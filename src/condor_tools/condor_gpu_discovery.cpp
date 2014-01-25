@@ -22,6 +22,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <string>
+#include <vector>
 #include <time.h>
 
 
@@ -29,6 +30,7 @@
 //#include <cuda_runtime_api.h>
 //#include "nvml.h"
 #include "cuda_header_doc.h"
+#include "opencl_header_doc.h"
 #include "nvml_stub.h"
 
 #ifdef WIN32
@@ -92,6 +94,7 @@ struct _simulated_cuda_device {
 	int SM;    // capability 0xMm (hexidecimal notation), M = SM Major version, and m = SM minor version
 	int clockRate;
 	int multiProcessorCount;
+	int ECCEnabled;
 	size_t totalGlobalMem;
 };
 struct _simulated_cuda_config {
@@ -101,8 +104,8 @@ struct _simulated_cuda_config {
 	const struct _simulated_cuda_device * device;
 };
 
-static const struct _simulated_cuda_device GeForceGTX480 = { "GeForce GTX 480", 0x20, 1400*1000, 15, 1536*1024*1024 };
-static const struct _simulated_cuda_device GeForceGT330 = { "GeForce GT 330",  0x12, 1340*1000, 12,  1024*1024*1024 };
+static const struct _simulated_cuda_device GeForceGTX480 = { "GeForce GTX 480", 0x20, 1400*1000, 15, 0, 1536*1024*1024 };
+static const struct _simulated_cuda_device GeForceGT330 = { "GeForce GT 330",  0x12, 1340*1000, 12,  0, 1024*1024*1024 };
 static const struct _simulated_cuda_config aSimConfig[] = {
 	{6000, 5050, 1, &GeForceGT330 },
 	{4020, 4010, 2, &GeForceGTX480 },
@@ -133,6 +136,7 @@ cudaError_t CUDACALL sim_cudaRuntimeGetVersion(int* pver) {
 }
 
 cudaError_t CUDACALL sim_cudaGetDeviceProperties(struct cudaDeviceProp * p, int devID) {
+	memset(p, 0, sizeof(*p));
 	if (sim_index < 0 || sim_index >= sim_index_max)
 		return cudaErrorNoDevice;
 
@@ -148,6 +152,7 @@ cudaError_t CUDACALL sim_cudaGetDeviceProperties(struct cudaDeviceProp * p, int 
 	p->multiProcessorCount = dev->multiProcessorCount;
 	p->clockRate = dev->clockRate;
 	p->totalGlobalMem = dev->totalGlobalMem;
+	p->ECCEnabled = dev->ECCEnabled;
 	return cudaSuccess;
 }
 
@@ -160,6 +165,7 @@ nvmlReturn_t sim_nvmlDeviceGetTemperature(nvmlDevice_t dev, nvmlTemperatureSenso
 nvmlReturn_t sim_nvmlDeviceGetTotalEccErrors(nvmlDevice_t /*dev*/, nvmlMemoryErrorType_t /*met*/, nvmlEccCounterType_t /*mec*/, unsigned long long * pval) { *pval = 0; /*sim_jitter-1+(int)dev;*/ return NVML_SUCCESS; }
 
 int g_verbose = 0;
+int g_diagnostic = 0;
 const char ** g_environ = NULL;
 void* g_cu_handle = NULL;
 // functions for runtime linking to nvcuda library
@@ -181,7 +187,7 @@ cuda_int_t cuDeviceGetCount = NULL;
 
 bool cu_Init(void* cu_handle) {
 	g_cu_handle = cu_handle;
-	if (g_verbose) fprintf(stderr, "Warning: simulating cudart using nvcuda\n");
+	if (g_diagnostic) fprintf(stderr, "diag: simulating cudart using nvcuda\n");
 	cuInit = (cuda_uint_t)dlsym(cu_handle, "cuInit");
 	if ( ! cuInit) return false;
 
@@ -198,11 +204,45 @@ bool cu_Init(void* cu_handle) {
 }
 
 cudaError_t CUDACALL cu_cudaRuntimeGetVersion(int* pver) { 
-	*pver = 5050;
-	return cudaSuccess; 
+	*pver = 0;
+	cudaError_t ret = cudaErrorNoDevice;
+
+#ifdef WIN32
+	// On windows, the CUDA runtime isn't installed in the system directory, 
+	// but we can locate it by looking in the registry.
+	// TODO: handle multiple installed runtimes...
+	const char * reg_key = "SOFTWARE\\NVIDIA Corporation\\GPU Computing Toolkit\\CUDA";
+	const char * reg_val_name = "FirstVersionInstalled";
+	HKEY hkey = NULL;
+	int bitness = KEY_WOW64_64KEY; //KEY_WOW64_32KEY; KEY_WOW64_64KEY
+	int res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, reg_key, 0, KEY_READ | bitness, &hkey);
+	if (res != ERROR_SUCCESS) {
+		fprintf(stderr, "can't open %s\n", reg_key);
+		return ret;
+	}
+	char version[100];
+	memset(version, 0, sizeof(version));
+	DWORD vtype = REG_SZ, cbData = sizeof(version);
+	res = RegQueryValueEx(hkey, reg_val_name, NULL, &vtype, (unsigned char*)version, &cbData);
+	if (res == ERROR_SUCCESS) {
+		// the value of this key is something like "v1.1", we want to strip off the v and
+		// convert the 1.1 into two integers. so we can pack them back together as 0x1010
+		version[sizeof(version)-1] = 0;
+		const char * pv = version;
+		while (*pv == ' ' || *pv == 'v' || *pv == 'V') ++pv;
+		int whole=0, fract=0;
+		if (2 == sscanf(pv, "%d.%d", &whole, &fract)) {
+			*pver = (whole * 1000) + ((fract*10) % 100);
+			ret = cudaSuccess;
+		}
+	}
+	RegCloseKey(hkey);
+#endif
+	return ret; 
 }
 
 cudaError_t CUDACALL cu_cudaGetDeviceProperties(struct cudaDeviceProp * p, int devID) {
+	memset(p, 0, sizeof(*p));
 	cudev dev;
 	cudaError_t res = cuDeviceGet(&dev, devID);
 	if (cudaSuccess == res) {
@@ -211,11 +251,217 @@ cudaError_t CUDACALL cu_cudaGetDeviceProperties(struct cudaDeviceProp * p, int d
 		cuDeviceTotalMem(&p->totalGlobalMem, dev);
 		cuDeviceGetAttribute(&p->clockRate, CU_DEVICE_ATTRIBUTE_CLOCK_RATE, dev);
 		cuDeviceGetAttribute(&p->multiProcessorCount, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, dev);
+		cuDeviceGetAttribute(&p->ECCEnabled, CU_DEVICE_ATTRIBUTE_ECC_ENABLED, dev);
 	}
 	return res; 
 }
 
 
+static struct {
+	clGetPlatformIDs_t GetPlatformIDs;
+	clGetPlatformInfo_t GetPlatformInfo;
+	clGetDeviceIDs_t GetDeviceIDs;
+	clGetDeviceInfo_t GetDeviceInfo;
+} ocl = { NULL, NULL, NULL, NULL };
+
+const char * ocl_name(cl_e_platform_info eInfo) {
+	switch (eInfo) {
+		case CL_PLATFORM_PROFILE:    return "PROFILE";
+		case CL_PLATFORM_VERSION:    return "VERSION";
+		case CL_PLATFORM_NAME:       return "NAME";
+		case CL_PLATFORM_VENDOR:     return "VENDOR";
+		case CL_PLATFORM_EXTENSIONS: return "EXTENSIONS";
+	}
+	return "";
+}
+
+const char * ocl_name(cl_e_device_info eInfo) {
+	switch (eInfo) {
+		case CL_DEVICE_TYPE:				 return "DEVICE_TYPE";
+		case CL_DEVICE_VENDOR_ID:			 return "VENDOR_ID";
+		case CL_DEVICE_MAX_COMPUTE_UNITS:	 return "MAX_COMPUTE_UNITS";
+		case CL_DEVICE_MAX_WORK_GROUP_SIZE:  return "MAX_WORK_GROUP_SIZE";
+		case CL_DEVICE_MAX_CLOCK_FREQUENCY:	 return "MAX_CLOCK_FREQUENCY";
+		case CL_DEVICE_GLOBAL_MEM_SIZE:		 return "GLOBAL_MEM_SIZE";
+		case CL_DEVICE_AVAILABLE:			 return "AVAILABLE";
+		case CL_DEVICE_EXECUTION_CAPABILITIES: return "EXECUTION_CAPABILITIES";
+		case CL_DEVICE_ERROR_CORRECTION_SUPPORT: return "ERROR_CORRECTION_SUPPORT";
+		case CL_DEVICE_NAME:				 return "NAME";
+		case CL_DEVICE_VENDOR:				 return "VENDOR";
+		case CL_DRIVER_VERSION:				 return "DRIVER";
+		case CL_DEVICE_PROFILE:				 return "PROFILE";
+		case CL_DEVICE_VERSION:				 return "VERSION";
+	}
+	return "";
+}
+
+// auto-growing buffer for use in fetching OpenCL info.
+static char* g_buffer = NULL;
+unsigned int g_cBuffer = 0;
+int ocl_log = 0; // set to true to enable logging of oclGetInfo
+
+clReturn oclGetInfo(cl_platform_id plid, cl_e_platform_info eInfo, std::string & val) {
+	val.clear();
+	size_t cb = 0;
+	clReturn clr = ocl.GetPlatformInfo(plid, eInfo, g_cBuffer, g_buffer, &cb);
+	if ((clr == CL_SUCCESS) && (g_cBuffer <= cb)) {
+		if (g_buffer) free (g_buffer);
+		if (cb < 120) cb = 120;
+		g_buffer = (char*)malloc(cb*2);
+		g_cBuffer = cb*2;
+		clr = ocl.GetPlatformInfo(plid, eInfo, g_cBuffer, g_buffer, &cb);
+	}
+	if (clr == CL_SUCCESS) {
+		g_buffer[g_cBuffer-1] = 0;
+		val = g_buffer;
+		if (ocl_log) { fprintf(stdout, "\t%s: \"%s\"\n", ocl_name(eInfo), val.c_str()); }
+	}
+	return clr;
+}
+
+clReturn oclGetInfo(cl_device_id did, cl_e_device_info eInfo, std::string & val) {
+	val.clear();
+	size_t cb = 0;
+	clReturn clr = ocl.GetDeviceInfo(did, eInfo, g_cBuffer, g_buffer, &cb);
+	if ((clr == CL_SUCCESS) && (g_cBuffer <= cb)) {
+		if (g_buffer) free (g_buffer);
+		if (cb < 120) cb = 120;
+		g_buffer = (char*)malloc(cb*2);
+		g_cBuffer = cb*2;
+		clr = ocl.GetDeviceInfo(did, eInfo, g_cBuffer, g_buffer, &cb);
+	}
+	if (clr == CL_SUCCESS) {
+		g_buffer[g_cBuffer-1] = 0;
+		val = g_buffer;
+		if (ocl_log) { fprintf(stdout, "\t\t%s: \"%s\"\n", ocl_name(eInfo), val.c_str()); }
+	}
+	return clr;
+}
+
+const char * ocl_value(int val) { static char ach[11]; sprintf(ach, "%d", val); return ach; }
+const char * ocl_value(unsigned int val) { static char ach[11]; sprintf(ach, "%u", val); return ach; }
+const char * ocl_value(long long val) { static char ach[22]; sprintf(ach, "%lld", val); return ach; }
+const char * ocl_value(unsigned long long val) { static char ach[22]; sprintf(ach, "%llu", val); return ach; }
+const char * ocl_value(double val) { static char ach[22]; sprintf(ach, "%g", val); return ach; }
+
+template <class t>
+clReturn oclGetInfo(cl_device_id did, cl_e_device_info eInfo, t & val) {
+	clReturn clr = ocl.GetDeviceInfo(did, eInfo, sizeof(val), &val, NULL);
+	if (clr == CL_SUCCESS) {
+		if (ocl_log) { fprintf(stdout, "\t\t%s: %s\n", ocl_name(eInfo), ocl_value(val)); }
+	}
+	return clr;
+}
+
+static int ocl_device_count = 0;
+static int ocl_was_initialized = 0;
+static std::vector<cl_platform_id> cl_platforms;
+static std::vector<cl_device_id> cl_gpu_ids;
+static cl_platform_id g_plidCuda = NULL;
+static std::string g_cudaOCLVersion;
+static int g_cl_ixFirstCuda = 0;
+static int g_cl_cCuda = 0;
+
+int ocl_Init(void) {
+
+	if (g_diagnostic) fprintf(stderr, "diag: ocl_Init()\n");
+	if (ocl_was_initialized) {
+		return 0;
+	}
+	ocl_was_initialized = 1;
+
+	if ( ! ocl.GetPlatformIDs) {
+		return cudaErrorInitializationError;
+	}
+
+	unsigned int cPlatforms = 0;
+	clReturn clr = ocl.GetPlatformIDs(0, NULL, &cPlatforms);
+	if (clr != CL_SUCCESS) {
+		fprintf(stderr, "ocl.GetPlatformIDs returned error=%d and %d platforms\n", clr, cPlatforms);
+	}
+	if (cPlatforms > 0) {
+		cl_platforms.reserve(cPlatforms);
+		for (unsigned int ii = 0; ii < cPlatforms; ++ii) {
+			cl_platforms.push_back(NULL);
+		}
+		clr = ocl.GetPlatformIDs(cPlatforms, &cl_platforms[0], &cPlatforms);
+	}
+
+	// enable logging in oclGetInfo if verbose
+	ocl_log = g_verbose;
+
+	for (unsigned int ii = 0; ii < cPlatforms; ++ii) {
+		cl_platform_id plid = cl_platforms[ii];
+		if (g_diagnostic) { fprintf(stdout, "ocl platform %d = %x\n", ii, (int)(size_t)plid); }
+		std::string val;
+		clr = oclGetInfo(plid, CL_PLATFORM_NAME, val);
+		if (val == "NVIDIA CUDA") g_plidCuda = plid;
+		clr = oclGetInfo(plid, CL_PLATFORM_VERSION, val);
+		if (plid == g_plidCuda) g_cudaOCLVersion = val;
+
+		// if logging is enabled, then oclGetInfo has the side effect of logging the value.
+		if (ocl_log) {
+			clr = oclGetInfo(plid, CL_PLATFORM_VENDOR, val);
+			clr = oclGetInfo(plid, CL_PLATFORM_PROFILE, val);
+			clr = oclGetInfo(plid, CL_PLATFORM_EXTENSIONS, val);
+		}
+
+		unsigned int cDevs = 0;
+		cl_f_device_type f_types = CL_DEVICE_TYPE_GPU;
+		clr = ocl.GetDeviceIDs(plid, f_types, 0, NULL, &cDevs);
+		if (g_verbose) { fprintf(stdout, "\tDEVICES = %d\n", cDevs); }
+
+		if (CL_SUCCESS == clr && cDevs > 0) {
+			unsigned int ixFirst = cl_gpu_ids.size();
+			cl_gpu_ids.reserve(ixFirst + cDevs);
+			for (unsigned int jj = 0; jj < cDevs; ++jj) { cl_gpu_ids.push_back(NULL); }
+			clr = ocl.GetDeviceIDs(plid, f_types, cDevs, &cl_gpu_ids[ixFirst], NULL);
+			if (clr == CL_SUCCESS) {
+				if (plid == g_plidCuda) {
+					// keep track of which of the opencl GPUS are also CUDA
+					g_cl_ixFirstCuda = ixFirst;
+					g_cl_cCuda = cDevs;
+				}
+
+				// if logging is enabled, query various properties of the devices
+				// to trigger the logging of those properties.
+				if (ocl_log) {
+					for (unsigned int jj = ixFirst; jj < ixFirst + cDevs; ++jj) {
+						cl_device_id did = cl_gpu_ids[jj];
+						oclGetInfo(did, CL_DEVICE_NAME, val);
+						cl_f_device_type eType = CL_DEVICE_TYPE_NONE;
+						oclGetInfo(did, CL_DEVICE_TYPE, eType);
+						unsigned int vid = 0;
+						oclGetInfo(did, CL_DEVICE_VENDOR_ID, vid);
+						oclGetInfo(did, CL_DEVICE_VENDOR, val);
+						oclGetInfo(did, CL_DEVICE_VERSION, val);
+						oclGetInfo(did, CL_DRIVER_VERSION, val);
+						unsigned int multiprocs = 0;
+						oclGetInfo(did, CL_DEVICE_MAX_COMPUTE_UNITS, multiprocs);
+						unsigned long long work_size = 0;
+						oclGetInfo(did, CL_DEVICE_MAX_WORK_GROUP_SIZE, work_size);
+						unsigned int clock_mhz;
+						oclGetInfo(did, CL_DEVICE_MAX_CLOCK_FREQUENCY, clock_mhz);
+						unsigned long long mem_bytes = 0;
+						oclGetInfo(did, CL_DEVICE_GLOBAL_MEM_SIZE, mem_bytes);
+						int has_ecc = 0;
+						oclGetInfo(did, CL_DEVICE_ERROR_CORRECTION_SUPPORT, has_ecc);
+					}
+				}
+			}
+		}
+	}
+
+	ocl_log = 0;
+	ocl_device_count = cl_gpu_ids.size();
+	return 0;
+}
+
+cudaError_t CUDACALL ocl_GetDeviceCount(int * pcount) {
+	ocl_Init();
+	*pcount = ocl_device_count;
+	return cudaSuccess;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Program main
@@ -230,10 +476,13 @@ main( int argc, const char** argv, const char ** envp)
 	int opt_dynamic = 0;
 	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
+	//int opt_rdp = 0;
 	int opt_slot = 0;
 	int opt_nvcuda = 0; // use nvcuda rather than cudarl
+	int opt_opencl = 0;
 	const char * opt_tag = "GPUs";
 	const char * opt_pre = "CUDA";
+	const char * opt_pre_arg = NULL;
 	int i;
     int dev;
 
@@ -245,7 +494,7 @@ main( int argc, const char** argv, const char ** envp)
 		}
 		else if (strcmp(argv[i],"-prefix")==0) {
 			if (argv[i+1]) {
-				opt_pre = argv[++i];
+				opt_pre_arg = argv[++i];
 			}
 		}
 		else if (strcmp(argv[i],"-static")==0) {
@@ -254,9 +503,21 @@ main( int argc, const char** argv, const char ** envp)
 		else if (strcmp(argv[i],"-dynamic")==0) {
 			opt_dynamic = 1;
 		}
+		else if (strcmp(argv[i],"-opencl")==0) {
+			opt_opencl = 1;
+		}
 		else if (strcmp(argv[i],"-verbose")==0) {
 			g_verbose = 1;
 		}
+		else if (strcmp(argv[i],"-diagnostic")==0) {
+			g_diagnostic = 1;
+		}
+		else if (strcmp(argv[i],"-config")==0) {
+			opt_config = 1;
+		}
+		//else if (strcmp(argv[i],"-rdp")==0) {
+		//	opt_rdp = 1;
+		//}
 		else if (strncmp(argv[i],"-simulate", 9)==0) {
 			opt_simulate = 1;
 			const char * pcolon = strchr(argv[i],':');
@@ -309,11 +570,19 @@ main( int argc, const char** argv, const char ** envp)
 	typedef nvmlReturn_t (*nvml_Device_MemoryErrorType_EccCounterType_unsigned_long_long)(nvmlDevice_t, nvmlMemoryErrorType_t, nvmlEccCounterType_t, unsigned long long *);
 	nvml_Device_MemoryErrorType_EccCounterType_unsigned_long_long nvmlDeviceGetTotalEccErrors = NULL;
 
+
+    //ciErrNum = clGetPlatformInfo (clSelectedPlatformID, CL_PLATFORM_NAME, sizeof(cBuffer), cBuffer, NULL);
+	//clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU, 100, devices, &devices_n)
+	//clGetDeviceInfo(devices[i], CL_DEVICE_NAME, sizeof(buffer), buffer, NULL));
+
+
 #ifdef WIN32
 	HINSTANCE cuda_handle = NULL;
+	HINSTANCE ocl_handle = NULL;
 	HINSTANCE nvml_handle = NULL;
 #else
 	void* cuda_handle = NULL;
+	void* ocl_handle = NULL;
 	void* nvml_handle = NULL;
 #endif
 
@@ -339,20 +608,29 @@ main( int argc, const char** argv, const char ** envp)
 	} else {
 
 	#ifdef WIN32
+		const char * opencl_library = "OpenCL.dll";
+		ocl_handle = LoadLibrary(opencl_library);
+		if ( ! ocl_handle && opt_opencl) {
+			fprintf(stderr, "Error %d: Cant open library: %s\r\n", GetLastError(), opencl_library);
+		}
+
 		const char * cudart_library = "cudart.dll"; // "cudart32_55.dll"
 		cuda_handle = LoadLibrary(cudart_library);
 		if ( ! cuda_handle) {
 			cuda_handle = LoadLibrary("nvcuda.dll");
 			if (cuda_handle && cu_Init(cuda_handle)) {
 				opt_nvcuda = 1;
-				//fprintf(stderr, "using nvcuda.dll\r\n");
+				if (g_diagnostic) { fprintf(stderr, "using nvcuda.dll to simulate cudart\n"); }
+			} else if (ocl_handle) {
+				// if no cuda, fall back to OpenCL detection
 			} else {
-				fprintf(stderr, "Error %d: Cant open library: %s\r\n", GetLastError(), cudart_library);
+				if (g_diagnostic) { fprintf(stderr, "Error %d: Cant open library: %s\r\n", GetLastError(), cudart_library); }
 				fprintf(stdout, "Detected%s=0\n", opt_tag);
 				return 0;
 			}
 		}
 
+		// if the NVIDIA management library is available, we can use it to get dynamic info
 		const char * nvml_library = "nvml.dll";
 		if (opt_dynamic) {
 			nvml_handle = LoadLibrary(nvml_library);
@@ -361,12 +639,26 @@ main( int argc, const char** argv, const char ** envp)
 			}
 		}
 	#else
+		const char * opencl_library = "libOpenCL.so";
+		ocl_handle = dlopen(opencl_library, RTLD_LAZY);
+		if ( ! ocl_handle && opt_opencl) {
+			fprintf(stderr, "Error %s: Cant open library: %s\n", dlerror(), opencl_library);
+		}
+		dlerror(); //Reset error
 		const char * cudart_library = "libcudart.so";
 		cuda_handle = dlopen(cudart_library, RTLD_LAZY);
 		if ( ! cuda_handle) {
-			fprintf(stderr, "Error %s: Cant open library: %s\n", dlerror(), cudart_library);
-			fprintf(stdout, "Detected%s=0\n", opt_tag);
-			return 0;
+			cuda_handle = dlopen("libnvcuda.so", RTLD_LAZY);
+			if (cuda_handle && cu_Init(cuda_handle)) {
+				opt_nvcuda = 1;
+				if (g_diagnostic) { fprintf(stderr, "using libnvcuda.so to simulate libcudart\n"); }
+			} else if (ocl_handle) {
+				// if no cuda, fall back to OpenCL detection
+			} else {
+				if (g_diagnostic) { fprintf(stderr, "Error %s: Cant open library: %s\n", dlerror(), cudart_library); }
+				fprintf(stdout, "Detected%s=0\n", opt_tag);
+				return 0;
+			}
 		}
 		dlerror(); //Reset error
 		const char * nvml_library = "libnvidia-ml.so";
@@ -379,7 +671,19 @@ main( int argc, const char** argv, const char ** envp)
 		}
 	#endif
 
-		cudaGetDeviceCount = (cuda_t) dlsym(cuda_handle, opt_nvcuda ? "cuDeviceGetCount" : "cudaGetDeviceCount");
+		if (ocl_handle) {
+			ocl.GetPlatformIDs = (clGetPlatformIDs_t) dlsym(ocl_handle, "clGetPlatformIDs");
+			ocl.GetPlatformInfo = (clGetPlatformInfo_t) dlsym(ocl_handle, "clGetPlatformInfo");
+			ocl.GetDeviceIDs = (clGetDeviceIDs_t) dlsym(ocl_handle, "clGetDeviceIDs");
+			ocl.GetDeviceInfo = (clGetDeviceInfo_t) dlsym(ocl_handle, "clGetDeviceInfo");
+		}
+
+		if (cuda_handle) {
+			cudaGetDeviceCount = (cuda_t) dlsym(cuda_handle, opt_nvcuda ? "cuDeviceGetCount" : "cudaGetDeviceCount");
+		} else if (ocl_handle && ocl.GetDeviceIDs) {
+			cudaGetDeviceCount = ocl_GetDeviceCount;
+			opt_pre = "OCL";
+		}
 		if ( ! cudaGetDeviceCount) {
 			#ifdef WIN32
 			fprintf(stderr, "Error %d: Cant find %s in library: %s\r\n", GetLastError(), "cudaGetDeviceCount", cudart_library);
@@ -396,6 +700,20 @@ main( int argc, const char** argv, const char ** envp)
 		// return 1;
 		deviceCount = 0;
 	}
+
+	/*
+	if (opt_rdp) {
+		deviceCount = deviceCount ? deviceCount : 1;
+	}
+	*/
+	if (opt_opencl) {
+		int cd = 0;
+		ocl_GetDeviceCount(&cd);
+		if ( ! deviceCount) {
+			deviceCount = cd;
+			opt_pre = "OCL";
+		}
+	}
     
 	// If there are no devices, there is nothing more to do
     if (deviceCount == 0) {
@@ -404,39 +722,6 @@ main( int argc, const char** argv, const char ** envp)
 		return 0;
 	}
 
-#if 0 //def TEST
-    for (dev = 0; dev < deviceCount; dev++) {
-
-		char prefix[100];
-		if ( opt_slot == 0 ) {
-		} else {
-			if ( opt_slot - 1 != dev ) 
-				continue;
-		}
-		sprintf(prefix,"%s%d_",opt_pre, dev);
-
-	if (opt_static) {
-
-		printf("%sCudaDrv=4.20\n", prefix);
-		printf("%sCudaRun=4.10\n", prefix);
-
-        	printf("%sDev=%d\n",  prefix,dev);
-        	printf("%sName=\"%s\"\n", prefix, "GeForce GTX 480");
-        	printf("%sCapability=%d.%d\n", prefix, 2, 0);
-		printf("%sGlobalMemMB=%.0f\n", prefix,1536 );
-        	printf("%sNumSMs=%d\n", prefix, 15);
-        	printf("%sNumCores=%d\n", prefix, 480);
-        	printf("%sClockGhz=%.2f\n", prefix, 1.40);
-	} else {
-
-		printf("%sFanSpeedPct=%u\n",prefix,44);
-		printf("%sDieTempF=%u\n",prefix,52);
-
-	}
-
-	}
-
-#endif
 
 	// lookup the function pointers we will need later from the cudart library
 	//
@@ -485,6 +770,8 @@ main( int argc, const char** argv, const char ** envp)
 		}
 	}
 
+	if (opt_pre_arg) { opt_pre = opt_pre_arg; }
+
 	// print out info about detected GPU resources
 	//
 	std::string detected_gpus;
@@ -506,30 +793,79 @@ main( int argc, const char** argv, const char ** envp)
 		char prefix[100];
 		sprintf(prefix,"%s%d",opt_pre,dev);
 
-		if ( opt_static ) {
+		if (opt_static && cudaGetDeviceProperties) {
 			cudaDeviceProp deviceProp;
 			int driverVersion=0, runtimeVersion=0;
 
 			cudaGetDeviceProperties(&deviceProp, dev);
 
+			//printf("%sDev=%d\n",  prefix,dev);
+
 		#if CUDART_VERSION >= 2020
 			cudaDriverGetVersion(&driverVersion);
 			cudaRuntimeGetVersion(&runtimeVersion);
 			printf("%sDriverVersion=%d.%d\n", prefix, driverVersion/1000, driverVersion%100);
-			// printf("%sRuntimeVersion=%d.%d\n", prefix, runtimeVersion/1000, runtimeVersion%100);
+			printf("%sRuntimeVersion=%d.%d\n", prefix, runtimeVersion/1000, runtimeVersion%100);
 		#endif
 
-			//printf("%sDev=%d\n",  prefix,dev);
-			printf("%sName=\"%s\"\n", prefix, deviceProp.name);
+			if (dev < g_cl_cCuda) {
+				cl_device_id did = cl_gpu_ids[g_cl_ixFirstCuda + dev];
+				std::string fullver;
+				oclGetInfo(did, CL_DEVICE_VERSION, fullver);
+				size_t ix = fullver.find_first_of(' '); // skip OpenCL
+				std::string vervend = fullver.substr(ix+1);
+				ix = vervend.find_first_of(' '); 
+				std::string ver = vervend.substr(0, ix); // split version from vendor info.
+				printf("%sOpenCLVersion=%s\n", prefix, ver.c_str());
+
+				//unsigned long long work_size = 0;
+				//oclGetInfo(did, CL_DEVICE_MAX_WORK_GROUP_SIZE, work_size);
+				//printf("%sWork=%llu\n", prefix, work_size);
+			}
+
+			printf("%sDeviceName=\"%s\"\n", prefix, deviceProp.name);
 			printf("%sCapability=%d.%d\n", prefix, deviceProp.major, deviceProp.minor);
-			printf("%sGlobalMemMB=%.0f\n", prefix, deviceProp.totalGlobalMem/(1024.*1024.));
-		#if CUDART_VERSION >= 2000
-			printf("%sNumSMs=%d\n", prefix, deviceProp.multiProcessorCount);
-			printf("%sNumCores=%d\n", prefix, deviceProp.multiProcessorCount * ConvertSMVer2Cores(deviceProp.major, deviceProp.minor));
-		#endif
-			printf("%sClockGhz=%.2f\n", prefix, deviceProp.clockRate * 1e-6f);
+			printf("%sECCEnabled=%s\n", prefix, deviceProp.ECCEnabled ? "true" : "false");
+			printf("%sGlobalMemoryMb=%.0f\n", prefix, deviceProp.totalGlobalMem/(1024.*1024.));
+			printf("%sClockMhz=%.2f\n", prefix, deviceProp.clockRate * 1e-3f);
+			printf("%sMultiprocessors=%u\n", prefix, deviceProp.multiProcessorCount);
+			//printf("%sCores=%u\n", prefix, deviceProp.multiProcessorCount * ConvertSMVer2Cores(deviceProp.major, deviceProp.minor));
 
-		}	// end of if opt_static
+		} else if (opt_static && ocl_handle) {
+			cl_device_id did = cl_gpu_ids[dev];
+			std::string val;
+			oclGetInfo(did, CL_DEVICE_NAME, val);
+			printf("%sDeviceName=\"%s\"\n", prefix, val.c_str());
+			//oclGetInfo(did, CL_DEVICE_VENDOR, val);
+			oclGetInfo(did, CL_DEVICE_VERSION, val);
+			size_t ix = val.find_first_of(' '); // skip OpenCL
+			std::string vervend = val.substr(ix+1);
+			ix = vervend.find_first_of(' '); 
+			std::string ver = vervend.substr(0, ix); // split version from vendor info.
+			printf("%sOpenCLVersion=%s\n", prefix, ver.c_str());
+
+			unsigned int multiprocs = 0;
+			oclGetInfo(did, CL_DEVICE_MAX_COMPUTE_UNITS, multiprocs);
+			printf("%sMultiprocessors=%u\n", prefix, multiprocs);
+			//unsigned int work_size = 0;
+			//oclGetInfo(did, CL_DEVICE_MAX_WORK_GROUP_SIZE, work_size);
+			//printf("%sWork=%u\n", prefix, work_size);
+			unsigned int clock_mhz;
+			oclGetInfo(did, CL_DEVICE_MAX_CLOCK_FREQUENCY, clock_mhz);
+			printf("%sClockMhz=%u\n", prefix, clock_mhz);
+			unsigned long long mem_bytes = 0;
+			oclGetInfo(did, CL_DEVICE_GLOBAL_MEM_SIZE, mem_bytes);
+			printf("%sGlobalMemoryMb=%.0f\n", prefix, mem_bytes/(1024.*1024.));
+			//printf("%sCapability=%d.%d\n", prefix, deviceProp.major, deviceProp.minor);
+			int ecc_enabled = 0;
+			oclGetInfo(did, CL_DEVICE_ERROR_CORRECTION_SUPPORT, ecc_enabled);
+			printf("%sECCEnabled=%s\n", prefix, ecc_enabled ? "true" : "false");
+		}
+
+
+
+		
+		// end of if opt_static
 
 
 		// Dynamic properties
