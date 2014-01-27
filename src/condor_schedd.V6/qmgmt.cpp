@@ -1916,25 +1916,6 @@ int DestroyProc(int cluster_id, int proc_id)
 		cleanup_ckpt_files(cluster_id,proc_id,Q_SOCK->getOwner() );
 	}
 
-	int universe = CONDOR_UNIVERSE_STANDARD;
-	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
-
-	if( (universe == CONDOR_UNIVERSE_MPI) ||
-		(universe == CONDOR_UNIVERSE_PARALLEL) ) {
-			// Parallel jobs take up a whole cluster.  If we've been ask to
-			// destroy any of the procs in a parallel job cluster, we
-			// should destroy the entire cluster.  This hack lets the
-			// schedd just destroy the proc associated with the shadow
-			// when a multi-class parallel job exits without leaving other
-			// procs in the cluster around.  It also ensures that the
-			// user doesn't delete only some of the procs in the parallel
-			// job cluster, since that's going to really confuse the
-			// shadow.
-		int ret = DestroyCluster(cluster_id);
-		if(ret < 0 ) { return DESTROYPROC_ERROR; }
-		return DESTROYPROC_SUCCESS;
-	}
-
 	// Append to history file
 	AppendHistory(ad);
 
@@ -1965,6 +1946,39 @@ int DestroyProc(int cluster_id, int proc_id)
 	JobQueue->DestroyClassAd(key);
 
 	DecrementClusterSize(cluster_id);
+
+	int universe = CONDOR_UNIVERSE_STANDARD;
+	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
+
+	if( (universe == CONDOR_UNIVERSE_MPI) ||
+		(universe == CONDOR_UNIVERSE_PARALLEL) ) {
+			// Parallel jobs take up a whole cluster.  If we've been ask to
+			// destroy any of the procs in a parallel job cluster, we
+			// should destroy the entire cluster.  This hack lets the
+			// schedd just destroy the proc associated with the shadow
+			// when a multi-class parallel job exits without leaving other
+			// procs in the cluster around.  It also ensures that the
+			// user doesn't delete only some of the procs in the parallel
+			// job cluster, since that's going to really confuse the
+			// shadow.
+		ClassAd *otherAd = NULL;
+		char	otherKey[PROC_ID_STR_BUFLEN];
+		int otherProc = -1;
+
+		bool stillLooking = true;
+		while (stillLooking) {
+			otherProc++;
+			if (otherProc == proc_id) continue; // skip this proc
+
+			IdToStr(cluster_id,otherProc,otherKey);
+			if (!JobQueue->LookupClassAd(otherKey, otherAd)) {
+				stillLooking = false;
+			} else {
+				JobQueue->DestroyClassAd(otherKey);
+				DecrementClusterSize(cluster_id);
+			}
+		}
+	}
 
 	if( !already_in_transaction ) {
 			// For performance, use a NONDURABLE transaction.  If we crash
