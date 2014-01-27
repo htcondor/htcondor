@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug in the \Condor{schedd} which would cause it
+to crash when running remotely submitted parallel universe jobs.
+\Ticket{4163}
+
 \item Fixed a bug with concurrency limits and partitionable slots,
 in which the partitionable slot would consume a concurrency token,
 even though the slot never runs jobs.  This would cause fewer jobs
