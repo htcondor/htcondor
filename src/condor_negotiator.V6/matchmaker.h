@@ -271,7 +271,7 @@ class Matchmaker : public Service
 			// rewrite the requirements expression to make matchmaking faster
 		void OptimizeJobAdForMatchmaking(ClassAd *ad);
 
-		void MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds);
+		void MakeClaimIdHash(ClassAdListDoesNotDeleteAds &startdAds, ClassAdList &startdPvtAdList, ClaimIdHash &claimIds);
 		char const *getClaimId (const char *, const char *, ClaimIdHash &, MyString &);
 		void addRemoteUserPrios( ClassAd* ad );
 		void addRemoteUserPrios( ClassAdListDoesNotDeleteAds &cal );

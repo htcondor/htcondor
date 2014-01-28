@@ -2960,7 +2960,14 @@ obtainAdsFromCollector (
 		dprintf(D_ALWAYS, "Not considering preemption, therefore constraining idle machines with %s\n", projectionString);
 	}
 
-	
+	dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
+	ClassAdList startdPvtAdList;
+	result = collects->query (privateQuery, startdPvtAdList);
+	if( result!=Q_OK ) {
+		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
+		return false;
+	}
+
     CondorError errstack;
 	dprintf(D_ALWAYS, "  Getting Scheduler, Submitter and Machine ads ...\n");
 	result = collects->query (publicQuery, allAds, &errstack);
@@ -3214,15 +3221,7 @@ obtainAdsFromCollector (
 		}
 	}
 
-	dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
-	ClassAdList startdPvtAdList;
-	result = collects->query (privateQuery, startdPvtAdList);
-	if( result!=Q_OK ) {
-		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
-		return false;
-	}
-
-	MakeClaimIdHash(startdPvtAdList,claimIds);
+	MakeClaimIdHash(startdAds, startdPvtAdList,claimIds);
 
 	dprintf(D_ALWAYS, "Got ads: %d public and %lu private\n",
 	        allAds.MyLength(),claimIds.size());
@@ -3269,36 +3268,68 @@ Matchmaker::OptimizeJobAdForMatchmaking(ClassAd *ad)
 	}
 }
 
+static bool
+makeKeyIfValid(const classad::ClassAd &ad, std::string &key, std::string &claim_id)
+{
+	std::string name;
+	std::string ip_addr;
+	std::string claimlist;
+	claim_id.clear();
+
+	if( !ad.EvaluateAttrString(ATTR_NAME, name) ) {
+		return false;
+	}
+	if( !ad.EvaluateAttrString(ATTR_MY_ADDRESS, ip_addr) )
+	{
+		return false;
+	}
+
+	// As of 7.1.3, we look up CLAIM_ID first and CAPABILITY
+	// second.  Someday CAPABILITY can be phased out.
+	if( !ad.EvaluateAttrString(ATTR_CLAIM_ID, claim_id) &&
+		!ad.EvaluateAttrString(ATTR_CAPABILITY, claim_id) &&
+		!ad.EvaluateAttrString(ATTR_CLAIM_ID_LIST, claimlist))
+	{
+		return false;
+	}
+
+	// hash key is name + ip_addr
+	key = name + ip_addr;
+
+	return true;
+}
+
+	// Check to see if a set of *private* claims has any claim which could
+	// match a given public ID.
+static bool
+setContainsClaimID(const std::string & public_claim_id, const std::set<std::string> &private_claims)
+{
+	for (std::set<std::string>::const_iterator it = private_claims.begin();
+		it != private_claims.end();
+		it++)
+	{
+		ClaimIdParser parser(it->c_str());
+		if (strcmp(parser.publicClaimId(), public_claim_id.c_str()) == 0)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 void
-Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
+Matchmaker::MakeClaimIdHash(ClassAdListDoesNotDeleteAds &startdAds, ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 {
 	ClassAd *ad;
+	std::string claim_id;
+	std::string claimlist;
+
 	startdPvtAdList.Open();
 	while( (ad = startdPvtAdList.Next()) ) {
-		MyString name;
-		MyString ip_addr;
-		string claim_id;
-        string claimlist;
 
-		if( !ad->LookupString(ATTR_NAME, name) ) {
-			continue;
-		}
-		if( !ad->LookupString(ATTR_MY_ADDRESS, ip_addr) )
-		{
-			continue;
-		}
-			// As of 7.1.3, we look up CLAIM_ID first and CAPABILITY
-			// second.  Someday CAPABILITY can be phased out.
-		if( !ad->LookupString(ATTR_CLAIM_ID, claim_id) &&
-			!ad->LookupString(ATTR_CAPABILITY, claim_id) &&
-            !ad->LookupString(ATTR_CLAIM_ID_LIST, claimlist))
-		{
-			continue;
-		}
+		std::string key;
+		if (!makeKeyIfValid(*ad, key, claim_id)) { continue; }
 
-			// hash key is name + ip_addr
-        string key = name;
-        key += ip_addr;
         ClaimIdHash::iterator f(claimIds.find(key));
         if (f == claimIds.end()) {
             claimIds[key];
@@ -3320,6 +3351,48 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
         }
 	}
 	startdPvtAdList.Close();
+
+		// Check to make sure our public ads match the private ads.
+		// If the private ad is newer than the public ad, it may be possible
+		// to preempt a job using the private ad's claim ID based on the (stale)
+		// version of the public ad.
+		//
+		// The basic idea is to iterate through the startd ad list and examine
+		// the corresponding set of ClaimIDs; remove the public ad if none of the
+		// private claim IDs could match the public claim ID.
+	startdAds.Open();
+	while( (ad = startdAds.Next()) ) {
+
+		std::string key;
+		if (!makeKeyIfValid(*ad, key, claim_id)) { continue; }
+
+		ClaimIdHash::iterator f(claimIds.find(key));
+			// Does this public ad have a corresponding private ad?
+		if (f == claimIds.end())
+		{
+			dprintf(D_ALWAYS, "Removing %s from list of startds because it doesn't have a private ad.\n", key.c_str());
+			startdAds.Remove(ad);
+		}
+
+		if (ad->EvaluateAttrString(ATTR_CLAIM_ID_LIST, claimlist))
+		{
+			StringList idlist(claimlist.c_str());
+			idlist.rewind();
+			while (char* id = idlist.next())
+			{
+				if (!setContainsClaimID(id, f->second))
+				{
+					dprintf(D_ALWAYS, "Removing %s from list of startds because it has a stale private ad.\n", key.c_str());
+					startdAds.Remove(ad);
+				}
+			}
+		}
+		else if (!setContainsClaimID(claim_id, f->second))
+		{
+			dprintf(D_ALWAYS, "Removing %s from list of startds because it has a stale private ad.\n", key.c_str());
+			startdAds.Remove(ad);
+		}
+	}
 }
 
 int Matchmaker::

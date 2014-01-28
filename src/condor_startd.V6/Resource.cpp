@@ -2101,6 +2101,29 @@ Resource::publish( ClassAd* cap, amask_t mask )
         }
     }
 
+
+	if (IS_PUBLIC(mask))
+	{
+		if( r_pre_pre ) {
+			cap->InsertAttr( ATTR_CAPABILITY, r_pre_pre->publicClaimId() );
+		}
+		else if( r_pre ) {
+			cap->InsertAttr( ATTR_CAPABILITY, r_pre->publicClaimId() );
+		} else if( r_cur ) {
+			cap->InsertAttr( ATTR_CAPABILITY, r_cur->publicClaimId() );
+		}
+
+		if (r_has_cp) {
+			string claims;
+			for (claims_t::iterator j(r_claims.begin());  j != r_claims.end();  ++j) {
+				claims += " ";
+				claims += (*j)->publicClaimId();
+			}
+			cap->InsertAttr(ATTR_CLAIM_ID_LIST, claims);
+			cap->InsertAttr(ATTR_NUM_CLAIMS, (long long)r_claims.size());
+		}
+	}
+
 #if defined(ADD_TARGET_SCOPING)
 	cap->AddTargetRefs( TargetJobAttrs, false );
 #endif
