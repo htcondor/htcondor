@@ -23,7 +23,17 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include <map>
+
 #include <time.h>
+#include <stdarg.h> // for va_start
+
+#if 0 
+// can't use these on linux without pulling in ALL of condor_utils - ssl, crypto, etc. 
+// so for now, just copy the bits we want inline.
+#include <match_prefix.h>
+#include <stl_string_utils.h>
+#endif
 
 
 // we don't want to use the actual cuda headers because we want to build on machines where they are not installed.
@@ -86,6 +96,96 @@ int ConvertSMVer2Cores(int major, int minor)
     return nGpuArchCoresPerSM[index-1].Cores;
 }
 
+// because we don't have access to condor_utils, make a limited local version
+const std::string & Format(const char * fmt, ...) {
+	static std::string buffer;
+	char temp[4096];
+	const int max_temp = (int)(sizeof(temp)/sizeof(temp[0]));
+
+	va_list args;
+	va_start(args, fmt);
+	int cch = vsnprintf(temp, max_temp, fmt, args);
+	va_end (args);
+
+	if (cch < 0 || cch >= max_temp) {
+		fprintf(stderr, "internal error, %d is not enough space to format, value will be truncated.\n", max_temp);
+		temp[max_temp-1] = 0;
+	}
+	buffer = temp;
+	return buffer;
+}
+
+#ifndef MATCH_PREFIX
+bool
+is_arg_prefix(const char * parg, const char * pval, int must_match_length /*= 0*/) 
+{
+	// no matter what, at least 1 char must match
+	// this also protects us from the case where parg is ""
+	if (!*pval || (*parg != *pval)) return false;
+
+	// do argument matching based on a minimum prefix. when we run out
+	// of characters in parg we must be at a \0 or no match and we
+	// must have matched at least must_match_length characters or no match
+	int match_length = 0;
+	while (*parg == *pval) {
+		++match_length;
+		++parg; ++pval;
+		if (!*pval) break;
+	}
+	if (*parg) return false;
+	if (must_match_length < 0) return (*pval == 0);
+	return match_length >= must_match_length;
+}
+
+bool
+is_arg_colon_prefix(const char * parg, const char * pval, const char ** ppcolon, int must_match_length /*= 0*/) 
+{
+	if (ppcolon) *ppcolon = NULL;
+
+	// no matter what, at least 1 char must match
+	// this also protects us from the case where parg is ""
+	if (!*pval || (*parg != *pval)) return false;
+
+	// do argument matching based on a minimum prefix. when we run out
+	// of characters in parg we must be at a \0 or no match and we
+	// must have matched at least must_match_length characters or no match
+	int match_length = 0;
+	while (*parg == *pval) {
+		++match_length;
+		++parg; ++pval;
+		if (*parg == ':') {
+			if (ppcolon) *ppcolon = parg;
+			break;
+		}
+		if (!*pval) break;
+	}
+	if (*parg && *parg != ':') return false;
+	if (must_match_length < 0) return (*pval == 0);
+	return match_length >= must_match_length;
+}
+
+bool
+is_dash_arg_prefix(const char * parg, const char * pval, int must_match_length /*= 0*/)
+{
+	if (*parg != '-') return false;
+	++parg;
+	// if arg begins with --, then we require an exact match for pval.
+	if (*parg == '-') { ++parg; must_match_length = -1; }
+	return is_arg_prefix(parg, pval, must_match_length);
+}
+
+bool
+is_dash_arg_colon_prefix(const char * parg, const char * pval, const char ** ppcolon, int must_match_length /*= 0*/)
+{
+	if (*parg != '-') return false;
+	++parg;
+	// if arg begins with --, then we require an exact match for pval.
+	if (*parg == '-') { ++parg; must_match_length = -1; }
+	return is_arg_colon_prefix(parg, pval, ppcolon, must_match_length);
+}
+#endif // MATCH_PREFIX
+
+
 // tables of simulated cuda devices, so we can test HTCondor startd and starter without 
 // actually having a GPU.
 //
@@ -117,9 +217,11 @@ static int sim_device_count = 0;
 
 cudaError_t CUDACALL sim_cudaGetDeviceCount(int* pdevs) {
 	*pdevs = 0;
-	if (sim_index < 0 || sim_index >= sim_index_max)
+	if (sim_index < 0 || sim_index > sim_index_max)
 		return cudaErrorInvalidValue;
-	if (sim_device_count) {
+	if (sim_index == sim_index_max) {
+		*pdevs = sim_index_max;
+	} else if (sim_device_count) {
 		*pdevs = sim_device_count;
 	} else {
 		*pdevs = aSimConfig[sim_index].deviceCount;
@@ -127,24 +229,34 @@ cudaError_t CUDACALL sim_cudaGetDeviceCount(int* pdevs) {
 	return cudaSuccess; 
 }
 cudaError_t CUDACALL sim_cudaDriverGetVersion(int* pver) {
-	*pver = aSimConfig[sim_index].driverVer;
+	if (sim_index < 0 || sim_index > sim_index_max)
+		return cudaErrorInvalidValue;
+	int ix = sim_index < sim_index_max ? sim_index : 0;
+	*pver = aSimConfig[ix].driverVer;
 	return cudaSuccess; 
 }
 cudaError_t CUDACALL sim_cudaRuntimeGetVersion(int* pver) {
-	*pver = aSimConfig[sim_index].runtimeVer;
+	if (sim_index < 0 || sim_index > sim_index_max)
+		return cudaErrorInvalidValue;
+	int ix = sim_index < sim_index_max ? sim_index : 0;
+	*pver = aSimConfig[ix].runtimeVer;
 	return cudaSuccess; 
 }
 
 cudaError_t CUDACALL sim_cudaGetDeviceProperties(struct cudaDeviceProp * p, int devID) {
 	memset(p, 0, sizeof(*p));
-	if (sim_index < 0 || sim_index >= sim_index_max)
+	if (sim_index < 0 || sim_index > sim_index_max)
 		return cudaErrorNoDevice;
 
-	const struct _simulated_cuda_device * dev = aSimConfig[sim_index].device;
-	int cDevs = sim_device_count ? sim_device_count : aSimConfig[sim_index].deviceCount;
-
-	if (devID < 0 || devID > cDevs)
-		return cudaErrorInvalidDevice;
+	const struct _simulated_cuda_device * dev;
+	if (sim_index == sim_index_max) {
+		dev = aSimConfig[devID].device;
+	} else {
+		int cDevs = sim_device_count ? sim_device_count : aSimConfig[sim_index].deviceCount;
+		if (devID < 0 || devID > cDevs)
+			return cudaErrorInvalidDevice;
+		dev = aSimConfig[sim_index].device;
+	}
 
 	strncpy(p->name, dev->name, sizeof(p->name));
 	p->major = (dev->SM & 0xF0) >> 4;
@@ -166,7 +278,6 @@ nvmlReturn_t sim_nvmlDeviceGetTotalEccErrors(nvmlDevice_t /*dev*/, nvmlMemoryErr
 
 int g_verbose = 0;
 int g_diagnostic = 0;
-const char ** g_environ = NULL;
 void* g_cu_handle = NULL;
 // functions for runtime linking to nvcuda library
 typedef void * cudev;
@@ -463,81 +574,103 @@ cudaError_t CUDACALL ocl_GetDeviceCount(int * pcount) {
 	return cudaSuccess;
 }
 
+void usage(FILE* output, const char* argv0);
+
 ////////////////////////////////////////////////////////////////////////////////
 // Program main
 ////////////////////////////////////////////////////////////////////////////////
 int
-main( int argc, const char** argv, const char ** envp)
+main( int argc, const char** argv)
 {
 	int deviceCount = 0;
 	//int have_cuda = 1;
 	int have_nvml = 0;
-	int opt_static = 0;
-	int opt_dynamic = 0;
+	int opt_basic = 0; // publish basic GPU properties
+	int opt_extra = 0; // publish extra GPU properties.
+	int opt_dynamic = 0; // publish dynamic GPU properties
+	int opt_hetero = 0;  // don't assume properties are homogeneous
 	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
 	//int opt_rdp = 0;
-	int opt_slot = 0;
+	int opt_dev = -1;   // -1 means all devs, otherwise print info only for this dev
 	int opt_nvcuda = 0; // use nvcuda rather than cudarl
-	int opt_opencl = 0;
+	int opt_opencl = 0; // prefer opencl detection
 	const char * opt_tag = "GPUs";
 	const char * opt_pre = "CUDA";
 	const char * opt_pre_arg = NULL;
+	const char * pcolon;
 	int i;
     int dev;
 
 	for (i=1; i<argc && argv[i]; i++) {
-		if (strcmp(argv[i],"-tag")==0) {
+		if (is_dash_arg_prefix(argv[i], "help", 1)) {
+			opt_basic = 1; // publish basic GPU properties
+			usage(stdout, argv[0]);
+			return 0;
+		}
+		else if (is_dash_arg_prefix(argv[i], "properties", 1)) {
+			opt_basic = 1; // publish basic GPU properties
+		}
+		else if (is_dash_arg_prefix(argv[i], "extra", 3)) {
+			opt_basic = 1; // publish basic GPU properties
+			opt_extra = 1; // publish extra GPU properties
+		}
+		else if (is_dash_arg_prefix(argv[i], "dynamic", 3)) {
+			opt_dynamic = 1;
+		}
+		else if (is_dash_arg_prefix(argv[i], "mixed", 3) || is_dash_arg_prefix(argv[i], "hetero", 3)) {
+			opt_hetero = 1;
+		}
+		else if (is_dash_arg_prefix(argv[i], "opencl", -1)) {
+			opt_opencl = 1;
+		}
+		else if (is_dash_arg_prefix(argv[i], "verbose", 4)) {
+			g_verbose = 1;
+		}
+		else if (is_dash_arg_prefix(argv[i], "diagnostic", 4)) {
+			g_diagnostic = 1;
+		}
+		else if (is_dash_arg_prefix(argv[i], "config", -1)) {
+			opt_config = 1;
+		}
+		else if (is_dash_arg_prefix(argv[i], "tag", 3)) {
 			if (argv[i+1]) {
 				opt_tag = argv[++i];
 			}
 		}
-		else if (strcmp(argv[i],"-prefix")==0) {
+		else if (is_dash_arg_prefix(argv[i], "prefix", 3)) {
 			if (argv[i+1]) {
 				opt_pre_arg = argv[++i];
 			}
 		}
-		else if (strcmp(argv[i],"-static")==0) {
-			opt_static = 1;
+		else if (is_dash_arg_prefix(argv[i], "device", 3)) {
+			if ( ! argv[i+1] || '-' == *argv[i+1]) {
+				fprintf (stderr, "Error: -device requires an argument\n");
+				usage(stderr, argv[0]);
+				return 1;
+			}
+			opt_dev = atoi(argv[++i]);
 		}
-		else if (strcmp(argv[i],"-dynamic")==0) {
-			opt_dynamic = 1;
-		}
-		else if (strcmp(argv[i],"-opencl")==0) {
-			opt_opencl = 1;
-		}
-		else if (strcmp(argv[i],"-verbose")==0) {
-			g_verbose = 1;
-		}
-		else if (strcmp(argv[i],"-diagnostic")==0) {
-			g_diagnostic = 1;
-		}
-		else if (strcmp(argv[i],"-config")==0) {
-			opt_config = 1;
-		}
-		//else if (strcmp(argv[i],"-rdp")==0) {
-		//	opt_rdp = 1;
-		//}
-		else if (strncmp(argv[i],"-simulate", 9)==0) {
+		else if (is_dash_arg_colon_prefix(argv[i], "simulate", &pcolon, 3)) {
 			opt_simulate = 1;
-			const char * pcolon = strchr(argv[i],':');
 			if (pcolon) {
 				sim_index = atoi(pcolon+1);
-				if (sim_index < 0 || sim_index >= sim_index_max) {
-					fprintf(stderr, "Error: simulation must be in range of 0-%d\r\n", sim_index_max-1);
-					return 0;
+				if (sim_index < 0 || sim_index > sim_index_max) {
+					fprintf(stderr, "Error: simulation must be in range of 0-%d\r\n", sim_index_max);
+					usage(stderr, argv[0]);
+					return 1;
 				}
 				const char * pcomma = strchr(pcolon+1,',');
 				if (pcomma) { sim_device_count = atoi(pcomma+1); }
 			}
 		}
-		else if (strcmp(argv[i],"-nvcuda")==0) {
+		else if (is_dash_arg_prefix(argv[i], "nvcuda",-1)) {
 			// use nvcuda instead of cudart, (option is for testing...)
 			opt_nvcuda = 1;
-			g_environ = envp;
 		} 
 		else {
 			fprintf(stderr, "option %s is not valid\n", argv[i]);
+			usage(stderr, argv[0]);
 			return 1;
 		}
 	}
@@ -569,11 +702,6 @@ main( int argc, const char** argv, const char ** envp)
 	nvml_Device_TemperatureSensors_unsigned_int nvmlDeviceGetTemperature = NULL;
 	typedef nvmlReturn_t (*nvml_Device_MemoryErrorType_EccCounterType_unsigned_long_long)(nvmlDevice_t, nvmlMemoryErrorType_t, nvmlEccCounterType_t, unsigned long long *);
 	nvml_Device_MemoryErrorType_EccCounterType_unsigned_long_long nvmlDeviceGetTotalEccErrors = NULL;
-
-
-    //ciErrNum = clGetPlatformInfo (clSelectedPlatformID, CL_PLATFORM_NAME, sizeof(cBuffer), cBuffer, NULL);
-	//clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU, 100, devices, &devices_n)
-	//clGetDeviceInfo(devices[i], CL_DEVICE_NAME, sizeof(buffer), buffer, NULL));
 
 
 #ifdef WIN32
@@ -772,12 +900,20 @@ main( int argc, const char** argv, const char ** envp)
 
 	if (opt_pre_arg) { opt_pre = opt_pre_arg; }
 
+	// we will build an array of key=value pairs to hold properties of each device
+	// we build the whole list before showing anything so we can decide whether
+	// we are looking at a homogenous or heterogeneous pool
+	typedef std::map<std::string, std::string> KVP;
+	typedef std::map<std::string, KVP> MKVP;
+	MKVP dev_props;
+
 	// print out info about detected GPU resources
 	//
 	std::string detected_gpus;
 	for (dev = 0; dev < deviceCount; dev++) {
 		char prefix[100];
 		sprintf(prefix,"%s%d",opt_pre,dev);
+		dev_props[prefix].clear(); // this has the side effect of creating the KVP for prefix.
 		if ( ! detected_gpus.empty()) { detected_gpus += ", "; }
 		detected_gpus += prefix;
 	}
@@ -786,95 +922,151 @@ main( int argc, const char** argv, const char ** envp)
 	// print out static and/or dynamic info about detected GPU resources
 	for (dev = 0; dev < deviceCount; dev++) {
 
-		if (opt_slot && ((opt_slot-1) != dev)) {
+		if (opt_dev >= 0 && (opt_dev != dev)) {
 			continue;
 		}
 
 		char prefix[100];
 		sprintf(prefix,"%s%d",opt_pre,dev);
+		KVP& props = dev_props.find(prefix)->second;
 
-		if (opt_static && cudaGetDeviceProperties) {
+		if (opt_basic && cudaGetDeviceProperties) {
 			cudaDeviceProp deviceProp;
 			int driverVersion=0, runtimeVersion=0;
 
-			cudaGetDeviceProperties(&deviceProp, dev);
-
 			//printf("%sDev=%d\n",  prefix,dev);
 
-		#if CUDART_VERSION >= 2020
-			cudaDriverGetVersion(&driverVersion);
-			cudaRuntimeGetVersion(&runtimeVersion);
-			printf("%sDriverVersion=%d.%d\n", prefix, driverVersion/1000, driverVersion%100);
-			printf("%sRuntimeVersion=%d.%d\n", prefix, runtimeVersion/1000, runtimeVersion%100);
-		#endif
+			if (cudaDriverGetVersion) {
+				cudaDriverGetVersion(&driverVersion);
+				props["DriverVersion"] = Format("%d.%d", driverVersion/1000, driverVersion%100);
+			}
+			if (cudaRuntimeGetVersion) {
+				cudaRuntimeGetVersion(&runtimeVersion);
+				props["RuntimeVersion"] = Format("%d.%d", runtimeVersion/1000, runtimeVersion%100);
+			}
 
 			if (dev < g_cl_cCuda) {
 				cl_device_id did = cl_gpu_ids[g_cl_ixFirstCuda + dev];
 				std::string fullver;
-				oclGetInfo(did, CL_DEVICE_VERSION, fullver);
-				size_t ix = fullver.find_first_of(' '); // skip OpenCL
-				std::string vervend = fullver.substr(ix+1);
-				ix = vervend.find_first_of(' '); 
-				std::string ver = vervend.substr(0, ix); // split version from vendor info.
-				printf("%sOpenCLVersion=%s\n", prefix, ver.c_str());
-
-				//unsigned long long work_size = 0;
-				//oclGetInfo(did, CL_DEVICE_MAX_WORK_GROUP_SIZE, work_size);
-				//printf("%sWork=%llu\n", prefix, work_size);
+				if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_VERSION, fullver)) {
+					size_t ix = fullver.find_first_of(' '); // skip OpenCL
+					std::string vervend = fullver.substr(ix+1);
+					ix = vervend.find_first_of(' '); 
+					std::string ver = vervend.substr(0, ix); // split version from vendor info.
+					props["OpenCLVersion"] = ver;
+				}
 			}
 
-			printf("%sDeviceName=\"%s\"\n", prefix, deviceProp.name);
-			printf("%sCapability=%d.%d\n", prefix, deviceProp.major, deviceProp.minor);
-			printf("%sECCEnabled=%s\n", prefix, deviceProp.ECCEnabled ? "true" : "false");
-			printf("%sGlobalMemoryMb=%.0f\n", prefix, deviceProp.totalGlobalMem/(1024.*1024.));
-			printf("%sClockMhz=%.2f\n", prefix, deviceProp.clockRate * 1e-3f);
-			printf("%sMultiprocessors=%u\n", prefix, deviceProp.multiProcessorCount);
-			//printf("%sCores=%u\n", prefix, deviceProp.multiProcessorCount * ConvertSMVer2Cores(deviceProp.major, deviceProp.minor));
+			if (cudaSuccess == cudaGetDeviceProperties(&deviceProp, dev)) {
+				props["DeviceName"] = Format("\"%s\"", deviceProp.name);
+				props["Capability"] = Format("%d.%d", deviceProp.major, deviceProp.minor);
+				props["ECCEnabled"] = deviceProp.ECCEnabled ? "true" : "false";
+				props["GlobalMemoryMb"] = Format("%.0f", deviceProp.totalGlobalMem/(1024.*1024.));
+				if (opt_extra) {
+					props["ClockMhz"] = Format("%.2f", deviceProp.clockRate * 1e-3f);
+					props["ComputeUnits"] = Format("%u", deviceProp.multiProcessorCount);
+					props["CoresPerCU"] = Format("%u", ConvertSMVer2Cores(deviceProp.major, deviceProp.minor));
+				}
+			}
 
-		} else if (opt_static && ocl_handle) {
+		} else if (opt_basic && ocl_handle) {
 			cl_device_id did = cl_gpu_ids[dev];
-			std::string val;
-			oclGetInfo(did, CL_DEVICE_NAME, val);
-			printf("%sDeviceName=\"%s\"\n", prefix, val.c_str());
-			//oclGetInfo(did, CL_DEVICE_VENDOR, val);
-			oclGetInfo(did, CL_DEVICE_VERSION, val);
-			size_t ix = val.find_first_of(' '); // skip OpenCL
-			std::string vervend = val.substr(ix+1);
-			ix = vervend.find_first_of(' '); 
-			std::string ver = vervend.substr(0, ix); // split version from vendor info.
-			printf("%sOpenCLVersion=%s\n", prefix, ver.c_str());
 
-			unsigned int multiprocs = 0;
-			oclGetInfo(did, CL_DEVICE_MAX_COMPUTE_UNITS, multiprocs);
-			printf("%sMultiprocessors=%u\n", prefix, multiprocs);
-			//unsigned int work_size = 0;
-			//oclGetInfo(did, CL_DEVICE_MAX_WORK_GROUP_SIZE, work_size);
-			//printf("%sWork=%u\n", prefix, work_size);
-			unsigned int clock_mhz;
-			oclGetInfo(did, CL_DEVICE_MAX_CLOCK_FREQUENCY, clock_mhz);
-			printf("%sClockMhz=%u\n", prefix, clock_mhz);
+			std::string val;
+			if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_NAME, val)) {
+				props["DeviceName"] = Format("\"%s\"", val.c_str());
+			}
+
 			unsigned long long mem_bytes = 0;
-			oclGetInfo(did, CL_DEVICE_GLOBAL_MEM_SIZE, mem_bytes);
-			printf("%sGlobalMemoryMb=%.0f\n", prefix, mem_bytes/(1024.*1024.));
-			//printf("%sCapability=%d.%d\n", prefix, deviceProp.major, deviceProp.minor);
+			if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_GLOBAL_MEM_SIZE, mem_bytes)) {
+				props["GlobalMemoryMb"] = Format("%.0f", mem_bytes/(1024.*1024.));
+			}
 			int ecc_enabled = 0;
-			oclGetInfo(did, CL_DEVICE_ERROR_CORRECTION_SUPPORT, ecc_enabled);
-			printf("%sECCEnabled=%s\n", prefix, ecc_enabled ? "true" : "false");
+			if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_ERROR_CORRECTION_SUPPORT, ecc_enabled)) {
+				props["ECCEnabled"] = ecc_enabled ? "true" : "false";
+			}
+			//printf("%sCapability=%d.%d\n", prefix, deviceProp.major, deviceProp.minor);
+
+			if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_VERSION, val)) {
+				size_t ix = val.find_first_of(' '); // skip OpenCL
+				std::string vervend = val.substr(ix+1);
+				ix = vervend.find_first_of(' '); 
+				std::string ver = vervend.substr(0, ix); // split version from vendor info.
+				props["OpenCLVersion"] = ver;
+			}
+
+			if (opt_extra) {
+
+				unsigned int cus = 0;
+				if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_MAX_COMPUTE_UNITS, cus)) {
+					props["ComputeUnits"] = Format("%u", cus);
+				}
+
+				unsigned int clock_mhz;
+				if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_MAX_CLOCK_FREQUENCY, clock_mhz)) {
+					props["ClockMhz"] = Format("%u", clock_mhz);
+				}
+
+				//if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_VENDOR, val)) { props["Vendor"] = ver; }
+			}
 		}
 
+	}
+
+	// check for device homogeneity so we can print out simpler
+	// config/device attributes 
+	if (opt_basic) {
+		KVP common;
+		if ( ! opt_hetero && ! dev_props.empty()) {
+			const KVP & dev0 = dev_props.begin()->second;
+			for (KVP::const_iterator it = dev0.begin(); it != dev0.end(); ++it) {
+				bool all_match = true;
+				MKVP::const_iterator mit = dev_props.begin();
+				while (++mit != dev_props.end()) {
+					const KVP & devN = mit->second;
+					KVP::const_iterator pair = devN.find(it->first);
+					if (pair == devN.end() || pair->second != it->second) {
+						all_match = false;
+					}
+					if ( ! all_match) break;
+				}
+				if (all_match) {
+					common[it->first] = it->second;
+				}
+			}
+		}
+
+		// now print out device properties.
+		if ( ! common.empty()) {
+			for (KVP::const_iterator it = common.begin(); it != common.end(); ++it) {
+				printf("%s%s=%s\n", opt_pre, it->first.c_str(), it->second.c_str());
+			}
+		}
+		for (MKVP::const_iterator mit = dev_props.begin(); mit != dev_props.end(); ++mit) {
+			for (KVP::const_iterator it = mit->second.begin(); it != mit->second.end(); ++it) {
+				if (common.find(it->first) != common.end()) continue;
+				printf("%s%s=%s\n", mit->first.c_str(), it->first.c_str(), it->second.c_str());
+			}
+		}
+	}
 
 
-		
-		// end of if opt_static
+	// Dynamic properties
+	if ( !opt_dynamic ) return 0;
 
+	// need nvml to do dynamic properties
+	if ( !have_nvml ) return 1;
 
-		// Dynamic properties
+	// everything after here is dynamic properties
 
-		// need nvml to do dynamic properties
-		if ( !have_nvml ) continue;
-		// everything after here is dynamic properties
-		if ( !opt_dynamic ) continue;
+	for (dev = 0; dev < deviceCount; dev++) {
 
+		if (opt_dev >= 0 && (opt_dev != dev)) {
+			continue;
+		}
+
+		char prefix[100];
+		sprintf(prefix,"%s%d",opt_pre,dev);
 		// get a handle to this device
 		nvmlDevice_t device;
 		if (nvmlDeviceGetHandleByIndex(dev,&device) != NVML_SUCCESS) {
@@ -951,3 +1143,28 @@ main( int argc, const char** argv, const char ** envp)
 
     return 0;
 }
+
+void usage(FILE* out, const char * argv0)
+{
+	fprintf(out, "Usage: %s [options]\n", argv0);
+	fprintf(out, "Where options are:\n"
+		"    -properties       Include basic GPU device properties useful for matchmaking\n"
+		"    -extra            Include extra GPU device properties\n"
+		"    -dynamic          Include dynamic GPU device properties\n"
+		"    -mixed            Assume mixed GPU configuration\n"
+		"    -device <N>       Include properties only for GPU device N\n"
+		"    -tag <string>     use <string> as resource tag, default is GPUs\n"
+		"    -prefix <string>  use <string> as property prefix, default is CUDA or OCL\n"
+		"    -opencl           Prefer detection via OpenCL rather than CUDA\n"
+		//"    -nvcuda           Use nvcuda rather than cudarl for detection\n"
+		"    -simulate[:D[,N]] Sumulate detection of N devices of type D\n"
+		"           where D is 0 - GeForce GT 330, default N=1\n"
+		"                      1 - GeForce GTX 480, default N=2\n"
+		//"    -config           Output in HTCondor config syntax\n"
+		"    -help             Show this screen and exit\n"
+		"    -verbose          Show detection progress\n"
+		//"    -diagnostic       Show detection diagnostic information\n"
+		"\n"
+	);
+}
+
