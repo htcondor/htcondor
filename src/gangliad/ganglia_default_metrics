@@ -79,12 +79,14 @@
   Name   = "JobsAccumBadputTime";
   Desc   = "Runtime of jobs that were aborted (removed or held) or (standard universe only) evicted without a checkpoint.";
   Units  = "seconds";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsAccumExecuteTime";
   Desc   = "Time spent running jobs.  Does not include file transfer and other job handling time.";
   Units  = "seconds";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
@@ -92,19 +94,22 @@
   Verbosity = 1;
   Desc   = "Time spent processing a completed job (includes output file transfer)";
   Units  = "seconds";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsAccumPreExecuteTime";
   Verbosity = 1;
   Desc   = "Time spent preparing to run a job (includes input file transfer)";
-  Units  = "";
+  Units  = "seconds";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsAccumRunningTime";
   Desc   = "Time spent running jobs that were not counted as badput (i.e. not removed or held).  Includes file transfer and other handling time.";
   Units  = "seconds";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
@@ -112,6 +117,7 @@
   Verbosity = 1;
   Desc   = "Time between submit and running of a job";
   Units  = "seconds";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
