@@ -44,7 +44,9 @@
   Name   = strcat(MyType,"MonitorSelfImageSize");
   Value  = MonitorSelfImageSize;
   Desc   = "Memory allocated to this daemon (i.e. virtual image size)";
-  Units  = "kbytes";
+  Units  = "bytes";
+  Scale  = 1024;
+  Type   = "float";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
@@ -60,7 +62,9 @@
   Value  = MonitorSelfResidentSetSize;
   Verbosity = 1;
   Desc   = "RAM allocated to this daemon";
-  Units  = "kbytes";
+  Units  = "bytes";
+  Scale  = 1024;
+  Type   = "float";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
@@ -824,17 +828,23 @@
   TargetType = "Machine_slot1";
 ]
 [
-  Name   = "KFlops";
+  Name   = "Linpack";
+  Value  = KFlops;
   Verbosity = 1;
   Desc   = "Linpack floating point benchmark";
-  Units  = "kflops";
+  Units  = "FLOPS";
+  Scale  = 1000;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [
-  Name   = "Mips";
+  Name   = "Dhrystone";
+  Value  = Mips;
   Verbosity = 1;
   Desc   = "Dhrystone integer benchmark";
-  Units  = "mips";
+  Units  = "Iterations/sec";
+  Scale  = 1000000;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [
@@ -862,7 +872,9 @@
   Name   = "TotalDisk";
   Verbosity = 1;
   Desc   = "Disk space in the job execute directory";
-  Units  = "KB";
+  Units  = "bytes";
+  Scale  = 1024;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [
@@ -874,8 +886,10 @@
 [
   Name   = "TotalMemory";
   Verbosity = 1;
-  Desc   = "RAM in MB";
-  Units  = "MB";
+  Desc   = "RAM";
+  Units  = "bytes";
+  Scale  = 1048576;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [
@@ -909,7 +923,9 @@
   Name   = "TotalVirtualMemory";
   Verbosity = 1;
   Desc   = "Addressable memory (RAM plus swap)";
-  Units  = "KB";
+  Units  = "bytes";
+  Scale  = 1024;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [
