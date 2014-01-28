@@ -197,6 +197,7 @@ bool Job::Remove (const queue_t queue, const JobID_t jobID)
 bool
 Job::CheckForLogFile( bool usingDefault ) const
 {
+		// Should this use FindLogFile()?  wenger 2014-01-27
 	bool tmpLogFileIsXml;
 	MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
 				_directory, tmpLogFileIsXml, usingDefault );
@@ -797,7 +798,8 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 				condorLogReader : storkLogReader;
 
 	MyString logFile;
-	if ( !GetLogFile( usingDefault, logFile ) ) {
+	if ( !FindLogFile( usingDefault, logFile ) ) {
+		LogMonitorFailed();
 		return false;
 	}
 	// Note:  logFile is "" here if usingDefault is true and this node
@@ -1054,7 +1056,7 @@ Job::Release(int proc)
 
 //---------------------------------------------------------------------------
 bool
-Job::GetLogFile( bool usingWorkflowLog, MyString &logFile )
+Job::FindLogFile( bool usingWorkflowLog, MyString &logFile )
 {
 	if ( _jobType == TYPE_CONDOR ) {
 		if ( usingWorkflowLog ) {
@@ -1072,11 +1074,12 @@ Job::GetLogFile( bool usingWorkflowLog, MyString &logFile )
 				debug_printf( DEBUG_NORMAL, "Unable to get log file from "
 							"submit file %s (node %s); using default/workflow log\n",
 							_cmdFile, GetJobName() );
+				// Don't return false here, because not specifying the
+				// log file is not an error.
 			}
 		}
 
 	} else {
-		//TEMPTEMP -- test this?  do I have a fake Stork in my test setup somewhere?
 			// Workflow/default log file mode is not supported for Stork
 			// nodes, so we always have to get the log file for a Stork
 			// node.
@@ -1086,14 +1089,12 @@ Job::GetLogFile( bool usingWorkflowLog, MyString &logFile )
 		if ( tmpResult != "" ) {
 			debug_printf( DEBUG_QUIET, "Error getting Stork log file: %s\n",
 						tmpResult.Value() );
-			LogMonitorFailed();
 			return false;
 
 		} else if ( logFiles.number() != 1 ) {
 			debug_printf( DEBUG_QUIET, "Error: %d Stork log files found "
 						"in submit file %s; we want 1\n",
 						logFiles.number(), _cmdFile );
-			LogMonitorFailed();
 			return false;
 
 		} else {

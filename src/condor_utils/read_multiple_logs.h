@@ -128,16 +128,6 @@ public:
 		*/
 	static bool logFileNFSError(const char *fileName, bool nfsIsError);
 
-		/** Reads in the specified file, breaks it into lines, and
-			combines the lines into "logical" lines (joins continued
-			lines).
-			@param The filename
-			@param The StringList to receive the logical lines
-			@return "" if okay, error message otherwise
-		*/
-	static MyString fileNameToLogicalLines(const MyString &filename,
-				StringList &logicalLines);
-
 	class FileReader
 	{
 	public:
@@ -152,12 +142,14 @@ public:
 
 			/** Open this file.
 				@param filename: the file to open
+				@return: "" on success; error message on failure
 			 */
 		MyString Open( const MyString &filename );
 
 			/** Real the next "logical" line from the file.  (This means
 				lines are combined if they end with a continuation character.)
 				@param line: a MyString to recieve the line string
+				@return: true iff we got any data
 			 */
 		bool NextLogicalLine( MyString &line );
 
@@ -170,12 +162,6 @@ public:
 	};
 
 private:
-	    /** Read the entire contents of the given file into a MyString.
-		 * @param The name of the file.
-		 * @return The contents of the file.
-		 */
-    static MyString readFileToString(const MyString &strFilename);
-
 		/**
 		 * Get the given parameter if it is defined in the given submit file
 		 * line.
@@ -186,18 +172,6 @@ private:
 		 */
 	static MyString getParamFromSubmitLine(MyString &submitLine,
 			const char *paramName);
-
-		/**
-		 * Combine input ("physical") lines that end with the given
-		 * continuation character into "logical" lines.
-		 * @param Input string list of "physical" lines.
-		 * @param Continuation character.
-		 * @param Filename (for error messages).
-		 * @param Output string list of "logical" lines.
-		 * @return "" if okay, or else an error message.
-		 */
-	static MyString CombineLines(StringList &listIn, char continuation,
-			const MyString &filename, StringList &listOut);
 
 		/**
 		 * Skip whitespace in a std::string buffer.  This is a helper function
@@ -217,7 +191,6 @@ private:
 		 * @param output buffer
 		 * @return "" if okay, or else an error message.
 		 */
-	//TEMPTEMP -- doesn't this pretty much duplicate readFileToString?
 	static MyString readFile(char const *filename,std::string& buf);
 
 };

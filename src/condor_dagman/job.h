@@ -224,7 +224,7 @@ class Job {
 			default node log
 		@return true iff the submit file defines a log file
 	*/
-	bool CheckForLogFile(bool usingDefault) const;
+	bool CheckForLogFile( bool usingDefault ) const;
 
     /** Returns true if a queue is empty (has no jobs)
         @param queue Selects which queue to look at
@@ -513,8 +513,16 @@ public:
 	bool Release(int proc);
 
 private:
-		//TEMPTEMP -- document
-	bool GetLogFile( bool usingWorkflowLog, MyString &logFile );
+		/** Get the log file specified in the given submit file, if
+			any.  Note that if the job is an HTCondor job and
+			usingWorkflowLog is true, this method will return "" for
+			the log file name.
+			@param usingWorkflowLog: true iff we're using the workflow
+				log file to monitor jobs
+			@param logFile: a MyString to hold the log file name
+			@return true on success, false otherwise
+		*/
+	bool FindLogFile( bool usingWorkflowLog, MyString &logFile );
 
 		/** _onHold[proc] is nonzero if the condor job 
  			with ProcId == proc is on hold, and zero

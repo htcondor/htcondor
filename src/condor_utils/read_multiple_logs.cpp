@@ -275,39 +275,6 @@ ReadMultipleUserLogs::readEventFromLog( LogFileMonitor *monitor )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-//TEMPTEMP -- eliminate this method!!
-MyString
-MultiLogFiles::fileNameToLogicalLines(const MyString &filename,
-			StringList &logicalLines)
-{
-	MyString	result("");
-
-	MyString fileContents = readFileToString(filename);
-	if (fileContents == "") {
-		result = "Unable to read file: " + filename;
-		dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.Value());
-		return result;
-	}
-
-		// Split the file string into physical lines.
-		// Note: StringList constructor removes leading whitespace from lines.
-	StringList physicalLines(fileContents.Value(), "\r\n");
-	physicalLines.rewind();
-
-		// Combine lines with continuation characters.
-	MyString	combineResult = CombineLines(physicalLines, '\\',
-				filename, logicalLines);
-	if ( combineResult != "" ) {
-		result = combineResult;
-		return result;
-	}
-	logicalLines.rewind();
-
-	return result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
 MultiLogFiles::FileReader::FileReader()
 {
 	_fp = NULL;
@@ -334,9 +301,7 @@ MultiLogFiles::FileReader::Open( const MyString &filename )
 	return result;
 }
 
-//TEMPTEMP -- if we're looking for a config file, should we stop reading the DAG file after we find one?
-
-bool //TEMPTEMP -- not EOF
+bool
 MultiLogFiles::FileReader::NextLogicalLine( MyString &line )
 {
 	char *tmpLine = getline( _fp );
@@ -358,77 +323,12 @@ MultiLogFiles::FileReader::Close()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-//TEMPTEMP -- should this also be eliminated?
-MyString
-MultiLogFiles::readFileToString(const MyString &strFilename)
-{
-	//TEMPTEMP dprintf( D_FULLDEBUG, "MultiLogFiles::readFileToString(%s)\n",
-	dprintf( D_ALWAYS, "MultiLogFiles::readFileToString(%s)############################\n",//TEMPTEMP
-				strFilename.Value() );
-
-	FILE *pFile = safe_fopen_wrapper_follow(strFilename.Value(), "r");
-	if (!pFile) {
-		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
-				"safe_fopen_wrapper_follow(%s) failed with errno %d (%s)\n", strFilename.Value(),
-				errno, strerror(errno) );
-		return "";
-	}
-
-	if ( fseek(pFile, 0, SEEK_END) != 0 ) {
-		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
-				"fseek(%s) failed with errno %d (%s)\n", strFilename.Value(),
-				errno, strerror(errno) );
-		fclose(pFile);
-		return "";
-	}
-	int iLength = ftell(pFile);
-	if ( iLength == -1 ) {
-		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
-				"ftell(%s) failed with errno %d (%s)\n", strFilename.Value(),
-				errno, strerror(errno) );
-		fclose(pFile);
-		return "";
-	}
-	MyString strToReturn;
-	strToReturn.reserve_at_least(iLength);
-
-	fseek(pFile, 0, SEEK_SET);
-	char *psBuf = new char[iLength+1];
-		/*  We now clear the buffer to ensure there will be a NULL at the
-			end of our buffer after the fread().  Why no just do
-				psBuf[iLength] = 0  ?
-			Because on Win32, iLength may not point to the end of 
-			the buffer because \r\n are converted into \n because
-			the file is opened in text mode.  
-		*/
-	memset(psBuf,0,iLength+1);
-	int ret = fread(psBuf, 1, iLength, pFile);
-	if (ret == 0) {
-		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
-				"fread failed with errno %d (%s)\n", 
-				errno, strerror(errno) );
-		fclose(pFile);
-		delete [] psBuf;
-		return "";
-	}
-	
-	fclose(pFile);
-
-	strToReturn = psBuf;
-	delete [] psBuf;
-
-	return strToReturn;
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // Note: this method should get speeded up (see Gnats PR 846).
 MyString
 MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 		const MyString &directory, bool &isXml, bool usingDefaultNode)
 {
-	//TEMPTEMP dprintf( D_FULLDEBUG, "MultiLogFiles::loadLogFileNameFromSubFile(%s, %s)\n",
-	dprintf( D_ALWAYS, "MultiLogFiles::loadLogFileNameFromSubFile(%s, %s)\n",//TEMPTEMP
+	dprintf( D_FULLDEBUG, "MultiLogFiles::loadLogFileNameFromSubFile(%s, %s)\n",
 				strSubFilename.Value(), directory.Value() );
 
 	TmpDir		td;
@@ -440,9 +340,8 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 		}
 	}
 
-	//TEMPTEMP -- change this to use getValuesFromFile
-	StringList	logicalLines;
-	if ( fileNameToLogicalLines( strSubFilename, logicalLines ) != "" ) {
+	FileReader reader;
+	if ( reader.Open( strSubFilename ) != "" ) {
 		return "";
 	}
 
@@ -454,9 +353,8 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 		// log file and initial directory (if specified) and combine
 		// them into a path to the log file that's either absolute or
 		// relative to the DAG submit directory.  Also look for log_xml.
-	const char *logicalLine;
-	while( (logicalLine = logicalLines.next()) != NULL ) {
-		MyString	submitLine(logicalLine);
+	MyString submitLine;
+	while ( reader.NextLogicalLine( submitLine ) ) {
 		MyString	tmpLogName = getParamFromSubmitLine(submitLine, "log");
 		if ( tmpLogName != "" ) {
 			logFileName = tmpLogName;
@@ -477,6 +375,8 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 			}
 		}
 	}
+
+	reader.Close();
 
 	if ( !usingDefaultNode ) {
 			//
@@ -532,11 +432,9 @@ MyString
 MultiLogFiles::loadValueFromSubFile(const MyString &strSubFilename,
 		const MyString &directory, const char *keyword)
 {
-	//TEMPTEMP dprintf( D_FULLDEBUG, "MultiLogFiles::loadValueFromSubFile(%s, %s, %s)\n",
-	dprintf( D_ALWAYS, "MultiLogFiles::loadValueFromSubFile(%s, %s, %s)\n",//TEMPTEMP
+	dprintf( D_FULLDEBUG, "MultiLogFiles::loadValueFromSubFile(%s, %s, %s)\n",
 				strSubFilename.Value(), directory.Value(), keyword );
 
-	//TEMPTEMP -- change this to use getValuesFromFile
 	TmpDir		td;
 	if ( directory != "" ) {
 		MyString	errMsg;
@@ -546,8 +444,8 @@ MultiLogFiles::loadValueFromSubFile(const MyString &strSubFilename,
 		}
 	}
 
-	StringList	logicalLines;
-	if ( fileNameToLogicalLines( strSubFilename, logicalLines ) != "" ) {
+	FileReader reader;
+	if ( reader.Open( strSubFilename ) != "" ) {
 		return "";
 	}
 
@@ -555,14 +453,15 @@ MultiLogFiles::loadValueFromSubFile(const MyString &strSubFilename,
 
 		// Now look through the submit file logical lines to find the
 		// value corresponding to the keyword.
-	const char *logicalLine;
-	while( (logicalLine = logicalLines.next()) != NULL ) {
-		MyString	submitLine(logicalLine);
+	MyString submitLine;
+	while ( reader.NextLogicalLine( submitLine ) ) {
 		MyString	tmpValue = getParamFromSubmitLine(submitLine, keyword);
 		if ( tmpValue != "" ) {
 			value = tmpValue;
 		}
 	}
+
+	reader.Close();
 
 		//
 		// Check for macros in the value -- we currently don't
@@ -621,8 +520,6 @@ MultiLogFiles::skip_whitespace(std::string const &s,int &offset) {
 MyString
 MultiLogFiles::readFile(char const *filename,std::string& buf)
 {
-	dprintf( D_ALWAYS, "MultiLogFiles::readFile(%s)#########################################\n",//TEMPTEMP
-				filename );//TEMPTEMP
     char chunk[4000];
 	MyString rtnVal;
 
@@ -766,12 +663,10 @@ int
 MultiLogFiles::getQueueCountFromSubmitFile(const MyString &strSubFilename,
 			const MyString &directory, MyString &errorMsg)
 {
-	//TEMPTEMP dprintf( D_FULLDEBUG,
-	dprintf( D_ALWAYS,//TEMPTEMP
+	dprintf( D_FULLDEBUG,
 				"MultiLogFiles::getQueueCountFromSubmitFile(%s, %s)\n",
 				strSubFilename.Value(), directory.Value() );
 
-	//TEMPTEMP -- change this to use getValuesFromFile
 	int queueCount = 0;
 	errorMsg = "";
 
@@ -782,9 +677,9 @@ MultiLogFiles::getQueueCountFromSubmitFile(const MyString &strSubFilename,
 		fullpath = strSubFilename;
 	}
 
-	StringList	logicalLines;
-	if ( (errorMsg = fileNameToLogicalLines( strSubFilename,
-				logicalLines)) != "" ) {
+	FileReader reader;
+	MyString errMsg = reader.Open( fullpath );
+	if ( errMsg != "" ) {
 		return -1;
 	}
 
@@ -792,9 +687,8 @@ MultiLogFiles::getQueueCountFromSubmitFile(const MyString &strSubFilename,
 		// queue commands, and count up the total number of job procs
 		// to be queued.
 	const char *	paramName = "queue";
-	const char *logicalLine;
-	while( (logicalLine = logicalLines.next()) != NULL ) {
-		MyString	submitLine(logicalLine);
+	MyString submitLine;
+	while ( reader.NextLogicalLine( submitLine ) ) {
 		submitLine.Tokenize();
 		const char *DELIM = " ";
 		const char *rawToken = submitLine.GetNextToken( DELIM, true );
@@ -811,6 +705,8 @@ MultiLogFiles::getQueueCountFromSubmitFile(const MyString &strSubFilename,
 			}
 		}
 	}
+
+	reader.Close();
 
 	return queueCount;
 }
@@ -907,50 +803,6 @@ MultiLogFiles::getParamFromSubmitLine(MyString &submitLine,
 	}
 
 	return paramValue;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-//TEMPTEMP -- eliminate this method!!
-MyString
-MultiLogFiles::CombineLines(StringList &listIn, char continuation,
-		const MyString &filename, StringList &listOut)
-{
-	dprintf( D_FULLDEBUG, "MultiLogFiles::CombineLines(%s, %c)\n",
-				filename.Value(), continuation );
-
-	listIn.rewind();
-
-		// Physical line is one line in the file.
-	const char	*physicalLine;
-	while ( (physicalLine = listIn.next()) != NULL ) {
-
-			// Logical line is physical lines combined as needed by
-			// continuation characters (backslash).
-		MyString	logicalLine(physicalLine);
-
-		while ( logicalLine[logicalLine.Length()-1] == continuation ) {
-
-				// Remove the continuation character.
-			logicalLine.setChar(logicalLine.Length()-1, '\0');
-
-				// Append the next physical line.
-			physicalLine = listIn.next();
-			if ( physicalLine ) {
-				logicalLine += physicalLine;
-			} else {
-				MyString result = MyString("Improper file syntax: ") +
-							"continuation character with no trailing line! (" +
-							logicalLine + ") in file " + filename;
-				dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.Value());
-				return result;
-			}
-		}
-
-		listOut.append(logicalLine.Value());
-	}
-
-	return ""; // blank means okay
 }
 
 ///////////////////////////////////////////////////////////////////////////////
