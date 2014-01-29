@@ -78,6 +78,17 @@ This affected the ability to turn off specific daemons,
 as sent to the \Condor{master}.
 \Ticket{4160}
 
+\item Fixed a bug that caused \Condor{submit\_dag} to crash on very
+large DAG files (e.g., larger than 2 GB).
+\Ticket{4171}
+
+\item Fixed a bug that caused \Condor{dagman} to unnecessarily attempt
+to read node job submit files, which could cause spurious warnings
+in recovery mode.  (Strictly speaking, the bug is fixed only for the
+default case of \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} being set
+to true.)
+\Ticket{3843}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
