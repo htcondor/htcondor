@@ -280,7 +280,24 @@ GangliaD::publishMetric(Metric const &m)
 			metric.name.c_str(), value.c_str(), metric.group.c_str(),  metric.units.c_str(), metric.derivative, metric.gangliaMetricType(), metric.title.c_str(), metric.desc.c_str(), metric.cluster.c_str(), spoof_host.c_str());
 
 	if( !m_ganglia_noop ) {
+        // TODO: Remove this hack that sends a heartbeat with every update
 		bool ok = ganglia_send(
+						  m_ganglia_context,
+						  m_ganglia_channels,
+						  NULL,
+						  "heartbeat",
+						  "0",
+						  "uint32",
+						  "",
+						  0,
+						  metric.title.c_str(),
+						  metric.desc.c_str(),
+						  spoof_host.c_str(),
+						  metric.cluster.c_str(),
+						  0,
+						  0);
+
+		ok = ganglia_send(
 						  m_ganglia_context,
 						  m_ganglia_channels,
 						  metric.group.c_str(),
