@@ -2493,6 +2493,7 @@ sub slurp {
 	  	return(0);
 	  }
 	  if($self->{alive} eq "yes") {
+	  	#print "master alive:$self->{alive}\n";
 	  	return(1);
 	  }
 	  return(0);
@@ -2515,9 +2516,10 @@ sub LoadWhoData
 		ListAllPersonalCondors();
 		return(0);
 	}
+	#
 	#print "<$condor> condor instance\n";
-	#print "<$daemon> daemon\n";
-	#print "<$alive> alive\n";
+	#print "LoadWhoData:<$daemon> daemon ";
+	#print "<$alive> alive ";
 	#print "<$pid> pid\n";
 	#print "<$ppid> ppid\n";
 	#print "<$binary> binary\n";
@@ -2689,7 +2691,7 @@ sub LoadWhoData
 	  foreach my $daemonkey (keys %{$self->{personal_who_data}}) {
 	  	#print "$daemonkey: $self->{personal_who_data}->{$daemonkey}\n";
 		if($daemonkey eq "Master") {
-			#print "found master\n";
+			#print "found master*******************************************************\n";
 			#$self->{personal_who_data}->{$daemonkey}->DisplayWhoDataInstance();
 			return($self->{personal_who_data}->{$daemonkey}->MasterLives());
 		}

@@ -1582,6 +1582,7 @@ sub StateChange
 	my $desiredstate = shift || croak "No desired state passed in\n";
 	my $config = shift;
 	my $timelimit = shift;
+	my $masterlimit = shift;
 	my $RunningTimeStamp = time;
 	my $finaltime = 0;
 	#print "StateChange: $desiredstate/$config\n";
@@ -1599,7 +1600,22 @@ sub StateChange
 		print "Waiting for condor to stop. $daemonlist\n";
 	}
 	while($state ne $desiredstate) {
+		my $amialive = $condor_instance->HasLiveMaster();
 		$now = time;
+		if(($amialive == 0) &&($desiredstate eq "up")) {
+			if(($now - $RunningTimeStamp) >= $masterlimit) {
+				print "Expended alloted time in StateChange waiting for a running master: $masterlimit\n";
+				$condor_instance->DisplayWhoDataInstances();
+				return(0);
+			}
+		}
+		if(($amialive == 1) &&($desiredstate eq "down")) {
+			if(($now - $RunningTimeStamp) >= $masterlimit) {
+				print "Expended alloted time in StateChange waiting for master to be gone: $masterlimit\n";
+				$condor_instance->DisplayWhoDataInstances();
+				return(0);
+			}
+		}
 		if(($now - $RunningTimeStamp) >= $timelimit) {
 			print "Expended alloted time in StateChange: $timelimit\n";
 			$condor_instance->DisplayWhoDataInstances();
@@ -1635,7 +1651,9 @@ sub NewIsRunningYet {
 	my $config = shift;
 	my $name = shift;
 	#print "Checking running of: $name config:$config \n";
-	my $res = StateChange("up", $config, 40);
+	# ON going up or down, first number total time to allow a full up state, but
+	# master has to be alive by second number or bail
+	my $res = StateChange("up", $config, 120, 30);
 	return $res;
 }
 
@@ -1647,7 +1665,7 @@ sub NewIsDownYet {
 	} else {
 		#print "This config does not have a condor instance condor_name:$config\n";
 	}
-	my $res = StateChange("down", $config, 40);
+	my $res = StateChange("down", $config, 40, 40);
 	return $res;
 }
 
@@ -2192,6 +2210,23 @@ sub CollectWhoData
 	my @whoarray;
 	#print "CollectWhoData for this Condor:<$ENV{CONDOR_CONFIG}>\n";
 
+	# Get condor instance for this config
+	#print "CollectWhoData start\n";
+	#system("date");
+	my $usequick = 1;
+	my $condor = CondorTest::GetPersonalCondorWithConfig($ENV{CONDOR_CONFIG});
+
+	#$condor->DisplayWhoDataInstances();
+	# condor_who -quick is best before master is alive
+	if($condor != 0) {
+		my $hasLive = $condor->HasLiveMaster();
+		#print "HasLiveMaster says:$hasLive\n";
+		if($condor->HasLiveMaster() == 1) {
+			$usequick = 0;
+		}
+	} else {
+		die "CollectWhoData with no condor instance yet\n";
+	}
     my $logdir = `condor_config_val log`;
 	if($btdebug == 1) {
 		#print "Log file from config: $logdir\n";
@@ -2204,22 +2239,74 @@ sub CollectWhoData
 	}
     CondorUtils::fullchomp($logdir);
 
-	CondorTest::runCondorTool("condor_who -daemon -log $logdir",\@whoarray,2,{emit_output=>0});
+	if($usequick == 1) {
+		#print "Using -quick\n";
+		CondorTest::runCondorTool("condor_who -quick -daemon -log $logdir",\@whoarray,2,{emit_output=>0});
+	} else {
+		CondorTest::runCondorTool("condor_who -daemon -log $logdir",\@whoarray,2,{emit_output=>0});
+	}
 
 	foreach my $wholine (@whoarray) {
 		CondorUtils::fullchomp($wholine);
+		#print "$wholine\n";
 		if($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+<(.*)>\s+(.*)/) {
+			#print "Who data with 7 fields:$1,$2,$3,$4,$5,$6,$7\n";
 			#print "Parse:$wholine\n";
 			#print "Before LoadWhoData: $1,$2,$3,$4,$5,$6,$7\n";
 			# this next call assumes we are interested in currently configed personal condor
 			# which means a lookup for condor instance for each daemon
 			CondorTest::LoadWhoData($1,$2,$3,$4,$5,$6,$7);
+		} elsif($wholine =~ /(\w*)\s+(.*?)\s+(.*?)\s+(.*?)/) {
+			#print "Who data with 4 fields:$1,$2,$3,$4\n";
+			#condor_who -quick fields. $1 daemon name $2 pid
+			#id this is the master is pid real?
+			my $savepid = $2;
+			my $processstring = "";
+			if($1 eq "Master") {
+				#print "Master found\n";
+				if(CondorUtils::is_windows() == 1) {
+			    	my @grift = `tasklist | grep $savepid`;
+					foreach my $process (@grift) {
+						#print "consider:$process saved pid: $savepid\n";
+						if($process =~ /(.*?)\s+(\d+)\s+(\w+).*/) {
+							$processstring = $1;
+							if($2 eq $savepid) {
+								#print "Pids equal:$processstring\n";
+								# does this process have master in binary
+								if($processstring =~ /condor_master/) {
+									#print "Is master, thus master alive\n";
+									CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
+								}
+							}
+						}
+					}
+				} else {
+					#print "Master record\n";
+					if($savepid ne "no") {
+						my @psdata = `ps $savepid`;
+						my $pssize = @psdata;
+						#print "ps data on $savepid: $psdata[1]\n";
+						if($pssize >= 2) {
+							if($psdata[1] =~ /condor_master/) {
+								#Mark master alive
+								#print "Marking Master Alive*************************************************************\n";
+								#print "Before LoadWhoData:\n";
+								CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
+							}
+						}
+					}
+				}
+			}
 		} elsif($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?).*/) {
+			#print "Who data with 5 fields:$1,$2,$3,$4,$5\n";
+			#print "Before LoadWhoData: $1,$2,$3,$4,$5\n";
 			CondorTest::LoadWhoData($1,$2,$3,$4,$5,"","");
 		} else {
 			#print "CollectWhoData: Parse Error: $wholine\n";
 		}
 	}
+	#print "CollectWhoData done\n";
+	#system("date");
 }
 #################################################################
 #
