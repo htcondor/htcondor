@@ -48,7 +48,6 @@ extern dynuser* myDynuser;
 #endif
 
 extern CStarter *Starter;
-FilesystemRemap * fs_remap = NULL;
 
 VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd),
 	m_memory_limit(-1),
@@ -208,11 +207,7 @@ VanillaProc::StartJob()
 		        fi.login);
 	}
 
-	if (fs_remap != NULL) {
-        delete fs_remap;
-        fs_remap = NULL;
-    }
-    
+	FilesystemRemap * fs_remap = NULL;
 #if defined(LINUX)
 	// on Linux, we also have the ability to track processes via
 	// a phony supplementary group ID
@@ -577,6 +572,9 @@ VanillaProc::StartJob()
 	//
 	int retval = OsProc::StartJob(&fi, fs_remap);
 
+	if (fs_remap != NULL) {
+		delete fs_remap;
+	}
 
 #if defined(HAVE_EXT_LIBCGROUP)
 
@@ -739,13 +737,6 @@ VanillaProc::JobReaper(int pid, int status)
 		fclose(f);
 	}
 
-	if (fs_remap != NULL) {
-        fs_remap->cleanup();
-        delete fs_remap;
-        fs_remap = NULL;
-    }
-	
-	
 		// This will reset num_pids for us, too.
 	return OsProc::JobReaper( pid, status );
 }

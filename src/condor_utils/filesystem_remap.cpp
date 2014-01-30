@@ -146,27 +146,6 @@ int FilesystemRemap::FixAutofsMounts() {
 #endif
 }
 
-int FilesystemRemap::cleanup()
-{
-    int retval = 0;
-    
-#if defined(LINUX)
-    TemporaryPrivSentry sentry(PRIV_ROOT);
-    
-    for (std::map<std::string, std::string>::iterator it = m_mounts_named.begin(); it != m_mounts_named.end(); it++)
-    {
-        dprintf(D_ALWAYS, "****UNMOUNTING %s\n",it->second.c_str() );
-        
-        if (0 != umount( it->second.c_str() ))
-        {
-            dprintf(D_ALWAYS, "**** FAILED UNMOUNTING %s errno=%d\n",it->second.c_str(), errno );
-        }
-    }
-#endif
-
-    return (retval);
-}
-
 // This is called within the exec
 // IT CANNOT CALL DPRINTF!
 int FilesystemRemap::PerformMappings() {

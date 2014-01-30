@@ -82,11 +82,6 @@ public:
 	 * @returns: 0 if everything went well, -1 if the remounts failed.
 	 */
 	int PerformMappings();
-    
-    /**
-     */
-    int cleanup();
-    
 
 	/**
 	 * Determine where a directory will be accessible from after the mapping.
