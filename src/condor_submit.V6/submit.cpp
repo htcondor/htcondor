@@ -5752,33 +5752,13 @@ SetGridParams()
 	}
 
 	// GceMetadata is not a necessary parameter
-	// The formatting of this attribute is identical to the environment.
+	// This is a comma-separated list of name/value pairs
 	if( (tmp = condor_param( GceMetadata, ATTR_GCE_METADATA )) ) {
-		Env envobject;
-
-		MyString error_msg;
-		if ( !envobject.MergeFromV1RawOrV2Quoted( tmp, &error_msg ) ) {
-			fprintf( stderr,
-					 "\n%s\nThe metadata you specified was: '%s'\n",
-					 error_msg.Value(), tmp );
-			DoCleanup( 0, 0, NULL );
-			exit( 1 );
-		}
-		free( tmp );
-
-		MyString newenv;
-		MyString newenv_raw;
-
-		if ( !envobject.getDelimitedStringV2Raw( &newenv_raw, &error_msg ) ) {
-			fprintf( stderr,
-					 "\nERROR: failed to insert metadata into job ad: %s\n",
-					 error_msg.Value() );
-			DoCleanup( 0, 0, NULL );
-			exit( 1 );
-		}
-		formatstr( newenv, "%s = \"%s\"", ATTR_GCE_METADATA,
-				   newenv_raw.EscapeChars( "\"", '\\' ).Value() );
-		InsertJobExpr( newenv );
+		StringList list( tmp, "," );
+		char *list_str = list.print_to_string();
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_METADATA, list_str );
+		InsertJobExpr( buffer.Value() );
+		free( list_str );
 	}
 
 	// GceMetadataFile is not a necessary parameter

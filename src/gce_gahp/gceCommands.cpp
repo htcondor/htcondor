@@ -21,7 +21,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "string_list.h"
-#include "env.h"
 #include "gcegahp_common.h"
 #include "gceCommands.h"
 
@@ -169,7 +168,8 @@ const char *escapeJSONString( const char *value )
 // Utility function for parsing the metadata file given by the user.
 // We expect to see one key/value pair per line, key and value separated
 // by '=' or ':', and no extraneous whitespace.
-bool ParseMetadataLine( const char *&input, string &key, string &value )
+bool ParseMetadataLine( const char *&input, string &key, string &value,
+						char delim )
 {
 	const char *ptr = NULL;
 	bool in_key = true;
@@ -183,7 +183,7 @@ bool ParseMetadataLine( const char *&input, string &key, string &value )
 			} else {
 				key += *ptr;
 			}
-		} else if ( *ptr == '\n' ) {
+		} else if ( *ptr == delim ) {
 			ptr++;
 			input = ptr;
 			return true;
@@ -193,7 +193,7 @@ bool ParseMetadataLine( const char *&input, string &key, string &value )
 	}
 
 	input = ptr;
-	return false;
+	return !key.empty() && !value.empty();
 }
 
 // From the body of a failure reply from the server, extract the best
@@ -808,12 +808,13 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.serviceURL += "/instances";
 	insert_request.requestMethod = "POST";
 
-	Env env;
+	std::map<string, string> metadata;
 	if ( strcasecmp( argv[9], NULLSTRING ) ) {
-		MyString err_msg;
-		if ( !env.MergeFromV2Raw( argv[9], &err_msg ) ) {
-			result_string = create_failure_result( requestID, "Bad metadata argument" );
-			return true;
+		string key;
+		string value;
+		const char *pos = argv[9];
+		while ( ParseMetadataLine( pos, key, value, ',' ) ) {
+			metadata[key] = value;
 		}
 	}
 	if ( strcasecmp( argv[10], NULLSTRING ) ) {
@@ -825,8 +826,8 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 		string key;
 		string value;
 		const char *pos = file_contents.c_str();
-		while( ParseMetadataLine( pos, key, value ) ) {
-			env.SetEnv( key.c_str(), value.c_str() );
+		while( ParseMetadataLine( pos, key, value, '\n' ) ) {
+			metadata[key] = value;
 		}
 	}
 
@@ -840,29 +841,21 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += "\"image\": \"";
 	insert_request.requestBody += argv[8];
 	insert_request.requestBody += "\",\n";
-	if ( env.Count() ) {
+	if ( !metadata.empty() ) {
 		insert_request.requestBody += "\"metadata\": {\n";
 		insert_request.requestBody += "\"items\": [\n";
 
-		char **vars = env.getStringArray();
-		for ( char **ptr = vars; *ptr; ptr++ ) {
-			char *equals = strchr( *ptr, '=' );
-			if ( equals == NULL ) {
-				continue;
-			}
-			*equals = '\0';
-			equals++;
-			if ( ptr != vars ) {
+		for ( map<string, string>::const_iterator itr = metadata.begin(); itr != metadata.end(); itr++ ) {
+			if ( itr != metadata.begin() ) {
 				insert_request.requestBody += ", ";
 			}
 			insert_request.requestBody += "{\n\"key\": \"";
-			insert_request.requestBody += *ptr;
+			insert_request.requestBody += itr->first;
 			insert_request.requestBody += "\",\n";
 			insert_request.requestBody += "\"value\": \"";
-			insert_request.requestBody += escapeJSONString( equals );
+			insert_request.requestBody += escapeJSONString( itr->second.c_str() );
 			insert_request.requestBody += "\"\n}\n";
 		}
-		deleteStringArray( vars );
 
 		insert_request.requestBody += "]\n";
 		insert_request.requestBody += "},\n";
