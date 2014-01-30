@@ -78,6 +78,22 @@ now fetches all \Condor{startd} history by concatenating all instances
 of log files resulting from rotation to the current history log.
 \Ticket{4152}
 
+\item Several general mechanisms for specifying user-defined \Condor{startd} resources
+have been enhanced so that GPUs can be easily defined and used with HTCondor. This includes
+having HTCondor automatically set \Env{CUDA\_VISIBLE\_DEVICES} for GPU jobs.
+
+\Macro{MACHINE\_RESOURCE\_<name>} and \Macro{MACHINE\_RESOURCE\_INVENTORY\_<name>}
+now support the the definition user-defined resources as a list of resource
+identifiers.  When HTCondor allocates a user-defined resource to a slot, if the resource
+has identifiers, then HTCondor will assign specific instances of the resouce and
+publish the assignment into the slot ClassAd using the new attribute \Attr{Assigned<name>}.
+It will also publish the assignment into the job's environment as \Env{\_CONDOR\_Assigned<name>}
+If the new configuration variable \Macro{ENVIRONMENT\_FOR\_Assigned<name>} is specified,
+HTCondor will also publish the assigned resources into the job's environment using the
+environment variables given in this configuration variable.
+\Ticket{4141}
+\Ticket{4148}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
