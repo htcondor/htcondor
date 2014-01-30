@@ -38,19 +38,6 @@ FilesystemRemap::FilesystemRemap() :
 	FixAutofsMounts();
 }
 
-int FilesystemRemap::AddFuseMapping(const std::string & exec, const std::string & dest) {
-    
-    if (!mkdir_and_parents_if_needed( dest.c_str(), S_IRWXU, PRIV_USER )) {
-        dprintf(D_ALWAYS, "Failed to create directory mount point %s\n", dest.c_str());
-        return -1;
-    }
-    
-    //TODO: should I check exec here?
-    m_mounts_fuse[exec]=dest;
-    
-    return 0;
-}
-
 int FilesystemRemap::AddMapping(std::string source, std::string dest) {
 	if (!is_relative_to_cwd(source) && !is_relative_to_cwd(dest)) {
 		std::list<pair_strings>::const_iterator it;
@@ -167,38 +154,6 @@ int FilesystemRemap::PerformMappings() {
 	if ((!retval) && m_remap_proc) {
 		retval = mount("proc", "/proc", "proc", 0, NULL);
 	}
-	
-	// setup fuse mounts.
-	if ( (!retval) && m_mounts_fuse.size() ) {
-        
-        for (std::map<std::string, std::string>::iterator it = m_mounts_fuse.begin(); it != m_mounts_fuse.end(); it++)
-        {          
-            errno = 0;
-            int pid = fork();
-            if (!pid) {
-                char *argv[5];
-                argv[0] = strdup( it->first.c_str() );
-                argv[1] = strdup( it->second.c_str() );
-                argv[2] = strdup("-o");
-                // it's debatable what othe items may be needed.
-                argv[3] = strdup("allow_other");
-                argv[4] = NULL;
-                execv(it->first.c_str(), argv);
-                _exit(errno);
-            } else if (pid == -1) {
-                retval = errno;
-            } else {
-                int status;
-                errno = EINVAL;
-                retval = waitpid(pid, &status, 0);
-                retval = retval == pid ? 0 : -1;
-                if (!retval) {
-                    retval = status;
-                }
-            }
-        }
-    }
-	
 #endif
 	return retval;
 }
