@@ -1,6 +1,7 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright (C) 1990-2014, Condor Team, Computer Sciences Department,
+ # University of Wisconsin-Madison, WI.
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
