@@ -171,6 +171,7 @@ sub GetStartdSlotAttrs
 	my $memorydescription = "";
 	my @fullslot1 = ();
 	my $trycount = 0;
+	my $cmdstatus = 1;
 
 	foreach my $slot (@namearray) {
 		$trycount = 0;
@@ -181,7 +182,11 @@ sub GetStartdSlotAttrs
 				$measuredslot = $1;
 				$memorydescription = "$measuredslot" . "_memory";
 			}
-			@fullslot1 = `condor_status -debug -l $slot | grep Memory | sort`;
+			# @fullslot1 = `condor_status -debug -l $slot | grep Memory | sort`;
+			$cmdstatus = runCondorTool("condor_status -debug -l $slot | grep Memory | sort",\@fullslot1,2);
+			if(!$cmdstatus) {
+				print "This:condor_status -debug -l $slot | grep Memory | sort should not have failed\n";
+			}
 			foreach my $thing (@fullslot1) {
 				chomp($thing);
 				#print "$slot: --- $thing ---\n";
@@ -191,7 +196,12 @@ sub GetStartdSlotAttrs
 				}
 			}
 		}
-		my @results = `condor_status -debug -l $slot | grep slot | sort`;
+		#my @results = `condor_status -debug -l $slot | grep slot | sort`;
+		my @results = ();
+		$cmdstatus = runCondorTool("condor_status -debug -l $slot | grep slot | sort",\@results, 2);
+			if(!$cmdstatus) {
+				print "This:condor_status -debug -l $slot | grep slot | sort should not have failed\n";
+			}
 		my $statusres = @results;
 		print "condor_status for slot <$slot> returned <$statusres> lines\n";
 		foreach my $item (@results) {
