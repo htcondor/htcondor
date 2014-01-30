@@ -7426,7 +7426,6 @@ init_params()
     fixedReqRes.insert(RequestCpus);
     fixedReqRes.insert(RequestMemory);
     fixedReqRes.insert(RequestDisk);
-    stringReqRes.clear();
 }
 
 int

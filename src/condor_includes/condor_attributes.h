@@ -896,11 +896,6 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_REQUEST_MEMORY  "RequestMemory"
 #define ATTR_REQUEST_DISK  "RequestDisk"
 
-//------------------------------------------------------------
-#define ATTR_REQUEST_MNTS  "RequestMounts"
-#define ATTR_NAMED_MOUNT_PTS "Mounts"
-//------------------------------------------------------------
-
 // machine resource prefixes
 #define ATTR_REQUEST_PREFIX  "Request"
 #define ATTR_DETECTED_PREFIX  "Detected"

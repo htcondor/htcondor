@@ -38,7 +38,7 @@ FilesystemRemap::FilesystemRemap() :
 	FixAutofsMounts();
 }
 
-int FilesystemRemap::AddNamedMapping(const std::string & exec, const std::string & dest) {
+int FilesystemRemap::AddFuseMapping(const std::string & exec, const std::string & dest) {
     
     if (!mkdir_and_parents_if_needed( dest.c_str(), S_IRWXU, PRIV_USER )) {
         dprintf(D_ALWAYS, "Failed to create directory mount point %s\n", dest.c_str());
@@ -46,7 +46,7 @@ int FilesystemRemap::AddNamedMapping(const std::string & exec, const std::string
     }
     
     //TODO: should I check exec here?
-    m_mounts_named[exec]=dest;
+    m_mounts_fuse[exec]=dest;
     
     return 0;
 }
@@ -168,10 +168,10 @@ int FilesystemRemap::PerformMappings() {
 		retval = mount("proc", "/proc", "proc", 0, NULL);
 	}
 	
-	// setup named mounts.
-	if ( (!retval) && m_mounts_named.size() ) {
+	// setup fuse mounts.
+	if ( (!retval) && m_mounts_fuse.size() ) {
         
-        for (std::map<std::string, std::string>::iterator it = m_mounts_named.begin(); it != m_mounts_named.end(); it++)
+        for (std::map<std::string, std::string>::iterator it = m_mounts_fuse.begin(); it != m_mounts_fuse.end(); it++)
         {          
             errno = 0;
             int pid = fork();

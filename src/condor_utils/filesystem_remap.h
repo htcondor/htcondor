@@ -71,7 +71,7 @@ public:
      * @param dest: A destination directory
      * @returns: 0 on success, -1 if the directories were not mappable.
      */
-    int AddNamedMapping(const std::string & exec, const std::string & dest);
+    int AddFuseMapping(const std::string & exec, const std::string & dest);
     
 	/**
 	 * Performs the mappings known to this class.
@@ -127,7 +127,7 @@ private:
 	std::list<pair_strings> m_mappings;
 	std::list<pair_str_bool> m_mounts_shared;
 	std::list<pair_strings> m_mounts_autofs;
-    std::map<std::string, std::string> m_mounts_named;
+    std::map<std::string, std::string> m_mounts_fuse;
 
 	bool m_remap_proc;
 
