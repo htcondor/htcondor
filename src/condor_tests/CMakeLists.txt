@@ -138,15 +138,15 @@ if (BUILD_TESTING)
 
 		# someone else can add the fortran tests.
 		dprint("UW - add fortran .exe tests if desired")
-		
-		if(${RPM_SYSTEM_NAME} MATCHES "rhel5" AND ${SYS_ARCH} MATCHES "X86_64")
-			condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
+
+		if( ${SYS_ARCH} MATCHES "X86_64" )
+			if(  "${RPM_SYSTEM_NAME}" MATCHES "rhel5"
+			  OR "${SYSTEM_NAME}" MATCHES "Debian-7"
+			  OR "${RPM_SYSTEM_NAME}" MATCHES "rhel7" )
+				condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
+			endif()
 		endif()
-		
-        if(${SYSTEM_NAME} MATCHES "Debian-7" AND ${SYS_ARCH} MATCHES "X86_64")
-            dprint( "Will run LIGO test on Debian 7" )
-			condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
-		endif()
+
 	endif(STD_UNIVERSE)
 
 	##########################################################
