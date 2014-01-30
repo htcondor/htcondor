@@ -109,7 +109,7 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 	condor_pre_external( BOOST ${BOOST_FILENAME}-p2 "lib;${INCLUDE_LOC}" "done")
 
 	set(BOOST_MIN_BUILD_DEP --with-thread --with-test --with-python)
-	if( "${CONDOR_PLATFORM}" STREQUAL "x86_64_Fedora18" OR "${CONDOR_PLATFORM}" STREQUAL "x86_64_Fedora19" )
+	if( "${CONDOR_PLATFORM}" STREQUAL "x86_64_Fedora18" OR "${CONDOR_PLATFORM}" STREQUAL "x86_64_Fedora19" OR "${CONDOR_PLATFORM}" STREQUAL "x86_64_RedHat7" )
 		set(BOOST_PATCH patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/boost.patch)
 	else ()
 		set(BOOST_PATCH echo "nothing")

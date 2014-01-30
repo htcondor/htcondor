@@ -281,6 +281,25 @@ our %submit_info = (
 	},
 
 	##########################################################################
+	# Platform RHEL 7 on x86_64
+	##########################################################################
+	'x86_64_RedHat7'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+			},
+			'prereqs'	=> [ ],
+			'xtests'	=>	undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
 	# Platform RedHat and SL
 	##########################################################################
 	'x86_64_RedHat6'	=> {
