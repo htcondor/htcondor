@@ -861,7 +861,11 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 		insert_request.requestBody += "},\n";
 	}
 	insert_request.requestBody += "\"networkInterfaces\": [\n{\n";
-	insert_request.requestBody += "\"network\": \"https://www.googleapis.com/compute/v1beta16/projects/jfrey-condor/global/networks/default\",\n";
+	insert_request.requestBody += "\"network\": \"";
+	insert_request.requestBody += argv[2];
+	insert_request.requestBody += "/projects/";
+	insert_request.requestBody += argv[4];
+	insert_request.requestBody += "/global/networks/default\",\n";
 	insert_request.requestBody += "\"accessConfigs\": [\n{\n";
 	insert_request.requestBody += "\"name\": \"External NAT\",\n";
 	insert_request.requestBody += "\"type\": \"ONE_TO_ONE_NAT\"\n";
