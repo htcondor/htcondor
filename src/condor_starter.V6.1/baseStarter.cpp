@@ -50,6 +50,7 @@
 #include "sshd_proc.h"
 #include "condor_base64.h"
 #include "my_username.h"
+#include <Regex.h>
 
 extern "C" int get_random_int();
 extern void main_shutdown_fast();
@@ -3025,7 +3026,10 @@ CStarter::GetJobEnv( ClassAd *jobad, Env *job_env, MyString *env_errors )
 		// the mainjob's env...
 	PublishToEnv( job_env );
 	return true;
-}	
+}
+
+// helper function
+static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, const char * assigned, const char * tag);
 
 void
 CStarter::PublishToEnv( Env* proc_env )
@@ -3101,10 +3105,10 @@ CStarter::PublishToEnv( Env* proc_env )
 					proc_env->SetEnv( env_name.Value(), assigned.c_str() );
 
 					// also allow a configured alternate environment name
-					MyString param_name("ENVIRONMENT_NAME_FOR_"); param_name += attr;
+					MyString param_name("ENVIRONMENT_FOR_"); param_name += attr;
 					if (param(env_name, param_name.c_str())) {
 						if ( ! env_name.empty()) {
-							proc_env->SetEnv( env_name.Value(), assigned.c_str() );
+							SetEnvironmentForAssignedRes(proc_env, env_name.c_str(), assigned.c_str(), tag);
 						}
 					}
 				}
@@ -3159,6 +3163,123 @@ CStarter::PublishToEnv( Env* proc_env )
 	proc_env->SetEnv("TMP", GetWorkingDir()); // Windows
 }
 
+// parse an environment prototype string of the form  key[[=/regex/replace/] key2=/regex2/replace2/]
+// where the / that separates the parts of the regex can be any non-whitespace character
+//
+static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, const char * assigned, const char * tag)
+{
+	const char * env_id_separator = ","; // maybe get this from config someday?
+
+	// multiple prototypes are permitted.
+	for (;;) {
+		while (isspace(*proto)) ++proto;
+		if ( ! *proto) { return; }
+
+		std::string rhs = ""; // the value that we will (eventually) assign to the environment variable
+
+		dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment proto '%s'\n", tag, proto);
+
+		const char * peq = strchr(proto, '=');
+		if ( ! peq) {
+			// special case - if no equal sign, the proto is just an environment name
+			// HACK!! 
+			// very special case, when proto is CUDA_VISIBLE_DEVICES, or GPU_DEVICE_ORDINAL
+			// we know that we have to strip the alpha part of the GPU id, as well as any whitespace.
+			if (MATCH == strcmp(proto, "CUDA_VISIBLE_DEVICES") || MATCH == strcmp(proto, "GPU_DEVICE_ORDINAL")) {
+				// strip everthing but digits and , from the assigned gpus value
+				for (const char * p = assigned; *p; ++p) {
+					if (isdigit(*p) || *p == ',') rhs += *p;
+				}
+				assigned = rhs.c_str();
+			}
+			dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s setting env %s=%s\n", tag, proto, assigned);
+			proc_env->SetEnv(proto, assigned);
+			return;
+		}
+
+		std::string env_name;
+		env_name.insert(0, proto, 0, (size_t)(peq - proto));
+		++peq; while(isspace(*peq)) ++peq;
+		// the next character we see is the regex separator character
+		// usually it will be / but it could be any non-whitespace character
+		// we expect to see 3 of them. 
+		char chRe = *peq;
+		const char * pre = peq+1;
+		const char * psub = strchr(pre, chRe);
+		const char * pend = psub ? strchr(psub+1,chRe) : psub;
+		if ( ! psub || ! pend ) {
+			dprintf(D_ALWAYS|D_FAILURE, "Assigned%s environment '%s' ignored - missing replacment end marker: %s\n", tag, env_name.c_str(), peq);
+			break;
+		}
+		// at this point if your expression is /aa/bbb/
+		//                              peq----^^ ^   ^
+		//                              pre-----| |   |
+		//                              psub------|   |
+		//                              pend----------|
+
+		// compile the pattern of the regular expression.
+		std::string pat;
+		pat.insert(0, pre, 0, (psub - pre));
+
+		const char * errstr = NULL; int erroff= 0;
+		int re_opts = 0;
+		pcre *re = pcre_compile(pat.c_str(), re_opts, &errstr, &erroff, NULL);
+		if ( ! re) {
+			dprintf(D_ALWAYS | D_FAILURE, "Assigned%s environment '%s' regex error %s at offset %d in: %s\n",
+				tag, env_name.c_str(), errstr ? errstr : "", erroff, pat.c_str());
+			break;
+		}
+
+		// HACK! special magic for CUDA_VISIBLE_DEVICES and GPU_DEVICE_ORDINAL
+		if (env_name == "CUDA_VISIBLE_DEVICES" || env_name == "GPU_DEVICE_ORDINAL") {
+			// strip everthing but digits and , from the assigned gpus value
+			for (const char * p = assigned; *p; ++p) {
+				if (isdigit(*p) || *p == ',') rhs += *p;
+			}
+		} else {
+			const char * resid;
+			int cGroups = 0;
+			pcre_fullinfo(re, NULL, PCRE_INFO_CAPTURECOUNT, &cGroups);
+			int ovecsize = 3 * (cGroups + 1); // +1 for the string itself
+			int * ovector = (int *) malloc(ovecsize * sizeof(int));
+
+			dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' pattern: %s\n", tag, env_name.c_str(), peq);
+
+			StringList ids(assigned);
+			ids.rewind();
+			while ((resid = ids.next())) {
+				if ( ! rhs.empty()) { rhs += env_id_separator; }
+				int cchresid = (int)strlen(resid);
+				int status = pcre_exec(re, NULL, resid, cchresid, 0, 0, ovector, ovecsize);
+				if (status >= 0) {
+					const struct _pcre_vector { int start; int end; } * groups = (const struct _pcre_vector*)ovector;
+					dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' match at %d,%d of pattern: %s\n", tag, env_name.c_str(), groups[0].start, groups[0].end, pat.c_str());
+					if (groups[0].start > 0) { rhs.append(resid, 0, groups[0].start); }
+					const char * ps = psub;
+					while (*++ps && ps < pend) {
+						if (ps[0] == '$' && isdigit(ps[1])) {
+							int ngrp = *++ps - '0';
+							if (ngrp < status) { rhs.append(resid, groups[ngrp].start, groups[ngrp].end - groups[ngrp].start); }
+						} else {
+							rhs += *ps;
+						}
+					}
+					if (groups[0].end < cchresid) { rhs.append(resid, groups[0].end, cchresid - groups[0].end); }
+				} else {
+					dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' no-match of pattern: %s\n", tag, env_name.c_str(), pat.c_str());
+					rhs += resid;
+				}
+			}
+			free(ovector);
+		}
+
+		pcre_free(re);
+
+		proc_env->SetEnv(env_name.c_str(), rhs.c_str());
+
+		proto = pend+1;
+	}
+}
 
 int
 CStarter::getMySlotNumber( void )
