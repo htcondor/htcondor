@@ -386,8 +386,7 @@ CStarter::ShutdownGraceful( void )
 	if (!jobRunning) {
 		dprintf(D_FULLDEBUG, 
 				"Got ShutdownGraceful when no jobs running.\n");
-		this->allJobsDone();
-		return 1;
+		return ( this->allJobsDone() );
 	}	
 	return 0;
 }

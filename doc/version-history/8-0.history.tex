@@ -41,6 +41,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug in the \Condor{schedd} which would cause it
+to crash when running remotely submitted parallel universe jobs.
+\Ticket{4163}
+
+\item Fixed a bug with concurrency limits and partitionable slots,
+in which the partitionable slot would consume a concurrency token,
+even though the slot never runs jobs.  This would cause fewer jobs
+than desired to run.
+\Ticket{4145}
+
+\item Fixed a bug in which the Job Exit work fetch hook was prematurely killed.
+\Ticket{3669}
+
 \item When the Windows installer was told to use VMware,
 it configured a requirement for a 
 \File{condor\_vmware\_local\_settings} file that it did not provide.
@@ -52,6 +65,28 @@ This configuration has been removed, so that the file is no longer required.
 \item Fixed a crash of the \Condor{shadow}, triggered when a disconnect
 from the \Condor{starter} occurs just as the job terminates.
 \Ticket{4127}
+
+\item Modified the output of \Condor{q},
+such that when invoked with options \Opt{-userlog} and \Opt{-af},
+a blank line and a totals summary line are not displayed.
+\Ticket{4045}
+
+\item For hierarchical group quotas, 
+fixed an incorrect count of the number of jobs when applying a quota.
+\Ticket{4117}
+
+\item Fixed the HTCondor module \Procedure{send\_command} python binding;
+an incorrect argument was only the first character of the daemon's name,
+instead of the full name. 
+This affected the ability to turn off specific daemons,
+as sent to the \Condor{master}.
+\Ticket{4160}
+
+\item Fixed the transfer of files larger than 4Gbytes,
+such that they no longer stop before the transfer is completed.
+This bug presented itself on all Windows systems and on all
+platforms running on a 32-bit architecture.
+\Ticket{4150}
 
 \end{itemize}
 
