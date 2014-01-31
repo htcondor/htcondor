@@ -247,7 +247,7 @@ sock_peer_to_string( SOCKET fd, char *buf, size_t buflen, char const *unknown )
 		return unknown;
 
 	addr.to_sinful(buf, buflen);
-	return unknown;
+	return buf;
 
 	/* This value is never used.
 	char const *sinful = sock_to_string( fd );
