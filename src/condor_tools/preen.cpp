@@ -65,9 +65,9 @@ char		*PreenAdmin;		// who to send mail to in case of trouble
 char		*MyName;			// name this program was invoked by
 char        *ValidSpoolFiles;   // well known files in the spool dir
 char        *InvalidLogFiles;   // files we know we want to delete from log
-BOOLEAN		MailFlag;			// true if we should send mail about problems
-BOOLEAN		VerboseFlag;		// true if we should produce verbose output
-BOOLEAN		RmFlag;				// true if we should remove extraneous files
+bool		MailFlag;			// true if we should send mail about problems
+bool		VerboseFlag;		// true if we should produce verbose output
+bool		RmFlag;				// true if we should remove extraneous files
 StringList	*BadFiles;			// list of files which don't belong
 
 // prototypes of local interest
@@ -83,15 +83,15 @@ void check_daemon_sock_dir();
 void bad_file( const char *, const char *, Directory & );
 void good_file( const char *, const char * );
 void produce_output();
-BOOLEAN is_valid_shared_exe( const char *name );
-BOOLEAN is_ckpt_file( const char *name );
-BOOLEAN is_v2_ckpt( const char *name );
-BOOLEAN is_v3_ckpt( const char *name );
-BOOLEAN cluster_exists( int );
-BOOLEAN proc_exists( int, int );
-BOOLEAN is_myproxy_file( const char *name );
-BOOLEAN is_ccb_file( const char *name );
-BOOLEAN touched_recently(char const *fname,time_t delta);
+bool is_valid_shared_exe( const char *name );
+bool is_ckpt_file( const char *name );
+bool is_v2_ckpt( const char *name );
+bool is_v3_ckpt( const char *name );
+bool cluster_exists( int );
+bool proc_exists( int, int );
+bool is_myproxy_file( const char *name );
+bool is_ccb_file( const char *name );
+bool touched_recently(char const *fname,time_t delta);
 
 /*
   Tell folks how to use this program.
@@ -121,9 +121,9 @@ main( int argc, char *argv[] )
 	myDistro->Init( argc, argv );
 	config();
 
-	VerboseFlag = FALSE;
-	MailFlag = FALSE;
-	RmFlag = FALSE;
+	VerboseFlag = false;
+	MailFlag = false;
+	RmFlag = false;
 
 		// Parse command line arguments
 	for( argv++; *argv; argv++ ) {
@@ -133,15 +133,15 @@ main( int argc, char *argv[] )
 			  case 'd':
                 dprintf_set_tool_debug("TOOL", 0);
 			  case 'v':
-				VerboseFlag = TRUE;
+				VerboseFlag = true;
 				break;
 
 			  case 'm':
-				MailFlag = TRUE;
+				MailFlag = true;
 				break;
 
 			  case 'r':
-				RmFlag = TRUE;
+				RmFlag = true;
 				break;
 
 			  default:
@@ -450,31 +450,31 @@ check_spool_dir()
 
 /*
 */
-BOOLEAN
+bool
 is_valid_shared_exe( const char *name )
 {
 	if ((strlen(name) < 4) || (strncmp(name, "exe-", 4) != 0)) {
-		return FALSE;
+		return false;
 	}
 	MyString path;
 	path.formatstr("%s/%s", Spool, name);
 	int count = link_count(path.Value());
 	if (count == 1) {
-		return FALSE;
+		return false;
 	}
 	if (count == -1) {
 		dprintf(D_ALWAYS, "link_count error on %s; not deleting\n", name);
 	}
-	return TRUE;
+	return true;
 }
 
 /*
-  Given the name of a file in the spool directory, return TRUE if it's a
-  legitimate checkpoint file, and FALSE otherwise.  If the name starts
+  Given the name of a file in the spool directory, return true if it's a
+  legitimate checkpoint file, and false otherwise.  If the name starts
   with "cluster", it should be a V3 style checkpoint.  Otherwise it is
   either a V2 style checkpoint, or not a checkpoint at all.
 */
-BOOLEAN
+bool
 is_ckpt_file( const char *name )
 {
 
@@ -507,14 +507,14 @@ grab_val( const char *str, const char *pattern )
 /*
   We're given the name of a file which appears to be a V2 checkpoint file.
   We try to dig out the cluster/proc ids, and search the job queue for
-  a corresponding process.  We return TRUE if we find it, and FALSE
+  a corresponding process.  We return true if we find it, and false
   otherwise.
 
   V2 checkpoint files formats are:
 	  job<#>.ickpt		- initial checkpoint file
 	  job<#>.ckpt.<#>	- specific checkpoint file
 */
-BOOLEAN
+bool
 is_v2_ckpt( const char *name )
 {
 	int		cluster;
@@ -533,14 +533,14 @@ is_v2_ckpt( const char *name )
 /*
   We're given the name of a file which appears to be a V3 checkpoint file.
   We try to dig out the cluster/proc ids, and search the job queue for
-  a corresponding process.  We return TRUE if we find it, and FALSE
+  a corresponding process.  We return true if we find it, and false
   otherwise.
 
   V3 checkpoint file formats are:
 	  cluster<#>.ickpt.subproc<#>		- initial checkpoint file
 	  cluster<#>.proc<#>.subproc<#>		- specific checkpoint file
 */
-BOOLEAN
+bool
 is_v3_ckpt( const char *name )
 {
 	int		cluster;
@@ -562,7 +562,7 @@ is_v3_ckpt( const char *name )
   Check whether the given file could be a valid MyProxy password file
   for a queued job.
 */
-BOOLEAN
+bool
 is_myproxy_file( const char *name )
 {
 	int cluster, proc;
@@ -571,7 +571,7 @@ is_myproxy_file( const char *name )
 		//   password file with extra characters on the end of the name.
 	int rc = sscanf( name, "mpp.%d.%d", &cluster, &proc );
 	if ( rc != 2 ) {
-		return FALSE;
+		return false;
 	}
 	return proc_exists( cluster, proc );
 }
@@ -580,19 +580,19 @@ is_myproxy_file( const char *name )
   Check whether the given file could be a valid MyProxy password file
   for a queued job.
 */
-BOOLEAN
+bool
 is_ccb_file( const char *name )
 {
 	if( strstr(name,".ccb_reconnect") ) {
-		return TRUE;
+		return true;
 	}
-	return FALSE;
+	return false;
 }
 
 /*
   Check to see whether a given cluster number exists in the job queue.
 */
-BOOLEAN
+bool
 cluster_exists( int cluster )
 {
 	return proc_exists( cluster, -1 );
@@ -602,17 +602,17 @@ cluster_exists( int cluster )
   Check to see whether a given cluster and process number exist in the
   job queue.
 */
-BOOLEAN
+bool
 proc_exists( int cluster, int proc )
 {
 	ClassAd *ad;
 
 	if ((ad = GetJobAd(cluster,proc)) != NULL) {
 		FreeJobAd(ad);
-		return TRUE;
+		return true;
 	}
 
-	return FALSE;
+	return false;
 }
 
 /*
@@ -956,7 +956,7 @@ get_machine_state()
 	return s;
 }
 
-BOOLEAN
+bool
 touched_recently(char const *fname,time_t delta)
 {
 	StatInfo statinfo(fname);
