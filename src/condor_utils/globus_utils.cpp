@@ -1321,12 +1321,10 @@ x509_receive_delegation( const char *destination_file,
 		return -1;
 	}
 
-	// see if we'd like the default number of bits or something custom
-	int bits = param_integer("GSI_DELEGATION_KEYBITS", 1024);
-
-	// default for clock skew is currently (2013-03-27) 5 minutes, but allow
-	// that to be changed
-	int skew = param_integer("GSI_DELEGATION_CLOCK_SKEW_ALLOWABLE", 0);
+	// declare some vars we'll need
+	int globus_bits = 0;
+	int bits = 0;
+	int skew = 0;
 
 	// prepare any special attributes desired
 	result = globus_gsi_proxy_handle_attrs_init( &handle_attrs );
@@ -1336,19 +1334,30 @@ x509_receive_delegation( const char *destination_file,
 		goto cleanup;
 	}
 
-	if (bits) {
-		// as of 2013-02-27, a bug in globus 5.2.1 causes a crash if bits
-		// is less than 512.  so we just make that the minimum.  there is no
-		// maximum, although setting it above 4096 could take a really long
-		// time to compute.  i would bet that in 20 years this comment is
-		// hilarious.
-		// as of 2014-01-16, many various pieces of the OSG software stack no
-		// longer work with proxies less than 1024 bits, so make sure we go at
-		// least that large regardless of what the user may have configured.
-		if (bits < 1024) {
-			bits = 1024;
-		}
+	// first, get the default that globus is using
+	result = globus_gsi_proxy_handle_attrs_get_keybits( handle_attrs, &globus_bits );
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
 
+	// as of 2014-01-16, many various pieces of the OSG software stack no
+	// longer work with proxies less than 1024 bits, so make sure globus is
+	// defaulting to at least that large
+	if (globus_bits < 1024) {
+		globus_bits = 1024;
+		result = globus_gsi_proxy_handle_attrs_set_keybits( handle_attrs, globus_bits );
+		if ( result != GLOBUS_SUCCESS ) {
+			rc = -1;
+			error_line = __LINE__;
+			goto cleanup;
+		}
+	}
+
+	// also allow the condor admin to increase it if they really feel the need
+	bits = param_integer("GSI_DELEGATION_KEYBITS", 0);
+	if (bits > globus_bits) {
 		result = globus_gsi_proxy_handle_attrs_set_keybits( handle_attrs, bits );
 		if ( result != GLOBUS_SUCCESS ) {
 			rc = -1;
@@ -1356,6 +1365,10 @@ x509_receive_delegation( const char *destination_file,
 			goto cleanup;
 		}
 	}
+
+	// default for clock skew is currently (2013-03-27) 5 minutes, but allow
+	// that to be changed
+	skew = param_integer("GSI_DELEGATION_CLOCK_SKEW_ALLOWABLE", 0);
 
 	if (skew) {
 		result = globus_gsi_proxy_handle_attrs_set_clock_skew_allowable( handle_attrs, skew );
