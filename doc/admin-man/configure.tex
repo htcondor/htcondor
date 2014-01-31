@@ -9740,6 +9740,24 @@ in section~\ref{sec:DAG-configuration}.
   the \Condor{dagman\_metrics\_reporter} will spend attempting
   to report metrics to the Pegasus metrics server.
   Defaults to 100.
+
+\label{param:DAGmanUseOldDagReader}
+\item[\Macro{DAGMAN\_USE\_OLD\_DAG\_READER}]
+  A boolean value defining whether \Condor{submit\_dag} uses old
+  (pre-8.0.6) code to read DAG files to find the per-DAG configuration
+  file (if any), and sub-DAG files (if the \Opt{-do\_recurse} option is used).
+  Note that \MacroNI{DAGMAN\_USE\_OLD\_DAG\_READER} is a special case
+  among \Condor{dagman}-related configuration variables, in that setting
+  it in a per-DAG configuration file will not have the desired effect.
+  Therefore, if you want to set \MacroNI{DAGMAN\_USE\_OLD\_DAG\_READER}
+  to a non-default value, you should do it in a machine or pool
+  configuration file, or by setting the environment variable
+  \MacroNI{\_CONDOR\_DAGMAN\_USE\_OLD\_DAG\_READER}.
+  The default value if not defined is \Expr{False}.  We anticipate
+  that this configuration variable should not have to be changed
+  from the default setting -- the only reason for doing so is if a
+  bug is found in the new DAG file-reading code.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
