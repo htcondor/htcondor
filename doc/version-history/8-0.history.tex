@@ -37,6 +37,17 @@ The details of each version are described below.
 
 \end{itemize}
 
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item The new configuration variable \MacroNI{DAGMAN\_USE\_OLD\_DAG\_READER}
+(see section~\ref{param:DAGmanUseOldDagReader} for details)
+allows disabling of the new file reader code put in place to fix bug
+\Ticket{4171}.
+
+\end{itemize}
+
 \noindent Bugs Fixed:
 
 \begin{itemize}
@@ -87,6 +98,10 @@ such that they no longer stop before the transfer is completed.
 This bug presented itself on all Windows systems and on all
 platforms running on a 32-bit architecture.
 \Ticket{4150}
+
+\item Fixed a bug that caused \Condor{submit\_dag} to crash on very
+large DAG files (e.g., larger than 2 GB).
+\Ticket{4171}
 
 \end{itemize}
 
