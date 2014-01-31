@@ -2960,7 +2960,14 @@ obtainAdsFromCollector (
 		dprintf(D_ALWAYS, "Not considering preemption, therefore constraining idle machines with %s\n", projectionString);
 	}
 
-	
+	dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
+	ClassAdList startdPvtAdList;
+	result = collects->query (privateQuery, startdPvtAdList);
+	if( result!=Q_OK ) {
+		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
+		return false;
+	}
+
     CondorError errstack;
 	dprintf(D_ALWAYS, "  Getting Scheduler, Submitter and Machine ads ...\n");
 	result = collects->query (publicQuery, allAds, &errstack);
@@ -3212,14 +3219,6 @@ obtainAdsFromCollector (
 		while( (ad=scheddAds.Next()) ) {
 			allAds.Insert(ad);
 		}
-	}
-
-	dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
-	ClassAdList startdPvtAdList;
-	result = collects->query (privateQuery, startdPvtAdList);
-	if( result!=Q_OK ) {
-		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
-		return false;
 	}
 
 	MakeClaimIdHash(startdPvtAdList,claimIds);
