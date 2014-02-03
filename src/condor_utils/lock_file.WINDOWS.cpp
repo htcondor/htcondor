@@ -25,7 +25,7 @@
 #include "file_lock.h"
 
 int
-lock_file_plain(int fd, LOCK_TYPE type, BOOLEAN do_block)
+lock_file_plain(int fd, LOCK_TYPE type, bool do_block)
 {
 	int	mode, result;
 	long original_pos, pos;
@@ -65,7 +65,7 @@ lock_file_plain(int fd, LOCK_TYPE type, BOOLEAN do_block)
 }
 
 int
-lock_file(int fd, LOCK_TYPE type, BOOLEAN do_block)
+lock_file(int fd, LOCK_TYPE type, bool do_block)
 {
 	int result = lock_file_plain( fd, type, do_block );
 
