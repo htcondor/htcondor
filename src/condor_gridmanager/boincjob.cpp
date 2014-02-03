@@ -463,10 +463,10 @@ void BoincJob::doEvaluateState()
 			// Wait for completion or failure.
 			if ( remoteState == BOINC_JOB_STATUS_DONE ) {
 				gmState = GM_STAGE_OUT;
-			} else if ( remoteState == BOINC_JOB_STATUS_ERROR ) {
-				// TODO Handle error
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
+			} else if ( remoteState == BOINC_JOB_STATUS_ERROR ) {
+				// TODO Handle error
 			} else {
 				// TODO anything to do?
 			}
