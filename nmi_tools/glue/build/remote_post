@@ -94,6 +94,8 @@ if( ! -d $pub_dir ) {
 if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
 	# munge cleanup is needed only if cygwin is messing with ACLs.
 	# in new batlab, instead of cleaning up, just don't allow it.
+	# ticket #4188 for enhanced windows testing environment
+	# get msconfig into condor_tests
 	if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
                 my $bsdtar = "$BaseDir/msconfig/tar.exe";
 		print "COMPUTERNAME=$ENV{COMPUTERNAME} In new batlab\n";
@@ -142,6 +144,19 @@ system("cp -r $SrcDir/condor_examples $pub_dir");
 # drops the current into an easy format for testing for completeness
 # in our framework.
 system("cp  $SrcDir/condor_utils/param_info_tables.h $pub_dir/condor_tests");
+if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
+	# get msconfig into condor_tests
+	# munge cleanup is needed only if cygwin is messing with ACLs.
+	# in new batlab, instead of cleaning up, just don't allow it.
+	# ticket #4188 for enhanced windows testing environment
+	# get msconfig into condor_tests
+	print "COMPUTERNAME=$ENV{COMPUTERNAME} In new batlab\n";
+	system("ls $pub_dir");
+	print "We shopuld see dir msconfig in listing about\n";
+	my $cmd = "cp -r  $pub_dir/msconfig $pub_dir/condor_tests";
+	print "About to:$cmd\n";
+	system("$cmd");
+}
 
 ######################################################################
 # tar up build results
