@@ -16,6 +16,36 @@ New features will be added in the 8.1.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-7}Version 8.0.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.0.7 not yet released.
+%\item HTCondor version 8.0.7 released on Month Date, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-0-6}Version 8.0.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -34,17 +64,6 @@ The details of each version are described below.
 \begin{itemize}
 
 \item None.
-
-\end{itemize}
-
-\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
-
-\begin{itemize}
-
-\item The new configuration variable \MacroNI{DAGMAN\_USE\_OLD\_DAG\_READER}
-(see section~\ref{param:DAGmanUseOldDagReader} for details)
-allows disabling of the new file reader code put in place to fix bug
-\Ticket{4171}.
 
 \end{itemize}
 
@@ -100,7 +119,10 @@ platforms running on a 32-bit architecture.
 \Ticket{4150}
 
 \item Fixed a bug that caused \Condor{submit\_dag} to crash on very
-large DAG files (e.g., larger than 2 GB).
+large DAG input files, such as those larger than 2 Gbytes.
+The new configuration variable \MacroNI{DAGMAN\_USE\_OLD\_DAG\_READER},
+as detailed in section~\ref{param:DAGmanUseOldDagReader},
+allows disabling the new file reader code put in place to fix the bug.
 \Ticket{4171}
 
 \end{itemize}
