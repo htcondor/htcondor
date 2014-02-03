@@ -9359,20 +9359,19 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanUseOldDagReader}
 \item[\Macro{DAGMAN\_USE\_OLD\_DAG\_READER}]
-  A boolean value defining whether \Condor{submit\_dag} uses old
-  (pre-8.0.6) code to read DAG files to find the per-DAG configuration
-  file (if any), and sub-DAG files (if the \Opt{-do\_recurse} option is used).
-  Note that \MacroNI{DAGMAN\_USE\_OLD\_DAG\_READER} is a special case
-  among \Condor{dagman}-related configuration variables, in that setting
-  it in a per-DAG configuration file will not have the desired effect.
-  Therefore, if you want to set \MacroNI{DAGMAN\_USE\_OLD\_DAG\_READER}
-  to a non-default value, you should do it in a machine or pool
-  configuration file, or by setting the environment variable
-  \MacroNI{\_CONDOR\_DAGMAN\_USE\_OLD\_DAG\_READER}.
-  The default value if not defined is \Expr{False}.  We anticipate
-  that this configuration variable should not have to be changed
-  from the default setting -- the only reason for doing so is if a
-  bug is found in the new DAG file-reading code.
+  A boolean value defining whether \Condor{submit\_dag} uses 
+  code to read DAG input files that comes from HTCondor versions previous
+  to version 8.0.6 or after. 
+  This code is used to discover any per-DAG configuration
+  files and SUBDAG files if the \Opt{-do\_recurse} option is used.
+  This variable needs to be set in a machine or pool
+  configuration file, or by setting the environment variable;
+  it cannot work as part of a per-DAG configuration file.
+  The default value if not defined is \Expr{False}.  
+  This configuration variable should not have to be changed
+  from the default setting. 
+  It exists to gracefully handle the unlikely case in which 
+  a bug is found in the new code.
 
 \end{description}
 
