@@ -1157,7 +1157,7 @@ void usage(FILE* out, const char * argv0)
 		"    -prefix <string>  use <string> as property prefix, default is CUDA or OCL\n"
 		"    -opencl           Prefer detection via OpenCL rather than CUDA\n"
 		//"    -nvcuda           Use nvcuda rather than cudarl for detection\n"
-		"    -simulate[:D[,N]] Sumulate detection of N devices of type D\n"
+		"    -simulate[:D[,N]] Simulate detection of N devices of type D\n"
 		"           where D is 0 - GeForce GT 330, default N=1\n"
 		"                      1 - GeForce GTX 480, default N=2\n"
 		//"    -config           Output in HTCondor config syntax\n"
