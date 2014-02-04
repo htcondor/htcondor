@@ -1,0 +1,107 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Gce}The GCE Grid Type }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Google Compute Engine}
+\index{GCE grid jobs}
+\index{grid computing!submitting jobs to GCE}
+\index{grid type!gce}
+
+HTCondor jobs may be submitted to the Google Compute Engine (GCE)
+cloud service.
+GCE is an on-line commerical service that provides
+the rental of computers by the hour to run computational applications.
+Its runs virtual machine images that have been uploaded to Google's
+servers.
+More information about Google Compute Engine is available at
+\URL{http://cloud.google.com/Compute}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Gce-submit}GCE Job Submission}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+HTCondor jobs are submitted to the GCE service
+with the \SubmitCmd{grid} universe, setting the
+\SubmitCmd{grid\_resource} command to \SubmitCmd{gce}, followed 
+by the service's URL, your GCE project, and the GCE zone you 
+wish to use.
+The result should look something like this:
+\begin{verbatim}
+grid_resource = gce https://www.googleapis.com/compute/v1 my_proj us-central1-a
+\end{verbatim}
+
+Since the job is a virtual machine image,
+most of the submit description file commands
+specifying input or output files are not applicable.
+The \SubmitCmd{executable} command is still required,
+but its value is ignored. 
+It can be used to identify different jobs in the output of \Condor{q}.
+
+The VM image for the job must already reside in Google's Cloud Storage
+service and be registered with GCE.
+In the submit description file,
+provide the full URL identifier for the image using \SubmitCmd{gce\_image}.
+
+This grid type requires you to grant HTCondor permission to use your
+Google account. The easiest way to do this is to use the \Prog{gcutil}
+command-line tool distributed by Google.
+You can find \Prog{gcutil} and documentation for it at
+\URL{https://developers.google.com/compute/docs/gcutil}.
+Once you have installed it, run \Prog{gcutil auth} and follow its
+directions.
+Once you are done, the tool will write authorization credentials to the
+file \File{.gcutil\_auth} in your HOME directory.
+You can use the \Arg{--credentials\_file} command-line argument to tell
+\Prog{gcutil} to use a different file.
+
+Once you have an authorization file, you must specify its location in
+your submit description file, using \SubmitCmd{gce\_auth\_file}:
+\begin{verbatim}
+gce_auth_file = /path/to/auth-file
+\end{verbatim}
+
+GCE allows the choice of different hardware configurations 
+for instances to run on.
+Select which configuration to use for the \SubmitCmd{gce} grid type
+with the \SubmitCmd{gce\_machine\_type} submit description file command.
+HTCondor provides no default.
+
+Each virtual machine instance can be given a unique set of metadata,
+which consists of name/value pairs, similar to the environment variables
+of regular jobs.
+The instance can query its metadata via a well-known address.
+This makes it easy for many instances to share the same VM image,
+but perform different work.
+This data can be specified to HTCondor in one of two ways.
+First, the data can be provided directly in the submit description file 
+using the \SubmitCmd{gce\_metadata} command.
+The value should be a comma-separated list of name=value settings, like this:
+\begin{verbatim}
+gce_metadata = setting1=foo,setting2=bar
+\end{verbatim}
+
+Second, the data can be
+stored in a file, and the file name is specified with the
+\SubmitCmd{gce\_metadata\_file} submit description file command.
+This second option allows a wider range of characters to be used in the
+metadata values.
+Each name=value pair should be on its own line.
+No whitespace is removed from the lines, except the newline that
+separates entries.
+
+Both options can be used at the same time. Don't use the same
+metadata name in both places.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Gce-config}GCE Configuration Variables}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The following configuration parameters are specific to the \SubmitCmd{gce}
+grid type. The values given are the defaults. You can set different values
+in your HTCondor configuration files.
+
+\footnotesize
+\begin{verbatim}
+GCE_GAHP     = $(SBIN)/gce_gahp
+GCE_GAHP_LOG = /tmp/GceGahpLog.$(USERNAME)
+\end{verbatim}
+\normalsize
