@@ -563,7 +563,7 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.1)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
 if (NOT WINDOWS)
