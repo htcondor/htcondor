@@ -128,7 +128,7 @@ sub timed_callback {
 
         my $sz = scalar keys %hist;
         my $sz2 = scalar keys %hist2;
-        if (($sz == 4) && ($hist{"1 0 0 95 0"} == 1) && ($hist{"2 0 1 0 0"} == 1) && ($hist{"3 0 5 100 0"} == 1) && ($hist{"4 0 0 0 0"} == 1) && ($sz2 == 4) && ($hist2{"-1 1 1 1 0"} == 5) && ($hist2{"-2 1 1 25 0"} == 4) && ($hist2{"-3 1 0 0 1"} == 3) && ($hist2{"-4 5 5 100 0"} == 1)) {
+        if (($sz == 4) && ($hist{"1 0 0 95 0"} == 1) && ($hist{"2 0 1 0 0"} == 1) && ($hist{"3 0 2 97 0"} == 1) && ($hist{"4 0 0 0 0"} == 1) && ($sz2 == 4) && ($hist2{"-1 1 1 1 0"} == 5) && ($hist2{"-2 1 1 25 0"} == 4) && ($hist2{"-3 1 1 1 1"} == 3) && ($hist2{"-4 5 5 100 0"} == 1)) {
             print "slot test passed\n";
             $slot_test_passed_or_failed = 1;
         } elsif (scalar(@res2) == 13) {

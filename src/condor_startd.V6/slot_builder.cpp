@@ -133,18 +133,33 @@ CpuAttributes** buildCpuAttrs( MachAttributes *m_attr, int max_types, StringList
 		}
 	}
 
+		// gather remaining resources and counts of slots desiring auto shares
+		// of user-defined resources into remain_cap, and remain_cnt.  these
+		// will be use to distribute auto shares in the loop below.
+	AvailAttributes::slotres_map_t remain_cap, remain_cnt;
+	avail.computeRemainder(remain_cap, remain_cnt);
+
+	// to make the output easier to read, only report the unallocated cap for each slot type once.
+	const int d_level = D_ALWAYS;
+	unsigned long report_auto = (unsigned long)-1;
+
 		// now replace "auto" shares with final value
 	for (int i=0; i<num; i++) {
 		cap = cap_array[i];
-        cap->show_totals(D_ALWAYS);
-		if( !avail.computeAutoShares(cap) ) {
+		unsigned long bit = 1 << cap->type();
+		if (report_auto & bit) {
+			dprintf(d_level, "Allocating auto shares for ");
+			cap->show_totals(d_level);
+			report_auto &= ~bit;
+		}
+		if( !avail.computeAutoShares(cap, remain_cap, remain_cnt) ) {
 
 				// We ran out of system resources.
 			dprintf( D_ALWAYS,
 					 "ERROR: Can't allocate slot id %d during auto "
 					 "allocation of resources\n", i+1 );
-			dprintf( D_ALWAYS | D_NOHEADER, "\tRequesting: " );
-			cap->show_totals( D_ALWAYS );
+			dprintf(D_ALWAYS | D_NOHEADER, "\tRequesting ");
+			cap->show_totals(d_level);
 			dprintf( D_ALWAYS | D_NOHEADER, "\tAvailable:  " );
 			avail.show_totals( D_ALWAYS, cap );
 			delete cap;	// This isn't in our array yet.
@@ -159,7 +174,7 @@ CpuAttributes** buildCpuAttrs( MachAttributes *m_attr, int max_types, StringList
 				return NULL;
 			}
 		}
-        cap->show_totals(D_ALWAYS);
+		cap->show_totals(d_level);
 	}
 
 	for (int i=0; i<num; i++) {
@@ -259,120 +274,78 @@ int countTypes( int max_types, int num_cpus, int** array_ptr, bool except )
 	return num;
 }
 
+
 /*
    Parse a string in one of a few formats, and return a float that
    represents the value.  Either it's "auto", or it's a fraction, like
-   "1/4", or it's a percent, like "25%" (in both cases we'd return
-   .25), or it's a regular value, like "64", in which case, we return
-   the negative value, so that our caller knows it's an absolute
-   value, not a fraction.
+   "1/4", or it's a percent, like "25%" (these are equivalent),
+   or it's a regular value, like "64"
+   auto and fraction/percent are returned as negative values
 */
-float parse_value( const char* str, int type, bool except )
+static double parse_share_value( const char* str, int type, bool except )
 {
-	char *tmp, *foo = strdup( str );
-	float val;
-	if( strcasecmp(foo,"auto") == 0 || strcasecmp(foo,"automatic") == 0 ) {
-		free( foo );
+	if( strcasecmp(str,"auto") == 0 || strcasecmp(str,"automatic") == 0 ) {
 		return AUTO_SHARE;
 	}
-	else if( (tmp = strchr(foo, '%')) ) {
+
+	const char * tmp = strchr(str, '%');
+	if (tmp) {
 			// It's a percent
-		*tmp = '\0';
-		val = (float)atoi(foo) / 100;
-		free( foo );
-		return val;
-	} else if( (tmp = strchr(foo, '/')) ) {
-			// It's a fraction
-		*tmp = '\0';
-		if( ! tmp[1] ) {
+		return -(atof(str) / 100.0);
+	}
+
+	tmp = strchr(str, '/');
+	if (tmp) {
+			// It's a ratio (i.e. a fraction)
+		double denom = tmp[1] ? atof(&tmp[1]) : 0;
+		if (denom <= 0) {
 			dprintf( D_ALWAYS, "Can't parse attribute \"%s\" in description of slot type %d\n",
-					 foo, type );
+					 str, type );
 			if( except ) {
 				DC_Exit( 4 );
 			} else {
-				free( foo );
 				return 0;
 			}
 		}
-		val = (float)atoi(foo) / ((float)atoi(&tmp[1]));
-		free( foo );
-		return val;
-	} else {
-			// This must just be an absolute value.  Return it as a negative
-			// float, so the caller knows it's not a fraction.
-		val = -(float)atoi(foo);
-		free( foo );
-		return val;
+		return -(atof(str) / denom);
 	}
+
+		// This must just be an absolute value.  Return it as a negative
+		// value, so the caller knows it's not a fraction.
+	return atof(str);
 }
 
 
 /*
-  Generally speaking, we want to round down for fractional amounts of
-  a CPU.  However, we never want to advertise less than 1.  Plus, if
-  the share in question is negative, it means it's an absolute value, not a
-  fraction.
+  convert share value into a quantity if possible, positive values are
+  absolute quantities, they are truncated to an int, but otherwise pass
+  through this function.  Negative values should be between -1.0 and 0.0
+  and are interpreted as a proportion of the total.
+
+  a CPU.  However, we never want to advertise less than 1.
+  Negative values between 0 and -1 are a fraction of the total
+  Positive values are absolute values.
 */
-int compute_cpus( int num_cpus, float share )
+template <class t>
+static t compute_local_resource(t num_res, double share, t min_res = 0)
 {
-	int cpus;
-	if( IS_AUTO_SHARE(share) ) {
-			// This will be replaced later with an even share of whatever
-			// cpus are left over.
-		return AUTO_CPU;
-	}
-	if( share > 0 ) {
-		cpus = (int)floor( share * num_cpus );
-	} else {
-		cpus = (int)floor( -share );
-	}
-	return cpus;
+	if (IS_AUTO_SHARE(share)) return AUTO_RES;
+	t res = (share < 0) ? t(-share * num_res) : t(share);
+	return MAX(res, min_res);
 }
 
-
-/*
-  Generally speaking, we want to round down for fractional amounts of
-  physical memory.  However, we never want to advertise less than 1.
-  Plus, if the share in question is negative, it means it's an absolute
-  value, not a fraction.
-*/
-int compute_phys_mem( MachAttributes *m_attr, float share )
-{
-	int phys_mem;
-	if( IS_AUTO_SHARE(share) ) {
-			// This will be replaced later with an even share of whatever
-			// memory is left over.
-		return AUTO_MEM;
-	}
-	if( share > 0 ) {
-		phys_mem = (int)floor( share * m_attr->phys_mem() );
-	} else {
-		phys_mem = (int)floor( -share );
-	}
-	return phys_mem;
-}
-
-
-int compute_local_resource(const float share, const string& rname, const CpuAttributes::slotres_map_t& machres) {
-    CpuAttributes::slotres_map_t::const_iterator f(machres.find(rname));
-    if (f == machres.end()) {
-        EXCEPT("Resource name %s was not defined in local machine resource table\n", rname.c_str());
-    }
-    if (IS_AUTO_SHARE(share)) return int(share);
-    if (share > 0) return int(f->second * share);
-    return int(-share);
-}
+const int UNSET_SHARE = -9998;
+#define IS_UNSET_SHARE(share) ((int)share == UNSET_SHARE)
 
 CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list, int type, bool except )
 {
     typedef CpuAttributes::slotres_map_t slotres_map_t;
 	int cpus = UNSET_SHARE;
-    int ram = UNSET_SHARE;
-	float disk = UNSET_SHARE;
-    float swap = UNSET_SHARE;
-    float share;
-    slotres_map_t slotres;
-	float default_share = AUTO_SHARE;
+	int ram = UNSET_SHARE; // this is in MB so an int is enough
+	double disk_fraction = UNSET_SHARE;
+	double swap_fraction = UNSET_SHARE;
+	slotres_map_t slotres;
+	double default_share = AUTO_SHARE;
 
 	MyString execute_dir, partition_id;
 	GetConfigExecuteDir( slot_id, &execute_dir, &partition_id );
@@ -380,17 +353,14 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 	if ( list == NULL) {
 	  // give everything the default share and return
 
-	  cpus = compute_cpus( m_attr->num_cpus(), default_share );
-	  ram = compute_phys_mem( m_attr, default_share );
-	  swap = default_share;
-	  disk = default_share;
+	  cpus = compute_local_resource(m_attr->num_cpus(), default_share, 1);
+	  ram = compute_local_resource(m_attr->phys_mem(), default_share, 1);
 
-	  PRAGMA_REMIND("tj: only pre-defined resources should automatically get a default share")
       for (slotres_map_t::const_iterator j(m_attr->machres().begin());  j != m_attr->machres().end();  ++j) {
           slotres[j->first] = default_share;
       }
 
-	  return new CpuAttributes( m_attr, type, cpus, ram, swap, disk, slotres, execute_dir, partition_id );
+	  return new CpuAttributes( m_attr, type, cpus, ram, AUTO_SHARE, AUTO_SHARE, slotres, execute_dir, partition_id );
 	}
 		// For this parsing code, deal with the following example
 		// string list:
@@ -400,7 +370,7 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 		// "c=1, 25%"
 
     for (slotres_map_t::const_iterator j(m_attr->machres().begin());  j != m_attr->machres().end();  ++j) {
-        slotres[j->first] = AUTO_RES;
+        slotres[j->first] = UNSET_SHARE;
     }
 
 	list->rewind();
@@ -412,8 +382,8 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 				// percentage or fraction for all attributes.
 				// For example "1/4" or "25%".  So, we can just parse
 				// it as a percentage and use that for everything.
-			default_share = parse_value(attr_expr.c_str(), type, except);
-			if( default_share <= 0 && !IS_AUTO_SHARE(default_share) ) {
+			default_share = parse_share_value(attr_expr.c_str(), type, except);
+			if (!IS_AUTO_SHARE(default_share) && (default_share < -1 || default_share > 0)) {
 				dprintf( D_ALWAYS, "ERROR: Bad description of slot type %d: "
 						"\"%s\" is invalid.\n"
 						"\tYou must specify a percentage (like \"25%%\"), "
@@ -435,7 +405,7 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 
 			// Get the value for this attribute.  It'll either be a
 			// percentage, or it'll be a distinct value (in which
-			// case, parse_value() will return negative.
+			// case, parse_share_value() will return negative.
         string val = attr_expr.substr(1+eqpos);
 		if (val.empty()) {
 			dprintf(D_ALWAYS, "Can't parse attribute \"%s\" in description of slot type %d\n",
@@ -446,28 +416,40 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 				return NULL;
 			}
 		}
-		share = parse_value(val.c_str(), type, except);
+		double share = parse_share_value(val.c_str(), type, except);
 
 		// Figure out what attribute we're dealing with.
-        string attr = attr_expr.substr(0, eqpos);
-        slotres_map_t::const_iterator f(m_attr->machres().find(attr));
-        if (f != m_attr->machres().end()) {
-			double num = compute_local_resource(share, f->first, m_attr->machres());
-			slotres[f->first] = num;
-            continue;
-        }
-		switch( tolower(attr[0]) ) {
-		case 'c':
-			cpus = compute_cpus( m_attr->num_cpus(), share );
-			break;
-		case 'r':
-		case 'm':
-			ram = compute_phys_mem( m_attr, share );
-			break;
-		case 's':
-		case 'v':
-			if( share >= 0 || IS_AUTO_SHARE(share) ) {
-				swap = share;
+		string attr = attr_expr.substr(0, eqpos);
+		trim(attr);
+		slotres_map_t::const_iterator f(m_attr->machres().find(attr));
+		if (f != m_attr->machres().end()) {
+			slotres[f->first] = compute_local_resource(f->second, share);
+			continue;
+		}
+
+		// before 8.1.4, only the first character of standard resource types
+		// was looked at (case insensitively). This prevented us from detecting
+		// typos in resource type names that start with c,r,m,s,v or d.
+		// This code now compares the whole resource type name
+		// But to preserve (most) of the pre 8.1.4 we will tolerate
+		// any case-insensitive substring match of cpus, ram, memory, swap, virtualmemory, or disk
+		int cattr = int(attr.length());
+		if (MATCH == strncasecmp(attr.c_str(), "cpus", cattr))
+		{
+			cpus = compute_local_resource(m_attr->num_cpus(), share, 1);
+		} else if (
+			MATCH == strncasecmp(attr.c_str(), "ram", cattr) ||
+			MATCH == strncasecmp(attr.c_str(), "memory", cattr))
+		{
+			ram = compute_local_resource(m_attr->phys_mem(), share, 1);
+		} else if (
+			MATCH == strncasecmp(attr.c_str(), "swap", cattr) ||
+			MATCH == strncasecmp(attr.c_str(), "virtualmemory", cattr))
+		{
+			// for now, we can only tolerate swap expressed a 'auto' or a proportion
+			// because we don't know how much disk is available until later.
+			if (share <= 0 || IS_AUTO_SHARE(share)) {
+				swap_fraction = compute_local_resource(1.0, share);
 			} else {
 				dprintf( D_ALWAYS,
 						 "You must specify a percent or fraction for swap in slot type %d\n",
@@ -478,10 +460,13 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 					return NULL;
 				}
 			}
-			break;
-		case 'd':
-			if( share >= 0 || IS_AUTO_SHARE(share) ) {
-				disk = share;
+		} else if (
+			MATCH == strncasecmp(attr.c_str(), "disk", cattr))
+		{
+			// for now, we can only tolerate swap expressed a 'auto' or a proportion
+			// because we don't know how much disk is available until later.
+			if (share <= 0 || IS_AUTO_SHARE(share)) {
+				disk_fraction = compute_local_resource(1.0, share);
 			} else {
 				dprintf( D_ALWAYS,
 						 "You must specify a percent or fraction for disk in slot type %d\n",
@@ -492,40 +477,52 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 					return NULL;
 				}
 			}
-			break;
-		default:
-			dprintf( D_ALWAYS, "Unknown attribute \"%s\" in slot type %d\n",
-					 attr.c_str(), type );
-			if( except ) {
-				DC_Exit( 4 );
+
+		} else {
+
+			// at this point in the code a non-zero amount of the resource is requested only if share > 0.
+			// requesting non-zero amounts of *unknown* resources is a fatal error
+			// but requesting 0 or a share of the remainder isn't.  this makes it possible
+			// to have a common config between machines that can be used to express things
+			// like - "if this machine has GPUs, I don't want this slot to get any"..
+			if (share > 0) {
+				dprintf( D_ALWAYS, "Unknown attribute \"%s\" in slot type %d\n", attr.c_str(), type);
+				if( except ) {
+					DC_Exit( 4 );
+				} else {
+					return NULL;
+				}
 			} else {
-				return NULL;
+				dprintf( D_ALWAYS | D_FULLDEBUG, "Unknown attribute \"%s\" in slot type %d, no resources will be allocated\n", attr.c_str(), type);
 			}
-			break;
 		}
 	}
 
 		// We're all done parsing the string.  Any attribute not
 		// listed will get the default share.
 	if (IS_UNSET_SHARE(cpus)) {
-		cpus = compute_cpus( m_attr->num_cpus(), default_share );
+		cpus = compute_local_resource(m_attr->num_cpus(), default_share, 1);
 	}
 	if (IS_UNSET_SHARE(ram)) {
-		ram = compute_phys_mem( m_attr, default_share );
+		ram = compute_local_resource(m_attr->phys_mem(), default_share, 1);
 	}
-	if (IS_UNSET_SHARE(swap)) {
-		swap = default_share;
+	if (IS_UNSET_SHARE(swap_fraction)) {
+		swap_fraction = compute_local_resource(1.0, default_share);
 	}
-	if (IS_UNSET_SHARE(disk)) {
-		disk = default_share;
+	if (IS_UNSET_SHARE(disk_fraction)) {
+		disk_fraction = compute_local_resource(1.0, default_share);
 	}
-    for (slotres_map_t::iterator j(slotres.begin());  j != slotres.end();  ++j) {
-        if (int(j->second) == AUTO_RES) {
-            j->second = compute_local_resource(default_share, j->first, m_attr->machres());
-        }
-    }
+	for (slotres_map_t::iterator j(slotres.begin());  j != slotres.end();  ++j) {
+		if (IS_UNSET_SHARE(j->second)) {
+			slotres_map_t::const_iterator f(m_attr->machres().find(j->first));
+			// it shouldn't be possible to get here with keys in slotres that aren't in machres
+			// but if it should happen it's a benign error, just allocate 0 of the unknown resource.
+			double avail = (f != m_attr->machres().end()) ? f->second : 0;
+			j->second = compute_local_resource(avail, default_share);
+		}
+	}
 
 		// Now create the object.
-	return new CpuAttributes( m_attr, type, cpus, ram, swap, disk, slotres, execute_dir, partition_id );
+	return new CpuAttributes( m_attr, type, cpus, ram, swap_fraction, disk_fraction, slotres, execute_dir, partition_id );
 }
 
