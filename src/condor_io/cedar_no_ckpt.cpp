@@ -995,6 +995,9 @@ ReliSock::do_shared_port_local_connect( char const *shared_port_id, bool nonbloc
 	set_connect_addr(orig_connect_addr.c_str());
 
 	char const *request_by = "";
+	// ToddT: should we be passing nonblocking arg along to PassSocket() below?
+	// Probably not, because we only get here in rare instances (aka if the shared
+	// port service is not yet registered), but not sure....
 	if( !shared_port_client.PassSocket(&sock_to_pass,shared_port_id,request_by) ) {
 		return 0;
 	}
