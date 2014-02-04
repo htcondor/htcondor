@@ -23,7 +23,7 @@
 # As of February, 2014, no additional changes have been made upstream.
 # Version 1.6.1 replaces the old Condor license when the Apache license.
 
-if (NOT PROPER AND (LINUX OR WINDOWS))
+if (NOT PROPER AND (LINUX OR WINDOWS OR DARWIN))
   option(WITH_DRMAA "Compiling with support for drmaa" ON)
 endif()
 
