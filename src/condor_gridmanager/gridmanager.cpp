@@ -42,6 +42,7 @@
 #include "condor_version.h"
 
 #include "ec2job.h"
+#include "gcejob.h"
 
 #if !defined(WIN32)
 #  include "creamjob.h"
@@ -356,6 +357,14 @@ Init()
 	new_type->ReconfigFunc = EC2JobReconfig;
 	new_type->AdMatchFunc = EC2JobAdMatch;
 	new_type->CreateFunc = EC2JobCreate;
+	jobTypes.Append( new_type );
+
+	new_type = new JobType;
+	new_type->Name = strdup( "GCE" );
+	new_type->InitFunc = GCEJobInit;
+	new_type->ReconfigFunc = GCEJobReconfig;
+	new_type->AdMatchFunc = GCEJobAdMatch;
+	new_type->CreateFunc = GCEJobCreate;
 	jobTypes.Append( new_type );
 #endif
 	
