@@ -6901,6 +6901,14 @@ review=?
 default=$(SBIN)/ec2_gahp
 review=?
 
+[GCE_GAHP]
+default=$(SBIN)/gce_gahp
+review=?
+
+[GCE_GAHP_LOG]
+default=/tmp/GceGahpLog.$(USERNAME)
+win32_default=NUL
+review=?
 
 [CREDD]
 default=$(SBIN)/condor_credd
