@@ -54,7 +54,7 @@ const int GahpServer::m_buffer_size = 4096;
 
 int GahpServer::m_reaperid = -1;
 
-const char *escapeGahpString(const std::string input);
+const char *escapeGahpString(const std::string &input);
 const char *escapeGahpString(const char * input);
 
 void GahpReconfig()
@@ -1361,9 +1361,9 @@ GahpServer::getPollInterval()
 }
 
 const char *
-escapeGahpString(const std::string input) 
+escapeGahpString(const std::string &input) 
 {
-	return escapeGahpString(input.empty() ? NULL : input.c_str());
+	return escapeGahpString(input.empty() ? "" : input.c_str());
 }
 
 const char *
@@ -7387,6 +7387,281 @@ int GahpClient::ec2_spot_status_all(    std::string service_url,
     }
     
     return GAHPCLIENT_COMMAND_PENDING;    
+}
+
+
+int GahpClient::gce_ping( const std::string &service_url,
+						  const std::string &auth_file,
+						  const std::string &project,
+						  const std::string &zone )
+{
+	static const char* command = "GCE_PING";
+
+	// Generate request line
+	std::string reqline;
+	reqline += escapeGahpString( service_url );
+	reqline += " ";
+	reqline += escapeGahpString( auth_file );
+	reqline += " ";
+	reqline += escapeGahpString( project );
+	reqline += " ";
+	reqline += escapeGahpString( zone );
+
+	const char *buf = reqline.c_str();
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc != 2 ) {
+			EXCEPT( "Bad %s result", command );
+		}
+		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
+			rc = 1;
+			error_string = result->argv[1];
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int GahpClient::gce_instance_insert( const std::string &service_url,
+									 const std::string &auth_file,
+									 const std::string &project,
+									 const std::string &zone,
+									 const std::string &instance_name,
+									 const std::string &machine_type,
+									 const std::string &image,
+									 const std::string &metadata,
+									 const std::string &metadata_file,
+									 std::string &instance_id )
+{
+	static const char* command = "GCE_INSTANCE_INSERT";
+
+	// Generate request line
+	std::string reqline;
+	reqline += escapeGahpString( service_url );
+	reqline += " ";
+	reqline += escapeGahpString( auth_file );
+	reqline += " ";
+	reqline += escapeGahpString( project );
+	reqline += " ";
+	reqline += escapeGahpString( zone );
+	reqline += " ";
+	reqline += escapeGahpString( instance_name );
+	reqline += " ";
+	reqline += escapeGahpString( machine_type );
+	reqline += " ";
+	reqline += escapeGahpString( image );
+	reqline += " ";
+	reqline += metadata.empty() ? NULLSTRING : escapeGahpString( metadata );
+	reqline += " ";
+	reqline += metadata_file.empty() ? NULLSTRING : escapeGahpString( metadata_file );
+
+	const char *buf = reqline.c_str();
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc < 2 ) {
+			EXCEPT( "Bad %s result", command );
+		}
+		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			if ( result->argc != 3 ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			instance_id = result->argv[2];
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int GahpClient::gce_instance_delete( std::string service_url,
+									 const std::string &auth_file,
+									 const std::string &project,
+									 const std::string &zone,
+									 const std::string &instance_name )
+{
+	static const char* command = "GCE_INSTANCE_DELETE";
+
+	// Generate request line
+	std::string reqline;
+	reqline += escapeGahpString( service_url );
+	reqline += " ";
+	reqline += escapeGahpString( auth_file );
+	reqline += " ";
+	reqline += escapeGahpString( project );
+	reqline += " ";
+	reqline += escapeGahpString( zone );
+	reqline += " ";
+	reqline += escapeGahpString( instance_name );
+
+	const char *buf = reqline.c_str();
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc != 2 ) {
+			EXCEPT( "Bad %s result", command );
+		}
+		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
+			rc = 1;
+			error_string = result->argv[1];
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int GahpClient::gce_instance_list( const std::string &service_url,
+								   const std::string &auth_file,
+								   const std::string &project,
+								   const std::string &zone,
+								   StringList &instance_ids,
+								   StringList &instance_names,
+								   StringList &statuses,
+								   StringList &status_msgs )
+{
+	static const char* command = "GCE_INSTANCE_LIST";
+
+	// Generate request line
+	std::string reqline;
+	reqline += escapeGahpString( service_url );
+	reqline += " ";
+	reqline += escapeGahpString( auth_file );
+	reqline += " ";
+	reqline += escapeGahpString( project );
+	reqline += " ";
+	reqline += escapeGahpString( zone );
+
+	const char *buf = reqline.c_str();
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc < 2 ) {
+			EXCEPT( "Bad %s result", command );
+		}
+		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			if ( result->argc < 3 ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			int cnt = atoi( result->argv[2] );
+			if ( cnt < 0 || result->argc != 3 + 4 * cnt ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			for ( int i = 0; i < cnt; i++ ) {
+				instance_ids.append( result->argv[3 + 4*i] );
+				instance_names.append( result->argv[3 + 4*i + 1] );
+				statuses.append( result->argv[3 + 4*i + 2] );
+				status_msgs.append( result->argv[3 + 4*i + 3] );
+			}
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
 }
 
 
