@@ -34,7 +34,7 @@
 #include "subsystem_info.h"
 
 #define MIN_WORKER_NUM 1
-#define AMAZON_GAHP_VERSION	"0.0.2"
+#define AMAZON_GAHP_VERSION	"1.0"
 
 int RESULT_OUTBOX = 1;	// stdout
 int REQUEST_INBOX = 0; // stdin
