@@ -609,11 +609,11 @@ if (WINDOWS)
   endif()
   
   # DRMAA currently punted on Windows until we can figure out correct build
-  #add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
+  #add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.1)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 else ()
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.1)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
 

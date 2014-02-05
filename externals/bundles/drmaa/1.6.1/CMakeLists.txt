@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright 2011 Red Hat, Inc. 
+ # Copyright 2014 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -16,13 +16,20 @@
  # 
  ############################################################### 
 
-if (NOT PROPER AND (LINUX OR WINDOWS))
+# The source code for the Condor drmaa library is hosted at
+#   https://sourceforge.net/projects/condor-ext
+# The source packaged as versions 1.6 and 1.6.1 in our externals
+# repository is the latest code from Sourceforge as of 2009.
+# As of February, 2014, no additional changes have been made upstream.
+# Version 1.6.1 replaces the old Condor license when the Apache license.
+
+if (NOT PROPER AND (LINUX OR WINDOWS OR DARWIN))
   option(WITH_DRMAA "Compiling with support for drmaa" ON)
 endif()
 
 if ( WITH_DRMAA )
 
-	condor_pre_external( DRMAA drmaa-1.6 "lib;include" "include/drmaa.h")
+	condor_pre_external( DRMAA drmaa-1.6.1 "lib;include" "include/drmaa.h")
 	
 	if (NOT WINDOWS)
 		set (DRMAA_CONFIGURE ./configure --prefix=${DRMAA_INSTALL_LOC})
