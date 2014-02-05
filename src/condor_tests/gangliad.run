@@ -46,7 +46,7 @@ my $append_condor_config = '
   # NOOP is a special hack for testing; no actual interaction with ganglia happens
   GANGLIA_LIB = NOOP
   GANGLIA_CONFIG = ' . $cwd . '/x_ganglia_config
-  GANGLIAD_INTERVAL = 5
+  GANGLIA_SEND_DATA_FOR_ALL_HOSTS = true
   GANGLIAD_DEBUG = D_FULLDEBUG
   GANGLIAD_METRICS_CONFIG_DIR = ' . $configd . '
 ';
@@ -55,7 +55,7 @@ CondorTest::StartCondorWithParams(
     append_condor_config => $append_condor_config
 );
 
-# sleep for twice ganglia interval
+# sleep for a while
 sleep(10);
 
 # Verify that at least one metric was successfully parsed and
