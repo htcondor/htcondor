@@ -1480,6 +1480,15 @@ ResMgr::addResource( Resource *rip )
 	resources = new_resources;
 	nresources++;
 
+	// If this newly added slot is dynamic, add it to
+	// its parent's children
+
+	if( rip->get_feature() == Resource::DYNAMIC_SLOT) {
+		Resource *parent = rip->get_parent();
+		if (parent) {
+			parent->add_dynamic_child(rip);
+		}
+	}
 }
 
 
@@ -1535,6 +1544,13 @@ ResMgr::removeResource( Resource* rip )
 		// Tell the collector this Resource is gone.
 	rip->final_update();
 
+	// If this was a dynamic slot, remove it from parent
+	if( rip->get_feature() == Resource::DYNAMIC_SLOT) {
+		Resource *parent = rip->get_parent();
+		if (parent) {
+			parent->remove_dynamic_child(rip);
+		}
+	}
 		// Log a message that we're going away
 	rip->dprintf( D_ALWAYS, "Resource no longer needed, deleting\n" );
 

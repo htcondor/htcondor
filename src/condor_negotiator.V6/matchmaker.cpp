@@ -4104,6 +4104,14 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
             cp_restore_requested(request, consumption);
         }
 
+		bool pslotRankMatch = false;
+		if (!is_a_match) {
+			if (param_boolean("ALLOW_PSLOT_PREEMPTION", true)) {
+				is_a_match = pslotMultiMatch(&request, candidate);
+				pslotRankMatch = true;
+			}
+		}
+
 		int cluster_id=-1,proc_id=-1;
 		MyString machine_name;
 		if( IsDebugLevel( D_MACHINE ) ) {
@@ -4141,7 +4149,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		// not prefer it, just continue with the next offer ad....  we can
 		// skip all the below logic about preempt for user-priority, etc.
 		if ( only_for_startdrank ) {
-			if ( remoteUser == "" ) {
+			if (( remoteUser == "" ) && (!pslotRankMatch)) {
 					// offer does not have a remote user, thus we cannot eval
 					// startd rank yet because it does not make sense (the
 					// startd has nothing to compare against).  
@@ -5699,6 +5707,151 @@ Matchmaker::calculate_subtree_usage(GroupEntry *group) {
 	group->subtree_usage = subtree_usage;;
 	dprintf(D_ALWAYS, "subtree_usage at %s is %g\n", group->name.c_str(), subtree_usage);
 	return subtree_usage;
+}
+
+bool rankPairCompare(std::pair<int,double> lhs, std::pair<int,double> rhs) {
+	return lhs.second < rhs.second;
+}
+
+	// Return true is this partitionable slot would match the
+	// job with preempted resources from a dynamic slot.
+	// Only consider startd RANK for now.
+bool
+Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine) {
+	bool isPartitionable = false;
+
+	machine->LookupBool(ATTR_SLOT_PARTITIONABLE, isPartitionable);
+
+	// This whole deal is only for partitionable slots
+	if (!isPartitionable) {
+		return false;
+	}
+
+	double newRank; // The startd rank of the potential job
+
+	if (!machine->EvalFloat(ATTR_RANK, job, newRank)) {
+		newRank = 0.0;
+	}
+
+	// How many active dslots does this pslot currently have?
+	int numDslots = 0;
+	machine->LookupInteger(ATTR_NUM_DYNAMIC_SLOTS, numDslots);
+
+	if (numDslots < 1) {
+		return false;
+	}
+
+		// Copy the childCurrentRanks list attributes into vector
+	std::vector<std::pair<int,double> > ranks(numDslots);
+	for (int i = 0; i < numDslots; i++)  {
+
+		double currentRank = 0.0; // global default startd rank
+		std::string rankExprStr;
+		ExprTree *rankEt = NULL;
+		classad::Value result;
+
+			// list dereferences must be evaled, not lookup'ed
+		formatstr(rankExprStr, "MY.childCurrentRank[%d]", i);
+		ParseClassAdRvalExpr(rankExprStr.c_str(), rankEt);
+
+			// Lookup the CurrentRank of the dslot from the pslot attr
+		if (rankEt) {
+			EvalExprTree(rankEt, machine, job, result);
+			result.IsRealValue(currentRank);
+			delete rankEt;
+		} 
+
+		std::pair<int, double> slotRank(i, currentRank);
+		ranks[i] = slotRank;
+	}
+
+		// Sort all dslots by their current rank
+	std::sort(ranks.begin(), ranks.end(), rankPairCompare);
+
+		// For all ranks less than the current job, in ascending order...
+	ClassAd mutatedMachine(*machine); // make a copy to mutate
+
+	std::list<std::string> attrs;
+	attrs.push_back("cpus");
+	attrs.push_back("memory");
+	attrs.push_back("disk");
+		// need to add custom resources here
+
+		// In rank order, see if by preempting one more dslot would cause pslot to match
+	for (int i = 0; i < numDslots && ranks[i].second < newRank; i++) {
+		int dSlot = ranks[i].first; // dslot index in childXXX list
+
+			// for each splitable resource, get it from the dslot, and add to pslot
+		for (std::list<std::string>::iterator it = attrs.begin(); it != attrs.end(); it++) {
+			double b4 = 0.0;
+			double realValue = 0.0;
+
+			if (mutatedMachine.LookupFloat((*it).c_str(), b4)) {
+					// The value exists in the parent
+				b4 = floor(b4);
+				std::string childAttr;
+				formatstr(childAttr, "MY.child%s[%d]", (*it).c_str(), dSlot);
+					// and in the child
+				ExprTree *et;
+				classad::Value result;
+
+				ParseClassAdRvalExpr(childAttr.c_str(), et);
+				EvalExprTree(et, machine, NULL, result);
+				delete et;
+
+				int intValue;
+				if (result.IsIntegerValue(intValue)) {
+					mutatedMachine.Assign((*it).c_str(), (int) (b4 + intValue));
+				} else if (result.IsRealValue(realValue)) {
+					mutatedMachine.Assign((*it).c_str(), (b4 + realValue));
+				} else {
+					dprintf(D_ALWAYS, "Lookup of %s failed to evalute to integer or real\n", (*it).c_str());	
+				}
+			}
+		}
+
+		// Now, check if it is a match
+
+		classad::MatchClassAd::UnoptimizeAdForMatchmaking(&mutatedMachine);
+		classad::MatchClassAd::UnoptimizeAdForMatchmaking(job);
+
+		if (IsAMatch(&mutatedMachine, job)) {
+			dprintf(D_FULLDEBUG, "Matched pslot by rank preempting %d dynamic slots\n", i + 1);
+			std::string claimsToPreempt = "{";
+			bool firstTime = true;
+			for (int child = 0; child < i + 1; child++) {
+				std::string childAttr;
+				formatstr(childAttr, "%s[%d]", ATTR_CHILD_CLAIM_IDS,child);
+				ExprTree *et;
+				classad::Value result;
+	
+				ParseClassAdRvalExpr(childAttr.c_str(), et);
+				EvalExprTree(et, machine, NULL, result);
+				delete et;
+
+				std::string strValue;
+				if (result.IsStringValue(strValue)) {
+
+					if (firstTime) {
+						firstTime = false;
+					} else {
+						claimsToPreempt += ",";
+					}
+					claimsToPreempt += '"';
+					claimsToPreempt += strValue;
+					claimsToPreempt += '"';
+				}
+
+			}
+			claimsToPreempt += "}";
+			
+			machine->AssignExpr("PreemptDslotClaims", claimsToPreempt.c_str());
+			return true;
+		} 
+	}
+
+	dprintf(D_FULLDEBUG, "Could not match pslot even by rank preempting all dynamic slots\n");
+	return false;
 }
 
 GCC_DIAG_ON(float-equal)

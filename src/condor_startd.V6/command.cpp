@@ -1106,6 +1106,29 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		claim->client()->setaddr( client_addr );
 		free( client_addr );
 		client_addr = NULL;
+			// The schedd is asking us to preempt these claims to make
+			// the pslot it is really claiming bigger.  New in 8.1.6
+		int num_preempting = 0;
+		if (stream->code(num_preempting)) {
+			rip->dprintf(D_FULLDEBUG, "Schedd sending %d preempting claims.\n", num_preempting);
+			char **claims = (char **)malloc(sizeof(char *) * (num_preempting));
+			for (int i = 0; i < num_preempting; i++) {
+				claims[i] = NULL;
+				if (! stream->code(claims[i])) {
+					rip->dprintf( D_ALWAYS, "Can't receive preempting claim\n" );
+					ABORT;
+				}
+				Resource *dslot = resmgr->get_by_any_id( claims[i] );
+				if( !dslot ) {
+					ClaimIdParser idp( claims[i] );
+					dprintf( D_ALWAYS, 
+							 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
+				}
+				dslot->kill_claim();
+				free(claims[i]);
+			}
+			free(claims);
+		}
 	} else {
 		rip->dprintf(D_FULLDEBUG, "Schedd using pre-v6.1.11 claim protocol\n");
 	}
