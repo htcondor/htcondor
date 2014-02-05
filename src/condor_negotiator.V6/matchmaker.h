@@ -282,6 +282,7 @@ class Matchmaker : public Service
 		static unsigned int HashFunc(const MyString &Key);
 		friend int comparisonFunction (AttrList *, AttrList *,
 										void *);
+		bool pslotMultiMatch(ClassAd *job, ClassAd *machine);
 
 			// If we are not considering preemption, this function will
 			// trim out startd ads that are not in the Unclaimed state.
@@ -434,6 +435,7 @@ class Matchmaker : public Service
 			~MatchListType();
 
 			void increment_rejForSubmitterLimit() { m_rejForSubmitterLimit++; }
+
 
 		private:
 

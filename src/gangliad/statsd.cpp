@@ -748,6 +748,8 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 void
 StatsD::publishMetrics()
 {
+    double start_time = UtcTime::getTimeDouble();
+
     m_stats_time_till_pub -= m_stats_heartbeat_interval;
 
     if (m_stats_time_till_pub > 0) {
@@ -823,6 +825,14 @@ StatsD::publishMetrics()
     sendHeartbeats();
 
 	dprintf(D_ALWAYS,"Done publishing\n");
+    
+    // Did we take longer than a heartbeat period?
+    int heartbeats_missed = (int)(UtcTime::getTimeDouble() - start_time) /
+                            m_stats_heartbeat_interval;
+    if (heartbeats_missed) {
+        dprintf(D_ALWAYS, "Skipping %d heartbeats\n", heartbeats_missed);
+        m_stats_time_till_pub -= (heartbeats_missed * m_stats_heartbeat_interval);
+    }
 }
 
 void
