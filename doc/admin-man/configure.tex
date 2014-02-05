@@ -786,9 +786,8 @@ File System Configuration File Entries''.
 \label{param:Bin}
 \item[\Macro{BIN}]
   This directory points to the
-  HTCondor directory where user-level programs are installed.  It is
-  usually defined relative to the \MacroUNI{RELEASE\_DIR} macro.
-  There is no default value for \Macro{BIN}.
+  HTCondor directory where user-level programs are installed.
+  The default value is \File{\MacroUNI{RELEASE\_DIR}/bin}.
   
 \label{param:Lib}
 \item[\Macro{LIB}]
@@ -796,9 +795,8 @@ File System Configuration File Entries''.
   HTCondor directory where libraries used to link jobs for HTCondor's
   standard universe are stored.  The \Condor{compile} program uses
   this macro to find these libraries, so it must be defined for
-  \Condor{compile} to function.  \MacroUNI{LIB} is usually defined
-  relative to the \MacroUNI{RELEASE\_DIR} macro, and has no default
-  value.
+  \Condor{compile} to function.
+  The default value is \File{\MacroUNI{RELEASE\_DIR}/lib}.
 
 \label{param:LibExec}
 \item[\Macro{LIBEXEC}]
@@ -810,10 +808,8 @@ File System Configuration File Entries''.
 \label{param:Include}
 \item[\Macro{INCLUDE}]
   This directory points to the HTCondor directory where header files reside.
-  \MacroUNI{INCLUDE} would usually be defined relative to
-  the \MacroUNI{RELEASE\_DIR} configuration macro.
-  There is no default value, but
-  if defined, it can make inclusion of necessary header files
+  The default value is \File{\MacroUNI{RELEASE\_DIR}/include}.
+  It can make inclusion of necessary header files
   for compilation of programs (such as those programs
   that use \File{libcondorapi.a})
   easier through the use of \Condor{config\_val}.
@@ -825,33 +821,25 @@ File System Configuration File Entries''.
   binaries for the HTCondor daemons) and administrative tools are
   installed.  Whatever directory \MacroU{SBIN} points to ought
   to be in the \Env{PATH} of users acting as HTCondor
-  administrators.  \Macro{SBIN} has no default value.
+  administrators.
+  The default value is \File{\MacroUNI{BIN}} in Windows and
+  \File{\MacroUNI{RELEASE\_DIR}/sbin} on all other platforms.
 
 \label{param:LocalDir}
 \item[\Macro{LOCAL\_DIR}]
   The location of the
-  local HTCondor directory on each machine in your pool.  One common
-  option is to use the condor user's home directory which may be
-  specified with \MacroUNI{TILDE}.  There is no default value for
-  \Macro{LOCAL\_DIR}.  For example:
+  local HTCondor directory on each machine in your pool.
+  The default value is \File{\MacroUNI{RELEASE\_DIR}} on Windows and
+  \File{\MacroUNI{RELEASE\_DIR}/hosts/\MacroUNI{HOSTNAME}} on all other
+  platforms.
+  
+  Another possibility
+  is to use the condor user's home directory, which may be
+  specified with \MacroUNI{TILDE}. For example:
   \begin{verbatim}
     LOCAL_DIR = $(tilde)
   \end{verbatim}
-  
-  On machines with a shared file system, where either the
-  \MacroUNI{TILDE} directory or another directory you want to use is
-  shared among all machines in your pool, you might use the
-  \MacroUNI{HOSTNAME} macro and have a directory with many
-  subdirectories, one for each machine in your pool, each named by
-  host names.  For example:
-  \begin{verbatim}
-    LOCAL_DIR = $(tilde)/hosts/$(hostname)      
-  \end{verbatim}
-  or:
-  \begin{verbatim}
-    LOCAL_DIR = $(release_dir)/hosts/$(hostname)
-  \end{verbatim}
-  
+
 \label{param:Log}
 \item[\Macro{LOG}]
   Used to specify the
@@ -860,9 +848,8 @@ File System Configuration File Entries''.
   the \MacroUNI{LOG} macro by default.  The log directory also acts as
   the current working directory of the HTCondor daemons as the run, so
   if one of them should produce a core file for any reason, it would
-  be placed in the directory defined by this macro.  \MacroNI{LOG} is
-  required to be defined.  Normally, \MacroUNI{LOG} is defined in
-  terms of \MacroUNI{LOCAL\_DIR}.
+  be placed in the directory defined by this macro.
+  The default value is \File{\MacroUNI{LOCAL\_DIR}/log}.
 
 \label{param:Run}
 \item[\Macro{RUN}]
@@ -883,9 +870,9 @@ File System Configuration File Entries''.
   directory is located on a partition with enough disk space.  If a
   given machine is only set up to execute HTCondor jobs and not submit
   them, it would not need a spool directory (or this macro defined).
-  There is no default value for \Macro{SPOOL}, and the \Condor{schedd}
-  will not function without it \Macro{SPOOL} defined.  Normally,
-  \MacroUNI{SPOOL} is defined in terms of \MacroUNI{LOCAL\_DIR}.
+  The default value is \File{\MacroUNI{LOCAL\_DIR}/spool}.
+  The \Condor{schedd}
+  will not function if \Macro{SPOOL} is not defined.
   
 \label{param:Execute}
 \item[\Macro{EXECUTE}]
@@ -898,10 +885,11 @@ File System Configuration File Entries''.
   mode and no other working directory was specified.
   If a given machine is set up to only submit
   jobs and not execute them, it would not need an execute directory,
-  and this macro need not be defined.  There is no default value for
-  \MacroNI{EXECUTE}, and the \Condor{startd} will not function if
-  \MacroNI{EXECUTE} is undefined.  Normally, \MacroUNI{EXECUTE} is
-  defined in terms of \MacroUNI{LOCAL\_DIR}.  To customize the execute
+  and this macro need not be defined.
+  The default value is \File{\MacroUNI{LOCAL\_DIR}/execute}.
+  The \Condor{startd} will not function if
+  \MacroNI{EXECUTE} is undefined.
+  To customize the execute
   directory independently for each batch slot, use \MacroNI{SLOT<N>\_EXECUTE}.
 
 \label{param:SlotNExecute}
@@ -1030,8 +1018,8 @@ File System Configuration File Entries''.
   the pool.  For example, if a daemon crashes, the \Condor{master}
   can send an \Term{obituary} to this address with the last few lines
   of that daemon's log file and a brief message that describes what
-  signal or exit status that daemon exited with.  There is no default
-  value for \MacroNI{CONDOR\_ADMIN}.
+  signal or exit status that daemon exited with.
+  The default value is root@\MacroUNI{FULL\_HOSTNAME}.
 
 \label{param:SubsysAdminEmail}
 \item[\MacroB{<SUBSYS>\_ADMIN\_EMAIL}]
@@ -1068,8 +1056,10 @@ File System Configuration File Entries''.
   sending program that uses \Opt{-s} to specify a subject for the
   message.  On all platforms, the default shipped with HTCondor should
   work.  Only if you installed things in a non-standard location on
-  your system would you need to change this setting.  There is no
-  default value for \MacroNI{MAIL}, and the \Condor{schedd} will not
+  your system would you need to change this setting.
+  The default value is \File{\MacroUNI{BIN}/condor\_mail.exe} on Windows
+  and \File{/usr/bin/mail} on all other platforms.
+  The \Condor{schedd} will not
   function unless \MacroNI{MAIL} is defined.
 
 \label{param:MailFrom}
@@ -8536,8 +8526,7 @@ These macros affect the \Condor{gridmanager}.
 \label{param:CGAHPLog}
 \item[\Macro{C\_GAHP\_LOG}]
   The complete path and file name of the HTCondor GAHP server's log.
-  There is no default value. The expected location as defined
-  in the example configuration is \File{/temp/CGAHPLog.\MacroUNI{USERNAME}}.
+  The default value is \File{/tmp/CGAHPLog.\MacroUNI{USERNAME}}.
 
 \label{param:MaxCGAHPLog}
 \item[\Macro{MAX\_C\_GAHP\_LOG}]
@@ -8546,9 +8535,7 @@ These macros affect the \Condor{gridmanager}.
 \label{param:CGAHPWorkerThreadLog}
 \item[\Macro{C\_GAHP\_WORKER\_THREAD\_LOG}]
   The complete path and file name of the HTCondor GAHP worker process' log.
-  There is no default value.
-  The expected location as defined in the example configuration is
-  \File{/temp/CGAHPWorkerLog.\MacroUNI{USERNAME}}.
+  The default value is \File{/temp/CGAHPWorkerLog.\MacroUNI{USERNAME}}.
 
 \label{param:CGAHPContactScheddDelay}
 \item[\Macro{C\_GAHP\_CONTACT\_SCHEDD\_DELAY}]
@@ -8561,33 +8548,29 @@ These macros affect the \Condor{gridmanager}.
 \label{param:GLITELocation}
 \item[\Macro{GLITE\_LOCATION}]
   The complete path to the directory containing the Glite software.
-  There is no default value. The expected location as given
-  in the example configuration is \File{\MacroUNI{LIB}/glite}.
+  The default value is \File{\MacroUNI{LIBEXEC}/glite}.
   The necessary Glite software is included with HTCondor,
-  and is required for pbs and lsf jobs.
+  and is required for grid-type batch jobs.
 
 \label{param:CondorGAHP}
 \item[\Macro{CONDOR\_GAHP}]
   The complete path and file name of the HTCondor GAHP executable.
-  There is no default value. The expected location as given
-  in the example configuration is \File{\MacroUNI{SBIN}/condor\_c-gahp}.
+  The default value is \File{\MacroUNI{SBIN}/condor\_c-gahp}.
 
 \label{param:EC2GAHP}
 \item[\Macro{EC2\_GAHP}]
   The complete path and file name of the EC2 GAHP executable.
-  There is no default value. The expected location as given
-  in the example configuration is \File{\MacroUNI{SBIN}/ec2\_gahp}.
+  The default value is \File{\MacroUNI{SBIN}/ec2\_gahp}.
 
 \label{param:GCEGAHP}
 \item[\Macro{GCE\_GAHP}]
   The complete path and file name of the GCE GAHP executable.
-  The default value is \File{\MacroUNI{SBIN}/ec2\_gahp}.
+  The default value is \File{\MacroUNI{SBIN}/gce\_gahp}.
 
 \label{param:GT2GAHP}
 \item[\Macro{GT2\_GAHP}]
   The complete path and file name of the GT2 GAHP executable.
-  There is no default value. The expected location as given
-  in the example configuration is \File{\MacroUNI{SBIN}/gahp\_server}.
+  The default value is \File{\MacroUNI{SBIN}/gahp\_server}.
 
 \label{param:BatchGAHP}
 \item[\Macro{BATCH\_GAHP}]
@@ -8624,29 +8607,23 @@ These macros affect the \Condor{gridmanager}.
 \item[\Macro{UNICORE\_GAHP}]
   The complete path and file name of the
   wrapper script that invokes the Unicore GAHP executable.
-  There is no default value. The expected location as given
-  in the example configuration is \File{\MacroUNI{SBIN}/unicore\_gahp}.
+  The default value is \File{\MacroUNI{SBIN}/unicore\_gahp}.
 
 \label{param:NorduGridGAHP}
 \item[\Macro{NORDUGRID\_GAHP}]
   The complete path and file name of the
   wrapper script that invokes the NorduGrid GAHP executable.
-  There is no default value. The expected location as given
-  in the example configuration is \File{\MacroUNI{SBIN}/nordugrid\_gahp}.
+  The default value is \File{\MacroUNI{SBIN}/nordugrid\_gahp}.
 
 \label{param:CREAMGAHP}
 \item[\Macro{CREAM\_GAHP}]
   The complete path and file name of the CREAM GAHP executable.
-  There is no default value.
-  The expected location as given in the example configuration is
-  \File{\MacroUNI{SBIN}/cream\_gahp}.
+  The default value is \File{\MacroUNI{SBIN}/cream\_gahp}.
 
 \label{param:DeltacloudGAHP}
 \item[\Macro{DELTACLOUD\_GAHP}]
   The complete path and file name of the Deltacloud GAHP executable.
-  There is no default value.
-  The expected location as given in the example configuration is
-  \File{\MacroUNI{SBIN}/deltacloud\_gahp}.
+  The default value is \File{\MacroUNI{SBIN}/deltacloud\_gahp}.
 
 \label{param:SGEGAHP}
 \item[\Macro{SGE\_GAHP}]
@@ -10273,7 +10250,7 @@ They specify items related to the \Condor{vm-gahp}.
 \label{param:VMGAHPServer}
 \item[\Macro{VM\_GAHP\_SERVER}]
   The complete path and file name of the \Condor{vm-gahp}.
-  There is no default value for this required configuration variable.
+  The default value is \File{\MacroUNI{SBIN}/condor\_vm-gahp}.
 
 \label{param:VMGAHPLog}
 \item[\Macro{VM\_GAHP\_LOG}]
@@ -10726,7 +10703,7 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
 \label{param:HADLog}
 \item[\Macro{HAD\_LOG}]
   Full path and file name of the log file.
-  There is no default value.
+  The default value is \File{\MacroUNI{LOG}/HADLog}.
 
 \label{param:ReplicationList}
 \item[\Macro{REPLICATION\_LIST}]
@@ -10814,22 +10791,17 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
 \label{param:ReplicationLog}
 \item[\Macro{REPLICATION\_LOG}]
   Full path and file name to the log file.
-  There is no default value.
+  The default value is \File{\MacroUNI{LOG}/ReplicationLog}.
 
 \label{param:Transferer}
 \item[\Macro{TRANSFERER}]
   The full path and file name of the \Condor{transferer} executable.
-  Versions of HTCondor previous to 7.2.2 hard coded the location
-  as \File{\MacroUNI{RELEASE\_DIR}/sbin/condor\_transferer}.
-  This is now the default value.
-  The future default value is likely to change, 
-  and be defined relative to \MacroUNI{SBIN}.
+  The default value is \File{\MacroUNI{LIBEXEC}/condor\_transferer}.
 
 \label{param:TransfererLog}
 \item[\Macro{TRANSFERER\_LOG}]
   Full path and file name to the log file.
-  There is no default value for this variable; a definition is required
-  if the \Condor{replication} daemon does a file transfer.
+  The default value is \File{\MacroUNI{LOG}/TransfererLog}.
 
 \label{param:TransfererDebug}
 \item[\Macro{TRANSFERER\_DEBUG}]
