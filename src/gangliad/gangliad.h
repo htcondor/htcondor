@@ -45,6 +45,12 @@ class GangliaD: public StatsD {
 	// apply ganglia-specific logic relating to the IP address in the spoof host
 	virtual bool getDaemonIP(std::string const &machine,std::string &result) const;
 
+    // Initialize list of host currently monitored by ganglia
+    virtual void initializeHostList();
+
+    // send heartbeats to hosts not currently monitored by ganglia
+    virtual void sendHeartbeats();
+
  private:
 	unsigned m_tmax; // max time between updates
 	unsigned m_dmax; // max time to deletion of metrics that are not updated
@@ -53,6 +59,12 @@ class GangliaD: public StatsD {
 	Ganglia_gmond_config m_ganglia_config;
 	Ganglia_udp_send_channels m_ganglia_channels;
 	bool m_ganglia_noop;
+    std::string m_gstat_command;
+    char **m_gstat_argv;
+    std::set<std::string> m_monitored_hosts;
+    std::set<std::string> m_need_heartbeat;
+    bool m_send_data_for_all_hosts;
+    int m_ganglia_metrics_sent;
 };
 
 #endif
