@@ -3173,7 +3173,7 @@ Resource::rollupDynamicAttrs(ClassAd *cap, std::string &name) const {
 	std::string attrValue = "{";
 	bool firstTime = true;
 
-	for (std::set<Resource *,ResourceLess>::iterator i(m_children.begin());  i != m_children.end();  i++) {
+	for (std::set<Resource *,ResourceLess>::const_iterator i(m_children.begin());  i != m_children.end();  i++) {
 		if (firstTime) {
 			firstTime = false;
 		} else {
