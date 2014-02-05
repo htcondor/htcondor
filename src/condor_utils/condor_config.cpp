@@ -1587,8 +1587,21 @@ fill_attributes()
 		// NUM_PHYSICAL_CORES, and what-have-you.
 	int num_cpus=0;
 	int num_hyperthread_cpus=0;
-	sysapi_ncpus_raw_no_param(&num_cpus,&num_hyperthread_cpus);
+	sysapi_ncpus_raw(&num_cpus,&num_hyperthread_cpus);
 
+	// DETECTED_PHYSICAL_CPUS will always be the number of real CPUs not counting hyperthreads.
+	val.formatstr("%d",num_cpus);
+	insert("DETECTED_PHYSICAL_CPUS", val.Value(), ConfigMacroSet, DetectedMacro);
+
+	int def_valid = 0;
+	bool count_hyper = param_default_boolean("COUNT_HYPERTHREAD_CPUS", get_mySubSystem()->getName(), &def_valid);
+	if ( ! def_valid) count_hyper = true;
+	// DETECTED_CPUS will be the value that NUM_CPUS will be set to by default.
+	val.formatstr("%d", count_hyper ? num_hyperthread_cpus : num_cpus);
+	insert("DETECTED_CPUS", val.Value(), ConfigMacroSet, DetectedMacro);
+
+	// DETECTED_CORES is not a good name, but we're stuck with it now...
+	// it will ALWAYS be the number of hyperthreaded cores.
 	val.formatstr("%d",num_hyperthread_cpus);
 	insert("DETECTED_CORES", val.Value(), ConfigMacroSet, DetectedMacro);
 }
@@ -2660,6 +2673,16 @@ reinsert_specials( const char* host )
 	snprintf(buf,40,"%u",reinsert_ppid);
 	insert("PPID", buf, ConfigMacroSet, DetectedMacro);
 	insert("IP_ADDRESS", my_ip_string(), ConfigMacroSet, DetectedMacro);
+
+	{ // set DETECTED_CPUS to the correct value, either hyperthreaded or not.
+		int num_cpus=0;
+		int num_hyperthread_cpus=0;
+		sysapi_ncpus_raw(&num_cpus,&num_hyperthread_cpus);
+		bool count_hyper = param_boolean("COUNT_HYPERTHREAD_CPUS", true);
+		// DETECTED_CPUS will be the value that NUM_CPUS will be set to by default.
+		snprintf(buf,40,"%d", count_hyper ? num_hyperthread_cpus : num_cpus);
+		insert("DETECTED_CPUS", buf, ConfigMacroSet, DetectedMacro);
+	}
 }
 
 

@@ -66,9 +66,12 @@ MachAttributes::MachAttributes()
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
 		// value for this as soon as the MachAttributes object exists.
-	m_num_cpus = sysapi_ncpus();
+	bool count_hyper = param_boolean("COUNT_HYPERTHREAD_CPUS", true);
+	int ncpus=0, nhyper_cpus=0;
+	sysapi_ncpus_raw(&ncpus, &nhyper_cpus);
+	m_num_real_cpus = count_hyper ? nhyper_cpus : ncpus;
+	m_num_cpus = param_integer("NUM_CPUS");
 
-	m_num_real_cpus = sysapi_ncpus_raw();
 
 		// The same is true of physical memory.  If we had an error in
 		// sysapi_phys_memory(), we need to just EXCEPT with a message

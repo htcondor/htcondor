@@ -1413,13 +1413,44 @@ review=?
 tags=quill,jobqueuedbmanager
 
 [COUNT_HYPERTHREAD_CPUS]
-default=1
-type=int
+default=true
+type=bool
 reconfig=true
 customization=seldom
 friendly_name=Count Hyperthread Cpus
 review=?
 tags=sysapi,test
+
+# we expect this to be overwritten by the config system, this is here just in case and to save space
+[DETECTED_CPUS]
+default=1
+type=int
+reconfig=false
+customization=devel
+usage=Number of detected cpus, includes hyperthreads if COUNT_HYPERTHREAD_CPUS
+tags=
+
+[DETECTED_PHYSICAL_CPUS]
+default=1
+type=int
+reconfig=false
+customization=devel
+usage=Number of detected cpus. does not include hyperthreads
+
+[DETECTED_CORES]
+default=1
+type=int
+reconfig=false
+customization=devel
+usage=Number of detected cpus. does not include hyperthreads
+
+[NUM_CPUS]
+default=$(DETECTED_CPUS)
+type=int
+reconfig=true
+customization=normal
+usage=Number of CPUs to provision in the startd
+tags=sysapi,reconfig
 
 [CONSOLE_DEVICES]
 default=mouse, console
