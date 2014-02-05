@@ -6406,6 +6406,15 @@ friendly_name=Ganglia Configuration
 review=?
 tags=c++_util,condor_config
 
+[GANGLIA_GSTAT_COMMAND]
+default=gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Ganglia gstat Command
+review=?
+tags=c++_util,condor_config
+
 [GANGLIAD_METRICS_CONFIG_DIR]
 default=/etc/condor/ganglia.d
 type=string
@@ -6425,7 +6434,7 @@ review=?
 tags=c++_util,condor_config
 
 [GANGLIAD_INTERVAL]
-default=300
+default=60
 type=int
 reconfig=true
 customization=seldom
@@ -6466,6 +6475,15 @@ type=bool
 reconfig=true
 customization=seldom
 friendly_name=Publish metrics for individual execute nodes
+review=?
+tags=c++_util,gangliad
+
+[GANGLIA_SEND_DATA_FOR_ALL_HOSTS]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Send metrics for all hosts
 review=?
 tags=c++_util,gangliad
 

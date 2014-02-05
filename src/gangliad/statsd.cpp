@@ -526,6 +526,8 @@ StatsD::StatsD():
 	m_verbosity(0),
 	m_per_execute_node_metrics(true),
 	m_stats_pub_interval(0),
+	m_stats_heartbeat_interval(20),
+	m_stats_time_till_pub(0),
 	m_stats_pub_timer(-1),
 	m_derivative_publication_failed(0),
 	m_non_derivative_publication_failed(0),
@@ -552,7 +554,7 @@ StatsD::initAndReconfig(char const *service_name)
 
 	int old_stats_pub_interval = m_stats_pub_interval;
 	formatstr(param_name,"%s_INTERVAL",service_name);
-	m_stats_pub_interval = param_integer(param_name.c_str(),300);
+	m_stats_pub_interval = param_integer(param_name.c_str(),60);
 	if( m_stats_pub_interval < 0 ) {
 		dprintf(D_ALWAYS,
 				"%s is less than 0, so no stats publications will be made.\n",
@@ -564,16 +566,13 @@ StatsD::initAndReconfig(char const *service_name)
 	}
 	else if( m_stats_pub_timer >= 0 ) {
 		if( old_stats_pub_interval != m_stats_pub_interval ) {
-			daemonCore->Reset_Timer(
-				m_stats_pub_timer,
-				m_stats_pub_interval,
-				m_stats_pub_interval);
+            m_stats_time_till_pub = m_stats_time_till_pub + (m_stats_pub_interval - old_stats_pub_interval );
 		}
 	}
 	else {
 		m_stats_pub_timer = daemonCore->Register_Timer(
-			10 < m_stats_pub_interval ? 10 : m_stats_pub_interval,
-			m_stats_pub_interval,
+			m_stats_heartbeat_interval,
+			m_stats_heartbeat_interval,
 			(TimerHandlercpp)&StatsD::publishMetrics,
 			"Statsd::publishMetrics",
 			this );
@@ -749,6 +748,17 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 void
 StatsD::publishMetrics()
 {
+    m_stats_time_till_pub -= m_stats_heartbeat_interval;
+
+    if (m_stats_time_till_pub > 0) {
+        sendHeartbeats();
+        return;
+    }
+
+    m_stats_time_till_pub = m_stats_pub_interval;
+
+    initializeHostList();
+
 	dprintf(D_ALWAYS,"Gathering ClassAds\n");
 
 	// reset all aggregate sums, counts, etc.
@@ -809,6 +819,8 @@ StatsD::publishMetrics()
 	daemon_ads.Close();
 
 	publishAggregateMetrics();
+
+    sendHeartbeats();
 
 	dprintf(D_ALWAYS,"Done publishing\n");
 }
