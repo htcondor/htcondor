@@ -1,0 +1,125 @@
+\begin{ManPage}{\label{man-condor-gpu-discovery}\Condor{gpu\_discovery}}{1}
+{Output GPU-related ClassAd attributes}
+\Synopsis \SynProg{\Condor{gpu\_discovery}}
+\Opt{-help}
+
+\SynProg{\Condor{gpu\_discovery}}
+\oOpt{<options>}
+
+\index{HTCondor commands!condor\_gpu\_discovery}
+\index{condor\_gpu\_discovery command}
+
+\Description
+
+\Condor{gpu\_discovery} runs discovery software to determine
+the host's GPU capabilities,
+which are output as ClassAd attributes.
+
+This tool is not available for MAC OS platforms.
+
+With no command line options, the single ClassAd attribute
+\Attr{DetectedGPUs} is printed.
+If the value is 0, no GPUs were detected.
+If one or more GPUS were detected, the value is 
+a string, presented as a comma and space separated list of the GPUs discovered,
+where each is given a name further used as the \Arg{prefix string} in other
+attribute names.
+Where there is more than one GPU of a particular type, 
+the \Arg{prefix string} includes an integer value numbering the device;
+these integer values monotonically increase from 0. 
+For example, a discovery of two GPUs may output
+\begin{verbatim}
+DetectedGPUs="CUDA0, CUDA1"
+\end{verbatim}
+Further command line options use \AdStr{CUDA} either with or without one of
+the integer values 0 or 1 as the \Arg{prefix string} in
+attribute names.
+
+\begin{Options}
+  \OptItem{\Opt{-help}} {
+    Print usage information and exit.
+  }
+  \OptItem{\Opt{-properties}} {
+    In addition to the \Attr{DetectedGPUs} attribute, display 
+    standard CUDA attributes 
+    \Attr{Capability}, \Attr{DeviceName}, \Attr{DriverVersion}, 
+    \Attr{ECCEnabled}, \Attr{GlobalMemoryMb}, and \Attr{RuntimeVersion}.
+    The displayed standard Open CL attributes are
+    \Attr{DeviceName}, \Attr{ECCEnabled}, \Attr{OpenCLVersion}, and
+    \Attr{GlobalMemoryMb}.
+    Note that for a host with more than one of the same GPU type,
+    those attribute values that are the same across all of the GPUs
+    will not have an integer value in the prefix string.
+  }
+  \OptItem{\Opt{-extra}} {
+    Display the additional attributes of
+    \Attr{ClockMhz}, \Attr{ComputeUnits}, and \Attr{CoresPerCU}
+    for a CUDA device,
+    and
+    \Attr{ClockMhz} and \Attr{ComputeUnits} for an OCL device.
+  }
+  \OptItem{\Opt{-dynamic}} {
+    Display attributes of NVIDIA devices that change values as the GPU 
+    is working.
+    These are \Attr{FanSpeedPct}, \Attr{BoardTempF}, \Attr{DieTempF}, 
+    \Attr{EccErrorsSingleBit}, and \Attr{EccErrorsDoubleBit}.
+  }
+  \OptItem{\Opt{-mixed}} {
+    When displaying attribute values, assume that the machine has a
+    heterogeneous set of GPUs,
+    so always include the integer value in the \Arg{prefix string}.
+  }
+  \OptItem{\OptArg{-device}{<N>}}{
+    Display properties only for GPU device \Arg{<N>}, 
+    where \Arg{<N>} is the integer value defined for the \Arg{prefix string}.
+    Note that the attribute names in this output will \emph{not} contain the 
+    value for \Arg{<N>}.
+  }
+  \OptItem{\OptArg{-tag}{string}}{
+    Set the resource tag portion of the intended machine ClassAd attribute
+    \Attr{Detected<ResourceTag>} to be \Arg{string}. 
+    If this option is not specified, the resource tag is \AdStr{GPUs},
+    resulting in attribute name \Attr{DetectedGPUs}.
+  }
+  \OptItem{\OptArg{-prefix}{string}}{
+    When naming attributes, use \Arg{string} as the prefix.
+    When this option is not specified, 
+    the string is either \Expr{CUDA} or \Expr{OCL}.
+  }
+  \OptItem{\Opt{-simulate:D,N}} {
+    For testing purposes, assume that N devices of type D were detected.
+    No discovery software is invoked.
+    If D is 0, it refers to GeForce GT 330, and a default value for N is 1.
+    If D is 1, it refers to GeForce GTX 480, and a default value for N is 2.
+  }
+  \OptItem{\Opt{-opencl}} {
+    Prefer detection via OpenCL rather than CUDA.
+    Without this option, CUDA detection software is invoked first,
+    and no further Open CL software is invoked if CUDA devices are detected.
+  }
+  \OptItem{\Opt{-nvcuda}} {
+    For Windows platforms only, use a CUDA driver rather than the
+    CUDA run time.
+  }
+  \OptItem{\Opt{-config}} {
+    This option is not yet implemented.
+    Future versions of HTCondor will output in the syntax of 
+    HTCondor configuration, instead of ClassAd language.
+  }
+  \OptItem{\Opt{-verbose}} {
+    For interactive use of the tool, output extra information to show 
+    detection while in progress.
+  }
+  \OptItem{\Opt{-diagnostic}} {
+    Show diagnostic information, to aid in tool development.
+  }
+\end{Options}
+
+\ExitStatus
+
+\Condor{gpu\_discovery} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+%\Examples
+
+\end{ManPage}
