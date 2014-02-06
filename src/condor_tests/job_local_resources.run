@@ -119,23 +119,34 @@ my $idles = 0;
 			$count += 1;
 			#print "AD: $line\n";
 			if($longad =~ /^TotalGpu\s*=\s*(\d+)\s*$/i) {
-				CondorTest::debug("Total$AdType = $1\n",1);;
+				CondorTest::debug("Total$AdType = $1\n",1);
 				CheckExpectations("Total$AdType", $1, 2);
 			} elsif($longad =~ /^Gpu\s*=\s*(\d+)\s*$/i) {
-				CondorTest::debug("$AdType = $1\n",1);;
+				CondorTest::debug("$AdType = $1\n",1);
 				CheckExpectations("$AdType", $1, 1);
 			} elsif($longad =~ /^DetectedGpu\s*=\s*(\d+)\s*$/i) {
-				CondorTest::debug("Detected$AdType = $1\n",1);;
+				CondorTest::debug("Detected$AdType = $1\n",1);
 				CheckExpectations("Detected$AdType", $1, 2);
+			} elsif($longad =~ /^TotalSlotGpu\s*=\s*(\d+)\s*$/i) {
+				my $expected_total_slot_gpu = 1;
+				if ($checkpslot eq "yes") {
+					$expected_total_slot_gpu = 2;
+				}
+				CondorTest::debug("TotalSlotGpu = $1\n",1);
+				CheckExpectations("$AdType", $1, $expected_total_slot_gpu);
 			} else {
-				CondorTest::debug("unexpected Gpu - $longad\n",1);;
+				CondorTest::debug("unexpected Gpu - $longad\n",1);
 			}
 		}
 	}
 	print "After: $cmd\n";
 
-	if($count != 4){
-		die "There are expected to be 4 resource uniqu ads. There were $count for Gpu\n";
+	my $expected_count = 4;
+	if ($checkpslot eq "yes") {
+		$expected_count = 5;
+	}
+	if($count != $expected_count){
+		die "There are expected to be $expected_count resource unique ads. There were $count for Gpu\n";
 	}
 
 
@@ -160,20 +171,20 @@ foreach my $longad (@adarray) {
 		$count += 1;
 		CondorTest::debug("ad: $longad\n",2);
 		if($longad =~ /^TotalGpu\s*=\s*(\d+)\s*$/i) {
-			CondorTest::debug("Total$AdType = $1\n",2);;
+			CondorTest::debug("Total$AdType = $1\n",2);
 			CheckExpectations("Total$AdType", $1, 2);
 		} elsif($longad =~ /^Gpu\s*=\s*(\d+)\s*$/i) {
-			CondorTest::debug("$AdType = $1\n",2);;
+			CondorTest::debug("$AdType = $1\n",2);
 			CheckExpectations("$AdType", $1, 1);
 		} elsif($longad =~ /^DetectedGpu\s*=\s*(\d+)\s*$/i) {
-			CondorTest::debug("Detected$AdType = $1\n",2);;
+			CondorTest::debug("Detected$AdType = $1\n",2);
 			CheckExpectations("Detected$AdType", $1, 2);
 		} 
 	}
 }
 
 if($count != 4){
-	die "There are expected to be 4 resource uniqu ads. There were $count for Gpu\n";
+	die "There are expected to be 4 resource unique ads. There were $count for Gpu\n";
 }
 
 $adarray = ();
@@ -187,16 +198,16 @@ foreach my $longad (@adarray) {
 		$count += 1;
 		CondorTest::debug("ad: $longad\n",2);
 		if($longad =~ /^TotalSails\s*=\s*(\d+)\s*$/i) {
-			CondorTest::debug("Total$AdType = $1\n",2);;
+			CondorTest::debug("Total$AdType = $1\n",2);
 			CheckExpectations("Total$AdType", $1, 2);
 		} elsif($longad =~ /^TotalSlotSails\s*=\s*(\d+)\s*$/i) {
-			CondorTest::debug("TotalSlot$AdType = $1\n",2);;
+			CondorTest::debug("TotalSlot$AdType = $1\n",2);
 			CheckExpectations("TotalSlot$AdType", $1, 1);
 		} elsif($longad =~ /^Sails\s*=\s*(\d+)\s*$/i) {
-			CondorTest::debug("$AdType = $1\n",2);;
+			CondorTest::debug("$AdType = $1\n",2);
 			CheckExpectations("$AdType", $1, 1);
 		} elsif($longad =~ /^DetectedSails\s*=\s*(\d+)\s*$/i) {
-			CondorTest::debug("Detected$AdType = $1\n",2);;
+			CondorTest::debug("Detected$AdType = $1\n",2);
 			CheckExpectations("Detected$AdType", $1, 2);
 		} else {
 			die "Failed to match this line<$longad>\n";
@@ -205,7 +216,7 @@ foreach my $longad (@adarray) {
 }
 
 if($count != 4){
-	die "There are expected to be 4 resource uniqu ads. There were $count for Sails\n";
+	die "There are expected to be 4 resource unique ads. There were $count for Sails\n";
 }
 
 $adarray = ();
@@ -220,16 +231,16 @@ foreach my $longad (@adarray) {
 		$count += 1;
 		CondorTest::debug("ad: $longad\n",2);
 		if($longad =~ /^TotalBoats\s*=\s*(\d+)\s*$/i) {
-			CondorTest::debug("Total$AdType = $1\n",2);;
+			CondorTest::debug("Total$AdType = $1\n",2);
 			CheckExpectations("Total$AdType", $1, 2);
 		} elsif($longad =~ /^TotalSlotBoats\s*=\s*(\d+)\s*$/i) {
-			CondorTest::debug("TotalSlot$AdType = $1\n",2);;
+			CondorTest::debug("TotalSlot$AdType = $1\n",2);
 			CheckExpectations("TotalSlot$AdType", $1, 1);
 		} elsif($longad =~ /^Boats\s*=\s*(\d+)\s*$/i) {
-			CondorTest::debug("$AdType = $1\n",2);;
+			CondorTest::debug("$AdType = $1\n",2);
 			CheckExpectations("$AdType", $1, 1);
 		} elsif($longad =~ /^DetectedBoats\s*=\s*(\d+)\s*$/i) {
-			CondorTest::debug("Detected$AdType = $1\n",2);;
+			CondorTest::debug("Detected$AdType = $1\n",2);
 			CheckExpectations("Detected$AdType", $1, 2);
 		} else {
 			die "Failed to match this line<$longad>\n";
@@ -238,7 +249,7 @@ foreach my $longad (@adarray) {
 }
 
 if($count != 4){
-	die "There are expected to be 4 resource uniqu ads. There were $count for Boats\n";
+	die "There are expected to be 4 resource unique ads. There were $count for Boats\n";
 }
 
 print "\n\n*************** Testing Slot Ads for local resources:\n";
