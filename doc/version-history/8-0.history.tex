@@ -63,13 +63,19 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item HTCondor now forces proxies that it delegates to be a minimum of 1024 bits.
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a rare bug in the \Condor{negotiator} where even
+if preemption was completely disabled via the \Macro{PREEMPTION\_REQUIREMENTS} = false
+setting, a newly started job could be preempted.  This bug is much more likely when
+\Macro{NEGOTIATOR\_CYCLE\_DELAY} is set lower than the default value.
+\Ticket{4185}
 
 \item Fixed a bug in the \Condor{schedd} which would cause it
 to crash when running remotely submitted parallel universe jobs.
