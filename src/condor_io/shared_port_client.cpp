@@ -25,6 +25,14 @@
 #include "shared_port_client.h"
 #include "shared_port_endpoint.h"
 
+// Initialize static class members
+unsigned int SharedPortClient::m_currentPendingPassSocketCalls = 0;
+unsigned int SharedPortClient::m_maxPendingPassSocketCalls = 0;
+unsigned int SharedPortClient::m_successPassSocketCalls = 0;
+unsigned int SharedPortClient::m_failPassSocketCalls = 0;
+unsigned int SharedPortClient::m_wouldBlockPassSocketCalls = 0;
+
+
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 
 #include "shared_port_scm_rights.h"
@@ -44,6 +52,21 @@ public:
 		  m_non_blocking(non_blocking)
 	{
 		// Ctor
+
+		// keep a count of how many shared_port forwards are happening...
+		SharedPortClient::m_currentPendingPassSocketCalls++;
+		// keep track of the max number for forwards happening...
+		if ( SharedPortClient::m_maxPendingPassSocketCalls <
+			 SharedPortClient::m_currentPendingPassSocketCalls )
+		{
+			SharedPortClient::m_maxPendingPassSocketCalls = 
+				SharedPortClient::m_currentPendingPassSocketCalls;
+		}
+	}
+
+	~SharedPortState() {
+		// keep a count of how many shared_port forwards are happening...
+		SharedPortClient::m_currentPendingPassSocketCalls--;
 	}
 
 	enum HandlerResult {FAILED, DONE, CONTINUE, WAIT};
@@ -153,6 +176,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 #ifndef HAVE_SHARED_PORT
 
 	dprintf(D_ALWAYS,"SharedPortClient::PassSocket() not supported on this platform\n");
+	SharedPortClient::m_failPassSocketCalls++;
 	return false;
 
 #elif WIN32
@@ -164,6 +188,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 				"ERROR: SharedPortClient: refusing to connect to shared port"
 				"%s, because specified id is illegal! (%s)\n",
 				requested_by, shared_port_id );
+		SharedPortClient::m_failPassSocketCalls++;
 		return false;
 	}
 
@@ -201,12 +226,14 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 			if (!WaitNamedPipe(pipe_name.Value(), 20000)) 
 			{
 				dprintf(D_ALWAYS, "ERROR: SharedPortClient: Wait for named pipe for sending socket timed out: %d\n", GetLastError());
+				SharedPortClient::m_failPassSocketCalls++;
 				return false;
 			}
 		}
 		else
 		{
 			dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to open named pipe for sending socket: %d\n", GetLastError());
+			SharedPortClient::m_failPassSocketCalls++;
 			return false;
 		}
 	}
@@ -221,6 +248,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 		DWORD last_error = GetLastError();
 		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to read PID from pipe: %d.\n", last_error);
 		CloseHandle(child_pipe);
+		SharedPortClient::m_failPassSocketCalls++;
 		return false;
 	}
 	else
@@ -242,6 +270,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	{
 		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to duplicate socket.\n");
 		CloseHandle(child_pipe);
+		SharedPortClient::m_failPassSocketCalls++;
 		return false;
 	}
 	protocol_command.id = SHARED_PORT_PASS_SOCK;
@@ -253,6 +282,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	{
 		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to duplicate socket.\n");
 		CloseHandle(child_pipe);
+		SharedPortClient::m_failPassSocketCalls++;
 		return false;
 	}
 	int bufferSize = (sizeof(int) + sizeof(protocol_info));
@@ -269,6 +299,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	{
 		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to send WSAPROTOCOL_INFO struct: %d\n", GetLastError());
 		CloseHandle(child_pipe);
+		SharedPortClient::m_failPassSocketCalls++;
 		return false;
 	}
 	dprintf(D_FULLDEBUG, "SharedPortClient: Wrote %d bytes to named pipe.\n", read_bytes);
@@ -276,6 +307,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 
 	CloseHandle(child_pipe);
 
+	SharedPortClient::m_successPassSocketCalls++;
 	return true;
 
 #elif HAVE_SCM_RIGHTS_PASSFD
@@ -335,15 +367,28 @@ SharedPortState::Handle(Stream *s)
 			result = FAILED;
 		}
 	}
+
+	// Update result statistics
+	if (result == DONE) {
+		SharedPortClient::m_successPassSocketCalls++;
+	}
+	if (result == FAILED) {
+		SharedPortClient::m_failPassSocketCalls++;
+	}
+
+	// If we are done, clean up and dellocate
 	if (result == DONE || result == FAILED) {
 		if (s && (m_state != RECV_RESP)) {
 			delete s;
 		}
 		delete this;
 	}
-	if (result == WAIT)
+
+	if (result == WAIT) {
 		return KEEP_STREAM;
-	return result;
+	} else {
+		return result;
+	}
 }
 
 SharedPortState::HandlerResult
@@ -411,7 +456,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 		fcntl(named_sock_fd, F_SETFL, flags | O_NONBLOCK);
 	}
 
-	int connect_rc;
+	int connect_rc = 0, connect_errno = 0;
 	{
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 
@@ -421,14 +466,45 @@ SharedPortState::HandleUnbound(Stream *&s)
 		connect_rc = connect(named_sock_fd,
 				(struct sockaddr *)&named_sock_addr,
 				SUN_LEN(&named_sock_addr));
+		connect_errno = errno;	// stash away errno quick so not overwritten by sentry
 	}
 
 	if( connect_rc != 0 )
 	{
-		dprintf(D_ALWAYS,"SharedPortServer: failed to connect to %s%s: %s\n",
+		/* Because we are connecting to a domain socket, we do not
+		 * expect connect() to ever return EINPROGRESS.  In fact, inspecting
+		 * the Linux 3.7.2 kernel source code, EINPROGRESS errno is indeed impossible
+		 * for a unix domain socket.  Hopefully this is true of other platform
+		 * as well, like MacOS.  If it is not true, we need to know about it, because
+		 * this code will need to be modified to handle an EINPROGRESS via registering
+		 * it with daemonCore, etc.  But instead of adding all that complicated code for
+		 * a situation we know never occurs on Linux and likely noplace else, we will
+		 * simply ASSERT that our expectation is correct.  -Todd Tannenbaum 2/1/2014
+		 */
+		ASSERT( connect_errno != EINPROGRESS );
+
+		/* The most likely/expected reason the connect fails is because the target daemon's 
+		 * listen queue is full, because the target daemon is swamped.  
+		 * Let's count that situation specifically, so anyone looking
+		 * at general connection failures (i.e. m_failPassSocketCalls) can subtract out
+		 * this "expected" overload situation to figure out if something else is broken.
+		 * Note Linux gives EAGAIN when the listen queue is full (nice!), but other
+		 * systems (BSD, MacOS) apparently do not distinguish between no listen posted -vs-
+		 * listen queue full, and just return ECONNREFUSED in both events. -Todd Tannenbaum 2/1/2014
+		 */
+		bool server_busy = false;
+		if ( connect_errno == EAGAIN || connect_errno == EWOULDBLOCK || 
+			 connect_errno == ETIMEDOUT || connect_errno == ECONNREFUSED )  
+		{
+			SharedPortClient::m_wouldBlockPassSocketCalls++;
+			server_busy = true;
+		}
+
+		dprintf(D_ALWAYS,"SharedPortServer:%s failed to connect to %s%s: %s (err=%d)\n",
+			server_busy ? " server was busy," : "",
 			sock_name.Value(),
 			m_requested_by.c_str(),
-			strerror(errno));
+			strerror(errno),errno);
 		delete named_sock;
 		return FAILED;
 	}
