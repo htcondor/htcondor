@@ -52,12 +52,12 @@
 	@return true on success, false on failure
 */
 
+//TEMPTEMP -- make sure this is right!
 bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					const char* DAGNodeName, MyString &DAGParentNodeNames,
 					List<Job::NodeVar> *vars, int retry,
-					const char* directory, const char *defLog, bool useDefLog,
-					const char *logFile, bool prohibitMultiJobs,
-					bool hold_claim );
+					const char* directory, const char *worflowLogFile,
+					bool prohibitMultiJobs, bool hold_claim );
 
 bool stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				   const char* DAGNodeName, const char* directory );

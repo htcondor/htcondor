@@ -38,6 +38,9 @@
 typedef bool (* parse_submit_fnc)( const char *buffer, int &jobProcCount,
 			int &cluster );
 
+	// Get the event mask for the workflow/default log file.
+const char *getEventMask();
+
 //-------------------------------------------------------------------------
 /** Parse output from condor_submit, determine the number of job procs
     and the cluster.
@@ -244,8 +247,8 @@ bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString &DAGParentNodeNames,
 			   List<Job::NodeVar> *vars, int retry,
-			   const char* directory, const char *defaultLog, bool appendDefaultLog,
-			   const char *logFile, bool prohibitMultiJobs, bool hold_claim )
+			   const char* directory, const char *workflowLogFile,
+			   bool prohibitMultiJobs, bool hold_claim )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -321,70 +324,30 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				"submit_event_notes = DAG Node: " ) + DAGNodeName;
 	args.AppendArg( submitEventNotes.Value() );
 
-		// logFile is null here if there was a log specified
-		// in the submit file
-	if ( !logFile ) {
-		if( appendDefaultLog ) {
-				// We need to append the DAGman default log file to
-				// the log file list
-			args.AppendArg( "-a" );
-			std::string dlog("dagman_log = ");
-			dlog += defaultLog;
-			args.AppendArg(dlog.c_str());
-			debug_printf( DEBUG_VERBOSE, "Adding a DAGMan auxiliary log %s\n", defaultLog );
-				// Now append the mask
-			args.AppendArg( "-a" );
-			std::string dmask("+");
-			dmask += ATTR_DAGMAN_WORKFLOW_MASK;
-			dmask += " = \"";
-			debug_printf( DEBUG_VERBOSE, "Masking the events recorded in the DAGMAN auxiliary log\n" );
-			std::stringstream dmaskstrm;
-			//
-			// IMPORTANT NOTE:  see all events that we deal with in
-			// Dag::ProcessOneEvent() -- all of those need to be in the
-			// event mask!! (wenger 2012-11-16)
-			//
-			int mask[] = {
-				ULOG_SUBMIT,
-				ULOG_EXECUTE,
-				ULOG_EXECUTABLE_ERROR,
-				ULOG_JOB_EVICTED,
-				ULOG_JOB_TERMINATED,
-				ULOG_SHADOW_EXCEPTION,
-				ULOG_JOB_ABORTED,
-				ULOG_JOB_SUSPENDED,
-				ULOG_JOB_UNSUSPENDED,
-				ULOG_JOB_HELD,
-				ULOG_JOB_RELEASED,
-				ULOG_POST_SCRIPT_TERMINATED,
-				ULOG_GLOBUS_SUBMIT,			// For Pegasus
-				ULOG_JOB_RECONNECT_FAILED,
-				ULOG_GRID_SUBMIT,			// For Pegasus
-				-1
-			};
-			for(const int*p = &mask[0]; *p != -1; ++p) {
-				if(p != &mask[0]) {
-					dmaskstrm << ",";
-				}
-				dmaskstrm << *p;
-			}
-			dmask += dmaskstrm.str();
-			debug_printf( DEBUG_VERBOSE, "Mask for auxiliary log is %s\n", dmaskstrm.str().c_str() );
-			dmask += "\"";
-			args.AppendArg(dmask.c_str());
-		}
-	} else {
-			// Log was not specified in the submit file
-			// There is a single user log file for this job;
-			// That is, the default
+		// workflowLogFile is non-null here if we need to tell the schedd to
+		// use that file as the default/workflow log for this node.
+	if ( workflowLogFile ) {
+			// We need to append the DAGman default log file to
+			// the log file list
 		args.AppendArg( "-a" );
-		std::string dlog("log = ");
-		dlog += logFile;
-		args.AppendArg(dlog.c_str());
-			// We are using the default log
-			// Never let it be XML
+		std::string dlog( "dagman_log = " );
+		dlog += workflowLogFile;
+		args.AppendArg( dlog.c_str() );
+		debug_printf( DEBUG_VERBOSE, "Adding a DAGMan workflow log %s\n",
+					workflowLogFile );
+
+			// Now append the mask
+		debug_printf( DEBUG_VERBOSE, "Masking the events recorded in the DAGMAN workflow log\n" );
 		args.AppendArg( "-a" );
-		args.AppendArg( "log_xml = False");
+		std::string dmask("+");
+		dmask += ATTR_DAGMAN_WORKFLOW_MASK;
+		dmask += " = \"";
+		const char *eventMask = getEventMask();
+		debug_printf( DEBUG_VERBOSE, "Mask for workflow log is %s\n",
+					eventMask );
+		dmask += eventMask;
+		dmask += "\"";
+		args.AppendArg( dmask.c_str() );
 	}
 
 	ArgList parentNameArgs;
@@ -645,4 +608,48 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 		return false;
 	}
 	return true;
+}
+
+const char *
+getEventMask()
+{
+	static std::string result("");
+	static std::stringstream dmaskstrm("");
+
+	if ( result == "" ) {
+		//
+		// IMPORTANT NOTE:  see all events that we deal with in
+		// Dag::ProcessOneEvent() -- all of those need to be in the
+		// event mask!! (wenger 2012-11-16)
+		//
+		int mask[] = {
+			ULOG_SUBMIT,
+			ULOG_EXECUTE,
+			ULOG_EXECUTABLE_ERROR,
+			ULOG_JOB_EVICTED,
+			ULOG_JOB_TERMINATED,
+			ULOG_SHADOW_EXCEPTION,
+			ULOG_JOB_ABORTED,
+			ULOG_JOB_SUSPENDED,
+			ULOG_JOB_UNSUSPENDED,
+			ULOG_JOB_HELD,
+			ULOG_JOB_RELEASED,
+			ULOG_POST_SCRIPT_TERMINATED,
+			ULOG_GLOBUS_SUBMIT,			// For Pegasus
+			ULOG_JOB_RECONNECT_FAILED,
+			ULOG_GRID_SUBMIT,			// For Pegasus
+			-1
+		};
+
+		for ( const int *p = &mask[0]; *p != -1; ++p ) {
+			if ( p != &mask[0] ) {
+				dmaskstrm << ",";
+			}
+			dmaskstrm << *p;
+		}
+
+		result = dmaskstrm.str();
+	}
+
+	return result.c_str();
 }

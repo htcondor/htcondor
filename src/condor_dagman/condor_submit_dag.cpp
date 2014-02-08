@@ -167,20 +167,19 @@ doRecursion( SubmitDagDeepOptions &deepOpts,
 	while ( (dagFile = shallowOpts.dagFiles.next()) ) {
 
 			// Get logical lines from this DAG file.
-		StringList logicalLines;
-		MyString error = MultiLogFiles::fileNameToLogicalLines(
-					dagFile, logicalLines );
-		if ( error != "" ) {
+		MultiLogFiles::FileReader reader;
+		MyString errMsg = reader.Open( dagFile );
+		if ( errMsg != "" ) {
 			fprintf( stderr, "Error reading DAG file: %s\n",
-						error.Value() );
+						errMsg.Value() );
 			return 1;
 		}
 
+
 			// Find and parse JOB and SUBDAG lines.
-		logicalLines.rewind();
-		const char *dagLine;
-		while ( (dagLine = logicalLines.next()) ) {
-			StringList tokens( dagLine, " \t" );
+		MyString dagLine;
+		while ( reader.NextLogicalLine( dagLine ) ) {
+			StringList tokens( dagLine.Value(), " \t" );
 			tokens.rewind();
 			const char *first = tokens.next();
 
@@ -190,7 +189,7 @@ doRecursion( SubmitDagDeepOptions &deepOpts,
 					// file line.
 				const char *subFile;
 				const char *directory;
-				if ( parseJobOrDagLine( dagLine, tokens, "submit",
+				if ( parseJobOrDagLine( dagLine.Value(), tokens, "submit",
 							subFile, directory ) != 0 ) {
 					return 1;
 				}
@@ -220,7 +219,7 @@ doRecursion( SubmitDagDeepOptions &deepOpts,
 				const char *inlineOrExt = tokens.next();
 				if ( strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
 					fprintf( stderr, "ERROR: only SUBDAG EXTERNAL is supported "
-								"at this time (line: <%s>)\n", dagLine );
+								"at this time (line: <%s>)\n", dagLine.Value() );
 					return 1;
 				}
 
@@ -228,7 +227,7 @@ doRecursion( SubmitDagDeepOptions &deepOpts,
 					// file line.
 				const char *nestedDagFile;
 				const char *directory;
-				if ( parseJobOrDagLine( dagLine, tokens, "DAG",
+				if ( parseJobOrDagLine( dagLine.Value(), tokens, "DAG",
 							nestedDagFile, directory ) != 0 ) {
 					return 1;
 				}
@@ -240,6 +239,8 @@ doRecursion( SubmitDagDeepOptions &deepOpts,
 				}
 			}
 		}
+
+		reader.Close();
 	}
 
 	return result;
@@ -655,19 +656,17 @@ getOldSubmitFlags(SubmitDagShallowOptions &shallowOpts)
 {
 		// It's not an error for the submit file to not exist.
 	if ( fileExists( shallowOpts.strSubFile ) ) {
-		StringList logicalLines;
-		MyString error = MultiLogFiles::fileNameToLogicalLines(
-					shallowOpts.strSubFile, logicalLines );
+		MultiLogFiles::FileReader reader;
+		MyString error = reader.Open( shallowOpts.strSubFile );
 		if ( error != "" ) {
 			fprintf( stderr, "Error reading submit file: %s\n",
 						error.Value() );
 			return 1;
 		}
 
-		logicalLines.rewind();
-		const char *subLine;
-		while ( (subLine = logicalLines.next()) ) {
-			StringList tokens( subLine, " \t" );
+		MyString subLine;
+		while ( reader.NextLogicalLine( subLine ) ) {
+			StringList tokens( subLine.Value(), " \t" );
 			tokens.rewind();
 			const char *first = tokens.next();
 			if ( first && !strcasecmp( first, "arguments" ) ) {
@@ -676,6 +675,8 @@ getOldSubmitFlags(SubmitDagShallowOptions &shallowOpts)
 				}
 			}
 		}
+
+		reader.Close();
 	}
 
 	return 0;
