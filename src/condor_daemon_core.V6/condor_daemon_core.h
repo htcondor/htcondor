@@ -1699,8 +1699,8 @@ class DaemonCore : public Service
 
     void                DumpCommandTable(int, const char* = NULL);
     int                 maxCommand;     // max number of command handlers
-    int                 nCommand;       // number of command handlers used
-    CommandEnt*         comTable;       // command table
+    int                 nCommand;       // number of table entries used
+    ExtArray<CommandEnt> comTable;      // command table
 
     struct SignalEnt 
     {
@@ -1719,8 +1719,8 @@ class DaemonCore : public Service
     };
     void                DumpSigTable(int, const char* = NULL);
     int                 maxSig;      // max number of signal handlers
-    int                 nSig;        // number of signal handlers used
-    SignalEnt*          sigTable;    // signal table
+    int                 nSig;        // high-water mark of entries used
+    ExtArray<SignalEnt> sigTable;    // signal table
     volatile int        sent_signal; // TRUE if a signal handler sends a signal
 
     struct SockEnt
@@ -1806,7 +1806,8 @@ class DaemonCore : public Service
     void                DumpReapTable(int, const char* = NULL);
     int                 maxReap;        // max number of reaper handlers
     int                 nReap;          // number of reaper handlers used
-    ReapEnt*            reapTable;      // reaper table
+    int                 nextReapId;     // next reaper id to use
+    ExtArray<ReapEnt>  reapTable;      // reaper table
     int                 defaultReaper;
 
     class PidEntry : public Service

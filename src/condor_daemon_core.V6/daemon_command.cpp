@@ -64,6 +64,7 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 	m_key(NULL),
 	m_sid(NULL),
 	m_async_waiting_time(0),
+	m_comTable(daemonCore->comTable),
 	m_real_cmd(0),
 	m_auth_cmd(0),
 	m_new_session(false),
@@ -73,7 +74,6 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 	m_sock = dynamic_cast<Sock *>(sock);
 
 	m_sec_man = daemonCore->getSecMan();
-	m_comTable = daemonCore->comTable;
 
 	m_handle_req_start_time.getTime();
 
