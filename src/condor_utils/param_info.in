@@ -5686,22 +5686,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit,submit
 id=336
 
-[JOB_LEASE_DURATION]
-aliases=
-default=ATTR_JOB_LEASE_DURATION
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Job Lease Duration
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=submit,submit
-id=337
-
 [SUBMIT_EXPRS]
 aliases=
 default=
