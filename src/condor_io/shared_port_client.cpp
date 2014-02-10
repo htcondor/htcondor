@@ -49,7 +49,8 @@ public:
 		  m_requested_by(requested_by ? requested_by : ""),
 		  m_sock_name("UNKNOWN"),
 		  m_state(UNBOUND),
-		  m_non_blocking(non_blocking)
+		  m_non_blocking(non_blocking),
+		  m_dealloc_sock(false)
 	{
 		// Ctor
 
@@ -67,6 +68,9 @@ public:
 	~SharedPortState() {
 		// keep a count of how many shared_port forwards are happening...
 		SharedPortClient::m_currentPendingPassSocketCalls--;
+		if ( m_dealloc_sock && m_sock ) {
+			delete m_sock;
+		}
 	}
 
 	enum HandlerResult {FAILED, DONE, CONTINUE, WAIT};
@@ -82,6 +86,7 @@ private:
 	std::string m_sock_name;
 	SPState m_state;
 	bool m_non_blocking;
+	bool m_dealloc_sock;
 
 	HandlerResult HandleUnbound(Stream *&s);
 	HandlerResult HandleHeader(Stream *&s);
@@ -170,14 +175,14 @@ SharedPortClient::SharedPortIdIsValid(char const *shared_port_id)
 	return true;
 }
 
-bool
+int
 SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char const *requested_by, bool non_blocking)
 {
 #ifndef HAVE_SHARED_PORT
 
 	dprintf(D_ALWAYS,"SharedPortClient::PassSocket() not supported on this platform\n");
 	SharedPortClient::m_failPassSocketCalls++;
-	return false;
+	return FALSE;
 
 #elif WIN32
 
@@ -189,7 +194,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 				"%s, because specified id is illegal! (%s)\n",
 				requested_by, shared_port_id );
 		SharedPortClient::m_failPassSocketCalls++;
-		return false;
+		return FALSE;
 	}
 
 	MyString pipe_name;
@@ -227,14 +232,14 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 			{
 				dprintf(D_ALWAYS, "ERROR: SharedPortClient: Wait for named pipe for sending socket timed out: %d\n", GetLastError());
 				SharedPortClient::m_failPassSocketCalls++;
-				return false;
+				return FALSE;
 			}
 		}
 		else
 		{
 			dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to open named pipe for sending socket: %d\n", GetLastError());
 			SharedPortClient::m_failPassSocketCalls++;
-			return false;
+			return FALSE;
 		}
 	}
 
@@ -249,7 +254,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to read PID from pipe: %d.\n", last_error);
 		CloseHandle(child_pipe);
 		SharedPortClient::m_failPassSocketCalls++;
-		return false;
+		return FALSE;
 	}
 	else
 	{
@@ -271,7 +276,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to duplicate socket.\n");
 		CloseHandle(child_pipe);
 		SharedPortClient::m_failPassSocketCalls++;
-		return false;
+		return FALSE;
 	}
 	protocol_command.id = SHARED_PORT_PASS_SOCK;
 	BOOL write_result = WriteFile(child_pipe, &protocol_command, sizeof(protocol_command), &read_bytes, 0);
@@ -283,7 +288,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to duplicate socket.\n");
 		CloseHandle(child_pipe);
 		SharedPortClient::m_failPassSocketCalls++;
-		return false;
+		return FALSE;
 	}
 	int bufferSize = (sizeof(int) + sizeof(protocol_info));
 	char *buffer = new char[bufferSize];
@@ -300,7 +305,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 		dprintf(D_ALWAYS, "ERROR: SharedPortClient: Failed to send WSAPROTOCOL_INFO struct: %d\n", GetLastError());
 		CloseHandle(child_pipe);
 		SharedPortClient::m_failPassSocketCalls++;
-		return false;
+		return FALSE;
 	}
 	dprintf(D_FULLDEBUG, "SharedPortClient: Wrote %d bytes to named pipe.\n", read_bytes);
 	FlushFileBuffers(child_pipe);
@@ -308,7 +313,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	CloseHandle(child_pipe);
 
 	SharedPortClient::m_successPassSocketCalls++;
-	return true;
+	return TRUE;
 
 #elif HAVE_SCM_RIGHTS_PASSFD
 
@@ -317,7 +322,31 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	SharedPortState * state = new SharedPortState(static_cast<ReliSock*>(sock_to_pass),
 									shared_port_id, requested_by, non_blocking);
 
-	return (state->Handle() != SharedPortState::FAILED);
+	int result = state->Handle();
+
+	switch (result) 
+	{
+	case KEEP_STREAM:
+		// pass thru so that we return KEEP_STREAM; the PassSocket call is
+		// pending, we want to keep the passed socket open until we get an 
+		// ack from endpoint.  
+		ASSERT( non_blocking ); // should only get KEEP_STREAM if non_blocking is true
+		break;
+	case SharedPortState::FAILED:
+		result = FALSE;
+		break;
+	case SharedPortState::DONE:
+		result = TRUE;
+		break;
+	case SharedPortState::CONTINUE:
+	case SharedPortState::WAIT:
+	default:
+		// coding logic error if Handle() returns anything else
+		EXCEPT("ERROR SharedPortState::Handle() unexpected return code %d",result);
+		break;
+	}
+
+	return result;
 
 #else
 
@@ -385,6 +414,13 @@ SharedPortState::Handle(Stream *s)
 	}
 
 	if (result == WAIT) {
+		// set flag to dealloc m_sock in the destructor... we need to do this because by
+		// returning KEEP_STREAM, the shared_port_server will tell daemonCore to not close
+		// the socket to pass (m_sock), and yet we do not have m_sock registered with daemonCore,
+		// we only have the unix domain socket (s) registered.  So after we called back 
+		// from daemonCore when we get a response on the domain socket, it will be up to this
+		// class to close the client copy of the m_sock that got passed.
+		m_dealloc_sock = true;
 		return KEEP_STREAM;
 	} else {
 		return result;

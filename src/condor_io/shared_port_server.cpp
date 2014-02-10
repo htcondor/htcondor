@@ -131,6 +131,8 @@ SharedPortServer::PublishAddress()
 int
 SharedPortServer::HandleConnectRequest(int,Stream *sock)
 {
+	int result = TRUE;
+
 	sock->decode();
 
 		// to avoid possible D-O-S attacks, we read into fixed-length buffers
@@ -200,9 +202,10 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 			m_shared_port_client.get_maxPendingPassSocketCalls() );
 
 #if HAVE_SCM_RIGHTS_PASSFD
-	// Note: the HAVE_SCM_RIGHTS_PASSFD implementation of PassSocket()
-	// is nonblocking.  See gt #4094.
-	m_shared_port_client.PassSocket((Sock *)sock, shared_port_id, NULL, true);
+		// Note: the HAVE_SCM_RIGHTS_PASSFD implementation of PassSocket()
+		// is nonblocking.  See gt #4094.
+		// Note: returns TRUE, FALSE, or KEEP_STREAM if operation is still pending...
+	result = m_shared_port_client.PassSocket((Sock *)sock, shared_port_id, NULL, true);
 #else
 		// Because of an ACK in the PassSocket protocol, this may block
 		// while waiting for the requested endpoint to respond.
@@ -228,5 +231,5 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 	}
 #endif
 
-	return TRUE;
+	return result;
 }
