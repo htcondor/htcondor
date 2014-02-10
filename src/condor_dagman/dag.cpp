@@ -3965,7 +3965,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
       			submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
 							node->GetJobName(), parents,
 							node->varsFromDag, node->GetRetries(),
-							node->GetDirectory(), DefaultNodeLog(),
+							node->GetDirectory(), logFile,
 							ProhibitMultiJobs(),
 							node->NumChildren() > 0 && dm._claim_hold_time > 0 );
 			}
