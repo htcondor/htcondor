@@ -38,7 +38,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed bug in \Condor{on}, \Condor{off}, \Condor{restart},
+\Condor{reconfig}, and \Condor{set\_shutdown}. When multiple machines
+were named on the command line, these tools could report 
+``Can't find address for master XXXX'' for some daemons even though
+the daemons are being advertised properly in the \Condor{collector}.
+\Ticket{4207}
 
 \end{itemize}
 
