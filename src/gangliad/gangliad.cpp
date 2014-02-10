@@ -245,6 +245,7 @@ GangliaD::initializeHostList()
             }
         }
     }
+    my_pclose(fp);
     dprintf(D_ALWAYS, "Ganglia is monitoring %ld hosts\n", m_monitored_hosts.size());
 }
 
