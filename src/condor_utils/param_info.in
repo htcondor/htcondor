@@ -3247,15 +3247,6 @@ friendly_name=Log On Nfs Is Error
 review=?
 tags=submit,submit
 
-[JOB_LEASE_DURATION]
-default=ATTR_JOB_LEASE_DURATION
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Job Lease Duration
-review=?
-tags=submit,submit
-
 [SUBMIT_EXPRS]
 default=
 type=string
