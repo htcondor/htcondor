@@ -1823,7 +1823,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if (is_arg_prefix (arg, "stream", 2)) {
+		if (is_arg_prefix (arg, "stream-results", 2)) {
 			g_stream_results = true;
 			if( dag ) {
 				fprintf( stderr, "-stream-results and -dag are incompatible\n" );
