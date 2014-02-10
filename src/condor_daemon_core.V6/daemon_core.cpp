@@ -967,7 +967,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	comTable[i].num = command;
 	comTable[i].handler = handler;
 	comTable[i].handlercpp = handlercpp;
-	comTable[i].is_cpp = is_cpp;
+	comTable[i].is_cpp = (bool)is_cpp;
 	comTable[i].perm = perm;
 	comTable[i].force_authentication = force_authentication;
 	comTable[i].service = s;
@@ -1317,10 +1317,10 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 	sigTable[i].num = sig;
 	sigTable[i].handler = handler;
 	sigTable[i].handlercpp = handlercpp;
-	sigTable[i].is_cpp = is_cpp;
+	sigTable[i].is_cpp = (bool)is_cpp;
 	sigTable[i].service = s;
-	sigTable[i].is_blocked = FALSE;
-	sigTable[i].is_pending = FALSE;
+	sigTable[i].is_blocked = false;
+	sigTable[i].is_pending = false;
 	free(sigTable[i].sig_descrip);
 	if ( sig_descrip )
 		sigTable[i].sig_descrip = strdup(sig_descrip);
@@ -1520,7 +1520,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 	(*sockTable)[i].handler = handler;
 	(*sockTable)[i].handlercpp = handlercpp;
-	(*sockTable)[i].is_cpp = is_cpp;
+	(*sockTable)[i].is_cpp = (bool)is_cpp;
 	(*sockTable)[i].perm = perm;
 	(*sockTable)[i].service = s;
 	(*sockTable)[i].data_ptr = NULL;
@@ -1898,7 +1898,7 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	(*pipeTable)[i].handler = handler;
 	(*pipeTable)[i].handler_type = handler_type;
 	(*pipeTable)[i].handlercpp = handlercpp;
-	(*pipeTable)[i].is_cpp = is_cpp;
+	(*pipeTable)[i].is_cpp = (bool)is_cpp;
 	(*pipeTable)[i].perm = perm;
 	(*pipeTable)[i].service = s;
 	(*pipeTable)[i].data_ptr = NULL;
@@ -2327,7 +2327,7 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 	reapTable[i].num = rid;
 	reapTable[i].handler = handler;
 	reapTable[i].handlercpp = handlercpp;
-	reapTable[i].is_cpp = is_cpp;
+	reapTable[i].is_cpp = (bool)is_cpp;
 	reapTable[i].service = s;
 	reapTable[i].data_ptr = NULL;
 	free(reapTable[i].reap_descrip);
@@ -2526,7 +2526,7 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 				descrip2 = sigTable[i].handler_descrip;
 			dprintf(flag, "%s%d: %s %s, Blocked:%d Pending:%d\n", indent,
 							sigTable[i].num, descrip1, descrip2,
-							sigTable[i].is_blocked, sigTable[i].is_pending);
+							(int)sigTable[i].is_blocked, (int)sigTable[i].is_pending);
 		}
 	}
 	dprintf(flag, "\n");
@@ -3099,7 +3099,7 @@ void DaemonCore::Driver()
 					// found a valid entry; test if we should call handler
 					if ( sigTable[i].is_pending && !sigTable[i].is_blocked ) {
 						// call handler, but first clear pending flag
-						sigTable[i].is_pending = 0;
+						sigTable[i].is_pending = false;
 						// Update curr_dataptr for GetDataPtr()
 						curr_dataptr = &(sigTable[i].data_ptr);
                         // update statistics
@@ -4323,18 +4323,18 @@ int DaemonCore::HandleSig(int command,int sig)
 			// set this signal entry to is_pending.
 			// the code to actually call the handler is
 			// in the Driver() method.
-			sigTable[index].is_pending = TRUE;
+			sigTable[index].is_pending = true;
 			break;
 		case _DC_BLOCKSIGNAL:
-			sigTable[index].is_blocked = TRUE;
+			sigTable[index].is_blocked = true;
 			break;
 		case _DC_UNBLOCKSIGNAL:
-			sigTable[index].is_blocked = FALSE;
+			sigTable[index].is_blocked = false;
 			// now check to see if this signal we are unblocking is pending.
 			// if so, set sent_signal to TRUE.  sent_signal is used by the
 			// Driver() to ensure that a signal raised from inside a
 			// signal handler is indeed delivered.
-			if ( sigTable[index].is_pending == TRUE )
+			if ( sigTable[index].is_pending == true )
 				sent_signal = TRUE;
 			break;
 		default:
