@@ -31,7 +31,11 @@ friend class SharedPortState;
 
  public:
 	bool sendSharedPortID(char const *shared_port_id,Sock *sock);
-	bool PassSocket(Sock *sock_to_pass,char const *shared_port_id,char const *requested_by=NULL, bool non_blocking = false);
+
+	// PassSocket() returns TRUE on success, FALSE on False, or KEEP_STREAM if 
+	// non_blocking == true and the caller should NOT delete sock_to_pass because
+	// the operation is still pending (it will be deleted once the operation is complete).
+	int PassSocket(Sock *sock_to_pass,char const *shared_port_id,char const *requested_by=NULL, bool non_blocking = false);
 
 	unsigned int get_currentPendingPassSocketCalls() 
 		{return m_currentPendingPassSocketCalls;}
