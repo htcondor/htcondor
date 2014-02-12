@@ -196,10 +196,207 @@ is_valid_command(const char* cmdToExecute)
 	return retVal;
 }
 
+static bool Evaluate_config_if_is_bool(const char * expr, bool &result, bool crufty)
+{
+	if (MATCH == strcmp(expr, "0")) {result = false; return true; }
+	if (MATCH == strcmp(expr, "1")) {result = true; return true; }
+	if (MATCH == strcasecmp(expr, "false")) {result = false; return true; }
+	if (MATCH == strcasecmp(expr, "true")) {result = true; return true; }
+	if (MATCH == strcasecmp(expr, "no")) {result = false; return true; }
+	if (MATCH == strcasecmp(expr, "yes")) {result = true; return true; }
+	if (crufty) {
+		if (MATCH == strcasecmp(expr, "f")) {result = false; return true; }
+		if (MATCH == strcasecmp(expr, "t")) {result = true; return true; }
+	}
+	return false;
+}
+
+// returns true if valid.
+//
+static bool Evaluate_config_if(const char * expr, bool & result, MACRO_SET& macro_set, const char * subsys)
+{
+	if (Evaluate_config_if_is_bool(expr, result, true))
+		return true;
+
+	if (starts_with_ignore_case(expr, "version ")) {
+		const char * ptr = expr+7; // skip over "version"
+		while (isspace(*ptr)) ++ptr;
+
+		// extract the compparison operator and set ptr to the version field
+		int op = 0; // -1 is <   0 is =   1 is >
+		bool or_equal = false;
+		if (*ptr >= '<' && *ptr <= '>') op = (*ptr++ - '=');
+		if (*ptr == '=') or_equal = (*ptr++ == '=');
+		while (isspace(*ptr)) ++ptr;
+		int ver_diff = -99;
+
+		CondorVersionInfo version;
+		if (version.is_valid(ptr)) {
+			ver_diff = version.compare_versions(ptr); // returns -1 for <, 0 for =, and 1 for >
+		} else {
+			int majv=0, minv=0, subv=0;
+			int cfld = sscanf(ptr,"%d.%d.%d",&majv, &minv, &subv);
+			if (cfld >= 2 && majv >= 6) {
+				// allow subminor version to be omitted.
+				if (cfld < 3) { subv = version.getSubMinorVer(); }
+				CondorVersionInfo version2(majv, minv, subv);
+				ver_diff = version.compare_versions(version2);
+			} else {
+				// doesn't look like a valid version string.
+				return false;
+			}
+		}
+		ver_diff *= -1; // swap left and right hand side of the comparison.
+		result = (ver_diff == op) || (or_equal && (ver_diff == 0));
+		return true;
+	}
+	if (starts_with_ignore_case(expr, "defined ")) {
+		const char * ptr = expr+7; // skip over "defined"
+		while (isspace(*ptr)) ++ptr;
+
+		if (!*ptr) {
+			result = false; // empty string is same as undef
+		} else if (Evaluate_config_if_is_bool(ptr, result, false)) {
+			result = true;
+		} else {
+			//
+			const char * tvalue = lookup_macro(ptr, subsys, macro_set);
+			if (subsys && ! tvalue)
+				tvalue = lookup_macro(ptr, NULL, macro_set);
+			if ( ! tvalue && macro_set.defaults) {
+				tvalue = param_default_string(ptr, subsys);
+			}
+
+			result = (tvalue != NULL && tvalue[0] != 0);
+		}
+		return true;
+	}
+
+	// TODO: add evaluation of expressions here.
+
+	return false;
+}
+
+static bool Test_config_if_expression(const char * expr, bool & result, MACRO_SET& macro_set, const char * subsys)
+{
+	bool value = result;
+	bool inverted = false;
+
+	// optimize the simple case by not bothering to macro expand if there are no $ in the expression
+	char * expanded = NULL;
+	if (strstr(expr, "$")) {
+		char * expanded = expand_macro(expr, macro_set, NULL, true, subsys);
+		if ( ! expanded) return false;
+		expr = expanded;
+	}
+
+	while (isspace(*expr)) ++expr;
+	if (*expr == '!') {
+		inverted = true;
+		++expr;
+		while (isspace(*expr)) ++expr;
+	}
+
+	bool valid = Evaluate_config_if(expr, value, macro_set, subsys);
+
+	if (expanded) free(expanded);
+	result = inverted ? !value : value;
+	return valid;
+}
+
+
+// a class to help keep track of if/elif/else stack while parsing config
+// this implementation has a max stack depth of 63.
+//
+// theory of operation:
+// a long integer will hold a bit map showing the current yes/no state of all ifs
+// that surround the current line. begin_if, begin_elif and begin_else, set a bit
+// in the state corresponding to the current nesting depth for the current yes/no value.
+// Since an if block is enabled only when ALL of the nesting levels are in yes state, we can
+// determine the enabled state by checking for a string of all 1 bits from the current level
+// down to bit0. Note: Bit0 in the state corresponds to base level, outside of all ifs so bit0
+// will always be 1 (assuming that the base state is enabled.)
+// Thus if we are inside 3 nested if's, top is 0x8, and the current line is enabled if
+// state ends in 0xF, and disabled if it ends in any other hex value.
+// to allow for elif without nesting, the estate field contains a set bit if ANY previous if/elif
+// body was 1. we use this to determine the state of else and to decided whether an
+// elif should be tested or just set to 0
+class ConfigIfStack {
+public:
+	unsigned long long state;   // the current yes/no state of all nested ifs. valid from bit0 to top
+	unsigned long long estate;  // 1 bits indicate an if or elif was true for all nested if. valid from bit0 to top
+	unsigned long long top;     // mask for the bit in state corresponding to current nesting level. only one bit should be set
+	ConfigIfStack() : state(1), estate(0), top(1) {}
+	bool enabled() { unsigned long long mask = top | (top-1); return (state&mask)==mask; }
+	bool inside_if() { return top > 1; }
+	bool begin_if(bool bb) { top <<= 1; if (bb) { state |= top; estate |= top; } else { state &= ~top; estate &= ~top; } return top != 0; }
+	bool begin_else() { if ((estate | state) & top) { state &= ~top; } else { state |= top; } return top > 1; }
+	bool begin_elif(bool bb) {
+		if (estate & top) { // if one of the previous if was true, then this else is false
+			state &= ~top;
+		} else { // if all of the previous ifs were false, then evaluate bb
+			if (bb) { estate |= top; state |= top; } else { state &= ~top; }
+		}
+		return top > 1;
+	}
+	bool end_if() { top >>= 1; if (!top) { top = state = 1; estate = 0; return false; } return true; }
+	bool line_is_if(const char * line, std::string & errmsg, MACRO_SET& macro_set, const char * subsys);
+};
+
+bool ConfigIfStack::line_is_if(const char * line, std::string & errmsg, MACRO_SET& macro_set, const char * subsys)
+{
+	if (starts_with(line,"if") && (isspace(line[2]) || !line[2])) {
+		const char * expr = line+2;
+		while (isspace(*expr)) ++expr;
+
+		bool bb = true;
+		if ( ! Test_config_if_expression(expr, bb, macro_set, subsys)) {
+			formatstr(errmsg, "%s is not a valid if condition", expr);
+		} else if ( ! this->begin_if(bb)) {
+			formatstr(errmsg, "if nesting too deep!");
+		} else {
+			errmsg.clear();
+		}
+		return true;
+	}
+	if (starts_with(line, "else") && (isspace(line[4]) || !line[4])) {
+		if ( ! this->begin_else()) {
+			errmsg = "else without matching if";
+		} else {
+			errmsg.clear();
+		}
+		return true;
+	}
+	if (starts_with(line, "elif") && (isspace(line[4]) || !line[4])) {
+		const char * expr = line+4;
+		while (isspace(*expr)) ++expr;
+
+		bool bb = true;
+		if ( ! Test_config_if_expression(expr, bb, macro_set, subsys)) {
+			formatstr(errmsg, "%s is not a valid elif condition", expr);
+		} else if ( ! this->begin_elif(bb)) {
+			errmsg = "elif without matching if";
+		} else {
+			errmsg.clear();
+		}
+		return true;
+	}
+	if (starts_with(line, "endif") && (isspace(line[5]) || !line[5])) {
+		if ( ! this->end_if()) {
+			errmsg = "endif without matching if";
+		} else {
+			errmsg.clear();
+		}
+		return true;
+	}
+	return false;
+}
 
 int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, MACRO_SET& macro_set, const char * subsys)
 {
 	source.meta_off = -1;
+
+	ConfigIfStack ifstack;
 
 	StringList lines(config, "\n");
 	lines.rewind();
@@ -208,6 +405,21 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 		++source.meta_off;
 		if( line[0] == '#' || blankline(line) )
 			continue;
+
+		std::string errmsg;
+		if (ifstack.line_is_if(line, errmsg, macro_set, subsys)) {
+			if ( ! errmsg.empty()) {
+				dprintf(D_CONFIG | D_FAILURE, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), line);
+				return -1;
+			} else {
+				dprintf(D_CONFIG | D_VERBOSE, "config %lld,%lld,%lld line: %s\n", ifstack.top, ifstack.state, ifstack.estate, line);
+			}
+			continue;
+		}
+		if ( ! ifstack.enabled()) {
+			dprintf(D_CONFIG | D_VERBOSE, "config if(%lld,%lld,%lld) ignoring: %s\n", ifstack.top, ifstack.state, ifstack.estate, line);
+			continue;
+		}
 
 		const char * name = line;
 		char * ptr = line;
@@ -242,15 +454,17 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 			return -1;
 		}
 
-		// ptr now points to the first non-space character of the right hand side
+		// ptr now points to the first non-space character of the right hand side, it may point to a \0
 		const char * rhs = ptr;
 
 		// Expand the knob name - do we allow this??
 		/*
-		name = expand_macro(name, macro_set);
-		if (name == NULL) {
+		PRAGMA_REMIND("tj: allow macro expansion in knob names in meta_params?")
+		char* expanded_name = expand_macro(name, macro_set);
+		if (expanded_name == NULL) {
 			return -1;
 		}
+		name = expanded_name;
 		*/
 
 		// if name begins with $ it might be a metaknob.
@@ -284,6 +498,8 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 			insert(name, value, macro_set, source);
 			FREE(value);
 		}
+
+		// FREE(expanded_name);
 	}
 	source.meta_off = -2;
 	return 0;
@@ -308,7 +524,7 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 	const int gl_opt_new = CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE | CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT;
 	int gl_opt = (macro_set.options & CONFIG_OPT_OLD_COM_IN_CONT) ? gl_opt_old : gl_opt_new;
 	bool gl_opt_smart = (macro_set.options & CONFIG_OPT_SMART_COM_IN_CONT) ? true : false;
-
+	ConfigIfStack ifstack;
 
 	if (subsys && ! *subsys) subsys = NULL;
 
@@ -424,6 +640,38 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 			continue;
 		}
 
+		// to allow if/else constructs to be used in files that are parsed by pre 8.1.5 HTCondor
+		// we ignore a ':' at the beginning of the line of an if body.
+		// before 8.1.5, a line that began with ':' would be effectively ignored*.
+		// now we ignore the ':' but not the rest of the line, so a ':' can be used to make lines
+		// invisible to the old config parser, but not the current one.  To help avoid regression
+		// we only ignore ':' at the start of lines that constitute an if body
+		if (*name == ':') {
+			if (ifstack.inside_if()
+				|| (name[1] == 'i' && name[2] == 'f' && (isspace(name[3]) || !name[3]))) {
+				++name;
+			}
+		}
+
+		// if the line is an if/elif/else/endif handle it here, updating the ifstack as needed.
+		std::string errmsg;
+		if (ifstack.line_is_if(name, errmsg, macro_set, subsys)) {
+			if ( ! errmsg.empty()) {
+				dprintf(D_CONFIG | D_FAILURE, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), name);
+				retval = -1;
+				goto cleanup;
+			} else {
+				dprintf(D_CONFIG | D_VERBOSE, "config %s:%lld,%lld,%lld line: %s\n", name, ifstack.top, ifstack.state, ifstack.estate, name);
+			}
+			continue;
+		}
+		// if the line is inside the body of an if/elif/else that is false, ignore it.
+		if ( ! ifstack.enabled()) {
+			dprintf(D_CONFIG | D_VERBOSE, "config if(%lld,%lld,%lld) ignoring: %s\n", ifstack.top, ifstack.state, ifstack.estate, name);
+			continue;
+		}
+
+		op = 0;
 		ptr = name;
 
 		// Assumption is that the line starts with a non whitespace
@@ -463,12 +711,10 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 			while( *ptr && !ISOP(*ptr) ) {
 				ptr++;
 			}
-
 			if( !*ptr ) {
 				retval = -1;
 				goto cleanup;
 			}
-
 			op = *ptr++;
 		}
 
