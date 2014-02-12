@@ -55,7 +55,9 @@ GangliaD::GangliaD():
 	m_ganglia_config(NULL),
 	m_ganglia_channels(NULL),
 	m_ganglia_noop(0),
-    m_gstat_argv(NULL)
+    m_gstat_argv(NULL),
+    m_send_data_for_all_hosts(false),
+    m_ganglia_metrics_sent(0)
 {
 }
 
