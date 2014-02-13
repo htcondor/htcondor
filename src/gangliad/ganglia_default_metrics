@@ -681,7 +681,7 @@
 ]
 [
   Aggregate = "MAX";
-  Name   = "Pool Min TransferQueueUploadWaitTime";
+  Name   = "Pool Max TransferQueueUploadWaitTime";
   Value  = TransferQueueUploadWaitTime;
   Desc   = "Oldest input file transfer waiting in the transfer queues reporting to this pool";
   Units  = "seconds";
