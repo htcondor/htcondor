@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-
 //
 // Terminology note:
 // We are calling a *node* the combination of pre-script, job, and
@@ -1927,7 +1926,10 @@ Dag::FinishedRunning( bool includeFinalNode ) const
 {
 	if ( includeFinalNode && _final_job && !_runningFinalNode ) {
 			// Make sure we don't incorrectly return true if we get called
-			// just before a final node is started...
+			// just before a final node is started...  (There is a race
+			// condition here otherwise, because all of the "regular"
+			// nodes can be done, and the final node not changed to
+			// ready yet.)
 		return false;
 	}
 
@@ -2399,10 +2401,6 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 {
 	ASSERT( !(recovery && bootstrap) );
     ASSERT( job != NULL );
-
-	if ( job == _final_job ) {
-		_runningFinalNode = false;
-	}
 
 	job->TerminateSuccess(); // marks job as STATUS_DONE
 	if ( job->GetStatus() != Job::STATUS_DONE ) {
