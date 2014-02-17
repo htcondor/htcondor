@@ -36,7 +36,7 @@ namespace condor_params { typedef struct key_value_pair key_value_pair; }
 typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
 #else // ! __cplusplus
 typedef void* MACRO_SOURCES; // placeholder for use in C
-typedef struct key_value_pair { const char * key; const void * def} key_value_pair;
+typedef struct key_value_pair { const char * key; const void * def; } key_value_pair;
 typedef const struct key_value_pair MACRO_DEF_ITEM;
 #endif
 
@@ -344,6 +344,7 @@ BEGIN_C_DECLS
 	void clear_macro_use_count (const char *name, MACRO_SET& macro_set);
 	int get_macro_use_count (const char *name, MACRO_SET& macro_set);
 	int get_macro_ref_count (const char *name, MACRO_SET& macro_set);
+	bool config_test_if_expression(const char * expr, bool & result, std::string & err_reason);
 
 #endif // __cplusplus
 

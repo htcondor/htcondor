@@ -61,6 +61,7 @@ if (BUILD_TESTING)
 	condor_exe_test(lib_eventlog_build.exe "lib_eventlog_base.cpp" "condorapi")
 	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
+	condor_exe_test(x_conditional_params.exe "x_conditional_params.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}" )
 	
 	# Not all of our gccs support -Wno-div-by-zero.
 	#if (UNIX)
@@ -413,6 +414,7 @@ if (BUILD_TESTING)
 	#condor_pl_test(cmd_ccval_remote "param remote checks" "core;quick;full")
 	#condor_pl_test(lib_python_bindings "check python bindings" "core;quick;full")
 	condor_pl_test(lib_param_completeness "minimal knobs" "core;quick;full")
+	condor_pl_test(lib_param_conditionals "config conditionals" "core;quick;full")
 	condor_pl_test(cmd_condor_ping_basic "Basic default test of condor_ping" "core;quick;full")
 	condor_pl_test(job_aggressive_flocking "Test aggressive flocking" "core;quick;full")
 	##### job tests

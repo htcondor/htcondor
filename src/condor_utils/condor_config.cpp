@@ -97,7 +97,8 @@ extern "C" {
 	
 // Function prototypes
 void real_config(const char* host, int wantsQuiet, int config_options);
-int Read_config(const char*, MACRO_SET& macro_set, int, bool, const char * subsys);
+int Read_config(const char*, MACRO_SET& macro_set, int, bool, const char * subsys, std::string & errmsg);
+bool Test_config_if_expression(const char * expr, bool & result, std::string & err_reason, MACRO_SET& macro_set, const char * subsys);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
 int SetSyscalls(int);
@@ -1080,12 +1081,14 @@ process_config_source( const char* file, const char* name,
 			exit( 1 );
 		}
 	} else {
+		std::string errmsg;
 		rval = Read_config( file, ConfigMacroSet, EXPAND_LAZY,
-							false, get_mySubSystem()->getName());
+							false, get_mySubSystem()->getName(), errmsg);
 		if( rval < 0 ) {
 			fprintf( stderr,
 					 "Configuration Error Line %d while reading %s %s\n",
 					 ConfigLineNo, name, file );
+			if (!errmsg.empty()) { fprintf(stderr, "%s\n", errmsg.c_str()); }
 			exit( 1 );
 		}
 	}
@@ -3091,12 +3094,13 @@ process_persistent_configs()
 	{
 		processed = true;
 
+		std::string errmsg;
 		rval = Read_config(toplevel_persistent_config.Value(), ConfigMacroSet,
-						EXPAND_LAZY, true, get_mySubSystem()->getName());
+						EXPAND_LAZY, true, get_mySubSystem()->getName(), errmsg);
 		if (rval < 0) {
-			dprintf( D_ALWAYS, "Configuration Error Line %d while reading "
+			dprintf( D_ALWAYS | D_FAILURE, "Configuration Error Line %d %s while reading "
 					 "top-level persistent config source: %s\n",
-					 ConfigLineNo, toplevel_persistent_config.Value() );
+					 ConfigLineNo, errmsg.c_str(), toplevel_persistent_config.Value() );
 			exit(1);
 		}
 
@@ -3113,12 +3117,13 @@ process_persistent_configs()
 		MyString config_source;
 		config_source.formatstr( "%s.%s", toplevel_persistent_config.Value(),
 							   tmp );
+		std::string errmsg;
 		rval = Read_config(config_source.Value(), ConfigMacroSet,
-						EXPAND_LAZY, true, get_mySubSystem()->getName());
+						EXPAND_LAZY, true, get_mySubSystem()->getName(), errmsg);
 		if (rval < 0) {
-			dprintf( D_ALWAYS, "Configuration Error Line %d "
+			dprintf( D_ALWAYS, "Configuration Error Line %d %s"
 					 "while reading persistent config source: %s\n",
-					 ConfigLineNo, config_source.Value() );
+					 ConfigLineNo, errmsg.c_str(), config_source.Value() );
 			exit(1);
 		}
 	}
@@ -3161,12 +3166,13 @@ process_runtime_configs()
 					 "process_dynamic_configs\n", errno );
 			exit(1);
 		}
+		std::string errmsg;
 		rval = Read_config(tmp_file, ConfigMacroSet,
-						EXPAND_LAZY, false, get_mySubSystem()->getName());
+						EXPAND_LAZY, false, get_mySubSystem()->getName(), errmsg);
 		if (rval < 0) {
-			dprintf( D_ALWAYS, "Configuration Error Line %d "
+			dprintf( D_ALWAYS, "Configuration Error Line %d %s"
 					 "while reading %s, runtime config: %s\n",
-					 ConfigLineNo, tmp_file, rArray[i].admin );
+					 ConfigLineNo, errmsg.c_str(), tmp_file, rArray[i].admin );
 			exit(1);
 		}
 		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
@@ -3284,6 +3290,12 @@ int write_macros_to_file(const char* pathname, MACRO_SET& macro_set, int options
 
 int write_config_file(const char* pathname, int options) {
 	return write_macros_to_file(pathname, ConfigMacroSet, options);
+}
+
+// so that condor_config_val can test config if expressions.
+bool config_test_if_expression(const char * expr, bool & result, std::string & err_reason)
+{
+	return Test_config_if_expression(expr, result, err_reason, ConfigMacroSet, get_mySubSystem()->getName());
 }
 
 /* End code for runtime support for modifying a daemon's config source. */
