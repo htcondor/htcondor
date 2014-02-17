@@ -2098,6 +2098,7 @@ this instance should be a part of.
 For grid type \SubmitCmd{gce} jobs, 
 specifies a path and file name of the authorization file that grants
 permission for HTCondor to use the Google account.
+There is no default value when not specified.
 
 %%%%%%%%%%%%%%%%%%%
 %% gce_image
@@ -2118,7 +2119,9 @@ and reside in Google's Cloud Storage service.
 \index{submit commands!gce\_machine\_type}
 \label{condor-submit-gce-machine-type}
 \item[gce\_machine\_type = $<$machine type$>$]
-\MoreTodo
+For grid type \SubmitCmd{gce} jobs,
+the long form of the URL that describes the machine configuration that the
+virtual machine instance is to run on. 
 
 %%%%%%%%%%%%%%%%%%%
 %% gce_metadata
