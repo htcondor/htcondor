@@ -162,11 +162,12 @@ file transfer attempts.
 when \Expr{NO\_DNS = True}.
 \Ticket{4140}
 
-\item In the \Condor{startd}, changed the way cpus are allocated to
-slots in configurations where there are more slots than cpus.
-Cpus are now distributed equally between slots that aren't configured
-to receive a specific number (via parameter \Macro{SLOT\_TYPE\_<N>}).
-Before, these slots received 1 cpu each.
+\item Changed the way the \Condor{startd} allocates CPUs to
+slots in configurations where there are more slots than CPUs.
+CPUs are now distributed equally between slots that are not configured
+to receive a specific number 
+(using configuration variable \Macro{SLOT\_TYPE\_<N>}).
+Before this change, these slots received 1 CPU each.
 The new behavior matches how other slot resources are distributed.
 \Ticket{3249}
 
