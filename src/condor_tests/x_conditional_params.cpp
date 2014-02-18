@@ -23,6 +23,7 @@
 #include "param_info.h" // access to default params
 #include "param_info_tables.h"
 #include "condor_version.h"
+#include <stdlib.h>
 
 const char * check_configif = NULL;
 
@@ -69,6 +70,16 @@ int main(int argc, const char ** argv)
 			do_test = false;
 		} else if (is_dash_arg_prefix(argv[ix], "verbose", 1)) {
 			dash_verbose = true;
+		} else if (is_dash_arg_prefix(argv[ix], "memory-snapshot")) {
+		#ifdef LINUX
+			const char * filename = "tool";
+			if (argv[ix+1]) filename = use_next_arg("memory-shapshot", argv, ix);
+			char copy_smaps[300];
+			pid_t pid = getpid();
+			sprintf(copy_smaps, "cat /proc/%d/smaps > %s", pid, filename);
+			int r = system(copy_smaps);
+			fprintf(stdout, "%s returned %d\n", copy_smaps, r);
+		#endif
 		} else {
 			fprintf(stderr, "unknown argument: %s\n", argv[ix]);
 			my_exit(1);
