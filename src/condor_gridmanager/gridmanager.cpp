@@ -882,26 +882,17 @@ contact_schedd_next_add_job:
 
 			} else if ( curr_status == REMOVED ) {
 
-				// If we don't know about the job, remove it immediately
-				// I don't think this can happen in the normal case,
-				// but I'm not sure.
+				// If we don't know about the job, act like we got an
+				// ADD_JOBS signal from the schedd the next time we
+				// connect, so that we'll create a Job object for it
+				// and decide how it needs to be handled.
+				// TODO The AddJobs and RemoveJobs queries shoule be
+				//   combined into a single query.
 				dprintf( D_ALWAYS, 
 						 "Don't know about removed job %d.%d. "
-						 "Deleting it immediately\n", procID.cluster,
-						 procID.proc );
-				// Log the removal of the job from the queue
-				WriteAbortEventToUserLog( next_ad );
-				// NOENT means the job doesn't exist.  Good enough for us.
-				rc = DestroyProc( procID.cluster, procID.proc );
-				if(rc == DESTROYPROC_ENOENT) {
-					dprintf(D_ALWAYS,"Gridmanager tried to destroy %d.%d twice.\n",procID.cluster,procID.proc);
-				}
-				if ( rc < 0 && rc != DESTROYPROC_ENOENT) {
-					failure_line_num = __LINE__;
-					delete next_ad;
-					commit_transaction = false;
-					goto contact_schedd_disconnect;
-				}
+						 "Will treat it as a new job to manage\n",
+						 procID.cluster, procID.proc );
+				addJobsSignaled = true;
 
 			} else {
 
