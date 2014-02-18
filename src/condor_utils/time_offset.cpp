@@ -149,7 +149,7 @@ time_offset_send_cedar_stub( Stream* s,
  * @param s -the Stream connection to the other daemon
  * @return true if
  **/
-bool
+int
 time_offset_receive_cedar_stub( Service*, int /* cmd */, Stream* s ) {
 	 	//
 	 	// Get the TimeOffsetPacket information off the wire
@@ -159,7 +159,7 @@ time_offset_receive_cedar_stub( Service*, int /* cmd */, Stream* s ) {
 	if ( ! time_offset_codePacket_cedar( packet, s ) ) {
  		dprintf( D_FULLDEBUG, "time_offset_receive_cedar_stub() failed to "
  							  "receive intial packet from remote daemon\n" );
-		return ( false );
+		return ( FALSE );
  	}
  		//
  		// Close our connection
@@ -179,13 +179,13 @@ time_offset_receive_cedar_stub( Service*, int /* cmd */, Stream* s ) {
   		if (! time_offset_codePacket_cedar( packet, s ) ) {
   			dprintf( D_FULLDEBUG, "time_offset_receive_cedar_stub() failed to "
   								  "send response packet to remote daemon\n" );
-	  		return ( false );
+	  		return ( FALSE );
   		}
 	  	s->end_of_message();
 	 	dprintf( D_FULLDEBUG, "time_offset_receive_cedar_stub() sent back response "
 	 					      "packet!\n");
 	}
-  	return ( true );
+  	return ( TRUE );
 }
 
 /**

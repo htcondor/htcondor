@@ -121,10 +121,10 @@ void RequestContactSchedd();
 void doContactSchedd();
 
 // handlers
-int ADD_JOBS_signalHandler( int );
-int REMOVE_JOBS_signalHandler( int );
+int ADD_JOBS_signalHandler( Service *, int );
+int REMOVE_JOBS_signalHandler( Service *, int );
 void CHECK_LEASES_signalHandler();
-int UPDATE_JOBAD_signalHandler( int );
+int UPDATE_JOBAD_signalHandler( Service *, int );
 
 
 static bool jobExternallyManaged(ClassAd * ad)
@@ -471,7 +471,7 @@ Reconfig()
 }
 
 int
-ADD_JOBS_signalHandler( int )
+ADD_JOBS_signalHandler( Service *, int )
 {
 	dprintf(D_FULLDEBUG,"Received ADD_JOBS signal\n");
 
@@ -484,7 +484,7 @@ ADD_JOBS_signalHandler( int )
 }
 
 int
-REMOVE_JOBS_signalHandler( int )
+REMOVE_JOBS_signalHandler( Service *, int )
 {
 	dprintf(D_FULLDEBUG,"Received REMOVE_JOBS signal\n");
 
@@ -504,7 +504,7 @@ REMOVE_JOBS_signalHandler( int )
 }
 
 int
-UPDATE_JOBAD_signalHandler( int )
+UPDATE_JOBAD_signalHandler( Service *, int )
 {
 	dprintf(D_FULLDEBUG,"Received UPDATE_JOBAD signal\n");
 	if ( !updateJobsSignaled ) {

@@ -65,7 +65,7 @@ static int code_access_request(Stream *socket, char *&filename, int &mode,
 
 }
 
-void attempt_access_handler(Service *, int  /*i*/, Stream *s)
+int attempt_access_handler(Service *, int  /*i*/, Stream *s)
 {
 	char *filename = NULL;
 	int mode;
@@ -86,7 +86,7 @@ void attempt_access_handler(Service *, int  /*i*/, Stream *s)
 		if( filename ) {
 			free( filename );
 		}
-		return;
+		return 0;
 	}
 
 	dprintf( D_FULLDEBUG, "ATTEMPT_ACCESS: Switching to user uid: "
@@ -111,7 +111,7 @@ void attempt_access_handler(Service *, int  /*i*/, Stream *s)
 		if( filename ) {
 			free( filename );
 		}
-		return;
+		return 0;
 	}
 	errno_result = errno;
 
@@ -140,14 +140,14 @@ void attempt_access_handler(Service *, int  /*i*/, Stream *s)
 	if( ! s->code(answer) ) {
 		dprintf( D_ALWAYS,
 				 "ATTEMPT_ACCESS: Failed to send result.\n" );
-		return;
+		return 0;
 	}
 	
 	if( ! s->end_of_message() ) {
 		dprintf( D_ALWAYS,
 				 "ATTEMPT_ACCESS: Failed to send end of message.\n");
 	}
-  	return;
+	return 0;
 }	
 
 int attempt_access(const char *filename, int mode, int uid, int gid, 

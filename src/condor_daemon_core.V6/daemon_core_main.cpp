@@ -1000,6 +1000,10 @@ handle_fetch_log( Service *, int, ReliSock *stream )
 	int result;
 	int type = -1;
 
+	if ( cmd == DC_PURGE_LOG ) {
+		return handle_fetch_log_history_purge( stream );
+	}
+
 	if( ! stream->code(type) ||
 		! stream->code(name) || 
 		! stream->end_of_message()) {
@@ -2706,7 +2710,7 @@ int dc_main( int argc, char** argv )
 								  "handle_fetch_log()", 0, ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_PURGE_LOG, "DC_PURGE_LOG",
-								  (CommandHandler)handle_fetch_log_history_purge,
+								  (CommandHandler)handle_fetch_log,
 								  "handle_fetch_log_history_purge()", 0, ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",
