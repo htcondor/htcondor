@@ -92,19 +92,27 @@ now fetches all \Condor{startd} history by concatenating all instances
 of log files resulting from rotation to the current history log.
 \Ticket{4152}
 
-\item Several general mechanisms for specifying user-defined \Condor{startd} resources
-have been enhanced so that GPUs can be easily defined and used with HTCondor. This includes
-having HTCondor automatically set \Env{CUDA\_VISIBLE\_DEVICES} for GPU jobs.
+\item Several general mechanisms for specifying user-defined \Condor{startd} 
+resources have been enhanced,
+so that GPUs can be easily defined and used.
+New to this 8.1.4 version of HTCondor is the allocation of user defined
+resources (especially GPUs) with partitionable and dynamic slots.
+This includes having HTCondor automatically set the environment variable
+\Env{CUDA\_VISIBLE\_DEVICES} for jobs that use CUDA GPUs
+and \Env{GPU\_DEVICE\_ORDINAL} for jobs that use OpenCL GPUs.
 
-\Macro{MACHINE\_RESOURCE\_<name>} and \Macro{MACHINE\_RESOURCE\_INVENTORY\_<name>}
-now support the the definition user-defined resources as a list of resource
-identifiers.  When HTCondor allocates a user-defined resource to a slot, if the resource
-has identifiers, then HTCondor will assign specific instances of the resouce and
-publish the assignment into the slot ClassAd using the new attribute \Attr{Assigned<name>}.
-It will also publish the assignment into the job's environment as \Env{\_CONDOR\_Assigned<name>}
-If the new configuration variable \Macro{ENVIRONMENT\_FOR\_Assigned<name>} is specified,
-HTCondor will also publish the assigned resources into the job's environment using the
-environment variables given in this configuration variable.
+The mechanism defines configuration variables 
+\Macro{MACHINE\_RESOURCE\_<name>} and 
+\Macro{MACHINE\_RESOURCE\_INVENTORY\_<name>}
+to specify the definition user-defined resources with a list of resource
+identifiers.  
+When HTCondor allocates one of these user-defined resources to a slot, 
+it will also publish this assignment within the slot's ClassAd 
+using the new job ClassAd attribute \Attr{Assigned<name>}.
+And, it will define in the job's environment the variable
+\Env{\_CONDOR\_Assigned<name>}.
+The new configuration variable \Macro{ENVIRONMENT\_FOR\_Assigned<name>}
+also sets further environment variables.
 \Ticket{4141}
 \Ticket{4148}
 
