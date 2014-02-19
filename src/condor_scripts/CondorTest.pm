@@ -2822,19 +2822,34 @@ sub GetPersonalCondorWithConfig
 	}
 }
 
+#************************************************
+#
+# The mypid arg has never gone past here, and I need to pass along a 
+# nowait option. In the gsi test, the new way to determine all daemons
+# are up is with condor_who which does not speak gsi. so $mypid
+# used pretty much only in the lib_auth_protocol*.run tests goes away
+# after this call.
+# an optional $nowait passed to CondorPersonal::StartCondor will trigger
+# a non-standard daemon up detection within the gsi test itself.
+# **********************************************
+
 sub StartPersonal {
-    my ($testname, $paramfile, $version) = @_;
+    my ($testname, $paramfile, $version, $mypid, $nowait) = @_;
+
+	if(defined $nowait) {
+		#print "StartPersonal no wait option\n";
+	}
 
     $handle = $testname;
     TestDebug("Starting Perosnal($$) for $testname/$paramfile/$version\n",2);
 
     my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: About to start a personal Condor in CondorTest::StartPersonal\n";
+    #print "$time: About to start a personal Condor in CondorTest::StartPersonal\n";
 	#print "Param file is <$paramfile> which contains:\n";
 	#system("cat $paramfile");
-    my $condor_info = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
+    my $condor_info = CondorPersonal::StartCondor( $testname, $paramfile ,$version, $nowait);
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: Finished starting personal Condor in CondorTest::StartPersonal\n";
+    #print "$time: Finished starting personal Condor in CondorTest::StartPersonal\n";
 
     my @condor_info = split /\+/, $condor_info;
     my $condor_config = shift @condor_info;
@@ -2849,7 +2864,7 @@ sub StartPersonal {
 	}
 
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
+    #print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
     my $new_condor = new PersonalCondorInstance( $version, $condor_config, $collector_addr, 1 );
     $personal_condors{$version} = $new_condor;
 	# assume we are creating so we may bring it up, thus direction up or down now up.
@@ -2907,17 +2922,21 @@ sub StartCondorWithParams
     my %condor_params = @_;
     my $condor_name = $condor_params{condor_name} || "";
     if( $condor_name eq "" ) {
-	$condor_name = GenUniqueCondorName();
-	$condor_params{condor_name} = $condor_name;
+		$condor_name = GenUniqueCondorName();
+		$condor_params{condor_name} = $condor_name;
     }
 
     if( exists $personal_condors{$condor_name} ) {
-	die "condor_name=$condor_name already exists!";
+		die "condor_name=$condor_name already exists!";
     }
 
     if( ! exists $condor_params{test_name} ) {
-	$condor_params{test_name} = GetDefaultTestName();
+		$condor_params{test_name} = GetDefaultTestName();
     }
+
+	foreach my $key (sort keys %condor_params) {
+		#print "$key:$condor_params{$key}\n";
+	}
 
 	# We need to have the condor instance we are bringing up as early as possible
 	# for having a place to store condor who data as we come up.
@@ -2925,9 +2944,52 @@ sub StartCondorWithParams
     #my $new_condor = CreateAndStoreCondorInstance( $condor_name, $condor_config, 0, 0 );
 
     my $condor_info = CondorPersonal::StartCondorWithParams( %condor_params, $condor_name );
+
+	if(exists $condor_params{do_not_start}) {
+		print "CondorTest::StartCondorWithParams: bailing after config\n";
+		return(0);
+	} else {
+		print "CondorTest::StartCondorWithParams: Full config and run\n";
+	}
+
     my @condor_info = split /\+/, $condor_info;
     my $condor_config = shift @condor_info;
     my $collector_port = shift @condor_info;
+
+    my $collector_addr = CondorPersonal::FindCollectorAddress();
+
+    #my $new_condor = new PersonalCondorInstance( $condor_name, $condor_config, $collector_addr, 1 );
+	my $new_condor = GetPersonalCondorWithConfig($condor_config);
+	#$new_condor->{collector_addr} = $collector_addr;
+	$new_condor->SetCollectorAddress($collector_addr);
+	$new_condor->SetCondorAlive(1);
+	#$new_condor->DisplayWhoDataInstances();
+	#$new_condor->{is_running} = 1;
+
+    $personal_condors{$condor_name} = $new_condor;
+
+    return $new_condor;
+}
+
+sub StartCondorWithParamsStart
+{
+	my %personal_condor_params = CondorPersonal::FetchParams();
+	print "In StartCondorWithParamsStart\n";
+
+	foreach my $key (sort keys %personal_condor_params) {
+		#print "$key:$personal_condor_params{$key}\n";
+	}
+
+    my $condor_name = $personal_condor_params{condor_name} || "";
+    if( $condor_name eq "" ) {
+		$condor_name = GenUniqueCondorName();
+		$personal_condor_params{condor_name} = $condor_name;
+    }
+
+    my $condor_info = CondorPersonal::StartCondorWithParamsStart();
+    my @condor_config_and_port = split /\+/, $condor_info;
+    my $condor_config = shift @condor_config_and_port;
+    my $collector_port = shift @condor_config_and_port;
 
     my $collector_addr = CondorPersonal::FindCollectorAddress();
 

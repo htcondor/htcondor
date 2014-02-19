@@ -263,6 +263,9 @@ sub StartCondor
 	my $testname = shift || die "Missing test name\n";
 	my $paramfile = shift || die "Missing parameter file!\n";
 	$version = shift || die "Missing parameter version!\n";
+	my $nowait = shift;
+
+
 	my $config_and_port = "";
 	my $winpath = "";
 
@@ -270,19 +273,24 @@ sub StartCondor
 		die "StartCondor: param file $paramfile does not exist!!\n";
 	}
 
-	if($arraysz == 3) {
-		$mpid = $pid; # assign process id
-	} else {
-		$mpid = shift; # assign process id
-	}
+	#if($arraysz == 3) {
+		#$mpid = $pid; # assign process id
+	#} else {
+		#$mpid = shift; # assign process id
+	#}
 
 	CondorPersonal::ParsePersonalCondorParams($paramfile);
+
+	if(defined $nowait) {
+		#print "StartCondor: no wait option\n";
+		$personal_condor_params{"no_wait"} = "TRUE";
+	}
 
 	# Insert the positional arguments into the new-style named-argument
 	# hash and call the version of this function which handles it.
 	$personal_condor_params{"test_name"} = $testname;
 	$personal_condor_params{"condor_name"} = $version;
-	$personal_condor_params{"owner_pid"} = $mpid;
+	#$personal_condor_params{"owner_pid"} = $mpid;
 	$personal_condor_params{"fresh_local"} = "TRUE";
 
 	return StartCondorWithParams(%personal_condor_params);
@@ -401,6 +409,46 @@ sub StartCondorWithParams
 	#print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
 	#}
 
+	if(exists $personal_condor_params{"do_not_start"}) {
+		return("do_not_start");
+	}
+
+	$collector_port = CondorPersonal::StartPersonalCondor();
+	#print "StartCondorWithParams: Hash <personal_condor_params > <post-StartPersonalCondor>holds:\n";
+	#foreach my $key (sort keys %personal_condor_params) {
+	#print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
+	#}
+
+
+	debug( "collector port is $collector_port\n",$debuglevel);
+
+	if( CondorUtils::is_windows() == 1 ){
+		$winpath = `cygpath -m $personal_config_file`;
+		CondorUtils::fullchomp($winpath);
+		if($btdebug == 1) {
+			print "Windows conversion of personal config file to $winpath!!\n";
+		}
+		$config_and_port = $winpath . "+" . $collector_port ;
+	} else {
+		$config_and_port = $personal_config_file . "+" . $collector_port ;
+	}
+
+	debug( "StartCondor config_and_port is --$config_and_port--\n",$debuglevel);
+	CondorPersonal::Reset();
+	debug( "StartCondor config_and_port is --$config_and_port--\n",$debuglevel);
+	debug( "Personal Condor Started\n",$debuglevel);
+	#system("date");
+	if($btdebug == 1) {
+		print  "Personal Condor Started\n";
+		print scalar localtime() . "\n";
+	}
+	return( $config_and_port );
+}
+
+sub StartCondorWithParamsStart
+{
+	my $winpath = "";
+	my $config_and_port = "";
 	$collector_port = CondorPersonal::StartPersonalCondor();
 	#print "StartCondorWithParams: Hash <personal_condor_params > <post-StartPersonalCondor>holds:\n";
 	#foreach my $key (sort keys %personal_condor_params) {
@@ -857,6 +905,11 @@ sub InstallPersonalCondor
 	return($sbinloc);
 }
 
+sub FetchParams
+{
+	return(%personal_condor_params);
+}
+
 #################################################################
 #
 # TunePersonalCondor
@@ -1296,6 +1349,16 @@ if($btdebug == 1) {
 		    print NEW "# Done appending from 'append_condor_config'\n";
 		}
 
+		# assume an array reference
+		if( exists $control{append_condor_config_plus} ) {
+		    print NEW "# Appending from 'append_condor_config_plus'\n";
+			my $arrayref = $control{append_condor_config_plus};
+			foreach my $line (@{$arrayref}) {
+		    	print NEW "$line\n";
+			}
+		    print NEW "# Done appending from 'append_condor_config_plus'\n";
+		}
+
 		# Gittrac Ticket 2889
 		# This is ok when tests are running as a slot user but if/when we start running tests as root we will
 		# need to put these into a directory with permissions 1777.
@@ -1426,11 +1489,16 @@ sub StartPersonalCondor
 	# is test opting into new condor personal status yet?
 	my $res = 1;
 	sleep(5);
-	if($UseNewRunning == 0) {
-		$res = IsRunningYet();
+	if(exists $control{"no_wait"}) {
+		#print "use no methods here to be sure daemons are up.\n";
 	} else {
-		my $condor_name = $personal_condor_params{"condor_name"};
-		$res = NewIsRunningYet($fullconfig, $condor_name);
+		#print "NO_WAIT not set???????\n";
+		if($UseNewRunning == 0) {
+			$res = IsRunningYet();
+		} else {
+			my $condor_name = $personal_condor_params{"condor_name"};
+			$res = NewIsRunningYet($fullconfig, $condor_name);
+		}
 	}
 
 	if($btdebug == 1) {
