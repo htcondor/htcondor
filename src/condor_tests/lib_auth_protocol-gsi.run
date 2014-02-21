@@ -299,9 +299,22 @@ sub HaveAllReportedIn
 				if(!(exists $daemonpids{$1})) {
 					$daemonpids{$1} = $2;
 					print "adding $1:$2\n";
+				} else {
+					# if this pid is different then the first one daemons
+					# are having issues. Fail test.
+					if($daemonpids{$1} ne $2) {
+						print "Saw multiple pid for: $1 Failing test\n";
+						$allup = 0;
+						last;
+					}
 				}
 			} else {
 			}
+		}
+
+		if($allup == 0) {
+			$done = 0;
+			last;
 		}
 
 		foreach my $daemon (sort keys %daemonpids) {
