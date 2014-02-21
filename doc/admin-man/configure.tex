@@ -11994,7 +11994,11 @@ are published to the \Condor{collector}.
 \label{param:GangliadInterval}
 \item[\Macro{GANGLIAD\_INTERVAL}]
   The integer number of seconds between publication of metrics to Ganglia.
-  The default value is 300.
+  Daemons update the \Condor{collector} every 300 seconds.
+  The ganglia heartbeat interval is 20 seconds. So, multiples of 20, between
+  20 and 300 makes sense for this value.
+  Negative values inhibit sending data to ganglia
+  The default value is 60.
 
 \label{param:GangliadVerbosity}
 \item[\Macro{GANGLIAD\_VERBOSITY}] An integer that specifies the
@@ -12041,6 +12045,20 @@ are published to the \Condor{collector}.
   compatible.  When a failure to use \File{libganglia} is detected,
   \Prog{gmetric} will be used, if it can be found in HTCondor's
   \Env{PATH} environment variable.
+
+\label{param:GangliaGstatCommand}
+\item[\Macro{GANGLIA\_GSTAT\_COMMAND}]
+  The full gstat command used to determine which hosts are monitored
+  by ganglia.
+  For a \Condor{gangliad} running on a host whose local gmond does
+  not know the list of monitored hosts, change the appropriate
+  hostname and port in the from the default string.
+  The default is 'gstat --all --mpifile --gmond\_ip=localhost --gmond\_port=8649'
+
+\label{param:GangliaSendDataForAllHosts}
+\item[\Macro{GANGLIA\_SEND\_DATA\_FOR\_ALL\_HOSTS}]
+  Whether to send data to ganglia for hosts that it is not currently monitoring.
+  The default is \Expr{False}.
 
 \label{param:GangliaLib}
 \item[\Macro{GANGLIA\_LIB}]
