@@ -41,6 +41,7 @@ my $condorinfo =CondorTest::StartCondorWithParams(
 	condor_name => "name1",
 	fresh_local => "TRUE",
 	config_minimal => "TRUE",
+	do_not_start => "TRUE",
 	condorlocalsrc => "$configfile",
 );
 
