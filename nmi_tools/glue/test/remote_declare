@@ -52,13 +52,19 @@ if (-f "$TestOverride") {
 	print "****************************************************\n";
 	print "**** Found test override file\n****   $TestOverride\n";
 	print "****************************************************\n";
-	File::Copy->copy("$TestOverride", \*STDOUT);
+	#copy("$TestOverride", \*STDOUT);
+	print "Open and list out:$TestOverride\n";
+	open(TO,"<$TestOverride") or die "Failed to open:$TestOverride :$!\n";
+	while (<TO>) {
+		print "$_";
+	}
+	close(TO);
 	print "****************************************************\n";
 	print "**** Copying to $TaskFile, $UserdirTaskFile\n";
 	print "**** and ignoring normal test lists/arguments\n";
 	print "****************************************************\n";
-	File::Copy->copy("$TestOverride", "$TaskFile");
-	File::Copy->copy("$TestOverride", "$UserdirTaskFile");
+	copy("$TestOverride", "$TaskFile");
+	copy("$TestOverride", "$UserdirTaskFile");
 	exit(0);
 }
 
