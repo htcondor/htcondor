@@ -7015,6 +7015,36 @@ default=1.0
 review=?
 
 # Useful constants
+[IsWindows]
+default=false
+win32_default=true
+type=bool
+customization=const
+
+[CONDOR_VERSION]
+macro=CONDOR_VERSION
+default=8.*
+type=string
+customization=const
+
+[CONDOR_BUILD_PLATFORM]
+macro=PLATFORM
+default=undefined
+type=string
+customization=const
+
+[HAVE_EXT_GLOBUS]
+macro=HAVE_EXT_GLOBUS
+default=0
+type=int
+customization=const
+
+[HAVE_EXT_KRB5]
+macro=HAVE_EXT_KRB5
+default=0
+type=int
+customization=const
+
 [MINUTE]
 default=60
 customization=const
