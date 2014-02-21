@@ -1375,11 +1375,11 @@ if($btdebug == 1) {
 	}
 
 	# Lets have some better default log size.
-	print NEW "MAX_MASTER_LOG = 100 Mb\n";
-	print NEW "MAX_COLLECTOR_LOG = 100 Mb\n";
-	print NEW "MAX_STARTD_LOG = 100 Mb\n";
-	print NEW "MAX_SCHEDD_LOG = 100 Mb\n";
-	print NEW "MAX_NEGOTIATOR_LOG = 100 Mb\n";
+	print NEW "MAX_MASTER_LOG = 10 Mb\n";
+	print NEW "MAX_COLLECTOR_LOG = 10 Mb\n";
+	print NEW "MAX_STARTD_LOG = 10 Mb\n";
+	print NEW "MAX_SCHEDD_LOG = 10 Mb\n";
+	print NEW "MAX_NEGOTIATOR_LOG = 10 Mb\n";
 
 	close(NEW);
 
