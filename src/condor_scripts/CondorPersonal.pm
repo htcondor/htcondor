@@ -1374,6 +1374,13 @@ if($btdebug == 1) {
 		print NEW "COLLECTOR_HOST = \$(CONDOR_HOST):0\n";
 	}
 
+	# Lets have some better default log size.
+	print NEW "MAX_MASTER_LOG = 100 Mb\n";
+	print NEW "MAX_COLLECTOR_LOG = 100 Mb\n";
+	print NEW "MAX_STARTD_LOG = 100 Mb\n";
+	print NEW "MAX_SCHEDD_LOG = 100 Mb\n";
+	print NEW "MAX_NEGOTIATOR_LOG = 100 Mb\n";
+
 	close(NEW);
 
 	PostTunePersonalCondor($personal_config_file);
