@@ -4,7 +4,22 @@
 \index{pool management!Monitoring}
 \index{Monitoring}
 
-About monitoring in general. . .
+The \Condor{collector} collects information from all the other Condor daemons
+in the pool.
+Each daemon periodically updates the collector with a ClassAd.
+The condor\_status command queries the \Condor{collector} to obtain a
+snapshot of the current state of the pool.
+However, monitoring systems track the state over time and optionally
+alert the system administrator about exceptional conditions.
+
+The most prevalent monitoring system on the Open Science Grid is ganglia.
+(http://ganglia.info/)
+Nagios is often used to provide alerts based on data from the ganglia
+monitoring system.
+(http://www.nagios.org/)
+\Condor{gangliad} provides a efficient way to take information from
+\Condor{collector} and supply it to the ganglia monitoring system.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:monitor-ganglia}Ganglia}
@@ -12,6 +27,49 @@ About monitoring in general. . .
 \index{Monitoring!with Ganglia}
 \index{Ganglia monitoring}
 
+In the past, system adminstrators have written scripts to extract data
+using the condor\_status command and propogate the data to their local
+monitoring system.
+
+The \Condor{gangliad} streamlines getting data to the ganglia monitoring
+system.
+Updates to ganglia are done using the ganglia shared libraries for
+efficiency.
+
+If ganglia is already deployed in your pool, monitoring HTCondor can
+be a simple as adding GANGLIAD to your DAEMON\_LIST on the host running
+the ganglia gmetad.
+If your pool does not use ganglia, it can still be monitored by a separate
+server running ganglia.
+
+The first decision is where to run the \Condor{gangliad}.
+Running the \Condor{gangliad} on the host where your gmetad is running,
+involves the least amount of configuration.
+The default configuration works in this case.
+
+It may be advantageous to run the \Condor{gangliad} on the \Condor{collector}
+host.
+On a large pool, there will be a large number of ClassAds.
+This may help cut down on network traffic.
+However, you may need to modify the \Macro{GANGLIA\_GSTAT\_COMMAND} to get the
+list of monitored hosts from the master gmond.
+
+By default, the \Condor{gangliad} will only propogate metrics to hosts
+that are already monitoring by ganglia.
+However, if you setup a ganglia host to monitor a pool not monitored by ganglia
+or have a heterogenous pool where some hosts are not monitored, then you will
+have to set \Macro{GANGLIA\_SEND\_DATA\_FOR\_ALL\_HOSTS} to \Expr{True}.
+In this case, default graphs that ganglia provides will not be present.
+However, the HTCondor metrics will appear.
+
+On large pools, setting \Macro{GANGLIAD\_PER\_EXECUTE\_NODE\_METRICS} to false
+will reduce the amount of data sent to ganglia.
+The execute node data is the least important to monitor.
+
+One can also limit the amount of data by setting the
+\Macro{GANGLIAD\_REQUIREMNTS}.
+Be aware, that aggregate sums over the entire pool will not be accurate
+if you limit the ClassAd queried with a requirements expression.
 
 An example of a metric definition:
 
@@ -72,13 +130,30 @@ An example of a metric definition:
 
   \item[Units] A string describing the units of this metric.
 
+  \item[Scale] A scale factor. The value is multiplied by this amount.
+    The scale factor is used when the value is not in the basic unit
+    or human interpretable unit. For example, duty cycle is commonly
+    expressed as a percent, but the HTCondor value ranges from 0 to 1.
+    So, duty cycle is scaled by 100. Some metrics are reported in kbytes.
+    Scaling by 1024 allows ganglia to pick the appropriate units (M bytes
+    rather than k kbytes). When scaling by large numbers, converting to
+    the \verb|"float"| type is recommended.
+
   \item[Derivative] A boolean value that specifies if Ganglia should
     graph the derivative of this metric.  Ganglia versions prior to
     3.4 do not support this.
 
   \item[Type] A string specifying the type of the metric.  Possible
-    values are \verb|"double"|, \verb|"boolean"|, and \verb|"string"|.
-    The default is \verb|"double"|.
+    values are \verb|"double"|, \verb|"float"|, \verb|"int32"|,
+    \verb|"uint32"|, \verb|"int16"|, \verb|"uint16"|,
+    \verb|"int8"|, \verb|"uint8"|, and \verb|"string"|.
+    The default is \verb|"string"| for string values,
+    The default is \verb|"int32"| for integer values,
+    The default is \verb|"float"| for real values,
+    The default is \verb|"int8"| for boolean values.
+    Integer values can be coerced to \verb|"float"| or \verb|"double"|.
+    This is especially important for values stored internally as 64-bit
+    values.
 
   \item[Regex] This string value specifies a regular expression that
     matches attributes to be monitored by this metric.  This is useful
