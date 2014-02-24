@@ -111,13 +111,13 @@ int main(int argc, const char ** argv)
 }
 
 static const char * const aBoolTrue[] = {
-	"true", "True", "TRUE", "yes", "Yes", "YES", "t", "T", "1", 
-	"1.0", "0.1", ".1", "1.", "1e1", "1e10", "2.0e10", 
+	"true", "True", "TRUE", "yes", "Yes", "YES", "t", "T", "1",
+	"1.0", "0.1", ".1", "1.", "1e1", "1e10", "2.0e10",
 	" true ", " 1 ",
 };
 
 static const char * const aBoolFalse[] = {
-	"false", "False", "FALSE", "no", "No", "NO", "f", "F ", 
+	"false", "False", "FALSE", "no", "No", "NO", "f", "F ",
 	"0", "0.0", ".0", "0.", "0e1", "0.0e10", " false ", " 0 ",
 };
 
