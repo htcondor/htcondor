@@ -114,6 +114,21 @@ using the configuration variable
 \Macro{MACHINE\_RESOURCE\_INVENTORY\_GPUs}.
 \Ticket{3386}
 
+\item A new configuration constant \Macro{DETECTED\_PHYSICAL\_CPUS} contains
+the number of physical (non-hyperthreaded) CPUs. An existing configuration
+constant \Macro{DETECTED\_CORES} contains the number of hyperthreaded CPUs.
+A new configuration constant \Macro{DETECTED\_CPUS} will match the value of
+either \Macro{DETECTED\_CORES} or \Macro{DETECTED\_PHYSICAL\_CPUS} depending
+on the state of \Macro{COUNT\_HYPERTHREAD\_CPUS}. These new \Macro{DETECTED\_}
+configuration constants are meant to be referenced in other configuration values;
+they cannot be overridden.
+The \Macro{NUM\_CPUS} is now set by default to \Macro{DETECTED\_CPUS}.
+\Ticket{4197}
+
+\item \Condor{q} will now show the macro-expanded job description from the attribute
+\Attr{MATCH\_EXP\_JobDescription} instead of \Attr{JobDescription} if it is available.
+\Ticket{4110}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
