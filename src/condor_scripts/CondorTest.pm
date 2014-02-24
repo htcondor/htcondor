@@ -2598,9 +2598,11 @@ sub LoadWhoData
 	  if((exists $daemon_tracking{COLLECTOR}) and ($daemon_tracking{SCHEDD})) {
 	  		my $currenthost = CondorTest::getFqdnHost();
 			my @statarray = ();
-			CondorTest::runCondorTool("condor_status -schedd -format \"%s\\n\" name",\@statarray,0,{emit_output=>0});
+			CondorTest::runCondorTool("condor_status -schedd -autoformat MyAddress Name",\@statarray,0,{emit_output=>0});
 			foreach my $line (@statarray) {
-				if( $line =~ /^.*$currenthost.*/) {
+			#<128.105.109.64:49860 Look for beginning of sinful string
+				if( $line =~ /^<\d+\.\d+\.\d+\.\d+:\d+.*$/) {
+					print "Got a sinful string for schedd:$line\n";
 					return("yes");
 				}
 			}
