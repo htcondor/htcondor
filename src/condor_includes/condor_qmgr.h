@@ -188,7 +188,7 @@ bool InTransaction();
 	schedd.
 	@return -1 on failurer; 0 on success
 */
-void BeginTransaction();
+int BeginTransaction();
 
 /** This didn't exist as a remote qmgmt call until 7.5.2.  Prior to that,
     the poorly named CloseConnection() call was used.
@@ -202,11 +202,9 @@ int RemoteCommitTransaction(SetAttributeFlags_t flags=0);
 */
 void CommitTransaction(SetAttributeFlags_t flags=0);
 
-void AbortTransaction();
+int AbortTransaction();
 void AbortTransactionAndRecomputeClusters();
 
-
-void AbortTransaction();
 
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success

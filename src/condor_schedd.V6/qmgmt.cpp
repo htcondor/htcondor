@@ -2881,13 +2881,15 @@ InTransaction()
 	return JobQueue->InTransaction();
 }
 
-void
+int
 BeginTransaction()
 {
 	JobQueue->BeginTransaction();
 
 	// note what time we started the transaction (used by SetTimerAttribute())
 	xact_start_time = time( NULL );
+
+	return 0;
 }
 
 
@@ -3016,10 +3018,10 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 	xact_start_time = 0;
 }
 
-void
+int
 AbortTransaction()
 {
-	JobQueue->AbortTransaction();
+	return JobQueue->AbortTransaction();
 }
 
 void

@@ -195,9 +195,35 @@ private:
     boost::shared_ptr<Sock> m_sock;
 };
 
+struct Schedd;
+struct ConnectionSentry
+{
+
+public:
+
+    ConnectionSentry(Schedd &schedd, bool transaction=false, SetAttributeFlags_t flags=0, bool continue_txn=false);
+    ~ConnectionSentry();
+
+    void abort();
+    void disconnect();
+
+    static boost::shared_ptr<ConnectionSentry> enter(boost::shared_ptr<ConnectionSentry> obj);
+    static bool exit(boost::shared_ptr<ConnectionSentry> mgr, boost::python::object obj1, boost::python::object obj2, boost::python::object obj3);
+
+private:
+    bool m_connected;
+    bool m_transaction;
+    SetAttributeFlags_t m_flags;
+    Schedd& m_schedd;
+};
+
+
 struct Schedd {
 
+    friend struct ConnectionSentry;
+
     Schedd()
+     : m_connection(NULL)
     {
         Daemon schedd( DT_SCHEDD, 0, 0 );
 
@@ -223,7 +249,7 @@ struct Schedd {
     }
 
     Schedd(const ClassAdWrapper &ad)
-      : m_addr(), m_name("Unknown"), m_version("")
+      : m_connection(NULL), m_addr(), m_name("Unknown"), m_version("")
     {
         if (!ad.EvaluateAttrString(ATTR_SCHEDD_IP_ADDR, m_addr))
         {
@@ -232,6 +258,11 @@ struct Schedd {
         }
         ad.EvaluateAttrString(ATTR_NAME, m_name);
         ad.EvaluateAttrString(ATTR_VERSION, m_version);
+    }
+
+    ~Schedd()
+    {
+        if (m_connection) { m_connection->abort(); }
     }
 
     object query(const std::string &constraint="", list attrs=list())
@@ -567,6 +598,7 @@ struct Schedd {
     }
 
 
+    // TODO: allow user to specify flags.
     void edit(object job_spec, std::string attr, object val)
     {
         std::vector<int> clusters;
@@ -690,44 +722,124 @@ struct Schedd {
         return iter;
     }
 
-private:
-    struct ConnectionSentry
+
+    boost::shared_ptr<ConnectionSentry> transaction(SetAttributeFlags_t flags=0, bool continue_txn=false)
     {
-    public:
-        ConnectionSentry(Schedd &schedd) : m_connected(false)
-        {
-            if (ConnectQ(schedd.m_addr.c_str(), 0, false, NULL, NULL, schedd.m_version.c_str()) == 0)
-            {
-                PyErr_SetString(PyExc_RuntimeError, "Failed to connect to schedd.");
-                throw_error_already_set();
-            }
-            m_connected = true;
-        }
+        boost::shared_ptr<ConnectionSentry> sentry_ptr(new ConnectionSentry(*this, true, flags, continue_txn));
+        return sentry_ptr;
+    }
 
-        void disconnect()
-        {
-            if (m_connected && !DisconnectQ(NULL))
-            {
-                m_connected = false;
-                PyErr_SetString(PyExc_RuntimeError, "Failed to commmit and disconnect from queue.");
-                throw_error_already_set();
-            }
-            m_connected = false;
-        }
 
-        ~ConnectionSentry()
-        {
-            disconnect();
-        }
-    private:
-        bool m_connected;
-    };
+private:
+
+    ConnectionSentry* m_connection;
 
     std::string m_addr, m_name, m_version;
+
 };
+
+ConnectionSentry::ConnectionSentry(Schedd &schedd, bool transaction, SetAttributeFlags_t flags, bool continue_txn)
+     : m_connected(false), m_transaction(false), m_flags(flags), m_schedd(schedd)
+{
+    if (schedd.m_connection)
+    {
+        if (transaction && !continue_txn) { THROW_EX(RuntimeError, "Transaction already in progress for schedd."); }
+        return;
+    }
+    else if (ConnectQ(schedd.m_addr.c_str(), 0, false, NULL, NULL, schedd.m_version.c_str()) == 0)
+    {
+        THROW_EX(RuntimeError, "Failed to connect to schedd.");
+    }
+    schedd.m_connection = this;
+    m_connected = true;
+    if (transaction)
+    {/*
+        if (BeginTransaction())
+        {
+            THROW_EX(RuntimeError, "Failed to begin transaction.");
+        }
+    */}
+    m_transaction = transaction;
+}
+
+
+void
+ConnectionSentry::abort()
+{ 
+    if (m_transaction)
+    {
+        m_transaction = false;
+        if (AbortTransaction())
+        {
+            THROW_EX(RuntimeError, "Failed to abort transaction.");
+        }
+        if (m_connected)
+        {
+            m_connected = false;
+            m_schedd.m_connection = NULL;
+            DisconnectQ(NULL);
+        }
+    }
+    else if (m_schedd.m_connection && m_schedd.m_connection != this)
+    {
+        m_schedd.m_connection->abort();
+    }
+}
+
+
+// Enter the context manager; as this is a dual-purpose object, this is a no-op
+// We assume the transaction started with the constructor.
+boost::shared_ptr<ConnectionSentry>
+ConnectionSentry::enter(boost::shared_ptr<ConnectionSentry> obj)
+{
+    return obj;
+}
+
+
+bool
+ConnectionSentry::exit(boost::shared_ptr<ConnectionSentry> mgr, boost::python::object obj1, boost::python::object /*obj2*/, boost::python::object /*obj3*/)
+{
+    if (obj1.ptr() == Py_None)
+    {
+        mgr->disconnect();
+        return true;
+    }
+    mgr->abort();
+    return false;
+}
+
+
+void
+ConnectionSentry::disconnect()
+{
+    bool throw_commit_error = false;
+    if (m_transaction)
+    {
+        m_transaction = false;
+        throw_commit_error = RemoteCommitTransaction(m_flags);
+    }
+    if (m_connected)
+    {
+        m_connected = false;
+        m_schedd.m_connection = NULL;
+        // WARNING: DisconnectQ returns a boolean; failure test is different from rest of qmgmt API.
+        if (!DisconnectQ(NULL))
+        {
+            THROW_EX(RuntimeError, "Failed to commmit and disconnect from queue.");
+        }
+    }
+    if (throw_commit_error) { THROW_EX(RuntimeError, "Failed to commit ongoing transaction."); }
+}
+
+
+ConnectionSentry::~ConnectionSentry()
+{
+    disconnect();
+}
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 2);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(submit_overloads, submit, 1, 4);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(transaction_overloads, transaction, 0, 2);
 
 void export_schedd()
 {
@@ -742,12 +854,27 @@ void export_schedd()
         .value("Continue", JA_CONTINUE_JOBS)
         ;
 
+    enum_<SetAttributeFlags_t>("TransactionFlags")
+        .value("None", 0)
+        .value("NonDurable", NONDURABLE)
+        .value("SetDirty", SETDIRTY)
+        .value("ShouldLog", SHOULDLOG)
+        ;
+
+    class_<ConnectionSentry>("Transaction", "An ongoing transaction in the HTCondor schedd", no_init)
+        .def("__enter__", &ConnectionSentry::enter)
+        .def("__exit__", &ConnectionSentry::exit)
+        ;
+    register_ptr_to_python< boost::shared_ptr<ConnectionSentry> >();
+
+    boost::python::docstring_options doc_options;
+    doc_options.disable_cpp_signatures();
     class_<Schedd>("Schedd", "A client class for the HTCondor schedd")
         .def(init<const ClassAdWrapper &>(":param ad: An ad containing the location of the schedd"))
         .def("query", &Schedd::query, query_overloads("Query the HTCondor schedd for jobs.\n"
             ":param constraint: An optional constraint for filtering out jobs; defaults to 'true'\n"
             ":param attr_list: A list of attributes for the schedd to project along.  Defaults to having the schedd return all attributes.\n"
-            ":return: A list of matching jobs, containing the requested attributes."))
+            ":return: A list of matching jobs, containing the requested attributes.", (boost::python::arg("self"), boost::python::arg("constraint")=true, boost::python::arg("attr_list")=boost::python::list())))
         .def("act", &Schedd::actOnJobs2)
         .def("act", &Schedd::actOnJobs, "Change status of job(s) in the schedd.\n"
             ":param action: Action to perform; must be from enum JobAction.\n"
@@ -758,9 +885,13 @@ void export_schedd()
             ":param count: Number of jobs to submit to cluster.\n"
             ":param spool: Set to true to spool files separately.\n"
             ":param ad_results: If set to a list, the resulting ClassAds will be added to the list post-submit.\n"
-            ":return: Newly created cluster ID."))
+            ":return: Newly created cluster ID.", (boost::python::arg("self"), "ad", boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::list())))
         .def("spool", &Schedd::spool, "Spool a list of given ads to the remote HTCondor schedd.\n"
             ":param ads: A python list containing one or more ads to spool.\n")
+        .def("transaction", &Schedd::transaction, transaction_overloads("Start a transaction with the schedd.\n"
+            ":param flags: Transaction flags from the htcondor.TransactionFlags enum.\n"
+            ":param continue_txn: Defaults to false; set to true to extend an ongoing transaction if present.  Otherwise, starting a new transaction while one is ongoing is an error.\n"
+            ":return: Transaction context manager.\n", (boost::python::arg("self"), boost::python::arg("flags")=0, boost::python::arg("continue_txn")=false))[boost::python::with_custodian_and_ward_postcall<1, 0>()])
         .def("retrieve", &Schedd::retrieve, "Retrieve the output sandbox from one or more jobs.\n"
             ":param jobs: A expression string matching the list of job output sandboxes to retrieve.\n")
         .def("edit", &Schedd::edit, "Edit one or more jobs in the queue.\n"

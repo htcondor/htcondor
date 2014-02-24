@@ -2,6 +2,7 @@
 
 import os
 import re
+import sys
 import time
 import errno
 import types
@@ -9,6 +10,7 @@ import atexit
 import signal
 import socket
 import classad
+import datetime
 import unittest
 
 master_pid = 0
@@ -16,53 +18,26 @@ def kill_master():
     if master_pid: os.kill(master_pid, signal.SIGTERM)
 atexit.register(kill_master)
 
-class TestConfig(unittest.TestCase):
-
-    def setUp(self):
-        os.environ["_condor_FOO"] = "BAR"
-        htcondor.reload_config()
-
-    def test_config(self):
-        self.assertEquals(htcondor.param["FOO"], "BAR")
-
-    def test_reconfig(self):
-        htcondor.param["FOO"] = "BAZ"
-        self.assertEquals(htcondor.param["FOO"], "BAZ")
-        os.environ["_condor_FOO"] = "1"
-        htcondor.reload_config()
-        self.assertEquals(htcondor.param["FOO"], "1")
-
-class TestVersion(unittest.TestCase):
-
-    def setUp(self):
-        fd = os.popen("condor_version")
-        self.lines = []
-        for line in fd.readlines():
-            self.lines.append(line.strip())
-        if fd.close():
-            raise RuntimeError("Unable to invoke condor_version")
-
-    def test_version(self):
-        self.assertEquals(htcondor.version(), self.lines[0])
-
-    def test_platform(self):
-        self.assertEquals(htcondor.platform(), self.lines[1])
 
 def makedirs_ignore_exist(directory):
     try:
         os.makedirs(directory)
-    except oe:
-        if not isinstance(oe, OSError): raise
+    except:
+        exctype, oe = sys.exc_info()[:2]
+        if not issubclass(exctype, OSError): raise
         if oe.errno != errno.EEXIST:
             raise
+
 
 def remove_ignore_missing(file):
     try:
         os.unlink(file)
-    except oe:
-        if not isinstance(oe, OSError): raise
+    except:
+        exctype, oe = sys.exc_info()[:2]
+        if not issubclass(exctype, OSError): raise
         if oe.errno != errno.ENOENT:
             raise
+
 
 # Bootstrap condor
 testdir = os.path.join(os.getcwd(), "tests_tmp")
@@ -74,6 +49,7 @@ open(config_file, "w").close()
 os.environ["CONDOR_CONFIG"] = config_file
 os.environ["_condor_TOOL_LOG"] = os.path.join(logdir, "ToolLog")
 import htcondor
+
 
 class WithDaemons(unittest.TestCase):
 
@@ -145,7 +121,8 @@ class WithDaemons(unittest.TestCase):
             try:
                 try:
                     os.execvp("condor_master", ["condor_master", "-f"])
-                except e:
+                except:
+                    e = sys.exc_info()[1]
                     print(str(e))
             finally:
                 os._exit(1)
@@ -323,10 +300,83 @@ class TestPythonBindings(WithDaemons):
              "Subproc": 0,
              "Cluster": 236467,
              "Proc": 0,
-             "EventTime": "2013-11-15T17:05:55",
+             "EventTime": "%d-11-15T17:05:55" % datetime.datetime.now().year,
              "SubmitHost": "<169.228.38.38:9615?sock=18627_6227_3>",
             }
-        self.assertEquals(a, b)
+        self.assertEquals(set(a.keys()), set(b.keys()))
+        for key, val in a.items():
+            self.assertEquals(val, b[key])
+
+    def testTransaction(self):
+        self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
+        output_file = os.path.join(testdir, "test.out")
+        log_file = os.path.join(testdir, "test.log")
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        if os.path.exists(log_file):
+            os.unlink(log_file)
+        schedd = htcondor.Schedd()
+        ad = classad.parse(open("tests/submit_sleep.ad"))
+        result_ads = []
+        cluster = schedd.submit(ad, 1, True, result_ads)
+
+        with schedd.transaction() as txn:
+            schedd.edit(["%d.0" % cluster], 'foo', classad.Literal(1))
+            schedd.edit(["%d.0" % cluster], 'bar', classad.Literal(2))
+        ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus", 'foo', 'bar'])
+        self.assertEquals(len(ads), 1)
+        self.assertEquals(ads[0]['foo'], 1)
+        self.assertEquals(ads[0]['bar'], 2)
+
+        with schedd.transaction() as txn:
+            schedd.edit(["%d.0" % cluster], 'baz', classad.Literal(3))
+            with schedd.transaction(htcondor.TransactionFlags.NonDurable | htcondor.TransactionFlags.ShouldLog, True) as txn:
+                schedd.edit(["%d.0" % cluster], 'foo', classad.Literal(4))
+                schedd.edit(["%d.0" % cluster], 'bar', classad.Literal(5))
+        ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus", 'foo', 'bar', 'baz'])
+        self.assertEquals(len(ads), 1)
+        self.assertEquals(ads[0]['foo'], 4)
+        self.assertEquals(ads[0]['bar'], 5)
+        self.assertEquals(ads[0]['baz'], 3)
+
+        try:
+            with schedd.transaction() as txn:
+                schedd.edit(["%d.0" % cluster], 'foo', classad.Literal(6))
+                schedd.edit(["%d.0" % cluster], 'bar', classad.Literal(7))
+                raise Exception("force abort")
+        except:
+            exctype, e = sys.exc_info()[:2]
+            if not issubclass(exctype, Exception):
+                raise
+            self.assertEquals(str(e), "force abort")
+        ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus", 'foo', 'bar'])
+        self.assertEquals(len(ads), 1)
+        self.assertEquals(ads[0]['foo'], 4)
+        self.assertEquals(ads[0]['bar'], 5)
+
+        try:
+            with schedd.transaction() as txn:
+                schedd.edit(["%d.0" % cluster], 'baz', classad.Literal(8))
+                with schedd.transaction(htcondor.TransactionFlags.NonDurable | htcondor.TransactionFlags.ShouldLog, True) as txn:
+                    schedd.edit(["%d.0" % cluster], 'foo', classad.Literal(9))
+                    schedd.edit(["%d.0" % cluster], 'bar', classad.Literal(10))
+                raise Exception("force abort")
+        except:
+            exctype, e = sys.exc_info()[:2]
+            if not issubclass(exctype, Exception): 
+                raise
+            self.assertEquals(str(e), "force abort")
+        ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus", 'foo', 'bar', 'baz'])
+        self.assertEquals(len(ads), 1)
+        self.assertEquals(ads[0]['foo'], 4)
+        self.assertEquals(ads[0]['bar'], 5)
+        self.assertEquals(ads[0]['baz'], 3)
+
+        schedd.act(htcondor.JobAction.Remove, ["%d.0" % cluster])
+        ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
+        self.assertEquals(len(ads), 0)
+
 
 if __name__ == '__main__':
     unittest.main()
+
