@@ -74,6 +74,11 @@ A full port includes support for the standard universe.
 
 \begin{itemize}
 
+\item Add ganglia statistics for total job starts, total job preemptions
+in a startd.  This allows ganglia to graph the total job preemptions
+across all startds in a pool.
+\Ticket{3965}
+
 \item The grid universe can now be used to create and manage VM instances
 in Google Compute Engine (GCE), using the new grid type \SubmitCmd{gce}.
 \Ticket{3833}
