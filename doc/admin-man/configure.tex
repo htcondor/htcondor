@@ -11980,24 +11980,27 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_gangliad configuration variables}
-\Condor{gangliad} is an optional daemon that may be added to the
-\Condor{master} daemon's \MacroNI{DAEMON\_LIST}.  It is responsible
+\Condor{gangliad} is an optional daemon responsible
 for publishing information about HTCondor daemons to the \TM{Ganglia}
-monitoring system, which must be installed and configured separately.
-In the typical case, a single instance of \Condor{gangliad} per pool
-is run.  A default set of metrics are provided.  Additional metrics
-may be defined to publish any information available in ClassAds that
-are published to the \Condor{collector}.
+monitoring system. 
+The {Ganglia} monitoring system  must be installed and configured separately.
+In the typical case, a single instance of the \Condor{gangliad} daemon
+is run per pool.
+A default set of metrics are sent.
+Additional metrics may be defined, 
+in order to publish any information available 
+in ClassAds that the \Condor{collector} daemon has.
 
 \begin{description}
 
 \label{param:GangliadInterval}
 \item[\Macro{GANGLIAD\_INTERVAL}]
-  The integer number of seconds between publication of metrics to Ganglia.
-  Daemons update the \Condor{collector} every 300 seconds.
-  The ganglia heartbeat interval is 20 seconds. So, multiples of 20, between
-  20 and 300 makes sense for this value.
-  Negative values inhibit sending data to ganglia
+  The integer number of seconds between consecutive sending 
+  of metrics to Ganglia.
+  Daemons update the \Condor{collector} every 300 seconds,
+  and the Ganglia heartbeat interval is 20 seconds. 
+  Therefore, multiples of 20 between 20 and 300 makes sense for this value.
+  Negative values inhibit sending data to Ganglia.
   The default value is 60.
 
 \label{param:GangliadVerbosity}
@@ -12010,26 +12013,28 @@ are published to the \Condor{collector}.
   not published to the \Condor{collector} when using the default value of
   \Macro{STATISTICS\_TO\_PUBLISH}.  For example, per-user file
   transfer statistics will only be published to Ganglia if
-  \Macro{GANGLIA\_VERBOSITY} is set to 1 or higher in the
+  \MacroNI{GANGLIA\_VERBOSITY} is set to 1 or higher in the
   \Condor{gangliad} configuration \emph{and}
-  \Macro{STATISTICS\_TO\_PUBLISH} in the \Condor{schedd} configuration
+  \MacroNI{STATISTICS\_TO\_PUBLISH} in the \Condor{schedd} configuration
   contains \Expr{TRANSFER:2}.
 
 \label{param:GangliadRequirements}
-\item[\Macro{GANGLIAD\_REQUIREMENTS}] An optional ClassAd expression
-  that restricts the set of daemon ClassAds to be monitored.  This could be
-  used to monitor a subset of the pool.  The default is an empty
-  expression, which has the effect of placing no restriction on the
-  monitored ClassAds.  Keep in mind that this expression is applied to
+\item[\Macro{GANGLIAD\_REQUIREMENTS}] An optional boolean ClassAd expression
+  that may restrict the set of daemon ClassAds to be monitored.  This could be
+  used to monitor a subset of a pool's daemons or machines.
+  The default is an empty expression, 
+  which has the effect of placing no restriction on the monitored ClassAds. 
+  Keep in mind that this expression is applied to
   all types of monitored ClassAds, not just machine ClassAds.
 
 \label{param:GangliadPerExecuteNodeMetrics}
-\item[\Macro{GANGLIAD\_PER\_EXECUTE\_NODE\_METRICS}] A boolean value
-  that when \Expr{False} causes metrics from execute node daemons to
-  not be published.  Aggregate values from these machines will still
-  be published.  The default is \Expr{True}.  This option is useful
-  for pools such as glidein pools, in which it is not desired to
-  record metrics for individual execute nodes.
+\item[\Macro{GANGLIAD\_PER\_EXECUTE\_NODE\_METRICS}] 
+  A boolean value that, when \Expr{False},
+  causes metrics from execute node daemons to not be published.
+  Aggregate values from these machines will still be published.  
+  The default value is \Expr{True}.  
+  This option is useful for pools such that use glidein, 
+  in which it is not desired to record metrics for individual execute nodes.
 
 \label{param:GangliaConfig}
 \item[\Macro{GANGLIA\_CONFIG}]
@@ -12043,30 +12048,38 @@ are published to the \Condor{collector}.
   because the library interface is more efficient than invoking
   \Prog{gmetric}.  Some versions of \File{libganglia} are not
   compatible.  When a failure to use \File{libganglia} is detected,
-  \Prog{gmetric} will be used, if it can be found in HTCondor's
+  \Prog{gmetric} will be used, if \Prog{gmetric} can be found in HTCondor's
   \Env{PATH} environment variable.
 
 \label{param:GangliaGstatCommand}
 \item[\Macro{GANGLIA\_GSTAT\_COMMAND}]
-  The full gstat command used to determine which hosts are monitored
-  by ganglia.
-  For a \Condor{gangliad} running on a host whose local gmond does
+  The full \Prog{gstat} command used to determine which hosts are monitored
+  by Ganglia.
+  For a \Condor{gangliad} running on a host whose local \Prog{gmond} does
   not know the list of monitored hosts, change the appropriate
-  hostname and port in the from the default string.
-  The default is 'gstat --all --mpifile --gmond\_ip=localhost --gmond\_port=8649'
+  host name and port from this default string:
+\footnotesize
+\begin{verbatim}
+  gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
+\end{verbatim}
+\normalsize
 
 \label{param:GangliaSendDataForAllHosts}
 \item[\Macro{GANGLIA\_SEND\_DATA\_FOR\_ALL\_HOSTS}]
-  Whether to send data to ganglia for hosts that it is not currently monitoring.
+  A boolean value that when \Expr{True} causes data to be sent to Ganglia 
+  for hosts that it is not currently monitoring.
   The default is \Expr{False}.
 
 \label{param:GangliaLib}
 \item[\Macro{GANGLIA\_LIB}]
-  The full path of the \File{libganglia} shared library to use.  If none is
-  specified, and \Macro{GANGLIA\_GMETRIC} is also not specified, then
-  a search for \File{libganglia} will be performed in the directories listed
-  in \Macro{GANGLIA\_LIB\_PATH} or \Macro{GANGLIA\_LIB64\_PATH}.  The
-  special value \Expr{NOOP} indicates that \Condor{gangliad} should not
+  The full path and file name of the \File{libganglia} shared library to use.
+  If none is specified, 
+  and if configuration variable \Macro{GANGLIA\_GMETRIC} is also not specified,
+  then a search for \File{libganglia} will be performed in the 
+  directories listed
+  in configuration variable \Macro{GANGLIA\_LIB\_PATH} or 
+  \Macro{GANGLIA\_LIB64\_PATH}.
+  The special value \Expr{NOOP} indicates that \Condor{gangliad} should not
   publish statistics to Ganglia, but should otherwise go through all
   the motions it normally does.
 
@@ -12106,10 +12119,9 @@ are published to the \Condor{collector}.
 \label{param:GangliadMetricsConfigDir}
 \item[\Macro{GANGLIAD\_METRICS\_CONFIG\_DIR}]
   Path to the directory containing files which define Ganglia metrics
-  in terms of HTCondor ClassAd attributes to be published.  Each
-  metric definition file contains a list of ClassAds.  The attributes
-  of each ClassAd define the properties of a metric.  The value of each
-  attribute may be a ClassAd expression that references properties of
-  the daemon ClassAd that is being monitored.
+  in terms of HTCondor ClassAd attributes to be published.  
+  All files in this directory are read, to define the metrics.
+  The default directory \File{/etc/condor/ganglia.d/}
+  is used when not specified.
 
 \end{description}
