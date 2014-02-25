@@ -1,24 +1,25 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Monitoring}Monitoring}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{pool management!Monitoring}
-\index{Monitoring}
+\index{pool management!monitoring}
+\index{monitoring pools}
+\index{pool monitoring}
 
-The \Condor{collector} collects information from all the other Condor daemons
-in the pool.
-Each daemon periodically updates the collector with a ClassAd.
-The condor\_status command queries the \Condor{collector} to obtain a
+Information that
+the \Condor{collector} collects can be used to monitor a pool.
+The \Condor{status} command can be used to display
 snapshot of the current state of the pool.
-However, monitoring systems track the state over time and optionally
-alert the system administrator about exceptional conditions.
+Monitoring systems can be set up to track the state over time,
+and they might go further, 
+to alert the system administrator about exceptional conditions.
 
-The most prevalent monitoring system on the Open Science Grid is ganglia.
-(http://ganglia.info/)
-Nagios is often used to provide alerts based on data from the ganglia
+Prevalent in the Open Science Grid is the Ganglia monitoring system
+(\URL{http://ganglia.info/}).
+Nagios (\URL{http://www.nagios.org/})
+is often used to provide alerts based on data from the Ganglia
 monitoring system.
-(http://www.nagios.org/)
-\Condor{gangliad} provides a efficient way to take information from
-\Condor{collector} and supply it to the ganglia monitoring system.
+The \Condor{gangliad} daemon provides an efficient way to take information from
+an HTCondor pool and supply it to the Ganglia monitoring system.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -27,51 +28,52 @@ monitoring system.
 \index{Monitoring!with Ganglia}
 \index{Ganglia monitoring}
 
-In the past, system adminstrators have written scripts to extract data
-using the condor\_status command and propogate the data to their local
-monitoring system.
-
-The \Condor{gangliad} streamlines getting data to the ganglia monitoring
+Support for Ganglia monitoring is integral to HTCondor.
+The \Condor{gangliad} gathers up data as specified by its configuration,
+and it streamlines getting that data to the Ganglia monitoring
 system.
-Updates to ganglia are done using the ganglia shared libraries for
+Updates sent to Ganglia are done using the Ganglia shared libraries for
 efficiency.
 
-If ganglia is already deployed in your pool, monitoring HTCondor can
-be a simple as adding GANGLIAD to your DAEMON\_LIST on the host running
-the ganglia gmetad.
-If your pool does not use ganglia, it can still be monitored by a separate
-server running ganglia.
+Given that Ganglia is already deployed in the pool,
+monitoring of HTCondor is enabled by running the \Condor{gangliad} daemon.
+Add \Expr{GANGLIAD} to the definition of configuration
+variable \MacroNI{DAEMON\_LIST} on the host running
+the Ganglia \Prog{gmetad}.
+If the pool does not use Ganglia, 
+the pool can still be monitored by a separate server running Ganglia.
 
-The first decision is where to run the \Condor{gangliad}.
-Running the \Condor{gangliad} on the host where your gmetad is running,
-involves the least amount of configuration.
-The default configuration works in this case.
-
-It may be advantageous to run the \Condor{gangliad} on the \Condor{collector}
-host.
-On a large pool, there will be a large number of ClassAds.
-This may help cut down on network traffic.
+It may be advantageous to run the \Condor{gangliad} daemon
+on the same machine as is running the \Condor{collector} daemon.
+On a large pool with many ClassAds
+there is likely to be less network traffic.
 However, you may need to modify the \Macro{GANGLIA\_GSTAT\_COMMAND} to get the
-list of monitored hosts from the master gmond.
+list of monitored hosts from the master \Prog{gmond} program.
 
-By default, the \Condor{gangliad} will only propogate metrics to hosts
-that are already monitoring by ganglia.
-However, if you setup a ganglia host to monitor a pool not monitored by ganglia
-or have a heterogenous pool where some hosts are not monitored, then you will
-have to set \Macro{GANGLIA\_SEND\_DATA\_FOR\_ALL\_HOSTS} to \Expr{True}.
-In this case, default graphs that ganglia provides will not be present.
+By default, the \Condor{gangliad} will only propagate metrics to hosts
+that are already monitored by Ganglia.
+Set configuration variable \Macro{GANGLIA\_SEND\_DATA\_FOR\_ALL\_HOSTS} 
+to \Expr{True} to set up
+a Ganglia host to monitor a pool not monitored by Ganglia
+or have a heterogeneous pool where some hosts are not monitored.
+In this case, default graphs that Ganglia provides will not be present.
 However, the HTCondor metrics will appear.
 
-On large pools, setting \Macro{GANGLIAD\_PER\_EXECUTE\_NODE\_METRICS} to false
-will reduce the amount of data sent to ganglia.
+On large pools, 
+setting configuration variable \Macro{GANGLIAD\_PER\_EXECUTE\_NODE\_METRICS}
+to \Expr{False} will reduce the amount of data sent to Ganglia.
 The execute node data is the least important to monitor.
+One can also limit the amount of data by setting configuration variable
+\Macro{GANGLIAD\_REQUIREMENTS}.
+Be aware that aggregate sums over the entire pool will not be accurate
+if this variable limits the ClassAds queried.
 
-One can also limit the amount of data by setting the
-\Macro{GANGLIAD\_REQUIREMNTS}.
-Be aware, that aggregate sums over the entire pool will not be accurate
-if you limit the ClassAd queried with a requirements expression.
-
-An example of a metric definition:
+Metrics to be sent to Ganglia are specified in all files within the
+directory specified by configuration variable 
+\Macro{GANGLIAD\_METRICS\_CONFIG\_DIR}.
+Each file in the directory is read,
+and the format within each file is that of New ClassAds.
+Here is an example of a single metric definition given as a New ClassAd:
 
 \begin{verbatim}
 [
@@ -82,47 +84,48 @@ An example of a metric definition:
 ]
 \end{verbatim}
 
-  This file containing the default metrics is a good source of
-  additional examples: 
-  \File{\$(GANGLIAD\_METRICS\_CONFIG\_DIR)/00\_default\_metrics}.
+A nice set of default metrics is in file:
+\File{\$(GANGLIAD\_METRICS\_CONFIG\_DIR)/00\_default\_metrics}.
 
-  The recognized metric attributes are the following:
+Recognized metric attribute names and their use:
 
   \begin{description}
 
-  \item[Name] The name of this metric.  Metrics published for the same
-    machine must have unique names.
+  \item[Name] The name of this metric,  
+    which corresponds to the ClassAd attribute name.
+    Metrics published for the same machine must have unique names.
 
-  \item[Value] A ClassAd expression that produces the value of this
-    metric.  The default value is the value in the daemon ClassAd of the
+  \item[Value] A ClassAd expression that produces the value when evaluated.
+    The default value is the value in the daemon ClassAd of the
     attribute with the same name as this metric.
 
-  \item[Desc] A description of the metric.  This is displayed when the
-    user holds the mouse over the metric's graph.
+  \item[Desc] A brief description of the metric.  This string is displayed 
+    when the user holds the mouse over the Ganglia graph for the metric.
 
-  \item[Verbosity] The integer verbosity level of this metric.  Metrics
-    with a higher verbosity level than \Macro{GANGLIA\_VERBOSITY} will
-    not be published.
+  \item[Verbosity] The integer verbosity level of this metric.  
+    Metrics with a higher verbosity level than that specified by
+    configuration variable \Macro{GANGLIA\_VERBOSITY} will not be published.
 
   \item[TargetType] A string containing a comma-separated list of daemon
-    ClassAd types this metric monitors.  The specified values should
-    match \Attr{MyType} of the daemon ClassAd.  In addition, there are
+    ClassAd types that this metric monitors.  The specified values should
+    match the value of \Attr{MyType} of the daemon ClassAd.  
+    In addition, there are
     special values that may be included. \verb|"Machine_slot1"| may be
     specified to monitor the machine ClassAd for slot 1 only.  This is
     useful when monitoring machine-wide attributes.  The special
     value \verb|"ANY"| matches any type of ClassAd.
 
-  \item[Requirements] If specified, this may be used to restrict which
-    daemon ClassAds are monitored by this metric.  By default, all daemon
-    ClassAds of the specified type are monitored.
+  \item[Requirements] A boolean expression that may restrict how this
+    metric is incorporated.  It defaults to \Expr{True}, which places
+    no restrictions on the collection of this ClassAd metric.
 
-  \item[Title] The graph title for this metric.  The default is the
+  \item[Title] The graph title used for this metric.  The default is the
     metric name.
 
   \item[Group] A string specifying the name of this metric's group.
-    Metrics are arranged by group in the Ganglia web page.  The
+    Metrics are arranged by group within a Ganglia web page.  The
     default is determined by the daemon type.  Metrics in different
-    groups must still have unique names.
+    groups must have unique names.
 
   \item[Cluster] A string specifying the cluster name for this metric.
     The default cluster name is taken from the configuration variable
@@ -130,13 +133,15 @@ An example of a metric definition:
 
   \item[Units] A string describing the units of this metric.
 
-  \item[Scale] A scale factor. The value is multiplied by this amount.
+  \item[Scale] A scaling factor that is multiplied by the value of the
+    \Attr{Value} attribute.
     The scale factor is used when the value is not in the basic unit
-    or human interpretable unit. For example, duty cycle is commonly
+    or a human-interpretable unit. For example, duty cycle is commonly
     expressed as a percent, but the HTCondor value ranges from 0 to 1.
-    So, duty cycle is scaled by 100. Some metrics are reported in kbytes.
-    Scaling by 1024 allows ganglia to pick the appropriate units (M bytes
-    rather than k kbytes). When scaling by large numbers, converting to
+    So, duty cycle is scaled by 100. Some metrics are reported in Kbytes.
+    Scaling by 1024 allows Ganglia to pick the appropriate units,
+    such as number of bytes rather than number of Kbytes. 
+    When scaling by large values, converting to
     the \verb|"float"| type is recommended.
 
   \item[Derivative] A boolean value that specifies if Ganglia should
@@ -183,7 +188,7 @@ An example of a metric definition:
 
   \item[AggregateGroup] When an aggregate function has been specified,
     this string value specifies which aggregation group the current
-    daemon ClassAd belongs to.  The default is the metric name.  This
+    daemon ClassAd belongs to.  The default is the metric \Attr{Name}.  This
     feature works like GROUP BY in SQL.  The aggregation function
     produces one result per value of \Attr{AggregateGroup}.  A single
     aggregate group would therefore be appropriate for a pool-wide
@@ -198,10 +203,12 @@ An example of a metric definition:
     the Ganglia page associated with each machine, one should make
     the \Attr{AggregateGroup} contain the machine name and override
     the default \Attr{Machine} attribute to be the daemon's machine
-    name, rather than the \Condor{collector}'s.
+    name, rather than the \Condor{collector} daemon's.
 
-  \item[Machine] The name of the host associated with this metric.  If
-    \Macro{GANGLIAD\_DEFAULT\_MACHINE} is not specified, the default
+  \item[Machine] The name of the host associated with this metric.  
+    If configuration variable
+    \Macro{GANGLIAD\_DEFAULT\_MACHINE} is not specified, 
+    the default
     is taken from the \Attr{Machine} attribute of the daemon ClassAd.
     If the daemon name is of the form \verb|name@hostname|, this may
     indicate that there are multiple instances of HTCondor running on

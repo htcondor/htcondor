@@ -35,9 +35,16 @@ A full port includes support for the standard universe.
 
 \begin{itemize}
 
-\item Add ganglia statistics for total job starts, total job preemptions
-in a startd.  This allows ganglia to graph the total job preemptions
-across all startds in a pool.
+\item Improved support for publishing monitoring information about an
+HTCondor pool to \TM{Ganglia}.
+Added Ganglia statistics for total job starts and total job preemptions
+within a \Condor{startd}.
+This allows Ganglia to graph the total job preemptions
+across all \Condor{startd} daemons in a pool.
+See section~\ref{sec:Config-gangliad} for configuration variable definitions,
+and section~\ref{sec:monitor-ganglia} for details about monitoring
+with Ganglia.
+\Ticket{4151}
 \Ticket{3965}
 
 \item The grid universe can now be used to create and manage VM instances
