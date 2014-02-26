@@ -12083,8 +12083,8 @@ in ClassAds that the \Condor{collector} daemon has.
   The full \Prog{gstat} command used to determine which hosts are monitored
   by Ganglia.
   For a \Condor{gangliad} running on a host whose local \Prog{gmond} does
-  not know the list of monitored hosts, change the appropriate
-  host name and port from this default string:
+  not know the list of monitored hosts, change \Expr{localhost} to be
+  the appropriate host name or IP address within this default string:
 \footnotesize
 \begin{verbatim}
   gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649

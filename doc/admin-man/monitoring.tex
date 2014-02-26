@@ -35,20 +35,24 @@ system.
 Updates sent to Ganglia are done using the Ganglia shared libraries for
 efficiency.
 
-Given that Ganglia is already deployed in the pool,
-monitoring of HTCondor is enabled by running the \Condor{gangliad} daemon.
-Add \Expr{GANGLIAD} to the definition of configuration
-variable \MacroNI{DAEMON\_LIST} on the host running
-the Ganglia \Prog{gmetad}.
+If Ganglia is already deployed in the pool,
+the monitoring of HTCondor is enabled by running the \Condor{gangliad} daemon
+on a single machine within the pool.
+If the machine chosen is the one running Ganglia's \Prog{gmetad},
+then the HTCondor configuration consists of
+adding \Expr{GANGLIAD} to the definition of configuration
+variable \MacroNI{DAEMON\_LIST} on that machine.
+It may be advantageous to run the \Condor{gangliad} daemon
+on the same machine as is running the \Condor{collector} daemon,
+because on a large pool with many ClassAds,
+there is likely to be less network traffic.
+If the \Condor{gangliad} daemon is to run on a different machine
+than the one running Ganglia's \Prog{gmetad},
+modify configuration variable \Macro{GANGLIA\_GSTAT\_COMMAND} to get the
+list of monitored hosts from the master \Prog{gmond} program.
+
 If the pool does not use Ganglia, 
 the pool can still be monitored by a separate server running Ganglia.
-
-It may be advantageous to run the \Condor{gangliad} daemon
-on the same machine as is running the \Condor{collector} daemon.
-On a large pool with many ClassAds
-there is likely to be less network traffic.
-However, you may need to modify the \Macro{GANGLIA\_GSTAT\_COMMAND} to get the
-list of monitored hosts from the master \Prog{gmond} program.
 
 By default, the \Condor{gangliad} will only propagate metrics to hosts
 that are already monitored by Ganglia.
