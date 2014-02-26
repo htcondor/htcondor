@@ -2602,7 +2602,7 @@ sub LoadWhoData
 			foreach my $line (@statarray) {
 			#<128.105.109.64:49860 Look for beginning of sinful string
 				if( $line =~ /^<\d+\.\d+\.\d+\.\d+:\d+.*$/) {
-					print "Got a sinful string for schedd:$line\n";
+					#print "Got a sinful string for schedd:$line\n";
 					return("yes");
 				}
 			}
