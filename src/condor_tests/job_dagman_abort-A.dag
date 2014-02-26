@@ -1,3 +1,5 @@
+NODE_STATUS_FILE job_dagman_abort-A.status 600
+
 Job A job_dagman_abort-A-node-succeed.cmd
 Vars A nodename = "$(JOB)"
 Job B job_dagman_abort-A-node-succeed.cmd

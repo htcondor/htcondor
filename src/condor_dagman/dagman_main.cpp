@@ -1454,9 +1454,10 @@ void condor_event_timer () {
 		// that completed; on the other hand, we don't care about waiting
 		// for PRE scripts because they'll be re-run when the rescue
 		// DAG is run anyhow).
+	//TEMPTEMP -- make sure all uses of FinalNodeRun are correct
 	if ( dagman.dag->IsHalted() && dagman.dag->NumJobsSubmitted() == 0 &&
 				dagman.dag->PostRunNodeCount() == 0 &&
-				!dagman.dag->RunningFinalNode() ) {
+				!dagman.dag->FinalNodeRun() ) {
 		debug_printf ( DEBUG_QUIET, "Exiting because DAG is halted "
 					"and no jobs or scripts are running\n" );
 		main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_HALTED );
@@ -1471,6 +1472,7 @@ void condor_event_timer () {
     // 
     if( dagman.dag->FinishedRunning( false ) ) {
 		Dag::dag_status dagStatus = Dag::DAG_STATUS_OK;
+		//TEMPTEMP -- document why we set includeFinalNode to false here!
 		if( dagman.dag->DoneFailed( false ) ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 				debug_printf( DEBUG_QUIET,

@@ -725,7 +725,8 @@ class Dag {
 		running (or has been run).
 		@return true iff the final node is running or has been run
 	*/
-	inline bool RunningFinalNode() { return _runningFinalNode; }
+	//TEMPTEMP -- change to FinalNodeRun()?
+	inline bool FinalNodeRun() { return _finalNodeRun; }
 
 	/** Determine whether the DAG is in recovery mode.
 		@return true iff the DAG is in recovery mode
@@ -923,9 +924,9 @@ class Dag {
 	void WriteNodeToRescue( FILE *fp, Job *node,
 				bool reset_retries_upon_rescue, bool isPartial );
 
-		// True iff the final node is ready to be run, or is running
-		// (including PRE and POST scripts, if any.
-	bool _runningFinalNode;
+		// True iff the final node is ready to be run, is running,
+		// or has been run (including PRE and POST scripts, if any).
+	bool _finalNodeRun;
 
     /// List of Job objects
     List<Job>     _jobs;

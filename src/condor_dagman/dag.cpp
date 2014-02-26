@@ -1,3 +1,8 @@
+//TEMPTEMP -- make sure jobstate.log doesn't have similar problem... probably doesn't, but check...
+//TEMPTEMP -- crap -- final-I doesn't update node status file correctly...
+//TEMPTEMP -- make sure abort (w/ and w/o final node) properly updates node status file!
+//TEMPTEMP -- make sure halt (w/ and w/o final node) properly updates node status file!
+//TEMPTEMP -- abort-A status file says STATUS_ERROR (cycle) for the dag status,  but dagman.out says success!
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -185,7 +190,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_recovery = false;
 	_abortOnScarySubmit = true;
 	_configFile = NULL;
-	_runningFinalNode = false;
+	_finalNodeRun = false;
 		
 		// Don't print any waiting node reports until we're done with
 		// recovery mode.
@@ -1445,7 +1450,7 @@ Dag::StartFinalNode()
 			// Now start up the final node.
 		_final_job->SetStatus( Job::STATUS_READY );
 		if ( StartNode( _final_job, false ) ) {
-			_runningFinalNode = true;
+			_finalNodeRun = true;
 			return true;
 		}
 	}
@@ -1481,7 +1486,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		debug_printf( DEBUG_QUIET,
 					"DAG is halted because halt file %s exists\n",
 					_haltFile.Value() );
-		if ( _runningFinalNode ) {
+		if ( _finalNodeRun ) {
 			debug_printf( DEBUG_QUIET,
 						"Continuing to allow final node to run\n" );
 		} else {
@@ -1924,7 +1929,8 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 bool
 Dag::FinishedRunning( bool includeFinalNode ) const
 {
-	if ( includeFinalNode && _final_job && !_runningFinalNode ) {
+	//TEMPTEMP -- add special case for halted here?
+	if ( includeFinalNode && _final_job && !_finalNodeRun ) {
 			// Make sure we don't incorrectly return true if we get called
 			// just before a final node is started...  (There is a race
 			// condition here otherwise, because all of the "regular"
@@ -1933,8 +1939,18 @@ Dag::FinishedRunning( bool includeFinalNode ) const
 		return false;
 	}
 
+#if 1 //TEMPTEMP?
 	return NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
 				ScriptRunNodeCount() == 0;
+#else //TEMPTEMP?
+	int readyCount = NumNodesReady();
+	//TEMPTEMP -- make IsHalted() const
+	//TEMPTEMP if ( IsHalted() ) readyCount = 0;
+	if ( _dagIsHalted ) readyCount = 0;
+	return NumJobsSubmitted() == 0 && readyCount == 0 &&
+				ScriptRunNodeCount() == 0;
+#endif //TEMPTEMP?
+//TEMPTEMP -- final-I finishes with a node in the Pre state -- WTF is going on?  why are there pre script deferrals???
 }
 
 //---------------------------------------------------------------------------
@@ -2801,7 +2817,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	}
 	
 	if ( !_statusFileOutdated && !held && !removed ) {
-		debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
+		//TEMPTEMP debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
+		debug_printf( DEBUG_QUIET, "Node status file not updated "//TEMPTEMP
 					"because it is not yet outdated\n" );
 		return;
 	}
@@ -2810,8 +2827,10 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	bool tooSoon = (_minStatusUpdateTime > 0) &&
 				((startTime - _lastStatusUpdateTimestamp) <
 				_minStatusUpdateTime);
+	//TEMPTEMP -- add halted check here??
 	if ( tooSoon && !held && !removed && !FinishedRunning( true ) ) {
-		debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
+		//TEMPTEMP debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
+		debug_printf( DEBUG_QUIET, "Node status file not updated "//TEMPTEMP
 					"because min. status update time has not yet passed\n" );
 		return;
 	}
@@ -2823,6 +2842,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		// "real" file is always complete.
 		//
 	debug_printf( DEBUG_DEBUG_1, "Updating node status file\n" );
+	debug_printf( DEBUG_QUIET, "Updating node status file\n" );//TEMPTEMP
 
 	MyString tmpStatusFile( _statusFileName );
 	tmpStatusFile += ".tmp";
