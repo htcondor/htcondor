@@ -4681,6 +4681,19 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   the quantity is the number of identifiers and slots will be allocated
   both a quantity of the resource and assigned specific resource identifiers.
 
+
+\label{param:OfflineMachineResourceResourcename}
+\item[\Macro{OFFLINE\_MACHINE\_RESOURCE\_<name>}]
+  A list of resource identifiers for the customized local machine resource
+  that are currently offline and should not be allocated to a slot.
+  The identifiers specified here must match those specified in the corresponding
+  \Macro{MACHINE\_RESOURCE\_<name>} or \Macro{MACHINE\_RESOURCE\_INVENTORY\_<name>}
+  or they will be ignored.
+  Use this to have resources that are detected and reported to exist by HTCondor
+  but not assigned to slots. A restart of the \Condor{startd} is required
+  for changes to take effect.
+
+
 \label{param:MachineResourceInventoryResourcename}
 \item[\Macro{MACHINE\_RESOURCE\_INVENTORY\_<name>}]
   Specifies a command line that is executed upon start up of the 
