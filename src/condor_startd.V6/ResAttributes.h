@@ -265,6 +265,7 @@ private:
 	int				m_phys_mem;
 	slotres_map_t   m_machres_map;
 	slotres_devIds_map_t m_machres_devIds_map;
+	slotres_devIds_map_t m_machres_offline_devIds_map;
 	slotres_devIdOwners_map_t m_machres_devIdOwners_map;
 	static bool init_machine_resource(MachAttributes * pme, HASHITER & it);
 	int init_machine_resource_from_script(const char * tag, const char * script_cmd);

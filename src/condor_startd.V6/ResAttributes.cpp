@@ -617,6 +617,7 @@ int MachAttributes::init_machine_resource_from_script(const char * tag, const ch
 	}
 
 	int quantity = 0;
+	int offline = 0;
 
 	FILE * fp = my_popen(args, "r", FALSE);
 	if ( ! fp) {
@@ -630,16 +631,32 @@ int MachAttributes::init_machine_resource_from_script(const char * tag, const ch
 		if (cAttrs <= 0) {
 			if (error) dprintf(D_ALWAYS, "Could not parse ClassAd for local resource '%s' (error %d) assuming quantity of 0\n", tag, error);
 		} else {
-			MyString attr;
-			attr.formatstr(ATTR_DETECTED_PREFIX "%s", tag);
+			MyString attr(ATTR_OFFLINE_PREFIX); attr += tag;
 			MyString res_value;
+			StringList offline_ids;
+			if (ad.LookupString(attr.c_str(),res_value)) {
+				offline = parse_user_resource_config(tag, res_value.c_str(), offline_ids);
+			} else {
+				attr = "OFFLINE_MACHINE_RESOURCE_"; attr += tag;
+				if (param(res_value, attr.c_str()) && !res_value.empty()) {
+					offline = parse_user_resource_config(tag, res_value.c_str(), offline_ids);
+				}
+			}
+
+			attr = ATTR_DETECTED_PREFIX; attr += tag;
 			if (ad.LookupString(attr.c_str(),res_value)) {
 				StringList ids;
 				quantity = parse_user_resource_config(tag, res_value.c_str(), ids);
 				if ( ! ids.isEmpty()) {
+					offline = 0; // we only want to count ids that match the detected list
 					ids.rewind();
 					while (const char* id = ids.next()) {
-						this->m_machres_devIds_map[tag].push_back(id);
+						if (offline_ids.contains(id)) {
+							this->m_machres_offline_devIds_map[tag].push_back(id);
+							++offline;
+						} else {
+							this->m_machres_devIds_map[tag].push_back(id);
+						}
 					}
 				}
 			}
@@ -652,7 +669,7 @@ int MachAttributes::init_machine_resource_from_script(const char * tag, const ch
 		my_pclose(fp);
 	}
 
-	return quantity;
+	return quantity - offline;
 }
 
 // this static callback for the param param iteration using foreach_param_*
@@ -670,6 +687,7 @@ bool MachAttributes::init_machine_resource(MachAttributes * pme, HASHITER & it) 
 		return true; // keep iterating
 
 	double num = 0;
+	double offline = 0;
 	const char * tag = name + sizeof("MACHINE_RESOURCE_")-1;
 
 	// MACHINE_RESOURCE_INVENTORY_* is a special case that runs a script that generates a classad.
@@ -679,19 +697,32 @@ bool MachAttributes::init_machine_resource(MachAttributes * pme, HASHITER & it) 
 			num = pme->init_machine_resource_from_script(tag, res_value);
 		}
 	} else {
+		StringList offline_ids;
+		MyString off_name("OFFLINE_"); off_name += name;
+		MyString my_value;
+		if (param(my_value, off_name.c_str()) && !my_value.empty()) {
+			offline = parse_user_resource_config(tag, my_value.c_str(), offline_ids);
+		}
+
 		// if the param value parses as a double, then we can handle it simply
 		StringList ids;
 		num = parse_user_resource_config(tag, res_value, ids);
 		if ( ! ids.isEmpty()) {
+			offline = 0; // we only want to count ids that match the detected list
 			ids.rewind();
 			while (const char* id = ids.next()) {
-				pme->m_machres_devIds_map[tag].push_back(id);
+				if (offline_ids.contains(id)) {
+					pme->m_machres_offline_devIds_map[tag].push_back(id);
+					++offline;
+				} else {
+					pme->m_machres_devIds_map[tag].push_back(id);
+				}
 			}
 		}
 	}
 
 	if (num < 0) num = 0;
-	pme->m_machres_map[tag] = num;
+	pme->m_machres_map[tag] = num - offline;
 	free(res_value);
 
 	return true; // keep iterating
@@ -703,6 +734,7 @@ void MachAttributes::init_machine_resources() {
 	m_machres_map.clear();
 	// defines which local machine resource device IDs are in use
 	m_machres_devIds_map.clear();
+	m_machres_offline_devIds_map.clear();
 
 	// this may be filled from resource inventory scripts
 	m_machres_attr.Clear();
@@ -930,6 +962,16 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 				cp->Assign(attr.c_str(), (long long)ipart);
 			} else {
 				cp->Assign(attr.c_str(), j->second);
+			}
+			// are there any offline ids for this resource?
+			slotres_devIds_map_t::const_iterator k = m_machres_offline_devIds_map.find(j->first);
+			if (k != m_machres_offline_devIds_map.end()) {
+				if ( ! k->second.empty()) {
+					attr = ATTR_OFFLINE_PREFIX; attr += k->first;
+					string ids;
+					join(k->second, ",", ids);
+					cp->Assign(attr.c_str(), ids.c_str());
+				}
 			}
 			machine_resources += " ";
 			machine_resources += j->first;

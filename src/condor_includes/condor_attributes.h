@@ -909,6 +909,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 // machine resource prefixes
 #define ATTR_REQUEST_PREFIX  "Request"
 #define ATTR_DETECTED_PREFIX  "Detected"
+#define ATTR_OFFLINE_PREFIX  "Offline"
 #define ATTR_TOTAL_PREFIX  "Total"
 #define ATTR_TOTAL_SLOT_PREFIX  "TotalSlot"
 #define ATTR_MACHINE_RESOURCES  "MachineResources"
