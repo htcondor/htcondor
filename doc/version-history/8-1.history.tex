@@ -130,6 +130,14 @@ It should now be possible to build expressions directly
 in python, without having to resort to string manipulation.
 \Ticket{4154}
 
+\item In UW style builds, set the RPATH such that LD\_LIBRARY\_PATH need
+not be set in order to use the python bindings.
+\Ticket{4128}
+
+\item The python bindings are now compatible with python 3.
+\Ticket{4146}
+
+
 \item Setting configuration variable
 \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to \Expr{False}
 or using the corresponding \Opt{-dont\_use\_default\_node\_log} option

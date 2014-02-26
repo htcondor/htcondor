@@ -4665,13 +4665,21 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   These resources are further intended to be statically divided or
   partitioned, and these resource names identify the configuration variables
   that define the partitioning.
+  If used, custom resources without names in the list are ignored.
+
 
 \label{param:MachineResourceResourcename}
 \item[\Macro{MACHINE\_RESOURCE\_<name>}]
-  An integer that specifies the quantity of the customized local machine
-  resource available for an SMP machine.
+  An integer that specifies the quantity of or list of identifiers for
+  the customized local machine resource available for an SMP machine.
   The portion of this configuration variable's name identified with
-  \Expr{<name>} is as defined in \Macro{MACHINE\_RESOURCE\_NAMES}.
+  \Expr{<name>} will be used to label quantities of the resource allocated
+  to a slot.
+  If a quantity is specified, the resource is presumed to be fungible
+  and slots will be allocated a quantity of the resource but specific
+  instances will not be identifed.  If a list of identifiers is specified
+  the quantity is the number of identifiers and slots will be allocated
+  both a quantity of the resource and assigned specific resource identifiers.
 
 \label{param:MachineResourceInventoryResourcename}
 \item[\Macro{MACHINE\_RESOURCE\_INVENTORY\_<name>}]
@@ -4681,14 +4689,20 @@ search for the corresponding attribute names using \Expr{slot}, instead.
 \begin{verbatim}
   Detected<xxx>=y
 \end{verbatim}
+  or of the form
+\begin{verbatim}
+  Detected<xxx>="y, z, a, ..."
+\end{verbatim}
   where \Expr{<xxx>} is the name of a resource that exists on the machine,
-  and \Expr{y} is the number of that resource that exist on the machine.
+  and \Expr{y} is the quantity of the resource or \Expr{"y, z, a, ..."} is
+  a comma and/or space separated list of identifiers of the
+  resource that exist on the machine.
   This attribute is added to the machine ClassAd,
   such that
   these resources may be statically divided or partitioned.
   A script may be a convenient way to specify a calculated or 
-  detected number of the resource, 
-  instead of specifying a fixed number of the resource
+  detected quantity of the resource, instead of specifying a
+  fixed quantity or list of the resource
   in the the configuration when set by \Macro{MACHINE\_RESOURCE\_<name>}.
 
 \label{param:MustModifyRequestExprs}
