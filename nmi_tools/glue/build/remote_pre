@@ -46,6 +46,8 @@ my $buildid;
 my $externals_loc="/scratch/condor_externals";
 my $platform = "$ENV{NMI_PLATFORM}";
 my %defines = (
+    listvars => "-LA",
+    #noregen => "-DCMAKE_SUPPRESS_REGENERATION:BOOL=TRUE",
     prefix => "-DCMAKE_INSTALL_PREFIX:PATH=$BaseDir/release_dir",
     );
 
@@ -123,6 +125,21 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
        print "prefast will not be used on Batlab Win7 boxen because the machine(s) aren't keeping up.\n";
     } else {
        $defines{analyze} = "-DMSVC_ANALYZE:BOOL=$prefast";
+    }
+}
+
+######################################################################
+# figure out if we have java
+######################################################################
+if ($ENV{NMI_PLATFORM} = ~ /_win/i) {
+    my $javaver = `reg QUERY "HKLM\\Software\\JavaSoft\\Java Runtime Environment"`;
+	#print "check for java runtime returned $javaver\n";
+    # look for "CurrentVersion    REG_SZ    n.m"
+    if ($javaver =~ /CurrentVersion\s+REG_SZ\s+([0-9\.]+)/) {
+        print "Enabling java tests because java runtime version $1 was found\n";
+    } else {
+        print "Disabling java tests because no java runtime was found: $javaver\n";
+        $defines{javatests} = "-DENABLE_JAVA_TESTS:BOOL=OFF";
     }
 }
 

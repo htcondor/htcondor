@@ -1266,11 +1266,24 @@ sub CreateLocalConfig {
 			$jvm = `\@for \%I in ($javabinary) do \@echo(\%~sf\$PATH:I`;
 					CondorUtils::fullchomp($jvm);
 		} else {
-			my $whichtest = `which $javabinary`;
-			CondorUtils::fullchomp($whichtest);
-			$whichtest =~ s/Program Files/progra~1/g;
-			$jvm = `cygpath -m $whichtest`;
-			CondorUtils::fullchomp($jvm);
+			#can't use which. its a linux tool and will lie about the path to java.
+			if (1) {
+				debug ("Running where $javabinary\n",2);
+				$jvm = `where $javabinary`;
+				CondorUtils::fullchomp($jvm);
+				# if where doesn't tell us the location of the java binary, just assume it's will be
+				# in the path once condor is running. (remember that cygwin lies...)
+				if ( ! ($jvm =~ /java/i)) {
+					debug ("where $javabinary returned nothing, assuming java will be in Condor's path.\n",2);
+					$jvm = "java.exe";
+				}
+			} else {
+				my $whichtest = `which $javabinary`;
+				CondorUtils::fullchomp($whichtest);
+				$whichtest =~ s/Program Files/progra~1/g;
+				$jvm = `cygpath -m $whichtest`;
+				CondorUtils::fullchomp($jvm);
+			}
 		}
 		CondorTest::debug("which java said: $jvm\n",2);
 
