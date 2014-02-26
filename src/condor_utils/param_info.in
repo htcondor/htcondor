@@ -10909,7 +10909,7 @@ id=613
 
 [CGROUP_MEMORY_LIMIT_POLICY]
 aliases=
-default=none
+default=soft
 version=7.9.0
 range=.*
 state=default
