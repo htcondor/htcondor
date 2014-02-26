@@ -6319,7 +6319,8 @@ review=?
 tags=starter
 
 [CGROUP_MEMORY_LIMIT_POLICY]
-default=none
+aliases=
+default=soft
 version=7.9.0
 type=string
 reconfig=true
