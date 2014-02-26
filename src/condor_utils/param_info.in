@@ -7378,3 +7378,11 @@ default : @end
 review=?
 
 
+[$USE.GPUS]
+friendly_name=Settings for to detect and use GPUs as custom resources
+default : @end
+	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
+	ENVIRONMENT_FOR_AssignedGPUs=CUDA_VISIBLE_DEVICES, GPU_DEVICE_ORDINAL
+@end
+review=?
+
