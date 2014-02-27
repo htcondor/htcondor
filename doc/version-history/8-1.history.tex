@@ -62,8 +62,7 @@ when starting a job obtained via the Work Fetch Hook.
 
 \begin{itemize}
 
-\item HTCondor version 8.1.4 not yet released.
-%\item HTCondor version 8.1.4 released on Month Date, 2013.
+\item HTCondor version 8.1.4 released on February 27, 2014.
 
 \item This version of HTCondor includes all bug fixes from version 8.0.6,
 as well as the new full port for the Red Hat Enterprise Linux 7.0 \emph{Beta} 
@@ -184,15 +183,15 @@ using the configuration variable
 \Macro{MACHINE\_RESOURCE\_INVENTORY\_GPUs}.
 \Ticket{3386}
 
-\item A new configuration constant \Macro{DETECTED\_PHYSICAL\_CPUS} contains
-the number of physical (non-hyperthreaded) CPUs. An existing configuration
-constant \Macro{DETECTED\_CORES} contains the number of hyperthreaded CPUs.
-A new configuration constant \Macro{DETECTED\_CPUS} will match the value of
-either \Macro{DETECTED\_CORES} or \Macro{DETECTED\_PHYSICAL\_CPUS} depending
-on the state of \Macro{COUNT\_HYPERTHREAD\_CPUS}. These new \Macro{DETECTED\_}
-configuration constants are meant to be referenced in other configuration values;
-they cannot be overridden.
-The \Macro{NUM\_CPUS} is now set by default to \Macro{DETECTED\_CPUS}.
+\item Two new pre-defined configuration variables are referenced with
+\MacroU{DETECTED\_PHYSICAL\_CPUS} and \MacroU{DETECTED\_CPUS}.
+\MacroUNI{DETECTED\_PHYSICAL\_CPUS} contains the number of 
+physical (non-hyperthreaded) CPUs. 
+\MacroUNI{DETECTED\_CPUS} will match the value of
+either \MacroNI{DETECTED\_CORES} or \MacroNI{DETECTED\_PHYSICAL\_CPUS}, 
+depending on the state of \Macro{COUNT\_HYPERTHREAD\_CPUS}.
+The default value of \Macro{NUM\_CPUS} now defaults to the value
+of \MacroNI{DETECTED\_CPUS}.
 \Ticket{4197}
 
 \item \Condor{q} will now show the macro-expanded job description from the attribute
