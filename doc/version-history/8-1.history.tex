@@ -76,9 +76,10 @@ A full port includes support for the standard universe.
 
 \begin{itemize}
 
-\item When startds are configured to use partitionable slots,
-running slots can now be preempted by the negotiator based
-on the \Macro{RANK}.
+\item When configured to use partitionable slots,
+those slots running jobs can now be preempted by the 
+\Condor{negotiator} daemon based on the value of 
+the machine's configuration of \MacroNI{RANK}.
 \Ticket{3667}
 
 \item Improved support for publishing monitoring information about an
