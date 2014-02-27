@@ -56,6 +56,10 @@ with Ganglia.
 in Google Compute Engine (GCE), using the new grid type \SubmitCmd{gce}.
 \Ticket{3833}
 
+\item As a scalability improvement for Unix platforms, 
+the \Condor{shared\_port} daemon no longer forks on incoming connections.
+\Ticket{4094}
+
 \item \Condor{ssh\_to\_job} and interactive jobs no longer try to 
 connect to held jobs.
 They instead report the hold and the reason why the job is being held.
