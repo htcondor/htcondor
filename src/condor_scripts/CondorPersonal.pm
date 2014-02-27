@@ -1174,6 +1174,13 @@ if($btdebug == 1) {
 		# bill make tools more forgiving of being busy
 		print NEW "TOOL_TIMEOUT_MULTIPLIER = 10\n";
 		print NEW "TOOL_DEBUG_ON_ERROR = D_ANY D_ALWAYS:2\n";
+		# Lets have some better default log size.
+		print NEW "MAX_MASTER_LOG = 10 Mb\n";
+		print NEW "MAX_COLLECTOR_LOG = 10 Mb\n";
+		print NEW "MAX_STARTD_LOG = 10 Mb\n";
+		print NEW "MAX_SCHEDD_LOG = 10 Mb\n";
+		print NEW "MAX_NEGOTIATOR_LOG = 10 Mb\n";
+
 
 		if($personal_daemons ne "")
 		{
@@ -1373,13 +1380,6 @@ if($btdebug == 1) {
 		print NEW "CONDOR_HOST = $condorhost\n";
 		print NEW "COLLECTOR_HOST = \$(CONDOR_HOST):0\n";
 	}
-
-	# Lets have some better default log size.
-	print NEW "MAX_MASTER_LOG = 10 Mb\n";
-	print NEW "MAX_COLLECTOR_LOG = 10 Mb\n";
-	print NEW "MAX_STARTD_LOG = 10 Mb\n";
-	print NEW "MAX_SCHEDD_LOG = 10 Mb\n";
-	print NEW "MAX_NEGOTIATOR_LOG = 10 Mb\n";
 
 	close(NEW);
 
