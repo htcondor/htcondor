@@ -1498,7 +1498,7 @@ accept_request_claim( Resource* rip, Claim* leftover_claim )
 		// Since we're done talking to this schedd, delete the stream.
 	rip->r_cur->setRequestStream( NULL );
 
-	rip->dprintf( D_FAILURE|D_ALWAYS, "State change: claiming protocol successful\n" );
+	rip->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
 	rip->change_state( claimed_state );
 	return true;
 }
@@ -1790,7 +1790,7 @@ activate_claim( Resource* rip, Stream* stream )
 		// Finally, update all these things into the resource classad.
 	rip->r_cur->publish( rip->r_classad, A_PUBLIC );
 
-	rip->dprintf( D_FAILURE|D_ALWAYS, 
+	rip->dprintf( D_ALWAYS,
 				  "State change: claim-activation protocol successful\n" );
 	rip->change_state( busy_act );
 
@@ -1863,7 +1863,7 @@ match_info( Resource* rip, char* id )
 				// too long. 
 			rip->r_cur->start_match_timer();
 
-			rip->dprintf( D_FAILURE|D_ALWAYS, "State change: "
+			rip->dprintf( D_ALWAYS, "State change: "
 						  "match notification protocol successful\n" );
 
 #if HAVE_BACKFILL
