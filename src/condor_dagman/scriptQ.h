@@ -57,6 +57,7 @@ class ScriptQ : public Service {
 	*/
 	int RunAllWaitingScripts();
 
+	//TEMPTEMP -- is this only scripts that are really running, or does it include deferred scripts? -- okay, looks like it does *not* include deferred scripts
     int NumScriptsRunning();
 
     // reaper function for PRE & POST script completion

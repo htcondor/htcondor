@@ -1,7 +1,7 @@
 //TEMPTEMP -- make sure jobstate.log doesn't have similar problem... probably doesn't, but check...
 //TEMPTEMP -- crap -- final-I doesn't update node status file correctly...
-//TEMPTEMP -- make sure abort (w/ and w/o final node) properly updates node status file!
-//TEMPTEMP -- make sure halt (w/ and w/o final node) properly updates node status file!
+//TEMPTEMP -- make sure abort (w/ and w/o final node) properly updates node status file!  abort test has cycle for final status!
+//TEMPTEMP -- make sure halt (w/ and w/o final node) properly updates node status file! -- halt test reports cycle for final dag status
 //TEMPTEMP -- abort-A status file says STATUS_ERROR (cycle) for the dag status,  but dagman.out says success!
 /***************************************************************
  *
@@ -1926,6 +1926,7 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 }
 
 //---------------------------------------------------------------------------
+//TEMPTEMP -- make sure this works right in the case of halting w/o a final node!!
 bool
 Dag::FinishedRunning( bool includeFinalNode ) const
 {
@@ -1938,6 +1939,17 @@ Dag::FinishedRunning( bool includeFinalNode ) const
 			// ready yet.)
 		return false;
 	}
+
+//TEMPTEMP -- how do we actually decide to exit in the final-I case?? -- DoneSuccess looks explicitly at final node
+//TEMPTEMP -- if we're halted, should we look only at running scripts?, at least for non-final nodes?  Do we have a way to know the actual count of *running* scripts?
+#if 1 //TEMPTEMP?
+	//TEMPTEMP -- make IsHalted() const
+	//TEMPTEMP if ( IsHalted() ) {
+	if ( _dagIsHalted ) {
+		return NumJobsSubmitted() == 0 && NumScriptsRunning() == 0;
+		//TEMPTEMP -- need to check for actual running scripts!!!!  (Hmm -- race condition w/ final node??)
+	}
+#endif //TEMPTEMP?
 
 #if 1 //TEMPTEMP?
 	return NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
@@ -2801,6 +2813,7 @@ Dag::SetNodeStatusFileName( const char *statusFileName,
 	_minStatusUpdateTime = minUpdateTime;
 }
 
+//TEMPTEMP -- okay, it looks like the halt case only works because removed is true...  FinishedRunning() should return true in that case...
 //-------------------------------------------------------------------------
 /** Dump the node status.
 	@param whether the DAG has just been held
@@ -2809,6 +2822,7 @@ Dag::SetNodeStatusFileName( const char *statusFileName,
 void
 Dag::DumpNodeStatus( bool held, bool removed )
 {
+	debug_printf( DEBUG_QUIET, "Dag::DumpNodeStatus( %d, %d )\n", held, removed );//TEMPTEMP
 		//
 		// Decide whether to update the file.
 		//
@@ -2816,6 +2830,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		return;
 	}
 	
+//TEMPTEMP -- now we fail here for final-I!  I guess if we're finished we should always update -- do we have a method where we update dag status? no!  we're okay because we actually just updated it!
 	if ( !_statusFileOutdated && !held && !removed ) {
 		//TEMPTEMP debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
 		debug_printf( DEBUG_QUIET, "Node status file not updated "//TEMPTEMP
@@ -2827,6 +2842,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	bool tooSoon = (_minStatusUpdateTime > 0) &&
 				((startTime - _lastStatusUpdateTimestamp) <
 				_minStatusUpdateTime);
+debug_printf( DEBUG_QUIET, "tooSoon: %d\n", tooSoon );//TEMPTMEP
+debug_printf( DEBUG_QUIET, "FinishedRunning(): %d\n", FinishedRunning( true ) );//TEMPTMEP
 	//TEMPTEMP -- add halted check here??
 	if ( tooSoon && !held && !removed && !FinishedRunning( true ) ) {
 		//TEMPTEMP debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
@@ -2920,23 +2937,70 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		//
 		// Print overall DAG status.
 		//
+debug_printf( DEBUG_QUIET, "DIAG _dagStatus: %d\n", _dagStatus );//TEMPTEMP
 	Job::status_t dagStatus = Job::STATUS_SUBMITTED;
 	const char *statusNote = "";
+#if 0 //TEMPTEMP
+//TEMPTEMP -- base this partly on _dagStatus...
+#else //TEMPTEMP
+//TEMPTEMP -- crap -- for abort w/ value of 0, we get STATUS_ERROR here!
 	if ( DoneSuccess( true ) ) {
+		debug_printf( DEBUG_QUIET, "DIAG 4010\n" );//TEMPTEMP
 		dagStatus = Job::STATUS_DONE;
 		statusNote = "success";
 	} else if ( DoneFailed( true ) ) {
+		debug_printf( DEBUG_QUIET, "DIAG 4020\n" );//TEMPTEMP
 		dagStatus = Job::STATUS_ERROR;
 		statusNote = "failed";
 	} else if ( DoneCycle( true ) ) {
+		//TEMPTEMP -- we get here on abort w/ 0 exit status!
+		//TEMPTEMP -- test abort w/ non-0 exit status
+		debug_printf( DEBUG_QUIET, "DIAG 4030\n" );//TEMPTEMP
 		dagStatus = Job::STATUS_ERROR;
 		statusNote = "cycle";
 	} else if ( held ) {
+		debug_printf( DEBUG_QUIET, "DIAG 4040\n" );//TEMPTEMP
+		//TEMPTEMP -- do we ever get here?
 		statusNote = "held";
 	} else if ( removed ) {
+		debug_printf( DEBUG_QUIET, "DIAG 4050\n" );//TEMPTEMP
 		dagStatus = Job::STATUS_ERROR;
 		statusNote = "removed";
 	}
+#endif //TEMPTEMP
+#if 1 //TEMPTEMP
+	switch ( _dagStatus ) {
+	case DAG_STATUS_OK:
+		statusNote = "success";
+		break;
+
+	case DAG_STATUS_ERROR:
+	case DAG_STATUS_NODE_FAILED:
+		statusNote = "failed";
+		break;
+
+	case DAG_STATUS_ABORT:
+		statusNote = "aborted";
+		break;
+
+	case DAG_STATUS_RM:
+		//TEMPTEMP -- test this...
+		statusNote = "removed";
+		break;
+
+	case DAG_STATUS_CYCLE:
+		statusNote = "cycle";
+		break;
+
+	case DAG_STATUS_HALTED:
+		statusNote = "halted";
+		break;
+
+	default:
+		statusNote = "ASSERT";//TEMPTEMP
+		//TEMPTEMP -- assert?
+	}
+#endif //TEMPTEMP
 	fprintf( outfile, "\nDAG status: %s (%s)\n",
 				Job::status_t_names[dagStatus], statusNote );
 
