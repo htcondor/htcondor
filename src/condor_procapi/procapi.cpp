@@ -701,9 +701,41 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 			continue;
 		}
 
+	        // format of /proc/self/stat is
+	        // pid (ProcessName) State number number number number...
+	        // The process name can have spaces in it, so read the
+	        // whole line in with fgets, whack the spaces, then 
+	        // parse again with sprintf
+	        char line[512];
+		if (fgets(line, 511, fp) == NULL) {
+			// couldn't read the right number of entries.
+			status = PROCAPI_UNSPECIFIED;
+			dprintf( D_ALWAYS, 
+				"ProcAPI: Unexpected short scan on %s: %s errno: %d.\n", 
+				 path, line, errno );
+
+			// don't leak for the next attempt;
+			fclose( fp );
+			fp = NULL;
+
+			// try again
+			continue;
+		}
+
+		char *rparen = strrchr(line, ')');
+		char *lparen = strchr(line, '(');
+		if (lparen && rparen && lparen < rparen) {
+			while (lparen != rparen) {
+				if (*lparen == ' ') {
+					*lparen = '_';
+				}
+				lparen++;
+			}
+		}
+
 			// fill the raw structure from the proc file
 			// ensure I read the right number of arguments....
-		if ( fscanf( fp, "%d %s %c %d "
+		if ( sscanf( line, "%d %s %c %d "
 			"%ld %ld %ld %ld "
 			"%lu %lu %lu %lu %lu "
 			"%ld %ld %ld %ld %ld %ld "
@@ -719,8 +751,8 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 			// couldn't read the right number of entries.
 			status = PROCAPI_UNSPECIFIED;
 			dprintf( D_ALWAYS, 
-				"ProcAPI: Unexpected short scan on %s, errno: %d.\n", 
-				 path, errno );
+				"ProcAPI: Unexpected short scan on %s, (%s) errno: %d.\n", 
+				 path, line, errno );
 
 			// don't leak for the next attempt;
 			fclose( fp );
