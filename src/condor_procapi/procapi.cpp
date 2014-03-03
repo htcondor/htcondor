@@ -707,12 +707,12 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	        // whole line in with fgets, whack the spaces, then 
 	        // parse again with sprintf
 	        char line[512];
-		if (fgets(line, 511, fp) == NULL) {
+		if (fgets(line, 512, fp) == NULL) {
 			// couldn't read the right number of entries.
 			status = PROCAPI_UNSPECIFIED;
 			dprintf( D_ALWAYS, 
-				"ProcAPI: Unexpected short scan on %s: %s errno: %d.\n", 
-				 path, line, errno );
+				"ProcAPI: Read error on %s: errno (%d): %s\n", 
+				 path, errno,  strerror(errno));
 
 			// don't leak for the next attempt;
 			fclose( fp );
