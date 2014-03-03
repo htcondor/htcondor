@@ -654,11 +654,6 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 			if (choice && !(choice & basic_flag) && !(choice & verbose_flag))
 				continue;
 
-			// for log files other than the first one, dont panic if we
-			// fail to write to the file.
-			PRAGMA_REMIND("TJ: move dont_panic flag into debug output vector")
-			//bool dont_panic = (ixOutput > 0) || DebugContinueOnOpenFailure;
-
 			/* Open and lock the log file */
 			bool   funlock_it = false;
 			switch ((*it).outputTarget) {
@@ -669,10 +664,8 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 					debug_lock_it(&(*it), NULL, 0, it->dont_panic);
 					funlock_it = true;
 					break;
-			   #ifdef WIN32
-				case OUTPUT_DEBUG_STR:
+				case OUTPUT_DEBUG_STR: // recognise this on linux, it's part of the >BUFFER special case
 					break;
-			   #endif
 			}
 			
 			it->dprintfFunc(cat_and_flags, DebugHeaderOptions, info, message_buffer, &(*it));
@@ -1673,6 +1666,52 @@ _condor_dprintf_saved_lines( void )
 		/* now that we deallocated everything, clear out our pointer
 		   to the list so it's not dangling. */
 	saved_list = NULL;
+}
+
+const char * _condor_print_dprintf_info(DebugFileInfo & info, std::string & out)
+{
+	extern const char * const _condor_DebugCategoryNames[D_CATEGORY_COUNT];
+	const unsigned int all_category_bits = ((unsigned int)1 << (D_CATEGORY_COUNT-1)) | (((unsigned int)1 << (D_CATEGORY_COUNT-1))-1);
+
+	DebugOutputChoice base = info.choice;
+	PRAGMA_REMIND("TJ: remove this hack for the primary log because DebugFileInfo has no verbose member.")
+	DebugOutputChoice verb = info.accepts_all ? AnyDebugVerboseListener : 0;
+	const unsigned int D_ALL_HDR_FLAGS = D_PID | D_FDS | D_CAT;
+	bool has_all_hdr_opts = (info.headerOpts & D_ALL_HDR_FLAGS) == D_ALL_HDR_FLAGS;
+
+	const char * sep = "";
+	if (base && (base == verb)) {
+		out += sep; sep = " ";
+		out += "D_FULLDEBUG";
+		verb = 0;
+	}
+	if (base == all_category_bits) {
+		out += sep; sep = " ";
+		out += has_all_hdr_opts ? "D_ALL" : "D_ANY";
+		base = 0;
+	}
+
+	for (int cat = D_ALWAYS; cat < D_CATEGORY_COUNT; ++cat) {
+		if (cat == D_GENERIC_VERBOSE) continue; // this is accounted for above..
+		DebugOutputChoice mask = 1 << cat;
+		if (mask & (base | verb)) {
+			out += sep; sep = " ";
+			out += _condor_DebugCategoryNames[cat];
+			if (mask & verb) {
+				out += ":2";
+			}
+		}
+	}
+	return out.c_str();
+}
+
+void dprintf_print_daemon_header(void)
+{
+	if (DebugLogs->size() > 0) {
+		std::string d_log;
+		_condor_print_dprintf_info((*DebugLogs)[0], d_log);
+		dprintf(D_ALWAYS, "Daemon Log is logging: %s\n", d_log.c_str());
+	}
 }
 
 #ifdef WIN32

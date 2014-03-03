@@ -271,7 +271,7 @@ ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 ##  default values for any of these settings.  If they are not
 ##  defined, no attributes can be set with condor_config_val.
 
-## Do you want to allow condor_config_val -reset to work at all?
+## Do you want to allow condor_config_val -rset to work at all?
 ## This feature is disabled by default, so to enable, you must
 ## uncomment the following setting and change the value to "True". 
 ## Note: changing this requires a restart not just a reconfig.

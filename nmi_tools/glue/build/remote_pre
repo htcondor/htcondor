@@ -46,6 +46,8 @@ my $buildid;
 my $externals_loc="/scratch/condor_externals";
 my $platform = "$ENV{NMI_PLATFORM}";
 my %defines = (
+    listvars => "-LA",
+    #noregen => "-DCMAKE_SUPPRESS_REGENERATION:BOOL=TRUE",
     prefix => "-DCMAKE_INSTALL_PREFIX:PATH=$BaseDir/release_dir",
     );
 
@@ -90,7 +92,13 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	# in the definition of $installcmakecmd to point to the correct
 	# thing.
 	$cmake = "cmake";
-	$defines{visualstudio} = '-G "Visual Studio 9 2008"';
+	my $enable_vs11 = 0;
+	if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs11 = 1; }
+	if ($enable_vs11 && $ENV{VS110COMNTOOLS} =~ /common7/i) {
+		$defines{visualstudio} = '-G "Visual Studio 11"';
+	} else {
+		$defines{visualstudio} = '-G "Visual Studio 9 2008"';
+	}
 } else {
 	$cmake = `$installcmakecmd ${CONDOR_SCRATCH_DIR} 2>&1 | sed -n \\\$p`;
 	if ($? != 0 || !defined($cmake) || $cmake =~ m/^FAILURE:/) {
@@ -117,6 +125,21 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
        print "prefast will not be used on Batlab Win7 boxen because the machine(s) aren't keeping up.\n";
     } else {
        $defines{analyze} = "-DMSVC_ANALYZE:BOOL=$prefast";
+    }
+}
+
+######################################################################
+# figure out if we have java
+######################################################################
+if ($ENV{NMI_PLATFORM} = ~ /_win/i) {
+    my $javaver = `reg QUERY "HKLM\\Software\\JavaSoft\\Java Runtime Environment"`;
+	#print "check for java runtime returned $javaver\n";
+    # look for "CurrentVersion    REG_SZ    n.m"
+    if ($javaver =~ /CurrentVersion\s+REG_SZ\s+([0-9\.]+)/) {
+        print "Enabling java tests because java runtime version $1 was found\n";
+    } else {
+        print "Disabling java tests because no java runtime was found: $javaver\n";
+        $defines{javatests} = "-DENABLE_JAVA_TESTS:BOOL=OFF";
     }
 }
 
@@ -195,7 +218,7 @@ if ( defined( $opt_use_externals_cache ) ) {
 	$defines{externals} = "-DCACHED_EXTERNALS:BOOL=FALSE";
 }
 
-if($platform =~ /Fedora1[78]$/) {
+if($platform =~ /Fedora1[789]$/) {
 	$defines{python_version} = "-DPythonLibs_FIND_VERSION:STRING=2.7";
 }
 

@@ -125,10 +125,10 @@ main(int argc, char* argv[])
 							   stderr);
 			exit(1);
 		}
-		tmp.sprintf ("%s == \"%s\"", ATTR_NAME, quillName);      		
+		tmp.formatstr ("%s == \"%s\"", ATTR_NAME, quillName);
 		quillQuery.addORConstraint (tmp.Value());
 
-                tmp.sprintf ("%s == \"%s\"", ATTR_SCHEDD_NAME, quillName);
+                tmp.formatstr ("%s == \"%s\"", ATTR_SCHEDD_NAME, quillName);
                 quillQuery.addORConstraint (tmp.Value());
 
 		remotequill = true;

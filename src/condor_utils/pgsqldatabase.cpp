@@ -512,12 +512,12 @@ PGSQLDatabase::getJobQueueDB( int *clusterarray, int numclusters,
 	int i;
 
 	if(isfullscan) {
-		procAds_hor_query.sprintf("SELECT cluster_id, proc_id, jobstatus, imagesize, remoteusercpu, remotewallclocktime, remotehost, globaljobid, jobprio,  args, extract(epoch from shadowbday) as shadowbday, extract(epoch from enteredcurrentstatus) as enteredcurrentstatus, numrestarts  FROM procads_horizontal WHERE scheddname=\'%s\' ORDER BY cluster_id, proc_id;", scheddname);
-		procAds_ver_query.sprintf("SELECT cluster_id, proc_id, attr, val FROM procads_vertical WHERE scheddname=\'%s\' ORDER BY cluster_id, proc_id;", scheddname);
+		procAds_hor_query.formatstr("SELECT cluster_id, proc_id, jobstatus, imagesize, remoteusercpu, remotewallclocktime, remotehost, globaljobid, jobprio,  args, extract(epoch from shadowbday) as shadowbday, extract(epoch from enteredcurrentstatus) as enteredcurrentstatus, numrestarts  FROM procads_horizontal WHERE scheddname=\'%s\' ORDER BY cluster_id, proc_id;", scheddname);
+		procAds_ver_query.formatstr("SELECT cluster_id, proc_id, attr, val FROM procads_vertical WHERE scheddname=\'%s\' ORDER BY cluster_id, proc_id;", scheddname);
 
-		clusterAds_hor_query.sprintf("SELECT cluster_id, owner, jobstatus, jobprio, imagesize, extract(epoch from qdate) as qdate, remoteusercpu, remotewallclocktime, cmd, args, jobuniverse FROM clusterads_horizontal WHERE scheddname=\'%s\' ORDER BY cluster_id;", scheddname);
+		clusterAds_hor_query.formatstr("SELECT cluster_id, owner, jobstatus, jobprio, imagesize, extract(epoch from qdate) as qdate, remoteusercpu, remotewallclocktime, cmd, args, jobuniverse FROM clusterads_horizontal WHERE scheddname=\'%s\' ORDER BY cluster_id;", scheddname);
 
-		clusterAds_ver_query.sprintf("SELECT cluster_id, attr, val FROM clusterads_vertical WHERE scheddname=\'%s\' ORDER BY cluster_id;", scheddname);
+		clusterAds_ver_query.formatstr("SELECT cluster_id, attr, val FROM clusterads_vertical WHERE scheddname=\'%s\' ORDER BY cluster_id;", scheddname);
 	}
 
 	/* OK, this is a little confusing.
@@ -574,7 +574,7 @@ PGSQLDatabase::getJobQueueDB( int *clusterarray, int numclusters,
 	else {
 	    if(numclusters > 0) {
 			// build up the cluster predicate
-			clusterpredicate.sprintf("%s%d)", 
+			clusterpredicate.formatstr("%s%d)",
 					" AND ( (cluster_id = ",clusterarray[0]);
 			for(i=1; i < numclusters; i++) {
 				clusterpredicate.formatstr_cat( 
@@ -584,11 +584,11 @@ PGSQLDatabase::getJobQueueDB( int *clusterarray, int numclusters,
 			// now build up the proc predicate string. 	
 			// first decide how to open it
 			 if(procarray[0] != -1) {
-					procpredicate.sprintf("%s%d%s%d)", 
+					procpredicate.formatstr("%s%d%s%d)",
 							" AND ( (cluster_id = ", clusterarray[0], 
 							" AND proc_id = ", procarray[0]);
 	 		} else {  // no proc for this entry, so only have cluster
-					procpredicate.sprintf( "%s%d)", 
+					procpredicate.formatstr( "%s%d)",
 								" AND ( (cluster_id = ", clusterarray[0]);
 	 		}
 	
@@ -612,17 +612,17 @@ PGSQLDatabase::getJobQueueDB( int *clusterarray, int numclusters,
 		} // end of numclusters > 0
 
 
-		procAds_hor_query.sprintf( 
+		procAds_hor_query.formatstr(
 			"SELECT cluster_id, proc_id, jobstatus, imagesize, remoteusercpu, remotewallclocktime, remotehost, globaljobid, jobprio, args, extract(epoch from shadowbday) as shadowbday, extract(epoch from enteredcurrentstatus) as enteredcurrentstatus, numrestarts FROM procads_horizontal WHERE scheddname=\'%s\' %s ORDER BY cluster_id, proc_id;", scheddname, procpredicate.Value() );
 
-		procAds_ver_query.sprintf(
+		procAds_ver_query.formatstr(
 	"SELECT cluster_id, proc_id, attr, val FROM procads_vertical WHERE scheddname=\'%s\' %s ORDER BY cluster_id, proc_id;", 
 			scheddname, procpredicate.Value() );
 
-		clusterAds_hor_query.sprintf(
+		clusterAds_hor_query.formatstr(
 			"SELECT cluster_id, owner, jobstatus, jobprio, imagesize, extract(epoch from qdate) as qdate, remoteusercpu, remotewallclocktime, cmd, args, jobuniverse FROM clusterads_horizontal WHERE scheddname=\'%s\' %s ORDER BY cluster_id;", scheddname, clusterpredicate.Value());
 
-		clusterAds_ver_query.sprintf(
+		clusterAds_ver_query.formatstr(
 		"SELECT cluster_id, attr, val FROM clusterads_vertical WHERE scheddname=\'%s\' %s ORDER BY cluster_id;", scheddname, clusterpredicate.Value());	
 	}
 
@@ -746,7 +746,7 @@ PGSQLDatabase::getHistoryHorValue(SQLQuery *queryhor,
 
 	const char *dataptr = PQgetvalue(historyHorRes, row - historyHorFirstRowIndex, col);
 	if(QUILLPP_HistoryHorIsQuoted[col]) {
-		bufferedResult.sprintf("\"%s\"", dataptr);
+		bufferedResult.formatstr("\"%s\"", dataptr);
 		*value =  bufferedResult.Value();
 	} else {
 		*value = dataptr;
@@ -801,7 +801,7 @@ PGSQLDatabase::getJobQueueProcAds_HorValue(int row, int col)
 	if(PQgetisnull(procAdsHorRes, row, col)) { return NULL; }
 
 	if(proc_field_is_quoted[col]) {
-		bufferedResult.sprintf("\"%s\"", dataptr);
+		bufferedResult.formatstr("\"%s\"", dataptr);
 		return bufferedResult.Value();
 	} else {
 		return dataptr;
@@ -824,7 +824,7 @@ PGSQLDatabase::getJobQueueClusterAds_HorValue(int row, int col)
 	if(PQgetisnull(clusterAdsHorRes, row, col)) { return NULL; }
 
 	if(cluster_field_is_quoted[col]) {
-		bufferedResult.sprintf("\"%s\"", dataptr);
+		bufferedResult.formatstr("\"%s\"", dataptr);
 		return bufferedResult.Value();
 	} else {
 		return dataptr;

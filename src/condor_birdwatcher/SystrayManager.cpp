@@ -274,8 +274,9 @@ LRESULT SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource
 					if (err)
 					{
 						TCHAR sz[256];
-						OutputDebugString(sz);
 						FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, err, 0, sz, _countof(sz), NULL);
+						sz[_countof(sz)-1] = 0;
+						OutputDebugString(sz);
 						MessageBox(parentHwnd, sz, TEXT("Command Failed"), 0);
 					}
 				}

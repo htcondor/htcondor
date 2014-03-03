@@ -46,5 +46,11 @@ bool is_arg_prefix(const char * parg, const char * pval, int must_match_length =
 // use this when you want to tack qualifiers onto arguments rather than supplying them as separate arguments.
 bool is_arg_colon_prefix(const char * parg, const char * pval, const char ** ppcolon, int must_match_length = 0);
 
-// return true of parg begins with '-' and is_arg_prefix(parg,pval,mml) is true
+// return true of parg begins with '-' or '--' and is_arg_prefix(parg,pval,mml) is true
+// if parg begins with '--' then parg and pval must match exactly (i.e. must_match_length is set to -1)
 bool is_dash_arg_prefix(const char * parg, const char * pval, int must_match_length = 0);
+
+// return true if parg with '-' or '--' and is_arg_colon_prefix(parg,pval,ppc,mml) is true
+// if parg begins with '--' then parg and pval must match exactly (i.e. must_match_length is set to -1)
+bool is_dash_arg_colon_prefix(const char * parg, const char * pval, const char ** ppcolon, int must_match_length = 0);
+

@@ -183,7 +183,7 @@ DBMSManager::InvalidatePublicAd() {
     SetTargetTypeName(query_ad, DBMSD_ADTYPE);
 
     MyString line;
-    line.sprintf("%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name.Value());
+    line.formatstr("%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name.Value());
     query_ad.Insert(line.Value());
 	query_ad.Assign(ATTR_NAME,m_name.Value());
 

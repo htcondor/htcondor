@@ -1083,6 +1083,8 @@ Scheduler::count_jobs()
 		Owners[i].OldFlockLevel = 0;
 		Owners[i].NegotiationTimestamp = current_time;
 		Owners[i].PrioSet.clear();
+		Owners[i].WeightedJobsRunning = 0;
+		Owners[i].WeightedJobsIdle = 0;
 	}
 
 	GridJobOwners.clear();
@@ -12868,6 +12870,10 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 							  jobid.cluster,jobid.proc);
 		}
 		else {
+			reply.Assign( ATTR_JOB_STATUS, job_status );
+			if( job_status == HELD ) {
+				reply.CopyAttribute( ATTR_HOLD_REASON, jobad );
+			}
 			error_msg.formatstr("Job %d.%d is not running.",
 							  jobid.cluster,jobid.proc);
 		}

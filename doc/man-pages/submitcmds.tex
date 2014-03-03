@@ -2088,6 +2088,64 @@ For grid type \SubmitCmd{ec2} jobs,
 an optional specification of the Virtual Private Cloud (VPC) that
 this instance should be a part of.
 
+%%%%%%%%%%%%%%%%%%%
+%% gce_auth_file
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!gce\_auth\_file}
+\label{condor-submit-gce-auth-file}
+\item[gce\_auth\_file = $<$pathname$>$]
+For grid type \SubmitCmd{gce} jobs, 
+specifies a path and file name of the authorization file that grants
+permission for HTCondor to use the Google account.
+There is no default value when not specified.
+
+%%%%%%%%%%%%%%%%%%%
+%% gce_image
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!gce\_image}
+\label{condor-submit-gce-image}
+\item[gce\_image = $<$URL$>$]
+For grid type \SubmitCmd{gce} jobs,
+the URL of the virtual machine image representing the HTCondor job to
+be run.  This virtual machine image must already be register with GCE
+and reside in Google's Cloud Storage service.
+
+%%%%%%%%%%%%%%%%%%%
+%% gce_machine_type
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!gce\_machine\_type}
+\label{condor-submit-gce-machine-type}
+\item[gce\_machine\_type = $<$machine type$>$]
+For grid type \SubmitCmd{gce} jobs,
+the long form of the URL that describes the machine configuration that the
+virtual machine instance is to run on. 
+
+%%%%%%%%%%%%%%%%%%%
+%% gce_metadata
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!gce\_metadata}
+\label{condor-submit-gce-metadata}
+\item[gce\_metadata = $<$name=value,\Dots,name=value$>$]
+For grid type \SubmitCmd{gce} jobs,
+a comma separated list of name and value pairs that define metadata
+for a virtual machine instance that is an HTCondor job.
+
+%%%%%%%%%%%%%%%%%%%
+%% gce_metadata_file
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!gce\_metadata\_file}
+\label{condor-submit-gce-metadata-file}
+\item[gce\_metadata\_file = $<$pathname$>$]
+For grid type \SubmitCmd{gce} jobs, 
+specifies a path and file name of the file that contains metadata
+for a virtual machine instance that is an HTCondor job.
+Within the file, each name and value pair is on its own line;
+so, the pairs are separated by the newline character.
 
 %%%%%%%%%%%%%%%%%%%
 %% globus_rematch

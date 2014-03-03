@@ -22,6 +22,7 @@
 #include "condor_constants.h"
 #include "authentication.h"
 #include "condor_debug.h"
+#include "condor_config.h"
 #include "internet.h"
 #include "condor_rw.h"
 #include "condor_socket_types.h"
@@ -186,14 +187,13 @@ ReliSock::accept( ReliSock	&c )
 	c.enter_connected_state("ACCEPT");
 	c.decode();
 
-	int on = 1;
-	c.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
-
+	c.set_keepalive();
 
 		/* Set no delay to disable Nagle, since we buffer all our
 		   relisock output and it degrades performance of our
 		   various chatty protocols. -Todd T, 9/05
 		*/
+	int on = 1;
 	c.setsockopt(IPPROTO_TCP, TCP_NODELAY, (char*)&on, sizeof(on));
 
 	return TRUE;
@@ -231,7 +231,7 @@ ReliSock::accept()
 		return (ReliSock *)0;
 	}
 
-	if ((c_sock = accept(*c_rs)) < 0) {
+	if ((c_sock = accept(*c_rs)) == FALSE) {
 		delete c_rs;
 		return (ReliSock *)0;
 	}

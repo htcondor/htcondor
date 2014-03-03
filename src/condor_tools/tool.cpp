@@ -1326,13 +1326,10 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 				dprintf (D_FULLDEBUG, "TOOL: checking %s (%s,%s,%s)\n",
 						real_dt ? daemonString(real_dt) : "daemon", name, host, tmp);
 
-					/* See comment above, "Because we need..." */
-				ad->Assign( ATTR_NAME, name);
-
 					/* look for a couple variations */
-				if( ! strcasecmp(name, host) ) {
-					d = new Daemon( ad, real_dt, pool_addr );
-				} else if( ! strcasecmp(name, tmp) ) {
+				if( ! strcasecmp(name, host) || ! strcasecmp(name, tmp) ) {
+						/* See comment above, "Because we need..." */
+					ad->Assign( ATTR_NAME, name);
 					d = new Daemon( ad, real_dt, pool_addr );
 				}
 				free( tmp );

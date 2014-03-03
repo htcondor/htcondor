@@ -817,7 +817,7 @@ void main_init (int argc, char ** const argv) {
 	dagman.ResolveDefaultLog();
 
     //
-    // Check the arguments
+    // Check the arguments...
     //
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -910,6 +910,15 @@ void main_init (int argc, char ** const argv) {
         debug_printf( DEBUG_SILENT, "-DoRescueFrom must be non-negative\n" );
         Usage();
     }
+
+	if ( !dagman._submitDagDeepOpts.always_use_node_log ) {
+        debug_printf( DEBUG_QUIET, "Warning: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer recommended and will probably be disabled in a future version\n" );
+		check_warning_strictness( DAG_STRICT_1 );
+	}
+
+	//
+	// ...done checking arguments.
+	//
 
     debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
                    lockFileName );

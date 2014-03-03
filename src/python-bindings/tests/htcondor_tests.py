@@ -51,14 +51,16 @@ class TestVersion(unittest.TestCase):
 def makedirs_ignore_exist(directory):
     try:
         os.makedirs(directory)
-    except OSError, oe:
+    except oe:
+        if not isinstance(oe, OSError): raise
         if oe.errno != errno.EEXIST:
             raise
 
 def remove_ignore_missing(file):
     try:
         os.unlink(file)
-    except OSError, oe:
+    except oe:
+        if not isinstance(oe, OSError): raise
         if oe.errno != errno.ENOENT:
             raise
 
@@ -143,8 +145,8 @@ class WithDaemons(unittest.TestCase):
             try:
                 try:
                     os.execvp("condor_master", ["condor_master", "-f"])
-                except Exception, e:
-                    print str(e)
+                except e:
+                    print(str(e))
             finally:
                 os._exit(1)
         global master_pid
@@ -222,7 +224,7 @@ class TestPythonBindings(WithDaemons):
             if ads: break
             time.sleep(1)
         self.assertEquals(len(ads), 1)
-	self.assertTrue(isinstance(ads[0]["Bar"], types.FloatType))
+        self.assertTrue(isinstance(ads[0]["Bar"], types.FloatType))
         self.assertEquals(ads[0]["Bar"], now)
         self.assertTrue("Foo" not in ads[0])
 
@@ -355,10 +357,10 @@ class TestPythonBindings(WithDaemons):
             del a['CurrentTime']
         b = {"LogNotes": "DAG Node: Job1",
              "MyType": "SubmitEvent",
-             "EventTypeNumber": 0L,
-             "Subproc": 0L,
-             "Cluster": 236467L,
-             "Proc": 0L,
+             "EventTypeNumber": 0,
+             "Subproc": 0,
+             "Cluster": 236467,
+             "Proc": 0,
              "EventTime": "2013-11-15T17:05:55",
              "SubmitHost": "<169.228.38.38:9615?sock=18627_6227_3>",
             }

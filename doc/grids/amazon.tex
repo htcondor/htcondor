@@ -264,3 +264,22 @@ checking in the following order:
 \end{enumerate}
 
 The EC2 GAHP supplies no default value, if it does not find a CA directory.
+
+By default, HTCondor assumes that EC2 services are reliably available.
+If an attempt to contact a service during the normal course of operation fails,
+HTCondor makes a special attempt to contact the service.
+If this attempt fails, 
+the service is marked as down,
+and normal operation for that service is
+suspended until a subsequent special attempt succeeds.  
+The jobs using that service do not go on hold.
+To place jobs on hold when their service becomes unavailable,
+set configuration variable \Macro{EC2\_RESOURCE\_TIMEOUT} to 
+the number of seconds to delay before placing the job on hold.
+The default value of -1 for this variable implements 
+an infinite delay, such that the job is never placed on hold.
+When setting this value, 
+consider the value of configuration variable
+\Macro{GRIDMANAGER\_RESOURCE\_PROBE\_INTERVAL},
+which sets the number of seconds that HTCondor will wait after each
+special contact attempt before trying again.

@@ -195,6 +195,7 @@ int main( int argc, char *argv[] )
 			} else {
 				reason = "connection lost";
 			}
+			while (!sock->get_file(&filesize, 1, 0)) ;
 			break;
 		case DC_FETCH_LOG_RESULT_NO_NAME:
 			reason = "no log file by that name";

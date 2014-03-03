@@ -16,6 +16,7 @@
 #include "classad_helpers.h"
 #include "condor_config.h"
 #include "condor_holdcodes.h"
+#include "globus_utils.h"
 #include "basename.h"
 
 #include <classad/operators.h>
@@ -605,6 +606,40 @@ struct Schedd {
             THROW_EX(RuntimeError, errstack.getFullText(true).c_str());
     }
 
+    int refreshGSIProxy(int cluster, int proc, std::string proxy_filename, int lifetime=-1)
+    {
+        time_t now = time(NULL);
+        time_t result_expiration;
+        CondorError errstack;
+
+        if (lifetime < 0)
+        {
+            lifetime = param_integer("DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME", 0);
+        }
+
+        DCSchedd schedd(m_addr.c_str());
+        bool do_delegation = param_boolean("DELEGATE_JOB_GSI_CREDENTIALS", true);
+        if (do_delegation && !schedd.delegateGSIcredential(cluster, proc, proxy_filename.c_str(), lifetime ? now+lifetime : 0,
+                                                           &result_expiration, &errstack))
+        {
+            THROW_EX(RuntimeError, errstack.getFullText(true).c_str());
+        }
+        else if (!do_delegation)
+        {
+            if (!schedd.updateGSIcredential(cluster, proc, proxy_filename.c_str(), &errstack))
+            {
+                THROW_EX(RuntimeError, errstack.getFullText(true).c_str());
+            }
+            // Note: x509_error_string() is not thread-safe; hence, we are not using the HTCondor-generated
+            // error handling.
+            int result = x509_proxy_seconds_until_expire(proxy_filename.c_str());
+            if (result < 0) {THROW_EX(RuntimeError, "Unable to determine proxy expiration time");}
+            return result;
+        }
+        return result_expiration - now;
+    }
+
+
     void edit(object job_spec, std::string attr, object val)
     {
         std::vector<int> clusters;
@@ -884,6 +919,15 @@ void export_schedd()
             ":param projection: The attributes to return; an empty list signifies all attributes.\n"
             ":param match: Number of matches to return.\n"
             ":return: An iterator for the matching job ads"))
+        .def("refreshGSIProxy", &Schedd::refreshGSIProxy, "Refresh the GSI proxy for a given job\n"
+            ":param cluster: Job cluster.\n"
+            ":param proc: Job proc.\n"
+            ":param filename: Filename of proxy to delegate or upload to job.\n"
+            ":param lifetime: Desired lifetime (in seconds) of delegated proxy; 0 indicates to not shorten"
+            " the proxy lifetime.  -1 indicates to use the value of parameter DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME."
+            " NOTE: depending on the lifetime of the proxy in `filename`, the resulting lifetime may be shorter"
+            " than the desired lifetime.\n"
+            ":return: Lifetime of the resulting job proxy in seconds.")
         ;
 
     class_<HistoryIterator>("HistoryIterator", no_init)

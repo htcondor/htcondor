@@ -268,7 +268,9 @@ HTCondorPeek::create_session()
 		// must be in format expected by SecMan::ImportSecSessionInfo()
 	char const *session_info = "[Encryption=\"YES\";Integrity=\"YES\";]";
 
-	bool success = schedd.getJobConnectInfo(m_id,-1,session_info,timeout,&error_stack,m_starter_addr,starter_claim_id,m_starter_version,slot_name,error_msg,m_retry_sensible);
+	int job_status;
+	MyString hold_reason;
+	bool success = schedd.getJobConnectInfo(m_id,-1,session_info,timeout,&error_stack,m_starter_addr,starter_claim_id,m_starter_version,slot_name,error_msg,m_retry_sensible,job_status,hold_reason);
 
 		// turn the ssh claim id into a security session so we can use it
 		// to authenticate ourselves to the starter

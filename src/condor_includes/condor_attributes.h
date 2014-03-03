@@ -79,6 +79,7 @@
 #define ATTR_CKPT_ARCH  "CkptArch"
 #define ATTR_CKPT_LAST_READ  "CkptLastRead"
 #define ATTR_CKPT_OPSYS  "CkptOpSys"
+#define ATTR_CHILD_CLAIM_IDS "ChildClaimIds"
 #define ATTR_CLAIM_ID  "ClaimId"
 #define ATTR_CLAIM_IDS  "ClaimIds"
 #define ATTR_PUBLIC_CLAIM_ID  "PublicClaimId"
@@ -194,6 +195,13 @@
 #define ATTR_FLOCKED_JOBS  "FlockedJobs"
 #define ATTR_FLAVOR  "Flavor"
 #define ATTR_FORCE  "Force"
+#define ATTR_GCE_AUTH_FILE  "GceAuthFile"
+#define ATTR_GCE_IMAGE  "GceImage"
+#define ATTR_GCE_MACHINE_TYPE  "GceMachineType"
+#define ATTR_GCE_METADATA  "GceMetadata"
+#define ATTR_GCE_METADATA_FILE  "GceMetadataFile"
+#define ATTR_GCE_PROJECT  "GceProject"
+#define ATTR_GCE_ZONE  "GceZone"
 #define ATTR_GID  "Gid"
 #define ATTR_GLOBAL_JOB_ID  "GlobalJobId"
 #define ATTR_GZIP  "GZIP"
@@ -411,6 +419,7 @@
 #define ATTR_MASTER_IP_ADDR  "MasterIpAddr"
 #define ATTR_MAX_HOSTS  "MaxHosts"
 #define ATTR_MAX_JOB_RETIREMENT_TIME  "MaxJobRetirementTime"
+#define ATTR_PARENT_SLOT_ID "ParentSlotId"
 #define ATTR_RETIREMENT_TIME_REMAINING "RetirementTimeRemaining"
 #define ATTR_MAX_JOBS_RUNNING  "MaxJobsRunning"
 #define ATTR_MEMORY  "Memory"
@@ -447,6 +456,7 @@
 #define ATTR_NUM_COD_CLAIMS  "NumCODClaims"
 #define ATTR_NUM_CKPTS  "NumCkpts"
 #define ATTR_NUM_CKPTS_RAW  "NumCkpts_RAW"
+#define ATTR_NUM_DYNAMIC_SLOTS  "NumDynamicSlots"
 #define ATTR_NUM_GLOBUS_SUBMITS  "NumGlobusSubmits"
 #define ATTR_NUM_MATCHES  "NumJobMatches"
 #define ATTR_NUM_HOPS_TO_SUBMIT_MACHINE  "NumHopsToSubmitMachine"
@@ -896,14 +906,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_REQUEST_MEMORY  "RequestMemory"
 #define ATTR_REQUEST_DISK  "RequestDisk"
 
-//------------------------------------------------------------
-#define ATTR_REQUEST_MNTS  "RequestMounts"
-#define ATTR_NAMED_MOUNT_PTS "Mounts"
-//------------------------------------------------------------
-
 // machine resource prefixes
 #define ATTR_REQUEST_PREFIX  "Request"
 #define ATTR_DETECTED_PREFIX  "Detected"
+#define ATTR_OFFLINE_PREFIX  "Offline"
 #define ATTR_TOTAL_PREFIX  "Total"
 #define ATTR_TOTAL_SLOT_PREFIX  "TotalSlot"
 #define ATTR_MACHINE_RESOURCES  "MachineResources"

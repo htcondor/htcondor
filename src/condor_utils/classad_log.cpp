@@ -301,14 +301,7 @@ ClassAdLog::AppendLog(LogRecord *log)
 				EXCEPT("write to %s failed, errno = %d", logFilename(), errno);
 			}
 			if( m_nondurable_level == 0 ) {
-					//MD: flushing data -- using a file pointer
-				if (fflush(log_fp) !=0){
-					EXCEPT("flush to %s failed, errno = %d", logFilename(), errno);
-				}
-					//MD: syncing the data as done before
-				if (condor_fsync(fileno(log_fp)) < 0) {
-					EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
-				}
+				ForceLog();  // flush and fsync
 			}
 		}
 		log->Play((void *)&table);
@@ -325,6 +318,25 @@ ClassAdLog::FlushLog()
 		}
 	}
 }
+
+void
+ClassAdLog::ForceLog()
+{
+	// Force log changes to disk.  This involves first flushing
+	// the log from memory buffers, then fsyncing to disk.
+	if (log_fp!=NULL) {
+
+		// First flush
+		FlushLog();
+
+		// Then sync
+		if (condor_fsync(fileno(log_fp)) < 0) {
+			EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
+		}
+
+	}
+}
+
 
 bool
 ClassAdLog::SaveHistoricalLogs()

@@ -283,7 +283,11 @@ bool starts_with_ignore_case(const std::string& str, const std::string& pre)
 	// str and pre of the same case, which is the most likely scenario.
 	for (size_t ix = 0; ix < cp; ++ix) {
 		if (str[ix] != pre[ix]) {
-			if (_tolower(str[ix]) != _tolower(pre[ix]))
+			if ((str[ix] ^ pre[ix]) != 0x20)
+				return false;
+			// if str & pre differ only in bit 0x20 AND are in the range of 'A' - 'Z' then they match
+			int ch = str[ix] | 0x20;
+			if (ch < 'a' || ch > 'z')
 				return false;
 		}
 	}
@@ -355,9 +359,9 @@ const char *GetNextToken(const char *delim, bool skipBlankTokens)
 	return result;
 }
 
-void join(std::vector< std::string > &v, char const *delim, std::string &result)
+void join(const std::vector< std::string > &v, char const *delim, std::string &result)
 {
-	std::vector<std::string>::iterator it;
+	std::vector<std::string>::const_iterator it;
 	for(it = v.begin();
 		it != v.end();
 		it++)

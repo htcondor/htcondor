@@ -77,11 +77,11 @@ int				rsleep;
 time_t 			sleeptime;			// Cast to this for sleep
 char        	*ValidSpoolFiles;   // well known files in the spool dir
 char        	*InvalidLogFiles;   // files we know we want to delete from log
-BOOLEAN			LogFlag;			// true if we should set the log file name
-BOOLEAN			SleepFlag;			// true if we should sleep between  writes
-BOOLEAN			VerboseFlag;		// true if we should produce verbose output
-BOOLEAN			WriterFlag;			// true if we expect multiple writers
-BOOLEAN			RandomRangeFlag;	// want to randomize sleeps
+bool			LogFlag;			// true if we should set the log file name
+bool			SleepFlag;			// true if we should sleep between  writes
+bool			VerboseFlag;		// true if we should produce verbose output
+bool			WriterFlag;			// true if we expect multiple writers
+bool			RandomRangeFlag;	// want to randomize sleeps
 
 // prototypes of local interest
 void usage();
@@ -118,11 +118,11 @@ main( int argc, char *argv[] )
 	dprintf_config(get_mySubSystem()->getName());
 	DataCount = 0;
 
-	VerboseFlag = FALSE;
-	SleepFlag = FALSE;
-	LogFlag = FALSE;
-	WriterFlag = FALSE;
-	RandomRangeFlag = FALSE;
+	VerboseFlag = false;
+	SleepFlag = false;
+	LogFlag = false;
+	WriterFlag = false;
+	RandomRangeFlag = false;
 	rtime = 0;
 	rsleep = 0;
 	Seed = 42;
@@ -142,19 +142,19 @@ main( int argc, char *argv[] )
 				break;
 
 			  case 'v':
-				VerboseFlag = TRUE;
+				VerboseFlag = true;
 				fprintf( stderr, "Setting verbose flag");
 				break;
 
 			  case 'l':
-				LogFlag = TRUE;
+				LogFlag = true;
 				argv++;
 				LogName = *argv;
 				//fprintf( stderr, "Logname requested: %s\n", LogName );
 				break;
 
 			  case 'c':
-				LogFlag = TRUE;
+				LogFlag = true;
 				argv++;
 				DataCount = atoi(*argv);
 				//fprintf( stderr, "Count requested: %d\n", DataCount );
@@ -167,7 +167,7 @@ main( int argc, char *argv[] )
 				break;
 
 			  case 's':
-				SleepFlag = TRUE;
+				SleepFlag = true;
 				argv++;
 				SleepTime = atoi(*argv);
 				sleeptime = (time_t)SleepTime;
@@ -175,7 +175,7 @@ main( int argc, char *argv[] )
 				break;
 
 			  case 'r':
-				RandomRangeFlag = TRUE;
+				RandomRangeFlag = true;
 				argv++;
 				Min = atoi(*argv);
 				argv++;
@@ -185,7 +185,7 @@ main( int argc, char *argv[] )
 				break;
 
 			  case 'w':
-				WriterFlag = TRUE;
+				WriterFlag = true;
 				argv++;
 				WriterMark = *argv;
 				//fprintf( stderr, "different writer requested: %s\n", WriterMark );

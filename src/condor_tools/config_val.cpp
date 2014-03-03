@@ -461,6 +461,7 @@ main( int argc, const char* argv[] )
 	bool    dash_default = false;
 	bool    stats_with_defaults = false;
 	const char * debug_flags = NULL;
+	const char * check_configif = NULL;
 
 #ifdef WIN32
 	// uncomment this if you need to debug crashes.
@@ -651,6 +652,8 @@ main( int argc, const char* argv[] )
 		} else if (is_dash_arg_prefix(argv[i], "version", 3)) {
 			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			my_exit(0);
+		} else if (is_dash_arg_prefix(argv[i], "check-if", -1)) {
+			check_configif = use_next_arg("check-if", argv, i);
 		} else {
 			fprintf(stderr, "%s is not valid argument\n", argv[i]);
 			usage();
@@ -825,6 +828,19 @@ main( int argc, const char* argv[] )
 
 	// temporary, to get rid of build warning.
 	if (dash_default) { fprintf(stderr, "-default not (yet) supported\n"); }
+
+	// handle check-if to valididate config's if/else parsing and help users to write
+	// valid if conditions.
+	if (check_configif) { 
+		std::string err_reason;
+		bool bb = false;
+		bool valid = config_test_if_expression(check_configif, bb, err_reason);
+		fprintf(stdout, "# %s: \"%s\" %s\n", 
+			valid ? "ok" : "not supported", 
+			check_configif, 
+			valid ? (bb ? "\ntrue" : "\nfalse") : err_reason.c_str());
+		exit(0);
+	}
 
 	if (write_config) {
 		if (ask_a_daemon) {
@@ -1789,21 +1805,13 @@ static void do_dump_config_stats(FILE * fh, bool dump_sources, bool dump_strings
 {
 	struct _macro_stats stats;
 	get_config_stats(&stats);
-	MyString line;
-	line.formatstr("Macros = %d\n", stats.cEntries);
-	fprintf(fh, line.Value());
-	line.formatstr("Used = %d\n", stats.cUsed);
-	fprintf(fh, line.Value());
-	line.formatstr("Referenced = %d\n", stats.cReferenced);
-	fprintf(fh, line.Value());
-	line.formatstr("Files = %d\n", stats.cFiles);
-	fprintf(fh, line.Value());
-	line.formatstr("StringBytes = %d\n", stats.cbStrings);
-	fprintf(fh, line.Value());
-	line.formatstr("TablesBytes = %d\n", stats.cbTables);
-	fprintf(fh, line.Value());
-	line.formatstr("IsSorted = %d\n", stats.cSorted);
-	fprintf(fh, line.Value());
+	fprintf(fh, "Macros = %d\n", stats.cEntries);
+	fprintf(fh, "Used = %d\n", stats.cUsed);
+	fprintf(fh, "Referenced = %d\n", stats.cReferenced);
+	fprintf(fh, "Files = %d\n", stats.cFiles);
+	fprintf(fh, "StringBytes = %d\n", stats.cbStrings);
+	fprintf(fh, "TablesBytes = %d\n", stats.cbTables);
+	fprintf(fh, "IsSorted = %d\n", stats.cSorted);
 
 	if (dump_sources) {
 		fprintf(fh, "\nSources -----\n");

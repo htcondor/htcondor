@@ -35,16 +35,14 @@ public:
 };
 
 Condor_MD_MAC::Condor_MD_MAC()
-    : isMAC_   (false),
-      context_ (new MD_Context()),
+    : context_ (new MD_Context()),
       key_     (0)
 {
     init();
 }
     
 Condor_MD_MAC::Condor_MD_MAC(KeyInfo * key)
-    : isMAC_   (true),
-      context_ (new MD_Context()),
+    : context_ (new MD_Context()),
       key_     (0)
 {
     key_ = new KeyInfo(*key);

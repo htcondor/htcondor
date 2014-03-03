@@ -69,6 +69,7 @@ sub RunCheckMultiple
 	my $match_new = $args{match_new} || "false";
     my $match_after_regexp = $args{match_after_regexp} || undef;
     my $match_between = $args{match_between_regexp} || undef;
+	my $no_result = $args{no_result} || undef;
 
     my $result;
     my $count = 0;
@@ -85,7 +86,9 @@ sub RunCheckMultiple
 		$result = CondorTest::SearchCondorLogMultiple($daemon,$match_regexp,$match_instances,$match_timeout,$match_new,$undead,$match_after_regexp,$match_between);
 	}
 
-    CondorTest::RegisterResult( $result, %args );
+	if(!(defined $no_result)) {
+    	CondorTest::RegisterResult( $result, %args );
+	}
 	#print "Result returned from RunCheckMultiple is <$result>\n";
     return $result;
 }

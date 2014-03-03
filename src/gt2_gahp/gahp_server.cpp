@@ -245,7 +245,7 @@ user_arg_t *
 new_gram_arg( const char *req_id, ptr_ref_count *cred )
 {
 	int result;
-	user_arg_t *gram_arg = (user_arg_t *) globus_libc_malloc( sizeof(user_arg_t) );
+	user_arg_t *gram_arg = (user_arg_t *) malloc( sizeof(user_arg_t) );
 	if ( req_id ) {
 		gram_arg->req_id = strdup( req_id );
 	} else {
@@ -273,13 +273,13 @@ void
 delete_gram_arg( user_arg_t *gram_arg )
 {
 	if ( gram_arg->req_id ) {
-		globus_libc_free( gram_arg->req_id );
+		free( gram_arg->req_id );
 	}
 	if ( gram_arg->cred ) {
 		unlink_ref_count( gram_arg->cred, 1 );
 	}
 	globus_gram_client_attr_destroy( &gram_arg->gram_attr );
-	globus_libc_free( gram_arg );
+	free( gram_arg );
 }
 
 int
@@ -403,7 +403,7 @@ escape_spaces( const char *input_line)
 	}
 
 	// get enough space to store it.  	
-	output_line = (char *)globus_libc_malloc(strlen(input_line) + i + 200);
+	output_line = (char *)malloc(strlen(input_line) + i + 200);
 
 	// now, blast across it
 	temp = input_line;
@@ -436,10 +436,10 @@ all_args_free( void * args)
 	/* trust how we got this memory. */
 
 	while(*input_line) {
-		globus_libc_free(*input_line);
+		free(*input_line);
 		input_line++;
 	}
-	globus_libc_free(args);
+	free(args);
 	return;	
 }
 
@@ -529,10 +529,10 @@ callback_gram_job_request(void *arg,
 
 	gram_arg = (user_arg_t *)arg;
 
-	output = (char *)globus_libc_malloc(500);
+	output = (char *)malloc(500);
 
-	globus_libc_sprintf(output, "%s %d %s", gram_arg->req_id, operation_fc,
-						job_contact ? job_contact : NULLSTRING);
+	sprintf(output, "%s %d %s", gram_arg->req_id, operation_fc,
+			job_contact ? job_contact : NULLSTRING);
 
 	enqueue_results(output);	
 
@@ -603,10 +603,10 @@ callback_gram_job_signal(void *arg,
 
 	gram_arg = (user_arg_t *)arg;
 
-	output = (char *)globus_libc_malloc(500);
+	output = (char *)malloc(500);
 
-	globus_libc_sprintf(output, "%s %d %d %d", gram_arg->req_id, operation_fc,
-						job_fc, job_state);
+	sprintf(output, "%s %d %d %d", gram_arg->req_id, operation_fc,
+			job_fc, job_state);
 
 	enqueue_results(output);	
 
@@ -662,10 +662,10 @@ callback_gram_job_status(void *arg,
 
 	gram_arg = (user_arg_t *)arg;
 
-	output = (char *)globus_libc_malloc(500);
+	output = (char *)malloc(500);
 
-	globus_libc_sprintf(output, "%s %d %d %d", gram_arg->req_id, operation_fc,
-						job_fc, job_state);
+	sprintf(output, "%s %d %d %d", gram_arg->req_id, operation_fc,
+			job_fc, job_state);
 
 	enqueue_results(output);	
 
@@ -721,9 +721,9 @@ callback_gram_job_cancel(void *arg,
 
 	gram_arg = (user_arg_t *)arg;
 
-	output = (char *)globus_libc_malloc(500);
+	output = (char *)malloc(500);
 
-	globus_libc_sprintf(output, "%s %d", gram_arg->req_id, operation_fc);
+	sprintf(output, "%s %d", gram_arg->req_id, operation_fc);
 
 	enqueue_results(output);	
 
@@ -791,8 +791,8 @@ handle_gass_server_init(void * user_arg)
 	// versions may change how the structures are layed out, since they're
 	// supposed to be private. So if we see a version we don't recgonize,
 	// disable our optimization.
-	if ( !version_in_range( GLOBUS_XIO_MODULE, 2, 8, 3, 3 ) ||
-		 !version_in_range( GLOBUS_IO_MODULE, 6, 3, 9, 3 ) ||
+	if ( !version_in_range( GLOBUS_XIO_MODULE, 2, 8, 3, 6 ) ||
+		 !version_in_range( GLOBUS_IO_MODULE, 6, 3, 9, 5 ) ||
 		 !version_in_range( GLOBUS_GASS_TRANSFER_MODULE, 4, 3, 7, 2 ) ) {
 		fprintf( stderr, "Unexpected module version, using low-performance GASS server!\n" );
 		num_listeners = 1;
@@ -822,7 +822,7 @@ handle_gass_server_init(void * user_arg)
       if (res != GLOBUS_SUCCESS) result=GLOBUS_FAILURE;
     }
 
-    output = (char *)globus_libc_malloc(500);
+    output = (char *)malloc(500);
 
     if (result == GLOBUS_SUCCESS && num_listeners > 1)
     {
@@ -833,7 +833,7 @@ handle_gass_server_init(void * user_arg)
         globus_gass_transfer_listener_struct_t *l = (globus_gass_transfer_listener_struct_t *)
           globus_handle_table_lookup(&globus_i_gass_transfer_listener_handles, gassServerListeners[i]);
 
-        globus_libc_close( ((my_globus_l_server_t*)l->proto->handle->xio_server->entry[1].server_handle)->listener_fd );
+        close( ((my_globus_l_server_t*)l->proto->handle->xio_server->entry[1].server_handle)->listener_fd );
         ((my_globus_l_server_t*)l->proto->handle->xio_server->entry[1].server_handle)->listener_fd = l0_fd;
         ((my_globus_l_server_t*)l->proto->handle->xio_server->entry[1].server_handle)->listener_system->fd = l0_fd;
       }
@@ -843,8 +843,8 @@ handle_gass_server_init(void * user_arg)
     }
 
 	// TODO: need to account for gassServerUrl being NULL
-	globus_libc_sprintf(output, "%s %d %s", req_id, result,
-						gassServerUrl ? gassServerUrl : NULLSTRING);
+	sprintf(output, "%s %d %s", req_id, result,
+			gassServerUrl ? gassServerUrl : NULLSTRING);
 
 	enqueue_results(output);	
 
@@ -910,10 +910,10 @@ callback_gram_job_callback_register(void *arg,
 
 	gram_arg = (user_arg_t *)arg;
 
-	output = (char *)globus_libc_malloc(500);
+	output = (char *)malloc(500);
 
-	globus_libc_sprintf(output, "%s %d %d %d", gram_arg->req_id, operation_fc,
-						job_fc, job_state);
+	sprintf(output, "%s %d %d %d", gram_arg->req_id, operation_fc,
+			job_fc, job_state);
 
 	enqueue_results(output);	
 
@@ -969,9 +969,9 @@ callback_gram_ping(void *arg,
 
 	gram_arg = (user_arg_t *)arg;
 
-	output = (char *)globus_libc_malloc(500);
+	output = (char *)malloc(500);
 
-	globus_libc_sprintf(output, "%s %d", gram_arg->req_id, operation_fc);
+	sprintf(output, "%s %d", gram_arg->req_id, operation_fc);
 
 	enqueue_results(output);	
 
@@ -1049,9 +1049,9 @@ callback_gram_job_refresh_proxy(void *arg,
 
 	gram_arg = (user_arg_t *)arg;
 
-	output = (char *)globus_libc_malloc(500);
+	output = (char *)malloc(500);
 
-	globus_libc_sprintf(output, "%s %d", gram_arg->req_id, operation_fc);
+	sprintf(output, "%s %d", gram_arg->req_id, operation_fc);
 
 	enqueue_results(output);	
 
@@ -1112,10 +1112,10 @@ callback_gram_get_jobmanager_version(void *arg,
 
 	gram_arg = (user_arg_t *)arg;
 
-	output = (char *)globus_libc_malloc(10240);
+	output = (char *)malloc(10240);
 
-	globus_libc_sprintf(output, "%s %d", gram_arg->req_id,
-						job_info->protocol_error_code);
+	sprintf(output, "%s %d", gram_arg->req_id,
+			job_info->protocol_error_code);
 
 	if ( job_info->protocol_error_code == GLOBUS_SUCCESS ) {
 		globus_gram_protocol_extension_t *entry = (globus_gram_protocol_extension_t *)globus_hashtable_first( &job_info->extensions );
@@ -1158,7 +1158,7 @@ handle_gram_callback_allow(void * user_arg)
 	// We need to stash a copy of of the req_id so Globus can give it to us
 	// in our callback
 
-	saved_req_id = (char *) globus_libc_malloc(strlen(req_id) + 1);
+	saved_req_id = (char *) malloc(strlen(req_id) + 1);
 	strcpy(saved_req_id, req_id);
 	result = globus_gram_client_callback_allow(gram_callback_handler,
 											   saved_req_id,
@@ -1167,10 +1167,10 @@ handle_gram_callback_allow(void * user_arg)
 	if( result != GLOBUS_SUCCESS) {
 		error_string = escape_spaces(globus_gram_client_error_string(result));
 		gahp_printf("F %d %s\n",  result, error_string);
-		globus_libc_free(error_string);
+		free(error_string);
 	} else {
 		gahp_printf("S %s\n", callback_contact);
-		globus_libc_free(callback_contact);
+		free(callback_contact);
 	}
 	gahp_sem_up(&print_control);
 
@@ -1184,10 +1184,10 @@ gram_callback_handler(void *callback_arg, char *job_contact, int state,
 {
 	char *output;
 
-	output = (char *)globus_libc_malloc(500);
+	output = (char *)malloc(500);
 
-	globus_libc_sprintf(output, "%s %s %d %d", (char *)callback_arg,
-						job_contact, state, error);
+	sprintf(output, "%s %s %d %d", (char *)callback_arg,
+			job_contact, state, error);
 
 	enqueue_results(output);
 }
@@ -1215,7 +1215,7 @@ handle_results(void * user_arg)
 		for(i = 0; i < count; i++) {
 			output = (char *) globus_fifo_dequeue(&result_fifo);
 			gahp_printf("%s\n", output);
-			globus_libc_free(output);
+			free(output);
 		}
 	}
 	ResultsPending = 0;
@@ -1256,7 +1256,7 @@ handle_gram_error_string( void * user_arg)
 	if( error_string )	{
 		output = escape_spaces( error_string );
 		gahp_printf("S %s\n", output); 
-		globus_libc_free(output);
+		free(output);
 	} else{
 		gahp_printf("F Unknown\\ Error\n"); 
 	}
@@ -1317,9 +1317,9 @@ handle_refresh_proxy_from_file(void * user_arg)
 
 	// if setenv copies it's second argument, this leaks memory
 	if(file_name) {
-		environ_variable = (char *) globus_libc_malloc(strlen(file_name) + 1);
+		environ_variable = (char *) malloc(strlen(file_name) + 1);
 		strcpy(environ_variable, file_name); 
-		globus_libc_setenv("X509_USER_PROXY", environ_variable, 1);	
+		setenv("X509_USER_PROXY", environ_variable, 1);
 	}
 
 	// this is a macro, not a function - hence the lack of a semicolon
@@ -1374,7 +1374,7 @@ handle_initialize_from_file(void * user_arg)
 	}
 
 	if(file_name) {
-		globus_libc_setenv("X509_USER_PROXY", file_name, 1);	
+		setenv("X509_USER_PROXY", file_name, 1);
 	}
 
 	if ( (result=main_activate_globus()) != GLOBUS_SUCCESS ) {
@@ -1413,7 +1413,7 @@ unlink_ref_count( ptr_ref_count* ptr, int decrement )
 			_exit(4);
 		}
 		gss_release_cred( (OM_uint32*) &result,&ptr->cred);
-		globus_libc_free(ptr);
+		free(ptr);
 	}
 }
 
@@ -1430,7 +1430,7 @@ uncache_proxy(char *key)
 			gahp_printf("uncache_proxy\\ failed\\ sanity\\ check!!!\n");
 			_exit(5);
 		}
-		globus_libc_free(ptr->key);
+		free(ptr->key);
 		ptr->key = NULL;
 		unlink_ref_count(ptr,0);
 	}
@@ -1570,8 +1570,8 @@ handle_cache_proxy_from_file(void * user_arg)
 	uncache_proxy(id);
 
 	/* Put into hash table */
-	ref = (ptr_ref_count *) globus_libc_malloc( sizeof(ptr_ref_count) );
-	ref->key = globus_libc_strdup(id);
+	ref = (ptr_ref_count *) malloc( sizeof(ptr_ref_count) );
+	ref->key = strdup(id);
 	ref->count = 0;
 	ref->cred = cred_handle;
 	if ( globus_hashtable_insert(&handle_cache,ref->key,(void*)ref) < 0 )
@@ -1611,7 +1611,7 @@ handle_response_prefix(void * user_arg)
 		ResponsePrefix = NULL;
 	}
 	if ( prefix ) {
-		ResponsePrefix = globus_libc_strdup(prefix);
+		ResponsePrefix = strdup(prefix);
 	}
 
 
@@ -1660,7 +1660,7 @@ read_command(int stdin_fd)
 	int result = 0;
 
 	if ( buf == NULL ) {
-		buf = (char *) globus_libc_malloc(1024 * 500);
+		buf = (char *) malloc(1024 * 500);
 	}
 
 	/* Read a command from stdin.  We use the read() system call for this,
@@ -1670,7 +1670,7 @@ read_command(int stdin_fd)
 	 * until read returns --- this would halt our other threads.
 	 */
 	
-	command_argv = (char **) globus_libc_calloc(500, sizeof(char*));
+	command_argv = (char **) calloc(500, sizeof(char*));
 
 	ibuf = 0;
 	iargv = 0;
@@ -1714,7 +1714,7 @@ read_command(int stdin_fd)
 			}
 			/* Trailing whitespace delimits a parameter to copy into argv */
 			buf[ibuf] = '\0';
-			command_argv[iargv] = (char *) globus_libc_malloc(ibuf + 5);
+			command_argv[iargv] = (char *) malloc(ibuf + 5);
 			strcpy(command_argv[iargv],buf);
 			ibuf = 0;
 			iargv++;
@@ -1724,7 +1724,7 @@ read_command(int stdin_fd)
 		/* If character was a newline, copy into argv and return */
 		if ( buf[ibuf]=='\n' ) { 
 			buf[ibuf] = '\0';
-			command_argv[iargv] = (char *) globus_libc_malloc(ibuf + 5);
+			command_argv[iargv] = (char *) malloc(ibuf + 5);
 			strcpy(command_argv[iargv],buf);
 			return command_argv;
 		}

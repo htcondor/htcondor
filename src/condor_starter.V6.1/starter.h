@@ -58,7 +58,7 @@ public:
 			cleanup code we always need, then call DC_Exit() with the
 			given exit code.
 		*/
-	virtual void PREFAST_NORETURN StarterExit( int code );
+	virtual void PREFAST_NORETURN StarterExit( int code ) GCC_NORETURN;
 
 		/** Do any potential cleanup before exiting. Used both in 
 		    successful exits (StarterExit()) and EXCEPT()ions.

@@ -257,9 +257,10 @@ const char	*MemoryUsage	= "memory_usage";
 const char	*RequestCpus	= "request_cpus";
 const char	*RequestMemory	= "request_memory";
 const char	*RequestDisk	= "request_disk";
-const std::string  RequestPrefix  = "request_";
-std::set<std::string> fixedReqRes;
-std::set<std::string> stringReqRes;
+const char	*RequestPrefix  = "request_";
+typedef std::set<std::string,  classad::CaseIgnLTStr> ResSet;
+ResSet fixedReqRes;	 // a case-insenstive set
+ResSet stringReqRes;
 
 const char	*Universe		= "universe";
 const char	*MachineCount	= "machine_count";
@@ -424,6 +425,15 @@ const char* EC2VpcSubnet = "ec2_vpc_subnet";
 const char* EC2VpcIP = "ec2_vpc_ip";
 const char* EC2TagNames = "ec2_tag_names";
 const char* EC2SpotPrice = "ec2_spot_price";
+
+//
+// GCE Parameters
+//
+const char* GceImage = "gce_image";
+const char* GceAuthFile = "gce_auth_file";
+const char* GceMachineType = "gce_machine_type";
+const char* GceMetadata = "gce_metadata";
+const char* GceMetadataFile = "gce_metadata_file";
 
 //
 // Deltacloud Parameters
@@ -1727,6 +1737,7 @@ SetExecutable()
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
 		   ( strcasecmp( JobGridType, "ec2" ) == MATCH ||
+			 strcasecmp( JobGridType, "gce" ) == MATCH ||
 		     strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
@@ -2052,6 +2063,7 @@ SetUniverse()
 				(strcasecmp (JobGridType, "condor") == MATCH) ||
 				(strcasecmp (JobGridType, "nordugrid") == MATCH) ||
 				(strcasecmp (JobGridType, "ec2") == MATCH) ||
+				(strcasecmp (JobGridType, "gce") == MATCH) ||
 				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
 				(strcasecmp (JobGridType, "cream") == MATCH)){
@@ -2065,7 +2077,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt5, pbs, lsf, "
-						 "sge, nqs, condor, nordugrid, unicore, ec2, deltacloud, or cream\n" );
+						 "sge, nqs, condor, nordugrid, unicore, ec2, gce, deltacloud, or cream\n" );
 				exit( 1 );
 			}
 		}			
@@ -2595,22 +2607,19 @@ void SetFileOptions()
 void SetRequestResources() {
     HASHITER it = hash_iter_begin(SubmitMacroSet);
     for (;  !hash_iter_done(it);  hash_iter_next(it)) {
-        std::string key = hash_iter_key(it);
-        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        const char * key = hash_iter_key(it);
         // if key is not of form "request_xxx", ignore it:
-        if (key.compare(0, RequestPrefix.length(), RequestPrefix) != 0) continue;
+        if ( ! starts_with_ignore_case(key, RequestPrefix)) continue;
         // if key is one of the predefined request_cpus, request_memory, etc, also ignore it,
         // those have their own special handling:
         if (fixedReqRes.count(key) > 0) continue;
-        std::string rname = key.substr(RequestPrefix.length());
+        const char * rname = key + strlen(RequestPrefix);
         // resource name should be nonempty
-        if (rname.size() <= 0) continue;
-        // CamelCase it!
-        *(rname.begin()) = toupper(*(rname.begin()));
+        if ( ! *rname) continue;
         // could get this from 'it', but this prevents unused-line warnings:
-        std::string val = condor_param(key.c_str());
+        char * val = condor_param(key);
         std::string assign;
-        formatstr(assign, "%s%s = %s", ATTR_REQUEST_PREFIX, rname.c_str(), val.c_str());
+        formatstr(assign, "%s%s = %s", ATTR_REQUEST_PREFIX, rname, val);
         
         if (val[0]=='\"')
         {
@@ -5693,6 +5702,82 @@ SetGridParams()
 
 
 	//
+	// GCE grid-type submit attributes
+	//
+	if ( (tmp = condor_param( GceAuthFile, ATTR_GCE_AUTH_FILE )) ) {
+		// check auth file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open auth file %s (%s)\n", 
+						 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+
+			StatInfo si(full_path(tmp));
+			if (si.IsDirectory()) {
+				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				exit(1);
+			}
+		}
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_AUTH_FILE, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "gce" ) == 0 ) {
+		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", GceAuthFile );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( GceImage, ATTR_GCE_IMAGE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_IMAGE, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "gce" ) == 0 ) {
+		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", GceImage );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( GceMachineType, ATTR_GCE_MACHINE_TYPE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_MACHINE_TYPE, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "gce" ) == 0 ) {
+		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", GceMachineType );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	// GceMetadata is not a necessary parameter
+	// This is a comma-separated list of name/value pairs
+	if( (tmp = condor_param( GceMetadata, ATTR_GCE_METADATA )) ) {
+		StringList list( tmp, "," );
+		char *list_str = list.print_to_string();
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_METADATA, list_str );
+		InsertJobExpr( buffer.Value() );
+		free( list_str );
+	}
+
+	// GceMetadataFile is not a necessary parameter
+	if( (tmp = condor_param( GceMetadataFile, ATTR_GCE_METADATA_FILE )) ) {
+		// check metadata file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open metadata file %s (%s)\n", 
+								 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_METADATA_FILE, 
+				full_path(tmp) );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+
+	//
 	// Deltacloud grid-type submit attributes
 	//
 	if ( (tmp = condor_param( DeltacloudUsername, ATTR_DELTACLOUD_USERNAME )) ) {
@@ -6959,23 +7044,20 @@ check_requirements( char const *orig, MyString &answer )
     // identify any custom pslot resource reqs and add them in:
     HASHITER it = hash_iter_begin(SubmitMacroSet);
     for (;  !hash_iter_done(it);  hash_iter_next(it)) {
-        std::string key = hash_iter_key(it);
-        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        const char * key = hash_iter_key(it);
         // if key is not of form "request_xxx", ignore it:
-        if (key.compare(0, RequestPrefix.length(), RequestPrefix) != 0) continue;
+        if ( ! starts_with_ignore_case(key, RequestPrefix)) continue;
         // if key is one of the predefined request_cpus, request_memory, etc, also ignore it,
         // those have their own special handling:
         if (fixedReqRes.count(key) > 0) continue;
-        std::string rname = key.substr(RequestPrefix.length());
+        const char * rname = key + strlen(RequestPrefix);
         // resource name should be nonempty
-        if (rname.size() <= 0) continue;
-        // CamelCase it!
-        *(rname.begin()) = toupper(*(rname.begin()));
+        if ( ! *rname) continue;
         std::string clause;
         if (stringReqRes.count(rname) > 0)
-            formatstr(clause, " && regexp(%s%s, TARGET.%s)", ATTR_REQUEST_PREFIX, rname.c_str(), rname.c_str());
+            formatstr(clause, " && regexp(%s%s, TARGET.%s)", ATTR_REQUEST_PREFIX, rname, rname);
         else
-            formatstr(clause, " && (TARGET.%s%s >= %s%s)", "", rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str());
+            formatstr(clause, " && (TARGET.%s%s >= %s%s)", "", rname, ATTR_REQUEST_PREFIX, rname);
         answer += clause;
     }
     hash_iter_delete(&it);
@@ -7431,7 +7513,6 @@ init_params()
     fixedReqRes.insert(RequestCpus);
     fixedReqRes.insert(RequestMemory);
     fixedReqRes.insert(RequestDisk);
-    stringReqRes.clear();
 }
 
 int

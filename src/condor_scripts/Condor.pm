@@ -49,7 +49,6 @@ my $CONDOR_VACATE_JOB = 'condor_vacate_job';
 my $CONDOR_RESCHD = 'condor_reschedule';
 my $CONDOR_RM = 'condor_rm';
 
-my $DEBUG = 0;
 my $DEBUGLEVEL = 1; # turn on lowest level output
 my $cluster = 0;
 my $num_active_jobs = 0;
@@ -244,9 +243,9 @@ sub TestSubmit
 
     my $debug_arg = "";
 
-    if( $DEBUG ) {
+    #if( $DEBUG ) {
 	$debug_arg = "-debug";
-    }
+    #}
 
     # reset global state
     # Reset();
@@ -1323,8 +1322,11 @@ sub CheckTimedCallback
 	{
 		#call timed callback
 		debug("Called timed callback!!!!!!-- $cluster --\n",5);
-		&$TimedCallback( %info )
-			if defined $TimedCallback;
+		if(defined $TimedCallback) {
+			my $tempcallback = $TimedCallback; # save and removed callback request
+			RemoveTimed();
+			&$tempcallback(%info);
+		}
 	}
 }
 
@@ -1345,7 +1347,6 @@ sub CheckTimedCallback
 ################################################################################
 
 sub debug {
-    return unless $DEBUG;
     my ($msg, $level) = @_;
     
     if(!(defined $level)) {
@@ -1357,15 +1358,10 @@ sub debug {
 }
 
 sub DebugLevel {
-    $DEBUGLEVEL = shift;
-}
-
-sub DebugOn {
-    $DEBUG = 1;
-}
-
-sub DebugOff {
-    $DEBUG = 0;
+	my $newlevel = shift;
+	my $oldlevel = $DEBUGLEVEL;
+    $DEBUGLEVEL = $newlevel;
+	return($oldlevel);
 }
 
 sub ParseSubmitFile
@@ -1436,7 +1432,7 @@ sub ParseSubmitFile
 }
 
 sub timestamp {
-    return strftime("%Y/%m/%d %H:%M:%S", localtime);
+    return strftime("%H:%M:%S", localtime);
 }
 
 sub safe_WIFEXITED {

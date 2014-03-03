@@ -66,10 +66,19 @@ public:
 	std::string cluster;
 	bool derivative;
 	int verbosity;
+    double scale;
 
 	enum MetricTypeEnum {
-		DOUBLE,
+        AUTO,
 		STRING,
+        INT8,
+        UINT8,
+        INT16,
+        UINT16,
+        INT32,
+        UINT32,
+        FLOAT,
+		DOUBLE,
 		BOOLEAN
 	};
 	MetricTypeEnum type;
@@ -128,6 +137,12 @@ class StatsD: Service {
 	// using information gathered from the collector.
 	virtual bool getDaemonIP(std::string const &machine,std::string &result) const;
 
+    // initialize monitored host list
+    virtual void initializeHostList() = 0;
+
+    // send heartbeats to hosts
+    virtual void sendHeartbeats() = 0;
+
 	// Returns the collector host name.
 	std::string const &getDefaultAggregateHost() { return m_default_aggregate_host; }
 
@@ -143,6 +158,8 @@ class StatsD: Service {
 	bool m_per_execute_node_metrics;
 	std::set< std::string > m_execute_only_nodes;
 	int m_stats_pub_interval;
+	int m_stats_heartbeat_interval;
+	int m_stats_time_till_pub;
 	int m_stats_pub_timer;
 	std::list< classad::ClassAd * > m_metrics;
 	typedef std::map< std::string, Metric *> AggregateMetricList;

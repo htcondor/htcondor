@@ -46,5 +46,7 @@ void ganglia_config_destroy(Ganglia_pool *context, Ganglia_gmond_config *config,
 
 bool ganglia_send(Ganglia_pool context, Ganglia_udp_send_channels channels, const char *group, const char *name, const char *value, const char *type, const char *units,int slope, const char *title, const char *desc, const char *spoof_host, const char *cluster, int tmax, int dmax);
 
+bool ganglia_send_heartbeat(Ganglia_pool context, Ganglia_udp_send_channels channels, const char *spoof_host);
+
 #endif
 

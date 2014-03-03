@@ -5,4 +5,4 @@ export LD_LIBRARY_PATH=$PWD:$PWD/../condor_utils:$PWD/../classad:$PWD/../../bld_
 # For Mac OS X
 export DYLD_LIBRARY_PATH=$PWD:$PWD/../condor_utils:$PWD/../classad:$PWD/../../bld_external/classads-@PACKAGE_VERSION@/install/lib:$PWD/../../release_dir/lib/condor
 export PYTHONPATH=$PWD
-exec python "$@"
+exec @PYTHON_EXECUTABLE@ "$@"

@@ -517,7 +517,7 @@ CondorQ::fetchQueueFromDBAndProcess ( const char *dbconn,
 	
 	while (ad != (ClassAd *) 0) {
 			// Process the data and insert it into the list
-		if ((*process_func) (ad, process_func_data) ) {
+		if ((*process_func) (process_func_data, ad) ) {
 			ad->Clear();
 			delete ad;
 		}

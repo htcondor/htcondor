@@ -14,12 +14,13 @@ public:
 
     OldClassAdIterator(boost::python::object source);
 
-    inline static boost::python::object pass_through(boost::python::object const& o) { return o; };
+    static boost::python::object pass_through(boost::python::object const& o);
 
     boost::shared_ptr<ClassAdWrapper> next();
 
 private:
     bool m_done;
+    bool m_source_has_next;
     boost::shared_ptr<ClassAdWrapper> m_ad;
     boost::python::object m_source;
 };
@@ -29,9 +30,8 @@ OldClassAdIterator parseOldAds(boost::python::object input);
 class ClassAdFileIterator
 {
 public:
+    ClassAdFileIterator() : m_done(true), m_source(NULL) {}
     ClassAdFileIterator(FILE *source);
-
-    inline static boost::python::object pass_through(boost::python::object const& o) { return o; };
 
     boost::shared_ptr<ClassAdWrapper> next();
 
@@ -46,8 +46,6 @@ class ClassAdStringIterator
 public:
 
     ClassAdStringIterator(const std::string & source);
-
-    inline static boost::python::object pass_through(boost::python::object const& o) { return o; };
 
     boost::shared_ptr<ClassAdWrapper> next();
 

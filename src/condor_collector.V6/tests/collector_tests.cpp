@@ -33,7 +33,6 @@ BOOST_AUTO_TEST_CASE( example_test )
     BOOST_CHECK( strcmp( "foo", "foo" ) == 0 );
 
 
-    BOOST_CHECK_NO_THROW(); 
 }
 
 //BOOST_AUTO_TEST_SUITE_END()

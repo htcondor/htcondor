@@ -275,6 +275,54 @@ ReadMultipleUserLogs::readEventFromLog( LogFileMonitor *monitor )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+MultiLogFiles::FileReader::FileReader()
+{
+	_fp = NULL;
+}
+
+MultiLogFiles::FileReader::~FileReader()
+{
+	Close();
+}
+
+MyString
+MultiLogFiles::FileReader::Open( const MyString &filename )
+{
+	MyString result( "" );
+
+	_fp = safe_fopen_wrapper_follow( filename.Value(), "r" );
+	if ( !_fp ) {
+		result.formatstr( "MultiLogFiles::FileReader::Open(): "
+				"safe_fopen_wrapper_follow(%s) failed with errno %d (%s)\n",
+				filename.Value(), errno, strerror(errno) );
+		dprintf( D_ALWAYS, "%s", result.Value() );
+	}
+
+	return result;
+}
+
+bool
+MultiLogFiles::FileReader::NextLogicalLine( MyString &line )
+{
+	char *tmpLine = getline( _fp );
+	if ( tmpLine != NULL ) {
+		line = tmpLine;
+		return true;
+	}
+
+	return false; // EOF
+}
+
+void
+MultiLogFiles::FileReader::Close()
+{
+	if ( !_fp ) {
+		fclose( _fp );
+		_fp = NULL;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 MyString
 MultiLogFiles::fileNameToLogicalLines(const MyString &filename,
@@ -817,6 +865,73 @@ MultiLogFiles::getValuesFromFile(const MyString &fileName,
 			}
 		}
 	}	
+
+	return "";
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+MyString
+MultiLogFiles::getValuesFromFileNew(const MyString &fileName, 
+			const MyString &keyword, StringList &values, int skipTokens)
+{
+	MyString	errorMsg;
+
+	FileReader reader;
+	errorMsg = reader.Open( fileName );
+	if ( errorMsg != "" ) {
+		return errorMsg;
+	}
+
+	MyString logicalLine;
+	while ( reader.NextLogicalLine( logicalLine ) ) {
+		if ( logicalLine != "" ) {
+				// Note: StringList constructor removes leading
+				// whitespace from lines.
+			StringList tokens( logicalLine.Value(), " \t" );
+			tokens.rewind();
+
+			if ( !strcasecmp(tokens.next(), keyword.Value()) ) {
+					// Skip over unwanted tokens.
+				for ( int skipped = 0; skipped < skipTokens; skipped++ ) {
+					if ( !tokens.next() ) {
+						MyString result = MyString( "Improperly-formatted "
+									"file: value missing after keyword <" ) +
+									keyword + ">";
+			    		return result;
+					}
+				}
+
+					// Get the value.
+				const char *newValue = tokens.next();
+				if ( !newValue || !strcmp( newValue, "" ) ) {
+					MyString result = MyString( "Improperly-formatted "
+								"file: value missing after keyword <" ) +
+								keyword + ">";
+			    	return result;
+				}
+
+					// Add the value we just found to the values list
+					// (if it's not already in the list -- we don't want
+					// duplicates).
+				values.rewind();
+				char *existingValue;
+				bool alreadyInList = false;
+				while ( (existingValue = values.next()) ) {
+					if (!strcmp( existingValue, newValue ) ) {
+						alreadyInList = true;
+					}
+				}
+
+				if ( !alreadyInList ) {
+						// Note: append copies the string here.
+					values.append(newValue);
+				}
+			}
+		}
+	}
+
+	reader.Close();
 
 	return "";
 }

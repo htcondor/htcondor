@@ -85,6 +85,10 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 		// This must happen before creating the Reqexp
 	set_parent( _parent );
 
+		// can't bind until after we get a r_sub_id, which happens inside set_parent above
+		// but must happend before createing the Reqexp
+	if (_parent) { r_attr->bind_DevIds(r_id, r_sub_id); }
+
 	prevLHF = 0;
 	r_classad = NULL;
 	r_state = new ResState( this );
@@ -211,6 +215,7 @@ Resource::~Resource()
 
 		// If we have a parent, return our resources to it
 	if( m_parent && !m_currently_fetching ) {
+		r_attr->unbind_DevIds(r_id, r_sub_id);
 		*(m_parent->r_attr) += *(r_attr);
 		m_parent->m_id_dispenser->insert( r_sub_id );
 		m_parent->update();
@@ -1876,8 +1881,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			cap->Assign(ATTR_VIRTUAL_MACHINE_ID, r_id);
 		}
 
-        // include any attributes set via local resource inventory
-        cap->Update(r_attr->get_mach_attr()->machattr());
+		// include any attributes set via local resource inventory
+		cap->Update(r_attr->get_mach_attr()->machres_attrs());
 
         // advertise the slot type id number, as in SLOT_TYPE_<N>
         cap->Assign(ATTR_SLOT_TYPE_ID, int(r_attr->type()));
@@ -1886,11 +1891,14 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		case PARTITIONABLE_SLOT:
 			cap->AssignExpr(ATTR_SLOT_PARTITIONABLE, "TRUE");
             cap->Assign(ATTR_SLOT_TYPE, "Partitionable");
-            if (r_has_cp) cap->Assign(ATTR_NUM_CLAIMS, r_claims.size());
+            if (r_has_cp) cap->Assign(ATTR_NUM_CLAIMS, (long long)r_claims.size());
+
+			publishDynamicChildSummaries(cap);
 			break;
 		case DYNAMIC_SLOT:
 			cap->AssignExpr(ATTR_SLOT_DYNAMIC, "TRUE");
             cap->Assign(ATTR_SLOT_TYPE, "Dynamic");
+			cap->Assign(ATTR_PARENT_SLOT_ID, r_id);
 			break;
 		default:
             cap->Assign(ATTR_SLOT_TYPE, "Static");
@@ -1967,45 +1975,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	cap->AssignExpr( ATTR_MACHINE_MAX_VACATE_TIME, ptr ? ptr : "0" );
 
 	free(ptr);
-    
-    
-    /////////////////////////////////////////////////////////////
-    // TSTCLAIR: Add named mounts to allow job matching based 
-    //           on starter mount capabilities. 
-    /////////////////////////////////////////////////////////////
-    ptr = param("NAMED_MOUNTS");
-    if (ptr)
-    {
-        StringList mount_list(ptr);
-        mount_list.rewind();
-        std::string mntlist; 
-        const char * next_mnt;
-        
-        // advertise the named mount points, but hide their details
-        while ( (next_mnt=mount_list.next()) ) 
-        {
-            MyString mnt_spec(next_mnt);
-            mnt_spec.Tokenize();
-            
-            const char * mnt_name = mnt_spec.GetNextToken("=", false);
-            if ( mnt_name ) 
-            {
-                if (mntlist.size())
-                {
-                    mntlist+=",";   
-                }
-                mntlist+=mnt_name;
-            }
-        }
-        
-        if (! cap->Assign( ATTR_NAMED_MOUNT_PTS, mntlist.c_str() ))
-        {
-            dprintf( D_ALWAYS, "FAILED to assign %s=%s\n",ATTR_NAMED_MOUNT_PTS,mntlist.c_str() );
-        }
-            
-        free(ptr);
-        ptr = NULL;
-    }
 
 #if HAVE_JOB_HOOKS
 	if (IS_PUBLIC(mask)) {
@@ -2074,23 +2043,21 @@ Resource::publish( ClassAd* cap, amask_t mask )
             StringList alist(mrv.c_str());
             alist.rewind();
             while (char* asset = alist.next()) {
-                string rname(asset);
-                if (rname == "swap") continue;
+                if (MATCH == strcasecmp(asset, "swap")) continue;
 
-                *(rname.begin()) = toupper(*(rname.begin()));
-                formatstr(pname, "SLOT_TYPE_%d_CONSUMPTION_%s", slot_type, rname.c_str());
+                formatstr(pname, "SLOT_TYPE_%d_CONSUMPTION_%s", slot_type, asset);
                 if (param_defined(pname.c_str())) {
                     param(expr, pname.c_str());
                 } else {
                     string cpdefault;
-                    formatstr(cpdefault, "ifthenelse(target.%s%s =?= undefined, 0, target.%s%s)", ATTR_REQUEST_PREFIX, rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str());
+                    formatstr(cpdefault, "ifthenelse(target.%s%s =?= undefined, 0, target.%s%s)", ATTR_REQUEST_PREFIX, asset, ATTR_REQUEST_PREFIX, asset);
                     // cpus, memory and disk will pick up default values from param_info:
-                    formatstr(pname, "CONSUMPTION_%s", rname.c_str());
+                    formatstr(pname, "CONSUMPTION_%s", asset);
                     param(expr, pname.c_str(), cpdefault.c_str());
                 }
 
                 string rattr;
-                formatstr(rattr, "%s%s", ATTR_CONSUMPTION_PREFIX, rname.c_str());
+                formatstr(rattr, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
                 if (!cap->AssignExpr(rattr.c_str(), expr.c_str())) {
                     EXCEPT("Bad consumption policy expression: '%s'", expr.c_str());
                 }
@@ -2151,8 +2118,42 @@ Resource::publish_private( ClassAd *ad )
             claims += (*j)->id();
         }
         ad->Assign(ATTR_CLAIM_ID_LIST, claims);
-        ad->Assign(ATTR_NUM_CLAIMS, r_claims.size());
+        ad->Assign(ATTR_NUM_CLAIMS, (long long)r_claims.size());
     }
+
+	if (get_feature() == PARTITIONABLE_SLOT) {
+		ad->AssignExpr(ATTR_CHILD_CLAIM_IDS, makeChildClaimIds().c_str());
+	}
+}
+
+std::string
+Resource::makeChildClaimIds() {
+		std::string attrValue = "{";
+		bool firstTime = true;
+
+		for (std::set<Resource *,ResourceLess>::iterator i(m_children.begin());  i != m_children.end();  i++) {
+			if (firstTime) {
+				firstTime = false;
+			} else {
+				attrValue += ", ";
+			}
+			Resource *child = (*i);
+			if (child->r_pre_pre) {
+				attrValue += '"';
+				attrValue += child->r_pre_pre->id();
+				attrValue += '"';
+			} else if (child->r_pre) {
+				attrValue += '"';
+				attrValue += child->r_pre->id();
+				attrValue += '"';
+			} else if (child->r_cur) {
+				attrValue += '"';
+				attrValue += child->r_cur->id();
+				attrValue += '"';
+			}
+		}
+		attrValue += "}";
+		return attrValue;
 }
 
 void
@@ -2271,7 +2272,7 @@ Resource::compute( amask_t mask )
 
 
 void
-Resource::dprintf_va( int flags, const char* fmt, va_list args )
+Resource::dprintf_va( int flags, const char* fmt, va_list args ) const
 {
 	const DPF_IDENT ident = 0; // REMIND: maybe something useful here??
 	if( resmgr->is_smp() ) {
@@ -2286,7 +2287,7 @@ Resource::dprintf_va( int flags, const char* fmt, va_list args )
 
 
 void
-Resource::dprintf( int flags, const char* fmt, ... )
+Resource::dprintf( int flags, const char* fmt, ... ) const
 {
 	va_list args;
 	va_start( args, fmt );
@@ -2904,7 +2905,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 		}
 
 			// Now make the modifications.
-		const char* resources[] = {ATTR_REQUEST_CPUS, ATTR_REQUEST_DISK, ATTR_REQUEST_MEMORY, NULL};
+		static const char* resources[] = {ATTR_REQUEST_CPUS, ATTR_REQUEST_DISK, ATTR_REQUEST_MEMORY, NULL};
 		for (int i=0; resources[i]; i++) {
 			MyString knob("MODIFY_REQUEST_EXPR_");
 			knob += resources[i];
@@ -2975,13 +2976,13 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 
         if (cp_supports_policy(*mach_classad)) {
             // apply consumption policy
-            std::map<string, double> consumption;
+            consumption_map_t consumption;
             cp_compute_consumption(*req_classad, *mach_classad, consumption);
 
             // generate the type string used by standard code path
-            for (std::map<string, double>::iterator j(consumption.begin());  j != consumption.end();  ++j) {
+            for (consumption_map_t::iterator j(consumption.begin());  j != consumption.end();  ++j) {
                 if (j != consumption.begin()) type += " ";
-                if (j->first == "disk") {
+                if (MATCH == strcasecmp(j->first.c_str(),"disk")) {
                     // if it weren't for special cases, we'd have no cases at all
                     type.formatstr_cat("disk=%d%%", max(0, (int)ceil(100 * j->second / (double)rip->r_attr->get_total_disk())));
                 } else {
@@ -3058,6 +3059,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			return NULL;
 		}
 
+
 			// Initialize the rest of the Resource
 		new_rip->compute( A_ALL );
 		new_rip->compute( A_TIMEOUT | A_UPDATE ); // Compute disk space
@@ -3100,9 +3102,6 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			 param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) ) 
 		{
 			leftover_claim = rip->r_cur;
-			leftover_claim->setad(new ClassAd(*req_classad));
-			leftover_claim->loadRequestInfo();
-			leftover_claim->setad(0);
 			ASSERT(leftover_claim);
 		}
 
@@ -3111,4 +3110,87 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 		// Basic slot.
 		return rip;
 	}
+}
+
+void
+Resource::publishDynamicChildSummaries(ClassAd *cap) {
+
+		// If set, turn off the whole thing
+	if (param_boolean("ALLOW_PSLOT_PREEMPTION", true) == false) {
+		return;
+	}
+
+	cap->Assign(ATTR_NUM_DYNAMIC_SLOTS, m_children.size());
+	cap->AssignExpr(ATTR_CHILD_CLAIM_IDS, makeChildClaimIds().c_str());
+
+	// List of attrs to rollup from dynamic ads into lists
+	// in the partitionable ad
+
+	std::list<std::string> attrs;
+	attrs.push_back(ATTR_NAME);
+	attrs.push_back(ATTR_CURRENT_RANK);
+	attrs.push_back(ATTR_REMOTE_USER);
+	attrs.push_back(ATTR_REMOTE_OWNER);
+	attrs.push_back(ATTR_ACCOUNTING_GROUP);
+	attrs.push_back(ATTR_STATE);
+	attrs.push_back(ATTR_ACTIVITY);
+	attrs.push_back(ATTR_ENTERED_CURRENT_STATE);
+
+	attrs.push_back(ATTR_CPUS);
+	attrs.push_back(ATTR_MEMORY);
+	attrs.push_back(ATTR_DISK);
+
+	MachAttributes::slotres_map_t machres_map = resmgr->m_attr->machres();
+
+    for (MachAttributes::slotres_map_t::iterator j(machres_map.begin());  j != machres_map.end();  j++) {
+        attrs.push_back(j->first);
+    }
+
+	// The admin can add additional ones
+	char *userDefined = param("STARTD_PARTITIONABLE_SLOT_ATTRS");
+	if (userDefined) {
+		char *p;
+
+		StringList udl(userDefined);
+       udl.rewind();
+
+		while((p = udl.next())) {
+			attrs.push_back(p);
+		}
+		free(userDefined);
+	}
+
+	for (std::list<std::string>::iterator i(attrs.begin()); i != attrs.end(); i++) {
+		rollupDynamicAttrs(cap, (*i));
+	}
+}
+
+void
+Resource::rollupDynamicAttrs(ClassAd *cap, std::string &name) const {
+	std::string attrName;
+	attrName = "child" + name;
+
+	std::string attrValue = "{";
+	bool firstTime = true;
+
+	for (std::set<Resource *,ResourceLess>::const_iterator i(m_children.begin());  i != m_children.end();  i++) {
+		if (firstTime) {
+			firstTime = false;
+		} else {
+			attrValue += ", ";
+		}
+		ExprTree *et = (*i)->r_classad->LookupExpr(name.c_str());
+		if (et) {
+			std::string buf;
+			classad::PrettyPrint pp;
+			pp.Unparse(buf,et);
+			attrValue += buf;
+		} else {
+			attrValue += "undefined";
+		}
+	}
+	attrValue += "}";
+	cap->AssignExpr(attrName.c_str(), attrValue.c_str());
+	
+	return;
 }

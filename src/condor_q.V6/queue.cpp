@@ -1156,7 +1156,10 @@ processCommandLineArguments (int argc, char *argv[])
 	const char * pcolon;
 
 	bool custom_attributes = false;
-	attrs.initializeFromString("ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\nJobDescription\nTransferringInput\nTransferringOutput");
+	attrs.initializeFromString(
+		"ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\n"
+		"RemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\nArguments\n"
+		"JobDescription\nMATCH_EXP_JobDescription\nTransferringInput\nTransferringOutput");
 
 	for (i = 1; i < argc; i++)
 	{
@@ -1824,7 +1827,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if (is_arg_prefix (arg, "stream", 2)) {
+		if (is_arg_prefix (arg, "stream-results", 2)) {
 			g_stream_results = true;
 			if( dag ) {
 				fprintf( stderr, "-stream-results and -dag are incompatible\n" );
@@ -2008,19 +2011,19 @@ bufferJobShort( ClassAd *ad ) {
 		memory_used_mb = memory_usage;
 	}
 
-	MyString args_string;
-	ArgList::GetArgsStringForDisplay(ad,&args_string);
-
 	std::string description;
-
-	ad->EvalString(ATTR_JOB_DESCRIPTION, NULL, description);
+	if ( ! ad->EvalString("MATCH_EXP_" ATTR_JOB_DESCRIPTION, NULL, description)) {
+		ad->EvalString(ATTR_JOB_DESCRIPTION, NULL, description);
+	}
 	if ( !description.empty() ){
 		buffer.formatstr("%s", description.c_str());
-	}
-	else if (!args_string.IsEmpty()) {
-		buffer.formatstr( "%s %s", condor_basename(cmd), args_string.Value() );
 	} else {
 		buffer.formatstr( "%s", condor_basename(cmd) );
+		MyString args_string;
+		ArgList::GetArgsStringForDisplay(ad,&args_string);
+		if ( ! args_string.IsEmpty()) {
+			buffer.formatstr_cat( " %s", args_string.Value() );
+		}
 	}
 	free(cmd);
 	utime = job_time(utime,ad);
@@ -3801,6 +3804,12 @@ show_file_queue(const char* jobads, const char* userlog)
 	if (better_analyze) {
 		return print_jobs_analysis(jobs, source_label.c_str(), NULL);
 	}
+
+	// TJ: copied this from the top of init_output_mask
+	if ( dash_run || dash_goodput || dash_globus || dash_grid )
+		summarize = false;
+	else if (customFormat && ! show_held)
+		summarize = false;
 
 		// display the jobs from this submittor
 	if( jobs.MyLength() != 0 || !global ) {

@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2011 Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -3431,13 +3431,6 @@ void DaemonCore::Driver()
 
         runtime = group_runtime = UtcTime::getTimeDouble();
 
-		// Call reaper handlers before we deal with incoming commands.
-		// The thinking here is incoming commands may very well spawn
-		// more child processes, so it makes sense to reap child processes
-		// who completed their work first before spawning yet more pids.
-		HandleDC_SERVICEWAITPIDS(0);
-
-		// Now, lets see what select told us
 		if ( selector.has_ready() ||
 			 ( selector.timed_out() && 
 			   min_deadline && min_deadline < time(NULL) ) )
@@ -3834,7 +3827,7 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 		    args->accepted_sock = (Stream *) ((ReliSock *)insock)->accept();
 
 		    if ( !(args->accepted_sock) ) {
-		        dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
+		        dprintf(D_ALWAYS, "DaemonCore: accept() failed!\n");
 		        // no need to add to work pool if we fail to accept
 		        delete args;
 		        return;
@@ -7260,7 +7253,6 @@ int DaemonCore::Create_Process(
 	//
 	newpid = piProcess.dwProcessId;
 	
-#ifdef HAVE_SCHED_SETAFFINITY
 	/* if we have an affinity array mask then: */
 	if ( affinity_mask ) {
 		
@@ -7292,7 +7284,6 @@ int DaemonCore::Create_Process(
 		}
 
 	}
-#endif
 
 	// if requested, register a process family with the procd and unsuspend
 	// the process
@@ -8940,6 +8931,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 			pidentry->watcherEvent = entry->event;
 			(entry->nEntries)++;
 			if ( !::SetEvent(entry->event) ) {
+				::LeaveCriticalSection(&(entry->crit_section));
 				EXCEPT("SetEvent failed");
 			}
 			alldone = TRUE;

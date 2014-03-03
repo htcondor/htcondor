@@ -157,10 +157,12 @@ if ( ${OS_NAME} STREQUAL "LINUX" )
 		else()
 			set( CONDOR_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor" )
 			set( EXTERNALS_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor:/usr/lib/condor" )
+			set( PYTHON_RPATH "$ORIGIN/../:/lib:/usr/lib:$ORIGIN/../condor" )
 		endif()
 	else()
 		set( CONDOR_RPATH "$ORIGIN/../lib:/lib64:/usr/lib64:$ORIGIN/../lib/condor" )
 		set( EXTERNALS_RPATH "$ORIGIN/../lib:/lib64:/usr/lib64:$ORIGIN/../lib/condor:/usr/lib64/condor" )
+		set( PYTHON_RPATH "$ORIGIN/../:/lib64:/usr/lib64:$ORIGIN/../condor" )
 	endif()
 elseif( ${OS_NAME} STREQUAL "DARWIN" )
 	set( EXTERNALS_LIB "${C_LIB}/condor" )
@@ -408,6 +410,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 	set( EXTERNALS_LIB "${C_LIB}" )
 	set( CONDOR_RPATH "/${C_LIB}" )
+	set( PYTHON_RPATH "/${C_LIB}" )
 
 	# Generate empty folder to ship with package
 	# Local dir
