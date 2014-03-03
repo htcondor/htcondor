@@ -4168,6 +4168,15 @@ friendly_name=Negotiator Use Nonblocking Startd Contact
 review=?
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_USE_WEIGHTED_DEMAND]
+default=true
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Use Weighted Demand
+review=?
+tags=negotiator,matchmaker
+
 [NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT]
 aliases=GROUP_DYNAMIC_MACH_CONSTRAINT
 default=

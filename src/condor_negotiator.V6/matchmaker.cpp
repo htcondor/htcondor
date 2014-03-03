@@ -1370,7 +1370,7 @@ negotiationTime ()
 			// and paritionable slot are in use.  The schedd can tell us the cpu-weighed
 			// demand in ATTR_WEIGHTED_IDLE_JOBS.  If this knob is set, use it.
 
-			if (param_boolean("NEGOTIATOR_USE_WEIGHTED_DEMAND", false)) {
+			if (param_boolean("NEGOTIATOR_USE_WEIGHTED_DEMAND", true)) {
 				int weightedIdle = numidle;
 				int weightedRunning = numrunning;
 
