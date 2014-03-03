@@ -5850,7 +5850,6 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine) {
 		} 
 	}
 
-	dprintf(D_FULLDEBUG, "Could not match pslot even by rank preempting all dynamic slots\n");
 	return false;
 }
 
