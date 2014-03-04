@@ -41,8 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed \Condor{q} command line parsing to look for \Opt{-stream-results}
-as the manual and useage indicates instead of just \Opt{-stream}.
+\item Fixed the parsing of the \Condor{q} command line,
+such that it looks for the entire option \Opt{-stream-results},
+instead of only the portion \Opt{-stream}.
+The code now matches what was previously documented in the manual page
+and in the usage output.
 \Ticket{4205}
 
 \item Fixed a bug in the grid universe that could allow a removed job to

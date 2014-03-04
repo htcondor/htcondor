@@ -321,7 +321,7 @@ if [ $# = 0 ]; then
 	fi
 	echo "  where <command> is one of the following:"
 	echo "  gcc, g++, g77, gfortran, cc, acc, c89, CC, f77, fort77, ld, "
-	echo "  pgcc, pgf77, pgf90, or pghpf."
+	echo "  pgcc, pgf77, pgf90, pghpf, or icc."
 	echo "  (on some platforms, f90 is also allowed)"
 	exit 1
 fi
@@ -390,6 +390,11 @@ fi
 # argument, so we can compare it different names, even if the user
 # specified a full path to the program.
 myname=`echo $NAME | sed "s/.*\///"`
+
+# Handle Intel compilers
+if [ $myname = "icc" ]; then
+	invoke_linker $ARGS -static -B$CONDOR_LD_DIR/
+fi
 
 # Handle GNU compilers
 
@@ -531,6 +536,6 @@ esac
 	fi
 	echo "  where <command> is one of the following:"
 	echo "  gcc, g++, g77, gfortran, cc, acc, c89, CC, f77, fort77, ld, "
-	echo "  pgcc, pgf77, pgf90, or pghpf."
+	echo "  pgcc, pgf77, pgf90, pghpf, or icc."
 	echo "  (on some platforms, f90 is also allowed)"
 	exit 1
