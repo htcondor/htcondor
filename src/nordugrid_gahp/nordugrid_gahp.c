@@ -33,18 +33,6 @@
 #include "globus_io.h"
 #include "globus_ftp_client.h"
 #include "globus_rsl.h"
-#include "globus_i_ftp_client.h"
-
-/* An extra globus_ftp_client call we've added for our use */
-globus_result_t
-globus_ftp_client_cwd(
-    globus_ftp_client_handle_t *			handle,
-    const char *							url,
-    globus_ftp_client_operationattr_t *		attr,
-    globus_byte_t **    					mlst_buffer,
-    globus_size_t *                        	mlst_buffer_length,
-    globus_ftp_client_complete_callback_t	complete_callback,
-    void *									callback_arg);
 
 	/* Define this if the gahp server should fork before dropping core */
 #undef FORK_FOR_CORE
@@ -733,13 +721,13 @@ void dispatch_ftp_command( ftp_cache_entry_t *entry )
 		}
 	}
 	if ( !found_it ) {
-		next_cmd->handle = (globus_i_ftp_client_handle_t**) globus_libc_malloc( sizeof(globus_ftp_client_handle_t) );
+		next_cmd->handle = (globus_ftp_client_handle_t*) globus_libc_malloc( sizeof(globus_ftp_client_handle_t) );
 
 		result = globus_ftp_client_handle_init( next_cmd->handle,
 												&ftp_handle_attr );
 		assert( result == GLOBUS_SUCCESS );
 
-		next_cmd->op_attr = (globus_i_ftp_client_operationattr_t**)globus_libc_malloc( sizeof(globus_ftp_client_operationattr_t) );
+		next_cmd->op_attr = (globus_ftp_client_operationattr_t*)globus_libc_malloc( sizeof(globus_ftp_client_operationattr_t) );
 
 		result = globus_ftp_client_operationattr_init( next_cmd->op_attr );
 		assert( result == GLOBUS_SUCCESS );
