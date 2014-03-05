@@ -199,19 +199,31 @@ class TestPythonBindings(WithDaemons):
         self.assertTrue("MyAddress" in coll_ad)
         self.assertEquals(coll_ad["Name"].split(":")[-1], os.environ["_condor_PORT"])
 
+    def testLocateList(self):
+        self.launch_daemons(["COLLECTOR"])
+        coll = htcondor.Collector()
+        coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
+        self.assertTrue("MyAddress" in coll_ad)
+        self.assertEquals(coll_ad["Name"].split(":")[-1], os.environ["_condor_PORT"])
+        # Make sure we can pass a list of addresses
+        coll = htcondor.Collector(["collector.example.com", coll_ad['Name']])
+        coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
+
     def testRemoteLocate(self):
         self.launch_daemons(["COLLECTOR"])
         coll = htcondor.Collector()
         coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
         remote_ad = self.waitRemoteDaemon(htcondor.DaemonTypes.Collector, "%s@%s" % (htcondor.param["COLLECTOR_NAME"], htcondor.param["CONDOR_HOST"]))
-        self.assertEquals(remote_ad["MyAddress"], coll_ad["MyAddress"])
+        remote_address = remote_ad["MyAddress"].split(">")[0].split("?")[0].lower()
+        coll_address = coll_ad["MyAddress"].split(">")[0].split("?")[0].lower()
+        self.assertEquals(remote_address, coll_address)
 
     def testScheddLocate(self):
         self.launch_daemons(["SCHEDD", "COLLECTOR"])
         coll = htcondor.Collector()
         name = "%s@%s" % (htcondor.param["SCHEDD_NAME"], htcondor.param["CONDOR_HOST"])
         schedd_ad = self.waitRemoteDaemon(htcondor.DaemonTypes.Schedd, name, timeout=10)
-        self.assertEquals(schedd_ad["Name"], name)
+        self.assertEquals(schedd_ad.eval("Name").lower(), name.lower())
 
     def testCollectorAdvertise(self):
         self.launch_daemons(["COLLECTOR"])

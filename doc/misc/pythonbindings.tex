@@ -209,8 +209,9 @@ than the desired lifetime.
 
 Create an instance of the \texttt{Collector} class.  
 
-Optional parameter \texttt{pool} is a string with host:port pair specified.
-If omitted, the local \Condor{schedd} daemon is used.
+Optional parameter \texttt{pool} is a string with host:port pair specified or
+a list of such strings.
+If omitted, the value of the \MacroNI{COLLECTOR\_HOST} parameter is used.
 \\ \hline
 \texttt{locate( (DaemonTypes)daemon\_type, (str)name )}
 
