@@ -211,8 +211,8 @@ static	ClassAdList	scheddList;
 
 static  ClassAdAnalyzer analyzer;
 
-static const char* format_owner( char*, AttrList*);
-static const char* format_owner_wide( char*, AttrList*, Formatter &);
+static const char* format_owner(const char*, AttrList*);
+static const char* format_owner_wide(const char*, AttrList*, Formatter &);
 
 // clusterProcString is the container where the output strings are
 //    stored.  We need the cluster and proc so that we can sort in an
@@ -2116,7 +2116,7 @@ short_header (void)
 }
 
 static char *
-format_remote_host (char *, AttrList *ad)
+format_remote_host (const char *, AttrList *ad)
 {
 	static char host_result[MAXHOSTNAMELEN];
 	static char unknownHost [] = "[????????????????]";
@@ -2221,7 +2221,7 @@ format_cpu_util (double utime, AttrList *ad)
 }
 
 static const char *
-format_owner_common (char *owner, AttrList *ad)
+format_owner_common (const char *owner, AttrList *ad)
 {
 	static char result_str[100] = "";
 
@@ -2259,7 +2259,7 @@ format_owner_common (char *owner, AttrList *ad)
 }
 
 static const char *
-format_owner (char *owner, AttrList *ad)
+format_owner (const char *owner, AttrList *ad)
 {
 	static char result_format[24];
 	sprintf(result_format, "%-14.14s", format_owner_common(owner, ad));
@@ -2267,7 +2267,7 @@ format_owner (char *owner, AttrList *ad)
 }
 
 static const char *
-format_owner_wide (char *owner, AttrList *ad, Formatter & /*fmt*/)
+format_owner_wide (const char *owner, AttrList *ad, Formatter & /*fmt*/)
 {
 	return format_owner_common(owner, ad);
 }
@@ -2451,7 +2451,7 @@ format_gridType( int , AttrList * ad )
 #endif
 
 static const char *
-format_gridResource( char * grid_res, AttrList * ad, Formatter & /*fmt*/ )
+format_gridResource(const char * grid_res, AttrList * ad, Formatter & /*fmt*/ )
 {
 	std::string grid_type;
 	std::string str = grid_res;
@@ -2517,7 +2517,7 @@ format_gridResource( char * grid_res, AttrList * ad, Formatter & /*fmt*/ )
 }
 
 static const char *
-format_gridJobId( char * grid_jobid, AttrList *ad, Formatter & /*fmt*/ )
+format_gridJobId(const char * grid_jobid, AttrList *ad, Formatter & /*fmt*/ )
 {
 	std::string str = grid_jobid;
 	std::string jid;
