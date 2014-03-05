@@ -38,26 +38,26 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
 
 \begin{Options}
     \ToolDebugDesc
-    \OptItem{\Opt{-help}}{(Help option) Display usage information}
-    \OptItem{\Opt{-diagnose}}{(Help option) Print out query ClassAd without 
-      performing query}
+    \OptItem{\Opt{-help}}{(Help option) Display usage information.}
+    \OptItem{\Opt{-diagnose}}{(Help option) Print out ClassAd query without 
+      performing the query.}
     \OptItem{\Opt{-absent}}{(Query option) Query for and display only 
       absent resources.}
-    \OptItem{\Opt{-any}}{(Query option) Query all ClassAds and display their type,
-      target type, and name}
-    \OptItem{\Opt{-avail}}{(Query option) Query \Condor{startd} ClassAds and identify
-      resources which are available}
-    \OptItem{\Opt{-ckptsrvr}}{(Query option) Query \Condor{ckpt\_server} ClassAds
-      and display checkpoint server attributes}
-    \OptItem{\Opt{-claimed}}{(Query option) Query \Condor{startd} ClassAds and print 
-      information about claimed resources}
+    \OptItem{\Opt{-any}}{(Query option) Query all ClassAds and display 
+      their type, target type, and name.}
+    \OptItem{\Opt{-avail}}{(Query option) Query \Condor{startd} ClassAds 
+      and identify resources which are available.}
+    \OptItem{\Opt{-ckptsrvr}}{(Query option) Query \Condor{ckpt\_server} 
+      ClassAds and display checkpoint server attributes.}
+    \OptItem{\Opt{-claimed}}{(Query option) Query \Condor{startd} ClassAds 
+      and print information about claimed resources.}
     \OptItem{\Opt{-cod}}{(Query option) Display only machine ClassAds
       that have COD claims. Information displayed includes
       the claim ID, the owner of the claim, and the state
       of the COD claim.}
     \OptItem{\Opt{-collector}}{(Query option) Query \Condor{collector} ClassAds
-      and display attributes}
-    \OptItem{\Opt{-defrag}}{(Query option) Query \Condor{defrag} ClassAds} 
+      and display attributes.}
+    \OptItem{\Opt{-defrag}}{(Query option) Query \Condor{defrag} ClassAds.} 
     \OptItem{\OptArg{-direct}{hostname}}{(Query option) Go directly to
       the given host name to get the ClassAds to display.  
       By default, returns the \Condor{startd} ClassAd.  
@@ -66,9 +66,9 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
     \OptItem{\Opt{-java}}{(Query option) Display only Java-capable resources.}
     \OptItem{\Opt{-license}}{(Query option) Display license attributes.}
     \OptItem{\Opt{-master}}{(Query option) Query \Condor{master} ClassAds 
-      and display daemon master attributes}
+      and display daemon master attributes.}
     \OptItem{\Opt{-negotiator}}{(Query option) Query \Condor{negotiator} 
-      ClassAds and display attributes}
+      ClassAds and display attributes.}
     \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
       {(Query option) Query the specified central manager using an
       optional port number. 
@@ -76,13 +76,13 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
       variable \MacroNI{COLLECTOR\_HOST} by default.}
     \OptItem{\Opt{-run}}{(Query option) Display information about machines
       currently running jobs.}
-    \OptItem{\Opt{-schedd}}{(Query option) Query \Condor{schedd} ClassAds and display
-      attributes}
+    \OptItem{\Opt{-schedd}}{(Query option) Query \Condor{schedd} ClassAds 
+      and display attributes.}
     \OptItem{\Opt{-server}}{(Query option) Query \Condor{startd} ClassAds and 
-      display resource attributes}
-    \OptItem{\Opt{-startd}}{(Query option) Query \Condor{startd} ClassAds} 
-    \OptItem{\Opt{-state}}{(Query option) Query \Condor{startd} ClassAds and display 
-      resource state information}
+      display resource attributes.}
+    \OptItem{\Opt{-startd}}{(Query option) Query \Condor{startd} ClassAds.} 
+    \OptItem{\Opt{-state}}{(Query option) Query \Condor{startd} ClassAds 
+      and display resource state information.}
     \OptItem{\OptArg{-statistics}{WhichStatistics}}{(Query option) Can only be
       used if the \Opt{-direct} option has been specified.
       Identifies which Statistics attributes to include in the ClassAd.
@@ -91,8 +91,8 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
       HTCondor Administrator's manual section on configuration.}
     \OptItem{\Opt{-storage}}{(Query option) Display attributes of machines
       with network storage resources.}
-    \OptItem{\Opt{-submitters}}{(Query option) Query ClassAds sent by submitters and
-      display important submitter attributes}
+    \OptItem{\Opt{-submitters}}{(Query option) Query ClassAds sent by 
+      submitters and display important submitter attributes.}
     \OptItem{\OptArg{-subsystem}{type}}{(Query option) If \Arg{type} is
       one of \Arg{collector}, \Arg{negotiator}, \Arg{master},
       \Arg{schedd}, \Arg{startd}, or \Arg{quill},
@@ -104,18 +104,17 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
       targets that type of ClassAd.  }
     \OptItem{\Opt{-vm}}{(Query option) Query \Condor{startd} ClassAds,
       and display only VM-enabled machines.  Information displayed includes
-      the the machine name, the virtual machine software version,
+      the machine name, the virtual machine software version,
       the state of machine, the virtual machine memory,
       and the type of networking.}
-
     \OptItem{\OptArg{-attributes}{Attr1[,Attr2 \Dots]}}{(Display option)
       Explicitly list the attributes in a comma separated list
       which should be displayed when using the \Opt{-xml} or \Opt{-long}
       options.  Limiting the number of attributes increases the efficiency 
       of the query.}  
-    \OptItem{\Opt{-expert}}{(Display option) Display shortened error messages}
+    \OptItem{\Opt{-expert}}{(Display option) Display shortened error messages.}
     \OptItem{\Opt{-long}}{(Display option) Display entire ClassAds 
-      (same as \Opt{-verbose})}
+      (same as \Opt{-verbose}).}
     \OptItem{\OptArg{-sort}{expr}}{(Display option) Change the display order
       to be based on ascending values of an evaluated expression 
       given by \Arg{expr}.
@@ -133,7 +132,7 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
       \AdAttr{CondorStatusSortKey<N>}
       gives the result of evaluating the sort expression that is numbered
       \Expr{<N>}.}
-    \OptItem{\Opt{-total}}{(Display option) Display totals only}
+    \OptItem{\Opt{-total}}{(Display option) Display totals only.}
     \OptItem{\Opt{-verbose}}{(Display option) Display entire ClassAds.  Implies
       that totals will not be displayed.}
     \OptItem{\Opt{-xml}}{(Display option) Display entire ClassAds,
