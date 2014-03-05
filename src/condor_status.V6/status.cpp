@@ -449,13 +449,13 @@ main (int argc, char *argv[])
 
 	CondorError errstack;
 	if (NULL != addr) {
-	        // this case executes if pool was provided, or if in "direct" mode with
-	        // subsystem that corresponds to a daemon (above).
-                // Here 'addr' represents either the host:port of requested pool, or
-                // alternatively the host:port of daemon associated with requested subsystem (direct mode)
+			// this case executes if pool was provided, or if in "direct" mode with
+			// subsystem that corresponds to a daemon (above).
+			// Here 'addr' represents either the host:port of requested pool, or
+			// alternatively the host:port of daemon associated with requested subsystem (direct mode)
 		q = query->fetchAds (result, addr, &errstack);
 	} else {
-                // otherwise obtain list of collectors and submit query that way
+			// otherwise obtain list of collectors and submit query that way
 		CollectorList * collectors = CollectorList::create();
 		q = collectors->query (*query, result, &errstack);
 		delete collectors;
@@ -463,33 +463,36 @@ main (int argc, char *argv[])
 		
 
 	// if any error was encountered during the query, report it and exit 
-        if (Q_OK != q) {
-            dprintf_WriteOnErrorBuffer(stderr, true);
-                // we can always provide these messages:
-	        fprintf( stderr, "Error: %s\n", getStrQueryResult(q) );
+	if (Q_OK != q) {
+
+		dprintf_WriteOnErrorBuffer(stderr, true);
+			// we can always provide these messages:
+		fprintf( stderr, "Error: %s\n", getStrQueryResult(q) );
 		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 
-	        if ((NULL != requested_daemon) && ((Q_NO_COLLECTOR_HOST == q) || (requested_daemon->type() == DT_COLLECTOR))) {
-                        // Specific long message if connection to collector failed.
-		        const char* fullhost = requested_daemon->fullHostname();
-                        if (NULL == fullhost) fullhost = "<unknown_host>";
-                        const char* daddr = requested_daemon->addr();
-                        if (NULL == daddr) daddr = "<unknown>";
-                        char info[1000];
-                        sprintf(info, "%s (%s)", fullhost, daddr);
-		        printNoCollectorContact( stderr, info, !expert );                        
-	        } else if ((NULL != requested_daemon) && (Q_COMMUNICATION_ERROR == q)) {
-                        // more helpful message for failure to connect to some daemon/subsys
+        if ((NULL != requested_daemon) && ((Q_NO_COLLECTOR_HOST == q) ||
+			(requested_daemon->type() == DT_COLLECTOR)))
+		{
+				// Specific long message if connection to collector failed.
+			const char* fullhost = requested_daemon->fullHostname();
+			if (NULL == fullhost) fullhost = "<unknown_host>";
+			const char* daddr = requested_daemon->addr();
+			if (NULL == daddr) daddr = "<unknown>";
+			char info[1000];
+			sprintf(info, "%s (%s)", fullhost, daddr);
+	        printNoCollectorContact( stderr, info, !expert );
+        } else if ((NULL != requested_daemon) && (Q_COMMUNICATION_ERROR == q)) {
+				// more helpful message for failure to connect to some daemon/subsys
 			const char* id = requested_daemon->idStr();
-                        if (NULL == id) id = requested_daemon->name();
+			if (NULL == id) id = requested_daemon->name();
 			if (NULL == id) id = "daemon";
-                        const char* daddr = requested_daemon->addr();
-                        if (NULL == daddr) daddr = "<unknown>";
-           	        fprintf(stderr, "Error: Failed to contact %s at %s\n", id, daddr);
+			const char* daddr = requested_daemon->addr();
+			if (NULL == daddr) daddr = "<unknown>";
+			fprintf(stderr, "Error: Failed to contact %s at %s\n", id, daddr);
 		}
 
-                // fail
-                exit (1);
+		// fail
+		exit (1);
 	}
 
 	if (sortSpecs.empty()) {
