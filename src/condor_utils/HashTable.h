@@ -117,13 +117,13 @@ class HashTable {
 #endif
 
   int tableSize;                                // size of hash table
+  int numElems; // number of elements in the hashtable
   HashBucket<Index, Value> **ht;                // actual hash table
   unsigned int (*hashfcn)(const Index &index);  // user-provided hash function
   double maxLoadFactor;			// average number of elements per bucket list
   duplicateKeyBehavior_t duplicateKeyBehavior;        // duplicate key behavior
   int currentBucket;
   HashBucket<Index, Value> *currentItem;
-  int numElems; // number of elements in the hashtable
 };
 
 // The two normal hash table constructors call initialize() to set everything up
