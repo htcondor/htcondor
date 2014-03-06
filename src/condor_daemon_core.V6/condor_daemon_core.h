@@ -1684,11 +1684,11 @@ class DaemonCore : public Service
     struct CommandEnt
     {
         int             num;
+        bool            is_cpp;
+        bool            force_authentication;
         CommandHandler  handler;
         CommandHandlercpp   handlercpp;
-        int             is_cpp;
         DCpermission    perm;
-        bool            force_authentication;
         Service*        service; 
         char*           command_descrip;
         char*           handler_descrip;
@@ -1699,28 +1699,28 @@ class DaemonCore : public Service
 
     void                DumpCommandTable(int, const char* = NULL);
     int                 maxCommand;     // max number of command handlers
-    int                 nCommand;       // number of command handlers used
-    CommandEnt*         comTable;       // command table
+    int                 nCommand;       // number of table entries used
+    ExtArray<CommandEnt> comTable;      // command table
 
     struct SignalEnt 
     {
         int             num;
-        SignalHandler   handler;
-        SignalHandlercpp    handlercpp;
-        int             is_cpp;
-        Service*        service; 
-        int             is_blocked;
+        bool            is_cpp;
+        bool            is_blocked;
         // Note: is_pending must be volatile because it could be set inside
         // of a Unix asynchronous signal handler (such as SIGCHLD).
-        volatile int    is_pending; 
+        volatile bool   is_pending;
+        SignalHandler   handler;
+        SignalHandlercpp    handlercpp;
+        Service*        service; 
         char*           sig_descrip;
         char*           handler_descrip;
         void*           data_ptr;
     };
     void                DumpSigTable(int, const char* = NULL);
     int                 maxSig;      // max number of signal handlers
-    int                 nSig;        // number of signal handlers used
-    SignalEnt*          sigTable;    // signal table
+    int                 nSig;        // high-water mark of entries used
+    ExtArray<SignalEnt> sigTable;    // signal table
     volatile int        sent_signal; // TRUE if a signal handler sends a signal
 
     struct SockEnt
@@ -1728,17 +1728,17 @@ class DaemonCore : public Service
         Sock*           iosock;
         SocketHandler   handler;
         SocketHandlercpp    handlercpp;
-        int             is_cpp;
-        DCpermission    perm;
         Service*        service; 
         char*           iosock_descrip;
         char*           handler_descrip;
         void*           data_ptr;
+        DCpermission    perm;
+		int				servicing_tid;	// tid servicing this socket
+        bool            is_cpp;
 		bool			is_connect_pending;
 		bool			is_reverse_connect_pending;
 		bool			call_handler;
 		bool			waiting_for_data;
-		int				servicing_tid;	// tid servicing this socket
 		bool			remove_asap;	// remove when being_serviced==false
     };
     void              DumpSocketTable(int, const char* = NULL);
@@ -1773,18 +1773,18 @@ class DaemonCore : public Service
 	class PidEntry;  // forward reference
     struct PipeEnt
     {
-        int				index;		// index into the pipeHandleTable
         PipeHandler		handler;
         PipeHandlercpp  handlercpp;
-        int             is_cpp;
-        DCpermission    perm;
         Service*        service; 
         char*           pipe_descrip;
         char*           handler_descrip;
         void*           data_ptr;
-		bool			call_handler;
-		HandlerType		handler_type;
 		PidEntry*		pentry;
+        int				index;		// index into the pipeHandleTable
+        DCpermission    perm;
+		HandlerType		handler_type;
+        bool            is_cpp;
+		bool			call_handler;
 		bool			in_handler;
     };
     // void              DumpPipeTable(int, const char* = NULL);
@@ -1795,9 +1795,9 @@ class DaemonCore : public Service
     struct ReapEnt
     {
         int             num;
+        bool            is_cpp;
         ReaperHandler   handler;
         ReaperHandlercpp    handlercpp;
-        int             is_cpp;
         Service*        service; 
         char*           reap_descrip;
         char*           handler_descrip;
@@ -1806,7 +1806,8 @@ class DaemonCore : public Service
     void                DumpReapTable(int, const char* = NULL);
     int                 maxReap;        // max number of reaper handlers
     int                 nReap;          // number of reaper handlers used
-    ReapEnt*            reapTable;      // reaper table
+    int                 nextReapId;     // next reaper id to use
+    ExtArray<ReapEnt>  reapTable;      // reaper table
     int                 defaultReaper;
 
     class PidEntry : public Service
