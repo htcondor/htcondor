@@ -1637,10 +1637,26 @@ of the subsystem corresponding to the daemon.
 
 \label{param:EnableUserlogLocking}
 \item[\Macro{ENABLE\_USERLOG\_LOCKING}]
-  When \Expr{True} (the default value),
-  a user's job log (as specified in a submit description file)
+  A boolean value that is \Expr{True} by default.
+  When \Expr{True}, a user's job event log
   will be locked before being written to.
   If \Expr{False}, HTCondor will not lock the file before writing.
+
+\label{param:EnableUserlogFsync}
+\item[\Macro{ENABLE\_USERLOG\_FSYNC}]
+  A boolean value that is \Expr{True} by default.
+  When \Expr{True}, writes to the user's job event log are sync-ed to
+  disk before releasing the lock.
+
+\label{param:EventLogCountEvents}
+\item[\Macro{EVENT\_LOG\_COUNT\_EVENTS}]
+  A boolean value that is \Expr{False} by default.
+  When \Expr{True}, upon rotation of the user's job event log, 
+  a count of the number of job events is taken by scanning the log,
+  such that the newly created,
+  post-rotation user job event log will have this count in its header.
+  This configuration variable is relevant when rotation of the
+  user's job event log is enabled.
 
 \label{param:NewLocking}
 \item[\Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK}]
