@@ -18,24 +18,23 @@
 ##
 ##**************************************************************
 
-# Note: we should check the node status file that the DAG now creates.
-
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_abort-A.dag';
-$testdesc =  'Condor submit dag - basic abort-dag-on test - scheduler U';
-$testname = "job_dagman_abort-A";
+$cmd = 'job_dagman_abort-final-B.dag';
+$testdesc =  'Condor submit dag - basic abort-final-dag-on test - scheduler U';
+$testname = "job_dagman_abort-final-B";
 $dagman_args = "-verbose";
 
-@outfiles = ("job_dagman_abort-A-node.A", "job_dagman_abort-A-node.B");
-$statusfile = "job_dagman_abort-A.status";
+@outfiles = ("job_dagman_abort-final-B-node.A", "job_dagman_abort-final-B-node.B");
+$statusfile = "job_dagman_abort-final-B.status";
 @statuslines = ("JOB A STATUS_DONE",
 	"JOB B STATUS_DONE",
 	"JOB C STATUS_ERROR",
 	"JOB D STATUS_UNREADY",
-	"Nodes total: 4",
-	"Nodes done: 2",
+	"JOB E STATUS_DONE",
+	"Nodes total: 5",
+	"Nodes done: 3",
 	"Nodes pre: 0",
 	"Nodes queued: 0",
 	"Nodes post: 0",
@@ -43,6 +42,10 @@ $statusfile = "job_dagman_abort-A.status";
 	"Nodes un-ready: 1",
 	"Nodes failed: 1",
 	"DAG status: STATUS_DONE      \\(success\\)");
+$finalfile = "job_dagman_abort-final-B-nodeE.out";
+@finallines = ("DAG_STATUS=3",
+	"FAILED_COUNT=1",
+	"E");
 
 my $killedchosen = 0;
 
@@ -51,11 +54,12 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-# clean out old output files
+# clean out old output and status files
 foreach $name (@outfiles) {
 	runcmd("rm -f $name.out $name.err");
 }
 runcmd("rm -f $statusfile");
+runcmd("rm -f $finalfile");
 
 $abnormal = sub 
 {
@@ -112,6 +116,37 @@ $success = sub
 			CondorTest::debug("failed $name.out: $line\n",1);
 			$diditpass = 0;
 		}
+	}
+
+	# Check the final node output file.
+	$line = "";
+	$passed = 0;
+	$canopen = open(FINAL,"<$finalfile");
+	if( ! (defined $canopen)) {
+		CondorTest::debug("Can not open finalfile<$finalfile>:$!\n",1);
+		$diditpass = 0;
+	}
+	while(<FINAL>) {
+		chomp();
+		$line = $_;
+		for ( $ind = 0; $ind <= $#finallines; $ind++ ) {
+			$target = $finallines[$ind];
+			if( $line =~ /$target/ ) {
+				CondorTest::debug("$name: $line\n",1);
+				# Remove the target we just found from the array.
+				splice(@finallines, $ind, 1);
+				last;
+			}
+		}
+	}
+	close(FINAL);
+
+	if ($#finallines >= 0) {
+		CondorTest::debug("failed missing final node output lines:\n");
+		foreach $missing (@finallines) {
+			print "  $missing\n";
+		}
+		$diditpass = 0;
 	}
 
 	# Check the node status file.
