@@ -623,13 +623,21 @@ review=?
 tags=starter,starter_common
 
 [STARTER_DEBUG]
-default=D_NODATE
+default=D_NODATE D_PID
 type=string
 reconfig=true
 customization=seldom
 friendly_name=Starter Debug
 review=?
 tags=starter,starter_common
+
+[HACK.STARTER_LOG_NAME_APPEND]
+friendly_name=controls what to append StarterLog, may be: Cluster, JobId, false or true. true or undef gives 8.0 compatible behavior.
+default=Cluster
+type=string
+reconfig=true
+customization=seldom
+tags=starter
 
 [USER_JOB_WRAPPER]
 default=
@@ -7395,3 +7403,10 @@ default : @end
 @end
 review=?
 
+[$HACK.ASYNC_STAGEOUT]
+friendly_name=Knobs to enable the async stage-out hack for CMS
+default: @end
+	# append cluster ID to StarterLog, may be: Cluster, JobId, false or true. true gives 8.0 compatible behavior.
+	STARTER_LOG_NAME_APPEND=Cluster
+	ALLOW_SLOT_CLAIM_SWAP=true
+@end
