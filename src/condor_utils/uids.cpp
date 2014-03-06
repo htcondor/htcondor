@@ -77,13 +77,13 @@ static const char *priv_state_name[] = {
 
 
 /* Start Common Bits */
-#define HISTORY_LENGTH 32
+#define HISTORY_LENGTH 16
 
 static struct {
 	time_t		timestamp;
 	priv_state	priv;
-	const char	*file;
 	int			line;
+	const char	*file;
 } priv_history[HISTORY_LENGTH];
 static int ph_head=0, ph_count=0;
 
