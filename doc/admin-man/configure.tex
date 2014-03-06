@@ -682,6 +682,13 @@ File System Configuration File Entries''.
   see section~\ref{sec:Ports-NonStandard} on
   page~\pageref{sec:Ports-NonStandard}.
 
+  Multiple \Condor{collector} daemons may be running simultaneously,
+  if \MacroNI{COLLECTOR\_HOST} is defined with a comma separated list of hosts.
+  Multiple \Condor{collector} daemons may run for the implementation of
+  high availability; see section~\ref{sec:high-availability} for details.
+  With more than one running, updates are sent to all.
+  With more than one running, queries are sent to one of 
+  the \Condor{collector} daemons, chosen at random.
 
 \label{param:NegotiatorHost} 
 \item[\Macro{NEGOTIATOR\_HOST}]
