@@ -57,6 +57,13 @@ the daemons are being advertised properly in the \Condor{collector}.
 when starting a job obtained via the Work Fetch Hook.
 \Ticket{4210}
 
+\item Fixed a bug that can cause the \Condor{schedd} to advertise a stale
+address in the ScheddIpAddr attribute of its submitter ads, resulting in
+other daemons being unable to contact it.
+The problem occurs when using both the shared-port daemon and CCB, and
+the \Macro{CCB\_ADDRESS} is chanaged.
+\Ticket{4250}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
