@@ -1296,6 +1296,7 @@ Scheduler::count_jobs()
 	// 
 	SetMyTypeName(*m_adBase, SUBMITTER_ADTYPE);
 	m_adBase->Assign(ATTR_SCHEDD_NAME, Name);
+	m_adBase->Assign(ATTR_SCHEDD_IP_ADDR, daemonCore->publicNetworkIpAddr() );
 	daemonCore->publish(m_adBase);
 	extra_ads.Publish(m_adBase);
 
