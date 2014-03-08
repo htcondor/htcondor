@@ -49,11 +49,89 @@ extern dynuser* myDynuser;
 
 extern CStarter *Starter;
 
+void StarterStatistics::Clear() {
+   this->InitTime = time(NULL);
+   this->StatsLifetime = 0;
+   this->StatsLastUpdateTime = 0;
+   this->RecentStatsTickTime = 0;
+   this->RecentStatsLifetime = 0;
+   Pool.Clear();
+}
+
+void StarterStatistics::Init() {
+    Clear();
+
+    if ( ! this->RecentWindowQuantum) this->RecentWindowQuantum = 1;
+    this->RecentWindowMax = this->RecentWindowQuantum;
+
+    STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockReads, IF_BASICPUB);
+    STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockWrites, IF_BASICPUB);
+    STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockReadKbytes, IF_BASICPUB);
+    STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockWriteKbytes, IF_BASICPUB);
+}
+
+void StarterStatistics::Reconfig() {
+    int quantum = param_integer("STATISTICS_WINDOW_QUANTUM_STARTER", INT_MAX, 1, INT_MAX);
+    if (quantum >= INT_MAX)
+        quantum = param_integer("STATISTICS_WINDOW_QUANTUM", 4*60, 1, INT_MAX);
+    this->RecentWindowQuantum = quantum;
+
+    int window = param_integer("STATISTICS_WINDOW_SECONDS_STARTER", INT_MAX, 1, INT_MAX);
+    if (window >= INT_MAX)
+        window = param_integer("STATISTICS_WINDOW_SECONDS", 1200, quantum, INT_MAX);
+    this->RecentWindowMax = window;
+
+    this->RecentWindowMax = window;
+    Pool.SetRecentMax(window, this->RecentWindowQuantum);
+
+    this->PublishFlags = IF_BASICPUB | IF_RECENTPUB;
+    char* tmp = param("STATISTICS_TO_PUBLISH");
+    if (tmp) {
+       this->PublishFlags = generic_stats_ParseConfigString(tmp, "STARTER", "_no_alternate_name_", this->PublishFlags);
+       free(tmp);
+    }
+}
+
+time_t StarterStatistics::Tick(time_t now) {
+    if (!now) now = time(NULL);
+
+    int cAdvance = generic_stats_Tick(now,
+                                      this->RecentWindowMax,
+                                      this->RecentWindowQuantum,
+                                      this->InitTime,
+                                      this->StatsLastUpdateTime,
+                                      this->RecentStatsTickTime,
+                                      this->StatsLifetime,
+                                      this->RecentStatsLifetime);
+
+    if (cAdvance) Pool.Advance(cAdvance);
+
+    return now;
+}
+
+void StarterStatistics::Publish(ClassAd& ad, int flags) const {
+    if ((flags & IF_PUBLEVEL) > 0) {
+        ad.Assign("StatsLifetime", (int)StatsLifetime);
+        if (flags & IF_VERBOSEPUB)
+            ad.Assign("StatsLastUpdateTime", (int)StatsLastUpdateTime);
+        if (flags & IF_RECENTPUB) {
+            ad.Assign("RecentStatsLifetime", (int)RecentStatsLifetime);
+            if (flags & IF_VERBOSEPUB) {
+                ad.Assign("RecentWindowMax", (int)RecentWindowMax);
+                ad.Assign("RecentStatsTickTime", (int)RecentStatsTickTime);
+            }
+        }
+    }
+    Pool.Publish(ad, flags);
+}
+
+
 VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd),
 	m_memory_limit(-1),
 	m_oom_fd(-1),
 	m_oom_efd(-1)
 {
+    m_statistics.Init();
 #if !defined(WIN32)
 	m_escalation_tid = -1;
 #endif
@@ -529,6 +607,8 @@ VanillaProc::StartJob()
 		setupOOMEvent(cgroup);
 	}
 
+    m_statistics.Reconfig();
+
 	// Now that the job is started, decrease the likelihood that the starter
 	// is killed instead of the job itself.
 	if (retval)
@@ -561,6 +641,9 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 		usage = &cur_usage;
 	}
 
+        // prepare for updating "generic_stats" stats, call Tick() to update current time
+    m_statistics.Tick();
+
 		// Publish the info we care about into the ad.
 	ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (double)usage->sys_cpu_time);
 	ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (double)usage->user_cpu_time);
@@ -579,15 +662,23 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	}
 #endif
 
-	if (usage->block_read_bytes >= 0) {
-		ad->Assign(ATTR_BLOCK_READ_KBYTES, usage->block_read_bytes/1024);
-	}
-	if (usage->block_write_bytes >= 0) {
-		ad->Assign(ATTR_BLOCK_WRITE_KBYTES, usage->block_write_bytes/1024);
-	}
+    // these two are maintained as floating point to avoid unbounded error accumulation
+    // they will be cast to integer over in the shadow, when it can be done safely
+	if (usage->block_read_bytes >= 0) 
+        m_statistics.BlockReadKbytes = double(usage->block_read_bytes)/1024;
+	if (usage->block_write_bytes >= 0) 
+        m_statistics.BlockWriteKbytes = double(usage->block_write_bytes)/1024;
+
+	if (usage->block_reads >= 0)
+        m_statistics.BlockReads = usage->block_reads;
+	if (usage->block_writes >= 0)
+        m_statistics.BlockWrites = usage->block_writes;
 
 		// Update our knowledge of how many processes the job has
 	num_pids = usage->num_procs;
+
+        // publish standardized "generic_stats" statistics
+    m_statistics.Publish(*ad);
 
 		// Now, call our parent class's version
 	return OsProc::PublishUpdateAd( ad );

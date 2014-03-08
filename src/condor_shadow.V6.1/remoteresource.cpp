@@ -1028,6 +1028,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 {
 	int int_value;
 	int64_t int64_value;
+    double double_value;
 	MyString string_value;
 
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
@@ -1083,13 +1084,29 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
-	if( update_ad->LookupInteger(ATTR_BLOCK_READ_KBYTES, int_value) ) {
-		jobAd->Assign(ATTR_BLOCK_READ_KBYTES, int_value);
-	}
+    // these are maintained as floating point for preventing unbounded error accumulation
+    // but here we can safely drop them to integers for public consumption
+    if (update_ad->LookupFloat(ATTR_BLOCK_READ_KBYTES, double_value))
+        jobAd->Assign(ATTR_BLOCK_READ_KBYTES, int64_t(double_value));
+    if (update_ad->LookupFloat(ATTR_BLOCK_WRITE_KBYTES, double_value))
+        jobAd->Assign(ATTR_BLOCK_WRITE_KBYTES, int64_t(double_value));
+    if (update_ad->LookupFloat("Recent" ATTR_BLOCK_READ_KBYTES, double_value))
+        jobAd->Assign("Recent" ATTR_BLOCK_READ_KBYTES, int64_t(double_value));
+    if (update_ad->LookupFloat("Recent" ATTR_BLOCK_WRITE_KBYTES, double_value))
+        jobAd->Assign("Recent" ATTR_BLOCK_WRITE_KBYTES, int64_t(double_value));
 
-	if( update_ad->LookupInteger(ATTR_BLOCK_WRITE_KBYTES, int_value) ) {
-		jobAd->Assign(ATTR_BLOCK_WRITE_KBYTES, int_value);
-	}
+    jobAd->CopyAttribute(ATTR_BLOCK_READS, update_ad);
+    jobAd->CopyAttribute(ATTR_BLOCK_WRITES, update_ad);
+    jobAd->CopyAttribute("Recent" ATTR_BLOCK_READS, update_ad);
+    jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITES, update_ad);
+
+    // these are headed for job ads in the scheduler, so rename them
+    // to prevent these from colliding with similar attributes from schedd statistics
+    jobAd->CopyAttribute("StatsLastUpdateTimeStarter", "StatsLastUpdateTime", update_ad);
+    jobAd->CopyAttribute("StatsLifetimeStarter", "StatsLifetime", update_ad);
+    jobAd->CopyAttribute("RecentStatsLifetimeStarter", "RecentStatsLifetime", update_ad);
+    jobAd->CopyAttribute("RecentWindowMaxStarter", "RecentWindowMax", update_ad);
+    jobAd->CopyAttribute("RecentStatsTickTimeStarter", "RecentStatsTickTime", update_ad);
 
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		if( int_value > disk_usage ) {
