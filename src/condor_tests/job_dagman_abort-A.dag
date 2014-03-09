@@ -1,4 +1,5 @@
 NODE_STATUS_FILE job_dagman_abort-A.status 600
+#TEMPTEMP -- ah, we should make sure abort removes a running node... 
 
 Job A job_dagman_abort-A-node-succeed.cmd
 Vars A nodename = "$(JOB)"
@@ -11,5 +12,6 @@ Vars D nodename = "$(JOB)"
 
 Abort-dag-on C 5 return 0
 
-PARENT A CHILD B C
-PARENT B C CHILD D
+PARENT A CHILD B
+PARENT B CHILD C
+PARENT C CHILD D

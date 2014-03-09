@@ -1,8 +1,11 @@
 //TEMPTEMP -- make sure jobstate.log doesn't have similar problem... probably doesn't, but check...
-//TEMPTEMP -- crap -- final-I doesn't update node status file correctly...
 //TEMPTEMP -- make sure abort (w/ and w/o final node) properly updates node status file!  abort test has cycle for final status!
-//TEMPTEMP -- make sure halt (w/ and w/o final node) properly updates node status file! -- halt test reports cycle for final dag status
 //TEMPTEMP -- abort-A status file says STATUS_ERROR (cycle) for the dag status,  but dagman.out says success!
+//TEMPTEMP -- if you have an abort value *and* a final node, which one determines the final dag status??
+//TEMPTEMP -- where does final node set DAG status? (final node in final-D overrides status) -- ah -- _dagStatus actually isn't set according to the final node -- if DoneSuccess is true we consider the dag successful
+//TEMPTEMP -- DoneCycle returns true for both the abort-A and halt-A tests...
+//TEMPTEMP -- in the abort-A test, the failed node has a status of done...
+//TEMPTEMP -- add a check of node status file for a removed dag
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -199,6 +202,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_lastEventTime = 0;
 
 	_dagIsHalted = false;
+	_dagIsAborted = false;
 	_dagFiles.rewind();
 	_haltFile = HaltFileName( _dagFiles.next() );
 	_dagStatus = DAG_STATUS_OK;
@@ -610,11 +614,15 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 			case ULOG_JOB_TERMINATED:
 					// Make sure we don't count finished jobs as idle.
 				ProcessNotIdleEvent(job);
+debug_printf( DEBUG_QUIET, "DIAG 5010 _dagStatus: %d\n", _dagStatus );//TEMPTEMP
 				ProcessTerminatedEvent(event, job, recovery);
+debug_printf( DEBUG_QUIET, "DIAG 5011 _dagStatus: %d\n", _dagStatus );//TEMPTEMP
 				break;
 
 			case ULOG_POST_SCRIPT_TERMINATED:
+debug_printf( DEBUG_QUIET, "DIAG 5110 _dagStatus: %d\n", _dagStatus );//TEMPTEMP
 				ProcessPostTermEvent(event, job, recovery);
+debug_printf( DEBUG_QUIET, "DIAG 5111 _dagStatus: %d\n", _dagStatus );//TEMPTEMP
 				break;
 
 			case ULOG_SUBMIT:
@@ -811,6 +819,10 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 							termEvent->subproc );
 		}
 
+		//TEMPTEMP -- make sure tests work..
+		ProcessJobProcEnd( job, recovery, failed );
+
+//TEMPTEMP -- should ProcessJobProcEnd() come before this??
 		if( job->_scriptPost == NULL ) {
 			bool abort = CheckForDagAbort(job, "job");
 			// if dag abort happened, we never return here!
@@ -818,8 +830,6 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 				return;
 			}
 		}
-
-		ProcessJobProcEnd( job, recovery, failed );
 
 		PrintReadyQ( DEBUG_DEBUG_2 );
 
@@ -1927,9 +1937,11 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 
 //---------------------------------------------------------------------------
 //TEMPTEMP -- make sure this works right in the case of halting w/o a final node!!
+//TEMPTEMP -- also in the case of aborting, especially with zero exit code...
 bool
 Dag::FinishedRunning( bool includeFinalNode ) const
 {
+//TEMPTEMP -- special case for aborted also???
 	//TEMPTEMP -- add special case for halted here?
 	if ( includeFinalNode && _final_job && !_finalNodeRun ) {
 			// Make sure we don't incorrectly return true if we get called
@@ -1944,8 +1956,7 @@ Dag::FinishedRunning( bool includeFinalNode ) const
 //TEMPTEMP -- if we're halted, should we look only at running scripts?, at least for non-final nodes?  Do we have a way to know the actual count of *running* scripts?
 #if 1 //TEMPTEMP?
 	//TEMPTEMP -- make IsHalted() const
-	//TEMPTEMP if ( IsHalted() ) {
-	if ( _dagIsHalted ) {
+	if ( IsHalted() ) {
 		return NumJobsSubmitted() == 0 && NumScriptsRunning() == 0;
 		//TEMPTEMP -- need to check for actual running scripts!!!!  (Hmm -- race condition w/ final node??)
 	}
@@ -1966,14 +1977,21 @@ Dag::FinishedRunning( bool includeFinalNode ) const
 }
 
 //---------------------------------------------------------------------------
+//TEMPTEMP -- for abort-final-A, this returns true while we're still running!!!
 bool
 Dag::DoneSuccess( bool includeFinalNode ) const
 {
+//TEMPTEMP -- abort value can also override "normal" status...
 	if ( NumNodesDone( includeFinalNode ) == NumNodes( includeFinalNode ) ) {
 		return true;
 	} else if ( includeFinalNode && _final_job &&
 				_final_job->GetStatus() == Job::STATUS_DONE ) {
 			// Final node can override the overall DAG status.
+		return true;
+	//TEMPTEMP? } else if ( _dagIsAborted && _dagStatus == DAG_STATUS_OK ) {
+	} else if ( _dagIsAborted && _dagStatus == DAG_STATUS_OK && FinishedRunning( includeFinalNode ) ) {//TEMPTEMP?
+			// Abort-dag-on can override the overall DAG status.
+			// TEMPTEMP -- make sure this works!!
 		return true;
 	}
 
@@ -1990,6 +2008,10 @@ Dag::DoneFailed( bool includeFinalNode ) const
 	} else if ( includeFinalNode && _final_job &&
 				_final_job->GetStatus() == Job::STATUS_DONE ) {
 			// Success of final node overrides failure of any other node.
+		return false;
+	} else if ( _dagIsAborted && _dagStatus == DAG_STATUS_OK ) {
+			// Abort-dag-on can override the overall DAG status.
+			// TEMPTEMP -- make sure this works!!
 		return false;
 	}
 
@@ -2640,6 +2662,7 @@ Dag::CheckForDagAbort(Job *job, const char *type)
 				job->retval == job->abort_dag_val ) {
 		debug_printf( DEBUG_QUIET, "Aborting DAG because we got "
 				"the ABORT exit value from a %s\n", type);
+		_dagIsAborted = true;
 		if ( job->have_abort_dag_return_val ) {
 			main_shutdown_rescue( job->abort_dag_return_val,
 						job->abort_dag_return_val != 0 ? DAG_STATUS_ABORT :
@@ -2647,6 +2670,7 @@ Dag::CheckForDagAbort(Job *job, const char *type)
 		} else {
 			main_shutdown_rescue( job->retval, DAG_STATUS_ABORT );
 		}
+debug_printf( DEBUG_QUIET, "DIAG _dagStatus: %d\n", _dagStatus );//TEMPTEMP
 		return true;
 	}
 
@@ -2823,6 +2847,11 @@ void
 Dag::DumpNodeStatus( bool held, bool removed )
 {
 	debug_printf( DEBUG_QUIET, "Dag::DumpNodeStatus( %d, %d )\n", held, removed );//TEMPTEMP
+debug_printf( DEBUG_QUIET, "DIAG 5210 _dagStatus: %d\n", _dagStatus );//TEMPTEMP
+debug_printf( DEBUG_QUIET, "DIAG FinishedRunning(true): %d\n", FinishedRunning(true) );//TEMPTEMP
+debug_printf( DEBUG_QUIET, "DIAG DoneSuccess(true): %d\n", DoneSuccess(true) );//TEMPTEMP
+debug_printf( DEBUG_QUIET, "DIAG DoneFailed(true): %d\n", DoneFailed(true) );//TEMPTEMP
+debug_printf( DEBUG_QUIET, "DIAG DoneCycle(true): %d\n", DoneCycle(true) );//TEMPTEMP
 		//
 		// Decide whether to update the file.
 		//
@@ -2937,13 +2966,13 @@ debug_printf( DEBUG_QUIET, "FinishedRunning(): %d\n", FinishedRunning( true ) );
 		//
 		// Print overall DAG status.
 		//
-debug_printf( DEBUG_QUIET, "DIAG _dagStatus: %d\n", _dagStatus );//TEMPTEMP
 	Job::status_t dagStatus = Job::STATUS_SUBMITTED;
 	const char *statusNote = "";
 #if 0 //TEMPTEMP
 //TEMPTEMP -- base this partly on _dagStatus...
 #else //TEMPTEMP
 //TEMPTEMP -- crap -- for abort w/ value of 0, we get STATUS_ERROR here!
+//TEMPTEMP -- test when we really have a cycle...
 	if ( DoneSuccess( true ) ) {
 		debug_printf( DEBUG_QUIET, "DIAG 4010\n" );//TEMPTEMP
 		dagStatus = Job::STATUS_DONE;
@@ -2951,7 +2980,13 @@ debug_printf( DEBUG_QUIET, "DIAG _dagStatus: %d\n", _dagStatus );//TEMPTEMP
 	} else if ( DoneFailed( true ) ) {
 		debug_printf( DEBUG_QUIET, "DIAG 4020\n" );//TEMPTEMP
 		dagStatus = Job::STATUS_ERROR;
-		statusNote = "failed";
+		//TEMPTEMP -- ah, crap -- final node should be able to override "aborted" for the final status...
+		//TEMPTEMP? if ( _dagIsAborted ) {
+		if ( _dagStatus == DAG_STATUS_ABORT ) {
+			statusNote = "aborted";//TEMPTEMP?
+		} else {
+			statusNote = "failed";
+		}
 	} else if ( DoneCycle( true ) ) {
 		//TEMPTEMP -- we get here on abort w/ 0 exit status!
 		//TEMPTEMP -- test abort w/ non-0 exit status
@@ -2968,7 +3003,7 @@ debug_printf( DEBUG_QUIET, "DIAG _dagStatus: %d\n", _dagStatus );//TEMPTEMP
 		statusNote = "removed";
 	}
 #endif //TEMPTEMP
-#if 1 //TEMPTEMP
+#if 0 //TEMPTEMP
 	switch ( _dagStatus ) {
 	case DAG_STATUS_OK:
 		statusNote = "success";

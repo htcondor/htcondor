@@ -486,6 +486,7 @@ void main_shutdown_graceful() {
 }
 
 void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
+debug_printf( DEBUG_QUIET, "main_shutdown_rescue(%d, %d)\n", exitVal, dagStatus );//TEMPTEMP
 		// Avoid possible infinite recursion if you hit a fatal error
 		// while writing a rescue DAG.
 	static bool inShutdownRescue = false;

@@ -8,10 +8,12 @@ Job B job_dagman_abort-B-node-succeed.cmd
 Vars B nodename = "$(JOB)"
 Job C job_dagman_abort-B-node-fail.cmd
 Vars C nodename = "$(JOB)"
+Script Post C job_dagman_abort-B-script.pl
 Job D job_dagman_abort-B-node-fail.cmd
 Vars D nodename = "$(JOB)"
 
 Abort-dag-on C 5 return 1
 
-PARENT A CHILD B C
-PARENT B C CHILD D
+PARENT A CHILD B
+PARENT B CHILD C
+PARENT C CHILD D

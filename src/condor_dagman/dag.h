@@ -410,6 +410,7 @@ class Dag {
     		@param whether to consider the final node, if any
 			@return true iff the DAG is finished but there is a cycle
 		*/
+	//TEMPTEMP -- crap -- this will probably report a cycle if all nodes except the final node succeed!
 	inline bool DoneCycle( bool includeFinalNode) {
 				return FinishedRunning( includeFinalNode ) &&
 				!DoneSuccess( includeFinalNode ) &&
@@ -702,7 +703,7 @@ class Dag {
 		existing jobs to finish but not submitting any new ones).
 		@return true iff the DAG is halted.
 	*/
-	bool IsHalted() { return _dagIsHalted; }
+	bool IsHalted() const { return _dagIsHalted; }
 
 	enum dag_status {
 		DAG_STATUS_OK = 0,
@@ -856,7 +857,8 @@ class Dag {
 			@return True iff aborting the DAG (it really should not
 			    return in that case)
 		*/
-	static bool CheckForDagAbort(Job *job, const char *type);
+	//TEMPTEMP!!! static bool CheckForDagAbort(Job *job, const char *type);
+	bool CheckForDagAbort(Job *job, const char *type);//TEMPTEMP!!!
 
 		// takes a userlog event and returns the corresponding node
 	Job* LogEventNodeLookup( int logsource, const ULogEvent* event,
@@ -1165,6 +1167,10 @@ class Dag {
 
 		// Whether the DAG is currently halted.
 	bool _dagIsHalted;
+
+		// Whether the DAG has been aborted.
+		// TEMPTEMP -- explain why we need this in addition to _dagStatus
+	bool _dagIsAborted;
 
 		// The name of the halt file (we halt the DAG if that file exists).
 	MyString _haltFile;
