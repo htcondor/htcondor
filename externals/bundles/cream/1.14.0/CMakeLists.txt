@@ -66,7 +66,7 @@ if ( NOT PROPER )
 
 #########################################
 
-		condor_pre_external( CARES c-ares-1.3.0-p8 "lib;include" "done")
+		condor_pre_external( CARES c-ares-1.3.0-p9 "lib;include" "done")
 		ExternalProject_Add(cares
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${CARES_STAGE}/dl
@@ -104,7 +104,7 @@ if ( NOT PROPER )
 
 ######################################### cream/gss packages.
 
-		condor_pre_external( GRIDSITE gridsite-1.6.0-p8 "lib;include" "done")
+		condor_pre_external( GRIDSITE gridsite-1.6.0-p9 "lib;include" "done")
 		ExternalProject_Add(gridsite
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${GRIDSITE_STAGE}/dl
