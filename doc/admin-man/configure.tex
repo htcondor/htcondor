@@ -448,6 +448,7 @@ Reconfiguration using \Condor{reconfig} will not be enough.
   \item \verb@PRIVSEP_ENABLED@
   \item \verb@PROCD_ADDRESS@
   \item \verb@SLOT_TYPE_<N>@
+  \item \verb@OFFLINE_MACHINE_RESOURCE_<name>@
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -4694,8 +4695,7 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   that define the partitioning.
   If used, custom resources without names in the list are ignored.
 
-
-\label{param:MachineResourceResourcename}
+\label{param:MachineResourceName}
 \item[\Macro{MACHINE\_RESOURCE\_<name>}]
   An integer that specifies the quantity of or list of identifiers for
   the customized local machine resource available for an SMP machine.
@@ -4708,20 +4708,25 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   the quantity is the number of identifiers and slots will be allocated
   both a quantity of the resource and assigned specific resource identifiers.
 
-
-\label{param:OfflineMachineResourceResourcename}
+\label{param:OfflineMachineResourceName}
 \item[\Macro{OFFLINE\_MACHINE\_RESOURCE\_<name>}]
-  A list of resource identifiers for the customized local machine resource
-  that are currently offline and should not be allocated to a slot.
-  The identifiers specified here must match those specified in the corresponding
-  \Macro{MACHINE\_RESOURCE\_<name>} or \Macro{MACHINE\_RESOURCE\_INVENTORY\_<name>}
-  or they will be ignored.
-  Use this to have resources that are detected and reported to exist by HTCondor
-  but not assigned to slots. A restart of the \Condor{startd} is required
-  for changes to take effect.
+  A comma and/or space separated list of resource identifiers for any 
+  customized local machine resources that are currently offline, 
+  and therefore should not be allocated to a slot.
+  The identifiers specified here must match those specified by value of
+  configuration variables \Macro{MACHINE\_RESOURCE\_<name>} or 
+  \Macro{MACHINE\_RESOURCE\_INVENTORY\_<name>},
+  or the identifiers will be ignored.
+  The \MacroNI{<name>} identifies the type of resource,
+  as specified by the value of configuration variable
+  \MacroNI{MACHINE\_RESOURCE\_NAMES}.
+  This configuration variable is used to have resources that are detected 
+  and reported to exist by HTCondor,
+  but not assigned to slots. 
+  A restart of the \Condor{startd} is required for changes to this
+  configuration variable to take effect.
 
-
-\label{param:MachineResourceInventoryResourcename}
+\label{param:MachineResourceInventoryName}
 \item[\Macro{MACHINE\_RESOURCE\_INVENTORY\_<name>}]
   Specifies a command line that is executed upon start up of the 
   \Condor{startd} daemon.  The script is expected to output an attribute
