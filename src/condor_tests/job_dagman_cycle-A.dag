@@ -1,0 +1,9 @@
+Node_status_file job_dagman_cycle-A.status
+
+Job A job_dagman_cycle-A-node.cmd
+Job B job_dagman_cycle-A-node.cmd
+Job C job_dagman_cycle-A-node.cmd
+
+Parent A Child B
+Parent B Child C
+Parent C Child B

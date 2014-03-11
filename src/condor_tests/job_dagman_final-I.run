@@ -32,6 +32,7 @@ $outfile = "job_dagman_final-I.nodes.out";
 $scriptfile = "job_dagman_final-I.scripts.out";
 $rescuefile = "job_dagman_final-I.dag.rescue001";
 $haltfile = "job_dagman_final-I.dag.halt";
+$statusfile = "job_dagman_final-I.status";
 
 # Note: we must find these lines *in the specified order*.
 @node_output_lines = ("Job for node I_A",
@@ -58,6 +59,21 @@ $haltfile = "job_dagman_final-I.dag.halt";
 			"  FAILED_COUNT=0",
 			"  RETURN=0");
 
+@statuslines = ("JOB I_A STATUS_DONE",
+	"JOB I_B STATUS_DONE",
+	"JOB I_C1 STATUS_READY",
+	"JOB I_C2 STATUS_PRERUN",
+	"JOB I_D STATUS_DONE",
+	"Nodes total: 5",
+	"Nodes done: 3",
+	"Nodes pre: 1",
+	"Nodes queued: 0",
+	"Nodes post: 0",
+	"Nodes ready: 1",
+	"Nodes un-ready: 0",
+	"Nodes failed: 0",
+	"DAG status: STATUS_DONE      \\(success\\)");
+
 my $killedchosen = 0;
 
 # truly const variables in perl
@@ -71,6 +87,9 @@ if (-e $outfile) {
 }
 if (-e $scriptfile) {
 	runcmd("rm -f $scriptfile");
+}
+if (-e $statusfile) {
+	runcmd("rm -f $statusfile");
 }
 runcmd("rm -f job_dagman_final-I.dag.rescue*");
 
@@ -148,6 +167,37 @@ $success = sub
 			$diditpass = 0;
 			CondorTest::debug("Mismatch at line $lineindex: expected <$script_output_lines[$lineindex]>, got <$line>\n", 1);
 		}
+	}
+
+	# Check the node status file.
+	$line = "";
+	$passed = 0;
+	$canopen = open(STATUS,"<$statusfile");
+	if( ! (defined $canopen)) {
+		CondorTest::debug("Can not open statusfile<$statusfile>:$!\n",1);
+		$diditpass = 0;
+	}
+	while(<STATUS>) {
+		chomp();
+		$line = $_;
+		for ( $ind = 0; $ind <= $#statuslines; $ind++ ) {
+			$target = $statuslines[$ind];
+			if( $line =~ /$target/ ) {
+				CondorTest::debug("$name: $line\n",1);
+				# Remove the target we just found from the array.
+				splice(@statuslines, $ind, 1);
+				last;
+			}
+		}
+	}
+	close(STATUS);
+
+	if ($#statuslines >= 0) {
+		CondorTest::debug("failed missing node status lines:\n");
+		foreach $missing (@statuslines) {
+			print "  $missing\n";
+		}
+		$diditpass = 0;
 	}
 
 	if (! -e $rescuefile) {
