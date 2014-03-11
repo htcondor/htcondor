@@ -40,11 +40,9 @@
 #include "subsystem_info.h"
 #include "ipv6_hostname.h"
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
-#endif
 #endif
 
 extern "C"
@@ -101,27 +99,6 @@ main_init(int argc, char* argv[])
 		// each creating their own
 	daemonCore->Proc_Family_Init();
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
-		// Intialization of the plugin manager, i.e. loading all
-		// plugins, should be performed before the job queue log is
-		// read so plugins have a chance to learn about all jobs
-		// already in the queue
-	ClassAdLogPluginManager::Load();
-
-		// Load all ScheddPlugins. In reality this doesn't do much
-		// since initializing any plugin manager loads plugins for all
-		// plugin manager.
-	ScheddPluginManager::Load();
-
-		// Tell all ScheddPlugins to initialze themselves
-	ScheddPluginManager::EarlyInitialize();
-
-		// Tell all plugins to initialize themselves
-	ClassAdLogPluginManager::EarlyInitialize();
-#endif
-#endif
-	
 		// Initialize all the modules
 	scheduler.Init();
 	scheduler.Register();
@@ -178,14 +155,23 @@ main_init(int argc, char* argv[])
 		// Do a timeout now at startup to get the ball rolling...
 	scheduler.timeout();
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
-		// Tell all ScheddPlugins to initialze themselves
-	ScheddPluginManager::Initialize();
+	// Loading the plugins before initializing the JobQueue means that it's
+	// valid for a plugin to be unable to look up the job ad it's updating;
+	// it's preferable to force plugins that care about the existing job
+	// queue to walk it (calling their add and update functions as they go)
+	// than to force plugins that don't to ignore events (being unable to look
+	// up an updated ad) that should be errors (and used to crash the schedd).
+	// (You could argue, vice-versa, that plugins which want to use the job
+	// queue should instead ignore events that happen before Initialize(), but
+	// hardly seems sensible.)
 
-		// Tell all plugins to initialize themselves
+	ClassAdLogPluginManager::Load();
+	ScheddPluginManager::Load();
+	ScheddPluginManager::EarlyInitialize();
+	ClassAdLogPluginManager::EarlyInitialize();
+	ScheddPluginManager::Initialize();
 	ClassAdLogPluginManager::Initialize();
-#endif
 #endif
 
 	daemonCore->InstallAuditingCallback( AuditLogNewConnection );

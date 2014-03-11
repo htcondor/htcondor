@@ -58,10 +58,8 @@
 #include "condor_url.h"
 #include "classad/classadCache.h"
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "ScheddPlugin.h"
-#endif
 #endif
 
 #if defined(HAVE_GETGRNAM)
@@ -1922,10 +1920,8 @@ int DestroyProc(int cluster_id, int proc_id)
 	// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
 	WritePerJobHistoryFile(ad, false);
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
   ScheddPluginManager::Archive(ad);
-#endif
 #endif
 
   if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
@@ -2065,10 +2061,8 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 				// Apend to history file
 				AppendHistory(ad);
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
 				ScheddPluginManager::Archive(ad);
-#endif
 #endif
 
 				if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
@@ -4122,6 +4116,11 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 	return true;
 }
 
+// Rather than worry about symbol collision with libcondorutils, do the link
+// to the schedd's GetJobAd() statically here and export a different name.
+ClassAd * ScheddGetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions) {
+	return GetJobAd( cluster_id, proc_id, expStartdAd, persist_expansions );
+}
 
 ClassAd *
 GetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions)
@@ -4130,7 +4129,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions)
 	ClassAd	*ad = NULL;
 
 	IdToStr(cluster_id,proc_id,key);
-	if (JobQueue->LookupClassAd(key, ad)) {
+	if (JobQueue && JobQueue->LookupClassAd(key, ad)) {
 		if ( !expStartdAd ) {
 			// we're done, return the ad.
 			return ad;
