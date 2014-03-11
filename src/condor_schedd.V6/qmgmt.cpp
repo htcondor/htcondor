@@ -159,6 +159,19 @@ static const char *default_super_user =
 #endif
 
 //static int allow_remote_submit = FALSE;
+ClassAdLog::filter_iterator
+BeginIterator(const classad::ExprTree &requirements, int timeslice_ms)
+{
+	ClassAdLog::filter_iterator it(JobQueue ? &JobQueue->table : NULL, &requirements, timeslice_ms);
+	return it;
+}
+
+ClassAdLog::filter_iterator
+EndIterator()
+{
+	ClassAdLog::filter_iterator it(JobQueue ? &JobQueue->table : NULL, NULL, 0, true);
+	return it;
+}
 
 static inline
 void

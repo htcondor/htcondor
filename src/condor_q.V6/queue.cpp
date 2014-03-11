@@ -128,9 +128,10 @@ extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, char *[]);
 
 //static  bool process_buffer_line_old(void*, ClassAd *);
-static  bool process_job_and_render_to_dag_map(void*, ClassAd *);
-static  bool process_and_print_job(void*, ClassAd *);
-typedef bool (* buffer_line_processor)(void*, ClassAd*);
+static  void process_job_and_render_to_dag_map(void*, classad_shared_ptr<ClassAd>);
+static  void process_and_print_job(void*, classad_shared_ptr<ClassAd>);
+static  void process_and_print_job(void*, ClassAd*);
+typedef void (* buffer_line_processor)(void*, classad_shared_ptr<ClassAd>);
 
 static 	void short_header (void);
 static 	void usage (const char *, int other=0);
@@ -141,7 +142,7 @@ static 	char * bufferJobShort (ClassAd *);
 // functions to fetch job ads and print them out
 //
 static bool show_file_queue(const char* jobads, const char* userlog);
-static bool show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, bool useFastPath);
+static bool show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath);
 #ifdef HAVE_EXT_POSTGRESQL
 static bool show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_name, const char* query_password);
 #endif
@@ -598,7 +599,7 @@ int main (int argc, char **argv)
 	bool		first;
 	char		*scheddName=NULL;
 	char		scheddMachine[64];
-	bool        useFastScheddQuery = false;
+	int		useFastScheddQuery = 0;
 	char		*tmp;
 	bool        useDB; /* Is there a database to query for a schedd */
 	int         retval = 0;
@@ -672,7 +673,10 @@ int main (int argc, char **argv)
 			}
 			if (schedd.version()) {
 				CondorVersionInfo v(schedd.version());
-				useFastScheddQuery = v.built_since_version(6,9,3);
+				useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
+				if (v.built_since_version(8, 1, 4)) {
+					useFastScheddQuery = 2;
+				}
 			}
 			
 			if ( directDBquery ) {
@@ -1036,7 +1040,7 @@ int main (int argc, char **argv)
 						didn't have a quill ad by that name. */
 
 					if((result2 == Q_OK) && quillAddr &&
-					   (retval = show_schedd_queue(quillAddr, quillName, quillMachine, false))
+					   (retval = show_schedd_queue(quillAddr, quillName, quillMachine, 0))
 					   )
 					{
 						/* processed correctly, so do the next ad */
@@ -1097,7 +1101,7 @@ int main (int argc, char **argv)
 				MyString scheddVersion;
 				ad->LookupString(ATTR_VERSION, scheddVersion);
 				CondorVersionInfo v(scheddVersion.Value());
-				useFastScheddQuery = v.built_since_version(6,9,3);
+				useFastScheddQuery = v.built_since_version(6,9,3) ? (v.built_since_version(8, 1, 4) ? 2 : 1) : 0;
 				retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
 				}
 
@@ -3531,13 +3535,11 @@ print_jobs_analysis(ClassAdList & jobs, const char * source_label, Daemon * psch
 
 // callback function for processing a job from the Q query that just adds the 
 // job into a ClassAdList.
-static bool
-AddToClassAdList(void * pv, ClassAd *ad) {
+static void
+AddToClassAdList(void * pv, classad_shared_ptr<ClassAd> ad) {
 	ClassAdList * plist = (ClassAdList*)pv;
-	plist->Insert(ad);
-	// return false to indicate we took ownership of the ad 
-	// and it should NOT be deleted by the caller.
-	return false;
+	ClassAd *new_ad = static_cast<ClassAd*>(ad->Copy());
+	plist->Insert(new_ad);
 }
 
 #ifdef HAVE_EXT_POSTGRESQL
@@ -3705,19 +3707,26 @@ static const char * render_job_text(ClassAd *job, std::string & result_text)
 	return result_text.c_str();
 }
 
-static bool
+static void
+process_and_print_job(void *, classad_shared_ptr<ClassAd> job)
+{
+	count_job(job.get());
+
+	std::string result_text;
+	render_job_text(job.get(), result_text);
+	printf("%s", result_text.c_str());
+}
+
+static void
 process_and_print_job(void *, ClassAd *job)
 {
 	count_job(job);
 
 	std::string result_text;
-	if (render_job_text(job, result_text)) {
-		printf("%s", result_text.c_str());
-	}
-
-	// return true to free the job ad, since we didn't take ownership of it.
-	return true;
+	render_job_text(job, result_text);
+	printf("%s", result_text.c_str());
 }
+
 
 // insert a line of formatted output into the dag_map, so we can print out
 // sorted results.
@@ -3825,20 +3834,16 @@ insert_job_output_into_dag_map(ClassAd * job, const char * job_output)
 	return true;
 }
 
-static bool
-process_job_and_render_to_dag_map(void *,  ClassAd *job)
+static void
+process_job_and_render_to_dag_map(void *,  classad_shared_ptr<ClassAd> job)
 {
-	count_job(job);
+	count_job(job.get());
 
 	ASSERT( ! g_stream_results);
 
 	std::string result_text;
-	render_job_text(job, result_text);
-	insert_job_output_into_dag_map(job, result_text.c_str());
-
-	// process_buffer_line returns 1 so that the ad that is passed
-	// to it should be deleted.
-	return true;
+	render_job_text(job.get(), result_text);
+	insert_job_output_into_dag_map(job.get(), result_text.c_str());
 }
 
 // query SCHEDD or QUILLD daemon for jobs. and then print out the desired job info.
@@ -3848,8 +3853,12 @@ process_job_and_render_to_dag_map(void *,  ClassAd *job)
 // the old code didn't try.
 //
 static bool
-show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, bool useFastPath)
+show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath)
 {
+	bool use_v3 = param_boolean("CONDOR_Q_USE_V3_PROTOCOL", true);
+	if ((useFastPath == 2) && !use_v3) {
+		useFastPath = 1;
+	}
 	// initialize counters
 	malformed = idle = running = held = completed = suspended = 0;
 

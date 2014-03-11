@@ -28,6 +28,7 @@
 #include "util_lib_proto.h"
 #include "classad_merge.h"
 #include "condor_fsync.h"
+#include "condor_attributes.h"
 
 #if defined(HAVE_DLOPEN)
 #include "ClassAdLogPlugin.h"
@@ -53,6 +54,99 @@ ptr = NULL;
 #define CLASSAD_LOG_HASHTABLE_SIZE 20000
 
 const char *EMPTY_CLASSAD_TYPE_NAME = "(empty)";
+
+ClassAdLogFilterIterator::ClassAdLogFilterIterator(ClassAdHashTable *table, const classad::ExprTree *requirements, int timeslice_ms, bool invalid)
+	: m_table(table),
+	  m_cur(table->begin()),
+	  m_cur_ad(NULL),
+	  m_requirements(requirements),
+	  m_timeslice_ms(timeslice_ms),
+	  m_done(invalid)
+	{}
+
+ClassAdLogFilterIterator::ClassAdLogFilterIterator(const ClassAdLogFilterIterator &other)
+	: m_table(other.m_table),
+	  m_cur(other.m_cur),
+	  m_cur_ad(other.m_cur_ad),
+	  m_requirements(other.m_requirements),
+	  m_timeslice_ms(other.m_timeslice_ms),
+	  m_done(other.m_done)
+{
+}
+
+ClassAd* ClassAdLogFilterIterator::operator *() const {
+	if (!m_cur_ad || m_done) return NULL;
+
+	return m_cur_ad;
+}
+
+ClassAdLogFilterIterator
+ClassAdLogFilterIterator::operator++(int)
+{
+	ClassAdLogFilterIterator cur = *this;
+	if (m_done) {
+		return cur;
+	}
+
+	HashIterator<HashKey, ClassAd*> end = m_table->end();
+	bool boolVal;
+	int intVal;
+	int miss_count = 0;
+	bool found_ad = false;
+	while (!(m_cur == end))
+	{
+		miss_count++;
+		if (miss_count == m_timeslice_ms)
+		{
+			m_cur_ad = NULL;
+			break;
+		}
+		ClassAd *tmp_ad = (*m_cur++).second;
+		if (!tmp_ad) continue;
+		if (m_requirements) {
+			classad::ExprTree &requirements = *const_cast<classad::ExprTree*>(m_requirements);
+			const classad::ClassAd *old_scope = requirements.GetParentScope();
+			requirements.SetParentScope( tmp_ad );
+				classad::Value result;
+			int retval = requirements.Evaluate(result);
+			requirements.SetParentScope(old_scope);
+			if (!retval) {
+				dprintf(D_FULLDEBUG, "Unable to evaluate ad.\n");
+				continue;
+			}
+
+			if (!(result.IsBooleanValue(boolVal) && boolVal) &&
+					!(result.IsIntegerValue(intVal) && intVal)) {
+				continue;
+			}
+		}
+		int tmp_int;
+		if (!tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, tmp_int) || !tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, tmp_int)) {
+			continue;
+		}
+                int proc, cluster;
+                tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
+                tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
+                //dprintf(D_FULLDEBUG, "Returning job %d.%d\n", cluster,proc);
+		m_cur_ad = tmp_ad;
+		found_ad = true;
+		break;
+	}
+	if ((m_cur == end) && (!found_ad)) {
+		m_done = true;
+	}
+	return cur;
+}
+
+bool
+ClassAdLogFilterIterator::operator==(const ClassAdLogFilterIterator &other)
+{
+	if (m_table != other.m_table) return false;
+	if (m_done && other.m_done) return true;
+	if (m_done != other.m_done) return false;
+	if (!(m_cur == other.m_cur) ) return false;
+	return true;
+}
 
 ClassAdLog::ClassAdLog() : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 {
