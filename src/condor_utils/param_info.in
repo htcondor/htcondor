@@ -7397,7 +7397,7 @@ review=?
 
 
 [PANDAD]
-default=$(SBIN)/condor_pandad
+default=$(LIBEXEC)/condor_pandad
 win32_default=
 type=path
 customization=seldom
