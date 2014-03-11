@@ -33,7 +33,7 @@ pthread_mutex_t bigGlobalMutex = PTHREAD_MUTEX_INITIALIZER;
 void configureSignals();
 static void * workerFunction( void * ptr );
 
-// Yes, globals are evail, and yes, I could wrap these and the queue in
+// Yes, globals are evil, and yes, I could wrap these and the queue in
 // a struct and pass that to thread instead, but why bother?
 std::string pandaURL;
 std::string vomsProxy;
@@ -68,8 +68,7 @@ int main( int /* argc */, char ** /* argv */ ) {
 		dprintf( D_ALWAYS, "One of PANDA_VOMS_CA_[PATH|CERT] is probably necessary, but neither is set.\n" );
 	}
 
-	// Remove the default 0 when TJ gets around to fixing this function.
-	timeout = param_integer( "PANDA_UPDATE_TIMEOUT", 0 );
+	timeout = param_integer( "PANDA_UPDATE_TIMEOUT" );
 
 	// curl_global_init() is not thread-safe.
 	CURLcode crv = curl_global_init( CURL_GLOBAL_ALL );
@@ -84,7 +83,7 @@ int main( int /* argc */, char ** /* argv */ ) {
 	pthread_mutex_lock( & bigGlobalMutex );
 
 	// A locking queue.
-	Queue< std::string > queue( & bigGlobalMutex );
+	Queue< std::string > queue( 1024, & bigGlobalMutex );
 
 	// We only need one worker thread.
 	pthread_t workerThread;

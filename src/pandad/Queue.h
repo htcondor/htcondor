@@ -4,19 +4,21 @@
 #include <pthread.h>
 #include <queue>
 
-// This class assumes that its storage never runs out of space; thus,
-// writers will never block (until the system runs out of memory).  The
-// writers, however, are therefore responsible for unlocking mutex so that
-// the reader(s) may proceed.
 //
-// Likewise, readers must acquire the mutex before calling dequeue().
+// This class never blocks on a write.  Instead, if the buffer would overflow,
+// the offending write is ignored (thrown away).
+//
+// The writer using this class must release the supplied mutex for the
+// reader(s) to make progress.  Likewise, the reader(s) must acquire the mutex
+// before calling dequeue().
 //
 // That is, this class mostly assumes the one-thread-at-a-time model.
+//
 
 template< class T >
 class Queue {
 	public:
-		Queue( pthread_mutex_t * _mutex ) : mutex( _mutex ) {
+		Queue( unsigned _capacity, pthread_mutex_t * _mutex ) : capacity( _capacity ), mutex( _mutex ) {
 			pthread_cond_init( & nonempty, NULL );
 			pthread_cond_init( & drained, NULL );
 		}
@@ -31,6 +33,7 @@ class Queue {
 		}
 
 	protected:
+		unsigned			capacity;
 		pthread_cond_t		drained;
 		pthread_cond_t		nonempty;
 		pthread_mutex_t *	mutex;
@@ -39,8 +42,10 @@ class Queue {
 
 template< class T >
 void Queue< T >::enqueue( const T & item ) {
-	storage.push( item );
-	pthread_cond_broadcast( & nonempty );
+	if( storage.size() < capacity ) {
+		storage.push( item );
+		pthread_cond_broadcast( & nonempty );
+	}
 } // end enqueue()
 
 template< class T >

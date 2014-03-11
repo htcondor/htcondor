@@ -133,7 +133,7 @@ static PandadClassAdLogPlugin instance;
 
  PandadClassAdLogPlugin::PandadClassAdLogPlugin() : ClassAdLogPlugin() {
 	std::string binary;
-	param( binary, "PANDA" );
+	param( binary, "PANDAD" );
 
 	const char * arguments[] = { binary.c_str(), NULL };
 	pandad = my_popenv( arguments, "w", 0 );
@@ -293,7 +293,7 @@ void PandadClassAdLogPlugin::updatePandaJob( const char * condorJobID, const cha
 	if( value == NULL ) { return; }
 	dprintf( D_FULLDEBUG, "updatePandaJob( %s, %s, %s, %s )...\n", condorJobID, globalJobID, attribute, value );
 	if( shouldIgnoreAttribute( attribute ) ) { return; }
-	dprintf( D_FULLDEBUG, "... will not ignore attribute\n", condorJobID, globalJobID, attribute, value );
+	dprintf( D_FULLDEBUG, "... will not ignore attribute\n" );
 	fprintf( pandad, "UPDATE %s %s %s\n", unquote( globalJobID ), CondorToPandaMap::map( attribute ), value );
 	fflush( pandad );
 }
