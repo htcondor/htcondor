@@ -373,7 +373,8 @@ review=?
 tags=vm-gahp,vmware_type
 
 [VMWARE_SCRIPT]
-default=
+default=$(SBIN)/condor_vm_vmware
+# there is no win32 default for this item, we DON'T want it to have a .exe extension
 type=string
 reconfig=true
 customization=seldom
@@ -407,8 +408,7 @@ review=?
 tags=vm-gahp,vmgahp_main
 
 [MAX_VM_GAHP_LOG]
-default=1000000
-type=int
+default=$(MAX_DEFAULT_LOG)
 review=?
 tags=vm-gahp,vmgahp_main
 
@@ -5643,8 +5643,7 @@ review=?
 tags=rooster
 
 [MAX_PROCD_LOG]
-default=10000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 reconfig=true
 customization=seldom
 friendly_name=Max Procd Log
@@ -6498,8 +6497,7 @@ review=?
 tags=gangliad
 
 [MAX_GANGLIAD_LOG]
-default=10000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 reconfig=true
 customization=seldom
 friendly_name=Max Gangliad Log
@@ -6795,134 +6793,121 @@ type=string
 review=?
 
 # defaults for debug logs
+[MAX_DEFAULT_LOG]
+default=10 Mb
+friendly_name=Default max size of a daemon log
+
 [COLLECTOR_DEBUG]
 default=
 review=?
 [MAX_COLLECTOR_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [KBDD_DEBUG]
 default=
 review=?
 [MAX_KBDD_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [NEGOTIATOR_DEBUG]
 default=D_MATCH
 review=?
 [MAX_NEGOTIATOR_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [MAX_NEGOTIATOR_MATCH_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [SCHEDD_DEBUG]
 default=D_PID
 review=?
 [MAX_SCHEDD_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [SHADOW_DEBUG]
 default=
 review=?
 [MAX_SHADOW_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [STARTD_DEBUG]
 default=
 review=?
 [MAX_STARTD_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [MAX_STARTER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [MASTER_DEBUG]
 default=
 review=?
 [MAX_MASTER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [JOB_ROUTER_DEBUG]
 default=
 review=?
 [MAX_JOB_ROUTER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [ROOSTER_DEBUG]
 default=
 review=?
 [MAX_ROOSTER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [SHARED_PORT_DEBUG]
 default=
 review=?
 [MAX_SHARED_PORT_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [HDFS_DEBUG]
 default=
 review=?
 [MAX_HDFS_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [HAD_DEBUG]
 default=
 review=?
 [MAX_HAD_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [REPLICATION_DEBUG]
 default=
 review=?
 [MAX_REPLICATION_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [TRANSFERER_DEBUG]
 default=
 review=?
 [MAX_TRANSFERER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [GRIDMANAGER_DEBUG]
 default=
 review=?
 [MAX_GRIDMANAGER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [GRIDMANAGER_LOG]
@@ -6936,8 +6921,7 @@ type=string
 review=?
 
 [MAX_C_GAHP_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [EC2_GAHP_LOG]
@@ -7006,8 +6990,7 @@ review=?
 default=D_FULLDEBUG
 review=?
 [MAX_CREDD_LOG]
-default=4000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 # benchmarking knobs
@@ -7202,7 +7185,6 @@ default=(RemoteUserPrio * 1000000) - TARGET.ImageSize
 # obsolete config file knobs to discard on upgrade
 [$UPGRADE.DISCARD]
 friendly_name=Config file knobs that should be ignored on upgrade
-# can't put leading tabs in this table without breaking condor_config_val
 default : @end
 	LeaseManager
 	LeaseManger_ADDRESS_FILE
@@ -7230,7 +7212,6 @@ default : @end
 [$UPGRADE.DISCARDX]
 friendly_name=Platform specific file knobs that should be ignored on upgrade
 default=
-# can't put leading tabs in this table without breaking condor_config_val
 win32_default : @end
 	GT2_GAHP
 	UNICORE_GAHP
@@ -7243,14 +7224,45 @@ win32_default : @end
 	CKPT_PROBE
 @end
 
+# use this table to detect knobs that have not been changed by the user when the default knob value HAS been changed since 8.0
 [$UPGRADE.DISCARDIF]
-friendly_name=Platform specific knobs that should be ignored on upgrade if they match the given value
+friendly_name=Knobs that should be ignored on upgrade if they match the given value
 default : @end
 	RESERVED_DISK=5
+	ALL_DEBUG=
+	MAX_COLLECTOR_LOG=1000000
+	MAX_KBDD_LOG=1000000
+	MAX_MASTER_LOG=1000000
+	MAX_NEGOTIATOR_LOG=1000000
+	MAX_NEGOTIATOR_MATCH_LOG=1000000
+	MAX_SCHEDD_LOG=1000000
+	MAX_SHADOW_LOG=1000000
+	MAX_SHARED_PORT_LOG=1000000
+	MAX_STARTD_LOG=1000000
+	MAX_STARTER_LOG=1000000
+	MAX_JOB_ROUTER_LOG=1000000
+	MAX_REPLICATION_LOG=1000000
+	MAX_ROOSTER_LOG=1000000
+	MAX_HDFS_LOG=1000000
+	MAX_HAD_LOG=1000000
+	MAX_TRANSFERER_LOG=1000000
+	MAX_GRIDMANAGER_LOG=1000000
+	MAX_C_GAHP_LOG=1000000
+	MAX_VM_GAHP_LOG=1000000
+	MAX_CREDD_LOG=4000000
+	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
+	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad, OfflineLog
+@end
+
+# This table is for platform-specific knobs that fit the rules for $UPGRADE.DISCARDIF above
+[$UPGRADE.DISCARDIFX]
+friendly_name=Platform specific knobs that should be ignored on upgrade if they match the given value
+default : @end
+	QUEUE_SUPER_USERS=root, condor
 @end
 win32_default : @end
+	QUEUE_SUPER_USERS=condor, SYSTEM
 	EC2_GAHP_LOG=/tmp/EC2GahpLog.$(USERNAME)
-	RESERVED_DISK=5
 	MAIL_FROM=
 	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware.exe
 	JAVA_CLASSPATH_SEPARATOR=:
@@ -7264,7 +7276,6 @@ win32_default : @end
 	HDFS_NAMENODE_ROLE=ACTIVE
 	HDFS_NAMENODE_DIR=/tmp/hadoop_name
 	HDFS_DATANODE_DIR=/scratch/tmp/hadoop_data
-	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
 	GLIDEIN_SERVER_URLS=http://www.cs.wisc.edu/condor/glidein/binaries
 @end
 
@@ -7336,6 +7347,14 @@ default : @end
 @end
 review=?
 
+[$POLICY.LIMIT_RUNTIMES]
+friendly_name=Limit job runtimes to 12 hours
+default : @end
+	MAX_JOB_RUNTIME=24*3600
+	PREMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
+@end
+review=?
+
 [$ROLE.Personal]
 friendly_name=Settings for Personal HTCondor
 default : @end
@@ -7401,7 +7420,6 @@ default : @end
 	#VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
 @end
 review=?
-
 
 [$USE.GPUS]
 friendly_name=Settings for to detect and use GPUs as custom resources
