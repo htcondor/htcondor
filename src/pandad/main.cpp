@@ -156,15 +156,15 @@ void constructCommand( const std::string & line ) {
 	std::string command = argv[0];
 	std::string globalJobID = argv[1];
 	if( command == "ADD" ) {
-		Command c = addCommands[ globalJobID ];
+		Command & c = addCommands[ globalJobID ];
 		c[ "globaljobid" ] = globalJobID;
 		c[ "condorid" ] = argv[2];
 	} else if( command == "UPDATE" ) {
-		Command c = updateCommands[ globalJobID ];
+		Command & c = updateCommands[ globalJobID ];
 		c[ "globaljobid" ] = globalJobID;
 		c[ argv[2] ] = argv[3];
 	} else if( command == "REMOVE" ) {
-		Command c = removeCommands[ globalJobID ];
+		Command & c = removeCommands[ globalJobID ];
 		c[ "globaljobid" ] = globalJobID;
 	} else {
 		dprintf( D_ALWAYS, "workerFunction() ignoring unknown command (%s).\n", command.c_str() );
@@ -185,9 +185,8 @@ std::string generatePostString( const CommandSet & commandSet ) {
 			postFieldString += "\"" + j->first + "\": ";
 			postFieldString += "\"" + j->second + "\", ";
 		}
-		// TO DO: Determine what, if anything, this ought to be.
-		postFieldString += "\"wmsid\": \"1001\", ";
-		postFieldString += "\"globaljobid\": \"" + globalJobID + "\"";
+		// TO DO: Determine what, if anything, 'wmsid' ought to be.
+		postFieldString += "\"wmsid\": \"1001\"";
 		postFieldString += " }, ";
 	}
 	// Remove trailing ', '.
