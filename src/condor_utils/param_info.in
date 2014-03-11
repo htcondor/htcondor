@@ -7400,12 +7400,12 @@ review=?
 default=$(SBIN)/condor_pandad
 win32_default=
 type=path
-reconfig=false
 customization=seldom
 review=tlmiller
+reconfig=false
 
 [PANDA_UPDATE_TIMEOUT]
 default=0
-type=integer
-reconfig=false
+type=int
 review=tlmiller
+reconfig=false
