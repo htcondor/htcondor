@@ -1,16 +1,3 @@
-//
-// TO DO: Rather than being entirely interrupt-driven, we should instead buffer
-// up the commands and send one of each (ADD, UPDATE, REMOVE; in that order)
-// once a second.  Be sure to do all command construction before the first
-// mutex release, so that we don't get confused about how far into the queue
-// we are.
-//
-// TO DO: Pick some large but not excessive maximum size for the queue; throw
-// away updates that don't fit.
-//
-// TO DO: Consider reimplementing Queue with a ring buffer.
-//
-
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
@@ -27,6 +14,7 @@
 #include <curl/curl.h>
 
 #include <vector>
+#include <map>
 
 pthread_mutex_t bigGlobalMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -151,6 +139,102 @@ void configureSignals() { }
 
 #endif
 
+typedef std::map< std::string, std::string > Command;
+typedef std::map< std::string, Command > CommandSet;
+CommandSet addCommands, updateCommands, removeCommands;
+
+void constructCommand( const std::string & line ) {
+	size_t nextSpace;
+	size_t currentSpace = -1;
+	std::vector< std::string > argv;
+	do {
+		nextSpace = line.find( ' ', currentSpace + 1 );
+		argv.push_back( line.substr( currentSpace + 1, nextSpace - (currentSpace + 1) ) );
+		currentSpace = nextSpace;
+	} while( currentSpace != std::string::npos );
+
+	std::string command = argv[0];
+	std::string globalJobID = argv[1];
+	if( command == "ADD" ) {
+		Command c = addCommands[ globalJobID ];
+		c[ "globaljobid" ] = globalJobID;
+		c[ "condorid" ] = argv[2];
+	} else if( command == "UPDATE" ) {
+		Command c = updateCommands[ globalJobID ];
+		c[ "globaljobid" ] = globalJobID;
+		c[ argv[2] ] = argv[3];
+	} else if( command == "REMOVE" ) {
+		Command c = removeCommands[ globalJobID ];
+		c[ "globaljobid" ] = globalJobID;
+	} else {
+		dprintf( D_ALWAYS, "workerFunction() ignoring unknown command (%s).\n", command.c_str() );
+	}
+} // end constructCommand()
+
+std::string generatePostString( const CommandSet & commandSet ) {
+	std::string postFieldString = "[ ";
+	CommandSet::const_iterator i = commandSet.begin();
+	for( ; i != commandSet.end(); ++i ) {
+		const std::string & globalJobID = i->first;
+		const Command & c = i->second;
+
+		postFieldString += "{ ";
+
+		Command::const_iterator j = c.begin();
+		for( ; j != c.end(); ++j ) {
+			postFieldString += "\"" + j->first + "\": ";
+			postFieldString += "\"" + j->second + "\", ";
+		}
+		// TO DO: Determine what, if anything, this ought to be.
+		postFieldString += "\"wmsid\": \"1001\", ";
+		postFieldString += "\"globaljobid\": \"" + globalJobID + "\"";
+		postFieldString += " }, ";
+	}
+	// Remove trailing ', '.
+	postFieldString.erase( postFieldString.length() - 2 );
+	postFieldString += " ]";
+
+	return postFieldString;
+} // end generatePostString()
+
+#define SET_REQUIRED_CURL_OPTION( A, B, C ) { \
+	CURLcode rv##B = curl_easy_setopt( A, B, C ); \
+	if( rv##B != CURLE_OK ) { \
+		dprintf( D_ALWAYS, "curl_easy_setopt( %s ) failed (%d): '%s', aborting.\n", \
+			#B, rv##B, curl_easy_strerror( rv##B ) ); \
+		exit( 1 ); \
+	} \
+}
+
+bool sendCommands( CURL * curl, const std::string & url, const CommandSet & commandSet, char * curlErrorBuffer, unsigned long & responseCode ) {
+	if( commandSet.size() == 0 ) { return false; }
+	std::string postString = generatePostString( commandSet );
+
+	dprintf( D_FULLDEBUG, "Sending commands to URL '%s'.\n", url.c_str() );
+	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_URL, url.c_str() );
+	dprintf( D_FULLDEBUG, "Sending POST '%s'.\n", postString.c_str() );
+	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_POSTFIELDS, postString.c_str() );
+
+	pthread_mutex_unlock( & bigGlobalMutex );
+	CURLcode rv = curl_easy_perform( curl );
+	pthread_mutex_lock( & bigGlobalMutex );
+
+	if( rv != CURLE_OK ) {
+		dprintf( D_ALWAYS, "Ignoring curl_easy_perform() error (%d): '%s'\n", rv, curl_easy_strerror( rv ) );
+		dprintf( D_ALWAYS, "curlErrorBuffer = '%s'\n", curlErrorBuffer );
+		return false;
+	}
+
+	rv = curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, & responseCode );
+	if( rv != CURLE_OK ) {
+		dprintf( D_ALWAYS, "Ignoring curl_easy_getinfo() error (%d): '%s'\n", rv, curl_easy_strerror( rv ) );
+		dprintf( D_ALWAYS, "curlErrorBuffer = '%s'\n", curlErrorBuffer );
+		return false;
+	}
+
+	return true;
+} // end sendCommands()
+
 // Required for debugging.  Stolen from ec2_gahp/amazonCommands.cpp.
 size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str ) {
 	if( size == 0 || nmemb == 0 ) { return 0; }
@@ -162,17 +246,9 @@ size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str )
 	return (size * nmemb);
 }
 
-#define SET_REQUIRED_CURL_OPTION( A, B, C ) { \
-	CURLcode rv##B = curl_easy_setopt( A, B, C ); \
-	if( rv##B != CURLE_OK ) { \
-		dprintf( D_ALWAYS, "curl_easy_setopt( %s ) failed (%d): '%s', aborting.\n", \
-			#B, rv##B, curl_easy_strerror( rv##B ) ); \
-		exit( 1 ); \
-	} \
-}
-
 static void * workerFunction( void * ptr ) {
 	Queue< std::string > * queue = (Queue< std::string > *)ptr;
+	pthread_mutex_lock( & bigGlobalMutex );
 
 	// Do the command-independent curl set-up.
 	CURL * curl = curl_easy_init();
@@ -206,85 +282,48 @@ static void * workerFunction( void * ptr ) {
 		SET_REQUIRED_CURL_OPTION( curl, CURLOPT_CAINFO, vomsCACert.c_str() );
 	}
 
-
 	// The trailing slash is required.
 	std::string API = pandaURL + "/api-auth/htcondorapi";
 	std::string addJob = API + "/addjob/";
 	std::string updateJob = API + "/updatejob/";
 	std::string removeJob = API + "/removejob/";
 
+
 	for( ; ; ) {
-		std::string line = queue->dequeue();
-		dprintf( D_FULLDEBUG, "workerFunction() handling '%s'\n", line.c_str() );
-
-		std::string url;
-		std::vector< std::pair< std::string, std::string > > postFields;
-
-		size_t nextSpace;
-		size_t currentSpace = -1;
-		std::vector< std::string > argv;
+		//
+		// Batch up all available commands.
+		//
 		do {
-			nextSpace = line.find( ' ', currentSpace + 1 );
-			argv.push_back( line.substr( currentSpace + 1, nextSpace - (currentSpace + 1) ) );
-			currentSpace = nextSpace;
-		} while( currentSpace != std::string::npos );
+			constructCommand( queue->dequeue() );
+		} while( ! queue->empty() );
 
-		std::string command = argv[0];
-		if( command == "ADD" ) {
-			url = addJob;
-			postFields.push_back( std::make_pair( "globaljobid", argv[1] ) );
-			postFields.push_back( std::make_pair( "condorid", argv[2] ) );
-		} else if( command == "UPDATE" ) {
-			url = updateJob;
-			postFields.push_back( std::make_pair( "globaljobid", argv[1] ) );
-			postFields.push_back( std::make_pair( argv[2], argv[3] ) );
-		} else if( command == "REMOVE" ) {
-			url = removeJob;
-			postFields.push_back( std::make_pair( "globaljobid", argv[1] ) );
-		} else {
-			dprintf( D_ALWAYS, "workerFunction() ignoring unknown command (%s).\n", command.c_str() );
-			continue;
-		}
-
-		// TO DO: Determine what, if anything, this ought to be; or change the API.
-		postFields.push_back( std::make_pair( "wmsid", "1001" ) );
-
-		std::string postFieldString = "[ { ";
-		postFieldString += "\"" + postFields[0].first + "\": ";
-		postFieldString += "\"" + postFields[0].second + "\"";
-		for( unsigned i = 1; i < postFields.size(); ++i ) {
-			postFieldString += ", \"" + postFields[i].first + "\": ";
-			postFieldString += "\"" + postFields[i].second + "\"";
-		}
-		postFieldString += " } ]";
-		dprintf( D_FULLDEBUG, "workerFunction() POSTing '%s'\n", postFieldString.c_str() );
-		SET_REQUIRED_CURL_OPTION( curl, CURLOPT_POSTFIELDS, postFieldString.c_str() );
-
-		dprintf( D_FULLDEBUG, "workerFunction() using URL '%s'\n", url.c_str() );
-		SET_REQUIRED_CURL_OPTION( curl, CURLOPT_URL, url.c_str() );
-
-		CURLcode rv = curl_easy_perform( curl );
-		if( rv != CURLE_OK ) {
-			dprintf( D_ALWAYS, "workerFunction() ignoring curl_easy_perform() error (%d): '%s'\n", rv, curl_easy_strerror( rv ) );
-			dprintf( D_ALWAYS, "workerFunction() curlErrorBuffer = '%s'\n", curlErrorBuffer );
-			continue;
-		}
-
+		// Send all of the add commands.
 		unsigned long responseCode = 0;
-		rv = curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, & responseCode );
-		if( rv != CURLE_OK ) {
-			// To be more user-friendly, we could set and report CURLOPT_ERRORBUFFER.
-			dprintf( D_ALWAYS, "workerFunction() ignoring curl_easy_getinfo() error (%d): '%s'\n", rv, curl_easy_strerror( rv ) );
-			continue;
+		bool rc = sendCommands( curl, addJob, addCommands, curlErrorBuffer, responseCode );
+		if( rc && responseCode != 201 ) {
+			dprintf( D_ALWAYS, "addJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
 		}
 
-		if( command == "ADD" && responseCode != 201 ) {
-			dprintf( D_ALWAYS, "workerFunction() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
-		} else if( command == "UPDATE" && responseCode != 202 ) {
-			dprintf( D_ALWAYS, "workerFunction() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
-		} else if ( command == "REMOVE" && responseCode != 202 ) {
-			dprintf( D_ALWAYS, "workerFunction() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
+		// Send all the update commands.
+		rc = sendCommands( curl, updateJob, updateCommands, curlErrorBuffer, responseCode );
+		if( rc && responseCode != 202 ) {
+			dprintf( D_ALWAYS, "updateJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
 		}
+
+		// Send all the remove commands.
+		rc = sendCommands( curl, removeJob, removeCommands, curlErrorBuffer, responseCode );
+		if( rc && responseCode != 202 ) {
+			dprintf( D_ALWAYS, "removeJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
+		}
+
+		// Clear the batched commands.
+		addCommands.clear();
+		updateCommands.clear();
+		removeCommands.clear();
+
+		pthread_mutex_unlock( & bigGlobalMutex );
+		sleep( 1 );
+		pthread_mutex_lock( & bigGlobalMutex );
 	}
 
 

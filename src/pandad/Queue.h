@@ -1,3 +1,7 @@
+//
+// Consider reimplementing with a ring buffer.
+//
+
 #ifndef QUEUE_H
 #define QUEUE_H
 
@@ -23,6 +27,7 @@ class Queue {
 			pthread_cond_init( & drained, NULL );
 		}
 
+		bool empty() { return storage.empty(); }
 		void enqueue( const T & item );
 		T dequeue();
 
