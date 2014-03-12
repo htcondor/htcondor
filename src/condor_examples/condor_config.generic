@@ -670,54 +670,49 @@ MachineBusy		= ($(CPUBusy) || $(KeyboardBusy))
 
 #####################################################################
 ##  This where you choose the configuration that you would like to
-##  use.  It has no defaults so it must be defined.  We start this
-##  file off with the UWCS_* policy.
+##  use. If you dont specify, the default policy is a no-preemption
+##  policy. This is what older config files called TESTINGMODE_*
 ######################################################################
 
-##  Also here is what is referred to as the TESTINGMODE_*, which is
-##  a quick hardwired way to test Condor with a simple no-preemption policy.
-##  Replace UWCS_* with TESTINGMODE_* if you wish to do testing mode.
-##  For example:
-##  WANT_SUSPEND 		= $(UWCS_WANT_SUSPEND)
-##  becomes
-##  WANT_SUSPEND 		= $(TESTINGMODE_WANT_SUSPEND)
-
 # When should we only consider SUSPEND instead of PREEMPT?
-WANT_SUSPEND 		= $(UWCS_WANT_SUSPEND)
+#WANT_SUSPEND = False
 
 # When should we preempt gracefully instead of hard-killing?
-WANT_VACATE		= $(UWCS_WANT_VACATE)
+#WANT_VACATE = False
 
 ##  When is this machine willing to start a job? 
-START			= $(UWCS_START)
-
-##  When should a local universe job be allowed to start?
-#START_LOCAL_UNIVERSE	= TotalLocalJobsRunning < 200
-
-##  When should a scheduler universe job be allowed to start?
-#START_SCHEDULER_UNIVERSE	= TotalSchedulerJobsRunning < 200
+#START = True
 
 ##  When to suspend a job?
-SUSPEND			= $(UWCS_SUSPEND)
+#SUSPEND = False
 
 ##  When to resume a suspended job?
-CONTINUE		= $(UWCS_CONTINUE)
+#CONTINUE = True
 
 ##  When to nicely stop a job?
 ##  (as opposed to killing it instantaneously)
-PREEMPT			= $(UWCS_PREEMPT)
+#PREEMPT = False
 
 ##  When to instantaneously kill a preempting job
 ##  (e.g. if a job is in the pre-empting stage for too long)
-KILL			= $(UWCS_KILL)
+#KILL = False
 
-PERIODIC_CHECKPOINT	= $(UWCS_PERIODIC_CHECKPOINT)
-PREEMPTION_REQUIREMENTS	= $(UWCS_PREEMPTION_REQUIREMENTS)
-PREEMPTION_RANK		= $(UWCS_PREEMPTION_RANK)
-NEGOTIATOR_PRE_JOB_RANK = $(UWCS_NEGOTIATOR_PRE_JOB_RANK)
-NEGOTIATOR_POST_JOB_RANK = $(UWCS_NEGOTIATOR_POST_JOB_RANK)
-MaxJobRetirementTime    = $(UWCS_MaxJobRetirementTime)
-CLAIM_WORKLIFE          = $(UWCS_CLAIM_WORKLIFE)
+##  A non-zero value here is another way to have a no-preemption policy
+##  a job is given this many seconds to exit even when it is preempted.
+#MaxJobRetirementTime    = 0
+
+#PERIODIC_CHECKPOINT = ((time() - LastPeriodicCheckpoint)/60.0) > (180.0 + $RANDOM_INTEGER(-30,30,1))
+#PREEMPTION_REQUIREMENTS = False
+#PREEMPTION_RANK = $(UWCS_PREEMPTION_RANK)
+#NEGOTIATOR_PRE_JOB_RANK = RemoteOwner =?= UNDEFINED
+#NEGOTIATOR_POST_JOB_RANK = (RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kflops) - SlotID - 1.0e10*(Offline=?=True))
+#CLAIM_WORKLIFE          = 1200
+
+##  When should a local universe job be allowed to start?
+#START_LOCAL_UNIVERSE = TotalLocalJobsRunning < 200
+
+##  When should a scheduler universe job be allowed to start?
+#START_SCHEDULER_UNIVERSE = TotalSchedulerJobsRunning < 200
 
 #####################################################################
 ## This is the UWisc - CS Department Configuration.
