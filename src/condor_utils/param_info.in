@@ -1249,7 +1249,7 @@ review=?
 tags=q,queue
 
 [PREEMPTION_REQUIREMENTS]
-default=$(UWCS_PREEMPTION_REQUIREMENTS)
+default=False
 type=string
 reconfig=true
 customization=seldom
@@ -2992,7 +2992,7 @@ review=?
 tags=startd,claim
 
 [START]
-default=$(UWCS_START)
+default=True
 type=string
 reconfig=true
 customization=seldom
@@ -4105,7 +4105,7 @@ review=?
 tags=negotiator,matchmaker
 
 [PREEMPTION_RANK]
-default=$(UWCS_PREEMPTION_RANK)
+default=
 type=string
 reconfig=true
 customization=seldom
@@ -4114,7 +4114,7 @@ review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PRE_JOB_RANK]
-default=$(UWCS_NEGOTIATOR_PRE_JOB_RANK)
+default=RemoteOwner =?= UNDEFINED
 type=string
 reconfig=true
 customization=seldom
@@ -4123,7 +4123,7 @@ review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_POST_JOB_RANK]
-default=$(UWCS_NEGOTIATOR_POST_JOB_RANK)
+default=(RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kflops) - SlotID - 1.0e10*(Offline=?=True))
 type=string
 reconfig=true
 customization=seldom
@@ -5873,6 +5873,19 @@ friendly_name=Append OS version to the value of OPSYS
 review=?
 tags=schedd
 
+[WANT_SUSPEND]
+default=False
+[WANT_VACATE]
+default=False
+[SUSPEND]
+default=False
+[CONTINUE]
+default=True
+[PREEMPT]
+default=False
+[KILL]
+default=False
+
 [MachineMaxVacateTime]
 default=600
 type=int
@@ -5880,6 +5893,12 @@ reconfig=true
 customization=seldom
 friendly_name=
 review=?
+tags=startd
+
+[PERIODIC_CHECKPOINT]
+default=((time() - LastPeriodicCheckpoint)/60.0) > (180.0 + $RANDOM_INTEGER(-30,30,1))
+type=string
+reconfig=true
 tags=startd
 
 [DEFRAG_REQUIREMENTS]
@@ -7307,14 +7326,13 @@ default : @end
 	SUSPEND=($(KeyboardBusy) || ( (CpuBusyTime > 120) && $(ActivationTimer) > 90))
 	CONTINUE=($(CPUIdle) && ($(ActivityTimer) > 10) && (KeyboardIdle > $(ContinueIdleTime)))
 	PREEMPT=(((Activity == "Suspended") && ($(ActivityTimer) > $(MaxSuspendTime))) || (SUSPEND && (WANT_SUSPEND == False)))
-	KILL=false
-	PERIODIC_CHECKPOINT=$(LastCkpt) > (3 * 3600 + $RANDOM_INTEGER(-1800,1800,60))
+	KILL=False
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=
 @end
 review=?
 
-# use the UWCS knobs 
+# no-preemption policy, formerly called TESTINGMODE_
 [$POLICY.ALWAYS_RUN]
 friendly_name=Use a no-preemption policy
 default : @end
@@ -7325,8 +7343,8 @@ default : @end
 	PREEMPT=False
 	START=True
 	KILL=False
-	PERIODIC_CHECKPOINT=False
 	PREEMPTION_REQUIREMENTS=False
+	NEGOTIATOR_CONSIDER_PREEMPTION=False
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=1200
 @end
@@ -7335,13 +7353,17 @@ review=?
 [$POLICY.UWCS_DESKTOP]
 friendly_name=Run jobs only when the user is away from their machine
 default : @end
-	SUSPEND=$(UWCS_SUSPEND)
 	WANT_SUSPEND=$(UWCS_WANT_SUSPEND)
 	WANT_VACATE=$(UWCS_WANT_VACATE)
+	SUSPEND=$(UWCS_SUSPEND)
 	CONTINUE=$(UWCS_CONTINUE)
 	PREEMPT=$(UWCS_PREEMPT)
 	KILL=$(UWCS_KILL)
 	PERIODIC_CHECKPOINT=$(UWCS_PERIODIC_CHECKPOINT)
+	PREEMPTION_REQUIREMENTS=$(UWCS_PREEMPTION_REQUIREMENTS)
+	PREEMPTION_RANK=$(UWCS_PREEMPTION_RANK)
+	NEGOTIATOR_PRE_JOB_RANK=$(UWCS_NEGOTIATOR_PRE_JOB_RANK)
+	NEGOTIATOR_POST_JOB_RANK=$(UWCS_NEGOTIATOR_POST_JOB_RANK)
 	MaxJobRetirementTime=$(UWCS_MaxJobRetirementTime)
 	CLAIM_WORKLIFE=$(UWCS_CLAIM_WORKLIFE)
 @end
