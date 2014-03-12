@@ -3036,7 +3036,7 @@ jobIsFinished( int cluster, int proc, void* )
 		*/
 	MyString iwd;
 	MyString owner;
-	BOOLEAN is_nfs;
+	bool is_nfs;
 	int want_flush = 0;
 
 	job_ad->EvalBool( ATTR_JOB_IWD_FLUSH_NFS_CACHE, NULL, want_flush );

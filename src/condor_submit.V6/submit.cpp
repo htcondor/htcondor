@@ -5105,8 +5105,8 @@ SetUserLog()
 					}
 
 					// Check that the log file isn't on NFS
-					BOOLEAN nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
-					BOOLEAN	nfs = FALSE;
+					bool nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
+					bool nfs = false;
 
 					if ( nfs_is_error ) {
 						if ( fs_detect_nfs( ulog.c_str(), &nfs ) != 0 ) {
