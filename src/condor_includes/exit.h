@@ -20,7 +20,7 @@
 
  
 #ifndef CONDOR_EXIT_UTILS_H
-#define CONODR_EXIT_UTILS_H
+#define CONDOR_EXIT_UTILS_H
 
 
 /*

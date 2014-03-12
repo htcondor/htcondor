@@ -1569,12 +1569,12 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	argarray = NULL;
 
 
-	ClassAd sshd_ad;
-	sshd_ad.CopyAttribute(ATTR_REMOTE_USER,jobad);
-	sshd_ad.CopyAttribute(ATTR_JOB_RUNAS_OWNER,jobad);
-	sshd_ad.Assign(ATTR_JOB_CMD,sshd.Value());
+	ClassAd *sshd_ad = new ClassAd;
+	sshd_ad->CopyAttribute(ATTR_REMOTE_USER,jobad);
+	sshd_ad->CopyAttribute(ATTR_JOB_RUNAS_OWNER,jobad);
+	sshd_ad->Assign(ATTR_JOB_CMD,sshd.Value());
 	CondorVersionInfo ver_info;
-	if( !sshd_arglist.InsertArgsIntoClassAd(&sshd_ad,&ver_info,&error_msg) ) {
+	if( !sshd_arglist.InsertArgsIntoClassAd(sshd_ad,&ver_info,&error_msg) ) {
 		return SSHDFailed(s,
 			"Failed to insert args into sshd job description: %s",
 			error_msg.Value());
@@ -1583,7 +1583,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// matter what we pass here.  Instead, we depend on sshd_shell_init
 		// to restore the environment that was saved by sshd_setup.
 		// However, we may as well pass the desired environment.
-	if( !setup_env.InsertEnvIntoClassAd(&sshd_ad,&error_msg,NULL,&ver_info) ) {
+	if( !setup_env.InsertEnvIntoClassAd(sshd_ad,&error_msg,NULL,&ver_info) ) {
 		return SSHDFailed(s,
 			"Failed to insert environment into sshd job description: %s",
 			error_msg.Value());
@@ -1623,7 +1623,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	std_fname[2] = sshd_log_fname.Value();
 
 
-	SSHDProc *proc = new SSHDProc(&sshd_ad);
+	SSHDProc *proc = new SSHDProc(sshd_ad, true);
 	if( !proc ) {
 		dprintf(D_ALWAYS,"Failed to create SSHDProc.\n");
 		return FALSE;

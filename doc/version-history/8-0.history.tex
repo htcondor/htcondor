@@ -56,6 +56,10 @@ leave the queue without cleaning up all job state on the remote server.
 can be read back properly.
 \Ticket{3772}
 
+\item Fixed a bug in the \Condor{starter} that could cause a crash if
+the job is evicted while a \Condor{ssh\_to\_job} command is active.
+\Ticket{4251}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
