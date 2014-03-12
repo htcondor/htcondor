@@ -74,17 +74,29 @@ high-availability setups.
 servers over IPv6.
 \Ticket{4243}
 
+\item The protocol for interaction between \Condor{q} and the 
+\Condor{schedd} daemon has been rewritten.
+The new protocol does not require the \Condor{schedd} to fork a child process 
+and does not cause blocking; 
+the result is that the \Condor{schedd} should be able to handle
+many concurrent \Condor{q} requests with minimal resource usage.
+\Ticket{4111}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item Fixed bug in \Condor{on}, \Condor{off}, \Condor{restart},
-\Condor{reconfig}, and \Condor{set\_shutdown}. When multiple machines
-were named on the command line, these tools could report 
-``Can't find address for master XXXX'' for some daemons even though
-the daemons are being advertised properly in the \Condor{collector}.
+\item Fixed a bug that affected \Condor{on}, \Condor{off}, \Condor{restart},
+\Condor{reconfig}, and \Condor{set\_shutdown}. 
+When multiple machines were named on the command line, 
+these tools could report 
+\begin{verbatim}
+Can't find address for master XXXX 
+\end{verbatim}
+for some daemons,
+even though the daemons were properly advertised to the \Condor{collector}.
 \Ticket{4207}
 
 \item Fixed a bug that can cause the \Condor{startd} to become unresponsive
@@ -253,12 +265,6 @@ of \MacroNI{DETECTED\_CPUS}.
 \item \Condor{q} will now show the macro-expanded job description from the attribute
 \Attr{MATCH\_EXP\_JobDescription} instead of \Attr{JobDescription} if it is available.
 \Ticket{4110}
-
-\item The protocol between \Condor{q} and the schedd was rewritten.  The new
-protocol does not require the schedd to fork a child process and does
-not cause blocking; the result is that the schedd should be able to handle
-many concurrent \Condor{q} requests with minimal resource usage.
-\Ticket{4111}
 
 \end{itemize}
 

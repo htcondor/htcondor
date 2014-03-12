@@ -139,8 +139,8 @@ It defaults to having the \Condor{schedd} daemon return all attributes.
 \texttt{xquery( constraint = true, attr\_list = [] )}
 
 Query the \Condor{schedd} daemon for jobs.
-Returns a iterator of ClassAds representing the matching jobs,
-containing at least the requested attributes requested by the second parameter.
+Returns an iterator of ClassAds representing the matching jobs
+containing at least the list of attributes requested by the second parameter.
 
 The optional parameter \texttt{constraint} provides a constraint for
 filtering out jobs.
