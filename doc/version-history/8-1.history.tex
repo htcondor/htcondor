@@ -58,11 +58,15 @@ many concurrent \Condor{q} requests with minimal resource usage.
 
 \begin{itemize}
 
-\item Fixed bug in \Condor{on}, \Condor{off}, \Condor{restart},
-\Condor{reconfig}, and \Condor{set\_shutdown}. When multiple machines
-were named on the command line, these tools could report 
-``Can't find address for master XXXX'' for some daemons even though
-the daemons are being advertised properly in the \Condor{collector}.
+\item Fixed a bug that affected \Condor{on}, \Condor{off}, \Condor{restart},
+\Condor{reconfig}, and \Condor{set\_shutdown}. 
+When multiple machines were named on the command line, 
+these tools could report 
+\begin{verbatim}
+Can't find address for master XXXX 
+\end{verbatim}
+for some daemons,
+even though the daemons were properly advertised to the \Condor{collector}.
 \Ticket{4207}
 
 \item Fixed a bug that can cause the \Condor{startd} to become unresponsive
