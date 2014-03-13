@@ -224,8 +224,9 @@ than the desired lifetime.
 Create an instance of the \texttt{Collector} class.  
 
 Optional parameter \texttt{pool} is a string with host:port pair specified or
-a list of such strings.
-If omitted, the value of the \MacroNI{COLLECTOR\_HOST} parameter is used.
+a list of pairs.
+If omitted, the value of configuration variable \MacroNI{COLLECTOR\_HOST} 
+is used.
 \\ \hline
 \texttt{locate( (DaemonTypes)daemon\_type, (str)name )}
 
@@ -564,7 +565,7 @@ Return the version of the linked ClassAd library.
 \texttt{Attribute( name )}
 
 Given the string \texttt{name}, 
-return an \texttt{ExprTree} obect which is a
+return an \texttt{ExprTree} object which is a
 reference to an attribute of that name.
 The ClassAd expression \Expr{foo == 1} can be constructed 
 by the python \Expr{Attribute("foo") == 1}.

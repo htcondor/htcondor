@@ -65,9 +65,9 @@ is used to identify a custom machine resource as offline,
 so that the resource will not be allocated to any slot.
 \Ticket{4177}
 
-\item The python bindings can now accept a list of collector host in the
-constructor of the Collector object.  This eases the use the bindings for
-high-availability setups.
+\item The python bindings can now accept a list of \Condor{collector} hosts
+in the constructor of the \texttt{Collector} object.  
+This eases use of the bindings for high availability setups.
 \Ticket{4245}
 
 \item The \Prog{cream\_gahp} and \Prog{nordugrid\_gahp} can now talk to
@@ -99,15 +99,15 @@ for some daemons,
 even though the daemons were properly advertised to the \Condor{collector}.
 \Ticket{4207}
 
-\item Fixed a bug that can cause the \Condor{startd} to become unresponsive
-when starting a job obtained via the Work Fetch Hook.
+\item Fixed a bug that could have caused the \Condor{startd} to become 
+unresponsive when starting a job obtained via the Work Fetch Hook.
 \Ticket{4210}
 
-\item Fixed a bug that can cause the \Condor{schedd} to advertise a stale
-address in the ScheddIpAddr attribute of its submitter ads, resulting in
-other daemons being unable to contact it.
-The problem occurs when using both the shared-port daemon and CCB, and
-the \Macro{CCB\_ADDRESS} is chanaged.
+\item Fixed a bug that could have caused the \Condor{schedd} to advertise a 
+stale address in the \Attr{ScheddIpAddr} attribute of its submitter ClassAds,
+resulting in other daemons being unable to contact it.
+The problem occurred when using both the \Condor{shared\_port} daemon and CCB,
+and the value of configuration variable \Macro{CCB\_ADDRESS} was changed.
 \Ticket{4250}
 
 \end{itemize}
