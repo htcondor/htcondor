@@ -1670,6 +1670,7 @@ init_config(int config_options)
 		if (ConfigMacroSet.defaults->metat) delete [] ConfigMacroSet.defaults->metat;
 		ConfigMacroSet.defaults->metat = NULL;
 		ConfigMacroSet.defaults->size = param_info_init((const void**)&ConfigMacroSet.defaults->table);
+		ConfigMacroSet.options |= CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO;
 	}
 	if (want_meta) {
 		if (ConfigMacroSet.metat) delete [] ConfigMacroSet.metat;
