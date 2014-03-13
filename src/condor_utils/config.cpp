@@ -638,7 +638,7 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 
 		if ( ! *ptr && ! ISOP(op)) {
 			// Here we have determined this line has no operator, or too many
-			PRAGMA_REMIND("tj: should report parse error in meta knobs here.")
+			//PRAGMA_REMIND("tj: should report parse error in meta knobs here.")
 			return -1;
 		}
 
@@ -677,8 +677,9 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 			}
 
 			/* expand self references only */
-			PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
-			char * value = expand_macro(rhs, macro_set, name, false, subsys);
+			//PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
+			bool use_def_param_info = macro_set.defaults && (macro_set.options & CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO) != 0;
+			char * value = expand_macro(rhs, macro_set, name, use_def_param_info, subsys);
 			if (value == NULL) {
 				return -1;
 			}
@@ -955,8 +956,9 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 				}
 			} else  {
 				/* expand self references only */
-				PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
-				value = expand_macro(rhs, macro_set, name, false, subsys);
+				//PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
+				bool use_def_param_info = macro_set.defaults && (macro_set.options & CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO) != 0;
+				value = expand_macro(rhs, macro_set, name, use_def_param_info, subsys);
 				if( value == NULL ) {
 					retval = -1;
 					goto cleanup;
@@ -1070,7 +1072,7 @@ condor_hash_symbol_name(const char *name, int size)
 /*
 ** Insert the parameter name and value into the given hash table.
 */
-PRAGMA_REMIND("TJ: insert bug - self refs to default refs never expanded")
+//PRAGMA_REMIND("TJ: insert bug - self refs to default refs never expanded")
 
 extern "C++" MACRO_ITEM* find_macro_item (const char *name, MACRO_SET& set)
 {
@@ -1615,7 +1617,7 @@ expand_macro(const char *value,
 				// Note that if 'name' has been explicitly set to nothing,
 				// tvalue will _not_ be NULL so we will not call
 				// param_default_string().  See gittrack #1302
-			if( !self && use_default_param_table && tvalue == NULL ) {
+			if (use_default_param_table && tvalue == NULL) {
 				tvalue = param_default_string(name, subsys);
 				if (use) { param_default_set_use(name, use, macro_set); }
 			}
@@ -1829,7 +1831,7 @@ find_config_macro( register char *value, register char **leftp,
 	char *left, *left_end, *name, *right;
 	char *tvalue;
    #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
-	bool after_colon = false;
+	int after_colon = 0; // records the offset of the : from the start of the macro
    #endif
 
 	tvalue = value + search_pos;
@@ -1901,11 +1903,14 @@ tryagain:
 					left_end = value - 1;
 				}
 				name = ++value;
+			   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
+				after_colon = 0;
+			   #endif
 				while( *value && *value != ')' ) {
 					char c = *value++;
 				   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
 					if ( ! after_colon && c == ':') {
-						after_colon = true;
+						after_colon = (int)(value - name);
 					} else if (after_colon) {
 						if (c == '(') {
 							// skip ahead past the close )
@@ -1943,6 +1948,9 @@ tryagain:
 					// between these two pointers gives us the length of the
 					// identifier.
 					int namelen = value-name;
+				   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
+					if (after_colon) namelen = after_colon-1;
+				   #endif
 					if( !self || ( strncasecmp( name, self, namelen ) == MATCH && self[namelen] == '\0' ) ) {
 							// $(DOLLAR) has special meaning; it is
 							// set to "$" and is _not_ recursively

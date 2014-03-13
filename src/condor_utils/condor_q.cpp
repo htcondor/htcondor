@@ -376,7 +376,9 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	delete tree;
 
 	if (useFastPath == 2) {
-		return fetchQueueFromHostAndProcessV2(host, constraint, attrs, process_func, process_func_data, connect_timeout, errstack);
+		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, process_func, process_func_data, connect_timeout, errstack);
+		free( constraint);
+		return result;
 	}
 
 	/*
