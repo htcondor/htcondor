@@ -124,9 +124,9 @@ static const char * const aBoolFalse[] = {
 static const char * const aVerTrue[] = {
 	"version > 6.0", "!version > 8.1", "version > 8.1.1",
 	"version > 8.1.4", "version > 7.24.29",
-	"version >= 8.1.5", "version == 8.1", "version != 8.0",
-	"version == 8.1.5", "version <= 8.1.5",
-	"version <= 8.1", "version < 8.1.6", "version < 8.1.16",
+	"version >= " CONDOR_VERSION, "version == 8.1", "version != 8.0",
+	"version == " CONDOR_VERSION, "version <= 8.1.9",
+	"version <= 8.1", "version < 8.1.9", "version < 8.1.16",
 	"version < 8.2.99", "version < 8.2", "version < 9.0",
 	"version < 10.0", " VERSION < 10.0 ", " Version < 10.0"
 };
@@ -134,9 +134,9 @@ static const char * const aVerTrue[] = {
 static const char * const aVerFalse[] = {
 	"version < 6.0", "version < 8.1", "version < 8.1.1",
 	"version < 8.1.4", " version < 8.1.4", "version < 8.1.4 ",
-	"  version  <  8.1.4  ", "version < 7.24.29", " ! version <= 8.1.5",
+	"  version  <  8.1.4  ", "version < 7.24.29", " ! version <= " CONDOR_VERSION,
 	"version == 8.0", "version == 8.0.6", "version <= 8.0.5",
-	"!version >= 8.1", "version > 8.1.6", "version > 8.1.16",
+	"!version >= 8.1", "version > " CONDOR_VERSION, "version > 8.1.16",
 	"version > 8.2.99", "version > 8.2", "version > 9.0",
 	"version > 10.0",
 };
