@@ -5642,11 +5642,12 @@ friendly_name=Rooster unhibernate rank
 review=?
 tags=rooster
 
+# the procd gets passed it's log size as an argument, so scale suffix like MB or time rotation is not allowed.
 [MAX_PROCD_LOG]
-default=$(MAX_DEFAULT_LOG)
+default=1000000
 reconfig=true
 customization=seldom
-friendly_name=Max Procd Log
+friendly_name=Max Procd Log (size rotation only, no scale suffix)
 review=?
 tags=c++_util,procd
 
