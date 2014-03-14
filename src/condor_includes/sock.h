@@ -135,12 +135,18 @@ public:
 	//	Socket services
 	//
 
+PRAGMA_REMIND("adesmet: DEPRECATED")
 	int assign(SOCKET =INVALID_SOCKET);
+
+	int assign(condor_protocol proto, SOCKET =INVALID_SOCKET);
 #if defined(WIN32) && defined(_WINSOCK2API_)
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
 
+PRAGMA_REMIND("adesmet: DEPRECATED")
 	int bind(bool outbound, int port=0, bool loopback=false);
+
+	int bind(condor_protocol proto, bool outbound, int port, bool loopback);
 
 	bool bind_to_loopback(bool outbound=false, int port=0);
 
@@ -163,6 +169,7 @@ public:
 	*/
 	bool set_keepalive();
 
+PRAGMA_REMIND("adesmet: deprecated")
 	inline int bind(bool outbound, char *s) { return bind(outbound, getportbyserv(s)); }
 
 	int close();
@@ -524,7 +531,7 @@ private:
 
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
 	int _condor_write(SOCKET fd, const char *buf, int sz, int timeout);
-	int bindWithin(const int low, const int high, bool outbound);
+	int bindWithin(condor_protocol proto, const int low, const int high, bool outbound);
 	///
 	// Buffer to hold the string version of our peer's IP address. 
 	char _peer_ip_buf[IP_STRING_BUF_SIZE];	

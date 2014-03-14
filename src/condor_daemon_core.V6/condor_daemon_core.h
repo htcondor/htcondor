@@ -61,6 +61,8 @@
 #include "condor_sockaddr.h"
 #include "generic_stats.h"
 #include "filesystem_remap.h"
+#include "counted_ptr.h"
+#include <vector>
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -217,35 +219,15 @@ typedef void sigset_t;
 #endif
 
 /** helper function for finding available port for both 
+    TCP and UDP command socket.  Only promised to be meaningful
+	for the local host.  No promises are made about what 
+	protocol will be used.
+	*/
+int BindAnyLocalCommandPort(ReliSock *rsock, SafeSock *ssock);
+/** helper function for finding available port for both 
     TCP and UDP command socket */
-int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
+int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock, condor_protocol proto);
 
-/**
- * Helper function to initialize command ports.
- *
- * This function is call for both the initial command sockets and when
- * creating sockets to inherit before DC:Create_Process().  It calls
- * bind() or BindAnyCommandPort()  as needed, listen() and
- * setsockopt() (for SO_REUSEADDR and TCP_NODELAY).
- *
- * @param port
- *   What port you want to bind to, or -1 if you don't care.
- * @param rsock
- *   Pointer to a ReliSock object for the TCP command socket.
- * @param ssock
- *   Pointer to a SafeSock object for the UDP command socket.
- * @param fatal
- *   Should errors be considered fatal (EXCEPT) or not (dprintf).
- *
- * @return
- *   true if everything worked, false if there were any errors.
- *
- * @see BindAnyCommandPort()
- * @see DaemonCore::InitDCCommandSock
- * @see DaemonCore::Create_Process
- */
-bool InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock,
-						bool fatal);
 
 class DCSignalMsg: public DCMsg {
  public:
@@ -1579,8 +1561,51 @@ class DaemonCore : public Service
 		// do we ourself want/have a udp comment socket?
 	bool m_wants_dc_udp_self;
 	bool m_invalidate_sessions_via_tcp;
-	ReliSock* dc_rsock;	// tcp command socket
-	SafeSock* dc_ssock;	// udp command socket
+
+	// This pairing should representing the "same" socket, just on UDP and TCP.
+	// It's okay for parts to be NULL.  Safe to copy, although all of the
+	// copies will be sharing the same sockets.  
+  public:
+	class SockPair {
+	public:
+
+		SockPair() : m_rsock(NULL), m_ssock(NULL) {}
+		SockPair(const SockPair & src) : m_rsock(src.m_rsock), m_ssock(src.m_ssock) {}
+
+		SockPair & operator=(const SockPair & src) {
+			m_rsock = src.m_rsock;
+			m_ssock = src.m_ssock;
+			return *this;
+		}
+
+			// Strictly unnecessary, but proved helpful for debugging.
+		~SockPair() {
+			m_rsock = counted_ptr<ReliSock>(NULL);
+			m_ssock = counted_ptr<SafeSock>(NULL);
+		}
+
+		bool has_relisock() const { return !m_rsock.is_null(); }
+		bool has_safesock() const { return !m_ssock.is_null(); }
+		bool not_empty() const { return has_relisock() || has_safesock(); }
+
+		// If you really need a non-counted_ptr version, use .get(). Avoid
+		// doing so if possible.  If you must, keep the usage brief.
+		counted_ptr<ReliSock> rsock() { return m_rsock; }
+		counted_ptr<SafeSock> ssock() { return m_ssock; }
+
+		// Associate a ReliSock or SafeSock with this SockPair. Does nothing
+		// if one is already associated. b must always be true and always
+		// returns true.
+		bool has_relisock(bool b);
+		bool has_safesock(bool b);
+	private:
+		counted_ptr<ReliSock> m_rsock;	// tcp command socket
+		counted_ptr<SafeSock> m_ssock;	// udp command socket
+	};
+	typedef std::vector<SockPair> SockPairVec;
+
+  private:
+	SockPairVec dc_socks;
 	ReliSock* super_dc_rsock;	// super user tcp command socket
 	SafeSock* super_dc_ssock;	// super user udp command socket
     int m_iMaxAcceptsPerCycle; ///< maximum number of inbound connections to accept per loop
@@ -1685,6 +1710,12 @@ class DaemonCore : public Service
 
 	MyString GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated);
 
+	// Returns first command socket in our list. In general, you
+	// probably want to spin over sockTable looking for it->command_sock==true,
+	// this is a transitional function for the old initial_command_sock 
+	// variable.  Returns index into sockTable, -1 if none available.
+	int initial_command_sock() const;
+
     struct CommandEnt
     {
         int             num;
@@ -1745,6 +1776,7 @@ class DaemonCore : public Service
 		bool			remove_asap;	// remove when being_serviced==false
 		HandlerType		handler_type;
 		int				servicing_tid;	// tid servicing this socket
+		bool            is_command_sock;
     };
     void              DumpSocketTable(int, const char* = NULL);
     int               maxSocket;  // number of socket handlers to start with
@@ -1752,7 +1784,6 @@ class DaemonCore : public Service
 	int				  nRegisteredSocks; // number of sockets registered, always < nSock
 	int               nPendingSockets; // number of sockets waiting on timers or any other callbacks
     ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
-    int               initial_command_sock;  
   	struct soap		  *soap;
 
 		// number of file descriptors in use past which we should start
@@ -2027,6 +2058,30 @@ class DaemonCore : public Service
 
 	void InitSharedPort(bool in_init_dc_command_socket=false);
 };
+
+/**
+ * Helper function to initialize command ports.
+ *
+ * This function is call for both the initial command sockets and when
+ * creating sockets to inherit before DC:Create_Process().  It calls
+ * bind() or BindAnyCommandPort()  as needed, listen() and
+ * setsockopt() (for SO_REUSEADDR and TCP_NODELAY).
+ *
+ * @param port
+ *   What port you want to bind to, or -1 if you don't care.
+ * @param socks
+ *   Created socks will be pushed onto this list.
+ * @param fatal
+ *   Should errors be considered fatal (EXCEPT) or not (dprintf).
+ *
+ * @return
+ *   true if everything worked, false if there were any errors.
+ *
+ * @see BindAnyCommandPort()
+ * @see DaemonCore::InitDCCommandSock
+ * @see DaemonCore::Create_Process
+ */
+bool InitCommandSockets(int port, DaemonCore::SockPairVec & socks, bool want_udp, bool fatal);
 
 // helper class that uses C++ constructor/destructor to automatically
 // time a function call. 
