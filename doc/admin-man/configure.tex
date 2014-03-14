@@ -7152,7 +7152,8 @@ These macros affect \Condor{preen}.
 \item[\Macro{VALID\_SPOOL\_FILES}]
   A comma or space separated list of files that
   \Condor{preen} considers valid files to find in the \MacroUNI{SPOOL}
-  directory. There is no default value. \Condor{preen} will add to the
+  directory, such that \Condor{preen} will not remove these files.
+  There is no default value. \Condor{preen} will add to the
   list files and directories that are normally present in the
   \MacroUNI{SPOOL} directory.
   A single asterisk (\verb|*|) wild card character is permitted in each 
@@ -7163,7 +7164,7 @@ These macros affect \Condor{preen}.
   A comma or space separated list of files that
   \Condor{preen} considers valid files to find in the \MacroUNI{SPOOL}
   directory. The default value is all files known by HTCondor to be valid.
-  This macro exists so that it can be queryied, it should not be changed.
+  This variable exists such that it can be queried; it should not be changed.
   \Condor{preen} use it to initialize the the list files and directories
   that are normally present in the
   \MacroUNI{SPOOL} directory.
