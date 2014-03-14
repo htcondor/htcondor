@@ -9608,7 +9608,7 @@ static bool assign_sock(condor_protocol proto, Sock * sock, bool fatal)
 	ASSERT(sock);
 	if( sock->assign(proto) ) return true;
 
-	char * type;
+	const char * type;
 	switch(sock->type()) {
 		case Stream::reli_sock: type = "TCP"; break;
 		case Stream::safe_sock: type = "UDP"; break;
