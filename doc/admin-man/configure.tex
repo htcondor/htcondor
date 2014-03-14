@@ -7157,7 +7157,19 @@ These macros affect \Condor{preen}.
   \MacroUNI{SPOOL} directory.
   A single asterisk (\verb|*|) wild card character is permitted in each 
   file item within the list.
-  
+
+\label{param:SystemValidSpoolFiles}
+\item[\Macro{SYSTEM\_VALID\_SPOOL\_FILES}]
+  A comma or space separated list of files that
+  \Condor{preen} considers valid files to find in the \MacroUNI{SPOOL}
+  directory. The default value is all files known by HTCondor to be valid.
+  This macro exists so that it can be queryied, it should not be changed.
+  \Condor{preen} use it to initialize the the list files and directories
+  that are normally present in the
+  \MacroUNI{SPOOL} directory.
+  A single asterisk (\verb|*|) wild card character is permitted in each 
+  file item within the list.
+
 \label{param:InvalidLogFiles}
 \item[\Macro{INVALID\_LOG\_FILES}]
   This macro contains a (comma or space separated) list of files that
