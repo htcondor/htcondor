@@ -30,6 +30,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The configuration variable \Macro{VALID\_SPOOL\_FILES} has been redefined
+to contain only files that the configurator needs to add to the list of valid files.
+A new configuration variable \Macro{SYSTEM\_VALID\_SPOOL\_FILES} contains the
+files that are known to be valid at the time HTCondor was built. \Condor{preen}
+will use the union of these two configuration variables as the set of valid files.
+\Ticket{4257}
+
 \item The new configuration variable \Macro{OFFLINE\_MACHINE\_RESOURCE\_<name>}
 is used to identify a custom machine resource as offline,
 so that the resource will not be allocated to any slot.
