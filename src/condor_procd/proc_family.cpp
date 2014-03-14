@@ -492,7 +492,7 @@ ProcFamily::aggregate_usage_cgroup_blockio(ProcFamilyUsage* usage)
 	int ret;
 	void *handle;
 	char line_contents[BLOCK_STATS_LINE_MAX], sep[]=" ", *tok_handle, *word, *info[3];
-	char blkio_stats_name[] = "blkio.io_service_bytes";
+	char blkio_stats_name[] = "blkio.throttle.io_service_bytes";
 	short ctr;
 	long int read_bytes=0, write_bytes=0;
 	ret = cgroup_read_value_begin(BLOCK_CONTROLLER_STR, m_cgroup_string.c_str(),
