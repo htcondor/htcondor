@@ -1755,15 +1755,6 @@ WINDOWS_SOFTKILL = $(SBIN)/condor_softkill
 ##  Who should condor_preen send email to?
 #PREEN_ADMIN		= $(CONDOR_ADMIN)
 
-##  What files should condor_preen leave in the spool directory?
-#VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, \
-#                          Accountant.log, Accountantnew.log, \
-#                          local_univ_execute, .quillwritepassword, \
-#						  .pgpass, \
-#						  .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
-
-##  What files should condor_preen remove from the log directory?
-#INVALID_LOG_FILES	= core
 
 ##--------------------------------------------------------------------
 ##  Java parameters:
