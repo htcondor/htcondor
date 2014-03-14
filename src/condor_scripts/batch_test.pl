@@ -1274,8 +1274,14 @@ sub CreateLocalConfig {
 				# if where doesn't tell us the location of the java binary, just assume it's will be
 				# in the path once condor is running. (remember that cygwin lies...)
 				if ( ! ($jvm =~ /java/i)) {
+					# we need a special check for 64bit java if we are a 32 bit app.
+					if ( -e '/cygdrive/c/windows/sysnative/java.exe') {
+						debug ("where $javabinary returned nothing, but found 64bit java in sysnative dir\n",2);
+						$jvm = "c:\\windows\\sysnative\\java.exe";
+					} else {
 					debug ("where $javabinary returned nothing, assuming java will be in Condor's path.\n",2);
 					$jvm = "java.exe";
+					}
 				}
 			} else {
 				my $whichtest = `which $javabinary`;
