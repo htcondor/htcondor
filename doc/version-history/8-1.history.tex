@@ -31,10 +31,14 @@ The details of each version are described below.
 \begin{itemize}
 
 \item The configuration variable \Macro{VALID\_SPOOL\_FILES} has been redefined
-to contain only files that the configurator needs to add to the list of valid files.
-A new configuration variable \Macro{SYSTEM\_VALID\_SPOOL\_FILES} contains the
-files that are known to be valid at the time HTCondor was built. \Condor{preen}
-will use the union of these two configuration variables as the set of valid files.
+to list only files that the system administrator determines must not
+be removed by \Condor{preen}.
+The new configuration variable \Macro{SYSTEM\_VALID\_SPOOL\_FILES} contains 
+a predetermined list of files that are known to be valid at 
+the time HTCondor was built. 
+\Condor{preen} will use the union of these two configuration variables 
+as the set of valid files that should not be removed from the \MacroNI{SPOOL}
+directory.
 \Ticket{4257}
 
 \item The new configuration variable \Macro{OFFLINE\_MACHINE\_RESOURCE\_<name>}
