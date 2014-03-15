@@ -233,7 +233,7 @@ extern "C" {
 	NOTE: Returns malloc()ed memory; caller is responsible for calling free().
 	*/
 	char * expand_macro (const char *value, MACRO_SET& macro_set,
-						 const char *self=NULL, bool use_default_param_table=false,
+						 bool use_default_param_table=false,
 						 const char *subsys=NULL, int use=2);
 	// Iterator for the hash array managed by insert() and expand_macro().  See
 	// hash_iter_begin(), hash_iter_next(), hash_iter_key(), hash_iter_value(),
