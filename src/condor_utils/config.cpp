@@ -1281,6 +1281,7 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 	if (set.size+1 >= set.allocation_size) {
 		int cAlloc = set.allocation_size*2;
 		if ( ! cAlloc) cAlloc = 32;
+		set.allocation_size = cAlloc;
 		MACRO_ITEM * ptab = new MACRO_ITEM[cAlloc];
 		if (set.table) {
 			// transfer existing key/value pairs old allocation to new one.
