@@ -411,10 +411,7 @@ class Dag {
 			@return true iff the DAG is finished but there is a cycle
 		*/
 	//TEMPTEMP -- crap -- this will probably report a cycle if all nodes except the final node succeed!
-	inline bool DoneCycle( bool includeFinalNode) {
-				return FinishedRunning( includeFinalNode ) &&
-				!DoneSuccess( includeFinalNode ) &&
-				NumNodesFailed() == 0; }
+	inline bool DoneCycle( bool includeFinalNode) const;
 
 		/** Submit all ready jobs, provided they are not waiting on a
 			parent job or being throttled.

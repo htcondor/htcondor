@@ -1335,6 +1335,7 @@ print_status() {
 	debug_printf( DEBUG_VERBOSE, "%d job proc(s) currently held\n",
 				dagman.dag->NumHeldJobProcs() );
 	dagman.dag->PrintDeferrals( DEBUG_VERBOSE, false );
+	dagman.dag->PrintReadyQ( DEBUG_QUIET );//TEMPTEMP
 
 	if ( dagman._dagmanClassad ) {
 		dagman._dagmanClassad->Update( total, done, pre, submitted, post,

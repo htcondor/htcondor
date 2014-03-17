@@ -1,11 +1,10 @@
 //TEMPTEMP -- make sure jobstate.log doesn't have similar problem... probably doesn't, but check...
 //TEMPTEMP -- make sure abort (w/ and w/o final node) properly updates node status file!  abort test has cycle for final status!
 //TEMPTEMP -- abort-A status file says STATUS_ERROR (cycle) for the dag status,  but dagman.out says success!
-//TEMPTEMP -- if you have an abort value *and* a final node, which one determines the final dag status??
 //TEMPTEMP -- where does final node set DAG status? (final node in final-D overrides status) -- ah -- _dagStatus actually isn't set according to the final node -- if DoneSuccess is true we consider the dag successful
-//TEMPTEMP -- DoneCycle returns true for both the abort-A and halt-A tests...
+//TEMPTEMP -- DoneCycle returns true for both the abort-A and halt-A tests... -- okay, abort-A is fixed, but halt-A still returns 1!
 //TEMPTEMP -- in the abort-A test, the failed node has a status of done...
-//TEMPTEMP -- add a check of node status file for a removed dag
+//TEMPTEMP -- add node status file test with cycle
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -1420,6 +1419,7 @@ Dag::StartNode( Job *node, bool isRetry )
 	node->FixPriority(*this);
 	if ( isRetry && m_retryNodeFirst ) {
 		_readyQ->Prepend( node, -node->_nodePriority );
+debug_printf( DEBUG_QUIET, "DIAG 6110; added node %s to ready queue\n", node->GetJobName() );//TEMPTEMP
 	} else {
 		if(node->_hasNodePriority){
 			Job::NodeVar *var = new Job::NodeVar();
@@ -1429,8 +1429,10 @@ Dag::StartNode( Job *node, bool isRetry )
 		}
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( node, -node->_nodePriority );
+debug_printf( DEBUG_QUIET, "DIAG 6120; added node %s to ready queue\n", node->GetJobName() );//TEMPTEMP
 		} else {
 			_readyQ->Append( node, -node->_nodePriority );
+debug_printf( DEBUG_QUIET, "DIAG 6130; added node %s to ready queue\n", node->GetJobName() );//TEMPTEMP
 		}
 	}
 	return TRUE;
@@ -1450,15 +1452,21 @@ Dag::StartFinalNode()
 		_readyQ->Rewind();
 		while ( _readyQ->Next( job ) ) {
 			if ( !job->GetFinal() ) {
-				debug_printf( DEBUG_DEBUG_1,
+				//TEMPTEMP debug_printf( DEBUG_DEBUG_1,
+				debug_printf( DEBUG_QUIET,//TEMPTEMP
 							"Removing node %s from ready queue\n",
 							job->GetJobName() );
 				_readyQ->DeleteCurrent();
+				job->SetStatus( Job::STATUS_NOT_READY );//TEMPTEMP?
+				//TEMPTEMP -- set node state to not ready??
+				//TEMPTEMP -- seems kind of inconsistent between pre state and ready state jobs, though...
+				//TEMPTEMP -- maybe take nodes out of the pre state??
 			}
 		}
 
 			// Now start up the final node.
 		_final_job->SetStatus( Job::STATUS_READY );
+debug_printf( DEBUG_QUIET, "DIAG 6010; set node %s to STATUS_READY\n", _final_job->GetJobName() );//TEMPTEMP
 		if ( StartNode( _final_job, false ) ) {
 			_finalNodeRun = true;
 			return true;
@@ -1628,6 +1636,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 					"Returning deferred node %s to the ready queue\n",
 					job->GetJobName() );
 		_readyQ->Prepend( job, -job->_nodePriority );
+debug_printf( DEBUG_QUIET, "DIAG 6140; added node %s to ready queue\n", job->GetJobName() );//TEMPTEMP
 	}
 
 	return numSubmitsThisCycle;
@@ -1749,10 +1758,13 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 				"successfully.\n", job->GetJobName() );
 		job->retval = 0; // for safety on retries
 		job->SetStatus( Job::STATUS_READY );
+debug_printf( DEBUG_QUIET, "DIAG 6020; set node %s to STATUS_READY\n", job->GetJobName() );//TEMPTEMP
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( job, -job->_nodePriority );
+debug_printf( DEBUG_QUIET, "DIAG 6150; added node %s to ready queue\n", job->GetJobName() );//TEMPTEMP
 		} else {
 			_readyQ->Append( job, -job->_nodePriority );
+debug_printf( DEBUG_QUIET, "DIAG 6160; added node %s to ready queue\n", job->GetJobName() );//TEMPTEMP
 		}
 	}
 
@@ -1942,7 +1954,6 @@ bool
 Dag::FinishedRunning( bool includeFinalNode ) const
 {
 //TEMPTEMP -- special case for aborted also???
-	//TEMPTEMP -- add special case for halted here?
 	if ( includeFinalNode && _final_job && !_finalNodeRun ) {
 			// Make sure we don't incorrectly return true if we get called
 			// just before a final node is started...  (There is a race
@@ -1954,26 +1965,15 @@ Dag::FinishedRunning( bool includeFinalNode ) const
 
 //TEMPTEMP -- how do we actually decide to exit in the final-I case?? -- DoneSuccess looks explicitly at final node
 //TEMPTEMP -- if we're halted, should we look only at running scripts?, at least for non-final nodes?  Do we have a way to know the actual count of *running* scripts?
-#if 1 //TEMPTEMP?
-	//TEMPTEMP -- make IsHalted() const
 	if ( IsHalted() ) {
+			// Note that we're checking for scripts actually running here,
+			// not the number of nodes in the PRERUN or POSTRUN state --
+			// if we're halted, we don't start any new PRE scripts.
 		return NumJobsSubmitted() == 0 && NumScriptsRunning() == 0;
-		//TEMPTEMP -- need to check for actual running scripts!!!!  (Hmm -- race condition w/ final node??)
 	}
-#endif //TEMPTEMP?
 
-#if 1 //TEMPTEMP?
 	return NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
 				ScriptRunNodeCount() == 0;
-#else //TEMPTEMP?
-	int readyCount = NumNodesReady();
-	//TEMPTEMP -- make IsHalted() const
-	//TEMPTEMP if ( IsHalted() ) readyCount = 0;
-	if ( _dagIsHalted ) readyCount = 0;
-	return NumJobsSubmitted() == 0 && readyCount == 0 &&
-				ScriptRunNodeCount() == 0;
-#endif //TEMPTEMP?
-//TEMPTEMP -- final-I finishes with a node in the Pre state -- WTF is going on?  why are there pre script deferrals???
 }
 
 //---------------------------------------------------------------------------
@@ -1982,14 +1982,18 @@ bool
 Dag::DoneSuccess( bool includeFinalNode ) const
 {
 //TEMPTEMP -- abort value can also override "normal" status...
-	if ( NumNodesDone( includeFinalNode ) == NumNodes( includeFinalNode ) ) {
+	if ( !FinishedRunning( includeFinalNode ) ) {
+			// Note: if final node is running we should get to here...
+		return false;
+	} else if ( NumNodesDone( includeFinalNode ) ==
+				NumNodes( includeFinalNode ) ) {
+			// This is the normal case.
 		return true;
 	} else if ( includeFinalNode && _final_job &&
 				_final_job->GetStatus() == Job::STATUS_DONE ) {
 			// Final node can override the overall DAG status.
 		return true;
-	//TEMPTEMP? } else if ( _dagIsAborted && _dagStatus == DAG_STATUS_OK ) {
-	} else if ( _dagIsAborted && _dagStatus == DAG_STATUS_OK && FinishedRunning( includeFinalNode ) ) {//TEMPTEMP?
+	} else if ( _dagIsAborted && _dagStatus == DAG_STATUS_OK ) {
 			// Abort-dag-on can override the overall DAG status.
 			// TEMPTEMP -- make sure this works!!
 		return true;
@@ -1999,9 +2003,11 @@ Dag::DoneSuccess( bool includeFinalNode ) const
 }
 
 //---------------------------------------------------------------------------
+//TEMPTEMP -- if you have a cycle, should this return true??
 bool
 Dag::DoneFailed( bool includeFinalNode ) const
 {
+	//TEMPTEMP -- need stuff here for halted...
 	if ( !FinishedRunning( includeFinalNode ) ) {
 			// Note: if final node is running we should get to here...
 		return false;
@@ -2013,9 +2019,22 @@ Dag::DoneFailed( bool includeFinalNode ) const
 			// Abort-dag-on can override the overall DAG status.
 			// TEMPTEMP -- make sure this works!!
 		return false;
+	} else if ( IsHalted() ) {
+		return true;
 	}
 
 	return NumNodesFailed() > 0;
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::DoneCycle( bool includeFinalNode) const
+{
+//TEMPTEMP -- crap -- this will probably report a cycle if all nodes except the final node succeed! -- one of the final node tests should trigger that
+	return FinishedRunning( includeFinalNode ) &&
+				!DoneSuccess( includeFinalNode ) &&
+				NumNodesFailed() == 0 &&
+				!IsHalted() && !_dagIsAborted;//TEMPTEMP?
 }
 
 //---------------------------------------------------------------------------
@@ -2477,6 +2496,7 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
         Job * child = FindNodeByNodeID( *qit );
         ASSERT( child != NULL );
         child->Remove(Job::Q_WAITING, job->GetJobID());
+debug_printf( DEBUG_QUIET, "DIAG 6210; removed node %s from node %s waiting q\n", job->GetJobName(), child->GetJobName() );//TEMPTEMP
 		if ( child->GetStatus() == Job::STATUS_READY &&
 			child->IsEmpty( Job::Q_WAITING ) ) {
 
@@ -2539,6 +2559,7 @@ Dag::RestartNode( Job *node, bool recovery )
         return;
     }
 	node->SetStatus( Job::STATUS_READY );
+debug_printf( DEBUG_QUIET, "DIAG 6030; set node %s to STATUS_READY\n", node->GetJobName() );//TEMPTEMP
 	node->retries++;
 	ASSERT( node->GetRetries() <= node->GetRetryMax() );
 	if( node->_scriptPre ) {
@@ -2852,6 +2873,7 @@ debug_printf( DEBUG_QUIET, "DIAG FinishedRunning(true): %d\n", FinishedRunning(t
 debug_printf( DEBUG_QUIET, "DIAG DoneSuccess(true): %d\n", DoneSuccess(true) );//TEMPTEMP
 debug_printf( DEBUG_QUIET, "DIAG DoneFailed(true): %d\n", DoneFailed(true) );//TEMPTEMP
 debug_printf( DEBUG_QUIET, "DIAG DoneCycle(true): %d\n", DoneCycle(true) );//TEMPTEMP
+debug_printf( DEBUG_QUIET, "DIAG NumScriptsRunning(): %d\n", NumScriptsRunning() );//TEMPTEMP
 		//
 		// Decide whether to update the file.
 		//
@@ -2931,10 +2953,12 @@ debug_printf( DEBUG_QUIET, "FinishedRunning(): %d\n", FinishedRunning( true ) );
 	while ( it.Next( node ) ) {
 		const char *statusStr = Job::status_t_names[node->GetStatus()];
 		const char *nodeNote = "";
+//TEMPTEMP -- shit -- STATUS_READY doesn't really mean the job is ready -- it means the job is ready *if* the parents are done... -- so STATUS_READY doesn't correlate with the ready count!
 		if ( node->GetStatus() == Job::STATUS_READY ) {
 			if ( !node->CanSubmit() ) {
 				// See Job::_job_type_names for other strings.
-				statusStr = "STATUS_UNREADY  ";
+				//TEMPTEMP? statusStr = "STATUS_UNREADY  ";
+				statusStr = Job::status_t_names[Job::STATUS_NOT_READY];//TEMPTEMP?
 			}
 		} else if ( node->GetStatus() == Job::STATUS_SUBMITTED ) {
 			nodeNote = node->GetIsIdle() ? "idle" : "not_idle";
@@ -4172,8 +4196,10 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 
 		if ( m_retrySubmitFirst ) {
 			_readyQ->Prepend(node, -node->_nodePriority);
+debug_printf( DEBUG_QUIET, "DIAG 6170; added node %s to ready queue\n", node->GetJobName() );//TEMPTEMP
 		} else {
 			_readyQ->Append(node, -node->_nodePriority);
+debug_printf( DEBUG_QUIET, "DIAG 6180; added node %s to ready queue\n", node->GetJobName() );//TEMPTEMP
 		}
 	}
 }

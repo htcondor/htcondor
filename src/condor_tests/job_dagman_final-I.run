@@ -61,7 +61,7 @@ $statusfile = "job_dagman_final-I.status";
 
 @statuslines = ("JOB I_A STATUS_DONE",
 	"JOB I_B STATUS_DONE",
-	"JOB I_C1 STATUS_READY",
+	"JOB I_C1 STATUS_NOT_READY",
 	"JOB I_C2 STATUS_PRERUN",
 	"JOB I_D STATUS_DONE",
 	"Nodes total: 5",
@@ -69,8 +69,8 @@ $statusfile = "job_dagman_final-I.status";
 	"Nodes pre: 1",
 	"Nodes queued: 0",
 	"Nodes post: 0",
-	"Nodes ready: 1",
-	"Nodes un-ready: 0",
+	"Nodes ready: 0",
+	"Nodes un-ready: 1",
 	"Nodes failed: 0",
 	"DAG status: STATUS_DONE      \\(success\\)");
 
