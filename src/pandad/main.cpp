@@ -16,6 +16,7 @@
 #include <vector>
 #include <map>
 
+unsigned badCommandCount = 0;
 pthread_mutex_t bigGlobalMutex = PTHREAD_MUTEX_INITIALIZER;
 
 void configureSignals();
@@ -71,7 +72,8 @@ int main( int /* argc */, char ** /* argv */ ) {
 	pthread_mutex_lock( & bigGlobalMutex );
 
 	// A locking queue.
-	Queue< std::string > queue( 1024, & bigGlobalMutex );
+	// Queue< std::string > queue( 1024, & bigGlobalMutex );
+	Queue< std::string > queue( 16384, & bigGlobalMutex );
 
 	// We only need one worker thread.
 	pthread_t workerThread;
@@ -143,11 +145,50 @@ typedef std::map< std::string, std::string > Command;
 typedef std::map< std::string, Command > CommandSet;
 CommandSet addCommands, updateCommands, removeCommands;
 
+std::string & doValueCleanup( std::string & value ) {
+	if( value[0] == '"' ) {
+		// If a ClassAd value has a leading quote, it's a string.  Unqoute it.
+		value.erase( 0, 1 );
+		size_t lastCharacter = value.length() - 1;
+		if( value[lastCharacter] == '"' ) { value.erase( lastCharacter, 1 ); }
+	} else {
+		// All other ClassAd values are numeric, but some integers are
+		// represented as floats with lots of trailing zeroes.  Convert.
+		size_t point = value.find( '.' );
+		if( point == std::string::npos ) { return value; }
+		for( size_t i = point + 1; i < value.length(); ++i ) {
+			if( value[i] != '0' ) { return value; }
+		}
+
+		// If we get here, then everything after the point must have been 0,
+		// so we can safely truncate the string.
+		value.erase( point, std::string::npos );
+	}
+	return value;
+}
+
 void constructCommand( const std::string & line ) {
+	//
+	// Before parsing the command, make sure that it wasn't mangled by
+	// an aborted partial write.  All writes from the schedd are of the
+	// form '\v[ADD|UPDATE|REMOVE] <arg>+\n'.  We know we have the newline
+	// because we feed the queue line-by-line.  If we find only one \v in
+	// the entire line, at the beginning of the line, then the write wasn't
+	// aborted, and it should be safe to parse.
+	//
+	size_t firstVerticalTab = line.find( '\v' );
+	if( firstVerticalTab != 0 ) {
+		++badCommandCount;
+		return;
+	}
+
 	size_t nextSpace;
-	size_t currentSpace = -1;
+	size_t currentSpace = 0;
 	std::vector< std::string > argv;
 	do {
+		// We know that the last line in the string is an newline, so
+		// currentSpace can never be the last character; thus currentSpace + 1
+		// will always be a valid index.
 		nextSpace = line.find( ' ', currentSpace + 1 );
 		argv.push_back( line.substr( currentSpace + 1, nextSpace - (currentSpace + 1) ) );
 		currentSpace = nextSpace;
@@ -162,7 +203,16 @@ void constructCommand( const std::string & line ) {
 	} else if( command == "UPDATE" ) {
 		Command & c = updateCommands[ globalJobID ];
 		c[ "globaljobid" ] = globalJobID;
-		c[ argv[2] ] = argv[3];
+		// Panda should redefine their schema so that 'submitted'
+		// is TIMESTAMP, not DATETIME. *sigh*
+		if( argv[2] == "submitted" ) {
+			time_t submitTime = atol( argv[3].c_str() );
+			char buffer[] = "YYYY-MM-DD HH:MM:SS";
+			struct tm * ts = localtime( & submitTime );
+			strftime( buffer, sizeof( buffer ), "%Y-%m-%d %H:%M:%S", ts );
+			argv[3] = buffer;
+		}
+		c[ argv[2] ] = doValueCleanup( argv[3] );
 	} else if( command == "REMOVE" ) {
 		Command & c = removeCommands[ globalJobID ];
 		c[ "globaljobid" ] = globalJobID;
@@ -175,7 +225,6 @@ std::string generatePostString( const CommandSet & commandSet ) {
 	std::string postFieldString = "[ ";
 	CommandSet::const_iterator i = commandSet.begin();
 	for( ; i != commandSet.end(); ++i ) {
-		const std::string & globalJobID = i->first;
 		const Command & c = i->second;
 
 		postFieldString += "{ ";
@@ -185,8 +234,10 @@ std::string generatePostString( const CommandSet & commandSet ) {
 			postFieldString += "\"" + j->first + "\": ";
 			postFieldString += "\"" + j->second + "\", ";
 		}
-		// TO DO: Determine what, if anything, 'wmsid' ought to be.
-		postFieldString += "\"wmsid\": \"1001\"";
+
+		// TO DO: Determine what, if anything, 'wmsid' ought to be; try to
+		// convince the PANDA people that it's not required?
+		postFieldString += "\"wmsid\": \"1002\"";
 		postFieldString += " }, ";
 	}
 	// Remove trailing ', '.
@@ -205,7 +256,26 @@ std::string generatePostString( const CommandSet & commandSet ) {
 	} \
 }
 
-bool sendCommands( CURL * curl, const std::string & url, const CommandSet & commandSet, char * curlErrorBuffer, unsigned long & responseCode ) {
+// TO DO: This should either be removed, or, if the information is of
+// general interest, changed to obtain the file name and minimum interval
+// from the config system (param() and its table).
+void updateStatisticsLog( unsigned queueFullCount ) {
+	static time_t lastLogTime = 0;
+
+	time_t now = time( NULL );
+	if( now - 60 > lastLogTime ) {
+		lastLogTime = now;
+		int fd = open( "/tmp/pandaStatisticsLog", O_CREAT | O_TRUNC | O_WRONLY | O_NONBLOCK, 00600 );
+		FILE * psl = fdopen( fd, "w" );
+		if( fd != -1 ) {
+		fprintf( psl, "queueFullCount: %u\n", queueFullCount );
+		fprintf( psl, "badCommandCount: %u\n", badCommandCount );
+		fclose( psl );
+		}
+	}
+}
+
+bool sendCommands( CURL * curl, const std::string & url, const CommandSet & commandSet, char * curlErrorBuffer, unsigned long & responseCode, unsigned queueFullCount ) {
 	if( commandSet.size() == 0 ) { return false; }
 	std::string postString = generatePostString( commandSet );
 
@@ -215,12 +285,17 @@ bool sendCommands( CURL * curl, const std::string & url, const CommandSet & comm
 	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_POSTFIELDS, postString.c_str() );
 
 	pthread_mutex_unlock( & bigGlobalMutex );
+	updateStatisticsLog( queueFullCount );
 	CURLcode rv = curl_easy_perform( curl );
 	pthread_mutex_lock( & bigGlobalMutex );
 
 	if( rv != CURLE_OK ) {
 		dprintf( D_ALWAYS, "Ignoring curl_easy_perform() error (%d): '%s'\n", rv, curl_easy_strerror( rv ) );
 		dprintf( D_ALWAYS, "curlErrorBuffer = '%s'\n", curlErrorBuffer );
+
+		// It would be nice, for performance monitoring, to dump some more
+		// information about the timed-out request here.
+
 		return false;
 	}
 
@@ -298,19 +373,19 @@ static void * workerFunction( void * ptr ) {
 
 		// Send all of the add commands.
 		unsigned long responseCode = 0;
-		bool rc = sendCommands( curl, addJob, addCommands, curlErrorBuffer, responseCode );
+		bool rc = sendCommands( curl, addJob, addCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
 		if( rc && responseCode != 201 ) {
 			dprintf( D_ALWAYS, "addJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
 		}
 
 		// Send all the update commands.
-		rc = sendCommands( curl, updateJob, updateCommands, curlErrorBuffer, responseCode );
+		rc = sendCommands( curl, updateJob, updateCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
 		if( rc && responseCode != 202 ) {
 			dprintf( D_ALWAYS, "updateJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
 		}
 
 		// Send all the remove commands.
-		rc = sendCommands( curl, removeJob, removeCommands, curlErrorBuffer, responseCode );
+		rc = sendCommands( curl, removeJob, removeCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
 		if( rc && responseCode != 202 ) {
 			dprintf( D_ALWAYS, "removeJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
 		}
