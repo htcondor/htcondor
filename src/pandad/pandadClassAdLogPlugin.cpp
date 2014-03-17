@@ -1,6 +1,8 @@
+//
 // TO DO: It would be much less user-hostile if we autorenewed the proxy
 // in question.  (It may make more logical sense to do this in the pandad,
 // but it shouldn't have the privileges to do that.)
+//
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -71,13 +73,13 @@ class CondorToPandaMap {
 //  { "LastJobStatus", "st" }
 const CondorToPandaMap::tuple sortedMap[] = {
 	{ "Cmd", "cmd" },
+	{ "Err", "p_stderr" },
 	{ "JobPrio", "pri" },
+	{ "Out", "p_stdout" },
 	{ "Owner", "owner" },
 	{ "QDate", "submitted" },
 	{ "RemoteWallClockTime", "run_time" },
     { "ResidentSetSize", "size" },
-	{ "Out", "p_stdout" },
-	{ "Err", "p_stderr" },
 };
 
 bool CondorToPandaMap::contains( const char * key ) {
@@ -101,12 +103,12 @@ class PandadClassAdLogPlugin : public ClassAdLogPlugin {
 		void initialize() { }
 		void shutdown() { }
 
-		// It turns out that new job ads don't contain the GlobalJobID,
-		// which mean we can't use this notification for Panda.
-		void newClassAd( const char * ) { }
+		void beginTransaction();
+		void newClassAd( const char * key );
 		void destroyClassAd( const char * key );
 		void setAttribute( const char * key, const char * attribute, const char * value );
 		void deleteAttribute( const char * key, const char * name );
+		void endTransaction();
 
 	private:
 		bool shouldIgnoreJob( const char * key, int & cluster, int & proc );
@@ -114,8 +116,11 @@ class PandadClassAdLogPlugin : public ClassAdLogPlugin {
 		bool shouldIgnoreAttribute( const char * attribute );
 
 		void addPandaJob( const char * key, const char * globalJobID );
-		void updatePandaJob( const char * key, const char * globalJobID, const char * attribute, const char * value );
-		void removePandaJob( const char * key, const char * globalJobID );
+		void updatePandaJob( const char * globalJobID, const char * attribute, const char * value );
+		void removePandaJob( const char * globalJobID );
+
+		int lowestSeenCluster;
+		int highestKnownCluster;
 
 		FILE *	pandad;
 };
@@ -131,15 +136,23 @@ static PandadClassAdLogPlugin instance;
 	#define DEVNULL "/dev/null"
 #endif // defined( WIN32 )
 
- PandadClassAdLogPlugin::PandadClassAdLogPlugin() : ClassAdLogPlugin() {
+PandadClassAdLogPlugin::PandadClassAdLogPlugin() : ClassAdLogPlugin(), lowestSeenCluster( INT_MAX ), highestKnownCluster( 0 ) {
 	std::string binary;
 	param( binary, "PANDAD" );
 
 	const char * arguments[] = { binary.c_str(), NULL };
 	pandad = my_popenv( arguments, "w", 0 );
 
+	// Never block the schedd.
+	if( pandad != NULL ) {
+		if( fcntl( fileno( pandad ), F_SETFL, O_NONBLOCK ) == -1 ) {
+			dprintf( D_ALWAYS, "PANDA: failed to set pandad pipe to nonblocking, monitor will not be updated.\n" );
+			pandad = NULL;
+		}
+	}
+
 	if( pandad == NULL ) {
-		dprintf( D_ALWAYS, "PandadClassAdLogPlugin: failed to start pandad, monitor will not be updated.\n" );
+		dprintf( D_ALWAYS, "PANDA: failed to start pandad, monitor will not be updated.\n" );
 
 		pandad = fopen( DEVNULL, "w" );
 	}
@@ -149,78 +162,187 @@ PandadClassAdLogPlugin::~PandadClassAdLogPlugin() {
 	my_pclose( pandad );
 }
 
-void PandadClassAdLogPlugin::destroyClassAd( const char * key ) {
+void PandadClassAdLogPlugin::beginTransaction() {
+	lowestSeenCluster = INT_MAX;
+
+	//
+	// If we want Panda to see job operations on jobs that were in the
+	// queue before we started, we could probe the job queue to find the
+	// highest known cluster ID.
+	//
+}
+
+void PandadClassAdLogPlugin::newClassAd( const char * key ) {
 	int cluster = 0, proc = 0;
 	if( shouldIgnoreJob( key, cluster, proc ) ) { return; }
 
-	dprintf( D_FULLDEBUG, "PandadClassAdLogPlugin::destroyClassAd( %s )\n", key );
+	dprintf( D_FULLDEBUG, "PANDA: newClassAd( %s )\n", key );
 
-	std::string globalJobID;
-	if( ! getGlobalJobID( cluster, proc, globalJobID ) ) {
-		dprintf( D_ALWAYS, "PandadClassAdLogPlugin::destroyClassAd( %s ) failed to find global job ID.\n", key );
+	if( cluster <= highestKnownCluster ) {
+		dprintf( D_ALWAYS, "PANDA: newClassAd() ignoring spurious call.\n" );
 		return;
 	}
 
-	removePandaJob( key, globalJobID.c_str() );
+	//
+	// We see new class ads before they contain any useful information.  Wait
+	// until after the transaction that created them completes to try to
+	// inform Panda about them.  Because we know cluster IDs increase
+	// monotonically, we can just store the lowest one we see during a given
+	// transaction and scan upwards from there when the transaction completes.
+	//
+	if( cluster < lowestSeenCluster ) {
+		lowestSeenCluster = cluster;
+	}
+}
+
+void PandadClassAdLogPlugin::destroyClassAd( const char * key ) {
+	int cluster = 0, proc = 0;
+	if( shouldIgnoreJob( key, cluster, proc ) ) { return; }
+	if( proc == -1 ) { return; }
+
+	dprintf( D_FULLDEBUG, "PANDA: destroyClassAd( %s )\n", key );
+
+	//
+	// If we're deleting a job that was created in this transaction, we
+	// won't send a create or update event for it when the transaction ends;
+	// therefore don't send a delete event, either.
+	//
+	if( cluster > highestKnownCluster ) {
+		return;
+	}
+
+	std::string globalJobID;
+	if( ! getGlobalJobID( cluster, proc, globalJobID ) ) {
+		dprintf( D_ALWAYS, "PANDA: destroyClassAd( %s ) failed to find global job ID.\n", key );
+		return;
+	}
+
+	removePandaJob( globalJobID.c_str() );
 }
 
 void PandadClassAdLogPlugin::setAttribute( const char * key, const char * attribute, const char * value ) {
 	int cluster = 0, proc = 0;
 	if( shouldIgnoreJob( key, cluster, proc ) ) { return; }
 
-	dprintf( D_FULLDEBUG, "PandadClassAdLogPlugin::setAttribute( %s, %s, %s )\n", key, attribute, value );
+	dprintf( D_FULLDEBUG, "PANDA: setAttribute( %s, %s, %s ).\n", key, attribute, value );
 
-	if( strcmp( attribute, "GlobalJobId" ) == 0 ) {
-		addPandaJob( key, value );
-
-		// If we're adding this job for the first time, update the attributes
-		// that we care about -- it could have some, if this a schedd restart.
-		ClassAd * classAd = ScheddGetJobAd( cluster, proc );
-		if( classAd == NULL ) {
-			dprintf( D_ALWAYS, "PandadClassAdLogPlugin::setAttribute( %s, %s, %s ) unable to update attributes after adding job: no job ad found.\n", key, attribute, value );
-			return;
-		}
-
-		ClassAd::const_iterator i = classAd->begin();
-		for( ; i != classAd->end(); ++i ) {
-			std::string attribute = i->first;
-			if( shouldIgnoreAttribute( attribute.c_str() ) ) { continue; }
-
-			ExprTree * valueExpr = i->second;
-			std::string valueString;
-			classad::ClassAdUnParser unparser;
-			unparser.Unparse( valueString, valueExpr );
-
-			updatePandaJob( key, value, attribute.c_str(), valueString.c_str() );
-		}
-	} else {
-		std::string globalJobID;
-		if( ! getGlobalJobID( cluster, proc, globalJobID ) ) {
-			dprintf( D_ALWAYS, "PandadClassAdLogPlugin::setAttribute( %s, %s, %s ) failed to find global job ID.\n", key, attribute, value );
-			return;
-		}
-		updatePandaJob( key, globalJobID.c_str(), attribute, value );
+	//
+	// If this is an update to an existing job, update the job.  Otherwise,
+	// it's an update to a job created in this transaction.  Delay updating
+	// it until the whole job is available (when the transaction ends).
+	//
+	if( cluster > highestKnownCluster ) {
+		return;
 	}
+
+	std::string globalJobID;
+	if( ! getGlobalJobID( cluster, proc, globalJobID ) ) {
+		dprintf( D_ALWAYS, "PANDA: setAttribute( %s, %s, %s ) failed to find global job ID.\n", key, attribute, value );
+		return;
+	}
+	if( shouldIgnoreAttribute( attribute ) ) { return; }
+	updatePandaJob( globalJobID.c_str(), attribute, value );
 }
 
 void PandadClassAdLogPlugin::deleteAttribute( const char * key, const char * attribute ) {
 	int cluster = 0, proc = 0;
 	if( shouldIgnoreJob( key, cluster, proc ) ) { return; }
 
-	dprintf( D_FULLDEBUG, "PandadClassAdLogPlugin::deleteAttribute( %s, %s )\n", key, attribute );
+	dprintf( D_FULLDEBUG, "PANDA: deleteAttribute( %s, %s )\n", key, attribute );
 
-	std::string globalJobID;
-	if( ! getGlobalJobID( cluster, proc, globalJobID ) ) {
-		dprintf( D_ALWAYS, "PandadClassAdLogPlugin::deleteAttribute( %s, %s ) failed to find global job ID.\n", key, attribute );
+	//
+	// If we're deleting an attribute from an ad that was created in the
+	// current transaction, we simply won't send it when we do our update
+	// after the transaction ends.
+	//
+	if( cluster > highestKnownCluster ) {
 		return;
 	}
 
-	// The global job ID is Panda's primary key, so we can't do any
-	// further updates to this job after it;s deleted.
+	std::string globalJobID;
+	if( ! getGlobalJobID( cluster, proc, globalJobID ) ) {
+		dprintf( D_ALWAYS, "PANDA: deleteAttribute( %s, %s ) failed to find global job ID.\n", key, attribute );
+		return;
+	}
+
+	//
+	// We need to the global job ID to call removePandaJob(), so do so
+	// while we still can.
+	//
+	updatePandaJob( globalJobID.c_str(), attribute, NULL );
 	if( strcmp( attribute, "GlobalJobId" ) == 0 ) {
-		removePandaJob( key, globalJobID.c_str() );
-	} else {
-		updatePandaJob( key, globalJobID.c_str(), attribute, NULL );
+		removePandaJob( globalJobID.c_str() );
+	}
+}
+
+//
+// After the end of a transaction, scan the job queue from the lowest
+// new cluster ID we saw until we run out, adding and updating the jobs
+// to Panda as we go.  (TO DO: Change the pandad so that we can combine
+// the add and update operations here.)
+//
+void PandadClassAdLogPlugin::endTransaction() {
+
+	for( int cluster = lowestSeenCluster; ; ++cluster ) {
+		dprintf( D_FULLDEBUG, "PANDA: looking at cluster %d\n", cluster );
+		ClassAd * clusterAd = ScheddGetJobAd( cluster, -1 );
+		for( int proc = 0; ; ++proc ) {
+			dprintf( D_FULLDEBUG, "PANDA: looking at proc [%d] %d\n", cluster, proc );
+			ClassAd * jobAd = ScheddGetJobAd( cluster, proc );
+			if( jobAd == NULL ) {
+				// While not all queue management users create a cluster ad
+				// (so it's OK for it to be NULL), they do have to start their
+				// proc IDs at zero.
+				if( proc == 0 ) { return; }
+				break;
+			}
+			highestKnownCluster = cluster;
+
+			std::string globalJobID;
+			if( ! jobAd->LookupString( "GlobalJobId", globalJobID ) ) {
+				dprintf( D_ALWAYS, "PANDA: endTransaction() found job without global job ID, ignoring it.\n" );
+				continue;
+			}
+
+			if( globalJobID.empty() ) {
+				dprintf( D_ALWAYS, "PANDA: endTransaction() found job with empty lobal job ID, ignoring it.\n" );
+				continue;
+			}
+
+			char condorJobID[ PROC_ID_STR_BUFLEN ];
+			ProcIdToStr( cluster, proc, condorJobID );
+			addPandaJob( condorJobID, globalJobID.c_str() );
+
+
+			ExprTree * valueExpr = NULL;
+			const char * attribute = NULL;
+
+			// Not all users of queue management create cluster ads.  However,
+			// if they don't, the job ad proper will have all of the attributes.
+			if( clusterAd != NULL ) {
+				clusterAd->ResetExpr();
+				while( clusterAd->NextExpr( attribute, valueExpr ) ) {
+					dprintf( D_FULLDEBUG, "PANDA: endTransaction() found %s in cluster ad.\n", attribute );
+					if( shouldIgnoreAttribute( attribute ) ) { continue; }
+
+					std::string valueString;
+					classad::ClassAdUnParser unparser;
+					unparser.Unparse( valueString, valueExpr );
+					updatePandaJob( globalJobID.c_str(), attribute, valueString.c_str() );
+				}
+			}
+
+			jobAd->ResetExpr();
+			while( jobAd->NextExpr( attribute, valueExpr ) ) {
+				dprintf( D_FULLDEBUG, "PANDA: endTransaction() found %s in job ad.\n", attribute );
+					if( shouldIgnoreAttribute( attribute ) ) { continue; }
+
+					std::string valueString;
+					classad::ClassAdUnParser unparser;
+					unparser.Unparse( valueString, valueExpr );
+					updatePandaJob( globalJobID.c_str(), attribute, valueString.c_str() );
+			}
+		}
 	}
 }
 
@@ -229,9 +351,6 @@ bool PandadClassAdLogPlugin::shouldIgnoreJob( const char * key, int & cluster, i
 
 	// Ignore the spurious 0.0 ad we get on startup.
 	if( cluster == 0 && proc == 0 ) { return true; }
-
-	// Ignore the <clusterId>.-1 ad for the grid manager.
-	if( proc == -1 ) { return true; }
 
 	return false;
 }
@@ -254,7 +373,6 @@ bool PandadClassAdLogPlugin::getGlobalJobID( int cluster, int proc, std::string 
 }
 
 bool PandadClassAdLogPlugin::shouldIgnoreAttribute( const char * attribute ) {
-	dprintf( D_FULLDEBUG, "PANDA: considering '%s'\n", attribute );
 	if( CondorToPandaMap::contains( attribute ) ) { return false; }
 	return true;
 }
@@ -266,7 +384,7 @@ char * unquote( const char * quotedString ) {
 	static const unsigned bufferSize = 128;
 	static char buffer[bufferSize];
 	if( quotedString == NULL ) {
-		dprintf( D_ALWAYS, "PandadClassAdLogPlugin: Attempted to unqoute NULL string.\n" );
+		dprintf( D_ALWAYS, "PANDA: Attempted to unqoute NULL string.\n" );
 		buffer[0] = '\0';
 		return buffer;
 	}
@@ -283,23 +401,21 @@ char * unquote( const char * quotedString ) {
 }
 
 void PandadClassAdLogPlugin::addPandaJob( const char * condorJobID, const char * globalJobID ) {
-	dprintf( D_FULLDEBUG, "addPandaJob( %s, %s )\n", condorJobID, globalJobID );
-	fprintf( pandad, "ADD %s %s\n", unquote( globalJobID ), condorJobID );
+	dprintf( D_FULLDEBUG, "PANDA: addPandaJob( %s, %s )\n", condorJobID, globalJobID );
+	fprintf( pandad, "\vADD %s %s\n", unquote( globalJobID ), condorJobID );
 	fflush( pandad );
 }
 
-// FIXME: If value is NULL, remove the attribute.  (Panda may not support this.)
-void PandadClassAdLogPlugin::updatePandaJob( const char * condorJobID, const char * globalJobID, const char * attribute, const char * value ) {
+// TO DO: If value is NULL, remove the attribute.  (Panda may not support this.)
+void PandadClassAdLogPlugin::updatePandaJob( const char * globalJobID, const char * attribute, const char * value ) {
 	if( value == NULL ) { return; }
-	dprintf( D_FULLDEBUG, "updatePandaJob( %s, %s, %s, %s )...\n", condorJobID, globalJobID, attribute, value );
-	if( shouldIgnoreAttribute( attribute ) ) { return; }
-	dprintf( D_FULLDEBUG, "... will not ignore attribute\n" );
-	fprintf( pandad, "UPDATE %s %s %s\n", unquote( globalJobID ), CondorToPandaMap::map( attribute ), value );
+	dprintf( D_FULLDEBUG, "PANDA: updatePandaJob( %s, %s, %s )\n", unquote( globalJobID ), CondorToPandaMap::map( attribute ), value );
+	fprintf( pandad, "\vUPDATE %s %s %s\n", unquote( globalJobID ), CondorToPandaMap::map( attribute ), value );
 	fflush( pandad );
 }
 
-void PandadClassAdLogPlugin::removePandaJob( const char * condorJobID, const char * globalJobID ) {
-	dprintf( D_FULLDEBUG, "removePandaJob( %s, %s )\n", condorJobID, globalJobID );
-	fprintf( pandad, "REMOVE %s\n", unquote( globalJobID ) );
+void PandadClassAdLogPlugin::removePandaJob( const char * globalJobID ) {
+	dprintf( D_FULLDEBUG, "PANDA: removePandaJob( %s )\n", globalJobID );
+	fprintf( pandad, "\vREMOVE %s\n", unquote( globalJobID ) );
 	fflush( pandad );
 }
