@@ -178,7 +178,10 @@ my $isXML = 0;  # are we running tests with XML output
 CleanFromPath(".");
 # yet add in base dir of all tests and compiler directories
 $ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
-
+# add 64 bit  location for java
+if($iswindows == 1) {
+	$ENV{PATH} = $ENV{PATH} . ":/cygdrive/c/windows/sysnative:c:\\windows\\sysnative";
+}
 #
 # the args:
 
