@@ -31,15 +31,15 @@ $statusfile = "job_dagman_abort-B.status";
 @statuslines = ("JOB A STATUS_DONE",
 	"JOB B STATUS_DONE",
 	"JOB C STATUS_ERROR",
-	"JOB D STATUS_NOT_READY",
+	"JOB D STATUS_ERROR     \\(removed\\)",
 	"Nodes total: 4",
 	"Nodes done: 2",
 	"Nodes pre: 0",
 	"Nodes queued: 0",
 	"Nodes post: 0",
 	"Nodes ready: 0",
-	"Nodes un-ready: 1",
-	"Nodes failed: 1",
+	"Nodes un-ready: 0",
+	"Nodes failed: 2",
 	"DAG status: STATUS_ERROR     \\(aborted\\)");
 
 my $killedchosen = 0;
