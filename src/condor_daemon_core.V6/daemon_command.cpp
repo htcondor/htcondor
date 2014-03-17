@@ -583,7 +583,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 	}
 	// For now, lets set a 20 second timeout, so all command handlers are called with
 	// a timeout of 20 seconds on their socket.
-	m_sock->timeout(20);
 	if(!m_result) {
 		char const *ip = m_sock->peer_ip_str();
 		if(!ip) {
@@ -594,6 +593,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		m_result = FALSE;
 		return CommandProtocolFinished;
 	}
+	m_sock->timeout(20);
 
 	if (m_req == DC_AUTHENTICATE) {
 
