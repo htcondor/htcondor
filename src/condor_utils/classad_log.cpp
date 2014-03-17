@@ -1048,6 +1048,15 @@ LogDeleteAttribute::WriteBody(FILE* fp)
 	return rval1 + rval;
 }
 
+int
+LogBeginTransaction::Play(void *){
+#if defined(HAVE_DLOPEN)
+	ClassAdLogPluginManager::BeginTransaction();
+#endif
+
+	return 1;
+}
+
 int 
 LogBeginTransaction::ReadBody(FILE* fp)
 {
@@ -1057,6 +1066,15 @@ LogBeginTransaction::ReadBody(FILE* fp)
 		return( -1 );
 	}
 	return( 1 );
+}
+
+int
+LogEndTransaction::Play(void *) {
+#if defined(HAVE_DLOPEN)
+	ClassAdLogPluginManager::EndTransaction();
+#endif
+
+	return 1;
 }
 
 int 

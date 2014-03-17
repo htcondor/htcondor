@@ -103,6 +103,26 @@ ClassAdLogPluginManager::DeleteAttribute(const char *key,
 	}
 }
 
+void
+ClassAdLogPluginManager::BeginTransaction() {
+	ClassAdLogPlugin *plugin;
+	SimpleList<ClassAdLogPlugin *> plugins = getPlugins();
+	plugins.Rewind();
+	while (plugins.Next(plugin)) {
+		plugin->beginTransaction();
+	}
+}
+
+void
+ClassAdLogPluginManager::EndTransaction() {
+	ClassAdLogPlugin *plugin;
+	SimpleList<ClassAdLogPlugin *> plugins = getPlugins();
+	plugins.Rewind();
+	while (plugins.Next(plugin)) {
+		plugin->endTransaction();
+	}
+}
+
 ClassAdLogPlugin::ClassAdLogPlugin()
 {
     if (PluginManager<ClassAdLogPlugin>::registerPlugin(this)) {
