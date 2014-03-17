@@ -18,11 +18,14 @@
 //
 // That is, this class mostly assumes the one-thread-at-a-time model.
 //
+// The diagnostic variable queueFullCount asssumes only one writer (it could
+// otherwise lose updates).
+//
 
 template< class T >
 class Queue {
 	public:
-		Queue( unsigned _capacity, pthread_mutex_t * _mutex ) : capacity( _capacity ), mutex( _mutex ) {
+		Queue( unsigned _capacity, pthread_mutex_t * _mutex ) : capacity( _capacity ), mutex( _mutex ), queueFullCount( 0 ) {
 			pthread_cond_init( & nonempty, NULL );
 			pthread_cond_init( & drained, NULL );
 		}
@@ -43,6 +46,9 @@ class Queue {
 		pthread_cond_t		nonempty;
 		pthread_mutex_t *	mutex;
 		std::queue< T >		storage;
+
+	public:
+		unsigned			queueFullCount;
 };
 
 template< class T >
@@ -50,6 +56,8 @@ void Queue< T >::enqueue( const T & item ) {
 	if( storage.size() < capacity ) {
 		storage.push( item );
 		pthread_cond_broadcast( & nonempty );
+	} else {
+		++queueFullCount;
 	}
 } // end enqueue()
 
