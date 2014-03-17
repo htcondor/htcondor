@@ -18,7 +18,7 @@ our $VERSION = '1.00';
 
 use base 'Exporter';
 
-our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows_native_perl fullchomp CreateDir CopyIt TarCreate TarExtract MoveIt DirLs List);
+our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl fullchomp CreateDir CopyIt TarCreate TarExtract MoveIt DirLs List);
 
 sub TRUE{1};
 sub FALSE{0};
