@@ -2825,6 +2825,98 @@ comparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
 int Matchmaker::
 trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds)
 {
+	/* 
+		Throw out startd ads have no business being 
+		visible to the matchmaking engine, but were fetched from the 
+		collector because perhaps the accountant needs to see them.  
+		This method is called after accounting completes, but before
+		matchmaking begins. 
+	*/
+
+	int removed = 0;
+
+	removed += trimStartdAds_PreemptionLogic(startdAds);
+	removed += trimStartdAds_ShutdownLogic(startdAds);
+
+	return removed;
+}
+
+int Matchmaker::
+trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds)
+{
+	int threshold = 0;
+	int removed = 0;
+	ClassAd *ad = NULL;
+	ExprTree *shutdown_expr = NULL;
+	ExprTree *shutdownfast_expr = NULL;	
+	const time_t now = time(NULL);
+	time_t myCurrentTime = now;
+	int shutdown;
+
+	/* 
+		Trim out any startd ads that have a DaemonShutdown attribute that evaluates
+		to True threshold seconds in the future.  The idea here is we don't want to 
+		match with startds that are real close to shutting down, since likely doing so
+		will just be a waste of time. 
+	*/
+
+	// Get our threshold from the config file; note that NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD 
+	// can be an int OR a classad expression that will get evaluated against the 
+	// negotiator ad.  This may be handy to express the threshold as a function of
+	// the negotiator cycle time.
+	param_integer("NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD",threshold,true,0,false,INT_MIN,INT_MAX,publicAd);
+
+	// A threshold of 0 (or less) means don't trim anything, in which case we have no
+	// work to do.
+	if ( threshold <= 0 ) {
+		// Nothing to do
+		return removed;
+	}
+
+	startdAds.Open();
+	while( (ad=startdAds.Next()) ) {
+		shutdown = 0;
+		shutdown_expr = ad->Lookup(ATTR_DAEMON_SHUTDOWN);
+		shutdownfast_expr = ad->Lookup(ATTR_DAEMON_SHUTDOWN_FAST);
+		if (shutdown_expr || shutdownfast_expr ) {
+			// Set CurrentTime to be threshold seconds into the
+			// future.  Use ATTR_MY_CURRENT_TIME if it exists in
+			// the ad to avoid issues due to clock skew between the
+			// startd and the negotiator.
+			myCurrentTime = now;
+			ad->LookupInteger(ATTR_MY_CURRENT_TIME,myCurrentTime);
+			ad->Assign(ATTR_CURRENT_TIME,myCurrentTime + threshold); // change time
+
+			// Now that CurrentTime is set into the future, evaluate
+			// if the Shutdown expression(s)
+			if (shutdown_expr) {
+				ad->EvalBool(ATTR_DAEMON_SHUTDOWN, NULL, shutdown);
+			}
+			if (shutdownfast_expr) {
+				ad->EvalBool(ATTR_DAEMON_SHUTDOWN_FAST, NULL, shutdown);
+			}
+
+			// Put CurrentTime back to how we found it, ie = time()
+			ad->AssignExpr(ATTR_CURRENT_TIME,"time()"); 
+		}
+		// If the startd is shutting down threshold seconds in the future, remove it
+		if ( shutdown ) {
+			startdAds.Remove(ad);
+			removed++;
+		}	
+	}
+	startdAds.Close();
+
+	dprintf(D_FULLDEBUG,
+				"Trimmed out %d startd ads due to NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD=%d\n",
+				removed,threshold);
+	
+	return removed;
+}
+
+int Matchmaker::
+trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds)
+{
 	int removed = 0;
 	ClassAd *ad = NULL;
 	char curState[80];
@@ -2884,11 +2976,10 @@ trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds)
 	}
 	startdAds.Close();
 
-	if ( removed > 0 ) {
-		dprintf(D_FULLDEBUG,
-				"Trimmed out %d startd ads due to NEGOTIATOR_CONSIDER_PREEMPTION=False\n",
-				removed);
-	}
+	dprintf(D_FULLDEBUG,
+			"Trimmed out %d startd ads due to NEGOTIATOR_CONSIDER_PREEMPTION=False\n",
+			removed);
+
 	return removed;
 }
 

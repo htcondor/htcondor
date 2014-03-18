@@ -93,6 +93,13 @@ the result is that the \Condor{schedd} should be able to handle
 many concurrent \Condor{q} requests with minimal resource usage.
 \Ticket{4111}
 
+\item Added configuration parameter
+	\Macro{NEGOTIATOR\_TRIM\_SHUTDOWN\_THRESHOLD} to avoid making matches to
+	resources that are about to go away; primarily of interest to glidein
+	pools.  See section~\ref{param:NegotiatorTrimShutdownThreshold} for details.
+\Ticket{4266}
+
+
 \end{itemize}
 
 \noindent Bugs Fixed:
