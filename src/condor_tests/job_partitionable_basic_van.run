@@ -134,7 +134,7 @@ output = $testname.out
 error = $testname.err
 notification = never
 request_memory = 1
-arguments = 60
+arguments = 120
 queue 10
 ";
 
