@@ -21,7 +21,7 @@ package SimpleJob;
 
 use CondorTest;
 my $timeout = 0;
-my $defaulttimeout = 180;
+my $defaulttimeout = 240;
 $timeout = $defaulttimeout;
 
 $timed_callback = sub
