@@ -1,5 +1,4 @@
 NODE_STATUS_FILE job_dagman_abort-A.status 600
-#TEMPTEMP -- ah, we should make sure abort removes a running node... 
 
 Job A job_dagman_abort-A-node-succeed.cmd
 Vars A nodename = "$(JOB)"

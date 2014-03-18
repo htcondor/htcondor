@@ -86,7 +86,6 @@ static void Usage() {
 			"\t\t[-Dont_Suppress_notification]\n"
             "\twhere NAME is the name of your DAG.\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
-	debug_printf( DEBUG_NORMAL, "DIAG 1010\n" );//TEMPTEMP
 	DC_Exit( EXIT_ERROR );
 }
 
@@ -175,7 +174,6 @@ Dagman::Config()
 			debug_printf( DEBUG_QUIET,
 						"ERROR: Can't read DAGMan config file: %s\n",
 						_dagmanConfigFile );
-	debug_printf( DEBUG_NORMAL, "DIAG 1110\n" );//TEMPTEMP
     		DC_Exit( EXIT_ERROR );
 		}
 		process_config_source( _dagmanConfigFile, "DAGMan config",
@@ -470,7 +468,6 @@ void
 main_shutdown_fast()
 {
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
-	debug_printf( DEBUG_NORMAL, "DIAG 1210\n" );//TEMPTEMP
     DC_Exit( EXIT_RESTART );
 }
 
@@ -479,14 +476,12 @@ main_shutdown_fast()
 void main_shutdown_graceful() {
 	print_status();
 	dagman.dag->DumpNodeStatus( true, false );
-	debug_printf( DEBUG_NORMAL, "DIAG 1310\n" );//TEMPTEMP
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
 	dagman.CleanUp();
 	DC_Exit( EXIT_RESTART );
 }
 
 void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
-debug_printf( DEBUG_QUIET, "main_shutdown_rescue(%d, %d)\n", exitVal, dagStatus );//TEMPTEMP
 		// Avoid possible infinite recursion if you hit a fatal error
 		// while writing a rescue DAG.
 	static bool inShutdownRescue = false;
@@ -545,7 +540,6 @@ debug_printf( DEBUG_QUIET, "main_shutdown_rescue(%d, %d)\n", exitVal, dagStatus 
 	tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	inShutdownRescue = false;
-	debug_printf( DEBUG_NORMAL, "DIAG 1410\n" );//TEMPTEMP
 	DC_Exit( exitVal );
 }
 
@@ -554,7 +548,6 @@ debug_printf( DEBUG_QUIET, "main_shutdown_rescue(%d, %d)\n", exitVal, dagStatus 
 // the schedd will send if the DAGMan job is removed from the queue
 int main_shutdown_remove(Service *, int) {
     debug_printf( DEBUG_QUIET, "Received SIGUSR1\n" );
-	debug_printf( DEBUG_NORMAL, "DIAG 1510\n" );//TEMPTEMP
 	main_shutdown_rescue( EXIT_ABORT, Dag::DAG_STATUS_RM );
 	return FALSE;
 }
@@ -565,7 +558,6 @@ void ExitSuccess() {
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
 	tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
-	debug_printf( DEBUG_NORMAL, "DIAG 1610\n" );//TEMPTEMP
 	DC_Exit( EXIT_OKAY );
 }
 
@@ -837,7 +829,6 @@ void main_init (int argc, char ** const argv) {
        	debug_printf( DEBUG_QUIET, "Unable to convert default log "
 					"file name to absolute path: %s\n",
 					errstack.getFullText().c_str() );
-	debug_printf( DEBUG_NORMAL, "DIAG 1710\n" );//TEMPTEMP
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_ERROR );
 		DC_Exit( EXIT_ERROR );
 	}
@@ -873,7 +864,6 @@ void main_init (int argc, char ** const argv) {
 		if ( !allowVerMismatch ) {
         	debug_printf( DEBUG_QUIET, "Error: %s is invalid!\n",
 						versionMsg.Value() );
-	debug_printf( DEBUG_NORMAL, "DIAG 1810\n" );//TEMPTEMP
 			DC_Exit( EXIT_ERROR );
 		} else {
         	debug_printf( DEBUG_NORMAL, "Warning: %s is invalid; "
@@ -893,7 +883,6 @@ void main_init (int argc, char ** const argv) {
         		debug_printf( DEBUG_QUIET, "Error: %s is older than "
 							"oldest permissible version (%s)\n",
 							versionMsg.Value(), minSubmitVersionStr.Value() );
-	debug_printf( DEBUG_NORMAL, "DIAG 1910\n" );//TEMPTEMP
 				DC_Exit( EXIT_ERROR );
 			} else {
         		debug_printf( DEBUG_NORMAL, "Warning: %s is older than "
@@ -1079,7 +1068,6 @@ void main_init (int argc, char ** const argv) {
 			dagman.CleanUp();
 			
 				// Note: debug_error calls DC_Exit().
-	debug_printf( DEBUG_NORMAL, "DIAG 2010\n" );//TEMPTEMP
         	debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
 					 	dagFile );
     	}
@@ -1136,7 +1124,6 @@ void main_init (int argc, char ** const argv) {
 			dagman.CleanUp();
 			
 				// Note: debug_error calls DC_Exit().
-	debug_printf( DEBUG_NORMAL, "DIAG 2110\n" );//TEMPTEMP
         	debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
 					 	dagFile );
     	}
@@ -1168,7 +1155,6 @@ void main_init (int argc, char ** const argv) {
 					"that the DAG file was produced with the -DumpRescue "
 					"flag when parsing the original DAG failed.\n",
 					firstLocation.Value() );
-	debug_printf( DEBUG_NORMAL, "DIAG 2210\n" );//TEMPTEMP
 		DC_Exit( EXIT_ERROR );
 		return;
 	}
@@ -1181,7 +1167,6 @@ void main_init (int argc, char ** const argv) {
 		dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 					dagman.multiDags, dagman.maxRescueDagNum, false,
 					false, false );
-	debug_printf( DEBUG_NORMAL, "DIAG 3010\n" );//TEMPTEMP
 		ExitSuccess();
 		return;
 	}
@@ -1213,7 +1198,6 @@ void main_init (int argc, char ** const argv) {
 					dagman.dag->GetJobstateLog().
 								WriteDagmanFinished( EXIT_RESTART );
     				dagman.CleanUp();
-	debug_printf( DEBUG_NORMAL, "DIAG 2310\n" );//TEMPTEMP
 					DC_Exit( EXIT_ERROR );
 					// We should never get to here!
 				}
@@ -1335,7 +1319,6 @@ print_status() {
 	debug_printf( DEBUG_VERBOSE, "%d job proc(s) currently held\n",
 				dagman.dag->NumHeldJobProcs() );
 	dagman.dag->PrintDeferrals( DEBUG_VERBOSE, false );
-	dagman.dag->PrintReadyQ( DEBUG_QUIET );//TEMPTEMP
 
 	if ( dagman._dagmanClassad ) {
 		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
@@ -1445,7 +1428,6 @@ void condor_event_timer () {
 						"completed!\n", dagman.dag->NumIdleJobProcs() );
 			check_warning_strictness( DAG_STRICT_1 );
 		}
-	debug_printf( DEBUG_NORMAL, "DIAG 3110\n" );//TEMPTEMP
 		ExitSuccess();
 		return;
     }
@@ -1472,10 +1454,11 @@ void condor_event_timer () {
 		// that completed; on the other hand, we don't care about waiting
 		// for PRE scripts because they'll be re-run when the rescue
 		// DAG is run anyhow).
-	//TEMPTEMP -- make sure all uses of FinalNodeRun are correct
 	if ( dagman.dag->IsHalted() && dagman.dag->NumJobsSubmitted() == 0 &&
 				dagman.dag->PostRunNodeCount() == 0 &&
 				!dagman.dag->FinalNodeRun() ) {
+			// Note:  main_shutdown_rescue() will run the final node
+			// if there is one.
 		debug_printf ( DEBUG_QUIET, "Exiting because DAG is halted "
 					"and no jobs or scripts are running\n" );
 		main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_HALTED );
@@ -1490,7 +1473,6 @@ void condor_event_timer () {
     // 
     if( dagman.dag->FinishedRunning( false ) ) {
 		Dag::dag_status dagStatus = Dag::DAG_STATUS_OK;
-		//TEMPTEMP -- document why we set includeFinalNode to false here!
 		if( dagman.dag->DoneFailed( false ) ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 				debug_printf( DEBUG_QUIET,

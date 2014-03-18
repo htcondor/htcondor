@@ -399,7 +399,8 @@ class Dag {
 	bool DoneSuccess( bool includeFinalNode ) const;
 
 		/** Determine whether the DAG is finished, but failed (because
-			of a node job failure, etc.).
+			of a node job failure, etc.).  Note that this returns false
+			if there's a cycle in the DAG but no nodes failed.
     		@param whether to consider the final node, if any
 			@return true iff the DAG is finished but failed
 		*/
@@ -410,7 +411,6 @@ class Dag {
     		@param whether to consider the final node, if any
 			@return true iff the DAG is finished but there is a cycle
 		*/
-	//TEMPTEMP -- crap -- this will probably report a cycle if all nodes except the final node succeed!
 	inline bool DoneCycle( bool includeFinalNode) const;
 
 		/** Submit all ready jobs, provided they are not waiting on a
@@ -723,7 +723,6 @@ class Dag {
 		running (or has been run).
 		@return true iff the final node is running or has been run
 	*/
-	//TEMPTEMP -- change to FinalNodeRun()?
 	inline bool FinalNodeRun() { return _finalNodeRun; }
 
 	/** Determine whether the DAG is in recovery mode.
@@ -854,8 +853,7 @@ class Dag {
 			@return True iff aborting the DAG (it really should not
 			    return in that case)
 		*/
-	//TEMPTEMP!!! static bool CheckForDagAbort(Job *job, const char *type);
-	bool CheckForDagAbort(Job *job, const char *type);//TEMPTEMP!!!
+	bool CheckForDagAbort(Job *job, const char *type);
 
 		// takes a userlog event and returns the corresponding node
 	Job* LogEventNodeLookup( int logsource, const ULogEvent* event,
@@ -1166,7 +1164,9 @@ class Dag {
 	bool _dagIsHalted;
 
 		// Whether the DAG has been aborted.
-		// TEMPTEMP -- explain why we need this in addition to _dagStatus
+		// Note:  we need this in addition to _dagStatus, because if you
+		// have a abort-dag-on return value of 0, _dagStatus will be
+		// DAG_STATUS_OK even on the abort...
 	bool _dagIsAborted;
 
 		// The name of the halt file (we halt the DAG if that file exists).

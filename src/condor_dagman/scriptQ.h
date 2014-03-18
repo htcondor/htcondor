@@ -57,7 +57,9 @@ class ScriptQ : public Service {
 	*/
 	int RunAllWaitingScripts();
 
-	//TEMPTEMP -- is this only scripts that are really running, or does it include deferred scripts? -- okay, looks like it does *not* include deferred scripts
+	/** Return the number of scripts actually running (does not include
+	    scripts that are queued to run but have been deferred).
+	*/
     int NumScriptsRunning();
 
     // reaper function for PRE & POST script completion
