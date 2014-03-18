@@ -4068,6 +4068,15 @@ friendly_name=Negotiator Update After Cycle
 review=?
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD]
+default=0
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Trim Shutdown Threshold
+review=?
+tags=negotiator,matchmaker
+
 [NEGOTIATOR_TIMEOUT]
 default=30
 type=int
