@@ -186,6 +186,9 @@ sub RunCheck
 	if($error ne "") {
 		print SUBMIT "error = $error\n";
 	}
+	if($args{request_memory}) {
+		print SUBMIT "request_memory = $args{request_memory}\n";
+	}
 	if($streamoutput ne "") {
 		print SUBMIT "stream_output = $streamoutput\n";
 	}
