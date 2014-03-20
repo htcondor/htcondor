@@ -286,6 +286,8 @@ class LogBeginTransaction : public LogRecord {
 public:
 	LogBeginTransaction() { op_type = CondorLogOp_BeginTransaction; }
 	virtual ~LogBeginTransaction(){};
+
+	int Play(void *data_structure);
 private:
 
 	virtual int WriteBody(FILE* /*fp*/) {return 0;}
@@ -298,6 +300,8 @@ class LogEndTransaction : public LogRecord {
 public:
 	LogEndTransaction() { op_type = CondorLogOp_EndTransaction; }
 	virtual ~LogEndTransaction(){};
+
+	int Play(void *data_structure);
 private:
 	virtual int WriteBody(FILE* /*fp*/) {return 0;}
 	virtual int ReadBody(FILE* fp);

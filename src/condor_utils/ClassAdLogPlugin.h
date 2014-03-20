@@ -64,6 +64,10 @@ class ClassAdLogPlugin
 							  const char *value) = 0;
 	virtual void deleteAttribute(const char *key,
 								 const char *name) = 0;
+
+	// These have implementations for source-level backwards-compatiblity.
+	virtual void beginTransaction() { };
+	virtual void endTransaction() { };
 };
 
 
@@ -80,6 +84,8 @@ class ClassAdLogPluginManager : public PluginManager<ClassAdLogPlugin>
 							 const char *value);
 	static void DeleteAttribute(const char *key,
 								const char *name);
+	static void BeginTransaction();
+	static void EndTransaction();
 };
 
 #endif /* _CLASSADLOG_PLUGIN_H */

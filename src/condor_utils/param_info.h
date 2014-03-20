@@ -212,5 +212,31 @@ int param_info_hash_dump_value(const param_info_t* param_value, void* unused);
 // Optimize the memory layout of the hash table.
 void param_info_hash_optimize(param_info_hash_t param_info);
 
+// binary search of an array of structures containing a member psz
+// find the (case insensitive) matching element in the array
+// and return a pointer to that element.
+template <typename T>
+const T * BinaryLookup (const T aTable[], int cElms, const char * key, int (*fncmp)(const char *, const char *))
+{
+	if (cElms <= 0)
+		return NULL;
+
+	int ixLower = 0;
+	int ixUpper = cElms-1;
+	for (;;) {
+		if (ixLower > ixUpper)
+			return NULL; // return null for "not found"
+
+		int ix = (ixLower + ixUpper) / 2;
+		int iMatch = fncmp(aTable[ix].key, key);
+		if (iMatch < 0)
+			ixLower = ix+1;
+		else if (iMatch > 0)
+			ixUpper = ix-1;
+		else
+			return &aTable[ix];
+	}
+}
+
 #endif
 
