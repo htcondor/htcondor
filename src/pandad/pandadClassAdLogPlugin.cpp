@@ -119,8 +119,9 @@ class PandadClassAdLogPlugin : public ClassAdLogPlugin {
 		void updatePandaJob( const char * globalJobID, const char * attribute, const char * value );
 		void removePandaJob( const char * globalJobID );
 
-		int lowestSeenCluster;
-		int highestKnownCluster;
+		bool inTransaction;
+		int lowestNewCluster;
+		int highestNewCluster;
 
 		FILE *	pandad;
 };
@@ -136,7 +137,7 @@ static PandadClassAdLogPlugin instance;
 	#define DEVNULL "/dev/null"
 #endif // defined( WIN32 )
 
-PandadClassAdLogPlugin::PandadClassAdLogPlugin() : ClassAdLogPlugin(), lowestSeenCluster( INT_MAX ), highestKnownCluster( 0 ) {
+PandadClassAdLogPlugin::PandadClassAdLogPlugin() : ClassAdLogPlugin(), inTransaction( false ), lowestNewCluster( INT_MAX ), highestNewCluster( 0 ) {
 	std::string binary;
 	param( binary, "PANDAD" );
 
@@ -163,13 +164,9 @@ PandadClassAdLogPlugin::~PandadClassAdLogPlugin() {
 }
 
 void PandadClassAdLogPlugin::beginTransaction() {
-	lowestSeenCluster = INT_MAX;
-
-	//
-	// If we want Panda to see job operations on jobs that were in the
-	// queue before we started, we could probe the job queue to find the
-	// highest known cluster ID.
-	//
+	inTransaction = true;
+	lowestNewCluster = INT_MAX;
+	highestNewCluster = 0;
 }
 
 void PandadClassAdLogPlugin::newClassAd( const char * key ) {
@@ -178,20 +175,28 @@ void PandadClassAdLogPlugin::newClassAd( const char * key ) {
 
 	dprintf( D_FULLDEBUG, "PANDA: newClassAd( %s )\n", key );
 
-	if( cluster <= highestKnownCluster ) {
-		dprintf( D_ALWAYS, "PANDA: newClassAd() ignoring spurious call.\n" );
-		return;
-	}
-
 	//
 	// We see new class ads before they contain any useful information.  Wait
 	// until after the transaction that created them completes to try to
 	// inform Panda about them.  Because we know cluster IDs increase
 	// monotonically, we can just store the lowest one we see during a given
 	// transaction and scan upwards from there when the transaction completes.
+	// We need to store the highestNewCluster because we can skip cluster IDs.
 	//
-	if( cluster < lowestSeenCluster ) {
-		lowestSeenCluster = cluster;
+	// If we're not in a transaction, we can't do anything useful, but since
+	// that should never happen, make a note of it in the log.
+	//
+
+	if( ! inTransaction ) {
+		dprintf( D_ALWAYS, "PANDA: newClassAd( %s ) saw a new job outside of transaction.  Unable to process; will ignore.\n", key );
+		return;
+	}
+
+	if( cluster < lowestNewCluster ) {
+		lowestNewCluster = cluster;
+	}
+	if( cluster > highestNewCluster ) {
+		highestNewCluster = cluster;
 	}
 }
 
@@ -207,9 +212,9 @@ void PandadClassAdLogPlugin::destroyClassAd( const char * key ) {
 	// won't send a create or update event for it when the transaction ends;
 	// therefore don't send a delete event, either.
 	//
-	if( cluster > highestKnownCluster ) {
-		return;
-	}
+	// If we're not in a transaction, send the even and hope for the best.
+	//
+	if( inTransaction && cluster > lowestNewCluster ) { return; }
 
 	std::string globalJobID;
 	if( ! getGlobalJobID( cluster, proc, globalJobID ) ) {
@@ -227,13 +232,13 @@ void PandadClassAdLogPlugin::setAttribute( const char * key, const char * attrib
 	dprintf( D_FULLDEBUG, "PANDA: setAttribute( %s, %s, %s ).\n", key, attribute, value );
 
 	//
-	// If this is an update to an existing job, update the job.  Otherwise,
-	// it's an update to a job created in this transaction.  Delay updating
-	// it until the whole job is available (when the transaction ends).
+	// Ignore updates to clusters we'll be handling in EndTransaction().  We'll
+	// always see newClassAd() before setAttribute() for the same ad, so we
+	// won't miss anything this way even if the ads are created out of order.
 	//
-	if( cluster > highestKnownCluster ) {
-		return;
-	}
+	// If we're not in a transaction, send the event and hope for the best.
+	//
+	if( inTransaction && cluster > lowestNewCluster ) { return; }
 
 	std::string globalJobID;
 	if( ! getGlobalJobID( cluster, proc, globalJobID ) ) {
@@ -251,13 +256,13 @@ void PandadClassAdLogPlugin::deleteAttribute( const char * key, const char * att
 	dprintf( D_FULLDEBUG, "PANDA: deleteAttribute( %s, %s )\n", key, attribute );
 
 	//
-	// If we're deleting an attribute from an ad that was created in the
-	// current transaction, we simply won't send it when we do our update
-	// after the transaction ends.
+	// Ignore updates to clusters we'll be handling in EndTransaction().  We'll
+	// always see newClassAd() before deleteAttribute() for the same ad, so we
+	// won't miss anything this way even if the ads are created out of order.
 	//
-	if( cluster > highestKnownCluster ) {
-		return;
-	}
+	// If we're not in a transaction, send the event and hope for the best.
+	//
+	if( inTransaction && cluster > lowestNewCluster ) { return; }
 
 	std::string globalJobID;
 	if( ! getGlobalJobID( cluster, proc, globalJobID ) ) {
@@ -282,21 +287,21 @@ void PandadClassAdLogPlugin::deleteAttribute( const char * key, const char * att
 // the add and update operations here.)
 //
 void PandadClassAdLogPlugin::endTransaction() {
+	if( ! inTransaction ) {
+		dprintf( D_ALWAYS, "PANDA: endTransaction() called but we're not in a transaction.  Ignoring.\n" );
+		return;
+	}
 
-	for( int cluster = lowestSeenCluster; ; ++cluster ) {
+	for( int cluster = lowestNewCluster; cluster <= highestNewCluster; ++cluster ) {
 		dprintf( D_FULLDEBUG, "PANDA: looking at cluster %d\n", cluster );
 		ClassAd * clusterAd = ScheddGetJobAd( cluster, -1 );
 		for( int proc = 0; ; ++proc ) {
 			dprintf( D_FULLDEBUG, "PANDA: looking at proc [%d] %d\n", cluster, proc );
 			ClassAd * jobAd = ScheddGetJobAd( cluster, proc );
 			if( jobAd == NULL ) {
-				// While not all queue management users create a cluster ad
-				// (so it's OK for it to be NULL), they do have to start their
-				// proc IDs at zero.
-				if( proc == 0 ) { return; }
+				// We claim here that proc IDs can't be skipped.
 				break;
 			}
-			highestKnownCluster = cluster;
 
 			std::string globalJobID;
 			if( ! jobAd->LookupString( "GlobalJobId", globalJobID ) ) {
@@ -344,6 +349,8 @@ void PandadClassAdLogPlugin::endTransaction() {
 			}
 		}
 	}
+
+	inTransaction = false;
 }
 
 bool PandadClassAdLogPlugin::shouldIgnoreJob( const char * key, int & cluster, int & proc ) {
@@ -357,7 +364,7 @@ bool PandadClassAdLogPlugin::shouldIgnoreJob( const char * key, int & cluster, i
 
 bool PandadClassAdLogPlugin::getGlobalJobID( int cluster, int proc, std::string & globalJobID ) {
 	ClassAd * classAd = ScheddGetJobAd( cluster, proc );
-	if( ! classAd ) {
+	if( classAd == NULL ) {
 		return false;
 	}
 
