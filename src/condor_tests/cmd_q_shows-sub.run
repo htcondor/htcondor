@@ -22,34 +22,44 @@ use strict;
 use warnings;
 
 use CondorTest;
+use Check::SimpleJob;
+use CondorUtils;
 
-my $cmd = 'cmd_q_shows-sub.cmd';
-my $testdesc =  'cmd_q_shows-sub';
 my $testname = "cmd_q_shows-sub";
 
 my $debuglevel = 2;
+my $ClusterId = 0;
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
 
 my $whoami;
 my $cluster;
 
 my $submit = sub {
+	$cluster = $ClusterId;
+	print "my cluster is:$cluster\n";
     my @adarray;
     CondorTest::debug("Determining submitter and cluster\n", $debuglevel);
 
-    open(CMD, '<', "$cmd.out") || die "Can not find submit output:$!\n";
-    while(<CMD>) {
-        if(/submitted to cluster\s+(\d+)/) {
-            $cluster = $1;
-            CondorTest::debug("Cluster = $cluster!\n", $debuglevel);
-        }
-    }
-    close(CMD);
 
     my $cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\n\" ClusterId";
-    if(!CondorTest::runCondorTool($cmd, \@adarray, 2)) {
+    if(!CondorTest::runCondorTool($cmd, \@adarray, 2,{emit_output=>0})) {
         CondorTest::debug("ERROR - cannot determine submitted and cluster.", $debuglevel);
         CondorTest::debug("Command failed: $cmd\n", $debuglevel);
-        exit(1)
+		FailAndEndTest();
     }
 
     foreach (@adarray) {
@@ -57,6 +67,8 @@ my $submit = sub {
             CondorTest::debug("Matching line -> $_\n", $debuglevel);
             CondorTest::debug("submitter = $1  -  cluster = $cluster\n", $debuglevel);
             $whoami = $1;
+
+			print "Determined submiter for cluster:$cluster is:$whoami\n";
         }
         else {
             CondorTest::debug("Non-matching line -> $_\n", $debuglevel);
@@ -64,11 +76,12 @@ my $submit = sub {
     }
 
     if(!$whoami) {
-        die "Can not find out who I am to use in condor_q -sub <submitter>\n";
+        print "Can not find out who I am to use in condor_q -sub <submitter>\n";
+		FailAndEndTest();
     }
 
     # Re-scheduling might get the job running sooner
-    CondorTest::runCondorTool("condor_reschedule", \@adarray, 2);
+    CondorTest::runCondorTool("condor_reschedule", \@adarray, 2,{emit_output=>0});
 };
 
 my $execute = sub {
@@ -77,46 +90,54 @@ my $execute = sub {
     my @adarray;
     my $cmd = "condor_q -sub $whoami -format \"%d.\" ClusterId -format \"%d \" ProcId -format \" %s\" Owner -format \" %s\n\" Cmd";
 
-    if(!CondorTest::runCondorTool($cmd,\@adarray,2)) {
+    if(!CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0})) {
         CondorTest::debug("ERROR - failed to run command: $cmd\n", $debuglevel);
         system("condor_rm $cluster"); # bail but pull job which never dies...
-        exit(1)
+		FailAndEndTest();
     }
 
+	my $done = 0;
     print "Looking for condor_q with submitter '$whoami' and cluster $cluster - ";
     foreach (@adarray) {
         if(/^\s*(\d+).\d+\s+([\w\-]+)/) {
             if(($cluster eq $1) && ($whoami eq $2)){
                 CondorTest::debug("condor_q -sub $whoami found my job matching $cluster\n", $debuglevel);
-                CondorTest::runCondorTool("condor_rm $cluster", \@adarray, 8);
+                CondorTest::runCondorTool("condor_rm $cluster", \@adarray, 8,{emit_output=>0});
                 print "ok\n";
-                exit(0);
+				$done = 1;
             }
         }
     }
 
-    print "bad\n";
-    CondorTest::runCondorTool("condor_rm $cluster", \@adarray, 8);
-    die "We never found ourselves with <condor_q -sub $whoami>\n"
+    CondorTest::runCondorTool("condor_rm $cluster", \@adarray, 8, {expect_result => ANY,emit_output=>0});
+
+	if($done == 0) {
+    	print "bad\n";
+    	print "We never found ourselves with:condor_q -sub $whoami\n";
+		FailAndEndTest();
+	}
+};
+
+sub FailAndEndTest
+{
+	CondorTest::RegisterResult(0);
+	CondorTest::EndTest();
 };
 
 my $abort = sub {
-	print "Got expected abort from the condor_rm\n";
 };
 
 my $evictedwithoutchpt = sub {
-	print "Got expected without checkpoint from the condor_rm\n";
 };
 
-CondorTest::RegisterAbort($testname, $abort);
-CondorTest::RegisterEvictedWithoutCheckpoint($testname, $abort);
-CondorTest::RegisterSubmit($testname, $submit);
-CondorTest::RegisterExecute($testname, $execute);
+print "Start a long runniing job - ";
 
-if( CondorTest::RunTest($testname, "cmd_q_shows-sub.cmd", 0)) {
-    CondorTest::debug("$testname: SUCCESS\n", $debuglevel);
-    exit(0);
-}
-else {
-    die "$testname: CondorTest::RunTest() failed\n";
-}
+my $runresult = SimpleJob::RunCheck(
+	duration => 0,
+	on_abort => $abort,
+	on_submit => $submit,
+	on_execute => $execute,
+	on_evictedwithoutcheckpoint => $abort,
+	GetClusterId => $GetClusterId,
+);
+

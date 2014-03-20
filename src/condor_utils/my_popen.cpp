@@ -471,6 +471,13 @@ my_popenv_impl( const char *const args[],
 		close(pipe_d2[0]);
 		close(pipe_d[0]);
 		close(pipe_d[1]);
+
+		/* Ensure child process is dead, then wait for it to exit */
+		kill(pid, SIGKILL);
+		while( waitpid(pid,NULL,0) < 0 && errno == EINTR ) {
+			/* NOOP */
+		}
+
 		return NULL;
 	}
 		/* Handle case where exec fails */
@@ -478,6 +485,13 @@ my_popenv_impl( const char *const args[],
 		fclose(fh);
 		close(pipe_d[0]);
 		close(pipe_d[1]);
+
+		/* Ensure child process is dead, then wait for it to exit */
+		kill(pid, SIGKILL);
+		while( waitpid(pid,NULL,0) < 0 && errno == EINTR ) {
+			/* NOOP */
+		}
+
 		errno = exit_code;
 		return NULL;
 	}

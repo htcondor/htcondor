@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Monitoring}Monitoring}
+\section{\label{sec:Monitoring}Monitoring}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{pool management!monitoring}
 \index{monitoring pools}
@@ -13,22 +13,21 @@ Monitoring systems can be set up to track the state over time,
 and they might go further, 
 to alert the system administrator about exceptional conditions.
 
-Prevalent in the Open Science Grid is the Ganglia monitoring system
-(\URL{http://ganglia.info/}).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:monitor-ganglia}Ganglia}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Monitoring!with Ganglia}
+\index{Ganglia monitoring}
+
+Support for the Ganglia monitoring system (\URL{http://ganglia.info/})
+is integral to HTCondor.
 Nagios (\URL{http://www.nagios.org/})
 is often used to provide alerts based on data from the Ganglia
 monitoring system.
 The \Condor{gangliad} daemon provides an efficient way to take information from
 an HTCondor pool and supply it to the Ganglia monitoring system.
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:monitor-ganglia}Ganglia}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Monitoring!with Ganglia}
-\index{Ganglia monitoring}
-
-Support for Ganglia monitoring is integral to HTCondor.
 The \Condor{gangliad} gathers up data as specified by its configuration,
 and it streamlines getting that data to the Ganglia monitoring
 system.
@@ -232,3 +231,5 @@ Recognized metric attribute names and their use:
     running on the same host.
 
   \end{description}
+
+\input{admin-man/absent.tex}

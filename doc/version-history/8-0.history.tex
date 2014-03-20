@@ -33,7 +33,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{JOB\_EXECDIR\_PERMISSIONS}
+defines the permissions on a job's scratch directory. 
+It defaults to setting permissions as \emph{0700}.
+\Ticket{4208}
+
 
 \end{itemize}
 
@@ -41,13 +45,24 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed \Condor{q} command line parsing to look for \Opt{-stream-results}
-as the manual and useage indicates instead of just \Opt{-stream}.
+\item Fixed the parsing of the \Condor{q} command line,
+such that it looks for the entire option \Opt{-stream-results},
+instead of only the portion \Opt{-stream}.
+The code now matches what was previously documented in the manual page
+and in the usage output.
 \Ticket{4205}
 
 \item Fixed a bug in the grid universe that could allow a removed job to
 leave the queue without cleaning up all job state on the remote server.
 \Ticket{4216}
+
+\item Fixed the printing of nested ClassAds, so that the nested ClassAds
+can be read back properly.
+\Ticket{3772}
+
+\item Fixed a bug in the \Condor{starter} that could cause a crash if
+the job is evicted while a \Condor{ssh\_to\_job} command is active.
+\Ticket{4251}
 
 \end{itemize}
 

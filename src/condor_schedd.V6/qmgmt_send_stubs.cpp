@@ -346,10 +346,10 @@ BeginTransaction_imp()
 	return rval;
 }
 
-void
+int
 BeginTransaction()
 {
-	BeginTransaction_imp();
+	return BeginTransaction_imp();
 }
 
 int
@@ -378,10 +378,10 @@ AbortTransaction_imp()
 		return rval;
 }
 
-void
+int
 AbortTransaction()
 {
-	AbortTransaction_imp();
+	return AbortTransaction_imp();
 }
 
 int

@@ -178,7 +178,10 @@ my $isXML = 0;  # are we running tests with XML output
 CleanFromPath(".");
 # yet add in base dir of all tests and compiler directories
 $ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
-
+# add 64 bit  location for java
+if($iswindows == 1) {
+	$ENV{PATH} = $ENV{PATH} . ":/cygdrive/c/windows/sysnative:c:\\windows\\sysnative";
+}
 #
 # the args:
 
@@ -1192,7 +1195,7 @@ sub CreateLocalConfig {
 	# ADD size for log files and debug level
 	# default settings are in condor_config, set here to override 
 	#print FIX "ALL_DEBUG               = D_FULLDEBUG D_SECURITY D_HOSTNAME\n";
-	print FIX "DEFAULT_DEBUG               = D_FULLDEBUG D_SECURITY D_HOSTNAME\n";
+	#print FIX "DEFAULT_DEBUG               = D_FULLDEBUG D_HOSTNAME\n";
 
 	print FIX "MAX_COLLECTOR_LOG       = $logsize\n";
 	print FIX "COLLECTOR_DEBUG         = \n";
@@ -1274,8 +1277,14 @@ sub CreateLocalConfig {
 				# if where doesn't tell us the location of the java binary, just assume it's will be
 				# in the path once condor is running. (remember that cygwin lies...)
 				if ( ! ($jvm =~ /java/i)) {
+					# we need a special check for 64bit java if we are a 32 bit app.
+					if ( -e '/cygdrive/c/windows/sysnative/java.exe') {
+						debug ("where $javabinary returned nothing, but found 64bit java in sysnative dir\n",2);
+						$jvm = "c:\\windows\\sysnative\\java.exe";
+					} else {
 					debug ("where $javabinary returned nothing, assuming java will be in Condor's path.\n",2);
 					$jvm = "java.exe";
+					}
 				}
 			} else {
 				my $whichtest = `which $javabinary`;

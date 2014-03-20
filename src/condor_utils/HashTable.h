@@ -24,6 +24,8 @@
 #include "condor_debug.h"
 #include "MyString.h"
 
+#include <utility>
+
 // a generic hash bucket class
 
 template <class Index, class Value>
@@ -32,6 +34,81 @@ class HashBucket {
   Index       index;                         // stored index
   Value      value;                          // associated value
   HashBucket<Index, Value> *next;            // next node in the hash table
+};
+
+template <class Index, class Value> class HashTable;
+
+template< class Index, class Value >
+class HashIterator : std::iterator<std::input_iterator_tag, std::pair<Index, Value> >
+{
+public:
+	HashIterator(const HashIterator &original) {
+		m_parent = original.m_parent;
+		m_idx = original.m_idx;
+		m_cur = original.m_cur;
+		m_parent->register_iterator(this);
+	}
+
+	~HashIterator() {
+		m_parent->remove_iterator(this);
+	}
+
+	std::pair<Index, Value> operator *() const {
+		return std::pair<Index, Value>(m_cur->index, m_cur->value);
+	}
+
+	std::pair<Index, Value> operator ->() const {
+		return std::pair<Index, Value>(m_cur->index, m_cur->value);
+	}
+
+	HashIterator operator++(int) {
+		HashIterator<Index,Value> result = *this;
+		if (m_cur) m_cur = m_cur->next;
+		while (!m_cur) {
+			if (m_idx == m_parent->tableSize-1) {
+				m_idx = -1;
+				break;
+			} else {
+				m_cur = m_parent->ht[++m_idx];
+			}
+		}
+		return result;
+	}
+
+	bool operator==(const HashIterator &rhs) const {
+		if (this->m_parent != rhs.m_parent) {
+			return false;
+		}
+		if (this->m_idx != rhs.m_idx) {
+			return false;
+		}
+		if (this->m_cur != rhs.m_cur) {
+			return false;
+		}
+		return true;
+	}
+
+private:
+	friend class HashTable<Index, Value>;
+
+	HashIterator(HashTable<Index, Value> *parent, int idx)
+	  : m_parent(parent), m_idx(idx), m_cur(NULL)
+	{
+		if (idx == -1) return;
+		m_cur = m_parent->ht[m_idx];
+		while (!m_cur) {
+			if (m_idx == m_parent->tableSize-1) {
+				m_idx = -1;
+				break;
+			} else {
+				m_cur = m_parent->ht[++m_idx];
+			}
+		}
+	}
+
+	HashTable<Index, Value> *m_parent;
+	int m_idx;
+	HashBucket<Index, Value> *m_cur;
 };
 
 // a generic hash table class
@@ -49,6 +126,9 @@ typedef enum {
 template <class Index, class Value>
 class HashTable {
  public:
+  typedef HashIterator<Index, Value> iterator;
+  friend class HashIterator<Index, Value>;
+
     // the first constructor takes a tableSize that isn't used, it's left in
 	// for compatibility reasons
   HashTable( int tableSize,
@@ -85,6 +165,8 @@ class HashTable {
   int  getCurrentKey (Index &index);
   int  iterate (Index &index, Value &value);
 
+  iterator begin() {return iterator(this, 0);}
+  iterator end() {return iterator(this, -1);}
 
   /*
   Walk the table, calling walkfunc() on every member.
@@ -97,6 +179,9 @@ class HashTable {
 
 
  private:
+  void register_iterator(iterator* it);
+  void remove_iterator(iterator* it);
+
   /* Deeply copy the hash table. */
   void copy_deep(const HashTable<Index, Value> &copy);
   /*
@@ -117,13 +202,14 @@ class HashTable {
 #endif
 
   int tableSize;                                // size of hash table
+  int numElems; // number of elements in the hashtable
   HashBucket<Index, Value> **ht;                // actual hash table
   unsigned int (*hashfcn)(const Index &index);  // user-provided hash function
   double maxLoadFactor;			// average number of elements per bucket list
   duplicateKeyBehavior_t duplicateKeyBehavior;        // duplicate key behavior
   int currentBucket;
   HashBucket<Index, Value> *currentItem;
-  int numElems; // number of elements in the hashtable
+  std::vector<iterator*> activeIterators;
 };
 
 // The two normal hash table constructors call initialize() to set everything up
@@ -198,6 +284,31 @@ const HashTable<Index,Value>& HashTable<Index,Value>::operator=( const HashTable
 
   // return a reference to ourself
   return *this;
+}
+
+// Register an iterator
+template <class Index, class Value>
+void
+HashTable<Index,Value>::register_iterator(typename HashTable<Index,Value>::iterator* it) {
+	activeIterators.push_back(it);
+}
+
+template <class Index, class Value>
+void
+HashTable<Index,Value>::remove_iterator(typename HashTable<Index,Value>::iterator* dead_it) {
+	typename std::vector<iterator*>::iterator it;
+	for (it = activeIterators.begin();
+		it != activeIterators.end();
+		++it)
+	{
+		if (dead_it == *it) {
+			activeIterators.erase(it);
+			break;
+		}
+	}
+	if(needs_resizing()) {
+		resize_hash_table();
+	}
 }
 
 // Do a deep copy into ourself
@@ -475,7 +586,18 @@ int HashTable<Index,Value>::remove(const Index &index)
 				if (bucket == currentItem)
 				{
 					currentItem = 0;
-					currentBucket --;
+					if (--currentBucket < 0) currentBucket = 0;
+				}
+				for (typename std::vector<iterator*>::iterator it=activeIterators.begin();
+					it != activeIterators.end();
+					it++)
+				{
+					if (bucket == (*it)->m_cur)
+					{
+						if (--(*it)->m_idx < 0) (*it)->m_idx = 0;
+						(*it)->m_cur = ht[(*it)->m_idx];
+						
+					}
 				}
 			}
       		else
@@ -486,6 +608,15 @@ int HashTable<Index,Value>::remove(const Index &index)
 				if (bucket == currentItem)
 				{
 					currentItem = prevBuc;
+				}
+				for (typename std::vector<iterator*>::iterator it=activeIterators.begin();
+					it != activeIterators.end();
+					it++)
+				{
+					if (bucket == (*it)->m_cur)
+					{
+						(*it)->m_cur = prevBuc;
+					}
 				}
 			}
 
@@ -642,6 +773,8 @@ HashTable<Index,Value>::~HashTable()
 // Determine if the hash table should be resized and reindexed
 template <class Index, class Value>
 int HashTable<Index, Value>::needs_resizing() {
+		// Resizing destroys active iterators.
+	if (activeIterators.size()) return 0;
 	if(((double) numElems / (double) tableSize) >= maxLoadFactor) {
 		return 1;
 	}

@@ -136,6 +136,20 @@ Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
 daemon to project along.  
 It defaults to having the \Condor{schedd} daemon return all attributes.
 \\ \hline
+\texttt{xquery( constraint = true, attr\_list = [] )}
+
+Query the \Condor{schedd} daemon for jobs.
+Returns an iterator of ClassAds representing the matching jobs
+containing at least the list of attributes requested by the second parameter.
+
+The optional parameter \texttt{constraint} provides a constraint for
+filtering out jobs.
+It defaults to \texttt{True}.
+
+Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
+daemon to project along.
+It defaults to having the \Condor{schedd} daemon return all attributes.
+\\ \hline
 \texttt{submit( ad, count = 1, spool = false, ad\_results = None )}
 
 Submit one or more jobs to the \Condor{schedd} daemon.
@@ -209,8 +223,10 @@ than the desired lifetime.
 
 Create an instance of the \texttt{Collector} class.  
 
-Optional parameter \texttt{pool} is a string with host:port pair specified.
-If omitted, the local \Condor{schedd} daemon is used.
+Optional parameter \texttt{pool} is a string with host:port pair specified or
+a list of pairs.
+If omitted, the value of configuration variable \MacroNI{COLLECTOR\_HOST} 
+is used.
 \\ \hline
 \texttt{locate( (DaemonTypes)daemon\_type, (str)name )}
 
@@ -549,7 +565,7 @@ Return the version of the linked ClassAd library.
 \texttt{Attribute( name )}
 
 Given the string \texttt{name}, 
-return an \texttt{ExprTree} obect which is a
+return an \texttt{ExprTree} object which is a
 reference to an attribute of that name.
 The ClassAd expression \Expr{foo == 1} can be constructed 
 by the python \Expr{Attribute("foo") == 1}.

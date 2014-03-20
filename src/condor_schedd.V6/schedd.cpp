@@ -1292,6 +1292,7 @@ Scheduler::count_jobs()
 	// 
 	SetMyTypeName(*m_adBase, SUBMITTER_ADTYPE);
 	m_adBase->Assign(ATTR_SCHEDD_NAME, Name);
+	m_adBase->Assign(ATTR_SCHEDD_IP_ADDR, daemonCore->publicNetworkIpAddr() );
 	daemonCore->publish(m_adBase);
 	extra_ads.Publish(m_adBase);
 
@@ -1751,6 +1752,158 @@ int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
 	}
 	m_history_helper_count++;
 	return true;
+}
+
+static bool
+sendJobErrorAd(Stream *stream, int errorCode, std::string errorString)
+{
+	classad::ClassAd ad;
+	ad.InsertAttr(ATTR_OWNER, 0);
+	ad.InsertAttr(ATTR_ERROR_STRING, errorString);
+	ad.InsertAttr(ATTR_ERROR_CODE, errorCode);
+
+	stream->encode();
+	if (!putClassAd(stream, ad) || !stream->end_of_message())
+	{
+		dprintf(D_ALWAYS, "Failed to send error ad for job ads query\n");
+	}
+	return false;
+}
+
+static bool
+sendDone(Stream *stream)
+{
+	classad::ClassAd ad;
+	ad.InsertAttr(ATTR_OWNER, 0);
+	ad.InsertAttr(ATTR_ERROR_CODE, 0);
+	stream->encode();
+	if (!putClassAd(stream, ad) || !stream->end_of_message())
+	{
+		dprintf(D_ALWAYS, "Failed to send done message to job query.\n");
+		return false;
+	}
+	return true;
+}
+
+struct QueryJobAdsContinuation : Service {
+
+	classad_shared_ptr<classad::ExprTree> requirements;
+	StringList projection;
+	ClassAdLog::filter_iterator it;
+	bool unfinished_eom;
+	bool registered_socket;
+
+	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int timeslice_ms=0);
+	int finish(Stream *);
+};
+
+QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int timeslice_ms)
+	: requirements(requirements_),
+	  it(BeginIterator(*requirements, timeslice_ms)),
+	  unfinished_eom(false),
+	  registered_socket(false)
+{
+}
+
+int
+QueryJobAdsContinuation::finish(Stream *stream) {
+        ReliSock *sock = static_cast<ReliSock*>(stream);
+        ClassAdLog::filter_iterator end = EndIterator();
+        bool has_backlog = false;
+
+	if (unfinished_eom) {
+		int retval = sock->finish_end_of_message();
+		if (sock->clear_backlog_flag()) {
+			return KEEP_STREAM;
+		} else if (retval == 1) {
+			unfinished_eom = false;
+		} else if (!retval) {
+			delete this;
+			return sendJobErrorAd(sock, 5, "Failed to write EOM to wire");
+		}
+	}
+        while ((it != end) && !has_backlog) {
+		ClassAd* tmp_ad = *it++;
+		if (!tmp_ad) {
+			// Return to DC in case if our time ran out.
+			has_backlog = true;
+			break;
+		}
+		int proc, cluster;
+                tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
+                tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
+                //dprintf(D_FULLDEBUG, "Writing job %d.%d to wire\n", cluster,proc);
+                int retval = putClassAdNonblocking(sock, *tmp_ad);
+                if (retval == 2) {
+			//dprintf(D_FULLDEBUG, "Detecting backlog.\n");
+                        has_backlog = true;
+                } else if (!retval) {
+			delete this;
+                        return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
+                }
+                retval = sock->end_of_message_nonblocking();
+                if (sock->clear_backlog_flag()) {
+			//dprintf(D_FULLDEBUG, "Socket EOM will block.\n");
+                        unfinished_eom = true;
+			has_backlog = true;
+                }
+        }
+        if (has_backlog && !registered_socket) {
+		int retval = daemonCore->Register_Socket(stream, "Client Response",
+			(SocketHandlercpp)&QueryJobAdsContinuation::finish,
+			"Query Job Ads Continuation", this, ALLOW, HANDLE_WRITE);
+		if (retval < 0) {
+			delete this;
+			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
+		}
+		registered_socket = true;
+        } else if (!has_backlog) {
+		//dprintf(D_FULLDEBUG, "Finishing condor_q.\n");
+		delete this;
+		return sendDone(sock);
+	}
+	return KEEP_STREAM;
+}
+
+int Scheduler::command_query_job_ads(int, Stream* stream)
+{
+	ClassAd queryAd;
+
+	stream->decode();
+	stream->timeout(15);
+	if( !getClassAd(stream, queryAd) || !stream->end_of_message()) {
+		dprintf( D_ALWAYS, "Failed to receive query on TCP: aborting\n" );
+		return FALSE;
+	}
+
+	classad::ExprTree *requirements = queryAd.Lookup(ATTR_REQUIREMENTS);
+	if (!requirements) {
+		classad::Value val; val.SetBooleanValue(true);
+		requirements = classad::Literal::MakeLiteral(val);
+		if (!requirements) return sendJobErrorAd(stream, 1, "Failed to create default requirements");
+	}
+	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements->Copy());
+
+	classad::Value value;
+	classad::ExprList *list = NULL;
+	if ((queryAd.find(ATTR_PROJECTION) != queryAd.end()) &&
+		(!queryAd.EvaluateAttr(ATTR_PROJECTION, value) || !value.IsListValue(list)))
+	{
+		return sendJobErrorAd(stream, 2, "Unable to evaluate projection list");
+	}
+	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, 1000);
+	StringList &projection = continuation->projection;
+	if (list) for (classad::ExprList::const_iterator it = list->begin(); it != list->end(); it++) {
+		std::string attr;
+		if (!(*it)->Evaluate(value) || !value.IsStringValue(attr))
+		{
+			delete continuation;
+			return sendJobErrorAd(stream, 3, "Unable to convert projection list to string list");
+		}
+		projection.insert(attr.c_str());
+	}
+
+	return continuation->finish(stream);
 }
 
 int 
@@ -2876,7 +3029,7 @@ jobIsFinished( int cluster, int proc, void* )
 		*/
 	MyString iwd;
 	MyString owner;
-	BOOLEAN is_nfs;
+	bool is_nfs;
 	int want_flush = 0;
 
 	job_ad->EvalBool( ATTR_JOB_IWD_FLUSH_NFS_CACHE, NULL, want_flush );
@@ -11323,6 +11476,12 @@ Scheduler::Register()
 				(CommandHandlercpp)&Scheduler::command_history,
 				"command_history", this, READ);
 
+	// Command handler for 'condor_q' queries.  Broken out from QMGMT for the 8.1.4 series.
+	// QMGMT is a massive hulk of global variables - we want to make this non-blocking and have
+	// multiple queries active in-process at once.
+	daemonCore->Register_CommandWithPayload(QUERY_JOB_ADS, "QUERY_JOB_ADS",
+				(CommandHandlercpp)&Scheduler::command_query_job_ads,
+				"command_query_job_ads", this, READ);
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified

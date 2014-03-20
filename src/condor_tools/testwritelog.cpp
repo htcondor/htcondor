@@ -342,7 +342,8 @@ init_params()
 #endif
 
 
-	ValidSpoolFiles = param("VALID_SPOOL_FILES");
+	//UserValidSpoolFiles = param("VALID_SPOOL_FILES");
+	ValidSpoolFiles = param("SYSTEM_VALID_SPOOL_FILES");
 
 	InvalidLogFiles = param("INVALID_LOG_FILES");
 }

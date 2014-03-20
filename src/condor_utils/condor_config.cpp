@@ -1670,6 +1670,7 @@ init_config(int config_options)
 		if (ConfigMacroSet.defaults->metat) delete [] ConfigMacroSet.defaults->metat;
 		ConfigMacroSet.defaults->metat = NULL;
 		ConfigMacroSet.defaults->size = param_info_init((const void**)&ConfigMacroSet.defaults->table);
+		ConfigMacroSet.options |= CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO;
 	}
 	if (want_meta) {
 		if (ConfigMacroSet.metat) delete [] ConfigMacroSet.metat;
@@ -1816,7 +1817,7 @@ param_without_default( const char *name )
 	}
 
 	// Ok, now expand it out...
-	expanded_val = expand_macro(val, ConfigMacroSet, NULL, false, subsys);
+	expanded_val = expand_macro(val, ConfigMacroSet, false, subsys);
 
 	// If it returned an empty string, free it before returning NULL
 	if( expanded_val == NULL ) {
@@ -1969,7 +1970,7 @@ param_with_default_abort(const char *name, int abort)
 	// if we get here, it means that we found a val of note, so expand it and
 	// return the canonical value of it. expand_macro returns allocated memory.
 	// note that expand_macro will first try and expand
-	char * expanded_val = expand_macro(val, ConfigMacroSet, NULL, true, subsys);
+	char * expanded_val = expand_macro(val, ConfigMacroSet, true, subsys);
 	if (expanded_val == NULL) {
 		return NULL;
 	}
@@ -2376,7 +2377,7 @@ macro_expand( const char *str )
 char *
 expand_param(const char *str, const char *subsys, int use)
 {
-	return expand_macro(str, ConfigMacroSet, NULL, true, subsys, use);
+	return expand_macro(str, ConfigMacroSet, true, subsys, use);
 }
 
 /*

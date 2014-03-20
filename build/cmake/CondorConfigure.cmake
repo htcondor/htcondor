@@ -633,7 +633,7 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.5)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.5.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.6)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.12.1_14)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.14.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
 
         if (LINUX)
@@ -882,7 +882,7 @@ else(MSVC)
 	endif(cxx_Wvolatile_register_var)
 
 	check_cxx_compiler_flag(-Wunused-local-typedefs cxx_Wunused_local_typedefs)
-	if (cxx_Wunused_local_typedefs)
+	if (cxx_Wunused_local_typedefs AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
 		# we don't ever want the 'unused local typedefs' warning treated as an error.
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=unused-local-typedefs")
 	endif(cxx_Wunused_local_typedefs)

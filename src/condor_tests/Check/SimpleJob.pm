@@ -21,7 +21,7 @@ package SimpleJob;
 
 use CondorTest;
 my $timeout = 0;
-my $defaulttimeout = 180;
+my $defaulttimeout = 240;
 $timeout = $defaulttimeout;
 
 $timed_callback = sub
@@ -185,6 +185,9 @@ sub RunCheck
 	}
 	if($error ne "") {
 		print SUBMIT "error = $error\n";
+	}
+	if($args{request_memory}) {
+		print SUBMIT "request_memory = $args{request_memory}\n";
 	}
 	if($streamoutput ne "") {
 		print SUBMIT "stream_output = $streamoutput\n";

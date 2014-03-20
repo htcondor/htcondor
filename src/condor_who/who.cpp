@@ -303,7 +303,7 @@ format_slot_id (int slotid, AttrList * ad, Formatter & /*fmt*/)
 
 // print the pid for a jobid.
 static const char *
-format_jobid_pid (char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
+format_jobid_pid (const char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
 {
 	static char outstr[16];
 	outstr[0] = 0;
@@ -929,7 +929,7 @@ static void init_program_for_pid(pid_t pid)
 
 
 static const char *
-format_jobid_program (char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
+format_jobid_program (const char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
 {
 	const char * outstr = NULL;
 

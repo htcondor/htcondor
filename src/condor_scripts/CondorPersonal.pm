@@ -1168,7 +1168,7 @@ if($btdebug == 1) {
 
 		# Dan: Jan 30, '08 added D_NETWORK in order to debug condor_rm timeout
 		# print NEW "ALL_DEBUG = D_FULLDEBUG\n";
-    	print NEW "DEFAULT_DEBUG = D_FULLDEBUG\n";
+    	#print NEW "DEFAULT_DEBUG = D_FULLDEBUG\n";
 		# bill: 8/13/09 speed up dagman
 		print NEW "DAGMAN_USER_LOG_SCAN_INTERVAL = 1\n";
 		# bill make tools more forgiving of being busy

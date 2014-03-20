@@ -2227,6 +2227,12 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 			args.obsoleteif = &obsoleteif;
 		}
 
+		items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIFX");
+		if (items && items[0]) {
+			obsoleteif.initializeFromString(items);
+			args.obsoleteif = &obsoleteif;
+		}
+
 		#ifdef WIN32
 		// on Windows we shove in some defaults for VMWARE, we want to ignore them
 		// for upgrade if the user isn't using vmware
@@ -2234,7 +2240,7 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 		if (vm_type) { free(vm_type); }
 		else
 		{
-			const char * items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIF_VMWARE");
+			items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIF_VMWARE");
 			if (items && items[0]) {
 				obsoleteif.initializeFromString(items);
 				args.obsoleteif = &obsoleteif;

@@ -448,6 +448,7 @@ Reconfiguration using \Condor{reconfig} will not be enough.
   \item \verb@PRIVSEP_ENABLED@
   \item \verb@PROCD_ADDRESS@
   \item \verb@SLOT_TYPE_<N>@
+  \item \verb@OFFLINE_MACHINE_RESOURCE_<name>@
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -744,6 +745,13 @@ File System Configuration File Entries''.
   see section~\ref{sec:Ports-NonStandard} on
   page~\pageref{sec:Ports-NonStandard}.
 
+  Multiple \Condor{collector} daemons may be running simultaneously,
+  if \MacroNI{COLLECTOR\_HOST} is defined with a comma separated list of hosts.
+  Multiple \Condor{collector} daemons may run for the implementation of
+  high availability; see section~\ref{sec:high-availability} for details.
+  With more than one running, updates are sent to all.
+  With more than one running, queries are sent to one of 
+  the \Condor{collector} daemons, chosen at random.
 
 \label{param:NegotiatorHost} 
 \item[\Macro{NEGOTIATOR\_HOST}]
@@ -1700,10 +1708,26 @@ of the subsystem corresponding to the daemon.
 
 \label{param:EnableUserlogLocking}
 \item[\Macro{ENABLE\_USERLOG\_LOCKING}]
-  When \Expr{True} (the default value),
-  a user's job log (as specified in a submit description file)
+  A boolean value that is \Expr{True} by default.
+  When \Expr{True}, a user's job event log
   will be locked before being written to.
   If \Expr{False}, HTCondor will not lock the file before writing.
+
+\label{param:EnableUserlogFsync}
+\item[\Macro{ENABLE\_USERLOG\_FSYNC}]
+  A boolean value that is \Expr{True} by default.
+  When \Expr{True}, writes to the user's job event log are sync-ed to
+  disk before releasing the lock.
+
+\label{param:EventLogCountEvents}
+\item[\Macro{EVENT\_LOG\_COUNT\_EVENTS}]
+  A boolean value that is \Expr{False} by default.
+  When \Expr{True}, upon rotation of the user's job event log, 
+  a count of the number of job events is taken by scanning the log,
+  such that the newly created,
+  post-rotation user job event log will have this count in its header.
+  This configuration variable is relevant when rotation of the
+  user's job event log is enabled.
 
 \label{param:NewLocking}
 \item[\Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK}]
@@ -3729,12 +3753,6 @@ will not want to change them for any reason.
   section~\ref{param:SubsysAddressFile} as
   \MacroNI{<SUBSYS>\_ADDRESS\_FILE}. 
 
-\label{param:SecondaryCollectorList}
-\item[\Macro{SECONDARY\_COLLECTOR\_LIST}]
-  This macro has been removed as of HTCondor version 6.9.3.
-  Use the \Macro{COLLECTOR\_HOST} configuration variable, which may define a
-  list of \Condor{collector} daemons.
-
 \label{param:AllowAdminCommands}
 \item[\Macro{ALLOW\_ADMIN\_COMMANDS}]
   If set to NO for a given host, this
@@ -4677,8 +4695,7 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   that define the partitioning.
   If used, custom resources without names in the list are ignored.
 
-
-\label{param:MachineResourceResourcename}
+\label{param:MachineResourceName}
 \item[\Macro{MACHINE\_RESOURCE\_<name>}]
   An integer that specifies the quantity of or list of identifiers for
   the customized local machine resource available for an SMP machine.
@@ -4691,20 +4708,25 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   the quantity is the number of identifiers and slots will be allocated
   both a quantity of the resource and assigned specific resource identifiers.
 
-
-\label{param:OfflineMachineResourceResourcename}
+\label{param:OfflineMachineResourceName}
 \item[\Macro{OFFLINE\_MACHINE\_RESOURCE\_<name>}]
-  A list of resource identifiers for the customized local machine resource
-  that are currently offline and should not be allocated to a slot.
-  The identifiers specified here must match those specified in the corresponding
-  \Macro{MACHINE\_RESOURCE\_<name>} or \Macro{MACHINE\_RESOURCE\_INVENTORY\_<name>}
-  or they will be ignored.
-  Use this to have resources that are detected and reported to exist by HTCondor
-  but not assigned to slots. A restart of the \Condor{startd} is required
-  for changes to take effect.
+  A comma and/or space separated list of resource identifiers for any 
+  customized local machine resources that are currently offline, 
+  and therefore should not be allocated to a slot.
+  The identifiers specified here must match those specified by value of
+  configuration variables \Macro{MACHINE\_RESOURCE\_<name>} or 
+  \Macro{MACHINE\_RESOURCE\_INVENTORY\_<name>},
+  or the identifiers will be ignored.
+  The \MacroNI{<name>} identifies the type of resource,
+  as specified by the value of configuration variable
+  \MacroNI{MACHINE\_RESOURCE\_NAMES}.
+  This configuration variable is used to have resources that are detected 
+  and reported to exist by HTCondor,
+  but not assigned to slots. 
+  A restart of the \Condor{startd} is required for changes to this
+  configuration variable to take effect.
 
-
-\label{param:MachineResourceInventoryResourcename}
+\label{param:MachineResourceInventoryName}
 \item[\Macro{MACHINE\_RESOURCE\_INVENTORY\_<name>}]
   Specifies a command line that is executed upon start up of the 
   \Condor{startd} daemon.  The script is expected to output an attribute
@@ -7130,12 +7152,25 @@ These macros affect \Condor{preen}.
 \item[\Macro{VALID\_SPOOL\_FILES}]
   A comma or space separated list of files that
   \Condor{preen} considers valid files to find in the \MacroUNI{SPOOL}
-  directory. There is no default value. \Condor{preen} will add to the
+  directory, such that \Condor{preen} will not remove these files.
+  There is no default value. \Condor{preen} will add to the
   list files and directories that are normally present in the
   \MacroUNI{SPOOL} directory.
   A single asterisk (\verb|*|) wild card character is permitted in each 
   file item within the list.
-  
+
+\label{param:SystemValidSpoolFiles}
+\item[\Macro{SYSTEM\_VALID\_SPOOL\_FILES}]
+  A comma or space separated list of files that
+  \Condor{preen} considers valid files to find in the \MacroUNI{SPOOL}
+  directory. The default value is all files known by HTCondor to be valid.
+  This variable exists such that it can be queried; it should not be changed.
+  \Condor{preen} use it to initialize the the list files and directories
+  that are normally present in the
+  \MacroUNI{SPOOL} directory.
+  A single asterisk (\verb|*|) wild card character is permitted in each 
+  file item within the list.
+
 \label{param:InvalidLogFiles}
 \item[\Macro{INVALID\_LOG\_FILES}]
   This macro contains a (comma or space separated) list of files that
@@ -7750,6 +7785,18 @@ These macros affect the \Condor{negotiator}.
   An expression which constrains which machine ClassAds are fetched from the
   \Condor{collector} by the \Condor{negotiator} during a negotiation
   cycle.
+
+\label{param:NegotiatorTrimShutdownThreshold}
+\item[\Macro{NEGOTIATOR\_TRIM\_SHUTDOWN\_THRESHOLD}] 
+	This setting is not likely to be customized, except perhaps in a glidein
+	setting.  An expression evaluated to an integer value within the context of
+	the negotiator classad, with a default value of 0.  When this expression
+	evaluates to an integer X, and X is greater than 0, the \Condor{negotiator}
+	will not make matches to machine ads that contain a \Attr{DaemonShutdown}
+	attribute that evalutes to \Expr{True} when \Attr{CurrentTime} is set to be
+	X seconds into the future.  The idea here is a mechanism to prevent
+	matching with startds that are real close to shutting down, since doing so
+	is likely just a waste of time.
 
 \label{param:NegotiatorSlotPoolsizeConstraint}
 \label{param:GroupDynamicMachConstraint}

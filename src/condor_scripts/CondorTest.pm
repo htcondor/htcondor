@@ -38,7 +38,7 @@ use CondorPersonal;
 
 use base 'Exporter';
 
-our @EXPORT = qw(runCondorTool runToolNTimes RegisterResult is_windows);
+our @EXPORT = qw(runCondorTool runToolNTimes RegisterResult );
 
 my %securityoptions =
 (
@@ -1941,19 +1941,30 @@ sub SearchCondorLog
 {
     my $daemon = shift;
     my $regexp = shift;
+	my $arrayref = shift;
 
     my $logloc = `condor_config_val ${daemon}_log`;
+	my $count = 0;
     CondorUtils::fullchomp($logloc);
 
     CondorTest::TestDebug("Search this log: $logloc for: $regexp\n",3);
     open(LOG,"<$logloc") || die "Can not open logfile: $logloc: $!\n";
     while(<LOG>) {
         if( $_ =~ /$regexp/) {
+			$count += 1;
             CondorTest::TestDebug("FOUND IT! $_",2);
-            return(1);
+			if(defined $arrayref) {
+				push @{$arrayref}, $_;
+			} else {
+            	return(1);
+			}
         }
     }
-    return(0);
+	if($count > 0) {
+    	return($count);
+	} else {
+    	return(0);
+	}
 }
 
 ##############################################################################
@@ -3201,7 +3212,7 @@ sub CPlusPlusfilt
 	close(TF);
 	# am I windows? don't look to see if you have c++filt. Otherwise try before
 	# you do system call
-	if(is_windows()) {
+	if(ChtcUtils::is_windows()) {
 		# will not use c++cfilt to demangle
 	} else {
 		my $filtprog = Which("c++filt");
@@ -3470,6 +3481,62 @@ sub DropExemptions
 
 ##############################################################################
 #
+# JavaInialize is used to do 3 things
+#
+# 1. Fail if no java is found in our current search path using our Which
+#
+# 2. Set a timed limit to any java test
+#
+# 3. Call a timeout handler here which will scrap JavaDetect message from 
+# 	StarterLog
+#
+##############################################################################
+
+sub JavaInitialize
+{
+	my $testname = shift;
+	my $returnvalue = 0;
+	my $iswindows = is_windows();
+	my $javacmd =  "";
+
+	if($iswindows == 1) {
+    	$javacmd = Which("java.exe");
+	} else {
+    	$javacmd = Which("java");
+	}
+
+	print "JAVA:$javacmd\n";
+
+	# 1. error right away if no java
+	if($javacmd eq "") {
+		return($returnvalue);
+	}
+	CondorTest::RegisterTimed($testname, \&JavaTimeout , 120);
+	return(1);
+}
+
+sub JavaTimeout
+{
+	my @responses = ();
+	print "Timeout: peekinig in starter log\n";
+	CondorLog::RunCheck(
+		daemon=>"STARTER",
+		match_regexp=>"JavaDetect",
+		all=>\@responses,
+	);
+	my $sizeresponses = @responses;
+	if($sizeresponses > 0) {
+		print "Starter log scrapping for JavaDetect:\n";
+		foreach my $line (@responses) {
+			print "$line";
+		}
+		print "Starter log scrapping for JavaDetect over:\n";
+	}
+	die "Java test timed out\n";
+}
+
+##############################################################################
+#
 #	File utilities. We want to keep an up to date record of every
 #	test currently running. If we only have one, then the tests are
 #	executing sequentially and we can do full core and ERROR detecting
@@ -3559,12 +3626,12 @@ sub IsThisNightly
 	}
 }
 
-sub is_windows {
-	if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
-		return 1;
-	}
-	return 0;
-}
+#sub is_windows {
+	#if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
+		#return 1;
+	#}
+	#return 0;
+#}
 
 # Given a filename and the contents, writes the file to that name.
 # it is a fatal error to fail to do so.

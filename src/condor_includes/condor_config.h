@@ -194,6 +194,7 @@ extern "C" {
 	#define CONFIG_OPT_KEEP_DEFAULTS  0x02   // keep items that match defaults
 	#define CONFIG_OPT_OLD_COM_IN_CONT 0x04  // ignore # after \ (i.e. pre 8.1.3 comment/continue behavior)
 	#define CONFIG_OPT_SMART_COM_IN_CONT 0x08 // parse #opt:oldcomment/newcomment to decide comment behavior
+	#define CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO 0x80 // the defaults table is the table defined in param_info.in.
 	void config();
 	void config_ex(int wantsQuiet, bool abort_if_invalid, int opt = CONFIG_OPT_WANT_META);
 	void config_host(const char* host, int wantsQuiet, int config_options);
@@ -232,7 +233,7 @@ extern "C" {
 	NOTE: Returns malloc()ed memory; caller is responsible for calling free().
 	*/
 	char * expand_macro (const char *value, MACRO_SET& macro_set,
-						 const char *self=NULL, bool use_default_param_table=false,
+						 bool use_default_param_table=false,
 						 const char *subsys=NULL, int use=2);
 	// Iterator for the hash array managed by insert() and expand_macro().  See
 	// hash_iter_begin(), hash_iter_next(), hash_iter_key(), hash_iter_value(),

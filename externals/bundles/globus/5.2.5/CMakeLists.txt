@@ -164,13 +164,13 @@ if (WITH_GLOBUS)
 
 			if ( LINUX )
 				set (GLOBUS_GRID_UNIVERSE_NORDUGRID
-				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.so")
+				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.so")
 			elseif ( DARWIN )
 				set (GLOBUS_GRID_UNIVERSE_NORDUGRID
-				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.dylib")
+				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.dylib")
 			else()
 				set (GLOBUS_GRID_UNIVERSE_NORDUGRID
-				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.a")
+				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.a")
 			endif()
 
 			condor_post_external( globus include/globus OFF )

@@ -16,6 +16,12 @@
  # 
  ############################################################### 
 
+# Sources for some of the source tarballs:
+#   http://emisoft.web.cern.ch/emisoft/dist/EMI/2/sl6/SRPMS/base/glite-lbjp-common-gss-3.1.3-2.el6.src.rpm
+#   http://emisoft.web.cern.ch/emisoft/dist/EMI/2/sl6/SRPMS/base/glite-lbjp-common-gsoap-plugin-3.1.2-2.el6.src.rpm
+#   http://emisoft.web.cern.ch/emisoft/dist/EMI/2/sl6/SRPMS/base/glite-ce-wsdl-1.14.0-4.sl6.src.rpm
+#   http://emisoft.web.cern.ch/emisoft/dist/EMI/2/sl6/SRPMS/base/glite-ce-cream-client-api-c-1.14.0-4.sl6.src.rpm
+
 if (LINUX)
   option( WITH_CREAM "Compiling with support for CREAM" ON )
 endif(LINUX)
@@ -35,33 +41,32 @@ if ( NOT PROPER )
 	endif()
 
 		# we define cream 1st because other externals will place bits there.
-		condor_pre_external( CREAM org.glite.ce.cream-client-api-c-1.12.1-14-p8 "lib;include;include/glite/security;opt" "done")
+		condor_pre_external( CREAM glite-ce-cream-client-api-c-1.14.0 "lib;include;include/glite/security;opt" "done")
 
 #########################################
-		condor_pre_external( CREAMSOAP gsoap_2.7.6b-p8 "lib;include" "done")
+		condor_pre_external( CREAMSOAP gsoap_2.7.16 "lib;include" "done")
 		ExternalProject_Add(creamsoap
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${CREAMSOAP_STAGE}/dl
-				    URL ${EXTERNALS_SOURCE_URL}/gsoap_2.7.6b.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/gsoap_2.7.16.zip
 				    #--Patch step ----------
-				    PATCH_COMMAND patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_cast.patch
+				    PATCH_COMMAND patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_cast.patch &&
+					patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_ipv6.patch
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND ./configure --prefix=${CREAM_INSTALL_LOC}
+				    CONFIGURE_COMMAND CFLAGS=-DWITH_IPV6 ./configure --prefix=${CREAM_INSTALL_LOC}
 				    #--Build Step ----------
 				    BUILD_COMMAND make
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
-				    INSTALL_COMMAND make
-				    install && cp -f soapcpp2/wsdl/stlvector.h
-				    ${CREAM_INSTALL_LOC}/include && touch
-				    ${CREAMSOAP_INSTALL_LOC}/done )
+				    INSTALL_COMMAND make install && 
+				        touch ${CREAMSOAP_INSTALL_LOC}/done )
 
 		condor_post_external( creamsoap OFF OFF )
 
 #########################################
 
-		condor_pre_external( CARES c-ares-1.3.0-p8 "lib;include" "done")
+		condor_pre_external( CARES c-ares-1.3.0-p9 "lib;include" "done")
 		ExternalProject_Add(cares
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${CARES_STAGE}/dl
@@ -99,16 +104,8 @@ if ( NOT PROPER )
 
 ######################################### cream/gss packages.
 
-		condor_pre_external( GRIDSITE gridsite-1.6.0-p8 "lib;include" "done")
-		if ( BUILDING_LIBXML2 )
-			set (GRIDSITE_DEPENDS ${LIBXML2_REF})
-			set (GRIDSITE_INCLUDE "-I. -I../interface -I${LIBXML2_INSTALL_LOC}/include/libxml2")
-		else ()
-			set (GRIDSITE_DEPENDS "")
-			set (GRIDSITE_INCLUDE "-I. -I../interface")
-		endif ()
+		condor_pre_external( GRIDSITE gridsite-1.6.0-p9 "lib;include" "done")
 		ExternalProject_Add(gridsite
-				    DEPENDS ${GRIDSITE_DEPENDS}
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${GRIDSITE_STAGE}/dl
 				    URL ${EXTERNALS_SOURCE_URL}/gridsite-1.6.0.src.tar.gz
@@ -117,7 +114,7 @@ if ( NOT PROPER )
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND echo "no config"
 				    #--Build Step ----------
-				    BUILD_COMMAND export MYCFLAGS=${GRIDSITE_INCLUDE} &&
+				    BUILD_COMMAND export "MYCFLAGS=-I. -I../interface" &&
 					  cd src &&
 					  make libgridsite.a
 				    BUILD_IN_SOURCE 1
@@ -131,29 +128,27 @@ if ( NOT PROPER )
 
 #########################################
 
-		condor_pre_external( GLITE_SECURITY org.glite.security.gss-2.0.1-1-p8 "lib;include" "done")
+		condor_pre_external( GLITE_SECURITY glite-lbjp-common-gss-3.1.3 "lib;include" "done")
 		ExternalProject_Add(glite_security
 				    DEPENDS ${GLOBUS_REF} ${GRIDSITE_REF} ${CARES_REF}
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${GLITE_SECURITY_STAGE}/dl
-				    URL ${EXTERNALS_SOURCE_URL}/org.glite.security.gss-2.0.1-1.tar.gz
-				    #--Patch step ----------
-				    PATCH_COMMAND patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/gss_import.patch
+				    URL ${EXTERNALS_SOURCE_URL}/glite-lbjp-common-gss-3.1.3-2.src.tar.gz
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND echo "no config"
 				    #--Build Step ----------
 				    BUILD_COMMAND cd src &&
-					  gcc -g -O0 -W -Wall
+					  gcc -g -O0 -W -Wall -D_GNU_SOURCE
 					  -Wno-unused-parameter -I../interface
 					  -I${CREAM_INSTALL_LOC}/include -I${GLOBUS_INSTALL_LOC}/include/globus -o glite_gss.thr.o -c glite_gss.c && 
-					  ar crv libglite_security_gss_${GLOBUS_FLAVOR}pthr.a glite_gss.thr.o &&
-					  ranlib libglite_security_gss_${GLOBUS_FLAVOR}pthr.a
+					  ar crv libglite_security_gss.a glite_gss.thr.o &&
+					  ranlib libglite_security_gss.a
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
 				    INSTALL_COMMAND cd src &&
 					  cp ../interface/glite_gss.h ${CREAM_INSTALL_LOC}/include/glite/security &&
-					  cp libglite_security_gss_${GLOBUS_FLAVOR}pthr.a ${CREAM_INSTALL_LOC}/lib && 
+					  cp libglite_security_gss.a ${CREAM_INSTALL_LOC}/lib && 
 					  touch ${GLITE_SECURITY_INSTALL_LOC}/done )
 		condor_post_external( glite_security OFF OFF )
 
@@ -161,83 +156,78 @@ if ( NOT PROPER )
 
 		# build gsoap plugin.
 		set (CSP_CC_FLAGS -g -O0 -W -Wall -Wno-unused-parameter -I. -I../interface -DWITH_NONAMESPACES -I${CREAM_INSTALL_LOC}/include -D_GNU_SOURCE)
-		condor_pre_external( CREAM_SOAP_PLUGIN org.glite.security.gsoap-plugin-2.0.1-3-p8 "lib;include" "done")
+		condor_pre_external( CREAM_SOAP_PLUGIN glite-lbjp-common-gsoap-plugin-3.1.2 "lib;include" "done")
 		ExternalProject_Add(cream_soap_plugin
 					DEPENDS ${CREAMSOAP_REF} ${GLITE_SECURITY_REF}
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${CREAM_SOAP_PLUGIN_STAGE}/dl
-				    URL ${EXTERNALS_SOURCE_URL}/org.glite.security.gsoap-plugin-2.0.1-3.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/glite-lbjp-common-gsoap-plugin-3.1.2-2.src.tar.gz
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND cd src &&
-				    	${CMAKE_CURRENT_SOURCE_DIR}/cream_soap_plugin_patch.sh
+				    	${CMAKE_CURRENT_SOURCE_DIR}/cream_soap_plugin_patch.sh ${CREAM_INSTALL_LOC}
 				    #--Build Step ----------
 				    BUILD_COMMAND cd src &&
 						gcc ${CSP_CC_FLAGS} -o glite_gsplugin.thr.o -c glite_gsplugin.c &&
-						gcc ${CSP_CC_FLAGS} -o stdsoap2.thr.o -c stdsoap2.c &&
-						ar crv libglite_security_gsoap_plugin_${GLOBUS_FLAVOR}pthr.a glite_gsplugin.thr.o stdsoap2.thr.o &&
-						ranlib libglite_security_gsoap_plugin_${GLOBUS_FLAVOR}pthr.a
+						ar crv libglite_security_gsoap_plugin.a glite_gsplugin.thr.o &&
+						ranlib libglite_security_gsoap_plugin.a
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}/lib
 				    INSTALL_COMMAND  cd src &&
-						cp libglite_security_gsoap_plugin_${GLOBUS_FLAVOR}pthr.a ${CREAM_INSTALL_LOC}/lib && 
-						cp ../interface/glite_gscompat.h ../interface/glite_gsplugin.h ../interface/glite_gsplugin-int.h ${CREAM_INSTALL_LOC}/include/glite/security && 
+						cp libglite_security_gsoap_plugin.a ${CREAM_INSTALL_LOC}/lib && 
+						cp ../interface/glite_gsplugin.h ../interface/glite_gsplugin-int.h ${CREAM_INSTALL_LOC}/include/glite/security && 
 						touch ${CREAM_SOAP_PLUGIN_INSTALL_LOC}/done )
 		condor_post_external( cream_soap_plugin OFF OFF )
 
-		condor_pre_external( CREAM_WSDL org.glite.ce.wsdl-1.12.1-14-p8 "lib;include" "done")
+		condor_pre_external( CREAM_WSDL glite-ce-wsdl-1.14.0 "lib;include" "done")
 		ExternalProject_Add(cream_wsdl
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${CREAM_WSDL_STAGE}/dl
-				    URL ${EXTERNALS_SOURCE_URL}/org.glite.ce.wsdl-1.12.1-14.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/glite-ce-wsdl-1.14.0-4.sl6.tar.gz
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND echo "nothing to do"
 				    #--Build Step ----------
-				    BUILD_COMMAND project/install.sh ${CREAM_INSTALL_LOC} ${CREAM_INSTALL_LOC} 1.12.1 2.0.0
+				    BUILD_COMMAND project/install.sh ${CREAM_INSTALL_LOC}
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
-				    INSTALL_COMMAND ln -fs share/wsdl ${CREAM_INSTALL_LOC}/interface && touch ${CREAM_WSDL_INSTALL_LOC}/done )
+				    #INSTALL_COMMAND ln -fs share/wsdl ${CREAM_INSTALL_LOC}/interface && touch ${CREAM_WSDL_INSTALL_LOC}/done )
+				    INSTALL_COMMAND touch ${CREAM_WSDL_INSTALL_LOC}/done )
 		condor_post_external( cream_wsdl OFF OFF )
 
-		set (CREAM_PATCH patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/cream.patch &&
-				 patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/voms2.patch)
+		set (CREAM_PATCH ln -f -s lib ${CREAM_INSTALL_LOC}/lib64 && patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/cream.patch && patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/cream_voms.patch)
 		if (DARWIN)
 		  set (CREAM_PATCH ${CREAM_PATCH} && patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/bsd.patch && patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/macos.patch )
 		endif(DARWIN)
 
-		if ( BUILDING_OPENSSL )
-			set( OPENSSL_FLAG --with-openssl-prefix=${OPENSSL_INSTALL_LOC} )
-		else()
-			set( OPENSSL_FLAG "" )
-		endif()
-
 		if(BOOST_INSTALL_LOC)
 			set ( BOOST_PREFIX --with-boost-prefix=${BOOST_INSTALL_LOC})
-			set (BOOST_LIB ${BOOST_INSTALL_LOC}/lib/libboost_thread.a)
+			set (BOOST_LIB ${BOOST_INSTALL_LOC}/lib/libboost_thread.a ${BOOST_INSTALL_LOC}/lib/libboost_filesystem.a ${BOOST_INSTALL_LOC}/lib/libboost_system.a)
 		else()
 			set ( BOOST_PREFIX --with-boost-prefix=/usr)
-			set (BOOST_LIB libboost_thread.a)
+			set (BOOST_LIB libboost_thread.a libbosst_filesystem.a libboost_system.a)
 		endif()
 
+		# ./bootstrap was called before the source package was
+		# created. We have to re-execute it here. Othewise, libtool
+		# complains about version skew if the build machine isn't
+		# RedHat6. Before that, we have to delete the .m4 files that
+		# are symlinks to files that may not be installed and
+		# provide our own .m4 file that includes the autocont 
+		# macros provided by other glite packages.
+		#
+		# We have to set a bunch of *_CFLAGS and *_LIBS variables
+		# for configure so that it doesn't attempt to call
+		# pkg-config to find the locations of the dependent packages.
 		ExternalProject_Add(cream
 				    DEPENDS ${VOMS_REF} ${CREAMSOAP_REF} ${BOOST_REF} ${LOG4CPP_REF} ${GRIDSITE_REF} ${CARES_REF} ${CREAM_SOAP_PLUGIN_REF} ${CREAM_WSDL_REF}
 				    #-- Download Step -------
 				    DOWNLOAD_DIR ${CREAM_STAGE}/dl
-				    URL ${EXTERNALS_SOURCE_URL}/org.glite.ce.cream-client-api-c-1.12.1-14.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/glite-ce-cream-client-api-c-1.14.0-4.sl6.tar.gz
 					#--Patch step ----------
 					PATCH_COMMAND ${CREAM_PATCH}
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/boost.m4 project/ &&
-						cp ${CMAKE_CURRENT_SOURCE_DIR}/classads.m4 project/ &&
-						cp ${CMAKE_CURRENT_SOURCE_DIR}/glite.m4 project/ &&
-						cp ${CMAKE_CURRENT_SOURCE_DIR}/glite_ce_wsdl.m4 project/ &&
-						cp ${CMAKE_CURRENT_SOURCE_DIR}/globus.m4 project/ &&
-						cp ${CMAKE_CURRENT_SOURCE_DIR}/gsoap.m4 project/ &&
-						cp ${CMAKE_CURRENT_SOURCE_DIR}/log4cpp.m4 project/ &&
-						cp ${CMAKE_CURRENT_SOURCE_DIR}/optimize.m4 project/ &&
-						./bootstrap &&
-						CPPFLAGS=${CPP11_FLAG} ./configure --prefix=${CREAM_INSTALL_LOC} --with-globus-prefix=${GLOBUS_INSTALL_LOC} --with-globus-thr-flavor=${GLOBUS_FLAVOR}pthr --with-globus-nothr-flavor=${GLOBUS_FLAVOR} ${OPENSSL_FLAG} --with-voms-prefix=${VOMS_INSTALL_LOC} --with-classads-prefix=${CLASSADS_INSTALL_LOC} --with-log4cpp-prefix=${LOG4CPP_INSTALL_LOC} --with-gsoap-location=${CREAM_INSTALL_LOC} --with-glite-location=${CREAM_INSTALL_LOC} --with-ce-wsdl-version=1.12.1 --with-delegation-wsdl-version=2.0.0 ${BOOST_PREFIX}
+				    CONFIGURE_COMMAND rm project/lt~obsolete.m4 project/ltoptions.m4 project/ltsugar.m4 project/ltversion.m4 && cp ${CMAKE_CURRENT_SOURCE_DIR}/myglite.m4 project/ && ./bootstrap && CPPFLAGS=${CPP11_FLAG} GRIDSITE_OPENSSL_CFLAGS=-I/usr/include/libxml2 GRIDSITE_OPENSSL_LIBS=${CREAM_INSTALL_LOC}/lib/libgridsite.a VOMS_CFLAGS=-I${VOMS_INSTALL_LOC}/include VOMS_LIBS=${VOMS_INSTALL_LOC}/lib/libvomsapi.so CLASSAD_CFLAGS=-I${CLASSADS_INSTALL_LOC}/include CLASSAD_LIBS=${CLASSADS_INSTALL_LOC}/lib/libclassad.so LD_LIBRARY_PATH=${BOOST_INSTALL_LOC}/lib LOG4CPP_CFLAGS=-I${LOG4CPP_INSTALL_LOC}/include LOG4CPP_LIBS=${LOG4CPP_INSTALL_LOC}/lib/liblog4cpp.a GSOAP_CFLAGS=-I${CREAM_INSTALL_LOC}/include GSOAP_LIBS=${CREAM_INSTALL_LOC}/lib/libgsoapssl++.a GLITE_LOCATION=${CREAM_INSTALL_LOC} ./configure --prefix=${CREAM_INSTALL_LOC} --with-gsoap-location=${CREAM_INSTALL_LOC} ${BOOST_PREFIX} --disable-shared
 				    #--Build Step ----------
 				    BUILD_COMMAND make
 				    BUILD_IN_SOURCE 1
@@ -249,7 +239,7 @@ if ( NOT PROPER )
 		
 		add_dependencies(cream ${CLASSADS_FOUND})
 
-		set(CREAM_FOUND "${CREAM_INSTALL_LOC}/lib/libglite_ce_cream_client_soap.a;${CREAM_INSTALL_LOC}/lib/libglite_ce_cream_client_util.a;${CREAM_INSTALL_LOC}/lib/libglite_security_gsoap_plugin_${GLOBUS_FLAVOR}pthr.a;${CREAM_INSTALL_LOC}/lib/libglite_security_gss_${GLOBUS_FLAVOR}pthr.a;${LOG4CPP_INSTALL_LOC}/lib/liblog4cpp.a;${CREAM_INSTALL_LOC}/lib/libgridsite.a;${CREAM_INSTALL_LOC}/lib/libcares.a;${BOOST_LIB}")
+		set(CREAM_FOUND "${CREAM_INSTALL_LOC}/lib/libglite_ce_cream_client_soap.a;${CREAM_INSTALL_LOC}/lib/libglite_ce_cream_client_util.a;${CREAM_INSTALL_LOC}/lib/libglite_security_gsoap_plugin.a;${CREAM_INSTALL_LOC}/lib/libglite_security_gss.a;${LOG4CPP_INSTALL_LOC}/lib/liblog4cpp.a;${CREAM_INSTALL_LOC}/lib/libgridsite.a;${CREAM_INSTALL_LOC}/lib/libcares.a;${CREAM_INSTALL_LOC}/lib/libgsoap.a;${LIBXML2_FOUND};${BOOST_LIB}")
 
 		condor_post_external( cream include OFF )
 

@@ -1026,7 +1026,7 @@ bool
 MultiLogFiles::logFileNFSError(const char *logFilename, bool nfsIsError)
 {
 
-	BOOLEAN isNfs;
+	bool isNfs;
    
 	if ( fs_detect_nfs( logFilename, &isNfs ) != 0 ) {
 		// can't determine if it's on NFS

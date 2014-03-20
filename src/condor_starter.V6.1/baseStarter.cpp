@@ -1569,12 +1569,12 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	argarray = NULL;
 
 
-	ClassAd sshd_ad;
-	sshd_ad.CopyAttribute(ATTR_REMOTE_USER,jobad);
-	sshd_ad.CopyAttribute(ATTR_JOB_RUNAS_OWNER,jobad);
-	sshd_ad.Assign(ATTR_JOB_CMD,sshd.Value());
+	ClassAd *sshd_ad = new ClassAd;
+	sshd_ad->CopyAttribute(ATTR_REMOTE_USER,jobad);
+	sshd_ad->CopyAttribute(ATTR_JOB_RUNAS_OWNER,jobad);
+	sshd_ad->Assign(ATTR_JOB_CMD,sshd.Value());
 	CondorVersionInfo ver_info;
-	if( !sshd_arglist.InsertArgsIntoClassAd(&sshd_ad,&ver_info,&error_msg) ) {
+	if( !sshd_arglist.InsertArgsIntoClassAd(sshd_ad,&ver_info,&error_msg) ) {
 		return SSHDFailed(s,
 			"Failed to insert args into sshd job description: %s",
 			error_msg.Value());
@@ -1583,7 +1583,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// matter what we pass here.  Instead, we depend on sshd_shell_init
 		// to restore the environment that was saved by sshd_setup.
 		// However, we may as well pass the desired environment.
-	if( !setup_env.InsertEnvIntoClassAd(&sshd_ad,&error_msg,NULL,&ver_info) ) {
+	if( !setup_env.InsertEnvIntoClassAd(sshd_ad,&error_msg,NULL,&ver_info) ) {
 		return SSHDFailed(s,
 			"Failed to insert environment into sshd job description: %s",
 			error_msg.Value());
@@ -1623,7 +1623,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	std_fname[2] = sshd_log_fname.Value();
 
 
-	SSHDProc *proc = new SSHDProc(&sshd_ad);
+	SSHDProc *proc = new SSHDProc(sshd_ad, true);
 	if( !proc ) {
 		dprintf(D_ALWAYS,"Failed to create SSHDProc.\n");
 		return FALSE;
@@ -3284,12 +3284,39 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 int
 CStarter::getMySlotNumber( void )
 {
-	
+	int slot_number = 0; // default to 0, let our caller decide how to interpret that.
+
+#if 1
+	MyString slot_name;
+	if (param(slot_name, "STARTER_SLOT_NAME")) {
+		// find the first number in the slot name, that's our slot number.
+		const char * tmp = slot_name.c_str();
+		while (*tmp && (*tmp < '0' || *tmp > '9')) ++tmp;
+		if (*tmp) slot_number = atoi(tmp);
+	} else {
+		// legacy (before 8.1.5), assume that the log filename ends with our slot name.
+		slot_name = this->getMySlotName();
+		if ( ! slot_name.empty()) {
+			MyString prefix;
+			if ( ! param(prefix, "STARTD_RESOURCE_PREFIX")) {
+				prefix = "slot";
+			}
+
+			const char * tmp = strstr(slot_name.c_str(), prefix.Value());
+			if (tmp) {
+				prefix += "%d";
+				if (sscanf(tmp, prefix.Value(), &slot_number) < 1) {
+					// if we couldn't parse it, leave it at 0.
+					slot_number = 0;
+				}
+			}
+		}
+	}
+#else
+
 	char *logappend = param("STARTER_LOG");		
 	char const *tmp = NULL;
 		
-	int slot_number = 0; // default to 0, let our caller decide how to 
-						 // interpret that.  
 			
 	if ( logappend ) {
 			// We currently use the extension of the starter log file
@@ -3317,18 +3344,21 @@ CStarter::getMySlotNumber( void )
 
 		free(logappend);
 	}
+#endif
 
 	return slot_number;
 }
 
 MyString
-CStarter::getMySlotName(void) {
-	
-	char *logappend = param("STARTER_LOG");		
-	const char *tmp = NULL;
-		
+CStarter::getMySlotName(void)
+{
 	MyString slotName = "";
-			
+	if (param(slotName, "STARTER_SLOT_NAME")) {
+		return slotName;
+	}
+
+	// legacy (before 8.1.5), assume that the log filename ends with our slot name.
+	char *logappend = param("STARTER_LOG");
 	if ( logappend ) {
 			// We currently use the extension of the starter log file
 			// name to determine which slot we are.  Strange.
@@ -3344,7 +3374,7 @@ CStarter::getMySlotName(void) {
 			prefix = ".slot";
 		}
 
-		tmp = strstr(log_basename, prefix.Value());
+		const char *tmp = strstr(log_basename, prefix.Value());
 		if ( tmp ) {				
 			slotName = (tmp + 1); // skip the .
 		} 

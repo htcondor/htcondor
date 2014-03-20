@@ -717,7 +717,7 @@ format_job_id(int clusterId, AttrList * ad, Formatter & /*fmt*/)
 }
 
 static const char *
-format_job_cmd_and_args(char * cmd, AttrList * ad, Formatter & /*fmt*/)
+format_job_cmd_and_args(const char * cmd, AttrList * ad, Formatter & /*fmt*/)
 {
 	static MyString ret;
 	ret = cmd;

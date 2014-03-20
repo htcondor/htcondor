@@ -196,6 +196,87 @@ is_valid_command(const char* cmdToExecute)
 	return retVal;
 }
 
+/*
+** Special version of expand_macro that only expands 'self' references. i.e. it only
+** expands the macro whose name is specified in the self argument.
+** Expand parameter references of the form "left$(self)right".  This
+** is deceptively simple, but does handle multiple and or nested references.
+** We only expand references to to the parameter specified by self. use expand_macro
+** to expand all references. 
+*/
+extern "C" char *
+expand_self_macro(const char *value,
+			 MACRO_SET& macro_set,
+			 const char *self,
+			 const char *subsys)
+{
+	char *tmp = strdup( value );
+	char *left, *name, *right;
+	const char *tvalue;
+	char *rval;
+
+	ASSERT(self != NULL && self[0] != 0);
+
+	// to avoid infinite recursive expansion, we have to look for both "subsys.self" and "self"
+	// so we want to set selfless equal to the part of self after the prefix.
+	const char *selfless = NULL; // if self=="master.foo" and subsys=="master", then this contains "foo"
+	if (subsys) {
+		const char * a = subsys;
+		const char * b = self;
+		while (*a && (tolower(*a) == tolower(*b))) {
+			++a; ++b;
+		}
+		// if a now points to a 0, and b now points to ".", then self contains subsys as a prefix.
+		if (0 == a[0] && '.' == b[0] && b[1] != 0) {
+			selfless = b+1;
+		}
+	}
+
+	bool all_done = false;
+	while( !all_done ) {		// loop until all done expanding
+		all_done = true;
+
+		if (find_config_macro(tmp, &left, &name, &right, self) ||
+			(selfless && find_config_macro(tmp, &left, &name, &right, selfless)) ) {
+			all_done = false;
+		   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
+			char * pcolon = strchr(name, ':');
+			if (pcolon) { *pcolon++ = 0; }
+		   #endif
+			tvalue = lookup_macro(name, subsys, macro_set, 0);
+			if (subsys && ! tvalue)
+				tvalue = lookup_macro(name, NULL, macro_set, 0);
+
+				// Note that if 'name' has been explicitly set to nothing,
+				// tvalue will _not_ be NULL so we will not call
+				// param_default_string().  See gittrack #1302
+			if (tvalue == NULL
+				&& macro_set.defaults
+				&& (macro_set.options & CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO) != 0) {
+				tvalue = param_default_string(name, subsys);
+			}
+		   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
+			if (pcolon && ( ! tvalue || ! tvalue[0])) {
+				tvalue = pcolon;
+			}
+		   #endif
+			if( tvalue == NULL ) {
+				tvalue = "";
+			}
+
+			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
+											  strlen(right) + 1));
+			ASSERT( rval != NULL );
+			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			FREE( tmp );
+			tmp = rval;
+		}
+	}
+
+	return( tmp );
+}
+
+
 typedef enum  {
 	CIFT_EMPTY=0,
 	CIFT_NUMBER,
@@ -457,9 +538,9 @@ bool Test_config_if_expression(const char * expr, bool & result, std::string & e
 	bool inverted = false;
 
 	// optimize the simple case by not bothering to macro expand if there are no $ in the expression
-	char * expanded = NULL;
+	char * expanded = NULL; // so we know whether to free the macro expansion
 	if (strstr(expr, "$")) {
-		expanded = expand_macro(expr, macro_set, NULL, true, subsys);
+		expanded = expand_macro(expr, macro_set, true, subsys);
 		if ( ! expanded) return false;
 		expr = expanded;
 		char * ptr = expanded + strlen(expanded);
@@ -473,7 +554,14 @@ bool Test_config_if_expression(const char * expr, bool & result, std::string & e
 		while (isspace(*expr)) ++expr;
 	}
 
-	bool valid = Evaluate_config_if(expr, value, err_reason, macro_set, subsys);
+	bool valid;
+	if (expanded && !*expr) {
+		// if the value expands to empty, then treat that as a boolean false
+		// we do this for that if $(foo) is false when foo isn't defined.
+		valid = true; value = false;
+	} else {
+		valid = Evaluate_config_if(expr, value, err_reason, macro_set, subsys);
+	}
 
 	if (expanded) free(expanded);
 	result = inverted ? !value : value;
@@ -638,7 +726,7 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 
 		if ( ! *ptr && ! ISOP(op)) {
 			// Here we have determined this line has no operator, or too many
-			PRAGMA_REMIND("tj: should report parse error in meta knobs here.")
+			//PRAGMA_REMIND("tj: should report parse error in meta knobs here.")
 			return -1;
 		}
 
@@ -677,8 +765,8 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 			}
 
 			/* expand self references only */
-			PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
-			char * value = expand_macro(rhs, macro_set, name, false, subsys);
+			//PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
+			char * value = expand_self_macro(rhs, macro_set, name, subsys);
 			if (value == NULL) {
 				return -1;
 			}
@@ -955,8 +1043,8 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 				}
 			} else  {
 				/* expand self references only */
-				PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
-				value = expand_macro(rhs, macro_set, name, false, subsys);
+				//PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
+				value = expand_self_macro(rhs, macro_set, name, subsys);
 				if( value == NULL ) {
 					retval = -1;
 					goto cleanup;
@@ -1070,7 +1158,7 @@ condor_hash_symbol_name(const char *name, int size)
 /*
 ** Insert the parameter name and value into the given hash table.
 */
-PRAGMA_REMIND("TJ: insert bug - self refs to default refs never expanded")
+//PRAGMA_REMIND("TJ: insert bug - self refs to default refs never expanded")
 
 extern "C++" MACRO_ITEM* find_macro_item (const char *name, MACRO_SET& set)
 {
@@ -1165,7 +1253,7 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 	// if already in the macro-set, we need to expand self-references and replace
 	MACRO_ITEM * pitem = find_macro_item(name, set);
 	if (pitem) {
-		char * tvalue = expand_macro(value,set,name,true);
+		char * tvalue = expand_self_macro(value, set, name, NULL);
 		if (MATCH != strcmp(tvalue, pitem->raw_value)) {
 			pitem->raw_value = set.apool.insert(tvalue);
 		}
@@ -1193,6 +1281,7 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 	if (set.size+1 >= set.allocation_size) {
 		int cAlloc = set.allocation_size*2;
 		if ( ! cAlloc) cAlloc = 32;
+		set.allocation_size = cAlloc;
 		MACRO_ITEM * ptab = new MACRO_ITEM[cAlloc];
 		if (set.table) {
 			// transfer existing key/value pairs old allocation to new one.
@@ -1468,9 +1557,6 @@ string_to_long( const char *s, long *valuep )
 /*
 ** Expand parameter references of the form "left$(middle)right".  This
 ** is deceptively simple, but does handle multiple and or nested references.
-** If self is not NULL, then we only expand references to to the parameter
-** specified by self.  This is used when we want to expand self-references
-** only.
 ** Also expand references of the form "left$ENV(middle)right",
 ** replacing $ENV(middle) with getenv(middle).
 ** Also expand references of the form "left$RANDOM_CHOICE(middle)right".
@@ -1478,7 +1564,6 @@ string_to_long( const char *s, long *valuep )
 extern "C" char *
 expand_macro(const char *value,
 			 MACRO_SET& macro_set,
-			 const char *self,
 			 bool use_default_param_table,
 			 const char *subsys,
 			 int use)
@@ -1487,26 +1572,12 @@ expand_macro(const char *value,
 	char *left, *name, *right;
 	const char *tvalue;
 	char *rval;
-	const char *selfless = NULL; // if self=="master.foo" and subsys=="master", then this contains "foo"
-
-	// to avoid infinite recursive expansion, we have to look for both "subsys.self" and "self"
-	if (self && subsys) {
-		const char * a = subsys;
-		const char * b = self;
-		while (*a && (tolower(*a) == tolower(*b))) {
-			++a; ++b;
-		}
-		// if a now points to a 0, and b now points to ".", then self contains subsys as a prefix.
-		if (0 == a[0] && '.' == b[0] && b[1] != 0) {
-			selfless = b+1;
-		}
-	}
 
 	bool all_done = false;
 	while( !all_done ) {		// loop until all done expanding
 		all_done = true;
 
-		if( !self && find_special_config_macro("$ENV",true,tmp, &left, &name, &right) ) 
+		if (find_special_config_macro("$ENV",true,tmp, &left, &name, &right)) 
 		{
 			all_done = false;
 			tvalue = getenv(name);
@@ -1523,8 +1594,7 @@ expand_macro(const char *value,
 			tmp = rval;
 		}
 
-		if( !self && find_special_config_macro("$RANDOM_CHOICE",false,tmp, &left, &name, 
-			&right) ) 
+		if (find_special_config_macro("$RANDOM_CHOICE",false,tmp, &left, &name, &right))
 		{
 			all_done = false;
 			StringList entries(name,",");
@@ -1549,8 +1619,7 @@ expand_macro(const char *value,
 			tmp = rval;
 		}
 
-		if( !self && find_special_config_macro("$RANDOM_INTEGER",false,tmp, &left, &name, 
-			&right) ) 
+		if (find_special_config_macro("$RANDOM_INTEGER",false,tmp, &left, &name, &right))
 		{
 			all_done = false;
 			StringList entries(name, ",");
@@ -1601,8 +1670,7 @@ expand_macro(const char *value,
 			tmp = rval;
 		}
 
-		if (find_config_macro(tmp, &left, &name, &right, self) ||
-			(selfless && find_config_macro(tmp, &left, &name, &right, selfless)) ) {
+		if (find_config_macro(tmp, &left, &name, &right, NULL)) {
 			all_done = false;
 		   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
 			char * pcolon = strchr(name, ':');
@@ -1615,7 +1683,7 @@ expand_macro(const char *value,
 				// Note that if 'name' has been explicitly set to nothing,
 				// tvalue will _not_ be NULL so we will not call
 				// param_default_string().  See gittrack #1302
-			if( !self && use_default_param_table && tvalue == NULL ) {
+			if (use_default_param_table && tvalue == NULL) {
 				tvalue = param_default_string(name, subsys);
 				if (use) { param_default_set_use(name, use, macro_set); }
 			}
@@ -1638,7 +1706,6 @@ expand_macro(const char *value,
 	}
 
 	// Now, deal with the special $(DOLLAR) macro.
-	if (!self)
 	while( find_config_macro(tmp, &left, &name, &right, DOLLAR_ID) ) {
 		rval = (char *)MALLOC( (unsigned)(strlen(left) + 1 +
 										  strlen(right) + 1));
@@ -1829,7 +1896,7 @@ find_config_macro( register char *value, register char **leftp,
 	char *left, *left_end, *name, *right;
 	char *tvalue;
    #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
-	bool after_colon = false;
+	int after_colon = 0; // records the offset of the : from the start of the macro
    #endif
 
 	tvalue = value + search_pos;
@@ -1901,11 +1968,14 @@ tryagain:
 					left_end = value - 1;
 				}
 				name = ++value;
+			   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
+				after_colon = 0;
+			   #endif
 				while( *value && *value != ')' ) {
 					char c = *value++;
 				   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
 					if ( ! after_colon && c == ':') {
-						after_colon = true;
+						after_colon = (int)(value - name);
 					} else if (after_colon) {
 						if (c == '(') {
 							// skip ahead past the close )
@@ -1943,6 +2013,9 @@ tryagain:
 					// between these two pointers gives us the length of the
 					// identifier.
 					int namelen = value-name;
+				   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
+					if (after_colon) namelen = after_colon-1;
+				   #endif
 					if( !self || ( strncasecmp( name, self, namelen ) == MATCH && self[namelen] == '\0' ) ) {
 							// $(DOLLAR) has special meaning; it is
 							// set to "$" and is _not_ recursively

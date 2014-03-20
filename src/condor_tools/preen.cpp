@@ -64,6 +64,7 @@ char		*DaemonSockDir;     // dir for daemon named sockets
 char		*PreenAdmin;		// who to send mail to in case of trouble
 char		*MyName;			// name this program was invoked by
 char        *ValidSpoolFiles;   // well known files in the spool dir
+char        *UserValidSpoolFiles; // user defined files in the spool dir to preserve
 char        *InvalidLogFiles;   // files we know we want to delete from log
 bool		MailFlag;			// true if we should send mail about problems
 bool		VerboseFlag;		// true if we should produce verbose output
@@ -339,21 +340,30 @@ check_spool_dir()
    	startd_history_length = strlen(startd_history);
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
+	if (UserValidSpoolFiles) {
+		StringList tmp(UserValidSpoolFiles);
+		well_known_list.create_union(tmp, false);
+	}
 		// add some reasonable defaults that we never want to remove
-	well_known_list.append( "job_queue.log" );
-	well_known_list.append( "job_queue.log.tmp" );
-	well_known_list.append( "spool_version" );
-	well_known_list.append( "Accountant.log" );
-	well_known_list.append( "Accountantnew.log" );
-	well_known_list.append( "local_univ_execute" );
-	well_known_list.append( "EventdShutdownRate.log" );
-	well_known_list.append( "OfflineLog" );
+	static const char* valid_list[] = {
+		"job_queue.log",
+		"job_queue.log.tmp",
+		"spool_version",
+		"Accountant.log",
+		"Accountantnew.log",
+		"local_univ_execute",
+		"EventdShutdownRate.log",
+		"OfflineLog",
 		// SCHEDD.lock: High availability lock file.  Current
 		// manual recommends putting it in the spool, so avoid it.
-	well_known_list.append( "SCHEDD.lock" );
+		"SCHEDD.lock",
 		// These are Quill-related files
-	well_known_list.append( ".quillwritepassword" );
-	well_known_list.append( ".pgpass" );
+		".quillwritepassword",
+		".pgpass",
+		};
+	for (int ix = 0; ix < (int)(sizeof(valid_list)/sizeof(valid_list[0])); ++ix) {
+		if ( ! well_known_list.contains(valid_list[ix])) well_known_list.append(valid_list[ix]);
+	}
 	
 	// connect to the Q manager
 	if (!(qmgr = ConnectQ (0))) {
@@ -855,7 +865,10 @@ init_params()
 		}
 	}
 
-	ValidSpoolFiles = param("VALID_SPOOL_FILES");
+	// in 8.1.5, the param VALID_SPOOL_FILES was redefied to be only the user additions to the list of valid files
+	UserValidSpoolFiles = param("VALID_SPOOL_FILES");
+	// SYSTEM_VALID_SPOOL_FILES is the set of files known by HTCondor at compile time. It should not be overidden by the user.
+	ValidSpoolFiles = param("SYSTEM_VALID_SPOOL_FILES");
 
 	InvalidLogFiles = param("INVALID_LOG_FILES");
 }
