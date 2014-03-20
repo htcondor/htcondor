@@ -237,7 +237,7 @@ std::string generatePostString( const CommandSet & commandSet ) {
 
 		// TO DO: Determine what, if anything, 'wmsid' ought to be; try to
 		// convince the PANDA people that it's not required?
-		postFieldString += "\"wmsid\": \"1002\"";
+		postFieldString += "\"wmsid\": \"1004\"";
 		postFieldString += " }, ";
 	}
 	// Remove trailing ', '.
@@ -365,11 +365,23 @@ static void * workerFunction( void * ptr ) {
 
 	for( ; ; ) {
 		//
-		// Batch up all available commands.
+		// Wait for the queue to fill up.  By sleeping instead of blocking,
+		// we give the other thread a chance to insert more than one read
+		// into the queue at a time.
 		//
-		do {
+		while( queue->empty() ) {
+			pthread_mutex_unlock( & bigGlobalMutex );
+			sleep( 1 );
+			pthread_mutex_lock( & bigGlobalMutex );
+		}
+
+		//
+		// Empty the qeueue.  We could easily add a limite here to smooth
+		// out bursty schedd activity (e.g., 'queue 1000').
+		//
+		while( ! queue->empty() ) {
 			constructCommand( queue->dequeue() );
-		} while( ! queue->empty() );
+		}
 
 		// Send all of the add commands.
 		unsigned long responseCode = 0;
@@ -394,10 +406,6 @@ static void * workerFunction( void * ptr ) {
 		addCommands.clear();
 		updateCommands.clear();
 		removeCommands.clear();
-
-		pthread_mutex_unlock( & bigGlobalMutex );
-		sleep( 1 );
-		pthread_mutex_lock( & bigGlobalMutex );
 	}
 
 
