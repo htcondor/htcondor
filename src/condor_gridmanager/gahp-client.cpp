@@ -8411,6 +8411,8 @@ int GahpClient::boinc_submit( const char *batch_name,
 }
 
 int GahpClient::boinc_query_batches( StringList &batch_names,
+									 const std::string &last_query_time,
+									 std::string &new_query_time,
 									 BoincQueryResults &results )
 {
 	static const char* command = "BOINC_QUERY_BATCHES";
@@ -8422,7 +8424,7 @@ int GahpClient::boinc_query_batches( StringList &batch_names,
 
 		// Generate request line
 	std::string reqline;
-	formatstr( reqline, "%d", batch_names.number() );
+	formatstr( reqline, "%s %d", last_query_time.c_str(), batch_names.number() );
 	const char *name;
 	batch_names.rewind();
 	while ( (name = batch_names.next()) ) {
@@ -8459,9 +8461,13 @@ int GahpClient::boinc_query_batches( StringList &batch_names,
 		}
 
 		if ( rc == 0 ) {
-			int i = 2;
+			int i = 3;
 			int b = 0;
 			int j_cnt = 0;
+			if ( result->argc < 3 ) {
+				EXCEPT( "Bad %s Result", command );
+			}
+			new_query_time = result->argv[2];
 			while ( i < result->argc ) {
 				j_cnt = atoi( result->argv[i] );
 				i++;

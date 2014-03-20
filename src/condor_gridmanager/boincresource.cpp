@@ -511,8 +511,10 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 		return BSR_DONE;
 	}
 
+	std::string new_query_time;
 	GahpClient::BoincQueryResults results;
-	int rc = m_statusGahp->boinc_query_batches( m_statusBatches, results );
+	int rc = m_statusGahp->boinc_query_batches( m_statusBatches, "0",
+												new_query_time, results );
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		return BSR_PENDING;
 	}
