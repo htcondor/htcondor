@@ -105,6 +105,7 @@ public:
 
 
 	inline int consumed() { return !_tail || (_tail && _tail->consumed()); }
+	inline int num_untouched() { return _tail ? _tail->num_untouched() : 0; }
 
 	int put(Buf *);
 	void reset();
