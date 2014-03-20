@@ -99,6 +99,14 @@ main_init(int argc, char* argv[])
 		// each creating their own
 	daemonCore->Proc_Family_Init();
 
+#if defined(HAVE_DLOPEN)
+	ClassAdLogPluginManager::Load();
+	ScheddPluginManager::Load();
+
+	ScheddPluginManager::EarlyInitialize();
+	ClassAdLogPluginManager::EarlyInitialize();
+#endif
+
 		// Initialize all the modules
 	scheduler.Init();
 	scheduler.Register();
@@ -156,20 +164,6 @@ main_init(int argc, char* argv[])
 	scheduler.timeout();
 
 #if defined(HAVE_DLOPEN)
-	// Loading the plugins before initializing the JobQueue means that it's
-	// valid for a plugin to be unable to look up the job ad it's updating;
-	// it's preferable to force plugins that care about the existing job
-	// queue to walk it (calling their add and update functions as they go)
-	// than to force plugins that don't to ignore events (being unable to look
-	// up an updated ad) that should be errors (and used to crash the schedd).
-	// (You could argue, vice-versa, that plugins which want to use the job
-	// queue should instead ignore events that happen before Initialize(), but
-	// hardly seems sensible.)
-
-	ClassAdLogPluginManager::Load();
-	ScheddPluginManager::Load();
-	ScheddPluginManager::EarlyInitialize();
-	ClassAdLogPluginManager::EarlyInitialize();
 	ScheddPluginManager::Initialize();
 	ClassAdLogPluginManager::Initialize();
 #endif
