@@ -89,11 +89,9 @@
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
 #include "globus_utils.h"
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
-#endif
 #endif
 #include <algorithm>
 #include <sstream>
@@ -1262,12 +1260,10 @@ Scheduler::count_jobs()
 	FILESQL::daemonAdInsert(cad, "ScheddAd", FILEObj, prevLHF);
 #endif
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, cad);
 #endif
-#endif
-	
+
 		// Update collectors
 	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, true);
 	dprintf( D_FULLDEBUG, 
@@ -1315,11 +1311,10 @@ Scheduler::count_jobs()
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 			   Owners[i].Name, UidDomain );
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
 #endif
-#endif
+
 		// Update collectors
 	  num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
 	  dprintf( D_ALWAYS, "Sent ad to %d collectors for %s@%s\n", 
@@ -1452,12 +1447,10 @@ Scheduler::count_jobs()
 		pAd.Assign(ATTR_NAME, submitter_name.Value());
 		dprintf (D_FULLDEBUG, "Changed attribute: %s = %s\n", ATTR_NAME, submitter_name.Value());
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 	// update plugins
 	dprintf(D_FULLDEBUG,"Sent owner (0 jobs) ad to schedd plugins\n");
 	ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
-#endif
 #endif
 
 		// Update collectors
@@ -11862,11 +11855,9 @@ Scheduler::shutdown_fast()
 		// still invalidate our classads, even on a fast shutdown.
 	invalidate_ads();
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 	ScheddPluginManager::Shutdown();
 	ClassAdLogPluginManager::Shutdown();
-#endif
 #endif
 
 	dprintf( D_ALWAYS, "All shadows have been killed, exiting.\n" );
@@ -11897,11 +11888,9 @@ Scheduler::schedd_exit()
 		// gone.  
 	invalidate_ads();
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 	ScheddPluginManager::Shutdown();
 	ClassAdLogPluginManager::Shutdown();
-#endif
 #endif
 
 	dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
