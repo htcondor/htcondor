@@ -122,7 +122,7 @@ sub GenerateMassive {
 		$genunique = "$unique$counter = $pattern";
 		print SF "$genunique\n";
 		$counter++;
-		$pattern = $pattern . "x";
+		$pattern = $pattern . "xxxxxxxxxxxxxxxx";
 	}
 };
 
