@@ -3687,12 +3687,12 @@ friendly_name=Event Log Use Xml
 review=?
 tags=c++_util,user_log
 
-[MAX_EVENT_LOG]
+[EVENT_LOG_MAX_SIZE]
 default=1000000
 type=long
 reconfig=true
 customization=seldom
-friendly_name=Max Event Log
+friendly_name=Maximum size of the event log in bytes
 review=?
 tags=c++_util,user_log
 

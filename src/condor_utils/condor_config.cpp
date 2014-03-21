@@ -2008,13 +2008,17 @@ param_integer( const char *name, int &value,
 
 		int def_valid = 0;
 		int is_long = false;
-		int tbl_default_value = param_default_integer(name, subsys, &def_valid, &is_long);
+		int was_truncated = false;
+		int tbl_default_value = param_default_integer(name, subsys, &def_valid, &is_long, &was_truncated);
 		bool tbl_check_ranges = 
 			(param_range_integer(name, &min_value, &max_value)==-1) 
 				? false : true;
 
 		if (is_long) {
-			dprintf (D_CONFIG | D_FAILURE, "Warning - long param %s fetched as integer\n", name);
+			if (was_truncated)
+				dprintf (D_CONFIG | D_FAILURE, "Error - long param %s was fetched as integer and truncated\n", name);
+			else
+				dprintf (D_CONFIG, "Warning - long param %s fetched as integer\n", name);
 		}
 
 		// if found in the default table, then we overwrite the arguments
@@ -2082,7 +2086,7 @@ param_integer( const char *name, int &value,
 		long_result = result;
 	}
 
-	if( (long)result != long_result ) {
+	if( (int)result != long_result ) {
 		EXCEPT( "%s in the condor configuration is out of bounds for"
 				" an integer (%s)."
 				"  Please set it to an integer in the range %d to %d"

@@ -243,8 +243,12 @@ void print_as_type(const char * name, int as_type)
 		fprintf(stdout, " # eval: %s def=%d (%s)\n", bb ? "true" : "false", bval, bvalid ? "valid" : "invalid");
 	} else if (as_type == PARAM_TYPE_INT) {
 		int ivalid = -1, ilong = 0;
-		int ival = param_default_integer(name, NULL, &ivalid, &ilong);
+		int ival = param_default_integer(name, NULL, &ivalid, &ilong, NULL);
 		fprintf(stdout, " # eval: %d (%s%s)\n", ival, ivalid ? "valid" : "invalid", ilong ? ", long" : "");
+	} else if (as_type == PARAM_TYPE_LONG) {
+		int ivalid = -1;
+		long long ival = param_default_long(name, NULL, &ivalid);
+		fprintf(stdout, " # eval: %lld (%s long)\n", ival, ivalid ? "valid" : "invalid");
 	} else if (as_type == PARAM_TYPE_DOUBLE) {
 		int dvalid = -1;
 		double dval = param_default_double(name, NULL, &dvalid);
