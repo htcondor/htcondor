@@ -66,8 +66,8 @@ void StarterStatistics::Init() {
 
     STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockReads, IF_BASICPUB);
     STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockWrites, IF_BASICPUB);
-    STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockReadKbytes, IF_BASICPUB);
-    STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockWriteKbytes, IF_BASICPUB);
+    STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockReadBytes, IF_VERBOSEPUB);
+    STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockWriteBytes, IF_VERBOSEPUB);
 }
 
 void StarterStatistics::Reconfig() {
@@ -122,7 +122,17 @@ void StarterStatistics::Publish(ClassAd& ad, int flags) const {
             }
         }
     }
+
     Pool.Publish(ad, flags);
+
+    if ((flags & IF_PUBLEVEL) > 0) {
+        ad.Assign(ATTR_BLOCK_READ_KBYTES, this->BlockReadBytes.value / 1024);
+        ad.Assign(ATTR_BLOCK_WRITE_KBYTES, this->BlockWriteBytes.value / 1024);
+        if (flags & IF_RECENTPUB) {
+            ad.Assign("Recent" ATTR_BLOCK_WRITE_KBYTES, this->BlockWriteBytes.recent / 1024);
+            ad.Assign("Recent" ATTR_BLOCK_READ_KBYTES, this->BlockReadBytes.recent / 1024);
+        }
+    }
 }
 
 
@@ -662,12 +672,10 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	}
 #endif
 
-    // these two are maintained as floating point to avoid unbounded error accumulation
-    // they will be cast to integer over in the shadow, when it can be done safely
 	if (usage->block_read_bytes >= 0) 
-        m_statistics.BlockReadKbytes = double(usage->block_read_bytes)/1024;
+        m_statistics.BlockReadBytes = usage->block_read_bytes;
 	if (usage->block_write_bytes >= 0) 
-        m_statistics.BlockWriteKbytes = double(usage->block_write_bytes)/1024;
+        m_statistics.BlockWriteBytes = usage->block_write_bytes;
 
 	if (usage->block_reads >= 0)
         m_statistics.BlockReads = usage->block_reads;

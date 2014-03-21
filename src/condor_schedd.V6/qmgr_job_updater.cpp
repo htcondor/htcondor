@@ -132,10 +132,14 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_DELEGATED_PROXY_EXPIRATION );
 	common_job_queue_attrs->insert( ATTR_BLOCK_WRITE_KBYTES );
 	common_job_queue_attrs->insert( ATTR_BLOCK_READ_KBYTES );
+	common_job_queue_attrs->insert( ATTR_BLOCK_WRITE_BYTES );
+	common_job_queue_attrs->insert( ATTR_BLOCK_READ_BYTES );
 	common_job_queue_attrs->insert( ATTR_BLOCK_WRITES );
 	common_job_queue_attrs->insert( ATTR_BLOCK_READS );
     common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READ_KBYTES );
     common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITE_KBYTES );
+    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READ_BYTES );
+    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITE_BYTES );
     common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READS );
     common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITES );
     common_job_queue_attrs->insert( "StatsLastUpdateTimeStarter" );

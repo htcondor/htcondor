@@ -1084,16 +1084,15 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
-    // these are maintained as floating point for preventing unbounded error accumulation
-    // but here we can safely drop them to integers for public consumption
-    if (update_ad->LookupFloat(ATTR_BLOCK_READ_KBYTES, double_value))
-        jobAd->Assign(ATTR_BLOCK_READ_KBYTES, int64_t(double_value));
-    if (update_ad->LookupFloat(ATTR_BLOCK_WRITE_KBYTES, double_value))
-        jobAd->Assign(ATTR_BLOCK_WRITE_KBYTES, int64_t(double_value));
-    if (update_ad->LookupFloat("Recent" ATTR_BLOCK_READ_KBYTES, double_value))
-        jobAd->Assign("Recent" ATTR_BLOCK_READ_KBYTES, int64_t(double_value));
-    if (update_ad->LookupFloat("Recent" ATTR_BLOCK_WRITE_KBYTES, double_value))
-        jobAd->Assign("Recent" ATTR_BLOCK_WRITE_KBYTES, int64_t(double_value));
+    jobAd->CopyAttribute(ATTR_BLOCK_READ_KBYTES, update_ad);
+    jobAd->CopyAttribute(ATTR_BLOCK_WRITE_KBYTES, update_ad);
+    jobAd->CopyAttribute("Recent" ATTR_BLOCK_READ_KBYTES, update_ad);
+    jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITE_KBYTES, update_ad);
+
+    jobAd->CopyAttribute(ATTR_BLOCK_READ_BYTES, update_ad);
+    jobAd->CopyAttribute(ATTR_BLOCK_WRITE_BYTES, update_ad);
+    jobAd->CopyAttribute("Recent" ATTR_BLOCK_READ_BYTES, update_ad);
+    jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITE_BYTES, update_ad);
 
     jobAd->CopyAttribute(ATTR_BLOCK_READS, update_ad);
     jobAd->CopyAttribute(ATTR_BLOCK_WRITES, update_ad);

@@ -191,6 +191,8 @@
 #define ATTR_FILE_WRITE_BYTES  "FileWriteBytes"
 #define ATTR_BLOCK_READ_KBYTES  "BlockReadKbytes"
 #define ATTR_BLOCK_WRITE_KBYTES  "BlockWriteKbytes"
+#define ATTR_BLOCK_READ_BYTES  "BlockReadBytes"
+#define ATTR_BLOCK_WRITE_BYTES  "BlockWriteBytes"
 #define ATTR_BLOCK_READS "BlockReads"
 #define ATTR_BLOCK_WRITES "BlockWrites"
 #define ATTR_FILE_SEEK_COUNT  "FileSeekCount"

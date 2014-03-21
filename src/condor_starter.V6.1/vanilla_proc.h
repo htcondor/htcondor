@@ -51,8 +51,8 @@ struct StarterStatistics {
     // i/o statistics as collected from cgroups blkio controller
     stats_entry_recent<int64_t> BlockReads;        // read operations
     stats_entry_recent<int64_t> BlockWrites;       // write operations
-    stats_entry_recent<double> BlockReadKbytes;    // kilobytes read
-    stats_entry_recent<double> BlockWriteKbytes;   // kilobytes written
+    stats_entry_recent<int64_t> BlockReadBytes;    // bytes read
+    stats_entry_recent<int64_t> BlockWriteBytes;   // bytes written
 };
 
 
