@@ -296,7 +296,7 @@ bool starts_with_ignore_case(const std::string& str, const std::string& pre)
 
 bool sort_ascending_ignore_case(std::string const & a, std::string const & b)
 {
-	PRAGMA_REMIND("TJ: implement this witout c_str()")
+	//PRAGMA_REMIND("TJ: implement this witout c_str()")
 	return strcasecmp(a.c_str(), b.c_str()) < 0;
 }
 
