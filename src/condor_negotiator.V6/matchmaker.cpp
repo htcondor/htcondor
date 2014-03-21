@@ -316,6 +316,7 @@ Matchmaker ()
  	NegotiatorInterval = 60;
  	MaxTimePerSubmitter = 31536000;
  	MaxTimePerSpin = 31536000;
+	MaxTimePerCycle = 31536000;
 
 	ASSERT( matchmaker_for_classad_func == NULL );
 	matchmaker_for_classad_func = this;
@@ -439,6 +440,8 @@ initialize ()
 int Matchmaker::
 reinitialize ()
 {
+	// NOTE: reinitialize() is also called on startup
+
 	char *tmp;
 	static bool first_time = true;
 
@@ -456,6 +459,9 @@ reinitialize ()
  	NegotiatorInterval = param_integer("NEGOTIATOR_INTERVAL",60);
 
 	NegotiatorTimeout = param_integer("NEGOTIATOR_TIMEOUT",30);
+
+	// up to 1 year per negotiation cycle
+ 	MaxTimePerCycle = param_integer("NEGOTIATOR_MAX_TIME_PER_CYCLE",31536000);
 
 	// up to 1 year per submitter by default
  	MaxTimePerSubmitter = param_integer("NEGOTIATOR_MAX_TIME_PER_SUBMITTER",31536000);
@@ -546,6 +552,7 @@ reinitialize ()
 			AccountantHost : "None (local)");
 	dprintf (D_ALWAYS,"NEGOTIATOR_INTERVAL = %d sec\n",NegotiatorInterval);
 	dprintf (D_ALWAYS,"NEGOTIATOR_TIMEOUT = %d sec\n",NegotiatorTimeout);
+	dprintf (D_ALWAYS,"MAX_TIME_PER_CYCLE = %d sec\n",MaxTimePerCycle);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_SUBMITTER = %d sec\n",MaxTimePerSubmitter);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_PIESPIN = %d sec\n",MaxTimePerSpin);
 
@@ -2684,28 +2691,37 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			// still negotiate because on the first spin we tell the negotiate
 			// function to ignore the submitterLimit w/ respect to jobs which
 			// are strictly preferred by resource offers (via startd rank).
+			// Also, don't bother negotiating if MaxTime(s) to negotiate exceeded.
+			time_t startTime = time(NULL);
+			int remainingTimeForThisCycle = MaxTimePerCycle - 
+						(startTime - negotiation_cycle_stats[0]->start_time);
+			int remainingTimeForThisSubmitter = MaxTimePerSubmitter - totalTime;
 			if ( num_idle_jobs == 0 ) {
 				dprintf(D_FULLDEBUG,
 					"  Negotiating with %s skipped because no idle jobs\n",
 					scheddName.Value());
 				result = MM_DONE;
-			} else if (totalTime >= MaxTimePerSubmitter) {
+			} else if (remainingTimeForThisSubmitter <= 0) {
 				dprintf(D_ALWAYS,
 					"  Negotiation with %s skipped because of time limits:\n",
 					scheddName.Value());
 				dprintf(D_ALWAYS,
-					"  %d seconds spent, max allowed %d\n ",
+					"  %d seconds spent on this user, MAX_TIME_PER_USER is %d secs\n ",
 					totalTime, MaxTimePerSubmitter);
 				negotiation_cycle_stats[0]->submitters_out_of_time.insert(scheddName.Value());
+				result = MM_DONE;
+			} else if (remainingTimeForThisCycle <= 0) {
+				dprintf(D_ALWAYS,
+					"  Negotiation with %s skipped because MAX_TIME_PER_CYCLE of %d secs exceeded\n",
+					scheddName.Value(),MaxTimePerCycle);
 				result = MM_DONE;
 			} else {
 				if ((submitterLimit < minSlotWeight || pieLeft < minSlotWeight) && (spin_pie > 1)) {
 					result = MM_RESUME;
 				} else {
 					int numMatched = 0;
-					int remainingTimeForThisSubmitter = MaxTimePerSubmitter - totalTime;
-					time_t startTime = time(NULL);
-					time_t deadline = startTime + MIN(MaxTimePerSpin, remainingTimeForThisSubmitter);
+					time_t deadline = startTime + 
+						MIN(MaxTimePerSpin, MIN(remainingTimeForThisCycle,remainingTimeForThisSubmitter));
                     if (negotiation_cycle_stats[0]->active_submitters.count(scheddName.Value()) <= 0) {
                         negotiation_cycle_stats[0]->num_idle_jobs += num_idle_jobs;
                     }
@@ -3576,9 +3592,10 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 		if (currentTime >= deadline) {
 			dprintf (D_ALWAYS, 	
-			"    Reached spin deadline for %s after %d sec... stopping\n       MAX_TIME_PER_SUBMITTER = %d sec, MAX_TIME_PER_PIESPIN = %d sec\n",
+			"    Reached deadline for %s after %d sec... stopping\n"
+			"       MAX_TIME_PER_SUBMITTER = %d sec, MAX_TIME_PER_CYCLE = %d sec, MAX_TIME_PER_PIESPIN = %d sec\n",
 				schedd_id.Value(), (int)(currentTime - beginTime),
-				MaxTimePerSubmitter, MaxTimePerSpin);
+				MaxTimePerSubmitter, MaxTimePerCycle, MaxTimePerSpin);
 			break;	// get out of the infinite for loop & stop negotiating
 		}
 

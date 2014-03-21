@@ -7825,12 +7825,20 @@ These macros affect the \Condor{negotiator}.
 \label{param:NegotiatorMaxTimePerSubmitter}
 \item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}]
   The maximum number of seconds
-  the \Condor{negotiator} will spend with a submitter during one
+  the \Condor{negotiator} will spend with each individual submitter during one
   negotiation cycle.  Once this time limit has been reached, the
-  \Condor{negotiator} will still finish its current pie spin, but it will skip
-  over the submitter if subsequent pie spins are needed to dish out all
-  of the available machines.  It defaults to one year.  See
-  \MacroNI{NEGOTIATOR\_MAX\_TIME\_PER\_PIESPIN} for more information.
+  \Condor{negotiator} will skip
+  over requests from this submitter until the next negotiation cycle.
+  It defaults to one year.
+
+\label{param:NegotiatorMaxTimePerCycle}
+\item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_CYCLE}]
+  The maximum number of seconds
+  the \Condor{negotiator} will spend in total across all submitters during one
+  negotiation cycle.  Once this time limit has been reached, the
+  \Condor{negotiator} will skip
+  over requests from all submitters until the next negotiation cycle.
+  It defaults to one year.
 
 \label{param:NegotiatorMaxTimePerPieSpin}
 \item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_PIESPIN}]

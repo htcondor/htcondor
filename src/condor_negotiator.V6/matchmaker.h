@@ -312,6 +312,7 @@ class Matchmaker : public Service
 		char *AccountantHost;		// who (if at all) is the accountant?
 		int  NegotiatorInterval;	// interval between negotiation cycles
 		int  NegotiatorTimeout;		// timeouts for communication
+		int  MaxTimePerCycle;		// how long for total negotiation cycle
 		int  MaxTimePerSubmitter;   // how long to talk to any one submitter
 		int  MaxTimePerSpin;        // How long per pie spin
 		ExprTree *PreemptionReq;	// only preempt if true
