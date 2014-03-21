@@ -225,7 +225,7 @@ sub RegisterResult
 	#print "RegisterResult: test name: $testname\n";
 
     my $result_str = $result == 1 ? "PASSED" : "FAILED";
-    TestDebug( "\n$result_str check $checkname in test $testname\n\n", 1 );
+    print "\n$result_str check $checkname in test $testname\n\n";
     if( $result != 1 ) {
 	$test_failure_count += 1;
     }
@@ -1495,6 +1495,19 @@ sub getJobStatus
 # Run a condor tool and look for exit value. Apply multiplier
 # upon failure and return 0 on failure.
 #
+sub PipeCheck {
+	my $cmdstring = shift;
+	if($cmdstring =~ /\|/) {
+		print "*******************************************************\n";
+		print "*                                                     *\n";
+		print "*               WARNING: runCondorTool                *\n";
+		print "*  Pipes will undo our recovery by masking a failure  *\n";
+		print "*  with a later return value!!!!!                     *\n";
+		print "*  cmd:$cmdstring   *\n";
+		print "*                                                     *\n";
+		print "*******************************************************\n";
+	}
+}
 
 
 sub runCondorTool
@@ -1505,6 +1518,7 @@ sub runCondorTool
 	my $status = 1;
 	my $done = 0;
 	my $cmd = shift;
+	PipeCheck($cmd);
 	my $arrayref = shift;
 	# use unused third arg to skip the noise like the time
 	my $quiet = shift;
@@ -1566,6 +1580,7 @@ sub runCondorTool
 		} else {
 
 			my $line = "";
+			my $sawerror = 0;
 			if(defined $output[0]) {
 				#have some info here
 				foreach my $value (@output)
@@ -1583,13 +1598,20 @@ sub runCondorTool
 				{
 					#print "adding <$value> to passed array ref(runCondorTool)(stderr)\n";
 					push @{$arrayref}, $value;
+					if($value =~ /^Error: communication error.*$/) {
+						$sawerror = 1;
+					}
 				}
 			}
 			my $current_time = time;
 			$delta_time = $current_time - $start_time;
 			TestDebug("runCondorTool: its been $delta_time since call\n",4);
 			#Condor::DebugLevel(2);
-			return(1);
+			if($sawerror == 1) {
+				print "0 return from runcmd but saw:Error: communication error. Going again\n";
+			} else {
+				return(1);
+			}
 		}
 		$count = $count + 1;
 		TestDebug("runCondorTool: iteration: $count cmd $cmd failed sleep 10 * $count \n",1);
