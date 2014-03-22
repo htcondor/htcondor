@@ -782,7 +782,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 		dprintf(D_ALWAYS, "IO: Out of memory\n");
 		return FALSE;
 	}
-	m_tmp->grow_buf(len);
+	m_tmp->grow_buf(len+1);
 
 	if (len <= 0)
 	{
