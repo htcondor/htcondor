@@ -145,9 +145,15 @@ typedef std::map< std::string, std::string > Command;
 typedef std::map< std::string, Command > CommandSet;
 CommandSet addCommands, updateCommands, removeCommands;
 
+// FIXME: generatePostString() currently always generates JSON strings.  This
+// really won't work for sending JSON nulls (for attribute removal) and may
+// be causing PanDA grief when sending ints.  Remove the quotes from around the
+// attribute value in generatePostString() and make sure all values coming
+// out of this function are properly JSON-formatted.
 std::string & doValueCleanup( std::string & value ) {
 	if( value[0] == '"' ) {
 		// If a ClassAd value has a leading quote, it's a string.  Unqoute it.
+		// (Do we get escaped strings here?  It would seem kind of pointless.)
 		value.erase( 0, 1 );
 		size_t lastCharacter = value.length() - 1;
 		if( value[lastCharacter] == '"' ) { value.erase( lastCharacter, 1 ); }
