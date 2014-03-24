@@ -434,6 +434,28 @@ main(int argc, char *argv[] )
 		LastCkptServer = NULL;
 	}
 
+	// LIGO
+	if (param_boolean("ALWAYS_USE_LOCAL_CKPT_SERVER", false)) {
+		if (LastCkptServer) {
+			char *remoteHost = NULL;
+			JobAd->LookupString(ATTR_REMOTE_HOST, &remoteHost);
+
+			char *machineName = strrchr(remoteHost, '@');
+			if (machineName == NULL) {
+				machineName = remoteHost;
+			} else {
+				machineName++;
+			}
+
+			LastCkptServer = strdup(machineName);
+			CkptServerHost = strdup(machineName);
+
+			dprintf(D_ALWAYS, "ALWAYS_USE_LOCAL_CKPT_SERVER is true, forcing LastCkptServer to %s\n", LastCkptServer);
+		} else {
+			dprintf(D_ALWAYS, "ALWAYS_USE_LOCAL_CKPT_SERVER is true, but checkpoint is not on server, restoring file local file\n");
+		}
+	}
+
 	MaxDiscardedRunTime = param_integer( "MAX_DISCARDED_RUN_TIME", 3600 );
 
 	CompressPeriodicCkpt = param_boolean( "COMPRESS_PERIODIC_CKPT", false );
