@@ -64,6 +64,17 @@ can be read back properly.
 the job is evicted while a \Condor{ssh\_to\_job} command is active.
 \Ticket{4251}
 
+\item Fixed a bug in which \Condor{dagman} did not correctly update
+the node status file at the end of the run for DAGs containing
+final nodes.
+\Ticket{4209}
+
+\item Fixed a bug in which \Condor{dagman} sometimes printed incorrect
+node status counts to the node status file.  Note that this fix also
+included changing the "STATUS\_UNREADY" strings in the node status
+file to "STATUS\_NOT\_READY" to be more consistent.
+\Ticket{4248}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
