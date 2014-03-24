@@ -1101,7 +1101,7 @@ int main (int argc, char **argv)
 				MyString scheddVersion;
 				ad->LookupString(ATTR_VERSION, scheddVersion);
 				CondorVersionInfo v(scheddVersion.Value());
-				useFastScheddQuery = v.built_since_version(6,9,3) ? (v.built_since_version(8, 1, 4) ? 2 : 1) : 0;
+				useFastScheddQuery = v.built_since_version(6,9,3) ? (v.built_since_version(8, 1, 5) ? 2 : 1) : 0;
 				retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
 				}
 
