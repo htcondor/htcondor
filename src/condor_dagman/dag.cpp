@@ -2915,6 +2915,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		return;
 	}
 
+#if 1 //TEMPTEMP
 		//
 		// Print header.
 		//
@@ -3028,6 +3029,128 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	}
 	fprintf( outfile, "END %lu (%s)\n",
 				(unsigned long)endTime, timeStr );
+#endif //TEMPTEMP
+#if 1 //TEMPTEMP
+{//TEMPTEMP
+	fprintf( outfile, "<add new stuff here>\n" );//TEMPTEMP
+	fprintf( outfile, "[\n" );
+
+	//TEMPTEMP -- test with multiple dag files
+		//
+		// Print DAG file list.
+		//
+	fprintf( outfile, "  DagFiles = {\n" );
+	char *dagFile;
+	_dagFiles.rewind();
+	while ( (dagFile = _dagFiles.next()) ) {
+		//TEMPTEMP -- comma only if not last?
+		fprintf( outfile, "    %s,\n", dagFile );
+	}
+	fprintf( outfile, "  };\n" );
+
+		//
+		// Print timestamp.
+		//
+	char *timeStr = ctime( &startTime );
+	char *newline = strchr(timeStr, '\n');
+	if (newline != NULL) {
+		*newline = 0;
+	}
+	fprintf( outfile, "  Timestamp = %lu; /* %s */\n",
+				(unsigned long)startTime, timeStr );
+
+		//
+		// Print next update time.
+		//
+	time_t nextTime;
+	if ( FinishedRunning( true ) || removed ) {
+		nextTime = 0;
+		timeStr = "none";//TEMPTEMP -- warning here
+	} else {
+		nextTime = endTime + _minStatusUpdateTime;
+		timeStr = ctime( &nextTime );
+		newline = strchr(timeStr, '\n');
+		if (newline != NULL) {
+			*newline = 0;
+		}
+	}
+	fprintf( outfile, "  NextUpdate = %lu; /* %s */\n",
+				(unsigned long)nextTime, timeStr );
+
+		//
+		// Print overall DAG status.
+		//
+	Job::status_t dagStatus = Job::STATUS_SUBMITTED;
+	const char *statusNote = "";
+	if ( DoneSuccess( true ) ) {
+		dagStatus = Job::STATUS_DONE;
+		statusNote = "success";
+	} else if ( DoneFailed( true ) ) {
+		dagStatus = Job::STATUS_ERROR;
+		if ( _dagStatus == DAG_STATUS_ABORT ) {
+			statusNote = "aborted";
+		} else {
+			statusNote = "failed";
+		}
+	} else if ( DoneCycle( true ) ) {
+		dagStatus = Job::STATUS_ERROR;
+		statusNote = "cycle";
+	} else if ( held ) {
+		statusNote = "held";
+	} else if ( removed ) {
+		dagStatus = Job::STATUS_ERROR;
+		statusNote = "removed";
+	}
+	fprintf( outfile, "  DagStatus = %d; /* %s (%s) */\n", dagStatus,
+				Job::status_t_names[dagStatus], statusNote );
+
+	fprintf( outfile, "  NodesTotal = %d;\n", NumNodes( true ) );
+	fprintf( outfile, "  NodesDone = %d;\n", NumNodesDone( true ) );
+	fprintf( outfile, "  NodesPre = %d;\n", PreRunNodeCount() );
+	fprintf( outfile, "  NodesQueued = %d;\n", NumJobsSubmitted() );
+	fprintf( outfile, "  NodesPost = %d;\n", PostRunNodeCount() );
+	fprintf( outfile, "  NodesReady = %d;\n", NumNodesReady() );
+	int unready = NumNodes( true )  - (NumNodesDone( true ) +
+				PreRunNodeCount() + NumJobsSubmitted() + PostRunNodeCount() +
+				NumNodesReady() + NumNodesFailed()  );
+	fprintf( outfile, "  NodesUnready = %d;\n", unready );
+	fprintf( outfile, "  NodesFailed = %d;\n", NumNodesFailed() );
+
+		//
+		// Print status of all nodes.
+		//
+	fprintf( outfile, "  Nodes = {\n" );
+	ListIterator<Job> it ( _jobs );
+	Job *node;
+	while ( it.Next( node ) ) {
+		fprintf( outfile, "    [\n" );
+		const char *statusStr = Job::status_t_names[node->GetStatus()];
+		const char *nodeNote = "";
+		if ( node->GetStatus() == Job::STATUS_READY ) {
+				// Note:  Job::STATUS_READY only means that the job is
+				// ready to submit if it doesn't have any unfinished
+				// parents.
+			if ( !node->CanSubmit() ) {
+				// See Job::_job_type_names for other strings.
+				statusStr = Job::status_t_names[Job::STATUS_NOT_READY];
+			}
+		} else if ( node->GetStatus() == Job::STATUS_SUBMITTED ) {
+			nodeNote = node->GetIsIdle() ? "idle" : "not_idle";
+			// Note: add info here about whether the job(s) are
+			// held, once that code is integrated.
+		} else if ( node->GetStatus() == Job::STATUS_ERROR ) {
+			nodeNote = node->error_text;
+		}
+		fprintf( outfile, "      Node = \"%s\";\n", node->GetJobName() );
+
+		//TEMPTEMP -- no comma on last?
+		fprintf( outfile, "    ],\n" );
+	}
+	fprintf( outfile, "  };\n" );
+
+	fprintf( outfile, "]\n" );
+}//TEMPTEMP
+#endif //TEMPTEMP
 
 	fclose( outfile );
 
