@@ -43,7 +43,6 @@ int main( int /* argc */, char ** /* argv */ ) {
 	}
 	dprintf( D_ALWAYS, "STARTING UP\n" );
 
-
 	param( pandaURL, "PANDA_URL" );
 	param( vomsProxy, "PANDA_VOMS_PROXY" );
 	if( pandaURL.empty() || vomsProxy.empty() ) {
@@ -145,21 +144,51 @@ typedef std::map< std::string, std::string > Command;
 typedef std::map< std::string, Command > CommandSet;
 CommandSet addCommands, updateCommands, removeCommands;
 
-// FIXME: generatePostString() currently always generates JSON strings.  This
-// really won't work for sending JSON nulls (for attribute removal) and may
-// be causing PanDA grief when sending ints.  Remove the quotes from around the
-// attribute value in generatePostString() and make sure all values coming
-// out of this function are properly JSON-formatted.
 std::string & doValueCleanup( std::string & value ) {
+	//
+	// We're sent unparse()d ClassAd values, but we need to send JSON.
+	//
 	if( value[0] == '"' ) {
-		// If a ClassAd value has a leading quote, it's a string.  Unqoute it.
-		// (Do we get escaped strings here?  It would seem kind of pointless.)
-		value.erase( 0, 1 );
-		size_t lastCharacter = value.length() - 1;
-		if( value[lastCharacter] == '"' ) { value.erase( lastCharacter, 1 ); }
-	} else {
-		// All other ClassAd values are numeric, but some integers are
-		// represented as floats with lots of trailing zeroes.  Convert.
+		if( value[ value.length() - 1 ] != '"' ) {
+			dprintf( D_ALWAYS, "String value '%s' lacks trailing \", appending.\n", value.c_str() );
+			value += "\"";
+		}
+
+		// All ClassAd escapes are legal JSON escapes, except for single
+		// quote and the octal escapes.  The former shouldn't be escaped
+		// and the latter must be converted into hex.  All ClassAd bytes
+		// are between U+0020 and U+007E (with U+005C = '\' already being
+		// escaped by unparse()), so they pass through unchanged.
+
+		size_t index = 1;
+		while( index < value.length() - 1 ) {
+			if( value[ index ] != '\\' ) { index += 1; continue; }
+			char c = value[ index + 1 ];
+			// Ignore escaped escapes.
+			if( c == '\\' ) { index += 2; continue; }
+			// Convert escaped single quotes.
+			if( c == '\'' ) { value.replace( index, 2, "'" ); index += 1; continue; }
+			// Convert octal escapes.  The job queue may never generate these.
+			if( ! isdigit( c ) ) { index += 2; continue; }
+
+			const char * left = value.c_str();
+			left = left + index + 1;
+			char * right;
+			unsigned long octal = strtoul( left, & right, 8 );
+			if( right == left) {
+				dprintf( D_ALWAYS, "Detected invalid octal escape, escaping.\n" );
+				value.replace( index, 2, "\\\\" );
+				index += 2;
+				continue;
+			}
+			std::string cStr;
+			formatstr( cStr, "\\u%04lX", octal );
+			value.replace( index, right - left + 1, cStr.c_str() );
+			index += right - left + 1;
+		}
+	} else if( isdigit( value[0] ) ) {
+		// Sometimes integers are represented as floats with lots of trailing
+		// zeroes, which can cause some parsers grief.  Convert them.
 		size_t point = value.find( '.' );
 		if( point == std::string::npos ) { return value; }
 		for( size_t i = point + 1; i < value.length(); ++i ) {
@@ -169,6 +198,16 @@ std::string & doValueCleanup( std::string & value ) {
 		// If we get here, then everything after the point must have been 0,
 		// so we can safely truncate the string.
 		value.erase( point, std::string::npos );
+	} else {
+		// A literal value.
+		if( value == "null" ) { return value; }
+		else if( value == "false" ) { return value; }
+		else if( value == "true" ) { return value; }
+		else {
+			// JSON does not permit any other literal.
+			dprintf( D_ALWAYS, "Converting illegal literal '%s' into string.\n", value.c_str() );
+			value = '"' + value + '"';
+		}
 	}
 	return value;
 }
@@ -210,12 +249,13 @@ void constructCommand( const std::string & line ) {
 		Command & c = updateCommands[ globalJobID ];
 		c[ "globaljobid" ] = globalJobID;
 		// Panda should redefine their schema so that 'submitted'
-		// is TIMESTAMP, not DATETIME. *sigh*
+		// is TIMESTAMP, not DATETIME. *sigh*  Include the quotes
+		// because TIMESTAMP is a string to JSON.
 		if( argv[2] == "submitted" ) {
 			time_t submitTime = atol( argv[3].c_str() );
-			char buffer[] = "YYYY-MM-DD HH:MM:SS";
+			char buffer[] = "\"YYYY-MM-DD HH:MM:SS\"";
 			struct tm * ts = localtime( & submitTime );
-			strftime( buffer, sizeof( buffer ), "%Y-%m-%d %H:%M:%S", ts );
+			strftime( buffer, sizeof( buffer ), "\"%Y-%m-%d %H:%M:%S\"", ts );
 			argv[3] = buffer;
 		}
 		c[ argv[2] ] = doValueCleanup( argv[3] );
@@ -238,12 +278,12 @@ std::string generatePostString( const CommandSet & commandSet ) {
 		Command::const_iterator j = c.begin();
 		for( ; j != c.end(); ++j ) {
 			postFieldString += "\"" + j->first + "\": ";
-			postFieldString += "\"" + j->second + "\", ";
+			postFieldString += j->second + ", ";
 		}
 
 		// TO DO: Determine what, if anything, 'wmsid' ought to be; try to
 		// convince the PANDA people that it's not required?
-		postFieldString += "\"wmsid\": \"1004\"";
+		postFieldString += "\"wmsid\": 1004";
 		postFieldString += " }, ";
 	}
 	// Remove trailing ', '.

@@ -74,6 +74,7 @@ class CondorToPandaMap {
 const CondorToPandaMap::tuple sortedMap[] = {
 	{ "Cmd", "cmd" },
 	{ "Err", "p_stderr" },
+	{ "JobDescription", "p_description" },
 	{ "JobPrio", "pri" },
 	{ "Out", "p_stdout" },
 	{ "Owner", "owner" },
@@ -274,6 +275,7 @@ void PandadClassAdLogPlugin::deleteAttribute( const char * key, const char * att
 	// We need to the global job ID to call removePandaJob(), so do so
 	// while we still can.
 	//
+	if( shouldIgnoreAttribute( attribute ) ) { return; }
 	updatePandaJob( globalJobID.c_str(), attribute, NULL );
 	if( strcmp( attribute, "GlobalJobId" ) == 0 ) {
 		removePandaJob( globalJobID.c_str() );
@@ -359,6 +361,9 @@ bool PandadClassAdLogPlugin::shouldIgnoreJob( const char * key, int & cluster, i
 	// Ignore the spurious 0.0 ad we get on startup.
 	if( cluster == 0 && proc == 0 ) { return true; }
 
+	// Ignore cluster ads.
+	if( proc == -1 ) { return true; }
+
 	return false;
 }
 
@@ -385,44 +390,21 @@ bool PandadClassAdLogPlugin::shouldIgnoreAttribute( const char * attribute ) {
 }
 
 
-// Because the schedd is single-threaded, and we only call this function
-// once per fprintf(), it can safely return out of a static buffer.
-char * unquote( const char * quotedString ) {
-	static const unsigned bufferSize = 128;
-	static char buffer[bufferSize];
-	if( quotedString == NULL ) {
-		dprintf( D_ALWAYS, "PANDA: Attempted to unqoute NULL string.\n" );
-		buffer[0] = '\0';
-		return buffer;
-	}
-
-	size_t i = 0;
-	for( ; i < bufferSize && quotedString[i] != '\0'; ++i ) {
-		buffer[i] = quotedString[i];
-	}
-	buffer[i] = '\0';
-
-	if( i > 0 && buffer[i - 1] == '"' ) { buffer[i - 1] = '\0'; }
-	if( buffer[0] == '"' ) { return & buffer[1]; }
-	return &buffer[0];
-}
-
 void PandadClassAdLogPlugin::addPandaJob( const char * condorJobID, const char * globalJobID ) {
 	dprintf( D_FULLDEBUG, "PANDA: addPandaJob( %s, %s )\n", condorJobID, globalJobID );
-	fprintf( pandad, "\vADD %s %s\n", unquote( globalJobID ), condorJobID );
+	fprintf( pandad, "\vADD \"%s\" \"%s\"\n", globalJobID, condorJobID );
 	fflush( pandad );
 }
 
-// TO DO: If value is NULL, remove the attribute.  (Panda may not support this.)
 void PandadClassAdLogPlugin::updatePandaJob( const char * globalJobID, const char * attribute, const char * value ) {
-	if( value == NULL ) { return; }
-	dprintf( D_FULLDEBUG, "PANDA: updatePandaJob( %s, %s, %s )\n", unquote( globalJobID ), CondorToPandaMap::map( attribute ), value );
-	fprintf( pandad, "\vUPDATE %s %s %s\n", unquote( globalJobID ), CondorToPandaMap::map( attribute ), value );
+	if( value == NULL ) { value = "null"; }
+	dprintf( D_FULLDEBUG, "PANDA: updatePandaJob( %s, %s, %s )\n", globalJobID, CondorToPandaMap::map( attribute ), value );
+	fprintf( pandad, "\vUPDATE \"%s\" %s %s\n", globalJobID, CondorToPandaMap::map( attribute ), value );
 	fflush( pandad );
 }
 
 void PandadClassAdLogPlugin::removePandaJob( const char * globalJobID ) {
 	dprintf( D_FULLDEBUG, "PANDA: removePandaJob( %s )\n", globalJobID );
-	fprintf( pandad, "\vREMOVE %s\n", unquote( globalJobID ) );
+	fprintf( pandad, "\vREMOVE \"%s\"\n", globalJobID );
 	fflush( pandad );
 }
