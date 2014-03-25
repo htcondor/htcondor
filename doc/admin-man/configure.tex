@@ -8130,12 +8130,12 @@ The following configuration macros affect negotiation for group users.
 
 \label{param:NegotiatorUseWeightedDemand}
 \item[\Macro{NEGOTIATOR\_USE\_WEIGHTED\_DEMAND}]
-  A boolean value with a default of \Expr{False}. 
+  A boolean value that defaults to \Expr{True}. 
   When \Expr{False}, the behavior is the same as for HTCondor versions
   prior to 7.9.6.
   If \Expr{True}, when the \Condor{schedd} advertises \Attr{IdleJobs}
   in the submitter ClassAd,
-  the number of idle jobs in the queue for that submitter,
+  which represents the number of idle jobs in the queue for that submitter,
   it will also advertise the total number of requested cores across
   all idle jobs from that submitter, \Attr{WeightedIdleJobs}.
   If partitionable slots are being used,
@@ -8146,7 +8146,6 @@ The following configuration macros affect negotiation for group users.
   the number of cores,
   then setting this configuration variable to \Expr{True} allows
   the amount of surplus allocated to each group to be calculated correctly. 
-   
 
 \label{param:GroupSortExpr}
 \item[\Macro{GROUP\_SORT\_EXPR}]
