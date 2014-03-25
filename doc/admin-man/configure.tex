@@ -1589,18 +1589,37 @@ of the subsystem corresponding to the daemon.
 \label{param:MaxSubsysLog}
 \item[\Macro{MAX\_<SUBSYS>\_LOG}]
   Controls the maximum size in bytes or amount of time that a
-  log will be allowed to grow.  When it is time to rotate a log file,
-  it will be saved to a file with an ISO timestamp 
-  suffix. The oldest rotated file receives the ending \File{.old}. 
+  log will be allowed to grow. 
+  For any log not specified, the default is \MacroU{MAX\_DEFAULT\_LOG},
+  which currently defaults to 10Mbytes in size.
+  Values are specified with the same syntax as \Macro{MAX\_DEFAULT\_LOG}.
+
+  Note that a log file for the \Condor{procd} does not use this configuration
+  variable definition. 
+  Its implementation is separate.  
+  See section~\ref{param:MaxProcdLog} for the definition of
+  \MacroNI{MAX\_PROCD\_LOG}.
+ 
+\label{param:MaxDefaultLog}
+\item[\Macro{MAX\_DEFAULT\_LOG}]
+\begin{description} 
+  Controls the maximum size in bytes or amount of time that any log
+  not explicitly specified using  \Macro{MAX\_<SUBSYS>\_LOG}
+  will be allowed to grow.
+  When it is time to rotate a log file,
+  it will be saved to a file with an ISO timestamp suffix. 
+  The oldest rotated file receives the ending \File{.old}. 
   The \File{.old} files are overwritten each time the maximum 
   number of rotated files (determined by the value of
   \MacroNI{MAX\_NUM\_<SUBSYS>\_LOG}) is exceeded.
+  The default value is 10 Mbytes in size.
   A value of 0 specifies that the file may grow without bounds. 
-  If not specified, the default is 1 Mbyte in size.
-  A single integer value is specified; without a suffix, defaults to
-  specifying a size in bytes.  The following suffixes may be used to
+  A single integer value is specified; without a suffix, it defaults to
+  specifying a size in bytes.  A suffix is case insensitive, except for
+  \Expr{Mb} and \Expr{Min}; these both start with the same letter, and
+  the implementation attaches meaning to the letter case when only the first
+  letter is present. Therefore, use the following suffixes to
   qualify the integer:
-\begin{description} 
   \item{\Expr{Bytes} for bytes}
   \item{\Expr{Kb} for kilobytes}
   \item{\Expr{Mb} for megabytes}
@@ -1612,7 +1631,7 @@ of the subsystem corresponding to the daemon.
   \item{\Expr{Day} for days}
   \item{\Expr{Wk} for weeks}
 \end{description} 
- 
+
 \label{param:MaxNumSubsysLog}
 \item[\Macro{MAX\_NUM\_<SUBSYS>\_LOG}]
   An integer that controls the maximum number of rotations a log file 

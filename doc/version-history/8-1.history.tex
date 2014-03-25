@@ -30,6 +30,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The specification in configuration for the size or amount of time
+that a log file may grow has changed.
+An explicit size or amount of time may still be specified for any
+individual log file.
+However, any log files not explicitly specified have a default maximum
+size specified by the new configuration variable 
+\Macro{MAX\_DEFAULT\_LOG}.
+\Ticket{4246}
+
 \item New configuration variable \Macro{NEGOTIATOR\_MAX\_TIME\_PER\_CYCLE}
 places an upper time limit on the time spent in each negotiation cycle.
 \Ticket{4271}
