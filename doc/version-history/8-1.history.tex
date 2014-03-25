@@ -80,6 +80,11 @@ is used to identify a custom machine resource as offline,
 so that the resource will not be allocated to any slot.
 \Ticket{4177}
 
+\item The default value of configuration variable 
+\Macro{NEGOTIATOR\_USE\_WEIGHTED\_DEMAND} has been changed from 
+\Expr{False} to \Expr{True}.
+\Ticket{4238}
+
 \item The python bindings can now accept a list of \Condor{collector} hosts
 in the constructor of the \texttt{Collector} object.  
 This eases use of the bindings for high availability setups.
