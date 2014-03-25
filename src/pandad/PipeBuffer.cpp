@@ -12,6 +12,7 @@ std::string * PipeBuffer::getNextLine() {
 		pthread_mutex_lock( mutex );
 
 		if( bytesReadAhead == (unsigned)-1 ) {
+			if( errno == EINTR ) { index = -1; return getNextLine(); }
 			dprintf( D_ALWAYS, "Error reading from pipe %d: %s (%d); returning NULL.\n", fd, strerror( errno ), errno );
 			error = true;
 			return NULL;

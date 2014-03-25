@@ -7491,3 +7491,9 @@ default=0
 type=int
 review=tlmiller
 reconfig=false
+
+[PANDA_QUEUE_SIZE]
+default=16384
+type=int
+review=tlmiller
+reconfig=false

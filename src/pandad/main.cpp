@@ -24,6 +24,7 @@ static void * workerFunction( void * ptr );
 
 // Yes, globals are evil, and yes, I could wrap these and the queue in
 // a struct and pass that to thread instead, but why bother?
+bool reconfigure = false;
 std::string pandaURL;
 std::string vomsProxy;
 std::string vomsCAPath;
@@ -58,6 +59,9 @@ int main( int /* argc */, char ** /* argv */ ) {
 
 	timeout = param_integer( "PANDA_UPDATE_TIMEOUT" );
 
+	int queueSize = param_integer( "PANDA_QUEUE_SIZE" );
+
+
 	// curl_global_init() is not thread-safe.
 	CURLcode crv = curl_global_init( CURL_GLOBAL_ALL );
 	if( crv != 0 ) {
@@ -71,8 +75,7 @@ int main( int /* argc */, char ** /* argv */ ) {
 	pthread_mutex_lock( & bigGlobalMutex );
 
 	// A locking queue.
-	// Queue< std::string > queue( 1024, & bigGlobalMutex );
-	Queue< std::string > queue( 16384, & bigGlobalMutex );
+	Queue< std::string > queue( queueSize, & bigGlobalMutex );
 
 	// We only need one worker thread.
 	pthread_t workerThread;
@@ -115,22 +118,36 @@ void quit( int signal ) {
 	_exit( signal );
 }
 
+void sighup( int signal ) {
+	if( signal != SIGHUP ) { return; }
+	reconfigure = true;
+}
+
 void configureSignals() {
+	// Stolen from the GAHPs.
 	sigset_t sigSet;
 	struct sigaction sigAct;
+
+	sigemptyset( &sigAct.sa_mask );
+	sigAct.sa_flags = 0;
+	sigAct.sa_handler = quit;
+	sigaction( SIGTERM, &sigAct, 0 );
+	sigaction( SIGQUIT, &sigAct, 0 );
 
 	sigemptyset( & sigSet );
 	sigaddset( &sigSet, SIGTERM );
 	sigaddset( &sigSet, SIGQUIT );
 	sigaddset( &sigSet, SIGPIPE );
+	sigprocmask( SIG_UNBLOCK, & sigSet, NULL );
 
-	sigemptyset( &sigAct.sa_mask );
+	// Handle SIGHUP.
+	sigemptyset( & sigAct.sa_mask );
 	sigAct.sa_flags = 0;
+	sigAct.sa_handler = sighup;
+	sigaction( SIGHUP, & sigAct, 0 );
 
-	sigAct.sa_handler = quit;
-	sigaction( SIGTERM, &sigAct, 0 );
-	sigaction( SIGQUIT, &sigAct, 0 );
-
+	sigemptyset( & sigSet );
+	sigaddset( & sigSet, SIGHUP );
 	sigprocmask( SIG_UNBLOCK, & sigSet, NULL );
 } // end configureSignals()
 
@@ -427,6 +444,19 @@ static void * workerFunction( void * ptr ) {
 		//
 		while( ! queue->empty() ) {
 			constructCommand( queue->dequeue() );
+		}
+
+		//
+		// It's (presently) safe to resize the queue at any time, since it's
+		// a non-destructive operation, but since the could change, do it
+		// now, while we know the queue is empty.
+		//
+		if( reconfigure ) {
+			config();
+			unsigned newSize = param_integer( "PANDA_QUEUE_SIZE" );
+			dprintf( D_ALWAYS, "Changing queue to size %u on SIGHUP.\n", newSize );
+			queue->resize( newSize );
+			reconfigure = false;
 		}
 
 		// Send all of the add commands.

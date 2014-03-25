@@ -35,6 +35,7 @@ class Queue {
 		T dequeue();
 
 		void drain();
+		void resize( unsigned _capacity );
 
 		~Queue() {
 			pthread_cond_destroy( & nonempty );
@@ -83,5 +84,10 @@ void Queue< T >::drain() {
 		pthread_cond_wait( & drained, mutex );
 	}
 } // end drain()
+
+template< class T >
+void Queue< T >::resize( unsigned _capacity ) {
+	capacity = _capacity;
+} // end resize()
 
 #endif
