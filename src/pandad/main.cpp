@@ -462,20 +462,29 @@ static void * workerFunction( void * ptr ) {
 		// Send all of the add commands.
 		unsigned long responseCode = 0;
 		bool rc = sendCommands( curl, addJob, addCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
-		if( rc && responseCode != 201 ) {
-			dprintf( D_ALWAYS, "addJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
+		if( rc ) {
+			dprintf( D_FULLDEBUG, "addJob() response code was %ld.\n", responseCode );
+			if( responseCode != 201 ) {
+				dprintf( D_ALWAYS, "addJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
+			}
 		}
 
 		// Send all the update commands.
 		rc = sendCommands( curl, updateJob, updateCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
-		if( rc && responseCode != 202 ) {
-			dprintf( D_ALWAYS, "updateJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
+		if( rc ) {
+			dprintf( D_FULLDEBUG, "updateJob() response code was %ld.\n", responseCode );
+			if( responseCode != 202 ) {
+				dprintf( D_ALWAYS, "updateJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
+			}
 		}
 
 		// Send all the remove commands.
 		rc = sendCommands( curl, removeJob, removeCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
-		if( rc && responseCode != 202 ) {
-			dprintf( D_ALWAYS, "removeJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
+		if( rc ) {
+			dprintf( D_FULLDEBUG, "removeJob() response code was %ld.\n", responseCode );
+			if( responseCode != 202 ) {
+				dprintf( D_ALWAYS, "removeJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
+			}
 		}
 
 		// Clear the batched commands.
