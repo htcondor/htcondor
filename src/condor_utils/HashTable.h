@@ -54,15 +54,16 @@ public:
 	}
 
 	std::pair<Index, Value> operator *() const {
-		return std::pair<Index, Value>(m_cur->index, m_cur->value);
+		return std::pair<Index, Value>(m_cur ? m_cur->index : NULL, m_cur ? m_cur->value : NULL);
 	}
 
 	std::pair<Index, Value> operator ->() const {
-		return std::pair<Index, Value>(m_cur->index, m_cur->value);
+		return std::pair<Index, Value>(m_cur ? m_cur->index : NULL, m_cur ? m_cur->value : NULL);
 	}
 
 	HashIterator operator++(int) {
 		HashIterator<Index,Value> result = *this;
+		if (m_idx == -1) { return result; }
 		if (m_cur) m_cur = m_cur->next;
 		while (!m_cur) {
 			if (m_idx == m_parent->tableSize-1) {
@@ -104,6 +105,7 @@ private:
 				m_cur = m_parent->ht[++m_idx];
 			}
 		}
+		m_parent->register_iterator(this);
 	}
 
 	HashTable<Index, Value> *m_parent;
@@ -588,17 +590,6 @@ int HashTable<Index,Value>::remove(const Index &index)
 					currentItem = 0;
 					if (--currentBucket < 0) currentBucket = 0;
 				}
-				for (typename std::vector<iterator*>::iterator it=activeIterators.begin();
-					it != activeIterators.end();
-					it++)
-				{
-					if (bucket == (*it)->m_cur)
-					{
-						if (--(*it)->m_idx < 0) (*it)->m_idx = 0;
-						(*it)->m_cur = ht[(*it)->m_idx];
-						
-					}
-				}
 			}
       		else
 			{
@@ -609,13 +600,33 @@ int HashTable<Index,Value>::remove(const Index &index)
 				{
 					currentItem = prevBuc;
 				}
-				for (typename std::vector<iterator*>::iterator it=activeIterators.begin();
-					it != activeIterators.end();
-					it++)
+			}
+
+			// Invalidate all active iterators that point to this object.
+			for (typename std::vector<iterator*>::iterator it=activeIterators.begin();
+				it != activeIterators.end();
+				it++)
+			{
+				if (bucket == (*it)->m_cur)
 				{
-					if (bucket == (*it)->m_cur)
-					{
-						(*it)->m_cur = prevBuc;
+					// These iterators must move forward!  The current iterator may be dereferenced
+					// before being incremented.  Hence, it must point at a valid object and it must
+					// not return a value already seen
+					(*it)->m_cur = (*it)->m_cur->next;
+					if (!(*it)->m_cur)
+					{	// In this case, the iterator was already at the end of a bucket chain.
+						// Select a new table entry and advance until we find one that is valid.
+						(*it)->m_idx += 1;
+						// Advance until we find a non-null entry or hit the end of the table.
+						while ((*it)->m_idx != tableSize && !((*it)->m_cur=ht[(*it)->m_idx]))
+						{
+							(*it)->m_idx += 1;
+						}
+						// This iterator now points to the NULL object.
+						if ((*it)->m_idx == tableSize)
+						{
+							(*it)->m_idx = -1; (*it)->m_cur = NULL;
+						}
 					}
 				}
 			}
@@ -650,6 +661,15 @@ int HashTable<Index,Value>::clear()
       delete tmpBuf;
     }
   }
+
+	// Change all existing iterators to point at the end.
+	for (typename std::vector<iterator*>::iterator it=activeIterators.begin();
+		it != activeIterators.end();
+		it++)
+	{
+		(*it)->m_idx = -1;
+		(*it)->m_cur = NULL;
+	}
 
   numElems = 0;
 

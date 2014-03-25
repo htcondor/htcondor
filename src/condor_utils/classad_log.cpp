@@ -58,7 +58,7 @@ const char *EMPTY_CLASSAD_TYPE_NAME = "(empty)";
 ClassAdLogFilterIterator::ClassAdLogFilterIterator(ClassAdHashTable *table, const classad::ExprTree *requirements, int timeslice_ms, bool invalid)
 	: m_table(table),
 	  m_cur(table->begin()),
-	  m_cur_ad(NULL),
+	  m_found_ad(false),
 	  m_requirements(requirements),
 	  m_timeslice_ms(timeslice_ms),
 	  m_done(invalid)
@@ -67,7 +67,7 @@ ClassAdLogFilterIterator::ClassAdLogFilterIterator(ClassAdHashTable *table, cons
 ClassAdLogFilterIterator::ClassAdLogFilterIterator(const ClassAdLogFilterIterator &other)
 	: m_table(other.m_table),
 	  m_cur(other.m_cur),
-	  m_cur_ad(other.m_cur_ad),
+	  m_found_ad(other.m_found_ad),
 	  m_requirements(other.m_requirements),
 	  m_timeslice_ms(other.m_timeslice_ms),
 	  m_done(other.m_done)
@@ -75,14 +75,17 @@ ClassAdLogFilterIterator::ClassAdLogFilterIterator(const ClassAdLogFilterIterato
 }
 
 ClassAd* ClassAdLogFilterIterator::operator *() const {
-	if (!m_cur_ad || m_done) return NULL;
-
-	return m_cur_ad;
+	if (m_done || (m_cur == m_table->end()) || !m_found_ad)
+	{
+		return NULL;
+	}
+	return (*m_cur).second;
 }
 
 ClassAdLogFilterIterator
 ClassAdLogFilterIterator::operator++(int)
 {
+	m_found_ad = false;
 	ClassAdLogFilterIterator cur = *this;
 	if (m_done) {
 		return cur;
@@ -92,15 +95,14 @@ ClassAdLogFilterIterator::operator++(int)
 	bool boolVal;
 	int intVal;
 	int miss_count = 0;
-	bool found_ad = false;
 	while (!(m_cur == end))
 	{
 		miss_count++;
 		if (miss_count == m_timeslice_ms)
 		{
-			m_cur_ad = NULL;
 			break;
 		}
+		cur = *this;
 		ClassAd *tmp_ad = (*m_cur++).second;
 		if (!tmp_ad) continue;
 		if (m_requirements) {
@@ -127,12 +129,11 @@ ClassAdLogFilterIterator::operator++(int)
                 int proc, cluster;
                 tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
                 tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
-                //dprintf(D_FULLDEBUG, "Returning job %d.%d\n", cluster,proc);
-		m_cur_ad = tmp_ad;
-		found_ad = true;
+		cur.m_found_ad = true;
+		m_found_ad = true;
 		break;
 	}
-	if ((m_cur == end) && (!found_ad)) {
+	if ((m_cur == end) && (!m_found_ad)) {
 		m_done = true;
 	}
 	return cur;
