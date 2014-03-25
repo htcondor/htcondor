@@ -105,6 +105,16 @@ class BoincResource : public BaseResource
 	int m_submitTid;
 	BoincBatch *m_activeSubmitBatch;
 
+	// A full query is one that obtains the status of all jobs in a
+	// subset of batches (those batches that have m_need_full_query==true).
+	// A partial query is one that returns jobs whose status has changed
+	// since the last partial status, for all batches. The first partial
+	// query asks for changes since time 0 (essential a full query for
+	// all batches).
+	bool m_needFullQuery;
+	bool m_doingFullQuery;
+	std::string m_lastQueryTime;
+
 protected:
 
 	BatchStatusResult StartBatchStatus();

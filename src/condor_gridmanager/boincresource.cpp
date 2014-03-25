@@ -61,6 +61,7 @@ enum BatchSubmitStatus {
 struct BoincBatch {
 	std::string m_batch_name;
 	BatchSubmitStatus m_submit_status;
+	bool m_need_full_query;
 	time_t m_lease_time;
 	time_t m_last_lease_attempt;
 	time_t m_last_insert;
@@ -111,6 +112,10 @@ BoincResource::BoincResource( const char *resource_name,
 //	hasLeases = true;
 //	m_hasSharedLeases = true;
 //	m_defaultLeaseDuration = 6 * 60 * 60;
+
+	m_needFullQuery = false;
+	m_doingFullQuery = false;
+	m_lastQueryTime = "0";
 
 	m_serviceUri = strdup( resource_name );
 	m_authenticator = strdup( authenticator );
@@ -340,6 +345,8 @@ bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,
 		}
 		batch->m_last_insert = time(NULL);
 		batch->m_jobs.insert( job );
+		batch->m_need_full_query = true;
+		m_needFullQuery = true;
 		return true;
 	} else {
 
@@ -370,6 +377,8 @@ bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,
 		batch->m_last_insert = time(NULL);
 		batch->m_jobs.insert( job );
 		batch_name = batch->m_batch_name;
+		batch->m_need_full_query = true;
+		m_needFullQuery = true;
 		return true;
 	}
 	// TODO For an unsubmitted batch, may need to update state to indicate
@@ -498,9 +507,14 @@ BoincResource::BatchStatusResult BoincResource::StartBatchStatus()
 		  itr != m_batches.end(); itr++ ) {
 		if ( (*itr)->m_submit_status == BatchSubmitted ||
 			 (*itr)->m_submit_status == BatchMaybeSubmitted ) {
+			if ( m_needFullQuery && !(*itr)->m_need_full_query ) {
+				continue;
+			}
 			m_statusBatches.append( (*itr)->m_batch_name.c_str() );
 		}
 	}
+	m_doingFullQuery = m_needFullQuery;
+	m_needFullQuery = false;
 
 	return FinishBatchStatus();
 }
@@ -511,9 +525,10 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 		return BSR_DONE;
 	}
 
+	std::string old_query_time = m_doingFullQuery ? "0" : m_lastQueryTime;
 	std::string new_query_time;
 	GahpClient::BoincQueryResults results;
-	int rc = m_statusGahp->boinc_query_batches( m_statusBatches, "0",
+	int rc = m_statusGahp->boinc_query_batches( m_statusBatches, old_query_time,
 												new_query_time, results );
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		return BSR_PENDING;
@@ -580,6 +595,12 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 		return BSR_ERROR;
 	}
 
+	// TODO If we knew that we were querying all batches, we'd want to
+	// update m_lastQueryTime.
+	if ( !m_doingFullQuery ) {
+		m_lastQueryTime = new_query_time;
+	}
+
 	// TODO We're not detecting missing jobs from batch results
 	//   Do we need to?
 	m_statusBatches.rewind();
@@ -590,30 +611,35 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 		batch_name = m_statusBatches.next();
 		ASSERT( batch_name );
 
-		// If we're in recovery, we may not know whether this batch has
-		// been submitted.
+		BoincBatch *batch = NULL;
 		for ( list<BoincBatch *>::iterator batch_itr = m_batches.begin();
 			  batch_itr != m_batches.end(); batch_itr++ ) {
-			if ( (*batch_itr)->m_batch_name == batch_name && 
-				 (*batch_itr)->m_submit_status == BatchMaybeSubmitted ) {
-
-				if ( i->empty() ) {
-					// Batch doesn't exist on sever
-					// Consider it for submission
-					(*batch_itr)->m_submit_status = BatchUnsubmitted;
-					daemonCore->Reset_Timer( m_submitTid, 0 );
-				} else {
-					// Batch exists on server
-					// Signal the jobs
-					(*batch_itr)->m_submit_status = BatchSubmitted;
-					for ( set<BoincJob *>::iterator job_itr = (*batch_itr)->m_jobs.begin();
-						  job_itr != (*batch_itr)->m_jobs.end(); job_itr++ ) {
-						(*job_itr)->SetEvaluateState();
-					}
-					daemonCore->Reset_Timer( m_leaseTid, 0 );
-				}
+			if ( (*batch_itr)->m_batch_name == batch_name ) {
+				batch = *batch_itr;
 				break;
 			}
+		}
+
+		// If we're in recovery, we may not know whether this batch has
+		// been submitted.
+		if ( batch && batch->m_submit_status == BatchMaybeSubmitted ) {
+
+			if ( i->empty() ) {
+				// Batch doesn't exist on sever
+				// Consider it for submission
+				batch->m_submit_status = BatchUnsubmitted;
+				daemonCore->Reset_Timer( m_submitTid, 0 );
+			} else {
+				// Batch exists on server
+				// Signal the jobs
+				batch->m_submit_status = BatchSubmitted;
+				for ( set<BoincJob *>::iterator job_itr = batch->m_jobs.begin();
+					  job_itr != batch->m_jobs.end(); job_itr++ ) {
+					(*job_itr)->SetEvaluateState();
+				}
+				daemonCore->Reset_Timer( m_leaseTid, 0 );
+			}
+			break;
 		}
 
 		// Iterate over the jobs for this batch
@@ -634,6 +660,13 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 				BoincJob *boinc_job = dynamic_cast<BoincJob*>( base_job );
 				ASSERT( boinc_job != NULL );
 				boinc_job->NewBoincState( j->second.c_str() );
+			}
+		}
+		// If not doing a full query, update all jobs in the batch that
+		// their status is unchanged.
+		if ( batch && !m_doingFullQuery ) {
+			for ( std::set<BoincJob*>::iterator job_itr = batch->m_jobs.begin(); job_itr != batch->m_jobs.end(); job_itr++ ) {
+				(*job_itr)->NewBoincState( (*job_itr)->remoteState.c_str() );
 			}
 		}
 	}
