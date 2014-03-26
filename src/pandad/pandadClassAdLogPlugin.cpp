@@ -12,14 +12,12 @@
 #include "condor_config.h"
 #include "param_info.h"
 
+#include <iostream>
+#include <sstream>
+#include <set>
+
 // Make sure we get the schedd's version of GetJobAd, and not libcondorutil's.
 extern ClassAd * ScheddGetJobAd( int, int, bool e = false, bool p = true );
-
-// The things we can tell Panda about are:
-// condorid, owner, submitted, run_time, st, pri, size, cmd, host, status,
-// manager, executable, goodput, cpu_util, mbps, read_, write_, seek, xput,
-// bufsize, blocksize, cpu_time, p_start_time, p_end_time, p_modif_time,
-// p_factory, p_schedd, p_description, p_stdout, p_stderr
 
 class CondorToPandaMap {
 	public:
@@ -29,48 +27,13 @@ class CondorToPandaMap {
 		typedef struct { const char * key; const char * value; } tuple;
 };
 
-/*
- * I don't know that HTCondor can acquire the following attributes.  Maybe
- * they're standard-universe specific?
- * { "", "mbps" }
- * { "", "read_" }
- * { "", "write_" }
- * { "", "seek" }
- * { "", "xput" }
- * { "", "bufsize" }
- * { "", "blocksize" }
- *
- * The following Panda attributes are derived and should be computed
- * in their database.  (I'm not sure why the first two are the same.)
- *	{ "", "goodput" }			// CPU_TIME / RUN_TIME
- *  { "", "cpu_util" }			// CPU_TIME / RUN_TIME
- *
- * I don't know what the following Panda attributes mean.
- *	{ "", "manager" }			//
- *	{ "", "p_schedd" }			//
- *	{ "", "p_factory" }			//
- *	{ "", "p_description" }		//
- *	{ "", "p_start_time" }		//
- *	{ "", "p_end_time" }		//
- *	{ "", "p_modif_time" }		//
- *
- * The following Panda attributes depend on more than one HTCondor attribute,
- * or aren't signalled by changes to job ad attributes.
- *	{ "", "host" }				// host submitted to, or host running on
- *	{ "", "cpu_time" }			// remote CPU (user+sys?) at last checkpoint
- *
- * The following tuples would duplicate HTCondor attributes in the map.
- *	{ "Cmd", "executable" }		// duplicates 'cmd'
- *
- * The following tuples would duplicate Panda attributes in the map.
- *	{ "ImageSize", "size " } 	// prefer 'MemoryUsage'
- *	{ "JobStatus", "status" }	// a different translation than for 'st'
- *
- * The remaining attributes are the usable 1-1 mapping.  We'll try to
- * convince Panda to do the translation on their side of the API.
- */
-//	{ "JobStatus", "st" }
-//  { "LastJobStatus", "st" }
+//
+// Map from HTCondor job attributes to PanDA monitor attributes.  Ideally,
+// this list would be empty, and there'd also be no hard-coded attribute
+// mangling in the pandad (which currently converts QDate from TIMESTAMP
+// to DATETIME).  At that point, we could probably just add GlobalJobID
+// to PANDA_REQUIRED_JOB_ATTRIBUTES and not have /any/ special cases.
+//
 const CondorToPandaMap::tuple sortedMap[] = {
 	{ "Cmd", "cmd" },
 	{ "Err", "p_stderr" },
@@ -124,6 +87,8 @@ class PandadClassAdLogPlugin : public ClassAdLogPlugin {
 		int lowestNewCluster;
 		int highestNewCluster;
 
+		std::set< std::string > requiredAttributes;
+
 		FILE *	pandad;
 };
 
@@ -157,6 +122,18 @@ PandadClassAdLogPlugin::PandadClassAdLogPlugin() : ClassAdLogPlugin(), inTransac
 		dprintf( D_ALWAYS, "PANDA: failed to start pandad, monitor will not be updated.\n" );
 
 		pandad = fopen( DEVNULL, "w" );
+	}
+
+
+	// This doesn't handle commas, but boy is it simple.
+	std::string raString;
+	param( raString, "PANDA_REQUIRED_JOB_ATTRIBUTES" );
+	if( ! raString.empty() ) {
+		std::istringstream raStream( raString );
+		std::string attribute;
+		while( std::getline( raStream, attribute, ' ' ) ) {
+			requiredAttributes.insert( attribute );
+		}
 	}
 }
 
@@ -364,6 +341,24 @@ bool PandadClassAdLogPlugin::shouldIgnoreJob( const char * key, int & cluster, i
 	// Ignore cluster ads.
 	if( proc == -1 ) { return true; }
 
+	// If PANDA_REQUIRED_JOB_ATTRIBUTES or PANDA_JOB_FILTER is set, we'll
+	// need to get the job ad to make a decision.  [TO DO]
+	if( ! requiredAttributes.empty() ) {
+		ClassAd * classAd = ScheddGetJobAd( cluster, proc );
+		if( classAd == NULL ) {
+			dprintf( D_ALWAYS, "PANDA: Failed to find job ad in shouldIgnoreJob(), ignoring job.\n" );
+			return true;
+		}
+
+		std::set< std::string >::iterator i = requiredAttributes.begin();
+		for( ; i != requiredAttributes.end(); ++i ) {
+			if( classAd->Lookup( * i ) == NULL ) {
+				dprintf( D_FULLDEBUG, "PANDA: Ignoring '%s' because required attribute '%s' is missing.\n", key, i->c_str() );
+				return true;
+			}
+		}
+	}
+
 	return false;
 }
 
@@ -373,7 +368,7 @@ bool PandadClassAdLogPlugin::getGlobalJobID( int cluster, int proc, std::string 
 		return false;
 	}
 
-	if( ! classAd->LookupString( "GlobalJobId", globalJobID ) ) {
+	if( ! classAd->LookupString( "GlobalJobID", globalJobID ) ) {
 		return false;
 	}
 
