@@ -87,6 +87,7 @@ class PandadClassAdLogPlugin : public ClassAdLogPlugin {
 		int lowestNewCluster;
 		int highestNewCluster;
 
+		std::set< std::string > jobAttributes;
 		std::set< std::string > requiredAttributes;
 
 		FILE *	pandad;
@@ -133,6 +134,17 @@ PandadClassAdLogPlugin::PandadClassAdLogPlugin() : ClassAdLogPlugin(), inTransac
 		std::string attribute;
 		while( std::getline( raStream, attribute, ' ' ) ) {
 			requiredAttributes.insert( attribute );
+		}
+	}
+
+	// This doesn't handle commas, but boy is it simple.
+	std::string jaString;
+	param( jaString, "PANDA_JOB_ATTRIBUTES" );
+	if( ! jaString.empty() ) {
+		std::istringstream jaStream( jaString );
+		std::string attribute;
+		while( std::getline( jaStream, attribute, ' ' ) ) {
+			jobAttributes.insert( attribute );
 		}
 	}
 }
@@ -381,6 +393,7 @@ bool PandadClassAdLogPlugin::getGlobalJobID( int cluster, int proc, std::string 
 
 bool PandadClassAdLogPlugin::shouldIgnoreAttribute( const char * attribute ) {
 	if( CondorToPandaMap::contains( attribute ) ) { return false; }
+	if( jobAttributes.find( attribute ) != jobAttributes.end() ) { return false; }
 	return true;
 }
 
@@ -393,8 +406,10 @@ void PandadClassAdLogPlugin::addPandaJob( const char * condorJobID, const char *
 
 void PandadClassAdLogPlugin::updatePandaJob( const char * globalJobID, const char * attribute, const char * value ) {
 	if( value == NULL ) { value = "null"; }
-	dprintf( D_FULLDEBUG, "PANDA: updatePandaJob( %s, %s, %s )\n", globalJobID, CondorToPandaMap::map( attribute ), value );
-	fprintf( pandad, "\vUPDATE \"%s\" %s %s\n", globalJobID, CondorToPandaMap::map( attribute ), value );
+	const char * mappedAttribute = CondorToPandaMap::map( attribute );
+	if( mappedAttribute == NULL ) { mappedAttribute = attribute; }
+	dprintf( D_FULLDEBUG, "PANDA: updatePandaJob( %s, %s, %s )\n", globalJobID, mappedAttribute, value );
+	fprintf( pandad, "\vUPDATE \"%s\" %s %s\n", globalJobID, mappedAttribute, value );
 	fflush( pandad );
 }
 
