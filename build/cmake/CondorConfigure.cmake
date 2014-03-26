@@ -861,6 +861,11 @@ else(MSVC)
 		if ( "${CONDOR_PLATFORM}" STREQUAL "x86_64_Ubuntu12")
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed")
 		endif()
+		# Link RedHat 5 binaries with both hash styles (GNU and SYSV)
+		# so that binaries are usable on old distros such as SUSE Linux Enterprise Server 10
+		if ( ${SYSTEM_NAME} MATCHES "rhel5" )
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--hash-style=both")
+		endif()
 	endif(LINUX)
 
 	if( HAVE_LIBDL AND NOT BSD_UNIX )
