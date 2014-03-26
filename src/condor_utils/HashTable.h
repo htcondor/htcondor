@@ -61,9 +61,13 @@ public:
 		return std::pair<Index, Value>(m_cur ? m_cur->index : NULL, m_cur ? m_cur->value : NULL);
 	}
 
-	HashIterator operator++(int) {
-		HashIterator<Index,Value> result = *this;
-		if (m_idx == -1) { return result; }
+	/*
+	 * Move the iterator forward by one entry in the hashtable.
+	 * Unlike the '++' operator, this has no side-effects outside
+	 * this object.
+	 */
+	void advance() {
+		if (m_idx == -1) { return; }
 		if (m_cur) m_cur = m_cur->next;
 		while (!m_cur) {
 			if (m_idx == m_parent->tableSize-1) {
@@ -73,6 +77,14 @@ public:
 				m_cur = m_parent->ht[++m_idx];
 			}
 		}
+	}
+
+	HashIterator operator++(int) {
+		// Note the copy constructor has the side-effect of
+		// registering a new iterator with the parent.  Do not
+		// call this from within the parent table itself.
+		HashIterator<Index,Value> result = *this;
+		advance();
 		return result;
 	}
 
@@ -612,22 +624,7 @@ int HashTable<Index,Value>::remove(const Index &index)
 					// These iterators must move forward!  The current iterator may be dereferenced
 					// before being incremented.  Hence, it must point at a valid object and it must
 					// not return a value already seen
-					(*it)->m_cur = (*it)->m_cur->next;
-					if (!(*it)->m_cur)
-					{	// In this case, the iterator was already at the end of a bucket chain.
-						// Select a new table entry and advance until we find one that is valid.
-						(*it)->m_idx += 1;
-						// Advance until we find a non-null entry or hit the end of the table.
-						while ((*it)->m_idx != tableSize && !((*it)->m_cur=ht[(*it)->m_idx]))
-						{
-							(*it)->m_idx += 1;
-						}
-						// This iterator now points to the NULL object.
-						if ((*it)->m_idx == tableSize)
-						{
-							(*it)->m_idx = -1; (*it)->m_cur = NULL;
-						}
-					}
+					(*it)->advance();
 				}
 			}
 
