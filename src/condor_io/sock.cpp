@@ -38,6 +38,7 @@
 
 #if defined(WIN32)
 #include <winsock2.h>
+#include <ws2def.h>
 #else
 #include <netinet/in.h>
 #endif
