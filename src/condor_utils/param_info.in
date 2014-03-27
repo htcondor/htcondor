@@ -5689,6 +5689,15 @@ friendly_name=Shadow Worklife
 review=?
 tags=shadow
 
+[CLAIM_WORKLIFE]
+default=3600
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Claim Worklife
+review=?
+tags=startd
+
 [NEGOTIATION_CYCLE_STATS_LENGTH]
 default=3
 version=7.5.3
