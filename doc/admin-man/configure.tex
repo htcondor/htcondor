@@ -7807,15 +7807,19 @@ These macros affect the \Condor{negotiator}.
 
 \label{param:NegotiatorTrimShutdownThreshold}
 \item[\Macro{NEGOTIATOR\_TRIM\_SHUTDOWN\_THRESHOLD}] 
-	This setting is not likely to be customized, except perhaps in a glidein
-	setting.  An expression evaluated to an integer value within the context of
-	the negotiator classad, with a default value of 0.  When this expression
-	evaluates to an integer X, and X is greater than 0, the \Condor{negotiator}
-	will not make matches to machine ads that contain a \Attr{DaemonShutdown}
-	attribute that evalutes to \Expr{True} when \Attr{CurrentTime} is set to be
-	X seconds into the future.  The idea here is a mechanism to prevent
-	matching with startds that are real close to shutting down, since doing so
-	is likely just a waste of time.
+  This setting is not likely to be customized, except perhaps within 
+  a glidein setting.  
+  An integer expression that evaluates to a value within the context of
+  the \Condor{negotiator} ClassAd, 
+  with a default value of 0.  
+  When this expression evaluates to an integer X greater than 0, 
+  the \Condor{negotiator} will not make matches to machines 
+  that contain the ClassAd attribute \Attr{DaemonShutdown}
+  which evaluates to \Expr{True},
+  when that shut down time is X seconds into the future.
+  The idea here is a mechanism to prevent
+  matching with machines that are quite close to shutting down, 
+  since the match would likely be a waste of time.
 
 \label{param:NegotiatorSlotPoolsizeConstraint}
 \label{param:GroupDynamicMachConstraint}

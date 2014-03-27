@@ -85,10 +85,12 @@ so that the resource will not be allocated to any slot.
 \Expr{False} to \Expr{True}.
 \Ticket{4238}
 
-\item Added configuration parameter
-	\Macro{NEGOTIATOR\_TRIM\_SHUTDOWN\_THRESHOLD} to avoid making matches to
-	resources that are about to go away; primarily of interest to glidein
-	pools.  See section~\ref{param:NegotiatorTrimShutdownThreshold} for details.
+\item The new configuration variable 
+\Macro{NEGOTIATOR\_TRIM\_SHUTDOWN\_THRESHOLD} can be used to avoid 
+making matches to resources that are about to go away. 
+It is primarily of interest to glidein pools.  
+Section~\ref{param:NegotiatorTrimShutdownThreshold} details the new
+configuration variable.
 \Ticket{4266}
 
 \item No user-visible changes result from reductions in the quantity of
