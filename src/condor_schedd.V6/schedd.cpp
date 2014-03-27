@@ -1833,7 +1833,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
                 tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
                 tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
                 //dprintf(D_FULLDEBUG, "Writing job %d.%d to wire\n", cluster,proc);
-                int retval = putClassAdNonblocking(sock, *tmp_ad);
+                int retval = putClassAdNonblocking(sock, *tmp_ad, false, projection.isEmpty() ? NULL : &projection);
                 if (retval == 2) {
 			//dprintf(D_FULLDEBUG, "Detecting backlog.\n");
                         has_backlog = true;

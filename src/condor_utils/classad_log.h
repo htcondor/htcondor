@@ -83,7 +83,7 @@ private:
 
 	ClassAdHashTable *m_table;
 	HashIterator<HashKey, ClassAd *> m_cur;
-	ClassAd *m_cur_ad;
+	bool m_found_ad;
 	const classad::ExprTree *m_requirements;
 	int m_timeslice_ms;
 	int m_done;

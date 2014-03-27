@@ -48,8 +48,9 @@ config_file = os.path.join(testdir, "condor_config")
 open(config_file, "w").close()
 os.environ["CONDOR_CONFIG"] = config_file
 os.environ["_condor_TOOL_LOG"] = os.path.join(logdir, "ToolLog")
+os.environ["_condor_TOOL_DEBUG"] = "D_FULLDEBUG, D_NETWORK"
 import htcondor
-
+htcondor.enable_log()
 
 class WithDaemons(unittest.TestCase):
 
@@ -287,6 +288,56 @@ class TestPythonBindings(WithDaemons):
             time.sleep(1)
         self.assertEquals(open(output_file).read(), "hello world\n");
 
+    def testScheddNonblockingQueryRemove(self):
+        os.environ["_condor_SCHEDD_DEBUG"] = "D_FULLDEBUG|D_NETWORK"
+        self.launch_daemons(["SCHEDD"])
+        schedd = htcondor.Schedd()
+        submit_ad = classad.parse(open("tests/submit_large.ad"))
+        ads = []
+        cluster = schedd.submit(submit_ad, 300, False, ads)
+        ads = schedd.xquery("ClusterId == %d" % cluster)
+        print str(datetime.datetime.now())
+        print str(datetime.datetime.now())
+        schedd.act(htcondor.JobAction.Remove, "ClusterId == %d" % cluster)
+        time.sleep(3)
+        print str(datetime.datetime.now())
+        print len(list(ads))
+        print str(datetime.datetime.now())
+
+    def testScheddNonblockingQueryCount(self):
+        os.environ["_condor_SCHEDD_DEBUG"] = "D_FULLDEBUG|D_NETWORK"
+        self.launch_daemons(["SCHEDD"])
+        schedd = htcondor.Schedd()
+        submit_ad = classad.parse(open("tests/submit_large.ad"))
+        schedd.act(htcondor.JobAction.Remove, "true")
+        ads = []
+        time.sleep(1)
+        while ads:
+            time.sleep(.2)
+            ads = schedd.query("true")
+        #print ads
+        for i in range(1, 60):
+            print "Testing querying %d jobs in queue." % i
+            schedd.submit(submit_ad, i, True, ads)
+            ads = schedd.query("true", ["ClusterID", "ProcID"])
+            ads2 = list(schedd.xquery("true", ["ClusterID", "ProcID", "a1", "a2", "a3", "a4"]))
+            #print ads
+            #print ads2
+            self.assertNotEqual(ads2[0].lookup("ProcID"), classad.Value.Undefined)
+            for ad in ads:
+                found_ad = False
+                for ad2 in ads2:
+                    if ad2["ProcID"] == ad["ProcID"] and ad2["ClusterID"] == ad["ClusterID"]:
+                        found_ad = True
+                        break
+                self.assertTrue(found_ad, msg="Ad %s missing from xquery results: %s" % (ad, ads2))
+            self.assertEquals(len(ads), i, msg="Old query protocol gives incorrect number of results (expected %d, got %d)" % (i, len(ads)))
+            self.assertEquals(len(ads2), i, msg="New query protocol gives incorrect number of results (expected %d, got %d)" % (i, len(ads2)))
+            schedd.act(htcondor.JobAction.Remove, "true")
+            while ads:
+                time.sleep(.2)
+                ads = schedd.query("true")
+
     def testScheddSubmitSpool(self):
         self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
         output_file = os.path.join(testdir, "test.out")
@@ -295,7 +346,7 @@ class TestPythonBindings(WithDaemons):
         schedd = htcondor.Schedd()
         ad = classad.parse(open("tests/submit.ad"))
         result_ads = []
-        cluster = schedd.submit(ad, 1, True, result_ads)
+        cluster = schedd.submit(submit_ad, 1, True, result_ads)
         #print result_ads[0]
         schedd.spool(result_ads)
         for i in range(60):
