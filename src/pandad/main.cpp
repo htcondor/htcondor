@@ -229,11 +229,29 @@ std::string & doValueCleanup( std::string & value ) {
 	return value;
 }
 
+
+void addRemainingPairs( Command & c, std::vector< std::string > & argv, size_t index ) {
+	for( ; index + 1 < argv.size(); index += 2 ) {
+		// Panda should redefine their schema so that 'submitted'
+		// is TIMESTAMP, not DATETIME.
+		if( argv[index] == "submitted" ) {
+			time_t submitTime = atol( argv[index + 1].c_str() );
+			char buffer[] = "\"YYYY-MM-DD HH:MM:SS\"";
+			struct tm * ts = localtime( & submitTime );
+			// Include the quotes because TIMESTAMP is a string to JSON.
+			strftime( buffer, sizeof( buffer ), "\"%Y-%m-%d %H:%M:%S\"", ts );
+			argv[index + 1] = buffer;
+		}
+
+		c[ argv[index] ] = doValueCleanup( argv[index + 1] );
+	}
+}
+
 void constructCommand( const std::string & line ) {
 	//
 	// Before parsing the command, make sure that it wasn't mangled by
 	// an aborted partial write.  All writes from the schedd are of the
-	// form '\v[ADD|UPDATE|REMOVE] <arg>+\n'.  We know we have the newline
+	// form '\v[ADD|UPDATE|REMOVE](\t<arg>)+\n'.  We know we have the newline
 	// because we feed the queue line-by-line.  If we find only one \v in
 	// the entire line, at the beginning of the line, then the write wasn't
 	// aborted, and it should be safe to parse.
@@ -245,13 +263,13 @@ void constructCommand( const std::string & line ) {
 	}
 
 	size_t nextSpace;
+	// The first character is '\v', so we can start looking at 0 + 1.
 	size_t currentSpace = 0;
 	std::vector< std::string > argv;
 	do {
-		// We know that the last line in the string is an newline, so
-		// currentSpace can never be the last character; thus currentSpace + 1
-		// will always be a valid index.
-		nextSpace = line.find( ' ', currentSpace + 1 );
+		// We know that the last character in line is '\n', so
+		// currentSpace + 1 is always a valid index.
+		nextSpace = line.find( '\t', currentSpace + 1 );
 		argv.push_back( line.substr( currentSpace + 1, nextSpace - (currentSpace + 1) ) );
 		currentSpace = nextSpace;
 	} while( currentSpace != std::string::npos );
@@ -262,25 +280,24 @@ void constructCommand( const std::string & line ) {
 		Command & c = addCommands[ globalJobID ];
 		c[ "globaljobid" ] = globalJobID;
 		c[ "condorid" ] = argv[2];
+		addRemainingPairs( c, argv, 3 );
 	} else if( command == "UPDATE" ) {
-		Command & c = updateCommands[ globalJobID ];
-		c[ "globaljobid" ] = globalJobID;
-		// Panda should redefine their schema so that 'submitted'
-		// is TIMESTAMP, not DATETIME. *sigh*  Include the quotes
-		// because TIMESTAMP is a string to JSON.
-		if( argv[2] == "submitted" ) {
-			time_t submitTime = atol( argv[3].c_str() );
-			char buffer[] = "\"YYYY-MM-DD HH:MM:SS\"";
-			struct tm * ts = localtime( & submitTime );
-			strftime( buffer, sizeof( buffer ), "\"%Y-%m-%d %H:%M:%S\"", ts );
-			argv[3] = buffer;
+		// Coalesce updates to a new job with the job creation commmand.
+		if( addCommands.find( globalJobID ) != addCommands.end() ) {
+			Command & c = addCommands[ globalJobID ];
+			addRemainingPairs( c, argv, 2 );
+		} else {
+			Command & c = updateCommands[ globalJobID ];
+			c[ "globaljobid" ] = globalJobID;
+			addRemainingPairs( c, argv, 2 );
 		}
-		c[ argv[2] ] = doValueCleanup( argv[3] );
 	} else if( command == "REMOVE" ) {
 		Command & c = removeCommands[ globalJobID ];
 		c[ "globaljobid" ] = globalJobID;
+		addRemainingPairs( c, argv, 2 );
 	} else {
 		dprintf( D_ALWAYS, "workerFunction() ignoring unknown command (%s).\n", command.c_str() );
+		return;
 	}
 } // end constructCommand()
 
@@ -297,10 +314,8 @@ std::string generatePostString( const CommandSet & commandSet ) {
 			postFieldString += "\"" + j->first + "\": ";
 			postFieldString += j->second + ", ";
 		}
-
-		// TO DO: Determine what, if anything, 'wmsid' ought to be; try to
-		// convince the PANDA people that it's not required?
-		postFieldString += "\"wmsid\": 1004";
+		// Remove trailing ', '.
+		postFieldString.erase( postFieldString.length() - 2 );
 		postFieldString += " }, ";
 	}
 	// Remove trailing ', '.
@@ -319,7 +334,7 @@ std::string generatePostString( const CommandSet & commandSet ) {
 	} \
 }
 
-// TO DO: This should either be removed, or, if the information is of
+// TO DO: Either remove updateStatisticsLog() or, if the information is of
 // general interest, changed to obtain the file name and minimum interval
 // from the config system (param() and its table).
 void updateStatisticsLog( unsigned queueFullCount ) {
