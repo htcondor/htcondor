@@ -3032,8 +3032,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 #endif //TEMPTEMP
 #if 1 //TEMPTEMP
 {//TEMPTEMP
-	fprintf( outfile, "<add new stuff here>\n" );//TEMPTEMP
 	fprintf( outfile, "[\n" );
+	fprintf( outfile, "  Type = \"DagStatus\";\n" );
 
 	//TEMPTEMP -- test with multiple dag files
 		//
@@ -3115,40 +3115,50 @@ Dag::DumpNodeStatus( bool held, bool removed )
 				NumNodesReady() + NumNodesFailed()  );
 	fprintf( outfile, "  NodesUnready = %d;\n", unready );
 	fprintf( outfile, "  NodesFailed = %d;\n", NumNodesFailed() );
+	fprintf( outfile, "]\n" );
 
 		//
 		// Print status of all nodes.
 		//
-	fprintf( outfile, "  Nodes = {\n" );
 	ListIterator<Job> it ( _jobs );
 	Job *node;
 	while ( it.Next( node ) ) {
-		fprintf( outfile, "    [\n" );
-		const char *statusStr = Job::status_t_names[node->GetStatus()];
+		fprintf( outfile, "[\n" );
+		fprintf( outfile, "  Type = \"NodeStatus\";\n" );
+		Job::status_t status = node->GetStatus();
 		const char *nodeNote = "";
-		if ( node->GetStatus() == Job::STATUS_READY ) {
+		if ( status == Job::STATUS_READY ) {
 				// Note:  Job::STATUS_READY only means that the job is
 				// ready to submit if it doesn't have any unfinished
 				// parents.
 			if ( !node->CanSubmit() ) {
 				// See Job::_job_type_names for other strings.
-				statusStr = Job::status_t_names[Job::STATUS_NOT_READY];
+				status = Job::STATUS_NOT_READY;
 			}
-		} else if ( node->GetStatus() == Job::STATUS_SUBMITTED ) {
+		} else if ( status == Job::STATUS_SUBMITTED ) {
 			nodeNote = node->GetIsIdle() ? "idle" : "not_idle";
 			// Note: add info here about whether the job(s) are
 			// held, once that code is integrated.
-		} else if ( node->GetStatus() == Job::STATUS_ERROR ) {
+		} else if ( status == Job::STATUS_ERROR ) {
 			nodeNote = node->error_text;
 		}
-		fprintf( outfile, "      Node = \"%s\";\n", node->GetJobName() );
 
-		//TEMPTEMP -- no comma on last?
-		fprintf( outfile, "    ],\n" );
+		fprintf( outfile, "  Node = \"%s\";\n", node->GetJobName() );
+		//TEMPTEMP -- trim trailing spaces from status name?
+		fprintf( outfile, "  NodeStatus = %d; /* %s */\n", status,
+					Job::status_t_names[status] );
+		fprintf( outfile, "  /* CondorStatus = xxx; */\n" );
+		fprintf( outfile, "  StatusDetails = \"%s\";\n", nodeNote );
+		fprintf( outfile, "  RetryCount = %d;\n", node->GetRetries() );
+		fprintf( outfile, "  /* JobProcsTotal = xxx; */\n" );
+		fprintf( outfile, "  JobProcsQueued = %d;\n",
+					node->_queuedNodeJobProcs );
+		fprintf( outfile, "  /* JobProcsRunning = xxx; */\n" );
+		fprintf( outfile, "  /* JobProcsIdle = xxx; */\n" );
+		fprintf( outfile, "  JobProcsHeld = %d;\n", node->_jobProcsOnHold );
+
+		fprintf( outfile, "]\n" );
 	}
-	fprintf( outfile, "  };\n" );
-
-	fprintf( outfile, "]\n" );
 }//TEMPTEMP
 #endif //TEMPTEMP
 
