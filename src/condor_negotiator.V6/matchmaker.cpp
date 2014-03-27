@@ -1489,8 +1489,8 @@ negotiationTime ()
                 maxdelta = std::max(maxdelta, std::max(0.0, target - group->usage));
             }
 
-            dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  slots= %g  requested= %g  allocated= %g  surplus= %g\n", 
-                    static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, double(effectivePoolsize), requested_total+allocated_total, allocated_total, surplus_quota);
+            dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  slots= %g  requested= %g  allocated= %g  surplus= %g  maxdelta= %g\n", 
+                    static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, double(effectivePoolsize), requested_total+allocated_total, allocated_total, surplus_quota, maxdelta );
 
             // The loop below can add a lot of work (and log output) to the negotiation.  I'm going to
             // default its behavior to execute once, and just negotiate for everything at once.  If a
@@ -1535,7 +1535,7 @@ negotiationTime ()
                 // Up our fraction of the full deltas.  Note that maxdelta may be zero, but we still
                 // want to negotiate at least once regardless, so loop halting check is at the end.
                 n = std::min(n+ninc, maxdelta);
-                dprintf(D_FULLDEBUG, "group quotas: entering RR iteration n= %g\n", n);
+                dprintf(D_ALWAYS, "group quotas: entering RR iteration n= %g\n", n);
 
                 // Do the negotiations
                 for (vector<GroupEntry*>::iterator j(negotiating_groups.begin());  j != negotiating_groups.end();  ++j) {
