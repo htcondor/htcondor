@@ -30,6 +30,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The protocol for interaction between \Condor{q} and the 
+\Condor{schedd} daemon has been rewritten.
+The new protocol does not require the \Condor{schedd} to fork a child process 
+and does not cause blocking; 
+the result is that the \Condor{schedd} should be able to handle
+many concurrent \Condor{q} requests with minimal resource usage.
+\Ticket{4111}
+
 \item The specification in configuration for the size or amount of time
 that a log file may grow has changed.
 An explicit size or amount of time may still be specified for any
@@ -38,6 +46,19 @@ However, any log files not explicitly specified have a default maximum
 size specified by the new configuration variable 
 \Macro{MAX\_DEFAULT\_LOG}.
 \Ticket{4246}
+
+\item The new \Condor{urlfetch} tool is enables the  acquisition of
+configuration with a query to a URL.
+\Ticket{4018}
+
+\item The \Prog{cream\_gahp} and \Prog{nordugrid\_gahp} can now talk to
+servers over IPv6.
+\Ticket{4243}
+
+\item The python bindings can now accept a list of \Condor{collector} hosts
+in the constructor of the \texttt{Collector} object.  
+This eases use of the bindings for high availability setups.
+\Ticket{4245}
 
 \item New configuration variable \Macro{NEGOTIATOR\_MAX\_TIME\_PER\_CYCLE}
 places an upper time limit on the time spent in each negotiation cycle.
@@ -64,29 +85,15 @@ so that the resource will not be allocated to any slot.
 \Expr{False} to \Expr{True}.
 \Ticket{4238}
 
-\item The python bindings can now accept a list of \Condor{collector} hosts
-in the constructor of the \texttt{Collector} object.  
-This eases use of the bindings for high availability setups.
-\Ticket{4245}
-
-\item The \Prog{cream\_gahp} and \Prog{nordugrid\_gahp} can now talk to
-servers over IPv6.
-\Ticket{4243}
-
-\item The protocol for interaction between \Condor{q} and the 
-\Condor{schedd} daemon has been rewritten.
-The new protocol does not require the \Condor{schedd} to fork a child process 
-and does not cause blocking; 
-the result is that the \Condor{schedd} should be able to handle
-many concurrent \Condor{q} requests with minimal resource usage.
-\Ticket{4111}
-
 \item Added configuration parameter
 	\Macro{NEGOTIATOR\_TRIM\_SHUTDOWN\_THRESHOLD} to avoid making matches to
 	resources that are about to go away; primarily of interest to glidein
 	pools.  See section~\ref{param:NegotiatorTrimShutdownThreshold} for details.
 \Ticket{4266}
 
+\item No user-visible changes result from reductions in the quantity of
+unused memory within DaemonCore data structures.
+\Ticket{4206}
 
 \end{itemize}
 
