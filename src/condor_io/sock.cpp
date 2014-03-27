@@ -24,15 +24,15 @@
 #  include <linux/tcp.h>	// get definition for TCP_USER_TIMEOUT
 #endif
 
+
+#include "sock.h"
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_uid.h"
-#include "sock.h"
 #include "condor_network.h"
 #include "internet.h"
 #include "ipv6_hostname.h"
 #include "condor_debug.h"
-#include "condor_socket_types.h"
 #include "get_port_range.h"
 #include "condor_netdb.h"
 #include "daemon_core_sock_adapter.h"
@@ -41,6 +41,13 @@
 #include "condor_sockfunc.h"
 #include "condor_ipv6.h"
 #include "condor_config.h"
+
+#if defined(WIN32)
+#include <winsock2.h>
+#include <ws2def.h>
+#else
+#include <netinet/in.h>
+#endif
 
 #ifdef HAVE_EXT_OPENSSL
 #include "condor_crypt_blowfish.h"
