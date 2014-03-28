@@ -176,13 +176,17 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 		m_sock_had_no_deadline = true;
 	}
 
-	int reg_rc = daemonCore->Register_Socket(
-		m_sock,
-		m_sock->peer_description(),
-		(SocketHandlercpp)&DaemonCommandProtocol::SocketCallback,
-		WaitForSocketDataString.c_str(),
-		this,
-		ALLOW);
+	int reg_rc = 0;
+	if (!daemonCore->SocketIsRegistered(m_sock))
+	{
+		reg_rc = daemonCore->Register_Socket(
+			m_sock,
+			m_sock->peer_description(),
+			(SocketHandlercpp)&DaemonCommandProtocol::SocketCallback,
+			WaitForSocketDataString.c_str(),
+			this,
+			ALLOW);
+	}
 
 	if(reg_rc < 0) {
 		dprintf(D_ALWAYS, "DaemonCommandProtocol failed to process command from %s because "
@@ -567,12 +571,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		// on which command is used.
 		bool read_would_block;
 		{
-			BlockingModeGuard guard(static_cast<ReliSock*>(m_sock), m_nonblocking);
+			BlockingModeGuard guard(static_cast<ReliSock*>(m_sock), 1);
 			m_result = m_sock->code(m_req);
 			read_would_block = static_cast<ReliSock*>(m_sock)->clear_read_block_flag();
 		}
 		if (read_would_block)
 		{
+			dprintf(D_NETWORK, "CommandProtocol read would block; waiting for more data to arrive on the socket.\n");
 			return WaitForSocketData();
 		}
 	}
