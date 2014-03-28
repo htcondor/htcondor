@@ -22,9 +22,39 @@
 #define _CONDOR_VANILLA_PROC_H
 
 #include "os_proc.h"
+#include "generic_stats.h"
 
 /* forward reference */
 class SafeSock;
+
+struct StarterStatistics {
+    // these are used by generic tick
+    time_t StatsLifetime;         // the total time covered by this set of statistics
+    time_t StatsLastUpdateTime;   // last time that statistics were last updated. (a freshness time)
+    time_t RecentStatsLifetime;   // actual time span of current RecentXXX data.
+    time_t RecentStatsTickTime;   // last time Recent values Advanced
+
+    time_t InitTime;            // last time we init'ed the structure
+    int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
+    int    RecentWindowQuantum;
+    int    PublishFlags;
+
+    StatisticsPool Pool;          // pool of statistics probes and Publish attrib names
+
+    void Init();
+    void Clear();
+    time_t Tick(time_t now=0); // call this when time may have changed to update StatsUpdateTime, etc.
+    void Reconfig();
+    void Publish(ClassAd& ad) const { this->Publish(ad, this->PublishFlags); }
+    void Publish(ClassAd& ad, int flags) const;
+
+    // i/o statistics as collected from cgroups blkio controller
+    stats_entry_recent<int64_t> BlockReads;        // read operations
+    stats_entry_recent<int64_t> BlockWrites;       // write operations
+    stats_entry_recent<int64_t> BlockReadBytes;    // bytes read
+    stats_entry_recent<int64_t> BlockWriteBytes;   // bytes written
+};
+
 
 /** The Vanilla-type job process class.  Uses procfamily to do its
 	dirty work.
@@ -75,6 +105,10 @@ public:
 private:
 		/// Final usage stats for this proc and all its children.
 	ProcFamilyUsage m_final_usage;
+
+        // standardized statistics reporting logic
+    StarterStatistics m_statistics;
+
 #if !defined(WIN32)
 	int m_escalation_tid;
 #endif
