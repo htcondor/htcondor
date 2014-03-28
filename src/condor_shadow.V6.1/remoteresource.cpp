@@ -1028,7 +1028,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 {
 	int int_value;
 	int64_t int64_value;
-    double double_value;
 	MyString string_value;
 
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
