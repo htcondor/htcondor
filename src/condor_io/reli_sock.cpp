@@ -745,10 +745,11 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 
 	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, 0, p_sock->is_non_blocking());
-        if ( retval == 0 ) {   // -3 means that the read would have blocked; 0 bytes were read
+	if ( retval == 0 ) {   // 0 means that the read would have blocked; unlike a normal read(), condor_read
+	                       // returns -2 if the socket has been closed.
 		dprintf(D_NETWORK, "Reading header would have blocked.\n");
 		return 2;
-        }
+	}
 	// Block on short reads for the header.  Since the header is very short (typically, 5 bytes),
 	// we don't care to gracefully handle the case where it has been fragmented over multiple
 	// TCP packets.
@@ -800,7 +801,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 read_packet:
 	tmp_len = m_tmp->read(peer_description, _sock, len, _timeout, p_sock->is_non_blocking());
 	if (tmp_len != len) {
-		if (p_sock->is_non_blocking() && (tmp_len == -3 || tmp_len >= 0)) {
+		if (p_sock->is_non_blocking() && (tmp_len >= 0)) {
 			m_partial_packet = true;
 			if (tmp_len >= 0) {
 				m_remaining_read_length = len - tmp_len;
