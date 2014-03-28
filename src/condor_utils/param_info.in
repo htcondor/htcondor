@@ -1123,8 +1123,8 @@ review=?
 tags=accountant,Accountant
 
 [NICE_USER_PRIO_FACTOR]
-default=
-type=string
+default=1e10
+type=double
 reconfig=true
 customization=seldom
 friendly_name=Nice User Prio Factor
@@ -1132,8 +1132,8 @@ review=?
 tags=accountant,Accountant
 
 [REMOTE_PRIO_FACTOR]
-default=
-type=string
+default=1e7
+type=double
 reconfig=true
 customization=seldom
 friendly_name=Remote Prio Factor
@@ -1141,8 +1141,8 @@ review=?
 tags=accountant,Accountant
 
 [DEFAULT_PRIO_FACTOR]
-default=
-type=string
+default=1000
+type=double
 reconfig=true
 customization=seldom
 friendly_name=Default Prio Factor

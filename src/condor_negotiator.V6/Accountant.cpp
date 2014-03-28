@@ -77,12 +77,12 @@ Accountant::Accountant():
   AcctLog=NULL;
   DiscountSuspendedResources = false;
   UseSlotWeights = false;
-  DefaultPriorityFactor = 1.0f;
+  DefaultPriorityFactor = 1e3;
   HalfLifePeriod = 1.0f;
   LastUpdateTime = 0;
   MaxAcctLogSize = 1000000;
-  NiceUserPriorityFactor = 100000;
-  RemoteUserPriorityFactor = 10000;
+  NiceUserPriorityFactor = 1e10;
+  RemoteUserPriorityFactor = 1e7;
   hgq_root_group = NULL;
 }
 
@@ -106,9 +106,9 @@ void Accountant::Initialize(GroupEntry* root_group)
   // Default values
 
   char* tmp;
-  NiceUserPriorityFactor=10000000;
-  RemoteUserPriorityFactor=10000;
-  DefaultPriorityFactor=1;
+  NiceUserPriorityFactor=1e10;
+  RemoteUserPriorityFactor=1e7;
+  DefaultPriorityFactor=1e3;
 
   // Set up HGQ accounting-group related information
   hgq_root_group = root_group;
