@@ -410,6 +410,7 @@ sub StartCondorWithParams
 	#}
 
 	if(exists $personal_condor_params{"do_not_start"}) {
+		$ENV{CONDOR_CONFIG} = $personal_config_file;
 		return("do_not_start");
 	}
 
