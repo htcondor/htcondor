@@ -58,10 +58,20 @@ static char const *not_null_peer_description(char const *peer_description,SOCKET
     return sock_peer_to_string(fd,sinbuf,SINFUL_STRING_BUF_SIZE,"disconnected socket");
 }
 
-/* Generic read/write wrappers for condor.  These function emulate the 
+/* Generic read/write wrappers for condor.  These function emulate-ish the 
  * read/write system calls under unix except that they are portable, use
  * a timeout, and make sure that all data is read or written.
- * Returns < 0 on failure.  -1 = general error, -2 = peer closed socket, -3 = read would block.
+ *
+ * A few notes on the behavior differing from POSIX:
+ * - These will never fail due to EINTR.
+ * - If in non_blocking mode, there may be a short read or write returned.
+ * - The corresponding POSIX functon returns 0 bytes read when the peer closed
+ *   the socket; these return -2.
+ * - If zero bytes were read/written in non-blocking mode, this will return 0.  This differs
+ *   from POSIX.
+ * - Providing a zero-sized argument to this function will cause the program to abort().
+ *
+ * Returns < 0 on failure.  -1 = general error, -2 = peer closed socket
  */
 int
 condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int timeout, int flags, bool non_blocking )
@@ -115,7 +125,13 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 			the_error = errno;
 			the_errorstr = strerror(the_error);
 #endif
-			if ( !errno_is_temporary(the_error) ) {
+			if ( nr == 0 && !(flags & MSG_PEEK)) {
+				nr = -2;
+				dprintf( D_FULLDEBUG, "condor_read(): "
+					"Socket closed when trying to read %d bytes from %s in non-blocking mode\n",
+					sz,
+					not_null_peer_description(peer_description,fd,sinbuf) );
+			} else if ( !errno_is_temporary(the_error) ) {
 				dprintf( D_ALWAYS, "condor_read() failed: recv() %d bytes from %s "
 					"returned %d, "     
 					"timeout=%d, errno=%d %s.\n",
@@ -128,9 +144,6 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 				nr = 0;
 			}
 		}
-		if (nr < 0) {
-			dprintf(D_NETWORK, "condor_read (non-blocking) read %d of %d request bytes.\n", nr, sz);
-		}       
 
 #ifdef WIN32
 		mode = 0; // reset blocking mode
