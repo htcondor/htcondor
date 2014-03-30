@@ -3732,7 +3732,9 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		}
 
 		if( started_transaction ) {
-			CommitTransaction();
+			// To reduce the number of fsyncs, we mark this as a non-durable transaction.
+			// Otherwise we incur two fsync's per matched job (one here, one for the job start).
+			CommitTransaction(NONDURABLE);
 		}
 
 		if ( startd_ad ) {
