@@ -43,6 +43,11 @@ and \Condor{submit\_dag} that causes \Condor{dagman} to run in
 recovery mode (see ~\ref{man-condor-submit-dag}).
 \Ticket{2218}
 
+\item The synchronization of the job log was improved by only
+using fsync where necessary and fdatasync where sufficient.  This should
+provide a small reduction in disk IO on the schedd.
+\Ticket{4283}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

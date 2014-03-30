@@ -555,6 +555,9 @@
 /* Define to 1 if you have the '_stati64' function. (USED)*/
 #cmakedefine HAVE__STATI64 1
 
+/* Define to 1 if you have the fdatasync function (Linux) */
+#cmakedefine HAVE_FDATASYNC 1
+
 /* Define to 1 if the system has the type '__int64'. (USED)*/
 #cmakedefine HAVE___INT64 1
 

@@ -272,7 +272,7 @@ ReliSock::get_file( filesize_t *size, int fd,
 	}
 
 	if (flush_buffers && fd != GET_FILE_NULL_FD ) {
-		if (condor_fsync(fd) < 0) {
+		if (condor_fdatasync(fd) < 0) {
 			dprintf(D_ALWAYS, "get_file(): ERROR on fsync: %d\n", errno);
 			return -1;
 		}
@@ -713,7 +713,7 @@ ReliSock::get_x509_delegation( filesize_t *size, const char *destination,
 		if ( fd < 0 ) {
 			rc = fd;
 		} else {
-			rc = condor_fsync( fd, destination );
+			rc = condor_fdatasync( fd, destination );
 			::close( fd );
 		}
 		if ( rc < 0 ) {

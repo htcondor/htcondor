@@ -457,13 +457,13 @@ ClassAdLog::TruncLog()
 		{
 			if (condor_fsync(parent_fd) == -1)
 			{
-				dprintf(D_ALWAYS, "Failed to fsync directory after rename. (errno=%d, msg=%s)\n", errno, strerror(errno));
+				EXCEPT("Failed to fsync directory %s after rename. (errno=%d, msg=%s)\n", parent_dir, errno, strerror(errno));
 			}
 			close(parent_fd);
 		}
 		else
 		{
-			dprintf(D_ALWAYS, "Failed to open parent directory for fsync after rename. (errno=%d, msg=%s)\n", errno, strerror(errno));
+			EXCEPT("Failed to open parent directory %s for fsync after rename. (errno=%d, msg=%s)\n", parent_dir, errno, strerror(errno));
 		}
 	}
 	else
