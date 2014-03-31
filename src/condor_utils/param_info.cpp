@@ -423,7 +423,6 @@ param_default_double(const char* param, const char * subsys, int* valid) {
 int
 param_range_long(const char* param, long long* min, long long* max) {
 
-#ifdef PARAM_DEFAULTS_SORTED
 	int ret = -1; // not ranged.
 	const param_table_entry_t* p = param_default_lookup(param);
 	if (p && p->def) {
@@ -456,12 +455,6 @@ param_range_long(const char* param, long long* min, long long* max) {
 		}
 	}
 	return ret;
-#else
-	PRAGMA_REMIND("write this!")
-	*min = LLONG_MIN;
-	*max = LLONG_MAX;
-	ret = 0;
-#endif
 }
 
 int
