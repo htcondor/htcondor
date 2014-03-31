@@ -28,6 +28,7 @@ $dagman_args = "-verbose";
 
 @outfiles = ("job_dagman_abort-B-node.A", "job_dagman_abort-B-node.B");
 $statusfile = "job_dagman_abort-B.status";
+# Lines must be found in order.
 @statuslines = ("JOB A STATUS_DONE",
 	"JOB B STATUS_DONE",
 	"JOB C STATUS_ERROR",
@@ -128,14 +129,11 @@ $failure = sub
 	while(<STATUS>) {
 		chomp();
 		$line = $_;
-		for ( $ind = 0; $ind <= $#statuslines; $ind++ ) {
-			$target = $statuslines[$ind];
-			if( $line =~ /$target/ ) {
-				CondorTest::debug("$name: $line\n",1);
-				# Remove the target we just found from the array.
-				splice(@statuslines, $ind, 1);
-				last;
-			}
+		$target = $statuslines[0];
+		if( $line =~ /$target/ ) {
+			CondorTest::debug("$name: $line\n",1);
+			# Remove the target we just found from the array.
+			shift @statuslines;
 		}
 	}
 	close(STATUS);

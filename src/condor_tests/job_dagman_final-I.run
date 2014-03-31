@@ -59,6 +59,7 @@ $statusfile = "job_dagman_final-I.status";
 			"  FAILED_COUNT=0",
 			"  RETURN=0");
 
+# Lines must be found in order.
 @statuslines = ("JOB I_A STATUS_DONE",
 	"JOB I_B STATUS_DONE",
 	"JOB I_C1 STATUS_NOT_READY",
@@ -180,14 +181,11 @@ $success = sub
 	while(<STATUS>) {
 		chomp();
 		$line = $_;
-		for ( $ind = 0; $ind <= $#statuslines; $ind++ ) {
-			$target = $statuslines[$ind];
-			if( $line =~ /$target/ ) {
-				CondorTest::debug("$name: $line\n",1);
-				# Remove the target we just found from the array.
-				splice(@statuslines, $ind, 1);
-				last;
-			}
+		$target = $statuslines[0];
+		if( $line =~ /$target/ ) {
+			CondorTest::debug("$name: $line\n",1);
+			# Remove the target we just found from the array.
+			shift @statuslines;
 		}
 	}
 	close(STATUS);

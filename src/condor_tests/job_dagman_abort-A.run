@@ -125,14 +125,11 @@ $success = sub
 	while(<STATUS>) {
 		chomp();
 		$line = $_;
-		for ( $ind = 0; $ind <= $#statuslines; $ind++ ) {
-			$target = $statuslines[$ind];
-			if( $line =~ /$target/ ) {
-				CondorTest::debug("$name: $line\n",1);
-				# Remove the target we just found from the array.
-				splice(@statuslines, $ind, 1);
-				last;
-			}
+		$target = $statuslines[0];
+		if( $line =~ /$target/ ) {
+			CondorTest::debug("$name: $line\n",1);
+			# Remove the target we just found from the array.
+			shift @statuslines;
 		}
 	}
 	close(STATUS);
