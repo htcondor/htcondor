@@ -2802,11 +2802,11 @@ review=?
 tags=startd,Starter
 
 [RunBenchmarks]
-default=
+default=LastBenchmark == 0
 type=string
 reconfig=true
 customization=seldom
-friendly_name=Runbenchmarks
+friendly_name=Expression that when true, causes the STARTD to run benchmarks
 review=?
 tags=startd,startd_main
 
@@ -7043,9 +7043,6 @@ review=?
 # benchmarking knobs
 [BenchmarkTimer]
 default=(time() - LastBenchmark)
-review=?
-[RunBenchmarks]
-default=(LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 review=?
 [BENCHMARKS_JOBLIST]
 default=mips kflops

@@ -918,12 +918,9 @@ The startd automatically inserts an attribute, \Attr{LastBenchmark},
 whenever it runs benchmarks, so commonly \Attr{RunBenchmarks} is
 defined in terms of this attribute, for example:
 \begin{verbatim}
-        BenchmarkTimer = (time() - LastBenchmark)
-        RunBenchmarks = $(BenchmarkTimer) >= (4 * $(HOUR))
+        RunBenchmarks = (time() - LastBenchmark) >= (4 * $(HOUR))
 \end{verbatim}
-Here, a macro, \MacroNI{BenchmarkTimer} is defined to help write the
-expression.
-This macro holds the time since the last benchmark,
+This macro calculates the time since the last benchmark,
 so when this time exceeds 4 hours, we run the benchmarks again.
 The startd keeps a weighted average of these benchmarking
 results to try to get the most accurate numbers possible.
