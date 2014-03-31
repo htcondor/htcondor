@@ -1849,7 +1849,7 @@ param_without_default( const char *name )
 	}
 }
 
-PRAGMA_REMIND("TJ: this gives incorrect result if the param is defined in defaults table.")
+//PRAGMA_REMIND("TJ: this gives incorrect result if the param is defined in defaults table.")
 bool param_defined(const char* name) {
     bool retval = false;
     char* v = param_without_default(name);

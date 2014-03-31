@@ -246,7 +246,7 @@ _condor_set_debug_flags_ex(
 	// special case. if a single category to be passed in cat_and_flags
 	// in practice, this category is always D_ALWAYS which is set above anyway.
 	choice |= 1<<(cat_and_flags & D_CATEGORY_MASK);
-	PRAGMA_REMIND("TJ: fix this to handle more than just basic & verbose levels")
+	//PRAGMA_REMIND("TJ: fix this to handle more than just basic & verbose levels")
 	if (cat_and_flags & (D_FULLDEBUG | D_VERBOSE_MASK)) { verbose |= choice; }
 
 	// parse and merge strflags and cat_and_flags into header & choice

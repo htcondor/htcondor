@@ -788,7 +788,7 @@ if(MSVC)
 
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4251")  #
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4275")  #
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4996")  # use of obsolete names for c-runtime functions
+	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4996")  # deprecation warnings
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4273")  # inconsistent dll linkage
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd6334") # inclusion warning from boost. 
 

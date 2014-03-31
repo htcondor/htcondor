@@ -37,6 +37,7 @@ private:
 	enum CommandProtocolState {
 		CommandProtocolAcceptTCPRequest,
 		CommandProtocolAcceptUDPRequest,
+		CommandProtocolReadHeader,
 		CommandProtocolReadCommand,
 		CommandProtocolAuthenticate,
 		CommandProtocolPostAuthenticate,
@@ -85,6 +86,7 @@ private:
 
 	CommandProtocolResult AcceptTCPRequest();
 	CommandProtocolResult AcceptUDPRequest();
+	CommandProtocolResult ReadHeader();
 	CommandProtocolResult ReadCommand();
 	CommandProtocolResult Authenticate();
 	CommandProtocolResult PostAuthenticate();

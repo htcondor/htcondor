@@ -299,25 +299,25 @@ print "Search command is:$cmd\n";
 #my @run = `grep \"$search\" $startdlog`;
 my @run = ();
 
-my $liine = "";
-open(SL,"<$startdlog") or die "Could not open:$startdlog for searching:$!\n";
-while(<SL>) {
-	CondorUtils::fullchomp($_);
-	$line = $_;
-	if($line =~ /Changing\sactivity:\sIdle\s->\sBusy/) {
-		push @run, $line;
-	}
-}
-close(SL);
-my $runcount = @run;
+#my $liine = "";
+#open(SL,"<$startdlog") or die "Could not open:$startdlog for searching:$!\n";
+#while(<SL>) {
+	#CondorUtils::fullchomp($_);
+	#$line = $_;
+	#if($line =~ /Changing\sactivity:\sIdle\s->\sBusy/) {
+		#push @run, $line;
+	#}
+#}
+#close(SL);
+#my $runcount = @run;
 
-if($runcount > 0) {
-	CondorTest::RegisterResult(1, "test_name", $testname);
-} else {
-	CondorTest::RegisterResult(0, "test_name", $testname);
-}
+#if($runcount > 0) {
+	#CondorTest::RegisterResult(1, "test_name", $testname);
+#} else {
+	#CondorTest::RegisterResult(0, "test_name", $testname);
+#}
 
-print "Flock_increment: $flock_increment Jobs:$runcount Log:$startdlog\n";
+#print "Flock_increment: $flock_increment Jobs:$runcount Log:$startdlog\n";
 
 CondorTest::EndTest();
 

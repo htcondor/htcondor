@@ -17,13 +17,6 @@
  *
  ***************************************************************/
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <time.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #ifdef WIN32
 #include "condor_header_features.h"
 #include "condor_sys_nt.h"
@@ -31,6 +24,13 @@
 #else
 #include <unistd.h>
 #endif
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <time.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include "write_user_log.h"
 #include "read_user_log.h"
 
