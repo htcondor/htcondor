@@ -64,7 +64,7 @@ class PandadClassAdLogPlugin : public ClassAdLogPlugin {
 		~PandadClassAdLogPlugin();
 
 		void earlyInitialize() { }
-		void initialize() { }
+		void initialize() { scheddInitialized = true; }
 		void shutdown() { }
 
 		void beginTransaction();
@@ -96,6 +96,8 @@ class PandadClassAdLogPlugin : public ClassAdLogPlugin {
 		ExprTree * jobFilter;
 
 		FILE *	pandad;
+
+		bool scheddInitialized;
 };
 
 // Required by plug-in API.  (Only if linked into the schedd?)
@@ -109,7 +111,7 @@ static PandadClassAdLogPlugin instance;
 	#define DEVNULL "/dev/null"
 #endif // defined( WIN32 )
 
-PandadClassAdLogPlugin::PandadClassAdLogPlugin() : ClassAdLogPlugin(), inTransaction( false ), lowestNewCluster( INT_MAX ), highestNewCluster( 0 ), jobFilter( NULL ) {
+PandadClassAdLogPlugin::PandadClassAdLogPlugin() : ClassAdLogPlugin(), inTransaction( false ), lowestNewCluster( INT_MAX ), highestNewCluster( 0 ), jobFilter( NULL ), pandad( NULL ), scheddInitialized( false ) {
 	std::string binary;
 	param( binary, "PANDAD" );
 
@@ -204,7 +206,7 @@ void PandadClassAdLogPlugin::newClassAd( const char * key ) {
 	//
 
 	if( ! inTransaction ) {
-		dprintf( D_ALWAYS, "PANDA: newClassAd( %s ) saw a new job outside of transaction.  Unable to process; will ignore.\n", key );
+		if( scheddInitialized ) { dprintf( D_ALWAYS, "PANDA: newClassAd( %s ) saw a new job outside of transaction.  Unable to process; will ignore.\n", key ); }
 		return;
 	}
 
@@ -235,7 +237,7 @@ void PandadClassAdLogPlugin::destroyClassAd( const char * key ) {
 	ClassAd * jobAd = NULL;
 	std::string globalJobID;
 	if( ! getGlobalJobID( cluster, proc, globalJobID, jobAd ) ) {
-		dprintf( D_ALWAYS, "PANDA: destroyClassAd( %s ) failed to find global job ID.\n", key );
+		if( scheddInitialized ) { dprintf( D_ALWAYS, "PANDA: destroyClassAd( %s ) failed to find global job ID.\n", key ); }
 		return;
 	}
 
@@ -261,7 +263,7 @@ void PandadClassAdLogPlugin::setAttribute( const char * key, const char * attrib
 	ClassAd * jobAd = NULL;
 	std::string globalJobID;
 	if( ! getGlobalJobID( cluster, proc, globalJobID, jobAd ) ) {
-		dprintf( D_ALWAYS, "PANDA: setAttribute( %s, %s, %s ) failed to find global job ID.\n", key, attribute, value );
+		if( scheddInitialized ) { dprintf( D_ALWAYS, "PANDA: setAttribute( %s, %s, %s ) failed to find global job ID.\n", key, attribute, value ); }
 		return;
 	}
 	if( shouldIgnoreAttribute( attribute ) ) { return; }
@@ -287,7 +289,7 @@ void PandadClassAdLogPlugin::deleteAttribute( const char * key, const char * att
 	ClassAd * jobAd = NULL;
 	std::string globalJobID;
 	if( ! getGlobalJobID( cluster, proc, globalJobID, jobAd ) ) {
-		dprintf( D_ALWAYS, "PANDA: deleteAttribute( %s, %s ) failed to find global job ID.\n", key, attribute );
+		if( scheddInitialized ) { dprintf( D_ALWAYS, "PANDA: deleteAttribute( %s, %s ) failed to find global job ID.\n", key, attribute ); }
 		return;
 	}
 
@@ -312,7 +314,7 @@ void PandadClassAdLogPlugin::deleteAttribute( const char * key, const char * att
 //
 void PandadClassAdLogPlugin::endTransaction() {
 	if( ! inTransaction ) {
-		dprintf( D_ALWAYS, "PANDA: endTransaction() called but we're not in a transaction.  Ignoring.\n" );
+		if( scheddInitialized ) { dprintf( D_ALWAYS, "PANDA: endTransaction() called but we're not in a transaction.  Ignoring.\n" ); }
 		return;
 	}
 
@@ -329,12 +331,12 @@ void PandadClassAdLogPlugin::endTransaction() {
 
 			std::string globalJobID;
 			if( ! jobAd->LookupString( "GlobalJobId", globalJobID ) ) {
-				dprintf( D_ALWAYS, "PANDA: endTransaction() found job without global job ID, ignoring it.\n" );
+				if( scheddInitialized ) { dprintf( D_ALWAYS, "PANDA: endTransaction() found job without global job ID, ignoring it.\n" ); }
 				continue;
 			}
 
 			if( globalJobID.empty() ) {
-				dprintf( D_ALWAYS, "PANDA: endTransaction() found job with empty lobal job ID, ignoring it.\n" );
+				if( scheddInitialized ) { dprintf( D_ALWAYS, "PANDA: endTransaction() found job with empty lobal job ID, ignoring it.\n" ); }
 				continue;
 			}
 
