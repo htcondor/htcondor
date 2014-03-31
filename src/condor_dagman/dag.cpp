@@ -2852,9 +2852,10 @@ Dag::SetNodeStatusFileName( const char *statusFileName,
 			int minUpdateTime )
 {
 	if ( _statusFileName != NULL ) {
-		debug_printf( DEBUG_NORMAL, "Attempt to set NODE_STATUS_FILE "
+		debug_printf( DEBUG_NORMAL, "Warning: Attempt to set NODE_STATUS_FILE "
 					"to %s does not override existing value of %s\n",
 					statusFileName, _statusFileName );
+		check_warning_strictness( DAG_STRICT_3 );
 		return;
 	}
 	_statusFileName = strnewp( statusFileName );
@@ -3035,29 +3036,26 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	fprintf( outfile, "[\n" );
 	fprintf( outfile, "  Type = \"DagStatus\";\n" );
 
-	//TEMPTEMP -- test with multiple dag files
 		//
 		// Print DAG file list.
 		//
 	fprintf( outfile, "  DagFiles = {\n" );
 	char *dagFile;
 	_dagFiles.rewind();
+	const char *separator = "";
 	while ( (dagFile = _dagFiles.next()) ) {
-		//TEMPTEMP -- comma only if not last?
-		fprintf( outfile, "    %s,\n", dagFile );
+		fprintf( outfile, "%s    \"%s\"", separator, dagFile );
+		separator = ",\n";
 	}
-	fprintf( outfile, "  };\n" );
+	fprintf( outfile, "\n  };\n" );
 
 		//
 		// Print timestamp.
 		//
-	char *timeStr = ctime( &startTime );
-	char *newline = strchr(timeStr, '\n');
-	if (newline != NULL) {
-		*newline = 0;
-	}
+	MyString timeStr = ctime( &startTime );
+	timeStr.chomp();
 	fprintf( outfile, "  Timestamp = %lu; /* %s */\n",
-				(unsigned long)startTime, timeStr );
+				(unsigned long)startTime, timeStr.Value() );
 
 		//
 		// Print next update time.
@@ -3065,17 +3063,14 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	time_t nextTime;
 	if ( FinishedRunning( true ) || removed ) {
 		nextTime = 0;
-		timeStr = "none";//TEMPTEMP -- warning here
+		timeStr = "none";
 	} else {
 		nextTime = endTime + _minStatusUpdateTime;
 		timeStr = ctime( &nextTime );
-		newline = strchr(timeStr, '\n');
-		if (newline != NULL) {
-			*newline = 0;
-		}
+		timeStr.chomp();
 	}
 	fprintf( outfile, "  NextUpdate = %lu; /* %s */\n",
-				(unsigned long)nextTime, timeStr );
+				(unsigned long)nextTime, timeStr.Value() );
 
 		//
 		// Print overall DAG status.
@@ -3115,6 +3110,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 				NumNodesReady() + NumNodesFailed()  );
 	fprintf( outfile, "  NodesUnready = %d;\n", unready );
 	fprintf( outfile, "  NodesFailed = %d;\n", NumNodesFailed() );
+	fprintf( outfile, "  JobProcsHeld = %d;\n", NumHeldJobProcs() );
+	fprintf( outfile, "  JobProcsIdle = %d;\n", NumIdleJobProcs() );
 	fprintf( outfile, "]\n" );
 
 		//
@@ -3144,9 +3141,10 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		}
 
 		fprintf( outfile, "  Node = \"%s\";\n", node->GetJobName() );
-		//TEMPTEMP -- trim trailing spaces from status name?
+		MyString statusStr = Job::status_t_names[status];
+		statusStr.trim();
 		fprintf( outfile, "  NodeStatus = %d; /* %s */\n", status,
-					Job::status_t_names[status] );
+					statusStr.Value() );
 		fprintf( outfile, "  /* CondorStatus = xxx; */\n" );
 		fprintf( outfile, "  StatusDetails = \"%s\";\n", nodeNote );
 		fprintf( outfile, "  RetryCount = %d;\n", node->GetRetries() );
@@ -3208,9 +3206,10 @@ void
 Dag::SetJobstateLogFileName( const char *logFileName )
 {
 	if ( _jobstateLog.LogFile() != NULL ) {
-		debug_printf( DEBUG_NORMAL, "Attempt to set JOBSTATE_LOG "
+		debug_printf( DEBUG_NORMAL, "Warning: Attempt to set JOBSTATE_LOG "
 					"to %s does not override existing value of %s\n",
 					logFileName, _jobstateLog.LogFile() );
+		check_warning_strictness( DAG_STRICT_3 );
 		return;
 	}
 	_jobstateLog.SetLogFile( logFileName );
