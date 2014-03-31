@@ -48,7 +48,9 @@
 // Disable warnings about deprecated ISO conforming names (for some 
 // reason defining fileno and fdopen to the right ones does not work 
 // in new versions of Visual Studio)
-#pragma warning( disable : 4996 )
+//#pragma warning( disable : 4996 )
+#define _CRT_NONSTDC_NO_DEPRECATE
+#define _CRT_NONSTDC_NO_WARNINGS
 
 // #define NOGDI
 #define NOSOUND

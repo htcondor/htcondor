@@ -1898,8 +1898,9 @@ CStarter::createTempExecuteDir( void )
 			}
 
 			if ( efs_support ) {
-				wchar_t *WorkingDir_w = new wchar_t[WorkingDir.Length()+1];
-				swprintf(WorkingDir_w, L"%S", WorkingDir.Value());
+				size_t cch = WorkingDir.Length()+1;
+				wchar_t *WorkingDir_w = new wchar_t[cch];
+				swprintf_s(WorkingDir_w, cch, L"%S", WorkingDir.Value());
 				EncryptionDisable(WorkingDir_w, FALSE);
 				delete[] WorkingDir_w;
 				

@@ -307,7 +307,7 @@ LRESULT SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource
 std::string makeString(int iVal)
 {
 	char psBuf[32];
-	itoa(iVal, psBuf, 10);
+	_itoa(iVal, psBuf, 10);
 	return string(psBuf);
 }
 

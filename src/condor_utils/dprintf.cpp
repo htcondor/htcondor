@@ -647,7 +647,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 		// as well as whatever category it's currently in.
 		if (cat_and_flags & D_FAILURE) { basic_flag |= 1<<D_ERROR; }
 
-		PRAGMA_REMIND("TJ: fix this to distinguish between verbose:2 and verbose:3")
+		//PRAGMA_REMIND("TJ: fix this to distinguish between verbose:2 and verbose:3")
 		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++, ++ixOutput)
 		{
 			unsigned int choice = (*it).choice;
@@ -803,7 +803,7 @@ debug_open_lock(void)
 #ifdef WIN32
 		// Use a mutex by default on Win32
 		//DebugLockIsMutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
-PRAGMA_REMIND("Figure out better way of doing this without relying on param!!!!")
+//PRAGMA_REMIND("Figure out better way of doing this without relying on param!!!!")
 		DebugLockIsMutex = TRUE;
 #else
 		// Use file locking by default on Unix.  We should 
@@ -1672,7 +1672,7 @@ const char * _condor_print_dprintf_info(DebugFileInfo & info, std::string & out)
 	const unsigned int all_category_bits = ((unsigned int)1 << (D_CATEGORY_COUNT-1)) | (((unsigned int)1 << (D_CATEGORY_COUNT-1))-1);
 
 	DebugOutputChoice base = info.choice;
-	PRAGMA_REMIND("TJ: remove this hack for the primary log because DebugFileInfo has no verbose member.")
+	//PRAGMA_REMIND("TJ: remove this hack for the primary log because DebugFileInfo has no verbose member.")
 	DebugOutputChoice verb = info.accepts_all ? AnyDebugVerboseListener : 0;
 	const unsigned int D_ALL_HDR_FLAGS = D_PID | D_FDS | D_CAT;
 	bool has_all_hdr_opts = (info.headerOpts & D_ALL_HDR_FLAGS) == D_ALL_HDR_FLAGS;

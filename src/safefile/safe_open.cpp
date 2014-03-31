@@ -16,6 +16,10 @@
  * limitations under the License.
  */
 
+#ifdef WIN32
+#define _CRT_NONSTDC_NO_DEPRECATE
+#define _CRT_NONSTDC_NO_WARNINGS
+#endif
 
 #include <sys/types.h>
 #include <sys/stat.h>

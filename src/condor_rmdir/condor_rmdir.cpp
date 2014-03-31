@@ -1130,7 +1130,7 @@ int DeletePath(LPCTSTR pszPathIn,
             }
          else
             {
-            #pragma REMIND("TJ: add code to split the file from the path and recurse on the filename.")
+            //#pragma REMIND("TJ: add code to split the file from the path and recurse on the filename.")
             }
          }
       if (fdwTraverse & TDT_NOFILES)
