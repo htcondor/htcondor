@@ -129,12 +129,15 @@ The problem occurred when using both the \Condor{shared\_port} daemon and CCB,
 and the value of configuration variable \Macro{CCB\_ADDRESS} was changed.
 \Ticket{4250}
 
-\item Fixed a bug introduced earlier in this developer series that could cause
-\Condor{submit} to crash when reading large submit files.
+\item Fixed a bug introduced earlier in the 8.1 developer series that 
+could cause \Condor{submit} to crash when reading 
+large submit description files.
 \Ticket{4260}
 
-\item Fixed a bug that prevented a configuration variable from referring to itself
-when the previous value was defined in the code rather than in a configuration file.
+\item Fixed a bug that prevented a configuration variable 
+from referring to itself,
+when the previous value was defined by the code,
+rather than within a configuration file.
 \Ticket{4256}
 
 \end{itemize}
