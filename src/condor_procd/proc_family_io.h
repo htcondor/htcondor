@@ -92,6 +92,8 @@ struct ProcFamilyUsage {
 #endif
 	int           num_procs;
 	// These are signed so a negative number indicates uninitialized
+    long          block_reads;
+    long          block_writes;
 	long          block_read_bytes;
 	long          block_write_bytes;
 
@@ -107,6 +109,8 @@ struct ProcFamilyUsage {
 		total_proportional_set_size_available(0),
 #endif
 		num_procs(0),
+        block_reads(0),
+        block_writes(0),
 		block_read_bytes(0),
 		block_write_bytes(0)
 	{ }

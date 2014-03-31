@@ -1589,18 +1589,37 @@ of the subsystem corresponding to the daemon.
 \label{param:MaxSubsysLog}
 \item[\Macro{MAX\_<SUBSYS>\_LOG}]
   Controls the maximum size in bytes or amount of time that a
-  log will be allowed to grow.  When it is time to rotate a log file,
-  it will be saved to a file with an ISO timestamp 
-  suffix. The oldest rotated file receives the ending \File{.old}. 
+  log will be allowed to grow. 
+  For any log not specified, the default is \MacroU{MAX\_DEFAULT\_LOG},
+  which currently defaults to 10Mbytes in size.
+  Values are specified with the same syntax as \Macro{MAX\_DEFAULT\_LOG}.
+
+  Note that a log file for the \Condor{procd} does not use this configuration
+  variable definition. 
+  Its implementation is separate.  
+  See section~\ref{param:MaxProcdLog} for the definition of
+  \MacroNI{MAX\_PROCD\_LOG}.
+ 
+\label{param:MaxDefaultLog}
+\item[\Macro{MAX\_DEFAULT\_LOG}]
+\begin{description} 
+  Controls the maximum size in bytes or amount of time that any log
+  not explicitly specified using  \Macro{MAX\_<SUBSYS>\_LOG}
+  will be allowed to grow.
+  When it is time to rotate a log file,
+  it will be saved to a file with an ISO timestamp suffix. 
+  The oldest rotated file receives the ending \File{.old}. 
   The \File{.old} files are overwritten each time the maximum 
   number of rotated files (determined by the value of
   \MacroNI{MAX\_NUM\_<SUBSYS>\_LOG}) is exceeded.
+  The default value is 10 Mbytes in size.
   A value of 0 specifies that the file may grow without bounds. 
-  If not specified, the default is 1 Mbyte in size.
-  A single integer value is specified; without a suffix, defaults to
-  specifying a size in bytes.  The following suffixes may be used to
+  A single integer value is specified; without a suffix, it defaults to
+  specifying a size in bytes.  A suffix is case insensitive, except for
+  \Expr{Mb} and \Expr{Min}; these both start with the same letter, and
+  the implementation attaches meaning to the letter case when only the first
+  letter is present. Therefore, use the following suffixes to
   qualify the integer:
-\begin{description} 
   \item{\Expr{Bytes} for bytes}
   \item{\Expr{Kb} for kilobytes}
   \item{\Expr{Mb} for megabytes}
@@ -1612,7 +1631,7 @@ of the subsystem corresponding to the daemon.
   \item{\Expr{Day} for days}
   \item{\Expr{Wk} for weeks}
 \end{description} 
- 
+
 \label{param:MaxNumSubsysLog}
 \item[\Macro{MAX\_NUM\_<SUBSYS>\_LOG}]
   An integer that controls the maximum number of rotations a log file 
@@ -7788,15 +7807,19 @@ These macros affect the \Condor{negotiator}.
 
 \label{param:NegotiatorTrimShutdownThreshold}
 \item[\Macro{NEGOTIATOR\_TRIM\_SHUTDOWN\_THRESHOLD}] 
-	This setting is not likely to be customized, except perhaps in a glidein
-	setting.  An expression evaluated to an integer value within the context of
-	the negotiator classad, with a default value of 0.  When this expression
-	evaluates to an integer X, and X is greater than 0, the \Condor{negotiator}
-	will not make matches to machine ads that contain a \Attr{DaemonShutdown}
-	attribute that evalutes to \Expr{True} when \Attr{CurrentTime} is set to be
-	X seconds into the future.  The idea here is a mechanism to prevent
-	matching with startds that are real close to shutting down, since doing so
-	is likely just a waste of time.
+  This setting is not likely to be customized, except perhaps within 
+  a glidein setting.  
+  An integer expression that evaluates to a value within the context of
+  the \Condor{negotiator} ClassAd, 
+  with a default value of 0.  
+  When this expression evaluates to an integer X greater than 0, 
+  the \Condor{negotiator} will not make matches to machines 
+  that contain the ClassAd attribute \Attr{DaemonShutdown}
+  which evaluates to \Expr{True},
+  when that shut down time is X seconds into the future.
+  The idea here is a mechanism to prevent
+  matching with machines that are quite close to shutting down, 
+  since the match would likely be a waste of time.
 
 \label{param:NegotiatorSlotPoolsizeConstraint}
 \label{param:GroupDynamicMachConstraint}
@@ -7825,12 +7848,20 @@ These macros affect the \Condor{negotiator}.
 \label{param:NegotiatorMaxTimePerSubmitter}
 \item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}]
   The maximum number of seconds
-  the \Condor{negotiator} will spend with a submitter during one
+  the \Condor{negotiator} will spend with each individual submitter during one
   negotiation cycle.  Once this time limit has been reached, the
-  \Condor{negotiator} will still finish its current pie spin, but it will skip
-  over the submitter if subsequent pie spins are needed to dish out all
-  of the available machines.  It defaults to one year.  See
-  \MacroNI{NEGOTIATOR\_MAX\_TIME\_PER\_PIESPIN} for more information.
+  \Condor{negotiator} will skip
+  over requests from this submitter until the next negotiation cycle.
+  It defaults to one year.
+
+\label{param:NegotiatorMaxTimePerCycle}
+\item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_CYCLE}]
+  The maximum number of seconds
+  the \Condor{negotiator} will spend in total across all submitters during one
+  negotiation cycle.  Once this time limit has been reached, the
+  \Condor{negotiator} will skip
+  over requests from all submitters until the next negotiation cycle.
+  It defaults to one year.
 
 \label{param:NegotiatorMaxTimePerPieSpin}
 \item[\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_PIESPIN}]
@@ -8122,12 +8153,12 @@ The following configuration macros affect negotiation for group users.
 
 \label{param:NegotiatorUseWeightedDemand}
 \item[\Macro{NEGOTIATOR\_USE\_WEIGHTED\_DEMAND}]
-  A boolean value with a default of \Expr{False}. 
+  A boolean value that defaults to \Expr{True}. 
   When \Expr{False}, the behavior is the same as for HTCondor versions
   prior to 7.9.6.
   If \Expr{True}, when the \Condor{schedd} advertises \Attr{IdleJobs}
   in the submitter ClassAd,
-  the number of idle jobs in the queue for that submitter,
+  which represents the number of idle jobs in the queue for that submitter,
   it will also advertise the total number of requested cores across
   all idle jobs from that submitter, \Attr{WeightedIdleJobs}.
   If partitionable slots are being used,
@@ -8138,7 +8169,6 @@ The following configuration macros affect negotiation for group users.
   the number of cores,
   then setting this configuration variable to \Expr{True} allows
   the amount of surplus allocated to each group to be calculated correctly. 
-   
 
 \label{param:GroupSortExpr}
 \item[\Macro{GROUP\_SORT\_EXPR}]

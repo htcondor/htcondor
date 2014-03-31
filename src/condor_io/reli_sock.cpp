@@ -451,9 +451,18 @@ ReliSock::handle_incoming_packet()
 int
 ReliSock::finish_end_of_message()
 {
+	dprintf(D_NETWORK, "Finishing a non-blocking EOM.\n");
 	BlockingModeGuard guard(this, true);
-	int retval = snd_msg.finish_packet(peer_description(), _sock, _timeout);
-	if (retval == 2) m_has_backlog = true;
+	int retval;
+	if (snd_msg.buf.num_used())
+	{
+		retval = snd_msg.snd_packet(peer_description(), _sock, true, _timeout);
+	}
+	else
+	{
+		retval = snd_msg.finish_packet(peer_description(), _sock, _timeout);
+	}
+	if (retval == 3 || retval == 2) m_has_backlog = true;
 	return retval;
 }
 
@@ -515,7 +524,7 @@ ReliSock::end_of_message_internal()
 				}
 				else {
 					char const *ip = get_sinful_peer();
-					dprintf(D_FULLDEBUG,"Failed to read end of message from %s.\n",ip ? ip : "(null)");
+					dprintf(D_FULLDEBUG,"Failed to read end of message from %s; %d untouched bytes.\n",ip ? ip : "(null)", rcv_msg.buf.num_untouched());
 				}
 				rcv_msg.ready = FALSE;
 				rcv_msg.buf.reset();
@@ -584,9 +593,8 @@ ReliSock::put_bytes(const void *data, int sz)
 			// This would block and the user asked us to work non-buffered - force the
 			// buffer to grow to hold the data for now.
 			if (retval == 3) {
-				nw = snd_msg.buf.put_force(&((char *)dta)[nw], sz-nw);
+				nw += snd_msg.buf.put_force(&((char *)dta)[nw], sz-nw);
 				m_has_backlog = true;
-				nw += tw;
 				break;
 			} else if (!retval) {
 				if (dta != NULL)
@@ -639,6 +647,7 @@ ReliSock::get_bytes(void *dta, int max_sz)
 	while (!rcv_msg.ready) {
 		int retval = handle_incoming_packet();
 		if (retval == 2) {
+			dprintf(D_NETWORK, "get_bytes would have blocked - failing call.\n");
 			m_read_would_block = true;
 			return false;
 		} else if (!retval) {
@@ -735,14 +744,17 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 
 	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 
-	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, p_sock->is_non_blocking());
-        if ( retval == -3 ) {   // -3 means that the read would have blocked; 0 bytes were read
+	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, 0, p_sock->is_non_blocking());
+	if ( retval == 0 ) {   // 0 means that the read would have blocked; unlike a normal read(), condor_read
+	                       // returns -2 if the socket has been closed.
+		dprintf(D_NETWORK, "Reading header would have blocked.\n");
 		return 2;
-        }
+	}
 	// Block on short reads for the header.  Since the header is very short (typically, 5 bytes),
 	// we don't care to gracefully handle the case where it has been fragmented over multiple
 	// TCP packets.
 	if ( (retval > 0) && (retval != header_size) ) {
+		dprintf(D_NETWORK, "Force-reading remainder of header.\n");
 		retval = condor_read(peer_description, _sock, hdr+retval, header_size-retval, _timeout);
 	}
 
@@ -766,15 +778,16 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 		return FALSE;
 	}
         
+	if (len > 1024*1024){
+		dprintf(D_ALWAYS, "IO: Incoming packet is larger than 1MB limit (requested size %d)\n", len);
+		return FALSE;
+	}
 	if (!(m_tmp = new Buf)){
 		dprintf(D_ALWAYS, "IO: Out of memory\n");
 		return FALSE;
 	}
-	if (len > m_tmp->max_size()){
-		delete m_tmp;
-		dprintf(D_ALWAYS, "IO: Incoming packet is too big\n");
-		return FALSE;
-	}
+	m_tmp->grow_buf(len+1);
+
 	if (len <= 0)
 	{
 		delete m_tmp;
@@ -788,7 +801,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 read_packet:
 	tmp_len = m_tmp->read(peer_description, _sock, len, _timeout, p_sock->is_non_blocking());
 	if (tmp_len != len) {
-		if (p_sock->is_non_blocking() && (tmp_len == -3 || tmp_len >= 0)) {
+		if (p_sock->is_non_blocking() && (tmp_len >= 0)) {
 			m_partial_packet = true;
 			if (tmp_len >= 0) {
 				m_remaining_read_length = len - tmp_len;
@@ -866,6 +879,7 @@ int ReliSock::SndMsg::finish_packet(const char *peer_description, int sock, int 
 
 void ReliSock::SndMsg::stash_packet()
 {
+	dprintf(D_NETWORK, "Stashing packet for later due to non-blocking request.\n");
 	m_out_buf = new Buf();
 	m_out_buf->swap(buf);
 	buf.reset();

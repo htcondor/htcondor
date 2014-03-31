@@ -142,6 +142,9 @@ int DaemonCommandProtocol::doProtocol()
 		case CommandProtocolAcceptUDPRequest:
 			what_next = AcceptUDPRequest();
 			break;
+		case CommandProtocolReadHeader:
+			what_next = ReadHeader();
+			break;
 		case CommandProtocolReadCommand:
 			what_next = ReadCommand();
 			break;
@@ -173,13 +176,17 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 		m_sock_had_no_deadline = true;
 	}
 
-	int reg_rc = daemonCore->Register_Socket(
-		m_sock,
-		m_sock->peer_description(),
-		(SocketHandlercpp)&DaemonCommandProtocol::SocketCallback,
-		WaitForSocketDataString.c_str(),
-		this,
-		ALLOW);
+	int reg_rc = 0;
+	if (!daemonCore->SocketIsRegistered(m_sock))
+	{
+		reg_rc = daemonCore->Register_Socket(
+			m_sock,
+			m_sock->peer_description(),
+			(SocketHandlercpp)&DaemonCommandProtocol::SocketCallback,
+			WaitForSocketDataString.c_str(),
+			this,
+			ALLOW);
+	}
 
 	if(reg_rc < 0) {
 		dprintf(D_ALWAYS, "DaemonCommandProtocol failed to process command from %s because "
@@ -226,7 +233,7 @@ DaemonCommandProtocol::SocketCallback( Stream *stream )
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptTCPRequest()
 {
 
-	m_state = CommandProtocolReadCommand;
+	m_state = CommandProtocolReadHeader;
 
 		// we have just accepted a socket or perhaps been given a
 		// socket from HandleReqAsync().  if there is nothing
@@ -464,14 +471,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: UDP message is from %s.\n", who.c_str());
 		}
 
-		m_state = CommandProtocolReadCommand;
+		m_state = CommandProtocolReadHeader;
 		return CommandProtocolContinue;
 }
 
-// Read the command.  This function will either be followed by
-// Authenticate or ExecCommand(), depending on whether authentication
-// was requested.  Soap requests are also handled here.
-DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand()
+// Read the header.  Soap requests are handled here.
+// If this is not a soap request, pass on to ReadCommand to do the 
+// DC command protocol.
+DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 {
 	CondorError errstack;
 
@@ -545,13 +552,42 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 	}
 #endif // HAVE_EXT_GSOAP
 
-	// read in the command from the sock with a timeout value of just 1 second,
-	// since we know there is already some data waiting for us.
-	m_sock->timeout(1);
-	m_result = m_sock->code(m_req);
+	m_state = CommandProtocolReadCommand;
+	return CommandProtocolContinue;
+}
+
+// Read the command.  This function will either be followed by
+// Authenticate or ExecCommand(), depending on whether authentication
+// was requested.  Soap requests are also handled here.
+DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand()
+{
+	CondorError errstack;
+
+	m_sock->decode();
+
+	if (m_sock->type() == Stream::reli_sock) {
+		// While we know data is waiting for us, the CEDAR 'code' implementation will
+		// read in all the data to a EOM; this can be an arbitrary number of bytes, depending
+		// on which command is used.
+		bool read_would_block;
+		{
+			BlockingModeGuard guard(static_cast<ReliSock*>(m_sock), 1);
+			m_result = m_sock->code(m_req);
+			read_would_block = static_cast<ReliSock*>(m_sock)->clear_read_block_flag();
+		}
+		if (read_would_block)
+		{
+			dprintf(D_NETWORK, "CommandProtocol read would block; waiting for more data to arrive on the socket.\n");
+			return WaitForSocketData();
+		}
+	}
+	else
+	{
+		m_sock->timeout(1);
+		m_result = m_sock->code(m_req);
+	}
 	// For now, lets set a 20 second timeout, so all command handlers are called with
 	// a timeout of 20 seconds on their socket.
-	m_sock->timeout(20);
 	if(!m_result) {
 		char const *ip = m_sock->peer_ip_str();
 		if(!ip) {
@@ -562,6 +598,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		m_result = FALSE;
 		return CommandProtocolFinished;
 	}
+	m_sock->timeout(20);
 
 	if (m_req == DC_AUTHENTICATE) {
 

@@ -127,7 +127,7 @@ extern "C" {
 
 	int param_info_init(const void ** pvdefaults);
 
-	int param_default_integer(const char* param, const char * subsys, int* valid, int* is_long);
+	int param_default_integer(const char* param, const char * subsys, int* valid, int* is_long, int* truncated);
 	int param_default_boolean(const char* param, const char * subsys, int* valid);
 	double param_default_double(const char* param, const char * subsys, int* valid);
 	long long param_default_long(const char* param, const char * subsys, int* valid);

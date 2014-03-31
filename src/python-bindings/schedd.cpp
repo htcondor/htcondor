@@ -168,7 +168,7 @@ struct HistoryIterator
         if (m_count < 0) THROW_EX(StopIteration, "All ads processed");
 
         boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
-        if (!getClassAd(m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to recieve remote ad.");
+        if (!getClassAd(m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to receive remote ad.");
         long long intVal;
         if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
         { // Last ad.
@@ -230,7 +230,7 @@ struct QueryIterator
         if (m_count < 0) THROW_EX(StopIteration, "All ads processed");
 
         boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
-        if (!getClassAd(m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to recieve remote ad.");
+        if (!getClassAd(m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to receive remote ad.");
         if (!m_sock->end_of_message()) THROW_EX(RuntimeError, "Failed to get EOM after ad.");
         long long intVal;
         if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))

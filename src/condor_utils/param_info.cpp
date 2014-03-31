@@ -283,11 +283,12 @@ param_exact_default_string(const char* param)
 }
 
 int
-param_default_integer(const char* param, const char* subsys, int* valid, int* is_long) {
+param_default_integer(const char* param, const char* subsys, int* valid, int* is_long, int* truncated) {
 	int ret = 0;
 #ifdef PARAM_DEFAULTS_SORTED
 	if (valid) *valid = false;
 	if (is_long) *is_long = false;
+	if (truncated) *truncated = false;
 	const param_table_entry_t* p = param_default_lookup(param, subsys);
 	if (p && p->def) {
 		int type = param_entry_get_type(p);
@@ -307,6 +308,7 @@ param_default_integer(const char* param, const char* subsys, int* valid, int* is
 				if (ret != tmp) {
 					if (tmp > INT_MAX) ret = INT_MAX;
 					if (tmp < INT_MIN) ret = INT_MIN;
+					if (truncated) *truncated = true;
 				};
 				if (valid) *valid = true;
 				if (is_long) *is_long = true;
@@ -421,7 +423,6 @@ param_default_double(const char* param, const char * subsys, int* valid) {
 int
 param_range_long(const char* param, long long* min, long long* max) {
 
-#ifdef PARAM_DEFAULTS_SORTED
 	int ret = -1; // not ranged.
 	const param_table_entry_t* p = param_default_lookup(param);
 	if (p && p->def) {
@@ -454,12 +455,6 @@ param_range_long(const char* param, long long* min, long long* max) {
 		}
 	}
 	return ret;
-#else
-	PRAGMA_REMIND("write this!")
-	*min = LLONG_MIN;
-	*max = LLONG_MAX;
-	ret = 0;
-#endif
 }
 
 int
