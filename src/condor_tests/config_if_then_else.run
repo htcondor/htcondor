@@ -23,7 +23,16 @@ use CondorUtils;
 use Condor;
 use Check::SimpleJob;
 
-use Check::SimpleJob;
+# we'll want the condor version for the fuzzy equality test
+# where we check against a version matching the first two digits
+
+my @versioninfo = `condor_version`;
+my $versionkey = "";
+if($versioninfo[0] =~ /^.*?:\s(\d+\.\d+).*/) {
+	$versionkey = $1;
+	#print "************************** Version:$versionkey ****************************\n";
+}
+
 
 Condor::DebugOn;
 Condor::DebugLevel(1);
@@ -308,48 +317,103 @@ foo9 = 3.5
 # ! for all cases
 # notes
 
-	if defined iftestb
-		iftestbd=iftestb defined
+	if defined foo9
+		iftest28=base define works
 	elif defined $(iftest)
-		iftestbd=iftest defined
-	elif ! defined $(iftestb)
-		iftestbd=iftestb not defined
+		iftest28=base define fails
 	else
-		iftestbd=four
+		iftest28=base define fails
+	endif
+
+	if defined foo10
+		iftest29=base define subs fails
+	elif defined $(foo8)
+		iftest29=base define subs works
+	else
+		iftest29=base define subs fails
+	endif
+
+	if defined foo10
+		iftest30=base define subs fails
+	elif defined $(foo10)
+		iftest30=base define subs fails
+	else
+		iftest30=define subs else works
+	endif
+
+	if ! defined foo10
+		iftest31=not base define works
+	elif defined $(foo10)
+		iftest31=not base define fails
+	else
+		iftest31=not base define fails
+	endif
+
+	if defined foo10
+		iftest32=base define fails
+	elif ! defined $(foo10)
+		iftest32=not define sub works
+	else
+		iftest32=not define sub fails
 	endif
 
 # test version
 iftver_test=8.0.6
 if version >= $(iftver_test)
-  iftestver= version >= $(iftver_test)
+  iftest33= version >= dollar iftver_test
 else
-  iftestver= version < $(iftver_test)
+  iftest33= version < dollar iftver_test
+endif
+# expected result is iftestver=version > 8.0.6
+
+if ! version >= $(iftver_test)
+  iftest34= version >= dollar iftver_test
+else
+  iftest34= version < dollar iftver_test
 endif
 # expected result is iftestver=version < 8.0.6
 
 # test version equality
 if version == 8.1.4
-  iftestveris= is 8.1.4
+  iftest35= is 8.1.4
 else
-  iftestveris=is not 8.1.4
+  iftest35=is not 8.1.4
 endif
 # expected result is iftestveris=is not 8.1.4
 
-# test version fuzzy equality
-if version == 8.1
-  iftestverisB= is 8.1
+if !version == 8.1.4
+  iftest36= is 8.1.4
 else
-  iftestverisB=is not 8.1
+  iftest36=is not 8.1.4
 endif
+# expected result is iftestveris=is 8.1.4
+
+# test version fuzzy equality
+# This does not parse because of the perl variable $versionkey
+#if version == $versionkey
+  #iftest37= is 8.1
+#else
+  #iftest37=is not 8.1
+#endif
 # expected result is iftestveris=is 8.1
 
 # test undef==false for references
 if ! $(TESTING_UNDEF)
-   UNDEF_VALUE = 1
+   iftest38=UNDEF_VALUE 1
+else
+   iftest38=UNDEF_VALUE 0
 endif
 # expected result is UNDEV_VALUE=1
 
 ';
+# Create array containing the version fuzzy equality test
+my @fuzzytest = ();
+
+push @fuzzytest, "if version == $versionkey\n";
+push @fuzzytest, "iftest37= is 8.1\n";
+push @fuzzytest, "else\n";
+push @fuzzytest, "iftest37=is not $versionkey\n";
+push @fuzzytest, "endif\n";
 
 my $testname = "configifthenelse";
 
@@ -360,13 +424,37 @@ CondorTest::StartCondorWithParams(
     condor_name => "configifthenelse",
     fresh_local => "TRUE",
     condorlocalsrc => "$configfile",
+	append_condor_config_plus => \@fuzzytest,
 	do_not_start => "TRUE",
 );
 
 print "after config only CONDOR_CONFIG=$ENV{CONDOR_CONFIG}\n";
 
 @toolout = ();
-runCondorTool("condor_config_val -dump if",\@toolout,2,{emit_output=>1});
+# we could see a parse error so in those cases do not run multiple times
+my $res = runCondorTool("condor_config_val -dump if",\@toolout,2,{emit_output=>1,expect_result=>\&ANY});
+
+# scan results. Could have been a parse error in which case we will not 
+# see all the iftest#### values. Look and coult. If we see none, drop
+# the output out and quit with one failure result
+
+my $count = 0;
+
+foreach my $line (@toolout) {
+	if($line =~ /iftest/) {
+		$count += 1;
+	}
+}
+
+if($count == 0) {
+	RegisterResult(0,test_name,$testname);
+	print "Likely a parse error:\n";
+	foreach my $line (@toolout) {
+		print "$line";
+	}
+	CondorTest::EndTest();
+	exit(0);
+}
 
 foreach my $line (@toolout) {
 	CondorUtils::fullchomp($line);
@@ -561,6 +649,83 @@ foreach my $line (@toolout) {
 			RegisterResult(0, test_name, $testname);
 		}
 	# defined checks start here
+	} elsif($line =~ /^(iftest28)\s=\s(\w+\s\w+\s\w+).*$/) {
+		if($2 eq "base define works") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected base define works got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest29)\s=\s(\w+\s\w+\s\w+\s\w+).*$/) {
+		if($2 eq "base define subs works") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected base define subs works got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest30)\s=\s(\w+\s\w+\s\w+\s\w+).*$/) {
+		if($2 eq "define subs else works") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected define subs else works got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest31)\s=\s(\w+\s\w+\s\w+\s\w+).*$/) {
+		if($2 eq "not base define works") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected not base define works got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest32)\s=\s(\w+\s\w+\s\w+\s\w+).*$/) {
+		if($2 eq "not define sub works") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected not define sub works got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest33)\s=\s(version >= dollar iftver_test).*$/) {
+		if($2 eq "version >= dollar iftver_test") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected version >= dollar iftver_test got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest34)\s=\s(version < dollar iftver_test).*$/) {
+		if($2 eq "version < dollar iftver_test") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected version < dollar iftver_test got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest35)\s=\s(is.*?4).*$/) {
+		if($2 eq "is not 8.1.4") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected is not 8.1.4 got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest36)\s=\s(is.*?4).*$/) {
+		if($2 eq "is 8.1.4") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected is 8.1.4 got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest37)\s=\s(is\s\d+\.\d+)$/) {
+		if($2 eq "is $versionkey") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected is $versionkey got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest38)\s=\s(\w+\s\d)$/) {
+		if($2 eq "UNDEF_VALUE 1") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected UNDEF_VALUE 1 got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
 	}
 }
 
