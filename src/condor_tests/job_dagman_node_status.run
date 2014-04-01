@@ -31,6 +31,7 @@ $dagman_args = "-verbose";
 @logfiles = ("job_dagman_node_status.dag.dagman.out");
 
 @outfiles = ("job_dagman_node_status.status");
+# Lines must be found in order.
 @outlines = ("JOB A STATUS_DONE", 
 	"JOB B1 STATUS_DONE",
 	"JOB B2 STATUS_DONE",
@@ -136,14 +137,11 @@ $success = sub
 		while(<OUT>) {
 			chomp();
 			$line = $_;
-			for ( $ind = 0; $ind <= $#outlines; $ind++ ) {
-				$target = $outlines[$ind];
-				if( $line =~ /$target/ ) {
-					CondorTest::debug("$name: $line\n",1);
-					# Remove the target we just found from the array.
-					splice(@outlines, $ind, 1);
-					last;
-				}
+			$target = $outlines[0];
+			if( $line =~ /$target/ ) {
+				CondorTest::debug("$name: $line\n",1);
+				# Remove the target we just found from the array.
+				shift @outlines;
 			}
 		}
 		close(OUT);
