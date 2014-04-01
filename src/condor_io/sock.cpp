@@ -17,8 +17,6 @@
  *
  ***************************************************************/
 
-
-
 #include "sock.h"
 #include "condor_constants.h"
 #include "condor_io.h"
@@ -37,8 +35,8 @@
 #include "condor_config.h"
 
 #if defined(WIN32)
-#include <winsock2.h>
-#include <ws2def.h>
+// <winsock2.h> already included...
+// note: IPPROTO_IPV6 is an enum member, not a #define on WIN32
 #else
 #include <netinet/in.h>
 #endif
@@ -505,7 +503,7 @@ int Sock::assign(condor_protocol proto, SOCKET sockd)
 		// Ensure the IPv6 socket doesn't claim the IPv4 port as well.
 #if defined(SOL_IPV6)
 		int level = SOL_IPV6;
-#elif defined(IPPROTO_IPV6)
+#elif defined(IPPROTO_IPV6)	|| defined(WIN32)
 		int level = IPPROTO_IPV6;
 #else
 #	error "Unable to determine correct level to pass to setsockopt for IPv6 control"
