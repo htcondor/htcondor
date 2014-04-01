@@ -160,12 +160,13 @@ $success = sub
 	while(<OUT>) {
 		chomp();
 		$line = $_;
-		if ($#status_lines >= 0) {
-			$target = $status_lines[0];
-			if( $line =~ /$target/ ) {
-				CondorTest::debug("$name: $line\n",1);
-				# Remove the target we just found from the array.
-				shift @status_lines;
+		$target = $status_lines[0];
+		if( $line =~ /$target/ ) {
+			CondorTest::debug("$name: $line\n",1);
+			# Remove the target we just found from the array.
+			shift @status_lines;
+			if ($#status_lines < 0) {
+				last;
 			}
 		}
 	}

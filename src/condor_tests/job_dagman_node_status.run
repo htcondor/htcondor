@@ -142,6 +142,9 @@ $success = sub
 				CondorTest::debug("$name: $line\n",1);
 				# Remove the target we just found from the array.
 				shift @outlines;
+				if ($#outlines < 0) {
+					last;
+				}
 			}
 		}
 		close(OUT);

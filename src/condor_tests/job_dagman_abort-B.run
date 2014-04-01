@@ -134,6 +134,9 @@ $failure = sub
 			CondorTest::debug("$name: $line\n",1);
 			# Remove the target we just found from the array.
 			shift @statuslines;
+			if ($#statuslines < 0) {
+				last;
+			}
 		}
 	}
 	close(STATUS);

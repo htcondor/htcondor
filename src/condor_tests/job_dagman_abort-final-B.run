@@ -132,6 +132,9 @@ $success = sub
 		$line = $_;
 		for ( $ind = 0; $ind <= $#finallines; $ind++ ) {
 			$target = $finallines[$ind];
+			if ($target eq "") {
+				last;
+			}
 			if( $line =~ /$target/ ) {
 				CondorTest::debug("$name: $line\n",1);
 				# Remove the target we just found from the array.
@@ -166,6 +169,9 @@ $success = sub
 			CondorTest::debug("$name: $line\n",1);
 			# Remove the target we just found from the array.
 			shift @statuslines;
+			if ($#statuslines < 0) {
+				last;
+			}
 		}
 	}
 	close(STATUS);
