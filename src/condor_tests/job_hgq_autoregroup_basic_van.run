@@ -40,7 +40,8 @@ my $pre_execution = 1;
 sub timed_callback {
     if ($pre_execution) {
         # jobs aren't running yet, we can skip this callback.
-		#CondorTest::RegisterTimed($testname, \&timed_callback, 15);
+		CondorTest::debug("timed_callback\n",1);
+		CondorTest::RegisterTimed($testname, \&timed_callback, 15);
         return;
     }
 	CondorTest::debug("timed_callback\n",1);
