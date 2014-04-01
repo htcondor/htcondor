@@ -1,0 +1,575 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Condor;
+use Check::SimpleJob;
+
+use Check::SimpleJob;
+
+Condor::DebugOn;
+Condor::DebugLevel(1);
+
+select STDERR; $|=1;
+select STDOUT; $|=1;
+
+my $firstappend_condor_config = '
+    WANT_SUSPEND = FALSE
+    KILLING_TIMEOUT = 1
+    MachineMaxVacateTime = 5
+    NEGOTIATION_INTERVAL = 5
+	UPDATE_INTERVAL = 5
+    KILL = FALSE
+    START = TRUE
+	NUM_CPUS = 32
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+
+	if 1
+ 		iftest1=one
+	else
+		if 0
+  			iftest1=two
+		else
+  			iftest1=three
+		endif
+	endif
+	#expected result iftest1=one which is undefined
+
+	if 0
+ 		iftest2=one
+	else
+		if 1
+  			iftest2=two
+		else
+  			iftest2=three
+		endif
+	endif
+	#expected result iftest2=two which is undefined
+
+	if 0
+ 		iftest3=one
+	else
+		if 0
+  			iftest3=two
+		else
+  			iftest3=three
+		endif
+	endif
+	#expected result iftest3=three which is undefined
+
+	if yes
+ 		iftest4=one
+	else
+		if no
+  			iftest4=two
+		else
+  			iftest4=three
+		endif
+	endif
+	#expected result iftest4=one which is undefined
+
+	if no
+ 		iftest5=one
+	else
+		if yes
+  			iftest5=two
+		else
+  			iftest5=three
+		endif
+	endif
+	#expected result iftest5=two which is undefined
+
+	if no
+ 		iftest6=one
+	else
+		if no
+  			iftest6=two
+		else
+  			iftest6=three
+		endif
+	endif
+	#expected result iftest6=three which is undefined
+
+	if true
+ 		iftest7=one
+	else
+		if false
+  			iftest7=two
+		else
+  			iftest7=three
+		endif
+	endif
+	#expected result iftest7=one which is undefined
+
+	if false
+ 		iftest8=one
+	else
+		if true
+  			iftest8=two
+		else
+  			iftest8=three
+		endif
+	endif
+	#expected result iftest8=two which is undefined
+
+	if false
+ 		iftest9=one
+	else
+		if false
+  			iftest9=two
+		else
+  			iftest9=three
+		endif
+	endif
+	#expected result iftest9=three which is undefined
+
+	if ! 0
+ 		iftest10=one
+	else
+		if ! 1
+  			iftest10=two
+		else
+  			iftest10=three
+		endif
+	endif
+	#expected result iftest10=one which is undefined
+
+	if ! 1
+ 		iftest11=one
+	else
+		if ! 0
+  			iftest11=two
+		else
+  			iftest11=three
+		endif
+	endif
+	#expected result iftest11=two which is undefined
+
+	if ! 1
+ 		iftest12=one
+	else
+		if ! 1
+  			iftest12=two
+		else
+  			iftest12=three
+		endif
+	endif
+	#expected result iftest12=three which is undefined
+
+	if ! no
+ 		iftest13=one
+	else
+		if ! yes
+  			iftest13=two
+		else
+  			iftest13=three
+		endif
+	endif
+	#expected result iftest13=one which is undefined
+
+	if !yes
+ 		iftest14=one
+	else
+		if  ! no
+  			iftest14=two
+		else
+  			iftest14=three
+		endif
+	endif
+	#expected result iftest14=two which is undefined
+
+	if ! yes
+ 		iftest15=one
+	else
+		if ! yes
+  			iftest15=two
+		else
+  			iftest15=three
+		endif
+	endif
+	#expected result iftest15=three which is undefined
+
+	if ! false
+ 		iftest16=one
+	else
+		if !  true
+  			iftest16=two
+		else
+  			iftest16=three
+		endif
+	endif
+	#expected result iftest16=one which is undefined
+
+	if ! true
+ 		iftest17=one
+	else
+		if ! false
+  			iftest17=two
+		else
+  			iftest17=three
+		endif
+	endif
+	#expected result 1ftest17=two which is undefined
+
+	if ! true
+ 		iftest18=one
+	else
+		if ! true
+  			iftest18=two
+		else
+  			iftest18=three
+		endif
+	endif
+	#expected result iftest18=three which is undefined
+
+# if  $(foo)    legal if foo 0 1 true false yes no empty
+foo1 = 0
+foo2 = 1
+foo3 = false
+foo4 = true
+foo5 = no
+foo6 = yes
+foo7 =
+foo8 = 7
+foo9 = 3.5
+
+	if !$(foo1)
+		iftest19 = 0 works
+	else
+		iftest19 = 0 fails
+	endif
+
+	if $(foo2)
+		iftest20 = 1 works
+	else
+		iftest20 = 1 fails
+	endif
+
+	if ! $(foo3)
+		iftest21 = false works
+	else
+		iftest21 = false fails
+	endif
+
+	if  $(foo4)
+		iftest22 = true works
+	else
+		iftest22 = true fails
+	endif
+
+	if ! $(foo5)
+		iftest23 = no works
+	else
+		iftest23 = no fails
+	endif
+
+	if $(foo6)
+		iftest24 = yes works
+	else
+		iftest24 = yes fails
+	endif
+
+	if ! $(foo7)
+		iftest25 = undefined works
+	else
+		iftest25 = undefined fails
+	endif
+
+	if $(foo8)
+		iftest26 = number works
+	else
+		iftest26 = number fails
+	endif
+
+	if $(foo9)
+		iftest27 = float works
+	else
+		iftest27 = float fails
+	endif
+
+# ! for all cases
+# notes
+
+	if defined iftestb
+		iftestbd=iftestb defined
+	elif defined $(iftest)
+		iftestbd=iftest defined
+	elif ! defined $(iftestb)
+		iftestbd=iftestb not defined
+	else
+		iftestbd=four
+	endif
+
+# test version
+iftver_test=8.0.6
+if version >= $(iftver_test)
+  iftestver= version >= $(iftver_test)
+else
+  iftestver= version < $(iftver_test)
+endif
+# expected result is iftestver=version < 8.0.6
+
+# test version equality
+if version == 8.1.4
+  iftestveris= is 8.1.4
+else
+  iftestveris=is not 8.1.4
+endif
+# expected result is iftestveris=is not 8.1.4
+
+# test version fuzzy equality
+if version == 8.1
+  iftestverisB= is 8.1
+else
+  iftestverisB=is not 8.1
+endif
+# expected result is iftestveris=is 8.1
+
+# test undef==false for references
+if ! $(TESTING_UNDEF)
+   UNDEF_VALUE = 1
+endif
+# expected result is UNDEV_VALUE=1
+
+';
+
+my $testname = "configifthenelse";
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"configifthenelse");
+print "local config file:$configfile\n";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "configifthenelse",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+print "after config only CONDOR_CONFIG=$ENV{CONDOR_CONFIG}\n";
+
+@toolout = ();
+runCondorTool("condor_config_val -dump if",\@toolout,2,{emit_output=>1});
+
+foreach my $line (@toolout) {
+	CondorUtils::fullchomp($line);
+	if($line =~ /^(iftest1)\s=\s(\w+).*$/) {
+		if($2 eq "one") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected one got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest4)\s=\s(\w+).*$/) {
+		if($2 eq "one") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected one got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest7)\s=\s(\w+).*$/) {
+		if($2 eq "one") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected one got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest10)\s=\s(\w+).*$/) {
+		if($2 eq "one") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected one got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest13)\s=\s(\w+).*$/) {
+		if($2 eq "one") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected one got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest16)\s=\s(\w+).*$/) {
+		if($2 eq "one") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected one got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest2)\s=\s(\w+).*$/) {
+		if($2 eq "two") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected two got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest5)\s=\s(\w+).*$/) {
+		if($2 eq "two") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected two got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest8)\s=\s(\w+).*$/) {
+		if($2 eq "two") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected two got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest11)\s=\s(\w+).*$/) {
+		if($2 eq "two") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected two got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest14)\s=\s(\w+).*$/) {
+		if($2 eq "two") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected two got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest17)\s=\s(\w+).*$/) {
+		if($2 eq "two") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected two got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest3)\s=\s(\w+).*$/) {
+		if($2 eq "three") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected three got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest6)\s=\s(\w+).*$/) {
+		if($2 eq "three") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected three got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest9)\s=\s(\w+).*$/) {
+		if($2 eq "three") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected three got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest12)\s=\s(\w+).*$/) {
+		if($2 eq "three") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected three got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest15)\s=\s(\w+).*$/) {
+		if($2 eq "three") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected three got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest18)\s=\s(\w+).*$/) {
+		if($2 eq "three") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected three got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	# if $(foo) checks start here
+	} elsif($line =~ /^(iftest19)\s=\s(\w+\s\w+).*$/) {
+		if($2 eq "0 works") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected 0 works got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest20)\s=\s(\w+\s\w+).*$/) {
+		if($2 eq "1 works") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected 1 works got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest21)\s=\s(\w+\s\w+).*$/) {
+		if($2 eq "false works") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected false works got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest22)\s=\s(\w+\s\w+).*$/) {
+		if($2 eq "true works") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected true works got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest23)\s=\s(\w+\s\w+).*$/) {
+		if($2 eq "no works") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected no works got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest24)\s=\s(\w+\s\w+).*$/) {
+		if($2 eq "yes works") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected yes works got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest25)\s=\s(\w+\s\w+).*$/) {
+		if($2 eq "undefined works") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected undefined works got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest26)\s=\s(\w+\s\w+).*$/) {
+		if($2 eq "number works") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected number works got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest27)\s=\s(\w+\s\w+).*$/) {
+		if($2 eq "float works") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected float works got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	# defined checks start here
+	}
+}
+
+
+
+print "TRUE:$toolout[0]\n";
+CondorTest::RegisterResult(1, "test_name", $testname);
+
+
+CondorTest::EndTest();
+
+exit $success;
