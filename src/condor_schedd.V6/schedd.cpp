@@ -11291,8 +11291,8 @@ Scheduler::Init()
 		if ( !shadowCommandrsock || !shadowCommandssock ) {
 			EXCEPT("Failed to create Shadow Command socket");
 		}
-		// Note: BindAnyCommandPort() is in daemon core
-		if ( !BindAnyCommandPort(shadowCommandrsock,shadowCommandssock)) {
+		// Note: BindAnyLocalCommandPort() is in daemon core
+		if ( !BindAnyLocalCommandPort(shadowCommandrsock,shadowCommandssock)) {
 			EXCEPT("Failed to bind Shadow Command socket");
 		}
 		if ( !shadowCommandrsock->listen() ) {

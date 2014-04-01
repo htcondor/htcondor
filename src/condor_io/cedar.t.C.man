@@ -46,6 +46,7 @@ int main()
 
 	charString = (char *)malloc(100);
 
+	mySock.assign(CP_IPV4);
 	result = mySock.set_os_buffers(3000000, false);
 	cout << "buffer size set to " << result << endl;
 

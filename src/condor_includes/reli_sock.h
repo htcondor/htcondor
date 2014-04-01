@@ -130,9 +130,9 @@ public:
     ///
 	int listen();
     /// FALSE means this is an incoming connection
-	inline int listen(int p) { if (!bind(FALSE,p)) return FALSE; return listen(); }
+	int listen(condor_protocol proto, int port);
     /// FALSE means this is an incoming connection
-	inline int listen(char *s) { if (!bind(FALSE,s)) return FALSE; return listen(); }
+	int listen(char *s);
 	bool isListenSock() { return _state == sock_special && _special_state == relisock_listen; }
 
     ///
