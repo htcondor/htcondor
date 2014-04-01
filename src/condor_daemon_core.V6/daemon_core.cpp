@@ -8428,6 +8428,25 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		InitCommandSockets(command_port, dc_socks, m_wants_dc_udp_self, true);
 	}
 
+	// TODO: This block should really be in the dc_socks loop below.
+	// Problem 1: It's getting a global answer, not individual answers
+	//            like it should.
+	// Problem 2: (Deal breaker): currently if you're using shared ports
+	//            dc_socks is empty, so the loop never fires.  We never
+	//            log the addresses. And condor_who, which reads the logs,
+	//            becomes sad, breaking tests.
+	// If you're fixing this, look for "TODO publicNetworkIpAddr goes here"
+	{
+		char const *addr = publicNetworkIpAddr();
+		if( addr ) {
+			dprintf( D_ALWAYS,"DaemonCore: command socket at %s\n", addr );
+		}
+		char const *priv_addr = privateNetworkIpAddr();
+		if( priv_addr ) {
+			dprintf( D_ALWAYS,"DaemonCore: private command socket at %s\n", priv_addr );
+		}
+	}
+
 	for(SockPairVec::iterator it = dc_socks.begin();
 		it != dc_socks.end(); it++) {
 
@@ -8476,14 +8495,9 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		if( it->has_safesock() ) {
 			Register_Command_Socket( it->ssock().get() );
 		}
-		char const *addr = publicNetworkIpAddr();
-		if( addr ) {
-			dprintf( D_ALWAYS,"DaemonCore: command socket at %s\n", addr );
-		}
-		char const *priv_addr = privateNetworkIpAddr();
-		if( priv_addr ) {
-			dprintf( D_ALWAYS,"DaemonCore: private command socket at %s\n", priv_addr );
-		}
+
+		// "TODO publicNetworkIpAddr goes here"
+		// See above, just before the loop
 
 		if( it->has_relisock() && m_shared_port_endpoint ) {
 				// SOAP-enabled daemons may have both a shared port and
