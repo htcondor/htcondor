@@ -405,6 +405,18 @@ else
 endif
 # expected result is UNDEV_VALUE=1
 
+if $(STARTER_INITIAL_UPDATE_INTERVAL)
+	iftest39 = STARTER_INITIAL_UPDATE_INTERVAL found
+else
+	iftest39 = STARTER_INITIAL_UPDATE_INTERVAL NOT found
+endif
+
+if defined STARTER_INITIAL_UPDATE_INTERVAL
+	iftest40 = STARTER_INITIAL_UPDATE_INTERVAL defined
+else
+	iftest40 = STARTER_INITIAL_UPDATE_INTERVAL NOT defined
+endif
+
 ';
 # Create array containing the version fuzzy equality test
 my @fuzzytest = ();
@@ -724,6 +736,20 @@ foreach my $line (@toolout) {
 			RegisterResult(1, test_name, $testname);
 		} else {
 			print "$1 failed expected UNDEF_VALUE 1 got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest39)\s=\s(STARTER.*?found)$/) {
+		if($2 eq "STARTER_INITIAL_UPDATE_INTERVAL found") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected STARTER_INITIAL_UPDATE_INTERVAL found got $2\n";
+			RegisterResult(0, test_name, $testname);
+		}
+	} elsif($line =~ /^(iftest40)\s=\s(STARTER.*?defined)$/) {
+		if($2 eq "STARTER_INITIAL_UPDATE_INTERVAL defined") {
+			RegisterResult(1, test_name, $testname);
+		} else {
+			print "$1 failed expected STARTER_INITIAL_UPDATE_INTERVAL defined got $2\n";
 			RegisterResult(0, test_name, $testname);
 		}
 	}
