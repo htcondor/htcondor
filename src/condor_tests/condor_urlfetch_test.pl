@@ -9,13 +9,14 @@ use Check::SimpleJob;
 use strict;
 use warnings;
 
-my $conf = 'URLTEST = 123456 ' #The local config file
+my $conf = 'URLTEST = 123456 '; #The local config file
 
 
 
-my $fh = File::Temp->new();
-my $fname = $fh->filename;
-$fh->print($conf);
+my $fileh;
+$fileh = File::Temp->new();
+my $fname = $fileh->filename;
+$fileh->print($conf);
 
 my $forkpid = fork();
 if($forkpid == 0)
@@ -30,8 +31,8 @@ if($forkpid == 0)
   close FILE;
 
   my @convaldump = ();
-  runCondorTool("condor_config_val -config", \@foobar, 2, {emit_output => 1});
-  my @lines = split /\n/, $str;
+  runCondorTool("condor_config_val -config", \@convaldump, 2, {emit_output => 1});
+  my @lines = split /\n/, @convaldump;
   my $configpath = trim($lines[1]); #$configpath now contains the address of the conf file
   
   my $oldconffh;
@@ -51,7 +52,7 @@ if($forkpid == 0)
   open($fetchedfh, "$(LOCAL_DIR)/condor_config_file_cache");
   
   use File::Compare;
-  if(compare($fh, $fetchedfh) != 0)
+  if(compare($fileh, $fetchedfh) != 0)
   {
     print "Error in downloading the config file";
     exit("Error in downloading the config file");
