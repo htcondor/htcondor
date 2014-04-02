@@ -18,7 +18,7 @@
  ***************************************************************/
 
 #ifndef _HISTORYFILEFINDER_H_
-#define _HISTORYFILEDINFER_H_
+#define _HISTORYFILEFINDER_H_
 
 extern char **findHistoryFiles(const char *paramName, int *numHistoryFiles);
 
