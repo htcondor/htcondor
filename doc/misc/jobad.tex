@@ -633,9 +633,9 @@ It can be used to determine if a job should be released or not.
 reason that a job was put on hold.
 
 %% Don't mess with the column widths, as they currently fit within the pdf,
-%% even if they look stupid in the html
+%% even if they look stupid in the html.
 \begin{center}
-\begin{table}[hbt]
+\begin{table}[p!]
 \begin{tabular}{|p{2cm}p{9cm}|p{4cm}} \hline
 \emph{Integer Code} & \emph{Reason for Hold} & \emph{HoldReasonSubCode} \\ \hline \hline
 1 & The user put the job on hold with \Condor{hold}.  \\ \hline
@@ -684,6 +684,9 @@ reason that a job was put on hold.
 \end{tabular}
 \end{table}
 \end{center}
+
+%% so we're at the top of a float place for the table of HoldReasonCode:
+\clearpage
 
 %%% ClassAd attribute: HoldReasonSubCode
 \index{ClassAd job attribute!HoldReasonSubCode}
