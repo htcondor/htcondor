@@ -742,7 +742,8 @@ reaper(Service *, int pid, int status)
 		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d died on signal %d (%s)\n",
 				pid, WTERMSIG(status), daemonCore->GetExceptionString(status));
 	} else {
-		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d exited with status %d\n",
+		int d_stat = status ? D_FAILURE : D_ALWAYS;
+		dprintf(d_stat|D_ALWAYS, "Starter pid %d exited with status %d\n",
 				pid, WEXITSTATUS(status));
 	}
 

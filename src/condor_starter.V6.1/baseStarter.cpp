@@ -3036,6 +3036,10 @@ void
 CStarter::PublishToEnv( Env* proc_env )
 {
 	ASSERT(proc_env);
+
+		// Write BATCH_SYSTEM environment variable to indicate HTCondor is the batch system.
+	proc_env->SetEnv("BATCH_SYSTEM","HTCondor");
+
 	if( pre_script ) {
 		pre_script->PublishToEnv( proc_env );
 	}
