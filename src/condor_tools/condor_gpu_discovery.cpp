@@ -1110,12 +1110,12 @@ main( int argc, const char** argv)
 #if 0 
 		result = nvmlDeviceGetTemperature(device,NVML_TEMPERATURE_BOARD,&tuint);
 		if ( result == NVML_SUCCESS ) {
-			printf("%sBoardTempF=%u\n",prefix,tuint);
+			printf("%sBoardTempC=%u\n",prefix,tuint);
 		}
 #endif
 		result = nvmlDeviceGetTemperature(device,NVML_TEMPERATURE_GPU,&tuint);
 		if ( result == NVML_SUCCESS ) {
-			printf("%sDieTempF=%u\n",prefix,tuint);
+			printf("%sDieTempC=%u\n",prefix,tuint);
 		}
 
 		unsigned long long eccCounts;
