@@ -2916,7 +2916,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		return;
 	}
 
-#if 1 //TEMPTEMP
+#if 0 //TEMPTEMP
 		//
 		// Print header.
 		//
@@ -3032,7 +3032,6 @@ Dag::DumpNodeStatus( bool held, bool removed )
 				(unsigned long)endTime, timeStr );
 #endif //TEMPTEMP
 #if 1 //TEMPTEMP
-{//TEMPTEMP
 	fprintf( outfile, "[\n" );
 	fprintf( outfile, "  Type = \"DagStatus\";\n" );
 
@@ -3058,21 +3057,6 @@ Dag::DumpNodeStatus( bool held, bool removed )
 				(unsigned long)startTime, timeStr.Value() );
 
 		//
-		// Print next update time.
-		//
-	time_t nextTime;
-	if ( FinishedRunning( true ) || removed ) {
-		nextTime = 0;
-		timeStr = "none";
-	} else {
-		nextTime = endTime + _minStatusUpdateTime;
-		timeStr = ctime( &nextTime );
-		timeStr.chomp();
-	}
-	fprintf( outfile, "  NextUpdate = %lu; /* %s */\n",
-				(unsigned long)nextTime, timeStr.Value() );
-
-		//
 		// Print overall DAG status.
 		//
 	Job::status_t dagStatus = Job::STATUS_SUBMITTED;
@@ -3096,8 +3080,10 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		dagStatus = Job::STATUS_ERROR;
 		statusNote = "removed";
 	}
+	MyString statusStr = Job::status_t_names[dagStatus];
+	statusStr.trim();
 	fprintf( outfile, "  DagStatus = %d; /* %s (%s) */\n", dagStatus,
-				Job::status_t_names[dagStatus], statusNote );
+				statusStr.Value(), statusNote );
 
 	fprintf( outfile, "  NodesTotal = %d;\n", NumNodes( true ) );
 	fprintf( outfile, "  NodesDone = %d;\n", NumNodesDone( true ) );
@@ -3141,7 +3127,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		}
 
 		fprintf( outfile, "  Node = \"%s\";\n", node->GetJobName() );
-		MyString statusStr = Job::status_t_names[status];
+		statusStr = Job::status_t_names[status];
 		statusStr.trim();
 		fprintf( outfile, "  NodeStatus = %d; /* %s */\n", status,
 					statusStr.Value() );
@@ -3157,7 +3143,31 @@ Dag::DumpNodeStatus( bool held, bool removed )
 
 		fprintf( outfile, "]\n" );
 	}
-}//TEMPTEMP
+
+		//
+		// Print end information.
+		//
+	fprintf( outfile, "[\n" );
+	fprintf( outfile, "  Type = \"StatusEnd\";\n" );
+
+	time_t endTime = time( NULL );
+	timeStr = ctime( &endTime );
+	timeStr.chomp();
+	fprintf( outfile, "  EndTime = %lu; /* %s */\n",
+				(unsigned long)endTime, timeStr.Value() );
+
+	time_t nextTime;
+	if ( FinishedRunning( true ) || removed ) {
+		nextTime = 0;
+		timeStr = "none";
+	} else {
+		nextTime = endTime + _minStatusUpdateTime;
+		timeStr = ctime( &nextTime );
+		timeStr.chomp();
+	}
+	fprintf( outfile, "  NextUpdate = %lu; /* %s */\n",
+				(unsigned long)nextTime, timeStr.Value() );
+	fprintf( outfile, "]\n" );
 #endif //TEMPTEMP
 
 	fclose( outfile );

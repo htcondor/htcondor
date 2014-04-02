@@ -29,19 +29,28 @@ $dagman_args = "-verbose";
 @outfiles = ("job_dagman_abort-B-node.A", "job_dagman_abort-B-node.B");
 $statusfile = "job_dagman_abort-B.status";
 # Lines must be found in order.
-@statuslines = ("JOB A STATUS_DONE",
-	"JOB B STATUS_DONE",
-	"JOB C STATUS_ERROR",
-	"JOB D STATUS_ERROR     \\(removed\\)",
-	"Nodes total: 4",
-	"Nodes done: 2",
-	"Nodes pre: 0",
-	"Nodes queued: 0",
-	"Nodes post: 0",
-	"Nodes ready: 0",
-	"Nodes un-ready: 0",
-	"Nodes failed: 2",
-	"DAG status: STATUS_ERROR     \\(aborted\\)");
+@statuslines = ("DagStatus = 6;.*STATUS_ERROR \\(aborted\\)",
+    "NodesTotal = 4;",
+    "NodesDone = 2;",
+    "NodesPre = 0;",
+    "NodesQueued = 1;",
+    "NodesPost = 0;",
+    "NodesReady = 0;",
+    "NodesUnready = 0;",
+    "NodesFailed = 1;",
+    "JobProcsHeld = 0;",
+    "JobProcsIdle = 0;",
+	"Node = \"A\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"C\";",
+	"NodeStatus = 6;.*STATUS_ERROR",
+	"Node = \"D\";",
+	# We really should see this job getting removed by the abort, but
+	# at this point we don't look for any more events after we abort.
+	# wenger 2014-04-02
+	"NodeStatus = 3;.*STATUS_SUBMITTED");
 
 my $killedchosen = 0;
 

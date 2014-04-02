@@ -54,10 +54,13 @@ $scriptfile = "job_dagman_final-A.scripts.out";
 			"Node A_C Post");
 
 $statusfile = "job_dagman_final-A.status";
-@status_lines = ("JOB A_A STATUS_DONE",
-	"JOB A_B STATUS_DONE",
-	"JOB A_C STATUS_DONE",
-	"DAG status: STATUS_DONE");
+@status_lines = ("DagStatus = 5;.*STATUS_DONE \\(success\\)",
+	"Node = \"A_A\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"A_B\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"A_C\";",
+	"NodeStatus = 5;.*STATUS_DONE");
 
 my $killedchosen = 0;
 

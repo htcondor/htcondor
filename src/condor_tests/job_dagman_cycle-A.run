@@ -28,18 +28,23 @@ $dagman_args = "-verbose";
 
 $statusfile = "job_dagman_cycle-A.status";
 # Lines must be found in order.
-@statuslines = ("JOB A STATUS_DONE",
-	"JOB B STATUS_NOT_READY",
-	"JOB C STATUS_NOT_READY",
-	"Nodes total: 3",
-	"Nodes done: 1",
-	"Nodes pre: 0",
-	"Nodes queued: 0",
-	"Nodes post: 0",
-	"Nodes ready: 0",
-	"Nodes un-ready: 2",
-	"Nodes failed: 0",
-	"DAG status: STATUS_ERROR     \\(cycle\\)");
+@statuslines = ("DagStatus = 6;.*STATUS_ERROR \\(cycle\\)",
+    "NodesTotal = 3;",
+    "NodesDone = 1;",
+    "NodesPre = 0;",
+    "NodesQueued = 0;",
+    "NodesPost = 0;",
+    "NodesReady = 0;",
+    "NodesUnready = 2;",
+    "NodesFailed = 0;",
+    "JobProcsHeld = 0;",
+    "JobProcsIdle = 0;",
+	"Node = \"A\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY",
+	"Node = \"C\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY");
 
 my $killedchosen = 0;
 
