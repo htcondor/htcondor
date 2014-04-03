@@ -955,6 +955,102 @@ a hibernating machine should be woken up, for example, by \Condor{rooster}.
 
 \end{description}
 
+For machines with user-defined or custom resource specifications,
+including GPUs, 
+the following attributes will be in the ClassAd for each slot.
+In the name of the attribute,
+\Attr{<name>} is substituted with the configured name given to the resource.
+
+\begin{description}
+
+\index{ClassAd machine attribute (for a user-defined resource)!Assigned<name>}
+\item[\AdAttr{Assigned<name>}:] A space separated list that 
+identifies which of these resources are currently assigned to slots.
+
+\index{ClassAd machine attribute (for a user-defined resource)!Offline<name>}
+\item[\AdAttr{Offline<name>}:] A space separated list that
+indicates which of these resources is unavailable for match making.
+
+\index{ClassAd machine attribute (for a user-defined resource)!Total<name>}
+\item[\AdAttr{Total<name>}:] An integer quantity of the total number of
+these resources.
+
+\end{description}
+
+For machines with custom resource specifications that include GPUs,
+the following attributes may be in the ClassAd for each slot,
+depending on the value of configuration variable
+\Macro{MACHINE\_RESOURCE\_INVENTORY\_GPUs}
+and what GPUs are detected.
+In the name of the attribute,
+\Attr{<name>} is substituted with the \Arg{prefix string} 
+assigned for the GPU.
+
+\begin{description}
+
+\index{ClassAd machine attribute (for GPU resources)!<name>BoardTempC}
+\item[\AdAttr{<name>BoardTempC}:] For NVIDIA devices,
+a dynamic attribute representing the temperature in Celsius of 
+the board containing the GPU.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>Capability}
+\item[\AdAttr{<name>Capability}:] The CUDA-defined capability for the GPU.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>ClockMhz}
+\item[\AdAttr{<name>ClockMhz}:] For CUDA or Open CL devices,
+the integer clocking speed of the GPU in MHz.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>ComputeUnits}
+\item[\AdAttr{<name>ComputeUnits}:] For CUDA or Open CL devices,
+the integer number of compute units per GPU.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>CoresPerCU}
+\item[\AdAttr{<name>CoresPerCU}:] For CUDA devices,
+the integer number of cores per compute unit.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>DeviceName}
+\item[\AdAttr{<name>DeviceName}:] For CUDA or Open CL devices,
+a string representing the manufacturer's proprietary device name.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>DieTempC}
+\item[\AdAttr{<name>DieTempC}:] For NVIDIA devices,
+a dynamic attribute representing the temperature in Celsius of the GPU die.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>DriverVersion}
+\item[\AdAttr{<name>DriverVersion}:] For CUDA devices,
+a string representing the manufacturer's driver version.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>ECCEnabled}
+\item[\AdAttr{<name>ECCEnabled}:] For CUDA or Open CL devices,
+a boolean value representing whether error correction is enabled.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>EccErrorsDoubleBit}
+\item[\AdAttr{<name>EccErrorsDoubleBit}:] For NVIDIA devices,
+a count of the number of double bit errors detected for this GPU.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>EccErrorsSingleBit}
+\item[\AdAttr{<name>EccErrorsSingleBit}:] For NVIDIA devices,
+a count of the number of single bit errors detected for this GPU.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>FanSpeedPct}
+\item[\AdAttr{<name>FanSpeedPct}:] For NVIDIA devices,
+a value between 0 and 100 (inclusive), used to represent the level
+of fan operation as percentage of full fan speed. 
+
+\index{ClassAd machine attribute (for GPU resources)!<name>GlobalMemoryMb}
+\item[\AdAttr{<name>GlobalMemoryMb}:] For CUDA or Open CL devices,
+the quantity of memory in Mbytes in this GPU.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>OpenCLVersion}
+\item[\AdAttr{<name>OpenCLVersion}:] For Open CL devices,
+a string representing the manufacturer's version number.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>RuntimeVersion}
+\item[\AdAttr{<name>RuntimeVersion}:] For CUDA devices,
+a string representing the manufacturer's version number.
+
+\end{description}
+
 Finally, the single attribute, 
 \Attr{CurrentTime}, is defined by the ClassAd
 environment.

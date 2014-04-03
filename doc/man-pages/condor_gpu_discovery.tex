@@ -41,18 +41,23 @@ attribute names.
   }
   \OptItem{\Opt{-properties}} {
     In addition to the \Attr{DetectedGPUs} attribute, display 
-    standard CUDA attributes 
+    standard CUDA attributes.
+    Each of these attribute names will have a \Arg{prefix string}
+    at the beginning of its name.
+    For a host with more than one of the same GPU type,
+    those attribute values that are the same across all of the GPUs
+    will not have an integer value in the \Arg{prefix string}.
+    The attributes are
     \Attr{Capability}, \Attr{DeviceName}, \Attr{DriverVersion}, 
     \Attr{ECCEnabled}, \Attr{GlobalMemoryMb}, and \Attr{RuntimeVersion}.
     The displayed standard Open CL attributes are
     \Attr{DeviceName}, \Attr{ECCEnabled}, \Attr{OpenCLVersion}, and
     \Attr{GlobalMemoryMb}.
-    Note that for a host with more than one of the same GPU type,
-    those attribute values that are the same across all of the GPUs
-    will not have an integer value in the prefix string.
   }
   \OptItem{\Opt{-extra}} {
     Display the additional attributes of
+    Each of these attribute names will have a \Arg{prefix string}
+    at the beginning of its name.
     \Attr{ClockMhz}, \Attr{ComputeUnits}, and \Attr{CoresPerCU}
     for a CUDA device,
     and
@@ -61,7 +66,9 @@ attribute names.
   \OptItem{\Opt{-dynamic}} {
     Display attributes of NVIDIA devices that change values as the GPU 
     is working.
-    These are \Attr{FanSpeedPct}, \Attr{BoardTempF}, \Attr{DieTempF}, 
+    Each of these attribute names will have a \Arg{prefix string}
+    at the beginning of its name.
+    These are \Attr{FanSpeedPct}, \Attr{BoardTempC}, \Attr{DieTempC}, 
     \Attr{EccErrorsSingleBit}, and \Attr{EccErrorsDoubleBit}.
   }
   \OptItem{\Opt{-mixed}} {
@@ -81,10 +88,10 @@ attribute names.
     If this option is not specified, the resource tag is \AdStr{GPUs},
     resulting in attribute name \Attr{DetectedGPUs}.
   }
-  \OptItem{\OptArg{-prefix}{string}}{
-    When naming attributes, use \Arg{string} as the prefix.
+  \OptItem{\OptArg{-prefix}{str}}{
+    When naming attributes, use \Arg{str} as the \Arg{prefix string}.
     When this option is not specified, 
-    the string is either \Expr{CUDA} or \Expr{OCL}.
+    the \Arg{prefix string} is either \Expr{CUDA} or \Expr{OCL}.
   }
   \OptItem{\Opt{-simulate:D,N}} {
     For testing purposes, assume that N devices of type D were detected.
