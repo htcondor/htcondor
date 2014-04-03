@@ -1048,12 +1048,15 @@ debug_close_file(struct DebugFileInfo* it)
 static void 
 debug_close_all_files()
 {
-	FILE *debug_file_ptr = NULL;
-	std::vector<DebugFileInfo>::iterator it;
+	if ( ! DebugLogs) return;
 
+	std::vector<DebugFileInfo>::iterator it;
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		debug_file_ptr = (*it).debugFP;
+		if (it->outputTarget != FILE_OUT)
+			continue;
+
+		FILE *debug_file_ptr = (*it).debugFP;
 		if(!debug_file_ptr)
 			continue;
 		int close_result = fclose_wrapper( debug_file_ptr, FCLOSE_RETRY_MAX );
