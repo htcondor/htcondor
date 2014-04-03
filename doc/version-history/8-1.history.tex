@@ -146,8 +146,8 @@ changed to C to correctly indicate Celsius. For instance \Attr{CUDA<n>DieTempF}
 has been changed to \Attr{CUDA<n>DieTempC}.
 \Ticket{4294}
 
-\item Fixed a bug that caused the \Condor{startd} to report the
-following when a plugin couldn't be run:
+\item The \Condor{startd} no longer generates this erroneous message
+when a plugin can not be run:
 \begin{verbatim}
 Warning: Starter pid XXX is not associated with a claim.
 A slot may fail to transition to Idle.
