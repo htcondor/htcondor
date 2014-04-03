@@ -140,10 +140,11 @@ when the previous value was defined by the code,
 rather than within a configuration file.
 \Ticket{4256}
 
-\item The temperature attributes returned by \Condor{gpu\_discovery} contained
-values in Celsius, but ended in F to indicate Fahrenheit. The endings have been
-changed to C to correctly indicate Celsius. For instance \Attr{CUDA<n>DieTempF}
-has been changed to \Attr{CUDA<n>DieTempC}.
+\item The temperature attributes output by the \Condor{gpu\_discovery} tool
+contained values represented in Celsius, while
+the names of these attributes ended in the letter 'F,' implying Fahrenheit.
+The names of these attributes have been changed to end with the letter 'C.' 
+For instance \Attr{<name>DieTempF} has been changed to \Attr{<name>DieTempC}.
 \Ticket{4294}
 
 \item The \Condor{startd} no longer generates this erroneous message
