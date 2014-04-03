@@ -113,6 +113,7 @@ DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #define execv _execv
 #define putenv _putenv
 #define itoa _itoa
+#define strtoll _strtoi64
 #define utime _utime
 #define utimbuf _utimbuf
 #define R_OK 4
