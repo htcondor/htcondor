@@ -96,6 +96,8 @@ public:
 		*/
 	virtual bool PublishUpdateAd( ClassAd* ad );
 
+protected:
+
 	virtual bool SupportsPIDNamespace() { return true;}
 
 	virtual std::string CgroupSuffix() { return "";}

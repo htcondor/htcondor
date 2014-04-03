@@ -786,9 +786,16 @@ Claim::beginActivation( time_t now )
 	}
 	c_universe = univ;
 
-	if( (univ == CONDOR_UNIVERSE_STANDARD) || 
-			(univ == CONDOR_UNIVERSE_VM)) {
-		c_last_pckpt = (int)now;
+	int wantCheckpoint = 0;
+	switch( univ ) {
+		case CONDOR_UNIVERSE_VANILLA:
+			c_ad->LookupBool( "WantCheckpoint", wantCheckpoint );
+			if( ! wantCheckpoint ) { break; }
+		case CONDOR_UNIVERSE_VM:
+		case CONDOR_UNIVERSE_STANDARD:
+			c_last_pckpt = (int)now;
+		default:
+			break;
 	}
 
 	resmgr->startd_stats.total_job_starts += 1;
