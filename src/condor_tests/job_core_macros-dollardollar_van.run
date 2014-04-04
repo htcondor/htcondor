@@ -68,8 +68,8 @@ $success = sub
 		if($machinemem eq $lines[0])
 		{
 			CondorTest::debug("Good macro and condor_status agree --$machinemem--!\n",1);
-			CondorTest::debug("$lines[4] should match too\n",1);
-			if( $lines[4] =~ /^\s*MEMORY\s+=\s+(\d+)$/ )
+			CondorTest::debug("$lines[5] should match too\n",1);
+			if( $lines[5] =~ /^\s*MEMORY\s+=\s+(\d+).*$/ )
 			{
 				CondorTest::debug("Memory = $1\n",1);
 				if( $1 eq $machinemem)
