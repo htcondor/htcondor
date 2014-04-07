@@ -396,10 +396,7 @@ if (BUILD_TESTING)
 	condor_pl_test(cmd_condor_submit_dashspool "Look at condor_submit -spool" "core;quick;full")
 	condor_pl_test(config_if_then_else "config file ifdefs" "core;quick;full")
 	condor_pl_test(job_massive_config "LARGE config file" "core;quick;full")
-	
-	if(NOT SOLARIS AND NOT DARWIN)
 	condor_pl_test(cmd_gpu_discovery "gpu discovery file" "core;quick;full")
-	endif
 
 	if(LINUX)
 		condor_pl_test(job_cpu_affinity_check "ensure Matlog has only matches" "core;quick;full")
