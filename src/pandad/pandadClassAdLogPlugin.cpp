@@ -462,6 +462,11 @@ std::string PandadClassAdLogPlugin::generateAttributesAlwaysSent( ClassAd * jobA
 		if( ignore != NULL && ignore == * i ) { continue; }
 		std::string value;
 		ExprTree * expr = jobAd->Lookup( * i );
+		if( expr == NULL ) {
+			dprintf( D_ALWAYS, "PANDA: You requested that attribute '%s' always be sent, but it doesn't exist in this ad.  You may need to set PANDA_REQUIRED_JOB_ATTIBUTES or adjust PANDA_JOB_FILTER.  Sending null, instead.\n", i->c_str() );
+			aas += "\t" + *i + "\t" + "null";
+			continue;
+		}
 		classad::ClassAdUnParser unparser;
 		unparser.Unparse( value, expr );
 		aas += "\t" + *i + "\t" + value;
