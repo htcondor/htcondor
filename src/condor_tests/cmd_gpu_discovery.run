@@ -165,39 +165,39 @@ if($configres != 1) {
 	RegisterResult(0,test_name,$testname);
 }
 
-my $localfig = "";
-foreach my $line (@configlines) {
-	fullchomp($line);
-	if($line =~ /^\s+?(.*config\.local).*$/) {
-		$localfig = $1;
-		print "our local config file is:$localfig\n";
-	}
-}
-
-my $newconfiglocal = "$localfig" . ".new";
-my $oldconfiglocal = "$localfig" . ".old";
-
-open(CF,"<$localfig") or die "Failed to open:$localfig :$1\n";
-open(NF,">$newconfiglocal") or die "Failed to open:$newconfiglocal :$1\n";
-while (<CF>) {
-	print NF "$_";
-}
-print NF "OFFLINE_MACHINE_RESOURCE_GPUs=CUDA2\n";
-close(NF);
-close(CF);
-
-system("mv $localfig $oldconfiglocal");
-system("mv $newconfiglocal $localfig");
-
-#my $res = system('condor_config_val -set "OFFLINE_MACHINE_RESOURCE_GPUS=CUDA2"');
-
-#if($res == 0) {
-	#print "Correctly took one gpu offline\n";
-	#RegisterResult(1,test_name,$testname);
-#} else {
-	#print "Failed to take one gpu offline\n";
-	#RegisterResult(1,test_name,$testname);
+#my $localfig = "";
+#foreach my $line (@configlines) {
+#	fullchomp($line);
+#	if($line =~ /^\s+?(.*config\.local).*$/) {
+#		$localfig = $1;
+#		print "our local config file is:$localfig\n";
+#	}
 #}
+
+#my $newconfiglocal = "$localfig" . ".new";
+#my $oldconfiglocal = "$localfig" . ".old";
+
+#open(CF,"<$localfig") or die "Failed to open:$localfig :$1\n";
+#open(NF,">$newconfiglocal") or die "Failed to open:$newconfiglocal :$1\n";
+#while (<CF>) {
+#	print NF "$_";
+#}
+#print NF "OFFLINE_MACHINE_RESOURCE_GPUs=CUDA2\n";
+#close(NF);
+#close(CF);
+
+#system("mv $localfig $oldconfiglocal");
+#system("mv $newconfiglocal $localfig");
+
+my $res = system('condor_config_val -startd -set "OFFLINE_MACHINE_RESOURCE_GPUS=CUDA2"');
+
+if($res == 0) {
+	print "Correctly requested one gpu offline\n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Failed to request one gpu offline\n";
+	RegisterResult(1,test_name,$testname);
+}
 
 #$res = system("condor_config_val -startd OFFLINE_MACHINE_RESOURCE_GPUS");
 
