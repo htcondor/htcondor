@@ -153,13 +153,11 @@ class match_rec: public ClaimIdParser
 
     int     		status;
 	shadow_rec*		shadowRec;
-	int				alive_countdown;
 	int				num_exceptions;
 	int				entered_current_status;
 	ClassAd*		my_match_ad;
 	char*			user;
 	char*			pool;		// negotiator hostname if flocking; else NULL
-	bool			sent_alive_interval;
 	bool            is_dedicated; // true if this match belongs to ded. sched.
 	bool			allocated;	// For use by the DedicatedScheduler
 	bool			scheduled;	// For use by the DedicatedScheduler

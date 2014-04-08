@@ -357,7 +357,6 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 	status = M_UNCLAIMED;
 	entered_current_status = (int)time(0);
 	shadowRec = NULL;
-	alive_countdown = 0;
 	num_exceptions = 0;
 	if( match ) {
 		my_match_ad = new ClassAd( *match );
@@ -375,7 +374,6 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 	} else {
 		pool = NULL;
 	}
-	sent_alive_interval = false;
 	this->is_dedicated = is_dedicated_arg;
 	allocated = false;
 	scheduled = false;
