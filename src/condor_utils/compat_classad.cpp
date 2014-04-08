@@ -678,7 +678,7 @@ ClassAd::~ClassAd()
 }
 
 ClassAd::
-ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
+ClassAd( FILE *file, const char *delimiter, int &isEOF, int&error, int &empty )
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
@@ -700,7 +700,10 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 
 	int index;
 	MyString buffer;
-	int			delimLen = strlen( delimitor );
+	int	delimLen = 0;
+	if( delimiter ) {
+		delimLen = strlen( delimiter );
+	}
 
 	empty = TRUE;
 
@@ -713,7 +716,7 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 		}
 
 			// did we hit the delimitor?
-		if ( strncmp( buffer.Value(), delimitor, delimLen ) == 0 ) {
+		if ( delimiter && strncmp( buffer.Value(), delimiter, delimLen ) == 0 ) {
 				// yes ... stop
 			isEOF = feof( file );
 			error = 0;
@@ -741,7 +744,7 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 					buffer.Value());
 				// read until delimitor or EOF; whichever comes first
 			buffer = "";
-			while ( strncmp( buffer.Value(), delimitor, delimLen ) &&
+			while ( (delimiter && strncmp( buffer.Value(), delimiter, delimLen )) &&
 					!feof( file ) ) {
 				buffer.readLine( file, false );
 			}

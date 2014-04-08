@@ -34,8 +34,7 @@ class VanillaCheckpointProc : public VanillaProc {
 		virtual void PublishToEnv( Env * env );
 
 	private:
-		// Does it make sense to use the OOM killer?
-
+		// TO DO.
 		StarterStatistics m_statistics;
 
 		// With no default constructor, we can't hold a VMProc directly
