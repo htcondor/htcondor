@@ -1553,6 +1553,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		}
 
 		m_result = daemonCore->CallCommandHandler(m_req,m_sock,false /*do not delete m_sock*/,true /*do check for payload*/,sec_time,0);
+
+		// update dc stats for the time spent in this command handler
+		daemonCore->dc_stats.AddRuntime(getCommandStringSafe(m_req), handler_start_time.combined());
 	}
 
 	return CommandProtocolFinished;

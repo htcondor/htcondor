@@ -950,6 +950,8 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 		nCommand++;
 	}
 
+	dc_stats.New("Command", getCommandStringSafe(command), AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+
 	// Found a blank entry at index i. Now add in the new data.
 	comTable[i].num = command;
 	comTable[i].handler = handler;
