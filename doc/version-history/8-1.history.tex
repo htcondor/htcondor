@@ -30,7 +30,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Event log files for jobs may now be optionally cached by the \Condor{schedd} 
+to improve logging performance.  Log file caching may be enabled by configuring
+\Macro{USERLOG\_FILE\_CACHE\_MAX} to a size greater than zero.
+\Ticket{4040}
 
 \end{itemize}
 
