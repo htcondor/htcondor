@@ -3760,10 +3760,12 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 
 			// We're going to try to start this reconnect job, so remove it
 			// from the reconnectLater list
-			removeFromList(&jobsToReconnectLater, &jobsToAllocate);
+			if (machinesToAllocate.Number() > 0) {
+				removeFromList(&jobsToReconnectLater, &jobsToAllocate);
 
-			createAllocations(&machinesToAllocate, &jobsToAllocate, 
+				createAllocations(&machinesToAllocate, &jobsToAllocate, 
 							  last_id.cluster, nprocs, true);
+			}
 		
 			nprocs = 0;
 			jobsToAllocate.Rewind();
