@@ -14,8 +14,8 @@ my $conf = 'URLTEST = 123456 '; #The local config file
 
 
 my $fileh;
-$fileh = File::Temp->new();
-my $fname = $fileh->filename;
+$fileh = open FILE, "+>", "defaultlocal.txt" or die;
+my $fname = "defaultlocal.txt";
 $fileh->print($conf);
 
 my $forkpid = fork();
