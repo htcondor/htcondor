@@ -1070,7 +1070,7 @@ VMProc::Ckpt()
 		return false;
 	}
 
-	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
+	if( strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) {
 		if( !m_is_vacate_ckpt ) {
 			// Xen doesn't support periodic checkpoint
 			return false;
@@ -1147,6 +1147,14 @@ VMProc::CkptDone(bool success)
 	if( m_is_vacate_ckpt ) {
 		// This is a vacate checkpoint.
 		// So we don't need to call continue.
+		return;
+	}
+
+	if( strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == MATCH ) {
+		// We need to Continue() past the "hard suspend" that took the
+		// checkpoint.  This will automagically return the VM to its
+		// original state, whatever it was.
+		Continue();
 		return;
 	}
 

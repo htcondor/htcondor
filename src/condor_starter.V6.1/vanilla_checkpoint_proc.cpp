@@ -76,6 +76,7 @@ int VanillaCheckpointProc::StartJob() {
 	vmClassAd->CopyAttribute( ATTR_PROC_ID, ATTR_PROC_ID, JobAd );
 	vmClassAd->CopyAttribute( ATTR_JOB_CMD, ATTR_JOB_CMD, JobAd );
 	vmClassAd->CopyAttribute( ATTR_USER, ATTR_USER, JobAd );
+	vmClassAd->CopyAttribute( ATTR_TRANSFER_INTERMEDIATE_FILES, ATTR_TRANSFER_INTERMEDIATE_FILES, JobAd );
 	vmProc = new VMProc( vmClassAd );
 
 
@@ -162,16 +163,21 @@ bool VanillaCheckpointProc::Ckpt() {
 		return true;
 	}
 
-	//
-	// VM-assisted of checkpointing of vanilla jobs is hard.
-	//
-	return false;
+	return vmProc->Ckpt();
 }
 
 void VanillaCheckpointProc::CkptDone( bool success ) {
 	dprintf( D_FULLDEBUG, "Entering VanillaCheckpointProc::CkptDone()\n" );
-	// VanillaProc::CkptDone( success );
-	// vmProc->CkptDone( success );
+
+	int userLevelCheckpoint = 0;
+	JobAd->LookupBool( "UserLevelCheckpoint", userLevelCheckpoint );
+	if( userLevelCheckpoint ) {
+		// This presently does nothing, but in case that changes...
+		VanillaProc::CkptDone( success );
+		return;
+	}
+
+	vmProc->CkptDone( success );
 }
 
 bool VanillaCheckpointProc::ShutdownGraceful() {

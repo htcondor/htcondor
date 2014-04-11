@@ -2059,19 +2059,6 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 bool
 JICShadow::beginFileTransfer( void )
 {
-	//
-	// If we're doing vm-assisted checkpointing (and this is the physical
-	// starter), don't do file transfer.  (For now, we assume pre-staged
-	// images.  Eventually, we'll want to rewrite the job ad to transfer
-	// only the VM disk image(s).)
-	//
-	int wantCheckpoint = 0, userLevelCheckpoint = 0;
-	job_ad->LookupBool( "WantCheckpoint", wantCheckpoint );
-	job_ad->LookupBool( "UserLevelCheckpoint", userLevelCheckpoint );
-	if( wantCheckpoint && ! userLevelCheckpoint ) {
-		return false;
-	}
-
 		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
 		// Only rename the executable if it is transferred.
@@ -2100,6 +2087,26 @@ JICShadow::beginFileTransfer( void )
 			dprintf( D_ALWAYS, "Can't determine shadow version for FileTransfer!\n" );
 		} else {
 			filetrans->setPeerVersion( *shadow_version );
+		}
+
+		//
+		// If we're doing vm-assisted checkpointing (and this is the physical
+		// starter), don't do file transfer.  (For now, we assume pre-staged
+		// images.  Eventually, we'll want to rewrite the job ad to transfer
+		// only the VM disk image(s).)
+		//
+		// We can't do this earlier because transferring checkpoints depends
+		// on the filetrans object having been initialized.
+		//
+		int wantCheckpoint = 0, userLevelCheckpoint = 0;
+		job_ad->LookupBool( "WantCheckpoint", wantCheckpoint );
+		job_ad->LookupBool( "UserLevelCheckpoint", userLevelCheckpoint );
+		if( wantCheckpoint && ! userLevelCheckpoint ) {
+			//
+			// Having intermediate file transfer actually occurs presently
+			// requires that DownloadFiles() have been called, which is silly.
+			//
+			// return false;
 		}
 
 		if( ! filetrans->DownloadFiles(false) ) { // do not block
