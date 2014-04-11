@@ -1524,8 +1524,10 @@ class DaemonCore : public Service
       #endif
 
        stats_entry_recent<Probe> PumpCycle;   // count of pump cycles plus sum of cycle time with min/max/avg/std 
+       stats_entry_sum_ema_rate<int> Commands;
 
        StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names
+       classy_counted_ptr<stats_ema_config> ema_config;	// Exponential moving average config for this pool.
 
 	   time_t InitTime;            // last time we init'ed the structure
 	   time_t RecentStatsTickTime; // time of the latest recent buffer Advance
@@ -1548,6 +1550,8 @@ class DaemonCore : public Service
        void* New(const char * category, const char * name, int as);
        void AddToProbe(const char * name, int val);
        void AddToProbe(const char * name, int64_t val);
+       void AddToSumEmaRate(const char * name, int val);
+       void AddToAnyProbe(const char * name, int val);
        stats_entry_recent<Probe> * AddSample(const char * name, int as, double val);
        double AddRuntime(const char * name, double before); // returns current time.
        double AddRuntimeSample(const char * name, int as, double before);

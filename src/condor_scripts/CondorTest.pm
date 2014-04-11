@@ -2597,6 +2597,11 @@ sub LoadWhoData
   	  #print "setting alive state to:$alive\n";
 	  $self->{is_running} = $alive;
   }
+  sub GetCondorName
+  {
+      my $self = shift;
+	  return($self->{name});
+  }
   sub GetCondorAlive
   {
       my $self = shift;
@@ -2780,6 +2785,17 @@ sub LoadWhoData
       my $self = shift;
       return $self->{collector_addr};
   }
+}
+
+sub PersonalBackUp 
+{
+	my $config = shift;
+	my $retval = 0;
+	my $condor_instance = GetPersonalCondorWithConfig($config);
+	my $condorname = $condor_instance->GetCondorName();
+	$retval = CondorPersonal::NewIsRunningYet($config,$condorname);
+	# this function returns 1 for good and 0 for bad
+	return($retval);
 }
 
 sub ListAllPersonalCondors

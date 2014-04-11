@@ -1738,6 +1738,32 @@ of the subsystem corresponding to the daemon.
   When \Expr{True}, writes to the user's job event log are sync-ed to
   disk before releasing the lock.
 
+\label{param:UserlogFileCacheMax}
+\item[\Macro{USERLOG\_FILE\_CACHE\_MAX}]
+  An integer value that is zero by default.
+  When configured to a value greater than zero, open job event log files 
+  are cached in the \Condor{schedd}, and the size of this cache is 
+  limited to the configured value.  Caching open user log files can 
+  improve the performance of the \Condor{schedd}, particularly when 
+  multiple jobs share a log file, and/or log files are being accessed
+  over a networked file system (NFS).  Larger values support caching of
+  a greater number of individual log files (i.e. scenarios where there
+  are many jobs, and little sharing of log files between jobs).
+
+\label{param:UserlogFileCacheClearInterval}
+\item[\Macro{USERLOG\_FILE\_CACHE\_CLEAR\_INTERVAL}]
+  An integer value that is \Expr{60} by default.
+  This macro applies when log file caching is enabled, by configuring 
+  \Macro{USERLOG\_FILE\_CACHE\_MAX} greater than zero.
+  Defines the minimum number of seconds that the log file cache is
+  allowed to persist before it is periodically cleared.  Periodic
+  cache clearing is intended to robustly prevent log files from being held
+  open when they are no longer being used by jobs in the queue.
+  Individual log files are also cleared when the \Condor{schedd} detects
+  that no jobs are currently using them, so this variable may be set
+  higher if the administrator determines that a longer cache duration
+  may yield higher performance.
+
 \label{param:EventLogCountEvents}
 \item[\Macro{EVENT\_LOG\_COUNT\_EVENTS}]
   A boolean value that is \Expr{False} by default.

@@ -804,6 +804,13 @@ private:
 	std::map<std::string, ClassAd *> m_unclaimedLocalStartds;
 	std::map<std::string, ClassAd *> m_claimedLocalStartds;
 
+    int m_userlog_file_cache_max;
+    time_t m_userlog_file_cache_clear_last;
+    int m_userlog_file_cache_clear_interval;
+    WriteUserLog::log_file_cache_map_t m_userlog_file_cache;
+    void userlog_file_cache_clear(bool force = false);
+    void userlog_file_cache_erase(const int& cluster, const int& proc);
+
 	// State for the history helper queue.
 	std::vector<HistoryHelperState> m_history_helper_queue;
 	unsigned m_history_helper_max;

@@ -1,5 +1,6 @@
 use Cwd 'abs_path';
 use File::Basename;
+use File::Temp;
 use lib dirname( abs_path $0 );
 use CondorTest;
 use CondorPersonal;
@@ -21,20 +22,31 @@ $fileh->print($conf);
 my $forkpid = fork();
 if($forkpid == 0)
 {
-  system("$(LOCAL_DIR)/python miniserver.py &");
+  system("python miniserver.py &");
 } else 
 {
   sleep(1);
   local $/=undef;
-  open FILE, "$(LOCALDIR)/pythonurl";
-  my $url = <FILE> . "/" . $fname;
+
+  #open FILE, "(pythonurl)";
+  #my $url = <FILE> . "/" . $fname;
+  print "URL:$url";
+  system("ls $url");
+
   close FILE;
 
+  my $configpath = "";
   my @convaldump = ();
   runCondorTool("condor_config_val -config", \@convaldump, 2, {emit_output => 1});
   my @lines = split /\n/, @convaldump;
-  my $configpath = trim($lines[1]); #$configpath now contains the address of the conf file
-  
+  foreach my $line (@lines) {
+  	if($line =~ /condor_config/) {
+		fullchomp($line);
+		$configpath = $line;
+		last;
+	}
+  }
+
   my $oldconffh;
   open($oldconffh, '>>', $configpath) or die "Can't open $configpath";
   # May add save old config file in condor_urlfetch_test.saveme, doesn't seem
