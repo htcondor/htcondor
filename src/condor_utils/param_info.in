@@ -5838,6 +5838,16 @@ friendly_name=Size of Recent Statistics Window
 review=?
 tags=scheduler
 
+[DCSTATISTICS_TIMESPANS]
+default=4m:240 20m:1200 4h:14400
+version=8.1.6
+type=string
+reconfig=true
+customization=seldom
+friendly_name=List of timespans for reporting DC exponential moving average statistics
+review=?
+tags=schedd
+
 [DCSTATISTICS_WINDOW_SECONDS]
 default=
 type=string
