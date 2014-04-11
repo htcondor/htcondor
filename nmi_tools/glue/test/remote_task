@@ -155,7 +155,8 @@ out("About to run batch_test.pl");
 # Now that we stash all debug messages, we'll only dump them all
 # when the test fails. This will be debugs at all levels.
 #system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated -v");
-system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated");
+#system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated");
+system("$perl_exe batch_test.pl -d $compiler -t $testname");
 my $batchteststatus = $?;
 
 # figure out here if the test passed or failed.  
