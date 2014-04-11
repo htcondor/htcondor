@@ -339,7 +339,7 @@ class Scheduler : public Service
 	friend	void	job_prio(ClassAd *);
 	friend  int		find_idle_local_jobs(ClassAd *);
 	friend	int		updateSchedDInterval( ClassAd* );
-    friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false);
+    friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
 	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify, bool log );
