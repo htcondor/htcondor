@@ -26,7 +26,7 @@ if($forkpid == 0)
 {
   sleep(1);
   local $/=undef;
-  open FILE, "($(LOCALDIR)/pythonurl";
+  open FILE, "$(LOCALDIR)/pythonurl";
   my $url = <FILE> . "/" . $fname;
   close FILE;
 
