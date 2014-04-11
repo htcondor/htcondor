@@ -1,0 +1,21 @@
+
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+    WANT_SUSPEND = FALSE
+    NEGOTIATION_INTERVAL = 5
+    NUM_CPUS = 6
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"XXXXX");
+
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
+
+CondorTest::StartCondorWithParams(
+    condor_name => "XXXXX",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+RegisterResult(1, test_name, $testname);
+EndTest();
