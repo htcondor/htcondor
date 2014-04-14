@@ -59,20 +59,28 @@ $statusfile = "job_dagman_final-I.status";
 			"  FAILED_COUNT=0",
 			"  RETURN=0");
 
-@statuslines = ("JOB I_A STATUS_DONE",
-	"JOB I_B STATUS_DONE",
-	"JOB I_C1 STATUS_NOT_READY",
-	"JOB I_C2 STATUS_PRERUN",
-	"JOB I_D STATUS_DONE",
-	"Nodes total: 5",
-	"Nodes done: 3",
-	"Nodes pre: 1",
-	"Nodes queued: 0",
-	"Nodes post: 0",
-	"Nodes ready: 0",
-	"Nodes un-ready: 1",
-	"Nodes failed: 0",
-	"DAG status: STATUS_DONE      \\(success\\)");
+# Lines must be found in order.
+@statuslines = ("DagStatus = 5;.*STATUS_DONE \\(success\\)",
+    "NodesTotal = 5;",
+    "NodesDone = 3;",
+    "NodesPre = 1;",
+    "NodesQueued = 0;",
+    "NodesPost = 0;",
+    "NodesReady = 0;",
+    "NodesUnready = 1;",
+    "NodesFailed = 0;",
+    "JobProcsHeld = 0;",
+    "JobProcsIdle = 0;",
+	"Node = \"I_A\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"I_B\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"I_C1\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY",
+	"Node = \"I_C2\";",
+	"NodeStatus = 2;.*STATUS_PRERUN",
+	"Node = \"I_D\";",
+	"NodeStatus = 5;.*STATUS_DONE");
 
 my $killedchosen = 0;
 
@@ -180,12 +188,12 @@ $success = sub
 	while(<STATUS>) {
 		chomp();
 		$line = $_;
-		for ( $ind = 0; $ind <= $#statuslines; $ind++ ) {
-			$target = $statuslines[$ind];
-			if( $line =~ /$target/ ) {
-				CondorTest::debug("$name: $line\n",1);
-				# Remove the target we just found from the array.
-				splice(@statuslines, $ind, 1);
+		$target = $statuslines[0];
+		if( $line =~ /$target/ ) {
+			CondorTest::debug("$name: $line\n",1);
+			# Remove the target we just found from the array.
+			shift @statuslines;
+			if ($#statuslines < 0) {
 				last;
 			}
 		}

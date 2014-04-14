@@ -28,20 +28,29 @@ $dagman_args = "-verbose";
 
 @outfiles = ("job_dagman_abort-final-B-node.A", "job_dagman_abort-final-B-node.B");
 $statusfile = "job_dagman_abort-final-B.status";
-@statuslines = ("JOB A STATUS_DONE",
-	"JOB B STATUS_DONE",
-	"JOB C STATUS_ERROR",
-	"JOB D STATUS_NOT_READY",
-	"JOB E STATUS_DONE",
-	"Nodes total: 5",
-	"Nodes done: 3",
-	"Nodes pre: 0",
-	"Nodes queued: 0",
-	"Nodes post: 0",
-	"Nodes ready: 0",
-	"Nodes un-ready: 1",
-	"Nodes failed: 1",
-	"DAG status: STATUS_DONE      \\(success\\)");
+# Lines must be found in order.
+@statuslines = ("DagStatus = 5;.*STATUS_DONE \\(success\\)");
+@statuslines = ("DagStatus = 5;.*STATUS_DONE \\(success\\)",
+    "NodesTotal = 5;",
+    "NodesDone = 3;",
+    "NodesPre = 0;",
+    "NodesQueued = 0;",
+    "NodesPost = 0;",
+    "NodesReady = 0;",
+    "NodesUnready = 1;",
+    "NodesFailed = 1;",
+    "JobProcsHeld = 0;",
+    "JobProcsIdle = 0;",
+	"Node = \"A\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"C\";",
+	"NodeStatus = 6;.*STATUS_ERROR",
+	"Node = \"D\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY",
+	"Node = \"E\";",
+	"NodeStatus = 5;.*STATUS_DONE");
 $finalfile = "job_dagman_abort-final-B-nodeE.out";
 @finallines = ("DAG_STATUS=3",
 	"FAILED_COUNT=1",
@@ -131,6 +140,9 @@ $success = sub
 		$line = $_;
 		for ( $ind = 0; $ind <= $#finallines; $ind++ ) {
 			$target = $finallines[$ind];
+			if ($target eq "") {
+				last;
+			}
 			if( $line =~ /$target/ ) {
 				CondorTest::debug("$name: $line\n",1);
 				# Remove the target we just found from the array.
@@ -160,12 +172,12 @@ $success = sub
 	while(<STATUS>) {
 		chomp();
 		$line = $_;
-		for ( $ind = 0; $ind <= $#statuslines; $ind++ ) {
-			$target = $statuslines[$ind];
-			if( $line =~ /$target/ ) {
-				CondorTest::debug("$name: $line\n",1);
-				# Remove the target we just found from the array.
-				splice(@statuslines, $ind, 1);
+		$target = $statuslines[0];
+		if( $line =~ /$target/ ) {
+			CondorTest::debug("$name: $line\n",1);
+			# Remove the target we just found from the array.
+			shift @statuslines;
+			if ($#statuslines < 0) {
 				last;
 			}
 		}
