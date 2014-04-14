@@ -2001,6 +2001,55 @@ param_with_default_abort(const char *name, int abort)
 	return expanded_val;
 }
 
+#define PARAM_PARSE_ERR_REASON_ASSIGN 1
+#define PARAM_PARSE_ERR_REASON_EVAL   2
+
+#if defined WIN32 && ! defined strtoll
+#define strtoll _strtoi64
+#endif
+
+bool
+string_is_long_param(
+	const char * string,
+	long long& result,
+	ClassAd *me /* = NULL*/,
+	ClassAd *target /*= NULL*/,
+	const char * name /*=NULL*/,
+	int* err_reason /*=NULL*/) // return 0 or PARAM_PARSE_ERR_REASON_*
+{
+	char *endptr = NULL;
+	result = strtoll(string,&endptr,10);
+
+	ASSERT(endptr);
+	if( endptr != string ) {
+		while( isspace(*endptr) ) {
+			endptr++;
+		}
+	}
+	bool valid = (endptr != string && *endptr == '\0');
+
+	if( !valid ) {
+		// For efficiency, we first tried to read the value as a
+		// simple literal.  Since that didn't work, now try parsing it
+		// as an expression.
+		ClassAd rhs;
+		if( me ) {
+			rhs = *me;
+		}
+		if ( ! name) { name = "CondorLong"; }
+
+		if( !rhs.AssignExpr( name, string ) ) {
+			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_ASSIGN;
+		} else if( !rhs.EvalInteger(name,target,result) ) {
+			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_EVAL;
+		} else {
+			valid = true;
+		}
+	}
+
+	return valid;
+}
+
 /*
 ** Return the integer value associated with the named paramter.
 ** This version returns true if a the parameter was found, or false
@@ -2050,9 +2099,8 @@ param_integer( const char *name, int &value,
 	}
 	
 	int result;
-	long long_result;
+	long long long_result;
 	char *string;
-	char *endptr = NULL;
 
 	ASSERT( name );
 	string = param( name );
@@ -2065,6 +2113,30 @@ param_integer( const char *name, int &value,
 		return false;
 	}
 
+#if 1
+	int err_reason = 0;
+	bool valid = string_is_long_param(string, long_result, me, target, name, &err_reason);
+	if ( ! valid) {
+		if (err_reason == PARAM_PARSE_ERR_REASON_ASSIGN) {
+			EXCEPT("Invalid expression for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "an integer expression in the range %d to %d "
+				   "(default %d).",
+				   name,string,min_value,max_value,default_value);
+		}
+
+		if (err_reason == PARAM_PARSE_ERR_REASON_EVAL) {
+			EXCEPT("Invalid result (not an integer) for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "an integer expression in the range %d to %d "
+				   "(default %d).",
+				   name,string,min_value,max_value,default_value);
+		}
+		long_result = default_value;
+	}
+	result = long_result;
+#else
+	char *endptr = NULL;
 	long_result = strtol(string,&endptr,10);
 	result = long_result;
 
@@ -2101,6 +2173,7 @@ param_integer( const char *name, int &value,
 		}
 		long_result = result;
 	}
+#endif
 
 	if( (int)result != long_result ) {
 		EXCEPT( "%s in the condor configuration is out of bounds for"
@@ -2165,9 +2238,54 @@ char* param_or_except(const char *attr)
 	return tmp;
 }
 
+/*
+ * Parse and/or evaluate the string and return a [double precision] floating
+ * point value parameter.If the value is not a valid float, then return
+ * the default_value argument. the return value indicates whether the string
+ * contained a valid float or expression that evaluated to a float.
+ */
+bool string_is_double_param(
+	const char * string,
+	double& result,
+	ClassAd *me /*= NULL*/,
+	ClassAd *target /* = NULL*/,
+	const char * name /*=NULL*/,
+	int* err_reason /*=NULL*/)
+{
+	char *endptr = NULL;
+	result = strtod(string,&endptr);
+
+	ASSERT(endptr);
+	if( endptr != string ) {
+		while( isspace(*endptr) ) {
+			endptr++;
+		}
+	}
+	bool valid = (endptr != string && *endptr == '\0');
+	if( !valid ) {
+		// For efficiency, we first tried to read the value as a
+		// simple literal.  Since that didn't work, now try parsing it
+		// as an expression.
+		ClassAd rhs;
+		float float_result = 0.0;
+		if( me ) {
+			rhs = *me;
+		}
+		if ( ! name) { name = "CondorDouble"; }
+		if ( ! rhs.AssignExpr( name, string )) {
+			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_ASSIGN;
+		}
+		else if ( ! rhs.EvalFloat(name,target,float_result) ) {
+			if (err_reason) *err_reason = PARAM_PARSE_ERR_REASON_EVAL;
+		} else {
+			valid = true;
+		}
+	}
+	return valid;
+}
 
 /*
- * Return the [single precision] floating point value associated with the named
+ * Return the [double precision] floating point value associated with the named
  * parameter.  If the value is not defined or not a valid float, then return
  * the default_value argument.  The min_value and max_value arguments are
  * optional and default to DBL_MIN and DBL_MAX.
@@ -2199,7 +2317,6 @@ param_double( const char *name, double default_value,
 	
 	double result;
 	char *string;
-	char *endptr = NULL;
 
 	ASSERT( name );
 	string = param( name );
@@ -2210,6 +2327,29 @@ param_double( const char *name, double default_value,
 		return default_value;
 	}
 
+#if 1
+	int err_reason = 0;
+	bool valid = string_is_double_param(string, result, me, target, name, &err_reason);
+	if( !valid ) {
+		if (err_reason == PARAM_PARSE_ERR_REASON_ASSIGN) {
+			EXCEPT("Invalid expression for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "a numeric expression in the range %lg to %lg "
+				   "(default %lg).",
+				   name,string,min_value,max_value,default_value);
+		}
+
+		if (err_reason == PARAM_PARSE_ERR_REASON_EVAL) {
+			EXCEPT("Invalid result (not a number) for %s (%s) "
+				   "in condor configuration.  Please set it to "
+				   "a numeric expression in the range %lg to %lg "
+				   "(default %lg).",
+				   name,string,min_value,max_value,default_value);
+		}
+		result = default_value;
+	}
+#else
+	char *endptr = NULL;
 	result = strtod(string,&endptr);
 
 	ASSERT(endptr);
@@ -2245,6 +2385,7 @@ param_double( const char *name, double default_value,
 		}
 		result = float_result;
 	}
+#endif
 
 	if( result < min_value ) {
 		EXCEPT( "%s in the condor configuration is too low (%s)."
@@ -2287,6 +2428,62 @@ param_boolean_crufty( const char *name, bool default_value )
 }
 
 
+// Parse a string and return true if it is a valid boolean
+bool string_is_boolean_param(const char * string, bool& result, ClassAd *me /*= NULL*/, ClassAd *target /*= NULL*/, const char *name /*= NULL*/)
+{
+	bool valid = true;
+
+	const char *endptr = string;
+	if( strncasecmp(endptr,"true",4) == 0 ) {
+		endptr+=4;
+		result = true;
+	}
+	else if( strncasecmp(endptr,"1",1) == 0 ) {
+		endptr+=1;
+		result = true;
+	}
+	else if( strncasecmp(endptr,"false",5) == 0 ) {
+		endptr+=5;
+		result = false;
+	}
+	else if( strncasecmp(endptr,"0",1) == 0 ) {
+		endptr+=1;
+		result = false;
+	}
+	else {
+		valid = false;
+	}
+
+	while( isspace(*endptr) ) {
+		endptr++;
+	}
+	if( *endptr != '\0' ) {
+		valid = false;
+	}
+
+	if( !valid ) {
+		// For efficiency, we first tried to read the value as a
+		// simple literal.  Since that didn't work, now try parsing it
+		// as an expression.
+		int int_value = result;
+		ClassAd rhs;
+		if( me ) {
+			rhs = *me;
+		}
+		if ( ! name) { name = "CondorBool"; }
+
+		if( rhs.AssignExpr( name, string ) &&
+			rhs.EvalBool(name,target,int_value) )
+		{
+			result = (int_value != 0);
+			valid = true;
+		}
+	}
+
+	return valid;
+}
+
+
 /*
 ** Return the boolean value associated with the named paramter.
 ** The parameter value is expected to be set to the string
@@ -2315,9 +2512,8 @@ param_boolean( const char *name, bool default_value, bool do_log,
 		}
 	}
 
-	bool result=false;
+	bool result = default_value;
 	char *string;
-	char *endptr;
 	bool valid = true;
 
 	ASSERT( name );
@@ -2330,6 +2526,11 @@ param_boolean( const char *name, bool default_value, bool do_log,
 		}
 		return default_value;
 	}
+
+#if 1
+	valid = string_is_boolean_param(string, result, me, target, name);
+#else
+	char *endptr;
 
 	endptr = string;
 	if( strncasecmp(endptr,"true",4) == 0 ) {
@@ -2376,6 +2577,7 @@ param_boolean( const char *name, bool default_value, bool do_log,
 			valid = true;
 		}
 	}
+#endif
 
 	if( !valid ) {
 		EXCEPT( "%s in the condor configuration  is not a valid boolean (\"%s\")."

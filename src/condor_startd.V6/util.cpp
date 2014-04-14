@@ -500,12 +500,12 @@ configInsert( ClassAd* ad, const char* param_name,
 
 
 /* 
-   This function reads of a ClaimId string and an eom from the
+   This function reads of a ClaimId string, optional classad, and eom from the
    given stream.  It looks up that ClaimId in the resmgr to find
    the corresponding Resource*.  If such a Resource is found, we
    return the pointer to it, otherwise, we return NULL.  */
 Resource*
-stream_to_rip( Stream* stream )
+stream_to_rip( Stream* stream, ClassAd * pad )
 {
 	char* id = NULL;
 	Resource* rip;
@@ -515,6 +515,12 @@ stream_to_rip( Stream* stream )
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
 		free( id );
 		return NULL;
+	}
+	// if we are not ad end of message, then there may be a classad payload containing argument options.
+	if (pad && ! stream->peek_end_of_message()) {
+		if ( ! getClassAd(stream, *pad)) {
+			dprintf( D_ALWAYS, "Can't read options ClassAd after ClaimId\n");
+		}
 	}
 	if( ! stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "Can't read end_of_message\n" );

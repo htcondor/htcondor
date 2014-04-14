@@ -39,7 +39,7 @@ bool	caInsert( ClassAd* target, ClassAd* source, const char* attr,
 bool	configInsert( ClassAd* ad, const char* attr, bool is_fatal );
 bool	configInsert( ClassAd* ad, const char* param_name, 
 					  const char* attr, bool is_fatal );
-Resource* stream_to_rip( Stream* );
+Resource* stream_to_rip( Stream*, ClassAd * pad=NULL );
 
 VacateType getVacateType( ClassAd* ad );
 
