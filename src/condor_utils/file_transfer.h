@@ -140,9 +140,6 @@ class FileTransfer: public Service {
 	void setMaxUploadBytes(filesize_t MaxUploadBytes);
 	void setMaxDownloadBytes(filesize_t MaxUploadBytes);
 
-	/** For vanilla-universe checkpointing. */
-	void skipInitialDownload();
-
 	/** @return 1 on success, 0 on failure */
 	int DownloadFiles(bool blocking=true);
 
@@ -340,8 +337,6 @@ class FileTransfer: public Service {
 	StringList* InputFiles;
 
   private:
-
-	void downloadCompleted();
 
 	bool TransferFilePermissions;
 	bool DelegateX509Credentials;

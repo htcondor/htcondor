@@ -594,23 +594,6 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	return 1;
 }
 
-// Factored out of DownloadFiles() so that skipInitialDownload() can call it.
-void FileTransfer::downloadCompleted() {
-	time(&last_download_time);
-	BuildFileCatalog();
-
-	// Now sleep for 1 second.  If we did not do this, then jobs
-	// which run real quickly (i.e. less than a second) would not
-	// have their output files uploaded.  The real reason we must
-	// sleep here is time_t is only at the resolution on 1 second.
-	sleep(1);
-}
-
-void
-FileTransfer::skipInitialDownload() {
-	downloadCompleted();
-}
-
 int
 FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	char *remap_fname = NULL;
@@ -920,7 +903,13 @@ FileTransfer::DownloadFiles(bool blocking)
 	// to compare.  If it is a non-blocking download, we do all this
 	// in the thread reaper.
 	if ( !simple_init && blocking && ret_value == 1 && upload_changed_files ) {
-		downloadCompleted();
+		time(&last_download_time);
+		BuildFileCatalog();
+		// Now sleep for 1 second.  If we did not do this, then jobs
+		// which run real quickly (i.e. less than a second) would not
+		// have their output files uploaded.  The real reason we must
+		// sleep here is time_t is only at the resolution on 1 second.
+		sleep(1);
 	}
 
 	return ret_value;

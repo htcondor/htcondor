@@ -2059,7 +2059,7 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 bool
 JICShadow::beginFileTransfer( void )
 {
-	// if requested in the jobad, transfer files over.  
+		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
 		// Only rename the executable if it is transferred.
 		int xferExec = 1;
@@ -2072,14 +2072,13 @@ JICShadow::beginFileTransfer( void )
 
 		filetrans = new FileTransfer();
 
-		// In the starter, we never want to use
-		// SpooledOutputFiles, because we are not reading the
-		// output from the spool.  We always want to use
-		// TransferOutputFiles instead.
+			// In the starter, we never want to use
+			// SpooledOutputFiles, because we are not reading the
+			// output from the spool.  We always want to use
+			// TransferOutputFiles instead.
 		job_ad->Delete(ATTR_SPOOLED_OUTPUT_FILES);
 
 		ASSERT( filetrans->Init(job_ad, false, PRIV_USER) );
-
 		filetrans->setSecuritySession(m_filetrans_sec_session);
 		filetrans->RegisterCallback(
 				  (FileTransferHandlerCpp)&JICShadow::transferCompleted,this );
@@ -2092,27 +2091,32 @@ JICShadow::beginFileTransfer( void )
 
 		//
 		// If we're doing vm-assisted checkpointing (and this is the physical
-		// starter), don't do file transfer.  We can't just skip calling
-		// DownloadFiles() because intermediate file transfer can't happen
-		// until after the initial download finishes.
+		// starter), don't do file transfer.  (For now, we assume pre-staged
+		// images.  Eventually, we'll want to rewrite the job ad to transfer
+		// only the VM disk image(s).)
+		//
+		// We can't do this earlier because transferring checkpoints depends
+		// on the filetrans object having been initialized.
 		//
 		int wantCheckpoint = 0, userLevelCheckpoint = 0;
 		job_ad->LookupBool( "WantCheckpoint", wantCheckpoint );
 		job_ad->LookupBool( "UserLevelCheckpoint", userLevelCheckpoint );
 		if( wantCheckpoint && ! userLevelCheckpoint ) {
-			dprintf( D_ALWAYS, "Using VM-assisted checkpointing: skipping initial file transfer.\n" );
-			filetrans->skipInitialDownload();
-		} else {
-			if( ! filetrans->DownloadFiles(false) ) { // do not block
+			//
+			// Having intermediate file transfer actually occurs presently
+			// requires that DownloadFiles() have been called, which is silly.
+			//
+			// return false;
+		}
+
+		if( ! filetrans->DownloadFiles(false) ) { // do not block
 				// Error starting the non-blocking file transfer.  For
 				// now, consider this a fatal error
-				EXCEPT( "Could not initiate file transfer" );
-			}
-			return true;
+			EXCEPT( "Could not initiate file transfer" );
 		}
+		return true;
 	}
-
-	// no transfer wanted or started, so return false
+		// no transfer wanted or started, so return false
 	return false;
 }
 
