@@ -3131,14 +3131,14 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		statusStr.trim();
 		fprintf( outfile, "  NodeStatus = %d; /* %s */\n", status,
 					statusStr.Value() );
-		fprintf( outfile, "  /* CondorStatus = xxx; */\n" );
+		// fprintf( outfile, "  /* CondorStatus = xxx; */\n" );
 		fprintf( outfile, "  StatusDetails = \"%s\";\n", nodeNote );
 		fprintf( outfile, "  RetryCount = %d;\n", node->GetRetries() );
-		fprintf( outfile, "  /* JobProcsTotal = xxx; */\n" );
+		// fprintf( outfile, "  /* JobProcsTotal = xxx; */\n" );
 		fprintf( outfile, "  JobProcsQueued = %d;\n",
 					node->_queuedNodeJobProcs );
-		fprintf( outfile, "  /* JobProcsRunning = xxx; */\n" );
-		fprintf( outfile, "  /* JobProcsIdle = xxx; */\n" );
+		// fprintf( outfile, "  /* JobProcsRunning = xxx; */\n" );
+		// fprintf( outfile, "  /* JobProcsIdle = xxx; */\n" );
 		fprintf( outfile, "  JobProcsHeld = %d;\n", node->_jobProcsOnHold );
 
 		fprintf( outfile, "]\n" );
