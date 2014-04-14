@@ -399,7 +399,8 @@ class Dag {
 	bool DoneSuccess( bool includeFinalNode ) const;
 
 		/** Determine whether the DAG is finished, but failed (because
-			of a node job failure, etc.).
+			of a node job failure, etc.).  Note that this returns false
+			if there's a cycle in the DAG but no nodes failed.
     		@param whether to consider the final node, if any
 			@return true iff the DAG is finished but failed
 		*/
@@ -410,10 +411,7 @@ class Dag {
     		@param whether to consider the final node, if any
 			@return true iff the DAG is finished but there is a cycle
 		*/
-	inline bool DoneCycle( bool includeFinalNode) {
-				return FinishedRunning( includeFinalNode ) &&
-				!DoneSuccess( includeFinalNode ) &&
-				NumNodesFailed() == 0; }
+	inline bool DoneCycle( bool includeFinalNode) const;
 
 		/** Submit all ready jobs, provided they are not waiting on a
 			parent job or being throttled.
@@ -702,7 +700,7 @@ class Dag {
 		existing jobs to finish but not submitting any new ones).
 		@return true iff the DAG is halted.
 	*/
-	bool IsHalted() { return _dagIsHalted; }
+	bool IsHalted() const { return _dagIsHalted; }
 
 	enum dag_status {
 		DAG_STATUS_OK = 0,
@@ -725,7 +723,7 @@ class Dag {
 		running (or has been run).
 		@return true iff the final node is running or has been run
 	*/
-	inline bool RunningFinalNode() { return _runningFinalNode; }
+	inline bool FinalNodeRun() { return _finalNodeRun; }
 
 	/** Determine whether the DAG is in recovery mode.
 		@return true iff the DAG is in recovery mode
@@ -855,7 +853,7 @@ class Dag {
 			@return True iff aborting the DAG (it really should not
 			    return in that case)
 		*/
-	static bool CheckForDagAbort(Job *job, const char *type);
+	bool CheckForDagAbort(Job *job, const char *type);
 
 		// takes a userlog event and returns the corresponding node
 	Job* LogEventNodeLookup( int logsource, const ULogEvent* event,
@@ -923,9 +921,9 @@ class Dag {
 	void WriteNodeToRescue( FILE *fp, Job *node,
 				bool reset_retries_upon_rescue, bool isPartial );
 
-		// True iff the final node is ready to be run, or is running
-		// (including PRE and POST scripts, if any.
-	bool _runningFinalNode;
+		// True iff the final node is ready to be run, is running,
+		// or has been run (including PRE and POST scripts, if any).
+	bool _finalNodeRun;
 
     /// List of Job objects
     List<Job>     _jobs;
@@ -1164,6 +1162,12 @@ class Dag {
 
 		// Whether the DAG is currently halted.
 	bool _dagIsHalted;
+
+		// Whether the DAG has been aborted.
+		// Note:  we need this in addition to _dagStatus, because if you
+		// have a abort-dag-on return value of 0, _dagStatus will be
+		// DAG_STATUS_OK even on the abort...
+	bool _dagIsAborted;
 
 		// The name of the halt file (we halt the DAG if that file exists).
 	MyString _haltFile;

@@ -1456,7 +1456,9 @@ void condor_event_timer () {
 		// DAG is run anyhow).
 	if ( dagman.dag->IsHalted() && dagman.dag->NumJobsSubmitted() == 0 &&
 				dagman.dag->PostRunNodeCount() == 0 &&
-				!dagman.dag->RunningFinalNode() ) {
+				!dagman.dag->FinalNodeRun() ) {
+			// Note:  main_shutdown_rescue() will run the final node
+			// if there is one.
 		debug_printf ( DEBUG_QUIET, "Exiting because DAG is halted "
 					"and no jobs or scripts are running\n" );
 		main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_HALTED );

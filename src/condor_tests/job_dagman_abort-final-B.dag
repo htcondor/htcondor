@@ -1,0 +1,20 @@
+NODE_STATUS_FILE job_dagman_abort-final-B.status 600
+
+Job A job_dagman_abort-final-B-node-succeed.cmd
+Vars A nodename = "$(JOB)"
+Job B job_dagman_abort-final-B-node-succeed.cmd
+Vars B nodename = "$(JOB)"
+Job C job_dagman_abort-final-B-node-fail.cmd
+Vars C nodename = "$(JOB)"
+Script Pre C job_dagman_abort-final-B-script.pl
+Job D job_dagman_abort-final-B-node-fail.cmd
+Vars D nodename = "$(JOB)"
+
+# Final node will invert the overall DAG status (failure->success).
+Final E job_dagman_abort-final-B-nodeE.cmd
+
+Abort-dag-on C 5 return 1
+
+PARENT A CHILD B
+PARENT B CHILD C
+PARENT C CHILD D

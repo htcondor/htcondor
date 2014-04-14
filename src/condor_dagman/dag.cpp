@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-
 //
 // Terminology note:
 // We are calling a *node* the combination of pre-script, job, and
@@ -186,7 +185,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_recovery = false;
 	_abortOnScarySubmit = true;
 	_configFile = NULL;
-	_runningFinalNode = false;
+	_finalNodeRun = false;
 		
 		// Don't print any waiting node reports until we're done with
 		// recovery mode.
@@ -195,6 +194,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_lastEventTime = 0;
 
 	_dagIsHalted = false;
+	_dagIsAborted = false;
 	_dagFiles.rewind();
 	_haltFile = HaltFileName( _dagFiles.next() );
 	_dagStatus = DAG_STATUS_OK;
@@ -807,6 +807,8 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 							termEvent->subproc );
 		}
 
+		ProcessJobProcEnd( job, recovery, failed );
+
 		if( job->_scriptPost == NULL ) {
 			bool abort = CheckForDagAbort(job, "job");
 			// if dag abort happened, we never return here!
@@ -814,8 +816,6 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 				return;
 			}
 		}
-
-		ProcessJobProcEnd( job, recovery, failed );
 
 		PrintReadyQ( DEBUG_DEBUG_2 );
 
@@ -867,6 +867,8 @@ Dag::RemoveBatchJob(Job *node) {
 }
 
 //---------------------------------------------------------------------------
+// Note:  if job is the final node of the DAG, should we set _dagStatus
+// in here according to whether job succeeded or failed?  wenger 2014-03-18
 void
 Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
@@ -1432,6 +1434,9 @@ Dag::StartFinalNode()
 			// Clear out the ready queue so "regular" jobs don't run
 			// when we run the final node (this is really just needed
 			// for the DAG abort and DAG halt cases).
+			// Note:  maybe we should change nodes in the prerun state
+			// to not ready here, to be more consistent.  But I'm not
+			// dealing with that for now.  wenger 2014-03-17
 		Job* job;
 		_readyQ->Rewind();
 		while ( _readyQ->Next( job ) ) {
@@ -1440,13 +1445,14 @@ Dag::StartFinalNode()
 							"Removing node %s from ready queue\n",
 							job->GetJobName() );
 				_readyQ->DeleteCurrent();
+				job->SetStatus( Job::STATUS_NOT_READY );
 			}
 		}
 
 			// Now start up the final node.
 		_final_job->SetStatus( Job::STATUS_READY );
 		if ( StartNode( _final_job, false ) ) {
-			_runningFinalNode = true;
+			_finalNodeRun = true;
 			return true;
 		}
 	}
@@ -1482,7 +1488,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		debug_printf( DEBUG_QUIET,
 					"DAG is halted because halt file %s exists\n",
 					_haltFile.Value() );
-		if ( _runningFinalNode ) {
+		if ( _finalNodeRun ) {
 			debug_printf( DEBUG_QUIET,
 						"Continuing to allow final node to run\n" );
 		} else {
@@ -1925,10 +1931,18 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 bool
 Dag::FinishedRunning( bool includeFinalNode ) const
 {
-	if ( includeFinalNode && _final_job && !_runningFinalNode ) {
+	if ( includeFinalNode && _final_job && !_finalNodeRun ) {
 			// Make sure we don't incorrectly return true if we get called
-			// just before a final node is started...
+			// just before a final node is started...  (There is a race
+			// condition here otherwise, because all of the "regular"
+			// nodes can be done, and the final node not changed to
+			// ready yet.)
 		return false;
+	} else if ( IsHalted() ) {
+			// Note that we're checking for scripts actually running here,
+			// not the number of nodes in the PRERUN or POSTRUN state --
+			// if we're halted, we don't start any new PRE scripts.
+		return NumJobsSubmitted() == 0 && NumScriptsRunning() == 0;
 	}
 
 	return NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
@@ -1939,11 +1953,19 @@ Dag::FinishedRunning( bool includeFinalNode ) const
 bool
 Dag::DoneSuccess( bool includeFinalNode ) const
 {
-	if ( NumNodesDone( includeFinalNode ) == NumNodes( includeFinalNode ) ) {
+	if ( !FinishedRunning( includeFinalNode ) ) {
+			// Note: if final node is running we should get to here...
+		return false;
+	} else if ( NumNodesDone( includeFinalNode ) ==
+				NumNodes( includeFinalNode ) ) {
+			// This is the normal case.
 		return true;
 	} else if ( includeFinalNode && _final_job &&
 				_final_job->GetStatus() == Job::STATUS_DONE ) {
 			// Final node can override the overall DAG status.
+		return true;
+	} else if ( _dagIsAborted && _dagStatus == DAG_STATUS_OK ) {
+			// Abort-dag-on can override the overall DAG status.
 		return true;
 	}
 
@@ -1961,9 +1983,24 @@ Dag::DoneFailed( bool includeFinalNode ) const
 				_final_job->GetStatus() == Job::STATUS_DONE ) {
 			// Success of final node overrides failure of any other node.
 		return false;
+	} else if ( _dagIsAborted && _dagStatus == DAG_STATUS_OK ) {
+			// Abort-dag-on can override the overall DAG status.
+		return false;
+	} else if ( IsHalted() ) {
+		return true;
 	}
 
 	return NumNodesFailed() > 0;
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::DoneCycle( bool includeFinalNode) const
+{
+	return FinishedRunning( includeFinalNode ) &&
+				!DoneSuccess( includeFinalNode ) &&
+				NumNodesFailed() == 0 &&
+				!IsHalted() && !_dagIsAborted;
 }
 
 //---------------------------------------------------------------------------
@@ -2400,10 +2437,6 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 	ASSERT( !(recovery && bootstrap) );
     ASSERT( job != NULL );
 
-	if ( job == _final_job ) {
-		_runningFinalNode = false;
-	}
-
 	job->TerminateSuccess(); // marks job as STATUS_DONE
 	if ( job->GetStatus() != Job::STATUS_DONE ) {
 		EXCEPT( "Node %s is not in DONE state", job->GetJobName() );
@@ -2614,6 +2647,7 @@ Dag::CheckForDagAbort(Job *job, const char *type)
 				job->retval == job->abort_dag_val ) {
 		debug_printf( DEBUG_QUIET, "Aborting DAG because we got "
 				"the ABORT exit value from a %s\n", type);
+		_dagIsAborted = true;
 		if ( job->have_abort_dag_return_val ) {
 			main_shutdown_rescue( job->abort_dag_return_val,
 						job->abort_dag_return_val != 0 ? DAG_STATUS_ABORT :
@@ -2868,9 +2902,12 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		const char *statusStr = Job::status_t_names[node->GetStatus()];
 		const char *nodeNote = "";
 		if ( node->GetStatus() == Job::STATUS_READY ) {
+				// Note:  Job::STATUS_READY only means that the job is
+				// ready to submit if it doesn't have any unfinished
+				// parents.
 			if ( !node->CanSubmit() ) {
 				// See Job::_job_type_names for other strings.
-				statusStr = "STATUS_UNREADY  ";
+				statusStr = Job::status_t_names[Job::STATUS_NOT_READY];
 			}
 		} else if ( node->GetStatus() == Job::STATUS_SUBMITTED ) {
 			nodeNote = node->GetIsIdle() ? "idle" : "not_idle";
@@ -2909,7 +2946,11 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		statusNote = "success";
 	} else if ( DoneFailed( true ) ) {
 		dagStatus = Job::STATUS_ERROR;
-		statusNote = "failed";
+		if ( _dagStatus == DAG_STATUS_ABORT ) {
+			statusNote = "aborted";
+		} else {
+			statusNote = "failed";
+		}
 	} else if ( DoneCycle( true ) ) {
 		dagStatus = Job::STATUS_ERROR;
 		statusNote = "cycle";
