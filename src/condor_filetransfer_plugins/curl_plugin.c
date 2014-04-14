@@ -1,6 +1,8 @@
 #ifdef WIN32
 #include <windows.h>
 #define CURL_STATICLIB // this has to match the way the curl library was built.
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
 #endif
 
 #include <curl/curl.h>
