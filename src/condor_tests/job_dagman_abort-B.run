@@ -18,31 +18,29 @@
 ##
 ##**************************************************************
 
-# Note: we should check the node status file that the DAG now creates.
-
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_abort-A.dag';
+$cmd = 'job_dagman_abort-B.dag';
 $testdesc =  'Condor submit dag - basic abort-dag-on test - scheduler U';
-$testname = "job_dagman_abort-A";
+$testname = "job_dagman_abort-B";
 $dagman_args = "-verbose";
 
-@outfiles = ("job_dagman_abort-A-node.A", "job_dagman_abort-A-node.B");
-$statusfile = "job_dagman_abort-A.status";
+@outfiles = ("job_dagman_abort-B-node.A", "job_dagman_abort-B-node.B");
+$statusfile = "job_dagman_abort-B.status";
 @statuslines = ("JOB A STATUS_DONE",
 	"JOB B STATUS_DONE",
 	"JOB C STATUS_ERROR",
-	"JOB D STATUS_NOT_READY",
+	"JOB D STATUS_ERROR     \\(removed\\)",
 	"Nodes total: 4",
 	"Nodes done: 2",
 	"Nodes pre: 0",
 	"Nodes queued: 0",
 	"Nodes post: 0",
 	"Nodes ready: 0",
-	"Nodes un-ready: 1",
-	"Nodes failed: 1",
-	"DAG status: STATUS_DONE      \\(success\\)");
+	"Nodes un-ready: 0",
+	"Nodes failed: 2",
+	"DAG status: STATUS_ERROR     \\(aborted\\)");
 
 my $killedchosen = 0;
 
@@ -85,6 +83,11 @@ $submitted = sub
 };
 
 $success = sub
+{
+	die("DAG is expected to fail.\n");
+};
+
+$failure = sub
 {
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
@@ -151,6 +154,7 @@ $success = sub
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExitedFailure( $testname, $failure);
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );

@@ -18,31 +18,27 @@
 ##
 ##**************************************************************
 
-# Note: we should check the node status file that the DAG now creates.
-
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_abort-A.dag';
-$testdesc =  'Condor submit dag - basic abort-dag-on test - scheduler U';
-$testname = "job_dagman_abort-A";
+$cmd = 'job_dagman_cycle-A.dag';
+$testdesc =  'Condor submit dag - basic cycle test - scheduler U';
+$testname = "job_dagman_cycle-A";
 $dagman_args = "-verbose";
 
-@outfiles = ("job_dagman_abort-A-node.A", "job_dagman_abort-A-node.B");
-$statusfile = "job_dagman_abort-A.status";
+$statusfile = "job_dagman_cycle-A.status";
 @statuslines = ("JOB A STATUS_DONE",
-	"JOB B STATUS_DONE",
-	"JOB C STATUS_ERROR",
-	"JOB D STATUS_NOT_READY",
-	"Nodes total: 4",
-	"Nodes done: 2",
+	"JOB B STATUS_NOT_READY",
+	"JOB C STATUS_NOT_READY",
+	"Nodes total: 3",
+	"Nodes done: 1",
 	"Nodes pre: 0",
 	"Nodes queued: 0",
 	"Nodes post: 0",
 	"Nodes ready: 0",
-	"Nodes un-ready: 1",
-	"Nodes failed: 1",
-	"DAG status: STATUS_DONE      \\(success\\)");
+	"Nodes un-ready: 2",
+	"Nodes failed: 0",
+	"DAG status: STATUS_ERROR     \\(cycle\\)");
 
 my $killedchosen = 0;
 
@@ -52,9 +48,6 @@ sub HELD{5};
 sub RUNNING{2};
 
 # clean out old output files
-foreach $name (@outfiles) {
-	runcmd("rm -f $name.out $name.err");
-}
 runcmd("rm -f $statusfile");
 
 $abnormal = sub 
@@ -86,33 +79,14 @@ $submitted = sub
 
 $success = sub
 {
+	die("DAG is expected to fail.\n");
+};
+
+$failure = sub
+{
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
-	foreach $name (@outfiles) {
-		$line = "";
-		$passed = 0;
-		$canopen = open(OUT,"<$name.out");
-		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open outfile<$name.out>:$!\n",1);
-			$diditpass = 0;
-		}
-		while(<OUT>) {
-			chomp();
-			$line = $_;
-			if( $line =~ /^.*OK$/ ) {
-				$passed = 1;
-				CondorTest::debug("$name.out: $line\n",1);
-			}
-		}
-		close(OUT);
-		if($passed == 1 ) {
-			;
-		} else {
-			CondorTest::debug("failed $name.out: $line\n",1);
-			$diditpass = 0;
-		}
-	}
 
 	# Check the node status file.
 	$line = "";
@@ -151,6 +125,7 @@ $success = sub
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExitedFailure( $testname, $failure);
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );

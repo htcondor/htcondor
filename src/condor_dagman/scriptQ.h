@@ -57,6 +57,9 @@ class ScriptQ : public Service {
 	*/
 	int RunAllWaitingScripts();
 
+	/** Return the number of scripts actually running (does not include
+	    scripts that are queued to run but have been deferred).
+	*/
     int NumScriptsRunning();
 
     // reaper function for PRE & POST script completion
