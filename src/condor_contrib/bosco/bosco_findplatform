@@ -14,7 +14,7 @@ OSX="MAC"
 OSX_UNSUPPORTED="UNSUPPORTED"
 DEB6="DEB6"
 
-SUPPORTED_OSX = ['10.6', '10.7', '10.8']
+SUPPORTED_OSX = ['10.6', '10.7', '10.8', '10.9']
 SUPPORTED_PLATFORMS = [ RH5, RH6, OSX, DEB6 ]
 
 # download URLs for the different platforms
