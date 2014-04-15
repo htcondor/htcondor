@@ -151,7 +151,7 @@ else {
 
 print "Condor version: $version\n";
 
-print "SETTING UP PERSONAL CONDOR\n";
+print "CONGIGURING PERSONAL CONDOR\n";
 
 # I'm not 100% certain wtf this actually does. 
 if( not TestGlue::is_windows() ) {
@@ -221,15 +221,7 @@ else {
 		}
 	}
 }
-# setup a base config and a personal condor in the test directory
-# so there is a master config other test can find when they set up a specialized
-# personal condor for its test
-if(TestGlue::is_windows()) {
-	chdir("$ENV{TESTS}");
-	#set up TestingPersonalCondor and start it bt
-	system("batch_test.pl -b -p"); 
-} else {
-	chdir("$ENV{TESTS}");
-	#set up TestingPersonalCondor and start it bt
-	system("./batch_test.pl -b -p"); 
-}
+
+# create initial configs
+#print "Caling prepare_for_configs: basedir:$BaseDir\n";
+TestGlue::prepare_for_configs($BaseDir);
