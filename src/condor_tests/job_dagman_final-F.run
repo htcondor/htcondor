@@ -44,7 +44,7 @@ $rescuefile = "job_dagman_final-F.dag.rescue001";
 			"  FAILED done with F_B2",
 			"Job for node F_C",
 			"  DAG_STATUS=3",
-			"  FAILED_COUNT=0",
+			"  FAILED_COUNT=1",
 			"  OK done with F_C");
 
 # Note: we must find these lines *in the specified order*.
@@ -54,11 +54,11 @@ $rescuefile = "job_dagman_final-F.dag.rescue001";
 			"  RETURN=-1",
 			"Node F_C Pre",
 			"  DAG_STATUS=3",
-			"  FAILED_COUNT=0",
+			"  FAILED_COUNT=1",
 			"  RETURN=-1",
 			"Node F_C Post",
 			"  DAG_STATUS=3",
-			"  FAILED_COUNT=0",
+			"  FAILED_COUNT=1",
 			"  RETURN=0");
 
 my $killedchosen = 0;

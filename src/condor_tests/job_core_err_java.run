@@ -24,6 +24,11 @@ $cmd = 'job_core_err_java.cmd';
 $testdesc =  'Condor_submit correctly uses error file - java U';
 $testname = "job_core_err_java";
 
+my $javainit = CondorTest::JavaInitialize($testname);
+if($javainit == 0) {
+	die "No java found\n";
+}
+
 $success = sub 
 {
 	my %info = @_;

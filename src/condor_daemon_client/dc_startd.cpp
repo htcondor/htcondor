@@ -91,6 +91,7 @@ ClaimStartdMsg::ClaimStartdMsg( char const *the_claim_id, ClassAd const *job_ad,
 	m_alive_interval = alive_interval;
 	m_reply = NOT_OK;
 	m_have_leftovers = false;
+	m_have_paired_slot = false;
 }
 
 void
@@ -114,6 +115,13 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		// over any leftover resources from a partitionable slot.
 	m_job_ad.Assign("_condor_SEND_LEFTOVERS",
 		param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true));
+
+		// Insert an attribute in the request ad to inform the
+		// startd that this schedd is capable of understanding
+		// the newer protocol where the claim response may send
+		// over the ad and claim id of the partner of a paired slot.
+	m_job_ad.Assign("_condor_SEND_PAIRED_SLOT",
+		param_boolean("CLAIM_PAIRED_SLOT",true));
 
 	if( !sock->put_secret( m_claim_id.c_str() ) ||
 	    !putClassAd( sock, m_job_ad ) ||
@@ -154,17 +162,21 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 	}
 
 	/* 
-		Reply of 0 (OK) means claim accepted.
-		Reply of 1 (NOT_OK) means claim rejected.
-		Reply of 3 means claim accepted by a partitionable slot,
-	      and the "leftovers" slot ad and claim id will be sent next.
+		Reply of 0 (NOT_OK) means claim rejected.
+		Reply of 1 (OK) means claim accepted.
+		Reply of 3 (REQUEST_CLAIM_LEFTOVERS) means claim accepted by a
+		  partitionable slot, and the "leftovers" slot ad and claim id
+		  will be sent next.
+		Reply of 4 (REQUEST_CLAIM_PAIR) means claim accepted by a slot
+		  that is paired, and the partner slot ad and claim id will be
+		  sent next.
 	*/
 
 	if( m_reply == OK ) {
 			// no need to log success, because DCMsg::reportSuccess() will
 	} else if( m_reply == NOT_OK ) {
 		dprintf( failureDebugLevel(), "Request was NOT accepted for claim %s\n", description() );
-	} else if( m_reply == 3 ) {
+	} else if( m_reply == REQUEST_CLAIM_LEFTOVERS ) {
 	 	if( !sock->get(m_leftover_claim_id) ||
 			!getClassAd( sock, m_leftover_startd_ad )  ) 
 		{
@@ -177,6 +189,22 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		} else {
 			// successfully read leftover partitionable slot info
 			m_have_leftovers = true;
+			// change reply to OK cuz claim was a success
+			m_reply = OK;
+		}
+	} else if( m_reply == REQUEST_CLAIM_PAIR ) {
+		if( !sock->get(m_paired_claim_id) ||
+			!getClassAd( sock, m_paired_startd_ad ) )
+		{
+			// failed to read paired slot info
+			dprintf( failureDebugLevel(),
+				 "Failed to read paired slot info from startd - claim %s.\n",
+				 description() );
+			// treat this failure same as NOT_OK, since this startd is screwed
+			m_reply = NOT_OK;
+		} else {
+			// successfully read paired slot info
+			m_have_paired_slot = true;
 			// change reply to OK cuz claim was a success
 			m_reply = OK;
 		}
@@ -383,6 +411,108 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		delete tmp;
 	}
 	return reply;
+}
+
+SwapClaimsMsg::SwapClaimsMsg( char const *claim_id, const char *src_descrip, const char * dest_slot_name)
+	: DCMsg(SWAP_CLAIM_AND_ACTIVATION)
+	, m_claim_id(claim_id)
+	, m_description(src_descrip)
+	, m_dest_slot_name(dest_slot_name)
+	, m_reply(NOT_OK)
+
+{
+	m_opts.Assign("DestinationSlotName", dest_slot_name);
+}
+
+void
+SwapClaimsMsg::cancelMessage(char const *reason) {
+	dprintf(D_ALWAYS,"Canceling swap claims request for claim %s %s\n", description(),reason ? reason : "");
+	DCMsg::cancelMessage(reason);
+}
+
+bool
+SwapClaimsMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
+
+	if ( ! sock->put_secret(m_claim_id.c_str()) || ! putClassAd(sock, m_opts))
+	{
+		dprintf(failureDebugLevel(),
+				"Couldn't encode claim swap request to startd %s\n",
+				description() );
+		sockFailed(sock);
+		return false;
+	}
+		// end_of_message() is done by caller
+	return true;
+}
+
+DCMsg::MessageClosureEnum
+SwapClaimsMsg::messageSent(DCMessenger *messenger, Sock *sock ) {
+	messenger->startReceiveMsg( this, sock );
+	return MESSAGE_CONTINUING;
+}
+
+bool
+SwapClaimsMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
+	// Now, we set the timeout on the socket to 1 second.  Since we
+	// were called by as a Register_Socket callback, this should not
+	// block if things are working as expected.
+	// However, if the Startd wigged out and sent a
+	// partial int or some such, we cannot afford to block.
+	sock->timeout(1);
+
+	if ( ! sock->get(m_reply)) {
+		dprintf(failureDebugLevel(),
+				"Response problem from startd when requesting claim swap %s.\n",
+				description());	
+		sockFailed( sock );
+		return false;
+	}
+
+	/*
+		Reply of 0 (OK) means swap happened
+		Reply of 1 (NOT_OK) means swap rejected
+		Reply of 4 (SWAP_CLAIM_ALREADY_SWAPPED) means swap did not happen because claim_id was already in slot_name
+	*/
+
+	if (m_reply == OK) {
+			// no need to log success, because DCMsg::reportSuccess() will
+	} else if (m_reply == NOT_OK) {
+		dprintf(failureDebugLevel(), "Swap claims request NOT accepted for claim %s\n", description());
+	} else if (m_reply == SWAP_CLAIM_ALREADY_SWAPPED) {
+		dprintf(failureDebugLevel(), "Swap claims request reports that swap had already happened for claim %s\n", description());
+	} else {
+		dprintf(failureDebugLevel(), "Unknown reply from startd when swapping claims %s\n",description());
+	}
+
+	// end_of_message() is done by caller
+
+	return true;
+}
+
+
+void
+DCStartd::asyncSwapClaims(const char * claim_id, char const *src_descrip, const char * dest_slot_name, int timeout, classy_counted_ptr<DCMsgCallback> cb)
+{
+	dprintf(D_FULLDEBUG|D_PROTOCOL,"Swapping claim %s into slot %s\n", src_descrip, dest_slot_name);
+
+	setCmdStr( "swapClaims" );
+	ASSERT( checkClaimId() );
+	ASSERT( checkAddr() );
+
+	classy_counted_ptr<SwapClaimsMsg> msg = new SwapClaimsMsg( claim_id, src_descrip, dest_slot_name );
+
+	ASSERT( msg.get() );
+	msg->setCallback(cb);
+
+	msg->setSuccessDebugLevel(D_ALWAYS|D_PROTOCOL);
+
+		// if this claim is associated with a security session
+	ClaimIdParser cid(claim_id);
+	msg->setSecSessionId(cid.secSessionId());
+
+	msg->setTimeout(timeout);
+	//msg->setDeadlineTimeout(deadline_timeout);
+	sendMsg(msg.get());
 }
 
 

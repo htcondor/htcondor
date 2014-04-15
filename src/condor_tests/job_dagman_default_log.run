@@ -33,7 +33,9 @@ $testname = "job_dagman_default_log";
 $dagman_args = "-verbose";
 
 @logfiles = ("job_dagman_default_log.dag.dagman.out");
-$nodelog = "job_dagman_default_log.test_node_log";
+$logdir = `condor_config_val LOG`;
+chomp $logdir;
+$nodelog = "$logdir/job_dagman_default_log.dag.test_node_log";
 
 my $dag_was_held = 0;
 my $dag_was_released = 0;

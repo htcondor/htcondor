@@ -208,7 +208,7 @@ int perm::userInLocalGroup( const char *account, const char *domain, const char 
 	_snwprintf(group_name_unicode, MAX_GROUP_LENGTH+1, L"%S", group_name);
 	
 	
-	DWORD resume_handle = 0;
+	DWORD_PTR resume_handle = 0;
 	
 	do {	 // loop until we have checked all the group members
 		

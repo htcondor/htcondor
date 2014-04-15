@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2014, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -58,10 +58,13 @@
 #include "condor_url.h"
 #include "classad/classadCache.h"
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "ScheddPlugin.h"
 #endif
+
+#if defined(HAVE_GETGRNAM)
+#include <sys/types.h>
+#include <grp.h>
 #endif
 
 #include "file_sql.h"
@@ -154,6 +157,19 @@ static const char *default_super_user =
 #endif
 
 //static int allow_remote_submit = FALSE;
+ClassAdLog::filter_iterator
+BeginIterator(const classad::ExprTree &requirements, int timeslice_ms)
+{
+	ClassAdLog::filter_iterator it(JobQueue ? &JobQueue->table : NULL, &requirements, timeslice_ms);
+	return it;
+}
+
+ClassAdLog::filter_iterator
+EndIterator()
+{
+	ClassAdLog::filter_iterator it(JobQueue ? &JobQueue->table : NULL, NULL, 0, true);
+	return it;
+}
 
 static inline
 void
@@ -1099,6 +1115,15 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 					JobQueueDirty = true;
 				}
 			}
+			// AsyncXfer: Delete in-job output transfer attributes
+			if( ad->LookupInteger(ATTR_JOB_TRANSFERRING_OUTPUT,transferring_output) ) {
+				ad->Delete(ATTR_JOB_TRANSFERRING_OUTPUT);
+				JobQueueDirty = true;
+			}
+			if( ad->LookupInteger(ATTR_JOB_TRANSFERRING_OUTPUT_TIME,transferring_output) ) {
+				ad->Delete(ATTR_JOB_TRANSFERRING_OUTPUT_TIME);
+				JobQueueDirty = true;
+			}
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			IncrementClusterSize(cluster_num);
@@ -1264,6 +1289,20 @@ isQueueSuperUser( const char* user )
 		return false;
 	}
 	for( i=0; i<num_super_users; i++ ) {
+#if defined(HAVE_GETGRNAM)
+        if (super_users[i][0] == '%') {
+            // this is a user group, so check user against the group membership
+            struct group* gr = getgrnam(1+super_users[i]);
+            if (gr) {
+                for (char** gmem=gr->gr_mem;  *gmem != NULL;  ++gmem) {
+                    if (strcmp(user, *gmem) == 0) return true;
+                }
+            } else {
+                dprintf(D_SECURITY, "Group name \"%s\" was not found in defined user groups\n", 1+super_users[i]);
+            }
+            continue;
+        }
+#endif
 		if( strcmp( user, super_users[i] ) == 0 ) {
 			return true;
 		}
@@ -1404,14 +1443,6 @@ OwnerCheck2(ClassAd *ad, const char *test_owner, const char *job_owner)
 		return false;
 	}
 
-	// The super users are always allowed to do updates.  They are
-	// specified with the "QUEUE_SUPER_USERS" string list in the
-	// config file.  Defaults to root and condor.
-	if( isQueueSuperUser(test_owner) ) {
-		dprintf( D_FULLDEBUG, "OwnerCheck retval 1 (success), super_user\n" );
-		return true;
-	}
-
 #if !defined(WIN32) 
 		// If we're not root or condor, only allow qmgmt writes from
 		// the UID we're running as.
@@ -1421,7 +1452,10 @@ OwnerCheck2(ClassAd *ad, const char *test_owner, const char *job_owner)
 			dprintf(D_FULLDEBUG, "OwnerCheck success: owner (%s) matches "
 					"my username\n", test_owner );
 			return true;
-		} else {
+		} else if (isQueueSuperUser(test_owner)) {
+            dprintf(D_FULLDEBUG, "OwnerCheck retval 1 (success), super_user\n");
+            return true;
+        } else {
 			errno = EACCES;
 			dprintf( D_FULLDEBUG, "OwnerCheck: reject owner: %s non-super\n",
 					 test_owner );
@@ -1450,18 +1484,21 @@ OwnerCheck2(ClassAd *ad, const char *test_owner, const char *job_owner)
 		// to connect to the queue.
 #if defined(WIN32)
 	// WIN32: user names are case-insensitive
-	if (strcasecmp(job_owner, test_owner) != 0) {
+	if (strcasecmp(job_owner, test_owner) == 0) {
 #else
-	if (strcmp(job_owner, test_owner) != 0) {
+	if (strcmp(job_owner, test_owner) == 0) {
 #endif
-		errno = EACCES;
-		dprintf( D_FULLDEBUG, "ad owner: %s, queue submit owner: %s\n",
-				job_owner, test_owner );
-		return false;
-	} 
-	else {
-		return true;
-	}
+        return true;
+    }
+
+    if (isQueueSuperUser(test_owner)) {
+        dprintf(D_FULLDEBUG, "OwnerCheck retval 1 (success), super_user\n");
+        return true;
+    }
+
+    errno = EACCES;
+    dprintf(D_FULLDEBUG, "ad owner: %s, queue submit owner: %s\n", job_owner, test_owner );
+    return false;
 }
 
 
@@ -1899,35 +1936,14 @@ int DestroyProc(int cluster_id, int proc_id)
 		cleanup_ckpt_files(cluster_id,proc_id,Q_SOCK->getOwner() );
 	}
 
-	int universe = CONDOR_UNIVERSE_STANDARD;
-	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
-
-	if( (universe == CONDOR_UNIVERSE_MPI) ||
-		(universe == CONDOR_UNIVERSE_PARALLEL) ) {
-			// Parallel jobs take up a whole cluster.  If we've been ask to
-			// destroy any of the procs in a parallel job cluster, we
-			// should destroy the entire cluster.  This hack lets the
-			// schedd just destroy the proc associated with the shadow
-			// when a multi-class parallel job exits without leaving other
-			// procs in the cluster around.  It also ensures that the
-			// user doesn't delete only some of the procs in the parallel
-			// job cluster, since that's going to really confuse the
-			// shadow.
-		int ret = DestroyCluster(cluster_id);
-		if(ret < 0 ) { return DESTROYPROC_ERROR; }
-		return DESTROYPROC_SUCCESS;
-	}
-
 	// Append to history file
 	AppendHistory(ad);
 
 	// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
 	WritePerJobHistoryFile(ad, false);
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
   ScheddPluginManager::Archive(ad);
-#endif
 #endif
 
   if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
@@ -1948,6 +1964,39 @@ int DestroyProc(int cluster_id, int proc_id)
 	JobQueue->DestroyClassAd(key);
 
 	DecrementClusterSize(cluster_id);
+
+	int universe = CONDOR_UNIVERSE_STANDARD;
+	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
+
+	if( (universe == CONDOR_UNIVERSE_MPI) ||
+		(universe == CONDOR_UNIVERSE_PARALLEL) ) {
+			// Parallel jobs take up a whole cluster.  If we've been ask to
+			// destroy any of the procs in a parallel job cluster, we
+			// should destroy the entire cluster.  This hack lets the
+			// schedd just destroy the proc associated with the shadow
+			// when a multi-class parallel job exits without leaving other
+			// procs in the cluster around.  It also ensures that the
+			// user doesn't delete only some of the procs in the parallel
+			// job cluster, since that's going to really confuse the
+			// shadow.
+		ClassAd *otherAd = NULL;
+		char	otherKey[PROC_ID_STR_BUFLEN];
+		int otherProc = -1;
+
+		bool stillLooking = true;
+		while (stillLooking) {
+			otherProc++;
+			if (otherProc == proc_id) continue; // skip this proc
+
+			IdToStr(cluster_id,otherProc,otherKey);
+			if (!JobQueue->LookupClassAd(otherKey, otherAd)) {
+				stillLooking = false;
+			} else {
+				JobQueue->DestroyClassAd(otherKey);
+				DecrementClusterSize(cluster_id);
+			}
+		}
+	}
 
 	if( !already_in_transaction ) {
 			// For performance, use a NONDURABLE transaction.  If we crash
@@ -2034,10 +2083,8 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 				// Apend to history file
 				AppendHistory(ad);
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
 				ScheddPluginManager::Archive(ad);
-#endif
 #endif
 
 				if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
@@ -2850,13 +2897,15 @@ InTransaction()
 	return JobQueue->InTransaction();
 }
 
-void
+int
 BeginTransaction()
 {
 	JobQueue->BeginTransaction();
 
 	// note what time we started the transaction (used by SetTimerAttribute())
 	xact_start_time = time( NULL );
+
+	return 0;
 }
 
 
@@ -2985,10 +3034,10 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 	xact_start_time = 0;
 }
 
-void
+int
 AbortTransaction()
 {
-	JobQueue->AbortTransaction();
+	return JobQueue->AbortTransaction();
 }
 
 void
@@ -3692,7 +3741,9 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		}
 
 		if( started_transaction ) {
-			CommitTransaction();
+			// To reduce the number of fsyncs, we mark this as a non-durable transaction.
+			// Otherwise we incur two fsync's per matched job (one here, one for the job start).
+			CommitTransaction(NONDURABLE);
 		}
 
 		if ( startd_ad ) {
@@ -4091,6 +4142,11 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 	return true;
 }
 
+// Rather than worry about symbol collision with libcondorutils, do the link
+// to the schedd's GetJobAd() statically here and export a different name.
+ClassAd * ScheddGetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions) {
+	return GetJobAd( cluster_id, proc_id, expStartdAd, persist_expansions );
+}
 
 ClassAd *
 GetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions)
@@ -4099,7 +4155,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions)
 	ClassAd	*ad = NULL;
 
 	IdToStr(cluster_id,proc_id,key);
-	if (JobQueue->LookupClassAd(key, ad)) {
+	if (JobQueue && JobQueue->LookupClassAd(key, ad)) {
 		if ( !expStartdAd ) {
 			// we're done, return the ad.
 			return ad;
@@ -4574,11 +4630,11 @@ jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 			 cluster, proc, (int)now, last_renewal, diff );
 
 	if( remaining <= 0 ) {
-		dprintf( D_ALWAYS, "%d.%d: %s remaining: EXPIRED!\n", 
+		dprintf( D_FULLDEBUG, "%d.%d: %s remaining: EXPIRED!\n", 
 				 cluster, proc, ATTR_JOB_LEASE_DURATION );
 		return false;
 	} 
-	dprintf( D_ALWAYS, "%d.%d: %s remaining: %d\n", cluster, proc,
+	dprintf( D_FULLDEBUG, "%d.%d: %s remaining: %d\n", cluster, proc,
 			 ATTR_JOB_LEASE_DURATION, remaining );
 	return true;
 }
@@ -4681,7 +4737,11 @@ int mark_idle(ClassAd *job)
 		SetAttributeFloat(cluster, proc,
 						  ATTR_CUMULATIVE_SLOT_TIME,slot_time);
 
-		CommitTransaction();
+		// Commit non-durable to speed up recovery; this is ok because a) after
+		// all jobs are marked idle in mark_jobs_idle() we force the log, and 
+		// b) in the worst case, we would just redo this work in the unfortuante evenent 
+		// we crash again before an fsync.
+		CommitTransaction( NONDURABLE );
 	}
 
 	return 1;
@@ -4726,6 +4786,12 @@ WalkJobQueue(scan_func func)
 void mark_jobs_idle()
 {
     WalkJobQueue( mark_idle );
+
+	// mark_idle() may have made a lot of commits in non-durable mode in 
+	// order to speed up recovery after a crash, so recovery does not incur
+	// the overhead of thousands of fsyncs.  Now do one fsync so that if
+	// we crash again, we do not have to redo all recovery work just performed.
+	JobQueue->ForceLog();
 }
 
 void DirtyPrioRecArray() {

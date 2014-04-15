@@ -40,6 +40,7 @@
 #include "exit.h"
 #include "param_functions.h"
 #include "match_prefix.h"
+#include "historyFileFinder.h"
 
 #include "file_sql.h"
 #include "file_xml.h"
@@ -76,18 +77,21 @@ int handle_fetch_log_history_purge(ReliSock *s);
 
 // Globals
 int		Foreground = 0;		// run in background by default
-static const char*	myName;			// set to basename(argv[0])
 char *_condor_myServiceName;		// name of service on Win32 (argv[0] from SCM)
-static char*	myFullName;		// set to the full path to ourselves
 DaemonCore*	daemonCore;
-char*	logDir = NULL;
-char*	pidFile = NULL;
-char*	addrFile = NULL;
+
+// Statics (e.g. global only to this file)
+static	char*	myFullName;		// set to the full path to ourselves
+static const char*	myName;			// set to basename(argv[0])
+static	char*	logDir = NULL;
+static	char*	pidFile = NULL;
+static	char*	addrFile[2] = { NULL, NULL };
 static	char*	logAppend = NULL;
 
 static int Termlog = 0;	//Replacing the Termlog in dprintf for daemons that use it
 
 static char *core_dir = NULL;
+static char *core_name = NULL;
 
 int condor_main_argc;
 char **condor_main_argv;
@@ -206,19 +210,21 @@ void clean_files()
 		}
 	}
 
-	if( addrFile ) {
-		if( unlink(addrFile) < 0 ) {
-			dprintf( D_ALWAYS, 
-					 "DaemonCore: ERROR: Can't delete address file %s\n",
-					 addrFile );
-		} else {
-			if( IsDebugVerbose( D_DAEMONCORE ) ) {
-				dprintf( D_DAEMONCORE, "Removed address file %s\n", 
-						 addrFile );
+	for (int i=0; i<2; i++) {
+		if( addrFile[i] ) {
+			if( unlink(addrFile[i]) < 0 ) {
+				dprintf( D_ALWAYS,
+						 "DaemonCore: ERROR: Can't delete address file %s\n",
+						 addrFile[i] );
+			} else {
+				if( IsDebugVerbose( D_DAEMONCORE ) ) {
+					dprintf( D_DAEMONCORE, "Removed address file %s\n",
+							 addrFile[i] );
+				}
 			}
+				// Since we param()'ed for this, we need to free it now.
+			free( addrFile[i] );
 		}
-			// Since we param()'ed for this, we need to free it now.
-		free( addrFile );
 	}
 	
 	if(daemonCore) {
@@ -301,6 +307,11 @@ DC_Exit( int status, const char *shutdown_program )
 		core_dir = NULL;
 	}
 
+	if (core_name) {
+		free(core_name);
+		core_name = NULL;
+	}
+
 		/*
 		  Log a message.  We want to do this *AFTER* we delete the
 		  daemonCore object and free up other memory, just to make
@@ -378,40 +389,51 @@ drop_addr_file()
 {
 	FILE	*ADDR_FILE;
 	char	addr_file[100];
+	const char* addr[2];
 
+	// Fill in addrFile[0] and addr[0] with info about regular command port
 	sprintf( addr_file, "%s_ADDRESS_FILE", get_mySubSystem()->getName() );
-
-	if( addrFile ) {
-		free( addrFile );
+	if( addrFile[0] ) {
+		free( addrFile[0] );
 	}
-	addrFile = param( addr_file );
+	addrFile[0] = param( addr_file );
+		// Always prefer the local, private address if possible.
+	addr[0] = daemonCore->privateNetworkIpAddr();
+	if (!addr[0]) {
+			// And if not, fall back to the public.
+		addr[0] = daemonCore->publicNetworkIpAddr();
+	}
 
-	if( addrFile ) {
-		MyString newAddrFile;
-		newAddrFile.formatstr("%s.new",addrFile);
-		if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.Value(), "w")) ) {
-			// Always prefer the local, private address if possible.
-			const char* addr = daemonCore->privateNetworkIpAddr();
-			if (!addr) {
-				// And if not, fall back to the public.
-				addr = daemonCore->publicNetworkIpAddr();
-			}
-			fprintf( ADDR_FILE, "%s\n", addr );
-			fprintf( ADDR_FILE, "%s\n", CondorVersion() );
-			fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
-			fclose( ADDR_FILE );
-			if( rotate_file(newAddrFile.Value(),addrFile)!=0 ) {
+	// Fill in addrFile[1] and addr[1] with info about superuser command port
+	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", get_mySubSystem()->getName() );
+	if( addrFile[1] ) {
+		free( addrFile[1] );
+	}
+	addrFile[1] = param( addr_file );
+	addr[1] = daemonCore->superUserNetworkIpAddr();
+
+	for (int i=0; i<2; i++) {
+		if( addrFile[i] ) {
+			MyString newAddrFile;
+			newAddrFile.formatstr("%s.new",addrFile[i]);
+			if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.Value(), "w")) ) {
+				fprintf( ADDR_FILE, "%s\n", addr[i] );
+				fprintf( ADDR_FILE, "%s\n", CondorVersion() );
+				fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
+				fclose( ADDR_FILE );
+				if( rotate_file(newAddrFile.Value(),addrFile[i])!=0 ) {
+					dprintf( D_ALWAYS,
+							 "DaemonCore: ERROR: failed to rotate %s to %s\n",
+							 newAddrFile.Value(),
+							 addrFile[i]);
+				}
+			} else {
 				dprintf( D_ALWAYS,
-						 "DaemonCore: ERROR: failed to rotate %s to %s\n",
-						 newAddrFile.Value(),
-						 addrFile);
+						 "DaemonCore: ERROR: Can't open address file %s\n",
+						 newAddrFile.Value() );
 			}
-		} else {
-			dprintf( D_ALWAYS,
-					 "DaemonCore: ERROR: Can't open address file %s\n",
-					 newAddrFile.Value() );
 		}
-	}
+	}	// end of for loop
 }
 
 void
@@ -705,7 +727,7 @@ linux_sig_coredump(int signum)
 		}
 	}
 
-	WriteCoreDump("core");
+	WriteCoreDump(core_name ? core_name : "core");
 
 	// It would be a good idea to actually terminate for the same reason.
 	sa.sa_handler = SIG_DFL;
@@ -756,6 +778,7 @@ drop_core_in_log( void )
 			if (MATCH == strcmpi(get_mySubSystem()->getName(), "KBDD")) {
 				dprintf (D_FULLDEBUG, "chdir() to LOG directory failed for KBDD, "
 					     "cannot drop core in LOG dir\n");
+				free(ptmp);
 				return;
 			}
 #endif
@@ -774,6 +797,16 @@ drop_core_in_log( void )
 	}
 	core_dir = strdup(ptmp);
 
+	// get the name for core files, we need to access this pointer
+	// later in the exception handlers, so keep it around in a module static
+	// the core dump handler is expected to deal with the case of core_name == NULL
+	// by using a default name.
+	if (core_name) {
+		free(core_name);
+		core_name = NULL;
+	}
+	core_name = param("CORE_FILE_NAME");
+
 	// in some case we need to hook up our own handler to generate
 	// core files.
 	install_core_dump_handler();
@@ -781,10 +814,9 @@ drop_core_in_log( void )
 #ifdef WIN32
 	{
 		// give our Win32 exception handler a filename for the core file
-		char pseudoCoreFileName[MAX_PATH];
-		sprintf(pseudoCoreFileName,"%s\\core.%s.WIN32",ptmp,
-				get_mySubSystem()->getName() );
-		g_ExceptionHandler.SetLogFileName(pseudoCoreFileName);
+		MyString pseudoCoreFileName;
+		formatstr(pseudoCoreFileName,"%s\\%s", ptmp, core_name ? core_name : "core.WIN32");
+		g_ExceptionHandler.SetLogFileName(pseudoCoreFileName.c_str());
 
 		// set the path where our Win32 exception handler can find
 		// debug symbols
@@ -961,12 +993,16 @@ handle_reconfig( Service*, int /* cmd */, Stream* stream )
 }
 
 int
-handle_fetch_log( Service *, int, ReliSock *stream )
+handle_fetch_log( Service *, int cmd, ReliSock *stream )
 {
 	char *name = NULL;
 	int  total_bytes = 0;
 	int result;
 	int type = -1;
+
+	if ( cmd == DC_PURGE_LOG ) {
+		return handle_fetch_log_history_purge( stream );
+	}
 
 	if( ! stream->code(type) ||
 		! stream->code(name) || 
@@ -1079,19 +1115,14 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 	}
 
 	free(name);
-	char *history_file = param(history_file_param);
 
-	if (!history_file) {
+	int numHistoryFiles = 0;
+	char **historyFiles = 0;
+
+	historyFiles = findHistoryFiles(history_file_param, &numHistoryFiles);
+
+	if (!historyFiles) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: no parameter named %s\n", history_file_param);
-		stream->code(result);
-		stream->end_of_message();
-		return FALSE;
-	}
-	int fd = safe_open_wrapper_follow(history_file,O_RDONLY);
-	free(history_file);
-	if(fd<0) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: can't open history file\n");
-		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
 		stream->code(result);
 		stream->end_of_message();
 		return FALSE;
@@ -1100,16 +1131,15 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 	result = DC_FETCH_LOG_RESULT_SUCCESS;
 	stream->code(result);
 
-	filesize_t size;
-	stream->put_file(&size, fd);
+	for (int f = 0; f < numHistoryFiles; f++) {
+		filesize_t size;
+		stream->put_file(&size, historyFiles[f]);
+		free(historyFiles[f]);
+	}
+	free(historyFiles);
 
 	stream->end_of_message();
 
-	if(size<0) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: couldn't send all data!\n");
-	}
-
-	close(fd);
 	return TRUE;
 }
 
@@ -1282,6 +1312,34 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 				}
 				names.clear();
 			}
+		} else if (is_arg_prefix(param_name, "?stats", -1)) {
+
+			struct _macro_stats stats;
+			int cQueries = get_config_stats(&stats);
+			// for backward compatility, we have to put a single string on the wire
+			// before we can put the stats classad.
+			MyString queries;
+			queries.formatstr("%d", cQueries);
+			if ( ! stream->code(queries)) {
+				dprintf(D_ALWAYS, "Can't send param stats for DC_CONFIG_VAL\n");
+				retval = false;
+			} else {
+				ClassAd ad; ad.Clear(); // remove time()
+				ad.Assign("Macros", stats.cEntries);
+				ad.Assign("Used", stats.cUsed);
+				ad.Assign("Referenced", stats.cReferenced);
+				ad.Assign("Files", stats.cFiles);
+				ad.Assign("StringBytes", stats.cbStrings);
+				ad.Assign("TablesBytes", stats.cbTables);
+				ad.Assign("Sorted", stats.cSorted);
+				if ( ! putClassAd(stream, ad)) {
+					dprintf(D_ALWAYS, "Can't send param stats ad for DC_CONFIG_VAL\n");
+					retval = false;
+				}
+			}
+			if (retval && ! stream->end_of_message()) {
+				retval = false;
+			}
 
 		} else { // unrecognised ?command
 
@@ -1304,29 +1362,75 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 	if (idCmd == DC_CONFIG_VAL) {
 		int retval = TRUE; // assume success
 
+#if 1
+		MyString name_used, value;
+		const char * def_val = NULL;
+		const MACRO_META * pmet = NULL;
+		const char * subsys = get_mySubSystem()->getName();
+		const char * local_name  = get_mySubSystem()->getLocalName();
+		const char * val = param_get_info(param_name, subsys, local_name, name_used, &def_val, &pmet);
+		if (name_used.empty()) {
+			dprintf( D_FULLDEBUG,
+					 "Got DC_CONFIG_VAL request for unknown parameter (%s)\n",
+					 param_name );
+			// send a NULL to indicate undefined. (val is NULL here)
+			if( ! stream->code(const_cast<char*&>(val)) ) {
+				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
+				retval = FALSE;
+			}
+		} else {
+
+			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
+
+			if (val) { tmp = expand_param(val, subsys, 0); } else { tmp = NULL; }
+			if( ! stream->code(tmp) ) {
+				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
+				retval = FALSE;
+			}
+			if (tmp) free(tmp); tmp = NULL;
+
+			name_used.upper_case();
+			name_used += " = ";
+			if (val) name_used += val;
+			if ( ! stream->code(name_used)) {
+				dprintf( D_ALWAYS, "Can't send raw reply for DC_CONFIG_VAL\n" );
+			}
+			param_get_location(pmet, value);
+			if ( ! stream->code(value)) {
+				dprintf( D_ALWAYS, "Can't send filename reply for DC_CONFIG_VAL\n" );
+			}
+			if ( ! stream->code(const_cast<char*&>(def_val))) {
+				dprintf( D_ALWAYS, "Can't send default reply for DC_CONFIG_VAL\n" );
+			}
+			if (pmet->ref_count) { value.formatstr("%d / %d", pmet->use_count, pmet->ref_count);
+			} else  { value.formatstr("%d", pmet->use_count); }
+			if ( ! stream->code(value)) {
+				dprintf( D_ALWAYS, "Can't send use count reply for DC_CONFIG_VAL\n" );
+			}
+		}
+#else
 		MyString value, name_used, filename;
 		int line_number, use_count, ref_count;
 		const char * subsys = get_mySubSystem()->getName();
 		const char * local_name  = get_mySubSystem()->getLocalName();
 		if (subsys && !subsys[0]) subsys = NULL;
 		if (local_name && !local_name[0]) local_name = NULL;
-
+		const char * def_val = NULL;
 		const char * val = param_get_info(param_name, subsys, local_name,
-								name_used, use_count, ref_count, filename, line_number);
-		if (val) {
-			const char * def_val = param_exact_default_string(name_used.Value());
-			dprintf(D_ALWAYS, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
+							&def_val, name_used, use_count, ref_count, filename, line_number);
+		if (val || ! filename.empty()) {
+			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
 
-			tmp = expand_param(val, subsys, 0);
+			if (val) { tmp = expand_param(val, subsys, 0); } else { tmp = NULL; }
 			if( ! stream->code(tmp) ) {
 				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
 				retval = FALSE;
 			}
-			free(tmp); tmp = NULL;
+			if (tmp) free(tmp); tmp = NULL;
 
 			name_used.upper_case();
 			name_used += " = ";
-			name_used += val;
+			if (val) name_used += val;
 			if ( ! stream->code(name_used)) {
 				dprintf( D_ALWAYS, "Can't send raw reply for DC_CONFIG_VAL\n" );
 			}
@@ -1344,8 +1448,8 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 				dprintf( D_ALWAYS, "Can't send use count reply for DC_CONFIG_VAL\n" );
 			}
 		} else {
-			dprintf( D_FULLDEBUG, 
-					 "Got DC_CONFIG_VAL request for unknown parameter (%s)\n", 
+			dprintf( D_FULLDEBUG,
+					 "Got DC_CONFIG_VAL request for unknown parameter (%s)\n",
 					 param_name );
 			// send a NULL to indicate undefined. (val is NULL here)
 			if( ! stream->code(const_cast<char*&>(val)) ) {
@@ -1353,7 +1457,7 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 				retval = FALSE;
 			}
 		}
-
+#endif
 		if( ! stream->end_of_message() ) {
 			dprintf( D_ALWAYS, "Can't send end of message for DC_CONFIG_VAL\n" );
 			retval = FALSE;
@@ -1570,7 +1674,7 @@ dc_reconfig()
 			as an extern "C" linkage with a default argument(WTF!?) while
 			being called in a C++ context, something goes wrong. So, we'll
 			just supply the errant argument. */
-	config(0);
+	config();
 
 		// See if we're supposed to be allowing core files or not
 	if ( doCoreInit ) {
@@ -2084,14 +2188,11 @@ int dc_main( int argc, char** argv )
 		Foreground = 1;
 	}
 
-		// call config so we can call param.  
-	if ( get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ) {
-		// Try to minimize shadow footprint by not loading
-		// the "extra" info from the config file
-		config( wantsQuiet, false, false );
-	} else {
-		config( wantsQuiet, false, true );
-	}
+	// call config so we can call param.  
+	// Try to minimize shadow footprint by not loading the metadata from the config file
+	int config_options = get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ? 0 : CONFIG_OPT_WANT_META;
+	const bool abort_if_invalid = true;
+	config_ex(wantsQuiet, abort_if_invalid, config_options);
 
 
     // call dc_config_GSI to set GSI related parameters so that all
@@ -2341,6 +2442,11 @@ int dc_main( int argc, char** argv )
 			dprintf(D_ALWAYS, "   %s\n", source );
 		}
 	}
+	_macro_stats stats;
+	get_config_stats(&stats);
+	dprintf(D_ALWAYS, "config Macros = %d, Sorted = %d, StringBytes = %d, TablesBytes = %d\n",
+				stats.cEntries, stats.cSorted, stats.cbStrings, stats.cbTables);
+
 
 	// TJ: Aug/2013 we are going to turn on classad caching by default in 8.1.1 we want to see in the log that its on.
 	dprintf (D_ALWAYS, "CLASSAD_CACHING is %s\n", param_boolean("ENABLE_CLASSAD_CACHING", false) ? "ENABLED" : "OFF");
@@ -2348,6 +2454,9 @@ int dc_main( int argc, char** argv )
 		// chdir() into our log directory so if we drop core, that's
 		// where it goes.  We also do some NT-specific stuff in here.
 	drop_core_in_log();
+
+	// write dprintf's contribution to the daemon header.
+	dprintf_print_daemon_header();
 
 #ifdef WIN32
 		// On NT, we need to make certain we have a console allocated,
@@ -2601,7 +2710,7 @@ int dc_main( int argc, char** argv )
 								  "handle_fetch_log()", 0, ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_PURGE_LOG, "DC_PURGE_LOG",
-								  (CommandHandler)handle_fetch_log_history_purge,
+								  (CommandHandler)handle_fetch_log,
 								  "handle_fetch_log_history_purge()", 0, ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",

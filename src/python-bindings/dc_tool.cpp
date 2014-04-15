@@ -93,9 +93,8 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     }
     if (target.size())
     {
-        std::vector<unsigned char> target_cstr; target_cstr.reserve(target.size()+1);
-        memcpy(&target_cstr[0], target.c_str(), target.size()+1);
-        if (!sock.code(&target_cstr[0]))
+        std::string target_to_send = target;
+        if (!sock.code(target_to_send))
         {
             PyErr_SetString(PyExc_RuntimeError, "Failed to send target.");
             throw_error_already_set();
@@ -107,6 +106,18 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
         }
     }
     sock.close();
+}
+
+void
+enable_debug()
+{
+    dprintf_set_tool_debug("TOOL", 0);
+}
+
+void
+enable_log()
+{
+    dprintf_config("TOOL");
 }
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(send_command_overloads, send_command, 2, 3);
@@ -138,4 +149,7 @@ export_dc_tool()
         ":param target: Some commands require additional arguments; for example, sending DaemonOff to a master requires one to specify which subsystem to turn off."
         "  If this parameter is given, the daemon is sent an additional argument."))
         ;
+
+    def("enable_debug", enable_debug, "Turn on debug logging output from HTCondor.  Logs to stderr.");
+    def("enable_log", enable_log, "Turn on logging output from HTCondor.  Logs to the file specified by the parameter TOOL_LOG.");
 }

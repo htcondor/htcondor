@@ -25,6 +25,7 @@
 #include "log_transaction.h" // for Transaction
 #include "prio_rec.h"
 #include "condor_sockaddr.h"
+#include "classad_log.h"
 
 
 void PrintQ();
@@ -103,6 +104,9 @@ extern ClassAd *dollarDollarExpand(int cid, int pid, ClassAd *job, ClassAd *res,
 bool rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad);
 ClassAd* GetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions);
 ClassAd* GetNextJobByCluster( int, int );
+
+ClassAdLog::filter_iterator BeginIterator(const classad::ExprTree &requirements, int timeslice_ms);
+ClassAdLog::filter_iterator EndIterator();
 
 int get_myproxy_password_handler(Service *, int, Stream *sock);
 

@@ -882,7 +882,7 @@ BOOL SystemHandleInformation::GetFileName( HANDLE h, MyString& str, DWORD proces
 	tp.pName = &str;
 	tp.rc = 0;
 
-	#pragma message(__FILE__ "(885) : tj:2012 is it really necessary to create a thread to call NtQueryInformationFile??")
+	// tj:2012 is it really necessary to create a thread to call NtQueryInformationFile??"
 	// Let's start the thread to get the file name
 	hThread = (HANDLE)_beginthread( GetFileNameThread, 0, &tp );
 

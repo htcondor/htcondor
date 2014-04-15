@@ -26,7 +26,7 @@
 #include "utc_time.h"
 #include "directory_util.h"
 
-extern "C" int lock_file( int fd, LOCK_TYPE type, BOOLEAN do_block );
+int lock_file( int fd, LOCK_TYPE type, bool do_block );
 
 FileLockBase::FileLockBase( void )
 {

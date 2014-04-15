@@ -426,16 +426,12 @@ set ARGS=%ARGS% INSTALLDIR="C:\Condor"
 set ARGS=%ARGS% POOLHOSTNAME="$(IP_ADDRESS)"
 set ARGS=%ARGS% ACCOUNTINGDOMAIN="none"
 set ARGS=%ARGS% JVMLOCATION="C:\Windows\system32\java.exe"
-set ARGS=%ARGS% USEVMUNIVERSE="N"set ARGS=%ARGS% VMMEMORY="128"
+set ARGS=%ARGS% USEVMUNIVERSE="N"
+set ARGS=%ARGS% VMMEMORY="128"
 set ARGS=%ARGS% VMMAXNUMBER="$(NUM_CPUS)"
 set ARGS=%ARGS% VMNETWORKING="N"
-set ARGS=%ARGS% USEHDFS="N"
-set ARGS=%ARGS% NAMENODE=""
-set ARGS=%ARGS% HDFSMODE="HDFS_NAMENODE"
-set ARGS=%ARGS% HDFSPORT="5000"
-set ARGS=%ARGS% HDFSWEBPORT="4000"
  
-msiexec /qb /l* condor-install-log.txt /i condor-7.1.0-winnt50-x86.msi %ARGS%
+msiexec /qb /l* condor-install-log.txt /i condor-8.0.0-133173-Windows-x86.msi %ARGS%
 \end{verbatim}
 
 Each property corresponds to answers that would have been
@@ -536,22 +532,8 @@ will cause the installer to enable VM Universe jobs on the target machine.
 \item[PERLLOCATION]
 defines the path to \Prog{Perl} on the target machine. This is required in
 order to use the \SubmitCmd{vm} universe.
+\end{description}
 
-\item[USEHDFS = $<$ Y \Bar\ N $>$]
-determines if HDFS is run.
-
-\item[HDFSMODE $<$ HDFS\_DATANODE \Bar\ HDFS\_NAMENODE $>$]
-sets the mode HDFS runs in.
-
-\item[NAMENODE]
-sets the host name of the primary name node.
-
-\item[HDFSPORT]
-sets the port number that the primary name node listens to.
-
-\item [HDFSWEBPORT]
-sets the port number that the name node web interface is bound to.
-\end {description}
 
 After defining each of these properties for the MSI installer, the
 installer can be started with the \Prog{msiexec} command. The following
@@ -559,7 +541,7 @@ command starts the installer in unattended mode, and it dumps a journal of
 the installer's progress to a log file:
 \footnotesize
 \begin{verbatim}
-msiexec /qb /lxv* condor-install-log.txt /i condor-7.2.2-winnt50-x86.msi [property=value] ... 
+msiexec /qb /lxv* condor-install-log.txt /i condor-8.0.0-173133-Windows-x86.msi [property=value] ... 
 \end{verbatim}
 \normalsize
 

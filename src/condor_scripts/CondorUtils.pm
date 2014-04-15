@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use IPC::Open3;
 use Time::HiRes qw(tv_interval gettimeofday);
+use Archive::Tar;
 
 BEGIN {
 	if ($^O =~ /MSWin32/) {
@@ -17,7 +18,7 @@ our $VERSION = '1.00';
 
 use base 'Exporter';
 
-our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE);
+our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl fullchomp CreateDir CopyIt TarCreate TarExtract MoveIt DirLs List);
 
 sub TRUE{1};
 sub FALSE{0};
@@ -141,7 +142,7 @@ sub runcmd {
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	my @abbr = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
         use POSIX qw/strftime/; # putting this at the top of the script doesn't work oddly
-        my $date = strftime("%Y/%m/%d %H:%M:%S", localtime);
+        my $date = strftime("%H:%M:%S", localtime);
 	my $childpid;
 	my $local_expectation = FALSE;
 	my %altoptions;
@@ -554,6 +555,220 @@ sub is_windows_native_perl {
          return 1;
     }
     return 0;
+}
+
+sub CreateDir
+{
+	my $cmdline = shift;
+	my @argsin = split /\s/, $cmdline;
+	my $cmdcount = @argsin;
+	my $ret = 0;
+	my $fullcmd = "";
+	#print  "CreateDir: $cmdline argcout:$cmdcount\n";
+
+	my $amwindows = is_windows();
+
+	my $winpath = "";
+	if($amwindows == 1) {
+		if($argsin[0] eq "-p") {
+			$winpath = `cygpath -w $argsin[1]`;
+			CondorUtils::fullchomp($winpath);
+			$_ = $winpath;
+			s/\\/\\\\/g;
+			$winpath = $_;
+			if(-d "$argsin[1]") {
+				return($ret);
+			}
+		} else {
+			$winpath = `cygpath -w $argsin[0]`;
+			CondorUtils::fullchomp($winpath);
+			$_ = $winpath;
+			s/\\/\\\\/g;
+			$winpath = $_;
+			if(-d "$argsin[0]") {
+				return($ret);
+			}
+		}
+
+		$fullcmd = "cmd /C mkdir $winpath";
+		$ret = system("$fullcmd");
+		#print "Tried to create dir got ret value:$ret path:$winpath/$fullcmd\n";
+	} else {
+		if($cmdline =~ /\-p/) {
+			$_ = $cmdline;
+			s/\-p//;
+			$cmdline = $_;
+		}
+		$fullcmd = "mkdir $cmdline"; 	
+		if(-d $cmdline) {
+			return($ret);
+		}
+		$ret = system("$fullcmd");
+		#print "Tried to create dir got ret value:$ret path:$cmdline/$fullcmd\n";
+	}
+	return($ret);
+}
+
+sub List
+{
+    my $cmdline = shift;
+	my @allargs = split /\s/, $cmdline;
+    my $amwindows = is_windows();
+    my $fullcmd = "";
+	my $ret = 0;
+
+    if($amwindows == 1) {
+		$fullcmd = "cmd /C dir ";
+
+		foreach my $patharg (@allargs) {
+			if($patharg =~ /cygdrive/) {
+				my $winpath = `cygpath -w $patharg`;
+        		CondorUtils::fullchomp($winpath);
+				$_ = $winpath;
+        		s/\\/\\\\/g;
+				$winpath = $_;
+				$fullcmd = $fullcmd . " $winpath";
+			} else {
+				$fullcmd = $fullcmd . " $patharg";
+	}
+		}
+
+		$ret = system("$fullcmd");
+	} else {
+		$fullcmd = "ls $cmdline";
+
+		$ret = system("$fullcmd");
+	}
+	return($ret);
+}
+
+sub DirLs
+{
+    my $cmdline = shift;
+    my $amwindows = is_windows();
+    my $fullcmd = "";
+	my $ret = 0;
+
+    if($amwindows == 1) {
+		$fullcmd = "cmd /C dir";
+
+		$ret = system("$fullcmd");
+	} else {
+		$fullcmd = "pwd;ls";
+
+		$ret = system("$fullcmd");
+	}
+	return($ret);
+}
+
+sub CopyIt
+{
+    my $cmdline = shift;
+    my $ret = 0;
+    my $fullcmd = "";
+    my $dashr = "no";
+	#print  "CopyIt: $cmdline\n";
+    my $winsrc = "";
+    my $windest = "";
+
+    my $amwindows = is_windows();
+    if($cmdline =~ /\-r/) {
+        $dashr = "yes";
+        $_ = $cmdline;
+        s/\-r//;
+        $cmdline = $_;
+    }
+    # this should leave us source and destination
+    my @argsin = split /\s/, $cmdline;
+    my $cmdcount = @argsin;
+
+    if($amwindows == 1) {
+        $winsrc = `cygpath -w $argsin[0]`;
+        $windest = `cygpath -w $argsin[1]`;
+        CondorUtils::fullchomp($winsrc);
+        CondorUtils::fullchomp($windest);
+        $_ = $winsrc;
+        s/\\/\\\\/g;
+        $winsrc = $_;
+        $_ = $windest;
+        s/\\/\\\\/g;
+        $windest = $_;
+        $fullcmd = "xcopy $winsrc $windest /Y";
+        if($dashr eq "yes") {
+            $fullcmd = $fullcmd . " /s /e";
+        }
+
+        $ret = system("$fullcmd");
+		#print "Tried to create dir got ret value:$ret cmd:$fullcmd\n";
+    } else {
+        $fullcmd = "cp ";
+        if($dashr eq "yes") {
+            $fullcmd = $fullcmd . "-r ";
+        }
+        $fullcmd = $fullcmd . "$cmdline";
+        $ret = system("$fullcmd");
+		#print "Tried to create dir got ret value:$ret path:$cmdline\n";
+    }
+    return($ret);
+}
+
+sub MoveIt
+{
+	# assume two args only
+	my $cmdline = shift;
+	my $ret = 0;
+	my $fullcmd = "";
+	#print  "MoveIt: $cmdline\n";
+	my $winsrc = "";
+	my $windest = "";
+
+	my $amwindows = is_windows();
+
+	# this should be source and destination
+	my @argsin = split /\s/, $cmdline;
+	my $cmdcount = @argsin;
+
+	if($amwindows == 1) {
+		$winsrc = `cygpath -w $argsin[0]`;
+		$windest = `cygpath -w $argsin[1]`;
+		CondorUtils::fullchomp($winsrc);
+		CondorUtils::fullchomp($windest);
+		$_ = $winsrc;
+		s/\\/\\\\/g;
+		$winsrc = $_;
+		$_ = $windest;
+		s/\\/\\\\/g;
+		$windest = $_;
+		$fullcmd = "cmd /C move $winsrc $windest";
+
+		$ret = system("$fullcmd");
+		#print "Tried to copy got ret value:$ret cmd:$fullcmd\n";
+	} else {
+		$fullcmd = "mv "; 	
+		$fullcmd = $fullcmd . "$cmdline";
+		$ret = system("$fullcmd");
+		#print "Tried to create dir got ret value:$ret path:$cmdline\n";
+	}
+	return($ret);
+}
+
+sub TarCreate
+{
+}
+
+sub TarExtract
+{
+	my $archive = shift;
+	my $amwindows = is_windows();
+	my $winpath = "";
+	my $tarobject = Archive::Tar->new;
+	if($amwindows == 1) {
+		$winpath = `cygpath -w $archive`;
+		CondorUtils::fullchomp($winpath);
+		$archive = $winpath;
+	}
+	$tarobject->read($archive);
+	$tarobject->extract();
 }
 
 1;

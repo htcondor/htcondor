@@ -800,10 +800,10 @@ void
 calc_idle_time_cpp(time_t * user_idle, time_t * console_idle)
 {
 
-    mach_port_t             masterPort           = NULL;
-    io_iterator_t           hidObjectIterator    = NULL;
+    mach_port_t             masterPort           = 0;
+    io_iterator_t           hidObjectIterator    = 0;
     CFMutableDictionaryRef  hidMatchDictionary   = NULL;
-    io_object_t             hidDevice            = NULL;
+    io_object_t             hidDevice            = 0;
     
     *user_idle = *console_idle = -1;
     
@@ -813,8 +813,6 @@ calc_idle_time_cpp(time_t * user_idle, time_t * console_idle)
         hidMatchDictionary = IOServiceMatching("IOHIDSystem");
         if (IOServiceGetMatchingServices(masterPort, hidMatchDictionary, &hidObjectIterator) != kIOReturnSuccess) {
             dprintf(D_ALWAYS, "IDLE: Can't find IOHIDSystem\n");
-        } else if (hidObjectIterator == NULL) {
-            dprintf(D_ALWAYS, "IDLE Can't find IOHIDSystem\n");
         } else {
             // Note that IOServiceGetMatchingServices consumes a reference to the dictionary
             // so we don't need to release it. We'll mark it as NULL, so we don't try to reuse it.

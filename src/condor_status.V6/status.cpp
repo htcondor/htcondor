@@ -80,11 +80,15 @@ struct SortSpec {
 
 // global variables
 AttrListPrintMask pm;
+printmask_headerfooter_t pmHeadFoot = STD_HEADFOOT;
 List<const char> pm_head; // The list of headings for the mask entries
+std::vector<GroupByKeyInfo> group_by_keys; // TJ 8.1.5 for future use, ignored for now.
+bool using_print_format = false; // hack for now so we can get standard totals when using -print-format
 const char		*DEFAULT= "<default>";
 DCCollector* pool = NULL;
 AdTypes		type 	= (AdTypes) -1;
 ppOption	ppStyle	= PP_NOTSET;
+ppOption	ppTotalStyle = PP_NOTSET; // used when setting PP_CUSTOM to keep track of how to do totals.
 int			wantOnlyTotals 	= 0;
 int			summarySize = -1;
 bool        expert = false;
@@ -117,6 +121,7 @@ void prettyPrint(ClassAdList &, TrackTotals *);
 int  matchPrefix(const char *, const char *, int min_len);
 int  lessThanFunc(AttrList*,AttrList*,void*);
 int  customLessThanFunc(AttrList*,AttrList*,void*);
+static int set_print_mask_from_stream (const char * streamid, bool id_is_filename);
 
 extern "C" int SetSyscalls (int) {return 0;}
 extern	void setPPstyle (ppOption, int, const char *);
@@ -164,6 +169,11 @@ main (int argc, char *argv[])
 		setPPstyle(PP_QUILL_NORMAL, 0, DEFAULT);
 		break;
 #endif /* HAVE_EXT_POSTGRESQL */
+
+
+	  case DEFRAG_AD:
+		setPPstyle(PP_GENERIC_NORMAL, 0, DEFAULT);
+		break;
 
 	  case STARTD_AD:
 		setPPstyle(PP_STARTD_NORMAL, 0, DEFAULT);
@@ -215,6 +225,7 @@ main (int argc, char *argv[])
 	  case MODE_QUILL_NORMAL:
 #endif /* HAVE_EXT_POSTGRESQL */
 
+	  case MODE_DEFRAG_NORMAL:
 	  case MODE_STARTD_NORMAL:
 	  case MODE_MASTER_NORMAL:
 	  case MODE_CKPT_SRVR_NORMAL:
@@ -322,7 +333,12 @@ main (int argc, char *argv[])
 	secondPass (argc, argv);
 
 	// initialize the totals object
-	TrackTotals	totals(ppStyle);
+	if (ppStyle == PP_CUSTOM && using_print_format) {
+		if (pmHeadFoot & HF_NOSUMMARY) ppTotalStyle = PP_CUSTOM;
+	} else {
+		ppTotalStyle = ppStyle;
+	}
+	TrackTotals	totals(ppTotalStyle);
 
 	// fetch the query
 	QueryResult q;
@@ -443,13 +459,13 @@ main (int argc, char *argv[])
 
 	CondorError errstack;
 	if (NULL != addr) {
-	        // this case executes if pool was provided, or if in "direct" mode with
-	        // subsystem that corresponds to a daemon (above).
-                // Here 'addr' represents either the host:port of requested pool, or
-                // alternatively the host:port of daemon associated with requested subsystem (direct mode)
+			// this case executes if pool was provided, or if in "direct" mode with
+			// subsystem that corresponds to a daemon (above).
+			// Here 'addr' represents either the host:port of requested pool, or
+			// alternatively the host:port of daemon associated with requested subsystem (direct mode)
 		q = query->fetchAds (result, addr, &errstack);
 	} else {
-                // otherwise obtain list of collectors and submit query that way
+			// otherwise obtain list of collectors and submit query that way
 		CollectorList * collectors = CollectorList::create();
 		q = collectors->query (*query, result, &errstack);
 		delete collectors;
@@ -457,33 +473,36 @@ main (int argc, char *argv[])
 		
 
 	// if any error was encountered during the query, report it and exit 
-        if (Q_OK != q) {
-            dprintf_WriteOnErrorBuffer(stderr, true);
-                // we can always provide these messages:
-	        fprintf( stderr, "Error: %s\n", getStrQueryResult(q) );
+	if (Q_OK != q) {
+
+		dprintf_WriteOnErrorBuffer(stderr, true);
+			// we can always provide these messages:
+		fprintf( stderr, "Error: %s\n", getStrQueryResult(q) );
 		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 
-	        if ((NULL != requested_daemon) && ((Q_NO_COLLECTOR_HOST == q) || (requested_daemon->type() == DT_COLLECTOR))) {
-                        // Specific long message if connection to collector failed.
-		        const char* fullhost = requested_daemon->fullHostname();
-                        if (NULL == fullhost) fullhost = "<unknown_host>";
-                        const char* daddr = requested_daemon->addr();
-                        if (NULL == daddr) daddr = "<unknown>";
-                        char info[1000];
-                        sprintf(info, "%s (%s)", fullhost, daddr);
-		        printNoCollectorContact( stderr, info, !expert );                        
-	        } else if ((NULL != requested_daemon) && (Q_COMMUNICATION_ERROR == q)) {
-                        // more helpful message for failure to connect to some daemon/subsys
+        if ((NULL != requested_daemon) && ((Q_NO_COLLECTOR_HOST == q) ||
+			(requested_daemon->type() == DT_COLLECTOR)))
+		{
+				// Specific long message if connection to collector failed.
+			const char* fullhost = requested_daemon->fullHostname();
+			if (NULL == fullhost) fullhost = "<unknown_host>";
+			const char* daddr = requested_daemon->addr();
+			if (NULL == daddr) daddr = "<unknown>";
+			char info[1000];
+			sprintf(info, "%s (%s)", fullhost, daddr);
+	        printNoCollectorContact( stderr, info, !expert );
+        } else if ((NULL != requested_daemon) && (Q_COMMUNICATION_ERROR == q)) {
+				// more helpful message for failure to connect to some daemon/subsys
 			const char* id = requested_daemon->idStr();
-                        if (NULL == id) id = requested_daemon->name();
+			if (NULL == id) id = requested_daemon->name();
 			if (NULL == id) id = "daemon";
-                        const char* daddr = requested_daemon->addr();
-                        if (NULL == daddr) daddr = "<unknown>";
-           	        fprintf(stderr, "Error: Failed to contact %s at %s\n", id, daddr);
+			const char* daddr = requested_daemon->addr();
+			if (NULL == daddr) daddr = "<unknown>";
+			fprintf(stderr, "Error: Failed to contact %s at %s\n", id, daddr);
 		}
 
-                // fail
-                exit (1);
+		// fail
+		exit (1);
 	}
 
 	if (sortSpecs.empty()) {
@@ -522,6 +541,59 @@ main (int argc, char *argv[])
 	return 0;
 }
 
+const CustomFormatFnTable * getCondorStatusPrintFormats();
+
+static int set_print_mask_from_stream (
+	const char * streamid,
+	bool is_filename)
+{
+	std::string where_expr;
+	std::string messages;
+	StringList attrs;
+
+	SimpleInputStream * pstream = NULL;
+
+	FILE *file = NULL;
+	if (MATCH == strcmp("-", streamid)) {
+		pstream = new SimpleFileInputStream(stdin, false);
+	} else if (is_filename) {
+		file = safe_fopen_wrapper_follow(streamid, "r");
+		if (file == NULL) {
+			fprintf(stderr, "Can't open select file: %s\n", streamid);
+			return -1;
+		}
+		pstream = new SimpleFileInputStream(file, true);
+	} else {
+		pstream = new StringLiteralInputStream(streamid);
+	}
+	ASSERT(pstream);
+
+	int err = SetAttrListPrintMaskFromStream(
+					*pstream,
+					*getCondorStatusPrintFormats(),
+					pm,
+					pmHeadFoot,
+					group_by_keys,
+					where_expr,
+					attrs,
+					messages);
+	delete pstream; pstream = NULL;
+	if ( ! err) {
+		if ( ! where_expr.empty()) {
+			const char * constraint = pm.store(where_expr.c_str());
+			if (query->addANDConstraint (constraint) != Q_OK) {
+				formatstr_cat(messages, "WHERE expression is not valid: %s\n", constraint);
+			}
+		}
+		// convert projection list into the format that condor status likes. because programmers.
+		attrs.rewind();
+		const char * attr;
+		while ((attr = attrs.next())) { projList.AppendArg(attr); }
+	}
+	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
+	return err;
+}
+
 
 void
 usage ()
@@ -529,7 +601,8 @@ usage ()
 	fprintf (stderr,"Usage: %s [help-opt] [query-opt] [display-opt] "
 		"[custom-opts ...] [name ...]\n"
 		"    where [help-opt] is one of\n"
-		"\t-help\t\t\tThis screen\n"
+		"\t-help\t\t\tPrint this screen and exit\n"
+		"\t-version\t\tPrint HTCondor version and exit\n"
 		"\t-diagnose\t\tPrint out query ad without performing query\n"
 		"    and [query-opt] is one of\n"
 		"\t-avail\t\t\tPrint information about available resources\n"
@@ -538,6 +611,7 @@ usage ()
 		"\t-cod\t\t\tDisplay Computing On Demand (COD) jobs\n"
 		"\t-collector\t\tDisplay collector daemon attributes\n"
 		"\t-debug\t\t\tDisplay debugging info to console\n"
+		"\t-defrag\t\t\tDisplay status of defrag daemon\n"
 		"\t-direct <host>\t\tGet attributes directly from the given daemon\n"
 		"\t-java\t\t\tDisplay Java-capable hosts\n"
 		"\t-vm\t\t\tDisplay VM-capable hosts\n"
@@ -667,6 +741,14 @@ firstPass (int argc, char *argv[])
 				++i;
 			}
 		} else
+		if (is_dash_arg_colon_prefix(argv[i], "print-format", &pcolon, 2)) {
+			if ( (i+1 >= argc)  || (*(argv[i+1]) == '-' && (argv[i+1])[1] != 0)) {
+				fprintf( stderr, "Error: Argument -print-format requires a filename argument\n");
+				exit( 1 );
+			}
+			++i; // eat the next argument.
+			// we can't fully parse the print format argument until the second pass, so we are done for now.
+		} else
 		if (matchPrefix (argv[i], "-wide", 3)) {
 			wide_display = true; // when true, don't truncate field data
 			//invalid_fields_empty = true;
@@ -715,6 +797,9 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-debug", 3)) {
 			// dprintf to console
 			dprintf_set_tool_debug("TOOL", 0);
+		} else
+		if (matchPrefix (argv[i], "-defrag", 4)) {
+			setMode (MODE_DEFRAG_NORMAL, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-help", 2)) {
 			usage ();
@@ -1040,7 +1125,22 @@ secondPass (int argc, char *argv[])
 			}
 			continue;
 		}
-		if (matchPrefix (argv[i], "-target", 2)) {
+		if (is_dash_arg_colon_prefix(argv[i], "print-format", &pcolon, 2)) {
+			if ( (i+1 >= argc)  || (*(argv[i+1]) == '-' && (argv[i+1])[1] != 0)) {
+				fprintf( stderr, "Error: Argument -print-format requires a filename argument\n");
+				exit( 1 );
+			}
+			ppTotalStyle = ppStyle;
+			setPPstyle (PP_CUSTOM, i, argv[i]);
+			++i; // skip to the next argument.
+			if (set_print_mask_from_stream(argv[i], true) < 0) {
+				fprintf(stderr, "Error: invalid select file %s\n", argv[i]);
+				exit (1);
+			}
+			using_print_format = true; // so we can hack totals.
+			continue;
+		}
+		if (matchPrefix (argv[i], "-target", 5)) {
 			i++;
 			continue;
 		}
@@ -1100,6 +1200,7 @@ secondPass (int argc, char *argv[])
 			}
 
 			switch (mode) {
+			  case MODE_DEFRAG_NORMAL:
 			  case MODE_STARTD_NORMAL:
 			  case MODE_STARTD_COD:
 #ifdef HAVE_EXT_POSTGRESQL

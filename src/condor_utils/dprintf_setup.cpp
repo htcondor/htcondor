@@ -176,7 +176,7 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 						DebugLastMod = -errno;
 					}
 				}
-				PRAGMA_REMIND("TJ: fix this when choice includes verbose.")
+				//PRAGMA_REMIND("TJ: fix this when choice includes verbose.")
 				AnyDebugBasicListener = p_info[ii].choice;
 				AnyDebugVerboseListener = p_info[ii].VerboseCats;
 				DebugHeaderOptions = p_info[ii].HeaderOpts;

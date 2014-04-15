@@ -51,6 +51,30 @@ to send to a daemon.   Some commands require additional arguments;
 for example, sending \texttt{DaemonOff} to a \Condor{master} requires 
 one to specify which subsystem to turn off. 
 \\ \hline
+\texttt{read\_events( file\_obj, is\_xml = True ) }
+
+Read and parse an HTCondor event log file.
+Returns a python iterator of ClassAds.
+
+Parameter \texttt{file\_obj} is a file object corresponding to an HTCondor
+event log.
+
+The optional parameter \texttt{is\_xml} specifies whether the event log is
+XML-formatted.
+
+\\ \hline
+
+\texttt{enable\_debug( )}
+
+Enable debugging output from HTCondor, where output is sent to \texttt{stderr}.
+The logging level is controlled by \MacroNI{TOOL\_DEBUG}.
+
+\\ \hline
+\texttt{enable\_log( )}
+
+Enable debugging output from HTCondor, where output is sent to a file.
+The log level is controlled by \MacroNI{TOOL\_DEBUG},
+and the file used is controlled by \MacroNI{TOOL\_LOG}.
 
 \end{tabular}
 \end{flushleft}
@@ -112,6 +136,20 @@ Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
 daemon to project along.  
 It defaults to having the \Condor{schedd} daemon return all attributes.
 \\ \hline
+\texttt{xquery( constraint = true, attr\_list = [] )}
+
+Query the \Condor{schedd} daemon for jobs.
+Returns an iterator of ClassAds representing the matching jobs
+containing at least the list of attributes requested by the second parameter.
+
+The optional parameter \texttt{constraint} provides a constraint for
+filtering out jobs.
+It defaults to \texttt{True}.
+
+Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
+daemon to project along.
+It defaults to having the \Condor{schedd} daemon return all attributes.
+\\ \hline
 \texttt{submit( ad, count = 1, spool = false, ad\_results = None )}
 
 Submit one or more jobs to the \Condor{schedd} daemon.
@@ -157,6 +195,22 @@ Retrieve the output sandbox from one or more jobs.
 
 Parameter \texttt{job\_spec} is an expression string matching 
 the list of job output sandboxes to retrieve.
+\\ \hline
+\texttt{refreshGSIProxy(cluster, proc, filename, lifetime)}
+
+Refresh the GSI proxy of a job with job identifier given
+by parameters \texttt{cluster} and \texttt{proc}.
+This will refresh the remote proxy with the contents of the file identified
+by parameter \texttt{filename}.  
+
+Parameter \texttt{lifetime} indicates the desired
+lifetime (in seconds) of the delegated proxy.
+A value of 0 specifies to not shorten the proxy lifetime.
+A value of -1 specifies to use the value of configuration variable
+\MacroNI{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}.
+Note that, depending on the lifetime
+of the proxy in \texttt{filename}, the resulting lifetime may be shorter
+than the desired lifetime.
 
 \end{tabular}
 \end{flushleft}
@@ -169,8 +223,10 @@ the list of job output sandboxes to retrieve.
 
 Create an instance of the \texttt{Collector} class.  
 
-Optional parameter \texttt{pool} is a string with host:port pair specified.
-If omitted, the local \Condor{schedd} daemon is used.
+Optional parameter \texttt{pool} is a string with host:port pair specified or
+a list of pairs.
+If omitted, the value of configuration variable \MacroNI{COLLECTOR\_HOST} 
+is used.
 \\ \hline
 \texttt{locate( (DaemonTypes)daemon\_type, (str)name )}
 
@@ -461,6 +517,21 @@ ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
 \end{verbatim}
 \normalsize
 
+The bindings can use a dictionary where a ClassAd is expected.
+Here is an example that uses the ClassAd:
+\footnotesize
+\begin{verbatim}
+htcondor.Schedd().submit(classad.ClassAd({"Cmd": "/bin/echo"}))
+\end{verbatim}
+\normalsize
+This same example, using a dictionary instead of constructing a ClassAd:
+\footnotesize
+\begin{verbatim}
+htcondor.Schedd().submit({"Cmd": "/bin/echo"})
+\end{verbatim}
+\normalsize
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{Python-ClassAd} ClassAd Module}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -490,6 +561,31 @@ Parse old ClassAd format input into a ClassAd.
 \texttt{version( )}
 
 Return the version of the linked ClassAd library.
+\\ \hline
+\texttt{Attribute( name )}
+
+Given the string \texttt{name}, 
+return an \texttt{ExprTree} object which is a
+reference to an attribute of that name.
+The ClassAd expression \Expr{foo == 1} can be constructed 
+by the python \Expr{Attribute("foo") == 1}.
+
+\\ \hline
+\texttt{Function( name, arg1, arg2, ... )}
+
+Given function name \texttt{name}, and zero-or-more arguments, 
+construct an \texttt{ExprTree} which is a function call expression.  
+The function is not evaluated.
+The ClassAd expression \Expr{strcat("hello ", "world")} 
+can be constructed by the python 
+\Expr{Function("strcat", "hello ", "world")}.
+
+\\ \hline
+\texttt{Literal( obj )}
+
+Given python object \texttt{obj}, convert it to a ClassAd literal.
+Python strings, floats, integers, and booleans have equivalent literals.
+
 \\ \hline
 
 \end{tabular}
@@ -611,12 +707,68 @@ Print the ClassAd in the old ClassAd format.
 
 Returns a string.
 \\ \hline
+\texttt{quote( str )}
+
+Converts the Python string, \Code{str}, into a ClassAd string literal.
+
+Returns the string literal.
+\\ \hline
+\texttt{unquote( str )}
+
+Converts the Python string, \Code{str}, escaped as a ClassAd string back to a
+Python string.
+
+Returns the Python string.
+\\ \hline
+\texttt{parseAds( input )}
+
+Given \Code{input} of a string or file, return an iterator of
+ClassAds where the ClassAds are in the New ClassAd format.
+
+Returns an iterator.
+\\ \hline
+\texttt{parseOldAds( input )}
+
+Given \Code{input} of a string or file, return an iterator of
+ClassAds where the ClassAds are in the Old ClassAd format.
+
+Returns an iterator.
+\\ \hline
+\texttt{flatten( expression )}
+
+Given \texttt{ExprTree} object \texttt{expression}, 
+perform a partial evaluation.  
+All the attributes in \texttt{expression} and
+defined in this object are evaluated and expanded.  Any constant
+expressions, such as \Expr{1 + 2}, are evaluated.  
+
+Returns a new \texttt{ExprTree} object.
+\\ \hline
+\texttt{matches( ad )}
+
+Given \texttt{ClassAd} object \texttt{ad}, 
+check to see if this object matches the \Code{Requirements} attribute 
+of \texttt{ad}.
+Returns \texttt{true} if it does.
+
+\\ \hline
+\texttt{symmetricMatch( ad )}
+
+Returns \texttt{true} if the given \texttt{ad} matches this and this matches
+\Code{ad}.  Equivalent to \texttt{self.matches(ad) and ad.matches(self)}.
+\\ \hline
+
 \end{tabular}
 \end{flushleft}
 
 
 \textbf{The \Expr{ExprTree} class} object
-represents an expression in the ClassAd language.
+represents an expression in the ClassAd language.  The python operators
+for \texttt{ExprTree} have been overloaded so, if \texttt{e1} and \texttt{e2}
+are \texttt{ExprTree} objects, then \texttt{e1 + e2} is also a \texttt{ExprTree}
+object.  Lazy-evaluation is used, so an expression \texttt{"foo" + 1} does not
+produce an error until it is evaluated with a call to \Code{bool()} or the
+\Code{.eval()} class member.
 
 \textbf{\texttt{ExprTree} class methods:}
 \begin{flushleft}
@@ -746,5 +898,19 @@ KeyError: 'foo'
 >>> ad
 [ foo = 1 ]
 
+\end{verbatim}
+\normalsize
+
+Here is an example that illustrates the use of the iterator
+\texttt{parseOldAds} method on a history log.
+\footnotesize
+\begin{verbatim}
+>>> import classad
+>>> import os
+>>> fd = os.popen("condor_history -l -match 4")
+>>> ads = classad.parseOldAds(fd)
+>>> print [ad["ClusterId"] for ad in ads]
+[23389L, 23388L, 23386L, 23387L]
+>>>
 \end{verbatim}
 \normalsize

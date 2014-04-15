@@ -24,6 +24,11 @@ $cmd = 'job_core_hold_java.cmd';
 $testdesc =  'Condor allows submit with hold - java U';
 $testname = "job_core_hold_java";
 
+my $javainit = CondorTest::JavaInitialize($testname);
+if($javainit == 0) {
+	die "No java found\n";
+}
+
 my $killedchosen = 0;
 
 # truly const variables in perl
@@ -80,11 +85,12 @@ $submitted = sub
 	} 
 	else 
 	{
+		print "Good job is in held state\n";
 		CondorTest::debug("good\n",1);
 		my @adarray;
 		my $status = 1;
 		my $cmd = "condor_rm $cluster";
-		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
 		if(!$status)
 		{
 			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);

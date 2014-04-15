@@ -22,6 +22,7 @@ if (NOT WINDOWS)
     install ( FILES condor_run DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     install ( FILES condor_updates_stats condor_init DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     install ( FILES condor_gather_info DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+    install ( FILES condor_pool_job_report DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
     if (WANT_FULL_DEPLOYMENT)
         install ( FILES condor_configure DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
@@ -33,6 +34,8 @@ if (NOT WINDOWS)
     endif(WANT_FULL_DEPLOYMENT)
 
 	install ( FILES condor_ssh sshd.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+
+    install ( FILES Condor.pm CondorUtils.pm CondorTest.pm CondorPersonal.pm DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 	if (STD_UNIVERSE)
 		install ( FILES condor_compile DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )

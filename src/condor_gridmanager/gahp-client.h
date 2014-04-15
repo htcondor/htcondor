@@ -641,12 +641,6 @@ class GahpClient : public Service {
 									std::string keyname,
 									std::string & error_code );
 
-		int ec2_vm_vm_keypair_all( std::string service_url,
-								   std::string publickeyfile,
-								   std::string privatekeyfile,
-								   StringList & returnStatus,
-								   std::string & error_code );
-
         /**
          * Used to associate an elastic ip with a running instance
          */
@@ -727,6 +721,37 @@ class GahpClient : public Service {
                                     StringList & returnStatus,
                                     std::string & error_code
                                );
+
+		int gce_ping( const std::string &service_url,
+					  const std::string &auth_file,
+					  const std::string &project,
+					  const std::string &zone );
+
+		int gce_instance_insert( const std::string &service_url,
+								 const std::string &auth_file,
+								 const std::string &project,
+								 const std::string &zone,
+								 const std::string &instance_name,
+								 const std::string &machine_type,
+								 const std::string &image,
+								 const std::string &metadata,
+								 const std::string &metadata_file,
+								 std::string &instance_id );
+
+		int gce_instance_delete( std::string service_url,
+								 const std::string &auth_file,
+								 const std::string &project,
+								 const std::string &zone,
+								 const std::string &instance_name );
+
+		int gce_instance_list( const std::string &service_url,
+							   const std::string &auth_file,
+							   const std::string &project,
+							   const std::string &zone,
+							   StringList &instance_ids,
+							   StringList &instance_names,
+							   StringList &statuses,
+							   StringList &status_msgs );
 
 		int
 		dcloud_submit( const char *service_url,

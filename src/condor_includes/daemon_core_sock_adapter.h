@@ -33,7 +33,7 @@
 
 class DaemonCoreSockAdapterClass {
  public:
-	typedef int (DaemonCore::*Register_Socket_fnptr)(Stream*,const char*,SocketHandlercpp,const char*,Service*,DCpermission);
+	typedef int (DaemonCore::*Register_Socket_fnptr)(Stream*,const char*,SocketHandlercpp,const char*,Service*,DCpermission,HandlerType);
 	typedef int (DaemonCore::*Cancel_Socket_fnptr)( Stream *sock );
 	typedef void (DaemonCore::*CallSocketHandler_fnptr)( Stream *sock, bool default_to_HandleCommand );
 	typedef int (DaemonCore::*CallCommandHandler_fnptr)( int cmd, Stream *stream, bool delete_stream, bool check_payload, float time_spent_on_sec, float time_spent_waiting_for_payload);
@@ -147,10 +147,11 @@ class DaemonCoreSockAdapterClass {
                          SocketHandlercpp     handlercpp,
                          const char *         handler_descrip,
                          Service*             s,
-                         DCpermission         perm = ALLOW)
+                         DCpermission         perm = ALLOW,
+			 HandlerType          handler_type = HANDLE_READ)
 	{
 		ASSERT(m_daemonCore);
-		return (m_daemonCore->*m_Register_Socket_fnptr)(iosock,iosock_descrip,handlercpp,handler_descrip,s,perm);
+		return (m_daemonCore->*m_Register_Socket_fnptr)(iosock,iosock_descrip,handlercpp,handler_descrip,s,perm, handler_type);
 	}
 
 	int Cancel_Socket( Stream *stream )

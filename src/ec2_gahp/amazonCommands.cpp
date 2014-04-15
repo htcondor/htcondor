@@ -115,7 +115,6 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
 
 //
 // Utility function; inefficient.
-// FIXME: GT #3924.  Also, broken for binary data with embedded NULs.
 //
 bool readShortFile( const std::string & fileName, std::string & contents ) {
     int fd = safe_open_wrapper_follow( fileName.c_str(), O_RDONLY, 0600 );
@@ -138,8 +137,7 @@ bool readShortFile( const std::string & fileName, std::string & contents ) {
         free( rawBuffer );
         return false;
     }
-    rawBuffer[ fileSize ] = '\0';
-    contents = rawBuffer;
+    contents.assign( rawBuffer, fileSize );
     free( rawBuffer );
 
     return true;
@@ -308,7 +306,7 @@ bool AmazonRequest::SendRequest() {
     canonicalizedQueryString.erase( canonicalizedQueryString.end() - 1 );
 
     // Step 2: Create the string to sign.
-    std::string stringToSign = "GET\n"
+    std::string stringToSign = "POST\n"
                              + valueOfHostHeaderInLowercase + "\n"
                              + httpRequestURI + "\n"
                              + canonicalizedQueryString;
@@ -352,17 +350,17 @@ bool AmazonRequest::SendRequest() {
 
     // Generate the final URI.
     canonicalizedQueryString += "&Signature=" + amazonURLEncode( signatureInBase64 );
-    std::string finalURI;
+    std::string postURI;
     if( protocol == "x509" ) {
-        finalURI = "https://" + hostAndPath + "?" + canonicalizedQueryString;
+        postURI = "https://" + hostAndPath;
     } else if( protocol == "euca3" ) {
-        finalURI = "http://" + hostAndPath + "?" + canonicalizedQueryString;
+        postURI = "http://" + hostAndPath;
     } else if( protocol == "euca3s" ) {
-        finalURI = "https://" + hostAndPath + "?" + canonicalizedQueryString;
+        postURI = "https://" + hostAndPath;
     } else {
-        finalURI = this->serviceURL + "?" + canonicalizedQueryString;
+        postURI = this->serviceURL;
     }
-    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", finalURI.c_str() );
+    std::string finalURI = postURI + "?" + canonicalizedQueryString;
 
     // curl_global_init() is not thread-safe.  However, it's safe to call
     // multiple times.  Therefore, we'll just call it before we drop the
@@ -390,6 +388,7 @@ bool AmazonRequest::SendRequest() {
         this->errorMessage = "curl_easy_setopt( CURLOPT_ERRORBUFFER ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_ERRORBUFFER ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
+        curl_easy_cleanup( curl );
         return false;
     }
 
@@ -401,15 +400,41 @@ bool AmazonRequest::SendRequest() {
         this->errorMessage = "curl_easy_setopt( CURLOPT_VERBOSE ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_VERBOSE ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
+        curl_easy_cleanup( curl );
         return false;
     }
 */
 
-    rv = curl_easy_setopt( curl, CURLOPT_URL, finalURI.c_str() );
+    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", postURI.c_str() );
+    rv = curl_easy_setopt( curl, CURLOPT_URL, postURI.c_str() );
+
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
         this->errorMessage = "curl_easy_setopt( CURLOPT_URL ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_URL ) failed (%d): '%s', failing.\n",
+            rv, curl_easy_strerror( rv ) );
+        curl_easy_cleanup( curl );
+        return false;
+    }
+
+    rv = curl_easy_setopt( curl, CURLOPT_POST, 1 );
+    if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_POST ) failed.";
+        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POST ) failed (%d): '%s', failing.\n",
+            rv, curl_easy_strerror( rv ) );
+        return false;
+    }
+
+    // We may, technically, need to replace '%20' in the canonicalized
+    // query string with '+' to be compliant.
+    dprintf( D_FULLDEBUG, "Post body is '%s'\n", canonicalizedQueryString.c_str() );
+
+    rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, canonicalizedQueryString.c_str() );
+    if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed.";
+        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
         return false;
     }
@@ -420,6 +445,7 @@ bool AmazonRequest::SendRequest() {
         this->errorMessage = "curl_easy_setopt( CURLOPT_NOPROGRESS ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_NOPROGRESS ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
+        curl_easy_cleanup( curl );
         return false;
     }
 
@@ -440,6 +466,7 @@ bool AmazonRequest::SendRequest() {
         this->errorMessage = "curl_easy_setopt( CURLOPT_WRITEFUNCTION ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_WRITEFUNCTION ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
+        curl_easy_cleanup( curl );
         return false;
     }
 
@@ -449,6 +476,7 @@ bool AmazonRequest::SendRequest() {
         this->errorMessage = "curl_easy_setopt( CURLOPT_WRITEDATA ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_WRITEDATA ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
+        curl_easy_cleanup( curl );
         return false;
     }
 
@@ -530,6 +558,7 @@ bool AmazonRequest::SendRequest() {
         this->errorMessage = error.str();
         dprintf( D_ALWAYS, "%s\n", this->errorMessage.c_str() );
         dprintf( D_FULLDEBUG, "%s\n", errorBuffer );
+        curl_easy_cleanup( curl );
         return false;
     }
 
@@ -540,6 +569,7 @@ bool AmazonRequest::SendRequest() {
         this->errorMessage = "curl_easy_getinfo() failed.";
         dprintf( D_ALWAYS, "curl_easy_getinfo( CURLINFO_RESPONSE_CODE ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
+        curl_easy_cleanup( curl );
         return false;
     }
 
@@ -670,7 +700,7 @@ bool AmazonVMStart::SendRequest() {
 // <groupname> are optional ones.
 // we support multiple groupnames
 bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "EC2_VM_START" ) == 0 );
+    assert( strcasecmp( argv[0], "EC2_VM_START" ) == 0 );
 
     // Uses the Query API function 'RunInstances', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-RunInstances.html
@@ -857,7 +887,7 @@ bool AmazonVMStartSpot::SendRequest() {
 }
 
 bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & result_string ) {
-    assert( strcmp( argv[0], "EC2_VM_START_SPOT" ) == 0 );
+    assert( strcasecmp( argv[0], "EC2_VM_START_SPOT" ) == 0 );
     
     // Uses the Query AP function 'RequestSpotInstances', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-RequestSpotInstances.html
@@ -970,7 +1000,7 @@ AmazonVMStop::~AmazonVMStop() { }
 
 // Expecting:EC2_VM_STOP <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
 bool AmazonVMStop::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "EC2_VM_STOP" ) == 0 );
+    assert( strcasecmp( argv[0], "EC2_VM_STOP" ) == 0 );
 
     // Uses the Query API function 'TerminateInstances', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-TerminateInstances.html
@@ -1015,7 +1045,7 @@ AmazonVMStopSpot::AmazonVMStopSpot() { }
 AmazonVMStopSpot::~AmazonVMStopSpot() { }
 
 bool AmazonVMStopSpot::workerFunction( char ** argv, int argc, std::string & result_string ) {
-    assert( strcmp( argv[0], "EC2_VM_STOP_SPOT" ) == 0 );
+    assert( strcasecmp( argv[0], "EC2_VM_STOP_SPOT" ) == 0 );
     
     // Uses the Query API function 'CancelSpotInstanceRequests', documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-CancelSpotInstanceRequests.html
@@ -1061,7 +1091,7 @@ AmazonVMStatus::~AmazonVMStatus() { }
 
 // Expecting:EC2_VM_STATUS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
 bool AmazonVMStatus::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "EC2_VM_STATUS" ) == 0 );
+    assert( strcasecmp( argv[0], "EC2_VM_STATUS" ) == 0 );
 
     // Uses the Query API function 'DescribeInstances', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeInstances.html
@@ -1262,7 +1292,7 @@ bool AmazonVMStatusSpot::SendRequest() {
 } // end AmazonVMStatusSpot::SendRequest()
 
 bool AmazonVMStatusSpot::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "EC2_VM_STATUS_SPOT" ) == 0 );
+    assert( strcasecmp( argv[0], "EC2_VM_STATUS_SPOT" ) == 0 );
 
     // Uses the Query API function 'DescribeSpotInstanceRequests', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeSpotInstanceRequests.html
@@ -1316,7 +1346,7 @@ AmazonVMStatusAllSpot::AmazonVMStatusAllSpot() { }
 AmazonVMStatusAllSpot::~AmazonVMStatusAllSpot( ) { }
 
 bool AmazonVMStatusAllSpot::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "EC2_VM_STATUS_ALL_SPOT" ) == 0 );
+    assert( strcasecmp( argv[0], "EC2_VM_STATUS_ALL_SPOT" ) == 0 );
 
     // Uses the Query API function 'DescribeSpotInstanceRequests', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeSpotInstanceRequests.html
@@ -1642,7 +1672,7 @@ bool AmazonVMStatusAll::SendRequest() {
 
 // Expecting:EC2_VM_STATUS_ALL <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
 bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "EC2_VM_STATUS_ALL" ) == 0 );
+    assert( strcasecmp( argv[0], "EC2_VM_STATUS_ALL" ) == 0 );
 
     // Uses the Query API function 'DescribeInstances', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeInstances.html
@@ -1686,63 +1716,6 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
             }
             result_string = create_success_result( requestID, & resultList );
         }
-    }
-
-    return true;
-}
-
-// ---------------------------------------------------------------------------
-
-AmazonVMRunningKeypair::AmazonVMRunningKeypair() { }
-
-AmazonVMRunningKeypair::~AmazonVMRunningKeypair() { }
-
-// Expecting:EC2_VM_RUNNING_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
-bool AmazonVMRunningKeypair::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "EC2_VM_RUNNING_KEYPAIR" ) == 0 );
-
-    // Uses the Query API function 'DescribeInstances', as documented at
-    // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeInstances.html
-
-    int requestID;
-    get_int( argv[1], & requestID );
-    
-    if( ! verify_min_number_args( argc, 5 ) ) {
-        result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
-        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-                 argc, 5, argv[0] );
-        return false;
-    }
-
-    // Fill in required attributes & parameters.
-    AmazonVMRunningKeypair rkpRequest;
-    rkpRequest.serviceURL = argv[2];
-    rkpRequest.accessKeyFile = argv[3];
-    rkpRequest.secretKeyFile = argv[4];
-    rkpRequest.query_parameters[ "Action" ] = "DescribeInstances";
-    
-    // Send the request.
-    if( ! rkpRequest.SendRequest() ) {
-        result_string = create_failure_result( requestID,
-            rkpRequest.errorMessage.c_str(),
-            rkpRequest.errorCode.c_str() );
-    } else {
-        if( rkpRequest.results.size() == 0 ) {
-            result_string = create_success_result( requestID, NULL );
-        } else {
-            StringList resultList;
-            for( unsigned i = 0; i < rkpRequest.results.size(); ++i ) {
-                AmazonStatusResult & asr = rkpRequest.results[i];
-
-                // The original SOAP-based GAHP didn't filter the 'running'
-                // key pairs based on their status, so we won't either.
-                if( ! asr.keyname.empty() ) {
-                    resultList.append( asr.instance_id.c_str() );
-                    resultList.append( asr.keyname.c_str() );
-                }
-            }
-            result_string = create_success_result( requestID, & resultList );
-        }            
     }
 
     return true;
@@ -1814,7 +1787,7 @@ bool AmazonVMCreateKeypair::SendRequest() {
 
 // Expecting:EC2_VM_CREATE_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <keyname> <outputfile>
 bool AmazonVMCreateKeypair::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "EC2_VM_CREATE_KEYPAIR" ) == 0 );
+    assert( strcasecmp( argv[0], "EC2_VM_CREATE_KEYPAIR" ) == 0 );
 
     // Uses the Query API function 'CreateKeyPair', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-CreateKeyPair.html
@@ -1858,7 +1831,7 @@ AmazonVMDestroyKeypair::~AmazonVMDestroyKeypair() { }
 
 // Expecting:EC2_VM_DESTROY_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <keyname>
 bool AmazonVMDestroyKeypair::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "EC2_VM_DESTROY_KEYPAIR" ) == 0 );
+    assert( strcasecmp( argv[0], "EC2_VM_DESTROY_KEYPAIR" ) == 0 );
 
     // Uses the Query API function 'DeleteKeyPair', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DeleteKeyPair.html
@@ -1895,109 +1868,13 @@ bool AmazonVMDestroyKeypair::workerFunction(char **argv, int argc, std::string &
 
 // ---------------------------------------------------------------------------
 
-AmazonVMKeypairNames::AmazonVMKeypairNames() { }
-
-AmazonVMKeypairNames::~AmazonVMKeypairNames() { }
-
-struct keyNamesUD_t {
-    bool inKeyName;
-    std::string keyName;
-    StringList & keyNameList;
-    
-    keyNamesUD_t( StringList & slr ) : inKeyName( false ), keyName(), keyNameList( slr ) { }
-};
-typedef struct keyNamesUD_t keyNamesUD;
-
-//
-// Technically, all the const XML_Char * strings are encoded in UTF-8.
-// We'll ignore that for now and assume they're in ASCII.
-//
-
-// EntityStartHandler
-void keypairNamesESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
-    keyNamesUD * knud = (keyNamesUD *)vUserData;
-    if( strcasecmp( ignoringNameSpace( name ), "KeyName" ) == 0 ) {
-        knud->inKeyName = true;
-    }
-}
-
-// CharacterDataHandler
-void keypairNamesCDH( void * vUserData, const XML_Char * cdata, int len ) {
-    keyNamesUD * knud = (keyNamesUD *)vUserData;
-    if( knud->inKeyName ) {
-        appendToString( (const void *)cdata, len, 1, (void *) & knud->keyName );
-    }
-}
-
-// EntityEndHandler
-void keypairNamesEEH( void * vUserData, const XML_Char * name ) {
-    keyNamesUD * knud = (keyNamesUD *)vUserData;
-    if( strcasecmp( ignoringNameSpace( name ), "KeyName" ) == 0 ) {
-        knud->inKeyName = false;
-        knud->keyNameList.append( knud->keyName.c_str() );
-        knud->keyName.clear();
-    }
-}
-
-bool AmazonVMKeypairNames::SendRequest() {
-    bool result = AmazonRequest::SendRequest();
-    if( result ) {
-        keyNamesUD knud( this->keyNames );
-        XML_Parser xp = XML_ParserCreate( NULL );
-        XML_SetElementHandler( xp, & keypairNamesESH, & keypairNamesEEH );
-        XML_SetCharacterDataHandler( xp, & keypairNamesCDH );
-        XML_SetUserData( xp, & knud );
-        XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
-        XML_ParserFree( xp );
-    }
-    return result;
-}
-
-// Expecting:EC2_VM_KEYPAIR_NAMES <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
-bool AmazonVMKeypairNames::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "EC2_VM_KEYPAIR_NAMES" ) == 0 );
-
-    // Uses the Query API function 'DescribeKeyPairs', as documented at
-    // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeKeyPairs.html
-
-    int requestID;
-    get_int( argv[1], & requestID );
-    
-    if( ! verify_min_number_args( argc, 5 ) ) {
-        result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
-        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-                 argc, 5, argv[0] );
-        return false;
-    }
-
-    // Fill in required attributes & parameters.
-    AmazonVMKeypairNames keypairRequest;
-    keypairRequest.serviceURL = argv[2];
-    keypairRequest.accessKeyFile = argv[3];
-    keypairRequest.secretKeyFile = argv[4];
-    keypairRequest.query_parameters[ "Action" ] = "DescribeKeyPairs";
-
-    // Send the request.
-    if( ! keypairRequest.SendRequest() ) {
-        result_string = create_failure_result( requestID,
-            keypairRequest.errorMessage.c_str(),
-            keypairRequest.errorCode.c_str() );
-    } else {
-        result_string = create_success_result( requestID, & keypairRequest.keyNames );
-    }
-
-    return true;
-}
-
-// ---------------------------------------------------------------------------
-
 AmazonAssociateAddress::AmazonAssociateAddress() { }
 
 AmazonAssociateAddress::~AmazonAssociateAddress() { }
 
 // Expecting:EC2_VM_ASSOCIATE_ADDRESS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <elastic-ip>
 bool AmazonAssociateAddress::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "EC2_VM_ASSOCIATE_ADDRESS" ) == 0 );
+    assert( strcasecmp( argv[0], "EC2_VM_ASSOCIATE_ADDRESS" ) == 0 );
 
     // Uses the Query API function 'AssociateAddress', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/index.html?ApiReference-query-AssociateAddress.html
@@ -2081,7 +1958,7 @@ AmazonCreateTags::workerFunction(char **argv,
 								 int argc,
 								 std::string &result_string)
 {
-    assert(strcmp(argv[0], "EC2_VM_CREATE_TAGS") == 0);
+    assert(strcasecmp(argv[0], "EC2_VM_CREATE_TAGS") == 0);
 
     // Uses the Query API function 'CreateTags', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/index.html?ApiReference-query-CreateTags.html
@@ -2138,7 +2015,7 @@ AmazonAttachVolume::~AmazonAttachVolume() { }
 
 bool AmazonAttachVolume::workerFunction(char **argv, int argc, std::string &result_string) 
 {
-	assert( strcmp( argv[0], "EC_VM_ATTACH_VOLUME" ) == 0 );
+	assert( strcasecmp( argv[0], "EC2_VM_ATTACH_VOLUME" ) == 0 );
 	
 	int requestID;
     get_int( argv[1], & requestID );
@@ -2185,6 +2062,7 @@ bool AmazonAttachVolume::workerFunction(char **argv, int argc, std::string &resu
 // * Amazon's header includes "Server: AmazonEC2"
 // * Nimbus's header includes "Server: Jetty"
 // * Eucalyptus's body doesn't include an "<?xml ...?>" tag
+//   Neither does OpenStack's starting with version Havana
 // * Amazon and Nimbus's <?xml?> tag includes version="1.0" and
 //   encoding="UTF-8" properties
 // * Nimbus and Eucalyptus's response doesn't include a <requestId> tag
@@ -2237,6 +2115,11 @@ bool AmazonVMServerType::SendRequest() {
 			serverType = "Amazon";
 		} else if ( !server_amazon && !server_jetty && xml_tag &&
 					!xml_encoding && request_id && !euca_tag ) {
+			serverType = "OpenStack";
+		} else if ( !server_amazon && !server_jetty && !xml_tag &&
+					!xml_encoding && request_id && !euca_tag ) {
+			// OpenStack Havana altered formatting from previous versions,
+			// but we don't want to treat it differently for now.
 			serverType = "OpenStack";
 		} else if ( !server_amazon && server_jetty && xml_tag &&
 					xml_encoding && !request_id && !euca_tag ) {

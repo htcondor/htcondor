@@ -19,15 +19,19 @@
 
 
 #include "condor_common.h"
+
+#if (HAVE_LINUX_TCP_H) && (HAVE_TCP_USER_TIMEOUT)
+#  include <linux/tcp.h>	// get definition for TCP_USER_TIMEOUT
+#endif
+
+#include "sock.h"
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_uid.h"
-#include "sock.h"
 #include "condor_network.h"
 #include "internet.h"
 #include "ipv6_hostname.h"
 #include "condor_debug.h"
-#include "condor_socket_types.h"
 #include "get_port_range.h"
 #include "condor_netdb.h"
 #include "daemon_core_sock_adapter.h"
@@ -36,6 +40,13 @@
 #include "condor_sockfunc.h"
 #include "condor_ipv6.h"
 #include "condor_config.h"
+
+#if defined(WIN32)
+// <winsock2.h> already included...
+// note: IPPROTO_IPV6 is an enum member, not a #define on WIN32
+#else
+#include <netinet/in.h>
+#endif
 
 #ifdef HAVE_EXT_OPENSSL
 #include "condor_crypt_blowfish.h"
@@ -410,6 +421,14 @@ int Sock::move_descriptor_up()
 
 int Sock::assign(SOCKET sockd)
 {
+	condor_protocol proto = CP_IPV4;
+	if (_condor_is_ipv6_mode())
+		proto = CP_IPV6;
+	return assign(proto, sockd);
+}
+
+int Sock::assign(condor_protocol proto, SOCKET sockd)
+{
 	int		my_type = SOCK_DGRAM;
 
 	if (_state != sock_virgin) return FALSE;
@@ -428,11 +447,12 @@ int Sock::assign(SOCKET sockd)
 		return TRUE;
 	}
 
-	int af_type;
-	if (_condor_is_ipv6_mode())
-		af_type = AF_INET6;
-	else
-		af_type = AF_INET;
+	int af_type = 0;
+	switch(proto) {
+		case CP_IPV4: af_type = AF_INET; break;
+		case CP_IPV6: af_type = AF_INET6; break;
+		default: ASSERT(false);
+	}
 
 	switch(type()){
 		case safe_sock:
@@ -485,16 +505,29 @@ int Sock::assign(SOCKET sockd)
 	if ( _timeout > 0 )
 		timeout_no_timeout_multiplier( _timeout );
 
+	if(proto == CP_IPV6) {
+		// We always use two sockets for mixed mode IPv4/IPv6 for consistency.
+		// Ensure the IPv6 socket doesn't claim the IPv4 port as well.
+#if defined(SOL_IPV6)
+		int level = SOL_IPV6;
+#elif defined(IPPROTO_IPV6)	|| defined(WIN32)
+		int level = IPPROTO_IPV6;
+#else
+#	error "Unable to determine correct level to pass to setsockopt for IPv6 control"
+#endif
+		int value = 1;
+		setsockopt(level, IPV6_V6ONLY, (char*)&value, sizeof(value));
+	}
+
     addr_changed();
 	return TRUE;
 }
 
 
 int
-Sock::bindWithin(const int low_port, const int high_port, bool outbound)
+Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port, bool outbound)
 {
 	bool bind_all = (bool)_condor_bind_all_interfaces();
-	bool ipv6_mode = _condor_is_ipv6_mode();
 
 	// Use hash function with pid to get the starting point
     struct timeval curTime;
@@ -517,16 +550,13 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 
 		addr.clear();
 		if( bind_all ) {
-			if (ipv6_mode)
-				addr.set_ipv6();
-			else
-				addr.set_ipv4();
+			addr.set_protocol(proto);
 			addr.set_addr_any();
 		} else {
 			addr = get_local_ipaddr();
 			// what if the socket type does not match?
 			// e.g. addr is ipv6 but ipv6 mode is not turned on?
-			if (addr.is_ipv4() && ipv6_mode)
+			if (addr.is_ipv4() && proto==CP_IPV6)
 				addr.convert_to_ipv6();
 		}
 		addr.set_port((unsigned short)this_trial++);
@@ -573,8 +603,16 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 	return FALSE;
 }
 
-
 int Sock::bind(bool outbound, int port, bool loopback)
+{
+	condor_protocol proto = CP_IPV4;
+	if(_condor_is_ipv6_mode()) {
+		proto = CP_IPV6;
+	}
+	return bind(proto, outbound, port, loopback);
+}
+
+int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 {
 	condor_sockaddr addr;
 	int bind_return_value;
@@ -588,7 +626,7 @@ int Sock::bind(bool outbound, int port, bool loopback)
     }
 
 	// if stream not assigned to a sock, do it now	*/
-	if (_state == sock_virgin) assign();
+	if (_state == sock_virgin) assign(proto);
 
 	if (_state != sock_assigned) {
 		dprintf(D_ALWAYS, "Sock::bind - _state is not correct\n");
@@ -627,23 +665,20 @@ int Sock::bind(bool outbound, int port, bool loopback)
 	int lowPort, highPort;
 	if ( port == 0 && !loopback && get_port_range((int)outbound, &lowPort, &highPort) == TRUE ) {
 			// Bind in a specific port range.
-		if ( bindWithin(lowPort, highPort, outbound) != TRUE ) {
+		if ( bindWithin(proto, lowPort, highPort, outbound) != TRUE ) {
 			return FALSE;
 		}
 	} else {
 			// Bind to a dynamic port.
 
-		if (_condor_is_ipv6_mode())
-			addr.set_ipv6();
-		else
-			addr.set_ipv4();
+		addr.set_protocol(proto);
 		if( loopback ) {
 			addr.set_loopback();
 		} else if( (bool)_condor_bind_all_interfaces() ) {
 			addr.set_addr_any();
 		} else {
 			addr = get_local_ipaddr();
-			if (addr.is_ipv4() && _condor_is_ipv6_mode())
+			if (addr.is_ipv4() && proto==CP_IPV6)
 				addr.convert_to_ipv6();
 		}
 		addr.set_port((unsigned short)port);
@@ -686,13 +721,23 @@ int Sock::bind(bool outbound, int port, bool loopback)
 	// Also set KEEPALIVE so we know if the socket disappears.
 	if ( type() == Stream::reli_sock ) {
 		struct linger linger = {0,0};
-		int on = 1;
 		setsockopt(SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
-		setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
+
+		// Note: Setting TCP keepalive values on a listen socket seems
+		// pointless, but it's not harmless. On Mac OS X, once the
+		// TCP_KEEPALIVE time passes, the socket becomes closed, the fd
+		// is always ready for read in select(), and accept() fails with
+		// errno ETIMEDOUT. This sends daemons into a tight loop of
+		// failing to accept non-existent incoming connections.
+		if ( outbound ) {
+			set_keepalive();
+		}
+
                /* Set no delay to disable Nagle, since we buffer all our
 			      relisock output and it degrades performance of our
 			      various chatty protocols. -Todd T, 9/05
 			   */
+		int on = 1;
 		setsockopt(IPPROTO_TCP, TCP_NODELAY, (char*)&on, sizeof(on));
 	}
 
@@ -704,6 +749,140 @@ bool Sock::bind_to_loopback(bool outbound,int port)
 	return bind(outbound,port,true) == TRUE;
 }
 
+bool Sock::set_keepalive()
+{
+	bool result = true;
+
+	// NOTE: Log failures to FULLDEBUG as we may be doing a lot of accepts...
+
+	// For now, only keepalive TCP sockets.
+	if ( type() != Stream::reli_sock ) {
+		return result;
+	}
+
+	int val = param_integer("TCP_KEEPALIVE_INTERVAL");
+
+	// If knob TCP_KEEPALIVE_INTERVAL < 0, don't do anything
+	if ( val < 0 ) {
+		return result;
+	}
+
+	// Set KEEPALIVE on socket using system defaults (likely 2hrs)
+	int on = 1;
+	if (setsockopt(SOL_SOCKET, SO_KEEPALIVE, static_cast<void*>(&on), sizeof(on)) < 0) {
+		dprintf(D_FULLDEBUG,
+			"ReliSock::accept - Failed to enable TCP keepalive (errno=%d, %s)",
+			errno, strerror(errno));
+		result = false;
+	}
+
+	// If knob TCP_KEEPALIVE_INTERVAL == 0, then admin wants to use system defaults,
+	// so we are done.  Return true.
+	if ( val == 0 ) {
+		return result;
+	}
+
+	// If we made it here, knob TCP_KEEPALIVE_INTERVAL and val must be > 0,
+	// which means the admin wants to specify a specific interval.
+
+	// Handle KEEPALIVE interval settings for Unix and MacOS platforms.
+#if !defined(WIN32) && (defined(HAVE_TCP_KEEPALIVE) || defined(HAVE_TCP_KEEPIDLE))
+
+	// Set keepalive idle time as specificed in config (defaults to 6 minutes).
+	// Note Mac OS X calls it TCP_KEEPALIVE; Unix/Linux calls it TCP_KEEPIDLE.
+#if defined(HAVE_TCP_KEEPALIVE)
+	if (setsockopt(IPPROTO_TCP, TCP_KEEPALIVE, static_cast<void*>(&val), sizeof(val)) < 0)
+#else
+	if (setsockopt(IPPROTO_TCP, TCP_KEEPIDLE, static_cast<void*>(&val), sizeof(val)) < 0)
+#endif
+	{
+		dprintf(D_FULLDEBUG,
+			"Failed to set TCP keepalive idle time to %d minutes (errno=%d, %s)",
+			val / 60, errno, strerror(errno));
+		result = false;
+	}
+
+	// Also set TCP_USER_TIMEOUT to make sure the connections fails in a reasonable
+	// amount of time even if there is traffic on it. This controls how long
+	// TCP is willing to wait for data to be ACKed.
+	// Note it is in ms, not seconds
+#if defined(HAVE_TCP_USER_TIMEOUT)
+	int user_timeout = (val + (5 * 5)) * 1000; // idle_secs + (interval * count) * 1000
+	if (setsockopt(IPPROTO_TCP, TCP_USER_TIMEOUT, static_cast<void*>(&user_timeout),
+				sizeof(user_timeout)) < 0)
+	{
+		dprintf(D_FULLDEBUG,
+			"Failed to set TCP user timeout to %d seconds (errno=%d, %s)",
+			user_timeout / 1000, errno, strerror(errno));
+		result = false;
+	}
+#endif
+
+	// Set keepalive probe count to 5.
+	val = 5;
+#if defined(HAVE_TCP_KEEPCNT)
+	if (setsockopt(IPPROTO_TCP, TCP_KEEPCNT, static_cast<void*>(&val), sizeof(val)) < 0) {
+		dprintf(D_FULLDEBUG,
+			"Failed to set TCP keepalive probe count to 5 (errno=%d, %s)",
+			errno, strerror(errno));
+		result = false;
+	}
+#endif
+
+	// Set keepalive interval to 5 seconds.
+#if defined(HAVE_TCP_KEEPINTVL)
+	if (setsockopt(IPPROTO_TCP, TCP_KEEPINTVL, static_cast<void*>(&val), sizeof(val)) < 0) {
+		dprintf(D_FULLDEBUG,
+			"Failed to set TCP keepalive interval to 5 seconds (errno=%d, %s)",
+			errno, strerror(errno));
+		result = false;
+	}
+#endif
+
+#endif  // of !defined(WIN32)....
+
+	// Handle KEEPALIVE interval settings for Windows platforms.
+#ifdef WIN32
+	struct tcp_keepalive alive; // Winsock struct for keep alive settings
+
+	// Edit alive settings. Note that TCP_KEEPCNT on Windows Vista and
+	// later is set to 10 and cannot be changed. Also note units are milliseconds.
+	alive.onoff = 1;
+	alive.keepalivetime = val * 1000;
+	alive.keepaliveinterval = 5 * 1000;
+
+	// if stream not assigned to a sock, do it now before WSAIoctl calls.
+	if (_state == sock_virgin) assign();
+
+	DWORD BytesReturned = 0;  // useless pointer needed for winsock call
+
+	// Set keepalive idle time as specificed in config (defaults to 6 minutes).
+	int rc = ::WSAIoctl(
+	  _sock,				// descriptor identifying a socket
+	  SIO_KEEPALIVE_VALS,	// dwIoControlCode
+	  (LPVOID) &alive,		// pointer to tcp_keepalive struct
+	  (DWORD)sizeof(alive),	// length of input buffer
+	  NULL,					// output buffer
+	  0,					// size of output buffer
+	  (LPDWORD) &BytesReturned,	// number of bytes returned
+	  (LPWSAOVERLAPPED) NULL,	// OVERLAPPED structure
+	  (LPWSAOVERLAPPED_COMPLETION_ROUTINE) NULL  // completion routine
+	);
+
+	if (rc == SOCKET_ERROR)
+	{
+		int err = WSAGetLastError();
+		dprintf(D_FULLDEBUG,
+			"Failed to set TCP keepalive idle time to 5 minutes (err=%d, %s)",
+			err, GetLastErrorString(err) );
+		result = false;
+	}
+#endif  // of #ifdef WIN32
+
+	return result;
+}
+
+
 int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 {
 	int current_size = 0;
@@ -712,8 +891,8 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 	int command;
 	SOCKET_LENGTH_TYPE temp;
 
-	if (_state == sock_virgin) assign();
-	
+	ASSERT(_state != sock_virgin); 
+
 	if ( set_write_buf ) {
 		command = SO_SNDBUF;
 	} else {
@@ -757,13 +936,12 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 	return current_size;
 }
 
-
-int Sock::setsockopt(int level, int optname, const char* optval, int optlen)
+int Sock::setsockopt(int level, int optname, const void* optval, int optlen)
 {
-	/* if stream not assigned to a sock, do it now	*/
-	if (_state == sock_virgin) assign();
+	ASSERT(_state != sock_virgin); 
 
-	if(::setsockopt(_sock, level, optname, optval, optlen) < 0)
+	/* cast optval from void* to char*, as some platforms (Windows!) require this */
+	if(::setsockopt(_sock, level, optname, static_cast<const char*>(optval), optlen) < 0)
 	{
 		return FALSE;
 	}
@@ -1394,9 +1572,8 @@ Sock::bytes_available_to_read()
 #ifndef FIONREAD
 #error FIONREAD is not defined!  Fix me by seeing code comment.
 #endif
+	if(_state == sock_virgin) return -1;
 
-		/* if stream not assigned to a sock, do it now	*/
-	if (_state == sock_virgin) assign();
 	if ( (_state != sock_assigned) &&  
 				(_state != sock_connect) &&
 				(_state != sock_bound) )  {

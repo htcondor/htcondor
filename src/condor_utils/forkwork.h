@@ -61,7 +61,8 @@ class ForkWork : public Service
 	// # of worker stats
 	void setMaxWorkers( int max_workers );
 	int getNumWorkers( void ) { return workerList.Number(); };
-	int getMaxwOrkers( void ) { return maxWorkers; };
+	int getMaxWorkers( void ) { return maxWorkers; };
+	int getPeakWorkers( void ) { return peakWorkers; };
 
 	int DeleteAll( void );
 	int KillAll( bool force );
@@ -71,9 +72,10 @@ class ForkWork : public Service
 
   private:
 	SimpleList<ForkWorker *>	workerList;
-	int			maxWorkers;		// Max # of children
+	int			maxWorkers;		// Max # of children allowed
+	int			peakWorkers;	// Most # of children alive at once
 	int			reaperId;		// ID Of the child reaper
-	bool			childExit;		// Am I an exiting child (don't kill things!!)
+	bool		childExit;		// Am I an exiting child (don't kill things!!)
 };
 
 #endif // __FORKWORK_H__

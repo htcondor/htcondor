@@ -21,11 +21,6 @@
 #include <stdio.h>
 #include <list>
 
-#ifdef WIN32
-#include <process.h> 
-#define _getpid getpid
-#endif
-
 using namespace classad;
 using namespace std;
 
@@ -196,7 +191,13 @@ public:
 
 	    // written at the end so you can tail the file.
 	    fprintf( fp, "------------------------------------------------\n");
-	    fprintf( fp, "ClassAdCache data for PID(%d)\n", getpid() ); 
+	    fprintf( fp, "ClassAdCache data for PID(%d)\n",
+#ifdef WIN32
+	    GetCurrentProcessId()
+#else
+	    getpid()
+#endif
+	    );
 	    fprintf( fp, "Hits [%lu - %f] Misses[%lu - %f] QueryMiss[%lu]\n", m_HitCount,dHitRatio,m_MissCount,dMissRatio,m_MissCheck ); 
 	    fprintf( fp, "Entries[%lu] UseCount[%lu] FlushedCount[%lu]\n", lEntries,lTotalUseCount,m_RemovalCount );
 	    fprintf( fp, "Pruned[%lu] - SHOULD BE 0\n",lTotalPruned);

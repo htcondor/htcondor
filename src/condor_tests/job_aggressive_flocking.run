@@ -21,6 +21,7 @@
 use CondorTest;
 use CondorUtils;
 use Condor;
+use Check::SimpleJob;
 
 use Check::SimpleJob;
 
@@ -29,6 +30,32 @@ Condor::DebugLevel(1);
 
 select STDERR; $|=1;
 select STDOUT; $|=1;
+
+my $firstappend_condor_config = '
+    WANT_SUSPEND = FALSE
+    KILLING_TIMEOUT = 1
+    MachineMaxVacateTime = 5
+    NEGOTIATION_INTERVAL = 5
+	UPDATE_INTERVAL = 5
+    KILL = FALSE
+    START = TRUE
+	NUM_CPUS = 32
+	#C1=$(COLLECTOR)
+	#C1_ARGS = -local-name C1
+	#COLLECTOR.C1.COLLECTOR_NAME = C1
+    #DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD,C1
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+';
+
+my $testname = "JobAggressiveFlocking";
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"aggressiveflocking");
+
+CondorTest::StartCondorWithParams(
+    condor_name => "aggressiveflocking",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
 
 my $spooldir = `condor_config_val SPOOL`;
 chomp $spooldir;
@@ -124,7 +151,12 @@ my $condor_local_config = `condor_config_val LOCAL_CONFIG_FILE`;
 open LOCAL_CONFIG, ">>$condor_local_config" || die "Could not append to the local config file $condor_local_config\n";
 print LOCAL_CONFIG "$append_condor_config\n";
 close LOCAL_CONFIG;
-runcmd ("condor_reconfig");
+my @fig = ();
+
+print "reconfig to add all the daemons we want - OK\n";
+runCondorTool("condor_reconfig",\@fig,2,{emit_output=>0});
+
+print "Waiting for Daemons to all be up\n";
 
 # Wait until all our daemons start up
 # We see that they start up when they drop 
@@ -168,6 +200,8 @@ while ($count_failures > 0) {
 	}
 }
 
+print "Daemons are all up\n";
+
 # Daemons have started up.
 # We need to get the collector host for each pool
 open LOCAL_CONFIG, ">>$condor_local_config" || die "Could not append to the local config file $condor_local_config\n";
@@ -195,21 +229,35 @@ print LOCAL_CONFIG "$daemon_string\n";
 print LOCAL_CONFIG "FLOCK_INCREMENT = $flock_increment\n";
 close LOCAL_CONFIG;
 
+my @outarray;
 # Now reconfig ... again.
-runcmd ("condor_reconfig");
+runCondorTool("condor_reconfig",\@outarray,2,{emit_output=>0});
 
-runcmd ("condor_submit job_aggressive_flocking.cmd");
+print "reconfig to tune flocking and assign startds to collectors \n";
 
-# Wait for our jobs to finish
-while(1) {
-	sleep 60;
-	my $results = runcmd ("condor_q -f \"%d\" JobStatus");
-	last if(scalar @{$results->{stdout}} ==  0);
-}
+sub on_submit {
+};
+
+sub on_exitedsuccess {
+	print ".";
+};
+
+#runCondorTool("condor_submit job_aggressive_flocking.cmd",\@outarray,2,{emit_output=>0});
+my $res = SimpleJob::RunCheck(
+		test_name => "$testname",
+		duration => 3,
+		queue_sz => 100,
+		on_submit => \&on_submit,
+		on_success => \&on_exitedsuccess,
+);
+
+print "Submitted lots of jobs for flocking test - OK\n";
+
+# We know when RunCheck completes all the jobs have run
 
 my $schedlog = `condor_config_val SCHEDD_LOG`;
 
-CondorTest::debug("Output from Schedd log file:\n\n");
+#ondorTest::debug("Output from Schedd log file:\n\n");
 open SCHEDLOG, "<$schedlog" || die "Cannot open ScheddLog file $schedlog\n";
 my @schedlog = <SCHEDLOG>;
 close SCHEDLOG;
@@ -228,13 +276,49 @@ foreach (@schedlog) {
 		$success = 1 if ($flockdiff != $flock_increment);
 		if($success == 0) {
 			CondorTest::debug("They agree!\n");
+			CondorTest::RegisterResult(1, "test_name", $testname);
 		} else {
 			CondorTest::debug("Boo! They do not agree.\n");
+			CondorTest::RegisterResult(0, "test_name", $testname);
 		}
 		$checked_flock = 1;	
 	}
 }
 
-CondorTest::Cleanup();
+my @extrastartdlog = ();
+my $result = runCondorTool("condor_config_val STARTD.S$flock_increment.STARTD_LOG",\@extrastartdlog,2,{emit_output=>0});
+
+my $search = "Changing activity: Idle -> Busy";
+CondorUtils::fullchomp($extrastartdlog[0]);
+my $startdlog = $extrastartdlog[0];
+
+print "STARTDLOG1:$startdlog\n";
+my $cmd = "grep $search $startdlog";
+print "Search command is:$cmd\n";
+
+#my @run = `grep \"$search\" $startdlog`;
+my @run = ();
+
+#my $liine = "";
+#open(SL,"<$startdlog") or die "Could not open:$startdlog for searching:$!\n";
+#while(<SL>) {
+	#CondorUtils::fullchomp($_);
+	#$line = $_;
+	#if($line =~ /Changing\sactivity:\sIdle\s->\sBusy/) {
+		#push @run, $line;
+	#}
+#}
+#close(SL);
+#my $runcount = @run;
+
+#if($runcount > 0) {
+	#CondorTest::RegisterResult(1, "test_name", $testname);
+#} else {
+	#CondorTest::RegisterResult(0, "test_name", $testname);
+#}
+
+#print "Flock_increment: $flock_increment Jobs:$runcount Log:$startdlog\n";
+
+CondorTest::EndTest();
 
 exit $success;

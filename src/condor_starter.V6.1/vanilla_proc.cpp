@@ -34,6 +34,7 @@
 #include "classad_helpers.h"
 #include "filesystem_remap.h"
 #include "directory.h"
+#include "env.h"
 #include "subsystem_info.h"
 #include "cgroup_limits.h"
 
@@ -47,13 +48,100 @@ extern dynuser* myDynuser;
 #endif
 
 extern CStarter *Starter;
-FilesystemRemap * fs_remap = NULL;
+
+void StarterStatistics::Clear() {
+   this->InitTime = time(NULL);
+   this->StatsLifetime = 0;
+   this->StatsLastUpdateTime = 0;
+   this->RecentStatsTickTime = 0;
+   this->RecentStatsLifetime = 0;
+   Pool.Clear();
+}
+
+void StarterStatistics::Init() {
+    Clear();
+
+    if ( ! this->RecentWindowQuantum) this->RecentWindowQuantum = 1;
+    this->RecentWindowMax = this->RecentWindowQuantum;
+
+    STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockReads, IF_BASICPUB);
+    STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockWrites, IF_BASICPUB);
+    STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockReadBytes, IF_VERBOSEPUB);
+    STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockWriteBytes, IF_VERBOSEPUB);
+}
+
+void StarterStatistics::Reconfig() {
+    int quantum = param_integer("STATISTICS_WINDOW_QUANTUM_STARTER", INT_MAX, 1, INT_MAX);
+    if (quantum >= INT_MAX)
+        quantum = param_integer("STATISTICS_WINDOW_QUANTUM", 4*60, 1, INT_MAX);
+    this->RecentWindowQuantum = quantum;
+
+    int window = param_integer("STATISTICS_WINDOW_SECONDS_STARTER", INT_MAX, 1, INT_MAX);
+    if (window >= INT_MAX)
+        window = param_integer("STATISTICS_WINDOW_SECONDS", 1200, quantum, INT_MAX);
+    this->RecentWindowMax = window;
+
+    this->RecentWindowMax = window;
+    Pool.SetRecentMax(window, this->RecentWindowQuantum);
+
+    this->PublishFlags = IF_BASICPUB | IF_RECENTPUB;
+    char* tmp = param("STATISTICS_TO_PUBLISH");
+    if (tmp) {
+       this->PublishFlags = generic_stats_ParseConfigString(tmp, "STARTER", "_no_alternate_name_", this->PublishFlags);
+       free(tmp);
+    }
+}
+
+time_t StarterStatistics::Tick(time_t now) {
+    if (!now) now = time(NULL);
+
+    int cAdvance = generic_stats_Tick(now,
+                                      this->RecentWindowMax,
+                                      this->RecentWindowQuantum,
+                                      this->InitTime,
+                                      this->StatsLastUpdateTime,
+                                      this->RecentStatsTickTime,
+                                      this->StatsLifetime,
+                                      this->RecentStatsLifetime);
+
+    if (cAdvance) Pool.Advance(cAdvance);
+
+    return now;
+}
+
+void StarterStatistics::Publish(ClassAd& ad, int flags) const {
+    if ((flags & IF_PUBLEVEL) > 0) {
+        ad.Assign("StatsLifetime", (int)StatsLifetime);
+        if (flags & IF_VERBOSEPUB)
+            ad.Assign("StatsLastUpdateTime", (int)StatsLastUpdateTime);
+        if (flags & IF_RECENTPUB) {
+            ad.Assign("RecentStatsLifetime", (int)RecentStatsLifetime);
+            if (flags & IF_VERBOSEPUB) {
+                ad.Assign("RecentWindowMax", (int)RecentWindowMax);
+                ad.Assign("RecentStatsTickTime", (int)RecentStatsTickTime);
+            }
+        }
+    }
+
+    Pool.Publish(ad, flags);
+
+    if ((flags & IF_PUBLEVEL) > 0) {
+        ad.Assign(ATTR_BLOCK_READ_KBYTES, this->BlockReadBytes.value / 1024);
+        ad.Assign(ATTR_BLOCK_WRITE_KBYTES, this->BlockWriteBytes.value / 1024);
+        if (flags & IF_RECENTPUB) {
+            ad.Assign("Recent" ATTR_BLOCK_WRITE_KBYTES, this->BlockWriteBytes.recent / 1024);
+            ad.Assign("Recent" ATTR_BLOCK_READ_KBYTES, this->BlockReadBytes.recent / 1024);
+        }
+    }
+}
+
 
 VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd),
 	m_memory_limit(-1),
 	m_oom_fd(-1),
 	m_oom_efd(-1)
 {
+    m_statistics.Init();
 #if !defined(WIN32)
 	m_escalation_tid = -1;
 #endif
@@ -207,11 +295,7 @@ VanillaProc::StartJob()
 		        fi.login);
 	}
 
-	if (fs_remap != NULL) {
-        delete fs_remap;
-        fs_remap = NULL;
-    }
-    
+	FilesystemRemap * fs_remap = NULL;
 #if defined(LINUX)
 	// on Linux, we also have the ability to track processes via
 	// a phony supplementary group ID
@@ -369,92 +453,7 @@ VanillaProc::StartJob()
                dprintf(D_FULLDEBUG, "Value of RequestedChroot is unset.\n");
        }
 	}
-    // End of chroot 
-
-
-    // NAMED_MOUNTS
-    {
-        std::string requested_fuse, fexec, fmnt;
-        // RequestedFuse='Name1' Debatable on if it should be a list.
-        JobAd->EvalString(ATTR_REQUEST_MNTS, NULL, requested_fuse);
-        // NAMED_FUSE= 'Name1=Executable:/sand_box_mountpoint, Name2=Executable:/sand_box_mountpoint'
-        const char * allowed_fuse_mounts = param("NAMED_MOUNTS");
-        
-        if (requested_fuse.size()) 
-        {
-            dprintf(D_FULLDEBUG, "Checking for fuse: %s\n", requested_fuse.c_str());
-            
-            StringList fuse_list(allowed_fuse_mounts);
-            fuse_list.rewind();
-            
-            const char * next_fuse;
-            bool acceptable_fuse = false;
-           
-            while ( (next_fuse=fuse_list.next()) ) {
-                
-                MyString fuse_spec(next_fuse);
-                fuse_spec.Tokenize();
-                
-                const char * fuse_name = fuse_spec.GetNextToken("=", false);
-                // e.g 'Name1=Executable:/sand_box_mountpoint'
-                if ( fuse_name == NULL ) {
-                    dprintf(D_ALWAYS, "Invalid named mount: %s\n", fuse_spec.Value());
-                }
-                else {
-                    
-                    dprintf(D_FULLDEBUG, "Considering mount %s.\n", fuse_name);
-                    // Check to see if the names are = ?
-                    if ( (strcmp(requested_fuse.c_str(), fuse_name) == 0)) 
-                    {
-                        const char * fuse_exec = fuse_spec.GetNextToken(":", false);
-                        //'Executable:/sand_box_mountpoint'
-                        if ( fuse_exec == NULL ) {
-                            dprintf(D_ALWAYS, "Invalid named mount: %s\n", fuse_spec.Value());
-                        }
-                        else {
-                            
-                            const char * fuse_mnt_point = fuse_spec.GetNextToken(":", false);
-                            if (fuse_mnt_point) 
-                            {
-                                fexec=fuse_exec;
-                                
-                                // 'SCRATCH'/fusemntpt
-                                fmnt = Starter->GetWorkingDir();
-                                fmnt+=fuse_mnt_point;
-                                
-                                acceptable_fuse = true;
-                            }
-                            
-                        }
-                    }
-                    
-                }
-                
-            }
-            
-            if (!acceptable_fuse) {
-                return FALSE;
-            }
-            
-            dprintf(D_FULLDEBUG, "Will attempt to set the Mount to %s.\n", requested_fuse.c_str());
-            
-            if (!fs_remap) {
-                fs_remap = new FilesystemRemap();
-            }
-            
-            // 
-            if ( fs_remap->AddNamedMapping( fexec, fmnt ) )
-            {
-                dprintf(D_FULLDEBUG, "Failed to mount NAMED_MOUNT: %s.\n", requested_fuse.c_str());
-                return FALSE;
-            }
-            
-            dprintf(D_FULLDEBUG, "Adding Named Mount Mapping [%s]: %s -> %s.\n", requested_fuse.c_str(),fexec.c_str(),fmnt.c_str());
-            
-        }
-        
-    }
-    // end autofuse mounting
+// End of chroot 
 #endif
 
 
@@ -520,10 +519,52 @@ VanillaProc::StartJob()
 		}
 		fi.want_pid_namespace = this->SupportsPIDNamespace();
 		if (fi.want_pid_namespace) {
-		if (!fs_remap) {
-			fs_remap = new FilesystemRemap();
+			if (!fs_remap) {
+				fs_remap = new FilesystemRemap();
+			}
+			fs_remap->RemapProc();
 		}
-		fs_remap->RemapProc();
+
+		// When PID Namespaces are enabled, need to run the job
+		// under the condor_pid_ns_init program, so that signals
+		// propagate through to the child.  
+
+		// First tell the program where to log output status
+		// via an environment variable
+		if (param_boolean("USE_PID_NAMESPACE_INIT", true)) {
+			Env env;
+			MyString env_errors;
+			MyString arg_errors;
+			std::string filename;
+
+			filename = Starter->GetWorkingDir();
+			filename += "/.condor_pid_ns_status";
+		
+			env.MergeFrom(JobAd, &env_errors);
+			env.SetEnv("_CONDOR_PID_NS_INIT_STATUS_FILENAME", filename);
+			env.InsertEnvIntoClassAd(JobAd, &env_errors);
+
+			Starter->jic->removeFromOutputFiles(filename.c_str());
+			this->m_pid_ns_init_filename = filename;
+			
+			// Now, set the job's CMD to the wrapper, and shift
+			// over the arguments by one
+
+			ArgList args;
+			std::string cmd;
+
+			JobAd->LookupString(ATTR_JOB_CMD, cmd);
+			args.AppendArg(cmd);
+			args.AppendArgsFromClassAd(JobAd, &arg_errors);
+			args.InsertArgsIntoClassAd(JobAd, NULL, & arg_errors);
+	
+			std::string libexec;
+			if( !param(libexec,"LIBEXEC") ) {
+				dprintf(D_ALWAYS, "Cannot find LIBEXEC so can not run condor_pid_ns_init\n");
+				return 0;
+			}
+			std::string c_p_n_i = libexec + "/condor_pid_ns_init";
+			JobAd->Assign(ATTR_JOB_CMD, c_p_n_i);
 		}
 	}
 	dprintf(D_FULLDEBUG, "PID namespace option: %s\n", fi.want_pid_namespace ? "true" : "false");
@@ -534,6 +575,9 @@ VanillaProc::StartJob()
 	//
 	int retval = OsProc::StartJob(&fi, fs_remap);
 
+	if (fs_remap != NULL) {
+		delete fs_remap;
+	}
 
 #if defined(HAVE_EXT_LIBCGROUP)
 
@@ -573,6 +617,8 @@ VanillaProc::StartJob()
 		setupOOMEvent(cgroup);
 	}
 
+    m_statistics.Reconfig();
+
 	// Now that the job is started, decrease the likelihood that the starter
 	// is killed instead of the job itself.
 	if (retval)
@@ -605,6 +651,9 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 		usage = &cur_usage;
 	}
 
+        // prepare for updating "generic_stats" stats, call Tick() to update current time
+    m_statistics.Tick();
+
 		// Publish the info we care about into the ad.
 	ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (double)usage->sys_cpu_time);
 	ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (double)usage->user_cpu_time);
@@ -623,15 +672,21 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	}
 #endif
 
-	if (usage->block_read_bytes >= 0) {
-		ad->Assign(ATTR_BLOCK_READ_KBYTES, usage->block_read_bytes/1024);
-	}
-	if (usage->block_write_bytes >= 0) {
-		ad->Assign(ATTR_BLOCK_WRITE_KBYTES, usage->block_write_bytes/1024);
-	}
+	if (usage->block_read_bytes >= 0) 
+        m_statistics.BlockReadBytes = usage->block_read_bytes;
+	if (usage->block_write_bytes >= 0) 
+        m_statistics.BlockWriteBytes = usage->block_write_bytes;
+
+	if (usage->block_reads >= 0)
+        m_statistics.BlockReads = usage->block_reads;
+	if (usage->block_writes >= 0)
+        m_statistics.BlockWrites = usage->block_writes;
 
 		// Update our knowledge of how many processes the job has
 	num_pids = usage->num_procs;
+
+        // publish standardized "generic_stats" statistics
+    m_statistics.Publish(*ad);
 
 		// Now, call our parent class's version
 	return OsProc::PublishUpdateAd( ad );
@@ -651,6 +706,7 @@ VanillaProc::JobReaper(int pid, int status)
 			// HOWEVER, iff we are tracking process families via a
 			// dedicated execute account, we want to delay killing until
 			// there is only one job under the starter.  We do this to
+		
 			// prevent the starter from killing the SSH daemon early, and
 			// therefore effectively killing any ssh_to_job session as soon
 			// as the job exits on machine configured with a dedicated
@@ -674,13 +730,27 @@ VanillaProc::JobReaper(int pid, int status)
 		}
 	}
 
-	if (fs_remap != NULL) {
-        fs_remap->cleanup();
-        delete fs_remap;
-        fs_remap = NULL;
-    }
-	
-	
+	if (m_pid_ns_init_filename.length() > 0) {
+		// We ran a job with a pid_ns_init wrapper.  This file contains
+		// true status
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		FILE *f = safe_fopen_wrapper_follow(m_pid_ns_init_filename.c_str(), "r");
+		if (f == NULL) {
+			// Probably couldn't exec the wrapper.  Badness
+			dprintf(D_ALWAYS, "JobReaper: condor_pid_ns_init didn't drop filename %s (%d)\n", m_pid_ns_init_filename.c_str(), errno);
+			EXCEPT("Starter configured to use PID NAMESPACES, but libexec/condor_pid_ns_init did not run properly");
+		}
+		if (fscanf(f, "ExecFailed") > 0) {
+			EXCEPT("Starter configured to use PID NAMESPACES, but execing the job failed");
+		}
+		
+		fseek(f, 0, SEEK_SET);
+		if (fscanf(f, "Exited: %d", &status) > 0) {
+			dprintf(D_FULLDEBUG, "Real job exit code of %d read from wrapper output file\n", status);
+		}
+		fclose(f);
+	}
+
 		// This will reset num_pids for us, too.
 	return OsProc::JobReaper( pid, status );
 }

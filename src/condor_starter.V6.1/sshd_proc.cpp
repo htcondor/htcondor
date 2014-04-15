@@ -26,6 +26,11 @@
 
 extern CStarter *Starter;
 
+SSHDProc::SSHDProc(ClassAd* job_ad, bool delete_ad) : VanillaProc(job_ad)
+{
+	m_deleteJobAd = delete_ad;
+}
+
 int
 SSHDProc::SshStartJob(int std_fds[],char const *std_fnames[])
 {

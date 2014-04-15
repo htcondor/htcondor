@@ -1,0 +1,23 @@
+# Filename: job_dagman_pegasus_recovery.dag.condor.sub_template
+# Note: this file has been manually modified to simulate a Pegasus-
+# generated sub-DAG submit file (basically, there's no version
+# information in the arguments.)
+universe	= scheduler
+executable	= condor_dagman
+getenv		= True
+output		= job_dagman_pegasus_recovery.dag.lib.out
+error		= job_dagman_pegasus_recovery.dag.lib.err
+log		= job_dagman_pegasus_recovery.dag.dagman.log
+remove_kill_sig	= SIGUSR1
++OtherJobRemoveRequirements	= "DAGManJobId == $(cluster)"
+# Note: default on_exit_remove expression:
+# ( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
+# attempts to ensure that DAGMan is automatically
+# requeued by the schedd if it exits abnormally or
+# is killed (e.g., during a reboot).
+on_exit_remove	= ( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
+copy_to_spool	= False
+arguments	= "-f -l . -Lockfile job_dagman_pegasus_recovery.dag.lock -AutoRescue 1 -DoRescueFrom 0 -Dag job_dagman_pegasus_recovery.dag -Suppress_notification -AllowVersionMismatch -Verbose -Force -Notification never -Dagman condor_dagman"
+environment	= _CONDOR_DAGMAN_LOG=job_dagman_pegasus_recovery.dag.dagman.out
+notification	= never
+queue

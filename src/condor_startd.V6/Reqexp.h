@@ -41,7 +41,7 @@ public:
 
 	void 	publish( ClassAd*, amask_t );
 	void	compute( amask_t );
-	void	dprintf( int, char* ... );
+	void	dprintf( int, const char* ... );
 
 private:
 	Resource*		rip;
@@ -50,6 +50,11 @@ private:
 	char*			m_origvalidckptpltfrm;
 	char*			m_within_resource_limits_expr;
 	reqexp_state	rstate;
+
+		// override param by slot_type
+	char * param(const char * name);
+	const char * param(std::string& out, const char * name);
+	const char * param(std::string& out, const char * name, const char * def);
 };
 
 #endif /* _REQEXP_H */

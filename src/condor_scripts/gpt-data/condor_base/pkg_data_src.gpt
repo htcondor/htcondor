@@ -28,6 +28,7 @@
         <Build_Step>cp $DIST_DIR/sbin/condor_master INSTALLDIR_GPTMACRO/sbin/condor_master</Build_Step>
         <Build_Step>cp $DIST_DIR/sbin/condor_restart INSTALLDIR_GPTMACRO/sbin/condor_restart</Build_Step>
         <Build_Step>cp $DIST_DIR/sbin/condor_preen INSTALLDIR_GPTMACRO/sbin/condor_preen</Build_Step>
+        <Build_Step>cp $DIST_DIR/sbin/condor_testwritelog INSTALLDIR_GPTMACRO/sbin/condor_testwritelog</Build_Step>
         <Build_Step>cp $DIST_DIR/bin/condor_userlog INSTALLDIR_GPTMACRO/bin/condor_userlog</Build_Step>
         <Build_Step>cp $DIST_DIR/bin/condor_version INSTALLDIR_GPTMACRO/bin/condor_version</Build_Step>
         <Build_Step>cp $DIST_DIR/bin/condor_config_val INSTALLDIR_GPTMACRO/bin/condor_config_val</Build_Step>

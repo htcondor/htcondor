@@ -23,7 +23,6 @@ Function CreateConfig2()
   end if
 
   daemonList = "MASTER"
-
   if Session.Property("SUBMITJOBS") = "Y" Then
    daemonList = daemonList & " SCHEDD"
   End If
@@ -31,8 +30,17 @@ Function CreateConfig2()
   Set Configfile = fso.OpenTextFile(path & "etc\condor_config.generic", 1, True)
   configTxt = Configfile.ReadAll
   Configfile.Close
-  
+
   configTxt = ReplaceConfig("RELEASE_DIR",strippedPath,configTxt)
+
+  localConfig = Session.Property("LOCALCONFIG")
+  if Left(localConfig, 4) = "http" Then
+     localConfigCmd = "config_fetch " & localConfig & " $$(LOCAL_DIR)\condor_config.local_cache |"
+     configTxt = ReplaceConfig("LOCAL_CONFIG_FILE",localConfigCmd,configTxt)
+  Else
+     configTxt = ReplaceConfig("LOCAL_CONFIG_FILE",localConfig,configTxt)
+  End If
+  
 
   Select Case Session.Property("NEWPOOL")
   Case "Y"
@@ -63,7 +71,7 @@ Function CreateConfig2()
    configTxt = ReplaceConfig("WANT_SUSPEND","FALSE",configTxt)
    configTxt = ReplaceConfig("WANT_VACATE","FALSE",configTxt)
    configTxt = ReplaceConfig("PREEMPT","FALSE",configTxt)
-   daemonList = daemonList & " STARTD KBDD"
+   daemonList = daemonList & " STARTD"
   Case "N"
    configTxt = ReplaceConfig("START","FALSE",configTxt)
   Case "I"
@@ -73,6 +81,7 @@ Function CreateConfig2()
   Case "C"
    daemonList = daemonList & " STARTD KBDD"
   End Select
+  
   If Session.Property("VACATEJOBS") = "N" Then
    configTxt = ReplaceConfig("WANT_VACATE","FALSE",configTxt)
    configTxt = ReplaceConfig("WANT_SUSPEND","TRUE",configTxt)
@@ -93,17 +102,6 @@ Function CreateConfig2()
     configTxt = ReplaceConfig("VM_NETWORKING","TRUE",configTxt)
     configTxt = ReplaceConfig("VM_NETWORKING_TYPE","nat, bridge",configTxt)
    End Select
-  End if
-
-  If Session.Property("USEHDFS") = "Y" Then
-   daemonList = daemonList & " HDFS"
-   namenodeAddr = Session.Property("NAMENODE")
-   configTxt = ReplaceConfig("HDFS_HOME","$$(RELEASE_DIR)/hdfs",configTxt)
-   configTxt = ReplaceConfig("HDFS_NODETYPE",Session.Property("HDFSMODE"),configTxt)
-   configTxt = ReplaceConfig("HDFS_NAMENODE",namenodeAddr & ":" & Session.Property("HDFSPORT"),configTxt)
-   configTxt = ReplaceConfig("HDFS_NAMENODE_WEB",namenodeAddr  & ":" & Session.Property("HDFSWEBPORT"),configTxt)
-   configTxt = ReplaceConfig("HDFS_NAMENODE_DIR",Session.Property("HDFSNAMEDIR"),configTxt)
-   configTxt = ReplaceConfig("HDFS_DATANODE_DIR",Session.Property("HDFSDATADIR"),configTxt)
   End if
 
   configTxt = ReplaceConfig("DAEMON_LIST",daemonList,configTxt)

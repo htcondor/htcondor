@@ -16,6 +16,318 @@ New features will be added in the 8.1.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-7}Version 8.0.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.0.7 not yet released.
+%\item HTCondor version 8.0.7 released on Month Date, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item The new configuration variable \Macro{JOB\_EXECDIR\_PERMISSIONS}
+defines the permissions on a job's scratch directory. 
+It defaults to setting permissions as \emph{0700}.
+\Ticket{4208}
+
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug which would cause the \Condor{schedd} to
+repeatedly crash when parallel universe jobs were running
+when the \Condor{schedd} was restarted, if the \Condor{startds}
+in use by running jobs were also shut down while the \Condor{schedd}
+was not running.
+\Ticket{4305}
+\item Fixed the parsing of the \Condor{q} command line,
+such that it looks for the entire option \Opt{-stream-results},
+instead of only the portion \Opt{-stream}.
+The code now matches what was previously documented in the manual page
+and in the usage output.
+\Ticket{4205}
+
+\item Fixed a bug in the grid universe that could allow a removed job to
+leave the queue without cleaning up all job state on the remote server.
+\Ticket{4216}
+
+\item Fixed the printing of nested ClassAds, so that the nested ClassAds
+can be read back properly.
+\Ticket{3772}
+
+\item Fixed a bug in the \Condor{starter} that could cause a crash if
+the job is evicted while a \Condor{ssh\_to\_job} command is active.
+\Ticket{4251}
+
+\item On Red Hat Enterprise Linux 5, link HTCondor executables using
+both GNU and SYSV hash-styles to support older Linux distributions,
+such as SUSE Enterprise Linux 10.
+\Ticket{4278}
+
+\item Fixed a bug in which \Condor{dagman} did not correctly update
+the node status file at the end of the run for DAGs containing
+final nodes.
+\Ticket{4209}
+
+\item Fixed a bug in which \Condor{dagman} sometimes printed incorrect
+node status counts to the node status file.  Note that this fix also
+included changing the "STATUS\_UNREADY" strings in the node status
+file to "STATUS\_NOT\_READY" to be more consistent.
+\Ticket{4248}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-6}Version 8.0.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.0.6 released on February 11, 2014.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item A full port, which includes support for the standard universe,
+is available for the Red Hat Enterprise Linux 7.0 \emph{Beta} release
+on the x86\_64 architecture.
+\Ticket{3629}
+
+\item HTCondor now forces proxies that it delegates 
+to be a minimum of 1024 bits.
+\Ticket{4168}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a rare bug in the \Condor{negotiator} where 
+completely disabled preemption achieved with
+\Expr{PREEMPTION\_REQUIREMENTS = False}
+might still cause a newly started job to be preempted.  
+This bug was much more likely when
+configuration variable \Macro{NEGOTIATOR\_CYCLE\_DELAY} was set lower 
+than the default value.
+\Ticket{4185}
+
+\item Fixed a bug in the \Condor{schedd} which would cause it
+to crash when running remotely submitted parallel universe jobs.
+\Ticket{4163}
+
+\item Fixed a bug with concurrency limits and partitionable slots,
+in which the partitionable slot would consume a concurrency token,
+even though the slot never runs jobs.  This would cause fewer jobs
+than desired to run.
+\Ticket{4145}
+
+\item Fixed a bug in which the Job Exit work fetch hook was prematurely killed.
+\Ticket{3669}
+
+\item When the Windows installer was told to use VMware,
+it configured a requirement for a 
+\File{condor\_vmware\_local\_settings} file that it did not provide.
+This caused the \Condor{vm-gahp} to fail to start,
+unless the user created this file.
+This configuration has been removed, so that the file is no longer required. 
+\Ticket{4109}
+
+\item Fixed a crash of the \Condor{shadow}, triggered when a disconnect
+from the \Condor{starter} occurs just as the job terminates.
+\Ticket{4127}
+
+\item Modified the output of \Condor{q},
+such that when invoked with options \Opt{-userlog} and \Opt{-af},
+a blank line and a totals summary line are not displayed.
+\Ticket{4045}
+
+\item For hierarchical group quotas, 
+fixed an incorrect count of the number of jobs when applying a quota.
+\Ticket{4117}
+
+\item Fixed the HTCondor module \Procedure{send\_command} python binding;
+an incorrect argument was only the first character of the daemon's name,
+instead of the full name. 
+This affected the ability to turn off specific daemons,
+as sent to the \Condor{master}.
+\Ticket{4160}
+
+\item Fixed the transfer of files larger than 4Gbytes,
+such that they no longer stop before the transfer is completed.
+This bug presented itself on all Windows systems and on all
+platforms running on a 32-bit architecture.
+\Ticket{4150}
+
+\item Fixed a bug that caused \Condor{submit\_dag} to crash on very
+large DAG input files, such as those larger than 2 Gbytes.
+The new configuration variable \MacroNI{DAGMAN\_USE\_OLD\_DAG\_READER},
+as detailed in section~\ref{param:DAGmanUseOldDagReader},
+allows disabling the new file reader code put in place to fix the bug.
+\Ticket{4171}
+
+\item Fixed a bug that caused attempts to set the CPU affinity 
+on Windows platforms to be quietly ignored.
+\Ticket{4131}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-5}Version 8.0.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.0.5 released on December 12, 2013.
+
+\item Helper script \Condor{ckpt\_probe} has been missing
+from HTCondor releases since version 7.8.1, and it is once again 
+in this release.
+As a result, the machine ClassAd attribute \Attr{CheckpointPlatform}
+will change for standard universe jobs upon upgrade to HTCondor version 8.0.5.
+This will prevent standard universe jobs started before the upgrade
+from continuing, because the attribute change eliminates a match 
+with upgraded machines. 
+To work around this issue,
+change the \Attr{LastCheckpointPlatform} attribute to be current,
+such that all jobs that have produced a checkpoint will qualify to 
+continue on the upgraded machines.
+Make the change by using \Condor{qedit}. 
+For example, use
+\footnotesize
+\begin{verbatim}
+condor_qedit -constraint 'LastCheckpointPlatform == "LINUX INTEL 2.6.x normal N/A"'
+    LastCheckpointPlatform "LINUX INTEL 2.6.x normal N/A ssse3 sse4_1 sse4_2"
+\end{verbatim}
+\normalsize
+where \Attr{CheckpointPlatform} after upgrade shows as
+\Expr{LINUX INTEL 2.6.x normal N/A ssse3 sse4\_1 sse4\_2}.
+\Ticket{4025}
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug that resulted in incorrect values for ClassAd attributes
+\Attr{RemoteGroupQuota} and \Attr{SubmitterGroupQuota}.
+These attributes are commonly used in an expression that defines
+\Macro{PREEMPTION\_REQUIREMENTS}.
+\Ticket{4093}
+
+\item Fixed a permissions bug that prevented Java universe jobs
+from running.
+\Ticket{4087}
+
+\item Fixed a bug in which job output files may not have been properly truncated
+at start up on Windows platforms. 
+\Ticket{4097}
+
+\item Fixed bug with \Condor{submit} 
+when invoked with the \Opt{-interactive} option and cgroups where enabled.
+The shell was terminated immediately after it started.
+\Ticket{4028}
+
+\item Prevent illegal values from being written into the job queue
+or accounting recovery logs, in order to minimize the chance of errors when
+the \Condor{schedd} or \Condor{negotiator} are restarted. Also
+have \Condor{qedit} validate attribute names and values.
+\Ticket{3616}
+
+\item The \Condor{starter} now writes to the log file
+\File{StarterLog.slotX} when running work fetch jobs, mirroring the
+behavior when running jobs that come from a \Condor{schedd}.
+Previously, log file \File{StarterLog} was used for all work fetch
+jobs.
+\Ticket{3091}
+
+\item Fixed a Python binding crash due to a segmentation fault, when evaluating an expression tree with an undefined reference.
+\Ticket{3910}
+
+\item Fixed the cURL file transfer plugin such that it now works
+on Windows platforms.
+\Ticket{3979}
+\Ticket{4012}
+
+\item Fixed a bug that caused cream grid universe jobs to fail, 
+if the submit description file contained 
+submit commands of \SubmitCmd{environment} or \SubmitCmd{cream\_attributes}.
+\Ticket{4037}
+
+\item Fixed a bug that could cause the \Condor{schedd} to crash when
+starting a local universe job.
+\Ticket{4088}
+
+\item Fixed a bug that caused \File{stdout} and \File{stderr} of
+nordugrid grid universe jobs to be lost when the remote 
+NorduGrid ARC server was using HTCondor as its local batch scheduler.
+\Ticket{4017}
+
+\item \Condor{status} with the \Opt{-t} option now consistently 
+specifies the \Opt{-total} option. 
+The \Opt{-target} option will now be distinguished, as it requires
+at least \Opt{-targ} in its specification.
+\Ticket{4096}
+
+\item Restored the omitted HTCondor Perl module.
+\Ticket{4098}
+
+\item For RPM installations, the post-install script now
+checks to make sure that the
+SELinux \Code{unconfined\_execmem\_exec\_t type} exists before trying to
+add it to the \File{/usr/sbin/condor\_startd} file context.
+\Ticket{4034}
+
+\item Fixed a bug in which both daemons and tools may have crashed due to
+the inability to resolve a host name defined by 
+configuration variable \Macro{COLLECTOR\_HOST} to an IP address.
+\Ticket{3946}
+
+\item Changed the algorithm for calculating the value of attribute
+\Attr{RecentDaemonCoreDutyCycle} such
+that the published value will never be negative.
+\Ticket{4052}
+
+\item For VMware vm universe jobs,
+the \Condor{vm-gahp} removed from the vm description file any cdrom, 
+floppy drive, serial or parallel devices.
+Now, only devices that do not refer to image files are removed,
+as the devices may be useful to the virtual machine.
+\Ticket{4002}
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-0-4}Version 8.0.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -23,8 +335,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.0.4 not yet released.
-%\item HTCondor version 8.0.4 released on Month Date, 2013.
+\item HTCondor version 8.0.4 released on October 24, 2013.
+
+\item A clipped version of HTCondor is now provided for Ubuntu 12.04 
+on the x86\_64 architecture.
+\Ticket{3972}
 
 \end{itemize}
 
@@ -41,7 +356,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{DYNAMIC\_RUN\_ACCOUNT\_LOCAL\_GROUP}
+permits an administrator of a Windows machine to specify a local group other 
+than the default \Expr{Users} for the \Expr{condor-reuse-slot<X>} run account.
+\Ticket{3998}
 
 \end{itemize}
 
@@ -49,15 +367,96 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item If cgroups were enabled, \Condor{ssh\_to\_job} would
-kill the job when the ssh session exited.  This bug has been fixed.
+\item Added a retry to work around problems with slow
+DHCP servers.  The result of the problem was that daemons
+would not be able to determine their own host names,
+and, among other problems, machine ClassAds would appear
+in the output of \Condor{status} with blank host names.
+\Ticket{3956}
+
+\item A spurious warning in the log of the \Condor{startd} 
+about undefined \MacroNI{PREEMPT\_VANILLA} expressions
+is no longer generated.
+\Ticket{3984}
+
+\item EC2 grid universe jobs may provide data in files.
+File contents of null-terminated strings worked correctly,
+but binary data did not.
+This bug fix makes sure that both kinds of data are read correctly.
+\Ticket{3924}
+
+\item EC2 grid universe jobs on OpenNebula work better for user data
+specified with \SubmitCmd{ec2\_user\_data},
+where the size of the data is larger than 2Kbytes.
+\Ticket{3923}
+
+\item Fixed a bug preventing HTTP file transfers from following redirects.
+HTTP file transfers also now fail if the file does not exist,
+but the server does exist.
+\Ticket{3904}
+
+\item Fixed a rare bug in which the \Condor{schedd} would exit
+with an ERROR message pertaining to \Procedure{select},
+when running with a very heavy load and many \Condor{shadow} daemons
+time out.
+\Ticket{3947}
+
+\item Fixed a bug in \Condor{ssh\_to\_job}
+that caused it to kill the job when the ssh session exited,
+if cgroups were enabled.
 \Ticket{3921}
 
-\item If a standard universe job exited and never used a checkpoint
-server, two spurious error messages would be logged to the 
-SchedLog, as it tried to remove the old checkpoint images from the
-non-existent checkpoint server.  This bug has been fixed.
+\item If a standard universe job exited without producing any checkpoints 
+and no checkpoint server was used, 
+two spurious error messages would be logged to the \File{SchedLog}, 
+as it tried to remove the old checkpoint images from the 
+non-existent checkpoint server. 
+These error messages are no longer logged.
 \Ticket{3919}
+
+\item The configuration file for Windows erroneously had two entries
+for configuration variable \Macro{JAVA\_CLASSPATH\_SEPARATOR},
+with the second entry specifying the
+separator used on Unix platforms, which overrode the first entry. 
+The Unix separator no longer affects this configuration file
+for Windows platforms.
+\Ticket{3957}
+
+\item The NorduGrid GAHP no longer consumes all of the CPU when run
+with threaded Globus libraries.
+\Ticket{3958}
+
+\item Fixed a bug that could cause ClassAd function \Procedure{quantize} to not
+evaluate properly when its second argument was a list and ClassAd caching
+was enabled.
+\Ticket{3967}
+
+\item Fixed a bug that caused the configuration variable setting 
+\Expr{STARTD\_CRON\_AUTOPUBLISH = If\_Changed} to not work correctly.  
+Updates were incorrectly sent to the \Condor{collector}
+in many cases when no attribute value had changed.
+\Ticket{3983}
+
+\item Fixed a bug that could cause \Condor{q} \Opt{-analyze} or 
+\Opt{-better-analyze}
+to sometimes crash on an Illegal Instruction, 
+when the \Attr{Requirements} expression contained a function.
+\Ticket{3985}
+
+\item The configuration variables \Macro{UPDATE\_COLLECTOR\_WITH\_TCP}
+and \Macro{TCP\_UPDATE\_COLLECTORS} are now respected when forwarding
+ClassAds to an HTCondorView server and setting \Macro{CONDOR\_VIEW\_HOST}.
+\Ticket{3986}
+
+\item \Condor{who} now prints an error message when passed an invalid argument.
+\Ticket{3987}
+
+\item Changed the script that finds the VMware tools to use the standard
+environment variables to find \File{Program Files}, instead of using a
+hard coded path.
+This fixes installation for both 64-bit and non-English language Windows 
+platforms.
+\Ticket{272}
 
 \end{itemize}
 
@@ -118,6 +517,7 @@ a resulting value of
 \Expr{UNDEFINED} or \Expr{ERROR} caused an exception in the \Condor{startd}.
 These values are now treated as \Expr{False},
 eliminating the exception.
+This fix addresses CVE-2013-4255.
 \Ticket{3869}
 
 \item Fixed a bug that prevented the use of simple host names to identify

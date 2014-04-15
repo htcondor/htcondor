@@ -20,6 +20,7 @@
 #define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
 #include "stream.h"
+#include "reli_sock.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
@@ -54,8 +55,7 @@ getClassAd( Stream *sock )
 	return ad;	
 }
 
-bool
-getClassAd( Stream *sock, classad::ClassAd& ad )
+bool getClassAd( Stream *sock, classad::ClassAd& ad )
 {
 	int 					numExprs;
 	MyString				inputLine;
@@ -129,6 +129,23 @@ getClassAd( Stream *sock, classad::ClassAd& ad )
 	return true;
 }
 
+int getClassAdNonblocking( ReliSock *sock, classad::ClassAd& ad )
+{
+	int retval;
+	bool read_would_block;
+	{
+		BlockingModeGuard guard(sock, true);
+		retval = getClassAd(sock, ad);
+		read_would_block = sock->clear_read_block_flag();
+	}
+	if (!retval) {
+		return 0;
+	} else if (read_would_block) {
+		return 2;
+	}
+	return retval;
+}
+
 bool
 getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 {
@@ -199,7 +216,7 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
  * It should also do encryption now.
  */
 
-bool putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist )
+int putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist )
 {
     bool completion;
     completion = _putClassAd(sock, ad, false, exclude_private, attr_whitelist);
@@ -209,13 +226,39 @@ bool putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, Stri
 	return completion;
 }
 
-bool
+/*
+ * Put the ClassAd onto the wire in a non-blocking manner.
+ * Return codes:
+ * - If the network would have blocked (meaning the socket is buffering the add internally),
+ *   then this returns 2.  Callers should stop sending ads, register the socket with DC for
+ *   write, and wait for a callback.
+ * - On success, this returns 1; this indicates that further ClassAds can be sent to this ReliSock.
+ * - On permanent failure, this returns 0.
+ */
+int putClassAdNonblocking(ReliSock *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist )
+{
+	int retval;
+	bool backlog;
+	{
+		BlockingModeGuard guard(sock, true);
+		retval = _putClassAd(sock, ad, false, exclude_private, attr_whitelist);
+		backlog = sock->clear_backlog_flag();
+	}
+	if (!retval) {
+		return 0;
+	} else if (backlog) {
+		return 2;
+	}
+	return retval;
+}
+
+int
 putClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_private )
 {
     return _putClassAd(sock, ad, true, exclude_private, NULL);
 }
 
-bool _putClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
+int _putClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 					 bool exclude_private, StringList *attr_whitelist )
 {
 	classad::ClassAdUnParser	unp;

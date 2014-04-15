@@ -191,5 +191,61 @@ class TestClassad(unittest.TestCase):
         for i in ["foo", '"foo', '"\\"foo']:
             self.assertEquals(i, classad.unquote(classad.quote(i)))
 
+    def test_literal(self):
+        self.assertEquals(classad.ExprTree('"foo"'), classad.Literal("foo"))
+        self.assertEquals(classad.Literal(1).eval(), 1)
+
+    def test_operator(self):
+        expr = classad.Literal(1) + 2
+        self.assertTrue(isinstance(expr, classad.ExprTree))
+        self.assertTrue(expr)
+        self.assertTrue(expr.sameAs(classad.ExprTree('1 + 2')))
+        expr = classad.Literal(1) & 2
+        self.assertTrue(isinstance(expr, classad.ExprTree))
+        self.assertEquals(expr.eval(), 0)
+        self.assertTrue(expr.sameAs(classad.ExprTree('1 & 2')))
+        expr = classad.Attribute("foo").is_(classad.Value.Undefined)
+        self.assertTrue(expr.eval())
+        ad = classad.ClassAd("[foo = 1]")
+        expr = classad.Attribute("foo").isnt_(classad.Value.Undefined)
+        self.assertTrue(expr.eval(ad))
+        expr = classad.Literal(1).and_( classad.Literal(2) )
+        self.assertRaises(RuntimeError, bool, expr)
+
+    def test_subscript(self):
+        ad = classad.ClassAd({'foo': [0,1,2,3]})
+        expr = classad.Attribute("foo")[2]
+        self.assertTrue(isinstance(expr, classad.ExprTree))
+        self.assertEquals(expr.eval(), classad.Value.Undefined)
+        self.assertEquals(expr.eval(ad), 2)
+
+    def test_function(self):
+        expr = classad.Function("strcat", "hello", " ", "world")
+        self.assertTrue(isinstance(expr, classad.ExprTree))
+        self.assertEquals(expr.eval(), "hello world")
+        expr = classad.Function("regexp", ".*")
+        self.assertEquals(expr.eval(), classad.Value.Error)
+
+    def test_flatten(self):
+        expr = classad.Attribute("foo") == classad.Attribute("bar")
+        ad = classad.ClassAd({"bar": 1})
+        self.assertTrue(ad.flatten(expr).sameAs( classad.ExprTree('foo == 1') ))
+
+    def test_matches(self):
+        left = classad.ClassAd('[requirements = other.foo == 3; bar=1]')
+        right = classad.ClassAd('[foo = 3]')
+        right2 = classad.ClassAd('[foo = 3; requirements = other.bar == 1;]')
+        self.assertFalse(left.matches(right))
+        self.assertTrue(right.matches(left))
+        self.assertFalse(right.symmetricMatch(left))
+        self.assertTrue(left.matches(right2))
+        self.assertTrue(right2.symmetricMatch(left))
+
+    def test_bool(self):
+        self.assertTrue(bool( classad.ExprTree('true || false') ))
+        self.assertTrue(bool( classad.Literal(True).or_(False) )) 
+        self.assertFalse(bool( classad.ExprTree('true && false') ))
+        self.assertFalse(bool( classad.Literal(True).and_(False) ))
+
 if __name__ == '__main__':
     unittest.main()

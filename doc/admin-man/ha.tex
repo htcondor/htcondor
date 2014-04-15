@@ -58,7 +58,7 @@ of any and all machines that are able to run the \Condor{schedd} daemon
 MASTER_HA_LIST = SCHEDD
 SPOOL = /share/spool
 HA_LOCK_URL = file:/share/spool
-VALID_SPOOL_FILES = $(VALID_SPOOL_FILES), SCHEDD.lock
+VALID_SPOOL_FILES = $(VALID_SPOOL_FILES) SCHEDD.lock
 \end{verbatim}
 
 Configuration macro \Macro{MASTER\_HA\_LIST} identifies the 

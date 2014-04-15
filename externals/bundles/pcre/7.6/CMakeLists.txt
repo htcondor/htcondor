@@ -16,7 +16,10 @@
  # 
  ############################################################### 
 
-if ( NOT PROPER AND NOT LINUX )
+# The directory include-darwin contains the header files for pcre 8.02,
+# the version of pcre included in modern versions of Mac OS X.
+
+if ( NOT PROPER AND NOT LINUX AND NOT DARWIN )
 
 	condor_pre_external( PCRE pcre-7.6 "lib;include" "include/pcre.h")
 
@@ -90,13 +93,13 @@ if ( NOT PROPER AND NOT LINUX )
 
 	set( HAVE_PCRE_H ON PARENT_SCOPE )
 
-else( NOT PROPER AND NOT LINUX )
+else( NOT PROPER AND NOT LINUX AND NOT DARWIN )
 
         if (HAVE_PCRE_H OR HAVE_PCRE_PCRE_H)
             find_multiple( "pcre" PCRE_FOUND )
         endif()
 
-endif( NOT PROPER AND NOT LINUX )
+endif( NOT PROPER AND NOT LINUX AND NOT DARWIN )
 
 ##################### 
 ## Hard failure if there is no PCRE

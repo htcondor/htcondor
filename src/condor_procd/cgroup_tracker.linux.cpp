@@ -99,9 +99,15 @@ CGroupTracker::check_process(procInfo* pi)
 	while (fgets(buffer, 1024, fp)) {
 		// Iterate through all our keys
 		for (std::map<std::string, ProcFamily*>::const_iterator it = m_cgroup_pool.begin(); it != end; ++it) {
-			if (strstr(buffer, it->first.c_str())) {
-				m_monitor->add_member_to_family(it->second, pi, "CGROUP");
-				found_cgroup = true;
+			char *pos = 0;
+			if ((pos = strstr(buffer, it->first.c_str()))) {
+				pos++;
+				// this cgroup name is at least a substring of the cgroup, 
+				// make sure it is a full match, not a substring
+				if (strlen(pos) == strlen(it->first.c_str())) {
+					m_monitor->add_member_to_family(it->second, pi, "CGROUP");
+					found_cgroup = true;
+				}
 			}
 		}
 	}

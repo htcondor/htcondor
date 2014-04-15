@@ -878,6 +878,10 @@ ClassAdAttributeIsPrivate( char const *name )
 			// This attribute contains the secret capability cookie
 		return true;
 	}
+	if( strcasecmp(name,ATTR_PAIRED_CLAIM_ID) == 0 ) {
+			// This attribute contains the secret capability cookie
+		return true;
+	}
 	if( strcasecmp(name,ATTR_CAPABILITY) == 0 ) {
 			// This attribute contains the secret capability cookie
 		return true;
@@ -888,6 +892,10 @@ ClassAdAttributeIsPrivate( char const *name )
 	}
 	if( strcasecmp(name,ATTR_TRANSFER_KEY) == 0 ) {
 			// This attribute contains the secret file transfer cookie
+		return true;
+	}
+	if (strcasecmp(name,"ChildClaimIds") == 0) {
+			// In a partitionable slot, contains all the claim ids
 		return true;
 	}
 	return false;

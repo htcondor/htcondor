@@ -1239,7 +1239,10 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 
 	if( _is_local ) {
 		bool foundLocalAd = readLocalClassAd( _subsys );
-		if(!foundLocalAd) {
+		// need to read the address file if we failed to
+		// find a local ad, or if we desire to use the super port
+		// (because the super port info is not included in the local ad)
+		if(!foundLocalAd || useSuperPort()) {
 			readAddressFile( _subsys );
 		}
 	}
@@ -1735,24 +1738,45 @@ Daemon::localName( void )
 	return my_name;
 }
 
+bool
+Daemon::useSuperPort()
+{
+	// If this is a client tool, and the invoking user is root
+	// or config knob USE_SUPER_PORT=True, try to use the
+	// SUPER_ADDRESS_FILE
+
+	return  get_mySubSystem()->isClient() &&
+		    (is_root() || param_boolean("USE_SUPER_PORT",false));
+}
 
 bool
 Daemon::readAddressFile( const char* subsys )
 {
-	char* addr_file;
+	char* addr_file = NULL;
 	FILE* addr_fp;
 	std::string param_name;
 	MyString buf;
 	bool rval = false;
+	bool use_superuser = false;
 
-	formatstr( param_name, "%s_ADDRESS_FILE", subsys );
-	addr_file = param( param_name.c_str() );
-	if( ! addr_file ) {
-		return false;
+	if ( useSuperPort() )
+	{
+		formatstr( param_name, "%s_SUPER_ADDRESS_FILE", subsys );
+		use_superuser = true;
+		addr_file = param( param_name.c_str() );
+	}
+	if ( ! addr_file ) {
+		formatstr( param_name, "%s_ADDRESS_FILE", subsys );
+		use_superuser = false;
+		addr_file = param( param_name.c_str() );
+		if( ! addr_file ) {
+			return false;
+		}
 	}
 
-	dprintf( D_HOSTNAME, "Finding address for local daemon, "
-			 "%s is \"%s\"\n", param_name.c_str(), addr_file );
+	dprintf( D_HOSTNAME, "Finding %s address for local daemon, "
+			 "%s is \"%s\"\n", use_superuser ? "superuser" : "local",
+			 param_name.c_str(), addr_file );
 
 	if( ! (addr_fp = safe_fopen_wrapper_follow(addr_file, "r")) ) {
 		dprintf( D_HOSTNAME,
@@ -1775,7 +1799,7 @@ Daemon::readAddressFile( const char* subsys )
 	buf.chomp();
 	if( is_valid_sinful(buf.Value()) ) {
 		dprintf( D_HOSTNAME, "Found valid address \"%s\" in "
-				 "local address file\n", buf.Value() );
+				 "%s address file\n", buf.Value(), use_superuser ? "superuser" : "local" );
 		New_addr( strnewp(buf.Value()) );
 		rval = true;
 	}
@@ -1787,13 +1811,13 @@ Daemon::readAddressFile( const char* subsys )
 		buf.chomp();
 		New_version( strnewp(buf.Value()) );
 		dprintf( D_HOSTNAME,
-				 "Found version string \"%s\" in local address file\n",
+				 "Found version string \"%s\" in address file\n",
 				 buf.Value() );
 		if( buf.readLine(addr_fp) ) {
 			buf.chomp();
 			New_platform( strnewp(buf.Value()) );
 			dprintf( D_HOSTNAME,
-					 "Found platform string \"%s\" in local address file\n",
+					 "Found platform string \"%s\" in address file\n",
 					 buf.Value() );
 		}
 	}

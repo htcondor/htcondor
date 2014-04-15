@@ -85,10 +85,10 @@ public:
 		const int recent_window = 60 * 20;
 		const int window_quantum = 60 * 4;
 
-		pool.AddProbe("TotalPreemptions", &total_preemptions);
-		pool.AddProbe("TotalRankPreemptions", &total_rank_preemptions);
-		pool.AddProbe("TotalUserPrioPreemptions", &total_user_prio_preemptions);
-		pool.AddProbe("TotalJobStarts", &total_job_starts);
+		pool.AddProbe("JobPreemptions", &total_preemptions);
+		pool.AddProbe("JobRankPreemptions", &total_rank_preemptions);
+		pool.AddProbe("JobUserPrioPreemptions", &total_user_prio_preemptions);
+		pool.AddProbe("JobStarts", &total_job_starts);
 
 		pool.SetRecentMax(recent_window, window_quantum);
 	}
@@ -174,7 +174,7 @@ public:
 
 	// Manipulate the supplemental Class Ad list
 	int		adlist_register( StartdNamedClassAd *ad );
-	int		adlist_replace( const char *name, ClassAd *ad, 
+	int		adlist_replace( const char *name, const char *prefix, ClassAd *ad, 
 							bool report_diff = false );
 	int		adlist_delete( const char *name );
 	int		adlist_publish( unsigned r_id, ClassAd *resAd, amask_t mask );
@@ -198,9 +198,9 @@ public:
 											const char *job_id);
 
 	Resource*	findRipForNewCOD( ClassAd* ad );
-	Resource*	get_by_cur_id(char*);	// Find rip by ClaimId of r_cur
-	Resource*	get_by_any_id(char*);	// Find rip by r_cur or r_pre
-	Resource*	get_by_name(char*);		// Find rip by r_name
+	Resource*	get_by_cur_id(const char*);	// Find rip by ClaimId of r_cur
+	Resource*	get_by_any_id(const char*);	// Find rip by r_cur or r_pre
+	Resource*	get_by_name(const char*);		// Find rip by r_name
 	Resource*	get_by_slot_id(int);	// Find rip by r_id
 	State		state( void );			// Return the machine state
 

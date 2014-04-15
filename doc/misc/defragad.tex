@@ -24,6 +24,10 @@
   represented as the number of seconds elapsed since
   the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 
+\index{ClassAd Defrag attribute!DrainedMachines}
+\item[\AdAttr{DrainedMachines}:] A count of the number of fully drained 
+machines which have arrived during the run time of this \Condor{defrag} daemon.
+
 \index{ClassAd Defrag attribute!DrainFailures}
 \item[\AdAttr{DrainFailures}:] Total count of failed attempts
   to initiate draining during the lifetime of this \Condor{defrag} daemon.
@@ -43,6 +47,10 @@
 \index{ClassAd Defrag attribute!MachinesDrainingPeak}
 \item[\AdAttr{MachinesDrainingPeak}:] Largest number of machines that were
 ever observed to be draining.
+
+\index{ClassAd Defrag attribute!MeanDrainedArrived}
+\item[\AdAttr{MeanDrainedArrived}:] The mean time in seconds 
+between arrivals of fully drained machines.
 
 \index{ClassAd Defrag attribute!MonitorSelfAge}
 \item[\AdAttr{MonitorSelfAge}:] The number of seconds that this daemon

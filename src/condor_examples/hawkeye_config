@@ -322,30 +322,30 @@ LOCK		= $(LOG)
 ## The flags given in ALL_DEBUG are shared between all daemons.
 ##
 
-ALL_DEBUG               =
+#ALL_DEBUG               =
 
-MAX_COLLECTOR_LOG	= 1000000
-COLLECTOR_DEBUG		=
+#MAX_COLLECTOR_LOG	= $(MAX_DEFAULT_LOG)
+#COLLECTOR_DEBUG		=
 
-MAX_KBDD_LOG		= 1000000
-KBDD_DEBUG		=
+#MAX_KBDD_LOG		= $(MAX_DEFAULT_LOG)
+#KBDD_DEBUG		=
 
-MAX_NEGOTIATOR_LOG	= 1000000
+#MAX_NEGOTIATOR_LOG	= $(MAX_DEFAULT_LOG)
 NEGOTIATOR_DEBUG	= D_MATCH
-MAX_NEGOTIATOR_MATCH_LOG = 1000000
+#MAX_NEGOTIATOR_MATCH_LOG = $(MAX_DEFAULT_LOG)
 
-MAX_SCHEDD_LOG		= 1000000
+#MAX_SCHEDD_LOG		= $(MAX_DEFAULT_LOG)
 SCHEDD_DEBUG		= D_COMMAND D_PID
 
-MAX_SHADOW_LOG		= 1000000
+#MAX_SHADOW_LOG		= $(MAX_DEFAULT_LOG)
 SHADOW_DEBUG		=
 
-MAX_STARTD_LOG		= 1000000
+#MAX_STARTD_LOG		= $(MAX_DEFAULT_LOG)
 STARTD_DEBUG		= D_COMMAND D_JOB
 
-MAX_STARTER_LOG		= 1000000
+#MAX_STARTER_LOG		= $(MAX_DEFAULT_LOG)
 
-MAX_MASTER_LOG		= 1000000
+#MAX_MASTER_LOG		= $(MAX_DEFAULT_LOG)
 MASTER_DEBUG		= D_COMMAND
 ##  When the master starts up, should it truncate it's log file?
 #TRUNC_MASTER_LOG_ON_OPEN        = False
@@ -611,8 +611,7 @@ UPDATE_INTERVAL         = 30
 ##  unclaimed and it's been at least 4 hours since we ran the last
 ##  benchmarks, run them again.  The startd keeps a weighted average
 ##  of the benchmark results to provide more accurate values.
-##  Note, if you don't want any benchmarks run at all, either comment
-##  RunBenchmarks out, or set it to "False".
+##  Note, if you don't want any benchmarks run at all set it to "False".
 RunBenchmarks = False
 
 ##  Normally, when the startd is computing the idle time of all the

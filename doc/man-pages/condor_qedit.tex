@@ -48,6 +48,11 @@ that job must first be evicted from a machine and returned to the queue.
 The same is true for other periodic expressions, 
 such as \Attr{PeriodicHold} and \Attr{PeriodicRelease}.
 
+\Condor{qedit} validates both attribute names and attribute values,
+checking for correct ClassAd syntax.
+An error message is printed, 
+and no attribute is set or changed if the name or value is invalid.
+
 \begin{Options}
     \ToolDebugDesc
     \OptItem{\OptArg{-n}{schedd-name}}{Modify job attributes in the queue of the specified schedd}

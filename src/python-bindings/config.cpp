@@ -45,14 +45,15 @@ std::string CondorVersionWrapper() { return CondorVersion(); }
 
 std::string CondorPlatformWrapper() { return CondorPlatform(); }
 
-BOOST_PYTHON_FUNCTION_OVERLOADS(config_overloads, config, 0, 3);
+//BOOST_PYTHON_FUNCTION_OVERLOADS(config_overloads, config, 0, 3);
+void configWrapper() { config(); }
 
 void export_config()
 {
     config();
     def("version", CondorVersionWrapper, "Returns the version of HTCondor this module is linked against.");
     def("platform", CondorPlatformWrapper, "Returns the platform of HTCondor this module is running on.");
-    def("reload_config", config, config_overloads("Reload the HTCondor configuration from disk."));
+    def("reload_config", configWrapper, "Reload the HTCondor configuration from disk.");
     class_<Param>("_Param")
         .def("__getitem__", &Param::getitem)
         .def("__setitem__", &Param::setitem)

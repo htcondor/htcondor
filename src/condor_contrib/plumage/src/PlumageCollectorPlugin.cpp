@@ -65,7 +65,8 @@ class PlumageCollectorPlugin : public Service, CollectorPlugin
             m_acct_ad = NULL;
         }
         if (!(m_acct_ad = acct.fetchAd())) {
-            dprintf(D_ALWAYS, "PlumageCollectorPlugin: unable to retrieve accountant ad from negotiator\n");
+            // For now, no accountant ad from negotiator means we stop until the CM is sane
+            EXCEPT("PlumageCollectorPlugin: unable to contact negotiator for accountant ad. Exiting...");
         }
         Date_t ts_now = jsTime();
         processAccountantStats(m_acct_ad, m_stats_conn, ts_now);

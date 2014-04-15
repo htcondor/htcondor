@@ -154,7 +154,7 @@ bool
 StringList::create_union(StringList & subset, bool anycase)
 {
 	char *x;
-	BOOLEAN ret_val = TRUE;
+	bool ret_val = true;
 	bool result = false;	// true if list modified
 
 	subset.rewind ();
@@ -165,7 +165,7 @@ StringList::create_union(StringList & subset, bool anycase)
 			ret_val = contains(x);
 		}
 			// not there, add it.
-		if( ret_val == FALSE ) {
+		if( ret_val == false ) {
 			result = true;
 			append(x);
 		}
@@ -178,7 +178,7 @@ bool
 StringList::contains_list(StringList & subset, bool anycase)
 {
 	char *x;
-	BOOLEAN ret_val;
+	bool ret_val;
 
 	subset.rewind ();
 	while ((x = subset.next ())) {
@@ -187,7 +187,7 @@ StringList::contains_list(StringList & subset, bool anycase)
 		} else {
 			ret_val = contains(x);
 		}
-		if( ret_val == FALSE ) {
+		if( ret_val == false ) {
 			return false;
 		}
 	}
@@ -195,7 +195,7 @@ StringList::contains_list(StringList & subset, bool anycase)
 }
 
 
-BOOLEAN
+bool
 StringList::contains( const char *st )
 {
 	char	*x;
@@ -203,14 +203,14 @@ StringList::contains( const char *st )
 	m_strings.Rewind ();
 	while ((x = m_strings.Next ())) {
 		if( strcmp(st, x) == MATCH ) {
-			return TRUE;
+			return true;
 		}
 	}
-	return FALSE;
+	return false;
 }
 
 
-BOOLEAN
+bool
 StringList::contains_anycase( const char *st )
 {
 	char	*x;
@@ -218,10 +218,10 @@ StringList::contains_anycase( const char *st )
 	m_strings.Rewind ();
 	while ((x = m_strings.Next ())) {
 		if( strcasecmp(st, x) == MATCH ) {
-			return TRUE;
+			return true;
 		}
 	}
-	return FALSE;
+	return false;
 }
 
 
@@ -251,7 +251,7 @@ StringList::remove_anycase(const char *str)
 	}
 }
 
-BOOLEAN
+bool
 StringList::substring( const char *st )
 {
 	char    *x;
@@ -261,19 +261,19 @@ StringList::substring( const char *st )
 	while( (x = m_strings.Next()) ) {
 		len = strlen(x);
 		if( strncmp(st, x, len) == MATCH ) {
-			return TRUE;
+			return true;
 		}
 	}
-	return FALSE;
+	return false;
 }
 
-BOOLEAN
+bool
 StringList::contains_withwildcard(const char *string)
 {
 	return (contains_withwildcard(string, false) != NULL);
 }
 
-BOOLEAN
+bool
 StringList::contains_anycase_withwildcard(const char *string)
 {
 	return (contains_withwildcard(string, true) != NULL);
@@ -299,7 +299,7 @@ StringList::contains_withwildcard(const char *string, bool anycase, StringList *
 	char *matchend;
 	char *asterisk;
 	int matchendlen, len;
-    BOOLEAN result; 
+    bool result;
 	int temp;
 	
 	if ( !string )
@@ -382,7 +382,7 @@ StringList::contains_withwildcard(const char *string, bool anycase, StringList *
 		// or in the middle somewhere, and both matchstart and matchend are set 
 		// appropiately with what we want
 
-		result = TRUE;
+		result = true;
 		*asterisk = '\0';	// replace asterisk with a NULL
 		if ( matchstart ) {
 			if ( anycase ) {
@@ -391,25 +391,25 @@ StringList::contains_withwildcard(const char *string, bool anycase, StringList *
 				temp = strncmp(matchstart,string,strlen(matchstart));
 			}
 			if ( temp != MATCH ) 
-				result = FALSE;
+				result = false;
 		}
-		if ( matchend && result == TRUE) {
+		if ( matchend && result == true) {
 			len = strlen(string);
 			matchendlen = strlen(matchend);
 			if ( matchendlen > len )	// make certain we do not SEGV below
-				result = FALSE;
-			if ( result == TRUE ) {
+				result = false;
+			if ( result == true ) {
 				if (anycase) {
 					temp = strcasecmp(&(string[len-matchendlen]),matchend);
 				} else {
 					temp = strcmp(&(string[len-matchendlen]),matchend);
 				}
 				if ( temp != MATCH )
-					result = FALSE;
+					result = false;
 			}
 		}
 		*asterisk = '*';	// set asterisk back no matter what the result
-		if ( result == TRUE ) {
+		if ( result == true ) {
 			if( matches ) {
 				matches->append( x );
 			}

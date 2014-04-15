@@ -133,21 +133,21 @@ MASTER_HAD_BACKOFF_CONSTANT	= 360
 
 
 ## The size of the HAD log file
-MAX_HAD_LOG = 640000
+#MAX_HAD_LOG = $(MAX_DEFAULT_LOG)
 ## debug level 
 HAD_DEBUG   = D_COMMAND
 ## location of the condor_had log file
 HAD_LOG     = $(LOG)/HADLog
 
 ## The size of replication log file
-MAX_REPLICATION_LOG     = 640000
+#MAX_REPLICATION_LOG     = $(MAX_DEFAULT_LOG)
 ## Replication debug level 
 REPLICATION_DEBUG       = D_COMMAND
 ## Replication log file
 REPLICATION_LOG         = $(LOG)/ReplicationLog
 
 ## The size of transferer log file
-MAX_TRANSFERER_LOG      = 640000
+#MAX_TRANSFERER_LOG      = $(MAX_DEFAULT_LOG)
 ## Replication debug level 
 TRANSFERER_DEBUG        = D_COMMAND
 ## Replication log file

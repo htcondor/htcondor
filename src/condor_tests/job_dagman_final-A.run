@@ -53,6 +53,15 @@ $scriptfile = "job_dagman_final-A.scripts.out";
 			"  FAILED_COUNT=0",
 			"Node A_C Post");
 
+$statusfile = "job_dagman_final-A.status";
+@status_lines = ("DagStatus = 5;.*STATUS_DONE \\(success\\)",
+	"Node = \"A_A\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"A_B\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"A_C\";",
+	"NodeStatus = 5;.*STATUS_DONE");
+
 my $killedchosen = 0;
 
 # truly const variables in perl
@@ -66,6 +75,9 @@ if (-e $outfile) {
 }
 if (-e $scriptfile) {
 	runcmd("rm -f $scriptfile");
+}
+if (-e $statusfile) {
+	runcmd("rm -f $statusfile");
 }
 
 $abnormal = sub 
@@ -137,6 +149,38 @@ $success = sub
 			$diditpass = 0;
 			CondorTest::debug("Mismatch at line $lineindex: expected <$script_output_lines[$lineindex]>, got <$line>\n", 1);
 		}
+	}
+
+	# Check the node status file (for gittrac #4209).
+	CondorTest::debug("Checking $statusfile\n",1);
+	$line = "";
+	$passed = 0;
+	$canopen = open(OUT,"<$statusfile");
+	if (! (defined $canopen)) {
+		CondorTest::debug("Can not open node status file<$statusfile>:$!\n",1);
+		$diditpass = 0;
+	}
+	while(<OUT>) {
+		chomp();
+		$line = $_;
+		$target = $status_lines[0];
+		if( $line =~ /$target/ ) {
+			CondorTest::debug("$name: $line\n",1);
+			# Remove the target we just found from the array.
+			shift @status_lines;
+			if ($#status_lines < 0) {
+				last;
+			}
+		}
+	}
+	close(OUT);
+
+	if ($#status_lines >= 0) {
+		CondorTest::debug("failed missing node status lines:\n");
+		foreach $missing (@status_lines) {
+			print "  $missing\n";
+		}
+		$diditpass = 0;
 	}
 
 	if($diditpass == 0) {

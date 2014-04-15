@@ -24,6 +24,7 @@ cmd_condor_submit_dashspool
 lib_bt_shared_port-check-ports_van
 cmd_drain
 defrag
+cmd_ccval_remote
 #cmd_status_shows-any
 #cmd_status_shows-submitters
 #cmd_status_shows-negotiator
@@ -154,10 +155,16 @@ condor_view_classad_types
 #added by bt 9/5/13
 negotiator_match_log_exists
 cmd_condor_submit_dashspool
-job_concurrency_limits
+#job_concurrency_limits
 job_schedd_restart-check_reconnect
 job_local_resources
 job_check_exitcode_in_classad
 job_services_during_neg_cycle
 basic_startd_slot_attrs
 job_basic_start_test
+collector_unit_test
+classad_unit_test
+classad_with_cache_unit_test
+classad_without_cache_unit_test
+consumption_policy_unit_test
+ring_buffer_unit_test

@@ -28,7 +28,7 @@
 #define MAXSCHEDDLEN 255
 
 // This is for the getFilterAndProcess function
-typedef bool    (*condor_q_process_func)(void*, ClassAd *);
+typedef void (*condor_q_process_func)(void*, classad_shared_ptr<ClassAd>);
 
 /* a list of all types of direct DB query defined here */
 enum CondorQQueryType
@@ -39,7 +39,10 @@ enum CondorQQueryType
 enum
 {
 	Q_NO_SCHEDD_IP_ADDR = 20,
-	Q_SCHEDD_COMMUNICATION_ERROR
+	Q_SCHEDD_COMMUNICATION_ERROR,
+	Q_INVALID_REQUIREMENTS,
+	Q_INTERNAL_ERROR,
+	Q_REMOTE_ERROR
 };
 
 enum CondorQIntCategories
@@ -91,7 +94,7 @@ class CondorQ
 	// from the local schedd
 	int fetchQueue (ClassAdList &, StringList &attrs, ClassAd * = 0, CondorError* errstack = 0);
 	int fetchQueueFromHost (ClassAdList &, StringList &attrs, const char * = 0, char const *schedd_version = 0,CondorError* errstack = 0);
-	int fetchQueueFromHostAndProcess ( const char *, StringList &attrs, condor_q_process_func process_func, void * process_func_data, bool useFastPath, CondorError* errstack = 0);
+	int fetchQueueFromHostAndProcess ( const char *, StringList &attrs, condor_q_process_func process_func, void * process_func_data, int useFastPath, CondorError* errstack = 0);
 	
 		// fetch the job ads from database 	
 	int fetchQueueFromDB (ClassAdList &, char *&lastUpdate, const char * = 0, CondorError* errstack = 0);
@@ -119,7 +122,8 @@ class CondorQ
 	time_t scheddBirthdate;
 	
 	// helper functions
-	int getAndFilterAds( const char *, StringList &attrs, ClassAdList &, bool useAll );
+	int fetchQueueFromHostAndProcessV2 ( const char * host, const char * constraint, StringList &attrs, condor_q_process_func process_func, void * process_func_data, int connect_timeout, CondorError* errstack = 0);
+	int getAndFilterAds( const char *, StringList &attrs, ClassAdList &, int useAll );
 	int getFilterAndProcessAds( const char *, StringList &attrs, condor_q_process_func pfn, void * process_func_data, bool useAll );
 };
 
