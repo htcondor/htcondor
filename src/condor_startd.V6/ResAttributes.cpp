@@ -1149,7 +1149,7 @@ MachAttributes::credd_test()
 
 CpuAttributes::CpuAttributes( MachAttributes* map_arg, 
 							  int slot_type,
-							  int num_cpus_arg, 
+							  double num_cpus_arg,
 							  int num_phys_mem,
 							  double virt_mem_fraction,
 							  double disk_fraction,
@@ -1160,6 +1160,7 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 	map = map_arg;
 	c_type = slot_type;
 	c_num_slot_cpus = c_num_cpus = num_cpus_arg;
+	c_allow_fractional_cpus = num_cpus_arg > 0 && num_cpus_arg < 0.9;
 	c_slot_mem = c_phys_mem = num_phys_mem;
 	c_virt_mem_fraction = virt_mem_fraction;
 	c_disk_fraction = disk_fraction;
@@ -1263,14 +1264,16 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 	if( IS_STATIC(how_much) || IS_PUBLIC(how_much) ) {
 
 		cp->Assign( ATTR_MEMORY, c_phys_mem );
-
-		cp->Assign( ATTR_CPUS, c_num_cpus );
-		
 		cp->Assign( ATTR_TOTAL_SLOT_MEMORY, c_slot_mem );
-		
 		cp->Assign( ATTR_TOTAL_SLOT_DISK, c_slot_disk );
 
-		cp->Assign( ATTR_TOTAL_SLOT_CPUS, c_num_slot_cpus );
+		if (c_allow_fractional_cpus) {
+			cp->Assign( ATTR_CPUS, c_num_cpus );
+			cp->Assign( ATTR_TOTAL_SLOT_CPUS, c_num_slot_cpus );
+		} else {
+			cp->Assign( ATTR_CPUS, (int)(c_num_cpus + 0.1) );
+			cp->Assign( ATTR_TOTAL_SLOT_CPUS, (int)(c_num_slot_cpus + 0.1) );
+		}
 		
 		// publish local resource quantities for this slot
 		for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
@@ -1369,7 +1372,7 @@ CpuAttributes::show_totals( int dflag )
 			 "Cpus: auto");
 	} else {
 		::dprintf( dflag | D_NOHEADER, 
-			 "Cpus: %d", c_num_cpus);
+			 "Cpus: %f", c_num_cpus);
 	}
 
 	if (IS_AUTO_SHARE(c_phys_mem)) {
@@ -1423,6 +1426,27 @@ CpuAttributes::dprintf( int flags, const char* fmt, ... )
 	va_start( args, fmt );
 	rip->dprintf_va( flags, fmt, args );
 	va_end( args );
+}
+
+void
+CpuAttributes::swap_attributes(CpuAttributes & attra, CpuAttributes & attrb, int flags)
+{
+	if (flags & 1) {
+		// swap execute directories.
+		MyString str = attra.c_execute_dir;
+		attra.c_execute_dir = attrb.c_execute_dir;
+		attrb.c_execute_dir = str;
+
+		// swap execute partition ids
+		str = attra.c_execute_partition_id;
+		attra.c_execute_partition_id = attrb.c_execute_partition_id;
+		attrb.c_execute_partition_id = str;
+
+		// swap total disk since we swapped partition ids
+		long long ll = attra.c_total_disk;
+		attra.c_total_disk = attrb.c_total_disk;
+		attrb.c_total_disk = ll;
+	}
 }
 
 
@@ -1504,11 +1528,15 @@ bool
 AvailAttributes::decrement( CpuAttributes* cap ) 
 {
 	int new_cpus, new_phys_mem;
-	float new_virt_mem, new_disk, floor = -0.000001f;
+	double new_virt_mem, new_disk, floor = -0.000001f;
 	
 	new_cpus = a_num_cpus;
 	if ( ! IS_AUTO_SHARE(cap->c_num_cpus)) {
-		new_cpus -= cap->c_num_cpus;
+		if (cap->c_allow_fractional_cpus && (cap->c_num_cpus < .5)) {
+			//PRAGMA_REMIND("TJ: account for fractional cpus properly...")
+		} else {
+			new_cpus -= cap->c_num_cpus;
+		}
 	}
 
 	new_phys_mem = a_phys_mem;
@@ -1605,8 +1633,11 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 {
 	if (IS_AUTO_SHARE(cap->c_num_cpus)) {
 		ASSERT( a_num_cpus_auto_count > 0 );
-		int new_value = a_num_cpus / a_num_cpus_auto_count;
-		if( new_value < 1 ) {
+		double new_value = a_num_cpus / a_num_cpus_auto_count;
+		if (cap->c_allow_fractional_cpus) {
+			if ( new_value <= 0.0)
+				return false;
+		} else if( new_value < 1 ) {
 			return false;
 		}
 		cap->c_num_slot_cpus = cap->c_num_cpus = new_value;
@@ -1623,7 +1654,7 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 
 	if( IS_AUTO_SHARE(cap->c_virt_mem_fraction) ) {
 		ASSERT( a_virt_mem_auto_count > 0 );
-		float new_value = a_virt_mem_fraction / a_virt_mem_auto_count;
+		double new_value = a_virt_mem_fraction / a_virt_mem_auto_count;
 		if( new_value <= 0 ) {
 			return false;
 		}
@@ -1633,7 +1664,7 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 	if( IS_AUTO_SHARE(cap->c_disk_fraction) ) {
 		AvailDiskPartition &partition = GetAvailDiskPartition( cap->c_execute_partition_id );
 		ASSERT( partition.m_auto_count > 0 );
-		float new_value = partition.m_disk_fraction / partition.m_auto_count;
+		double new_value = partition.m_disk_fraction / partition.m_auto_count;
 		if( new_value <= 0 ) {
 			return false;
 		}

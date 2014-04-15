@@ -14,11 +14,34 @@ my $conf = 'URLTEST = 123456 '; #The local config file
 
 
 
-my $fileh;
-$fileh = File::Temp->new();
-my $fname = $fileh->filename;
-$fileh->print($conf);
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+    WANT_SUSPEND = FALSE
+    NEGOTIATION_INTERVAL = 5
+    NUM_CPUS = 6
+';
 
+my $testname = "condor_urlfetch_test";
+
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"condorurlfetchtest");
+
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
+
+CondorTest::StartCondorWithParams(
+    condor_name => "condorurlfetchtest",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+my $fileh;
+# creating line to be seen in local config file
+ open(FT, ">defaultlocal.txt") or die "can not opn defaultlocal.txt:$!\n";
+
+print FT "$conf\n";
+close(FT);
+
+print "Line to go into local file:$conf\n";
 my $forkpid = fork();
 if($forkpid == 0)
 {
@@ -27,40 +50,47 @@ if($forkpid == 0)
 {
   sleep(1);
   local $/=undef;
-  #open FILE, "(pythonurl)";
-  #my $url = <FILE> . "/" . $fname;
+
+  open FT, "pythonurl";
+  my $url = <FT> . "/" . "defaultlocal.txt";
   print "URL:$url";
-  system("ls $url");
-  close FILE;
+  close FT;
 
   my $configpath = "";
   my @convaldump = ();
   runCondorTool("condor_config_val -config", \@convaldump, 2, {emit_output => 1});
-  my @lines = split /\n/, @convaldump;
-  foreach my $line (@lines) {
-  	if($line =~ /condor_config/) {
-		fullchomp($line);
-		$configpath = $line;
+  foreach my $line (@convaldump) {
+  	print "$line\n";
+  	if($line =~ /^\s*(.*?\/condor_config)\s*$/) {
+		fullchomp($1);
+		$configpath = $1;
 		last;
 	}
   }
+  print "I think my config file is:$configpath\n";
 
-  my $oldconffh;
-  open($oldconffh, '>>', $configpath) or die "Can't open $configpath";
-  # May add save old config file in condor_urlfetch_test.saveme, doesn't seem
-  # necessary for now
-  say $oldconffh "\n LOCAL_CONFIG_FILE = condor_urlfetch _P(SUBSYSTEM) " . $url . " condor_config_file_cache";
-  CondorTest::StartCondorWithParams
-  (
-    condor_name => "urlfetch_test",
-    #condorlocalsrc=> ($conf . "\n LOCAL_CONFIG_FILE = condor_urlfetch _P(SUBSYSTEM) " . $url . " condor_config_file_cache"),
-    do_not_start => 1,
-    fresh_local => "true"
-  ); 
-  
+  my $newconfig = "$configpath" . ".new";
+  my $extraline = "";
+
+  print "$newconfig\n";
+
+  open(OF, "<$configpath") or die "Can't open $configpath: $!\n";
+  open(NF, ">$newconfig") or die "Can't open $newconfig: $!\n";
+  while (<OF>) {
+  	 print NF "$_";
+  }
+  $extraline = "LOCAL_CONFIG_FILE = condor_urlfetch _P(SUBSYSTEM) " . $url . " condor_config_file_cache";
+  print NF "$extraline\n";
+  close(OF);
+  close(NF);
+  system("mv $newconfig $configpath");
+
   my $fetchedfh;
   open($fetchedfh, "$(LOCAL_DIR)/condor_config_file_cache");
   
+  runCondorToolNTimes("condor_restart",1,1);
+  sleep(40);
+
   use File::Compare;
   if(compare($fileh, $fetchedfh) != 0)
   {
@@ -71,4 +101,6 @@ if($forkpid == 0)
 }
 
 
+RegisterResult(1, "test_name", $testname);
+EndTest();
 exit(0);

@@ -31,19 +31,42 @@ $dagman_args = "-verbose";
 @logfiles = ("job_dagman_node_status.dag.dagman.out");
 
 @outfiles = ("job_dagman_node_status.status");
-@outlines = ("JOB A STATUS_DONE", 
-	"JOB B1 STATUS_DONE",
-	"JOB B2 STATUS_DONE",
-	"JOB B3 STATUS_DONE",
-	"JOB B4 STATUS_DONE",
-	"JOB B5 STATUS_DONE",
-	"JOB B6 STATUS_DONE",
-	"JOB B7 STATUS_DONE",
-	"JOB B8 STATUS_DONE",
-	"JOB B9 STATUS_DONE",
-	"JOB B10 STATUS_DONE",
-	"JOB C STATUS_DONE",
-	"DAG status: STATUS_DONE");
+# Lines must be found in order.
+@outlines = ("DagStatus = 5;.*STATUS_DONE \\(success\\)",
+	"NodesTotal = 12;",
+	"NodesDone = 12;",
+	"NodesPre = 0;",
+	"NodesQueued = 0;",
+	"NodesPost = 0;",
+	"NodesReady = 0;",
+	"NodesUnready = 0;",
+	"NodesFailed = 0;",
+	"JobProcsHeld = 0;",
+	"JobProcsIdle = 0;",
+	"Node = \"A\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B1\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B2\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B3\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B4\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B5\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B6\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B7\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B8\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B9\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B10\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"C\";",
+	"NodeStatus = 5;.*STATUS_DONE");
 
 my $killedchosen = 0;
 
@@ -136,12 +159,12 @@ $success = sub
 		while(<OUT>) {
 			chomp();
 			$line = $_;
-			for ( $ind = 0; $ind <= $#outlines; $ind++ ) {
-				$target = $outlines[$ind];
-				if( $line =~ /$target/ ) {
-					CondorTest::debug("$name: $line\n",1);
-					# Remove the target we just found from the array.
-					splice(@outlines, $ind, 1);
+			$target = $outlines[0];
+			if( $line =~ /$target/ ) {
+				CondorTest::debug("$name: $line\n",1);
+				# Remove the target we just found from the array.
+				shift @outlines;
+				if ($#outlines < 0) {
 					last;
 				}
 			}

@@ -169,6 +169,9 @@ class match_rec: public ClaimIdParser
 		// punched hole
 	MyString*		auth_hole_id;
 
+	match_rec *m_paired_mrec;
+	bool m_can_start_jobs;
+
 	bool m_startd_sends_alives;
 
 	int keep_while_idle; // number of seconds to hold onto an idle claim
@@ -339,7 +342,7 @@ class Scheduler : public Service
 	friend	void	job_prio(ClassAd *);
 	friend  int		find_idle_local_jobs(ClassAd *);
 	friend	int		updateSchedDInterval( ClassAd* );
-    friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false);
+    friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
 	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify, bool log );
@@ -528,6 +531,10 @@ class Scheduler : public Service
 	HashTable <PROC_ID, ClassAd *> *resourcesByProcID;
   
 	bool usesLocalStartd() const { return m_use_startd_for_local;}
+
+	void swappedClaims( DCMsgCallback *cb );
+	bool CheckForClaimSwap(match_rec *rec);
+
 	
 private:
 	
@@ -803,6 +810,13 @@ private:
 	int m_local_startd_pid;
 	std::map<std::string, ClassAd *> m_unclaimedLocalStartds;
 	std::map<std::string, ClassAd *> m_claimedLocalStartds;
+
+    int m_userlog_file_cache_max;
+    time_t m_userlog_file_cache_clear_last;
+    int m_userlog_file_cache_clear_interval;
+    WriteUserLog::log_file_cache_map_t m_userlog_file_cache;
+    void userlog_file_cache_clear(bool force = false);
+    void userlog_file_cache_erase(const int& cluster, const int& proc);
 
 	// State for the history helper queue.
 	std::vector<HistoryHelperState> m_history_helper_queue;

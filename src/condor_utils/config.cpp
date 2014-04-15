@@ -139,21 +139,36 @@ is_piped_command(const char* filename)
 	return retVal;
 }
 
-bool is_meta_knob(const char * name)
-{
-	if ( ! name || name[0] != '$')
-		return false;
-	return param_meta_table(name+1) != NULL;
-}
-
 int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, MACRO_SET& macro_set, const char * subsys);
 
 int read_meta_config(MACRO_SOURCE & source, const char *name, const char * rhs, MACRO_SET& macro_set, const char * subsys)
 {
-	if ( ! name || name[0] != '$')
-		return -1;
+#ifdef GUESS_METAKNOB_CATEGORY
+	std::string nameguess;
+	if ( ! name || ! name[0]) {
+		// guess the name by looking for matches on the rhs.
+		for (int id = 0; ; ++id) {
+			MACRO_DEF_ITEM * pmet = param_meta_source_by_id(id);
+			if ( ! pmet) break;
+			const char * pcolon = strchr(pmet->key, ':');
+			if ( ! pcolon) continue;
+			if (MATCH == strcasecmp(rhs, pcolon+1)) {
+				nameguess = pmet->key;
+				nameguess[pcolon - pmet->key] = 0;
+				name = nameguess.c_str();
+				break;
+			}
+		}
+	}
+#endif
 
-	MACRO_TABLE_PAIR* ptable = param_meta_table(name+1);
+	if ( ! name || ! name[0]) {
+		fprintf(stderr,
+				"Configuration Error: use needs a keyword before : %s\n", rhs);
+		return -1;
+	}
+
+	MACRO_TABLE_PAIR* ptable = param_meta_table(name);
 	if ( ! ptable)
 		return -1;
 
@@ -164,15 +179,15 @@ int read_meta_config(MACRO_SOURCE & source, const char *name, const char * rhs, 
 		const char * value = param_meta_table_string(ptable, item);
 		if ( ! value) {
 			fprintf(stderr,
-					"Configuration Error: Meta %s does not have a value for %s\n",
+					"Configuration Error: use %s: does not recognise %s\n",
 					name, item);
 			return -1;
 		}
-		source.meta_id = param_default_get_source_meta_id(name+1, item);
+		source.meta_id = param_default_get_source_meta_id(name, item);
 		int ret = Parse_config(source, name, value, macro_set, subsys);
 		if (ret < 0) {
 			fprintf(stderr,
-					"Internal Configuration Error: Meta %s has a bad value for %s\n",
+					"Internal Configuration Error: use %s: %s is invalid\n",
 					name, item);
 			return ret;
 		}
@@ -326,7 +341,8 @@ static expr_character_t Characterize_config_if_expression(const char * expr, boo
 		ct_logic = 0x40, // & |
 		ct_group = 0x80, // ()[]{}
 		ct_money = 0x100, // $
-		ct_other = 0x200, // all other characters
+		ct_colon = 0x200, // :
+		ct_other = 0x400, // all other characters
 		ct_float = 0x1000, // digits with . or e
 		ct_macro = 0x2000, // $(
 	};
@@ -348,6 +364,7 @@ static expr_character_t Characterize_config_if_expression(const char * expr, boo
 		else if (ch >= '{' && ch <= '}') set |= ct_group;
 		else if (ch == '(' || ch == ')') set |= ct_group;
 		else if (ch == '[' || ch == ']') set |= ct_group;
+		else if (ch == ':') set |= ct_colon;
 		else set |= ct_other;
 	}
 
@@ -385,7 +402,9 @@ static expr_character_t Characterize_config_if_expression(const char * expr, boo
 
 			// this matches defined identifier, defined bool & defined int
 		case ct_alpha|ct_space:
+		case ct_alpha|ct_space|ct_colon:
 		case ct_alpha|ct_space|ct_ident:
+		case ct_alpha|ct_space|ct_ident|ct_colon:
 		case ct_alpha|ct_space|ct_digit:
 		case ct_alpha|ct_space|ct_digit|ct_float:
 			if (keyword_check && matches_literal_ignore_case(begin, "defined", false))
@@ -393,7 +412,7 @@ static expr_character_t Characterize_config_if_expression(const char * expr, boo
 			return CIFT_COMPLEX;
 	}
 
-	if ((set & ct_macro) && 0 == (set & ~(ct_money|ct_ident|ct_alpha|ct_digit|ct_macro)))
+	if ((set & ct_macro) && 0 == (set & ~(ct_money|ct_ident|ct_alpha|ct_digit|ct_macro|ct_colon)))
 		return CIFT_MACRO;
 
 	return CIFT_COMPLEX;
@@ -503,6 +522,21 @@ static bool Evaluate_config_if(const char * expr, bool & result, std::string & e
 			// if what we are checking for 'defined' is a bool or int, then it's defined.
 			} else if (ec2 == CIFT_NUMBER || ec2 == CIFT_BOOL) {
 				result = true;
+			} else if (starts_with(ptr, "use ")) { // is it check for a metaknob definition?
+				ptr += 4; // skip over "use ";
+				while (isspace(*ptr)) ++ptr;
+				// there are two allowed forms "if defined use <cat>", and "if defined use <cat>:<val>"
+				MACRO_TABLE_PAIR * tbl = param_meta_table(ptr);
+				result = false;
+				if (tbl) {
+					const char * pcolon = strchr(ptr, ':');
+					if ( ! pcolon || !pcolon[1] || param_meta_table_string(tbl, pcolon+1))
+						result = true;
+				}
+				if (strchr(ptr, ' ') || strchr(ptr, '\t') || strchr(ptr, '\r')) { // catch most common syntax error
+					err_reason = "defined use meta argument with internal spaces will never match";
+					return false;
+				}
 			} else {
 				err_reason = "defined argument must be param name, boolean, or number";
 				return false;
@@ -668,6 +702,10 @@ bool ConfigIfStack::line_is_if(const char * line, std::string & errmsg, MACRO_SE
 	return false;
 }
 
+// parse a string containing one or more statements in config syntax
+// and insert the resulting declarations into the given macro set.
+// this code is used to parse meta-knob definitions.
+//
 int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, MACRO_SET& macro_set, const char * subsys)
 {
 	source.meta_off = -1;
@@ -700,6 +738,13 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 		const char * name = line;
 		char * ptr = line;
 		int op = 0;
+
+		// detect the 'use' keyword
+		bool is_meta = (MATCH == strncmp(line, "use ", 4));
+		if (is_meta) {
+			ptr += 4; while (isspace(*ptr)) ++ptr;
+			name = ptr; // name is now the metaknob category name rather than the keyword 'use'
+		}
 
 		// parse to the end of the name and null terminate it
 		while (*ptr) {
@@ -744,7 +789,7 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 		*/
 
 		// if name begins with $ it might be a metaknob.
-		if (is_meta_knob(name)) {
+		if (is_meta) {
 			if (MATCH == strcasecmp(self, name)) {
 				// self ref is invalid
 				return -1;
@@ -981,6 +1026,7 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 			}
 		}
 
+		char * pop = ptr; // keep track of where we see the operator
 		if( ISOP(*ptr) ) {
 			op = *ptr;
 			//op is now '=' in the above eg
@@ -995,6 +1041,7 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 				retval = -1;
 				goto cleanup;
 			}
+			pop = ptr;
 			op = *ptr++;
 		}
 
@@ -1006,6 +1053,33 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 		rhs = ptr;
 		// rhs is now 'SunOS' in the above eg
 
+		// if the name is 'use' then this is a metaknob, so the actual name
+		// is the word after 'use'. so we want to find that word and
+		// remove trailing spaces from it.
+		bool is_meta = (op == ':' && MATCH == strcmp(name, "use"));
+		if (is_meta) {
+			if (name+4 < pop) {
+				name += 4;
+				while (isspace(*name) && name < pop) { ++name; }
+				char * p = pop-1;
+				while (isspace(*p) && p > name) { *p-- = 0; }
+			} else {
+				name += 3; // this will point at the null terminator of 'use'
+			}
+		} else if (op == ':') {
+			// backward compat hack. the old config file used : syntax for RunBenchmarks, so this is just a warning for now.
+			if (MATCH == strcasecmp(name, "RunBenchmarks")) { op = '='; }
+			fprintf( stderr, "Configuration %s File <%s>, Line %d: obsolete use of ':' for parameter assigment at %s : %s\n",
+					op == ':' ? "Error" : "Warning",
+					config_source, ConfigLineNo,
+					name, rhs
+					);
+			if (op == ':') {
+				retval = -1;
+				goto cleanup;
+			}
+		}
+
 		/* Expand references to other parameters */
 		name = expand_macro(name, macro_set);
 		if( name == NULL ) {
@@ -1013,14 +1087,14 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 			goto cleanup;
 		}
 
-		// if name begins with $ it might be a metaknob.
-		if (is_meta_knob(name)) {
+		// if name is 'use' then this is a metaknob usage
+		if (is_meta) {
 			FileMacro.line = ConfigLineNo;
 			retval = read_meta_config(FileMacro, name, rhs, macro_set, subsys);
 			if (retval < 0) {
 				fprintf( stderr,
-						 "Configuration Error File <%s>, Line %d: Meta <%s>\n",
-						 config_source, ConfigLineNo, name );
+							"Configuration Error File <%s>, Line %d: at use %s:%s\n",
+							config_source, ConfigLineNo, name, rhs );
 				goto cleanup;
 			}
 		} else {

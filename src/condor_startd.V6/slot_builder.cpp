@@ -218,6 +218,16 @@ void initTypes( int max_types, StringList **type_strings, int except )
 		type_strings[i] = new StringList();
 		type_strings[i]->initializeFromString( tmp );
 		free( tmp );
+#if 0
+		// check for pairings
+		buf += "PAIRED_WITH";
+		tmp = param(buf.Value());
+		if ( ! tmp)
+			continue;
+		PRAGMA_REMIND("tj: treating the slot that has PAIRED_WITH as subordinate! fix this!")
+		type_strings[i]->insert("minimal");
+		free (tmp);
+#endif
 	}
 }
 
@@ -274,19 +284,27 @@ int countTypes( int max_types, int num_cpus, int** array_ptr, bool except )
 	return num;
 }
 
+const double MINIMAL_SHARE = -1.0/128;
+typedef enum { SPECIAL_SHARE_NONE=0, SPECIAL_SHARE_AUTO=1, SPECIAL_SHARE_MINIMAL=2 } special_share_t;
 
 /*
    Parse a string in one of a few formats, and return a float that
-   represents the value.  Either it's "auto", or it's a fraction, like
+   represents the value.  Either it's "auto", "minimal" or it's a fraction, like
    "1/4", or it's a percent, like "25%" (these are equivalent),
    or it's a regular value, like "64"
    auto and fraction/percent are returned as negative values
 */
-static double parse_share_value( const char* str, int type, bool except )
+static double parse_share_value(const char* str, int type, bool except, special_share_t & special)
 {
 	if( strcasecmp(str,"auto") == 0 || strcasecmp(str,"automatic") == 0 ) {
+		special = SPECIAL_SHARE_AUTO;
 		return AUTO_SHARE;
 	}
+	if (strcasecmp(str,"min") == 0 || strcasecmp(str,"minimal") == 0) {
+		special = SPECIAL_SHARE_MINIMAL;
+		return MINIMAL_SHARE;
+	}
+	special = SPECIAL_SHARE_NONE;
 
 	const char * tmp = strchr(str, '%');
 	if (tmp) {
@@ -337,15 +355,18 @@ static t compute_local_resource(t num_res, double share, t min_res = 0)
 const int UNSET_SHARE = -9998;
 #define IS_UNSET_SHARE(share) ((int)share == UNSET_SHARE)
 
+
 CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list, int type, bool except )
 {
     typedef CpuAttributes::slotres_map_t slotres_map_t;
-	int cpus = UNSET_SHARE;
+	double cpus = UNSET_SHARE;
 	int ram = UNSET_SHARE; // this is in MB so an int is enough
 	double disk_fraction = UNSET_SHARE;
 	double swap_fraction = UNSET_SHARE;
 	slotres_map_t slotres;
+	special_share_t default_share_special = SPECIAL_SHARE_AUTO;
 	double default_share = AUTO_SHARE;
+	bool allow_fractional_cpu = false;
 
 	MyString execute_dir, partition_id;
 	GetConfigExecuteDir( slot_id, &execute_dir, &partition_id );
@@ -353,7 +374,7 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 	if ( list == NULL) {
 	  // give everything the default share and return
 
-	  cpus = compute_local_resource(m_attr->num_cpus(), default_share, 1);
+	  cpus = compute_local_resource(m_attr->num_cpus(), default_share, 1.0);
 	  ram = compute_local_resource(m_attr->phys_mem(), default_share, 1);
 
       for (slotres_map_t::const_iterator j(m_attr->machres().begin());  j != m_attr->machres().end();  ++j) {
@@ -382,8 +403,8 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 				// percentage or fraction for all attributes.
 				// For example "1/4" or "25%".  So, we can just parse
 				// it as a percentage and use that for everything.
-			default_share = parse_share_value(attr_expr.c_str(), type, except);
-			if (!IS_AUTO_SHARE(default_share) && (default_share < -1 || default_share > 0)) {
+			default_share = parse_share_value(attr_expr.c_str(), type, except, default_share_special);
+			if (default_share_special == SPECIAL_SHARE_NONE && (default_share < -1 || default_share > 0)) {
 				dprintf( D_ALWAYS, "ERROR: Bad description of slot type %d: "
 						"\"%s\" is invalid.\n"
 						"\tYou must specify a percentage (like \"25%%\"), "
@@ -397,6 +418,7 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 					return NULL;
 				}
 			}
+			if (default_share_special == SPECIAL_SHARE_MINIMAL) allow_fractional_cpu = true;
 			continue;
 		}
 
@@ -416,7 +438,8 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 				return NULL;
 			}
 		}
-		double share = parse_share_value(val.c_str(), type, except);
+		special_share_t share_special = SPECIAL_SHARE_NONE;
+		double share = parse_share_value(val.c_str(), type, except, share_special);
 
 		// Figure out what attribute we're dealing with.
 		string attr = attr_expr.substr(0, eqpos);
@@ -436,7 +459,8 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 		int cattr = int(attr.length());
 		if (MATCH == strncasecmp(attr.c_str(), "cpus", cattr))
 		{
-			cpus = compute_local_resource(m_attr->num_cpus(), share, 1);
+			double lower_bound = (allow_fractional_cpu) ? 0.0 : 1.0;
+			cpus = compute_local_resource(m_attr->num_cpus(), share, lower_bound);
 		} else if (
 			MATCH == strncasecmp(attr.c_str(), "ram", cattr) ||
 			MATCH == strncasecmp(attr.c_str(), "memory", cattr))
@@ -498,13 +522,15 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 		}
 	}
 
+	int std_resource_lower_bound = (allow_fractional_cpu) ? 0 : 1;
+
 		// We're all done parsing the string.  Any attribute not
 		// listed will get the default share.
 	if (IS_UNSET_SHARE(cpus)) {
-		cpus = compute_local_resource(m_attr->num_cpus(), default_share, 1);
+		cpus = compute_local_resource(m_attr->num_cpus(), default_share, (double)std_resource_lower_bound);
 	}
 	if (IS_UNSET_SHARE(ram)) {
-		ram = compute_local_resource(m_attr->phys_mem(), default_share, 1);
+		ram = compute_local_resource(m_attr->phys_mem(), default_share, std_resource_lower_bound);
 	}
 	if (IS_UNSET_SHARE(swap_fraction)) {
 		swap_fraction = compute_local_resource(1.0, default_share);

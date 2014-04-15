@@ -582,6 +582,36 @@ if (NOT EXISTS ${EXTERNAL_STAGE})
 	file ( MAKE_DIRECTORY ${EXTERNAL_STAGE} )
 endif()
 
+# I'd like this to apply to classads build as well, so I put it
+# above the addition of the .../src/classads subdir:
+if (LINUX
+    AND PROPER 
+    AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")  
+    AND NOT ("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 4.4.6))
+
+    # I wrote a nice macro for testing linker flags, but it is useless
+    # because at least some older versions of linker ignore all '-z'
+    # args in the name of "solaris compatibility"
+    # So instead I'm enabling for GNU toolchains on RHEL-6 and newer
+
+    # note, I'm only turning these on for proper builds because
+    # non-proper external builds don't receive the necessary flags
+    # and it breaks the build
+
+    # partial relro (for all libs)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,relro")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}  -Wl,-z,relro")
+
+    # full relro and pie get turned on for daemons:
+    set(cxx_full_relro_and_pie 1)
+    # I've seen a reference to '-z bind_now', but all the
+    # versions I can find actually use just '-z now':
+    set(cxx_full_relro_arg "-Wl,-z,now")
+    # compiling everything with -fPIC is important for PIE
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
+
+
 ###########################################
 #if (NOT MSVC11) 
 #endif()

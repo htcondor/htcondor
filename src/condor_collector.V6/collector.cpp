@@ -311,6 +311,9 @@ void CollectorDaemon::Init()
 
     }
 
+	// add an exponential moving average counter of updates received.
+	daemonCore->dc_stats.New("Collector", "UpdatesReceived", AS_COUNT | IS_CLS_SUM_EMA_RATE | IF_BASICPUB);
+
 	forkQuery.Initialize( );
 }
 
@@ -687,6 +690,8 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 {
     int	insert;
 	ClassAd *cad;
+
+	daemonCore->dc_stats.AddToAnyProbe("UpdatesReceived", 1);
 
 	/* assume the ad is malformed... other functions set this value */
 	insert = -3;

@@ -120,6 +120,7 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_fsync: return "fsync";
         case CONDOR_get_file_info_new: return "get_file_info_new";
         case CONDOR_ulog: return "ulog";
+        case CONDOR_phase: return "phase";
         case CONDOR_get_job_attr: return "get_job_attr";
         case CONDOR_set_job_attr: return "set_job_attr";
         case CONDOR_constrain: return "constrain";
@@ -829,6 +830,22 @@ do_REMOTE_syscall()
 		ASSERT( result );
 
 		rval = pseudo_ulog(&ad);
+		dprintf( D_SYSCALLS, "\trval = %d\n", rval );
+
+		//NOTE: caller does not expect a response.
+
+		return 0;
+	}
+
+	case CONDOR_phase:
+	{
+		char *phase = 0;
+		result = ( syscall_sock->code(phase) );
+		ASSERT( result );
+		result = ( syscall_sock->end_of_message() );
+		ASSERT( result );
+
+		rval = pseudo_phase(phase);
 		dprintf( D_SYSCALLS, "\trval = %d\n", rval );
 
 		//NOTE: caller does not expect a response.

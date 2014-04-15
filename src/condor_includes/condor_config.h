@@ -135,6 +135,12 @@ typedef struct macro_set {
 						ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 
+	// helper function, parse and/or evaluate string and return true if it is a valid boolean
+	// if it is a valid boolean, the value is returned in 'result', otherwise result is unchanged.
+	bool string_is_boolean_param(const char * string, bool& result, ClassAd *me = NULL, ClassAd *target = NULL, const char * name=NULL);
+	bool string_is_double_param(const char * string, double& result, ClassAd *me = NULL, ClassAd *target = NULL, const char * name=NULL, int* err_reason=NULL);
+	bool string_is_long_param(const char * string, long long& result, ClassAd *me = NULL, ClassAd *target = NULL, const char * name=NULL, int* err_reason=NULL);
+
 #if 1
 	const char * param_get_location(const MACRO_META * pmet, MyString & value);
 #else

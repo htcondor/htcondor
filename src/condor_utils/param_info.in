@@ -5838,6 +5838,16 @@ friendly_name=Size of Recent Statistics Window
 review=?
 tags=scheduler
 
+[DCSTATISTICS_TIMESPANS]
+default=4m:240 20m:1200 4h:14400
+version=8.1.6
+type=string
+reconfig=true
+customization=seldom
+friendly_name=List of timespans for reporting DC exponential moving average statistics
+review=?
+tags=schedd
+
 [DCSTATISTICS_WINDOW_SECONDS]
 default=
 type=string
@@ -6670,6 +6680,25 @@ customization=devel
 friendly_name=Control use of V3 query protocol for condor_q
 usage=Set to false to disable V3 query protocol for condor_q.
 
+[ENABLE_IPV6]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Enable IPv6
+usage=Should HTCondor listen on IPv6 interfaces?
+tags=daemon_core
+
+[ENABLE_IPV4]
+default=true
+version=8.1.3
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Enable IPv4
+usage=Should HTCondor listen on IPv4 interfaces?
+tags=daemon_core
+
 [JOB_EXECDIR_PERMISSIONS]
 default=user
 version=8.1.3
@@ -7071,6 +7100,78 @@ review=?
 [IsWindows]
 default=false
 win32_default=true
+type=bool
+customization=const
+
+[IsMaster]
+default=false
+type=bool
+customization=const
+[MASTER.IsMaster]
+default=true
+type=bool
+customization=const
+
+[IsCollector]
+default=false
+type=bool
+customization=const
+[COLLECTOR.IsCollector]
+default=true
+type=bool
+customization=const
+
+[IsNegotiator]
+default=false
+type=bool
+customization=const
+[NEGOTIATOR.IsNegotiator]
+default=true
+type=bool
+customization=const
+
+[IsSchedd]
+default=false
+type=bool
+customization=const
+[SCHEDD.IsSchedd]
+default=true
+type=bool
+customization=const
+
+[IsStartd]
+default=false
+type=bool
+customization=const
+[STARTD.IsStartd]
+default=true
+type=bool
+customization=const
+
+[IsStarter]
+default=false
+type=bool
+customization=const
+[STARTER.IsStarter]
+default=true
+type=bool
+customization=const
+
+[IsShadow]
+default=false
+type=bool
+customization=const
+[SHADOW.IsShadow]
+default=true
+type=bool
+customization=const
+
+[IsTool]
+default=false
+type=bool
+customization=const
+[TOOL.IsTool]
+default=true
 type=bool
 customization=const
 
@@ -7476,40 +7577,21 @@ default : @end
 @end
 review=?
 
-[$HACK.ASYNC_STAGEOUT]
+[$EXPERIMENTAL.ASYNC_STAGEOUT]
 friendly_name=Knobs to enable the async stage-out hack for CMS
 default: @end
-	# append cluster ID to StarterLog, may be: Cluster, JobId, false or true. true gives 8.0 compatible behavior.
-	STARTER_LOG_NAME_APPEND=Cluster
-	ALLOW_SLOT_CLAIM_SWAP=true
+	ALLOW_SLOT_PAIRING=true
+	# don't append slot name to StarterLog, may be: Cluster, JobId, false or true. true gives 8.0 compatible behavior.
+	STARTER_LOG_NAME_APPEND=false
+	# create a hidden type2 xfer slot for every type1 slot
+	NUM_SLOTS_TYPE_1 = $(NUM_CPUS)
+	NUM_SLOTS_TYPE_2 = $(NUM_SLOTS_TYPE_1)
+	SLOT_TYPE_2 = minimal cpus=0.1 memory=100 disk=auto
+	SLOT_TYPE_2_NAME_PREFIX = xfer
+	SLOT_TYPE_2_PAIRED_WITH = SLOT_TYPE_1
+	SLOT_TYPE_2_HIDDEN = true
+	SLOT_TYPE_2_START = TARGET.JobTransferringOutput  && splitslotname(TARGET.RemoteHost)[1] == splitslotname(MY.Name)[1]
+	# cross-advertise these slot attributes in all other slots
+	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
 @end
 
-[ENABLE_IPV6]
-aliases=
-default=false
-version=0.0.0
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Enable IPv6
-usage=Should HTCondor listen on IPv6 interfaces?
-url=http://research.cs.wisc.edu/htcondor/manual/current/3_3Configuration.html
-tags=daemon_core
-id=552
-
-[ENABLE_IPV4]
-aliases=
-default=true
-version=8.1.3
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Enable IPv4
-usage=Should HTCondor listen on IPv4 interfaces?
-url=http://research.cs.wisc.edu/htcondor/manual/current/3_3Configuration.html
-tags=daemon_core
-id=552

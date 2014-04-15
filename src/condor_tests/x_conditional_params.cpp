@@ -146,13 +146,17 @@ static const char * const aDefTrue[] = {
 	"defined 0", "defined t", "defined f",
 	"defined release_dir", "defined log",
 	"defined LOG", "defined $(not_a_real_param:true)",
+	"defined use ROLE", "defined use ROLE:", "defined use ROLE:Personal",
+	"defined use feature", "defined use Feature:VMware",
 };
 
 static const char * const aDefFalse[] = {
 	"defined", " defined ", "defined a",
 	"defined not_a_real_param",
-	"defined master.not_a_real_param"
-	"defined $(not_a_real_param)"
+	"defined master.not_a_real_param",
+	"defined $(not_a_real_param)",
+	"defined use NOT", "defined use NOT:a_real_meta",
+	"defined use",
 };
 
 static const char * const aBoolError[] = {
@@ -168,6 +172,8 @@ static const char * const aVerError[] = {
 
 static const char * const aDefError[] = {
 	"defined a b", "defined 11 99", "defined < 1.1",
+	"defined use foo bar", // internal whitespace (or no :)
+	"defined use ROLE: Personal", // internal whitespace
 };
 
 static const char * const aUnsupError[] = {

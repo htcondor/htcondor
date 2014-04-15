@@ -50,6 +50,12 @@ Reqexp::Reqexp( Resource* res_ip )
 	m_within_resource_limits_expr = NULL;
 }
 
+
+char * Reqexp::param(const char * name) {
+	if (rip) return SlotType::param(rip->r_attr, name);
+	return param(name);
+}
+
 void
 Reqexp::compute( amask_t how_much ) 
 {

@@ -45,6 +45,12 @@ It defaults to setting permissions as \emph{0700}.
 
 \begin{itemize}
 
+\item Fixed a bug which would cause the \Condor{schedd} to
+repeatedly crash when parallel universe jobs were running
+when the \Condor{schedd} was restarted, if the \Condor{startds}
+in use by running jobs were also shut down while the \Condor{schedd}
+was not running.
+\Ticket{4305}
 \item Fixed the parsing of the \Condor{q} command line,
 such that it looks for the entire option \Opt{-stream-results},
 instead of only the portion \Opt{-stream}.
@@ -63,6 +69,22 @@ can be read back properly.
 \item Fixed a bug in the \Condor{starter} that could cause a crash if
 the job is evicted while a \Condor{ssh\_to\_job} command is active.
 \Ticket{4251}
+
+\item On Red Hat Enterprise Linux 5, link HTCondor executables using
+both GNU and SYSV hash-styles to support older Linux distributions,
+such as SUSE Enterprise Linux 10.
+\Ticket{4278}
+
+\item Fixed a bug in which \Condor{dagman} did not correctly update
+the node status file at the end of the run for DAGs containing
+final nodes.
+\Ticket{4209}
+
+\item Fixed a bug in which \Condor{dagman} sometimes printed incorrect
+node status counts to the node status file.  Note that this fix also
+included changing the "STATUS\_UNREADY" strings in the node status
+file to "STATUS\_NOT\_READY" to be more consistent.
+\Ticket{4248}
 
 \end{itemize}
 

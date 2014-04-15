@@ -78,7 +78,7 @@ else {
 }
 
 # Note: you must run condor_reconfig after rset'ing a variable
-system("condor_config_val -collector -rset 'CONDOR_VIEW_HOST:\$(IP_ADDRESS):$view_port'; condor_reconfig -collector");
+system("condor_config_val -collector -rset 'CONDOR_VIEW_HOST=\$(IP_ADDRESS):$view_port'; condor_reconfig -collector");
 
 # Validate that we set this properly
 my $cmd = "condor_config_val -collector CONDOR_VIEW_HOST";

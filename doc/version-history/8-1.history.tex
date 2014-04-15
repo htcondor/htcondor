@@ -30,7 +30,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Event log files for jobs may now be optionally cached by the \Condor{schedd} 
+to improve logging performance.  Log file caching may be enabled by configuring
+\Macro{USERLOG\_FILE\_CACHE\_MAX} to a size greater than zero.
+\Ticket{4040}
+
+\item The curl file transfer plugin can now be used to transfer output
+ files, in addition to input files.
+\Ticket{4190}
 
 \end{itemize}
 
@@ -134,6 +141,14 @@ unused memory within DaemonCore data structures.
 \item The \Condor{negotiator} logs more information about its round robin
 iteration to ease debugging.
 \Ticket{3871}
+
+\item The \Condor{starter} can now be configured to collect block I/O
+statistics from the cgroups blkio controller and advertise them to job
+ads on the \Condor{schedd}, by configuring:
+\begin{verbatim}
+STATISTICS_TO_PUBLISH = ... , STARTER:1 , ...
+\end{verbatim}
+\Ticket{3850}
 
 \end{itemize}
 
