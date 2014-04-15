@@ -104,14 +104,6 @@ unused memory within DaemonCore data structures.
 iteration to ease debugging.
 \Ticket{3871}
 
-\item The \Condor{starter} can now be configured to collect block I/O
-statistics from the cgroups blkio controller and advertise them to job
-ads on the \Condor{schedd}, by configuring:
-\begin{verbatim}
-STATISTICS_TO_PUBLISH = ... , STARTER:1 , ...
-\end{verbatim}
-\Ticket{3850}
-
 \end{itemize}
 
 \noindent Bugs Fixed:
