@@ -1,4 +1,5 @@
 universe     = scheduler
-executable   = /bin/true
+executable   = ./x_sleep.pl
+arguments    = 1
 Notification = NEVER
 queue
