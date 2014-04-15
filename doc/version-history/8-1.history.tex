@@ -57,8 +57,7 @@ to improve logging performance.  Log file caching may be enabled by configuring
 
 \begin{itemize}
 
-\item HTCondor version 8.1.5 not yet released.
-%\item HTCondor version 8.1.5 released on Month Date, 2013.
+\item HTCondor version 8.1.5 released on April 15, 2014.
 
 \end{itemize}
 
@@ -101,6 +100,12 @@ in the constructor of the \texttt{Collector} object.
 This eases use of the bindings for high availability setups.
 \Ticket{4245}
 
+\item The new python binding \texttt{transaction} creates a transaction
+with the \Condor{schedd},
+providing a way to submit multiple clusters of jobs
+or edit multiple attributes atomically.
+\Ticket{4225}
+
 \item New configuration variable \Macro{NEGOTIATOR\_MAX\_TIME\_PER\_CYCLE}
 places an upper time limit on the time spent in each negotiation cycle.
 \Ticket{4271}
@@ -142,13 +147,10 @@ unused memory within DaemonCore data structures.
 iteration to ease debugging.
 \Ticket{3871}
 
-\item The \Condor{starter} can now be configured to collect block I/O
-statistics from the cgroups blkio controller and advertise them to job
-ads on the \Condor{schedd}, by configuring:
-\begin{verbatim}
-STATISTICS_TO_PUBLISH = ... , STARTER:1 , ...
-\end{verbatim}
-\Ticket{3850}
+\item Some communications between daemons will cause fewer network timeouts,
+as the reading of commands no longer blocks while
+waiting for completion of the command.
+\Ticket{4237}
 
 \end{itemize}
 
