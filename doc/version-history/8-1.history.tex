@@ -63,6 +63,12 @@ in the constructor of the \texttt{Collector} object.
 This eases use of the bindings for high availability setups.
 \Ticket{4245}
 
+\item The new python binding \texttt{transaction} creates a transaction
+with the \Condor{schedd},
+providing a way to submit multiple clusters of jobs
+or edit multiple attributes atomically.
+\Ticket{4225}
+
 \item New configuration variable \Macro{NEGOTIATOR\_MAX\_TIME\_PER\_CYCLE}
 places an upper time limit on the time spent in each negotiation cycle.
 \Ticket{4271}
