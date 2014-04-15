@@ -482,7 +482,15 @@ main( int argc, const char* argv[] )
 #if 1
 		// arguments that don't begin with "-" are params to be looked up.
 		if (*argv[i] != '-') {
-			params.append(strdup(argv[i]));
+			// allow "use category:value" syntax to query meta-params
+			if (MATCH == strcmp(argv[i], "use") && *argv[i+1] && *argv[i+1] != '-') {
+				++i; // skip "use"
+				// save off the parameter name, prefixed with $ so that the code below we know it's a metaknob name.
+				std::string meta("$"); meta += argv[i];
+				params.append(strdup(meta.c_str()));
+			} else {
+				params.append(strdup(argv[i]));
+			}
 			continue;
 		}
 
@@ -1065,12 +1073,12 @@ main( int argc, const char* argv[] )
 			MyString name_used, raw_value, file_and_line, def_value, usage_report;
 			bool raw_supported = false;
 			//fprintf(stderr, "param = %s\n", tmp);
-			if (tmp[0] == '$') {
+			if (tmp[0] == '$') { // a leading '$' indicates a meta-param
 				if (target) {
-					fprintf(stderr, "remote query not supported for %s\n", tmp);
+					fprintf(stderr, "remote query not supported for use %s\n", tmp+1);
 					my_exit(1);
 				}
-				PrintMetaParam(tmp);
+				PrintMetaParam(tmp+1);
 				continue;
 			}
 			if (target) {
@@ -1637,10 +1645,10 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 	char* tmp = NULL;
 
 	if( set ) {
-		tmp = strchr( param_name, ':' );
-		if( ! tmp ) {
-			tmp = strchr( param_name, '=' );
-		}
+		tmp = strchr( param_name, '=' );
+		char * tmp2 = strchr( param_name, ':' );
+		if ( ! tmp || (tmp2 && tmp2 < tmp)) tmp = tmp2;
+
 		if( ! tmp ) {
 			fprintf( stderr, "%s: Can't set configuration value (\"%s\")\n" 
 					 "You must specify \"macro_name = value\" or " 
@@ -1986,14 +1994,14 @@ void PrintMetaParam(const char * name)
 		*parm++ = 0;
 	}
 
-	MACRO_TABLE_PAIR* ptable = param_meta_table(use+1);
+	MACRO_TABLE_PAIR* ptable = param_meta_table(use);
 	MACRO_DEF_ITEM * pdef = NULL;
 	if (ptable) {
 		// if only a metaknob category was passed, print out all of the 
 		// knob names in that category.
 		if ( ! *parm) {
 			if (ptable->cElms > 0) {
-				printf("$%s accepts\n", ptable->key);
+				printf("use %s accepts\n", ptable->key);
 				for (int ii = 0; ii < ptable->cElms; ++ii) {
 					printf("  %s\n", ptable->aTable[ii].key);
 				}
@@ -2004,12 +2012,12 @@ void PrintMetaParam(const char * name)
 		pdef = param_meta_table_lookup(ptable, parm);
 	}
 	if (pdef) {
-		printf("$%s:%s is\n%s\n", ptable->key, pdef->key, pdef->def->psz);
+		printf("use %s:%s is\n%s\n", ptable->key, pdef->key, pdef->def->psz);
 	} else {
 		MyString name_used(use);
 		if (ptable) { name_used.formatstr("%s:%s", use, parm); }
 		name_used.upper_case();
-		printf("Not defined: %s\n", name_used.c_str());
+		printf("Not defined: use %s\n", name_used.c_str());
 	}
 }
 

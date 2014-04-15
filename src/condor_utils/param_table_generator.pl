@@ -694,7 +694,7 @@ sub reconstitute {
 	continue_output("const key_value_pair metaknobsources[] = {\n");
 	foreach my $key (sort  { lc($a) cmp lc($b) } keys %var_metas) {
 		foreach (sort { lc($a) cmp lc($b) } @{$var_metas{$key}}) {
-			continue_output("\t{ \"\$${key}:$_\", (const nodef_value*)&def_\$${key}\$$_ },\n");
+			continue_output("\t{ \"${key}:$_\", (const nodef_value*)&def_\$${key}\$$_ },\n");
 		}
 	}
 	continue_output("}; // metaknobsources[]\n");

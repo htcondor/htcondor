@@ -2625,7 +2625,7 @@ const char * param_get_location(const MACRO_META * pmet, MyString & value)
 		value.formatstr_cat(", line %d", pmet->source_line);
 		MACRO_DEF_ITEM * pmsi = param_meta_source_by_id(pmet->source_meta_id);
 		if (pmsi) {
-			value.formatstr_cat(", %s+%d", pmsi->key, pmet->source_meta_off);
+			value.formatstr_cat(", use %s+%d", pmsi->key, pmet->source_meta_off);
 		}
 	}
 	return value.c_str();
@@ -2717,6 +2717,21 @@ bool param_find_item (
 		name_found = pi->key;
 		it.ix = (int)(pi - it.set.table);
 		return true;
+	}
+
+	const char * pdot = strchr(name, '.');
+	if (pdot) {
+		const MACRO_DEF_ITEM* pdf = (const MACRO_DEF_ITEM*)param_subsys_default_lookup(name, pdot+1);
+		if (pdf) {
+			name_found = name;
+			name_found.upper_case();
+			name_found.setChar((int)(pdot - name)+1, 0); // MyString trucates when you setChar(,0)
+			name_found += pdf->key;
+			it.is_def = true;
+			it.pdef = pdf;
+			it.id = param_default_get_id(name);
+			return true;
+		}
 	}
 
 	MACRO_DEF_ITEM * pdf = param_default_lookup(name);

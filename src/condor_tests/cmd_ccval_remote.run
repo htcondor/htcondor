@@ -101,6 +101,7 @@ my %hashcompareexceptions =
 	"PPID" => "1",
 	"SUBSYSTEM" => "1",
 	"TOOL_TIMEOUT_MULTIPLIER" => "1",
+	"IsNegitiator" => "1",
 );
 
 my $ccvstat = 1;
