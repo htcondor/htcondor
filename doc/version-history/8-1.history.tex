@@ -104,6 +104,11 @@ unused memory within DaemonCore data structures.
 iteration to ease debugging.
 \Ticket{3871}
 
+\item Some communications between daemons will cause fewer network timeouts,
+as the reading of commands no longer blocks while
+waiting for completion of the command.
+\Ticket{4237}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
