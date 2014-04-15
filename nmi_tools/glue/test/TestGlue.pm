@@ -22,17 +22,19 @@ use strict;
 use warnings;
 use Cwd;
 use File::Spec;
-use CondorTest;
-use CondorUtils;
+#use CondorTest;
+#use CondorUtils;
 
 package TestGlue;
+
+use Net::Domain qw(hostfqdn);
 
 my $installdir = "";
 my $wininstalldir = "";
 my $initialconfig = "";
 
-my $iswindows = CondorUtils::is_windows();
-my $iscygwin  = CondorUtils::is_cygwin_perl();
+my $iswindows = is_windows();
+my $iscygwin  = is_cygwin_perl();
 my $configmain = "condor_examples/condor_config.generic";
 my $configlocal = "condor_examples/condor_config.local.central.manager";
 my $targetconfig = "";
@@ -53,6 +55,7 @@ sub print_debug_header {
     print "Perl path: $^X\n";
     print "Perl version: $]\n";
     print "Uptime: " . `uptime`;
+	print "PATH:$ENV{PATH}\n";
     dir_listing(".");
     print "---------- End Debug Header --------------\n";
 }
@@ -60,13 +63,6 @@ sub print_debug_header {
 sub setup_test_environment {
 
     my $base_dir = Cwd::getcwd();
-
-	$initialconfig = "$base_dir/condor_tests/Config";
-	$targetconfig = "$base_dir/condor_tests/Config/condor_config";
-	$targetconfiglocal = "$base_dir/condor_tests/Config/condor_config.local";
-	if(!(-d $initialconfig)) {
-		create_initial_configs($initialconfig);
-	}
 
     if( not is_windows() ) {
         set_env("BASE_DIR", $base_dir);
@@ -127,24 +123,35 @@ sub setup_test_environment {
     }
 }
 
+sub prepare_for_configs {
+	my $base_dir = shift;
+	$initialconfig = "$base_dir/condor_tests/Config";
+	$targetconfig = "$base_dir/condor_tests/Config/condor_config";
+	$targetconfiglocal = "$base_dir/condor_tests/Config/condor_config.local";
+	if(!(-d $initialconfig)) {
+		#print "Calling create_initial_configs($initialconfig)\n";
+		create_initial_configs($initialconfig,$base_dir);
+	}
+}
+
 sub create_initial_configs {
 	my $configlocation = shift;
-	my $basedir = shift;
+	my $base_dir = shift;
 
 	my $awkscript = "condor_examples/convert_config_to_win32.awk";
 	my $genericconfig = "condor_examples/condor_config.generic";
 	my $genericlocalconfig = "condor_examples/condor_config.local.central.manager";
 	
 	if( -d $configlocation ) {
-		#debug( "Test Personal Condor Directory Established prior\n",2);
+		#print "Config Directory Established prior\n";
 	} else {
-		#debug( "Test Personal Condor Directory being Established now\n",2);
+		#print "Test Personal Condor Directory being Established now\n";
 		system("mkdir -p $configlocation");
 	}
         
-	WhereIsInstallDir();
+	WhereIsInstallDir($base_dir);
         
-	debug("Need to set up config files for test condor\n",2);
+	print "Need to set up config files for tests\n";
 	CreateConfig($awkscript, $genericconfig);
 	CreateLocalConfig($awkscript, $genericlocalconfig);
 	#CreateLocal(); We are never going to run a condor here, just need a base set
@@ -152,37 +159,43 @@ sub create_initial_configs {
 }
 
 sub WhereIsInstallDir {
+	my $base_dir = shift;
+	my $top = $base_dir;
 	if($iswindows == 1) {
-		my $top = getcwd();
-		debug( "getcwd says \"$top\"\n",2);
+		#my $top = getcwd();
+		print "base_dir is \"$top\"\n";
 		if ($iscygwin) {
 			my $crunched = `cygpath -m $top`;
-			CondorUtils::fullchomp($crunched);
-			debug( "cygpath changed it to: \"$crunched\"\n",2);
+			fullchomp($crunched);
+			#print "cygpath changed it to: \"$crunched\"\n";
 			my $ppwwdd = `pwd`;
-			debug( "pwd says: $ppwwdd\n",2);
+			#print "pwd says: $ppwwdd\n";
 		} else {
 			my $ppwwdd = `cd`;
-			debug( "cd says: $ppwwdd\n",2);
+			#print"cd says: $ppwwdd\n";
 		}
 	}
 
 	my $master_name = "condor_master"; if ($iswindows) { $master_name = "condor_master.exe"; }
-	my $tmp = CondorTest::Which($master_name);
+	my $tmp = Which($master_name);
 	if ( ! ($tmp =~ /condor_master/ ) ) {
-		print STDERR "CondorTest::Which($master_name) returned:$tmp\n";
-		print STDERR "Unable to find a $master_name in your \$PATH!\n";
+		print STDERR "Which($master_name) returned:$tmp\n";
+		print STDERR "Unable to find a $master_name in your PATH!\n";
+		system("ls build");
+		print "PATH: $ENV{PATH}\n";
 		exit(1);
+	} else {
+		print "Found master via Which here:$tmp\n";
 	}
-	CondorUtils::fullchomp($tmp);
-	debug( "Install Directory \"$tmp\"\n",2);
+	fullchomp($tmp);
+	print "Install Directory \"$tmp\"\n";
 	if ($iswindows) {
 		if ($iscygwin) {
 			$tmp =~ s|\\|/|g; # convert backslashes to forward slashes.
 			if($tmp =~ /^(.*)\/bin\/condor_master.exe\s*$/) {
 				$installdir = $1;
 				$tmp = `cygpath -m $1`;
-				CondorUtils::fullchomp($tmp);
+				fullchomp($tmp);
 				$wininstalldir = $tmp;
 			}
 		} else {
@@ -246,10 +259,10 @@ sub CreateConfig {
 	# The only change we need to make to the generic configuration
 	# file is to set the release-dir and local-dir. (non-windows)
 	# change RELEASE_DIR and LOCAL_DIR    
-	my $currenthost = CondorTest::getFqdnHost();
-	CondorUtils::fullchomp($currenthost);
+	my $currenthost = getFqdnHost();
+	#function above chomps fullchomp($currenthost);
 
-	debug( "Set RELEASE_DIR and LOCAL_DIR\n",2);
+	#print "Set RELEASE_DIR and LOCAL_DIR\n";
 
 	# Windows needs config file preparation, wrapper scripts etc
 	if($iswindows == 1) {
@@ -257,7 +270,7 @@ sub CreateConfig {
 		# create config file with todd's awk script
 		my $configcmd = "gawk -f $awkscript $genericconfig";
 		if ($^O =~ /MSWin32/) {  $configcmd =~ s/gawk/awk/; $configcmd =~ s|/|\\|g; }
-		debug("awk cmd is $configcmd\n",2);
+		print "awk cmd is $configcmd\n";
 
 		open(OLDFIG, " $configcmd 2>&1 |") || die "Can't run script file\"$configcmd\": $!\n";    
 	} else {
@@ -266,9 +279,9 @@ sub CreateConfig {
 
 	open(NEWFIG, '>', $targetconfig ) || die "Can't write to new config file $targetconfig: $!\n";    
 	while( <OLDFIG> ) {
-		CondorUtils::fullchomp($_);        
+		fullchomp($_);        
 		if(/^RELEASE_DIR\s*=/) {
-			debug("Matching:$_\n", 2);
+			#print "Matching:$_\n";
 			if($iswindows == 1) {
 				print NEWFIG "RELEASE_DIR = $wininstalldir\n";
 			}
@@ -286,7 +299,7 @@ sub CreateConfig {
 			#}
 		#}
 		elsif(/^LOCAL_CONFIG_FILE\s*=/) {
-			debug( "Matching:$_\n",2);
+			#print "Matching:$_\n";
 			if($iswindows == 1) {
 				print NEWFIG "LOCAL_CONFIG_FILE = $initialconfig/condor_config.local\n";
 			}
@@ -298,19 +311,19 @@ sub CreateConfig {
 			# we don't want this
 		}
 		elsif(/^CONDOR_HOST\s*=/) {
-			debug( "Matching:$_\n",2);
+			#print "Matching:$_\n";
 			print NEWFIG "CONDOR_HOST = $currenthost\n";
 		}
 		elsif(/^ALLOW_WRITE\s*=/) {
-			debug( "Matching:$_\n",2);
+			#print "Matching:$_\n";
 			print NEWFIG "ALLOW_WRITE = *\n";
 		}
 		elsif(/NOT_RESPONDING_WANT_CORE\s*=/ and $want_core_dumps ) {
-			debug( "Matching:$_\n",2);
+			#print "Matching:$_\n";
 			print NEWFIG "NOT_RESPONDING_WANT_CORE = True\n";
 		}
 		elsif(/CREATE_CORE_FILES\s*=/ and $want_core_dumps ) {
-			debug( "Matching:$_\n",2);
+			#print "Matching:$_\n";
 			print NEWFIG "CREATE_CORE_FILES = True\n";
 		}
 		else {
@@ -326,7 +339,7 @@ sub CreateConfig {
 sub CreateLocalConfig {
 	my ($awkscript, $genericlocalconfig) = @_;
 
-	debug( "Modifying local config file\n",2);
+	#print "Modifying local config file\n";
 	my $logsize = 50000000;
 
 	# make sure ports for Personal Condor are valid, we'll use address
@@ -335,7 +348,7 @@ sub CreateLocalConfig {
 	# create config file with todd's awk script
 		my $configcmd = "gawk -f $awkscript $genericlocalconfig";
 		if ($^O =~ /MSWin32/) {  $configcmd =~ s/gawk/awk/; $configcmd =~ s|/|\\|g; }
-		debug("gawk cmd is $configcmd\n",2);
+		print "gawk cmd is $configcmd\n";
 
 		open( ORIG, " $configcmd 2>&1 |")
 			|| die "Can't run script file\"$configcmd\": $!\n";    
@@ -434,34 +447,34 @@ sub CreateLocalConfig {
 		$javabinary = "java.exe";
 		if ($^O =~ /MSWin32/) {
 			$jvm = `\@for \%I in ($javabinary) do \@echo(\%~sf\$PATH:I`;
-					CondorUtils::fullchomp($jvm);
+					fullchomp($jvm);
 		} else {
 			#can't use which. its a linux tool and will lie about the path to java.
 			if (1) {
-				debug ("Running where $javabinary\n",2);
+				print "Running where $javabinary\n";
 				$jvm = `where $javabinary`;
-				CondorUtils::fullchomp($jvm);
+				fullchomp($jvm);
 				# if where doesn't tell us the location of the java binary, just assume it's will be
 				# in the path once condor is running. (remember that cygwin lies...)
 				if ( ! ($jvm =~ /java/i)) {
 					# we need a special check for 64bit java if we are a 32 bit app.
 					if ( -e '/cygdrive/c/windows/sysnative/java.exe') {
-						debug ("where $javabinary returned nothing, but found 64bit java in sysnative dir\n",2);
+						print "where $javabinary returned nothing, but found 64bit java in sysnative dir\n";
 						$jvm = "c:\\windows\\sysnative\\java.exe";
 					} else {
-					debug ("where $javabinary returned nothing, assuming java will be in Condor's path.\n",2);
+					print "where $javabinary returned nothing, assuming java will be in Condor's path.\n";
 					$jvm = "java.exe";
 					}
 				}
 			} else {
 				my $whichtest = `which $javabinary`;
-				CondorUtils::fullchomp($whichtest);
+				fullchomp($whichtest);
 				$whichtest =~ s/Program Files/progra~1/g;
 				$jvm = `cygpath -m $whichtest`;
-				CondorUtils::fullchomp($jvm);
+				fullchomp($jvm);
 			}
 		}
-		CondorTest::debug("which java said: $jvm\n",2);
+		#print "which java said: $jvm\n";
 
 		$java_libdir = "$wininstalldir/lib";
 
@@ -475,8 +488,8 @@ sub CreateLocalConfig {
 
 		$javabinary = "java";
 		unless (system ("which java >> /dev/null 2>&1")) {
-			CondorUtils::fullchomp(my $which_java = CondorTest::Which("$javabinary"));
-			CondorTest::debug("CT::Which for $javabinary said $which_java\n",2);
+			fullchomp(my $which_java = Which("$javabinary"));
+			#print "CT::Which for $javabinary said $which_java\n";
 			@default_jvm_locations = ($which_java, @default_jvm_locations) unless ($?);
 		}
 
@@ -484,7 +497,7 @@ sub CreateLocalConfig {
 
 		# check some default locations for java and pick first valid one
 		foreach my $default_jvm_location (@default_jvm_locations) {
-			CondorTest::debug("default_jvm_location is:$default_jvm_location\n",2);
+			#print "default_jvm_location is:$default_jvm_location\n";
 			if ( -f $default_jvm_location && -x $default_jvm_location) {
 				$jvm = $default_jvm_location;
 				print "Set JAVA to $jvm\n";
@@ -494,7 +507,7 @@ sub CreateLocalConfig {
 	}
 	# if nothing is found, explain that, otherwise see if they just want to
 	# accept what I found.
-	debug ("Setting JAVA=$jvm\n",2);
+	print "Setting JAVA=$jvm\n";
 	# Now that we have an executable JVM, see if it is a Sun jvm because that
 	# JVM it supports the -Xmx argument then, which is used to specify the
 	# maximum size to which the heap can grow.
@@ -646,6 +659,54 @@ sub is_windows_native_perl {
          return 1;
     }
     return 0;
+}
+
+# Cygwin's chomp does not remove the \r
+ sub fullchomp {
+	# Preserve the behavior of chomp, e.g. chomp $_ if no argument is specified.
+	push (@_,$_) if( scalar(@_) == 0);
+
+	foreach my $arg (@_) {
+ 		$arg =~ s/[\012\015]+$//;
+	}
+
+	return;
+}
+
+##############################################################################
+##
+## getFqdnHost
+##
+## hostname sometimes does not return a fully qualified
+## domain name and we must ensure we have one. We will call
+## this function in the tests wherever we were calling
+## hostname.
+###############################################################################
+
+sub getFqdnHost {
+	my $host = hostfqdn();
+	fullchomp($host);
+	return($host);
+}
+
+# which is broken on some platforms, so implement a Perl version here
+sub Which {
+	my ($exe) = @_;
+
+	return "" if(!$exe);
+
+	if( is_windows_native_perl() ) {
+		return `\@for \%I in ($exe) do \@echo(\%~\$PATH:I`;
+	}
+	foreach my $path (split /:/, $ENV{PATH}) {
+		chomp $path;
+		#print "Checking <$path>\n";
+		if(-f "$path/$exe") {
+			return "$path/$exe";
+		}
+	}
+
+return "";
 }
 
 1;

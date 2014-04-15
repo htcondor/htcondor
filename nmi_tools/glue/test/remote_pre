@@ -151,7 +151,7 @@ else {
 
 print "Condor version: $version\n";
 
-print "SETTING UP PERSONAL CONDOR\n";
+print "CONGIGURING PERSONAL CONDOR\n";
 
 # I'm not 100% certain wtf this actually does. 
 if( not TestGlue::is_windows() ) {
@@ -221,3 +221,7 @@ else {
 		}
 	}
 }
+
+# create initial configs
+#print "Caling prepare_for_configs: basedir:$BaseDir\n";
+TestGlue::prepare_for_configs($BaseDir);
