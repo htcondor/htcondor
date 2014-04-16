@@ -379,7 +379,7 @@ SharedPortState::Handle(Stream *s)
 			result = FAILED;
 		}
 	}
-	if (result == WAIT) {
+	if (result == WAIT && !daemonCoreSockAdapter.SocketIsRegistered(s)) {
 		int reg_rc = daemonCoreSockAdapter.Register_Socket(
 			s,
 			m_requested_by.c_str(),
@@ -651,8 +651,26 @@ SharedPortState::HandleResp(Stream *&s)
 	ReliSock *sock = static_cast<ReliSock*>(s);
 	sock->decode();
 	int status = 0;
+	bool result;
 
-	if( !sock->get(status) || !sock->end_of_message() ) {
+	bool read_would_block;
+	{
+		BlockingModeGuard guard(sock, 1);
+		result = sock->code(status);
+		read_would_block = sock->clear_read_block_flag();
+	}
+	if (read_would_block)
+	{
+		if (sock->deadline_expired())
+		{
+			dprintf(D_ALWAYS, "SharedPortClient - server response deadline has passed for %s%s\n", m_sock_name.c_str(), m_requested_by.c_str());
+			return FAILED;
+		}
+		dprintf(D_ALWAYS, "SharedPortCliient read would block; waiting for result for SHARED_PORT_PASS_FD to %s%s.\n", m_sock_name.c_str(), m_requested_by.c_str());
+		return WAIT;
+	}
+
+	if( !result || !sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
 			"SharedPortClient: failed to receive result for SHARED_PORT_PASS_FD to %s%s: %s\n",
 			m_sock_name.c_str(),

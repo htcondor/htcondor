@@ -278,7 +278,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		&DaemonCore::publicNetworkIpAddr,
 		&DaemonCore::Register_Command,
 		&DaemonCore::daemonContactInfoChanged,
-		&DaemonCore::Register_Timer_TS);
+		&DaemonCore::Register_Timer_TS,
+		&DaemonCore::SocketIsRegistered);
 
 	if ( PidSize == 0 )
 		PidSize = DEFAULT_PIDBUCKETS;
