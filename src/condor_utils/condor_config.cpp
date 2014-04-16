@@ -1592,6 +1592,8 @@ fill_attributes()
 	}
 #endif
 
+	insert("CondorIsAdmin", can_switch_ids() ? "true" : "false", ConfigMacroSet, DetectedMacro);
+
 	insert("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro);
 
 	val.formatstr("%d",sysapi_phys_memory_raw_no_param());

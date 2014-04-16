@@ -323,8 +323,8 @@ friendly_name=Query Timeout
 review=?
 
 [GSI_DAEMON_DIRECTORY]
-default=
-type=string
+default=/etc/grid-security
+type=path
 reconfig=true
 customization=seldom
 friendly_name=GSI Daemon Directory
@@ -7459,7 +7459,7 @@ default : @end
 review=?
 
 # no-preemption policy, formerly called TESTINGMODE_
-[$POLICY.ALWAYS_RUN]
+[$POLICY.ALWAYS_RUN_JOBS]
 friendly_name=Use a no-preemption policy
 default : @end
 	WANT_SUSPEND=False
@@ -7495,8 +7495,8 @@ default : @end
 @end
 review=?
 
-[$POLICY.LIMIT_RUNTIMES]
-friendly_name=Limit job runtimes to 12 hours
+[$POLICY.LIMIT_JOB_RUNTIMES]
+friendly_name=Limit job runtimes to 24 hours
 default : @end
 	MAX_JOB_RUNTIME=24*3600
 	PREMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
@@ -7504,7 +7504,7 @@ default : @end
 review=?
 
 [$ROLE.Personal]
-friendly_name=Settings for Personal HTCondor
+friendly_name=Settings for Personal HTCondor (i.e. the whole pool is on a single machine)
 default : @end
 	COLLECTOR_HOST=$(CONDOR_HOST):0
 	DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
@@ -7534,8 +7534,8 @@ default : @end
 review=?
 
 # default security policy
-[$AUTH.DEFAULT]
-friendly_name=Default Authorization policy based on IPs and DNS names
+[$SECURITY.HOST_BASED]
+friendly_name=Default (host based) Authorization policy based on IPs and DNS names
 default : @end
 	ALLOW_ADMINISTRATOR=$(CONDOR_HOST), $(IP_ADDRESS)
 	ALLOW_OWNER=$(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
@@ -7550,6 +7550,63 @@ default : @end
 @end
 review=?
 
+[$SECURITY.WITH_AUTHENTICATION]
+friendly_name=Enable
+default : @end
+	SEC_DEFAULT_AUTHENTICATION=required
+	SEC_DEFAULT_INTEGRITY=required
+@end
+review=?
+
+[$SECURITY.STRONG]
+friendly_name=Enable
+default : @end
+	SEC_DEFAULT_ENCRYPTION=required
+	SEC_DEFAULT_INTEGRITY=required
+	SEC_DEFAULT_AUTHENTICATION=required
+@end
+review=?
+
+[$SECURITY.USER_BASED]
+friendly_name=Enable
+default : @end
+	if $(CondorIsAdmin)
+	  authuser=condor
+	else
+	  authuser=$(USERNAME)
+	endif
+	ALLOW_ADMINISTRATOR=$(authuser)@$(CONDOR_HOST), $(authuser)@$(IP_ADDRESS)
+	ALLOW_OWNER=$(authuser)@$(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
+	ALLOW_READ=*
+	ALLOW_WRITE=$(ALLOW_ADMINISTRATOR) $(ALLOW_OWNER)
+	ALLOW_NEGOTIATOR=$(authuser)@$(CONDOR_HOST)
+	ALLOW_NEGOTIATOR_SCHEDD=$(ALLOW_NEGOTIATOR), $(FLOCK_NEGOTIATOR_HOSTS)
+	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE), $(FLOCK_FROM)
+	ALLOW_WRITE_STARTD=$(ALLOW_WRITE), $(FLOCK_FROM)
+	ALLOW_READ_COLLECTOR=$(ALLOW_READ), $(FLOCK_FROM)
+	ALLOW_READ_STARTD=$(ALLOW_READ), $(FLOCK_FROM)
+	use SECURITY : WITH_AUTHENTICATION
+@end
+review=?
+
+[$FEATURE.REMOTE_RUNTIME_CONFIG]
+friendly_name=Enable runtime configuration of HTCondor daemons
+default : @end
+	ENABLE_RUNTIME_CONFIG=True
+	ALLOW_CONFIG=$(ALLOW_ADMINISTRATOR)
+	# the value of this attribute defines which parameters can be set remotely
+	#SETTABLE_ATTRS_CONFIG=*
+@end
+review=?
+
+[$FEATURE.REMOTE_CONFIG]
+friendly_name=Enable runtime and persistent configuration of HTCondor daemons
+default : @end
+	ENABLE_PERSISTENT_CONFIG=True
+	PERSISTENT_CONFIG_DIR=$(SPOOL)
+	use FEATURE : REMOTE_RUNTIME_CONFIG
+@end
+review=?
 
 # note vm_vmware script is perl so it doesn't get a .exe extension on Windows.
 [$FEATURE.VMWARE]
