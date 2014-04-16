@@ -64,6 +64,20 @@ XML-formatted.
 
 \\ \hline
 
+\texttt{lock( file\_obj, lock\_type )}
+
+Take a lock on a file object using the HTCondor locking protocol (which
+is distinct from typical POSIX locks).
+
+Parameter \texttt{file\_obj} is a file object corresponding which should
+be locked.  Parameter \texttt{lock\_type} specifies whether the lock should
+be for reads or for writes.
+
+This returns a context manager object; the lock is released as soon as
+this object is destroyed.
+
+\\ \hline
+
 \texttt{enable\_debug( )}
 
 Enable debugging output from HTCondor, where output is sent to \texttt{stderr}.
