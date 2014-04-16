@@ -14617,6 +14617,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	{
 		stream->encode();
 		stream->put((int)0);
+		stream->end_of_message();
 		return FALSE;
 	}
 
@@ -14662,6 +14663,10 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	}
 
 	if( !FindRunnableJobForClaim(mrec,accept_std_univ) ) {
+		dprintf(D_FULLDEBUG,
+			"No runnable jobs for shadow pid %d (was running job %d.%d); shadow will exit.\n",
+			shadow_pid, prev_job_id.cluster, prev_job_id.proc);
+		stream->encode();
 		stream->put((int)0);
 		stream->end_of_message();
 		return TRUE;
