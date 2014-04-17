@@ -9612,7 +9612,7 @@ static bool assign_sock(condor_protocol proto, Sock * sock, bool fatal)
 		protoname.Value(),
 		protoname.Value());
 	if(fatal) {
-		EXCEPT(msg.Value());
+		EXCEPT("%s", msg.Value());
 	}
 
 	dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());
@@ -9637,7 +9637,7 @@ InitCommandSocket(condor_protocol proto, int port, DaemonCore::SockPair & sock_p
 			MyString msg;
 			msg.formatstr("BindAnyCommandPort() failed. Does this computer have %s support?", condor_protocol_to_str(proto).Value());
 			if (fatal) {
-				EXCEPT(msg.Value());
+				EXCEPT("%s", msg.Value());
 			}
 			else {
 				dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());
@@ -9724,7 +9724,7 @@ InitCommandSocket(condor_protocol proto, int port, DaemonCore::SockPair & sock_p
 				condor_protocol_to_str(proto).Value()
 				);
 			if (fatal) {
-				EXCEPT(msg.Value());
+				EXCEPT("%s", msg.Value());
 			}
 			else {
 				dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());
