@@ -829,6 +829,10 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	char* tmp = NULL;
 	int scm;
 
+	#ifdef WARN_COLON_FOR_PARAM_ASSIGN
+	config_options |= CONFIG_OPT_COLON_IS_META_ONLY;
+	#endif
+
 	static bool first_time = true;
 	if( first_time ) {
 		first_time = false;

@@ -98,30 +98,92 @@ int is_valid_param_name(const char *name)
 	return 1;
 }
 
-char * parse_param_name_from_config(const char *config)
+// This is used by daemon_core to help it with DC_CONFIG_PERSIST & DC_CONFIG_RUNTIME
+// this code validates the passed in config assignment before it is written into the
+// persist or runtime tables.  it also returns a copy of the parameter name extracted
+// from the config line.
+//
+char * is_valid_config_assignment(const char *config)
 {
-	char *name, *tmp;
+	char *name, *tmp = NULL;
+
+	while (isspace(*config)) ++config;
+
+	bool is_meta = starts_with(config, "use ");
+	if (is_meta) {
+		config += 4;
+		while (isspace(*config)) ++config;
+		--config; // leave room for leading $
+	}
 
 	if (!(name = strdup(config))) {
 		EXCEPT("Out of memory!");
 	}
 
-	tmp = strchr(name, '=');
-	if (!tmp) {
+	// if this is a metaknob assigment, we have to check to see if the category and value are valid.
+	// and set the config name to be $category.option
+	if (is_meta) {
+		name[0] = '$'; // mark config name as being a metaknob name.
+
+		bool is_valid = false;
+		// name points to the category name, everything after the colon must be a list of options for that category
 		tmp = strchr(name, ':');
-	}
-	if (!tmp) {
-			// Line is invalid, should be "name = value" or "name : value"
-		return NULL;
-	}
+		if (tmp) {
+			// turn the right hand side into a string list
+			StringList opts(tmp+1);
 
-		// Trim whitespace...
-	*tmp = ' ';
-	while (isspace(*tmp)) {
-		*tmp = '\0';
-		tmp--;
-	}
+			// null terminate and trim trailing whitespace from the category name
+			*tmp = 0; 
+			while (tmp > name && isspace(tmp[-1])) --tmp;
+			*tmp = 0;
 
+			// the proper way to parse the right hand side of a metaknob is by using a stringlist
+			// but for remote setting, we really only want to allow a single options on the right hand side.
+			opts.rewind();
+			char * opt;
+			while ((opt = opts.next())) {
+				// lookup name,val as a metaknob, a return of -1 means not found
+				if ( ! is_valid && param_default_get_source_meta_id(name+1, opt) >= 0) {
+					is_valid = true;
+					// append the value to the metaknob name.
+					*tmp++ = '.';
+					strcpy(tmp, opt);
+					tmp += strlen(tmp);
+					continue;
+				}
+				// if we get here, either we failed to lookup the option, or we saw more the one option.
+				is_valid = false;
+				break;
+			}
+			if (is_valid) return name;
+		}
+		free(name);
+		return NULL; // indicate failure.
+
+	} else { // not a metaknob, just a knob.
+
+		tmp = strchr(name, '=');
+		#ifdef WARN_COLON_FOR_PARAM_ASSIGN
+		// for remote param set calls, we don't want to allow the : style assignment at all. 
+		#else
+		char * tmp2 = strchr(name, ':');
+		if ( ! tmp || (tmp2 && tmp2 < tmp)) tmp = tmp2;
+		#endif
+
+		if (!tmp) {
+				// Line is invalid, should be "name = value" (or "name : value" if ! WARN_COLON_FOR_PARAM_ASSIGN)
+			free (name);
+			return NULL;
+		}
+
+			// Trim whitespace from the param name.
+		*tmp = ' ';
+		while (isspace(*tmp)) {
+			*tmp = '\0';
+			tmp--;
+		}
+
+	}
 	return name;
 }
 
@@ -740,7 +802,7 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 		int op = 0;
 
 		// detect the 'use' keyword
-		bool is_meta = (MATCH == strncmp(line, "use ", 4));
+		bool is_meta = starts_with(line, "use ");
 		if (is_meta) {
 			ptr += 4; while (isspace(*ptr)) ++ptr;
 			name = ptr; // name is now the metaknob category name rather than the keyword 'use'
@@ -788,7 +850,7 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 		name = expanded_name;
 		*/
 
-		// if name begins with $ it might be a metaknob.
+		// if this is a metaknob use statement
 		if (is_meta) {
 			if (MATCH == strcasecmp(self, name)) {
 				// self ref is invalid
@@ -846,6 +908,7 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 	const int gl_opt_new = CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE | CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT;
 	int gl_opt = (macro_set.options & CONFIG_OPT_OLD_COM_IN_CONT) ? gl_opt_old : gl_opt_new;
 	bool gl_opt_smart = (macro_set.options & CONFIG_OPT_SMART_COM_IN_CONT) ? true : false;
+	int opt_meta_colon = (macro_set.options & CONFIG_OPT_COLON_IS_META_ONLY) ? 1 : 0;
 	ConfigIfStack ifstack;
 
 	if (subsys && ! *subsys) subsys = NULL;
@@ -959,6 +1022,8 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 					gl_opt = gl_opt_old;
 				} else if (MATCH == strcasecmp(name, "#opt:newcomment")) {
 					gl_opt = gl_opt_new;
+				} else if (MATCH == strcasecmp(name, "#opt:strict")) {
+					opt_meta_colon = 2;
 				}
 			}
 			continue;
@@ -1067,17 +1132,23 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 				name += 3; // this will point at the null terminator of 'use'
 			}
 		} else if (op == ':') {
+		#ifdef WARN_COLON_FOR_PARAM_ASSIGN
+			if (opt_meta_colon < 2) { op = '='; } // change the op to = so that we don't "goto cleanup" below
 			// backward compat hack. the old config file used : syntax for RunBenchmarks, so this is just a warning for now.
-			if (MATCH == strcasecmp(name, "RunBenchmarks")) { op = '='; }
-			fprintf( stderr, "Configuration %s File <%s>, Line %d: obsolete use of ':' for parameter assigment at %s : %s\n",
-					op == ':' ? "Error" : "Warning",
-					config_source, ConfigLineNo,
-					name, rhs
-					);
-			if (op == ':') {
-				retval = -1;
-				goto cleanup;
+			else if (MATCH == strcasecmp(name, "RunBenchmarks")) { op = '='; }
+
+			if (opt_meta_colon) {
+				fprintf( stderr, "Configuration %s File <%s>, Line %d: obsolete use of ':' for parameter assigment at %s : %s\n",
+						op == ':' ? "Error" : "Warning",
+						config_source, ConfigLineNo,
+						name, rhs
+						);
+				if (op == ':') {
+					retval = -1;
+					goto cleanup;
+				}
 			}
+		#endif // def WARN_COLON_FOR_PARAM_ASSIGN
 		}
 
 		/* Expand references to other parameters */

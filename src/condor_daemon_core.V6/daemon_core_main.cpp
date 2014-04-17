@@ -1527,12 +1527,17 @@ handle_config( Service *, int cmd, Stream *stream )
 		dprintf( D_ALWAYS, "handle_config: failed to read end of message\n");
 		return FALSE;
 	}
+	bool is_meta = admin && admin[0] == '$';
 	if( config && config[0] ) {
-		to_check = parse_param_name_from_config(config);
+		#if 0 // tj: we've decide to just fail the assign instead of 'fixing' it. //def WARN_COLON_FOR_PARAM_ASSIGN
+		// for backward compat with older senders, change first : to = before we do the assignment.
+		for (char * p = config; *p; ++p) { if (*p==':') *p = '='; if (*p=='=') break; }
+		#endif
+		to_check = is_valid_config_assignment(config);
 	} else {
 		to_check = strdup(admin);
 	}
-	if (!is_valid_param_name(to_check)) {
+	if (!is_valid_param_name(to_check + is_meta)) {
 		dprintf( D_ALWAYS, "Rejecting attempt to set param with invalid name (%s)\n", to_check);
 		free(admin); free(config);
 		rval = -1;

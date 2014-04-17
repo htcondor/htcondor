@@ -1640,38 +1640,43 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 		my_exit( 1 );
 	}
 
-		// Now, process our strings for sanity.
-	char* param_name = strdup( param_value );
-	char* tmp = NULL;
+	while (isspace(*param_value)) ++param_value;
+	bool is_meta = starts_with(param_value, "use ");
 
-	if( set ) {
-		tmp = strchr( param_name, '=' );
-		char * tmp2 = strchr( param_name, ':' );
-		if ( ! tmp || (tmp2 && tmp2 < tmp)) tmp = tmp2;
-
-		if( ! tmp ) {
-			fprintf( stderr, "%s: Can't set configuration value (\"%s\")\n" 
-					 "You must specify \"macro_name = value\" or " 
-					 "\"expr_name : value\"\n", MyName, param_name );
+	char * config_name = NULL;
+	if (set || is_meta) {
+		config_name = is_valid_config_assignment(param_value);
+		if ( ! config_name) {
+			char * tmp = strchr(param_value, is_meta ? ':' : '=' );
+			#ifdef WARN_COLON_FOR_PARAM_ASSIGN
+			#else
+			char * tmp2 = strchr( param_name, ':' );
+			if ( ! tmp || (tmp2 && tmp2 < tmp)) tmp = tmp2;
+			#endif
+			std::string name;  name.append(param_value, 0, (int)(tmp - param_value));
+	
+			fprintf( stderr, "%s: Can't set configuration value (\"%s\")\n"
+					 "You must specify \"macro_name = value\""
+					#ifdef WARN_COLON_FOR_PARAM_ASSIGN
+					 " or \"use category:option\""
+					#else
+					 " or \"expr_name : value\""
+					#endif
+					 "\n", MyName, name.c_str() );
 			my_exit( 1 );
 		}
-			// If we're still here, we found a ':' or a '=', so, now,
-			// chop off everything except the attribute name
-			// (including spaces), so we can send that seperately. 
-		do {
-			*tmp = '\0';
-			tmp--;
-		} while( *tmp == ' ' );
 	} else {
 			// Want to do different sanity checking.
-		if( (tmp = strchr(param_name, ':')) || 
-			(tmp = strchr(param_name, '=')) ) {
-			fprintf( stderr, "%s: Can't unset configuration value (\"%s\")\n" 
-					 "To unset, you only specify the name of the attribute\n", 
-					 MyName, param_name );
+		char * tmp;
+		if( (tmp = strchr(param_value, ':')) || 
+			(tmp = strchr(param_value, '=')) ) {
+			fprintf( stderr, "%s: Can't unset configuration value (\"%s\")\n"
+					 "To unset, you only specify the name of the attribute\n",
+					 MyName, param_value);
 			my_exit( 1 );
 		}
-		tmp = strchr( param_name, ' ' );
+		config_name = strdup(param_value);
+		tmp = strchr(config_name, ' ');
 		if( tmp ) {
 			*tmp = '\0';
 		}
@@ -1680,22 +1685,17 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 		// At this point, in either set or unset mode, param_name
 		// should hold a valid name, so do a final check to make sure
 		// there are no spaces.
-	if( !is_valid_param_name(param_name) ) {
+	if( !is_valid_param_name(config_name + is_meta) ) {
 		fprintf( stderr, 
 				 "%s: Error: Configuration variable name (%s) is not valid, alphanumeric and _ only\n",
-				 MyName, param_name );
+				 MyName, config_name + is_meta );
 		my_exit( 1 );
 	}
 
 	if (!mixedcase) {
-		strlwr(param_name);		// make the config name case insensitive
+		strlwr(config_name);		// make the config name case insensitive
 	}
 
-		// We need a version with a newline at the end to make
-		// everything cool at the other end.
-	char* buf = (char*)malloc( strlen(param_value) + 2 );
-	ASSERT( buf != NULL );
-	sprintf( buf, "%s\n", param_value );
 
 	s.timeout( 30 );
 	do {
@@ -1720,8 +1720,8 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 	target->startCommand( cmd, &s );
 
 	s.encode();
-	if( !s.code(param_name) ) {
-		fprintf( stderr, "Can't send config name (%s)\n", param_name );
+	if( !s.code(config_name) ) {
+		fprintf( stderr, "Can't send config name (%s)\n", config_name + is_meta );
 		my_exit(1);
 	}
 	if( set ) {
@@ -1772,8 +1772,7 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 				 param_value, daemonString(dt), name, addr );
 	}
 
-	free( buf );
-	free( param_name );
+	free( config_name );
 }
 
 static void PrintConfigSources(void)
