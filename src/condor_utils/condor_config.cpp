@@ -97,7 +97,7 @@ extern "C" {
 	
 // Function prototypes
 void real_config(const char* host, int wantsQuiet, int config_options);
-int Read_config(const char*, MACRO_SET& macro_set, int, bool, const char * subsys, std::string & errmsg);
+int Read_config(const char*, int depth, MACRO_SET& macro_set, int, bool, const char * subsys, std::string & errmsg);
 bool Test_config_if_expression(const char * expr, bool & result, std::string & err_reason, MACRO_SET& macro_set, const char * subsys);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
@@ -109,7 +109,7 @@ void fill_attributes();
 void check_domain_attributes();
 void clear_config();
 void reinsert_specials(const char* host);
-void process_config_source(const char*, const char*, const char*, int);
+void process_config_source(const char*, int depth, const char*, const char*, int);
 void process_locals( const char*, const char*);
 void process_directory( const char* dirlist, const char* host);
 static int  process_dynamic_configs();
@@ -829,6 +829,10 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	char* tmp = NULL;
 	int scm;
 
+	#ifdef WARN_COLON_FOR_PARAM_ASSIGN
+	config_options |= CONFIG_OPT_COLON_IS_META_ONLY;
+	#endif
+
 	static bool first_time = true;
 	if( first_time ) {
 		first_time = false;
@@ -919,7 +923,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 
 		// Read in the global file
 	if( config_source ) {
-		process_config_source( config_source, "global config source", NULL, true );
+		process_config_source( config_source, 0, "global config source", NULL, true );
 		global_config_source = config_source;
 		free( config_source );
 		config_source = NULL;
@@ -1084,7 +1088,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 
 
 void
-process_config_source( const char* file, const char* name,
+process_config_source( const char* file, int depth, const char* name,
 					   const char* host, int required )
 {
 	int rval;
@@ -1098,7 +1102,7 @@ process_config_source( const char* file, const char* name,
 		}
 	} else {
 		std::string errmsg;
-		rval = Read_config( file, ConfigMacroSet, EXPAND_LAZY,
+		rval = Read_config(file, depth, ConfigMacroSet, EXPAND_LAZY,
 							false, get_mySubSystem()->getName(), errmsg);
 		if( rval < 0 ) {
 			fprintf( stderr,
@@ -1134,7 +1138,7 @@ process_locals( const char* param_name, const char* host )
 		if (simulated_local_config) sources_to_process.append(simulated_local_config);
 		sources_to_process.rewind();
 		while( (source = sources_to_process.next()) ) {
-			process_config_source( source, "config source", host,
+			process_config_source( source, 1, "config source", host,
 								   local_required );
 			local_config_sources.append( source );
 
@@ -1249,7 +1253,7 @@ process_directory( const char* dirlist, const char* host )
 
 		char const *file;
 		while( (file=file_list.next()) ) {
-			process_config_source( file, "config source", host, local_required );
+			process_config_source( file, 1, "config source", host, local_required );
 
 			local_config_sources.append(file);
 		}
@@ -1591,6 +1595,8 @@ fill_attributes()
 		insert("UTSNAME_MACHINE", tmp, ConfigMacroSet, DetectedMacro);
 	}
 #endif
+
+	insert("CondorIsAdmin", can_switch_ids() ? "true" : "false", ConfigMacroSet, DetectedMacro);
 
 	insert("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro);
 
@@ -3333,7 +3339,7 @@ process_persistent_configs()
 		processed = true;
 
 		std::string errmsg;
-		rval = Read_config(toplevel_persistent_config.Value(), ConfigMacroSet,
+		rval = Read_config(toplevel_persistent_config.Value(), 0, ConfigMacroSet,
 						EXPAND_LAZY, true, get_mySubSystem()->getName(), errmsg);
 		if (rval < 0) {
 			dprintf( D_ALWAYS | D_FAILURE, "Configuration Error Line %d %s while reading "
@@ -3356,7 +3362,7 @@ process_persistent_configs()
 		config_source.formatstr( "%s.%s", toplevel_persistent_config.Value(),
 							   tmp );
 		std::string errmsg;
-		rval = Read_config(config_source.Value(), ConfigMacroSet,
+		rval = Read_config(config_source.Value(), 0, ConfigMacroSet,
 						EXPAND_LAZY, true, get_mySubSystem()->getName(), errmsg);
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d %s"
@@ -3405,7 +3411,7 @@ process_runtime_configs()
 			exit(1);
 		}
 		std::string errmsg;
-		rval = Read_config(tmp_file, ConfigMacroSet,
+		rval = Read_config(tmp_file, 0, ConfigMacroSet,
 						EXPAND_LAZY, false, get_mySubSystem()->getName(), errmsg);
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d %s"

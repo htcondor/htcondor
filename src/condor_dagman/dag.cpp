@@ -2867,6 +2867,9 @@ Dag::SetNodeStatusFileName( const char *statusFileName,
 	@param whether the DAG has just been held
 	@param whether the DAG has just been removed
 */
+// Note:  We might eventually want to change this to actually creating
+// classad objects and calling the unparser on them.  (See gittrac
+// #4316.)  wenger 2014-04-16
 void
 Dag::DumpNodeStatus( bool held, bool removed )
 {
@@ -2916,122 +2919,6 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		return;
 	}
 
-#if 0 //TEMPTEMP
-		//
-		// Print header.
-		//
-	char *timeStr = ctime( &startTime );
-	char *newline = strchr(timeStr, '\n');
-	if (newline != NULL) {
-		*newline = 0;
-	}
-	fprintf( outfile, "BEGIN %lu (%s)\n",
-				(unsigned long)startTime, timeStr );
-	fprintf( outfile, "Status of nodes of DAG(s): " );
-	char *dagFile;
-	_dagFiles.rewind();
-	while ( (dagFile = _dagFiles.next()) ) {
-		fprintf( outfile, "%s ", dagFile );
-	}
-	fprintf( outfile, "\n\n" );
-
-		//
-		// Print status of all nodes.
-		//
-	ListIterator<Job> it ( _jobs );
-	Job *node;
-	while ( it.Next( node ) ) {
-		const char *statusStr = Job::status_t_names[node->GetStatus()];
-		const char *nodeNote = "";
-		if ( node->GetStatus() == Job::STATUS_READY ) {
-				// Note:  Job::STATUS_READY only means that the job is
-				// ready to submit if it doesn't have any unfinished
-				// parents.
-			if ( !node->CanSubmit() ) {
-				// See Job::_job_type_names for other strings.
-				statusStr = Job::status_t_names[Job::STATUS_NOT_READY];
-			}
-		} else if ( node->GetStatus() == Job::STATUS_SUBMITTED ) {
-			nodeNote = node->GetIsIdle() ? "idle" : "not_idle";
-			// Note: add info here about whether the job(s) are
-			// held, once that code is integrated.
-		} else if ( node->GetStatus() == Job::STATUS_ERROR ) {
-			nodeNote = node->error_text;
-		}
-		fprintf( outfile, "JOB %s %s (%s)\n", node->GetJobName(),
-					statusStr, nodeNote );
-	}
-
-		//
-		// Print node counts.
-		//
-	fprintf( outfile, "\n" );
-	fprintf( outfile, "Nodes total: %d\n", NumNodes( true ) );
-	fprintf( outfile, "Nodes done: %d\n", NumNodesDone( true ) );
-	fprintf( outfile, "Nodes pre: %d\n", PreRunNodeCount() );
-	fprintf( outfile, "Nodes queued: %d\n", NumJobsSubmitted() );
-	fprintf( outfile, "Nodes post: %d\n", PostRunNodeCount() );
-	fprintf( outfile, "Nodes ready: %d\n", NumNodesReady() );
-	int unready = NumNodes( true )  - (NumNodesDone( true ) +
-				PreRunNodeCount() + NumJobsSubmitted() + PostRunNodeCount() +
-				NumNodesReady() + NumNodesFailed()  );
-	fprintf( outfile, "Nodes un-ready: %d\n", unready );
-	fprintf( outfile, "Nodes failed: %d\n", NumNodesFailed() );
-
-		//
-		// Print overall DAG status.
-		//
-	Job::status_t dagStatus = Job::STATUS_SUBMITTED;
-	const char *statusNote = "";
-	if ( DoneSuccess( true ) ) {
-		dagStatus = Job::STATUS_DONE;
-		statusNote = "success";
-	} else if ( DoneFailed( true ) ) {
-		dagStatus = Job::STATUS_ERROR;
-		if ( _dagStatus == DAG_STATUS_ABORT ) {
-			statusNote = "aborted";
-		} else {
-			statusNote = "failed";
-		}
-	} else if ( DoneCycle( true ) ) {
-		dagStatus = Job::STATUS_ERROR;
-		statusNote = "cycle";
-	} else if ( held ) {
-		statusNote = "held";
-	} else if ( removed ) {
-		dagStatus = Job::STATUS_ERROR;
-		statusNote = "removed";
-	}
-	fprintf( outfile, "\nDAG status: %s (%s)\n",
-				Job::status_t_names[dagStatus], statusNote );
-
-		//
-		// Print footer.
-		//
-	time_t endTime = time( NULL );
-
-	fprintf( outfile, "Next scheduled update: " );
-	if ( FinishedRunning( true ) || removed ) {
-		fprintf( outfile, "none\n" );
-	} else {
-		time_t nextTime = endTime + _minStatusUpdateTime;
-		timeStr = ctime( &nextTime );
-		newline = strchr(timeStr, '\n');
-		if (newline != NULL) {
-			*newline = 0;
-		}
-		fprintf( outfile, "%lu (%s)\n", (unsigned long)nextTime, timeStr );
-	}
-
-	timeStr = ctime( &endTime );
-	newline = strchr(timeStr, '\n');
-	if (newline != NULL) {
-		*newline = 0;
-	}
-	fprintf( outfile, "END %lu (%s)\n",
-				(unsigned long)endTime, timeStr );
-#endif //TEMPTEMP
-#if 1 //TEMPTEMP
 	fprintf( outfile, "[\n" );
 	fprintf( outfile, "  Type = \"DagStatus\";\n" );
 
@@ -3043,7 +2930,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	_dagFiles.rewind();
 	const char *separator = "";
 	while ( (dagFile = _dagFiles.next()) ) {
-		fprintf( outfile, "%s    \"%s\"", separator, dagFile );
+		fprintf( outfile, "%s    %s", separator,
+					EscapeClassadString( dagFile ) );
 		separator = ",\n";
 	}
 	fprintf( outfile, "\n  };\n" );
@@ -3054,7 +2942,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	MyString timeStr = ctime( &startTime );
 	timeStr.chomp();
 	fprintf( outfile, "  Timestamp = %lu; /* %s */\n",
-				(unsigned long)startTime, timeStr.Value() );
+				(unsigned long)startTime,
+				EscapeClassadString( timeStr.Value() ) );
 
 		//
 		// Print overall DAG status.
@@ -3082,8 +2971,11 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	}
 	MyString statusStr = Job::status_t_names[dagStatus];
 	statusStr.trim();
-	fprintf( outfile, "  DagStatus = %d; /* %s (%s) */\n", dagStatus,
-				statusStr.Value(), statusNote );
+	statusStr += " (";
+	statusStr += statusNote;
+	statusStr += ")";
+	fprintf( outfile, "  DagStatus = %d; /* %s */\n", dagStatus,
+				EscapeClassadString( statusStr.Value() ) );
 
 	fprintf( outfile, "  NodesTotal = %d;\n", NumNodes( true ) );
 	fprintf( outfile, "  NodesDone = %d;\n", NumNodesDone( true ) );
@@ -3091,10 +2983,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	fprintf( outfile, "  NodesQueued = %d;\n", NumJobsSubmitted() );
 	fprintf( outfile, "  NodesPost = %d;\n", PostRunNodeCount() );
 	fprintf( outfile, "  NodesReady = %d;\n", NumNodesReady() );
-	int unready = NumNodes( true )  - (NumNodesDone( true ) +
-				PreRunNodeCount() + NumJobsSubmitted() + PostRunNodeCount() +
-				NumNodesReady() + NumNodesFailed()  );
-	fprintf( outfile, "  NodesUnready = %d;\n", unready );
+	fprintf( outfile, "  NodesUnready = %d;\n",NumNodesUnready( true ) );
 	fprintf( outfile, "  NodesFailed = %d;\n", NumNodesFailed() );
 	fprintf( outfile, "  JobProcsHeld = %d;\n", NumHeldJobProcs() );
 	fprintf( outfile, "  JobProcsIdle = %d;\n", NumIdleJobProcs() );
@@ -3126,13 +3015,15 @@ Dag::DumpNodeStatus( bool held, bool removed )
 			nodeNote = node->error_text;
 		}
 
-		fprintf( outfile, "  Node = \"%s\";\n", node->GetJobName() );
+		fprintf( outfile, "  Node = %s;\n",
+					EscapeClassadString( node->GetJobName() ) );
 		statusStr = Job::status_t_names[status];
 		statusStr.trim();
 		fprintf( outfile, "  NodeStatus = %d; /* %s */\n", status,
-					statusStr.Value() );
+					EscapeClassadString( statusStr.Value() ) );
 		// fprintf( outfile, "  /* CondorStatus = xxx; */\n" );
-		fprintf( outfile, "  StatusDetails = \"%s\";\n", nodeNote );
+		fprintf( outfile, "  StatusDetails = %s;\n",
+					EscapeClassadString( nodeNote ) );
 		fprintf( outfile, "  RetryCount = %d;\n", node->GetRetries() );
 		// fprintf( outfile, "  /* JobProcsTotal = xxx; */\n" );
 		fprintf( outfile, "  JobProcsQueued = %d;\n",
@@ -3154,7 +3045,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	timeStr = ctime( &endTime );
 	timeStr.chomp();
 	fprintf( outfile, "  EndTime = %lu; /* %s */\n",
-				(unsigned long)endTime, timeStr.Value() );
+				(unsigned long)endTime,
+				EscapeClassadString( timeStr.Value() ) );
 
 	time_t nextTime;
 	if ( FinishedRunning( true ) || removed ) {
@@ -3166,9 +3058,9 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		timeStr.chomp();
 	}
 	fprintf( outfile, "  NextUpdate = %lu; /* %s */\n",
-				(unsigned long)nextTime, timeStr.Value() );
+				(unsigned long)nextTime,
+				EscapeClassadString( timeStr.Value() ) );
 	fprintf( outfile, "]\n" );
-#endif //TEMPTEMP
 
 	fclose( outfile );
 
@@ -3187,6 +3079,21 @@ Dag::DumpNodeStatus( bool held, bool removed )
 
 	_statusFileOutdated = false;
 	_lastStatusUpdateTimestamp = startTime;
+}
+
+//-------------------------------------------------------------------------
+const char *
+Dag::EscapeClassadString( const char* strIn )
+{
+	static classad::Value tmpValue;
+	static std::string tmpStr; // must be static so we can return c_str()
+	static classad::ClassAdUnParser unparse;
+
+	tmpValue.SetStringValue( strIn );
+	tmpStr = "";
+	unparse.Unparse( tmpStr, tmpValue );
+
+	return tmpStr.c_str();
 }
 
 //-------------------------------------------------------------------------

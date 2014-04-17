@@ -29,7 +29,6 @@ $dagman_args = "-verbose";
 @outfiles = ("job_dagman_abort-final-B-node.A", "job_dagman_abort-final-B-node.B");
 $statusfile = "job_dagman_abort-final-B.status";
 # Lines must be found in order.
-@statuslines = ("DagStatus = 5;.*STATUS_DONE \\(success\\)");
 @statuslines = ("DagStatus = 5;.*STATUS_DONE \\(success\\)",
     "NodesTotal = 5;",
     "NodesDone = 3;",
