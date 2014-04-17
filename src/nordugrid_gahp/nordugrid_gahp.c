@@ -947,7 +947,13 @@ void nordugrid_submit_cwd1_callback( void *arg,
 		return;
 	}
 
-	if ( sscanf( (char *)user_arg->buff, "250 \"jobs/%[A-Za-z0-9]", job_id ) != 1 ) {
+	/* If the server doesn't return a 250 response to the CWD command,
+	 * then the gridftp library won't allocate a buffer with the response
+	 * line (and it doesn't flag an error). We've seen some ARC servers
+	 * return '226 Abort finished'.
+	 */
+	if ( user_arg->buff == NULL ||
+		 sscanf( (char *)user_arg->buff, "250 \"jobs/%[A-Za-z0-9]", job_id ) != 1 ) {
 			result = globus_error_put( globus_error_construct_string(
 											NULL,
 											NULL,
