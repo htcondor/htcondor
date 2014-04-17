@@ -90,7 +90,7 @@ int scandirectory(const char *dir, struct dirent ***namelist,
         int (*compar)(const void*, const void*) ) {
 	DIR *d;
 	struct dirent *entry;
-	register int i = 0;
+	int i = 0;
 	size_t entrysize;
 
 	if ((d=opendir(dir)) == NULL)
