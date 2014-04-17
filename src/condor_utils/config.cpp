@@ -201,9 +201,9 @@ is_piped_command(const char* filename)
 	return retVal;
 }
 
-int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, MACRO_SET& macro_set, const char * subsys);
+int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, MACRO_SET& macro_set, const char * subsys);
 
-int read_meta_config(MACRO_SOURCE & source, const char *name, const char * rhs, MACRO_SET& macro_set, const char * subsys)
+int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const char * rhs, MACRO_SET& macro_set, const char * subsys)
 {
 #ifdef GUESS_METAKNOB_CATEGORY
 	std::string nameguess;
@@ -246,7 +246,7 @@ int read_meta_config(MACRO_SOURCE & source, const char *name, const char * rhs, 
 			return -1;
 		}
 		source.meta_id = param_default_get_source_meta_id(name, item);
-		int ret = Parse_config(source, name, value, macro_set, subsys);
+		int ret = Parse_config_string(source, depth, value, macro_set, subsys);
 		if (ret < 0) {
 			fprintf(stderr,
 					"Internal Configuration Error: use %s: %s is invalid\n",
@@ -768,7 +768,7 @@ bool ConfigIfStack::line_is_if(const char * line, std::string & errmsg, MACRO_SE
 // and insert the resulting declarations into the given macro set.
 // this code is used to parse meta-knob definitions.
 //
-int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, MACRO_SET& macro_set, const char * subsys)
+int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, MACRO_SET& macro_set, const char * subsys)
 {
 	source.meta_off = -1;
 
@@ -852,14 +852,14 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 
 		// if this is a metaknob use statement
 		if (is_meta) {
-			if (MATCH == strcasecmp(self, name)) {
-				// self ref is invalid
-				return -1;
+			if (depth >= 20) {
+				// looks like infinite recursion, give up and return an error instead.
+				return -2;
 			}
 			// for recursive metaknobs, we need to use a temp copy of the source info
 			// to avoid loosing the source id/offset info.
 			MACRO_SOURCE source2 = source;
-			int retval = read_meta_config(source2, name, rhs, macro_set, subsys);
+			int retval = read_meta_config(source2, depth+1, name, rhs, macro_set, subsys);
 			if (retval < 0) {
 				return retval;
 			}
@@ -889,7 +889,9 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 }
 
 int
-Read_config(const char* config_source, MACRO_SET& macro_set,
+Read_config(const char* config_source,
+			int depth, // a simple recursion detector
+			MACRO_SET& macro_set,
 			int expand_flag,
 			bool check_runtime_security,
 			const char * subsys,
@@ -1161,7 +1163,7 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 		// if name is 'use' then this is a metaknob usage
 		if (is_meta) {
 			FileMacro.line = ConfigLineNo;
-			retval = read_meta_config(FileMacro, name, rhs, macro_set, subsys);
+			retval = read_meta_config(FileMacro, depth+1, name, rhs, macro_set, subsys);
 			if (retval < 0) {
 				fprintf( stderr,
 							"Configuration Error File <%s>, Line %d: at use %s:%s\n",
@@ -1207,7 +1209,7 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 				insert(name, value, macro_set, FileMacro);
 			} else {
 				fprintf( stderr,
-					"Configuration Error File <%s>, Line %d: Syntax Error\n",
+					"Configuration Error File <%s>, Line %d: Syntax Error, missing : or =\n",
 					config_source, ConfigLineNo );
 				retval = -1;
 				goto cleanup;

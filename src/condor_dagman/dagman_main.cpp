@@ -177,7 +177,7 @@ Dagman::Config()
 						_dagmanConfigFile );
     		DC_Exit( EXIT_ERROR );
 		}
-		process_config_source( _dagmanConfigFile, "DAGMan config",
+		process_config_source( _dagmanConfigFile, 0, "DAGMan config",
 					NULL, true );
 	}
 

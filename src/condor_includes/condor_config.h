@@ -383,7 +383,7 @@ BEGIN_C_DECLS
 	int  param_boolean_int_without_default( const char* name, int default_value );
 	
 	// Process an additional chunk of file
-	void process_config_source(const char* filename, const char* sourcename, const char* host, int required);
+	void process_config_source(const char* filename, int depth, const char* sourcename, const char* host, int required);
 
 /* This function initialize GSI (maybe other) authentication related
    stuff Daemons that should use the condor daemon credentials should
