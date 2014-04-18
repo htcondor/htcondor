@@ -483,7 +483,7 @@ main( int argc, const char* argv[] )
 		// arguments that don't begin with "-" are params to be looked up.
 		if (*argv[i] != '-') {
 			// allow "use category:value" syntax to query meta-params
-			if (MATCH == strcmp(argv[i], "use") && *argv[i+1] && *argv[i+1] != '-') {
+			if (MATCH == strcasecmp(argv[i], "use") && *argv[i+1] && *argv[i+1] != '-') {
 				++i; // skip "use"
 				// save off the parameter name, prefixed with $ so that the code below we know it's a metaknob name.
 				std::string meta("$"); meta += argv[i];
@@ -1641,7 +1641,7 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 	}
 
 	while (isspace(*param_value)) ++param_value;
-	bool is_meta = starts_with(param_value, "use ");
+	bool is_meta = starts_with_ignore_case(param_value, "use ");
 
 	char * config_name = NULL;
 	if (set || is_meta) {

@@ -109,7 +109,7 @@ char * is_valid_config_assignment(const char *config)
 
 	while (isspace(*config)) ++config;
 
-	bool is_meta = starts_with(config, "use ");
+	bool is_meta = starts_with_ignore_case(config, "use ");
 	if (is_meta) {
 		config += 4;
 		while (isspace(*config)) ++config;
@@ -584,7 +584,7 @@ static bool Evaluate_config_if(const char * expr, bool & result, std::string & e
 			// if what we are checking for 'defined' is a bool or int, then it's defined.
 			} else if (ec2 == CIFT_NUMBER || ec2 == CIFT_BOOL) {
 				result = true;
-			} else if (starts_with(ptr, "use ")) { // is it check for a metaknob definition?
+			} else if (starts_with_ignore_case(ptr, "use ")) { // is it check for a metaknob definition?
 				ptr += 4; // skip over "use ";
 				while (isspace(*ptr)) ++ptr;
 				// there are two allowed forms "if defined use <cat>", and "if defined use <cat>:<val>"
@@ -713,7 +713,7 @@ public:
 
 bool ConfigIfStack::line_is_if(const char * line, std::string & errmsg, MACRO_SET& macro_set, const char * subsys)
 {
-	if (starts_with(line,"if") && (isspace(line[2]) || !line[2])) {
+	if (starts_with_ignore_case(line,"if") && (isspace(line[2]) || !line[2])) {
 		const char * expr = line+2;
 		while (isspace(*expr)) ++expr;
 
@@ -729,7 +729,7 @@ bool ConfigIfStack::line_is_if(const char * line, std::string & errmsg, MACRO_SE
 		}
 		return true;
 	}
-	if (starts_with(line, "else") && (isspace(line[4]) || !line[4])) {
+	if (starts_with_ignore_case(line, "else") && (isspace(line[4]) || !line[4])) {
 		if ( ! this->begin_else()) {
 			errmsg = this->inside_else() ? "else is not allowed after else" : "else without matching if";
 		} else {
@@ -737,7 +737,7 @@ bool ConfigIfStack::line_is_if(const char * line, std::string & errmsg, MACRO_SE
 		}
 		return true;
 	}
-	if (starts_with(line, "elif") && (isspace(line[4]) || !line[4])) {
+	if (starts_with_ignore_case(line, "elif") && (isspace(line[4]) || !line[4])) {
 		const char * expr = line+4;
 		while (isspace(*expr)) ++expr;
 		std::string err_reason;
@@ -753,7 +753,7 @@ bool ConfigIfStack::line_is_if(const char * line, std::string & errmsg, MACRO_SE
 		}
 		return true;
 	}
-	if (starts_with(line, "endif") && (isspace(line[5]) || !line[5])) {
+	if (starts_with_ignore_case(line, "endif") && (isspace(line[5]) || !line[5])) {
 		if ( ! this->end_if()) {
 			errmsg = "endif without matching if";
 		} else {
@@ -802,7 +802,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		int op = 0;
 
 		// detect the 'use' keyword
-		bool is_meta = starts_with(line, "use ");
+		bool is_meta = starts_with_ignore_case(line, "use ");
 		if (is_meta) {
 			ptr += 4; while (isspace(*ptr)) ++ptr;
 			name = ptr; // name is now the metaknob category name rather than the keyword 'use'
@@ -1086,7 +1086,7 @@ Read_config(const char* config_source,
 
 		if( !*ptr ) {
 				// Here we have determined this line has no operator
-			if ( name && name[0] && name[0] == '[' ) {
+			if ( name && name[0] == '[' ) {
 				// Treat a line w/o an operator that begins w/ a square bracket
 				// as a comment so a config file can look like
 				// a Win32 .ini file for MS Installer purposes.		
@@ -1125,34 +1125,42 @@ Read_config(const char* config_source,
 		rhs = ptr;
 		// rhs is now 'SunOS' in the above eg
 
+		// in order to prevent "use" and "include" from looking like valid config in 8.0 and earlier
+		// they can optionally be preceeded with an @ that doesn't change the  meaning, but will
+		// generate a syntax error in 8.0 and earlier.
+		bool has_at = (*name == '@');
+		int is_include = (op == ':' && MATCH == strcasecmp(name + has_at, "include"));
+		bool is_meta = (op == ':' && MATCH == strcasecmp(name + has_at, "use"));
+
 		// if the name is 'use' then this is a metaknob, so the actual name
 		// is the word after 'use'. so we want to find that word and
 		// remove trailing spaces from it.
-		int is_include = (op == ':' && MATCH == strcmp(name, "include"));
-		bool is_meta = (op == ':' && MATCH == strcmp(name, "use"));
 		if (is_meta) {
-			if (name+4 < pop) {
-				name += 4;
+			// set name to point to the word after use (if there is one)
+			if (name+has_at+4 < pop) {
+				name += has_at+4;
 				while (isspace(*name) && name < pop) { ++name; }
 				char * p = pop-1;
 				while (isspace(*p) && p > name) { *p-- = 0; }
 			} else {
-				name += 3; // this will point at the null terminator of 'use'
+				name += has_at+3; // this will point at the null terminator of 'use'
 			}
 		} else if (is_include) {
 			// check for keywords after "include" and before the :
-			if (name+8 < pop) {
-				name += 8;
+			// these keywords will modifity the behavior of include
+			if (name+has_at+8 < pop) {
+				name += has_at+8;
 				while (isspace(*name)) ++name; // skip whitespace
 				*pop = 0; // guarantee null term for include keyword.
 				char * p = pop-1;
 				while (isspace(*p) && p > name) { *p-- = 0; }
 				if (*name) {
-					if (MATCH == strcmp(name, "output")) is_include = 2;
+					if (MATCH == strcasecmp(name, "output")) is_include = 2; // a value of 2 indicates a command rather than a filename.
+					else if (MATCH == strcasecmp(name, "command")) is_include = 2; // a value of 2 indicates a command rather than a filename.
 					else {
-						config_errmsg = "unexpected keyword ";
+						config_errmsg = "unexpected keyword '";
 						config_errmsg += name;
-						config_errmsg += " after include";
+						config_errmsg += "' after include";
 						return -1;
 					}
 				}
