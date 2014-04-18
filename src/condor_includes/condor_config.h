@@ -48,6 +48,7 @@ typedef const struct key_value_pair MACRO_DEF_ITEM;
 #define MACRO_SET_KNOWS_DEFAULT
 #define COLON_DEFAULT_FOR_MACRO_EXPAND  // enable $(FOO:default-value) and $(FOO:$(OTHER)) for config
 #define WARN_COLON_FOR_PARAM_ASSIGN   0 // parameter assigment with : (instead of =) is disallowed, a value of 0 is warn, 1 is fail
+#define CONFIG_MAX_NESTING_DEPTH 20     // the maximum depth of nesting/recursion for include & meta
 
 // structures for param/submit macro storage
 // These structures are carefully tuned to allow for minimal private memory
