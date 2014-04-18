@@ -60,6 +60,7 @@ enum BatchSubmitStatus {
 
 struct BoincBatch {
 	std::string m_batch_name;
+	std::string m_app_name;
 	BatchSubmitStatus m_submit_status;
 	bool m_need_full_query;
 	time_t m_lease_time;
@@ -188,7 +189,7 @@ bool BoincResource::Init()
 
 	m_submitGahp->setNotificationTimerId( m_submitTid );
 	m_submitGahp->setMode( GahpClient::normal );
-	m_submitGahp->setTimeout( gahpCallTimeout );
+	m_submitGahp->setTimeout( 1800 );
 	m_submitGahp->setBoincResource( this );
 
 	char* pool_name = param( "COLLECTOR_HOST" );
@@ -329,6 +330,7 @@ bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,
 		if ( batch == NULL ) {
 			batch = new BoincBatch();
 			batch->m_batch_name = batch_name;
+			batch->m_app_name = job->GetAppName();
 			batch->m_lease_time = 0;
 			batch->m_last_lease_attempt = 0;
 			batch->m_submit_status = BatchMaybeSubmitted;
@@ -353,10 +355,11 @@ bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,
 		BoincBatch *batch = NULL;
 		for ( list<BoincBatch *>::iterator batch_itr = m_batches.begin();
 			  batch_itr != m_batches.end(); batch_itr++ ) {
-			// Assume all jobs in a cluster belong in the same boinc batch
+			// Assume all jobs with the same application can go into the
+			// same boinc batch.
 			// But we can't add this job to a batch that's already been
 			// submitted.
-			if ( (*(*batch_itr)->m_jobs.begin())->procID.cluster == job->procID.cluster && (*batch_itr)->m_submit_status == BatchUnsubmitted ) {
+			if ( (*batch_itr)->m_app_name == job->GetAppName() && (*batch_itr)->m_submit_status == BatchUnsubmitted ) {
 				batch = *batch_itr;
 				break;
 			}
@@ -364,10 +367,11 @@ bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,
 
 		if ( batch == NULL ) {
 			batch = new BoincBatch();
-			// This batch naming scheme assumes all jobs in a cluster
-			// should go into the same boinc batch.
-			formatstr( batch->m_batch_name, "condor#%s#%d#%d", ScheddName,
-					   job->procID.cluster, (int)time(NULL) );
+			batch->m_app_name = job->GetAppName();
+			// This batch naming scheme assumes all jobs with the same
+			// application can go into the same boinc batch.
+			formatstr( batch->m_batch_name, "condor#%s#%s#%d", ScheddName,
+					   batch->m_app_name.c_str(), (int)time(NULL) );
 			batch->m_lease_time = 0;
 			batch->m_last_lease_attempt = 0;
 			batch->m_submit_status = BatchUnsubmitted;
