@@ -396,9 +396,7 @@ review=?
 tags=vm-gahp,vmgahp
 
 [VM_GAHP_LOG]
-default=/tmp/VMGAHPLog.$(USERNAME)
-# daemons that run as user can't write to $(LOG) and there is no /tmp on windows
-win32_default=NUL
+default=$(LOG)/VMGahpLog
 type=path
 reconfig=true
 customization=seldom
