@@ -3103,19 +3103,31 @@ CStarter::PublishToEnv( Env* proc_env )
 			const char *tag;
 			while ((tag = tags.next())) {
 				MyString attr("Assigned"); attr += tag;
+
+				// we need to publish Assigned resources in the environment. the rules are 
+				// a bit wierd here. we publish if there are any assigned, we also always
+				// publish if there is a config knob ENVIRONMENT_FOR_Assigned<tag> even if
+				// there are none assigned, so long as there are any defined.
+				MyString env_name;
+				MyString param_name("ENVIRONMENT_FOR_"); param_name += attr;
+				param(env_name, param_name.c_str());
+
 				MyString assigned;
-				if (mad->LookupString(attr.c_str(), assigned)) {
+				bool is_assigned = mad->LookupString(attr.c_str(), assigned);
+				if (is_assigned || (mad->Lookup(tag) &&  ! env_name.empty())) {
+
+					if ( ! is_assigned) {
+						param_name = "ENVIRONMENT_VALUE_FOR_UN"; param_name += attr;
+						param(assigned, param_name.c_str());
+					}
+
+					if ( ! env_name.empty()) {
+						SetEnvironmentForAssignedRes(proc_env, env_name.c_str(), assigned.c_str(), tag);
+					}
+
 					env_name = base;
 					env_name += attr;
-					proc_env->SetEnv( env_name.Value(), assigned.c_str() );
-
-					// also allow a configured alternate environment name
-					MyString param_name("ENVIRONMENT_FOR_"); param_name += attr;
-					if (param(env_name, param_name.c_str())) {
-						if ( ! env_name.empty()) {
-							SetEnvironmentForAssignedRes(proc_env, env_name.c_str(), assigned.c_str(), tag);
-						}
-					}
+					proc_env->SetEnv(env_name.Value(), assigned.c_str());
 				}
 			}
 		}
@@ -3235,8 +3247,8 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 			break;
 		}
 
-		// HACK! special magic for CUDA_VISIBLE_DEVICES and GPU_DEVICE_ORDINAL
-		if (env_name == "CUDA_VISIBLE_DEVICES" || env_name == "GPU_DEVICE_ORDINAL") {
+		// HACK! special magic for CUDA_VISIBLE_DEVICES
+		if (env_name == "CUDA_VISIBLE_DEVICES") {
 			// strip everthing but digits and , from the assigned gpus value
 			for (const char * p = assigned; *p; ++p) {
 				if (isdigit(*p) || *p == ',') rhs += *p;
@@ -3283,6 +3295,7 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 		proc_env->SetEnv(env_name.c_str(), rhs.c_str());
 
 		proto = pend+1;
+		if (*proto == ',') ++proto; // in case there is a comma separating the fields.
 	}
 }
 

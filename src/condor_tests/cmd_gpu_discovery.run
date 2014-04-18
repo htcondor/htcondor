@@ -53,6 +53,7 @@ my $firstappend_condor_config = '
 	MASTER_DEBUG = D_SECURITY:2 D_COMMAND:2
 	MACHINE_RESOURCE_INVENTORY_GPUs = $(LIBEXEC)/condor_gpu_discovery -simulate:0,4 -properties
 	ENVIRONMENT_FOR_AssignedGPUs = CUDA_VISIBLE_DEVICES
+	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
 ';
 # don't forget PERSISTENT_CONFIG settings
 
