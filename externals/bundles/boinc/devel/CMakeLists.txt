@@ -24,9 +24,9 @@ if ( WITH_BOINC )
 
 	if ( NOT PROPER )
 
-		condor_pre_external( BOINC boinc-devel "lib;include" "done")
+		condor_pre_external( BOINC boinc-6706f5c "lib;include" "done")
 
-		set( BOINC_PATCH /bin/true )
+		set( BOINC_PATCH patch -p0 -N -i ${CMAKE_CURRENT_SOURCE_DIR}/unzip.patch )
 		if ( LINUX )
 			if ( "${SYSTEM_NAME}" MATCHES "rhel5" OR
 			     "${SYSTEM_NAME}" MATCHES "centos5" OR
