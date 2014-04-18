@@ -1138,9 +1138,9 @@ process_locals( const char* param_name, const char* host )
 		if (simulated_local_config) sources_to_process.append(simulated_local_config);
 		sources_to_process.rewind();
 		while( (source = sources_to_process.next()) ) {
+			local_config_sources.append( source );
 			process_config_source( source, 1, "config source", host,
 								   local_required );
-			local_config_sources.append( source );
 
 			sources_done.append(source);
 

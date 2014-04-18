@@ -248,9 +248,9 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 		source.meta_id = param_default_get_source_meta_id(name, item);
 		int ret = Parse_config_string(source, depth, value, macro_set, subsys);
 		if (ret < 0) {
-			fprintf(stderr,
-					"Internal Configuration Error: use %s: %s is invalid\n",
-					name, item);
+			const char * msg = "Internal Configuration Error: use %s: %s is invalid\n";
+			if (ret == -2) msg = "Configuration Error: use %s: %s nesting too deep\n"; 
+			fprintf(stderr, msg, name, item);
 			return ret;
 		}
 	}
@@ -852,7 +852,7 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 
 		// if this is a metaknob use statement
 		if (is_meta) {
-			if (depth >= 20) {
+			if (depth >= CONFIG_MAX_NESTING_DEPTH) {
 				// looks like infinite recursion, give up and return an error instead.
 				return -2;
 			}
@@ -923,6 +923,12 @@ Read_config(const char* config_source,
 	MACRO_SOURCE FileMacro;
 	insert_source(config_source, macro_set, FileMacro);
 
+	// check for exceeded nesting depth.
+	if (depth >= CONFIG_MAX_NESTING_DEPTH) {
+		config_errmsg = "includes nested too deep";
+		return -2; // indicate that nesting depth has been exceeded.
+	}
+
 	// Determine if the config file name specifies a file to open, or a
 	// pipe to suck on. Process each accordingly
 	if ( is_piped_command(config_source) ) {
@@ -936,28 +942,27 @@ Read_config(const char* config_source,
 			ArgList argList;
 			MyString args_errors;
 			if(!argList.AppendArgsV1RawOrV2Quoted(cmdToExecute, &args_errors)) {
-				printf("Can't append cmd %s(%s)\n", cmdToExecute, args_errors.Value());
+				formatstr(config_errmsg, "Can't append args, %s", args_errors.Value());
 				free( cmdToExecute );
 				return -1;
 			}
 			conf_fp = my_popen(argList, "r", FALSE);
 			if( conf_fp == NULL ) {
-				printf("Can't open cmd %s\n", cmdToExecute);
+				config_errmsg = "not a valid command";
 				free( cmdToExecute );
 				return -1;
 			}
 			free( cmdToExecute );
 		} else {
-			printf("Specified cmd, %s, not a valid command to execute.  It must have a '|' "
-				   "character at the end.\n", config_source);
-			return( -1 );
+			config_errmsg = "not a valid command, | must be at the end\n";
+			return  -1;
 		}
 	} else {
 		is_pipe_cmd = false;
 		conf_fp = safe_fopen_wrapper_follow(config_source, "r");
 		if( conf_fp == NULL ) {
-			printf("Can't open file %s\n", config_source);
-			return( -1 );
+			config_errmsg = "can't open file";
+			return  -1;
 		}
 	}
 
@@ -1123,6 +1128,7 @@ Read_config(const char* config_source,
 		// if the name is 'use' then this is a metaknob, so the actual name
 		// is the word after 'use'. so we want to find that word and
 		// remove trailing spaces from it.
+		int is_include = (op == ':' && MATCH == strcmp(name, "include"));
 		bool is_meta = (op == ':' && MATCH == strcmp(name, "use"));
 		if (is_meta) {
 			if (name+4 < pop) {
@@ -1133,6 +1139,27 @@ Read_config(const char* config_source,
 			} else {
 				name += 3; // this will point at the null terminator of 'use'
 			}
+		} else if (is_include) {
+			// check for keywords after "include" and before the :
+			if (name+8 < pop) {
+				name += 8;
+				while (isspace(*name)) ++name; // skip whitespace
+				*pop = 0; // guarantee null term for include keyword.
+				char * p = pop-1;
+				while (isspace(*p) && p > name) { *p-- = 0; }
+				if (*name) {
+					if (MATCH == strcmp(name, "output")) is_include = 2;
+					else {
+						config_errmsg = "unexpected keyword ";
+						config_errmsg += name;
+						config_errmsg += " after include";
+						return -1;
+					}
+				}
+			}
+			// set name to be the filename or command line.
+			name = pop+1;
+			while (isspace(*name)) ++name; // skip whitespace before the filename
 		} else if (op == ':') {
 		#ifdef WARN_COLON_FOR_PARAM_ASSIGN
 			if (opt_meta_colon < 2) { op = '='; } // change the op to = so that we don't "goto cleanup" below
@@ -1140,7 +1167,7 @@ Read_config(const char* config_source,
 			else if (MATCH == strcasecmp(name, "RunBenchmarks")) { op = '='; }
 
 			if (opt_meta_colon) {
-				fprintf( stderr, "Configuration %s File <%s>, Line %d: obsolete use of ':' for parameter assigment at %s : %s\n",
+				fprintf( stderr, "Configuration %s \"%s\", Line %d: obsolete use of ':' for parameter assignment at %s : %s\n",
 						op == ':' ? "Error" : "Warning",
 						config_source, ConfigLineNo,
 						name, rhs
@@ -1154,20 +1181,41 @@ Read_config(const char* config_source,
 		}
 
 		/* Expand references to other parameters */
-		name = expand_macro(name, macro_set);
+		bool use_default_param_table = (macro_set.options & CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO) != 0;
+		name = expand_macro(name, macro_set, use_default_param_table, subsys);
 		if( name == NULL ) {
 			retval = -1;
 			goto cleanup;
 		}
 
-		// if name is 'use' then this is a metaknob usage
+		// if this is a metaknob
 		if (is_meta) {
 			FileMacro.line = ConfigLineNo;
 			retval = read_meta_config(FileMacro, depth+1, name, rhs, macro_set, subsys);
 			if (retval < 0) {
 				fprintf( stderr,
-							"Configuration Error File <%s>, Line %d: at use %s:%s\n",
+							"Configuration Error \"%s\", Line %d: at use %s:%s\n",
 							config_source, ConfigLineNo, name, rhs );
+				goto cleanup;
+			}
+		} else if (is_include) {
+			FileMacro.line = ConfigLineNo; // save current line number around the recursive call
+			if ((is_include > 1) && !is_piped_command(name)) {
+				std::string cmd(name); cmd += " |";
+				if (use_default_param_table) local_config_sources.append(cmd.c_str());
+				retval = Read_config(cmd.c_str(), depth+1, macro_set, expand_flag, check_runtime_security, subsys, config_errmsg);
+			} else {
+				if (use_default_param_table) local_config_sources.append(name);
+				retval = Read_config(name, depth+1, macro_set, expand_flag, check_runtime_security, subsys, config_errmsg);
+			}
+			int last_line = ConfigLineNo; // get the exit line from the recursive call
+			ConfigLineNo = FileMacro.line; // restore the global line number.
+
+			if (retval < 0) {
+				fprintf( stderr,
+							"Configuration Error \"%s\", Line %d, Include Depth %d: %s\n",
+							name, last_line, depth+1, config_errmsg.c_str());
+				config_errmsg.clear();
 				goto cleanup;
 			}
 		} else {
@@ -1176,7 +1224,7 @@ Read_config(const char* config_source,
 			   alphanumeric characters and _ allowed*/
 			if( !is_valid_param_name(name) ) {
 				fprintf( stderr,
-						 "Configuration Error File <%s>, Line %d: Illegal Identifier: <%s>\n",
+						 "Configuration Error \"%s\", Line %d: Illegal Identifier: <%s>\n",
 						 config_source, ConfigLineNo, name );
 				retval = -1;
 				goto cleanup;
@@ -1209,7 +1257,7 @@ Read_config(const char* config_source,
 				insert(name, value, macro_set, FileMacro);
 			} else {
 				fprintf( stderr,
-					"Configuration Error File <%s>, Line %d: Syntax Error, missing : or =\n",
+					"Configuration Error \"%s\", Line %d: Syntax Error, missing : or =\n",
 					config_source, ConfigLineNo );
 				retval = -1;
 				goto cleanup;
@@ -1224,7 +1272,7 @@ Read_config(const char* config_source,
 
 	if (ifstack.inside_if()) {
 		fprintf(stderr,
-				"Configuration Error File <%s>, Line %d: \n",
+				"Configuration Error \"%s\", Line %d: \n",
 				config_source, ConfigLineNo );
 		config_errmsg = "endif(s) not found before end-of-file";
 		retval = -1;
@@ -1236,7 +1284,7 @@ Read_config(const char* config_source,
 		if ( is_pipe_cmd ) {
 			int exit_code = my_pclose( conf_fp );
 			if ( retval == 0 && exit_code != 0 ) {
-				fprintf( stderr, "Configuration Error File <%s>: "
+				fprintf( stderr, "Configuration Error \"%s\": "
 						 "command terminated with exit code %d\n",
 						 config_source, exit_code );
 				retval = -1;

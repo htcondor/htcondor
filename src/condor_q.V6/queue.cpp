@@ -2814,7 +2814,7 @@ print_full_header(const char * source_label)
 		// print the source label.
 		if ( ! (customHeadFoot&HF_NOTITLE)) {
 			static bool first_time = false;
-			printf ("\n\n-- %s\n" + (first_time ? 2 : 0), source_label);
+			printf ("%s-- %s\n", (first_time ? "" : "\n\n"), source_label);
 			first_time = false;
 		}
 		if ( ! (customHeadFoot&HF_NOHEADER)) {
