@@ -665,6 +665,7 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.6)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.14.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/devel)
 
         if (LINUX)
           option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
