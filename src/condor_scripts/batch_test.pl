@@ -1109,7 +1109,7 @@ sub CreateConfig {
 				print NEWFIG "RELEASE_DIR = $installdir\n";
 			}
 		}
-		elsif(/^LOCAL_DIR\s*=/) {
+		elsif(/^#?LOCAL_DIR\s*=/) {
 			debug("Matching:$_\n", 2);
 			if($iswindows == 1) {
 				print NEWFIG "LOCAL_DIR = $wintestpersonalcondorlocation/local\n";
@@ -1150,7 +1150,16 @@ sub CreateConfig {
 			print NEWFIG "$_\n";
 		}    
 	}    
-	close( OLDFIG );    
+	close( OLDFIG );
+	# make sure that things we need set are set.
+	if($iswindows == 1) { print NEWFIG "LOCAL_DIR = $wintestpersonalcondorlocation/local\n"; }
+	else { print NEWFIG "LOCAL_DIR = $localdir\n"; }
+	print NEWFIG "CONDOR_HOST = $currenthost\n";
+	print NEWFIG "ALLOW_WRITE = *\n";
+	if ($want_core_dumps) {
+		print NEWFIG "NOT_RESPONDING_WANT_CORE = True\n";
+		print NEWFIG "CREATE_CORE_FILES = True\n";
+	}
 	print NEWFIG "TOOL_TIMEOUT_MULTIPLIER = 10\n";
 	print NEWFIG "TOOL_DEBUG_ON_ERROR = D_ANY D_ALWAYS:2\n";
 	close( NEWFIG );

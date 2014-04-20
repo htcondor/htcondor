@@ -12,7 +12,7 @@
 ##  Please read the INSTALL file (or the Install chapter in the
 ##  Condor Administrator's Manual) for detailed explanations of the 
 ##  various settings in here and possible ways to configure your
-##  pool. 
+##  pool. condor_config.annotated is a more detailed sample config file
 ##
 ##  Unless otherwise specified, settings that are commented out show
 ##  the defaults that are used if you don't define a value.  Settings
