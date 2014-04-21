@@ -342,8 +342,9 @@ sub StartCondorWithParams
 	if($btdebug == 1) {
 		print "######################### StartCondorWithParams: toplevedir: $topleveldir ###########################\n";
 	}
-        $topleveldir = "$topleveldir/$testname.saveme/$mpid/$mpid$version";
+
 	system("mkdir -p $topleveldir/$testname.saveme/$mpid/$mpid$version");
+    $topleveldir = "$topleveldir/$testname.saveme/$mpid/$mpid$version";
 
 	$procdaddress = $mpid . $version;
 
@@ -370,11 +371,11 @@ sub StartCondorWithParams
 	}
 
 	# we need the condor instance early for state determination
-#print "Personal: StartCondorWithParams: Creating condor instance for: $personal_config_file\n";
+	#print "Personal: StartCondorWithParams: Creating condor instance for: $personal_config_file\n";
     my $new_condor = CondorTest::CreateAndStoreCondorInstance( $version, $personal_config_file, 0, 0 );
 #print "New condor instance:$new_condor\n";
 
-	#print " ****** StartCondorWithParams: our new config file is <$personal_config_file>\n";
+	#print " ****** StartCondorWithParams: our new config file is:$personal_config_file topleveldir:$topleveldir \n";
 
 	# what if we want to change what goes on here? Like really bare bones config
 	# file for checking internal param table defaults and values.
@@ -408,6 +409,9 @@ sub StartCondorWithParams
 	#foreach my $key (sort keys %personal_condor_params) {
 	#print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
 	#}
+
+	# reset topleveldir to $home so all configs go at same level
+	$topleveldir = $home;
 
 	if(exists $personal_condor_params{"do_not_start"}) {
 		$ENV{CONDOR_CONFIG} = $personal_config_file;
@@ -2869,45 +2873,45 @@ sub FindCollectorPort
 #
 #################################################################
 
-sub SaveMeSetup
-{
-	my $testname = shift;
-	my $mypid = $$;
-	my $res = 1;
-	my $mysaveme = $testname . ".saveme";
-	$res = system("mkdir -p $mysaveme");
-	if($res != 0) {
-		print "SaveMeSetup: Could not create \"saveme\" directory for test\n";
-		return(0);
-	}
-	my $mypiddir = $mysaveme . "/" . $mypid;
-	# there should be no matching directory here
-	# unless we are getting pid recycling. Start fresh.
-	$res = system("rm -rf $mypiddir");
-	if($res != 0) {
-		print "SaveMeSetup: Could not remove prior pid directory in savemedir \n";
-		return(0);
-	}
-	$res = system("mkdir $mypiddir");
-	if($res != 0) {
-		print "SaveMeSetup: Could not create pid directory in \"saveme\" directory\n";
-		return(0);
-	}
-	# make a symbolic link for personal condor module to use
-	# if we get pid recycling, blow the symbolic link 
-	# This might not be a symbolic link, so use -r to be sure
-	#$res = verbose_system("rm -fr $mypid");
-	#if($res != 0) {
-		#print "SaveMeSetup: Could not remove prior pid directory\n";
-		#return(0);
-	#}
-	#$res = verbose_system("ln -s $mypiddir $mypid");
-	#if($res != 0) {
-		#print "SaveMeSetup: Could not link to pid dir in  \"saveme\" directory\n";
-		#return(0);
-	#}
-	return($mypid);
-}
+#sub SaveMeSetup
+#{
+#	my $testname = shift;
+#	my $mypid = $$;
+#	my $res = 1;
+#	my $mysaveme = $testname . ".saveme";
+#	$res = system("mkdir -p $mysaveme");
+#	if($res != 0) {
+#		print "SaveMeSetup: Could not create \"saveme\" directory for test\n";
+#		return(0);
+#	}
+#	my $mypiddir = $mysaveme . "/" . $mypid;
+#	# there should be no matching directory here
+#	# unless we are getting pid recycling. Start fresh.
+#	$res = system("rm -rf $mypiddir");
+#	if($res != 0) {
+#		print "SaveMeSetup: Could not remove prior pid directory in savemedir \n";
+#		return(0);
+#	}
+#	$res = system("mkdir $mypiddir");
+#	if($res != 0) {
+#		print "SaveMeSetup: Could not create pid directory in \"saveme\" directory\n";
+#		return(0);
+#	}
+#	# make a symbolic link for personal condor module to use
+#	# if we get pid recycling, blow the symbolic link 
+#	# This might not be a symbolic link, so use -r to be sure
+#	#$res = verbose_system("rm -fr $mypid");
+#	#if($res != 0) {
+#		#print "SaveMeSetup: Could not remove prior pid directory\n";
+#		#return(0);
+#	#}
+#	#$res = verbose_system("ln -s $mypiddir $mypid");
+#	#if($res != 0) {
+#		#print "SaveMeSetup: Could not link to pid dir in  \"saveme\" directory\n";
+#		#return(0);
+#	#}
+#	return($mypid);
+#}
 
 sub PersonalSystem 
 {
