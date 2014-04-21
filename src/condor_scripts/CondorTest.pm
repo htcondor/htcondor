@@ -1523,6 +1523,7 @@ sub runCondorTool
 	# use unused third arg to skip the noise like the time
 	my $quiet = shift;
 	my $options = shift; #hash ref
+	my $retval = shift; #ref to return value location, must have 5 args to use
 	my $count = 0;
 	my %altoptions = ();
 	my $failconcerns = 1;
@@ -1561,6 +1562,9 @@ sub runCondorTool
 		my @error =  @{${$hashref}{"stderr"}};
 
 		$status = ${$hashref}{"exitcode"};
+		if(defined $retval ) {
+			$retval = $status;
+		}
 		#print "runCondorTool: Status was <$status>\n";
 		TestDebug("Status is $status after command\n",4);
 		if(( $status != 0 ) && ($failconcerns == 1)){
