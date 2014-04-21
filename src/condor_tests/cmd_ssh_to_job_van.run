@@ -62,7 +62,17 @@ $success = sub {
     CondorTest::EndTest();
 };
 
-CondorTest::StartCondorWithParams();
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+';
+
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"condorssshtojob");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "condorssshtojob",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
 
 my $testname = "cmd_ssh_to_job_van";
 CondorTest::RegisterSubmit( $testname, $submit );
