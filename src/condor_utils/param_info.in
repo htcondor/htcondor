@@ -396,9 +396,7 @@ review=?
 tags=vm-gahp,vmgahp
 
 [VM_GAHP_LOG]
-default=/tmp/VMGAHPLog.$(USERNAME)
-# daemons that run as user can't write to $(LOG) and there is no /tmp on windows
-win32_default=NUL
+default=$(LOG)/VMGahpLog
 type=path
 reconfig=true
 customization=seldom
@@ -2162,7 +2160,7 @@ review=?
 tags=collector,view_server
 
 [LOCAL_DIR]
-default=$(RELEASE_DIR)/hosts/$(HOSTNAME)
+default=$(TILDE)
 win32_default=$(RELEASE_DIR)
 type=string
 reconfig=true
@@ -2657,7 +2655,8 @@ friendly_name=Ignore Nfs Lock Errors
 review=?
 
 [MAIL]
-default=/usr/bin/mail
+# default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
+default=/bin/mail
 win32_default=$(BIN)\condor_mail.exe
 type=path
 reconfig=true
@@ -4744,7 +4743,7 @@ review=?
 tags=schedd,schedd
 
 [SHADOW_STANDARD]
-default=$(SBIN)/condor_shadow
+default=$(SBIN)/condor_shadow.std
 win32_default=
 type=path
 tags=schedd,schedd
@@ -6518,8 +6517,8 @@ review=?
 tags=c++_util,condor_config
 
 [GANGLIAD_METRICS_CONFIG_DIR]
-default=/etc/condor/ganglia.d
-type=string
+default=$(RELEASE_DIR)/etc/condor/ganglia.d
+type=path
 reconfig=true
 customization=seldom
 friendly_name=Ganglia metric config dir
@@ -6708,6 +6707,14 @@ customization=seldom
 friendly_name=Permissions on the job's execute directory
 review=?
 tags=starter
+
+[FILETRANSFER_PLUGINS]
+default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
+win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe
+customization=seldom
+friendly_name=List of installed file transfer plugins
+tags=startd
+review=?
 
 [CONDOR_ADMIN]
 default=root@$(FULL_HOSTNAME)

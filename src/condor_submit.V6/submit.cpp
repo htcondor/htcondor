@@ -426,6 +426,8 @@ const char* EC2VpcIP = "ec2_vpc_ip";
 const char* EC2TagNames = "ec2_tag_names";
 const char* EC2SpotPrice = "ec2_spot_price";
 
+const char* BoincAuthenticatorFile = "boinc_authenticator_file";
+
 //
 // GCE Parameters
 //
@@ -1731,14 +1733,15 @@ SetExecutable()
 	MyString	full_ename;
 	MyString buffer;
 
-	// In vm universe and ec2 grid jobs, 'Executable' parameter is not
-	// a real file but just the name of job.
+	// In vm universe and ec2/deltacloud/boinc grid jobs, 'Executable'
+	// parameter is not a real file but just the name of job.
 	if ( JobUniverse == CONDOR_UNIVERSE_VM ||
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
 		   ( strcasecmp( JobGridType, "ec2" ) == MATCH ||
 			 strcasecmp( JobGridType, "gce" ) == MATCH ||
-		     strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
+		     strcasecmp( JobGridType, "deltacloud" ) == MATCH ||
+			 strcasecmp( JobGridType, "boinc" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
 
@@ -2066,6 +2069,7 @@ SetUniverse()
 				(strcasecmp (JobGridType, "gce") == MATCH) ||
 				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
+				(strcasecmp (JobGridType, "boinc") == MATCH) ||
 				(strcasecmp (JobGridType, "cream") == MATCH)){
 				// We're ok	
 				// Values are case-insensitive for gridmanager, so we don't need to change case			
@@ -2077,7 +2081,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt5, pbs, lsf, "
-						 "sge, nqs, condor, nordugrid, unicore, ec2, gce, deltacloud, or cream\n" );
+						 "sge, nqs, condor, nordugrid, unicore, ec2, gce, deltacloud, cream, or boinc\n" );
 				exit( 1 );
 			}
 		}			
@@ -5700,6 +5704,26 @@ SetGridParams()
 		InsertJobExpr(buffer.Value());
 	}
 
+	if ( (tmp = condor_param( BoincAuthenticatorFile,
+							  ATTR_BOINC_AUTHENTICATOR_FILE )) ) {
+		// check authenticator file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open authenticator file %s (%s)\n", 
+								 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.formatstr( "%s = \"%s\"", ATTR_BOINC_AUTHENTICATOR_FILE,
+						  full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "boinc" ) == 0 ) {
+		fprintf(stderr, "\nERROR: BOINC jobs require a \"%s\" parameter\n", BoincAuthenticatorFile );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
 
 	//
 	// GCE grid-type submit attributes

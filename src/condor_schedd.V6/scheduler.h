@@ -662,6 +662,10 @@ private:
 	struct sockaddr_in	From;
 	int					Len; 
 
+	ExprTree* slotWeight;
+	ClassAd*  slotWeightMapAd;
+	bool			m_use_slot_weights;
+
 	// utility functions
 	int				count_jobs();
 	bool			fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level=-1); 
