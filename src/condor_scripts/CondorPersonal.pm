@@ -340,7 +340,7 @@ sub StartCondorWithParams
 	my $winpath = "";
 
 	if($btdebug == 1) {
-		print "######################### StartCondorWithParams: toplevedir: $topleveldir ###########################\n";
+		#print "######################### StartCondorWithParams: toplevedir: $topleveldir ###########################\n";
 	}
 
 	system("mkdir -p $topleveldir/$testname.saveme/$mpid/$mpid$version");
@@ -385,9 +385,11 @@ sub StartCondorWithParams
 	#}
 
 	$localdir = CondorPersonal::InstallPersonalCondor();
+	#print "localdir after InstallPersonalCondor:$localdir\n";
 
 	#print "StartCondorWithParams: Hash <personal_condor_params > <post-InstallPersonalCondor>holds:\n";
 	#foreach my $key (sort keys %personal_condor_params) {
+	#print "run through hash. This key:$key\n";
 	#print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
 	#}
 
@@ -409,12 +411,10 @@ sub StartCondorWithParams
 	#foreach my $key (sort keys %personal_condor_params) {
 	#print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
 	#}
+#	print "before not start StartCondorWithParams: home:$home toplevel:$topleveldir config:$personal_config_file\n"; 
 
-	# reset topleveldir to $home so all configs go at same level
-	$topleveldir = $home;
-
+	$ENV{CONDOR_CONFIG} = $personal_config_file;
 	if(exists $personal_condor_params{"do_not_start"}) {
-		$ENV{CONDOR_CONFIG} = $personal_config_file;
 		return("do_not_start");
 	}
 
@@ -424,6 +424,8 @@ sub StartCondorWithParams
 	#print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
 	#}
 
+	# reset topleveldir to $home so all configs go at same level
+	$topleveldir = $home;
 
 	debug( "collector port is $collector_port\n",$debuglevel);
 
@@ -447,6 +449,7 @@ sub StartCondorWithParams
 		print  "Personal Condor Started\n";
 		print scalar localtime() . "\n";
 	}
+	#print "StartCondorWithParams returning:$config_and_port\n";
 	return( $config_and_port );
 }
 
@@ -1439,7 +1442,12 @@ sub StartPersonalCondor
 	}
 
 	my $configfile = $control{"condorconfig"};
-	my $fullconfig = "$topleveldir/$configfile";
+	#my $fullconfig = "$topleveldir/$configfile";
+	
+	my $fullconfig = "$ENV{CONDOR_CONFIG}";
+
+	#print "StartPersonalCondor:fullconfig:$fullconfig\n";
+
 	my $oldpath = $ENV{PATH};
 	my $newpath = $localdir . "sbin:" . $localdir . "bin:" . "$oldpath";
 	my $figpath = "";
@@ -1668,10 +1676,11 @@ sub StateChange
 	#print "StateChange: $desiredstate/$config\n";
 	my $state = "";
 	my $now = 0;
-	#print "-$RunningTimeStamp-\n";
+	print "-$RunningTimeStamp-\n";
 	# we'll use this to set alive field in instance correctly
 	# or upon error to drop out condor_who data
 	my $condor_config = $ENV{CONDOR_CONFIG};
+	#print "StateChange: condor_config:$condor_config\n";
 	my $condor_instance = CondorTest::GetPersonalCondorWithConfig($condor_config);
 	my $daemonlist = $condor_instance->GetDaemonList();
 	if($desiredstate eq "up") {
@@ -2873,45 +2882,45 @@ sub FindCollectorPort
 #
 #################################################################
 
-#sub SaveMeSetup
-#{
-#	my $testname = shift;
-#	my $mypid = $$;
-#	my $res = 1;
-#	my $mysaveme = $testname . ".saveme";
-#	$res = system("mkdir -p $mysaveme");
-#	if($res != 0) {
-#		print "SaveMeSetup: Could not create \"saveme\" directory for test\n";
-#		return(0);
-#	}
-#	my $mypiddir = $mysaveme . "/" . $mypid;
-#	# there should be no matching directory here
-#	# unless we are getting pid recycling. Start fresh.
-#	$res = system("rm -rf $mypiddir");
-#	if($res != 0) {
-#		print "SaveMeSetup: Could not remove prior pid directory in savemedir \n";
-#		return(0);
-#	}
-#	$res = system("mkdir $mypiddir");
-#	if($res != 0) {
-#		print "SaveMeSetup: Could not create pid directory in \"saveme\" directory\n";
-#		return(0);
-#	}
-#	# make a symbolic link for personal condor module to use
-#	# if we get pid recycling, blow the symbolic link 
-#	# This might not be a symbolic link, so use -r to be sure
-#	#$res = verbose_system("rm -fr $mypid");
-#	#if($res != 0) {
-#		#print "SaveMeSetup: Could not remove prior pid directory\n";
-#		#return(0);
-#	#}
-#	#$res = verbose_system("ln -s $mypiddir $mypid");
-#	#if($res != 0) {
-#		#print "SaveMeSetup: Could not link to pid dir in  \"saveme\" directory\n";
-#		#return(0);
-#	#}
-#	return($mypid);
-#}
+sub SaveMeSetup
+{
+	my $testname = shift;
+	my $mypid = $$;
+	my $res = 1;
+	my $mysaveme = $testname . ".saveme";
+	$res = system("mkdir -p $mysaveme");
+	if($res != 0) {
+		print "SaveMeSetup: Could not create \"saveme\" directory for test\n";
+		return(0);
+	}
+	my $mypiddir = $mysaveme . "/" . $mypid;
+	# there should be no matching directory here
+	# unless we are getting pid recycling. Start fresh.
+	$res = system("rm -rf $mypiddir");
+	if($res != 0) {
+		print "SaveMeSetup: Could not remove prior pid directory in savemedir \n";
+		return(0);
+	}
+	$res = system("mkdir $mypiddir");
+	if($res != 0) {
+		print "SaveMeSetup: Could not create pid directory in \"saveme\" directory\n";
+		return(0);
+	}
+	# make a symbolic link for personal condor module to use
+	# if we get pid recycling, blow the symbolic link 
+	# This might not be a symbolic link, so use -r to be sure
+	#$res = verbose_system("rm -fr $mypid");
+	#if($res != 0) {
+		#print "SaveMeSetup: Could not remove prior pid directory\n";
+		#return(0);
+	#}
+	#$res = verbose_system("ln -s $mypiddir $mypid");
+	#if($res != 0) {
+		#print "SaveMeSetup: Could not link to pid dir in  \"saveme\" directory\n";
+		#return(0);
+	#}
+	return($mypid);
+}
 
 sub PersonalSystem 
 {
