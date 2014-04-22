@@ -531,7 +531,9 @@ ResMgr::reconfig_resources( void )
 #endif
 
 #if HAVE_JOB_HOOKS
-	m_hook_mgr->reconfig();
+	if ( m_hook_mgr ) {
+		m_hook_mgr->reconfig();
+	}
 #endif
 
 #if HAVE_HIBERNATION
