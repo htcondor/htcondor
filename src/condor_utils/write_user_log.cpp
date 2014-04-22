@@ -262,6 +262,7 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 				dprintf(D_ALWAYS, "WriteUserLog::initialize: failed to open file %s\n",
 					log->path.c_str() );
 				ret = false;
+				delete log;
 				break;
 			} else {
 				dprintf(D_FULLDEBUG, "WriteUserLog::initialize: opened %s successfully\n",
