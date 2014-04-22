@@ -2998,7 +2998,7 @@ sub StartCondorWithParams
 
     #my $new_condor = CreateAndStoreCondorInstance( $condor_name, $condor_config, 0, 0 );
 
-    my $condor_info = CondorPersonal::StartCondorWithParams( %condor_params, $condor_name );
+    my $condor_info = CondorPersonal::StartCondorWithParams( %condor_params );
 
 	if(exists $condor_params{do_not_start}) {
 		print "CondorTest::StartCondorWithParams: bailing after config\n";
