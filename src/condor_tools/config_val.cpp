@@ -134,7 +134,14 @@ usage(int retval = 1)
 		"\t-unused\t\tPrint only variables not used by the specified daemon\n"
 		"      these options apply when reading configuration files\n"
 		"\t-config\t\tPrint the locations of configuration files\n"
-		"\t-writeconfig <file>\tWrite non-default configuration to <file>\n"
+		"\t-writeconfig[:<filter>[,only]] <file>\tWrite configuration to <file>\n"
+		"\t\twhere <filter> is a comma separated filter option\n"
+		"\t\t\tdefault - compile time default values\n"
+		"\t\t\tdetected - detected values\n"
+		"\t\t\tenvironment - values read from environment\n"
+		"\t\t\tfile - values from config file(s)\n"
+		"\t\t\tonly - show only values that match the filter\n"
+		"\t\t\tupgrade - values changed by config files(s)\n"
 		//"\t-reconfig <file>\tReload configuration files and append <file>\n"
 		"\t-mixedcase\tPrint variable names as originally specified\n"
 		"\t-local-name <name>  Use local name for querying and expanding\n"
@@ -483,11 +490,16 @@ main( int argc, const char* argv[] )
 		// arguments that don't begin with "-" are params to be looked up.
 		if (*argv[i] != '-') {
 			// allow "use category:value" syntax to query meta-params
-			if (MATCH == strcasecmp(argv[i], "use") && *argv[i+1] && *argv[i+1] != '-') {
-				++i; // skip "use"
-				// save off the parameter name, prefixed with $ so that the code below we know it's a metaknob name.
-				std::string meta("$"); meta += argv[i];
-				params.append(strdup(meta.c_str()));
+			if (MATCH == strcasecmp(argv[i], "use")) {
+				if (argv[i+1] && *argv[i+1] != '-') {
+					++i; // skip "use"
+					// save off the parameter name, prefixed with $ so that the code below we know it's a metaknob name.
+					std::string meta("$"); meta += argv[i];
+					params.append(strdup(meta.c_str()));
+				} else {
+					fprintf(stderr, "use should be followed by a category or category:option argument\n");
+					params.append(strdup("$"));
+				}
 			} else {
 				params.append(strdup(argv[i]));
 			}
