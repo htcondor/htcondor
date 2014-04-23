@@ -691,7 +691,7 @@ command_match_info( Service*, int cmd, Stream* stream )
 	return rval;
 }
 
-#if 1
+#if 0 // temporary code for testing swap_claim_and_activation
 void hack_test_claim_swap(StringList & args)
 {
 	args.rewind();
@@ -704,7 +704,6 @@ void hack_test_claim_swap(StringList & args)
 	dprintf(D_ALWAYS, "Got command to swap claims for '%s' and '%s'\n", ida ? ida : "NULL", idb ? idb : "NULL");
 	if (ida && idb) {
 		Resource* ripa = resmgr->get_by_name(ida);
-#if 1
 		if ( ! ripa) {
 			dprintf(D_ALWAYS, "Could not find Resource for '%s'\n", ida);
 		} else {
@@ -722,17 +721,6 @@ void hack_test_claim_swap(StringList & args)
 			int iret = swap_claim_and_activation(ripa, opts, NULL);
 			dprintf(D_ALWAYS, "swap_claim_and_activation returned %d\n", iret);
 		}
-#else
-		Resource* ripb = resmgr->get_by_name(idb);
-		if (ripa && ripb) {
-			dprintf(D_ALWAYS, "Swapping claims\n");
-			Resource::swap_claims(ripa, ripb);
-			dprintf(D_ALWAYS, "Claims swapped\n");
-		} else {
-			if ( ! ripa) dprintf(D_ALWAYS, "Could not find resource for %s\n", ida);
-			if ( ! ripb) dprintf(D_ALWAYS, "Could not find resource for %s\n", idb);
-		}
-#endif
 	}
 }
 #endif
@@ -763,7 +751,7 @@ command_query_ads( Service*, int, Stream* stream)
    int      dc_publish_flags = daemonCore->dc_stats.PublishFlags;
    queryAd.LookupString("STATISTICS_TO_PUBLISH",stats_config);
    if ( ! stats_config.IsEmpty()) {
-#if 1 // HACK to test config swap
+#if 0 // HACK to test swapping claims without a schedd
        dprintf(D_ALWAYS, "Got QUERY_STARTD_ADS with stats config: %s\n", stats_config.c_str());
        if (starts_with_ignore_case(stats_config.c_str(), "swap:")) {
 		   StringList swap_args(stats_config.c_str()+5);
