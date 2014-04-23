@@ -201,6 +201,8 @@ bool condor_sockaddr::from_sinful(const MyString& sinful) {
 // faithful reimplementation of 'string_to_sin' of internet.c
 bool condor_sockaddr::from_sinful(const char* sinful)
 {
+	if ( !sinful ) return false;
+
 	const char* addr = sinful;
 	bool ipv6 = false;
 	const char* addr_begin = NULL;
