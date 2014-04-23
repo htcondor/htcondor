@@ -1382,7 +1382,7 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		}
 		dprintf( D_ALWAYS, "%s\n", transobject->Info.error_desc.Value() );
 	} else {
-		if( WEXITSTATUS(exit_status) != 0 ) {
+		if( WEXITSTATUS(exit_status) == 1 ) {
 			dprintf( D_ALWAYS, "File transfer completed successfully.\n" );
 			transobject->Info.success = true;
 		} else {
@@ -1403,7 +1403,13 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 
 		// if we haven't already read the final status update, do it now
 	if( transobject->registered_xfer_pipe ) {
-		transobject->ReadTransferPipeMsg();
+		// It's possible that the pipe contains a progress update message
+		// followed by the final update message. Keep reading until we
+		// get the final message or encounter an error.
+		do {
+			transobject->ReadTransferPipeMsg();
+		} while ( transobject->Info.success &&
+				  transobject->Info.xfer_status != XFER_STATUS_DONE );
 	}
 
 	if( transobject->registered_xfer_pipe ) {
