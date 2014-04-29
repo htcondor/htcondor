@@ -857,8 +857,11 @@ Inclusion of characters other than these as options are ignored.
     If any argument is not a string, or if \Expr{pattern} does not describe
     a valid regular expression, returns \Expr{ERROR}.
 
+% LaTeX can't get the right stuff on a single line, so break the item[]
+% early. Stupid solution, but if it works. . .
   \index{ClassAd functions!regexps()}
-  \item[\Code{String regexps(String pattern, String target, String substitute  \Lbr\ , String options \Rbr) } ]
+  \item[\Code{String regexps}] \Code{(String pattern, String target, 
+   String substitute \Lbr\ , String options \Rbr) } 
     Uses the description of a regular expression 
     given by string \Expr{pattern}
     to scan through the string \Expr{target}.
@@ -868,8 +871,12 @@ Inclusion of characters other than these as options are ignored.
     with backslash expansion performed.
     If any argument is not a string, returns \Expr{ERROR}.
 
+% LaTeX can't get the right stuff on a single line, so break the item[]
+% early. Stupid solution, but if it works. . .
   \index{ClassAd functions!stringList\_regexpMember()}
-  \item[\Code{Boolean stringList\_regexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr\ \Lbr\ , String options \Rbr) } ]
+  \item[\Code{Boolean stringList\_regexpMember}]
+    \Code{(String pattern, String list \Lbr\ , String delimiter 
+    \Rbr\ \Lbr\ , String options \Rbr) } 
     Uses the description of a regular expression 
     given by string \Expr{pattern}
     to scan through the list of strings in \Expr{list}.

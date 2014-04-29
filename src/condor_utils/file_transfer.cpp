@@ -1386,7 +1386,7 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		}
 		dprintf( D_ALWAYS, "%s\n", transobject->Info.error_desc.Value() );
 	} else {
-		if( WEXITSTATUS(exit_status) == 1 ) {
+		if( WEXITSTATUS(exit_status) != 0 ) {
 			dprintf( D_ALWAYS, "File transfer completed successfully.\n" );
 			transobject->Info.success = true;
 		} else {
