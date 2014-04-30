@@ -1286,10 +1286,10 @@ class DaemonCore : public Service
 
 	/** Public method to allow things that fork() themselves without
 		using Create_Thread() to set the magic DC variable so that our
-		version of exit() uses exec() instead of exit() and we don't
+		version of exit() uses _exit() instead of exit() and we don't
 		call destructors when the child exits.
 	*/
-	void Forked_Child_Wants_Exit_By_Exec( bool exit_by_exec );
+	void Forked_Child_Wants_Fast_Exit( bool exit_by_exec );
 
     Stream **GetInheritedSocks() { return (Stream **)inheritedSocks; }
 
