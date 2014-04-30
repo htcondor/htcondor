@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2011 Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -243,9 +243,10 @@ static unsigned int compute_pid_hash(const pid_t &key)
 
 DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 				int SocSize,int ReapSize,int PipeSize)
+	: comTable(32), sigTable(10), reapTable(4)
 {
 
-	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || PidSize < 0)
+	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || PidSize < 0 || ReapSize < 0)
 	{
 		EXCEPT("Invalid argument(s) for DaemonCore constructor");
 	}
@@ -308,23 +309,18 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	if(maxCommand == 0)
 		maxCommand = DEFAULT_MAXCOMMANDS;
 
-	comTable = new CommandEnt[maxCommand];
-	if(comTable == NULL) {
-		EXCEPT("Out of memory!");
-	}
 	nCommand = 0;
-	memset(comTable,'\0',maxCommand*sizeof(CommandEnt));
+	CommandEnt blankCommandEnt;
+	memset(&blankCommandEnt, '\0', sizeof(CommandEnt));
+	comTable.fill(blankCommandEnt);
 
 	if(maxSig == 0)
 		maxSig = DEFAULT_MAXSIGNALS;
 
-	sigTable = new SignalEnt[maxSig];
-	if(sigTable == NULL)
-	{
-		EXCEPT("Out of memory!");
-	}
 	nSig = 0;
-	memset(sigTable,'\0',maxSig*sizeof(SignalEnt));
+	SignalEnt blankSignalEnt;
+	memset(&blankSignalEnt, '\0', sizeof(SignalEnt));
+	sigTable.fill(blankSignalEnt);
 
 	if(maxSocket == 0)
 		maxSocket = DEFAULT_MAXSOCKETS;
@@ -371,13 +367,11 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	if(maxReap == 0)
 		maxReap = DEFAULT_MAXREAPS;
 
-	reapTable = new ReapEnt[maxReap];
-	if(reapTable == NULL)
-	{
-		EXCEPT("Out of memory!");
-	}
 	nReap = 0;
-	memset(reapTable,'\0',maxReap*sizeof(ReapEnt));
+	nextReapId = 1;
+	ReapEnt blankReapEnt;
+	memset(&blankReapEnt, '\0', sizeof(ReapEnt));
+	reapTable.fill(blankReapEnt);
 	defaultReaper=-1;
 
 	curr_dataptr = NULL;
@@ -506,22 +500,14 @@ DaemonCore::~DaemonCore()
 	close(async_pipe[0]);
 #endif
 
-	if (comTable != NULL )
-	{
-		for (i=0;i<maxCommand;i++) {
-			free( comTable[i].command_descrip );
-			free( comTable[i].handler_descrip );
-		}
-		delete []comTable;
+	for (i=0;i<nCommand;i++) {
+		free( comTable[i].command_descrip );
+		free( comTable[i].handler_descrip );
 	}
 
-	if (sigTable != NULL)
-	{
-		for (i=0;i<maxSig;i++) {
-			free( sigTable[i].sig_descrip );
-			free( sigTable[i].handler_descrip );
-		}
-		delete []sigTable;
+	for (i=0;i<nSig;i++) {
+		free( sigTable[i].sig_descrip );
+		free( sigTable[i].handler_descrip );
 	}
 
 	if (sockTable != NULL)
@@ -570,13 +556,9 @@ DaemonCore::~DaemonCore()
 		delete super_dc_ssock;
 	}
 
-	if (reapTable != NULL)
-	{
-		for (i=0;i<maxReap;i++) {
-			free( reapTable[i].reap_descrip );
-			free( reapTable[i].handler_descrip );
-		}
-		delete []reapTable;
+	for (i=0;i<nReap;i++) {
+		free( reapTable[i].reap_descrip );
+		free( reapTable[i].handler_descrip );
 	}
 
 	// Delete all entries from the pidTable, and the table itself
@@ -804,19 +786,19 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
 
 int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
 				SocketHandler handler, const char* handler_descrip,
-				Service* s, DCpermission perm)
+				Service* s, DCpermission perm, HandlerType handler_type)
 {
 	return( Register_Socket(iosock, iosock_descrip, handler,
 							(SocketHandlercpp)NULL, handler_descrip, s,
-							perm, FALSE) );
+							perm, handler_type, FALSE) );
 }
 
 int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
 				SocketHandlercpp handlercpp, const char* handler_descrip,
-				Service* s, DCpermission perm)
+				Service* s, DCpermission perm, HandlerType handler_type)
 {
 	return( Register_Socket(iosock, iosock_descrip, NULL, handlercpp,
-							handler_descrip, s, perm, TRUE) );
+							handler_descrip, s, perm, handler_type, TRUE) );
 }
 
 int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
@@ -954,8 +936,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 				int dprintf_flag, int is_cpp, bool force_authentication,
 				int wait_for_payload)
 {
-    int     i;		// hash value
-    int     j;		// for linear probing
+	int i = -1;
 
     if( handler == 0 && handlercpp == 0 ) {
 		dprintf(D_DAEMONCORE, "Can't register NULL command handler\n");
@@ -966,37 +947,27 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 		EXCEPT("# of command handlers exceeded specified maximum");
     }
 
-	// We want to allow "command" to be a negative integer, so
-	// be careful about sign when computing our simple hash value
-    if(command < 0) {
-        i = -command % maxCommand;
-    } else {
-        i = command % maxCommand;
-    }
-
-	// See if our hash landed on an empty bucket...
-    if ( (comTable[i].handler) || (comTable[i].handlercpp) ) {
-		// occupied
-        if(comTable[i].num == command) {
-			// by the same signal
+	// Search our array for an empty spot and ensure there isn't an entry
+	// for this command already.
+	for ( int j = 0; j < nCommand; j++ ) {
+		if ( comTable[j].handler == NULL && comTable[j].handlercpp == NULL ) {
+			i = j;
+		}
+		if ( comTable[j].num == command ) {
 			EXCEPT("DaemonCore: Same command registered twice");
-        }
-		// by some other signal, so scan thru the entries to
-		// find the first empty one
-        for(j = (i + 1) % maxCommand; j != i; j = (j + 1) % maxCommand) {
-            if( (comTable[j].handler == 0) && (comTable[j].handlercpp == 0) )
-            {
-				i = j;
-				break;
-            }
-        }
-    }
+		}
+	}
+	if ( i == -1 ) {
+		// We need to add a new entry at the end of our array
+		i = nCommand;
+		nCommand++;
+	}
 
 	// Found a blank entry at index i. Now add in the new data.
 	comTable[i].num = command;
 	comTable[i].handler = handler;
 	comTable[i].handlercpp = handlercpp;
-	comTable[i].is_cpp = is_cpp;
+	comTable[i].is_cpp = (bool)is_cpp;
 	comTable[i].perm = perm;
 	comTable[i].force_authentication = force_authentication;
 	comTable[i].service = s;
@@ -1014,9 +985,6 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	else
 		comTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
-	// Increment the counter of total number of entries
-	nCommand++;
-
 	// Update curr_regdataptr for SetDataPtr()
 	curr_regdataptr = &(comTable[i].data_ptr);
 
@@ -1030,10 +998,10 @@ int DaemonCore::Cancel_Command( int command )
 {
 
 	int i;
-	for(i = 0; i<maxCommand; i++) {
-		if( comTable[i].num == command )
+	for(i = 0; i<nCommand; i++) {
+		if( comTable[i].num == command &&
+			( comTable[i].handler || comTable[i].handlercpp ) )
 		{
-			comTable[i].num = 0;
 			comTable[i].num = 0;
 			comTable[i].handler = 0;
 			comTable[i].handlercpp = 0;
@@ -1041,7 +1009,11 @@ int DaemonCore::Cancel_Command( int command )
 			comTable[i].command_descrip = NULL;
 			free(comTable[i].handler_descrip);
 			comTable[i].handler_descrip = NULL;
-			nCommand--;
+			while ( nCommand > 0 && comTable[nCommand - 1].num == 0 &&
+					comTable[nCommand - 1].handler == NULL &&
+					comTable[nCommand - 1].handlercpp == NULL ) {
+				nCommand--;
+			}
 			return TRUE;
 		}
 	}
@@ -1295,8 +1267,7 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 				const char* handler_descrip, Service* s, 
 				int is_cpp)
 {
-    int     i;		// hash value
-    int     j;		// for linear probing
+    int i = -1;
 
 
     if( handler == 0 && handlercpp == 0 ) {
@@ -1326,42 +1297,30 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		EXCEPT("# of signal handlers exceeded specified maximum");
     }
 
-	// We want to allow "command" to be a negative integer, so
-	// be careful about sign when computing our simple hash value
-    if(sig < 0) {
-        i = -sig % maxSig;
-    } else {
-        i = sig % maxSig;
-    }
-
-	// See if our hash landed on an empty bucket...  We identify an empty
-	// bucket by checking of there is a handler (or a c++ handler) defined;
-	// if there is no handler, then it is an empty entry.
-    if( sigTable[i].handler || sigTable[i].handlercpp ) {
-		// occupied...
-        if(sigTable[i].num == sig) {
-			// by the same signal
+	// Search our array for an empty spot and ensure there isn't an entry
+	// for this signal already.
+	for ( int j = 0; j < nSig; j++ ) {
+		if ( sigTable[j].num == 0 ) {
+			i = j;
+		}
+		if ( sigTable[j].num == sig ) {
 			EXCEPT("DaemonCore: Same signal registered twice");
-        }
-		// by some other signal, so scan thru the entries to
-		// find the first empty one
-        for(j = (i + 1) % maxSig; j != i; j = (j + 1) % maxSig) {
-            if( (sigTable[j].handler == 0) && (sigTable[j].handlercpp == 0) )
-            {
-				i = j;
-				break;
-            }
-        }
-    }
+		}
+	}
+	if ( i == -1 ) {
+		// We need to add a new entry at the end of our array
+		i = nSig;
+		nSig++;
+	}
 
 	// Found a blank entry at index i. Now add in the new data.
 	sigTable[i].num = sig;
 	sigTable[i].handler = handler;
 	sigTable[i].handlercpp = handlercpp;
-	sigTable[i].is_cpp = is_cpp;
+	sigTable[i].is_cpp = (bool)is_cpp;
 	sigTable[i].service = s;
-	sigTable[i].is_blocked = FALSE;
-	sigTable[i].is_pending = FALSE;
+	sigTable[i].is_blocked = false;
+	sigTable[i].is_pending = false;
 	free(sigTable[i].sig_descrip);
 	if ( sig_descrip )
 		sigTable[i].sig_descrip = strdup(sig_descrip);
@@ -1372,9 +1331,6 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		sigTable[i].handler_descrip = strdup(handler_descrip);
 	else
 		sigTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
-
-	// Increment the counter of total number of entries
-	nSig++;
 
 	// Update curr_regdataptr for SetDataPtr()
 	curr_regdataptr = &(sigTable[i].data_ptr);
@@ -1387,27 +1343,15 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 
 int DaemonCore::Cancel_Signal( int sig )
 {
-	int i,j;
 	int found = -1;
 
-	// We want to allow "command" to be a negative integer, so
-	// be careful about sign when computing our simple hash value
-    if(sig < 0) {
-        i = -sig % maxSig;
-    } else {
-        i = sig % maxSig;
-    }
-
 	// find this signal in our table
-	j = i;
-	do {
-		if ( (sigTable[j].num == sig) &&
-			 ( sigTable[j].handler || sigTable[j].handlercpp ) ) {
-			found = j;
-		} else {
-			j = (j + 1) % maxSig;
+	for ( int i = 0; i < nSig; i++ ) {
+		if ( sigTable[i].num == sig ) {
+			found = i;
+			break;
 		}
-	} while ( j != i && found == -1 );
+	}
 
 	// Check if found
 	if ( found == -1 ) {
@@ -1422,9 +1366,6 @@ int DaemonCore::Cancel_Signal( int sig )
 	free( sigTable[found].handler_descrip );
 	sigTable[found].handler_descrip = NULL;
 
-	// Decrement the counter of total number of entries
-	nSig--;
-
 	// Clear any data_ptr which go to this entry we just removed
 	if ( curr_regdataptr == &(sigTable[found].data_ptr) )
 		curr_regdataptr = NULL;
@@ -1438,6 +1379,11 @@ int DaemonCore::Cancel_Signal( int sig )
 	free( sigTable[found].sig_descrip );
 	sigTable[found].sig_descrip = NULL;
 
+	// Shrink our table size if we have empty entries at the end
+	while ( nSig > 0 && sigTable[nSig-1].num == 0 ) {
+		nSig--;
+	}
+
 	DumpSigTable(D_FULLDEBUG | D_DAEMONCORE);
 
 	return TRUE;
@@ -1446,6 +1392,7 @@ int DaemonCore::Cancel_Signal( int sig )
 int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 				SocketHandler handler, SocketHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, DCpermission perm,
+				HandlerType handler_type,
 				int is_cpp)
 {
     int     i;
@@ -1574,8 +1521,9 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 	(*sockTable)[i].handler = handler;
 	(*sockTable)[i].handlercpp = handlercpp;
-	(*sockTable)[i].is_cpp = is_cpp;
+	(*sockTable)[i].is_cpp = (bool)is_cpp;
 	(*sockTable)[i].perm = perm;
+	(*sockTable)[i].handler_type = handler_type;
 	(*sockTable)[i].service = s;
 	(*sockTable)[i].data_ptr = NULL;
 	free((*sockTable)[i].iosock_descrip);
@@ -1952,7 +1900,7 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	(*pipeTable)[i].handler = handler;
 	(*pipeTable)[i].handler_type = handler_type;
 	(*pipeTable)[i].handlercpp = handlercpp;
-	(*pipeTable)[i].is_cpp = is_cpp;
+	(*pipeTable)[i].is_cpp = (bool)is_cpp;
 	(*pipeTable)[i].perm = perm;
 	(*pipeTable)[i].service = s;
 	(*pipeTable)[i].data_ptr = NULL;
@@ -2328,7 +2276,6 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 				const char *handler_descrip, Service* s, int is_cpp)
 {
     int     i;
-    int     j;
 
     // In reapTable, unlike the others handler tables, we allow for a
 	// NULL handler and a NULL handlercpp - this means just reap
@@ -2351,36 +2298,38 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 				reap_descrip==NULL?"[Not specified]":reap_descrip);
 			EXCEPT("# of reaper handlers exceeded specified maximum");
 		}
-		// scan thru table to find a new entry. scan in such a way
-		// that we do not re-use rid's until we have to.
-		for(i = nReap % maxReap, j=0; j < maxReap; j++, i = (i + 1) % maxReap)
+		// scan through the table to find an empty slot
+		for(i = 0; i <= nReap; i++)
 		{
 			if ( reapTable[i].num == 0 ) {
 				break;
-			} else {
-				if ( reapTable[i].num != i + 1 ) {
-					dprintf(D_ALWAYS, 
-						"Unable to register reaper with description: %s\n",
-						reap_descrip==NULL?"[Not specified]":reap_descrip);
-					EXCEPT("reaper table messed up");
-				}
 			}
 		}
-		nReap++;	// this is a new entry, so increment our counter
-		rid = i + 1;
+		if ( i == nReap ) {
+			// Our new entry is at the end of our array,
+			// so increment our counter
+			nReap++;
+		}
+		rid = nextReapId++;
 	} else {
-		if ( (rid < 1) || (rid > maxReap) )
+		if ( rid < 1 ) {
 			return FALSE;	// invalid rid passed to us
-		if ( (reapTable[rid - 1].num) != rid )
+		}
+		for ( i = 0; i < nReap; i++ ) {
+			if ( reapTable[i].num == rid ) {
+				break;
+			}
+		}
+		if ( reapTable[i].num != rid ) {
 			return FALSE;	// trying to re-register a non-existant entry
-		i = rid - 1;
+		}
 	}
 
 	// Found the entry to use at index i. Now add in the new data.
 	reapTable[i].num = rid;
 	reapTable[i].handler = handler;
 	reapTable[i].handlercpp = handlercpp;
-	reapTable[i].is_cpp = is_cpp;
+	reapTable[i].is_cpp = (bool)is_cpp;
 	reapTable[i].service = s;
 	reapTable[i].data_ptr = NULL;
 	free(reapTable[i].reap_descrip);
@@ -2416,16 +2365,23 @@ int DaemonCore::Lookup_Socket( Stream *insock )
 
 int DaemonCore::Cancel_Reaper( int rid )
 {
-	if( reapTable[rid].num == 0 ) {
+	int idx;
+
+	for ( idx = 0; idx < nReap; idx++ ) {
+		if ( reapTable[idx].num == rid ) {
+			break;
+		}
+	}
+	if ( idx == nReap ) {
 		dprintf(D_ALWAYS,"Cancel_Reaper(%d) called on unregistered reaper.\n",rid);
 		return FALSE;
 	}
 
-	reapTable[rid].num = 0;
-	reapTable[rid].handler = NULL;
-	reapTable[rid].handlercpp = NULL;
-	reapTable[rid].service = NULL;
-	reapTable[rid].data_ptr = NULL;
+	reapTable[idx].num = 0;
+	reapTable[idx].handler = NULL;
+	reapTable[idx].handlercpp = NULL;
+	reapTable[idx].service = NULL;
+	reapTable[idx].data_ptr = NULL;
 
 	PidEntry *pid_entry;
 	pidTable->startIterations();
@@ -2469,7 +2425,7 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	dprintf(flag,"\n");
 	dprintf(flag, "%sCommands Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
-	for (i = 0; i < maxCommand; i++) {
+	for (i = 0; i < nCommand; i++) {
 		if( comTable[i].handler || comTable[i].handlercpp )
 		{
 			descrip1 = "NULL";
@@ -2493,7 +2449,7 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authentica
 
 		// iterate through a list of this perm and all perms implied by it
 	for (perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
-		for (i = 0; i < maxCommand; i++) {
+		for (i = 0; i < nCommand; i++) {
 			if( (comTable[i].handler || comTable[i].handlercpp) &&
 				(comTable[i].perm == perm) &&
 				(!comTable[i].force_authentication || is_authenticated))
@@ -2527,7 +2483,7 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 	dprintf(flag,"\n");
 	dprintf(flag, "%sReapers Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
-	for (i = 0; i < maxReap; i++) {
+	for (i = 0; i < nReap; i++) {
 		if( reapTable[i].handler || reapTable[i].handlercpp ) {
 			descrip1 = "NULL";
 			descrip2 = descrip1;
@@ -2562,7 +2518,7 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 	dprintf(flag, "\n");
 	dprintf(flag, "%sSignals Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~\n", indent);
-	for (i = 0; i < maxSig; i++) {
+	for (i = 0; i < nSig; i++) {
 		if( sigTable[i].handler || sigTable[i].handlercpp ) {
 			descrip1 = "NULL";
 			descrip2 = descrip1;
@@ -2572,7 +2528,7 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 				descrip2 = sigTable[i].handler_descrip;
 			dprintf(flag, "%s%d: %s %s, Blocked:%d Pending:%d\n", indent,
 							sigTable[i].num, descrip1, descrip2,
-							sigTable[i].is_blocked, sigTable[i].is_pending);
+							(int)sigTable[i].is_blocked, (int)sigTable[i].is_pending);
 		}
 	}
 	dprintf(flag, "\n");
@@ -3140,12 +3096,12 @@ void DaemonCore::Driver()
 
 		// call signal handlers for any pending signals
 		sent_signal = FALSE;	// set to True inside Send_Signal()
-			for (i=0;i<maxSig;i++) {
+			for (i=0;i<nSig;i++) {
 				if ( sigTable[i].handler || sigTable[i].handlercpp ) {
 					// found a valid entry; test if we should call handler
 					if ( sigTable[i].is_pending && !sigTable[i].is_blocked ) {
 						// call handler, but first clear pending flag
-						sigTable[i].is_pending = 0;
+						sigTable[i].is_pending = false;
 						// Update curr_dataptr for GetDataPtr()
 						curr_dataptr = &(sigTable[i].data_ptr);
                         // update statistics
@@ -3251,9 +3207,19 @@ void DaemonCore::Driver()
 					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_WRITE );
 					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_EXCEPT );
 				} else {
-						// we want to be woken when there is something
-						// to read.
-					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
+					int sockfd = (*sockTable)[i].iosock->get_file_desc();
+					switch( (*sockTable)[i].handler_type ) {
+					case HANDLE_READ:
+						selector.add_fd( sockfd, Selector::IO_READ );
+						break;
+					case HANDLE_WRITE:
+						selector.add_fd( sockfd, Selector::IO_WRITE );
+						break;
+					case HANDLE_READ_WRITE:
+						selector.add_fd( sockfd, Selector::IO_READ );
+						selector.add_fd( sockfd, Selector::IO_WRITE );
+						break;
+					}
 				}
 
 					// If this socket times out sooner than
@@ -3419,13 +3385,6 @@ void DaemonCore::Driver()
 
         runtime = group_runtime = UtcTime::getTimeDouble();
 
-		// Call reaper handlers before we deal with incoming commands.
-		// The thinking here is incoming commands may very well spawn
-		// more child processes, so it makes sense to reap child processes
-		// who completed their work first before spawning yet more pids.
-		HandleDC_SERVICEWAITPIDS(0);
-
-		// Now, lets see what select told us
 		if ( selector.has_ready() ||
 			 ( selector.timed_out() && 
 			   min_deadline && min_deadline < time(NULL) ) )
@@ -3502,9 +3461,14 @@ void DaemonCore::Driver()
 								(*sockTable)[i].call_handler = true;
 							}
 						}
-					} else {
-						if ( selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
-												Selector::IO_READ ) ||
+					} else if ((*sockTable)[i].handler_type == HANDLE_READ || (*sockTable)[i].handler_type == HANDLE_READ_WRITE) {
+						if ( (selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ ) ) ||
+							 sock_timed_out )
+						{
+							(*sockTable)[i].call_handler = true;
+						}
+					} else if ((*sockTable)[i].handler_type == HANDLE_WRITE || (*sockTable)[i].handler_type == HANDLE_READ_WRITE) {
+						if ( (selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_WRITE ) ) ||
 							 sock_timed_out )
 						{
 							(*sockTable)[i].call_handler = true;
@@ -3817,7 +3781,7 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 		    args->accepted_sock = (Stream *) ((ReliSock *)insock)->accept();
 
 		    if ( !(args->accepted_sock) ) {
-		        dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
+		        dprintf(D_ALWAYS, "DaemonCore: accept() failed!\n");
 		        // no need to add to work pool if we fail to accept
 		        delete args;
 		        return;
@@ -3945,22 +3909,11 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 bool
 DaemonCore::CommandNumToTableIndex(int cmd,int *cmd_index)
 {
-		// first compute the hash
-	if ( cmd < 0 )
-		*cmd_index = -cmd % maxCommand;
-	else
-		*cmd_index = cmd % maxCommand;
+	for ( int i = 0; i < nCommand; i++ ) {
+		if ( comTable[i].num == cmd &&
+			 ( comTable[i].handler || comTable[i].handlercpp ) ) {
 
-	if (comTable[*cmd_index].num == cmd) {
-			// hash found it first try... cool
-		return true;
-	}
-
-		// hash did not find it, search for it
-	int j;
-	for (j = (*cmd_index + 1) % maxCommand; j != *cmd_index; j = (j + 1) % maxCommand) {
-		if(comTable[j].num == cmd) {
-			*cmd_index = j;
+			*cmd_index = i;
 			return true;
 		}
 	}
@@ -4355,28 +4308,15 @@ int DaemonCore::HandleSigCommand(int command, Stream* stream) {
 
 int DaemonCore::HandleSig(int command,int sig)
 {
-	int j,index;
-	int sigFound;
+	int index;
+	int sigFound = FALSE;
 
 	// find the signal entry in our table
-	// first compute the hash
-	if ( sig < 0 )
-		index = -sig % maxSig;
-	else
-		index = sig % maxSig;
-
-	sigFound = FALSE;
-	if (sigTable[index].num == sig) {
-		// hash found it first try... cool
-		sigFound = TRUE;
-	} else {
-		// hash did not find it, search for it
-		for (j = (index + 1) % maxSig; j != index; j = (j + 1) % maxSig)
-			if(sigTable[j].num == sig) {
-				sigFound = TRUE;
-				index = j;
-				break;
-			}
+	for ( index = 0; index < nSig; index++ ) {
+		if ( sigTable[index].num == sig ) {
+			sigFound = TRUE;
+			break;
+		}
 	}
 
 	if ( sigFound == FALSE ) {
@@ -4393,18 +4333,18 @@ int DaemonCore::HandleSig(int command,int sig)
 			// set this signal entry to is_pending.
 			// the code to actually call the handler is
 			// in the Driver() method.
-			sigTable[index].is_pending = TRUE;
+			sigTable[index].is_pending = true;
 			break;
 		case _DC_BLOCKSIGNAL:
-			sigTable[index].is_blocked = TRUE;
+			sigTable[index].is_blocked = true;
 			break;
 		case _DC_UNBLOCKSIGNAL:
-			sigTable[index].is_blocked = FALSE;
+			sigTable[index].is_blocked = false;
 			// now check to see if this signal we are unblocking is pending.
 			// if so, set sent_signal to TRUE.  sent_signal is used by the
 			// Driver() to ensure that a signal raised from inside a
 			// signal handler is indeed delivered.
-			if ( sigTable[index].is_pending == TRUE )
+			if ( sigTable[index].is_pending == true )
 				sent_signal = TRUE;
 			break;
 		default:
@@ -6496,8 +6436,18 @@ int DaemonCore::Create_Process(
 	// First do whatever error checking we can that is not platform specific
 
 	// check reaper_id validity.  note: reaper id of 0 means no reaper wanted.
-	if ( (reaper_id < 0) || (reaper_id > maxReap) ||
-		 ((reaper_id > 0) && (reapTable[reaper_id - 1].num == 0)) ) {
+	if ( reaper_id > 0 && reaper_id < nextReapId ) {
+		int i;
+		for ( i = 0; i < nReap; i++ ) {
+			if ( reapTable[i].num == reaper_id ) {
+				break;
+			}
+		}
+		if ( i == nReap ) {
+			reaper_id = -1;
+		}
+	}
+	if ( (reaper_id < 0) || (reaper_id >= nextReapId) ) {
 		dprintf(D_ALWAYS,"Create_Process: invalid reaper_id\n");
 		goto wrapup;
 	}
@@ -7243,7 +7193,6 @@ int DaemonCore::Create_Process(
 	//
 	newpid = piProcess.dwProcessId;
 	
-#ifdef HAVE_SCHED_SETAFFINITY
 	/* if we have an affinity array mask then: */
 	if ( affinity_mask ) {
 		
@@ -7275,7 +7224,6 @@ int DaemonCore::Create_Process(
 		}
 
 	}
-#endif
 
 	// if requested, register a process family with the procd and unsuspend
 	// the process
@@ -7903,8 +7851,18 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 						  int reaper_id)
 {
 	// check reaper_id validity
-	if ( (reaper_id < 1) || (reaper_id > maxReap)
-		 || (reapTable[reaper_id - 1].num == 0) ) {
+	if ( reaper_id > 0 && reaper_id < nextReapId ) {
+		int i;
+		for ( i = 0; i < nReap; i++ ) {
+			if ( reapTable[i].num == reaper_id ) {
+				break;
+			}
+		}
+		if ( i == nReap ) {
+			reaper_id = -1;
+		}
+	}
+	if ( (reaper_id < 1) || (reaper_id > nextReapId) ) {
 		dprintf(D_ALWAYS,"Create_Thread: invalid reaper_id\n");
 		return FALSE;
 	}
@@ -7929,7 +7887,14 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 
 		priv_state new_priv = get_priv();
 		if( saved_priv != new_priv ) {
-			char const *reaper = reapTable[reaper_id-1].handler_descrip;
+			int i;
+			const char *reaper = NULL;
+			for ( i = 0; i < nReap; i++ ) {
+				if ( reapTable[i].num == reaper_id ) {
+					reaper = reapTable[i].handler_descrip;
+					break;
+				}
+			}
 			dprintf(D_ALWAYS,
 					"Create_Thread: UNEXPECTED: priv state changed "
 					"during worker function: %d %d (%s)\n",
@@ -8923,6 +8888,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 			pidentry->watcherEvent = entry->event;
 			(entry->nEntries)++;
 			if ( !::SetEvent(entry->event) ) {
+				::LeaveCriticalSection(&(entry->crit_section));
 				EXCEPT("SetEvent failed");
 			}
 			alldone = TRUE;
@@ -8967,7 +8933,12 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 	ReapEnt *reaper = NULL;
 
 	if( reaper_id > 0 ) {
-		reaper = &(reapTable[reaper_id-1]);
+		for ( int i = 0; i < nReap; i++ ) {
+			if ( reapTable[i].num == reaper_id ) {
+				reaper = &(reapTable[i]);
+				break;
+			}
+		}
 	}
 	if( !reaper || !(reaper->handler || reaper->handlercpp) ) {
 			// no registered reaper

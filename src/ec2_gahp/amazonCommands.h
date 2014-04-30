@@ -47,7 +47,7 @@
 #define AMAZON_COMMAND_VM_DEREGISTER_IMAGE  "EC2_VM_DEREGISTER_IMAGE"
 #define AMAZON_COMMAND_VM_ASSOCIATE_ADDRESS "EC2_VM_ASSOCIATE_ADDRESS"
 //#define AMAZON_COMMAND_VM_DISASSOCIATE_ADDRESS   "EC2_VM_DISASSOCIATE_ADDRESS"
-#define AMAZON_COMMAND_VM_ATTACH_VOLUME		"EC_VM_ATTACH_VOLUME"
+#define AMAZON_COMMAND_VM_ATTACH_VOLUME		"EC2_VM_ATTACH_VOLUME"
 #define AMAZON_COMMAND_VM_CREATE_TAGS		"EC2_VM_CREATE_TAGS"
 #define AMAZON_COMMAND_VM_SERVER_TYPE		"EC2_VM_SERVER_TYPE"
 
@@ -218,15 +218,6 @@ class AmazonVMStatusAllSpot : public AmazonVMStatusSpot {
 		static bool workerFunction( char ** argv, int argc, std::string & result_string );
 };
 
-class AmazonVMRunningKeypair : public AmazonVMStatusAll {
-	public:
-		AmazonVMRunningKeypair();
-		virtual ~AmazonVMRunningKeypair();
-
-		static bool ioCheck(char **argv, int argc);
-		static bool workerFunction(char **argv, int argc, std::string &result_string);
-};
-
 class AmazonVMCreateKeypair : public AmazonRequest {
 	public:
 		AmazonVMCreateKeypair();
@@ -248,20 +239,6 @@ class AmazonVMDestroyKeypair : public AmazonRequest {
 
 		static bool ioCheck(char **argv, int argc);
 		static bool workerFunction(char **argv, int argc, std::string &result_string);
-};
-
-class AmazonVMKeypairNames : public AmazonRequest {
-	public:
-		AmazonVMKeypairNames();
-		virtual ~AmazonVMKeypairNames();
-
-        virtual bool SendRequest();
-
-		static bool ioCheck(char **argv, int argc);
-		static bool workerFunction(char **argv, int argc, std::string &result_string);
-
-    protected:
-        StringList keyNames;
 };
 
 class AmazonAssociateAddress : public AmazonRequest {

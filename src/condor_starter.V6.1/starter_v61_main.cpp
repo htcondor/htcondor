@@ -355,6 +355,7 @@ parseArgs( int argc, char* argv [] )
 	char _header[] = "-header";
 	char _gridshell[] = "-gridshell";
 	char _schedd_addr[] = "-schedd-addr";
+	char _slot_name[] = "-slot-name";
 	char* target = NULL;
 
 	ASSERT( argc >= 2 );
@@ -397,6 +398,16 @@ parseArgs( int argc, char* argv [] )
 			free( schedd_addr );
 			schedd_addr = strdup( arg );
 			tmp++;	// consume the arg so we don't get confused 
+			continue;
+		}
+
+		if (opt_len >=4 && ! strncmp(opt, _slot_name, opt_len)) {
+			if( ! arg ) {
+				another( _slot_name );
+			}
+			config_insert( "STARTER_SLOT_NAME", arg );
+			dprintf( D_ALWAYS, "STARTER_SLOT_NAME is %s\n", arg);
+			tmp++; // consume the arg
 			continue;
 		}
 

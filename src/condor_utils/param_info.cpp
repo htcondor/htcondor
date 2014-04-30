@@ -49,32 +49,6 @@ int param_info_init(const void ** pvdefaults)
 
 #ifdef PARAM_DEFAULTS_SORTED
 
-// binary search of an array of structures containing a member psz
-// find the (case insensitive) matching element in the array
-// and return a pointer to that element.
-template <typename T>
-const T * BinaryLookup (const T aTable[], int cElms, const char * key, int (*fncmp)(const char *, const char *))
-{
-	if (cElms <= 0)
-		return NULL;
-
-	int ixLower = 0;
-	int ixUpper = cElms-1;
-	for (;;) {
-		if (ixLower > ixUpper)
-			return NULL; // return null for "not found"
-
-		int ix = (ixLower + ixUpper) / 2;
-		int iMatch = fncmp(aTable[ix].key, key);
-		if (iMatch < 0)
-			ixLower = ix+1;
-		else if (iMatch > 0)
-			ixUpper = ix-1;
-		else
-			return &aTable[ix];
-	}
-}
-
 typedef const struct condor_params::key_value_pair param_table_entry_t;
 const param_table_entry_t * param_generic_default_lookup(const char * param)
 {
@@ -309,11 +283,12 @@ param_exact_default_string(const char* param)
 }
 
 int
-param_default_integer(const char* param, const char* subsys, int* valid, int* is_long) {
+param_default_integer(const char* param, const char* subsys, int* valid, int* is_long, int* truncated) {
 	int ret = 0;
 #ifdef PARAM_DEFAULTS_SORTED
 	if (valid) *valid = false;
 	if (is_long) *is_long = false;
+	if (truncated) *truncated = false;
 	const param_table_entry_t* p = param_default_lookup(param, subsys);
 	if (p && p->def) {
 		int type = param_entry_get_type(p);
@@ -333,6 +308,7 @@ param_default_integer(const char* param, const char* subsys, int* valid, int* is
 				if (ret != tmp) {
 					if (tmp > INT_MAX) ret = INT_MAX;
 					if (tmp < INT_MIN) ret = INT_MIN;
+					if (truncated) *truncated = true;
 				};
 				if (valid) *valid = true;
 				if (is_long) *is_long = true;
@@ -447,7 +423,6 @@ param_default_double(const char* param, const char * subsys, int* valid) {
 int
 param_range_long(const char* param, long long* min, long long* max) {
 
-#ifdef PARAM_DEFAULTS_SORTED
 	int ret = -1; // not ranged.
 	const param_table_entry_t* p = param_default_lookup(param);
 	if (p && p->def) {
@@ -480,12 +455,6 @@ param_range_long(const char* param, long long* min, long long* max) {
 		}
 	}
 	return ret;
-#else
-	PRAGMA_REMIND("write this!")
-	*min = LLONG_MIN;
-	*max = LLONG_MAX;
-	ret = 0;
-#endif
 }
 
 int

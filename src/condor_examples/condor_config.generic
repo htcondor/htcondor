@@ -295,7 +295,7 @@ ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 ##  default values for any of these settings.  If they are not
 ##  defined, no attributes can be set with condor_config_val.
 
-## Do you want to allow condor_config_val -reset to work at all?
+## Do you want to allow condor_config_val -rset to work at all?
 ## This feature is disabled by default, so to enable, you must
 ## uncomment the following setting and change the value to "True". 
 ## Note: changing this requires a restart not just a reconfig.
@@ -585,53 +585,54 @@ TRUST_UID_DOMAIN = True
 ## The flags given in ALL_DEBUG are shared between all daemons.
 ##
 
-ALL_DEBUG               =
+#ALL_DEBUG               =
+#MAX_DEFAULT_LOG		= 10 Mb
 
-MAX_COLLECTOR_LOG	= 1000000
-COLLECTOR_DEBUG		=
+#MAX_COLLECTOR_LOG	= $(MAX_DEFAULT_LOG)
+#COLLECTOR_DEBUG		=
 
-MAX_KBDD_LOG		= 1000000
-KBDD_DEBUG		=
+#MAX_KBDD_LOG		= $(MAX_DEFAULT_LOG)
+#KBDD_DEBUG		=
 
-MAX_NEGOTIATOR_LOG	= 1000000
-NEGOTIATOR_DEBUG	= D_MATCH
-MAX_NEGOTIATOR_MATCH_LOG = 1000000
+#MAX_NEGOTIATOR_LOG	= $(MAX_DEFAULT_LOG)
+#NEGOTIATOR_DEBUG	= D_MATCH
+#MAX_NEGOTIATOR_MATCH_LOG = $(MAX_DEFAULT_LOG)
 
-MAX_SCHEDD_LOG		= 1000000
-SCHEDD_DEBUG		= D_PID
+#MAX_SCHEDD_LOG		= $(MAX_DEFAULT_LOG)
+#SCHEDD_DEBUG		= D_PID
 
-MAX_SHADOW_LOG		= 1000000
-SHADOW_DEBUG		=
+#MAX_SHADOW_LOG		= $(MAX_DEFAULT_LOG)
+#SHADOW_DEBUG		=
 
-MAX_STARTD_LOG		= 1000000
-STARTD_DEBUG		= 
+#MAX_STARTD_LOG		= $(MAX_DEFAULT_LOG)
+#STARTD_DEBUG		= 
 
-MAX_STARTER_LOG		= 1000000
+#MAX_STARTER_LOG		= $(MAX_DEFAULT_LOG)
 
-MAX_MASTER_LOG		= 1000000
-MASTER_DEBUG		= 
+#MAX_MASTER_LOG		= $(MAX_DEFAULT_LOG)
+#MASTER_DEBUG		= 
 ##  Truncates master log start up?
 #TRUNC_MASTER_LOG_ON_OPEN        = False
 
-MAX_JOB_ROUTER_LOG      = 1000000
-JOB_ROUTER_DEBUG        =
+#MAX_JOB_ROUTER_LOG      = $(MAX_DEFAULT_LOG)
+#JOB_ROUTER_DEBUG        =
 
-MAX_ROOSTER_LOG         = 1000000
-ROOSTER_DEBUG           =
+#MAX_ROOSTER_LOG         = $(MAX_DEFAULT_LOG)
+#ROOSTER_DEBUG           =
 
-MAX_SHARED_PORT_LOG     = 1000000
-SHARED_PORT_DEBUG       =
+#MAX_SHARED_PORT_LOG     = $(MAX_DEFAULT_LOG)
+#SHARED_PORT_DEBUG       =
 
-MAX_HDFS_LOG            = 1000000
-HDFS_DEBUG              =
+#MAX_HDFS_LOG            = $(MAX_DEFAULT_LOG)
+#HDFS_DEBUG              =
 
 # High Availability Logs
-MAX_HAD_LOG		= 1000000
-HAD_DEBUG		=
-MAX_REPLICATION_LOG	= 1000000
-REPLICATION_DEBUG	=
-MAX_TRANSFERER_LOG	= 1000000
-TRANSFERER_DEBUG	=
+#MAX_HAD_LOG		= $(MAX_DEFAULT_LOG)
+#HAD_DEBUG		=
+#MAX_REPLICATION_LOG	= $(MAX_DEFAULT_LOG)
+#REPLICATION_DEBUG	=
+#MAX_TRANSFERER_LOG	= $(MAX_DEFAULT_LOG)
+#TRANSFERER_DEBUG	=
 
 
 ## The daemons touch their log file periodically, even when they have
@@ -716,54 +717,49 @@ MachineBusy		= ($(CPUBusy) || $(KeyboardBusy))
 
 #####################################################################
 ##  This where you choose the configuration that you would like to
-##  use.  It has no defaults so it must be defined.  We start this
-##  file off with the UWCS_* policy.
+##  use. If you dont specify, the default policy is a no-preemption
+##  policy. This is what older config files called TESTINGMODE_*
 ######################################################################
 
-##  Also here is what is referred to as the TESTINGMODE_*, which is
-##  a quick hardwired way to test Condor with a simple no-preemption policy.
-##  Replace UWCS_* with TESTINGMODE_* if you wish to do testing mode.
-##  For example:
-##  WANT_SUSPEND 		= $(UWCS_WANT_SUSPEND)
-##  becomes
-##  WANT_SUSPEND 		= $(TESTINGMODE_WANT_SUSPEND)
-
 # When should we only consider SUSPEND instead of PREEMPT?
-WANT_SUSPEND 		= $(UWCS_WANT_SUSPEND)
+#WANT_SUSPEND = False
 
 # When should we preempt gracefully instead of hard-killing?
-WANT_VACATE		= $(UWCS_WANT_VACATE)
+#WANT_VACATE = False
 
 ##  When is this machine willing to start a job? 
-START			= $(UWCS_START)
-
-##  When should a local universe job be allowed to start?
-#START_LOCAL_UNIVERSE	= TotalLocalJobsRunning < 200
-
-##  When should a scheduler universe job be allowed to start?
-#START_SCHEDULER_UNIVERSE	= TotalSchedulerJobsRunning < 200
+#START = True
 
 ##  When to suspend a job?
-SUSPEND			= $(UWCS_SUSPEND)
+#SUSPEND = False
 
 ##  When to resume a suspended job?
-CONTINUE		= $(UWCS_CONTINUE)
+#CONTINUE = True
 
 ##  When to nicely stop a job?
 ##  (as opposed to killing it instantaneously)
-PREEMPT			= $(UWCS_PREEMPT)
+#PREEMPT = False
 
 ##  When to instantaneously kill a preempting job
 ##  (e.g. if a job is in the pre-empting stage for too long)
-KILL			= $(UWCS_KILL)
+#KILL = False
 
-PERIODIC_CHECKPOINT	= $(UWCS_PERIODIC_CHECKPOINT)
-PREEMPTION_REQUIREMENTS	= $(UWCS_PREEMPTION_REQUIREMENTS)
-PREEMPTION_RANK		= $(UWCS_PREEMPTION_RANK)
-NEGOTIATOR_PRE_JOB_RANK = $(UWCS_NEGOTIATOR_PRE_JOB_RANK)
-NEGOTIATOR_POST_JOB_RANK = $(UWCS_NEGOTIATOR_POST_JOB_RANK)
-MaxJobRetirementTime    = $(UWCS_MaxJobRetirementTime)
-CLAIM_WORKLIFE          = $(UWCS_CLAIM_WORKLIFE)
+##  A non-zero value here is another way to have a no-preemption policy
+##  a job is given this many seconds to exit even when it is preempted.
+#MaxJobRetirementTime    = 0
+
+#PERIODIC_CHECKPOINT = ((time() - LastPeriodicCheckpoint)/60.0) > (180.0 + $RANDOM_INTEGER(-30,30,1))
+#PREEMPTION_REQUIREMENTS = False
+#PREEMPTION_RANK = $(UWCS_PREEMPTION_RANK)
+#NEGOTIATOR_PRE_JOB_RANK = RemoteOwner =?= UNDEFINED
+#NEGOTIATOR_POST_JOB_RANK = (RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kflops) - SlotID - 1.0e10*(Offline=?=True))
+#CLAIM_WORKLIFE          = 1200
+
+##  When should a local universe job be allowed to start?
+#START_LOCAL_UNIVERSE = TotalLocalJobsRunning < 200
+
+##  When should a scheduler universe job be allowed to start?
+#START_SCHEDULER_UNIVERSE = TotalSchedulerJobsRunning < 200
 
 #####################################################################
 ## This is the UWisc - CS Department Configuration.
@@ -1813,11 +1809,11 @@ WINDOWS_SOFTKILL = $(SBIN)/condor_softkill
 #PREEN_ADMIN		= $(CONDOR_ADMIN)
 
 ##  What files should condor_preen leave in the spool directory?
-VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, \
-                          Accountant.log, Accountantnew.log, \
-                          local_univ_execute, .quillwritepassword, \
-						  .pgpass, \
-						  .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
+#VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, \
+#                          Accountant.log, Accountantnew.log, \
+#                          local_univ_execute, .quillwritepassword, \
+#						  .pgpass, \
+#						  .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
 
 ##  What files should condor_preen remove from the log directory?
 #INVALID_LOG_FILES	= core
@@ -1884,8 +1880,8 @@ GRID_MONITOR			= $(SBIN)/grid_monitor
 ##  Another option is to use /tmp as the location of the GridManager log.
 ## 
 
-MAX_GRIDMANAGER_LOG	= 1000000
-GRIDMANAGER_DEBUG	= 
+#MAX_GRIDMANAGER_LOG	= $(MAX_DEFAULT_LOG)
+#GRIDMANAGER_DEBUG	= 
 
 GRIDMANAGER_LOG = $(LOG)/GridmanagerLog.$(USERNAME)
 GRIDMANAGER_LOCK = $(LOCK)/GridmanagerLock.$(USERNAME)
@@ -1971,7 +1967,7 @@ CONDOR_GAHP_WORKER = $(SBIN)/condor_c-gahp_worker_thread
 ## UNIX permissions 1777 (just like /tmp )
 ## Another option is to use /tmp as the location of the CGAHP log.
 ## 
-MAX_C_GAHP_LOG	= 1000000
+#MAX_C_GAHP_LOG	= $(MAX_DEFAULT_LOG)
 
 #C_GAHP_LOG = $(LOG)/GridLogs/CGAHPLog.$(USERNAME)
 C_GAHP_LOG = /tmp/CGAHPLog.$(USERNAME)
@@ -2048,7 +2044,7 @@ CREDD_ARGS			= -p $(CREDD_PORT) -f
 ## CredD daemon debugging log
 CREDD_LOG			= $(LOG)/CredLog
 CREDD_DEBUG			= D_FULLDEBUG
-MAX_CREDD_LOG		= 4000000
+#MAX_CREDD_LOG		= $(MAX_DEFAULT_LOG)
 
 ## The credential owner submits the credential.  This list specifies
 ## other user who are also permitted to see all credentials.  Defaults
@@ -2088,7 +2084,7 @@ VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp
 ## However, on Windows machine you must always define VM_GAHP_LOG. 
 #
 VM_GAHP_LOG	= $(LOG)/VMGahpLog
-MAX_VM_GAHP_LOG	= 1000000
+#MAX_VM_GAHP_LOG	= $(MAX_DEFAULT_LOG)
 #VM_GAHP_DEBUG = D_FULLDEBUG
 
 ## What kind of virtual machine program will be used for 

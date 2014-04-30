@@ -85,7 +85,7 @@ void Tokenize(const std::string &str);
 void Tokenize(const char *str);
 const char *GetNextToken(const char *delim, bool skipBlankTokens);
 
-void join(std::vector< std::string > &v, char const *delim, std::string &result);
+void join(const std::vector< std::string > &v, char const *delim, std::string &result);
 
 // Returns true iff (s) casts to <T>, and all of (s) is consumed,
 // i.e. if (s) is an exact representation of a value of <T>, no more and

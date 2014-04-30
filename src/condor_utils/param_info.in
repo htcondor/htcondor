@@ -373,7 +373,8 @@ review=?
 tags=vm-gahp,vmware_type
 
 [VMWARE_SCRIPT]
-default=
+default=$(SBIN)/condor_vm_vmware
+# there is no win32 default for this item, we DON'T want it to have a .exe extension
 type=string
 reconfig=true
 customization=seldom
@@ -407,8 +408,7 @@ review=?
 tags=vm-gahp,vmgahp_main
 
 [MAX_VM_GAHP_LOG]
-default=1000000
-type=int
+default=$(MAX_DEFAULT_LOG)
 review=?
 tags=vm-gahp,vmgahp_main
 
@@ -623,13 +623,21 @@ review=?
 tags=starter,starter_common
 
 [STARTER_DEBUG]
-default=D_NODATE
+default=D_NODATE D_PID
 type=string
 reconfig=true
 customization=seldom
 friendly_name=Starter Debug
 review=?
 tags=starter,starter_common
+
+[HACK.STARTER_LOG_NAME_APPEND]
+friendly_name=controls what to append StarterLog, may be: Cluster, JobId, false or true. true or undef gives 8.0 compatible behavior.
+default=Cluster
+type=string
+reconfig=true
+customization=seldom
+tags=starter
 
 [USER_JOB_WRAPPER]
 default=
@@ -1241,7 +1249,7 @@ review=?
 tags=q,queue
 
 [PREEMPTION_REQUIREMENTS]
-default=$(UWCS_PREEMPTION_REQUIREMENTS)
+default=False
 type=string
 reconfig=true
 customization=seldom
@@ -1413,13 +1421,44 @@ review=?
 tags=quill,jobqueuedbmanager
 
 [COUNT_HYPERTHREAD_CPUS]
-default=1
-type=int
+default=true
+type=bool
 reconfig=true
 customization=seldom
 friendly_name=Count Hyperthread Cpus
 review=?
 tags=sysapi,test
+
+# we expect this to be overwritten by the config system, this is here just in case and to save space
+[DETECTED_CPUS]
+default=1
+type=int
+reconfig=false
+customization=devel
+usage=Number of detected cpus, includes hyperthreads if COUNT_HYPERTHREAD_CPUS
+tags=
+
+[DETECTED_PHYSICAL_CPUS]
+default=1
+type=int
+reconfig=false
+customization=devel
+usage=Number of detected cpus. does not include hyperthreads
+
+[DETECTED_CORES]
+default=1
+type=int
+reconfig=false
+customization=devel
+usage=Number of detected cpus. does not include hyperthreads
+
+[NUM_CPUS]
+default=$(DETECTED_CPUS)
+type=int
+reconfig=true
+customization=normal
+usage=Number of CPUs to provision in the startd
+tags=sysapi,reconfig
 
 [CONSOLE_DEVICES]
 default=mouse, console
@@ -1789,8 +1828,6 @@ tags=daemon_core,daemon_core
 
 [USE_CLONE_TO_CREATE_PROCESSES]
 default=true
-# TJ 26-Nov-2013 v8.1.3 - Fedora19 crashes if we use clone, so disable clone until we get this fixed.
-Fedora19_default=false
 type=bool
 reconfig=true
 customization=seldom
@@ -2955,7 +2992,7 @@ review=?
 tags=startd,claim
 
 [START]
-default=$(UWCS_START)
+default=True
 type=string
 reconfig=true
 customization=seldom
@@ -3215,15 +3252,6 @@ type=bool
 reconfig=true
 customization=seldom
 friendly_name=Log On Nfs Is Error
-review=?
-tags=submit,submit
-
-[JOB_LEASE_DURATION]
-default=ATTR_JOB_LEASE_DURATION
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Job Lease Duration
 review=?
 tags=submit,submit
 
@@ -3659,12 +3687,12 @@ friendly_name=Event Log Use Xml
 review=?
 tags=c++_util,user_log
 
-[MAX_EVENT_LOG]
+[EVENT_LOG_MAX_SIZE]
 default=1000000
 type=long
 reconfig=true
 customization=seldom
-friendly_name=Max Event Log
+friendly_name=Maximum size of the event log in bytes
 review=?
 tags=c++_util,user_log
 
@@ -4040,6 +4068,15 @@ friendly_name=Negotiator Update After Cycle
 review=?
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD]
+default=0
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Trim Shutdown Threshold
+review=?
+tags=negotiator,matchmaker
+
 [NEGOTIATOR_TIMEOUT]
 default=30
 type=int
@@ -4077,7 +4114,7 @@ review=?
 tags=negotiator,matchmaker
 
 [PREEMPTION_RANK]
-default=$(UWCS_PREEMPTION_RANK)
+default=
 type=string
 reconfig=true
 customization=seldom
@@ -4086,7 +4123,7 @@ review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PRE_JOB_RANK]
-default=$(UWCS_NEGOTIATOR_PRE_JOB_RANK)
+default=RemoteOwner =?= UNDEFINED
 type=string
 reconfig=true
 customization=seldom
@@ -4095,7 +4132,7 @@ review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_POST_JOB_RANK]
-default=$(UWCS_NEGOTIATOR_POST_JOB_RANK)
+default=(RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kflops) - SlotID - 1.0e10*(Offline=?=True))
 type=string
 reconfig=true
 customization=seldom
@@ -4145,6 +4182,15 @@ type=bool
 reconfig=true
 customization=seldom
 friendly_name=Negotiator Use Nonblocking Startd Contact
+review=?
+tags=negotiator,matchmaker
+
+[NEGOTIATOR_USE_WEIGHTED_DEMAND]
+default=true
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Use Weighted Demand
 review=?
 tags=negotiator,matchmaker
 
@@ -4323,14 +4369,23 @@ friendly_name=Preen Admin
 review=?
 tags=tools,preen
 
-[VALID_SPOOL_FILES]
+[SYSTEM_VALID_SPOOL_FILES]
 default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
 type=string
 reconfig=true
+customization=const
+friendly_name=System defined Valid Spool Files
+usage=What HTCondor created files should condor_preen leave in the spool directory?
+review=tj
+tags=tools,preen
+
+[VALID_SPOOL_FILES]
+default=
+friendly_name=User defined Valid Spool Files
+reconfig=true
 customization=seldom
-friendly_name=Valid Spool Files
-usage=What files should condor_preen leave in the spool directory?
-review=?
+usage=What user files should condor_preen leave in the spool directory?
+review=tj
 tags=tools,preen
 
 [INVALID_LOG_FILES]
@@ -5546,15 +5601,15 @@ friendly_name=Auto Include Shared Port In Daemon List
 review=?
 
 [CCB_HEARTBEAT_INTERVAL]
-default=1200
+default=300
 version=7.5.0
 range=0,
 type=int
 reconfig=true
 customization=seldom
-friendly_name=Schedd Job Queue Log Flush Delay
+friendly_name=Interval between CCB protocol heartbeats
 review=?
-tags=schedd
+tags=ccb
 
 [ROOSTER_INTERVAL]
 default=300
@@ -5605,12 +5660,12 @@ friendly_name=Rooster unhibernate rank
 review=?
 tags=rooster
 
+# the procd gets passed it's log size as an argument, so scale suffix like MB or time rotation is not allowed.
 [MAX_PROCD_LOG]
-default=10000000
-type=long
+default=1000000
 reconfig=true
 customization=seldom
-friendly_name=Max Procd Log
+friendly_name=Max Procd Log (size rotation only, no scale suffix)
 review=?
 tags=c++_util,procd
 
@@ -5633,6 +5688,15 @@ customization=seldom
 friendly_name=Shadow Worklife
 review=?
 tags=shadow
+
+[CLAIM_WORKLIFE]
+default=3600
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Claim Worklife
+review=?
+tags=startd
 
 [NEGOTIATION_CYCLE_STATS_LENGTH]
 default=3
@@ -5783,6 +5847,14 @@ friendly_name=Size of Recent Statistics Window for DaemonCore Stats
 review=?
 tags=scheduler
 
+[TCP_KEEPALIVE_INTERVAL]
+default=360
+range=-1,
+type=int
+reconfig=true
+customization=expert
+friendly_name=Setting for TCP keepalive probe interval
+
 [SHADOW_CHECKPROXY_INTERVAL]
 default=600
 range=1,
@@ -5829,6 +5901,19 @@ friendly_name=Append OS version to the value of OPSYS
 review=?
 tags=schedd
 
+[WANT_SUSPEND]
+default=False
+[WANT_VACATE]
+default=False
+[SUSPEND]
+default=False
+[CONTINUE]
+default=True
+[PREEMPT]
+default=False
+[KILL]
+default=False
+
 [MachineMaxVacateTime]
 default=600
 type=int
@@ -5836,6 +5921,12 @@ reconfig=true
 customization=seldom
 friendly_name=
 review=?
+tags=startd
+
+[PERIODIC_CHECKPOINT]
+default=((time() - LastPeriodicCheckpoint)/60.0) > (180.0 + $RANDOM_INTEGER(-30,30,1))
+type=string
+reconfig=true
 tags=startd
 
 [DEFRAG_REQUIREMENTS]
@@ -6291,7 +6382,8 @@ review=?
 tags=starter
 
 [CGROUP_MEMORY_LIMIT_POLICY]
-default=none
+aliases=
+default=soft
 version=7.9.0
 type=string
 reconfig=true
@@ -6406,6 +6498,15 @@ friendly_name=Ganglia Configuration
 review=?
 tags=c++_util,condor_config
 
+[GANGLIA_GSTAT_COMMAND]
+default=gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Ganglia gstat Command
+review=?
+tags=c++_util,condor_config
+
 [GANGLIAD_METRICS_CONFIG_DIR]
 default=/etc/condor/ganglia.d
 type=string
@@ -6425,7 +6526,7 @@ review=?
 tags=c++_util,condor_config
 
 [GANGLIAD_INTERVAL]
-default=300
+default=60
 type=int
 reconfig=true
 customization=seldom
@@ -6443,8 +6544,7 @@ review=?
 tags=gangliad
 
 [MAX_GANGLIAD_LOG]
-default=10000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 reconfig=true
 customization=seldom
 friendly_name=Max Gangliad Log
@@ -6466,6 +6566,15 @@ type=bool
 reconfig=true
 customization=seldom
 friendly_name=Publish metrics for individual execute nodes
+review=?
+tags=c++_util,gangliad
+
+[GANGLIA_SEND_DATA_FOR_ALL_HOSTS]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Send metrics for all hosts
 review=?
 tags=c++_util,gangliad
 
@@ -6552,6 +6661,14 @@ customization=seldom
 friendly_name=History Helper max number of helper sub-processes
 usage=Set the limit on the number of condor_history_helper sub-processes
 review=?
+
+[CONDOR_Q_USE_V3_PROTOCOL]
+default=true
+type=bool
+reconfig=false
+customization=devel
+friendly_name=Control use of V3 query protocol for condor_q
+usage=Set to false to disable V3 query protocol for condor_q.
 
 [JOB_EXECDIR_PERMISSIONS]
 default=user
@@ -6723,134 +6840,121 @@ type=string
 review=?
 
 # defaults for debug logs
+[MAX_DEFAULT_LOG]
+default=10 Mb
+friendly_name=Default max size of a daemon log
+
 [COLLECTOR_DEBUG]
 default=
 review=?
 [MAX_COLLECTOR_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [KBDD_DEBUG]
 default=
 review=?
 [MAX_KBDD_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [NEGOTIATOR_DEBUG]
 default=D_MATCH
 review=?
 [MAX_NEGOTIATOR_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [MAX_NEGOTIATOR_MATCH_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [SCHEDD_DEBUG]
 default=D_PID
 review=?
 [MAX_SCHEDD_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [SHADOW_DEBUG]
 default=
 review=?
 [MAX_SHADOW_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [STARTD_DEBUG]
 default=
 review=?
 [MAX_STARTD_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [MAX_STARTER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [MASTER_DEBUG]
 default=
 review=?
 [MAX_MASTER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [JOB_ROUTER_DEBUG]
 default=
 review=?
 [MAX_JOB_ROUTER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [ROOSTER_DEBUG]
 default=
 review=?
 [MAX_ROOSTER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [SHARED_PORT_DEBUG]
 default=
 review=?
 [MAX_SHARED_PORT_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [HDFS_DEBUG]
 default=
 review=?
 [MAX_HDFS_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [HAD_DEBUG]
 default=
 review=?
 [MAX_HAD_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [REPLICATION_DEBUG]
 default=
 review=?
 [MAX_REPLICATION_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [TRANSFERER_DEBUG]
 default=
 review=?
 [MAX_TRANSFERER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [GRIDMANAGER_DEBUG]
 default=
 review=?
 [MAX_GRIDMANAGER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [GRIDMANAGER_LOG]
@@ -6864,8 +6968,7 @@ type=string
 review=?
 
 [MAX_C_GAHP_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [EC2_GAHP_LOG]
@@ -6895,6 +6998,14 @@ review=?
 default=$(SBIN)/ec2_gahp
 review=?
 
+[GCE_GAHP]
+default=$(SBIN)/gce_gahp
+review=?
+
+[GCE_GAHP_LOG]
+default=/tmp/GceGahpLog.$(USERNAME)
+win32_default=NUL
+review=?
 
 [CREDD]
 default=$(SBIN)/condor_credd
@@ -6926,8 +7037,7 @@ review=?
 default=D_FULLDEBUG
 review=?
 [MAX_CREDD_LOG]
-default=4000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 # benchmarking knobs
@@ -6961,6 +7071,36 @@ default=1.0
 review=?
 
 # Useful constants
+[IsWindows]
+default=false
+win32_default=true
+type=bool
+customization=const
+
+[CONDOR_VERSION]
+macro=CONDOR_VERSION
+default=8.*
+type=string
+customization=const
+
+[CONDOR_BUILD_PLATFORM]
+macro=PLATFORM
+default=undefined
+type=string
+customization=const
+
+[HAVE_EXT_GLOBUS]
+macro=HAVE_EXT_GLOBUS
+default=0
+type=int
+customization=const
+
+[HAVE_EXT_KRB5]
+macro=HAVE_EXT_KRB5
+default=0
+type=int
+customization=const
+
 [MINUTE]
 default=60
 customization=const
@@ -7092,7 +7232,6 @@ default=(RemoteUserPrio * 1000000) - TARGET.ImageSize
 # obsolete config file knobs to discard on upgrade
 [$UPGRADE.DISCARD]
 friendly_name=Config file knobs that should be ignored on upgrade
-# can't put leading tabs in this table without breaking condor_config_val
 default : @end
 	LeaseManager
 	LeaseManger_ADDRESS_FILE
@@ -7120,7 +7259,6 @@ default : @end
 [$UPGRADE.DISCARDX]
 friendly_name=Platform specific file knobs that should be ignored on upgrade
 default=
-# can't put leading tabs in this table without breaking condor_config_val
 win32_default : @end
 	GT2_GAHP
 	UNICORE_GAHP
@@ -7133,14 +7271,45 @@ win32_default : @end
 	CKPT_PROBE
 @end
 
+# use this table to detect knobs that have not been changed by the user when the default knob value HAS been changed since 8.0
 [$UPGRADE.DISCARDIF]
-friendly_name=Platform specific knobs that should be ignored on upgrade if they match the given value
+friendly_name=Knobs that should be ignored on upgrade if they match the given value
 default : @end
 	RESERVED_DISK=5
+	ALL_DEBUG=
+	MAX_COLLECTOR_LOG=1000000
+	MAX_KBDD_LOG=1000000
+	MAX_MASTER_LOG=1000000
+	MAX_NEGOTIATOR_LOG=1000000
+	MAX_NEGOTIATOR_MATCH_LOG=1000000
+	MAX_SCHEDD_LOG=1000000
+	MAX_SHADOW_LOG=1000000
+	MAX_SHARED_PORT_LOG=1000000
+	MAX_STARTD_LOG=1000000
+	MAX_STARTER_LOG=1000000
+	MAX_JOB_ROUTER_LOG=1000000
+	MAX_REPLICATION_LOG=1000000
+	MAX_ROOSTER_LOG=1000000
+	MAX_HDFS_LOG=1000000
+	MAX_HAD_LOG=1000000
+	MAX_TRANSFERER_LOG=1000000
+	MAX_GRIDMANAGER_LOG=1000000
+	MAX_C_GAHP_LOG=1000000
+	MAX_VM_GAHP_LOG=1000000
+	MAX_CREDD_LOG=4000000
+	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
+	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad, OfflineLog
+@end
+
+# This table is for platform-specific knobs that fit the rules for $UPGRADE.DISCARDIF above
+[$UPGRADE.DISCARDIFX]
+friendly_name=Platform specific knobs that should be ignored on upgrade if they match the given value
+default : @end
+	QUEUE_SUPER_USERS=root, condor
 @end
 win32_default : @end
+	QUEUE_SUPER_USERS=condor, SYSTEM
 	EC2_GAHP_LOG=/tmp/EC2GahpLog.$(USERNAME)
-	RESERVED_DISK=5
 	MAIL_FROM=
 	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware.exe
 	JAVA_CLASSPATH_SEPARATOR=:
@@ -7154,7 +7323,6 @@ win32_default : @end
 	HDFS_NAMENODE_ROLE=ACTIVE
 	HDFS_NAMENODE_DIR=/tmp/hadoop_name
 	HDFS_DATANODE_DIR=/scratch/tmp/hadoop_data
-	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
 	GLIDEIN_SERVER_URLS=http://www.cs.wisc.edu/condor/glidein/binaries
 @end
 
@@ -7186,14 +7354,13 @@ default : @end
 	SUSPEND=($(KeyboardBusy) || ( (CpuBusyTime > 120) && $(ActivationTimer) > 90))
 	CONTINUE=($(CPUIdle) && ($(ActivityTimer) > 10) && (KeyboardIdle > $(ContinueIdleTime)))
 	PREEMPT=(((Activity == "Suspended") && ($(ActivityTimer) > $(MaxSuspendTime))) || (SUSPEND && (WANT_SUSPEND == False)))
-	KILL=false
-	PERIODIC_CHECKPOINT=$(LastCkpt) > (3 * 3600 + $RANDOM_INTEGER(-1800,1800,60))
+	KILL=False
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=
 @end
 review=?
 
-# use the UWCS knobs 
+# no-preemption policy, formerly called TESTINGMODE_
 [$POLICY.ALWAYS_RUN]
 friendly_name=Use a no-preemption policy
 default : @end
@@ -7204,8 +7371,8 @@ default : @end
 	PREEMPT=False
 	START=True
 	KILL=False
-	PERIODIC_CHECKPOINT=False
 	PREEMPTION_REQUIREMENTS=False
+	NEGOTIATOR_CONSIDER_PREEMPTION=False
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=1200
 @end
@@ -7214,15 +7381,27 @@ review=?
 [$POLICY.UWCS_DESKTOP]
 friendly_name=Run jobs only when the user is away from their machine
 default : @end
-	SUSPEND=$(UWCS_SUSPEND)
 	WANT_SUSPEND=$(UWCS_WANT_SUSPEND)
 	WANT_VACATE=$(UWCS_WANT_VACATE)
+	SUSPEND=$(UWCS_SUSPEND)
 	CONTINUE=$(UWCS_CONTINUE)
 	PREEMPT=$(UWCS_PREEMPT)
 	KILL=$(UWCS_KILL)
 	PERIODIC_CHECKPOINT=$(UWCS_PERIODIC_CHECKPOINT)
+	PREEMPTION_REQUIREMENTS=$(UWCS_PREEMPTION_REQUIREMENTS)
+	PREEMPTION_RANK=$(UWCS_PREEMPTION_RANK)
+	NEGOTIATOR_PRE_JOB_RANK=$(UWCS_NEGOTIATOR_PRE_JOB_RANK)
+	NEGOTIATOR_POST_JOB_RANK=$(UWCS_NEGOTIATOR_POST_JOB_RANK)
 	MaxJobRetirementTime=$(UWCS_MaxJobRetirementTime)
 	CLAIM_WORKLIFE=$(UWCS_CLAIM_WORKLIFE)
+@end
+review=?
+
+[$POLICY.LIMIT_RUNTIMES]
+friendly_name=Limit job runtimes to 12 hours
+default : @end
+	MAX_JOB_RUNTIME=24*3600
+	PREMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
 @end
 review=?
 
@@ -7292,4 +7471,18 @@ default : @end
 @end
 review=?
 
+[$USE.GPUS]
+friendly_name=Settings for to detect and use GPUs as custom resources
+default : @end
+	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
+	ENVIRONMENT_FOR_AssignedGPUs=CUDA_VISIBLE_DEVICES, GPU_DEVICE_ORDINAL
+@end
+review=?
 
+[$HACK.ASYNC_STAGEOUT]
+friendly_name=Knobs to enable the async stage-out hack for CMS
+default: @end
+	# append cluster ID to StarterLog, may be: Cluster, JobId, false or true. true gives 8.0 compatible behavior.
+	STARTER_LOG_NAME_APPEND=Cluster
+	ALLOW_SLOT_CLAIM_SWAP=true
+@end

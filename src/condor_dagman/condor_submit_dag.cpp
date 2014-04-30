@@ -51,7 +51,11 @@ void parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			const char * const argv[]);
 bool parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
 			const char * const argv[], SubmitDagShallowOptions &shallowOpts);
+// Note: doRecursion() should eventually be torn out completely (see
+// gittrac #4189).
 int doRecursion( SubmitDagDeepOptions &deepOpts,
+			SubmitDagShallowOptions &shallowOpts );
+int doRecursionNew( SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts );
 int parseJobOrDagLine( const char *dagLine, StringList &tokens,
 			const char *fileType, const char *&submitOrDagFile,
@@ -104,7 +108,13 @@ int main(int argc, char *argv[])
 		// depth-first so all of the lower-level .condor.sub files already
 		// exist when we check for log files.
 	if ( deepOpts.recurse ) {
-		tmpResult = doRecursion( deepOpts, shallowOpts );
+		bool useOldDagReader = param_boolean( "DAGMAN_USE_OLD_DAG_READER",
+					false );
+		if ( useOldDagReader ) {
+			tmpResult = doRecursion( deepOpts, shallowOpts );
+		} else {
+			tmpResult = doRecursionNew( deepOpts, shallowOpts );
+		}
 		if ( tmpResult != 0) {
 			fprintf( stderr, "Recursive submit(s) failed; exiting without "
 						"attempting top-level submit\n" );
@@ -230,6 +240,104 @@ doRecursion( SubmitDagDeepOptions &deepOpts,
 				}
 			}
 		}
+	}
+
+	return result;
+}
+
+//---------------------------------------------------------------------------
+/** Recursively call condor_submit_dag on nested DAGs.
+	@param deepOpts: the condor_submit_dag deep options
+	@return 0 if successful, 1 if failed
+*/
+int
+doRecursionNew( SubmitDagDeepOptions &deepOpts,
+			SubmitDagShallowOptions &shallowOpts )
+{
+	int result = 0;
+
+	shallowOpts.dagFiles.rewind();
+
+		// Go through all DAG files specified on the command line...
+	StringList submitFiles;
+	const char *dagFile;
+	while ( (dagFile = shallowOpts.dagFiles.next()) ) {
+
+			// Get logical lines from this DAG file.
+		MultiLogFiles::FileReader reader;
+		MyString errMsg = reader.Open( dagFile );
+		if ( errMsg != "" ) {
+			fprintf( stderr, "Error reading DAG file: %s\n",
+						errMsg.Value() );
+			return 1;
+		}
+
+
+			// Find and parse JOB and SUBDAG lines.
+		MyString dagLine;
+		while ( reader.NextLogicalLine( dagLine ) ) {
+			StringList tokens( dagLine.Value(), " \t" );
+			tokens.rewind();
+			const char *first = tokens.next();
+
+			if ( first && !strcasecmp( first, "JOB" ) ) {
+
+					// Get the submit file and directory from the DAG
+					// file line.
+				const char *subFile;
+				const char *directory;
+				if ( parseJobOrDagLine( dagLine.Value(), tokens, "submit",
+							subFile, directory ) != 0 ) {
+					return 1;
+				}
+
+					// Now figure out whether JOB line is a nested DAG.
+				MyString submitFile( subFile );
+
+					// If submit file ends in ".condor.sub", we assume it
+					// refers to a sub-DAG.
+				int start = submitFile.find( DAG_SUBMIT_FILE_SUFFIX );
+				if ( start >= 0 &&
+							start + (int)strlen( DAG_SUBMIT_FILE_SUFFIX) ==
+							submitFile.Length() ) {
+
+						// Change submit file name to DAG file name.
+					submitFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
+
+						// Now run condor_submit_dag on the DAG file.
+					if ( runSubmitDag( deepOpts, submitFile.Value(),
+								directory, false ) != 0 ) {
+						result = 1;
+					}
+				}
+
+			} else if ( first && !strcasecmp( first, "SUBDAG" ) ) {
+
+				const char *inlineOrExt = tokens.next();
+				if ( strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
+					fprintf( stderr, "ERROR: only SUBDAG EXTERNAL is supported "
+								"at this time (line: <%s>)\n", dagLine.Value() );
+					return 1;
+				}
+
+					// Get the nested DAG file and directory from the DAG
+					// file line.
+				const char *nestedDagFile;
+				const char *directory;
+				if ( parseJobOrDagLine( dagLine.Value(), tokens, "DAG",
+							nestedDagFile, directory ) != 0 ) {
+					return 1;
+				}
+
+					// Now run condor_submit_dag on the DAG file.
+				if ( runSubmitDag( deepOpts, nestedDagFile, directory,
+							false ) != 0 ) {
+					result = 1;
+				}
+			}
+		}
+
+		reader.Close();
 	}
 
 	return result;

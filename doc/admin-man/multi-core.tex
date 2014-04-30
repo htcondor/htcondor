@@ -341,7 +341,7 @@ If the default policy is used,
 all slots notice
 tty and console activity
 and
-currently running jobs would suspend or preempt.
+currently running jobs would suspend.
 
 This example policy is
 controlled with the following configuration variables.
@@ -646,6 +646,7 @@ To do so, set the following configuration variables:
 \begin{verbatim}
 NUM_SLOTS=1
 NUM_SLOTS_TYPE_1=1
+SLOT_TYPE_1=100%
 SLOT_TYPE_1_PARTITIONABLE=true
 \end{verbatim}
 

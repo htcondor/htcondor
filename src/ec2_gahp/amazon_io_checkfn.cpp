@@ -117,7 +117,7 @@ bool AmazonAssociateAddress::ioCheck(char **argv, int argc)
         verify_string_name(argv[6]);
 }
 
-// Expecting:EC_VM_ATTACH_VOLUME <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <volume-id> <instance-id> <device-id>
+// Expecting:EC2_VM_ATTACH_VOLUME <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <volume-id> <instance-id> <device-id>
 bool AmazonAttachVolume::ioCheck(char **argv, int argc)
 {
     return verify_number_args(argc, 8) &&
@@ -132,18 +132,6 @@ bool AmazonAttachVolume::ioCheck(char **argv, int argc)
 
 // Expecting:EC2_VM_STATUS_ALL <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
 bool AmazonVMStatusAll::ioCheck(char **argv, int argc)
-{
-	return verify_min_number_args(argc, 5) &&
-		verify_request_id(argv[1]) &&
-		verify_string_name(argv[2]) &&
-		verify_string_name(argv[3]) &&
-		verify_string_name(argv[4]);
-}
-
-// Expecting:EC2_VM_RUNNING_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <Status>
-// <Status> is optional field. If <Status> is specified, the keypair which belongs to VM with the status will be listed.
-
-bool AmazonVMRunningKeypair::ioCheck(char **argv, int argc)
 {
 	return verify_min_number_args(argc, 5) &&
 		verify_request_id(argv[1]) &&
@@ -173,16 +161,6 @@ bool AmazonVMDestroyKeypair::ioCheck(char **argv, int argc)
 		verify_string_name(argv[3]) &&
 		verify_string_name(argv[4]) &&
 		verify_string_name(argv[5]);
-}
-
-// Expecting:EC2_VM_KEYPAIR_NAMES <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
-bool AmazonVMKeypairNames::ioCheck(char **argv, int argc)
-{
-	return verify_number_args(argc, 5) &&
-		verify_request_id(argv[1]) &&
-		verify_string_name(argv[2]) &&
-		verify_string_name(argv[3]) &&
-		verify_string_name(argv[4]);
 }
 
 // Expecting:EC2_VM_SERVER_TYPE <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>

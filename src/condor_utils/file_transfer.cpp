@@ -1289,6 +1289,7 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 		!sock->end_of_message() ) {
 		dprintf(D_FULLDEBUG,
 			    	"FileTransfer::HandleCommands failed to read transkey\n");
+		if (transkey) free(transkey);
 		return 0;
 	}
 	dprintf(D_FULLDEBUG,

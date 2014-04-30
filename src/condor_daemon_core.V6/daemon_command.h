@@ -37,6 +37,7 @@ private:
 	enum CommandProtocolState {
 		CommandProtocolAcceptTCPRequest,
 		CommandProtocolAcceptUDPRequest,
+		CommandProtocolReadHeader,
 		CommandProtocolReadCommand,
 		CommandProtocolAuthenticate,
 		CommandProtocolPostAuthenticate,
@@ -74,7 +75,7 @@ private:
 	UtcTime m_async_waiting_start_time;
 	float m_async_waiting_time;
 	SecMan *m_sec_man;
-	DaemonCore::CommandEnt *m_comTable;
+	ExtArray<DaemonCore::CommandEnt> &m_comTable;
 	const static std::string WaitForSocketDataString;
 	int m_real_cmd;       // for DC_AUTHENTICATE, the final command to execute
 	int m_auth_cmd;       // for DC_AUTHENTICATE, the command the security session will be used for
@@ -85,6 +86,7 @@ private:
 
 	CommandProtocolResult AcceptTCPRequest();
 	CommandProtocolResult AcceptUDPRequest();
+	CommandProtocolResult ReadHeader();
 	CommandProtocolResult ReadCommand();
 	CommandProtocolResult Authenticate();
 	CommandProtocolResult PostAuthenticate();

@@ -97,7 +97,8 @@ extern "C" {
 	
 // Function prototypes
 void real_config(const char* host, int wantsQuiet, int config_options);
-int Read_config(const char*, MACRO_SET& macro_set, int, bool, const char * subsys);
+int Read_config(const char*, MACRO_SET& macro_set, int, bool, const char * subsys, std::string & errmsg);
+bool Test_config_if_expression(const char * expr, bool & result, std::string & err_reason, MACRO_SET& macro_set, const char * subsys);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
 int SetSyscalls(int);
@@ -969,11 +970,13 @@ real_config(const char* host, int wantsQuiet, int config_options)
 			EXCEPT( "Out of memory in %s:%d\n", __FILE__, __LINE__ );
 		}
 
-		// isolate variable name by finding & nulling the '='
+		// isolate variable name by finding & nulling the '=', and trimming spaces before and after 
 		int equals_offset = strchr( varname, '=' ) - varname;
 		varname[equals_offset] = '\0';
+		for (int ii = equals_offset-1; ii > 1; --ii) { if (isspace(varname[ii])) { varname[ii] = 0; } }
 		// isolate value by pointing to everything after the '='
 		char *varvalue = varname + equals_offset + 1;
+		while (isspace(*varvalue)) ++varvalue;
 //		assert( !strcmp( varvalue, getenv( varname ) ) );
 		// isolate Condor macro_name by skipping magic prefix
 		char *macro_name = varname + prefix_len;
@@ -1078,12 +1081,14 @@ process_config_source( const char* file, const char* name,
 			exit( 1 );
 		}
 	} else {
+		std::string errmsg;
 		rval = Read_config( file, ConfigMacroSet, EXPAND_LAZY,
-							false, get_mySubSystem()->getName());
+							false, get_mySubSystem()->getName(), errmsg);
 		if( rval < 0 ) {
 			fprintf( stderr,
 					 "Configuration Error Line %d while reading %s %s\n",
 					 ConfigLineNo, name, file );
+			if (!errmsg.empty()) { fprintf(stderr, "%s\n", errmsg.c_str()); }
 			exit( 1 );
 		}
 	}
@@ -1585,8 +1590,21 @@ fill_attributes()
 		// NUM_PHYSICAL_CORES, and what-have-you.
 	int num_cpus=0;
 	int num_hyperthread_cpus=0;
-	sysapi_ncpus_raw_no_param(&num_cpus,&num_hyperthread_cpus);
+	sysapi_ncpus_raw(&num_cpus,&num_hyperthread_cpus);
 
+	// DETECTED_PHYSICAL_CPUS will always be the number of real CPUs not counting hyperthreads.
+	val.formatstr("%d",num_cpus);
+	insert("DETECTED_PHYSICAL_CPUS", val.Value(), ConfigMacroSet, DetectedMacro);
+
+	int def_valid = 0;
+	bool count_hyper = param_default_boolean("COUNT_HYPERTHREAD_CPUS", get_mySubSystem()->getName(), &def_valid);
+	if ( ! def_valid) count_hyper = true;
+	// DETECTED_CPUS will be the value that NUM_CPUS will be set to by default.
+	val.formatstr("%d", count_hyper ? num_hyperthread_cpus : num_cpus);
+	insert("DETECTED_CPUS", val.Value(), ConfigMacroSet, DetectedMacro);
+
+	// DETECTED_CORES is not a good name, but we're stuck with it now...
+	// it will ALWAYS be the number of hyperthreaded cores.
 	val.formatstr("%d",num_hyperthread_cpus);
 	insert("DETECTED_CORES", val.Value(), ConfigMacroSet, DetectedMacro);
 }
@@ -1652,6 +1670,7 @@ init_config(int config_options)
 		if (ConfigMacroSet.defaults->metat) delete [] ConfigMacroSet.defaults->metat;
 		ConfigMacroSet.defaults->metat = NULL;
 		ConfigMacroSet.defaults->size = param_info_init((const void**)&ConfigMacroSet.defaults->table);
+		ConfigMacroSet.options |= CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO;
 	}
 	if (want_meta) {
 		if (ConfigMacroSet.metat) delete [] ConfigMacroSet.metat;
@@ -1989,13 +2008,17 @@ param_integer( const char *name, int &value,
 
 		int def_valid = 0;
 		int is_long = false;
-		int tbl_default_value = param_default_integer(name, subsys, &def_valid, &is_long);
+		int was_truncated = false;
+		int tbl_default_value = param_default_integer(name, subsys, &def_valid, &is_long, &was_truncated);
 		bool tbl_check_ranges = 
 			(param_range_integer(name, &min_value, &max_value)==-1) 
 				? false : true;
 
 		if (is_long) {
-			dprintf (D_CONFIG | D_FAILURE, "Warning - long param %s fetched as integer\n", name);
+			if (was_truncated)
+				dprintf (D_CONFIG | D_FAILURE, "Error - long param %s was fetched as integer and truncated\n", name);
+			else
+				dprintf (D_CONFIG, "Warning - long param %s fetched as integer\n", name);
 		}
 
 		// if found in the default table, then we overwrite the arguments
@@ -2063,7 +2086,7 @@ param_integer( const char *name, int &value,
 		long_result = result;
 	}
 
-	if( (long)result != long_result ) {
+	if( (int)result != long_result ) {
 		EXCEPT( "%s in the condor configuration is out of bounds for"
 				" an integer (%s)."
 				"  Please set it to an integer in the range %d to %d"
@@ -2658,6 +2681,16 @@ reinsert_specials( const char* host )
 	snprintf(buf,40,"%u",reinsert_ppid);
 	insert("PPID", buf, ConfigMacroSet, DetectedMacro);
 	insert("IP_ADDRESS", my_ip_string(), ConfigMacroSet, DetectedMacro);
+
+	{ // set DETECTED_CPUS to the correct value, either hyperthreaded or not.
+		int num_cpus=0;
+		int num_hyperthread_cpus=0;
+		sysapi_ncpus_raw(&num_cpus,&num_hyperthread_cpus);
+		bool count_hyper = param_boolean("COUNT_HYPERTHREAD_CPUS", true);
+		// DETECTED_CPUS will be the value that NUM_CPUS will be set to by default.
+		snprintf(buf,40,"%d", count_hyper ? num_hyperthread_cpus : num_cpus);
+		insert("DETECTED_CPUS", buf, ConfigMacroSet, DetectedMacro);
+	}
 }
 
 
@@ -3066,12 +3099,13 @@ process_persistent_configs()
 	{
 		processed = true;
 
+		std::string errmsg;
 		rval = Read_config(toplevel_persistent_config.Value(), ConfigMacroSet,
-						EXPAND_LAZY, true, get_mySubSystem()->getName());
+						EXPAND_LAZY, true, get_mySubSystem()->getName(), errmsg);
 		if (rval < 0) {
-			dprintf( D_ALWAYS, "Configuration Error Line %d while reading "
+			dprintf( D_ALWAYS | D_FAILURE, "Configuration Error Line %d %s while reading "
 					 "top-level persistent config source: %s\n",
-					 ConfigLineNo, toplevel_persistent_config.Value() );
+					 ConfigLineNo, errmsg.c_str(), toplevel_persistent_config.Value() );
 			exit(1);
 		}
 
@@ -3088,12 +3122,13 @@ process_persistent_configs()
 		MyString config_source;
 		config_source.formatstr( "%s.%s", toplevel_persistent_config.Value(),
 							   tmp );
+		std::string errmsg;
 		rval = Read_config(config_source.Value(), ConfigMacroSet,
-						EXPAND_LAZY, true, get_mySubSystem()->getName());
+						EXPAND_LAZY, true, get_mySubSystem()->getName(), errmsg);
 		if (rval < 0) {
-			dprintf( D_ALWAYS, "Configuration Error Line %d "
+			dprintf( D_ALWAYS, "Configuration Error Line %d %s"
 					 "while reading persistent config source: %s\n",
-					 ConfigLineNo, config_source.Value() );
+					 ConfigLineNo, errmsg.c_str(), config_source.Value() );
 			exit(1);
 		}
 	}
@@ -3136,12 +3171,13 @@ process_runtime_configs()
 					 "process_dynamic_configs\n", errno );
 			exit(1);
 		}
+		std::string errmsg;
 		rval = Read_config(tmp_file, ConfigMacroSet,
-						EXPAND_LAZY, false, get_mySubSystem()->getName());
+						EXPAND_LAZY, false, get_mySubSystem()->getName(), errmsg);
 		if (rval < 0) {
-			dprintf( D_ALWAYS, "Configuration Error Line %d "
+			dprintf( D_ALWAYS, "Configuration Error Line %d %s"
 					 "while reading %s, runtime config: %s\n",
-					 ConfigLineNo, tmp_file, rArray[i].admin );
+					 ConfigLineNo, errmsg.c_str(), tmp_file, rArray[i].admin );
 			exit(1);
 		}
 		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
@@ -3259,6 +3295,12 @@ int write_macros_to_file(const char* pathname, MACRO_SET& macro_set, int options
 
 int write_config_file(const char* pathname, int options) {
 	return write_macros_to_file(pathname, ConfigMacroSet, options);
+}
+
+// so that condor_config_val can test config if expressions.
+bool config_test_if_expression(const char * expr, bool & result, std::string & err_reason)
+{
+	return Test_config_if_expression(expr, result, err_reason, ConfigMacroSet, get_mySubSystem()->getName());
 }
 
 /* End code for runtime support for modifying a daemon's config source. */

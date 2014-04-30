@@ -19,18 +19,32 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
 use strict;
 use warnings;
 
-my $cmd = 'cmd_q_shows-cputime.cmd';
-my $cmdout = $cmd . ".out";
-my $testdesc =  'cmd_q_shows-cputime  ';
 my $testname = "cmd_q_shows-cputime";
+my $ClusterId = 0;
 my $debuglevel = 2;
 
 my @adarray;
 
-my $submit = sub {
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
+my $on_submit = sub {
 	my %info = @_;
 	my $cmd = "condor_q -cputime ";
 
@@ -47,20 +61,9 @@ my $submit = sub {
 	my $submitline = "";
 	my $cluster = "";
 
-	print "Looking for cluster - ";
-	open(CMD, "<$cmdout") || die "Can not find submit output:$!\n";;
-	while(<CMD>) {
-		chomp($_);
-		$submitline = $_;
-		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
-			$cluster = $1;
-			CondorTest::debug("Found my cluster which is $cluster!\n",$debuglevel);
-		}
-		CondorTest::debug("$_\n",$debuglevel);
-	}
-	print "$cluster\n";
+	print "My cluster is: $ClusterId\n";
 
-	$cmd = "condor_rm $cluster";
+	$cmd = "condor_rm $ClusterId";
 
 	print "Looking for CPU_TIME - ";
 	foreach my $line (@adarray) {
@@ -68,7 +71,7 @@ my $submit = sub {
 		if($line =~ /^\s*ID\s+OWNER\s+SUBMITTED\s+CPU_TIME\s+ST\s+PRI\s+SIZE\s+CMD\s*$/) {
 				CondorTest::debug("Bingo\n",$debuglevel);
 				$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
-				print "ok\n";
+				print "ok - Saw CPU_TIME label\n";
 				return(0);
 		} else {
 			CondorTest::debug("<<<$line>>>\n",$debuglevel);
@@ -90,15 +93,16 @@ my $ExitSuccess = sub {
 	my %info = @_;
 };
 
-CondorTest::RegisterAbort($testname, $aborted);
-CondorTest::RegisterSubmit($testname, $submit);
-CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+my $on_evictedwithoutcheckpoint = sub {
+};
 
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
-}
+my $runresult = SimpleJob::RunCheck(
+	duration => 0,
+	on_abort => $aborted,
+	on_submit => $on_submit,
+	on_success => $ExitSuccess,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	GetClusterId => $GetClusterId,
+);
 
 

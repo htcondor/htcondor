@@ -282,10 +282,21 @@ class Matchmaker : public Service
 		static unsigned int HashFunc(const MyString &Key);
 		friend int comparisonFunction (AttrList *, AttrList *,
 										void *);
+		bool pslotMultiMatch(ClassAd *job, ClassAd *machine);
 
-			// If we are not considering preemption, this function will
-			// trim out startd ads that are not in the Unclaimed state.
+		/** trimStartdAds will throw out startd ads have no business being 
+			visible to the matchmaking engine, but were fetched from the 
+			collector because perhaps the accountant needs to see them.  
+			This method is called after accounting completes, but before
+			matchmaking begins.  trimStartdAds() calls out to subroutines
+			like trimStartdAds_PreemptionLogic as needed.
+			@param startdAds List of startd ads to trim
+			@return the number of ads removed from the startdAds list 
+		**/
 		int trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds);
+		// Note: these are called by trimStartdAds as required
+		int trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds);
+		int trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds);
 
 		bool SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double allowed, double pieLeft);
 		double sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds,double *minSlotWeight, ExprTree* constraint);
@@ -301,6 +312,7 @@ class Matchmaker : public Service
 		char *AccountantHost;		// who (if at all) is the accountant?
 		int  NegotiatorInterval;	// interval between negotiation cycles
 		int  NegotiatorTimeout;		// timeouts for communication
+		int  MaxTimePerCycle;		// how long for total negotiation cycle
 		int  MaxTimePerSubmitter;   // how long to talk to any one submitter
 		int  MaxTimePerSpin;        // How long per pie spin
 		ExprTree *PreemptionReq;	// only preempt if true
@@ -434,6 +446,7 @@ class Matchmaker : public Service
 			~MatchListType();
 
 			void increment_rejForSubmitterLimit() { m_rejForSubmitterLimit++; }
+
 
 		private:
 

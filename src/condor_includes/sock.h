@@ -144,7 +144,7 @@ public:
 
 	bool bind_to_loopback(bool outbound=false, int port=0);
 
-    int setsockopt(int, int, const char*, int); 
+    int setsockopt(int, int, const void*, int); 
 
 	/**  Set the size of the operating system buffers (in the IP stack) for
 		 this socket.
@@ -156,6 +156,12 @@ public:
 		 @return the actual/resulting size of the buffer in bytes
 	*/
 	int set_os_buffers(int desired_size, bool set_write_buf = false);
+
+	/** Enable keepalive options for this socket as dictacted by config knob
+		TCP_KEEPALIVE_INTERVAL.  Currently a no-op on anything but relisocks.
+		@return false if any system call errors, true otherwise.
+	*/
+	bool set_keepalive();
 
 	inline int bind(bool outbound, char *s) { return bind(outbound, getportbyserv(s)); }
 

@@ -197,7 +197,7 @@ $success = sub
 				$outindex++;
 				if ($outindex > $#outlines) {
 					$passed = 1;
-					break;
+					last;
 				}
 			} else {
 				CondorTest::debug("failed: \"extra\" output line $line\n");

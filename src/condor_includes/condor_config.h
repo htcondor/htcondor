@@ -36,7 +36,7 @@ namespace condor_params { typedef struct key_value_pair key_value_pair; }
 typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
 #else // ! __cplusplus
 typedef void* MACRO_SOURCES; // placeholder for use in C
-typedef struct key_value_pair { const char * key; const void * def} key_value_pair;
+typedef struct key_value_pair { const char * key; const void * def; } key_value_pair;
 typedef const struct key_value_pair MACRO_DEF_ITEM;
 #endif
 
@@ -194,6 +194,7 @@ extern "C" {
 	#define CONFIG_OPT_KEEP_DEFAULTS  0x02   // keep items that match defaults
 	#define CONFIG_OPT_OLD_COM_IN_CONT 0x04  // ignore # after \ (i.e. pre 8.1.3 comment/continue behavior)
 	#define CONFIG_OPT_SMART_COM_IN_CONT 0x08 // parse #opt:oldcomment/newcomment to decide comment behavior
+	#define CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO 0x80 // the defaults table is the table defined in param_info.in.
 	void config();
 	void config_ex(int wantsQuiet, bool abort_if_invalid, int opt = CONFIG_OPT_WANT_META);
 	void config_host(const char* host, int wantsQuiet, int config_options);
@@ -344,6 +345,7 @@ BEGIN_C_DECLS
 	void clear_macro_use_count (const char *name, MACRO_SET& macro_set);
 	int get_macro_use_count (const char *name, MACRO_SET& macro_set);
 	int get_macro_ref_count (const char *name, MACRO_SET& macro_set);
+	bool config_test_if_expression(const char * expr, bool & result, std::string & err_reason);
 
 #endif // __cplusplus
 

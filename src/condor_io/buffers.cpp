@@ -77,27 +77,41 @@ Buf::dealloc_buf()
     }
 }
 
+void
+Buf::grow_buf(int new_sz)
+{
+	if (new_sz < _dta_maxsz) return;
+	char * new_dta = new char[new_sz];
+	if (_dta) {
+		memcpy(new_dta, _dta, _dta_sz);
+		delete [] _dta;
+	}
+	_dta = new_dta;
+	_dta_maxsz = new_sz;
+}
 
 int Buf::write(
 	char const *peer_description,
 	SOCKET	sockd,
 	int		sz,
-	int		timeout
+	int		timeout,
+	bool	non_blocking
 	)
 {
 	int	nw;
 	alloc_buf();
 	if (sz < 0 || sz > num_untouched()) {
-        sz = num_untouched();
-    }
+		sz = num_untouched();
+	}
 
-    nw = condor_write(peer_description,sockd, &_dta[num_touched()], sz , timeout);
-	if (nw < 0){
+	nw = condor_write(peer_description,sockd, &_dta[num_touched()], sz , timeout, 0, non_blocking);
+	if (nw < 0) {
 		dprintf( D_ALWAYS, "Buf::write(): condor_write() failed\n" );
 		return -1;
 	}
 
 	_dta_pt += nw;
+
 	return nw;
 }
 
@@ -107,7 +121,8 @@ int Buf::flush(
 	SOCKET	sockd,
 	void	*hdr,
 	int		sz,
-	int		timeout
+	int		timeout,
+	bool		non_blocking
 	)
 {
 /* DEBUG SESSION
@@ -137,8 +152,10 @@ int Buf::flush(
 */
 
 
-	sz = write(peer_description,sockd, -1, timeout);
-	reset();
+	sz = write(peer_description,sockd, -1, timeout, non_blocking);
+	if (!non_blocking || consumed()) {
+		reset();
+	}
 
 	return sz;
 }
@@ -148,7 +165,8 @@ int Buf::read(
 	char const *peer_description,
 	SOCKET	sockd,
 	int		sz,
-	int		timeout
+	int		timeout,
+	bool		non_blocking
 	)
 {
 	int	nr;
@@ -161,10 +179,10 @@ int Buf::read(
 		/* sz = num_free(); */
 	}
 
-    nr = condor_read(peer_description,sockd,&_dta[num_used()],sz,timeout);	
+	nr = condor_read(peer_description,sockd,&_dta[num_used()],sz,timeout, 0, non_blocking);
 	if (nr < 0) {
 		dprintf( D_ALWAYS, "Buf::read(): condor_read() failed\n" );
-		return -1;
+		return nr;
 	}
 
 	_dta_sz += nr;
@@ -196,6 +214,22 @@ int Buf::put_max(
 
 	memcpy(&_dta[num_used()], dta, sz);
 
+	_dta_sz += sz;
+	return sz;
+}
+
+
+int Buf::put_force(
+	const void *dta,
+	int sz
+	)
+{
+	int free = num_free();
+	int needed = sz - free;
+	if (needed > 0) {
+		grow_buf(_dta_maxsz + needed);
+	}
+	memcpy(&_dta[num_used()], dta, sz);
 	_dta_sz += sz;
 	return sz;
 }
@@ -284,6 +318,32 @@ bool Buf::verifyMD(char * checkSUM, Condor_MD_MAC * checker)
     checker->addMD((unsigned char *) &(_dta[0]), _dta_sz);
 
     return checker->verifyMD((unsigned char *) checkSUM);
+}
+
+void Buf::swap(Buf &other)
+{
+	char * tmp_dta = _dta;
+	int tmp_dta_sz = _dta_sz;
+	int tmp_dta_maxsz = _dta_maxsz;
+	int tmp_dta_pt = _dta_pt;
+		// NOTE: This will not work with a buf in ChainBuf
+		// because we need to fixup anything pointing to us!
+	Buf *tmp_next = _next;
+	Sock *tmp_sock = p_sock;
+
+	_dta = other._dta;
+	_dta_sz = other._dta_sz;
+	_dta_maxsz = other._dta_maxsz;
+	_dta_pt = other._dta_pt;
+	_next = other._next;
+	p_sock = other.p_sock;
+
+	other._dta = tmp_dta;
+	other._dta_sz = tmp_dta_sz;
+	other._dta_maxsz = tmp_dta_maxsz;
+	other._dta_pt = tmp_dta_pt;
+	other._next = tmp_next;
+	other.p_sock = tmp_sock;
 }
 
 void ChainBuf::reset()

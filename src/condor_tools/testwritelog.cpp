@@ -77,11 +77,11 @@ int				rsleep;
 time_t 			sleeptime;			// Cast to this for sleep
 char        	*ValidSpoolFiles;   // well known files in the spool dir
 char        	*InvalidLogFiles;   // files we know we want to delete from log
-BOOLEAN			LogFlag;			// true if we should set the log file name
-BOOLEAN			SleepFlag;			// true if we should sleep between  writes
-BOOLEAN			VerboseFlag;		// true if we should produce verbose output
-BOOLEAN			WriterFlag;			// true if we expect multiple writers
-BOOLEAN			RandomRangeFlag;	// want to randomize sleeps
+bool			LogFlag;			// true if we should set the log file name
+bool			SleepFlag;			// true if we should sleep between  writes
+bool			VerboseFlag;		// true if we should produce verbose output
+bool			WriterFlag;			// true if we expect multiple writers
+bool			RandomRangeFlag;	// want to randomize sleeps
 
 // prototypes of local interest
 void usage();
@@ -93,7 +93,7 @@ void init_params();
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [-count count] [-sleep time] [-write mark] [-r min max] [-log logname] [-verbose] [-debug] [ textdata ]\n", MyName );
+	fprintf( stderr, "Usage: %s [-count count] [-sleep time] [-write mark] [-r min max] [-Seed seed] [-log logname] [-verbose] [-debug] [ textdata ]\n", MyName );
 	exit( 1 );
 }
 
@@ -118,11 +118,11 @@ main( int argc, char *argv[] )
 	dprintf_config(get_mySubSystem()->getName());
 	DataCount = 0;
 
-	VerboseFlag = FALSE;
-	SleepFlag = FALSE;
-	LogFlag = FALSE;
-	WriterFlag = FALSE;
-	RandomRangeFlag = FALSE;
+	VerboseFlag = false;
+	SleepFlag = false;
+	LogFlag = false;
+	WriterFlag = false;
+	RandomRangeFlag = false;
 	rtime = 0;
 	rsleep = 0;
 	Seed = 42;
@@ -142,47 +142,53 @@ main( int argc, char *argv[] )
 				break;
 
 			  case 'v':
-				VerboseFlag = TRUE;
+				VerboseFlag = true;
 				fprintf( stderr, "Setting verbose flag");
 				break;
 
 			  case 'l':
-				LogFlag = TRUE;
+				LogFlag = true;
 				argv++;
 				LogName = *argv;
-				fprintf( stderr, "Logname requested: %s\n", LogName );
+				//fprintf( stderr, "Logname requested: %s\n", LogName );
 				break;
 
 			  case 'c':
-				LogFlag = TRUE;
+				LogFlag = true;
 				argv++;
 				DataCount = atoi(*argv);
-				fprintf( stderr, "Count requested: %d\n", DataCount );
+				//fprintf( stderr, "Count requested: %d\n", DataCount );
+				break;
+
+			  case 'S':
+				argv++;
+				Seed = atoi(*argv);
+				//fprintf( stderr, "Seed requested: %d\n", Seed );
 				break;
 
 			  case 's':
-				SleepFlag = TRUE;
+				SleepFlag = true;
 				argv++;
 				SleepTime = atoi(*argv);
 				sleeptime = (time_t)SleepTime;
-				fprintf( stderr, "sleep requested: %d\n", SleepTime );
+				//fprintf( stderr, "sleep requested: %d\n", SleepTime );
 				break;
 
 			  case 'r':
-				RandomRangeFlag = TRUE;
+				RandomRangeFlag = true;
 				argv++;
 				Min = atoi(*argv);
 				argv++;
 				Max = atoi(*argv);
 				Range = (Max - Min);
-				fprintf( stderr, "random sleep range requested: %d - %d\n", Min, Max );
+				//fprintf( stderr, "random sleep range requested: %d - %d\n", Min, Max );
 				break;
 
 			  case 'w':
-				WriterFlag = TRUE;
+				WriterFlag = true;
 				argv++;
 				WriterMark = *argv;
-				fprintf( stderr, "different writer requested: %s\n", WriterMark );
+				//fprintf( stderr, "different writer requested: %s\n", WriterMark );
 				break;
 
 			  default:
@@ -231,7 +237,7 @@ main( int argc, char *argv[] )
 			rsleep = Min + rtime;
 			//fprintf(stderr,"Min:%d and rtime:%d yields:%d\n",Min, rtime, rsleep);
 			sleeptime = rsleep;
-			fprintf(stderr,"Random sleep time %d\n", rsleep);
+			//fprintf(stderr,"Random sleep time %d\n", rsleep);
 			sleep(sleeptime);
 		}
 		if(WriterFlag) {
@@ -336,7 +342,8 @@ init_params()
 #endif
 
 
-	ValidSpoolFiles = param("VALID_SPOOL_FILES");
+	//UserValidSpoolFiles = param("VALID_SPOOL_FILES");
+	ValidSpoolFiles = param("SYSTEM_VALID_SPOOL_FILES");
 
 	InvalidLogFiles = param("INVALID_LOG_FILES");
 }

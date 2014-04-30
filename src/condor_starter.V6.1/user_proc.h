@@ -134,6 +134,11 @@ protected:
 	bool requested_exit;
 	bool m_proc_exited;
 
+		// This indicates whether we're responsible for deleting the
+		// JobAd. Most of the time, we aren't. But in at least one case,
+		// we are.
+	bool m_deleteJobAd;
+
 		/** This is the identifier for this UserProc.  It's used for
 			dprintf messages() and in some cases as a prefix for
 			ClassAd attribute names.  For regular job procs, it's left

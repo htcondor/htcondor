@@ -105,7 +105,7 @@ dprintf_config_tool(const char* subsys, int /*flags*/)
 	unsigned int HeaderOpts = 0;
 	DebugOutputChoice verbose = 0;
 
-	PRAGMA_REMIND("TJ: allow callers of dprintf_config_tool to pass logging verbosity and flags");
+	//PRAGMA_REMIND("TJ: allow callers of dprintf_config_tool to pass logging verbosity and flags");
 
 	dprintf_output_settings tool_output[2];
 	tool_output[0].choice = 1<<D_ALWAYS | 1<<D_ERROR;
@@ -171,16 +171,28 @@ static bool parse_size_with_unit(
 	bool       & is_time)
 {
 	value = 0;
-	std::stringstream ss(input);
-	ss >> value;
-	bool r = (ss.eof() && (0 == (ss.rdstate() & std::stringstream::failbit)));
-	if (r) return r;
+	const char * p = input;
+	while(isspace(*p)) ++p;
+		// all whitespace is failure
+	if ( ! *p) return false;
 
-	std::string unit;
-	ss >> unit; // optional unit with optional leading whitespace
-	if (unit.length() > 0) {
-		int ch = unit[0];
-		int ch2 = (unit.length() > 1) ? toupper((int)unit[1]) : 0;
+		// fetch the number, and get a pointer to the first char after
+	char *pend;
+	value = strtoll(p, &pend, 10);
+
+		// no number at this position is failure
+	if (pend == p) return false;
+	p = pend;
+
+		// skip whitespace after number
+	while (isspace(*p)) ++p;
+
+		// check for unit after the number
+	if (*p) {
+		int ch = *p++;
+		int ch2 = *p & ~0x20; if (ch2) ++p; // convert to uppercase if lowercase, symbols don't matter here.
+		int ch3 = *p & ~0x20; if (ch3) ++p;
+		while (isalpha(*p)) ++p;
 		switch (toupper(ch)) {
 			case 'S': is_time = true; break;
 			case 'H': is_time = true; value *= 60*60; break;
@@ -196,22 +208,26 @@ static bool parse_size_with_unit(
 			case 'M': {
 				if (ch2) {
 					if (ch2 == 'B') is_time = false;
-					else if (ch2 == 'I') is_time = true;
+					else if (ch2 == 'I') is_time = (ch3 != 'B');
 					else return false;
 				} else {
 					if (ch == 'm') is_time = true;
 				}
 				if (is_time) value *= 60;
 				else value *= 1024*1024;
-				break;
 			}
+			break;
+
+			// not a valid unit is failure
+			// default: return false;
 		}
+
+		// skip whitespace after unit
+		while (isspace(*p)) ++p;
 	}
 
-	ss >> std::ws; // consume trailing whitespce before testing for eof
-	r = (ss.eof() && (0 == (ss.rdstate() & std::stringstream::failbit)));
-	//bool r = lex_cast(pval, value);
-	return r;
+	// return success if we are at the end of the string.
+	return !*p;
 }
 
 int
@@ -221,6 +237,8 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 	char *pval = NULL;
 	//static int first_time = 1;
 	int log_open_default = TRUE;
+	long long def_max_log = 1024*1024*10;  // default to 10 Mb
+	bool def_max_log_by_time = false;
 
 	/*
 	**  We want to initialize this here so if we reconfig and the
@@ -229,7 +247,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 	*/
 	unsigned int HeaderOpts = 0;
 	DebugOutputChoice verbose = 0;
-	PRAGMA_REMIND("TJ: move verbose into choice")
+	//PRAGMA_REMIND("TJ: move verbose into choice")
 
 	std::vector<struct dprintf_output_settings> DebugParams(1);
 	DebugParams[0].choice = 1<<D_ALWAYS | 1<<D_ERROR;
@@ -262,6 +280,28 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 	}
 
 	/*
+	** Get the default value for a log file size
+	*/
+	pval = param("MAX_DEFAULT_LOG");
+	if (pval) {
+		long long maxlog = 0;
+		bool unit_is_time = false;
+		bool r = parse_size_with_unit(pval, maxlog, unit_is_time);
+		if (!r || (maxlog < 0)) {
+			std::string m;
+			formatstr(m, "Invalid config %s = %s: %s must be an integer literal >= 0 and may be followed by a units value\n", pname, pval, pname);
+			_condor_dprintf_exit(EINVAL, m.c_str());
+		}
+		if (unit_is_time) {
+			// TJ: 8.1.5 the time rotation code currently doesn't work for logs that have multiple writers...
+			_condor_dprintf_exit(EINVAL, "Invalid config. MAX_DEFAULT_LOG must be a size, not a time in this version of HTCondor.\n");
+		}
+		def_max_log = maxlog;
+		def_max_log_by_time = unit_is_time;
+		free(pval);
+	}
+
+	/*
 	**  Then, add flags set by the subsys_DEBUG parameters
 	*/
 	(void)sprintf(pname, "%s_DEBUG", subsys);
@@ -278,7 +318,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 		free(DebugLogDir);
 	DebugLogDir = param( "LOG" );//dprintf_param_funcs->param( "LOG" );
 
-	PRAGMA_REMIND("TJ: dprintf_config should not set globals if p_info != NULL")
+	//PRAGMA_REMIND("TJ: dprintf_config should not set globals if p_info != NULL")
 #ifdef WIN32
 		/* Two reasons why we need to lock the log in Windows
 		 * (when a lock is configured)
@@ -378,7 +418,8 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 			DebugParams[0].want_truncate = false;
 			DebugParams[0].rotate_by_time = false;
 			DebugParams[0].logPath = logPath;
-			DebugParams[0].logMax = 1024*1024;
+			DebugParams[0].logMax = def_max_log;
+			DebugParams[0].rotate_by_time = def_max_log_by_time;
 			DebugParams[0].maxLogNum = 1;
 			DebugParams[0].HeaderOpts = HeaderOpts;
 			DebugParams[0].VerboseCats = verbose;
@@ -414,10 +455,11 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 				info.want_truncate = false;
 				info.rotate_by_time = false;
 				info.choice = 1<<debug_level;
-				PRAGMA_REMIND("tj: remove this hack when you can config header of secondary log files.")
+				//PRAGMA_REMIND("tj: remove this hack when you can config header of secondary log files.")
 				if (debug_level == D_AUDIT) info.HeaderOpts |= D_IDENT;
 				info.logPath = logPath;
-				info.logMax = 1024*1024;
+				info.logMax = def_max_log;
+				info.rotate_by_time = def_max_log_by_time;
 				info.maxLogNum = 1;
 
 				DebugParams.push_back(info);
@@ -434,7 +476,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 		(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys_and_level.c_str());
 		DebugParams[param_index].want_truncate = param_boolean_int(pname, DebugParams[param_index].want_truncate) ? 1 : 0;//dprintf_param_funcs->param_boolean_int(pname, DebugParams[param_index].want_truncate) ? 1 : 0;
 
-		PRAGMA_REMIND("TJ: move initialization of DebugLock")
+		//PRAGMA_REMIND("TJ: move initialization of DebugLock")
 		if (debug_level == D_ALWAYS) {
 			(void)sprintf(pname, "%s_LOCK", subsys);
 			if (DebugLock) {

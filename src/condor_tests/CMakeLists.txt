@@ -61,6 +61,7 @@ if (BUILD_TESTING)
 	condor_exe_test(lib_eventlog_build.exe "lib_eventlog_base.cpp" "condorapi")
 	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
+	condor_exe_test(x_conditional_params.exe "x_conditional_params.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}" )
 	
 	# Not all of our gccs support -Wno-div-by-zero.
 	#if (UNIX)
@@ -138,15 +139,15 @@ if (BUILD_TESTING)
 
 		# someone else can add the fortran tests.
 		dprint("UW - add fortran .exe tests if desired")
-		
-		if(${RPM_SYSTEM_NAME} MATCHES "rhel5" AND ${SYS_ARCH} MATCHES "X86_64")
-			condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
+
+		if( ${SYS_ARCH} MATCHES "X86_64" )
+			if(  "${RPM_SYSTEM_NAME}" MATCHES "rhel5"
+			  OR "${SYSTEM_NAME}" MATCHES "Debian-7"
+			  OR "${RPM_SYSTEM_NAME}" MATCHES "rhel7" )
+				condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
+			endif()
 		endif()
-		
-        if(${SYSTEM_NAME} MATCHES "Debian-7" AND ${SYS_ARCH} MATCHES "X86_64")
-            dprint( "Will run LIGO test on Debian 7" )
-			condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
-		endif()
+
 	endif(STD_UNIVERSE)
 
 	##########################################################
@@ -169,12 +170,15 @@ if (BUILD_TESTING)
 	endif()
 
 
-	condor_pl_test(fetch_work-basic "work fetch smoke test" "core;quick;quicknolink")
+	condor_pl_test(fetch_work_static_slot "work fetch static smoke test" "core;quick;quicknolink")
+	condor_pl_test(fetch_work_pslot "work fetch pslot smoke test" "core;quick;quicknolink")
 	if(HAVE_EXT_OPENSSL)
 		condor_pl_test(lib_auth_protocol-ssl "SSL authentication test" "core;quick;full;quicknolink")
 	endif()
 	#condor_pl_test(lib_auth_protocol-pw "PW authentication test" "core;quick;full;quicknolink")
-	#condor_pl_test(lib_auth_protocol-gsi "GSI authentication test" "core;quick;full;quicknolink")
+	if (HAVE_EXT_GLOBUS)
+	condor_pl_test(lib_auth_protocol-gsi "GSI authentication test" "core;quick;full;quicknolink")
+	endif()
 	condor_pl_test(job_dagman_large_dag "Test large DAG w/ recovery mode" "dagman;quick;full;quicknolink")
 	condor_pl_test(lib_shared_port_van "Test of shared port feature." "core;quick;full;quicknolink")
 	condor_pl_test(lib_shared_port-collector_van "Test of shared port feature with collector usage." "core;quick;full;quicknolink")
@@ -393,7 +397,12 @@ if (BUILD_TESTING)
 		condor_pl_test(job_cpu_affinity_check "ensure Matlog has only matches" "core;quick;full")
 	endif ( LINUX )
 
-	condor_pl_test(job_concurrency_limits "ensure Matlog has only matches" "core;quick;full")
+	condor_pl_test(job_concurrency_limitsS "Check concurrency" "core;quick;full")
+	condor_pl_test(job_concurrency_limitsS0 "Check concurrency" "core;quick;full")
+	condor_pl_test(job_concurrency_limitsS1 "Check concurrency" "core;quick;full")
+	condor_pl_test(job_concurrency_limitsP "Check concurrency" "core;quick;full")
+	condor_pl_test(job_concurrency_limitsP0 "Check concurrency" "core;quick;full")
+	condor_pl_test(job_concurrency_limitsP1 "Check concurrency" "core;quick;full")
 	condor_pl_test(job_basic_preempt "preempt and nopreempt tests" "core;quick;full")
 	condor_pl_test(job_schedd_restart-check_reconnect "test reconnects" "core;quick;full")
 	condor_pl_test(job_local_resources "test local resources" "core;quick;full")
@@ -408,6 +417,7 @@ if (BUILD_TESTING)
 	#condor_pl_test(cmd_ccval_remote "param remote checks" "core;quick;full")
 	#condor_pl_test(lib_python_bindings "check python bindings" "core;quick;full")
 	condor_pl_test(lib_param_completeness "minimal knobs" "core;quick;full")
+	condor_pl_test(lib_param_conditionals "config conditionals" "core;quick;full")
 	condor_pl_test(cmd_condor_ping_basic "Basic default test of condor_ping" "core;quick;full")
 	condor_pl_test(job_aggressive_flocking "Test aggressive flocking" "core;quick;full")
 	##### job tests

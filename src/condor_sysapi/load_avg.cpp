@@ -443,7 +443,8 @@ sysapi_load_avg_raw(void)
 	sysapi_internal_reconfig();
 	
 	if (threadHandle == NULL) {
-		ncpus = sysapi_ncpus();
+		PRAGMA_REMIND("FIXME: is it correct to use the hyperthread count for load average?")
+		sysapi_ncpus(NULL, &ncpus);
 		InitializeCriticalSection(&cs);
 		createNewThread = TRUE;	
 	} else {

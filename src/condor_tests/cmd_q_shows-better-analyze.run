@@ -48,6 +48,7 @@ my $submit = sub {
 	my $wait_time = 0;
 	my $wait_max = 60;
 	my $wait_interval = 5;
+	my @statarray = ();
 	
 	print "Have cluster - $cluster\n";
 
@@ -57,23 +58,27 @@ my $submit = sub {
 	# Wait for the negotiator and startd to advertise themselves
 	while ( ( !$foundnegotiator || !$foundstartd ) && $wait_time < $wait_max ) {
 		if ( !$foundnegotiator ) {
-			open(CS, "condor_status -negotiator -format 'here' Name |") || die "Can't run condor_status\n";
-			while ( <CS> ) {
-				if ( /here/ ) {
+			@statarray = ();
+			CondorTest::runCondorTool("condor_status -negotiator -autoformat MyAddress Name",\@statarray,0,{emit_output=>0});
+			foreach my $line (@statarray) {
+			#<128.105.109.64:49860 Look for beginning of sinful string
+				if( $line =~ /^<\d+\.\d+\.\d+\.\d+:\d+.*$/) {
+			#print "Got a sinful string for negotiator:$line\n";
 					$foundnegotiator = 1;
 				}
 			}
-			close( CS );
 		}
 
 		if ( !$foundstartd ) {
-			open(CS, "condor_status -format 'here' Name |") || die "Can't run condor_status\n";
-			while ( <CS> ) {
-				if ( /here/ ) {
+			@statarray = ();
+			CondorTest::runCondorTool("condor_status -startd -autoformat MyAddress Name",\@statarray,0,{emit_output=>0});
+			foreach my $line (@statarray) {
+			#<128.105.109.64:49860 Look for beginning of sinful string
+				if( $line =~ /^<\d+\.\d+\.\d+\.\d+:\d+.*$/) {
+					#print "Got a sinful string for startd:$line\n";
 					$foundstartd = 1;
 				}
 			}
-			close( CS );
 		}
 
 		if ( $foundnegotiator && $foundstartd ) {

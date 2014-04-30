@@ -596,6 +596,53 @@ Instead, see the attributes: \AdAttr{ExitBySignal},
 \AdAttr{ExitCode}, and
 \AdAttr{ExitSignal}.
 
+%%% ClassAd attribute: GceAuthFile
+\index{ClassAd job attribute!GceAuthFile}
+\index{GceAuthFile!job ClassAd attribute}
+\item[\AdAttr{GceAuthFile}:] 
+Used for grid type gce jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{gce\_auth\_file}.
+Defines the path and file name of the file containing authorization
+credentials to use the GCE service.
+
+%%% ClassAd attribute: GceImage
+\index{ClassAd job attribute!GceImage}
+\index{GceImage!job ClassAd attribute}
+\item[\AdAttr{GceImage}:] 
+Used for grid type gce jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{gce\_image}.
+Identifies the machine image of the instance.
+
+%%% ClassAd attribute: GceMachineType
+\index{ClassAd job attribute!GceMachineType}
+\index{GceMachineType!job ClassAd attribute}
+\item[\AdAttr{GceMachineType}:] 
+Used for grid type gce jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{gce\_machine\_type}.
+Specifies the hardward profile that should be used for a GCE instance.
+
+%%% ClassAd attribute: GceMetadata
+\index{ClassAd job attribute!GceMetadata}
+\index{GceMetadata!job ClassAd attribute}
+\item[\AdAttr{GceMetadata}:] 
+Used for grid type gce jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{gce\_metadata}.
+Defines a set of name/value pairs that can be accessed by the virtual machine.
+
+%%% ClassAd attribute: GceMetadataFile
+\index{ClassAd job attribute!GceMetadataFile}
+\index{GceMetadataFile!job ClassAd attribute}
+\item[\AdAttr{GceMetadataFile}:] 
+Used for grid type gce jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{gce\_metadata\_file}.
+Specifies a path and file name of a file containing 
+a set of name/value pairs that can be accessed by the virtual machine.
+
 %%% ClassAd attribute: GridJobStatus
 \index{ClassAd job attribute!GridJobStatus}
 \index{GridJobStatus!job ClassAd attribute}
@@ -633,9 +680,9 @@ It can be used to determine if a job should be released or not.
 reason that a job was put on hold.
 
 %% Don't mess with the column widths, as they currently fit within the pdf,
-%% even if they look stupid in the html
+%% even if they look stupid in the html.
 \begin{center}
-\begin{table}[hbt]
+\begin{table}[p!]
 \begin{tabular}{|p{2cm}p{9cm}|p{4cm}} \hline
 \emph{Integer Code} & \emph{Reason for Hold} & \emph{HoldReasonSubCode} \\ \hline \hline
 1 & The user put the job on hold with \Condor{hold}.  \\ \hline
@@ -684,6 +731,9 @@ reason that a job was put on hold.
 \end{tabular}
 \end{table}
 \end{center}
+
+%% so we're at the top of a float place for the table of HoldReasonCode:
+\clearpage
 
 %%% ClassAd attribute: HoldReasonSubCode
 \index{ClassAd job attribute!HoldReasonSubCode}

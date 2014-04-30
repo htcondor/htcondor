@@ -55,6 +55,18 @@ public:
 	static MyString getValuesFromFile(const MyString &fileName,
 			const MyString &keyword, StringList &values, int skipTokens = 0);
 
+		/** getValuesFromFileNew() performs exactly the same function as
+			getValuesFromFile(); the difference is that
+			getValuesFromFileNew() reads the given file line-by-line
+			rather than reading the whole thing into one string (this
+			fixes gittrac #4171).  As of 8.0.6 we are keeping both
+			versions so the new one can be turned off with configuration,
+			but eventually the old version should be torn out completely
+			(see gittrac #4189).
+		*/
+	static MyString getValuesFromFileNew(const MyString &fileName,
+			const MyString &keyword, StringList &values, int skipTokens = 0);
+
 	    /** Gets the log file from a Condor submit file.
 		    on success, the return value will be the log file name
 		    on failure, it will be ""
@@ -127,6 +139,39 @@ public:
 				is true
 		*/
 	static bool logFileNFSError(const char *fileName, bool nfsIsError);
+
+	class FileReader
+	{
+	public:
+			/** Constructor -- doesn't really do anything -- open is
+				a separate method so errors can be returned.
+			 */
+		FileReader();
+
+			/** Destructor -- closes the file if it's open.
+			 */
+		~FileReader();
+
+			/** Open this file.
+				@param filename: the file to open
+				@return: "" on success; error message on failure
+			 */
+		MyString Open( const MyString &filename );
+
+			/** Real the next "logical" line from the file.  (This means
+				lines are combined if they end with a continuation character.)
+				@param line: a MyString to recieve the line string
+				@return: true iff we got any data
+			 */
+		bool NextLogicalLine( MyString &line );
+
+			/** Close the file.
+			 */
+		void Close();
+
+	private:
+		FILE *_fp;
+	};
 
 		/** Reads in the specified file, breaks it into lines, and
 			combines the lines into "logical" lines (joins continued

@@ -702,7 +702,7 @@ Equals( IndexSet &is )
 		cerr << "IndexSet::Equals: IndexSet not initialized" << endl;
 		return false;
 	}
-	else if( size != is.size || cardinality != cardinality ) {
+	else if( size != is.size || cardinality != is.cardinality ) {
 		return false;
 	}
 	else {

@@ -1,4 +1,10 @@
 [
+  Name   = strcat(MyType,"CondorVersion");
+  Value  = CondorVersion;
+  Desc   = "Version String";
+  TargetType = "Scheduler,Negotiator,Machine_slot1";
+]
+[
   Name   = strcat(MyType,"UpdatesLost");
   Value  = UpdatesLost;
   Verbosity = 1;
@@ -16,6 +22,8 @@
   Name   = strcat(MyType,"DaemonCoreDutyCycle");
   Value  = RecentDaemonCoreDutyCycle;
   Desc   = "Recent fraction of busy time in the daemon event loop";
+  Scale  = 100;
+  Units  = "%";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
@@ -36,7 +44,9 @@
   Name   = strcat(MyType,"MonitorSelfImageSize");
   Value  = MonitorSelfImageSize;
   Desc   = "Memory allocated to this daemon (i.e. virtual image size)";
-  Units  = "kbytes";
+  Units  = "bytes";
+  Scale  = 1024;
+  Type   = "float";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
@@ -52,7 +62,9 @@
   Value  = MonitorSelfResidentSetSize;
   Verbosity = 1;
   Desc   = "RAM allocated to this daemon";
-  Units  = "kbytes";
+  Units  = "bytes";
+  Scale  = 1024;
+  Type   = "float";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
@@ -67,12 +79,14 @@
   Name   = "JobsAccumBadputTime";
   Desc   = "Runtime of jobs that were aborted (removed or held) or (standard universe only) evicted without a checkpoint.";
   Units  = "seconds";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsAccumExecuteTime";
   Desc   = "Time spent running jobs.  Does not include file transfer and other job handling time.";
   Units  = "seconds";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
@@ -80,19 +94,22 @@
   Verbosity = 1;
   Desc   = "Time spent processing a completed job (includes output file transfer)";
   Units  = "seconds";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsAccumPreExecuteTime";
   Verbosity = 1;
   Desc   = "Time spent preparing to run a job (includes input file transfer)";
-  Units  = "";
+  Units  = "seconds";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsAccumRunningTime";
   Desc   = "Time spent running jobs that were not counted as badput (i.e. not removed or held).  Includes file transfer and other handling time.";
   Units  = "seconds";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
@@ -100,6 +117,7 @@
   Verbosity = 1;
   Desc   = "Time between submit and running of a job";
   Units  = "seconds";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
@@ -663,7 +681,7 @@
 ]
 [
   Aggregate = "MAX";
-  Name   = "Pool Min TransferQueueUploadWaitTime";
+  Name   = "Pool Max TransferQueueUploadWaitTime";
   Value  = TransferQueueUploadWaitTime;
   Desc   = "Oldest input file transfer waiting in the transfer queues reporting to this pool";
   Units  = "seconds";
@@ -816,17 +834,23 @@
   TargetType = "Machine_slot1";
 ]
 [
-  Name   = "KFlops";
+  Name   = "Linpack";
+  Value  = KFlops;
   Verbosity = 1;
   Desc   = "Linpack floating point benchmark";
-  Units  = "kflops";
+  Units  = "FLOPS";
+  Scale  = 1000;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [
-  Name   = "Mips";
+  Name   = "Dhrystone";
+  Value  = Mips;
   Verbosity = 1;
   Desc   = "Dhrystone integer benchmark";
-  Units  = "mips";
+  Units  = "Iterations/sec";
+  Scale  = 1000000;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [
@@ -854,7 +878,9 @@
   Name   = "TotalDisk";
   Verbosity = 1;
   Desc   = "Disk space in the job execute directory";
-  Units  = "KB";
+  Units  = "bytes";
+  Scale  = 1024;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [
@@ -866,8 +892,10 @@
 [
   Name   = "TotalMemory";
   Verbosity = 1;
-  Desc   = "RAM in MB";
-  Units  = "MB";
+  Desc   = "RAM";
+  Units  = "bytes";
+  Scale  = 1048576;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [
@@ -901,7 +929,9 @@
   Name   = "TotalVirtualMemory";
   Verbosity = 1;
   Desc   = "Addressable memory (RAM plus swap)";
-  Units  = "KB";
+  Units  = "bytes";
+  Scale  = 1024;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [

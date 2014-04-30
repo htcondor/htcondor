@@ -65,16 +65,16 @@ ODSAccountant::fetchAd ()
         dprintf( D_ALWAYS, "ODSAccountant: failed to send GET_PRIORITY command to negotiator!\n" );
     }
 
-    // get reply
-    sock->decode();
-    ad=new AttrList();
-    if (!getClassAdNoTypes(sock, *ad) || !sock->end_of_message()) {
-        dprintf( D_ALWAYS, "ODSAccountant: failed to get classad from negotiator!\n" );
-    }
-    
     if (sock) {
-        sock->close();
-        delete sock;
+       // get reply
+       sock->decode();
+       ad=new AttrList();
+       if (!getClassAdNoTypes(sock, *ad) || !sock->end_of_message()) {
+          dprintf( D_ALWAYS, "ODSAccountant: failed to get classad from negotiator!\n" );
+       }
+
+      sock->close();
+      delete sock;
     }
 
     return ad;

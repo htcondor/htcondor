@@ -40,6 +40,7 @@
 #include "exit.h"
 #include "param_functions.h"
 #include "match_prefix.h"
+#include "historyFileFinder.h"
 
 #include "file_sql.h"
 #include "file_xml.h"
@@ -777,6 +778,7 @@ drop_core_in_log( void )
 			if (MATCH == strcmpi(get_mySubSystem()->getName(), "KBDD")) {
 				dprintf (D_FULLDEBUG, "chdir() to LOG directory failed for KBDD, "
 					     "cannot drop core in LOG dir\n");
+				free(ptmp);
 				return;
 			}
 #endif
@@ -991,12 +993,16 @@ handle_reconfig( Service*, int /* cmd */, Stream* stream )
 }
 
 int
-handle_fetch_log( Service *, int, ReliSock *stream )
+handle_fetch_log( Service *, int cmd, ReliSock *stream )
 {
 	char *name = NULL;
 	int  total_bytes = 0;
 	int result;
 	int type = -1;
+
+	if ( cmd == DC_PURGE_LOG ) {
+		return handle_fetch_log_history_purge( stream );
+	}
 
 	if( ! stream->code(type) ||
 		! stream->code(name) || 
@@ -1109,19 +1115,14 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 	}
 
 	free(name);
-	char *history_file = param(history_file_param);
 
-	if (!history_file) {
+	int numHistoryFiles = 0;
+	char **historyFiles = 0;
+
+	historyFiles = findHistoryFiles(history_file_param, &numHistoryFiles);
+
+	if (!historyFiles) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: no parameter named %s\n", history_file_param);
-		stream->code(result);
-		stream->end_of_message();
-		return FALSE;
-	}
-	int fd = safe_open_wrapper_follow(history_file,O_RDONLY);
-	free(history_file);
-	if(fd<0) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: can't open history file\n");
-		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
 		stream->code(result);
 		stream->end_of_message();
 		return FALSE;
@@ -1130,16 +1131,15 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 	result = DC_FETCH_LOG_RESULT_SUCCESS;
 	stream->code(result);
 
-	filesize_t size;
-	stream->put_file(&size, fd);
+	for (int f = 0; f < numHistoryFiles; f++) {
+		filesize_t size;
+		stream->put_file(&size, historyFiles[f]);
+		free(historyFiles[f]);
+	}
+	free(historyFiles);
 
 	stream->end_of_message();
 
-	if(size<0) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: couldn't send all data!\n");
-	}
-
-	close(fd);
 	return TRUE;
 }
 
@@ -2455,6 +2455,9 @@ int dc_main( int argc, char** argv )
 		// where it goes.  We also do some NT-specific stuff in here.
 	drop_core_in_log();
 
+	// write dprintf's contribution to the daemon header.
+	dprintf_print_daemon_header();
+
 #ifdef WIN32
 		// On NT, we need to make certain we have a console allocated,
 		// since many standard mechanisms do not work without a console
@@ -2707,7 +2710,7 @@ int dc_main( int argc, char** argv )
 								  "handle_fetch_log()", 0, ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_PURGE_LOG, "DC_PURGE_LOG",
-								  (CommandHandler)handle_fetch_log_history_purge,
+								  (CommandHandler)handle_fetch_log,
 								  "handle_fetch_log_history_purge()", 0, ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",

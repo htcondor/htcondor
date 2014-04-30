@@ -1106,6 +1106,29 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		claim->client()->setaddr( client_addr );
 		free( client_addr );
 		client_addr = NULL;
+			// The schedd is asking us to preempt these claims to make
+			// the pslot it is really claiming bigger.  New in 8.1.6
+		int num_preempting = 0;
+		if (stream->code(num_preempting)) {
+			rip->dprintf(D_FULLDEBUG, "Schedd sending %d preempting claims.\n", num_preempting);
+			char **claims = (char **)malloc(sizeof(char *) * (num_preempting));
+			for (int i = 0; i < num_preempting; i++) {
+				claims[i] = NULL;
+				if (! stream->code(claims[i])) {
+					rip->dprintf( D_ALWAYS, "Can't receive preempting claim\n" );
+					ABORT;
+				}
+				Resource *dslot = resmgr->get_by_any_id( claims[i] );
+				if( !dslot ) {
+					ClaimIdParser idp( claims[i] );
+					dprintf( D_ALWAYS, 
+							 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
+				}
+				dslot->kill_claim();
+				free(claims[i]);
+			}
+			free(claims);
+		}
 	} else {
 		rip->dprintf(D_FULLDEBUG, "Schedd using pre-v6.1.11 claim protocol\n");
 	}
@@ -1136,7 +1159,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		ABORT;
 	}
 
-    map<string, double> consumption;
+    consumption_map_t consumption;
     bool has_cp = cp_supports_policy(*rip->r_classad);
     if (has_cp) {
         cp_override_requested(*req_classad, *rip->r_classad, consumption);
@@ -1475,7 +1498,7 @@ accept_request_claim( Resource* rip, Claim* leftover_claim )
 		// Since we're done talking to this schedd, delete the stream.
 	rip->r_cur->setRequestStream( NULL );
 
-	rip->dprintf( D_FAILURE|D_ALWAYS, "State change: claiming protocol successful\n" );
+	rip->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
 	rip->change_state( claimed_state );
 	return true;
 }
@@ -1566,7 +1589,7 @@ activate_claim( Resource* rip, Stream* stream )
 		// See if machine and job meet each other's requirements, if
 		// so start the job and tell shadow, otherwise refuse and
 		// clean up.  
-    map<string, double> consumption;
+    consumption_map_t consumption;
     bool has_cp = cp_supports_policy(*mach_classad, false);
     bool cp_sufficient = true;
     if (has_cp) {
@@ -1767,7 +1790,7 @@ activate_claim( Resource* rip, Stream* stream )
 		// Finally, update all these things into the resource classad.
 	rip->r_cur->publish( rip->r_classad, A_PUBLIC );
 
-	rip->dprintf( D_FAILURE|D_ALWAYS, 
+	rip->dprintf( D_ALWAYS,
 				  "State change: claim-activation protocol successful\n" );
 	rip->change_state( busy_act );
 
@@ -1840,7 +1863,7 @@ match_info( Resource* rip, char* id )
 				// too long. 
 			rip->r_cur->start_match_timer();
 
-			rip->dprintf( D_FAILURE|D_ALWAYS, "State change: "
+			rip->dprintf( D_ALWAYS, "State change: "
 						  "match notification protocol successful\n" );
 
 #if HAVE_BACKFILL

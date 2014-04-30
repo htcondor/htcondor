@@ -80,7 +80,7 @@ MyString condor_ttdb_buildts(time_t *tv, dbtype dt)
 
 	switch(dt) {
 	case T_PGSQL:
-		rv.sprintf("'%s'", tsv);		
+		rv.formatstr("'%s'", tsv);
 		break;
 	default:
 		break;
@@ -237,7 +237,7 @@ const char* spool
 	port[strlen(ptr_colon+1)] = '\0';
 
 		// get the password from the .pgpass file
-	writePasswordFile.sprintf( "%s/.pgpass", spool);
+	writePasswordFile.formatstr( "%s/.pgpass", spool);
 
 	writePassword = getWritePassword(writePasswordFile.Value(), 
 										   host, port,
@@ -578,12 +578,12 @@ QuillErrCode insertHistoryJobCommon(AttrList *ad, JobQueueDatabase* DBObj, dbtyp
   ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cid);
   ad->EvalInteger (ATTR_PROC_ID, NULL, pid);
 
-  scheddbirthdate_str.sprintf("%lu", scheddbirthdate);
+  scheddbirthdate_str.formatstr("%lu", scheddbirthdate);
 
  {
-	  sql_stmt.sprintf(
+	  sql_stmt.formatstr(
 					   "DELETE FROM Jobs_Horizontal_History WHERE scheddname = '%s' AND scheddbirthdate = %lu AND cluster_id = %d AND proc_id = %d", scheddname, (unsigned long)scheddbirthdate, cid, pid);
-	  sql_stmt2.sprintf(
+	  sql_stmt2.formatstr(
 						"INSERT INTO Jobs_Horizontal_History(scheddname, scheddbirthdate, cluster_id, proc_id, enteredhistorytable) VALUES('%s', %lu, %d, %d, current_timestamp)", scheddname, (unsigned long)scheddbirthdate, cid, pid);
 
 	  if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
@@ -664,7 +664,7 @@ QuillErrCode insertHistoryJobCommon(AttrList *ad, JobQueueDatabase* DBObj, dbtyp
 			  {
 				  ts_expr = condor_ttdb_buildts(&clock, dt);	
 				  
-				  sql_stmt.sprintf(
+				  sql_stmt.formatstr(
 								   "UPDATE Jobs_Horizontal_History SET %s = (%s) WHERE scheddname = '%s' and scheddbirthdate = %lu and cluster_id = %d and proc_id = %d", name.Value(), ts_expr.Value(), scheddname, (unsigned long)scheddbirthdate, cid, pid);
 			  }
 		  }	else {
@@ -680,7 +680,7 @@ QuillErrCode insertHistoryJobCommon(AttrList *ad, JobQueueDatabase* DBObj, dbtyp
 			  newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
 
 			  {
-				  sql_stmt.sprintf( 
+				  sql_stmt.formatstr(
 								   "UPDATE Jobs_Horizontal_History SET %s = '%s' WHERE scheddname = '%s' and scheddbirthdate = %lu and cluster_id = %d and proc_id = %d", name.Value(), newvalue.Value(), scheddname, (unsigned long)scheddbirthdate, cid, pid);
 			  }
 		  }
@@ -688,12 +688,12 @@ QuillErrCode insertHistoryJobCommon(AttrList *ad, JobQueueDatabase* DBObj, dbtyp
 		  newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
 		  
 		  {
-			  sql_stmt.sprintf(
+			  sql_stmt.formatstr(
 							   "DELETE FROM Jobs_Vertical_History WHERE scheddname = '%s' AND scheddbirthdate = %lu AND cluster_id = %d AND proc_id = %d AND attr = '%s'", scheddname, (unsigned long)scheddbirthdate, cid, pid, name.Value());
 		  }
 			
 		  {
-			  sql_stmt2.sprintf( 
+			  sql_stmt2.formatstr(
 								"INSERT INTO Jobs_Vertical_History(scheddname, scheddbirthdate, cluster_id, proc_id, attr, val) VALUES('%s', %lu, %d, %d, '%s', '%s')", scheddname, (unsigned long)scheddbirthdate, cid, pid, name.Value(), newvalue.Value());
 		  }
 	  }

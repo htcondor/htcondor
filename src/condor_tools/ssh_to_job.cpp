@@ -440,11 +440,25 @@ bool SSHToJob::execute_ssh()
 			return false;
 		}
 
+		if( jobStatus == HELD ) {
+			std::string holdReason = "The job is on hold for an unknown reason.\n";
+			if( jobAd->EvaluateAttrString( ATTR_HOLD_REASON, holdReason ) ) {
+				formatstr( holdReason, "The job is on hold: \"%s\".\n", holdReason.c_str() );
+			}
+			logError( holdReason.c_str() );
+			return false;
+		}
+
 		FreeJobAd( jobAd );
 
 		if( gotGridResource ) {
 			if( gridResource.substr( 0, 3 ) == "ec2" ) {
 				if( gotVMName && gotKPName ) {
+					if( jobStatus != RUNNING ) {
+						m_retry_sensible = true;
+						return false;
+					}
+
 					int pid = fork();
 					if( pid == 0 ) {
 						// Because ssh has a command-line parser that doesn't
@@ -530,7 +544,9 @@ bool SSHToJob::execute_ssh()
 		// must be in format expected by SecMan::ImportSecSessionInfo()
 	char const *session_info = "[Encryption=\"YES\";Integrity=\"YES\";]";
 
-	bool success = schedd.getJobConnectInfo(m_jobid,m_subproc,session_info,timeout,&error_stack,starter_addr,starter_claim_id,starter_version,slot_name,error_msg,m_retry_sensible);
+	int job_status;
+	MyString hold_reason;
+	bool success = schedd.getJobConnectInfo(m_jobid,m_subproc,session_info,timeout,&error_stack,starter_addr,starter_claim_id,starter_version,slot_name,error_msg,m_retry_sensible,job_status,hold_reason);
 
 		// turn the ssh claim id into a security session so we can use it
 		// to authenticate ourselves to the starter
@@ -557,6 +573,10 @@ bool SSHToJob::execute_ssh()
 	if( !success ) {
 		if ( !m_retry_sensible ) {
 			logError("%s\n",error_msg.Value());
+		}
+		if( job_status == HELD ) {
+			m_retry_sensible = false;
+			logError( "Job is held: \"%s\".\n", hold_reason.Value() );
 		}
 		return false;
 	}

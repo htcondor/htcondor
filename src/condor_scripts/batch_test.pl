@@ -73,18 +73,15 @@ use CondorUtils;
 # level 5 - debug statements from Condor.pm
 #
 # There is no reason not to have debug always on the the level
-# pretty completely controls it. All DebugOff calls
-# have been removed.
 #
 # CondorPersonal.pm has a similar but separate mechanism.
 #
 #################################################################
 
-Condor::DebugOff();
-Condor::DebugLevel(2);
-CondorPersonal::DebugLevel(2);
-CondorPersonal::DebugOff();
+Condor::DebugLevel(1);
+CondorPersonal::DebugLevel(1);
 my @debugcollection = ();
+my $UseNewRunning = 1;
 
 #################################################################
 #
@@ -340,7 +337,7 @@ my %test_suite = ();
 if(!($wantcurrentdaemons)) {
 	# ...unless isolation was requested.  Then we do one before running each test
 	if(!$isolated) {
-		start_condor();
+		start_condor($testpersonalcondorlocation);
 	}
 }
 
@@ -732,9 +729,43 @@ if ( $cleanupcondor ) {
 exit $num_failed;
 
 
+sub IsAlive
+{
+	my $config = shift;
+	my $condor_config = "";
+	my $alive = 0;
+	if($iswindows == 1) {
+		if ($iscygwin) {
+			$condor_config = `cygpath -m $config`;
+			CondorUtils::fullchomp($condor_config);
+		} else {
+			($condor_config = $config) =~ s|/|\\|g;
+		}
+	} else {
+		$condor_config = $config;
+	}
+	print "IsAlive testing this config:$condor_config\n";
+	my $condor_instance = CondorTest::GetPersonalCondorWithConfig($targetconfig);
+	if($condor_instance != 0) { 
+		$alive = $condor_instance->GetCondorAlive();
+	} else {
+		$alive = 0;
+	}
+	return($alive);
+}
+
 sub start_condor {
+	my $alive = 0;
 	if($isolated) {
-		$testpersonalcondorlocation = $_[0];
+		$testpersonalcondorlocation = "$_[0]";
+		if($UseNewRunning == 0) {
+			$alive = CondorPersonal::TestCondorHereAlive($testpersonalcondorlocation);
+			if($alive == 1) {
+				print "Don't need to start condor\n";
+				# nothing to do
+				return;
+			}
+		}
 		if($iswindows == 1) {
 			if ($iscygwin) {
 				$wintestpersonalcondorlocation = `cygpath -m $testpersonalcondorlocation`;
@@ -742,13 +773,42 @@ sub start_condor {
 			} else {
 				($wintestpersonalcondorlocation = $testpersonalcondorlocation) =~ s|/|\\|g;
 			}
+			$testpersonalcondorlocation = $wintestpersonalcondorlocation;
 		}
 		$targetconfig      = "$testpersonalcondorlocation/condor_config";
+
+		if($UseNewRunning == 1) {
+			$alive = IsAlive($targetconfig);
+			if($alive == 1) {
+				print "Don't need to start condor\n";
+				# nothing to do
+				return;
+			}
+		}
+
 		$targetconfiglocal = "$testpersonalcondorlocation/condor_config.local";
 		$localdir          = "$testpersonalcondorlocation/local";
 
 		$condorpidfile     = "$testpersonalcondorlocation/.pidfile";
 		push(@extracondorargs, "-pidfile $condorpidfile");
+	} else { 
+		#$alive = CondorPersonal::TestCondorHereAlive($testpersonalcondorlocation);
+		if($UseNewRunning == 0) {
+		my $condor_instance = CondorTest::GetPersonalCondorWithConfig($targetconfig);
+		if($condor_instance != 0) { 
+			$alive = $condor_instance->GetCondorAlive();
+		} else {
+			$alive = 0;
+		}
+		} else {
+		# UseNewRunning == 1
+			$alive = IsAlive($targetconfig);
+		}
+		if($alive == 1) {
+			# nothing to do
+			print "Don't need to start condor\n";
+			return;
+		}
 	}
 
 	my $awkscript = "../condor_examples/convert_config_to_win32.awk";
@@ -778,6 +838,8 @@ sub start_condor {
 		if ($iscygwin) {
 			$tmp = `cygpath -m $targetconfig`;
 			CondorUtils::fullchomp($tmp);
+			# save corrected config path
+			$targetconfig = $tmp
 		}
 		$ENV{CONDOR_CONFIG} = $tmp;
 		print "setting CONDOR_CONFIG=$tmp\n";
@@ -814,9 +876,32 @@ sub start_condor {
 	else {
 		CondorTest::verbose_system("$installdir/sbin/condor_master @extracondorargs -f &",{emit_output=>0,use_system=>1});
 	}
+	#create personal condor instance
+	#
+	#sub CreateAndStoreCondorInstance
+	#{
+		#my $version = shift;
+		#my $condorconfig = shift;
+		#my $collectoraddr = shift;
+		#my $amalive = shift;
+		#$personal_condors{$version} = new PersonalCondorInstance( $version, $condorconfig, $collectoraddr, $amalive );
+		#return($personal_condors{$version});
+	#}
 	#debug("Done Starting Personal Condor\n",2);
-
-	CondorPersonal::IsRunningYet() || die "Failed to start Condor";
+	my $namedcondor = "";
+	my $personalinstance = 0;
+	my $upyet = 0;
+	sleep(5);
+	if($UseNewRunning == 1) {
+		$namedcondor = "batchtestcondor" . "$$";
+		$personalinstance = CondorTest::CreateAndStoreCondorInstance("TestingPersonalCondor",$ENV{CONDOR_CONFIG},0,0);
+		$upyet = CondorPersonal::NewIsRunningYet($targetconfig,$namedcondor);
+	} else {
+		$upyet = CondorPersonal::IsRunningYet();
+	}
+	if($upyet ==  0) {
+		print "start_condor:IsRunningYet says NOT!!!!!!! for testing personal condor\n";
+	}
 }
 
 
@@ -1107,7 +1192,7 @@ sub CreateLocalConfig {
 	# ADD size for log files and debug level
 	# default settings are in condor_config, set here to override 
 	#print FIX "ALL_DEBUG               = D_FULLDEBUG D_SECURITY D_HOSTNAME\n";
-	print FIX "DEFAULT_DEBUG               = D_FULLDEBUG D_SECURITY D_HOSTNAME\n";
+	print FIX "DEFAULT_DEBUG               = D_FULLDEBUG D_HOSTNAME\n";
 
 	print FIX "MAX_COLLECTOR_LOG       = $logsize\n";
 	print FIX "COLLECTOR_DEBUG         = \n";
@@ -1181,11 +1266,30 @@ sub CreateLocalConfig {
 			$jvm = `\@for \%I in ($javabinary) do \@echo(\%~sf\$PATH:I`;
 					CondorUtils::fullchomp($jvm);
 		} else {
-			my $whichtest = `which $javabinary`;
-			CondorUtils::fullchomp($whichtest);
-			$whichtest =~ s/Program Files/progra~1/g;
-			$jvm = `cygpath -m $whichtest`;
-			CondorUtils::fullchomp($jvm);
+			#can't use which. its a linux tool and will lie about the path to java.
+			if (1) {
+				debug ("Running where $javabinary\n",2);
+				$jvm = `where $javabinary`;
+				CondorUtils::fullchomp($jvm);
+				# if where doesn't tell us the location of the java binary, just assume it's will be
+				# in the path once condor is running. (remember that cygwin lies...)
+				if ( ! ($jvm =~ /java/i)) {
+					# we need a special check for 64bit java if we are a 32 bit app.
+					if ( -e '/cygdrive/c/windows/sysnative/java.exe') {
+						debug ("where $javabinary returned nothing, but found 64bit java in sysnative dir\n",2);
+						$jvm = "c:\\windows\\sysnative\\java.exe";
+					} else {
+					debug ("where $javabinary returned nothing, assuming java will be in Condor's path.\n",2);
+					$jvm = "java.exe";
+					}
+				}
+			} else {
+				my $whichtest = `which $javabinary`;
+				CondorUtils::fullchomp($whichtest);
+				$whichtest =~ s/Program Files/progra~1/g;
+				$jvm = `cygpath -m $whichtest`;
+				CondorUtils::fullchomp($jvm);
+			}
 		}
 		CondorTest::debug("which java said: $jvm\n",2);
 

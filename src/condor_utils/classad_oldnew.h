@@ -31,11 +31,22 @@
 #include "classad/value.h"
 #include "classad/matchClassad.h"
 
+// Forward dec'l
+class ReliSock;
 
 void AttrList_setPublishServerTimeMangled( bool publish);
 
 classad::ClassAd* getClassAd( Stream *sock );
 bool getClassAd( Stream *sock, classad::ClassAd& ad );
+
+/** Get the ClassAd from the CEDAR stream.  This will not block.
+ *  Returns 2 if this would have blocked; the resulting ClassAd is not yet valid in this case
+ * @param sock
+ * @param ad the ClassAd to be received
+ * @returns 0 for error; 1 for success; 2 if this would have blocked.
+ */
+int getClassAdNonblocking(ReliSock *sock, classad::ClassAd& ad);
+
 bool getClassAdNoTypes( Stream *sock, classad::ClassAd& ad );
 
 /** Send the ClassAd on the CEDAR stream
@@ -44,7 +55,16 @@ bool getClassAdNoTypes( Stream *sock, classad::ClassAd& ad );
  * @param exclude_private whether to exclude private attributes
  * @param attr_whitelist list of attributes to send (default is to send all)
  */
-bool putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private = false, StringList *attr_whitelist=NULL );
+int putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private = false, StringList *attr_whitelist=NULL );
+
+/** Send the ClassAd on the CEDAR stream.  This will not block even if the send socket is full.
+ *  Returns 2 if this would have blocked; the ClassAd will be buffered in memory.
+ * @param sock the stream
+ * @param ad the ClassAd to be sent
+ * @param exclude_private whether to exclude private attributes
+ * @param attr_whitelist list of attributes to send (default is to send all)
+ */
+int putClassAdNonblocking(ReliSock *sock, classad::ClassAd& ad, bool exclude_private = false, StringList *attr_whitelist=NULL );
 
 /** Send the ClassAd on the CEDAR stream, excluding the special handling
  *  for MyType and TargetType. You will rarely want this function.
@@ -53,14 +73,14 @@ bool putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private = fal
  * @param exclude_private whether to exclude private attributes
  * @param attr_whitelist list of attributes to send (default is to send all)
  */
-bool putClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_private = false );
+int putClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_private = false );
 
 //DO NOT CALL THIS, EXCEPT IN THE ABOVE TWO putClassAds*!
 //the bool exclude types tells the function whether to exclude 
 //  stuff about MyType and TargetType from being included.
 //  true is the same as the old putClassAd()
 //  false is the same as the putClassAdNoTypes()
-bool _putClassAd(Stream *sock, classad::ClassAd& ad, bool excludeTypes,
+int _putClassAd(Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 					bool exclude_private, StringList *attr_whitelist);
 
 //this is a shorthand version of EvalTree w/o a target ad.

@@ -46,11 +46,13 @@ int sysapi_phys_memory_raw_no_param(void);
 long long sysapi_disk_space_raw(const char *filename);
 long long sysapi_disk_space(const char *filename);
 
-/* return the number of cpus there on a machine */
-int sysapi_ncpus_raw(void);
-int sysapi_ncpus(void);
-/* get raw ncpus without making any calls to config system */
-void sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus);
+/* get ncpus without making any calls to config system, this uses cached values */
+void sysapi_ncpus_raw(int * num_cpus, int * num_hyperthreads);
+/* For backward compatibility, this is an alias for the above call */
+void sysapi_ncpus(int * num_cpus, int * num_hyperthreads);
+/* call call cpu/hyperthread detection code.  this should only be called once per process. */
+void sysapi_detect_cpu_cores(int * num_cpus, int * num_hyperthreads);
+
 
 #if 0 // removed from condor_utils to reduce shadow memory use
 /* calculate the number of mips the machine is. Even though this is a user

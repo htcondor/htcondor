@@ -181,6 +181,25 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 		# The enable-static-nss patch works, and disable link warning about dynamic nss
 		set (GLIBC_PATCH patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-static-link-warning.patch && patch --binary -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.patch && patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-nscd.patch)
 
+	elseif( ${GLIBC_VERSION} STREQUAL "217" )
+		#
+		# x86-64 RHEL 7 Beta
+		#
+		if( NOT ${SYS_ARCH} STREQUAL "X86_64" )
+			message( STATUS "HTCondor will not build 32-bit standard universe for glibc version ${GLIBC_VERSION}" )
+			set( GLIBC_DETECTED OFF )
+			set( CLIPPED ON PARENT_SCOPE )
+		endif()
+
+		set( VER 2.17-36-x86_64 )
+		set( GLIBC_TARNAME glibc-2.17-36-x86_64 )
+		set( GLIBC_FLAGS export CC=gcc && export CXX=g++ && export "CFLAGS=-mtune=generic -fasynchronous-unwind-tables -DNDEBUG -g -O3" )
+		set( GLIBC_CONFIGURE ./configure CC=gcc CXX=g++ "CFLAGS=-mtune=generic -fasynchronous-unwind-tables -DNDEBUG -g -O3 -fno-asynchronous-unwind-tables" --prefix=/usr --enable-add-ons=ports,nptl,rtkaio,c_stubs,libidn --with-headers=/usr/include --enable-kernel=2.6.32 --enable-bind-now --build=x86_64-redhat-linux --enable-multi-arch --enable-obsolete-rpc --enable-systemtap --disable-profile --enable-nss-crypt --enable-static-nss )
+
+		set( GLIBC_MAKE make -r )
+
+		set (GLIBC_PATCH patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-static-link-warning.patch && patch --binary -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.patch && patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-nscd.patch)
+
 	else()
 		message(STATUS "Condor can not build standard universe for glibc version:${GLIBC_VERSION}")
 		set(GLIBC_DETECTED OFF)
@@ -210,7 +229,7 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 	  set( EXT_GLIBC_FOUND "${GLIBC_INSTALL_LOC}/lib/libc.a" )
 	  message ( STATUS "external configured (EXT_GLIBC_FOUND=${EXT_GLIBC_FOUND})" )
 	  set( EXT_GLIBC_FOUND ${EXT_GLIBC_FOUND} PARENT_SCOPE )
-	  
+
 	  condor_post_external( glibc OFF OFF )
 
 	  install ( FILES ${GLIBC_INSTALL_LOC}/lib/libc.a DESTINATION ${C_LIB} RENAME libcondor_c.a)

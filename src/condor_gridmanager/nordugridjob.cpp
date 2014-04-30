@@ -1300,6 +1300,18 @@ void NordugridJob::NotifyNewRemoteStatus( const char *status )
 	}
 }
 
+// Return the filenames we should use for stdout and stderr in the job
+// directory on the ARC server. We used to name them _condor_stdout/err,
+// but that can cause problems if ARC is submitting into Condor.
+// ARC uses a wrapper script that redirects the job's output to filenames
+// given in the RSL and lets the batch scheduler capture the wrapper's
+// output. If Condor decides to name the wrapper's output files
+// _condor_stdout/err (like when Condor's file transfer is used),
+// the two outputs get intermingled.
+// So starting with 8.0.5, we generate more unique filenames, based on
+// the GlobalJobId attribute. For users who have jobs submitted when
+// upgrading to this version or beyond, we will try using the old names
+// when transferring output if we fail using the new names.
 void NordugridJob::GetRemoteStdoutNames( std::string &std_out, std::string &std_err, bool use_old_names )
 {
 	if ( use_old_names ) {

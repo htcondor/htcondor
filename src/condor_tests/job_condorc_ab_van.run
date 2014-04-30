@@ -53,6 +53,7 @@ CondorTest::StartCondorWithParams(
 # verify that a job runs
 SimpleJob::RunCheck(
     universe => "grid",
+	timeout => 240,
     grid_resource => "condor $poolB_schedd_name $poolB_collector"
 );
 

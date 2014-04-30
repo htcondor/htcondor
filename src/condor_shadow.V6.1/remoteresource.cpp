@@ -139,6 +139,9 @@ RemoteResource::~RemoteResource()
 		daemonCore->Cancel_Timer(m_attempt_shutdown_tid);
 		m_attempt_shutdown_tid = -1;
 	}
+	if ( next_reconnect_tid != -1 ) {
+		daemonCore->Cancel_Timer( next_reconnect_tid );
+	}
 }
 
 
@@ -1080,13 +1083,28 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		}
 	}
 
-	if( update_ad->LookupInteger(ATTR_BLOCK_READ_KBYTES, int_value) ) {
-		jobAd->Assign(ATTR_BLOCK_READ_KBYTES, int_value);
-	}
+    jobAd->CopyAttribute(ATTR_BLOCK_READ_KBYTES, update_ad);
+    jobAd->CopyAttribute(ATTR_BLOCK_WRITE_KBYTES, update_ad);
+    jobAd->CopyAttribute("Recent" ATTR_BLOCK_READ_KBYTES, update_ad);
+    jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITE_KBYTES, update_ad);
 
-	if( update_ad->LookupInteger(ATTR_BLOCK_WRITE_KBYTES, int_value) ) {
-		jobAd->Assign(ATTR_BLOCK_WRITE_KBYTES, int_value);
-	}
+    jobAd->CopyAttribute(ATTR_BLOCK_READ_BYTES, update_ad);
+    jobAd->CopyAttribute(ATTR_BLOCK_WRITE_BYTES, update_ad);
+    jobAd->CopyAttribute("Recent" ATTR_BLOCK_READ_BYTES, update_ad);
+    jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITE_BYTES, update_ad);
+
+    jobAd->CopyAttribute(ATTR_BLOCK_READS, update_ad);
+    jobAd->CopyAttribute(ATTR_BLOCK_WRITES, update_ad);
+    jobAd->CopyAttribute("Recent" ATTR_BLOCK_READS, update_ad);
+    jobAd->CopyAttribute("Recent" ATTR_BLOCK_WRITES, update_ad);
+
+    // these are headed for job ads in the scheduler, so rename them
+    // to prevent these from colliding with similar attributes from schedd statistics
+    jobAd->CopyAttribute("StatsLastUpdateTimeStarter", "StatsLastUpdateTime", update_ad);
+    jobAd->CopyAttribute("StatsLifetimeStarter", "StatsLifetime", update_ad);
+    jobAd->CopyAttribute("RecentStatsLifetimeStarter", "RecentStatsLifetime", update_ad);
+    jobAd->CopyAttribute("RecentWindowMaxStarter", "RecentWindowMax", update_ad);
+    jobAd->CopyAttribute("RecentStatsTickTimeStarter", "RecentStatsTickTime", update_ad);
 
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		if( int_value > disk_usage ) {

@@ -196,10 +196,395 @@ is_valid_command(const char* cmdToExecute)
 	return retVal;
 }
 
+typedef enum  {
+	CIFT_EMPTY=0,
+	CIFT_NUMBER,
+	CIFT_BOOL,
+	CIFT_IDENTIFIER,
+	CIFT_MACRO,
+	CIFT_VERSION,
+	CIFT_IFDEF,
+	CIFT_COMPLEX,
+} expr_character_t;
+
+// helper function to compare ptr case-insensitively to a known lower case literal
+// leading and trailing whitespace is ignored, but the literal must otherwise match exactly.
+// if no_trailing_token is true, there must be nothing after the literal but whitespace.
+// if no_trailing_token is false, then the next character after the literal must not be
+// an identifier token.
+static bool matches_literal_ignore_case(const char * ptr, const char * lit, bool no_trailing_token=true)
+{
+	while (isspace(*ptr)) ++ptr;
+	while (*lit) { if ((*ptr++ | 0x20) != *lit++) return false; }
+	if (no_trailing_token) {
+		while (isspace(*ptr)) ++ptr;
+		return !*ptr;
+	}
+	return !isalnum(*ptr);
+}
+
+static expr_character_t Characterize_config_if_expression(const char * expr, bool keyword_check)
+{
+	const char * p = expr;
+	while (isspace(*p)) ++p;
+	if ( ! *p) return CIFT_EMPTY;
+
+	const char * begin = p;
+
+	// we don't want a leading - to confuse us into thinking we are seeing a sum
+	bool leading_minus = *p == '-';
+	if (leading_minus) ++p;
+
+	enum _char_types {
+		ct_space = 0x01, // internal whitespace (trailing whitespace doesn't count)
+		ct_digit = 0x02, // 0-9
+		ct_alpha = 0x04, // a-zA-Z
+		ct_ident = 0x08, // _/.
+		ct_cmp   = 0x10, // <=>
+		ct_sum   = 0x20, // +-
+		ct_logic = 0x40, // & |
+		ct_group = 0x80, // ()[]{}
+		ct_money = 0x100, // $
+		ct_other = 0x200, // all other characters
+		ct_float = 0x1000, // digits with . or e
+		ct_macro = 0x2000, // $(
+	};
+
+	int set = 0;
+	while (int ch = *p++) {
+		if (ch >= '0' && ch <= '9') set |= ct_digit;
+		else if (ch == '.') { if (set == ct_digit || (!*p || (*p >= '0' && *p <= '9'))) set |= ct_float; else set |= ct_ident; }
+		else if (ch == 'e' || ch == 'E') { if ((set & ~ct_float) == ct_digit) set |= ct_float; else  set |= ct_alpha; }
+		else if (ch == '-' || ch == '+') { if (set != (ct_digit|ct_float)) set |= ct_sum; }
+		else if (ch >= 'a' && ch <= 'z') set |= ct_alpha;
+		else if (ch >= 'A' && ch <= 'Z') set |= ct_alpha;
+		else if (ch == '_' || ch == '/') set |= ct_ident;
+		else if (ch >= '<' && ch <= '>') set |= ct_cmp;
+		else if (ch == '!' && *p == '=') set |= ct_cmp;
+		else if (ch == '$') { set |= ct_money; if (*p == '(') set |= ct_macro; }
+		else if (isspace(ch)) { if ( *p && ! isspace(*p)) set |= ct_space; } // we only count internal spaces.
+		else if (ch == '&' || ch == '|') set |= ct_logic;
+		else if (ch >= '{' && ch <= '}') set |= ct_group;
+		else if (ch == '(' || ch == ')') set |= ct_group;
+		else if (ch == '[' || ch == ']') set |= ct_group;
+		else set |= ct_other;
+	}
+
+	// intentify some simple cases.
+	switch (set) {
+		case 0:
+			return CIFT_EMPTY;
+
+		case ct_digit:
+		case ct_digit|ct_float: 
+			return CIFT_NUMBER;
+
+		case ct_alpha:
+			if (matches_literal_ignore_case(expr, "false") || matches_literal_ignore_case(expr, "true"))
+				return CIFT_BOOL;
+			if (keyword_check) {
+				if (matches_literal_ignore_case(begin, "version"))
+					return CIFT_VERSION; // identify bare version to insure a reasonable error message
+				if (matches_literal_ignore_case(begin, "defined"))
+					return CIFT_IFDEF; // identify bare defined to insure a reasonable error message
+			}
+		case ct_alpha|ct_digit:
+		case ct_alpha|ct_digit|ct_float:
+		case ct_alpha|ct_ident:
+		case ct_alpha|ct_ident|ct_digit:
+		case ct_alpha|ct_ident|ct_digit|ct_float:
+			return CIFT_IDENTIFIER;
+
+			// this matches version >= 8.1.2
+		case ct_alpha|ct_space|ct_cmp|ct_digit:
+		case ct_alpha|ct_space|ct_cmp|ct_digit|ct_float:
+			if (keyword_check && matches_literal_ignore_case(begin, "version", false))
+				return CIFT_VERSION;
+			return CIFT_COMPLEX;
+
+			// this matches defined identifier, defined bool & defined int
+		case ct_alpha|ct_space:
+		case ct_alpha|ct_space|ct_ident:
+		case ct_alpha|ct_space|ct_digit:
+		case ct_alpha|ct_space|ct_digit|ct_float:
+			if (keyword_check && matches_literal_ignore_case(begin, "defined", false))
+				return CIFT_IFDEF; // identify bare defined to insure a reasonable error message
+			return CIFT_COMPLEX;
+	}
+
+	if ((set & ct_macro) && 0 == (set & ~(ct_money|ct_ident|ct_alpha|ct_digit|ct_macro)))
+		return CIFT_MACRO;
+
+	return CIFT_COMPLEX;
+}
+
+static bool Evaluate_config_if_bool(const char * expr, expr_character_t ec)
+{
+	if (ec == CIFT_NUMBER) {
+		double dd = atof(expr);
+		return dd < 0 || dd > 0;
+	} else if (ec == CIFT_BOOL) {
+		if (matches_literal_ignore_case(expr, "false")) return false;
+		if (matches_literal_ignore_case(expr, "true")) return true;
+	}
+	return false;
+}
+
+static bool is_crufty_bool(const char * expr, bool & result)
+{
+	// crufty bools look like identifiers to the characterize function
+	if (matches_literal_ignore_case(expr, "yes") || matches_literal_ignore_case(expr, "t")) {
+		result = true;
+		return true;
+	}
+	if (matches_literal_ignore_case(expr, "no") || matches_literal_ignore_case(expr, "f")) {
+		result = false;
+		return true;
+	}
+	return false;
+}
+// returns true if valid.
+//
+static bool Evaluate_config_if(const char * expr, bool & result, std::string & err_reason, MACRO_SET & macro_set, const char * subsys)
+{
+	expr_character_t ec = Characterize_config_if_expression(expr, true);
+	if (ec == CIFT_NUMBER || ec == CIFT_BOOL) {
+		result = Evaluate_config_if_bool(expr, ec);
+		return true;
+	}
+	// crufty bools look like identifiers to the characterize function
+	if ((ec == CIFT_IDENTIFIER) && is_crufty_bool(expr, result)) {
+		return true;
+	}
+
+	if (ec == CIFT_VERSION) {
+		const char * ptr = expr+7; // skip over "version"
+		while (isspace(*ptr)) ++ptr;
+
+		// extract the compparison operator and set ptr to the version field
+		int op = 0; // -1 is <   0 is =   1 is >
+		bool or_equal = false;
+		bool negated = (*ptr == '!'); if (negated) ++ptr;
+		if (*ptr >= '<' && *ptr <= '>') op = (*ptr++ - '=');
+		if (*ptr == '=') or_equal = (*ptr++ == '=');
+		while (isspace(*ptr)) ++ptr;
+		int ver_diff = -99;
+
+		CondorVersionInfo version;
+		if (version.is_valid(ptr)) {
+			ver_diff = version.compare_versions(ptr); // returns -1 for <, 0 for =, and 1 for >
+		} else {
+			// for (possible) future compat with classad syntax. v prefix indicates version literal.
+			if (*ptr == 'v' || *ptr == 'V') ++ptr;
+
+			int majv=0, minv=0, subv=0;
+			int cfld = sscanf(ptr,"%d.%d.%d",&majv, &minv, &subv);
+			if (cfld >= 2 && majv >= 6) {
+				// allow subminor version to be omitted.
+				if (cfld < 3) { subv = version.getSubMinorVer(); }
+				CondorVersionInfo version2(majv, minv, subv);
+				ver_diff = version.compare_versions(version2);
+			} else {
+				// doesn't look like a valid version string.
+				err_reason = "the version literal is invalid";
+				return false;
+			}
+		}
+		ver_diff *= -1; // swap left and right hand side of the comparison.
+		result = (ver_diff == op) || (or_equal && (ver_diff == 0));
+		if (negated) result = !result;
+		return true;
+	}
+
+	if (ec == CIFT_IFDEF) {
+		const char * ptr = expr+7; // skip over "defined"
+		while (isspace(*ptr)) ++ptr;
+
+		if (!*ptr) {
+			result = false; // empty string is same as undef
+		} else {
+			expr_character_t ec2 = Characterize_config_if_expression(ptr, false);
+			// if it's an identifier, do macro lookup.
+			if (ec2 == CIFT_IDENTIFIER) {
+				const char * name = ptr;
+				const char * tvalue = lookup_macro(name, subsys, macro_set);
+				if (subsys && ! tvalue)
+					tvalue = lookup_macro(name, NULL, macro_set);
+				if ( ! tvalue && macro_set.defaults) {
+					tvalue = param_default_string(name, subsys);
+				}
+				if ( ! tvalue && is_crufty_bool(name, result)) {
+					tvalue = "true"; // any non empty value will do here.
+				}
+
+				// result is false if macro is not defined, or if defined to be ""
+				result = (tvalue != NULL && tvalue[0] != 0);
+			// if what we are checking for 'defined' is a bool or int, then it's defined.
+			} else if (ec2 == CIFT_NUMBER || ec2 == CIFT_BOOL) {
+				result = true;
+			} else {
+				err_reason = "defined argument must be param name, boolean, or number";
+				return false;
+			}
+		}
+		return true;
+	}
+
+#if 1
+	// TODO: convert version & defined to booleans, and then evaluate the result as a ClassAd expression
+#else // this code sort of works, but isn't necessarily the way we want to go
+	// the expression MAY be evaluatable by the classad library, if it is, then great
+	int ival;
+	ClassAd rad;
+	if (rad.AssignExpr("ifcondition", expr) && rad.EvalBool("ifcondition", NULL, ival)) {
+		result = (ival != 0);
+		return true;
+	}
+#endif
+
+	if (ec == CIFT_COMPLEX) {
+		err_reason = "complex conditionals are not supported";
+	} else {
+		err_reason = "expression is not a conditional";
+	}
+
+	return false;
+}
+
+bool Test_config_if_expression(const char * expr, bool & result, std::string & err_reason, MACRO_SET& macro_set, const char * subsys)
+{
+	bool value = result;
+	bool inverted = false;
+
+	// optimize the simple case by not bothering to macro expand if there are no $ in the expression
+	char * expanded = NULL;
+	if (strstr(expr, "$")) {
+		expanded = expand_macro(expr, macro_set, NULL, true, subsys);
+		if ( ! expanded) return false;
+		expr = expanded;
+		char * ptr = expanded + strlen(expanded);
+		while (ptr > expanded && isspace(ptr[-1])) *--ptr = 0;
+	}
+
+	while (isspace(*expr)) ++expr;
+	if (*expr == '!') {
+		inverted = true;
+		++expr;
+		while (isspace(*expr)) ++expr;
+	}
+
+	bool valid = Evaluate_config_if(expr, value, err_reason, macro_set, subsys);
+
+	if (expanded) free(expanded);
+	result = inverted ? !value : value;
+	return valid;
+}
+
+// a class to help keep track of if/elif/else stack while parsing config
+// this implementation has a max stack depth of 63.
+//
+// theory of operation:
+// a long integer will hold a bit map showing the current yes/no state of all ifs
+// that surround the current line. begin_if, begin_elif and begin_else, set a bit
+// in the state corresponding to the current nesting depth for the current yes/no value.
+// Since an if block is enabled only when ALL of the nesting levels are in yes state, we can
+// determine the enabled state by checking for a string of all 1 bits from the current level
+// down to bit0. Note: Bit0 in the state corresponds to base level, outside of all ifs so bit0
+// will always be 1 (assuming that the base state is enabled.)
+// Thus if we are inside 3 nested if's, top is 0x8, and the current line is enabled if
+// state ends in 0xF, and disabled if it ends in any other hex value.
+// to allow for elif without nesting, the estate field contains a set bit if ANY previous if/elif
+// body was 1. we use this to determine the state of else and to decided whether an
+// elif should be tested or just set to 0
+// TODO: fix to detect duplicate else, elsif after else. 
+class ConfigIfStack {
+public:
+	unsigned long long state;   // the current yes/no state of all nested ifs. valid from bit0 to top
+	unsigned long long estate;  // 1 bits indicate an if or elif was true for all nested if. valid from bit0 to top
+	unsigned long long istate;  // 1 bits that a if has been seen, but no else yet, use to multiple else.
+	unsigned long long top;     // mask for the bit in state corresponding to current nesting level. only one bit should be set
+	ConfigIfStack() : state(1), estate(0), istate(0), top(1) {}
+	bool enabled() { unsigned long long mask = top | (top-1); return (state&mask)==mask; }
+	bool inside_if() { return top > 1; }
+	bool inside_else() { return top > 1 && !(istate & top); }
+	bool begin_if(bool bb) { top <<= 1; istate |= top; if (bb) { state |= top; estate |= top; } else { state &= ~top; estate &= ~top; } return top != 0; }
+	bool begin_else() { 
+		if (!(istate & top)) return false;
+		istate &= ~top;
+		if ((estate | state) & top) { state &= ~top; } else { state |= top; }
+		return top > 1; 
+	}
+	bool begin_elif(bool bb) {
+		if (!(istate & top)) return false;
+		if (estate & top) { // if one of the previous if was true, then this else is false
+			state &= ~top;
+		} else { // if all of the previous ifs were false, then evaluate bb
+			if (bb) { estate |= top; state |= top; } else { state &= ~top; }
+		}
+		return top > 1;
+	}
+	bool end_if() { istate &= ~top; top >>= 1; if (!top) { top = state = 1; istate = estate = 0; return false; } return true; }
+	bool line_is_if(const char * line, std::string & errmsg, MACRO_SET& macro_set, const char * subsys);
+};
+
+bool ConfigIfStack::line_is_if(const char * line, std::string & errmsg, MACRO_SET& macro_set, const char * subsys)
+{
+	if (starts_with(line,"if") && (isspace(line[2]) || !line[2])) {
+		const char * expr = line+2;
+		while (isspace(*expr)) ++expr;
+
+		bool bb = this->enabled();
+		std::string err_reason;
+		if (bb && ! Test_config_if_expression(expr, bb, err_reason, macro_set, subsys)) {
+			formatstr(errmsg, "%s is not a valid if condition", expr);
+			if (!err_reason.empty()) { errmsg += " because "; errmsg += err_reason; }
+		} else if ( ! this->begin_if(bb)) {
+			formatstr(errmsg, "if nesting too deep!");
+		} else {
+			errmsg.clear();
+		}
+		return true;
+	}
+	if (starts_with(line, "else") && (isspace(line[4]) || !line[4])) {
+		if ( ! this->begin_else()) {
+			errmsg = this->inside_else() ? "else is not allowed after else" : "else without matching if";
+		} else {
+			errmsg.clear();
+		}
+		return true;
+	}
+	if (starts_with(line, "elif") && (isspace(line[4]) || !line[4])) {
+		const char * expr = line+4;
+		while (isspace(*expr)) ++expr;
+		std::string err_reason;
+
+		bool bb = !(estate & top) && ((state & (top-1)) == (top-1));	// if an outer if prunes this, don't evaluate the expression.
+		if (bb && ! Test_config_if_expression(expr, bb, err_reason, macro_set, subsys)) {
+			formatstr(errmsg, "%s is not a valid elif condition", expr);
+			if (!err_reason.empty()) { errmsg += " because "; errmsg += err_reason; }
+		} else if ( ! this->begin_elif(bb)) {
+			errmsg = this->inside_else() ? "elif is not allowed after else" : "elif without matching if";
+		} else {
+			errmsg.clear();
+		}
+		return true;
+	}
+	if (starts_with(line, "endif") && (isspace(line[5]) || !line[5])) {
+		if ( ! this->end_if()) {
+			errmsg = "endif without matching if";
+		} else {
+			errmsg.clear();
+		}
+		return true;
+	}
+	return false;
+}
 
 int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, MACRO_SET& macro_set, const char * subsys)
 {
 	source.meta_off = -1;
+
+	ConfigIfStack ifstack;
 
 	StringList lines(config, "\n");
 	lines.rewind();
@@ -208,6 +593,21 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 		++source.meta_off;
 		if( line[0] == '#' || blankline(line) )
 			continue;
+
+		std::string errmsg;
+		if (ifstack.line_is_if(line, errmsg, macro_set, subsys)) {
+			if ( ! errmsg.empty()) {
+				dprintf(D_CONFIG | D_FAILURE, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), line);
+				return -1;
+			} else {
+				dprintf(D_CONFIG | D_VERBOSE, "config %lld,%lld,%lld line: %s\n", ifstack.top, ifstack.state, ifstack.estate, line);
+			}
+			continue;
+		}
+		if ( ! ifstack.enabled()) {
+			dprintf(D_CONFIG | D_VERBOSE, "config if(%lld,%lld,%lld) ignoring: %s\n", ifstack.top, ifstack.state, ifstack.estate, line);
+			continue;
+		}
 
 		const char * name = line;
 		char * ptr = line;
@@ -238,19 +638,21 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 
 		if ( ! *ptr && ! ISOP(op)) {
 			// Here we have determined this line has no operator, or too many
-			PRAGMA_REMIND("tj: should report parse error in meta knobs here.")
+			//PRAGMA_REMIND("tj: should report parse error in meta knobs here.")
 			return -1;
 		}
 
-		// ptr now points to the first non-space character of the right hand side
+		// ptr now points to the first non-space character of the right hand side, it may point to a \0
 		const char * rhs = ptr;
 
 		// Expand the knob name - do we allow this??
 		/*
-		name = expand_macro(name, macro_set);
-		if (name == NULL) {
+		PRAGMA_REMIND("tj: allow macro expansion in knob names in meta_params?")
+		char* expanded_name = expand_macro(name, macro_set);
+		if (expanded_name == NULL) {
 			return -1;
 		}
+		name = expanded_name;
 		*/
 
 		// if name begins with $ it might be a metaknob.
@@ -275,8 +677,9 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 			}
 
 			/* expand self references only */
-			PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
-			char * value = expand_macro(rhs, macro_set, name, false, subsys);
+			//PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
+			bool use_def_param_info = macro_set.defaults && (macro_set.options & CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO) != 0;
+			char * value = expand_macro(rhs, macro_set, name, use_def_param_info, subsys);
 			if (value == NULL) {
 				return -1;
 			}
@@ -284,6 +687,8 @@ int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, 
 			insert(name, value, macro_set, source);
 			FREE(value);
 		}
+
+		// FREE(expanded_name);
 	}
 	source.meta_off = -2;
 	return 0;
@@ -293,7 +698,8 @@ int
 Read_config(const char* config_source, MACRO_SET& macro_set,
 			int expand_flag,
 			bool check_runtime_security,
-			const char * subsys)
+			const char * subsys,
+			std::string & config_errmsg)
 {
 	FILE*	conf_fp = NULL;
 	char*	name = NULL;
@@ -308,11 +714,13 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 	const int gl_opt_new = CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE | CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT;
 	int gl_opt = (macro_set.options & CONFIG_OPT_OLD_COM_IN_CONT) ? gl_opt_old : gl_opt_new;
 	bool gl_opt_smart = (macro_set.options & CONFIG_OPT_SMART_COM_IN_CONT) ? true : false;
-
+	ConfigIfStack ifstack;
 
 	if (subsys && ! *subsys) subsys = NULL;
 
 	ConfigLineNo = 0;
+	config_errmsg.clear();
+
 	// initialize a MACRO_SOURCE for this file that we will use
 	// in subsequent macro insert calls.
 	MACRO_SOURCE FileMacro;
@@ -424,6 +832,39 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 			continue;
 		}
 
+		// to allow if/else constructs to be used in files that are parsed by pre 8.1.5 HTCondor
+		// we ignore a ':' at the beginning of the line of an if body.
+		// before 8.1.5, a line that began with ':' would be effectively ignored*.
+		// now we ignore the ':' but not the rest of the line, so a ':' can be used to make lines
+		// invisible to the old config parser, but not the current one.  To help avoid regression
+		// we only ignore ':' at the start of lines that constitute an if body
+		if (*name == ':') {
+			if (ifstack.inside_if()
+				|| (name[1] == 'i' && name[2] == 'f' && (isspace(name[3]) || !name[3]))) {
+				++name;
+			}
+		}
+
+		// if the line is an if/elif/else/endif handle it here, updating the ifstack as needed.
+		std::string errmsg;
+		if (ifstack.line_is_if(name, errmsg, macro_set, subsys)) {
+			if ( ! errmsg.empty()) {
+				dprintf(D_CONFIG | D_FAILURE, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), name);
+				config_errmsg = errmsg;
+				retval = -1;
+				goto cleanup;
+			} else {
+				dprintf(D_CONFIG | D_VERBOSE, "config %s:%lld,%lld,%lld line: %s\n", name, ifstack.top, ifstack.state, ifstack.estate, name);
+			}
+			continue;
+		}
+		// if the line is inside the body of an if/elif/else that is false, ignore it.
+		if ( ! ifstack.enabled()) {
+			dprintf(D_CONFIG | D_VERBOSE, "config if(%lld,%lld,%lld) ignoring: %s\n", ifstack.top, ifstack.state, ifstack.estate, name);
+			continue;
+		}
+
+		op = 0;
 		ptr = name;
 
 		// Assumption is that the line starts with a non whitespace
@@ -463,12 +904,10 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 			while( *ptr && !ISOP(*ptr) ) {
 				ptr++;
 			}
-
 			if( !*ptr ) {
 				retval = -1;
 				goto cleanup;
 			}
-
 			op = *ptr++;
 		}
 
@@ -517,8 +956,9 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 				}
 			} else  {
 				/* expand self references only */
-				PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
-				value = expand_macro(rhs, macro_set, name, false, subsys);
+				//PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
+				bool use_def_param_info = macro_set.defaults && (macro_set.options & CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO) != 0;
+				value = expand_macro(rhs, macro_set, name, use_def_param_info, subsys);
 				if( value == NULL ) {
 					retval = -1;
 					goto cleanup;
@@ -547,6 +987,15 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 		name = NULL;
 		FREE( value );
 		value = NULL;
+	}
+
+	if (ifstack.inside_if()) {
+		fprintf(stderr,
+				"Configuration Error File <%s>, Line %d: \n",
+				config_source, ConfigLineNo );
+		config_errmsg = "endif(s) not found before end-of-file";
+		retval = -1;
+		goto cleanup;
 	}
 
  cleanup:
@@ -623,7 +1072,7 @@ condor_hash_symbol_name(const char *name, int size)
 /*
 ** Insert the parameter name and value into the given hash table.
 */
-PRAGMA_REMIND("TJ: insert bug - self refs to default refs never expanded")
+//PRAGMA_REMIND("TJ: insert bug - self refs to default refs never expanded")
 
 extern "C++" MACRO_ITEM* find_macro_item (const char *name, MACRO_SET& set)
 {
@@ -746,6 +1195,7 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 	if (set.size+1 >= set.allocation_size) {
 		int cAlloc = set.allocation_size*2;
 		if ( ! cAlloc) cAlloc = 32;
+		set.allocation_size = cAlloc;
 		MACRO_ITEM * ptab = new MACRO_ITEM[cAlloc];
 		if (set.table) {
 			// transfer existing key/value pairs old allocation to new one.
@@ -1168,7 +1618,7 @@ expand_macro(const char *value,
 				// Note that if 'name' has been explicitly set to nothing,
 				// tvalue will _not_ be NULL so we will not call
 				// param_default_string().  See gittrack #1302
-			if( !self && use_default_param_table && tvalue == NULL ) {
+			if (use_default_param_table && tvalue == NULL) {
 				tvalue = param_default_string(name, subsys);
 				if (use) { param_default_set_use(name, use, macro_set); }
 			}
@@ -1382,7 +1832,7 @@ find_config_macro( register char *value, register char **leftp,
 	char *left, *left_end, *name, *right;
 	char *tvalue;
    #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
-	bool after_colon = false;
+	int after_colon = 0; // records the offset of the : from the start of the macro
    #endif
 
 	tvalue = value + search_pos;
@@ -1454,11 +1904,14 @@ tryagain:
 					left_end = value - 1;
 				}
 				name = ++value;
+			   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
+				after_colon = 0;
+			   #endif
 				while( *value && *value != ')' ) {
 					char c = *value++;
 				   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
 					if ( ! after_colon && c == ':') {
-						after_colon = true;
+						after_colon = (int)(value - name);
 					} else if (after_colon) {
 						if (c == '(') {
 							// skip ahead past the close )
@@ -1496,6 +1949,9 @@ tryagain:
 					// between these two pointers gives us the length of the
 					// identifier.
 					int namelen = value-name;
+				   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
+					if (after_colon) namelen = after_colon-1;
+				   #endif
 					if( !self || ( strncasecmp( name, self, namelen ) == MATCH && self[namelen] == '\0' ) ) {
 							// $(DOLLAR) has special meaning; it is
 							// set to "$" and is _not_ recursively

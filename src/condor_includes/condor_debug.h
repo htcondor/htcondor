@@ -194,10 +194,10 @@ bool dprintf_to_term_check();
 #endif
 void _condor_dprintf_va ( int flags, DPF_IDENT ident, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
-void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
+void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
 void Suicide(void);
 void set_debug_flags( const char *strflags, int cat_and_flags );
-void PREFAST_NORETURN _condor_dprintf_exit( int error_code, const char* msg );
+void PREFAST_NORETURN _condor_dprintf_exit( int error_code, const char* msg ) GCC_NORETURN;
 void _condor_fd_panic( int line, const char *file );
 void _condor_set_debug_flags( const char *strflags, int cat_and_flags );
 int  _condor_dprintf_is_initialized();
@@ -223,6 +223,8 @@ void dprintf_dump_stack(void);
 
 time_t dprintf_last_modification(void);
 void dprintf_touch_log(void);
+/* write dprintf contribution to the daemon header */
+void dprintf_print_daemon_header(void);
 
 /* reset statistics about delays acquiring the debug file lock */
 void dprintf_reset_lock_delay(void);
@@ -251,6 +253,17 @@ int dprintf_SetExitCode(int code);
  */
 int fclose_wrapper( FILE *stream, int maxRetries );
 
+/* Windows-specific function to provide strerror() like functionality for
+ * Win32 and Winsock error codes. Returns an error string from a static
+ * buffer (no need to free it), just like strerror.
+ * errCode should come from GetLastError() or WSAGetLastError().
+ * If errCode is 0 (default), then GetLastErrorString will invoke
+ * GetLastError itself.
+ */
+#ifdef WIN32
+const char* GetLastErrorString(DWORD errCode=0);
+#endif
+
 /*
 **	Definition of exception macro
 */
@@ -275,7 +288,7 @@ extern int	_EXCEPT_Line;			/* Line number of the exception    */
 extern const char	*_EXCEPT_File;		/* File name of the exception      */
 extern int	_EXCEPT_Errno;			/* errno from most recent system call */
 extern int (*_EXCEPT_Cleanup)(int,int,const char*);	/* Function to call to clean up (or NULL) */
-extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2);
+extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
 
 #if defined(__cplusplus)
 }
@@ -359,6 +372,8 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 # define DEBUG_WAIT_FOR_DEBUGGER(var,def) ((void)0)
 #endif
 
+#define dprintf_set_tool_debug(name, flags) dprintf_config_tool(name, flags)
+
 #endif /* CONDOR_DEBUG_H */
 
 /* 
@@ -377,6 +392,3 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 #	define ASSERT(cond) CONDOR_ASSERT(cond)
 #	define assert(cond) CONDOR_ASSERT(cond)
 #endif	/* of ifdef WIN32 */
-
-#define dprintf_set_tool_debug(name, flags) dprintf_config_tool(name, flags)
-

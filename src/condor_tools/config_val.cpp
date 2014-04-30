@@ -243,8 +243,12 @@ void print_as_type(const char * name, int as_type)
 		fprintf(stdout, " # eval: %s def=%d (%s)\n", bb ? "true" : "false", bval, bvalid ? "valid" : "invalid");
 	} else if (as_type == PARAM_TYPE_INT) {
 		int ivalid = -1, ilong = 0;
-		int ival = param_default_integer(name, NULL, &ivalid, &ilong);
+		int ival = param_default_integer(name, NULL, &ivalid, &ilong, NULL);
 		fprintf(stdout, " # eval: %d (%s%s)\n", ival, ivalid ? "valid" : "invalid", ilong ? ", long" : "");
+	} else if (as_type == PARAM_TYPE_LONG) {
+		int ivalid = -1;
+		long long ival = param_default_long(name, NULL, &ivalid);
+		fprintf(stdout, " # eval: %lld (%s long)\n", ival, ivalid ? "valid" : "invalid");
 	} else if (as_type == PARAM_TYPE_DOUBLE) {
 		int dvalid = -1;
 		double dval = param_default_double(name, NULL, &dvalid);
@@ -461,6 +465,7 @@ main( int argc, const char* argv[] )
 	bool    dash_default = false;
 	bool    stats_with_defaults = false;
 	const char * debug_flags = NULL;
+	const char * check_configif = NULL;
 
 #ifdef WIN32
 	// uncomment this if you need to debug crashes.
@@ -651,6 +656,8 @@ main( int argc, const char* argv[] )
 		} else if (is_dash_arg_prefix(argv[i], "version", 3)) {
 			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			my_exit(0);
+		} else if (is_dash_arg_prefix(argv[i], "check-if", -1)) {
+			check_configif = use_next_arg("check-if", argv, i);
 		} else {
 			fprintf(stderr, "%s is not valid argument\n", argv[i]);
 			usage();
@@ -825,6 +832,19 @@ main( int argc, const char* argv[] )
 
 	// temporary, to get rid of build warning.
 	if (dash_default) { fprintf(stderr, "-default not (yet) supported\n"); }
+
+	// handle check-if to valididate config's if/else parsing and help users to write
+	// valid if conditions.
+	if (check_configif) { 
+		std::string err_reason;
+		bool bb = false;
+		bool valid = config_test_if_expression(check_configif, bb, err_reason);
+		fprintf(stdout, "# %s: \"%s\" %s\n", 
+			valid ? "ok" : "not supported", 
+			check_configif, 
+			valid ? (bb ? "\ntrue" : "\nfalse") : err_reason.c_str());
+		exit(0);
+	}
 
 	if (write_config) {
 		if (ask_a_daemon) {
@@ -1789,21 +1809,13 @@ static void do_dump_config_stats(FILE * fh, bool dump_sources, bool dump_strings
 {
 	struct _macro_stats stats;
 	get_config_stats(&stats);
-	MyString line;
-	line.formatstr("Macros = %d\n", stats.cEntries);
-	fprintf(fh, line.Value());
-	line.formatstr("Used = %d\n", stats.cUsed);
-	fprintf(fh, line.Value());
-	line.formatstr("Referenced = %d\n", stats.cReferenced);
-	fprintf(fh, line.Value());
-	line.formatstr("Files = %d\n", stats.cFiles);
-	fprintf(fh, line.Value());
-	line.formatstr("StringBytes = %d\n", stats.cbStrings);
-	fprintf(fh, line.Value());
-	line.formatstr("TablesBytes = %d\n", stats.cbTables);
-	fprintf(fh, line.Value());
-	line.formatstr("IsSorted = %d\n", stats.cSorted);
-	fprintf(fh, line.Value());
+	fprintf(fh, "Macros = %d\n", stats.cEntries);
+	fprintf(fh, "Used = %d\n", stats.cUsed);
+	fprintf(fh, "Referenced = %d\n", stats.cReferenced);
+	fprintf(fh, "Files = %d\n", stats.cFiles);
+	fprintf(fh, "StringBytes = %d\n", stats.cbStrings);
+	fprintf(fh, "TablesBytes = %d\n", stats.cbTables);
+	fprintf(fh, "IsSorted = %d\n", stats.cSorted);
 
 	if (dump_sources) {
 		fprintf(fh, "\nSources -----\n");
@@ -2219,6 +2231,12 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 			args.obsoleteif = &obsoleteif;
 		}
 
+		items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIFX");
+		if (items && items[0]) {
+			obsoleteif.initializeFromString(items);
+			args.obsoleteif = &obsoleteif;
+		}
+
 		#ifdef WIN32
 		// on Windows we shove in some defaults for VMWARE, we want to ignore them
 		// for upgrade if the user isn't using vmware
@@ -2226,7 +2244,7 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 		if (vm_type) { free(vm_type); }
 		else
 		{
-			const char * items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIF_VMWARE");
+			items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIF_VMWARE");
 			if (items && items[0]) {
 				obsoleteif.initializeFromString(items);
 				args.obsoleteif = &obsoleteif;

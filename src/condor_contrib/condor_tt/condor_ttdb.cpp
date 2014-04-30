@@ -32,7 +32,7 @@ MyString condor_ttdb_buildseq(dbtype dt, char *seqName)
 
 	switch(dt) {
 	case T_PGSQL:
-		rv.sprintf("nextval('%s')", seqName);		
+		rv.formatstr("nextval('%s')", seqName);
 		break;
 	default:
 		break;
@@ -47,7 +47,7 @@ MyString condor_ttdb_onerow_clause(dbtype dt)
 
 	switch(dt) {
 	case T_PGSQL:
-		rv.sprintf(" LIMIT 1");
+		rv.formatstr(" LIMIT 1");
 		break;
 	default:
 		break;
@@ -62,7 +62,7 @@ MyString condor_ttdb_compare_clob_to_lit(dbtype dt, const char* col_nam, const c
 
 	switch(dt) {
 	case T_PGSQL:
-		rv.sprintf("%s != '%s'", col_nam, literal);
+		rv.formatstr("%s != '%s'", col_nam, literal);
 		break;
 	default:
 		break;
