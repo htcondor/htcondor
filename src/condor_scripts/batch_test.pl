@@ -339,8 +339,18 @@ my %test_suite = ();
 # If a Condor was requested we want to start one up...
 if(!($wantcurrentdaemons)) {
 	# ...unless isolation was requested.  Then we do one before running each test
-	if(!$isolated) {
-		start_condor($testpersonalcondorlocation);
+	# We always want to establish The testing personal condor
+	# so we have a base config available for tests which start their
+	# own personal condor. bt 4/28/14
+	
+	if($iswindows == 1){
+		if(!(-d $wintestpersonalcondorlocation)) {
+			start_condor($wintestpersonalcondorlocation);
+		}
+	} else {
+		if(!(-d $testpersonalcondorlocation)) {
+			start_condor($testpersonalcondorlocation);
+		}
 	}
 }
 
