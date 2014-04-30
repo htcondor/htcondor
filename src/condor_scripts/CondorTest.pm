@@ -52,8 +52,8 @@ my %securityoptions =
 my $RunningFile = "RunningTests";
 my $teststrt = 0;
 my $teststop = 0;
-my $DEBUGLEVEL = 1;
-my $debuglevel = 2;
+my $DEBUGLEVEL = 4;
+my $debuglevel = 1;
 
 my $UseNewRunning = 1;
 
@@ -120,7 +120,7 @@ BEGIN
 	$hoststring = "notset:000";
     $vacates = 0;
 	$lastconfig = "";
-	$DEBUGLEVEL = 1;
+	$DEBUGLEVEL = 3;
 	$CondorTestPid = $$;
 }
 
@@ -1529,6 +1529,7 @@ sub runCondorTool
 	my $failconcerns = 1;
 
 	if(exists ${$options}{expect_result}) {
+		#print "for cmd: $cmd, any result is ok\n";
 		$failconcerns = 0;
 	}
 
@@ -1557,7 +1558,15 @@ sub runCondorTool
 		TestDebug( "Try command: $cmd\n",4);
 		#open(PULL, "_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd 2>$catch |");
 
-		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=10 $cmd", $options);
+		if(CondorUtils::is_windows() == 1) {
+			if($cmd =~ /condor_who/) {
+			} else {
+				$ENV{_condor_TOOL_TIMEOUT_MULTIPLIER} = 10;
+			}
+			$hashref = runcmd("$cmd", $options);
+		} else {
+			$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=10 $cmd", $options);
+		}
 		my @output =  @{${$hashref}{"stdout"}};
 		my @error =  @{${$hashref}{"stderr"}};
 
@@ -2977,9 +2986,13 @@ sub StartCondorWithParams
     my %condor_params = @_;
     my $condor_name = $condor_params{condor_name} || "";
     if( $condor_name eq "" ) {
+		#print "CondorTest::StartCondorWithParams:condor_name unset in CondorTest::StartCondorWithParams\n";
 		$condor_name = GenUniqueCondorName();
 		$condor_params{condor_name} = $condor_name;
-    }
+		#print "CondorTest::StartCondorWithParams:Using:$condor_name\n";
+    } else {
+		#print "CondorTest::StartCondorWithParams:Using requested name:$condor_name\n";
+	}
 
     if( exists $personal_condors{$condor_name} ) {
 		die "condor_name=$condor_name already exists!";
@@ -3001,10 +3014,10 @@ sub StartCondorWithParams
     my $condor_info = CondorPersonal::StartCondorWithParams( %condor_params );
 
 	if(exists $condor_params{do_not_start}) {
-		print "CondorTest::StartCondorWithParams: bailing after config\n";
+		#print "CondorTest::StartCondorWithParams: bailing after config\n";
 		return(0);
 	} else {
-		print "CondorTest::StartCondorWithParams: Full config and run\n";
+		#print "CondorTest::StartCondorWithParams: Full config and run\n";
 	}
 
     my @condor_info = split /\+/, $condor_info;
@@ -3696,13 +3709,19 @@ sub CreateLocalConfig
 	my $extratext = shift;
     $name = "$name$$";
     open(FI,">$name") or die "Failed to create local config starter file: $name:$!\n";
-    print "Created: $name\n";
+    #print "Created: $name\n";
     print FI "$text";
 	if(defined $extratext) {
     	print FI "$extratext";
 	}
-    runcmd("cat $name");
     close(FI);
+	my @configarray = ();
+    runCondorTool("cat $name",\@configarray,2,{emit_output=>0});
+	print "\nIncorporating the following into the local config file:\n\n";
+	foreach my $line (@configarray) {
+		print "$line";
+	}
+	print "\n";
     return($name);
 }
 
