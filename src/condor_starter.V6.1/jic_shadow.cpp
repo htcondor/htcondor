@@ -2104,7 +2104,7 @@ JICShadow::beginFileTransfer( void )
 		if( wantCheckpoint && ! userLevelCheckpoint ) {
 			//
 			// Right now, the shadow decides which files to send, and it
-			// doesn't distinguish between input and intermediate fiels,
+			// doesn't distinguish between input and intermediate fields,
 			// so we can either skip job files on start-up xor get checkpoint
 			// files on a resume.
 			//
