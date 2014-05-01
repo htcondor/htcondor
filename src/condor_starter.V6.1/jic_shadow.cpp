@@ -2103,10 +2103,21 @@ JICShadow::beginFileTransfer( void )
 		job_ad->LookupBool( "UserLevelCheckpoint", userLevelCheckpoint );
 		if( wantCheckpoint && ! userLevelCheckpoint ) {
 			//
-			// Having intermediate file transfer actually occurs presently
-			// requires that DownloadFiles() have been called, which is silly.
+			// Right now, the shadow decides which files to send, and it
+			// doesn't distinguish between input and intermediate fiels,
+			// so we can either skip job files on start-up xor get checkpoint
+			// files on a resume.
 			//
-			// return false;
+			// This may not be worth fixing (by adding a new command to allow
+			// the starter to choose from the whilelist of files the shadow
+			// is willing to send), since nobody's going to want to host
+			// checkpoint files on their submit node /anyway/ -- in which
+			// case we can safely wholly ignore the shadow in the physical
+			// starter, which may be a good thing in itself.
+			//
+			// (The new command should probably just be an extensions of
+			// subcommand int 999, which converts the channel to classads.)
+			//
 		}
 
 		if( ! filetrans->DownloadFiles(false) ) { // do not block
