@@ -1740,29 +1740,40 @@ of the subsystem corresponding to the daemon.
 
 \label{param:UserlogFileCacheMax}
 \item[\Macro{USERLOG\_FILE\_CACHE\_MAX}]
-  An integer value that is zero by default.
-  When configured to a value greater than zero, open job event log files 
-  are cached in the \Condor{schedd}, and the size of this cache is 
-  limited to the configured value.  Caching open user log files can 
-  improve the performance of the \Condor{schedd}, particularly when 
-  multiple jobs share a log file, and/or log files are being accessed
-  over a networked file system (NFS).  Larger values support caching of
-  a greater number of individual log files (i.e. scenarios where there
-  are many jobs, and little sharing of log files between jobs).
+  The integer number of job event log files that the \Condor{schedd}
+  will keep open for writing during an interval of time
+  (specified by \MacroNI{USERLOG\_FILE\_CACHE\_CLEAR\_INTERVAL}).
+  The default value is 0, causing no files to remain open;
+  when 0, each job event log is opened, the event is written, and then the
+  file is closed.
+  Individual file descriptors are removed from this count 
+  when the \Condor{schedd} detects that no jobs are currently using them.
+  Opening a file is a relatively time consuming operation on a
+  networked file system (NFS),
+  and therefore, 
+  allowing a set of files to remain open can improve performance.
+  The value of this variable needs to be set low enough such that the
+  \Condor{schedd} daemon process does not run out of file descriptors by
+  leaving these job event log files open.
+  The Linux operating system defaults to permitting 1024 assigned
+  file descriptors per process; the \Condor{schedd} will have one
+  file descriptor per running job for the \Condor{shadow}. 
 
 \label{param:UserlogFileCacheClearInterval}
 \item[\Macro{USERLOG\_FILE\_CACHE\_CLEAR\_INTERVAL}]
-  An integer value that is \Expr{60} by default.
-  This macro applies when log file caching is enabled, by configuring 
-  \Macro{USERLOG\_FILE\_CACHE\_MAX} greater than zero.
-  Defines the minimum number of seconds that the log file cache is
-  allowed to persist before it is periodically cleared.  Periodic
-  cache clearing is intended to robustly prevent log files from being held
-  open when they are no longer being used by jobs in the queue.
-  Individual log files are also cleared when the \Condor{schedd} detects
-  that no jobs are currently using them, so this variable may be set
-  higher if the administrator determines that a longer cache duration
-  may yield higher performance.
+  The integer number of seconds that forms the time interval within which
+  job event logs will be permitted to remain open
+  when \MacroNI{USERLOG\_FILE\_CACHE\_MAX} is greater than zero.
+  The default is 60 seconds.
+  When the interval has passed, 
+  all job event logs that the \Condor{schedd} has permitted to stay
+  open will be closed, and the interval within which 
+  job event logs may remain open between writes of events begins anew.
+  This time interval may be set to a longer duration
+  if the administrator determines that the \Condor{schedd} will not
+  exceed the maximum number of file descriptors;
+  a longer interval may yield higher performance due to fewer files
+  being opened and closed.
 
 \label{param:EventLogCountEvents}
 \item[\Macro{EVENT\_LOG\_COUNT\_EVENTS}]

@@ -30,9 +30,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Event log files for jobs may now be optionally cached by the \Condor{schedd} 
-to improve logging performance.  Log file caching may be enabled by configuring
-\Macro{USERLOG\_FILE\_CACHE\_MAX} to a size greater than zero.
+\item The \Condor{schedd} may now keep open a configurable number
+of job event log files.
+This improves performance over the previous behavior of
+open, write, close done for each event.
+New configuration variables \Macro{USERLOG\_FILE\_CACHE\_MAX} and 
+\Macro{USERLOG\_FILE\_CACHE\_CLEAR\_INTERVAL} specify the number
+of job event log files that may be kept open at the same time
+and the periodic interval of time that passes
+before the set of open files are closed.
 \Ticket{4040}
 
 \item The curl file transfer plug-in can now be used to transfer output
