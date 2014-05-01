@@ -1111,6 +1111,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_history_helper
 %_libexecdir/condor/condor_job_router
 %_libexecdir/condor/condor_pid_ns_init
+%_libexecdir/condor/condor_urlfetch
 %_libexecdir/condor/config_fetch
 %if %glexec
 %_libexecdir/condor/condor_glexec_setup
@@ -1273,6 +1274,7 @@ rm -rf %{buildroot}
 %_sbindir/grid_monitor.sh
 %_sbindir/remote_gahp
 %_sbindir/nordugrid_gahp
+%_sbindir/gce_gahp
 %_libexecdir/condor/condor_gpu_discovery
 %_sbindir/condor_vm_vmware
 %config(noreplace) %_sysconfdir/condor/condor_config.local
