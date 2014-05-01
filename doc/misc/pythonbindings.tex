@@ -66,15 +66,17 @@ XML-formatted.
 
 \texttt{lock( file\_obj, lock\_type )}
 
-Take a lock on a file object using the HTCondor locking protocol (which
-is distinct from typical POSIX locks).
+Take a lock on a file object using the HTCondor locking protocol,
+which is distinct from typical POSIX locks.
+Returns a context manager object; the lock is released as
+this context manager object is destroyed.
 
-Parameter \texttt{file\_obj} is a file object corresponding which should
-be locked.  Parameter \texttt{lock\_type} specifies whether the lock should
-be for reads or for writes.
+Parameter \texttt{file\_obj} is a file object corresponding to the file
+which should be locked.
 
-This returns a context manager object; the lock is released as soon as
-this object is destroyed.
+Parameter \texttt{lock\_type} specifies the string
+\texttt{"ReadLock"} if the lock should be for reads 
+or \texttt{"WriteLock"} if the lock should be for writes.
 
 \\ \hline
 
