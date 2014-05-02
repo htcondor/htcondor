@@ -1344,62 +1344,57 @@ sub ParseMachineAds
 	my $variable;
 	my $value;
 
-	if( ! open(PULL, "condor_status -l $machine 2>&1 |") )
-    {
-		print "error getting Ads for \"$machine\": $!\n";
-		return 0;
-    }
+	my @ads = ();
+	my $res = runCondorTool("condor_status -l $machine",\@ads,2,{emit_output=>0});
     
     TestDebug( "reading machine ads from $machine...\n" ,5);
-    while( <PULL> )
-    {
-	CondorUtils::fullchomp($_);
-	TestDebug("Raw AD is $_\n",5);
-	$line++;
+    #while( <PULL> )
+	foreach my $ad (@ads) {
+		CondorUtils::fullchomp($ad);
+		TestDebug("Raw AD is $ad\n",5);
+		$line++;
 
-	# skip comments & blank lines
-	next if /^#/ || /^\s*$/;
+		# skip comments & blank lines
+		$_ = $ad;
+		next if /^#/ || /^\s*$/;
 
-	# if this line is a variable assignment...
-	if( /^(\w+)\s*\=\s*(.*)$/ )
-	{
-	    $variable = lc $1;
-	    $value = $2;
-
-	    # if line ends with a continuation ('\')...
-	    while( $value =~ /\\\s*$/ )
-	    {
-		# remove the continuation
-		$value =~ s/\\\s*$//;
-
-		# read the next line and append it
-		<PULL> || last;
-		$value .= $_;
-	    }
-
-	    # compress whitespace and remove trailing newline for readability
-	    $value =~ s/\s+/ /g;
-	    CondorUtils::fullchomp($value);
-
+		# if this line is a variable assignment...
+		if( /^(\w+)\s*\=\s*(.*)$/ ) {
+	    	$variable = lc $1;
+	    	$value = $2;
 	
-		# Do proper environment substitution
-	    if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ )
-	    {
-			my $envlookup = $ENV{$2};
-	    	TestDebug( "Found $envlookup in environment \n",5);
-			$value = $1.$envlookup.$3;
-	    }
+	    	# if line ends with a continuation ('\')...
+	    	while( $value =~ /\\\s*$/ ) {
+				# remove the continuation
+				$value =~ s/\\\s*$//;
+	
+				# read the next line and append it
+				$ad = shift @ads || last;
+				$value .= $ad;
+	    	}
 
-	    TestDebug( "$variable = $value\n" ,5);
+	    	# compress whitespace and remove trailing newline for readability
+	    	$value =~ s/\s+/ /g;
+	    	CondorUtils::fullchomp($value);
+	
+			# Do proper environment substitution
+	    	if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ ) {
+				my $envlookup = $ENV{$2};
+	    		TestDebug( "Found $envlookup in environment \n",5);
+				$value = $1.$envlookup.$3;
+	    	}
+	
+	    	TestDebug( "$variable = $value\n" ,5);
+	    	#print "$variable = $value\n";
 	    
-	    # save the variable/value pair
-	    $machine_ads{$variable} = $value;
-	}
-	else
-	{
-	    TestDebug( "line $line of $submit_file not a variable assignment... " .
+	    	# save the variable/value pair
+	    	$machine_ads{$variable} = $value;
+		}
+		else
+		{
+	    	TestDebug( "line $line of $submit_file not a variable assignment... " .
 		   "skipping\n" ,5);
-	}
+		}
     }
 	close(PULL);
     return 1;
@@ -3605,10 +3600,10 @@ sub FindControlFile
 	my $cwd = getcwd();
 	my $runningfile = "";
 	CondorUtils::fullchomp($cwd);
-	TestDebug( "Current working dir is: $cwd\n",$debuglevel);
+	#TestDebug( "Current working dir is: $cwd\n",$debuglevel);
 	if($cwd =~ /^(.*condor_tests)(.*)$/) {
 		$runningfile = $1 . "/" . $RunningFile;
-		TestDebug( "Running file test is: $runningfile\n",$debuglevel);
+		#TestDebug( "Running file test is: $runningfile\n",$debuglevel);
 		if(!(-d $runningfile)) {
 			TestDebug( "Creating control file directory: $runningfile\n",$debuglevel);
 			runcmd("mkdir -p $runningfile");
@@ -3656,7 +3651,7 @@ sub CountRunningTests
 sub AddRunningTest {
     my $test = shift;
     my $runningfile = FindControlFile();
-    TestDebug( "Adding: $test to running tests\n",$debuglevel);
+    #TestDebug( "Adding: $test to running tests\n",$debuglevel);
     open(OUT, '>', '$runningfile/$test');
     close(OUT);
 }
