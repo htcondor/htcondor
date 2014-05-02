@@ -109,12 +109,8 @@ sub setup_test_environment {
         set_env("PATH", "$front_path;$ENV{PATH};$end_path");
 
         # Condor will want Win32-style paths for CONDOR_CONFIG
-<<<<<<< HEAD
-        set_env("CONDOR_CONFIG", "$base_dir\\condor_tests\\TestingPersonalCondor\\condor_config");
 		set_env("TESTS","$base_dir\\condor_tests");
-=======
         set_env("CONDOR_CONFIG", "$base_dir\\condor_tests\\Config\\condor_config");
->>>>>>> start of moving config file generation to the glue.#4306
         
         # also, throw in the WIN32 version of the base directory path for later use
         set_env("WIN32_BASE_DIR", $base_dir);
@@ -638,7 +634,7 @@ sub dir_listing {
 sub which {
     my ($exe) = @_;
 
-    if( is_windows() ) {
+if( is_windows() ) {
         return `\@for \%I in ($exe) do \@echo(\%~\$PATH:I`;
     }
     else {
