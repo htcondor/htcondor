@@ -483,13 +483,13 @@ VMProc::StartJob()
 	return true;
 }
 
-bool 
+bool
 VMProc::process_vm_status_result(Gahp_Args *result_args)
 {
 	// status result
 	// argv[1] : should be 0, it means success.
 	// From argv[2] : representing some info about VM
-	
+
 	if( !result_args || ( result_args->argc < 3) ) {
 		dprintf(D_ALWAYS, "Bad Result for VM status\n");
 		vm_status_error();
@@ -498,7 +498,7 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 
 	int tmp_argv = (int)strtol(result_args->argv[1], (char **)NULL, 10);
 	if( tmp_argv != 0 || !strcasecmp(result_args->argv[2], NULLSTRING)) {
-		dprintf(D_ALWAYS, "Received VM status, result(%s,%s)\n", 
+		dprintf(D_ALWAYS, "Received VM status, result(%s,%s)\n",
 				result_args->argv[1], result_args->argv[2]);
 		vm_status_error();
 		return true;
@@ -531,21 +531,21 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 
 		if(!strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_STATUS)) {
 			vm_status = tmp_value;
-		}else if( !strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_CPUTIME) ) {
+		} else if( !strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_CPUTIME ) ) {
 			cpu_time = (float)strtod(tmp_value.Value(), (char **)NULL);
 			if( cpu_time <= 0 ) {
 				cpu_time = 0;
 			}
-		}else if( !strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_PID) ) {
+		} else if( !strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_PID ) ) {
 			vm_pid = (int)strtol(tmp_value.Value(), (char **)NULL, 10);
 			if( vm_pid <= 0 ) {
 				vm_pid = 0;
 			}
-		}else if( !strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_MAC) ) {
+		} else if( !strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_MAC ) ) {
 			vm_mac = tmp_value;
-		}else if( !strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_IP) ) {
+		} else if( !strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_IP ) ) {
 			vm_ip = tmp_value;
-		}else if ( !strcasecmp(tmp_name.Value(),VMGAHP_STATUS_COMMAND_CPUUTILIZATION) ) {
+		} else if ( !strcasecmp(tmp_name.Value(), VMGAHP_STATUS_COMMAND_CPUUTILIZATION ) ) {
 		      /* This is here for vm's which are spun via libvirt*/
 		      m_vm_utilization = (float)strtod(tmp_value.Value(), (char **)NULL);
 		}
@@ -582,8 +582,8 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 		// destroy the vmgahp server
 		cleanup();
 		return false;
-	}else {
-		dprintf(D_FULLDEBUG, "Virtual machine status is %s, utilization is %f\n", vm_status.Value(), m_vm_utilization );
+	} else {
+		dprintf( D_FULLDEBUG, "Virtual machine status is %s, utilization is %f\n", vm_status.Value(), m_vm_utilization );
 		if( !strcasecmp(vm_status.Value(), "Running") ) {
 			is_suspended = false;
 			m_is_soft_suspended = false;
@@ -614,7 +614,7 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 		}else {
 			dprintf(D_ALWAYS, "Unknown VM status: %s\n", vm_status.Value());
 
-			// Restore status error count 
+			// Restore status error count
 			m_status_error_count = old_status_error_count;
 			vm_status_error();
 		}
@@ -1248,7 +1248,7 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 		bool pss_available = false;
 
 		getUsageOfVM(sys_time, user_time, max_image, rss, pss, pss_available);
-		
+
 		// Added to update CPU Usage of VM in ESX
 		if ( long(m_vm_cputime) > user_time ) {
 			user_time = long(m_vm_cputime);
@@ -1275,7 +1275,7 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 			ad->Assign(ATTR_VM_CKPT_IP, m_vm_ip);
 		}
 	}
-			
+
 	// Now, call our parent class's version
 	return OsProc::PublishUpdateAd(ad);
 }
