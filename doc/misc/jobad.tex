@@ -1376,7 +1376,8 @@ were evicted without a checkpoint.
 \item[\AdAttr{RemoteUserCpu}:]  The total number of seconds
 of user CPU time the job used on remote machines.  This does not
 count time spent on run attempts that were evicted without a checkpoint.
-
+A job in the virtual machine universe will only report this attribute if run
+on a KVM hypervisor.
 
 %%% ClassAd attribute: RemoteWallClockTime
 \index{ClassAd job attribute!RemoteWallClockTime}
