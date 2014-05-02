@@ -1218,15 +1218,18 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 	}
 
 	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
-		double sys_time = m_vm_cputime;
-		double user_time = 0.0;
+		double sys_time = 0.0;
+		double user_time = m_vm_cputime;
 
 		// Publish it into the ad.
 		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, sys_time );
 		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, user_time );
+		ad->Assign(ATTR_JOB_VM_CPU_UTILIZATION, m_vm_utilization);
+		// For KVM, we can probably do better for by asking (the procd?) about
+		// the kvm/qemu process.  It's not clear that using that process's
+		// sys time would actualle be useful.
 		ad->Assign(ATTR_IMAGE_SIZE, (int)0);
 		ad->Assign(ATTR_RESIDENT_SET_SIZE, (int)0);
-		ad->Assign(ATTR_JOB_VM_CPU_UTILIZATION, m_vm_utilization);
 	}else {
 		// Update usage of process for VM
 		long sys_time = 0;
