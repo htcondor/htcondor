@@ -3676,7 +3676,7 @@ Scheduler::transferJobFilesReaper(int tid,int exit_status)
 		return FALSE;
 	}
 
-	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == FALSE)) {
+	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != TRUE)) {
 		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
 		spoolJobFileWorkers->remove(tid);
 		delete jobs;
@@ -3715,7 +3715,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		return FALSE;
 	}
 
-	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == FALSE)) {
+	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != TRUE)) {
 		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
 		spoolJobFileWorkers->remove(tid);
 		int len = (*jobs).getlast() + 1;
