@@ -83,7 +83,9 @@ AttrListPrintMask pm;
 printmask_headerfooter_t pmHeadFoot = STD_HEADFOOT;
 List<const char> pm_head; // The list of headings for the mask entries
 std::vector<GroupByKeyInfo> group_by_keys; // TJ 8.1.5 for future use, ignored for now.
+bool explicit_format = false;
 bool using_print_format = false; // hack for now so we can get standard totals when using -print-format
+bool disable_user_print_files = false; // allow command line to defeat use of default user print files.
 const char		*DEFAULT= "<default>";
 DCCollector* pool = NULL;
 AdTypes		type 	= (AdTypes) -1;
@@ -121,7 +123,6 @@ void prettyPrint(ClassAdList &, TrackTotals *);
 int  matchPrefix(const char *, const char *, int min_len);
 int  lessThanFunc(AttrList*,AttrList*,void*);
 int  customLessThanFunc(AttrList*,AttrList*,void*);
-static int set_print_mask_from_stream (const char * streamid, bool id_is_filename);
 
 extern "C" int SetSyscalls (int) {return 0;}
 extern	void setPPstyle (ppOption, int, const char *);
@@ -543,7 +544,7 @@ main (int argc, char *argv[])
 
 const CustomFormatFnTable * getCondorStatusPrintFormats();
 
-static int set_print_mask_from_stream (
+int set_status_print_mask_from_stream (
 	const char * streamid,
 	bool is_filename)
 {
@@ -665,6 +666,7 @@ firstPass (int argc, char *argv[])
 	int had_pool_error = 0;
 	int had_direct_error = 0;
 	int had_statistics_error = 0;
+	//bool explicit_mode = false;
 	const char * pcolon = NULL;
 
 	// Process arguments:  there are dependencies between them
@@ -720,7 +722,8 @@ firstPass (int argc, char *argv[])
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
-			i += 2;			
+			i += 2;
+			explicit_format = true;
 		} else
 		if (*argv[i] == '-' &&
 			(is_arg_colon_prefix(argv[i]+1, "autoformat", &pcolon, 5) || 
@@ -732,6 +735,7 @@ firstPass (int argc, char *argv[])
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit( 1 );
 			}
+			explicit_format = true;
 			setPPstyle (PP_CUSTOM, i, argv[i]);
 			while (argv[i+1] && *(argv[i+1]) != '-') {
 				++i;
@@ -746,6 +750,7 @@ firstPass (int argc, char *argv[])
 				fprintf( stderr, "Error: Argument -print-format requires a filename argument\n");
 				exit( 1 );
 			}
+			explicit_format = true;
 			++i; // eat the next argument.
 			// we can't fully parse the print format argument until the second pass, so we are done for now.
 		} else
@@ -827,13 +832,13 @@ firstPass (int argc, char *argv[])
 			setMode (MODE_STARTD_COD, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-java", 2)) {
-			javaMode = true;
+			/*explicit_mode =*/ javaMode = true;
 		} else
 		if (matchPrefix (argv[i], "-absent", 3)) {
-			absentMode = true;
+			/*explicit_mode =*/ absentMode = true;
 		} else
 		if (matchPrefix (argv[i], "-vm", 3)) {
-			vmMode = true;
+			/*explicit_mode =*/ vmMode = true;
 		} else
 		if (matchPrefix (argv[i], "-server", 3)) {
 			setPPstyle (PP_STARTD_SERVER, i, argv[i]);
@@ -984,6 +989,7 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-total", 2)) {
 			wantOnlyTotals = 1;
+			explicit_format = true;
 		} else
 		if (matchPrefix(argv[i], "-expert", 2)) {
 			expert = true;
@@ -1130,10 +1136,16 @@ secondPass (int argc, char *argv[])
 				fprintf( stderr, "Error: Argument -print-format requires a filename argument\n");
 				exit( 1 );
 			}
+			// hack allow -pr ! to disable use of user-default print format files.
+			if (MATCH == strcmp(argv[i+1], "!")) {
+				++i;
+				disable_user_print_files = true;
+				continue;
+			}
 			ppTotalStyle = ppStyle;
 			setPPstyle (PP_CUSTOM, i, argv[i]);
 			++i; // skip to the next argument.
-			if (set_print_mask_from_stream(argv[i], true) < 0) {
+			if (set_status_print_mask_from_stream(argv[i], true) < 0) {
 				fprintf(stderr, "Error: invalid select file %s\n", argv[i]);
 				exit (1);
 			}
