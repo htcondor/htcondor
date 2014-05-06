@@ -523,18 +523,21 @@ VirshType::Suspend()
 	priv = set_root_priv();
 	int result = virDomainSave(dom, tmpfilename.Value());
 	virDomainFree(dom);
+	set_priv(priv);
+
 	if( result != 0 ) {
 		unlink(tmpfilename.Value());
-		set_priv(priv);
 		return false;
-	} else {
-		if( chown( tmpfilename.Value(), get_user_uid(), get_user_gid() ) != 0 ) {
-			dprintf( D_ALWAYS, "Error changing ownership of checkpoint: %d (%s), failing.\n", errno, strerror( errno ) );
-			set_priv( priv );
-			return false;
-		}
 	}
-	set_priv(priv);
+
+	priv = set_root_priv();
+	result = chown( tmpfilename.Value(), get_user_uid(), get_user_gid() );
+	set_priv( priv );
+
+	if( result != 0 ) {
+		dprintf( D_ALWAYS, "Error changing ownership of checkpoint: %d (%s), failing.\n", errno, strerror( errno ) );
+		return false;
+	}
 
 	m_suspendfile = tmpfilename;
 
@@ -734,6 +737,17 @@ VirshType::Status()
 
 	    LastCpuTime = CurrentCpuTime;
 	    LastStamp = CurrentStamp;
+
+	    // Memory usage is in kbytes.
+	    if( info->memory != 0 ) {
+	    	m_result_msg += " " VMGAHP_STATUS_COMMAND_MEMORY "=";
+	    	m_result_msg += (long long)(info->memory);
+	    }
+
+	    if( info->maxMem != 0 ) {
+	    	m_result_msg += " " VMGAHP_STATUS_COMMAND_MAX_MEMORY "=";
+	    	m_result_msg += (long long)(info->maxMem);
+	    }
 
 	    virDomainFree(dom);
 	    return true;
