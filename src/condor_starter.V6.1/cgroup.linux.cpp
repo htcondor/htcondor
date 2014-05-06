@@ -291,12 +291,10 @@ CgroupManager::destroy(Cgroup &cgroup)
 			dprintf(D_ALWAYS,
 				"Unable to completely remove cgroup %s for. %u %s\n",
 				cgroup_string.c_str(), err, cgroup_strerror(err));
-			return -1;
 		} else {
 			dprintf(D_FULLDEBUG,
 				"Deleted cgroup %s.\n",
 				cgroup_string.c_str());
-			return -1;
 		}
 		cgroup_free(&dcg);
 	}
