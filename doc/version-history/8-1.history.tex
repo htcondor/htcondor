@@ -67,6 +67,10 @@ on a very unresponsive daemon.
 run on KVM hypervisors.  CPU usage remains unreported by VMWare hypervisors.
 \Ticket{4337}
 
+\item The \Condor{gridmanager} no longer assumes that a NorduGrid ARC job
+with a reported exit code greater than 128 exited abnormally via a signal.
+\Ticket{4342}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
