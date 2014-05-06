@@ -324,6 +324,14 @@ passwd_cache::cache_uid(const char* user) {
 		return false;
 	}
 
+	// check for root priv
+	if (0 == pwent->pw_uid) {
+		dprintf(D_ALWAYS, "WARNING: getpwnam(%s) returned ZERO!\n", user);
+		// ZKM: should we bail?
+	} else {
+		dprintf(D_PRIV, "getpwnam(%s) returned (%i)\n", user, pwent->pw_uid);
+	}
+
    	return cache_uid(pwent);
 }
 

@@ -402,6 +402,12 @@ JICShadow::transferOutput( bool &transient_failure )
 		return true;
 	}
 
+	bool spool_on_evict = true, tmp_value;
+	if (job_ad->EvaluateAttrBool("SpoolOnEvict", tmp_value))
+	{
+		spool_on_evict = tmp_value;
+	}
+
 	dprintf(D_FULLDEBUG, "JICShadow::transferOutput(void): Transferring...\n");
 
 		// transfer output files back if requested job really
@@ -433,8 +439,9 @@ JICShadow::transferOutput( bool &transient_failure )
 			filetrans->addFileToExeptionList(CHIRP_CONFIG_FILENAME);
 		}
 	
-			// true if job exited on its own
-		bool final_transfer = (requested_exit == false);	
+			// true if job exited on its own or if we are set to not spool
+			// on eviction.
+		bool final_transfer = !spool_on_evict || (requested_exit == false);	
 
 			// The shadow may block on disk I/O for long periods of
 			// time, so set a big timeout on the starter's side of the

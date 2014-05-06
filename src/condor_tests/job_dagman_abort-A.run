@@ -18,6 +18,8 @@
 ##
 ##**************************************************************
 
+# Note: we should check the node status file that the DAG now creates.
+
 use CondorTest;
 use CondorUtils;
 
@@ -27,6 +29,27 @@ $testname = "job_dagman_abort-A";
 $dagman_args = "-verbose";
 
 @outfiles = ("job_dagman_abort-A-node.A", "job_dagman_abort-A-node.B");
+$statusfile = "job_dagman_abort-A.status";
+# Lines must be found in order.
+@statuslines = ("DagStatus = 5;.*STATUS_DONE \\(success\\)",
+    "NodesTotal = 4;",
+    "NodesDone = 2;",
+    "NodesPre = 0;",
+    "NodesQueued = 0;",
+    "NodesPost = 0;",
+    "NodesReady = 0;",
+    "NodesUnready = 1;",
+    "NodesFailed = 1;",
+    "JobProcsHeld = 0;",
+    "JobProcsIdle = 0;",
+    "Node = \"A\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+    "Node = \"B\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+    "Node = \"C\";",
+	"NodeStatus = 6;.*STATUS_ERROR",
+    "Node = \"D\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY");
 
 my $killedchosen = 0;
 
@@ -34,6 +57,12 @@ my $killedchosen = 0;
 sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
+
+# clean out old output files
+foreach $name (@outfiles) {
+	runcmd("rm -f $name.out $name.err");
+}
+runcmd("rm -f $statusfile");
 
 $abnormal = sub 
 {
@@ -91,10 +120,38 @@ $success = sub
 			$diditpass = 0;
 		}
 	}
-	# clean out old output files
-	foreach $name (@outfiles) {
-		runcmd("rm -f $name.out $name.err");
+
+	# Check the node status file.
+	$line = "";
+	$passed = 0;
+	$canopen = open(STATUS,"<$statusfile");
+	if( ! (defined $canopen)) {
+		CondorTest::debug("Can not open statusfile<$statusfile>:$!\n",1);
+		$diditpass = 0;
 	}
+	while(<STATUS>) {
+		chomp();
+		$line = $_;
+		$target = $statuslines[0];
+		if( $line =~ /$target/ ) {
+			CondorTest::debug("$name: $line\n",1);
+			# Remove the target we just found from the array.
+			shift @statuslines;
+			if ($#statuslines < 0) {
+				last;
+			}
+		}
+	}
+	close(STATUS);
+
+	if ($#statuslines >= 0) {
+		CondorTest::debug("failed missing node status lines:\n");
+		foreach $missing (@statuslines) {
+			print "  $missing\n";
+		}
+		$diditpass = 0;
+	}
+
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}

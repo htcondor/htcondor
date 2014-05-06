@@ -1,6 +1,8 @@
 #ifdef WIN32
 #include <windows.h>
 #define CURL_STATICLIB // this has to match the way the curl library was built.
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
 #endif
 
 #include <curl/curl.h>
@@ -27,11 +29,19 @@ int main(int argc, char **argv) {
 	} else if(argc != 3) {
 		return -1;
 	}
-#ifndef WIN32
-	curl_global_init(CURL_GLOBAL_NOTHING);
-#endif
 
-	if((handle = curl_easy_init())) {
+	// Initialize win32 socket libraries, but not ssl
+	curl_global_init(CURL_GLOBAL_WIN32);
+
+	if ( (handle = curl_easy_init()) == NULL ) {
+		return -1;
+	}
+
+	if ( !strncasecmp( argv[1], "http://", 7 ) ||
+		 !strncasecmp( argv[1], "ftp://", 6 ) ||
+		 !strncasecmp( argv[1], "file://", 7 ) ) {
+
+		// Input transfer: URL -> file
 		int close_output = 1;
 		if ( ! strcmp(argv[2],"-")) {
 			file = stdout;
@@ -75,8 +85,57 @@ int main(int argc, char **argv) {
 				}
 			}
 		}
-		curl_easy_cleanup(handle);
+	} else {
+		// Output transfer: file -> URL
+		int close_input = 1;
+		if ( ! strcmp(argv[1],"-")) {
+			file = stdin;
+			close_input = 0;
+			if (diagnostic) { fprintf(stderr, "sending stdin to %s\n", argv[2]); }
+		} else {
+			file = fopen(argv[1], "r");
+			close_input = 1;
+			if (diagnostic) { fprintf(stderr, "sending %s to %s\n", argv[1], argv[2]); }
+		}
+		if(file) {
+			curl_easy_setopt(handle, CURLOPT_URL, argv[2]);
+			curl_easy_setopt(handle, CURLOPT_UPLOAD, 1);
+			curl_easy_setopt(handle, CURLOPT_READDATA, file);
+			curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, -1);
+			// Does curl protect against redirect loops otherwise?  It's
+			// unclear how to tune this constant.
+			// curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
+			rval = curl_easy_perform(handle);
+
+			if (diagnostic && rval) {
+				fprintf(stderr, "curl_easy_perform returned CURLcode %d: %s\n",
+						rval, curl_easy_strerror((CURLcode)rval));
+			}
+			if (close_input) {
+				fclose(file); file = NULL;
+			}
+
+			if( rval == 0 ) {
+				char * finalURL = NULL;
+				rval = curl_easy_getinfo( handle, CURLINFO_EFFECTIVE_URL, & finalURL );
+
+				if( rval == 0 ) {
+					if( strstr( finalURL, "http" ) == finalURL ) {
+						long httpCode = 0;
+						rval = curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, & httpCode );
+
+						if( rval == 0 ) {
+							if( httpCode != 200 ) { rval = 1; }
+						}
+					}
+				}
+			}
+		}
+
 	}
+
+	curl_easy_cleanup(handle);
+
 	curl_global_cleanup();
 
 	return rval;	// 0 on success

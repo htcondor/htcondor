@@ -48,6 +48,7 @@ sub setup_test_environment {
         set_env("BASE_DIR", $base_dir);
         set_env("PATH", "$base_dir/nmi_tools/glue/test:$base_dir/condor/bin:$base_dir/condor/sbin:$ENV{PATH}");
         set_env("CONDOR_CONFIG", "$base_dir/condor_tests/TestingPersonalCondor/condor_config");
+		set_env("TESTS","$base_dir/condor_tests");
 		if(exists $ENV{LD_LIBRARY_PATH}) {
 			set_env("LD_LIBRARY_PATH","$ENV{LD_LIBRARY_PATH}:$base_dir/condor/libexec:$base_dir/condor/lib:$base_dir/condor/lib/python");
 		} else {
@@ -89,6 +90,7 @@ sub setup_test_environment {
 
         # Condor will want Win32-style paths for CONDOR_CONFIG
         set_env("CONDOR_CONFIG", "$base_dir\\condor_tests\\TestingPersonalCondor\\condor_config");
+		set_env("TESTS","$base_dir\\condor_tests");
         
         # also, throw in the WIN32 version of the base directory path for later use
         set_env("WIN32_BASE_DIR", $base_dir);

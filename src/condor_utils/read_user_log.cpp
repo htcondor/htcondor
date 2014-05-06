@@ -1213,7 +1213,7 @@ ReadUserLog::readEventOld( ULogEvent *& event )
 			}
 
 			// if failed again, we have a parse error
-			if (!retval1 != 1 || !retval2)
+			if (retval1 != 1 || !retval2)
 			{
 				dprintf( D_FULLDEBUG, "ReadUserLog: error reading event "
 							"on second try\n");

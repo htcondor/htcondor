@@ -611,8 +611,7 @@ UPDATE_INTERVAL         = 30
 ##  unclaimed and it's been at least 4 hours since we ran the last
 ##  benchmarks, run them again.  The startd keeps a weighted average
 ##  of the benchmark results to provide more accurate values.
-##  Note, if you don't want any benchmarks run at all, either comment
-##  RunBenchmarks out, or set it to "False".
+##  Note, if you don't want any benchmarks run at all set it to "False".
 RunBenchmarks = False
 
 ##  Normally, when the startd is computing the idle time of all the

@@ -1738,6 +1738,43 @@ of the subsystem corresponding to the daemon.
   When \Expr{True}, writes to the user's job event log are sync-ed to
   disk before releasing the lock.
 
+\label{param:UserlogFileCacheMax}
+\item[\Macro{USERLOG\_FILE\_CACHE\_MAX}]
+  The integer number of job event log files that the \Condor{schedd}
+  will keep open for writing during an interval of time
+  (specified by \MacroNI{USERLOG\_FILE\_CACHE\_CLEAR\_INTERVAL}).
+  The default value is 0, causing no files to remain open;
+  when 0, each job event log is opened, the event is written, and then the
+  file is closed.
+  Individual file descriptors are removed from this count 
+  when the \Condor{schedd} detects that no jobs are currently using them.
+  Opening a file is a relatively time consuming operation on a
+  networked file system (NFS),
+  and therefore, 
+  allowing a set of files to remain open can improve performance.
+  The value of this variable needs to be set low enough such that the
+  \Condor{schedd} daemon process does not run out of file descriptors by
+  leaving these job event log files open.
+  The Linux operating system defaults to permitting 1024 assigned
+  file descriptors per process; the \Condor{schedd} will have one
+  file descriptor per running job for the \Condor{shadow}. 
+
+\label{param:UserlogFileCacheClearInterval}
+\item[\Macro{USERLOG\_FILE\_CACHE\_CLEAR\_INTERVAL}]
+  The integer number of seconds that forms the time interval within which
+  job event logs will be permitted to remain open
+  when \MacroNI{USERLOG\_FILE\_CACHE\_MAX} is greater than zero.
+  The default is 60 seconds.
+  When the interval has passed, 
+  all job event logs that the \Condor{schedd} has permitted to stay
+  open will be closed, and the interval within which 
+  job event logs may remain open between writes of events begins anew.
+  This time interval may be set to a longer duration
+  if the administrator determines that the \Condor{schedd} will not
+  exceed the maximum number of file descriptors;
+  a longer interval may yield higher performance due to fewer files
+  being opened and closed.
+
 \label{param:EventLogCountEvents}
 \item[\Macro{EVENT\_LOG\_COUNT\_EVENTS}]
   A boolean value that is \Expr{False} by default.
@@ -3870,6 +3907,7 @@ Configuring The Startd Policy.
   causes HTCondor to stop a currently running job once
   \Macro{MAXJOBRETIREMENTTIME} has expired.  This expression is not
   evaluated if \MacroNI{WANT\_SUSPEND} is \Expr{True}.
+  The default value is \Expr{False}, such that preemption is disabled.
 
 \label{param:WantHold}
 \item[\Macro{WANT\_HOLD}]
@@ -4007,6 +4045,7 @@ WANT_HOLD_REASON = \
   job will be soft-killed and given time to checkpoint or clean up.
   The amount of time given depends on \Macro{MachineMaxVacateTime}
   and \Macro{KILL}.
+  The default value is \Expr{False}.
 
 \label{param:EnableVersionedOpsys}
 \item[\Macro{ENABLE\_VERSIONED\_OPSYS}]
@@ -4150,6 +4189,8 @@ WANT_HOLD_REASON = \
   By default the \Condor{negotiator} will not match jobs to a slot with
   retirement time remaining.  This behavior is controlled by
   \Macro{NEGOTIATOR\_CONSIDER\_EARLY\_PREEMPTION}.
+
+  There is no default value for this configuration variable.
 
 \label{param:ClaimWorklife}
 \item[\Macro{CLAIM\_WORKLIFE}]
@@ -4381,8 +4422,7 @@ WANT_HOLD_REASON = \
   evaluates to \Expr{True}, benchmarks will be run.
   If RunBenchmarks is specified and set to anything other than \Expr{False},
   additional benchmarks will be run when the \Condor{startd} initially starts.
-  To disable start up benchmarks, set \MacroNI{RunBenchmarks} to \Expr{False},
-  or comment it out of the configuration file.
+  To disable start up benchmarks, set \MacroNI{RunBenchmarks} to \Expr{False}
 
 \label{param:DedicatedScheduler}
 \item[\Macro{DedicatedScheduler}]
@@ -5719,8 +5759,9 @@ MAX_JOBS_RUNNING	= \
   Once a request times out, the \Condor{schedd} will simply begin the process
   of finding a machine for the job all over again.
 
-  Normally, it is not a good idea to set this to be very small (e.g. a
-  few minutes).  Doing so can lead to failure to preempt, because the
+  Normally, it is not a good idea to set this to be very small, 
+  where a small value is a few minutes.  
+  Doing so can lead to failure to preempt, because the
   preempting job will spend a significant fraction of its time waiting
   to be re-matched.  During that time, it would miss out on any
   opportunity to run if the job it is trying to preempt gets out of
@@ -7724,25 +7765,19 @@ These macros affect the \Condor{negotiator}.
   attributes of the machine ClassAd and \Expr{TARGET.} refers to the
   job ClassAd.  The purpose of the post job rank is to allow the pool
   administrator to choose between machines that the job ranks equally.
-  The default value is undefined, which causes this rank to have no
-  effect on the ranking of matches.  The following example expression
-  steers jobs toward faster machines and tends to fill a cluster of
-  multi-processors by spreading across all machines before filling up
-  individual machines.  In this example, the expression is chosen to
-  have no effect when preemption would take place, allowing control to
-  pass on to \MacroNI{PREEMPTION\_RANK}.
-
+  The default value is 
 \begin{verbatim}
-  UWCS_NEGOTIATOR_POST_JOB_RANK = \
-   (RemoteOwner =?= UNDEFINED) * (KFlops - SlotID)
+  NEGOTIATOR_POST_JOB_RANK = \
+   (RemoteOwner =?= UNDEFINED) * \
+   (ifThenElse(isUndefined(KFlops), 1000, Kflops) - \
+   SlotID - 1.0e10*(Offline=?=True)) 
 \end{verbatim}
-
 
 \label{param:PreemptionRequirements}
 \item[\Macro{PREEMPTION\_REQUIREMENTS}]
   When considering user priorities, the negotiator will not preempt
-  a job running on a given machine unless the
-  \MacroNI{PREEMPTION\_REQUIREMENTS} expression evaluates to \Expr{True} and the
+  a job running on a given machine unless this
+  expression evaluates to \Expr{True}, and the
   owner of the idle job has a better priority than the owner of the
   running job. 
   The \MacroNI{PREEMPTION\_REQUIREMENTS} expression is evaluated within the
@@ -7754,14 +7789,14 @@ These macros affect the \Condor{negotiator}.
   in \MacroNI{PREEMPTION\_REQUIREMENTS} can be placed in the machine ClassAd
   using \Macro{STARTD\_JOB\_EXPRS}.
   If not explicitly set in the HTCondor configuration file, the default value
-  for this expression is \Expr{True}.
+  for this expression is \Expr{False}.
   \MacroNI{PREEMPTION\_REQUIREMENTS} should include the term 
-  \Expr{(SubmitterGroup =?= RemoteGroup)} if a preemption policy that respects
+  \Expr{(SubmitterGroup =?= RemoteGroup)}, if a preemption policy that respects
   \Term{group quotas} is desired.
-  Note that this setting does not
-  influence other potential causes of preemption, such as startd
-  \MacroNI{RANK}, or \MacroNI{PREEMPT} expressions.  See
-  section \ref{sec:Disabling Preemption} for a general discussion of
+  Note that this variable does not
+  influence other potential causes of preemption, such as the
+  \MacroNI{RANK} of the \Condor{startd}, or \MacroNI{PREEMPT} expressions.
+  See section \ref{sec:DisablingPreemption} for a general discussion of
   limiting preemption.
 
 \label{param:PreemptionRequirementsStable} 
@@ -7786,8 +7821,9 @@ These macros affect the \Condor{negotiator}.
   and the other negotiation expressions rank the same.  For example,
   if the job has no preference, it is usually preferable to preempt a
   job with a small \AdAttr{ImageSize} instead of a job with a large
-  \AdAttr{ImageSize}.  The default is to rank all preemptable matches
-  the same.  However, the negotiator will always prefer to match the
+  \AdAttr{ImageSize}.  There is no default value, causing
+  all preemptable matches to be ranked the same.  
+  However, the negotiator will always prefer to match the
   job with an idle machine over a preemptable machine, if none of the
   other ranks express a preference between them.
 
@@ -7943,9 +7979,9 @@ These macros affect the \Condor{negotiator}.
 
 \label{param:NegotiatorConsiderPreemption}
 \item[\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}]
-  For expert users only. A boolean value (defaults to \Expr{True}),
-  that when \Expr{False},
-  can cause the \Condor{negotiator} to run
+  For expert users only. A boolean value that defaults to \Expr{True}.
+  When \Expr{False},
+  it can cause the \Condor{negotiator} to run
   faster and also have better spinning pie accuracy.
   \emph{Only set this to \Expr{False} if \Macro{PREEMPTION\_REQUIREMENTS}
   is \Expr{False},

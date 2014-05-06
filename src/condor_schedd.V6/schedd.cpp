@@ -357,7 +357,6 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 	status = M_UNCLAIMED;
 	entered_current_status = (int)time(0);
 	shadowRec = NULL;
-	alive_countdown = 0;
 	num_exceptions = 0;
 	if( match ) {
 		my_match_ad = new ClassAd( *match );
@@ -375,7 +374,6 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 	} else {
 		pool = NULL;
 	}
-	sent_alive_interval = false;
 	this->is_dedicated = is_dedicated_arg;
 	allocated = false;
 	scheduled = false;
@@ -442,6 +440,9 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 
 	keep_while_idle = 0;
 	idle_timer_deadline = 0;
+
+	m_can_start_jobs = true;
+	m_paired_mrec = NULL;
 }
 
 void
@@ -548,6 +549,9 @@ Scheduler::Scheduler() :
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 ),
+	slotWeight(0),
+	slotWeightMapAd(0),
+	m_use_slot_weights(false),
 	m_local_startd_pid(-1),
 	m_history_helper_count(0)
 {
@@ -655,6 +659,10 @@ Scheduler::Scheduler() :
 	m_unparsed_gridman_selection_expr = NULL;
 
 	CronJobMgr = NULL;
+
+    m_userlog_file_cache_max = 0;
+    m_userlog_file_cache_clear_last = time(NULL);
+    m_userlog_file_cache_clear_interval = 60;
 
 	jobThrottleNextJobDelay = 0;
 #ifdef HAVE_EXT_POSTGRESQL
@@ -774,6 +782,9 @@ Scheduler::~Scheduler()
 	if ( m_unparsed_gridman_selection_expr ) {
 		free(m_unparsed_gridman_selection_expr);
 	}
+
+    userlog_file_cache_clear(true);
+
 		//
 		// Delete CronTab objects
 		//
@@ -872,6 +883,9 @@ Scheduler::timeout()
 	walk_job_queue_timer_set = false;
 	min_interval_timer_set = false;
 	SchedDInterval.setStartTimeNow();
+
+    // keep the log file cache from accumulating defunct user log file mappings
+    userlog_file_cache_clear();
 
 	count_jobs();
 
@@ -1041,6 +1055,54 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level)
 	return true;
 }
 
+void Scheduler::userlog_file_cache_clear(bool force) {
+    time_t t = time(NULL);
+    if (!force && ((t - m_userlog_file_cache_clear_last) < m_userlog_file_cache_clear_interval)) return;
+
+    dprintf(D_FULLDEBUG, "Clearing userlog file cache\n");
+
+    for (WriteUserLog::log_file_cache_map_t::iterator e(m_userlog_file_cache.begin());  e != m_userlog_file_cache.end();  ++e) {
+        delete e->second;
+    }
+    m_userlog_file_cache.clear();
+
+    m_userlog_file_cache_clear_last = t;
+}
+
+
+void Scheduler::userlog_file_cache_erase(const int& cluster, const int& proc) {
+    // only if caching is turned on
+    if (m_userlog_file_cache_max <= 0) return;
+
+	ClassAd* ad = GetJobAd(cluster, proc);
+    if (NULL == ad) return;
+
+    MyString userlog_name;
+    MyString dagman_log_name;
+    std::vector<char const*> log_names;
+
+    // possible userlog file names associated with this job
+    if (getPathToUserLog(ad, userlog_name)) log_names.push_back(userlog_name.Value());
+    if (getPathToUserLog(ad, dagman_log_name, ATTR_DAGMAN_WORKFLOW_LOG)) log_names.push_back(dagman_log_name.Value());
+    
+    for (std::vector<char const*>::iterator j(log_names.begin());  j != log_names.end();  ++j) {
+
+        // look for file name in the cache
+        WriteUserLog::log_file_cache_map_t::iterator f(m_userlog_file_cache.find(*j));
+        if (f == m_userlog_file_cache.end()) continue;
+
+        // remove this job from the reference set:
+        f->second->refset.erase(std::make_pair(cluster, proc));
+        if (f->second->refset.empty()) {
+            // if that was the last job referring to this log file, remove it from the cache
+            dprintf(D_FULLDEBUG, "Erasing entry for %s from userlog file cache\n", *j);
+            delete f->second;
+            m_userlog_file_cache.erase(f);
+        }
+    }
+}
+
+
 /*
 ** Examine the job queue to determine how many CONDOR jobs we currently have
 ** running, and how many individual users own them.
@@ -1110,18 +1172,27 @@ Scheduler::count_jobs()
 		if (at_sign) *at_sign = '@';
 		if (rec->shadowRec && !rec->pool) {
 				// Sum up the # of cpus claimed by this user and advertise it as
-				// WeightedJobsRunning.  Technically, should look at SlotWeight
-				// but the IdleJobRunning only know about request_cpus, etc.
-				// and hard-codes cpus as the weight, so we do the same here.
-				// This is needed as the HGQ code in the negotitator needs to
-				// know weighted demand to dole out surplus properly.
-			int request_cpus = 1;
-			if (rec->my_match_ad) {
-				if(0 == rec->my_match_ad->LookupInteger(ATTR_CPUS, request_cpus)) {
-					request_cpus = 1;
+				// WeightedJobsRunning. 
+
+			int job_weight = 1;
+			if (m_use_slot_weights && slotWeight && rec->my_match_ad) {
+					// if the schedd slot weight expression is set and parses,
+					// evaluate it here
+				classad::Value result;
+				int rval = EvalExprTree( slotWeight, rec->my_match_ad, NULL, result );
+				if( !rval || !result.IsNumber(job_weight)) {
+					job_weight = 1;
+				}
+			} else {
+					// slot weight isn't set, fall back to assuming cpus
+				if (rec->my_match_ad) {
+					if(0 == rec->my_match_ad->LookupInteger(ATTR_CPUS, job_weight)) {
+						job_weight = 1; // or fall back to one if CPUS isn't in the startds
+					}
 				}
 			}
-			Owners[OwnerNum].WeightedJobsRunning += request_cpus;
+			
+			Owners[OwnerNum].WeightedJobsRunning += job_weight;
 			Owners[OwnerNum].JobsRunning++;
 		} else {				// in remote pool, so add to Flocked count
 			Owners[OwnerNum].JobsFlocked++;
@@ -2149,7 +2220,23 @@ count( ClassAd *job )
 		}
 			// Update Owners array JobsIdle
 		scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
-		scheduler.Owners[OwnerNum].WeightedJobsIdle += request_cpus * (max_hosts - cur_hosts);
+
+		
+			// If we're biasing by slot weight, and the job is idle, and everything parsed...
+		if ((scheduler.m_use_slot_weights) && (cur_hosts == 0) && scheduler.slotWeightMapAd) {
+
+				// if we're biasing idle jobs by SLOT_WEIGHT, eval that here
+			classad::Value result;
+			int job_weight;
+			int rval = EvalExprTree( scheduler.slotWeight, scheduler.slotWeightMapAd, job, result );
+
+			if( !rval || !result.IsNumber(job_weight)) {
+				job_weight = request_cpus * (max_hosts - cur_hosts); // fall back if slot weight doesn't evaluate
+			}
+			scheduler.Owners[OwnerNum].WeightedJobsIdle += job_weight;
+		} else {
+			scheduler.Owners[OwnerNum].WeightedJobsIdle += request_cpus * (max_hosts - cur_hosts);
+		}
 
 			// Don't update scheduler.Owners[OwnerNum].JobsRunning here.
 			// We do it in Scheduler::count_jobs().
@@ -3194,6 +3281,17 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	ULog->setUseXML(0 <= GetAttributeBool(job_id.cluster, job_id.proc,
 		ATTR_ULOG_USE_XML, &use_xml) && 1 == use_xml);
 	ULog->setCreatorName( Name );
+
+    if (m_userlog_file_cache_max > 0) {
+        // This is a bit draconian, but doing it smarter requires more machinery and data,
+        // and the log cache can still save plenty of open/close
+        if (m_userlog_file_cache.size() >= size_t(m_userlog_file_cache_max)) userlog_file_cache_clear(true);
+
+        // important to do this before invoking initialize() method
+        dprintf(D_FULLDEBUG, "Scheduler::InitializeUserLog(): setting log file cache\n");
+        ULog->setLogFileCache(&m_userlog_file_cache);
+    }
+
 	if (ULog->initialize(owner.Value(), domain.Value(), logfiles,
 			job_id.cluster, job_id.proc, 0, gjid.Value())) {
 		if(logfiles.size() > 1) {
@@ -3291,6 +3389,8 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 		ULog->writeEvent(&event, GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
+    userlog_file_cache_erase(job_id.cluster, job_id.proc);
+
 	if (!status) {
 		dprintf( D_ALWAYS,
 				 "Unable to log ULOG_JOB_ABORTED event for job %d.%d\n",
@@ -3339,6 +3439,8 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
+
+    userlog_file_cache_erase(job_id.cluster, job_id.proc);
 
 	if (!status) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_HELD event for job %d.%d\n",
@@ -3424,6 +3526,9 @@ Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed )
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
+
+    userlog_file_cache_erase(job_id.cluster, job_id.proc);
+
 	if (!status) {
 		dprintf( D_ALWAYS,
 				 "Unable to log ULOG_JOB_EVICTED event for job %d.%d\n",
@@ -3467,6 +3572,8 @@ Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status )
 	}
 	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
+
+    userlog_file_cache_erase(job_id.cluster, job_id.proc);
 
 	if (!rval) {
 		dprintf( D_ALWAYS, 
@@ -3569,7 +3676,7 @@ Scheduler::transferJobFilesReaper(int tid,int exit_status)
 		return FALSE;
 	}
 
-	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == FALSE)) {
+	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != TRUE)) {
 		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
 		spoolJobFileWorkers->remove(tid);
 		delete jobs;
@@ -3608,7 +3715,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		return FALSE;
 	}
 
-	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == FALSE)) {
+	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != TRUE)) {
 		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
 		spoolJobFileWorkers->remove(tid);
 		int len = (*jobs).getlast() + 1;
@@ -6159,6 +6266,43 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		delete sn;
 	} 
 
+	// AsyncXfer: If this isn't a dedicated match, handle a paired claim
+	if ( !match->is_dedicated && msg->have_paired_slot() ) {
+		// AsyncXfer: TODO Is this the right job id to use for the paired
+		//   match_rec?
+		PROC_ID paired_job_id;
+		paired_job_id.cluster = match->cluster;
+		paired_job_id.proc = -1;
+		match_rec *paired_mrec = AddMrec( msg->paired_claim_id(), match->peer,
+										  &paired_job_id, msg->paired_startd_ad(),
+										  match->user, match->pool );
+
+		if ( paired_mrec == NULL ) {
+			dprintf( D_ALWAYS, "AsyncXfer: Failed to make match_rec for paired slot!\n" );
+		} else {
+			match->m_paired_mrec = paired_mrec;
+			paired_mrec->m_paired_mrec = match;
+			paired_mrec->m_can_start_jobs = false;
+
+			paired_mrec->setStatus( M_CLAIMED );
+
+			if ( match->auth_hole_id != NULL ) {
+				paired_mrec->auth_hole_id = new MyString( *match->auth_hole_id );
+				IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
+				if (!ipv->PunchHole(READ, *paired_mrec->auth_hole_id)) {
+					dprintf(D_ALWAYS,
+						"WARNING: IpVerify::PunchHole error for paired %s: "
+			            "job %d.%d may fail to execute\n",
+						paired_mrec->auth_hole_id->Value(),
+						paired_mrec->cluster,
+						paired_mrec->proc);
+					delete paired_mrec->auth_hole_id;
+					paired_mrec->auth_hole_id = NULL;
+				}
+			}
+		}
+	}
+
 	if (match->is_dedicated) {
 			// Set a timer to call handleDedicatedJobs() when we return,
 			// since we might be able to spawn something now.
@@ -6399,6 +6543,20 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 			delete mrec->auth_hole_id;
 			mrec->auth_hole_id = NULL;
 		}
+	}
+
+	// AsyncXfer: If this claim has a paired claim that we've already created
+	//   a match_rec for, link the two together.
+	MyString paired_claim_id;
+	match_rec *paired_mrec = NULL;
+	if ( GetAttributeString( cluster, proc, ATTR_PAIRED_CLAIM_ID,
+							 paired_claim_id ) >= 0 &&
+			 matches->lookup( HashKey( paired_claim_id ), paired_mrec ) == 0 ) {
+
+		mrec->m_paired_mrec = paired_mrec;
+		paired_mrec->m_paired_mrec = mrec;
+		mrec->m_can_start_jobs = false;
+		paired_mrec->m_can_start_jobs = false;
 	}
 
 	if( pool ) {
@@ -6724,6 +6882,103 @@ Scheduler::StartJobs()
 }
 
 void
+Scheduler::swappedClaims( DCMsgCallback *cb )
+{
+
+	SwapClaimsMsg *msg = (SwapClaimsMsg *)cb->getMessage();
+
+	match_rec *active_rec = NULL;
+	match_rec *idle_rec = NULL;
+
+	if( msg->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
+		dprintf( D_FULLDEBUG, "AsyncXfer: SwapClaims message failed\n" );
+		return;
+	}
+
+	if ( matches->lookup( HashKey( msg->claim_id() ), active_rec ) < 0 ||
+		 (idle_rec = active_rec->m_paired_mrec) == NULL ) {
+		dprintf( D_FULLDEBUG, "AsyncXfer: Failed to find match_rec's for swapped claims\n" );
+		return;
+	}
+
+	if( !msg->swap_claims_success() ) {
+		dprintf( D_FULLDEBUG, "AsyncXfer: SwapClaims attempt failed\n" );
+		// AsyncXfer: TODO Should we do anything about the failure?
+		//   Throw the claims away?
+		//   Retry a limited number of times?
+		return;
+	}
+
+	std::string active_rec_slot_name;
+	std::string idle_rec_slot_name;
+	active_rec->my_match_ad->LookupString( ATTR_NAME, active_rec_slot_name );
+	idle_rec->my_match_ad->LookupString( ATTR_NAME, idle_rec_slot_name );
+
+	if ( !strcmp( active_rec_slot_name.c_str(), msg->dest_slot_name() ) ) {
+		dprintf( D_FULLDEBUG, "AsyncXfer: match_recs already swapped, nothing to do\n" );
+		return;
+	} else if ( !strcmp( idle_rec_slot_name.c_str(), msg->dest_slot_name() ) ) {
+		dprintf( D_FULLDEBUG, "AsyncXfer: Swapping match_recs for swapped claims.\n" );
+
+		std::swap( active_rec->keep_while_idle, idle_rec->keep_while_idle );
+		std::swap( active_rec->idle_timer_deadline, idle_rec->idle_timer_deadline );
+		std::swap( active_rec->m_can_start_jobs, idle_rec->m_can_start_jobs );
+		std::swap( active_rec->my_match_ad, idle_rec->my_match_ad );
+
+		// After the swap, the active claim is now on the slot that was idle.
+		SetAttributeString( active_rec->cluster, active_rec->proc,
+							ATTR_REMOTE_HOST, idle_rec_slot_name.c_str() );
+		int slot_id = 1;
+		if ( active_rec->my_match_ad->LookupInteger( ATTR_SLOT_ID, slot_id ) ) {
+			SetAttributeInt( active_rec->cluster, active_rec->proc,
+							 ATTR_REMOTE_SLOT_ID, slot_id );
+		}
+
+	} else {
+		dprintf( D_FULLDEBUG, "AsyncXfer: slot names don't match!\n" );
+	}
+
+	StartJob( idle_rec );
+}
+
+bool
+Scheduler::CheckForClaimSwap(match_rec *mrec)
+{
+	if ( !mrec->m_paired_mrec ) {
+		return false;
+	}
+	int job_xfer_output = FALSE;
+	GetAttributeBool( mrec->cluster, mrec->proc,
+					  ATTR_JOB_TRANSFERRING_OUTPUT,
+					  &job_xfer_output );
+
+	if ( job_xfer_output && mrec->m_can_start_jobs &&
+		 mrec->m_paired_mrec->status == M_CLAIMED ) {
+
+		// AsyncXfer: Our job is in output phase and we have a paired slot
+		//   that's idle. Swap them.
+		classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
+					(DCMsgCallback::CppFunction)&Scheduler::swappedClaims,
+					this, NULL);
+
+		std::string paired_slot_name;
+		mrec->m_paired_mrec->my_match_ad->LookupString( ATTR_NAME, paired_slot_name );
+
+		// AsyncXfer: TODO Why is this a classy_counted_ptr instead of a regular
+		//   pointer that we delete before we return? Or an object on the stack?
+		classy_counted_ptr<DCStartd> startd = new DCStartd(mrec->description(),NULL,mrec->peer,mrec->claimId());
+
+		startd->asyncSwapClaims( mrec->claimId(), mrec->description(),
+								 paired_slot_name.c_str(),
+								 STARTD_CONTACT_TIMEOUT, cb );
+
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void
 Scheduler::StartJob(match_rec *rec)
 {
 	PROC_ID id;
@@ -6740,7 +6995,27 @@ Scheduler::StartJob(match_rec *rec)
 	case M_ACTIVE:
 	case M_CLAIMED:
 		if ( rec->shadowRec ) {
-			dprintf(D_FULLDEBUG, "match (%s) already running a job\n",
+			// AsyncXfer: If we have an idle paired xfer slot and our job is
+			//   in output phase, try to swap the job to to the paired slot.
+			if ( rec->m_paired_mrec ) {
+				if ( CheckForClaimSwap( rec ) ) {
+					dprintf(D_FULLDEBUG, "match (%s) swapping job to paired slot\n",
+							rec->description());
+				} else {
+					dprintf(D_FULLDEBUG, "match (%s) already running a job, can't swap\n",
+							rec->description());
+				}
+			} else {
+				dprintf(D_FULLDEBUG, "match (%s) already running a job\n",
+					rec->description());
+			}
+			return;
+		}
+		// AsyncXfer: When we have a paired claim, m_can_start_jobs==false
+		// means we can't start a job. Either we're the transfer slot or
+		// someone called DelMrec() on one of us.
+		if ( rec->m_paired_mrec && !rec->m_can_start_jobs ) {
+			dprintf(D_FULLDEBUG, "AsyncXfer: match (%s) not eligible for starting a job\n",
 					rec->description());
 			return;
 		}
@@ -6828,7 +7103,7 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ)
 	new_job_id.cluster = -1;
 	new_job_id.proc = -1;
 
-	if( mrec->my_match_ad && !ExitWhenDone ) {
+	if( mrec->my_match_ad && mrec->m_can_start_jobs && !ExitWhenDone ) {
 		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user);
 	}
 	if( !accept_std_univ && new_job_id.proc == -1 ) {
@@ -6840,6 +7115,15 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ)
 	}
 	if( new_job_id.proc == -1 ) {
 			// no more jobs to run
+		// AsyncXfer: If this match has a paired match that can start jobs,
+		//   don't delete this match.
+		if ( !mrec->m_can_start_jobs && mrec->m_paired_mrec &&
+			 mrec->m_paired_mrec->m_can_start_jobs ) {
+			dprintf(D_ALWAYS, "AsyncXfer: match (%s) can't start jobs; waiting for paired match (%s), which can\n",
+					mrec->description(),
+					mrec->m_paired_mrec->description());
+			return false;
+		}
 		if (mrec->idle_timer_deadline < time(0))  {
 			dprintf(D_ALWAYS,
 				"match (%s) out of jobs; relinquishing\n",
@@ -8758,6 +9042,10 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		SetAttributeString( cluster, proc, ATTR_STARTD_IP_ADDR, mrec->peer );
 		SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL,
 						 (int)time(0) ); 
+		if ( mrec->m_paired_mrec ) {
+			SetAttributeString( cluster, proc, ATTR_PAIRED_CLAIM_ID,
+								mrec->m_paired_mrec->claimId() );
+		}
 
 		bool have_remote_host = false;
 		if( mrec->my_match_ad ) {
@@ -9046,6 +9334,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// when the schedd comes back online.
 		//
 	if ( ! rec->keepClaimAttributes ) {
+		DeleteAttribute( cluster, proc, ATTR_PAIRED_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_CLAIM_IDS );
@@ -9059,6 +9348,9 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_INPUT );
 		DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_OUTPUT );
 		DeleteAttribute( cluster, proc, ATTR_TRANSFER_QUEUED );
+		// AsyncXfer: Delete in-job output transfer attributes
+		DeleteAttribute( cluster, proc, ATTR_JOB_TRANSFERRING_OUTPUT );
+		DeleteAttribute( cluster, proc, ATTR_JOB_TRANSFERRING_OUTPUT_TIME );
 	} else {
 		dprintf( D_FULLDEBUG, "Job %d.%d has keepClaimAttributes set to true. "
 					    "Not removing %s and %s attributes.\n",
@@ -9719,21 +10011,37 @@ Scheduler::child_exit(int pid, int status)
 		// if we do not start a new job, should we keep the claim?
 	bool            keep_claim = false; // by default, no
 	bool            srec_keep_claim_attributes;
+		// AsyncXfer: Should this match be held idle waiting for a paired match?
+	bool            paired_match_wait = false;
 
 	srec = FindSrecByPid(pid);
 	ASSERT(srec);
 
 		if( srec->match ) {
-			if (srec->exit_already_handled && (srec->match->keep_while_idle == 0)) {
+			match_rec *mrec = srec->match;
+
+			// AsyncXfer: If this match has a paired match that can start
+			//   new jobs, we should let this match hang around idle
+			//   waiting for swaps.
+			if (srec->match->m_paired_mrec ) {
+				paired_match_wait = srec->match->m_paired_mrec->m_can_start_jobs;
+			}
+			if (srec->exit_already_handled && (srec->match->keep_while_idle == 0) && !paired_match_wait) {
 				DelMrec( srec->match );
 			} else {
 				int exitstatus = WEXITSTATUS(status);
-				if ((srec->match->keep_while_idle > 0) && ((exitstatus == JOB_EXITED) || (exitstatus == JOB_SHOULD_REMOVE) || (exitstatus == JOB_KILLED))) {
+				if ((srec->match->keep_while_idle > 0 || paired_match_wait) && ((exitstatus == JOB_EXITED) || (exitstatus == JOB_SHOULD_REMOVE) || (exitstatus == JOB_KILLED))) {
 					srec->match->status = M_CLAIMED;
 					srec->match->shadowRec = NULL;
 					srec->match->idle_timer_deadline = time(NULL) + srec->match->keep_while_idle;
 					srec->match = NULL;
 				}
+			}
+
+				// AsyncXfer: If we have a match with a paired match that
+				//   can start jobs, see if we want to swap.
+			if ( !ExitWhenDone && paired_match_wait && mrec->m_paired_mrec->status == M_ACTIVE ) {
+				this->CheckForClaimSwap( mrec->m_paired_mrec );
 			}
 		}
 
@@ -9863,7 +10171,12 @@ Scheduler::child_exit(int pid, int status)
 		// If we're not trying to shutdown, now that either an agent
 		// or a shadow (or both) have exited, we should try to
 		// start another job.
-	if( ! ExitWhenDone && StartJobsFlag ) {
+		// AsyncXfer: If we have a match with a paired match that can
+		//   start jobs, we don't want to find another job for this
+		//   match or delete it.
+	if ( !ExitWhenDone && paired_match_wait ) {
+		return;
+	} else if( ! ExitWhenDone && StartJobsFlag ) {
 		if( !claim_id.IsEmpty() ) {
 				// Try finding a new job for this claim.
 			match_rec *mrec = scheduler.FindMrecByClaimID( claim_id.Value() );
@@ -11291,8 +11604,8 @@ Scheduler::Init()
 		if ( !shadowCommandrsock || !shadowCommandssock ) {
 			EXCEPT("Failed to create Shadow Command socket");
 		}
-		// Note: BindAnyCommandPort() is in daemon core
-		if ( !BindAnyCommandPort(shadowCommandrsock,shadowCommandssock)) {
+		// Note: BindAnyLocalCommandPort() is in daemon core
+		if ( !BindAnyLocalCommandPort(shadowCommandrsock,shadowCommandssock)) {
 			EXCEPT("Failed to bind Shadow Command socket");
 		}
 		if ( !shadowCommandrsock->listen() ) {
@@ -11372,6 +11685,28 @@ Scheduler::Init()
 	m_job_machine_attrs_history_length = param_integer("SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH",1,0);
 
 	m_history_helper_max = param_integer("HISTORY_HELPER_MAX_CONCURRENCY", 2);
+
+    m_userlog_file_cache_max = param_integer("USERLOG_FILE_CACHE_MAX", 0, 0);
+    m_userlog_file_cache_clear_interval = param_integer("USERLOG_FILE_CACHE_CLEAR_INTERVAL", 60, 0);
+
+	char *sw = param("SLOT_WEIGHT");
+	if (sw) {
+		if (slotWeight) {
+			delete slotWeight;
+		}
+		ParseClassAdRvalExpr(sw, slotWeight);
+		free(sw);
+	}
+
+	if (slotWeightMapAd) {
+		delete slotWeightMapAd;
+		slotWeightMapAd = 0;
+	}
+	m_use_slot_weights = param_boolean("SCHEDD_USE_SLOT_WEIGHT", false);
+
+	std::string sswma = "Memory = RequestMemory \n Disk = RequestDisk \n Cpus = RequestCpus";
+	slotWeightMapAd = new ClassAd;
+	slotWeightMapAd->initFromString(sswma.c_str());
 
 	first_time_in_init = false;
 }
@@ -12163,6 +12498,23 @@ Scheduler::DelMrec(match_rec* match)
 			// This is a convenience for code that is shared with
 			// DedicatedScheduler, such as contactStartd().
 		return dedicated_scheduler.DelMrec( match );
+	}
+
+	if ( match->m_paired_mrec && match->m_paired_mrec->status == M_ACTIVE ) {
+		// AsyncXfer: We want to throw this match away, but we should wait
+		//   until the paired match is done with its current job.
+		dprintf( D_ALWAYS, "AsyncXfer: Match record (%s, %d.%d) delay deletion until paired match finishes\n", match->description(), match->cluster, match->proc );
+		match->m_can_start_jobs = false;
+		match->m_paired_mrec->m_can_start_jobs = false;
+		return 0;
+	}
+	if ( match->m_paired_mrec ) {
+		// AsyncXfer: Release the claim for our paired match as well.
+		//   Disconnect the two and do the tear-down for each.
+		match_rec *paired_match = match->m_paired_mrec;
+		paired_match->m_paired_mrec = NULL;
+		match->m_paired_mrec = NULL;
+		DelMrec( paired_match );
 	}
 
 	// release the claim on the startd
@@ -14312,6 +14664,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	{
 		stream->encode();
 		stream->put((int)0);
+		stream->end_of_message();
 		return FALSE;
 	}
 
@@ -14357,6 +14710,10 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	}
 
 	if( !FindRunnableJobForClaim(mrec,accept_std_univ) ) {
+		dprintf(D_FULLDEBUG,
+			"No runnable jobs for shadow pid %d (was running job %d.%d); shadow will exit.\n",
+			shadow_pid, prev_job_id.cluster, prev_job_id.proc);
+		stream->encode();
 		stream->put((int)0);
 		stream->end_of_message();
 		return TRUE;

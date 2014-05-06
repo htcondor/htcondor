@@ -323,8 +323,8 @@ friendly_name=Query Timeout
 review=?
 
 [GSI_DAEMON_DIRECTORY]
-default=
-type=string
+default=/etc/grid-security
+type=path
 reconfig=true
 customization=seldom
 friendly_name=GSI Daemon Directory
@@ -396,9 +396,7 @@ review=?
 tags=vm-gahp,vmgahp
 
 [VM_GAHP_LOG]
-default=/tmp/VMGAHPLog.$(USERNAME)
-# daemons that run as user can't write to $(LOG) and there is no /tmp on windows
-win32_default=NUL
+default=$(LOG)/VMGahpLog
 type=path
 reconfig=true
 customization=seldom
@@ -2162,7 +2160,7 @@ review=?
 tags=collector,view_server
 
 [LOCAL_DIR]
-default=$(RELEASE_DIR)/hosts/$(HOSTNAME)
+default=$(TILDE)
 win32_default=$(RELEASE_DIR)
 type=string
 reconfig=true
@@ -2657,7 +2655,8 @@ friendly_name=Ignore Nfs Lock Errors
 review=?
 
 [MAIL]
-default=/usr/bin/mail
+# default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
+default=/bin/mail
 win32_default=$(BIN)\condor_mail.exe
 type=path
 reconfig=true
@@ -2802,11 +2801,11 @@ review=?
 tags=startd,Starter
 
 [RunBenchmarks]
-default=
+default=LastBenchmark == 0
 type=string
 reconfig=true
 customization=seldom
-friendly_name=Runbenchmarks
+friendly_name=Expression that when true, causes the STARTD to run benchmarks
 review=?
 tags=startd,startd_main
 
@@ -4744,7 +4743,7 @@ review=?
 tags=schedd,schedd
 
 [SHADOW_STANDARD]
-default=$(SBIN)/condor_shadow
+default=$(SBIN)/condor_shadow.std
 win32_default=
 type=path
 tags=schedd,schedd
@@ -5105,7 +5104,7 @@ review=?
 tags=master,master
 
 [DAEMON_LIST]
-default=MASTER, STARTD, SCHEDD
+default=MASTER
 type=string
 reconfig=true
 customization=normal
@@ -5838,6 +5837,16 @@ friendly_name=Size of Recent Statistics Window
 review=?
 tags=scheduler
 
+[DCSTATISTICS_TIMESPANS]
+default=4m:240 20m:1200 4h:14400
+version=8.1.6
+type=string
+reconfig=true
+customization=seldom
+friendly_name=List of timespans for reporting DC exponential moving average statistics
+review=?
+tags=schedd
+
 [DCSTATISTICS_WINDOW_SECONDS]
 default=
 type=string
@@ -6508,8 +6517,8 @@ review=?
 tags=c++_util,condor_config
 
 [GANGLIAD_METRICS_CONFIG_DIR]
-default=/etc/condor/ganglia.d
-type=string
+default=$(RELEASE_DIR)/etc/condor/ganglia.d
+type=path
 reconfig=true
 customization=seldom
 friendly_name=Ganglia metric config dir
@@ -6670,6 +6679,25 @@ customization=devel
 friendly_name=Control use of V3 query protocol for condor_q
 usage=Set to false to disable V3 query protocol for condor_q.
 
+[ENABLE_IPV6]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Enable IPv6
+usage=Should HTCondor listen on IPv6 interfaces?
+tags=daemon_core
+
+[ENABLE_IPV4]
+default=true
+version=8.1.3
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Enable IPv4
+usage=Should HTCondor listen on IPv4 interfaces?
+tags=daemon_core
+
 [JOB_EXECDIR_PERMISSIONS]
 default=user
 version=8.1.3
@@ -6679,6 +6707,14 @@ customization=seldom
 friendly_name=Permissions on the job's execute directory
 review=?
 tags=starter
+
+[FILETRANSFER_PLUGINS]
+default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
+win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe
+customization=seldom
+friendly_name=List of installed file transfer plugins
+tags=startd
+review=?
 
 [CONDOR_ADMIN]
 default=root@$(FULL_HOSTNAME)
@@ -7044,9 +7080,6 @@ review=?
 [BenchmarkTimer]
 default=(time() - LastBenchmark)
 review=?
-[RunBenchmarks]
-default=(LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
-review=?
 [BENCHMARKS_JOBLIST]
 default=mips kflops
 review=?
@@ -7074,6 +7107,78 @@ review=?
 [IsWindows]
 default=false
 win32_default=true
+type=bool
+customization=const
+
+[IsMaster]
+default=false
+type=bool
+customization=const
+[MASTER.IsMaster]
+default=true
+type=bool
+customization=const
+
+[IsCollector]
+default=false
+type=bool
+customization=const
+[COLLECTOR.IsCollector]
+default=true
+type=bool
+customization=const
+
+[IsNegotiator]
+default=false
+type=bool
+customization=const
+[NEGOTIATOR.IsNegotiator]
+default=true
+type=bool
+customization=const
+
+[IsSchedd]
+default=false
+type=bool
+customization=const
+[SCHEDD.IsSchedd]
+default=true
+type=bool
+customization=const
+
+[IsStartd]
+default=false
+type=bool
+customization=const
+[STARTD.IsStartd]
+default=true
+type=bool
+customization=const
+
+[IsStarter]
+default=false
+type=bool
+customization=const
+[STARTER.IsStarter]
+default=true
+type=bool
+customization=const
+
+[IsShadow]
+default=false
+type=bool
+customization=const
+[SHADOW.IsShadow]
+default=true
+type=bool
+customization=const
+
+[IsTool]
+default=false
+type=bool
+customization=const
+[TOOL.IsTool]
+default=true
 type=bool
 customization=const
 
@@ -7361,7 +7466,7 @@ default : @end
 review=?
 
 # no-preemption policy, formerly called TESTINGMODE_
-[$POLICY.ALWAYS_RUN]
+[$POLICY.ALWAYS_RUN_JOBS]
 friendly_name=Use a no-preemption policy
 default : @end
 	WANT_SUSPEND=False
@@ -7397,8 +7502,8 @@ default : @end
 @end
 review=?
 
-[$POLICY.LIMIT_RUNTIMES]
-friendly_name=Limit job runtimes to 12 hours
+[$POLICY.LIMIT_JOB_RUNTIMES]
+friendly_name=Limit job runtimes to 24 hours
 default : @end
 	MAX_JOB_RUNTIME=24*3600
 	PREMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
@@ -7406,7 +7511,7 @@ default : @end
 review=?
 
 [$ROLE.Personal]
-friendly_name=Settings for Personal HTCondor
+friendly_name=Settings for Personal HTCondor (i.e. the whole pool is on a single machine)
 default : @end
 	COLLECTOR_HOST=$(CONDOR_HOST):0
 	DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
@@ -7414,14 +7519,14 @@ default : @end
 @end
 review=?
 
-[$ROLE.ExecNode]
+[$ROLE.Execute]
 friendly_name=Settings for HTCondor Execute node
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) STARTD
 @end
 review=?
 
-[$ROLE.SubmitNode]
+[$ROLE.Submit]
 friendly_name=Settings for HTCondor Execute node
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) SCHEDD
@@ -7436,8 +7541,8 @@ default : @end
 review=?
 
 # default security policy
-[$AUTH.DEFAULT]
-friendly_name=Default Authorization policy based on IPs and DNS names
+[$SECURITY.HOST_BASED]
+friendly_name=Default (host based) Authorization policy based on IPs and DNS names
 default : @end
 	ALLOW_ADMINISTRATOR=$(CONDOR_HOST), $(IP_ADDRESS)
 	ALLOW_OWNER=$(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
@@ -7452,9 +7557,66 @@ default : @end
 @end
 review=?
 
+[$SECURITY.WITH_AUTHENTICATION]
+friendly_name=Enable
+default : @end
+	SEC_DEFAULT_AUTHENTICATION=required
+	SEC_DEFAULT_INTEGRITY=required
+@end
+review=?
+
+[$SECURITY.STRONG]
+friendly_name=Enable
+default : @end
+	SEC_DEFAULT_ENCRYPTION=required
+	SEC_DEFAULT_INTEGRITY=required
+	SEC_DEFAULT_AUTHENTICATION=required
+@end
+review=?
+
+[$SECURITY.USER_BASED]
+friendly_name=Enable
+default : @end
+	if $(CondorIsAdmin)
+	  authuser=condor
+	else
+	  authuser=$(USERNAME)
+	endif
+	ALLOW_ADMINISTRATOR=$(authuser)@$(CONDOR_HOST), $(authuser)@$(IP_ADDRESS)
+	ALLOW_OWNER=$(authuser)@$(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
+	ALLOW_READ=*
+	ALLOW_WRITE=$(ALLOW_ADMINISTRATOR) $(ALLOW_OWNER)
+	ALLOW_NEGOTIATOR=$(authuser)@$(CONDOR_HOST)
+	ALLOW_NEGOTIATOR_SCHEDD=$(ALLOW_NEGOTIATOR), $(FLOCK_NEGOTIATOR_HOSTS)
+	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE), $(FLOCK_FROM)
+	ALLOW_WRITE_STARTD=$(ALLOW_WRITE), $(FLOCK_FROM)
+	ALLOW_READ_COLLECTOR=$(ALLOW_READ), $(FLOCK_FROM)
+	ALLOW_READ_STARTD=$(ALLOW_READ), $(FLOCK_FROM)
+	use SECURITY : WITH_AUTHENTICATION
+@end
+review=?
+
+[$FEATURE.REMOTE_RUNTIME_CONFIG]
+friendly_name=Enable runtime configuration of HTCondor daemons
+default : @end
+	ENABLE_RUNTIME_CONFIG=True
+	ALLOW_CONFIG=$(ALLOW_ADMINISTRATOR)
+	# the value of this attribute defines which parameters can be set remotely
+	#SETTABLE_ATTRS_CONFIG=*
+@end
+review=?
+
+[$FEATURE.REMOTE_CONFIG]
+friendly_name=Enable runtime and persistent configuration of HTCondor daemons
+default : @end
+	ENABLE_PERSISTENT_CONFIG=True
+	PERSISTENT_CONFIG_DIR=$(SPOOL)
+	use FEATURE : REMOTE_RUNTIME_CONFIG
+@end
+review=?
 
 # note vm_vmware script is perl so it doesn't get a .exe extension on Windows.
-[$USE.VMWARE]
+[$FEATURE.VMWARE]
 friendly_name=Settings for to use VMWARE with VM Universe
 default : @end
 	VM_TYPE=vmware
@@ -7471,18 +7633,30 @@ default : @end
 @end
 review=?
 
-[$USE.GPUS]
+[$FEATURE.GPUs]
 friendly_name=Settings for to detect and use GPUs as custom resources
 default : @end
 	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
-	ENVIRONMENT_FOR_AssignedGPUs=CUDA_VISIBLE_DEVICES, GPU_DEVICE_ORDINAL
+	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES
+	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
 @end
 review=?
 
-[$HACK.ASYNC_STAGEOUT]
+[$EXPERIMENTAL.ASYNC_STAGEOUT]
 friendly_name=Knobs to enable the async stage-out hack for CMS
 default: @end
-	# append cluster ID to StarterLog, may be: Cluster, JobId, false or true. true gives 8.0 compatible behavior.
-	STARTER_LOG_NAME_APPEND=Cluster
-	ALLOW_SLOT_CLAIM_SWAP=true
+	ALLOW_SLOT_PAIRING=true
+	# don't append slot name to StarterLog, may be: Cluster, JobId, false or true. true gives 8.0 compatible behavior.
+	STARTER_LOG_NAME_APPEND=false
+	# create a hidden type2 xfer slot for every type1 slot
+	NUM_SLOTS_TYPE_1 = $(NUM_CPUS)
+	NUM_SLOTS_TYPE_2 = $(NUM_SLOTS_TYPE_1)
+	SLOT_TYPE_2 = minimal cpus=0.1 memory=100 disk=auto
+	SLOT_TYPE_2_NAME_PREFIX = xfer
+	SLOT_TYPE_2_PAIRED_WITH = SLOT_TYPE_1
+	SLOT_TYPE_2_HIDDEN = true
+	SLOT_TYPE_2_START = TARGET.JobTransferringOutput  && splitslotname(TARGET.RemoteHost)[1] == splitslotname(MY.Name)[1]
+	# cross-advertise these slot attributes in all other slots
+	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
 @end
+

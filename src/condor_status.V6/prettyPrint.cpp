@@ -255,6 +255,7 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 void
 prettyPrint (ClassAdList &adList, TrackTotals *totals)
 {
+	ppOption pps = using_print_format ? PP_CUSTOM : ppStyle;
 	ClassAd	*ad;
 	int     classad_index;
 	int     last_classad_index;
@@ -265,7 +266,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	adList.Open();
 	while ((ad = adList.Next())) {
 		if (!wantOnlyTotals) {
-			switch (ppStyle) {
+			switch (pps) {
 			  case PP_STARTD_NORMAL:
 				if (absentMode) {
 					printStartdAbsent (ad, (classad_index == 0));
@@ -379,7 +380,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	// if there are no ads to print, but the user wanted XML output,
 	// then print out the XML header and footer, so that naive XML
 	// parsers won't get confused.
-	if ( PP_XML == ppStyle && 0 == classad_index ) {
+	if ( PP_XML == pps && 0 == classad_index ) {
 		printXML (NULL, true, true);
 	}
 

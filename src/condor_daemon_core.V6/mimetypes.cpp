@@ -160,7 +160,7 @@ mime_hash (register const char *str, register unsigned int len)
       259, 259, 259, 259, 259, 259, 259, 259, 259, 259,
       259, 259, 259, 259, 259, 259
     };
-  register int hval = len;
+  int hval = len;
 
   switch (hval)
     {
@@ -327,11 +327,11 @@ mime_lookup (register const char *str, register unsigned int len)
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)
     {
-      register int key = mime_hash (str, len);
+      int key = mime_hash (str, len);
 
       if (key <= MAX_HASH_VALUE && key >= 0)
         {
-          register const char *s = wordlist[key].ext;
+          const char *s = wordlist[key].ext;
 
           if ((((unsigned char)*str ^ (unsigned char)*s) & ~32) == 0 && !gperf_case_strcmp (str, s))
             return &wordlist[key];

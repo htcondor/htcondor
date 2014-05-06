@@ -24,15 +24,14 @@
 #  include <linux/tcp.h>	// get definition for TCP_USER_TIMEOUT
 #endif
 
+#include "sock.h"
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_uid.h"
-#include "sock.h"
 #include "condor_network.h"
 #include "internet.h"
 #include "ipv6_hostname.h"
 #include "condor_debug.h"
-#include "condor_socket_types.h"
 #include "get_port_range.h"
 #include "condor_netdb.h"
 #include "daemon_core_sock_adapter.h"
@@ -41,6 +40,13 @@
 #include "condor_sockfunc.h"
 #include "condor_ipv6.h"
 #include "condor_config.h"
+
+#if defined(WIN32)
+// <winsock2.h> already included...
+// note: IPPROTO_IPV6 is an enum member, not a #define on WIN32
+#else
+#include <netinet/in.h>
+#endif
 
 #ifdef HAVE_EXT_OPENSSL
 #include "condor_crypt_blowfish.h"
@@ -415,6 +421,14 @@ int Sock::move_descriptor_up()
 
 int Sock::assign(SOCKET sockd)
 {
+	condor_protocol proto = CP_IPV4;
+	if (_condor_is_ipv6_mode())
+		proto = CP_IPV6;
+	return assign(proto, sockd);
+}
+
+int Sock::assign(condor_protocol proto, SOCKET sockd)
+{
 	int		my_type = SOCK_DGRAM;
 
 	if (_state != sock_virgin) return FALSE;
@@ -433,11 +447,12 @@ int Sock::assign(SOCKET sockd)
 		return TRUE;
 	}
 
-	int af_type;
-	if (_condor_is_ipv6_mode())
-		af_type = AF_INET6;
-	else
-		af_type = AF_INET;
+	int af_type = 0;
+	switch(proto) {
+		case CP_IPV4: af_type = AF_INET; break;
+		case CP_IPV6: af_type = AF_INET6; break;
+		default: ASSERT(false);
+	}
 
 	switch(type()){
 		case safe_sock:
@@ -490,16 +505,29 @@ int Sock::assign(SOCKET sockd)
 	if ( _timeout > 0 )
 		timeout_no_timeout_multiplier( _timeout );
 
+	if(proto == CP_IPV6) {
+		// We always use two sockets for mixed mode IPv4/IPv6 for consistency.
+		// Ensure the IPv6 socket doesn't claim the IPv4 port as well.
+#if defined(SOL_IPV6)
+		int level = SOL_IPV6;
+#elif defined(IPPROTO_IPV6)	|| defined(WIN32)
+		int level = IPPROTO_IPV6;
+#else
+#	error "Unable to determine correct level to pass to setsockopt for IPv6 control"
+#endif
+		int value = 1;
+		setsockopt(level, IPV6_V6ONLY, (char*)&value, sizeof(value));
+	}
+
     addr_changed();
 	return TRUE;
 }
 
 
 int
-Sock::bindWithin(const int low_port, const int high_port, bool outbound)
+Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port, bool outbound)
 {
 	bool bind_all = (bool)_condor_bind_all_interfaces();
-	bool ipv6_mode = _condor_is_ipv6_mode();
 
 	// Use hash function with pid to get the starting point
     struct timeval curTime;
@@ -522,16 +550,13 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 
 		addr.clear();
 		if( bind_all ) {
-			if (ipv6_mode)
-				addr.set_ipv6();
-			else
-				addr.set_ipv4();
+			addr.set_protocol(proto);
 			addr.set_addr_any();
 		} else {
 			addr = get_local_ipaddr();
 			// what if the socket type does not match?
 			// e.g. addr is ipv6 but ipv6 mode is not turned on?
-			if (addr.is_ipv4() && ipv6_mode)
+			if (addr.is_ipv4() && proto==CP_IPV6)
 				addr.convert_to_ipv6();
 		}
 		addr.set_port((unsigned short)this_trial++);
@@ -578,8 +603,16 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 	return FALSE;
 }
 
-
 int Sock::bind(bool outbound, int port, bool loopback)
+{
+	condor_protocol proto = CP_IPV4;
+	if(_condor_is_ipv6_mode()) {
+		proto = CP_IPV6;
+	}
+	return bind(proto, outbound, port, loopback);
+}
+
+int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 {
 	condor_sockaddr addr;
 	int bind_return_value;
@@ -593,7 +626,7 @@ int Sock::bind(bool outbound, int port, bool loopback)
     }
 
 	// if stream not assigned to a sock, do it now	*/
-	if (_state == sock_virgin) assign();
+	if (_state == sock_virgin) assign(proto);
 
 	if (_state != sock_assigned) {
 		dprintf(D_ALWAYS, "Sock::bind - _state is not correct\n");
@@ -632,23 +665,20 @@ int Sock::bind(bool outbound, int port, bool loopback)
 	int lowPort, highPort;
 	if ( port == 0 && !loopback && get_port_range((int)outbound, &lowPort, &highPort) == TRUE ) {
 			// Bind in a specific port range.
-		if ( bindWithin(lowPort, highPort, outbound) != TRUE ) {
+		if ( bindWithin(proto, lowPort, highPort, outbound) != TRUE ) {
 			return FALSE;
 		}
 	} else {
 			// Bind to a dynamic port.
 
-		if (_condor_is_ipv6_mode())
-			addr.set_ipv6();
-		else
-			addr.set_ipv4();
+		addr.set_protocol(proto);
 		if( loopback ) {
 			addr.set_loopback();
 		} else if( (bool)_condor_bind_all_interfaces() ) {
 			addr.set_addr_any();
 		} else {
 			addr = get_local_ipaddr();
-			if (addr.is_ipv4() && _condor_is_ipv6_mode())
+			if (addr.is_ipv4() && proto==CP_IPV6)
 				addr.convert_to_ipv6();
 		}
 		addr.set_port((unsigned short)port);
@@ -861,8 +891,8 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 	int command;
 	SOCKET_LENGTH_TYPE temp;
 
-	if (_state == sock_virgin) assign();
-	
+	ASSERT(_state != sock_virgin); 
+
 	if ( set_write_buf ) {
 		command = SO_SNDBUF;
 	} else {
@@ -908,8 +938,7 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 
 int Sock::setsockopt(int level, int optname, const void* optval, int optlen)
 {
-	/* if stream not assigned to a sock, do it now	*/
-	if (_state == sock_virgin) assign();
+	ASSERT(_state != sock_virgin); 
 
 	/* cast optval from void* to char*, as some platforms (Windows!) require this */
 	if(::setsockopt(_sock, level, optname, static_cast<const char*>(optval), optlen) < 0)
@@ -1543,9 +1572,8 @@ Sock::bytes_available_to_read()
 #ifndef FIONREAD
 #error FIONREAD is not defined!  Fix me by seeing code comment.
 #endif
+	if(_state == sock_virgin) return -1;
 
-		/* if stream not assigned to a sock, do it now	*/
-	if (_state == sock_virgin) assign();
 	if ( (_state != sock_assigned) &&  
 				(_state != sock_connect) &&
 				(_state != sock_bound) )  {

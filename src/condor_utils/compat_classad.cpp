@@ -881,6 +881,10 @@ ClassAdAttributeIsPrivate( char const *name )
 			// This attribute contains the secret capability cookie
 		return true;
 	}
+	if( strcasecmp(name,ATTR_PAIRED_CLAIM_ID) == 0 ) {
+			// This attribute contains the secret capability cookie
+		return true;
+	}
 	if( strcasecmp(name,ATTR_CAPABILITY) == 0 ) {
 			// This attribute contains the secret capability cookie
 		return true;

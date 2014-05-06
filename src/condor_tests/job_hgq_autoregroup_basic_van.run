@@ -117,6 +117,7 @@ sub timed_callback {
 		}
         $negotiate_test_passed = $succ;
     }
+	CondorTest::RegisterTimed($testname, \&timed_callback, 15);
 }
 
 

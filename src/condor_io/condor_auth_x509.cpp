@@ -73,7 +73,7 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
 		// Setting GSI_AUTHZ_CONF=/dev/null works for disabling the callouts.
 		std::string gsi_authz_conf;
 		if (param(gsi_authz_conf, "GSI_AUTHZ_CONF")) {
-			if (globus_libc_setenv("GSI_AUTHZ_CONF", gsi_authz_conf.c_str(), 1)) {
+			if (setenv("GSI_AUTHZ_CONF", gsi_authz_conf.c_str(), 1)) {
 				dprintf(D_ALWAYS, "Failed to set the GSI_AUTHZ_CONF environment variable.\n");
 				EXCEPT("Failed to set the GSI_AUTHZ_CONF environment variable.\n");
 			}

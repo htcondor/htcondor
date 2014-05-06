@@ -1360,8 +1360,11 @@ template class stats_entry_recent_histogram<long long>;
 template class stats_entry_recent_histogram<long>;
 template class stats_entry_recent_histogram<int>;
 template class stats_entry_recent_histogram<double>;
+template class stats_entry_ema_base<int>;
 template class stats_entry_ema_base<double>;
+template class stats_entry_sum_ema_rate<int>;
 template class stats_entry_sum_ema_rate<double>;
+template class stats_entry_ema<int>;
 template class stats_entry_ema<double>;
 
 //

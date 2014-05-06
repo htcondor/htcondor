@@ -59,6 +59,7 @@ class DaemonCoreSockAdapterClass {
 		bool            force_authentication,
 		int             wait_for_payload);
 	typedef void (DaemonCore::*daemonContactInfoChanged_fnptr)();
+	typedef bool (DaemonCore::*SocketIsRegistered_fnptr)(Stream*);
 
 
 	DaemonCoreSockAdapterClass(): m_daemonCore(0),
@@ -78,7 +79,8 @@ class DaemonCoreSockAdapterClass {
 	m_publicNetworkIpAddr_fnptr(0),
 	m_Register_Command_fnptr(0),
 	m_daemonContactInfoChanged_fnptr(0),
-	m_Register_Timer_TS_fnptr(0) {}
+	m_Register_Timer_TS_fnptr(0),
+	m_SocketIsRegistered_fnptr(0) {}
 
 	void EnableDaemonCore(
 		DaemonCore *dC,
@@ -98,7 +100,8 @@ class DaemonCoreSockAdapterClass {
 		publicNetworkIpAddr_fnptr in_publicNetworkIpAddr_fnptr,
 		Register_Command_fnptr in_Register_Command_fnptr,
 		daemonContactInfoChanged_fnptr in_daemonContactInfoChanged_fnptr,
-		Register_Timer_TS_fnptr in_Register_Timer_TS_fnptr)
+		Register_Timer_TS_fnptr in_Register_Timer_TS_fnptr,
+		SocketIsRegistered_fnptr in_SocketIsRegistered_fnptr)
 	{
 		m_daemonCore = dC;
 		m_Register_Socket_fnptr = in_Register_Socket_fnptr;
@@ -118,6 +121,7 @@ class DaemonCoreSockAdapterClass {
 		m_Register_Command_fnptr = in_Register_Command_fnptr;
 		m_daemonContactInfoChanged_fnptr = in_daemonContactInfoChanged_fnptr;
 		m_Register_Timer_TS_fnptr = in_Register_Timer_TS_fnptr;
+		m_SocketIsRegistered_fnptr = in_SocketIsRegistered_fnptr;
 	}
 
 		// These functions all have the same interface as the corresponding
@@ -141,6 +145,7 @@ class DaemonCoreSockAdapterClass {
 	Register_Command_fnptr m_Register_Command_fnptr;
 	daemonContactInfoChanged_fnptr m_daemonContactInfoChanged_fnptr;
 	Register_Timer_TS_fnptr m_Register_Timer_TS_fnptr;
+	SocketIsRegistered_fnptr m_SocketIsRegistered_fnptr;
 
     int Register_Socket (Stream*              iosock,
                          const char *         iosock_descrip,
@@ -270,6 +275,12 @@ class DaemonCoreSockAdapterClass {
 	{
 		ASSERT(m_daemonCore);
 		return (m_daemonCore->*m_Register_Timer_TS_fnptr)(deltawhen, handler, event_descrip, s);
+	}
+
+	bool SocketIsRegistered (Stream* s)
+	{
+		ASSERT(m_SocketIsRegistered_fnptr);
+		return (m_daemonCore->*m_SocketIsRegistered_fnptr)(s);
 	}
 };
 

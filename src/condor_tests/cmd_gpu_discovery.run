@@ -1,0 +1,291 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test check availability and usage contol of the new
+## local, resources in both a static configuration and in psolts.
+## It is model after what we did to test concurrency limits
+## as we are checking the same sorts of things. bt
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+my @submitfiles =	();
+
+my $pid = $$;
+my $ClusterId = 0;
+
+my $totalcpus = 6;
+my $totalgpus = 4;
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	WANT_SUSPEND = FALSE
+	NEGOTIATION_INTERVAL = 5
+	ALL_DEBUG = D_FULLDEBUG
+	ENABLE_RUNTIME_CONFIG = TRUE
+	ENABLE_PERSISTENT_CONFIG = TRUE
+	PERSISTENT_CONFIG_DIR = $(spool)
+	#OFFLINE_MACHINE_RESOURCE_GPUS = 0
+	SETTABLE_ATTRS_CONFIG = OFFLINE_MACHINE_RESOURCE_GPUS
+	ALLOW_CONFIG = $(FULL_HOSTNAME)
+	NUM_CPUS = 6
+	MASTER_DEBUG = D_SECURITY:2 D_COMMAND:2
+	MACHINE_RESOURCE_INVENTORY_GPUs = $(LIBEXEC)/condor_gpu_discovery -simulate:0,4 -properties
+	ENVIRONMENT_FOR_AssignedGPUs = CUDA_VISIBLE_DEVICES
+	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
+';
+# don't forget PERSISTENT_CONFIG settings
+
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"cmdgpudiscovery");
+
+my $testname = "cmd_gpu_discovery";
+
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
+
+CondorTest::StartCondorWithParams(
+	condor_name => "cmdgpudiscovery",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+#print "************************** CONDOR_CONFIG now set to:$ENV{CONDOR_CONFIG} ******************\n";
+
+
+# now start the personal condor to ensure it comes up
+
+#Do a job before setting tesing exit codes
+print "First test basic job\n";
+my $result = SimpleJob::RunCheck(); # jobid 1
+
+my $on_success = sub {
+};
+
+my $on_submit = sub {
+};
+
+my @running = ();
+my %gpulandings = ();
+my $onexecute = sub {
+	$runcount += 1;
+	#print "A Job Started\n";
+	# sample jobs running and save the locations
+	runCondorTool("condor_q -constraint jobstatus==2 -af RemoteHost",\@running,2,{emit_output=>0});
+	foreach my $slot (@running) {
+		if(!(exists $gpulandings{$slot})) {
+			$gpulandings{$slot} = 1;
+		}
+	}
+};
+
+my $appended_submit_info = '
+	Request_GPUs = 1
+';
+$result = SimpleJob::RunCheck(
+	append_submit_commands => $appended_submit_info,
+	queue_sz => 6,
+	duration => 6,
+	on_execute => $onexecute,
+	on_success => $on_success,
+	on_submit => $on_submit,
+); # jobid 2-5
+
+print "Good $totalcpus jobs ran\n";
+
+my @slots = ();
+runCondorTool("condor_status -af name -constraint GPUs==1",\@slots,2,{emit_output=>0});
+
+my $gpuslots = @slots;
+
+if($gpuslots == $totalgpus) {
+	print "Great, GPUs were distributed evenly\n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "We expected $totalgpus GPUs and saw:$gpuslot\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+# stash slots in a hash where GPUs can be found to cross check where
+# GPU jobs are running.
+
+my %gpuslots = ();
+
+foreach my $slot (@slots) {
+	$gpuslots{$slot} = 1;
+}
+
+#now ensure each job is running where there is a GPU
+
+my $gpumatch = 0;
+my $gpumiss = 0;
+
+foreach my $job (sort keys %gpulandings) {
+	if(exists $gpuslots{$job}) {
+		$gpumatch += 1;
+	} else {
+		print "$job: IS NOT A GPU SLOT!\n";
+		$gpumiss += 1;
+	}
+}
+
+if($gpumiss == 0) {
+	print "GPU jobs only running on GPU slots\n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "$gpumiss jobs ran on non-GPU slots\n"; 
+	RegisterResult(0,test_name,$testname);
+}
+
+my @configlines = ();
+my $configres = runCondorTool("condor_config_val -config",\@configlines,2,{emit_output=>0});
+
+if($configres != 1) {
+	print "Failed to get config file locations\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+#my $localfig = "";
+#foreach my $line (@configlines) {
+#	fullchomp($line);
+#	if($line =~ /^\s+?(.*config\.local).*$/) {
+#		$localfig = $1;
+#		print "our local config file is:$localfig\n";
+#	}
+#}
+
+#my $newconfiglocal = "$localfig" . ".new";
+#my $oldconfiglocal = "$localfig" . ".old";
+
+#open(CF,"<$localfig") or die "Failed to open:$localfig :$1\n";
+#open(NF,">$newconfiglocal") or die "Failed to open:$newconfiglocal :$1\n";
+#while (<CF>) {
+#	print NF "$_";
+#}
+#print NF "OFFLINE_MACHINE_RESOURCE_GPUs=CUDA2\n";
+#close(NF);
+#close(CF);
+
+#system("mv $localfig $oldconfiglocal");
+#system("mv $newconfiglocal $localfig");
+
+my $res = system('condor_config_val -startd -set "OFFLINE_MACHINE_RESOURCE_GPUS=CUDA2"');
+
+if($res == 0) {
+	print "Correctly requested one gpu offline\n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Failed to request one gpu offline\n";
+	RegisterResult(1,test_name,$testname);
+}
+
+#$res = system("condor_config_val -startd OFFLINE_MACHINE_RESOURCE_GPUS");
+
+runToolNTimes("condor_restart -daemon startd",1,0);
+
+my $slotsupdated = 0;
+my @updates = ();
+my $trys = 0;
+while($slotsupdated < $totalcpus) {
+	runCondorTool("condor_status -constraint \'OfflineGPUs==\"CUDA2\"\' -af name",\@updates,2,{emit_output=>0});
+	$slotsupdated =  @updates;
+	$trys += 1;
+	if($trys == 10) {
+		print "failed to see desired $totalgpus updates: only see $slotsupdated\n";
+		RegisterResult(0,test_name,$testname);
+		last;
+	}
+	sleep (5);
+}
+
+if($slotsupdated == $totalcpus) {
+	print "Correctly advertised gpu offline\n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Failed expected to see $totalcpus updates, saw $slotsupdated\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+
+# lower the expectation on running jobs
+$totalgpus = 3;
+ 
+@running = ();
+%gpulandings = ();
+
+# Lets repeat some test we should only see 3 gpu slots
+# and of course the three jobs should run
+
+$result = SimpleJob::RunCheck(
+	append_submit_commands => $appended_submit_info,
+	queue_sz =>  6,
+	duration => 6,
+	on_execute => $onexecute,
+	on_success => $on_success,
+	on_submit => $on_submit,
+); # jobid 2-5
+
+print "Good $totalcpus jobs ran\n";
+
+@slots = ();
+runCondorTool("condor_status -af name -constraint GPUs==1",\@slots,2,{emit_output=>0});
+
+$gpuslots = @slots;
+
+if($gpuslots == $totalgpus) {
+	print "Great, GPUs were distributed evenly\n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "We expected $totalgpus GPUs and saw:$gpuslot\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+%gpuslots = ();
+
+foreach my $slot (@slots) {
+	$gpuslots{$slot} = 1;
+}
+
+foreach my $job (sort keys %gpulandings) {
+	if(exists $gpuslots{$job}) {
+		$gpumatch += 1;
+	} else {
+		print "$job: IS NOT A GPU SLOT!\n";
+		$gpumiss += 1;
+	}
+}
+
+if($gpumiss == 0) {
+	print "GPU jobs only running on GPU slots\n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "$gpumiss jobs ran on non-GPU slots\n"; 
+	RegisterResult(0,test_name,$testname);
+}
+
+
+CondorTest::EndTest();
+
+exit(0);
+
