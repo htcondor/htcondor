@@ -548,6 +548,12 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 		}else if ( !strcasecmp(tmp_name.Value(),VMGAHP_STATUS_COMMAND_CPUUTILIZATION) ) {
 		      /* This is here for vm's which are spun via libvirt*/
 		      m_vm_utilization = (float)strtod(tmp_value.Value(), (char **)NULL);
+		} else if ( !strcasecmp( tmp_name.Value(), VMGAHP_STATUS_COMMAND_MEMORY ) ) {
+			// This comes from the GAHP in kbytes.
+			m_vm_memory = strtol( tmp_value.Value(), (char **)NULL, 10 );
+		} else if ( !strcasecmp( tmp_name.Value(), VMGAHP_STATUS_COMMAND_MAX_MEMORY ) ) {
+			// This comes from the GAHP in kbytes.
+			m_vm_max_memory = strtol( tmp_value.Value(), (char **)NULL, 10 );
 		}
 	}
 
@@ -1225,11 +1231,8 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, sys_time );
 		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, user_time );
 		ad->Assign(ATTR_JOB_VM_CPU_UTILIZATION, m_vm_utilization);
-		// For KVM, we can probably do better for by asking (the procd?) about
-		// the kvm/qemu process.  It's not clear that using that process's
-		// sys time would actualle be useful.
-		ad->Assign(ATTR_IMAGE_SIZE, (int)0);
-		ad->Assign(ATTR_RESIDENT_SET_SIZE, (int)0);
+		ad->Assign( ATTR_IMAGE_SIZE, m_vm_max_memory );
+		ad->Assign( ATTR_RESIDENT_SET_SIZE, m_vm_memory );
 	}else {
 		// Update usage of process for VM
 		long sys_time = 0;
