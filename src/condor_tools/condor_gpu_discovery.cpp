@@ -518,7 +518,7 @@ int ocl_Init(void) {
 		}
 
 		unsigned int cDevs = 0;
-		cl_f_device_type f_types = CL_DEVICE_TYPE_GPU;
+		cl_device_type f_types = CL_DEVICE_TYPE_GPU;
 		clr = ocl.GetDeviceIDs(plid, f_types, 0, NULL, &cDevs);
 		if (g_verbose) { fprintf(stdout, "\tDEVICES = %d\n", cDevs); }
 
@@ -540,7 +540,7 @@ int ocl_Init(void) {
 					for (unsigned int jj = ixFirst; jj < ixFirst + cDevs; ++jj) {
 						cl_device_id did = cl_gpu_ids[jj];
 						oclGetInfo(did, CL_DEVICE_NAME, val);
-						cl_f_device_type eType = CL_DEVICE_TYPE_NONE;
+						cl_device_type eType = CL_DEVICE_TYPE_NONE;
 						oclGetInfo(did, CL_DEVICE_TYPE, eType);
 						unsigned int vid = 0;
 						oclGetInfo(did, CL_DEVICE_VENDOR_ID, vid);

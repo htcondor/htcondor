@@ -135,10 +135,10 @@ BoincResource::~BoincResource()
 	daemonCore->Cancel_Timer( m_leaseTid );
 	daemonCore->Cancel_Timer( m_submitTid );
 
+	ResourcesByName.remove( HashKey( HashName( resourceName, m_authenticator ) ) );
+
 	free( m_serviceUri );
 	free( m_authenticator );
-
-	ResourcesByName.remove( HashKey( HashName( resourceName, m_authenticator ) ) );
 
 	delete gahp;
 	delete m_statusGahp;
