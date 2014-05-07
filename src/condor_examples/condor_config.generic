@@ -42,6 +42,8 @@ LOCAL_CONFIG_DIR = $(LOCAL_DIR)/config
 
 ##  Use a host-based security policy. By default CONDOR_HOST and the local machine will be allowed
 use SECURITY : HOST_BASED
+##  To expand your condor pool beyond a single host, set ALLOW_WRITE to match all of the hosts
+#ALLOW_WRITE = *.cs.wisc.edu
 
 ##--------------------------------------------------------------------
 ## Values set by the condor_configure script:
