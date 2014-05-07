@@ -2739,7 +2739,7 @@ tags=startd,command
 
 [STARTD_SENDS_ALIVES]
 default=peer
-type=bool
+type=string
 reconfig=true
 customization=seldom
 friendly_name=Startd Sends Alives
@@ -5475,7 +5475,7 @@ tags=ccb,ccb
 
 [SHADOW_LOCK]
 default=$(LOCK)/ShadowLock
-type=bool
+type=path
 reconfig=true
 customization=seldom
 friendly_name=Lock file for locking the shadow log file
