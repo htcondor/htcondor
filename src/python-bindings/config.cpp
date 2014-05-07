@@ -44,7 +44,7 @@ struct Param
         }
         case PARAM_TYPE_BOOL:
         {
-            bool result = param_boolean(attr, result);
+            bool result = param_boolean(attr, false);
             pyresult = object(result);
             break;
         }
@@ -56,7 +56,7 @@ struct Param
         }
         case PARAM_TYPE_LONG:
         {
-            long long result = param_integer(attr, result);
+            long long result = param_integer(attr);
             pyresult = object(result);
             break;
         }
