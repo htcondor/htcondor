@@ -824,7 +824,7 @@ main( int argc, const char* argv[] )
 	if (write_config || stats_with_defaults) {
 		config_options |= CONFIG_OPT_KEEP_DEFAULTS;
 	}
-	config_host(host, 0, config_options);
+	config_host(host, config_options);
 	validate_config(false); // validate, but do not abort.
 	if (print_config_sources) {
 		PrintConfigSources();
@@ -837,7 +837,7 @@ main( int argc, const char* argv[] )
 
 		extern const char * simulated_local_config;
 		simulated_local_config = reconfig_source;
-		config_host(host, 0, config_options);
+		config_host(host, config_options);
 		if (print_config_sources) {
 			fprintf(stdout, "Reconfig with %s appended\n", reconfig_source);
 			PrintConfigSources();

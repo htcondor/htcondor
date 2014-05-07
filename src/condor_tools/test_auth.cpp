@@ -113,7 +113,7 @@ main( int argc, char* argv[] )
 		get_mySubSystem()->setName( "DAEMON-TOOL" );
 	}
 
-	config_ex( 0, false );
+	config_ex( CONFIG_OPT_WANT_META | CONFIG_OPT_NO_EXIT );
 
 	IpVerify ipverify;
 
