@@ -6637,6 +6637,16 @@ These settings affect the \Condor{starter}.
   information back to the \Condor{shadow} where it will end up in the
   ShadowLog.  It defaults to \Expr{True}.
 
+\label{param:StarterLogNameAppend}
+\item[\Macro{STARTER\_LOG\_NAME\_APPEND}]
+  This setting controls the file extension of the local log file used
+  by the starter. Permitted values are true, false, slot, cluster and jobid.
+  false will suppress the file extension, true gives the default behavior of
+  using the slot name unless there is only a single slot. slot, cluster and jobid
+  use the slot name, cluster id and job id respectively. If cluster or jobid are
+  specified, the resulting log files will persist until deleted by the user, so these
+  two options should only be used to assist in debugging, not as permanent options.
+
 \label{param:StarterDebug}
 \item[\Macro{STARTER\_DEBUG}]
   This setting (and other settings related to debug logging in the starter) is

@@ -220,7 +220,10 @@ if ( defined( $opt_use_externals_cache ) ) {
 
 if($platform =~ /Fedora1[789]$/) {
 	$defines{python_version} = "-DPythonLibs_FIND_VERSION:STRING=2.7";
+} if ($platform =~ /Fedora2[01]$/) {
+	$defines{python_version} = "-DPythonLibs_FIND_VERSION:STRING=2.7";
 }
+
 
 ######################################################################
 # run cmake on the source tree
