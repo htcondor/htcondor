@@ -133,14 +133,16 @@ class Job {
 		and the IsActive() method, etc.
     */
 	// WARNING!  status_t and status_t_names must be kept in sync!!
+	// WARNING!  Don't change the values of existing enums -- the
+	// node status file relies on the values staying the same.
     enum status_t {
-		/** Job is not ready (for final) */ STATUS_NOT_READY,
-        /** Job is ready for submission */ STATUS_READY,
-        /** Job waiting for PRE script */  STATUS_PRERUN,
-        /** Job has been submitted */      STATUS_SUBMITTED,
-        /** Job waiting for POST script */ STATUS_POSTRUN,
-        /** Job is done */                 STATUS_DONE,
-        /** Job exited abnormally */       STATUS_ERROR,
+		/** Job is not ready (for final) */ STATUS_NOT_READY = 0,
+        /** Job is ready for submission */ STATUS_READY = 1,
+        /** Job waiting for PRE script */  STATUS_PRERUN = 2,
+        /** Job has been submitted */      STATUS_SUBMITTED = 3,
+        /** Job waiting for POST script */ STATUS_POSTRUN = 4,
+        /** Job is done */                 STATUS_DONE = 5,
+        /** Job exited abnormally */       STATUS_ERROR = 6,
     };
 
     /** The string names for the status_t enumeration.  Use this the same

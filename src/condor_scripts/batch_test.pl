@@ -339,8 +339,18 @@ my %test_suite = ();
 # If a Condor was requested we want to start one up...
 if(!($wantcurrentdaemons)) {
 	# ...unless isolation was requested.  Then we do one before running each test
-	if(!$isolated) {
-		start_condor($testpersonalcondorlocation);
+	# We always want to establish The testing personal condor
+	# so we have a base config available for tests which start their
+	# own personal condor. bt 4/28/14
+	
+	if($iswindows == 1){
+		if(!(-d $wintestpersonalcondorlocation)) {
+			start_condor($wintestpersonalcondorlocation);
+		}
+	} else {
+		if(!(-d $testpersonalcondorlocation)) {
+			start_condor($testpersonalcondorlocation);
+		}
 	}
 }
 
@@ -862,6 +872,8 @@ sub start_condor {
 	unlink("$testpersonalcondorlocation/local/log/.startd_address");
 	unlink("$testpersonalcondorlocation/local/log/.schedd_address");
 
+showEnv();
+
 	if($iswindows == 1) {
 		my $mcmd = "$wininstalldir/bin/condor_master.exe -f &";
 		if ($iscygwin) {
@@ -1109,7 +1121,7 @@ sub CreateConfig {
 				print NEWFIG "RELEASE_DIR = $installdir\n";
 			}
 		}
-		elsif(/^LOCAL_DIR\s*=/) {
+		elsif(/^#?LOCAL_DIR\s*=/) {
 			debug("Matching:$_\n", 2);
 			if($iswindows == 1) {
 				print NEWFIG "LOCAL_DIR = $wintestpersonalcondorlocation/local\n";
@@ -1150,7 +1162,16 @@ sub CreateConfig {
 			print NEWFIG "$_\n";
 		}    
 	}    
-	close( OLDFIG );    
+	close( OLDFIG );
+	# make sure that things we need set are set.
+	if($iswindows == 1) { print NEWFIG "LOCAL_DIR = $wintestpersonalcondorlocation/local\n"; }
+	else { print NEWFIG "LOCAL_DIR = $localdir\n"; }
+	print NEWFIG "CONDOR_HOST = $currenthost\n";
+	print NEWFIG "ALLOW_WRITE = *\n";
+	if ($want_core_dumps) {
+		print NEWFIG "NOT_RESPONDING_WANT_CORE = True\n";
+		print NEWFIG "CREATE_CORE_FILES = True\n";
+	}
 	print NEWFIG "TOOL_TIMEOUT_MULTIPLIER = 10\n";
 	print NEWFIG "TOOL_DEBUG_ON_ERROR = D_ANY D_ALWAYS:2\n";
 	close( NEWFIG );
@@ -1771,4 +1792,9 @@ sub wait_for_test_children {
 	return $tests_reaped;
 }
 
+sub showEnv {
+	foreach my $env (sort keys %ENV) {
+		print "$env: $ENV{$env}\n";
+	}
+}
 1;

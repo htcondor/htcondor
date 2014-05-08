@@ -1,4 +1,4 @@
-NODE_STATUS_FILE job_dagman_final-B.status
+NODE_STATUS_FILE job_dagman_final-B.status 600
 
 JOB B_A job_dagman_final-B-nodeA.cmd
 # Node B_B will fail.

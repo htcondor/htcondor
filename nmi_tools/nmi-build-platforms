@@ -8,27 +8,25 @@ x86_64_MacOSX8
 x86_64_RedHat5
 x86_64_RedHat6
 x86_64_RedHat7
+x86_64_Ubuntu12
 x86_64_Windows7
 x86_64_Windows8
 x86_Debian6
 x86_RedHat5
 x86_RedHat6
 
-# This Windows machine has only 2 slots so we are only building on master currently
-#x86_WindowsXP
-
 # We want to build all branches on Fedora because it is our "warning check" platform
-x86_64_Fedora17
-x86_64_Fedora18
 x86_64_Fedora19
+x86_64_Fedora20
 
 # We might as well build on SL
 x86_64_SL6
 x86_SL5
 
-# These are NMI requested platforms.  We only need to build these on master since
-# NMI will only take releases from our master branch.
+# These are NMI requested platforms.
 x86_64_Solaris11
 x86_64_Ubuntu10
-x86_64_Ubuntu12
-#x86_FreeBSD7
+
+# Test the SWAMP infrastructure.
+swamp:rhel-6.4-64
+swamp:ubuntu-12.04-64

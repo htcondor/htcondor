@@ -94,6 +94,9 @@ template<typename T>
 bool lex_cast(const std::string& s, T& v) {
     std::stringstream ss(s);
     ss >> v;
+    if ( !ss.eof() ) {
+        ss >> std::ws;
+    }
     return ss.eof() && (0 == (ss.rdstate() & std::stringstream::failbit));
 }
 

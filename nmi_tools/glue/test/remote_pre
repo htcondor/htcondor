@@ -221,3 +221,15 @@ else {
 		}
 	}
 }
+# setup a base config and a personal condor in the test directory
+# so there is a master config other test can find when they set up a specialized
+# personal condor for its test
+if(TestGlue::is_windows()) {
+	chdir("$ENV{TESTS}");
+	#set up TestingPersonalCondor and start it bt
+	system("batch_test.pl -b -p"); 
+} else {
+	chdir("$ENV{TESTS}");
+	#set up TestingPersonalCondor and start it bt
+	system("./batch_test.pl -b -p"); 
+}

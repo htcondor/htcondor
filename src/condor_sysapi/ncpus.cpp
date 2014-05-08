@@ -273,8 +273,8 @@ typedef struct Processor_s
 	int			cpu_cores;		/* "cpu cores" / -1 */
 	int			siblings;		/* "siblings" / -1 */
 
-	BOOLEAN		have_flags;		/* "flags" line? */
-	BOOLEAN		flag_ht;		/*   HT flag set? */
+	bool		have_flags;		/* "flags" line? */
+	bool		flag_ht;		/*   HT flag set? */
 
 	/* These are for counting the number of records with matching ID info
 	 * We define a match as having the same physical and core IDs */
@@ -293,13 +293,13 @@ typedef struct
 
 	// Global info when available
 	int			cpus_detected;		/* value: "cpus detected" / -1 */
-	BOOLEAN		have_siblings;		/* value: "siblings" / -1 */
-	BOOLEAN		have_physical_id;	/* Did we find a "physical id"? */
-	BOOLEAN		have_core_id;		/* Did we find a "core id"? */
-	BOOLEAN		have_cores;			/* Did we find a "cores"? */
+	bool		have_siblings;		/* value: "siblings" / -1 */
+	bool		have_physical_id;	/* Did we find a "physical id"? */
+	bool		have_core_id;		/* Did we find a "core id"? */
+	bool		have_cores;			/* Did we find a "cores"? */
 
-	BOOLEAN		have_flags;			/* "flags" line? */
-	BOOLEAN		flag_ht;			/*   HT flag set? */
+	bool		have_flags;			/* "flags" line? */
+	bool		flag_ht;			/*   HT flag set? */
 
 } CpuInfo;
 
@@ -345,12 +345,12 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 	cpuinfo->num_cpus = 0;
 	cpuinfo->num_hthreads = 0;
 	cpuinfo->cpus_detected = -1;
-	cpuinfo->have_siblings = FALSE;
-	cpuinfo->have_physical_id = FALSE;
-	cpuinfo->have_core_id = FALSE;
-	cpuinfo->have_cores = FALSE;
-	cpuinfo->have_flags = FALSE;
-	cpuinfo->flag_ht = FALSE;
+	cpuinfo->have_siblings = false;
+	cpuinfo->have_physical_id = false;
+	cpuinfo->have_core_id = false;
+	cpuinfo->have_cores = false;
+	cpuinfo->have_flags = false;
+	cpuinfo->flag_ht = false;
 
 	/* Allocate the array to hold 8 to start with; we'll realloc() it
 	 * bigger if we find more cpus
@@ -474,8 +474,8 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 			cur_processor->cpu_cores = -1;
 			cur_processor->siblings = -1;
 
-			cur_processor->have_flags = FALSE;
-			cur_processor->flag_ht = FALSE;
+			cur_processor->have_flags = false;
+			cur_processor->flag_ht = false;
 
 			cur_processor->match_count = 1;			/* I match myself */
 			cur_processor->first_match = NULL;
@@ -494,40 +494,40 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 
 			else if( !strcmp( attr, "siblings" ) ) {
 				cur_processor->siblings = my_atoi( value, 1 );
-				cpuinfo->have_siblings = TRUE;
+				cpuinfo->have_siblings = true;
 			}
 
 			else if( !strcmp( attr, "physical id" ) ) {
 				cur_processor->physical_id = my_atoi( value, 1 );
-				cpuinfo->have_physical_id = TRUE;
+				cpuinfo->have_physical_id = true;
 			}
 
 			else if( !strcmp( attr, "core id" ) ) {
 				cur_processor->core_id = my_atoi( value, 1 );
-				cpuinfo->have_core_id = TRUE;
+				cpuinfo->have_core_id = true;
 			}
 
 			else if( !strcmp( attr, "cpu cores" ) ) {
 				cur_processor->cpu_cores = my_atoi( value, 1 );
-				cpuinfo->have_cores = TRUE;
+				cpuinfo->have_cores = true;
 			}
 
 			else if( !strcmp( attr, "flags" ) ) {
-				cur_processor->have_flags = TRUE;
-				cur_processor->flag_ht = FALSE;
+				cur_processor->have_flags = true;
+				cur_processor->flag_ht = false;
 				{
 					char	*t, *save;
 					t = strtok_r( value, " ", &save );
 					while( t ) {
 						if ( !strcmp( t, "ht" ) ) {
-							cur_processor->flag_ht = TRUE;
+							cur_processor->flag_ht = false;
 							break;
 						}
 						t = strtok_r( NULL, " ", &save );
 					}
 				}
 				if ( ! cpuinfo->have_flags ) {
-					cpuinfo->have_flags = TRUE;
+					cpuinfo->have_flags = true;
 					cpuinfo->flag_ht = cur_processor->flag_ht;
 				}
 			}
@@ -564,7 +564,7 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 	
 /* For intel-ish CPUs, count the # of CPUs using the physical/core IDs */
 static int
-linux_count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
+linux_count_cpus_id( CpuInfo *cpuinfo, bool count_hthreads )
 {
 	int			pnum;					/* Current processor # */
 
@@ -655,7 +655,7 @@ linux_count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 	
 /* For intel-ish CPUS, count the # of CPUs using siblings */
 static int
-linux_count_cpus_siblings( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
+linux_count_cpus_siblings( CpuInfo *cpuinfo, bool count_hthreads )
 {
 	int		pnum;				/* Current processor # */
 	int		np_siblings = 0;	/* Non-primary siblings */
@@ -697,7 +697,7 @@ linux_count_cpus_siblings( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 	
 /* For intel-ish CPUS, let's look at the number of processor records */
 static int
-linux_count_cpus( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
+linux_count_cpus( CpuInfo *cpuinfo, bool count_hthreads )
 {
 	const	char	*ana_type = "";
 

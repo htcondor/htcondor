@@ -223,8 +223,8 @@ public:
 	void final_idle_dprintf();
 
 		// Functions to return the value of shared attributes
-	int				num_cpus()	{ return m_num_cpus; };
-	int				num_real_cpus()	{ return m_num_real_cpus; };
+	double			num_cpus()	{ return m_num_cpus; };
+	double			num_real_cpus()	{ return m_num_real_cpus; };
 	int				phys_mem()	{ return m_phys_mem; };
 	long long		virt_mem()	{ return m_virt_mem; };
 	float		load()			{ return m_load; };
@@ -260,8 +260,8 @@ private:
 	time_t			m_last_credd_test;
 #endif
 		// Static info
-	int				m_num_cpus;
-	int				m_num_real_cpus;
+	double			m_num_cpus;
+	double			m_num_real_cpus;
 	int				m_phys_mem;
 	slotres_map_t   m_machres_map;
 	slotres_devIds_map_t m_machres_devIds_map;
@@ -322,7 +322,7 @@ public:
 
 	friend class AvailAttributes;
 
-	CpuAttributes( MachAttributes*, int slot_type, int num_cpus, 
+	CpuAttributes( MachAttributes*, int slot_type, double num_cpus,
 				   int num_phys_mem, double virt_mem_fraction,
 				   double disk_fraction,
 				   const slotres_map_t& slotres_map,
@@ -352,7 +352,8 @@ public:
 	void dprintf( int, const char*, ... );
 	void show_totals( int );
 
-	int num_cpus() { return c_num_cpus; }
+	double num_cpus() { return c_num_cpus; }
+	bool allow_fractional_cpus(bool allow) { bool old = c_allow_fractional_cpus; c_allow_fractional_cpus = allow; return old; }
 	long long get_disk() { return c_disk; }
 	double get_disk_fraction() { return c_disk_fraction; }
 	long long get_total_disk() { return c_total_disk; }
@@ -360,6 +361,8 @@ public:
 	char const *executePartitionID() { return c_execute_partition_id.Value(); }
     const slotres_map_t& get_slotres_map() { return c_slotres_map; }
     const MachAttributes* get_mach_attr() { return map; }
+
+	static void swap_attributes(CpuAttributes & attra, CpuAttributes & attrb, int flags);
 
 	CpuAttributes& operator+=( CpuAttributes& rhs);
 	CpuAttributes& operator-=( CpuAttributes& rhs);
@@ -384,14 +387,15 @@ private:
 
 	int				c_phys_mem;
 	int				c_slot_mem;
-	int				c_num_cpus;    
+	bool			c_allow_fractional_cpus;
+	double			c_num_cpus;
     // custom slot resources
     slotres_map_t c_slotres_map;
     slotres_map_t c_slottot_map;
 	slotres_devIds_map_t c_slotres_ids_map;
 
     // totals
-	int			  c_num_slot_cpus;
+	double			c_num_slot_cpus;
 
 		// These hold the fractions of shared, dynamic resources
 		// that are allocated to this CPU.

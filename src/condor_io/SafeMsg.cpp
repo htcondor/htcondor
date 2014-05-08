@@ -25,8 +25,9 @@
 #include "internet.h"
 #include "condor_md.h"       // Condor_MD_MAC
 #include "condor_sockfunc.h"
+#include "condor_config.h"
 
-#define USABLE_PACKET_SIZE SAFE_MSG_FRAGMENT_SIZE - SAFE_MSG_HEADER_SIZE
+#define USABLE_PACKET_SIZE m_SAFE_MSG_FRAGMENT_SIZE - SAFE_MSG_HEADER_SIZE
 const char THIS_IS_TOO_UGLY_FOR_THE_SAKE_OF_BACKWARD[] = "CRAP";
 static const int SAFE_MSG_CRYPTO_HEADER_SIZE = 10;
 
@@ -75,6 +76,8 @@ void _condorPacket :: init()
     outgoingEncKeyId_ = 0;
     outgoingEidLen_   = 0;
 	md_ = NULL;
+	m_SAFE_MSG_FRAGMENT_SIZE = DEFAULT_SAFE_MSG_FRAGMENT_SIZE;
+	m_desired_fragment_size = m_SAFE_MSG_FRAGMENT_SIZE;
 }
 
 const char * _condorPacket :: isDataMD5ed()
@@ -431,6 +434,11 @@ void _condorPacket::reset()
         free(incomingEncKeyId_);
         incomingEncKeyId_ = 0;
     }
+
+	// Set fragment size to desired size. We don't want
+	// to change m_SAFE_MSG_FRAGMENT_SIZE in the middle of
+	// a message, so only change it on reset().
+	m_SAFE_MSG_FRAGMENT_SIZE = m_desired_fragment_size;
 }
 
 /* Check if every data in the packet has been read */
@@ -485,6 +493,31 @@ void _condorPacket::addExtendedHeader(unsigned char * mac)
 bool _condorPacket::full()
 {
     return (curIndex == USABLE_PACKET_SIZE);
+}
+
+int _condorPacket::set_MTU(int mtu)
+{
+	if ( mtu <= 0 ) {
+		mtu = DEFAULT_SAFE_MSG_FRAGMENT_SIZE;
+	}
+	if ( mtu < SAFE_MSG_HEADER_SIZE + 1 ) {
+		mtu = SAFE_MSG_HEADER_SIZE + 1;
+	}
+	if ( mtu > SAFE_MSG_MAX_PACKET_SIZE-SAFE_MSG_HEADER_SIZE-1 ) {
+		mtu = SAFE_MSG_MAX_PACKET_SIZE-SAFE_MSG_HEADER_SIZE-1;
+	}
+
+	if ( mtu != m_desired_fragment_size ) {
+		// stash santized mtu as the size next time reset() is called
+		m_desired_fragment_size = mtu;
+
+		// if this packet is empty, we can safely set the size immediately
+		if ( empty() ) {
+			m_SAFE_MSG_FRAGMENT_SIZE = m_desired_fragment_size;
+		}
+	}
+
+	return m_desired_fragment_size;
 }
 
 bool _condorPacket::empty()
@@ -621,6 +654,7 @@ _condorOutMsg::_condorOutMsg()
 	}
 	noMsgSent = 0;
 	avgMsgSize = 0;
+	m_mtu = DEFAULT_SAFE_MSG_FRAGMENT_SIZE;
 }
 
 _condorOutMsg::~_condorOutMsg() {
@@ -631,6 +665,17 @@ _condorOutMsg::~_condorOutMsg() {
 		headPacket = headPacket->next;
 		delete tempPacket;
 	}
+}
+
+int _condorOutMsg :: set_MTU(const int mtu)
+{
+	if ( mtu != DEFAULT_SAFE_MSG_FRAGMENT_SIZE ) {
+		dprintf(D_NETWORK,
+			"_condorOutMsg MTU changed from default to %d\n",
+			mtu);
+	}
+	m_mtu = mtu;
+	return lastPacket->set_MTU(m_mtu);
 }
 
 bool _condorOutMsg :: set_encryption_id(const char * keyId)
@@ -666,6 +711,7 @@ int _condorOutMsg::putn(const char *dta, const int size) {
 				dprintf(D_ALWAYS, "Error: OutMsg::putn: out of memory\n");
 				return -1;
 			}
+			lastPacket->next->set_MTU(m_mtu);
 			lastPacket = lastPacket->next;
 		}
 		len = lastPacket->putMax(&dta[total], size - total);

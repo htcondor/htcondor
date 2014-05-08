@@ -41,7 +41,7 @@
 char*
 strupr(char* src)
 {
-	register char* tmp;
+	char* tmp;
 	tmp = src;
 	while( tmp && *tmp ) {
         if( *tmp >= 'a' && *tmp <= 'z' ) {
@@ -59,7 +59,7 @@ strupr(char* src)
 char*
 strlwr(char* src)
 {
-	register char* tmp;
+	char* tmp;
 	tmp = src;
 	while( tmp && *tmp ) {
         if( *tmp >= 'A' && *tmp <= 'Z' ) {

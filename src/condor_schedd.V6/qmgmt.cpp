@@ -1115,6 +1115,15 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 					JobQueueDirty = true;
 				}
 			}
+			// AsyncXfer: Delete in-job output transfer attributes
+			if( ad->LookupInteger(ATTR_JOB_TRANSFERRING_OUTPUT,transferring_output) ) {
+				ad->Delete(ATTR_JOB_TRANSFERRING_OUTPUT);
+				JobQueueDirty = true;
+			}
+			if( ad->LookupInteger(ATTR_JOB_TRANSFERRING_OUTPUT_TIME,transferring_output) ) {
+				ad->Delete(ATTR_JOB_TRANSFERRING_OUTPUT_TIME);
+				JobQueueDirty = true;
+			}
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			IncrementClusterSize(cluster_num);
@@ -3732,7 +3741,9 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		}
 
 		if( started_transaction ) {
-			CommitTransaction();
+			// To reduce the number of fsyncs, we mark this as a non-durable transaction.
+			// Otherwise we incur two fsync's per matched job (one here, one for the job start).
+			CommitTransaction(NONDURABLE);
 		}
 
 		if ( startd_ad ) {

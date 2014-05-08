@@ -445,7 +445,7 @@ bool SSHToJob::execute_ssh()
 			if( jobAd->EvaluateAttrString( ATTR_HOLD_REASON, holdReason ) ) {
 				formatstr( holdReason, "The job is on hold: \"%s\".\n", holdReason.c_str() );
 			}
-			logError( holdReason.c_str() );
+			logError( "%s", holdReason.c_str() );
 			return false;
 		}
 

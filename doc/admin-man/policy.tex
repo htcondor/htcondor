@@ -495,9 +495,9 @@ The cause of each transition is described below.
   \begin{itemize}
   \item The \Condor{schedd} that has claimed the machine has no more
     work to perform and releases the claim
-  \item The \MacroNI{PREEMPT} expression evaluates to TRUE (which usually
+  \item The \MacroNI{PREEMPT} expression evaluates to \Expr{True} (which usually
     means the resource owner has started using the machine again and
-    is now using the keyboard, mouse, CPU, etc)  
+    is now using the keyboard, mouse, CPU, etc.)  
   \item The \Condor{startd} receives a \Condor{vacate} command
   \item The \Condor{startd} is told to shutdown (either via a signal
     or a \Condor{off} command)
@@ -689,7 +689,7 @@ entered.
 \end{description}
 
 \item Preempting
-  The preempting state is used for evicting an HTCondor job from a given
+  The Preempting state is used for evicting an HTCondor job from a given
   machine.
   When the machine enters the Preempting state, it checks the
   \MacroNI{WANT\_VACATE} expression to determine its activity.
@@ -918,12 +918,9 @@ The startd automatically inserts an attribute, \Attr{LastBenchmark},
 whenever it runs benchmarks, so commonly \Attr{RunBenchmarks} is
 defined in terms of this attribute, for example:
 \begin{verbatim}
-        BenchmarkTimer = (time() - LastBenchmark)
-        RunBenchmarks = $(BenchmarkTimer) >= (4 * $(HOUR))
+        RunBenchmarks = (time() - LastBenchmark) >= (4 * $(HOUR))
 \end{verbatim}
-Here, a macro, \MacroNI{BenchmarkTimer} is defined to help write the
-expression.
-This macro holds the time since the last benchmark,
+This macro calculates the time since the last benchmark,
 so when this time exceeds 4 hours, we run the benchmarks again.
 The startd keeps a weighted average of these benchmarking
 results to try to get the most accurate numbers possible.
@@ -1121,7 +1118,7 @@ By transition, the possible state/activity destinations from Claimed/Busy:
   to Claimed/Idle (transition \Bold{12}).
   
 \item[Claimed/Retiring] If \MacroNI{WANT\_SUSPEND} is FALSE and the
-  \MacroNI{PREEMPT} expression is TRUE, the machine enters the
+  \MacroNI{PREEMPT} expression is \Expr{True}, the machine enters the
   Retiring activity (transition \Bold{13}).  From there, it
   waits for a configurable amount of time for the job to finish
   before moving on to preemption.
@@ -1216,17 +1213,17 @@ The Preempting state is less complex than the Claimed state.
 There are two activities.
 Depending on the value of \MacroNI{WANT\_VACATE}, a machine will
 be in the
-Vacating activity (if TRUE) or the Killing activity (if FALSE).  
+Vacating activity (if \Expr{True}) or the Killing activity (if \Expr{False}).  
 
 While in the Preempting state (regardless of activity) the machine
-advertises its \Expr{Requirements} expression as FALSE to signify that
+advertises its \Expr{Requirements} expression as \Expr{False} to signify that
 it is not available for further matches, either because it is about to
 transition
 to the Owner state, or because it has already been matched with
 one preempting match, and further preempting matches are disallowed
 until the machine has been claimed by the new match.
 
-The main function of the Preempting state is to get rid of the starter
+The main function of the Preempting state is to get rid of the \Condor{starter}
 associated with the resource.  If the \Condor{starter} associated with
 a given claim exits while the machine is still in the Vacating
 activity, then the job successfully completed a graceful shutdown.
@@ -1510,7 +1507,7 @@ retirement time remaining.  This behavior is controlled by
   
 \item[\Macro{RANK}] If this expression evaluates to a higher number for
   a pending resource request than it does for the current request, the
-  machine preempts the current request (enters the
+  machine may preempt the current request (enters the
   Preempting/Vacating state).  When the preemption is complete, the
   machine enters the Claimed/Idle state with the new resource
   request claiming it.
@@ -1602,6 +1599,10 @@ clearly.
     
 \end{description}
 
+These variable definitions exist in the example configuration file
+in order to help write legible expressions.
+They are not required, and perhaps will go unused by many
+configurations.
 \begin{verbatim}
 ##  These macros are here to help write legible expressions:
 MINUTE          = 60
@@ -1626,82 +1627,23 @@ KeyboardNotBusy         = ($(KeyboardBusy) == False)
 MachineBusy             = ($(CPUBusy) || $(KeyboardBusy)
 \end{verbatim}
 
-Macros are defined to want to suspend jobs (instead of
-killing them) in the case of jobs that use little memory,
-when the keyboard is not being used, and for vanilla universe
-jobs.
-We want to gracefully vacate jobs which
-have been running for more than 10 minutes
-or are vanilla universe jobs.
+Preemption is disabled as a default.
+Always desire to start jobs.
 \begin{verbatim}
-WANT_SUSPEND       = ( $(SmallJob) || $(KeyboardNotBusy) \
-                       || $(IsVanilla) )
-WANT_VACATE        = ( $(ActivationTimer) > 10 * $(MINUTE) \
-                       || $(IsVanilla) )
-\end{verbatim}
-
-Finally, definitions of the actual expressions.
-Start a job if 
-the keyboard has been idle long enough and
-the load average is low enough OR the machine is currently
-running an HTCondor job.
-Note that HTCondor would only run one job at a time.
-It just may prefer to run a different job, as defined by
-the machine rank or user priorities.
-\begin{verbatim}
-START        = ( (KeyboardIdle > $(StartIdleTime)) \
-                  && ( $(CPUIdle) || \
-                       (State != "Unclaimed" && State != "Owner")) )
-\end{verbatim}
-
-Suspend a job if the keyboard has been touched.
-Alternatively, suspend if the CPU has been busy for more than two minutes
-and the job has been running for more than 90 seconds.
-\begin{verbatim}
-SUSPEND         = ( $(KeyboardBusy) || \
-                 ( (CpuBusyTime > 2 * $(MINUTE)) \
-                    && $(ActivationTimer) > 90 ) )
-\end{verbatim}
-
-Continue a suspended job if the CPU is idle, the Keyboard has been
-idle for long enough, and the job has been suspended more
-than 10 seconds.
-\begin{verbatim}
-CONTINUE        = ( $(CPUIdle) && ($(ActivityTimer) > 10) \
-                  && (KeyboardIdle > $(ContinueIdleTime)) )
-\end{verbatim}
-
-There are two conditions that signal preemption.
-The first condition is if the job is suspended,
-but it has been suspended too long.
-The second condition is if suspension is not desired and the machine is busy. 
-\begin{verbatim}
-PREEMPT	        = ( ((Activity == "Suspended") && \
-                    ($(ActivityTimer) > $(MaxSuspendTime))) \
-                    || (SUSPEND && (WANT_SUSPEND == False)) )
-\end{verbatim}
-
-
-Do not give jobs any time to retire on their own when they are about to
-be preempted.
-
-\begin{verbatim}
-MAXJOBRETIREMENTTIME = 0
-\end{verbatim}
-
-
-Kill jobs that take too long leaving gracefully.
-\begin{verbatim}
+WANT_SUSPEND         = False
+WANT_VACATE          = False
+START                = True
+SUSPEND              = False
+CONTINUE             = True
+PREEMPT	             = False
+# Kill jobs that take too long leaving gracefully.
 MachineMaxVacateTime = 10 * $(MINUTE)
+KILL                 = False
 \end{verbatim}
 
-\begin{verbatim}
-KILL            = False
-\end{verbatim}
-
-Finally, specify periodic checkpointing.  
-For jobs smaller than 60 Mbytes, do a periodic checkpoint every 6 hours.  
-For larger jobs, only checkpoint every 12 hours.
+Periodic checkpointing specifies that  
+for jobs smaller than 60 Mbytes, take a periodic checkpoint every 6 hours.  
+For larger jobs, only take a checkpoint every 12 hours.
 \begin{verbatim}
 PERIODIC_CHECKPOINT     = ( (ImageSize < 60000) && \
                             ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
@@ -1714,55 +1656,6 @@ At UW-Madison, we have a fast network.
 We simplify our expression considerably to
 \begin{verbatim}
 PERIODIC_CHECKPOINT     = $(LastCkpt) > (3 * $(HOUR))
-\end{verbatim}
-
-For reference, the entire set of policy settings are included
-once more without comments:
-
-\begin{verbatim}
-##  These macros are here to help write legible expressions:
-MINUTE          = 60
-HOUR            = (60 * $(MINUTE))
-StateTimer      = (time() - EnteredCurrentState)
-ActivityTimer   = (time() - EnteredCurrentActivity)
-ActivationTimer = (time() - JobStart)
-LastCkpt        = (time() - LastPeriodicCheckpoint)
-
-NonCondorLoadAvg        = (LoadAvg - CondorLoadAvg)
-BackgroundLoad          = 0.3
-HighLoad                = 0.5
-StartIdleTime           = 15 * $(MINUTE)
-ContinueIdleTime        = 5 * $(MINUTE)
-MaxSuspendTime          = 10 * $(MINUTE)
-
-KeyboardBusy            = KeyboardIdle < $(MINUTE)
-ConsoleBusy             = (ConsoleIdle  < $(MINUTE))
-CPUIdle                = $(NonCondorLoadAvg) <= $(BackgroundLoad)
-CPUBusy                = $(NonCondorLoadAvg) >= $(HighLoad)
-KeyboardNotBusy         = ($(KeyboardBusy) == False)
-MachineBusy             = ($(CPUBusy) || $(KeyboardBusy)
-
-WANT_SUSPEND       = ( $(SmallJob) || $(KeyboardNotBusy) \
-                       || $(IsVanilla) )
-WANT_VACATE        = ( $(ActivationTimer) > 10 * $(MINUTE) \
-                       || $(IsVanilla) )
-START        = ( (KeyboardIdle > $(StartIdleTime)) \
-                  && ( $(CPUIdle) || \
-                       (State != "Unclaimed" && State != "Owner")) )
-SUSPEND         = ( $(KeyboardBusy) || \
-                 ( (CpuBusyTime > 2 * $(MINUTE)) \
-                    && $(ActivationTimer) > 90 ) )
-CONTINUE        = ( $(CPUIdle) && ($(ActivityTimer) > 10) \
-                  && (KeyboardIdle > $(ContinueIdleTime)) )
-PREEMPT	        = ( ((Activity == "Suspended") && \
-                    ($(ActivityTimer) > $(MaxSuspendTime))) \
-                    || (SUSPEND && (WANT_SUSPEND == False)) )
-MAXJOBRETIREMENTTIME = 0
-MachineMaxVacateTime = 10 * $(MINUTE)
-KILL                 = False
-PERIODIC_CHECKPOINT     = ( (ImageSize < 60000) && \
-                            ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
-                          ( $(LastCkpt) > (12 * $(HOUR)) )
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1785,11 +1678,11 @@ This works with any machine
 (or the whole pool, for that matter) by adding the following 5 expressions
 to the existing configuration:
 \begin{verbatim}
-        START      = ($(START)) || Owner == "coltrane"
-        SUSPEND    = ($(SUSPEND)) && Owner != "coltrane"
-        CONTINUE   = $(CONTINUE)
-        PREEMPT    = ($(PREEMPT)) && Owner != "coltrane"
-        KILL       = $(KILL)
+  START      = ($(START)) || Owner == "coltrane"
+  SUSPEND    = ($(SUSPEND)) && Owner != "coltrane"
+  CONTINUE   = $(CONTINUE)
+  PREEMPT    = ($(PREEMPT)) && Owner != "coltrane"
+  KILL       = $(KILL)
 \end{verbatim}
 Notice that there is nothing special in either the
 \MacroNI{CONTINUE} or \MacroNI{KILL} expressions.
@@ -1806,15 +1699,17 @@ Time of Day Policy}
 HTCondor can be
 configured to only run jobs at
 certain times of the day.
-In general, we discourage configuring a system like this, since you
-can often get lots of good cycles out of machines, even when their
+In general, we discourage configuring a system like this, since 
+there will
+often be lots of good cycles on machines, even when their
 owners say ``I'm always using my machine during the day.''
 However, if you submit mostly vanilla jobs or other jobs that cannot
-checkpoint, it might be a good idea to only allow the jobs to run when
+produce checkpoints, 
+it might be a good idea to only allow the jobs to run when
 you know the machines will be idle and when they will not be
 interrupted.
 
-To configure this kind of policy, you should use the \Attr{ClockMin}
+To configure this kind of policy, use the \Attr{ClockMin}
 and \Attr{ClockDay} attributes.
 These are special attributes which are automatically inserted by the
 \Condor{startd} into its ClassAd, so you can always reference them in
@@ -1829,7 +1724,7 @@ and so on.
 
 To make the policy expressions easy to read, we recommend using macros
 to define the time periods when you want jobs to run or not run.  
-For example, assume regular ``work hours'' at your site are from
+For example, assume regular work hours at your site are from
 8:00am until 5:00pm, Monday through Friday: 
 
 \begin{verbatim}
@@ -1842,33 +1737,20 @@ AfterHours = ( (ClockMin < 480 || ClockMin >= 1020) || \
 Of course, you can fine-tune these settings by changing the definition
 of \Macro{AfterHours} and \Macro{WorkHours} for your site.
 
-Assuming you are using the default policy expressions discussed above,
-there are only a few minor changes required to force HTCondor jobs to
+To force HTCondor jobs to
 stay off of your machines during work hours:
 
 \begin{verbatim}
 # Only start jobs after hours.
-START = $(AfterHours) && $(CPUIdle) && KeyboardIdle > $(StartIdleTime)
+START = $(AfterHours) 
 
 # Consider the machine busy during work hours, or if the keyboard or
 # CPU are busy.
 MachineBusy = ( $(WorkHours) || $(CPUBusy) || $(KeyboardBusy) )
 \end{verbatim}
 
-By default, the \MacroNI{MachineBusy} macro is used to define the
-\MacroNI{SUSPEND} and \MacroNI{PREEMPT} expressions.  
-If you have changed these expressions at your site, you will need to
-add \MacroUNI{WorkHours} to your \MacroNI{SUSPEND} and \MacroNI{PREEMPT}
-expressions as appropriate.  
-
-Depending on your site, you might also want to avoid suspending jobs
-during work hours, so that in the morning, if a job is running, it
-will be immediately preempted, instead of being suspended for some
-length of time:
-
-\begin{verbatim}
-WANT_SUSPEND = $(AfterHours)
-\end{verbatim}
+This \MacroNI{MachineBusy} macro is convenient if other than 
+the default \MacroNI{SUSPEND} and \MacroNI{PREEMPT} expressions are used.  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{policy!desktop/non-desktop}
@@ -1888,8 +1770,9 @@ responsive to the user.
 There are many ways to achieve the desired behavior.  One way is to
 make a standard desktop policy and a standard non-desktop policy and
 to copy the desired one into the local configuration file for each
-machine.  Another way is to define one standard policy (in
-\condor{config}) with a simple toggle that can be set in the local
+machine.  Another way is to define one standard policy 
+(in the global configuration file) 
+with a simple toggle that can be set in the local
 configuration file.  The following example illustrates the latter
 approach.
 
@@ -1949,7 +1832,7 @@ KILL = False
 
 \end{verbatim}
 
-With this policy in \condor{config}, the local configuration files for
+With this policy in the global configuration, the local configuration files for
 desktops can be easily configured with the following line:
 
 \begin{verbatim}
@@ -1960,81 +1843,22 @@ In all other cases, the default policy described above will ignore
 keyboard activity.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Disabling Preemption}
-Disabling Preemption}
+\subsubsection{\label{sec:DisablingPreemption}
+Disabling and Enabling Preemption}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{policy!disabling preemption}
-\index{preemption!disabling}
-Preemption can result in jobs being killed by HTCondor.  When this
-happens, the jobs remain in the queue and will be automatically
-rescheduled.  We recommend designing jobs that work well in
-this environment, rather than simply disabling preemption.
-
-Planning for preemption makes jobs more robust in the face of other
-sources of failure.  One way to live happily with preemption is to use
-HTCondor's standard universe, which provides the ability to produce
-checkpoints.
-If a job is incompatible with the requirements of standard universe,
-the job can still gracefully shutdown and restart by intercepting the soft
-kill signal.
-
-All that being said, there may be cases where it is appropriate
-to force 
-HTCondor to never kill jobs within some upper time limit.
-This can be achieved with the following policy in the configuration of
-the execute nodes:
-
-\index{MAXJOBRETIREMENTTIME macro@\texttt{MAXJOBRETIREMENTTIME} macro}
-\index{configuration macro!\texttt{MAXJOBRETIREMENTTIME}}
-\footnotesize
-\begin{verbatim}
-# When we want to kick a job off, only kill jobs that have run
-# for longer than 2 days
-MAXJOBRETIREMENTTIME = $(HOUR) * 24 * 2
-\end{verbatim}
-\normalsize
-
-Construction of this expression may be more complicated.
-For example, it could provide
-a different retirement time to different users or different types of
-jobs.  Also be aware that the job may come with its own definition
-of \AdAttr{MaxJobRetirementTime}, but this may only cause \emph{less}
-retirement time to be used, never more than what the machine offers.
-
-The longer the retirement time that is given, the slower reallocation
-of resources in the pool can become if there are long-running jobs.
-However, by preventing jobs from being killed, 
-you may decrease the number of
-cycles that are wasted on non-checkpointable jobs that are killed.
-That is the basic trade off.
-
-It is instructive to see how one could disable preemption without
-using \MacroNI{MAXJOBRETIREMENTTIME}.  This can be done with
-the following policy, which applies to both the execute machines
-and the central manager:
-
-\footnotesize
-\begin{verbatim}
-#Disable preemption by machine activity.
-PREEMPT = False
-#Disable preemption by user priority.
-PREEMPTION_REQUIREMENTS = False
-#Disable preemption by machine RANK by ranking all jobs equally.
-RANK = 0
-#Since we are disabling claim preemption, we
-# may as well optimize negotiation for this case:
-NEGOTIATOR_CONSIDER_PREEMPTION = False
-# Without preemption, it is advisable to limit the time during
-# which the submit node may keep reusing the same slot for
-# more jobs.
-CLAIM_WORKLIFE = 3600
-\end{verbatim}
-\normalsize
-
-Unlike \MacroNI{MAXJOBRETIREMENTTIME}, the above policy does not prevent
-jobs from being immediately killed during a graceful shutdown or draining
-operation.
+\index{policy!enabling preemption}
+\index{preemption!disabling and enabling}
+Preemption causes a running job to be suspended or killed, such that
+another job can run.
+As of HTCondor version 8.1.5, preemption is disabled by the default
+configuration.
+Previous versions of HTCondor had configuration that enabled preemption.
+Upon upgrade, the previous behavior will continue,
+if the previous configuration files are used.
+New configuration file examples disable preemption, but contain directions
+for enabling preemption.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Job-Suspension}Job Suspension}

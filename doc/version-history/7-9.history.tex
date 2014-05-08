@@ -346,25 +346,26 @@ transferred as well as time spent reading and writing to files and
 to the network.  These statistics are reported for the sum of all
 users and, when increased verbosity is configured, individually for
 recently active users.  
-These ClassAd attributes are fully described 
+These ClassAd attributes 
+
+\begin{description}
+  \item \AdAttr{FileTransferUploadBytes}
+  \item \AdAttr{FileTransferUploadBytesPerSecond\_<timespan>}
+  \item \AdAttr{FileTransferDownloadBytes}
+  \item \AdAttr{FileTransferDownloadBytesPerSecond\_<timespan>}
+  \item \AdAttr{FileTransferFileReadSeconds}
+  \item \AdAttr{FileTransferFileReadLoad\_<timespan>} 
+  \item \AdAttr{FileTransferFileWriteSeconds}
+  \item \AdAttr{FileTransferFileWriteLoad\_<timespan>}
+  \item \AdAttr{FileTransferNetReadSeconds}
+  \item \AdAttr{FileTransferNetReadLoad\_<timespan>} 
+  \item \AdAttr{FileTransferNetWriteSeconds}
+  \item \AdAttr{FileTransferNetWriteLoad\_<timespan>} 
+\end{description}
+are fully described 
 within the section on scheduler attributes at 
 section~\pageref{sec:FT-Scheduler-ClassAd-Attributes}.
 \Ticket{3496}
-
-\begin{itemize}
-  \item[\AdAttr{FileTransferUploadBytes}]
-  \item[\AdAttr{FileTransferUploadBytesPerSecond\_<timespan>}]
-  \item[\AdAttr{FileTransferDownloadBytes}]
-  \item[\AdAttr{FileTransferDownloadBytesPerSecond\_<timespan>}]
-  \item[\AdAttr{FileTransferFileReadSeconds}] 
-  \item[\AdAttr{FileTransferFileReadLoad\_<timespan>}] 
-  \item[\AdAttr{FileTransferFileWriteSeconds}] 
-  \item[\AdAttr{FileTransferFileWriteLoad\_<timespan>}]
-  \item[\AdAttr{FileTransferNetReadSeconds}] 
-  \item[\AdAttr{FileTransferNetReadLoad\_<timespan>}] 
-  \item[\AdAttr{FileTransferNetWriteSeconds}] 
-  \item[\AdAttr{FileTransferNetWriteLoad\_<timespan>}] 
-\end{itemize}
 
 \item \Macro{NOT\_RESPONDING\_TIMEOUT} now internally adds some random skew
 to avoid synchronization of heartbeat messages, which can lead to UDP
@@ -392,6 +393,7 @@ service had purged it.
 
 \item The EC2 GAHP now reports the
 bidding status, defined at
+
 \URL{http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-spot-instances-bid-status.html},
 for spot instances. 
 \Ticket{3388}

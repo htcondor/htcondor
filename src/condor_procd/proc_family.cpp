@@ -258,6 +258,7 @@ ProcFamily::set_cgroup(const std::string &cgroup_string)
 				"Some block IO accounting will be inaccurate (ProcFamily %u): %u %s\n",
 				m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
 		}
+		cgroup_free(&tmp_cgroup);
 	}
 
 	return 0;
@@ -494,7 +495,7 @@ ProcFamily::aggregate_usage_cgroup_blockio(ProcFamilyUsage* usage)
 	char line_contents[BLOCK_STATS_LINE_MAX], sep[]=" ", *tok_handle, *word, *info[3];
 	char blkio_stats_name[] = "blkio.io_service_bytes";
 	short ctr;
-	long int read_bytes=0, write_bytes=0;
+	int64_t read_bytes=0, write_bytes=0;
 	ret = cgroup_read_value_begin(BLOCK_CONTROLLER_STR, m_cgroup_string.c_str(),
 	                              blkio_stats_name, &handle, line_contents, BLOCK_STATS_LINE_MAX);
 	while (ret == 0) {
@@ -506,7 +507,7 @@ ProcFamily::aggregate_usage_cgroup_blockio(ProcFamilyUsage* usage)
 		}
 		if (ctr == 3) {
 			errno = 0;
-			long ctrval = strtol(info[2], NULL, 10);
+			int64_t ctrval = strtoll(info[2], NULL, 10);
 			if (errno) {
 				dprintf(D_FULLDEBUG, "Error parsing kernel value to a long: %s; %s\n",
 					 info[2], strerror(errno));
@@ -547,7 +548,7 @@ ProcFamily::aggregate_usage_cgroup_blockio_io_serviced(ProcFamilyUsage* usage)
 	char line_contents[BLOCK_STATS_LINE_MAX], sep[]=" ", *tok_handle, *word, *info[3];
 	char blkio_stats_name[] = "blkio.io_serviced";
 	short ctr;
-	long int reads=0, writes=0;
+	int64_t reads=0, writes=0;
 	ret = cgroup_read_value_begin(BLOCK_CONTROLLER_STR, m_cgroup_string.c_str(),
 	                              blkio_stats_name, &handle, line_contents, BLOCK_STATS_LINE_MAX);
 	while (ret == 0) {
@@ -559,7 +560,7 @@ ProcFamily::aggregate_usage_cgroup_blockio_io_serviced(ProcFamilyUsage* usage)
 		}
 		if (ctr == 3) {
 			errno = 0;
-			long ctrval = strtol(info[2], NULL, 10);
+			int64_t ctrval = strtoll(info[2], NULL, 10);
 			if (errno) {
 				dprintf(D_FULLDEBUG, "Error parsing kernel value to a long: %s; %s\n",
 					 info[2], strerror(errno));

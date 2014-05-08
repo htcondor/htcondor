@@ -116,6 +116,7 @@ if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
 			my $winsrcdir = $_;
 			my $wintestloc = $winsrcdir . "\\condor_tests";
 			my $winutilloc = $winsrcdir . "\\condor_utils\\param_info_tables.h";
+			my $winutilloc2 = $winsrcdir . "\\condor_utils\\param_info.in";
 			
 			my $xcopy1 = "xcopy $winbasedir $wintestloc /E /y";
 			print "Get msconfig into test folder:$xcopy1\n";
@@ -123,6 +124,9 @@ if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
 			my $xcopy2 = "xcopy  $winutilloc $wintestloc /E /y";
 			print "get param_info_tables.h into test folder:$xcopy2\n";
 			system("$xcopy2");
+			my $xcopy3 = "xcopy  $winutilloc2 $wintestloc /E /y";
+			print "get param_info.in into test folder:$xcopy3\n";
+			system("$xcopy3");
 			print "$SrcDir now:\n";
 			system("dir $SrcDir");
 			print "Tarring up results and tests ($zips $msis $reldir)\n";
@@ -166,6 +170,7 @@ system("cp -r $SrcDir/condor_examples $pub_dir");
 # drops the current into an easy format for testing for completeness
 # in our framework.
 system("cp  $SrcDir/condor_utils/param_info_tables.h $pub_dir/condor_tests");
+system("cp  $SrcDir/condor_utils/param_info.in $pub_dir/condor_tests");
 
 ######################################################################
 # tar up build results

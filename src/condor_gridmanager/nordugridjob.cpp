@@ -609,13 +609,11 @@ void NordugridJob::doEvaluateState()
 					gmState = GM_CANCEL;
 					break;
 				}
-				if ( exit_code > 128 ) {
-					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, true );
-					jobAd->Assign( ATTR_ON_EXIT_SIGNAL, exit_code - 128 );
-				} else {
-					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
-					jobAd->Assign( ATTR_ON_EXIT_CODE, exit_code );
-				}
+				// We can't distinguish between normal job exit and
+				// exit-by-signal.
+				// Assume it's always a normal exit.
+				jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+				jobAd->Assign( ATTR_ON_EXIT_CODE, exit_code );
 				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock * 60.0 );
 				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, cpu * 60.0 );
 				gmState = GM_STAGE_OUT;

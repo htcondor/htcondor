@@ -2382,7 +2382,9 @@ the FINAL node will be run.
 
 One of the most important considerations with a FINAL node is that the
 success or failure of the FINAL node overrides all previous status
-in determining the success or failure of the DAG.
+in determining the success or failure of the DAG
+(this includes status specified by any ABORT-DAG-ON specification
+that has taken effect).
 For example, if some nodes of a DAG fail,
 but the FINAL node succeeds, the DAG will be considered successful.
 Therefore, it is important
@@ -2821,6 +2823,9 @@ The node status file can be updated at most once
 per \Macro{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL},
 as defined at section~\ref{param:DAGManUserLogScanInterval},
 no matter how small the \Arg{minimumUpdateTime} value.
+Also, the node status file will be updated when the DAG finishes
+(whether successfully or not), even if \Arg{minimumUpdateTime} seconds
+have not elapsed since the last update.
 
 As an example, if the DAG input file contains the line
 \begin{verbatim}
@@ -2843,7 +2848,7 @@ Here is an example of a node status file:
   JOB A STATUS_DONE      ()
   JOB B STATUS_SUBMITTED (not_idle)
   JOB C STATUS_SUBMITTED (idle)
-  JOB D STATUS_UNREADY   ()
+  JOB D STATUS_NOT_READY ()
 
   Nodes total: 4
   Nodes done: 1
@@ -2862,7 +2867,8 @@ Here is an example of a node status file:
 Possible node status values are:
 
 \begin{itemize}
-\item \verb@STATUS_UNREADY@ At least one parent has not yet finished.
+\item \verb@STATUS_NOT_READY@ At least one parent has not yet finished
+(or the node is a final node).
 \item \verb@STATUS_READY@ All parents have finished, but not yet running.
 \item \verb@STATUS_PRERUN@ The PRE script is running.
 \item \verb@STATUS_SUBMITTED@ The node's HTCondor or Stork job(s) are in 

@@ -48,7 +48,9 @@
 // Disable warnings about deprecated ISO conforming names (for some 
 // reason defining fileno and fdopen to the right ones does not work 
 // in new versions of Visual Studio)
-#pragma warning( disable : 4996 )
+//#pragma warning( disable : 4996 )
+#define _CRT_NONSTDC_NO_DEPRECATE
+#define _CRT_NONSTDC_NO_WARNINGS
 
 // #define NOGDI
 #define NOSOUND
@@ -113,6 +115,7 @@ DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #define execv _execv
 #define putenv _putenv
 #define itoa _itoa
+#define strtoll _strtoi64
 #define utime _utime
 #define utimbuf _utimbuf
 #define R_OK 4

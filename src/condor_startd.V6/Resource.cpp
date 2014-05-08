@@ -44,6 +44,152 @@
 
 extern FILESQL *FILEObj;
 
+std::vector<SlotType> SlotType::types(10);
+
+const char * SlotType::type_param(const char * name)
+{
+	slottype_param_map_t::const_iterator it = params.find(name);
+	if (it != params.end()) { return it->second.c_str(); }
+	return NULL;
+}
+
+/*static*/ const char * SlotType::type_param(int type_id, const char * name)
+{
+	if (type_id < 0) type_id = -type_id; // d-slots have the negative of their parents type id
+	if (type_id < (int)types.size()) {
+		return types[type_id].type_param(name);
+	}
+	return NULL;
+}
+/*static*/ const char * SlotType::type_param(CpuAttributes* p_attr, const char * name)
+{
+	if (p_attr) { return type_param(p_attr->type(), name); }
+	return NULL;
+}
+
+/*static*/ bool SlotType::type_param_boolean(int type_id, const char * name, bool def_value)
+{
+	bool result = def_value;
+	if (type_id < 0) type_id = -type_id; // d-slots have the negative of their parents type id
+	if (type_id < (int)types.size()) {
+		const char * str = types[type_id].type_param(name);
+		if ( ! str || ! string_is_boolean_param(str, result))
+			result = def_value;
+	}
+	return result;
+}
+/*static*/ bool SlotType::type_param_boolean(CpuAttributes* p_attr, const char * name, bool def_value)
+{
+	if ( ! p_attr) return def_value;
+	return type_param_boolean(p_attr->type(), name, def_value);
+}
+/*static*/ long long SlotType::type_param_long(CpuAttributes* p_attr, const char * name, long long def_value)
+{
+	if ( ! p_attr) return def_value;
+
+	long long result = def_value;
+	int type_id = p_attr->type();
+	if (type_id < 0) type_id = -type_id; // d-slots have the negative of their parents type id
+	if (type_id < (int)types.size()) {
+		const char * str = types[type_id].type_param(name);
+		if ( ! str || ! string_is_long_param(str, result))
+			result = def_value;
+	}
+	return result;
+}
+
+
+/*static*/ char * SlotType::param(CpuAttributes* p_attr, const char * name)
+{
+	const char * str = type_param(p_attr, name);
+	if (str) {
+		return strdup(str);
+	}
+	return ::param(name);
+}
+
+/*static*/ const char * SlotType::param(std::string &out, CpuAttributes* p_attr, const char * name)
+{
+	const char * str = type_param(p_attr, name);
+	if (str) {
+		out = str;
+		return out.c_str();
+	}
+	if (::param(out, name)) {
+		return out.c_str();
+	}
+	out.clear();
+	return NULL;
+}
+
+// callback for foreach_param_matching that saves SLOT_TYPE_n_* params into a map.
+/*static*/ bool SlotType::insert_param(void*, HASHITER & it)
+{
+	const char * name = hash_iter_key(it);
+	const char * rawval = hash_iter_value(it);
+	if ( ! rawval || ! rawval[0])
+		return true; // keep iterating
+
+	char * res_value = ::param(name);
+	if ( ! res_value)
+		return true; // keep iterating
+
+	// extract the number and get a pointer to the remainder
+	const char * pnum = name + sizeof("SLOT_TYPE_")-1;
+	char * tag;
+	int type_id = strtol(pnum, &tag, 10);
+	if (tag == pnum)
+		return true; // keep iterating
+
+	if (type_id < 0 || type_id >= (int)types.size()) {
+		dprintf(D_FULLDEBUG, "param %s matches SLOT_TYPE_n pattern, but n is out of range, ignoring", name);
+	} else {
+		SlotType * ptyp = &types[type_id];
+		if ( ! *tag) {
+			ptyp->shares = res_value;
+		} else if (*tag == '_') {
+			ptyp->params[tag+1] = res_value;
+		}
+	}
+	free(res_value);
+	return true;
+}
+
+
+// clear the table of slot type config info, and then re-initialize it
+// by fetching all params that begin with "SLOT_TYPE_n".
+/*static*/ void SlotType::init_types(int max_type_id)
+{
+	types.resize(max_type_id);
+	for (size_t ix = 0; ix < types.size(); ++ix) { types[ix].clear(); }
+
+	Regex re;
+	int err = 0;
+	const char* pszMsg = 0;
+	ASSERT(re.compile("^SLOT_TYPE_[0-9]+", &pszMsg, &err, PCRE_CASELESS));
+	const int iter_options = 0;
+	foreach_param_matching(re, iter_options, SlotType::insert_param, 0);
+}
+
+// these override the param call, looking the key up first in the per-slot-type config table
+// and then in the global param table if it is not found.
+char * Resource::param(const char * name) {
+	if (r_attr) return SlotType::param(r_attr, name);
+	return param(name);
+}
+const char * Resource::param(std::string& out, const char * name) {
+	if (r_attr) return SlotType::param(out, r_attr, name);
+	if ( ! ::param(out, name)) return NULL;
+	return out.c_str();
+}
+const char * Resource::param(std::string& out, const char * name, const char * def) {
+	const char * val = NULL;
+	if (r_attr) val = SlotType::param(out, r_attr, name);
+	else if (::param(out, name)) val = out.c_str();
+	if ( ! val) out = def;
+	return out.c_str();
+}
+
 Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent )
 {
 	MyString tmp;
@@ -51,7 +197,12 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 
 		// we need this before we instantiate any Claim objects...
 	r_id = rid;
-	char* name_prefix = param( "STARTD_RESOURCE_PREFIX" );
+	char* name_prefix = NULL;
+	if (cap) {
+		const char * p = SlotType::type_param(cap, "NAME_PREFIX");
+		name_prefix = p ? strdup(p) : NULL;
+	}
+	if ( ! name_prefix) name_prefix = ::param( "STARTD_RESOURCE_PREFIX" );
 	if( name_prefix ) {
 		tmp = name_prefix;
 		free( name_prefix );
@@ -65,6 +216,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 		tmp.formatstr_cat( "%d", r_id );
 	}
 	r_id_str = strdup( tmp.Value() );
+	r_pair_name = NULL;
 
 		// we need this before we can call type()...
 	r_attr = cap;
@@ -73,8 +225,12 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	m_id_dispenser = NULL;
 
 		// we need this before we instantiate the Reqexp object...
+#if 1
+	if (SlotType::type_param_boolean(cap, "PARTITIONABLE", false)) {
+#else
 	tmp.formatstr( "SLOT_TYPE_%d_PARTITIONABLE", type() );
 	if( param_boolean( tmp.Value(), false ) ) {
+#endif
 		set_feature( PARTITIONABLE_SLOT );
 
 		m_id_dispenser = new IdDispenser( 3, 1 );
@@ -102,6 +258,17 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
     if (get_feature() == PARTITIONABLE_SLOT) {
         // Partitionable slots may support a consumption policy
         // first, determine if a consumption policy is being configured
+#if 1
+		r_has_cp = param_boolean("CONSUMPTION_POLICY", false);
+		r_has_cp = SlotType::type_param_boolean(cap, "CONSUMPTION_POLICY", r_has_cp);
+		if (r_has_cp) {
+			unsigned nclaims = 1;
+			int ncpus = (int)ceil(r_attr->num_cpus());
+			nclaims = param_integer("NUM_CLAIMS", ncpus);
+			nclaims = (unsigned) SlotType::type_param_long(cap, "NUM_CLAIMS", nclaims);
+			while (r_claims.size() < nclaims) r_claims.insert(new Claim(this));
+		}
+#else
         string pname;
         formatstr(pname, "SLOT_TYPE_%d_CONSUMPTION_POLICY", type());
         if (param_defined(pname.c_str())) {
@@ -114,14 +281,16 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
             // number of claims to be supplied by the pslot
             formatstr(pname, "SLOT_TYPE_%d_NUM_CLAIMS", type());
             unsigned nclaims = 1;
+            int ncpus = (int)ceil(r_attr->num_cpus());
             if (param_defined(pname.c_str())) {
-                nclaims = param_integer(pname.c_str(), r_attr->num_cpus());
+                nclaims = param_integer(pname.c_str(), ncpus);
             } else {
-                nclaims = param_integer("NUM_CLAIMS", r_attr->num_cpus());
+                nclaims = param_integer("NUM_CLAIMS", ncpus);
             }
             while (r_claims.size() < nclaims) r_claims.insert(new Claim(this));
         }
-    }
+#endif
+	}
 
     r_cur = new Claim(this);
 
@@ -136,6 +305,41 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	} else {
 		r_name = strdup( tmpName );
 	}
+
+	// check for slot pairing configuration
+	if (param_boolean("ALLOW_SLOT_PAIRING", false)) {
+		dprintf(D_ALWAYS, "ALLOW_SLOT_PAIRING is enabled, checking for pairs\n");
+		const char * p = SlotType::type_param(cap, "PAIRED_WITH");
+		if (p) {
+			r_pair_name = strdup(p);
+			dprintf(D_ALWAYS, "\tSLOT_TYPE_%d_PAIRED_WITH %s\n", cap->type(), r_pair_name);
+			// if the pair name begins with slot_type then it's not a name it's a sort of command
+			if (starts_with_ignore_case(r_pair_name, "slot_type_")) {
+				int pair_type = atoi(r_pair_name+10);
+				if (pair_type) {
+					// we can't store the actual name of the paired slot yet, so for now we
+					// set the pair name to "#N" where N is the slot type, we will replace
+					// this string with the actual paired slot name in ResMgr::addResource
+					// once the slot we are to be paired with exists.
+					sprintf(r_pair_name, "#%d", pair_type);
+					if (SlotType::type_param_boolean(pair_type, "PARTITIONABLE", false)) {
+						EXCEPT("SLOT_TYPE_%d_PARTITIONABLE is true and is PAIRED_WITH. These cannot be used together!\n", pair_type);
+					}
+				}
+			}
+			if (get_feature() == PARTITIONABLE_SLOT) {
+				EXCEPT("SLOT_TYPE_%d_PARTITIONABLE is true and has PAIRED_WITH. These cannot be used together!\n", cap->type());
+			}
+		}
+	}
+
+	// check if slot should be hidden from the collector
+#if 1
+	r_no_collector_updates = SlotType::type_param_boolean(cap, "HIDDEN", false);
+#else
+	tmp.formatstr( "SLOT_TYPE_%d_HIDDEN", type() );
+	r_no_collector_updates = param_boolean(tmp.c_str(), false);
+#endif
 
 	update_tid = -1;
 
@@ -242,6 +446,8 @@ Resource::~Resource()
 	delete r_load_queue; r_load_queue = NULL;
 	free( r_name ); r_name = NULL;
 	free( r_id_str ); r_id_str = NULL;
+	if (r_pair_name) free( r_pair_name ); r_pair_name = NULL;
+
 }
 
 
@@ -955,11 +1161,64 @@ Resource::leave_preempting_state( void )
 
 
 void
+Resource::publish_slot_config_overrides(ClassAd * cad)
+{
+	static const char * const attrs[] = {
+		"START",
+		"SUSPEND",
+		"CONTINUE",
+		"PREEMPT",
+		"KILL",
+		"WANT_SUSPEND",
+		"WANT_VACATE",
+		"WANT_HOLD",
+		"WANT_HOLD_REASON",
+		"WANT_HOLD_SUBCODE",
+		"CLAIM_WORKLIFE",
+		ATTR_MAX_JOB_RETIREMENT_TIME,
+		ATTR_MACHINE_MAX_VACATE_TIME,
+
+		// Now, bring in things that we might need
+		"PERIODIC_CHECKPOINT",
+		"RunBenchmarks",
+		ATTR_RANK,
+		"SUSPEND_VANILLA",
+		"CONTINUE_VANILLA",
+		"PREEMPT_VANILLA",
+		"KILL_VANILLA",
+		"WANT_SUSPEND_VANILLA",
+		"WANT_VACATE_VANILLA",
+	#if HAVE_BACKFILL
+		"START_BACKFILL",
+		"EVICT_BACKFILL",
+	#endif /* HAVE_BACKFILL */
+	#if HAVE_JOB_HOOKS
+		ATTR_FETCH_WORK_DELAY,
+	#endif /* HAVE_JOB_HOOKS */
+	#if HAVE_HIBERNATION
+		"HIBERNATE",
+		ATTR_UNHIBERNATE,
+	#endif /* HAVE_HIBERNATION */
+		ATTR_SLOT_WEIGHT,
+		ATTR_IS_OWNER,
+		ATTR_CPU_BUSY,
+		};
+
+	for (size_t ix = 0; ix < sizeof(attrs)/sizeof(attrs[0]); ++ix) {
+		const char * val = SlotType::type_param(r_attr, attrs[0]);
+		if (val) cad->AssignExpr(attrs[0], val);
+	}
+}
+
+void
 Resource::init_classad( void )
 {
 	ASSERT( resmgr->config_classad );
 	if( r_classad ) delete(r_classad);
 	r_classad = new ClassAd( *resmgr->config_classad );
+
+		// put in slottype overrides of the config_classad
+	this->publish_slot_config_overrides(r_classad);
 
 	// Publish everything we know about.
 	this->publish( r_classad, A_PUBLIC | A_ALL | A_EVALUATED );
@@ -1014,6 +1273,9 @@ void
 Resource::update( void )
 {
 	int timeout = 3;
+
+	if (r_no_collector_updates)
+		return;
 
 	if ( update_tid == -1 ) {
 			// Send no more than 16 ClassAds per second to help
@@ -1881,6 +2143,11 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			cap->Assign(ATTR_VIRTUAL_MACHINE_ID, r_id);
 		}
 
+		if (r_pair_name) {
+			cap->Assign( ATTR_SLOT_PAIR_NAME, r_pair_name );
+		}
+
+
 		// include any attributes set via local resource inventory
 		cap->Update(r_attr->get_mach_attr()->machres_attrs());
 
@@ -2019,6 +2286,12 @@ Resource::publish( ClassAd* cap, amask_t mask )
         // the slot-type of its parent for inheriting CP-related configurations:
         int slot_type = (type() >= 0) ? type() : -type();
 
+#if 1
+		if ( ! SlotType::param(expr, r_attr, "SLOT_WEIGHT") &&
+			 ! SlotType::param(expr, r_attr, "SlotWeight")) {
+			expr = "Cpus";
+		}
+#else
         formatstr(pname, "SLOT_TYPE_%d_SLOT_WEIGHT", slot_type);
         if (param_defined(pname.c_str())) {
             param(expr, pname.c_str());
@@ -2027,6 +2300,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
         } else {
             param(expr, "SlotWeight", "Cpus");
         }
+#endif
         if (!cap->AssignExpr(ATTR_SLOT_WEIGHT, expr.c_str())) {
             EXCEPT("Bad slot weight expression: '%s'", expr.c_str());
         }
@@ -2045,6 +2319,12 @@ Resource::publish( ClassAd* cap, amask_t mask )
             while (char* asset = alist.next()) {
                 if (MATCH == strcasecmp(asset, "swap")) continue;
 
+#if 1
+				pname = "CONSUMPTION_"; pname += asset;
+				if ( ! SlotType::param(expr, r_attr, pname.c_str())) {
+					formatstr(expr, "ifthenelse(target.%s%s =?= undefined, 0, target.%s%s)", ATTR_REQUEST_PREFIX, asset, ATTR_REQUEST_PREFIX, asset);
+				}
+#else
                 formatstr(pname, "SLOT_TYPE_%d_CONSUMPTION_%s", slot_type, asset);
                 if (param_defined(pname.c_str())) {
                     param(expr, pname.c_str());
@@ -2055,6 +2335,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
                     formatstr(pname, "CONSUMPTION_%s", asset);
                     param(expr, pname.c_str(), cpdefault.c_str());
                 }
+#endif
 
                 string rattr;
                 formatstr(rattr, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
@@ -2879,6 +3160,45 @@ Resource::compute_rank( ClassAd* req_classad ) {
 
 
 #endif /* HAVE_JOB_HOOKS */
+
+bool
+Resource::swap_claims(Resource* ripa, Resource* ripb)
+{
+	if (ripa == ripb) return false;
+
+	// swap state
+	ResState* r_state = ripa->r_state;
+	ripa->r_state = ripb->r_state;
+	ripb->r_state = r_state;
+	// update resource back pointers in the states
+	time_t now = time(NULL); // reset the activity time as part of the swap.
+	ripa->r_state->setResource(ripa, now);
+	ripb->r_state->setResource(ripb, now);
+
+	// swap claim
+	Claim* r_cur = ripa->r_cur;
+	ripa->r_cur = ripb->r_cur;
+	ripb->r_cur = r_cur;
+	// update resource pointers in the claims
+	ripa->r_cur->setResource(ripa);
+	ripb->r_cur->setResource(ripb);
+
+	// swap execute directory
+	MyString str = ripa->m_execute_dir;
+	ripa->m_execute_dir = ripb->m_execute_dir;
+	ripb->m_execute_dir = str;
+
+	// swap execute partition ids
+	str = ripa->m_execute_partition_id;
+	ripa->m_execute_partition_id = ripb->m_execute_partition_id;
+	ripb->m_execute_partition_id = str;
+
+	// swap execute directory inside machine attributes
+	CpuAttributes::swap_attributes(*(ripa->r_attr), *(ripb->r_attr), 1);
+
+	return true;
+}
+
 
 
 Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim)

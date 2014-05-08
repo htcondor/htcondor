@@ -348,6 +348,8 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 #  define PRAGMA_QUOTE(x)   #x
 #  define PRAGMA_QQUOTE(y)  PRAGMA_QUOTE(y)
 #  define PRAGMA_REMIND(str) __pragma(message(__FILE__ "(" PRAGMA_QQUOTE(__LINE__) ") : " str))
+#  define DEPRECATE_MSC __declspec(deprecated)
+#  define DEPRECATE_GCC
 # elif defined __GNUC__ // gcc emits file and line prefix automatically.
 #  if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 402
 #   define PRAGMA_QUOTE(x)  _Pragma(#x)
@@ -355,8 +357,12 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 #  else
 #   define PRAGMA_REMIND(str)
 #  endif
+#  define DEPRECATE_MSC
+#  define DEPRECATE_GCC __attribute__ ((deprecated))
 # else 
 #  define PRAGMA_REMIND(str)
+#  define DEPRECATE_MSC
+#  define DEPRECATE_GCC
 # endif
 #endif // REMIND
 

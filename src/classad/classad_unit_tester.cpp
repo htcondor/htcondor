@@ -381,7 +381,7 @@ static void test_classad(const Parameters &, Results &results)
     double r;
     string s;
     ClassAd *c;
-    ExprList *l;
+    //ExprList *l;
     
     basic = parser.ParseClassAd(input_basic);
 

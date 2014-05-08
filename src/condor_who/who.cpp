@@ -944,6 +944,18 @@ format_jobid_program (const char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
 	return outstr;
 }
 
+#if 1
+void AddPrintColumn(const char * heading, int width, const char * attr, const CustomFormatFn & fmt)
+{
+	App.projection.AppendArg(attr);
+	App.print_head.Append(heading);
+
+	int wid = width ? width : strlen(heading);
+	int opts = FormatOptionNoTruncate | FormatOptionAutoWidth;
+	if ( ! width && ! fmt.IsNumber()) opts |= FormatOptionLeftAlign; // strings default to left align.
+	App.print_mask.registerFormat(NULL, wid, opts, fmt, attr);
+}
+#else
 void AddPrintColumn(const char * heading, int width, const char * attr, StringCustomFmt fmt)
 {
 	App.projection.AppendArg(attr);
@@ -964,6 +976,7 @@ void AddPrintColumn(const char * heading, int width, const char * attr, IntCusto
 	int opts = FormatOptionNoTruncate | FormatOptionAutoWidth;
 	App.print_mask.registerFormat(NULL, wid, opts, fmt, attr);
 }
+#endif
 
 #define IsArg is_arg_prefix
 #define IsArgColon is_arg_colon_prefix
@@ -1076,33 +1089,53 @@ void parse_args(int /*argc*/, char *argv[])
 
 					parg = argv[ixArg];
 					const char * pattr = parg;
+#if 1
+					CustomFormatFn cust_fmt;
+#else
 					void * cust_fmt = NULL;
 					FormatKind cust_kind = PRINTF_FMT;
+#endif
 
 					// If the attribute/expression begins with # treat it as a magic
 					// identifier for one of the derived fields that we normally display.
 					if (*parg == '#') {
 						++parg;
 						if (MATCH == strcasecmp(parg, "SLOT") || MATCH == strcasecmp(parg, "SlotID")) {
+#if 1
+							cust_fmt = format_slot_id;
+#else
 							cust_fmt = (void*)format_slot_id;
 							cust_kind = INT_CUSTOM_FMT;
+#endif
 							pattr = ATTR_SLOT_ID;
 							App.projection.AppendArg(pattr);
 							App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
 							App.projection.AppendArg(ATTR_NAME);
 						} else if (MATCH == strcasecmp(parg, "PID")) {
+#if 1
+							cust_fmt = format_jobid_pid;
+#else
 							cust_fmt = (void*)format_jobid_pid;
 							cust_kind = STR_CUSTOM_FMT;
+#endif
 							pattr = ATTR_JOB_ID;
 							App.projection.AppendArg(pattr);
 						} else if (MATCH == strcasecmp(parg, "PROGRAM")) {
+#if 1
+							cust_fmt = format_jobid_program;
+#else
 							cust_fmt = (void*)format_jobid_program;
 							cust_kind = STR_CUSTOM_FMT;
+#endif
 							pattr = ATTR_JOB_ID;
 							App.projection.AppendArg(pattr);
 						} else if (MATCH == strcasecmp(parg, "RUNTIME")) {
+#if 1
+							cust_fmt = format_int_runtime;
+#else
 							cust_fmt = (void*)format_int_runtime;
 							cust_kind = INT_CUSTOM_FMT;
+#endif
 							pattr = ATTR_TOTAL_JOB_RUN_TIME;
 							App.projection.AppendArg(pattr);
 						} else {
@@ -1137,10 +1170,13 @@ void parse_args(int /*argc*/, char *argv[])
 
 					lbl += fCapV ? "%V" : "%v";
 					if (App.diagnostic) {
-						printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for %x[%s]\n",
-							ixArg, lbl.Value(), wid, opts, (int)(long long)cust_fmt, pattr);
+						printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for %llx[%s]\n",
+							ixArg, lbl.Value(), wid, opts, (long long)(StringCustomFormat)cust_fmt, pattr);
 					}
 					if (cust_fmt) {
+#if 1
+						App.print_mask.registerFormat(NULL, wid, opts, cust_fmt, pattr);
+#else
 						switch (cust_kind) {
 							case INT_CUSTOM_FMT:
 								App.print_mask.registerFormat(NULL, wid, opts, (IntCustomFmt)cust_fmt, pattr);
@@ -1155,6 +1191,7 @@ void parse_args(int /*argc*/, char *argv[])
 								App.print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
 								break;
 						}
+#endif
 					} else {
 						App.print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
 					}
