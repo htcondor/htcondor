@@ -347,6 +347,15 @@ class Dag {
      */
     inline int NumNodesReady() const { return _readyQ->Number(); }
 
+    /** @param whether to include final node, if any, in the count
+	    @return the number of nodes not ready to submit to batch system
+	 */
+    inline int NumNodesUnready( bool includeFinal ) const {
+				return ( NumNodes( includeFinal )  -
+				( NumNodesDone( includeFinal ) + PreRunNodeCount() +
+				NumJobsSubmitted() + PostRunNodeCount() +
+				NumNodesReady() + NumNodesFailed() ) ); }
+
     /** @return the number of PRE scripts currently running
      */
     inline int NumPreScriptsRunning() const
@@ -942,6 +951,15 @@ class Dag {
 		// True iff the final node is ready to be run, is running,
 		// or has been run (including PRE and POST scripts, if any).
 	bool _finalNodeRun;
+
+	/** Escape a string according to new classad syntax.
+	    Note:  This method uses a static buffer and is therefore not
+		reentrant!
+	    @param strIn:  the string to be escaped
+		@return:  the properly-escaped string, including surrounding
+			double quotes
+	*/
+	const char *EscapeClassadString( const char* strIn );
 
 protected:
     /// List of Job objects

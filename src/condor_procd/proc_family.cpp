@@ -258,6 +258,7 @@ ProcFamily::set_cgroup(const std::string &cgroup_string)
 				"Some block IO accounting will be inaccurate (ProcFamily %u): %u %s\n",
 				m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
 		}
+		cgroup_free(&tmp_cgroup);
 	}
 
 	return 0;

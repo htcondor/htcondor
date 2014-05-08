@@ -135,7 +135,7 @@ public:
 	//	Socket services
 	//
 
-PRAGMA_REMIND("adesmet: DEPRECATED")
+//PRAGMA_REMIND("adesmet: DEPRECATED")
 	int assign(SOCKET =INVALID_SOCKET);
 
 	int assign(condor_protocol proto, SOCKET =INVALID_SOCKET);
@@ -143,7 +143,7 @@ PRAGMA_REMIND("adesmet: DEPRECATED")
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
 
-PRAGMA_REMIND("adesmet: DEPRECATED")
+//PRAGMA_REMIND("adesmet: DEPRECATED")
 	int bind(bool outbound, int port=0, bool loopback=false);
 
 	int bind(condor_protocol proto, bool outbound, int port, bool loopback);
@@ -169,7 +169,7 @@ PRAGMA_REMIND("adesmet: DEPRECATED")
 	*/
 	bool set_keepalive();
 
-PRAGMA_REMIND("adesmet: deprecated")
+//PRAGMA_REMIND("adesmet: deprecated")
 	inline int bind(bool outbound, char *s) { return bind(outbound, getportbyserv(s)); }
 
 	int close();

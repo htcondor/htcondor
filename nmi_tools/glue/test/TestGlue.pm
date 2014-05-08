@@ -68,6 +68,7 @@ sub setup_test_environment {
         set_env("BASE_DIR", $base_dir);
         set_env("PATH", "$base_dir/nmi_tools/glue/test:$base_dir/condor/bin:$base_dir/condor/sbin:$ENV{PATH}");
         set_env("CONDOR_CONFIG", "$base_dir/condor_tests/Config/condor_config");
+		set_env("TESTS","$base_dir/condor_tests");
 		if(exists $ENV{LD_LIBRARY_PATH}) {
 			set_env("LD_LIBRARY_PATH","$ENV{LD_LIBRARY_PATH}:$base_dir/condor/libexec:$base_dir/condor/lib:$base_dir/condor/lib/python");
 		} else {
@@ -107,8 +108,11 @@ sub setup_test_environment {
 
         set_env("PATH", "$front_path;$ENV{PATH};$end_path");
 
+		print "^^^^^^ Windows path set to:$ENV{PATH} ^^^^^^^^^^^^^^^^\n";
+
         # Condor will want Win32-style paths for CONDOR_CONFIG
         set_env("CONDOR_CONFIG", "$base_dir\\condor_tests\\Config\\condor_config");
+		set_env("TESTS","$base_dir\\condor_tests");
         
         # also, throw in the WIN32 version of the base directory path for later use
         set_env("WIN32_BASE_DIR", $base_dir);
@@ -125,9 +129,15 @@ sub setup_test_environment {
 
 sub prepare_for_configs {
 	my $base_dir = shift;
-	$initialconfig = "$base_dir/condor_tests/Config";
-	$targetconfig = "$base_dir/condor_tests/Config/condor_config";
-	$targetconfiglocal = "$base_dir/condor_tests/Config/condor_config.local";
+	if(($iswindows) && (!$iscygwin)) {
+		$initialconfig = "$base_dir\\condor_tests\\Config";
+		$targetconfig = "$base_dir\\condor_tests\\Config\\condor_config";
+		$targetconfiglocal = "$base_dir\\condor_tests\\Config\\condor_config.local";
+	} else {
+		$initialconfig = "$base_dir/condor_tests/Config";
+		$targetconfig = "$base_dir/condor_tests/Config/condor_config";
+		$targetconfiglocal = "$base_dir/condor_tests/Config/condor_config.local";
+	}
 	if(!(-d $initialconfig)) {
 		#print "Calling create_initial_configs($initialconfig)\n";
 		create_initial_configs($initialconfig,$base_dir);
@@ -138,22 +148,37 @@ sub create_initial_configs {
 	my $configlocation = shift;
 	my $base_dir = shift;
 
-	my $awkscript = "condor_examples/convert_config_to_win32.awk";
-	my $genericconfig = "condor_examples/condor_config.generic";
-	my $genericlocalconfig = "condor_examples/condor_config.local.central.manager";
+	my $awkscript = "";
+	my $genericconfig = "";
+	my $genericlocalconfig = "";
+	if(($iswindows) && (!$iscygwin)) {
+		$awkscript = "condor_examples\\convert_config_to_win32.awk";
+		$genericconfig = "condor_examples\\condor_config.generic";
+		$genericlocalconfig = "condor_examples\\condor_config.local.central.manager";
+	} else {
+		$awkscript = "condor_examples/convert_config_to_win32.awk";
+		$genericconfig = "condor_examples/condor_config.generic";
+		$genericlocalconfig = "condor_examples/condor_config.local.central.manager";
+	}
 	
 	if( -d $configlocation ) {
 		#print "Config Directory Established prior\n";
 	} else {
 		#print "Test Personal Condor Directory being Established now\n";
-		system("mkdir -p $configlocation");
+		CreateDir("-p $configlocation");
+		print "Showing Config folder\n";
+		dir_listing($configlocation);
 	}
         
 	WhereIsInstallDir($base_dir);
         
 	print "Need to set up config files for tests\n";
 	CreateConfig($awkscript, $genericconfig);
+	print "Showing Config folder\n";
+	dir_listing($configlocation);
 	CreateLocalConfig($awkscript, $genericlocalconfig);
+	print "Showing Config folder\n";
+	dir_listing($configlocation);
 	#CreateLocal(); We are never going to run a condor here, just need a base set
 	# of config files.
 }
@@ -162,17 +187,17 @@ sub WhereIsInstallDir {
 	my $base_dir = shift;
 	my $top = $base_dir;
 	if($iswindows == 1) {
-		#my $top = getcwd();
+		my $top = Cwd::getcwd();
 		print "base_dir is \"$top\"\n";
 		if ($iscygwin) {
 			my $crunched = `cygpath -m $top`;
 			fullchomp($crunched);
-			#print "cygpath changed it to: \"$crunched\"\n";
+			print "cygpath changed it to: \"$crunched\"\n";
 			my $ppwwdd = `pwd`;
-			#print "pwd says: $ppwwdd\n";
+			print "pwd says: $ppwwdd\n";
 		} else {
 			my $ppwwdd = `cd`;
-			#print"cd says: $ppwwdd\n";
+			print"cd says: $ppwwdd\n";
 		}
 	}
 
@@ -231,25 +256,48 @@ sub WhereIsInstallDir {
 # Not called, never going to run a level 1 condor. Jobs will have their own.
 sub CreateLocal
 {
-	if( !(-d "$initialconfig/local")) {
-		mkdir( "$initialconfig/local", 0777 ) 
-			|| die "Can't mkdir $initialconfig/local: $!\n";
-	}
-	if( !(-d "$initialconfig/local/spool")) {
-		mkdir( "$initialconfig/local/spool", 0777 ) 
-			|| die "Can't mkdir $initialconfig/local/spool: $!\n";
-	}
-	if( !(-d "$initialconfig/local/execute")) {
-		mkdir( "$initialconfig/local/execute", 0777 ) 
-			|| die "Can't mkdir $initialconfig/local/execute: $!\n";
-	}
-	if( !(-d "$initialconfig/local/log")) {
-		mkdir( "$initialconfig/local/log", 0777 ) 
-			|| die "Can't mkdir $initialconfig/local/log: $!\n";
-	}
-	if( !(-d "$initialconfig/local/log/tmp")) {
-		mkdir( "$initialconfig/local/log/tmp", 0777 ) 
-			|| die "Can't mkdir $initialconfig/local/log: $!\n";
+	if(($iswindows) &&(!$iscygwin)) {
+		if( !(-d "$initialconfig\\local")) {
+			CreateDir( "$initialconfig\\local") 
+				|| die "Can't mkdir $initialconfig\\local: $!\n";
+		}
+		if( !(-d "$initialconfig\\local\\spool")) {
+			CreateDir( "$initialconfig\\local\\spool") 
+				|| die "Can't mkdir $initialconfig\\local\\spool: $!\n";
+		}
+		if( !(-d "$initialconfig\\local\execute")) {
+			CreateDir( "$initialconfig\\local\\execute") 
+				|| die "Can't mkdir $initialconfig\\local\\execute: $!\n";
+		}
+		if( !(-d "$initialconfig\\local\\log")) {
+			CreateDir( "$initialconfig\\local\\log") 
+				|| die "Can't mkdir $initialconfig\\local\\log: $!\n";
+		}
+		if( !(-d "$initialconfig\\local\\log\\tmp")) {
+			CreateDir( "$initialconfig\\local\\log\\tmp") 
+				|| die "Can't mkdir $initialconfig\\local\\log: $!\n";
+		}
+	} else {
+		if( !(-d "$initialconfig/local")) {
+			mkdir( "$initialconfig/local", 0777 ) 
+				|| die "Can't mkdir $initialconfig/local: $!\n";
+		}
+		if( !(-d "$initialconfig/local/spool")) {
+			mkdir( "$initialconfig/local/spool", 0777 ) 
+				|| die "Can't mkdir $initialconfig/local/spool: $!\n";
+		}
+		if( !(-d "$initialconfig/local/execute")) {
+			mkdir( "$initialconfig/local/execute", 0777 ) 
+				|| die "Can't mkdir $initialconfig/local/execute: $!\n";
+		}
+		if( !(-d "$initialconfig/local/log")) {
+			mkdir( "$initialconfig/local/log", 0777 ) 
+				|| die "Can't mkdir $initialconfig/local/log: $!\n";
+		}
+		if( !(-d "$initialconfig/local/log/tmp")) {
+			mkdir( "$initialconfig/local/log/tmp", 0777 ) 
+				|| die "Can't mkdir $initialconfig/local/log: $!\n";
+		}
 	}
 }
 
@@ -272,12 +320,14 @@ sub CreateConfig {
 		if ($^O =~ /MSWin32/) {  $configcmd =~ s/gawk/awk/; $configcmd =~ s|/|\\|g; }
 		print "awk cmd is $configcmd\n";
 
+		Which("awk");
 		open(OLDFIG, " $configcmd 2>&1 |") || die "Can't run script file\"$configcmd\": $!\n";    
 	} else {
 		open(OLDFIG, '<', $configmain ) || die "Can't read base config file $configmain: $!\n";
 	}
 
 	open(NEWFIG, '>', $targetconfig ) || die "Can't write to new config file $targetconfig: $!\n";    
+	print "New config file open......\n";
 	while( <OLDFIG> ) {
 		fullchomp($_);        
 		if(/^RELEASE_DIR\s*=/) {
@@ -707,6 +757,78 @@ sub Which {
 	}
 
 return "";
+}
+
+sub CreateDir
+{
+	my $cmdline = shift;
+	my @argsin = split /\s/, $cmdline;
+	my $cmdcount = @argsin;
+	my $ret = 0;
+	my $fullcmd = "";
+	print  "CreateDir: $cmdline argcout:$cmdcount\n";
+
+	my $amwindows = is_windows();
+
+	my $winpath = "";
+	if($amwindows == 1) {
+		if(is_windows_native_perl()) {
+			if($argsin[0] eq "-p") {
+				$_ = $argsin[1];
+				s/\\/\\\\/g;
+				$winpath = $_;
+				#$winpath = $argsin[1];
+				if(-d "$argsin[1]") {
+					return($ret);
+				}
+			} else {
+				#$_ = $argsin[0];
+				#s/\\/\\\\/g;
+				#$winpath = $_;
+				$winpath = $argsin[0];
+				if(-d "$argsin[0]") {
+					return($ret);
+				}
+			}
+		} else {
+			if($argsin[0] eq "-p") {
+				$winpath = `cygpath -w $argsin[1]`;
+				CondorUtils::fullchomp($winpath);
+				$_ = $winpath;
+				s/\\/\\\\/g;
+				$winpath = $_;
+				if(-d "$argsin[1]") {
+					return($ret);
+				}
+			} else {
+				$winpath = `cygpath -w $argsin[0]`;
+				CondorUtils::fullchomp($winpath);
+				$_ = $winpath;
+				s/\\/\\\\/g;
+				$winpath = $_;
+				if(-d "$argsin[0]") {
+					return($ret);
+				}
+			}
+		}
+
+		$fullcmd = "cmd /C mkdir $winpath";
+		$ret = system("$fullcmd");
+		print "Tried to create dir got ret value:$ret path:$winpath/$fullcmd\n";
+	} else {
+		if($cmdline =~ /\-p/) {
+			$_ = $cmdline;
+			s/\-p//;
+			$cmdline = $_;
+		}
+		$fullcmd = "mkdir $cmdline"; 	
+		if(-d $cmdline) {
+			return($ret);
+		}
+		$ret = system("$fullcmd");
+		#print "Tried to create dir got ret value:$ret path:$cmdline/$fullcmd\n";
+	}
+	return($ret);
 }
 
 1;

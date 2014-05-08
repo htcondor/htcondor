@@ -60,6 +60,7 @@
 #define ATTR_BANDWIDTH_TO_LAST_CKPT_SERVER  "BandwidthToLastCkptServer"
 #define ATTR_BANDWIDTH_TO_CKPT_SERVER  "BandwidthToCkptServer"
 #define ATTR_BATCH_QUEUE  "BatchQueue"
+#define ATTR_BOINC_AUTHENTICATOR_FILE "BoincAuthenticatorFile"
 #define ATTR_BUFFER_SIZE  "BufferSize"
 #define ATTR_BUFFER_FILES  "BufferFiles"
 #define ATTR_BUFFER_BLOCK_SIZE  "BufferBlockSize"

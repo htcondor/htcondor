@@ -103,6 +103,11 @@ print "$time: batch_test.pl starting up ($^O perl)\n";
 my $iswindows = CondorUtils::is_windows();
 my $iscygwin  = CondorUtils::is_cygwin_perl();
 
+if($iscygwin == 1) {
+	print "examine our paths to find the form to use to add cygwin/bin\n";
+	showEnv();
+}
+
 # configuration options
 my $test_retirement = 3600;	# seconds for an individual test timeout - 30 minutes
 my $BaseDir = getcwd();
@@ -655,9 +660,6 @@ if($ripout == 0) {
 
 exit $num_failed;
 
-
-
-
 # Spin wait until $pid is no longer present or $max_wait (seconds) passes.
 # Returns 1 if process exited, 0 if we timed out.
 # Seconds are the smallest granularity.
@@ -1042,4 +1044,9 @@ sub wait_for_test_children {
 	return $tests_reaped;
 }
 
+sub showEnv {
+	foreach my $env (sort keys %ENV) {
+		print "$env: $ENV{$env}\n";
+	}
+}
 1;

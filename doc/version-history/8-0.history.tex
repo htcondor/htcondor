@@ -33,6 +33,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The new configuration variable \Macro{ALWAYS\_USE\_LOCAL\_CKPT\_SERVER}
+forces all standard universe checkpoints to be read from a checkpoint
+server running on the same machine where the job runs.  This is only useful
+when all the checkpoint servers are using a common shared filesystem.
+\Ticket{4625}
+
 \item The new configuration variable \Macro{JOB\_EXECDIR\_PERMISSIONS}
 defines the permissions on a job's scratch directory. 
 It defaults to setting permissions as \emph{0700}.
@@ -85,6 +91,25 @@ node status counts to the node status file.  Note that this fix also
 included changing the "STATUS\_UNREADY" strings in the node status
 file to "STATUS\_NOT\_READY" to be more consistent.
 \Ticket{4248}
+
+\item Fixed a bug that caused the \Prog{nordugrid\_gahp} to crash if
+the NorduGrid ARC server returned an unexpected response during job
+submission.
+\Ticket{4318}
+
+\item Fixed a bug that caused the \Condor{startd} to crash when
+\Attr{NUM\_SLOTS} was set to 0 and a \Condor{reconfig} command was
+issued.
+\Ticket{4327}
+
+\item In some unusual error conditions, the \Condor{schedd} and
+\Condor{shadow} could treat a failed file transfer as if it had
+succeeded.
+As a result, the \Condor{schedd} could try to run a job whose input
+files weren't available, or a job could leave the queue as completed
+despite its output files not being transferred back from the executing
+machine.
+\Ticket{4328}
 
 \end{itemize}
 

@@ -224,7 +224,7 @@ void zz2printf(int debug_levels, KeyInfo *k) {
 }
 */
 
-static int _condor_exit_with_exec = 0;
+static int _condor_fast_exit = 0;
 
 void **curr_dataptr;
 void **curr_regdataptr;
@@ -278,7 +278,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		&DaemonCore::publicNetworkIpAddr,
 		&DaemonCore::Register_Command,
 		&DaemonCore::daemonContactInfoChanged,
-		&DaemonCore::Register_Timer_TS);
+		&DaemonCore::Register_Timer_TS,
+		&DaemonCore::SocketIsRegistered);
 
 	if ( PidSize == 0 )
 		PidSize = DEFAULT_PIDBUCKETS;
@@ -5041,11 +5042,9 @@ int DaemonCore::SetFDInheritFlag(int fh, int flag)
 
 
 void
-DaemonCore::Forked_Child_Wants_Exit_By_Exec( bool exit_by_exec )
+DaemonCore::Forked_Child_Wants_Fast_Exit( bool fast_exit )
 {
-	if( exit_by_exec ) {
-		_condor_exit_with_exec = 1;
-	}
+	_condor_fast_exit = fast_exit;
 }
 
 #if !defined(WIN32)
@@ -5074,14 +5073,14 @@ writeExecError(CreateProcessForkit *forkit,int exec_errno,int failed_op=0);
 	 * When the forked child calls exit, however, all the class
 	 * destructors are called.  However, the code was never written in
 	 * a way that expects the daemons to be forked.  For instance, some
-	 * global constructor in the schedd tells the gridmanager to shutdown...
+	 * global destructor in the schedd tells the gridmanager to shutdown...
 	 * certainly we do not want this happening in our forked child!  Also,
 	 * we've seen problems were the forked child gets stuck in libc realloc
 	 * on Linux trying to free up space in the gsi libraries after being
 	 * called by some global destructor.  So.... for now, if we are
 	 * forked via Create_Thread, we have our child exit _without_ calling
 	 * any c++ destructors.  How do we accomplish that magic feat?  By
-	 * exiting via a call to exec()!  So here it is... we overload exit()
+	 * exiting via a call to _exit()!  So here it is... we overload exit()
 	 * inside of daemonCore -- we do it this way so we catch all calls to
 	 * exit, including ones buried in dprintf etc.  Note we dont want to
 	 * do this via a macro setting, because some .C files that call exit
@@ -5095,7 +5094,7 @@ extern "C" {
 void __real_exit(int status);
 void __wrap_exit(int status)
 {
-	if ( _condor_exit_with_exec == 0 && g_create_process_forkit == NULL ) {
+	if ( _condor_fast_exit == 0 && g_create_process_forkit == NULL ) {
 			// The advantage of calling the real exit() rather than
 			// _exit() is that things like gprof and google-perftools
 			// can write a final profile dump.
@@ -5123,45 +5122,7 @@ void exit(int status)
 		writeExecError(g_create_process_forkit,DaemonCore::ERRNO_EXIT);
 	}
 
-	if ( _condor_exit_with_exec == 0 ) {
-		_exit(status);
-	}
-
-	const char* my_argv[2];
-	const char* my_env[1];
-	my_argv[1] = NULL;
-	my_env[0] = NULL;
-
-		// First try to just use /bin/true or /bin/false.
-	if ( status == 0 ) {
-		my_argv[0] = "/bin/true";
-		execve( "/bin/true",
-				const_cast<char *const*>(my_argv),
-				const_cast<char *const*>(my_env)  );
-		my_argv[0] = "/usr/bin/true";
-		execve( "/usr/bin/true",
-				const_cast<char *const*>(my_argv),
-				const_cast<char *const*>(my_env)  );
-	} else {
-		my_argv[0] = "/bin/false";
-		execve( "/bin/false",
-				const_cast<char *const*>(my_argv),
-				const_cast<char *const*>(my_env)  );
-		my_argv[0] = "/usr/bin/false";
-		execve( "/usr/bin/false",
-				const_cast<char *const*>(my_argv),
-				const_cast<char *const*>(my_env)  );
-	}
-
-		// If we made it here, we cannot use /bin/[true|false].
-		// So we need to use the condor_exit_code utility, if
-		// it exists.
-		// TODO
-
-		// If we made it here, we are out of options.  So we will
-		// just call _exit(), and hope for the best.
-	_condor_exit_with_exec = 0;
-	_exit(status ? 1 : 0);
+	_exit(status);
 }
 }
 #endif
@@ -7965,7 +7926,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	int tid;
 	tid = fork();
 	if (tid == 0) {				// new thread (i.e., child process)
-		_condor_exit_with_exec = 1;
+		_condor_fast_exit = 1;
             // close the read end of our error pipe and set the
             // close-on-exec flag on the write end
         close(errorpipe[0]);
@@ -9611,7 +9572,7 @@ static bool assign_sock(condor_protocol proto, Sock * sock, bool fatal)
 		protoname.Value(),
 		protoname.Value());
 	if(fatal) {
-		EXCEPT(msg.Value());
+		EXCEPT("%s", msg.Value());
 	}
 
 	dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());
@@ -9636,7 +9597,7 @@ InitCommandSocket(condor_protocol proto, int port, DaemonCore::SockPair & sock_p
 			MyString msg;
 			msg.formatstr("BindAnyCommandPort() failed. Does this computer have %s support?", condor_protocol_to_str(proto).Value());
 			if (fatal) {
-				EXCEPT(msg.Value());
+				EXCEPT("%s", msg.Value());
 			}
 			else {
 				dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());
@@ -9723,7 +9684,7 @@ InitCommandSocket(condor_protocol proto, int port, DaemonCore::SockPair & sock_p
 				condor_protocol_to_str(proto).Value()
 				);
 			if (fatal) {
-				EXCEPT(msg.Value());
+				EXCEPT("%s", msg.Value());
 			}
 			else {
 				dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());

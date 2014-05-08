@@ -55,7 +55,7 @@ enum cl_e_platform_info {
 };
 typedef clReturn (CL_API_CALL* clGetPlatformInfo_t)(cl_platform_id, cl_e_platform_info, size_t, void*, size_t*);
 typedef struct _cl_device_id * cl_device_id;
-enum cl_f_device_type {
+enum { // used 
 	CL_DEVICE_TYPE_NONE = 0,
 	CL_DEVICE_TYPE_DEFAULT     = (1 << 0),
 	CL_DEVICE_TYPE_CPU         = (1 << 1),
@@ -63,7 +63,8 @@ enum cl_f_device_type {
 	CL_DEVICE_TYPE_ACCELERATOR = (1 << 3),
 	CL_DEVICE_TYPE_ALL         = 0xFFFFFFFF
 };
-typedef clReturn (CL_API_CALL* clGetDeviceIDs_t)(cl_platform_id, cl_f_device_type, unsigned int, cl_device_id*, unsigned int *);
+typedef unsigned long long cl_device_type; // device type is type cl_bitfield which is cl_ulong which is unsigned long long
+typedef clReturn (CL_API_CALL* clGetDeviceIDs_t)(cl_platform_id, cl_device_type, unsigned int, cl_device_id*, unsigned int *);
 enum cl_e_device_info {
 	CL_DEVICE_TYPE                =  0x1000, // enum cl_device_type
 	CL_DEVICE_VENDOR_ID           =  0x1001, // uint vendor unique id

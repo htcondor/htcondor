@@ -509,13 +509,25 @@ sub Which {
 
     return "" if(!$exe);
 
-    if( is_windows_native_perl() ) {
-        return `\@for \%I in ($exe) do \@echo(\%~\$PATH:I`;
-    }
-    foreach my $path (split /:/, $ENV{PATH}) {
-        chomp $path;
+    #if( is_windows_native_perl() ) {
+		#print "windows native perl!\n";
+        #return `\@for \%I in ($exe) do \@echo(\%~\$PATH:I`;
+    #}
+	my $amwindows = is_windows();
+
+	my @winpath = {};
+	if($amwindows == 1) {
+		@winpath = split /;/, $ENV{PATH};
+		$exe = "$exe" . ".exe";
+	} else {
+		@winpath = split /:/, $ENV{PATH};
+	}
+
+    foreach my $path (@winpath) {
+        fullchomp( $path);
 		#print "Checking <$path>\n";
         if(-f "$path/$exe") {
+			#print "Which returning:$path/$exe\n";
             return "$path/$exe";
         }
     }
@@ -570,29 +582,47 @@ sub CreateDir
 
 	my $winpath = "";
 	if($amwindows == 1) {
-		if($argsin[0] eq "-p") {
-			$winpath = `cygpath -w $argsin[1]`;
-			CondorUtils::fullchomp($winpath);
-			$_ = $winpath;
-			s/\\/\\\\/g;
-			$winpath = $_;
-			if(-d "$argsin[1]") {
-				return($ret);
+		if(is_windows_native_perl()) {
+			if($argsin[0] eq "-p") {
+				$_ = $argsin[1];
+				s/\\/\\\\/g;
+				$winpath = $_;
+				if(-d "$argsin[1]") {
+					return($ret);
+				}
+			} else {
+				$_ = $argsin[0];
+				s/\\/\\\\/g;
+				$winpath = $_;
+				if(-d "$argsin[0]") {
+					return($ret);
+				}
 			}
 		} else {
-			$winpath = `cygpath -w $argsin[0]`;
-			CondorUtils::fullchomp($winpath);
-			$_ = $winpath;
-			s/\\/\\\\/g;
-			$winpath = $_;
-			if(-d "$argsin[0]") {
-				return($ret);
+			if($argsin[0] eq "-p") {
+				$winpath = `cygpath -w $argsin[1]`;
+				CondorUtils::fullchomp($winpath);
+				$_ = $winpath;
+				s/\\/\\\\/g;
+				$winpath = $_;
+				if(-d "$argsin[1]") {
+					return($ret);
+				}
+			} else {
+				$winpath = `cygpath -w $argsin[0]`;
+				CondorUtils::fullchomp($winpath);
+				$_ = $winpath;
+				s/\\/\\\\/g;
+				$winpath = $_;
+				if(-d "$argsin[0]") {
+					return($ret);
+				}
 			}
 		}
 
 		$fullcmd = "cmd /C mkdir $winpath";
 		$ret = system("$fullcmd");
-		#print "Tried to create dir got ret value:$ret path:$winpath/$fullcmd\n";
+		print "Tried to create dir got ret value:$ret path:$winpath/$fullcmd\n";
 	} else {
 		if($cmdline =~ /\-p/) {
 			$_ = $cmdline;

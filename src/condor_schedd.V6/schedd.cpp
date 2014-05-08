@@ -549,6 +549,9 @@ Scheduler::Scheduler() :
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 ),
+	slotWeight(0),
+	slotWeightMapAd(0),
+	m_use_slot_weights(false),
 	m_local_startd_pid(-1),
 	m_history_helper_count(0)
 {
@@ -1169,18 +1172,27 @@ Scheduler::count_jobs()
 		if (at_sign) *at_sign = '@';
 		if (rec->shadowRec && !rec->pool) {
 				// Sum up the # of cpus claimed by this user and advertise it as
-				// WeightedJobsRunning.  Technically, should look at SlotWeight
-				// but the IdleJobRunning only know about request_cpus, etc.
-				// and hard-codes cpus as the weight, so we do the same here.
-				// This is needed as the HGQ code in the negotitator needs to
-				// know weighted demand to dole out surplus properly.
-			int request_cpus = 1;
-			if (rec->my_match_ad) {
-				if(0 == rec->my_match_ad->LookupInteger(ATTR_CPUS, request_cpus)) {
-					request_cpus = 1;
+				// WeightedJobsRunning. 
+
+			int job_weight = 1;
+			if (m_use_slot_weights && slotWeight && rec->my_match_ad) {
+					// if the schedd slot weight expression is set and parses,
+					// evaluate it here
+				classad::Value result;
+				int rval = EvalExprTree( slotWeight, rec->my_match_ad, NULL, result );
+				if( !rval || !result.IsNumber(job_weight)) {
+					job_weight = 1;
+				}
+			} else {
+					// slot weight isn't set, fall back to assuming cpus
+				if (rec->my_match_ad) {
+					if(0 == rec->my_match_ad->LookupInteger(ATTR_CPUS, job_weight)) {
+						job_weight = 1; // or fall back to one if CPUS isn't in the startds
+					}
 				}
 			}
-			Owners[OwnerNum].WeightedJobsRunning += request_cpus;
+			
+			Owners[OwnerNum].WeightedJobsRunning += job_weight;
 			Owners[OwnerNum].JobsRunning++;
 		} else {				// in remote pool, so add to Flocked count
 			Owners[OwnerNum].JobsFlocked++;
@@ -2208,7 +2220,23 @@ count( ClassAd *job )
 		}
 			// Update Owners array JobsIdle
 		scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
-		scheduler.Owners[OwnerNum].WeightedJobsIdle += request_cpus * (max_hosts - cur_hosts);
+
+		
+			// If we're biasing by slot weight, and the job is idle, and everything parsed...
+		if ((scheduler.m_use_slot_weights) && (cur_hosts == 0) && scheduler.slotWeightMapAd) {
+
+				// if we're biasing idle jobs by SLOT_WEIGHT, eval that here
+			classad::Value result;
+			int job_weight;
+			int rval = EvalExprTree( scheduler.slotWeight, scheduler.slotWeightMapAd, job, result );
+
+			if( !rval || !result.IsNumber(job_weight)) {
+				job_weight = request_cpus * (max_hosts - cur_hosts); // fall back if slot weight doesn't evaluate
+			}
+			scheduler.Owners[OwnerNum].WeightedJobsIdle += job_weight;
+		} else {
+			scheduler.Owners[OwnerNum].WeightedJobsIdle += request_cpus * (max_hosts - cur_hosts);
+		}
 
 			// Don't update scheduler.Owners[OwnerNum].JobsRunning here.
 			// We do it in Scheduler::count_jobs().
@@ -3648,7 +3676,7 @@ Scheduler::transferJobFilesReaper(int tid,int exit_status)
 		return FALSE;
 	}
 
-	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == FALSE)) {
+	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != TRUE)) {
 		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
 		spoolJobFileWorkers->remove(tid);
 		delete jobs;
@@ -3687,7 +3715,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		return FALSE;
 	}
 
-	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == FALSE)) {
+	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != TRUE)) {
 		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
 		spoolJobFileWorkers->remove(tid);
 		int len = (*jobs).getlast() + 1;
@@ -11661,6 +11689,25 @@ Scheduler::Init()
     m_userlog_file_cache_max = param_integer("USERLOG_FILE_CACHE_MAX", 0, 0);
     m_userlog_file_cache_clear_interval = param_integer("USERLOG_FILE_CACHE_CLEAR_INTERVAL", 60, 0);
 
+	char *sw = param("SLOT_WEIGHT");
+	if (sw) {
+		if (slotWeight) {
+			delete slotWeight;
+		}
+		ParseClassAdRvalExpr(sw, slotWeight);
+		free(sw);
+	}
+
+	if (slotWeightMapAd) {
+		delete slotWeightMapAd;
+		slotWeightMapAd = 0;
+	}
+	m_use_slot_weights = param_boolean("SCHEDD_USE_SLOT_WEIGHT", false);
+
+	std::string sswma = "Memory = RequestMemory \n Disk = RequestDisk \n Cpus = RequestCpus";
+	slotWeightMapAd = new ClassAd;
+	slotWeightMapAd->initFromString(sswma.c_str());
+
 	first_time_in_init = false;
 }
 
@@ -14617,6 +14664,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	{
 		stream->encode();
 		stream->put((int)0);
+		stream->end_of_message();
 		return FALSE;
 	}
 
@@ -14662,6 +14710,10 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	}
 
 	if( !FindRunnableJobForClaim(mrec,accept_std_univ) ) {
+		dprintf(D_FULLDEBUG,
+			"No runnable jobs for shadow pid %d (was running job %d.%d); shadow will exit.\n",
+			shadow_pid, prev_job_id.cluster, prev_job_id.proc);
+		stream->encode();
 		stream->put((int)0);
 		stream->end_of_message();
 		return TRUE;

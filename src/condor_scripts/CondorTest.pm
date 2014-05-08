@@ -38,7 +38,7 @@ use CondorPersonal;
 
 use base 'Exporter';
 
-our @EXPORT = qw(runCondorTool runToolNTimes RegisterResult EndTest );
+our @EXPORT = qw(runCondorTool runToolNTimes RegisterResult EndTest);
 
 my %securityoptions =
 (
@@ -52,8 +52,8 @@ my %securityoptions =
 my $RunningFile = "RunningTests";
 my $teststrt = 0;
 my $teststop = 0;
-my $DEBUGLEVEL = 1;
-my $debuglevel = 2;
+my $DEBUGLEVEL = 4;
+my $debuglevel = 1;
 
 my $UseNewRunning = 1;
 
@@ -120,7 +120,7 @@ BEGIN
 	$hoststring = "notset:000";
     $vacates = 0;
 	$lastconfig = "";
-	$DEBUGLEVEL = 1;
+	$DEBUGLEVEL = 3;
 	$CondorTestPid = $$;
 }
 
@@ -1344,62 +1344,57 @@ sub ParseMachineAds
 	my $variable;
 	my $value;
 
-	if( ! open(PULL, "condor_status -l $machine 2>&1 |") )
-    {
-		print "error getting Ads for \"$machine\": $!\n";
-		return 0;
-    }
+	my @ads = ();
+	my $res = runCondorTool("condor_status -l $machine",\@ads,2,{emit_output=>0});
     
     TestDebug( "reading machine ads from $machine...\n" ,5);
-    while( <PULL> )
-    {
-	CondorUtils::fullchomp($_);
-	TestDebug("Raw AD is $_\n",5);
-	$line++;
+    #while( <PULL> )
+	foreach my $ad (@ads) {
+		CondorUtils::fullchomp($ad);
+		TestDebug("Raw AD is $ad\n",5);
+		$line++;
 
-	# skip comments & blank lines
-	next if /^#/ || /^\s*$/;
+		# skip comments & blank lines
+		$_ = $ad;
+		next if /^#/ || /^\s*$/;
 
-	# if this line is a variable assignment...
-	if( /^(\w+)\s*\=\s*(.*)$/ )
-	{
-	    $variable = lc $1;
-	    $value = $2;
-
-	    # if line ends with a continuation ('\')...
-	    while( $value =~ /\\\s*$/ )
-	    {
-		# remove the continuation
-		$value =~ s/\\\s*$//;
-
-		# read the next line and append it
-		<PULL> || last;
-		$value .= $_;
-	    }
-
-	    # compress whitespace and remove trailing newline for readability
-	    $value =~ s/\s+/ /g;
-	    CondorUtils::fullchomp($value);
-
+		# if this line is a variable assignment...
+		if( /^(\w+)\s*\=\s*(.*)$/ ) {
+	    	$variable = lc $1;
+	    	$value = $2;
 	
-		# Do proper environment substitution
-	    if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ )
-	    {
-			my $envlookup = $ENV{$2};
-	    	TestDebug( "Found $envlookup in environment \n",5);
-			$value = $1.$envlookup.$3;
-	    }
+	    	# if line ends with a continuation ('\')...
+	    	while( $value =~ /\\\s*$/ ) {
+				# remove the continuation
+				$value =~ s/\\\s*$//;
+	
+				# read the next line and append it
+				$ad = shift @ads || last;
+				$value .= $ad;
+	    	}
 
-	    TestDebug( "$variable = $value\n" ,5);
+	    	# compress whitespace and remove trailing newline for readability
+	    	$value =~ s/\s+/ /g;
+	    	CondorUtils::fullchomp($value);
+	
+			# Do proper environment substitution
+	    	if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ ) {
+				my $envlookup = $ENV{$2};
+	    		TestDebug( "Found $envlookup in environment \n",5);
+				$value = $1.$envlookup.$3;
+	    	}
+	
+	    	TestDebug( "$variable = $value\n" ,5);
+	    	#print "$variable = $value\n";
 	    
-	    # save the variable/value pair
-	    $machine_ads{$variable} = $value;
-	}
-	else
-	{
-	    TestDebug( "line $line of $submit_file not a variable assignment... " .
+	    	# save the variable/value pair
+	    	$machine_ads{$variable} = $value;
+		}
+		else
+		{
+	    	TestDebug( "line $line of $submit_file not a variable assignment... " .
 		   "skipping\n" ,5);
-	}
+		}
     }
 	close(PULL);
     return 1;
@@ -1523,11 +1518,13 @@ sub runCondorTool
 	# use unused third arg to skip the noise like the time
 	my $quiet = shift;
 	my $options = shift; #hash ref
+	my $retval = shift; #ref to return value location, must have 5 args to use
 	my $count = 0;
 	my %altoptions = ();
 	my $failconcerns = 1;
 
 	if(exists ${$options}{expect_result}) {
+		#print "for cmd: $cmd, any result is ok\n";
 		$failconcerns = 0;
 	}
 
@@ -1556,11 +1553,22 @@ sub runCondorTool
 		TestDebug( "Try command: $cmd\n",4);
 		#open(PULL, "_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd 2>$catch |");
 
-		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=10 $cmd", $options);
+		if(CondorUtils::is_windows() == 1) {
+			if($cmd =~ /condor_who/) {
+			} else {
+				$ENV{_condor_TOOL_TIMEOUT_MULTIPLIER} = 10;
+			}
+			$hashref = runcmd("$cmd", $options);
+		} else {
+			$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=10 $cmd", $options);
+		}
 		my @output =  @{${$hashref}{"stdout"}};
 		my @error =  @{${$hashref}{"stderr"}};
 
 		$status = ${$hashref}{"exitcode"};
+		if(defined $retval ) {
+			$retval = $status;
+		}
 		#print "runCondorTool: Status was <$status>\n";
 		TestDebug("Status is $status after command\n",4);
 		if(( $status != 0 ) && ($failconcerns == 1)){
@@ -2973,9 +2981,13 @@ sub StartCondorWithParams
     my %condor_params = @_;
     my $condor_name = $condor_params{condor_name} || "";
     if( $condor_name eq "" ) {
+		#print "CondorTest::StartCondorWithParams:condor_name unset in CondorTest::StartCondorWithParams\n";
 		$condor_name = GenUniqueCondorName();
 		$condor_params{condor_name} = $condor_name;
-    }
+		#print "CondorTest::StartCondorWithParams:Using:$condor_name\n";
+    } else {
+		#print "CondorTest::StartCondorWithParams:Using requested name:$condor_name\n";
+	}
 
     if( exists $personal_condors{$condor_name} ) {
 		die "condor_name=$condor_name already exists!";
@@ -2994,13 +3006,13 @@ sub StartCondorWithParams
 
     #my $new_condor = CreateAndStoreCondorInstance( $condor_name, $condor_config, 0, 0 );
 
-    my $condor_info = CondorPersonal::StartCondorWithParams( %condor_params, $condor_name );
+    my $condor_info = CondorPersonal::StartCondorWithParams( %condor_params );
 
 	if(exists $condor_params{do_not_start}) {
-		print "CondorTest::StartCondorWithParams: bailing after config\n";
+		#print "CondorTest::StartCondorWithParams: bailing after config\n";
 		return(0);
 	} else {
-		print "CondorTest::StartCondorWithParams: Full config and run\n";
+		#print "CondorTest::StartCondorWithParams: Full config and run\n";
 	}
 
     my @condor_info = split /\+/, $condor_info;
@@ -3588,10 +3600,10 @@ sub FindControlFile
 	my $cwd = getcwd();
 	my $runningfile = "";
 	CondorUtils::fullchomp($cwd);
-	TestDebug( "Current working dir is: $cwd\n",$debuglevel);
+	#TestDebug( "Current working dir is: $cwd\n",$debuglevel);
 	if($cwd =~ /^(.*condor_tests)(.*)$/) {
 		$runningfile = $1 . "/" . $RunningFile;
-		TestDebug( "Running file test is: $runningfile\n",$debuglevel);
+		#TestDebug( "Running file test is: $runningfile\n",$debuglevel);
 		if(!(-d $runningfile)) {
 			TestDebug( "Creating control file directory: $runningfile\n",$debuglevel);
 			runcmd("mkdir -p $runningfile");
@@ -3639,7 +3651,7 @@ sub CountRunningTests
 sub AddRunningTest {
     my $test = shift;
     my $runningfile = FindControlFile();
-    TestDebug( "Adding: $test to running tests\n",$debuglevel);
+    #TestDebug( "Adding: $test to running tests\n",$debuglevel);
     open(OUT, '>', '$runningfile/$test');
     close(OUT);
 }
@@ -3692,13 +3704,19 @@ sub CreateLocalConfig
 	my $extratext = shift;
     $name = "$name$$";
     open(FI,">$name") or die "Failed to create local config starter file: $name:$!\n";
-    print "Created: $name\n";
+    #print "Created: $name\n";
     print FI "$text";
 	if(defined $extratext) {
     	print FI "$extratext";
 	}
-    runcmd("cat $name");
     close(FI);
+	my @configarray = ();
+    runCondorTool("cat $name",\@configarray,2,{emit_output=>0});
+	print "\nIncorporating the following into the local config file:\n\n";
+	foreach my $line (@configarray) {
+		print "$line";
+	}
+	print "\n";
     return($name);
 }
 

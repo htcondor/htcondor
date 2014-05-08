@@ -40,7 +40,7 @@ $|=1;
 
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 my $logsize = "50000000"; # size for logs of personal Condor
-my $force_cygwin = 1; # force a switch to cygwin perl before running batch test.
+my $force_cygwin = 0; # force a switch to cygwin perl before running batch test.
 
 # Hard-coded filename, defined in test_platform_pre
 my $tarball_file = "CONDOR-TARBALL-NAME";
@@ -202,7 +202,7 @@ else {
 	if (!($^O =~ /cygwin/)) {
 		if ( ! $force_cygwin && ($ENV{COMPUTERNAME} =~ /^EXEC\-/)) {
 			print "attempting to run tests using current perl\n";
-			#$ENV{PATH} = "$Win32BaseDir\\msconfig;$ENV{PATH}";
+			$ENV{PATH} = "$Win32BaseDir\\msconfig;$ENV{PATH}";
 			print "PATH=$ENV{PATH}\n";
 		} else {
 			print "adding cygwin to the front of the path\n";

@@ -64,6 +64,22 @@ XML-formatted.
 
 \\ \hline
 
+\texttt{lock( file\_obj, lock\_type )}
+
+Take a lock on a file object using the HTCondor locking protocol,
+which is distinct from typical POSIX locks.
+Returns a context manager object; the lock is released as
+this context manager object is destroyed.
+
+Parameter \texttt{file\_obj} is a file object corresponding to the file
+which should be locked.
+
+Parameter \texttt{lock\_type} specifies the string
+\texttt{"ReadLock"} if the lock should be for reads 
+or \texttt{"WriteLock"} if the lock should be for writes.
+
+\\ \hline
+
 \texttt{enable\_debug( )}
 
 Enable debugging output from HTCondor, where output is sent to \texttt{stderr}.
@@ -83,7 +99,7 @@ and the file used is controlled by \MacroNI{TOOL\_LOG}.
 a dictionary-like object providing access to the configuration variables
 in the current HTCondor configuration.
 
-\textbf{The \Condor{schedd} class:}
+\textbf{The \texttt{Schedd} class:}
 \begin{flushleft}
 \begin{tabular}{|p{14cm}|} \hline
 
@@ -94,6 +110,18 @@ Create an instance of the \texttt{Schedd} class.
 Optional parameter \texttt{classad} 
 describes the location of the remote \Condor{schedd} daemon.
 If the parameter is omitted, the local \Condor{schedd} daemon is used.
+\\ \hline
+\texttt{transaction( flags = 0, continue\_txn = False ) }
+
+Start a transaction with the \Condor{schedd}.
+Returns a transaction context manager.
+Starting a new transaction while one is ongoing is an error. 
+
+The optional parameter \texttt{flags} defaults to 0.
+Transaction flags are from the the enum \texttt{htcondor.TransactionFlags}.
+
+The optional parameter \texttt{continue\_txn} defaults to \texttt{false};
+set the value to \texttt{true} to extend an ongoing transaction. 
 \\ \hline
 \texttt{act( (JobAction)action, (object)job\_spec )}
 

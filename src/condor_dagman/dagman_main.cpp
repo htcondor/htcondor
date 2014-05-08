@@ -177,7 +177,7 @@ Dagman::Config()
 						_dagmanConfigFile );
     		DC_Exit( EXIT_ERROR );
 		}
-		process_config_source( _dagmanConfigFile, "DAGMan config",
+		process_config_source( _dagmanConfigFile, 0, "DAGMan config",
 					NULL, true );
 	}
 
@@ -1344,7 +1344,7 @@ print_status() {
 	int post = dagman.dag->PostRunNodeCount();
 	int ready =  dagman.dag->NumNodesReady();
 	int failed = dagman.dag->NumNodesFailed();
-	int unready = total - (done + pre + submitted + post + ready + failed );
+	int unready = dagman.dag->NumNodesUnready( true );
 
 	debug_printf( DEBUG_VERBOSE, "Of %d nodes total:\n", total );
 
