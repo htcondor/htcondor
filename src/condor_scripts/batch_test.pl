@@ -872,6 +872,8 @@ sub start_condor {
 	unlink("$testpersonalcondorlocation/local/log/.startd_address");
 	unlink("$testpersonalcondorlocation/local/log/.schedd_address");
 
+showEnv();
+
 	if($iswindows == 1) {
 		my $mcmd = "$wininstalldir/bin/condor_master.exe -f &";
 		if ($iscygwin) {
@@ -1790,4 +1792,9 @@ sub wait_for_test_children {
 	return $tests_reaped;
 }
 
+sub showEnv {
+	foreach my $env (sort keys %ENV) {
+		print "$env: $ENV{$env}\n";
+	}
+}
 1;

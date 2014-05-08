@@ -144,7 +144,7 @@ if($expected ne $reply) {
 #[$ROLE.Personal]
 #friendly_name=Settings for Personal HTCondor
 #default : @end
-#	COLLECTOR_HOST=$(CONDOR_HOST):0
+#	COLLECTOR_HOST=127.0.0.1:0
 #	DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
 #	RunBenchmarks=0
 #@end
@@ -180,7 +180,7 @@ if($expected ne $reply) {
 	$counter += 1;
 }
 
-$expected = "$lookups{CONDOR_HOST}:0";
+$expected = "127.0.0.1:0";
 $reply = ccv_getval(COLLECTOR_HOST);
 
 if($expected ne $reply) {
