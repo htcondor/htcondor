@@ -265,7 +265,11 @@ ssh_find_remote () {
                        ;;
             redhat6) echo "`$findplatform_path --url --force RH6`"
                        ;;
+            redhat7) echo "`$findplatform_path --url --force RH7`"
+                       ;;
             debian6) echo "`$findplatform_path --url --force DEB6`"
+                       ;;
+            debian7) echo "`$findplatform_path --url --force DEB7`"
                        ;;
             *) ;; 
         esac

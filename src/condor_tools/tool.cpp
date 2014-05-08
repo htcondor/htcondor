@@ -37,6 +37,7 @@
 #include "daemon_types.h"
 #include "sig_install.h"
 #include "command_strings.h"
+#include "match_prefix.h"
 #include "condor_distribution.h"
 #include "condor_query.h"
 #include "daemon_list.h"
@@ -524,7 +525,8 @@ main( int argc, char *argv[] )
 			}
 			break;
 		case 'd':
-			if (!(*tmp)[2] || (*tmp)[2] == 'e') {
+			// -de can be debug, but we don't want it to match -defrag!
+			if (is_dash_arg_prefix(*tmp, "debug", 1)) {
 				dprintf_set_tool_debug("TOOL", 0);
 			} else if ((*tmp)[2] == 'a')  {
 				subsys_check( MyName );

@@ -1,11 +1,11 @@
---- condor_config.patched	Sat Apr 19 13:56:42 2014
-+++ condor_config.patched.x86_64	Sat Apr 19 13:57:53 2014
-@@ -64,7 +64,7 @@
- SPOOL	= $(LOCAL_DIR)/lib/condor/spool
- EXECUTE	= $(LOCAL_DIR)/lib/condor/execute
- BIN		= $(RELEASE_DIR)/bin
--LIB		= $(RELEASE_DIR)/lib/condor
-+LIB		= $(RELEASE_DIR)/lib64/condor
- INCLUDE	= $(RELEASE_DIR)/include/condor
- SBIN	= $(RELEASE_DIR)/sbin
- LIBEXEC	= $(RELEASE_DIR)/libexec/condor
+--- condor_config.patched	Wed May  7 17:33:29 2014
++++ condor_config.patched.X86_64	Wed May  7 17:37:09 2014
+@@ -58,7 +58,7 @@
+ SPOOL   = $(LOCAL_DIR)/lib/condor/spool
+ EXECUTE = $(LOCAL_DIR)/lib/condor/execute
+ BIN     = $(RELEASE_DIR)/bin
+-LIB     = $(RELEASE_DIR)/lib/condor
++LIB     = $(RELEASE_DIR)/lib64/condor
+ INCLUDE = $(RELEASE_DIR)/include/condor
+ SBIN    = $(RELEASE_DIR)/sbin
+ LIBEXEC = $(RELEASE_DIR)/libexec/condor
