@@ -75,6 +75,12 @@ run on KVM hypervisors.  CPU usage remains unreported by VMWare hypervisors.
 with a reported exit code greater than 128 exited abnormally via a signal.
 \Ticket{4342}
 
+\item Many tools, including \Condor{off} and \Condor{restart} would interpret
+the argument \Opt{-defrag} as \Opt{-debug} since both words start with de.
+The confusion has been fixed. use of \Opt{-defrag} will now produced an error
+message since it is not a valid option for these tools.
+\Ticket{3717}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
