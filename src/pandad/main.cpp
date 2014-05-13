@@ -338,19 +338,36 @@ std::string generatePostString( const CommandSet & commandSet ) {
 // general interest, changed to obtain the file name and minimum interval
 // from the config system (param() and its table).
 void updateStatisticsLog( unsigned queueFullCount ) {
-	static time_t lastLogTime = 0;
+	static unsigned previousQueueFullCount = UINT_MAX;
+	static unsigned previousBadCommandCount = UINT_MAX;
+
+	if(  previousQueueFullCount == queueFullCount
+	  && previousBadCommandCount == previousBadCommandCount ) {
+	  		return;
+	}
+	previousQueueFullCount = queueFullCount;
+	previousBadCommandCount = badCommandCount;
+
+	int fd = open( "/tmp/pandaStatisticsLog", O_CREAT | O_APPEND | O_WRONLY | O_NONBLOCK, 00600 );
+	if( fd == -1 ) {
+		return;
+	}
+
+	FILE * psl = fdopen( fd, "a" );
+	if( psl == NULL ) {
+		return;
+	}
 
 	time_t now = time( NULL );
-	if( now - 60 > lastLogTime ) {
-		lastLogTime = now;
-		int fd = open( "/tmp/pandaStatisticsLog", O_CREAT | O_TRUNC | O_WRONLY | O_NONBLOCK, 00600 );
-		FILE * psl = fdopen( fd, "w" );
-		if( fd != -1 ) {
-		fprintf( psl, "queueFullCount: %u\n", queueFullCount );
-		fprintf( psl, "badCommandCount: %u\n", badCommandCount );
-		fclose( psl );
-		}
-	}
+	struct tm * ns = localtime( & now );
+	char nowString[] = "YYYY-MM-DD HH:MM:SS";
+	snprintf( nowString, sizeof( nowString ), "%4d-%02d-%02d %02d:%02d:%02d",
+			  ns->tm_year + 1900, ns->tm_mon + 1, ns->tm_mday,
+			  ns->tm_hour, ns->tm_min, ns->tm_sec );
+
+	fprintf( psl, "[%s] queueFullCount: %u\n", nowString, queueFullCount );
+	fprintf( psl, "[%s] badCommandCount: %u\n", nowString, badCommandCount );
+	fclose( psl );
 }
 
 bool sendCommands( CURL * curl, const std::string & url, const CommandSet & commandSet, char * curlErrorBuffer, unsigned long & responseCode, unsigned queueFullCount ) {
