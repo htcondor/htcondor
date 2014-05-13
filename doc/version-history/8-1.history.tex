@@ -58,6 +58,15 @@ section~\ref{sec:DAG-node-status} for more information.)
 be use to control the file extension of the log used by the \Condor{starter}.
 \Ticket{4244}
 
+\item A new configuration parameter \Macro{ENVIRONMENT\_VALUE\_FOR\_UnAssignedGPUs}
+can be used to define what GPU id to assign to slots that have no assigned GPU.
+Without this, the CUDA runtime would allow slots with no assigned GPU to use
+all of the GPUs.
+\Ticket{4320}
+
+\item The batch system name HTCondor is now published in each job's environment
+\Ticket{4233}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -85,12 +94,6 @@ message since it is not a valid option for these tools.
 \item Fixed a crash in \Condor{gpu\_discovery} when running on a 32-bit
 platform or on Windows and detecting via OpenCL.
 \Ticket{4339}
-
-\item A new configuration parameter \Macro{ENVIRONMENT\_VALUE\_FOR\_UnAssignedGPUs}
-can be used to define what GPU id to assign to slots that have no assigned GPU.
-Without this, the CUDA runtime would allow slots with no assigned GPU to use
-all of the GPUs.
-\Ticket{4320}
 
 \end{itemize}
 
