@@ -2047,7 +2047,9 @@ int DaemonCore::Cancel_Pipe( int pipe_end )
 unsigned __stdcall pipe_close_thread(void *arg)
 {
 	WritePipeEnd* wpe = (WritePipeEnd*)arg;
+	::EnterCriticalSection(&Big_fat_mutex); // grab the big fat mutex before we write
 	wpe->complete_async_write(false);
+	::LeaveCriticalSection(&Big_fat_mutex); // release the big fat mutux after
 
 	dprintf(D_DAEMONCORE, "finally closing pipe %p\n", wpe);
 	delete wpe;
