@@ -2895,16 +2895,16 @@ Here is an example of a node status file:
 Possible DAG and node status values are:
 
 \begin{itemize}
-\item 0 (\verb@STATUS_NOT_READY@) At least one parent has not yet finished
+\item 0 (\verb@STATUS_NOT_READY@): At least one parent has not yet finished
 (or the node is a final node).
-\item 1 (\verb@STATUS_READY@) All parents have finished, but the node is not
+\item 1 (\verb@STATUS_READY@): All parents have finished, but the node is not
 yet running.
-\item 2 (\verb@STATUS_PRERUN@) The node's PRE script is running.
-\item 3 (\verb@STATUS_SUBMITTED@) The node's HTCondor or Stork job(s) are in 
+\item 2 (\verb@STATUS_PRERUN@): The node's PRE script is running.
+\item 3 (\verb@STATUS_SUBMITTED@): The node's HTCondor or Stork job(s) are in 
   the queue.
-\item 4 (\verb@STATUS_POSTRUN@) The node's POST script is running.
-\item 5 (\verb@STATUS_DONE@) The node has completed successfully.
-\item 6 (\verb@STATUS_ERROR@) The node has failed.
+\item 4 (\verb@STATUS_POSTRUN@): The node's POST script is running.
+\item 5 (\verb@STATUS_DONE@): The node has completed successfully.
+\item 6 (\verb@STATUS_ERROR@): The node has failed.
 \end{itemize}
 
 A \Arg{NODE\_STATUS\_FILE} key word inside any splice is ignored.
