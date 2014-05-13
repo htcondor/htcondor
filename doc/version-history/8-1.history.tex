@@ -30,6 +30,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The default priority factor for new users is now 1000. This was changed
+from a default of 1 in earlier versions because 1 leaves no room to boost
+the priority factor.
+\Ticket{4282}
+
 \item The \Condor{schedd} may now keep open a configurable number
 of job event log files.
 This improves performance over the previous behavior of
