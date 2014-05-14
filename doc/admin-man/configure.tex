@@ -429,6 +429,62 @@ This syntax does not permit distinguishing one from the other,
 so only one may be specified.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Config-Include}Including Configuration from Elsewhere}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!INCLUDE syntax}
+\index{INCLUDE configuration syntax}
+Externally defined configuration can be incorporated using the syntax
+\begin{verbatim}
+  include : <what-to-include>
+\end{verbatim}
+
+The \verb@<what-to-include>@ specification may describe a single file,
+where the contents of the file will be parsed and incorporated
+into the configuration.
+Or, \verb@<what-to-include>@  may cause a program to be executed,
+where the output of the program is parsed and incorporated
+into the configuration.
+
+The \MacroNI{include} key word is case insensitive.
+There are \emph{no} requirements for white space characters surrounding
+the colon character.
+
+Consider the example
+\begin{verbatim}
+  FILE = config.$(FULL_HOSTNAME)
+  include : $(LOCAL_DIR)/$(FILE)
+\end{verbatim}
+Values are acquired for configuration variables 
+\MacroNI{FILE}, and \MacroNI{LOCAL\_DIR} by immediate evaluation, 
+causing variable \MacroNI{FULL\_HOSTNAME} to also be immediately evaluated.
+The resulting value forms a full path and file name.
+This file is read and parsed.
+The resulting configuration is incorporated into the current
+configuration.
+This resulting configuration may contain further nested \MacroNI{include} 
+specifications, 
+which are also parsed, evaluated, and incorporated.
+Levels of nested \MacroNI{include}s are limited,
+such that infinite nesting is discovered and thwarted,
+while still permitting nesting.
+
+Consider the further example
+\begin{verbatim}
+  SCRIPT_FILE = script.$(IP_ADDRESS)
+  include : $(RELEASE_DIR)/$(SCRIPT_FILE) |
+\end{verbatim}
+In this example, the bar character at the end of the line 
+causes a script to be invoked,
+and the output of the script is incorporated into the current
+configuration.
+The same immediate parsing and evaluation occurs in this
+case as when a file's contents are included. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Config-Metaknobs}Metaknobs: Using Predefined Sets of Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Macros-Requiring-Restart}Macros That Will Require a Restart When Changed}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration change requiring a restart of HTCondor}
