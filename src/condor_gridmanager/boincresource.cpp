@@ -558,11 +558,10 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 					break;
 				}
 			}
+			m_statusBatches.remove( ptr );
 			if ( batch == NULL ) {
 				dprintf( D_ALWAYS, "Failed to find batch %s!\n", ptr );
-			}
-			m_statusBatches.remove( ptr );
-			if ( batch->m_submit_status == BatchMaybeSubmitted ) {
+			} else if ( batch->m_submit_status == BatchMaybeSubmitted ) {
 				batch->m_submit_status = BatchUnsubmitted;
 				daemonCore->Reset_Timer( m_submitTid, 0 );
 			} else {
