@@ -2580,7 +2580,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	// Get the job's status and only mark dirty if it is running
 	// Note: Dirty attribute notification could work for local and
 	// standard universe, but is currently not supported for them.
-	int universe;
+	int universe = -1;
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
 	if( ( universe != CONDOR_UNIVERSE_SCHEDULER &&
