@@ -2800,19 +2800,19 @@ listed is used.
 \index{DAGMan!node status file}
 \index{status!of a DAGMan node}
 
-DAGMan can capture the status of all DAG nodes,
-such that the user or a script may easily monitor the status of all DAG nodes.
-A node status file is periodically rewritten by DAGMan.
-To enable this feature, the DAG input file contains a line with the
+DAGMan can capture the status of the overall DAG and all DAG nodes,
+such that the user or a script can easily monitor this status,
+in a \emph{node status file}.  This file is periodically updated
+while the DAG runs.
+To enable this feature, the DAG input file must contain a line with the
 \Arg{NODE\_STATUS\_FILE} key word.
 
 The syntax for a \Arg{NODE\_STATUS\_FILE} specification is
 
 \Opt{NODE\_STATUS\_FILE} \Arg{statusFileName} \oArg{minimumUpdateTime}
 
-The status file is written on the machine where the DAG is submitted;
-its location is given by \Arg{statusFileName}.  
-This will be the same machine where the \Condor{dagman} job is running.
+The status file is written on the machine on which the DAG is submitted;
+its location is given by \Arg{statusFileName} (which can be a full path).
 
 The optional \Arg{minimumUpdateTime} specifies the minimum number of seconds
 that must elapse between updates to the node status file.
@@ -2837,45 +2837,74 @@ or more.
 This node status file is overwritten each time it is updated.
 Therefore, it only holds information about the \emph{current} status 
 of each node; it does not provide a history of the node status.
-The file contains one line describing the status of every node in the DAG.
 The file contents do not distinguish between HTCondor jobs and Stork jobs.
+
+\Bold{Important note:  as of version 8.1.6, the format of the node status
+file has changed.}  The node status file is now a collection of ClassAds.
+There is one ClassAd for the overall status of the DAG, one ClassAd
+for the status of each node, and one ClassAd with the time at which
+the node status file was completed and the time of the next update.
+
 Here is an example of a node status file:
 
 \begin{verbatim}
-  BEGIN 1281041745 (Thu Aug  5 15:55:45 2010)
-  Status of nodes of DAG(s): my.dag
-
-  JOB A STATUS_DONE      ()
-  JOB B STATUS_SUBMITTED (not_idle)
-  JOB C STATUS_SUBMITTED (idle)
-  JOB D STATUS_NOT_READY ()
-
-  Nodes total: 4
-  Nodes done: 1
-  Nodes pre: 0
-  Nodes queued: 2
-  Nodes post: 0
-  Nodes ready: 0
-  Nodes un-ready: 1
-  Nodes failed: 0
-
-  DAG status: STATUS_SUBMITTED ()
-  Next scheduled update: 1281041775 (Thu Aug  5 15:56:15 2010)
-  END 1281041745 (Thu Aug  5 15:55:45 2010)
+[
+  Type = "DagStatus";
+  DagFiles = {
+    "job_dagman_node_status.dag"
+  };
+  Timestamp = 1399674138; /* "Fri May  9 17:22:18 2014" */
+  DagStatus = 3; /* "STATUS_SUBMITTED ()" */
+  NodesTotal = 12;
+  NodesDone = 11;
+  NodesPre = 0;
+  NodesQueued = 1;
+  NodesPost = 0;
+  NodesReady = 0;
+  NodesUnready = 0;
+  NodesFailed = 0;
+  JobProcsHeld = 0;
+  JobProcsIdle = 1;
+]
+[
+  Type = "NodeStatus";
+  Node = "A";
+  NodeStatus = 5; /* "STATUS_DONE" */
+  StatusDetails = "";
+  RetryCount = 0;
+  JobProcsQueued = 0;
+  JobProcsHeld = 0;
+]
+...
+[
+  Type = "NodeStatus";
+  Node = "C";
+  NodeStatus = 3; /* "STATUS_SUBMITTED" */
+  StatusDetails = "idle";
+  RetryCount = 0;
+  JobProcsQueued = 1;
+  JobProcsHeld = 0;
+]
+[
+  Type = "StatusEnd";
+  EndTime = 1399674138; /* "Fri May  9 17:22:18 2014" */
+  NextUpdate = 1399674141; /* "Fri May  9 17:22:21 2014" */
+]
 \end{verbatim}
 
-Possible node status values are:
+Possible DAG and node status values are:
 
 \begin{itemize}
-\item \verb@STATUS_NOT_READY@ At least one parent has not yet finished
+\item 0 (\verb@STATUS_NOT_READY@): At least one parent has not yet finished
 (or the node is a final node).
-\item \verb@STATUS_READY@ All parents have finished, but not yet running.
-\item \verb@STATUS_PRERUN@ The PRE script is running.
-\item \verb@STATUS_SUBMITTED@ The node's HTCondor or Stork job(s) are in 
+\item 1 (\verb@STATUS_READY@): All parents have finished, but the node is not
+yet running.
+\item 2 (\verb@STATUS_PRERUN@): The node's PRE script is running.
+\item 3 (\verb@STATUS_SUBMITTED@): The node's HTCondor or Stork job(s) are in 
   the queue.
-\item \verb@STATUS_POSTRUN@ The POST script is running.
-\item \verb@STATUS_DONE@ The node has completed successfully.
-\item \verb@STATUS_ERROR@ The node has failed.
+\item 4 (\verb@STATUS_POSTRUN@): The node's POST script is running.
+\item 5 (\verb@STATUS_DONE@): The node has completed successfully.
+\item 6 (\verb@STATUS_ERROR@): The node has failed.
 \end{itemize}
 
 A \Arg{NODE\_STATUS\_FILE} key word inside any splice is ignored.

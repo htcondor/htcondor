@@ -52,7 +52,6 @@ bool validateHookPath( const char* hook_param, char*& hpath )
 		free(tmp);
 		return false;
 	}
-#endif
 
 	if (!si.IsExecutable()) {
 		dprintf(D_ALWAYS, "ERROR: path specified for %s (%s) "
@@ -60,6 +59,7 @@ bool validateHookPath( const char* hook_param, char*& hpath )
 		free(tmp);
 		return false;
 	}
+#endif
 
 	// TODO: forbid symlinks, too?
 	
