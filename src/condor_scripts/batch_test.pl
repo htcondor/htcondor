@@ -872,6 +872,8 @@ sub start_condor {
 	unlink("$testpersonalcondorlocation/local/log/.startd_address");
 	unlink("$testpersonalcondorlocation/local/log/.schedd_address");
 
+showEnv();
+
 	if($iswindows == 1) {
 		my $mcmd = "$wininstalldir/bin/condor_master.exe -f &";
 		if ($iscygwin) {
@@ -1291,7 +1293,8 @@ sub CreateLocalConfig {
 			#can't use which. its a linux tool and will lie about the path to java.
 			if (1) {
 				debug ("Running where $javabinary\n",2);
-				$jvm = `where $javabinary`;
+				my @jvms = `where $javabinary`;
+				$jvm = $jvms[0];
 				CondorUtils::fullchomp($jvm);
 				# if where doesn't tell us the location of the java binary, just assume it's will be
 				# in the path once condor is running. (remember that cygwin lies...)
@@ -1790,4 +1793,9 @@ sub wait_for_test_children {
 	return $tests_reaped;
 }
 
+sub showEnv {
+	foreach my $env (sort keys %ENV) {
+		print "$env: $ENV{$env}\n";
+	}
+}
 1;

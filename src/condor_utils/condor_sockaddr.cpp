@@ -359,7 +359,7 @@ bool condor_sockaddr::from_ip_string(const char* ip_string)
 		return true;
 	} else if (inet_pton(AF_INET6, ip_string, &v6.sin6_addr) == 1) {
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
-		v6.sin6_len = sizeof(sockaddr_in);
+		v6.sin6_len = sizeof(sockaddr_in6);
 #endif
 		v6.sin6_family = AF_INET6;
 		v6.sin6_port = 0;
@@ -585,9 +585,14 @@ bool condor_sockaddr::operator==(const condor_sockaddr& rhs) const
 
 bool condor_sockaddr::is_link_local() const {
 	if (is_ipv4()) {
-		// it begins with 169.254 -> a9 fe
-		uint32_t mask = 0xa9fe0000;
-		return ((uint32_t)v4.sin_addr.s_addr & mask) == mask;
+		static struct in_addr link_mask;
+		static bool initialized = false;
+		if(!initialized) {
+			int converted = inet_pton(AF_INET, "169.254.0.0", &link_mask);
+			ASSERT(converted);
+			initialized = true;
+		}
+		return ((uint32_t)v4.sin_addr.s_addr & link_mask.s_addr) == link_mask.s_addr;
 	} else if (is_ipv6()) {
 		// it begins with fe80
 		return v6.sin6_addr.s6_addr[0] == 0xfe &&

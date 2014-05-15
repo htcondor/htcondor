@@ -204,10 +204,12 @@ extern "C" {
 	#define CONFIG_OPT_SMART_COM_IN_CONT 0x08 // parse #opt:oldcomment/newcomment to decide comment behavior
 	#define CONFIG_OPT_COLON_IS_META_ONLY 0x10 // colon isn't valid for use in param assigments (only = is allowed)
 	#define CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO 0x80 // the defaults table is the table defined in param_info.in.
-	void config();
-	void config_ex(int wantsQuiet, bool abort_if_invalid, int opt = CONFIG_OPT_WANT_META);
-	void config_host(const char* host, int wantsQuiet, int config_options);
-	void validate_config(bool abort_if_invalid);
+	#define CONFIG_OPT_NO_EXIT 0x100 // If a config file is missing or the config is invalid, do not abort/exit the process.
+	#define CONFIG_OPT_WANT_QUIET 0x200 // Keep printing to stdout/err to a minimum
+	bool config();
+	bool config_ex(int opt);
+	bool config_host(const char* host, int config_options);
+	bool validate_config(bool abort_if_invalid);
 	void config_dump_string_pool(FILE * fh, const char * sep);
 	void config_dump_sources(FILE * fh, const char * sep);
 	const char * config_source_by_id(int source_id);

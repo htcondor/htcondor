@@ -558,10 +558,7 @@ int main( int argc, char *argv[] )
 		}
 	}
 
-	if(daemon) {
-		delete daemon;
-		daemon = NULL;
-	}
+	delete daemon;
 
 	return (all_okay ? 0 : 1);
 

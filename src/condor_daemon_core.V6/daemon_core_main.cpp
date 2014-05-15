@@ -2196,8 +2196,8 @@ int dc_main( int argc, char** argv )
 	// call config so we can call param.  
 	// Try to minimize shadow footprint by not loading the metadata from the config file
 	int config_options = get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ? 0 : CONFIG_OPT_WANT_META;
-	const bool abort_if_invalid = true;
-	config_ex(wantsQuiet, abort_if_invalid, config_options);
+        if (wantsQuiet) { config_options |= CONFIG_OPT_WANT_QUIET; }
+	config_ex(config_options);
 
 
     // call dc_config_GSI to set GSI related parameters so that all

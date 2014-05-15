@@ -115,7 +115,7 @@ main( int argc, char *argv[] )
 #endif
 
 	// initialize the config settings
-	config_ex(false,false,0);
+	config_ex(CONFIG_OPT_NO_EXIT);
 	
 		// Initialize things
 	MyName = argv[0];
