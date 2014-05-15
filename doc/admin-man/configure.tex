@@ -4865,6 +4865,53 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   fixed quantity or list of the resource
   in the the configuration when set by \Macro{MACHINE\_RESOURCE\_<name>}.
 
+\label{param:EnvironmentForAssignedName}
+\item[\Macro{ENVIRONMENT\_FOR\_Assigned<name>}]
+  A space separated list of environment variables to set for the job.
+  Each environment variable will be set to the list of assigned resources 
+  defined by the slot ClassAd attribute \Attr{Assigned<name>}.
+  Each environment variable name may be followed by an equals sign
+  and a Perl style regular expression that defines how to modify each 
+  resource ID before using it as the value of the environment variable.  
+  As a special case for CUDA GPUs,
+  if the environment variable name is \Env{CUDA\_VISIBLE\_DEVICES}, 
+  then the correct Perl style regular expression is applied automatically. 
+
+  For example, with the configuration
+\begin{verbatim}
+  ENVIRONMENT_FOR_AssignedGPUs = VISIBLE_GPUS=/^/gpuid:/ 
+\end{verbatim}
+
+  and with the machine ClassAd attribute
+  \Expr{AssignedGPUs = "CUDA1, CUDA2"}, 
+  the job's environment will contain
+
+\begin{verbatim}
+  VISIBLE_GPUS = gpuid:CUDA1, gpuid:CUDA2 
+\end{verbatim}
+
+\label{param:EnvironmentValueForUnassignedName}
+\item[\Macro{ENVIRONMENT\_VALUE\_FOR\_UnAssigned<name>}]
+  Defines the value to set for environment variables specified
+  in by configuration variable \MacroNI{ENVIRONMENT\_FOR\_Assigned<name>}
+  when there is no machine ClassAd attribute \Attr{Assigned<name>} 
+  for the slot. 
+  This configuration variable exists to deal with the situation where 
+  jobs will use a resource that they have not been assigned because
+  there is no explicit assignment.  
+  The CUDA runtime library (for GPUs) has this problem.
+
+  For example, where configuration is
+\begin{verbatim}
+  ENVIRONMENT_FOR_AssignedGPUs = VISIBLE_GPUS
+  ENVIRONMENT_VALUE_FOR_UnAssignedGPUs = none 
+\end{verbatim}
+  and there is \emph{no} machine ClassAd attribute \Attr{AssignedGPUs},
+  the job's environment will contain
+\begin{verbatim}
+  VISIBLE_GPUS = none
+\end{verbatim}
+
 \label{param:MustModifyRequestExprs}
 \item[\Macro{MUST\_MODIFY\_REQUEST\_EXPRS}]
   A boolean value that defaults to \Expr{False}.
