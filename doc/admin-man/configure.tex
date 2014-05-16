@@ -6742,13 +6742,20 @@ These settings affect the \Condor{starter}.
 
 \label{param:StarterLogNameAppend}
 \item[\Macro{STARTER\_LOG\_NAME\_APPEND}]
-  This setting controls the file extension of the local log file used
-  by the starter. Permitted values are true, false, slot, cluster and jobid.
-  false will suppress the file extension, true gives the default behavior of
-  using the slot name unless there is only a single slot. slot, cluster and jobid
-  use the slot name, cluster id and job id respectively. If cluster or jobid are
-  specified, the resulting log files will persist until deleted by the user, so these
-  two options should only be used to assist in debugging, not as permanent options.
+  A fixed value that sets the file name extension of the local log file used
+  by the \Condor{starter} daemon. 
+  Permitted values are \Expr{true}, \Expr{false}, \Expr{slot}, 
+  \Expr{cluster} and \Expr{jobid}.
+  A value of \Expr{false} will suppress the use of a file extension.
+  A value of \Expr{true} gives the default behavior of using the slot name,
+  unless there is only a single slot. 
+  A value of \Expr{slot} uses the slot name.
+  A value of \Expr{cluster} uses the job's \Attr{ClusterId} ClassAd attribute.
+  A value of \Expr{jobid} uses the job's \Attr{ProcId} ClassAd attribute.
+  If \Expr{cluster} or \Expr{jobid} are specified,
+  the resulting log files will persist until deleted by the user,
+  so these two options should only be used to assist in debugging, 
+  not as permanent options.
 
 \label{param:StarterDebug}
 \item[\Macro{STARTER\_DEBUG}]
