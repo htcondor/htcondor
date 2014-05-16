@@ -7781,20 +7781,20 @@ These macros affect the \Condor{negotiator}.
 \item[\Macro{DEFAULT\_PRIO\_FACTOR}]
   Sets the priority factor for local users as they first submit jobs,
   as described in section~\ref{sec:UserPrio}.
-  Defaults to 1.0.
+  Defaults to 1000.
 
 \label{param:NiceUserPrioFactor} 
 \item[\Macro{NICE\_USER\_PRIO\_FACTOR}]
   Sets the priority factor for nice users, as described in
   section~\ref{sec:UserPrio}.
-  Defaults to 10000000.
+  Defaults to 10000000000.
 
 \label{param:RemotePrioFactor} 
 \item[\Macro{REMOTE\_PRIO\_FACTOR}]
   Defines the priority factor for remote users,
   which are those users who who do not belong to the local domain.
   See section~\ref{sec:UserPrio} for details.  
-  Defaults to 10000.
+  Defaults to 10000000.
 
 \label{param:AccountantLocalDomain} 
 \item[\Macro{ACCOUNTANT\_LOCAL\_DOMAIN}]
