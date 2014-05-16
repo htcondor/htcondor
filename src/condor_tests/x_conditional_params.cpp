@@ -121,23 +121,24 @@ static const char * const aBoolFalse[] = {
 	"0", "0.0", ".0", "0.", "0e1", "0.0e10", " false ", " 0 ",
 };
 
+#define CONDOR_SERIES_VERSION "8.2"
 static const char * const aVerTrue[] = {
-	"version > 6.0", "!version > 8.1", "version > 8.1.1",
+	"version > 6.0", "!version >" CONDOR_SERIES_VERSION, "version > 8.1.1",
 	"version > 8.1.4", "version > 7.24.29",
-	"version >= " CONDOR_VERSION, "version == 8.1", "version != 8.0",
-	"version == " CONDOR_VERSION, "version <= 8.1.9",
-	"version <= 8.1", "version < 8.1.9", "version < 8.1.16",
-	"version < 8.2.99", "version < 8.2", "version < 9.0",
+	"version >= " CONDOR_VERSION, "version == " CONDOR_SERIES_VERSION, "version != 8.0",
+	"version == " CONDOR_VERSION, "version <= " CONDOR_SERIES_VERSION ".9",
+	"version <= " CONDOR_SERIES_VERSION, "version < " CONDOR_SERIES_VERSION ".9", "version < " CONDOR_SERIES_VERSION ".16",
+	"version < 8.2.99", "version < " CONDOR_SERIES_VERSION, "version < 9.0",
 	"version < 10.0", " VERSION < 10.0 ", " Version < 10.0"
 };
 
 static const char * const aVerFalse[] = {
-	"version < 6.0", "version < 8.1", "version < 8.1.1",
+	"version < 6.0", "version < " CONDOR_SERIES_VERSION, "version < " CONDOR_VERSION,
 	"version < 8.1.4", " version < 8.1.4", "version < 8.1.4 ",
 	"  version  <  8.1.4  ", "version < 7.24.29", " ! version <= " CONDOR_VERSION,
 	"version == 8.0", "version == 8.0.6", "version <= 8.0.5",
-	"!version >= 8.1", "version > " CONDOR_VERSION, "version > 8.1.16",
-	"version > 8.2.99", "version > 8.2", "version > 9.0",
+	"!version >= " CONDOR_SERIES_VERSION, "version > " CONDOR_VERSION, "version > " CONDOR_SERIES_VERSION ".16",
+	"version > " CONDOR_SERIES_VERSION ".99", "version > " CONDOR_SERIES_VERSION, "version > 9.0",
 	"version > 10.0",
 };
 
