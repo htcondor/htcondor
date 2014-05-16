@@ -121,8 +121,8 @@ static const char * const aBoolFalse[] = {
 	"0", "0.0", ".0", "0.", "0e1", "0.0e10", " false ", " 0 ",
 };
 
-#define CONDOR_SERIES_VERSION "8.2"
-#define CONDOR_NEXT_VERSION "8.3"
+#define CONDOR_SERIES_VERSION "8.3"
+#define CONDOR_NEXT_VERSION "8.4"
 static const char * const aVerTrue[] = {
 	"version > 6.0", "!version >" CONDOR_SERIES_VERSION, "version > 8.1.1",
 	"version > 8.1.4", "version > 7.24.29",
