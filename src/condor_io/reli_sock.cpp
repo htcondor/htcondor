@@ -747,6 +747,7 @@ ReliSock::RcvMsg::~RcvMsg()
 int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, int _timeout)
 {
 	char	        hdr[MAX_HEADER_SIZE];
+	char *cksum_ptr = &hdr[5];
 	int		len, len_t, header_size;
 	int		tmp_len;
 	int		retval;
@@ -756,6 +757,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 	if (m_partial_packet) {
 		m_partial_packet = false;
 		len = m_remaining_read_length;
+		cksum_ptr = m_partial_cksum;
 		goto read_packet;
 	}
 
@@ -825,6 +827,9 @@ read_packet:
 			} else {
 				m_remaining_read_length = len;
 			}
+			if ( mode_ != MD_OFF && cksum_ptr != m_partial_cksum ) {
+				memcpy( m_partial_cksum, cksum_ptr, sizeof(m_partial_cksum) );
+			}
 			return 2;
 		} else {
 			delete m_tmp;
@@ -837,7 +842,7 @@ read_packet:
 
         // Now, check MD
         if (mode_ != MD_OFF) {
-            if (!m_tmp->verifyMD(&hdr[5], mdChecker_)) {
+            if (!m_tmp->verifyMD(cksum_ptr, mdChecker_)) {
                 delete m_tmp;
 		m_tmp = NULL;
                 dprintf(D_ALWAYS, "IO: Message Digest/MAC verification failed!\n");

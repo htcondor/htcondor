@@ -774,19 +774,21 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
 
 int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
 				SocketHandler handler, const char* handler_descrip,
-				Service* s, DCpermission perm, HandlerType handler_type)
+				Service* s, DCpermission perm, HandlerType handler_type,
+				void **prev_entry)
 {
 	return( Register_Socket(iosock, iosock_descrip, handler,
 							(SocketHandlercpp)NULL, handler_descrip, s,
-							perm, handler_type, FALSE) );
+							perm, handler_type, FALSE, prev_entry) );
 }
 
 int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
 				SocketHandlercpp handlercpp, const char* handler_descrip,
-				Service* s, DCpermission perm, HandlerType handler_type)
+				Service* s, DCpermission perm, HandlerType handler_type,
+				void **prev_entry)
 {
 	return( Register_Socket(iosock, iosock_descrip, NULL, handlercpp,
-							handler_descrip, s, perm, handler_type, TRUE) );
+							handler_descrip, s, perm, handler_type, TRUE, prev_entry) );
 }
 
 int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
@@ -1384,7 +1386,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 				SocketHandler handler, SocketHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, DCpermission perm,
 				HandlerType handler_type,
-				int is_cpp)
+				int is_cpp, void **prev_entry)
 {
     int     i;
     int     j;
@@ -1396,6 +1398,9 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 
 	// And since FD_ISSET only allows us to probe, we do not bother using a
 	// hash table for sockets.  We simply store them in an array.
+	if ( prev_entry ) {
+		*prev_entry = NULL;
+	}
 
     if ( !iosock ) {
 		dprintf(D_DAEMONCORE, "Can't register NULL socket \n");
@@ -1436,6 +1441,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	for ( j=0; j < nSock; j++ )
 	{		
 		if ( (*sockTable)[j].iosock == iosock ) {
+			i = j;
 			duplicate_found = true;
         }
 
@@ -1444,6 +1450,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		if ( (*sockTable)[j].iosock && fd_to_register != -1 ) {
 			if ( ((Sock *)(*sockTable)[j].iosock)->get_file_desc() ==
 								fd_to_register ) {
+				i = j;
 				duplicate_found = true;
 			}
 		}
@@ -1457,8 +1464,15 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		}
 	}
 	if (duplicate_found) {
-		dprintf(D_ALWAYS, "DaemonCore: Attempt to register socket twice\n");
-		return -2;
+		if ( prev_entry ) {
+			*prev_entry = malloc(sizeof(SockEnt));
+			*(SockEnt*)*prev_entry = (*sockTable)[i];
+			(*sockTable)[i].iosock_descrip = NULL;
+			(*sockTable)[i].handler_descrip = NULL;
+		} else {
+			dprintf(D_ALWAYS, "DaemonCore: Attempt to register socket twice\n");
+			return -2;
+		}
 	} 
 
 		// Check that we are within the file descriptor safety limit
@@ -1517,6 +1531,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	(*sockTable)[i].handler_type = handler_type;
 	(*sockTable)[i].service = s;
 	(*sockTable)[i].data_ptr = NULL;
+	(*sockTable)[i].waiting_for_data = false;
 	free((*sockTable)[i].iosock_descrip);
 	if ( iosock_descrip )
 		(*sockTable)[i].iosock_descrip = strdup(iosock_descrip);
@@ -1558,7 +1573,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	return i;
 }
 
-int DaemonCore::Cancel_Socket( Stream* insock)
+int DaemonCore::Cancel_Socket( Stream* insock, void *prev_entry)
 {
 	int i,j;
 
@@ -1592,7 +1607,7 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 		curr_dataptr = NULL;
 
 	if ((*sockTable)[i].servicing_tid == 0 ||
-		(*sockTable)[i].servicing_tid == CondorThreads::get_handle()->get_tid())
+		(*sockTable)[i].servicing_tid == CondorThreads::get_handle()->get_tid() || prev_entry)
 	{
 		// Log a message
 		dprintf(D_DAEMONCORE,"Cancel_Socket: cancelled socket %d <%s> %p\n",
@@ -1604,8 +1619,14 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 		free( (*sockTable)[i].handler_descrip );
 		(*sockTable)[i].handler_descrip = NULL;
 		// If we just removed the last entry in the table, we can decrement nSock
-		if ( i == nSock - 1 ) {
-			nSock--;            
+		if ( prev_entry ) {
+			((SockEnt*)prev_entry)->servicing_tid = (*sockTable)[i].servicing_tid;
+			(*sockTable)[i] = *(SockEnt*)prev_entry;
+			free( prev_entry );
+		} else {
+			if ( i == nSock - 1 ) {
+				nSock--;
+			}
 		}
 	} else {
 		// Log a message
@@ -1614,7 +1635,9 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 		(*sockTable)[i].remove_asap = true;
 	}
 
-	nRegisteredSocks--;		// decrement count of active sockets
+	if ( !prev_entry ) {
+		nRegisteredSocks--;		// decrement count of active sockets
+	}
 	
 	DumpSocketTable(D_FULLDEBUG | D_DAEMONCORE);
 
