@@ -675,7 +675,8 @@ class DaemonCore : public Service
                          const char *      handler_descrip,
                          Service *         s                = NULL,
                          DCpermission      perm             = ALLOW,
-			 HandlerType          handler_type = HANDLE_READ);
+                         HandlerType       handler_type = HANDLE_READ,
+                         void **           prev_entry = NULL);
 
     /** Not_Yet_Documented
         @param iosock           Not_Yet_Documented
@@ -692,7 +693,8 @@ class DaemonCore : public Service
                          const char *         handler_descrip,
                          Service*             s,
                          DCpermission         perm = ALLOW,
-			 HandlerType          handler_type = HANDLE_READ);
+                         HandlerType          handler_type = HANDLE_READ,
+                         void **              prev_entry = NULL);
 
     /** Not_Yet_Documented
         @param iosock           Not_Yet_Documented
@@ -716,7 +718,7 @@ class DaemonCore : public Service
         @param insock           Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Cancel_Socket ( Stream * insock );
+    int Cancel_Socket ( Stream * insock, void *prev_entry = NULL );
 
 		// Returns true if the given socket is already registered.
 	bool SocketIsRegistered( Stream *sock );
@@ -1664,7 +1666,8 @@ class DaemonCore : public Service
                         Service* s, 
                         DCpermission perm,
 			HandlerType handler_type,
-                        int is_cpp);
+                        int is_cpp,
+                        void **prev_entry = NULL);
 
 		// This function is called in order to have
 		// TooManyRegisteredSockets() take into account an extra socket
