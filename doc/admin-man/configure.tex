@@ -4559,12 +4559,14 @@ WANT_HOLD_REASON = \
 
 \label{param:RunBenchmarks}
 \item[\Macro{RUNBENCHMARKS}]
-  Specifies when to run benchmarks.
+  A boolean expression that specifies whether to run benchmarks.
   When the machine is in the Unclaimed state and this expression
   evaluates to \Expr{True}, benchmarks will be run.
-  If RunBenchmarks is specified and set to anything other than \Expr{False},
-  additional benchmarks will be run when the \Condor{startd} initially starts.
-  To disable start up benchmarks, set \MacroNI{RunBenchmarks} to \Expr{False}
+  If \MacroNI{RUNBENCHMARKS} is specified and set to anything other 
+  than \Expr{False},
+  additional benchmarks will be run once,
+  when the \Condor{startd} starts.
+  To disable start up benchmarks, set \MacroNI{RunBenchmarks} to \Expr{False}.
 
 \label{param:DedicatedScheduler}
 \item[\Macro{DedicatedScheduler}]
