@@ -483,6 +483,85 @@ case as when a file's contents are included.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-Metaknobs}Metaknobs: Using Predefined Sets of Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!USE syntax}
+\index{USE configuration syntax}
+Predefined sets of configuration may be identified and incorporated
+into the configuration using the syntax
+\begin{verbatim}
+  use <category id> : <name of set> 
+\end{verbatim}
+
+The \MacroNI{use} key word is case insensitive.
+There are \emph{no} requirements for white space characters surrounding
+the colon character.
+More than one \MacroNI{<name of set>} identifier may be placed within
+a single \MacroNI{use} line. 
+Separate the names by a space character. 
+There is no mechanism by which the administrator may define their
+own custom \MacroNI{<category id>} or \MacroNI{<name of set>}.
+
+Each predefined \MacroNI{<category id>} has a fixed, case insensitive
+name for the sets of configuration that are predefined. 
+Placement of a \MacroNI{use} line in the configuration brings in
+the predefined configuration it identifies.
+
+There are four \MacroNI{<category id>} values.
+Within a category, a predefined, case insensitive name identifies
+the set of configuration it incorporates. 
+\begin{description}
+
+\label{usecategory:ROLE}
+\item[\MacroNI{ROLE}]
+  Describes configuration for the various roles that a machine might
+  play within an HTCondor pool.
+  \begin{itemize}
+    \item \texttt{Personal}
+    Settings needed for when a single machine is the entire pool.
+    \item \texttt{Submit}
+    Settings needed to allow this machine to submit jobs to the pool.
+    \item \texttt{Execute}
+    Settings needed to allow this machine to execute jobs.
+    \item \texttt{CentralManager}
+    Settings needed to allow this machine to act as the central manager
+    for the pool.
+  \end{itemize}
+
+\label{usecategory:FEATURE}
+\item[\MacroNI{FEATURE}]
+  Describes configuration for implemented features. 
+  \begin{itemize}
+    \item \texttt{Remote\_Runtime\_Config}
+    \item \texttt{Runtime\_Config}
+    \item \texttt{VMware}
+    \item \texttt{GPUs}
+  \end{itemize}
+
+\label{usecategory:POLICY}
+\item[\MacroNI{POLICY}]
+  Describes configuration for the circumstances under which
+  machines choose to run jobs.
+  \begin{itemize}
+    \item \texttt{Always\_Run\_Jobs}
+    \item \texttt{UWCS\_Desktop}
+    \item \texttt{Desktop}
+    \item \texttt{Limit\_Job\_Runtimes}
+  \end{itemize}
+
+\label{usecategory:SECURITY}
+\item[\MacroNI{SECURITY}]
+  Describes configuration for an implemented security model.
+  \begin{itemize}
+    \item \texttt{Host\_Based}
+    \item \texttt{With\_Authentication}
+    Requires both authentication and integrity checks.
+    \item \texttt{Strong}
+    Requires authentication, encryption, and integrity checks.
+    \item \texttt{User\_Based}
+    Grants permissions to an administrator and uses 
+    \texttt{With\_Authentication}.
+  \end{itemize}
+
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Macros-Requiring-Restart}Macros That Will Require a Restart When Changed}
