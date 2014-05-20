@@ -2800,9 +2800,10 @@ listed is used.
 \index{DAGMan!node status file}
 \index{status!of a DAGMan node}
 
-DAGMan can capture the status of the overall DAG and all DAG nodes,
-such that the user or a script can easily monitor this status,
-in a \emph{node status file}.  This file is periodically updated
+DAGMan can capture the status of the overall DAG and all DAG nodes
+in a \emph{node status file},
+such that the user or a script can monitor this status.
+This file is periodically rewritten
 while the DAG runs.
 To enable this feature, the DAG input file must contain a line with the
 \Arg{NODE\_STATUS\_FILE} key word.
@@ -2812,7 +2813,8 @@ The syntax for a \Arg{NODE\_STATUS\_FILE} specification is
 \Opt{NODE\_STATUS\_FILE} \Arg{statusFileName} \oArg{minimumUpdateTime}
 
 The status file is written on the machine on which the DAG is submitted;
-its location is given by \Arg{statusFileName} (which can be a full path).
+its location is given by \Arg{statusFileName},
+and it may be a full path and file name.
 
 The optional \Arg{minimumUpdateTime} specifies the minimum number of seconds
 that must elapse between updates to the node status file.
@@ -2839,13 +2841,15 @@ Therefore, it only holds information about the \emph{current} status
 of each node; it does not provide a history of the node status.
 The file contents do not distinguish between HTCondor jobs and Stork jobs.
 
-\Bold{Important note:  as of version 8.1.6, the format of the node status
-file has changed.}  The node status file is now a collection of ClassAds.
+\Note HTCondor version 8.1.6 changes the format of the node status
+file.
+
+The node status file is a collection of ClassAds in New ClassAd format.
 There is one ClassAd for the overall status of the DAG, one ClassAd
 for the status of each node, and one ClassAd with the time at which
-the node status file was completed and the time of the next update.
+the node status file was completed as well as the time of the next update.
 
-Here is an example of a node status file:
+Here is an example portion of a node status file:
 
 \begin{verbatim}
 [
@@ -2892,7 +2896,7 @@ Here is an example of a node status file:
 ]
 \end{verbatim}
 
-Possible DAG and node status values are:
+Possible \Attr{DagStatus} and \Attr{NodeStatus} attribute values are:
 
 \begin{itemize}
 \item 0 (\verb@STATUS_NOT_READY@): At least one parent has not yet finished
