@@ -737,6 +737,7 @@ ReliSock::RcvMsg :: RcvMsg() :
 	m_tmp(NULL),
 	ready(0)
 {
+	memset( m_partial_cksum, 0, sizeof(m_partial_cksum) );
 }
 
 ReliSock::RcvMsg::~RcvMsg()
@@ -822,11 +823,7 @@ read_packet:
 	if (tmp_len != len) {
 		if (p_sock->is_non_blocking() && (tmp_len >= 0)) {
 			m_partial_packet = true;
-			if (tmp_len >= 0) {
-				m_remaining_read_length = len - tmp_len;
-			} else {
-				m_remaining_read_length = len;
-			}
+			m_remaining_read_length = len - tmp_len;
 			if ( mode_ != MD_OFF && cksum_ptr != m_partial_cksum ) {
 				memcpy( m_partial_cksum, cksum_ptr, sizeof(m_partial_cksum) );
 			}
