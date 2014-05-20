@@ -2372,13 +2372,15 @@ Note that \Arg{DIR} and \Arg{NOOP}, if used, must appear
 in the order shown above.
 See section~\ref{dagman:JOB} for the descriptions of these two keywords.
 
+The FINAL node is virtually always run.
+It is run if the \Condor{dagman} job is removed with \Condor{rm}.
 The only case in which a FINAL node is not run
 is if the configuration variable \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} 
 is set to \Expr{True},
 and a cycle is detected at start up time.
 If \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} is set to \Expr{False} and
 a cycle is detected during the course of the run, 
-the FINAL node will be run.
+the FINAL node \emph{will} be run.
 
 One of the most important considerations with a FINAL node is that the
 success or failure of the FINAL node overrides all previous status
