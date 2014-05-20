@@ -91,8 +91,9 @@ composes and mails a report about all jobs run in the previous
 on a very unresponsive daemon.
 \Ticket{4314}
 
-\item Virtual machine universe jobs now report \Attr{RemoteUserCPU} when
-run on KVM hypervisors.  CPU usage remains unreported by VMWare hypervisors.
+\item vm universe jobs now report attribute \Attr{RemoteUserCPU} when
+run on a KVM hypervisor.
+CPU usage remains unreported by VMware hypervisors.
 \Ticket{4337}
 
 \item The \Condor{gridmanager} no longer assumes that a NorduGrid ARC job
