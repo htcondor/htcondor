@@ -84,9 +84,10 @@ files in addition to input files.
 file locking protocol as HTCondor daemons.
 \Ticket{4315}
 
-\item Changed the format of the DAG node status file to be HTCondor new-style
-ClassAds, and increased the amount of information in the file.  (See
-section~\ref{sec:DAG-node-status} for more information.)
+\item The DAGMan node status file formatting has changed.
+The format of the DAG node status file is now New ClassAds,
+and the amount of information in the file has increased.
+Section~\ref{sec:DAG-node-status} has details on node status files.
 \Ticket{4115}
 
 \item The new configuration variable \Macro{STARTER\_LOG\_NAME\_APPEND}
@@ -120,8 +121,9 @@ composes and mails a report about all jobs run in the previous
 on a very unresponsive daemon.
 \Ticket{4314}
 
-\item Virtual machine universe jobs now report \Attr{RemoteUserCPU} when
-run on KVM hypervisors.  CPU usage remains unreported by VMWare hypervisors.
+\item vm universe jobs now report attribute \Attr{RemoteUserCPU} when
+run on a KVM hypervisor.
+CPU usage remains unreported by VMware hypervisors.
 \Ticket{4337}
 
 \item The \Condor{gridmanager} no longer assumes that a NorduGrid ARC job
