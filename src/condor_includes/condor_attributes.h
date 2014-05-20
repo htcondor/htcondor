@@ -584,7 +584,7 @@
 #define ATTR_SUBMITTER_ID  "SubmitterId"
 #define ATTR_SUBMITTER_TAG  "SubmitterTag"
 #define ATTR_SUBMITTOR_PRIO  "SubmittorPrio"   // old-style for ATTR_SUBMITTER_USER_PRIO
-#define ATTR_SUBMITTER_USER_PRIO  "SubmittorUserPrio"   // old-style for ATTR_SUBMITTER_USER_PRIO
+#define ATTR_SUBMITTER_USER_PRIO  "SubmitterUserPrio"   // new-style for ATTR_SUBMITTOR_PRIO
 #define ATTR_SUBMITTER_USER_RESOURCES_IN_USE  "SubmitterUserResourcesInUse"
 #define ATTR_SUBMITTER_AUTOREGROUP  "SubmitterAutoregroup"
 #define ATTR_SUBMITTER_GROUP  "SubmitterGroup"

@@ -70,6 +70,7 @@ private:
 	ClassAd m_auth_info;
 	KeyInfo *m_key;
 	char    *m_sid;
+	void *m_prev_sock_ent;
 
 	UtcTime m_handle_req_start_time;
 	UtcTime m_async_waiting_start_time;
