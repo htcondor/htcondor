@@ -63,6 +63,7 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 	m_policy(NULL),
 	m_key(NULL),
 	m_sid(NULL),
+	m_prev_sock_ent(NULL),
 	m_async_waiting_time(0),
 	m_comTable(daemonCore->comTable),
 	m_real_cmd(0),
@@ -176,17 +177,15 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 		m_sock_had_no_deadline = true;
 	}
 
-	int reg_rc = 0;
-	if (!daemonCore->SocketIsRegistered(m_sock))
-	{
-		reg_rc = daemonCore->Register_Socket(
+	int reg_rc = daemonCore->Register_Socket(
 			m_sock,
 			m_sock->peer_description(),
 			(SocketHandlercpp)&DaemonCommandProtocol::SocketCallback,
 			WaitForSocketDataString.c_str(),
 			this,
-			ALLOW);
-	}
+			ALLOW,
+			HANDLE_READ,
+			&m_prev_sock_ent);
 
 	if(reg_rc < 0) {
 		dprintf(D_ALWAYS, "DaemonCommandProtocol failed to process command from %s because "
@@ -217,7 +216,8 @@ DaemonCommandProtocol::SocketCallback( Stream *stream )
 	async_waiting_stop_time.getTime();
 	m_async_waiting_time += async_waiting_stop_time.difference(&m_async_waiting_start_time);
 
-	daemonCore->Cancel_Socket( stream );
+	daemonCore->Cancel_Socket( stream, m_prev_sock_ent );
+	m_prev_sock_ent = NULL;
 
 	int rc = doProtocol();
 

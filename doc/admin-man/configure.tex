@@ -483,6 +483,92 @@ case as when a file's contents are included.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-Metaknobs}Metaknobs: Using Predefined Sets of Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!USE syntax}
+\index{USE configuration syntax}
+Predefined sets of configuration may be identified and incorporated
+into the configuration using the syntax
+\begin{verbatim}
+  use <category id> : <name of set> 
+\end{verbatim}
+
+The \MacroNI{use} key word is case insensitive.
+There are \emph{no} requirements for white space characters surrounding
+the colon character.
+More than one \MacroNI{<name of set>} identifier may be placed within
+a single \MacroNI{use} line. 
+Separate the names by a space character. 
+There is no mechanism by which the administrator may define their
+own custom \MacroNI{<category id>} or \MacroNI{<name of set>}.
+
+Each predefined \MacroNI{<category id>} has a fixed, case insensitive
+name for the sets of configuration that are predefined. 
+Placement of a \MacroNI{use} line in the configuration brings in
+the predefined configuration it identifies.
+
+There are four \MacroNI{<category id>} values.
+Within a category, a predefined, case insensitive name identifies
+the set of configuration it incorporates. 
+\begin{description}
+
+\label{usecategory:ROLE}
+\item[\MacroNI{ROLE}]
+  Describes configuration for the various roles that a machine might
+  play within an HTCondor pool.
+  \begin{itemize}
+    \item \texttt{Personal}
+    Settings needed for when a single machine is the entire pool.
+    \item \texttt{Submit}
+    Settings needed to allow this machine to submit jobs to the pool.
+    \item \texttt{Execute}
+    Settings needed to allow this machine to execute jobs.
+    \item \texttt{CentralManager}
+    Settings needed to allow this machine to act as the central manager
+    for the pool.
+  \end{itemize}
+
+\label{usecategory:FEATURE}
+\item[\MacroNI{FEATURE}]
+  Describes configuration for implemented features. 
+  \begin{itemize}
+    \item \texttt{Remote\_Runtime\_Config}
+    \item \texttt{Runtime\_Config}
+    \item \texttt{VMware}
+    \item \texttt{GPUs}
+  \end{itemize}
+
+\label{usecategory:POLICY}
+\item[\MacroNI{POLICY}]
+  Describes configuration for the circumstances under which
+  machines choose to run jobs.
+  \begin{itemize}
+    \item \texttt{Always\_Run\_Jobs}
+    \item \texttt{UWCS\_Desktop}
+    \item \texttt{Desktop}
+    \item \texttt{Limit\_Job\_Runtimes}
+  \end{itemize}
+
+\label{usecategory:SECURITY}
+\item[\MacroNI{SECURITY}]
+  Describes configuration for an implemented security model.
+  \begin{itemize}
+    \item \texttt{Host\_Based}
+    \item \texttt{With\_Authentication}
+    Requires both authentication and integrity checks.
+    \item \texttt{Strong}
+    Requires authentication, encryption, and integrity checks.
+    \item \texttt{User\_Based}
+    Grants permissions to an administrator and uses 
+    \texttt{With\_Authentication}.
+  \end{itemize}
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Config-IfElse}Conditionals in Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!IF/ELSE syntax}
+\index{IF/ELSE configuration syntax}
+\Todo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Macros-Requiring-Restart}Macros That Will Require a Restart When Changed}
@@ -4473,12 +4559,14 @@ WANT_HOLD_REASON = \
 
 \label{param:RunBenchmarks}
 \item[\Macro{RUNBENCHMARKS}]
-  Specifies when to run benchmarks.
+  A boolean expression that specifies whether to run benchmarks.
   When the machine is in the Unclaimed state and this expression
   evaluates to \Expr{True}, benchmarks will be run.
-  If RunBenchmarks is specified and set to anything other than \Expr{False},
-  additional benchmarks will be run when the \Condor{startd} initially starts.
-  To disable start up benchmarks, set \MacroNI{RunBenchmarks} to \Expr{False}
+  If \MacroNI{RUNBENCHMARKS} is specified and set to anything other 
+  than \Expr{False},
+  additional benchmarks will be run once,
+  when the \Condor{startd} starts.
+  To disable start up benchmarks, set \MacroNI{RunBenchmarks} to \Expr{False}.
 
 \label{param:DedicatedScheduler}
 \item[\Macro{DedicatedScheduler}]
@@ -4864,6 +4952,53 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   detected quantity of the resource, instead of specifying a
   fixed quantity or list of the resource
   in the the configuration when set by \Macro{MACHINE\_RESOURCE\_<name>}.
+
+\label{param:EnvironmentForAssignedName}
+\item[\Macro{ENVIRONMENT\_FOR\_Assigned<name>}]
+  A space separated list of environment variables to set for the job.
+  Each environment variable will be set to the list of assigned resources 
+  defined by the slot ClassAd attribute \Attr{Assigned<name>}.
+  Each environment variable name may be followed by an equals sign
+  and a Perl style regular expression that defines how to modify each 
+  resource ID before using it as the value of the environment variable.  
+  As a special case for CUDA GPUs,
+  if the environment variable name is \Env{CUDA\_VISIBLE\_DEVICES}, 
+  then the correct Perl style regular expression is applied automatically. 
+
+  For example, with the configuration
+\begin{verbatim}
+  ENVIRONMENT_FOR_AssignedGPUs = VISIBLE_GPUS=/^/gpuid:/ 
+\end{verbatim}
+
+  and with the machine ClassAd attribute
+  \Expr{AssignedGPUs = "CUDA1, CUDA2"}, 
+  the job's environment will contain
+
+\begin{verbatim}
+  VISIBLE_GPUS = gpuid:CUDA1, gpuid:CUDA2 
+\end{verbatim}
+
+\label{param:EnvironmentValueForUnassignedName}
+\item[\Macro{ENVIRONMENT\_VALUE\_FOR\_UnAssigned<name>}]
+  Defines the value to set for environment variables specified
+  in by configuration variable \MacroNI{ENVIRONMENT\_FOR\_Assigned<name>}
+  when there is no machine ClassAd attribute \Attr{Assigned<name>} 
+  for the slot. 
+  This configuration variable exists to deal with the situation where 
+  jobs will use a resource that they have not been assigned because
+  there is no explicit assignment.  
+  The CUDA runtime library (for GPUs) has this problem.
+
+  For example, where configuration is
+\begin{verbatim}
+  ENVIRONMENT_FOR_AssignedGPUs = VISIBLE_GPUS
+  ENVIRONMENT_VALUE_FOR_UnAssignedGPUs = none 
+\end{verbatim}
+  and there is \emph{no} machine ClassAd attribute \Attr{AssignedGPUs},
+  the job's environment will contain
+\begin{verbatim}
+  VISIBLE_GPUS = none
+\end{verbatim}
 
 \label{param:MustModifyRequestExprs}
 \item[\Macro{MUST\_MODIFY\_REQUEST\_EXPRS}]
@@ -6695,13 +6830,20 @@ These settings affect the \Condor{starter}.
 
 \label{param:StarterLogNameAppend}
 \item[\Macro{STARTER\_LOG\_NAME\_APPEND}]
-  This setting controls the file extension of the local log file used
-  by the starter. Permitted values are true, false, slot, cluster and jobid.
-  false will suppress the file extension, true gives the default behavior of
-  using the slot name unless there is only a single slot. slot, cluster and jobid
-  use the slot name, cluster id and job id respectively. If cluster or jobid are
-  specified, the resulting log files will persist until deleted by the user, so these
-  two options should only be used to assist in debugging, not as permanent options.
+  A fixed value that sets the file name extension of the local log file used
+  by the \Condor{starter} daemon. 
+  Permitted values are \Expr{true}, \Expr{false}, \Expr{slot}, 
+  \Expr{cluster} and \Expr{jobid}.
+  A value of \Expr{false} will suppress the use of a file extension.
+  A value of \Expr{true} gives the default behavior of using the slot name,
+  unless there is only a single slot. 
+  A value of \Expr{slot} uses the slot name.
+  A value of \Expr{cluster} uses the job's \Attr{ClusterId} ClassAd attribute.
+  A value of \Expr{jobid} uses the job's \Attr{ProcId} ClassAd attribute.
+  If \Expr{cluster} or \Expr{jobid} are specified,
+  the resulting log files will persist until deleted by the user,
+  so these two options should only be used to assist in debugging, 
+  not as permanent options.
 
 \label{param:StarterDebug}
 \item[\Macro{STARTER\_DEBUG}]
@@ -7727,20 +7869,20 @@ These macros affect the \Condor{negotiator}.
 \item[\Macro{DEFAULT\_PRIO\_FACTOR}]
   Sets the priority factor for local users as they first submit jobs,
   as described in section~\ref{sec:UserPrio}.
-  Defaults to 1.0.
+  Defaults to 1000.
 
 \label{param:NiceUserPrioFactor} 
 \item[\Macro{NICE\_USER\_PRIO\_FACTOR}]
   Sets the priority factor for nice users, as described in
   section~\ref{sec:UserPrio}.
-  Defaults to 10000000.
+  Defaults to 10000000000.
 
 \label{param:RemotePrioFactor} 
 \item[\Macro{REMOTE\_PRIO\_FACTOR}]
   Defines the priority factor for remote users,
   which are those users who who do not belong to the local domain.
   See section~\ref{sec:UserPrio} for details.  
-  Defaults to 10000.
+  Defaults to 10000000.
 
 \label{param:AccountantLocalDomain} 
 \item[\Macro{ACCOUNTANT\_LOCAL\_DOMAIN}]
