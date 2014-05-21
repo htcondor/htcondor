@@ -50,6 +50,16 @@ passed to the job, when those arguments are specified using the
 \item[\AdAttr{BatchQueue}:]  For grid universe jobs destined for 
 PBS, LSF or SGE, the name of the queue in the remote batch system.
 
+%%% ClassAd attribute: BoincAuthenticatorFile
+\index{ClassAd job attribute!BoincAuthenticatorFile}
+\index{BoincAuthenticatorFile!job ClassAd attribute}
+\item[\AdAttr{BoincAuthenticatorFile}:] 
+Used for grid type boinc jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{boinc\_authenticator\_file}.
+Defines the path and file name of the file containing the authenticator
+string to use to authenticate to the BOINC service.
+
 %%% ClassAd attribute: CkptArch
 \index{ClassAd job attribute!CkptArch}
 \index{CkptArch!job ClassAd attribute}

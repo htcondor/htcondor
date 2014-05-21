@@ -568,7 +568,103 @@ the set of configuration it incorporates.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!IF/ELSE syntax}
 \index{IF/ELSE configuration syntax}
-\Todo
+Conditional configuration using \verb@if@/\verb@else@ semantics
+is available in a limited form.
+The syntax:
+\begin{verbatim}
+  if <simple condition>
+     <configuration statement>
+     . . .
+     <configuration statement>
+  else
+     <configuration statement>
+     . . .
+     <configuration statement>
+  endif
+\end{verbatim}
+
+An \verb@else@ key word and configuration statements are not required,
+such that simple \verb@if@ semantics are implemented.
+The  \verb@<simple condition>@ does not permit compound conditions.
+It optionally contains the exclamation point character (\verb@!@)
+to represent the not operation,
+followed by 
+\begin{itemize}
+  \item the \verb@defined@ keyword followed by the name of a configuration 
+    variable.
+    If the variable is defined, the configuration statement(s) are
+    incorporated into the configuration.
+    If the variable is \emph{not} defined, the configuration statement(s) are
+    not incorporated into the configuration.
+    As an example,
+\begin{verbatim}
+  if defined MY_UNDEFINED_VARIABLE
+     X = 12
+  else
+     X = -1
+  endif
+\end{verbatim}
+    results in \Expr{X = -1}, when \Expr{MY\_UNDEFINED\_VARIABLE} is
+    \emph{not} yet defined within the configuration.
+  \item the \verb@version@ keyword, representing the version number of
+    of the daemon currently reading the configuration, 
+    followed by a limited comparison to an HTCondor version number.
+    That version number can be of the form \verb@x.y.z@ or \verb@x.y@.
+    The comparison operators are
+    \verb@==@ for equality, where current version 8.2.3 is equal to 8.2,
+    \verb@>=@ to see if the current version number is greater than or
+    equal to, where current version 8.2.3 is greater than 8.2.2, 
+    and current version 8.2.3 is greater than or equal to 8.2.
+    \verb@<=@ to see if the current version number is less than or
+    equal to, where current version 8.2.0 is less than 8.2.2, 
+    and current version 8.2.3 is less than or equal to 8.2.
+    As an example,
+\begin{verbatim}
+  if version == 8.1.6
+     DO_X = True
+  else
+     DO_Y = True
+  endif
+\end{verbatim}
+    results in defining \Expr{DO\_X} as \Expr{True} if the current
+    version of the daemon reading this configuration is 8.1.6.
+  \item \verb@True@ or \verb@yes@ or the value 1.
+    The configuration statement(s) are incorporated into the configuration.
+  \item \verb@False@ or \verb@no@ or the value 0
+    The configuration statement(s) are \emph{not} incorporated into the 
+    configuration.
+  \item \verb@$(<configuration variable>)@ may be used where the
+    immediately evaluated value is a simple boolean value.
+    A value that is does not evaluate to a simple boolean value
+    is considered \verb@False@.
+\end{itemize}
+
+The syntax
+\begin{verbatim}
+  if <simple condition>
+     <configuration statement>
+     . . .
+     <configuration statement>
+  elif <simple condition>
+     <configuration statement>
+     . . .
+     <configuration statement>
+  endif
+\end{verbatim}
+is the same as syntax
+\begin{verbatim}
+  if <simple condition>
+     <configuration statement>
+     . . .
+     <configuration statement>
+  else
+     if <simple condition>
+        <configuration statement>
+        . . .
+        <configuration statement>
+     endif
+  endif
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Macros-Requiring-Restart}Macros That Will Require a Restart When Changed}
@@ -3038,6 +3134,36 @@ limit above the hard limit (on maximum open files) that it inherits.
   from the \Condor{negotiator} daemon to the \Condor{startd} daemon
   for a security-enabled pool are done in a nonblocking manner.
 
+\label{param:UdpNetworkFragmentSize}
+\item[\Macro{UDP\_NETWORK\_FRAGMENT\_SIZE}]
+	An integer value that defaults to 1000 and represents the maximum
+	size in bytes of an outgoing UDP packet.  If the outgoing message
+	is larger than \MacroUNI{UDP\_NETWORK\_FRAGMENT\_SIZE}, then the message
+	will be split (fragmented) into multiple packets no larger than
+	\MacroUNI{UDP\_NETWORK\_FRAGMENT\_SIZE}. If the destination of the message
+	is the loopback network interface, see 
+	\Macro{UDP\_LOOPBACK\_FRAGMENT\_SIZE} below. 
+	For instance, the maximum payload size of a UDP packet over Ethernet
+	is typically 1472 bytes, and thus if a UDP payload exceeds 1472 bytes 
+	the IP network stack on either hosts or forwarding devices (such
+	as network routers) will have to perform message fragmentation 
+	on transmission and reassembly on receipt.  Experimentation
+	has shown that such devices are more likely to simply drop a UDP message
+	under high-traffic scenarios if the message requires reassembly.  
+	HTCondor avoids this situation via the capability to
+	perform UDP fragmentation and reassembly on its own. 
+
+\label{param:UdpLoopbackFragmentSize}
+\item[\Macro{UDP\_LOOPBACK\_FRAGMENT\_SIZE}]
+	An integer value that defaults to 60000 and represents the maximum
+	size in bytes of an outgoing UDP packet that is being sent
+	to the loopback network interface (e.g. 127.0.0.1).  
+	If the outgoing message
+	is larger than \MacroUNI{UDP\_LOOPBACK\_FRAGMENT\_SIZE}, then the message
+	will be split (fragmented) into multiple packets no larger than
+	\MacroUNI{UDP\_LOOPBACK\_FRAGMENT\_SIZE}.
+	If the destination of the message is not the loopback interface,
+	see \Macro{UDP\_NETWORK\_FRAGMENT\_SIZE} above.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -5114,7 +5240,7 @@ CONSUMPTION_DISK = quantize(target.RequestDisk,{1024})
 \label{param:SlotWeight}
 \item[\Macro{SLOT\_WEIGHT}]
   An expression that specifies a slot's weight, used as a multiplier
-  the \Condor{negotiator} daemon during matchmaking to asses user usage
+  the \Condor{negotiator} daemon during matchmaking to assess user usage
   of a slot, which affects user priority.
   Defaults to \Attr{Cpus}.  
   %In this example, a memory-centric slot
@@ -8920,11 +9046,6 @@ These macros affect the \Condor{gridmanager}.
   The complete path and file name of the EC2 GAHP executable.
   The default value is \File{\MacroUNI{SBIN}/ec2\_gahp}.
 
-\label{param:GCEGAHP}
-\item[\Macro{GCE\_GAHP}]
-  The complete path and file name of the GCE GAHP executable.
-  The default value is \File{\MacroUNI{SBIN}/gce\_gahp}.
-
 \label{param:GT2GAHP}
 \item[\Macro{GT2\_GAHP}]
   The complete path and file name of the GT2 GAHP executable.
@@ -8999,6 +9120,11 @@ These macros affect the \Condor{gridmanager}.
 \item[\Macro{GCE\_GAHP}]
   The complete path and file name of the GCE GAHP executable.
   The default value is \File{\MacroUNI{SBIN}/gce\_gahp}.
+
+\label{param:BOINCGAHP}
+\item[\Macro{BOINC\_GAHP}]
+  The complete path and file name of the BOINC GAHP executable.
+  The default value is \File{\MacroUNI{SBIN}/boinc\_gahp}.
 
 \end{description}
 
