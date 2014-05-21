@@ -21,22 +21,9 @@ with the \SubmitCmd{grid} universe, setting the
 \SubmitCmd{grid\_resource} command to \SubmitCmd{boinc}, followed 
 by the service's URL.
 
-%Since the HTCondor job is a virtual machine image,
-%most of the submit description file commands
-%specifying input or output files are not applicable.
-%The \SubmitCmd{executable} command is still required,
-%but its value is ignored. 
-%It identifies different jobs in the output of \Condor{q}.
-
-%The VM image for the job must already reside in Google's Cloud Storage
-%service and be registered with GCE.
-%In the submit description file,
-%provide the full URL identifier for the image using 
-%the \SubmitCmd{gce\_image} command.
-
 To use this grid type, you must have an account on the BOINC server
 that is authorized to submit jobs.
-You have to provide the authenticator string for that account for
+Provide the authenticator string for that account for
 HTCondor to use.
 Write the authenticator string in a file and specify its location in
 the submit description file using the
@@ -45,7 +32,7 @@ the submit description file using the
 boinc_authenticator_file = /path/to/auth-file
 \end{verbatim}
 
-Before you can submit BOINC jobs, you must register your application
+Before submitting BOINC jobs, register the application
 with the BOINC server.
 This includes describing the application's resource requirements and
 input and output files, and placing application files on the server.
@@ -55,7 +42,7 @@ See the BOINC documentation for details.
 In the submit description file, the \SubmitCmd{executable} command
 gives the registered name of the application on the BOINC server.
 Input and output files can be described as in the vanilla universe,
-but the filenames must match the application description on the
+but the file names must match the application description on the
 BOINC server.
 If \SubmitCmd{transfer\_output\_files} is omitted, then all output
 files are transferred.
@@ -64,10 +51,10 @@ files are transferred.
 \subsubsection{\label{sec:Boinc-config}BOINC Configuration Variables}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The following configuration parameters are specific to the \SubmitCmd{boinc}
+The following configuration variable is specific to the \SubmitCmd{boinc}
 grid type. 
-The values listed here are the defaults. 
-Different values may be specified in the HTCondor configuration files.
+The value listed here is the default. 
+A different value may be specified in the HTCondor configuration files.
 
 \footnotesize
 \begin{verbatim}
