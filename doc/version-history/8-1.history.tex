@@ -76,6 +76,12 @@ all of the GPUs.
 each job's environment.
 \Ticket{4233}
 
+\item New configuration variables \Macro{UDP\_NETWORK\_FRAGMENT\_SIZE} and
+	\Macro{UDP\_LOOPBACK\_FRAGMENT\_SIZE} added to control UDP message
+	fragmentation size over the network and loopback interface, 
+	respectively.
+\Ticket{4321}
+
 \item The new \Condor{pool\_job\_report} tool for Linux platforms
 composes and mails a report about all jobs run in the previous
 24 hours on all execute machines within the pool. 
