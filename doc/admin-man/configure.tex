@@ -3134,6 +3134,36 @@ limit above the hard limit (on maximum open files) that it inherits.
   from the \Condor{negotiator} daemon to the \Condor{startd} daemon
   for a security-enabled pool are done in a nonblocking manner.
 
+\label{param:UdpNetworkFragmentSize}
+\item[\Macro{UDP\_NETWORK\_FRAGMENT\_SIZE}]
+	An integer value that defaults to 1000 and represents the maximum
+	size in bytes of an outgoing UDP packet.  If the outgoing message
+	is larger than \MacroUNI{UDP\_NETWORK\_FRAGMENT\_SIZE}, then the message
+	will be split (fragmented) into multiple packets no larger than
+	\MacroUNI{UDP\_NETWORK\_FRAGMENT\_SIZE}. If the destination of the message
+	is the loopback network interface, see 
+	\Macro{UDP\_LOOPBACK\_FRAGMENT\_SIZE} below. 
+	For instance, the maximum payload size of a UDP packet over Ethernet
+	is typically 1472 bytes, and thus if a UDP payload exceeds 1472 bytes 
+	the IP network stack on either hosts or forwarding devices (such
+	as network routers) will have to perform message fragmentation 
+	on transmission and reassembly on receipt.  Experimentation
+	has shown that such devices are more likely to simply drop a UDP message
+	under high-traffic scenarios if the message requires reassembly.  
+	HTCondor avoids this situation via the capability to
+	perform UDP fragmentation and reassembly on its own. 
+
+\label{param:UdpLoopbackFragmentSize}
+\item[\Macro{UDP\_LOOPBACK\_FRAGMENT\_SIZE}]
+	An integer value that defaults to 60000 and represents the maximum
+	size in bytes of an outgoing UDP packet that is being sent
+	to the loopback network interface (e.g. 127.0.0.1).  
+	If the outgoing message
+	is larger than \MacroUNI{UDP\_LOOPBACK\_FRAGMENT\_SIZE}, then the message
+	will be split (fragmented) into multiple packets no larger than
+	\MacroUNI{UDP\_LOOPBACK\_FRAGMENT\_SIZE}.
+	If the destination of the message is not the loopback interface,
+	see \Macro{UDP\_NETWORK\_FRAGMENT\_SIZE} above.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
