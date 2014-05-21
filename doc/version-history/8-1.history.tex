@@ -30,6 +30,35 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Configuration has been enhanced in structure and with
+newly implemented semantics describing configuration.
+As part of this effort, most all configuration variables have
+compile-time defaults specified and incorporated into the code.
+Therefore, they no longer appear in the example, distributed
+configuration file.
+It is only when values change that these variables will be placed
+into a configuration file.
+For current installations wishing to transition to the new, stripped down
+configurations files, 
+the new \Opt{-writeconfig} option to \Condor{config\_val} will
+help to identify values different from defaults.
+New configuration semantics permit
+\begin{itemize}
+  \item the inclusion of configuration defined elsewhere.
+  See section~\ref{sec:Config-Include} for a description.
+  \item metaknobs, which incorporate predefined sets of configuration
+  that are commonly used.
+  See section~\ref{sec:Config-Metaknobs} for a description.
+  \item a simple if/else syntax for conditional specification of 
+  configuration. 
+  See section~\ref{sec:Config-IfElse} for a description.
+\end{itemize}
+\Ticket{4325}
+\Ticket{3894}
+\Ticket{4319}
+\Ticket{4031}
+\Ticket{4211}
+
 \item When hierarchical group quotas are used, and surplus
 sharing is enabled, the quotas are now correctly computed
 if slot weights are also enabled.
