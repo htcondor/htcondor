@@ -30,6 +30,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item When hierarchical group quotas are used, and surplus
+sharing is enabled, the quotas are now correctly computed
+if slot weights are also enabled.
+\Ticket{4324}
+
 \item The default priority factor set for new users is now 1000.
 This was changed from a default value of 1, because a value of 1 
 leaves no room to boost the priority factor.
@@ -86,6 +91,10 @@ each job's environment.
 composes and mails a report about all jobs run in the previous
 24 hours on all execute machines within the pool. 
 \Ticket{4267}
+
+\item The grid universe can now be used to submit and manage jobs on
+a BOINC server, using the new grid type \SubmitCmd{boinc}.
+\Ticket{3540}
 
 \end{itemize}
 
