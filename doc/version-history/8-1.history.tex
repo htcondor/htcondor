@@ -30,6 +30,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item STILL TO DO GPU functionality.
+\Ticket{3386}
+
+\item The grid universe can now be used to submit and manage jobs on
+a BOINC server, using the new grid type \SubmitCmd{boinc}.
+\Ticket{3540}
+
 \item Configuration has been enhanced in structure and with
 newly implemented semantics describing configuration.
 As part of this effort, most all configuration variables have
@@ -120,10 +127,6 @@ each job's environment.
 composes and mails a report about all jobs run in the previous
 24 hours on all execute machines within the pool. 
 \Ticket{4267}
-
-\item The grid universe can now be used to submit and manage jobs on
-a BOINC server, using the new grid type \SubmitCmd{boinc}.
-\Ticket{3540}
 
 \item HTCondor now publishes more I/O statistics as job ClassAd attributes.
 The new attributes are
