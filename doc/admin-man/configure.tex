@@ -6760,8 +6760,13 @@ SYSTEM_PERIODIC_REMOVE = \
   the \Condor{schedd} audit log is allowed to perform,
   before the oldest one will be rotated away. The default value is 1. 
 
-\end{description}
+\label{param:ScheddUseSlotWeight}
+\item[\Macro{SCHEDD\_USE\_SLOT\_WEIGHT}]
+  A boolean that defaults to false that controls whether the 
+  \Condor{schedd} should use the SLOT\_WEIGHT expression
+  to weight running and idle job counts in the submitter ad.
 
+\end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Shadow-Config-File-Entries}\condor{shadow}
 Configuration File Entries}
