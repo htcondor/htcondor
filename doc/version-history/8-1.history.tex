@@ -30,8 +30,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item STILL TO DO GPU functionality.
-\Ticket{3386}
+\item HTCondor can discover, schedule, and manage GPUs in an
+exceedingly simple way by inserting
+\begin{verbatim}
+  use feature : GPUs
+\end{verbatim}
+in the configuration file.
+The HTCondor wiki page, 
+\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToManageGpus},
+describes the capabilities.
 
 \item The grid universe can now be used to submit and manage jobs on
 a BOINC server, using the new grid type \SubmitCmd{boinc}.
