@@ -142,6 +142,11 @@ The new attributes are
 the debugging of failed jobs.
 \Ticket{4292}
 
+\item Memory corruption mitigation is enabled by additional linker flags,
+when building HTCondor from source against system-shared
+libraries installed by the distribution.
+\Ticket{4153}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -1135,10 +1140,6 @@ monitoring file transfer activity:
 set defaults used by the new \Condor{dagman\_metrics\_reporter} executable,
 which reports metrics for DAGMan jobs running under Pegasus.
 \Ticket{3532}
-
-\item When building a "proper" style build of HTCondor from source, memory
-corruption mitigations are enabled by additional linker flags.
-\Ticket{4153}
 
 \end{itemize}
 
