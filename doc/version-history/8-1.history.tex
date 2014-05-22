@@ -125,6 +125,16 @@ composes and mails a report about all jobs run in the previous
 a BOINC server, using the new grid type \SubmitCmd{boinc}.
 \Ticket{3540}
 
+\item HTCondor now publishes more I/O statistics as job ClassAd attributes.
+The new attributes are
+\Attr{BlockReads},
+\Attr{BlockWrites},
+\Attr{RecentBlockReads},
+\Attr{RecentBlockWrites},
+\Attr{RecentBlockReadKbytes}, and
+\Attr{RecentBlockWriteKbytes}.
+\Ticket{3850}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -1119,24 +1129,15 @@ set defaults used by the new \Condor{dagman\_metrics\_reporter} executable,
 which reports metrics for DAGMan jobs running under Pegasus.
 \Ticket{3532}
 
-\item HTCondor now publishes I/O statistics (
-\AdAttr{BlockReads},
-\AdAttr{BlockWrites},
-\AdAttr{RecentBlockReads},
-\AdAttr{RecentBlockWrites},
-\AdAttr{RecentBlockReadKbytes},
-\AdAttr{RecentBlockWriteKbytes},
-in the JobAd.
-\Ticket{3850}
-
 \item When building a "proper" style build of HTCondor from source, memory
 corruption mitigations are enabled by additional linker flags.
 \Ticket{4153}
-\end{itemize}
 
 \item Add "SpoolOnEvict" job attribute to facilitate debugging of failed jobs.
 Documentation forthcoming.
 \Ticket{4292}
+
+\end{itemize}
 
 \noindent Bugs Fixed:
 
