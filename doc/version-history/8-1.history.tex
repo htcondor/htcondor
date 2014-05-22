@@ -1119,6 +1119,16 @@ set defaults used by the new \Condor{dagman\_metrics\_reporter} executable,
 which reports metrics for DAGMan jobs running under Pegasus.
 \Ticket{3532}
 
+\item HTCondor now publishes I/O statistics (
+\AdAttr{BlockReads},
+\AdAttr{BlockWrites},
+\AdAttr{RecentBlockReads},
+\AdAttr{RecentBlockWrites},
+\AdAttr{RecentBlockReadKbytes},
+\AdAttr{RecentBlockWriteKbytes},
+in the JobAd.
+\Ticket{3850}
+
 \item When building a "proper" style build of HTCondor from source, memory
 corruption mitigations are enabled by additional linker flags.
 \Ticket{4153}
