@@ -135,6 +135,10 @@ The new attributes are
 \Attr{RecentBlockWriteKbytes}.
 \Ticket{3850}
 
+\item The new job ClassAd attribute \Attr{SpoolOnEvict} facilitates
+the debugging of failed jobs.
+\Ticket{4292}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -1132,10 +1136,6 @@ which reports metrics for DAGMan jobs running under Pegasus.
 \item When building a "proper" style build of HTCondor from source, memory
 corruption mitigations are enabled by additional linker flags.
 \Ticket{4153}
-
-\item Add "SpoolOnEvict" job attribute to facilitate debugging of failed jobs.
-Documentation forthcoming.
-\Ticket{4292}
 
 \end{itemize}
 
