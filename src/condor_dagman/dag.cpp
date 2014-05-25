@@ -3067,6 +3067,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		//
 		// Now rename the temporary file to the "real" file.
 		//
+	tolerant_unlink( _statusFileName );
 	if ( rename( tmpStatusFile.Value(), _statusFileName ) != 0 ) {
 		debug_printf( DEBUG_NORMAL,
 					  "Warning: can't rename temporary node status "
