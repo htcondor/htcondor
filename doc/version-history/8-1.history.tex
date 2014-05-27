@@ -60,6 +60,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The default priority factor for new users is now 1000. This was changed
+from a default of 1 in earlier versions because 1 leaves no room to boost
+the priority factor.
+\Ticket{4282}
+
 \item The \Condor{schedd} may now keep open a configurable number
 of job event log files.
 This improves performance over the previous behavior of
@@ -79,9 +84,23 @@ files in addition to input files.
 file locking protocol as HTCondor daemons.
 \Ticket{4315}
 
-\item Changed the format of DAG node status files to be HTCondor new-style
-ClassAds, and increased the amount of information in the file.
+\item Changed the format of the DAG node status file to be HTCondor new-style
+ClassAds, and increased the amount of information in the file.  (See
+section~\ref{sec:DAG-node-status} for more information.)
 \Ticket{4115}
+
+\item An new configuration parameter \Macro{STARTER\_LOG\_NAME\_APPEND} can
+be use to control the file extension of the log used by the \Condor{starter}.
+\Ticket{4244}
+
+\item A new configuration parameter \Macro{ENVIRONMENT\_VALUE\_FOR\_UnAssignedGPUs}
+can be used to define what GPU id to assign to slots that have no assigned GPU.
+Without this, the CUDA runtime would allow slots with no assigned GPU to use
+all of the GPUs.
+\Ticket{4320}
+
+\item The batch system name HTCondor is now published in each job's environment
+\Ticket{4233}
 
 \end{itemize}
 
@@ -100,6 +119,16 @@ run on KVM hypervisors.  CPU usage remains unreported by VMWare hypervisors.
 \item The \Condor{gridmanager} no longer assumes that a NorduGrid ARC job
 with a reported exit code greater than 128 exited abnormally via a signal.
 \Ticket{4342}
+
+\item Many tools, including \Condor{off} and \Condor{restart} would interpret
+the argument \Opt{-defrag} as \Opt{-debug} since both words start with de.
+The confusion has been fixed. use of \Opt{-defrag} will now produced an error
+message since it is not a valid option for these tools.
+\Ticket{3717}
+
+\item Fixed a crash in \Condor{gpu\_discovery} when running on a 32-bit
+platform or on Windows and detecting via OpenCL.
+\Ticket{4339}
 
 \end{itemize}
 

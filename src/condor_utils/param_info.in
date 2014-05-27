@@ -629,9 +629,9 @@ friendly_name=Starter Debug
 review=?
 tags=starter,starter_common
 
-[HACK.STARTER_LOG_NAME_APPEND]
-friendly_name=controls what to append StarterLog, may be: Cluster, JobId, false or true. true or undef gives 8.0 compatible behavior.
-default=Cluster
+[STARTER_LOG_NAME_APPEND]
+friendly_name=controls what to append StarterLog, may be: false, true, Slot, Cluster, or JobId, true or undef gives 8.0 compatible behavior.
+default=
 type=string
 reconfig=true
 customization=seldom

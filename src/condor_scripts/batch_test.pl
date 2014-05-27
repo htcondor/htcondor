@@ -1293,7 +1293,8 @@ sub CreateLocalConfig {
 			#can't use which. its a linux tool and will lie about the path to java.
 			if (1) {
 				debug ("Running where $javabinary\n",2);
-				$jvm = `where $javabinary`;
+				my @jvms = `where $javabinary`;
+				$jvm = $jvms[0];
 				CondorUtils::fullchomp($jvm);
 				# if where doesn't tell us the location of the java binary, just assume it's will be
 				# in the path once condor is running. (remember that cygwin lies...)
