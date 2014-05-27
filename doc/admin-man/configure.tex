@@ -6762,9 +6762,9 @@ SYSTEM_PERIODIC_REMOVE = \
 
 \label{param:ScheddUseSlotWeight}
 \item[\Macro{SCHEDD\_USE\_SLOT\_WEIGHT}]
-  A boolean that defaults to false that controls whether the 
-  \Condor{schedd} should use the SLOT\_WEIGHT expression
-  to weight running and idle job counts in the submitter ad.
+  A boolean that defaults to \Expr{False}. When \Expr{True}, 
+  the \Condor{schedd} does use configuration variable \MacroNI{SLOT\_WEIGHT} 
+  to weight running and idle job counts in the submitter ClassAd.
 
 \end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
