@@ -943,6 +943,17 @@ Set the \Env{CONDOR\_CONFIG} environment variable
 to point to the new copy of the configuration,
 so the new version of HTCondor will use the new configuration when restarted.
 
+When upgrading from a version of HTCondor earlier than 8.2 to a more recent version,
+you have the option of reducing the size of the base condor_config file.  Starting
+with HTCondor 8.2, nearly all of what had formerly been in the default condor_config
+file is now compiled into the HTCondor daemons. So the configuration files only
+need to contain values that differ from the compile-time default values.  You can use
+\Condor{config\_val} with the \OptArg{-writeconfig:upgrade}
+argument to create a file that behaves the same as your current configuration, but is much
+smaller because values matching the default values (and some obsolete parameters) have been removed.
+Items in this file will be in the order that they were read from the original configuration files,
+so this file is a convenient guide to stripping the cruft from your old configuration files.
+
 When upgrading from a version of HTCondor earlier than 6.8 to more recent version,
 note that the configuration settings must be modified for security reasons.
 Specifically, the \Macro{HOSTALLOW\_WRITE} configuration variable
