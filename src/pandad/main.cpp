@@ -264,11 +264,14 @@ void constructCommand( const std::string & line ) {
 		currentSpace = nextSpace;
 	} while( currentSpace != std::string::npos );
 
+// Change to "id" when Peter Love fixes the schema.
+#define PRIMARY_KEY "globaljobid"
+
 	std::string command = argv[0];
 	std::string globalJobID = argv[1];
 	if( command == "ADD" ) {
 		Command & c = addCommands[ globalJobID ];
-		c[ "globaljobid" ] = globalJobID;
+		c[ PRIMARY_KEY ] = globalJobID;
 		c[ "condorid" ] = argv[2];
 		addRemainingPairs( c, argv, 3 );
 	} else if( command == "UPDATE" ) {
@@ -278,12 +281,12 @@ void constructCommand( const std::string & line ) {
 			addRemainingPairs( c, argv, 2 );
 		} else {
 			Command & c = updateCommands[ globalJobID ];
-			c[ "globaljobid" ] = globalJobID;
+			c[ PRIMARY_KEY ] = globalJobID;
 			addRemainingPairs( c, argv, 2 );
 		}
 	} else if( command == "REMOVE" ) {
 		Command & c = removeCommands[ globalJobID ];
-		c[ "globaljobid" ] = globalJobID;
+		c[ PRIMARY_KEY ] = globalJobID;
 		addRemainingPairs( c, argv, 2 );
 	} else {
 		dprintf( D_ALWAYS, "workerFunction() ignoring unknown command (%s).\n", command.c_str() );
@@ -434,7 +437,7 @@ static void * workerFunction( void * ptr ) {
 	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_HTTPHEADER, headers );
 
 	std::string addJobVerb = "POST";
-	std::string updateJobVerb = "PATCH";
+	std::string updateJobVerb = "PUT";
 	std::string removeJobVerb = "DELETE";
 
 
