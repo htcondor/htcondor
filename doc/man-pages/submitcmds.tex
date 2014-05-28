@@ -1735,7 +1735,7 @@ conditions that were present when the job checkpointed.
 \index{submit commands!batch\_queue}
 \label{condor-submit-batch-queue}
 \item[batch\_queue = $<$queuename$>$]
-Used for \SubmitCmd{pbs}, \SubmitCmd{lsf}, and \SubmitCmd{sge} 
+Used for \SubmitCmdNI{pbs}, \SubmitCmdNI{lsf}, and \SubmitCmdNI{sge} 
 grid universe jobs.
 Specifies the name of the PBS/LSF/SGE job queue into which the job should
 be submitted.
@@ -2229,33 +2229,33 @@ jobs, where the grid resource has a \SubmitCmd{grid-type-string} of
 \index{submit commands!grid\_resource}
 \label{condor-submit-grid-resource}
 \item[grid\_resource = $<$grid-type-string$>$ $<$grid-specific-parameter-list$>$ ]
-For each \SubmitCmd{grid-type-string} value, 
+For each \SubmitCmdNI{grid-type-string} value, 
 there are further type-specific values that must specified.
 This submit description file command allows each to
 be given in a space-separated list.
 Allowable \SubmitCmd{grid-type-string} values are
-\SubmitCmd{batch}, 
-\SubmitCmd{condor}, \SubmitCmd{cream}, 
-\SubmitCmd{deltacloud}, 
-\SubmitCmd{ec2},
-\SubmitCmd{gt2}, \SubmitCmd{gt5},
-\SubmitCmd{lsf}, \SubmitCmd{nordugrid}, \SubmitCmd{pbs},
-\SubmitCmd{sge},
-and \SubmitCmd{unicore}.
+\SubmitCmdNI{batch}, 
+\SubmitCmdNI{condor}, \SubmitCmd{cream}, 
+\SubmitCmdNI{deltacloud}, 
+\SubmitCmdNI{ec2},
+\SubmitCmdNI{gt2}, \SubmitCmdNI{gt5},
+\SubmitCmdNI{lsf}, \SubmitCmdNI{nordugrid}, \SubmitCmdNI{pbs},
+\SubmitCmdNI{sge},
+and \SubmitCmdNI{unicore}.
 The HTCondor manual chapter on Grid Computing details the variety of 
 grid types.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{batch},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{batch},
 the single parameter is the name of the local batch system,
 and will be one of \Expr{pbs}, \Expr{lsf}, or \Expr{sge}.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{condor},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{condor},
 the first parameter is the name of the remote \Condor{schedd}
 daemon.
 The second parameter is the name of the pool to which the remote
 \Condor{schedd} daemon belongs.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{cream},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{cream},
 there are three parameters.
 The first parameter is the web services address of the CREAM server.
 The second parameter is the 
@@ -2263,32 +2263,32 @@ name of the batch system that sits behind the CREAM server.
 The third parameter identifies a site-specific queue
 within the batch system.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{deltacloud},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{deltacloud},
 the single parameter is the URL of the deltacloud service requested.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{ec2},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{ec2},
 one additional parameter specifies the EC2 URL. 
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt2},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{gt2},
 the single parameter is the name of the pre-WS GRAM resource to be used.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt5},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{gt5},
 the single parameter is the name of the pre-WS GRAM resource to be used,
-which is the same as for the \SubmitCmd{grid-type-string} of \SubmitCmd{gt2}.
+which is the same as for the \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{gt2}.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{lsf}, no additional
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{lsf}, no additional
 parameters are used.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{nordugrid},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{nordugrid},
 the single parameter is the name of the NorduGrid resource to be used.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{pbs}, no additional
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{pbs}, no additional
 parameters are used.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{sge}, no additional
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{sge}, no additional
 parameters are used.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{unicore},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{unicore},
 the first parameter is the name of the Unicore Usite to be used.
 The second parameter is the name of the Unicore Vsite to be used.
 
