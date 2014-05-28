@@ -430,6 +430,7 @@ set ARGS=%ARGS% USEVMUNIVERSE="N"
 set ARGS=%ARGS% VMMEMORY="128"
 set ARGS=%ARGS% VMMAXNUMBER="$(NUM_CPUS)"
 set ARGS=%ARGS% VMNETWORKING="N"
+REM set ARGS=%ARGS% LOCALCONFIG="http://my.example.com/condor_config.$(FULL_HOSTNAME)"
  
 msiexec /qb /l* condor-install-log.txt /i condor-8.0.0-133173-Windows-x86.msi %ARGS%
 \end{verbatim}
@@ -528,6 +529,11 @@ determines if VM Universe can use networking. This can be set to:
 \item [USEVMUNIVERSE = $<$ Y \Bar\ N $>$]
 will cause the installer to enable VM Universe jobs on the target machine.
 
+\item[LOCALCONFIG]
+defines the location of the local configuration file.
+The value may be the path to a file on the local machine, or a URL beginning with http.
+If the value is a URL, then the \Condor{urlfetch} tool will be used to fetch it whenever
+the configururation is read.
 
 \item[PERLLOCATION]
 defines the path to \Prog{Perl} on the target machine. This is required in
