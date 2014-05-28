@@ -26,9 +26,6 @@ static void * workerFunction( void * ptr );
 // a struct and pass that to thread instead, but why bother?
 bool reconfigure = false;
 std::string pandaURL;
-std::string vomsProxy;
-std::string vomsCAPath;
-std::string vomsCACert;
 int timeout = 0;
 
 int main( int /* argc */, char ** /* argv */ ) {
@@ -45,16 +42,9 @@ int main( int /* argc */, char ** /* argv */ ) {
 	dprintf( D_ALWAYS, "STARTING UP\n" );
 
 	param( pandaURL, "PANDA_URL" );
-	param( vomsProxy, "PANDA_VOMS_PROXY" );
-	if( pandaURL.empty() || vomsProxy.empty() ) {
-		dprintf( D_ALWAYS, "You must define both PANDA_URL and PANDA_VOMS_PROXY for pandad to function.\n" );
+	if( pandaURL.empty() ) {
+		dprintf( D_ALWAYS, "You must define PANDA_URL for pandad to function.\n" );
 		exit( 1 );
-	}
-
-	param( vomsCAPath, "PANDA_VOMS_CA_PATH" );
-	param( vomsCACert, "PANDA_VOMS_CA_FILE" );
-	if( vomsCAPath.empty() && vomsCACert.empty() ) {
-		dprintf( D_ALWAYS, "One of PANDA_VOMS_CA_[PATH|CERT] is probably necessary, but neither is set.\n" );
 	}
 
 	timeout = param_integer( "PANDA_UPDATE_TIMEOUT" );
@@ -370,13 +360,15 @@ void updateStatisticsLog( unsigned queueFullCount ) {
 	fclose( psl );
 }
 
-bool sendCommands( CURL * curl, const std::string & url, const CommandSet & commandSet, char * curlErrorBuffer, unsigned long & responseCode, unsigned queueFullCount ) {
+bool sendCommands( CURL * curl, const std::string & url, const std::string & verb, const CommandSet & commandSet, char * curlErrorBuffer, unsigned long & responseCode, unsigned queueFullCount ) {
 	if( commandSet.size() == 0 ) { return false; }
 	std::string postString = generatePostString( commandSet );
 
 	dprintf( D_FULLDEBUG, "Sending commands to URL '%s'.\n", url.c_str() );
 	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_URL, url.c_str() );
-	dprintf( D_FULLDEBUG, "Sending POST '%s'.\n", postString.c_str() );
+	dprintf( D_FULLDEBUG, "Setting verb to '%s'.\n", verb.c_str() );
+  	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_CUSTOMREQUEST, verb.c_str() );
+	dprintf( D_FULLDEBUG, "Sending %s '%s'.\n", verb.c_str(), postString.c_str() );
 	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_POSTFIELDS, postString.c_str() );
 
 	pthread_mutex_unlock( & bigGlobalMutex );
@@ -429,9 +421,6 @@ static void * workerFunction( void * ptr ) {
 	char curlErrorBuffer[CURL_ERROR_SIZE];
 	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_ERRORBUFFER, curlErrorBuffer );
 	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_NOPROGRESS, 1 );
-	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_SSLCERT, vomsProxy.c_str() );
-	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_SSLKEY, vomsProxy.c_str() );
-  	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_POST, 1 );
 	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_NOSIGNAL, 1 );
 	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_TIMEOUT, timeout );
 
@@ -444,18 +433,9 @@ static void * workerFunction( void * ptr ) {
 	headers = curl_slist_append( headers, "Content-Type: application/json" );
 	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_HTTPHEADER, headers );
 
-	if( ! vomsCAPath.empty() ) {
-		SET_REQUIRED_CURL_OPTION( curl, CURLOPT_CAPATH, vomsCAPath.c_str() );
-	}
-	if( ! vomsCACert.empty() ) {
-		SET_REQUIRED_CURL_OPTION( curl, CURLOPT_CAINFO, vomsCACert.c_str() );
-	}
-
-	// The trailing slash is required.
-	std::string API = pandaURL + "/api-auth/htcondorapi";
-	std::string addJob = API + "/addjob/";
-	std::string updateJob = API + "/updatejob/";
-	std::string removeJob = API + "/removejob/";
+	std::string addJobVerb = "POST";
+	std::string updateJobVerb = "PATCH";
+	std::string removeJobVerb = "DELETE";
 
 
 	for( ; ; ) {
@@ -492,8 +472,9 @@ static void * workerFunction( void * ptr ) {
 		}
 
 		// Send all of the add commands.
+		resultString = "";
 		unsigned long responseCode = 0;
-		bool rc = sendCommands( curl, addJob, addCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
+		bool rc = sendCommands( curl, pandaURL, addJobVerb, addCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
 		if( rc ) {
 			dprintf( D_FULLDEBUG, "addJob() response code was %ld.\n", responseCode );
 			if( responseCode != 201 ) {
@@ -502,19 +483,21 @@ static void * workerFunction( void * ptr ) {
 		}
 
 		// Send all the update commands.
-		rc = sendCommands( curl, updateJob, updateCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
+		resultString = "";
+		rc = sendCommands( curl, pandaURL, updateJobVerb, updateCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
 		if( rc ) {
 			dprintf( D_FULLDEBUG, "updateJob() response code was %ld.\n", responseCode );
-			if( responseCode != 202 ) {
+			if( responseCode != 200 ) {
 				dprintf( D_ALWAYS, "updateJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
 			}
 		}
 
 		// Send all the remove commands.
-		rc = sendCommands( curl, removeJob, removeCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
+		resultString = "";
+		rc = sendCommands( curl, pandaURL, removeJobVerb, removeCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
 		if( rc ) {
 			dprintf( D_FULLDEBUG, "removeJob() response code was %ld.\n", responseCode );
-			if( responseCode != 202 ) {
+			if( responseCode != 204 ) {
 				dprintf( D_ALWAYS, "removeJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
 			}
 		}
