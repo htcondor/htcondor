@@ -635,8 +635,9 @@ followed by
     configuration.
   \item \verb@$(<configuration variable>)@ may be used where the
     immediately evaluated value is a simple boolean value.
-    A value that is does not evaluate to a simple boolean value
-    is considered \verb@False@.
+    A value that evaluates to the empty string is considered \verb@False@,
+    otherwise a value that does not evaluate to a simple boolean value
+    is a syntax error.
 \end{itemize}
 
 The syntax
