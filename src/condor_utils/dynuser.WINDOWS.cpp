@@ -149,7 +149,7 @@ bool dynuser::init_user() {
 		
 
  		// How we initialize username: if we are the starter,
-		// we set it to be condor-reuse-slotX. However, if
+		// we set it to be condor-slotX. However, if
 		// reuse_account = false we initialize it to be 
 		// condor-run-<pid>.
 
