@@ -480,6 +480,33 @@ configuration.
 The same immediate parsing and evaluation occurs in this
 case as when a file's contents are included. 
 
+For pools that are transitioning to using this new syntax in configuration,
+while still having some tools and daemons with HTCondor versions 
+earlier than 8.1.6,
+special syntax in the configuration will cause those daemons to
+fail upon start up,
+rather than use the new, but misinterpreted, syntax. 
+Newer daemons will ignore the extra syntax.
+Placing the \verb|@| character before the \MacroNI{include} key word
+causes daemons the older daemons to fail when they attempt to
+parse this syntax.
+
+Here is the same example, but with the syntax that causes older daemons
+to fail when reading it.
+\begin{verbatim}
+  FILE = config.$(FULL_HOSTNAME)
+  @include : $(LOCAL_DIR)/$(FILE)
+\end{verbatim}
+A daemon previous to HTCondor version 8.1.6 fails to start.
+Running an older \Condor{config\_val} identifies the \Expr{@include}
+line as being bad.
+A daemon of HTCondor version 8.1.6 or more recent sees
+\begin{verbatim}
+  FILE = config.$(FULL_HOSTNAME)
+  include : $(LOCAL_DIR)/$(FILE)
+\end{verbatim}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-Metaknobs}Metaknobs: Using Predefined Sets of Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -562,6 +589,30 @@ the set of configuration it incorporates.
   \end{itemize}
 
 \end{description}
+
+For pools that are transitioning to using this new syntax in configuration,
+while still having some tools and daemons with HTCondor versions 
+earlier than 8.1.6,
+special syntax in the configuration will cause those daemons to
+fail upon start up,
+rather than use the new, but misinterpreted, syntax. 
+Newer daemons will ignore the extra syntax.
+Placing the \verb|@| character before the \MacroNI{use} key word
+causes daemons the older daemons to fail when they attempt to
+parse this syntax.
+
+As an example, consider the \Condor{startd} as it starts up.
+A \Condor{startd} previous to HTCondor version 8.1.6 fails to start
+when it sees:
+\begin{verbatim}
+@use feature : GPUs
+\end{verbatim}
+Running an older \Condor{config\_val} also identifies the \Expr{@use}
+line as being bad.
+A \Condor{startd} of HTCondor version 8.1.6 or more recent sees
+\begin{verbatim}
+use feature : GPUs
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-IfElse}Conditionals in Configuration}
