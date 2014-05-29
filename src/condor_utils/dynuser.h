@@ -36,7 +36,7 @@ const int max_domain_length = 100;
 #endif 
 
 #define ACCOUNT_PREFIX			"condor-run-"
-#define ACCOUNT_PREFIX_REUSE	"condor-reuse-"
+#define ACCOUNT_PREFIX_REUSE	"condor-"
 
 // get names of accounts and groups in a language-independent way
 char* getWellKnownName( DWORD subAuth1, DWORD subAuth2 = 0, bool domainname=false );
