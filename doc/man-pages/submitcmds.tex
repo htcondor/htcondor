@@ -642,11 +642,15 @@ Characters may be appended to a numerical value to indicate units.
 %%%%%%%%%%%%%%%%%%%
 
 \index{submit commands!request\_<name>}
+\index{submit commands!request\_GPUs}
+\index{GPUs!requesting GPUs for a job}
 \label{man-condor-submit-request-name}
 \item[request\_<name> = $<$quantity$>$] 
 The required amount of the custom machine resource 
 identified by \Expr{<name>} that this job needs.
 The custom machine resource is defined in the machine's configuration.
+Machines that have available GPUs will define \Expr{<name>}
+to be \Expr{GPUs}.
 
 %%%%%%%%%%%%%%%%%%%
 %% requirements
