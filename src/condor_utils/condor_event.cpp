@@ -1727,8 +1727,6 @@ ExecuteEvent::getExecuteHost()
 int
 ExecuteEvent::writeEvent (FILE *file)
 {
-	struct hostent *hp;
-	unsigned long addr = -1;
 	ClassAd tmpCl1, tmpCl2, tmpCl3;
 	//ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2, *tmpClP3 = &tmpCl3;
 	MyString tmp = "";
@@ -1750,34 +1748,7 @@ ExecuteEvent::writeEvent (FILE *file)
 
 	dprintf(D_FULLDEBUG, "executeHost = %s\n", executeHost);
 
-	char *start = index(executeHost, '<');
-	char *end = index(executeHost, ':');
-
-	if(start && end) {
-		char *tmpaddr;
-		tmpaddr = (char *) malloc(32 * sizeof(char));
-		tmpaddr = strncpy(tmpaddr, start+1, end-start-1);
-		tmpaddr[end-start-1] = '\0';
-
-		inet_pton(AF_INET, tmpaddr, &addr);
-
-		dprintf(D_FULLDEBUG, "start = %s\n", start);
-		dprintf(D_FULLDEBUG, "end = %s\n", end);
-		dprintf(D_FULLDEBUG, "tmpaddr = %s\n", tmpaddr);
-		free(tmpaddr);
-	}
-	else {
-		inet_pton(AF_INET, executeHost, &addr);
-	}
-
-	//hp = condor_gethostbyaddr((char *) &addr, sizeof(addr), AF_INET);
-	hp = gethostbyaddr((char *) &addr, sizeof(addr), AF_INET);
-	if(hp) {
-		dprintf(D_FULLDEBUG, "Executehost name = %s (hp->h_name) \n", hp->h_name);
-	}
-	else {
-		dprintf(D_FULLDEBUG, "Executehost name = %s (executeHost) \n", executeHost);
-	}
+	dprintf(D_FULLDEBUG, "Executehost name = %s\n", remoteName ? remoteName : "" );
 
 	tmpCl1.Assign("endts", (int)eventclock);
 
