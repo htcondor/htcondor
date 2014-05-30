@@ -323,7 +323,7 @@ friendly_name=Query Timeout
 review=?
 
 [GSI_DAEMON_DIRECTORY]
-default=/etc/grid-security
+default=
 type=path
 reconfig=true
 customization=seldom
