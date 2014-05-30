@@ -57,5 +57,10 @@ cream jobs to fail when \SubmitCmd{copy\_to\_spool} was set to \Expr{True}
 in the submit description file.
 \Ticket{4391}
 
+\item When submitting a grid universe job with a grid type of batch and
+setting \SubmitCmd{request\_memory}, the job would fail if the remote
+batch system was HTCondor. This has been fixed.
+\Ticket{4367}
+
 \end{itemize}
 
