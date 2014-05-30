@@ -48,6 +48,10 @@ The details of each version are described below.
 \Condor{schedd} from HTCondor version 8.1.4.
 \Ticket{4384}
 
+\item Fixed bugs introduced in HTCondor 8.1.5 that caused communcation
+between the \Prog{cream\_gahp} and remote CREAM servers to fail.
+\Ticket{4392}
+
 \item Fixed a bug introduced in HTCondor 8.1.2 that caused grid-type
 cream jobs to fail when \SubmitCmd{copy\_to\_spool} was set to \Expr{True}
 in the submit description file.
