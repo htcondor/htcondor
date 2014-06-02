@@ -298,6 +298,15 @@ customization=seldom
 friendly_name=Soap SSL Port
 review=?
 
+[SOCKET_LISTEN_BACKLOG]
+default=500
+range=1,
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Socket Listen Backlog
+review=?
+
 [SOAP_SSL_PORT]
 default=0
 type=int
