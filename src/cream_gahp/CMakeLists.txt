@@ -39,7 +39,18 @@ if ( HAVE_EXT_CREAM )
 		${C_SBIN}
 		"${CREAM_FOUND};${OPENSSL_FOUND};${GLOBUS_THR_FOUND};${VOMS_FOUND};${CLASSADS_FOUND};${PCRE_FOUND}"
 		OFF )
-        
+
+	# Check cream_gahp's shared library dependencies and copy a
+	# specific subset of those libraries into <release>/lib/condor
+	if ( LINUX AND NOT CONDOR_PACKAGE_BUILD )
+		set( SRC_DIR ${CMAKE_SOURCE_DIR} )
+		set( BIN_DIR ${CMAKE_BINARY_DIR} )
+		install( CODE "execute_process(COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/lib/condor)" )
+		install( CODE "execute_process(COMMAND ${SRC_DIR}/src/condor_scripts/print-libs ${BIN_DIR}/src/cream_gahp/cream_gahp ${SRC_DIR}/src/condor_scripts/syslib-patterns
+			COMMAND xargs -isrc cp src ${CMAKE_INSTALL_PREFIX}/lib/condor
+			)" )
+	endif()
+
 else ( HAVE_EXT_CREAM )
 
 	message(STATUS "NOTE: *cream* targets will not be built HAVE_EXT_CREAM=${HAVE_EXT_CREAM}")
