@@ -3177,6 +3177,14 @@ for details on installing and running a checkpoint server.
   been accessed, it is considered stale.
   The default value is 5184000 seconds, which is sixty days.
 
+\label{param:AlwaysUseLocalCkptServer}
+\item[\Macro{ALWAYS\_USE\_LOCAL\_CKPT\_SERVER}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, it forces all checkpoints to be read from a checkpoint
+  server running on the same machine where the job is running.
+  This is intended to be used when all checkpoint servers access
+  a shared file system.
+
 \end{description}
 
 

@@ -34,10 +34,11 @@ The details of each version are described below.
 \begin{itemize}
 
 \item The new configuration variable \Macro{ALWAYS\_USE\_LOCAL\_CKPT\_SERVER}
-forces all standard universe checkpoints to be read from a checkpoint
-server running on the same machine where the job runs.  This is only useful
-when all the checkpoint servers are using a common shared filesystem.
-\Ticket{4625}
+forces all standard universe job checkpoints to be read from a checkpoint
+server running on the same machine where the job runs.  
+This is only useful
+when all the checkpoint servers are using a common shared file system.
+\Ticket{4265}
 
 \item The new configuration variable \Macro{JOB\_EXECDIR\_PERMISSIONS}
 defines the permissions on a job's scratch directory. 
@@ -52,14 +53,15 @@ It defaults to setting permissions as \emph{0700}.
 \begin{itemize}
 
 \item Fixed a bug  which caused the memory used by the \Condor{procd}
-grow arbitrarily in size with cgroup based tracking was in effect.
+grow arbitrarily in size when cgroup-based tracking was in effect.
 \Ticket{4343}
 
 \item Fixed a bug which would cause the \Condor{schedd} to
-repeatedly crash when parallel universe jobs were running
-when the \Condor{schedd} was restarted, if the \Condor{startds}
-in use by running jobs were also shut down while the \Condor{schedd}
-was not running.
+repeatedly crash.
+This occurred when parallel universe jobs were running
+as the \Condor{schedd} was restarted, 
+and if the \Condor{startd} daemons in use by running jobs were 
+also shut down while the \Condor{schedd} was not running.
 \Ticket{4305}
 
 \item Fixed the parsing of the \Condor{q} command line,
@@ -107,14 +109,19 @@ submission.
 issued.
 \Ticket{4327}
 
-\item In some unusual error conditions, the \Condor{schedd} and
-\Condor{shadow} could treat a failed file transfer as if it had
-succeeded.
+\item Under limited and unusual error conditions,
+the \Condor{schedd} and the \Condor{shadow} could treat a failed 
+file transfer as if it had succeeded.
 As a result, the \Condor{schedd} could try to run a job whose input
-files weren't available, or a job could leave the queue as completed
+files were not available, 
+or a job could leave the queue as completed,
 despite its output files not being transferred back from the executing
 machine.
 \Ticket{4328}
+
+\item The \Condor{shadow} no longer performs a DNS query while holding
+the lock for the job event logs.
+\Ticket{4377}
 
 \end{itemize}
 
