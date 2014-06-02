@@ -741,6 +741,12 @@ class Dag {
 
 	dag_status _dagStatus;
 
+	// WARNING!  dag_status and dag_status_names just be kept in sync!
+	static const char *_dag_status_names[];
+
+	const char *GetStatusName() const {
+				return _dag_status_names[_dagStatus]; }
+
 	/** Determine whether this DAG has a final node.
 		@return true iff the DAG has a final node.
 	*/

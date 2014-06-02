@@ -59,6 +59,17 @@ const int Dag::DAG_ERROR_CONDOR_JOB_ABORTED = -1002;
 const int Dag::DAG_ERROR_LOG_MONITOR_ERROR = -1003;
 const int Dag::DAG_ERROR_JOB_SKIPPED = -1004;
 
+// NOTE: this must be kept in sync with the dag_status enum
+const char * Dag::_dag_status_names[] = {
+    "DAG_STATUS_OK",
+    "DAG_STATUS_ERROR",
+    "DAG_STATUS_NODE_FAILED",
+    "DAG_STATUS_ABORT",
+    "DAG_STATUS_RM",
+    "DAG_STATUS_CYCLE",
+    "DAG_STATUS_HALTED"
+};
+
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
     int fd = safe_open_wrapper_follow(filename, O_RDWR | O_CREAT, 0600);
@@ -219,7 +230,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 }
 
 //-------------------------------------------------------------------------
-Dag::~Dag() {
+Dag::~Dag()
+{
 		// remember kids, delete is safe *even* if ptr == NULL...
 
     // delete all jobs in _jobs

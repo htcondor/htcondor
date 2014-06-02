@@ -860,7 +860,7 @@ The Rescue DAG includes all the path information necessary to
 run each node job in the proper directory.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Job Monitoring, Job Failure, and Job Removal}
+\subsection{\label{sec:DAGMonitoring}Job Monitoring, Job Failure, and Job Removal}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 After submission, the progress of the DAG can be monitored
@@ -3154,6 +3154,10 @@ The attributes are
 \item \Attr{DAG\_Status}
 \item \Attr{DAG\_InRecovery}
 \end{itemize}
+
+Note that most of this information is also available in the
+\File{dagman.out} file (see section~\ref{sec:DAGMonitoring}).
+(\Attr{DAG\_Status} was added in version 8.3.0.)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGLotsaJobs}Utilizing the Power of DAGMan for Large Numbers of Jobs}
