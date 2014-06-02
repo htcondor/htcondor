@@ -107,11 +107,12 @@ submission.
 issued.
 \Ticket{4327}
 
-\item In some unusual error conditions, the \Condor{schedd} and
-\Condor{shadow} could treat a failed file transfer as if it had
-succeeded.
+\item Under limited and unusual error conditions,
+the \Condor{schedd} and the \Condor{shadow} could treat a failed 
+file transfer as if it had succeeded.
 As a result, the \Condor{schedd} could try to run a job whose input
-files weren't available, or a job could leave the queue as completed
+files were not available, 
+or a job could leave the queue as completed,
 despite its output files not being transferred back from the executing
 machine.
 \Ticket{4328}
