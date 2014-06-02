@@ -213,6 +213,38 @@ std::string & doValueCleanup( std::string & value ) {
 		else {
 			// JSON does not permit any other literal.
 			dprintf( D_ALWAYS, "Converting illegal literal '%s' into string.\n", value.c_str() );
+
+			// Unfortunately, the alphabet for ClassAd expressions is less
+			// limited than the alphabet for ClassAd strings.
+			size_t index = 0;
+			while( index < value.length() ) {
+				unsigned char c = value[ index ];
+
+				// Escape control characters.  This code should never run.
+				if( c <= 0x1F ) {
+					std::string cStr;
+					formatstr( cStr, "\\u%04lX", (unsigned long)c );
+					value.replace( index, 1, cStr.c_str() );
+					index += cStr.length();
+					continue;
+				}
+
+				// The quotation mark and the backslash must be escaped.  All
+				// other escapes are optional, so we won't generate them.
+				if( c == '"' ) {
+					value.replace( index, 1, "\\\"" );
+					index += 2;
+					continue;
+				}
+
+				if( c == '\\' ) {
+					value.replace( index, 1, "\\\\" );
+					continue;
+				}
+
+				++index;
+			}
+
 			value = '"' + value + '"';
 		}
 	}
