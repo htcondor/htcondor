@@ -56,10 +56,11 @@ grow arbitrarily in size when cgroup-based tracking was in effect.
 \Ticket{4343}
 
 \item Fixed a bug which would cause the \Condor{schedd} to
-repeatedly crash when parallel universe jobs were running
-when the \Condor{schedd} was restarted, if the \Condor{startds}
-in use by running jobs were also shut down while the \Condor{schedd}
-was not running.
+repeatedly crash.
+This occurred when parallel universe jobs were running
+as the \Condor{schedd} was restarted, 
+and if the \Condor{startd} daemons in use by running jobs were 
+also shut down while the \Condor{schedd} was not running.
 \Ticket{4305}
 
 \item Fixed the parsing of the \Condor{q} command line,
