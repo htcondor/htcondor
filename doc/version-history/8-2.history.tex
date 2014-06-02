@@ -63,7 +63,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added configuration parameter \Macro{SOCKET\_LISTEN\_BACKLOG}, which
+can be used to control the listen backlog setting for a daemon's command
+port.
+The default value of 500 maintains the previously hardcoded setting.
+\Ticket{4393}
 
 \end{itemize}
 
