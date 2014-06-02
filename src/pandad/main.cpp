@@ -244,8 +244,9 @@ std::string & doValueCleanup( std::string & value ) {
 
 				++index;
 			}
-
 			value = '"' + value + '"';
+
+			dprintf( D_FULLDEBUG, "Converted illegal literal into '%s'.\n", value.c_str() );
 		}
 	}
 	return value;
