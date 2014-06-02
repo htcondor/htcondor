@@ -34,10 +34,11 @@ The details of each version are described below.
 \begin{itemize}
 
 \item The new configuration variable \Macro{ALWAYS\_USE\_LOCAL\_CKPT\_SERVER}
-forces all standard universe checkpoints to be read from a checkpoint
-server running on the same machine where the job runs.  This is only useful
-when all the checkpoint servers are using a common shared filesystem.
-\Ticket{4625}
+forces all standard universe job checkpoints to be read from a checkpoint
+server running on the same machine where the job runs.  
+This is only useful
+when all the checkpoint servers are using a common shared file system.
+\Ticket{4265}
 
 \item The new configuration variable \Macro{JOB\_EXECDIR\_PERMISSIONS}
 defines the permissions on a job's scratch directory. 
