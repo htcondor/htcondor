@@ -496,7 +496,7 @@ sub StartCondorWithParams
 		return("Failed to do needed Condor Install\n");
 	}
 
-	if(exists $personal_condor_params{"test_glue"}) {
+	#if(exists $personal_condor_params{"test_glue"}) {
 		if( CondorUtils::is_windows() == 1 ){
 			$winpath = `cygpath -m $localdir`;
 			CondorUtils::fullchomp($winpath);
@@ -522,7 +522,7 @@ sub StartCondorWithParams
 				CondorPersonal::TunePersonalCondor($localdir, $mpid);
 			}
 		}
-	}
+	#}
 
 	if($btdebug == 1) {
 		print "StartCondorWithParams: Hash <personal_condor_params > <post-TunePersonalCondor>holds:\n";
@@ -534,11 +534,11 @@ sub StartCondorWithParams
 	}
 
 	#print "Setting CONDOR_CONFIGjust before StartPersonalCondor to:$personal_config_file :masterconfig currently:$masterconfig\n";
-	if(exists $personal_condor_params{"test_glue"}) {
+	#if(exists $personal_condor_params{"test_glue"}) {
 		$ENV{CONDOR_CONFIG} = $personal_config_file;
-	} else {
-		print "Runing with existing configuration:$ENV{CONDOR_CONFIG}\n";
-	}
+	#} else {
+		#print "Runing with existing configuration:$ENV{CONDOR_CONFIG}\n";
+	#}
 
 	if(exists $personal_condor_params{"do_not_start"}) {
 		$topleveldir = $home;
@@ -622,477 +622,387 @@ sub debug {
 	my $time = `date`;
 	fullchomp($time);
 	push @debugcollection, "$time: CondorPersonal - $string";
- 	       if(!(defined $level) or ($level <= $DEBUGLEVEL)) {
-				if(defined $level) {
- 	           	print( "", timestamp(), ": CondorPersonal(L=$level) $string" );
-				} else {
- 	           	print( "", timestamp(), ": CondorPersonal(L=?) $string" );
-				}
- 	       }
-}	
-
-s	ub debug_flush {
-		print "\nDEBUG_FLUSH:\n";
-		my $logdir = `condor_config_val log`;
-		$_ = $logdir;
-		s/\\/\//g;
-		$logdir = $_;
-		fullchomp($logdir);
-		print "\nLog directory: $logdir and contains:\n";
-		List("ls -lh $logdir");
-		#system("ls -lh $logdir");
-		print "\ncondor_who -verb says:\n";
-		system("condor_who -verb");
-		print "\nDebug collection starts now:\n";
-		foreach my $line (@debugcollection) {
-			print "$line\n";
+	if(!(defined $level) or ($level <= $DEBUGLEVEL)) {
+		if(defined $level) {
+			print( "", timestamp(), ": CondorPersonal(L=$level) $string" );
+		} else {
+			print( "", timestamp(), ": CondorPersonal(L=?) $string" );
 		}
-}	
+	}
+}
 
-s	ub DebugLevel
-{	
- 	   my $newlevel = shift;
-		my $oldlevel = $DEBUGLEVEL;
- 	   $DEBUGLEVEL = $newlevel;
-		return($oldlevel);
-}	
+sub debug_flush {
+	print "\nDEBUG_FLUSH:\n";
+	my $logdir = `condor_config_val log`;
+	$_ = $logdir;
+	s/\\/\//g;
+	$logdir = $_;
+	fullchomp($logdir);
+	print "\nLog directory: $logdir and contains:\n";
+	List("ls -lh $logdir");
+	#system("ls -lh $logdir");
+	print "\ncondor_who -verb says:\n";
+	system("condor_who -verb");
+	print "\nDebug collection starts now:\n";
+	foreach my $line (@debugcollection) {
+		print "$line\n";
+	}
+}
 
-s	ub timestamp {
- 	   return strftime("%H:%M:%S", localtime);
-}	
+sub DebugLevel
+{
+	my $newlevel = shift;
+	my $oldlevel = $DEBUGLEVEL;
+	$DEBUGLEVEL = $newlevel;
+	return($oldlevel);
+}
 
-s	ub Reset
-{	
-		debug( "CondorPersonal RESET\n",$debuglevel);
- 	   %personal_condor_params = ();
- 	   %personal_config_changes = ();
-		$personal_config = "condor_config";
-		$personal_template = "condor_config_template";
-		$personal_daemons = "";
-		$personal_local = "condor_config.local";
-		$personal_local_src = "";
-		$personal_local_post_src = "";
-		$personal_sec_prepost_src = "";
-		$personal_universe = "";
-		$personal_startup_wait = "true";
+sub timestamp {
+	return strftime("%H:%M:%S", localtime);
+}
 
-		$RunningTimeStamp = 0;
+sub Reset
+{
+	debug( "CondorPersonal RESET\n",$debuglevel);
+	%personal_condor_params = ();
+	%personal_config_changes = ();
+	$personal_config = "condor_config";
+	$personal_template = "condor_config_template";
+	$personal_daemons = "";
+	$personal_local = "condor_config.local";
+	$personal_local_src = "";
+	$personal_local_post_src = "";
+	$personal_sec_prepost_src = "";
+	$personal_universe = "";
+	$personal_startup_wait = "true";
 
-		$topleveldir = getcwd();
-		$home = $topleveldir;
-		$portchanges = "dynamic";
-		$collector_port = "0";
-		$personal_config_file = "";
-		$condordomain = "";
-		$procdaddress = "";
-}	
+	$RunningTimeStamp = 0;
 
-s	ub SetUseNewRunning {
-		$UseNewRunning = 1;
-		print "Setting to use new isrunning function\n";
-}	
+	$topleveldir = getcwd();
+	$home = $topleveldir;
+	$portchanges = "dynamic";
+	$collector_port = "0";
+	$personal_config_file = "";
+	$condordomain = "";
+	$procdaddress = "";
+}
+
+sub SetUseNewRunning {
+	$UseNewRunning = 1;
+	print "Setting to use new isrunning function\n";
+}
 
 
-#	################################################################
-#	
-#	 ParsePersonalCondorParams
-#	
-#	 	Parses parameter file in typical condor form of NAME = VALUE
-#			and stores results into a hash for lookup later.
-#	
+#################################################################
+#
+# ParsePersonalCondorParams
+#
+#	Parses parameter file in typical condor form of NAME = VALUE
+#	and stores results into a hash for lookup later.
+#
 
-s	ub ParsePersonalCondorParams
-{	
- 	   my $submit_file = shift || die "missing submit file argument";
- 	   my $line = 0;
+sub ParsePersonalCondorParams
+{
+    my $submit_file = shift || die "missing submit file argument";
+    my $line = 0;
 
- 	   if( ! open( SUBMIT_FILE, $submit_file ) )
- 	   {
-			die "error opening \"$submit_file\": $!\n";
-			return 0;
- 	   }
- 	   
- 	   debug( "reading submit file...\n" ,4);
-		my $variable;
-		my $value;
+    if( ! open( SUBMIT_FILE, $submit_file ) )
+    {
+		die "error opening \"$submit_file\": $!\n";
+		return 0;
+    }
+    
+    debug( "reading submit file...\n" ,4);
+	my $variable;
+	my $value;
 
- 	   while( <SUBMIT_FILE> )
- 	   {
-			CondorUtils::fullchomp($_);
-			$line++;
+    while( <SUBMIT_FILE> )
+    {
+		CondorUtils::fullchomp($_);
+		$line++;
 
-			# skip comments & blank lines
-			next if /^#/ || /^\s*$/;
+		# skip comments & blank lines
+		next if /^#/ || /^\s*$/;
 
-			# if this line is a variable assignment...
-			if( /^(\w+)\s*\=\s*(.*)$/ ) {
-		    	$variable = lc $1;
-		    	$value = $2;
+		# if this line is a variable assignment...
+		if( /^(\w+)\s*\=\s*(.*)$/ ) {
+	    	$variable = lc $1;
+	    	$value = $2;
 
-		    	# if line ends with a continuation ('\')...
-		    	while( $value =~ /\\\s*$/ ) {
-					# remove the continuation
-					$value =~ s/\\\s*$//;
+	    	# if line ends with a continuation ('\')...
+	    	while( $value =~ /\\\s*$/ ) {
+				# remove the continuation
+				$value =~ s/\\\s*$//;
 
-					# read the next line and append it
-					<SUBMIT_FILE> || last;
-					$value .= $_;
-		    	}
+				# read the next line and append it
+				<SUBMIT_FILE> || last;
+				$value .= $_;
+	    	}
 
-		    	# compress whitespace and remove trailing newline for readability
-		    	$value =~ s/\s+/ /g;
-				CondorUtils::fullchomp($value);
-			
-				# Do proper environment substitution
-		    	if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ ) {
-					my $envlookup = $ENV{$2};
-		    		 debug( "Found $envlookup in environment \n",4);
-					$value = $1.$envlookup.$3;
-		    	}
-
-		    	debug( "(CondorPersonal.pm) $variable = $value\n" ,$debuglevel);
-		    	#print "(CondorPersonal.pm) $variable = $value\n";
-
-		    	# save the variable/value pair
-		    	$personal_condor_params{$variable} = $value;
-			} else {
-		#	    debug( "line $line of $submit_file not a variable assignment... " .
-		#		   "skipping\n" );
-			}
- 	   }
-		close(SUBMIT_FILE);
-		#foreach my $key (%personal_condor_params) {
-			#print "ParsePersonalCondorParams: param: $key , $personal_condor_params{$key}\n";
-		#}
- 	   return 1;
-}	
-
-#	################################################################
-#	
-#	 WhichCondorConfig
-#	
-#	 	Analysis to decide if we are currently in the environment of this same personal
-#			Condor. Not very likely anymore as the config files are all dependent on
-#			the pid of the requesting shell so every request for a personal condor
-#			should be unique.
-#	
-
-s	ub WhichCondorConfig
-{	
-		my $pathtoconfig = shift @_;
-		my $line = "";
-		my $badness = "";
-		my $matchedconfig = "";
-
-		open(CONFIG, "condor_config_val -config -master 2>&1 |") || die "condor_config_val: $!\n";
-		while(<CONFIG>)
-		{
-			CondorUtils::fullchomp($_);
-			$line = $_;
-			debug ("--$line--\n",$debuglevel);
-
-			if( $line =~ /^\s*($pathtoconfig)\s*$/ )
-			{
-				$matchedconfig = $1;
-				debug ("Matched! $1\n",$debuglevel);
-			}
-
-			if( $line =~ /(Can't find address for this master)/ )
-			{
-				$badness = $1;
-				debug( "Not currently running! $1\n",$debuglevel);
-			}
-		}
-		close(CONFIG);
+	    	# compress whitespace and remove trailing newline for readability
+	    	$value =~ s/\s+/ /g;
+			CondorUtils::fullchomp($value);
 		
-		# we want matched running or matched not running or lost returned
+			# Do proper environment substitution
+	    	if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ ) {
+				my $envlookup = $ENV{$2};
+	    		debug( "Found $envlookup in environment \n",4);
+				$value = $1.$envlookup.$3;
+	    	}
 
-		if( $matchedconfig eq "" )
+	    	debug( "(CondorPersonal.pm) $variable = $value\n" ,$debuglevel);
+	    	#print "(CondorPersonal.pm) $variable = $value\n";
+
+	    	# save the variable/value pair
+	    	$personal_condor_params{$variable} = $value;
+		} else {
+	#	    debug( "line $line of $submit_file not a variable assignment... " .
+	#		   "skipping\n" );
+		}
+    }
+	close(SUBMIT_FILE);
+	#foreach my $key (%personal_condor_params) {
+		#print "ParsePersonalCondorParams: param: $key , $personal_condor_params{$key}\n";
+	#}
+    return 1;
+}
+
+#################################################################
+#
+# WhichCondorConfig
+#
+# 	Analysis to decide if we are currently in the environment of this same personal
+#	Condor. Not very likely anymore as the config files are all dependent on
+#	the pid of the requesting shell so every request for a personal condor
+#	should be unique.
+#
+
+sub WhichCondorConfig
+{
+	my $pathtoconfig = shift @_;
+	my $line = "";
+	my $badness = "";
+	my $matchedconfig = "";
+
+	open(CONFIG, "condor_config_val -config -master 2>&1 |") || die "condor_config_val: $!\n";
+	while(<CONFIG>)
+	{
+		CondorUtils::fullchomp($_);
+		$line = $_;
+		debug ("--$line--\n",$debuglevel);
+
+		if( $line =~ /^\s*($pathtoconfig)\s*$/ )
 		{
-			return("lost");
-		} 
+			$matchedconfig = $1;
+			debug ("Matched! $1\n",$debuglevel);
+		}
+
+		if( $line =~ /(Can't find address for this master)/ )
+		{
+			$badness = $1;
+			debug( "Not currently running! $1\n",$debuglevel);
+		}
+	}
+	close(CONFIG);
+	
+	# we want matched running or matched not running or lost returned
+
+	if( $matchedconfig eq "" )
+	{
+		return("lost");
+	} 
+	else
+	{
+		if( $badness eq "" )
+		{
+			return("matched running");
+		}
 		else
 		{
-			if( $badness eq "" )
-			{
-				return("matched running");
-			}
-			else
-			{
-				return("matched not running");
-			}
+			return("matched not running");
 		}
-}	
+	}
+}
 
-#	#################################################################
-#	
-#	 Run condor_config_val using the specified configuration file.
-#	
+##################################################################
+#
+# Run condor_config_val using the specified configuration file.
+#
 
-s	ub CondorConfigVal
-{	
- 	   my $config_file = shift;
- 	   my $param_name = shift;
-		my $returnarrayref = shift;
-		my @otherarray = ();
-		my $result = "";
+sub CondorConfigVal
+{
+    my $config_file = shift;
+    my $param_name = shift;
+	my $returnarrayref = shift;
+	my @otherarray = ();
+	my $result = "";
 
- 	   my $oldconfig = $ENV{CONDOR_CONFIG};
- 	   $ENV{CONDOR_CONFIG} = $config_file;
-		#print "CondorConfigVal called with this fig:$config_file;\n";
+    my $oldconfig = $ENV{CONDOR_CONFIG};
+    $ENV{CONDOR_CONFIG} = $config_file;
+	#print "CondorConfigVal called with this fig:$config_file;\n";
 
- 	   #my $result = `condor_config_val $param_name`;
+    #my $result = `condor_config_val $param_name`;
 
-		if (defined $returnarrayref) {
-			if($btdebug == 1) {
-				print "\n\n\n================= capturing all results from looking at the config with condor_config_val ==============\n\n\n";
-			}
-			my $res = CondorTest::runCondorTool("condor_config_val $param_name",$returnarrayref,2,{emit_output=>0,expect_result=>\&ANY});
-		} else {
-			if($btdebug == 1) {
-				print "======================= Not seeing returnarrayref =======================\n";
-			}
-			my $res = CondorTest::runCondorTool("condor_config_val $param_name",\@otherarray,2,{emit_output=>0});
-			my $firstline = $otherarray[0];
- 	   	fullchomp $firstline;
-			$result = $firstline;
+	if (defined $returnarrayref) {
+		if($btdebug == 1) {
+			print "\n\n\n================= capturing all results from looking at the config with condor_config_val ==============\n\n\n";
 		}
-
- 	   $ENV{CONDOR_CONFIG} = $oldconfig;
- 	   return $result;
-}	
-
-#	################################################################
-#	
-#	 InstallPersonalCondor
-#	
-#		We either find binaries in the environment or we install
-#			a particular tar ball.
-#	
-
-s	ub InstallPersonalCondor
-{	
-		# this used to be used globally but now passwed
-		# in from StartCondorWithParams
-		#%personal_condor_params = @_;
-		my %control = %personal_condor_params;
-
-		my $master;
-		my $collector;
-		my $submit;
-		my $iswindows = CondorUtils::is_windows() ;
-		my $condorq = "";
-		my $sbinloc = "";
-		my $configline = "";
-		my @configfiles;
-		my $condordistribution;
-		my $tmpconfig = $ENV{CONDOR_CONFIG};
-		my $configdir = "";
-
-		if($iswindows) {
-			$condorq = Which("condor_q.exe");
-		} else {
-			$condorq = Which("condor_q");
+		my $res = CondorTest::runCondorTool("condor_config_val $param_name",$returnarrayref,2,{emit_output=>0,expect_result=>\&ANY});
+	} else {
+		if($btdebug == 1) {
+			print "======================= Not seeing returnarrayref =======================\n";
 		}
-		print "InstallPersonalCondor: Which condor_q:$condorq\n";
-		print "InstallPersonalCondor: CONDOR_CONFIG in ENV:$tmpconfig\n";
-		if($tmpconfig =~ /^(.*\/)\w+$/) {
-			$configdir = $1;
-			#print "InstallPersonalCondor: CONFIG DIR:$configdir\n";
+		my $res = CondorTest::runCondorTool("condor_config_val $param_name",\@otherarray,2,{emit_output=>0});
+		my $firstline = $otherarray[0];
+    	fullchomp $firstline;
+		$result = $firstline;
+	}
 
-		}
-		my $binloc = "";
+    $ENV{CONDOR_CONFIG} = $oldconfig;
+    return $result;
+}
 
-		$condordistribution = $control{"condor"} || "nightlies";
-		debug( "Install this condor --$condordistribution--\n",$debuglevel);
-		if( $condordistribution eq "nightlies" ) {
-			# test if this is really the environment we are in or
-			# switch it to install mode.
-			 if(! -f "../../condor/sbin/condor_master") {
-			 	$condordistribution = "install";
-				print "NOT nightlies so switch to INSTALL mode\n";
-			 }
-		}
+#################################################################
+#
+# InstallPersonalCondor
+#
+#	We either find binaries in the environment or we install
+#		a particular tar ball.
+#
 
-		if( $condordistribution eq "install" ) {
-		if($iswindows == 1) {
-			#print "condor distribution = install\n";
-		}
-			# where is the hosting condor_config file? The one assumed to be based
-			# on a setup with condor_configure.
-			if($btdebug == 1) {
-				print "InstallPersonalCondor: About to get our config:\n";
-				print "&&&&&&&&&&&&&&&&& Cuurent CONDOR_CONFIG:$ENV{CONDOR_CONFIG} &&&&&&&&&&&&\n";
-				#if( CondorUtils::is_windows() == 1 ){
-				#system("dir $ENV{CONDOR_CONFIG}");
-				#system("dir $configdir");
-				#} else {
-				#system("ls $ENV{CONDOR_CONFIG}");
-				#system("ls $configdir");
-				#}
-			}
-			my @config = ();
-			debug("InstallPersonalCondor getting ccv -config\n",$debuglevel);
-			CondorTest::runCondorTool("condor_config_val -config",\@config,2,{emit_output=>0});
-			debug("InstallPersonalCondor BACK FROM ccv -config\n",$debuglevel);
-			#open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
-			#while(<CONFIG>)
-			#{
-				#CondorUtils::fullchomp($_);
-				#$configline = $_;
-				#push @configfiles, $configline;
-			#}
-			#close(CONFIG);
-			#$personal_condor_params{"condortemplate"} = $masterconfig;
-			#$personal_condor_params{"condortemplate"} = shift @configfiles;
-			$personal_condor_params{"condortemplate"} = shift @config;
-			fullchomp($personal_condor_params{"condortemplate"});
+sub InstallPersonalCondor
+{
+	# this used to be used globally but now passwed
+	# in from StartCondorWithParams
+	#%personal_condor_params = @_;
+	my %control = %personal_condor_params;
 
-			#print " ****** Condortemplate set to <$personal_condor_params{condortemplate}>\n";
+	my $master;
+	my $collector;
+	my $submit;
+	my $iswindows = CondorUtils::is_windows() ;
+	my $condorq = "";
+	my $sbinloc = "";
+	my $configline = "";
+	my @configfiles;
+	my $condordistribution;
+	my $tmpconfig = $ENV{CONDOR_CONFIG};
+	my $configdir = "";
 
-			if(exists $personal_condor_params{fresh_local}) {
-			} else {
-				# Always start with a freshly constructed local config file
-				# so we know what we get  bt 5/13
-				#$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
-			}
+	if($iswindows) {
+		$condorq = Which("condor_q.exe");
+	} else {
+		$condorq = Which("condor_q");
+	}
+	print "InstallPersonalCondor: Which condor_q:$condorq\n";
+	print "InstallPersonalCondor: CONDOR_CONFIG in ENV:$tmpconfig\n";
+	if($tmpconfig =~ /^(.*\/)\w+$/) {
+		$configdir = $1;
+		#print "InstallPersonalCondor: CONFIG DIR:$configdir\n";
 
-			debug("condor_q: $condorq\n",$debuglevel);
- 	       debug("topleveldir: $topleveldir",$debuglevel);
+	}
+	my $binloc = "";
 
+	$condordistribution = $control{"condor"} || "nightlies";
+	debug( "Install this condor --$condordistribution--\n",$debuglevel);
+	if( $condordistribution eq "nightlies" ) {
+		# test if this is really the environment we are in or
+		# switch it to install mode.
+		 if(! -f "../../condor/sbin/condor_master") {
+		 	$condordistribution = "install";
+			print "NOT nightlies so switch to INSTALL mode\n";
+		 }
+	}
 
-			if($iswindows == 1) {
-				# maybe we have a dos path
-				if(is_windows_native_perl()) {
-					if($condorq =~ /[Cc]:/) {
-						$_ = $condorq;
-						s/\//\\/g;
-						$condorq = $_;
-						#print "condor_q now:$condorq\n";
-						if($condorq =~ /^([Cc]:\\.*?)\\bin\\(.*)$/) {
-							#print "setting binloc:$1 \n";
-							$binloc = $1;
-							$sbinloc = $1;
-						}
-					}
-				} else {
-					my $tmp = `cygpath -m $condorq`;
-					fullchomp($tmp);
-					#print "InstallPersonalCondor:condorq:$tmp\n";
-					$condorq = $tmp;
-					if($condorq =~ /[Cc]:/) {
-						#print "InstallPersonal condorq now:$condorq\n";
-						#$_ = $condorq;
-						#s/\//\\\\/g;
-						#$condorq = $_;
-						#print "InstallPersonalCondor condor_q now:$condorq\n";
-						if($condorq =~ /^([Cc]:\/.*?)\/bin\/(.*)$/) {
-							#print "setting binloc:$1 \n";
-							$binloc = $1;
-							$sbinloc = $1;
-						}
-					}
-				}
-			}
-
-			if($binloc eq "") {
-				if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ ) {
-					debug( "Root path $1 and base $2\n",$debuglevel);
-					$binloc = $1;	# we'll get our binaries here.
-				} elsif(-f "../release_dir/bin/condor_status") {
-					print "Bummer which condor_q failed\n";
-					#print "Using ../release_dir/bin(s)\n";
-					$binloc = "../release_dir/bin"; # we'll get our binaries here.
-				}
-				else
-				{
-					#print "which condor_q responded: $condorq! CondorPersonal Failing now\n";
-					debug_flush();
-					die "Can not seem to find a Condor install!\n";
-				}
-			}
-			
-
-			if($sbinloc eq "") {
-				if( $binloc =~ /^(\/.*\/)s*bin\/\s*$/ )
-				{
-					debug( "Root path to sbin is $1\n",$debuglevel);
-					$sbinloc = $1;	# we'll get our binaries here. # local_dir is here
-				}
-				else
-				{
-					debug_flush();
-					die "Can not seem to locate Condor release binaries\n";
-				}
-			}
-
-			#print "Before setting binary paths, sbinloc:$sbinloc binloc:$binloc\n";
-			#if($iswindows == 1) {
-				#if(is_windows_native_perl()) {
-					#$master = $sbinloc . "condor_master.exe";
-					#$submit = $binloc . "condor_submit.exe";
-				#} else { #cygwin
-					#$master = $sbinloc . "bin/condor_master.exe";
-					#$submit = $binloc . "bin/condor_submit.exe";
-				#}
+	if( $condordistribution eq "install" ) {
+	if($iswindows == 1) {
+		#print "condor distribution = install\n";
+	}
+		# where is the hosting condor_config file? The one assumed to be based
+		# on a setup with condor_configure.
+		if($btdebug == 1) {
+			print "InstallPersonalCondor: About to get our config:\n";
+			print "&&&&&&&&&&&&&&&&& Cuurent CONDOR_CONFIG:$ENV{CONDOR_CONFIG} &&&&&&&&&&&&\n";
+			#if( CondorUtils::is_windows() == 1 ){
+			#system("dir $ENV{CONDOR_CONFIG}");
+			#system("dir $configdir");
 			#} else {
-				#$master = $sbinloc . "sbin/". "condor_master";
-				#$submit = $binloc . "condor_submit";
+			#system("ls $ENV{CONDOR_CONFIG}");
+			#system("ls $configdir");
 			#}
-
-
-			debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
-
-
-			#print "Sandbox started rooted here: $topleveldir\n";
-			if(is_windows_native_perl()) {
-				#print "before making local dirs\n";
-				CondorUtils::dir_listing("$topleveldir");
-				my $cwd = getcwd();
-				chdir ("$topleveldir");
-				CreateDir("execute spool log log\\tmp");
-				chdir ("$cwd");
-				#print "after making local dirs\n";
-				CondorUtils::dir_listing("$topleveldir");
-			} else {
-				system("cd $topleveldir && mkdir -p execute spool log log/tmp");
-			}
-		} elsif( $condordistribution eq "nightlies" ) {
-		if($iswindows == 1) {
-			print "condor distribution = nightlies\n";
 		}
-			# we want a mechanism by which to find the condor binaries
-			# we are testing. But we know where they are relative to us
-			# ../../condor/bin etc
-			# That is simply the nightly test setup.... for now at least
-			# where is the hosting condor_config file? The one assumed to be based
-			# on a setup with condor_configure.
+		my @config = ();
+		debug("InstallPersonalCondor getting ccv -config\n",$debuglevel);
+		CondorTest::runCondorTool("condor_config_val -config",\@config,2,{emit_output=>0});
+		debug("InstallPersonalCondor BACK FROM ccv -config\n",$debuglevel);
+		#open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
+		#while(<CONFIG>)
+		#{
+			#CondorUtils::fullchomp($_);
+			#$configline = $_;
+			#push @configfiles, $configline;
+		#}
+		#close(CONFIG);
+		#$personal_condor_params{"condortemplate"} = $masterconfig;
+		#$personal_condor_params{"condortemplate"} = shift @configfiles;
+		$personal_condor_params{"condortemplate"} = shift @config;
+		fullchomp($personal_condor_params{"condortemplate"});
 
-			debug(" Nightlies - find environment config files\n",$debuglevel);
-			my @config = ();
-			CondorTest::runCondorTool("condor_config_val -config",\@config,2,{emit_output=>0});
-			#open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
-			#while(<CONFIG>)
-			#{
-				#CondorUtils::fullchomp($_);
-				#$configline = $_;
-				##debug( "$_\n" ,$debuglevel);
-				#push @configfiles, $configline;
-			#}
-			#close(CONFIG);
-			# yes this assumes we don't have multiple config files!
-			$personal_condor_params{"condortemplate"} = shift @config;
-			$personal_condor_params{"condorlocalsrc"} = shift @config;
-			fullchomp($personal_condor_params{"condortemplate"});
-			fullchomp($personal_condor_params{"condorlocalsrc"});
+		#print " ****** Condortemplate set to <$personal_condor_params{condortemplate}>\n";
 
-			#print " ****** Case nightlies leading to <$personal_condor_params{condortemplate}> and $personal_condor_params{condorlocalsrc}\n";
-			debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n",$debuglevel);
+		if(exists $personal_condor_params{fresh_local}) {
+		} else {
+			# Always start with a freshly constructed local config file
+			# so we know what we get  bt 5/13
+			#$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
+		}
 
-			if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ )
-			{
+		debug("condor_q: $condorq\n",$debuglevel);
+        debug("topleveldir: $topleveldir",$debuglevel);
+
+
+		if($iswindows == 1) {
+			# maybe we have a dos path
+			if(is_windows_native_perl()) {
+				if($condorq =~ /[Cc]:/) {
+					$_ = $condorq;
+					s/\//\\/g;
+					$condorq = $_;
+					#print "condor_q now:$condorq\n";
+					if($condorq =~ /^([Cc]:\\.*?)\\bin\\(.*)$/) {
+						#print "setting binloc:$1 \n";
+						$binloc = $1;
+						$sbinloc = $1;
+					}
+				}
+			} else {
+				my $tmp = `cygpath -m $condorq`;
+				fullchomp($tmp);
+				#print "InstallPersonalCondor:condorq:$tmp\n";
+				$condorq = $tmp;
+				if($condorq =~ /[Cc]:/) {
+					#print "InstallPersonal condorq now:$condorq\n";
+					#$_ = $condorq;
+					#s/\//\\\\/g;
+					#$condorq = $_;
+					#print "InstallPersonalCondor condor_q now:$condorq\n";
+					if($condorq =~ /^([Cc]:\/.*?)\/bin\/(.*)$/) {
+						#print "setting binloc:$1 \n";
+						$binloc = $1;
+						$sbinloc = $1;
+					}
+				}
+			}
+		}
+
+		if($binloc eq "") {
+			if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ ) {
 				debug( "Root path $1 and base $2\n",$debuglevel);
 				$binloc = $1;	# we'll get our binaries here.
+			} elsif(-f "../release_dir/bin/condor_status") {
+				print "Bummer which condor_q failed\n";
+				#print "Using ../release_dir/bin(s)\n";
+				$binloc = "../release_dir/bin"; # we'll get our binaries here.
 			}
 			else
 			{
@@ -1100,9 +1010,11 @@ s	ub InstallPersonalCondor
 				debug_flush();
 				die "Can not seem to find a Condor install!\n";
 			}
-			
+		}
+		
 
-			if( $binloc =~ /^(\/.*)\/bin\/\s*$/ )
+		if($sbinloc eq "") {
+			if( $binloc =~ /^(\/.*\/)s*bin\/\s*$/ )
 			{
 				debug( "Root path to sbin is $1\n",$debuglevel);
 				$sbinloc = $1;	# we'll get our binaries here. # local_dir is here
@@ -1112,24 +1024,112 @@ s	ub InstallPersonalCondor
 				debug_flush();
 				die "Can not seem to locate Condor release binaries\n";
 			}
-			#$binloc = "../../condor/bin/";
-			#$sbinloc = "../../condor/";
+		}
 
-			debug( "My path to condor_q is $binloc and topleveldir is $topleveldir\n",$debuglevel);
-			print "NIGHTLIES: My path to condor_q is $binloc and topleveldir is $topleveldir\n";
-
-			#if($iswindows) {
-				#if(is_windows_native_perl()) {
-					#$master = $sbinloc .  "condor_master";
-					#$submit = $binloc . "condor_submit";
+		#print "Before setting binary paths, sbinloc:$sbinloc binloc:$binloc\n";
+		#if($iswindows == 1) {
+			#if(is_windows_native_perl()) {
+				#$master = $sbinloc . "condor_master.exe";
+				#$submit = $binloc . "condor_submit.exe";
 			#} else { #cygwin
-				#$master = $sbinloc .  "condor_master";
-				#$submit = $binloc . "condor_submit";
+				#$master = $sbinloc . "bin/condor_master.exe";
+				#$submit = $binloc . "bin/condor_submit.exe";
 			#}
 		#} else {
-			#$master = $sbinloc . "sbin/" .  "condor_master";
+			#$master = $sbinloc . "sbin/". "condor_master";
 			#$submit = $binloc . "condor_submit";
 		#}
+
+
+		debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
+
+
+		#print "Sandbox started rooted here: $topleveldir\n";
+		if(is_windows_native_perl()) {
+			#print "before making local dirs\n";
+			CondorUtils::dir_listing("$topleveldir");
+			my $cwd = getcwd();
+			chdir ("$topleveldir");
+			CreateDir("execute spool log log\\tmp");
+			chdir ("$cwd");
+			#print "after making local dirs\n";
+			CondorUtils::dir_listing("$topleveldir");
+		} else {
+			system("cd $topleveldir && mkdir -p execute spool log log/tmp");
+		}
+	} elsif( $condordistribution eq "nightlies" ) {
+	if($iswindows == 1) {
+		print "condor distribution = nightlies\n";
+	}
+		# we want a mechanism by which to find the condor binaries
+		# we are testing. But we know where they are relative to us
+		# ../../condor/bin etc
+		# That is simply the nightly test setup.... for now at least
+		# where is the hosting condor_config file? The one assumed to be based
+		# on a setup with condor_configure.
+
+		debug(" Nightlies - find environment config files\n",$debuglevel);
+		my @config = ();
+		CondorTest::runCondorTool("condor_config_val -config",\@config,2,{emit_output=>0});
+		#open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
+		#while(<CONFIG>)
+		#{
+			#CondorUtils::fullchomp($_);
+			#$configline = $_;
+			##debug( "$_\n" ,$debuglevel);
+			#push @configfiles, $configline;
+		#}
+		#close(CONFIG);
+		# yes this assumes we don't have multiple config files!
+		$personal_condor_params{"condortemplate"} = shift @config;
+		$personal_condor_params{"condorlocalsrc"} = shift @config;
+		fullchomp($personal_condor_params{"condortemplate"});
+		fullchomp($personal_condor_params{"condorlocalsrc"});
+
+		#print " ****** Case nightlies leading to <$personal_condor_params{condortemplate}> and $personal_condor_params{condorlocalsrc}\n";
+		debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n",$debuglevel);
+
+		if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ )
+		{
+			debug( "Root path $1 and base $2\n",$debuglevel);
+			$binloc = $1;	# we'll get our binaries here.
+		}
+		else
+		{
+			#print "which condor_q responded: $condorq! CondorPersonal Failing now\n";
+			debug_flush();
+			die "Can not seem to find a Condor install!\n";
+		}
+		
+
+		if( $binloc =~ /^(\/.*)\/bin\/\s*$/ )
+		{
+			debug( "Root path to sbin is $1\n",$debuglevel);
+			$sbinloc = $1;	# we'll get our binaries here. # local_dir is here
+		}
+		else
+		{
+			debug_flush();
+			die "Can not seem to locate Condor release binaries\n";
+		}
+		#$binloc = "../../condor/bin/";
+		#$sbinloc = "../../condor/";
+
+		debug( "My path to condor_q is $binloc and topleveldir is $topleveldir\n",$debuglevel);
+		print "NIGHTLIES: My path to condor_q is $binloc and topleveldir is $topleveldir\n";
+
+		#if($iswindows) {
+			#if(is_windows_native_perl()) {
+				#$master = $sbinloc .  "condor_master";
+				#$submit = $binloc . "condor_submit";
+		#} else { #cygwin
+			#$master = $sbinloc .  "condor_master";
+			#$submit = $binloc . "condor_submit";
+		#}
+	#} else {
+		#$master = $sbinloc . "sbin/" .  "condor_master";
+		#$submit = $binloc . "condor_submit";
+	#}
 
 
 
@@ -1144,9 +1144,9 @@ s	ub InstallPersonalCondor
 			system("cd $topleveldir && mkdir -p execute spool log log/tmp");
 		}
 	} elsif( -e $condordistribution ) {
-	if($iswindows == 1) {
-		print "condor distribution = other\n";
-	}
+		if($iswindows == 1) {
+			print "condor distribution = other\n";
+		}
 		# in this option we ought to run condor_configure
 		# to get a current config files but we'll do this
 		# after getting the current condor_config from
@@ -1608,12 +1608,15 @@ if($btdebug == 1) {
 					fullchomp($jvm);
 				}
 			} else {
-				print "64 bit windows\n";
+				print "cygwin 64 bit windows\n";
 				#can't use which. its a linux tool and will lie about the path to java.
 				if (1) {
 					print "Running where $javabinary\n";
 					$jvm = `where $javabinary`;
 					fullchomp($jvm);
+					$_ = $jvm;
+					s/\\/\\\\/g;
+					$jvm = $_;
 					print "After Where java is:$jvm\n";
 					# if where doesn't tell us the location of the java binary, just assume it's will be
 					# in the path once condor is running. (remember that cygwin lies...)

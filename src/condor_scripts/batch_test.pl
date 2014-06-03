@@ -104,8 +104,8 @@ my $iswindows = CondorUtils::is_windows();
 my $iscygwin  = CondorUtils::is_cygwin_perl();
 
 if($iscygwin == 1) {
-	print "examine our paths to find the form to use to add cygwin/bin\n";
-	showEnv();
+	#print "examine our paths to find the form to use to add cygwin/bin\n";
+	#showEnv();
 }
 
 # configuration options
@@ -118,7 +118,6 @@ my $timestamp = 0;
 my $kindwait = 1; # run tests one at a time
 my $groupsize = 0; # run tests in group for more throughput
 my $currentgroup = 0;
-my $repeat = 1; # run test/s repeatedly
 my $cleanupcondor = 0;
 my $want_core_dumps = 1;
 my $condorpidfile = "/tmp/condor.pid.$$";
@@ -128,8 +127,6 @@ my $testdir;
 
 my $wantcurrentdaemons = 1; # dont set up a new testing pool in condor_tests/TestingPersonalCondor
 my $pretestsetuponly = 0; # only get the personal condor in place
-
-my $isolated = 0;
 
 # set up to recover from tests which hang
 $SIG{ALRM} = sub { die "timeout" };
@@ -236,20 +233,6 @@ while( $_ = shift( @ARGV ) ) {
 		}
 		if( /^-s.*/ ) {
 			$sortfirst = 1;
-			next SWITCH;
-		}
-		if( /^-k.*/ ) {
-			$kindwait = 1;
-			next SWITCH;
-		}
-		if( /^-e.*/ ) {
-			$groupsize = shift(@ARGV);
-			$kindwait = 0;
-			print "kindwait set to 0 by -e switch\n";
-			next SWITCH;
-		}
-		if( /^-a.*/ ) {
-			$repeat = shift(@ARGV);
 			next SWITCH;
 		}
 		if( /^-p.*/ ) { # start with fresh environment
@@ -459,31 +442,15 @@ foreach my $compiler (@compilers) {
 		# doing this next test
 		$currenttest = $currenttest + 1;
 
-		if(($hush == 0) && ($kindwait == 0)) { 
-			print ".";
-		}
 		debug("Want to test $test_program\n",2);
 
 		#next if $skip_hash{$compiler}->{$test_program};
 
-		# allow multiple runs easily
-		my $repeatcounter = 0;
-		#if( $hush == 0 ) {
-			#debug("Want $repeat runs of each test\n",3);
-		#}
-		while($repeatcounter < $repeat) {
-			#if($isolated) {
-				#my $state_dir = "$BaseDir/$test_program.$repeatcounter";
-				#if($compiler ne ".") {
-					#$state_dir .= ".$compiler";
-				#}
-				#my $time = time();
-				#start_condor("$state_dir.$time.saveme");
-			#}
-
-			#debug( "About to fork test<$currentgroup>\n",2);
-			$currentgroup += 1;
-			#print "currentgroup now <$currentgroup>\n";
+		#debug( "About to fork test<$currentgroup>\n",2);
+		$currentgroup += 1;
+		#print "currentgroup now <$currentgroup>\n";
+		my $forknow = 0;
+		if($forknow) {
 			#debug( "About to fork test new size<$currentgroup>\n",2);
 			#print "About to fork...........\n";
 			my $pid = fork();
@@ -491,90 +458,40 @@ foreach my $compiler (@compilers) {
 				debug( "forking for $test_program pid returned is $pid\n",3);
 			}
 			#print "forking for $test_program pid returned is $pid\n";
-
+	
 			#debug_flush();
 			die "error calling fork(): $!\n" unless defined $pid;
 
-			# two modes 
-			#		kindwait = resolve each test after the fork
-			#		else:	   fork them all and then wait for all
 
-			if( $kindwait == 1 ) {
-				#*****************************************************************
-				if( $pid > 0 ) {
-					$test{$pid} = "$test_program";
-					debug( "Started test: kindwait: $test_program/$pid\n",2);
+			#*****************************************************************
+			if( $pid > 0 ) {
+				$test{$pid} = "$test_program";
+				debug( "Started test: kindwait: $test_program/$pid\n",2);
 
-					# Wait for job before starting the next one
+				# Wait for job before starting the next one
 
-					#print "Calling StartTestOutput $compiler/$test_program <$pid>\n";
-					StartTestOutput($compiler,$test_program);
+				#print "Calling StartTestOutput $compiler/$test_program <$pid>\n";
+				StartTestOutput($compiler,$test_program);
 
-					#print "kindwait: Waiting on test\n";
-					wait_for_test_children(\%test, $compiler,
-						suppress_start_test_output=>1);
-				} else {
-					# if we're the child, start test program
-					#print "DoChild kindwait $test_program/$test_retirement\n";
-					DoChild($test_program, $test_retirement);
-				}
-				#*****************************************************************
+				#print "kindwait: Waiting on test\n";
+				wait_for_test_children(\%test, $compiler,
+					suppress_start_test_output=>1);
 			} else {
-				if( $pid > 0 ) {
-					#$test{$pid} = "$test_program <$pid>";
-					$test{$pid} = "$test_program";
-					if( $hush == 0 ) {
-						debug( "Started test: $test_program/$pid\n",2);
-						print "Started test: $test_program/$pid\n";
-					}
-					# are we submitting all the tests for a compiler and then
-					# waiting for them all? Or are we submitting a bunch and waiting
-					# for them before submitting some more.
-					if($groupsize != 0) {
-						debug( "current group: $currentgroup Limit: $groupsize\n",2);
-						#print  "current group: $currentgroup Limit: $groupsize\n";
-						if($currentgroup == $groupsize) {
-							debug( "wait for batch\n",2);
-							#print "wait for batch as $currentgroup == $groupsize\n";
-							my $max_to_reap = 0; # unlimited;
-							#print "test number $currenttest batch size $testspercompiler\n";
-							if($currenttest <= $testspercompiler) {
-								#print "currenttest<$currenttest> >= testcompiler:$testspercompiler> maxreap now 1\n";
-								$max_to_reap = 1;
-							}
-							#my $reaped = wait_for_test_children(\%test, 
-								#$compiler, max_to_reap => $max_to_reap);
-							$reaped = wait_for_test_children(\%test, 
-								$compiler);
-							debug( "wait returned test:$currentgroup\n",2);
-							$currentgroup -= $reaped;
-							debug( "wait returned test new size:$currentgroup\n",2);
-							debug("currenttest:$currenttest testspercompiler:$testspercompiler\n",2);
-
-							#next;
-						} else {
-							# batch size not met yet
-							debug( "batch size not met yet: current group:$currentgroup\n",2);
-							sleep 1;
-							#next;
-						}
-					} else {
-						sleep 1;
-						#next;
-					}
-				} else { # child
-					# if we're the child, start test program
-					DoChild($test_program, $test_retirement,$currentgroup);
-				}
+				# if we're the child, start test program
+				#print "DoChild kindwait $test_program/$test_retirement\n";
+				DoChild($test_program, $test_retirement);
 			}
 			#*****************************************************************
+	} else {
+		my $res = DoChild($test_program, $test_retirement);
+		StartTestOutput($compiler, $test_program); 
+		if($res == 0) {
+			print "$test_program succeeded\n";
+		} else {
+			print "$test_program failed\n";
+		}
+	}
 
-			$repeatcounter = $repeatcounter + 1;
-
-			if($isolated) {
-				stop_condor();
-			}
-		} #end of repeater loop
 	} # end of foreach $test_program
 
 	# wait for each test to finish and print outcome
@@ -799,9 +716,13 @@ sub DoChild
 	my $save = $testname . ".saveme";
 	my $piddir = $save . "/$$";
 	# make sure pid storage directory exists
-	verbose_system("mkdir -p $save",{emit_output=>0});
-	my $pidcmd = "mkdir -p " . $save . "/" . "$$";
-	verbose_system("$pidcmd",{emit_output=>0});
+	#print "Batch_test: checking on saveme: $save\n";
+	CreateDir("-p $save");
+	#verbose_system("mkdir -p $save",{emit_output=>0});
+	my $pidcmd =  $save . "/" . "$$";
+	#print "Batch_test: checking on saveme/pid: $pidcmd\n";
+	CreateDir("-p $pidcmd");
+	#verbose_system("$pidcmd",{emit_output=>0});
 
 	my $log = "";
 	my $cmd = "";
@@ -860,10 +781,6 @@ sub DoChild
 	copy($err, $newerr);
 	copy($runout, $newrunout);
 	copy($cmdout, $newcmdout);
-
-	if($repeat > 1) {
-	    print "($$)";
-	}
 
 	if($res != 0) { 
 	    #print "Perl test($test_program) returned <<$res>>!!! \n"; 

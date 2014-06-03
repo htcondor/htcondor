@@ -20,6 +20,7 @@
 
 # This tests that having a global event log does not mess up DAGman
 
+use Condor;
 use CondorTest;
 use CondorUtils;
 
@@ -28,6 +29,23 @@ $testdesc =  'Condor submit dag - Global event log - scheduler U';
 $testname = "job_dagman_global_event_log-A";
 $userlog = "job_dagman_global_event_log-A.log";
 $dagman_args = "-verbose";
+
+# Static slot set up for local resources
+# also test 50% and 1/2
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+    ALL_DEBUG =
+    NEGOTIATOR_INTERVAL = 5
+	EVENT_LOG = $(LOG)/EventLog
+';
+ 
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"dagmanglobaleventlog");
+
+CondorTest::StartCondorWithParams(
+    condor_name => "dagmanglobaleventlog",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
 
 $outfile = "job_dagman_global_event_log-A.nodes.out";
 
@@ -105,9 +123,13 @@ CondorTest::RegisterSubmit( $testname, $submitted );
 # Ensure results aren't fouled by previous runs.
 unlink $userlog;
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::RegisterResult(1,"test_name",$testname);
 	CondorTest::debug("$testname: SUCCESS\n",1);
+	CondorTest::EndTest();
 	exit(0);
 } else {
+	CondorTest::RegisterResult(1,"test_name",$testname);
+	CondorTest::EndTest();
 	die "$testname: CondorTest::RunTest() failed\n";
 }
 

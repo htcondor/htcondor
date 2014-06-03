@@ -83,6 +83,7 @@ job_dagman_nonexistent_subdag
 lib_unit_tests
 lib_auth_config
 cmd_q_shows-dag
+cmd_q_shows-xml
 cmd_q_shows-better-analyze
 file_transfer_submit
 lib_userlog
@@ -124,7 +125,6 @@ job_core_macros-dollardollar_van
 job_core_onexithold_local
 job_core_onexitrem_local
 job_core_perhold_local
-job_core_perremove_local
 job_filexfer_basic_van
 job_filexfer_minus1_van
 job_filexfer_output-withvacate_van
@@ -189,6 +189,9 @@ job_dagman_retry
 job_dagman_throttle
 job_dagman_unlessexit
 job_dagman_abort-A
+job_dagman_abort-final-A
+job_dagman_abort-final-B
+job_dagman_cycle-A
 job_dagman_parallel-A
 job_dagman_subdag-A
 job_dagman_subdag_in_splice-A

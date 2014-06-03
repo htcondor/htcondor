@@ -42,7 +42,7 @@ use File::Copy;
 use File::Basename;
 use POSIX qw/strftime/;
 
-my $force_cygwin = 0;
+my $force_cygwin = 1;
 my $dir = dirname($0);
 unshift @INC, $dir;
 require "TestGlue.pm";
@@ -50,9 +50,9 @@ TestGlue::setup_test_environment();
 
 push @INC, "$ENV{BASE_DIR}/condor_tests";
 
-foreach my $path (@INC) {
-	print "INC: $path\n";
-}
+#foreach my $path (@INC) {
+	#print "INC: $path\n";
+#}
 
 require CondorTest;
 require CondorPersonal;
@@ -73,39 +73,39 @@ if( ! $fulltestname ) {
 }
 
 # must use cygwin perl on Windows for batch_test.pl
-my $perl_exe = "perl";
-if ($ENV{NMI_PLATFORM} =~ /_win/i) {
-    my $perlver = `$perl_exe -version`;
-    print $perlver;
-    if ( !$force_cygwin ) {
-        print "attempting to run tests using current perl\n";
-		if ($ENV{PATH} =~ /[a-z]:\\condor\\bin;/i) {
-            print "removing base condor from the path\n";
-            my $tmppath = $ENV{PATH};
-            $tmppath =~ s/[a-z]:\\condor\\bin;//i;
-            if ($^O =~ /MSWin32/) {
-	        	if ($tmppath =~ /[a-z]:\\cygwin\bin;/i) {
-                    print "removing cygwin from the path\n";
-                    $tmppath =~ s/[a-z]:\\cygwin\bin;//i;
-				}
-	    	}
-            print "new PATH=$tmppath\n";
-            $ENV{PATH} = $tmppath;
-        }
-    } elsif (!($perlver =~ /cygwin/i)) {
-        print "adding cygwin to the front of the path\n";
-        $ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
-		print "PATH=$ENV{PATH}\n";
+#my $perl_exe = "perl";
+#if ($ENV{NMI_PLATFORM} =~ /_win/i) {
+#    my $perlver = `$perl_exe -version`;
+#    print $perlver;
+#    if ( !$force_cygwin ) {
+#        print "attempting to run tests using current perl\n";
+#		if ($ENV{PATH} =~ /[a-z]:\\condor\\bin;/i) {
+#            print "removing base condor from the path\n";
+#            my $tmppath = $ENV{PATH};
+#            $tmppath =~ s/[a-z]:\\condor\\bin;//i;
+#            if ($^O =~ /MSWin32/) {
+#	        	if ($tmppath =~ /[a-z]:\\cygwin\bin;/i) {
+#                    print "removing cygwin from the path\n";
+#                    $tmppath =~ s/[a-z]:\\cygwin\bin;//i;
+#				}
+#	    	}
+#            print "new PATH=$tmppath\n";
+#            $ENV{PATH} = $tmppath;
+#        }
+#    } elsif (!($perlver =~ /cygwin/i)) {
+#        print "adding cygwin to the front of the path\n";
+#        $ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
+#		print "PATH=$ENV{PATH}\n";
 
-		#$perl_exe = "c:\\cygwin\\bin\\perl";
-		#print "Invoking cygwin perl by explicit path ($perl_exe)\n";
-        $perlver = `$perl_exe -version`;
-        print $perlver;
-        if (!($perlver =~ /cygwin/i)) {
-            die "cygwin perl not found!\n";
-        }
-    }
-}
+#		#$perl_exe = "c:\\cygwin\\bin\\perl";
+#		#print "Invoking cygwin perl by explicit path ($perl_exe)\n";
+#        $perlver = `$perl_exe -version`;
+#        print $perlver;
+#        if (!($perlver =~ /cygwin/i)) {
+#            die "cygwin perl not found!\n";
+#        }
+#    }
+#}
 
 
 my $BaseDir  = $ENV{BASE_DIR} || c_die("BASE_DIR is not in environment!\n");
@@ -183,7 +183,6 @@ my $iscygwin  = CondorUtils::is_cygwin_perl();
 
 if($need ne "") {
 	print "Test $testname DOES require a personal\n";
-	showEnv();
 	StartTestPersonal($testname);
 } else {
 	print "Test $testname does not require a personal\n";
@@ -194,6 +193,40 @@ if($need ne "") {
 # when the test fails. This will be debugs at all levels.
 #system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated -v");
 #system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated");
+# must use cygwin perl on Windows for batch_test.pl
+my $perl_exe = "perl";
+if ($ENV{NMI_PLATFORM} =~ /_win/i) {
+    my $perlver = `$perl_exe -version`;
+    print $perlver;
+    if ( !$force_cygwin ) {
+        print "attempting to run tests using current perl\n";
+		if ($ENV{PATH} =~ /[a-z]:\\condor\\bin;/i) {
+            print "removing base condor from the path\n";
+            my $tmppath = $ENV{PATH};
+            $tmppath =~ s/[a-z]:\\condor\\bin;//i;
+            if ($^O =~ /MSWin32/) {
+	        	if ($tmppath =~ /[a-z]:\\cygwin\bin;/i) {
+                    print "removing cygwin from the path\n";
+                    $tmppath =~ s/[a-z]:\\cygwin\bin;//i;
+				}
+	    	}
+            print "new PATH=$tmppath\n";
+            $ENV{PATH} = $tmppath;
+        }
+    } elsif (!($perlver =~ /cygwin/i)) {
+        print "adding cygwin to the front of the path\n";
+        $ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
+		print "PATH=$ENV{PATH}\n";
+
+		#$perl_exe = "c:\\cygwin\\bin\\perl";
+		#print "Invoking cygwin perl by explicit path ($perl_exe)\n";
+        $perlver = `$perl_exe -version`;
+        print $perlver;
+        if (!($perlver =~ /cygwin/i)) {
+            die "cygwin perl not found!\n";
+        }
+    }
+}
 system("$perl_exe batch_test.pl -d $compiler -t $testname");
 my $batchteststatus = $?;
 
@@ -282,6 +315,7 @@ else {
     #out("\n\nERROR: failed to open $test_err_path: $!");
 #}
 
+print "********************** EXIT REMOTE_TASK: Status:$teststatus ******************\n";
 exit $teststatus;
 
 ######################################################################
@@ -332,6 +366,7 @@ sub StartTestPersonal {
     	condor_name => "remotetask$test",
     	fresh_local => "TRUE",
     	condorlocalsrc => "$configfile",
+		test_glue => "TRUE",
 	);
 }
 

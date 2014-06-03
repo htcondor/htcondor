@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/env pere
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
@@ -224,13 +224,17 @@ sub WhereIsInstallDir {
 				$wininstalldir = $tmp;
 			}
 		} else {
+			print "$tmp before trying to remove bin\condor_master.exe\n";
 			$tmp =~ s/\\bin\\condor_master.exe$//i;
 			$installdir = $tmp;
 			$wininstalldir = $tmp;
+			print "$tmp after trying to remove bin\condor_master.exe\n";
+			$tmp =~ s/\\bin\\condor_master.exe$//i;
 		}
 		$wininstalldir =~ s|/|\\|g; # forward slashes.to backslashes
 		$installdir =~ s|\\|/|g; # convert backslashes to forward slashes.
 		print "Testing this Install Directory: \"$wininstalldir\"\n";
+		print "Installdir:$installdir\n";
 	} else {
 		$tmp =~ s|//|/|g;
 		if( ($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) || \
@@ -351,9 +355,11 @@ sub CreateConfig {
 		elsif(/^LOCAL_CONFIG_FILE\s*=/) {
 			#print "Matching:$_\n";
 			if($iswindows == 1) {
-				print NEWFIG "LOCAL_CONFIG_FILE = $initialconfig/condor_config.local\n";
+				print NEWFIG "LOCAL_DIR = $initialconfig\n";
+				print NEWFIG "LOCAL_CONFIG_FILE = $initialconfig\\condor_config.local\n";
 			}
 			else {
+				print NEWFIG "LOCAL_DIR = $initialconfig\n";
 				print NEWFIG "LOCAL_CONFIG_FILE = $initialconfig/condor_config.local\n";
 			}
 		}
@@ -650,8 +656,8 @@ sub CreateLocalConfig {
 
 sub set_env {
     my ($key, $val) = @_;;
-    print "Setting environment variable:\n";
-    print "\t$key -> '$val'\n";
+    #print "Setting environment variable:\n";
+    #print "\t$key -> '$val'\n";
     $ENV{$key} = $val;
 }
 
