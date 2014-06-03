@@ -45,6 +45,11 @@ defines the permissions on a job's scratch directory.
 It defaults to setting permissions as \emph{0700}.
 \Ticket{4208}
 
+\item An experimental new feature allows the specification of 
+\Prog{icc} on the \Condor{compile} command line,
+instead of \Prog{cc} or \Prog{gcc}, to build standard universe programs 
+with the Intel C compiler. 
+\Ticket{4234}
 
 \end{itemize}
 
@@ -83,20 +88,20 @@ can be read back properly.
 the job is evicted while a \Condor{ssh\_to\_job} command is active.
 \Ticket{4251}
 
-\item On Red Hat Enterprise Linux 5, link HTCondor executables using
-both GNU and SYSV hash-styles to support older Linux distributions,
+\item HTCondor executables are now linked on RHEL 5 platforms using
+both GNU and System V hash styles to support older Linux distributions,
 such as SUSE Enterprise Linux 10.
 \Ticket{4278}
 
 \item Fixed a bug in which \Condor{dagman} did not correctly update
-the node status file at the end of the run for DAGs containing
-final nodes.
+the node status file at the end of the run for any DAGs containing
+a FINAL node.
 \Ticket{4209}
 
 \item Fixed a bug in which \Condor{dagman} sometimes printed incorrect
 node status counts to the node status file.  Note that this fix also
-included changing the "STATUS\_UNREADY" strings in the node status
-file to "STATUS\_NOT\_READY" to be more consistent.
+included changing one of the strings used as a node status from
+\Expr{"STATUS\_UNREADY"} to \Expr{"STATUS\_NOT\_READY"}.
 \Ticket{4248}
 
 \item Fixed a bug that caused the \Prog{nordugrid\_gahp} to crash if
