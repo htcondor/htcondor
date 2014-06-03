@@ -2822,6 +2822,8 @@ Dag::DumpDotFile(void)
 
 			fprintf(temp_dot_file, "}\n");
 			fclose(temp_dot_file);
+				// Note:  we do tolerant_unlink because renaming over an
+				// existing file fails on Windows.
 			tolerant_unlink(current_dot_file_name.Value());
 			if ( rename(temp_dot_file_name.Value(),
 						current_dot_file_name.Value()) != 0 ) {
@@ -3066,7 +3068,10 @@ Dag::DumpNodeStatus( bool held, bool removed )
 
 		//
 		// Now rename the temporary file to the "real" file.
+		// Note:  we do tolerant_unlink because renaming over an
+		// existing file fails on Windows.
 		//
+	tolerant_unlink( _statusFileName );
 	if ( rename( tmpStatusFile.Value(), _statusFileName ) != 0 ) {
 		debug_printf( DEBUG_NORMAL,
 					  "Warning: can't rename temporary node status "

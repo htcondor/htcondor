@@ -117,7 +117,7 @@ $failure = sub
 		while(<OUT>) {
 			chomp();
 			$line = $_;
-			if( $line =~ /^.*OK$/ ) {
+			if( $line =~ /^.*OK/ ) {
 				$passed = 1;
 				CondorTest::debug("$name.out: $line\n",1);
 			}
