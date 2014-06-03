@@ -297,9 +297,7 @@ void constructCommand( const std::string & line ) {
 		currentSpace = nextSpace;
 	} while( currentSpace != std::string::npos );
 
-// Change to "id" when Peter Love fixes the schema.
-#define PRIMARY_KEY "globaljobid"
-
+	#define PRIMARY_KEY "id"
 	std::string command = argv[0];
 	std::string globalJobID = argv[1];
 	if( command == "ADD" ) {
