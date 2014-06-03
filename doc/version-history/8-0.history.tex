@@ -89,14 +89,14 @@ such as SUSE Enterprise Linux 10.
 \Ticket{4278}
 
 \item Fixed a bug in which \Condor{dagman} did not correctly update
-the node status file at the end of the run for DAGs containing
-final nodes.
+the node status file at the end of the run for any DAGs containing
+a FINAL node.
 \Ticket{4209}
 
 \item Fixed a bug in which \Condor{dagman} sometimes printed incorrect
 node status counts to the node status file.  Note that this fix also
-included changing the "STATUS\_UNREADY" strings in the node status
-file to "STATUS\_NOT\_READY" to be more consistent.
+included changing one of the strings used as a node status from
+\Expr{"STATUS\_UNREADY"} to \Expr{"STATUS\_NOT\_READY"}.
 \Ticket{4248}
 
 \item Fixed a bug that caused the \Prog{nordugrid\_gahp} to crash if

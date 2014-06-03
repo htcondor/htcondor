@@ -2318,13 +2318,15 @@ at a higher level, the splice name must be included.
 \index{DAGMan!DAG FINAL node}
 \index{DAGMan input file!FINAL key word}
 
-A FINAL node is a special node that is always run at the end of the DAG,
-even if previous nodes in the DAG have failed.  Final nodes can be used
+A FINAL node is a single and special node that is always run at 
+the end of the DAG,
+even if previous nodes in the DAG have failed.  
+A FINAL node can be used
 for tasks such as cleaning up intermediate files and checking the output
 of previous nodes.
 
 The \Arg{FINAL} key word specifies a job to be run at the end of
-the DAG.  The syntax used for each \Arg{FINAL} entry is
+the DAG.  The syntax used for the \Arg{FINAL} entry is
 
 \Opt{FINAL} \Arg{JobName} \Arg{SubmitDescriptionFileName}
 \oOptArg{DIR}{directory} \oOpt{NOOP}
@@ -2337,6 +2339,10 @@ The key words \Arg{DIR} and \Arg{NOOP} are not case sensitive.
 Note that \Arg{DIR} and \Arg{NOOP}, if used, must appear
 in the order shown above.
 See section~\ref{dagman:JOB} for the descriptions of these two keywords.
+There may only be one FINAL node in a DAG.
+A parse error will be logged by the \Condor{dagman} job in the
+\File{dagman.out} file,
+if more than one FINAL node is specified.
 
 The only case in which a FINAL node is not run
 is if the configuration variable \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} 
@@ -2346,11 +2352,11 @@ If \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} is set to \Expr{False} and
 a cycle is detected during the course of the run, 
 the FINAL node will be run.
 
-One of the most important considerations with a FINAL node is that the
+An important consideration in using a FINAL node is that the
 success or failure of the FINAL node overrides all previous status
-in determining the success or failure of the DAG
-(this includes status specified by any ABORT-DAG-ON specification
-that has taken effect).
+in determining the success or failure of the entire DAG.
+This includes a status specified by any ABORT-DAG-ON specification
+that has taken effect.
 For example, if some nodes of a DAG fail,
 but the FINAL node succeeds, the DAG will be considered successful.
 Therefore, it is important
@@ -2789,8 +2795,8 @@ The node status file can be updated at most once
 per \Macro{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL},
 as defined at section~\ref{param:DAGManUserLogScanInterval},
 no matter how small the \Arg{minimumUpdateTime} value.
-Also, the node status file will be updated when the DAG finishes
-(whether successfully or not), even if \Arg{minimumUpdateTime} seconds
+Also, the node status file will be updated when the DAG finishes,
+whether successful or not, even if \Arg{minimumUpdateTime} seconds
 have not elapsed since the last update.
 
 As an example, if the DAG input file contains the line
@@ -2833,8 +2839,8 @@ Here is an example of a node status file:
 Possible node status values are:
 
 \begin{itemize}
-\item \verb@STATUS_NOT_READY@ At least one parent has not yet finished
-(or the node is a final node).
+\item \verb@STATUS_NOT_READY@ At least one parent has not yet finished,
+or the node is a FINAL node.
 \item \verb@STATUS_READY@ All parents have finished, but not yet running.
 \item \verb@STATUS_PRERUN@ The PRE script is running.
 \item \verb@STATUS_SUBMITTED@ The node's HTCondor or Stork job(s) are in 
