@@ -67,8 +67,8 @@ sub setup_test_environment {
     if( not is_windows() ) {
         set_env("BASE_DIR", $base_dir);
         set_env("PATH", "$base_dir/nmi_tools/glue/test:$base_dir/condor/bin:$base_dir/condor/sbin:$ENV{PATH}");
-        set_env("CONDOR_CONFIG", "$base_dir/condor_tests/Config/condor_config");
 		set_env("TESTS","$base_dir/condor_tests");
+        set_env("CONDOR_CONFIG", "$base_dir/condor_tests/Config/condor_config");
 		if(exists $ENV{LD_LIBRARY_PATH}) {
 			set_env("LD_LIBRARY_PATH","$ENV{LD_LIBRARY_PATH}:$base_dir/condor/libexec:$base_dir/condor/lib:$base_dir/condor/lib/python");
 		} else {
@@ -111,8 +111,8 @@ sub setup_test_environment {
 		print "^^^^^^ Windows path set to:$ENV{PATH} ^^^^^^^^^^^^^^^^\n";
 
         # Condor will want Win32-style paths for CONDOR_CONFIG
-        set_env("CONDOR_CONFIG", "$base_dir\\condor_tests\\Config\\condor_config");
 		set_env("TESTS","$base_dir\\condor_tests");
+        set_env("CONDOR_CONFIG", "$base_dir\\condor_tests\\Config\\condor_config");
         
         # also, throw in the WIN32 version of the base directory path for later use
         set_env("WIN32_BASE_DIR", $base_dir);
@@ -688,7 +688,7 @@ sub dir_listing {
 sub which {
     my ($exe) = @_;
 
-    if( is_windows() ) {
+if( is_windows() ) {
         return `\@for \%I in ($exe) do \@echo(\%~\$PATH:I`;
     }
     else {

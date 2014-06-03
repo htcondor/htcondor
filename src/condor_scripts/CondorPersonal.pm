@@ -98,7 +98,6 @@ sub Initialize
 	}
 	print "CondorPersonal::Initialize set MasterConfig:$masterconfig\n";
 }
-#print "+++++++++++++ Orig template set to:$masterconfig ++++++++++++++++\n";
 
 BEGIN {
 }
@@ -308,12 +307,6 @@ sub StartCondor
 	if(!(-f $paramfile)) {
 		die "StartCondor: param file $paramfile does not exist!!\n";
 	}
-
-	#if($arraysz == 3) {
-		#$mpid = $pid; # assign process id
-	#} else {
-		#$mpid = shift; # assign process id
-	#}
 
 	CondorPersonal::ParsePersonalCondorParams($paramfile);
 
@@ -533,7 +526,6 @@ sub StartCondorWithParams
 		print "before not start StartCondorWithParams: home:$home toplevel:$topleveldir config:$personal_config_file\n"; 
 	}
 
-	#print "Setting CONDOR_CONFIGjust before StartPersonalCondor to:$personal_config_file :masterconfig currently:$masterconfig\n";
 	#if(exists $personal_condor_params{"test_glue"}) {
 		$ENV{CONDOR_CONFIG} = $personal_config_file;
 	#} else {
@@ -546,10 +538,6 @@ sub StartCondorWithParams
 	}
 
 	$collector_port = CondorPersonal::StartPersonalCondor();
-	#print "StartCondorWithParams: Hash <personal_condor_params > <post-StartPersonalCondor>holds:\n";
-	#foreach my $key (sort keys %personal_condor_params) {
-	#print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
-	#}
 
 	# reset topleveldir to $home so all configs go at same level
 	$topleveldir = $home;
@@ -585,11 +573,6 @@ sub StartCondorWithParamsStart
 	my $winpath = "";
 	my $config_and_port = "";
 	$collector_port = CondorPersonal::StartPersonalCondor();
-	#print "StartCondorWithParams: Hash <personal_condor_params > <post-StartPersonalCondor>holds:\n";
-	#foreach my $key (sort keys %personal_condor_params) {
-	#print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
-	#}
-
 
 	debug( "collector port is $collector_port\n",$debuglevel);
 
@@ -608,7 +591,6 @@ sub StartCondorWithParamsStart
 	CondorPersonal::Reset();
 	debug( "StartCondor config_and_port is --$config_and_port--\n",$debuglevel);
 	debug( "Personal Condor Started\n",$debuglevel);
-	#system("date");
 	if($btdebug == 1) {
 		print  "Personal Condor Started\n";
 		print scalar localtime() . "\n";
@@ -1877,11 +1859,11 @@ sub StartPersonalCondor
 {
 	my %control = %personal_condor_params;
 
-	#if($btdebug == 1) {
+	if($btdebug == 1) {
 		foreach my $key (sort keys %control) {
 			print "StartPersonalCondor: $key = $control{$key}\n";
 		}
-	#}
+	}
 
 	my $personalmaster = "";
 	
@@ -1978,8 +1960,6 @@ sub StartPersonalCondor
 		debug_flush();
 		die "Bad state for a new personal condor configuration! running :-(\n";
 	}
-
-print "****************** AFTER starting master *******************\n";
 
 	# is test opting into new condor personal status yet?
 	my $res = 1;

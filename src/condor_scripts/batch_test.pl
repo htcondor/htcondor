@@ -54,7 +54,7 @@
 # April 14 : moved all condor startups, turnoffs out forever. However the initial
 # config is now done once by remote_pre. The tests will all start their own 
 # condor. Massive code deletion now that glue is doing the config and the tests
-# their own personal condor startups. (bt)
+# their own personal condor startups from list personal_list. (bt)
 #
 
 use strict;
@@ -87,14 +87,6 @@ CondorPersonal::DebugLevel(1);
 my @debugcollection = ();
 my $UseNewRunning = 1;
 
-#my $LogFile = "batch_test.log";
-#open(OLDOUT, ">&STDOUT");
-#open(OLDERR, ">&STDERR");
-#open(STDOUT, ">$LogFile") or die "Could not open $LogFile: $!";
-#open(STDERR, ">&STDOUT");
-#select(STDERR); $| = 1;
-#select(STDOUT); $| = 1;
-
 my $starttime = time();
 
 my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
@@ -102,11 +94,6 @@ print "$time: batch_test.pl starting up ($^O perl)\n";
 
 my $iswindows = CondorUtils::is_windows();
 my $iscygwin  = CondorUtils::is_cygwin_perl();
-
-if($iscygwin == 1) {
-	#print "examine our paths to find the form to use to add cygwin/bin\n";
-	#showEnv();
-}
 
 # configuration options
 my $test_retirement = 3600;	# seconds for an individual test timeout - 30 minutes
@@ -167,8 +154,6 @@ my @testlist;
 # -q[uiet]: hush
 # -m[arktime]: time stamp
 # -k[ind]: be kind and submit slowly
-# -b[buildandtest]: set up a personal condor and generic configs
-# -w[wrap]: test in personal condor enable core/ERROR detection
 # -a[again]: how many times do we run each test?
 # -p[pretest]: get are environment set but run no tests
 #
@@ -380,7 +365,6 @@ if( $ignorefile ) {
 		my $test = $_;
 		foreach my $compiler (@compilers) {
 			# $skip_hash{"$compiler"}->{"$test"} = 1;
-			#@{$test_suite{"$compiler"}} = grep !/$test\.run/, @{$test_suite{"$compiler"}};
 			@{$test_suite{"$compiler"}} = grep !/$test/, @{$test_suite{"$compiler"}};
 		} 
 	}
@@ -435,8 +419,6 @@ foreach my $compiler (@compilers) {
 		@currenttests = sort @currenttests;
 	}
 	foreach my $test_program (@currenttests) {
-		#print "----------------------------\n";
-		#print "Starting test: $test_program\n";
 		debug(" *********** Starting test: $test_program *********** \n",2);
 
 		# doing this next test
@@ -444,45 +426,9 @@ foreach my $compiler (@compilers) {
 
 		debug("Want to test $test_program\n",2);
 
-		#next if $skip_hash{$compiler}->{$test_program};
 
-		#debug( "About to fork test<$currentgroup>\n",2);
 		$currentgroup += 1;
-		#print "currentgroup now <$currentgroup>\n";
-		my $forknow = 0;
-		if($forknow) {
-			#debug( "About to fork test new size<$currentgroup>\n",2);
-			#print "About to fork...........\n";
-			my $pid = fork();
-			if( $hush == 0 ) {
-				debug( "forking for $test_program pid returned is $pid\n",3);
-			}
-			#print "forking for $test_program pid returned is $pid\n";
-	
-			#debug_flush();
-			die "error calling fork(): $!\n" unless defined $pid;
-
-
-			#*****************************************************************
-			if( $pid > 0 ) {
-				$test{$pid} = "$test_program";
-				debug( "Started test: kindwait: $test_program/$pid\n",2);
-
-				# Wait for job before starting the next one
-
-				#print "Calling StartTestOutput $compiler/$test_program <$pid>\n";
-				StartTestOutput($compiler,$test_program);
-
-				#print "kindwait: Waiting on test\n";
-				wait_for_test_children(\%test, $compiler,
-					suppress_start_test_output=>1);
-			} else {
-				# if we're the child, start test program
-				#print "DoChild kindwait $test_program/$test_retirement\n";
-				DoChild($test_program, $test_retirement);
-			}
-			#*****************************************************************
-	} else {
+		# run test directly. no more forking
 		my $res = DoChild($test_program, $test_retirement);
 		StartTestOutput($compiler, $test_program); 
 		if($res == 0) {
@@ -490,7 +436,6 @@ foreach my $compiler (@compilers) {
 		} else {
 			print "$test_program failed\n";
 		}
-	}
 
 	} # end of foreach $test_program
 
@@ -559,11 +504,6 @@ close OUTF;
 close SUMOUTF;
 
 
-if($ripout == 0) {
-	#if ( $cleanupcondor ) {
-    	#stop_condor();
-	#}
-}
 
 {
 	my $endtime = time();
