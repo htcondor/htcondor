@@ -23,8 +23,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.0.7 not yet released.
-%\item HTCondor version 8.0.7 released on Month Date, 2013.
+\item HTCondor version 8.0.7 released on June 5, 2014.
 
 \end{itemize}
 
@@ -60,6 +59,11 @@ with the Intel C compiler.
 \item Fixed a bug  which caused the memory used by the \Condor{procd}
 grow arbitrarily in size when cgroup-based tracking was in effect.
 \Ticket{4343}
+
+\item Fixed a bug in which any job running on an execute node with a
+process name that had a space character caused the 
+\Condor{procd} to log a short read error repeatedly to the \File{ProcLog}.
+\Ticket{4235}
 
 \item Fixed a bug which would cause the \Condor{schedd} to
 repeatedly crash.
