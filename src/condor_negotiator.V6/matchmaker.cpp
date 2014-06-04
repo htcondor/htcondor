@@ -5426,8 +5426,10 @@ Matchmaker::updateCollector() {
         daemonCore->dc_stats.Publish(*publicAd);
 		daemonCore->monitor_data.ExportData(publicAd);
 
-		// log classad into sql log so that it can be updated to DB
-		FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
+		if ( FILEObj ) {
+			// log classad into sql log so that it can be updated to DB
+			FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);
+		}
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
@@ -5470,6 +5472,9 @@ Matchmaker::invalidateNegotiatorAd( void )
 /* CONDORDB functions */
 void Matchmaker::insert_into_rejects(char const *userName, ClassAd& job)
 {
+	if ( !FILEObj ) {
+		return;
+	}
 	int cluster, proc;
 //	char startdname[80];
 	char globaljobid[200];
@@ -5509,6 +5514,9 @@ void Matchmaker::insert_into_rejects(char const *userName, ClassAd& job)
 }
 void Matchmaker::insert_into_matches(char const * userName,ClassAd& request, ClassAd& offer)
 {
+	if ( !FILEObj ) {
+		return;
+	}
 	char startdname[80],remote_user[80];
 	char globaljobid[200];
 	float remote_prio;
