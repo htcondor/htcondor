@@ -6404,8 +6404,8 @@ REM Run the actual job now
 
 \label{param:CgroupMemoryLimitPolicy} 
 \item[\Macro{CGROUP\_MEMORY\_LIMIT\_POLICY}]
-  A string with values of \Expr{hard}, \Expr{soft} and the default value
-  of \Expr{none}.
+  A string with possible values of \Expr{hard}, the default value
+  \Expr{soft} and \Expr{none}.
   If set to \Expr{hard}, the cgroup-based limit on the total amount 
   of physical memory used by the sum of all processes in the job 
   will not be allowed to exceed the limit given by the cgroup memory
@@ -6413,7 +6413,8 @@ REM Run the actual job now
   If the processes try to allocate more memory, 
   the allocation will succeed, and virtual memory will be allocated, 
   but no additional physical memory will be allocated.
-  If set to \Expr{soft}, the cgroup-based limit on the total amount 
+  If set to the default value \Expr{soft}, 
+  the cgroup-based limit on the total amount 
   of physical memory used by the sum of all processes in the job 
   will be allowed to go over the limit, 
   if there is free memory available on the system.
