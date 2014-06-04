@@ -18,27 +18,91 @@
 ##
 ##**************************************************************
 
+use Condor;
 use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	PERIODIC_EXPR_INTERVAL = 15
+    NEGOTIATOR_INTERVAL = 5
+';
+
+# which job am I
+my $jobcount = 1;
+
+$on_success = sub {
+	print "exited well as expected\n";
+	if($jobcount != 1) {
+		print "only first job was supposed to be not removed\n";
+		CondorTest::RegisterResult(0,"test_name", $testname);
+	} else {
+		CondorTest::RegisterResult(1,"test_name", $testname);
+	}
+};
+
+$on_abort = sub {
+	print "aborted as expected\n";
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+	print "Exited without checkpoint\n";
+	if($jobcount != 2) {
+		print "only second job was supposed to exit without a checkpint\n";
+		CondorTest::RegisterResult(0,"test_name", $testname);
+	} else {
+		CondorTest::RegisterResult(1,"test_name", $testname);
+	}
+};
+
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"static");
+my $testname = "job_core_perremove_local.run";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "coreperremovelocal",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
 
 $testdesc =  'Condor PERIODIC_REMOVE policy test - local U';
 $testname = "job_core_perremove_local";
 
-my $nostatus = CondorTest::verbose_system("./job_core_perremove-false_local.pl");
-my $willstatus = CondorTest::verbose_system("./job_core_perremove-true_local.pl");
+#my $nostatus = CondorTest::verbose_system("./job_core_perremove-false_local.pl");
+#my $willstatus = CondorTest::verbose_system("./job_core_perremove-true_local.pl");
 
-if($nostatus != 0)
-{
-	CondorTest::debug("PERIODIC_REMOVE: failed no trigger test\n",1);
-}
-
-if($willstatus != 0)
-{
-	CondorTest::debug("PERIODIC_REMOVE: failed trigger test\n",1);
-}
-
-if(($willstatus != 0) || ($nostatus != 0))
-{
-	die "Failed one PERIODIC_REMOVE test\n";
-}
+my $append_submit_commands_false_rm = '
+##
+## The PERIODIC_EXPR_INTERVAL is set to 15 for tests so we need
+## to make sure we sleep for just a little bit more than that
+##
+arguments  = 20
+periodic_remove = (time() - QDate) < (0)
+';
 
 
+my $append_submit_commands_true_rm = '
+##
+## The PERIODIC_EXPR_INTERVAL is set to 15 for tests so we need
+## to make sure we sleep for just a little bit more than that
+##
+arguments  = 20
+periodic_remove = (time() - QDate) > 2
+';
+
+SimpleJob::RunCheck(
+  append_submit_commands=>$append_submit_commands_false_rm,
+  on_success => $on_success,
+  universe => "local",
+);
+
+$jobcount += 1;
+	
+SimpleJob::RunCheck(
+  append_submit_commands=>$append_submit_commands_true_rm,
+  on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+  on_abort => $on_abort,
+  universe => "local",
+);
+
+CondorTest::EndTest();
