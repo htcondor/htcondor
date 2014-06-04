@@ -779,8 +779,11 @@ sub DoTest
 		#print "Regular Test....\n";
     	$cluster = Condor::TestSubmit( $submit_file );
 	} else {
-		#print "Dagman Test....\n";
+		print "Dagman Test....\n";
     	$cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
+		if($cluster == 0) {
+			print "*********** Dag Submit Failed ***********\n";
+		}
 	}
     
 	if(defined $clusterIDcallback) {
@@ -904,7 +907,7 @@ sub DoTest
 	##############################################################
 	if(ShouldCheck_coreERROR() == 1){
 		TestDebug("Want to Check core and ERROR!!!!!!!!!!!!!!!!!!\n\n",2);
-		# running in TestingPersonalCondor
+		# running in Config
 		my $logdir = `condor_config_val log`;
 		CondorUtils::fullchomp($logdir);
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
@@ -1540,7 +1543,7 @@ sub runCondorTool
 
 	# clean array before filling
 
-	my $attempts = 15;
+	my $attempts = 3; # was 15
 	$count = 0;
 	my $hashref;
 	while( $count < $attempts) {
@@ -1556,11 +1559,11 @@ sub runCondorTool
 		if(CondorUtils::is_windows() == 1) {
 			if($cmd =~ /condor_who/) {
 			} else {
-				$ENV{_condor_TOOL_TIMEOUT_MULTIPLIER} = 10;
+				$ENV{_condor_TOOL_TIMEOUT_MULTIPLIER} = 4; #was 10
 			}
 			$hashref = runcmd("$cmd", $options);
 		} else {
-			$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=10 $cmd", $options);
+			$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd", $options);
 		}
 		my @output =  @{${$hashref}{"stdout"}};
 		my @error =  @{${$hashref}{"stderr"}};
@@ -2275,7 +2278,7 @@ sub OuterPoolTest
 	TestDebug( "log dir is: $logdir\n",2);
 	if($logdir =~ /^.*condor_tests.*$/){
 		print "Running within condor_tests\n";
-		if($logdir =~ /^.*TestingPersonalCondor.*$/){
+		if($logdir =~ /^.*Config.*$/){
 			TestDebug( "Running with outer testing personal condor\n",2);
 			return(1);
 		}
@@ -2298,7 +2301,7 @@ sub PersonalCondorTest
 	print "log dir is: $logdir\n";
 	if($logdir =~ /^.*condor_tests.*$/){
 		print "Running within condor_tests\n";
-		if($logdir =~ /^.*TestingPersonalCondor.*$/){
+		if($logdir =~ /^.*Config.*$/){
 			print "Running with outer testing personal condor\n";
 			#my $testname = findOutput($submitfile);
 			#print "findOutput saya test is $testname\n";
@@ -3111,12 +3114,12 @@ sub ShouldCheck_coreERROR
 	my $logdir = `condor_config_val log`;
 	CondorUtils::fullchomp($logdir);
 	my $testsrunning = CountRunningTests();
-	if(($logdir =~ /TestingPersonalCondor/) &&($testsrunning > 1)) {
+	if(($logdir =~ /Config/) &&($testsrunning > 1)) {
 		# no because we are doing concurrent testing
 		return(0);
 	}
 	my $saveme = $handle . ".saveme";
-	TestDebug("Not /TestingPersonalCondor/ based, saveme is $saveme\n",2);
+	TestDebug("Not /Config/ based, saveme is $saveme\n",2);
 	TestDebug("Logdir is $logdir\n",2);
 	if($logdir =~ /$saveme/) {
 		# no because KillPersonal will do it
