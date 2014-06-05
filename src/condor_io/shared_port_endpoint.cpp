@@ -22,7 +22,6 @@
 #include "shared_port_endpoint.h"
 #include "subsystem_info.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "daemon_core_sock_adapter.h"
 #include "counted_ptr.h"
 #include "basename.h"
 
@@ -213,8 +212,8 @@ SharedPortEndpoint::StopListener()
 		DeleteCriticalSection(&received_lock);
 	}
 #else
-	if( m_registered_listener && daemonCoreSockAdapter.isEnabled() ) {
-		daemonCoreSockAdapter.Cancel_Socket( &m_listener_sock );
+	if( m_registered_listener && daemonCore ) {
+		daemonCore->Cancel_Socket( &m_listener_sock );
 	}
 	m_listener_sock.close();
 	if( !m_full_name.IsEmpty() ) {
@@ -222,7 +221,7 @@ SharedPortEndpoint::StopListener()
 	}
 
 	if( m_retry_remote_addr_timer != -1 ) {
-		daemonCoreSockAdapter.Cancel_Timer( m_retry_remote_addr_timer );
+		daemonCore->Cancel_Timer( m_retry_remote_addr_timer );
 		m_retry_remote_addr_timer = -1;
 	}
 #endif
@@ -378,10 +377,10 @@ SharedPortEndpoint::StartListener()
 
 	return StartListenerWin32();
 #else
-	ASSERT( daemonCoreSockAdapter.isEnabled() );
+	ASSERT( daemonCore );
 
 	int rc;
-	rc = daemonCoreSockAdapter.Register_Socket(
+	rc = daemonCore->Register_Socket(
 		&m_listener_sock,
 		m_full_name.Value(),
 		(SocketHandlercpp)&SharedPortEndpoint::HandleListenerAccept,
@@ -395,7 +394,7 @@ SharedPortEndpoint::StartListener()
 			// from removing it (and to prevent tmpwatch accidents).
 		const int socket_check_interval = TouchSocketInterval();
 		int fuzz = timer_fuzz(socket_check_interval);
-		m_socket_check_timer = daemonCoreSockAdapter.Register_Timer(
+		m_socket_check_timer = daemonCore->Register_Timer(
 			socket_check_interval + fuzz,
 			socket_check_interval + fuzz,
 			(TimerHandlercpp)&SharedPortEndpoint::SocketCheck,
@@ -563,7 +562,7 @@ SharedPortEndpoint::PipeListenerThread()
 			if(!wake_select_dest)
 			{
 //				dprintf(D_ALWAYS, "SharedPortEndpoint: Registering timer.\n");
-				int status = daemonCoreSockAdapter.Register_Timer_TS(0, (TimerHandlercpp)&SharedPortEndpoint::PipeListenerHelper, "Received socket handler", this);
+				int status = daemonCore->Register_Timer_TS(0, (TimerHandlercpp)&SharedPortEndpoint::PipeListenerHelper, "Received socket handler", this);
 //				dprintf(D_ALWAYS, "SharedPortEndpoint: Timer registration status: %d\n", status);
 			}
 			else
@@ -723,12 +722,12 @@ SharedPortEndpoint::RetryInitRemoteAddress()
 			// Now set up a timer to periodically check for changes
 			// in SharedPortServer's address.
 
-		if( daemonCoreSockAdapter.isEnabled() ) {
+		if( daemonCore ) {
 				// Randomize time a bit so many daemons are unlikely to
 				// do it all at once.
 			int fuzz = timer_fuzz(remote_addr_retry_time);
 
-			m_retry_remote_addr_timer = daemonCoreSockAdapter.Register_Timer(
+			m_retry_remote_addr_timer = daemonCore->Register_Timer(
 				remote_addr_refresh_time + fuzz,
 				(TimerHandlercpp)&SharedPortEndpoint::RetryInitRemoteAddress,
 				"SharedPortEndpoint::RetryInitRemoteAddress",
@@ -740,19 +739,19 @@ SharedPortEndpoint::RetryInitRemoteAddress()
 					// for daemonCore's command socket.  If that isn't
 					// true, we may inform daemonCore more frequently
 					// than necessary, which isn't the end of the world.
-				daemonCoreSockAdapter.daemonContactInfoChanged();
+				daemonCore->daemonContactInfoChanged();
 			}
 		}
 
 		return;
 	}
 
-	if( daemonCoreSockAdapter.isEnabled() ) {
+	if( daemonCore ) {
 		dprintf(D_ALWAYS,
 			"SharedPortEndpoint: did not successfully find SharedPortServer address."
 			" Will retry in %ds.\n",remote_addr_retry_time);
 
-		m_retry_remote_addr_timer = daemonCoreSockAdapter.Register_Timer(
+		m_retry_remote_addr_timer = daemonCore->Register_Timer(
 			remote_addr_retry_time,
 			(TimerHandlercpp)&SharedPortEndpoint::RetryInitRemoteAddress,
 			"SharedPortEndpoint::RetryInitRemoteAddress",
@@ -773,9 +772,9 @@ SharedPortEndpoint::ClearSharedPortServerAddr()
 void
 SharedPortEndpoint::ReloadSharedPortServerAddr()
 {
-	if( daemonCoreSockAdapter.isEnabled() ) {
+	if( daemonCore ) {
 		if( m_retry_remote_addr_timer != -1 ) {
-			daemonCoreSockAdapter.Cancel_Timer( m_retry_remote_addr_timer );
+			daemonCore->Cancel_Timer( m_retry_remote_addr_timer );
 			m_retry_remote_addr_timer = -1;
 		}
 	}
@@ -854,7 +853,7 @@ SharedPortEndpoint::DoListenerAccept(ReliSock *return_remote_sock)
 		remote_sock->enter_connected_state();
 		remote_sock->isClient(false);
 		if(!return_remote_sock)
-			daemonCoreSockAdapter.HandleReqAsync(remote_sock);
+			daemonCore->HandleReqAsync(remote_sock);
 		HeapFree(GetProcessHeap(), NULL, received_socket);
 	}
 	else
@@ -1018,8 +1017,8 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 
 
 	if( !return_remote_sock ) {
-		ASSERT( daemonCoreSockAdapter.isEnabled() );
-		daemonCoreSockAdapter.HandleReqAsync(remote_sock);
+		ASSERT( daemonCore );
+		daemonCore->HandleReqAsync(remote_sock);
 		remote_sock = NULL; // daemonCore took ownership of remote_sock
 	}
 	free(buf);
@@ -1080,7 +1079,7 @@ SharedPortEndpoint::deserialize(char *inherit_buf)
 	*/
 	sscanf_s(inherit_buf, "%d", (int*)&pipe_end);
 
-	//m_pipe_out = daemonCoreSockAdapter.Inherit_Pipe_Handle(out_pipe, false, true, true, 4096);
+	//m_pipe_out = daemonCore->Inherit_Pipe_Handle(out_pipe, false, true, true, 4096);
 #else
 	inherit_buf = m_listener_sock.serialize(inherit_buf);
 #endif

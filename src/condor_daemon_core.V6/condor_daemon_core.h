@@ -736,6 +736,15 @@ class DaemonCore : public Service
 	int CallCommandHandler(int req,Stream *stream,bool delete_stream=true,bool check_payload=true,float time_spent_on_sec=0,float time_spent_waiting_for_payload=0);
 
 
+		// This function is called in order to have
+		// TooManyRegisteredSockets() take into account an extra socket
+		// that is waiting for a timer or other callback to complete.
+	void incrementPendingSockets() { nPendingSockets++; }
+
+		// This function must be called after incrementPendingSockets()
+		// when the socket is being (or about to be) destroyed.
+	void decrementPendingSockets() { nPendingSockets--; }
+
 	/**
 	   @return Number of currently registered sockets.
 	 */
@@ -1668,15 +1677,6 @@ class DaemonCore : public Service
 			HandlerType handler_type,
                         int is_cpp,
                         void **prev_entry = NULL);
-
-		// This function is called in order to have
-		// TooManyRegisteredSockets() take into account an extra socket
-		// that is waiting for a timer or other callback to complete.
-	void incrementPendingSockets() { nPendingSockets++; }
-
-		// This function must be called after incrementPendingSockets()
-		// when the socket is being (or about to be) destroyed.
-	void decrementPendingSockets() { nPendingSockets--; }
 
     int Register_Pipe(int pipefd,
                         const char *pipefd_descrip,

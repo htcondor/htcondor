@@ -90,7 +90,6 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "directory.h"
 #include "../condor_io/condor_rw.h"
 
-#include "daemon_core_sock_adapter.h"
 #include "HashTable.h"
 #include "selector.h"
 #include "proc_family_interface.h"
@@ -253,33 +252,6 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
     dc_stats.Init(); // initilize statistics.
     dc_stats.SetWindowSize(20*60);
-
-		// Provide cedar sock with pointers to various daemonCore functions
-		// that cannot be directly referenced in cedar, because it
-		// is sometimes used in an application that is not linked with
-		// DaemonCore.
-	daemonCoreSockAdapter.EnableDaemonCore(
-		this,
-		// Typecast Register_Socket because it is overloaded, and some (all?)
-		// compilers have trouble choosing which one to use.
-		(DaemonCoreSockAdapterClass::Register_Socket_fnptr)&DaemonCore::Register_Socket,
-		&DaemonCore::Cancel_Socket,
-		&DaemonCore::CallSocketHandler,
-		&DaemonCore::CallCommandHandler,
-		&DaemonCore::HandleReqAsync,
-		&DaemonCore::Register_DataPtr,
-		&DaemonCore::GetDataPtr,
-		(DaemonCoreSockAdapterClass::Register_Timer_fnptr)&DaemonCore::Register_Timer,
-		(DaemonCoreSockAdapterClass::Register_PeriodicTimer_fnptr)&DaemonCore::Register_Timer,
-		&DaemonCore::Cancel_Timer,
-		&DaemonCore::TooManyRegisteredSockets,
-		&DaemonCore::incrementPendingSockets,
-		&DaemonCore::decrementPendingSockets,
-		&DaemonCore::publicNetworkIpAddr,
-		&DaemonCore::Register_Command,
-		&DaemonCore::daemonContactInfoChanged,
-		&DaemonCore::Register_Timer_TS,
-		&DaemonCore::SocketIsRegistered);
 
 	if ( PidSize == 0 )
 		PidSize = DEFAULT_PIDBUCKETS;

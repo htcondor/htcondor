@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "daemon_core_sock_adapter.h"
 #include "subsystem_info.h"
 #include "shared_port_client.h"
 #include "shared_port_endpoint.h"
@@ -151,9 +150,9 @@ SharedPortClient::myName()
 	// It is who we say we are when talking to the shared port server.
 	MyString name;
 	name = get_mySubSystem()->getName();
-	if( daemonCoreSockAdapter.isEnabled() ) {
+	if( daemonCore ) {
 		name += " ";
-		name += daemonCoreSockAdapter.publicNetworkIpAddr();
+		name += daemonCore->publicNetworkIpAddr();
 	}
 	return name;
 }
@@ -379,8 +378,8 @@ SharedPortState::Handle(Stream *s)
 			result = FAILED;
 		}
 	}
-	if (result == WAIT && !daemonCoreSockAdapter.SocketIsRegistered(s)) {
-		int reg_rc = daemonCoreSockAdapter.Register_Socket(
+	if (result == WAIT && !daemonCore->SocketIsRegistered(s)) {
+		int reg_rc = daemonCore->Register_Socket(
 			s,
 			m_requested_by.c_str(),
 			(SocketHandlercpp)&SharedPortState::Handle,

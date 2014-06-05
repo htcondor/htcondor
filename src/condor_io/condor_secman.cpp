@@ -38,7 +38,6 @@
 #include "condor_secman.h"
 #include "classad_merge.h"
 #include "daemon.h"
-#include "daemon_core_sock_adapter.h"
 #include "subsystem_info.h"
 #include "setenv.h"
 #include "ipv6_hostname.h"
@@ -904,7 +903,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	~SecManStartCommand() {
 		if( m_pending_socket_registered ) {
 			m_pending_socket_registered = false;
-			daemonCoreSockAdapter.decrementPendingSockets();
+			daemonCore->decrementPendingSockets();
 		}
 		if( m_private_key ) {
 			delete m_private_key;
@@ -928,7 +927,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 			// case automatically.
 		if( !m_pending_socket_registered ) {
 			m_pending_socket_registered = true;
-			daemonCoreSockAdapter.incrementPendingSockets();
+			daemonCore->incrementPendingSockets();
 		}
 	}
 
@@ -2302,7 +2301,7 @@ SecManStartCommand::WaitForSocketCallback()
 	MyString req_description;
 	req_description.formatstr("SecManStartCommand::WaitForSocketCallback %s",
 							m_cmd_description.Value());
-	int reg_rc = daemonCoreSockAdapter.Register_Socket(
+	int reg_rc = daemonCore->Register_Socket(
 		m_sock,
 		m_sock->peer_description(),
 		(SocketHandlercpp)&SecManStartCommand::SocketCallback,
@@ -2333,7 +2332,7 @@ SecManStartCommand::WaitForSocketCallback()
 int
 SecManStartCommand::SocketCallback( Stream *stream )
 {
-	daemonCoreSockAdapter.Cancel_Socket( stream );
+	daemonCore->Cancel_Socket( stream );
 
 		// NOTE: startCommand_inner() is responsible for checking
 		// if our deadline had expired.
