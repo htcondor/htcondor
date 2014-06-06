@@ -418,7 +418,7 @@ if ($opt_central_manager) {
 
 # Path to ganglia.d for condor_gangliad configuration
 if ( -d "${release_dir}/etc/condor/ganglia.d" ) {
-	$global_config{GANGLIAD_METRICS_CONFIG_DIR}="${release_dir}/etc/condor/ganglia.d";
+	$local_config{GANGLIAD_METRICS_CONFIG_DIR}="${release_dir}/etc/condor/ganglia.d";
 }
 
 

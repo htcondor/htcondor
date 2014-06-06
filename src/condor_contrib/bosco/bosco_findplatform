@@ -10,19 +10,25 @@ UNKNOWN="UNKNOWN"
 UNSUPPORTED="UNSUPPORTED"
 RH5="RH5"
 RH6="RH6"
+RH7="RH7"
 OSX="MAC"
 OSX_UNSUPPORTED="UNSUPPORTED"
 DEB6="DEB6"
+DEB7="DEB7"
+UBUNTU12="UBUNTU12"
 
-SUPPORTED_OSX = ['10.6', '10.7', '10.8']
-SUPPORTED_PLATFORMS = [ RH5, RH6, OSX, DEB6 ]
+SUPPORTED_OSX = ['10.6', '10.7', '10.8', '10.9']
+SUPPORTED_PLATFORMS = [ RH5, RH6, RH7, OSX, DEB6, DEB7, UBUNTU12 ]
 
 # download URLs for the different platforms
 URL_DICT={
   DEB6: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Debian6.tar.gz",
+  DEB7: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Debian7.tar.gz",
   OSX: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_MacOSX7.tar.gz",
   RH5: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_RedHat5.tar.gz",
   RH6: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_RedHat6.tar.gz",
+  RH7: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_RedHat7.tar.gz",
+  UBUNTU12: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Ubuntu12.tar.gz",
 }
 
 BIT32="32bit"
@@ -66,6 +72,8 @@ def findversion_redhat(detail=False):
       return RH5
     if 'release 6.' in line:
       return RH6
+    if 'release 7.' in line:
+      return RH7
     return UNSUPPORTED
   return UNKNOWN
 
@@ -94,11 +102,17 @@ Codename:    oneiric
        if 'DISTRIB_DESCRIPTION' in line:
         return line[len('DISTRIB_DESCRIPTION='):]
     if 'DISTRIB_ID' in line:
-      if not 'Debian' in line:
+      if not 'Debian' in line and not 'Ubuntu' in line:
         return UNSUPPORTED
     if 'DISTRIB_RELEASE' in line:
+        # TODO These checks need to to be conditioned on whether the
+        #   distro is Debian or Ubuntu.
         if line[len('DISTRIB_RELEASE='):].startswith('6.'):
           retv=DEB6
+        if line[len('DISTRIB_RELEASE='):].startswith('7.'):
+          retv=DEB7
+        if line[len('DISTRIB_RELEASE='):].startswith('12.'):
+          retv=UBUNTU12
   return retv
 
 def findversion():
@@ -122,9 +136,16 @@ def findversion():
           return RH5
         if mydist[1].startswith('6.'):
           return RH6
+        if mydist[1].startswith('7.'):
+          return RH7
       if mydist[0].lower()=='debian':
         if mydist[1].startswith('6.'):
           return DEB6
+        if mydist[1].startswith('7.'):
+          return DEB7
+      if mydist[0].lower()=='ubuntu':
+        if mydist[1].startswith('12'):
+          return UBUNTU12
     if os.path.isfile('/etc/redhat-release'):
       return findversion_redhat()
     elif os.path.isfile('/etc/lsb-release'):

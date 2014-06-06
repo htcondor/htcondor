@@ -164,10 +164,10 @@ if (WITH_GLOBUS)
 
 			if ( LINUX )
 				set (GLOBUS_GRID_UNIVERSE_NORDUGRID
-				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.so")
+				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.so")
 			elseif ( DARWIN )
 				set (GLOBUS_GRID_UNIVERSE_NORDUGRID
-				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.dylib")
+				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.dylib")
 			else()
 				set (GLOBUS_GRID_UNIVERSE_NORDUGRID
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.a")
@@ -222,7 +222,7 @@ if (WITH_GLOBUS)
 		find_multiple( "globus_gss_assist;globus_gssapi_gsi;globus_gsi_proxy_core;globus_gsi_credential;globus_gsi_callback;globus_gsi_sysconfig;globus_oldgaa;globus_gsi_cert_utils;globus_openssl;globus_openssl_error;globus_proxy_ssl;globus_callout;globus_common;ltdl" GLOBUS_FOUND )
 		find_multiple( "globus_gssapi_error;globus_xio;globus_io;globus_rsl" GLOBUS_GRID_UNIVERSE_COMMON )
 		find_multiple( "globus_gass_transfer;globus_gram_client;globus_gram_protocol" GLOBUS_GRID_UNIVERSE_GT2 )
-		find_multiple( "globus_ftp_control" GLOBUS_GRID_UNIVERSE_NORDUGRID)
+		find_multiple( "globus_ftp_client" GLOBUS_GRID_UNIVERSE_NORDUGRID)
 		if (GLOBUS_FOUND)
 		  append_var (CONDOR_EXTERNAL_INCLUDE_DIRS "/usr/include/globus;/usr/lib64/globus/include;/usr/lib/globus/include;/usr/local/globus/include/globus")
 		endif(GLOBUS_FOUND)

@@ -121,23 +121,25 @@ static const char * const aBoolFalse[] = {
 	"0", "0.0", ".0", "0.", "0e1", "0.0e10", " false ", " 0 ",
 };
 
+#define CONDOR_SERIES_VERSION "8.3"
+#define CONDOR_NEXT_VERSION "8.4"
 static const char * const aVerTrue[] = {
-	"version > 6.0", "!version > 8.1", "version > 8.1.1",
+	"version > 6.0", "!version >" CONDOR_SERIES_VERSION, "version > 8.1.1",
 	"version > 8.1.4", "version > 7.24.29",
-	"version >= " CONDOR_VERSION, "version == 8.1", "version != 8.0",
-	"version == " CONDOR_VERSION, "version <= 8.1.9",
-	"version <= 8.1", "version < 8.1.9", "version < 8.1.16",
-	"version < 8.2.99", "version < 8.2", "version < 9.0",
+	"version >= " CONDOR_VERSION, "version == " CONDOR_SERIES_VERSION, "version != 8.0",
+	"version == " CONDOR_VERSION, "version <= " CONDOR_SERIES_VERSION ".9",
+	"version <= " CONDOR_SERIES_VERSION, "version < " CONDOR_SERIES_VERSION ".9", "version < " CONDOR_SERIES_VERSION ".16",
+	"version < " CONDOR_SERIES_VERSION ".99", "version < " CONDOR_NEXT_VERSION, "version < 9.0",
 	"version < 10.0", " VERSION < 10.0 ", " Version < 10.0"
 };
 
 static const char * const aVerFalse[] = {
-	"version < 6.0", "version < 8.1", "version < 8.1.1",
+	"version < 6.0", "version < " CONDOR_SERIES_VERSION, "version < " CONDOR_VERSION,
 	"version < 8.1.4", " version < 8.1.4", "version < 8.1.4 ",
 	"  version  <  8.1.4  ", "version < 7.24.29", " ! version <= " CONDOR_VERSION,
 	"version == 8.0", "version == 8.0.6", "version <= 8.0.5",
-	"!version >= 8.1", "version > " CONDOR_VERSION, "version > 8.1.16",
-	"version > 8.2.99", "version > 8.2", "version > 9.0",
+	"!version >= " CONDOR_SERIES_VERSION, "version > " CONDOR_VERSION, "version > " CONDOR_SERIES_VERSION ".16",
+	"version > " CONDOR_SERIES_VERSION ".99", "version > " CONDOR_SERIES_VERSION, "version > 9.0",
 	"version > 10.0",
 };
 
@@ -146,13 +148,17 @@ static const char * const aDefTrue[] = {
 	"defined 0", "defined t", "defined f",
 	"defined release_dir", "defined log",
 	"defined LOG", "defined $(not_a_real_param:true)",
+	"defined use ROLE", "defined use ROLE:", "defined use ROLE:Personal",
+	"defined use feature", "defined use Feature:VMware",
 };
 
 static const char * const aDefFalse[] = {
 	"defined", " defined ", "defined a",
 	"defined not_a_real_param",
-	"defined master.not_a_real_param"
-	"defined $(not_a_real_param)"
+	"defined master.not_a_real_param",
+	"defined $(not_a_real_param)",
+	"defined use NOT", "defined use NOT:a_real_meta",
+	"defined use",
 };
 
 static const char * const aBoolError[] = {
@@ -168,6 +174,8 @@ static const char * const aVerError[] = {
 
 static const char * const aDefError[] = {
 	"defined a b", "defined 11 99", "defined < 1.1",
+	"defined use foo bar", // internal whitespace (or no :)
+	"defined use ROLE: Personal", // internal whitespace
 };
 
 static const char * const aUnsupError[] = {

@@ -22,7 +22,7 @@
 #include "condor_auth.h"
 #include "condor_string.h"
 
-static const char root[] = "root";
+//static const char root[] = "root";
 
 Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode) : 
 	mySock_        ( sock  ),

@@ -106,17 +106,11 @@ ReliSock::listen()
         return FALSE;
     }
 
-	// many modern OS's now support a >5 backlog, so we ask for 500,
-	// but since we don't know how they behave when you ask for too
-	// many, if 200 doesn't work we try progressively smaller numbers.
-	// you may ask, why not just use SOMAXCONN ?  unfortunately,
-	// it is not correct on several platforms such as Solaris, which
-	// accepts an unlimited number of socks but sets SOMAXCONN to 5.
-	if( ::listen( _sock, 500 ) < 0 ) {
-		if( ::listen( _sock, 300 ) < 0 ) 
-		if( ::listen( _sock, 200 ) < 0 ) 
-		if( ::listen( _sock, 100 ) < 0 ) 
-		if( ::listen( _sock, 5 ) < 0 ) {
+	// Ask for a (configurable) large backlog of connections. If this
+	// value is too large, the OS will cap it at the kernel's current
+	// maxiumum. Why not just use SOMAXCONN? Unfortunately, it's a
+	// fairly small value (128) on many platforms.
+	if( ::listen( _sock, param_integer( "SOCKET_LISTEN_BACKLOG", 500 ) ) < 0 ) {
 
             char const *self_address = get_sinful();
             if( !self_address ) {
@@ -130,7 +124,6 @@ ReliSock::listen()
 #endif
 
 			return FALSE;
-		}
 	}
 
 	dprintf( D_NETWORK, "LISTEN %s fd=%d\n", sock_to_string(_sock),
@@ -140,6 +133,23 @@ ReliSock::listen()
 	_special_state = relisock_listen;
 
 	return TRUE;
+}
+
+
+/// FALSE means this is an incoming connection
+int ReliSock::listen(condor_protocol proto, int port)
+{
+	if (!bind(proto, false, port, false)) return
+		FALSE;
+	return listen();
+}
+
+/// FALSE means this is an incoming connection
+int ReliSock::listen(char *s)
+{
+	if (!bind(false, s))
+		return FALSE;
+	return listen();
 }
 
 
@@ -720,6 +730,7 @@ ReliSock::RcvMsg :: RcvMsg() :
 	m_tmp(NULL),
 	ready(0)
 {
+	memset( m_partial_cksum, 0, sizeof(m_partial_cksum) );
 }
 
 ReliSock::RcvMsg::~RcvMsg()
@@ -730,6 +741,7 @@ ReliSock::RcvMsg::~RcvMsg()
 int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, int _timeout)
 {
 	char	        hdr[MAX_HEADER_SIZE];
+	char *cksum_ptr = &hdr[5];
 	int		len, len_t, header_size;
 	int		tmp_len;
 	int		retval;
@@ -739,6 +751,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 	if (m_partial_packet) {
 		m_partial_packet = false;
 		len = m_remaining_read_length;
+		cksum_ptr = m_partial_cksum;
 		goto read_packet;
 	}
 
@@ -803,10 +816,9 @@ read_packet:
 	if (tmp_len != len) {
 		if (p_sock->is_non_blocking() && (tmp_len >= 0)) {
 			m_partial_packet = true;
-			if (tmp_len >= 0) {
-				m_remaining_read_length = len - tmp_len;
-			} else {
-				m_remaining_read_length = len;
+			m_remaining_read_length = len - tmp_len;
+			if ( mode_ != MD_OFF && cksum_ptr != m_partial_cksum ) {
+				memcpy( m_partial_cksum, cksum_ptr, sizeof(m_partial_cksum) );
 			}
 			return 2;
 		} else {
@@ -820,7 +832,7 @@ read_packet:
 
         // Now, check MD
         if (mode_ != MD_OFF) {
-            if (!m_tmp->verifyMD(&hdr[5], mdChecker_)) {
+            if (!m_tmp->verifyMD(cksum_ptr, mdChecker_)) {
                 delete m_tmp;
 		m_tmp = NULL;
                 dprintf(D_ALWAYS, "IO: Message Digest/MAC verification failed!\n");

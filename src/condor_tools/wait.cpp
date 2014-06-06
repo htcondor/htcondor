@@ -247,7 +247,7 @@ rescue :
 						/* nothing to do */
 					}
 				}
-				if (event != NULL) delete event;
+				delete event;
 				if( minjobs && (completed + aborted >= minjobs ) ) {
 					printf( "Specifed number of jobs (%d) done.\n", minjobs );
 					EXIT_SUCCESS;

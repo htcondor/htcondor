@@ -177,7 +177,7 @@ Dagman::Config()
 						_dagmanConfigFile );
     		DC_Exit( EXIT_ERROR );
 		}
-		process_config_source( _dagmanConfigFile, "DAGMan config",
+		process_config_source( _dagmanConfigFile, 0, "DAGMan config",
 					NULL, true );
 	}
 
@@ -1337,6 +1337,10 @@ Dagman::ResolveDefaultLog()
 
 void
 print_status() {
+	debug_printf( DEBUG_VERBOSE, "DAG status: %d (%s)\n",
+				dagman.dag->_dagStatus,
+				dagman.dag->GetStatusName() );
+
 	int total = dagman.dag->NumNodes( true );
 	int done = dagman.dag->NumNodesDone( true );
 	int pre = dagman.dag->PreRunNodeCount();
@@ -1344,7 +1348,7 @@ print_status() {
 	int post = dagman.dag->PostRunNodeCount();
 	int ready =  dagman.dag->NumNodesReady();
 	int failed = dagman.dag->NumNodesFailed();
-	int unready = total - (done + pre + submitted + post + ready + failed );
+	int unready = dagman.dag->NumNodesUnready( true );
 
 	debug_printf( DEBUG_VERBOSE, "Of %d nodes total:\n", total );
 
@@ -1494,7 +1498,9 @@ void condor_event_timer () {
 		// DAG is run anyhow).
 	if ( dagman.dag->IsHalted() && dagman.dag->NumJobsSubmitted() == 0 &&
 				dagman.dag->PostRunNodeCount() == 0 &&
-				!dagman.dag->RunningFinalNode() ) {
+				!dagman.dag->FinalNodeRun() ) {
+			// Note:  main_shutdown_rescue() will run the final node
+			// if there is one.
 		debug_printf ( DEBUG_QUIET, "Exiting because DAG is halted "
 					"and no jobs or scripts are running\n" );
 		main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_HALTED );

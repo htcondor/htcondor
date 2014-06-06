@@ -45,6 +45,7 @@ int main()
 
 	// my_ip_addr() is obsolete
 	//cout << "I am " << my_ip_addr() << endl;
+	mySock.assign(CP_IPV4);
 	result = mySock.set_os_buffers(3000000, false);
 	cout << "buffer size set to " << result << endl;
 	switch(op) {

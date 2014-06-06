@@ -47,7 +47,16 @@ my $collectorport = $condor_instance_local->GetCollectorAddress();
 my $localconfig = $condor_instance_local->GetCondorConfig();
 
 # where am I running
-my $currenthost = CondorTest::getFqdnHost();
+#my $currenthost = CondorTest::getFqdnHost();
+my @host = `hostname`;
+
+print "hostname:$host[0]\n";
+fullchomp($host[0]);
+my $naming = $host[0];
+
+print "hostname:$naming\n";
+my $currenthost = $naming;
+print "currenthost:$currenthost\n";
 my $primarycollector = $currenthost;
 $primarycollector = $primarycollector . ":" . $collectorport;
 
@@ -120,8 +129,8 @@ if($bail != 1) {
 print "ok\n";
 my $cmdstatus;
 my @adarray;
-my $sched1 = "master_local_schd" . "@" . $currenthost;;
-my $sched2 = "master_scheddone_schd" . "@" . $currenthost;;
+my $sched1 = "master_local_schd" . "@" . $currenthost;
+my $sched2 = "master_scheddone_schd" . "@" . $currenthost;
 
 #Place condor_q back into the original condor config
 #and aim the -global -pool command at this new collector.

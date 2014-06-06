@@ -60,6 +60,7 @@
 #define ATTR_BANDWIDTH_TO_LAST_CKPT_SERVER  "BandwidthToLastCkptServer"
 #define ATTR_BANDWIDTH_TO_CKPT_SERVER  "BandwidthToCkptServer"
 #define ATTR_BATCH_QUEUE  "BatchQueue"
+#define ATTR_BOINC_AUTHENTICATOR_FILE "BoincAuthenticatorFile"
 #define ATTR_BUFFER_SIZE  "BufferSize"
 #define ATTR_BUFFER_FILES  "BufferFiles"
 #define ATTR_BUFFER_BLOCK_SIZE  "BufferBlockSize"
@@ -79,6 +80,7 @@
 #define ATTR_CKPT_ARCH  "CkptArch"
 #define ATTR_CKPT_LAST_READ  "CkptLastRead"
 #define ATTR_CKPT_OPSYS  "CkptOpSys"
+#define ATTR_PAIRED_CLAIM_ID  "PairedClaimId"
 #define ATTR_CHILD_CLAIM_IDS "ChildClaimIds"
 #define ATTR_CLAIM_ID  "ClaimId"
 #define ATTR_CLAIM_IDS  "ClaimIds"
@@ -365,6 +367,8 @@
 #define ATTR_JOB_STATUS  "JobStatus"
 #define ATTR_LAST_JOB_STATUS  "LastJobStatus"
 #define ATTR_JOB_STATUS_ON_RELEASE  "JobStatusOnRelease"
+#define ATTR_JOB_TRANSFERRING_OUTPUT  "JobTransferringOutput"
+#define ATTR_JOB_TRANSFERRING_OUTPUT_TIME  "JobTransferringOutputTime"
 #define ATTR_JOB_UNIVERSE  "JobUniverse"
 #define ATTR_JOB_WALL_CLOCK_CKPT  "WallClockCheckpoint"
 #define ATTR_JOB_QUEUE_BIRTHDATE  "JobQueueBirthdate"
@@ -550,6 +554,7 @@
 #define ATTR_SCHEDULER  "Scheduler"
 #define ATTR_SHADOW_WAIT_FOR_DEBUG  "ShadowWaitForDebug"
 #define ATTR_SLOT_ID  "SlotID"
+#define ATTR_SLOT_PAIR_NAME  "SlotPairName"
 #define ATTR_SLOT_PARTITIONABLE  "PartitionableSlot"
 #define ATTR_SLOT_DYNAMIC  "DynamicSlot"
 #define ATTR_SOURCE  "Source"
@@ -579,7 +584,7 @@
 #define ATTR_SUBMITTER_ID  "SubmitterId"
 #define ATTR_SUBMITTER_TAG  "SubmitterTag"
 #define ATTR_SUBMITTOR_PRIO  "SubmittorPrio"   // old-style for ATTR_SUBMITTER_USER_PRIO
-#define ATTR_SUBMITTER_USER_PRIO  "SubmittorUserPrio"   // old-style for ATTR_SUBMITTER_USER_PRIO
+#define ATTR_SUBMITTER_USER_PRIO  "SubmitterUserPrio"   // new-style for ATTR_SUBMITTOR_PRIO
 #define ATTR_SUBMITTER_USER_RESOURCES_IN_USE  "SubmitterUserResourcesInUse"
 #define ATTR_SUBMITTER_AUTOREGROUP  "SubmitterAutoregroup"
 #define ATTR_SUBMITTER_GROUP  "SubmitterGroup"

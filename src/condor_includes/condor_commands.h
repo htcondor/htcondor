@@ -175,6 +175,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define GET_PRIORITY_ROLLUP (SCHED_VERS+114) // negotiator
 #define QUERY_SCHEDD_HISTORY (SCHED_VERS+115)
 #define QUERY_JOB_ADS (SCHED_VERS+116)
+#define SWAP_CLAIM_AND_ACTIVATION (SCHED_VERS+117) // swap claim & activation between two STARTD resources, for moving a job into a 'transfer' slot.
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0
@@ -517,5 +518,11 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 #define CONDOR_TRY_AGAIN	2
 #define CONDOR_ERROR	3
 
+/* Replies specific to the REQUEST_CLAIM command */
+#define REQUEST_CLAIM_LEFTOVERS		3
+#define REQUEST_CLAIM_PAIR			4
+
+/* Replies specific to the SWAP_CLAIM_AND_ACTIVATION command */
+#define SWAP_CLAIM_ALREADY_SWAPPED	4
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */

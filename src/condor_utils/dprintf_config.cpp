@@ -171,16 +171,28 @@ static bool parse_size_with_unit(
 	bool       & is_time)
 {
 	value = 0;
-	std::stringstream ss(input);
-	ss >> value;
-	bool r = (ss.eof() && (0 == (ss.rdstate() & std::stringstream::failbit)));
-	if (r) return r;
+	const char * p = input;
+	while(isspace(*p)) ++p;
+		// all whitespace is failure
+	if ( ! *p) return false;
 
-	std::string unit;
-	ss >> unit; // optional unit with optional leading whitespace
-	if (unit.length() > 0) {
-		int ch = unit[0];
-		int ch2 = (unit.length() > 1) ? toupper((int)unit[1]) : 0;
+		// fetch the number, and get a pointer to the first char after
+	char *pend;
+	value = strtoll(p, &pend, 10);
+
+		// no number at this position is failure
+	if (pend == p) return false;
+	p = pend;
+
+		// skip whitespace after number
+	while (isspace(*p)) ++p;
+
+		// check for unit after the number
+	if (*p) {
+		int ch = *p++;
+		int ch2 = *p & ~0x20; if (ch2) ++p; // convert to uppercase if lowercase, symbols don't matter here.
+		int ch3 = *p & ~0x20; if (ch3) ++p;
+		while (isalpha(*p)) ++p;
 		switch (toupper(ch)) {
 			case 'S': is_time = true; break;
 			case 'H': is_time = true; value *= 60*60; break;
@@ -196,22 +208,26 @@ static bool parse_size_with_unit(
 			case 'M': {
 				if (ch2) {
 					if (ch2 == 'B') is_time = false;
-					else if (ch2 == 'I') is_time = true;
+					else if (ch2 == 'I') is_time = (ch3 != 'B');
 					else return false;
 				} else {
 					if (ch == 'm') is_time = true;
 				}
 				if (is_time) value *= 60;
 				else value *= 1024*1024;
-				break;
 			}
+			break;
+
+			// not a valid unit is failure
+			// default: return false;
 		}
+
+		// skip whitespace after unit
+		while (isspace(*p)) ++p;
 	}
 
-	ss >> std::ws; // consume trailing whitespce before testing for eof
-	r = (ss.eof() && (0 == (ss.rdstate() & std::stringstream::failbit)));
-	//bool r = lex_cast(pval, value);
-	return r;
+	// return success if we are at the end of the string.
+	return !*p;
 }
 
 int

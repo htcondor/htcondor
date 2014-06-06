@@ -257,15 +257,21 @@ ssh_find_remote () {
         echo "`$findplatform_path --url --force MAC`"
         return 0
     fi
-    cmd_out=`ssh $remote_host "python -c \"import platform; mydist = platform.dist(); print '%s%s' % (mydist[0], mydist[1][0])\"" 2>/dev/null`
+    cmd_out=`ssh $remote_host "python -c \"import platform; mydist = platform.dist(); print '%s%s' % (mydist[0], mydist[1])\"" 2>/dev/null`
     if [ $? -eq 0 ]; then
         # check for linux
         case "$cmd_out" in 
-            redhat5) echo "`$findplatform_path --url --force RH5`"
+            redhat5*) echo "`$findplatform_path --url --force RH5`"
                        ;;
-            redhat6) echo "`$findplatform_path --url --force RH6`"
+            redhat6*) echo "`$findplatform_path --url --force RH6`"
                        ;;
-            debian6) echo "`$findplatform_path --url --force DEB6`"
+            redhat7*) echo "`$findplatform_path --url --force RH7`"
+                       ;;
+            debian6*) echo "`$findplatform_path --url --force DEB6`"
+                       ;;
+            debian7*) echo "`$findplatform_path --url --force DEB7`"
+                       ;;
+            Ubuntu12*) echo "`$findplatform_path --url --force UBUNTU12`"
                        ;;
             *) ;; 
         esac

@@ -47,8 +47,6 @@
 #include "classad_hashtable.h"
 #include "log_transaction.h"
 
-#include <boost/iterator/transform_iterator.hpp>
-#include <boost/iterator/filter_iterator.hpp>
 
 typedef HashTable <HashKey, ClassAd *> ClassAdHashTable;
 

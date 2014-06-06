@@ -26,6 +26,7 @@
 #include "condor_adtypes.h"
 #include "condor_system.h"
 #include "condor_ipverify.h"
+#include "condor_md.h"
 
 
 /*
@@ -130,9 +131,9 @@ public:
     ///
 	int listen();
     /// FALSE means this is an incoming connection
-	inline int listen(int p) { if (!bind(FALSE,p)) return FALSE; return listen(); }
+	int listen(condor_protocol proto, int port);
     /// FALSE means this is an incoming connection
-	inline int listen(char *s) { if (!bind(FALSE,s)) return FALSE; return listen(); }
+	int listen(char *s);
 	bool isListenSock() { return _state == sock_special && _special_state == relisock_listen; }
 
     ///
@@ -290,6 +291,7 @@ protected:
 
 	class RcvMsg {
 		
+		char m_partial_cksum[MAC_SIZE];
                 CONDOR_MD_MODE  mode_;
                 Condor_MD_MAC * mdChecker_;
 		ReliSock      * p_sock; //preserve parent pointer to use for condor_read/write

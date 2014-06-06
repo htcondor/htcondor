@@ -192,63 +192,6 @@ win32_getExecPath()
    Derek Wright <wright@cs.wisc.edu> 2004-05-13
 */
 #include <mach-o/dyld.h>
-#include <crt_externs.h>
-
-typedef int (*NSGetExecutablePathProcPtr)(char *buf, size_t *bufsize);
-
-int
-darwin_NSGetExecutablePath_getExecPath( char* buf, size_t* bufsize )
-{
-	return ((NSGetExecutablePathProcPtr)NSAddressOfSymbol(NSLookupAndBindSymbol("__NSGetExecutablePath")))(buf, bufsize);
-}
-
-int
-darwin_NSGetArgv_getExecPath( char* buf, size_t* bufsize )
-{
-	size_t len = MAXPATHLEN;
-	int argc = 0;
-    char *path;
-    char **ptr;
-
-		/* _NSGetArgv() returns a pointer to the argv array.  After
-		   all the args, there should be a NULL in the table.  Next
-		   comes the environment, and another NULL.  After that, the
-		   next entry will be the value of the path given to exec().
-		*/
-	ptr = (char**)(*(_NSGetArgv()));
-		/* Get the value of our original argc. */
-	argc = *(_NSGetArgc());
-		/* skip over all the args: */
-	ptr += argc;
-		/* ptr should be pointing at the NULL terminating the args. */
-	if( *ptr != NULL ) {
-		return -1;
-	} else {
-			/* skip the NULL */
-		ptr += 1;
-	}
-		/* now, skip the environment, searching for the next NULL. */
-	while( *ptr != NULL ) {
-		ptr += 1;
-	}
-		/* ptr should be pointing at the NULL terminating the env. */
-	if( *ptr != NULL ) {
-		return -1;
-	} else { 
-			/* skip the NULL */
-		ptr += 1;
-	}
-		/* Now we're finally pointing at the thing we want */
-	path = *ptr;
-	len = strlen( path ) + 1;
-	if( len > *bufsize ) {
-		return -1;
-	}
-	strncpy( buf, path, len );
-	*bufsize = len;
-	return len;
-}
-
 
 char*
 darwin_getExecPath( void )
@@ -256,34 +199,18 @@ darwin_getExecPath( void )
 	char buf[MAXPATHLEN];
 	char full_buf[MAXPATHLEN];
 	char* path = NULL;
-	size_t size = MAXPATHLEN;
+	uint32_t size = sizeof(buf);
 	int rval = 0;
 
     memset( buf, '\0', MAXPATHLEN );
     memset( full_buf, '\0', MAXPATHLEN );
 
-		// Figure out dynamically if we can use the special method or
-		// if we have to do it ourselves...
-	if( NSIsSymbolNameDefined("__NSGetExecutablePath") ) {
-			// We've got the handy function that does all this work
-			// for us, so use it.
-		rval = darwin_NSGetExecutablePath_getExecPath( buf, &size );
-	    if( rval < 0 ) {
-			dprintf( D_ALWAYS, "getExecName(): NSGetExecutablePath() "
-					 "returned failure (%d): %s (errno %d)\n", 
-					 rval, strerror(errno), errno );
-			return NULL;
-	    }
-	} else {
-			// No handy function that does it for us, so instead we
-			// use a slightly more convoluted method...
-		rval = darwin_NSGetArgv_getExecPath( buf, &size );
-		if( rval < 0 ) {		
-			dprintf( D_ALWAYS, "getExecName(): NSGetArgv() "
-					 "returned failure (%d): %s (errno %d)\n", 
-					 rval, strerror(errno), errno );
-			return NULL;
-	    }
+	rval = _NSGetExecutablePath( buf, &size );
+	if( rval != 0 ) {
+		dprintf( D_ALWAYS, "getExecName(): _NSGetExecutablePath() "
+				 "returned failure (%d): %s (errno %d)\n",
+				 rval, strerror(errno), errno );
+		return NULL;
 	}
 		/* 
 		   Either way, the resulting path might still have some

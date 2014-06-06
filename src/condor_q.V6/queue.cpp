@@ -195,6 +195,7 @@ static  char *userprios_file = NULL;
 static  bool analyze_with_userprio = false;
 static  bool dash_profile = false;
 //static  bool analyze_dslots = false;
+static  bool disable_user_print_files = false;
 
 static  char *userlog_file = NULL;
 
@@ -663,7 +664,7 @@ int main (int argc, char **argv)
 			if (schedd.version()) {
 				CondorVersionInfo v(schedd.version());
 				useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
-				if (v.built_since_version(8, 1, 4)) {
+				if (v.built_since_version(8, 1, 5)) {
 					useFastScheddQuery = 2;
 				}
 			}
@@ -1618,6 +1619,12 @@ processCommandLineArguments (int argc, char *argv[])
 			if ( (i+1 >= argc)  || (*(argv[i+1]) == '-' && (argv[i+1])[1] != 0)) {
 				fprintf( stderr, "Error: Argument -print-format requires a filename argument\n");
 				exit( 1 );
+			}
+			// hack allow -pr ! to disable use of user-default print format files.
+			if (MATCH == strcmp(argv[i+1], "!")) {
+				++i;
+				disable_user_print_files = true;
+				continue;
 			}
 			if ( ! widescreen) mask.SetOverallWidth(getDisplayWidth()-1);
 			if( !custom_attributes ) {
@@ -2814,7 +2821,7 @@ print_full_header(const char * source_label)
 		// print the source label.
 		if ( ! (customHeadFoot&HF_NOTITLE)) {
 			static bool first_time = false;
-			printf ("\n\n-- %s\n" + (first_time ? 2 : 0), source_label);
+			printf ("%s-- %s\n", (first_time ? "" : "\n\n"), source_label);
 			first_time = false;
 		}
 		if ( ! (customHeadFoot&HF_NOHEADER)) {
@@ -2996,6 +3003,41 @@ SELECT
 SUMMARY STANDARD
 */
 
+static bool init_user_override_output_mask()
+{
+	// if someone already setup a print mask, then don't use an override file.
+	if (usingPrintMask || disable_user_print_files)
+		return false;
+
+	bool using_override = false;
+	MyString param_name("Q_DEFAULT_");
+	const char * pdash = "";
+	if (dash_run) { pdash = "RUN"; }
+	else if (dash_goodput) { pdash = "GOODPUT"; }
+	else if (dash_globus) { pdash = "GLOBUS"; }
+	else if (dash_grid) { pdash = "GRID"; }
+	else if (show_held) { pdash = "HOLD"; }
+	if (pdash[0]) {
+		param_name += pdash;
+		param_name += "_";
+	}
+	param_name += "PRINT_FORMAT_FILE";
+	char * pf_file = param(param_name.c_str());
+	if (pf_file) {
+		struct stat stat_buff;
+		if (0 != stat(pf_file, &stat_buff)) {
+			// do nothing, this is not an error.
+		} else if (set_print_mask_from_stream(pf_file, true, attrs) < 0) {
+			fprintf(stderr, "Warning: default %s print-format file '%s' is invalid\n", pdash, pf_file);
+		} else {
+			using_override = true;
+			if (customHeadFoot&HF_NOSUMMARY) summarize = false;
+		}
+		free(pf_file);
+	}
+	return using_override;
+}
+
 static void init_output_mask()
 {
 	// just  in case we re-enter this function, only setup the mask once
@@ -3009,6 +3051,11 @@ static void init_output_mask()
 	if (setup_mask)
 		return;
 	setup_mask = true;
+
+	// if there is a user-override output mask, then use that instead of the code below
+	if (init_user_override_output_mask()) {
+		return;
+	}
 
 	int console_width = getDisplayWidth();
 

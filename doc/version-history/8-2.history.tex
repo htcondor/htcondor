@@ -1,0 +1,102 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-8-2}Stable Release Series 8.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is a stable release series of HTCondor.
+As usual, only bug fixes (and potentially, ports to new platforms)
+will be provided in future 8.2.x releases.
+New features will be added in the 8.3.x development series.
+
+The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-2-1}Version 8.2.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.2.1 not yet released.
+%\item HTCondor version 8.2.1 released on Month Date, 2014.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a Windows-specific bug:  specfying a DAG node status file
+caused DAGMan to fail.
+\Ticket{4361}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-2-0}Version 8.2.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.2.0 not yet released.
+%\item HTCondor version 8.2.0 released on Month Date, 2014.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added configuration parameter \Macro{SOCKET\_LISTEN\_BACKLOG}, which
+can be used to control the listen backlog setting for a daemon's command
+port.
+The default value of 500 maintains the previously hardcoded setting.
+\Ticket{4393}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Windows machines with more than nine dynamic slots may fail to start jobs.
+\Ticket{4388}
+
+\item Fixed a bug where \Condor{q} will fail to communicate with a
+\Condor{schedd} from HTCondor version 8.1.4.
+\Ticket{4384}
+
+\item Fixed bugs introduced in HTCondor 8.1.5 that caused communcation
+between the \Prog{cream\_gahp} and remote CREAM servers to fail.
+\Ticket{4392}
+
+\item Fixed a bug introduced in HTCondor 8.1.2 that caused grid-type
+cream jobs to fail when \SubmitCmd{copy\_to\_spool} was set to \Expr{True}
+in the submit description file.
+\Ticket{4391}
+
+\item When submitting a grid universe job with a grid type of batch and
+setting \SubmitCmd{request\_memory}, the job would fail if the remote
+batch system was HTCondor. This has been fixed.
+\Ticket{4367}
+
+\end{itemize}
+

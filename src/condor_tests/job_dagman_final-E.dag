@@ -1,5 +1,7 @@
 CONFIG job_dagman_final-E.config
 
+NODE_STATUS_FILE job_dagman_final-E.status 600
+
 # This node now uses the 'always run post' feature.
 JOB E_A job_dagman_final-E-nodeA.cmd
 SCRIPT PRE E_A job_dagman_final-E-script.pl E_A Pre $DAG_STATUS $FAILED_COUNT 1

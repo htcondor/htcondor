@@ -429,6 +429,296 @@ This syntax does not permit distinguishing one from the other,
 so only one may be specified.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Config-Include}Including Configuration from Elsewhere}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!INCLUDE syntax}
+\index{INCLUDE configuration syntax}
+Externally defined configuration can be incorporated using the syntax
+\begin{verbatim}
+  include : <what-to-include>
+\end{verbatim}
+
+The \verb@<what-to-include>@ specification may describe a single file,
+where the contents of the file will be parsed and incorporated
+into the configuration.
+Or, \verb@<what-to-include>@  may cause a program to be executed,
+where the output of the program is parsed and incorporated
+into the configuration.
+
+The \MacroNI{include} key word is case insensitive.
+There are \emph{no} requirements for white space characters surrounding
+the colon character.
+
+Consider the example
+\begin{verbatim}
+  FILE = config.$(FULL_HOSTNAME)
+  include : $(LOCAL_DIR)/$(FILE)
+\end{verbatim}
+Values are acquired for configuration variables 
+\MacroNI{FILE}, and \MacroNI{LOCAL\_DIR} by immediate evaluation, 
+causing variable \MacroNI{FULL\_HOSTNAME} to also be immediately evaluated.
+The resulting value forms a full path and file name.
+This file is read and parsed.
+The resulting configuration is incorporated into the current
+configuration.
+This resulting configuration may contain further nested \MacroNI{include} 
+specifications, 
+which are also parsed, evaluated, and incorporated.
+Levels of nested \MacroNI{include}s are limited,
+such that infinite nesting is discovered and thwarted,
+while still permitting nesting.
+
+Consider the further example
+\begin{verbatim}
+  SCRIPT_FILE = script.$(IP_ADDRESS)
+  include : $(RELEASE_DIR)/$(SCRIPT_FILE) |
+\end{verbatim}
+In this example, the bar character at the end of the line 
+causes a script to be invoked,
+and the output of the script is incorporated into the current
+configuration.
+The same immediate parsing and evaluation occurs in this
+case as when a file's contents are included. 
+
+For pools that are transitioning to using this new syntax in configuration,
+while still having some tools and daemons with HTCondor versions 
+earlier than 8.1.6,
+special syntax in the configuration will cause those daemons to
+fail upon start up,
+rather than use the new, but misinterpreted, syntax. 
+Newer daemons will ignore the extra syntax.
+Placing the \verb|@| character before the \MacroNI{include} key word
+causes daemons the older daemons to fail when they attempt to
+parse this syntax.
+
+Here is the same example, but with the syntax that causes older daemons
+to fail when reading it.
+\begin{verbatim}
+  FILE = config.$(FULL_HOSTNAME)
+  @include : $(LOCAL_DIR)/$(FILE)
+\end{verbatim}
+A daemon previous to HTCondor version 8.1.6 fails to start.
+Running an older \Condor{config\_val} identifies the \Expr{@include}
+line as being bad.
+A daemon of HTCondor version 8.1.6 or more recent sees
+\begin{verbatim}
+  FILE = config.$(FULL_HOSTNAME)
+  include : $(LOCAL_DIR)/$(FILE)
+\end{verbatim}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Config-Metaknobs}Metaknobs: Using Predefined Sets of Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!USE syntax}
+\index{USE configuration syntax}
+Predefined sets of configuration may be identified and incorporated
+into the configuration using the syntax
+\begin{verbatim}
+  use <category id> : <name of set> 
+\end{verbatim}
+
+The \MacroNI{use} key word is case insensitive.
+There are \emph{no} requirements for white space characters surrounding
+the colon character.
+More than one \MacroNI{<name of set>} identifier may be placed within
+a single \MacroNI{use} line. 
+Separate the names by a space character. 
+There is no mechanism by which the administrator may define their
+own custom \MacroNI{<category id>} or \MacroNI{<name of set>}.
+
+Each predefined \MacroNI{<category id>} has a fixed, case insensitive
+name for the sets of configuration that are predefined. 
+Placement of a \MacroNI{use} line in the configuration brings in
+the predefined configuration it identifies.
+
+There are four \MacroNI{<category id>} values.
+Within a category, a predefined, case insensitive name identifies
+the set of configuration it incorporates. 
+\begin{description}
+
+\label{usecategory:ROLE}
+\item[\MacroNI{ROLE}]
+  Describes configuration for the various roles that a machine might
+  play within an HTCondor pool.
+  \begin{itemize}
+    \item \texttt{Personal}
+    Settings needed for when a single machine is the entire pool.
+    \item \texttt{Submit}
+    Settings needed to allow this machine to submit jobs to the pool.
+    \item \texttt{Execute}
+    Settings needed to allow this machine to execute jobs.
+    \item \texttt{CentralManager}
+    Settings needed to allow this machine to act as the central manager
+    for the pool.
+  \end{itemize}
+
+\label{usecategory:FEATURE}
+\item[\MacroNI{FEATURE}]
+  Describes configuration for implemented features. 
+  \begin{itemize}
+    \item \texttt{Remote\_Runtime\_Config}
+    \item \texttt{Runtime\_Config}
+    \item \texttt{VMware}
+    \item \texttt{GPUs}
+  \end{itemize}
+
+\label{usecategory:POLICY}
+\item[\MacroNI{POLICY}]
+  Describes configuration for the circumstances under which
+  machines choose to run jobs.
+  \begin{itemize}
+    \item \texttt{Always\_Run\_Jobs}
+    \item \texttt{UWCS\_Desktop}
+    \item \texttt{Desktop}
+    \item \texttt{Limit\_Job\_Runtimes}
+  \end{itemize}
+
+\label{usecategory:SECURITY}
+\item[\MacroNI{SECURITY}]
+  Describes configuration for an implemented security model.
+  \begin{itemize}
+    \item \texttt{Host\_Based}
+    \item \texttt{With\_Authentication}
+    Requires both authentication and integrity checks.
+    \item \texttt{Strong}
+    Requires authentication, encryption, and integrity checks.
+    \item \texttt{User\_Based}
+    Grants permissions to an administrator and uses 
+    \texttt{With\_Authentication}.
+  \end{itemize}
+
+\end{description}
+
+For pools that are transitioning to using this new syntax in configuration,
+while still having some tools and daemons with HTCondor versions 
+earlier than 8.1.6,
+special syntax in the configuration will cause those daemons to
+fail upon start up,
+rather than use the new, but misinterpreted, syntax. 
+Newer daemons will ignore the extra syntax.
+Placing the \verb|@| character before the \MacroNI{use} key word
+causes daemons the older daemons to fail when they attempt to
+parse this syntax.
+
+As an example, consider the \Condor{startd} as it starts up.
+A \Condor{startd} previous to HTCondor version 8.1.6 fails to start
+when it sees:
+\begin{verbatim}
+@use feature : GPUs
+\end{verbatim}
+Running an older \Condor{config\_val} also identifies the \Expr{@use}
+line as being bad.
+A \Condor{startd} of HTCondor version 8.1.6 or more recent sees
+\begin{verbatim}
+use feature : GPUs
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Config-IfElse}Conditionals in Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!IF/ELSE syntax}
+\index{IF/ELSE configuration syntax}
+Conditional configuration using \verb@if@/\verb@else@ semantics
+is available in a limited form.
+The syntax:
+\begin{verbatim}
+  if <simple condition>
+     <configuration statement>
+     . . .
+     <configuration statement>
+  else
+     <configuration statement>
+     . . .
+     <configuration statement>
+  endif
+\end{verbatim}
+
+An \verb@else@ key word and configuration statements are not required,
+such that simple \verb@if@ semantics are implemented.
+The  \verb@<simple condition>@ does not permit compound conditions.
+It optionally contains the exclamation point character (\verb@!@)
+to represent the not operation,
+followed by 
+\begin{itemize}
+  \item the \verb@defined@ keyword followed by the name of a configuration 
+    variable.
+    If the variable is defined, the configuration statement(s) are
+    incorporated into the configuration.
+    If the variable is \emph{not} defined, the configuration statement(s) are
+    not incorporated into the configuration.
+    As an example,
+\begin{verbatim}
+  if defined MY_UNDEFINED_VARIABLE
+     X = 12
+  else
+     X = -1
+  endif
+\end{verbatim}
+    results in \Expr{X = -1}, when \Expr{MY\_UNDEFINED\_VARIABLE} is
+    \emph{not} yet defined within the configuration.
+  \item the \verb@version@ keyword, representing the version number of
+    of the daemon currently reading the configuration, 
+    followed by a limited comparison to an HTCondor version number.
+    That version number can be of the form \verb@x.y.z@ or \verb@x.y@.
+    The comparison operators are
+    \verb@==@ for equality, where current version 8.2.3 is equal to 8.2,
+    \verb@>=@ to see if the current version number is greater than or
+    equal to, where current version 8.2.3 is greater than 8.2.2, 
+    and current version 8.2.3 is greater than or equal to 8.2.
+    \verb@<=@ to see if the current version number is less than or
+    equal to, where current version 8.2.0 is less than 8.2.2, 
+    and current version 8.2.3 is less than or equal to 8.2.
+    As an example,
+\begin{verbatim}
+  if version == 8.1.6
+     DO_X = True
+  else
+     DO_Y = True
+  endif
+\end{verbatim}
+    results in defining \Expr{DO\_X} as \Expr{True} if the current
+    version of the daemon reading this configuration is 8.1.6.
+  \item \verb@True@ or \verb@yes@ or the value 1.
+    The configuration statement(s) are incorporated into the configuration.
+  \item \verb@False@ or \verb@no@ or the value 0
+    The configuration statement(s) are \emph{not} incorporated into the 
+    configuration.
+  \item \verb@$(<configuration variable>)@ may be used where the
+    immediately evaluated value is a simple boolean value.
+    A value that evaluates to the empty string is considered \verb@False@,
+    otherwise a value that does not evaluate to a simple boolean value
+    is a syntax error.
+\end{itemize}
+
+The syntax
+\begin{verbatim}
+  if <simple condition>
+     <configuration statement>
+     . . .
+     <configuration statement>
+  elif <simple condition>
+     <configuration statement>
+     . . .
+     <configuration statement>
+  endif
+\end{verbatim}
+is the same as syntax
+\begin{verbatim}
+  if <simple condition>
+     <configuration statement>
+     . . .
+     <configuration statement>
+  else
+     if <simple condition>
+        <configuration statement>
+        . . .
+        <configuration statement>
+     endif
+  endif
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Macros-Requiring-Restart}Macros That Will Require a Restart When Changed}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration change requiring a restart of HTCondor}
@@ -1738,6 +2028,43 @@ of the subsystem corresponding to the daemon.
   When \Expr{True}, writes to the user's job event log are sync-ed to
   disk before releasing the lock.
 
+\label{param:UserlogFileCacheMax}
+\item[\Macro{USERLOG\_FILE\_CACHE\_MAX}]
+  The integer number of job event log files that the \Condor{schedd}
+  will keep open for writing during an interval of time
+  (specified by \MacroNI{USERLOG\_FILE\_CACHE\_CLEAR\_INTERVAL}).
+  The default value is 0, causing no files to remain open;
+  when 0, each job event log is opened, the event is written, and then the
+  file is closed.
+  Individual file descriptors are removed from this count 
+  when the \Condor{schedd} detects that no jobs are currently using them.
+  Opening a file is a relatively time consuming operation on a
+  networked file system (NFS),
+  and therefore, 
+  allowing a set of files to remain open can improve performance.
+  The value of this variable needs to be set low enough such that the
+  \Condor{schedd} daemon process does not run out of file descriptors by
+  leaving these job event log files open.
+  The Linux operating system defaults to permitting 1024 assigned
+  file descriptors per process; the \Condor{schedd} will have one
+  file descriptor per running job for the \Condor{shadow}. 
+
+\label{param:UserlogFileCacheClearInterval}
+\item[\Macro{USERLOG\_FILE\_CACHE\_CLEAR\_INTERVAL}]
+  The integer number of seconds that forms the time interval within which
+  job event logs will be permitted to remain open
+  when \MacroNI{USERLOG\_FILE\_CACHE\_MAX} is greater than zero.
+  The default is 60 seconds.
+  When the interval has passed, 
+  all job event logs that the \Condor{schedd} has permitted to stay
+  open will be closed, and the interval within which 
+  job event logs may remain open between writes of events begins anew.
+  This time interval may be set to a longer duration
+  if the administrator determines that the \Condor{schedd} will not
+  exceed the maximum number of file descriptors;
+  a longer interval may yield higher performance due to fewer files
+  being opened and closed.
+
 \label{param:EventLogCountEvents}
 \item[\Macro{EVENT\_LOG\_COUNT\_EVENTS}]
   A boolean value that is \Expr{False} by default.
@@ -2451,6 +2778,14 @@ which use DaemonCore).
   The default value is 28800, which is 8 hours. 
   This variable only takes effect at the start or restart of a daemon.
 
+\label{param:SocketListenBacklog}
+\item[\Macro{SOCKET\_LISTEN\_BACKLOG}]
+  An integer value that defaults to 500.
+  It sets the backlog setting of the listen() network call when a daemon
+  creates a socket for incoming connections.
+  It limits the number of new incoming network connections the OS will
+  accept for a daemon that the daemon hasn't serviced yet.
+
 \label{param:MaxAcceptsPerCycle}
 \item[\Macro{MAX\_ACCEPTS\_PER\_CYCLE}]
   An integer value that defaults to 8.
@@ -2859,6 +3194,36 @@ limit above the hard limit (on maximum open files) that it inherits.
   from the \Condor{negotiator} daemon to the \Condor{startd} daemon
   for a security-enabled pool are done in a nonblocking manner.
 
+\label{param:UdpNetworkFragmentSize}
+\item[\Macro{UDP\_NETWORK\_FRAGMENT\_SIZE}]
+	An integer value that defaults to 1000 and represents the maximum
+	size in bytes of an outgoing UDP packet.  If the outgoing message
+	is larger than \MacroUNI{UDP\_NETWORK\_FRAGMENT\_SIZE}, then the message
+	will be split (fragmented) into multiple packets no larger than
+	\MacroUNI{UDP\_NETWORK\_FRAGMENT\_SIZE}. If the destination of the message
+	is the loopback network interface, see 
+	\Macro{UDP\_LOOPBACK\_FRAGMENT\_SIZE} below. 
+	For instance, the maximum payload size of a UDP packet over Ethernet
+	is typically 1472 bytes, and thus if a UDP payload exceeds 1472 bytes 
+	the IP network stack on either hosts or forwarding devices (such
+	as network routers) will have to perform message fragmentation 
+	on transmission and reassembly on receipt.  Experimentation
+	has shown that such devices are more likely to simply drop a UDP message
+	under high-traffic scenarios if the message requires reassembly.  
+	HTCondor avoids this situation via the capability to
+	perform UDP fragmentation and reassembly on its own. 
+
+\label{param:UdpLoopbackFragmentSize}
+\item[\Macro{UDP\_LOOPBACK\_FRAGMENT\_SIZE}]
+	An integer value that defaults to 60000 and represents the maximum
+	size in bytes of an outgoing UDP packet that is being sent
+	to the loopback network interface (e.g. 127.0.0.1).  
+	If the outgoing message
+	is larger than \MacroUNI{UDP\_LOOPBACK\_FRAGMENT\_SIZE}, then the message
+	will be split (fragmented) into multiple packets no larger than
+	\MacroUNI{UDP\_LOOPBACK\_FRAGMENT\_SIZE}.
+	If the destination of the message is not the loopback interface,
+	see \Macro{UDP\_NETWORK\_FRAGMENT\_SIZE} above.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -3312,6 +3677,14 @@ for details on installing and running a checkpoint server.
   The number of seconds after which if a checkpoint file has not
   been accessed, it is considered stale.
   The default value is 5184000 seconds, which is sixty days.
+
+\label{param:AlwaysUseLocalCkptServer}
+\item[\Macro{ALWAYS\_USE\_LOCAL\_CKPT\_SERVER}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, it forces all checkpoints to be read from a checkpoint
+  server running on the same machine where the job is running.
+  This is intended to be used when all checkpoint servers access
+  a shared file system.
 
 \end{description}
 
@@ -3870,6 +4243,7 @@ Configuring The Startd Policy.
   causes HTCondor to stop a currently running job once
   \Macro{MAXJOBRETIREMENTTIME} has expired.  This expression is not
   evaluated if \MacroNI{WANT\_SUSPEND} is \Expr{True}.
+  The default value is \Expr{False}, such that preemption is disabled.
 
 \label{param:WantHold}
 \item[\Macro{WANT\_HOLD}]
@@ -4007,6 +4381,7 @@ WANT_HOLD_REASON = \
   job will be soft-killed and given time to checkpoint or clean up.
   The amount of time given depends on \Macro{MachineMaxVacateTime}
   and \Macro{KILL}.
+  The default value is \Expr{False}.
 
 \label{param:EnableVersionedOpsys}
 \item[\Macro{ENABLE\_VERSIONED\_OPSYS}]
@@ -4150,6 +4525,8 @@ WANT_HOLD_REASON = \
   By default the \Condor{negotiator} will not match jobs to a slot with
   retirement time remaining.  This behavior is controlled by
   \Macro{NEGOTIATOR\_CONSIDER\_EARLY\_PREEMPTION}.
+
+  There is no default value for this configuration variable.
 
 \label{param:ClaimWorklife}
 \item[\Macro{CLAIM\_WORKLIFE}]
@@ -4376,13 +4753,14 @@ WANT_HOLD_REASON = \
 
 \label{param:RunBenchmarks}
 \item[\Macro{RUNBENCHMARKS}]
-  Specifies when to run benchmarks.
+  A boolean expression that specifies whether to run benchmarks.
   When the machine is in the Unclaimed state and this expression
   evaluates to \Expr{True}, benchmarks will be run.
-  If RunBenchmarks is specified and set to anything other than \Expr{False},
-  additional benchmarks will be run when the \Condor{startd} initially starts.
-  To disable start up benchmarks, set \MacroNI{RunBenchmarks} to \Expr{False},
-  or comment it out of the configuration file.
+  If \MacroNI{RUNBENCHMARKS} is specified and set to anything other 
+  than \Expr{False},
+  additional benchmarks will be run once,
+  when the \Condor{startd} starts.
+  To disable start up benchmarks, set \MacroNI{RunBenchmarks} to \Expr{False}.
 
 \label{param:DedicatedScheduler}
 \item[\Macro{DedicatedScheduler}]
@@ -4769,6 +5147,53 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   fixed quantity or list of the resource
   in the the configuration when set by \Macro{MACHINE\_RESOURCE\_<name>}.
 
+\label{param:EnvironmentForAssignedName}
+\item[\Macro{ENVIRONMENT\_FOR\_Assigned<name>}]
+  A space separated list of environment variables to set for the job.
+  Each environment variable will be set to the list of assigned resources 
+  defined by the slot ClassAd attribute \Attr{Assigned<name>}.
+  Each environment variable name may be followed by an equals sign
+  and a Perl style regular expression that defines how to modify each 
+  resource ID before using it as the value of the environment variable.  
+  As a special case for CUDA GPUs,
+  if the environment variable name is \Env{CUDA\_VISIBLE\_DEVICES}, 
+  then the correct Perl style regular expression is applied automatically. 
+
+  For example, with the configuration
+\begin{verbatim}
+  ENVIRONMENT_FOR_AssignedGPUs = VISIBLE_GPUS=/^/gpuid:/ 
+\end{verbatim}
+
+  and with the machine ClassAd attribute
+  \Expr{AssignedGPUs = "CUDA1, CUDA2"}, 
+  the job's environment will contain
+
+\begin{verbatim}
+  VISIBLE_GPUS = gpuid:CUDA1, gpuid:CUDA2 
+\end{verbatim}
+
+\label{param:EnvironmentValueForUnassignedName}
+\item[\Macro{ENVIRONMENT\_VALUE\_FOR\_UnAssigned<name>}]
+  Defines the value to set for environment variables specified
+  in by configuration variable \MacroNI{ENVIRONMENT\_FOR\_Assigned<name>}
+  when there is no machine ClassAd attribute \Attr{Assigned<name>} 
+  for the slot. 
+  This configuration variable exists to deal with the situation where 
+  jobs will use a resource that they have not been assigned because
+  there is no explicit assignment.  
+  The CUDA runtime library (for GPUs) has this problem.
+
+  For example, where configuration is
+\begin{verbatim}
+  ENVIRONMENT_FOR_AssignedGPUs = VISIBLE_GPUS
+  ENVIRONMENT_VALUE_FOR_UnAssignedGPUs = none 
+\end{verbatim}
+  and there is \emph{no} machine ClassAd attribute \Attr{AssignedGPUs},
+  the job's environment will contain
+\begin{verbatim}
+  VISIBLE_GPUS = none
+\end{verbatim}
+
 \label{param:MustModifyRequestExprs}
 \item[\Macro{MUST\_MODIFY\_REQUEST\_EXPRS}]
   A boolean value that defaults to \Expr{False}.
@@ -4883,7 +5308,7 @@ CONSUMPTION_DISK = quantize(target.RequestDisk,{1024})
 \label{param:SlotWeight}
 \item[\Macro{SLOT\_WEIGHT}]
   An expression that specifies a slot's weight, used as a multiplier
-  the \Condor{negotiator} daemon during matchmaking to asses user usage
+  the \Condor{negotiator} daemon during matchmaking to assess user usage
   of a slot, which affects user priority.
   Defaults to \Attr{Cpus}.  
   %In this example, a memory-centric slot
@@ -5719,8 +6144,9 @@ MAX_JOBS_RUNNING	= \
   Once a request times out, the \Condor{schedd} will simply begin the process
   of finding a machine for the job all over again.
 
-  Normally, it is not a good idea to set this to be very small (e.g. a
-  few minutes).  Doing so can lead to failure to preempt, because the
+  Normally, it is not a good idea to set this to be very small, 
+  where a small value is a few minutes.  
+  Doing so can lead to failure to preempt, because the
   preempting job will spend a significant fraction of its time waiting
   to be re-matched.  During that time, it would miss out on any
   opportunity to run if the job it is trying to preempt gets out of
@@ -6402,8 +6828,13 @@ SYSTEM_PERIODIC_REMOVE = \
   the \Condor{schedd} audit log is allowed to perform,
   before the oldest one will be rotated away. The default value is 1. 
 
-\end{description}
+\label{param:ScheddUseSlotWeight}
+\item[\Macro{SCHEDD\_USE\_SLOT\_WEIGHT}]
+  A boolean that defaults to \Expr{False}. When \Expr{True}, 
+  the \Condor{schedd} does use configuration variable \MacroNI{SLOT\_WEIGHT} 
+  to weight running and idle job counts in the submitter ClassAd.
 
+\end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Shadow-Config-File-Entries}\condor{shadow}
 Configuration File Entries}
@@ -6596,6 +7027,23 @@ These settings affect the \Condor{starter}.
   information back to the \Condor{shadow} where it will end up in the
   ShadowLog.  It defaults to \Expr{True}.
 
+\label{param:StarterLogNameAppend}
+\item[\Macro{STARTER\_LOG\_NAME\_APPEND}]
+  A fixed value that sets the file name extension of the local log file used
+  by the \Condor{starter} daemon. 
+  Permitted values are \Expr{true}, \Expr{false}, \Expr{slot}, 
+  \Expr{cluster} and \Expr{jobid}.
+  A value of \Expr{false} will suppress the use of a file extension.
+  A value of \Expr{true} gives the default behavior of using the slot name,
+  unless there is only a single slot. 
+  A value of \Expr{slot} uses the slot name.
+  A value of \Expr{cluster} uses the job's \Attr{ClusterId} ClassAd attribute.
+  A value of \Expr{jobid} uses the job's \Attr{ProcId} ClassAd attribute.
+  If \Expr{cluster} or \Expr{jobid} are specified,
+  the resulting log files will persist until deleted by the user,
+  so these two options should only be used to assist in debugging, 
+  not as permanent options.
+
 \label{param:StarterDebug}
 \item[\Macro{STARTER\_DEBUG}]
   This setting (and other settings related to debug logging in the starter) is
@@ -6696,8 +7144,8 @@ REM Run the actual job now
 
 \label{param:CgroupMemoryLimitPolicy} 
 \item[\Macro{CGROUP\_MEMORY\_LIMIT\_POLICY}]
-  A string with values of \Expr{hard}, \Expr{soft} and the default value
-  of \Expr{none}.
+  A string with possible values of \Expr{hard}, the default value
+  \Expr{soft} and \Expr{none}.
   If set to \Expr{hard}, the cgroup-based limit on the total amount 
   of physical memory used by the sum of all processes in the job 
   will not be allowed to exceed the limit given by the cgroup memory
@@ -6705,7 +7153,8 @@ REM Run the actual job now
   If the processes try to allocate more memory, 
   the allocation will succeed, and virtual memory will be allocated, 
   but no additional physical memory will be allocated.
-  If set to \Expr{soft}, the cgroup-based limit on the total amount 
+  If set to the default value \Expr{soft}, 
+  the cgroup-based limit on the total amount 
   of physical memory used by the sum of all processes in the job 
   will be allowed to go over the limit, 
   if there is free memory available on the system.
@@ -7620,20 +8069,20 @@ These macros affect the \Condor{negotiator}.
 \item[\Macro{DEFAULT\_PRIO\_FACTOR}]
   Sets the priority factor for local users as they first submit jobs,
   as described in section~\ref{sec:UserPrio}.
-  Defaults to 1.0.
+  Defaults to 1000.
 
 \label{param:NiceUserPrioFactor} 
 \item[\Macro{NICE\_USER\_PRIO\_FACTOR}]
   Sets the priority factor for nice users, as described in
   section~\ref{sec:UserPrio}.
-  Defaults to 10000000.
+  Defaults to 10000000000.
 
 \label{param:RemotePrioFactor} 
 \item[\Macro{REMOTE\_PRIO\_FACTOR}]
   Defines the priority factor for remote users,
   which are those users who who do not belong to the local domain.
   See section~\ref{sec:UserPrio} for details.  
-  Defaults to 10000.
+  Defaults to 10000000.
 
 \label{param:AccountantLocalDomain} 
 \item[\Macro{ACCOUNTANT\_LOCAL\_DOMAIN}]
@@ -7724,25 +8173,19 @@ These macros affect the \Condor{negotiator}.
   attributes of the machine ClassAd and \Expr{TARGET.} refers to the
   job ClassAd.  The purpose of the post job rank is to allow the pool
   administrator to choose between machines that the job ranks equally.
-  The default value is undefined, which causes this rank to have no
-  effect on the ranking of matches.  The following example expression
-  steers jobs toward faster machines and tends to fill a cluster of
-  multi-processors by spreading across all machines before filling up
-  individual machines.  In this example, the expression is chosen to
-  have no effect when preemption would take place, allowing control to
-  pass on to \MacroNI{PREEMPTION\_RANK}.
-
+  The default value is 
 \begin{verbatim}
-  UWCS_NEGOTIATOR_POST_JOB_RANK = \
-   (RemoteOwner =?= UNDEFINED) * (KFlops - SlotID)
+  NEGOTIATOR_POST_JOB_RANK = \
+   (RemoteOwner =?= UNDEFINED) * \
+   (ifThenElse(isUndefined(KFlops), 1000, Kflops) - \
+   SlotID - 1.0e10*(Offline=?=True)) 
 \end{verbatim}
-
 
 \label{param:PreemptionRequirements}
 \item[\Macro{PREEMPTION\_REQUIREMENTS}]
   When considering user priorities, the negotiator will not preempt
-  a job running on a given machine unless the
-  \MacroNI{PREEMPTION\_REQUIREMENTS} expression evaluates to \Expr{True} and the
+  a job running on a given machine unless this
+  expression evaluates to \Expr{True}, and the
   owner of the idle job has a better priority than the owner of the
   running job. 
   The \MacroNI{PREEMPTION\_REQUIREMENTS} expression is evaluated within the
@@ -7754,14 +8197,14 @@ These macros affect the \Condor{negotiator}.
   in \MacroNI{PREEMPTION\_REQUIREMENTS} can be placed in the machine ClassAd
   using \Macro{STARTD\_JOB\_EXPRS}.
   If not explicitly set in the HTCondor configuration file, the default value
-  for this expression is \Expr{True}.
+  for this expression is \Expr{False}.
   \MacroNI{PREEMPTION\_REQUIREMENTS} should include the term 
-  \Expr{(SubmitterGroup =?= RemoteGroup)} if a preemption policy that respects
+  \Expr{(SubmitterGroup =?= RemoteGroup)}, if a preemption policy that respects
   \Term{group quotas} is desired.
-  Note that this setting does not
-  influence other potential causes of preemption, such as startd
-  \MacroNI{RANK}, or \MacroNI{PREEMPT} expressions.  See
-  section \ref{sec:Disabling Preemption} for a general discussion of
+  Note that this variable does not
+  influence other potential causes of preemption, such as the
+  \MacroNI{RANK} of the \Condor{startd}, or \MacroNI{PREEMPT} expressions.
+  See section \ref{sec:DisablingPreemption} for a general discussion of
   limiting preemption.
 
 \label{param:PreemptionRequirementsStable} 
@@ -7786,8 +8229,9 @@ These macros affect the \Condor{negotiator}.
   and the other negotiation expressions rank the same.  For example,
   if the job has no preference, it is usually preferable to preempt a
   job with a small \AdAttr{ImageSize} instead of a job with a large
-  \AdAttr{ImageSize}.  The default is to rank all preemptable matches
-  the same.  However, the negotiator will always prefer to match the
+  \AdAttr{ImageSize}.  There is no default value, causing
+  all preemptable matches to be ranked the same.  
+  However, the negotiator will always prefer to match the
   job with an idle machine over a preemptable machine, if none of the
   other ranks express a preference between them.
 
@@ -7943,9 +8387,9 @@ These macros affect the \Condor{negotiator}.
 
 \label{param:NegotiatorConsiderPreemption}
 \item[\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}]
-  For expert users only. A boolean value (defaults to \Expr{True}),
-  that when \Expr{False},
-  can cause the \Condor{negotiator} to run
+  For expert users only. A boolean value that defaults to \Expr{True}.
+  When \Expr{False},
+  it can cause the \Condor{negotiator} to run
   faster and also have better spinning pie accuracy.
   \emph{Only set this to \Expr{False} if \Macro{PREEMPTION\_REQUIREMENTS}
   is \Expr{False},
@@ -8676,11 +9120,6 @@ These macros affect the \Condor{gridmanager}.
   The complete path and file name of the EC2 GAHP executable.
   The default value is \File{\MacroUNI{SBIN}/ec2\_gahp}.
 
-\label{param:GCEGAHP}
-\item[\Macro{GCE\_GAHP}]
-  The complete path and file name of the GCE GAHP executable.
-  The default value is \File{\MacroUNI{SBIN}/gce\_gahp}.
-
 \label{param:GT2GAHP}
 \item[\Macro{GT2\_GAHP}]
   The complete path and file name of the GT2 GAHP executable.
@@ -8755,6 +9194,11 @@ These macros affect the \Condor{gridmanager}.
 \item[\Macro{GCE\_GAHP}]
   The complete path and file name of the GCE GAHP executable.
   The default value is \File{\MacroUNI{SBIN}/gce\_gahp}.
+
+\label{param:BOINCGAHP}
+\item[\Macro{BOINC\_GAHP}]
+  The complete path and file name of the BOINC GAHP executable.
+  The default value is \File{\MacroUNI{SBIN}/boinc\_gahp}.
 
 \end{description}
 

@@ -18,11 +18,33 @@
 ##
 ##**************************************************************
 
+use CondorTest;
+use CondorPersonal;
 use CondorUtils;
 use strict;
 use warnings;
 
 # Set up some handy global variables
+
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+    WANT_SUSPEND = FALSE
+    NEGOTIATION_INTERVAL = 5
+    NUM_CPUS = 6
+';
+
+my $testname = "lib_chirp";
+
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"libchirp");
+
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
+
+CondorTest::StartCondorWithParams(
+    condor_name => "libchirp",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
 
 my $libexecdir = `condor_config_val LIBEXEC`;
 chomp($libexecdir);
@@ -64,16 +86,25 @@ There are many like it
 But this one is mine.
 ";
 
+sub SetFailure {
+	my $reason = shift;
+	print "$reason";
+	RegisterResult(0, "test_name", $testname);
+	EndTest();
+	exit(1);
+};
+
 # Make an arbitrary input file
 print "Making a lib_chirp_input file to transfer to the job and chirp put back...\n";
-open LIB_CHIRP_INPUT, ">lib_chirp_input" || die("ERROR: Can't create lib_chirp_input: $!\n");
-print LIB_CHIRP_INPUT  $input_file_contents || die("ERROR: Can't write to the input file: $!\n");
+open LIB_CHIRP_INPUT, ">lib_chirp_input" || SetFailure("ERROR: Can't create lib_chirp_input: $!\n");
+print LIB_CHIRP_INPUT  $input_file_contents || SetFailure("ERROR: Can't write to the input file: $!\n");
 close LIB_CHIRP_INPUT;
 print "Succeeded making the input file\n";
 
 print "Making a Condor submit file to run chirp ...\n";
-open CONDOR_SUBMIT, ">lib_chirp.cmd" || die("ERROR: Can't create lib_chirp.cmd: $!\n");
-print CONDOR_SUBMIT  $submitTemplate || die("ERROR: Can't create lib_chirp.cmd: $!\n");;
+open CONDOR_SUBMIT, ">lib_chirp.cmd" || SetFailure("ERROR: Can't create lib_chirp.cmd: $!\n");
+
+print CONDOR_SUBMIT  $submitTemplate || SetFailure("ERROR: Can't create lib_chirp.cmd: $!\n");
 close CONDOR_SUBMIT;
 print "Succeeded making the submit file\n";
 
@@ -82,10 +113,10 @@ runcmd("condor_submit lib_chirp.cmd");
 runcmd("condor_wait -wait 1200 lib_chirp.log");
 
 # And check to see that the test did what we expected
--f "lib_chirp_output" || die("ERROR: lib_chirp_output never got chirp put back\n");
+-f "lib_chirp_output" || SetFailure("ERROR: lib_chirp_output never got chirp put back\n");
 
 print "lib_chirp_output did make it back\n";
-open LIB_CHIRP_OUTPUT, "<lib_chirp_output" || die("ERROR: Can't open lib_chirp_output\n");
+open LIB_CHIRP_OUTPUT, "<lib_chirp_output" || SetFailure("ERROR: Can't open lib_chirp_output\n");
 my $output_validation = join("", <LIB_CHIRP_OUTPUT>); # Slurp
 
 # Are they the same?
@@ -93,8 +124,8 @@ print "Output file is\n============";
 print $output_validation;
 print "===================\n";
 if ($output_validation ne $input_file_contents) {
-        # Badness
-        die("ERROR: Sucessfully chirp'ed back the input file, but the contents aren't the same\n");
+	# Badness
+	SetFailure("ERROR: Sucessfully chirp'ed back the input file, but the contents aren't the same\n");
 }
 
 
@@ -103,5 +134,8 @@ unlink("lib_chirp.cmd");
 unlink("lib_chirp.log");
 unlink("lib_chirp_input");
 unlink("lib_chirp_output");
+
+RegisterResult(1, "test_name", $testname);
+EndTest();
 exit(0);
 
