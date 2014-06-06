@@ -15,7 +15,7 @@ job_core_err_java
 job_core_initialdir_java
 job_core_input_java
 job_core_output_java
-cmd_q_shows-dag
+lib_include_cmd_config
 
 lib_auth_protocol-ctb
 lib_auth_protocol-fs

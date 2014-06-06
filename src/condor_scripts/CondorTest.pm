@@ -792,7 +792,7 @@ sub DoTest
 
     # if condor_submit failed for some reason return an error
     if($cluster == 0){
-		print "Why is cluster 0 in RunTest??????\n";
+		die "Why is cluster 0 in RunTest??????\n";
 	} else {
 
     	# monitor the cluster and return its exit status
@@ -3077,7 +3077,7 @@ sub KillPersonal
 	my $personal_config = shift;
 	my $logdir = "";
 	if($personal_config =~ /^(.*[\\\/])(.*)$/) {
-		TestDebug("LOG dir is $1/log\n",$debuglevel);
+		#TestDebug("LOG dir is $1/log\n",$debuglevel);
 		$logdir = $1 . "/log";
 	} else {
 		TestDebug("KillPersonal passed this config: $personal_config\n",2);
