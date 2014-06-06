@@ -490,6 +490,22 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
         // Defensive programming: to protect against buffer overruns in the
         // unknown globus mapping module, make sure we are at least nul-term'd
         local_user[USER_NAME_MAX-1] = '\0';
+
+	// More defensive programming: There is a bug in LCMAPS, (which is possibly
+	// called by a globus callout) that sometimes returns with the euid set to
+	// root (!?!).  As a safeguard, We check for that here and return to the
+	// condor euid.  This is done "outside" of the condor priv stack since this
+	// is essentially undoing a side effect of the library call, not
+	// intentionally changing priv state.
+	if (geteuid() == 0) {
+		dprintf(D_ALWAYS, "WARNING: globus returned with euid 0\n");
+		// attempt to undo
+		if (seteuid(get_condor_uid())) {
+			// complain loudly, but continue
+			dprintf(D_ALWAYS, "ERROR: something has gone terribly wrong: errno %i\n", errno);
+		}
+	}
+
 #endif
 
 	if (tmp_user) {
