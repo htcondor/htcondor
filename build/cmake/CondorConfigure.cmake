@@ -916,7 +916,7 @@ else(MSVC)
 	if (cxx_Wunused_local_typedefs AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
 		# we don't ever want the 'unused local typedefs' warning treated as an error.
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=unused-local-typedefs")
-	endif(cxx_Wunused_local_typedefs)
+	endif(cxx_Wunused_local_typedefs AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
 	# check compiler flag not working for this flag.  
 	if (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.8")
