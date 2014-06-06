@@ -85,6 +85,11 @@ lib_auth_config
 cmd_q_shows-dag
 cmd_q_shows-xml
 cmd_q_shows-better-analyze
+cmd_q_shows-format
+cmd_q_shows-cputime
+cmd_q_shows-hold
+cmd_q_shows-run
+cmd_q_shows-sub
 file_transfer_submit
 lib_userlog
 lib_eventlog

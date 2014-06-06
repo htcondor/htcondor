@@ -15,6 +15,7 @@ BEGIN {
 package CondorUtils;
 
 our $VERSION = '1.00';
+my $btdebug = 0;
 
 use base 'Exporter';
 
@@ -521,7 +522,9 @@ sub Which {
 
 #print "Which: looking for: $exe\n";
     if( is_windows_native_perl() ) {
-		print "windows native perl!\n";
+		if($btdebug == 1) {
+			print "windows native perl!\n";
+		}
         return `\@for \%I in ($exe) do \@echo(\%~\$PATH:I`;
     }
 	my $amwindows = is_windows();
@@ -543,7 +546,9 @@ sub Which {
         fullchomp( $path);
 		#print "Checking <$path>\n";
         if(-f "$path/$exe") {
-			print "Which returning:$path/$exe\n";
+			if($btdebug == 1) {
+				print "Which returning:$path/$exe\n";
+			}
             return "$path/$exe";
         }
     }
@@ -592,7 +597,7 @@ sub CreateDir
 	my $cmdcount = @argsin;
 	my $ret = 0;
 	my $fullcmd = "";
-	print  "CreateDir: $cmdline argcout:$cmdcount\n";
+	#print  "CreateDir: $cmdline argcout:$cmdcount\n";
 
 	my $amwindows = is_windows();
 
@@ -642,7 +647,9 @@ sub CreateDir
 
 		$fullcmd = "cmd /C mkdir $winpath";
 		$ret = system("$fullcmd");
-		print "Tried to create dir got ret value:$ret path:$winpath:$fullcmd\n";
+		if($btdebug == 1) {
+			print "Tried to create dir got ret value:$ret path:$winpath:$fullcmd\n";
+		}
 	} else {
 		$fullcmd = "mkdir $cmdline"; 	
 		if(-d $cmdline) {
@@ -717,7 +724,9 @@ sub dir_listing {
 	if(not File::Spec->file_name_is_absolute($path)) {
 		$cwd = "(CWD: '" . Cwd::getcwd() . "')";
 	}
-	print "Showing directory contents of path '$path' $cwd\n";
+	if($btdebug == 1) {
+		print "Showing directory contents of path '$path' $cwd\n";
+	}
     
 	# We have to check $^O because the platform_* scripts will be executed on a Linux
 	# submit node - but the nmi platform string will have winnt
@@ -850,16 +859,24 @@ sub WhereIsInstallDir {
 	my $top = $base_dir;
 	if($iswindows == 1) {
 		my $top = Cwd::getcwd();
-		print "base_dir is \"$top\"\n";
+		if($btdebug == 1) {
+			print "base_dir is \"$top\"\n";
+		}
 		if ($iscygwin) {
 			my $crunched = `cygpath -m $top`;
 			fullchomp($crunched);
-			print "cygpath changed it to: \"$crunched\"\n";
+			if($btdebug == 1) {
+				print "cygpath changed it to: \"$crunched\"\n";
+			}
 			my $ppwwdd = `pwd`;
-			print "pwd says: $ppwwdd\n";
+			if($btdebug == 1) {
+				print "pwd says: $ppwwdd\n";
+			}
 		} else {
 			my $ppwwdd = `cd`;
-			print"cd says: $ppwwdd\n";
+			if($btdebug == 1) {
+				print"cd says: $ppwwdd\n";
+			}
 		}
 	}
 
@@ -872,10 +889,14 @@ sub WhereIsInstallDir {
 		print "PATH: $ENV{PATH}\n";
 		exit(1);
 	} else {
-		print "Found master via Which here:$tmp\n";
+		if($btdebug == 1) {
+			print "Found master via Which here:$tmp\n";
+		}
 	}
 	fullchomp($tmp);
-	print "Install Directory \"$tmp\"\n";
+	if($btdebug == 1) {
+		print "Install Directory \"$tmp\"\n";
+	}
 	if ($iswindows) {
 		if ($iscygwin) {
 			$tmp =~ s|\\|/|g; # convert backslashes to forward slashes.
@@ -892,14 +913,18 @@ sub WhereIsInstallDir {
 		}
 		$wininstalldir =~ s|/|\\|g; # forward slashes.to backslashes
 		$installdir =~ s|\\|/|g; # convert backslashes to forward slashes.
-		print "Testing this Install Directory: \"$wininstalldir\"\n";
+		if($btdebug == 1) {
+			print "Testing this Install Directory: \"$wininstalldir\"\n";
+		}
 	} else {
 		$wininstalldir = "none";
 		$tmp =~ s|//|/|g;
 		if( ($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) || \
 				($tmp =~ /^(.*)\/bin\/condor_master\s*$/) ) {
 			$installdir = $1;
-			print "Testing This Install Directory: \"$installdir\"\n";
+			if($btdebug == 1) {
+				print "Testing This Install Directory: \"$installdir\"\n";
+			}
 		} else {
 			die "'$tmp' didn't match path RE\n";
 		}

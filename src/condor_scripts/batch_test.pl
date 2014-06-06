@@ -722,22 +722,23 @@ sub DoChild
 	copy($runout, $newrunout);
 	copy($cmdout, $newcmdout);
 
-	if($res != 0) { 
+	return($res);
+	#if($res != 0) { 
 	    #print "Perl test($test_program) returned <<$res>>!!! \n"; 
-	    exit(1); 
-	}
-	exit(0);
-
-	if($@) {
-		if($@ =~ /timeout/) {
-			print "\n$test_program            Timeout\n";
-			exit(1);
-		} else {
-			alarm(0);
-			exit(0);
-		}
-	}
-	exit(0);
+	    #exit(1); 
+	#}
+	#exit(0);
+#
+	#if($@) {
+		#if($@ =~ /timeout/) {
+			#print "\n$test_program            Timeout\n";
+			#exit(1);
+		#} else {
+			#alarm(0);
+			#exit(0);
+		#}
+	#}
+	#exit(0);
 }
 
 # Call down to Condor Perl Module for now
