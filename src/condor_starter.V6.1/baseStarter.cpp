@@ -2368,7 +2368,11 @@ CStarter::SpawnJob( void )
 		case CONDOR_UNIVERSE_VANILLA: {
 			int wantCheckpoint = 0;
 			jobAd->LookupBool( "WantCheckpoint", wantCheckpoint );
-			if( wantCheckpoint ) {
+
+			int userLevelCheckpoint = 0;
+			jobAd->LookupBool( "UserLevelCheckpoint", userLevelCheckpoint );
+
+			if( wantCheckpoint && ! userLevelCheckpoint ) {
 				job = new VanillaCheckpointProc( jobAd );
 			} else {
 				job = new VanillaProc( jobAd );

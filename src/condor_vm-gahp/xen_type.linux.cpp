@@ -37,6 +37,8 @@
 #include <string>
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
+#include <errno.h>
+#include <string.h>
 
 #define XEN_CONFIG_FILE_NAME "xen_vm.config"
 #define XEN_CKPT_TIMESTAMP_FILE_SUFFIX ".timestamp"
@@ -110,8 +112,7 @@ VirshType::Start()
 	vmprintf(D_FULLDEBUG, "Inside VirshType::Start\n");
 
 	if( (m_configfile.Length() == 0)) {
-
-	        m_result_msg = VMGAHP_ERR_INTERNAL;
+		m_result_msg = VMGAHP_ERR_INTERNAL;
 		vmprintf(D_FULLDEBUG, "Config file was not set configfile: %s\n", m_configfile.Value());
 		return false;
 	}
@@ -506,7 +507,7 @@ VirshType::Suspend()
 	ResumeFromSoftSuspend();
 
 	MyString tmpfilename;
-	makeNameofSuspendfile(tmpfilename);
+	makeNameOfSuspendFile(tmpfilename);
 	unlink(tmpfilename.Value());
 
 	priv_state priv = set_root_priv();
@@ -523,12 +524,18 @@ VirshType::Suspend()
 	int result = virDomainSave(dom, tmpfilename.Value());
 	virDomainFree(dom);
 	set_priv(priv);
+
 	if( result != 0 ) {
-		// Read error output
-// 		char *temp = cmd_out.print_to_delimed_string("/");
-// 		m_result_msg = temp;
-// 		free( temp );
 		unlink(tmpfilename.Value());
+		return false;
+	}
+
+	priv = set_root_priv();
+	result = chown( tmpfilename.Value(), get_user_uid(), get_user_gid() );
+	set_priv( priv );
+
+	if( result != 0 ) {
+		dprintf( D_ALWAYS, "Error changing ownership of checkpoint: %d (%s), failing.\n", errno, strerror( errno ) );
 		return false;
 	}
 
@@ -598,8 +605,8 @@ VirshType::Status()
 	vmprintf(D_FULLDEBUG, "Inside VirshType::Status\n");
 
  	if((m_configfile.Length() == 0)) {
- 		m_result_msg = VMGAHP_ERR_INTERNAL;
- 		return false;
+		m_result_msg = VMGAHP_ERR_INTERNAL;
+		return false;
  	}
 
  	m_result_msg = "";
@@ -698,39 +705,50 @@ VirshType::Status()
 	    return false;
 	  }
 	if(info->state == VIR_DOMAIN_RUNNING || info->state == VIR_DOMAIN_BLOCKED)
-	  { 
-	    static unsigned long long LastCpuTime = 0; 
-	    static time_t LastStamp = time(0); 
-	    
+	  {
+	    static unsigned long long LastCpuTime = 0;
+	    static time_t LastStamp = time(0);
+
 	    time_t CurrentStamp = time(0);
 	    unsigned long long CurrentCpuTime= info->cpuTime;
 	    double percentUtilization=1.0;
-	    
+
 	    setVMStatus(VM_RUNNING);
 	    // libvirt reports cputime in nanoseconds
 	    m_cpu_time = info->cpuTime / 1000000000.0;
 	    m_result_msg += "Running";
-	    
+
 	    m_result_msg += " ";
 	    m_result_msg += VMGAHP_STATUS_COMMAND_CPUUTILIZATION;
 	    m_result_msg += "=";
-	    
+
 	    if ( (CurrentStamp - LastStamp) > 0 )
 	    {
-	      // Old calc method because of libvirt version mismatches. 
+	      // Old calc method because of libvirt version mismatches.
 	      // courtesy of http://people.redhat.com/~rjones/virt-top/faq.html#calccpu 
 	      percentUtilization = (1.0 * (CurrentCpuTime-LastCpuTime) ) / ((CurrentStamp - LastStamp)*info->nrVirtCpu*1000000000.0);
 	      vmprintf(D_FULLDEBUG, "Computing utilization %f = (%llu) / (%d * %d * 1000000000.0)\n",percentUtilization, (CurrentCpuTime-LastCpuTime), (int) (CurrentStamp - LastStamp), info->nrVirtCpu );
 	    }
 
 	    m_result_msg += percentUtilization;
-	    
+
 	    m_result_msg += " " VMGAHP_STATUS_COMMAND_CPUTIME "=";
 	    m_result_msg += m_cpu_time;
 
-	    LastCpuTime = CurrentCpuTime; 
+	    LastCpuTime = CurrentCpuTime;
 	    LastStamp = CurrentStamp;
-	    
+
+	    // Memory usage is in kbytes.
+	    if( info->memory != 0 ) {
+	    	m_result_msg += " " VMGAHP_STATUS_COMMAND_MEMORY "=";
+	    	m_result_msg += (long long)(info->memory);
+	    }
+
+	    if( info->maxMem != 0 ) {
+	    	m_result_msg += " " VMGAHP_STATUS_COMMAND_MAX_MEMORY "=";
+	    	m_result_msg += (long long)(info->maxMem);
+	    }
+
 	    virDomainFree(dom);
 	    return true;
 	  }
@@ -1272,7 +1290,7 @@ XenType::killVMFast(const char* vmname)
 }
 
 void
-VirshType::makeNameofSuspendfile(MyString& name)
+VirshType::makeNameOfSuspendFile(MyString& name)
 {
 	name.formatstr("%s%c%s", m_workingpath.Value(), DIR_DELIM_CHAR,
 			XEN_MEM_SAVED_FILE);
@@ -1371,7 +1389,7 @@ VirshType::findCkptConfigAndSuspendFile(MyString &vmconfig, MyString &suspendfil
 	}
 
 	MyString tmp_name;
-	makeNameofSuspendfile(tmp_name);
+	makeNameOfSuspendFile(tmp_name);
 
 	if( filelist_contains_file(tmp_name.Value(),
 				&m_transfer_intermediate_files, true) ) {
@@ -1586,7 +1604,7 @@ bool XenType::CreateConfigFile()
 
 	// Check whether this is re-starting after vacating checkpointing,
 	if( m_transfer_intermediate_files.isEmpty() == false ) {
-		// we have chckecpointed files
+		// we have checkpointed files
 		// Find vm config file and suspend file
 		MyString ckpt_config_file;
 		MyString ckpt_suspend_file;
@@ -1594,10 +1612,10 @@ bool XenType::CreateConfigFile()
 				== false ) {
 			vmprintf(D_ALWAYS, "Checkpoint files exist but "
 					"cannot find the correct config file and suspend file\n");
-			//Delete all non-transferred files from submit machine
+			// Delete all non-transferred files from submit machine
 			deleteNonTransferredFiles();
 			m_restart_with_ckpt = false;
-		}else {
+		} else {
 			m_configfile = ckpt_config_file;
 			m_suspendfile = ckpt_suspend_file;
 			vmprintf(D_ALWAYS, "Found checkpointed files, "
@@ -1697,24 +1715,29 @@ KVMType::CreateConfigFile()
 
 	// Check whether this is re-starting after vacating checkpointing,
 	if( m_transfer_intermediate_files.isEmpty() == false ) {
-		// we have chckecpointed files
-		// Find vm config file and suspend file
-		MyString ckpt_config_file;
-		MyString ckpt_suspend_file;
-		if( findCkptConfigAndSuspendFile(ckpt_config_file, ckpt_suspend_file)
-				== false ) {
-			vmprintf(D_ALWAYS, "Checkpoint files exist but "
-					"cannot find the correct config file and suspend file\n");
-			//Delete all non-transferred files from submit machine
-			deleteNonTransferredFiles();
-			m_restart_with_ckpt = false;
-		}else {
-			m_configfile = ckpt_config_file;
-			m_suspendfile = ckpt_suspend_file;
-			vmprintf(D_ALWAYS, "Found checkpointed files, "
-					"so we start using them\n");
-			m_restart_with_ckpt = true;
-			return true;
+		MyString suspendFileName;
+		makeNameOfSuspendFile( suspendFileName );
+
+		// Did we transfer the memory state file?
+		if( filelist_contains_file( suspendFileName.c_str(), & m_transfer_intermediate_files, true ) ) {
+			// Can we read it?
+			if( check_vm_read_access_file( suspendFileName.Value(), true ) ) {
+				// We don't check the timestamp vs the state file's mtime,
+				// because file transfer doesn't preserve that.q
+				dprintf( D_ALWAYS, "Found checkpoint file '%s', will resume from it.\n", suspendFileName.Value() );
+
+				// Rather than fix all the code that checks for it, just treat
+				// this like a complicated boolean.  It'll be harmless as
+				// long the file doesn't actually exist.
+				m_configfile.formatstr( "%s%c%s", m_workingpath.Value(), DIR_DELIM_CHAR, XEN_CONFIG_FILE_NAME );
+				m_suspendfile = suspendFileName;
+				m_restart_with_ckpt = true;
+				return true;
+			} else {
+				dprintf( D_FULLDEBUG, "Not resuming from checkpoint because we did not have read access to the memory state file.\n" );
+			}
+		} else {
+			dprintf( D_FULLDEBUG, "Not resuming from checkpoint because we had no intermediate files.\n" );
 		}
 	}
 

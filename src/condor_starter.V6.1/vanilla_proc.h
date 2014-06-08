@@ -79,6 +79,8 @@ public:
 		/** Cass family->resume() */
 	virtual void Continue();
 
+	virtual bool Ckpt();
+
 		/** Take a family snapshot, call OsProc::ShutDownGraceful() */
 	virtual bool ShutdownGraceful();
 
@@ -95,8 +97,6 @@ public:
 			@return true if success, false if failure
 		*/
 	virtual bool PublishUpdateAd( ClassAd* ad );
-
-protected:
 
 	virtual bool SupportsPIDNamespace() { return true;}
 

@@ -412,8 +412,6 @@ VMwareType::VMwareType(const char* prog_for_script, const char* scriptname,
 {
 	m_vmtype = CONDOR_VM_UNIVERSE_VMWARE;
 
-	//m_cputime_before_suspend = 0;
-
 	m_need_snapshot = false;
 	m_restart_with_ckpt = false;
 	m_vmware_transfer = false;
@@ -1169,7 +1167,6 @@ VMwareType::Start()
 
 	setVMStatus(VM_RUNNING);
 	m_start_time.getTime();
-    //m_cpu_time = 0;
 	return true;
 }
 
@@ -1429,8 +1426,6 @@ VMwareType::Suspend()
 	// Suspend succeeds. So there is no process for VM.
 	m_vm_pid = 0;
 	setVMStatus(VM_SUSPENDED);
-	//m_cputime_before_suspend += m_cpu_time;
-	//m_cpu_time = 0;
 	return true;
 }
 
@@ -1504,7 +1499,7 @@ VMwareType::Status()
 	}
 
 	if( m_is_soft_suspended ) {
-		// If a VM is softly suspended, 
+		// If a VM is softly suspended,
 		// we cannot get info about the VM by using script
 		m_result_msg = VMGAHP_STATUS_COMMAND_STATUS;
 		m_result_msg += "=";
@@ -1513,9 +1508,9 @@ VMwareType::Status()
 	}
 
 	// Check the last time when we executed status.
-	// If the time is in 10 seconds before current time, 
+	// If the time is in 10 seconds before current time,
 	// We will not execute status again.
-	// Maybe this case may happen when it took long time 
+	// Maybe this case may happen when it took long time
 	// to execute the last status.
 	UtcTime cur_time;
 	long diff_seconds = 0;
@@ -1575,7 +1570,7 @@ VMwareType::Status()
 		if( !name.Length() || !value.Length() ) {
 			continue;
 		}
-		
+
 		if( !strcasecmp(name.Value(), VMGAHP_STATUS_COMMAND_CPUTIME)) {
 			cputime = (float)strtod(value.Value(), (char **)NULL);
 			if( cputime <= 0 ) {
@@ -1664,7 +1659,6 @@ VMwareType::Status()
 			m_result_msg += VMGAHP_STATUS_COMMAND_CPUTIME;
 			m_result_msg += "=";
 			m_result_msg += m_cpu_time;
-			//m_result_msg += (double)(m_cpu_time + m_cputime_before_suspend);
 		}
 
 		return true;

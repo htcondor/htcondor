@@ -73,7 +73,7 @@ protected:
 	bool parseXenDiskParam(const char *format);
 	bool writableXenDisk(const char* file);
 	void updateLocalWriteDiskTimestamp(time_t timestamp);
-	void makeNameofSuspendfile(MyString& name);
+	void makeNameOfSuspendFile(MyString& name);
 	bool createCkptFiles(void);
 	bool findCkptConfigAndSuspendFile(MyString &config, MyString &suspendfile);
 	bool checkCkptSuspendFile(const char* file);
