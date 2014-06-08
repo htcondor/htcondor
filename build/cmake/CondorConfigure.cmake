@@ -628,7 +628,7 @@ if (WINDOWS)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.54.0)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.33)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.10)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.33.0)
   else()
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
@@ -916,7 +916,7 @@ else(MSVC)
 	if (cxx_Wunused_local_typedefs AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
 		# we don't ever want the 'unused local typedefs' warning treated as an error.
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=unused-local-typedefs")
-	endif(cxx_Wunused_local_typedefs)
+	endif(cxx_Wunused_local_typedefs AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
 	# check compiler flag not working for this flag.  
 	if (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.8")

@@ -50,6 +50,40 @@ passed to the job, when those arguments are specified using the
 \item[\AdAttr{BatchQueue}:]  For grid universe jobs destined for 
 PBS, LSF or SGE, the name of the queue in the remote batch system.
 
+%%% ClassAd attribute: BlockReadKbytes
+\index{ClassAd job attribute!BlockReadKbytes}
+\index{BlockReadKbytes!job ClassAd attribute}
+\item[\AdAttr{BlockReadKbytes}:] The integer number of Kbytes
+read from disk for this job.
+
+%%% ClassAd attribute: BlockReads
+\index{ClassAd job attribute!BlockReads}
+\index{BlockReads!job ClassAd attribute}
+\item[\AdAttr{BlockReads}:] The integer number of disk blocks
+read for this job.
+
+%%% ClassAd attribute: BlockWriteKbytes
+\index{ClassAd job attribute!BlockWriteKbytes}
+\index{BlockWriteKbytes!job ClassAd attribute}
+\item[\AdAttr{BlockWriteKbytes}:] The integer number of Kbytes
+written to disk for this job.
+
+%%% ClassAd attribute: BlockWrites
+\index{ClassAd job attribute!BlockWrites}
+\index{BlockWrites!job ClassAd attribute}
+\item[\AdAttr{BlockWrites}:] The integer number of blocks
+written to disk for this job.
+
+%%% ClassAd attribute: BoincAuthenticatorFile
+\index{ClassAd job attribute!BoincAuthenticatorFile}
+\index{BoincAuthenticatorFile!job ClassAd attribute}
+\item[\AdAttr{BoincAuthenticatorFile}:] 
+Used for grid type boinc jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{boinc\_authenticator\_file}.
+Defines the path and file name of the file containing the authenticator
+string to use to authenticate to the BOINC service.
+
 %%% ClassAd attribute: CkptArch
 \index{ClassAd job attribute!CkptArch}
 \index{CkptArch!job ClassAd attribute}
@@ -1343,6 +1377,34 @@ except there is no division by the number of processes sharing the pages.
 queue.  Measured in the
 number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 
+%%% ClassAd attribute: RecentBlockReadKbytes
+\index{ClassAd job attribute!RecentBlockReadKbytes}
+\index{RecentBlockReadKbytes!job ClassAd attribute}
+\item[\AdAttr{RecentBlockReadKbytes}:] The integer number of Kbytes
+read from disk for this job over the previous time interval defined
+by configuration variable \MacroNI{STATISTICS\_WINDOW\_SECONDS}.
+
+%%% ClassAd attribute: RecentBlockReads
+\index{ClassAd job attribute!RecentBlockReads}
+\index{RecentBlockReads!job ClassAd attribute}
+\item[\AdAttr{RecentBlockReads}:] The integer number of disk blocks
+read for this job over the previous time interval defined
+by configuration variable \MacroNI{STATISTICS\_WINDOW\_SECONDS}.
+
+%%% ClassAd attribute: RecentBlockWriteKbytes
+\index{ClassAd job attribute!RecentBlockWriteKbytes}
+\index{RecentBlockWriteKbytes!job ClassAd attribute}
+\item[\AdAttr{RecentBlockWriteKbytes}:] The integer number of Kbytes
+written to disk for this job over the previous time interval defined
+by configuration variable \MacroNI{STATISTICS\_WINDOW\_SECONDS}.
+
+%%% ClassAd attribute: RecentBlockWrites
+\index{ClassAd job attribute!RecentBlockWrites}
+\index{RecentBlockWrites!job ClassAd attribute}
+\item[\AdAttr{RecentBlockWrites}:] The integer number of blocks
+written to disk for this job over the previous time interval defined
+by configuration variable \MacroNI{STATISTICS\_WINDOW\_SECONDS}.
+
 %%% ClassAd attribute: ReleaseReason
 \index{ClassAd job attribute!ReleaseReason}
 \index{ReleaseReason!job ClassAd attribute}
@@ -1843,7 +1905,7 @@ This is a node in which one or more of the parent nodes has not yet finished.
 \index{DAG\_Status!job ClassAd attribute}
 \label{AttrDAGStatus}
 \item[\AdAttr{DAG\_Status}:]   
-The overall status of the DAG, with the same values as the \Env{\_DAG\_STATUS}
+The overall status of the DAG, with the same values as the \Env{\$DAG\_STATUS}
 macro.
 \begin{center}
 \begin{table}[hbt]

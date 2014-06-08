@@ -821,19 +821,10 @@ int
 supervise_all()
 {
 	UserProc	*proc;
-	int			periodic_checkpointing = FALSE;
 	static Transition	*tr = 0;
 
 
 	// dprintf( D_ALWAYS, "Entering function supervise_all()\n" );
-
-	UProcList.Rewind();
-	while( (proc = UProcList.Next()) ) {
-		if( proc->ckpt_enabled() ) {
-			periodic_checkpointing = TRUE;
-			break;
-		}
-	}
 
 	if (tr == 0) {
 		tr = condor_starter_ptr->find_transition( ALARM );

@@ -298,6 +298,15 @@ customization=seldom
 friendly_name=Soap SSL Port
 review=?
 
+[SOCKET_LISTEN_BACKLOG]
+default=500
+range=1,
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Socket Listen Backlog
+review=?
+
 [SOAP_SSL_PORT]
 default=0
 type=int
@@ -323,7 +332,7 @@ friendly_name=Query Timeout
 review=?
 
 [GSI_DAEMON_DIRECTORY]
-default=/etc/grid-security
+default=
 type=path
 reconfig=true
 customization=seldom
@@ -1310,6 +1319,106 @@ friendly_name=Use Ckpt Server
 review=?
 tags=shadow,baseshadow
 
+[ALWAYS_USE_LOCAL_CKPT_SERVER]
+default=false
+type=bool
+reconfig=false
+customization=seldom
+friendly_name=Always Use local Ckpt Server
+review=?
+tags=shadow,baseshadow
+
+[RECONNECT_BACKOFF_CEILING]
+default=300
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Reconnect Backoff Ceiling
+review=?
+tags=shadow,baseshadow
+
+[SHADOW_MAX_JOB_CLEANUP_RETRIES]
+default=5
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Shadow Max Job Cleanup Retries
+review=?
+tags=shadow,baseshadow
+
+[SHADOW_JOB_CLEANUP_RETRY_DELAY]
+default=30
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Shadow Job Cleanup Retry Delay
+review=?
+tags=shadow,baseshadow
+
+[SHADOW_LAZY_QUEUE_UPDATE]
+default=true
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Shadow Lazy Queue Update
+review=?
+tags=shadow,baseshadow
+
+[RESERVED_SWAP]
+default=0
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Reserved Swap
+review=?
+tags=shadow,baseshadow
+
+[QUILL_MANAGE_VACUUM]
+default=false
+type=bool
+reconfig=true
+customization=devel
+friendly_name=Quill Manage Vacuum
+review=?
+tags=quill,jobqueuedbmanager
+
+[QUILL_POLLING_PERIOD]
+default=10
+type=int
+reconfig=true
+customization=devel
+friendly_name=Quill Polling Period
+review=?
+tags=quill,jobqueuedbmanager
+
+[QUILL_HISTORY_DURATION]
+default=180
+type=int
+reconfig=true
+customization=devel
+friendly_name=Quill History Duration
+review=?
+tags=quill,jobqueuedbmanager
+
+[QUILL_HISTORY_CLEANING_INTERVAL]
+default=24
+type=int
+reconfig=true
+customization=devel
+friendly_name=Quill History Cleaning Interval
+review=?
+tags=quill,jobqueuedbmanager
+
+[QUILL_SHOULD_REINDEX]
+default=true
+type=bool
+reconfig=true
+customization=devel
+friendly_name=Quill Should Reindex
+review=?
+tags=quill,jobqueuedbmanager
+
+[SCHEDD_NAME]
 [RECONNECT_BACKOFF_CEILING]
 default=300
 type=int

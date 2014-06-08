@@ -1226,6 +1226,10 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				claims[i] = NULL;
 				if (! stream->code(claims[i])) {
 					rip->dprintf( D_ALWAYS, "Can't receive preempting claim\n" );
+					for (int n = 0; n < i - 1; n++) {
+						free(claims[n]);
+					}
+					free(claims);
 					ABORT;
 				}
 				Resource *dslot = resmgr->get_by_any_id( claims[i] );

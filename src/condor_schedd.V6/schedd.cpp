@@ -1328,7 +1328,9 @@ Scheduler::count_jobs()
 
 		// log classad into sql log so that it can be updated to DB
 #ifdef HAVE_EXT_POSTGRESQL
-	FILESQL::daemonAdInsert(cad, "ScheddAd", FILEObj, prevLHF);
+	if ( FILEObj ) {
+		FILESQL::daemonAdInsert(cad, "ScheddAd", FILEObj, prevLHF);
+	}
 #endif
 
 #if defined(HAVE_DLOPEN)

@@ -1337,6 +1337,10 @@ Dagman::ResolveDefaultLog()
 
 void
 print_status() {
+	debug_printf( DEBUG_VERBOSE, "DAG status: %d (%s)\n",
+				dagman.dag->_dagStatus,
+				dagman.dag->GetStatusName() );
+
 	int total = dagman.dag->NumNodes( true );
 	int done = dagman.dag->NumNodesDone( true );
 	int pre = dagman.dag->PreRunNodeCount();
