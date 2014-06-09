@@ -44,7 +44,11 @@ The default value of 500 implements the previously hard coded value.
 
 \begin{itemize}
 
-\item Windows machines with more than nine dynamic slots may fail to start jobs.
+\item Windows machines with more than nine dynamic slots may have
+failed to start jobs due to a limit on the number of characters
+in a user name.
+To address this limit, the user name is shortened from
+\Expr{condor-reuse-slot<N>} to \Expr{condor-slot<N>}.
 \Ticket{4388}
 
 \item Fixed a bug where \Condor{q} will fail to communicate with a
