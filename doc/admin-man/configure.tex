@@ -2780,11 +2780,11 @@ which use DaemonCore).
 
 \label{param:SocketListenBacklog}
 \item[\Macro{SOCKET\_LISTEN\_BACKLOG}]
-  An integer value that defaults to 500.
-  It sets the backlog setting of the listen() network call when a daemon
-  creates a socket for incoming connections.
-  It limits the number of new incoming network connections the OS will
-  accept for a daemon that the daemon hasn't serviced yet.
+  An integer value that defaults to 500,
+  which defines the backlog value for the \Procedure{listen} 
+  network call when a daemon creates a socket for incoming connections.
+  It limits the number of new incoming network connections the operating
+  system will accept for a daemon that the daemon has not yet serviced.
 
 \label{param:MaxAcceptsPerCycle}
 \item[\Macro{MAX\_ACCEPTS\_PER\_CYCLE}]
@@ -7342,7 +7342,7 @@ REM Run the actual job now
 \label{param:DynamicRunAccountLocalGroup} 
 \item[\Macro{DYNAMIC\_RUN\_ACCOUNT\_LOCAL\_GROUP}]
   For Windows platforms, a value that sets the local group to a group other 
-  than the default \Expr{Users} for the \Expr{condor-reuse-slot<X>} run account.
+  than the default \Expr{Users} for the \Expr{condor-slot<X>} run account.
   Do \emph{not} place the local group name within quotation marks.
 
 \label{param:JobExecdirPermissions}
@@ -10399,6 +10399,7 @@ section~\ref{sec:Security} on Security.
   \MacroNI{GSI\_DAEMON\_KEY}, and
   \MacroNI{GSI\_DAEMON\_TRUSTED\_CA\_DIR},
   for any of these configuration variables are not explicitly set.
+  The value is unset by default. 
 
 \label{param:GSIDaemonCert}
 \item[\Macro{GSI\_DAEMON\_CERT}]
