@@ -2780,11 +2780,11 @@ which use DaemonCore).
 
 \label{param:SocketListenBacklog}
 \item[\Macro{SOCKET\_LISTEN\_BACKLOG}]
-  An integer value that defaults to 500.
-  It sets the backlog setting of the listen() network call when a daemon
-  creates a socket for incoming connections.
-  It limits the number of new incoming network connections the OS will
-  accept for a daemon that the daemon hasn't serviced yet.
+  An integer value that defaults to 500,
+  which defines the backlog value for the \Procedure{listen} 
+  network call when a daemon creates a socket for incoming connections.
+  It limits the number of new incoming network connections the operating
+  system will accept for a daemon that the daemon has not yet serviced.
 
 \label{param:MaxAcceptsPerCycle}
 \item[\Macro{MAX\_ACCEPTS\_PER\_CYCLE}]
