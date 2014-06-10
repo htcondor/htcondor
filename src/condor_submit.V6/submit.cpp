@@ -133,6 +133,7 @@ int 	InteractiveJob = 0; /* true if job submitted with -interactive flag */
 int 	InteractiveSubmitFile = 0; /* true if using INTERACTIVE_SUBMIT_FILE */
 bool	verbose = false; // formerly: int Quiet = 1;
 bool	terse = false; // generate parsable output
+SetAttributeFlags_t setattrflags = 0; // flags to SetAttribute()
 bool	SubmitFromStdin = false;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
@@ -7532,6 +7533,12 @@ init_params()
 		param_boolean_crufty("WARN_ON_UNUSED_SUBMIT_FILE_MACROS",
 							 WarnOnUnusedMacros ? true : false) ? 1 : 0;
 
+	if ( param_boolean("SUBMIT_NOACK_ON_SETATTRIBUTE",true) ) {
+		setattrflags |= SetAttribute_NoAck;  // set noack flag
+	} else {
+		setattrflags &= ~SetAttribute_NoAck; // clear noack flag
+	}
+
     // the special "fixed" request_xxx forms
     fixedReqRes.clear();
     fixedReqRes.insert(RequestCpus);
@@ -7680,7 +7687,6 @@ log_submit()
 	}
 }
 
-
 int
 SaveClassAd ()
 {
@@ -7691,12 +7697,17 @@ SaveClassAd ()
 	static ClassAd* current_cluster_ad = NULL;
 
 	if ( ProcId > 0 ) {
-		SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId);
+		SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId, setattrflags);
 	} else {
 		myprocid = -1;		// means this is a cluster ad
-		if( SetAttributeInt (ClusterId, myprocid, ATTR_CLUSTER_ID, ClusterId) == -1 ) {
-			fprintf( stderr, "\nERROR: Failed to set %s=%d for job %d.%d (%d)\n", 
+		if( SetAttributeInt (ClusterId, myprocid, ATTR_CLUSTER_ID, ClusterId, setattrflags) == -1 ) {
+			if( setattrflags & SetAttribute_NoAck ) {
+				fprintf( stderr, "\nERROR: Failed submission for job %d.%d - aborting entire submit\n",
+					ClusterId, ProcId);
+			} else {
+				fprintf( stderr, "\nERROR: Failed to set %s=%d for job %d.%d (%d)\n",
 					ATTR_CLUSTER_ID, ClusterId, ClusterId, ProcId, errno);
+			}
 			return -1;
 		}
 	}
@@ -7738,9 +7749,14 @@ SaveClassAd ()
 				}
 			}
 
-			if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
-				fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n", 
+			if( SetAttribute(ClusterId, myprocid, lhstr, rhstr, setattrflags) == -1 ) {
+				if( setattrflags & SetAttribute_NoAck ) {
+					fprintf( stderr, "\nERROR: Failed submission for job %d.%d - aborting entire submit\n",
+						ClusterId, ProcId);
+				} else {
+					fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n",
 						 lhstr, rhstr, ClusterId, ProcId, errno );
+				}
 				retval = -1;
 			}
 			myprocid = tmpProcId;
@@ -7751,9 +7767,14 @@ SaveClassAd ()
 	}
 
 	if ( ProcId == 0 ) {
-		if( SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId) == -1 ) {
-			fprintf( stderr, "\nERROR: Failed to set %s=%d for job %d.%d (%d)\n", 
+		if( SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId, setattrflags) == -1 ) {
+			if( setattrflags & SetAttribute_NoAck ) {
+				fprintf( stderr, "\nERROR: Failed submission for job %d.%d - aborting entire submit\n",
+					ClusterId, ProcId);
+			} else {
+				fprintf( stderr, "\nERROR: Failed to set %s=%d for job %d.%d (%d)\n",
 					 ATTR_PROC_ID, ProcId, ClusterId, ProcId, errno );
+			}
 			return -1;
 		}
 	}
