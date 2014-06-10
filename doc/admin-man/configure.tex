@@ -540,17 +540,21 @@ the set of configuration it incorporates.
 \label{usecategory:ROLE}
 \item[\MacroNI{ROLE}]
   Describes configuration for the various roles that a machine might
-  play within an HTCondor pool.
+  play within an HTCondor pool. The configuration will identify which
+  daemons are running on a machine.
   \begin{itemize}
     \item \texttt{Personal}
     Settings needed for when a single machine is the entire pool.
     \item \texttt{Submit}
     Settings needed to allow this machine to submit jobs to the pool.
+    May be combined with \texttt{Execute} and \texttt{CentralManager} roles.
     \item \texttt{Execute}
     Settings needed to allow this machine to execute jobs.
+    May be combined with \texttt{Submit} and \texttt{CentralManager} roles.
     \item \texttt{CentralManager}
     Settings needed to allow this machine to act as the central manager
     for the pool.
+    May be combined with \texttt{Submit} and \texttt{Execute} roles.
   \end{itemize}
 
 \label{usecategory:FEATURE}
@@ -558,9 +562,24 @@ the set of configuration it incorporates.
   Describes configuration for implemented features. 
   \begin{itemize}
     \item \texttt{Remote\_Runtime\_Config}
-    \item \texttt{Runtime\_Config}
+    Enables the use of \Condor{config\_val} \Opt{-rset} to the machine with
+    this configuration.
+    Note that there are security implications for use of this configuration,
+    as it potentially permits the arbitrary modification of configuration.
+    Variable \Macro{SETTABLE\_ATTRS\_CONFIG} must also be defined.
+    \item \texttt{Remote\_Config}
+    Enables the use of \Condor{config\_val} \Opt{-set} to the machine with
+    this configuration.
+    Note that there are security implications for use of this configuration,
+    as it potentially permits the arbitrary modification of configuration.
+    Variable \Macro{SETTABLE\_ATTRS\_CONFIG} must also be defined.
     \item \texttt{VMware}
+    Enables use of the vm universe with VMware virtual machines.
+    Note that this feature depends on Perl. 
     \item \texttt{GPUs}
+    Sets configuration based on detection with the \Condor{gpu\_discovery}
+    tool, and defines a custom resource using the name \Expr{GPUs}.
+    Supports both OpenCL and CUDA if detected. 
   \end{itemize}
 
 \label{usecategory:POLICY}
@@ -569,9 +588,33 @@ the set of configuration it incorporates.
   machines choose to run jobs.
   \begin{itemize}
     \item \texttt{Always\_Run\_Jobs}
+    Always start jobs and run them to completion, without consideration of
+    \Condor{negotiator} generated preemption or suspension.
+    This is the default policy, and it is intended to be used with dedicated
+    resources.
+    If this policy is used together with the \texttt{Limit\_Job\_Runtimes}
+    policy,
+    order the specification by placing this \texttt{Always\_Run\_Jobs} 
+    policy first. 
     \item \texttt{UWCS\_Desktop}
+    This was the default policy before HTCondor version 8.1.6.
+    It is intended to be used with desktop machines not exclusively running
+    HTCondor jobs.
+    It injects \Expr{UWCS} into the name of some configuration variables.
     \item \texttt{Desktop}
+    An updated and reimplementation of the \texttt{UWCS\_Desktop} policy,
+    but \emph{without} the \Expr{UWCS} naming of some configuration variables.
     \item \texttt{Limit\_Job\_Runtimes}
+    Limits running jobs to a maximum of 24 hours using preemption.
+    To set the limit to a different amount of time, 
+    define configuration variable \MacroNI{MAX\_JOB\_RUNTIME}
+    with the desired limit in seconds;
+    place this definition of \MacroNI{MAX\_JOB\_RUNTIME} \emph{after} the
+    \Expr{use POLICY : Limit\_Job\_Runtimes} line within the configuration
+    file.  
+    If this policy is used together with the \texttt{Always\_Run\_Jobs} policy,
+    order the specification by placing this \texttt{Limit\_Job\_Runtimes} 
+    policy second. 
   \end{itemize}
 
 \label{usecategory:SECURITY}
@@ -579,13 +622,16 @@ the set of configuration it incorporates.
   Describes configuration for an implemented security model.
   \begin{itemize}
     \item \texttt{Host\_Based}
+    The default security model used.
+    Do \emph{not} combine with \texttt{User\_Based} security.
+    \item \texttt{User\_Based}
+    Grants permissions to an administrator and uses 
+    \texttt{With\_Authentication}.
+    Do \emph{not} combine with \texttt{Host\_Based} security.
     \item \texttt{With\_Authentication}
     Requires both authentication and integrity checks.
     \item \texttt{Strong}
     Requires authentication, encryption, and integrity checks.
-    \item \texttt{User\_Based}
-    Grants permissions to an administrator and uses 
-    \texttt{With\_Authentication}.
   \end{itemize}
 
 \end{description}
