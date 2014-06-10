@@ -488,7 +488,7 @@ fail upon start up,
 rather than use the new, but misinterpreted, syntax. 
 Newer daemons will ignore the extra syntax.
 Placing the \verb|@| character before the \MacroNI{include} key word
-causes daemons the older daemons to fail when they attempt to
+causes the older daemons to fail when they attempt to
 parse this syntax.
 
 Here is the same example, but with the syntax that causes older daemons
@@ -540,17 +540,21 @@ the set of configuration it incorporates.
 \label{usecategory:ROLE}
 \item[\MacroNI{ROLE}]
   Describes configuration for the various roles that a machine might
-  play within an HTCondor pool.
+  play within an HTCondor pool. The configuration will identify which
+  daemons are running on a machine.
   \begin{itemize}
     \item \texttt{Personal}
     Settings needed for when a single machine is the entire pool.
     \item \texttt{Submit}
     Settings needed to allow this machine to submit jobs to the pool.
+    May be combined with \texttt{Execute} and \texttt{CentralManager} roles.
     \item \texttt{Execute}
     Settings needed to allow this machine to execute jobs.
+    May be combined with \texttt{Submit} and \texttt{CentralManager} roles.
     \item \texttt{CentralManager}
     Settings needed to allow this machine to act as the central manager
     for the pool.
+    May be combined with \texttt{Submit} and \texttt{Execute} roles.
   \end{itemize}
 
 \label{usecategory:FEATURE}
@@ -558,9 +562,24 @@ the set of configuration it incorporates.
   Describes configuration for implemented features. 
   \begin{itemize}
     \item \texttt{Remote\_Runtime\_Config}
-    \item \texttt{Runtime\_Config}
+    Enables the use of \Condor{config\_val} \Opt{-rset} to the machine with
+    this configuration.
+    Note that there are security implications for use of this configuration,
+    as it potentially permits the arbitrary modification of configuration.
+    Variable \Macro{SETTABLE\_ATTRS\_CONFIG} must also be defined.
+    \item \texttt{Remote\_Config}
+    Enables the use of \Condor{config\_val} \Opt{-set} to the machine with
+    this configuration.
+    Note that there are security implications for use of this configuration,
+    as it potentially permits the arbitrary modification of configuration.
+    Variable \Macro{SETTABLE\_ATTRS\_CONFIG} must also be defined.
     \item \texttt{VMware}
+    Enables use of the vm universe with VMware virtual machines.
+    Note that this feature depends on Perl. 
     \item \texttt{GPUs}
+    Sets configuration based on detection with the \Condor{gpu\_discovery}
+    tool, and defines a custom resource using the name \Expr{GPUs}.
+    Supports both OpenCL and CUDA if detected. 
   \end{itemize}
 
 \label{usecategory:POLICY}
@@ -569,9 +588,33 @@ the set of configuration it incorporates.
   machines choose to run jobs.
   \begin{itemize}
     \item \texttt{Always\_Run\_Jobs}
+    Always start jobs and run them to completion, without consideration of
+    \Condor{negotiator} generated preemption or suspension.
+    This is the default policy, and it is intended to be used with dedicated
+    resources.
+    If this policy is used together with the \texttt{Limit\_Job\_Runtimes}
+    policy,
+    order the specification by placing this \texttt{Always\_Run\_Jobs} 
+    policy first. 
     \item \texttt{UWCS\_Desktop}
+    This was the default policy before HTCondor version 8.1.6.
+    It is intended to be used with desktop machines not exclusively running
+    HTCondor jobs.
+    It injects \Expr{UWCS} into the name of some configuration variables.
     \item \texttt{Desktop}
+    An updated and reimplementation of the \texttt{UWCS\_Desktop} policy,
+    but \emph{without} the \Expr{UWCS} naming of some configuration variables.
     \item \texttt{Limit\_Job\_Runtimes}
+    Limits running jobs to a maximum of 24 hours using preemption.
+    To set the limit to a different amount of time, 
+    define configuration variable \MacroNI{MAX\_JOB\_RUNTIME}
+    with the desired limit in seconds;
+    place this definition of \MacroNI{MAX\_JOB\_RUNTIME} \emph{after} the
+    \Expr{use POLICY : Limit\_Job\_Runtimes} line within the configuration
+    file.  
+    If this policy is used together with the \texttt{Always\_Run\_Jobs} policy,
+    order the specification by placing this \texttt{Limit\_Job\_Runtimes} 
+    policy second. 
   \end{itemize}
 
 \label{usecategory:SECURITY}
@@ -579,13 +622,16 @@ the set of configuration it incorporates.
   Describes configuration for an implemented security model.
   \begin{itemize}
     \item \texttt{Host\_Based}
+    The default security model used.
+    Do \emph{not} combine with \texttt{User\_Based} security.
+    \item \texttt{User\_Based}
+    Grants permissions to an administrator and uses 
+    \texttt{With\_Authentication}.
+    Do \emph{not} combine with \texttt{Host\_Based} security.
     \item \texttt{With\_Authentication}
     Requires both authentication and integrity checks.
     \item \texttt{Strong}
     Requires authentication, encryption, and integrity checks.
-    \item \texttt{User\_Based}
-    Grants permissions to an administrator and uses 
-    \texttt{With\_Authentication}.
   \end{itemize}
 
 \end{description}
@@ -598,7 +644,7 @@ fail upon start up,
 rather than use the new, but misinterpreted, syntax. 
 Newer daemons will ignore the extra syntax.
 Placing the \verb|@| character before the \MacroNI{use} key word
-causes daemons the older daemons to fail when they attempt to
+causes the older daemons to fail when they attempt to
 parse this syntax.
 
 As an example, consider the \Condor{startd} as it starts up.
@@ -2780,11 +2826,11 @@ which use DaemonCore).
 
 \label{param:SocketListenBacklog}
 \item[\Macro{SOCKET\_LISTEN\_BACKLOG}]
-  An integer value that defaults to 500.
-  It sets the backlog setting of the listen() network call when a daemon
-  creates a socket for incoming connections.
-  It limits the number of new incoming network connections the OS will
-  accept for a daemon that the daemon hasn't serviced yet.
+  An integer value that defaults to 500,
+  which defines the backlog value for the \Procedure{listen} 
+  network call when a daemon creates a socket for incoming connections.
+  It limits the number of new incoming network connections the operating
+  system will accept for a daemon that the daemon has not yet serviced.
 
 \label{param:MaxAcceptsPerCycle}
 \item[\Macro{MAX\_ACCEPTS\_PER\_CYCLE}]
@@ -7342,7 +7388,7 @@ REM Run the actual job now
 \label{param:DynamicRunAccountLocalGroup} 
 \item[\Macro{DYNAMIC\_RUN\_ACCOUNT\_LOCAL\_GROUP}]
   For Windows platforms, a value that sets the local group to a group other 
-  than the default \Expr{Users} for the \Expr{condor-reuse-slot<X>} run account.
+  than the default \Expr{Users} for the \Expr{condor-slot<X>} run account.
   Do \emph{not} place the local group name within quotation marks.
 
 \label{param:JobExecdirPermissions}
@@ -10399,6 +10445,7 @@ section~\ref{sec:Security} on Security.
   \MacroNI{GSI\_DAEMON\_KEY}, and
   \MacroNI{GSI\_DAEMON\_TRUSTED\_CA\_DIR},
   for any of these configuration variables are not explicitly set.
+  The value is unset by default. 
 
 \label{param:GSIDaemonCert}
 \item[\Macro{GSI\_DAEMON\_CERT}]
