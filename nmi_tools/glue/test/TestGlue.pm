@@ -837,4 +837,38 @@ sub CreateDir
 	return($ret);
 }
 
+sub ProcessReturn {
+	my ($status) = @_;
+	my $rc = -1;
+	my $signal = 0;
+	my @result;
+
+	#print "ProcessReturn: Entrance status " . sprintf("%x", $status) . "\n";
+	if ($status == -1) {
+		# failed to execute, how do I represent this? Choose -1 for now
+		# since that is an impossible unix return code.
+		$rc = -1;
+		#print "ProcessReturn: Process Failed to Execute.\n";
+	} elsif ($status & 0x7f) {
+		# died with signal and maybe coredump.
+		# Ignore the fact a coredump happened for now.
+
+		# XXX Stupidly, we also make the return code the same as the 
+		# signal. This is a legacy decision I don't want to change now because
+		# I don't know how big the ramifications will be.
+		$signal = $status & 0x7f;
+		$rc = $signal;
+		#print "ProcessReturn: Died with Signal: $signal\n";
+	} else {
+		# Child returns valid exit code
+		$rc = $status >> 8;
+		#print "ProcessReturn: Exited normally $rc\n";
+	}
+
+	#print "ProcessReturn: return=$rc, signal=$signal\n";
+	push @result, $rc;
+	push @result, $signal;
+	return @result;
+}
+
 1;
