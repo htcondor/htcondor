@@ -27,7 +27,6 @@
 #include "condor_string.h"
 #include "condor_environ.h"
 #include "CondorError.h"
-#include "get_full_hostname.h"
 #include "openssl/rand.h"
 #include "condor_netdb.h"
 

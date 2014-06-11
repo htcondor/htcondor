@@ -28,7 +28,6 @@
 #include "vanilla_proc.h"
 #include "starter.h"
 #include "syscall_numbers.h"
-#include "dynuser.h"
 #include "condor_config.h"
 #include "domain_tools.h"
 #include "classad_helpers.h"
@@ -40,7 +39,6 @@
 
 #ifdef WIN32
 #include "executable_scripts.WINDOWS.h"
-extern dynuser* myDynuser;
 #endif
 
 #if defined(HAVE_EVENTFD)
