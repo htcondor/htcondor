@@ -17,5 +17,27 @@ Here is a list of items that administrators should be aware of.
 
 \item Support for ganglia monitoring.
 
+\item The DAGMan node status file formatting has changed.
+The format of the DAG node status file is now New ClassAds,
+and the amount of information in the file has increased.
+
+\item Setting configuration variable
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to \Expr{False}
+or using the corresponding \Opt{-dont\_use\_default\_node\_log} option
+to \Condor{submit\_dag} is no longer recommended.
+Note that at strictness setting 1 (the default), setting
+\MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to \Expr{False}
+will cause a fatal error. 
+If the DAG must be run with \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} 
+set to \Expr{False},
+a good way to deal with upgrading is to use DAGMan Halt files 
+to cause all of the running DAGs to drain from the queue, 
+and then do the upgrade after the DAGs have stopped.  
+After the upgrade is done, 
+edit the per-DAG configuration files to have 
+\MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} set to \Expr{True},
+or set \MacroNI{DAGMAN\_USE\_STRICT} to 0 and 
+re-submit the DAGs, which will then run the Rescue DAGs.
+
 \end{itemize}
 
