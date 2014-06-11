@@ -1,4 +1,3 @@
-//TEMPTEMP -- make sure this is right!!!!
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

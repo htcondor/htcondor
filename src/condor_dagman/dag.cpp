@@ -1,4 +1,3 @@
-//TEMPTEMP -- make sure whether the new config has to control more stuff before merging
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

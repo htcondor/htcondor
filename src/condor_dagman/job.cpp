@@ -198,7 +198,6 @@ bool Job::Remove (const queue_t queue, const JobID_t jobID)
 bool
 Job::CheckForLogFile( bool usingDefault ) const
 {
-		// Should this use FindLogFile()?  wenger 2014-01-27
 	bool tmpLogFileIsXml;
 	MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
 				_directory, tmpLogFileIsXml, usingDefault );

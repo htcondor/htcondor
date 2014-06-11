@@ -72,7 +72,6 @@ GetConfigFile(/* const */ StringList &dagFiles, bool useDagDir,
 			// Get the list of config files from the current DAG file.
 			//
 		StringList		configFiles;
-		//TEMPTEMP -- check this
 		bool useOldDagReader = param_boolean( "DAGMAN_USE_OLD_DAG_READER",
 					false );
 		MyString msg;

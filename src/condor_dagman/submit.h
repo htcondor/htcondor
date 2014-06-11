@@ -52,7 +52,6 @@
 	@return true on success, false on failure
 */
 
-//TEMPTEMP -- make sure this is right!
 bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					const char* DAGNodeName, MyString &DAGParentNodeNames,
 					List<Job::NodeVar> *vars, int retry,
