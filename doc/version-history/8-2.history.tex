@@ -74,9 +74,9 @@ setting \SubmitCmd{request\_memory}, the job would fail if the remote
 batch system was HTCondor. This has been fixed.
 \Ticket{4367}
 
-\item Fixed bug where the HTCondor central manager may attempt to
-	send email to a user named NONE if \Macro{CONDOR\_DEVELOPERS}
-	is left unset in the config file.
+\item Fixed a bug in which the HTCondor central manager may attempt to
+send email to a user named \Expr{NONE}, if configuration variable
+\MacroNI{CONDOR\_DEVELOPERS} is left unset.
 \Ticket{4399}
 
 \end{itemize}
