@@ -1101,12 +1101,5 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 
 bool VanillaProc::Ckpt() {
 	dprintf( D_FULLDEBUG, "Entering VanillaProc::Ckpt()\n" );
-	int userLevelCheckpoint = 0;
-	JobAd->LookupBool( "UserLevelCheckpoint", userLevelCheckpoint );
-	if( userLevelCheckpoint ) {
-		daemonCore->Send_Signal( JobPid, soft_kill_sig );
-		return true;
-	}
-
 	return OsProc::Ckpt();
 }

@@ -547,6 +547,75 @@ VirshType::Suspend()
 	return true;
 }
 
+// This probably doesn't apply to Xen.
+bool VirshType::RewriteSuspendFile() { return true; }
+
+//
+// Change the disk parameters to reflect the current sandbox.  Would be
+// nice if we could use relative paths...
+//
+bool KVMType::RewriteSuspendFile() {
+	char * xml = virDomainSaveImageGetXMLDesc( m_libvirt_connection,
+		m_suspendfile.Value(), 0 );
+	if( xml == NULL ) {
+		dprintf( D_ALWAYS, "Failed to extract XML from suspend file.\n" );
+		return false;
+	}
+	dprintf( D_FULLDEBUG, "Suspend file XML: '%s'\n", xml );
+	std::string xmlString( xml );
+	free( xml );
+
+	//
+	// We assume unique basenames.
+	//
+	m_disk_list.Rewind();
+	XenDisk * disk = NULL;
+	while( m_disk_list.Next( disk ) ) {
+		std::string baseName = disk->filename.Value();
+		if( baseName[0] == DIR_DELIM_CHAR ) {
+			// Assumes the filename doesn't end in '/'.
+			baseName = baseName.substr( baseName.rfind( DIR_DELIM_CHAR ) + 1 );
+		}
+
+		size_t bnIndex = xmlString.find( baseName );
+		if( bnIndex == std::string::npos ) {
+			dprintf( D_ALWAYS, "Could not find specified disk (%s) base name (%s) in state file.\n", disk->filename.c_str(), baseName.c_str() );
+			return false;
+		}
+
+		size_t leftQuoteIndex = xmlString.rfind( "'", bnIndex );
+		if( leftQuoteIndex == std::string::npos ) {
+			dprintf( D_ALWAYS, "Failed to parse state file XML.\n" );
+			return false;
+		}
+
+		size_t length = (bnIndex - (leftQuoteIndex + 1)) + baseName.length();
+		std::string previousFullPath = xmlString.substr( leftQuoteIndex + 1, length );
+
+		// Assume the extant full paths are pre-staged or on a shared
+		// file system and do nothing.
+		struct stat buf;
+		if( stat( previousFullPath.c_str(), & buf ) == 0 ) {
+			dprintf( D_FULLDEBUG, "Not rewriting '%s' because it exists.\n", previousFullPath.c_str() );
+			continue;
+		}
+
+		std::string sandboxPath;
+		formatstr( sandboxPath, "%s%c%s", m_workingpath.Value(), DIR_DELIM_CHAR, baseName.c_str() );
+		xmlString.replace( leftQuoteIndex + 1, length, sandboxPath );
+		dprintf( D_FULLDEBUG, "Suspend file XML: '%s'\n", xmlString.c_str() );
+	}
+
+	int rv = virDomainSaveImageDefineXML( m_libvirt_connection,
+		m_suspendfile.Value(), xmlString.c_str(), 0 );
+	if( rv != 0 ) {
+		dprintf( D_ALWAYS, "Failed to reset XML in suspend file.\n" );
+		return false;
+	}
+
+	return true;
+}
+
 bool
 VirshType::Resume()
 {
@@ -562,6 +631,16 @@ VirshType::Resume()
 
 	if( getVMStatus() == VM_RUNNING ) {
 		return true;
+	}
+
+	// Although it's harmless to rewrite the XML if we're resuming from
+	// a periodic checkpoint, it's a waste (and could produce confusing
+	// spam in the log).
+	if( m_restart_with_ckpt ) {
+		if( ! RewriteSuspendFile() ) {
+			dprintf( D_ALWAYS, "Failed to adjust checkpoint for its new location.\n" );
+			return false;
+		}
 	}
 
 	if( !m_restart_with_ckpt &&
@@ -583,10 +662,7 @@ VirshType::Resume()
 	set_priv(priv);
 
 	if( result != 0 ) {
-		// Read error output
-// 		char *temp = cmd_out.print_to_delimed_string("/");
-// 		m_result_msg = temp;
-// 		free( temp );
+		dprintf( D_ALWAYS, "Failed to restart from checkpoint because virDomainRestore() failed (%d)\n", result );
 		return false;
 	}
 
@@ -1723,7 +1799,7 @@ KVMType::CreateConfigFile()
 			// Can we read it?
 			if( check_vm_read_access_file( suspendFileName.Value(), true ) ) {
 				// We don't check the timestamp vs the state file's mtime,
-				// because file transfer doesn't preserve that.q
+				// because file transfer doesn't preserve that.
 				dprintf( D_ALWAYS, "Found checkpoint file '%s', will resume from it.\n", suspendFileName.Value() );
 
 				// Rather than fix all the code that checks for it, just treat
@@ -1738,22 +1814,6 @@ KVMType::CreateConfigFile()
 			}
 		} else {
 			dprintf( D_FULLDEBUG, "Not resuming from checkpoint because we had no intermediate files.\n" );
-		}
-	}
-
-	// Here we check if this job actually can use checkpoint
-	if( m_vm_checkpoint ) {
-		// For vm checkpoint in Virsh
-		// 1. all disk files should be in a shared file system
-		if( m_has_transferred_disk_file ) {
-			// In this case, we cannot use vm checkpoint for Virsh
-			// To use vm checkpoint in Virsh,
-			// all disk and iso files should be in a shared file system
-			vmprintf(D_ALWAYS, "To use vm checkpint in Virsh, "
-					"all disk and iso files should be "
-					"in a shared file system\n");
-			m_result_msg = VMGAHP_ERR_JOBCLASSAD_KVM_MISMATCHED_CHECKPOINT;
-			return false;
 		}
 	}
 

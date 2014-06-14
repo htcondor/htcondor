@@ -7770,3 +7770,7 @@ default: @end
 	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
 @end
 
+[TAR]
+default=/bin/tar
+type=path
+review=tlmiller

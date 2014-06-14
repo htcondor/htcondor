@@ -40,6 +40,12 @@ class VanillaCheckpointProc : public VanillaProc {
 		// With no default constructor, we can't hold a VMProc directly
 		// unless it really can use the same jobAd we do.
 		VMProc * vmProc;
+
+		// The base starter should provide this but doesn't.
+		bool shuttingDown;
+
+		// A convenient refactoring.
+		bool CreateInitialDisks();
 };
 
 #endif /* _CONDOR_VANILLA_CHECKPOINT_PROC_H */
