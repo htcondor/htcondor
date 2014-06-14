@@ -76,7 +76,7 @@ $submitted = sub
 $success = sub
 {
 	CondorTest::debug("executed successfully\n",1);
-	die "$dontwatchlog should not have been created\n" if ( -e $dontwatchlog );
+	die "Failed: $dontwatchlog should not have been created\n" if ( -e $dontwatchlog );
 
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;

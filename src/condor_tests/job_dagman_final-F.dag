@@ -1,3 +1,6 @@
+#TEMP -- either remove this after merge or add check to test...
+NODE_STATUS_FILE job_dagman_final-F.status
+
 CONFIG job_dagman_final-F.config
 
 # This node now uses the 'pre skip' feature.
@@ -11,6 +14,8 @@ JOB F_B1 job_dagman_final-F-nodeB1.cmd
 JOB F_B2 job_dagman_final-F-nodeB2.cmd
 ABORT-DAG-ON F_B2 2
 
+# This job shouldn't actually get submitted because of the throttling
+# in our config file.
 JOB F_B3 job_dagman_final-F-nodeB3.cmd
 # Make sure this runs *after* F_B2
 PRIORITY F_B3 -1
