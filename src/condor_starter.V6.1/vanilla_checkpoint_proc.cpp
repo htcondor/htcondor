@@ -102,7 +102,18 @@ bool VanillaCheckpointProc::CreateInitialDisks() {
 		while( close( fd ) == EINTR ) { ; }
 	}
 
-	// FIXME: Remove _condor_input.tar.gz from the intermediate file transfer list.
+	// There's an optimization opportunity here: we could have the internal
+	// starter notify us when it's finished with the input tarball, and we
+	// could delete it.  Another possibility is to unconditionally remove it
+	// from the intermediate file transfer list (we'll clean it up before
+	// transferring output), and add logic to recreate it on restart.  This
+	// could be combined with the first optimization, although both should
+	// be rare.  We could also refuse to take a checkpoint until input
+	// transfer is done, which would eliminate this problem entirely.
+	//
+	// Of course, with a cooperative process on the inside, we could also
+	// stream the tarball (via files or virtio serial), and save a lot of
+	// peak disk-space usage.
 
 	//
 	// Pre-allocate the classad "disk".
@@ -120,7 +131,10 @@ bool VanillaCheckpointProc::CreateInitialDisks() {
 	}
 	while( close( fd ) == EINTR ) { ; }
 
-	// FIXME: Remove _condor_vm_classad from the intermediate file transfer list.
+	// Note that we /want/ to maintain the STATUS_NAME file across checkpoints;
+	// it's small (and therefore cheap), and it's easier than adding the logic
+	// to recreate it, plus it means that we don't have to worry about partial
+	// writes becoming inconsistent (partially zero).
 
 
 	//
@@ -132,16 +146,16 @@ bool VanillaCheckpointProc::CreateInitialDisks() {
 		return false;
 	}
 
-	// FIXME: This needs to be something from the job ad (checked above).
-	unsigned long outputDiskSize = ((1024 * 1024 * 1024) / 4096) + 1;
-	while( (rv = posix_fallocate( fd, 0, 4096 * outputDiskSize )) == EINTR ) { ; }
+	int outputSizeInKilobytes = 1024 * 1024;
+	JobAd->EvaluateAttrInt( ATTR_REQUEST_DISK, outputSizeInKilobytes );
+	unsigned fallocateBlocks = (outputSizeInKilobytes / 4) +
+		( ((outputSizeInKilobytes % 4) == 0) ? 0 : 1 );
+	while( (rv = posix_fallocate( fd, 0, 4096 * fallocateBlocks )) == EINTR ) { ; }
 	if( rv != 0 ) {
 		dprintf( D_ALWAYS, "Unable to pre-allocate monitor file (%d: %s)\n", rv, strerror( rv ) );
 		return false;
 	}
 	while( close( fd ) == EINTR ) { ; }
-
-	// FIXME: Remove _condor_output_disk from the intermediate file transfer list.
 
 
 	//
