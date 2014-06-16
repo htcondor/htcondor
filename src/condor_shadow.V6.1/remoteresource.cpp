@@ -1189,7 +1189,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				// and we don't want to log any events here. 
 		}
 		free( job_state );
-		if( state == RR_PENDING_DEATH || state == RR_PENDING_TRANSFER ) {
+
+				// Even if we're shutting down, we need to record that the job
+				// checkpointed so that we can resume it later.
+		if( new_state != RR_CHECKPOINTED && (RR_PENDING_DEATH || state == RR_PENDING_TRANSFER) ) {
 				// we're trying to shutdown, so don't bother recording
 				// what we just heard from the starter.  we're done
 				// dealing with this update.

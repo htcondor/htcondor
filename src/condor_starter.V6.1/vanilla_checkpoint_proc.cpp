@@ -114,6 +114,11 @@ bool VanillaCheckpointProc::CreateInitialDisks() {
 	// Of course, with a cooperative process on the inside, we could also
 	// stream the tarball (via files or virtio serial), and save a lot of
 	// peak disk-space usage.
+	//
+	// There's also an optimization to be made during a given instance's
+	// first file-transfer (although that code is elsewhere):: there's no
+	// reason to transfer the input files a second time, since we're keeping
+	// the input disk.
 
 	//
 	// Pre-allocate the classad "disk".
