@@ -49,6 +49,18 @@ especially when performing a submit to a remote \Condor{schedd}.
 
 \begin{itemize}
 
+\item Changed default value for CLAIM\_WORKLIFE from 60 minutes
+to 20 minutes.
+\Ticket{4370}
+
+\item Added example file condor\_config.annotated that documents
+many configuration parameters.
+\Ticket{4370}
+
+\item Changed NEGOTIATOR\_PRE\_JOB\_RANK default to prefer to match
+multi-core jobs to dynamic slots in a best-fit manner.
+\Ticket {4370}
+
 \item Fixed a bug that caused a memory leak in the \Condor{collector}
 under heavy load.  This bug was introduced in 8.1.5.
 \Ticket{4370}
