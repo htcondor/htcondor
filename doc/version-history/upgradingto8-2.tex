@@ -13,7 +13,39 @@ Here is a list of items that administrators should be aware of.
 
 \begin{itemize}
 
-\item New syntax and features with respect to configuration.
+\item New syntax and features with respect to configuration
+make configuration more powerful.
+  \begin{itemize}
+  \item The default configuration file is much smaller in size.
+   Defaults for most configuration variables are set at compile time.
+   Directions for converting to the new, small size file are in
+   section~\ref{sec:Pool-Upgrade}.
+  \item A feature to include configuration from elsewhere
+   is described in section~\ref{sec:Config-Include}.
+  \item Metaknobs permit the incorporation of predefined configuration.
+   Metaknobs are available for setting a machine's role within
+   a pool, enabling a feature belonging to a machine, the policy under which
+   machines start jobs, or the security configuration.
+   Section~\ref{sec:Config-Metaknobs} lists the complete set of available
+   metaknobs.
+  \item Limited conditional configuration is described in 
+   section~\ref{sec:Config-IfElse}.
+  \end{itemize}
+This introduction of new features causes a few items that pool
+administrators must be aware of and work with:
+  \begin{itemize}
+  \item The interaction of comments and the line continuation character
+   has changed.  See  section~\ref{sec:Other-Syntax} for the current
+   interaction. 
+  \item The use of a colon character (\verb@:@) instead of the
+   equals sign (\verb@=@) in assigning a value to a configuration variable
+   causes tools that parse configuration to output a warning.
+   Therefore, any custom parsing of tool output may need to be updated to
+   handle this warning.
+   Previous versions of the default configuration set variable
+   \MacroNI{RUNBENCHMARKS} using a colon character;
+   HTCondor code explicitly suppresses the warning in this case.
+  \end{itemize}
 
 \item Support for ganglia monitoring.
 
@@ -56,8 +88,10 @@ daemons will listen on both IPv4 and IPv6,
 but will only advertise one of the two addresses.
 
 \item Globus 5.2.2 or a more recent version is now required 
-for nordugrid and cream jobs;
-this release is included in this 8.2.0 release of HTCondor.
+for grid universe jobs of grid-type nordugrid and cream.
+Globus version 5.2.5 is included in this 8.2.0 release of HTCondor.
+HTCondor will prefer to use libraries already installed in \File{/usr/lib[64]},
+when present.
 \Ticket{4243}
 
 \item ClassAd integer and real values are 64 bits.
