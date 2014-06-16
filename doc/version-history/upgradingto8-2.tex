@@ -17,6 +17,16 @@ Here is a list of items that administrators should be aware of.
 
 \item Support for ganglia monitoring.
 
+\item Support for GPUs.
+
+\item The meaning of \Expr{cpus=auto} when there are more 
+slots than CPUs has changed within the configuration. 
+In the \Expr{SLOT\_TYPE\_<N>} configuration variable,
+\Expr{cpus=auto} previously resulted in 1 CPU per slot. 
+Now, all slots with \Expr{cpu=auto} get an equal share of the CPUs, 
+rounded down.
+\Ticket{3249}
+
 \item The DAGMan node status file formatting has changed.
 The format of the DAG node status file is now New ClassAds,
 and the amount of information in the file has increased.
@@ -38,6 +48,26 @@ edit the per-DAG configuration files to have
 \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} set to \Expr{True},
 or set \MacroNI{DAGMAN\_USE\_STRICT} to 0 and 
 re-submit the DAGs, which will then run the Rescue DAGs.
+
+\item If using \Expr{ENABLE\_IPV6 = True}, the configuration must
+also set \Expr{ENABLE\_IPV4 = False}.
+If both are enabled simultaneously,
+daemons will listen on both IPv4 and IPv6, 
+but will only advertise one of the two addresses.
+
+\item Globus 5.2.2 or a more recent version is now required 
+for nordugrid and cream jobs;
+this release is included in this 8.2.0 release of HTCondor.
+\Ticket{4243}
+
+\item ClassAd integer and real values are 64 bits.
+\Ticket{3928}
+
+\item HTCondor can not distinguish normal from abnormal job exit
+for Nordugrid ARC grids.
+Therefore, all grid-type nordugrid jobs will be recorded as 
+terminating normally, with an exit code from 0 to 255.
+\Ticket{4342}
 
 \end{itemize}
 

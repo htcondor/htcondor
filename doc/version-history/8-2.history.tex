@@ -81,6 +81,10 @@ especially when performing a submit to a remote \Condor{schedd}.
 
 \begin{itemize}
 
+\item Fixed a bug that caused a memory leak in the \Condor{collector}
+under heavy load.  This bug was introduced in HTCondor version 8.1.5.
+\Ticket{4370}
+
 \item Windows machines with more than nine dynamic slots may have
 failed to start jobs due to a limit on the number of characters
 in a user name.
@@ -106,7 +110,7 @@ setting \SubmitCmd{request\_memory}, the job would fail if the remote
 batch system was HTCondor. This has been fixed.
 \Ticket{4367}
 
-\item Improved detection of IPv4 link local addresses.
+\item Improved the detection of IPv4 link-local addresses.
 \Ticket{4341}
 
 \item Fixed a bug in which the HTCondor central manager may attempt to
