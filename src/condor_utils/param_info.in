@@ -5698,7 +5698,7 @@ review=?
 tags=shadow
 
 [CLAIM_WORKLIFE]
-default=3600
+default=1200
 type=int
 reconfig=true
 customization=seldom
