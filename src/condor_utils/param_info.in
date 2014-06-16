@@ -4122,7 +4122,7 @@ review=?
 tags=negotiator,matchmaker
 
 [PREEMPTION_RANK]
-default=
+default=(RemoteUserPrio * 1000000) - ifThenElse(isUndefined(TotalJobRuntime), 0, TotalJobRuntime)
 type=string
 reconfig=true
 customization=seldom
@@ -7341,7 +7341,7 @@ default=(RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kfl
 [UWCS_PREEMPTION_REQUIREMENTS]
 default=((SubmitterGroup =?= RemoteGroup) && ($(StateTimer) > (1 * $(HOUR))) && (RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2)) || (MY.NiceUser == True)
 [UWCS_PREEMPTION_RANK]
-default=(RemoteUserPrio * 1000000) - TARGET.ImageSize
+default=(RemoteUserPrio * 1000000) - ifThenElse(isUndefined(TotalJobRuntime), 0, TotalJobRuntime)
 
 # obsolete config file knobs to discard on upgrade
 [$UPGRADE.DISCARD]
