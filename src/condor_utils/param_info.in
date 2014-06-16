@@ -4131,7 +4131,7 @@ review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PRE_JOB_RANK]
-default=RemoteOwner =?= UNDEFINED
+default=(10000000 * My.Rank) + (1000000 * (RemoteOwner =?= UNDEFINED)) - (100000 * Cpus) - Memory
 type=string
 reconfig=true
 customization=seldom
@@ -7335,7 +7335,7 @@ default=false
 [UWCS_PERIODIC_CHECKPOINT]
 default=$(LastCkpt) > (3 * $(HOUR) + $RANDOM_INTEGER(-30,30,1) * $(MINUTE) )
 [UWCS_NEGOTIATOR_PRE_JOB_RANK]
-default=RemoteOwner =?= UNDEFINED
+default=(10000000 * My.Rank) + (1000000 * (RemoteOwner =?= UNDEFINED)) - (100000 * Cpus) - Memory
 [UWCS_NEGOTIATOR_POST_JOB_RANK]
 default=(RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kflops) - SlotID - 1.0e10*(Offline=?=True))
 [UWCS_PREEMPTION_REQUIREMENTS]
