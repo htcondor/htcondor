@@ -24,7 +24,8 @@
 #include <dirent.h>
 
 
-static int access_euid_dir(char const *path,int mode,struct stat *statbuf)
+#if !defined(HAVE_EUIDACCESS)
+static int access_euid_dir(char const *path,int mode)
 {
 	errno = 0;
 
@@ -85,6 +86,7 @@ static int access_euid_dir(char const *path,int mode,struct stat *statbuf)
 
 	return 0;
 }
+#endif
 
 /* This function access a file with the access() interface, but with stat()
 	semantics so that the access doesn't occur with the real uid, but the
@@ -130,7 +132,7 @@ access_euid(const char *path, int mode)
 		already_stated = 1;
 
 		if( buf.st_mode & S_IFDIR ) {
-			return access_euid_dir(path,mode,&buf);
+			return access_euid_dir(path,mode);
 		}
 	}
 
@@ -138,7 +140,7 @@ access_euid(const char *path, int mode)
 		f = safe_fopen_wrapper_follow(path, "r", 0644);
 		if (f == NULL) {
 			if( errno == EISDIR ) {
-				return access_euid_dir(path,mode,NULL);
+				return access_euid_dir(path,mode);
 			}
 			if( ! errno ) {
 				dprintf( D_ALWAYS, "WARNING: safe_fopen_wrapper() failed, but "
@@ -154,7 +156,7 @@ access_euid(const char *path, int mode)
 		f = safe_fopen_wrapper_follow(path, "a", 0644); /* don't truncate the file! */
 		if (f == NULL) {
 			if( errno == EISDIR ) {
-				return access_euid_dir(path,mode,NULL);
+				return access_euid_dir(path,mode);
 			}
 			if( ! errno ) {
 				dprintf( D_ALWAYS, "WARNING: safe_fopen_wrapper() failed, but "
@@ -178,7 +180,7 @@ access_euid(const char *path, int mode)
 				return -1;
 			}
 			if( buf.st_mode & S_IFDIR ) {
-				return access_euid_dir(path,mode,&buf);
+				return access_euid_dir(path,mode);
 			}
 		}
 		if (!(buf.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))) {
