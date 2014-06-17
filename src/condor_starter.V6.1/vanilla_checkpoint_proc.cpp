@@ -325,12 +325,21 @@ bool VanillaCheckpointProc::JobReaper( int pid, int status ) {
 	int rv = my_system( tarArgs );
 
 	if( rv != 0 ) {
-		// FIXME: Do we consider this HTCondor's problem?  If so, will
-		// returning FALSE here cause the job to re-run?  If so, do we
-		// want to retry from the last checkpoint or what?
-		dprintf( D_ALWAYS, "Unable to extract output tarball with command '%s' (%d).\n", displayString.Value(), rv );
-		vmProc->JobReaper( pid, status );
-		return FALSE;
+		//
+		// We can't fail: otherwise, the job will run forever.  However,
+		// this is clearly a problem that needs to be reported to the user.
+		// FIXME: A message in the starter log is clearly spectacularly
+		// inadequate.
+		//
+		dprintf( D_ALWAYS, "Unable to extract output tarball with command '%s': \n", displayString.Value() );
+		if( WIFEXITED( rv ) ) {
+			dprintf( D_ALWAYS, "It exited normally with code %d\n", WEXITSTATUS( rv ) );
+		} else if( WIFSIGNALED( rv ) ) {
+			dprintf( D_ALWAYS, "It exited on signal %d\n", WTERMSIG( rv ) );
+		} else {
+			dprintf( D_ALWAYS, "It exited with status %d\n", rv );
+		}
+		return vmProc->JobReaper( pid, status );
 	}
 
 	// If the VM output includes '_condor_exitcode' file, use that as the
