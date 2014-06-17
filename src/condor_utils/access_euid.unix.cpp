@@ -69,33 +69,18 @@ static int access_euid_dir(char const *path,int mode,struct stat *statbuf)
 	}
 
 	if ((X_OK == 0) || (mode & X_OK)) {
-		struct stat st;
-		if (!statbuf) {
-			/* stats are expensive, so only do it if I have to */
-			if (stat(path, &st) < 0) {
-				if( ! errno ) {
-					dprintf( D_ALWAYS, "WARNING: stat() failed, but "
-							 "errno is still 0!  Beware of misleading "
-							 "error messages\n" );
-				}
-				return -1;
-			}
-			statbuf = &st;
-		}
-		int bit = 0;
-		if( statbuf->st_uid == geteuid() ) {
-			bit |= S_IXUSR;
-		}
-		else if( statbuf->st_gid == getegid() ) {
-			bit |= S_IXGRP;
-		}
-		else {
-			bit |= S_IXOTH;
-		}
-		if (!(statbuf->st_mode & bit)) {
-			errno = EACCES;
+		int back;
+		back = open(".", O_RDONLY);
+		if (chdir(path) != 0) {
+			int save_errno = errno;
+			close(back);
+			errno = save_errno;
 			return -1;
 		}
+
+		/* chdir succeeded, so this effective user has access */
+		fchdir(back);
+		close(back);
 	}
 
 	return 0;
