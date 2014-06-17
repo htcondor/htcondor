@@ -4577,8 +4577,9 @@ WANT_HOLD_REASON = \
 \label{param:ClaimWorklife}
 \item[\Macro{CLAIM\_WORKLIFE}]
   This expression specifies the number of seconds after which a claim
-  will stop accepting additional jobs.  The default is 3600.  Once the
-  \Condor{negotiator} gives a \Condor{schedd} a claim to a slot, 
+  will stop accepting additional jobs.  
+  The default is 1200, which is 20 minutes.  
+  Once the \Condor{negotiator} gives a \Condor{schedd} a claim to a slot, 
   the \Condor{schedd} will keep
   running jobs on that slot as long as it has more jobs with matching
   requirements, and \MacroNI{CLAIM\_WORKLIFE} has not expired, and it is
@@ -8198,14 +8199,18 @@ These macros affect the \Condor{negotiator}.
   job ClassAd.  The purpose of the pre job rank is to allow the pool
   administrator to override any other rankings, in order to optimize
   overall throughput.  For example, it is commonly used to minimize
-  preemption, even if the job rank prefers a machine that is busy.  If
-  undefined, this expression has no effect on the ranking of matches.
-  The standard configuration file shipped with HTCondor specifies an
-  expression to steer jobs away from busy resources:
+  preemption, even if the job rank prefers a machine that is busy.
+  If explicitly set to be undefined, 
+  this expression has no effect on the ranking of matches.
+  The default value prefers to match multi-core jobs to dynamic slots in
+  a best fit manner:
 
+\footnotesize
 \begin{verbatim}
-  NEGOTIATOR_PRE_JOB_RANK = RemoteOwner =?= UNDEFINED
+  NEGOTIATOR_PRE_JOB_RANK = (10000000 * My.Rank) + \
+   (1000000 * (RemoteOwner =?= UNDEFINED)) - (100000 * Cpus) - Memory
 \end{verbatim}
+\normalsize
 
 \label{param:NegotiatorPostJobRank}
 \item[\Macro{NEGOTIATOR\_POST\_JOB\_RANK}]
@@ -8275,11 +8280,17 @@ These macros affect the \Condor{negotiator}.
   and the other negotiation expressions rank the same.  For example,
   if the job has no preference, it is usually preferable to preempt a
   job with a small \AdAttr{ImageSize} instead of a job with a large
-  \AdAttr{ImageSize}.  There is no default value, causing
-  all preemptable matches to be ranked the same.  
-  However, the negotiator will always prefer to match the
-  job with an idle machine over a preemptable machine, if none of the
-  other ranks express a preference between them.
+  \AdAttr{ImageSize}.  
+  The default value first considers the user's priority and chooses
+  the user with the worst priority.
+  Then, among the running jobs of that user, 
+  it chooses the job with the least accumulated run time:
+\footnotesize
+\begin{verbatim}
+  PREEMPTION_RANK = (RemoteUserPrio * 1000000) - \ 
+   ifThenElse(isUndefined(TotalJobRunTime), 0, TotalJobRunTime)
+\end{verbatim}
+\normalsize
 
 \label{param:PreemptionRankStable}
 \item[\Macro{PREEMPTION\_RANK\_STABLE}]
