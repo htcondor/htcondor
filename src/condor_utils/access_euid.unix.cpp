@@ -92,6 +92,9 @@ static int access_euid_dir(char const *path,int mode,struct stat *statbuf)
 int
 access_euid(const char *path, int mode)
 {
+#if defined(HAVE_EUIDACCESS)
+	return euidaccess(path, mode);
+#else
 	FILE *f;
 	struct stat buf;
 	int already_stated = 0;
@@ -188,6 +191,7 @@ access_euid(const char *path, int mode)
 	}
 
 	return 0;
+#endif
 }
 
 
