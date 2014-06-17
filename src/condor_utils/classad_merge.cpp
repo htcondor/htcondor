@@ -34,6 +34,8 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 	merge_from->ResetName();
 	merge_from->ResetExpr();
 
+	bool was_dirty_tracking = merge_into->SetDirtyTracking(mark_dirty);
+
 	const char     *name;
 	ExprTree       *expression;
 
@@ -60,16 +62,12 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 				}
 			}
 
-			ExprTree  *copy_expression;
-
-			copy_expression = expression->Copy();
+			ExprTree *copy_expression = expression->Copy();
 			merge_into->Insert(name, copy_expression,false);
-			if ( !mark_dirty ) {
-				merge_into->SetDirtyFlag(name, false);
-			}
 		}
 	}
 
+	merge_into->SetDirtyTracking(was_dirty_tracking);
 	return;
 }
 
@@ -88,6 +86,8 @@ int MergeClassAdsIgnoring(ClassAd *merge_into, ClassAd *merge_from, const AttrNa
 	merge_from->ResetName();
 	merge_from->ResetExpr();
 
+	bool was_dirty_tracking = merge_into->SetDirtyTracking(mark_dirty);
+
 	int cMerged = 0; // count of merged items
 	const char *name;
 	ExprTree   *expression;
@@ -99,12 +99,10 @@ int MergeClassAdsIgnoring(ClassAd *merge_into, ClassAd *merge_from, const AttrNa
 
 		ExprTree  *copy_expression = expression->Copy();
 		merge_into->Insert(name, copy_expression,false);
-		if ( !mark_dirty ) {
-			merge_into->SetDirtyFlag(name, false);
-		}
 		++cMerged;
 	}
 
+	merge_into->SetDirtyTracking(was_dirty_tracking);
 	return cMerged;
 }
 
