@@ -43,23 +43,24 @@ resulting in faster job submission times and less \Condor{schedd} overhead,
 especially when performing a submit to a remote \Condor{schedd}.
 \Ticket{3846}
 
+\item The default value for configuration variable \Macro{CLAIM\_WORKLIFE} 
+has changed from 60 minutes to 20 minutes.
+\Ticket{4374}
+
+\item The default value for configuration variable 
+\Macro{NEGOTIATOR\_PRE\_JOB\_RANK} has changed to prefer to match
+multi-core jobs to dynamic slots in a best-fit manner.
+And, the default value for configuration variable
+\Macro{PREEMPTION\_RANK} has changed to first choose the user with the
+worst priority, and then choose the job of that user with the least
+amount of accumulated run time. 
+\Ticket {4374}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
-
-\item Changed default value for CLAIM\_WORKLIFE from 60 minutes
-to 20 minutes.
-\Ticket{4370}
-
-\item Added example file condor\_config.annotated that documents
-many configuration parameters.
-\Ticket{4370}
-
-\item Changed NEGOTIATOR\_PRE\_JOB\_RANK default to prefer to match
-multi-core jobs to dynamic slots in a best-fit manner.
-\Ticket {4370}
 
 \item Fixed a bug that caused a memory leak in the \Condor{collector}
 under heavy load.  This bug was introduced in HTCondor version 8.1.5.
