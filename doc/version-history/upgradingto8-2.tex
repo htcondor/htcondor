@@ -51,6 +51,15 @@ administrators must be aware of and work with:
 
 \item Support for GPUs.
 
+\item The default user priority factor for new users has changed 
+from 1 to 1000.
+Therefore, unless the accountant log is discarded,
+existing users will still have a priority factor of 1,
+while new users will have a priority factor of 1000.
+Use \Condor{userprio} to change the priority factor of existing users
+if the accountant log is maintained across the upgrade. 
+\Ticket{4282}
+
 \item The meaning of \Expr{cpus=auto} when there are more 
 slots than CPUs has changed within the configuration. 
 In the \Expr{SLOT\_TYPE\_<N>} configuration variable,
