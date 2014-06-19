@@ -64,7 +64,7 @@ static void quicklog(const char * p)
 static inline void quicklog(const char *) { }
 #endif
 
-#define WORKER 6 // Worker threads
+#define DEFAULT_WORKER_CNT 6 // Worker threads
 
 #define DEFAULT_TIMEOUT 60
 
@@ -2359,11 +2359,20 @@ int main(int /*argc*/, char ** /*argv*/)
 #endif
 
 	gahp_printf("%s\n", VersionString);
-	
-	threads = (pthread_t *)malloc(sizeof(pthread_t) * WORKER);
-	
+
+	int worker_cnt = DEFAULT_WORKER_CNT;
+
+	threads = (pthread_t *)malloc(sizeof(pthread_t) * worker_cnt);
+	const char *worker_env = getenv( "CREAM_GAHP_WORKER_THREADS" );
+	if ( worker_env ) {
+		worker_cnt = atoi( worker_env );
+		if ( worker_cnt < 1 ) {
+			worker_cnt = 1;
+		}
+	}
+
 		//create & detach worker threads
-	for (i = 0; i < WORKER; i++){
+	for (i = 0; i < worker_cnt; i++){
 		
 		pthread_create(&threads[i], NULL, worker_main, NULL);
 		pthread_detach(threads[i]);
