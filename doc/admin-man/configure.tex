@@ -12291,6 +12291,13 @@ on page~\pageref{sec:daemon-classad-hooks}.
   In general, \Expr{WaitForExit} mode is for jobs that produce
   a periodic stream of updated data, but it can be used for other
   purposes, as well.
+  The output data from the job is accumulated into a temporary ClassAd 
+  until the job exits or until it writes 
+  a line starting with dash (\verb@-@) character.
+  At that point,
+  the temporary ClassAd replaces the active ClassAd for the  job.
+  The active ClassAd for the job is  merged into the appropriate 
+  slot ClassAds whenever the slot ClassAds are published.
 
   The \Expr{OneShot} mode is used for jobs that are run once at the
   start of the daemon.  If the \Expr{reconfig\_rerun} option is
