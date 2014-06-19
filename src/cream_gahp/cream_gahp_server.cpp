@@ -2334,6 +2334,17 @@ int main(int /*argc*/, char ** /*argv*/)
 {
 	int i;
 
+		// Globus and gsoap have some initialization code that must be
+		// called in the main thread before any other threads are
+		// created.
+	if ( globus_thread_set_model( "pthread" ) != GLOBUS_SUCCESS ||
+		 globus_module_activate( GLOBUS_THREAD_MODULE ) != GLOBUS_SUCCESS ||
+		 globus_module_activate( GLOBUS_GSI_GSSAPI_MODULE ) != GLOBUS_SUCCESS ) {
+		fprintf( stderr, "Failed to initialize Globus modules.\n" );
+		return 1;
+	}
+	soap_ssl_init();
+
 		// Enable logging to stderr. In the future, we may want make
 		// this configurable and/or turn down the priority level.
 	glite::ce::cream_client_api::util::creamApiLogger* logger_instance =
