@@ -63,6 +63,12 @@ Use \Condor{userprio} to change the priority factor of existing users
 if the accountant log is maintained across the upgrade. 
 \Ticket{4282}
 
+\item For Windows platforms,
+HTCondor has switched to use the newer 2012 Microsoft compiler,
+which uses the Visual C++ 2012 Runtime components.
+Therefore, the HTCondor MSI installer will acquire this Runtime,
+if it is not already installed.
+
 \item The meaning of \Expr{cpus=auto} when there are more 
 slots than CPUs has changed within the configuration. 
 In the \Expr{SLOT\_TYPE\_<N>} configuration variable,
