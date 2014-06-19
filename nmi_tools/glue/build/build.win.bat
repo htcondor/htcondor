@@ -157,7 +157,7 @@ if NOT "%BUILD_VERSION%"=="" (
 :: the BUILD_WIN_TAG is used to indicate the Windows version in the .zip and .msi names
 :: 7 indicates that XP is no longer supported, which is currently the case when we build with VC11
 set BUILD_WIN_TAG=
-if "%2"=="VC11" set BUILD_WIN_TAG=7
+if "%2"=="VC9" set BUILD_WIN_TAG=XP
 @echo BUILDID=%BUILDID%
 @echo BUILD_VERSION=%BUILD_VERSION%
 @echo BUILD_WIN_TAG==%BUILD_WIN_TAG%
