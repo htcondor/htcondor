@@ -33,6 +33,7 @@
 #include "classad_helpers.h"
 #include "classad_merge.h"
 #include "dc_startd.h"
+#include "condor_daemon_core.h"
 #include <math.h>
 
 // these are declared static in baseshadow.h; allocate space here
@@ -98,6 +99,68 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	scheddAddr = sendUpdatesToSchedd ? strdup( schedd_addr ) : strdup("noschedd");
 
 	m_xfer_queue_contact_info = xfer_queue_contact_info;
+
+
+/* ZKMZKM */
+
+	// TODO: Is it possible the change the parent sinful earlier so we don't
+	// need to iterate the command_map and copy everything?
+	//
+	// TODO: We should remove the old entries after adding the new ones.  Also,
+	// Iterating through the hash table while we insert things into it means
+	// we'll also iterated the new entries we just inserted.  Not a problem,
+	// but not efficient either.
+
+	// algorithm:
+	// iterate the existing command map
+	// 	everything that is mapped for psin should also be mapped for scheddAddr
+
+	// now add entrys which map all the {<sinful_string>,<command>} pairs
+	// to the same key id (which is in the variable sesid)
+	dprintf(D_ALWAYS, "ZKM: SHADOW: now copying non-negotiated command mappings\n");
+
+	// this is the sinful we are looking for
+	int schedd_pid = daemonCore->getppid();
+	const char *psin = daemonCore->InfoCommandSinfulString(schedd_pid);
+
+	MyString i,v;
+	HashTable<MyString,MyString>* mycmdmap = daemonCore->getSecMan()->command_map;
+	mycmdmap->startIterations();
+
+	MyString orig_keybuf;
+	MyString new_keybuf;
+	orig_keybuf.formatstr("{%s,", psin);
+	new_keybuf.formatstr("{%s,", scheddAddr);
+	dprintf(D_ALWAYS, "ZKM: converting %s to %s\n", orig_keybuf.Value(), new_keybuf.Value());
+
+	while ( mycmdmap->iterate(i,v)) {
+		// check if this is the schedd we want
+		dprintf (D_ALWAYS, "ZKM: examining key %s\n", i.Value());
+		if (i.replaceString(orig_keybuf.Value(), new_keybuf.Value())) {
+			dprintf (D_ALWAYS, "ZKM: new key is %s\n", i.Value());
+			// NOTE: HashTable returns ZERO on SUCCESS!!!
+			if (daemonCore->getSecMan()->command_map->insert(i.Value(), v.Value()) == 0) {
+				// success
+				if (IsDebugVerbose(D_SECURITY)) {
+					dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", i.Value(), v.Value());
+				}
+			} else {
+				dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", i.Value());
+			}
+		} else {
+			dprintf (D_ALWAYS, "ZKM: not interested in key %s\n", i.Value());
+		}
+
+	}
+
+	// now that new mappings exist, explicitly rewrite our parent sinful so we
+	// always use the "Shadow Port" on the schedd.
+	dprintf(D_ALWAYS, "ZKM: Changing my parent %i from sinful %s to %s\n", schedd_pid, psin, scheddAddr);
+	if (!(daemonCore->SetPidSinfulString(schedd_pid, scheddAddr))) {
+		EXCEPT("SHADOW: changing parent sinful failed!");
+	}
+
+/* ZKMZKM */
 
 	if ( !jobAd->LookupString(ATTR_OWNER, owner)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_OWNER);

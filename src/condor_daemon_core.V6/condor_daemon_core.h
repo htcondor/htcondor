@@ -311,6 +311,13 @@ class DaemonCore : public Service
      */
     void clearSession(pid_t pid);
 
+    /** Assigns a sinful string to a pid entry.
+        @param pid The pid to modify
+        @param sinful The string which specifies the IP and port
+        @return A boolean specifyig if the pid was found and change
+				was successful */
+	bool SetPidSinfulString(int pid, char* sinful);
+
 	/** @name Command Events
 	 */
 	//@{

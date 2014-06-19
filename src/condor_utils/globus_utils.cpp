@@ -22,6 +22,7 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "util_lib_proto.h"
+#include "subsystem_info.h"
 
 #include "globus_utils.h"
 
@@ -98,6 +99,10 @@ static
 int
 activate_globus_gsi( void )
 {
+	if (strcasecmp("SHADOW", get_mySubSystem()->getName()) == 0) {
+		EXCEPT("GLOBUS UTILS USED IN SHADOW\n");
+	}
+
 	static int globus_gsi_activated = 0;
 
 	if ( globus_gsi_activated != 0 ) {

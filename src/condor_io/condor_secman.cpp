@@ -2849,6 +2849,8 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 	ASSERT(sesid);
 
+	dprintf(D_ALWAYS, "ZKM: auth_level %i, id %s, info %s, fqu %s, sinful %s, %s\n", auth_level, sesid, exported_session_info, peer_fqu, peer_sinful, "<end>");
+
 	condor_sockaddr peer_addr;
 	if(peer_sinful && !peer_addr.from_sinful(peer_sinful)) {
 		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
@@ -2889,9 +2891,12 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	delete auth_info;
 	auth_info = NULL;
 
+	dprintf(D_ALWAYS, "ZKM: CNNSS: info to be imported: %s\n", exported_session_info);
 	if( !ImportSecSessionInfo(exported_session_info,policy) ) {
 		return false;
 	}
+	dprintf(D_ALWAYS, "ZKM: CNNSS: new policy:\n");
+	dPrintAd(D_ALWAYS, policy);
 
 	policy.Assign(ATTR_SEC_USE_SESSION, "YES");
 	policy.Assign(ATTR_SEC_SID, sesid);
@@ -2980,6 +2985,34 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %d %sseconds."
 			"\n", sesid, duration, expiration_time == 0 ? "(inf) " : "");
 
+
+	// now add entrys which map all the {<sinful_string>,<command>} pairs
+	// to the same key id (which is in the variable sesid)
+	dprintf(D_ALWAYS, "SECMAN: now creating non-negotiated command mappings\n");
+
+	MyString valid_coms;
+	policy.LookupString(ATTR_SEC_VALID_COMMANDS, valid_coms);
+	dprintf (D_ALWAYS, "ZKM: SM: valid commands for new session are %s\n", valid_coms.Value());
+	StringList coms(valid_coms.Value());
+	char *p;
+
+	coms.rewind();
+	while ( (p = coms.next()) ) {
+		MyString keybuf;
+		keybuf.formatstr ("{%s,<%s>}", peer_sinful, p);
+
+		// NOTE: HashTable returns ZERO on SUCCESS!!!
+		if (command_map->insert(keybuf, sesid) == 0) {
+			// success
+			if (IsDebugVerbose(D_SECURITY)) {
+				dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.Value(), sesid);
+			}
+		} else {
+			dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf.Value());
+		}
+	}
+
+
 	if( IsDebugVerbose(D_SECURITY) ) {
 		if( exported_session_info ) {
 			dprintf(D_SECURITY,"Imported session attributes: %s\n",
@@ -3036,6 +3069,7 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_ENCRYPTION);
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_CRYPTO_METHODS);
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_SESSION_EXPIRES);
+	sec_copy_attribute(policy,imp_policy,ATTR_SEC_VALID_COMMANDS);
 
 	return true;
 }
@@ -3058,6 +3092,7 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_ENCRYPTION);
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_CRYPTO_METHODS);
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_SESSION_EXPIRES);
+	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_VALID_COMMANDS);
 
 	session_info += "[";
 	exp_policy.ResetExpr();

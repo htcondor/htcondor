@@ -259,6 +259,7 @@ initShadow( ClassAd* ad )
 				 CondorUniverseName(universe) );
 		EXCEPT( "Universe not supported" );
 	}
+	dprintf(D_ALWAYS, "ZKM: SHADOW INIT: %s %s\n", schedd_addr, xfer_queue_contact_info);
 	Shadow->init( ad, schedd_addr, xfer_queue_contact_info );
 }
 

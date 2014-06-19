@@ -34,6 +34,7 @@
 #include "condor_environ.h"
 #include "condor_ipverify.h"
 #include "CondorError.h"
+#include "subsystem_info.h"
 
 
 
@@ -436,6 +437,10 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	}
 
 #if defined(HAVE_EXT_GLOBUS)
+	if (strcasecmp("SHADOW", get_mySubSystem()->getName()) == 0) {
+		EXCEPT("GLOBUS X509 USED IN SHADOW\n");
+	}
+
 	if (globus_activated == false) {
 		dprintf (D_FULLDEBUG, "Activating Globus GSI_GSSAPI_ASSIST module.\n");
 		globus_module_activate(GLOBUS_GSI_GSS_ASSIST_MODULE);

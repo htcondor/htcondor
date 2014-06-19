@@ -1155,6 +1155,19 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 	return m_sinful.getSinful();
 }
 
+
+bool DaemonCore::SetPidSinfulString(int pid, char* sinful)
+{
+	PidEntry *pidinfo = NULL;
+	if ((pidTable->lookup(pid, pidinfo) < 0)) {
+		// we have no information on this pid
+		return false;
+	}
+	pidinfo->sinful_string = sinful;
+	return true;
+}
+
+
 void
 DaemonCore::daemonContactInfoChanged()
 {
@@ -6576,11 +6589,16 @@ int DaemonCore::Create_Process(
 		char const *session_id_c_str = session_id.c_str();
 		char const *session_key_c_str = session_key.c_str();
 
+		// we need to include the list of valid commands with the session
+		// so the child knows it can use this ession to contact the parent.
+		MyString valid_coms;
+		valid_coms.formatstr("[%s=\"%s\"]", ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(DAEMON,true).Value());
+		dprintf(D_ALWAYS, "ZKM: DC: valid commands for DAEMON are %s\n", valid_coms.Value());
 		bool rc = getSecMan()->CreateNonNegotiatedSecuritySession(
 			DAEMON,
 			session_id_c_str,
 			session_key_c_str,
-			NULL,
+			valid_coms.Value(),
 			CONDOR_CHILD_FQU,
 			NULL,
 			0);
@@ -6590,6 +6608,7 @@ int DaemonCore::Create_Process(
 			dprintf(D_ALWAYS, "ERROR: Create_Process failed to create security session for child daemon.\n");
 			goto wrapup;
 		}
+		dprintf(D_ALWAYS, "ZKM: private pre-session: %s\n", privateinheritbuf.Value());
 		privateinheritbuf += " SessionKey:";
 
 		MyString session_info;
@@ -6601,6 +6620,7 @@ int DaemonCore::Create_Process(
 		}
 		ClaimIdParser claimId(session_id_c_str, session_info.Value(), session_key_c_str);
 		privateinheritbuf += claimId.claimId();
+		dprintf(D_ALWAYS, "ZKM: private post-session: %s\n", privateinheritbuf.Value());
 	}
 #endif
 	// now process fd_inherit_list, which allows the caller the specify
@@ -8125,6 +8145,7 @@ DaemonCore::Inherit( void )
 	int numInheritedSocks = 0;
 	char *ptmp;
 	static bool already_inherited = false;
+	MyString saved_sinful_string;
 
 	if( already_inherited ) {
 		return;
@@ -8169,6 +8190,7 @@ DaemonCore::Inherit( void )
 		pidtmp->pid = ppid;
 		ptmp=inherit_list.next();
 		dprintf(D_DAEMONCORE,"Parent Command Sock = %s\n",ptmp);
+		saved_sinful_string = ptmp;
 		pidtmp->sinful_string = ptmp;
 		pidtmp->is_local = TRUE;
 		pidtmp->parent_is_local = TRUE;
@@ -8334,6 +8356,7 @@ DaemonCore::Inherit( void )
 	private_list.rewind();
 	while((ptmp = private_list.next()) != NULL)
 	{
+		dprintf (D_ALWAYS, "ZKM: private inherit: %s\n", ptmp);
 		if( ptmp && strncmp(ptmp,"SessionKey:",11)==0 ) {
 			dprintf(D_DAEMONCORE, "Removing session key.\n");
 			ClaimIdParser claimid(ptmp+11);
@@ -8343,7 +8366,7 @@ DaemonCore::Inherit( void )
 				claimid.secSessionKey(),
 				claimid.secSessionInfo(),
 				CONDOR_PARENT_FQU,
-				NULL,
+				saved_sinful_string.Value(),
 				0);
 			if(!rc)
 			{

@@ -32,6 +32,7 @@
 #include "condor_gssapi_openssl.h"
 #include "ipv6_hostname.h"
 #include "condor_sinful.h"
+#include "subsystem_info.h"
 
 #if defined(HAVE_EXT_VOMS)
 extern "C" {
@@ -66,6 +67,10 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
 #ifdef WIN32
 	ParseMapFile();
 #endif
+	if (strcasecmp("SHADOW", get_mySubSystem()->getName()) == 0) {
+		EXCEPT("GLOBUS X509 USED IN SHADOW\n");
+	}
+
 	if ( !m_globusActivated ) {
 		// The Globus callout module is a system-wide setting.  There are several
 		// cases where a user may not want it to apply to Condor by default
