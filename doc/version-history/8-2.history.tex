@@ -62,6 +62,10 @@ amount of accumulated run time.
 
 \begin{itemize}
 
+\item Fixed a bug that caused a memory leak in the \Condor{procd}
+when cgroup tracking is enabled.
+\Ticket{4408}
+
 \item Fixed a bug that caused a memory leak in the \Condor{collector}
 under heavy load.  This bug was introduced in HTCondor version 8.1.5.
 \Ticket{4370}
