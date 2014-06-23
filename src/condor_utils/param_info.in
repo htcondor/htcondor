@@ -7774,3 +7774,8 @@ default: @end
 default=/bin/tar
 type=path
 review=tlmiller
+
+[QEMU_IMG]
+default=/usr/bin/qemu-img
+type=path
+review=tlmiller

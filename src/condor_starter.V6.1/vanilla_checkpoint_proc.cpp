@@ -14,6 +14,7 @@ extern CStarter * Starter;
 #define	STATUS_NAME	"_condor_vm_classad"
 #define	OUTPUT_NAME	"_condor_output_disk"
 #define	EXIT_NAME	"_condor_exitcode"
+#define DELTA_NAME	"_condor_delta_from"
 
 VanillaCheckpointProc::VanillaCheckpointProc( ClassAd * jobAd ) : VanillaProc( jobAd ), vmProc( NULL ), shuttingDown( false ) {
 }
@@ -54,7 +55,7 @@ bool VanillaCheckpointProc::CreateInitialDisks() {
 		tarArgs.AppendArg( de->d_name );
 	}
 	if( errno ) {
-		dprintf( D_ALWAYS, "Unable to readdir(%s). (%d: %s)\n", sandbox, errno, strerror( errno ) );
+		dprintf( D_ALWAYS, "Unable to readdir(%s) while looking for input files. (%d: %s)\n", sandbox, errno, strerror( errno ) );
 		return false;
 	}
 
@@ -241,6 +242,7 @@ int VanillaCheckpointProc::StartJob() {
 		return false;
 	}
 
+
 	//
 	// Don't adjust the transferred files if we're resuming from a checkpoint.
 	//
@@ -249,6 +251,79 @@ int VanillaCheckpointProc::StartJob() {
 	if( (! hasLastCkptTime) || lastCheckpointTime == 0 ) {
 		if( ! CreateInitialDisks() ) { return FALSE; }
 	}
+
+
+	//
+	// Create the delta disk(s).
+	//
+	dprintf( D_FULLDEBUG, "Looking for delta disks in '%s'\n", vmDiskString.c_str() );
+	StringList disks( vmDiskString.c_str(), "," );
+
+	disks.rewind();
+	const char * disk = NULL;
+	std::string newVMDiskString;
+	while( (disk = disks.next()) != NULL ) {
+		StringList params( disk, ":" );
+		if( params.number() == 4 ) {
+			params.rewind();
+			char * path = params.next();
+			char * device = params.next();
+			char * mode = params.next();
+			char * format = params.next();
+
+			//
+			// The version of libvirt I have ready access to can't create
+			// snapshots (even if you create a dummy domain for the disk
+			// image, because the domain will be "inactive"), so create a
+			// delta disk using qemu-img here, and change the format string
+			// to "${path}.delta:${device}:${mode}:qcow2".
+			//
+			if( strcmp( format, "snapshot-qcow2" ) == 0 ) {
+				dprintf( D_FULLDEBUG, "Found delta disk request in '%s'\n", disk );
+
+				int i = strlen( path ) - 1;
+				for( ; i >= 0 && path[i] != '/'; --i ) { ; }
+				std::string ddPath;
+				formatstr( ddPath, DELTA_NAME "_%s", & path[i + 1] );
+				dprintf( D_FULLDEBUG, "Delta disk will be named '%s'\n", ddPath.c_str() );
+
+				const char * qiBin = param( "QEMU_IMG" );
+				ArgList qiArgs;
+				qiArgs.AppendArg( qiBin );
+				qiArgs.AppendArg( "create" );
+				qiArgs.AppendArg( "-f" );
+				qiArgs.AppendArg( "qcow2" );
+				qiArgs.AppendArg( "-o" );
+				std::string backingFileArg;
+				formatstr( backingFileArg, "backing_file=%s", path );
+				qiArgs.AppendArg( backingFileArg.c_str() );
+				qiArgs.AppendArg( ddPath );
+
+				MyString displayString;
+				qiArgs.GetArgsStringForDisplay( & displayString );
+				dprintf( D_FULLDEBUG, "Attempting to create delta disk with command '%s'\n", displayString.Value() );
+
+				int rv = my_system( qiArgs );
+
+				if( rv != 0 ) {
+					dprintf( D_ALWAYS, "Unable to create delta disk with command '%s' (%d).\n", displayString.Value(), rv );
+					return false;
+				}
+
+				formatstr( newVMDiskString, "%s,%s:%s:%s:%s",
+					newVMDiskString.c_str(),
+					ddPath.c_str(), device, mode, "qcow2" );
+			}
+		} else if( params.number() == 3 ) {
+			formatstr( newVMDiskString, "%s,%s", newVMDiskString.c_str(), disk );
+			continue;
+		} else {
+			dprintf( D_ALWAYS, "Disk parameter string '%s' must have exactly three our four elements.\n", disk );
+			return FALSE;
+		}
+	}
+	vmDiskString = newVMDiskString.substr( 1 );
+
 
 	//
 	// Adding the initial disks to the XML helps the VM GAHP rewrite the
@@ -309,6 +384,38 @@ bool VanillaCheckpointProc::JobReaper( int pid, int status ) {
 	// Do we need to do one last check of the status "disk" here?
 	unlink( STATUS_NAME );
 
+	// Remove the delta disk(s).
+	const char * sandbox = Starter->jic->jobRemoteIWD();
+	DIR * d = opendir( sandbox );
+	if( d == NULL ) {
+		dprintf( D_ALWAYS, "Unable to opendir(%s).\n", sandbox );
+		return false;
+	}
+
+	errno = 0;
+	struct dirent * de = NULL;
+	while( (de = readdir( d )) != NULL ) {
+		if( ( strcmp( de->d_name, "." ) == 0 ) || ( strcmp( de->d_name, ".." ) == 0 ) ) {
+			continue;
+		}
+		// char * prefix = strstr( de->d_name, DELTA_NAME );
+		// dprintf( D_FULLDEBUG, "%s ? %s (%p ? %p) => %p\n", de->d_name, DELTA_NAME, de->d_name, DELTA_NAME, prefix );
+		if( strstr( de->d_name, DELTA_NAME ) == de->d_name ) {
+			unlink( de->d_name );
+		}
+	}
+	if( errno ) {
+		dprintf( D_ALWAYS, "Unable to readdir(%s) while looking for delta disk(s). (%d: %s)\n", sandbox, errno, strerror( errno ) );
+		return false;
+	}
+
+
+	//
+	// There's an optimization opportunity for the internal starter here:
+	// instead of blindly tarring everything up, it could instead look at
+	// the job ad and tar up only what's going to be sent back.
+	//
+
 	// Extract the output disk.
 	const char * tarBin = param( "TAR" );
 
@@ -328,8 +435,11 @@ bool VanillaCheckpointProc::JobReaper( int pid, int status ) {
 		//
 		// We can't fail: otherwise, the job will run forever.  However,
 		// this is clearly a problem that needs to be reported to the user.
-		// FIXME: A message in the starter log is clearly spectacularly
-		// inadequate.
+		// FIXME: A message in the starter log is clearly inadequate.
+		// FIXME: It would be nice if the internal "starter" would detect
+		// a short write and make a note of it somewhere, so we could know
+		// if this was actually the specific problem of running out of space
+		// on the output disk.  Maybe something to the status job ad?
 		//
 		dprintf( D_ALWAYS, "Unable to extract output tarball with command '%s': \n", displayString.Value() );
 		if( WIFEXITED( rv ) ) {
