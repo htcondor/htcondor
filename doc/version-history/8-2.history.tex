@@ -102,6 +102,10 @@ amount of accumulated run time.
 
 \begin{itemize}
 
+\item Fixed a bug that caused a memory leak in the \Condor{procd}
+when cgroup tracking is enabled.
+\Ticket{4408}
+
 \item Fixed a bug that caused a memory leak in the \Condor{collector}
 under heavy load.  This bug was introduced in HTCondor version 8.1.5.
 \Ticket{4370}
@@ -142,6 +146,9 @@ send email to a user named \Expr{NONE}, if configuration variable
 \item Fixed a bug in which \Condor{user\_prio} could result in a
 segmentation fault when given the \Opt{-grouporder} option.
 \Ticket{4407}
+
+\item Fixed a bug that caused frequent crashes of the \Prog{cream\_gahp}.
+\Ticket{4406}
 
 \end{itemize}
 
