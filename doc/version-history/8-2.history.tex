@@ -49,6 +49,10 @@ caused DAGMan to fail.
 	due to a bug in HTCondor's autocluster mechanism.
 \Ticket{4403}
 
+\item Update the HTCondor DRMAA library to 1.6.2. This version fixes a
+couple minor bugs in the functions for querying how a job exited.
+\Ticket{4413}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -78,6 +82,19 @@ The default value of 500 implements the previously hard coded value.
 resulting in faster job submission times and less \Condor{schedd} overhead, 
 especially when performing a submit to a remote \Condor{schedd}.
 \Ticket{3846}
+
+\item The default value for configuration variable \Macro{CLAIM\_WORKLIFE} 
+has changed from 60 minutes to 20 minutes.
+\Ticket{4374}
+
+\item The default value for configuration variable 
+\Macro{NEGOTIATOR\_PRE\_JOB\_RANK} has changed to prefer to match
+multi-core jobs to dynamic slots in a best-fit manner.
+And, the default value for configuration variable
+\Macro{PREEMPTION\_RANK} has changed to first choose the user with the
+worst priority, and then choose the job of that user with the least
+amount of accumulated run time. 
+\Ticket {4374}
 
 \end{itemize}
 
@@ -121,6 +138,10 @@ batch system was HTCondor. This has been fixed.
 send email to a user named \Expr{NONE}, if configuration variable
 \MacroNI{CONDOR\_DEVELOPERS} is left unset.
 \Ticket{4399}
+
+\item Fixed a bug in which \Condor{user\_prio} could result in a
+segmentation fault when given the \Opt{-grouporder} option.
+\Ticket{4407}
 
 \end{itemize}
 
