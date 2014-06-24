@@ -69,8 +69,7 @@ is set to a directory that's not the current working directory of
 
 \begin{itemize}
 
-\item HTCondor version 8.2.0 not yet released.
-%\item HTCondor version 8.2.0 released on Month Date, 2014.
+\item HTCondor version 8.2.0 released on June 24, 2014.
 
 \end{itemize}
 
@@ -101,6 +100,11 @@ And, the default value for configuration variable
 worst priority, and then choose the job of that user with the least
 amount of accumulated run time. 
 \Ticket {4374}
+
+\item The default set of metrics published by the \Condor{gangliad} has been
+reduced to an essential set of scheduler and negotiator metrics.
+Also, the units for accumulated times have changed from seconds to hours.
+\Ticket{4299}
 
 \end{itemize}
 
@@ -155,6 +159,17 @@ segmentation fault when given the \Opt{-grouporder} option.
 
 \item Fixed a bug that caused frequent crashes of the \Prog{cream\_gahp}.
 \Ticket{4406}
+
+\item Fixed a bug that prevented attribute \AdAttr{SubmitterUserPrio} from
+	properly functioning in \MacroNI{PREEMPTION\_REQUIREMENTS} and 
+	\MacroNI{PREEMPTION\_RANK} expressions as documented in
+	section~\ref{sec:Priorities-in-Negotiation-and-Preemption}.
+\Ticket{4369}
+
+\item Fixed a bug that could cause some commands sent to HTCondor daemons
+to fail, especially when sent over a slow network.
+This bug was introduced in HTCondor version 8.1.5.
+\Ticket{4368}
 
 \end{itemize}
 
