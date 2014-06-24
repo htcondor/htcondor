@@ -47,7 +47,12 @@ administrators must be aware of and work with:
    HTCondor code explicitly suppresses the warning in this case.
   \end{itemize}
 
-\item Support for ganglia monitoring.
+\item The new \Condor{gangliad} can publish metrics from daemon ClassAds 
+to the Ganglia monitoring system.
+In addition, the HTCondor can perform simple aggregations, 
+such as sums or averages, 
+over many instances of a metric to provide pool-wide statistics.
+Metrics can be scaled for presentation. 
 
 \item HTCondor supports the use of GPUs as machine resources.
 Management and how to request GPUs by jobs are detailed on
