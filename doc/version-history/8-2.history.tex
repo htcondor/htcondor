@@ -53,6 +53,12 @@ caused DAGMan to fail.
 couple minor bugs in the functions for querying how a job exited.
 \Ticket{4413}
 
+\item \Condor{submit} no longer fails if the value of
+\SubmitCmd{x509userproxy} is a relative path and \SubmitCmd{initialdir}
+is set to a directory that's not the current working directory of
+\Condor{submit}.
+\Ticket{4415}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
