@@ -5981,6 +5981,9 @@ SetGSICredentials()
 //			InsertJobExpr(buffer);	
 			free( proxy_file );
 		} else {
+			char *full_proxy_file = strdup( full_path( proxy_file ) );
+			free( proxy_file );
+			proxy_file = full_proxy_file;
 #if defined(HAVE_EXT_GLOBUS)
 			if ( check_x509_proxy(proxy_file) != 0 ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
@@ -6053,7 +6056,7 @@ SetGSICredentials()
 #endif
 
 			(void) buffer.formatstr( "%s=\"%s\"", ATTR_X509_USER_PROXY, 
-						   full_path(proxy_file));
+						   proxy_file);
 			InsertJobExpr(buffer);	
 			free( proxy_file );
 		}
