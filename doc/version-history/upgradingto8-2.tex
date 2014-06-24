@@ -112,6 +112,12 @@ HTCondor will prefer to use libraries already installed in \File{/usr/lib[64]},
 when present.
 \Ticket{4243}
 
+\item If you reference attribute \AdAttr{SubmittorUserPrio} in your
+	configuration, such as in your \MacroNI{preemption\_requirements} 
+	expression, you will need to change it to \AdAttr{SubmitterUserPrio} 
+	when upgrading to version 8.2.x.  Note the spelling difference.
+\Ticket{4369}
+
 \item ClassAd integer and real values are 64 bits.
 \Ticket{3928}
 
