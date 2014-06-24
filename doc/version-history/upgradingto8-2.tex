@@ -3,36 +3,40 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{upgrading!items to be aware of}
-While upgrading from the 8.0 series of HTCondor to the 8.2 series 
-will bring 
-new features and improvements introduced in the 8.1 series of HTCondor,
-it will
+Upgrading from the 8.0 series of HTCondor to the 8.2 series 
+will bring new features introduced in the 8.1 series of HTCondor.
+These new features include:
+configuration is more powerful with new syntax and features, and
+the default configuration policy does not preempt jobs,
+monitoring is enhanced and now integrates with Ganglia,
+automated detection and management of GPUs,
+numerous scalability enhancements improve performance,
+an improved Python API including support for Python 3,
+new native packaging and ports are available for the latest Linux 
+distributions including Red Hat 7 Beta and Debian 7,
+cloud computing improvements including support for
+EC2 spot instances, OpenStack, and \Condor{ssh\_to\_job} 
+directly into EC2 jobs,
+grid universe jobs can now target Google Compute Engine and BOINC servers,
+partitionable slots now are compatible with \Condor{startd} \MacroNI{RANK}
+expressions, and consumption policies permit partitionable slots 
+to be split into dynamic slots at negotiation time,
+improved data management including dynamic adjustment of the level of 
+file transfer concurrency based on disk load 
+(see section~\ref{param:FileTransferDiskLoadThrottle}), 
+and experimental support to allow the execution of a job to be overlaid 
+with the transfer of output files from the previous different job,
+and
+the new \Condor{sos} tool helps administrators manage overloaded daemons. 
+
+Upgrading from the 8.0 series of HTCondor to the 8.2 series will
 also introduce changes that administrators of sites running from an older
 HTCondor version should be aware of when planning an upgrade.  
 Here is a list of items that administrators should be aware of.
 
 \begin{itemize}
 
-\item New syntax and features with respect to configuration
-make configuration more powerful.
-  \begin{itemize}
-  \item The default configuration file is much smaller in size.
-   Defaults for most configuration variables are set at compile time.
-   Directions for converting to the new, small size file are in
-   section~\ref{sec:Pool-Upgrade}.
-  \item A feature to include configuration from elsewhere
-   is described in section~\ref{sec:Config-Include}.
-  \item Metaknobs permit the incorporation of predefined configuration.
-   Metaknobs are available for setting a machine's role within
-   a pool, enabling a feature belonging to a machine, the policy under which
-   machines start jobs, or the security configuration.
-   Section~\ref{sec:Config-Metaknobs} lists the complete set of available
-   metaknobs.
-  \item Limited conditional configuration is described in 
-   section~\ref{sec:Config-IfElse}.
-  \end{itemize}
-This introduction of new features causes a few items that pool
-administrators must be aware of and work with:
+\item New configuration syntax and features change:
   \begin{itemize}
   \item The interaction of comments and the line continuation character
    has changed.  See  section~\ref{sec:Other-Syntax} for the current
@@ -46,18 +50,6 @@ administrators must be aware of and work with:
    \MacroNI{RUNBENCHMARKS} using a colon character;
    HTCondor code explicitly suppresses the warning in this case.
   \end{itemize}
-
-\item The new \Condor{gangliad} can publish metrics from daemon ClassAds 
-to the Ganglia monitoring system.
-In addition, the HTCondor can perform simple aggregations, 
-such as sums or averages, 
-over many instances of a metric to provide pool-wide statistics.
-Metrics can be scaled for presentation. 
-
-\item HTCondor supports the use of GPUs as machine resources.
-Management and how to request GPUs by jobs are detailed on
-the wiki page
-\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToManageGpus}.
 
 \item The default user priority factor for new users has changed 
 from 1 to 1000.
@@ -117,20 +109,21 @@ HTCondor will prefer to use libraries already installed in \File{/usr/lib[64]},
 when present.
 \Ticket{4243}
 
-\item If you reference attribute \AdAttr{SubmittorUserPrio} in your
-	configuration, such as in your \MacroNI{preemption\_requirements} 
-	expression, you will need to change it to \AdAttr{SubmitterUserPrio} 
-	when upgrading to version 8.2.x.  Note the spelling difference.
+\item If referencing attribute \AdAttr{SubmittorUserPrio} in
+configuration, such as in the \MacroNI{PREEMPTION\_REQUIREMENTS} expression,
+you will need to change it to \AdAttr{SubmitterUserPrio} 
+Note the spelling difference in the ClassAd attribute name.
 \Ticket{4369}
-
-\item ClassAd integer and real values are 64 bits.
-\Ticket{3928}
 
 \item HTCondor can not distinguish normal from abnormal job exit
 for Nordugrid ARC grids.
 Therefore, all grid-type nordugrid jobs will be recorded as 
 terminating normally, with an exit code from 0 to 255.
 \Ticket{4342}
+
+\item For configuration, parameter substitution now honors per-daemon 
+overrides.  This long standing bug's fix may result in subtle changes
+to the way that your configuration files are processed.
 
 \end{itemize}
 
