@@ -120,6 +120,7 @@ void ScheddStatistics::Init(int fOtherPool)
 
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumTimeToStart, if_poolbasic);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumBadputTime,  if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumExceptionalBadputTime,  if_poolbasic);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumRunningTime, if_poolbasic);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumExecuteTime, if_poolbasic);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumPreExecuteTime,  if_poolbasic);
@@ -149,6 +150,7 @@ void ScheddStatistics::Init(int fOtherPool)
    SCHEDD_STATS_ADD_RECENT(Pool, JobsCompletedRuntimes,     if_poolbasic);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsBadputRuntimes,        if_poolbasic);
 
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRunning,                  if_poolbasic);
    SCHEDD_STATS_ADD_VAL(Pool, JobsRunningSizes,             if_poolbasic);
    SCHEDD_STATS_ADD_VAL(Pool, JobsRunningRuntimes,          if_poolbasic);
 
@@ -450,6 +452,39 @@ void ScheddOtherStatsMgr::CountJobsSubmitted()
 	}
 	deferred_jobs_submitted.clear();
 }
+
+// reset jobs-running counters/histograms in preparation for count_jobs
+void ScheddOtherStatsMgr::ResetJobsRunning()
+{
+	ScheddOtherStats* po = NULL;
+	pools.startIterations();
+	while (pools.iterate(po)) {
+
+		// don't bother to reset disabled stats.
+		if ( ! po->enabled)
+			continue;
+
+		po->stats.JobsRunning = 0;
+		po->stats.JobsRunningRuntimes = 0;
+		po->stats.JobsRunningSizes = 0;
+
+		if (po->sets.empty())
+			continue;
+
+		for (std::map<std::string, ScheddOtherStats*>::iterator it = po->sets.begin();
+				it != po->sets.end();
+				++it) {
+
+			ScheddOtherStats* po2 = it->second;
+			if (po2->enabled) {
+				po2->stats.JobsRunning = 0;
+				po2->stats.JobsRunningRuntimes = 0;
+				po2->stats.JobsRunningSizes = 0;
+			}
+		}
+	}
+}
+
 
 
 /* don't use these.
