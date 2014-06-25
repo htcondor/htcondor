@@ -32,6 +32,11 @@ The details of each version are described below.
 \item Added DAG status to the \File{dagman.out} file.
 \Ticket{4381}
 
+\item When a daemon creates a child daemon process, it also creates a
+security session shared with the child daemon.
+This makes the initial communication between the daemons more efficient.
+\Ticket{4405}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
