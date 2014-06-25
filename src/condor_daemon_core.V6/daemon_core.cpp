@@ -6424,10 +6424,14 @@ int DaemonCore::Create_Process(
 		//  CCB's trickery if present.  As this address is
 		//  intended for my own children on the same machine,
 		//  this should be safe.
-	{
+		// If m_inherit_parent_sinful is set, then the daemon wants
+		//   this child to use an alternate sinful to contact it.
+	if ( m_inherit_parent_sinful.empty() ) {
 		MyString mysin = InfoCommandSinfulStringMyself(true);
 		ASSERT(mysin.Length() > 0); // Empty entry means unparsable string.
 		inheritbuf += mysin;
+	} else {
+		inheritbuf += m_inherit_parent_sinful;
 	}
 
 	if ( sock_inherit_list ) {

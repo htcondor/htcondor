@@ -455,6 +455,10 @@ class DaemonCore : public Service
 		*/
 	const char* privateNetworkName(void);
 
+	void SetInheritParentSinful( const char *sinful ) {
+		m_inherit_parent_sinful = sinful ? sinful : "";
+	}
+
 	/** Returns a pointer to the penvid passed in if successful
 		in determining the environment id for the pid, or NULL if unable
 		to determine.
@@ -2064,6 +2068,8 @@ class DaemonCore : public Service
 	bool CommandNumToTableIndex(int cmd,int *cmd_index);
 
 	void InitSharedPort(bool in_init_dc_command_socket=false);
+
+	std::string m_inherit_parent_sinful;
 };
 
 /**

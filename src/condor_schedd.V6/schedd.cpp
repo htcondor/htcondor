@@ -8660,14 +8660,18 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		core_size = (size_t)core_size_truncated;
 		core_size_ptr = &core_size;
 	}
-	
+
+		// Scheduler universe jobs should not be told about the shadow
+		// command socket in the inherit buffer.
+	daemonCore->SetInheritParentSinful( NULL );
 	pid = daemonCore->Create_Process( a_out_name.Value(), args, PRIV_USER_FINAL, 
 	                                  shadowReaperId, FALSE,
 	                                  &envobject, iwd.Value(), NULL, NULL, inouterr,
 	                                  NULL, niceness, NULL,
 	                                  DCJOBOPT_NO_ENV_INHERIT,
 	                                  core_size_ptr );
-	
+	daemonCore->SetInheritParentSinful( MyShadowSockName );
+
 	// now close those open fds - we don't want them here.
 	for ( i=0 ; i<3 ; i++ ) {
 		if ( close( inouterr[i] ) == -1 ) {
@@ -11629,6 +11633,10 @@ Scheduler::Init()
 		MyShadowSockName = strdup( shadowCommandrsock->get_sinful() );
 
 		sent_shadow_failure_email = FALSE;
+
+		// In the inherit buffer we pass to our children, tell them to use
+		// the shadow command socket.
+		daemonCore->SetInheritParentSinful( MyShadowSockName );
 	}
 		
 		// initialize our ShadowMgr, too.
