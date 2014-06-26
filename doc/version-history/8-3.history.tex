@@ -45,10 +45,11 @@ This makes the initial communication between the daemons more efficient.
 \begin{itemize}
 
 \item Fixed a bug that caused \Condor{dagman} to unnecessarily attempt
-to read node job submit files, which could cause spurious warnings
-in recovery mode.  (Strictly speaking, the bug is fixed only for the
-default case of \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} being set
-to true.)
+to read node job submit description files, 
+which could cause spurious warnings when in recovery mode.
+Strictly speaking, the bug is fixed only for the
+default case in which \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set
+to \Expr{True}.
 \Ticket{3843}
 
 \end{itemize}
