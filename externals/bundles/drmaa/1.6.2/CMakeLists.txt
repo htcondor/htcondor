@@ -22,6 +22,7 @@
 # repository is the latest code from Sourceforge as of 2009.
 # As of February, 2014, no additional changes have been made upstream.
 # Version 1.6.1 replaces the old Condor license when the Apache license.
+# Version 1.6.2 fixes some handling of job exit signals.
 
 if (NOT PROPER AND (LINUX OR WINDOWS OR DARWIN))
   option(WITH_DRMAA "Compiling with support for drmaa" ON)
@@ -29,7 +30,7 @@ endif()
 
 if ( WITH_DRMAA )
 
-	condor_pre_external( DRMAA drmaa-1.6.1 "lib;include" "include/drmaa.h")
+	condor_pre_external( DRMAA drmaa-1.6.2 "lib;include" "include/drmaa.h")
 	
 	if (NOT WINDOWS)
 		set (DRMAA_CONFIGURE ./configure --prefix=${DRMAA_INSTALL_LOC})

@@ -221,7 +221,7 @@ struct LineRecLT {
                // individual submitters, and in breadth-first order of hierarchy.
                // This preserves that ordering:
                if (a.IsAcctGroup || b.IsAcctGroup) {
-                   return &a < &b;
+                   return a.index < b.index;
                }
             }
         }

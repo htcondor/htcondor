@@ -110,6 +110,23 @@ group htcondor {
 }
 \end{verbatim}
 
+On Debian based systems, the memory system is often not on by default, and
+needs to be enable by a boot time option.  This setting needs to be inheritted
+down to the per-job cgroup with the following commands in rc.local:
+
+\begin{verbatim}
+/usr/sbin/cgconfigparser -l /etc/cgconfig.conf
+/bin/echo 1 > /sys/fs/cgroup/htcondor/cgroup.clone_children
+\end{verbatim}
+
+Finally for Debian, add to group htcondor the following field:
+
+\begin{verbatim}
+	cpuset {
+		cpusets.mems = 0;
+	}
+\end{verbatim}
+
 After the \File{/etc/cgconfig.conf} file has had the htcondor group
 added to it, add and start the cgconfig service by running
 

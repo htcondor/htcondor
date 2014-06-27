@@ -192,6 +192,7 @@ if( NOT WINDOWS)
 	check_function_exists("access" HAVE_ACCESS)
 	check_function_exists("clone" HAVE_CLONE)
 	check_function_exists("dirfd" HAVE_DIRFD)
+	check_function_exists("euidaccess" HAVE_EUIDACCESS)
 	check_function_exists("execl" HAVE_EXECL)
 	check_function_exists("fstat64" HAVE_FSTAT64)
 	check_function_exists("_fstati64" HAVE__FSTATI64)
@@ -639,11 +640,11 @@ if (WINDOWS)
   endif()
   
   # DRMAA currently punted on Windows until we can figure out correct build
-  #add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.1)
+  #add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.2)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 else ()
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.1)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.2)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
 

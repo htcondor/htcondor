@@ -108,6 +108,22 @@ ClassAdCronJob::Initialize( void )
 	return CronJob::Initialize( );
 }
 
+
+// Process (i.e. store) the separator args between output records. (i.e. everything after the -)
+// so that the Publish method (including a derived one) can fetch and parse it.
+int
+ClassAdCronJob::ProcessOutputSep( const char *args )
+{
+	int status = 0;
+	if ( NULL == args ) {
+		m_output_ad_args.clear();
+	} else {
+		m_output_ad_args = args;
+	}
+	return status;
+}
+
+
 // Process a line of input
 int
 ClassAdCronJob::ProcessOutput( const char *line )
@@ -138,12 +154,17 @@ ClassAdCronJob::ProcessOutput( const char *line )
 				}
 			}
 
+			const char * ad_args = NULL;
+			if ( ! m_output_ad_args.empty())
+				ad_args = m_output_ad_args.c_str();
+
 			// Replace the old ClassAd now
-			Publish( GetName( ), m_output_ad );
+			Publish( GetName( ), ad_args, m_output_ad );
 
 			// I've handed it off; forget about it!
 			m_output_ad = NULL;
 			m_output_ad_count = 0;
+			m_output_ad_args.clear();
 		}
 	} else {
 		// Process this line!

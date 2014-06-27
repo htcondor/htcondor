@@ -6424,10 +6424,14 @@ int DaemonCore::Create_Process(
 		//  CCB's trickery if present.  As this address is
 		//  intended for my own children on the same machine,
 		//  this should be safe.
-	{
+		// If m_inherit_parent_sinful is set, then the daemon wants
+		//   this child to use an alternate sinful to contact it.
+	if ( m_inherit_parent_sinful.empty() ) {
 		MyString mysin = InfoCommandSinfulStringMyself(true);
 		ASSERT(mysin.Length() > 0); // Empty entry means unparsable string.
 		inheritbuf += mysin;
+	} else {
+		inheritbuf += m_inherit_parent_sinful;
 	}
 
 	if ( sock_inherit_list ) {
@@ -6576,11 +6580,16 @@ int DaemonCore::Create_Process(
 		char const *session_id_c_str = session_id.c_str();
 		char const *session_key_c_str = session_key.c_str();
 
+		// we need to include the list of valid commands with the session
+		// so the child knows it can use this session to contact the parent.
+		std::string valid_coms;
+		formatstr( valid_coms, "[%s=\"%s\"]", ATTR_SEC_VALID_COMMANDS,
+				   GetCommandsInAuthLevel(DAEMON,true).Value() );
 		bool rc = getSecMan()->CreateNonNegotiatedSecuritySession(
 			DAEMON,
 			session_id_c_str,
 			session_key_c_str,
-			NULL,
+			valid_coms.c_str(),
 			CONDOR_CHILD_FQU,
 			NULL,
 			0);
@@ -8125,6 +8134,7 @@ DaemonCore::Inherit( void )
 	int numInheritedSocks = 0;
 	char *ptmp;
 	static bool already_inherited = false;
+	std::string saved_sinful_string;
 
 	if( already_inherited ) {
 		return;
@@ -8169,6 +8179,7 @@ DaemonCore::Inherit( void )
 		pidtmp->pid = ppid;
 		ptmp=inherit_list.next();
 		dprintf(D_DAEMONCORE,"Parent Command Sock = %s\n",ptmp);
+		saved_sinful_string = ptmp;
 		pidtmp->sinful_string = ptmp;
 		pidtmp->is_local = TRUE;
 		pidtmp->parent_is_local = TRUE;
@@ -8343,7 +8354,7 @@ DaemonCore::Inherit( void )
 				claimid.secSessionKey(),
 				claimid.secSessionInfo(),
 				CONDOR_PARENT_FQU,
-				NULL,
+				saved_sinful_string.c_str(),
 				0);
 			if(!rc)
 			{
@@ -9309,6 +9320,7 @@ int DaemonCore::HungChildTimeout()
 			want_core = false;
 		}
 		else {
+			dprintf(D_ALWAYS, "Sending SIGABRT to child to generate a core file.\n");
 			const int want_core_timeout = 600;
 			pidentry->hung_tid =
 				Register_Timer(want_core_timeout,

@@ -915,8 +915,6 @@ int ClassAd::Insert( const char *name, classad::ExprTree *& expr, bool bCache )
 int
 ClassAd::Insert( const char *str )
 {
-	classad::ClassAdParser parser;
-
 		// String escaping is different between new and old ClassAds.
 		// We need to convert the escaping from old to new style before
 		// handing the expression to the new ClassAds parser.

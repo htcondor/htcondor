@@ -207,6 +207,9 @@
 /* Define to 1 if you have the 'access' function. */
 #cmakedefine HAVE_ACCESS 1
 
+/* Define to 1 if you have the 'access' function. */
+#cmakedefine HAVE_EUIDACCESS 1
+
 /* are we compiling support for any backfill systems (USED)*/
 #cmakedefine HAVE_BACKFILL 1
 

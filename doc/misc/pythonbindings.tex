@@ -118,7 +118,18 @@ Returns a transaction context manager.
 Starting a new transaction while one is ongoing is an error. 
 
 The optional parameter \texttt{flags} defaults to 0.
-Transaction flags are from the the enum \texttt{htcondor.TransactionFlags}.
+Transaction flags are from the the enum \texttt{htcondor.TransactionFlags},
+and the three flags are
+\texttt{NonDurable}, \texttt{SetDirty}, or \texttt{ShouldLog}. 
+\texttt{NonDurable} is used for performance, as it eliminates 
+extra \Procedure{fsync} calls.
+If the \Condor{schedd} crashes before the transaction is written to disk,
+the transaction will be retried on restart of the  \Condor{schedd}. 
+\texttt{SetDirty} marks the changed ClassAds as dirty,
+so an update notification is sent to the \Condor{shadow} and 
+the \Condor{gridmanager}. 
+\texttt{ShouldLog} causes changes to the job queue to be logged
+in the job event log file.
 
 The optional parameter \texttt{continue\_txn} defaults to \texttt{false};
 set the value to \texttt{true} to extend an ongoing transaction. 
