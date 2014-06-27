@@ -1377,6 +1377,7 @@ int printUsage(int iExitCode)
     printf("    -notification <value> (Determines how much email you get from Condor.\n");
     printf("        See the condor_submit man page for values.)\n");
     printf("    -NoEventChecks      (Now ignored -- use DAGMAN_ALLOW_EVENTS)\n"); 
+    printf("    -DontAlwaysRunPost  (Don't run POST script if PRE script fails)\n");
     printf("    -AllowLogError      (Allows the DAG to attempt execution even if the log\n");
     printf("        reading code finds errors when parsing the submit files)\n"); 
 	printf("    -UseDagDir          (Run DAGs in directories specified in DAG file paths)\n");
