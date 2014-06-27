@@ -66,25 +66,27 @@ static void Usage() {
             "\t\t[-MaxJobs <int N>]\n"
             "\t\t[-MaxPre <int N>]\n"
             "\t\t[-MaxPost <int N>]\n"
-            "\t\t[-DontAlwaysRunPost]\n"
-            "\t\t[-WaitForDebug]\n"
             "\t\t[-NoEventChecks]\n"
             "\t\t[-AllowLogError]\n"
+            "\t\t[-DontAlwaysRunPost]\n"
+            "\t\t[-WaitForDebug]\n"
             "\t\t[-UseDagDir]\n"
             "\t\t[-AutoRescue <0|1>]\n"
             "\t\t[-DoRescueFrom <int N>]\n"
-            "\t\t[-Priority <int N>]\n"
 			"\t\t[-AllowVersionMismatch]\n"
 			"\t\t[-DumpRescue]\n"
 			"\t\t[-Verbose]\n"
 			"\t\t[-Force]\n"
 			"\t\t[-Notification <never|always|complete|error>]\n"
+			"\t\t[-Suppress_notification]\n"
+			"\t\t[-Dont_Suppress_notification]\n"
 			"\t\t[-Dagman <dagman_executable>]\n"
 			"\t\t[-Outfile_dir <directory>]\n"
 			"\t\t[-Update_submit]\n"
 			"\t\t[-Import_env]\n"
-			"\t\t[-Suppress_notification]\n"
-			"\t\t[-Dont_Suppress_notification]\n"
+            "\t\t[-Priority <int N>]\n"
+			"\t\t[-dont_use_default_node_log]\n"
+			"\t\t[-DoRecov]\n"
             "\twhere NAME is the name of your DAG.\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
 	DC_Exit( EXIT_ERROR );
@@ -135,6 +137,7 @@ Dagman::Dagman() :
 	_runPost(true),
 	_defaultPriority(0),
 	_claim_hold_time(20),
+	_doRecovery(false),
 	_dagmanClassad(NULL)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
@@ -795,14 +798,19 @@ void main_init (int argc, char ** const argv) {
 			dagman._submitDagDeepOpts.importEnv = true;
 
         } else if( !strcasecmp( "-priority", argv[i] ) ) {
-		++i;
-		if( i >= argc || strcmp( argv[i], "" ) == 0 ) {
-			debug_printf( DEBUG_NORMAL, "No priority value specified\n");
-			Usage();
-		}
-		dagman._submitDagDeepOpts.priority = atoi(argv[i]);
+			++i;
+			if( i >= argc || strcmp( argv[i], "" ) == 0 ) {
+				debug_printf( DEBUG_NORMAL, "No priority value specified\n");
+				Usage();
+			}
+			dagman._submitDagDeepOpts.priority = atoi(argv[i]);
+
 		} else if( !strcasecmp( "-dont_use_default_node_log", argv[i] ) ) {
 			dagman._submitDagDeepOpts.always_use_node_log = false;
+
+		} else if ( !strcasecmp( "-dorecov", argv[i] ) ) {
+			dagman._doRecovery = true;
+
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
 						argv[i] );
@@ -1195,6 +1203,12 @@ void main_init (int argc, char ** const argv) {
 				}
 			}
 
+        } else if ( dagman._doRecovery ) {
+            debug_printf( DEBUG_VERBOSE, "Running in recovery mode because -DoRecovery flag was specified\n" );
+			recovery = true;
+		}
+
+        if ( recovery ) {
 				// Not using the default node log is the backward
 				// compatible thing to do, so if using the default
 				// log file is already disabled, we don't have to
@@ -1202,7 +1216,7 @@ void main_init (int argc, char ** const argv) {
 			if ( dagman._submitDagDeepOpts.always_use_node_log ) { 
 				dagman.CheckLogFileMode( submitFileVersion );
 			}
-        }
+		}
 
 			//
 			// If this DAGMan continues, it should overwrite the lock

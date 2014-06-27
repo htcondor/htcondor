@@ -27,7 +27,9 @@ use CondorUtils;
 $cmd = 'job_dagman_abnormal_term_recovery_retries.dag';
 $testdesc =  'Condor submit dag - abnormal termination-recovery-retries test - scheduler U';
 $testname = "job_dagman_abnormal_term_recovery_retries";
-$dagman_args = "-verbose";
+# Force DAGMan to run in recovery mode (so we'll read the log file we
+# copy below).
+$dagman_args = "-verbose -DoRecov";
 
 @logfiles = ("job_dagman_abnormal_term_recovery_retries.dag.dagman.out");
 
@@ -42,10 +44,6 @@ foreach $name (@logfiles) {
 		runcmd("rm -f $name");
 	}
 }
-
-# Force the DAG into recovery mode (so we'll read the log file we
-# copy below).
-runcmd("touch job_dagman_abnormal_term_recovery_retries.dag.lock");
 
 # Copy in dummy log with signal 11 abnormal termination for node A.
 runcmd("cp job_dagman_abnormal_term_recovery_retries-nodeA.dummy_log job_dagman_abnormal_term_recovery_retries-nodeA.log");
