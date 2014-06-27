@@ -115,7 +115,7 @@ needs to be enable by a boot time option.  This setting needs to be inheritted
 down to the per-job cgroup with the following commands in rc.local:
 
 \begin{verbatim}
-/usr/bin/cgconfigparser -l /etc/cgconfig.conf
+/usr/sbin/cgconfigparser -l /etc/cgconfig.conf
 /bin/echo 1 > /sys/fs/cgroup/htcondor/cgroup.clone_children
 \end{verbatim}
 
