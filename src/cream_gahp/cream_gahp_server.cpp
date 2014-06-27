@@ -2361,8 +2361,6 @@ int main(int /*argc*/, char ** /*argv*/)
 	gahp_printf("%s\n", VersionString);
 
 	int worker_cnt = DEFAULT_WORKER_CNT;
-
-	threads = (pthread_t *)malloc(sizeof(pthread_t) * worker_cnt);
 	const char *worker_env = getenv( "CREAM_GAHP_WORKER_THREADS" );
 	if ( worker_env ) {
 		worker_cnt = atoi( worker_env );
@@ -2370,6 +2368,8 @@ int main(int /*argc*/, char ** /*argv*/)
 			worker_cnt = 1;
 		}
 	}
+
+	threads = (pthread_t *)malloc(sizeof(pthread_t) * worker_cnt);
 
 		//create & detach worker threads
 	for (i = 0; i < worker_cnt; i++){
