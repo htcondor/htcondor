@@ -41,7 +41,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a Windows-specific bug:  specfying a DAG node status file
+\item Fixed a Windows-specific bug:  specifying a DAG node status file
 caused DAGMan to fail.
 \Ticket{4361}
 
@@ -58,6 +58,10 @@ couple minor bugs in the functions for querying how a job exited.
 is set to a directory that's not the current working directory of
 \Condor{submit}.
 \Ticket{4415}
+
+\item Fixed a bug that caused \Condor{submit\_dag} to core dump if
+a non-existent DAG file was specified.
+\Ticket{4423}
 
 \end{itemize}
 
