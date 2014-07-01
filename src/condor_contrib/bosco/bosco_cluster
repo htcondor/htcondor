@@ -131,7 +131,7 @@ list()
 set_bosco_routing () {
     # $1 file to write the routing info into
     #  default to  LOCAL_CONFIG_DIR`/condor_config.bosco_routing
-    if [ -n PRIVATE_ON_MU ]; then
+    if [ -n "$PRIVATE_ON_MU" ]; then
         return
     fi
     if [ "x$1" != "x" ]; then
@@ -969,7 +969,7 @@ show_progress "Sending libraries to $remote_host" rsync -aq  $archive_dir/$libdi
 rsync -aq  $archive_dir/sbin/condor_ft-gahp $remote_glite_dir/bin 2>/dev/null
 
 # create the glidein
-if [ -n PRIVATE_ON_MU ]; then
+if [ -n "$PRIVATE_ON_MU" ]; then
     echo "You are not running as the factory user. BOSCO Glideins disabled."
 else
     export PYTHONPATH=`condor_config_val LIBEXEC`/campus_factory/python-lib
@@ -988,7 +988,7 @@ EOF
 
 # A regular user cannot write on system files
 # and will not need the password for grid universe jobs
-if [ ! -n PRIVATE_ON_MU ]; then
+if [ ! -n "$PRIVATE_ON_MU" ]; then
     # Generate the password file, if it doesn't already exist 
     bosco_passwd_file=`condor_config_val SEC_PASSWORD_FILE` 
     if [ "x$bosco_passwd_file" == "x" ]; then
@@ -1040,7 +1040,7 @@ echo "Installation complete"
 
 # Configure condor
 # Not if private user on BOSCO MU
-if [ ! -n PRIVATE_ON_MU ]; then
+if [ ! -n "$PRIVATE_ON_MU" ]; then
     min_queue_size=`get_min_queue`
     tmpfile=`mktemp -t tmpconfigfile.XXXXX`
     condor_config_file=`condor_config_val LOCAL_CONFIG_FILE`
