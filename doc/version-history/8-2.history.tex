@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where PeriodicRemove expressions would not remove
+jobs running on Linux machines when PID Namespaces were enabled.
+\Ticket{4421}
+
 \item Fixed a Windows-specific bug:  specifying a DAG node status file
 caused DAGMan to fail.
 \Ticket{4361}
