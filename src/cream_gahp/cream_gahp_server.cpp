@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <dlfcn.h>
 #include <string.h>
 #include <string>
 #include <iostream>
@@ -2333,6 +2334,18 @@ void *worker_main(void * /*ignored*/)
 int main(int /*argc*/, char ** /*argv*/)
 {
 	int i;
+
+		// When loading a library for real threading support, Globus
+		// uses lt_dlopen(), which ignores our RPATH. This means that
+		// it won't find the globus_thread_pthread library that we
+		// include in UW builds of Condor.
+		// If we load the library with dlopen() first, then lt_dlopen()
+		// will find it.
+	void *dl_ptr = dlopen( "libglobus_thread_pthread.so", RTLD_LAZY);
+	if ( dl_ptr == NULL ) {
+		fprintf( stderr, "Failed to open globus_thread_pthread.\n" );
+		return 1;
+	}
 
 		// Globus and gsoap have some initialization code that must be
 		// called in the main thread before any other threads are
