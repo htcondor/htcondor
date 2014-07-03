@@ -38,6 +38,11 @@ security session shared with the child daemon.
 This makes the initial communication between the daemons more efficient.
 \Ticket{4405}
 
+\item Added a \Opt{-DoRecovery} command-line flag to \Condor{dagman}
+and \Condor{submit\_dag} that causes \Condor{dagman} to run in
+recovery mode (see ~\ref{man-condor-submit-dag}).
+\Ticket{2218}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
