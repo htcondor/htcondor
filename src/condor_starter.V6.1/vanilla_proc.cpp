@@ -730,7 +730,8 @@ VanillaProc::JobReaper(int pid, int status)
 		}
 	}
 
-	if (m_pid_ns_init_filename.length() > 0) {
+	// If we didn't kill it ourselves, and we've using pid namespaces
+	if (!requested_exit && (m_pid_ns_init_filename.length() > 0)) {
 		// We ran a job with a pid_ns_init wrapper.  This file contains
 		// true status
 		TemporaryPrivSentry sentry(PRIV_ROOT);
