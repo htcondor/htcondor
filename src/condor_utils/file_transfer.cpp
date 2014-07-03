@@ -981,13 +981,14 @@ FileTransfer::ComputeFilesToSend()
 
 			filesize_t filesize;
 			time_t modification_time;
+			unsigned char md5sum[MAC_SIZE];
 			if ( ExceptionFiles && ExceptionFiles->file_contains(f) ) {
 				dprintf ( 
 					D_FULLDEBUG, 
 					"Skipping file in exception list: %s\n", 
 					f );
 				continue;
-			} else if ( !LookupInFileCatalog(f, &modification_time, &filesize) ) {
+			} else if ( !LookupInFileCatalog(f, &modification_time, &filesize, md5sum) ) {
 				// file was not found.  send it.
 				dprintf( D_FULLDEBUG, 
 						 "Sending new file %s, time==%ld, size==%ld\n",	
@@ -1030,18 +1031,34 @@ FileTransfer::ComputeFilesToSend()
 					continue;
 				}
 			}
-			else if ((filesize != dir.GetFileSize()) ||
-					(modification_time != dir.GetModifyTime()) ) {
-				// file has changed in size or modification time.  this
-				// doesn't catch the case where the file was modified
-				// without changing size and is then back-dated.  use md5
-				// or something if that's truly needed, and compare the
-				// checksums.
-				dprintf( D_FULLDEBUG, 
-					 "Sending changed file %s, t: %ld, %ld, "
-					 "s: " FILESIZE_T_FORMAT ", " FILESIZE_T_FORMAT "\n",
-					 f, dir.GetModifyTime(), modification_time,
-					 dir.GetFileSize(), filesize );
+			else if( filesize != dir.GetFileSize() ) {
+				// If the file is a different size, it has to go back.
+				dprintf( D_FULLDEBUG, "Sending changed file %s, size "
+					FILESIZE_T_FORMAT " != " FILESIZE_T_FORMAT "\n",
+					f, dir.GetFileSize(), filesize );
+				send_it = true;
+			}
+			else if( modification_time != dir.GetModifyTime() ) {
+				// If the file is the same size but has a different modified
+				// time, it could be different.
+				//
+				// FIXME: Only do this check by default for vanilla universe
+				// with VM-assisted checkpointing, where the input files may
+				// have been overwritten by an "old" copy from the output
+				// disk after job termination.
+				Condor_MD_MAC md;
+				md.addMDFile( f );
+				unsigned char * allocatedSum = md.computeMD();
+				int rv =  memcmp( (void *)allocatedSum, md5sum, MAC_SIZE );
+				free( allocatedSum );
+
+				if( rv == 0 ) {
+					dprintf( D_FULLDEBUG, "Skipping date-dissimilar file %s "
+						"because md5sum matched catalog.\n", f );
+					continue;
+				}
+				dprintf( D_FULLDEBUG, "Sending modified file %s (%ld != %ld)\n",
+					f, dir.GetModifyTime(), modification_time );
 				send_it = true;
 			}
 			else {
@@ -3951,7 +3968,7 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 // will take a filename and look it up in our internal catalog.  returns
 // true if found and false if not.  also updates the parameters mod_time
 // and filesize if they are not null.
-bool FileTransfer::LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize) {
+bool FileTransfer::LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize, unsigned char *md5sum) {
 	CatalogEntry *entry = 0;
 	MyString fn = fname;
 	if (last_download_catalog->lookup(fn, entry) == 0) {
@@ -3965,6 +3982,10 @@ bool FileTransfer::LookupInFileCatalog(const char *fname, time_t *mod_time, file
 		// update if passed in
 		if (filesize) {
 			*filesize = entry->filesize;
+		}
+
+		if (md5sum) {
+			memmove( md5sum, entry->md5sum, MAC_SIZE );
 		}
 
 		// we return true, as in 'yes, we found it'
@@ -4055,6 +4076,16 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 			} else {
 				tmpentry->modification_time = file_iterator.GetModifyTime();
 				tmpentry->filesize = file_iterator.GetFileSize();
+
+				// The most efficient way to do this would be to compute
+				// the md5sum of each buffer as we shovelled it down the pipe
+				// during the initial transfer of the sandbox to the starter,
+				// and then store the result until we need it.
+				Condor_MD_MAC md5sum;
+				md5sum.addMDFile( f );
+				unsigned char * allocatedSum = md5sum.computeMD();
+				memcpy( & tmpentry->md5sum, allocatedSum, MAC_SIZE );
+				free( allocatedSum );
 			}
 			MyString fn = f;
 			(*catalog)->insert(fn, tmpentry);
