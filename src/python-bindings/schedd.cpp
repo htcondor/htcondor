@@ -1,9 +1,13 @@
-
-// Note - pyconfig.h must be included before condor_common to avoid
-// re-definition warnings.
-# include <pyconfig.h>
-
+// pyconfig.h is broken on Debian and #defines HAVE_IO_H, when Debian doesn't.
+// This causes the Globus headers to fail.  Instead, include the Globus headers
+// as early as possible and hack around the other brokenness where pyconfig.h
+// redefines _XOPEN_SOURCE and _POSIX_C_SOURCE.  (Since pyconfig's definition
+// won before this change, this has no semantic effect.)
 #include "condor_common.h"
+#include "globus_utils.h"
+#undef _XOPEN_SOURCE
+#undef _POSIX_C_SOURCE
+#include <pyconfig.h>
 
 #include "condor_attributes.h"
 #include "condor_universe.h"
@@ -16,7 +20,6 @@
 #include "classad_helpers.h"
 #include "condor_config.h"
 #include "condor_holdcodes.h"
-#include "globus_utils.h"
 #include "basename.h"
 
 #include <classad/operators.h>
