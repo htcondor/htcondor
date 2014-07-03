@@ -126,7 +126,7 @@ static unsigned int compute_transthread_hash(const int &pid)
 	return (unsigned int)pid;
 }
 
-FileTransfer::FileTransfer()
+FileTransfer::FileTransfer() : useMD5Sums( false )
 {
 	TransferFilePermissions = false;
 	DelegateX509Credentials = false;
@@ -576,6 +576,25 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	I_support_filetransfer_plugins = false;
 	plugin_table = NULL;
 	InitializePlugins(e);
+
+
+	//
+	// Only use md5sums for kvm-assisted checkpointing.  (The input files
+	// may be touched when the output files are extracted, which screws up
+	// the usual difference-detection algorithm.)
+	//
+	// This bool must be calculated before calling BuildFileCatalog().
+	//
+	bool wantCheckpoint = false;
+	jobAd.LookupBool( "WantCheckpoint", wantCheckpoint );
+
+	bool userLevelCheckpoint = false;
+	jobAd.LookupBool( "UserLevelCheckpoint", userLevelCheckpoint );
+
+	if( wantCheckpoint && ! userLevelCheckpoint ) {
+		useMD5Sums = true;
+	}
+
 
 	int spool_completion_time = 0;
 	Ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_completion_time);
@@ -1042,21 +1061,20 @@ FileTransfer::ComputeFilesToSend()
 				// If the file is the same size but has a different modified
 				// time, it could be different.
 				//
-				// FIXME: Only do this check by default for vanilla universe
-				// with VM-assisted checkpointing, where the input files may
-				// have been overwritten by an "old" copy from the output
-				// disk after job termination.
-				Condor_MD_MAC md;
-				md.addMDFile( f );
-				unsigned char * allocatedSum = md.computeMD();
-				int rv =  memcmp( (void *)allocatedSum, md5sum, MAC_SIZE );
-				free( allocatedSum );
+				if( useMD5Sums ) {
+					Condor_MD_MAC md;
+					md.addMDFile( f );
+					unsigned char * allocatedSum = md.computeMD();
+					int rv =  memcmp( (void *)allocatedSum, md5sum, MAC_SIZE );
+					free( allocatedSum );
 
-				if( rv == 0 ) {
-					dprintf( D_FULLDEBUG, "Skipping date-dissimilar file %s "
-						"because md5sum matched catalog.\n", f );
-					continue;
+					if( rv == 0 ) {
+						dprintf( D_FULLDEBUG, "Skipping date-dissimilar file %s "
+							"because md5sum matched catalog.\n", f );
+						continue;
+					}
 				}
+
 				dprintf( D_FULLDEBUG, "Sending modified file %s (%ld != %ld)\n",
 					f, dir.GetModifyTime(), modification_time );
 				send_it = true;
@@ -4081,11 +4099,13 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 				// the md5sum of each buffer as we shovelled it down the pipe
 				// during the initial transfer of the sandbox to the starter,
 				// and then store the result until we need it.
-				Condor_MD_MAC md5sum;
-				md5sum.addMDFile( f );
-				unsigned char * allocatedSum = md5sum.computeMD();
-				memcpy( & tmpentry->md5sum, allocatedSum, MAC_SIZE );
-				free( allocatedSum );
+				if( useMD5Sums ) {
+					Condor_MD_MAC md5sum;
+					md5sum.addMDFile( f );
+					unsigned char * allocatedSum = md5sum.computeMD();
+					memcpy( & tmpentry->md5sum, allocatedSum, MAC_SIZE );
+					free( allocatedSum );
+				}
 			}
 			MyString fn = f;
 			(*catalog)->insert(fn, tmpentry);

@@ -473,6 +473,11 @@ class FileTransfer: public Service {
 	bool outputFileIsSpooled(char const *fname);
 
 	void callClientCallback();
+
+	// Using md5sum to determine if we need to send a file back (to the
+	// schedd) is expensive, so don't do it unless we have to (e.g.,
+	// kvm-assisted checkpointing).
+	bool useMD5Sums;
 };
 
 // returns 0 if no expiration
