@@ -4093,6 +4093,14 @@ friendly_name=Starter Job Hook Keyword
 review=?
 tags=starter,StarterHookMgr
 
+[JOB_NO_NEW_PRIVS]
+default=false
+type=bool
+recofnig=true
+customization=seldom
+friendly_name=Prevent starter jobs from acquiring new privileges
+tags=starter
+
 [JAVA_BENCHMARK_TIME]
 default=2
 type=int

@@ -41,6 +41,10 @@
 #include <resolv.h>
 #endif
 
+#ifdef HAVE_PR_SET_NO_NEW_PRIVS
+#include <sys/prctl.h>
+#endif
+
 static const int DEFAULT_MAXCOMMANDS = 255;
 static const int DEFAULT_MAXSIGNALS = 99;
 static const int DEFAULT_MAXSOCKETS = 8;
@@ -5732,6 +5736,24 @@ void CreateProcessForkit::exec() {
 		// We may determine to seed the child's environment with the parent's.
 	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) ) {
 		m_envobject.Import();
+	}
+
+		// If the caller requested that this process is never allowed to gain
+		// new privileges, set the appropriate prctl.  As this is security-
+		// related, we make it a fatal failure if the attempt fails.
+	if( HAS_DCJOBOPT_NO_NEW_PRIVS(m_job_opt_mask) ) {
+		int retval = -1;
+		errno = EINVAL;
+#ifdef HAVE_PR_SET_NO_NEW_PRIVS
+		retval = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+#else
+		dprintf(D_ALWAYS, "ERROR: No-new-privs mode requested but it is not supported on this platform.\n");
+#endif
+		if (retval) {
+			dprintf(D_ALWAYS, "Error occurred when attempting to apply no-new-privs protection to the process: %s (errno=%d).\n", strerror(errno), errno);
+			writeExecError(errno);
+			_exit(errno);
+		}
 	}
 
 		// Put the caller's env requests into the job's environment, potentially

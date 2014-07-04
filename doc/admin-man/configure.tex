@@ -7238,6 +7238,17 @@ REM Run the actual job now
   is overridden.
   This variable does not apply to standard universe jobs.
 
+\label{param:JobNoNewPrivs}
+\item[\Macro{JOB\_NO\_NEW\_PRIVS}]
+  A boolean value that defaults to \Expr{False}.  When \Expr{True},
+  it prevents jobs from acquiring new OS-level privileges (such as
+  escalating to root by calling \Prog{sudo}).  Most sysadmins will want
+  to enable this option. Integration with \Prog{glexec}
+  will be broken by enabling this feature.  If enabled and the operating system
+  does not support this mode - or privilege separation is in use - then
+  the starter will refuse to start the job.  Support for this feature was
+  introduced in the Linux 3.5 kernel.
+
 \label{param:NamedChroot} 
 \item[\Macro{NAMED\_CHROOT}]
   A comma and/or space separated list of full paths to one or more directories,

@@ -43,6 +43,12 @@ and \Condor{submit\_dag} that causes \Condor{dagman} to run in
 recovery mode (see ~\ref{man-condor-submit-dag}).
 \Ticket{2218}
 
+\item On newer Linux platforms (such as RHEL7), execute hosts can now
+prevent jobs from acquiring additional OS-level privileges by setting
+\MacroNI{JOB\_NO\_NEW\_PRIVS} to \Expr{True}.  For example, this would
+prevent jobs from gaining root access by invoking \Prog{sudo}.
+\Ticket{4443}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

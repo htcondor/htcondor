@@ -612,4 +612,7 @@
 /* Define to 1 if the OS has support for the TCP_USER_TIMEOUT setsockopt */
 #cmakedefine HAVE_TCP_USER_TIMEOUT
 
+/* Define to 1 if the OS supports the "no new privs" prctl mode */
+#cmakedefine HAVE_PR_SET_NO_NEW_PRIVS
+
 #endif

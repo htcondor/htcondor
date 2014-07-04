@@ -542,6 +542,19 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		dprintf(D_ALWAYS,"Running job %sas user %s\n",how,username);
 	}
 
+	if (param_boolean("JOB_NO_NEW_PRIVS", false)) {
+		if (privsep_helper != NULL) {
+			dprintf(D_ALWAYS, "JOB_NO_NEW_PRIVS is enabled in addition to privsep; these are not compatible options.  Not launching the job.\n");
+			return 0;
+		}
+#ifdef HAVE_PR_SET_NO_NEW_PRIVS
+		dprintf(D_FULLDEBUG, "Requesting job is run with NO_NEW_PRIVS flag set.\n");
+		job_opt_mask |= DCJOBOPT_NO_NEW_PRIVS;
+#else
+		dprintf(D_ALWAYS, "JOB_NO_NEW_PRIVS is enabled but not present on this platform; not launching the job.\n");
+#endif
+	}
+
 	set_priv ( priv );
 
     // use this to return more detailed and reliable error message info
