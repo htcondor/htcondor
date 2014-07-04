@@ -7247,7 +7247,14 @@ REM Run the actual job now
   will be broken by enabling this feature.  If enabled and the operating system
   does not support this mode - or privilege separation is in use - then
   the starter will refuse to start the job.  Support for this feature was
-  introduced in the Linux 3.5 kernel.
+  introduced in the Linux 3.5 kernel; HTCondor does not need to run as root
+  use this feature.  See \URL{https://www.kernel.org/doc/Documentation/prctl/no\_new\_privs.txt}
+  for more information.
+
+  This expression is evaluated within the context of the job's ClassAd
+  and the machine's ClassAd as the target (if they exist); this allows the sysadmin to
+  conditionally disable the feature.  For example, to enable for all
+  all users except alice, one could set \Expr{JOB\_NO\_NEW\_PRIVS=Owner=!="alice"}.
 
 \label{param:NamedChroot} 
 \item[\Macro{NAMED\_CHROOT}]

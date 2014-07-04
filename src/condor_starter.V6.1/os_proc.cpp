@@ -542,7 +542,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		dprintf(D_ALWAYS,"Running job %sas user %s\n",how,username);
 	}
 
-	if (param_boolean("JOB_NO_NEW_PRIVS", false)) {
+	if (param_boolean("JOB_NO_NEW_PRIVS", false, true, JobAd, Starter->jic->machClassAd())) {
 		if (privsep_helper != NULL) {
 			dprintf(D_ALWAYS, "JOB_NO_NEW_PRIVS is enabled in addition to privsep; these are not compatible options.  Not launching the job.\n");
 			return 0;
