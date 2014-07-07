@@ -101,6 +101,11 @@ CCBServer::~CCBServer()
 	while( m_targets.iterate(target) ) {
 		RemoveTarget(target);
 	}
+	if (-1 != m_epfd)
+	{
+		daemonCore->Close_Pipe(m_epfd);
+		m_epfd = -1;
+	}
 }
 
 void
