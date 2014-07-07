@@ -735,6 +735,13 @@ GahpServer::Startup()
 		free( tmp_char );
 	}
 
+		// Number of worker threads the cream_gahp should create
+	tmp_char = param("CREAM_GAHP_WORKER_THREADS");
+	if ( tmp_char ) {
+		newenv.SetEnv( "CREAM_GAHP_WORKER_THREADS", tmp_char );
+		free( tmp_char );
+	}
+
 	// For amazon ec2 ca authentication
 	tmp_char = param("SOAP_SSL_CA_FILE");
 	if( tmp_char ) {

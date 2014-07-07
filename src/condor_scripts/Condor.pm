@@ -891,8 +891,7 @@ sub Monitor
 	    $info{'job'} = $2;
 		$info{'imagesize'} = $3;
 
-	    #debug( "Saw Image Size Update <$3>\n" ,2);
-		#print "Saw Image Size Update <$3>\n";
+	    debug( "Saw Image Size Update <$3>\n" ,2);
 
 	    # read next line to see current Megs
 	    $line = <SUBMIT_LOG>;
@@ -935,8 +934,11 @@ sub Monitor
 		}
 
 		# execute callback if one is registered
-		&$ImageUpdatedCallback( %info )
-		    if defined $ImageUpdatedCallback;
+		    if (defined $ImageUpdatedCallback) {
+				&$ImageUpdatedCallback( %info );
+			} else {
+				print "Saw Image Size Update <$info{'imagesize'}>\n";
+			}
 
 	    next LINE;
 

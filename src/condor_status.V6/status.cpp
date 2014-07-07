@@ -106,10 +106,12 @@ char		buffer[1024];
 ClassAdList result;
 char		*myName;
 vector<SortSpec> sortSpecs;
+bool            noSort = false; // set to true to disable sorting entirely
 bool            javaMode = false;
 bool			vmMode = false;
 bool        absentMode = false;
 char 		*target = NULL;
+const char * ads_file = NULL; // read classads from this file instead of querying them from the collector
 ClassAd		*targetAd = NULL;
 ArgList projList;		// Attributes that we want the server to send us
 
@@ -123,6 +125,7 @@ void prettyPrint(ClassAdList &, TrackTotals *);
 int  matchPrefix(const char *, const char *, int min_len);
 int  lessThanFunc(AttrList*,AttrList*,void*);
 int  customLessThanFunc(AttrList*,AttrList*,void*);
+static bool read_classad_file(const char *filename, ClassAdList &classads, const char * constr);
 
 extern "C" int SetSyscalls (int) {return 0;}
 extern	void setPPstyle (ppOption, int, const char *);
@@ -459,7 +462,14 @@ main (int argc, char *argv[])
 	}
 
 	CondorError errstack;
-	if (NULL != addr) {
+	if (NULL != ads_file) {
+		MyString req; // query requirements
+		q = query->getRequirements(req);
+		const char * constraint = req.empty() ? NULL : req.c_str();
+		if (read_classad_file(ads_file, result, constraint)) {
+			q = Q_OK;
+		}
+	} else if (NULL != addr) {
 			// this case executes if pool was provided, or if in "direct" mode with
 			// subsystem that corresponds to a daemon (above).
 			// Here 'addr' represents either the host:port of requested pool, or
@@ -506,7 +516,9 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 
-	if (sortSpecs.empty()) {
+	if (noSort) {
+		// do nothing 
+	} else if (sortSpecs.empty()) {
         // default classad sorting
 		result.Sort((SortFunctionType)lessThanFunc);
 	} else {
@@ -596,6 +608,55 @@ int set_status_print_mask_from_stream (
 }
 
 
+static bool read_classad_file(const char *filename, ClassAdList &classads, const char * constr)
+{
+	bool success = false;
+
+	FILE* file = safe_fopen_wrapper_follow(filename, "r");
+	if (file == NULL) {
+		fprintf(stderr, "Can't open file of job ads: %s\n", filename);
+		return false;
+	} else {
+		CondorClassAdFileParseHelper parse_helper("\n");
+
+		for (;;) {
+			ClassAd* classad = new ClassAd();
+
+			int error;
+			bool is_eof;
+			int cAttrs = classad->InsertFromFile(file, is_eof, error, &parse_helper);
+
+			bool include_classad = cAttrs > 0 && error >= 0;
+			if (include_classad && constr) {
+				classad::Value val;
+				if (classad->EvaluateExpr(constr,val)) {
+					if ( ! val.IsBooleanValueEquiv(include_classad)) {
+						include_classad = false;
+					}
+				}
+			}
+			if (include_classad) {
+				classads.Insert(classad);
+			} else {
+				delete classad;
+			}
+
+			if (is_eof) {
+				success = true;
+				break;
+			}
+			if (error < 0) {
+				success = false;
+				break;
+			}
+		}
+
+		fclose(file);
+	}
+	return success;
+}
+
+
 void
 usage ()
 {
@@ -619,6 +680,7 @@ usage ()
 		"\t-license\t\tDisplay attributes of licenses\n"
 		"\t-master\t\t\tDisplay daemon master attributes\n"
 		"\t-pool <name>\t\tGet information from collector <name>\n"
+		"\t-ads <file>\t\tGet information from <file>\n"
         "\t-grid\t\t\tDisplay grid resources\n"
 		"\t-run\t\t\tSame as -claimed [deprecated]\n"
 #ifdef HAVE_EXT_POSTGRESQL
@@ -639,7 +701,7 @@ usage ()
 //		"\t-world\t\t\tDisplay all pools reporting to UW collector\n"
 		"    and [display-opt] is one of\n"
 		"\t-long\t\t\tDisplay entire classads\n"
-		"\t-sort <expr>\t\tSort entries by expressions\n"
+		"\t-sort <expr>\t\tSort entries by expressions. 'no' disables sorting\n"
 		"\t-total\t\t\tDisplay totals only\n"
 		"\t-verbose\t\tSame as -long\n"
 		"\t-wide\t\t\tdon't truncate data to fit in 80 columns.\n"
@@ -713,6 +775,16 @@ firstPass (int argc, char *argv[])
 				}
 				exit( 1 );
 			}
+		} else
+		if (is_dash_arg_prefix (argv[i], "ads", 2)) {
+			if( !argv[i+1] ) {
+				fprintf( stderr, "%s: -ads requires a filename argument\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				exit( 1 );
+			}
+			i += 1;
+			ads_file = argv[i];
 		} else
 		if (matchPrefix (argv[i], "-format", 2)) {
 			setPPstyle (PP_CUSTOM, i, argv[i]);
@@ -940,6 +1012,15 @@ firstPass (int argc, char *argv[])
 				exit( 1 );
 			}
 
+			if (MATCH == strcasecmp(argv[i], "false") ||
+				MATCH == strcasecmp(argv[i], "0") ||
+				MATCH == strcasecmp(argv[i], "no") ||
+				MATCH == strcasecmp(argv[i], "none"))
+			{
+				noSort = true;
+				continue;
+			}
+
             int jsort = sortSpecs.size();
             SortSpec ss;
 			ExprTree* sortExpr = NULL;
@@ -1156,10 +1237,16 @@ secondPass (int argc, char *argv[])
 			i++;
 			continue;
 		}
+		if (is_dash_arg_prefix(argv[i], "ads", 2)) {
+			++i;
+			continue;
+		}
 		if( matchPrefix(argv[i], "-sort", 3) ) {
 			i++;
-			sprintf( buffer, "%s =!= UNDEFINED", argv[i] );
-			query->addANDConstraint( buffer );
+			if ( ! noSort) {
+				sprintf( buffer, "%s =!= UNDEFINED", argv[i] );
+				query->addANDConstraint( buffer );
+			}
 			continue;
 		}
 		
