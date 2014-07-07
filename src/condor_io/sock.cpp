@@ -1615,11 +1615,15 @@ Sock::readReady() {
 		return true;
 	}
 
-	selector.add_fd( _sock, Selector::IO_READ );
-	selector.set_timeout( 0 );
-	selector.execute();
+	if (type() == Stream::safe_sock)
+	{
+		selector.add_fd( _sock, Selector::IO_READ );
+		selector.set_timeout( 0 );
+		selector.execute();
 
-	return selector.has_ready();
+		return selector.has_ready();
+	}
+	return false;
 }
 
 int
