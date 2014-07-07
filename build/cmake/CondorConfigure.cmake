@@ -188,6 +188,7 @@ if( NOT WINDOWS)
 	check_symbol_exists(MS_SHARED  "sys/mount.h" HAVE_MS_SHARED)
 	check_symbol_exists(MS_SLAVE  "sys/mount.h" HAVE_MS_SLAVE)
 	check_symbol_exists(MS_REC  "sys/mount.h" HAVE_MS_REC)
+	check_symbol_exists(epoll_create1 "sys/epoll.h" HAVE_EPOLL)
 
 	check_function_exists("access" HAVE_ACCESS)
 	check_function_exists("clone" HAVE_CLONE)
