@@ -1,5 +1,6 @@
 #! /usr/bin/env perl
+use CondorTests;
 
-system("condor_q -l $ARGV[0] | grep DAG_");
+runToolNTimes("condor_q -l $ARGV[0] | grep DAG_",1,1);
 
 print "Node $ARGV[1] succeeded\n";
