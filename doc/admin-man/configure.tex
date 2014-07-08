@@ -5696,16 +5696,16 @@ These macros control the \Condor{schedd}.
 \item[\Macro{START\_LOCAL\_UNIVERSE}]
   A boolean value that defaults to \Expr{TotalLocalJobsRunning < 200}.
   The \Condor{schedd} uses this macro to determine whether to start
-  a \SubmitCmd{local} universe job. 
+  a \SubmitCmdNI{local} universe job. 
   At intervals determined by \MacroNI{SCHEDD\_INTERVAL}, 
   the \Condor{schedd} daemon evaluates this macro
-  for each idle \SubmitCmd{local} universe job that it has.
+  for each idle \SubmitCmdNI{local} universe job that it has.
   For each job, if the \MacroNI{START\_LOCAL\_UNIVERSE} 
   macro is \Expr{True}, then the job's \Macro{Requirements} expression
   is evaluated. If both conditions are met, then the job is allowed
   to begin execution. 
   
-  The following example only allows 10 \SubmitCmd{local} universe jobs to
+  The following example only allows 10 \SubmitCmdNI{local} universe jobs to
   execute concurrently. The attribute \Attr{TotalLocalJobsRunning}
   is supplied by \Condor{schedd}'s ClassAd:
   
@@ -5718,7 +5718,7 @@ These macros control the \Condor{schedd}.
 \label{param:StarterLocal}
 \item[\Macro{STARTER\_LOCAL}]
   The complete path and executable name of the \Condor{starter} to
-  run for \SubmitCmd{local} universe jobs.  This variable's value
+  run for \SubmitCmdNI{local} universe jobs.  This variable's value
   is defined in the initial configuration provided with HTCondor as
   \footnotesize
   \begin{verbatim}
@@ -5728,8 +5728,8 @@ These macros control the \Condor{schedd}.
   This variable would only be modified or hand added into 
   the configuration for a pool to be upgraded from one
   running a version of HTCondor that existed before the
-  \SubmitCmd{local} universe to one that includes the
-  \SubmitCmd{local} universe, but without utilizing the newer, provided
+  \SubmitCmdNI{local} universe to one that includes the
+  \SubmitCmdNI{local} universe, but without utilizing the newer, provided
   configuration files.
 
 \label{param:LocalUnivExecute}
@@ -5743,16 +5743,16 @@ These macros control the \Condor{schedd}.
 \item[\Macro{START\_SCHEDULER\_UNIVERSE}]
   A boolean value that defaults to \Expr{TotalSchedulerJobsRunning < 200}.
   The \Condor{schedd} uses this macro to determine whether to start
-  a \SubmitCmd{scheduler} universe job. 
+  a \SubmitCmdNI{scheduler} universe job. 
   At intervals determined by \MacroNI{SCHEDD\_INTERVAL}, 
   the \Condor{schedd} daemon evaluates this macro
-  for each idle \SubmitCmd{scheduler} universe job that it has.
+  for each idle \SubmitCmdNI{scheduler} universe job that it has.
   For each job, if the \MacroNI{START\_SCHEDULER\_UNIVERSE} 
   macro is \Expr{True}, then the job's \Macro{Requirements} expression
   is evaluated. If both conditions are met, then the job is allowed
   to begin execution. 
   
-  The following example only allows 10 \SubmitCmd{scheduler} universe jobs to
+  The following example only allows 10 \SubmitCmdNI{scheduler} universe jobs to
   execute concurrently. The attribute \Attr{TotalSchedulerJobsRunning}
   is supplied by \Condor{schedd}'s ClassAd:
   
@@ -9031,7 +9031,7 @@ These macros affect the \Condor{gridmanager}.
 
 \label{param:GridmanagerMaxJobmanagersPerResource}
 \item[\Macro{GRIDMANAGER\_MAX\_JOBMANAGERS\_PER\_RESOURCE}]
-  For grid jobs of type \SubmitCmd{gt2}, limits the number of globus-job-manager
+  For grid jobs of type \SubmitCmdNI{gt2}, limits the number of globus-job-manager
   processes that the \Condor{gridmanager} lets run at a time on
   the remote head node. Allowing too many globus-job-managers to run
   causes severe load on the head note, possibly making it
@@ -9603,7 +9603,7 @@ These macros affect the Grid Monitor.
 \item[\Macro{ENABLE\_GRID\_MONITOR}]
   A boolean value that when \Expr{True} enables the Grid Monitor.
   The Grid Monitor is used to reduce load on Globus gatekeepers.
-  This parameter only affects grid jobs of type \SubmitCmd{gt2}.
+  This parameter only affects grid jobs of type \SubmitCmdNI{gt2}.
   The variable \MacroNI{GRID\_MONITOR} must also be correctly configured.
   Defaults to \Expr{True}.
   See section~\ref{sec:HTCondor-G-GridMonitor} on
@@ -9614,7 +9614,7 @@ These macros affect the Grid Monitor.
 \item[\Macro{GRID\_MONITOR}]
   The complete path name of the \Prog{grid\_monitor.sh} tool used to reduce
   the load on Globus gatekeepers.
-  This parameter only affects grid jobs of type \SubmitCmd{gt2}.
+  This parameter only affects grid jobs of type \SubmitCmdNI{gt2}.
   This parameter is not referenced unless
   \MacroNI{ENABLE\_GRID\_MONITOR} is set to \Expr{True} (the default value). 
 
@@ -10863,7 +10863,7 @@ Relating to Virtual Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!virtual machine configuration variables}
-These macros affect how HTCondor runs \SubmitCmd{vm} universe jobs on
+These macros affect how HTCondor runs \SubmitCmdNI{vm} universe jobs on
 a matched machine within the pool.
 They specify items related to the \Condor{vm-gahp}.
 
@@ -10988,7 +10988,7 @@ They specify items related to the \Condor{vm-gahp}.
 \item[\Macro{LIBVIRT\_XML\_SCRIPT}]
   For Xen and KVM only, a path and executable specifying a program.
   When the \Condor{vm-gahp} is ready to start a Xen or KVM 
-  \SubmitCmd{vm} universe job, 
+  \SubmitCmdNI{vm} universe job, 
   it will invoke this program to generate the XML description of 
   the virtual machine,
   which it then provides to the virtualization software.
@@ -11065,7 +11065,7 @@ The following two macros affect the configuration of HTCondor where HTCondor is
 running on a host machine, the host machine is running an
 inner virtual machine,
 and HTCondor is also running on that inner virtual machine.
-These two variables have nothing to do with the \SubmitCmd{vm}
+These two variables have nothing to do with the \SubmitCmdNI{vm}
 universe.
 
 \begin{description}
