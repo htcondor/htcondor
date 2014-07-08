@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-use CondorTests;
+use CondorTest;
 
 runToolNTimes("condor_q -l $ARGV[0] | grep DAG_",1,1);
 
