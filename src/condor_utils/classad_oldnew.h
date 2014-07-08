@@ -52,10 +52,23 @@ bool getClassAdNoTypes( Stream *sock, classad::ClassAd& ad );
 /** Send the ClassAd on the CEDAR stream
  * @param sock the stream
  * @param ad the ClassAd to be sent
- * @param exclude_private whether to exclude private attributes
- * @param attr_whitelist list of attributes to send (default is to send all)
  */
-int putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private = false, StringList *attr_whitelist=NULL );
+int putClassAd (Stream *sock, classad::ClassAd& ad);
+
+/** Send the ClassAd on the CEDAR stream, this function has the functionality of all of the above
+ * @param sock the stream
+ * @param ad the ClassAd to be sent
+ * @param whitelist list of attributes to send (default is to send all)
+ * @param options one or more of PUT_CLASS_AD_* flags
+ *  if the PUT_CLASSAD_NON_BLOCKING flag is used, then This will not block even if the send socket is full.
+ *  and the return value is 2 if it would have blocked; the ClassAd will be buffered in memory.
+ */
+int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::References * whitelist = NULL);
+// options valuees for putClassad
+#define PUT_CLASSAD_NO_PRIVATE          0x01 // exclude private attributes
+#define PUT_CLASSAD_NO_TYPES            0x02 // exclude MyType and TargetType from output.
+#define PUT_CLASSAD_NON_BLOCKING        0x04 // use non-blocking sematics. returns 2 of this would have blocked.
+#define PUT_CLASSAD_NO_EXPAND_WHITELIST 0x08 // use the whitelist argument as-is, (default is to expand internal references before using it)
 
 /** Send the ClassAd on the CEDAR stream.  This will not block even if the send socket is full.
  *  Returns 2 if this would have blocked; the ClassAd will be buffered in memory.
@@ -73,15 +86,8 @@ int putClassAdNonblocking(ReliSock *sock, classad::ClassAd& ad, bool exclude_pri
  * @param exclude_private whether to exclude private attributes
  * @param attr_whitelist list of attributes to send (default is to send all)
  */
-int putClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_private = false );
+int putClassAdNoTypes (Stream *sock, classad::ClassAd& ad);
 
-//DO NOT CALL THIS, EXCEPT IN THE ABOVE TWO putClassAds*!
-//the bool exclude types tells the function whether to exclude 
-//  stuff about MyType and TargetType from being included.
-//  true is the same as the old putClassAd()
-//  false is the same as the putClassAdNoTypes()
-int _putClassAd(Stream *sock, classad::ClassAd& ad, bool excludeTypes,
-					bool exclude_private, StringList *attr_whitelist);
 
 //this is a shorthand version of EvalTree w/o a target ad.
 bool EvalTree(classad::ExprTree* eTree, classad::ClassAd* mine, classad::Value* v);

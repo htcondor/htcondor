@@ -916,7 +916,9 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 			i = j;
 		}
 		if ( comTable[j].num == command ) {
-			EXCEPT("DaemonCore: Same command registered twice");
+			MyString msg;
+			msg.formatstr("DaemonCore: Same command registered twice (id=%d)", command);
+			EXCEPT(msg.c_str());
 		}
 	}
 	if ( i == -1 ) {

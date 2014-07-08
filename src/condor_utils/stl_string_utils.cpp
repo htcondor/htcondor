@@ -372,3 +372,34 @@ void join(const std::vector< std::string > &v, char const *delim, std::string &r
 		result += (*it);
 	}
 }
+
+// return the next string from the StringTokenIterator as a const std::string *
+// returns NULL when there is no next string.
+//
+const std::string * StringTokenIterator::next_string()
+{
+	if ( ! str) return NULL;
+
+	int ix = ixNext;
+
+	// skip leading separators and whitespace
+	while (str[ix] && strchr(delims, str[ix])) ++ix;
+	ixNext = ix;
+
+	// scan for next delimiter or \0
+	while (str[ix] && !strchr(delims, str[ix])) ++ix;
+	if (ix <= ixNext)
+		return NULL;
+
+	current.assign(str, ixNext, ix-ixNext);
+	ixNext = ix;
+	return &current;
+}
+
+bool StringTokenIterator::next(MyString & tok)
+{
+	const char * p = next(); 
+	tok = p;
+	return p != NULL; 
+}
+
