@@ -372,24 +372,17 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 
 		// See if query ad asks for server-side projection
 	string projection = "";
+		// turn projection string into a set of attributes
+	classad::References proj;
+	if (cad.LookupString(ATTR_PROJECTION, projection) && ! projection.empty()) {
+		StringTokenIterator list(projection);
+		const std::string * attr;
+		while ((attr = list.next_string())) { proj.insert(*attr); }
+	}
 
 	while ( (curr_ad=results.Next()) )
     {
-		StringList expanded_projection;
-		StringList *attr_whitelist=NULL;
-
-		projection = "";
-		cad.EvalString(ATTR_PROJECTION, curr_ad, projection);
-		SimpleList<MyString> projectionList;
-
-		::split_args(projection.c_str(), &projectionList);
-
-		if (projectionList.Number() > 0) {
-			computeProjection(curr_ad, &projectionList, expanded_projection);
-			attr_whitelist = &expanded_projection;
-		}
-		
-        if (!sock->code(more) || !putClassAd(sock, *curr_ad, false, attr_whitelist))
+        if (!sock->code(more) || !putClassAd(sock, *curr_ad, 0, proj.empty() ? NULL : &proj))
         {
             dprintf (D_ALWAYS,
                     "Error sending query result to client -- aborting\n");
