@@ -40,8 +40,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug where PeriodicRemove expressions would not remove
-jobs running on Linux machines when PID Namespaces were enabled.
+\item Fixed a bug in which the expression set by submit command 
+\SubmitCmd{periodic\_remove} would not remove
+jobs running on Linux machines when PID namespaces were enabled.
 \Ticket{4421}
 
 \item Fixed a Windows-specific bug:  specifying a DAG node status file

@@ -108,24 +108,24 @@ GSI, SSL, KERBEROS, and FS.
 \index{HTCondor-C!job submission}
 \index{universe!grid}
 Job submission of HTCondor-C jobs is the same as for any HTCondor job.
-The \SubmitCmd{universe} is \SubmitCmd{grid}.
+The \SubmitCmdNI{universe} is \SubmitCmdNI{grid}.
 The submit command \SubmitCmd{grid\_resource} specifies 
 the remote \Condor{schedd} daemon to which
 the job should be submitted, and its value consists of three fields.
-The first field is the grid type, which is \SubmitCmd{condor}.
+The first field is the grid type, which is \SubmitCmdNI{condor}.
 The second field is the name of the remote \Condor{schedd} daemon.
 Its value is the
 same as the \Condor{schedd} ClassAd attribute \Attr{Name} on the
 remote machine.
 The third field is the name of the remote pool's \Condor{collector}.
-%and the \SubmitCmd{grid\_type} is \SubmitCmd{condor}. 
+%and the \SubmitCmdNI{grid\_type} is \SubmitCmdNI{condor}. 
 %The remote pool's job queue is defined and located by
-%the submit description file command \SubmitCmd{remote\_schedd}.
+%the submit description file command \SubmitCmdNI{remote\_schedd}.
 %The value assigned for this command is the same as
 %the \Condor{schedd} ClassAd attribute
 %\Attr{Name} on the remote machine.
 %The remote pool's \Condor{collector} is defined by the submit
-%description file command \SubmitCmd{remote\_pool}.
+%description file command \SubmitCmdNI{remote\_pool}.
 
 The following represents a minimal submit description file for
 a job.
@@ -150,11 +150,11 @@ queue
 
 The remote machine needs to understand the attributes of the job.
 These are specified in the submit description file using the '+'
-syntax, followed by the string \SubmitCmd{remote\_}.
-At a minimum, this will be the job's \SubmitCmd{universe} and the job's
-\SubmitCmd{requirements}.
+syntax, followed by the string \SubmitCmdNI{remote\_}.
+At a minimum, this will be the job's \SubmitCmdNI{universe} and the job's
+\SubmitCmdNI{requirements}.
 It is likely that other attributes specific to the
-job's \SubmitCmd{universe} (on the remote pool) will also be necessary.
+job's \SubmitCmdNI{universe} (on the remote pool) will also be necessary.
 Note that attributes set with '+' are inserted directly into
 the job's ClassAd.  
 Specify attributes as they 
@@ -178,11 +178,11 @@ This must appear in the HTCondor-C job submit description file as
 \normalsize
 
 For convenience, the specific entries of 
-\SubmitCmd{universe}, 
-\SubmitCmd{remote\_grid\_resource}, 
+\SubmitCmdNI{universe}, 
+\SubmitCmdNI{remote\_grid\_resource}, 
 \SubmitCmd{globus\_rsl}, and
 \SubmitCmd{globus\_xml}
-may be specified as \SubmitCmd{remote\_} commands
+may be specified as \SubmitCmdNI{remote\_} commands
 without the leading '+'. 
 Instead of 
 \footnotesize
@@ -216,13 +216,13 @@ remote_grid_resource = condor schedd.example.com cm.example.com
 
 % why we need +remote_ShouldTransferFiles, etc.
 For the given example,
-the job is to be run as a \SubmitCmd{vanilla} 
-\SubmitCmd{universe} job at the remote pool.
+the job is to be run as a \SubmitCmdNI{vanilla} 
+\SubmitCmdNI{universe} job at the remote pool.
 The (remote pool's) \Condor{schedd} daemon is likely to
 place its job queue data on a local disk 
 and execute the job on another machine within the pool of machines.
 This implies that the file systems for the resulting submit machine
-(the machine specified by \SubmitCmd{remote\_schedd}) and
+(the machine specified by \SubmitCmdNI{remote\_schedd}) and
 the execute machine (the machine that runs the job) will
 \emph{not} be shared.
 Thus,
