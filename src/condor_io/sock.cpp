@@ -1601,6 +1601,12 @@ Sock::bytes_available_to_read()
 	return ret_val;
 }
 
+	// NOTE NOTE: this returns true in the same cases the select() syscall
+	// would return true.  This includes BOTH when a message is ready (such
+	// as a complete CEDAR message - if there's just an incomplete message,
+	// calling this will consume any bytes available on the socket) AND
+	// when the reli sock has been closed.  Take note that at least the CCB
+	// depends on this returning true when the reli sock is closed.
 bool
 Sock::readReady() {
 	Selector selector;
@@ -1622,6 +1628,11 @@ Sock::readReady() {
 		selector.execute();
 
 		return selector.has_ready();
+	}
+	else if (type() == Stream::reli_sock)
+	{
+		ReliSock *relisock = static_cast<ReliSock*>(this);
+		return relisock->is_closed();
 	}
 	return false;
 }

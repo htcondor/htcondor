@@ -595,7 +595,7 @@
 #cmakedefine PREFER_TR1
 
 /* Define to 1 if the OS has support for epoll (Linux) */
-#cmakedefine HAVE_EPOLL
+#cmakedefine CONDOR_HAVE_EPOLL
 
 /* Define to 1 if the OS has support for ppoll (Linux) */
 #cmakedefine HAVE_PPOLL

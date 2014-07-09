@@ -243,6 +243,11 @@ Selector::set_timeout( time_t sec, long usec )
 
 	timeout.tv_sec = sec;
 	timeout.tv_usec = usec;
+
+	if (usec)
+	{
+		m_single_shot = SINGLE_SHOT_SKIP;
+	}
 }
 
 void
@@ -250,6 +255,10 @@ Selector::set_timeout( timeval tv )
 {
 	timeout_wanted = true;
 
+	if (tv.tv_usec)
+	{
+		m_single_shot = SINGLE_SHOT_SKIP;
+	}
 	timeout = tv;
 }
 
@@ -280,16 +289,10 @@ Selector::execute()
 		// select() ignores its first argument on Windows. We still track
 		// max_fd for the display() functions.
 	start_thread_safe("select");
-		// ppoll is preferable over poll as poll only has second resolution
-		// while the Selector interface provides microsecond resolution.
-		// Unfortunately, ppoll is Linux-only.
-#ifdef HAVE_PPOLL
+#ifdef HAVE_POLL
 	if (m_single_shot == SINGLE_SHOT_OK)
 	{
-		struct timespec ts;
-		ts.tv_sec = tp->tv_sec;
-		ts.tv_nset = tp->tv_usec*1000;
-		nfds = poll(&m_poll, 1, NULL, &ts);
+		nfds = poll(&m_poll, 1, NULL, tp->tv_sec);
 	}
 	else
 #else

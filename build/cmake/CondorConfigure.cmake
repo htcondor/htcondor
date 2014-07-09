@@ -188,8 +188,9 @@ if( NOT WINDOWS)
 	check_symbol_exists(MS_SHARED  "sys/mount.h" HAVE_MS_SHARED)
 	check_symbol_exists(MS_SLAVE  "sys/mount.h" HAVE_MS_SLAVE)
 	check_symbol_exists(MS_REC  "sys/mount.h" HAVE_MS_REC)
-	check_symbol_exists(epoll_create1 "sys/epoll.h" HAVE_EPOLL)
-	check_symbol_exists(ppoll "poll.h" HAVE_PPOLL)
+	# Python also defines HAVE_EPOLL; hence, we use non-standard 'CONDOR_HAVE_EPOLL' here.
+	check_symbol_exists(epoll_create1 "sys/epoll.h" CONDOR_HAVE_EPOLL)
+	check_symbol_exists(ppoll "poll.h" HAVE_POLL)
 
 	check_function_exists("access" HAVE_ACCESS)
 	check_function_exists("clone" HAVE_CLONE)

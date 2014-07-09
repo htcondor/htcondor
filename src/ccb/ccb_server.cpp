@@ -25,7 +25,7 @@
 #include "util_lib_proto.h"
 #include "condor_open.h"
 
-#ifdef HAVE_EPOLL
+#ifdef CONDOR_HAVE_EPOLL
 #include <sys/epoll.h>
 #endif
 
@@ -198,7 +198,7 @@ CCBServer::InitAndReconfig()
 		LoadReconnectInfo();
 	}
 
-#ifdef HAVE_EPOLL
+#ifdef CONDOR_HAVE_EPOLL
 	if (-1 == (m_epfd = epoll_create1(EPOLL_CLOEXEC)))
 	{
 		dprintf(D_ALWAYS, "epoll file descriptor creation failed; will use periodic polling techniques: %s (errno=%d).\n", strerror(errno), errno);
@@ -273,10 +273,11 @@ CCBServer::EpollSockets(int)
 		m_epfd = -1;
 		return -1;
 	}
-#ifdef HAVE_EPOLL
+#ifdef CONDOR_HAVE_EPOLL
 	struct epoll_event events[10];
 	bool needs_poll = true;
-	while (needs_poll)
+	unsigned counter = 0;
+	while (needs_poll && counter++ < 100)
 	{
 		needs_poll = false;
 		int result = epoll_wait(epfd, events, 10, 0);
@@ -288,6 +289,7 @@ CCBServer::EpollSockets(int)
 				CCBTarget *target = NULL;
 				if (m_targets.lookup(id, target) == -1)
 				{
+					dprintf(D_FULLDEBUG, "No target found for CCBID %ld.\n", id);
 					continue;
 				}
 				if (target->getSock()->readReady())
@@ -319,11 +321,15 @@ CCBServer::EpollAdd(CCBTarget *target)
 		m_epfd = -1;
 		return;
 	}       
-#ifdef HAVE_EPOLL
+#ifdef CONDOR_HAVE_EPOLL
+		// We have epoll maintain the map of FD -> CCBID for us by taking
+		// advantage of the data field of the epoll event.  This way, when the
+		// epoll watch fires, we can do a hash table lookup for the target object.
 	struct epoll_event event;
 	event.events = EPOLLIN;
 	event.data.u64 = target->getCCBID();
-	if (-1 == epoll_ctl(epfd, EPOLL_CTL_ADD, target->getSock()->get_file_desc(), event))
+	dprintf(D_NETWORK, "Registering file descriptor %d with CCBID %ld.\n", target->getSock()->get_file_desc(), event.data.u64);
+	if (-1 == epoll_ctl(epfd, EPOLL_CTL_ADD, target->getSock()->get_file_desc(), &event))
 	{
 		dprintf(D_ALWAYS, "CCB: failed to add watch for target daemon %s with ccbid %lu: %s (errno=%d).\n", target->getSock()->peer_description(), target->getCCBID(), strerror(errno), errno);
 	}
@@ -341,11 +347,11 @@ CCBServer::EpollRemove(CCBTarget *target)
 		m_epfd = -1;
 		return;
 	}       
-#ifdef HAVE_EPOLL
+#ifdef CONDOR_HAVE_EPOLL
 	struct epoll_event event;
 	event.events = EPOLLIN;
 	event.data.u64 = target->getCCBID();
-	if (-1 == epoll_ctl(epfd, EPOLL_CTL_DEL, target->getSock()->get_file_desc(), event))
+	if (-1 == epoll_ctl(epfd, EPOLL_CTL_DEL, target->getSock()->get_file_desc(), &event))
 	{       
 		dprintf(D_ALWAYS, "CCB: failed to delete watch for target daemon %s with ccbid %lu: %s (errno=%d).\n", target->getSock()->peer_description(), target->getCCBID(), strerror(errno), errno);
 	}

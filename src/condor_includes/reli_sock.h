@@ -256,6 +256,7 @@ public:
 	int clear_backlog_flag() {bool state = m_has_backlog; m_has_backlog = false; return state;}
 	int clear_read_block_flag() {bool state = m_read_would_block; m_read_would_block = false; return state;}
 
+	bool is_closed() {return rcv_msg.m_closed;}
 //	PROTECTED INTERFACE TO RELIABLE SOCKS
 //
 protected:
@@ -305,7 +306,8 @@ protected:
 
 		ChainBuf	buf;
 		int			ready;
-                bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key);
+		bool m_closed;
+		bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key);
 	} rcv_msg;
 
 	class SndMsg {

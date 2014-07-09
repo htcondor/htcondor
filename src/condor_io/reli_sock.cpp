@@ -735,7 +735,8 @@ ReliSock::RcvMsg :: RcvMsg() :
 	m_remaining_read_length(0),
 	m_end(0),
 	m_tmp(NULL),
-	ready(0)
+	ready(0),
+	m_closed(false)
 {
 }
 
@@ -783,6 +784,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 	}
 	if ( retval == -2 ) {	// -2 means peer just closed the socket
 		dprintf(D_FULLDEBUG,"IO: EOF reading packet header\n");
+		m_closed = true;
 		return FALSE;
 	}
 
