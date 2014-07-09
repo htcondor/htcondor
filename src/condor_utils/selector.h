@@ -22,6 +22,7 @@
 #define SELECTOR_H
 
 #include "condor_common.h"
+#include <poll.h>
 
 class Selector {
 public:
@@ -54,6 +55,10 @@ public:
 	void display();
 
 private:
+	enum SINGLE_SHOT {
+		SINGLE_SHOT_VIRGIN, SINGLE_SHOT_OK, SINGLE_SHOT_SKIP
+	};
+
 	static int _fd_select_size;
 	fd_set	*read_fds, *save_read_fds;
 	fd_set	*write_fds, *save_write_fds;
@@ -65,6 +70,9 @@ private:
 	SELECTOR_STATE	state;
 	int		_select_retval;
 	int		_select_errno;
+
+	SINGLE_SHOT m_single_shot;
+	struct pollfd m_poll;
 };
 
 void display_fd_set( const char *msg, fd_set *set, int max,

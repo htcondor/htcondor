@@ -76,6 +76,7 @@ Selector::reset()
 	memset( save_write_fds, 0, fd_set_size * sizeof(fd_set) );
 	memset( save_except_fds, 0, fd_set_size * sizeof(fd_set) );
 #endif
+	m_single_shot = SINGLE_SHOT_VIRGIN;
 
 	if (IsDebugLevel(D_DAEMONCORE)) {
 		dprintf(D_DAEMONCORE | D_VERBOSE, "selector %p resetting\n", this);
@@ -167,6 +168,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 		free(fd_description);
 	}
 
+	m_poll.fd = fd;
 	switch( interest ) {
 
 	  case IO_READ:
@@ -175,6 +177,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 			EXCEPT( "Selector::add_fd(): read fd_set is full" );
 		}
 #endif
+		m_poll.events = POLLIN;
 		FD_SET( fd, save_read_fds );
 		break;
 
@@ -184,6 +187,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 			EXCEPT( "Selector::add_fd(): write fd_set is full" );
 		}
 #endif
+		m_poll.events = POLLOUT;
 		FD_SET( fd, save_write_fds );
 		break;
 
@@ -193,10 +197,12 @@ Selector::add_fd( int fd, IO_FUNC interest )
 			EXCEPT( "Selector::add_fd(): except fd_set is full" );
 		}
 #endif
+		m_poll.events = POLLERR;
 		FD_SET( fd, save_except_fds );
 		break;
 
 	}
+	m_single_shot = m_single_shot == SINGLE_SHOT_VIRGIN ? SINGLE_SHOT_OK : SINGLE_SHOT_SKIP;
 }
 
 void
@@ -274,11 +280,28 @@ Selector::execute()
 		// select() ignores its first argument on Windows. We still track
 		// max_fd for the display() functions.
 	start_thread_safe("select");
-	nfds = select( max_fd + 1, 
+		// ppoll is preferable over poll as poll only has second resolution
+		// while the Selector interface provides microsecond resolution.
+		// Unfortunately, ppoll is Linux-only.
+#ifdef HAVE_PPOLL
+	if (m_single_shot == SINGLE_SHOT_OK)
+	{
+		struct timespec ts;
+		ts.tv_sec = tp->tv_sec;
+		ts.tv_nset = tp->tv_usec*1000;
+		nfds = poll(&m_poll, 1, NULL, &ts);
+	}
+	else
+#else
+	m_single_shot = SINGLE_SHOT_SKIP;
+#endif
+	{
+		nfds = select( max_fd + 1,
 				  (SELECT_FDSET_PTR) read_fds, 
 				  (SELECT_FDSET_PTR) write_fds, 
 				  (SELECT_FDSET_PTR) except_fds, 
 				  tp );
+	}
 	_select_errno = errno;
 	stop_thread_safe("select");
 	_select_retval = nfds;
@@ -335,15 +358,15 @@ Selector::fd_ready( int fd, IO_FUNC interest )
 	switch( interest ) {
 
 	  case IO_READ:
-		return FD_ISSET( fd, read_fds );
+		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & POLLIN) : FD_ISSET( fd, read_fds );
 		break;
 
 	  case IO_WRITE:
-		return FD_ISSET( fd, write_fds );
+		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & POLLOUT) : FD_ISSET( fd, write_fds );
 		break;
 
 	  case IO_EXCEPT:
-		return FD_ISSET( fd, except_fds );
+		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & POLLERR) : FD_ISSET( fd, except_fds );
 		break;
 
 	}
