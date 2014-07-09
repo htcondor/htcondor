@@ -374,14 +374,29 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	string projection = "";
 		// turn projection string into a set of attributes
 	classad::References proj;
+	bool evaluate_projection = false;
 	if (cad.LookupString(ATTR_PROJECTION, projection) && ! projection.empty()) {
 		StringTokenIterator list(projection);
 		const std::string * attr;
 		while ((attr = list.next_string())) { proj.insert(*attr); }
+	} else if (cad.Lookup(ATTR_PROJECTION)) {
+		// if projection is not a simple string, then assume that evaluating it as a string in the context of the ad will work better
+		// (the negotiator sends this sort of projection)
+		evaluate_projection = true;
 	}
 
 	while ( (curr_ad=results.Next()) )
     {
+		if (evaluate_projection) {
+			proj.clear();
+			projection.clear();
+			if (cad.EvalString(ATTR_PROJECTION, curr_ad, projection) && ! projection.empty()) {
+				StringTokenIterator list(projection);
+				const std::string * attr;
+				while ((attr = list.next_string())) { proj.insert(*attr); }
+			}
+		}
+
         if (!sock->code(more) || !putClassAd(sock, *curr_ad, 0, proj.empty() ? NULL : &proj))
         {
             dprintf (D_ALWAYS,
