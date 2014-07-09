@@ -232,6 +232,49 @@ int _mergeStringListIntoWhitelist(StringList & list_in, classad::References & wh
 	return (int)whitelist_out.size();
 }
 
+// read an attribute from a query ad, and turn it into a classad projection (i.e. a set of attributes)
+// the projection attribute can be a string, or (if allow_list is true) a classad list of strings.
+// returns:
+//    -1 if projection does not evaluate
+//    -2 if projection does not convert to string
+//    0  if no projection or projection is valid but empty
+//    1  the projection is non-empty
+//
+int mergeProjectionFromQueryAd(classad::ClassAd & queryAd, const char * attr_projection, classad::References & projection, bool allow_list /*= false*/)
+{
+	if ( ! queryAd.Lookup(attr_projection))
+		return 0; // no projection
+
+	classad::Value value;
+	if ( ! queryAd.EvaluateAttr(attr_projection, value)) {
+		return -1;
+	}
+
+	classad::ExprList *list = NULL;
+	if (allow_list && value.IsListValue(list)) {
+		for (classad::ExprList::const_iterator it = list->begin(); it != list->end(); it++) {
+			std::string attr;
+			if (!(*it)->Evaluate(value) || !value.IsStringValue(attr)) {
+				return -2;
+			}
+			projection.insert(attr);
+		}
+		return projection.empty() ? 0 : 1;
+	}
+
+	std::string proj_list;
+	if (value.IsStringValue(proj_list)) {
+		StringTokenIterator list(proj_list);
+		const std::string * attr;
+		while ((attr = list.next_string())) { projection.insert(*attr); }
+	} else {
+		return -2;
+	}
+
+	return projection.empty() ? 0 : 1;
+}
+
+
 /* 
  * It now prints chained attributes. Or it should.
  * 

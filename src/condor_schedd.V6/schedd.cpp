@@ -1863,7 +1863,7 @@ sendDone(Stream *stream)
 struct QueryJobAdsContinuation : Service {
 
 	classad_shared_ptr<classad::ExprTree> requirements;
-	StringList projection;
+	classad::References projection;
 	ClassAdLog::filter_iterator it;
 	bool unfinished_eom;
 	bool registered_socket;
@@ -1910,18 +1910,9 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		//	tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
 		//	dprintf(D_FULLDEBUG, "Writing job %d.%d to wire\n", cluster,proc);
 		//}
-		StringList expanded_projection;
-		StringList * attr_whitelist = NULL;
-		if ( ! projection.isEmpty()) {
-			StringList externals; // don't need this, but must pass it.
-			const char * attr;
-			projection.rewind();
-			while ((attr = projection.next())) {
-				tmp_ad->GetExprReferences(attr, expanded_projection, externals);
-			}
-			attr_whitelist = &expanded_projection;
-		}
-		int retval = putClassAdNonblocking(sock, *tmp_ad, true, attr_whitelist);
+		int retval = putClassAd(sock, *tmp_ad,
+					PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
+					projection.empty() ? NULL : &projection);
 		if (retval == 2) {
 			//dprintf(D_FULLDEBUG, "Detecting backlog.\n");
                         has_backlog = true;
@@ -1972,23 +1963,14 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	}
 	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements->Copy());
 
-	classad::Value value;
-	classad::ExprList *list = NULL;
-	if ((queryAd.find(ATTR_PROJECTION) != queryAd.end()) &&
-		(!queryAd.EvaluateAttr(ATTR_PROJECTION, value) || !value.IsListValue(list)))
-	{
-		return sendJobErrorAd(stream, 2, "Unable to evaluate projection list");
-	}
 	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, 1000);
-	StringList &projection = continuation->projection;
-	if (list) for (classad::ExprList::const_iterator it = list->begin(); it != list->end(); it++) {
-		std::string attr;
-		if (!(*it)->Evaluate(value) || !value.IsStringValue(attr))
-		{
-			delete continuation;
-			return sendJobErrorAd(stream, 3, "Unable to convert projection list to string list");
+	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, continuation->projection, true);
+	if (proj_err < 0) {
+		delete continuation;
+		if (proj_err == -1) {
+			return sendJobErrorAd(stream, 2, "Unable to evaluate projection list");
 		}
-		projection.insert(attr.c_str());
+		return sendJobErrorAd(stream, 3, "Unable to convert projection list to string list");
 	}
 
 	return continuation->finish(stream);
