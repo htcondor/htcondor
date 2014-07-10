@@ -136,17 +136,11 @@ chkconfig --add cgconfig
 service cgconfig start
 \end{verbatim}
 
-<<<<<<< HEAD
 When the \Prog{cgconfig} service is correctly running, 
 the virtual file system
 mounted on \File{/cgroup} should have several subdirectories under it, 
 and there should an \File{htcondor} subdirectory under the directory 
 \File{/cgroup/cpu}.
-=======
-When the cgconfig service is correctly running, the virtual file system
-mounted on \File{/cgroup} should have several subdirectories under it, and
-there should a an htcondor subdirectory under the directory \File{/cgroup/cpu}
->>>>>>> V8_2-branch
 
 The \Condor{starter} daemon can optionally use cgroups
 to accurately track all the processes started by a job, 
