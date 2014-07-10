@@ -232,28 +232,25 @@ CCBServer::InitAndReconfig()
 	}
 		// Either epoll is not available or creation of the epoll FD failed; in this case,
 		// we just periodically poll the FD for responses.
-	else if (m_epfd == -1)
-	{
-		Timeslice poll_slice;
-		poll_slice.setTimeslice( // do not run more than this fraction of the time
-			param_double("CCB_POLLING_TIMESLICE",0.05) );
+	Timeslice poll_slice;
+	poll_slice.setTimeslice( // do not run more than this fraction of the time
+		param_double("CCB_POLLING_TIMESLICE",0.05) );
 
-		poll_slice.setDefaultInterval( // try to run this often
-			param_integer("CCB_POLLING_INTERVAL",20,0) );
+	poll_slice.setDefaultInterval( // try to run this often
+		param_integer("CCB_POLLING_INTERVAL",20,0) );
 
-		poll_slice.setMaxInterval( // run at least this often
-			param_integer("CCB_POLLING_MAX_INTERVAL",600) );
+	poll_slice.setMaxInterval( // run at least this often
+		param_integer("CCB_POLLING_MAX_INTERVAL",600) );
 
-		if( m_polling_timer != -1 ) {
-			daemonCore->Cancel_Timer(m_polling_timer);
-		}
-
-		m_polling_timer = daemonCore->Register_Timer(
-			poll_slice,
-			(TimerHandlercpp)&CCBServer::PollSockets,
-			"CCBServer::PollSockets",
-			this);
+	if( m_polling_timer != -1 ) {
+		daemonCore->Cancel_Timer(m_polling_timer);
 	}
+
+	m_polling_timer = daemonCore->Register_Timer(
+		poll_slice,
+		(TimerHandlercpp)&CCBServer::PollSockets,
+		"CCBServer::PollSockets",
+		this);
 
 	RegisterHandlers();
 }
@@ -367,12 +364,14 @@ CCBServer::PollSockets()
 		// out of fear that the overhead of dealing with all of these
 		// sockets in every iteration of the select loop may be
 		// too much.
-
-	CCBTarget *target=NULL;
-	m_targets.startIterations();
-	while( m_targets.iterate(target) ) {
-		if( target->getSock()->readReady() ) {
-			HandleRequestResultsMsg(target);
+	if (m_epfd == -1)
+	{
+		CCBTarget *target=NULL;
+		m_targets.startIterations();
+		while( m_targets.iterate(target) ) {
+			if( target->getSock()->readReady() ) {
+				HandleRequestResultsMsg(target);
+			}
 		}
 	}
 
