@@ -26,9 +26,9 @@ they execute under. This can be accomplished with group ID-based
 tracking. This method of tracking requires that a range of dedicated
 \emph{group} IDs (GID) be set aside for HTCondor's use. The number of GIDs
 that must be set aside for an execute machine is equal to its number
-of execution slots. GID-based tracking is only available on Linux, and
-it requires that HTCondor either runs as \Login{root} or uses privilege
-separation (see Section~\ref{sec:PrivSep}).
+of execution slots. 
+GID-based tracking is only available on Linux, 
+and it requires that HTCondor runs as \Login{root}.
 
 GID-based tracking works by placing a dedicated GID in the
 supplementary group list of a job's initial process. Since modifying
@@ -118,7 +118,7 @@ chkconfig --add cgconfig
 service cgconfig start
 \end{verbatim}
 
-When the cgconfig service is correctly running, the virtual filesystem
+When the cgconfig service is correctly running, the virtual file system
 mounted on \File{/cgroup} should have several subdirectories under it, and
 there should a an htcondor subdirectory under the directory \File{/cgroup/cpu}
 
