@@ -667,6 +667,7 @@ usage ()
 		"\t-version\t\tPrint HTCondor version and exit\n"
 		"\t-diagnose\t\tPrint out query ad without performing query\n"
 		"    and [query-opt] is one of\n"
+		"\t-absent\t\t\tPrint information about absent resources\n"
 		"\t-avail\t\t\tPrint information about available resources\n"
 		"\t-ckptsrvr\t\tDisplay checkpoint server attributes\n"
 		"\t-claimed\t\tPrint information about claimed resources\n"
