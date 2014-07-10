@@ -92,9 +92,10 @@ my $onexecute = sub {
 	$runcount += 1;
 	#print "A Job Started\n";
 	# sample jobs running and save the locations
-	runCondorTool("condor_q -constraint jobstatus==2 -af RemoteHost",\@running,2,{emit_output=>0});
+	runCondorTool("condor_q -constraint jobstatus==2 -af RemoteHost",\@running,2,{emit_output=>1});
 	foreach my $slot (@running) {
 		if(!(exists $gpulandings{$slot})) {
+			print "Marking slot $slot as gpu landing location\n";
 			$gpulandings{$slot} = 1;
 		}
 	}
@@ -115,7 +116,7 @@ $result = SimpleJob::RunCheck(
 print "Good $totalcpus jobs ran\n";
 
 my @slots = ();
-runCondorTool("condor_status -af name -constraint GPUs==1",\@slots,2,{emit_output=>0});
+runCondorTool("condor_status -af name -constraint GPUs==1",\@slots,2,{emit_output=>1});
 
 my $gpuslots = @slots;
 
@@ -123,7 +124,7 @@ if($gpuslots == $totalgpus) {
 	print "Great, GPUs were distributed evenly\n";
 	RegisterResult(1,test_name,$testname);
 } else {
-	print "We expected $totalgpus GPUs and saw:$gpuslot\n";
+	print "We expected $totalgpus GPUs and saw:$gpuslots\n";
 	RegisterResult(0,test_name,$testname);
 }
 
@@ -208,7 +209,7 @@ my $slotsupdated = 0;
 my @updates = ();
 my $trys = 0;
 while($slotsupdated < $totalcpus) {
-	runCondorTool("condor_status -constraint \'OfflineGPUs==\"CUDA2\"\' -af name",\@updates,2,{emit_output=>0});
+	runCondorTool("condor_status -constraint \'OfflineGPUs==\"CUDA2\"\' -af name",\@updates,2,{emit_output=>1});
 	$slotsupdated =  @updates;
 	$trys += 1;
 	if($trys == 10) {
@@ -249,7 +250,7 @@ $result = SimpleJob::RunCheck(
 print "Good $totalcpus jobs ran\n";
 
 @slots = ();
-runCondorTool("condor_status -af name -constraint GPUs==1",\@slots,2,{emit_output=>0});
+runCondorTool("condor_status -af name -constraint GPUs==1",\@slots,2,{emit_output=>1});
 
 $gpuslots = @slots;
 
@@ -257,7 +258,7 @@ if($gpuslots == $totalgpus) {
 	print "Great, GPUs were distributed evenly\n";
 	RegisterResult(1,test_name,$testname);
 } else {
-	print "We expected $totalgpus GPUs and saw:$gpuslot\n";
+	print "We expected $totalgpus GPUs and saw:$gpuslots\n";
 	RegisterResult(0,test_name,$testname);
 }
 
