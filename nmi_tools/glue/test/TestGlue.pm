@@ -498,17 +498,62 @@ sub CreateLocalConfig {
 	my $java_libdir = "";
 	my $exec_result;
 	my $javabinary = "";
+	my @whereresponse = ();
+	my $wherecount = 0;
+	my @pathsearch = ();
+	my $pathcount = 0;
 	if($iswindows == 1) {
 
 		$javabinary = "java.exe";
 		if ($^O =~ /MSWin32/) {
-			$jvm = `\@for \%I in ($javabinary) do \@echo(\%~sf\$PATH:I`;
-					fullchomp($jvm);
+			#$jvm = `\@for \%I in ($javabinary) do \@echo(\%~sf\$PATH:I`;
+			print "Windows native perl\n";
+			@pathsearch = `\@for \%I in ($javabinary) do \@echo(\%~sf\$PATH:I`;
+			$pathcount = @pathsearch;
+			print "FOR search count:$pathcount\n";
+			foreach my $targ (@pathsearch) {
+				print "FOR:$targ\n";
+			}
+			if($pathcount > 1) {
+				print "Native windows search through path returned multiple choices:$pathcount\n";
+				foreach my $choice (@pathsearch) {
+					if($choice =~ /sysnative/) {
+						print "Found sysnative\n";
+						$jvm = $choice;
+					}
+				}
+				if($jvm eq "") {
+					$jvm = $pathsearch[0];
+				}
+			} else {
+				$jvm = $pathsearch[0];
+			}
+			fullchomp($jvm);
 		} else {
 			#can't use which. its a linux tool and will lie about the path to java.
 			if (1) {
 				print "Running where $javabinary\n";
-				$jvm = `where $javabinary`;
+				@whereresponse= `where $javabinary`;
+				$wherecount = @whereresponse;
+				print "where search count:$wherecount\n";
+				foreach my $targ (@whereresponse) {
+					print "WHERE:$targ\n";
+				}
+				if($wherecount > 1) {
+				print "Running where returned multiple choices:$wherecount\n";
+					foreach my $choice (@whereresponse) {
+						if($choice =~ /sysnative/) {
+							print "Found sysnative\n";
+							$jvm = $choice;
+						}
+					}
+					if($jvm eq "") {
+						$jvm = $whereresponse[0];
+					}
+				} else {
+					$jvm = $whereresponse[0];
+				}
+
 				fullchomp($jvm);
 				# if where doesn't tell us the location of the java binary, just assume it's will be
 				# in the path once condor is running. (remember that cygwin lies...)
