@@ -103,7 +103,6 @@ char*       statistics = NULL;
 char*		genericType = NULL;
 CondorQuery *query;
 char		buffer[1024];
-ClassAdList result;
 char		*myName;
 vector<SortSpec> sortSpecs;
 bool            javaMode = false;
@@ -458,6 +457,7 @@ main (int argc, char *argv[])
 		}
 	}
 
+	ClassAdList result;
 	CondorError errstack;
 	if (NULL != addr) {
 			// this case executes if pool was provided, or if in "direct" mode with
