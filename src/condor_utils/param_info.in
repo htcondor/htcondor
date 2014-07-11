@@ -363,6 +363,12 @@ customization=seldom
 friendly_name=GSI Daemon Key
 review=?
 
+[GSS_ASSIST_GRIDMAP_CACHE_EXPIRATION]
+default=0
+type=int
+reconfig=true
+customization=seldom
+
 [VMWARE_NETWORKING_TYPE]
 default=
 type=string
