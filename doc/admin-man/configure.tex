@@ -10509,13 +10509,13 @@ section~\ref{sec:Security} on Security.
   variable \Env{GSI\_AUTHZ\_CONF} when this variable is not defined.
   Setting this variable to \Expr{/dev/null} disables callouts.
 
-\label{param:GSIMappingCacheExpiration}
-\item[\Macro{GSI\_MAPPING\_CACHE\_EXPIRATION}]
+\label{param:GSSAssistGridmapCacheExpiration}
+\item[\Macro{GSS\_ASSIST\_GRIDMAP\_CACHE\_EXPIRATION}]
   The length of time, in seconds, to cache the result of the Globus mapping
   lookup result when using Globus to map certificates to HTCondor user names.
   The lookup only occurs when the canonical name GSS\_ASSIST\_GRIDMAP is present
-  in the HTCondor mapfile.  This defaults to 300 seconds; the special value of
-  0 will disable all caching.  The cache uses the DN and VOMS FQAN as a key;
+  in the HTCondor mapfile.  This defaults to 0 seconds, a special value which
+  will disable all caching.  The cache uses the DN and VOMS FQAN as a key;
   very rare Globus configurations that utilize other certificate attributes
   for the mapping may cause the cache to return a different user than Globus.
 

@@ -491,7 +491,7 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 	if (m_mapping == NULL) {
 		// Size of hash table is purposely initialized small to prevent this
 		// from hogging memory.  This will, of course, grow at large sites.
-		m_mapping = new GlobusMappingTable(53, hashFuncString);
+		m_mapping = new GlobusMappingTable(53, hashFuncString, updateDuplicateKeys);
 	}
 	const char *auth_name_to_map;
 	const char *fqan = getFQAN();
@@ -504,7 +504,7 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 
 	globus_mapping_entry_ptr value;
 	time_t now = 0;
-	time_t gsi_cache_expiry = param_integer("GSI_MAPPING_CACHE_EXPIRATION", 300);
+	time_t gsi_cache_expiry = param_integer("GSS_ASSIST_GRIDMAP_CACHE_EXPIRATION", 0);
 	if (gsi_cache_expiry && (m_mapping->lookup(auth_name_to_map, value) == 0)) {
 		now = time(NULL);
 		if (now < value->expiry_time) {

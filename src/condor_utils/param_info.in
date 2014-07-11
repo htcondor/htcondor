@@ -363,8 +363,8 @@ customization=seldom
 friendly_name=GSI Daemon Key
 review=?
 
-[GSI_MAPPING_CACHE_EXPIRATION]
-default=300
+[GSS_ASSIST_GRIDMAP_CACHE_EXPIRATION]
+default=0
 type=int
 reconfig=true
 customization=seldom
