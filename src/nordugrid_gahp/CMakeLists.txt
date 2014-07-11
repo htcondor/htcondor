@@ -16,7 +16,11 @@
  # 
  ############################################################### 
 
-if (HAVE_EXT_GLOBUS AND HAVE_LDAP_H AND LDAP_FOUND )
+if (HAVE_EXT_GLOBUS)
+
+	if (NOT HAVE_LDAP_H OR NOT LDAP_FOUND)
+		message(FATAL_ERROR "Can't find ldap.h, needed to build nordugrid_gahp")
+	endif()
 
 	add_definitions(-DLDAP_DEPRECATED)
 
@@ -48,6 +52,6 @@ if (HAVE_EXT_GLOBUS AND HAVE_LDAP_H AND LDAP_FOUND )
 
 else()
 
-	message( STATUS "NOTE: *nordugrid* targets will not be built HAVE_EXT_GLOBUS=${HAVE_EXT_GLOBUS} HAVE_LDAP_H=${HAVE_LDAP_H}" )
+	message( STATUS "NOTE: *nordugrid* targets will not be built HAVE_EXT_GLOBUS=${HAVE_EXT_GLOBUS}" )
 
 endif ()
