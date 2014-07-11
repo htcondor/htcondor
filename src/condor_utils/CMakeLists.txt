@@ -30,18 +30,24 @@ endif()
 condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
 
 ############ generate params
+add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h
+		COMMAND perl
+		ARGS ${CMAKE_CURRENT_SOURCE_DIR}/command_table_generator.pl -i ${CMAKE_CURRENT_SOURCE_DIR}/../condor_includes/condor_commands.h -o ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h
+		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../condor_includes/condor_commands.h ${CMAKE_CURRENT_SOURCE_DIR}/command_table_generator.pl)
+
 add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h
 		COMMAND perl
 		ARGS ${CMAKE_CURRENT_SOURCE_DIR}/param_table_generator.pl -i ${CMAKE_CURRENT_SOURCE_DIR}/param_info.in -o ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h -p ${PLATFORM}
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/param_info.in ${CMAKE_CURRENT_SOURCE_DIR}/param_table_generator.pl)
 
-add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h)
+add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h)
 
 if(UNIX)
 	set_source_files_properties(param_info.cpp PROPERTIES COMPILE_FLAGS -Wno-unused-parameter)
 endif(UNIX)
 
 ############ end generate params
+
 
 # These are source files that reside in other directories that we want to
 # include in libcondor_utils. They used to be in separate libraries.

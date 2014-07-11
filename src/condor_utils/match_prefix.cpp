@@ -92,3 +92,14 @@ is_dash_arg_prefix(const char * parg, const char * pval, int must_match_length /
 	return is_arg_prefix(parg, pval, must_match_length);
 }
 
+bool
+is_dash_arg_colon_prefix(const char * parg, const char * pval, const char ** ppcolon, int must_match_length /*= 0*/)
+{
+	if (*parg != '-') return false;
+	++parg;
+	// if arg begins with --, then we require an exact match for pval.
+	if (*parg == '-') { ++parg; must_match_length = -1; }
+	return is_arg_colon_prefix(parg, pval, ppcolon, must_match_length);
+}
+
+

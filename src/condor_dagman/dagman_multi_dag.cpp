@@ -72,11 +72,19 @@ GetConfigFile(/* const */ StringList &dagFiles, bool useDagDir,
 			// Get the list of config files from the current DAG file.
 			//
 		StringList		configFiles;
-		MyString msg = MultiLogFiles::getValuesFromFile( newDagFile, "config",
-					configFiles);
+		bool useOldDagReader = param_boolean( "DAGMAN_USE_OLD_DAG_READER",
+					false );
+		MyString msg;
+		if ( useOldDagReader ) {
+			msg = MultiLogFiles::getValuesFromFile( newDagFile, "config",
+					configFiles );
+		} else {
+			msg = MultiLogFiles::getValuesFromFileNew( newDagFile,
+					"config", configFiles );
+		}
 		if ( msg != "" ) {
 			AppendError( errMsg,
-					MyString("Failed to locate Condor job log files: ") +
+					MyString("Error getting DAGMan config file: ") +
 					msg );
 			result = false;
 		}
@@ -215,6 +223,8 @@ RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags,
 					rescueNum );
 		dprintf( D_ALWAYS, "Renaming %s\n", rescueDagName.Value() );
 		MyString newName = rescueDagName + ".old";
+			// Unlink here to be safe on Windows.
+		tolerant_unlink( newName.Value() );
 		if ( rename( rescueDagName.Value(), newName.Value() ) != 0 ) {
 			EXCEPT( "Fatal error: unable to rename old rescue file "
 						"%s: error %d (%s)\n", rescueDagName.Value(),

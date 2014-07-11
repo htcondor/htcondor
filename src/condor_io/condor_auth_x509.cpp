@@ -51,6 +51,13 @@ HashTable<MyString, MyString> * Condor_Auth_X509::GridMap = 0;
 
 bool Condor_Auth_X509::m_globusActivated = false;
 
+unsigned int hashFuncString( const std::string &key )
+{
+	return hashFuncChars(key.c_str());
+}
+
+Condor_Auth_X509::GlobusMappingTable *Condor_Auth_X509::m_mapping = NULL;
+
 //----------------------------------------------------------------------
 // Implementation
 //----------------------------------------------------------------------
@@ -73,7 +80,7 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
 		// Setting GSI_AUTHZ_CONF=/dev/null works for disabling the callouts.
 		std::string gsi_authz_conf;
 		if (param(gsi_authz_conf, "GSI_AUTHZ_CONF")) {
-			if (globus_libc_setenv("GSI_AUTHZ_CONF", gsi_authz_conf.c_str(), 1)) {
+			if (setenv("GSI_AUTHZ_CONF", gsi_authz_conf.c_str(), 1)) {
 				dprintf(D_ALWAYS, "Failed to set the GSI_AUTHZ_CONF environment variable.\n");
 				EXCEPT("Failed to set the GSI_AUTHZ_CONF environment variable.\n");
 			}
@@ -469,7 +476,7 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 {
 	//this might need to change with SSLK5 stuff
 	//just extract username from /CN=<username>@<domain,etc>
-	OM_uint32 major_status;
+	OM_uint32 major_status = GSS_S_COMPLETE;
 	char *tmp_user = NULL;
 	char local_user[USER_NAME_MAX];
 
@@ -480,16 +487,73 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 #else
 // Switched the unix map function to _map_and_authorize, which allows access
 // to the Globus callout infrastructure.
-        char condor_str[] = "condor";
-	major_status = globus_gss_assist_map_and_authorize(
-            context_handle,
-            condor_str, // Requested service name
-            NULL, // Requested user name; NULL for non-specified
-            local_user,
-            USER_NAME_MAX-1); // Leave one space at end of buffer, just-in-case
-        // Defensive programming: to protect against buffer overruns in the
-        // unknown globus mapping module, make sure we are at least nul-term'd
-        local_user[USER_NAME_MAX-1] = '\0';
+
+	if (m_mapping == NULL) {
+		// Size of hash table is purposely initialized small to prevent this
+		// from hogging memory.  This will, of course, grow at large sites.
+		m_mapping = new GlobusMappingTable(53, hashFuncString, updateDuplicateKeys);
+	}
+	const char *auth_name_to_map;
+	const char *fqan = getFQAN();
+	if (fqan && fqan[0]) {
+		auth_name_to_map = fqan;
+	}
+	else {
+		auth_name_to_map = GSSClientname;
+	}
+
+	globus_mapping_entry_ptr value;
+	time_t now = 0;
+	time_t gsi_cache_expiry = param_integer("GSS_ASSIST_GRIDMAP_CACHE_EXPIRATION", 0);
+	if (gsi_cache_expiry && (m_mapping->lookup(auth_name_to_map, value) == 0)) {
+		now = time(NULL);
+		if (now < value->expiry_time) {
+			dprintf(D_SECURITY, "Using Globus mapping result from the cache.\n");
+			if (value->name.size()) {
+				tmp_user = strdup(value->name.c_str());
+			}
+			else {
+				major_status = GSS_S_FAILURE;
+			}
+		}
+	}
+
+	if ((tmp_user == NULL) && (major_status == GSS_S_COMPLETE)) {
+		char condor_str[] = "condor";
+		major_status = globus_gss_assist_map_and_authorize(
+			context_handle,
+			condor_str, // Requested service name
+			NULL, // Requested user name; NULL for non-specified
+			local_user,
+			USER_NAME_MAX-1); // Leave one space at end of buffer, just-in-case
+		// Defensive programming: to protect against buffer overruns in the
+		// unknown globus mapping module, make sure we are at least nul-term'd
+		local_user[USER_NAME_MAX-1] = '\0';
+
+		// More defensive programming: There is a bug in LCMAPS, (which is possibly
+		// called by a globus callout) that sometimes returns with the euid set to
+		// root (!?!).  As a safeguard, We check for that here and return to the
+		// condor euid.  This is done "outside" of the condor priv stack since this
+		// is essentially undoing a side effect of the library call, not
+		// intentionally changing priv state.
+		if (geteuid() == 0) {
+			dprintf(D_ALWAYS, "WARNING: globus returned with euid 0\n");
+			// attempt to undo
+			if (seteuid(get_condor_uid())) {
+				// complain loudly, but continue
+				dprintf(D_ALWAYS, "ERROR: something has gone terribly wrong: errno %i\n", errno);
+			}
+		}
+
+		if (now == 0) { now = time(NULL); }
+		value.reset(new globus_mapping_entry_t);
+		value->expiry_time = now + gsi_cache_expiry;
+		// The special name of "" indicates failed mapping.
+		if (major_status == GSS_S_COMPLETE) {
+			value->name = local_user;
+		}
+		m_mapping->insert(auth_name_to_map, value);
+	}
 #endif
 
 	if (tmp_user) {

@@ -49,32 +49,6 @@ int param_info_init(const void ** pvdefaults)
 
 #ifdef PARAM_DEFAULTS_SORTED
 
-// binary search of an array of structures containing a member psz
-// find the (case insensitive) matching element in the array
-// and return a pointer to that element.
-template <typename T>
-const T * BinaryLookup (const T aTable[], int cElms, const char * key, int (*fncmp)(const char *, const char *))
-{
-	if (cElms <= 0)
-		return NULL;
-
-	int ixLower = 0;
-	int ixUpper = cElms-1;
-	for (;;) {
-		if (ixLower > ixUpper)
-			return NULL; // return null for "not found"
-
-		int ix = (ixLower + ixUpper) / 2;
-		int iMatch = fncmp(aTable[ix].key, key);
-		if (iMatch < 0)
-			ixLower = ix+1;
-		else if (iMatch > 0)
-			ixUpper = ix-1;
-		else
-			return &aTable[ix];
-	}
-}
-
 typedef const struct condor_params::key_value_pair param_table_entry_t;
 const param_table_entry_t * param_generic_default_lookup(const char * param)
 {
@@ -94,6 +68,21 @@ int ComparePrefixBeforeDot(const char * p1, const char * p2)
 		int ch1 = *p1, ch2 = *p2;
 		if (ch1 == '.') ch1 = 0; else if (ch1 >= 'a') ch1 &= ~0x20; // change lower to upper
 		if (ch2 == '.') ch2 = 0; else if (ch2 >= 'a') ch2 &= ~0x20; // this is cheap, but doesn't work for {|}~
+		int diff = ch1 - ch2;
+		if (diff) return diff;
+		if ( ! ch1) break;
+	}
+	return 0;
+}
+
+// case insensitive compare of two strings up to the first ":" or \0
+//
+int ComparePrefixBeforeColon(const char * p1, const char * p2)
+{
+	for (;*p1 || *p2; ++p1, ++p2) {
+		int ch1 = *p1, ch2 = *p2;
+		if (ch1 == ':') ch1 = 0; else if (ch1 >= 'a') ch1 &= ~0x20; // change lower to upper
+		if (ch2 == ':') ch2 = 0; else if (ch2 >= 'a') ch2 &= ~0x20; // this is cheap, but doesn't work for {|}~
 		int diff = ch1 - ch2;
 		if (diff) return diff;
 		if ( ! ch1) break;
@@ -122,22 +111,25 @@ MACRO_DEF_ITEM * param_subsys_default_lookup(const char * subsys, const char * p
 	return NULL;
 }
 
-MACRO_DEF_ITEM * param_default_lookup(const char * param, const char * subsys)
+MACRO_DEF_ITEM * param_default_lookup2(const char * param, const char * subsys)
 {
 	if (subsys) {
 		MACRO_DEF_ITEM * p = param_subsys_default_lookup(subsys, param);
 		if (p) return p;
 		// fall through to do generic lookup.
 	}
+#if 1 // tj: fix bug where param("master.foo") doesn't work when master.foo is in defined in param_info.in
+	return param_default_lookup(param);
+#else
 	return param_generic_default_lookup(param);
+#endif
 }
 
 // lookup a knob by metaname and by knobname.
 //
 int param_default_get_source_meta_id(const char * meta, const char * param)
 {
-	std::string fullname("$");
-	fullname += meta;
+	std::string fullname(meta);
 	fullname += ":";
 	fullname += param;
 
@@ -165,7 +157,7 @@ MACRO_TABLE_PAIR* param_meta_table(const char * meta)
 	return BinaryLookup<MACRO_TABLE_PAIR>(
 		condor_params::metaknobsets,
 		condor_params::metaknobsets_count,
-		meta, ComparePrefixBeforeDot);
+		meta, ComparePrefixBeforeColon);
 }
 
 // lookup a param in the metatable
@@ -285,7 +277,7 @@ bool param_default_ispath_by_id(int ix)
 const char*
 param_default_string(const char* param, const char * subsys)
 {
-	const param_table_entry_t* p = param_default_lookup(param, subsys);
+	const param_table_entry_t* p = param_default_lookup2(param, subsys);
 	if (p && p->def) {
 		return p->def->psz;
 	}
@@ -309,12 +301,13 @@ param_exact_default_string(const char* param)
 }
 
 int
-param_default_integer(const char* param, const char* subsys, int* valid, int* is_long) {
+param_default_integer(const char* param, const char* subsys, int* valid, int* is_long, int* truncated) {
 	int ret = 0;
 #ifdef PARAM_DEFAULTS_SORTED
 	if (valid) *valid = false;
 	if (is_long) *is_long = false;
-	const param_table_entry_t* p = param_default_lookup(param, subsys);
+	if (truncated) *truncated = false;
+	const param_table_entry_t* p = param_default_lookup2(param, subsys);
 	if (p && p->def) {
 		int type = param_entry_get_type(p);
 		switch (type) {
@@ -333,6 +326,7 @@ param_default_integer(const char* param, const char* subsys, int* valid, int* is
 				if (ret != tmp) {
 					if (tmp > INT_MAX) ret = INT_MAX;
 					if (tmp < INT_MIN) ret = INT_MIN;
+					if (truncated) *truncated = true;
 				};
 				if (valid) *valid = true;
 				if (is_long) *is_long = true;
@@ -366,7 +360,7 @@ param_default_long(const char* param, const char* subsys, int* valid) {
 	int ret = 0;
 #ifdef PARAM_DEFAULTS_SORTED
 	if (valid) *valid = false;
-	const param_table_entry_t* p = param_default_lookup(param, subsys);
+	const param_table_entry_t* p = param_default_lookup2(param, subsys);
 	if (p && p->def) {
 		int type = param_entry_get_type(p);
 		switch (type) {
@@ -405,7 +399,7 @@ param_default_double(const char* param, const char * subsys, int* valid) {
 	double ret = 0.0;
 
 #ifdef PARAM_DEFAULTS_SORTED
-	const param_table_entry_t* p = param_default_lookup(param, subsys);
+	const param_table_entry_t* p = param_default_lookup2(param, subsys);
 	if (valid) *valid = false;
 	if (p && p->def) {
 		int type = param_entry_get_type(p);
@@ -447,7 +441,6 @@ param_default_double(const char* param, const char * subsys, int* valid) {
 int
 param_range_long(const char* param, long long* min, long long* max) {
 
-#ifdef PARAM_DEFAULTS_SORTED
 	int ret = -1; // not ranged.
 	const param_table_entry_t* p = param_default_lookup(param);
 	if (p && p->def) {
@@ -480,12 +473,6 @@ param_range_long(const char* param, long long* min, long long* max) {
 		}
 	}
 	return ret;
-#else
-	PRAGMA_REMIND("write this!")
-	*min = LLONG_MIN;
-	*max = LLONG_MAX;
-	ret = 0;
-#endif
 }
 
 int

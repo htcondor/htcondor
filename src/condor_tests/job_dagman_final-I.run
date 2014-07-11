@@ -32,6 +32,7 @@ $outfile = "job_dagman_final-I.nodes.out";
 $scriptfile = "job_dagman_final-I.scripts.out";
 $rescuefile = "job_dagman_final-I.dag.rescue001";
 $haltfile = "job_dagman_final-I.dag.halt";
+$statusfile = "job_dagman_final-I.status";
 
 # Note: we must find these lines *in the specified order*.
 @node_output_lines = ("Job for node I_A",
@@ -58,6 +59,29 @@ $haltfile = "job_dagman_final-I.dag.halt";
 			"  FAILED_COUNT=0",
 			"  RETURN=0");
 
+# Lines must be found in order.
+@statuslines = ("DagStatus = 5;.*STATUS_DONE \\(success\\)",
+    "NodesTotal = 5;",
+    "NodesDone = 3;",
+    "NodesPre = 1;",
+    "NodesQueued = 0;",
+    "NodesPost = 0;",
+    "NodesReady = 0;",
+    "NodesUnready = 1;",
+    "NodesFailed = 0;",
+    "JobProcsHeld = 0;",
+    "JobProcsIdle = 0;",
+	"Node = \"I_A\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"I_B\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"I_C1\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY",
+	"Node = \"I_C2\";",
+	"NodeStatus = 2;.*STATUS_PRERUN",
+	"Node = \"I_D\";",
+	"NodeStatus = 5;.*STATUS_DONE");
+
 my $killedchosen = 0;
 
 # truly const variables in perl
@@ -71,6 +95,9 @@ if (-e $outfile) {
 }
 if (-e $scriptfile) {
 	runcmd("rm -f $scriptfile");
+}
+if (-e $statusfile) {
+	runcmd("rm -f $statusfile");
 }
 runcmd("rm -f job_dagman_final-I.dag.rescue*");
 
@@ -148,6 +175,37 @@ $success = sub
 			$diditpass = 0;
 			CondorTest::debug("Mismatch at line $lineindex: expected <$script_output_lines[$lineindex]>, got <$line>\n", 1);
 		}
+	}
+
+	# Check the node status file.
+	$line = "";
+	$passed = 0;
+	$canopen = open(STATUS,"<$statusfile");
+	if( ! (defined $canopen)) {
+		CondorTest::debug("Can not open statusfile<$statusfile>:$!\n",1);
+		$diditpass = 0;
+	}
+	while(<STATUS>) {
+		chomp();
+		$line = $_;
+		$target = $statuslines[0];
+		if( $line =~ /$target/ ) {
+			CondorTest::debug("$name: $line\n",1);
+			# Remove the target we just found from the array.
+			shift @statuslines;
+			if ($#statuslines < 0) {
+				last;
+			}
+		}
+	}
+	close(STATUS);
+
+	if ($#statuslines >= 0) {
+		CondorTest::debug("failed missing node status lines:\n");
+		foreach $missing (@statuslines) {
+			print "  $missing\n";
+		}
+		$diditpass = 0;
 	}
 
 	if (! -e $rescuefile) {

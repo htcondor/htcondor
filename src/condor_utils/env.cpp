@@ -729,6 +729,7 @@ Env::getWindowsEnvironmentString() const
 	output += '\0';
 	char* ret = new char[output.size()];
 	ASSERT(ret != NULL);
+	#pragma warning(suppress: 4996) // suppress next warning: std::string.copy may be unsafe.
 	output.copy(ret, output.size());
 	return ret;
 }

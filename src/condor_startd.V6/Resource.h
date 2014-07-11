@@ -30,14 +30,43 @@
 #include "cod_mgr.h"
 #include "IdDispenser.h"
 
-#include <deque>
 #include <set>
+
+class SlotType
+{
+public:
+	typedef std::map<std::string, std::string, classad::CaseIgnLTStr> slottype_param_map_t;
+
+	const char * type_param(const char * name);
+	const char * Shares() { return shares.empty() ? NULL : shares.c_str(); }
+
+	static const char * type_param(CpuAttributes* p_attr, const char * name);
+	static const char * type_param(int type_id, const char * name);
+	static bool type_param_boolean(CpuAttributes* p_attr, const char * name, bool def_value);
+	static bool type_param_boolean(int type_id, const char * name, bool def_value);
+	static long long type_param_long(CpuAttributes* p_attr, const char * name, long long def_value);
+	static char * param(CpuAttributes* p_attr, const char * name);
+	static const char * param(std::string& out, CpuAttributes* p_attr, const char * name);
+	static void init_types(int max_type_id);
+
+private:
+	std::string shares; // share info from SLOT_TYPE_n attribute
+	slottype_param_map_t params;
+	static std::vector<SlotType> types;
+	static bool insert_param(void*, HASHITER & it);
+	void clear() { shares.clear(); params.clear(); }
+};
 
 class Resource : public Service
 {
 public:
 	Resource( CpuAttributes*, int, bool multiple_slots, Resource* _parent = NULL);
 	~Resource();
+
+		// override param by slot_type
+	char * param(const char * name);
+	const char * param(std::string& out, const char * name);
+	const char * param(std::string& out, const char * name, const char * def);
 
 		// Public methods that can be called from command handlers
 	int		retire_claim( bool reversible=false );	// Gracefully finish job and release claim
@@ -115,6 +144,8 @@ public:
     void	publishDeathTime( ClassAd* cap );
 	void	publishSlotAttrs( ClassAd* );
 	void	refreshSlotAttrs( void );
+	void	publishDynamicChildSummaries( ClassAd *cap);
+	void    rollupDynamicAttrs(ClassAd *cap, std::string &name) const;
 
 		// Load Average related methods
 	float	condor_load( void ) {return r_attr->condor_load();};
@@ -129,8 +160,8 @@ public:
 		// dprintf() functions add the CPU id to the header of each
 		// message for SMP startds (single CPU machines get no special
 		// header and it works just like regular dprintf())
-	void	dprintf( int, const char*, ... );
-	void	dprintf_va( int, const char*, va_list );
+	void	dprintf( int, const char*, ... ) const;
+	void	dprintf_va( int, const char*, va_list ) const;
 
 		// Helper functions to log that we're ignoring a command that
 		// came in while we were in an unexpected state, or while
@@ -175,6 +206,7 @@ public:
 	void	init_classad( void );		
 	void	refresh_classad( amask_t mask );	
 	void	reconfig( void );
+	void	publish_slot_config_overrides(ClassAd * cad);
 
 	void	update( void );		// Schedule to update the central manager.
 	void		do_update( void );			// Actually update the CM
@@ -264,9 +296,11 @@ public:
 	int				r_id;		// CPU id of this resource (int form)
 	int				r_sub_id;	// Sub id of this resource (int form)
 	char*			r_id_str;	// CPU id of this resource (string form)
+	char*			r_pair_name; // Name of the resource paired with this one, NULL is no pair (the default), may contain "#type" during the slot building process
 	AvailStats		r_avail_stats; // computes resource availability stats
 	int             prevLHF;
 	bool 			m_bUserSuspended;
+	bool			r_no_collector_updates;
 
 	int				type( void ) { return r_attr->type(); };
 
@@ -289,11 +323,26 @@ public:
 	void set_parent( Resource* rip );
     Resource* get_parent() { return m_parent; }
 
+	std::string makeChildClaimIds();
+	void add_dynamic_child(Resource *rip) { m_children.insert(rip); }
+	void remove_dynamic_child(Resource *rip) {m_children.erase(rip); }
+
+	static bool swap_claims(Resource* ripa, Resource* ripb);
+
 	std::list<int> *get_affinity_set() { return &m_affinity_mask;}
 private:
 	ResourceFeature m_resource_feature;
 
 	Resource*	m_parent;
+
+	// Only partitionable slots have children
+	
+    struct ResourceLess {
+        bool operator()(Resource *lhs, Resource *rhs) const {
+            return strcmp(lhs->r_name, rhs->r_name) < 0;
+        }
+    };
+	std::set<Resource *, ResourceLess> m_children;
 
 	IdDispenser* m_id_dispenser;
 

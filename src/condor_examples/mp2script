@@ -2,7 +2,7 @@
 
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2014, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -35,25 +35,24 @@ rm -f $CONDOR_CONTACT_FILE
 
 PATH=`condor_config_val libexec`/:$PATH
 
-# MPP needs a conf file, and it must be
-# 0700
+# mpd needs a conf file, and it must be
+# permissions 0700
 mkdir tmp
 MPD_CONF_FILE=`pwd`/tmp/mpd_conf_file
 export MPD_CONF_FILE
 
 ulimit -c 0
 
-# If you have a shared filesystem, maybe you
+# If you have a shared file system, maybe you
 # want to put the mpd.conf file in your home
 # directory
 
 echo "password=somepassword" > $MPD_CONF_FILE
 chmod 0700 $MPD_CONF_FILE
 
-# If on the head node, start mpd, get the port
-# it, and condor_chirp it back into the ad
-# so others can see
-# sshds run
+# If on the head node, start mpd, get the port and host,
+# and condor_chirp it back into the ClassAd
+# so the non-head nodes can find the head node.
 
 if [ $_CONDOR_PROCNO -eq 0 ]
 then
@@ -80,20 +79,28 @@ then
 		fi
 	done
 
-	## run the actual mpijob
-	mpiexec -n $_CONDOR_NPROCS $EXECUTABLE $@
+	## run the actual mpi job, which was the command line argument
+ 	## to the invocation of this shell script
+ 	mpiexec -n $_CONDOR_NPROCS $@
 	e=$?
 
 	mpdallexit
 	sleep 20
 	echo $e
 else
-	e=1
-	while [ $e -ne 0 ]
+	# If NOT the head node, acquire the host and port of 
+ 	# the head node
+ 	retries=0
+	host=UNDEFINED
+	while [ $host == "UNDEFINED" ]
 	do
 		host=`condor_chirp get_job_attr MPICH_HOST`
-		e=$?
 		sleep 2
+		retries=`expr $retries + 1`
+		if [ $retries -gt 100 ]; then
+                    echo "Too many retries, could not get mpd host from condor_chirp, giving up."
+                    exit 1
+                fi
 	done
 
 	port=`condor_chirp get_job_attr MPICH_PORT`

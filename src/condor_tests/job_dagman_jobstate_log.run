@@ -121,6 +121,9 @@ foreach $name (@outfiles) {
 	}
 }
 
+# Remove any existing rescue DAGs.
+runcmd("rm -f job_dagman_jobstate_log.dag.rescue*");
+
 $abnormal = sub 
 {
 	die "Want to see only submit, execute and successful completion\n";
@@ -197,7 +200,7 @@ $success = sub
 				$outindex++;
 				if ($outindex > $#outlines) {
 					$passed = 1;
-					break;
+					last;
 				}
 			} else {
 				CondorTest::debug("failed: \"extra\" output line $line\n");

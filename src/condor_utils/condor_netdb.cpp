@@ -349,7 +349,7 @@ condor_gethostname(char *name, size_t namelen) {
 			}
 
 			if (condor_connect(s, collector_addr)) {
-				perror("connect");
+				close(s);
 				dprintf(D_HOSTNAME,
 						"NO_DNS: Failed to bind socket, errno=%d (%s)\n",
 						errno, strerror(errno));
@@ -357,12 +357,14 @@ condor_gethostname(char *name, size_t namelen) {
 			}
 
 			if (condor_getsockname(s, addr)) {
+				close(s);
 				dprintf(D_HOSTNAME,
 						"NO_DNS: Failed to get socket name, errno=%d (%s)\n",
 						errno, strerror(errno));
 				return -1;
 			}
 
+			close(s);
 			MyString hostname = convert_ipaddr_to_hostname(addr);
 			if (hostname.Length() >= (int) namelen) {
 				return -1;

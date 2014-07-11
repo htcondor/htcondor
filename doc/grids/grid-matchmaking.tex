@@ -36,7 +36,7 @@ grid resource, which is then used by HTCondor to make matches.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 To submit a grid universe job intended for a single, specific
-\SubmitCmd{gt2} resource,
+\SubmitCmdNI{gt2} resource,
 the submit description file for the job explicitly specifies
 the resource:
 
@@ -46,7 +46,7 @@ grid_resource = gt2 grid.example.com/jobmanager-pbs
 \end{verbatim}
 \normalsize
 
-If there were multiple \SubmitCmd{gt2} resources that
+If there were multiple \SubmitCmdNI{gt2} resources that
 might be matched to the job,
 the submit description file changes:
 
@@ -74,7 +74,7 @@ must agree upon the name of the attribute.
 As a more complex example,
 consider a job that wants
 to run not only
-on a \SubmitCmd{gt2} resource,
+on a \SubmitCmdNI{gt2} resource,
 but on one that has the Bamboozle software installed.
 The complete submit description file might appear:
 
@@ -100,9 +100,9 @@ job's point of view).
 A grid resource that has one of these attributes defined,
 but not the other results in no match being made.
 
-Note that the entire value of \SubmitCmd{grid\_resource} comes from
+Note that the entire value of \SubmitCmdNI{grid\_resource} comes from
 the grid resource's ad. This means that the job can be matched with
-a resource of any type, not just \SubmitCmd{gt2}.
+a resource of any type, not just \SubmitCmdNI{gt2}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Advertising Grid Resources to HTCondor}
@@ -131,7 +131,7 @@ To advertise a grid site, place the attributes
 in a file.
 Here is a sample ClassAd that describes a grid resource
 that is capable of running a
-\SubmitCmd{gt2} job.
+\SubmitCmdNI{gt2} job.
 
 \footnotesize
 \begin{verbatim}
@@ -232,7 +232,7 @@ Requirements     = (TARGET.JobUniverse == 9)
 \end{verbatim}
 \normalsize
 This set of requirements state that any job is
-required to be for the \SubmitCmd{grid} universe.
+required to be for the \SubmitCmdNI{grid} universe.
 
 The attributes
 \footnotesize

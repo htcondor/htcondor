@@ -105,7 +105,7 @@ the submit description file becomes:
 \begin{verbatim}
   ####################
   #
-  # Example 1
+  # Example 2
   # Execute a single Java class,
   # not on a shared file system
   #
@@ -189,9 +189,9 @@ for the two ways of specifying files (\SubmitCmd{transfer\_input\_files}
 and \SubmitCmd{jar\_files}).
 
 If there are multiple JAR files,
-the \SubmitCmd{executable} command specifies the JAR file
+the \SubmitCmdNI{executable} command specifies the JAR file
 that contains the program's entry point.
-This file is also listed with the \SubmitCmd{jar\_files} command:
+This file is also listed with the \SubmitCmdNI{jar\_files} command:
 \begin{verbatim}
 executable = sortmerge.jar
 jar_files = sortmerge.jar,statemap.jar
@@ -231,7 +231,7 @@ With this option,
 the Java virtual machine discovers the main class to run 
 from the contents of the Manifest file,
 which is bundled within the JAR file.  
-HTCondor's \SubmitCmd{java} universe does not support this discovery,
+HTCondor's \SubmitCmdNI{java} universe does not support this discovery,
 so before submitting the job,
 the name of the main class must be identified.
 

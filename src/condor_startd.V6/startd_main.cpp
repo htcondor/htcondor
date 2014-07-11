@@ -258,6 +258,11 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( REQ_NEW_PROC, "REQ_NEW_PROC", 
 								  (CommandHandler)command_handler,
 								  "command_handler", 0, DAEMON );
+	if (param_boolean("ALLOW_SLOT_PAIRING", false)) {
+		daemonCore->Register_Command( SWAP_CLAIM_AND_ACTIVATION, "SWAP_CLAIM_AND_ACTIVATION",
+								  (CommandHandler)command_with_opts_handler,
+								  "command_handler", 0, DAEMON );
+	}
 
 		// These commands are special and need their own handlers
 		// READ permission commands
@@ -742,7 +747,8 @@ reaper(Service *, int pid, int status)
 		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d died on signal %d (%s)\n",
 				pid, WTERMSIG(status), daemonCore->GetExceptionString(status));
 	} else {
-		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d exited with status %d\n",
+		int d_stat = status ? D_FAILURE : D_ALWAYS;
+		dprintf(d_stat|D_ALWAYS, "Starter pid %d exited with status %d\n",
 				pid, WEXITSTATUS(status));
 	}
 

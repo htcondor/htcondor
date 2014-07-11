@@ -68,6 +68,11 @@ print "Initializing values from the environment\n";
 my $platform = $ENV{NMI_PLATFORM};
 my $mode = "regular"; # if workspace, try to do a workspace test
 
+if( ! $platform ) {
+	print( "NMI_PLATFORM was empty, trying SWAMP_PLATFORM...\n" );
+	$platform = "swamp:" . $ENV{ 'SWAMP_PLATFORM' };
+}
+
 print "ENV: NMI_PLATFORM = $platform\n";
 $platform || die "No platform to use, NOT submitting tests\n";
 

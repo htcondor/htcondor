@@ -105,7 +105,19 @@ CondorVersionInfo::~CondorVersionInfo()
  	if(myversion.OpSys) free(myversion.OpSys);
 }
 
-	
+
+int
+CondorVersionInfo::compare_versions(const CondorVersionInfo & other_version) const
+{
+	if ( other_version.myversion.Scalar < myversion.Scalar ) {
+		return -1;
+	}
+	if ( other_version.myversion.Scalar > myversion.Scalar ) {
+		return 1;
+	}
+	return 0;
+}
+
 int
 CondorVersionInfo::compare_versions(const char* VersionString1) const
 {

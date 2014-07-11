@@ -39,9 +39,11 @@
 #include "unicorejob.h"
 #include "condorjob.h"
 #include "infnbatchjob.h"
+#include "boincjob.h"
 #include "condor_version.h"
 
 #include "ec2job.h"
+#include "gcejob.h"
 
 #if !defined(WIN32)
 #  include "creamjob.h"
@@ -120,10 +122,10 @@ void RequestContactSchedd();
 void doContactSchedd();
 
 // handlers
-int ADD_JOBS_signalHandler( int );
-int REMOVE_JOBS_signalHandler( int );
+int ADD_JOBS_signalHandler( Service *, int );
+int REMOVE_JOBS_signalHandler( Service *, int );
 void CHECK_LEASES_signalHandler();
-int UPDATE_JOBAD_signalHandler( int );
+int UPDATE_JOBAD_signalHandler( Service *, int );
 
 
 static bool jobExternallyManaged(ClassAd * ad)
@@ -357,6 +359,14 @@ Init()
 	new_type->AdMatchFunc = EC2JobAdMatch;
 	new_type->CreateFunc = EC2JobCreate;
 	jobTypes.Append( new_type );
+
+	new_type = new JobType;
+	new_type->Name = strdup( "GCE" );
+	new_type->InitFunc = GCEJobInit;
+	new_type->ReconfigFunc = GCEJobReconfig;
+	new_type->AdMatchFunc = GCEJobAdMatch;
+	new_type->CreateFunc = GCEJobCreate;
+	jobTypes.Append( new_type );
 #endif
 	
 #if defined( LINUX )
@@ -383,6 +393,14 @@ Init()
 	new_type->ReconfigFunc = INFNBatchJobReconfig;
 	new_type->AdMatchFunc = INFNBatchJobAdMatch;
 	new_type->CreateFunc = INFNBatchJobCreate;
+	jobTypes.Append( new_type );
+
+	new_type = new JobType;
+	new_type->Name = strdup( "BOINC" );
+	new_type->InitFunc = BoincJobInit;
+	new_type->ReconfigFunc = BoincJobReconfig;
+	new_type->AdMatchFunc = BoincJobAdMatch;
+	new_type->CreateFunc = BoincJobCreate;
 	jobTypes.Append( new_type );
 
 	new_type = new JobType;
@@ -462,7 +480,7 @@ Reconfig()
 }
 
 int
-ADD_JOBS_signalHandler( int )
+ADD_JOBS_signalHandler( Service *, int )
 {
 	dprintf(D_FULLDEBUG,"Received ADD_JOBS signal\n");
 
@@ -475,7 +493,7 @@ ADD_JOBS_signalHandler( int )
 }
 
 int
-REMOVE_JOBS_signalHandler( int )
+REMOVE_JOBS_signalHandler( Service *, int )
 {
 	dprintf(D_FULLDEBUG,"Received REMOVE_JOBS signal\n");
 
@@ -495,7 +513,7 @@ REMOVE_JOBS_signalHandler( int )
 }
 
 int
-UPDATE_JOBAD_signalHandler( int )
+UPDATE_JOBAD_signalHandler( Service *, int )
 {
 	dprintf(D_FULLDEBUG,"Received UPDATE_JOBAD signal\n");
 	if ( !updateJobsSignaled ) {
@@ -884,26 +902,17 @@ contact_schedd_next_add_job:
 
 			} else if ( curr_status == REMOVED ) {
 
-				// If we don't know about the job, remove it immediately
-				// I don't think this can happen in the normal case,
-				// but I'm not sure.
+				// If we don't know about the job, act like we got an
+				// ADD_JOBS signal from the schedd the next time we
+				// connect, so that we'll create a Job object for it
+				// and decide how it needs to be handled.
+				// TODO The AddJobs and RemoveJobs queries shoule be
+				//   combined into a single query.
 				dprintf( D_ALWAYS, 
 						 "Don't know about removed job %d.%d. "
-						 "Deleting it immediately\n", procID.cluster,
-						 procID.proc );
-				// Log the removal of the job from the queue
-				WriteAbortEventToUserLog( next_ad );
-				// NOENT means the job doesn't exist.  Good enough for us.
-				rc = DestroyProc( procID.cluster, procID.proc );
-				if(rc == DESTROYPROC_ENOENT) {
-					dprintf(D_ALWAYS,"Gridmanager tried to destroy %d.%d twice.\n",procID.cluster,procID.proc);
-				}
-				if ( rc < 0 && rc != DESTROYPROC_ENOENT) {
-					failure_line_num = __LINE__;
-					delete next_ad;
-					commit_transaction = false;
-					goto contact_schedd_disconnect;
-				}
+						 "Will treat it as a new job to manage\n",
+						 procID.cluster, procID.proc );
+				addJobsSignaled = true;
 
 			} else {
 

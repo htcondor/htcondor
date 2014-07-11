@@ -38,7 +38,6 @@
 #include "condor_secman.h"
 #include "classad_merge.h"
 #include "daemon.h"
-#include "daemon_core_sock_adapter.h"
 #include "subsystem_info.h"
 #include "setenv.h"
 #include "ipv6_hostname.h"
@@ -904,7 +903,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	~SecManStartCommand() {
 		if( m_pending_socket_registered ) {
 			m_pending_socket_registered = false;
-			daemonCoreSockAdapter.decrementPendingSockets();
+			daemonCore->decrementPendingSockets();
 		}
 		if( m_private_key ) {
 			delete m_private_key;
@@ -928,7 +927,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 			// case automatically.
 		if( !m_pending_socket_registered ) {
 			m_pending_socket_registered = true;
-			daemonCoreSockAdapter.incrementPendingSockets();
+			daemonCore->incrementPendingSockets();
 		}
 	}
 
@@ -2302,7 +2301,7 @@ SecManStartCommand::WaitForSocketCallback()
 	MyString req_description;
 	req_description.formatstr("SecManStartCommand::WaitForSocketCallback %s",
 							m_cmd_description.Value());
-	int reg_rc = daemonCoreSockAdapter.Register_Socket(
+	int reg_rc = daemonCore->Register_Socket(
 		m_sock,
 		m_sock->peer_description(),
 		(SocketHandlercpp)&SecManStartCommand::SocketCallback,
@@ -2333,7 +2332,7 @@ SecManStartCommand::WaitForSocketCallback()
 int
 SecManStartCommand::SocketCallback( Stream *stream )
 {
-	daemonCoreSockAdapter.Cancel_Socket( stream );
+	daemonCore->Cancel_Socket( stream );
 
 		// NOTE: startCommand_inner() is responsible for checking
 		// if our deadline had expired.
@@ -2981,6 +2980,31 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %d %sseconds."
 			"\n", sesid, duration, expiration_time == 0 ? "(inf) " : "");
 
+	// now add entrys which map all the {<sinful_string>,<command>} pairs
+	// to the same key id (which is in the variable sesid)
+	dprintf(D_SECURITY, "SECMAN: now creating non-negotiated command mappings\n");
+
+	MyString valid_coms;
+	policy.LookupString(ATTR_SEC_VALID_COMMANDS, valid_coms);
+	StringList coms(valid_coms.Value());
+	char *p;
+
+	coms.rewind();
+	while ( (p = coms.next()) ) {
+		MyString keybuf;
+		keybuf.formatstr ("{%s,<%s>}", peer_sinful, p);
+
+		// NOTE: HashTable returns ZERO on SUCCESS!!!
+		if (command_map->insert(keybuf, sesid) == 0) {
+			// success
+			if (IsDebugVerbose(D_SECURITY)) {
+				dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.Value(), sesid);
+			}
+		} else {
+			dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf.Value());
+		}
+	}
+
 	if( IsDebugVerbose(D_SECURITY) ) {
 		if( exported_session_info ) {
 			dprintf(D_SECURITY,"Imported session attributes: %s\n",
@@ -3037,6 +3061,7 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_ENCRYPTION);
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_CRYPTO_METHODS);
 	sec_copy_attribute(policy,imp_policy,ATTR_SEC_SESSION_EXPIRES);
+	sec_copy_attribute(policy,imp_policy,ATTR_SEC_VALID_COMMANDS);
 
 	return true;
 }
@@ -3059,6 +3084,7 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_ENCRYPTION);
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_CRYPTO_METHODS);
 	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_SESSION_EXPIRES);
+	sec_copy_attribute(exp_policy,*policy,ATTR_SEC_VALID_COMMANDS);
 
 	session_info += "[";
 	exp_policy.ResetExpr();

@@ -26,6 +26,7 @@
 #include "condor_adtypes.h"
 #include "condor_system.h"
 #include "condor_ipverify.h"
+#include "condor_md.h"
 
 
 /*
@@ -49,8 +50,11 @@ class Condor_MD_MAC;
 #define PUT_FILE_MAX_BYTES_EXCEEDED -5
 #define GET_FILE_MAX_BYTES_EXCEEDED -5
 
+class BlockingModeGuard;
+
 class ReliSock : public Sock {
 	friend class Authentication;
+	friend class BlockingModeGuard;
 
 //	PUBLIC INTERFACE TO RELIABLE SOCKS
 //
@@ -70,6 +74,14 @@ public:
 
     ///
 	virtual int end_of_message();
+	int end_of_message_internal();
+
+		// If in non-blocking mode and EOM_nb returns 2,
+		// then this must be called until it finishes
+		// successfully (1) or fails (0); if this returns
+		// 2, then try again in the future.
+	int end_of_message_nonblocking();
+	int finish_end_of_message();
 
 	virtual bool peek_end_of_message();
 
@@ -119,9 +131,9 @@ public:
     ///
 	int listen();
     /// FALSE means this is an incoming connection
-	inline int listen(int p) { if (!bind(FALSE,p)) return FALSE; return listen(); }
+	int listen(condor_protocol proto, int port);
     /// FALSE means this is an incoming connection
-	inline int listen(char *s) { if (!bind(FALSE,s)) return FALSE; return listen(); }
+	int listen(char *s);
 	bool isListenSock() { return _state == sock_special && _special_state == relisock_listen; }
 
     ///
@@ -242,10 +254,15 @@ public:
 
     const char * isIncomingDataMD5ed();
 
+	int clear_backlog_flag() {bool state = m_has_backlog; m_has_backlog = false; return state;}
+	int clear_read_block_flag() {bool state = m_read_would_block; m_read_would_block = false; return state;}
 
 //	PROTECTED INTERFACE TO RELIABLE SOCKS
 //
 protected:
+
+	bool set_non_blocking(bool val) {bool state = m_non_blocking; m_non_blocking = val; return state;}
+	bool is_non_blocking() const {return m_non_blocking;}
 
         virtual bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId);
         virtual bool set_encryption_id(const char * keyId);
@@ -274,10 +291,14 @@ protected:
 
 	class RcvMsg {
 		
+		char m_partial_cksum[MAC_SIZE];
                 CONDOR_MD_MODE  mode_;
                 Condor_MD_MAC * mdChecker_;
 		ReliSock      * p_sock; //preserve parent pointer to use for condor_read/write
-		
+		bool		m_partial_packet; // A partial packet is stored.
+		size_t		m_remaining_read_length; // Length remaining on a partial packet
+		int		m_end; // The end status of the partial packet.
+		Buf		*m_tmp;
 	public:
 		RcvMsg();
                 ~RcvMsg();
@@ -293,11 +314,18 @@ protected:
                 CONDOR_MD_MODE  mode_;
                 Condor_MD_MAC * mdChecker_;
 		ReliSock      * p_sock;
+		Buf		*m_out_buf;
+		void stash_packet();
+
 	public:
 		SndMsg();
                 ~SndMsg();
 		Buf			buf;
 		int snd_packet(char const *peer_description, int, int, int);
+
+			// If there is a packet not flushed to the network, try to
+			// send it again.
+		int finish_packet(const char *peer_description, int sock, int timeout);
 
 		//function to support the use of condor_read /write
 		
@@ -323,9 +351,31 @@ protected:
 		// after connecting, request to be routed to this daemon
 	char *m_target_shared_port_id;
 
+	bool m_has_backlog;
+	bool m_read_would_block;
+	bool m_non_blocking;
+
 	virtual void setTargetSharedPortID( char const *id );
 	virtual bool sendTargetSharedPortID();
 	char const *getTargetSharedPortID() { return m_target_shared_port_id; }
+};
+
+class BlockingModeGuard {
+
+public:
+	BlockingModeGuard(ReliSock *parent, bool non_blocking)
+	 : m_parent(parent), m_mode(m_parent->set_non_blocking(non_blocking))
+	{
+	}
+
+	~BlockingModeGuard()
+	{
+		m_parent->set_non_blocking(m_mode);
+	}
+
+private:
+	ReliSock *m_parent;
+	bool m_mode;
 };
 
 #endif

@@ -74,8 +74,14 @@ ClassAdWrapper *parseOld(boost::python::object input)
 }
 
 OldClassAdIterator::OldClassAdIterator(boost::python::object source)
-    : m_done(false), m_ad(new ClassAdWrapper()), m_source(source)
-{}
+    : m_done(false), m_source_has_next(py_hasattr(source, "next")),
+      m_ad(new ClassAdWrapper()), m_source(source)
+{
+    if (!m_source_has_next && !PyIter_Check(m_source.ptr()))
+    {
+        THROW_EX(TypeError, "Source object is not iterable")
+    }
+}
 
 boost::shared_ptr<ClassAdWrapper>
 OldClassAdIterator::next()
@@ -87,7 +93,17 @@ OldClassAdIterator::next()
         boost::python::object next_obj;
         try
         {
-            next_obj = m_source.attr("next")();
+            if (m_source_has_next)
+            {
+                next_obj = m_source.attr("next")();
+            }
+            else
+            {
+                PyObject *next_obj_ptr = m_source.ptr()->ob_type->tp_iternext(m_source.ptr());
+                if (next_obj_ptr == NULL) {THROW_EX(StopIteration, "All input ads processed");}
+                next_obj = boost::python::object(boost::python::handle<>(next_obj_ptr));
+		if (PyErr_Occurred()) throw boost::python::error_already_set();
+            }
         }
         catch (const boost::python::error_already_set&)
         {
@@ -127,7 +143,7 @@ OldClassAdIterator::next()
 
 OldClassAdIterator parseOldAds(boost::python::object input)
 {
-    boost::python::object input_iter = (PyString_Check(input.ptr())) ?
+    boost::python::object input_iter = (PyString_Check(input.ptr()) || PyUnicode_Check(input.ptr())) ?
           input.attr("splitlines")().attr("__iter__")()
         : input.attr("__iter__")();
 
@@ -195,4 +211,68 @@ parseAdsFile(FILE * file)
 {
     return ClassAdFileIterator(file);
 }
+
+// Implement the iterator protocol.
+static PyObject *
+obj_iternext(PyObject *self)
+{
+        try
+        {
+            boost::python::object obj(boost::python::borrowed(self));
+            if (!py_hasattr(obj, "next")) THROW_EX(TypeError, "instance has no next() method");
+            boost::python::object result = obj.attr("next")();
+            return boost::python::incref(result.ptr());
+        }
+        catch (...)
+        {
+            if (PyErr_ExceptionMatches(PyExc_StopIteration)) {
+                PyErr_Clear();
+                return NULL;
+            }
+            boost::python::handle_exception();
+            return NULL;
+        }
+}
+
+
+static PyObject *
+obj_getiter(PyObject* self)
+{
+    boost::python::object obj(boost::python::borrowed(self));
+    if (py_hasattr(obj, "__iter__"))
+    {
+        try
+        {
+            boost::python::object my_iter = obj.attr("__iter__")();
+            if (!PyIter_Check(my_iter.ptr())) {
+                PyErr_Format(PyExc_TypeError,
+                             "__iter__ returned non-iterator "
+                             "of type '%.100s'",
+                             my_iter.ptr()->ob_type->tp_name);
+                return NULL;
+            }
+            return boost::python::incref(my_iter.ptr());
+        }
+        catch (...)
+        {
+            boost::python::handle_exception();
+            return NULL;
+        }
+    }
+    else if (py_hasattr(obj, "__getitem__"))
+    {
+        return PySeqIter_New(self);
+    }
+    PyErr_SetString(PyExc_TypeError, "iteration over non-sequence");
+    return NULL;
+}
+
+boost::python::object
+OldClassAdIterator::pass_through(boost::python::object const& o)
+{
+    PyTypeObject * boost_class = o.ptr()->ob_type;
+    if (!boost_class->tp_iter) { boost_class->tp_iter = obj_getiter; }
+    boost_class->tp_iternext = obj_iternext;
+    return o;
+};
 

@@ -65,7 +65,7 @@ one line summary of information as follows:
         X = removed,
         < = transferring input (or queued to do so), and
         > = transferring output (or queued to do so). 
-\item[PRI] User specified priority of the job, ranges from -20 to +20, with 
+\item[PRI] User specified priority of the job, displayed as an integer, with 
 	higher numbers corresponding to greater priority. 
 \item[SIZE] The value of job ClassAd attribute \Attr{MemoryUsage} (in Mbytes),
 when the attribute is defined, and \Attr{ImageSize} (in Kbytes), otherwise. 
@@ -224,8 +224,8 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     of the DAG. }
   \OptItem{\Opt{-expert}}{(output option) Display shorter error messages. }
   \OptItem{\Opt{-globus}}{(output option) Get information only about 
-    jobs submitted to grid resources described as \SubmitCmd{gt2}
-    or \SubmitCmd{gt5}.}
+    jobs submitted to grid resources described as \SubmitCmdNI{gt2}
+    or \SubmitCmdNI{gt5}.}
   \OptItem{\Opt{-goodput}}{(output option) Display job goodput statistics.}
   \OptItem{\Opt{-help [Universe | State]}}{(output option) Print usage info, 
     and additionally print job universes or job states.}

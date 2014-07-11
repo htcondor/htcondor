@@ -132,10 +132,27 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_DELEGATED_PROXY_EXPIRATION );
 	common_job_queue_attrs->insert( ATTR_BLOCK_WRITE_KBYTES );
 	common_job_queue_attrs->insert( ATTR_BLOCK_READ_KBYTES );
+	common_job_queue_attrs->insert( ATTR_BLOCK_WRITE_BYTES );
+	common_job_queue_attrs->insert( ATTR_BLOCK_READ_BYTES );
+	common_job_queue_attrs->insert( ATTR_BLOCK_WRITES );
+	common_job_queue_attrs->insert( ATTR_BLOCK_READS );
+    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READ_KBYTES );
+    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITE_KBYTES );
+    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READ_BYTES );
+    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITE_BYTES );
+    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READS );
+    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITES );
+    common_job_queue_attrs->insert( "StatsLastUpdateTimeStarter" );
+    common_job_queue_attrs->insert( "StatsLifetimeStarter" );
+    common_job_queue_attrs->insert( "RecentStatsLifetimeStarter" );
+    common_job_queue_attrs->insert( "RecentWindowMaxStarter" );
+    common_job_queue_attrs->insert( "RecentStatsTickTimeStarter" );
 	common_job_queue_attrs->insert( ATTR_JOB_VM_CPU_UTILIZATION );
 	common_job_queue_attrs->insert( ATTR_TRANSFERRING_INPUT );
 	common_job_queue_attrs->insert( ATTR_TRANSFERRING_OUTPUT );
 	common_job_queue_attrs->insert( ATTR_TRANSFER_QUEUED );
+	common_job_queue_attrs->insert( ATTR_JOB_TRANSFERRING_OUTPUT );
+	common_job_queue_attrs->insert( ATTR_JOB_TRANSFERRING_OUTPUT_TIME );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );

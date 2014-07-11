@@ -127,17 +127,14 @@ if ( LINUX AND NOT CONDOR_PACKAGE_BUILD )
 	install( CODE "execute_process(COMMAND chmod -R u+w ${CMAKE_INSTALL_PREFIX}/lib/condor/)" )
 endif()
 
-if (CURL_FOUND)
-  if (WINDOWS)
-    condor_exe( config_fetch "file_fetch.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
-  else()
-    condor_exe( config_fetch "file_fetch.cpp" ${C_LIBEXEC} "${CURL_FOUND};${CONDOR_TOOL_LIBS}" OFF )
-  endif()
-endif()
 
 ############################################################
 # GPU Support
 ############################################################
 if ( LINUX AND HAVE_LIBDL AND HAVE_DLFCN_H AND HAVE_DLOPEN )
 	condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
+else ()
+	if (WINDOWS)
+		condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF )
+	endif ()
 endif()

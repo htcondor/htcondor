@@ -27,6 +27,8 @@
 
 extern ppOption				ppStyle;
 extern AttrListPrintMask 	pm;
+extern printmask_headerfooter_t pmHeadFoot;
+extern bool using_print_format; // hack for now so we can get standard totals when using -print-format
 extern List<const char>     pm_head; // The list of headings for the mask entries
 extern int					wantOnlyTotals;
 extern bool wide_display; // when true, don't truncate field data
@@ -149,6 +151,42 @@ static void ppSetColumn(const char * label, const char * attr, const char * fmt,
 	pm.registerFormat(fmt, width, opts, attr, alt);
 }
 
+#if 1
+
+static void ppSetColumn(const char * label, const char * attr, const CustomFormatFn & fmt, int width, bool truncate = true, const char * alt = NULL)
+{
+	pm_head.Append(label ? label : attr);
+
+	int opts = FormatOptionAutoWidth;
+	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
+	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
+
+	if (width == 11 && fmt.IsNumber() && (fmt.Is(formatElapsedTime) || fmt.Is(formatRealTime))) {
+		opts |= FormatOptionNoPrefix;
+		width = 12;
+	}
+
+	char altq[22];
+	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
+
+	pm.registerFormat(NULL, width, opts, fmt, attr, alt);
+}
+
+static void ppSetColumn(const char * label, const char * attr, const CustomFormatFn & fmt, const char * print, int width, bool truncate = true, const char * alt = NULL)
+{
+	pm_head.Append(label ? label : attr);
+
+	int opts = FormatOptionAutoWidth;
+	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
+	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
+
+	char altq[22];
+	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
+
+	pm.registerFormat(print, width, opts, fmt, attr, alt);
+}
+
+#else
 
 static void ppSetColumn(const char * label, const char * attr, IntCustomFmt fmt, int width, bool truncate = true, const char * alt = NULL)
 {
@@ -196,6 +234,7 @@ static void ppSetColumn(const char * label, const char * attr, FloatCustomFmt fm
 
 	pm.registerFormat(print, width, opts, fmt, attr, alt);
 }
+#endif
 
 static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 {
@@ -204,7 +243,11 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 		char * tmp = pm.display(ad, NULL);
 		delete [] tmp;
 	}
-	pm.display_Headings(file, pm_head);
+	if (pm.has_headings()) {
+		pm.display_Headings(file);
+	} else {
+		pm.display_Headings(file, pm_head);
+	}
 	if (pszExtra)
 		printf("%s", pszExtra);
 }
@@ -212,17 +255,18 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 void
 prettyPrint (ClassAdList &adList, TrackTotals *totals)
 {
+	ppOption pps = using_print_format ? PP_CUSTOM : ppStyle;
 	ClassAd	*ad;
 	int     classad_index;
 	int     last_classad_index;
-	bool    fPrintHeadings = pm_head.Length() > 0;
+	bool    fPrintHeadings = pm.has_headings() || (pm_head.Length() > 0);
 
 	classad_index = 0;
 	last_classad_index = adList.Length() - 1;
 	adList.Open();
 	while ((ad = adList.Next())) {
 		if (!wantOnlyTotals) {
-			switch (ppStyle) {
+			switch (pps) {
 			  case PP_STARTD_NORMAL:
 				if (absentMode) {
 					printStartdAbsent (ad, (classad_index == 0));
@@ -308,7 +352,12 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				if (fPrintHeadings) {
 					char * tmp = pm.display(ad, targetAd);
 					delete [] tmp;
-					pm.display_Headings(stdout, pm_head);
+					if (pm.has_headings()) {
+						if ( ! (pmHeadFoot & HF_NOHEADER))
+							pm.display_Headings(stdout);
+					} else {
+						pm.display_Headings(stdout, pm_head);
+					}
 					fPrintHeadings = false;
 				}
 				printCustom (ad);
@@ -331,7 +380,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	// if there are no ads to print, but the user wanted XML output,
 	// then print out the XML header and footer, so that naive XML
 	// parsers won't get confused.
-	if ( PP_XML == ppStyle && 0 == classad_index ) {
+	if ( PP_XML == pps && 0 == classad_index ) {
 		printXML (NULL, true, true);
 	}
 
@@ -1187,7 +1236,7 @@ These are actually contained in the ClassAd.
 */
 
 const char *
-formatAdType ( char * type, AttrList *, Formatter &)
+formatAdType (const char * type, AttrList *, Formatter &)
 {
 	static char temp[19];
 	if ( ! type || ! type[0]) return "None";
@@ -1353,3 +1402,28 @@ formatRealTime( int t , AttrList * , Formatter &)
 {
 	return format_time( t );
 }
+
+/*
+# default condor_status output
+SELECT
+   Name       AS Name     WIDTH -18 TRUNCATE
+   OpSys      AS OpSys    WIDTH -10
+   Arch       AS Arch     WIDTH -6
+   State      AS State    WIDTH -9
+   Activity   AS Activity WIDTH -8
+   LoadAvg    AS LoadAv             PRINTAS LOAD_AVG
+   Memory     AS Mem                PRINTF "%4d"
+   EnteredCurrentActivity AS "  ActvtyTime" NOPREFIX PRINTAS ACTIVITY_TIME
+SUMMARY STANDARD
+*/
+
+// !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
+static const CustomFormatFnTableItem LocalPrintFormats[] = {
+	{ "ACTIVITY_TIME", NULL, formatActivityTime, ATTR_LAST_HEARD_FROM "\0" ATTR_MY_CURRENT_TIME "\0"  },
+	{ "DATE",         NULL, formatRealDate, NULL },
+	{ "ELAPSED_TIME", ATTR_LAST_HEARD_FROM, formatElapsedTime, ATTR_LAST_HEARD_FROM "\0" },
+	{ "LOAD_AVG",     ATTR_LOAD_AVG, formatLoadAvg, NULL },
+	{ "TIME",         ATTR_KEYBOARD_IDLE, formatRealTime, NULL },
+};
+static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
+const CustomFormatFnTable * getCondorStatusPrintFormats() { return &LocalPrintFormatsTable; }

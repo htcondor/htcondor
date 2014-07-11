@@ -281,6 +281,25 @@ our %submit_info = (
 	},
 
 	##########################################################################
+	# Platform RHEL 7 on x86_64
+	##########################################################################
+	'x86_64_RedHat7'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+			},
+			'prereqs'	=> [ ],
+			'xtests'	=>	undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
 	# Platform RedHat and SL
 	##########################################################################
 	'x86_64_RedHat6'	=> {
@@ -306,6 +325,9 @@ our %submit_info = (
 	'x86_64_rhap_6.7'	=> 'x86_64_RedHat6',
 	'x86_64_rhap_6.8'	=> 'x86_64_RedHat6',
 	'x86_64_rhap_6.9'	=> 'x86_64_RedHat6',
+
+	# Add the SWAMP's (temporary) platform name
+	'swamp:rhel-6.4-64'	=> 'x86_64_RedHat6',
 
 	# for now SL6 is the same as RedHat6
 	'x86_64_SL6'	=> 'x86_64_RedHat6',
@@ -544,6 +566,9 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+
+	# Add the SWAMP's (temporary) platform name
+	'swamp:ubuntu-12.04-64'	=> 'x86_64_Ubuntu12',
 	
 	##########################################################################
 	# Platform openSUSE

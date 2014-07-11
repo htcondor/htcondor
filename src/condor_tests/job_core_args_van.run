@@ -110,9 +110,12 @@ my $ExitSuccess = sub {
 	my $i;
 	for(my $i = 0; $i < scalar(@args_reqd); $i++) {
 		CondorTest::debug("Checking $args_reqd[$i]...\n",$debuglevel);
+		print "checking Nth arg $i:request<$args_reqd[$i]>found<$args_found[$i]>\n";
+		CondorUtils::fullchomp($args_found[$i]);
 		if($args_reqd[$i] ne $args_found[$i]) 
 		{
 			my $adjust = exceptadjust($args_reqd[$i]); # translate escapes
+			print "After adjust:<$adjust>\n";
 			if($adjust ne $args_found[$i])
 			{
 				print "bad\n";

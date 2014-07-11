@@ -28,7 +28,7 @@ numerous.  They are listed here in alphabetical order by category.
 List of arguments to be supplied
 to the executable as part of the command line.
 
-In the \SubmitCmd{java} universe, the first
+In the \SubmitCmdNI{java} universe, the first
 argument must be the name of the class containing \Code{main}.
 
 There are two permissible formats for specifying arguments,
@@ -223,10 +223,10 @@ two=2
 three="quotes have no 'special' meaning"
 \end{verbatim}
 
-If the environment is set with the \Opt{environment} command \emph{and}
-\Opt{getenv} is also set to true, values specified with
-\Opt{environment} override values in the submitter's environment
-(regardless of the order of the \Opt{environment} and \Opt{getenv}
+If the environment is set with the \SubmitCmd{environment} command \emph{and}
+\SubmitCmd{getenv} is also set to true, values specified with
+\SubmitCmdNI{environment} override values in the submitter's environment
+(regardless of the order of the \SubmitCmdNI{environment} and \SubmitCmdNI{getenv}
 commands).
 
 
@@ -290,7 +290,7 @@ argument must be a compiled \File{.class} file.
 \index{submit commands!getenv}
 \label{man-condor-submit-getenv}
 \item[getenv = $<$True \Bar\ False$>$] 
-If \SubmitCmd{getenv} is set to
+If \SubmitCmdNI{getenv} is set to
 \index{environment variables!copying current environment}
 \Expr{True}, then \Condor{submit} will copy all of the user's current
 shell environment variables at the time of job submission into the job
@@ -302,10 +302,10 @@ variables that the user had at submit time. Defaults to \Expr{False}.
 %submit your job, and you will have to use the ``Environment'' setting
 %described below, instead.
 
-If the environment is set with the \Opt{environment} command \emph{and}
-\Opt{getenv} is also set to true, values specified with
-\Opt{environment} override values in the submitter's environment
-(regardless of the order of the \Opt{environment} and \Opt{getenv}
+If the environment is set with the \SubmitCmdNI{environment} command \emph{and}
+\SubmitCmdNI{getenv} is also set to true, values specified with
+\SubmitCmdNI{environment} override values in the submitter's environment
+(regardless of the order of the \SubmitCmdNI{environment} and \SubmitCmdNI{getenv}
 commands).
 
 
@@ -496,34 +496,34 @@ one submit description file.
 Specifies which HTCondor universe to use when running this job.  The HTCondor
 universe specifies an HTCondor execution environment.
 
-The \SubmitCmd{vanilla} universe is the default (except where the
+The \SubmitCmdNI{vanilla} universe is the default (except where the
 configuration variable \Macro{DEFAULT\_UNIVERSE} defines it
 otherwise), and is an execution environment for jobs which do not
 use HTCondor's mechanisms for taking checkpoints;
 these are ones that have not been linked with the HTCondor libraries.  
-Use the \SubmitCmd{vanilla} universe to submit shell scripts to HTCondor.
+Use the \SubmitCmdNI{vanilla} universe to submit shell scripts to HTCondor.
 
-The \SubmitCmd{standard} universe tells HTCondor that this job has been
+The \SubmitCmdNI{standard} universe tells HTCondor that this job has been
 re-linked via \Condor{compile} with the HTCondor libraries and therefore
 supports taking checkpoints and remote system calls.
 
-The \SubmitCmd{scheduler} universe is for a job that is to run on the
+The \SubmitCmdNI{scheduler} universe is for a job that is to run on the
 machine where the job is submitted.
 This universe is intended for a job that acts as a metascheduler
 and will not be preempted.
 
-The \SubmitCmd{local} universe is for a job that is to run on the
+The \SubmitCmdNI{local} universe is for a job that is to run on the
 machine where the job is submitted.
 This universe runs the job immediately and will not be preempt the job.
 
-The \SubmitCmd{grid} universe forwards the job to an external job
+The \SubmitCmdNI{grid} universe forwards the job to an external job
 management system.
-Further specification of the \SubmitCmd{grid} universe is done with the
+Further specification of the \SubmitCmdNI{grid} universe is done with the
 \SubmitCmd{grid\_resource} command.
 
-The \SubmitCmd{java} universe is for programs written to the Java Virtual Machine.
+The \SubmitCmdNI{java} universe is for programs written to the Java Virtual Machine.
 
-The \SubmitCmd{vm} universe facilitates the execution of a virtual
+The \SubmitCmdNI{vm} universe facilitates the execution of a virtual
 machine.
 
 \end{description} 
@@ -642,11 +642,15 @@ Characters may be appended to a numerical value to indicate units.
 %%%%%%%%%%%%%%%%%%%
 
 \index{submit commands!request\_<name>}
+\index{submit commands!request\_GPUs}
+\index{GPUs!requesting GPUs for a job}
 \label{man-condor-submit-request-name}
 \item[request\_<name> = $<$quantity$>$] 
 The required amount of the custom machine resource 
 identified by \Expr{<name>} that this job needs.
 The custom machine resource is defined in the machine's configuration.
+Machines that have available GPUs will define \Expr{<name>}
+to be \Expr{GPUs}.
 
 %%%%%%%%%%%%%%%%%%%
 %% requirements
@@ -966,7 +970,7 @@ ignored on Windows machines.
 \item[transfer\_executable = $<$True \Bar\ False$>$]
 This command is applicable to jobs submitted to the grid
 and vanilla universes.
-If \SubmitCmd{transfer\_executable} is set to
+If \SubmitCmdNI{transfer\_executable} is set to
 \Expr{False}, then HTCondor looks for the executable on the remote machine, and
 does not transfer the executable over.
 This is useful for an already pre-staged 
@@ -1031,7 +1035,7 @@ the submit machine.
 If there are multiple files, they must be delimited with commas.
 
 For HTCondor-C jobs and all other non-grid universe jobs,
-if \SubmitCmd{transfer\_output\_files} is not specified,
+if \SubmitCmdNI{transfer\_output\_files} is not specified,
 HTCondor will automatically transfer back all files in the job's
 temporary working directory which have been
 modified or created by the job.  Subdirectories are not scanned for
@@ -1042,10 +1046,10 @@ also be explicitly listed.
 Another reason to explicitly list output files is for a job that creates
 many files, and the user wants only a subset transferred back.
 
-For grid universe jobs other than with grid type \SubmitCmd{condor},
+For grid universe jobs other than with grid type \SubmitCmdNI{condor},
 to have files other than standard output and standard error transferred
 from the execute machine back to the submit machine,
-do use \SubmitCmd{transfer\_output\_files}, listing
+do use \SubmitCmdNI{transfer\_output\_files}, listing
 all files to be transferred.
 These files are found on the execute machine in the
 working directory of the job.
@@ -1140,7 +1144,7 @@ automatically sent back out again as input files if the job restarts.
 \index{submit commands!hold}
 \label{man-condor-submit-hold}
 \item[hold = $<$True \Bar\ False$>$] 
-If \SubmitCmd{hold} is set to
+If \SubmitCmdNI{hold} is set to
 \Expr{True}, then the submitted job will be placed into the Hold state.
 Jobs in the Hold state will not run until released by \Condor{release}.
 Defaults to \Expr{False}.
@@ -1215,8 +1219,8 @@ This expression specifies the number of seconds to delay after starting up
 this job before the next job is started.  The maximum
 allowed delay is specified by the HTCondor configuration variable
 \Macro{MAX\_NEXT\_JOB\_START\_DELAY}, which defaults to 10 minutes.
-This command does not apply to \SubmitCmd{scheduler}
-or \SubmitCmd{local} universe jobs.
+This command does not apply to \SubmitCmdNI{scheduler}
+or \SubmitCmdNI{local} universe jobs.
 
 This command has been historically used to implement a form
 of job start throttling from the job submitter's perspective.
@@ -1735,11 +1739,23 @@ conditions that were present when the job checkpointed.
 \index{submit commands!batch\_queue}
 \label{condor-submit-batch-queue}
 \item[batch\_queue = $<$queuename$>$]
-Used for \SubmitCmd{pbs}, \SubmitCmd{lsf}, and \SubmitCmd{sge} 
+Used for \SubmitCmdNI{pbs}, \SubmitCmdNI{lsf}, and \SubmitCmdNI{sge} 
 grid universe jobs.
 Specifies the name of the PBS/LSF/SGE job queue into which the job should
 be submitted.
 If not specified, the default queue is used.
+
+%%%%%%%%%%%%%%%%%%%
+%% boinc_authenticator_file
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!boinc\_authenticator\_file}
+\label{condor-submit-boinc-authenticator-file}
+\item[boinc\_authenticator\_file = $<$pathname$>$]
+For grid type \SubmitCmdNI{boinc} jobs, 
+specifies a path and file name of the authorization file that grants
+permission for HTCondor to use the BOINC service.
+There is no default value when not specified.
 
 %%%%%%%%%%%%%%%%%%%
 %% cream_attributes
@@ -1781,7 +1797,7 @@ because in that case the job proxy is copied rather than delegated.
 \index{submit commands!deltacloud\_hardware\_profile}
 \label{condor-submit-deltacloud-hardware-profile}
 \item[deltacloud\_hardware\_profile = $<$Deltacloud profile name$>$]
-Used for \SubmitCmd{deltacloud} jobs.
+Used for \SubmitCmdNI{deltacloud} jobs.
 An optional identifier for the type of VM desired. If not provided,
 a service-defined default is used.
 
@@ -1792,7 +1808,7 @@ a service-defined default is used.
 \index{submit commands!deltacloud\_hardware\_profile\_cpu}
 \label{condor-submit-deltacloud-hardware-profile-cpu}
 \item[deltacloud\_hardware\_profile\_cpu = $<$cpu details$>$]
-Used for \SubmitCmd{deltacloud} jobs.
+Used for \SubmitCmdNI{deltacloud} jobs.
 An optional description of the CPUs desired for the VM, overriding
 the selected hardware profile.
 
@@ -1803,7 +1819,7 @@ the selected hardware profile.
 \index{submit commands!deltacloud\_hardware\_profile\_memory}
 \label{condor-submit-deltacloud-hardware-profile-memory}
 \item[deltacloud\_hardware\_profile\_memory = $<$memory details$>$]
-Used for \SubmitCmd{deltacloud} jobs.
+Used for \SubmitCmdNI{deltacloud} jobs.
 An optional description of the memory (RAM) desired for the VM, overriding
 the selected hardware profile.
 
@@ -1814,7 +1830,7 @@ the selected hardware profile.
 \index{submit commands!deltacloud\_hardware\_profile\_storage}
 \label{condor-submit-deltacloud-hardware-profile-storage}
 \item[deltacloud\_hardware\_profile\_storage = $<$storage details$>$]
-Used for \SubmitCmd{deltacloud} jobs.
+Used for \SubmitCmdNI{deltacloud} jobs.
 An optional description of the storage (disk) desired for the VM, overriding
 the selected hardware profile.
 
@@ -1825,7 +1841,7 @@ the selected hardware profile.
 \index{submit commands!deltacloud\_image\_id}
 \label{condor-submit-deltacloud-image-id}
 \item[deltacloud\_image\_id = $<$Deltacloud image ID$>$]
-Used for \SubmitCmd{deltacloud} jobs.
+Used for \SubmitCmdNI{deltacloud} jobs.
 Identifier of the VM image to run.
 
 %%%%%%%%%%%%%%%%%%%
@@ -1835,7 +1851,7 @@ Identifier of the VM image to run.
 \index{submit commands!deltacloud\_keyname}
 \label{condor-submit-deltacloud-keyname}
 \item[deltacloud\_keyname = $<$Deltacloud key name$>$]
-Used for \SubmitCmd{deltacloud} jobs.
+Used for \SubmitCmdNI{deltacloud} jobs.
 Identifier of the SSH key pair that should be used to allow remote login
 to the running instance. The key pair needs to be created before
 submission.
@@ -1847,7 +1863,7 @@ submission.
 \index{submit commands!deltacloud\_password\_file}
 \label{condor-submit-deltacloud-password-file}
 \item[deltacloud\_password\_file = $<$pathname$>$]
-Used for \SubmitCmd{deltacloud} jobs.
+Used for \SubmitCmdNI{deltacloud} jobs.
 Path and file name of a file containing the secret key to be used to
 authenticate with a Deltacloud service.
 
@@ -1858,7 +1874,7 @@ authenticate with a Deltacloud service.
 \index{submit commands!deltacloud\_realm\_id}
 \label{condor-submit-deltacloud-realm-id}
 \item[deltacloud\_realm\_id = $<$Deltacloud realm ID$>$]
-Used for \SubmitCmd{deltacloud} jobs.
+Used for \SubmitCmdNI{deltacloud} jobs.
 An optional identifier specifying which of multiple locations within a
 cloud service should be used to run the VM. If not provided, a
 service-selected default is used.
@@ -1870,7 +1886,7 @@ service-selected default is used.
 \index{submit commands!deltacloud\_user\_data}
 \label{condor-submit-deltacloud-user-data}
 \item[deltacloud\_user\_data = $<$data$>$]
-Used for \SubmitCmd{deltacloud} jobs.
+Used for \SubmitCmdNI{deltacloud} jobs.
 A string, representing a block of data that can be accessed 
 by the virtual machine job inside the cloud service.
 
@@ -1881,7 +1897,7 @@ by the virtual machine job inside the cloud service.
 \index{submit commands!deltacloud\_username}
 \label{condor-submit-deltacloud-username}
 \item[deltacloud\_username = $<$Deltacloud username$>$]
-Used for \SubmitCmd{deltacloud} jobs.
+Used for \SubmitCmdNI{deltacloud} jobs.
 The user name to be used to authenticate with a Deltacloud service.
 
 %%%%%%%%%%%%%%%%%%%
@@ -1891,7 +1907,7 @@ The user name to be used to authenticate with a Deltacloud service.
 \index{submit commands!ec2\_access\_key\_id}
 \label{condor-submit-ec2-access-key-id}
 \item[ec2\_access\_key\_id = $<$pathname$>$]
-For grid type \SubmitCmd{ec2} jobs,
+For grid type \SubmitCmdNI{ec2} jobs,
 identifies the file containing the access key.  
 
 %%%%%%%%%%%%%%%%%%%
@@ -1901,7 +1917,7 @@ identifies the file containing the access key.
 \index{submit commands!ec2\_ami\_id}
 \label{condor-submit-ec2-ami-id}
 \item[ec2\_ami\_id = $<$EC2 xMI ID$>$]
-For grid type \SubmitCmd{ec2} jobs, identifies the machine image.
+For grid type \SubmitCmdNI{ec2} jobs, identifies the machine image.
 Services compatible with the EC2 Query API may refer to these
 with abbreviations other than \Expr{AMI},
 for example \Expr{EMI} is valid for Eucalyptus.
@@ -1913,7 +1929,7 @@ for example \Expr{EMI} is valid for Eucalyptus.
 \index{submit commands!ec2\_availability\_zone}
 \label{condor-submit-ec2-availability-zone}
 \item[ec2\_availability\_zone = $<$zone name$>$]
-For grid type \SubmitCmd{ec2} jobs, 
+For grid type \SubmitCmdNI{ec2} jobs, 
 specifies the Availability Zone that the instance should be run in. 
 This command is optional, unless \SubmitCmd{ec2\_ebs\_volumes} is set.
 As an example, one current zone is \Expr{us-east-1b}.
@@ -1925,7 +1941,7 @@ As an example, one current zone is \Expr{us-east-1b}.
 \index{submit commands!ec2\_ebs\_volumes}
 \label{condor-submit-ec2-ebs-volumes}
 \item[ec2\_ebs\_volumes = $<$ebs name$>$:$<$device name$>$,$<$ebs name$>$:$<$device name$>$,\Dots]
-For grid type \SubmitCmd{ec2} jobs,
+For grid type \SubmitCmdNI{ec2} jobs,
 optionally specifies a list of Elastic Block Store (EBS)
 volumes to be made available to the instance and the device names they
 should have in the instance.
@@ -1937,7 +1953,7 @@ should have in the instance.
 \index{submit commands!ec2\_elastic\_ip}
 \label{condor-submit-ec2-elastic-id}
 \item[ec2\_elastic\_ip = $<$elastic IP address$>$]
-For grid type \SubmitCmd{ec2} jobs,
+For grid type \SubmitCmdNI{ec2} jobs,
 and optional specification of an Elastic IP address 
 that should be assigned to this instance.
 
@@ -1948,7 +1964,7 @@ that should be assigned to this instance.
 \index{submit commands!ec2\_instance\_type}
 \label{condor-submit-ec2-instance-type}
 \item[ec2\_instance\_type = $<$instance type$>$]
-For grid type \SubmitCmd{ec2} jobs, identifies the instance type.
+For grid type \SubmitCmdNI{ec2} jobs, identifies the instance type.
 Different services may offer different instance types,
 so no default value is set.
 
@@ -1958,7 +1974,7 @@ so no default value is set.
 
 \index{submit commands!ec2\_keypair}
 \item[ec2\_key\_pair = $<$ssh key-pair name$>$]
-For grid type \SubmitCmd{ec2} jobs, 
+For grid type \SubmitCmdNI{ec2} jobs, 
 specifies the name of an SSH key-pair that is already registered
 with the EC2 service.
 The associated private key can be used to \Prog{ssh} into the
@@ -1970,7 +1986,7 @@ virtual machine once it is running.
 
 \index{submit commands!ec2\_keypair\_file}
 \item[ec2\_key\_pair\_file = $<$pathname$>$]
-For grid type \SubmitCmd{ec2} jobs, 
+For grid type \SubmitCmdNI{ec2} jobs, 
 specifies the complete path and file name of a file into which 
 HTCondor will write an SSH key for use with ec2 jobs. 
 The key can be used to \Prog{ssh} into the
@@ -1985,7 +2001,7 @@ If \SubmitCmd{ec2\_keypair} is specified for a job,
 \index{submit commands!ec2\_secret\_access\_key}
 \label{condor-submit-ec2-access-key}
 \item[ec2\_secret\_access\_key = $<$pathname$>$]
-For grid type \SubmitCmd{ec2} jobs,
+For grid type \SubmitCmdNI{ec2} jobs,
 specifies the path and file name containing the secret access key.
 
 %%%%%%%%%%%%%%%%%%%
@@ -1995,7 +2011,7 @@ specifies the path and file name containing the secret access key.
 \index{submit commands!ec2\_security\_groups}
 \label{condor-submit-ec2-security-groups}
 \item[ec2\_security\_groups = group1, group2, ...]
-For grid type \SubmitCmd{ec2} jobs, 
+For grid type \SubmitCmdNI{ec2} jobs, 
 defines the list of EC2 security groups which
 should be associated with the job.
 
@@ -2006,7 +2022,7 @@ should be associated with the job.
 \index{submit commands!ec2\_spot\_price}
 \label{condor-submit-ec2-spot-price}
 \item[ec2\_spot\_price = $<$bid$>$]
-For grid type \SubmitCmd{ec2} jobs, 
+For grid type \SubmitCmdNI{ec2} jobs, 
 specifies the spot instance bid, which is the most that the job submitter
 is willing to pay per hour to run this job.
 
@@ -2017,7 +2033,7 @@ is willing to pay per hour to run this job.
 \index{submit commands!ec2\_tag\_names}
 \label{condor-submit-ec2-tag-names}
 \item[ec2\_tag\_names = $<$name0,name1,name...$>$]
-For grid type \SubmitCmd{ec2} jobs, 
+For grid type \SubmitCmdNI{ec2} jobs, 
 specifies the case of tag names that will be associated with the
 running instance.
 This is only necessary if a tag name case matters.
@@ -2029,7 +2045,7 @@ By default the list will be automatically generated.
 
 \index{submit commands!ec2\_tag\_$<$name$>$}
 \item[ec2\_tag\_$<$name$>$ = $<$value$>$]
-For grid type \SubmitCmd{ec2} jobs, 
+For grid type \SubmitCmdNI{ec2} jobs, 
 specifies a tag to be associated with the running instance.
 The tag name will be lower-cased, use \SubmitCmd{ec2\_tag\_names} to
 change the case.
@@ -2041,12 +2057,12 @@ change the case.
 \index{submit commands!ec2\_user\_data}
 \label{condor-submit-ec2-user-data}
 \item[ec2\_user\_data = $<$data$>$]
-For grid type \SubmitCmd{ec2} jobs, 
+For grid type \SubmitCmdNI{ec2} jobs, 
 provides a block of data that can be accessed by the virtual machine.
 If both \SubmitCmd{ec2\_user\_data} and 
 \SubmitCmd{ec2\_user\_data\_file} are specified for a job,
 the two blocks of data are concatenated, 
-with the data from this \SubmitCmd{ec2\_user\_data} submit command 
+with the data from this \SubmitCmdNI{ec2\_user\_data} submit command 
 occurring first.
 
 %%%%%%%%%%%%%%%%%%%
@@ -2056,13 +2072,13 @@ occurring first.
 \index{submit commands!ec2\_user\_data\_file}
 \label{condor-submit-ec2-user-data-file}
 \item[ec2\_user\_data\_file = $<$pathname$>$]
-For grid type \SubmitCmd{ec2} jobs, 
+For grid type \SubmitCmdNI{ec2} jobs, 
 specifies a path and file name whose contents can be 
 accessed by the virtual machine.
 If both \SubmitCmd{ec2\_user\_data} and 
 \SubmitCmd{ec2\_user\_data\_file} are specified for a job,
 the two blocks of data are concatenated, 
-with the data from that \SubmitCmd{ec2\_user\_data} submit command 
+with the data from that \SubmitCmdNI{ec2\_user\_data} submit command 
 occurring first.
 
 %%%%%%%%%%%%%%%%%%%
@@ -2072,7 +2088,7 @@ occurring first.
 \index{submit commands!ec2\_vpc\_ip}
 \label{condor-submit-ec2-vpc-ip}
 \item[ec2\_vpc\_ip = $<$a.b.c.d$>$]
-For grid type \SubmitCmd{ec2} jobs, 
+For grid type \SubmitCmdNI{ec2} jobs, 
 that are part of a Virtual Private Cloud (VPC),
 an optional specification of the IP address that this instance should have 
 within the VPC.
@@ -2084,10 +2100,68 @@ within the VPC.
 \index{submit commands!ec2\_vpc\_subnet}
 \label{condor-submit-ec2-vpc-subnet}
 \item[ec2\_vpc\_subnet = $<$subnet specification string$>$]
-For grid type \SubmitCmd{ec2} jobs, 
+For grid type \SubmitCmdNI{ec2} jobs, 
 an optional specification of the Virtual Private Cloud (VPC) that
 this instance should be a part of.
 
+%%%%%%%%%%%%%%%%%%%
+%% gce_auth_file
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!gce\_auth\_file}
+\label{condor-submit-gce-auth-file}
+\item[gce\_auth\_file = $<$pathname$>$]
+For grid type \SubmitCmdNI{gce} jobs, 
+specifies a path and file name of the authorization file that grants
+permission for HTCondor to use the Google account.
+There is no default value when not specified.
+
+%%%%%%%%%%%%%%%%%%%
+%% gce_image
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!gce\_image}
+\label{condor-submit-gce-image}
+\item[gce\_image = $<$URL$>$]
+For grid type \SubmitCmdNI{gce} jobs,
+the URL of the virtual machine image representing the HTCondor job to
+be run.  This virtual machine image must already be register with GCE
+and reside in Google's Cloud Storage service.
+
+%%%%%%%%%%%%%%%%%%%
+%% gce_machine_type
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!gce\_machine\_type}
+\label{condor-submit-gce-machine-type}
+\item[gce\_machine\_type = $<$machine type$>$]
+For grid type \SubmitCmdNI{gce} jobs,
+the long form of the URL that describes the machine configuration that the
+virtual machine instance is to run on. 
+
+%%%%%%%%%%%%%%%%%%%
+%% gce_metadata
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!gce\_metadata}
+\label{condor-submit-gce-metadata}
+\item[gce\_metadata = $<$name=value,\Dots,name=value$>$]
+For grid type \SubmitCmdNI{gce} jobs,
+a comma separated list of name and value pairs that define metadata
+for a virtual machine instance that is an HTCondor job.
+
+%%%%%%%%%%%%%%%%%%%
+%% gce_metadata_file
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!gce\_metadata\_file}
+\label{condor-submit-gce-metadata-file}
+\item[gce\_metadata\_file = $<$pathname$>$]
+For grid type \SubmitCmdNI{gce} jobs, 
+specifies a path and file name of the file that contains metadata
+for a virtual machine instance that is an HTCondor job.
+Within the file, each name and value pair is on its own line;
+so, the pairs are separated by the newline character.
 
 %%%%%%%%%%%%%%%%%%%
 %% globus_rematch
@@ -2149,9 +2223,9 @@ once.  Do not treat this operation lightly.
 \item[globus\_rsl = $<$RSL-string$>$]
 Used to provide any additional Globus RSL
 string attributes which are not covered by other submit description
-file commands or job attributes. Used for \SubmitCmd{grid} \SubmitCmd{universe}
-jobs, where the grid resource has a \SubmitCmd{grid-type-string} of
-\SubmitCmd{gt2}.
+file commands or job attributes. Used for \SubmitCmdNI{grid} \SubmitCmdNI{universe}
+jobs, where the grid resource has a \SubmitCmdNI{grid-type-string} of
+\SubmitCmdNI{gt2}.
 
 %%%%%%%%%%%%%%%%%%%
 %% grid_resource
@@ -2159,33 +2233,33 @@ jobs, where the grid resource has a \SubmitCmd{grid-type-string} of
 \index{submit commands!grid\_resource}
 \label{condor-submit-grid-resource}
 \item[grid\_resource = $<$grid-type-string$>$ $<$grid-specific-parameter-list$>$ ]
-For each \SubmitCmd{grid-type-string} value, 
+For each \SubmitCmdNI{grid-type-string} value, 
 there are further type-specific values that must specified.
 This submit description file command allows each to
 be given in a space-separated list.
-Allowable \SubmitCmd{grid-type-string} values are
-\SubmitCmd{batch}, 
-\SubmitCmd{condor}, \SubmitCmd{cream}, 
-\SubmitCmd{deltacloud}, 
-\SubmitCmd{ec2},
-\SubmitCmd{gt2}, \SubmitCmd{gt5},
-\SubmitCmd{lsf}, \SubmitCmd{nordugrid}, \SubmitCmd{pbs},
-\SubmitCmd{sge},
-and \SubmitCmd{unicore}.
+Allowable \SubmitCmdNI{grid-type-string} values are
+\SubmitCmdNI{batch}, 
+\SubmitCmdNI{condor}, \SubmitCmdNI{cream}, 
+\SubmitCmdNI{deltacloud}, 
+\SubmitCmdNI{ec2},
+\SubmitCmdNI{gt2}, \SubmitCmdNI{gt5},
+\SubmitCmdNI{lsf}, \SubmitCmdNI{nordugrid}, \SubmitCmdNI{pbs},
+\SubmitCmdNI{sge},
+and \SubmitCmdNI{unicore}.
 The HTCondor manual chapter on Grid Computing details the variety of 
 grid types.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{batch},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{batch},
 the single parameter is the name of the local batch system,
 and will be one of \Expr{pbs}, \Expr{lsf}, or \Expr{sge}.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{condor},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{condor},
 the first parameter is the name of the remote \Condor{schedd}
 daemon.
 The second parameter is the name of the pool to which the remote
 \Condor{schedd} daemon belongs.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{cream},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{cream},
 there are three parameters.
 The first parameter is the web services address of the CREAM server.
 The second parameter is the 
@@ -2193,32 +2267,32 @@ name of the batch system that sits behind the CREAM server.
 The third parameter identifies a site-specific queue
 within the batch system.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{deltacloud},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{deltacloud},
 the single parameter is the URL of the deltacloud service requested.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{ec2},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{ec2},
 one additional parameter specifies the EC2 URL. 
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt2},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{gt2},
 the single parameter is the name of the pre-WS GRAM resource to be used.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt5},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{gt5},
 the single parameter is the name of the pre-WS GRAM resource to be used,
-which is the same as for the \SubmitCmd{grid-type-string} of \SubmitCmd{gt2}.
+which is the same as for the \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{gt2}.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{lsf}, no additional
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{lsf}, no additional
 parameters are used.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{nordugrid},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{nordugrid},
 the single parameter is the name of the NorduGrid resource to be used.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{pbs}, no additional
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{pbs}, no additional
 parameters are used.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{sge}, no additional
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{sge}, no additional
 parameters are used.
 
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{unicore},
+For a \SubmitCmdNI{grid-type-string} of \SubmitCmdNI{unicore},
 the first parameter is the name of the Unicore Usite to be used.
 The second parameter is the name of the Unicore Vsite to be used.
 
@@ -2231,7 +2305,7 @@ The second parameter is the name of the Unicore Vsite to be used.
 \label{condor-submit-keystore-alias}
 \item[keystore\_alias = $<$name$>$]
 A string to locate the certificate in a Java keystore file,
-as used for a \SubmitCmd{unicore} job.
+as used for a \SubmitCmdNI{unicore} job.
 
 %%%%%%%%%%%%%%%%%%%
 %% keystore_file
@@ -2241,7 +2315,7 @@ as used for a \SubmitCmd{unicore} job.
 \label{condor-submit-keystore-file}
 \item[keystore\_file = $<$pathname$>$]
 The complete path and file name of the Java keystore file
-containing the certificate to be used for a \SubmitCmd{unicore} job.
+containing the certificate to be used for a \SubmitCmdNI{unicore} job.
 
 %%%%%%%%%%%%%%%%%%%
 %% keystore_passphrase_file
@@ -2252,7 +2326,7 @@ containing the certificate to be used for a \SubmitCmd{unicore} job.
 The complete path and file name
 to the file containing the passphrase protecting a Java keystore
 file containing the certificate.
-Relevant for a \SubmitCmd{unicore} job.
+Relevant for a \SubmitCmdNI{unicore} job.
 
 %%%%%%%%%%%%%%%%%%%
 %% MyProxyCredentialName
@@ -2274,10 +2348,10 @@ initially stored on the server (using \Prog{myproxy-init}).
 \label{condor-submit-MyProxyHost}
 \item[MyProxyHost = $<$host$>$:$<$port$>$]
 The Internet address of the host that is the \Prog{MyProxy} server.
-The \SubmitCmd{host} may be specified by either a host name
+The \SubmitCmdNI{host} may be specified by either a host name
 (as in \File{head.example.com}) or an IP address
 (of the form 123.456.7.8).
-The \SubmitCmd{port} number is an integer.
+The \SubmitCmdNI{port} number is an integer.
 
 %%%%%%%%%%%%%%%%%%%
 %% MyProxyNewProxyLifetime
@@ -2342,8 +2416,8 @@ example, when the  \Prog{MyProxy} server DN begins with a user credential.
 \item[nordugrid\_rsl = $<$RSL-string$>$]
 Used to provide any additional RSL
 string attributes which are not covered by regular submit description
-file parameters. Used when the \SubmitCmd{universe} is \SubmitCmd{grid},
-and the type of grid system is \SubmitCmd{nordugrid}.
+file parameters. Used when the \SubmitCmdNI{universe} is \SubmitCmdNI{grid},
+and the type of grid system is \SubmitCmdNI{nordugrid}.
 
 
 %%%%%%%%%%%%%%%%%%%
@@ -2411,12 +2485,12 @@ see \SubmitCmd{transfer\_output\_files}.
 \item[use\_x509userproxy = $<$True \Bar\ False$>$]
 Set this command to \Expr{True} to indicate that the job requires an
 X.509 user proxy.
-If \SubmitCmd{x509userproxy} is set, then that file is used for the proxy.
+If \SubmitCmdNI{x509userproxy} is set, then that file is used for the proxy.
 Otherwise, the proxy is looked for in the standard locations.
-If \SubmitCmd{x509userproxy} is set or if the job is a grid universe job
+If \SubmitCmdNI{x509userproxy} is set or if the job is a grid universe job
 of grid type 
-\SubmitCmd{gt2}, \SubmitCmd{gt5}, \SubmitCmd{cream}, or \SubmitCmd{nordugrid},
-then the value of \SubmitCmd{use\_x509userproxy} is forced to \Expr{True}.
+\SubmitCmdNI{gt2}, \SubmitCmdNI{gt5}, \SubmitCmdNI{cream}, or \SubmitCmdNI{nordugrid},
+then the value of \SubmitCmdNI{use\_x509userproxy} is forced to \Expr{True}.
 Defaults to \Expr{False}.
 
 %%%%%%%%%%%%%%%%%%%
@@ -2439,11 +2513,11 @@ If that variable is not present,
 it will search in the default location.
 
 \SubmitCmd{x509userproxy} is relevant when
-the \SubmitCmd{universe} is \SubmitCmd{vanilla},
-or when the \SubmitCmd{universe} is \SubmitCmd{grid}
-and the type of grid system is one of \SubmitCmd{gt2},
-\SubmitCmd{gt5}, \SubmitCmd{condor}, \SubmitCmd{cream}, 
-or \SubmitCmd{nordugrid}.
+the \SubmitCmdNI{universe} is \SubmitCmdNI{vanilla},
+or when the \SubmitCmdNI{universe} is \SubmitCmdNI{grid}
+and the type of grid system is one of \SubmitCmdNI{gt2},
+\SubmitCmdNI{gt5}, \SubmitCmdNI{condor}, \SubmitCmdNI{cream}, 
+or \SubmitCmdNI{nordugrid}.
 Defining a value causes the proxy to be delegated to the execute machine.
 Further, VOMS attributes defined in the proxy will appear in
 the job ClassAd.
@@ -2805,8 +2879,8 @@ precisely the same executable that created the checkpoint.
 \index{submit commands!coresize}
 \label{condor-submit-coresize}
 \item[coresize = $<$size$>$] Should the user's program abort and produce
-a core file, \SubmitCmd{coresize} specifies the maximum size in bytes of the
-core file which the user wishes to keep. If \SubmitCmd{coresize} is not
+a core file, \SubmitCmdNI{coresize} specifies the maximum size in bytes of the
+core file which the user wishes to keep. If \SubmitCmdNI{coresize} is not
 specified in the command file, the system's user resource limit
 \Env{coredumpsize} is used.
 A value of -1 results in no limits being applied to the core file size.
@@ -3260,16 +3334,16 @@ specify this in the requirements and/or rank expressions.
 \label{man-condor-submit-nice-user}
 \item[nice\_user = $<$True \Bar\ False$>$] Normally, when a machine
 becomes available to HTCondor, HTCondor decides which job to run based upon
-user and job priorities. Setting \SubmitCmd{nice\_user} equal to \Expr{True}
+user and job priorities. Setting \SubmitCmdNI{nice\_user} equal to \Expr{True}
 tells HTCondor not to use your regular user priority, but that this job
 should have last priority among all users and all jobs. So jobs
 submitted in this fashion run only on machines which no other
-non-nice\_user job wants --- a true ``bottom-feeder'' job! This is very
+non-nice\_user job wants --- a true bottom-feeder job! This is very
 handy if a user has some jobs they wish to run, but do not wish to use
 resources that could instead be used to run other people's HTCondor jobs. Jobs
-submitted in this fashion have ``nice-user.'' pre-appended in front of
+submitted in this fashion have \Expr{"nice-user."} prepended to
 the owner name when viewed from \Condor{q} or \Condor{userprio}.  The
-default value is \SubmitCmd{False}.
+default value is \Expr{False}.
 
 %%%%%%%%%%%%%%%%%%%
 %% noop_job
@@ -3377,7 +3451,7 @@ which is unlimited in size.
 \item[submit\_event\_notes = $<$note$>$]
 A string that is appended to the submit event in the job's log file.
 For DAGMan jobs, the string \Expr{DAG Node:} and the node's name is
-automatically defined for \SubmitCmd{submit\_event\_notes},
+automatically defined for \SubmitCmdNI{submit\_event\_notes},
 causing the logged submit event to identify the DAG node job submitted. 
 
 %%%%%%%%%%%%%%%%%%%

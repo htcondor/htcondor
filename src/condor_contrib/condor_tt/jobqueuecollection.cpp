@@ -481,11 +481,11 @@ JobQueueCollection::loadAd(char* cid,
 
 		// first generate the key columns
 	if (pid != NULL) {
-		attNameList.sprintf("(scheddname, cluster_id, proc_id");
-		attValList.sprintf("('%s', %s, %s", scheddname, cid, pid);
+		attNameList.formatstr("(scheddname, cluster_id, proc_id");
+		attValList.formatstr("('%s', %s, %s", scheddname, cid, pid);
 	} else {
-		attNameList.sprintf("(scheddname, cluster_id");
-		attValList.sprintf("('%s', %s", scheddname, cid);		
+		attNameList.formatstr("(scheddname, cluster_id");
+		attValList.formatstr("('%s', %s", scheddname, cid);
 	}
 
 	ad->ResetExpr(); // for iteration initialization
@@ -509,7 +509,7 @@ JobQueueCollection::loadAd(char* cid,
 					}
 
 					newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
-					tmpVal.sprintf("'%s'", newvalue.Value());
+					tmpVal.formatstr("'%s'", newvalue.Value());
 
 					break;
 				case CONDOR_TT_TYPE_STRING:	
@@ -519,10 +519,10 @@ JobQueueCollection::loadAd(char* cid,
 					}
 
 					newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
-					tmpVal.sprintf("'%s'", newvalue.Value());
+					tmpVal.formatstr("'%s'", newvalue.Value());
 					break;
 				case CONDOR_TT_TYPE_NUMBER:
-					tmpVal.sprintf("%s", value.Value());
+					tmpVal.formatstr("%s", value.Value());
 					break;
 				case CONDOR_TT_TYPE_TIMESTAMP:
 					time_t clock;
@@ -535,7 +535,7 @@ JobQueueCollection::loadAd(char* cid,
 						return QUILL_FAILURE;
 					}
 					
-					tmpVal.sprintf("%s", ts_expr.Value());
+					tmpVal.formatstr("%s", ts_expr.Value());
 					
 						/* the converted timestamp value is longer, so realloc
 						   the buffer for attValList
@@ -556,7 +556,7 @@ JobQueueCollection::loadAd(char* cid,
 
 
 				{
-					sql_str.sprintf("INSERT INTO ProcAds_Vertical VALUES('%s', %s, %s, '%s', '%s')", scheddname,cid, pid, name, newvalue.Value());
+					sql_str.formatstr("INSERT INTO ProcAds_Vertical VALUES('%s', %s, %s, '%s', '%s')", scheddname,cid, pid, name, newvalue.Value());
 
 					if (DBObj->execCommand(sql_str.Value()) == QUILL_FAILURE) {
                         dprintf(D_ALWAYS, "JobQueueCollection::loadAd - ERROR [SQL] %s\n", sql_str.Value());
@@ -579,7 +579,7 @@ JobQueueCollection::loadAd(char* cid,
 					}
 					
 					newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
-					tmpVal.sprintf("'%s'", newvalue.Value());
+					tmpVal.formatstr("'%s'", newvalue.Value());
 						
 					break;					
 				case CONDOR_TT_TYPE_STRING:					
@@ -589,10 +589,10 @@ JobQueueCollection::loadAd(char* cid,
 					}
 
 					newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
-					tmpVal.sprintf("'%s'", newvalue.Value());
+					tmpVal.formatstr("'%s'", newvalue.Value());
 					break;
 				case CONDOR_TT_TYPE_NUMBER:
-					tmpVal.sprintf("%s", value.Value());
+					tmpVal.formatstr("%s", value.Value());
 					break;
 				case CONDOR_TT_TYPE_TIMESTAMP:
 					time_t clock;
@@ -605,7 +605,7 @@ JobQueueCollection::loadAd(char* cid,
 						return QUILL_FAILURE;
 					}
 					
-					tmpVal.sprintf("%s", ts_expr.Value());
+					tmpVal.formatstr("%s", ts_expr.Value());
 					
 						/* the converted timestamp value is longer, so realloc
 						   the buffer for attValList
@@ -624,7 +624,7 @@ JobQueueCollection::loadAd(char* cid,
 					newvalue.Length() + strlen(cid);
 
 				{
-					sql_str.sprintf("INSERT INTO ClusterAds_Vertical VALUES('%s', %s, '%s', '%s')", scheddname,cid, name, newvalue.Value());
+					sql_str.formatstr("INSERT INTO ClusterAds_Vertical VALUES('%s', %s, '%s', '%s')", scheddname,cid, name, newvalue.Value());
 					if (DBObj->execCommand(sql_str.Value()) == QUILL_FAILURE) {
                         dprintf(D_ALWAYS, "JobQueueCollection::loadAd - ERROR [SQL] %s\n", sql_str.Value());
                         return QUILL_FAILURE;
@@ -643,10 +643,10 @@ JobQueueCollection::loadAd(char* cid,
 		// build the sql
 	if (pid != NULL) {
 			// procad		
-		sql_str.sprintf("INSERT INTO ProcAds_Horizontal %s VALUES %s", attNameList.Value(), attValList.Value());
+		sql_str.formatstr("INSERT INTO ProcAds_Horizontal %s VALUES %s", attNameList.Value(), attValList.Value());
 	} else { 
 			// clusterad
-		sql_str.sprintf("INSERT INTO ClusterAds_Horizontal %s VALUES %s", attNameList.Value(), attValList.Value());
+		sql_str.formatstr("INSERT INTO ClusterAds_Horizontal %s VALUES %s", attNameList.Value(), attValList.Value());
 	}
 
 		// execute it

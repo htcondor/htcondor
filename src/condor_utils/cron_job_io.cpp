@@ -55,6 +55,10 @@ CronJobOut::Output( const char *buf, int len )
 
 	// Check for record delimitter
 	if ( '-' == buf[0] ) {
+		if (buf[1]) {
+			m_q_sep = &buf[1];
+			m_q_sep.trim();
+		}
 		return 1;
 	}
 
@@ -103,6 +107,7 @@ CronJobOut::FlushQueue( void )
 	while( ! m_lineq.dequeue( line ) ) {
 		free( line );
 	}
+	m_q_sep.clear();
 
 	// Return the size
 	return size;
@@ -117,6 +122,7 @@ CronJobOut::GetLineFromQueue( void )
 	if ( ! m_lineq.dequeue( line ) ) {
 		return line;
 	} else {
+		m_q_sep.clear();
 		return NULL;
 	}
 }

@@ -20,7 +20,7 @@
 
 use CondorTest;
 use CondorUtils;
-use CondorCmdStatusWorker;
+use CondorCmdStatusWorker2;
 use strict;
 use warnings;
 
@@ -53,7 +53,7 @@ my $mycorenmlog = $corename . ".log";
 CondorTest::debug("Master PID is $mypid\n",$debuglevel);
 CondorTest::debug("Master PID submit file is $mysubmitnm\n",$debuglevel);
 
-my $outsource = CondorCmdStatusWorker::SetUp("cmd_status_shows-master");
+my $outsource = CondorCmdStatusWorker2::SetUp("cmd_status_shows-master");
 CondorUtils::fullchomp($outsource);
 
 if($outsource eq "") {
@@ -66,7 +66,7 @@ if($outsource eq "") {
 CondorTest::debug("Two pools are $locconfig and $scheddoneconfig\n",$debuglevel);
 
 my $done = 0;
-my $stable = CondorCmdStatusWorker::IsSystemStable();
+my $stable = CondorCmdStatusWorker2::IsSystemStable();
 my @adarray;
 my $nummaster = 0;
 

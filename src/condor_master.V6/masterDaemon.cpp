@@ -2785,9 +2785,11 @@ Daemons::UpdateCollector()
 #endif
 #endif
 
+	if ( FILEObj ) {
 		// log classad into sql log so that it can be updated to DB
-	FILESQL::daemonAdInsert(ad, "MasterAd", FILEObj, prevLHF);
-	
+		FILESQL::daemonAdInsert(ad, "MasterAd", FILEObj, prevLHF);
+	}
+
 		// Reset the timer so we don't do another period update until 
 	daemonCore->Reset_Timer( update_tid, update_interval, update_interval );
 

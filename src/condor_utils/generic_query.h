@@ -59,6 +59,7 @@ class GenericQuery
 	
 	// make the query expression
 	int makeQuery (ExprTree *&tree);
+	int makeQuery (MyString &expr);
 
 	// overloaded operators
     // friend ostream &operator<< (ostream &, GenericQuery &);  // display

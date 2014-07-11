@@ -178,13 +178,13 @@ MgmtScheddPlugin::initialize()
 		int value;
 
 		if (!ad->LookupInteger(ATTR_CLUSTER_ID, id.cluster)) {
-			EXCEPT("%s on job is missing or not an integer", ATTR_CLUSTER_ID);
+                        dprintf(D_ALWAYS,"%s on job is missing or not an integer", ATTR_CLUSTER_ID);
 		}
 		if (!ad->LookupInteger(ATTR_PROC_ID, id.proc)) {
-			EXCEPT("%s on job is missing or not an integer", ATTR_PROC_ID);
+                        dprintf(D_ALWAYS,"%s on job is missing or not an integer", ATTR_PROC_ID);
 		}
 		if (!ad->LookupInteger(ATTR_JOB_STATUS, value)) {
-			EXCEPT("%s on job is missing or not an integer", ATTR_JOB_STATUS);
+                        dprintf(D_ALWAYS,"%s on job is missing or not an integer", ATTR_JOB_STATUS);
 		}
 
 		key.formatstr("%d.%d", id.cluster, id.proc);

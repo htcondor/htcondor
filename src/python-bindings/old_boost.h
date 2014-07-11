@@ -30,8 +30,21 @@ inline boost::python::object py_import(boost::python::str name)
   return boost::python::object(module);
 }
 
+inline bool py_hasattr(boost::python::object obj, std::string const &attrName) {
+    // Const cast is necessary because python 2.4 (RHEL5) marks the second arg
+    // as a (char *), even though it is not modified.
+    return PyObject_HasAttrString(obj.ptr(), const_cast<char*>(attrName.c_str()));
+}
+
 #define THROW_EX(exception, message) \
     { \
         PyErr_SetString(PyExc_ ##exception, message); \
         boost::python::throw_error_already_set(); \
     }
+
+#define THROW_ERRNO(exception) \
+    { \
+        PyErr_SetFromErrno(PyExc_ ##exception); \
+        boost::python::throw_error_already_set(); \
+    }
+

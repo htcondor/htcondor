@@ -194,6 +194,7 @@ private:
 
 	int count_tasks_cgroup();
 	int aggregate_usage_cgroup_blockio(ProcFamilyUsage*);
+	int aggregate_usage_cgroup_blockio_io_serviced(ProcFamilyUsage*);
 	int aggregate_usage_cgroup(ProcFamilyUsage*);
 	int freezer_cgroup(const char *);
 	int spree_cgroup(int);

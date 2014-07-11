@@ -28,6 +28,7 @@
 #include "CondorError.h"
 #include "condor_classad.h"
 #include "quill_enums.h"
+#include "dc_schedd.h"
 
 #ifdef HAVE_EXT_POSTGRESQL
 #include "pgsqldatabase.h"
@@ -217,7 +218,7 @@ fetchQueue (ClassAdList &list, StringList &attrs, ClassAd *ad, CondorError* errs
 	char    		scheddString [32];
 	const char 		*constraint;
 
-	bool useFastPath = false;
+	int useFastPath = 0;
 
 	// make the query ad
 	if ((result = query.makeQuery (tree)) != Q_OK)
@@ -234,7 +235,7 @@ fetchQueue (ClassAdList &list, StringList &attrs, ClassAd *ad, CondorError* errs
 			errstack->push("TEST", 0, "FOO");
 			return Q_SCHEDD_COMMUNICATION_ERROR;
 		}
-		useFastPath = true;
+		useFastPath = 2;
 	}
 	else
 	{
@@ -279,10 +280,13 @@ fetchQueueFromHost (ClassAdList &list, StringList &attrs, const char *host, char
 	if( !(qmgr = ConnectQ( host, connect_timeout, true, errstack)) )
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 
-	bool useFastPath = false;
+	int useFastPath = 0;
 	if( schedd_version && *schedd_version ) {
 		CondorVersionInfo v(schedd_version);
-		useFastPath = v.built_since_version(6,9,3);
+		useFastPath = v.built_since_version(6,9,3) ? 1 : 0;
+		if (v.built_since_version(8, 1, 5)) {
+			useFastPath = 2;
+		}
 	}
 
 	// get the ads and filter them
@@ -357,7 +361,7 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 										StringList &attrs,
 										condor_q_process_func process_func,
 										void * process_func_data,
-										bool useFastPath,
+										int useFastPath,
 										CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
@@ -370,6 +374,12 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 		return result;
 	constraint = strdup( ExprTreeToString( tree ) );
 	delete tree;
+
+	if (useFastPath == 2) {
+		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, process_func, process_func_data, connect_timeout, errstack);
+		free( constraint);
+		return result;
+	}
 
 	/*
 	 connect to the Q manager.
@@ -390,6 +400,68 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	DisconnectQ (qmgr);
 	free( constraint );
 	return result;
+}
+
+int
+CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
+					const char *constraint,
+					StringList &attrs,
+					condor_q_process_func process_func,
+					void * process_func_data,
+					int connect_timeout,
+					CondorError *errstack)
+{
+	classad::ClassAdParser parser;
+	classad::ExprTree *expr = NULL;
+	parser.ParseExpression(constraint, expr);
+	if (!expr) return Q_INVALID_REQUIREMENTS;
+
+	classad::ExprList *projList = new classad::ExprList();
+	if (!projList) return Q_INTERNAL_ERROR;
+	attrs.rewind();
+	const char *attr;
+	while ((attr = attrs.next())) {
+		classad::Value value; value.SetStringValue(attr);
+		classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
+		if (!entry) return Q_INTERNAL_ERROR;
+		projList->push_back(entry);
+	}
+	classad::ClassAd ad;
+	ad.Insert(ATTR_REQUIREMENTS, expr);
+	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
+	ad.Insert(ATTR_PROJECTION, projTree);
+
+	DCSchedd schedd(host);
+	Sock* sock;
+	if (!(sock = schedd.startCommand(QUERY_JOB_ADS, Stream::reli_sock, connect_timeout, errstack))) return Q_SCHEDD_COMMUNICATION_ERROR;
+
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	if (!putClassAd(sock, ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
+	dprintf(D_FULLDEBUG, "Sent classad to schedd\n");
+
+	do {
+		classad_shared_ptr<compat_classad::ClassAd> ad(new ClassAd());
+		if (!getClassAd(sock, *ad.get())) return Q_SCHEDD_COMMUNICATION_ERROR;
+		if (!sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
+		dprintf(D_FULLDEBUG, "Got classad from schedd.\n");
+		long long intVal;
+		if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
+		{ // Last ad.
+			sock->close();
+			dprintf(D_FULLDEBUG, "Ad was last one from schedd.\n");
+			std::string errorMsg;
+			if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
+			{
+				if (errstack) errstack->push("TOOL", intVal, errorMsg.c_str());
+				return Q_REMOTE_ERROR;
+			}
+			break;
+		}
+		(*process_func) (process_func_data, ad);
+	} while (true);
+
+	return 0;
 }
 
 int
@@ -447,7 +519,7 @@ CondorQ::fetchQueueFromDBAndProcess ( const char *dbconn,
 	
 	while (ad != (ClassAd *) 0) {
 			// Process the data and insert it into the list
-		if ((*process_func) (ad, process_func_data) ) {
+		if ((*process_func) (process_func_data, ad) ) {
 			ad->Clear();
 			delete ad;
 		}
@@ -546,7 +618,7 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 								 void * process_func_data,
 								 bool useAll )
 {
-	ClassAd *ad;
+	classad_shared_ptr<ClassAd> ad;
 
 	if (useAll) {
 			// The fast case with the new protocol
@@ -555,32 +627,26 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 		free(attrs_str);
 
 		while( true ) {
-			ad = new ClassAd;
-			if( GetAllJobsByConstraint_Next( *ad ) != 0 ) {
-				delete ad;
+			ad.reset(new ClassAd());
+			if( GetAllJobsByConstraint_Next( *ad.get() ) != 0 ) {
 				break;
 			}
-			if ( ( *process_func )( process_func_data, ad ) ) {
-				delete(ad);
-			}
+			( *process_func )( process_func_data, ad );
 		}
 	} else {
 
-	// slow case, using old protocol
-	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
-		// Process the data and insert it into the list
-		if ( ( *process_func )( process_func_data, ad ) ) {
-			delete(ad);
-		}
-
-		while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
+		// slow case, using old protocol
+		ad.reset(GetNextJobByConstraint(constraint, 1));
+		if (ad.get() != NULL) {
 			// Process the data and insert it into the list
-			if ( ( *process_func )( process_func_data, ad ) ) {
-				delete(ad);
+			( *process_func )( process_func_data, ad );
+
+			ad.reset(GetNextJobByConstraint(constraint, 0));
+			while(ad.get() != NULL) {
+				// Process the data and insert it into the list
+				( *process_func )( process_func_data, ad );
 			}
 		}
-	}
-
 	}
 
 	// here GetNextJobByConstraint returned NULL.  check if it was
@@ -598,21 +664,21 @@ int
 CondorQ::getAndFilterAds (const char *constraint,
 						  StringList &attrs,
 						  ClassAdList &list,
-						  bool useAllJobs)
+						  int useAllJobs)
 {
-	if (useAllJobs) {
-	char *attrs_str = attrs.print_to_delimed_string();
-	GetAllJobsByConstraint(constraint, attrs_str, list);
-	free(attrs_str);
+	if (useAllJobs == 1) {
+		char *attrs_str = attrs.print_to_delimed_string();
+		GetAllJobsByConstraint(constraint, attrs_str, list);
+		free(attrs_str);
 
 	} else {
-	ClassAd		*ad;
-	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
-		list.Insert(ad);
-		while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
+		ClassAd		*ad;
+		if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
 			list.Insert(ad);
+			while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
+				list.Insert(ad);
+			}
 		}
-	}
 	}
 
 	// here GetNextJobByConstraint returned NULL.  check if it was

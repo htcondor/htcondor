@@ -20,13 +20,24 @@
 
 use CondorTest;
 use CondorUtils;
+use Check::CondorLog;
 
 $cmd = 'job_core_initialdir_java.cmd';
 $testdesc =  'condor_submit initialdir works - java U';
 $testname = "job_core_initialdir_java";
+my $pid = $$;
 
+my $javainit = CondorTest::JavaInitialize($testname);
+if($javainit == 0) {
+	die "No java found\n";
+}
 
-runcmd("mkdir -p initd");
+if(!(-d "initd")) {
+	runcmd("mkdir -p initd",{emit_output=>0});
+
+} else {
+	runcmd("rm -rf initd/*",{emit_output=>0}); 
+}
 runcmd("cp x_java_CondorEcho.class initd");
 
 #CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
@@ -37,19 +48,20 @@ $ExitSuccess = sub
 	my %info = @_;
 
 	my $goal = "";
-	CondorTest::debug("Looking for $goal\n",1);
 #	# Pull out requested environment values
 	my $logs   = $info{"log"};
-	CondorTest::debug("Log is $logs\n",1);
+	print "My user log is:$logs\n";
 	my $initialdir = $info{"initialdir"};
-	CondorTest::debug("initialdir is $initialdir\n",1);
 	$goal = "$initialdir" . "/" . "$logs";
+	print "It should be:$goal\n";
 	if( ! -s $goal )
 	{
 		die "Initialdir does not contain user log\n";
 	}
 	# clean up
-	runcmd("rm -rf initd");
+	print "Great it is in the intialdir set for job\n";
+
+	runcmd("rm -rf initd",{emit_output=>0});
 };
 
 

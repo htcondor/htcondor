@@ -33,18 +33,6 @@
 #include "globus_io.h"
 #include "globus_ftp_client.h"
 #include "globus_rsl.h"
-#include "globus_i_ftp_client.h"
-
-/* An extra globus_ftp_client call we've added for our use */
-globus_result_t
-globus_ftp_client_cwd(
-    globus_ftp_client_handle_t *			handle,
-    const char *							url,
-    globus_ftp_client_operationattr_t *		attr,
-    globus_byte_t **    					mlst_buffer,
-    globus_size_t *                        	mlst_buffer_length,
-    globus_ftp_client_complete_callback_t	complete_callback,
-    void *									callback_arg);
 
 	/* Define this if the gahp server should fork before dropping core */
 #undef FORK_FOR_CORE
@@ -516,7 +504,7 @@ escape_spaces( const char *input_line)
 	}
 
 	// get enough space to store it.  	
-	output_line = (char*) globus_libc_malloc(strlen(input_line) + i + 200);
+	output_line = (char*) malloc(strlen(input_line) + i + 200);
 
 	// now, blast across it
 	temp = input_line;
@@ -549,7 +537,7 @@ escape_err_msg( const char *input_line)
 	}
 
 	// get enough space to store it.  	
-	output_line = (char *) globus_libc_malloc(strlen(input_line) + i + 200);
+	output_line = (char *) malloc(strlen(input_line) + i + 200);
 
 	// now, blast across it
 	temp = input_line;
@@ -595,10 +583,10 @@ all_args_free( char **input_line )
 
 	ptr = input_line;
 	while(*ptr) {
-		globus_libc_free(*ptr);
+		free(*ptr);
 		ptr++;
 	}
-	globus_libc_free((void *)input_line);
+	free(input_line);
 	return;	
 }
 
@@ -607,7 +595,7 @@ user_arg_t *malloc_user_arg( char **cmd, ptr_ref_count *cred,
 {
 	user_arg_t *user_arg;
 
-	user_arg = (user_arg_t*) globus_libc_malloc( sizeof(user_arg_t) );
+	user_arg = (user_arg_t*) malloc( sizeof(user_arg_t) );
 	user_arg->cmd = cmd;
 	user_arg->buff = NULL;
 	user_arg->buff_len = 0;
@@ -637,18 +625,18 @@ void free_user_arg( user_arg_t *user_arg )
 		all_args_free( user_arg->cmd );
 	}
 	if ( user_arg->buff ) {
-		globus_libc_free( user_arg->buff );
+		free( user_arg->buff );
 	}
 	if ( user_arg->fd >= 0 ) {
 		close( user_arg->fd );
 	}
 	if ( user_arg->server ) {
-		globus_libc_free( user_arg->server );
+		free( user_arg->server );
 	}
 	if ( user_arg->cred ) {
 		unlink_ref_count( user_arg->cred, 1 );
 	}
-	globus_libc_free( user_arg );
+	free( user_arg );
 }
 
 void clean_ftp_handles( void *arg )
@@ -674,17 +662,17 @@ void clean_ftp_handles( void *arg )
 
 				result = globus_ftp_client_operationattr_destroy( curr_handle->op_attr );
 				assert( result == GLOBUS_SUCCESS );
-				globus_libc_free( curr_handle->op_attr );
+				free( curr_handle->op_attr );
 
 				result = globus_ftp_client_handle_destroy( curr_handle->handle );
 				assert( result == GLOBUS_SUCCESS );
-				globus_libc_free( curr_handle->handle );
+				free( curr_handle->handle );
 
 				if ( curr_handle->cred ) {
 					unlink_ref_count( curr_handle->cred, 1 );
 				}
 
-				globus_libc_free( curr_handle );
+				free( curr_handle );
 			}
 
 			curr_elem = next_elem;
@@ -727,19 +715,19 @@ void dispatch_ftp_command( ftp_cache_entry_t *entry )
 			if ( next_handle->cred ) {
 				unlink_ref_count( next_handle->cred, 1 );
 			}
-			globus_libc_free( next_handle );
+			free( next_handle );
 			found_it = 1;
 			break;
 		}
 	}
 	if ( !found_it ) {
-		next_cmd->handle = (globus_i_ftp_client_handle_t**) globus_libc_malloc( sizeof(globus_ftp_client_handle_t) );
+		next_cmd->handle = (globus_ftp_client_handle_t*) malloc( sizeof(globus_ftp_client_handle_t) );
 
 		result = globus_ftp_client_handle_init( next_cmd->handle,
 												&ftp_handle_attr );
 		assert( result == GLOBUS_SUCCESS );
 
-		next_cmd->op_attr = (globus_i_ftp_client_operationattr_t**)globus_libc_malloc( sizeof(globus_ftp_client_operationattr_t) );
+		next_cmd->op_attr = (globus_ftp_client_operationattr_t*)malloc( sizeof(globus_ftp_client_operationattr_t) );
 
 		result = globus_ftp_client_operationattr_init( next_cmd->op_attr );
 		assert( result == GLOBUS_SUCCESS );
@@ -764,7 +752,7 @@ void begin_ftp_command( user_arg_t *user_arg )
 
 	entry = (ftp_cache_entry_t *) globus_hashtable_lookup( &ftp_cache_table, (void *)user_arg->server );
 	if ( entry == NULL ) {
-		entry = (ftp_cache_entry_t *) globus_libc_malloc( sizeof( ftp_cache_entry_t ) );
+		entry = (ftp_cache_entry_t *) malloc( sizeof( ftp_cache_entry_t ) );
 		entry->server = strdup( user_arg->server );
 		entry->num_active_ctrl_cmds = 0;
 		entry->num_active_data_cmds = 0;
@@ -809,7 +797,7 @@ void finish_ftp_command( user_arg_t *user_arg )
 		exit( 1 );
 	}
 
-	saved_handle = (ftp_handle_t *)globus_libc_malloc( sizeof(ftp_handle_t) );
+	saved_handle = (ftp_handle_t *)malloc( sizeof(ftp_handle_t) );
 	saved_handle->last_use = time(NULL);
 	saved_handle->handle = user_arg->handle;
 	saved_handle->op_attr = user_arg->op_attr;
@@ -855,10 +843,10 @@ handle_nordugrid_submit( char **input_line )
 		rsl = globus_rsl_parse( input_line[3] );
 		if ( rsl == NULL ) {
 			char *esc = escape_err_msg( "Failed to parsed RSL" );
-			char *output = (char *) globus_libc_malloc( 10 + strlen( input_line[1] ) +
+			char *output = (char *) malloc( 10 + strlen( input_line[1] ) +
 														strlen( esc ) );
-			globus_libc_sprintf( output, "%s 1 NULL %s", input_line[1], esc );
-			globus_libc_free( esc );
+			sprintf( output, "%s 1 NULL %s", input_line[1], esc );
+			free( esc );
 			enqueue_results( output );
 			all_args_free( input_line );
 			return 0;
@@ -894,7 +882,7 @@ handle_nordugrid_submit( char **input_line )
 
 		globus_rsl_free_recursive( rsl );
 
-		globus_libc_free( input_line[3] );
+		free( input_line[3] );
 		input_line[3] = str;
 	}
 
@@ -920,7 +908,7 @@ nordugrid_submit_start_callback( void *arg,
 		nordugrid_submit_cwd2_callback( arg, handle, error );
 	}
 
-	globus_libc_sprintf( url, "gsiftp://%s/jobs/new", user_arg->cmd[2] );
+	sprintf( url, "gsiftp://%s/jobs/new", user_arg->cmd[2] );
 
 	result = globus_ftp_client_cwd( user_arg->handle, url,
 									user_arg->op_attr,
@@ -947,7 +935,13 @@ void nordugrid_submit_cwd1_callback( void *arg,
 		return;
 	}
 
-	if ( sscanf( (char *)user_arg->buff, "250 \"jobs/%[A-Za-z0-9]", job_id ) != 1 ) {
+	/* If the server doesn't return a 250 response to the CWD command,
+	 * then the gridftp library won't allocate a buffer with the response
+	 * line (and it doesn't flag an error). We've seen some ARC servers
+	 * return '226 Abort finished'.
+	 */
+	if ( user_arg->buff == NULL ||
+		 sscanf( (char *)user_arg->buff, "250 \"jobs/%[A-Za-z0-9]", job_id ) != 1 ) {
 			result = globus_error_put( globus_error_construct_string(
 											NULL,
 											NULL,
@@ -958,7 +952,7 @@ void nordugrid_submit_cwd1_callback( void *arg,
 	}
 	strcpy( (char *)user_arg->buff, job_id );
 
-	globus_libc_sprintf( url, "gsiftp://%s/jobs/new/job", user_arg->cmd[2] );
+	sprintf( url, "gsiftp://%s/jobs/new/job", user_arg->cmd[2] );
 
 	result = globus_ftp_client_put( user_arg->handle, url,
 									user_arg->op_attr, NULL,
@@ -1016,7 +1010,7 @@ nordugrid_submit_put_callback( void *arg,
 		return;
 	}
 
-	globus_libc_sprintf( url, "gsiftp://%s/jobs", user_arg->cmd[2] );
+	sprintf( url, "gsiftp://%s/jobs", user_arg->cmd[2] );
 
 	result = globus_ftp_client_cwd( user_arg->handle, url,
 									user_arg->op_attr, NULL, NULL,
@@ -1036,18 +1030,18 @@ nordugrid_submit_cwd2_callback( void *arg,
 	char *output;
 
 	if ( error == GLOBUS_SUCCESS ) {
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( (char *) user_arg->buff ) );
-		globus_libc_sprintf( output, "%s 0 %s NULL", user_arg->cmd[1],
+		sprintf( output, "%s 0 %s NULL", user_arg->cmd[1],
 							 (char *)user_arg->buff );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
 		char *esc = escape_err_msg( err_str );
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
-		globus_libc_sprintf( output, "%s 1 NULL %s", user_arg->cmd[1], esc );
-		globus_libc_free( err_str );
-		globus_libc_free( esc );
+		sprintf( output, "%s 1 NULL %s", user_arg->cmd[1], esc );
+		free( err_str );
+		free( esc );
 	}
 
 	enqueue_results(output);	
@@ -1092,7 +1086,7 @@ void nordugrid_status_start_callback( void *arg,
 		nordugrid_status_get_callback( arg, handle, error );
 	}
 
-	globus_libc_sprintf( url, "gsiftp://%s/jobs/info/%s/status",
+	sprintf( url, "gsiftp://%s/jobs/info/%s/status",
 						 user_arg->cmd[2], user_arg->cmd[3] );
 
 	result = globus_ftp_client_get( user_arg->handle, url,
@@ -1141,7 +1135,7 @@ void nordugrid_status_read_callback( void *arg,
 		while ( offset + length > user_arg->buff_len ) {
 			user_arg->buff_len += 4096;
 		}
-		user_arg->buff = globus_libc_realloc( user_arg->buff,
+		user_arg->buff = realloc( user_arg->buff,
 											  user_arg->buff_len );
 	}
 	bcopy( buffer, (void *)(user_arg->buff + offset), length );
@@ -1175,18 +1169,18 @@ void nordugrid_status_get_callback( void *arg,
 
 	if ( error == GLOBUS_SUCCESS ) {
 		(user_arg->buff)[user_arg->buff_filled-1] = '\0';
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( (char *) user_arg->buff ) );
-		globus_libc_sprintf( output, "%s 0 %s NULL", user_arg->cmd[1],
+		sprintf( output, "%s 0 %s NULL", user_arg->cmd[1],
 							 (char *)user_arg->buff );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
 		char *esc = escape_err_msg( err_str );
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
-		globus_libc_sprintf( output, "%s 1 NULL %s", user_arg->cmd[1], esc );
-		globus_libc_free( err_str );
-		globus_libc_free( esc );
+		sprintf( output, "%s 1 NULL %s", user_arg->cmd[1], esc );
+		free( err_str );
+		free( esc );
 	}
 
 	enqueue_results(output);	
@@ -1232,7 +1226,7 @@ nordugrid_cancel_start_callback( void *arg,
 		nordugrid_cancel_rmdir_callback( arg, handle, error );
 	}
 
-	globus_libc_sprintf( url, "gsiftp://%s/jobs/%s", user_arg->cmd[2],
+	sprintf( url, "gsiftp://%s/jobs/%s", user_arg->cmd[2],
 						 user_arg->cmd[3] );
 
 	result = globus_ftp_client_rmdir( user_arg->handle, url,
@@ -1253,16 +1247,16 @@ nordugrid_cancel_rmdir_callback( void *arg,
 	char *output;
 
 	if ( error == GLOBUS_SUCCESS ) {
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) );
-		globus_libc_sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) );
+		sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
 		char *esc = escape_err_msg( err_str );
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
-		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
-		globus_libc_free( err_str );
-		globus_libc_free( esc );
+		sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
+		free( err_str );
+		free( esc );
 	}
 
 	enqueue_results(output);	
@@ -1318,7 +1312,7 @@ nordugrid_stage_in_start_callback( void *arg,
 		nordugrid_stage_in_start_file_callback( arg, handle, error );
 	}
 
-	globus_libc_sprintf( url, "gsiftp://%s/jobs/%s/%s", user_arg->cmd[2],
+	sprintf( url, "gsiftp://%s/jobs/%s/%s", user_arg->cmd[2],
 						 user_arg->cmd[3], STAGE_IN_COMPLETE_FILE );
 
 	result = globus_ftp_client_exists( user_arg->handle, url,
@@ -1378,7 +1372,7 @@ void nordugrid_stage_in_start_file_callback( void *arg,
 			goto stage_in_end;
 		}
 
-		globus_libc_sprintf( url, "gsiftp://%s/jobs/%s/%s",
+		sprintf( url, "gsiftp://%s/jobs/%s/%s",
 							 user_arg->cmd[2], user_arg->cmd[3],
 							 basename( filename ) );
 		free( filename );
@@ -1401,18 +1395,18 @@ void nordugrid_stage_in_start_file_callback( void *arg,
  stage_in_end:
 	if ( error == GLOBUS_SUCCESS ) {
 
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) );
-		globus_libc_sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) );
+		sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
 
 	} else {
 
 		char *err_str = globus_error_print_friendly( error );
 		char *esc = escape_err_msg( err_str );
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
-		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
-		globus_libc_free( err_str );
-		globus_libc_free( esc );
+		sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
+		free( err_str );
+		free( esc );
 
 	}
 
@@ -1530,17 +1524,17 @@ handle_nordugrid_stage_out( char **input_line )
 		 * command is a superset of the STAGE_OUT command, allowing
 		 * output files to be renamed as they're staged back.
 		 */
-	new_line = (char **)globus_libc_calloc( 6 + 2 * num_files, sizeof(char*) );
+	new_line = (char **)calloc( 6 + 2 * num_files, sizeof(char*) );
 
 	for ( i = 0; i < 5; i++ ) {
-		new_line[i] = globus_libc_strdup( input_line[i] );
+		new_line[i] = strdup( input_line[i] );
 	}
 
 	for ( i = 0; i < num_files; i++ ) {
 		new_line[5 + 2 * i] =
-			globus_libc_strdup( basename( input_line[5 + i] ) );
+			strdup( basename( input_line[5 + i] ) );
 		new_line[5 + 2 * i + 1] =
-			globus_libc_strdup( input_line[5 + i] );
+			strdup( input_line[5 + i] );
 	}
 
 	all_args_free( input_line );
@@ -1610,7 +1604,7 @@ void nordugrid_stage_out2_start_file_callback( void *arg,
 			goto stage_out2_end;
 		}
 
-		globus_libc_sprintf( url, "gsiftp://%s/jobs/%s/%s",
+		sprintf( url, "gsiftp://%s/jobs/%s/%s",
 							 user_arg->cmd[2], user_arg->cmd[3], src_file );
 
 		result = globus_ftp_client_get( user_arg->handle, url,
@@ -1641,18 +1635,18 @@ void nordugrid_stage_out2_start_file_callback( void *arg,
  stage_out2_end:
 	if ( error == GLOBUS_SUCCESS ) {
 
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) );
-		globus_libc_sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) );
+		sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
 
 	} else {
 
 		char *err_str = globus_error_print_friendly( error );
 		char *esc = escape_err_msg( err_str );
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
-		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
-		globus_libc_free( err_str );
-		globus_libc_free( esc );
+		sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
+		free( err_str );
+		free( esc );
 
 	}
 
@@ -1778,7 +1772,7 @@ void nordugrid_exit_info_start_callback( void *arg,
 		nordugrid_exit_info_get_callback( arg, handle, error );
 	}
 
-	globus_libc_sprintf( url, "gsiftp://%s/jobs/info/%s/diag",
+	sprintf( url, "gsiftp://%s/jobs/info/%s/diag",
 						 user_arg->cmd[2], user_arg->cmd[3] );
 
 	result = globus_ftp_client_get( user_arg->handle, url,
@@ -1828,7 +1822,7 @@ void nordugrid_exit_info_read_callback( void *arg,
 		while ( offset + length > user_arg->buff_len ) {
 			user_arg->buff_len += 4096;
 		}
-		user_arg->buff = globus_libc_realloc( user_arg->buff,
+		user_arg->buff = realloc( user_arg->buff,
 											  user_arg->buff_len );
 		memset( (void *)(user_arg->buff + old_len), '*', (long) user_arg->buff_len - old_len );
 	}
@@ -1901,11 +1895,11 @@ void nordugrid_exit_info_get_callback( void *arg,
 		}
 		if ( file == NULL ) {
 			char *err_str = escape_err_msg( "Failed to parse job usage info" );
-			output = (char *) globus_libc_malloc( 16 + strlen( user_arg->cmd[1] ) +
+			output = (char *) malloc( 16 + strlen( user_arg->cmd[1] ) +
 										 strlen( err_str ) );
-			globus_libc_sprintf( output, "%s 1 0 0 0 0 0 %s", user_arg->cmd[1],
+			sprintf( output, "%s 1 0 0 0 0 0 %s", user_arg->cmd[1],
 								 err_str );
-			globus_libc_free( err_str );
+			free( err_str );
 
 			fprintf( stderr, "job info diag file:\n%s",
 					 (char *)user_arg->buff );
@@ -1945,11 +1939,11 @@ void nordugrid_exit_info_get_callback( void *arg,
 					 wallclock, sys_cpu, user_cpu ) != 3 ) {
 
 			char *err_str = escape_err_msg( "Failed to parse job usage info" );
-			output = (char *)globus_libc_malloc( 16 + strlen( user_arg->cmd[1] ) +
+			output = (char *)malloc( 16 + strlen( user_arg->cmd[1] ) +
 										 strlen( err_str ) );
-			globus_libc_sprintf( output, "%s 1 0 0 0 0 0 %s", user_arg->cmd[1],
+			sprintf( output, "%s 1 0 0 0 0 0 %s", user_arg->cmd[1],
 								 err_str );
-			globus_libc_free( err_str );
+			free( err_str );
 
 			fprintf( stderr, "job info diag file:\n%s",
 					 (char *)user_arg->buff );
@@ -1959,10 +1953,10 @@ void nordugrid_exit_info_get_callback( void *arg,
 		// the remaining lines contain more usage info
 		// we can read more if we want, but not for now
 
-		output = (char *) globus_libc_malloc( 40 + strlen( user_arg->cmd[1] ) +
+		output = (char *) malloc( 40 + strlen( user_arg->cmd[1] ) +
 									 strlen( wallclock ) + strlen( sys_cpu ) +
 									 strlen( user_cpu ) );
-		globus_libc_sprintf( output, "%s 0 %d %d %s %s %s NULL",
+		sprintf( output, "%s 0 %d %d %s %s %s NULL",
 							 user_arg->cmd[1], normal_exit, exit_code,
 							 wallclock, sys_cpu, user_cpu );
 
@@ -1970,12 +1964,12 @@ void nordugrid_exit_info_get_callback( void *arg,
 
 		char *err_str = globus_error_print_friendly( error );
 		char *esc = escape_err_msg( err_str );
-		output = (char *) globus_libc_malloc( 16 + strlen( user_arg->cmd[1] ) +
+		output = (char *) malloc( 16 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
-		globus_libc_sprintf( output, "%s 1 0 0 0 0 0 %s", user_arg->cmd[1],
+		sprintf( output, "%s 1 0 0 0 0 0 %s", user_arg->cmd[1],
 							 esc );
-		globus_libc_free( err_str );
-		globus_libc_free( esc );
+		free( err_str );
+		free( esc );
 
 	}
 
@@ -2022,7 +2016,7 @@ nordugrid_ping_start_callback( void *arg,
 		nordugrid_ping_exists_callback( arg, handle, error );
 	}
 
-	globus_libc_sprintf( url, "gsiftp://%s/jobs", user_arg->cmd[2] );
+	sprintf( url, "gsiftp://%s/jobs", user_arg->cmd[2] );
 
 	result = globus_ftp_client_exists( user_arg->handle, url,
 									   user_arg->op_attr,
@@ -2042,16 +2036,16 @@ nordugrid_ping_exists_callback( void *arg,
 	char *output;
 
 	if ( error == GLOBUS_SUCCESS ) {
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) );
-		globus_libc_sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) );
+		sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
 		char *esc = escape_err_msg( err_str );
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
-		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
-		globus_libc_free( err_str );
-		globus_libc_free( esc );
+		sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
+		free( err_str );
+		free( esc );
 	}
 
 	enqueue_results(output);	
@@ -2198,11 +2192,11 @@ handle_nordugrid_ldap_query( char **input_line )
 		output = my_string_convert( reply );
 	} else {
 		char *esc = escape_err_msg( err_str );
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
-		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
-		globus_libc_free( err_str );
-		globus_libc_free( esc );
+		sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
+		free( err_str );
+		free( esc );
 		my_string_free( reply );
 	}
 
@@ -2261,7 +2255,7 @@ handle_gridftp_transfer( char **input_line )
 	user_arg->cmd_type = FtpDataCmd;
 	user_arg->first_callback = gridftp_transfer_start_callback;
 
-	globus_libc_free( server );
+	free( server );
 
 	begin_ftp_command( user_arg );
 
@@ -2480,16 +2474,16 @@ void gridftp_transfer_done_callback( void *arg,
 	char *output;
 
 	if ( error == GLOBUS_SUCCESS ) {
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) );
-		globus_libc_sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) );
+		sprintf( output, "%s 0 NULL", user_arg->cmd[1] );
 	} else {
 		char *err_str = globus_error_print_friendly( error );
 		char *esc = escape_err_msg( err_str );
-		output = (char *) globus_libc_malloc( 10 + strlen( user_arg->cmd[1] ) +
+		output = (char *) malloc( 10 + strlen( user_arg->cmd[1] ) +
 									 strlen( esc ) );
-		globus_libc_sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
-		globus_libc_free( err_str );
-		globus_libc_free( esc );
+		sprintf( output, "%s 1 %s", user_arg->cmd[1], esc );
+		free( err_str );
+		free( esc );
 	}
 
 	enqueue_results(output);	
@@ -2522,7 +2516,7 @@ handle_results( char **input_line )
 		for(i = 0; i < count; i++) {
 			output = (char *) globus_fifo_dequeue(&result_fifo);
 			gahp_printf("%s\n", output);
-			globus_libc_free(output);
+			free(output);
 		}
 	}
 	ResultsPending = 0;
@@ -2593,9 +2587,9 @@ handle_refresh_proxy_from_file( char **input_line )
 
 	// if setenv copies it's second argument, this leaks memory
 	if(file_name) {
-		environ_variable = (char *) globus_libc_malloc(strlen(file_name) + 1);
+		environ_variable = (char *) malloc(strlen(file_name) + 1);
 		strcpy(environ_variable, file_name); 
-		globus_libc_setenv("X509_USER_PROXY", environ_variable, 1);	
+		setenv("X509_USER_PROXY", environ_variable, 1);	
 	}
 
 	// this is a macro, not a function - hence the lack of a semicolon
@@ -2651,7 +2645,7 @@ handle_initialize_from_file( char **input_line )
 	}
 
 	if(file_name) {
-		globus_libc_setenv("X509_USER_PROXY", file_name, 1);	
+		setenv("X509_USER_PROXY", file_name, 1);	
 	}
 
 	if ( (result=main_activate_globus()) != GLOBUS_SUCCESS ) {
@@ -2696,7 +2690,7 @@ unlink_ref_count( ptr_ref_count* ptr, int decrement )
 		gss_release_cred(&result,&old_cred);
 */
 gss_release_cred((OM_uint32*)&result,&ptr->cred);
-		globus_libc_free(ptr);
+		free(ptr);
 	}
 }
 
@@ -2713,7 +2707,7 @@ uncache_proxy(char *key)
 			gahp_printf("uncache_proxy\\ failed\\ sanity\\ check!!!\n");
 			_exit(5);
 		}
-		globus_libc_free(ptr->key);
+		free(ptr->key);
 		ptr->key = NULL;
 		unlink_ref_count(ptr,0);
 	}
@@ -2867,8 +2861,8 @@ handle_cache_proxy_from_file( char **input_line )
 	uncache_proxy(id);
 
 	/* Put into hash table */
-	ref = (ptr_ref_count *) globus_libc_malloc( sizeof(ptr_ref_count) );
-	ref->key = globus_libc_strdup(id);
+	ref = (ptr_ref_count *) malloc( sizeof(ptr_ref_count) );
+	ref->key = strdup(id);
 	ref->count = 0;
 /*
 	ref->gram_attr = gram_attr;
@@ -2910,7 +2904,7 @@ handle_response_prefix( char **input_line )
 		ResponsePrefix = NULL;
 	}
 	if ( prefix ) {
-		ResponsePrefix = globus_libc_strdup(prefix);
+		ResponsePrefix = strdup(prefix);
 	}
 
 
@@ -2974,17 +2968,10 @@ read_command(int stdin_fd)
 	int escape_seen = 0;
 
 	if ( buf == NULL ) {
-		buf = (char *) globus_libc_malloc(1024 * 500);
+		buf = (char *) malloc(1024 * 500);
 	}
 
-	/* Read a command from stdin.  We use the read() system call for this,
-	 * since the POSIX threads standard requires that read just block
-	 * the thread and not the entire process.  We do _not_ use 
-	 * globus_libc_read() here because that holds onto a libc mutex 
-	 * until read returns --- this would halt our other threads.
-	 */
-	
-	command_argv = (char **) globus_libc_malloc(argv_size * sizeof(char*));
+	command_argv = (char **) malloc(argv_size * sizeof(char*));
 
 	ibuf = 0;
 	iargv = 0;
@@ -3038,14 +3025,14 @@ read_command(int stdin_fd)
 		/* An unescaped space delimits a parameter to copy into argv */
 		if ( buf[ibuf] == ' ' ) {
 			buf[ibuf] = '\0';
-			command_argv[iargv] = (char *) globus_libc_malloc(ibuf + 5);
+			command_argv[iargv] = (char *) malloc(ibuf + 5);
 			strcpy(command_argv[iargv],buf);
 			ibuf = 0;
 			iargv++;
 			if ( iargv >= argv_size ) {
 				argv_size += 20;
 				command_argv =
-					(char **)globus_libc_realloc( command_argv,
+					(char **)realloc( command_argv,
 												  argv_size * sizeof(char *) );
 			}
 			continue;
@@ -3054,13 +3041,13 @@ read_command(int stdin_fd)
 		/* If character was a newline, copy into argv and return */
 		if ( buf[ibuf]=='\n' ) { 
 			buf[ibuf] = '\0';
-			command_argv[iargv] = (char *) globus_libc_malloc(ibuf + 5);
+			command_argv[iargv] = (char *) malloc(ibuf + 5);
 			strcpy(command_argv[iargv],buf);
 			iargv++;
 			if ( iargv >= argv_size ) {
 				argv_size += 20;
 				command_argv = 
-					(char **)globus_libc_realloc( command_argv,
+					(char **)realloc( command_argv,
 												  argv_size * sizeof(char *) );
 			}
 			command_argv[iargv] = NULL;

@@ -40,6 +40,7 @@
 #include "exit.h"
 #include "param_functions.h"
 #include "match_prefix.h"
+#include "historyFileFinder.h"
 
 #include "file_sql.h"
 #include "file_xml.h"
@@ -992,12 +993,16 @@ handle_reconfig( Service*, int /* cmd */, Stream* stream )
 }
 
 int
-handle_fetch_log( Service *, int, ReliSock *stream )
+handle_fetch_log( Service *, int cmd, ReliSock *stream )
 {
 	char *name = NULL;
 	int  total_bytes = 0;
 	int result;
 	int type = -1;
+
+	if ( cmd == DC_PURGE_LOG ) {
+		return handle_fetch_log_history_purge( stream );
+	}
 
 	if( ! stream->code(type) ||
 		! stream->code(name) || 
@@ -1110,19 +1115,14 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 	}
 
 	free(name);
-	char *history_file = param(history_file_param);
 
-	if (!history_file) {
+	int numHistoryFiles = 0;
+	char **historyFiles = 0;
+
+	historyFiles = findHistoryFiles(history_file_param, &numHistoryFiles);
+
+	if (!historyFiles) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: no parameter named %s\n", history_file_param);
-		stream->code(result);
-		stream->end_of_message();
-		return FALSE;
-	}
-	int fd = safe_open_wrapper_follow(history_file,O_RDONLY);
-	free(history_file);
-	if(fd<0) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: can't open history file\n");
-		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
 		stream->code(result);
 		stream->end_of_message();
 		return FALSE;
@@ -1131,16 +1131,15 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 	result = DC_FETCH_LOG_RESULT_SUCCESS;
 	stream->code(result);
 
-	filesize_t size;
-	stream->put_file(&size, fd);
+	for (int f = 0; f < numHistoryFiles; f++) {
+		filesize_t size;
+		stream->put_file(&size, historyFiles[f]);
+		free(historyFiles[f]);
+	}
+	free(historyFiles);
 
 	stream->end_of_message();
 
-	if(size<0) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: couldn't send all data!\n");
-	}
-
-	close(fd);
 	return TRUE;
 }
 
@@ -1528,12 +1527,17 @@ handle_config( Service *, int cmd, Stream *stream )
 		dprintf( D_ALWAYS, "handle_config: failed to read end of message\n");
 		return FALSE;
 	}
+	bool is_meta = admin && admin[0] == '$';
 	if( config && config[0] ) {
-		to_check = parse_param_name_from_config(config);
+		#if 0 // tj: we've decide to just fail the assign instead of 'fixing' it. //def WARN_COLON_FOR_PARAM_ASSIGN
+		// for backward compat with older senders, change first : to = before we do the assignment.
+		for (char * p = config; *p; ++p) { if (*p==':') *p = '='; if (*p=='=') break; }
+		#endif
+		to_check = is_valid_config_assignment(config);
 	} else {
 		to_check = strdup(admin);
 	}
-	if (!is_valid_param_name(to_check)) {
+	if (!is_valid_param_name(to_check + is_meta)) {
 		dprintf( D_ALWAYS, "Rejecting attempt to set param with invalid name (%s)\n", to_check);
 		free(admin); free(config);
 		rval = -1;
@@ -2192,8 +2196,8 @@ int dc_main( int argc, char** argv )
 	// call config so we can call param.  
 	// Try to minimize shadow footprint by not loading the metadata from the config file
 	int config_options = get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ? 0 : CONFIG_OPT_WANT_META;
-	const bool abort_if_invalid = true;
-	config_ex(wantsQuiet, abort_if_invalid, config_options);
+        if (wantsQuiet) { config_options |= CONFIG_OPT_WANT_QUIET; }
+	config_ex(config_options);
 
 
     // call dc_config_GSI to set GSI related parameters so that all
@@ -2711,7 +2715,7 @@ int dc_main( int argc, char** argv )
 								  "handle_fetch_log()", 0, ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_PURGE_LOG, "DC_PURGE_LOG",
-								  (CommandHandler)handle_fetch_log_history_purge,
+								  (CommandHandler)handle_fetch_log,
 								  "handle_fetch_log_history_purge()", 0, ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",

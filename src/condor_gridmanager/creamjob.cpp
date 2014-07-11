@@ -1743,6 +1743,7 @@ TransferRequest *CreamJob::MakeStageInRequest()
 		tmp_str2 = "file://" + tmp_str;
 		local_urls.insert(tmp_str2.c_str());
 
+		jobAd->LookupString( ATTR_JOB_CMD, tmp_str );
 		formatstr( tmp_str2, "%s/%s", uploadUrl,
 				 condor_basename( tmp_str.c_str() ) );
 		remote_urls.insert( tmp_str2.c_str() );

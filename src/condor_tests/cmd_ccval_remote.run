@@ -34,6 +34,8 @@ use Check::CondorLog;
 my $ClusterId = 0;
 my $mismatch = 0;
 
+CondorTest::SetUseNewRunning();
+
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	WANT_SUSPEND = FALSE
@@ -99,6 +101,7 @@ my %hashcompareexceptions =
 	"PPID" => "1",
 	"SUBSYSTEM" => "1",
 	"TOOL_TIMEOUT_MULTIPLIER" => "1",
+	"IsNegotiator" => "1",
 );
 
 my $ccvstat = 1;

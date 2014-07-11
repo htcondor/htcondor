@@ -1,6 +1,8 @@
 # Test DAG halt in combination with final node -- node B will halt the
 # DAG.
 
+NODE_STATUS_FILE job_dagman_final-I.status 600
+
 JOB I_A job_dagman_final-I-nodeA.cmd
 JOB I_B job_dagman_final-I-nodeB.cmd
 JOB I_C1 job_dagman_final-I-nodeC.cmd

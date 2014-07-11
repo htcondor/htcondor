@@ -457,6 +457,7 @@ ResMgr::init_resources( void )
 		// string lists for each type definition.  This only happens
 		// once!  If you change the type definitions, you must restart
 		// the startd, or else too much weirdness is possible.
+	SlotType::init_types(max_types);
 	initTypes( max_types, type_strings, 1 );
 
 		// First, see how many slots of each type are specified.
@@ -531,7 +532,9 @@ ResMgr::reconfig_resources( void )
 #endif
 
 #if HAVE_JOB_HOOKS
-	m_hook_mgr->reconfig();
+	if ( m_hook_mgr ) {
+		m_hook_mgr->reconfig();
+	}
 #endif
 
 #if HAVE_HIBERNATION
@@ -733,8 +736,15 @@ ResMgr::adlist_register( StartdNamedClassAd *ad )
 	return extra_ads.Register( ad );
 }
 
+StartdNamedClassAd *
+ResMgr::adlist_find( const char * name )
+{
+	NamedClassAd * nad = extra_ads.Find(name);
+	return dynamic_cast<StartdNamedClassAd*>(nad);
+}
+
 int
-ResMgr::adlist_replace( const char *name, const char *prefix, ClassAd *newAd, bool report_diff )
+ResMgr::adlist_replace( const char *name, ClassAd *newAd, bool report_diff, const char *prefix )
 {
 	if( report_diff ) {
 		StringList ignore_list;
@@ -748,11 +758,6 @@ ResMgr::adlist_replace( const char *name, const char *prefix, ClassAd *newAd, bo
 	}
 }
 
-int
-ResMgr::adlist_delete( const char *name )
-{
-	return extra_ads.Delete( name );
-}
 
 int
 ResMgr::adlist_publish( unsigned r_id, ClassAd *resAd, amask_t mask )
@@ -910,7 +915,7 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 
 
 Resource*
-ResMgr::get_by_cur_id( char* id )
+ResMgr::get_by_cur_id(const char* id )
 {
 	if( ! resources ) {
 		return NULL;
@@ -937,7 +942,7 @@ ResMgr::get_by_cur_id( char* id )
 
 
 Resource*
-ResMgr::get_by_any_id( char* id )
+ResMgr::get_by_any_id(const char* id )
 {
 	if( ! resources ) {
 		return NULL;
@@ -972,7 +977,7 @@ ResMgr::get_by_any_id( char* id )
 
 
 Resource*
-ResMgr::get_by_name( char* name )
+ResMgr::get_by_name(const char* name )
 {
 	if( ! resources ) {
 		return NULL;
@@ -1480,6 +1485,35 @@ ResMgr::addResource( Resource *rip )
 	resources = new_resources;
 	nresources++;
 
+	// if this newly added slot is part of a pair, fixup the pair pointers
+	dprintf(D_ALWAYS, "Setting up slot pairings\n");
+	if (rip->r_pair_name && rip->r_pair_name[0] == '#') {
+		int slot_type = atoi(rip->r_pair_name+1);
+		dprintf(D_ALWAYS, "\t searching for type %d to pair with %s (%s)\n", slot_type, rip->r_id_str, rip->r_pair_name);
+		for (int ix = 0; ix < nresources-1; ++ix) {
+			Resource * ripT = resources[ix];
+			if (ripT->type() == slot_type) {
+				if ( ! ripT->r_pair_name || ripT->r_pair_name[0] == '#') {
+					// ok pair these two.
+					if (rip->r_pair_name) free(rip->r_pair_name); rip->r_pair_name = NULL;
+					if (ripT->r_pair_name) free(ripT->r_pair_name); ripT->r_pair_name = NULL;
+					rip->r_pair_name = strdup(ripT->r_name);
+					ripT->r_pair_name = strdup(rip->r_name);
+					break;
+				}
+			}
+		}
+	}
+
+	// If this newly added slot is dynamic, add it to
+	// its parent's children
+
+	if( rip->get_feature() == Resource::DYNAMIC_SLOT) {
+		Resource *parent = rip->get_parent();
+		if (parent) {
+			parent->add_dynamic_child(rip);
+		}
+	}
 }
 
 
@@ -1535,6 +1569,13 @@ ResMgr::removeResource( Resource* rip )
 		// Tell the collector this Resource is gone.
 	rip->final_update();
 
+	// If this was a dynamic slot, remove it from parent
+	if( rip->get_feature() == Resource::DYNAMIC_SLOT) {
+		Resource *parent = rip->get_parent();
+		if (parent) {
+			parent->remove_dynamic_child(rip);
+		}
+	}
 		// Log a message that we're going away
 	rip->dprintf( D_ALWAYS, "Resource no longer needed, deleting\n" );
 

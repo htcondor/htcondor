@@ -64,10 +64,11 @@ char		*DaemonSockDir;     // dir for daemon named sockets
 char		*PreenAdmin;		// who to send mail to in case of trouble
 char		*MyName;			// name this program was invoked by
 char        *ValidSpoolFiles;   // well known files in the spool dir
+char        *UserValidSpoolFiles; // user defined files in the spool dir to preserve
 char        *InvalidLogFiles;   // files we know we want to delete from log
-BOOLEAN		MailFlag;			// true if we should send mail about problems
-BOOLEAN		VerboseFlag;		// true if we should produce verbose output
-BOOLEAN		RmFlag;				// true if we should remove extraneous files
+bool		MailFlag;			// true if we should send mail about problems
+bool		VerboseFlag;		// true if we should produce verbose output
+bool		RmFlag;				// true if we should remove extraneous files
 StringList	*BadFiles;			// list of files which don't belong
 
 // prototypes of local interest
@@ -83,15 +84,15 @@ void check_daemon_sock_dir();
 void bad_file( const char *, const char *, Directory & );
 void good_file( const char *, const char * );
 void produce_output();
-BOOLEAN is_valid_shared_exe( const char *name );
-BOOLEAN is_ckpt_file( const char *name );
-BOOLEAN is_v2_ckpt( const char *name );
-BOOLEAN is_v3_ckpt( const char *name );
-BOOLEAN cluster_exists( int );
-BOOLEAN proc_exists( int, int );
-BOOLEAN is_myproxy_file( const char *name );
-BOOLEAN is_ccb_file( const char *name );
-BOOLEAN touched_recently(char const *fname,time_t delta);
+bool is_valid_shared_exe( const char *name );
+bool is_ckpt_file( const char *name );
+bool is_v2_ckpt( const char *name );
+bool is_v3_ckpt( const char *name );
+bool cluster_exists( int );
+bool proc_exists( int, int );
+bool is_myproxy_file( const char *name );
+bool is_ccb_file( const char *name );
+bool touched_recently(char const *fname,time_t delta);
 
 /*
   Tell folks how to use this program.
@@ -114,16 +115,16 @@ main( int argc, char *argv[] )
 #endif
 
 	// initialize the config settings
-	config_ex(false,false,0);
+	config_ex(CONFIG_OPT_NO_EXIT);
 	
 		// Initialize things
 	MyName = argv[0];
 	myDistro->Init( argc, argv );
 	config();
 
-	VerboseFlag = FALSE;
-	MailFlag = FALSE;
-	RmFlag = FALSE;
+	VerboseFlag = false;
+	MailFlag = false;
+	RmFlag = false;
 
 		// Parse command line arguments
 	for( argv++; *argv; argv++ ) {
@@ -133,15 +134,15 @@ main( int argc, char *argv[] )
 			  case 'd':
                 dprintf_set_tool_debug("TOOL", 0);
 			  case 'v':
-				VerboseFlag = TRUE;
+				VerboseFlag = true;
 				break;
 
 			  case 'm':
-				MailFlag = TRUE;
+				MailFlag = true;
 				break;
 
 			  case 'r':
-				RmFlag = TRUE;
+				RmFlag = true;
 				break;
 
 			  default:
@@ -339,21 +340,30 @@ check_spool_dir()
    	startd_history_length = strlen(startd_history);
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
+	if (UserValidSpoolFiles) {
+		StringList tmp(UserValidSpoolFiles);
+		well_known_list.create_union(tmp, false);
+	}
 		// add some reasonable defaults that we never want to remove
-	well_known_list.append( "job_queue.log" );
-	well_known_list.append( "job_queue.log.tmp" );
-	well_known_list.append( "spool_version" );
-	well_known_list.append( "Accountant.log" );
-	well_known_list.append( "Accountantnew.log" );
-	well_known_list.append( "local_univ_execute" );
-	well_known_list.append( "EventdShutdownRate.log" );
-	well_known_list.append( "OfflineLog" );
+	static const char* valid_list[] = {
+		"job_queue.log",
+		"job_queue.log.tmp",
+		"spool_version",
+		"Accountant.log",
+		"Accountantnew.log",
+		"local_univ_execute",
+		"EventdShutdownRate.log",
+		"OfflineLog",
 		// SCHEDD.lock: High availability lock file.  Current
 		// manual recommends putting it in the spool, so avoid it.
-	well_known_list.append( "SCHEDD.lock" );
+		"SCHEDD.lock",
 		// These are Quill-related files
-	well_known_list.append( ".quillwritepassword" );
-	well_known_list.append( ".pgpass" );
+		".quillwritepassword",
+		".pgpass",
+		};
+	for (int ix = 0; ix < (int)(sizeof(valid_list)/sizeof(valid_list[0])); ++ix) {
+		if ( ! well_known_list.contains(valid_list[ix])) well_known_list.append(valid_list[ix]);
+	}
 	
 	// connect to the Q manager
 	if (!(qmgr = ConnectQ (0))) {
@@ -450,31 +460,31 @@ check_spool_dir()
 
 /*
 */
-BOOLEAN
+bool
 is_valid_shared_exe( const char *name )
 {
 	if ((strlen(name) < 4) || (strncmp(name, "exe-", 4) != 0)) {
-		return FALSE;
+		return false;
 	}
 	MyString path;
 	path.formatstr("%s/%s", Spool, name);
 	int count = link_count(path.Value());
 	if (count == 1) {
-		return FALSE;
+		return false;
 	}
 	if (count == -1) {
 		dprintf(D_ALWAYS, "link_count error on %s; not deleting\n", name);
 	}
-	return TRUE;
+	return true;
 }
 
 /*
-  Given the name of a file in the spool directory, return TRUE if it's a
-  legitimate checkpoint file, and FALSE otherwise.  If the name starts
+  Given the name of a file in the spool directory, return true if it's a
+  legitimate checkpoint file, and false otherwise.  If the name starts
   with "cluster", it should be a V3 style checkpoint.  Otherwise it is
   either a V2 style checkpoint, or not a checkpoint at all.
 */
-BOOLEAN
+bool
 is_ckpt_file( const char *name )
 {
 
@@ -507,14 +517,14 @@ grab_val( const char *str, const char *pattern )
 /*
   We're given the name of a file which appears to be a V2 checkpoint file.
   We try to dig out the cluster/proc ids, and search the job queue for
-  a corresponding process.  We return TRUE if we find it, and FALSE
+  a corresponding process.  We return true if we find it, and false
   otherwise.
 
   V2 checkpoint files formats are:
 	  job<#>.ickpt		- initial checkpoint file
 	  job<#>.ckpt.<#>	- specific checkpoint file
 */
-BOOLEAN
+bool
 is_v2_ckpt( const char *name )
 {
 	int		cluster;
@@ -533,14 +543,14 @@ is_v2_ckpt( const char *name )
 /*
   We're given the name of a file which appears to be a V3 checkpoint file.
   We try to dig out the cluster/proc ids, and search the job queue for
-  a corresponding process.  We return TRUE if we find it, and FALSE
+  a corresponding process.  We return true if we find it, and false
   otherwise.
 
   V3 checkpoint file formats are:
 	  cluster<#>.ickpt.subproc<#>		- initial checkpoint file
 	  cluster<#>.proc<#>.subproc<#>		- specific checkpoint file
 */
-BOOLEAN
+bool
 is_v3_ckpt( const char *name )
 {
 	int		cluster;
@@ -562,7 +572,7 @@ is_v3_ckpt( const char *name )
   Check whether the given file could be a valid MyProxy password file
   for a queued job.
 */
-BOOLEAN
+bool
 is_myproxy_file( const char *name )
 {
 	int cluster, proc;
@@ -571,7 +581,7 @@ is_myproxy_file( const char *name )
 		//   password file with extra characters on the end of the name.
 	int rc = sscanf( name, "mpp.%d.%d", &cluster, &proc );
 	if ( rc != 2 ) {
-		return FALSE;
+		return false;
 	}
 	return proc_exists( cluster, proc );
 }
@@ -580,19 +590,19 @@ is_myproxy_file( const char *name )
   Check whether the given file could be a valid MyProxy password file
   for a queued job.
 */
-BOOLEAN
+bool
 is_ccb_file( const char *name )
 {
 	if( strstr(name,".ccb_reconnect") ) {
-		return TRUE;
+		return true;
 	}
-	return FALSE;
+	return false;
 }
 
 /*
   Check to see whether a given cluster number exists in the job queue.
 */
-BOOLEAN
+bool
 cluster_exists( int cluster )
 {
 	return proc_exists( cluster, -1 );
@@ -602,17 +612,17 @@ cluster_exists( int cluster )
   Check to see whether a given cluster and process number exist in the
   job queue.
 */
-BOOLEAN
+bool
 proc_exists( int cluster, int proc )
 {
 	ClassAd *ad;
 
 	if ((ad = GetJobAd(cluster,proc)) != NULL) {
 		FreeJobAd(ad);
-		return TRUE;
+		return true;
 	}
 
-	return FALSE;
+	return false;
 }
 
 /*
@@ -855,7 +865,10 @@ init_params()
 		}
 	}
 
-	ValidSpoolFiles = param("VALID_SPOOL_FILES");
+	// in 8.1.5, the param VALID_SPOOL_FILES was redefied to be only the user additions to the list of valid files
+	UserValidSpoolFiles = param("VALID_SPOOL_FILES");
+	// SYSTEM_VALID_SPOOL_FILES is the set of files known by HTCondor at compile time. It should not be overidden by the user.
+	ValidSpoolFiles = param("SYSTEM_VALID_SPOOL_FILES");
 
 	InvalidLogFiles = param("INVALID_LOG_FILES");
 }
@@ -956,7 +969,7 @@ get_machine_state()
 	return s;
 }
 
-BOOLEAN
+bool
 touched_recently(char const *fname,time_t delta)
 {
 	StatInfo statinfo(fname);

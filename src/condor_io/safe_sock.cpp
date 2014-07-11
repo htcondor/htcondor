@@ -128,6 +128,9 @@ void SafeSock::init()
 	}
 
     mdChecker_     = NULL;
+
+	m_udp_network_mtu = -1;
+	m_udp_loopback_mtu = -1;
 }
 
 
@@ -364,6 +367,24 @@ int SafeSock::connect(
 		return FALSE;
 	}
 	
+	// Set MTU based on if we are connecting to loopback or not.  Do this
+	// in such a way that we only param once for this safesock, instead of param-ing
+	// every time we do a connect, because often times one safe sock is created
+	// and then used to connect to different hosts over and over.
+	if (m_udp_network_mtu == -1) {
+		m_udp_network_mtu = param_integer("UDP_NETWORK_FRAGMENT_SIZE",
+									DEFAULT_SAFE_MSG_FRAGMENT_SIZE);
+	}
+	if (m_udp_loopback_mtu == -1) {
+		m_udp_loopback_mtu = param_integer("UDP_LOOPBACK_FRAGMENT_SIZE",
+									SAFE_MSG_MAX_PACKET_SIZE-SAFE_MSG_HEADER_SIZE-1);
+	}
+	if ( _who.is_loopback() ) {
+		_outMsg.set_MTU( m_udp_loopback_mtu );
+	} else {
+		_outMsg.set_MTU( m_udp_network_mtu );
+	}
+
 	_state = sock_connect;
 	return TRUE;
 }

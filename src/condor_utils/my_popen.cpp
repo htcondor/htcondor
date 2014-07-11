@@ -129,7 +129,8 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 
 	// create the pipe (and mark the parent's end as uninheritable)
 	if (CreatePipe(&hReadPipe, &hWritePipe, &saPipe, 0) == 0) {
-		dprintf(D_ALWAYS, "my_popen: CreatePipe failed\n");
+		DWORD err = GetLastError();
+		dprintf(D_ALWAYS, "my_popen: CreatePipe failed, err=%d\n", err);
 		return NULL;
 	}
 	if (read_mode) {
@@ -177,9 +178,10 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 	                       &pi);                   // receive PROCESS_INFORMATION
 	free(cmd);
 	if (result == 0) {
+		DWORD err = GetLastError();
 		CloseHandle(hParentPipe);
 		CloseHandle(hChildPipe);
-		dprintf(D_ALWAYS, "my_popen: CreateProcess failed\n");
+		dprintf(D_ALWAYS, "my_popen: CreateProcess failed err=%d\n", err);
 		return NULL;
 	}
 
@@ -469,6 +471,13 @@ my_popenv_impl( const char *const args[],
 		close(pipe_d2[0]);
 		close(pipe_d[0]);
 		close(pipe_d[1]);
+
+		/* Ensure child process is dead, then wait for it to exit */
+		kill(pid, SIGKILL);
+		while( waitpid(pid,NULL,0) < 0 && errno == EINTR ) {
+			/* NOOP */
+		}
+
 		return NULL;
 	}
 		/* Handle case where exec fails */
@@ -476,6 +485,13 @@ my_popenv_impl( const char *const args[],
 		fclose(fh);
 		close(pipe_d[0]);
 		close(pipe_d[1]);
+
+		/* Ensure child process is dead, then wait for it to exit */
+		kill(pid, SIGKILL);
+		while( waitpid(pid,NULL,0) < 0 && errno == EINTR ) {
+			/* NOOP */
+		}
+
 		errno = exit_code;
 		return NULL;
 	}

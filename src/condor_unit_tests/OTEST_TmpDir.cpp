@@ -198,7 +198,7 @@ static void setup() {
 		cut_assert_true( deep_dir.formatstr_cat("%s%c", tmp.Value(),
 			DIR_DELIM_CHAR) );
 	}
-	cut_assert_true( deep_dir.formatstr_cat(tmp.Value()) );
+	cut_assert_true( deep_dir.formatstr_cat("%s", tmp.Value()) );
 	
 	for(int i = 0; i < long_dir_depth - 1; i++) {
 		cut_assert_true( deep_dir_long.formatstr_cat("%s%c", long_dir,
@@ -432,6 +432,13 @@ static bool test_cd2tmpdir_temp_path() {
 		temporary_dir.Value());
 	emit_param("Current Working Directory after delete", "\n\t\t%s",
 		current_dir.Value());
+#if defined(DARWIN)
+	// On Mac OS X, /tmp is a symlink to /private/tmp. So treat them the
+	// same for considering whether the test passes.
+	if(!strcmp(path, "/tmp") && temporary_dir == "/private/tmp") {
+		temporary_dir = path;
+	}
+#endif
 	if(!ret_val || temporary_dir != path || current_dir != original_dir) {
 		free(path);
 		FAIL;

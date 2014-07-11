@@ -61,30 +61,34 @@ static void Usage() {
             "\t\t-Lockfile <NAME.dag.lock>\n"
             "\t\t-Dag <NAME.dag>\n"
             "\t\t-CsdVersion <version string>\n"
-            "\t\t[-Debug <level>]\n"
+            "\t\t[-Help]\n"
+            "\t\t[-Version]\n"
+	    "\t\t[-Debug <level>]\n"
             "\t\t[-MaxIdle <int N>]\n"
             "\t\t[-MaxJobs <int N>]\n"
             "\t\t[-MaxPre <int N>]\n"
             "\t\t[-MaxPost <int N>]\n"
-            "\t\t[-DontAlwaysRunPost]\n"
-            "\t\t[-WaitForDebug]\n"
             "\t\t[-NoEventChecks]\n"
             "\t\t[-AllowLogError]\n"
+            "\t\t[-DontAlwaysRunPost]\n"
+            "\t\t[-WaitForDebug]\n"
             "\t\t[-UseDagDir]\n"
             "\t\t[-AutoRescue <0|1>]\n"
             "\t\t[-DoRescueFrom <int N>]\n"
-            "\t\t[-Priority <int N>]\n"
 			"\t\t[-AllowVersionMismatch]\n"
 			"\t\t[-DumpRescue]\n"
 			"\t\t[-Verbose]\n"
 			"\t\t[-Force]\n"
 			"\t\t[-Notification <never|always|complete|error>]\n"
+			"\t\t[-Suppress_notification]\n"
+			"\t\t[-Dont_Suppress_notification]\n"
 			"\t\t[-Dagman <dagman_executable>]\n"
 			"\t\t[-Outfile_dir <directory>]\n"
 			"\t\t[-Update_submit]\n"
 			"\t\t[-Import_env]\n"
-			"\t\t[-Suppress_notification]\n"
-			"\t\t[-Dont_Suppress_notification]\n"
+            "\t\t[-Priority <int N>]\n"
+			"\t\t[-dont_use_default_node_log]\n"
+			"\t\t[-DoRecov]\n"
             "\twhere NAME is the name of your DAG.\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
 	DC_Exit( EXIT_ERROR );
@@ -135,6 +139,7 @@ Dagman::Dagman() :
 	_runPost(true),
 	_defaultPriority(0),
 	_claim_hold_time(20),
+	_doRecovery(false),
 	_dagmanClassad(NULL)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
@@ -177,7 +182,7 @@ Dagman::Config()
 						_dagmanConfigFile );
     		DC_Exit( EXIT_ERROR );
 		}
-		process_config_source( _dagmanConfigFile, "DAGMan config",
+		process_config_source( _dagmanConfigFile, 0, "DAGMan config",
 					NULL, true );
 	}
 
@@ -795,14 +800,19 @@ void main_init (int argc, char ** const argv) {
 			dagman._submitDagDeepOpts.importEnv = true;
 
         } else if( !strcasecmp( "-priority", argv[i] ) ) {
-		++i;
-		if( i >= argc || strcmp( argv[i], "" ) == 0 ) {
-			debug_printf( DEBUG_NORMAL, "No priority value specified\n");
-			Usage();
-		}
-		dagman._submitDagDeepOpts.priority = atoi(argv[i]);
+			++i;
+			if( i >= argc || strcmp( argv[i], "" ) == 0 ) {
+				debug_printf( DEBUG_NORMAL, "No priority value specified\n");
+				Usage();
+			}
+			dagman._submitDagDeepOpts.priority = atoi(argv[i]);
+
 		} else if( !strcasecmp( "-dont_use_default_node_log", argv[i] ) ) {
 			dagman._submitDagDeepOpts.always_use_node_log = false;
+
+		} else if ( !strcasecmp( "-dorecov", argv[i] ) ) {
+			dagman._doRecovery = true;
+
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
 						argv[i] );
@@ -817,7 +827,7 @@ void main_init (int argc, char ** const argv) {
 	dagman.ResolveDefaultLog();
 
     //
-    // Check the arguments
+    // Check the arguments...
     //
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -910,6 +920,15 @@ void main_init (int argc, char ** const argv) {
         debug_printf( DEBUG_SILENT, "-DoRescueFrom must be non-negative\n" );
         Usage();
     }
+
+	if ( !dagman._submitDagDeepOpts.always_use_node_log ) {
+        debug_printf( DEBUG_QUIET, "Warning: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer recommended and will probably be disabled in a future version\n" );
+		check_warning_strictness( DAG_STRICT_1 );
+	}
+
+	//
+	// ...done checking arguments.
+	//
 
     debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
                    lockFileName );
@@ -1186,6 +1205,12 @@ void main_init (int argc, char ** const argv) {
 				}
 			}
 
+        } else if ( dagman._doRecovery ) {
+            debug_printf( DEBUG_VERBOSE, "Running in recovery mode because -DoRecovery flag was specified\n" );
+			recovery = true;
+		}
+
+        if ( recovery ) {
 				// Not using the default node log is the backward
 				// compatible thing to do, so if using the default
 				// log file is already disabled, we don't have to
@@ -1193,7 +1218,7 @@ void main_init (int argc, char ** const argv) {
 			if ( dagman._submitDagDeepOpts.always_use_node_log ) { 
 				dagman.CheckLogFileMode( submitFileVersion );
 			}
-        }
+		}
 
 			//
 			// If this DAGMan continues, it should overwrite the lock
@@ -1328,6 +1353,10 @@ Dagman::ResolveDefaultLog()
 
 void
 print_status() {
+	debug_printf( DEBUG_VERBOSE, "DAG status: %d (%s)\n",
+				dagman.dag->_dagStatus,
+				dagman.dag->GetStatusName() );
+
 	int total = dagman.dag->NumNodes( true );
 	int done = dagman.dag->NumNodesDone( true );
 	int pre = dagman.dag->PreRunNodeCount();
@@ -1335,7 +1364,7 @@ print_status() {
 	int post = dagman.dag->PostRunNodeCount();
 	int ready =  dagman.dag->NumNodesReady();
 	int failed = dagman.dag->NumNodesFailed();
-	int unready = total - (done + pre + submitted + post + ready + failed );
+	int unready = dagman.dag->NumNodesUnready( true );
 
 	debug_printf( DEBUG_VERBOSE, "Of %d nodes total:\n", total );
 
@@ -1485,7 +1514,9 @@ void condor_event_timer () {
 		// DAG is run anyhow).
 	if ( dagman.dag->IsHalted() && dagman.dag->NumJobsSubmitted() == 0 &&
 				dagman.dag->PostRunNodeCount() == 0 &&
-				!dagman.dag->RunningFinalNode() ) {
+				!dagman.dag->FinalNodeRun() ) {
+			// Note:  main_shutdown_rescue() will run the final node
+			// if there is one.
 		debug_printf ( DEBUG_QUIET, "Exiting because DAG is halted "
 					"and no jobs or scripts are running\n" );
 		main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_HALTED );
