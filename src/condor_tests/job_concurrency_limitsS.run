@@ -53,6 +53,8 @@ CondorTest::StartCondorWithParams(
 );
 
 my $on_abort = sub {
+		system("date");
+		print "Abort seen\n";
 };
 
 sub multi_timeout_callback
@@ -65,6 +67,8 @@ sub multi_timeout_callback
 
 sub evictedwithoutcheckpoint 
 {
+		system("date");
+		print "evicted wothout checkpoint\n";
 };
 
 my $Calledcheck_expectations = 0;
@@ -74,6 +78,7 @@ my $expectation_timeout = 10;
 sub on_submit {
 	if($Calledcheck_expectations == 0) {
   		CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);
+		print "Setting first checkexpectations callback in:$expectation_timeout\n";
 		$Calledcheck_expectations = 1;
 	}
 };
@@ -97,7 +102,8 @@ my $on_match = sub {
 };
 
 sub check_expectations {
-	#system("date");
+	print "In check_expectations callback: $Calledcheck_expectations\n";
+	system("date");
 	CondorTest::RemoveTimed( "checkexpectations");
 	# things have gone on since we looked for clear wins
 	# so check now
@@ -133,8 +139,8 @@ sub check_expectations {
 	#print "Watching for another job to start up\n";
 	# Started Negotiation Cycle A wait of about 10 seconds is caused here
 	# leading the next one to occur in about 20 seconds
-	#print "before multicheck\n";
-	#system("date");
+	print "before multicheck\n";
+	system("date");
 	CondorLog::RunCheckMultiple(
 		daemon => "Negotiator",
 		match_regexp => "Started Negotiation Cycle",
@@ -145,8 +151,8 @@ sub check_expectations {
 		match_new => "true",
 		no_result => "true",
 	);
-	#print "After multicheck\n";
-	#system("date");
+	print "After multicheck\n";
+	system("date");
 
 	if($expect_checks < $total_checks) {
   		CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);
@@ -158,8 +164,8 @@ sub check_expectations {
 
 my $on_execute = sub {
 my $idles = 0;
-	#print "Running now has value <$running_now>\n";
 	$running_now += 1;
+	print "Running now has value:$running_now expecting:$expect_run\n";
 	if($running_now == 1) {
 		$allow_too_few_idle_once = 1;
 	}

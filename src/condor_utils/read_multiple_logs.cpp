@@ -316,7 +316,7 @@ MultiLogFiles::FileReader::NextLogicalLine( MyString &line )
 void
 MultiLogFiles::FileReader::Close()
 {
-	if ( !_fp ) {
+	if ( _fp ) {
 		fclose( _fp );
 		_fp = NULL;
 	}

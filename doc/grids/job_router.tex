@@ -137,12 +137,12 @@ important to explicitly specify all
 output files that must be transferred upon job completion.
 
 An additional difference between the vanilla universe jobs
-and \SubmitCmd{gt2} grid universe jobs
-is that \SubmitCmd{gt2} jobs do not return
+and \SubmitCmdNI{gt2} grid universe jobs
+is that \SubmitCmdNI{gt2} jobs do not return
 any information about the job's exit status.
 The exit status as reported in the job ClassAd and job event log are
 always 0.
-Therefore, jobs that may be routed to a \SubmitCmd{gt2} grid site
+Therefore, jobs that may be routed to a \SubmitCmdNI{gt2} grid site
 must not rely upon a non-zero job exit status.
 
 \item One configuration for routed jobs requires the jobs to
@@ -411,7 +411,7 @@ specifies a failure condition specific to the type of job.
 \index{Job Router Routing Table ClassAd attribute!TargetUniverse}
 \item[TargetUniverse] An integer value specifying the desired
 universe for the routed copy of the job.  The default value is 9, 
-which is the \SubmitCmd{grid} universe.
+which is the \SubmitCmdNI{grid} universe.
 
 \index{Job Router Routing Table ClassAd attribute!UseSharedX509UserProxy}
 \item[UseSharedX509UserProxy] A boolean expression

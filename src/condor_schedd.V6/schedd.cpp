@@ -1900,12 +1900,25 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 			has_backlog = true;
 			break;
 		}
-		int proc, cluster;
-                tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
-                tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
-                //dprintf(D_FULLDEBUG, "Writing job %d.%d to wire\n", cluster,proc);
-                int retval = putClassAdNonblocking(sock, *tmp_ad, false, projection.isEmpty() ? NULL : &projection);
-                if (retval == 2) {
+		//if (IsFulldebug(D_FULLDEBUG)) {
+		//	int proc, cluster;
+		//	tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
+		//	tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
+		//	dprintf(D_FULLDEBUG, "Writing job %d.%d to wire\n", cluster,proc);
+		//}
+		StringList expanded_projection;
+		StringList * attr_whitelist = NULL;
+		if ( ! projection.isEmpty()) {
+			StringList externals; // don't need this, but must pass it.
+			const char * attr;
+			projection.rewind();
+			while ((attr = projection.next())) {
+				tmp_ad->GetExprReferences(attr, expanded_projection, externals);
+			}
+			attr_whitelist = &expanded_projection;
+		}
+		int retval = putClassAdNonblocking(sock, *tmp_ad, true, attr_whitelist);
+		if (retval == 2) {
 			//dprintf(D_FULLDEBUG, "Detecting backlog.\n");
                         has_backlog = true;
                 } else if (!retval) {
@@ -1958,12 +1971,23 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	classad::Value value;
 	classad::ExprList *list = NULL;
 	if ((queryAd.find(ATTR_PROJECTION) != queryAd.end()) &&
-		(!queryAd.EvaluateAttr(ATTR_PROJECTION, value) || !value.IsListValue(list)))
+		!queryAd.EvaluateAttr(ATTR_PROJECTION, value))
 	{
 		return sendJobErrorAd(stream, 2, "Unable to evaluate projection list");
 	}
 	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, 1000);
 	StringList &projection = continuation->projection;
+	if (!value.IsListValue(list)) {
+		list = NULL;
+		std::string slist;
+		// a string of comma and/or space separated attributes is the usual form for projection
+		if (value.IsStringValue(slist)) {
+			projection.initializeFromString(slist.c_str());
+		} else {
+			delete continuation;
+			return sendJobErrorAd(stream, 3, "Unable to convert projection list to string list");
+		}
+	}
 	if (list) for (classad::ExprList::const_iterator it = list->begin(); it != list->end(); it++) {
 		std::string attr;
 		if (!(*it)->Evaluate(value) || !value.IsStringValue(attr))

@@ -103,7 +103,6 @@ char*       statistics = NULL;
 char*		genericType = NULL;
 CondorQuery *query;
 char		buffer[1024];
-ClassAdList result;
 char		*myName;
 vector<SortSpec> sortSpecs;
 bool            javaMode = false;
@@ -458,6 +457,7 @@ main (int argc, char *argv[])
 		}
 	}
 
+	ClassAdList result;
 	CondorError errstack;
 	if (NULL != addr) {
 			// this case executes if pool was provided, or if in "direct" mode with
@@ -606,6 +606,7 @@ usage ()
 		"\t-version\t\tPrint HTCondor version and exit\n"
 		"\t-diagnose\t\tPrint out query ad without performing query\n"
 		"    and [query-opt] is one of\n"
+		"\t-absent\t\t\tPrint information about absent resources\n"
 		"\t-avail\t\t\tPrint information about available resources\n"
 		"\t-ckptsrvr\t\tDisplay checkpoint server attributes\n"
 		"\t-claimed\t\tPrint information about claimed resources\n"

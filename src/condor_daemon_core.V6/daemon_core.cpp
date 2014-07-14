@@ -9337,6 +9337,7 @@ int DaemonCore::HungChildTimeout()
 			want_core = false;
 		}
 		else {
+			dprintf(D_ALWAYS, "Sending SIGABRT to child to generate a core file.\n");
 			const int want_core_timeout = 600;
 			pidentry->hung_tid =
 				Register_Timer(want_core_timeout,
