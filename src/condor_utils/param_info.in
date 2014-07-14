@@ -6771,6 +6771,16 @@ friendly_name=Use Resource Request Counts
 review=?
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE]
+default=20
+range=1,
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Size of Resource Request List
+review=?
+tags=negotiator,matchmaker
+
 [HISTORY_HELPER_MAX_HISTORY]
 default=10000
 type=int
