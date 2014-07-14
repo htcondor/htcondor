@@ -6752,6 +6752,16 @@ friendly_name=Schedd Max File Descriptors
 usage=Set the limit on file descriptor usage for the scheduler.
 review=?
 
+[SHARED_PORT_MAX_FILE_DESCRIPTORS]
+default=4096
+range=0,
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Shared Port Max File Descriptors
+usage=Set the limit on file descriptor usage for condor_shared_port.
+review=?
+
 [USE_RESOURCE_REQUEST_COUNTS]
 default=true
 type=bool
