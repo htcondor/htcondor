@@ -221,6 +221,13 @@ Policy expressions may then reference the dynamic attributes.
 
 Configuration variables related to Daemon ClassAd Hooks are defined
 within section ~\ref{sec:Config-hooks}.
+
+The output of the job is incorporated into the ClassAd when
+the job exits,
+or when the job outputs a specialized line containing a 
+dash as the first character.
+The remainder of the line is discarded.
+
 Here is a complete configuration example.
 It defines all three of the available types of jobs:
 ones that use the \Condor{startd}, benchmark jobs,
