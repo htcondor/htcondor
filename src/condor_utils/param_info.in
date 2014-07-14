@@ -5697,7 +5697,7 @@ friendly_name=Shared Port Daemon Ad File
 review=?
 
 [USE_SHARED_PORT]
-default=false
+default=true
 version=7.5.0
 type=bool
 reconfig=true

@@ -9674,8 +9674,9 @@ InitCommandSocket(condor_protocol proto, int port, int udp_port, DaemonCore::Soc
 	SafeSock * ssock = sock_pair.ssock().get();
 
 	if (port <= 1) {
+		bool well_known_udp = udp_port > 1;
 			// Choose any old port (dynamic port)
-		if( !BindAnyCommandPort(rsock, ssock, proto) ) {
+		if( !BindAnyCommandPort(rsock, well_known_udp ? NULL : ssock, proto) ) {
 			MyString msg;
 			msg.formatstr("BindAnyCommandPort() failed. Does this computer have %s support?", condor_protocol_to_str(proto).Value());
 			if (fatal) {
@@ -9687,8 +9688,8 @@ InitCommandSocket(condor_protocol proto, int port, int udp_port, DaemonCore::Soc
 			}
 
 		}
-		if( udp_port > 1) {
-			if (ssock && !ssock->bind(FALSE, udp_port)) {
+		if (well_known_udp) {
+			if (ssock && !ssock->bind(proto, false, udp_port, false)) {
 				if (fatal) {
 					EXCEPT("Failed to bind(%d) on UDP command socket.", port);
 				}
@@ -9822,8 +9823,8 @@ InitCommandSockets(int port, int udp_port, DaemonCore::SockPairVec & socks, bool
 			dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket.\n");
 			return false;
 		}
-		new_socks.push_back(sock_pair);
-	}
+                new_socks.push_back(sock_pair);
+        }
 
 	if(param_boolean("ENABLE_IPV6", true)) {
 		DaemonCore::SockPair sock_pair;
