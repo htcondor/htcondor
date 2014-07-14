@@ -346,25 +346,29 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 
 		// Send the ad to the negotiator
 	int putad_result = 0;
-	char *auto_cluster_attrs = NULL;
+	std::string auto_cluster_attrs;
 	if ( just_sig_attrs &&
-		 m_current_job_ad.LookupString(ATTR_AUTO_CLUSTER_ATTRS,&auto_cluster_attrs) )
+		 m_current_job_ad.LookupString(ATTR_AUTO_CLUSTER_ATTRS, auto_cluster_attrs) )
 	{
 		// don't send the entire job ad; just send significant attrs
-		StringList sig_attrs(auto_cluster_attrs);
-		free(auto_cluster_attrs);
+		classad::References sig_attrs;
+
+		StringTokenIterator list(auto_cluster_attrs);
+		const std::string *attr;
+		while ((attr = list.next_string())) { sig_attrs.insert(*attr); }
+
 		// besides significant attrs, we also always want to send these attrs cuz
 		// the matchmaker explicitly looks for them (for dprintfs or whatever).
-		sig_attrs.append(ATTR_OWNER);
-		sig_attrs.append(ATTR_CLUSTER_ID);
-		sig_attrs.append(ATTR_PROC_ID);
-		sig_attrs.append(ATTR_RESOURCE_REQUEST_COUNT);
-		sig_attrs.append(ATTR_GLOBAL_JOB_ID);
-		sig_attrs.append(ATTR_AUTO_CLUSTER_ID);
-		sig_attrs.append(ATTR_WANT_MATCH_DIAGNOSTICS);
-		sig_attrs.append(ATTR_WANT_CLAIMING);  // used for Condor-G matchmaking
+		sig_attrs.insert(ATTR_OWNER);
+		sig_attrs.insert(ATTR_CLUSTER_ID);
+		sig_attrs.insert(ATTR_PROC_ID);
+		sig_attrs.insert(ATTR_RESOURCE_REQUEST_COUNT);
+		sig_attrs.insert(ATTR_GLOBAL_JOB_ID);
+		sig_attrs.insert(ATTR_AUTO_CLUSTER_ID);
+		sig_attrs.insert(ATTR_WANT_MATCH_DIAGNOSTICS);
+		sig_attrs.insert(ATTR_WANT_CLAIMING);  // used for Condor-G matchmaking
 		// ship it!
-		putad_result = putClassAd(sock, m_current_job_ad, false, &sig_attrs);
+		putad_result = putClassAd(sock, m_current_job_ad, 0, &sig_attrs);
 	} else {
 		// send the entire classad.  perhaps we are doing this because the
 		// ad does not have ATTR_AUTO_CLUSTER_ATTRS defined for some reason,
