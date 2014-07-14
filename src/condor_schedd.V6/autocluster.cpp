@@ -224,6 +224,7 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 		job->GetReferences(ATTR_RANK,internal_refs,external_refs);
 		internal_refs.remove_anycase(ATTR_CURRENT_TIME);	// never want this attr
 		internal_refs.append(ATTR_REQUIREMENTS);	// always want these attrs
+		internal_refs.append(ATTR_RANK);
 		internal_refs.append(ATTR_NICE_USER);
 		internal_refs.append(ATTR_CONCURRENCY_LIMITS);
 
