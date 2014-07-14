@@ -222,11 +222,23 @@ Policy expressions may then reference the dynamic attributes.
 Configuration variables related to Daemon ClassAd Hooks are defined
 within section ~\ref{sec:Config-hooks}.
 
-The output of the job is incorporated into the ClassAd when
-the job exits,
-or when the job outputs a specialized line containing a 
-dash as the first character.
-The remainder of the line is discarded.
+The output of the job is incorporated into one or more ClassAds when
+the job exits.
+When the job outputs the specialized line:
+\begin{verbatim}
+  - update:true
+\end{verbatim}
+the output of the job goes is merged into all proper ClassAds,
+and an update goes to the \Condor{collector} daemon.
+
+When the output of the job contains a dash as the first character,
+following the dash may be a tag composed of alphanumeric characters,
+which uniquely identifies a buffer corresponding to a specific ClassAd.
+The contents of the output attributes from the job specify which ClassAd.
+The use of the tag intends to permit output with different attributes 
+and values for different slots of the same machine.
+An output line from the job with a dash and optionally a tag
+causes the associated buffer to be merged with appropriate ClassAd.
 
 Here is a complete configuration example.
 It defines all three of the available types of jobs:
