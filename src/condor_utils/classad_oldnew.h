@@ -36,7 +36,9 @@ class ReliSock;
 
 void AttrList_setPublishServerTimeMangled( bool publish);
 
-classad::ClassAd* getClassAd( Stream *sock );
+namespace compat_classad { class ClassAd; } //forward declaration
+compat_classad::ClassAd* getClassAd( Stream *sock );
+
 bool getClassAd( Stream *sock, classad::ClassAd& ad );
 
 /** Get the ClassAd from the CEDAR stream.  This will not block.

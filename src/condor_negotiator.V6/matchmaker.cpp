@@ -3437,14 +3437,11 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 {
 	ReliSock	*sock;
 	int			reply;
-	int			cluster, proc;
+	int			cluster, proc, autocluster;
 	int			result;
 	time_t		currentTime;
 	time_t		beginTime = time(NULL);
 	ClassAd		request;
-	ClassAd     cached_resource_request;
-	int			resource_request_count = 0;  // how many resources desired in resource request
-	int			resource_request_offers = 0; // how many resources offered on behalf of this request
 	ClassAd*    offer = NULL;
 	bool		only_consider_startd_rank = false;
 	bool		display_overlimit = true;
@@ -3574,9 +3571,9 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 		sockCache->invalidateSock(scheddAddr.Value());
 		return MM_ERROR;
 	}
-
 	
 	// 2.  negotiation loop with schedd
+	ResourceRequestList request_list(0);  
 	for (numMatched=0;true;numMatched++)
 	{
 		// Service any interactive commands on our command socket.
@@ -3621,102 +3618,32 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 
 		// 2a.  ask for job information
-		if ( resource_request_count > ++resource_request_offers ) {
-			// no need to go to the schedd to ask for another resource request,
-			// since we have not yet handed out the number of requested matches
-			// for the request we already have cached.
-			request = cached_resource_request;
-		} else {
-			// need to go over the wire and ask the schedd for the request
-			int sleepy = param_integer("NEG_SLEEP", 0);
-				//  This sleep is useful for any testing that calls for a
-				//  long negotiation cycle, please do not remove
-				//  it. Examples of such testing are the async negotiation
-				//  protocol w/ schedds and reconfig delaying until after
-				//  a negotiation cycle. -matt 21 mar 2012
-			if ( sleepy ) {
-				dprintf(D_ALWAYS, "begin sleep: %d seconds\n", sleepy);
-				sleep(sleepy); // TODD DEBUG - allow schedd to do other things
-				dprintf(D_ALWAYS, "end sleep: %d seconds\n", sleepy);
-			}
-			dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
-			sock->encode();
-			if (!sock->put(SEND_JOB_INFO) || !sock->end_of_message())
-			{
-				dprintf (D_ALWAYS, "    Failed to send SEND_JOB_INFO/eom\n");
+		if ( !request_list.getRequest(request,cluster,proc,autocluster,sock) ) {
+			// Failed to get a request.  Check to see if it is because
+			// of an error talking to the schedd.
+			if ( request_list.hadError() ) {
+				// note: error message already dprintf-ed 
 				sockCache->invalidateSock(scheddAddr.Value());
 				return MM_ERROR;
+			} 
+			// Failed to get a request, and no error occured.  
+			// If we have negotiated above our submitterLimit, we have only
+			// considered matching if the offer strictly prefers the request.
+			// So in this case, return MM_RESUME since there still may be
+			// jobs which the schedd wants scheduled but have not been considered
+			// as candidates for no preemption or user priority preemption.
+			// Also, if we were limited by submitterLimit, resume
+			// in the next spin of the pie, because our limit might
+			// increase.
+			if( limitUsed >= submitterLimit || limited_by_submitterLimit ) {
+				return MM_RESUME;
+			} else {
+				return MM_DONE;
 			}
+		}
+		// end of asking for job information - we now have a request
+	
 
-			// 2b.  the schedd may either reply with JOB_INFO or NO_MORE_JOBS
-			dprintf (D_FULLDEBUG, "    Getting reply from schedd ...\n");
-			sock->decode();
-			if (!sock->get (reply))
-			{
-				dprintf (D_ALWAYS, "    Failed to get reply from schedd\n");
-				sock->end_of_message ();
-				sockCache->invalidateSock(scheddAddr.Value());
-				return MM_ERROR;
-			}
-
-			// 2c.  if the schedd replied with NO_MORE_JOBS, cleanup and quit
-			if (reply == NO_MORE_JOBS)
-			{
-				dprintf (D_ALWAYS, "    Got NO_MORE_JOBS;  done negotiating\n");
-				sock->end_of_message ();
-					// If we have negotiated above our submitterLimit, we have only
-					// considered matching if the offer strictly prefers the request.
-					// So in this case, return MM_RESUME since there still may be
-					// jobs which the schedd wants scheduled but have not been considered
-					// as candidates for no preemption or user priority preemption.
-					// Also, if we were limited by submitterLimit, resume
-					// in the next spin of the pie, because our limit might
-					// increase.
-				if( limitUsed >= submitterLimit || limited_by_submitterLimit ) {
-					return MM_RESUME;
-				} else {
-					return MM_DONE;
-				}
-			}
-			else
-			if (reply != JOB_INFO)
-			{
-				// something goofy
-				dprintf(D_ALWAYS,"    Got illegal command %d from schedd\n",reply);
-				sock->end_of_message ();
-				sockCache->invalidateSock(scheddAddr.Value());
-				return MM_ERROR;
-			}
-
-			// 2d.  get the request
-			dprintf (D_FULLDEBUG,"    Got JOB_INFO command; getting classad/eom\n");
-			if (!getClassAd(sock, request) || !sock->end_of_message())
-			{
-				dprintf(D_ALWAYS, "    JOB_INFO command not followed by ad/eom\n");
-				sock->end_of_message();
-				sockCache->invalidateSock(scheddAddr.Value());
-				return MM_ERROR;
-			}
-			if (!request.LookupInteger (ATTR_CLUSTER_ID, cluster) ||
-				!request.LookupInteger (ATTR_PROC_ID, proc))
-			{
-				dprintf (D_ALWAYS, "    Could not get %s and %s from request\n",
-						ATTR_CLUSTER_ID, ATTR_PROC_ID);
-				sockCache->invalidateSock( scheddAddr.Value() );
-				return MM_ERROR;
-			}
-			resource_request_offers = 0;
-			resource_request_count = 0;
-			if ( param_boolean("USE_RESOURCE_REQUEST_COUNTS",true) ) {
-				request.LookupInteger(ATTR_RESOURCE_REQUEST_COUNT,resource_request_count);
-				if (resource_request_count > 0) {
-					cached_resource_request = request;
-				}
-			}
-		}	// end of going over wire to ask schedd for request
-
-		dprintf(D_ALWAYS, "    Request %05d.%05d:  (request count %d of %d)\n", cluster, proc,
-			resource_request_offers+1,resource_request_count);
         negotiation_cycle_stats[0]->num_jobs_considered += 1;
 
 #if defined(ADD_TARGET_SCOPING)
@@ -3776,9 +3703,12 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 			if( !offer )
 			{
+				// lookup want_match_diagnostics in request
+				// 0 = no match diagnostics
+				// 1 = match diagnostics string
+				// 2 = match diagnostics string w/ autocluster + jobid
 				int want_match_diagnostics = 0;
-				request.LookupBool (ATTR_WANT_MATCH_DIAGNOSTICS,
-									want_match_diagnostics);
+				request.LookupInteger(ATTR_WANT_MATCH_DIAGNOSTICS,want_match_diagnostics);
 				string diagnostic_message;
 				// no match found
 				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
@@ -3811,6 +3741,12 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 					}
 					dprintf(D_ALWAYS|D_MATCH|D_NOHEADER, "%s\n",
 							diagnostic_message.c_str());
+				}
+				// add in autocluster and job id info if requested
+				if ( want_match_diagnostics == 2 ) {
+					string diagnostic_jobinfo;
+					formatstr(diagnostic_jobinfo," |%d|%d.%d|",autocluster,cluster,proc);
+					diagnostic_message += diagnostic_jobinfo;
 				}
 				sock->encode();
 				if ((want_match_diagnostics) ? 
@@ -3880,7 +3816,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 		{
 			numMatched--;		// haven't used any resources this cycle
 
-			resource_request_count = 0;	// do not reuse any cached request
+			request_list.noMatchFound(); // do not reuse any cached requests
 
             if (rejForSubmitterLimit && !ConsiderPreemption && !accountant.UsingWeightedSlots()) {
                 // If we aren't considering preemption and slots are unweighted, then we can
@@ -4596,7 +4532,8 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 						ClaimIdHash &claimIds, Sock *sock,
 					    const char* scheddName, const char* scheddAddr)
 {
-	int  cluster, proc;
+	int  cluster = 0;
+	int proc = 0;
 	MyString startdAddr;
 	string remoteUser;
 	char accountingGroup[256];
@@ -4702,6 +4639,11 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
     offer->CopyAttribute(ATTR_REMOTE_GROUP, ATTR_SUBMITTER_GROUP, &request);
     offer->CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, ATTR_SUBMITTER_NEGOTIATING_GROUP, &request);
     offer->CopyAttribute(ATTR_REMOTE_AUTOREGROUP, ATTR_SUBMITTER_AUTOREGROUP, &request);
+
+	// insert cluster and proc from the request into the offer; this is
+	// used by schedd_negotiate.cpp when resource request lists are being used
+	offer->Assign(ATTR_RESOURCE_REQUEST_CLUSTER,cluster);
+	offer->Assign(ATTR_RESOURCE_REQUEST_PROC,proc);
 
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd 
