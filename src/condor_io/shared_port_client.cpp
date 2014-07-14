@@ -407,7 +407,7 @@ SharedPortState::Handle(Stream *s)
 
 	// If we are done, clean up and dellocate
 	if (result == DONE || result == FAILED) {
-		if (s && (m_state != RECV_RESP)) {
+		if ((s) && (m_state != RECV_RESP || !m_non_blocking || !daemonCoreSockAdapter.SocketIsRegistered(s))) {
 			delete s;
 		}
 		delete this;

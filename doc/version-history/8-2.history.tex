@@ -40,6 +40,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a file descriptor leak in the \Condor{shared\_port}
+daemon.
+\Ticket{4456}
+
 \item Fixed a bug that happened on newer Linux kernels where
 with cgroups enabled, the OOM killer would kill the job when it
 went over the memory allocation.  Now the starter catches the OOM
