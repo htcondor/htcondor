@@ -56,10 +56,10 @@ void AttrList_setPublishServerTimeMangled( bool publish)
 
 static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
 
-classad::ClassAd *
+compat_classad::ClassAd *
 getClassAd( Stream *sock )
 {
-	classad::ClassAd *ad = new classad::ClassAd( );
+	compat_classad::ClassAd *ad = new compat_classad::ClassAd( );
 	if( !ad ) { 
 		return NULL;
 	}
