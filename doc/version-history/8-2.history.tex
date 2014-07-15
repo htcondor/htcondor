@@ -96,6 +96,11 @@ using more than the default number of worker threads.
 startup because it couldn't locate a Globus threading library.
 \Ticket{4440}
 
+\item When a daemon checks whether a user has execute permission for a
+directory, it now considers supplemental groups and POSIX ACLs in the
+determination.
+\Ticket{4402}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
