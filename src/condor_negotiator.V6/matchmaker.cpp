@@ -3436,7 +3436,6 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 		   int& numMatched, double &pieLeft)
 {
 	ReliSock	*sock;
-	int			reply;
 	int			cluster, proc, autocluster;
 	int			result;
 	time_t		currentTime;
