@@ -658,8 +658,9 @@ int daemon::RealStart( )
 
 		if (command_port == -1) {
 				// strange....
-			command_port = COLLECTOR_PORT;
-			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", COLLECTOR_PORT);
+			int default_port = param_integer("COLLECTOR_PORT", 9618);
+			command_port = default_port;
+			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", default_port);
 		}
 
 		if( daemon_sock ) {

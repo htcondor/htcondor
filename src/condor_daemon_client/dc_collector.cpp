@@ -251,7 +251,8 @@ DCCollector::parseTCPInfo( void )
 		if( !(colon = strchr(host, ':')) ) {
 				// no colon, use the default port, and treat the given
 				// string as the address.
-			tcp_collector_port = COLLECTOR_PORT;
+			int default_port = param_integer("COLLECTOR_PORT", 9618);
+			tcp_collector_port = default_port;
 			tcp_collector_addr = strnewp( tcp_collector_host );
 		} else { 
 				// there's a colon, so grab what's after it for the

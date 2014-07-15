@@ -1693,10 +1693,13 @@ Daemon::getDefaultPort( void )
 {
 	switch( _type ) {
 	case DT_COLLECTOR:
-		return COLLECTOR_PORT;
+	{
+		int port = param_integer("COLLECTOR_PORT", 9618);
+		return port;
 		break;
+	}
 	case DT_VIEW_COLLECTOR:
-		return CONDOR_VIEW_PORT;
+		return param_integer("COLLECTOR_PORT", 9618);
 		break;
 	default:
 		return 0;

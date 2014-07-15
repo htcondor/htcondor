@@ -298,6 +298,15 @@ customization=seldom
 friendly_name=Soap SSL Port
 review=?
 
+[COLLECTOR_PORT]
+default=9618
+range=1,65536
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Default collector port
+review=?
+
 [SOCKET_LISTEN_BACKLOG]
 default=500
 range=1,
