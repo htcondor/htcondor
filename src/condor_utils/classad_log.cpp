@@ -447,6 +447,7 @@ ClassAdLog::TruncLog()
 		return false;
 	}
 
+#ifndef WIN32
 	// POSIX does not provide any durability guarantees for rename().  Instead, we must
 	// open the parent directory and invoke fsync there.
 	char * parent_dir = condor_dirname( logFilename() );
@@ -457,19 +458,20 @@ ClassAdLog::TruncLog()
 		{
 			if (condor_fsync(parent_fd) == -1)
 			{
-				EXCEPT("Failed to fsync directory %s after rename. (errno=%d, msg=%s)\n", parent_dir, errno, strerror(errno));
+				EXCEPT("Failed to fsync directory %s after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
 			}
 			close(parent_fd);
 		}
 		else
 		{
-			EXCEPT("Failed to open parent directory %s for fsync after rename. (errno=%d, msg=%s)\n", parent_dir, errno, strerror(errno));
+			EXCEPT("Failed to open parent directory %s for fsync after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
 		}
 	}
 	else
 	{
 		dprintf(D_ALWAYS, "Failed to determine log's directory name\n");
 	}
+#endif
 
 	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE, 0600);
 	if (log_fd < 0) {

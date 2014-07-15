@@ -826,11 +826,11 @@ void BaseShadow::initUserLog()
 		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_DAGMAN_WORKFLOW_LOG, dagmanLogFile.Value());	
 	}
 	if( !logfiles.empty()) {
-		if( !uLog.initialize (owner.Value(), domain.Value(), logfiles,
-				cluster, proc, 0, gjid)) {
+		if( !uLog.initialize (logfiles, cluster, proc, 0, gjid)) {
 			MyString hold_reason;
-			hold_reason.formatstr("Failed to initialize user log to %s or %s",
-				logfilename.Value(), dagmanLogFile.Value());
+			hold_reason.formatstr("Failed to initialize user log to %s%s%s",
+				logfilename.Value(), logfiles.size() == 1 ? "" : " or ",
+				dagmanLogFile.Value());
 			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
 			holdJobAndExit(hold_reason.Value(),
 					CONDOR_HOLD_CODE_UnableToInitUserLog,0);

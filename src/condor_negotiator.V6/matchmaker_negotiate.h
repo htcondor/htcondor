@@ -51,6 +51,7 @@ class ResourceRequestList : public ClassyCountedPtr {
 	bool fetchRequestsFromSchedd(ReliSock* const sock);
 
 	int m_protocol_version;
+	bool m_use_resource_request_counts;
 	bool m_clear_rejected_autoclusters;
 	int m_num_to_fetch;
 	int errcode;

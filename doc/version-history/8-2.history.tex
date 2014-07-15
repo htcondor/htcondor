@@ -82,6 +82,25 @@ attribute printing out "undefined" instead of nothing when using the \Opt{\%s}
 format specifier.
 \Ticket{4418}
 
+\item Fixed a bug in \Condor{shadow} that caused the user's supplemental
+groups to be unset when trying to write to the user job log.
+This could result in the job being held with the hold reason
+``Failed to initialize user log to <path>''.
+\Ticket{4437}
+
+\item Fixed a bug in \Prog{cream\_gahp} that would corrupt memory when
+using more than the default number of worker threads.
+\Ticket{4416}
+
+\item Fixed a bug that could cause the \Prog{cream\_gahp} to fail at
+startup because it couldn't locate a Globus threading library.
+\Ticket{4440}
+
+\item When a daemon checks whether a user has execute permission for a
+directory, it now considers supplemental groups and POSIX ACLs in the
+determination.
+\Ticket{4402}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

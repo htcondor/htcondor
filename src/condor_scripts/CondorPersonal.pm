@@ -3813,8 +3813,8 @@ print CC $eof2;
 	}
 
 my $eof3 =  <<EOF1;
-use ROLE : PERSONAL
-use SECURITY : HOST_BASED
+USE ROLE : PERSONAL
+USE SECURITY : HOST_BASED
 EOF1
 print CC $eof3;
 
