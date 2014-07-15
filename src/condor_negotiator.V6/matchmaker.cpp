@@ -2607,16 +2607,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				dprintf(D_ALWAYS, "%d seconds so far\n", totalTime);
 			}
 
-			// store the verison of the schedd, so we can take advantage of
-			// protocol improvements in newer versions while still being
-			// backwards compatible.
-			char *schedd_ver_string = NULL;
-			schedd->LookupString(ATTR_VERSION, &schedd_ver_string);
-			ASSERT(schedd_ver_string);
-			CondorVersionInfo	scheddVersion(schedd_ver_string);
-			free(schedd_ver_string);
-			schedd_ver_string = NULL;
-
 			double submitterLimit = 0.0;
             double submitterLimitUnclaimed = 0.0;
 			double submitterUsage = 0.0;
@@ -3459,6 +3449,22 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 		negotiate_cmd = NEGOTIATE_WITH_SIGATTRS;
 	}
 
+	// fetch the verison of the schedd, so we can take advantage of
+	// protocol improvements in newer versions while still being
+	// backwards compatible.  
+	MyString schedd_version_string;
+	scheddAd->LookupString(ATTR_VERSION,schedd_version_string);	
+	// from the version of the schedd, figure out the version of the negotiate 
+	// protocol supported.
+	int schedd_negotiate_protocol_version = 0; 
+	if ( !schedd_version_string.empty() ) {
+		CondorVersionInfo	scheddVersion(schedd_version_string.Value());
+		if ( scheddVersion.built_since_version(8,3,0) ) {
+			// resource request lists supported...
+			schedd_negotiate_protocol_version = 1;
+		}
+	}
+
 	// Because of CCB, we may end up contacting a different
 	// address than scheddAddr!  This is used for logging (to identify
 	// the schedd) and to uniquely identify the host in the socketCache.
@@ -3573,7 +3579,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 	}
 	
 	// 2.  negotiation loop with schedd
-	ResourceRequestList request_list(0);  
+	ResourceRequestList request_list(schedd_negotiate_protocol_version);  
 	for (numMatched=0;true;numMatched++)
 	{
 		// Service any interactive commands on our command socket.

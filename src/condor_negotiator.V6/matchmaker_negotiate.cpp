@@ -29,7 +29,17 @@ ResourceRequestList::ResourceRequestList(int protocol_version)
 {
 	m_protocol_version = protocol_version;
 	m_clear_rejected_autoclusters = false;
-	m_num_to_fetch = param_integer("NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE");
+	m_use_resource_request_counts = param_boolean("USE_RESOURCE_REQUEST_COUNTS",true);
+	if ( protocol_version == 0 || m_use_resource_request_counts == false ) {
+		// Protocol version is 0, and schedd resource request lists were introduced
+		// in protocol version 1.  so set m_num_to_fetch to 1 so we use the old
+		// protocol of getting one request at a time with this old schedd.
+		// Also we must use the old protocol if admin disabled USE_RESOURCE_REQUEST_COUNTS,
+		// since the new protocol relies on that.
+		m_num_to_fetch = 1;
+	} else {
+		m_num_to_fetch = param_integer("NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE");
+	}
 	errcode = 0;
 	current_autocluster = -1;
 	resource_request_count = 0;
@@ -113,7 +123,7 @@ ResourceRequestList::getRequest(ClassAd &request, int &cluster, int &proc, int &
 		delete front;
 		front = NULL;
 
-		if ( param_boolean("USE_RESOURCE_REQUEST_COUNTS",true) ) {
+		if ( m_use_resource_request_counts ) {
 			request.LookupInteger(ATTR_RESOURCE_REQUEST_COUNT,resource_request_count);
 			if (resource_request_count > 0) {
 				cached_resource_request = request;
