@@ -101,6 +101,10 @@ directory, it now considers supplemental groups and POSIX ACLs in the
 determination.
 \Ticket{4402}
 
+\item Fixed a bug that could cause GSI security operations to fail if
+\Env{GLOBUS\_THREAD\_MODEL} was set in the environment.
+\Ticket{4464}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
