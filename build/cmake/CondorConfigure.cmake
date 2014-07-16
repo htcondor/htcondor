@@ -951,7 +951,7 @@ else(MSVC)
 
 	if (LINUX)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--warn-once -Wl,--warn-common")
-		if ( "${CONDOR_PLATFORM}" STREQUAL "x86_64_Ubuntu12")
+		if ( "${LINUX_NAME}" STREQUAL "Ubuntu" )
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed")
 		endif()
 		# Link RedHat 5 binaries with both hash styles (GNU and SYSV)

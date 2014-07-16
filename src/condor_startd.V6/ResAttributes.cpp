@@ -607,7 +607,7 @@ static double parse_user_resource_config(const char * tag, const char * res_valu
 
 // run a script, and take use its output to configure a custom resource of type tag
 //
-int MachAttributes::init_machine_resource_from_script(const char * tag, const char * script_cmd) {
+double MachAttributes::init_machine_resource_from_script(const char * tag, const char * script_cmd) {
 
 	ArgList args;
 	MyString errors;
@@ -616,7 +616,7 @@ int MachAttributes::init_machine_resource_from_script(const char * tag, const ch
 		return -1;
 	}
 
-	int quantity = 0;
+	double quantity = 0;
 	int offline = 0;
 
 	FILE * fp = my_popen(args, "r", FALSE);
@@ -631,6 +631,7 @@ int MachAttributes::init_machine_resource_from_script(const char * tag, const ch
 		if (cAttrs <= 0) {
 			if (error) dprintf(D_ALWAYS, "Could not parse ClassAd for local resource '%s' (error %d) assuming quantity of 0\n", tag, error);
 		} else {
+			classad::Value value;
 			MyString attr(ATTR_OFFLINE_PREFIX); attr += tag;
 			MyString res_value;
 			StringList offline_ids;
@@ -659,6 +660,8 @@ int MachAttributes::init_machine_resource_from_script(const char * tag, const ch
 						}
 					}
 				}
+			} else if (ad.EvaluateAttr(attr, value) && value.IsNumber(quantity)) {
+				// don't need to do anythin more here.
 			}
 
 			// make sure that the inventory ad doesn't have an attribute for the tag name

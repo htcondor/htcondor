@@ -27,6 +27,7 @@
 #include "string_list.h"
 #include "dc_collector.h"
 #include "condor_ver_info.h"
+#include "matchmaker_negotiate.h"
 
 #include <vector>
 #include <string>
@@ -155,7 +156,7 @@ class Matchmaker : public Service
 
 		int update_collector_tid;
 		void updateCollector();
-
+		
 		// auxillary functions
 		bool obtainAdsFromCollector (ClassAdList&, ClassAdListDoesNotDeleteAds&, ClassAdListDoesNotDeleteAds&, ClaimIdHash& );	
 		char * compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds);
@@ -449,7 +450,7 @@ class Matchmaker : public Service
 
 
 		private:
-
+			
 			// AdListEntry* peek_candidate();
 			static int sort_compare(const void*, const void*);
 			AdListEntry* AdListArray;			

@@ -66,17 +66,17 @@ runcmd("rm -f $statusfile");
 
 $abnormal = sub 
 {
-	die "Want to see only submit, execute and successful completion\n";
+	die "Error: Want to see only submit, execute and successful completion\n";
 };
 
 $aborted = sub 
 {
-	die "Abort event NOT expected\n";
+	die "Error: Abort event NOT expected\n";
 };
 
 $held = sub 
 {
-	die "Held event NOT expected\n";
+	die "Error: Held event NOT expected\n";
 };
 
 $executed = sub
@@ -153,11 +153,17 @@ $success = sub
 	}
 
 	if($diditpass == 0) {
-		die "All expected files and correct output failed\n";
+		die "Error: All expected files and correct output failed\n";
 	}
 };
 
+$failure = sub
+{
+	die "Error: DAG is not expected to fail!\n";
+};
+
 CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExitedFailure( $testname, $failure );
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );
@@ -168,6 +174,6 @@ if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
-	die "$testname: CondorTest::RunTest() failed\n";
+	die "Error: $testname: CondorTest::RunTest() failed\n";
 }
 

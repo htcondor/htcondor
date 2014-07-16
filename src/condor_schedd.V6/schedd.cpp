@@ -12656,7 +12656,10 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 
 	if (GetAttributeInt(id->cluster, id->proc,
 						ATTR_JOB_UNIVERSE, &universe) < 0) {
-		dprintf(D_FULLDEBUG, "GetAttributeInt() failed\n");
+		// Failing to get the JOB_UNIVERSE is common 
+		// because the job may have left the queue.
+		// So in this case, just return FALSE, since a job
+		// not in the queue is most certainly not matched :)
 		return FALSE;
 	}
 

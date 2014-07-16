@@ -6668,6 +6668,10 @@ int DaemonCore::Create_Process(
 			dprintf(D_ALWAYS, "ERROR: Create_Process failed to create security session for child daemon.\n");
 			goto wrapup;
 		}
+		IpVerify* ipv = getSecMan()->getIpVerify();
+		MyString id = CONDOR_CHILD_FQU;
+		ipv->PunchHole(DAEMON, id);
+
 		privateinheritbuf += " SessionKey:";
 
 		MyString session_info;

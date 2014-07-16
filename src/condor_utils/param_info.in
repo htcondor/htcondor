@@ -298,6 +298,15 @@ customization=seldom
 friendly_name=Soap SSL Port
 review=?
 
+[COLLECTOR_PORT]
+default=9618
+range=0,65536
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Default collector port
+review=?
+
 [SOCKET_LISTEN_BACKLOG]
 default=500
 range=1,
@@ -6772,12 +6781,32 @@ friendly_name=Schedd Max File Descriptors
 usage=Set the limit on file descriptor usage for the scheduler.
 review=?
 
+[SHARED_PORT_MAX_FILE_DESCRIPTORS]
+default=4096
+range=0,
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Shared Port Max File Descriptors
+usage=Set the limit on file descriptor usage for condor_shared_port.
+review=?
+
 [USE_RESOURCE_REQUEST_COUNTS]
 default=true
 type=bool
 reconfig=true
 customization=seldom
 friendly_name=Use Resource Request Counts
+review=?
+tags=negotiator,matchmaker
+
+[NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE]
+default=20
+range=1,
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Size of Resource Request List
 review=?
 tags=negotiator,matchmaker
 

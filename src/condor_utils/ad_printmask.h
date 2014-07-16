@@ -26,6 +26,8 @@
 #include "condor_attributes.h"
 #include "pool_allocator.h"
 
+#define AD_PRINTMASK_V2
+
 enum {
 	FormatOptionNoPrefix = 0x01,
 	FormatOptionNoSuffix = 0x02,
@@ -33,6 +35,10 @@ enum {
 	FormatOptionAutoWidth = 0x08,
 	FormatOptionLeftAlign = 0x10,
 	FormatOptionAlwaysCall = 0x80,
+
+	AltQuestion = 0x10000,     // alt text is single ?
+	AltWide     = 0x20000,     // alt text is the width of the field.
+	AltFixMe    = 0x40000,     // some alt text that needs to be fixed somehow.
 };
 
 typedef const char *(*IntCustomFormat)(int,AttrList*,struct Formatter &);
@@ -77,7 +83,11 @@ struct Formatter
 	char       fmt_letter;   // actual letter in the % escape
 	char       fmt_type;     // one of the the printf_fmt_t enum values.
 	char       fmtKind;      // identifies type type of the union
+#ifdef AD_PRINTMASK_V2
+	char       altKind;      // identifies type of alt text to print when attribute cannot be fetched
+#else
 	const char * altText;      // print this when attribute data is unavailable
+#endif
 	const char * printfFmt;    // may be NULL if fmtKind != PRINTF_FMT
 	union {
 		StringCustomFormat	sf;
@@ -100,10 +110,13 @@ class AttrListPrintMask
 	void SetOverallWidth(int wid);
 
 	// register a format and an attribute
+#ifdef AD_PRINTMASK_V2
+	void registerFormat (const char *print, int wid, int opts, const char *attr);
+	void registerFormat (const char *print, int wid, int opts, const CustomFormatFn & fmt, const char *attr);
+	void registerFormat (const char *print, const char *attr)          { registerFormat(print, 0, 0, attr); }
+	void registerformat (const CustomFormatFn & fmt, const char *attr) { registerFormat(NULL, 0, 0, fmt, attr); }
+#else
 	void registerFormat (const char *fmt, int wid, int opts, const char *attr, const char*alt="");
-	//void registerFormat (const char *print, int wid, int opts, IntCustomFmt fmt, const char *attr, const char *alt="");
-	//void registerFormat (const char *print, int wid, int opts, FloatCustomFmt fmt, const char *attr, const char *alt="");
-	//void registerFormat (const char *print, int wid, int opts, StringCustomFmt fmt, const char *attr, const char *alt="");
 	void registerFormat (const char *print, int wid, int opts, const CustomFormatFn & fmt, const char *attr, const char *alt="");
 
 	void registerFormat (const char *fmt, const char *attr, const char*alt="") {
@@ -112,17 +125,8 @@ class AttrListPrintMask
 	void registerformat (const CustomFormatFn & fmt, const char *attr, const char*alt="") {
 		registerFormat(NULL, 0, 0, fmt, attr, alt);
 	}
-/*
-	void registerFormat (IntCustomFmt fmt, const char *attr, const char *alt="") {
-		registerFormat(NULL, 0, 0, fmt, attr, alt);
-		}
-	void registerFormat (FloatCustomFmt fmt, const char *attr, const char *alt="") {
-		registerFormat(NULL, 0, 0, fmt, attr, alt);
-		}
-	void registerFormat (StringCustomFmt fmt, const char *attr, const char *alt="") {
-		registerFormat(NULL, 0, 0, fmt, attr, alt);
-		}
-*/
+#endif
+
 	// clear all formats
 	void clearFormats (void);
 	bool IsEmpty(void) { return formats.IsEmpty(); }
@@ -162,8 +166,13 @@ class AttrListPrintMask
 	ALLOCATION_POOL stringpool;
 
 	void PrintCol(MyString * pretval, Formatter & fmt, const char * value);
-	void commonRegisterFormat (int wid, int opts, const char *print, 
-		                       const CustomFormatFn & sf, const char *attr, const char *alt);
+	void commonRegisterFormat (int wid, int opts, const char *print, const CustomFormatFn & sf,
+#ifdef AD_PRINTMASK_V2
+							const char *attr
+#else
+							const char *attr, const char *alt
+#endif
+							);
 };
 
 // functions & classes in make_printmask.cpp

@@ -103,7 +103,6 @@ char*       statistics = NULL;
 char*		genericType = NULL;
 CondorQuery *query;
 char		buffer[1024];
-ClassAdList result;
 char		*myName;
 vector<SortSpec> sortSpecs;
 bool            noSort = false; // set to true to disable sorting entirely
@@ -461,6 +460,7 @@ main (int argc, char *argv[])
 		}
 	}
 
+	ClassAdList result;
 	CondorError errstack;
 	if (NULL != ads_file) {
 		MyString req; // query requirements
