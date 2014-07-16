@@ -300,7 +300,7 @@ review=?
 
 [COLLECTOR_PORT]
 default=9618
-range=1,65536
+range=0,65536
 type=int
 reconfig=true
 customization=seldom

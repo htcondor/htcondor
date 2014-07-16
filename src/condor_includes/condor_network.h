@@ -29,6 +29,8 @@
 #define START_PORT						9611
 #define START_UDP_PORT					9611
 
+#define COLLECTOR_PORT					9618	
+
 #define CREDD_PORT						9620
 
 #define	DEFAULT_CONFIG_SERVER_PORT		    9600

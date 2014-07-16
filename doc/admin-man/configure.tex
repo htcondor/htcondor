@@ -1089,6 +1089,15 @@ File System Configuration File Entries''.
   With more than one running, queries are sent to one of 
   the \Condor{collector} daemons, chosen at random.
 
+\label{param:CollectorPort}
+\item[\Macro{COLLECTOR\_PORT}]
+  The default port used to contact the \Condor{collector}.  This parameter is
+  referenced if no port is given and there is no other means to find the
+  \Condor{collector} port.
+
+  This also controls the default port the \Condor{collector} listens on if
+  no port is specified.
+
 \label{param:NegotiatorHost} 
 \item[\Macro{NEGOTIATOR\_HOST}]
   This configuration variable is no longer used.

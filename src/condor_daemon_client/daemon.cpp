@@ -1694,12 +1694,12 @@ Daemon::getDefaultPort( void )
 	switch( _type ) {
 	case DT_COLLECTOR:
 	{
-		int port = param_integer("COLLECTOR_PORT", 9618);
+		int port = param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
 		return port;
 		break;
 	}
 	case DT_VIEW_COLLECTOR:
-		return param_integer("COLLECTOR_PORT", 9618);
+		return param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
 		break;
 	default:
 		return 0;
