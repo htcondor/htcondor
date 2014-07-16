@@ -499,7 +499,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 	}
 #ifdef HAVE_EXT_GSOAP
 	if ( strstr(tmpbuf,"GET") ) {
-		if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
+		if ( param_boolean("USE_SHARED_PORT", true) ) {
+			dprintf(D_ALWAYS, "Received HTTP GET connection from %s -- DENIED because USE_SHARED_PORT=true\n", m_sock->peer_addr());
+		}
+		else if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
 			// mini-web server requires READ authorization.
 			if ( daemonCore->Verify("HTTP GET", READ,m_sock->peer_addr(),NULL) ) {
 				m_is_http_get = true;
@@ -511,7 +514,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 		}
 	} else {
 		if ( strstr(tmpbuf,"POST") ) {
-			if ( param_boolean("ENABLE_SOAP",false) ) {
+			if ( param_boolean("USE_SHARED_PORT", true) ) {
+				dprintf(D_ALWAYS, "Received HTTP POST connection from %s -- DENIED because USE_SHARED_PORT=true\n", m_sock->peer_addr());
+			}
+			else if ( param_boolean("ENABLE_SOAP",false) ) {
 				// SOAP requires SOAP authorization.
 				if ( daemonCore->Verify("HTTP POST",SOAP_PERM,m_sock->peer_addr(),NULL) ) {
 					m_is_http_post = true;

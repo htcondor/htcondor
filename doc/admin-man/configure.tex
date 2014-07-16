@@ -2925,9 +2925,22 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   \Condor{shared\_port} for receiving incoming connections.  
   Under Unix, write access to the location defined by 
   \Macro{DAEMON\_SOCKET\_DIR} is required for this to take
-  effect.  The default is \Expr{False}.
+  effect.  The default is \Expr{True}.
   For more information about using
   a shared port, see page~\pageref{sec:Config-shared-port}.
+
+\label{param:CollectorUsesSharedPort}
+\item[\Macro{COLLECTOR\_USES\_SHARED\_PORT}] A boolean value that
+  specifies whether the \Condor{collector} uses the \Condor{shared\_port}
+  daemon.  When true, the \Condor{shared\_port} will transparently
+  proxy queries to the \Condor{collector} so users do not need to be aware of
+  the presence of the \Condor{shared\_port} when querying the collector
+  and configuring other daemons.  The default is \Expr{True}
+
+\label{param:SharedPortDefaultId}
+\item[\Macro{SHARED\_PORT\_DEFAULT\_ID}] When \Macro{COLLECTOR\_USES\_SHARED\_PORT}
+  is set to \Expr{True}, this is the shared port ID used by the \Condor{collector}.
+  This defaults to \Expr{collector} and will not need to be changed by most sites.
 
 \label{param:AutoIncludeSharedPortInDaemonList}
 \item[\Macro{AUTO\_INCLUDE\_SHARED\_PORT\_IN\_DAEMON\_LIST}] A boolean
