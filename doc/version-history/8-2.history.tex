@@ -77,9 +77,10 @@ that is not the current working directory of \Condor{submit}.
 a non-existent DAG file was specified.
 \Ticket{4423}
 
-\item Fixed a bug that resulted in \Condor{q} \Opt{-format} of an non existent
-attribute printing out "undefined" instead of nothing when using the \Opt{\%s}
-format specifier.
+\item Fixed a bug that resulted in output of the string \AdStr{undefined}, 
+instead of printing nothing,
+when using the \Opt{\%s} format specifier to
+\Condor{q} \Opt{-format}.
 \Ticket{4418}
 
 \item Fixed a bug in \Condor{shadow} that caused the user's supplemental
