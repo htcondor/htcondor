@@ -438,6 +438,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 #if defined(HAVE_EXT_GLOBUS)
 	if (globus_activated == false) {
 		dprintf (D_FULLDEBUG, "Activating Globus GSI_GSSAPI_ASSIST module.\n");
+		globus_thread_set_model(GLOBUS_THREAD_MODEL_NONE);
 		globus_module_activate(GLOBUS_GSI_GSS_ASSIST_MODULE);
 		globus_activated = true;
 	}
