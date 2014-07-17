@@ -5690,7 +5690,7 @@ review=?
 tags=schedd
 
 [DAEMON_SOCKET_DIR]
-default=$(LOCK)/daemon_sock
+default=auto
 type=string
 reconfig=true
 customization=seldom

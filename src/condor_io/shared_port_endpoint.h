@@ -119,7 +119,10 @@ class SharedPortEndpoint: Service {
 
 	static void paramDaemonSocketDir(MyString &result);
 
+	static bool CreatedSharedPortDirectory() {return m_created_shared_port_dir;}
+
  private:
+	static bool m_created_shared_port_dir;
 	bool m_listening;
 	bool m_registered_listener;
 	MyString m_socket_dir;// dirname of socket

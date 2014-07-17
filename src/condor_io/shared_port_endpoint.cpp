@@ -45,6 +45,8 @@
 static char const *WINDOWS_DAEMON_SOCKET_DIR = "\\\\.\\pipe\\condor";
 #endif
 
+bool SharedPortEndpoint::m_created_shared_port_dir = false;
+
 SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 	m_listening(false),
 	m_registered_listener(false),
@@ -282,8 +284,16 @@ SharedPortEndpoint::CreateListener()
 	struct sockaddr_un named_sock_addr;
 	memset(&named_sock_addr, 0, sizeof(named_sock_addr));
 	named_sock_addr.sun_family = AF_UNIX;
-	strncpy(named_sock_addr.sun_path,m_full_name.Value(),sizeof(named_sock_addr.sun_path)-1);
-	if( strcmp(named_sock_addr.sun_path,m_full_name.Value()) ) {
+#ifdef LINUX
+	strncpy(named_sock_addr.sun_path+1, m_full_name.Value(), sizeof(named_sock_addr.sun_path)-2);
+	unsigned named_sock_addr_len = sizeof(named_sock_addr) - sizeof(named_sock_addr.sun_path) + 1 + strlen(named_sock_addr.sun_path+1);
+	bool is_good = strcmp(named_sock_addr.sun_path+1,m_full_name.Value());;
+#else
+	strncpy(named_sock_addr.sun_path, m_full_name.Value(), sizeof(named_sock_addr.sun_path)-1);
+	unsigned named_sock_addr_len = SUN_LEN(&named_sock_addr);
+	bool is_good = strcmp(named_sock_addr.sun_path,m_full_name.Value());
+#endif
+	if( is_good ) {
 		dprintf(D_ALWAYS,
 			"ERROR: SharedPortEndpoint: full listener socket name is too long."
 			" Consider changing DAEMON_SOCKET_DIR to avoid this:"
@@ -303,7 +313,7 @@ SharedPortEndpoint::CreateListener()
 			bind(
 				 sock_fd,
 				 (struct sockaddr *)&named_sock_addr,
-				 SUN_LEN(&named_sock_addr));
+				 named_sock_addr_len);
 
 		if( tried_priv_switch ) {
 			set_priv( orig_priv );
@@ -1315,9 +1325,50 @@ SharedPortEndpoint::paramDaemonSocketDir(MyString &result)
 {
 #ifdef WIN32
 	result = WINDOWS_DAEMON_SOCKET_DIR;
+#elif defined(LINUX)
+		// Linux has some unique behavior.  We use a random cookie as a prefix to our
+		// shared port "directory" in the abstract Unix namespace.
+		// First, look into our environment to see if we have this set already.
+		// DaemonCore takes care of propagating this cookie to children processes.
+	const char * known_dir = getenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
+	if (known_dir == NULL) {
+		char *keybuf = Condor_Crypt_Base::randomHexKey(32);
+		if (keybuf == NULL) {
+			EXCEPT("SharedPortEndpoint: Unable to create a secure shared port cookie.\n");
+		}
+		setenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", keybuf, 1);
+	}
+	result = known_dir;
 #else
-	if( !param(result,"DAEMON_SOCKET_DIR") ) {
+	const char * known_dir = getenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
+	if (known_dir != NULL) {
+		result = known_dir;
+		return;
+	}
+	if( !param(result, "DAEMON_SOCKET_DIR") ) {
 		EXCEPT("DAEMON_SOCKET_DIR must be defined");
 	}
+		// If set to "auto", we want to make sure that $(DAEMON_SOCKET_DIR)/collector isn't more than 108 characters
+	if (result == "auto") {
+		struct sockaddr_un named_sock_addr;
+		const unsigned max_len = sizeof(named_sock_addr.sun_path)-1;
+		const char * default_name = macro_expand("$(LOCK)/daemon_sock");
+		if (strlen(default_name) + strlen("/collector") > max_len) {
+			TemporaryPrivSentry tps(PRIV_CONDOR);
+				// NOTE we force the use of /tmp here - not using the HTCondor library routines;
+				// this is because HTCondor will look up the param TMP_DIR, which might also be
+				// a long directory path.  We really want /tmp.
+			char dirname_template[] = "/tmp/condor_shared_port_XXXXXX";
+			const char *dirname = mkdtemp(dirname_template);
+			if (dirname == NULL) {
+				EXCEPT("SharedPortEndpoint: Failed to create shared port directory: %s (errno=%d)\n", strerror(errno), errno);
+			}
+			m_created_shared_port_dir = true;
+			result = dirname;
+			dprintf(D_ALWAYS, "Default DAEMON_SOCKET_DIR too long; using %s instead.  Please shorten the length of $(LOCK)\n", dirname);
+		}
+	}
+	setenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", result.Value(), 1);
 #endif
 }
+

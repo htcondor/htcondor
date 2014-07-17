@@ -452,8 +452,16 @@ SharedPortState::HandleUnbound(Stream *&s)
 	struct sockaddr_un named_sock_addr;
 	memset(&named_sock_addr, 0, sizeof(named_sock_addr));
 	named_sock_addr.sun_family = AF_UNIX;
+#ifdef LINUX
+	strncpy(named_sock_addr.sun_path+1, sock_name.Value(), sizeof(named_sock_addr.sun_path)-2);
+	unsigned named_sock_addr_len = sizeof(named_sock_addr) - sizeof(named_sock_addr.sun_path) + 1 + strlen(named_sock_addr.sun_path+1);
+	bool is_good = strcmp(named_sock_addr.sun_path+1,sock_name.Value());
+#else
 	strncpy(named_sock_addr.sun_path, sock_name.Value(), sizeof(named_sock_addr.sun_path)-1);
-	if( strcmp(named_sock_addr.sun_path,sock_name.Value()) ) {
+	unsigned named_sock_addr_len = SUN_LEN(&named_sock_addr);
+	bool is_good = strcmp(named_sock_addr.sun_path,sock_name.Value());
+#endif
+	if( is_good ) {
 			dprintf(D_ALWAYS,"ERROR: SharedPortClient: full socket name%s is too long: %s\n",
 							m_requested_by.c_str(),
 							sock_name.Value());
@@ -500,7 +508,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 		// not a network (ipv4/ipv6) socket.
 		connect_rc = connect(named_sock_fd,
 				(struct sockaddr *)&named_sock_addr,
-				SUN_LEN(&named_sock_addr));
+				named_sock_addr_len);
 		connect_errno = errno;	// stash away errno quick so not overwritten by sentry
 	}
 
