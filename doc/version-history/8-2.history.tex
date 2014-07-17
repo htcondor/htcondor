@@ -59,27 +59,28 @@ jobs running on Linux machines when PID namespaces were enabled.
 caused DAGMan to fail.
 \Ticket{4361}
 
-\item Fixed problems where job rank may not always work as documented
-	due to a bug in HTCondor's autocluster mechanism.
+\item Fixed a problem in which job rank may not have always worked
+as documented due to a bug in HTCondor's auto cluster mechanism.
 \Ticket{4403}
 
-\item Update the HTCondor DRMAA library to 1.6.2. This version fixes a
-couple minor bugs in the functions for querying how a job exited.
+\item Updated the HTCondor DRMAA library to version 1.6.2. 
+This version fixes minor bugs in the functions for querying how a job exited.
 \Ticket{4413}
 
 \item \Condor{submit} no longer fails if the value of
-\SubmitCmd{x509userproxy} is a relative path and \SubmitCmd{initialdir}
-is set to a directory that's not the current working directory of
-\Condor{submit}.
+\SubmitCmd{x509userproxy} is a relative path, 
+and the value of \SubmitCmd{initialdir} is set to a directory 
+that is not the current working directory of \Condor{submit}.
 \Ticket{4415}
 
 \item Fixed a bug that caused \Condor{submit\_dag} to core dump if
 a non-existent DAG file was specified.
 \Ticket{4423}
 
-\item Fixed a bug that resulted in \Condor{q} \Opt{-format} of an non existent
-attribute printing out "undefined" instead of nothing when using the \Opt{\%s}
-format specifier.
+\item Fixed a bug that resulted in output of the string \AdStr{undefined}, 
+instead of printing nothing,
+when using the \Opt{\%s} format specifier to
+\Condor{q} \Opt{-format}.
 \Ticket{4418}
 
 \item Fixed a bug in \Condor{shadow} that caused the user's supplemental
@@ -88,18 +89,22 @@ This could result in the job being held with the hold reason
 ``Failed to initialize user log to <path>''.
 \Ticket{4437}
 
-\item Fixed a bug in \Prog{cream\_gahp} that would corrupt memory when
+\item Fixed a bug in the \Prog{cream\_gahp} that would corrupt memory when
 using more than the default number of worker threads.
 \Ticket{4416}
 
 \item Fixed a bug that could cause the \Prog{cream\_gahp} to fail at
-startup because it couldn't locate a Globus threading library.
+start up, because it could not locate a Globus threading library.
 \Ticket{4440}
 
 \item When a daemon checks whether a user has execute permission for a
 directory, it now considers supplemental groups and POSIX ACLs in the
 determination.
 \Ticket{4402}
+
+\item Fixed a bug that could cause GSI security operations to fail if
+\Env{GLOBUS\_THREAD\_MODEL} was set in the environment.
+\Ticket{4464}
 
 \end{itemize}
 

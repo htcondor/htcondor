@@ -1953,6 +1953,11 @@ int main(int, char **)
 	/* Parse command line args */
 
 	/* Activate Globus modules we intend to use */
+	if ( globus_thread_set_model(GLOBUS_THREAD_MODEL_NONE) != GLOBUS_SUCCESS ) {
+		printf("Unable to set Globus thread model!\n");
+		_exit(1);
+	}
+
     err = globus_module_activate( GLOBUS_COMMON_MODULE );
     if ( err != GLOBUS_SUCCESS ) {
 		printf("Unable to activate Globus Common Module!\n");
