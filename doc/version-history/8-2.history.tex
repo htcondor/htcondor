@@ -44,10 +44,11 @@ The details of each version are described below.
 daemon.
 \Ticket{4456}
 
-\item Fixed a bug that happened on newer Linux kernels where
-with cgroups enabled, the OOM killer would kill the job when it
-went over the memory allocation.  Now the starter catches the OOM
-signal and puts the job on hold with an appropriate message.
+\item Fixed a bug existing on Linux platforms with newer kernels.
+With cgroups enabled, the OOM killer killed the job when the job
+went over its memory allocation.  
+Now, the \Condor{starter} catches the OOM signal and 
+places the job on hold with an appropriate message.
 \Ticket{4435}
 
 \item Fixed a bug in which the expression set by submit command 
