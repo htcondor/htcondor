@@ -450,7 +450,7 @@ init_user_ids(const char username[], const char domain[])
 		bool got_password_from_credd = false;
 
 		// these should probably be snprintfs
-		swprintf_s(w_fullname, L"%S@%S", username, domain);
+		swprintf_s(w_fullname, COUNTOF(w_fullname), L"%S@%S", username, domain);
 		sprintf(user, "%s", username);
 		sprintf(dom, "%s", domain);
 		
