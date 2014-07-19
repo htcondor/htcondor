@@ -143,8 +143,6 @@ SharedPortServer::PublishAddress()
 int
 SharedPortServer::HandleConnectRequest(int,Stream *sock)
 {
-	int result = TRUE;
-
 	sock->decode();
 
 		// to avoid possible D-O-S attacks, we read into fixed-length buffers

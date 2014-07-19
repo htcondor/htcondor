@@ -48,6 +48,10 @@
 #endif
 #endif
 
+#ifdef WIN32
+#include <sstream>
+#endif
+
 // these are defined in master.C
 extern int 		MasterLockFD;
 extern FileLock*	MasterLock;
@@ -554,6 +558,13 @@ int daemon::RealStart( )
 	ArgList args;
 
 	param(default_id, "SHARED_PORT_DEFAULT_ID");
+		// Windows has a global pipe namespace, meaning that several instances of
+		// HTCondor share the same default ID; we make it unique below.
+#ifdef WIN32
+	std::stringstream ss;
+	ss << default_id << "_" << getpid();
+	default_id = ss.str();
+#endif
 
 	// Copy a couple of checks from Start
 	dprintf( D_FULLDEBUG, "::RealStart; %s on_hold=%d\n", name_in_config_file, on_hold );
@@ -797,6 +808,9 @@ int daemon::RealStart( )
 	}
 	if( !strcmp(name_in_config_file,"SHARED_PORT") ) {
 		jobopts |= DCJOBOPT_NO_UDP | DCJOBOPT_NEVER_USE_SHARED_PORT;
+#ifdef WIN32
+		env.SetEnv("_condor_SHARED_PORT_DEFAULT_ID", default_id.c_str());
+#endif
 	}
 	// If we are starting a collector and passed a "-sock" command in the command line,
 	// but didn't set the COLLECTOR_HOST to use shared port, have the collector listen on
