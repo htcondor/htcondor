@@ -49,6 +49,14 @@ on Linux platforms.
 All cores reported as full cores without hyper-threading. 
 \Ticket{4458}
 
+\item Fixed a Windows platform bug that caused the \Condor{starter}
+to abort while creating the job sandbox.
+The bug presents as a minor memory leak in all versions of HTCondor 
+for Windows prior to version 8.2.2 and 8.3.0.
+In HTCondor version 8.2.0, this bug could sometimes
+present as an abrupt \Condor{starter} exit with status -1073740940. 
+\Ticket{4467}
+
 \item Fixed a file descriptor leak in the \Condor{shared\_port}
 daemon.
 \Ticket{4456}
