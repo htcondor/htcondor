@@ -45,9 +45,11 @@
 static char const *WINDOWS_DAEMON_SOCKET_DIR = "\\\\.\\pipe\\condor";
 #endif
 
+bool SharedPortEndpoint::m_should_initialize_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
 
 SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
+	m_is_file_socket(true),
 	m_listening(false),
 	m_registered_listener(false),
 	m_retry_remote_addr_timer(-1),
@@ -134,15 +136,23 @@ SharedPortEndpoint::GetSharedPortID()
 void
 SharedPortEndpoint::InitAndReconfig()
 {
-	MyString socket_dir;
-	paramDaemonSocketDir(socket_dir);
+	std::string socket_dir;
+#if USE_ABSTRACT
+	m_is_file_socket = false;
+#endif
+	if (!GetDaemonSocketDir(socket_dir)) {
+		m_is_file_socket = true;
+		if (!GetAltDaemonSocketDir(socket_dir)) {
+			EXCEPT("Unable to determine an appropriate DAEMON_SOCKET_DIR to use.");
+		}
+	}
 
 	if( !m_listening ) {
 		m_socket_dir = socket_dir;
 	}
 	else if( m_socket_dir != socket_dir ) {
 		dprintf(D_ALWAYS,"SharedPortEndpoint: DAEMON_SOCKET_DIR changed from %s to %s, so restarting.\n",
-				m_socket_dir.Value(), socket_dir.Value());
+				m_socket_dir.Value(), socket_dir.c_str());
 		StopListener();
 		m_socket_dir = socket_dir;
 		StartListener();
@@ -284,16 +294,18 @@ SharedPortEndpoint::CreateListener()
 	struct sockaddr_un named_sock_addr;
 	memset(&named_sock_addr, 0, sizeof(named_sock_addr));
 	named_sock_addr.sun_family = AF_UNIX;
-#ifdef LINUX
-	strncpy(named_sock_addr.sun_path+1, m_full_name.Value(), sizeof(named_sock_addr.sun_path)-2);
-	unsigned named_sock_addr_len = sizeof(named_sock_addr) - sizeof(named_sock_addr.sun_path) + 1 + strlen(named_sock_addr.sun_path+1);
-	bool is_good = strcmp(named_sock_addr.sun_path+1,m_full_name.Value());;
-#else
-	strncpy(named_sock_addr.sun_path, m_full_name.Value(), sizeof(named_sock_addr.sun_path)-1);
-	unsigned named_sock_addr_len = SUN_LEN(&named_sock_addr);
-	bool is_good = strcmp(named_sock_addr.sun_path,m_full_name.Value());
-#endif
-	if( is_good ) {
+	unsigned named_sock_addr_len;
+	bool is_no_good;
+	if (m_is_file_socket) {
+		strncpy(named_sock_addr.sun_path, m_full_name.Value(), sizeof(named_sock_addr.sun_path)-1);
+		named_sock_addr_len = SUN_LEN(&named_sock_addr);
+		is_no_good = strcmp(named_sock_addr.sun_path,m_full_name.Value());
+	} else {
+		strncpy(named_sock_addr.sun_path+1, m_full_name.Value(), sizeof(named_sock_addr.sun_path)-2);
+		named_sock_addr_len = sizeof(named_sock_addr) - sizeof(named_sock_addr.sun_path) + 1 + strlen(named_sock_addr.sun_path+1);
+		is_no_good = strcmp(named_sock_addr.sun_path+1,m_full_name.Value());;
+	}
+	if( is_no_good ) {
 		dprintf(D_ALWAYS,
 			"ERROR: SharedPortEndpoint: full listener socket name is too long."
 			" Consider changing DAEMON_SOCKET_DIR to avoid this:"
@@ -327,13 +339,13 @@ SharedPortEndpoint::CreateListener()
 
 			// bind failed: deal with some common sources of error
 
-		if( RemoveSocket(m_full_name.Value()) ) {
+		if( m_is_file_socket && RemoveSocket(m_full_name.Value()) ) {
 			dprintf(D_ALWAYS,
 				"WARNING: SharedPortEndpoint: removing pre-existing socket %s\n",
 				m_full_name.Value());
 			continue;
 		}
-		else if( MakeDaemonSocketDir() ) {
+		else if( m_is_file_socket && MakeDaemonSocketDir() ) {
 			dprintf(D_ALWAYS,
 				"SharedPortEndpoint: creating DAEMON_SOCKET_DIR=%s\n",
 				m_socket_dir.Value());
@@ -617,7 +629,7 @@ SharedPortEndpoint::TouchSocketInterval()
 void
 SharedPortEndpoint::SocketCheck()
 {
-	if( !m_listening || m_full_name.IsEmpty() ) {
+	if( !m_listening || m_full_name.IsEmpty() || !m_is_file_socket) {
 		return;
 	}
 
@@ -1169,17 +1181,34 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 
 	time_t now = time(NULL);
 	if( abs((int)now-(int)cached_time) > 10 || cached_time==0 || why_not ) {
-		MyString socket_dir;
-		paramDaemonSocketDir(socket_dir);
-
 		cached_time = now;
-		cached_result = access(socket_dir.Value(),W_OK)==0;
+
+		std::string socket_dir;
+		bool is_file_socket = true;
+#ifdef USE_ABSTRACT
+		is_file_socket = false;
+#endif
+		if (!GetDaemonSocketDir(socket_dir)) {
+			is_file_socket = true;
+			if (!GetAltDaemonSocketDir(socket_dir)) {
+				why_not->formatstr("No DAEMON_SOCKET_DIR is available.\n");
+				cached_result = false;
+				return cached_result;
+			}
+		}
+
+		if (!is_file_socket) {
+			cached_result = true;
+			return cached_result;
+		}
+
+		cached_result = access(socket_dir.c_str(),W_OK)==0;
 
 		if( !cached_result && errno == ENOENT )
 		{
 				// if socket_dir doesn't exist, see if we are allowed to
 				// create it
-			char *parent_dir = condor_dirname( socket_dir.Value() );
+			char *parent_dir = condor_dirname( socket_dir.c_str() );
 			if( parent_dir ) {
 				cached_result = access(parent_dir,W_OK)==0;
 				free( parent_dir );
@@ -1188,7 +1217,7 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 
 		if( !cached_result && why_not ) {
 			why_not->formatstr("cannot write to %s: %s",
-						   socket_dir.Value(),
+						   socket_dir.c_str(),
 						   strerror(errno));
 		}
 	}
@@ -1320,31 +1349,26 @@ SharedPortEndpoint::MakeDaemonSocketDir()
 }
 #endif
 
+
 void
-SharedPortEndpoint::paramDaemonSocketDir(MyString &result)
+SharedPortEndpoint::InitializeDaemonSocketDir()
 {
-#ifdef WIN32
-	result = WINDOWS_DAEMON_SOCKET_DIR;
-#elif defined(LINUX)
+	m_should_initialize_socket_dir = true;
+}
+
+void
+SharedPortEndpoint::RealInitializeDaemonSocketDir()
+{
+	std::string result;
+#ifdef USE_ABSTRACT
 		// Linux has some unique behavior.  We use a random cookie as a prefix to our
 		// shared port "directory" in the abstract Unix namespace.
-		// First, look into our environment to see if we have this set already.
-		// DaemonCore takes care of propagating this cookie to children processes.
-	const char * known_dir = getenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
-	if (known_dir == NULL) {
-		char *keybuf = Condor_Crypt_Base::randomHexKey(32);
-		if (keybuf == NULL) {
-			EXCEPT("SharedPortEndpoint: Unable to create a secure shared port cookie.\n");
-		}
-		setenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", keybuf, 1);
+	char *keybuf = Condor_Crypt_Base::randomHexKey(32);
+	if (keybuf == NULL) {
+		EXCEPT("SharedPortEndpoint: Unable to create a secure shared port cookie.\n");
 	}
-	result = known_dir;
+	result = keybuf;
 #else
-	const char * known_dir = getenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
-	if (known_dir != NULL) {
-		result = known_dir;
-		return;
-	}
 	if( !param(result, "DAEMON_SOCKET_DIR") ) {
 		EXCEPT("DAEMON_SOCKET_DIR must be defined");
 	}
@@ -1366,9 +1390,56 @@ SharedPortEndpoint::paramDaemonSocketDir(MyString &result)
 			m_created_shared_port_dir = true;
 			result = dirname;
 			dprintf(D_ALWAYS, "Default DAEMON_SOCKET_DIR too long; using %s instead.  Please shorten the length of $(LOCK)\n", dirname);
+		} else {
+			result = default_name;
 		}
 	}
-	setenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", result.Value(), 1);
 #endif
+	setenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", result.c_str(), 1);
+}
+
+
+bool
+SharedPortEndpoint::GetAltDaemonSocketDir(std::string &result)
+{
+#ifndef WIN32
+	if (!param(result, "DAEMON_SOCKET_DIR") )
+	{
+		EXCEPT("DAEMON_SOCKET_DIR must be defined");
+	}
+		// If set to "auto", we want to make sure that $(DAEMON_SOCKET_DIR)/collector isn't more than 108 characters
+	if (result == "auto") {
+		struct sockaddr_un named_sock_addr;
+		const unsigned max_len = sizeof(named_sock_addr.sun_path)-1;
+		const char * default_name = macro_expand("$(LOCK)/daemon_sock");
+		if (strlen(default_name) + strlen("/collector") > max_len) {
+			dprintf(D_FULLDEBUG, "WARNING: DAEMON_SOCKET_DIR %s setting is too long.\n", default_name);
+			return false;
+		}
+		result = default_name;
+	}
+	return true;
+#endif
+	return false;
+}
+
+
+bool
+SharedPortEndpoint::GetDaemonSocketDir(std::string &result)
+{
+#ifdef WIN32
+	result = WINDOWS_DAEMON_SOCKET_DIR;
+#else
+	if (m_should_initialize_socket_dir) {
+		RealInitializeDaemonSocketDir();
+		m_should_initialize_socket_dir = false;
+	}
+	const char * known_dir = getenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
+	if (known_dir == NULL) {
+		return false;
+	}
+	result = known_dir;
+#endif
+	return true;
 }
 

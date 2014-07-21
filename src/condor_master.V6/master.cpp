@@ -187,9 +187,9 @@ master_exit(int retval)
 		// we created it.
 	if (SharedPortEndpoint::CreatedSharedPortDirectory()) {
 		TemporaryPrivSentry tps(PRIV_CONDOR);
-		MyString dirname;
-		SharedPortEndpoint::paramDaemonSocketDir(dirname);
-		Directory d(dirname.Value());
+		std::string dirname;
+		SharedPortEndpoint::GetDaemonSocketDir(dirname);
+		Directory d(dirname.c_str());
 		d.Remove_Entire_Directory();
 		if (-1 == rmdir(dirname.c_str())) {
 			dprintf(D_ALWAYS, "ERROR: failed to remove shared port temporary directory: %s (errno=%d).\n", strerror(errno), errno);
@@ -1315,6 +1315,7 @@ main( int argc, char **argv )
 #endif
 
 	set_mySubSystem( "MASTER", SUBSYSTEM_TYPE_MASTER );
+	SharedPortEndpoint::InitializeDaemonSocketDir();
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;
