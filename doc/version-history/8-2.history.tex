@@ -40,6 +40,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a Windows platform bug that caused \Condor{status} to abort
+when \Macro{ENABLE\_CLASSAD\_CACHING} was set to \Expr{True}. 
+\Ticket{4459}
+
 \item Fixed a bug that prevented the detection of hyper-threaded cores
 on Linux platforms.
 All cores reported as full cores without hyper-threading. 
