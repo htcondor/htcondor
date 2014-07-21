@@ -40,6 +40,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that prevented the detection of hyper-threaded cores
+on Linux platforms.
+All cores reported as full cores without hyper-threading. 
+\Ticket{4458}
+
 \item Fixed a file descriptor leak in the \Condor{shared\_port}
 daemon.
 \Ticket{4456}
