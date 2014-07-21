@@ -869,16 +869,16 @@ the changed value.
 
 \label{param:DetectedCpus}
 \item[\MacroU{DETECTED\_CPUS}]
-  The integer number of physical (non-hyperthreaded) CPUs, as given by
+  The integer number of physical (non hyper-threaded) CPUs, as given by
   \MacroUNI{DETECTED\_PHYSICAL\_CPUS}, when \Macro{COUNT\_HYPERTHREAD\_CPUS}
   is \Expr{True}.
-  The integer number of hyperthreaded CPUs, as given by
+  The integer number of hyper-threaded CPUs, as given by
   \MacroUNI{DETECTED\_CORES}, when \MacroNI{COUNT\_HYPERTHREAD\_CPUS}
   is \Expr{False}.
 
 \label{param:DetectedPhysicalCpus}
 \item[\MacroU{DETECTED\_PHYSICAL\_CPUS}]
-  The integer number of physical (non-hyperthreaded) CPUs.
+  The integer number of physical (non hyper-threaded) CPUs.
 
 \end{description}
 
@@ -934,7 +934,7 @@ determined automatically at run time but which can be overwritten.
 \label{param:DetectedCores}
 \item[\MacroU{DETECTED\_CORES}]
   The number of detected CPU cores.  
-  This includes hyper threaded cores, if there are any.
+  This includes hyper-threaded cores, if there are any.
 
 \label{param:Pid}
 \item[\MacroU{PID}]
@@ -4771,7 +4771,7 @@ WANT_HOLD_REASON = \
 
 \label{param:CountHyperthreadCpus}
 \item[\Macro{COUNT\_HYPERTHREAD\_CPUS}]
-  This macro controls how HTCondor sees hyper threaded
+  This macro controls how HTCondor sees hyper-threaded
   processors. When set to \Expr{True} (the default), it includes virtual CPUs in
   the default value of \MacroNI{NUM\_CPUS}. On dedicated cluster nodes, 
   counting virtual CPUs can sometimes improve total throughput at the expense 

@@ -101,10 +101,10 @@ when using the \Opt{\%s} format specifier to
 \Condor{q} \Opt{-format}.
 \Ticket{4418}
 
-\item Fixed a bug in \Condor{shadow} that caused the user's supplemental
-groups to be unset when trying to write to the user job log.
+\item Fixed a bug in the \Condor{shadow} that caused the user's supplemental
+groups to be unset when trying to write to the user's job event log.
 This could result in the job being held with the hold reason
-``Failed to initialize user log to <path>''.
+\Expr{"Failed to initialize user log to <path>"}.
 \Ticket{4437}
 
 \item Fixed a bug in the \Prog{cream\_gahp} that would corrupt memory when
