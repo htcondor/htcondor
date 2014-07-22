@@ -111,13 +111,18 @@ fi
 # Start and init ssh agent if key file is specified
 
 
-# if a passphrase is required, start up a ssh-agent and do ssh-add
-if [ "$PRIVATE_KEY_LOCATION" != "" -a -f "$PRIVATE_KEY_LOCATION" ] ; then
+# if a ssh key is required, start up a ssh-agent and do ssh-add
+if [ -n "$PRIVATE_KEY_LOCATION" -a -f "$PRIVATE_KEY_LOCATION" ] ; then
 	# start the ssh-agent
 	eval `ssh-agent -s` 1>&2
 
 	# Call the external program to do ssh-add
-	bosco_ssh_start
+        # If a passphrase is required pass it to the script
+        if [ -n "$PASSPHRASE_LOCATION" ]; then
+	    bosco_ssh_start --key "$PRIVATE_KEY_LOCATION" --pass "$PASSPHRASE_LOCATION"
+        else
+	    bosco_ssh_start --key "$PRIVATE_KEY_LOCATION" --nopass
+        fi
 	ADD_STATUS=$?
 
 	# check if ssh-add failed
@@ -166,7 +171,7 @@ elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
         SSH_STATUS=$?
     done
 else
-    echo "Unknown remote command" 1>&2
+    echo "Unknown remote command (${REMOTE_CMD})" 1>&2
     SSH_STATUS=1
 fi
 
