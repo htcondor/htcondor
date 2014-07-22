@@ -223,7 +223,7 @@ CCBServer::InitAndReconfig()
 			return;
 		}
 		dup2(m_epfd, fd_to_replace);
-		fcntl(fd_to_replace, F_SETFL, O_CLOEXEC);
+		fcntl(fd_to_replace, F_SETFL, FD_CLOEXEC);
 		close(m_epfd);
 		m_epfd = pipes[0];
 
