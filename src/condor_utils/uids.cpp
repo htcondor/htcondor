@@ -294,7 +294,10 @@ void uninit_file_owner_ids() {}
 uid_t getuid() { return get_my_uid(); }
 
 // Static/Global objects
-extern dynuser *myDynuser; 	// the "system wide" dynuser object
+
+// This is the global object to access Dynuser.
+dynuser		myDyn;
+dynuser		*myDynuser = &myDyn;
 
 static HANDLE CurrUserHandle = NULL;
 static char *UserLoginName = NULL; // either a "nobody" account or the submitting user
@@ -450,7 +453,7 @@ init_user_ids(const char username[], const char domain[])
 		bool got_password_from_credd = false;
 
 		// these should probably be snprintfs
-		swprintf_s(w_fullname, L"%S@%S", username, domain);
+		swprintf_s(w_fullname, COUNTOF(w_fullname), L"%S@%S", username, domain);
 		sprintf(user, "%s", username);
 		sprintf(dom, "%s", domain);
 		

@@ -31,7 +31,7 @@ class ScheddCronJob: public ClassAdCronJob
 	virtual ~ScheddCronJob( );
 
   private:
-	int Publish( const char *name, ClassAd *ad );
+	int Publish( const char *name, const char *args, ClassAd *ad );
 };
 
 #endif /* _SCHEDD_CRON_JOB_H */

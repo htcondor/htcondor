@@ -28,7 +28,6 @@
 #include "vanilla_proc.h"
 #include "starter.h"
 #include "syscall_numbers.h"
-#include "dynuser.h"
 #include "condor_config.h"
 #include "domain_tools.h"
 #include "classad_helpers.h"
@@ -40,7 +39,6 @@
 
 #ifdef WIN32
 #include "executable_scripts.WINDOWS.h"
-extern dynuser* myDynuser;
 #endif
 
 #if defined(HAVE_EVENTFD)
@@ -730,7 +728,8 @@ VanillaProc::JobReaper(int pid, int status)
 		}
 	}
 
-	if (m_pid_ns_init_filename.length() > 0) {
+	// If we didn't kill it ourselves, and we've using pid namespaces
+	if (!requested_exit && (m_pid_ns_init_filename.length() > 0)) {
 		// We ran a job with a pid_ns_init wrapper.  This file contains
 		// true status
 		TemporaryPrivSentry sentry(PRIV_ROOT);
@@ -1050,9 +1049,19 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 		dprintf(D_ALWAYS,
 			"Unable to set OOM control to %s for starter: %u %s\n",
 				limits, errno, strerror(errno));
+			/* 
+				For reasons I don't understand, some newer kernels
+				are returning EINVAL for this write, even though they
+				would still deliver OOM to the starter.  Ignore the
+				error for now, and continue on and try to subscribe
+				to the event  #4435
+			*/
+/* #4435
 		close(event_ctrl_fd);
 		close(oom_fd2);
 		return 1;
+*/
+
 	}
 	close(oom_fd2);
 

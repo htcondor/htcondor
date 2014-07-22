@@ -134,6 +134,7 @@ ProcFamily::migrate_to_cgroup(pid_t pid)
 			dprintf(D_PROCFAMILY,
 				"Unable to read original cgroup %s (ProcFamily %u): %u %s\n",
 				orig_cgroup_string, m_root_pid, err, cgroup_strerror(err));
+			cgroup_free(&orig_cgroup);
 			goto after_migrate;
 		}
 		if ((memory_controller = cgroup_get_controller(orig_cgroup, MEMORY_CONTROLLER_STR)) == NULL) {
@@ -157,6 +158,7 @@ ProcFamily::migrate_to_cgroup(pid_t pid)
 			goto after_migrate;
 		}
 		if (orig_migrate != 3) {
+			cgroup_free(&orig_cgroup);
 			orig_cgroup = cgroup_new_cgroup(orig_cgroup_string);
 			memory_controller = cgroup_add_controller(orig_cgroup, MEMORY_CONTROLLER_STR);
 			ASSERT (memory_controller != NULL); // Memory controller must already exist
@@ -185,7 +187,7 @@ after_migrate:
 	}
 
 	if (changed_orig) {
-		if ((orig_cgroup = cgroup_new_cgroup(orig_cgroup_string))) {
+		if ((orig_cgroup = cgroup_new_cgroup(orig_cgroup_string)) == NULL) {
 			goto after_restore;
 		}
 		if (((memory_controller = cgroup_add_controller(orig_cgroup, MEMORY_CONTROLLER_STR)) != NULL) &&

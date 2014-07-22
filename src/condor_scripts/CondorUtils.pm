@@ -15,10 +15,11 @@ BEGIN {
 package CondorUtils;
 
 our $VERSION = '1.00';
+my $btdebug = 0;
 
 use base 'Exporter';
 
-our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl fullchomp CreateDir CopyIt TarCreate TarExtract MoveIt DirLs List);
+our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl is_cygwin_perl fullchomp CreateDir CopyIt TarCreate TarExtract MoveIt DirLs List WhereIsInstallDir);
 
 sub TRUE{1};
 sub FALSE{0};
@@ -351,6 +352,16 @@ sub runcmd {
 	#print "expected returnval was <$expected>\n";
 	$returnthings{"expectation"} = $expected;
 	if(!$expected && (${$options}{die_on_failed_expectation} == TRUE)) {
+		print "****** STDOUT ******\n";
+		foreach my $thing1 (@outlines) {
+			print "$thing1\n";
+		}
+		print "****** STDOUT ******\n";
+		print "****** STDERR ******\n";
+		foreach my $thing2 (@errlines) {
+			print "$thing2\n";
+		}
+		print "****** STDERR ******\n";
 		die "Expectation Failed on cmd <$args>\n";
 	} else {
 		#print "runcmd: Told Failure was OK\n";
@@ -509,13 +520,35 @@ sub Which {
 
     return "" if(!$exe);
 
+#print "Which: looking for: $exe\n";
     if( is_windows_native_perl() ) {
+		if($btdebug == 1) {
+			print "windows native perl!\n";
+		}
         return `\@for \%I in ($exe) do \@echo(\%~\$PATH:I`;
     }
-    foreach my $path (split /:/, $ENV{PATH}) {
-        chomp $path;
+	my $amwindows = is_windows();
+
+	my @winpath = {};
+	if($amwindows == 1) {
+		if(is_cygwin_perl()) {
+			@winpath = split /:/, $ENV{PATH};
+			#$exe = "$exe" . ".exe";
+		} else {
+			@winpath = split /;/, $ENV{PATH};
+			# should not get here
+		}
+	} else {
+		@winpath = split /:/, $ENV{PATH};
+	}
+
+    foreach my $path (@winpath) {
+        fullchomp( $path);
 		#print "Checking <$path>\n";
         if(-f "$path/$exe") {
+			if($btdebug == 1) {
+				print "Which returning:$path/$exe\n";
+			}
             return "$path/$exe";
         }
     }
@@ -570,35 +603,54 @@ sub CreateDir
 
 	my $winpath = "";
 	if($amwindows == 1) {
-		if($argsin[0] eq "-p") {
-			$winpath = `cygpath -w $argsin[1]`;
-			CondorUtils::fullchomp($winpath);
-			$_ = $winpath;
-			s/\\/\\\\/g;
-			$winpath = $_;
-			if(-d "$argsin[1]") {
-				return($ret);
+		if(is_windows_native_perl()) {
+			# what if a linux path first?
+			if($argsin[0] eq "-p") {
+				shift @argsin;
 			}
+			foreach my $dir (@argsin) {
+				$_ = $dir;
+				s/\//\\/g;
+				s/\\/\\\\/g;
+				$dir = $_;
+				if(-d "$dir") {
+					next;
+				}
+				$fullcmd = "cmd /C mkdir $dir";
+				$ret = system("$fullcmd");
+				if($ret != 0) {
+					print "THIS:$fullcmd Failed\n";
+				}
+			}
+			return($ret);
 		} else {
-			$winpath = `cygpath -w $argsin[0]`;
-			CondorUtils::fullchomp($winpath);
-			$_ = $winpath;
-			s/\\/\\\\/g;
-			$winpath = $_;
-			if(-d "$argsin[0]") {
-				return($ret);
+			if($argsin[0] eq "-p") {
+				$winpath = `cygpath -w $argsin[1]`;
+				CondorUtils::fullchomp($winpath);
+				$_ = $winpath;
+				s/\\/\\\\/g;
+				$winpath = $_;
+				if(-d "$argsin[1]") {
+					return($ret);
+				}
+			} else {
+				$winpath = `cygpath -w $argsin[0]`;
+				CondorUtils::fullchomp($winpath);
+				$_ = $winpath;
+				s/\\/\\\\/g;
+				$winpath = $_;
+				if(-d "$argsin[0]") {
+					return($ret);
+				}
 			}
 		}
 
 		$fullcmd = "cmd /C mkdir $winpath";
 		$ret = system("$fullcmd");
-		#print "Tried to create dir got ret value:$ret path:$winpath/$fullcmd\n";
-	} else {
-		if($cmdline =~ /\-p/) {
-			$_ = $cmdline;
-			s/\-p//;
-			$cmdline = $_;
+		if($btdebug == 1) {
+			print "Tried to create dir got ret value:$ret path:$winpath:$fullcmd\n";
 		}
+	} else {
 		$fullcmd = "mkdir $cmdline"; 	
 		if(-d $cmdline) {
 			return($ret);
@@ -659,6 +711,30 @@ sub DirLs
 		$ret = system("$fullcmd");
 	}
 	return($ret);
+}
+
+
+sub dir_listing {
+	my (@path) = @_;
+
+	my $path = File::Spec->catdir(@path);
+
+	# If we have a relative path then show the CWD
+	my $cwd = "";
+	if(not File::Spec->file_name_is_absolute($path)) {
+		$cwd = "(CWD: '" . Cwd::getcwd() . "')";
+	}
+	if($btdebug == 1) {
+		print "Showing directory contents of path '$path' $cwd\n";
+	}
+    
+	# We have to check $^O because the platform_* scripts will be executed on a Linux
+	# submit node - but the nmi platform string will have winnt
+	if( is_windows() && $^O ne "linux" ) {
+		system("dir $path");
+	} else {
+		system("ls -l $path");
+	}
 }
 
 sub CopyIt
@@ -771,4 +847,99 @@ sub TarExtract
 	$tarobject->extract();
 }
 
+sub WhereIsInstallDir {
+	my $base_dir = shift;
+	my $iswindows = shift;
+	my $iscygwin = shift;
+	my $iswindowsnativeperl = shift;
+
+	my $installdir = "";
+	my $wininstalldir = "";
+
+	my $top = $base_dir;
+	if($iswindows == 1) {
+		my $top = Cwd::getcwd();
+		if($btdebug == 1) {
+			print "base_dir is \"$top\"\n";
+		}
+		if ($iscygwin) {
+			my $crunched = `cygpath -m $top`;
+			fullchomp($crunched);
+			if($btdebug == 1) {
+				print "cygpath changed it to: \"$crunched\"\n";
+			}
+			my $ppwwdd = `pwd`;
+			if($btdebug == 1) {
+				print "pwd says: $ppwwdd\n";
+			}
+		} else {
+			my $ppwwdd = `cd`;
+			if($btdebug == 1) {
+				print"cd says: $ppwwdd\n";
+			}
+		}
+	}
+
+	my $master_name = "condor_master"; if ($iswindows) { $master_name = "condor_master.exe"; }
+	my $tmp = Which($master_name);
+	if ( ! ($tmp =~ /condor_master/ ) ) {
+		print STDERR "Which($master_name) returned:$tmp\n";
+		print STDERR "Unable to find a $master_name in your PATH!\n";
+		system("ls build");
+		print "PATH: $ENV{PATH}\n";
+		exit(1);
+	} else {
+		if($btdebug == 1) {
+			print "Found master via Which here:$tmp\n";
+		}
+	}
+	fullchomp($tmp);
+	if($btdebug == 1) {
+		print "Install Directory \"$tmp\"\n";
+	}
+	if ($iswindows) {
+		if ($iscygwin) {
+			$tmp =~ s|\\|/|g; # convert backslashes to forward slashes.
+			if($tmp =~ /^(.*)\/bin\/condor_master.exe\s*$/) {
+				$installdir = $1;
+				$tmp = `cygpath -m $1`;
+				fullchomp($tmp);
+				$wininstalldir = $tmp;
+			}
+		} else {
+			$tmp =~ s/\\bin\\condor_master.exe$//i;
+			$installdir = $tmp;
+			$wininstalldir = $tmp;
+		}
+		$wininstalldir =~ s|/|\\|g; # forward slashes.to backslashes
+		$installdir =~ s|\\|/|g; # convert backslashes to forward slashes.
+		if($btdebug == 1) {
+			print "Testing this Install Directory: \"$wininstalldir\"\n";
+		}
+	} else {
+		$wininstalldir = "none";
+		$tmp =~ s|//|/|g;
+		if( ($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) || \
+				($tmp =~ /^(.*)\/bin\/condor_master\s*$/) ) {
+			$installdir = $1;
+			if($btdebug == 1) {
+				print "Testing This Install Directory: \"$installdir\"\n";
+			}
+		} else {
+			die "'$tmp' didn't match path RE\n";
+		}
+		if(defined $ENV{LD_LIBRARY_PATH}) {
+			$ENV{LD_LIBRARY_PATH} = "$installdir/lib:$ENV{LD_LIBRARY_PATH}";
+		} else {
+			$ENV{LD_LIBRARY_PATH} = "$installdir/lib";
+		}
+		if(defined $ENV{PYTHONPATH}) {
+			$ENV{PYTHONPATH} = "$installdir/lib/python:$ENV{PYTHONPATH}";
+		} else {
+			$ENV{PYTHONPATH} = "$installdir/lib/python";
+		}
+	}
+	my $paths = "$installdir" . ",$wininstalldir";
+	return($paths);
+}
 1;

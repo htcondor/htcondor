@@ -5,7 +5,7 @@
 \index{universe!vm}
 \index{vm universe}
 
-The \SubmitCmd{vm} universe facilitates an HTCondor job
+The \SubmitCmdNI{vm} universe facilitates an HTCondor job
 that matches and then lands a disk image on an execute machine
 within an HTCondor pool.
 This disk image is intended to be a virtual machine.
@@ -20,13 +20,13 @@ for details of configuration variables.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Different than all other universe jobs,
-the \SubmitCmd{vm} universe job specifies a disk image,
+the \SubmitCmdNI{vm} universe job specifies a disk image,
 not an executable.
 Therefore, the submit commands \SubmitCmd{input}, \SubmitCmd{output},
 and \SubmitCmd{error} do not apply.
 If specified, \Condor{submit} rejects the job with an error.
 The \SubmitCmd{executable} command changes definition within a
-\SubmitCmd{vm} universe job.
+\SubmitCmdNI{vm} universe job.
 It no longer specifies an executable file, but instead
 provides a string that identifies the job for tools such
 as \Condor{q}.
@@ -59,11 +59,11 @@ Virtual machine networking is enabled with the command
   vm_networking = true
 \end{verbatim}
 And, when networking is enabled, a definition of
-\SubmitCmd{vm\_networking\_type} as \SubmitCmd{bridge}
+\SubmitCmd{vm\_networking\_type} as \SubmitCmdNI{bridge}
 matches the job only with a machine that is configured to use
 bridge networking.
 A definition of
-\SubmitCmd{vm\_networking\_type} as \SubmitCmd{nat}
+\SubmitCmd{vm\_networking\_type} as \SubmitCmdNI{nat}
 matches the job only with a machine that is configured to use
 NAT networking.
 When no definition of
@@ -74,8 +74,8 @@ and further, the choice of bridge or NAT networking
 is determined by the machine's configuration.
 
 Modified disk images are transferred back to the machine from which
-the job was submitted as the \SubmitCmd{vm} universe job completes.
-Job completion for a \SubmitCmd{vm} universe job occurs when 
+the job was submitted as the \SubmitCmdNI{vm} universe job completes.
+Job completion for a \SubmitCmdNI{vm} universe job occurs when 
 the virtual machine is shut down, and HTCondor notices 
 (as the result of a periodic check on the state of the virtual machine).
 Should the job not want any files transferred back (modified or not),
@@ -116,7 +116,7 @@ For KVM and Xen virtual machines,
 HTCondor uses these values when it produces the description file.
 
 For Xen and KVM jobs, if any files need to be transferred from the submit machine
-to the machine where the \SubmitCmd{vm} universe job will execute, 
+to the machine where the \SubmitCmdNI{vm} universe job will execute, 
 HTCondor must be explicitly told to do so with the 
 standard file transfer attributes:
 \footnotesize
@@ -147,7 +147,7 @@ which form a virtual hard drive (disk image) for the virtual machine.
 VMX files containing the primary configuration for the virtual
 machine would also be in this directory.
 
-HTCondor must be told whether or not the contents of the \SubmitCmd{vmware\_dir}
+HTCondor must be told whether or not the contents of the \SubmitCmdNI{vmware\_dir}
 directory must be transferred to the machine where the job is
 to be executed.
 This required information is given with the submit command
@@ -163,7 +163,7 @@ By default, HTCondor uses a snapshot disk for new and modified files.
 They may also be utilized for checkpoints.
 The snapshot disk is initially quite small,
 growing only as new files are created or files are modified.
-When \SubmitCmd{vmware\_should\_transfer\_files} is \Expr{True},
+When \SubmitCmdNI{vmware\_should\_transfer\_files} is \Expr{True},
 a job may specify that a snapshot disk is \emph{not} to be
 used with the command
 \begin{verbatim}
@@ -172,21 +172,21 @@ used with the command
 In this case, HTCondor will utilize original disk files in producing
 checkpoints. 
 Note that \Condor{submit} issues an error message and does not
-submit the job if both \SubmitCmd{vmware\_should\_transfer\_files}
+submit the job if both \SubmitCmdNI{vmware\_should\_transfer\_files}
 and \SubmitCmd{vmware\_snapshot\_disk} are \Expr{False}.
 
 Because \Prog{VMware Player} does not support snapshots, 
-machines using \Prog{VMware Player} may only run \SubmitCmd{vm} jobs
-that set \SubmitCmd{vmware\_snapshot\_disk} to \Expr{False}.
+machines using \Prog{VMware Player} may only run \SubmitCmdNI{vm} jobs
+that set \SubmitCmdNI{vmware\_snapshot\_disk} to \Expr{False}.
 These jobs will also set
-\SubmitCmd{vmware\_should\_transfer\_files} to \Expr{True}.
+\SubmitCmdNI{vmware\_should\_transfer\_files} to \Expr{True}.
 A job using \Prog{VMware Player} will go on hold if it attempts
 to use a snapshot.
 The pool administrator should have configured the pool
 such that machines will not start jobs they can not run.
 
 Note that if snapshot disks are requested and file transfer is not
-being used, the \SubmitCmd{vmware\_dir} setting given in 
+being used, the \SubmitCmdNI{vmware\_dir} setting given in 
 the submit description file
 should not contain any symbolic link path components,
 as described on the
@@ -204,7 +204,7 @@ vmware_dir                   = C:\condor-test
 vmware_should_transfer_files = True
 queue
 \end{verbatim}
-This sample uses the \SubmitCmd{vmware\_dir} command to identify
+This sample uses the \SubmitCmdNI{vmware\_dir} command to identify
 the location of the disk image to be executed as an HTCondor job.
 The contents of this directory are transferred to the machine assigned
 to execute the HTCondor job.
@@ -215,23 +215,23 @@ to execute the HTCondor job.
 \index{vm universe!submit commands specific to Xen}
 
 % xen_kernel description
-A Xen \SubmitCmd{vm} universe job requires specification of the
+A Xen \SubmitCmdNI{vm} universe job requires specification of the
 guest kernel. 
 The \SubmitCmd{xen\_kernel} command accomplishes this, 
 utilizing one of the following definitions.
 \begin{enumerate}
-\item \SubmitCmd{xen\_kernel = included} implies that the kernel
+\item \Expr{xen\_kernel = included} implies that the kernel
   is to be found in disk image given by the definition of the single file
   specified in \SubmitCmd{vm\_disk}. 
 
-\item \SubmitCmd{xen\_kernel = path-to-kernel} gives a full path and
+\item \Expr{xen\_kernel = path-to-kernel} gives a full path and
   file name of the required kernel.  If this kernel must be transferred
-  to machine on which the \SubmitCmd{vm} universe job will execute,
+  to machine on which the \SubmitCmdNI{vm} universe job will execute,
   it must also be included in the \SubmitCmd{xen\_transfer\_files} command. 
 
   This form of the \SubmitCmd{xen\_kernel} command also requires further
   definition of the \SubmitCmd{xen\_root} command.
-  \SubmitCmd{xen\_root} defines the device containing files needed by
+  \SubmitCmdNI{xen\_root} defines the device containing files needed by
   \Login{root}.
 
 \end{enumerate}
@@ -252,16 +252,16 @@ The submit command to create checkpoints is
   vm_checkpoint = true
 \end{verbatim}
 Without this command, no checkpoints are created (by default).
-With the command, a checkpoint is created any time the \SubmitCmd{vm}
+With the command, a checkpoint is created any time the \SubmitCmdNI{vm}
 universe jobs is evicted from the machine upon which it is executing.
 This occurs as a result of the machine configuration indicating
 that it will no longer execute this job.
 
-\SubmitCmd{vm} universe jobs can \emph{not} use a checkpoint server.
+\SubmitCmdNI{vm} universe jobs can \emph{not} use a checkpoint server.
 
 Periodic creation of checkpoints is not supported at this time.
 
-Enabling both networking and checkpointing for a \SubmitCmd{vm}
+Enabling both networking and checkpointing for a \SubmitCmdNI{vm}
 universe job can cause networking problems when the job restarts,
 particularly if the job migrates to a different machine.
 \Condor{submit} will normally reject such jobs.
@@ -306,7 +306,7 @@ other platforms as well.
 \subsection{\label{sec:vm-job-completion-details}Job Completion in the vm Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Job completion for a \SubmitCmd{vm} universe job occurs when 
+Job completion for a \SubmitCmdNI{vm} universe job occurs when 
 the virtual machine is shut down, and HTCondor notices 
 (as the result of a periodic check on the state of the virtual machine).
 This is different from jobs executed under the environment of other 
@@ -332,10 +332,10 @@ The command \verb@/sbin/halt@ will not completely
 shut down some Linux distributions, and instead
 causes the job to hang.
 
-Since the successful completion of the \SubmitCmd{vm} universe job
+Since the successful completion of the \SubmitCmdNI{vm} universe job
 requires the successful shut down of the virtual machine,
 it is good advice to try the shut down procedure outside of
-HTCondor, before a \SubmitCmd{vm} universe job is submitted.
+HTCondor, before a \SubmitCmdNI{vm} universe job is submitted.
 
 
 \index{virtual machine universe|)}

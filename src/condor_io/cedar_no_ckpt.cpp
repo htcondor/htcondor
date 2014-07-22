@@ -40,7 +40,6 @@
 #include "ccb_client.h"
 #include "condor_sinful.h"
 #include "shared_port_client.h"
-#include "daemon_core_sock_adapter.h"
 #include "condor_netdb.h"
 #include "internet.h"
 #include "ipv6_hostname.h"
@@ -273,7 +272,7 @@ ReliSock::get_file( filesize_t *size, int fd,
 	}
 
 	if (flush_buffers && fd != GET_FILE_NULL_FD ) {
-		if (condor_fsync(fd) < 0) {
+		if (condor_fdatasync(fd) < 0) {
 			dprintf(D_ALWAYS, "get_file(): ERROR on fsync: %d\n", errno);
 			return -1;
 		}
@@ -714,7 +713,7 @@ ReliSock::get_x509_delegation( filesize_t *size, const char *destination,
 		if ( fd < 0 ) {
 			rc = fd;
 		} else {
-			rc = condor_fsync( fd, destination );
+			rc = condor_fdatasync( fd, destination );
 			::close( fd );
 		}
 		if ( rc < 0 ) {
@@ -886,8 +885,8 @@ int Sock::special_connect(char const *host,int /*port*/,bool nonblocking)
 		}
 
 		bool i_am_shared_port_server = false;
-		if( daemonCoreSockAdapter.isEnabled() ) {
-			char const *daemon_addr = daemonCoreSockAdapter.publicNetworkIpAddr();
+		if( daemonCore ) {
+			char const *daemon_addr = daemonCore->publicNetworkIpAddr();
 			if( daemon_addr ) {
 				Sinful my_sinful(daemon_addr);
 				if( my_sinful.getHost() && sinful.getHost() &&

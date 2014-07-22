@@ -246,14 +246,13 @@ setFloatKwList (char **value)
 
 // make query
 int GenericQuery::
-makeQuery (ExprTree *&tree)
+makeQuery (MyString &req)
 {
 	int		i, value;
 	char	*item;
 	float   fvalue;
-	MyString req = "";
 
-	tree = NULL;
+	req = "";
 
 	// construct query requirement expression
 	bool firstCategory = true;
@@ -348,15 +347,24 @@ makeQuery (ExprTree *&tree)
 		req += " )";
 	}
 
-	// absolutely no constraints at all
-	if (firstCategory) { req += "TRUE"; }
+	return Q_OK;
+}
+
+int GenericQuery::
+makeQuery (ExprTree *&tree)
+{
+	MyString req;
+	int status = makeQuery(req);
+	if (status != Q_OK) return status;
+
+	// If there are no constraints, then we match everything.
+	if (req.empty()) req = "TRUE";
 
 	// parse constraints and insert into query ad
 	if (ParseClassAdRvalExpr (req.Value(), tree) > 0) return Q_PARSE_ERROR;
 
 	return Q_OK;
 }
-
 
 // helper functions --- clear 
 void GenericQuery::

@@ -536,6 +536,8 @@
 #define ATTR_REQUEUE_REASON  "RequeueReason"
 #define ATTR_REQUIREMENTS  "Requirements"
 #define ATTR_RESOURCE_REQUEST_COUNT "_condor_RESOURCE_COUNT"  // used in resource request ad
+#define ATTR_RESOURCE_REQUEST_CLUSTER "_condor_RESOURCE_CLUSTER"
+#define ATTR_RESOURCE_REQUEST_PROC "_condor_RESOURCE_PROC"
 #define ATTR_SLOT_TYPE  "SlotType"
 #define ATTR_SLOT_TYPE_ID  "SlotTypeID"
 #define ATTR_SLOT_WEIGHT  "SlotWeight"
@@ -584,7 +586,7 @@
 #define ATTR_SUBMITTER_ID  "SubmitterId"
 #define ATTR_SUBMITTER_TAG  "SubmitterTag"
 #define ATTR_SUBMITTOR_PRIO  "SubmittorPrio"   // old-style for ATTR_SUBMITTER_USER_PRIO
-#define ATTR_SUBMITTER_USER_PRIO  "SubmittorUserPrio"   // old-style for ATTR_SUBMITTER_USER_PRIO
+#define ATTR_SUBMITTER_USER_PRIO  "SubmitterUserPrio"   // new-style for ATTR_SUBMITTOR_PRIO
 #define ATTR_SUBMITTER_USER_RESOURCES_IN_USE  "SubmitterUserResourcesInUse"
 #define ATTR_SUBMITTER_AUTOREGROUP  "SubmitterAutoregroup"
 #define ATTR_SUBMITTER_GROUP  "SubmitterGroup"

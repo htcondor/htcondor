@@ -207,6 +207,9 @@
 /* Define to 1 if you have the 'access' function. */
 #cmakedefine HAVE_ACCESS 1
 
+/* Define to 1 if you have the 'access' function. */
+#cmakedefine HAVE_EUIDACCESS 1
+
 /* are we compiling support for any backfill systems (USED)*/
 #cmakedefine HAVE_BACKFILL 1
 
@@ -551,6 +554,9 @@
 
 /* Define to 1 if you have the '_stati64' function. (USED)*/
 #cmakedefine HAVE__STATI64 1
+
+/* Define to 1 if you have the fdatasync function (Linux) */
+#cmakedefine HAVE_FDATASYNC 1
 
 /* Define to 1 if the system has the type '__int64'. (USED)*/
 #cmakedefine HAVE___INT64 1

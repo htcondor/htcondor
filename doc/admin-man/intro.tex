@@ -304,12 +304,12 @@ files for a given job back to the submit machine.
 \index{daemon!condor\_gridmanager@\Condor{gridmanager}}
 \index{condor\_gridmanager daemon}
 \item[\Condor{gridmanager}] This daemon
-handles management and execution of all \SubmitCmd{grid}
+handles management and execution of all \SubmitCmdNI{grid}
 universe jobs.
 The \Condor{schedd} invokes the \Condor{gridmanager} when
-there are \SubmitCmd{grid} universe jobs in the queue,
+there are \SubmitCmdNI{grid} universe jobs in the queue,
 and the \Condor{gridmanager} exits when there are no more
-\SubmitCmd{grid} universe jobs in the queue.
+\SubmitCmdNI{grid} universe jobs in the queue.
 
 \index{HTCondor daemon!condor\_credd@\Condor{credd}}
 \index{daemon!condor\_credd@\Condor{credd}}
@@ -349,15 +349,14 @@ a state file before exiting.
 \index{condor\_procd daemon}
 \item[\Condor{procd}] This daemon
 controls and monitors process families within HTCondor. Its use
-is optional in general, but it must be used if privilege separation
-(see Section~\ref{sec:PrivSep}) or group-ID based tracking (see
-Section~\ref{sec:GroupTracking}) is enabled.
+is optional in general, but it must be used if 
+group-ID based tracking (see Section~\ref{sec:GroupTracking}) is enabled.
 
 \index{HTCondor daemon!condor\_job\_router@\Condor{job\_router}}
 \index{daemon!condor\_job\_router@\Condor{job\_router}}
 \index{condor\_job\_router daemon} 
 \item[\Condor{job\_router}] This daemon 
-transforms \SubmitCmd{vanilla} universe jobs into \SubmitCmd{grid}
+transforms \SubmitCmdNI{vanilla} universe jobs into \SubmitCmdNI{grid}
 universe jobs, such that the transformed jobs are capable
 of running elsewhere, as appropriate.
 

@@ -174,9 +174,12 @@ public:
 
 	// Manipulate the supplemental Class Ad list
 	int		adlist_register( StartdNamedClassAd *ad );
-	int		adlist_replace( const char *name, const char *prefix, ClassAd *ad, 
-							bool report_diff = false );
-	int		adlist_delete( const char *name );
+	StartdNamedClassAd* adlist_find( const char *name );
+	int		adlist_replace( const char *name, ClassAd *ad) { return extra_ads.Replace( name, ad ); }
+	int		adlist_replace( const char *name, ClassAd *ad, bool report_diff, const char *prefix);
+	int		adlist_delete( const char *name ) { return extra_ads.Delete( name ); }
+	int		adlist_delete( StartdCronJob * job ) { return extra_ads.DeleteJob( job ); }
+	int		adlist_clear( StartdCronJob * job )  { return extra_ads.ClearJob( job ); } // delete child ads, and clear the base job ad
 	int		adlist_publish( unsigned r_id, ClassAd *resAd, amask_t mask );
 
 	// Methods to control various timers

@@ -56,9 +56,7 @@ if(!(-f "$unit_test")) {
 #
 print("HACK: running $unit_test -memory-shapshot basic_condorutils_mem.smaps\n");
 system("$unit_test -memory-snapshot basic_condorutils_mem.smaps");
-if (-f "basic_condorutils_mem.smaps") { 
-	smap_sum_verbose("basic_condorutils_mem.smaps"); 
-}
+#if (-f "basic_condorutils_mem.smaps") { smap_sum_verbose("basic_condorutils_mem.smaps"); }
 
 my $test_status = 0;
 $test_status = system("$unit_test -v");

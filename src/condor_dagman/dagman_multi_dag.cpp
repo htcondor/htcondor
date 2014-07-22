@@ -223,6 +223,8 @@ RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags,
 					rescueNum );
 		dprintf( D_ALWAYS, "Renaming %s\n", rescueDagName.Value() );
 		MyString newName = rescueDagName + ".old";
+			// Unlink here to be safe on Windows.
+		tolerant_unlink( newName.Value() );
 		if ( rename( rescueDagName.Value(), newName.Value() ) != 0 ) {
 			EXCEPT( "Fatal error: unable to rename old rescue file "
 						"%s: error %d (%s)\n", rescueDagName.Value(),

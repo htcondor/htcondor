@@ -1021,9 +1021,9 @@ does this,
 as described at section~\ref{man-condor-submit-getenv}.
 
 If the environment is set with the \SubmitCmd{environment} command \emph{and}
-\SubmitCmd{getenv} is also set to true, values specified with
-\SubmitCmd{environment} override values in the submitter's environment,
-regardless of the order of the \SubmitCmd{environment} and \SubmitCmd{getenv}
+\SubmitCmdNI{getenv} is also set to true, values specified with
+\SubmitCmdNI{environment} override values in the submitter's environment,
+regardless of the order of the \SubmitCmdNI{environment} and \SubmitCmdNI{getenv}
 commands.
 
 Commands within the submit description file may reference the
@@ -1398,6 +1398,42 @@ Here is a more compact way to specify a RedHat 6 platform.
 
   Queue
 \end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Request-GPUs}Jobs That Require GPUs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{GPUs!requesting GPUs for a job}
+A job that needs GPUs to run identifies the number of GPUs needed
+in the submit description file by adding the submit command
+\begin{verbatim}
+  request_GPUs = <n>
+\end{verbatim}
+where \Expr{<n>} is replaced by the integer quantity of GPUs required
+for the job.
+For example, a job that needs 1 GPU uses
+\begin{verbatim}
+  request_GPUs = 1
+\end{verbatim}
+
+Because there are different capabilities among GPUs, 
+the job might need to further qualify which GPU of available ones
+is required.
+Do this by specifying or adding a clause to an existing 
+\SubmitCmd{Requirements} submit command.
+As an example, 
+assume that the job needs a speed and capacity of a CUDA GPU
+that meets or exceeds the value 1.2.
+In the submit description file, place
+\begin{verbatim}
+  request_GPUs = 1
+  requirements = (CUDACapability >= 1.2) && $(requirements:True)
+\end{verbatim}
+
+Access to GPU resources by an HTCondor job needs special configuration
+of the machines that offer GPUs.
+Details of how to set up the configuration are in
+section~\ref{sec:GPU-resources}.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/interactive.tex}

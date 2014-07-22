@@ -455,6 +455,10 @@ class DaemonCore : public Service
 		*/
 	const char* privateNetworkName(void);
 
+	void SetInheritParentSinful( const char *sinful ) {
+		m_inherit_parent_sinful = sinful ? sinful : "";
+	}
+
 	/** Returns a pointer to the penvid passed in if successful
 		in determining the environment id for the pid, or NULL if unable
 		to determine.
@@ -675,7 +679,8 @@ class DaemonCore : public Service
                          const char *      handler_descrip,
                          Service *         s                = NULL,
                          DCpermission      perm             = ALLOW,
-			 HandlerType          handler_type = HANDLE_READ);
+                         HandlerType       handler_type = HANDLE_READ,
+                         void **           prev_entry = NULL);
 
     /** Not_Yet_Documented
         @param iosock           Not_Yet_Documented
@@ -692,7 +697,8 @@ class DaemonCore : public Service
                          const char *         handler_descrip,
                          Service*             s,
                          DCpermission         perm = ALLOW,
-			 HandlerType          handler_type = HANDLE_READ);
+                         HandlerType          handler_type = HANDLE_READ,
+                         void **              prev_entry = NULL);
 
     /** Not_Yet_Documented
         @param iosock           Not_Yet_Documented
@@ -716,7 +722,7 @@ class DaemonCore : public Service
         @param insock           Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Cancel_Socket ( Stream * insock );
+    int Cancel_Socket ( Stream * insock, void *prev_entry = NULL );
 
 		// Returns true if the given socket is already registered.
 	bool SocketIsRegistered( Stream *sock );
@@ -733,6 +739,15 @@ class DaemonCore : public Service
 		// KEEP_STREAM, the stream is deleted
 	int CallCommandHandler(int req,Stream *stream,bool delete_stream=true,bool check_payload=true,float time_spent_on_sec=0,float time_spent_waiting_for_payload=0);
 
+
+		// This function is called in order to have
+		// TooManyRegisteredSockets() take into account an extra socket
+		// that is waiting for a timer or other callback to complete.
+	void incrementPendingSockets() { nPendingSockets++; }
+
+		// This function must be called after incrementPendingSockets()
+		// when the socket is being (or about to be) destroyed.
+	void decrementPendingSockets() { nPendingSockets--; }
 
 	/**
 	   @return Number of currently registered sockets.
@@ -1664,16 +1679,8 @@ class DaemonCore : public Service
                         Service* s, 
                         DCpermission perm,
 			HandlerType handler_type,
-                        int is_cpp);
-
-		// This function is called in order to have
-		// TooManyRegisteredSockets() take into account an extra socket
-		// that is waiting for a timer or other callback to complete.
-	void incrementPendingSockets() { nPendingSockets++; }
-
-		// This function must be called after incrementPendingSockets()
-		// when the socket is being (or about to be) destroyed.
-	void decrementPendingSockets() { nPendingSockets--; }
+                        int is_cpp,
+                        void **prev_entry = NULL);
 
     int Register_Pipe(int pipefd,
                         const char *pipefd_descrip,
@@ -2061,6 +2068,8 @@ class DaemonCore : public Service
 	bool CommandNumToTableIndex(int cmd,int *cmd_index);
 
 	void InitSharedPort(bool in_init_dc_command_socket=false);
+
+	std::string m_inherit_parent_sinful;
 };
 
 /**

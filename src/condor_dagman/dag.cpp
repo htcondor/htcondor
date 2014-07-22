@@ -59,6 +59,17 @@ const int Dag::DAG_ERROR_CONDOR_JOB_ABORTED = -1002;
 const int Dag::DAG_ERROR_LOG_MONITOR_ERROR = -1003;
 const int Dag::DAG_ERROR_JOB_SKIPPED = -1004;
 
+// NOTE: this must be kept in sync with the dag_status enum
+const char * Dag::_dag_status_names[] = {
+    "DAG_STATUS_OK",
+    "DAG_STATUS_ERROR",
+    "DAG_STATUS_NODE_FAILED",
+    "DAG_STATUS_ABORT",
+    "DAG_STATUS_RM",
+    "DAG_STATUS_CYCLE",
+    "DAG_STATUS_HALTED"
+};
+
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
     int fd = safe_open_wrapper_follow(filename, O_RDWR | O_CREAT, 0600);
@@ -219,7 +230,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 }
 
 //-------------------------------------------------------------------------
-Dag::~Dag() {
+Dag::~Dag()
+{
 		// remember kids, delete is safe *even* if ptr == NULL...
 
     // delete all jobs in _jobs
@@ -2822,6 +2834,8 @@ Dag::DumpDotFile(void)
 
 			fprintf(temp_dot_file, "}\n");
 			fclose(temp_dot_file);
+				// Note:  we do tolerant_unlink because renaming over an
+				// existing file fails on Windows.
 			tolerant_unlink(current_dot_file_name.Value());
 			if ( rename(temp_dot_file_name.Value(),
 						current_dot_file_name.Value()) != 0 ) {
@@ -3066,7 +3080,10 @@ Dag::DumpNodeStatus( bool held, bool removed )
 
 		//
 		// Now rename the temporary file to the "real" file.
+		// Note:  we do tolerant_unlink because renaming over an
+		// existing file fails on Windows.
 		//
+	tolerant_unlink( _statusFileName );
 	if ( rename( tmpStatusFile.Value(), _statusFileName ) != 0 ) {
 		debug_printf( DEBUG_NORMAL,
 					  "Warning: can't rename temporary node status "
@@ -4010,16 +4027,12 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		return SUBMIT_RESULT_NO_SUBMIT;
 	}
 
-		// Note: we're checking for a missing log file spec here instead of
-		// inside the submit code because we don't want to re-try the submit
-		// if the log file spec is missing in the submit file.  wenger
-
 		// We now only check for missing log files for Stork jobs because
 		// of the default log file feature; that doesn't work for Stork
 		// jobs because we can't specify the log file on the command
 		// line.  wenger 2009-08-14
 	if ( !_allowLogError && node->JobType() == Job::TYPE_STORK &&
-				!node->CheckForLogFile( _use_default_node_log ) ) {
+				!node->CheckForLogFile( false ) ) {
 		debug_printf( DEBUG_NORMAL, "ERROR: No 'log =' value found in "
 					"submit file %s for node %s\n", node->GetCmdFile(),
 					node->GetJobName() );
@@ -4038,7 +4051,6 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		debug_printf( DEBUG_NORMAL, "Submitting %s Node %s job(s)...\n",
 				  	node->JobTypeString(), node->GetJobName() );
 
-    	MyString cmd_file = node->GetCmdFile();
 		bool submit_success = false;
 
     	if( node->JobType() == Job::TYPE_CONDOR ) {
@@ -4046,37 +4058,34 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			if ( node->GetNoop() ) {
       			submit_success = fake_condor_submit( condorID, 0,
 							node->GetJobName(), node->GetDirectory(),
-							_use_default_node_log ? DefaultNodeLog():
-								node->GetLogFile() ,
-							!_use_default_node_log && node->GetLogFileIsXml() );
+							node->GetLogFile() ,
+							node->GetLogFileIsXml() );
 			} else {
 				const char *logFile = node->UsingDefaultLog() ?
-							DefaultNodeLog() : NULL;
+							node->GetLogFile() : NULL;
 					// Note: assigning the ParentListString() return value
 					// to a variable here, instead of just passing it directly
 					// to condor_submit(), fixes a memory leak(!).
 					// wenger 2008-12-18
 				MyString parents = ParentListString( node );
-      			submit_success = condor_submit( dm, cmd_file.Value(), condorID,
+      			submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
 							node->GetJobName(), parents,
 							node->varsFromDag, node->GetRetries(),
-							node->GetDirectory(), DefaultNodeLog(),
-							_use_default_node_log && node->UseDefaultLog(),
-							logFile, ProhibitMultiJobs(),
-							node->NumChildren() > 0 && dm._claim_hold_time > 0);
+							node->GetDirectory(), logFile,
+							ProhibitMultiJobs(),
+							node->NumChildren() > 0 && dm._claim_hold_time > 0 );
 			}
     	} else if( node->JobType() == Job::TYPE_STORK ) {
 	  		node->_submitTries++;
 			if ( node->GetNoop() ) {
       			submit_success = fake_condor_submit( condorID, 0,
 							node->GetJobName(), node->GetDirectory(),
-							_use_default_node_log ? DefaultNodeLog() :
-								node->GetLogFile(),
-							!_use_default_node_log && node->GetLogFileIsXml() );
+							node->GetLogFile(),
+							node->GetLogFileIsXml() );
 
 			} else {
-      			submit_success = stork_submit( dm, cmd_file.Value(), condorID,
-				   		node->GetJobName(), node->GetDirectory() );
+      			submit_success = stork_submit( dm, node->GetCmdFile(),
+						condorID, node->GetJobName(), node->GetDirectory() );
 			}
     	} else {
 	    	debug_printf( DEBUG_QUIET, "Illegal job type: %d\n",

@@ -658,8 +658,9 @@ int daemon::RealStart( )
 
 		if (command_port == -1) {
 				// strange....
-			command_port = COLLECTOR_PORT;
-			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", COLLECTOR_PORT);
+			int default_port = param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
+			command_port = default_port;
+			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", default_port);
 		}
 
 		if( daemon_sock ) {
@@ -2752,9 +2753,11 @@ Daemons::UpdateCollector()
 #endif
 #endif
 
+	if ( FILEObj ) {
 		// log classad into sql log so that it can be updated to DB
-	FILESQL::daemonAdInsert(ad, "MasterAd", FILEObj, prevLHF);
-	
+		FILESQL::daemonAdInsert(ad, "MasterAd", FILEObj, prevLHF);
+	}
+
 		// Reset the timer so we don't do another period update until 
 	daemonCore->Reset_Timer( update_tid, update_interval, update_interval );
 

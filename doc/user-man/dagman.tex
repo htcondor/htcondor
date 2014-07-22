@@ -837,7 +837,7 @@ condor_submit_dag -usedagdir dag1/one.dag dag2/two.dag
 \end{verbatim}
 The directory will be correct for each of the two DAGs,
 and output files will be placed in the correct directory.
-The File{.dagman.out} file will also be in the correct directory.
+The \File{.dagman.out} file will also be in the correct directory.
 
 If all paths in the DAG input file(s) and the relevant submit
 description files are absolute,
@@ -860,7 +860,7 @@ The Rescue DAG includes all the path information necessary to
 run each node job in the proper directory.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Job Monitoring, Job Failure, and Job Removal}
+\subsection{\label{sec:DAGMonitoring}Job Monitoring, Job Failure, and Job Removal}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 After submission, the progress of the DAG can be monitored
@@ -1281,7 +1281,7 @@ Note that the NodeA value for \Expr{second} contains a tab.
 \end{verbatim}
 \normalsize
 
-The new syntax \SubmitCmd{arguments} line of the HTCondor submit description file
+The new syntax \SubmitCmdNI{arguments} line of the HTCondor submit description file
 for NodeA is
 \footnotesize
 \begin{verbatim}
@@ -1300,7 +1300,7 @@ The resulting values passed to the NodeA executable are
 \end{verbatim}
 \normalsize
 
-The old syntax \SubmitCmd{arguments} line of the HTCondor submit description file
+The old syntax \SubmitCmdNI{arguments} line of the HTCondor submit description file
 for NodeB is
 \footnotesize
 \begin{verbatim}
@@ -2352,13 +2352,15 @@ at a higher level, the splice name must be included.
 \index{DAGMan!DAG FINAL node}
 \index{DAGMan input file!FINAL key word}
 
-A FINAL node is a special node that is always run at the end of the DAG,
-even if previous nodes in the DAG have failed.  Final nodes can be used
+A FINAL node is a single and special node that is always run at 
+the end of the DAG,
+even if previous nodes in the DAG have failed.  
+A FINAL node can be used
 for tasks such as cleaning up intermediate files and checking the output
 of previous nodes.
 
 The \Arg{FINAL} key word specifies a job to be run at the end of
-the DAG.  The syntax used for each \Arg{FINAL} entry is
+the DAG.  The syntax used for the \Arg{FINAL} entry is
 
 \Opt{FINAL} \Arg{JobName} \Arg{SubmitDescriptionFileName}
 \oOptArg{DIR}{directory} \oOpt{NOOP}
@@ -2371,20 +2373,26 @@ The key words \Arg{DIR} and \Arg{NOOP} are not case sensitive.
 Note that \Arg{DIR} and \Arg{NOOP}, if used, must appear
 in the order shown above.
 See section~\ref{dagman:JOB} for the descriptions of these two keywords.
+There may only be one FINAL node in a DAG.
+A parse error will be logged by the \Condor{dagman} job in the
+\File{dagman.out} file,
+if more than one FINAL node is specified.
 
+The FINAL node is virtually always run.
+It is run if the \Condor{dagman} job is removed with \Condor{rm}.
 The only case in which a FINAL node is not run
 is if the configuration variable \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} 
 is set to \Expr{True},
 and a cycle is detected at start up time.
 If \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} is set to \Expr{False} and
 a cycle is detected during the course of the run, 
-the FINAL node will be run.
+the FINAL node \emph{will} be run.
 
-One of the most important considerations with a FINAL node is that the
+An important consideration in using a FINAL node is that the
 success or failure of the FINAL node overrides all previous status
-in determining the success or failure of the DAG
-(this includes status specified by any ABORT-DAG-ON specification
-that has taken effect).
+in determining the success or failure of the entire DAG.
+This includes a status specified by any ABORT-DAG-ON specification
+that has taken effect.
 For example, if some nodes of a DAG fail,
 but the FINAL node succeeds, the DAG will be considered successful.
 Therefore, it is important
@@ -2800,9 +2808,10 @@ listed is used.
 \index{DAGMan!node status file}
 \index{status!of a DAGMan node}
 
-DAGMan can capture the status of the overall DAG and all DAG nodes,
-such that the user or a script can easily monitor this status,
-in a \emph{node status file}.  This file is periodically updated
+DAGMan can capture the status of the overall DAG and all DAG nodes
+in a \emph{node status file},
+such that the user or a script can monitor this status.
+This file is periodically rewritten
 while the DAG runs.
 To enable this feature, the DAG input file must contain a line with the
 \Arg{NODE\_STATUS\_FILE} key word.
@@ -2812,7 +2821,8 @@ The syntax for a \Arg{NODE\_STATUS\_FILE} specification is
 \Opt{NODE\_STATUS\_FILE} \Arg{statusFileName} \oArg{minimumUpdateTime}
 
 The status file is written on the machine on which the DAG is submitted;
-its location is given by \Arg{statusFileName} (which can be a full path).
+its location is given by \Arg{statusFileName},
+and it may be a full path and file name.
 
 The optional \Arg{minimumUpdateTime} specifies the minimum number of seconds
 that must elapse between updates to the node status file.
@@ -2823,8 +2833,8 @@ The node status file can be updated at most once
 per \Macro{DAGMAN\_USER\_LOG\_SCAN\_INTERVAL},
 as defined at section~\ref{param:DAGManUserLogScanInterval},
 no matter how small the \Arg{minimumUpdateTime} value.
-Also, the node status file will be updated when the DAG finishes
-(whether successfully or not), even if \Arg{minimumUpdateTime} seconds
+Also, the node status file will be updated when the DAG finishes,
+whether successful or not, even if \Arg{minimumUpdateTime} seconds
 have not elapsed since the last update.
 
 As an example, if the DAG input file contains the line
@@ -2839,13 +2849,15 @@ Therefore, it only holds information about the \emph{current} status
 of each node; it does not provide a history of the node status.
 The file contents do not distinguish between HTCondor jobs and Stork jobs.
 
-\Bold{Important note:  as of version 8.1.6, the format of the node status
-file has changed.}  The node status file is now a collection of ClassAds.
+\Note HTCondor version 8.1.6 changes the format of the node status
+file.
+
+The node status file is a collection of ClassAds in New ClassAd format.
 There is one ClassAd for the overall status of the DAG, one ClassAd
 for the status of each node, and one ClassAd with the time at which
-the node status file was completed and the time of the next update.
+the node status file was completed as well as the time of the next update.
 
-Here is an example of a node status file:
+Here is an example portion of a node status file:
 
 \begin{verbatim}
 [
@@ -2892,11 +2904,11 @@ Here is an example of a node status file:
 ]
 \end{verbatim}
 
-Possible DAG and node status values are:
+Possible \Attr{DagStatus} and \Attr{NodeStatus} attribute values are:
 
 \begin{itemize}
 \item 0 (\verb@STATUS_NOT_READY@): At least one parent has not yet finished
-(or the node is a final node).
+or the node is a FINAL node.
 \item 1 (\verb@STATUS_READY@): All parents have finished, but the node is not
 yet running.
 \item 2 (\verb@STATUS_PRERUN@): The node's PRE script is running.
@@ -3148,6 +3160,9 @@ The attributes are
 \item \Attr{DAG\_Status}
 \item \Attr{DAG\_InRecovery}
 \end{itemize}
+
+Note that most of this information is also available in the
+\File{dagman.out} file as described in section~\ref{sec:DAGMonitoring}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGLotsaJobs}Utilizing the Power of DAGMan for Large Numbers of Jobs}

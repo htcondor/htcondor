@@ -1946,8 +1946,10 @@ int DestroyProc(int cluster_id, int proc_id)
   ScheddPluginManager::Archive(ad);
 #endif
 
-  if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
-	  dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
+  if ( FILEObj ) {
+	  if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
+		  dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
+	  }
   }
 
   // save job ad to the log
@@ -2087,8 +2089,10 @@ int DestroyCluster(int cluster_id, const char* reason)
 				ScheddPluginManager::Archive(ad);
 #endif
 
-				if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
-			  		dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
+				if ( FILEObj ) {
+					if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
+						dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
+					}
 		  		}
 
   // save job ad to the log

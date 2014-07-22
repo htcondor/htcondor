@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <dlfcn.h>
 #include <string.h>
 #include <string>
 #include <iostream>
@@ -64,7 +65,7 @@ static void quicklog(const char * p)
 static inline void quicklog(const char *) { }
 #endif
 
-#define WORKER 6 // Worker threads
+#define DEFAULT_WORKER_CNT 6 // Worker threads
 
 #define DEFAULT_TIMEOUT 60
 
@@ -2334,6 +2335,29 @@ int main(int /*argc*/, char ** /*argv*/)
 {
 	int i;
 
+		// When loading a library for real threading support, Globus
+		// uses lt_dlopen(), which ignores our RPATH. This means that
+		// it won't find the globus_thread_pthread library that we
+		// include in UW builds of Condor.
+		// If we load the library with dlopen() first, then lt_dlopen()
+		// will find it.
+	void *dl_ptr = dlopen( "libglobus_thread_pthread.so", RTLD_LAZY);
+	if ( dl_ptr == NULL ) {
+		fprintf( stderr, "Failed to open globus_thread_pthread.\n" );
+		return 1;
+	}
+
+		// Globus and gsoap have some initialization code that must be
+		// called in the main thread before any other threads are
+		// created.
+	if ( globus_thread_set_model( "pthread" ) != GLOBUS_SUCCESS ||
+		 globus_module_activate( GLOBUS_THREAD_MODULE ) != GLOBUS_SUCCESS ||
+		 globus_module_activate( GLOBUS_GSI_GSSAPI_MODULE ) != GLOBUS_SUCCESS ) {
+		fprintf( stderr, "Failed to initialize Globus modules.\n" );
+		return 1;
+	}
+	soap_ssl_init();
+
 		// Enable logging to stderr. In the future, we may want make
 		// this configurable and/or turn down the priority level.
 	glite::ce::cream_client_api::util::creamApiLogger* logger_instance =
@@ -2348,11 +2372,20 @@ int main(int /*argc*/, char ** /*argv*/)
 #endif
 
 	gahp_printf("%s\n", VersionString);
-	
-	threads = (pthread_t *)malloc(sizeof(pthread_t) * WORKER);
-	
+
+	int worker_cnt = DEFAULT_WORKER_CNT;
+	const char *worker_env = getenv( "CREAM_GAHP_WORKER_THREADS" );
+	if ( worker_env ) {
+		worker_cnt = atoi( worker_env );
+		if ( worker_cnt < 1 ) {
+			worker_cnt = 1;
+		}
+	}
+
+	threads = (pthread_t *)malloc(sizeof(pthread_t) * worker_cnt);
+
 		//create & detach worker threads
-	for (i = 0; i < WORKER; i++){
+	for (i = 0; i < worker_cnt; i++){
 		
 		pthread_create(&threads[i], NULL, worker_main, NULL);
 		pthread_detach(threads[i]);

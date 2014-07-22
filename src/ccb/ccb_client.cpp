@@ -26,7 +26,6 @@
 #include "selector.h"
 #include "CondorError.h"
 #include "ccb_client.h"
-#include "daemon_core_sock_adapter.h"
 #include "condor_sinful.h"
 #include "shared_port_endpoint.h"
 
@@ -75,7 +74,7 @@ CCBClient::~CCBClient()
 		delete m_ccb_sock;
 	}
 	if( m_deadline_timer != -1 ) {
-		daemonCoreSockAdapter.Cancel_Timer(m_deadline_timer);
+		daemonCore->Cancel_Timer(m_deadline_timer);
 		m_deadline_timer = -1;
 	}
 }
@@ -85,6 +84,11 @@ bool
 CCBClient::ReverseConnect( CondorError *error, bool non_blocking )
 {
 	if( non_blocking ) {
+		// Non-blocking mode requires DaemonCore
+		if ( !daemonCore ) {
+			dprintf( D_ALWAYS, "Can't do non-blocking CCB reverse connection without DaemonCore!\n" );
+			return false;
+		}
 		m_target_sock->enter_reverse_connecting_state();
 		// NOTE: now we _must_ call exit_reverse_connecting_state()
 		// before we are done with m_target_sock.  This state
@@ -108,9 +112,9 @@ CCBClient::myName()
 	// It is who we say we are when talking to the CCB server.
 	MyString name;
 	name = get_mySubSystem()->getName();
-	if( daemonCoreSockAdapter.isEnabled() ) {
+	if( daemonCore ) {
 		name += " ";
-		name += daemonCoreSockAdapter.publicNetworkIpAddr();
+		name += daemonCore->publicNetworkIpAddr();
 	}
 	return name;
 }
@@ -503,7 +507,7 @@ CCBClient::try_next_ccb()
 		return try_next_ccb();
 	}
 
-	char const *return_address = daemonCoreSockAdapter.publicNetworkIpAddr();
+	char const *return_address = daemonCore->publicNetworkIpAddr();
 
 	// For now, we require that this daemon has a command port.
 	// If needed, we could add support for opening a listen socket here.
@@ -580,7 +584,7 @@ CCBClient::try_next_ccb()
 
 			// bypass startCommand() and call the command handler directly
 			// this call will take care of deleting server_sock when done
-		daemonCoreSockAdapter.CallCommandHandler(CCB_REQUEST,server_sock);
+		daemonCore->CallCommandHandler(CCB_REQUEST,server_sock);
 	}
 	else {
 		ccb_server->sendMsg(msg.get());
@@ -593,7 +597,7 @@ CCBClient::try_next_ccb()
 void
 CCBClient::CancelReverseConnect()
 {
-	if( m_target_sock ) {
+	if( daemonCore && m_target_sock ) {
 		ReverseConnectCallback( NULL );
 	}
 }
@@ -681,7 +685,7 @@ CCBClient::RegisterReverseConnectCallback()
 		// security session management.  Again, that stuff all happens
 		// later in the reverse direction.
 
-		daemonCoreSockAdapter.Register_Command(
+		daemonCore->Register_Command(
 			CCB_REVERSE_CONNECT,
 			"CCB_REVERSE_CONNECT",
 			CCBClient::ReverseConnectCommandHandler,
@@ -706,7 +710,7 @@ CCBClient::RegisterReverseConnectCallback()
 		if( timeout < 0 ) {
 			timeout = 0;
 		}
-		m_deadline_timer = daemonCoreSockAdapter.Register_Timer (
+		m_deadline_timer = daemonCore->Register_Timer (
 			timeout,
 			(TimerHandlercpp)&CCBClient::DeadlineExpired,
 			"CCBClient::DeadlineExpired",
@@ -732,7 +736,7 @@ void
 CCBClient::UnregisterReverseConnectCallback()
 {
 	if( m_deadline_timer != -1 ) {
-		daemonCoreSockAdapter.Cancel_Timer(m_deadline_timer);
+		daemonCore->Cancel_Timer(m_deadline_timer);
 		m_deadline_timer = -1;
 	}
 
@@ -806,7 +810,7 @@ CCBClient::ReverseConnectCallback(Sock *sock)
 	// We are all done creating the connection (or failing to do so).
 	// Call any function that may have been registered with
 	// DaemonCore::Register_Socket().
-	daemonCoreSockAdapter.CallSocketHandler(m_target_sock,false);
+	daemonCore->CallSocketHandler(m_target_sock,false);
 
 	// No more use of m_target_sock, because it may have been deleted
 	// by now.

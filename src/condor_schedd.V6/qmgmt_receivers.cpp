@@ -820,7 +820,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( putClassAd(syscall_sock, *ad, true) );
+			assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
 		// Here we must really, truely delete the ad.  Why? Because
 		// when GetJobAd is called with the third bool argument set
@@ -853,7 +853,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( putClassAd(syscall_sock, *ad, true) );
+			assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );
@@ -883,7 +883,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( putClassAd(syscall_sock, *ad, true) );
+			assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
 		FreeJobAd(ad);
 		assert( syscall_sock->end_of_message() );;
@@ -920,7 +920,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( putClassAd(syscall_sock, *ad, true) );
+			assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );
@@ -957,7 +957,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( putClassAd(syscall_sock, *ad, true) );
+			assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );
@@ -1012,6 +1012,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		ClassAd *ad;
 		int terrno;
 		int initScan = 1;
+		classad::References proj;
 
 		if ( !(syscall_sock->code(constraint)) ) {
 			if (constraint != NULL) {
@@ -1033,7 +1034,12 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 		assert( syscall_sock->end_of_message() );;
 
-		StringList sl(projection, "\n");
+		// if there is a projection, convert it into a set of attribute names
+		if (projection) {
+			StringTokenIterator list(projection);
+			const std::string * attr;
+			while ((attr = list.next_string())) { proj.insert(*attr); }
+		}
 
 		syscall_sock->encode();
 
@@ -1054,23 +1060,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			}
 
 			if( rval >= 0 ) {
-				if (sl.number() != 0) {
-					sl.rewind();
-					StringList internals;
-					StringList externals; // shouldn't have any
-					while (char *attr = sl.next()) {
-
-						if( !ad->GetExprReferences(attr, internals, externals) ) {
-							dprintf(D_FULLDEBUG,
-									"GetAllJobsByConstraint failed to parse "
-									"requested ClassAd expression: %s\n",attr);
-						}
-					}
-
-					assert( putClassAd(syscall_sock, *ad, true, &internals) );
-				} else {
-					assert( putClassAd(syscall_sock, *ad, true) );
-				}
+				assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE, proj.empty() ? NULL : &proj) );
 				FreeJobAd(ad);
 			}
 		} while (rval >= 0);

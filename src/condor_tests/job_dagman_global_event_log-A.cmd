@@ -1,4 +1,4 @@
-executable = /bin/echo
+executable = x_echostring.pl
 arguments = "Global event log test"
 universe = scheduler
 output = job_dagman_global_event_log-A-node.out
