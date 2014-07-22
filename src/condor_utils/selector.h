@@ -22,7 +22,25 @@
 #define SELECTOR_H
 
 #include "condor_common.h"
+
+#ifdef HAVE_POLL
+#define USE_POLL 1
+#endif
+
+#ifdef USE_POLL
 #include <poll.h>
+#else
+// We define stubs for pollfd so we don't have to sprinkle our
+// code with ifdef's
+struct pollfd {
+	int   fd;         /* file descriptor */
+	short events;     /* requested events */
+	short revents;    /* returned events */
+};
+#define POLLIN 1
+#define POLLOUT 2
+#define POLLERR 3
+#endif
 
 class Selector {
 public:
