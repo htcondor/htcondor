@@ -51,10 +51,12 @@ the \Condor{schedd} daemon.
 \Ticket{4283}
 
 \item HTCondor can now internally cache the result of Globus authorization
-callouts.  The caching behavior can be enabled by setting
-\Macro{GSS\_ASSIST\_GRIDMAP\_CACHE\_EXPIRATION} to a non-zero value (default
-is zero) in seconds.  This will be useful for sites that use the Globus authorization
-callouts based only on DN and VOMS FQAN and have performance issues.
+callouts.  
+The caching behavior is enabled by setting configuration variable
+\Macro{GSS\_ASSIST\_GRIDMAP\_CACHE\_EXPIRATION} to a non-zero value.
+This feature will be useful for sites that use the Globus authorization
+callouts based only on DN and VOMS FQAN, and for sites that have 
+performance issues.
 \Ticket{4138}
 
 \end{itemize}
