@@ -1,0 +1,128 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+
+$testname = "job_schedd_restart-runningjobs-ok";
+
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
+
+print scalar localtime() . "\n";
+
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+    WANT_SUSPEND = FALSE
+    NEGOTIATION_INTERVAL = 5
+    ALL_DEBUG = D_FULLDEBUG
+    NUM_CPUS = 6
+';
+
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"scheddrestartrunningjobs");
+
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
+
+CondorTest::StartCondorWithParams(
+    condor_name => "scheddrestartrunningjobs",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+my $alreadydone=0;
+
+my $count = 0;
+my $on_execute = sub {
+
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $doneyet = "no";
+
+
+	$status = CondorTest::changeDaemonState( "schedd", "off", 9 );
+	if(!$status)
+	{
+		CondorTest::debug("Test failure: could not turn scheduler off!\n",1);
+		RegisterResult(0,"test_name",$testname);
+		return(1)
+	}
+
+	$status = CondorTest::changeDaemonState( "schedd", "on", 9 );
+	if(!$status)
+	{
+		CondorTest::debug("Test failure: could not turn scheduler on!\n",1);
+		RegisterResult(0,"test_name",$testname);
+		return(1)
+	} else {
+		RegisterResult(1,"test_name",$testname);
+		runToolNTimes("condor_rm $cluster",1,1);
+		return(0);
+	}
+};
+
+my $on_abort = sub {
+};
+
+my $on_success = sub {
+	print "Job done\n";
+};
+
+my $on_submit = sub {
+};
+
+my $on_disconnect = sub {
+};
+
+my $on_reconnected = sub {
+};
+
+my $on_reconnectfailed = sub {
+};
+
+my $appended_submit_info = '
+';
+
+my $on_evictedwithoutcheckpoint = sub {
+	print "We should not need this callback\n";
+};
+
+# We have a windows reconnect bug. But this test is only
+# about the schedd restaring so there are extra callbacks
+# to have that be the only issue. The reconnect test
+# is currently skipped on windows only.
+
+$result = SimpleJob::RunCheck(
+    append_submit_commands => $appended_submit_info,
+    queue_sz => 1,
+    duration => 20,
+    on_execute => $on_execute,
+    on_disconnected => $on_disconnect,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	on_reconnectfailed => $on_reconnectfailed,
+    on_reconnected => $on_reconnected,
+    on_success => $on_success,
+    on_submit => $on_submit,
+	on_abort => $on_abort,
+);
+
+CondorTest::EndTest();
+exit(0);
