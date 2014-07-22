@@ -37,6 +37,10 @@ SimpleList<HOOK_RUN_INFO*> JobRouterHookMgr::m_job_hook_list;
 
 JobRouterHookMgr::JobRouterHookMgr()
 	: HookClientMgr(),
+	  m_warn_cleanup(true),
+	  m_warn_update(true),
+	  m_warn_translate(true),
+	  m_warn_exit(true),
 	  NUM_HOOKS(4),
 	  UNDEFINED("UNDEFINED"),
 	  m_hook_paths(MyStringHash)
@@ -111,6 +115,10 @@ JobRouterHookMgr::reconfig()
 		free(m_default_hook_keyword);
 	}
 	m_default_hook_keyword = param("JOB_ROUTER_HOOK_KEYWORD");
+	m_warn_translate = true;
+	m_warn_exit = true;
+	m_warn_update = true;
+	m_warn_cleanup = true;
 	return true;
 }
 
@@ -189,7 +197,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 	if (NULL == hook_translate)
 	{
 		// hook not defined, which is ok
-		dprintf(D_FULLDEBUG, "HOOK_TRANSLATE_JOB not configured.\n");
+		if (m_warn_translate) {dprintf(D_FULLDEBUG, "HOOK_TRANSLATE_JOB not configured.\n"); m_warn_translate=false;}
 		return 0;
 	}
 
@@ -254,7 +262,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 	if (NULL == hook_update_job_info)
 	{
 		// hook not defined
-		dprintf(D_FULLDEBUG, "HOOK_UPDATE_JOB_INFO not configured.\n");
+		if (m_warn_update) {dprintf(D_FULLDEBUG, "HOOK_UPDATE_JOB_INFO not configured.\n"); m_warn_update=false;}
 		return 0;
 	}
 
@@ -319,7 +327,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 	if (NULL == hook_job_exit)
 	{
 		// hook not defined
-		dprintf(D_FULLDEBUG, "HOOK_JOB_EXIT not configured.\n");
+		if (m_warn_exit) {dprintf(D_FULLDEBUG, "HOOK_JOB_EXIT not configured.\n"); m_warn_exit=false;}
 		return 0;
 	}
 
@@ -386,7 +394,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 	if (NULL == hook_cleanup)
 	{
 		// hook not defined
-		dprintf(D_FULLDEBUG, "HOOK_JOB_CLEANUP not configured.\n");
+		if (m_warn_cleanup) {dprintf(D_FULLDEBUG, "HOOK_JOB_CLEANUP not configured.\n"); m_warn_cleanup=false;}
 		return 0;
 	}
 
