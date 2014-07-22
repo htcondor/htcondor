@@ -22,11 +22,12 @@
 #define _CONDOR_FSYNC_H
 
 /*
- * Conditionally fsyncs based on configuration knob.
+ * Conditionally fsyncs/fdatasyncs based on configuration knob.
  * path parameter is currently not used but may be used
  * in the future to further conditionalize fsyncs based
  * on location of file.
  */
 int condor_fsync( int fd, const char* path = NULL );
+int condor_fdatasync( int fd, const char* path = NULL );
 
 #endif 

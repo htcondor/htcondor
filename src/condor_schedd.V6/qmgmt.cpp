@@ -1946,8 +1946,10 @@ int DestroyProc(int cluster_id, int proc_id)
   ScheddPluginManager::Archive(ad);
 #endif
 
-  if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
-	  dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
+  if ( FILEObj ) {
+	  if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
+		  dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
+	  }
   }
 
   // save job ad to the log
@@ -2087,8 +2089,10 @@ int DestroyCluster(int cluster_id, const char* reason)
 				ScheddPluginManager::Archive(ad);
 #endif
 
-				if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
-			  		dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
+				if ( FILEObj ) {
+					if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
+						dprintf(D_ALWAYS, "AppendHistory Logging History Event --- Error\n");
+					}
 		  		}
 
   // save job ad to the log
@@ -2580,7 +2584,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	// Get the job's status and only mark dirty if it is running
 	// Note: Dirty attribute notification could work for local and
 	// standard universe, but is currently not supported for them.
-	int universe;
+	int universe = -1;
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
 	if( ( universe != CONDOR_UNIVERSE_SCHEDULER &&

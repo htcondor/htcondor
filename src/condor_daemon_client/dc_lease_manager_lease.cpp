@@ -464,7 +464,6 @@ DCLeaseManagerLease_getConstList(
 	const list<DCLeaseManagerLease *>	&non_const_list
 	)
 {
-	typedef list<DCLeaseManagerLease *>			LeaseList;
 	typedef list<const DCLeaseManagerLease *>	ConstList;
 
 	const ConstList *const_list = (const ConstList *) &non_const_list;

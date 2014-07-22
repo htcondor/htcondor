@@ -1,3 +1,6 @@
+#TEMP -- either remove this after merge or add check to test...
+NODE_STATUS_FILE job_dagman_final-D.status
+
 JOB D_A job_dagman_final-D-nodeA.cmd
 
 # This node fails.

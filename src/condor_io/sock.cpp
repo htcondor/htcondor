@@ -34,12 +34,12 @@
 #include "condor_debug.h"
 #include "get_port_range.h"
 #include "condor_netdb.h"
-#include "daemon_core_sock_adapter.h"
 #include "selector.h"
 #include "authentication.h"
 #include "condor_sockfunc.h"
 #include "condor_ipv6.h"
 #include "condor_config.h"
+#include "condor_sinful.h"
 
 #if defined(WIN32)
 // <winsock2.h> already included...
@@ -65,8 +65,6 @@ void dprintf ( int flags, Sock & sock, const char *fmt, ... )
     _condor_dprintf_va( flags, (DPF_IDENT)sock.getUniqueId(), fmt, args );
     va_end( args );
 }
-
-DaemonCoreSockAdapterClass daemonCoreSockAdapter;
 
 unsigned int Sock::m_nextUniqueId = 1;
 

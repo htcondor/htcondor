@@ -26,6 +26,7 @@
 #include "condor_adtypes.h"
 #include "condor_system.h"
 #include "condor_ipverify.h"
+#include "condor_md.h"
 
 
 /*
@@ -291,6 +292,7 @@ protected:
 
 	class RcvMsg {
 		
+		char m_partial_cksum[MAC_SIZE];
                 CONDOR_MD_MODE  mode_;
                 Condor_MD_MAC * mdChecker_;
 		ReliSock      * p_sock; //preserve parent pointer to use for condor_read/write

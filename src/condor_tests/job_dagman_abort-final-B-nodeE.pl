@@ -1,4 +1,4 @@
-#! /usr/bin/env perl
+#!/usr/bin/env perl
 
 system("echo '  DAG_STATUS=$ARGV[2]'");
 system("echo '  FAILED_COUNT=$ARGV[3]'");

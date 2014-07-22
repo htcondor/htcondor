@@ -246,6 +246,7 @@ sub on_exitedsuccess {
 my $res = SimpleJob::RunCheck(
 		test_name => "$testname",
 		duration => 3,
+		timeout => 480,
 		queue_sz => 100,
 		on_submit => \&on_submit,
 		on_success => \&on_exitedsuccess,

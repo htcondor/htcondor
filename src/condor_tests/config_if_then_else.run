@@ -422,7 +422,7 @@ endif
 my @fuzzytest = ();
 
 push @fuzzytest, "if version == $versionkey\n";
-push @fuzzytest, "iftest37= is 8.1\n";
+push @fuzzytest, "iftest37= is 8.3\n";
 push @fuzzytest, "else\n";
 push @fuzzytest, "iftest37=is not $versionkey\n";
 push @fuzzytest, "endif\n";

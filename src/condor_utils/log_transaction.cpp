@@ -322,7 +322,7 @@ fflush_with_status(stream_with_status_t* s)
 */
 
 static int
-fsync_with_status(stream_with_status_t* s) 
+fdatasync_with_status(stream_with_status_t* s) 
 {
   ASSERT(s);
 
@@ -338,7 +338,7 @@ fsync_with_status(stream_with_status_t* s)
        fileno.  Whether or not this is the right thing to do, it's at
        least backwards-compatible. */
 
-	if (condor_fsync(fd) < 0) {
+	if (condor_fdatasync(fd) < 0) {
 	  s->why = WHY_FSYNC;
 	  s->err = errno;
 	  return -1;
@@ -473,10 +473,10 @@ Transaction::Commit(FILE* fp, void *data_structure, bool nondurable)
 	  }
 
 	  before = time(NULL);
-	  fsync_with_status(&(fps[0]));
+	  fdatasync_with_status(&(fps[0]));
 	  after = time(NULL);
 	  if ( (after - before) > 5 ) {
-		  dprintf( D_FULLDEBUG, "Transaction::Commit(): fsync_with_status() took %ld seconds to run\n", after - before );
+		  dprintf( D_FULLDEBUG, "Transaction::Commit(): fdatasync_with_status() took %ld seconds to run\n", after - before );
 	  }
 
 	  bool failure = fps[0].why != WHY_OK;
@@ -489,7 +489,7 @@ Transaction::Commit(FILE* fp, void *data_structure, bool nondurable)
 	    */
 
 	    fflush_with_status(&(fps[1]));
-	    fsync_with_status(&(fps[1]));
+	    fdatasync_with_status(&(fps[1]));
 
 	    fclose_with_status(&(fps[1]));
 	    bi.fp = NULL;

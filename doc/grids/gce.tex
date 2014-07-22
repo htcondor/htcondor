@@ -20,8 +20,8 @@ More information about Google Compute Engine is available at
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 HTCondor jobs are submitted to the GCE service
-with the \SubmitCmd{grid} universe, setting the
-\SubmitCmd{grid\_resource} command to \SubmitCmd{gce}, followed 
+with the \SubmitCmdNI{grid} universe, setting the
+\SubmitCmd{grid\_resource} command to \SubmitCmdNI{gce}, followed 
 by the service's URL, your GCE project, 
 and the desired GCE zone to be used.
 The submit description file command will be similar to:
@@ -65,7 +65,7 @@ gce_auth_file = /path/to/auth-file
 
 GCE allows the choice of different hardware configurations 
 for instances to run on.
-Select which configuration to use for the \SubmitCmd{gce} grid type
+Select which configuration to use for the \SubmitCmdNI{gce} grid type
 with the \SubmitCmd{gce\_machine\_type} submit description file command.
 HTCondor provides no default.
 
@@ -100,7 +100,7 @@ but do not use the same metadata name in both places.
 \subsubsection{\label{sec:Gce-config}GCE Configuration Variables}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The following configuration parameters are specific to the \SubmitCmd{gce}
+The following configuration parameters are specific to the \SubmitCmdNI{gce}
 grid type. 
 The values listed here are the defaults. 
 Different values may be specified in the HTCondor configuration files.

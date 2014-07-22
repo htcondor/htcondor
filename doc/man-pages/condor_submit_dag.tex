@@ -39,6 +39,7 @@
 \oOptArg{-schedd-address-file}{FileName}
 \oOpt{-suppress\_notification}
 \oOpt{-dont\_suppress\_notification}
+\oOpt{-DoRecovery}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
@@ -58,8 +59,8 @@ Extensive documentation is in the HTCondor User Manual
 section on DAGMan.
 
 \begin{Options}
-  \OptItem{\Opt{-help}}{Display usage information.}
-  \OptItem{\Opt{-version}}{Display version information.}
+  \OptItem{\Opt{-help}}{Display usage information and exit.}
+  \OptItem{\Opt{-version}}{Display version information and exit.}
   \OptItem{\Opt{-no\_submit}}{Produce the HTCondor submit description file
      for DAGMan, but do not submit DAGMan as an HTCondor job.}
   \OptItem{\Opt{-verbose}}{Cause \Condor{submit\_dag}
@@ -272,7 +273,7 @@ section on DAGMan.
      value and would not run the POST script if the PRE script failed.
   }
   \OptItem{\OptArg{-priority}{number}}{Sets the minimum job priority
-    of jobs submitted and running under the \Condor{dagman} job
+    of node jobs submitted and running under the \Condor{dagman} job
     submitted by this \Condor{submit\_dag} command.
   }
   \OptItem{\Opt{-dont\_use\_default\_node\_log}}{ Tells \Condor{dagman}
@@ -324,6 +325,11 @@ section on DAGMan.
     If both \Opt{-dont\_suppress\_notification} and 
     \Opt{-suppress\_notification} are specified with the same command line,
     the last argument is used.
+  }
+  \OptItem{\Opt{-DoRecovery}}{Causes \Condor{dagman} to start in recovery
+    mode.  (This means that it reads the relevant job user log(s) and
+    "catches up" to the given DAG's previous state before submitting
+    any new jobs.)
   }
   \end{Options}
 

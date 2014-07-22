@@ -1,0 +1,419 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use strict;
+use warnings;
+
+#my $cmd = 'cmd_q_status_format-check.cmd';
+#my $cmdout = $cmd . ".out";
+#my $testdesc =  'cmd_q_status_format-check';
+#my $testname = "cmd_q_status_format-check";
+my $debuglevel = 2;
+
+my $whoami = "";
+
+my @rmarray = ();
+my @qarray = ();
+my @q2array = ();
+my @q3array = ();
+my @q4array = ();
+my $ClusterId = 0;
+
+my %skipad = (
+	"UserLog" => 1,
+	"JobStartDate" => 1,
+	"PublicClaimId" => 1,
+	"LastMatchTime" => 1,
+	"QDate" => 1,
+	"StartdIpAddr" => 1,
+	"JobCurrentStartTime" => 1,
+	"GlobalJobId" => 1,
+	"LastJobLeaseRenewal" => 1,
+	"EnteredCurrentStatus" => 1,
+	"ClusterId" => 1,
+	"JobCurrentStartDate" => 1,
+	"ServerTime" => 1,
+	"ShadowBday" => 1,
+	"EnteredCurrentStatus" => 1,
+);
+
+my $firstappend_condor_config = '
+	WANT_SUSPEND = FALSE
+	NEGOTIATION_INTERVAL = 5
+	ALL_DEBUG = D_FULLDEBUG D_NETWORK
+	NUM_CPUS = 6
+	CONDOR_Q_USE_V3_PROTOCOL = true
+	#use role: personal
+';
+
+
+my $configfile1 = CondorTest::CreateLocalConfig($firstappend_condor_config,"cmdqprotocols1");
+
+my $testname = "cmd_q_protocols";
+
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
+
+CondorTest::StartCondorWithParams(
+	condor_name => "cmdqprotocols1",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile1",
+);
+
+#print "************************** CONDOR_CONFIG now set to:$ENV{CONDOR_CONFIG} ******************\n";
+
+
+# now start the personal condor to ensure it comes up
+
+#Do a job before setting tesing exit codes
+print "First test basic job\n";
+my $result = SimpleJob::RunCheck(); # jobid 1
+
+my $personal_counter = 0;
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
+
+my $on_execute = sub {
+	my %info = @_;
+	#my $cmdq3 =  "condor_q  $ClusterId -af ClaimId ClaimIds Capability";
+	#my $cmdq4 =  "condor_q  $ClusterId -af ClaimId ClaimIds Capability";
+	my $cmdq3 =  "condor_q  -l $ClusterId";
+	my $cmdq4 =  "condor_q -l  $ClusterId";
+	my $cmdrm = "";
+	my $cmdstatus = 0;
+
+	# what I am looking to see can only be seen while job is running
+	# and the first two test probably never get to running as they
+	# end up triggering on_submit call back which removes them. We want to make sure
+	# in case 3 and four these do not get removed in on_submit.
+	if($personal_counter == 3) {
+		print "Running cmd $cmdq3 - ";
+		$cmdstatus = CondorTest::runCondorTool($cmdq3,\@q3array,2,{emit_output=>0});
+		if(!$cmdstatus)
+		{
+			print "bad\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmdq3>\n",$debuglevel);
+			exit(1)
+		}
+	} elsif($personal_counter == 4) {
+		print "Running cmd $cmdq4 - ";
+		$cmdstatus = CondorTest::runCondorTool($cmdq4,\@q4array,2,{emit_output=>0});
+		if(!$cmdstatus)
+		{
+			print "bad\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmdq4>\n",$debuglevel);
+			exit(1)
+		}
+	}
+	$cmdrm = "condor_rm $ClusterId";
+	$cmdstatus = CondorTest::runCondorTool($cmdrm,\@rmarray,8,{emit_output=>0});
+};
+
+my $submit = sub {
+	my %info = @_;
+	$personal_counter++;
+	my $cmdq = "condor_q -format \"%s\" FOO";
+	my $cmdq2 =  "condor_q -format \"%s\" FOO";
+	my $cmdrm = "";
+	my $cmdstatus = 0;
+
+	if($personal_counter == 1) {
+		print "Running cmd $cmdq - ";
+		$cmdstatus = CondorTest::runCondorTool($cmdq,\@qarray,2,{emit_output=>0});
+		if(!$cmdstatus)
+		{
+			print "bad\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmdq>\n",$debuglevel);
+			exit(1)
+		}
+		$cmdrm = "condor_rm $ClusterId";
+		$cmdstatus = CondorTest::runCondorTool($cmdrm,\@rmarray,8,{emit_output=>0});
+	} elsif($personal_counter == 2) {
+		print "Running cmd $cmdq2 - ";
+		$cmdstatus = CondorTest::runCondorTool($cmdq2,\@q2array,2,{emit_output=>0});
+		if(!$cmdstatus)
+		{
+			print "bad\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmdq2>\n",$debuglevel);
+			exit(1)
+		}
+		$cmdrm = "condor_rm $ClusterId";
+		$cmdstatus = CondorTest::runCondorTool($cmdrm,\@rmarray,8,{emit_output=>0});
+	} elsif($personal_counter == 3) {
+	} elsif($personal_counter == 4) {
+	} else {
+		print "wild test\n";
+		exit(1)
+	}
+};
+
+my $aborted = sub {
+	CondorTest::debug("If all is good we abort our own job.......\n",$debuglevel);
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+};
+
+my $ExitSuccess = sub {
+	my %info = @_;
+};
+
+my $runresult = SimpleJob::RunCheck(
+	duration => 0,
+	on_abort => $aborted,
+	on_submit => $submit,
+	on_success => $ExitSuccess,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	GetClusterId => $GetClusterId,
+);
+
+
+my $secondappend_condor_config = '
+	WANT_SUSPEND = FALSE
+	NEGOTIATION_INTERVAL = 5
+	ALL_DEBUG = D_FULLDEBUG
+	NUM_CPUS = 6
+	CONDOR_Q_USE_V3_PROTOCOL = false
+	#use role: personal
+';
+
+
+my $configfile2 = CondorTest::CreateLocalConfig($secondappend_condor_config,"cmdqprotocols2");
+
+
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
+
+CondorTest::StartCondorWithParams(
+	condor_name => "cmdqprotocols2",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile2",
+);
+
+$runresult = SimpleJob::RunCheck(
+	duration => 0,
+	on_abort => $aborted,
+	on_submit => $submit,
+	on_success => $ExitSuccess,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	GetClusterId => $GetClusterId,
+);
+
+# so now we have the output from both forms of the cmd_q protocal
+# they had best be the same
+
+my $qsize = @qarray;
+my $q2size = @q2array;
+my $contentcheckerres = 0;
+
+if($qsize != $q2size) {
+	print "Sizes vary Proto on: size:$qsize Proto off size:$q2size\n";
+	CondorTest::RegisterResult(0,"test_name",$testname);
+} else {
+	print "Output sizes are the same from both cmd_q protocols\n";
+	CondorTest::RegisterResult(1,"test_name",$testname);
+}
+
+print "How about the contents?\n";
+if(($qsize == $q2size)&&($qsize == 0)) {
+	print "Trivial comparison of arrays size equal to 0\n";
+	CondorTest::RegisterResult(1,"test_name",$testname);
+} else {
+	print "Checking that no way produces either more or less results\n";
+	$contentcheckerres = CheckContents(\@qarray,\@q2array);
+	if($contentcheckerres == 0) {
+		print "Contents perfect match\n";
+		CondorTest::RegisterResult(1,"test_name",$testname);
+	} else {
+		print "Contents IMPERFECT match\n";
+		CondorTest::RegisterResult(0,"test_name",$testname);
+	}
+}
+
+# NOTE if we submit again with same config, we are testing command 
+# with old cmd q protcol after that we start a different condor personal
+# with the new procol turned on. @q3array will be old way and @q4array
+# the new protocol
+
+$runresult = SimpleJob::RunCheck(
+	duration => 0,
+	on_abort => $aborted,
+	on_execute => $on_execute,
+	on_submit => $submit,
+	on_success => $ExitSuccess,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	GetClusterId => $GetClusterId,
+);
+
+my $thirdappend_condor_config = '
+	WANT_SUSPEND = FALSE
+	NEGOTIATION_INTERVAL = 5
+	ALL_DEBUG = D_FULLDEBUG
+	NUM_CPUS = 6
+	CONDOR_Q_USE_V3_PROTOCOL = true
+	#use role: personal
+';
+
+
+my $configfile3 = CondorTest::CreateLocalConfig($thirdappend_condor_config,"cmdqprotocols3");
+
+
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
+
+CondorTest::StartCondorWithParams(
+	condor_name => "cmdqprotocols3",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile3",
+);
+
+$runresult = SimpleJob::RunCheck(
+	duration => 0,
+	on_abort => $aborted,
+	on_submit => $submit,
+	on_execute => $on_execute,
+	on_success => $ExitSuccess,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	GetClusterId => $GetClusterId,
+);
+
+# so now we have the output from both forms of the cmd_q protocal
+# they had best be the same
+
+my $q3size = @q3array;
+my $q4size = @q4array;
+$contentcheckerres = 0;
+
+if($q3size != $q4size) {
+	print "Sizes vary Proto on: size:$q3size Proto off size:$q4size\n";
+	CondorTest::RegisterResult(0,"test_name",$testname);
+} else {
+	print "Output sizes are the same from both cmd_q protocols\n";
+	CondorTest::RegisterResult(1,"test_name",$testname);
+}
+
+print "How about the contents?\n";
+if(($q3size == $q4size)&&($q3size == 0)) {
+	print "Trivial comparison of arrays size equal to 0\n";
+	CondorTest::RegisterResult(1,"test_name",$testname);
+} else {
+	print "Checking that no way produces either more or less results\n";
+	$contentcheckerres = CheckContents(\@q4array,\@q3array);
+	if($contentcheckerres == 0) {
+		print "Contents perfect match\n";
+		CondorTest::RegisterResult(1,"test_name",$testname);
+	} else {
+		print "Contents IMPERFECT match\n";
+		CondorTest::RegisterResult(0,"test_name",$testname);
+	}
+}
+
+
+CondorTest::EndTest();
+
+sub CheckContents
+{
+	my $firstarrayref = shift;
+	my $secondarrayref = shift;
+	my %firsthash = ();
+	my %secondhash = ();
+	my $ret = 0;
+
+	# we check that neither array has values defined that are not in the other.
+
+	foreach my $aitem (@{$firstarrayref}) {
+		#print "Hash1:$aitem\n";
+		$firsthash{$aitem} = 1;
+	}
+
+	foreach my $bitem (@{$secondarrayref}) {
+		#print "Hash2:$bitem\n";
+		$secondhash{$bitem} = 1;
+	}
+
+	#foreach my $firstone (sort keys %skipad) {
+		#print "skip:$firstone\n";
+	#}
+
+	#foreach my $firstone (sort keys %firsthash) {
+		#print "First:$firstone\n";
+	#}
+	#foreach my $secondone (sort keys %secondhash) {
+		#print "Second:$secondone\n";
+	#}
+
+
+	foreach my $citem (@{$firstarrayref}) {
+		if(exists $secondhash{$citem}) {
+		} else {
+			if($citem =~ /(.*?)\s*=(.*)/) {
+				#print "Checking for skip on:$1:\n";
+				if(exists $skipad{$1}) {
+				} else {
+					print "First array has extra member:$citem\n";
+					$ret++;
+				}
+			} elsif($citem =~ /(.*?)/) {
+				if(exists $skipad{$1}) {
+				} else {
+					print "First array has extra member:$citem\n";
+					$ret++;
+				}
+			}
+		}
+	}
+
+	foreach my $ditem (@{$secondarrayref}) {
+		if(exists $firsthash{$ditem}) {
+		} else {
+			if($ditem =~ /(.*?)\s*=(.*)/) {
+				#print "Checking for skip on:$1:\n";
+				if(exists $skipad{$1}) {
+				} else {
+					print "Second array has extra member:$ditem\n";
+					$ret++;
+				}
+			} elsif($ditem =~ /(.*?)/) {
+				if(exists $skipad{$1}) {
+				} else {
+					print "second array has extra member:$ditem\n";
+					$ret++;
+				}
+			}
+		}
+	}
+
+	return($ret);
+}

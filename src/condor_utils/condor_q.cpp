@@ -284,7 +284,7 @@ fetchQueueFromHost (ClassAdList &list, StringList &attrs, const char *host, char
 	if( schedd_version && *schedd_version ) {
 		CondorVersionInfo v(schedd_version);
 		useFastPath = v.built_since_version(6,9,3) ? 1 : 0;
-		if (v.built_since_version(8, 1, 4)) {
+		if (v.built_since_version(8, 1, 5)) {
 			useFastPath = 2;
 		}
 	}

@@ -227,7 +227,7 @@ class Job {
 			default node log
 		@return true iff the submit file defines a log file
 	*/
-	bool CheckForLogFile(bool usingDefault) const;
+	bool CheckForLogFile( bool usingDefault ) const;
 
     /** Returns true if a queue is empty (has no jobs)
         @param queue Selects which queue to look at
@@ -356,6 +356,8 @@ class Job {
 		@param recovery: whether we're in recovery mode
 		@param defaultNodeLog: the default log file to be used if the
 			node's submit file doesn't define a log file
+		@param usingDefault: whether we're using the default/workflow
+			log at the DAG level
 		@return true if successful, false if failed
 	*/
 	bool MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
@@ -518,7 +520,6 @@ public:
 		// (Note: we may need to track the hold state of each proc in a
 		// cluster separately to correctly deal with multi-proc clusters.)
 	int _jobProcsOnHold;
-	bool UseDefaultLog() const { return append_default_log; }
 
 		/** Mark a job with ProcId == proc as being on hold
  			Returns false if the job is already on hold
@@ -539,6 +540,17 @@ private:
 			metrics.
 		*/
 	void Cleanup();
+
+		/** Get the log file specified in the given submit file, if
+			any.  Note that if the job is an HTCondor job and
+			usingWorkflowLog is true, this method will return "" for
+			the log file name.
+			@param usingWorkflowLog: true iff we're using the workflow
+				log file to monitor jobs
+			@param logFile: a MyString to hold the log file name
+			@return true on success, false otherwise
+		*/
+	bool FindLogFile( bool usingWorkflowLog, MyString &logFile );
 
 		/** _onHold[proc] is nonzero if the condor job 
  			with ProcId == proc is on hold, and zero
@@ -655,7 +667,6 @@ private:
 
 	// whether this is a final job
 	bool _final;
-	bool append_default_log;
 
 		//
 		// For metrics reporting.

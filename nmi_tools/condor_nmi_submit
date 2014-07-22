@@ -950,7 +950,9 @@ sub checkoutSubmitInfo
     print "Attempting to fetch $submit_info from $tag...\n";
     my $cmd = "/bin/false FATAL ERROR, UNKNOWN VCS";
     if (defined($opt_git)) {
-	$cmd = "git archive --remote=$GITROOT_SRC $tag $submit_info | tar x";
+# This fails to find $tag on newer version of git.
+#	$cmd = "git archive --remote=$GITROOT_SRC $tag $submit_info | tar x";
+	$cmd = "git --git-dir=$GITROOT_SRC archive $tag $submit_info | tar x";
     }
 
     open( OUT, "$cmd 2>&1 |" ) ||
@@ -961,6 +963,7 @@ sub checkoutSubmitInfo
     if( $retval != 0 ) {
         print @output;
         print "FAILED (return value $retval)\n";
+	print "FAILED (command was '$cmd')\n";
         return 0;
     } 
     if( ! -f $submit_info ) {

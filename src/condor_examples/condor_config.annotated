@@ -855,12 +855,13 @@ UWCS_PREEMPTION_REQUIREMENTS = ((SubmitterGroup =?= RemoteGroup) \
 ##  The PREEMPTION_RANK expression is used in a case where preemption
 ##  is the only option and all other negotiation ranks are equal.  For
 ##  example, if the job has no preference, it is usually preferable to
-##  preempt a job with a small ImageSize instead of a job with a large
-##  ImageSize.  The default is to rank all preemptable matches the
-##  same.  However, the negotiator will always prefer to match the job
-##  with an idle machine over a preemptable machine, if all other
-##  negotiation ranks are equal.
-UWCS_PREEMPTION_RANK = (RemoteUserPrio * 1000000) - TARGET.ImageSize
+##  preempt a job that has just started instead of a job with a longer
+##  runtime, to cause less badput.  The default is to rank all 
+##  preemptable matches the same.  However, the negotiator will always 
+##  prefer to match the job with an idle machine over a preemptable 
+##  machine, if all other negotiation ranks are equal.
+
+UWCS_PREEMPTION_RANK = (RemoteUserPrio * 1000000) - ifThenElse(isUndefined(TotalJobRuntime), 0, TotalJobRuntime)
 
 
 #####################################################################

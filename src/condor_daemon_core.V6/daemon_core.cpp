@@ -90,7 +90,6 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "directory.h"
 #include "../condor_io/condor_rw.h"
 
-#include "daemon_core_sock_adapter.h"
 #include "HashTable.h"
 #include "selector.h"
 #include "proc_family_interface.h"
@@ -253,33 +252,6 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
     dc_stats.Init(); // initilize statistics.
     dc_stats.SetWindowSize(20*60);
-
-		// Provide cedar sock with pointers to various daemonCore functions
-		// that cannot be directly referenced in cedar, because it
-		// is sometimes used in an application that is not linked with
-		// DaemonCore.
-	daemonCoreSockAdapter.EnableDaemonCore(
-		this,
-		// Typecast Register_Socket because it is overloaded, and some (all?)
-		// compilers have trouble choosing which one to use.
-		(DaemonCoreSockAdapterClass::Register_Socket_fnptr)&DaemonCore::Register_Socket,
-		&DaemonCore::Cancel_Socket,
-		&DaemonCore::CallSocketHandler,
-		&DaemonCore::CallCommandHandler,
-		&DaemonCore::HandleReqAsync,
-		&DaemonCore::Register_DataPtr,
-		&DaemonCore::GetDataPtr,
-		(DaemonCoreSockAdapterClass::Register_Timer_fnptr)&DaemonCore::Register_Timer,
-		(DaemonCoreSockAdapterClass::Register_PeriodicTimer_fnptr)&DaemonCore::Register_Timer,
-		&DaemonCore::Cancel_Timer,
-		&DaemonCore::TooManyRegisteredSockets,
-		&DaemonCore::incrementPendingSockets,
-		&DaemonCore::decrementPendingSockets,
-		&DaemonCore::publicNetworkIpAddr,
-		&DaemonCore::Register_Command,
-		&DaemonCore::daemonContactInfoChanged,
-		&DaemonCore::Register_Timer_TS,
-		&DaemonCore::SocketIsRegistered);
 
 	if ( PidSize == 0 )
 		PidSize = DEFAULT_PIDBUCKETS;
@@ -774,19 +746,21 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
 
 int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
 				SocketHandler handler, const char* handler_descrip,
-				Service* s, DCpermission perm, HandlerType handler_type)
+				Service* s, DCpermission perm, HandlerType handler_type,
+				void **prev_entry)
 {
 	return( Register_Socket(iosock, iosock_descrip, handler,
 							(SocketHandlercpp)NULL, handler_descrip, s,
-							perm, handler_type, FALSE) );
+							perm, handler_type, FALSE, prev_entry) );
 }
 
 int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
 				SocketHandlercpp handlercpp, const char* handler_descrip,
-				Service* s, DCpermission perm, HandlerType handler_type)
+				Service* s, DCpermission perm, HandlerType handler_type,
+				void **prev_entry)
 {
 	return( Register_Socket(iosock, iosock_descrip, NULL, handlercpp,
-							handler_descrip, s, perm, handler_type, TRUE) );
+							handler_descrip, s, perm, handler_type, TRUE, prev_entry) );
 }
 
 int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
@@ -942,7 +916,9 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 			i = j;
 		}
 		if ( comTable[j].num == command ) {
-			EXCEPT("DaemonCore: Same command registered twice");
+			MyString msg;
+			msg.formatstr("DaemonCore: Same command registered twice (id=%d)", command);
+			EXCEPT(msg.c_str());
 		}
 	}
 	if ( i == -1 ) {
@@ -1384,7 +1360,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 				SocketHandler handler, SocketHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, DCpermission perm,
 				HandlerType handler_type,
-				int is_cpp)
+				int is_cpp, void **prev_entry)
 {
     int     i;
     int     j;
@@ -1396,6 +1372,9 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 
 	// And since FD_ISSET only allows us to probe, we do not bother using a
 	// hash table for sockets.  We simply store them in an array.
+	if ( prev_entry ) {
+		*prev_entry = NULL;
+	}
 
     if ( !iosock ) {
 		dprintf(D_DAEMONCORE, "Can't register NULL socket \n");
@@ -1436,6 +1415,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	for ( j=0; j < nSock; j++ )
 	{		
 		if ( (*sockTable)[j].iosock == iosock ) {
+			i = j;
 			duplicate_found = true;
         }
 
@@ -1444,6 +1424,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		if ( (*sockTable)[j].iosock && fd_to_register != -1 ) {
 			if ( ((Sock *)(*sockTable)[j].iosock)->get_file_desc() ==
 								fd_to_register ) {
+				i = j;
 				duplicate_found = true;
 			}
 		}
@@ -1457,8 +1438,15 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		}
 	}
 	if (duplicate_found) {
-		dprintf(D_ALWAYS, "DaemonCore: Attempt to register socket twice\n");
-		return -2;
+		if ( prev_entry ) {
+			*prev_entry = malloc(sizeof(SockEnt));
+			*(SockEnt*)*prev_entry = (*sockTable)[i];
+			(*sockTable)[i].iosock_descrip = NULL;
+			(*sockTable)[i].handler_descrip = NULL;
+		} else {
+			dprintf(D_ALWAYS, "DaemonCore: Attempt to register socket twice\n");
+			return -2;
+		}
 	} 
 
 		// Check that we are within the file descriptor safety limit
@@ -1517,6 +1505,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	(*sockTable)[i].handler_type = handler_type;
 	(*sockTable)[i].service = s;
 	(*sockTable)[i].data_ptr = NULL;
+	(*sockTable)[i].waiting_for_data = false;
 	free((*sockTable)[i].iosock_descrip);
 	if ( iosock_descrip )
 		(*sockTable)[i].iosock_descrip = strdup(iosock_descrip);
@@ -1558,7 +1547,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	return i;
 }
 
-int DaemonCore::Cancel_Socket( Stream* insock)
+int DaemonCore::Cancel_Socket( Stream* insock, void *prev_entry)
 {
 	int i,j;
 
@@ -1592,7 +1581,7 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 		curr_dataptr = NULL;
 
 	if ((*sockTable)[i].servicing_tid == 0 ||
-		(*sockTable)[i].servicing_tid == CondorThreads::get_handle()->get_tid())
+		(*sockTable)[i].servicing_tid == CondorThreads::get_handle()->get_tid() || prev_entry)
 	{
 		// Log a message
 		dprintf(D_DAEMONCORE,"Cancel_Socket: cancelled socket %d <%s> %p\n",
@@ -1604,8 +1593,14 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 		free( (*sockTable)[i].handler_descrip );
 		(*sockTable)[i].handler_descrip = NULL;
 		// If we just removed the last entry in the table, we can decrement nSock
-		if ( i == nSock - 1 ) {
-			nSock--;            
+		if ( prev_entry ) {
+			((SockEnt*)prev_entry)->servicing_tid = (*sockTable)[i].servicing_tid;
+			(*sockTable)[i] = *(SockEnt*)prev_entry;
+			free( prev_entry );
+		} else {
+			if ( i == nSock - 1 ) {
+				nSock--;
+			}
 		}
 	} else {
 		// Log a message
@@ -1614,7 +1609,9 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 		(*sockTable)[i].remove_asap = true;
 	}
 
-	nRegisteredSocks--;		// decrement count of active sockets
+	if ( !prev_entry ) {
+		nRegisteredSocks--;		// decrement count of active sockets
+	}
 	
 	DumpSocketTable(D_FULLDEBUG | D_DAEMONCORE);
 
@@ -2047,7 +2044,9 @@ int DaemonCore::Cancel_Pipe( int pipe_end )
 unsigned __stdcall pipe_close_thread(void *arg)
 {
 	WritePipeEnd* wpe = (WritePipeEnd*)arg;
+	::EnterCriticalSection(&Big_fat_mutex); // grab the big fat mutex before we write
 	wpe->complete_async_write(false);
+	::LeaveCriticalSection(&Big_fat_mutex); // release the big fat mutux after
 
 	dprintf(D_DAEMONCORE, "finally closing pipe %p\n", wpe);
 	delete wpe;
@@ -6427,10 +6426,14 @@ int DaemonCore::Create_Process(
 		//  CCB's trickery if present.  As this address is
 		//  intended for my own children on the same machine,
 		//  this should be safe.
-	{
+		// If m_inherit_parent_sinful is set, then the daemon wants
+		//   this child to use an alternate sinful to contact it.
+	if ( m_inherit_parent_sinful.empty() ) {
 		MyString mysin = InfoCommandSinfulStringMyself(true);
 		ASSERT(mysin.Length() > 0); // Empty entry means unparsable string.
 		inheritbuf += mysin;
+	} else {
+		inheritbuf += m_inherit_parent_sinful;
 	}
 
 	if ( sock_inherit_list ) {
@@ -6579,11 +6582,16 @@ int DaemonCore::Create_Process(
 		char const *session_id_c_str = session_id.c_str();
 		char const *session_key_c_str = session_key.c_str();
 
+		// we need to include the list of valid commands with the session
+		// so the child knows it can use this session to contact the parent.
+		std::string valid_coms;
+		formatstr( valid_coms, "[%s=\"%s\"]", ATTR_SEC_VALID_COMMANDS,
+				   GetCommandsInAuthLevel(DAEMON,true).Value() );
 		bool rc = getSecMan()->CreateNonNegotiatedSecuritySession(
 			DAEMON,
 			session_id_c_str,
 			session_key_c_str,
-			NULL,
+			valid_coms.c_str(),
 			CONDOR_CHILD_FQU,
 			NULL,
 			0);
@@ -6593,6 +6601,10 @@ int DaemonCore::Create_Process(
 			dprintf(D_ALWAYS, "ERROR: Create_Process failed to create security session for child daemon.\n");
 			goto wrapup;
 		}
+		IpVerify* ipv = getSecMan()->getIpVerify();
+		MyString id = CONDOR_CHILD_FQU;
+		ipv->PunchHole(DAEMON, id);
+
 		privateinheritbuf += " SessionKey:";
 
 		MyString session_info;
@@ -8128,6 +8140,7 @@ DaemonCore::Inherit( void )
 	int numInheritedSocks = 0;
 	char *ptmp;
 	static bool already_inherited = false;
+	std::string saved_sinful_string;
 
 	if( already_inherited ) {
 		return;
@@ -8172,6 +8185,7 @@ DaemonCore::Inherit( void )
 		pidtmp->pid = ppid;
 		ptmp=inherit_list.next();
 		dprintf(D_DAEMONCORE,"Parent Command Sock = %s\n",ptmp);
+		saved_sinful_string = ptmp;
 		pidtmp->sinful_string = ptmp;
 		pidtmp->is_local = TRUE;
 		pidtmp->parent_is_local = TRUE;
@@ -8346,7 +8360,7 @@ DaemonCore::Inherit( void )
 				claimid.secSessionKey(),
 				claimid.secSessionInfo(),
 				CONDOR_PARENT_FQU,
-				NULL,
+				saved_sinful_string.c_str(),
 				0);
 			if(!rc)
 			{
@@ -9312,6 +9326,7 @@ int DaemonCore::HungChildTimeout()
 			want_core = false;
 		}
 		else {
+			dprintf(D_ALWAYS, "Sending SIGABRT to child to generate a core file.\n");
 			const int want_core_timeout = 600;
 			pidentry->hung_tid =
 				Register_Timer(want_core_timeout,

@@ -148,11 +148,13 @@ cause all the HTCondor daemons in the pool to exit.
     and \emph{not} when applied to a specific daemon.
     Display the current configuration file that set the variable.
    }
-  \OptItem{\OptArg{-writeconfig}{filename}} {(view option)
+  \OptItem{\OptArg{-writeconfig[:upgrade]}{filename}} {(view option)
     For the configuration read from files (the default),
-    write to file \Arg{filename} all configuration variables that have
-    specified values which are different than their internal, compile-time
-    defaults.
+    write to file \Arg{filename} all configuration variables. Values that are
+    the same as internal, compile-time defaults will be preceded by the comment character.
+    If the \OptArg{:upgrade} option is specified, then values that are the same as
+    the internal, compile-time defaults are omitted. Variables are in the same
+    order as the they were read from the original configuration files.
    }
   \OptItem{\Opt{-mixedcase}} {(view option)
     Applied only when the configuration is read from files (the default),

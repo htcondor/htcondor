@@ -9,6 +9,14 @@ cmd_wait_shows-base
 cmd_wait_shows-notimeout
 cmd_wait_shows-partial
 
+#Java tests turned off since java in refactor glue still not working windows 8
+# bt 6/3/14
+job_core_err_java
+job_core_initialdir_java
+job_core_input_java
+job_core_output_java
+lib_include_cmd_config
+
 lib_auth_protocol-ctb
 lib_auth_protocol-fs
 lib_auth_protocol-ssl

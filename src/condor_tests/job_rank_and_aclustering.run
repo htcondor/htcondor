@@ -1,0 +1,181 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+##  Are rank and autoclustering working?
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+my @submitfiles =	();
+
+my $pid = $$;
+my $ClusterId = 0;
+my $jobcount = 5;
+my $runcount = 0;
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	WANT_SUSPEND = FALSE
+	NEGOTIATION_INTERVAL = 5
+	ALL_DEBUG = D_FULLDEBUG
+	NUM_CPUS = 5
+	STARTD_EXPRS = $(STARTD_EXPRS) MachineDataSet
+	SLOT1_MachineDataSet = "S00"
+	SLOT2_MachineDataSet = "S01"
+	SLOT3_MachineDataSet = "S02"
+	SLOT4_MachineDataSet = "S03"
+	SLOT5_MachineDataSet = "S04"
+';
+
+
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobrankautoclustering");
+
+my $testname = "job_rank_and_aclustering";
+
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
+
+CondorTest::StartCondorWithParams(
+	condor_name => "jobrankautoclustering",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+#print "************************** CONDOR_CONFIG now set to:$ENV{CONDOR_CONFIG} ******************\n";
+
+
+# now start the personal condor to ensure it comes up
+
+#Do a job before setting tesing exit codes
+print "First test basic job\n";
+my $result = SimpleJob::RunCheck(); # jobid 1
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+};
+
+my $on_success = sub {
+};
+
+my $on_abort = sub {
+};
+
+my $on_submit = sub {
+};
+
+my $on_imageupdated = sub {
+	#print "my image update\n";
+};
+
+my @running = ();
+my @rmarray = ();
+my %autoclusterids = {};
+my $autoclusterfailed = 0;
+my $rankingfailed = 0;
+my $onexecute = sub {
+	$runcount += 1;
+	#print "A Job Started\n";
+	# sample jobs running and save the locations
+	if($runcount == $jobcount ) {
+		runCondorTool("condor_q -af ProcId RemoteHost  JobDataSet MachineAttrMachineDataSet0 AutoClusterId",\@running,2,{emit_output=>0});
+		foreach my $slot (@running) {
+			fullchomp($slot);
+			print "$slot\n";
+			if($slot =~ /(\d+)\s(.*?)\s(S\d+)\s(S\d+)\s(\d+)/) {
+				#print "$1 $3 $4 $5\n";
+				if($autoclusterfailed == 0) {
+					if(exists $autoclusterids{$5}) {
+						$autoclusterfailed = 1;
+						print "Repeated autocluster id:$5\n";
+						CondorTest::RegisterResult(0,"test_name",$testname);
+					} else {
+						$autoclusterids{$5} = 1;
+					}
+				}
+				if($rankingfailed == 0) {
+					if($3 ne $4) {
+						$rankingfailed = 1;
+						print "Ranking failed:$3ne$4\n";
+						CondorTest::RegisterResult(0,"test_name",$testname);
+					}
+				}
+			}
+		}
+		if($autoclusterfailed == 0) {
+			print "All AutoClusterId(s) unique!\n";
+			CondorTest::RegisterResult(1,"test_name",$testname);
+		}
+
+		if($rankingfailed == 0) {
+			print "All rank requests worked!\n";
+			CondorTest::RegisterResult(1,"test_name",$testname);
+		}
+
+		runCondorTool("condor_rm $ClusterId",\@rmarray,2,{emit_output=>0});
+	}
+};
+
+my $appended_submit_info = "
+	# For easy monitoring, take the MachineDataSet attribute from
+	# the slot we match with and add it into
+	# the job classad as attribute MachineAttrMachineDataSet0
+	job_machine_attrs = MachineDataSet
+	# Prefer slots where MachineDataSet attribute in the slot
+	# is equal to the JobDataSet attribute in the job
+	rank = JobDataSet =?= MachineDataSet
+	# Set JobDataSet to be S00, S01, S02, etc.
+	+JobDataSet = \"S0\$(Process)\"
+";
+
+$result = SimpleJob::RunCheck(
+	append_submit_commands => $appended_submit_info,
+	queue_sz => $jobcount,
+	duration => 6000,
+	on_execute => $onexecute,
+	on_success => $on_success,
+	on_abort => $on_abort,
+	on_imageupdated => $on_imageupdated,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	on_submit => $on_submit,
+	GetClusterId => $GetClusterId,
+); 
+
+
+CondorTest::EndTest();
+
+exit(0);
+

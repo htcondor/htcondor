@@ -520,7 +520,7 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 					t = strtok_r( value, " ", &save );
 					while( t ) {
 						if ( !strcmp( t, "ht" ) ) {
-							cur_processor->flag_ht = false;
+							cur_processor->flag_ht = true;
 							break;
 						}
 						t = strtok_r( NULL, " ", &save );

@@ -30,14 +30,12 @@
 #include "condor_adtypes.h"
 #include "condor_query.h"
 #include "get_daemon_name.h"
-#include "get_full_hostname.h"
 #include "internet.h"
 #include "HashTable.h"
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
 #include "time_offset.h"
 #include "condor_netdb.h"
-#include "daemon_core_sock_adapter.h"
 #include "subsystem_info.h"
 #include "condor_sinful.h"
 
@@ -1695,10 +1693,13 @@ Daemon::getDefaultPort( void )
 {
 	switch( _type ) {
 	case DT_COLLECTOR:
-		return COLLECTOR_PORT;
+	{
+		int port = param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
+		return port;
 		break;
+	}
 	case DT_VIEW_COLLECTOR:
-		return CONDOR_VIEW_PORT;
+		return param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
 		break;
 	default:
 		return 0;
