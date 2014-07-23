@@ -5,9 +5,31 @@ import os
 import re
 import sys
 import time
+import getopt
 
 BOSCO_KEY = os.path.expanduser("~/.ssh/bosco_key.rsa")
 BOSCO_PASS = os.path.expanduser("~/.bosco/.pass")
+
+
+def parse_opts(argv):
+    optlist, args = getopt.getopt(argv, 'k:p:n', ['key=', 'pass=', 'nopass'])
+    # --key, -k FILE : name of the file with private key used for ssh (def: ~/.ssh/bosco_key.rsa)
+    # --pass, -p FILE :  name of the file with the passphrase for the private key (def: ~/.bosco/.pass)
+    # --nopass, -n : if the private key requires no passphrase
+    # TODO: add help, check for no arguments and consistent combinations
+    global BOSCO_PASS
+    global BOSCO_KEY
+    for opt in optlist:
+        if opt[0]=='--key' or  opt[0]=='-k':
+            BOSCO_KEY = opt[1]
+        elif opt[0]=='--nopass' or opt[0]=='-n':
+            BOSCO_PASS = ""
+        elif opt[0]=='--pass' or opt[0]=='-p':
+            BOSCO_PASS = opt[1]
+        else:
+            # wrong option
+            pass
+
 
 def main():
     max_read = 1024
@@ -56,5 +78,7 @@ def main():
 
 
 if __name__ == "__main__":
+    if sys.argv and len(sys.argv)>1:
+        parse_opts(sys.argv[1:])
     main()
 

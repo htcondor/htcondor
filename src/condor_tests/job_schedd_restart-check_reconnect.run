@@ -20,81 +20,156 @@
 
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 
-$cmd_template = "job_schedd_restart-check_reconnect.template";
-$testdesc =  'job_schedd_restart-check_reconnect - Simple parallel job with security on';
 $testname = "job_schedd_restart-check_reconnect";
-$cmd = "job_schedd_restart-check_reconnect.cmd";
-$corename = "job_schedd_restart-check_reconnect";
 
-# where am I running
-$currenthost = CondorTest::getFqdnHost();
+$beforequeue = "job_schedd_restart-holdjobs.before";
+$afterqueue = "job_schedd_restart-holdjobs.after";
 
-print scalar localtime() . "\n";
+my $alreadydone=0;
+my $disconnectedcount = 0;
+my $reconnectedcount = 0;
+my $reconnectfailedcount = 0;
 
-$mypid = $$;
-$mysaveme = $corename . ".saveme";
+my $submithandled = "no";
 
-if($mypid == 0) {
-	die "Saveme setup for test failed\n";
-}
-
-$mysubmitnm = $corename . $mypid . ".cmd";
-$mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
-$mysubmitnmlog = $corename . $mypid . ".log";
-$mysubmitnmerr = $corename . $mypid . ".err";
-$mysubmitnmout = $corename . $mypid . ".out";
-$mycorenm = $corename . ".cmd";
-$mycorenmcmdout = $corename . ".cmd.out";
-$mycorenmlog = $corename . ".log";
-$mycorenmerr = $corename . ".err";
-$mycorenmout = $corename . ".out";
-
-CondorTest::debug("Master PID is $mypid\n",1);
-CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
-
-# get a remote scheduler running (side b)
-my $configrem = CondorTest::StartPersonal( "job_schedd_restart-check_reconnect", "x_param.scheddrestart" ,"scheddrestart");
-my @parallel = split /\+/, $configrem;
-my $parallelconfig = shift @parallel;
-my $parallelport = shift @parallel;
-
-CondorTest::debug("---Parallel config is $parallelconfig and remote port is $parallelport---\n",1);
-
-$ENV{CONDOR_CONFIG} = $parallelconfig;
-
-CondorTest::debug("Set config to $parallelconfig\n",1);
-
-CondorTest::debug("---about to run job_schedd_restart-check_reconnect.pl---\n",1);
-my $result = system("./job_schedd_restart-check_reconnect.pl $mysubmitnm");
-CondorTest::debug("Result of job_schedd_restart-check_reconnect job is  $result\n",1);
-
-#fails due to directory matching pattern
-runcmd("cp *schedd_restart-check_reconnect* $mysaveme", {expect_result=>\&ANY});
-
-if( -e "$mysubmitnm" )
+$aborted = sub
 {
-	runcmd("cp $mysubmitnm $mycorenm");
-}
+	CondorTest::debug("Aborting expected\n",1);
+};
 
-if( -e "$mysubmitnmout" )
+my $evictedwithoutcheckpoint = sub {
+}; 
+
+$disconnected = sub
 {
-	runcmd("cp $mysubmitnmcmdout $mycorenmcmdout");
-}
+	$disconnectedcount += 1;
+	CondorTest::debug("Disconnect expected count now $disconnectedcount\n",1);
+};
 
-if( -e "$mysubmitnmlog" )
+$reconnected = sub
 {
-	runcmd("cp $mysubmitnmlog $mycorenmlog");
-}
+	$reconnectedcount += 1;
+	CondorTest::debug("Reconnect expected count now $reconnectedcount\n",1);
+};
 
-CondorTest::KillPersonal($parallelconfig);
-print scalar localtime() . "\n";
-
-if($result != 0)
+$reconnectfailed = sub
 {
-    # actuaal job failed but we allowed cleanup
-    exit(1);
-}
+	$reconnectfailedcount += 1;
+	CondorTest::debug("Reconnect Failure Not expected count now $reconnectfailedcount\n",1);
+};
 
-CondorTest::debug("job_schedd_restart-check_restarcheck_reconnect",1);
+
+$executed = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $doneyet = "no";
+
+	if($submithandled eq "no") {
+		$submithandled = "yes";
+
+		CondorTest::debug("Exectuting\n",1);
+		CondorTest::debug("Collecting queue details on $cluster\n",1);
+		my @adarray;
+		my $status = 1;
+		my $cmd = "condor_q $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if(!$status)
+		{
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+			exit(1)
+		}
+
+		#open(BEFORE,">$beforequeue") || die "Could not ope file for before stats $!\n";
+		#foreach my $line (@adarray)
+		#{
+			#CondorTest::debug("$line\n",1);
+			#print BEFORE "$line\n";
+		#}
+		#close(BEFORE);
+
+		$status = CondorTest::changeDaemonState( "schedd", "off", 9 );
+		if(!$status)
+		{
+			CondorTest::debug("Test failure: could not turn scheduler off!\n",1);
+			exit(1)
+		}
+
+		$status = CondorTest::changeDaemonState( "schedd", "on", 9 );
+		if(!$status)
+		{
+			CondorTest::debug("Test failure: could not turn scheduler on!\n",1);
+			exit(1)
+		}
+
+		CondorTest::debug("Collecting queue details on $cluster\n",1);
+		my @fdarray;
+		my $status = 1;
+		my $cmd = "condor_q $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@fdarray,2);
+		if(!$status)
+		{
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+			exit(1)
+		}
+
+		$cmd = "condor_rm $cluster";
+		CondorTest::debug("removing reconnected jobs <$cmd>\n",1);
+		$status = CondorTest::runCondorTool($cmd,\@fdarray,2);
+		if(!$status)
+		{
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+			exit(1)
+		}
+
+		if($reconnectedcount != $disconnectedcount) {
+			die "Not all jobs reconnnected\n";
+		}
+	}
+};
+
+
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+};
+
+
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+    WANT_SUSPEND = FALSE
+    NEGOTIATION_INTERVAL = 5
+    ALL_DEBUG = D_FULLDEBUG
+    NUM_CPUS = 6
+';
+
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"scheddrestartrunningjobs");
+
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
+
+CondorTest::StartCondorWithParams(
+    condor_name => "scheddrestartrunningjobs",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+
+
+$result = SimpleJob::RunCheck(
+    append_submit_commands => $appended_submit_info,
+    queue_sz => 5,
+    duration => 0,
+	timeout => 480,
+    on_execute => $executed,
+    on_disconnected => $disconnected,
+    on_reconnected => $reconnected,
+	on_evictedwithoutcheckpoint => $evictedwithoutcheckpoint,
+    #on_success => $on_success,
+    on_submit => $on_submit,
+	on_abort => $aborted,
+);
+
+CondorTest::EndTest();
 exit(0);

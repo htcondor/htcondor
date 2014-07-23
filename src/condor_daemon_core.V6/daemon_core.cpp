@@ -6903,6 +6903,18 @@ int DaemonCore::Create_Process(
 			// be allocated on the heap with new [].
 		newenv = job_environ.getWindowsEnvironmentString();
 	}
+#ifdef LINUX
+	const char * cookie = newenv.GetEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE")
+	if (want_command_port) {
+		if (cookie == NULL) {
+			MyString value;
+			SharedPortEndpoint::paramDaemonSocketDir(value)
+			newenv.SetEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", value.Value());
+		}
+	} else if (cookie) { // There's no API for deleting from an environment.
+		newenv.SetEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", "unavailable");
+	}
+#endif
 	// end of dealing with the environment....
 
 	// Check if it's a 16-bit application

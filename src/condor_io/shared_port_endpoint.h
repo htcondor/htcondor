@@ -25,6 +25,10 @@
 #include "selector.h"
 #include <queue>
 
+#ifdef LINUX
+#define USE_ABSTRACT 1
+#endif
+
 // SharedPortEndpoint receives connections forwarded from SharedPortServer.
 // This enables Condor daemons to share a single network port.
 
@@ -117,9 +121,17 @@ class SharedPortEndpoint: Service {
 
 	void DoListenerAccept(ReliSock *return_remote_sock);
 
-	static void paramDaemonSocketDir(MyString &result);
+	static void InitializeDaemonSocketDir();
+	static bool GetDaemonSocketDir(std::string &result);
+	static bool GetAltDaemonSocketDir(std::string &result);
+	static bool CreatedSharedPortDirectory() {return m_created_shared_port_dir;}
 
  private:
+	static void RealInitializeDaemonSocketDir();
+	static bool m_created_shared_port_dir;
+	static bool m_should_initialize_socket_dir;
+
+	bool m_is_file_socket; // Set to false if we are using a Linux abstract socket.
 	bool m_listening;
 	bool m_registered_listener;
 	MyString m_socket_dir;// dirname of socket

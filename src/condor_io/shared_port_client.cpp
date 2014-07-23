@@ -24,6 +24,8 @@
 #include "shared_port_client.h"
 #include "shared_port_endpoint.h"
 
+#include <sstream>
+
 // Initialize static class members
 unsigned int SharedPortClient::m_currentPendingPassSocketCalls = 0;
 unsigned int SharedPortClient::m_maxPendingPassSocketCalls = 0;
@@ -197,9 +199,10 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	}
 
 	MyString pipe_name;
-	MyString socket_dir;
 
-	SharedPortEndpoint::paramDaemonSocketDir(pipe_name);
+	std::string tmp_name;
+	SharedPortEndpoint::GetDaemonSocketDir(tmp_name);
+	pipe_name = tmp_name.c_str();
 	pipe_name.formatstr_cat("%c%s",DIR_DELIM_CHAR,shared_port_id);
 
 	MyString requested_by_buf;
@@ -437,26 +440,54 @@ SharedPortState::HandleUnbound(Stream *&s)
 			return FAILED;
 	}
 
-	MyString sock_name;
-	MyString socket_dir;
+	std::string sock_name;
+	std::string alt_sock_name;
+	bool has_socket = SharedPortEndpoint::GetDaemonSocketDir(sock_name);;
+	bool has_alt_socket = SharedPortEndpoint::GetAltDaemonSocketDir(alt_sock_name);;
 
-	SharedPortEndpoint::paramDaemonSocketDir(sock_name);
-	sock_name.formatstr_cat("%c%s", DIR_DELIM_CHAR, m_shared_port_id);
-	m_sock_name = sock_name.Value();
+	std::stringstream ss;
+	ss << sock_name << DIR_DELIM_CHAR << m_shared_port_id;
+	sock_name = ss.str();
+	m_sock_name = m_shared_port_id;
+	ss.str("");
+	ss.clear();
+	ss << alt_sock_name << DIR_DELIM_CHAR << m_shared_port_id;
+	alt_sock_name = ss.str();
+	m_shared_port_id = NULL;
+	
 
 	if( !m_requested_by.size() ) {
-			formatstr(m_requested_by,
-					" as requested by %s", m_sock->peer_description());
+		formatstr(m_requested_by,
+				" as requested by %s", m_sock->peer_description());
 	}
 
 	struct sockaddr_un named_sock_addr;
 	memset(&named_sock_addr, 0, sizeof(named_sock_addr));
 	named_sock_addr.sun_family = AF_UNIX;
-	strncpy(named_sock_addr.sun_path, sock_name.Value(), sizeof(named_sock_addr.sun_path)-1);
-	if( strcmp(named_sock_addr.sun_path,sock_name.Value()) ) {
+	struct sockaddr_un alt_named_sock_addr;
+	memset(&alt_named_sock_addr, 0, sizeof(alt_named_sock_addr));
+	alt_named_sock_addr.sun_family = AF_UNIX;
+	unsigned named_sock_addr_len, alt_named_sock_addr_len = 0;
+	bool is_no_good;
+#if USE_ABSTRACT
+	strncpy(named_sock_addr.sun_path+1, sock_name.c_str(), sizeof(named_sock_addr.sun_path)-2);
+	named_sock_addr_len = sizeof(named_sock_addr) - sizeof(named_sock_addr.sun_path) + 1 + strlen(named_sock_addr.sun_path+1);
+	is_no_good = strcmp(named_sock_addr.sun_path+1, sock_name.c_str());
+#else
+	strncpy(named_sock_addr.sun_path, sock_name.c_str(), sizeof(named_sock_addr.sun_path)-1);
+	named_sock_addr_len = SUN_LEN(&named_sock_addr);
+	is_no_good = strcmp(named_sock_addr.sun_path, sock_name.c_str());
+#endif
+	if (has_alt_socket) {
+		strncpy(alt_named_sock_addr.sun_path, alt_sock_name.c_str(), sizeof(named_sock_addr.sun_path)-1);
+		has_alt_socket = !strcmp(alt_named_sock_addr.sun_path, alt_sock_name.c_str());
+		alt_named_sock_addr_len = SUN_LEN(&alt_named_sock_addr);
+	}
+
+	if( is_no_good ) {
 			dprintf(D_ALWAYS,"ERROR: SharedPortClient: full socket name%s is too long: %s\n",
 							m_requested_by.c_str(),
-							sock_name.Value());
+							m_sock_name.c_str());
 			return FAILED;
 	}
 
@@ -465,7 +496,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 			dprintf(D_ALWAYS,
 					"ERROR: SharedPortClient: failed to created named socket%s to connect to %s: %s\n",
 					m_requested_by.c_str(),
-					m_shared_port_id,
+					m_sock_name.c_str(),
 					strerror(errno));
 			return FAILED;
 	}
@@ -498,10 +529,29 @@ SharedPortState::HandleUnbound(Stream *&s)
 		// Note: why not using condor_connect() here?
 		// Probably because we are connecting to a unix domain socket here,
 		// not a network (ipv4/ipv6) socket.
-		connect_rc = connect(named_sock_fd,
-				(struct sockaddr *)&named_sock_addr,
-				SUN_LEN(&named_sock_addr));
-		connect_errno = errno;	// stash away errno quick so not overwritten by sentry
+		if (has_socket)
+		{
+			connect_rc = connect(named_sock_fd,
+					(struct sockaddr *)&named_sock_addr,
+					named_sock_addr_len);
+			connect_errno = errno;	// stash away errno quick so not overwritten by sentry
+		}
+		if (!has_socket || (has_alt_socket && connect_rc && (connect_errno == ENOENT || connect_errno == ECONNREFUSED)))
+		{
+			int tmp_rc;
+			if (!(tmp_rc = connect(named_sock_fd,
+				(struct sockaddr *)&alt_named_sock_addr,
+				alt_named_sock_addr_len)))
+			{
+				connect_rc = 0;
+				connect_errno = 0;
+			}
+			if (!has_socket)
+			{
+				connect_rc = tmp_rc;
+				connect_errno = errno;
+			}
+		}
 	}
 
 	if( connect_rc != 0 )
@@ -537,7 +587,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 
 		dprintf(D_ALWAYS,"SharedPortServer:%s failed to connect to %s%s: %s (err=%d)\n",
 			server_busy ? " server was busy," : "",
-			sock_name.Value(),
+			m_sock_name.c_str(),
 			m_requested_by.c_str(),
 			strerror(errno),errno);
 		delete named_sock;
