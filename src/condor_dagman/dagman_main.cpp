@@ -478,6 +478,8 @@ void main_shutdown_graceful() {
 }
 
 void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
+	debug_printf( DEBUG_QUIET, "main_shutdown_rescue(%d, %d)\n", exitVal, dagStatus );//TEMPTEMP
+	debug_printf( DEBUG_QUIET, "DIAG 1110\n" );//TEMPTEMP
 		// Avoid possible infinite recursion if you hit a fatal error
 		// while writing a rescue DAG.
 	static bool inShutdownRescue = false;
@@ -485,6 +487,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 		return;
 	}
 	inShutdownRescue = true;
+	debug_printf( DEBUG_QUIET, "DIAG 1120\n" );//TEMPTEMP
 
 		// If is here in case we get an error during parsing...
 	if ( dagman.dag ) dagman.dag->_dagStatus = dagStatus;
@@ -530,7 +533,10 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 			return;
 		}
 		print_status();
-		dagman.dag->DumpNodeStatus( false, true );
+		//TEMPTEMP -- gittrac #4312 -- looks like we must be dumping node status here -- the only place where removed is true
+	debug_printf( DEBUG_QUIET, "DIAG 1130\n" );//TEMPTEMP
+		bool removed = ( dagStatus == Dag::DAG_STATUS_RM );
+		dagman.dag->DumpNodeStatus( false, removed );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
 	dagman.dag->ReportMetrics( exitVal );
@@ -545,6 +551,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 // the schedd will send if the DAGMan job is removed from the queue
 int main_shutdown_remove(Service *, int) {
     debug_printf( DEBUG_QUIET, "Received SIGUSR1\n" );
+	//TEMPTEMP -- should we set a "removed" flag here?
 	main_shutdown_rescue( EXIT_ABORT, Dag::DAG_STATUS_RM );
 	return FALSE;
 }
@@ -1499,6 +1506,7 @@ void condor_event_timer () {
 			// if there is one.
 		debug_printf ( DEBUG_QUIET, "Exiting because DAG is halted "
 					"and no jobs or scripts are running\n" );
+		//TEMPTEMP -- is EXIT_ERROR what we want here?
 		main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_HALTED );
 		return;
 	}
