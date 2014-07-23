@@ -1368,6 +1368,8 @@ SharedPortEndpoint::RealInitializeDaemonSocketDir()
 		EXCEPT("SharedPortEndpoint: Unable to create a secure shared port cookie.\n");
 	}
 	result = keybuf;
+#elif defined(WIN32)
+	return;
 #else
 	if( !param(result, "DAEMON_SOCKET_DIR") ) {
 		EXCEPT("DAEMON_SOCKET_DIR must be defined");
@@ -1395,7 +1397,9 @@ SharedPortEndpoint::RealInitializeDaemonSocketDir()
 		}
 	}
 #endif
+#ifndef WIN32
 	setenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", result.c_str(), 1);
+#endif
 }
 
 

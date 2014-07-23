@@ -200,7 +200,9 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 
 	MyString pipe_name;
 
-	SharedPortEndpoint::paramDaemonSocketDir(pipe_name);
+	std::string tmp_name;
+	SharedPortEndpoint::GetDaemonSocketDir(tmp_name);
+	pipe_name = tmp_name.c_str();
 	pipe_name.formatstr_cat("%c%s",DIR_DELIM_CHAR,shared_port_id);
 
 	MyString requested_by_buf;
