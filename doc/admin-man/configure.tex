@@ -1098,6 +1098,19 @@ File System Configuration File Entries''.
   This also controls the default port the \Condor{collector} listens on if
   no port is specified.
 
+\label{param:SharedPortPort}
+\item[\Macro{SHARED\_PORT\_PORT}]
+  The default TCP port used by the \Condor{shared\_port}.  If \Macro{COLLECTOR\_USES\_SHARED\_PORT}
+  is \Expr{True} (the default value) and the \Condor{master} will launch a \Condor{collector},
+  then the \Condor{shared\_port} daemon will ignore this value and use the TCP port
+  assigned to the collector via the \Macro{COLLECTOR\_HOST} macro.
+
+  The default value is \Expr{\$(COLLECTOR\_PORT)}, currently 9618.  The special value
+  of \Expr{0} causes the \Condor{shared\_port} to use a randomly selected port.  \emph{Note}
+  that this causes all HTCondor hosts to use TCP port 9618 by default, differing from previous
+  behavior (previously, only the collector host used a fixed port).  To restore the prior
+  behavior, set \Macro{SHARED\_PORT\_PORT} to \Expr{0}.
+
 \label{param:NegotiatorHost} 
 \item[\Macro{NEGOTIATOR\_HOST}]
   This configuration variable is no longer used.

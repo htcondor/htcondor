@@ -5715,6 +5715,13 @@ customization=seldom
 friendly_name=Use Shared Port
 review=?
 
+[SHARED_PORT_PORT]
+default=$(COLLECTOR_PORT)
+type=int
+reconfig=true
+customization=seldom
+friendly_name=TCP port used by condor_shared_port
+
 [AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST]
 default=true
 version=8.1.1

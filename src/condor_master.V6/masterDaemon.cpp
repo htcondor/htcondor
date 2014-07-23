@@ -673,7 +673,7 @@ int daemon::RealStart( )
 
 		if (command_port == -1) {
 				// strange....
-			int default_port = param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
+			int default_port = !strcmp(name_in_config_file, "SHARED_PORT") ? param_integer("SHARED_PORT_PORT", COLLECTOR_PORT) : param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
 			command_port = default_port;
 			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", default_port);
 		}
