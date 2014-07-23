@@ -393,6 +393,7 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
         privilege,                    // priv
         m_uploadReaperId,             // reaper id
         FALSE,                        // command port needed?
+        FALSE,                        // command port needed?
         NULL,                         // envs
         NULL,                         // cwd
         NULL                          // process family info
