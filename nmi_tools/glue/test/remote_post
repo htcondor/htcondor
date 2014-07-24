@@ -56,6 +56,19 @@ if( ! -f "tasklist.nmi" || -z "tasklist.nmi" ) {
     exit $exit_status;
 }
 
+# workaround for socket directoy path too long
+my $sd = "SOCKETDIR";
+my $dirname = "";
+if(-f "$sd") {
+	#This will not be here for windows
+	#don't die on error, we want results tarred up
+	open(SD,"<$sd") or print "Could not read SOCKETDIR:$!\n";
+	$dirname = <SD>;
+	print "Name of socket dir:$dirname\n";
+	chomp($dirname);
+	close(SD);
+	system("rm -r /tmp/$dirname");
+}
 print "cding to $BaseDir \n";
 chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
 
