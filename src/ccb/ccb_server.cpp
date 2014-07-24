@@ -207,6 +207,7 @@ CCBServer::InitAndReconfig()
 
 	if (m_epfd >= 0)
 	{
+#ifndef WIN32
 			// Fool DC into talking to the epoll fd; note we only register the read side.
 		int pipes[2]; pipes[0] = -1; pipes[1] = -1;
 		int fd_to_replace = -1;
@@ -229,6 +230,7 @@ CCBServer::InitAndReconfig()
 
 			// Inform DC we want to recieve notifications from this FD.
 		daemonCore->Register_Pipe(m_epfd,"CCB epoll FD", static_cast<PipeHandlercpp>(&CCBServer::EpollSockets),"CCB Epoll Handler", this, HANDLE_READ);
+#endif
 	}
 		// Either epoll is not available or creation of the epoll FD failed; in this case,
 		// we just periodically poll the FD for responses.
@@ -263,6 +265,7 @@ CCBServer::EpollSockets(int)
 	{
 		return -1;
 	}
+#ifdef CONDOR_HAVE_EPOLL
 	int epfd = -1;
 	if (daemonCore->Get_Pipe_FD(m_epfd, &epfd) == -1 || epfd == -1) {
 		dprintf(D_ALWAYS, "Unable to lookup epoll FD\n");
@@ -270,7 +273,6 @@ CCBServer::EpollSockets(int)
 		m_epfd = -1;
 		return -1;
 	}
-#ifdef CONDOR_HAVE_EPOLL
 	struct epoll_event events[10];
 	bool needs_poll = true;
 	unsigned counter = 0;
@@ -311,6 +313,7 @@ void
 CCBServer::EpollAdd(CCBTarget *target)
 {
 	if ((-1 == m_epfd) || !target) {return;}
+#ifdef CONDOR_HAVE_EPOLL
 	int epfd = -1;
 	if (daemonCore->Get_Pipe_FD(m_epfd, &epfd) == -1 || epfd == -1) {
 		dprintf(D_ALWAYS, "Unable to lookup epoll FD\n");
@@ -318,7 +321,6 @@ CCBServer::EpollAdd(CCBTarget *target)
 		m_epfd = -1;
 		return;
 	}       
-#ifdef CONDOR_HAVE_EPOLL
 		// We have epoll maintain the map of FD -> CCBID for us by taking
 		// advantage of the data field of the epoll event.  This way, when the
 		// epoll watch fires, we can do a hash table lookup for the target object.
@@ -337,6 +339,7 @@ void
 CCBServer::EpollRemove(CCBTarget *target)
 {
 	if ((-1 == m_epfd) || !target) {return;}
+#ifdef CONDOR_HAVE_EPOLL
 	int epfd = -1;
 	if (daemonCore->Get_Pipe_FD(m_epfd, &epfd) == -1 || epfd == -1) {
 		dprintf(D_ALWAYS, "Unable to lookup epoll FD\n");
@@ -344,7 +347,6 @@ CCBServer::EpollRemove(CCBTarget *target)
 		m_epfd = -1;
 		return;
 	}       
-#ifdef CONDOR_HAVE_EPOLL
 	struct epoll_event event;
 	event.events = EPOLLIN;
 	event.data.u64 = target->getCCBID();

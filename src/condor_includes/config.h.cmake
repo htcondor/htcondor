@@ -603,8 +603,8 @@
 /* Define to 1 if the OS has support for epoll (Linux) */
 #cmakedefine CONDOR_HAVE_EPOLL
 
-/* Define to 1 if the OS has support for ppoll (Linux) */
-#cmakedefine HAVE_PPOLL
+/* Define to 1 if the OS has support for poll (Unix) */
+#cmakedefine CONDOR_HAVE_POLL
 
 /* Define to 1 if the OS has support for the TCP_KEEPALIVE setsockopt (Mac) */
 #cmakedefine HAVE_TCP_KEEPALIVE

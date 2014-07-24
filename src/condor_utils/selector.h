@@ -23,7 +23,7 @@
 
 #include "condor_common.h"
 
-#ifdef HAVE_POLL
+#ifdef CONDOR_HAVE_POLL
 #define USE_POLL 1
 #endif
 

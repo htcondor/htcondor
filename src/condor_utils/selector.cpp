@@ -292,7 +292,7 @@ Selector::execute()
 #ifdef USE_POLL
 	if (m_single_shot == SINGLE_SHOT_OK)
 	{
-		nfds = poll(&m_poll, 1, NULL, tp->tv_sec);
+		nfds = poll(&m_poll, 1, tp->tv_sec);
 	}
 	else
 #else

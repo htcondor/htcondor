@@ -190,7 +190,7 @@ if( NOT WINDOWS)
 	check_symbol_exists(MS_REC  "sys/mount.h" HAVE_MS_REC)
 	# Python also defines HAVE_EPOLL; hence, we use non-standard 'CONDOR_HAVE_EPOLL' here.
 	check_symbol_exists(epoll_create1 "sys/epoll.h" CONDOR_HAVE_EPOLL)
-	check_symbol_exists(ppoll "poll.h" HAVE_POLL)
+	check_symbol_exists(poll "sys/poll.h" CONDOR_HAVE_POLL)
 	check_symbol_exists(fdatasync "unistd.h" HAVE_FDATASYNC)
 
 	check_function_exists("access" HAVE_ACCESS)
