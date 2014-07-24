@@ -1513,22 +1513,12 @@ categories and splices.
 \subsubsection{\label{sec:DAG-configuration}Configuration Specific to a DAG}
 \index{DAGMan input file!CONFIG key word}
 \index{DAGMan!CONFIG}
+\index{DAGMan!configuration specific to a DAG}
 
-The \Arg{CONFIG} keyword specifies a configuration file to be used
-to set configuration variables related to \Condor{dagman}
-when running this DAG.
-The syntax for \Arg{CONFIG} is
+All configuration variables and their definitions that relate to 
+DAGMan may be found in section~\ref{sec:DAGMan-Config-File-Entries}.
 
-\Opt{CONFIG} \Arg{ConfigFileName}
-
-If the DAG file contains a line like this,
-\begin{verbatim}
-    CONFIG dagman.config
-\end{verbatim}
-then the configuration values in the file \File{dagman.config} will be used
-for this DAG.
-
-Configuration macros for \Condor{dagman} can be specified in several
+Configuration variables for \Condor{dagman} can be specified in several
 ways, as given within the ordered list:
 \begin{enumerate}
 \item
@@ -1537,28 +1527,40 @@ In an HTCondor configuration file.
 With an environment variable.
 Prepend the string \verb@_CONDOR_@ to the configuration variable's name.
 \item
-As specified above, with a line in the DAG input file
-using the keyword \Arg{CONFIG}, such that there is a \Condor{dagman}-specific
-configuration file specified,
-or on the \Condor{submit\_dag} command line.
+With a line in the DAG input file using the keyword \Arg{CONFIG}, 
+such that there is a configuration file specified
+that is specific to an instance of \Condor{dagman}.
+The configuration file specification may instead be specified
+on the \Condor{submit\_dag} command line using the \Opt{-config} option.
 \item
 For some configuration variables,
-there is a corresponding \Condor{submit\_dag} command line argument.
+\Condor{submit\_dag} command line argument specifies a configuration variable. 
 For example, the configuration variable \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}
 has the corresponding command line argument \Arg{-maxjobs}.
 \end{enumerate}
 
-In the above list, configuration values specified later in the list
-override ones specified earlier
+For this ordered list, 
+configuration values specified or parsed later in the list
+override ones specified earlier.
 For example, a value specified on the
 \Condor{submit\_dag} command line overrides corresponding values in any
 configuration file.
 And, a value specified in a DAGMan-specific configuration
 file overrides values specified in a general HTCondor configuration file.
 
-Configuration variables that are not for \Condor{dagman}
-and not utilized by DaemonCore, yet are specified in a
-\Condor{dagman}-specific configuration file are ignored.
+The \Arg{CONFIG} keyword within the DAG input file specifies a 
+configuration file to be used to set configuration variables 
+related to \Condor{dagman} when running this DAG.
+The syntax for \Arg{CONFIG} is
+
+\Opt{CONFIG} \Arg{ConfigFileName}
+
+As an example, if the DAG input file contains:
+\begin{verbatim}
+  CONFIG dagman.config
+\end{verbatim}
+then the configuration values in file \File{dagman.config} will be used
+for this DAG.
 
 Only a single configuration file can be specified for a given
 \Condor{dagman} run.  For example, if one file is specified within a DAG
@@ -1566,16 +1568,17 @@ input file,
 and a different file is specified on the \Condor{submit\_dag} command
 line, this is a fatal error at submit time.
 The same is true if
-different configuration files are specified in multiple DAG input files,
+different configuration files are specified in multiple DAG input files
 and referenced in a single \Condor{submit\_dag} command.
 
-If multiple DAGs are run in a single \Condor{dagman} run, the
-configuration options specified in the \Condor{dagman} configuration
+If multiple DAGs are run in a single \Condor{dagman} run, 
+the configuration options specified in the \Condor{dagman} configuration
 file, if any, apply to all DAGs, even if some of the DAGs specify no
 configuration file.
 
-Configuration variables relating to DAGMan may be found
-in section~\ref{sec:DAGMan-Config-File-Entries}.
+Configuration variables that are not for \Condor{dagman}
+and not utilized by DaemonCore, yet are specified in a
+\Condor{dagman}-specific configuration file are ignored.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:MultipleDAGs}Optimization of Submission Time}
