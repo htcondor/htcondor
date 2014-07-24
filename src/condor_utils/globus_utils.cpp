@@ -111,6 +111,11 @@ activate_globus_gsi( void )
 	}
 */
 
+	if ( globus_thread_set_model( GLOBUS_THREAD_MODEL_NONE ) != GLOBUS_SUCCESS ) {
+		set_error_string( "couldn't set globus thread model" );
+		return -1;
+	}
+
 	if ( globus_module_activate(GLOBUS_GSI_CREDENTIAL_MODULE) ) {
 		set_error_string( "couldn't activate globus gsi credential module" );
 		return -1;

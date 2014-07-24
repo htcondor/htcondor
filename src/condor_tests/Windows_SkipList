@@ -8,6 +8,9 @@ cmd_wait_shows-all
 cmd_wait_shows-base
 cmd_wait_shows-notimeout
 cmd_wait_shows-partial
+# bug in windows disconnect/reconnect  reconnection failure
+job_schedd_restart-check_reconnect
+job_schedd_restart-runningjobs-ok
 
 #Java tests turned off since java in refactor glue still not working windows 8
 # bt 6/3/14

@@ -32,6 +32,7 @@
 #include "condor_network.h"
 #include "condor_adtypes.h"
 #include "condor_io.h"
+#include "directory.h"
 #include "exit.h"
 #include "string_list.h"
 #include "get_daemon_name.h"
@@ -180,6 +181,20 @@ master_exit(int retval)
 	MasterPluginManager::Shutdown();
 #endif
 #endif
+
+		// If we're positive that we are going to shut down,
+		// we should clean out the shared port directory if
+		// we created it.
+	if (SharedPortEndpoint::CreatedSharedPortDirectory()) {
+		TemporaryPrivSentry tps(PRIV_CONDOR);
+		std::string dirname;
+		SharedPortEndpoint::GetDaemonSocketDir(dirname);
+		Directory d(dirname.c_str());
+		d.Remove_Entire_Directory();
+		if (-1 == rmdir(dirname.c_str())) {
+			dprintf(D_ALWAYS, "ERROR: failed to remove shared port temporary directory: %s (errno=%d).\n", strerror(errno), errno);
+		}
+	}
 
 	DC_Exit(retval, shutdown_program );
 	return 1;	// just to satisfy vc++
@@ -1300,6 +1315,7 @@ main( int argc, char **argv )
 #endif
 
 	set_mySubSystem( "MASTER", SUBSYSTEM_TYPE_MASTER );
+	SharedPortEndpoint::InitializeDaemonSocketDir();
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

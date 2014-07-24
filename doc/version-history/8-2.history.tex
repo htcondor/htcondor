@@ -40,14 +40,32 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a Windows platform bug that caused \Condor{status} to abort
+when \Macro{ENABLE\_CLASSAD\_CACHING} was set to \Expr{True}. 
+\Ticket{4459}
+
+\item Fixed a bug that prevented the detection of hyper-threaded cores
+on Linux platforms.
+All cores reported as full cores without hyper-threading. 
+\Ticket{4458}
+
+\item Fixed a Windows platform bug that caused the \Condor{starter}
+to abort while creating the job sandbox.
+The bug presents as a minor memory leak in all versions of HTCondor 
+for Windows prior to version 8.2.2 and 8.3.0.
+In HTCondor version 8.2.0, this bug could sometimes
+present as an abrupt \Condor{starter} exit with status -1073740940. 
+\Ticket{4467}
+
 \item Fixed a file descriptor leak in the \Condor{shared\_port}
 daemon.
 \Ticket{4456}
 
-\item Fixed a bug that happened on newer Linux kernels where
-with cgroups enabled, the OOM killer would kill the job when it
-went over the memory allocation.  Now the starter catches the OOM
-signal and puts the job on hold with an appropriate message.
+\item Fixed a bug existing on Linux platforms with newer kernels.
+With cgroups enabled, the OOM killer killed the job when the job
+went over its memory allocation.  
+Now, the \Condor{starter} catches the OOM signal and 
+places the job on hold with an appropriate message.
 \Ticket{4435}
 
 \item Fixed a bug in which the expression set by submit command 
@@ -59,47 +77,52 @@ jobs running on Linux machines when PID namespaces were enabled.
 caused DAGMan to fail.
 \Ticket{4361}
 
-\item Fixed problems where job rank may not always work as documented
-	due to a bug in HTCondor's autocluster mechanism.
+\item Fixed a problem in which job rank may not have always worked
+as documented due to a bug in HTCondor's auto cluster mechanism.
 \Ticket{4403}
 
-\item Update the HTCondor DRMAA library to 1.6.2. This version fixes a
-couple minor bugs in the functions for querying how a job exited.
+\item Updated the HTCondor DRMAA library to version 1.6.2. 
+This version fixes minor bugs in the functions for querying how a job exited.
 \Ticket{4413}
 
 \item \Condor{submit} no longer fails if the value of
-\SubmitCmd{x509userproxy} is a relative path and \SubmitCmd{initialdir}
-is set to a directory that's not the current working directory of
-\Condor{submit}.
+\SubmitCmd{x509userproxy} is a relative path, 
+and the value of \SubmitCmd{initialdir} is set to a directory 
+that is not the current working directory of \Condor{submit}.
 \Ticket{4415}
 
 \item Fixed a bug that caused \Condor{submit\_dag} to core dump if
 a non-existent DAG file was specified.
 \Ticket{4423}
 
-\item Fixed a bug that resulted in \Condor{q} \Opt{-format} of an non existent
-attribute printing out "undefined" instead of nothing when using the \Opt{\%s}
-format specifier.
+\item Fixed a bug that resulted in output of the string \AdStr{undefined}, 
+instead of printing nothing,
+when using the \Opt{\%s} format specifier to
+\Condor{q} \Opt{-format}.
 \Ticket{4418}
 
-\item Fixed a bug in \Condor{shadow} that caused the user's supplemental
-groups to be unset when trying to write to the user job log.
+\item Fixed a bug in the \Condor{shadow} that caused the user's supplemental
+groups to be unset when trying to write to the user's job event log.
 This could result in the job being held with the hold reason
-``Failed to initialize user log to <path>''.
+\Expr{"Failed to initialize user log to <path>"}.
 \Ticket{4437}
 
-\item Fixed a bug in \Prog{cream\_gahp} that would corrupt memory when
+\item Fixed a bug in the \Prog{cream\_gahp} that would corrupt memory when
 using more than the default number of worker threads.
 \Ticket{4416}
 
 \item Fixed a bug that could cause the \Prog{cream\_gahp} to fail at
-startup because it couldn't locate a Globus threading library.
+start up, because it could not locate a Globus threading library.
 \Ticket{4440}
 
 \item When a daemon checks whether a user has execute permission for a
 directory, it now considers supplemental groups and POSIX ACLs in the
 determination.
 \Ticket{4402}
+
+\item Fixed a bug that could cause GSI security operations to fail if
+\Env{GLOBUS\_THREAD\_MODEL} was set in the environment.
+\Ticket{4464}
 
 \end{itemize}
 

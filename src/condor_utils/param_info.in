@@ -5690,7 +5690,7 @@ review=?
 tags=schedd
 
 [DAEMON_SOCKET_DIR]
-default=$(LOCK)/daemon_sock
+default=auto
 type=string
 reconfig=true
 customization=seldom
@@ -5706,13 +5706,21 @@ friendly_name=Shared Port Daemon Ad File
 review=?
 
 [USE_SHARED_PORT]
-default=false
+default=true
+win32_default=false
 version=7.5.0
 type=bool
 reconfig=true
 customization=seldom
 friendly_name=Use Shared Port
 review=?
+
+[SHARED_PORT_PORT]
+default=$(COLLECTOR_PORT)
+type=int
+reconfig=true
+customization=seldom
+friendly_name=TCP port used by condor_shared_port
 
 [AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST]
 default=true
@@ -5722,6 +5730,20 @@ reconfig=true
 customization=expert
 friendly_name=Auto Include Shared Port In Daemon List
 review=?
+
+[COLLECTOR_USES_SHARED_PORT]
+default=true
+version=8.1.4
+type=bool
+reconfig=true
+customization=expert
+
+[SHARED_PORT_DEFAULT_ID]
+default=
+version=8.1.4
+type=string
+reconfig=true
+customization=expert
 
 [CCB_HEARTBEAT_INTERVAL]
 default=300
