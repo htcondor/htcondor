@@ -77,6 +77,7 @@ Selector::reset()
 	memset( save_except_fds, 0, fd_set_size * sizeof(fd_set) );
 #endif
 	m_single_shot = SINGLE_SHOT_VIRGIN;
+	memset(&m_poll, '\0', sizeof(m_poll));
 
 	if (IsDebugLevel(D_DAEMONCORE)) {
 		dprintf(D_DAEMONCORE | D_VERBOSE, "selector %p resetting\n", this);
@@ -168,6 +169,10 @@ Selector::add_fd( int fd, IO_FUNC interest )
 		free(fd_description);
 	}
 
+	bool new_fd = false;
+	if ((m_single_shot == SINGLE_SHOT_OK) && (m_poll.fd != fd)) {
+		new_fd = true;
+	}
 	m_poll.fd = fd;
 	switch( interest ) {
 
@@ -177,7 +182,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 			EXCEPT( "Selector::add_fd(): read fd_set is full" );
 		}
 #endif
-		m_poll.events = POLLIN;
+		m_poll.events |= POLLIN;
 		FD_SET( fd, save_read_fds );
 		break;
 
@@ -187,7 +192,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 			EXCEPT( "Selector::add_fd(): write fd_set is full" );
 		}
 #endif
-		m_poll.events = POLLOUT;
+		m_poll.events |= POLLOUT;
 		FD_SET( fd, save_write_fds );
 		break;
 
@@ -197,12 +202,19 @@ Selector::add_fd( int fd, IO_FUNC interest )
 			EXCEPT( "Selector::add_fd(): except fd_set is full" );
 		}
 #endif
-		m_poll.events = POLLERR;
+		m_poll.events |= POLLERR;
 		FD_SET( fd, save_except_fds );
 		break;
 
 	}
-	m_single_shot = m_single_shot == SINGLE_SHOT_VIRGIN ? SINGLE_SHOT_OK : SINGLE_SHOT_SKIP;
+	if ((m_single_shot == SINGLE_SHOT_VIRGIN) || ((m_single_shot == SINGLE_SHOT_OK) && (new_fd == false)))
+	{
+		m_single_shot = SINGLE_SHOT_OK;
+	}
+	else
+	{
+		m_single_shot = SINGLE_SHOT_SKIP;
+	}
 }
 
 void
@@ -214,6 +226,8 @@ Selector::delete_fd( int fd, IO_FUNC interest )
 				fd, _fd_select_size-1 );
 	}
 #endif
+
+	m_single_shot = SINGLE_SHOT_SKIP;
 
 	if (IsDebugLevel(D_DAEMONCORE)) {
 		dprintf(D_DAEMONCORE | D_VERBOSE, "selector %p deleting fd %d\n", this, fd);
@@ -255,10 +269,6 @@ Selector::set_timeout( timeval tv )
 {
 	timeout_wanted = true;
 
-	if (tv.tv_usec)
-	{
-		m_single_shot = SINGLE_SHOT_SKIP;
-	}
 	timeout = tv;
 }
 
@@ -292,7 +302,7 @@ Selector::execute()
 #ifdef USE_POLL
 	if (m_single_shot == SINGLE_SHOT_OK)
 	{
-		nfds = poll(&m_poll, 1, tp->tv_sec);
+		nfds = poll(&m_poll, 1, 1000*tp->tv_sec + tp->tv_usec/1000);
 	}
 	else
 #else
