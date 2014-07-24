@@ -656,7 +656,7 @@ Identifies the machine image of the instance.
 Used for grid type gce jobs;
 a string taken from the definition of the submit description file command
 \SubmitCmd{gce\_machine\_type}.
-Specifies the hardward profile that should be used for a GCE instance.
+Specifies the hardware profile that should be used for a GCE instance.
 
 %%% ClassAd attribute: GceMetadata
 \index{ClassAd job attribute!GceMetadata}
@@ -1905,8 +1905,8 @@ This is a node in which one or more of the parent nodes has not yet finished.
 \index{DAG\_Status!job ClassAd attribute}
 \label{AttrDAGStatus}
 \item[\AdAttr{DAG\_Status}:]   
-The overall status of the DAG, with the same value as the \Expr{\$DAG\_STATUS}
-macro that can be used within a DAG input file.
+The overall status of the DAG, with the same values as the macro
+\Env{\$DAG\_STATUS} used in DAGMan FINAL nodes.
 \begin{center}
 \begin{table}[hbt]
 \begin{tabular}{|p{2cm}p{10cm}|} \hline
