@@ -265,7 +265,7 @@ class Value
 			@param c The ClassAd if the value is a ClassAd.
 			@return true iff the value is a ClassAd.
 		*/
-		inline bool IsClassAdValue(ClassAd *&c); 
+		inline bool IsClassAdValue(ClassAd *&c) const; 
 		/** Checks if the value is a ClassAd. 
 			@return true iff the value is a ClassAd value.
 		*/
@@ -516,7 +516,7 @@ IsClassAdValue(const ClassAd *&ad) const
 }
 
 inline bool Value::
-IsClassAdValue(ClassAd *&ad)
+IsClassAdValue(ClassAd *&ad) const
 {
 	if ( valueType == CLASSAD_VALUE ) {
 		ad = classadValue;

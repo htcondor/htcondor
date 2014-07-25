@@ -37,37 +37,14 @@ BEGIN {
 # installer. This is done before the .exe append bellow, because that match 
 # seems to block any other matches for that line.
 /^#VM_GAHP_SERVER/ {
-	print "#VM_GAHP_SERVER = $(BIN)/condor_vm-gahp.exe"
+	print "#VM_GAHP_SERVER = $(BIN)\\condor_vm-gahp.exe"
 	print "VM_GAHP_SERVER = "
 	next
 }
-
-# Add a .exe to the end of all condor daemon names in $(BIN) and $(SBIN)
-/BIN)\/condor_/ {
-	printf "%s.exe\n",$0
-	next
-}
-
-# Add a .exe to the end of all condor daemon names in $(LIBEXEC)
-/LIBEXEC)\/condor_/ {
-	printf "%s.exe\n",$0
-	next
-}
-
-# Email Settings
-# Use condor_mail.exe for MAIL, and put in a stub for SMTP_SERVER
-/^MAIL/ {
-	printf "MAIL = $(BIN)/condor_mail.exe\n\n"
-	printf "## For Condor on Win32 we need to specify an SMTP server so\n"
-	printf "## that Condor is able to send email.\n"
-	printf "SMTP_SERVER =\n\n"
-	printf "## For Condor on Win32 we may need to specify a \"from\"\n"
-	printf "## address so that a valid address is used in the from\n"
-	printf "## field.\n"
-	printf "MAIL_FROM =\n\n"
-	next
-}
-/^SMTP_SERVER/ {
+# We DONT want to add a .exe extension to the vmware script, it's a perl script.
+/VMWARE_SCRIPT[ \t]*=/ {
+	gsub(/\//, "\\", $0)
+	printf "%s\n",$0
 	next
 }
 
@@ -89,6 +66,31 @@ BEGIN {
 /^STARTER_LIST/ {
     printf "STARTER_LIST = STARTER\n"
     next
+}
+
+/^FILETRANSFER_PLUGINS[ \t]*=/ {
+	gsub(/\//, "\\", $0)
+	gsub(/_plugin,/, "_plugin.exe,", $0)
+	gsub(/_plugin$/, "_plugin.exe", $0)
+	printf "%s\n",$0
+	next
+}
+
+# Email Settings
+# Use condor_mail.exe for MAIL, and put in a stub for SMTP_SERVER
+/^MAIL/ {
+	printf "MAIL = $(BIN)\\condor_mail.exe\n\n"
+	printf "## For Condor on Win32 we need to specify an SMTP server so\n"
+	printf "## that Condor is able to send email.\n"
+	printf "SMTP_SERVER =\n\n"
+	printf "## For Condor on Win32 we may need to specify a \"from\"\n"
+	printf "## address so that a valid address is used in the from\n"
+	printf "## field.\n"
+	printf "MAIL_FROM =\n\n"
+	next
+}
+/^SMTP_SERVER/ {
+	next
 }
 
 # Choose a Windows-reasonable value for RELEASE_DIR and LOCAL_DIR
@@ -143,15 +145,16 @@ BEGIN {
 }
 
 # Clean out the initial guess of /usr/bin/java for JAVA... ;)
-# Note the space after JAVA below, so we do not change other JAVA settings.
-/^JAVA / {
+# wherever it is on Windows, it's not there.
+/^JAVA[ \t]*=/ {
 	printf "JAVA =\n"
 	next
 }
 
 # Win32 has a path separator of ';', while on Unix it is ':'
 /^JAVA_CLASSPATH_SEPARATOR/ {
-	printf "JAVA_CLASSPATH_SEPARATOR= ;\n", $1
+	printf "JAVA_CLASSPATH_SEPARATOR = ;\n", $1
+	next
 }
 
 # Win32 has the jar files located in the bin directory.
@@ -189,7 +192,7 @@ BEGIN {
 	next
 }
 /^#VMWARE_LOCAL_SETTINGS_FILE/ {
-	print "VMWARE_LOCAL_SETTINGS_FILE = $(RELEASE_DIR)/condor_vmware_local_settings"
+	print "#VMWARE_LOCAL_SETTINGS_FILE = $(RELEASE_DIR)/condor_vmware_local_settings"
 	next
 }
 
@@ -223,6 +226,37 @@ BEGIN {
 }
 /^#VMWARE_BRIDGE_NETWORKING_TYPE/ {
 	printf "VMWARE_BRIDGE_NETWORKING_TYPE = bridged\n"
+	next
+}
+
+# Add a .exe to the end of all condor daemon names in $(BIN) and $(SBIN)
+/BIN)\/condor_/ {
+	gsub(/\//, "\\", $0)
+	printf "%s.exe\n",$0
+	next
+}
+
+# Add a .exe to the end of all condor daemon names in $(LIBEXEC)
+/LIBEXEC)\/condor_/ {
+	gsub(/\//, "\\", $0)
+	printf "%s.exe\n",$0
+	next
+}
+
+# convert paths relative to LOCAL_DIR, RELEASE_DIR and LOG to windows path separators
+/[ \t]*=[ \t]*\$\(LOCAL_DIR\)\// {
+	gsub(/\//, "\\", $0)
+	printf "%s\n",$0
+	next
+}
+/[ \t]*=[ \t]*\$\(RELEASE_DIR\)\// {
+	gsub(/\//, "\\", $0)
+	printf "%s\n",$0
+	next
+}
+/[ \t]*=[ \t]*\$\(LOG\)\// {
+	gsub(/\//, "\\", $0)
+	printf "%s\n",$0
 	next
 }
 

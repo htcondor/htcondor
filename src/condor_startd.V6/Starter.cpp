@@ -775,20 +775,66 @@ Starter::execDCStarter( Stream* s )
 {
 	ArgList args;
 
-	char* hostname = s_claim->client()->host();
-	if ( resmgr->is_smp() ) {
-		// Note: the "-a" option is a daemon core option, so it
-		// must come first on the command line.
-		args.AppendArg("condor_starter");
-		args.AppendArg("-f");
-		args.AppendArg("-a");
-		args.AppendArg(s_claim->rip()->r_id_str);
-		args.AppendArg(hostname);
-	} else {
-		args.AppendArg("condor_starter");
-		args.AppendArg("-f");
-		args.AppendArg(hostname);
+	// decide whether we are going to pass a -slot-name argument to the starter
+	// by default we do things the pre 8.1.4 way
+	// we default to -slot-name, but that can be disabled by setting STARTER_LOG_NAME_APPEND = true
+	// otherwise the value of this param determines what we append.
+	bool slot_arg = false;
+	enum { APPEND_NOTHING, APPEND_SLOT, APPEND_CLUSTER, APPEND_JOBID } append = APPEND_SLOT;
+
+	// by default, single slots machines get no log append and no slot argument.
+	if ( ! resmgr->is_smp()) {
+		slot_arg = false;
+		append = APPEND_NOTHING;
 	}
+
+	MyString ext;
+	if (param(ext, "STARTER_LOG_NAME_APPEND")) {
+		slot_arg = true;
+		if (MATCH == strcasecmp(ext.c_str(), "Slot")) {
+			append = APPEND_SLOT;
+		} else if (MATCH == strcasecmp(ext.c_str(), "ClusterId") || MATCH == strcasecmp(ext.c_str(), "Cluster")) {
+			append = APPEND_CLUSTER;
+		} else if (MATCH == strcasecmp(ext.c_str(), "JobId")) {
+			append = APPEND_JOBID;
+		} else if (MATCH == strcasecmp(ext.c_str(), "false") || MATCH == strcasecmp(ext.c_str(), "0")) {
+			append = APPEND_NOTHING;
+		} else if (MATCH == strcasecmp(ext.c_str(), "true") || MATCH == strcasecmp(ext.c_str(), "1")) {
+			append = APPEND_SLOT;
+			slot_arg = false;
+		}
+	}
+
+
+	char* hostname = s_claim->client()->host();
+
+	args.AppendArg("condor_starter");
+	args.AppendArg("-f");
+
+	// Note: the "-a" option is a daemon core option, so it
+	// must come first on the command line.
+	if (append != APPEND_NOTHING) {
+		args.AppendArg("-a");
+		switch (append) {
+		case APPEND_CLUSTER: args.AppendArg(s_claim->cluster()); break;
+
+		case APPEND_JOBID: {
+			MyString jobid;
+			jobid.formatstr("%d.%d", s_claim->cluster(), s_claim->proc());
+			args.AppendArg(jobid.c_str());
+		} break;
+
+		default:
+		case APPEND_SLOT: args.AppendArg(s_claim->rip()->r_id_str); break;
+		}
+	}
+
+	if (slot_arg) {
+		args.AppendArg("-slot-name");
+		args.AppendArg(s_claim->rip()->r_id_str);
+	}
+
+	args.AppendArg(hostname);
 	execDCStarter( args, NULL, NULL, s );
 
 	return s_pid;
@@ -805,6 +851,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		// from it.
 
 	stream->decode();
+	stream->timeout(10);
 	if( !stream->get( final_update) ||
 		!getClassAd( stream, update_ad ) ||
 		!stream->end_of_message() )

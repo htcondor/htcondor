@@ -43,6 +43,7 @@ my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
 my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
 my $NATIVE_TASK           = "remote_task.create_native";
 my $CHECK_NATIVE_TASK     = "remote_task.check_native";
+my $RUN_UNIT_TESTS        = "remote_task.run_unit_tests";
 my $COVERITY_ANALYSIS     = "remote_task.coverity_analysis";
 
 my $taskname = "";
@@ -86,6 +87,13 @@ if ($ENV{NMI_PLATFORM} =~ /macos/i) {
     $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.6";
 }
 
+# enable use of VisualStudio 2012 (vs11) on the Windows8 platform
+my $enable_vs11 = 0;
+if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs11 = 1; }
+if ($enable_vs11 && $ENV{VS110COMNTOOLS} =~ /common7/i) {
+	$VCVER = "VC11";
+}
+
 # Checking task type
 if( $taskname eq $EXTERNALS_TASK ) {
     # Since we do not declare the externals task on Windows, we don't have
@@ -100,7 +108,8 @@ elsif ($taskname eq $UNSTRIPPED_TASK) {
 	}
 
     #Append extra argument
-    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 install tests && ctest --output-on-failure && make targz";
+    # we don't run unit tests here because if they fail, they defeat running all of the other tests!
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 install tests targz";
 }
 elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
     my $tarball_check_script = get_tarball_check_script();
@@ -114,7 +123,8 @@ elsif ($taskname eq $TAR_TASK) {
     $execstr = get_cmake_args();
 
     # We can't call "make install" (which just calls "cmake -P cmake_install.cmake") because we need to add the CMAKE_INSTALL_DO_STRIP argument.
-    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make VERBOSE=1 install/strip tests && ctest --output-on-failure && make targz";
+    # we don't run unit tests here because if they fail, they defeat running all of the other tests!
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make VERBOSE=1 install/strip tests targz";
 }
 elsif ($taskname eq $CHECK_TAR_TASK) {
     my $tarball_check_script = get_tarball_check_script();
@@ -167,10 +177,15 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
         print "We do not generate a native package for this platform.\n";
         exit 0;
     }
+} elsif ($taskname eq $RUN_UNIT_TESTS) {
+    if ($ENV{NMI_PLATFORM} =~ /_win/i) {
+    } else {
+        $execstr = "ctest -v --output-on-failure";
+    }
 } elsif ($taskname eq $COVERITY_ANALYSIS) {
 	print "Running Coverity analysis\n";
 	$ENV{PATH} = "$ENV{PATH}:/home/condorauto/cov-sa-linux64-5.5.3/bin";
-	$execstr = "cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --enable-constraint-fpp --dir ../public/cov-data";
+	$execstr = "cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --enable-constraint-fpp --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-2.batlab.org --user admin --password `cat /home/condorauto/coverity/.p`";
 }
 
 

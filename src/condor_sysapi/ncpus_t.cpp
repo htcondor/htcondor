@@ -34,10 +34,8 @@ int ncpus_test(int trials, double warn_ok_ratio)
 	int	num_tests = 0;
 	int	num_warnings = 0;
 
-	foo = sysapi_ncpus_raw();
-	dprintf(D_ALWAYS, "SysAPI: sysapi_ncpus_raw -> %d\n", foo);
-	bar = sysapi_ncpus();
-	dprintf(D_ALWAYS, "SysAPI: sysapi_ncpus -> %d\n", bar);
+	sysapi_detect_cpu_cores(&foo, &bar);
+	dprintf(D_ALWAYS, "SysAPI: sysapi_detect_cpu_cores -> %d, %d\n", foo, bar);
 
 	foo2 = foo;
 	bar2 = bar;
@@ -45,8 +43,7 @@ int ncpus_test(int trials, double warn_ok_ratio)
 	dprintf(D_ALWAYS, "SysAPI: Doing %d trials\n", trials);
 	for (i=0; i<trials; i++) {
 
-		foo = sysapi_ncpus_raw();
-		bar = sysapi_ncpus();
+		sysapi_detect_cpu_cores(&foo, &bar);
 
 		num_tests++;
 		if (foo <= 0) {
@@ -72,10 +69,8 @@ int ncpus_test(int trials, double warn_ok_ratio)
 		bar2 = bar;
 	}
 
-	foo = sysapi_ncpus_raw();
-	dprintf(D_ALWAYS, "SysAPI: sysapi_ncpus_raw -> %d\n", foo);
-	bar = sysapi_ncpus();
-	dprintf(D_ALWAYS, "SysAPI: sysapi_ncpus -> %d\n", bar);
+	sysapi_ncpus_raw(&foo, &bar);
+	dprintf(D_ALWAYS, "SysAPI: sysapi_ncpus_raw -> %d,%d\n", foo, bar);
 
 	if (((double)num_warnings/(double)num_tests) > warn_ok_ratio) {
 			dprintf(D_ALWAYS, "SysAPI: ERROR! Warning warn_ok_ratio exceeded (%2f%% warnings > %2f%% warn_ok_ratio) .\n", ((double)num_warnings/(double)num_tests)*100, warn_ok_ratio*100);

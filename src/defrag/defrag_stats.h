@@ -45,6 +45,11 @@ class DefragStats {
 	stats_entry_abs<double> AvgDrainingBadput;
 	stats_entry_abs<double> AvgDrainingUnclaimed;
 
+	stats_entry_abs<double> MeanDrainedArrival;
+	stats_entry_abs<double> MeanDrainedArrivalSD;
+
+	stats_entry_recent<int> DrainedMachines;
+
 	void Init();
 	void Clear();
 	time_t Tick(time_t now=0);

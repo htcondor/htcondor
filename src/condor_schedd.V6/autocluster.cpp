@@ -297,3 +297,8 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 
 	return cur_id;
 }
+
+int
+AutoCluster::getNumAutoclusters() const {
+	return cluster_in_use.size();
+}

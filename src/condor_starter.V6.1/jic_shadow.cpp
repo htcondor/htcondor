@@ -375,17 +375,19 @@ JICShadow::Continue( void )
 
 bool JICShadow::allJobsDone( void )
 {
-	bool r1, r2 = false;
 	ClassAd update_ad;
 
-	r1 = JobInfoCommunicator::allJobsDone();
+	bool r1 = JobInfoCommunicator::allJobsDone();
 
+	// Tell shadow job is done, and moving to job state transfer output
 	if (!m_did_transfer) {
 		publishJobExitAd( &update_ad );
-		r2 = updateShadow( &update_ad, true );
+		// Note if updateShadow() fails, it will dprintf into the log.
+		updateShadow( &update_ad, true );
 	}
 
-	return r1 || r2;
+	// only report success if our parent class is also done
+	return r1;
 }
 
 

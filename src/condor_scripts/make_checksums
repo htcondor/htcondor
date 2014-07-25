@@ -164,7 +164,7 @@ sub gen_sha1_checksum
 	} else {
 		unlink("$file.sha1"); # don't care if this fails.
 		print "WARNING: $sha1sum not executable and not required. Not " .
-			"producing an sha1 checksum file.\n";
+			"producing a sha1 checksum file.\n";
 	}
 }
 

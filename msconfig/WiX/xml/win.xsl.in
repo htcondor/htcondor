@@ -42,11 +42,6 @@
                  <RegistryValue Type="string" Name="VMMEMORY" Value="[VMMEMORY]" />
                  <RegistryValue Type="string" Name="VMNETWORKING" Value="[VMNETWORKING]" />
                  <RegistryValue Type="string" Name="PERLLOCATION" Value="[PERLLOCATION]" />
-                 <RegistryValue Type="string" Name="USEHDFS" Value="[USEHDFS]" />
-                 <RegistryValue Type="string" Name="NAMENODE" Value="[NAMENODE]" />
-                 <RegistryValue Type="string" Name="HDFSMODE" Value="[HDFSMODE]" />
-                 <RegistryValue Type="string" Name="HDFSPORT" Value="[HDFSPORT]" />
-                 <RegistryValue Type="string" Name="HDFSWEBPORT" Value="[HDFSWEBPORT]" />
              </RegistryKey>
              <RegistryKey Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\condor"  Action="createAndRemoveOnUninstall">
                <RegistryValue Type="integer" Name="DelayedAutostart" Value="1" />
@@ -58,7 +53,7 @@
               <RegistryKey Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Run">
                 <RegistryValue Type="string" Name="condor_kbdd" Value="&quot;[INSTALLDIR]bin\condor_kbdd.exe&quot;" />
               </RegistryKey>
-              <Condition>RUNJOBS = "A" Or RUNJOBS = "I" Or RUNJOBS = "C"</Condition>
+              <Condition>RUNJOBS = "I" Or RUNJOBS = "C"</Condition>
             </Component>
             <Directory Id="LogDir" Name="log">
               <Component Id="CreatingLogDir" Guid="F6731DF5-5E28-405F-82EC-5F269FD434E5" Permanent="no" NeverOverwrite="yes">
@@ -199,26 +194,11 @@
         <Property Id="OLD_PERLLOCATION">
           <RegistrySearch Id="PERLLOCATION_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="PERLLOCATION" />
         </Property>
-        <Property Id="OLD_USEHDFS">
-          <RegistrySearch Id="USEHDFS_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="USEHDFS" />
-        </Property>
-        <Property Id="OLD_NAMENODE">
-          <RegistrySearch Id="NAMENODE_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="NAMENODE" />
-        </Property>
-        <Property Id="OLD_HDFSMODE">
-          <RegistrySearch Id="HDFSMODE_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HDFSMODE" />
-        </Property>
-        <Property Id="OLD_HDFSPORT">
-          <RegistrySearch Id="HDFSPORT_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HDFSPORT" />
-        </Property>
-        <Property Id="OLD_HDFSWEBPORT">
-          <RegistrySearch Id="HDFSWEBPORT_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HDFSWEBPORT" />
-        </Property>
 
         <Property Id="POOLHOSTNAME" Value="$$(IP_ADDRESS)" />
         <!--Permissions properties-->
         <Property Id="HOSTALLOWREAD" Value="*" />
-        <Property Id="HOSTALLOWWRITE" Value="your.domain.com, *.cs.wisc.edu" />
+        <Property Id="HOSTALLOWWRITE" Value="$$(CONDOR_HOST), $$(IP_ADDRESS), *.cs.wisc.edu" />
         <Property Id="HOSTALLOWADMINISTRATOR" Value="$$(IP_ADDRESS)" />
         <!--VM Universe properties-->
         <Property Id="VMVERSION" Value="server1.0" />
@@ -226,13 +206,10 @@
         <Property Id="VMMAXNUMBER" Value="$$(NUM_CPUS)" />
         <Property Id="VMNETWORKING" Value="N"/>
         <Property Id="PERLLOCATION" Value="PERL.EXE" />
-        <!--HDFS properties-->
-        <Property Id="HDFSPORT" Value="9000" />
-        <Property Id="HDFSWEBPORT" Value="8000" />
-        <SetProperty Id="HDFSHOME" Value="[INSTALLDIR]HDFS" After="AppSearch">Not UPGRADEFOUND</SetProperty>
-        <SetProperty Id="HDFSNAMEDIR" Value="[HDFS_HOME]/hadoop_name" After="AppSearch">Not UPGRADEFOUND</SetProperty>
-        <SetProperty Id="HDFSDATADIR" Value="[HDFS_HOME]/hadoop_data" After="AppSearch">Not UPGRADEFOUND</SetProperty>
+
         <SetDirectory Id="TARGETDIR" Value="[INSTALLDIR]" Sequence="execute" />
+
+        <Property Id="LOCALCONFIG" Value="$$(LOCAL_DIR)\condor_config.local" />
 
         <SetProperty Id="INSTALLDIR" Value="[OLD_INSTALLDIR]" After="AppSearch">UPGRADEFOUND</SetProperty>
         <SetProperty Id="SUBMITJOBS" Value="[OLD_SUBMITJOBS]" After="AppSearch">UPGRADEFOUND</SetProperty>
@@ -251,11 +228,6 @@
         <SetProperty Id="VMMAXNUMBER" Value="[OLD_VMMAXNUMBER]" After="AppSearch">UPGRADEFOUND</SetProperty>
         <SetProperty Id="VMMEMORY" Value="[OLD_VMMEMORY]" After="AppSearch">UPGRADEFOUND</SetProperty>
         <SetProperty Id="PERLLOCATION" Value="[OLD_PERLLOCATION]" After="AppSearch">UPGRADEFOUND</SetProperty>
-        <SetProperty Id="USEHDFS" Value="[OLD_USEHDFS]" After="AppSearch">UPGRADEFOUND</SetProperty>
-        <SetProperty Id="NAMENODE" Value="[OLD_NAMENODE]" After="AppSearch">UPGRADEFOUND</SetProperty>
-        <SetProperty Id="HDFSMODE" Value="[OLD_HDFSMODE]" After="AppSearch">UPGRADEFOUND</SetProperty>
-        <SetProperty Id="HDFSPORT" Value="[OLD_HDFSPORT]" After="AppSearch">UPGRADEFOUND</SetProperty>
-        <SetProperty Id="HDFSWEBPORT" Value="[OLD_HDFSWEBPORT]" After="AppSearch">UPGRADEFOUND</SetProperty>
 
         <!-- Begin custom actions and install sequence -->
         <CustomAction Id="CondorConfigLocal"
@@ -321,9 +293,8 @@
             <DialogRef Id="CondorJavaCfgDlg" />
             <DialogRef Id="CondorPermCfgDlg" />
             <DialogRef Id="CondorVMCfgDlg" />
-            <DialogRef Id="CondorHDFSCfgDlg" />
             <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="CondorPoolCfgDlg" Order="2">LicenseAccepted = "1" And Not UPGRADEFOUND</Publish>
-            <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="CondorHDFSCfgDlg">1</Publish>
+            <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="CondorVMCfgDlg">1</Publish>
             <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="2">1</Publish>
             <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="InstallDirDlg">Not UPGRADEFOUND</Publish>
             <Publish Dialog="LicenseAgreementDlg" Event="NewDialog" Value="VerifyReadyDlg" Control="Next">LicenseAccepted = "1" And UPGRADEFOUND And Not SEVENFIVEFIVEFOUND</Publish>

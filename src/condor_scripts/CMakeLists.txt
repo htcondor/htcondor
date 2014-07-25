@@ -34,6 +34,8 @@ if (NOT WINDOWS)
 
 	install ( FILES condor_ssh sshd.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
+    install ( FILES Condor.pm CondorUtils.pm CondorTest.pm CondorPersonal.pm DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+
 	if (STD_UNIVERSE)
 		install ( FILES condor_compile DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 		install ( FILES ld DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )

@@ -25,10 +25,6 @@
 
 typedef enum { READ_LOCK, WRITE_LOCK, UN_LOCK } LOCK_TYPE;
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 /* Lock/unlock a file using the OS's file locking mechanism.
  *
  * lock_file_plain() doesn't call any Condor code. It can be used anywhere
@@ -39,14 +35,9 @@ extern "C" {
  *   ignoring locking failures on NFS).
  */
 
-int lock_file( int fd, LOCK_TYPE lock_type, BOOLEAN do_block );
-int lock_file_plain( int fd, LOCK_TYPE lock_type, BOOLEAN do_block );
+int lock_file( int fd, LOCK_TYPE lock_type, bool do_block );
+int lock_file_plain( int fd, LOCK_TYPE lock_type, bool do_block );
 
-#if defined(__cplusplus)
-}		/* End of extern "C" declaration */
-#endif
-
-#if defined(__cplusplus)
 
 	// C++ wrapper for lock_file.  Note that the constructor takes 
 	// the path to the file, which must be supplied. This class
@@ -172,7 +163,6 @@ class FileLock : public FileLockBase
 	// Private Data Members
 	//
 	
-	unsigned int m_id;		// the ID number for this object
 	int			 m_fd;		// File descriptor to deal with
 	FILE		*m_fp;
 	char		*m_path;	// Path to the file being locked, must use
@@ -224,7 +214,5 @@ class FakeFileLock : public FileLockBase
 	bool release( void )				// release the lock
 		{ m_state = UN_LOCK; return true; };
 };
-
-#endif	/* cpluscplus */
 
 #endif

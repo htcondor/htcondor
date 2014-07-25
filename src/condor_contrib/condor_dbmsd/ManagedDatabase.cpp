@@ -145,7 +145,7 @@ void ManagedDatabase::PurgeDatabase() {
 
 	switch (dt) {				
 	case T_PGSQL:
-		sql_str.sprintf("select quill_purgeHistory(%d, %d, %d)", 
+		sql_str.formatstr("select quill_purgeHistory(%d, %d, %d)",
 						resourceHistoryDuration,
 						runHistoryDuration,
 						jobHistoryDuration);
@@ -172,7 +172,7 @@ void ManagedDatabase::PurgeDatabase() {
 		  a warning to the administrator 
 		*/
 	
-	sql_str.sprintf("SELECT dbsize FROM quillDBMonitor");
+	sql_str.formatstr("SELECT dbsize FROM quillDBMonitor");
 	ret_st = DBObj->execQuery(sql_str.Value(), num_result);
 
 	if ((ret_st == QUILL_SUCCESS) && 
@@ -246,7 +246,7 @@ void ManagedDatabase::ReindexDatabase() {
 			return;
 		}	
 		
-		sql_str.sprintf("select quill_reindexTables()");
+		sql_str.formatstr("select quill_reindexTables()");
 
 		ret_st = DBObj->execCommand(sql_str.Value());
 		if (ret_st == QUILL_FAILURE) {

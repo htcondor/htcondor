@@ -199,8 +199,16 @@ char* UserNotesVal = NULL;
 char* StackSizeVal = NULL;
 List<const char> extraLines;  // lines passed in via -a argument
 
-#define PROCVARSIZE	32
-BUCKET *ProcVars[ PROCVARSIZE ];
+// the submit file is read into this macro table
+//
+static MACRO_SET SubmitMacroSet = {
+	0, 0,
+	CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS,
+	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), NULL };
+
+// these are used to keep track of the source of various macros in the table.
+const MACRO_SOURCE DefaultMacro = { true, 1, -2, -1, -2 };
+MACRO_SOURCE FileMacroSource = { false, 0, 0, -1, -2 };
 
 #define MEG	(1<<20)
 
@@ -249,9 +257,10 @@ const char	*MemoryUsage	= "memory_usage";
 const char	*RequestCpus	= "request_cpus";
 const char	*RequestMemory	= "request_memory";
 const char	*RequestDisk	= "request_disk";
-const std::string  RequestPrefix  = "request_";
-std::set<std::string> fixedReqRes;
-std::set<std::string> stringReqRes;
+const char	*RequestPrefix  = "request_";
+typedef std::set<std::string,  classad::CaseIgnLTStr> ResSet;
+ResSet fixedReqRes;	 // a case-insenstive set
+ResSet stringReqRes;
 
 const char	*Universe		= "universe";
 const char	*MachineCount	= "machine_count";
@@ -418,6 +427,15 @@ const char* EC2TagNames = "ec2_tag_names";
 const char* EC2SpotPrice = "ec2_spot_price";
 
 //
+// GCE Parameters
+//
+const char* GceImage = "gce_image";
+const char* GceAuthFile = "gce_auth_file";
+const char* GceMachineType = "gce_machine_type";
+const char* GceMetadata = "gce_metadata";
+const char* GceMetadataFile = "gce_metadata_file";
+
+//
 // Deltacloud Parameters
 //
 const char* DeltacloudUsername = "deltacloud_username";
@@ -551,7 +569,6 @@ char *myproxy_password = NULL;
 bool stream_std_file = false;
 
 extern DLL_IMPORT_MAGIC char **environ;
-
 
 extern "C" {
 int SetSyscalls( int foo );
@@ -1192,12 +1209,14 @@ main( int argc, char *argv[] )
 	if ( ! cmd_file || SubmitFromStdin) {
 		// no file specified, read from stdin
 		fp = stdin;
+		insert_source("<stdin>", SubmitMacroSet, FileMacroSource);
 	} else {
 		if( (fp=safe_fopen_wrapper_follow(cmd_file,"r")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open command file (%s)\n",
 						strerror(errno));
 			exit(1);
 		}
+		insert_source(cmd_file, SubmitMacroSet, FileMacroSource);
 	}
 
 	// in case things go awry ...
@@ -1403,11 +1422,11 @@ main( int argc, char *argv[] )
 		in the submit file */
 	if (WarnOnUnusedMacros) {
 		if (verbose) { fprintf(stdout, "\n"); }
-		HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+		HASHITER it = hash_iter_begin(SubmitMacroSet);
 		for ( ; !hash_iter_done(it); hash_iter_next(it) ) {
 			if(0 == hash_iter_used_value(it)) {
-				char *key = hash_iter_key(it),
-					 *val = hash_iter_value(it);
+				const char *key = hash_iter_key(it);
+				const char *val = hash_iter_value(it);
 					// Don't warn if DAG_STATUS or FAILED_COUNT is specified
 					// but unused -- these are specified for all DAG node
 					// jobs (see dagman_submit.cpp).  wenger 2012-03-26
@@ -1497,10 +1516,10 @@ SetRemoteAttrs()
 	const int tostringizesz = sizeof(tostringize) / sizeof(tostringize[0]);
 
 
-	HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+	HASHITER it = hash_iter_begin(SubmitMacroSet);
 	for( ; ! hash_iter_done(it); hash_iter_next(it)) {
 
-		char * key = hash_iter_key(it);
+		const char * key = hash_iter_key(it);
 		int remote_depth = 0;
 		while(strncasecmp(key, REMOTE_PREFIX, REMOTE_PREFIX_LEN) == 0) {
 			remote_depth++;
@@ -1718,6 +1737,7 @@ SetExecutable()
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
 		   ( strcasecmp( JobGridType, "ec2" ) == MATCH ||
+			 strcasecmp( JobGridType, "gce" ) == MATCH ||
 		     strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
@@ -2043,6 +2063,7 @@ SetUniverse()
 				(strcasecmp (JobGridType, "condor") == MATCH) ||
 				(strcasecmp (JobGridType, "nordugrid") == MATCH) ||
 				(strcasecmp (JobGridType, "ec2") == MATCH) ||
+				(strcasecmp (JobGridType, "gce") == MATCH) ||
 				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
 				(strcasecmp (JobGridType, "cream") == MATCH)){
@@ -2056,7 +2077,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt5, pbs, lsf, "
-						 "sge, nqs, condor, nordugrid, unicore, ec2, deltacloud, or cream\n" );
+						 "sge, nqs, condor, nordugrid, unicore, ec2, gce, deltacloud, or cream\n" );
 				exit( 1 );
 			}
 		}			
@@ -2584,24 +2605,21 @@ void SetFileOptions()
 
 
 void SetRequestResources() {
-    HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+    HASHITER it = hash_iter_begin(SubmitMacroSet);
     for (;  !hash_iter_done(it);  hash_iter_next(it)) {
-        std::string key = hash_iter_key(it);
-        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        const char * key = hash_iter_key(it);
         // if key is not of form "request_xxx", ignore it:
-        if (key.compare(0, RequestPrefix.length(), RequestPrefix) != 0) continue;
+        if ( ! starts_with_ignore_case(key, RequestPrefix)) continue;
         // if key is one of the predefined request_cpus, request_memory, etc, also ignore it,
         // those have their own special handling:
         if (fixedReqRes.count(key) > 0) continue;
-        std::string rname = key.substr(RequestPrefix.length());
+        const char * rname = key + strlen(RequestPrefix);
         // resource name should be nonempty
-        if (rname.size() <= 0) continue;
-        // CamelCase it!
-        *(rname.begin()) = toupper(*(rname.begin()));
+        if ( ! *rname) continue;
         // could get this from 'it', but this prevents unused-line warnings:
-        std::string val = condor_param(key.c_str());
+        char * val = condor_param(key);
         std::string assign;
-        formatstr(assign, "%s%s = %s", ATTR_REQUEST_PREFIX, rname.c_str(), val.c_str());
+        formatstr(assign, "%s%s = %s", ATTR_REQUEST_PREFIX, rname, val);
         
         if (val[0]=='\"')
         {
@@ -5248,7 +5266,7 @@ SetForcedAttributes()
 	while( ( forcedAttributes.iterate( name, value ) ) )
 	{
 		// expand the value; and insert it into the job ad
-		exValue = expand_macro( value.Value(), ProcVars, PROCVARSIZE );
+		exValue = expand_macro(value.Value(), SubmitMacroSet);
 		if( !exValue )
 		{
 			fprintf( stderr, "\nWarning: Unable to expand macros in \"%s\"."
@@ -5621,11 +5639,11 @@ SetGridParams()
 		free(tmp); tmp = NULL;
 	}
 
-	HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+	HASHITER it = hash_iter_begin(SubmitMacroSet);
 	int prefix_len = strlen(ATTR_EC2_TAG_PREFIX);
 	for (;!hash_iter_done(it); hash_iter_next(it)) {
-		char *key = hash_iter_key(it);
-		char *name = NULL;
+		const char *key = hash_iter_key(it);
+		const char *name = NULL;
 		if (!strncasecmp(key, ATTR_EC2_TAG_PREFIX, prefix_len) &&
 			key[prefix_len]) {
 			name = &key[prefix_len];
@@ -5680,6 +5698,82 @@ SetGridParams()
 		buffer.formatstr("%s = \"%s\"",
 					ATTR_EC2_TAG_NAMES, tagNames.print_to_delimed_string(","));
 		InsertJobExpr(buffer.Value());
+	}
+
+
+	//
+	// GCE grid-type submit attributes
+	//
+	if ( (tmp = condor_param( GceAuthFile, ATTR_GCE_AUTH_FILE )) ) {
+		// check auth file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open auth file %s (%s)\n", 
+						 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+
+			StatInfo si(full_path(tmp));
+			if (si.IsDirectory()) {
+				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				exit(1);
+			}
+		}
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_AUTH_FILE, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "gce" ) == 0 ) {
+		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", GceAuthFile );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( GceImage, ATTR_GCE_IMAGE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_IMAGE, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "gce" ) == 0 ) {
+		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", GceImage );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( GceMachineType, ATTR_GCE_MACHINE_TYPE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_MACHINE_TYPE, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "gce" ) == 0 ) {
+		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", GceMachineType );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	// GceMetadata is not a necessary parameter
+	// This is a comma-separated list of name/value pairs
+	if( (tmp = condor_param( GceMetadata, ATTR_GCE_METADATA )) ) {
+		StringList list( tmp, "," );
+		char *list_str = list.print_to_string();
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_METADATA, list_str );
+		InsertJobExpr( buffer.Value() );
+		free( list_str );
+	}
+
+	// GceMetadataFile is not a necessary parameter
+	if( (tmp = condor_param( GceMetadataFile, ATTR_GCE_METADATA_FILE )) ) {
+		// check metadata file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open metadata file %s (%s)\n", 
+								 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_METADATA_FILE, 
+				full_path(tmp) );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
 	}
 
 
@@ -6170,7 +6264,7 @@ read_condor_file( FILE *fp )
 				// since the string is still pointed to by name and
 				// will be freed below like any other line...
 			}
-			name = expand_macro( name, ProcVars, PROCVARSIZE );
+			name = expand_macro(name, SubmitMacroSet);
 			if( name == NULL ) {
 				(void)fclose( fp );
 				fprintf( stderr, "\nERROR: Failed to expand macros "
@@ -6242,7 +6336,7 @@ read_condor_file( FILE *fp )
 		if (name != NULL) {
 
 			/* Expand references to other parameters */
-			name = expand_macro( name, ProcVars, PROCVARSIZE );
+			name = expand_macro(name, SubmitMacroSet);
 			if( name == NULL ) {
 				(void)fclose( fp );
 				fprintf( stderr, "\nERROR: Failed to expand macros in: %s\n",
@@ -6274,7 +6368,7 @@ read_condor_file( FILE *fp )
 		 *  wasn't forced into the ad with a '+'
 		 */
 		if ( force == 0 ) {
-			insert( name, value, ProcVars, PROCVARSIZE );
+			insert(name, value, SubmitMacroSet, FileMacroSource);
 		}
 
 		free( name );
@@ -6294,7 +6388,8 @@ char *
 condor_param( const char* name, const char* alt_name )
 {
 	bool used_alt = false;
-	char *pval = lookup_macro( name, NULL, ProcVars, PROCVARSIZE );
+	const char *pval = lookup_macro(name, NULL, SubmitMacroSet);
+	char * pval_expanded = NULL;
 
 	static StringList* submit_exprs = NULL;
 	static bool submit_exprs_initialized = false;
@@ -6308,7 +6403,7 @@ condor_param( const char* name, const char* alt_name )
 	}
 
 	if( ! pval && alt_name ) {
-		pval = lookup_macro( alt_name, NULL, ProcVars, PROCVARSIZE );
+		pval = lookup_macro(alt_name, NULL, SubmitMacroSet);
 		used_alt = true;
 	}
 
@@ -6326,7 +6421,7 @@ condor_param( const char* name, const char* alt_name )
 		return( NULL );
 	}
 
-	pval = expand_macro( pval, ProcVars, PROCVARSIZE );
+	pval_expanded = expand_macro(pval, SubmitMacroSet);
 
 	if( pval == NULL ) {
 		fprintf( stderr, "\nERROR: Failed to expand macros in: %s\n",
@@ -6334,7 +6429,7 @@ condor_param( const char* name, const char* alt_name )
 		exit(1);
 	}
 
-	return( pval );
+	return  pval_expanded;
 }
 
 
@@ -6343,18 +6438,14 @@ set_condor_param( const char *name, const char *value )
 {
 	char *tval = strdup( value );
 
-	insert( name, tval, ProcVars, PROCVARSIZE );
+	insert(name, tval, SubmitMacroSet, DefaultMacro);
 	free(tval);
 }
 
 void
 set_condor_param_used( const char *name ) 
 {
-#ifdef PARAM_USE_COUNTING
-	increment_macro_use_count(name, ProcVars, PROCVARSIZE);
-#else
-	set_macro_used(name, 1, ProcVars, PROCVARSIZE);
-#endif
+	increment_macro_use_count(name, SubmitMacroSet);
 }
 
 int
@@ -6951,25 +7042,22 @@ check_requirements( char const *orig, MyString &answer )
 	}
 
     // identify any custom pslot resource reqs and add them in:
-    HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+    HASHITER it = hash_iter_begin(SubmitMacroSet);
     for (;  !hash_iter_done(it);  hash_iter_next(it)) {
-        std::string key = hash_iter_key(it);
-        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        const char * key = hash_iter_key(it);
         // if key is not of form "request_xxx", ignore it:
-        if (key.compare(0, RequestPrefix.length(), RequestPrefix) != 0) continue;
+        if ( ! starts_with_ignore_case(key, RequestPrefix)) continue;
         // if key is one of the predefined request_cpus, request_memory, etc, also ignore it,
         // those have their own special handling:
         if (fixedReqRes.count(key) > 0) continue;
-        std::string rname = key.substr(RequestPrefix.length());
+        const char * rname = key + strlen(RequestPrefix);
         // resource name should be nonempty
-        if (rname.size() <= 0) continue;
-        // CamelCase it!
-        *(rname.begin()) = toupper(*(rname.begin()));
+        if ( ! *rname) continue;
         std::string clause;
         if (stringReqRes.count(rname) > 0)
-            formatstr(clause, " && regexp(%s%s, TARGET.%s)", ATTR_REQUEST_PREFIX, rname.c_str(), rname.c_str());
+            formatstr(clause, " && regexp(%s%s, TARGET.%s)", ATTR_REQUEST_PREFIX, rname, rname);
         else
-            formatstr(clause, " && (TARGET.%s%s >= %s%s)", "", rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str());
+            formatstr(clause, " && (TARGET.%s%s >= %s%s)", "", rname, ATTR_REQUEST_PREFIX, rname);
         answer += clause;
     }
     hash_iter_delete(&it);
@@ -7425,7 +7513,6 @@ init_params()
     fixedReqRes.insert(RequestCpus);
     fixedReqRes.insert(RequestMemory);
     fixedReqRes.insert(RequestDisk);
-    stringReqRes.clear();
 }
 
 int

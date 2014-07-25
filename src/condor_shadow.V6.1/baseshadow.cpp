@@ -79,6 +79,7 @@ BaseShadow::~BaseShadow() {
 	if (gjid) free(gjid); 
 	if (scheddAddr) free(scheddAddr);
 	if( job_updater ) delete job_updater;
+	if (m_cleanup_retry_tid != -1) daemonCore->Cancel_Timer(m_cleanup_retry_tid);
 }
 
 void
@@ -103,11 +104,11 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 
 	if( !jobAd->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
-		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_CLUSTER_ID);
+		EXCEPT("Job ad doesn't contain a %s attribute.", ATTR_CLUSTER_ID);
 	}
 
 	if( !jobAd->LookupInteger(ATTR_PROC_ID, proc)) {
-		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_PROC_ID);
+		EXCEPT("Job ad doesn't contain a %s attribute.", ATTR_PROC_ID);
 	}
 
 

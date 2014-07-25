@@ -84,6 +84,7 @@ ForkWork::ForkWork( int max_workers )
 	max_workers = 0;
 # endif
 	maxWorkers = max_workers;
+	peakWorkers = 0;
 	reaperId = -1;
 	childExit = false;
 }
@@ -195,7 +196,9 @@ ForkWork::NewJob( void )
 
 	  // Ok, let's see what happenned..
 	  if ( FORK_PARENT == status ) {
+		  dprintf( D_ALWAYS, "Number of Active Workers %d\n", workerList.Number());
 		  workerList.Append( worker );
+		  peakWorkers = MAX( peakWorkers, workerList.Number() );
 	  } else if ( FORK_FAILED == status ) {
 		  delete worker;
 	  } else {
@@ -204,7 +207,6 @@ ForkWork::NewJob( void )
 	  }
 	}
 	
-	dprintf( D_ALWAYS, "Number of Active Workers %d\n", workerList.Number());
 	
 	return status;
 }

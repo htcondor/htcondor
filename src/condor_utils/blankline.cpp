@@ -29,7 +29,7 @@
 ** Return true iff the given string is a blank line.
 */
 int
-blankline( char *str )
+blankline( const char *str )
 {
 	while(isspace(*str))
 		str++;

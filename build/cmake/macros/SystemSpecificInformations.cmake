@@ -191,6 +191,17 @@ if(UNIX)
 	endif()
       endif()
 
+	if(NOT SYSTEM_NAME)
+		if(EXISTS "/etc/redhat-release")
+			file(READ "/etc/redhat-release" REDHAT_RELEASE)
+			string(REGEX MATCH "^Red Hat Enterprise Linux .* release ([0-9.]+)" RELEASE "${REDHAT_RELEASE}")
+			set(LINUX_NAME "RedHat")
+			set(LINUX_VER "${CMAKE_MATCH_1}")
+			set(SYSTEM_NAME "rhel${CMAKE_MATCH_1}")
+			set(RPM_SYSTEM_NAME "${SYSTEM_NAME}")
+		endif(EXISTS "/etc/redhat-release")
+	endif(NOT SYSTEM_NAME)
+
 	#Find CPU Arch
 	if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "64")
 		set ( BIT_MODE "64")

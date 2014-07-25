@@ -142,7 +142,7 @@ $success = sub
 					CondorTest::debug("$name: $line\n",1);
 					# Remove the target we just found from the array.
 					splice(@outlines, $ind, 1);
-					break;
+					last;
 				}
 			}
 		}

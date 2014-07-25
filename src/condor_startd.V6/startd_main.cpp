@@ -753,7 +753,7 @@ reaper(Service *, int pid, int status)
 	if( foo ) {
 		foo->starterExited(status);
 	} else {
-		dprintf(D_FAILURE|D_ALWAYS, "Warning: Starter pid %d is not associated with an claim. A slot may fail to transition to Idle.\n", pid);
+		dprintf(D_FAILURE|D_ALWAYS, "Warning: Starter pid %d is not associated with a claim. A slot may fail to transition to Idle.\n", pid);
 	}
 	return TRUE;
 }

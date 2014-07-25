@@ -472,7 +472,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 	char *value_from_classad = NULL;
 
 	struct printf_fmt_info fmt_info;
-	printf_fmt_t fmt_type;
+	printf_fmt_t fmt_type = PFT_NONE;
 	const char* tmp_fmt = NULL;
 
 	formats.Rewind();
@@ -495,11 +495,61 @@ display (AttrList *al, AttrList *target /* = NULL */)
 		if (++icol == columns) {
 			fmt->options |= FormatOptionNoSuffix;
 		}
+
+		// first determine the basic type (int, string, float)
+		// that we want to retrieve, and whether we even want to bother
+		// to evaluate the attribute/expression
+		bool print_no_data = false;
+		switch (fmt->fmtKind) {
+			case PRINTF_FMT:
+					// figure out what kind of format string the
+					// caller is using, we will print out the appropriate
+					// value depending on what they want. we also determine
+					// that no data is needed here.
+				tmp_fmt = fmt->printfFmt;
+				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) ) {
+					print_no_data = true;
+				}
+				fmt_type = fmt_info.type;
+			break;
+
+			case INT_CUSTOM_FMT: fmt_type = PFT_INT;   break;
+			case FLT_CUSTOM_FMT: fmt_type = PFT_FLOAT; break;
+			case STR_CUSTOM_FMT: fmt_type = PFT_VALUE; break;
+		}
+
 			// If we decide that the "attr" requested is actually
 			// an expression, we need to remember that, as 1.
 			// it needs to be deleted, and 2. there is some
 			// special handling for the string case.
 		bool attr_is_expr = false;
+		bool result_is_valid = false;
+		if ( ! print_no_data) {
+				// if we got here, there's some data to be fetched
+				// so we'll need to get the expression tree of the
+				// attribute they asked for...
+			if ( ! (tree = al->LookupExpr (attr))) {
+					// we couldn't find it. Maybe it's an expression?
+				tree = NULL;
+				if (ParseClassAdRvalExpr(attr, tree) != 0) {
+					delete tree;
+					tree = NULL;
+				} else {
+					attr_is_expr = true; // so we know to delete tree
+				}
+			}
+
+			// conversion of the PRINTF_FMT to data types is complicated
+			// so we will leave expression evaluation to the formatting code
+			// for now.  but for the custom formats, we can get the result now
+			if (tree && (fmt->fmtKind != PRINTF_FMT)) {
+				result_is_valid = EvalExprTree(tree, al, target, result);
+				if (attr_is_expr) { delete tree; tree = NULL; }
+			}
+		}
+
+		// now do the actual formatting.
+		//
 		int  col_start;
 		switch( fmt->fmtKind )
 		{
@@ -508,11 +558,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 					retval += col_prefix;
 				col_start = retval.Length();
 
-					// figure out what kind of format string the
-					// caller is using, and print out the appropriate
-					// value depending on what they want.
-				tmp_fmt = fmt->printfFmt;
-				if( ! parsePrintfFormat(&tmp_fmt, &fmt_info) ) {
+				if (print_no_data) {
 						/*
 						  if parsePrintfFormat() returned 0, it means
 						  there are no conversion strings in the
@@ -541,37 +587,25 @@ display (AttrList *al, AttrList *target /* = NULL */)
 					continue;
 				}
 
-					// if we got here, there's some % conversion
-					// string, so we'll need to get the expression
-					// tree of the attribute they asked for...
-				if( !(tree = al->LookupExpr (attr)) ) {
-						// drat, we couldn't find it. Maybe it's an
-						// expression?
-					tree = NULL;
-					if( ParseClassAdRvalExpr(attr, tree) != 0 ) {
-						delete tree;
-
-							// drat, still no luck.  if there's an
-							// alt string, use that, otherwise bail.
-						if ( alt ) {
-							retval += alt;
-						}
-						if (fmt->options & FormatOptionAutoWidth) {
-							int col_width = retval.Length() - col_start;
-							fmt->width = MAX(fmt->width, col_width);
-						}
-						if (col_suffix && ! (fmt->options & FormatOptionNoSuffix))
-							retval += col_suffix;
-						continue;
+				if ( ! tree) {
+						// drat, there's no data to print if there's an
+						// alt string, use that, otherwise bail.
+					if ( alt ) {
+						retval += alt;
 					}
-					ASSERT(tree);
-					attr_is_expr = true;
+					if (fmt->options & FormatOptionAutoWidth) {
+						int col_width = retval.Length() - col_start;
+						fmt->width = MAX(fmt->width, col_width);
+					}
+					if (col_suffix && ! (fmt->options & FormatOptionNoSuffix))
+						retval += col_suffix;
+					continue;
 				}
+				ASSERT(tree);
 
 					// Now, figure out what kind of value they want,
 					// based on the kind of % conversion in their
 					// format string 
-				fmt_type = fmt_info.type;
 				switch( fmt_type ) {
 				case PFT_STRING:
 					if( attr_is_expr ) {
@@ -752,6 +786,43 @@ display (AttrList *al, AttrList *target /* = NULL */)
 			{
 			const char * pszVal;
 
+#if 1
+			case INT_CUSTOM_FMT:
+				if (result_is_valid) {
+					if (result.IsNumber(intValue)) {
+						pszVal = (fmt->df)(intValue , al, *fmt);
+					} else {
+						result_is_valid = false;
+					}
+				}
+				if ( ! result_is_valid) pszVal = alt;
+				PrintCol(&retval, *fmt, pszVal);
+				break;
+
+			case FLT_CUSTOM_FMT:
+				if (result_is_valid) {
+					if (result.IsNumber(realValue)) {
+						pszVal = (fmt->ff)(realValue , al, *fmt);
+					} else {
+						result_is_valid = false;
+					}
+				}
+				if ( ! result_is_valid) pszVal = alt;
+				PrintCol(&retval, *fmt, pszVal);
+				break;
+
+			case STR_CUSTOM_FMT:
+				if (result_is_valid) {
+					if (result.IsStringValue(pszVal)) {
+						pszVal = (fmt->sf)(pszVal, al, *fmt);
+					} else {
+						result_is_valid = false;
+					}
+				}
+				if ( ! result_is_valid) pszVal = alt;
+				PrintCol(&retval, *fmt, pszVal);
+				break;
+#else
 		  	case INT_CUSTOM_FMT:
 				if( al->EvalInteger( attr, target, intValue ) ) {
 					pszVal = (fmt->df)(intValue , al, *fmt);
@@ -779,7 +850,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				}
 				PrintCol(&retval, *fmt, pszVal);
 				break;
-	
+#endif
 			default:
 				PrintCol(&retval, *fmt, alt);
 				break;

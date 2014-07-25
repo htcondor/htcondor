@@ -83,6 +83,7 @@ public:
 
 
 	int compare_versions(const char* other_version_string) const;
+	int compare_versions(const CondorVersionInfo & other_version) const;
 	
 	bool built_since_version(int MajorVer, int MinorVer, int SubMinorVer) const;
 

@@ -37,6 +37,7 @@ my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
 my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
 my $NATIVE_TASK           = "remote_task.create_native";
 my $CHECK_NATIVE_TASK     = "remote_task.check_native";
+my $RUN_UNIT_TESTS        = "remote_task.run_unit_tests";
 my $COVERITY_ANALYSIS     = "remote_task.coverity_analysis";
 
 # autoflush our STDOUT
@@ -58,6 +59,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     print TASKLIST "$CHECK_UNSTRIPPED_TASK 4h\n";
     print TASKLIST "$NATIVE_TASK 4h\n";
     print TASKLIST "$TAR_TASK 4h\n";
+    print TASKLIST "$RUN_UNIT_TESTS 4h\n";
 }    
 else {
     # Everything else
@@ -68,6 +70,7 @@ else {
     print TASKLIST "$CHECK_NATIVE_TASK 4h\n";
     print TASKLIST "$TAR_TASK 4h\n";
     print TASKLIST "$CHECK_TAR_TASK 4h\n";
+    print TASKLIST "$RUN_UNIT_TESTS 4h\n";
 }
 
 if (defined($opt_coverity_analysis)) {

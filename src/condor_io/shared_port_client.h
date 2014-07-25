@@ -21,15 +21,49 @@
 #define __SHARED_PORT_CLIENT_H__
 
 #include "MyString.h"
+#include "reli_sock.h"
+
+class SharedPortState;
 
 class SharedPortClient {
+
+friend class SharedPortState;
+
  public:
 	bool sendSharedPortID(char const *shared_port_id,Sock *sock);
-	bool PassSocket(Sock *sock_to_pass,char const *shared_port_id,char const *requested_by=NULL);
+
+	// PassSocket() returns TRUE on success, FALSE on False, or KEEP_STREAM if 
+	// non_blocking == true and the caller should NOT delete sock_to_pass because
+	// the operation is still pending (it will be deleted once the operation is complete).
+	int PassSocket(Sock *sock_to_pass,char const *shared_port_id,char const *requested_by=NULL, bool non_blocking = false);
+
+	unsigned int get_currentPendingPassSocketCalls() 
+		{return m_currentPendingPassSocketCalls;}
+	unsigned int get_maxPendingPassSocketCalls() 
+		{return m_maxPendingPassSocketCalls;}
+	unsigned int get_successPassSocketCalls() 
+		{return m_successPassSocketCalls;}
+	unsigned int get_failPassSocketCalls() 
+		{return m_failPassSocketCalls;}
+	unsigned int get_wouldBlockPassSocketCalls() 
+		{return m_wouldBlockPassSocketCalls;}
+
  private:
 	MyString myName();
-	bool SharedPortIdIsValid(char const *name);
+	bool static SharedPortIdIsValid(char const *name);
 
+	// Some operational metrics filled in by the SharedPortState
+	// class, which does the heavy lifting during a call to PassSocket().
+	// For now, these are just simple counters.  Eventually they
+	// should use statistics from generic_stats.h.
+	// These metrics are static so that SharedPortState does not 
+	// need to hold a pointer back to a SharedPortClient instance which
+	// may go stale (during shutdown).
+	static unsigned int m_currentPendingPassSocketCalls;
+	static unsigned int m_maxPendingPassSocketCalls;
+	static unsigned int m_successPassSocketCalls;
+	static unsigned int m_failPassSocketCalls;
+	static unsigned int m_wouldBlockPassSocketCalls;
 };
 
 #endif

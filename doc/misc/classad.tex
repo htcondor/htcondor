@@ -714,7 +714,8 @@ Optional parameters are given within square brackets.
      This function evaluates its argument, and it returns the result.
      Thus, it is a no-operation.
      However, a side-effect of the function is that information about
-     the evaluation is logged to the evaluating program's log file.
+     the evaluation is logged to the evaluating program's log file,
+     at the \Expr{D\_FULLDEBUG} debug level.
      This is useful for determining why a given ClassAd expression
      is evaluating the way it does.  
      For example, if a \Condor{startd} \MacroNI{START} expression
@@ -847,29 +848,35 @@ Inclusion of characters other than these as options are ignored.
 \begin{description}
   \index{ClassAd functions!regexp()}
   \item[\Code{Boolean regexp(String pattern, String target \Lbr\ , String options \Rbr)}]
-    Returns \Expr{TRUE} if the string \Expr{target} is 
+    Uses the description of a regular expression 
+    given by string \Expr{pattern}
+    to scan through the string \Expr{target}.
+    Returns \Expr{TRUE} when \Expr{target} is 
     a regular expression as described by \Expr{pattern}.
     Returns \Expr{FALSE} otherwise.
     If any argument is not a string, or if \Expr{pattern} does not describe
     a valid regular expression, returns \Expr{ERROR}.
 
   \index{ClassAd functions!regexps()}
-  \item[\Code{String regexps(String pattern, String target, String substitute,}]
-  \item[\Code{\Lbr\ String options \Rbr) } ]
-    The regular expression \Expr{pattern} is applied to \Expr{target}.
-    If the string \Expr{target} is a regular expression
+  \item[\Code{String regexps(String pattern, String target, String substitute  \Lbr\ , String options \Rbr) } ]
+    Uses the description of a regular expression 
+    given by string \Expr{pattern}
+    to scan through the string \Expr{target}.
+    When \Expr{target} is a regular expression
     as described by \Expr{pattern},
     the string \Expr{substitute} is returned,
     with backslash expansion performed.
-    The return value is \Expr{ERROR}, if any of the arguments
-    are not strings.
+    If any argument is not a string, returns \Expr{ERROR}.
 
   \index{ClassAd functions!stringList\_regexpMember()}
-  \item[\Code{Boolean stringList\_regexpMember(String pattern, String list \Lbr\ , String delimiter, String options \Rbr})]
-    Returns \Expr{TRUE} if the string \Expr{pattern} is a regular expression
-    that matches an item in the string \Expr{list}.
-    The optional \Expr{delimiter} string says how to delimit,
-    while string \Expr{options} modifies how the match is performed.
+  \item[\Code{Boolean stringList\_regexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr\ \Lbr\ , String options \Rbr) } ]
+    Uses the description of a regular expression 
+    given by string \Expr{pattern}
+    to scan through the list of strings in \Expr{list}.
+    Returns \Expr{TRUE} when one of the strings in \Expr{list} is 
+    a regular expression as described by \Expr{pattern}.
+    The optional \Expr{delimiter} describes how the list is delimited,
+    and string \Expr{options} modifies how the match is performed.
     Returns \Expr{FALSE} if \Expr{pattern} does not match any entries in
     \Expr{list}.
     The return value is \Expr{ERROR}, if any of the arguments

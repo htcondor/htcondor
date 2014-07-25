@@ -56,17 +56,22 @@ int _sysapi_startd_has_bad_utmp = FALSE;
 #endif
 
 #ifdef LINUX
-int _sysapi_count_hyperthread_cpus = FALSE;
+bool _sysapi_count_hyperthread_cpus = true;
 #elif defined WIN32
-int _sysapi_count_hyperthread_cpus = TRUE; // we can only detect hyperthreads until WinXP SP3
+bool _sysapi_count_hyperthread_cpus = true; // we can only detect hyperthreads on WinXP SP3 or later
 #endif
 
 /* needed by everyone, if this is false, then call sysapi_reconfig() */
 int _sysapi_config = 0;
 
 /* needed by ncpus.c */
+#if 1
+int _sysapi_detected_phys_cpus = 1; // we know we will have at least 1
+int _sysapi_detected_hyper_cpus = 1;
+#else
 int _sysapi_ncpus = 0;
 int _sysapi_max_ncpus = 0;
+#endif
 
 /* needed by phys_mem.c */
 int _sysapi_memory = 0;
@@ -147,12 +152,17 @@ sysapi_reconfig(void)
 	_sysapi_reserve_disk = param_integer_c( "RESERVED_DISK", 0, INT_MIN, INT_MAX );
 	_sysapi_reserve_disk *= 1024;    /* Parameter is in meg */
 
+#if 1
+	// _sysapi_detected_phys_cpus;
+	// _sysapi_detected_hyper_cpus;
+#else
 	_sysapi_ncpus = param_integer_c( "NUM_CPUS", 0, 0, INT_MAX );
 
 	_sysapi_max_ncpus = param_integer_c( "MAX_NUM_CPUS", 0, 0, INT_MAX );
 	if(_sysapi_max_ncpus < 0) {
 		_sysapi_max_ncpus = 0;
 	}
+#endif
 
 
 	_sysapi_memory = param_integer_c( "MEMORY", 0, 0, INT_MAX );
@@ -178,9 +188,9 @@ sysapi_reconfig(void)
 #ifdef LINUX
 	/* Should we count hyper threads? */
 	_sysapi_count_hyperthread_cpus = 
-		param_boolean_int("COUNT_HYPERTHREAD_CPUS", 1);
+		param_boolean("COUNT_HYPERTHREAD_CPUS", true);
 #elif defined WIN32
-	_sysapi_count_hyperthread_cpus = param_boolean_int("COUNT_HYPERTHREAD_CPUS", _sysapi_count_hyperthread_cpus);
+	_sysapi_count_hyperthread_cpus = param_boolean("COUNT_HYPERTHREAD_CPUS", _sysapi_count_hyperthread_cpus);
 #endif
 
 	/* tell the library I have configured myself */

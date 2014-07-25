@@ -38,8 +38,9 @@ my $firstappend_condor_config = '
 	SLOT4_CPU_AFFINITY = 3
 	SLOT5_CPU_AFFINITY = 4
 	SLOT5_IsGeneralPurposeSlot = False
-	START = ($(START)) \
-		&& ((TARGET.RequiresTypeB =?= TRUE && MY.SlotID == 5) \
+	#START = ($(START)) \
+		#&& ((TARGET.RequiresTypeB =?= TRUE && MY.SlotID == 5) \
+	START =  ((TARGET.RequiresTypeB =?= TRUE && MY.SlotID == 5) \
 		  || (TARGET.RequiresTypeB =!= TRUE && MY.SlotID != 5))
 	ALL_DEBUG = 
 ';

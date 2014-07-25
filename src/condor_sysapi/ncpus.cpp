@@ -64,9 +64,13 @@ static DWORD CountSetBits(ULONG_PTR bitMask)
 }
 #endif
 
+
+static bool need_cpu_detection = true;
+
 void
-sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
+sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 {
+	need_cpu_detection = false;
 
 	{
 #if defined(sequent)
@@ -99,80 +103,80 @@ sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
 	if( num_cpus ) *num_cpus = cpus;
 	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
 #elif defined(WIN32)
-	if(!_sysapi_count_hyperthread_cpus)
-	{
-		LPFN_GLPI glpi = NULL;
-		DWORD returnLength = 0;
-		int byteOffset = 0;
 		int coreCount = 0;
 		int logicalCoreCount = 0;
-		bool done = false;
-		PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = NULL;
-		PSYSTEM_LOGICAL_PROCESSOR_INFORMATION info = NULL;
+
+		LPFN_GLPI glpi = NULL;
 		HMODULE hmod = GetModuleHandle(TEXT("kernel32"));
 		if (hmod) {
 			glpi = (LPFN_GLPI) GetProcAddress(hmod, "GetLogicalProcessorInformation");
 		}
-		if(glpi == NULL)
+		if (glpi)
 		{
-			EXCEPT("Error: COUNT_HYPERTHREAD_CPUS can only be set to false on Windows XP SP3 or Windows 2003 SP1 or higher.\n");
-		}
-		while(!done)
-		{
-			DWORD rc = glpi(buffer, &returnLength);
-			if(rc == FALSE)
+			DWORD returnLength = 0;
+			int byteOffset = 0;
+			PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = NULL;
+			PSYSTEM_LOGICAL_PROCESSOR_INFORMATION info = NULL;
+
+			bool done = false;
+			while(!done)
 			{
-				if(GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+				DWORD rc = glpi(buffer, &returnLength);
+				if(rc == FALSE)
 				{
-					if(buffer)
-						free(buffer);
-					buffer = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION)malloc(returnLength);
-					if(!buffer)
-						EXCEPT("Error: Failed to allocate space for SYSTEM_LOGICAL_PROCESSOR_INFORMATION\n");
+					if(GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+					{
+						if(buffer)
+							free(buffer);
+						buffer = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION)malloc(returnLength);
+						if(!buffer)
+							EXCEPT("Error: Failed to allocate space for SYSTEM_LOGICAL_PROCESSOR_INFORMATION\n");
+					}
+					else
+					{
+						EXCEPT("Error: Failed to call GetLogicalProcessorInformation: %d\n", GetLastError());
+					}
 				}
 				else
 				{
-					EXCEPT("Error: Failed to call GetLogicalProcessorInformation: %d\n", GetLastError());
+					done = true;
+					if (!buffer)
+						EXCEPT("Error: Failed to get SYSTEM_LOGICAL_PROCESSOR_INFORMATION\n");
 				}
 			}
-			else
+
+			info = buffer;
+
+			coreCount = 0;
+			logicalCoreCount = 0;
+			while(byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength)
 			{
-				done = true;
-				if (!buffer)
-					EXCEPT("Error: Failed to get SYSTEM_LOGICAL_PROCESSOR_INFORMATION\n");
+				switch(info->Relationship)
+				{
+				case RelationProcessorCore:
+					coreCount++;
+					logicalCoreCount += CountSetBits(info->ProcessorMask);
+					break;
+				default:
+					break;
+				}
+
+				byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
+				info++;
 			}
+
+			free(buffer);
 		}
-
-		info = buffer;
-
-		while(byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength)
+		else
 		{
-			switch(info->Relationship)
-			{
-			case RelationProcessorCore:
-				coreCount++;
-				logicalCoreCount += CountSetBits(info->ProcessorMask);
-				break;
-			default:
-				break;
-			}
-
-			byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
-			info++;
+			SYSTEM_INFO info;
+			GetNativeSystemInfo(&info);
+			coreCount = logicalCoreCount = info.dwNumberOfProcessors;
 		}
 
 		if( num_cpus ) *num_cpus = coreCount;
 		if( num_hyperthread_cpus ) *num_hyperthread_cpus = logicalCoreCount;
 
-		free(buffer);
-	}
-	else
-	{
-		SYSTEM_INFO info;
-		GetNativeSystemInfo(&info);
-		if( num_cpus ) *num_cpus = info.dwNumberOfProcessors;
-		if( num_hyperthread_cpus ) *num_hyperthread_cpus = info.dwNumberOfProcessors;
-	}
 #elif defined(LINUX)
 	ncpus_linux(num_cpus,num_hyperthread_cpus );
 #elif defined(AIX)
@@ -195,6 +199,19 @@ sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
 
 }
 
+#if 1
+void sysapi_ncpus_raw(int * pncpus, int * pnhyperthread_cpus) {
+	if (need_cpu_detection) {
+		sysapi_detect_cpu_cores(&_sysapi_detected_phys_cpus, &_sysapi_detected_hyper_cpus);
+	}
+	if (pncpus) *pncpus = _sysapi_detected_phys_cpus;
+	if (pnhyperthread_cpus) *pnhyperthread_cpus = _sysapi_detected_hyper_cpus;
+}
+// NOTE: we do NOT want to param for NUM_CPUS here, only the startd really wants to be lied to about the number of cpus...
+void sysapi_ncpus(int * pncpus, int * pnhyperthread_cpus) {
+	sysapi_ncpus_raw(pncpus, pnhyperthread_cpus);
+}
+#else
 int
 sysapi_ncpus_raw(void)
 {
@@ -229,6 +246,7 @@ sysapi_ncpus(void)
 		}
 	}
 }
+#endif
 
 /*
  * Linux specific CPU counting logic; uses /proc/cpuinfo.

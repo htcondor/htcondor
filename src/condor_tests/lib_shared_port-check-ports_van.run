@@ -73,19 +73,27 @@ $execute = sub {
 	my $match;
 	my $found_listening_daemon = 0;
 	my $unexpected_listening_daemon = 1;
-	foreach(@lines) {
+	foreach my $line (@lines) {
 		$match = 0;
+		my $foundpid = 0;
+		# find target pid
+		if($line =~ /^.*?LISTEN\s+(\d+)\/.*$/) {
+			$foundpid = $1;
+		}
 		# go through all the pids
 		for($i = 0; $i < @pids && $match == 0; $i++) {
 			# check if this is a daemon we care about
-			if(index($_, @pids[$i] . '/', 0) != -1) {
+			
+			if("$foundpid" eq "@pids[$i]") {
+				print "Found an expected daemon\n";
+			#if(index($_, @pids[$i] . '/', 0) != -1) {
 				$match = 1;
-				if(index($_, "condor_sch", 0) == -1 &&
-					index($_, "condor_shar", 0) == -1 &&
-					index($_, "condor_coll", 0) == -1)
+				if(index($line, "condor_sch", 0) == -1 &&
+					index($line, "condor_shar", 0) == -1 &&
+					index($line, "condor_coll", 0) == -1)
 				{
 					$unexpected_listening_daemon = 0;
-					CondorTest::debug("Error: unexpected daemon has open listening tcp port ($_)\n", 1);
+					CondorTest::debug("Error: unexpected daemon has open listening tcp port ($line)\n", 1);
 				}
 				else
 				{
@@ -144,15 +152,20 @@ my $testname = "lib_shared_port-check-ports_van";
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterExitedSuccess ($testname, $success);
 
+my $logfile = "$testname.log";
+unlink($logfile);
+
 # submit file
 my $submit_fname = CondorTest::TempFileName("$testname.submit");
 open( SUBMIT, ">$submit_fname" ) || die "error writing to $submit_fname: $!\n";
-print SUBMIT "universe = vanilla\n";
-print SUBMIT "executable = x_sleep.pl\n";
-print SUBMIT "log = $testname.log\n";
-print SUBMIT "arguments = 10\n";
-print SUBMIT "notification = never\n";
-print SUBMIT "queue\n";
+print SUBMIT <<END;
+universe = vanilla
+executable = x_sleep.pl
+log = $logfile
+arguments = 10
+notification = never
+queue
+END
 close( SUBMIT );
 
 # run test

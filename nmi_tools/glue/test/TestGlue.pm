@@ -48,7 +48,11 @@ sub setup_test_environment {
         set_env("BASE_DIR", $base_dir);
         set_env("PATH", "$base_dir/nmi_tools/glue/test:$base_dir/condor/bin:$base_dir/condor/sbin:$ENV{PATH}");
         set_env("CONDOR_CONFIG", "$base_dir/condor_tests/TestingPersonalCondor/condor_config");
-		set_env("LD_LIBRARY_PATH","$ENV{LD_LIBRARY_PATH}:$base_dir/condor/libexec:$base_dir/condor/lib:$base_dir/condor/lib/python");
+		if(exists $ENV{LD_LIBRARY_PATH}) {
+			set_env("LD_LIBRARY_PATH","$ENV{LD_LIBRARY_PATH}:$base_dir/condor/libexec:$base_dir/condor/lib:$base_dir/condor/lib/python");
+		} else {
+			set_env("LD_LIBRARY_PATH","$base_dir/condor/libexec:$base_dir/condor/lib:$base_dir/condor/lib/python");
+		}
     }
     else {
         # Get the right slashes for Windows.  Apparently getcwd() returns forward slashes, even
@@ -89,10 +93,13 @@ sub setup_test_environment {
         # also, throw in the WIN32 version of the base directory path for later use
         set_env("WIN32_BASE_DIR", $base_dir);
 
-        print "----------------------------------\n";
-        print "Dumping environment:\n";
-        system("set");
-        print "----------------------------------\n\n";
+        # full environment dump to help debugging
+        if ( ! $force_cygwin ) {
+            print "----------------------------------\n";
+            print "Dumping environment:\n";
+            system("set");
+            print "----------------------------------\n\n";
+        }
     }
 }
 

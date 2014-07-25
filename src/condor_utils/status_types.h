@@ -24,6 +24,7 @@
 enum ppOption {
     PP_NOTSET,
 	
+	PP_DEFRAG_NORMAL,
     PP_STARTD_NORMAL,
     PP_STARTD_SERVER,
     PP_STARTD_STATE,
@@ -54,6 +55,7 @@ enum ppOption {
 // modes for condor_status
 enum Mode {
     MODE_NOTSET,
+	MODE_DEFRAG_NORMAL,
     MODE_STARTD_NORMAL,
     MODE_STARTD_AVAIL,
     MODE_STARTD_RUN,

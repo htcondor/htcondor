@@ -1,0 +1,204 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2013, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+
+
+# trip whitespace from beginning and end of a string
+sub trimws($) {
+    my $string = shift;
+    $string =~ s/^\s+//;
+    $string =~ s/\s+$//;
+    return $string;
+}
+
+
+my $testname = "job_cp_cclim_acctgrp_basic_van";
+my $test_passed = 0;
+my $pre_execution = 1;
+
+
+sub timed_callback {
+    if ($test_passed) {
+        # if we already detected that the test passed
+        return;
+    }
+    if ($pre_execution) {
+        # if we already detected that the test passed, or if 
+        # jobs aren't running yet, we can skip this callback.
+		CondorTest::RegisterTimed($testname, \&timed_callback, 15);
+        return;
+    }
+
+    my $stat = `condor_q -format "%s\n" AcctGroup -constraint "JobStatus == 2" | sort | uniq -c`;
+    my @slines = split /\n/, $stat;
+
+    my $tst = "";
+    foreach my $line (@slines) {
+        my $t = trimws($line);
+        $tst = $tst." ".$t;
+    }
+
+    if ($tst == " 1 a 2 b 2 c") {
+        # we detected the expected pattern of running jobs
+        $test_passed = 1;
+        # we found what we were looking for: now we want to clear the que
+        runcmd("condor_rm -all");
+    } else {
+        print "Haven't seen expected output yet.  What I saw was:\n";
+        print $stat;
+		CondorTest::RegisterTimed($testname, \&timed_callback, 15);
+        # if this check failed, wait a little:
+        sleep(5);
+    }
+}
+
+sub execute_callback {
+    if ($pre_execution) {
+        # only do this once, to let all jobs have a chance to spin up
+        sleep(10);
+    }
+    # flag that jobs have started
+    $pre_execution = 0;
+}
+
+sub exit_callback {
+    # by this time we had better have seen the running job pattern we were looking for
+    #unless ($test_passed) {
+        #die "Failed to find expected pattern of running jobs";
+    #}
+}
+
+
+my $append_condor_config = '
+DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, STARTD, SCHEDD
+
+NUM_CPUS = 8
+
+# startd-wide consumption policy config
+CONSUMPTION_POLICY = True
+
+CONSUMPTION_CPUS = 1
+CONSUMPTION_MEMORY = 25
+CONSUMPTION_DISK = 100
+
+# use a memory-centric slot weight
+SLOT_WEIGHT = floor(Memory / 25)
+
+# slot type 1: will demo/test a memory-centric policy
+SLOT_TYPE_1 = cpus=8,memory=150,disk=100%
+SLOT_TYPE_1_PARTITIONABLE = True
+NUM_SLOTS_TYPE_1 = 1
+
+# turn this off to demonstrate that consumption policy will handle this kind of logic
+MUST_MODIFY_REQUEST_EXPRS = False
+
+# turn off schedd-side resource splitting since we are demonstrating neg-side alternative
+CLAIM_PARTITIONABLE_LEFTOVERS = False
+
+# keep slot weights enabled for match costing
+NEGOTIATOR_USE_SLOT_WEIGHTS = True
+
+# for simplicity, turn off preemption, caching, worklife
+CLAIM_WORKLIFE=0
+MAXJOBRETIREMENTTIME = 3600
+PREEMPT = False
+RANK = 0
+PREEMPTION_REQUIREMENTS = False
+NEGOTIATOR_CONSIDER_PREEMPTION = False
+NEGOTIATOR_MATCHLIST_CACHING = False
+
+# verbose logging
+ALL_DEBUG = D_FULLDEBUG | D_ACCOUNTANT
+
+YYZ_LIMIT = 2
+
+GROUP_NAMES = a, b, c
+GROUP_QUOTA_a = 1
+GROUP_QUOTA_b = 2
+GROUP_QUOTA_c = 3
+GROUP_ACCEPT_SURPLUS = False
+GROUP_AUTOREGROUP = False
+
+# reduce daemon update latencies
+NEGOTIATOR_INTERVAL = 20
+SCHEDD_INTERVAL = 10
+
+# currently (circa 8.1.1) there is some weird interaction between
+# classad caching and calls to quantize() where 2nd arg is a list,
+# so just disabling caching for the time being.
+ENABLE_CLASSAD_CACHING = False
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
+);
+
+
+# submit jobs
+my $submit_body = '
+universe = vanilla
+executable = x_sleep.pl
+log = $testname.log
+output = $testname.out
+error = $testname.err
+notification = never
+arguments = 0
+#
+# jobs charged against group "a" (quota is 1)
+accounting_group = a
+queue 5
+#
+# jobs charged against group "b" (quota is 2)
+accounting_group = b
+queue 5
+#
+# jobs charged against group "c" (quota is 3) 
+# these jobs are also governed by cc-limit "yyz":
+accounting_group = c
+concurrency_limits = yyz
+queue 5
+';
+
+my $submit_filename = CondorTest::TempFileName("$testname.submit");
+open(SUBMIT, ">$submit_filename") || die "Failed to open $submit_filename\n";
+print SUBMIT $submit_body;
+close(SUBMIT);
+
+
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+};
+
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
+CondorTest::RegisterTimed($testname, \&timed_callback, 15);
+CondorTest::RegisterExecute($testname, \&execute_callback);
+
+CondorTest::RegisterExited($testname, \&exit_callback);
+CondorTest::RegisterExitedSuccess($testname, \&exit_callback);
+CondorTest::RegisterAbort($testname, \&exit_callback);
+
+if (CondorTest::RunTest($testname, $submit_filename, 0)) {
+    CondorTest::debug("$testname: SUCCESS\n",1);
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}

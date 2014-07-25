@@ -65,6 +65,9 @@ print CONFIGFILE "DAGMAN_MAX_SUBMITS_PER_INTERVAL = 1000\n";
 # This only works in 7.3.2 and later.
 print CONFIGFILE "DAGMAN_USER_LOG_SCAN_INTERVAL = 1\n";
 # print CONFIGFILE "DAGMAN_CONDOR_SUBMIT_EXE = dummy_condor_submit.pl\n";
+# Turning off userlog fsync() makes the test run an order of magnitude
+# faster, at least on RHEL 6.4.
+print CONFIGFILE "ENABLE_USERLOG_FSYNC = false\n";
 close(CONFIGFILE);
 
 #

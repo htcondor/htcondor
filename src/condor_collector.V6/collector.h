@@ -132,7 +132,7 @@ public:
     // data pertaining to each view collector entry
     struct vc_entry {
         std::string name;
-        Daemon* collector;
+        DCCollector* collector;
         Sock* sock;
     };
 

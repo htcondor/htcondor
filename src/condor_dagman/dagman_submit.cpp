@@ -243,7 +243,7 @@ do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType,
 bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString &DAGParentNodeNames,
-			   List<Job::NodeVar> *vars,
+			   List<Job::NodeVar> *vars, int retry,
 			   const char* directory, const char *defaultLog, bool appendDefaultLog,
 			   const char *logFile, bool prohibitMultiJobs, bool hold_claim )
 {
@@ -398,8 +398,16 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	ListIterator<Job::NodeVar> varsIter(*vars);
 	Job::NodeVar nodeVar;
 	while ( varsIter.Next(nodeVar) ) {
+
+			// Substitute the node retry count if necessary.  Note that
+			// we can't do this in Job::ResolveVarsInterpolations()
+			// because that's only called at parse time.
+		MyString value = nodeVar._value;
+		MyString retryStr( retry );
+		value.replaceString( "$(RETRY)", retryStr.Value() );
+		MyString varStr = nodeVar._name + " = " + value;
+
 		args.AppendArg( "-a" );
-		MyString varStr = nodeVar._name + " = " + nodeVar._value;
 		args.AppendArg( varStr.Value() );
 	}
 

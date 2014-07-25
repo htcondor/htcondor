@@ -40,8 +40,11 @@ my $pre_execution = 1;
 sub timed_callback {
     if ($pre_execution) {
         # jobs aren't running yet, we can skip this callback.
+		CondorTest::debug("timed_callback\n",1);
+		CondorTest::RegisterTimed($testname, \&timed_callback, 15);
         return;
     }
+	CondorTest::debug("timed_callback\n",1);
 
     # skip this tests if we have already passed it
     if (!$execute_test_passed) {
@@ -53,22 +56,28 @@ sub timed_callback {
             my $t = trimws($line);
             $tst = $tst." ".$t;
         }
+		CondorTest::debug("tst: $tst\n",1);
 
         if ($tst == " 2 a.user 2 b.user") {
             # we detected the expected pattern of running jobs
             $execute_test_passed = 1;
+			CondorTest::debug("Execute test passed\n",1);
         } else {
-            print "Did not see expected output.  What I saw was:\n";
-            print $stat;
+            CondorTest::debug("Did not see expected output.  What I saw was:\n",1);
+            CondorTest::debug("$stat\n",1);
             # if this check failed, wait a little:
             sleep(5);
         }
     }
 
     if (!$negotiate_test_passed) {
+        CondorTest::debug("Negotiate Test\n",1);
         my $neglog = trimws(`condor_config_val NEGOTIATOR_LOG`);
 	my @slines = grep(/(Group.* - BEGIN|Negotiating with .* at)/, CondorTest::slurp($neglog));
 
+		foreach my $line (@slines) {
+        	CondorTest::debug("nt: $line",1);
+		}
         # This always checks the first negotiation cycle (where somebody negotiated)
         my $succ = 1;
         my $expect = "";
@@ -97,9 +106,15 @@ sub timed_callback {
         unless ($saw_a_neg && $saw_b_neg) { $succ = 0; }
 
         if (!$succ) {
-            print "Did not see expected output.  What I saw was:\n";
-            print $stat;
-        }
+        	CondorTest::debug("Did not see expected output.  What I saw was:\n",1);
+        	CondorTest::debug("$stat\n",1);
+			CondorTest::RegisterTimed($testname, \&timed_callback, 15);
+        } else {
+        	CondorTest::debug("Saw what we wanted!\n",1);
+			runToolNTimes("condor_rm -all",1 ,0);
+			CondorTest::RegisterResult($succ, test_name, $testname);
+			CondorTest::EndTest();
+		}
         $negotiate_test_passed = $succ;
     }
 }
@@ -173,16 +188,17 @@ CondorTest::StartCondorWithParams(
     append_condor_config => $append_condor_config
 );
 
+my $job_log = "$testname.log";
 
 # submit jobs
 my $submit_body = "
 universe = vanilla
 executable = x_sleep.pl
-log = $testname.log
+log = $job_log
 output = $testname.out
 error = $testname.err
 notification = never
-arguments = 45
+arguments = 0
 +AccountingGroup=\"a.user\"
 queue 2
 +AccountingGroup=\"b.user\"
@@ -197,6 +213,9 @@ close(SUBMIT);
 CondorTest::RegisterTimed($testname, \&timed_callback, 15);
 CondorTest::RegisterExecute($testname, \&execute_callback);
 CondorTest::RegisterExitedSuccess($testname, \&exit_callback);
+
+# Ensure earlier output doesn't confuse us.
+unlink $job_log;
 
 if (CondorTest::RunTest($testname, $submit_filename, 0)) {
     CondorTest::debug("$testname: SUCCESS\n",1);

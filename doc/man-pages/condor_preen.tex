@@ -4,6 +4,7 @@
 \oOpt{-mail}
 \oOpt{-remove}
 \oOpt{-verbose}
+\oOpt{-debug}
 
 \index{HTCondor commands!condor\_preen}
 \index{condor\_preen command}
@@ -23,8 +24,9 @@ errors. This is done automatically by default by the \Condor{master} daemon.
 It may also be explicitly invoked on an as needed basis.
 
 When \Condor{preen} cleans the \MacroNI{SPOOL} directory, it always leaves
-behind the files specified in the configuration variable
-\Macro{VALID\_SPOOL\_FILES} as given by the configuration.
+behind the files specified in the configuration variables
+\Macro{VALID\_SPOOL\_FILES} and \Macro{SYSTEM\_VALID\_SPOOL\_FILES},
+as given by the configuration.
 For the \MacroNI{LOG} directory, the only files removed or reported are those
 listed within the configuration variable \Macro{INVALID\_LOG\_FILES} list.
 The reason for this difference is that, in general,
@@ -37,15 +39,18 @@ than those that are not to be removed.
 
 \begin{Options}
 
-	\OptItem{\Opt{-mail}}{Send mail to the user defined in the
-	\Macro{PREEN\_ADMIN} configuration variable,
-	instead of writing to the standard output.}
+  \OptItem{\Opt{-mail}}{Send mail to the user defined in the
+    \Macro{PREEN\_ADMIN} configuration variable,
+    instead of writing to the standard output.}
 
-	\OptItem{\Opt{-remove}}{Remove the offending files and directories
-	rather than reporting on them.}
+  \OptItem{\Opt{-remove}}{Remove the offending files and directories
+    rather than reporting on them.}
 
-	\OptItem{\Opt{-verbose}}{List all files found in the Condor
-	directories, even those which are not considered extraneous.}
+  \OptItem{\Opt{-verbose}}{List all files found in the Condor
+    directories, even those which are not considered extraneous.}
+
+  \OptItem{\Opt{-debug}}{Print extra debugging information as the command
+    executes.}
 
 \end{Options}
 

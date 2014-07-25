@@ -6303,7 +6303,7 @@ static bool test_v2_quoted_to_v2_raw_return_false_trail() {
 }
 
 static bool test_v2_quoted_to_v2_raw_return_true() {
-	emit_test("Test that V2QuotedToV2Raw() returns true for an valid V2 "
+	emit_test("Test that V2QuotedToV2Raw() returns true for a valid V2 "
 		"quoted string.");
 	MyString result, error;
 	bool expect = true;

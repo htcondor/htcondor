@@ -134,7 +134,7 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 	} else {
 		InputFiles = new StringList(NULL,",");
 	}
-	if (ad->LookupString(ATTR_JOB_INPUT, buf) == 1) {
+	if (ad->LookupString(ATTR_JOB_INPUT, buf, ATTRLIST_MAX_EXPRESSION) == 1) {
         // only add to list if not NULL_FILE (i.e. /dev/null)
         if ( ! nullFile(buf) ) {
             if ( !InputFiles->file_contains(buf) )

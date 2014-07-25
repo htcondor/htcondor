@@ -1,4 +1,4 @@
-%define tarball_version 8.1.2
+%define tarball_version 8.1.3
 
 # optionally define any of these, here or externally
 # % define fedora   16
@@ -105,7 +105,7 @@ Version: %{tarball_version}
 %global version_ %(tr . _ <<< %{version})
 
 # Only edit the %condor_base_release to bump the rev number
-%define condor_git_base_release 0.3
+%define condor_git_base_release 0.1
 %define condor_base_release 1
 %if %git_build
         %define condor_release %condor_git_base_release.%{git_rev}.git
@@ -168,18 +168,18 @@ Source101: blahp-1.16.5.1.tar.gz
 Source102: boost_1_49_0.tar.gz
 Source103: c-ares-1.3.0.tar.gz
 Source104: coredumper-2011.05.24-r31.tar.gz
-Source105: drmaa-1.6.tar.gz
-Source106: globus-5.2.1.tar.gz
-Source107: gridsite-1.6.0.src.tar.gz
-Source108: gsoap-2.7.10.tar.gz
-Source109: gsoap_2.7.6b.tar.gz
-Source110: libcgroup-0.37.tar.bz2
-Source111: libdeltacloud-0.9.tar.gz
-Source112: log4cpp-1.0-3.tar.gz
-Source113: org.glite.ce.cream-client-api-c-1.12.1-14.tar.gz
-Source114: org.glite.ce.wsdl-1.12.1-14.tar.gz
-Source115: org.glite.security.gsoap-plugin-2.0.1-3.tar.gz
-Source116: org.glite.security.gss-2.0.1-1.tar.gz
+Source105: drmaa-1.6.1.tar.gz
+Source106: glite-ce-cream-client-api-c-1.14.0-4.sl6.tar.gz
+Source107: glite-ce-wsdl-1.14.0-4.sl6.tar.gz
+Source108: glite-lbjp-common-gsoap-plugin-3.1.2-2.src.tar.gz
+Source109: glite-lbjp-common-gss-3.1.3-2.src.tar.gz
+Source110: gridsite-1.6.0.src.tar.gz
+Source111: gsoap-2.7.10.tar.gz
+Source112: gsoap_2.7.16.zip
+Source113: gt5.2.5-all-source-installer.tar.gz
+Source114: libcgroup-0.37.tar.bz2
+Source115: libdeltacloud-0.9.tar.gz
+Source116: log4cpp-1.0-3.tar.gz
 Source117: unicoregahp-1.2.0.tar.gz
 Source118: voms-2.0.6.tar.gz
 %endif
@@ -1108,7 +1108,11 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_chirp
 %_libexecdir/condor/condor_ssh
 %_libexecdir/condor/sshd.sh
+%_libexecdir/condor/condor_history_helper
 %_libexecdir/condor/condor_job_router
+%_libexecdir/condor/condor_pid_ns_init
+%_libexecdir/condor/condor_urlfetch
+%_libexecdir/condor/config_fetch
 %if %glexec
 %_libexecdir/condor/condor_glexec_setup
 %_libexecdir/condor/condor_glexec_run
@@ -1255,9 +1259,11 @@ rm -rf %{buildroot}
 %attr(6755, root, root) %_sbindir/condor_root_switchboard
 %_sbindir/condor_schedd
 %_sbindir/condor_shadow
+%_sbindir/condor_sos
 %_sbindir/condor_startd
 %_sbindir/condor_starter
 %_sbindir/condor_store_cred
+%_sbindir/condor_testwritelog
 %_sbindir/condor_transferd
 %_sbindir/condor_updates_stats
 %_sbindir/ec2_gahp
@@ -1268,6 +1274,7 @@ rm -rf %{buildroot}
 %_sbindir/grid_monitor.sh
 %_sbindir/remote_gahp
 %_sbindir/nordugrid_gahp
+%_sbindir/gce_gahp
 %_libexecdir/condor/condor_gpu_discovery
 %_sbindir/condor_vm_vmware
 %config(noreplace) %_sysconfdir/condor/condor_config.local
@@ -1559,6 +1566,7 @@ rm -rf %{buildroot}
 %_libdir/condor/libcondor_resolv.a
 %_libdir/condor/libcondor_z.a
 %_libdir/condor/libcondorsyscall.a
+%_libexecdir/condor/condor_ckpt_probe
 %ifarch %{ix86}
 %if 0%{?rhel} == 5
 %_libdir/condor/libcondorzsyscall.a

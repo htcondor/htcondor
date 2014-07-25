@@ -169,17 +169,10 @@ CollectorList::create( const char * pool )
 	CollectorList * result = new CollectorList();
 	DCCollector * collector = NULL;
 
-	if (pool) {
-			// Eventually we might want to query this collector
-			// for all the other collectors in the pool....
-		result->append (new DCCollector (pool));
-		return result;
-	}
-
-		// Read the new names from config file
+		// Read the new names from config file or use the given parameter
 	StringList collector_name_list;
 	char * collector_name_param = NULL;
-	collector_name_param = getCmHostFromConfig( "COLLECTOR" );
+	collector_name_param = pool ? strdup(pool) : getCmHostFromConfig( "COLLECTOR" );
 	if( collector_name_param ) {
 		collector_name_list.initializeFromString(collector_name_param);
 	
@@ -298,14 +291,11 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 	}
 	
 
-        while ( vCollectors.size() ) 
-        {
-            // choose a random collector in the list to query.
-            unsigned int idx = get_random_int() % vCollectors.size() ;
-            daemon = vCollectors[idx];
+	while ( vCollectors.size() ) {
+		// choose a random collector in the list to query.
+		unsigned int idx = get_random_int() % vCollectors.size() ;
+		daemon = vCollectors[idx];
 
-	    if ( !daemon->isBlacklisted() )
-	    {
 		if ( ! daemon->addr() ) {
 			if ( daemon->name() ) {
 				dprintf( D_ALWAYS,
@@ -316,40 +306,33 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 						 "Can't resolve nameless collector; skipping\n" );
 			}
 			problems_resolving = true;
-			
+		} else if ( daemon->isBlacklisted() ) {
+			dprintf( D_ALWAYS,"Collector %s blacklisted; skipping\n",
+					 daemon->name() );
+		} else {
+			dprintf (D_FULLDEBUG,
+					 "Trying to query collector %s\n",
+					 daemon->addr());
+
+			if( num_collectors > 1 ) {
+				daemon->blacklistMonitorQueryStarted();
+			}
+
+			result = cQuery.fetchAds (adList, daemon->addr(), errstack);
+
+			if( num_collectors > 1 ) {
+				daemon->blacklistMonitorQueryFinished( result == Q_OK );
+			}
+
+			if (result == Q_OK) {
+				return result;
+			}
 		}
-		else
-                {
 
-                    dprintf (D_FULLDEBUG, 
-                                    "Trying to query collector %s\n", 
-                                    daemon->addr());
-
-                    if( num_collectors > 1 ) {
-                            daemon->blacklistMonitorQueryStarted();
-                    }
-
-                    result = 
-                            cQuery.fetchAds (adList, daemon->addr(), errstack);
-
-                    if( num_collectors > 1 ) {
-                            daemon->blacklistMonitorQueryFinished( result == Q_OK );
-                    }
-
-                    if (result == Q_OK) {
-                            return result;
-                    }
-                }
-	    }
-	    else
-	    {
-	      dprintf( D_ALWAYS,"Collector %s blacklisted; skipping\n", daemon->name() );
-	    }
-
-	    // if you got here remove it from the list of potential candidates.
-	    vCollectors.erase( vCollectors.begin()+idx );
+		// if you got here remove it from the list of potential candidates.
+		vCollectors.erase( vCollectors.begin()+idx );
 	}
-			
+
 	// only push an error if the error stack exists and is currently empty
 	if(problems_resolving && errstack && !errstack->code(0)) {
 		char* tmplist = getCmHostFromConfig( "COLLECTOR" );

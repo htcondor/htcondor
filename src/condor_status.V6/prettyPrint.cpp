@@ -1187,7 +1187,7 @@ These are actually contained in the ClassAd.
 */
 
 const char *
-formatAdType ( char * type, AttrList *, Formatter &)
+formatAdType (const char * type, AttrList *, Formatter &)
 {
 	static char temp[19];
 	if ( ! type || ! type[0]) return "None";

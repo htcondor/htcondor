@@ -41,8 +41,8 @@ while(1) {
 	last if($size != $oldsize);
 }
 
-open CONDORQ,"condor_q -dag|" || die "Could not run condor_q";
-my @condorq = <CONDORQ>;
+my @condorq = ();
+runCondorTool("condor_q -dag",\@condorq, 2, {emit_output=>0});
 my $endline = $#condorq - 2;
 @condorq = @condorq[4..$endline];
 open OUT,">cmd_q_shows-dag.output";

@@ -641,40 +641,71 @@ heading of Submit Commands.
 %%%%%%%%%%%%%%%%%%%%
 
 In addition to the examples of submit description files given
-in the 
-\Condor{submit} manual page, here are a few more.
+here, there are more in the \Condor{submit} manual page.
 \index{submit description file!examples|(}
 
-\subsubsection{Example 1} 
+\begin{description}
+\item[Example 1]
+\end{description}
+Example 1 is one of the simplest submit description files possible. 
+It queues up the program \Prog{myexe} for execution somewhere in the pool. 
+Use of the vanilla universe is implied, as that is the default when
+not specified in the submit description file.
 
-Example 1 is one of the simplest submit description
-files possible. It queues up one copy of the program \Prog{foo}
-(which had been created by \Condor{compile})
-for execution by HTCondor.
-Since no platform is specified, HTCondor will use its default,
-which is to run the job on a machine which has the
-same architecture and operating system as the machine from which it was
-submitted. 
-No 
-\AdAttr{input},
-\AdAttr{output}, and
-\AdAttr{error}
-commands are given in the submit
-description file, so the
-files \File{stdin}, \File{stdout}, and \File{stderr} will all refer to 
-\File{/dev/null}.
-The program may produce output by explicitly opening a file and writing to
-it.
-A log file, \File{foo.log}, will also be produced that contains events
+An executable is compiled to run on a specific platform.
+Since this submit description file does not specify a platform,
+HTCondor will use its default,
+which is to run the job on a machine which has the same architecture 
+and operating system as the machine where \Condor{submit} is run
+to submit the job. 
+
+Standard input for this job will come from file \File{inputfile},
+as specified by the \SubmitCmd{input} command,
+and standard output for this job will go to file \File{outputfile},
+as specified by the \SubmitCmd{output} command.
+HTCondor expects to find these files in the current working directory,
+as this job is submitted,
+and the system will take care of getting the input file 
+to where it needs to be when the job is executed,
+as well as bring back the output results after job execution.
+
+A log file, \File{myexe.log}, will also be produced that contains events
 the job had during its lifetime inside of HTCondor.
 When the job finishes, its exit conditions will be noted in the log file.
-It is recommended that you always have a log file so you know what
-happened to your jobs.
+This file's contents are an excellent way to figure out what
+happened to submitted jobs.
 \begin{verbatim}
   ####################                                                    
   # 
   # Example 1                                                            
-  # Simple condor job description file                                    
+  # Simple HTCondor submit description file                                    
+  #                                                                       
+  ####################                                                    
+                                                                          
+  Executable   = myexe                                                    
+  Log          = myexe.log                                                    
+  Input        = inputfile
+  Output       = outputfile
+  Queue    
+\end{verbatim}
+
+\begin{description}
+\item[Example 2]
+\end{description}
+Example 2 queues up one copy of the program \Prog{foo}
+(which had been created by \Condor{compile})
+for execution by HTCondor.
+No \SubmitCmd{input}, \SubmitCmd{output}, or \SubmitCmd{error}
+commands are given in the submit description file,
+so \File{stdin}, \File{stdout}, and \File{stderr} will all refer to 
+\File{/dev/null}.
+The program may produce output by explicitly opening a file and writing to
+it.
+\begin{verbatim}
+  ####################                                                    
+  # 
+  # Example 2                                                            
+  # Standard universe submit description file
   #                                                                       
   ####################                                                    
                                                                           
@@ -684,31 +715,34 @@ happened to your jobs.
   Queue    
 \end{verbatim}
 
-\subsubsection{Example 2}
+\begin{description}
+\item[Example 3]
+\end{description}
 
-Example 2 queues two copies of the program \Prog{mathematica}. The
+Example 3 queues two copies of the program \Prog{mathematica}. The
 first copy will run in directory \File{run\_1}, and the second will run in
-directory \File{run\_2}. For both queued copies, 
+directory \File{run\_2} due to the \SubmitCmd{initialdir} command.
+For each copy, 
 \File{stdin} will be \File{test.data},
 \File{stdout} will be \File{loop.out}, and
 \File{stderr} will be \File{loop.error}.
-There will be two sets of files written,
-as the files are each written to their own directories.
-This is a convenient way to organize data if you
-have a large group of HTCondor jobs to run. The example file 
-shows program submission of
+Each run will read input and write output files within its own directory.
+Placing data files in separate directories 
+is a convenient way to organize data when
+a large group of HTCondor jobs is to run.
+The example file shows program submission of
 \Prog{mathematica} as a vanilla universe job.
-This may be necessary if the source
-and/or object code to \Prog{mathematica} is not available.
+The vanilla universe is most often the right choice of universe
+when the source and/or object code is not available.
 
-The \SubmitCmd{request\_memory} command is included to insure
+The \SubmitCmd{request\_memory} command is included to ensure
 that the \Prog{mathematica} jobs match with and then execute on
 pool machines that provide at least 1 GByte of memory.
 
 \begin{verbatim}
   ####################     
   #                       
-  # Example 2: demonstrate use of multiple     
+  # Example 3: demonstrate use of multiple     
   # directories for data organization.      
   #                                        
   ####################                    
@@ -728,15 +762,19 @@ pool machines that provide at least 1 GByte of memory.
   queue                     
 \end{verbatim}
 
-\subsubsection{Example 3}
+\begin{description}
+\item[Example 4]
+\end{description}
 
-The submit description file for Example 3 queues 150
+The submit description file for Example 4 queues 150
 \index{running multiple programs}
 runs of program \Prog{foo} which has been compiled and linked for
-LINUX running on a 32-bit Intel processor.
+Linux running on a 32-bit Intel processor.
 This job requires HTCondor to run the program on machines which have
-greater than 32 Mbytes of physical memory, and expresses a
-preference to run the program on machines with more than 64 Mbytes.
+greater than 32 Mbytes of physical memory, 
+and the \SubmitCmd{rank} command expresses a
+preference to run each instance of the program 
+on machines with more than 64 Mbytes.
 It also advises HTCondor that this standard universe job will
 use up to 28000 Kbytes of memory when running.
 Each of the 150 runs of the program is given its own process number,
@@ -754,8 +792,8 @@ will be written into the single file \File{foo.log}.
 \begin{verbatim}
   ####################                    
   #
-  # Example 3: Show off some fancy features including
-  # use of pre-defined macros and logging.
+  # Example 4: Show off some fancy features including
+  # the use of pre-defined macros.
   #
   ####################                                                    
 

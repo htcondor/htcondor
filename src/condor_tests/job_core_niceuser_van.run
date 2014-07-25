@@ -61,6 +61,10 @@ my $locport = shift @local;
 
 CondorTest::debug("---local config is $locconfig and local port is $locport---\n",$debuglevel);
 
+# Ensure previous runs don't pollute our results.
+# (Can cause failures)
+unlink $mycorenmlog;
+
 my $outcome = system("./job_core_niceuser_van.pl");
 #fails due to directory matching pattern
 runcmd("cp *job_core_niceuser_van* $mysaveme",{expect_result=>\&ANY});

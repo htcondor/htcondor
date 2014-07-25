@@ -205,7 +205,7 @@ our %submit_info = (
 			  '-DCMAKE_SUPPRESS_REGENERATION:BOOL' => 'TRUE', # because the windows VM doesn't keep time very well.
             },
 			'prereqs'	=> undef,
-			'xtests'	=> [],
+			'xtests'	=> undef,
 		},
 
 		'test' => {
@@ -265,6 +265,25 @@ our %submit_info = (
 	# Platform DEB 7 on x86_64
 	##########################################################################
 	'x86_64_Debian7'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+			},
+			'prereqs'	=> [ ],
+			'xtests'	=>	undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform RHEL 7 on x86_64
+	##########################################################################
+	'x86_64_RedHat7'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
@@ -533,7 +552,7 @@ our %submit_info = (
 	
 	'x86_64_Ubuntu12' => {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},

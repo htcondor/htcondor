@@ -141,7 +141,7 @@ TransferD::read_files_handler(int /* cmd */, Stream *sock)
 	if (treq->get_direction() != FTPD_DOWNLOAD) {
 			respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 			respad.Assign(ATTR_TREQ_INVALID_REASON, 
-				"Transfer Request was not an download request!");
+				"Transfer Request was not a download request!");
 			putClassAd(rsock, respad);
 			rsock->end_of_message();
 

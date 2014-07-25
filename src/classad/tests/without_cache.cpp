@@ -113,7 +113,6 @@ BOOST_AUTO_TEST_CASE( example_test )
 #endif
     ads.clear();
 
-    BOOST_CHECK_NO_THROW(); 
 }
 
 //BOOST_AUTO_TEST_SUITE_END()

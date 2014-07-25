@@ -19,20 +19,35 @@
 ##**************************************************************
 
 use CondorTest;
+use Check::SimpleJob;
+use CondorUtils;
 use strict;
 use warnings;
 
-my $cmd = 'cmd_q_shows-xml.cmd';
-my $cmdout = $cmd . ".out";
-my $testdesc =  'cmd_q_shows-xml  ';
 my $testname = "cmd_q_shows-xml";
 my $debuglevel = 2;
 my $worked = 0;
 
+my $ClusterId = 0;
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
+
 my @adarray;
 
 my $submit = sub {
-	my %info = @_;
 	my $cmd = "condor_q -xml ";
 
 	print "ok\n";
@@ -47,18 +62,7 @@ my $submit = sub {
 	print "ok\n";
 
 	my $submitline = "";
-	my $cluster = "";
-
-	open(CMD, "<$cmdout") || die "Can not find submit output:$!\n";;
-	while(<CMD>) {
-		chomp($_);
-		$submitline = $_;
-		if($submitline =~ /^.*cluster\s+(\d+).*$/) {
-			$cluster = $1;
-			CondorTest::debug("Found my cluster which is $cluster!\n",$debuglevel);
-		}
-		CondorTest::debug("$_\n",$debuglevel);
-	}
+	my $cluster = $ClusterId;
 
 	$cmd = "condor_rm $cluster";
 
@@ -76,7 +80,6 @@ my $submit = sub {
 			print "bad\n";
 			CondorTest::debug("Lines must be blank or start with <\n",$debuglevel);
 			CondorTest::debug("<<<$line>>>\n",$debuglevel);
-			$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
 			exit(1)
 		}
 	}
@@ -86,16 +89,13 @@ my $submit = sub {
 		print "bad\n";
 	}
 
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
-	return(0);
+	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8,{expect_result => ANY,emit_output=>0});
 };
 
 my $aborted = sub {
-	CondorTest::debug("If all is good we abort our own job.......\n",$debuglevel);
 };
 
 my $ExitSuccess = sub {
-	my %info = @_;
 };
 
 my $timed = sub
@@ -103,17 +103,14 @@ my $timed = sub
     die "Job should have ended by now. condor_q -xml broken!\n";
 };
 
-CondorTest::RegisterAbort($testname, $aborted);
-CondorTest::RegisterSubmit($testname, $submit);
-CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+print "Start a long runniing job - ";
 
-print "Submit a long running job on hold - ";
-
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
-}
+my $runresult = SimpleJob::RunCheck(
+	duration => 0,
+	on_abort => $aborted,
+	on_submit => $submit,
+	on_success => $ExitSuccess,
+	GetClusterId => $GetClusterId,
+);
 
 

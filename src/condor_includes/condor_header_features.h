@@ -76,4 +76,10 @@ b - Argument position of the "..."
 #endif
 #endif
 
+#if defined(__GNUC__)
+# define GCC_NORETURN __attribute__((__noreturn__))
+#else
+# define GCC_NORETURN
+#endif
+
 #endif /* CONDOR_SYS_FEATURES_H */

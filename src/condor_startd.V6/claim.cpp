@@ -1657,6 +1657,10 @@ Claim::makeFetchStarterArgs( ArgList &args )
 {
 	args.AppendArg("condor_starter");
 	args.AppendArg("-f");
+	if ( resmgr->is_smp() ) {
+		args.AppendArg("-a");
+		args.AppendArg(rip()->r_id_str);
+	}
 	args.AppendArg("-job-input-ad");
 	args.AppendArg("-");
 }

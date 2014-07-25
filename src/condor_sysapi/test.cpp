@@ -146,9 +146,9 @@ sysapi_test_dump_functions(void)
 	loo = sysapi_disk_space("/");
 	dprintf(D_ALWAYS, "SysAPI: sysapi_disk_space() -> %" PRIi64 "\n", loo);
 
-	foo = sysapi_ncpus_raw();
+	sysapi_ncpus_raw(&foo,NULL);
 	dprintf(D_ALWAYS, "SysAPI: sysapi_ncpus_raw() -> %d\n", foo);
-	foo = sysapi_ncpus();
+	sysapi_ncpus_raw(&foo, NULL);
 	dprintf(D_ALWAYS, "SysAPI: sysapi_ncpus() -> %d\n", foo);
 
 	foo = sysapi_mips_raw();

@@ -113,12 +113,7 @@ bool IOProxy::init( JICShadow *shadow, const char *config_file, bool want_io, bo
 		return false;
 	}
 
-	/* passing FALSE to bind means this is an incomming connection.
-	 * however, here we are going to pass TRUE because only machines
-	 * on this host need to connect to the ioproxy (chirp) socket,
-	 * so there is no need to register it with a ccb broker. 
-	 **/
-	if(!server->bind(TRUE)) {
+	if(!server->bind(false)) {
 		dprintf(D_ALWAYS,"IOProxy: couldn't bind: %s\n",strerror(errno));
 		return false;
 	}

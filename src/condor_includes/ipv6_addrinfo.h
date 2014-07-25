@@ -19,7 +19,7 @@
 
 
 #ifndef IPV6_ADDRINFO_H
-#define IPV6_ADDRNIFO_H
+#define IPV6_ADDRINFO_H
 
 //#include <string>
 

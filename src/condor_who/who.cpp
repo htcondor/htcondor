@@ -71,11 +71,15 @@ typedef std::map<std::string, LOG_INFO*> LOG_INFO_MAP;
 typedef std::map<std::string, pid_t> MAP_STRING_TO_PID;
 typedef std::map<pid_t, std::string> MAP_STRING_FROM_PID;
 typedef std::map<std::string, std::vector<std::string> > TABULAR_MAP;
+typedef std::map<std::string, std::string> MAP_STRING_TO_STRING;
 
 //char	*param();
 static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info);
 static void print_log_info(LOG_INFO_MAP & info);
-static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_pid);
+static void print_daemon_info(LOG_INFO_MAP & info, bool fQuick);
+static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_pid, bool fAddressesOnly);
+static void scan_a_log_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_pid, LOG_INFO_MAP::const_iterator & it);
+
 static void query_daemons_for_pids(LOG_INFO_MAP & info);
 static void ping_all_known_addrs(LOG_INFO_MAP & info);
 static char * get_daemon_param(const char * addr, const char * param_name);
@@ -93,9 +97,12 @@ static struct {
 	int    diagnostic; // output useful only to developers
 	bool   verbose;    // extra output useful to users
 	bool   wide;       // don't truncate to fit the screen
+	bool   show_daemons;
 	bool   show_full_ads;
 	bool   show_job_ad;     // debugging
 	bool   scan_pids;       // query all schedds found via ps/tasklist
+	bool   quick_scan;      // do only the scanning that can be done quickly (i.e. no talking to daemons)
+	bool   timed_scan;
 	bool   ping_all_addrs;	 //
 	int    test_backward;   // test backward reading code.
 	vector<pid_t> query_pids;
@@ -104,6 +111,8 @@ static struct {
 	vector<const char *> constraint;
 
 	// hold temporary results.
+	MAP_STRING_TO_STRING file_to_daemon; // map condor_xxxx_yyyy to daemon name XxxxxYyyy
+	MAP_STRING_TO_STRING log_to_daemon;  // map XxxYyyLog to daemon name XxxYyy
 	MAP_STRING_TO_PID   job_to_pid;
 	MAP_STRING_FROM_PID pid_to_program;	// pid to program/command line
 	MAP_STRING_FROM_PID pid_to_addr; // pid to sinful address
@@ -117,11 +126,26 @@ void InitAppGlobals(const char * argv0)
 	App.Name = argv0;
 	App.diagnostic = 0; // output useful only to developers
 	App.verbose = false;    // extra output useful to users
+	App.show_daemons = false; 
 	App.show_full_ads = false;
 	App.show_job_ad = false;     // debugging
 	App.scan_pids = false;
+	App.quick_scan = false;
 	App.ping_all_addrs = false;
 	App.test_backward = false;
+
+	// map Log name to daemon name for those that don't match the rule : 'remove Log'
+	App.log_to_daemon["Sched"] = "Schedd";
+	App.log_to_daemon["Start"] = "Startd";
+	App.log_to_daemon["Match"] = "Negotiator";
+	App.log_to_daemon["Cred"]  = "Credd";
+	App.log_to_daemon["Kbd"] = "Kbdd";
+
+	// map executable name to daemon name for those that don't match the rule : 'remove condor_ and lowercase'
+	App.file_to_daemon["shared_port"] = "SharedPort";
+	App.file_to_daemon["job_router"]  = "JobRouter";
+	App.file_to_daemon["ckpt_server"] = "CkptServer";
+
 }
 
 	// Tell folks how to use this program
@@ -279,7 +303,7 @@ format_slot_id (int slotid, AttrList * ad, Formatter & /*fmt*/)
 
 // print the pid for a jobid.
 static const char *
-format_jobid_pid (char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
+format_jobid_pid (const char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
 {
 	static char outstr[16];
 	outstr[0] = 0;
@@ -905,7 +929,7 @@ static void init_program_for_pid(pid_t pid)
 
 
 static const char *
-format_jobid_program (char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
+format_jobid_program (const char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
 {
 	const char * outstr = NULL;
 
@@ -978,6 +1002,12 @@ void parse_args(int /*argc*/, char *argv[])
 				if (pcolon) App.diagnostic = atoi(++pcolon);
 			} else if (IsArg(parg, "verbose", 4)) {
 				App.verbose = true;
+			} else if (IsArg(parg, "daemons", 3)) {
+				App.show_daemons = true;
+			} else if (IsArg(parg, "quick", 4)) {
+				App.quick_scan = true;
+			} else if (IsArg(parg, "timed", 5)) {
+				App.timed_scan = true;
 			} else if (IsArg(parg, "address", 4)) {
 				if ( ! argv[ixArg+1] || *argv[ixArg+1] == '-') {
 					fprintf(stderr, "Error: Argument %s requires a host address\n", argv[ixArg]);
@@ -1135,6 +1165,9 @@ void parse_args(int /*argc*/, char *argv[])
 				App.ping_all_addrs = true;
 			} else if (IsArgColon(parg, "test_backwards", &pcolon, 6)) {
 				App.test_backward = pcolon ? atoi(pcolon) : 1;
+			} else {
+				fprintf(stderr, "Error: %s is not a valid argument\n", argv[ixArg]);
+				exit(1);
 			}
 		}
 	}
@@ -1264,6 +1297,7 @@ void init_condor_config()
 int
 main( int argc, char *argv[] )
 {
+	time_t begin_time = time(NULL);
 	InitAppGlobals(argv[0]);
 
 #if !defined(WIN32)
@@ -1278,6 +1312,7 @@ main( int argc, char *argv[] )
 
 	// parse command line arguments here.
 	parse_args(argc, argv);
+	bool fAddressesOnly = App.show_daemons && ! App.verbose;
 
 	// setup initial config params from the default condor_config
 	// TODO: change config based on daemon that we are trying to query?
@@ -1301,13 +1336,19 @@ main( int argc, char *argv[] )
 				printf("    [%3d] %s\n", (int)ii, App.query_log_dirs[ii]);
 			}
 		}
+
 		// scrape the log directory, scanning master, startd and slot logs
 		// to pick up addresses, pids & exit codes.
 		//
 		for (size_t ii = 0; ii < App.query_log_dirs.size(); ++ii) {
 			LOG_INFO_MAP info;
 			query_log_dir(App.query_log_dirs[ii], info);
-			scan_logs_for_info(info, App.job_to_pid);
+			if (App.quick_scan) {
+				LOG_INFO_MAP::const_iterator it = info.find("Master");
+				if (it != info.end()) { scan_a_log_for_info(info, App.job_to_pid, it); }
+			} else {
+				scan_logs_for_info(info, App.job_to_pid, fAddressesOnly);
+			}
 
 			// if we got a STARTD address, push it's address onto the list
 			// that we want to query.
@@ -1320,16 +1361,25 @@ main( int argc, char *argv[] )
 			}
 
 			if(App.ping_all_addrs) { ping_all_known_addrs(info); }
-			// fill in missing PIDS for daemons by sending them DC_CONFIG_VAL commands
-			query_daemons_for_pids(info);
+
+			if ( ! App.quick_scan) {
+				// fill in missing PIDS for daemons by sending them DC_CONFIG_VAL commands
+				query_daemons_for_pids(info);
+			}
 
 			if (App.diagnostic || App.verbose) {
 				printf("\nLOG directory \"%s\"\n", App.query_log_dirs[ii]);
 				print_log_info(info);
+			} else if (App.show_daemons) {
+				printf("\nLOG directory \"%s\"\n", App.query_log_dirs[ii]);
+				print_daemon_info(info, App.quick_scan);
 			}
-
-
 		}
+	}
+
+	if (App.show_daemons && App.quick_scan) {
+		if (App.timed_scan) { printf("%d seconds\n", (int)(time(NULL) - begin_time)); }
+		exit(0);
 	}
 
 	// build a table of info from the output of ps or tasklist
@@ -1368,16 +1418,18 @@ main( int argc, char *argv[] )
 					if ( ! App.query_log_dirs.size()) {
 						char * logdir = get_daemon_param(addr.c_str(), "LOG");
 						if (logdir) {
-							if (App.diagnostic || App.verbose) {
+							if (App.diagnostic || App.verbose || App.show_daemons) {
 								printf("LOG directory for PID %d is \"%s\"\n", pid, logdir);
 							}
 
 							LOG_INFO_MAP info;
 							query_log_dir(logdir, info);
-							scan_logs_for_info(info, App.job_to_pid);
+							scan_logs_for_info(info, App.job_to_pid, fAddressesOnly);
 
 							if (App.diagnostic || App.verbose) {
 								print_log_info(info);
+							} else if (App.show_daemons) {
+								print_daemon_info(info, false);
 							}
 							free(logdir);
 						}
@@ -1385,6 +1437,11 @@ main( int argc, char *argv[] )
 				}
 			}
 		}
+	}
+
+	if (App.show_daemons) {
+		if (App.timed_scan) { printf("%d seconds\n", (int)(time(NULL) - begin_time)); }
+		exit(0);
 	}
 
 	// query any detected startd's for running jobs.
@@ -1733,13 +1790,19 @@ static void scan_a_log_for_info(
 						std::string daemon = line.substr(ix2, ix3-ix2);
 						std::string pid = line.substr(ix3+cch3, ix4-ix3-cch3);
 						lower_case(daemon);
-						daemon[0] = toupper(daemon[0]);
-						if (App.diagnostic)
-							printf("From Sent Signal: %s = %s\n", daemon.c_str(), pid.c_str());
+						MAP_STRING_TO_STRING::const_iterator alt = App.file_to_daemon.find(daemon);
+						if (alt != App.file_to_daemon.end()) { 
+							daemon = alt->second; 
+						} else {
+							daemon[0] = toupper(daemon[0]);
+						}
 						if (info.find(daemon) != info.end()) {
 							LOG_INFO * pliTemp = info[daemon];
-							if (pliTemp->pid.empty())
+							if (pliTemp->pid.empty()) {
 								pliTemp->pid = pid;
+								if (App.diagnostic)
+									printf("From Sent Signal: %s = %s\n", daemon.c_str(), pid.c_str());
+							}
 						}
 					}
 				}
@@ -1760,13 +1823,19 @@ static void scan_a_log_for_info(
 						if (ix4 > ix3 && ix4 < ix2) {
 							std::string daemon = line.substr(ix3+cch3,ix4-ix3-cch3);
 							lower_case(daemon);
-							daemon[0] = toupper(daemon[0]);
-							if (App.diagnostic)
-								printf("From Started DaemonCore process: %s = %s\n", daemon.c_str(), pid.c_str());
+							MAP_STRING_TO_STRING::const_iterator alt = App.file_to_daemon.find(daemon);
+							if (alt != App.file_to_daemon.end()) { 
+								daemon = alt->second; 
+							} else {
+								daemon[0] = toupper(daemon[0]);
+							}
 							if (info.find(daemon) != info.end()) {
 								LOG_INFO * pliD = info[daemon];
-								if (pliD->pid.empty())
+								if (pliD->pid.empty()) {
 									info[daemon]->pid = pid;
+									if (App.diagnostic)
+										printf("From Started DaemonCore process: %s = %s\n", daemon.c_str(), pid.c_str());
+								}
 							}
 						}
 					}
@@ -1789,14 +1858,16 @@ static void scan_a_log_for_info(
 
 						std::string exited_pid = line.substr(ix2+cch2, ix-ix2-cch2);
 						std::string exit_code = line.substr(ix+cch1);
-						if (App.diagnostic) {
-							printf("From exited with status: %s = %s (exit %s)\n",
-									daemon.c_str(), exited_pid.c_str(), exit_code.c_str());
-						}
 						if (info.find(daemon) != info.end()) {
 							LOG_INFO * pliD = info[daemon];
-							pliD->pid = exited_pid;
-							pliD->exit_code = exit_code;
+							if (pliD->pid.empty()) {
+								pliD->pid = exited_pid;
+								pliD->exit_code = exit_code;
+								if (App.diagnostic) {
+									printf("From exited with status: %s = %s (exit %s)\n",
+											daemon.c_str(), exited_pid.c_str(), exit_code.c_str());
+								}
+							}
 						}
 					}
 				}
@@ -1912,7 +1983,7 @@ static void scan_a_log_for_info(
 // and use that information to populate the info map and to build a mapping
 // of jobid to pid.
 //
-static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_pid)
+static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_pid, bool fAddressesOnly)
 {
 	// scan the master log first
 	LOG_INFO_MAP::const_iterator it = info.find("Master");
@@ -1923,7 +1994,7 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_p
 		// scan starter logs.
 		if (starts_with(it->first.c_str(),"Slot",NULL) || 
 			starts_with(it->first.c_str(),"Starter", NULL)) {
-			scan_a_log_for_info(info, job_to_pid, it);
+			if ( ! fAddressesOnly) { scan_a_log_for_info(info, job_to_pid, it); }
 			continue;
 		}
 
@@ -1932,8 +2003,9 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_p
 		LOG_INFO * pliDaemon = it->second;
 		if ( ! pliDaemon->pid.empty() && ! pliDaemon->addr.empty())
 			continue;
-
-		if (it->first != "Schedd" && it->first != "Startd")
+		if (it->first == "Shadow") // shadows don't even have command ports...
+			continue;
+		if (it->first != "Schedd" && it->first != "Startd" && ! fAddressesOnly)
 			continue;
 
 		scan_a_log_for_info(info, job_to_pid, it);
@@ -1959,17 +2031,27 @@ static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info)
 			//if (App.diagnostic) printf("\t\tAddress file: %s\n", name.c_str());
 		} else if (ends_with(file, "Log", &pu)) {
 			name.insert(0, file, pu-file);
+			MAP_STRING_TO_STRING::const_iterator alt = App.log_to_daemon.find(name);
+			if (alt != App.log_to_daemon.end()) { name = alt->second; }
+			/*
 			if (name == "Sched") name = "Schedd"; // the schedd log is called SchedLog
 			if (name == "Start") name = "Startd"; // the startd log is called StartLog
+			if (name == "Match") name = "Negotiator"; // the Match log is a secondary Negotiator log
 			if (name == "Cred") name = "Credd"; // the credd log is called CredLog
 			if (name == "Kbd") name = "Kbdd"; // the kbdd log is called KbdLog
+			*/
 			filetype = 2; // log
 		} else if (ends_with(file, "Log.old", &pu)) {
 			name.insert(0, file, pu-file);
+			MAP_STRING_TO_STRING::const_iterator alt = App.log_to_daemon.find(name);
+			if (alt != App.log_to_daemon.end()) { name = alt->second; }
+			/*
 			if (name == "Sched") name = "Schedd"; // the schedd log is called SchedLog
 			if (name == "Start") name = "Startd"; // the startd log is called StartLog
+			if (name == "Match") name = "Negotiator"; // the Match log is a secondary Negotiator log
 			if (name == "Cred") name = "Credd";
 			if (name == "Kbd") name = "Kbdd";
+			*/
 			filetype = 3; // previous.log
 		} else if (starts_with(file, "StarterLog.", &pu)) {
 			const char * pname = pu;
@@ -2022,6 +2104,62 @@ void print_log_info(LOG_INFO_MAP & info)
 	}
 }
 
+void print_daemon_info(LOG_INFO_MAP & info, bool fQuick)
+{
+	printf("\n");
+	if (fQuick) {
+		printf("%-12s %-6s %-6s %s\n", "Daemon", "PID", "Exit", "Addr");
+		printf("%-12s %-6s %-6s %s\n", "------", "---", "----", "----");
+	} else {
+		printf("%-12s %-6s %-6s %-6s %-6s %-24s %s\n", "Daemon", "Alive", "PID", "PPID", "Exit", "Addr", "Executable");
+		printf("%-12s %-6s %-6s %-6s %-6s %-24s %s\n", "------", "-----", "---", "----", "----", "----", "----------");
+	}
+	for (LOG_INFO_MAP::const_iterator it = info.begin(); it != info.end(); ++it)
+	{
+		LOG_INFO * pli = it->second;
+		if (pli->pid.empty() && pli->exit_code.empty() && pli->addr.empty())
+			continue;
+		bool active = false;
+		const char * pid = "no";
+		const char * last_pid = "no";
+		const char * exit = pli->exit_code.c_str();
+		if ( ! exit || !exit[0]) {
+			exit = "no";
+			pid = pli->pid.c_str();
+			if ( ! pid || !pid[0]) pid = "?";
+		} else {
+			last_pid = pli->pid.c_str();
+			if ( ! last_pid || !last_pid[0]) last_pid = "?";
+		}
+
+		char * pexe = NULL;
+		char * ppid = NULL;
+		if ( ! fQuick && ! pli->addr.empty() && ! pli->pid.empty() && pli->exit_code.empty()) {
+			ppid = get_daemon_param(pli->addr.c_str(), "PPID");
+			if (ppid) {
+				active = true;
+				pexe = get_daemon_param(pli->addr.c_str(), it->first.c_str());
+			}
+		}
+
+		if (fQuick) {
+			printf("%-12s %-6s %-6s %s\n", it->first.c_str(), pid, exit, pli->addr.c_str());
+		} else {
+			printf("%-12s %-6s %-6s %-6s %-6s %-24s %s\n",
+				it->first.c_str(),
+				active ? "yes" : "no",
+				pid, ppid ? ppid : "no", exit,
+				pli->addr.c_str(),
+				pexe ? pexe : pli->exe_path.c_str()
+			);
+		}
+
+		if (pexe) free(pexe);
+		if (ppid) free(ppid);
+	}
+}
+
+
 // make a DC config val query for a particular daemon.
 static char * get_daemon_param(const char * addr, const char * param_name)
 {
@@ -2036,13 +2174,13 @@ static char * get_daemon_param(const char * addr, const char * param_name)
 	sock.timeout(20);   // years of research... :)
 	sock.connect(addr);
 
-	dae.startCommand(DC_CONFIG_VAL, &sock, 2);
+	dae.startCommand(CONFIG_VAL, &sock, 2);
 
 	sock.encode();
 	//if (App.diagnostic) { printf("Querying %s for $(%s) param\n", addr, param_name); }
 
 	if ( ! sock.code(tmp_param_name)) {
-		if (App.diagnostic > 1) { fprintf(stderr, "Can't send DC_CONFIG_VAL for %s to %s\n", param_name, addr); }
+		if (App.diagnostic > 1) { fprintf(stderr, "Can't send CONFIG_VAL for %s to %s\n", param_name, addr); }
 	} else if ( ! sock.end_of_message()) {
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't send end of message to %s\n", addr); }
 	} else {

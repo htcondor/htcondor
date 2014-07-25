@@ -227,16 +227,16 @@ DELEGATE_JOB_GSI_CREDENTIALS = True
 ## The flags given in ALL_DEBUG are shared between all daemons.
 ##
 
-ALL_DEBUG               =
+#ALL_DEBUG               =
 
-MAX_SCHEDD_LOG		= 1000000
-SCHEDD_DEBUG		= D_PID
+#MAX_SCHEDD_LOG		= $(MAX_DEFAULT_LOG)
+#SCHEDD_DEBUG		= D_PID
 
-MAX_SHADOW_LOG		= 1000000
-SHADOW_DEBUG		=
+#MAX_SHADOW_LOG		= $(MAX_DEFAULT_LOG)
+#SHADOW_DEBUG		=
 
-MAX_MASTER_LOG		= 1000000
-MASTER_DEBUG		= 
+#MAX_MASTER_LOG		= $(MAX_DEFAULT_LOG)
+#MASTER_DEBUG		= 
 ##  When the master starts up, should it truncate it's log file?
 #TRUNC_MASTER_LOG_ON_OPEN        = False
 
@@ -544,7 +544,7 @@ VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, \
                           Accountant.log, Accountantnew.log, \
                           local_univ_execute, .quillwritepassword, \
 						  .pgpass, \
-			  .schedd_address, .schedd_classad
+			  .schedd_address, .schedd_address.super, .schedd_classad
 
 ##  What files should condor_preen remove from the log directory?
 INVALID_LOG_FILES	= core
@@ -571,7 +571,7 @@ GRID_MONITOR			= $(SBIN)/grid_monitor
 ##  Another option is to use /tmp as the location of the GridManager log.
 ##
 
-MAX_GRIDMANAGER_LOG	= 1000000
+MAX_GRIDMANAGER_LOG	= $(MAX_DEFAULT_LOG)
 GRIDMANAGER_DEBUG	= 
 
 GRIDMANAGER_LOG = $(LOG)/GridmanagerLog.$(USERNAME)
@@ -633,7 +633,7 @@ CONDOR_GAHP = $(SBIN)/condor_c-gahp
 ## UNIX permissions 1777 (just like /tmp )
 ## Another option is to use /tmp as the location of the CGAHP log.
 ## 
-MAX_C_GAHP_LOG	= 1000000
+MAX_C_GAHP_LOG	= $(MAX_DEFAULT_LOG)
 
 #C_GAHP_LOG = $(LOG)/GridLogs/CGAHPLog.$(USERNAME)
 C_GAHP_LOG = /tmp/CGAHPLog.$(USERNAME)

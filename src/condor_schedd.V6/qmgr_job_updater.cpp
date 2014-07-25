@@ -54,11 +54,11 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address,
 				schedd_address );
 	}
 	if( !job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
-		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_CLUSTER_ID);
+		EXCEPT("Job ad doesn't contain a %s attribute.", ATTR_CLUSTER_ID);
 	}
 
 	if( !job_ad->LookupInteger(ATTR_PROC_ID, proc)) {
-		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_PROC_ID);
+		EXCEPT("Job ad doesn't contain a %s attribute.", ATTR_PROC_ID);
 	}
 
 	// It is safest to read this attribute now, before the ad is
@@ -132,6 +132,21 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_DELEGATED_PROXY_EXPIRATION );
 	common_job_queue_attrs->insert( ATTR_BLOCK_WRITE_KBYTES );
 	common_job_queue_attrs->insert( ATTR_BLOCK_READ_KBYTES );
+	common_job_queue_attrs->insert( ATTR_BLOCK_WRITE_BYTES );
+	common_job_queue_attrs->insert( ATTR_BLOCK_READ_BYTES );
+	common_job_queue_attrs->insert( ATTR_BLOCK_WRITES );
+	common_job_queue_attrs->insert( ATTR_BLOCK_READS );
+    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READ_KBYTES );
+    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITE_KBYTES );
+    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READ_BYTES );
+    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITE_BYTES );
+    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READS );
+    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITES );
+    common_job_queue_attrs->insert( "StatsLastUpdateTimeStarter" );
+    common_job_queue_attrs->insert( "StatsLifetimeStarter" );
+    common_job_queue_attrs->insert( "RecentStatsLifetimeStarter" );
+    common_job_queue_attrs->insert( "RecentWindowMaxStarter" );
+    common_job_queue_attrs->insert( "RecentStatsTickTimeStarter" );
 	common_job_queue_attrs->insert( ATTR_JOB_VM_CPU_UTILIZATION );
 	common_job_queue_attrs->insert( ATTR_TRANSFERRING_INPUT );
 	common_job_queue_attrs->insert( ATTR_TRANSFERRING_OUTPUT );

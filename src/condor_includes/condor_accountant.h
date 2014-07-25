@@ -43,6 +43,10 @@ using std::string;
 // to be considered distinct values
 static const float PriorityDelta = 0.5;
 
+// local working attribute to stash match-cost on resource ads that have a 
+// request matched against them
+#define CP_MATCH_COST "_cp_match_cost"
+
 class ClassAdLog;
 struct GroupEntry;
 

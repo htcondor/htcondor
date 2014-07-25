@@ -19,11 +19,11 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
 use strict;
 use warnings;
 
-my $cmd      = 'cmd_q_shows-hold.cmd';
-my $testdesc =  'Condor_q shows jobs on hold - vanilla U';
 my $testname = "cmd_q_shows-hold";
 my $debuglevel = 2;
 
@@ -35,22 +35,36 @@ sub RUNNING{2};
 my $alreadydone=0;
 my @adarray;
 
+my $ClusterId = 0;
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
 my $abort = sub {
 	CondorTest::debug("Job is gone now, cool.\n",$debuglevel);
 };
 
 my $submit = sub
 {
-	my %args = @_;
-	my $cluster = $args{"cluster"};
 	my $header = 0;
 	my $reason = 0;
 
-	print "Job $cluster is supposed to be on hold.\n";
-	print "See if condor_q -hold $cluster says this -  ";
-	CondorTest::debug("Good. Cluster $cluster is supposed to be held.....\n",$debuglevel);
+	print "Job $ClusterId is supposed to be on hold.\n";
+	print "See if condor_q -hold $ClusterId says this -  ";
+	CondorTest::debug("Good. Cluster $ClusterId is supposed to be held.....\n",$debuglevel);
 	my $status = 1;
-	my $cmd = "condor_q -hold $cluster";
+	my $cmd = "condor_q -hold $ClusterId";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
@@ -77,11 +91,11 @@ my $submit = sub
 	if( $reason == 1 && $header == 1 )
 	{
 		
-		print "Releasing cluster $cluster - ";
-		CondorTest::debug("Good. Cluster $cluster needs to be released.....\n",$debuglevel);
-		CondorTest::debug("Releasing cluster $cluster\n",$debuglevel);
+		print "Releasing cluster $ClusterId - ";
+		CondorTest::debug("Good. Cluster $ClusterId needs to be released.....\n",$debuglevel);
+		CondorTest::debug("Releasing cluster $ClusterId\n",$debuglevel);
 		$status = 1;
-		$cmd = "condor_release $cluster";
+		$cmd = "condor_release $ClusterId";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{
@@ -102,14 +116,12 @@ my $submit = sub
 
 my $release = sub
 {
-	my %args = @_;
-	my $cluster = $args{"cluster"};
 
 	print "Cluster released - removing it - ";
 	CondorTest::debug("Good hold and release both worked! removing job\n",$debuglevel);
 	my @adarray;
 	my $status = 1;
-	my $cmd = "condor_rm $cluster";
+	my $cmd = "condor_rm $ClusterId";
 	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$status)
 	{
@@ -121,20 +133,25 @@ my $release = sub
 	#system("condor_q");
 };
 
+my $hold = sub
+{
+	print "Hold event seen\n";
+};
+
 my $success = sub
 {
 	die "Hold/Release/Remove/Abort is expected event trail!\n";
 };
 
-CondorTest::RegisterSubmit($testname, $submit);
-CondorTest::RegisterAbort($testname, $abort);
-CondorTest::RegisterRelease($testname, $release);
-CondorTest::RegisterExitedSuccess($testname, $success);
+my $runresult = SimpleJob::RunCheck(
+	duration => 0,
+	on_abort => $abort,
+	on_hold => $hold,
+	hold => "True",
+	on_submit => $submit,
+	on_success => $success,
+	on_released => $release,
+	GetClusterId => $GetClusterId,
+);
 
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
-}
 

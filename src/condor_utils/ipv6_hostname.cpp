@@ -84,11 +84,19 @@ void init_local_hostname()
 		return;
 	}
 
+	int retry_count = 20;
 	addrinfo_iterator ai;
+
+retry:
 	ret = ipv6_getaddrinfo(hostname, NULL, ai);
 	if (ret) {
-		dprintf(D_HOSTNAME, "ipv6_getaddrinfo() could not look up %s: %s (%d)\n", 
+		dprintf(D_ALWAYS, "init_local_hostname: ipv6_getaddrinfo() could not look up %s: %s (%d)\n", 
 			hostname, gai_strerror(ret), ret);
+		retry_count--;
+		if ((retry_count > 0) && (ret == EAI_AGAIN)) {
+			sleep(3);
+			goto retry;
+		}
 		return;
 	}
 	

@@ -66,11 +66,11 @@ const int CONDOR_HOLD_CODE_UnableToOpenInputStream = 10;
 //An internal Condor protocol error was encountered when transferring files.
 const int CONDOR_HOLD_CODE_InvalidTransferAck = 11;
 
-//The condor_starter failed to download input files.
+//The starter or shadow failed to receive or write job files.
 //The subcode will contain the unix errno.
 const int CONDOR_HOLD_CODE_DownloadFileError = 12;
 
-//The condor_starter failed to upload output files.
+//The starter or shadow failed to read or send job files.
 //The subcode will contain the unix errno.
 const int CONDOR_HOLD_CODE_UploadFileError = 13;
 
