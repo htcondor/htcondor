@@ -16,8 +16,15 @@
 #include <vector>
 #include <map>
 
-unsigned badCommandCount = 0;
 pthread_mutex_t bigGlobalMutex = PTHREAD_MUTEX_INITIALIZER;
+
+// Performance metrics.
+unsigned badCommandCount = 0;
+unsigned commandsSentCount = 0;
+
+unsigned curlCalledCount = 0;
+unsigned curlFailureCount = 0;
+unsigned badResponseCodeCount = 0;
 
 void configureSignals();
 static void * workerFunction( void * ptr );
@@ -358,19 +365,25 @@ std::string generatePostString( const CommandSet & commandSet ) {
 	} \
 }
 
-// TO DO: Either remove updateStatisticsLog() or, if the information is of
-// general interest, changed to obtain the file name and minimum interval
-// from the config system (param() and its table).
-void updateStatisticsLog( unsigned queueFullCount ) {
+// FIXME: Obtain the log file's name from configuration.
+// FIXME: use safe_open().
+template< class T >
+void updateStatisticsLog( const Queue<T> & queue ) {
 	static unsigned previousQueueFullCount = UINT_MAX;
 	static unsigned previousBadCommandCount = UINT_MAX;
+	static unsigned previousCurlFailureCount = UINT_MAX;
+	static unsigned previousBadResponseCodeCount = UINT_MAX;
 
-	if(  previousQueueFullCount == queueFullCount
-	  && previousBadCommandCount == previousBadCommandCount ) {
+	if(  previousQueueFullCount == queue.queueFullCount
+	  && previousBadCommandCount == badCommandCount
+	  && previousCurlFailureCount == curlFailureCount
+	  && previousBadResponseCodeCount == badResponseCodeCount ) {
 	  		return;
 	}
-	previousQueueFullCount = queueFullCount;
+	previousQueueFullCount = queue.queueFullCount;
 	previousBadCommandCount = badCommandCount;
+	previousCurlFailureCount = curlFailureCount;
+	previousBadResponseCodeCount = badResponseCodeCount;
 
 	int fd = open( "/tmp/pandaStatisticsLog", O_CREAT | O_APPEND | O_WRONLY | O_NONBLOCK, 00600 );
 	if( fd == -1 ) {
@@ -389,14 +402,33 @@ void updateStatisticsLog( unsigned queueFullCount ) {
 			  ns->tm_year + 1900, ns->tm_mon + 1, ns->tm_mday,
 			  ns->tm_hour, ns->tm_min, ns->tm_sec );
 
-	fprintf( psl, "[%s] queueFullCount: %u\n", nowString, queueFullCount );
+	fprintf( psl, "[%s] queueFullCount: %u\n", nowString, queue.queueFullCount );
+	fprintf( psl, "[%s] enqueueCallCount: %u\n", nowString, queue.enqueueCallCount );
+	fprintf( psl, "[%s] %.3f%% queue success rate.\n", nowString,
+		(1 - (queue.queueFullCount / (double)queue.enqueueCallCount)) * 100 );
+
 	fprintf( psl, "[%s] badCommandCount: %u\n", nowString, badCommandCount );
+	fprintf( psl, "[%s] commandsSentCount: %u\n", nowString, commandsSentCount );
+	fprintf( psl, "[%s] %.3f%% command success rate.\n", nowString,
+		(1 - (badCommandCount / (double)commandsSentCount )) * 100 );
+
+	fprintf( psl, "[%s] curlFailureCount: %u\n", nowString, curlFailureCount );
+	fprintf( psl, "[%s] badResponseCodeCount: %u\n", nowString, badResponseCodeCount );
+	fprintf( psl, "[%s] curlCalledCount: %u\n", nowString, curlCalledCount );
+	fprintf( psl, "[%s] %.3f%% total curl success rate.\n", nowString,
+		(1 - ((curlFailureCount + badResponseCodeCount) / (double)curlCalledCount)) * 100 );
+
+	fprintf( psl, "[%s]\n", nowString );
 	fclose( psl );
 }
 
-bool sendCommands( CURL * curl, const std::string & url, const std::string & verb, const CommandSet & commandSet, char * curlErrorBuffer, unsigned long & responseCode, unsigned queueFullCount ) {
+template< class T >
+bool sendCommands( CURL * curl, const std::string & url, const std::string & verb, const CommandSet & commandSet, char * curlErrorBuffer, unsigned long & responseCode, const Queue< T > & queue ) {
 	if( commandSet.size() == 0 ) { return false; }
 	std::string postString = generatePostString( commandSet );
+
+	++curlCalledCount;
+	commandsSentCount += commandSet.size();
 
 	dprintf( D_FULLDEBUG, "Sending commands to URL '%s'.\n", url.c_str() );
 	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_URL, url.c_str() );
@@ -406,7 +438,7 @@ bool sendCommands( CURL * curl, const std::string & url, const std::string & ver
 	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_POSTFIELDS, postString.c_str() );
 
 	pthread_mutex_unlock( & bigGlobalMutex );
-	updateStatisticsLog( queueFullCount );
+	updateStatisticsLog( queue );
 	CURLcode rv = curl_easy_perform( curl );
 	pthread_mutex_lock( & bigGlobalMutex );
 
@@ -417,6 +449,7 @@ bool sendCommands( CURL * curl, const std::string & url, const std::string & ver
 		// It would be nice, for performance monitoring, to dump some more
 		// information about the timed-out request here.
 
+		++curlFailureCount;
 		return false;
 	}
 
@@ -508,31 +541,34 @@ static void * workerFunction( void * ptr ) {
 		// Send all of the add commands.
 		resultString = "";
 		unsigned long responseCode = 0;
-		bool rc = sendCommands( curl, pandaURL, addJobVerb, addCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
+		bool rc = sendCommands( curl, pandaURL, addJobVerb, addCommands, curlErrorBuffer, responseCode, * queue );
 		if( rc ) {
 			dprintf( D_FULLDEBUG, "addJob() response code was %ld.\n", responseCode );
 			if( responseCode != 201 ) {
 				dprintf( D_ALWAYS, "addJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
+				++badResponseCodeCount;
 			}
 		}
 
 		// Send all the update commands.
 		resultString = "";
-		rc = sendCommands( curl, pandaURL, updateJobVerb, updateCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
+		rc = sendCommands( curl, pandaURL, updateJobVerb, updateCommands, curlErrorBuffer, responseCode, * queue );
 		if( rc ) {
 			dprintf( D_FULLDEBUG, "updateJob() response code was %ld.\n", responseCode );
 			if( responseCode != 200 ) {
 				dprintf( D_ALWAYS, "updateJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
+				++badResponseCodeCount;
 			}
 		}
 
 		// Send all the remove commands.
 		resultString = "";
-		rc = sendCommands( curl, pandaURL, removeJobVerb, removeCommands, curlErrorBuffer, responseCode, queue->queueFullCount );
+		rc = sendCommands( curl, pandaURL, removeJobVerb, removeCommands, curlErrorBuffer, responseCode, * queue );
 		if( rc ) {
 			dprintf( D_FULLDEBUG, "removeJob() response code was %ld.\n", responseCode );
 			if( responseCode != 204 ) {
 				dprintf( D_ALWAYS, "removeJob() ignoring non-OK (%ld) response '%s'.\n", responseCode, resultString.c_str() );
+				++badResponseCodeCount;
 			}
 		}
 

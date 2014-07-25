@@ -25,7 +25,7 @@
 template< class T >
 class Queue {
 	public:
-		Queue( unsigned _capacity, pthread_mutex_t * _mutex ) : capacity( _capacity ), mutex( _mutex ), queueFullCount( 0 ) {
+		Queue( unsigned _capacity, pthread_mutex_t * _mutex ) : capacity( _capacity ), mutex( _mutex ), queueFullCount( 0 ), enqueueCallCount( 0 ) {
 			pthread_cond_init( & nonempty, NULL );
 			pthread_cond_init( & drained, NULL );
 		}
@@ -50,10 +50,12 @@ class Queue {
 
 	public:
 		unsigned			queueFullCount;
+		unsigned			enqueueCallCount;
 };
 
 template< class T >
 void Queue< T >::enqueue( const T & item ) {
+	++enqueueCallCount;
 	if( storage.size() < capacity ) {
 		storage.push( item );
 		pthread_cond_broadcast( & nonempty );
