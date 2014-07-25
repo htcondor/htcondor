@@ -15,6 +15,11 @@ $|$ \OptArg{-constraint}{expression} $|$ -all }
 \Description
 
 \Condor{suspend} suspends one or more jobs from the HTCondor job queue.  
+When a job is suspended,
+the match between the \Condor{schedd} and machine is not been broken,
+such that the claim is still valid.
+But, the job is not making any progress and HTCondor is no longer 
+generating a load on the machine.
 If the \Opt{-name} option is specified, the named \Condor{schedd} is targeted
 for processing.  
 Otherwise, the local \Condor{schedd} is targeted.
