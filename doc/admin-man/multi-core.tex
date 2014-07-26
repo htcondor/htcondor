@@ -341,7 +341,7 @@ If the default policy is used,
 all slots notice
 tty and console activity
 and
-currently running jobs would suspend or preempt.
+currently running jobs would suspend.
 
 This example policy is
 controlled with the following configuration variables.
@@ -511,6 +511,39 @@ and slot-specific messages,
 such as the load average or state of each slot,
 get the slot number appended.  
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:GPU-resources}
+Configuring GPUs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{GPUs!configuration}
+\index{configuration!to use GPUs}
+HTCondor supports incorporating GPU resources and making them available 
+for jobs.
+First, GPUs must be detected as available resources.
+Then, machine ClassAd attributes advertise this availability.
+Both detection and advertisement are accomplished by having
+this configuration for each execute machine that has GPUs:
+\begin{verbatim}
+  use feature : GPUs
+\end{verbatim}
+
+Use of this metaknob invokes the \Condor{gpu\_discovery} tool
+to create a custom resource, with a custom
+resource name of \Expr{GPUs},
+and it generates the ClassAd attributes needed to advertise the GPUs.
+\Condor{gpu\_discovery} is invoked in a mode that discovers 
+and advertises both CUDA and OpenCL GPUs.
+
+This metaknob refers to macro \MacroNI{GPU\_DISCOVERY\_EXTRA},
+which may be used to define additional command line arguments 
+for the \Condor{gpu\_discovery} tool.
+For example, setting 
+\begin{verbatim}
+  use feature : GPUs
+  GPU_DISCOVERY_EXTRA = -extra
+\end{verbatim}
+causes the \Condor{gpu\_discovery} tool to output more attributes that
+describe the detected GPUs on the machine.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-exprs}
@@ -646,6 +679,7 @@ To do so, set the following configuration variables:
 \begin{verbatim}
 NUM_SLOTS=1
 NUM_SLOTS_TYPE_1=1
+SLOT_TYPE_1=100%
 SLOT_TYPE_1_PARTITIONABLE=true
 \end{verbatim}
 
@@ -751,7 +785,7 @@ and their defaults are
 
 \begin{description}
   \item{\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTCPUS} = \Expr{quantize(RequestCpus, \{1\})}}
-  \item{\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTMEMORY} = \Expr{quantize(RequestMemory, \{TotalSlotMem / TotalSlotCpus / 4\}) }}
+  \item{\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTMEMORY} = \Expr{quantize(RequestMemory, \{128\}) }}
   \item{\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTDISK} = \Expr{quantize(RequestDisk, \{1024\}) }}
 \end{description}
 

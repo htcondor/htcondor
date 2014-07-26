@@ -352,6 +352,13 @@ These names will be of the form ``slot\#@full.hostname'', for example,
 ``slot1@vulture.cs.wisc.edu'', which signifies slot number 1 from
 vulture.cs.wisc.edu.
 %
+\index{ClassAd machine attribute!Offline<name>}
+\label{OfflineName-machine-attribute}
+\item[\AdAttr{Offline<name>}:] A string that lists specific
+instances of a user-defined machine resource,
+identified by \Attr{name}. 
+Each instance is currently unavailable for purposes of match making.
+%
 \index{ClassAd machine attribute!OpSys}
 \label{OpSys-machine-attribute}
 \item[\AdAttr{OpSys}:] String describing the operating system running on this
@@ -360,7 +367,7 @@ Currently supported operating systems have the following string
 definitions:
 	\begin{description}
 	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x,
-	LINUX 2.4.x, or LINUX 2.6.x kernel systems, as well as Scientific Linux 
+	LINUX 2.4.x, LINUX 2.6.x, or LINUX 3.10.0 kernel systems, as well as Scientific Linux 
         and Ubuntu 12.04
 	\item[\AdStr{OSX}:] for Darwin
 	\item[\AdStr{FREEBSD7}:] for FreeBSD 7
@@ -384,6 +391,7 @@ concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
 	\begin{description}
 	\item[\AdStr{RedHat5}:] for RedHat Linux version 5
 	\item[\AdStr{RedHat6}:] for RedHat Linux version 6
+	\item[\AdStr{RedHat7}:] for RedHat Linux version 7 \emph{Beta}
 	\item[\AdStr{Fedora16}:] for Fedora Linux version 16
 	\item[\AdStr{Debian5}:] for Debian Linux version 5
 	\item[\AdStr{Debian6}:] for Debian Linux version 6
@@ -428,7 +436,7 @@ concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
 Currently supported operating systems have the following string
 definitions:
 	\begin{description}
-	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x, LINUX 2.4.x, or LINUX 2.6.x kernel systems, as well as Scientific Linux and  Ubuntu 12.04 versions
+	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x, LINUX 2.4.x, LINUX 2.6.x, or LINUX 3.10.0 kernel systems, as well as Scientific Linux and  Ubuntu 12.04 versions
 	\item[\AdStr{OSX}:] for Darwin
 	\item[\AdStr{FREEBSD7}:] for FreeBSD version 7
 	\item[\AdStr{FREEBSD8}:] for FreeBSD version 8
@@ -445,6 +453,7 @@ with extra characters stripped off Debian versions.
 	\begin{description}
 	\item[\AdStr{Red Hat Enterprise Linux Server release 5.7 (Tikanga)}:] for RedHat Linux version 5
 	\item[\AdStr{Red Hat Enterprise Linux Server release 6.2 (Santiago)}:] for RedHat Linux version 6
+	\item[\AdStr{Red Hat Enterprise Linux Everything release 7.0 (Maipo)}:] for RedHat Linux version 7.0 \emph{Beta}
 	\item[\AdStr{Ubuntu 12.04.3 LTS}:] for Ubuntu 12.04 point release 3 
 	\item[\AdStr{Fedora release 16 (Verne)}:] for Fedora Linux version 16
 	\item[\AdStr{MacOSX 6.5}:] for MacOS version 10.6.5 (Snow Leopard)
@@ -463,6 +472,7 @@ with extra characters stripped off Debian versions.
 and derived platforms such as Scientific Linux
 	\item[\Expr{6}:] for RedHat Linux version 6
 and derived platforms such as Scientific Linux
+	\item[\Expr{7}:] for RedHat Linux version 7 \emph{Beta}
 	\item[\Expr{12}:] for Ubuntu 12.04
 	\item[\Expr{16}:] for Fedora Linux version 16
 	\item[\Expr{6}:] for MacOS version 10.6.5 (Snow Leopard)
@@ -478,7 +488,7 @@ and derived platforms such as Scientific Linux
 \index{ClassAd machine attribute!OpSysName}
 \item[\AdAttr{OpSysName}:] A string containing a terse description of the operating system.
 	\begin{description}
-	\item[\AdStr{RedHat}:] for RedHat Linux version 6
+	\item[\AdStr{RedHat}:] for RedHat Linux version 6 and 7 \emph{Beta}
 	\item[\AdStr{Fedora}:] for Fedora Linux version 16
 	\item[\AdStr{Ubuntu}:] for Ubuntu 12.04
 	\item[\AdStr{SnowLeopard}:] for MacOS version 10.6.5 (Snow Leopard)
@@ -498,7 +508,7 @@ and derived platforms such as Scientific Linux
 \item[\AdAttr{OpSysShortName}:] A string containing a short name for
 the operating system.
 	\begin{description}
-	\item[\AdStr{RedHat}:] for RedHat Linux version 5 or 6
+	\item[\AdStr{RedHat}:] for RedHat Linux version 5, 6 or 7 \emph{Beta}
 	\item[\AdStr{Fedora}:] for Fedora Linux version 16
 	\item[\AdStr{Debian}:] for Debian Linux version 5 or 6
 	\item[\AdStr{Ubuntu}:] for Ubuntu 12.04
@@ -519,6 +529,7 @@ for MacOS version 10.7.3 (Lion)
 \item[\AdAttr{OpSysVer}:] An integer value representing the operating system
 version number.
 	\begin{description}
+	\item[\Expr{700}:] for RedHat Linux version 7.0 \emph{Beta}
 	\item[\Expr{602}:] for RedHat Linux version 6.2
 	\item[\Expr{1600}:] for Fedora Linux version 16.0
 	\item[\Expr{1204}:] for Ubuntu 12.04
@@ -941,6 +952,102 @@ such that they will continue to exist after the \Condor{collector} restarts.
 \index{ClassAd machine attribute (when offline)!Unhibernate}
 \item[\AdAttr{Unhibernate}:] A boolean expression that specifies when
 a hibernating machine should be woken up, for example, by \Condor{rooster}.
+
+\end{description}
+
+For machines with user-defined or custom resource specifications,
+including GPUs, 
+the following attributes will be in the ClassAd for each slot.
+In the name of the attribute,
+\Attr{<name>} is substituted with the configured name given to the resource.
+
+\begin{description}
+
+\index{ClassAd machine attribute (for a user-defined resource)!Assigned<name>}
+\item[\AdAttr{Assigned<name>}:] A space separated list that 
+identifies which of these resources are currently assigned to slots.
+
+\index{ClassAd machine attribute (for a user-defined resource)!Offline<name>}
+\item[\AdAttr{Offline<name>}:] A space separated list that
+indicates which of these resources is unavailable for match making.
+
+\index{ClassAd machine attribute (for a user-defined resource)!Total<name>}
+\item[\AdAttr{Total<name>}:] An integer quantity of the total number of
+these resources.
+
+\end{description}
+
+For machines with custom resource specifications that include GPUs,
+the following attributes may be in the ClassAd for each slot,
+depending on the value of configuration variable
+\Macro{MACHINE\_RESOURCE\_INVENTORY\_GPUs}
+and what GPUs are detected.
+In the name of the attribute,
+\Attr{<name>} is substituted with the \Arg{prefix string} 
+assigned for the GPU.
+
+\begin{description}
+
+\index{ClassAd machine attribute (for GPU resources)!<name>BoardTempC}
+\item[\AdAttr{<name>BoardTempC}:] For NVIDIA devices,
+a dynamic attribute representing the temperature in Celsius of 
+the board containing the GPU.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>Capability}
+\item[\AdAttr{<name>Capability}:] The CUDA-defined capability for the GPU.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>ClockMhz}
+\item[\AdAttr{<name>ClockMhz}:] For CUDA or Open CL devices,
+the integer clocking speed of the GPU in MHz.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>ComputeUnits}
+\item[\AdAttr{<name>ComputeUnits}:] For CUDA or Open CL devices,
+the integer number of compute units per GPU.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>CoresPerCU}
+\item[\AdAttr{<name>CoresPerCU}:] For CUDA devices,
+the integer number of cores per compute unit.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>DeviceName}
+\item[\AdAttr{<name>DeviceName}:] For CUDA or Open CL devices,
+a string representing the manufacturer's proprietary device name.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>DieTempC}
+\item[\AdAttr{<name>DieTempC}:] For NVIDIA devices,
+a dynamic attribute representing the temperature in Celsius of the GPU die.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>DriverVersion}
+\item[\AdAttr{<name>DriverVersion}:] For CUDA devices,
+a string representing the manufacturer's driver version.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>ECCEnabled}
+\item[\AdAttr{<name>ECCEnabled}:] For CUDA or Open CL devices,
+a boolean value representing whether error correction is enabled.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>EccErrorsDoubleBit}
+\item[\AdAttr{<name>EccErrorsDoubleBit}:] For NVIDIA devices,
+a count of the number of double bit errors detected for this GPU.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>EccErrorsSingleBit}
+\item[\AdAttr{<name>EccErrorsSingleBit}:] For NVIDIA devices,
+a count of the number of single bit errors detected for this GPU.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>FanSpeedPct}
+\item[\AdAttr{<name>FanSpeedPct}:] For NVIDIA devices,
+a value between 0 and 100 (inclusive), used to represent the level
+of fan operation as percentage of full fan speed. 
+
+\index{ClassAd machine attribute (for GPU resources)!<name>GlobalMemoryMb}
+\item[\AdAttr{<name>GlobalMemoryMb}:] For CUDA or Open CL devices,
+the quantity of memory in Mbytes in this GPU.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>OpenCLVersion}
+\item[\AdAttr{<name>OpenCLVersion}:] For Open CL devices,
+a string representing the manufacturer's version number.
+
+\index{ClassAd machine attribute (for GPU resources)!<name>RuntimeVersion}
+\item[\AdAttr{<name>RuntimeVersion}:] For CUDA devices,
+a string representing the manufacturer's version number.
 
 \end{description}
 

@@ -23,6 +23,36 @@
 // depends on these headers
 //#include "condor_header_features.h"
 
+/*
+ * This is a simple pool allocator for storing string data, it is intended 
+ * to be used in conjunction with other data structures that that want to
+ * mix pointers to string literals with pointers to dynamic strings.
+ *
+ * strings stored in this pool can be treated as string literals in other
+ * data structures.  They can be freed all at once when no longer needed.
+ * They cannot be freed individually. So use the pool allocator only in
+ * conjunction with other data structures that have finite lifetime.
+ *
+ * For instance, if you have List<const char> that you want to use to store
+ * data temporarily, you can do this.
+ *
+ *    POOL_ALLOCATOR pool;
+ *    List<const char> stuff;
+
+ *    // build the list
+ *    stuff.insert("literal"); // literals can be stored directly in in the list
+ *    MyString number; number.formatstr("%d", num);
+ *    const char * number_lit = pool.insert(number.Value()); // generated strings are stored in the string pool
+ *    stuff.insert(number_lit); // and can then be treated as a string literal in the List
+ *
+ *    // use the list here
+ *
+ *    // free the list and pool of strings (if any)
+ *    stuff.Rewind(); while (stuff.DeleteCurrent());
+ *    pool.clear();
+ *
+ */
+
 typedef struct _allocation_hunk {
 	int ixFree;   // index of first free byte in pb
 	int cbAlloc;  // allocation size of pb
@@ -47,16 +77,27 @@ typedef struct _allocation_pool {
 	};
 	int alignment() const { return 1; };
 	int def_first_alloc() const { return 4 * 1024; };
+	// free all pool memory
 	void clear();
+	// allocate pool memory and return a pointer 
 	char * consume(int cb, int cbAlign);
+	// insert arbitrary data into the pool and return a pointer.
 	const char * insert(const char * pbInsert, int cbInsert);
+	// insert a string into the pool and return a pointer.
 	const char * insert(const char * psz);
+	// check to see if a pointer was allocated from this pool
 	bool contains(const char * pb);
-	void free(const char * psz);
+	// free an allocation and everything allocated after it.
+	// may fail if pb is not the most recent allocation.
+	void free(const char * pb);
+	// reserve space in the pool. (allocates at least this much contiguous from the system)
 	void reserve(int cbLeaveFree);
+	// compact the pool, leaving at least this much free space
 	void compact(int cbLeaveFree);
+	// swap allocations with another pool. (used to defragment the param table)
 	void swap(struct _allocation_pool & other);
-	int  usage(int & cHunks, int & cbFree); // returns total used size.
+	// get total used size, total number of system allocations and amount of free space in the pool.
+	int  usage(int & cHunks, int & cbFree);
 #endif
 
 } ALLOCATION_POOL;

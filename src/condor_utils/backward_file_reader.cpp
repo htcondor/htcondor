@@ -34,7 +34,7 @@ BackwardFileReader::BWReaderBuffer::BWReaderBuffer(int cb/*=0*/, char * input /*
 		cbAlloc = cbData = cb;
 	} else if (cb > 0) {
 		data = (char*)malloc(cb);
-		memset(data, 17, cb);
+		if (data) memset(data, 17, cb);
 		cbData = 0;
 	}
 }

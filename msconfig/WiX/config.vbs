@@ -6,8 +6,13 @@ Function ReplaceConfig(configName, newValue, srcTxt)
   Set matches = re.Execute(srcTxt)
   if matches.Count = 0 then
     re.Pattern = "^#" & configName & "[ \t]*=.+$"
+    Set matches = re.Execute(srcText)
   end if
-  ReplaceConfig = re.Replace(srcTxt, configName & "=" & newValue)
+  if matches.Count = 0 then
+    ReplaceConfig = srcTxt & configName & " = " & newValue & VbCrLf
+  else
+    ReplaceConfig = re.Replace(srcTxt, configName & " = " & newValue)
+  end if
 End Function
 
 Function CreateConfig2()
@@ -29,13 +34,14 @@ Function CreateConfig2()
 
   Set Configfile = fso.OpenTextFile(path & "etc\condor_config.generic", 1, True)
   configTxt = Configfile.ReadAll
+  configTxt = configTxt & VbCrLf
   Configfile.Close
 
   configTxt = ReplaceConfig("RELEASE_DIR",strippedPath,configTxt)
 
   localConfig = Session.Property("LOCALCONFIG")
   if Left(localConfig, 4) = "http" Then
-     localConfigCmd = "config_fetch " & localConfig & " $$(LOCAL_DIR)\condor_config.local_cache |"
+     localConfigCmd = "condor_urlfetch -$$(SUBSYSTEM) " & localConfig & " $$(LOCAL_DIR)\condor_config.url_cache |"
      configTxt = ReplaceConfig("LOCAL_CONFIG_FILE",localConfigCmd,configTxt)
   Else
      configTxt = ReplaceConfig("LOCAL_CONFIG_FILE",localConfig,configTxt)

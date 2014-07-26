@@ -436,18 +436,22 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	}
 
 	// If there is a requested coresize for this job, enforce it.
-	// It is truncated because you can't put an unsigned integer
-	// into a classad. I could rewrite condor's use of ATTR_CORE_SIZE to
-	// be a float, but then when that attribute is read/written to the
-	// job queue log by/or shared between versions of Condor which view the
-	// type of that attribute differently, calamity would arise.
-	int core_size_truncated;
+	// Convert negative and very large values to RLIM_INFINITY, meaning
+	// no size limit.
+	// RLIM_INFINITY is unsigned, but its value and type size vary.
+	long long core_size_ad;
 	size_t core_size;
 	size_t *core_size_ptr = NULL;
-	if ( JobAd->LookupInteger( ATTR_CORE_SIZE, core_size_truncated ) ) {
-		core_size = (size_t)core_size_truncated;
+#if !defined(WIN32)
+	if ( JobAd->LookupInteger( ATTR_CORE_SIZE, core_size_ad ) ) {
+		if ( core_size_ad < 0 || (unsigned long long)core_size_ad > RLIM_INFINITY ) {
+			core_size = RLIM_INFINITY;
+		} else {
+			core_size = (size_t)core_size_ad;
+		}
 		core_size_ptr = &core_size;
 	}
+#endif // !defined(WIN32)
 
 	long rlimit_as_hard_limit = 0;
 	char *rlimit_expr = param("STARTER_RLIMIT_AS");

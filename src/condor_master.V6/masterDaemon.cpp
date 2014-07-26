@@ -54,6 +54,10 @@ int g_systemd_count = -2;
 bool g_usable_unixsock = true;
 #endif
 
+#ifdef WIN32
+#include <sstream>
+#endif
+
 // these are defined in master.C
 extern int 		MasterLockFD;
 extern FileLock*	MasterLock;
@@ -560,6 +564,13 @@ int daemon::RealStart( )
 	ArgList args;
 
 	param(default_id, "SHARED_PORT_DEFAULT_ID");
+		// Windows has a global pipe namespace, meaning that several instances of
+		// HTCondor share the same default ID; we make it unique below.
+#ifdef WIN32
+	std::stringstream ss;
+	ss << default_id << "_" << getpid();
+	default_id = ss.str();
+#endif
 
 	// Copy a couple of checks from Start
 	dprintf( D_FULLDEBUG, "::RealStart; %s on_hold=%d\n", name_in_config_file, on_hold );
@@ -668,8 +679,9 @@ int daemon::RealStart( )
 
 		if (command_port == -1) {
 				// strange....
-			command_port = COLLECTOR_PORT;
-			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", COLLECTOR_PORT);
+			int default_port = !strcmp(name_in_config_file, "SHARED_PORT") ? param_integer("SHARED_PORT_PORT", COLLECTOR_PORT) : param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
+			command_port = default_port;
+			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", default_port);
 		}
 
 		if (collector_uses_shared_port && !strcmp(name_in_config_file,"COLLECTOR")) {
@@ -802,6 +814,9 @@ int daemon::RealStart( )
 	}
 	if( !strcmp(name_in_config_file,"SHARED_PORT") ) {
 		jobopts |= DCJOBOPT_NO_UDP | DCJOBOPT_NEVER_USE_SHARED_PORT;
+#ifdef WIN32
+		env.SetEnv("_condor_SHARED_PORT_DEFAULT_ID", default_id.c_str());
+#endif
 	}
 
 #if defined(HAVE_SD_DAEMON_H)
@@ -2858,9 +2873,11 @@ Daemons::UpdateCollector()
 #endif
 #endif
 
+	if ( FILEObj ) {
 		// log classad into sql log so that it can be updated to DB
-	FILESQL::daemonAdInsert(ad, "MasterAd", FILEObj, prevLHF);
-	
+		FILESQL::daemonAdInsert(ad, "MasterAd", FILEObj, prevLHF);
+	}
+
 		// Reset the timer so we don't do another period update until 
 	daemonCore->Reset_Timer( update_tid, update_interval, update_interval );
 

@@ -64,19 +64,33 @@ XML-formatted.
 
 \\ \hline
 
+\texttt{lock( file\_obj, lock\_type )}
+
+Take a lock on a file object using the HTCondor locking protocol,
+which is distinct from typical POSIX locks.
+Returns a context manager object; the lock is released as
+this context manager object is destroyed.
+
+Parameter \texttt{file\_obj} is a file object corresponding to the file
+which should be locked.
+
+Parameter \texttt{lock\_type} specifies the string
+\texttt{"ReadLock"} if the lock should be for reads 
+or \texttt{"WriteLock"} if the lock should be for writes.
+
+\\ \hline
+
 \texttt{enable\_debug( )}
 
-Enable debugging output from HTCondor (output is sent to stdout).
-
-The log level is controlled by TOOL\_DEBUG.
+Enable debugging output from HTCondor, where output is sent to \texttt{stderr}.
+The logging level is controlled by \MacroNI{TOOL\_DEBUG}.
 
 \\ \hline
 \texttt{enable\_log( )}
 
-Enable debugging output from HTCondor (output is sent to a logfile).
-
-The log level is controlled by TOOL\_DEBUG; the logfile used is controlled
-by TOOL\_LOG.
+Enable debugging output from HTCondor, where output is sent to a file.
+The log level is controlled by \MacroNI{TOOL\_DEBUG},
+and the file used is controlled by \MacroNI{TOOL\_LOG}.
 
 \end{tabular}
 \end{flushleft}
@@ -85,7 +99,7 @@ by TOOL\_LOG.
 a dictionary-like object providing access to the configuration variables
 in the current HTCondor configuration.
 
-\textbf{The \Condor{schedd} class:}
+\textbf{The \texttt{Schedd} class:}
 \begin{flushleft}
 \begin{tabular}{|p{14cm}|} \hline
 
@@ -96,6 +110,29 @@ Create an instance of the \texttt{Schedd} class.
 Optional parameter \texttt{classad} 
 describes the location of the remote \Condor{schedd} daemon.
 If the parameter is omitted, the local \Condor{schedd} daemon is used.
+\\ \hline
+\texttt{transaction( flags = 0, continue\_txn = False ) }
+
+Start a transaction with the \Condor{schedd}.
+Returns a transaction context manager.
+Starting a new transaction while one is ongoing is an error. 
+
+The optional parameter \texttt{flags} defaults to 0.
+Transaction flags are from the the enum \texttt{htcondor.TransactionFlags},
+and the three flags are
+\texttt{NonDurable}, \texttt{SetDirty}, or \texttt{ShouldLog}. 
+\texttt{NonDurable} is used for performance, as it eliminates 
+extra \Procedure{fsync} calls.
+If the \Condor{schedd} crashes before the transaction is written to disk,
+the transaction will be retried on restart of the  \Condor{schedd}. 
+\texttt{SetDirty} marks the changed ClassAds as dirty,
+so an update notification is sent to the \Condor{shadow} and 
+the \Condor{gridmanager}. 
+\texttt{ShouldLog} causes changes to the job queue to be logged
+in the job event log file.
+
+The optional parameter \texttt{continue\_txn} defaults to \texttt{false};
+set the value to \texttt{true} to extend an ongoing transaction. 
 \\ \hline
 \texttt{act( (JobAction)action, (object)job\_spec )}
 
@@ -136,6 +173,20 @@ It defaults to \texttt{True}.
 
 Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
 daemon to project along.  
+It defaults to having the \Condor{schedd} daemon return all attributes.
+\\ \hline
+\texttt{xquery( constraint = true, attr\_list = [] )}
+
+Query the \Condor{schedd} daemon for jobs.
+Returns an iterator of ClassAds representing the matching jobs
+containing at least the list of attributes requested by the second parameter.
+
+The optional parameter \texttt{constraint} provides a constraint for
+filtering out jobs.
+It defaults to \texttt{True}.
+
+Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
+daemon to project along.
 It defaults to having the \Condor{schedd} daemon return all attributes.
 \\ \hline
 \texttt{submit( ad, count = 1, spool = false, ad\_results = None )}
@@ -186,13 +237,17 @@ the list of job output sandboxes to retrieve.
 \\ \hline
 \texttt{refreshGSIProxy(cluster, proc, filename, lifetime)}
 
-Refresh the GSI proxy of a job (identified by \texttt{cluster} and \texttt{proc} IDs).
-
+Refresh the GSI proxy of a job with job identifier given
+by parameters \texttt{cluster} and \texttt{proc}.
 This will refresh the remote proxy with the contents of the file identified
-by \texttt{filename}.  The parameter \texttt{lifetime} indicates the desired
-lifetime (in seconds) of delegated proxy; 0 indicates to not shorten
-the proxy lifetime.  -1 indicates to use the value of parameter
-DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME.  Note that, depending on the lifetime
+by parameter \texttt{filename}.  
+
+Parameter \texttt{lifetime} indicates the desired
+lifetime (in seconds) of the delegated proxy.
+A value of 0 specifies to not shorten the proxy lifetime.
+A value of -1 specifies to use the value of configuration variable
+\MacroNI{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}.
+Note that, depending on the lifetime
 of the proxy in \texttt{filename}, the resulting lifetime may be shorter
 than the desired lifetime.
 
@@ -207,8 +262,10 @@ than the desired lifetime.
 
 Create an instance of the \texttt{Collector} class.  
 
-Optional parameter \texttt{pool} is a string with host:port pair specified.
-If omitted, the local \Condor{schedd} daemon is used.
+Optional parameter \texttt{pool} is a string with host:port pair specified or
+a list of pairs.
+If omitted, the value of configuration variable \MacroNI{COLLECTOR\_HOST} 
+is used.
 \\ \hline
 \texttt{locate( (DaemonTypes)daemon\_type, (str)name )}
 
@@ -544,6 +601,31 @@ Parse old ClassAd format input into a ClassAd.
 
 Return the version of the linked ClassAd library.
 \\ \hline
+\texttt{Attribute( name )}
+
+Given the string \texttt{name}, 
+return an \texttt{ExprTree} object which is a
+reference to an attribute of that name.
+The ClassAd expression \Expr{foo == 1} can be constructed 
+by the python \Expr{Attribute("foo") == 1}.
+
+\\ \hline
+\texttt{Function( name, arg1, arg2, ... )}
+
+Given function name \texttt{name}, and zero-or-more arguments, 
+construct an \texttt{ExprTree} which is a function call expression.  
+The function is not evaluated.
+The ClassAd expression \Expr{strcat("hello ", "world")} 
+can be constructed by the python 
+\Expr{Function("strcat", "hello ", "world")}.
+
+\\ \hline
+\texttt{Literal( obj )}
+
+Given python object \texttt{obj}, convert it to a ClassAd literal.
+Python strings, floats, integers, and booleans have equivalent literals.
+
+\\ \hline
 
 \end{tabular}
 \end{flushleft}
@@ -691,12 +773,41 @@ ClassAds where the ClassAds are in the Old ClassAd format.
 
 Returns an iterator.
 \\ \hline
+\texttt{flatten( expression )}
+
+Given \texttt{ExprTree} object \texttt{expression}, 
+perform a partial evaluation.  
+All the attributes in \texttt{expression} and
+defined in this object are evaluated and expanded.  Any constant
+expressions, such as \Expr{1 + 2}, are evaluated.  
+
+Returns a new \texttt{ExprTree} object.
+\\ \hline
+\texttt{matches( ad )}
+
+Given \texttt{ClassAd} object \texttt{ad}, 
+check to see if this object matches the \Code{Requirements} attribute 
+of \texttt{ad}.
+Returns \texttt{true} if it does.
+
+\\ \hline
+\texttt{symmetricMatch( ad )}
+
+Returns \texttt{true} if the given \texttt{ad} matches this and this matches
+\Code{ad}.  Equivalent to \texttt{self.matches(ad) and ad.matches(self)}.
+\\ \hline
+
 \end{tabular}
 \end{flushleft}
 
 
 \textbf{The \Expr{ExprTree} class} object
-represents an expression in the ClassAd language.
+represents an expression in the ClassAd language.  The python operators
+for \texttt{ExprTree} have been overloaded so, if \texttt{e1} and \texttt{e2}
+are \texttt{ExprTree} objects, then \texttt{e1 + e2} is also a \texttt{ExprTree}
+object.  Lazy-evaluation is used, so an expression \texttt{"foo" + 1} does not
+produce an error until it is evaluated with a call to \Code{bool()} or the
+\Code{.eval()} class member.
 
 \textbf{\texttt{ExprTree} class methods:}
 \begin{flushleft}

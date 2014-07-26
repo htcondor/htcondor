@@ -140,7 +140,7 @@ BOOST_AUTO_TEST_CASE(cp_supports_policy_1) {
 BOOST_FIXTURE_TEST_CASE(cp_compute_1, cpfix) {
     BOOST_CHECK(cp_supports_policy(resource));
 
-    map<string, double> consumption;
+    consumption_map_t consumption;
     cp_compute_consumption(request, resource, consumption);
 
     BOOST_CHECK_EQUAL((int)consumption["cpus"], 2);
@@ -159,7 +159,7 @@ BOOST_FIXTURE_TEST_CASE(cp_compute_2, cpfix) {
     formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, "Actuators");
     request.Delete(attr.c_str());
 
-    map<string, double> consumption;
+    consumption_map_t consumption;
     cp_compute_consumption(request, resource, consumption);
 
     BOOST_CHECK_EQUAL((int)consumption["cpus"], 2);
@@ -182,7 +182,7 @@ BOOST_FIXTURE_TEST_CASE(cp_compute_3, cpfix) {
     formatstr(attr, "_condor_%s%s", ATTR_REQUEST_PREFIX, "Actuators");
     request.Assign(attr.c_str(), 9);
 
-    map<string, double> consumption;
+    consumption_map_t consumption;
     cp_compute_consumption(request, resource, consumption);
 
     BOOST_CHECK_EQUAL((int)consumption["cpus"], 2);
@@ -201,7 +201,7 @@ BOOST_FIXTURE_TEST_CASE(cp_compute_3, cpfix) {
 BOOST_FIXTURE_TEST_CASE(cp_override_1, cpfix) {
     BOOST_CHECK(cp_supports_policy(resource));
 
-    map<string, double> consumption;
+    consumption_map_t consumption;
     cp_override_requested(request, resource, consumption);
 
     string attr;
@@ -240,7 +240,7 @@ BOOST_FIXTURE_TEST_CASE(cp_restore_1, cpfix) {
     BOOST_CHECK(cp_supports_policy(resource));
 
     // override the values
-    map<string, double> consumption;
+    consumption_map_t consumption;
     cp_override_requested(request, resource, consumption);
 
     // now restore them and verify the result
@@ -301,7 +301,7 @@ BOOST_FIXTURE_TEST_CASE(cp_sufficient_1, cpfix) {
 BOOST_FIXTURE_TEST_CASE(cp_sufficient_2, cpfix) {
     BOOST_CHECK(cp_supports_policy(resource));
 
-    map<string, double> consumption;
+    consumption_map_t consumption;
     cp_compute_consumption(request, resource, consumption);
     BOOST_CHECK(cp_sufficient_assets(resource, consumption));
 

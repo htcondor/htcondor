@@ -255,6 +255,7 @@ static void Debug_Subst_Hex_ODS(const TCHAR * pmsg, const DWORD * pHex, int cHex
    TCHAR sz[200];
    UINT  cch = lstrlen(pmsg)+1;
    CopyMemory(sz, pmsg, cch*sizeof(TCHAR));
+   sz[(sizeof(sz)/sizeof(TCHAR))-1] = 0;
 
    TCHAR * psz = sz + cch;
 

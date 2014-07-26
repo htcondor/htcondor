@@ -40,7 +40,7 @@ $|=1;
 
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 my $logsize = "50000000"; # size for logs of personal Condor
-my $force_cygwin = 1; # force a switch to cygwin perl before running batch test.
+my $force_cygwin = 0; # force a switch to cygwin perl before running batch test.
 
 # Hard-coded filename, defined in test_platform_pre
 my $tarball_file = "CONDOR-TARBALL-NAME";
@@ -151,7 +151,7 @@ else {
 
 print "Condor version: $version\n";
 
-print "SETTING UP PERSONAL CONDOR\n";
+print "CONGIGURING PERSONAL CONDOR\n";
 
 # I'm not 100% certain wtf this actually does. 
 if( not TestGlue::is_windows() ) {
@@ -202,7 +202,7 @@ else {
 	if (!($^O =~ /cygwin/)) {
 		if ( ! $force_cygwin && ($ENV{COMPUTERNAME} =~ /^EXEC\-/)) {
 			print "attempting to run tests using current perl\n";
-			#$ENV{PATH} = "$Win32BaseDir\\msconfig;$ENV{PATH}";
+			$ENV{PATH} = "$Win32BaseDir\\msconfig;$ENV{PATH}";
 			print "PATH=$ENV{PATH}\n";
 		} else {
 			print "adding cygwin to the front of the path\n";
@@ -221,3 +221,21 @@ else {
 		}
 	}
 }
+
+# we need a shorter path for socket dirs so we place file in condor_tests
+# which has the master folder dir in /tmp.
+if( not TestGlue::is_windows() ) {
+	my $privatetmploc = "/tmp/tds$$";
+	print "tmp loc:$privatetmploc\n";
+	my $socketdir = "condor_tests/SOCKETDIR";
+	system("mkdir $privatetmploc;ls /tmp");
+	open(SD,">$socketdir") or print "Failed to create:$socketdir:$!\n";
+	print SD "$privatetmploc\n";
+	close(SD);
+} else {
+	print "Not preparing SOCKETDIR. Believe it is windows\n";
+}
+
+# create initial configs
+#print "Caling prepare_for_configs: basedir:$BaseDir\n";
+TestGlue::prepare_for_configs($BaseDir);

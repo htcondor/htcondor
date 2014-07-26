@@ -1,0 +1,17 @@
+diff -u -r gsoap-2.7/gsoap/stdsoap2.h gsoap-2.7-patched/gsoap/stdsoap2.h
+--- gsoap-2.7/gsoap/stdsoap2.h	2010-04-06 11:23:14.000000000 -0500
++++ gsoap-2.7-patched/gsoap/stdsoap2.h	2014-03-04 11:13:21.432011926 -0600
+@@ -55,6 +55,13 @@
+ # include "soapdefs.h"		/* include user-defined stuff */
+ #endif
+ 
++/* Explicitly enable IPv6, to match how we build the gsoap libraries,
++ * ensuring it's enabled in all source files that include this header.
++ */
++#ifndef WITH_IPV6
++# define WITH_IPV6
++#endif
++
+ #ifndef _THREAD_SAFE
+ # define _THREAD_SAFE
+ #endif

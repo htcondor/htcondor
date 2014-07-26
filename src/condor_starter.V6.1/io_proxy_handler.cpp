@@ -461,6 +461,12 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		}
 		r->put_line_raw(line);
 		
+	} else if(m_enable_updates && sscanf_chirp(line,"phase %s", name)==1) {
+
+		result = REMOTE_CONDOR_phase( name );
+		sprintf(line, "%d", convert(result,errno));
+		r->put_line_raw(line);
+
 	} else if(m_enable_updates && sscanf_chirp(line,"ulog %s", name)==1) {
 
 		GenericEvent event;

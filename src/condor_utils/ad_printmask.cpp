@@ -33,9 +33,11 @@ AttrListPrintMask ()
 	, col_prefix(NULL)
 	, col_suffix(NULL)
 	, row_suffix(NULL)
+	, stringpool(3)
 {
 }
 
+#if 0 // TJ: 2014 no-one uses this...
 AttrListPrintMask::
 AttrListPrintMask (const AttrListPrintMask &pm)
 	: overall_max_width(0)
@@ -43,6 +45,7 @@ AttrListPrintMask (const AttrListPrintMask &pm)
 	, col_prefix(NULL)
 	, col_suffix(NULL)
 	, row_suffix(NULL)
+	, stringpool(3)
 {
 	copyList (formats, const_cast<List<Formatter> &>(pm.formats));
 	copyList (attributes, const_cast<List<char> &>(pm.attributes));
@@ -52,13 +55,14 @@ AttrListPrintMask (const AttrListPrintMask &pm)
 	if (pm.col_suffix) { col_suffix = new_strdup(pm.col_suffix); }
 	if (pm.row_suffix) { row_suffix = new_strdup(pm.row_suffix); }
 }
-
+#endif
 
 AttrListPrintMask::
 ~AttrListPrintMask ()
 {
 	clearFormats ();
 	clearPrefixes ();
+	stringpool.clear();
 }
 
 void AttrListPrintMask::
@@ -78,16 +82,27 @@ SetOverallWidth(int wid)
 }
 
 void AttrListPrintMask::
-commonRegisterFormat (FormatKind kind, int wid, int opts, const char *print, 
-                       StringCustomFmt sf, const char *attr, const char *alt)
+commonRegisterFormat (int wid, int opts, const char *print,
+                      const CustomFormatFn & sf,
+#ifdef AD_PRINTMASK_V2
+					  const char *attr
+#else
+					  const char *attr, const char *alt
+#endif
+					 )
 {
 	Formatter *newFmt = new Formatter;
 	memset(newFmt, 0, sizeof(*newFmt));
 
-	newFmt->fmtKind = kind;
+	newFmt->fmtKind = sf.Kind();
 	newFmt->sf = sf;
 	newFmt->width = abs(wid);
 	newFmt->options = opts;
+#ifdef AD_PRINTMASK_V2
+	newFmt->altKind = (char)((opts & (AltQuestion | AltWide | AltFixMe)) / AltQuestion);
+#else
+	newFmt->altText = "";
+#endif
 	if (wid < 0)
 		newFmt->options |= FormatOptionLeftAlign;
 	if (print) {
@@ -111,106 +126,52 @@ commonRegisterFormat (FormatKind kind, int wid, int opts, const char *print,
 	formats.Append (newFmt);
 
 	attributes.Append(new_strdup (attr));
-	alternates.Append(collapse_escapes(new_strdup(alt)));
+#ifdef AD_PRINTMASK_V2
+#else
+	if (alt && alt[0]) {
+		char * tmp = stringpool.consume(strlen(alt)+1, 1);
+		strcpy(tmp, alt);
+		newFmt->altText = collapse_escapes(tmp);
+	}
+#endif
 }
 
+#ifdef AD_PRINTMASK_V2
+void AttrListPrintMask::
+registerFormat (const char *print, int wid, int opts, const CustomFormatFn & fmt, const char *attr)
+{
+	commonRegisterFormat(wid, opts, print, fmt, attr);
+}
+
+void AttrListPrintMask::
+registerFormat (const char *fmt, int wid, int opts, const char *attr)
+{
+	commonRegisterFormat(wid, opts, fmt, CustomFormatFn(), attr);
+}
+#else
+void AttrListPrintMask::
+registerFormat (const char *print, int wid, int opts, const CustomFormatFn & fmt, const char *attr, const char *alternate)
+{
+	commonRegisterFormat(wid, opts, print, fmt, attr, alternate);
+}
 
 void AttrListPrintMask::
 registerFormat (const char *fmt, int wid, int opts, const char *attr, const char *alternate)
 {
-#if 1
-	commonRegisterFormat(PRINTF_FMT, wid, opts, fmt, NULL, attr, alternate);
-#else
-	Formatter *newFmt = new Formatter;
-	memset(newFmt, 0, sizeof(*newFmt));
-
-	newFmt->fmtKind = PRINTF_FMT;
-	newFmt->width = wid;
-	newFmt->options = opts;
-	newFmt->printfFmt = collapse_escapes(new_strdup(fmt));
-	formats.Append (newFmt);
-
-	attributes.Append(new_strdup (attr));
-	alternates.Append(collapse_escapes(new_strdup(alternate)));
-#endif
+	commonRegisterFormat(wid, opts, fmt, CustomFormatFn(), attr, alternate);
 }
-
-void AttrListPrintMask::
-registerFormat (const char *print, int wid, int opts, IntCustomFmt fmt, const char *attr, const char *alternate)
-{
-#if 1
-	commonRegisterFormat(INT_CUSTOM_FMT, wid, opts, print, (StringCustomFmt)fmt, attr, alternate);
-#else
-	Formatter *newFmt = new Formatter;
-	memset(newFmt, 0, sizeof(*newFmt));
-
-	if (print)
-		newFmt->printfFmt = collapse_escapes(new_strdup(print));
-	newFmt->fmtKind = INT_CUSTOM_FMT;
-	newFmt->width = wid;
-	newFmt->options = opts;
-	newFmt->df = fmt;
-
-	formats.Append (newFmt);
-
-	attributes.Append(new_strdup (attr));
-	alternates.Append(collapse_escapes(new_strdup(alternate)));
 #endif
-}
-
-void AttrListPrintMask::
-registerFormat (const char *print, int wid, int opts, FloatCustomFmt fmt, const char *attr, const char *alternate)
-{
-#if 1
-	commonRegisterFormat(FLT_CUSTOM_FMT, wid, opts, print, (StringCustomFmt)fmt, attr, alternate);
-#else
-	Formatter *newFmt = new Formatter;
-	memset(newFmt, 0, sizeof(*newFmt));
-
-	if (print)
-		newFmt->printfFmt = collapse_escapes(new_strdup(print));
-	newFmt->fmtKind = FLT_CUSTOM_FMT;
-	newFmt->width = wid;
-	newFmt->options = opts;
-	newFmt->ff = fmt;
-
-	formats.Append (newFmt);
-
-	attributes.Append(new_strdup (attr));
-	alternates.Append(collapse_escapes(new_strdup(alternate)));
-#endif
-}
-
-
-void AttrListPrintMask::
-registerFormat (const char *print, int wid, int opts, StringCustomFmt fmt, const char *attr, const char *alternate)
-{
-#if 1
-	commonRegisterFormat(STR_CUSTOM_FMT, wid, opts, print, fmt, attr, alternate);
-#else
-	Formatter *newFmt = new Formatter;
-	memset(newFmt, 0, sizeof(*newFmt));
-
-	if (print)
-		newFmt->printfFmt = collapse_escapes(new_strdup(print));
-	newFmt->fmtKind = STR_CUSTOM_FMT;
-	newFmt->width = wid;
-	newFmt->options = opts;
-	newFmt->sf = fmt;
-
-	formats.Append (newFmt);
-
-	attributes.Append(new_strdup (attr));
-	alternates.Append(collapse_escapes(new_strdup(alternate)));
-#endif
-}
 
 void AttrListPrintMask::
 clearFormats (void)
 {
 	clearList (formats);
 	clearList (attributes);
+#if 1
+#else
 	clearList (alternates);
+#endif
+	headings.Rewind(); while(headings.Next()) { headings.DeleteCurrent(); }
 }
 
 void AttrListPrintMask::
@@ -324,8 +285,17 @@ calc_widths(AttrList * al, AttrList *target /*=NULL*/ )
 }
 #endif
 
-char * AttrListPrintMask::
-display_Headings(List<const char> & headings)
+void AttrListPrintMask::set_heading(const char * heading)
+{
+	if (heading && heading[0]) {
+		headings.Append(stringpool.insert(heading));
+	} else {
+		headings.Append("");
+	}
+}
+
+
+char * AttrListPrintMask::display_Headings(List<const char> & headings)
 {
 	Formatter *fmt;
 	formats.Rewind();
@@ -456,12 +426,41 @@ PrintCol(MyString * prow, Formatter & fmt, const char * value)
 		(*prow) += col_suffix;
 }
 
+static void appendFieldofQuestions(MyString & buf, int width)
+{
+	int cq = width;
+	if ( ! cq)
+		return;
+	if (cq < 0) 
+		cq = 0-width;
+
+	if (cq < 3) {
+		buf += "?";
+	} else {
+		buf.reserve_at_least(buf.length() + cq+1);
+		buf += '[';
+		--cq;
+		while (--cq) buf += '?';
+		buf += ']';
+	}
+}
+
+static void append_alt(MyString & buf, Formatter & fmt)
+{
+	int alt = (int)fmt.altKind * AltQuestion;
+	if (alt == AltQuestion) {
+		buf += "?";
+	} else if (alt == (AltQuestion | AltWide)) {
+		appendFieldofQuestions(buf, fmt.width);
+	}
+}
+
 // returns a new char * that is your responsibility to delete.
 char * AttrListPrintMask::
 display (AttrList *al, AttrList *target /* = NULL */)
 {
 	Formatter *fmt;
-	char 	*attr, *alt;
+	char 	*attr;
 	ExprTree *tree;
 	classad::Value result;
 	MyString  retval("");
@@ -472,12 +471,16 @@ display (AttrList *al, AttrList *target /* = NULL */)
 	char *value_from_classad = NULL;
 
 	struct printf_fmt_info fmt_info;
-	printf_fmt_t fmt_type;
+	printf_fmt_t fmt_type = PFT_NONE;
 	const char* tmp_fmt = NULL;
+	const char * pszVal;
 
 	formats.Rewind();
 	attributes.Rewind();
+#if 1
+#else
 	alternates.Rewind();
+#endif
 
 	int columns = formats.Length();
 	int icol = 0;
@@ -486,33 +489,84 @@ display (AttrList *al, AttrList *target /* = NULL */)
 		retval = row_prefix;
 
 	// for each item registered in the print mask
-	while ((fmt=formats.Next()) && (attr=attributes.Next()) &&
-				(alt=alternates.Next()))
+	while ( (fmt = formats.Next()) && (attr = attributes.Next()) )
 	{
+#ifdef AD_PRINTMASK_V2
+		//const char * alt = NULL;
+#else
+		const char * alt = fmt->altText;
+#endif
 		if (icol == 0) {
 			fmt->options |= FormatOptionNoPrefix;
 		}
 		if (++icol == columns) {
 			fmt->options |= FormatOptionNoSuffix;
 		}
+
+		// first determine the basic type (int, string, float)
+		// that we want to retrieve, and whether we even want to bother
+		// to evaluate the attribute/expression
+		bool print_no_data = false;
+		switch (fmt->fmtKind) {
+			case CustomFormatFn::INT_CUSTOM_FMT: fmt_type = PFT_INT;   break;
+			case CustomFormatFn::FLT_CUSTOM_FMT: fmt_type = PFT_FLOAT; break;
+			case CustomFormatFn::STR_CUSTOM_FMT: fmt_type = PFT_VALUE; break;
+			case CustomFormatFn::VALUE_CUSTOM_FMT: fmt_type = PFT_VALUE; break;
+			case CustomFormatFn::ALWAYS_CUSTOM_FMT: print_no_data = true; break;
+			default:
+					// figure out what kind of format string the
+					// caller is using, we will print out the appropriate
+					// value depending on what they want. we also determine
+					// that no data is needed here.
+				tmp_fmt = fmt->printfFmt;
+				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) ) {
+					print_no_data = true;
+				}
+				fmt_type = fmt_info.type;
+			break;
+		}
+
 			// If we decide that the "attr" requested is actually
 			// an expression, we need to remember that, as 1.
 			// it needs to be deleted, and 2. there is some
 			// special handling for the string case.
 		bool attr_is_expr = false;
+		bool result_is_valid = false;
+		if ( ! print_no_data) {
+				// if we got here, there's some data to be fetched
+				// so we'll need to get the expression tree of the
+				// attribute they asked for...
+			if ( ! (tree = al->LookupExpr (attr))) {
+					// we couldn't find it. Maybe it's an expression?
+				tree = NULL;
+				if (ParseClassAdRvalExpr(attr, tree) != 0) {
+					delete tree;
+					tree = NULL;
+				} else {
+					attr_is_expr = true; // so we know to delete tree
+				}
+			}
+
+			// conversion of the PRINTF_FMT to data types is complicated
+			// so we will leave expression evaluation to the formatting code
+			// for now.  but for the custom formats, we can get the result now
+			if (tree && (fmt->fmtKind != CustomFormatFn::PRINTF_FMT)) {
+				result_is_valid = EvalExprTree(tree, al, target, result);
+				if (attr_is_expr) { delete tree; tree = NULL; }
+			}
+		}
+
+		// now do the actual formatting.
+		//
 		int  col_start;
 		switch( fmt->fmtKind )
 		{
-		  	case PRINTF_FMT:
+		  	case CustomFormatFn::PRINTF_FMT:
 				if (col_prefix && ! (fmt->options & FormatOptionNoPrefix))
 					retval += col_prefix;
 				col_start = retval.Length();
 
-					// figure out what kind of format string the
-					// caller is using, and print out the appropriate
-					// value depending on what they want.
-				tmp_fmt = fmt->printfFmt;
-				if( ! parsePrintfFormat(&tmp_fmt, &fmt_info) ) {
+				if (print_no_data) {
 						/*
 						  if parsePrintfFormat() returned 0, it means
 						  there are no conversion strings in the
@@ -527,8 +581,13 @@ display (AttrList *al, AttrList *target /* = NULL */)
 						  there is an alt string defined, we should
 						  print that, instead. -Derek 2004-10-15
 						*/
+#ifdef AD_PRINTMASK_V2
+					if (fmt->altKind) {
+						append_alt(retval, *fmt);
+#else
 					if( alt && alt[0] ) {
 						retval += alt;
+#endif
 					} else { 
 						retval += fmt->printfFmt;
 					}
@@ -541,37 +600,29 @@ display (AttrList *al, AttrList *target /* = NULL */)
 					continue;
 				}
 
-					// if we got here, there's some % conversion
-					// string, so we'll need to get the expression
-					// tree of the attribute they asked for...
-				if( !(tree = al->LookupExpr (attr)) ) {
-						// drat, we couldn't find it. Maybe it's an
-						// expression?
-					tree = NULL;
-					if( ParseClassAdRvalExpr(attr, tree) != 0 ) {
-						delete tree;
-
-							// drat, still no luck.  if there's an
-							// alt string, use that, otherwise bail.
-						if ( alt ) {
-							retval += alt;
-						}
-						if (fmt->options & FormatOptionAutoWidth) {
-							int col_width = retval.Length() - col_start;
-							fmt->width = MAX(fmt->width, col_width);
-						}
-						if (col_suffix && ! (fmt->options & FormatOptionNoSuffix))
-							retval += col_suffix;
-						continue;
+				if ( ! tree) {
+						// drat, there's no data to print if there's an
+						// alt string, use that, otherwise bail.
+#ifdef AD_PRINTMASK_V2
+					if (fmt->altKind) { append_alt(retval, *fmt); }
+#else
+					if ( alt ) {
+						retval += alt;
 					}
-					ASSERT(tree);
-					attr_is_expr = true;
+#endif
+					if (fmt->options & FormatOptionAutoWidth) {
+						int col_width = retval.Length() - col_start;
+						fmt->width = MAX(fmt->width, col_width);
+					}
+					if (col_suffix && ! (fmt->options & FormatOptionNoSuffix))
+						retval += col_suffix;
+					continue;
 				}
+				ASSERT(tree);
 
 					// Now, figure out what kind of value they want,
 					// based on the kind of % conversion in their
 					// format string 
-				fmt_type = fmt_info.type;
 				switch( fmt_type ) {
 				case PFT_STRING:
 					if( attr_is_expr ) {
@@ -581,9 +632,13 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							retval.formatstr_cat(fmt->printfFmt, buff.c_str());
 						} else {
 							// couldn't eval
+#ifdef AD_PRINTMASK_V2
+							if (fmt->altKind) { append_alt(retval, *fmt); }
+#else
 							if( alt ) {
 								retval += alt;
 							}
+#endif
 						}
 					} else if( al->EvalString( attr, target, &value_from_classad ) ) {
 						stringValue.formatstr( fmt->printfFmt,
@@ -597,9 +652,13 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							stringValue.formatstr(fmt->printfFmt, bool_str);
 							retval += stringValue;
 						} else {
+#ifdef AD_PRINTMASK_V2
+							if (fmt->altKind) { append_alt(retval, *fmt); }
+#else
 							if ( alt ) {
 								retval += alt;
 							}
+#endif
 						}
 					}
 					break;
@@ -607,7 +666,11 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				case PFT_VALUE:
 					{
 #if 1
+#ifdef AD_PRINTMASK_V2
+						const char * pszValue = NULL;
+#else
 						const char * pszValue = alt;
+#endif
 						std::string buff;
 						if( EvalExprTree(tree, al, target, result) ) {
 							// Only strings are formatted differently for
@@ -620,6 +683,12 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							}
 							pszValue = buff.c_str();
 						}
+#ifdef AD_PRINTMASK_V2
+						else if (fmt->altKind) {
+							buff = "?";
+							pszValue = buff.c_str();
+						}
+#endif
 
 						if ((fmt->options & FormatOptionAutoWidth) && strlen(fmt->printfFmt) == 2) {
 							char tfmt[40];
@@ -722,16 +791,24 @@ display (AttrList *al, AttrList *target /* = NULL */)
 								// the thing they want to print
 								// doesn't evaulate to an int or a
 								// float, so just print the alternate
+#ifdef AD_PRINTMASK_V2
+							if (fmt->altKind) { append_alt(retval, *fmt); }
+#else
 							if ( alt ) {
 								retval += alt;
 							}
+#endif
 							break;
 						}
 					} else {
 							// couldn't eval
+#ifdef AD_PRINTMASK_V2
+						if (fmt->altKind) { append_alt(retval, *fmt); }
+#else
 						if( alt ) {
 							retval += alt;
 						}
+#endif
 					}
 					break;
 
@@ -749,9 +826,78 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				if(attr_is_expr) { delete tree; tree = NULL; }
 				break;
 
-			{
-			const char * pszVal;
 
+#if 1
+			case CustomFormatFn::INT_CUSTOM_FMT:
+				if (result_is_valid) {
+					result_is_valid = result.IsNumber(intValue);
+				} else {
+					intValue = 0;
+				}
+				if (result_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
+					pszVal = fmt->df(intValue , al, *fmt);
+				} else {
+#ifdef AD_PRINTMASK_V2
+					stringValue = "";
+					if (fmt->altKind) { append_alt(stringValue, *fmt); }
+					pszVal = stringValue.c_str();
+#else
+					pszVal = alt;
+#endif
+				}
+				PrintCol(&retval, *fmt, pszVal);
+				break;
+
+			case CustomFormatFn::FLT_CUSTOM_FMT:
+				if (result_is_valid) {
+					result_is_valid = result.IsNumber(realValue);
+				} else {
+					realValue = 0.0;
+				}
+				if (result_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
+					pszVal = fmt->ff(realValue , al, *fmt);
+				} else {
+#ifdef AD_PRINTMASK_V2
+					stringValue = "";
+					if (fmt->altKind) { append_alt(stringValue, *fmt); }
+					pszVal = stringValue.c_str();
+#else
+					pszVal = alt;
+#endif
+				}
+				PrintCol(&retval, *fmt, pszVal);
+				break;
+
+			case CustomFormatFn::STR_CUSTOM_FMT:
+				pszVal = NULL;
+				if (result_is_valid) {
+					result_is_valid = result.IsStringValue(pszVal);
+				}
+				if (result_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
+					pszVal = fmt->sf(pszVal, al, *fmt);
+				} else {
+#ifdef AD_PRINTMASK_V2
+					stringValue = "";
+					if (fmt->altKind) { append_alt(stringValue, *fmt); }
+					pszVal = stringValue.c_str();
+#else
+					pszVal = alt;
+#endif
+				}
+				PrintCol(&retval, *fmt, pszVal);
+				break;
+
+			case CustomFormatFn::ALWAYS_CUSTOM_FMT:
+				pszVal = fmt->af(al, *fmt);
+				PrintCol(&retval, *fmt, pszVal);
+				break;
+
+			case CustomFormatFn::VALUE_CUSTOM_FMT:
+				//if ( ! result_is_valid) result.SetErrorValue();
+				pszVal = fmt->vf(result, al, *fmt);
+				PrintCol(&retval, *fmt, pszVal);
+				break;
+#else
 		  	case INT_CUSTOM_FMT:
 				if( al->EvalInteger( attr, target, intValue ) ) {
 					pszVal = (fmt->df)(intValue , al, *fmt);
@@ -779,11 +925,16 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				}
 				PrintCol(&retval, *fmt, pszVal);
 				break;
-	
+#endif
 			default:
+#ifdef AD_PRINTMASK_V2
+				stringValue = "";
+				if (fmt->altKind) {  append_alt(stringValue, *fmt); }
+				PrintCol(&retval, *fmt, stringValue.c_str());
+#else
 				PrintCol(&retval, *fmt, alt);
+#endif
 				break;
-			}
 		}
 	}
 
@@ -892,44 +1043,3 @@ static char *new_strdup (const char *str)
     return x;
 }
 
-/*
-void AttrListPrintMask::
-registerFormat (IntCustomFmt fmt, const char *attr, const char *alternate)
-{
-	Formatter *newFmt = new Formatter;
-
-	newFmt->fmtKind = INT_CUSTOM_FMT;
-	newFmt->df = fmt;
-
-	formats.Append (newFmt);
-
-	attributes.Append(new_strdup (attr));
-	alternates.Append(collapse_escapes(new_strdup(alternate)));
-}
-void AttrListPrintMask::
-registerFormat (FloatCustomFmt fmt, const char *attr, const char *alternate)
-{
-	Formatter *newFmt = new Formatter;
-
-	newFmt->fmtKind = FLT_CUSTOM_FMT;
-	newFmt->ff = fmt;
-
-	formats.Append (newFmt);
-
-	attributes.Append(new_strdup (attr));
-	alternates.Append(collapse_escapes(new_strdup(alternate)));
-}
-void AttrListPrintMask::
-registerFormat (StringCustomFmt fmt, const char *attr, const char *alternate)
-{
-	Formatter *newFmt = new Formatter;
-
-	newFmt->fmtKind = STR_CUSTOM_FMT;
-	newFmt->sf = fmt;
-
-	formats.Append (newFmt);
-
-	attributes.Append(new_strdup (attr));
-	alternates.Append(collapse_escapes(new_strdup(alternate)));
-}
-*/

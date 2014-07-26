@@ -15,7 +15,7 @@ online storage service (S3 or EBS).
 More information about Amazon's EC2 service is available at
 \URL{http://aws.amazon.com/ec2}.
 
-The \SubmitCmd{ec2} grid type uses the EC2 Query API,
+The \SubmitCmdNI{ec2} grid type uses the EC2 Query API,
 also called the EC2 REST API.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -23,8 +23,8 @@ also called the EC2 REST API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 HTCondor jobs are submitted to an EC2 service
-with the \SubmitCmd{grid} universe, setting the
-\SubmitCmd{grid\_resource} command to \SubmitCmd{ec2}, followed 
+with the \SubmitCmdNI{grid} universe, setting the
+\SubmitCmd{grid\_resource} command to \SubmitCmdNI{ec2}, followed 
 by the service's URL. For example,
 partial contents of the submit description file may be
 \begin{verbatim}
@@ -47,7 +47,7 @@ provide the identifier for the image using \SubmitCmd{ec2\_ami\_id}.
 This grid type requires access to user authentication information,
 in the form of path names to files containing the appropriate keys.
 
-The \SubmitCmd{ec2} grid type has two different authentication methods.
+The \SubmitCmdNI{ec2} grid type has two different authentication methods.
 The first authentication method uses the EC2 API's built-in authentication.
 Specify the service with expected \Expr{http://} or \Expr{https://} URL,
 and set the EC2 access key and secret access key as follows:
@@ -99,11 +99,11 @@ The EC2 API calls these security groups.
 If utilized, tell HTCondor what set of security
 groups should be applied to each VM using the
 \SubmitCmd{ec2\_security\_groups} submit description file command.
-If not provided, HTCondor uses the security group \SubmitCmd{default}.
+If not provided, HTCondor uses the security group \SubmitCmdNI{default}.
 
 The EC2 API allows the choice of different hardware configurations 
 for instances to run on.
-Select which configuration to use for the \SubmitCmd{ec2} grid type
+Select which configuration to use for the \SubmitCmdNI{ec2} grid type
 with the \SubmitCmd{ec2\_instance\_type} submit description file command.
 HTCondor provides no default.
 
@@ -119,7 +119,7 @@ stored in a file, and the file name is specified with the
 \SubmitCmd{ec2\_user\_data\_file} submit description file command.
 This second option allows the use of binary data.
 If both options are used, the two blocks of
-data are concatenated, with the data from \SubmitCmd{ec2\_user\_data} 
+data are concatenated, with the data from \SubmitCmdNI{ec2\_user\_data} 
 occurring first.  HTCondor performs the base64 encoding that EC2 expects on 
 the data.
 
@@ -195,7 +195,7 @@ More information about Amazon's spot instances is available at
 \subsubsection{\label{sec:Amazon-config}EC2 Configuration Variables}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The \SubmitCmd{ec2} grid type requires these configuration variables 
+The \SubmitCmdNI{ec2} grid type requires these configuration variables 
 to be set in the HTCondor configuration file:
 
 \footnotesize
@@ -205,7 +205,7 @@ EC2_GAHP_LOG = /tmp/EC2GahpLog.$(USERNAME)
 \end{verbatim}
 \normalsize
 
-The \SubmitCmd{ec2} grid type does not presently permit the explicit use 
+The \SubmitCmdNI{ec2} grid type does not presently permit the explicit use 
 of an HTTP proxy.
 
 The specification of a service with an \Expr{https://}, an \Expr{x509://},
@@ -264,3 +264,22 @@ checking in the following order:
 \end{enumerate}
 
 The EC2 GAHP supplies no default value, if it does not find a CA directory.
+
+By default, HTCondor assumes that EC2 services are reliably available.
+If an attempt to contact a service during the normal course of operation fails,
+HTCondor makes a special attempt to contact the service.
+If this attempt fails, 
+the service is marked as down,
+and normal operation for that service is
+suspended until a subsequent special attempt succeeds.  
+The jobs using that service do not go on hold.
+To place jobs on hold when their service becomes unavailable,
+set configuration variable \Macro{EC2\_RESOURCE\_TIMEOUT} to 
+the number of seconds to delay before placing the job on hold.
+The default value of -1 for this variable implements 
+an infinite delay, such that the job is never placed on hold.
+When setting this value, 
+consider the value of configuration variable
+\Macro{GRIDMANAGER\_RESOURCE\_PROBE\_INTERVAL},
+which sets the number of seconds that HTCondor will wait after each
+special contact attempt before trying again.

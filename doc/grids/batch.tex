@@ -6,8 +6,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{batch grid type}
 
-The \SubmitCmd{batch} grid type is used to submit to a local PBS, LSF, or SGE
-system using the \SubmitCmd{grid} universe and the
+The \SubmitCmdNI{batch} grid type is used to submit to a local PBS, LSF, or SGE
+system using the \SubmitCmdNI{grid} universe and the
 \SubmitCmd{grid\_resource} command by placing a variant of the following
 into the submit description file.
 \begin{verbatim}
@@ -60,8 +60,8 @@ and Torque is at
 
 As an alternative to the submission details given above,
 HTCondor jobs may be submitted to a local PBS system
-using the \SubmitCmd{grid} universe and the
-\SubmitCmd{grid\_resource} command by placing the following
+using the \SubmitCmdNI{grid} universe and the
+\SubmitCmdNI{grid\_resource} command by placing the following
 into the submit description file.
 \begin{verbatim}
 grid_resource = pbs
@@ -80,8 +80,8 @@ for more information about Platform LSF.
 
 As an alternative to the submission details given above,
 HTCondor jobs may be submitted to a local Platform LSF system
-using the \SubmitCmd{grid} universe and the
-\SubmitCmd{grid\_resource} command  by placing the following
+using the \SubmitCmdNI{grid} universe and the
+\SubmitCmdNI{grid\_resource} command  by placing the following
 into the submit description file.
 \begin{verbatim}
 grid_resource = lsf
@@ -102,8 +102,8 @@ and Univa Grid Engine
 
 As an alternative to the submission details given above,
 HTCondor jobs may be submitted to a local SGE system
-using the \SubmitCmd{grid} universe and adding the
-\SubmitCmd{grid\_resource} command by placing
+using the \SubmitCmdNI{grid} universe and adding the
+\SubmitCmdNI{grid\_resource} command by placing
 into the submit description file:
 \begin{verbatim}
 grid_resource = sge

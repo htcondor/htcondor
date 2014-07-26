@@ -89,11 +89,17 @@ struct ProcFamilyUsage {
 #if HAVE_PSS
     unsigned long total_proportional_set_size;
     bool total_proportional_set_size_available;
+    // These exist to make valgrind quit whining.
+    bool pad1;
+    bool pad2;
+    bool pad3;
 #endif
 	int           num_procs;
 	// These are signed so a negative number indicates uninitialized
-	long          block_read_bytes;
-	long          block_write_bytes;
+    int64_t          block_reads;
+    int64_t          block_writes;
+	int64_t          block_read_bytes;
+	int64_t          block_write_bytes;
 
 	ProcFamilyUsage() :
 		user_cpu_time(0),
@@ -105,8 +111,11 @@ struct ProcFamilyUsage {
 #if HAVE_PSS
 		total_proportional_set_size(0),
 		total_proportional_set_size_available(0),
+		pad1(0), pad2(0), pad3(0),
 #endif
 		num_procs(0),
+        block_reads(0),
+        block_writes(0),
 		block_read_bytes(0),
 		block_write_bytes(0)
 	{ }

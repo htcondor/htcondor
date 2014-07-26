@@ -46,6 +46,7 @@ public:
 
 	void alloc_buf();
 	void dealloc_buf();
+	void grow_buf(int new_sz);
 
 	inline int max_size() const { return _dta_maxsz; }
 	inline int num_untouched() const { return _dta_sz - _dta_pt; }
@@ -58,12 +59,13 @@ public:
 	inline int consumed() const { return _dta_pt == _dta_sz; }
 
 
-	int write(char const *peer_description,SOCKET sockd, int sz=-1, int timeout=0);
-	int read(char const *peer_description,SOCKET sockd, int sz=-1, int timeout=0);
+	int write(char const *peer_description,SOCKET sockd, int sz=-1, int timeout=0, bool non_blocking=false);
+	int read(char const *peer_description,SOCKET sockd, int sz=-1, int timeout=0, bool non_blocking=false);
 
-	int flush(char const *peer_description,SOCKET sockd, void * hdr=0, int sz=0, int timeout=0);
+	int flush(char const *peer_description,SOCKET sockd, void * hdr=0, int sz=0, int timeout=0, bool non_blocking=false);
 
 	int put_max(const void *, int);
+	int put_force(const void *, int);
 	int get_max(void *, int);
 
 	int find(char);
@@ -79,6 +81,8 @@ public:
 
         bool computeMD(char * checkSUM, Condor_MD_MAC * checker);
         bool verifyMD(char * checkSUM, Condor_MD_MAC * checker);
+
+	void swap(Buf &);
 
 private:
 
@@ -101,6 +105,7 @@ public:
 
 
 	inline int consumed() { return !_tail || (_tail && _tail->consumed()); }
+	inline int num_untouched() { return _tail ? _tail->num_untouched() : 0; }
 
 	int put(Buf *);
 	void reset();

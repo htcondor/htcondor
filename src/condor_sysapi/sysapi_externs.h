@@ -72,8 +72,10 @@ extern int _sysapi_startd_has_bad_utmp;
 extern int _sysapi_config;
 
 /* needed by ncpus.c */
-extern int _sysapi_ncpus;
-extern int _sysapi_max_ncpus;
+//extern int _sysapi_ncpus;
+//extern int _sysapi_max_ncpus;
+extern int _sysapi_detected_phys_cpus;
+extern int _sysapi_detected_hyper_cpus;
 
 /* needed by processor_flags.c */
 extern const char * _sysapi_processor_flags_raw;
@@ -90,7 +92,7 @@ extern char* _sysapi_ckptpltfrm;
 extern int _sysapi_getload;
 
 #if defined LINUX || defined WIN32
-extern int _sysapi_count_hyperthread_cpus;
+extern bool _sysapi_count_hyperthread_cpus;
 #endif
 
 /* needed by arch.cpp */

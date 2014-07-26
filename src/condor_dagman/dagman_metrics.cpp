@@ -17,6 +17,12 @@
  *
  ***************************************************************/
 
+#ifdef WIN32
+// shouldn't really need to do this here, but this file isn't pulling in condor_common for some reason...
+#define _CRT_NONSTDC_NO_DEPRECATE
+#define _CRT_NONSTDC_NO_WARNINGS
+#endif
+
 #include <stdlib.h>
 #include "dagman_metrics.h"
 #include "debug.h"

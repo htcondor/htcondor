@@ -24,6 +24,10 @@ $cmd = 'job_core_output_java.cmd';
 $testdesc =  'condor_submit output works - java U';
 $testname = "job_core_output_java";
 
+my $javainit = CondorTest::JavaInitialize($testname);
+if($javainit == 0) {
+	die "No java found\n";
+}
 
 my @expected_output =
 (

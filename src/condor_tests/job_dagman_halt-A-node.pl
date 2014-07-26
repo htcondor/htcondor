@@ -19,6 +19,7 @@ if ($ARGV[1] eq "-sleep") {
 	sleep(5);
 
 } elsif ($ARGV[1] eq "-halt") {
+	#TEMP -- check for sibling node start?
 	sleep(15); # Allow time for sibling node to start.
 	print OUT "  $ARGV[0] halting DAG\n";
 	system("touch $halt_file");

@@ -23,6 +23,7 @@
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_attributes.h"
+#include "daemon.h"	// for global_dc_sinful()
 
 #include <sstream>
 
@@ -394,20 +395,53 @@ Sinful::regenerateSinful()
 bool
 Sinful::addressPointsToMe( Sinful const &addr ) const
 {
-	if( getHost() && addr.getHost() && !strcmp(getHost(),addr.getHost()) &&
-		getPort() && addr.getPort() && !strcmp(getPort(),addr.getPort()) )
+	bool addrs_match = false;
+
+	// Confirm that ports match. Don't even bother checking the addresses if ports don't match.
+	if ( getHost() && getPort() && addr.getPort() && !strcmp(getPort(),addr.getPort()) )
+	{
+		// Check if host addresses match
+		if( addr.getHost() && !strcmp(getHost(),addr.getHost()) )
+		{
+			addrs_match = true;
+		} 
+
+		// We may have failed to match host addresses above, but we now need
+		// to cover the case of the loopback interface (aka 127.0.0.1).  A common
+		// usage pattern for this method is for "this" object to represent our daemonCore 
+		// command socket.  If this is the case, and the addr passed in is a loopback
+		// address, consider the addresses to match.  Note we convert to a condor_sockaddr
+		// so we can use method is_loopback(), which correctly handles both IPv4 and IPv6.
+		Sinful oursinful( global_dc_sinful() );
+		condor_sockaddr addrsock;
+		if( !addrs_match && oursinful.getHost() && !strcmp(getHost(),oursinful.getHost()) &&
+			addr.getSinful() && addrsock.from_sinful(addr.getSinful()) && addrsock.is_loopback() )
+		{
+			addrs_match = true;
+		}
+	}
+
+	// The addrs and ports match, but if shared_port is in use, we need to confirm the
+	// shared port id also matches.
+	if (addrs_match)
 	{
 		char const *spid = getSharedPortID();
 		char const *addr_spid = addr.getSharedPortID();
-		if( (spid == NULL && addr_spid == NULL) ||
-			(spid && addr_spid && !strcmp(spid,addr_spid)) ) {
+		if( (spid == NULL && addr_spid == NULL) ||			// case without shared port
+			(spid && addr_spid && !strcmp(spid,addr_spid)) 	// case with shared port
+		  ) 
+		{
 			return true;
 		}
 	}
+	
+	// Public address failed to match, but now need to do it all over again checking
+	// the private address.
 	if( getPrivateAddr() ) {
 		Sinful private_addr( getPrivateAddr() );
 		return private_addr.addressPointsToMe( addr );
 	}
+
 	return false;
 }
 

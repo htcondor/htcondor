@@ -43,6 +43,9 @@
 void
 ReliSock::init()
 {
+	m_has_backlog = false;
+	m_read_would_block = false;
+	m_non_blocking = false;
 	ignore_next_encode_eom = FALSE;
 	ignore_next_decode_eom = FALSE;
 	_bytes_sent = 0.0;
@@ -103,17 +106,11 @@ ReliSock::listen()
         return FALSE;
     }
 
-	// many modern OS's now support a >5 backlog, so we ask for 500,
-	// but since we don't know how they behave when you ask for too
-	// many, if 200 doesn't work we try progressively smaller numbers.
-	// you may ask, why not just use SOMAXCONN ?  unfortunately,
-	// it is not correct on several platforms such as Solaris, which
-	// accepts an unlimited number of socks but sets SOMAXCONN to 5.
-	if( ::listen( _sock, 500 ) < 0 ) {
-		if( ::listen( _sock, 300 ) < 0 ) 
-		if( ::listen( _sock, 200 ) < 0 ) 
-		if( ::listen( _sock, 100 ) < 0 ) 
-		if( ::listen( _sock, 5 ) < 0 ) {
+	// Ask for a (configurable) large backlog of connections. If this
+	// value is too large, the OS will cap it at the kernel's current
+	// maxiumum. Why not just use SOMAXCONN? Unfortunately, it's a
+	// fairly small value (128) on many platforms.
+	if( ::listen( _sock, param_integer( "SOCKET_LISTEN_BACKLOG", 500 ) ) < 0 ) {
 
             char const *self_address = get_sinful();
             if( !self_address ) {
@@ -127,7 +124,6 @@ ReliSock::listen()
 #endif
 
 			return FALSE;
-		}
 	}
 
 	dprintf( D_NETWORK, "LISTEN %s fd=%d\n", sock_to_string(_sock),
@@ -137,6 +133,23 @@ ReliSock::listen()
 	_special_state = relisock_listen;
 
 	return TRUE;
+}
+
+
+/// FALSE means this is an incoming connection
+int ReliSock::listen(condor_protocol proto, int port)
+{
+	if (!bind(proto, false, port, false)) return
+		FALSE;
+	return listen();
+}
+
+/// FALSE means this is an incoming connection
+int ReliSock::listen(char *s)
+{
+	if (!bind(false, s))
+		return FALSE;
+	return listen();
 }
 
 
@@ -184,45 +197,13 @@ ReliSock::accept( ReliSock	&c )
 	c.enter_connected_state("ACCEPT");
 	c.decode();
 
-	int val = param_integer("TCP_KEEPALIVE_INTERVAL");
-	int on = 1;
-	if (val >= 0) {
-		// NOTE: Log failures to FULLDEBUG as we may be doing a lot of accepts...
-		if (c.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)(&on), sizeof(on)) < 0) {
-			dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to enable TCP keepalive (errno=%d, %s)", errno, strerror(errno));
-		}
-	}
-	if (val > 0) {
-#if !defined(WIN32) && (defined(HAVE_TCP_KEEPALIVE) || defined(HAVE_TCP_KEEPIDLE))
-
-// Mac OS X calls it TCP_KEEPALIVE; Linux calls it TCP_KEEPIDLE.
-#if defined(HAVE_TCP_KEEPALIVE)
-		if (c.setsockopt(IPPROTO_TCP, TCP_KEEPALIVE, (char*)(&val), sizeof(val)) < 0)
-#else
-		if (c.setsockopt(IPPROTO_TCP, TCP_KEEPIDLE, (char*)(&val), sizeof(val)) < 0)
-#endif
-		{
-			dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to set TCP keepalive idle time to 5 minutes (errno=%d, %s)", errno, strerror(errno));
-		}
-		val = 5;
-#if defined(HAVE_TCP_KEEPCNT)
-		if (c.setsockopt(IPPROTO_TCP, TCP_KEEPCNT, (char*)(&val), sizeof(val)) < 0) {
-			dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to set TCP keepalive probe count to 5 (errno=%d, %s)", errno, strerror(errno));
-		}
-#endif
-#if defined(HAVE_TCP_KEEPINTVL)
-		if (c.setsockopt(IPPROTO_TCP, TCP_KEEPINTVL, (char*)(&val), sizeof(val)) < 0) {
-			dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to set TCP keepalive interval to 5 seconds (errno=%d, %s)", errno, strerror(errno));
-		}
-#endif
-		// TODO: there are equivalent Win32 API calls for the above setsockopt
-#endif
-	}
+	c.set_keepalive();
 
 		/* Set no delay to disable Nagle, since we buffer all our
 		   relisock output and it degrades performance of our
 		   various chatty protocols. -Todd T, 9/05
 		*/
+	int on = 1;
 	c.setsockopt(IPPROTO_TCP, TCP_NODELAY, (char*)&on, sizeof(on));
 
 	return TRUE;
@@ -260,7 +241,7 @@ ReliSock::accept()
 		return (ReliSock *)0;
 	}
 
-	if ((c_sock = accept(*c_rs)) < 0) {
+	if ((c_sock = accept(*c_rs)) == FALSE) {
 		delete c_rs;
 		return (ReliSock *)0;
 	}
@@ -474,17 +455,51 @@ ReliSock::handle_incoming_packet()
 		return TRUE;
 	}
 
-	if (!rcv_msg.rcv_packet(peer_description(), _sock, _timeout)) {
-		return FALSE;
-	}
-
-	return TRUE;
+	return rcv_msg.rcv_packet(peer_description(), _sock, _timeout);
 }
 
+int
+ReliSock::finish_end_of_message()
+{
+	dprintf(D_NETWORK, "Finishing a non-blocking EOM.\n");
+	BlockingModeGuard guard(this, true);
+	int retval;
+	if (snd_msg.buf.num_used())
+	{
+		retval = snd_msg.snd_packet(peer_description(), _sock, true, _timeout);
+	}
+	else
+	{
+		retval = snd_msg.finish_packet(peer_description(), _sock, _timeout);
+	}
+	if (retval == 3 || retval == 2) m_has_backlog = true;
+	return retval;
+}
 
+	// Ret values:
+	// - TRUE: successfully sent EOM; if set to ignore next EOM, we did nothing.
+	// - FALSE: failure occurred when sending EOM.
+	// - 2: When encoding mode and non-blocking is enabled, this indicates that
+	//   a subset of the data successfully went to the wire but finish_end_of_message
+	//   needs to be called.
+	// If allow_empty_message is set and there are no bytes to send, return TRUE.
+	// Otherwise, an error occurs if there is no unbuffer bytes.
+int
+ReliSock::end_of_message_nonblocking()
+{
+	BlockingModeGuard guard(this, true);
+	return end_of_message_internal();
+}
+
+int
+ReliSock::end_of_message()
+{
+	BlockingModeGuard guard(this, false);
+	return end_of_message_internal();
+}
 
 int 
-ReliSock::end_of_message()
+ReliSock::end_of_message_internal()
 {
 	int ret_val = FALSE;
 
@@ -496,7 +511,11 @@ ReliSock::end_of_message()
 				return TRUE;
 			}
 			if (!snd_msg.buf.empty()) {
-				return snd_msg.snd_packet(peer_description(), _sock, TRUE, _timeout);
+				int retval = snd_msg.snd_packet(peer_description(), _sock, TRUE, _timeout);
+				if (retval == 2 || retval == 3) {
+					m_has_backlog = true;
+				}
+				return retval ? true : false;
 			}
 			if ( allow_empty_message_flag ) {
 				allow_empty_message_flag = FALSE;
@@ -515,7 +534,7 @@ ReliSock::end_of_message()
 				}
 				else {
 					char const *ip = get_sinful_peer();
-					dprintf(D_FULLDEBUG,"Failed to read end of message from %s.\n",ip ? ip : "(null)");
+					dprintf(D_FULLDEBUG,"Failed to read end of message from %s; %d untouched bytes.\n",ip ? ip : "(null)", rcv_msg.buf.num_untouched());
 				}
 				rcv_msg.ready = FALSE;
 				rcv_msg.buf.reset();
@@ -580,7 +599,14 @@ ReliSock::put_bytes(const void *data, int sz)
 	for(nw=0;;) {
 		
 		if (snd_msg.buf.full()) {
-			if (!snd_msg.snd_packet(peer_description(), _sock, FALSE, _timeout)) {
+			int retval = snd_msg.snd_packet(peer_description(), _sock, FALSE, _timeout);
+			// This would block and the user asked us to work non-buffered - force the
+			// buffer to grow to hold the data for now.
+			if (retval == 3) {
+				nw += snd_msg.buf.put_force(&((char *)dta)[nw], sz-nw);
+				m_has_backlog = true;
+				break;
+			} else if (!retval) {
 				if (dta != NULL)
 				{
 					free(dta);
@@ -596,7 +622,7 @@ ReliSock::put_bytes(const void *data, int sz)
 		
 		if (dta && (tw = snd_msg.buf.put_max(&((char *)dta)[nw], sz-nw)) < 0) {
 			free(dta);
-			dta = NULL;
+		dta = NULL;
 			return -1;
 		}
 		
@@ -627,8 +653,14 @@ ReliSock::get_bytes(void *dta, int max_sz)
 
 	ignore_next_decode_eom = FALSE;
 
+	m_read_would_block = false;
 	while (!rcv_msg.ready) {
-		if (!handle_incoming_packet()){
+		int retval = handle_incoming_packet();
+		if (retval == 2) {
+			dprintf(D_NETWORK, "get_bytes would have blocked - failing call.\n");
+			m_read_would_block = true;
+			return false;
+		} else if (!retval) {
 			return FALSE;
 		}
 	}
@@ -692,8 +724,14 @@ ReliSock::RcvMsg :: RcvMsg() :
     mode_(MD_OFF),
     mdChecker_(0), 
 	p_sock(0),
-    ready(0)
+	m_partial_packet(false),
+	m_remaining_read_length(0),
+	m_end(0),
+	m_tmp(NULL),
+	ready(0),
+	m_closed(false)
 {
+	memset( m_partial_cksum, 0, sizeof(m_partial_cksum) );
 }
 
 ReliSock::RcvMsg::~RcvMsg()
@@ -703,15 +741,37 @@ ReliSock::RcvMsg::~RcvMsg()
 
 int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, int _timeout)
 {
-	Buf		*tmp;
 	char	        hdr[MAX_HEADER_SIZE];
-	int		end;
+	char *cksum_ptr = &hdr[5];
 	int		len, len_t, header_size;
 	int		tmp_len;
+	int		retval;
+
+	// We read the partial packet in a previous read; try to finish it and
+	// then skip down to packet verification.
+	if (m_partial_packet) {
+		m_partial_packet = false;
+		len = m_remaining_read_length;
+		cksum_ptr = m_partial_cksum;
+		goto read_packet;
+	}
 
 	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 
-	int retval = condor_read(peer_description,_sock,hdr,header_size,_timeout);
+	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, 0, p_sock->is_non_blocking());
+	if ( retval == 0 ) {   // 0 means that the read would have blocked; unlike a normal read(), condor_read
+	                       // returns -2 if the socket has been closed.
+		dprintf(D_NETWORK, "Reading header would have blocked.\n");
+		return 2;
+	}
+	// Block on short reads for the header.  Since the header is very short (typically, 5 bytes),
+	// we don't care to gracefully handle the case where it has been fragmented over multiple
+	// TCP packets.
+	if ( (retval > 0) && (retval != header_size) ) {
+		dprintf(D_NETWORK, "Force-reading remainder of header.\n");
+		retval = condor_read(peer_description, _sock, hdr+retval, header_size-retval, _timeout);
+	}
+
 	if ( retval < 0 && 
 		 retval != -2 ) // -2 means peer just closed the socket
 	{
@@ -720,57 +780,76 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 	}
 	if ( retval == -2 ) {	// -2 means peer just closed the socket
 		dprintf(D_FULLDEBUG,"IO: EOF reading packet header\n");
+		m_closed = true;
 		return FALSE;
 	}
-	end = (int) ((char *)hdr)[0];
+
+	m_end = (int) ((char *)hdr)[0];
 	memcpy(&len_t,  &hdr[1], 4);
 	len = (int) ntohl(len_t);
 
-	if (end < 0 || end > 10) {
+	if (m_end < 0 || m_end > 10) {
 		dprintf(D_ALWAYS,"IO: Incoming packet header unrecognized\n");
 		return FALSE;
 	}
         
-	if (!(tmp = new Buf)){
+	if (len > 1024*1024){
+		dprintf(D_ALWAYS, "IO: Incoming packet is larger than 1MB limit (requested size %d)\n", len);
+		return FALSE;
+	}
+	if (!(m_tmp = new Buf)){
 		dprintf(D_ALWAYS, "IO: Out of memory\n");
 		return FALSE;
 	}
-	if (len > tmp->max_size()){
-		delete tmp;
-		dprintf(D_ALWAYS, "IO: Incoming packet is too big\n");
-		return FALSE;
-	}
+	m_tmp->grow_buf(len+1);
+
 	if (len <= 0)
 	{
-		delete tmp;
+		delete m_tmp;
+		m_tmp = NULL;
 		dprintf(D_ALWAYS, 
 			"IO: Incoming packet improperly sized (len=%d,end=%d)\n",
-			len,end);
+			len, m_end);
 		return FALSE;
 	}
-	if ((tmp_len = tmp->read(peer_description, _sock, len, _timeout)) != len){
-		delete tmp;
-		dprintf(D_ALWAYS, "IO: Packet read failed: read %d of %d\n",
-				tmp_len, len);
-		return FALSE;
+
+read_packet:
+	tmp_len = m_tmp->read(peer_description, _sock, len, _timeout, p_sock->is_non_blocking());
+	if (tmp_len != len) {
+		if (p_sock->is_non_blocking() && (tmp_len >= 0)) {
+			m_partial_packet = true;
+			m_remaining_read_length = len - tmp_len;
+			if ( mode_ != MD_OFF && cksum_ptr != m_partial_cksum ) {
+				memcpy( m_partial_cksum, cksum_ptr, sizeof(m_partial_cksum) );
+			}
+			return 2;
+		} else {
+			delete m_tmp;
+			m_tmp = NULL;
+			dprintf(D_ALWAYS, "IO: Packet read failed: read %d of %d\n",
+					tmp_len, len);
+			return FALSE;
+		}
 	}
 
         // Now, check MD
         if (mode_ != MD_OFF) {
-            if (!tmp->verifyMD(&hdr[5], mdChecker_)) {
-                delete tmp;
+            if (!m_tmp->verifyMD(cksum_ptr, mdChecker_)) {
+                delete m_tmp;
+		m_tmp = NULL;
                 dprintf(D_ALWAYS, "IO: Message Digest/MAC verification failed!\n");
                 return FALSE;  // or something other than this
             }
         }
         
-	if (!buf.put(tmp)) {
-		delete tmp;
+	if (!buf.put(m_tmp)) {
+		delete m_tmp;
+		m_tmp = NULL;
 		dprintf(D_ALWAYS, "IO: Packet storing failed\n");
 		return FALSE;
 	}
 		
-	if (end) {
+	if (m_end) {
 		ready = TRUE;
 	}
 	return TRUE;
@@ -780,7 +859,8 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 ReliSock::SndMsg::SndMsg() : 
     mode_(MD_OFF), 
     mdChecker_(0),
-	p_sock(0)
+	p_sock(0),
+	m_out_buf(NULL)
 {
 }
 
@@ -789,29 +869,86 @@ ReliSock::SndMsg::~SndMsg()
     delete mdChecker_;
 }
 
+int ReliSock::SndMsg::finish_packet(const char *peer_description, int sock, int timeout)
+{
+	if (m_out_buf == NULL) {
+		return true;
+	}
+	dprintf(D_NETWORK, "Finishing packet with non-blocking %d.\n", p_sock->is_non_blocking());
+	int retval = true;
+	int result = m_out_buf->write(peer_description, sock, -1, timeout, p_sock->is_non_blocking());
+	if (result < 0) {
+		retval = false;
+	} else if (!m_out_buf->consumed()) {
+		if (p_sock->is_non_blocking()) {
+			return 2;
+		} else {
+			retval = false;
+		}
+	}
+	delete m_out_buf;
+	m_out_buf = NULL;
+	return retval;
+}
+
+void ReliSock::SndMsg::stash_packet()
+{
+	dprintf(D_NETWORK, "Stashing packet for later due to non-blocking request.\n");
+	m_out_buf = new Buf();
+	m_out_buf->swap(buf);
+	buf.reset();
+}
+
+	// Send the current buffer in a single CEDAR packet.
+	// Return codes:
+	//   - TRUE: successful send.
+	//   - FALSE: failed
+	//   - 2: Write would have blocked and we are in non-blocking mode.
+	//
+	// Note: If we are in non-blocking mode, we may just form the buffer but only
+	// partially send it to the wire.  If this happens, we return 2.  In such a case,
+	// we leave the SndMsg buffer in a valid state -- if the caller cannot buffer the
+	// data itself, it may use the 'put_force' method to grow the underlying buffer.
 int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int end, int _timeout )
 {
+		// First, see if we have an incomplete packet.
+	int retval = finish_packet(peer_description, _sock, _timeout);
+	if (retval == 2) {
+		return 3;
+	} else if (!retval) {
+		return false;
+	}
+		// 
+
 	char	        hdr[MAX_HEADER_SIZE];
 	int		len, header_size;
 	int		ns;
 
-    header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
+	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 	hdr[0] = (char) end;
 	ns = buf.num_used() - header_size;
 	len = (int) htonl(ns);
 
 	memcpy(&hdr[1], &len, 4);
 
-        if (mode_ != MD_OFF) {
-            if (!buf.computeMD(&hdr[5], mdChecker_)) {
-                dprintf(D_ALWAYS, "IO: Failed to compute Message Digest/MAC\n");
-                return FALSE;
-            }
-        }
+	if (mode_ != MD_OFF) {
+		if (!buf.computeMD(&hdr[5], mdChecker_)) {
+			dprintf(D_ALWAYS, "IO: Failed to compute Message Digest/MAC\n");
+			return FALSE;
+		}
+	}
 
-        if (buf.flush(peer_description, _sock, hdr, header_size, _timeout) != (ns+header_size)){
-            return FALSE;
-        }
+	int result = buf.flush(peer_description, _sock, hdr, header_size, _timeout, p_sock->is_non_blocking());
+	if (result < 0) {
+		return false;
+	} else if (result != ns+header_size) {
+		if (p_sock->is_non_blocking()) {
+			stash_packet();
+			return 2;
+		} else {
+			return false;
+		}
+	}
         
 	if( end ) {
 		buf.dealloc_buf(); // save space, now that we are done sending
@@ -977,7 +1114,10 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 				return TRUE;
 			}
 			if (!snd_msg.buf.empty()) {
+				bool is_non_blocking = m_non_blocking;
+				m_non_blocking = false;
 				ret_val = snd_msg.snd_packet(peer_description(), _sock, TRUE, _timeout);
+				m_non_blocking = is_non_blocking;
 			}
 			if ( ret_val ) {
 				ignore_next_encode_eom = TRUE;
@@ -1164,5 +1304,13 @@ ReliSock::setTargetSharedPortID( char const *id )
 
 bool
 ReliSock::msgReady() {
+	if (rcv_msg.ready) { return true; }
+	BlockingModeGuard sentry(this, true);
+	int retval = handle_incoming_packet();
+	if (retval == 2) {
+		dprintf(D_NETWORK, "msgReady would have blocked.\n");
+		m_read_would_block = true;
+		return false;
+	}
 	return rcv_msg.ready;
 }

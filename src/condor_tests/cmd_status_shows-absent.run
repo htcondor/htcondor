@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use CondorCmdStatusWorker;
+use CondorCmdStatusWorker2;
 use CondorTest;
 
 #
@@ -14,14 +14,14 @@ use CondorTest;
 #
 # This is terrible hack.
 #
-my $terribleHack = CondorCmdStatusWorker::SetUp( "cmd_status_shows-absent" );
+my $terribleHack = CondorCmdStatusWorker2::SetUp( "cmd_status_shows-absent" );
 ## my $terribleHack = "x&y";
 if( $terribleHack eq "" ) {
     die( "Unable to set up personal condor(s).\n" );
 }
 my( $personalCondorA, $personalCondorB ) = split( '&', $terribleHack );
 
-my $stable = CondorCmdStatusWorker::IsSystemStable();
+my $stable = CondorCmdStatusWorker2::IsSystemStable();
 ## my $stable = 1;
 if( $stable != 1 ) {
     failTestWithReason( "System did not stabilize.\n" );

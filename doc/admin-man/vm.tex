@@ -10,12 +10,12 @@ Virtual machines can be executed on any execution site with VMware, Xen
 To do this, HTCondor must be informed of some details of the 
 virtual machine installation, and the execution machines must
 be configured correctly.
-This permits the execution of \SubmitCmd{vm} universe jobs.
+This permits the execution of \SubmitCmdNI{vm} universe jobs.
 
 What follows is not a comprehensive list of the options that
-help set up to use the \SubmitCmd{vm} universe; rather,
+help set up to use the \SubmitCmdNI{vm} universe; rather,
 it is intended to serve as a starting point for those users interested in
-getting \SubmitCmd{vm} universe jobs up and running quickly.
+getting \SubmitCmdNI{vm} universe jobs up and running quickly.
 Details of configuration variables are in section~\ref{sec:Config-VMs}.
 
 Begin by installing the virtualization package on all execute machines,
@@ -36,7 +36,7 @@ If using \Prog{Player}, also install the \Prog{VIX API},
 which is freely available from VMware.
 
 For Xen, there are three things that must exist on 
-an execute machine to fully support \SubmitCmd{vm} universe jobs. 
+an execute machine to fully support \SubmitCmdNI{vm} universe jobs. 
 \begin{enumerate}
 \item
 A Xen-enabled kernel must be running. 
@@ -53,7 +53,7 @@ for execution of VMs whose disks contain the kernel they will run.
 \end{enumerate}
 
 For KVM, there are two things that must exist on
-an execute machine to fully support \SubmitCmd{vm} universe jobs. 
+an execute machine to fully support \SubmitCmdNI{vm} universe jobs. 
 \begin{enumerate}
 \item
 The machine must have the KVM kernel module installed and running.
@@ -68,7 +68,7 @@ The \Prog{libvirtd} daemon must be installed and running.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 There are configuration variables related to the virtual machines
-for \SubmitCmd{vm} universe jobs.
+for \SubmitCmdNI{vm} universe jobs.
 Some options are required, while others are optional.
 Here we only discuss those that are required.
 
@@ -142,9 +142,9 @@ VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware
 
 Note that an execute machine's \MacroNI{EXECUTE} variable should not
 contain any symbolic links in its path,
-if the machine is configured to run VMware \SubmitCmd{vm} universe jobs.
+if the machine is configured to run VMware \SubmitCmdNI{vm} universe jobs.
 Strange behavior has been noted when HTCondor tries to run a 
-\SubmitCmd{vm} universe VMware
+\SubmitCmdNI{vm} universe VMware
 job using a path to a VMX file that contains a symbolic link.
 An example of an error message that may appear in such a job's event log:
 \begin{verbatim}
@@ -200,7 +200,7 @@ installation, and a variety of other factors. We can offer only limited
 advice on these matters:
 
 For Xen and KVM,
-the \SubmitCmd{vm} universe is only available when \Login{root} starts HTCondor.
+the \SubmitCmdNI{vm} universe is only available when \Login{root} starts HTCondor.
 This is a restriction currently imposed because root privileges are 
 required to create a virtual machine on top of a Xen-enabled kernel.
 Specifically, root is needed 

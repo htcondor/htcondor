@@ -27,6 +27,8 @@
 
 extern ppOption				ppStyle;
 extern AttrListPrintMask 	pm;
+extern printmask_headerfooter_t pmHeadFoot;
+extern bool using_print_format; // hack for now so we can get standard totals when using -print-format
 extern List<const char>     pm_head; // The list of headings for the mask entries
 extern int					wantOnlyTotals;
 extern bool wide_display; // when true, don't truncate field data
@@ -77,11 +79,29 @@ static const char *formatLoadAvg (double, AttrList *, Formatter &);
 static void ppInit()
 {
 	pm.SetAutoSep(NULL, " ", NULL, "\n");
-	//pm.SetAutoSep(NULL, " (", ")", "\n");
+	//pm.SetAutoSep(NULL, " (", ")", "\n"); // for debugging, delimit the field data explicitly
 }
 
+#ifdef AD_PRINTMASK_V2
+enum ivfield {
+	BlankInvalidField = 0,
+	WideInvalidField = 1,
+	ShortInvalidField = 2,
+	CallInvalidField = 3,   // call the formatter function to generate invalid fields.  only valid when there is a format function.
+};
+class Lbl {
+public:
+	explicit Lbl(const char * ll) : m_lbl(ll) {};
+	operator const char*() const { return m_lbl; }
+private:
+	const char * m_lbl;
+};
+#else
 const char *StdInvalidField = "[?]"; // fill field with ??? surrounded by [], if 
+#endif
 
+#ifdef AD_PRINTMASK_V2
+#else
 // construct a string if the form "[????]" that is the given width
 // into the supplied buffer, output not to exceed max_buf, and
 // if the buffer or width is < 3, then return "?" instead of "[?]"
@@ -107,9 +127,11 @@ static const char * ppMakeFieldofQuestions(int width, char * buf, int buf_size)
 	return buf;
 }
 
+static const char *MinInvalidField = "[?]"; // fill field with ??? surrounded by [], if 
+
 static const char * ppMakeInvalidField(int width, const char * alt, char * buf, int buf_size)
 {
-	if (alt == StdInvalidField) {
+	if (alt == MinInvalidField) {
 		if (invalid_fields_empty) 
 			return "";
 		// make a field-width string of "[????]" for the alt string.
@@ -119,6 +141,99 @@ static const char * ppMakeInvalidField(int width, const char * alt, char * buf, 
 	}
 	return alt;
 }
+#endif
+
+#ifdef AD_PRINTMASK_V2
+
+static int ppWidthOpts(int width, int truncate)
+{
+	int opts = FormatOptionAutoWidth;
+	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
+	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
+	return opts;
+}
+
+static int ppAltOpts(ivfield alt)
+{
+	int opts = 0;
+	if (alt == WideInvalidField) {
+		if (!invalid_fields_empty) opts |= AltQuestion | AltWide;
+	} else if (alt == ShortInvalidField) {
+		if (!invalid_fields_empty) opts |= AltQuestion;
+	} else if (alt == CallInvalidField) {
+		opts |= FormatOptionAlwaysCall;
+	} else if (alt != BlankInvalidField) {
+		opts |= AltFixMe;
+	}
+	return opts;
+}
+
+static void ppSetColumnFormat(const char * print, int width, bool truncate, ivfield alt, const char * attr)
+{
+	int opts = ppWidthOpts(width, truncate) | ppAltOpts(alt);
+	pm.registerFormat(print, width, opts, attr);
+}
+
+static void ppSetColumnFormat(const CustomFormatFn & fmt, const char * print, int width, bool truncate, ivfield alt, const char * attr)
+{
+	int opts = ppWidthOpts(width, truncate) | ppAltOpts(alt);
+	if (width == 11 && fmt.IsNumber() && (fmt.Is(formatElapsedTime) || fmt.Is(formatRealTime))) {
+		opts |= FormatOptionNoPrefix;
+		width = 12;
+	}
+	pm.registerFormat(print, width, opts, fmt, attr);
+}
+
+// ------ helpers
+//
+static void ppSetColumn(const char * attr, const Lbl & label, int width, bool truncate, ivfield alt = WideInvalidField)
+{
+	pm_head.Append(label);
+	ppSetColumnFormat("%v", width, truncate, alt, attr);
+}
+static void ppSetColumn(const char * attr, int width, bool truncate, ivfield alt = WideInvalidField)
+{
+	pm_head.Append(attr);
+	ppSetColumnFormat("%v", width, truncate, alt, attr);
+}
+
+
+static void ppSetColumn(const char * attr, const Lbl & label, const char * print, bool truncate, ivfield alt = WideInvalidField)
+{
+	pm_head.Append(label);
+	ppSetColumnFormat(print, 0, truncate, alt, attr);
+}
+static void ppSetColumn(const char * attr, const char * print, bool truncate, ivfield alt = WideInvalidField)
+{
+	pm_head.Append(attr);
+	ppSetColumnFormat(print, 0, truncate, alt, attr);
+}
+
+
+static void ppSetColumn(const char * attr, const Lbl & label, const CustomFormatFn & fmt, int width, bool truncate, ivfield alt = WideInvalidField)
+{
+	pm_head.Append(label);
+	ppSetColumnFormat(fmt, NULL, width, truncate, alt, attr);
+}
+static void ppSetColumn(const char * attr, const CustomFormatFn & fmt, int width, bool truncate, ivfield alt = WideInvalidField)
+{
+	pm_head.Append(attr);
+	ppSetColumnFormat(fmt, NULL, width, truncate, alt, attr);
+}
+
+static void ppSetColumn(const char * attr, const Lbl & label, const CustomFormatFn & fmt, const char * print, int width, bool truncate = true, ivfield alt = WideInvalidField)
+{
+	pm_head.Append(label);
+	ppSetColumnFormat(fmt, print, width, truncate, alt, attr);
+}
+/* not currently used
+static void ppSetColumn(const char * attr, const CustomFormatFn & fmt, const char * print, int width, bool truncate = true, ivfield alt = WideInvalidField)
+{
+	pm_head.Append(attr);
+	ppSetColumnFormat(fmt, print, width, truncate, alt, attr);
+}
+*/
+#else
 
 static void ppSetColumn(const char * label, const char * attr, int width, bool truncate, const char * alt)
 {
@@ -133,6 +248,7 @@ static void ppSetColumn(const char * label, const char * attr, int width, bool t
 
 	pm.registerFormat("%v", width, opts, attr, alt);
 }
+
 
 static void ppSetColumn(const char * label, const char * attr, const char * fmt, bool truncate = true, const char * alt = NULL)
 {
@@ -149,8 +265,7 @@ static void ppSetColumn(const char * label, const char * attr, const char * fmt,
 	pm.registerFormat(fmt, width, opts, attr, alt);
 }
 
-
-static void ppSetColumn(const char * label, const char * attr, IntCustomFmt fmt, int width, bool truncate = true, const char * alt = NULL)
+static void ppSetColumn(const char * label, const char * attr, const CustomFormatFn & fmt, int width, bool truncate = true, const char * alt = NULL)
 {
 	pm_head.Append(label ? label : attr);
 
@@ -158,7 +273,7 @@ static void ppSetColumn(const char * label, const char * attr, IntCustomFmt fmt,
 	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
 	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
 
-	if (((fmt == formatElapsedTime) || (fmt == formatRealTime)) && (width == 11)) {
+	if (width == 11 && fmt.IsNumber() && (fmt.Is(formatElapsedTime) || fmt.Is(formatRealTime))) {
 		opts |= FormatOptionNoPrefix;
 		width = 12;
 	}
@@ -169,21 +284,7 @@ static void ppSetColumn(const char * label, const char * attr, IntCustomFmt fmt,
 	pm.registerFormat(NULL, width, opts, fmt, attr, alt);
 }
 
-static void ppSetColumn(const char * label, const char * attr, StringCustomFmt fmt, int width, bool truncate = true, const char * alt = NULL)
-{
-	pm_head.Append(label ? label : attr);
-
-	int opts = FormatOptionAutoWidth;
-	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-
-	char altq[22];
-	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
-
-	pm.registerFormat(NULL, width, opts, fmt, attr, alt);
-}
-
-static void ppSetColumn(const char * label, const char * attr, FloatCustomFmt fmt, const char * print, int width, bool truncate = true, const char * alt = NULL)
+static void ppSetColumn(const char * label, const char * attr, const CustomFormatFn & fmt, const char * print, int width, bool truncate = true, const char * alt = NULL)
 {
 	pm_head.Append(label ? label : attr);
 
@@ -197,6 +298,9 @@ static void ppSetColumn(const char * label, const char * attr, FloatCustomFmt fm
 	pm.registerFormat(print, width, opts, fmt, attr, alt);
 }
 
+#endif
+
+
 static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 {
 	if (ad) {
@@ -204,7 +308,11 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 		char * tmp = pm.display(ad, NULL);
 		delete [] tmp;
 	}
-	pm.display_Headings(file, pm_head);
+	if (pm.has_headings()) {
+		pm.display_Headings(file);
+	} else {
+		pm.display_Headings(file, pm_head);
+	}
 	if (pszExtra)
 		printf("%s", pszExtra);
 }
@@ -212,17 +320,18 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 void
 prettyPrint (ClassAdList &adList, TrackTotals *totals)
 {
+	ppOption pps = using_print_format ? PP_CUSTOM : ppStyle;
 	ClassAd	*ad;
 	int     classad_index;
 	int     last_classad_index;
-	bool    fPrintHeadings = pm_head.Length() > 0;
+	bool    fPrintHeadings = pm.has_headings() || (pm_head.Length() > 0);
 
 	classad_index = 0;
 	last_classad_index = adList.Length() - 1;
 	adList.Open();
 	while ((ad = adList.Next())) {
 		if (!wantOnlyTotals) {
-			switch (ppStyle) {
+			switch (pps) {
 			  case PP_STARTD_NORMAL:
 				if (absentMode) {
 					printStartdAbsent (ad, (classad_index == 0));
@@ -308,7 +417,12 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				if (fPrintHeadings) {
 					char * tmp = pm.display(ad, targetAd);
 					delete [] tmp;
-					pm.display_Headings(stdout, pm_head);
+					if (pm.has_headings()) {
+						if ( ! (pmHeadFoot & HF_NOHEADER))
+							pm.display_Headings(stdout);
+					} else {
+						pm.display_Headings(stdout, pm_head);
+					}
 					fPrintHeadings = false;
 				}
 				printCustom (ad);
@@ -331,7 +445,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	// if there are no ads to print, but the user wanted XML output,
 	// then print out the XML header and footer, so that naive XML
 	// parsers won't get confused.
-	if ( PP_XML == ppStyle && 0 == classad_index ) {
+	if ( PP_XML == pps && 0 == classad_index ) {
 		printXML (NULL, true, true);
 	}
 
@@ -343,406 +457,130 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 void
 printStartdAbsent (ClassAd *ad, bool first)
 {
-#if 1
 	if (first) {
 		ppInit();
-		ppSetColumn(0,ATTR_NAME, -34, ! wide_display, StdInvalidField);
-		ppSetColumn(0,ATTR_OPSYS, -10, true, StdInvalidField);
-		ppSetColumn(0,ATTR_ARCH, -10, true, StdInvalidField);
-		ppSetColumn("Went Absent", ATTR_LAST_HEARD_FROM, formatRealDate, -10, true);
-		ppSetColumn("Will Forget", ATTR_CLASSAD_LIFETIME, formatDueDate, -10, true);
+		ppSetColumn(ATTR_NAME, -34, ! wide_display);
+		ppSetColumn(ATTR_OPSYS, -10, true);
+		ppSetColumn(ATTR_ARCH, -10, true);
+		ppSetColumn(ATTR_LAST_HEARD_FROM, Lbl("Went Absent"), formatRealDate, -10, true);
+		ppSetColumn(ATTR_CLASSAD_LIFETIME, Lbl("Will Forget"), formatDueDate, -10, true);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
 	if (ad)
 		pm.display (stdout, ad);
-#else
-	static bool first = true;
-	static AttrListPrintMask alpm;
-	int    now;
-	int	   actvty;
-
-	if( ad ) {
-		if( first ) {
-			printf( "\n%-34.34s %-10.10s %-10.10s %-11.11s %-11.11s\n\n",
-				ATTR_NAME, ATTR_OPSYS, ATTR_ARCH,
-				"Went Absent", "Will Forget" );
-
-			alpm.registerFormat( "%-34.34s ", ATTR_NAME, "[???] " );
-			alpm.registerFormat( "%-10.10s " , ATTR_OPSYS, "[???] " );
-			alpm.registerFormat( "%-10.10s ", ATTR_ARCH, "[???] " );
-
-			first = false;
-			}
-
-		alpm.display( stdout, ad );
-
-		if( ad->LookupInteger( ATTR_LAST_HEARD_FROM, now ) ) {
-			printf( "%-11.11s", format_date( now ) );
-
-			if( ad->LookupInteger( ATTR_CLASSAD_LIFETIME, actvty ) ) {
-				printf( " %-11.11s", format_date( now + actvty ) );
-				}
-			}
-
-		printf( "\n" );
-		}
-	}
-#endif
 	return;
 }
 
 void
 printStartdNormal (ClassAd *ad, bool first)
 {
-#if 1
 	if (first) {
 		ppInit();
-		ppSetColumn(0, ATTR_NAME, wide_display ? -34 : -18, ! wide_display, StdInvalidField);
+		ppSetColumn(ATTR_NAME, wide_display ? -34 : -18, ! wide_display);
 
 		if (javaMode) {
-			ppSetColumn(0, ATTR_JAVA_VENDOR, -10, ! wide_display, StdInvalidField);
-			ppSetColumn("Ver", ATTR_JAVA_VERSION, -6, ! wide_display, StdInvalidField);
+			ppSetColumn(ATTR_JAVA_VENDOR, -10, ! wide_display);
+			ppSetColumn(ATTR_JAVA_VERSION, Lbl("Ver"), -6, ! wide_display);
 		} else if (vmMode) {
-			ppSetColumn("VmType", ATTR_VM_TYPE, -6, true, StdInvalidField);
-			ppSetColumn("Network", ATTR_VM_NETWORKING_TYPES, -9, true, StdInvalidField);
+			ppSetColumn(ATTR_VM_TYPE, Lbl("VmType"), -6, true);
+			ppSetColumn(ATTR_VM_NETWORKING_TYPES, Lbl("Network"), -9, true);
 		}else {
-			ppSetColumn(0, ATTR_OPSYS, -10, true, StdInvalidField);
-			ppSetColumn(0, ATTR_ARCH, -6, true, StdInvalidField);
+			ppSetColumn(ATTR_OPSYS, -10, true);
+			ppSetColumn(ATTR_ARCH, -6, true);
 		}
-		ppSetColumn(0, ATTR_STATE,    -9, true, StdInvalidField);
-		ppSetColumn(0, ATTR_ACTIVITY, -8, true, StdInvalidField);
+		ppSetColumn(ATTR_STATE,    -9, true);
+		ppSetColumn(ATTR_ACTIVITY, -8, true);
 
 		//ppSetColumn(0, ATTR_LOAD_AVG, "%.3f ", false, invalid_fields_empty ? "" : "[???] ");
 		//pm_head.Append(ATTR_LOAD_AVG);
 		//pm_head.Append(wide_display ? ATTR_LOAD_AVG : "LoadAv");
 		//pm.registerFormat("%.3f ", wide_display ? 7 : 6, FormatOptionAutoWidth, ATTR_LOAD_AVG, invalid_fields_empty ? "" : "[???] ");
-		ppSetColumn("LoadAv",ATTR_LOAD_AVG, formatLoadAvg, NULL, 6, true, StdInvalidField);
+		ppSetColumn(ATTR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
 
 		if (vmMode) {
-			ppSetColumn("VMMem", ATTR_VM_MEMORY, "%4d", false, StdInvalidField);
+			ppSetColumn(ATTR_VM_MEMORY, Lbl("VMMem"), "%4d", false);
 		} else {
-			ppSetColumn("Mem", ATTR_MEMORY, "%4d", false, StdInvalidField);
+			ppSetColumn(ATTR_MEMORY, Lbl("Mem"), "%4d", false);
 		}
 		pm_head.Append(wide_display ? "ActivityTime" : "  ActvtyTime");
-		pm.registerFormat(NULL, 12, FormatOptionAutoWidth | (wide_display ? 0 : FormatOptionNoPrefix), formatActivityTime, ATTR_ENTERED_CURRENT_ACTIVITY, "   [Unknown]");
+		pm.registerFormat(NULL, 12, FormatOptionAutoWidth | (wide_display ? 0 : FormatOptionNoPrefix) | AltFixMe,
+			formatActivityTime, ATTR_ENTERED_CURRENT_ACTIVITY /* "   [Unknown]"*/);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
 	if (ad)
 		pm.display (stdout, ad);
-#else
-	static bool first = true;
-	static AttrListPrintMask alpm;
-	int    now;
-	int	   actvty;
-
-	const char *opsys_attr, *arch_attr, *mem_attr;
-	const char *opsys_name, *arch_name, *mem_name;
- 
-	mem_name = "Mem";
-	mem_attr = ATTR_MEMORY;
-
-    /* 
-     * The absent mode would share no more than four lines of code with
-     * the other two modes, so just handle it separately.
-     */
-    if( absentMode ) {
-        if( ad ) {
-            if( first ) {
-                printf( "\n%-34.34s %-10.10s %-10.10s %-11.11s %-11.11s\n\n",
-                        ATTR_NAME, ATTR_OPSYS, ATTR_ARCH,
-                        "Went Absent", "Will Forget" );
-
-                alpm.registerFormat( "%-34.34s ", ATTR_NAME, "[???] " );
-                alpm.registerFormat( "%-10.10s " , ATTR_OPSYS, "[???] " );
-                alpm.registerFormat( "%-10.10s ", ATTR_ARCH, "[???] " );
-
-                first = false;
-            }
-
-            alpm.display( stdout, ad );
-
-            if( ad->LookupInteger( ATTR_LAST_HEARD_FROM, now ) ) {
-                printf( "%-11.11s", format_date( now ) );
-
-                if( ad->LookupInteger( ATTR_CLASSAD_LIFETIME, actvty ) ) {
-                    printf( " %-11.11s", format_date( now + actvty ) );
-                }
-            }
-
-            printf( "\n" );
-        }
-
-        return;
-    }
-
-	if(javaMode) {
-		opsys_name = opsys_attr = ATTR_JAVA_VENDOR;
-		arch_name = "Ver";
-		arch_attr = ATTR_JAVA_VERSION;	
-	} else if(vmMode) {
-		// For vm universe, we will print ATTR_VM_MEMORY
-		// instead of ATTR_MEMORY
-		opsys_name = "VMType";
-		opsys_attr = ATTR_VM_TYPE;
-		arch_name = "Network";
-		arch_attr = ATTR_VM_NETWORKING_TYPES;
-		mem_name = "VMMem";
-		mem_attr = ATTR_VM_MEMORY;
-	} else {
-		opsys_name = opsys_attr = ATTR_OPSYS;
-		arch_name = arch_attr = ATTR_ARCH;
-	}
-
-	if (ad)
-	{
-		// print header if necessary
-		if (first)
-		{
-			if( vmMode ) {
-				printf ("\n%-18.18s %-6.6s %-10.10s %-9.9s %-8.8s %-6.6s "
-						"%-4.4s %-12.12s  %s\n\n",
-						ATTR_NAME, opsys_name, arch_name, ATTR_STATE, ATTR_ACTIVITY,
-						ATTR_LOAD_AVG, mem_name, "ActvtyTime", "VMNetworking");
-			}else {
-				printf ("\n%-18.18s %-10.10s %-6.6s %-9.9s %-8.8s %-6.6s "
-						"%-4.4s  %s\n\n",
-						ATTR_NAME, opsys_name, arch_name, ATTR_STATE, ATTR_ACTIVITY,
-						ATTR_LOAD_AVG, mem_name, "ActvtyTime");
-			}
-		
-			alpm.registerFormat("%-18.18s ", ATTR_NAME, "[????????????????] ");
-
-			if( vmMode ) {
-				alpm.registerFormat("%-6.6s " , opsys_attr, "[????] ");
-				alpm.registerFormat("%-10.10s " , arch_attr, "[????????] ");
-			}else {
-				alpm.registerFormat("%-10.10s " , opsys_attr, "[????????] ");
-				alpm.registerFormat("%-6.6s " , arch_attr, "[????] ");
-			}
-
-			alpm.registerFormat("%-9.9s ",  ATTR_STATE, "[???????] ");
-			alpm.registerFormat("%-8.8s ",  ATTR_ACTIVITY, "[??????] ");
-			alpm.registerFormat("%.3f  ",  ATTR_LOAD_AVG, "[???]  ");
-			alpm.registerFormat("%4d",  mem_attr, "[??]");
-
-			first = false;
-		}
-
-		alpm.display(stdout, ad);
-		if (ad->LookupInteger(ATTR_ENTERED_CURRENT_ACTIVITY, actvty)
-			&& (ad->LookupInteger(ATTR_MY_CURRENT_TIME, now) ||
-				ad->LookupInteger(ATTR_LAST_HEARD_FROM, now))) {
-			actvty = now - actvty;
-			printf("%s", format_time(actvty));
-		} else {
-			printf("   [Unknown]");
-		}
-
-		printf("\n");
-	}
-#endif
 }
 
 
 void
 printServer (ClassAd *ad, bool first)
 {
-#if 1
 	if (first) {
 		ppInit();
-		ppSetColumn(0,ATTR_NAME,    wide_display ? -34 : -13, ! wide_display, StdInvalidField);
-		ppSetColumn(0,ATTR_OPSYS,  -11, true, StdInvalidField);
-		ppSetColumn(0,ATTR_ARCH,    -6, true, StdInvalidField);
-		ppSetColumn("LoadAv",ATTR_LOAD_AVG, formatLoadAvg, NULL, 6, true, StdInvalidField);
-		ppSetColumn(0,ATTR_MEMORY, "%8d",  true, StdInvalidField);
-		ppSetColumn(0,ATTR_DISK, "%9d",  true, StdInvalidField);
-		ppSetColumn(0,ATTR_MIPS, "%7d", true, StdInvalidField);
-		ppSetColumn(0,ATTR_KFLOPS, "%9d", true, StdInvalidField);
+		ppSetColumn(ATTR_NAME,    wide_display ? -34 : -13, ! wide_display);
+		ppSetColumn(ATTR_OPSYS,  -11, true);
+		ppSetColumn(ATTR_ARCH,    -6, true);
+		ppSetColumn(ATTR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
+		ppSetColumn(ATTR_MEMORY, "%8d",  true);
+		ppSetColumn(ATTR_DISK, "%9d",  true);
+		ppSetColumn(ATTR_MIPS, "%7d", true);
+		ppSetColumn(ATTR_KFLOPS, "%9d", true);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
 	if (ad)
 		pm.display (stdout, ad);
-#else
-	static bool first = true;
-	static AttrListPrintMask alpm;
-
-	if (ad)
-	{
-		// print header if necessary
-		if (first)
-		{
-			printf ("\n%-13.13s %-11.11s %-6.6s %-6.6s %-6.6s  %-7.7s "
-					"%-10.10s %-10.10s\n\n",
-				ATTR_NAME, ATTR_OPSYS, ATTR_ARCH, ATTR_LOAD_AVG, ATTR_MEMORY,
-				ATTR_DISK, ATTR_MIPS, ATTR_KFLOPS);
-		
-			alpm.registerFormat("%-13.13s ", ATTR_NAME, "[???????????] ");
-			alpm.registerFormat("%-11.11s " , ATTR_OPSYS, "[?????????] ");
-			alpm.registerFormat("%-6.6s " , ATTR_ARCH, "[????] ");
-			alpm.registerFormat("%.3f  ",  ATTR_LOAD_AVG, "[???]  ");
-			alpm.registerFormat("%6d  ",  ATTR_MEMORY, "[????]  ");
-			alpm.registerFormat("%7d ",  ATTR_DISK, "[?????] ");
-			alpm.registerFormat("%10d ", ATTR_MIPS, "[????????] ");
-			alpm.registerFormat("%10d\n", ATTR_KFLOPS, "[????????]\n");
-
-			first = false;
-		}
-
-		alpm.display (stdout, ad);
-	}
-#endif
 }
 
 void
 printState (ClassAd *ad, bool first)
 {
-#if 1
 	if (first) {
 		ppInit();
 		int timewid = wide_display ? 12 : 11;
-		ppSetColumn(0,ATTR_NAME,    wide_display ? -34 : -12, ! wide_display, StdInvalidField);
-		ppSetColumn("Cpu",ATTR_CPUS,  3, true, StdInvalidField);
-		ppSetColumn(" Mem",ATTR_MEMORY, 5, true, StdInvalidField);
-		//ppSetColumn("Load ",ATTR_LOAD_AVG, "%.3f", true, StdInvalidField);
-		ppSetColumn("LoadAv",ATTR_LOAD_AVG, formatLoadAvg, NULL, 6, true, StdInvalidField);
-		ppSetColumn("  KbdIdle",ATTR_KEYBOARD_IDLE, formatRealTime, timewid, true, StdInvalidField);
-		ppSetColumn(0,ATTR_STATE, -7,  true, StdInvalidField);
-		ppSetColumn("  StateTime",ATTR_ENTERED_CURRENT_STATE, formatElapsedTime, timewid, true, StdInvalidField);
-		ppSetColumn("Activ",ATTR_ACTIVITY, -5, true, StdInvalidField);
-		ppSetColumn("  ActvtyTime",ATTR_ENTERED_CURRENT_ACTIVITY, formatElapsedTime, timewid, true, StdInvalidField);
+		ppSetColumn(ATTR_NAME,    wide_display ? -34 : -12, ! wide_display);
+		ppSetColumn(ATTR_CPUS, Lbl("Cpu"), 3, true);
+		ppSetColumn(ATTR_MEMORY, Lbl(" Mem"), 5, true);
+		//ppSetColumn(ATTR_LOAD_AVG, Lbl("Load "), "%.3f", true);
+		ppSetColumn(ATTR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
+		ppSetColumn(ATTR_KEYBOARD_IDLE, Lbl("  KbdIdle"), formatRealTime, timewid, true);
+		ppSetColumn(ATTR_STATE, -7,  true);
+		ppSetColumn(ATTR_ENTERED_CURRENT_STATE, Lbl("  StateTime"), formatElapsedTime, timewid, true);
+		ppSetColumn(ATTR_ACTIVITY, Lbl("Activ"), -5, true);
+		ppSetColumn(ATTR_ENTERED_CURRENT_ACTIVITY, Lbl("  ActvtyTime"), formatElapsedTime, timewid, true);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
 	if (ad)
 		pm.display (stdout, ad);
-#else
-	static bool first = true;
-	static AttrListPrintMask alpm;
-
-	if (ad)
-	{
-		// print header if necessary
-		if (first)
-		{
-			printf ("\n%-10.10s %-3.3s %5.5s %-6.6s  "
-					"%-10.10s %-7.7s   %-11.11s"
-					"%-4.4s %-12.12s\n\n",
-				ATTR_NAME, ATTR_CPUS, ATTR_MEMORY, "LoadAv",
-				"KbdIdle", ATTR_STATE, "StateTime",
-				ATTR_ACTIVITY, "ActvtyTime");
-		
-			alpm.registerFormat("%-10.10s ", ATTR_NAME, "[????????] ");
-			alpm.registerFormat("%3d " , ATTR_CPUS, "[?] ");
-			alpm.registerFormat("%5d " , ATTR_MEMORY, "[???] ");
-			alpm.registerFormat("%.3f ", ATTR_LOAD_AVG, "[???] ");
-			alpm.registerFormat( (IntCustomFmt) format_time,
-									ATTR_KEYBOARD_IDLE,
-									"[??????????]");
-			alpm.registerFormat(" %-7.7s ",  ATTR_STATE, " [?????] ");
-			alpm.registerFormat( (IntCustomFmt) formatElapsedTime,
-									ATTR_ENTERED_CURRENT_STATE,
-									"[??????????]");
-			alpm.registerFormat(" %-4.4s ",  ATTR_ACTIVITY, " [??] ");
-			alpm.registerFormat( (IntCustomFmt) formatElapsedTime,
-									ATTR_ENTERED_CURRENT_ACTIVITY,
-									"[??????????]");
-			alpm.registerFormat("\n", "*bogus*", "\n");  // force newline
-
-			first = false;
-		}
-
-		alpm.display (stdout, ad);
-	}
-#endif
 }
 
 void
 printRun (ClassAd *ad, bool first)
 {
-#if 1
 	if (first) {
 		ppInit();
-		ppSetColumn(0,ATTR_NAME,    wide_display ? -34 : -15, ! wide_display, StdInvalidField);
+		ppSetColumn(ATTR_NAME,    wide_display ? -34 : -15, ! wide_display);
 		if (javaMode) {
-			ppSetColumn(0,ATTR_JAVA_VENDOR,  -11, ! wide_display, StdInvalidField);
-			ppSetColumn("Ver",ATTR_JAVA_VERSION,  -6, ! wide_display, StdInvalidField);
+			ppSetColumn(ATTR_JAVA_VENDOR,  -11, ! wide_display);
+			ppSetColumn(ATTR_JAVA_VERSION, Lbl("Ver"),  -6, ! wide_display);
 		} else if (vmMode) {
-			ppSetColumn("VMType",ATTR_VM_TYPE,  -6, ! wide_display, StdInvalidField);
-			ppSetColumn("Network",ATTR_VM_NETWORKING_TYPES,  -11, ! wide_display, StdInvalidField);
+			ppSetColumn(ATTR_VM_TYPE, Lbl("VMType"), -6, ! wide_display);
+			ppSetColumn(ATTR_VM_NETWORKING_TYPES, Lbl("Network"),  -11, ! wide_display);
 		} else {
-			ppSetColumn(0,ATTR_OPSYS,  -11, true, StdInvalidField);
-			ppSetColumn(0,ATTR_ARCH,    -6, true, StdInvalidField);
+			ppSetColumn(ATTR_OPSYS,  -11, true);
+			ppSetColumn(ATTR_ARCH,    -6, true);
 		}
-		ppSetColumn("LoadAv",ATTR_LOAD_AVG, formatLoadAvg, NULL, 6, true, StdInvalidField);
-		ppSetColumn(0,ATTR_REMOTE_USER,    -20, ! wide_display, StdInvalidField);
-		ppSetColumn(0,ATTR_CLIENT_MACHINE, -16, ! wide_display, StdInvalidField);
+		ppSetColumn(ATTR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
+		ppSetColumn(ATTR_REMOTE_USER,    -20, ! wide_display);
+		ppSetColumn(ATTR_CLIENT_MACHINE, -16, ! wide_display);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
 	if (ad)
 		pm.display (stdout, ad);
-#else
-	static bool first = true;
-	static AttrListPrintMask alpm;
-
-	const char *opsys_attr, *arch_attr;
-	const char *opsys_name, *arch_name;
-
-	if(javaMode) {
-		opsys_name = opsys_attr = ATTR_JAVA_VENDOR;
-		arch_name = "Ver";
-		arch_attr = ATTR_JAVA_VERSION;	
-	} else if(vmMode) {
-		opsys_name = "VMType";
-		opsys_attr = ATTR_VM_TYPE;
-		arch_name = "Network";
-		arch_attr = ATTR_VM_NETWORKING_TYPES;
-	} else {
-		opsys_name = opsys_attr = ATTR_OPSYS;
-		arch_name = arch_attr = ATTR_ARCH;
-	}
-
-	if (ad)
-	{
-		// print header if necessary
-		if (first)
-		{
-			if(vmMode) {
-				printf ("\n%-13.13s %-6.6s %-11.11s %-6.6s %-20.20s %-15.15s\n\n",
-						ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG,
-						ATTR_REMOTE_USER, ATTR_CLIENT_MACHINE);
-			}else {
-				printf ("\n%-13.13s %-11.11s %-6.6s %-6.6s %-20.20s %-15.15s\n\n",
-						ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG,
-						ATTR_REMOTE_USER, ATTR_CLIENT_MACHINE);
-			}
-		
-			alpm.registerFormat("%-13.13s ", ATTR_NAME, "[???????????] ");
-
-
-			if(vmMode) {
-				alpm.registerFormat("%-6.6s " , opsys_attr, "[????] ");
-				alpm.registerFormat("%-11.11s " , arch_attr, "[?????????] ");
-			}else {
-				alpm.registerFormat("%-11.11s " , opsys_attr, "[?????????] ");
-				alpm.registerFormat("%-6.6s " , arch_attr, "[????] ");
-			}
-
-			alpm.registerFormat("%-.3f  ",  ATTR_LOAD_AVG, "[???]  ");
-			alpm.registerFormat("%-20.20s ", ATTR_REMOTE_USER,
-													"[??????????????????] ");
-			alpm.registerFormat("%-15.15s\n", ATTR_CLIENT_MACHINE,
-													"[?????????????]\n");
-
-			first = false;
-		}
-
-		alpm.display (stdout, ad);
-	}
-#endif
 }
 
 
@@ -853,331 +691,130 @@ printQuillNormal (ClassAd *ad) {
 void
 printScheddNormal (ClassAd *ad, bool first)
 {
-#if 1
 	if (first) {
 		ppInit();
-		ppSetColumn(0,ATTR_NAME,    wide_display ? -34 : -20, ! wide_display, StdInvalidField);
-		ppSetColumn(0,ATTR_MACHINE, wide_display ? -34 : -10, ! wide_display, StdInvalidField);
-		ppSetColumn(0,ATTR_TOTAL_RUNNING_JOBS, "%16d", true, StdInvalidField);
-		ppSetColumn(0,ATTR_TOTAL_IDLE_JOBS,    "%13d", true, StdInvalidField);
-		ppSetColumn(0,ATTR_TOTAL_HELD_JOBS,    "%14d", true, StdInvalidField);
+		ppSetColumn(ATTR_NAME,    wide_display ? -34 : -20, ! wide_display);
+		ppSetColumn(ATTR_MACHINE, wide_display ? -34 : -10, ! wide_display);
+		ppSetColumn(ATTR_TOTAL_RUNNING_JOBS, "%16d", true);
+		ppSetColumn(ATTR_TOTAL_IDLE_JOBS,    "%13d", true);
+		ppSetColumn(ATTR_TOTAL_HELD_JOBS,    "%14d", true);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
 	if (ad)
 		pm.display (stdout, ad);
-#else
-	static bool first = true;
-	static AttrListPrintMask alpm;
-
-	if (ad)
-	{
-		// print header if necessary
-		if (first)
-		{
-			printf ("\n%-20.20s %-10.10s %-16.16s %-13.13s %-14.14s\n\n",
-				ATTR_NAME, ATTR_MACHINE, ATTR_TOTAL_RUNNING_JOBS,
-				ATTR_TOTAL_IDLE_JOBS, ATTR_TOTAL_HELD_JOBS);
-		
-			alpm.registerFormat("%-20.20s ", ATTR_NAME,
-													"[??????????????????] ");
-			alpm.registerFormat("%-10.10s ", ATTR_MACHINE,
-													"[????????] ");
-			alpm.registerFormat("%16d ",ATTR_TOTAL_RUNNING_JOBS,
-													"[??????????????] ");
-			alpm.registerFormat("%13d ",ATTR_TOTAL_IDLE_JOBS,
-													"[???????????] ");
-			alpm.registerFormat("%14d\n",ATTR_TOTAL_HELD_JOBS,"[????????????]\n");
-
-			first = false;
-		}
-
-		alpm.display (stdout, ad);
-	}
-#endif
 }
 
 
 void
 printScheddSubmittors (ClassAd *ad, bool first)
 {
-#if 1
 	if (first) {
 		ppInit();
-		ppSetColumn(0,ATTR_NAME,    wide_display ? -34 : -28, ! wide_display, StdInvalidField);
-		ppSetColumn(0,ATTR_MACHINE, wide_display ? -34 : -18, ! wide_display, StdInvalidField);
-		ppSetColumn(0,ATTR_RUNNING_JOBS, "%11d", true, StdInvalidField);
-		ppSetColumn(0,ATTR_IDLE_JOBS,    "%8d", true, StdInvalidField);
-		ppSetColumn(0,ATTR_HELD_JOBS,    "%8d", true, StdInvalidField);
+		ppSetColumn(ATTR_NAME,    wide_display ? -34 : -28, ! wide_display);
+		ppSetColumn(ATTR_MACHINE, wide_display ? -34 : -18, ! wide_display);
+		ppSetColumn(ATTR_RUNNING_JOBS, "%11d", true);
+		ppSetColumn(ATTR_IDLE_JOBS,    "%8d", true);
+		ppSetColumn(ATTR_HELD_JOBS,    "%8d", true);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
 	if (ad)
 		pm.display (stdout, ad);
-#else
-	static bool first = true;
-	static AttrListPrintMask alpm;
-
-	if (ad)
-	{
-		// print header if necessary
-		if (first)
-		{
-			printf ("\n%-20.20s %-10.10s  %8.8s %-8.8s %-8.8s\n\n",
-				ATTR_NAME, ATTR_MACHINE, "Running", ATTR_IDLE_JOBS,
-				ATTR_HELD_JOBS);
-		
-			alpm.registerFormat("%-20.20s ", ATTR_NAME,
-													"[??????????????????] ");
-			alpm.registerFormat("%-10.10s  ", ATTR_MACHINE,
-													"[????????]  ");
-			alpm.registerFormat("%8d ", ATTR_RUNNING_JOBS, "[??????] ");
-			alpm.registerFormat("%8d ", ATTR_IDLE_JOBS, "[??????] ");
-			alpm.registerFormat("%8d\n", ATTR_HELD_JOBS, "[???????]\n");
-
-			first = false;
-		}
-
-		alpm.display (stdout, ad);
-	}
-#endif
 }
 
 void
 printCollectorNormal(ClassAd *ad, bool first)
 {
-#if 1
 	if (first) {
 		ppInit();
-		ppSetColumn(0,ATTR_NAME,    wide_display ? -34 : -28, ! wide_display, StdInvalidField);
-		ppSetColumn(0,ATTR_MACHINE, wide_display ? -34 : -18, ! wide_display, StdInvalidField);
-		ppSetColumn(0,ATTR_RUNNING_JOBS, "%11d", true, StdInvalidField);
-		ppSetColumn(0,ATTR_IDLE_JOBS,    "%8d", true, StdInvalidField);
-		ppSetColumn(0,ATTR_NUM_HOSTS_TOTAL,    "%10d", true, StdInvalidField);
+		ppSetColumn(ATTR_NAME,    wide_display ? -34 : -28, ! wide_display);
+		ppSetColumn(ATTR_MACHINE, wide_display ? -34 : -18, ! wide_display);
+		ppSetColumn(ATTR_RUNNING_JOBS, "%11d", true);
+		ppSetColumn(ATTR_IDLE_JOBS,    "%8d", true);
+		ppSetColumn(ATTR_NUM_HOSTS_TOTAL,    "%10d", true);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
 	if (ad)
 		pm.display (stdout, ad);
-#else
-	static bool first = true;
-	static AttrListPrintMask alpm;
-
-	if (ad)
-	{
-		// print header if necessary
-		if (first)
-		{
-			printf ("\n%-20.20s %-20.20s  %-8.8s %-8.8s  %s\n\n",
-				ATTR_NAME, ATTR_MACHINE, "Running", ATTR_IDLE_JOBS,
-				ATTR_NUM_HOSTS_TOTAL);
-		
-			alpm.registerFormat("%-20.20s ", ATTR_NAME,
-													"[??????????????????] ");
-			alpm.registerFormat("%-20.20s ", ATTR_MACHINE,
-													"[??????????????????] ");
-			alpm.registerFormat("%8d ", ATTR_RUNNING_JOBS, " [?????] ");
-			alpm.registerFormat("%8d  ", ATTR_IDLE_JOBS, " [?????]  ");
-			alpm.registerFormat("%8d\n", ATTR_NUM_HOSTS_TOTAL, "[?????]\n");
-
-			first = false;
-		}
-
-		alpm.display (stdout, ad);
-	}
-#endif
 }
 
 void
 printMasterNormal(ClassAd *ad, bool first)
 {
-#if 1
 	if (first) {
 		ppInit();
-		ppSetColumn(0,ATTR_NAME, -20, false, StdInvalidField);
+		ppSetColumn(ATTR_NAME, -20, false);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
 	if (ad)
 		pm.display (stdout, ad);
-#else
-	static bool first = true;
-	static AttrListPrintMask alpm;
-
-	if (ad)
-	{
-		// print header if necessary
-		if (first)
-		{
-			alpm.registerFormat("%s\n",ATTR_NAME,"[??????????????????]");
-			first = false;
-		}
-
-		alpm.display (stdout, ad);
-	}
-#endif
 }
 
 
 void
 printCkptSrvrNormal(ClassAd *ad, bool first)
 {
-#if 1
 	if (first) {
 		ppInit();
-		ppSetColumn(0,ATTR_NAME,    wide_display ? -34 : -28, ! wide_display, StdInvalidField);
-		ppSetColumn("AvailDisk",ATTR_DISK, "%9d", true, StdInvalidField);
-		ppSetColumn(0,ATTR_SUBNET, "%-11s", !wide_display, "[?????]");
+		ppSetColumn(ATTR_NAME,    wide_display ? -34 : -28, ! wide_display);
+		ppSetColumn(ATTR_DISK, Lbl("AvailDisk"), "%9d", true);
+		ppSetColumn(ATTR_SUBNET, "%-11s", !wide_display);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
 	if (ad)
 		pm.display (stdout, ad);
-#else
-	static bool first = true;
-	static AttrListPrintMask alpm;
-
-	if (ad)
-	{
-		// print header if necessary
-		if (first)
-		{
-			printf ("\n%-20.20s %-9.9s %-11.11s\n\n", ATTR_NAME,
-					"AvailDisk", ATTR_SUBNET);
-			alpm.registerFormat("%-20.20s ", ATTR_NAME, "[??????????????????] ");
-			alpm.registerFormat("%9d ", ATTR_DISK, "[???????] ");
-			alpm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
-			first = false;
-		}
-
-		alpm.display (stdout, ad);
-	}
-#endif
 }
 
 
 void
 printStorageNormal(ClassAd *ad, bool first)
 {
-#if 1
 	if (first) {
 		ppInit();
-		ppSetColumn(0,ATTR_NAME,    wide_display ? -34 : -30, ! wide_display, StdInvalidField);
-		ppSetColumn("AvailDisk",ATTR_DISK, "%9d", true, StdInvalidField);
-		ppSetColumn(0,ATTR_SUBNET, "%-11s", !wide_display, "[?????]");
+		ppSetColumn(ATTR_NAME,    wide_display ? -34 : -30, ! wide_display);
+		ppSetColumn(ATTR_DISK, Lbl("AvailDisk"), "%9d", true);
+		ppSetColumn(ATTR_SUBNET, "%-11s", !wide_display);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
 	if (ad)
 		pm.display (stdout, ad);
-#else
-	static bool first = true;
-	static AttrListPrintMask alpm;
-
-	if (ad)
-	{
-		// print header if necessary
-		if (first)
-		{
-			printf ("\n%-30.30s %-9.9s %-11.11s\n\n", ATTR_NAME,
-					"AvailDisk", ATTR_SUBNET);
-			alpm.registerFormat("%-30.30s ", ATTR_NAME, "[????????????????????????????] ");
-			alpm.registerFormat("%9d ", ATTR_DISK, "[???????] ");
-			alpm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
-			first = false;
-		}
-
-		alpm.display (stdout, ad);
-	}
-#endif
 }
 
 void
 printGridNormal(ClassAd *ad, bool first)
 {
-#if 1
 	if (first) {
 		ppInit();
-		ppSetColumn(0,ATTR_NAME, -34, ! wide_display, StdInvalidField);
-		ppSetColumn(0,"NumJobs", "%7d", true, StdInvalidField);
-		ppSetColumn("Allowed","SubmitsAllowed", "%7d", true, StdInvalidField);
-		ppSetColumn(" Wanted","SubmitsWanted", "%7d", true, StdInvalidField);
-		ppSetColumn(0,ATTR_RUNNING_JOBS, "%11d", true, StdInvalidField);
-		ppSetColumn(0,ATTR_IDLE_JOBS,    "%8d", true, StdInvalidField);
+		ppSetColumn(ATTR_NAME, -34, ! wide_display);
+		ppSetColumn("NumJobs", "%7d", true);
+		ppSetColumn("SubmitsAllowed", Lbl("Allowed"), "%7d", true);
+		ppSetColumn("SubmitsWanted", Lbl(" Wanted"), "%7d", true);
+		ppSetColumn(ATTR_RUNNING_JOBS, "%11d", true);
+		ppSetColumn(ATTR_IDLE_JOBS,    "%8d", true);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
 	if (ad)
 		pm.display (stdout, ad);
-#else
-    static bool first = true;
-	static AttrListPrintMask alpm;
-
-    if (ad)
-    {
-        // print header if necessary
-        if (first)
-        {
-            printf ("\n%-35.35s %-7.7s %-7.7s %-7.7s %-7.7s %-7.7s\n\n",
-				ATTR_NAME, "NumJobs", "Allowed", "Wanted", "Running", "Idle" );
-			
-			alpm.registerFormat("%-35.35s ", ATTR_NAME, 
-				"[?????????????????????????????????] " );
-			alpm.registerFormat ( "%-7d ", "NumJobs",
-				"[?????] " );
-			alpm.registerFormat ( "%-7d ", "SubmitsAllowed",
-				"[?????] " );
-			alpm.registerFormat ( "%-7d ", "SubmitsWanted",
-				"[?????] " );
-			alpm.registerFormat ( "%-7d ", ATTR_RUNNING_JOBS,
-				"[?????] " );
-			alpm.registerFormat ( "%-7d\n", ATTR_IDLE_JOBS,
-				"[?????]\n" );
-
-            first = false;
-        }
-        
-        alpm.display (stdout, ad);
-	}
-#endif
 }
 
 void
 printNegotiatorNormal(ClassAd *ad, bool first)
 {
-#if 1
 	if (first) {
 		ppInit();
-		ppSetColumn(0,ATTR_NAME, wide_display ? -32 : -20, ! wide_display,  StdInvalidField);
-		ppSetColumn(0,ATTR_MACHINE, wide_display ? -32 : -20, ! wide_display,  StdInvalidField);
+		ppSetColumn(ATTR_NAME, wide_display ? -32 : -20, ! wide_display);
+		ppSetColumn(ATTR_MACHINE, wide_display ? -32 : -20, ! wide_display);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
 	if (ad)
 		pm.display (stdout, ad);
-#else
-	static bool first = true;
-	static AttrListPrintMask alpm;
-
-	if (ad)
-	{
-		// print header if necessary
-		if (first)
-		{
-			printf ("\n%-20.20s %-20.20s\n\n",
-				ATTR_NAME, ATTR_MACHINE);
-		
-			alpm.registerFormat("%-20.20s ", ATTR_NAME,
-													"[??????????????????] ");
-			alpm.registerFormat("%-20.20s\n", ATTR_MACHINE,
-													"[??????????????????] ");
-
-			first = false;
-		}
-
-		alpm.display (stdout, ad);
-	}
-#endif
 }
 
 /*
@@ -1187,7 +824,7 @@ These are actually contained in the ClassAd.
 */
 
 const char *
-formatAdType ( char * type, AttrList *, Formatter &)
+formatAdType (const char * type, AttrList *, Formatter &)
 {
 	static char temp[19];
 	if ( ! type || ! type[0]) return "None";
@@ -1199,48 +836,16 @@ formatAdType ( char * type, AttrList *, Formatter &)
 void
 printAnyNormal(ClassAd *ad, bool first)
 {
-#if 1
 	if (first) {
 		ppInit();
-		ppSetColumn(0,ATTR_MY_TYPE,     formatAdType, -18, true,  "None");
-		ppSetColumn(0,ATTR_TARGET_TYPE, formatAdType, -18, true,  "None");
-		ppSetColumn(0,ATTR_NAME, wide_display ? "%-41s" : "%-41.41s", ! wide_display, "[???]");
+		ppSetColumn(ATTR_MY_TYPE,     formatAdType, -18, true, CallInvalidField);
+		ppSetColumn(ATTR_TARGET_TYPE, formatAdType, -18, true, CallInvalidField);
+		ppSetColumn(ATTR_NAME, wide_display ? "%-41s" : "%-41.41s", ! wide_display, ShortInvalidField /*"[???]"*/);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
 	if (ad)
 		pm.display (stdout, ad);
-#else
-	static bool first = true;
-	char *name;
-	const char *my_type, *target_type;
-
-	if (ad)
-	{
-		if (first)
-		{		
-			printf ("\n%-20.20s %-20.20s %-30.30s\n\n", ATTR_MY_TYPE, ATTR_TARGET_TYPE, ATTR_NAME );
-			first = false;
-		}
-		name = 0;
-		if(!ad->LookupString(ATTR_NAME,&name)) {
-			name = (char *) malloc(strlen("[???]") + 1);
-			ASSERT( name != NULL );
-			strcpy(name,"[???]");
-		}
-
-		my_type = GetMyTypeName(*ad);
-		if(!my_type[0]) my_type = "None";
-
-		target_type = GetTargetTypeName(*ad);
-		if(!target_type[0]) target_type = "None";
-
-		printf("%-20.20s %-20.20s %-30.30s\n",my_type,target_type,name);
-		free(name);
-
-		pm.display (stdout, ad);
-	}
-#endif
 }
 
 
@@ -1353,3 +958,28 @@ formatRealTime( int t , AttrList * , Formatter &)
 {
 	return format_time( t );
 }
+
+/*
+# default condor_status output
+SELECT
+   Name       AS Name     WIDTH -18 TRUNCATE
+   OpSys      AS OpSys    WIDTH -10
+   Arch       AS Arch     WIDTH -6
+   State      AS State    WIDTH -9
+   Activity   AS Activity WIDTH -8
+   LoadAvg    AS LoadAv             PRINTAS LOAD_AVG
+   Memory     AS Mem                PRINTF "%4d"
+   EnteredCurrentActivity AS "  ActvtyTime" NOPREFIX PRINTAS ACTIVITY_TIME
+SUMMARY STANDARD
+*/
+
+// !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
+static const CustomFormatFnTableItem LocalPrintFormats[] = {
+	{ "ACTIVITY_TIME", NULL, formatActivityTime, ATTR_LAST_HEARD_FROM "\0" ATTR_MY_CURRENT_TIME "\0"  },
+	{ "DATE",         NULL, formatRealDate, NULL },
+	{ "ELAPSED_TIME", ATTR_LAST_HEARD_FROM, formatElapsedTime, ATTR_LAST_HEARD_FROM "\0" },
+	{ "LOAD_AVG",     ATTR_LOAD_AVG, formatLoadAvg, NULL },
+	{ "TIME",         ATTR_KEYBOARD_IDLE, formatRealTime, NULL },
+};
+static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
+const CustomFormatFnTable * getCondorStatusPrintFormats() { return &LocalPrintFormatsTable; }

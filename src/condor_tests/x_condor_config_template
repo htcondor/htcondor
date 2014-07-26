@@ -854,11 +854,9 @@ STARTD_ADDRESS_FILE	= $(LOG)/.startd_address
 ##  unclaimed and it's been at least 4 hours since we ran the last
 ##  benchmarks, run them again.  The startd keeps a weighted average
 ##  of the benchmark results to provide more accurate values.
-##  Note, if you don't want any benchmarks run at all, either comment
-##  RunBenchmarks out, or set it to "False".
-BenchmarkTimer = (time() - LastBenchmark)
-RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
-#RunBenchmarks : False
+##  Note, if you don't want any benchmarks run at all, set RunBenchmarks to "False".
+#RunBenchmarks = False
+#RunBenchmarks = (time() - LastBenchmark) >= (4 * $(HOUR))
 
 ##  Normally, when the startd is computing the idle time of all the
 ##  users of the machine (both local and remote), it checks the utmp

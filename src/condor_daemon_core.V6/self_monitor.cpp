@@ -163,6 +163,16 @@ void DaemonCore::Stats::Reconfig()
        free(tmp);
     }
     SetWindowSize(this->RecentWindowMax);
+
+    std::string timespans;
+    param(timespans,"DCSTATISTICS_TIMESPANS");
+
+    std::string timespans_err;
+    if( !ParseEMAHorizonConfiguration(timespans.c_str(),ema_config,timespans_err) ) {
+        EXCEPT("Error in DCSTATISTICS_TIMESPANS=%s: %s",timespans.c_str(),timespans_err.c_str());
+    }
+
+    this->Commands.ConfigureEMAHorizons(ema_config);
 }
 
 void DaemonCore::Stats::SetWindowSize(int window)
@@ -171,6 +181,7 @@ void DaemonCore::Stats::SetWindowSize(int window)
    Pool.SetRecentMax(window, this->RecentWindowQuantum);
 }
 
+#define DC_STATS_ADD_DEF(pool,name,as)     STATS_POOL_ADD(pool, "DC", name, as)
 #define DC_STATS_ADD_RECENT(pool,name,as)  STATS_POOL_ADD_VAL_PUB_RECENT(pool, "DC", name, as) 
 #define DC_STATS_PUB_DEBUG(pool,name,as)   STATS_POOL_PUB_DEBUG(pool, "DC", name, as) 
 
@@ -201,6 +212,7 @@ void DaemonCore::Stats::Init()
    //DC_STATS_ADD_RECENT(Pool, PipeBytes,     IF_BASICPUB);
    DC_STATS_ADD_RECENT(Pool, DebugOuts,     IF_VERBOSEPUB);
    DC_STATS_ADD_RECENT(Pool, PumpCycle,     IF_VERBOSEPUB);
+   DC_STATS_ADD_DEF(Pool, Commands, IF_BASICPUB);
 
    // Insert additional publish entries for the XXXDebug values
    //
@@ -217,6 +229,9 @@ void DaemonCore::Stats::Init()
    //DC_STATS_PUB_DEBUG(Pool, PipeBytes,     IF_BASICPUB);
    DC_STATS_PUB_DEBUG(Pool, DebugOuts,     IF_VERBOSEPUB);
    DC_STATS_PUB_DEBUG(Pool, PumpCycle,     IF_VERBOSEPUB);
+
+   // clear all counters we just added to the pool
+   Pool.Clear();
 }
 
 void DaemonCore::Stats::Clear()
@@ -325,6 +340,45 @@ void DaemonCore::Stats::AddToProbe(const char * name, int64_t val)
       pstat->Add(val);
 }
 
+void DaemonCore::Stats::AddToAnyProbe(const char * name, int val)
+{
+   int units;
+   stats_entry_base* pbase = Pool.GetProbe(name, units);
+   if (pbase) {
+      switch (units) {
+         case stats_entry_recent<int>::unit: {
+            stats_entry_recent<int>* pstat = reinterpret_cast<stats_entry_recent<int>*>(pbase);
+            pstat->Add(val);
+         } break;
+
+         case stats_entry_recent<int64_t>::unit: {
+            stats_entry_recent<int64_t>* pstat = reinterpret_cast<stats_entry_recent<int64_t>*>(pbase);
+            pstat->Add(val);
+         } break;
+
+         case stats_entry_sum_ema_rate<int>::unit: {
+            stats_entry_sum_ema_rate<int>* pstat = reinterpret_cast<stats_entry_sum_ema_rate<int>*>(pbase);
+            pstat->Add(val);
+         } break;
+
+         case stats_entry_sum_ema_rate<double>::unit: {
+            stats_entry_sum_ema_rate<double>* pstat = reinterpret_cast<stats_entry_sum_ema_rate<double>*>(pbase);
+            pstat->Add(val);
+         } break;
+
+         default: {
+            dprintf(D_ALWAYS, "AddToAnyProbe(%s) add of %d failed because of a 0x%x is invalid case\n", name, val, units);
+         } break;
+      }
+   }
+}
+
+void DaemonCore::Stats::AddToSumEmaRate(const char * name, int val) {
+   stats_entry_sum_ema_rate<int>* pstat = Pool.GetProbe<stats_entry_sum_ema_rate<int> >(name);
+   if (pstat)
+      pstat->Add(val);
+}
+
 double DaemonCore::Stats::AddRuntime(const char * name, double before)
 {
    double now = UtcTime::getTimeDouble();
@@ -373,9 +427,49 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
       {
       case AS_COUNT | IS_RECENT:
          {
-         stats_entry_recent<int> * probe = 
+         stats_entry_recent<int> * probe =
          Pool.NewProbe< stats_entry_recent<int> >(name,  attr.Value(), as);
          probe->SetRecentMax(this->RecentWindowMax / this->RecentWindowQuantum);
+         ret = probe;
+         }
+         break;
+
+     case  AS_COUNT | IS_CLS_EMA:
+         {
+         stats_entry_ema<int>* probe =
+         Pool.NewProbe< stats_entry_ema<int> >(name, attr.Value(), as | stats_entry_ema<int>::PubDefault);
+         probe->ConfigureEMAHorizons(ema_config);
+         probe->Clear();
+         ret = probe;
+         }
+         break;
+
+     case  STATS_ENTRY_TYPE_DOUBLE | IS_CLS_EMA:
+         {
+         stats_entry_ema<double>* probe =
+         Pool.NewProbe< stats_entry_ema<double> >(name, attr.Value(), as | stats_entry_ema<double>::PubDefault);
+         probe->ConfigureEMAHorizons(ema_config);
+         probe->Clear();
+         ret = probe;
+         }
+         break;
+
+     case  AS_COUNT | IS_CLS_SUM_EMA_RATE:
+         {
+         stats_entry_sum_ema_rate<int>* probe =
+         Pool.NewProbe< stats_entry_sum_ema_rate<int> >(name, attr.Value(), as | stats_entry_sum_ema_rate<int>::PubDefault);
+         probe->ConfigureEMAHorizons(ema_config);
+         probe->Clear();
+         ret = probe;
+         }
+         break;
+
+     case  STATS_ENTRY_TYPE_DOUBLE | IS_CLS_SUM_EMA_RATE:
+         {
+         stats_entry_sum_ema_rate<double>* probe =
+         Pool.NewProbe< stats_entry_sum_ema_rate<double> >(name, attr.Value(), as | stats_entry_sum_ema_rate<double>::PubDefault);
+         probe->ConfigureEMAHorizons(ema_config);
+         probe->Clear();
          ret = probe;
          }
          break;
@@ -393,7 +487,7 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
       case AS_COUNT | IS_RCT:
       case AS_RELTIME | IS_RCT:
          {
-         stats_recent_counter_timer * probe = 
+         stats_recent_counter_timer * probe =
          Pool.NewProbe<stats_recent_counter_timer>(name, attr.Value(), as);
         #if 0 // def DEBUG
          attr += "Debug";

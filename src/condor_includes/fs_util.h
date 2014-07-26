@@ -22,10 +22,6 @@
 
 #include "condor_constants.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 /* Prototypes */
 
 /** Determine whether the given path is on NFS (note that if path points
@@ -38,10 +34,6 @@ extern "C" {
 int
 fs_detect_nfs(
 	const char		*path,
-	BOOLEAN			*is_nfs );
-
-#if defined(__cplusplus)
-}
-#endif
+	bool			*is_nfs );
 
 #endif /* _FS_UTIL_H */

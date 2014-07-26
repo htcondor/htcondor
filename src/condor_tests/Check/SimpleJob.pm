@@ -21,7 +21,7 @@ package SimpleJob;
 
 use CondorTest;
 my $timeout = 0;
-my $defaulttimeout = 180;
+my $defaulttimeout = 240;
 $timeout = $defaulttimeout;
 
 $timed_callback = sub
@@ -69,6 +69,7 @@ sub RunCheck
 
     my $testname = $args{test_name} || CondorTest::GetDefaultTestName();
     my $universe = $args{universe} || "vanilla";
+	my $hold = $args{hold} || "False";
     my $user_log = $args{user_log} || CondorTest::TempFileName("$testname.user_log");
     my $output = $args{output} || "";
     my $error = $args{error} || "";
@@ -93,6 +94,7 @@ sub RunCheck
     my $hold_fn = $args{on_hold} || $dummy;
     my $shadow = $args{on_shadow} || $dummy;
     my $suspended_fn = $args{on_suspended} || $dummy;
+    my $released_fn = $args{on_released} || $dummy;
     my $unsuspended_fn = $args{on_unsuspended} || $dummy;
     my $disconnected_fn = $args{on_disconnected} || $dummy;
     my $reconnected_fn = $args{on_reconnected} || $dummy;
@@ -140,6 +142,9 @@ sub RunCheck
 	if( exists $args{on_hold} ) {
     	CondorTest::RegisterHold( $testname, $hold_fn );
 	}
+	if( exists $args{on_released} ) {
+    	CondorTest::RegisterRelease( $testname, $released_fn );
+	}
 	if( exists $args{on_evicted} ) {
     	CondorTest::RegisterEvicted( $testname, $evicted_fn );
 	}
@@ -169,6 +174,7 @@ sub RunCheck
     print SUBMIT "universe = $universe\n";
     print SUBMIT "executable = $program\n";
     print SUBMIT "log = $user_log\n";
+    print SUBMIT "hold = $hold\n";
     print SUBMIT "arguments = $duration\n";
     print SUBMIT "notification = never\n";
     if( $grid_resource ne "" ) {
@@ -179,6 +185,9 @@ sub RunCheck
 	}
 	if($error ne "") {
 		print SUBMIT "error = $error\n";
+	}
+	if($args{request_memory}) {
+		print SUBMIT "request_memory = $args{request_memory}\n";
 	}
 	if($streamoutput ne "") {
 		print SUBMIT "stream_output = $streamoutput\n";

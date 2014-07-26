@@ -64,9 +64,13 @@ static DWORD CountSetBits(ULONG_PTR bitMask)
 }
 #endif
 
+
+static bool need_cpu_detection = true;
+
 void
-sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
+sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 {
+	need_cpu_detection = false;
 
 	{
 #if defined(sequent)
@@ -99,80 +103,80 @@ sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
 	if( num_cpus ) *num_cpus = cpus;
 	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
 #elif defined(WIN32)
-	if(!_sysapi_count_hyperthread_cpus)
-	{
-		LPFN_GLPI glpi = NULL;
-		DWORD returnLength = 0;
-		int byteOffset = 0;
 		int coreCount = 0;
 		int logicalCoreCount = 0;
-		bool done = false;
-		PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = NULL;
-		PSYSTEM_LOGICAL_PROCESSOR_INFORMATION info = NULL;
+
+		LPFN_GLPI glpi = NULL;
 		HMODULE hmod = GetModuleHandle(TEXT("kernel32"));
 		if (hmod) {
 			glpi = (LPFN_GLPI) GetProcAddress(hmod, "GetLogicalProcessorInformation");
 		}
-		if(glpi == NULL)
+		if (glpi)
 		{
-			EXCEPT("Error: COUNT_HYPERTHREAD_CPUS can only be set to false on Windows XP SP3 or Windows 2003 SP1 or higher.\n");
-		}
-		while(!done)
-		{
-			DWORD rc = glpi(buffer, &returnLength);
-			if(rc == FALSE)
+			DWORD returnLength = 0;
+			int byteOffset = 0;
+			PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = NULL;
+			PSYSTEM_LOGICAL_PROCESSOR_INFORMATION info = NULL;
+
+			bool done = false;
+			while(!done)
 			{
-				if(GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+				DWORD rc = glpi(buffer, &returnLength);
+				if(rc == FALSE)
 				{
-					if(buffer)
-						free(buffer);
-					buffer = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION)malloc(returnLength);
-					if(!buffer)
-						EXCEPT("Error: Failed to allocate space for SYSTEM_LOGICAL_PROCESSOR_INFORMATION\n");
+					if(GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+					{
+						if(buffer)
+							free(buffer);
+						buffer = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION)malloc(returnLength);
+						if(!buffer)
+							EXCEPT("Error: Failed to allocate space for SYSTEM_LOGICAL_PROCESSOR_INFORMATION\n");
+					}
+					else
+					{
+						EXCEPT("Error: Failed to call GetLogicalProcessorInformation: %d\n", GetLastError());
+					}
 				}
 				else
 				{
-					EXCEPT("Error: Failed to call GetLogicalProcessorInformation: %d\n", GetLastError());
+					done = true;
+					if (!buffer)
+						EXCEPT("Error: Failed to get SYSTEM_LOGICAL_PROCESSOR_INFORMATION\n");
 				}
 			}
-			else
+
+			info = buffer;
+
+			coreCount = 0;
+			logicalCoreCount = 0;
+			while(byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength)
 			{
-				done = true;
-				if (!buffer)
-					EXCEPT("Error: Failed to get SYSTEM_LOGICAL_PROCESSOR_INFORMATION\n");
+				switch(info->Relationship)
+				{
+				case RelationProcessorCore:
+					coreCount++;
+					logicalCoreCount += CountSetBits(info->ProcessorMask);
+					break;
+				default:
+					break;
+				}
+
+				byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
+				info++;
 			}
+
+			free(buffer);
 		}
-
-		info = buffer;
-
-		while(byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength)
+		else
 		{
-			switch(info->Relationship)
-			{
-			case RelationProcessorCore:
-				coreCount++;
-				logicalCoreCount += CountSetBits(info->ProcessorMask);
-				break;
-			default:
-				break;
-			}
-
-			byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
-			info++;
+			SYSTEM_INFO info;
+			GetNativeSystemInfo(&info);
+			coreCount = logicalCoreCount = info.dwNumberOfProcessors;
 		}
 
 		if( num_cpus ) *num_cpus = coreCount;
 		if( num_hyperthread_cpus ) *num_hyperthread_cpus = logicalCoreCount;
 
-		free(buffer);
-	}
-	else
-	{
-		SYSTEM_INFO info;
-		GetNativeSystemInfo(&info);
-		if( num_cpus ) *num_cpus = info.dwNumberOfProcessors;
-		if( num_hyperthread_cpus ) *num_hyperthread_cpus = info.dwNumberOfProcessors;
-	}
 #elif defined(LINUX)
 	ncpus_linux(num_cpus,num_hyperthread_cpus );
 #elif defined(AIX)
@@ -195,6 +199,19 @@ sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
 
 }
 
+#if 1
+void sysapi_ncpus_raw(int * pncpus, int * pnhyperthread_cpus) {
+	if (need_cpu_detection) {
+		sysapi_detect_cpu_cores(&_sysapi_detected_phys_cpus, &_sysapi_detected_hyper_cpus);
+	}
+	if (pncpus) *pncpus = _sysapi_detected_phys_cpus;
+	if (pnhyperthread_cpus) *pnhyperthread_cpus = _sysapi_detected_hyper_cpus;
+}
+// NOTE: we do NOT want to param for NUM_CPUS here, only the startd really wants to be lied to about the number of cpus...
+void sysapi_ncpus(int * pncpus, int * pnhyperthread_cpus) {
+	sysapi_ncpus_raw(pncpus, pnhyperthread_cpus);
+}
+#else
 int
 sysapi_ncpus_raw(void)
 {
@@ -229,6 +246,7 @@ sysapi_ncpus(void)
 		}
 	}
 }
+#endif
 
 /*
  * Linux specific CPU counting logic; uses /proc/cpuinfo.
@@ -255,8 +273,8 @@ typedef struct Processor_s
 	int			cpu_cores;		/* "cpu cores" / -1 */
 	int			siblings;		/* "siblings" / -1 */
 
-	BOOLEAN		have_flags;		/* "flags" line? */
-	BOOLEAN		flag_ht;		/*   HT flag set? */
+	bool		have_flags;		/* "flags" line? */
+	bool		flag_ht;		/*   HT flag set? */
 
 	/* These are for counting the number of records with matching ID info
 	 * We define a match as having the same physical and core IDs */
@@ -275,13 +293,13 @@ typedef struct
 
 	// Global info when available
 	int			cpus_detected;		/* value: "cpus detected" / -1 */
-	BOOLEAN		have_siblings;		/* value: "siblings" / -1 */
-	BOOLEAN		have_physical_id;	/* Did we find a "physical id"? */
-	BOOLEAN		have_core_id;		/* Did we find a "core id"? */
-	BOOLEAN		have_cores;			/* Did we find a "cores"? */
+	bool		have_siblings;		/* value: "siblings" / -1 */
+	bool		have_physical_id;	/* Did we find a "physical id"? */
+	bool		have_core_id;		/* Did we find a "core id"? */
+	bool		have_cores;			/* Did we find a "cores"? */
 
-	BOOLEAN		have_flags;			/* "flags" line? */
-	BOOLEAN		flag_ht;			/*   HT flag set? */
+	bool		have_flags;			/* "flags" line? */
+	bool		flag_ht;			/*   HT flag set? */
 
 } CpuInfo;
 
@@ -327,12 +345,12 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 	cpuinfo->num_cpus = 0;
 	cpuinfo->num_hthreads = 0;
 	cpuinfo->cpus_detected = -1;
-	cpuinfo->have_siblings = FALSE;
-	cpuinfo->have_physical_id = FALSE;
-	cpuinfo->have_core_id = FALSE;
-	cpuinfo->have_cores = FALSE;
-	cpuinfo->have_flags = FALSE;
-	cpuinfo->flag_ht = FALSE;
+	cpuinfo->have_siblings = false;
+	cpuinfo->have_physical_id = false;
+	cpuinfo->have_core_id = false;
+	cpuinfo->have_cores = false;
+	cpuinfo->have_flags = false;
+	cpuinfo->flag_ht = false;
 
 	/* Allocate the array to hold 8 to start with; we'll realloc() it
 	 * bigger if we find more cpus
@@ -456,8 +474,8 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 			cur_processor->cpu_cores = -1;
 			cur_processor->siblings = -1;
 
-			cur_processor->have_flags = FALSE;
-			cur_processor->flag_ht = FALSE;
+			cur_processor->have_flags = false;
+			cur_processor->flag_ht = false;
 
 			cur_processor->match_count = 1;			/* I match myself */
 			cur_processor->first_match = NULL;
@@ -476,40 +494,40 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 
 			else if( !strcmp( attr, "siblings" ) ) {
 				cur_processor->siblings = my_atoi( value, 1 );
-				cpuinfo->have_siblings = TRUE;
+				cpuinfo->have_siblings = true;
 			}
 
 			else if( !strcmp( attr, "physical id" ) ) {
 				cur_processor->physical_id = my_atoi( value, 1 );
-				cpuinfo->have_physical_id = TRUE;
+				cpuinfo->have_physical_id = true;
 			}
 
 			else if( !strcmp( attr, "core id" ) ) {
 				cur_processor->core_id = my_atoi( value, 1 );
-				cpuinfo->have_core_id = TRUE;
+				cpuinfo->have_core_id = true;
 			}
 
 			else if( !strcmp( attr, "cpu cores" ) ) {
 				cur_processor->cpu_cores = my_atoi( value, 1 );
-				cpuinfo->have_cores = TRUE;
+				cpuinfo->have_cores = true;
 			}
 
 			else if( !strcmp( attr, "flags" ) ) {
-				cur_processor->have_flags = TRUE;
-				cur_processor->flag_ht = FALSE;
+				cur_processor->have_flags = true;
+				cur_processor->flag_ht = false;
 				{
 					char	*t, *save;
 					t = strtok_r( value, " ", &save );
 					while( t ) {
 						if ( !strcmp( t, "ht" ) ) {
-							cur_processor->flag_ht = TRUE;
+							cur_processor->flag_ht = true;
 							break;
 						}
 						t = strtok_r( NULL, " ", &save );
 					}
 				}
 				if ( ! cpuinfo->have_flags ) {
-					cpuinfo->have_flags = TRUE;
+					cpuinfo->have_flags = true;
 					cpuinfo->flag_ht = cur_processor->flag_ht;
 				}
 			}
@@ -546,7 +564,7 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 	
 /* For intel-ish CPUs, count the # of CPUs using the physical/core IDs */
 static int
-linux_count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
+linux_count_cpus_id( CpuInfo *cpuinfo, bool count_hthreads )
 {
 	int			pnum;					/* Current processor # */
 
@@ -637,7 +655,7 @@ linux_count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 	
 /* For intel-ish CPUS, count the # of CPUs using siblings */
 static int
-linux_count_cpus_siblings( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
+linux_count_cpus_siblings( CpuInfo *cpuinfo, bool count_hthreads )
 {
 	int		pnum;				/* Current processor # */
 	int		np_siblings = 0;	/* Non-primary siblings */
@@ -679,7 +697,7 @@ linux_count_cpus_siblings( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 	
 /* For intel-ish CPUS, let's look at the number of processor records */
 static int
-linux_count_cpus( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
+linux_count_cpus( CpuInfo *cpuinfo, bool count_hthreads )
 {
 	const	char	*ana_type = "";
 

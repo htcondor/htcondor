@@ -17,11 +17,6 @@
  *
  ***************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <sys/types.h>
 #ifdef WIN32
 #include "condor_header_features.h"
 #include "condor_sys_nt.h"
@@ -30,6 +25,11 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #endif
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <sys/types.h>
 #include "read_user_log.h"
 
 struct hostent *NameEnt;

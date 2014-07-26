@@ -3,15 +3,15 @@
 ################################################################################
 # blahp-over-ssh shim script
 #
-# command [options] remote_hostname [remote options/arguments]
+# command [options] [user@]hostname [options] command [remote arguments]
 #
 # Options:
 #   see usage string 
 #
 # Arguments:
-#   mandatory: remote_hostname
+#   mandatory: hostname, command
 #
-# Remote options/arguments are passed along
+# Remote arguments are passed along
 #
 # Assumes public/private key pair is already created and exists on host
 #
@@ -32,125 +32,97 @@ PASSPHRASE_LOCATION=`echo ~/.bosco/.pass`
 PRIVATE_KEY_LOCATION=`echo ~/.ssh/bosco_key.rsa`
 
 
-# List of remote hosts to connect to
-# Customize this for different remote hosts
-# This overrides the default and is overridden by options
-#
-# Format:
-# "remote_hostname remote_script_path passphrase_location private_key_location"
-# - remote_hostname: name of server to connect to (required)
-# - remote_script_path: path to script to start up blahp (required)
-# - passphrase_location: location of passphrase protecting ssh private key
-#     (default is no passphrase required)
-# - private_key_location: location of ssh private key (default is ~/.ssh/id_rsa)
-
-REMOTE_HOSTS=(
-	"glow-c004 /home/slauson/remote-test/batch_gahp.wrapper /scratch.1/slauson/condor-blahp_over_ssh/passphrase"
-	"condor-student1 /afs/cs.wisc.edu/u/s/l/slauson/public/test /afs/cs.wisc.edu/u/s/l/slauson/private/condor/git2/CONDOR_SRC/src/passphrase"
-)
-
-
-###### Setting options #####
-# 1. defaults
-# 2. host defaults from REMOTE_HOSTS list
-# 3. command line options
-# Higher number overrides the lower one
-
 # Parse command line arguments 
 PROG_NAME=$0
-USAGE="Usage: $PROG_NAME [options] remote_hostname remote_cmd [remote options and arguments]\n \
+USAGE="Usage: $PROG_NAME [options] remote_hostname [options] REMOTE_CMD [remote arguments]\n \
+$PROG_NAME [options] remote_hostname [remote options and arguments]\n \
+Options: \n \
  --rgahp-user REMOTE_USER \tuser name on the remote host\n \
- --rgahp-key PRIVATE-KEY-PATH \tlocation of ssh private key (~/.ssh/id_rsa)\n \
+ --rgahp-key PRIVATE-KEY-PATH \tlocation of ssh private key (~/.ssh/bosco_key.rsa)\n \
  --rgahp-nokey  \t\tno ssh private key or key already enabled (same as empty rgahp-key)\n \
  --rgahp-pass PASSPHRASE \tlocation of passphrase protecting ssh private key (~/.bosco/.pass)\n \
  --rgahp-nopass \t\tno passphrase protecting ssh private key (same as empty rgahp-pass)\n \
- --rgahp-script SCRIPT \tpath to script to start up blahp (~/.bosco/batch_gahp)\n \
+ --rgahp-glite PATH \tpath to the directory of the script (~/bosco/glite)\n \
+ --rgahp-script SCRIPT \tpath to script to start up blahp (PATH/bin/batch_gahp)\n \
  --help, -h \t\t\tprint this\n \
+ remote_hostname: USER@HOST same string that can be used to ssh to the host\n \
+ remote arguments are passed to the REMOTE_CMD
+ REMOTE_CMD can be expressed as argument or option
 "
-if [ `uname` = "Darwin" ] ; then
-    # Mac OS X doesn't have GNU getopt, so not fancy argument checking here
-    # TODO This means that the --rgahp-* options aren't supported on
-    #   Mac OS X. We should fix that sometime.
-    eval set -- -- "$@"
-else
-    TEMP=`getopt -o +h --long help,rgahp-user:,rgahp-key:,rgahp-nokey,rgahp-pass:,rgahp-nopass,rgahp-script: -- "$@"`
 
-    if [ $? != 0 ] ; then echo -e "$USAGE" >&2 ; exit 1 ; fi
+while [ $# != 0 ] ; do
+    case "$1" in
+        -h | --help  ) echo -e "$USAGE"
+            exit 0;;
+        --rgahp-user  ) REMOTE_USER="$2"
+            shift 2;;
+        --rgahp-nokey  ) PRIVATE_KEY_LOCATION=""
+            shift ;;
+        --rgahp-key  ) PRIVATE_KEY_LOCATION="$2"
+            shift ; shift  ;;
+        --rgahp-pass  ) PASSPHRASE_LOCATION="$2"
+            shift 2;;
+        --rgahp-nopass  ) PASSPHRASE_LOCATION=""
+            shift ;;
+        --rgahp-glite ) REMOTE_GLITE="$2"
+            shift 2;;
+        --rgahp-script ) REMOTE_CMD="$2"
+            shift 2;;
+        --rgahp-* ) echo "Unknown option: $1" 1>&2
+            echo -e "$USAGE"
+            exit 1;;
+        -- ) shift
+            if [ "$REMOTE_CMD" = "" ] ; then
+                REMOTE_CMD="$1"
+                shift
+            fi
+            break;;
+        -* ) break;;
+        * )
+            if [ "$REMOTE_HOSTNAME" = "" ] ; then
+                REMOTE_HOSTNAME=`echo "$1" | sed 's/.*@//'`
+                echo "$1" | grep -q '@'
+                if [ $? -eq 0 ] ; then
+                    REMOTE_USER=`echo "$1" | sed 's/@.*//'`
+                fi
+                shift
+            elif [ "$REMOTE_CMD" = "" ] ; then
+                REMOTE_CMD="$1"
+                shift
+            else
+                break
+            fi
+            ;;
+    esac
+done
 
-    eval set -- "$TEMP"
+if [ "$REMOTE_HOSTNAME" = "" ] ; then
+    echo "Missing hostname" 1>&2
+    echo -e "$USAGE"
+    exit 1
 fi
-
-# Remote hostname is mandatory
-# It is the first argument after the rgahp options
-tmp_found=1
-for i; do
-	if [ $tmp_found -eq 0 ] ; then 
-		if [ "x${REMOTE_HOSTNAME}" = "x" ] ; then
-		    REMOTE_HOSTNAME=`echo "$i" | sed 's/.*@//'`
-		    echo "$i" | grep -q '@'
-		    if [ $? -eq 0 ] ; then
-		        REMOTE_USER=`echo "$i" | sed 's/@.*//'`
-		    fi
-		else
-		    REMOTE_CMD="$i"
-		    break
-		fi
-	fi
-	if [ "$i" = "--" ]; then tmp_found=0; fi
-done
-
-if [ "X${REMOTE_HOSTNAME}X" = "XX" ] ; then echo -e "$USAGE" >&2 ; exit 1 ; fi
-
-
-# Go through possible remote hosts and set eventual host default
-for host in "${REMOTE_HOSTS[@]}" ; do
-
-	# split string on ' '
-	parts=($host)
-
-	# check if this is a host we care about
-	if [ "$REMOTE_HOSTNAME" == ${parts[0]} ] ; then
-		#REMOTE_HOSTNAME=${parts[0]}
-		REMOTE_GLITE=${parts[1]}
-		PASSPHRASE_LOCATION=${parts[2]}
-		PRIVATE_KEY_LOCATION=${parts[3]}
-		break
-	fi
-done
-
-# Set values specified in command line arguments (these override defaults and REMOTE_HOSTS)
-for i; do
-	case "$i" in
-		-h | --help  ) echo -e "$USAGE"
-			exit 0;;
-		--rgahp-user  ) REMOTE_USER="$2"
-			shift 2;;
-		--rgahp-nokey  ) PRIVATE_KEY_LOCATION=""
-			shift ;;
-		--rgahp-key  ) PRIVATE_KEY_LOCATION="$2"
-			shift ; shift  ;;
-		--rgahp-pass  ) PASSPHRASE_LOCATION="$2"
-			shift 2;;
-		--rgahp-nopass  ) PASSPHRASE_LOCATION=""
-			shift ;;
-		--rgahp-glite ) REMOTE_GLITE="$2"
-			shift 2;;
-		--  ) shift; break ;;
-	esac
-done
-
+if [ "$REMOTE_CMD" = "" ] ; then
+    echo "Missing remote command" 1>&2
+    echo -e "$USAGE"
+    exit 1
+fi
 
 ##### Handling authentication #####
 # Start and init ssh agent if key file is specified
 
 
-# if a passphrase is required, start up a ssh-agent and do ssh-add
-if [ "$PRIVATE_KEY_LOCATION" != "" -a -f "$PRIVATE_KEY_LOCATION" ] ; then
+# if a ssh key is required, start up a ssh-agent and do ssh-add
+if [ -n "$PRIVATE_KEY_LOCATION" -a -f "$PRIVATE_KEY_LOCATION" ] ; then
 	# start the ssh-agent
 	eval `ssh-agent -s` 1>&2
 
 	# Call the external program to do ssh-add
-	bosco_ssh_start
+        # If a passphrase is required pass it to the script
+        if [ -n "$PASSPHRASE_LOCATION" ]; then
+	    bosco_ssh_start --key "$PRIVATE_KEY_LOCATION" --pass "$PASSPHRASE_LOCATION"
+        else
+	    bosco_ssh_start --key "$PRIVATE_KEY_LOCATION" --nopass
+        fi
 	ADD_STATUS=$?
 
 	# check if ssh-add failed
@@ -199,7 +171,7 @@ elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
         SSH_STATUS=$?
     done
 else
-    echo "Unknown remote command" 1>&2
+    echo "Unknown remote command (${REMOTE_CMD})" 1>&2
     SSH_STATUS=1
 fi
 

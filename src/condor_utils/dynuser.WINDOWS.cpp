@@ -149,7 +149,7 @@ bool dynuser::init_user() {
 		
 
  		// How we initialize username: if we are the starter,
-		// we set it to be condor-reuse-slotX. However, if
+		// we set it to be condor-slotX. However, if
 		// reuse_account = false we initialize it to be 
 		// condor-run-<pid>.
 
@@ -647,11 +647,11 @@ bool dynuser::add_users_group() {
 	tmp = param("DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP");
 	if (tmp) {
 		friendly_group_name = tmp;
-		swprintf(UserGroupName, L"%S", tmp);
+		swprintf_s(UserGroupName, COUNTOF(UserGroupName), L"%S", tmp);
 		free(tmp);
 	} else {
 		tmp = getUserGroupName();
-		swprintf(UserGroupName, L"%S", tmp);
+		swprintf_s(UserGroupName, COUNTOF(UserGroupName), L"%S", tmp);
 		delete[] tmp;
 	}
 	tmp = NULL;
@@ -696,11 +696,11 @@ bool dynuser::del_users_group() {
 
 	tmp = param("DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP");
 	if (tmp) {
-		swprintf(UserGroupName, L"%S", tmp);
+		swprintf_s(UserGroupName, COUNTOF(UserGroupName), L"%S", tmp);
 		free(tmp);
 	} else {
 		tmp = getUserGroupName();
-		swprintf(UserGroupName, L"%S", tmp);
+		swprintf_s(UserGroupName, COUNTOF(UserGroupName), L"%S", tmp);
 		delete[] tmp;
 	}
 	tmp = NULL;

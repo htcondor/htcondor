@@ -298,6 +298,24 @@ customization=seldom
 friendly_name=Soap SSL Port
 review=?
 
+[COLLECTOR_PORT]
+default=9618
+range=0,65536
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Default collector port
+review=?
+
+[SOCKET_LISTEN_BACKLOG]
+default=500
+range=1,
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Socket Listen Backlog
+review=?
+
 [SOAP_SSL_PORT]
 default=0
 type=int
@@ -324,7 +342,7 @@ review=?
 
 [GSI_DAEMON_DIRECTORY]
 default=
-type=string
+type=path
 reconfig=true
 customization=seldom
 friendly_name=GSI Daemon Directory
@@ -354,6 +372,12 @@ customization=seldom
 friendly_name=GSI Daemon Key
 review=?
 
+[GSS_ASSIST_GRIDMAP_CACHE_EXPIRATION]
+default=0
+type=int
+reconfig=true
+customization=seldom
+
 [VMWARE_NETWORKING_TYPE]
 default=
 type=string
@@ -373,7 +397,8 @@ review=?
 tags=vm-gahp,vmware_type
 
 [VMWARE_SCRIPT]
-default=
+default=$(SBIN)/condor_vm_vmware
+# there is no win32 default for this item, we DON'T want it to have a .exe extension
 type=string
 reconfig=true
 customization=seldom
@@ -395,9 +420,7 @@ review=?
 tags=vm-gahp,vmgahp
 
 [VM_GAHP_LOG]
-default=/tmp/VMGAHPLog.$(USERNAME)
-# daemons that run as user can't write to $(LOG) and there is no /tmp on windows
-win32_default=NUL
+default=$(LOG)/VMGahpLog
 type=path
 reconfig=true
 customization=seldom
@@ -407,8 +430,7 @@ review=?
 tags=vm-gahp,vmgahp_main
 
 [MAX_VM_GAHP_LOG]
-default=1000000
-type=int
+default=$(MAX_DEFAULT_LOG)
 review=?
 tags=vm-gahp,vmgahp_main
 
@@ -623,13 +645,21 @@ review=?
 tags=starter,starter_common
 
 [STARTER_DEBUG]
-default=D_NODATE
+default=D_NODATE D_PID
 type=string
 reconfig=true
 customization=seldom
 friendly_name=Starter Debug
 review=?
 tags=starter,starter_common
+
+[STARTER_LOG_NAME_APPEND]
+friendly_name=controls what to append StarterLog, may be: false, true, Slot, Cluster, or JobId, true or undef gives 8.0 compatible behavior.
+default=
+type=string
+reconfig=true
+customization=seldom
+tags=starter
 
 [USER_JOB_WRAPPER]
 default=
@@ -1115,8 +1145,8 @@ review=?
 tags=accountant,Accountant
 
 [NICE_USER_PRIO_FACTOR]
-default=
-type=string
+default=1e10
+type=double
 reconfig=true
 customization=seldom
 friendly_name=Nice User Prio Factor
@@ -1124,8 +1154,8 @@ review=?
 tags=accountant,Accountant
 
 [REMOTE_PRIO_FACTOR]
-default=
-type=string
+default=1e7
+type=double
 reconfig=true
 customization=seldom
 friendly_name=Remote Prio Factor
@@ -1133,8 +1163,8 @@ review=?
 tags=accountant,Accountant
 
 [DEFAULT_PRIO_FACTOR]
-default=
-type=string
+default=1000
+type=double
 reconfig=true
 customization=seldom
 friendly_name=Default Prio Factor
@@ -1241,7 +1271,7 @@ review=?
 tags=q,queue
 
 [PREEMPTION_REQUIREMENTS]
-default=$(UWCS_PREEMPTION_REQUIREMENTS)
+default=False
 type=string
 reconfig=true
 customization=seldom
@@ -1304,6 +1334,106 @@ friendly_name=Use Ckpt Server
 review=?
 tags=shadow,baseshadow
 
+[ALWAYS_USE_LOCAL_CKPT_SERVER]
+default=false
+type=bool
+reconfig=false
+customization=seldom
+friendly_name=Always Use local Ckpt Server
+review=?
+tags=shadow,baseshadow
+
+[RECONNECT_BACKOFF_CEILING]
+default=300
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Reconnect Backoff Ceiling
+review=?
+tags=shadow,baseshadow
+
+[SHADOW_MAX_JOB_CLEANUP_RETRIES]
+default=5
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Shadow Max Job Cleanup Retries
+review=?
+tags=shadow,baseshadow
+
+[SHADOW_JOB_CLEANUP_RETRY_DELAY]
+default=30
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Shadow Job Cleanup Retry Delay
+review=?
+tags=shadow,baseshadow
+
+[SHADOW_LAZY_QUEUE_UPDATE]
+default=true
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Shadow Lazy Queue Update
+review=?
+tags=shadow,baseshadow
+
+[RESERVED_SWAP]
+default=0
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Reserved Swap
+review=?
+tags=shadow,baseshadow
+
+[QUILL_MANAGE_VACUUM]
+default=false
+type=bool
+reconfig=true
+customization=devel
+friendly_name=Quill Manage Vacuum
+review=?
+tags=quill,jobqueuedbmanager
+
+[QUILL_POLLING_PERIOD]
+default=10
+type=int
+reconfig=true
+customization=devel
+friendly_name=Quill Polling Period
+review=?
+tags=quill,jobqueuedbmanager
+
+[QUILL_HISTORY_DURATION]
+default=180
+type=int
+reconfig=true
+customization=devel
+friendly_name=Quill History Duration
+review=?
+tags=quill,jobqueuedbmanager
+
+[QUILL_HISTORY_CLEANING_INTERVAL]
+default=24
+type=int
+reconfig=true
+customization=devel
+friendly_name=Quill History Cleaning Interval
+review=?
+tags=quill,jobqueuedbmanager
+
+[QUILL_SHOULD_REINDEX]
+default=true
+type=bool
+reconfig=true
+customization=devel
+friendly_name=Quill Should Reindex
+review=?
+tags=quill,jobqueuedbmanager
+
+[SCHEDD_NAME]
 [RECONNECT_BACKOFF_CEILING]
 default=300
 type=int
@@ -1413,13 +1543,44 @@ review=?
 tags=quill,jobqueuedbmanager
 
 [COUNT_HYPERTHREAD_CPUS]
-default=1
-type=int
+default=true
+type=bool
 reconfig=true
 customization=seldom
 friendly_name=Count Hyperthread Cpus
 review=?
 tags=sysapi,test
+
+# we expect this to be overwritten by the config system, this is here just in case and to save space
+[DETECTED_CPUS]
+default=1
+type=int
+reconfig=false
+customization=devel
+usage=Number of detected cpus, includes hyperthreads if COUNT_HYPERTHREAD_CPUS
+tags=
+
+[DETECTED_PHYSICAL_CPUS]
+default=1
+type=int
+reconfig=false
+customization=devel
+usage=Number of detected cpus. does not include hyperthreads
+
+[DETECTED_CORES]
+default=1
+type=int
+reconfig=false
+customization=devel
+usage=Number of detected cpus. does not include hyperthreads
+
+[NUM_CPUS]
+default=$(DETECTED_CPUS)
+type=int
+reconfig=true
+customization=normal
+usage=Number of CPUs to provision in the startd
+tags=sysapi,reconfig
 
 [CONSOLE_DEVICES]
 default=mouse, console
@@ -2123,7 +2284,7 @@ review=?
 tags=collector,view_server
 
 [LOCAL_DIR]
-default=$(RELEASE_DIR)/hosts/$(HOSTNAME)
+default=$(TILDE)
 win32_default=$(RELEASE_DIR)
 type=string
 reconfig=true
@@ -2618,7 +2779,8 @@ friendly_name=Ignore Nfs Lock Errors
 review=?
 
 [MAIL]
-default=/usr/bin/mail
+# default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
+default=/bin/mail
 win32_default=$(BIN)\condor_mail.exe
 type=path
 reconfig=true
@@ -2701,7 +2863,7 @@ tags=startd,command
 
 [STARTD_SENDS_ALIVES]
 default=peer
-type=bool
+type=string
 reconfig=true
 customization=seldom
 friendly_name=Startd Sends Alives
@@ -2763,11 +2925,11 @@ review=?
 tags=startd,Starter
 
 [RunBenchmarks]
-default=
+default=LastBenchmark == 0
 type=string
 reconfig=true
 customization=seldom
-friendly_name=Runbenchmarks
+friendly_name=Expression that when true, causes the STARTD to run benchmarks
 review=?
 tags=startd,startd_main
 
@@ -2953,7 +3115,7 @@ review=?
 tags=startd,claim
 
 [START]
-default=$(UWCS_START)
+default=True
 type=string
 reconfig=true
 customization=seldom
@@ -3213,15 +3375,6 @@ type=bool
 reconfig=true
 customization=seldom
 friendly_name=Log On Nfs Is Error
-review=?
-tags=submit,submit
-
-[JOB_LEASE_DURATION]
-default=ATTR_JOB_LEASE_DURATION
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Job Lease Duration
 review=?
 tags=submit,submit
 
@@ -3657,12 +3810,12 @@ friendly_name=Event Log Use Xml
 review=?
 tags=c++_util,user_log
 
-[MAX_EVENT_LOG]
+[EVENT_LOG_MAX_SIZE]
 default=1000000
 type=long
 reconfig=true
 customization=seldom
-friendly_name=Max Event Log
+friendly_name=Maximum size of the event log in bytes
 review=?
 tags=c++_util,user_log
 
@@ -4038,6 +4191,15 @@ friendly_name=Negotiator Update After Cycle
 review=?
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD]
+default=0
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Trim Shutdown Threshold
+review=?
+tags=negotiator,matchmaker
+
 [NEGOTIATOR_TIMEOUT]
 default=30
 type=int
@@ -4075,7 +4237,7 @@ review=?
 tags=negotiator,matchmaker
 
 [PREEMPTION_RANK]
-default=$(UWCS_PREEMPTION_RANK)
+default=(RemoteUserPrio * 1000000) - ifThenElse(isUndefined(TotalJobRuntime), 0, TotalJobRuntime)
 type=string
 reconfig=true
 customization=seldom
@@ -4084,7 +4246,7 @@ review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PRE_JOB_RANK]
-default=$(UWCS_NEGOTIATOR_PRE_JOB_RANK)
+default=(10000000 * My.Rank) + (1000000 * (RemoteOwner =?= UNDEFINED)) - (100000 * Cpus) - Memory
 type=string
 reconfig=true
 customization=seldom
@@ -4093,7 +4255,7 @@ review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_POST_JOB_RANK]
-default=$(UWCS_NEGOTIATOR_POST_JOB_RANK)
+default=(RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kflops) - SlotID - 1.0e10*(Offline=?=True))
 type=string
 reconfig=true
 customization=seldom
@@ -4143,6 +4305,15 @@ type=bool
 reconfig=true
 customization=seldom
 friendly_name=Negotiator Use Nonblocking Startd Contact
+review=?
+tags=negotiator,matchmaker
+
+[NEGOTIATOR_USE_WEIGHTED_DEMAND]
+default=true
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Use Weighted Demand
 review=?
 tags=negotiator,matchmaker
 
@@ -4321,14 +4492,23 @@ friendly_name=Preen Admin
 review=?
 tags=tools,preen
 
-[VALID_SPOOL_FILES]
+[SYSTEM_VALID_SPOOL_FILES]
 default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
 type=string
 reconfig=true
+customization=const
+friendly_name=System defined Valid Spool Files
+usage=What HTCondor created files should condor_preen leave in the spool directory?
+review=tj
+tags=tools,preen
+
+[VALID_SPOOL_FILES]
+default=
+friendly_name=User defined Valid Spool Files
+reconfig=true
 customization=seldom
-friendly_name=Valid Spool Files
-usage=What files should condor_preen leave in the spool directory?
-review=?
+usage=What user files should condor_preen leave in the spool directory?
+review=tj
 tags=tools,preen
 
 [INVALID_LOG_FILES]
@@ -4687,7 +4867,7 @@ review=?
 tags=schedd,schedd
 
 [SHADOW_STANDARD]
-default=$(SBIN)/condor_shadow
+default=$(SBIN)/condor_shadow.std
 win32_default=
 type=path
 tags=schedd,schedd
@@ -5048,7 +5228,7 @@ review=?
 tags=master,master
 
 [DAEMON_LIST]
-default=MASTER, STARTD, SCHEDD
+default=MASTER
 type=string
 reconfig=true
 customization=normal
@@ -5419,7 +5599,7 @@ tags=ccb,ccb
 
 [SHADOW_LOCK]
 default=$(LOCK)/ShadowLock
-type=bool
+type=path
 reconfig=true
 customization=seldom
 friendly_name=Lock file for locking the shadow log file
@@ -5510,7 +5690,7 @@ review=?
 tags=schedd
 
 [DAEMON_SOCKET_DIR]
-default=$(LOCK)/daemon_sock
+default=auto
 type=string
 reconfig=true
 customization=seldom
@@ -5526,13 +5706,21 @@ friendly_name=Shared Port Daemon Ad File
 review=?
 
 [USE_SHARED_PORT]
-default=false
+default=true
+win32_default=false
 version=7.5.0
 type=bool
 reconfig=true
 customization=seldom
 friendly_name=Use Shared Port
 review=?
+
+[SHARED_PORT_PORT]
+default=$(COLLECTOR_PORT)
+type=int
+reconfig=true
+customization=seldom
+friendly_name=TCP port used by condor_shared_port
 
 [AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST]
 default=true
@@ -5617,12 +5805,12 @@ friendly_name=Rooster unhibernate rank
 review=?
 tags=rooster
 
+# the procd gets passed it's log size as an argument, so scale suffix like MB or time rotation is not allowed.
 [MAX_PROCD_LOG]
-default=10000000
-type=long
+default=1000000
 reconfig=true
 customization=seldom
-friendly_name=Max Procd Log
+friendly_name=Max Procd Log (size rotation only, no scale suffix)
 review=?
 tags=c++_util,procd
 
@@ -5645,6 +5833,15 @@ customization=seldom
 friendly_name=Shadow Worklife
 review=?
 tags=shadow
+
+[CLAIM_WORKLIFE]
+default=1200
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Claim Worklife
+review=?
+tags=startd
 
 [NEGOTIATION_CYCLE_STATS_LENGTH]
 default=3
@@ -5800,6 +5997,16 @@ friendly_name=Size of Recent Statistics Window
 review=?
 tags=scheduler
 
+[DCSTATISTICS_TIMESPANS]
+default=4m:240 20m:1200 4h:14400
+version=8.1.6
+type=string
+reconfig=true
+customization=seldom
+friendly_name=List of timespans for reporting DC exponential moving average statistics
+review=?
+tags=schedd
+
 [DCSTATISTICS_WINDOW_SECONDS]
 default=
 type=string
@@ -5863,6 +6070,19 @@ friendly_name=Append OS version to the value of OPSYS
 review=?
 tags=schedd
 
+[WANT_SUSPEND]
+default=False
+[WANT_VACATE]
+default=False
+[SUSPEND]
+default=False
+[CONTINUE]
+default=True
+[PREEMPT]
+default=False
+[KILL]
+default=False
+
 [MachineMaxVacateTime]
 default=600
 type=int
@@ -5870,6 +6090,12 @@ reconfig=true
 customization=seldom
 friendly_name=
 review=?
+tags=startd
+
+[PERIODIC_CHECKPOINT]
+default=((time() - LastPeriodicCheckpoint)/60.0) > (180.0 + $RANDOM_INTEGER(-30,30,1))
+type=string
+reconfig=true
 tags=startd
 
 [DEFRAG_REQUIREMENTS]
@@ -6325,7 +6551,8 @@ review=?
 tags=starter
 
 [CGROUP_MEMORY_LIMIT_POLICY]
-default=none
+aliases=
+default=soft
 version=7.9.0
 type=string
 reconfig=true
@@ -6440,9 +6667,18 @@ friendly_name=Ganglia Configuration
 review=?
 tags=c++_util,condor_config
 
-[GANGLIAD_METRICS_CONFIG_DIR]
-default=/etc/condor/ganglia.d
+[GANGLIA_GSTAT_COMMAND]
+default=gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
 type=string
+reconfig=true
+customization=seldom
+friendly_name=Ganglia gstat Command
+review=?
+tags=c++_util,condor_config
+
+[GANGLIAD_METRICS_CONFIG_DIR]
+default=$(RELEASE_DIR)/etc/condor/ganglia.d
+type=path
 reconfig=true
 customization=seldom
 friendly_name=Ganglia metric config dir
@@ -6459,7 +6695,7 @@ review=?
 tags=c++_util,condor_config
 
 [GANGLIAD_INTERVAL]
-default=300
+default=60
 type=int
 reconfig=true
 customization=seldom
@@ -6477,8 +6713,7 @@ review=?
 tags=gangliad
 
 [MAX_GANGLIAD_LOG]
-default=10000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 reconfig=true
 customization=seldom
 friendly_name=Max Gangliad Log
@@ -6500,6 +6735,15 @@ type=bool
 reconfig=true
 customization=seldom
 friendly_name=Publish metrics for individual execute nodes
+review=?
+tags=c++_util,gangliad
+
+[GANGLIA_SEND_DATA_FOR_ALL_HOSTS]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Send metrics for all hosts
 review=?
 tags=c++_util,gangliad
 
@@ -6559,12 +6803,32 @@ friendly_name=Schedd Max File Descriptors
 usage=Set the limit on file descriptor usage for the scheduler.
 review=?
 
+[SHARED_PORT_MAX_FILE_DESCRIPTORS]
+default=4096
+range=0,
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Shared Port Max File Descriptors
+usage=Set the limit on file descriptor usage for condor_shared_port.
+review=?
+
 [USE_RESOURCE_REQUEST_COUNTS]
 default=true
 type=bool
 reconfig=true
 customization=seldom
 friendly_name=Use Resource Request Counts
+review=?
+tags=negotiator,matchmaker
+
+[NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE]
+default=20
+range=1,
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Size of Resource Request List
 review=?
 tags=negotiator,matchmaker
 
@@ -6587,6 +6851,33 @@ friendly_name=History Helper max number of helper sub-processes
 usage=Set the limit on the number of condor_history_helper sub-processes
 review=?
 
+[CONDOR_Q_USE_V3_PROTOCOL]
+default=true
+type=bool
+reconfig=false
+customization=devel
+friendly_name=Control use of V3 query protocol for condor_q
+usage=Set to false to disable V3 query protocol for condor_q.
+
+[ENABLE_IPV6]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Enable IPv6
+usage=Should HTCondor listen on IPv6 interfaces?
+tags=daemon_core
+
+[ENABLE_IPV4]
+default=true
+version=8.1.3
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Enable IPv4
+usage=Should HTCondor listen on IPv4 interfaces?
+tags=daemon_core
+
 [JOB_EXECDIR_PERMISSIONS]
 default=user
 version=8.1.3
@@ -6596,6 +6887,14 @@ customization=seldom
 friendly_name=Permissions on the job's execute directory
 review=?
 tags=starter
+
+[FILETRANSFER_PLUGINS]
+default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
+win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe
+customization=seldom
+friendly_name=List of installed file transfer plugins
+tags=startd
+review=?
 
 [CONDOR_ADMIN]
 default=root@$(FULL_HOSTNAME)
@@ -6757,134 +7056,121 @@ type=string
 review=?
 
 # defaults for debug logs
+[MAX_DEFAULT_LOG]
+default=10 Mb
+friendly_name=Default max size of a daemon log
+
 [COLLECTOR_DEBUG]
 default=
 review=?
 [MAX_COLLECTOR_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [KBDD_DEBUG]
 default=
 review=?
 [MAX_KBDD_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [NEGOTIATOR_DEBUG]
 default=D_MATCH
 review=?
 [MAX_NEGOTIATOR_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [MAX_NEGOTIATOR_MATCH_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [SCHEDD_DEBUG]
 default=D_PID
 review=?
 [MAX_SCHEDD_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [SHADOW_DEBUG]
 default=
 review=?
 [MAX_SHADOW_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [STARTD_DEBUG]
 default=
 review=?
 [MAX_STARTD_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [MAX_STARTER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [MASTER_DEBUG]
 default=
 review=?
 [MAX_MASTER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [JOB_ROUTER_DEBUG]
 default=
 review=?
 [MAX_JOB_ROUTER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [ROOSTER_DEBUG]
 default=
 review=?
 [MAX_ROOSTER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [SHARED_PORT_DEBUG]
 default=
 review=?
 [MAX_SHARED_PORT_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [HDFS_DEBUG]
 default=
 review=?
 [MAX_HDFS_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [HAD_DEBUG]
 default=
 review=?
 [MAX_HAD_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [REPLICATION_DEBUG]
 default=
 review=?
 [MAX_REPLICATION_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [TRANSFERER_DEBUG]
 default=
 review=?
 [MAX_TRANSFERER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [GRIDMANAGER_DEBUG]
 default=
 review=?
 [MAX_GRIDMANAGER_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [GRIDMANAGER_LOG]
@@ -6898,8 +7184,7 @@ type=string
 review=?
 
 [MAX_C_GAHP_LOG]
-default=1000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 [EC2_GAHP_LOG]
@@ -6929,6 +7214,14 @@ review=?
 default=$(SBIN)/ec2_gahp
 review=?
 
+[GCE_GAHP]
+default=$(SBIN)/gce_gahp
+review=?
+
+[GCE_GAHP_LOG]
+default=/tmp/GceGahpLog.$(USERNAME)
+win32_default=NUL
+review=?
 
 [CREDD]
 default=$(SBIN)/condor_credd
@@ -6960,16 +7253,12 @@ review=?
 default=D_FULLDEBUG
 review=?
 [MAX_CREDD_LOG]
-default=4000000
-type=long
+default=$(MAX_DEFAULT_LOG)
 review=?
 
 # benchmarking knobs
 [BenchmarkTimer]
 default=(time() - LastBenchmark)
-review=?
-[RunBenchmarks]
-default=(LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 review=?
 [BENCHMARKS_JOBLIST]
 default=mips kflops
@@ -6995,6 +7284,108 @@ default=1.0
 review=?
 
 # Useful constants
+[IsWindows]
+default=false
+win32_default=true
+type=bool
+customization=const
+
+[IsMaster]
+default=false
+type=bool
+customization=const
+[MASTER.IsMaster]
+default=true
+type=bool
+customization=const
+
+[IsCollector]
+default=false
+type=bool
+customization=const
+[COLLECTOR.IsCollector]
+default=true
+type=bool
+customization=const
+
+[IsNegotiator]
+default=false
+type=bool
+customization=const
+[NEGOTIATOR.IsNegotiator]
+default=true
+type=bool
+customization=const
+
+[IsSchedd]
+default=false
+type=bool
+customization=const
+[SCHEDD.IsSchedd]
+default=true
+type=bool
+customization=const
+
+[IsStartd]
+default=false
+type=bool
+customization=const
+[STARTD.IsStartd]
+default=true
+type=bool
+customization=const
+
+[IsStarter]
+default=false
+type=bool
+customization=const
+[STARTER.IsStarter]
+default=true
+type=bool
+customization=const
+
+[IsShadow]
+default=false
+type=bool
+customization=const
+[SHADOW.IsShadow]
+default=true
+type=bool
+customization=const
+
+[IsTool]
+default=false
+type=bool
+customization=const
+[TOOL.IsTool]
+default=true
+type=bool
+customization=const
+
+[CONDOR_VERSION]
+macro=CONDOR_VERSION
+default=8.*
+type=string
+customization=const
+
+[CONDOR_BUILD_PLATFORM]
+macro=PLATFORM
+default=undefined
+type=string
+customization=const
+
+[HAVE_EXT_GLOBUS]
+macro=HAVE_EXT_GLOBUS
+default=0
+type=int
+customization=const
+
+[HAVE_EXT_KRB5]
+macro=HAVE_EXT_KRB5
+default=0
+type=int
+customization=const
+
 [MINUTE]
 default=60
 customization=const
@@ -7115,18 +7506,17 @@ default=false
 [UWCS_PERIODIC_CHECKPOINT]
 default=$(LastCkpt) > (3 * $(HOUR) + $RANDOM_INTEGER(-30,30,1) * $(MINUTE) )
 [UWCS_NEGOTIATOR_PRE_JOB_RANK]
-default=RemoteOwner =?= UNDEFINED
+default=(10000000 * My.Rank) + (1000000 * (RemoteOwner =?= UNDEFINED)) - (100000 * Cpus) - Memory
 [UWCS_NEGOTIATOR_POST_JOB_RANK]
 default=(RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kflops) - SlotID - 1.0e10*(Offline=?=True))
 [UWCS_PREEMPTION_REQUIREMENTS]
 default=((SubmitterGroup =?= RemoteGroup) && ($(StateTimer) > (1 * $(HOUR))) && (RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2)) || (MY.NiceUser == True)
 [UWCS_PREEMPTION_RANK]
-default=(RemoteUserPrio * 1000000) - TARGET.ImageSize
+default=(RemoteUserPrio * 1000000) - ifThenElse(isUndefined(TotalJobRuntime), 0, TotalJobRuntime)
 
 # obsolete config file knobs to discard on upgrade
 [$UPGRADE.DISCARD]
 friendly_name=Config file knobs that should be ignored on upgrade
-# can't put leading tabs in this table without breaking condor_config_val
 default : @end
 	LeaseManager
 	LeaseManger_ADDRESS_FILE
@@ -7154,7 +7544,6 @@ default : @end
 [$UPGRADE.DISCARDX]
 friendly_name=Platform specific file knobs that should be ignored on upgrade
 default=
-# can't put leading tabs in this table without breaking condor_config_val
 win32_default : @end
 	GT2_GAHP
 	UNICORE_GAHP
@@ -7167,14 +7556,45 @@ win32_default : @end
 	CKPT_PROBE
 @end
 
+# use this table to detect knobs that have not been changed by the user when the default knob value HAS been changed since 8.0
 [$UPGRADE.DISCARDIF]
-friendly_name=Platform specific knobs that should be ignored on upgrade if they match the given value
+friendly_name=Knobs that should be ignored on upgrade if they match the given value
 default : @end
 	RESERVED_DISK=5
+	ALL_DEBUG=
+	MAX_COLLECTOR_LOG=1000000
+	MAX_KBDD_LOG=1000000
+	MAX_MASTER_LOG=1000000
+	MAX_NEGOTIATOR_LOG=1000000
+	MAX_NEGOTIATOR_MATCH_LOG=1000000
+	MAX_SCHEDD_LOG=1000000
+	MAX_SHADOW_LOG=1000000
+	MAX_SHARED_PORT_LOG=1000000
+	MAX_STARTD_LOG=1000000
+	MAX_STARTER_LOG=1000000
+	MAX_JOB_ROUTER_LOG=1000000
+	MAX_REPLICATION_LOG=1000000
+	MAX_ROOSTER_LOG=1000000
+	MAX_HDFS_LOG=1000000
+	MAX_HAD_LOG=1000000
+	MAX_TRANSFERER_LOG=1000000
+	MAX_GRIDMANAGER_LOG=1000000
+	MAX_C_GAHP_LOG=1000000
+	MAX_VM_GAHP_LOG=1000000
+	MAX_CREDD_LOG=4000000
+	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
+	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad, OfflineLog
+@end
+
+# This table is for platform-specific knobs that fit the rules for $UPGRADE.DISCARDIF above
+[$UPGRADE.DISCARDIFX]
+friendly_name=Platform specific knobs that should be ignored on upgrade if they match the given value
+default : @end
+	QUEUE_SUPER_USERS=root, condor
 @end
 win32_default : @end
+	QUEUE_SUPER_USERS=condor, SYSTEM
 	EC2_GAHP_LOG=/tmp/EC2GahpLog.$(USERNAME)
-	RESERVED_DISK=5
 	MAIL_FROM=
 	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware.exe
 	JAVA_CLASSPATH_SEPARATOR=:
@@ -7188,7 +7608,6 @@ win32_default : @end
 	HDFS_NAMENODE_ROLE=ACTIVE
 	HDFS_NAMENODE_DIR=/tmp/hadoop_name
 	HDFS_DATANODE_DIR=/scratch/tmp/hadoop_data
-	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
 	GLIDEIN_SERVER_URLS=http://www.cs.wisc.edu/condor/glidein/binaries
 @end
 
@@ -7220,15 +7639,14 @@ default : @end
 	SUSPEND=($(KeyboardBusy) || ( (CpuBusyTime > 120) && $(ActivationTimer) > 90))
 	CONTINUE=($(CPUIdle) && ($(ActivityTimer) > 10) && (KeyboardIdle > $(ContinueIdleTime)))
 	PREEMPT=(((Activity == "Suspended") && ($(ActivityTimer) > $(MaxSuspendTime))) || (SUSPEND && (WANT_SUSPEND == False)))
-	KILL=false
-	PERIODIC_CHECKPOINT=$(LastCkpt) > (3 * 3600 + $RANDOM_INTEGER(-1800,1800,60))
+	KILL=False
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=
 @end
 review=?
 
-# use the UWCS knobs 
-[$POLICY.ALWAYS_RUN]
+# no-preemption policy, formerly called TESTINGMODE_
+[$POLICY.ALWAYS_RUN_JOBS]
 friendly_name=Use a no-preemption policy
 default : @end
 	WANT_SUSPEND=False
@@ -7238,8 +7656,8 @@ default : @end
 	PREEMPT=False
 	START=True
 	KILL=False
-	PERIODIC_CHECKPOINT=False
 	PREEMPTION_REQUIREMENTS=False
+	NEGOTIATOR_CONSIDER_PREEMPTION=False
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=1200
 @end
@@ -7248,35 +7666,48 @@ review=?
 [$POLICY.UWCS_DESKTOP]
 friendly_name=Run jobs only when the user is away from their machine
 default : @end
-	SUSPEND=$(UWCS_SUSPEND)
 	WANT_SUSPEND=$(UWCS_WANT_SUSPEND)
 	WANT_VACATE=$(UWCS_WANT_VACATE)
+	SUSPEND=$(UWCS_SUSPEND)
 	CONTINUE=$(UWCS_CONTINUE)
 	PREEMPT=$(UWCS_PREEMPT)
 	KILL=$(UWCS_KILL)
 	PERIODIC_CHECKPOINT=$(UWCS_PERIODIC_CHECKPOINT)
+	PREEMPTION_REQUIREMENTS=$(UWCS_PREEMPTION_REQUIREMENTS)
+	PREEMPTION_RANK=$(UWCS_PREEMPTION_RANK)
+	NEGOTIATOR_PRE_JOB_RANK=$(UWCS_NEGOTIATOR_PRE_JOB_RANK)
+	NEGOTIATOR_POST_JOB_RANK=$(UWCS_NEGOTIATOR_POST_JOB_RANK)
 	MaxJobRetirementTime=$(UWCS_MaxJobRetirementTime)
 	CLAIM_WORKLIFE=$(UWCS_CLAIM_WORKLIFE)
 @end
 review=?
 
-[$ROLE.Personal]
-friendly_name=Settings for Personal HTCondor
+[$POLICY.LIMIT_JOB_RUNTIMES]
+friendly_name=Limit job runtimes to 24 hours
 default : @end
+	MAX_JOB_RUNTIME=24*3600
+	PREMPT=(Activity == "Busy") && ((time() - EnteredCurrentActivity) > $(MAX_JOB_RUNTIME))
+@end
+review=?
+
+[$ROLE.Personal]
+friendly_name=Settings for Personal HTCondor (i.e. the whole pool is on a single machine)
+default : @end
+	CONDOR_HOST=127.0.0.1
 	COLLECTOR_HOST=$(CONDOR_HOST):0
 	DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
 	RunBenchmarks=0
 @end
 review=?
 
-[$ROLE.ExecNode]
+[$ROLE.Execute]
 friendly_name=Settings for HTCondor Execute node
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) STARTD
 @end
 review=?
 
-[$ROLE.SubmitNode]
+[$ROLE.Submit]
 friendly_name=Settings for HTCondor Execute node
 default : @end
 	DAEMON_LIST=$(DAEMON_LIST) SCHEDD
@@ -7291,25 +7722,82 @@ default : @end
 review=?
 
 # default security policy
-[$AUTH.DEFAULT]
-friendly_name=Default Authorization policy based on IPs and DNS names
+[$SECURITY.HOST_BASED]
+friendly_name=Default (host based) Authorization policy based on IPs and DNS names
 default : @end
-	ALLOW_ADMINISTRATOR=$(CONDOR_HOST), $(IP_ADDRESS)
-	ALLOW_OWNER=$(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
+	ALLOW_ADMINISTRATOR=$(CONDOR_HOST)
+	ALLOW_OWNER=$(FULL_HOSTNAME) $(IP_ADDRESS)
 	ALLOW_READ=*
-	ALLOW_WRITE=$(FULL_HOSTNAME), $(IP_ADDRESS)
-	ALLOW_NEGOTIATOR=$(CONDOR_HOST), $(IP_ADDRESS)
-	ALLOW_NEGOTIATOR_SCHEDD=$(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS), $(IP_ADDRESS)
-	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE), $(FLOCK_FROM)
-	ALLOW_WRITE_STARTD=$(ALLOW_WRITE), $(FLOCK_FROM)
-	ALLOW_READ_COLLECTOR=$(ALLOW_READ), $(FLOCK_FROM)
-	ALLOW_READ_STARTD=$(ALLOW_READ), $(FLOCK_FROM)
+	ALLOW_WRITE=$(FULL_HOSTNAME) $(IP_ADDRESS)
+	ALLOW_NEGOTIATOR=$(CONDOR_HOST)
+	ALLOW_NEGOTIATOR_SCHEDD=$(CONDOR_HOST) $(FLOCK_NEGOTIATOR_HOSTS)
+	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE) $(FLOCK_FROM)
+	ALLOW_WRITE_STARTD=$(ALLOW_WRITE) $(FLOCK_FROM)
+	ALLOW_READ_COLLECTOR=$(ALLOW_READ) $(FLOCK_FROM)
+	ALLOW_READ_STARTD=$(ALLOW_READ) $(FLOCK_FROM)
 @end
 review=?
 
+[$SECURITY.WITH_AUTHENTICATION]
+friendly_name=Enable
+default : @end
+	SEC_DEFAULT_AUTHENTICATION=required
+	SEC_DEFAULT_INTEGRITY=required
+@end
+review=?
+
+[$SECURITY.STRONG]
+friendly_name=Enable
+default : @end
+	SEC_DEFAULT_ENCRYPTION=required
+	SEC_DEFAULT_INTEGRITY=required
+	SEC_DEFAULT_AUTHENTICATION=required
+@end
+review=?
+
+[$SECURITY.USER_BASED]
+friendly_name=Enable
+default : @end
+	if $(CondorIsAdmin)
+	  authuser=condor
+	else
+	  authuser=$(USERNAME)
+	endif
+	ALLOW_ADMINISTRATOR=$(authuser)@$(CONDOR_HOST)
+	ALLOW_OWNER=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
+	ALLOW_READ=*
+	ALLOW_WRITE=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
+	ALLOW_NEGOTIATOR=$(authuser)@$(CONDOR_HOST)
+	ALLOW_NEGOTIATOR_SCHEDD=$(ALLOW_NEGOTIATOR) $(FLOCK_NEGOTIATOR_HOSTS)
+	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE) $(FLOCK_FROM)
+	ALLOW_WRITE_STARTD=$(ALLOW_WRITE) $(FLOCK_FROM)
+	ALLOW_READ_COLLECTOR=$(ALLOW_READ) $(FLOCK_FROM)
+	ALLOW_READ_STARTD=$(ALLOW_READ) $(FLOCK_FROM)
+	use SECURITY : WITH_AUTHENTICATION
+@end
+review=?
+
+[$FEATURE.REMOTE_RUNTIME_CONFIG]
+friendly_name=Enable runtime configuration of HTCondor daemons
+default : @end
+	ENABLE_RUNTIME_CONFIG=True
+	ALLOW_CONFIG=$(ALLOW_ADMINISTRATOR)
+	# the value of this attribute defines which parameters can be set remotely
+	#SETTABLE_ATTRS_CONFIG=*
+@end
+review=?
+
+[$FEATURE.REMOTE_CONFIG]
+friendly_name=Enable runtime and persistent configuration of HTCondor daemons
+default : @end
+	ENABLE_PERSISTENT_CONFIG=True
+	PERSISTENT_CONFIG_DIR=$(SPOOL)
+	use FEATURE : REMOTE_RUNTIME_CONFIG
+@end
+review=?
 
 # note vm_vmware script is perl so it doesn't get a .exe extension on Windows.
-[$USE.VMWARE]
+[$FEATURE.VMWARE]
 friendly_name=Settings for to use VMWARE with VM Universe
 default : @end
 	VM_TYPE=vmware
@@ -7326,13 +7814,30 @@ default : @end
 @end
 review=?
 
-[$USE_SHARED_PORT.TRUE]
-friendly_name=Settings for enabling the shared port daemon
+[$FEATURE.GPUs]
+friendly_name=Settings for to detect and use GPUs as custom resources
 default : @end
-	USE_SHARED_PORT=true
-	SHARED_PORT_DEFAULT_ID=collector
-	COLLECTOR_ARGS = -sock collector
-	SHARED_PORT_ARGS = -p 9618
-	DAEMON_LIST = $(DAEMON_LIST) SHARED_PORT
+	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
+	ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES
+	ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
+@end
+review=?
+
+[$EXPERIMENTAL.ASYNC_STAGEOUT]
+friendly_name=Knobs to enable the async stage-out hack for CMS
+default: @end
+	ALLOW_SLOT_PAIRING=true
+	# don't append slot name to StarterLog, may be: Cluster, JobId, false or true. true gives 8.0 compatible behavior.
+	STARTER_LOG_NAME_APPEND=false
+	# create a hidden type2 xfer slot for every type1 slot
+	NUM_SLOTS_TYPE_1 = $(NUM_CPUS)
+	NUM_SLOTS_TYPE_2 = $(NUM_SLOTS_TYPE_1)
+	SLOT_TYPE_2 = minimal cpus=0.1 memory=100 disk=auto
+	SLOT_TYPE_2_NAME_PREFIX = xfer
+	SLOT_TYPE_2_PAIRED_WITH = SLOT_TYPE_1
+	SLOT_TYPE_2_HIDDEN = true
+	SLOT_TYPE_2_START = TARGET.JobTransferringOutput  && splitslotname(TARGET.RemoteHost)[1] == splitslotname(MY.Name)[1]
+	# cross-advertise these slot attributes in all other slots
+	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
 @end
 

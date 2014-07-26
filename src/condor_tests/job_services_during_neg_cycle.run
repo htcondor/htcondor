@@ -40,11 +40,14 @@ my $expect_return = 0;
 
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	MAX_NEGOTIATOR_LOG = 5000000000
-	MAX_SCHEDD_LOG = 5000000000
+	MAX_NEGOTIATOR_LOG = 30 Mb
+	MAX_SCHEDD_LOG = 20 Mb
 	SIGNIFICANT_ATTRIBUTES = Procid
 	START = False
 	NEGOTIATOR_DEBUG = D_COMMAND, D_MATCH
+	USE_SHARED_PORT = False
+	NUM_CPUS = 12
+	USE_SHARED_PORT = false
 ';
 
 $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"negotiator");
@@ -61,6 +64,20 @@ my $on_execute = sub {
 };
 
 my $on_abort = sub {
+};
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
 };
 
 my $result = 1;
@@ -102,6 +119,9 @@ my $on_submit = sub {
 	#print "Submitted count <$count>\n";
 	if($count == $targetjobcount) {
 	print "************************************ All Jobs Submitted ***********************************\n";
+	print "What does job matching potential look like?\n";
+		#runToolNTimes("condor_q -better $ClusterId.10000",1,1);
+		# they will never match because start = false
 		# wait for the start of the next negotiation cycle
 		$matchonbegin = 1;
 		CondorLog::RunCheckMultiple(
@@ -188,71 +208,6 @@ my $on_submit = sub {
 
 		CheckExpectations("Condor_reconfig handlings during cycle",$match,0);
 
-		# find the start cycle after the matching end to the start
-		# we did this on
-		$matchedbeginafterend = 1;
-		CondorLog::RunCheckMultiple(
-			daemon => "Negotiator",
-			match_new => "true",
-			match_timeout => 600,
-			match_regexp => "Started Negotiation Cycle",
-			match_callback => $on_match,
-		);
-		$matchedbeginafterend = 0;
-
-		print "Looking for new - Started Negotiation Cycle - ";
-		if($matchbeginafterend eq $failure) {
-			print "$failure\n";
-		} else {
-			print "OK\n";
-		}
-
-
-		runToolNTimes("condor_userprio",1,0);
-		runToolNTimes("condor_off -fast -daemon negotiator",1,0);
-		runToolNTimes("condor_userprio",5,0);
-
-		# find the last negotiator end and store the match
-		$matchonfinalfinish = 1;
-		CondorLog::RunCheckMultiple(
-			daemon => "Negotiator",
-			match_new => "true",
-			match_timeout => 600,
-			match_regexp => "Finished Negotiation Cycle",
-			match_callback => $on_match,
-		);
-		$matchonfinalfinish = 0;
-		# could I not be getting the Finsh I expect?
-		print "Looking for new Finsh after this Begin - $matchbeginafterend - ";
-		if($matchedfinalfinish eq $failure) {
-			print "$failure\n";
-		} else {
-			print "OK\n";
-		}
-
-
-		CondorLog::RunCheckMultiple(
-			daemon => "Negotiator",
-			match_new => "false",
-			match_timeout => 600,
-			match_regexp => "$matchedfinalfinish",
-			match_after_regexp => "Got SIGQUIT.  Performing fast shutdown.",
-			match_callback => $on_match,
-		);
-
-		print "Looking for Got SIGQUIT.  Performing fast shutdown. After this - $matchedfinalfinish - ";
-		if($match eq $failure) {
-			print "$failure\n";
-		} else {
-			print "OK\n";
-		}
-
-		if($match =~ /Got SIGQUIT.  Performing fast shutdown./) {
-			print "Saw the condor_off -fast hit the negotiator\n";
-			print "condor_off -fast -daemon negotiator happened After Negotiation Cycle Finished\n";
-			# as of 8.0.0 we don't expect the condor_off to happen before the negotiation cycle finishes
-			# die "condor_off -fast -daemon negotiator happened After Negotiation Cycle Finished\n";
-		}
 
 		runToolNTimes("condor_rm -all",1,0);
 		runToolNTimes("condor_rm -forcex -all",1,0);
@@ -277,6 +232,7 @@ $result = SimpleJob::RunCheck(
 	on_submit => $on_submit,
 	on_execute => $on_execute,
 	queue_sz => $targetjobcount,
+	GetClusterId => $GetClusterId,
 	duration => 0,
 );
 

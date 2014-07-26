@@ -42,15 +42,15 @@ is not supported and could be problematic.
 
 \begin{itemize}
 
-\item HTCondor for Windows requires Windows 2000 SP4, Windows XP SP2, 
+\item HTCondor for Windows is supported for Windows Vista
 or a more recent version.
 
 \item 300 megabytes of free disk space is recommended.  Significantly more 
 disk space could be desired to be able to run jobs with large data files.
 
-\item HTCondor for Windows will operate on either an NTFS or FAT file system.  However, for security purposes, NTFS is preferred.
+\item HTCondor for Windows will operate on either an NTFS or FAT32 file system.  However, for security purposes, NTFS is preferred.
 
-\item HTCondor for Windows requires the Visual C++ 2008 C runtime library.
+\item HTCondor for Windows uses the Visual C++ 2012 C runtime library.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -240,11 +240,11 @@ the condition chosen for when to run jobs.]
      since it will indicate problems in the HTCondor pool.
 
 \item[STEP 6: Java Settings.]
-     In order to run jobs in the \SubmitCmd{java} universe,
+     In order to run jobs in the \SubmitCmdNI{java} universe,
      HTCondor must have the path to the jvm executable on the machine.
      The installer will search for and list the jvm path, if it finds one.
      If not, enter the path.
-     To disable use of the \SubmitCmd{java} universe,
+     To disable use of the \SubmitCmdNI{java} universe,
      leave the field blank.
 
 \item[STEP 7: Host Permission Settings.]
@@ -288,11 +288,11 @@ the condition chosen for when to run jobs.]
 
 \item[STEP 8: VM Universe Setting.]
      A radio button determines whether 
-     this machine will be configured to run \SubmitCmd{vm} universe jobs 
+     this machine will be configured to run \SubmitCmdNI{vm} universe jobs 
      utilizing VMware.
      In addition to having the VMware Server installed, HTCondor also needs
      \Prog{Perl} installed.
-     The resources available for \SubmitCmd{vm} universe jobs can be tuned 
+     The resources available for \SubmitCmdNI{vm} universe jobs can be tuned 
      with these settings, or the defaults listed may be used.
 
      \begin{description}
@@ -430,6 +430,7 @@ set ARGS=%ARGS% USEVMUNIVERSE="N"
 set ARGS=%ARGS% VMMEMORY="128"
 set ARGS=%ARGS% VMMAXNUMBER="$(NUM_CPUS)"
 set ARGS=%ARGS% VMNETWORKING="N"
+REM set ARGS=%ARGS% LOCALCONFIG="http://my.example.com/condor_config.$(FULL_HOSTNAME)"
  
 msiexec /qb /l* condor-install-log.txt /i condor-8.0.0-133173-Windows-x86.msi %ARGS%
 \end{verbatim}
@@ -528,10 +529,17 @@ determines if VM Universe can use networking. This can be set to:
 \item [USEVMUNIVERSE = $<$ Y \Bar\ N $>$]
 will cause the installer to enable VM Universe jobs on the target machine.
 
+\item[LOCALCONFIG]
+defines the location of the local configuration file.
+The value may be the path to a file on the local machine, 
+or it may be a URL beginning with \Expr{http}.
+If the value is a URL, 
+then the \Condor{urlfetch} tool is invoked to fetch configuration
+whenever the configuration is read.
 
 \item[PERLLOCATION]
 defines the path to \Prog{Perl} on the target machine. This is required in
-order to use the \SubmitCmd{vm} universe.
+order to use the \SubmitCmdNI{vm} universe.
 \end{description}
 
 

@@ -29,6 +29,7 @@ my $append_condor_config = '
   VIEW_COLLECTOR_ARGS = -local-name VIEW_COLLECTOR
   VIEW_COLLECTOR.COLLECTOR_LOG = $(LOG)/ViewCollectorLog
   VIEW_COLLECTOR.COLLECTOR_ADDRESS_FILE = $(SPOOL)/.VIEWcollector_address
+  USE_SHARED_PORT = false
 
   DAEMON_LIST = MASTER,COLLECTOR,VIEW_COLLECTOR,NEGOTIATOR,SCHEDD,STARTD
   DC_DAEMON_LIST = + VIEW_COLLECTOR
@@ -67,10 +68,12 @@ print "The first line of the View Collector address file ($view_addr_file):\n";
 print "\t$first_line";
 
 my $view_port;
-if($first_line =~ /<[\d.]+:(\d+)>/) {
+if ($first_line =~ /<[\d.]+:(\d+)>/) {
     $view_port = $1;
-}
-else {
+} elsif ($first_line =~ /<[\d.]+:(\d+\?sock=[a-f_\d]+)>/) {
+    $view_port = $1;
+	print "Viewport with shared port on:$view_port\n";
+} else {
     print "Cannot figure out what port the view collector is running on.\n";
     print "The first line of the view address file is:\n";
     print $first_line;
@@ -78,7 +81,7 @@ else {
 }
 
 # Note: you must run condor_reconfig after rset'ing a variable
-system("condor_config_val -collector -rset 'CONDOR_VIEW_HOST:\$(IP_ADDRESS):$view_port'; condor_reconfig -collector");
+system("condor_config_val -collector -rset 'CONDOR_VIEW_HOST=\$(IP_ADDRESS):$view_port'; condor_reconfig -collector");
 
 # Validate that we set this properly
 my $cmd = "condor_config_val -collector CONDOR_VIEW_HOST";

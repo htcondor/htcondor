@@ -44,13 +44,67 @@ AdTypes convert_to_ad_type(daemon_t d_type)
 
 struct Collector {
 
-    Collector(const std::string &pool="")
-      : m_collectors(NULL)
+    Collector(boost::python::object pool = boost::python::object())
+      : m_collectors(NULL), m_default(false)
     {
-        if (pool.size())
-            m_collectors = CollectorList::create(pool.c_str());
-        else
+        if (pool.ptr() == Py_None)
+        {
             m_collectors = CollectorList::create();
+            m_default = true;
+        }
+        else if (PyString_Check(pool.ptr()) || PyUnicode_Check(pool.ptr()))
+        {
+            std::string pool_str = boost::python::extract<std::string>(pool);
+            if (pool_str.size())
+            {
+                m_collectors = CollectorList::create(pool_str.c_str());
+            }
+            else
+            {
+                m_collectors = CollectorList::create();
+                m_default = true;
+            }
+        }
+        else
+        {
+            StringList collector_list;
+            boost::python::object my_iter = pool.attr("__iter__")();
+            if (!PyIter_Check(my_iter.ptr())) {
+                PyErr_Format(PyExc_TypeError,
+                             "__iter__ returned non-iterator "
+                             "of type '%.100s'",
+                             my_iter.ptr()->ob_type->tp_name);
+                boost::python::throw_error_already_set();
+            }
+            while (true)
+            {
+                try
+                {
+                    boost::python::object next_obj = my_iter.attr("next")();
+                    std::string pool_str = boost::python::extract<std::string>(next_obj);
+                    collector_list.append(pool_str.c_str());
+                }
+                catch (const boost::python::error_already_set&)
+                {
+                    if (PyErr_ExceptionMatches(PyExc_StopIteration))
+                    {
+                        PyErr_Clear();
+                        break;
+                    }
+                    else
+                    {
+                        boost::python::throw_error_already_set();
+                    }
+                }
+            }
+            char * pool_str = collector_list.print_to_string();
+            m_collectors = CollectorList::create(pool_str);
+            free(pool_str);
+        }
+        if (!m_collectors)
+        {
+            THROW_EX(ValueError, "No collector specified");
+        }
     }
 
     ~Collector()
@@ -132,7 +186,7 @@ struct Collector {
 
     object locate(daemon_t d_type, const std::string &name)
     {
-        std::string constraint = ATTR_NAME " =?= \"" + name + "\"";
+        std::string constraint = "stricmp(" ATTR_NAME ", \"" + name + "\") == 0";
         object result = query(convert_to_ad_type(d_type), constraint, list());
         if (py_len(result) >= 1) {
             return result[0];
@@ -142,11 +196,22 @@ struct Collector {
         return object();
     }
 
-    ClassAdWrapper *locateLocal(daemon_t d_type)
+    object locateLocal(daemon_t d_type)
     {
+        if (!m_default)
+        {
+            std::string constraint = "true";
+            object result = query(convert_to_ad_type(d_type), constraint, list());
+            if (py_len(result) >= 1) {
+                return result[0];
+            }
+            PyErr_SetString(PyExc_ValueError, "Unable to find daemon.");
+            throw_error_already_set();
+        }
+
         Daemon my_daemon( d_type, 0, 0 );
 
-        ClassAdWrapper *wrapper = new ClassAdWrapper();
+        boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
         if (my_daemon.locate())
         {
             classad::ClassAd *daemonAd;
@@ -205,7 +270,7 @@ struct Collector {
             PyErr_SetString(PyExc_RuntimeError, "Unable to locate local daemon");
             boost::python::throw_error_already_set();
         }
-        return wrapper;
+        return boost::python::object(wrapper);
     }
 
 
@@ -293,6 +358,7 @@ struct Collector {
 private:
 
     CollectorList *m_collectors;
+    bool m_default;
 
 };
 
@@ -301,7 +367,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(advertise_overloads, advertise, 1, 3);
 void export_collector()
 {
     class_<Collector>("Collector", "Client-side operations for the HTCondor collector")
-        .def(init<std::string>(":param pool: Name of collector to query; if not specified, uses the local one."))
+        .def(init<boost::python::object>(":param pool: Name of collector to query; if not specified, uses the local one."))
         .def("query", &Collector::query0)
         .def("query", &Collector::query1)
         .def("query", &Collector::query2)
@@ -312,7 +378,7 @@ void export_collector()
             ":param attrs: A list of attributes; if specified, the returned ads will be "
             "projected along these attributes.\n"
             ":return: A list of ads in the collector matching the constraint.")
-        .def("locate", &Collector::locateLocal, return_value_policy<manage_new_object>())
+        .def("locate", &Collector::locateLocal)
         .def("locate", &Collector::locate,
             "Query the collector for a particular daemon.\n"
             ":param daemon_type: Type of daemon; must be from the DaemonTypes enum.\n"

@@ -48,7 +48,9 @@
 // Disable warnings about deprecated ISO conforming names (for some 
 // reason defining fileno and fdopen to the right ones does not work 
 // in new versions of Visual Studio)
-#pragma warning( disable : 4996 )
+//#pragma warning( disable : 4996 )
+#define _CRT_NONSTDC_NO_DEPRECATE
+#define _CRT_NONSTDC_NO_WARNINGS
 
 // #define NOGDI
 #define NOSOUND
@@ -108,11 +110,12 @@ typedef __int32 int32_t;
 #define strlwr _strlwr
 #define chdir _chdir
 #define fsync _commit
-DLL_IMPORT_MAGIC int access(const char *, int);
+DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #define execl _execl  
 #define execv _execv
 #define putenv _putenv
 #define itoa _itoa
+#define strtoll _strtoi64
 #define utime _utime
 #define utimbuf _utimbuf
 #define R_OK 4
@@ -142,6 +145,7 @@ DLL_IMPORT_MAGIC int access(const char *, int);
 #include <math.h>
 #include <float.h>   // for DBL_MAX and other constants
 #include <errno.h>
+#include <Mstcpip.h> // for Winsock SIO_KEEPALIVE_VALS support
 #include "file_lock.h"
 #include "condor_fix_assert.h"
 

@@ -34,7 +34,7 @@
 #include "subsystem_info.h"
 
 #define MIN_WORKER_NUM 1
-#define AMAZON_GAHP_VERSION	"0.0.2"
+#define AMAZON_GAHP_VERSION	"1.0"
 
 int RESULT_OUTBOX = 1;	// stdout
 int REQUEST_INBOX = 0; // stdin
@@ -109,9 +109,6 @@ registerAllAmazonCommands(void)
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STATUS_ALL, 
 			AmazonVMStatusAll::ioCheck, AmazonVMStatusAll::workerFunction);
 
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_RUNNING_KEYPAIR, 
-			AmazonVMRunningKeypair::ioCheck, AmazonVMRunningKeypair::workerFunction);
-
 	/*
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_CREATE_GROUP, 
 			AmazonVMCreateGroup::ioCheck, AmazonVMCreateGroup::workerFunction);
@@ -139,12 +136,9 @@ registerAllAmazonCommands(void)
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_DESTROY_KEYPAIR, 
 			AmazonVMDestroyKeypair::ioCheck, AmazonVMDestroyKeypair::workerFunction);
 
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_KEYPAIR_NAMES, 
-			AmazonVMKeypairNames::ioCheck, AmazonVMKeypairNames::workerFunction);
-    
     registerAmazonGahpCommand(AMAZON_COMMAND_VM_ASSOCIATE_ADDRESS, 
             AmazonAssociateAddress::ioCheck, AmazonAssociateAddress::workerFunction);
-	
+
 	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_ATTACH_VOLUME, 
             AmazonAttachVolume::ioCheck, AmazonAttachVolume::workerFunction);
 

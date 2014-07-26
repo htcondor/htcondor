@@ -174,9 +174,12 @@ public:
 
 	// Manipulate the supplemental Class Ad list
 	int		adlist_register( StartdNamedClassAd *ad );
-	int		adlist_replace( const char *name, const char *prefix, ClassAd *ad, 
-							bool report_diff = false );
-	int		adlist_delete( const char *name );
+	StartdNamedClassAd* adlist_find( const char *name );
+	int		adlist_replace( const char *name, ClassAd *ad) { return extra_ads.Replace( name, ad ); }
+	int		adlist_replace( const char *name, ClassAd *ad, bool report_diff, const char *prefix);
+	int		adlist_delete( const char *name ) { return extra_ads.Delete( name ); }
+	int		adlist_delete( StartdCronJob * job ) { return extra_ads.DeleteJob( job ); }
+	int		adlist_clear( StartdCronJob * job )  { return extra_ads.ClearJob( job ); } // delete child ads, and clear the base job ad
 	int		adlist_publish( unsigned r_id, ClassAd *resAd, amask_t mask );
 
 	// Methods to control various timers
@@ -198,9 +201,9 @@ public:
 											const char *job_id);
 
 	Resource*	findRipForNewCOD( ClassAd* ad );
-	Resource*	get_by_cur_id(char*);	// Find rip by ClaimId of r_cur
-	Resource*	get_by_any_id(char*);	// Find rip by r_cur or r_pre
-	Resource*	get_by_name(char*);		// Find rip by r_name
+	Resource*	get_by_cur_id(const char*);	// Find rip by ClaimId of r_cur
+	Resource*	get_by_any_id(const char*);	// Find rip by r_cur or r_pre
+	Resource*	get_by_name(const char*);		// Find rip by r_name
 	Resource*	get_by_slot_id(int);	// Find rip by r_id
 	State		state( void );			// Return the machine state
 

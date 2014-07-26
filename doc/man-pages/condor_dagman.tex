@@ -1,6 +1,18 @@
 \begin{ManPage}{\label{man-condor-dagman}\Condor{dagman}}{3}
 {meta scheduler of the jobs submitted as the nodes of a DAG or DAGs}
-\Synopsis \SynProg{\Condor{dagman}}
+\Synopsis
+\SynProg{\Condor{dagman}}
+\Opt{-f}
+\Opt{-t}
+\OptArg{-l}{.}
+\Opt{-help}
+
+\SynProg{\Condor{dagman}}
+\Opt{-version}
+
+\SynProg{\Condor{dagman}}
+\Opt{-f}
+\OptArg{-l}{.}
 \oOptArg{-debug}{level}
 \oOptArg{-maxidle}{numberOfJobs}
 \oOptArg{-maxjobs}{numberOfJobs}
@@ -25,7 +37,9 @@
 \oOptArg{-outfile\_dir}{directory}
 \oOpt{-update\_submit}
 \oOpt{-import\_env}
+\oOptArg{-priority}{number}
 \oOpt{-DontAlwaysRunPost}
+\oOpt{-DoRecovery}
 \OptArg{-dag}{dag\_file}
 \oArg{\OptArg{-dag}{dag\_file\_2} \Dots \OptArg{-dag}{dag\_file\_n} }
 
@@ -77,6 +91,8 @@ output DAG input file lines as they are parsed
 
 
 \begin{Options}
+    \OptItem{\Opt{-help}}{Display usage information and exit.}
+    \OptItem{\Opt{-version}}{Display version information and exit.}
     \OptItem{\OptArg{-debug}{level}}{An integer level of debugging output.
        \Arg{level} is an integer, with values of 0-7 inclusive,
        where 7 is the most verbose output.
@@ -196,6 +212,28 @@ output DAG input file lines as they are parsed
        submit description file for DAGMan. This file is produced by
        \Condor{submit\_dag}. The \Opt{notification} option is described
        in the \Condor{submit} manual page. }
+    \OptItem{\Opt{-suppress\_notification}}{Causes jobs submitted
+       by \Condor{dagman} to not send email notification for events. 
+       The same effect
+       can be achieved by setting the configuration variable
+       \Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} to \Expr{True}.
+       This command line option is independent of the
+       \Opt{-notification} command line option, 
+       which controls notification for the \Condor{dagman} job itself.
+       This flag is generally superfluous, as
+       \MacroNI{DAGMAN\_SUPPRESS\_NOTIFICATION} defaults to \Expr{True}.}
+    \OptItem{\Opt{-dont\_suppress\_notification}}{Causes jobs
+       submitted by \Condor{dagman} to defer to content within 
+       the submit description file when deciding to send
+       email notification for events. 
+       The same effect can be achieved by setting the configuration variable
+       \Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} to \Expr{False}.
+       This command line flag is independent of the \Opt{-notification} 
+       command line option, 
+       which controls notification for the \Condor{dagman} job itself. 
+       If both \Opt{-dont\_suppress\_notification} and 
+       \Opt{-suppress\_notification} are specified within the same command line,
+       the last argument is used.}
     \OptItem{\OptArg{-dagman}{DagmanExecutable}}{(This argument is
        included only to be passed to \Condor{submit\_dag} if lazy submit
        file generation is used for nested DAGs.)  Allows the
@@ -224,9 +262,8 @@ output DAG input file lines as they are parsed
        \Condor{submit\_dag} to import the current environment into
        the \Opt {environment} command of the \File{.condor.sub} file it
        generates.}
-    \OptItem{\OptArg{-dag}{filename}}{\Arg{filename} is the name of the
-       DAG input file that is set as an argument to \Condor{submit\_dag},
-       and passed to \Condor{dagman}.}
+    \OptItem{\OptArg{-priority}{number}}{Sets the minimum job priority
+       of node jobs submitted and running under this \Condor{dagman} job.}
     \OptItem{\Opt{-DontAlwaysRunPost}}{This option causes \Condor{dagman} to
        observe the exit status of the PRE script when deciding whether or not
        to run the POST script.  
@@ -238,28 +275,13 @@ output DAG input file lines as they are parsed
        Using this option restores the previous behavior, 
        in which \Condor{dagman} will not run the POST script if the PRE
        script fails.}
-    \OptItem{\Opt{-suppress\_notification}}{Causes jobs submitted
-       by \Condor{dagman} to not send email notification for events. 
-       The same effect
-       can be achieved by setting the configuration variable
-       \Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} to \Expr{True}.
-       This command line option is independent of the
-       \Opt{-notification} command line option, 
-       which controls notification for the \Condor{dagman} job itself.
-       This flag is generally superfluous, as
-       \MacroNI{DAGMAN\_SUPPRESS\_NOTIFICATION} defaults to \Expr{True}.}
-    \OptItem{\Opt{-dont\_suppress\_notification}}{Causes jobs
-       submitted by \Condor{dagman} to defer to content within 
-       the submit description file when deciding to send
-       email notification for events. 
-       The same effect can be achieved by setting the configuration variable
-       \Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} to \Expr{False}.
-       This command line flag is independent of the \Opt{-notification} 
-       command line option, 
-       which controls notification for the \Condor{dagman} job itself. 
-       If both \Opt{-dont\_suppress\_notification} and 
-       \Opt{-suppress\_notification} are specified within the same command line,
-       the last argument is used.}
+    \OptItem{\Opt{-DoRecovery}}{Causes \Condor{dagman} to start in recovery
+      mode.  (This means that it reads the relevant job user log(s) and
+      "catches up" to the given DAG's previous state before submitting
+      any new jobs.)}
+    \OptItem{\OptArg{-dag}{filename}}{\Arg{filename} is the name of the
+       DAG input file that is set as an argument to \Condor{submit\_dag},
+       and passed to \Condor{dagman}.}
 
 \end{Options}
 

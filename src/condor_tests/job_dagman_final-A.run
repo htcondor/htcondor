@@ -53,6 +53,15 @@ $scriptfile = "job_dagman_final-A.scripts.out";
 			"  FAILED_COUNT=0",
 			"Node A_C Post");
 
+$statusfile = "job_dagman_final-A.status";
+@status_lines = ("DagStatus = 5;.*STATUS_DONE \\(success\\)",
+	"Node = \"A_A\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"A_B\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"A_C\";",
+	"NodeStatus = 5;.*STATUS_DONE");
+
 my $killedchosen = 0;
 
 # truly const variables in perl
@@ -67,20 +76,23 @@ if (-e $outfile) {
 if (-e $scriptfile) {
 	runcmd("rm -f $scriptfile");
 }
+if (-e $statusfile) {
+	runcmd("rm -f $statusfile");
+}
 
 $abnormal = sub 
 {
-	die "Want to see only submit, execute and successful completion\n";
+	die "Error: Want to see only submit, execute and successful completion\n";
 };
 
 $aborted = sub 
 {
-	die "Abort event NOT expected\n";
+	die "Error: Abort event NOT expected\n";
 };
 
 $held = sub 
 {
-	die "Held event NOT expected\n";
+	die "Error: Held event NOT expected\n";
 };
 
 $executed = sub
@@ -105,7 +117,7 @@ $success = sub
 	# correct order, and there aren't any "extra" lines.
 	CondorTest::debug("Checking $outfile\n",1);
 	open(CHECK, "<$outfile") ||
-			die "Cannot open $outfile: $!\n";
+			die "Error: Cannot open $outfile: $!\n";
 	@lines = <CHECK>;
 	close(CHECK);
 	$max = $#node_output_lines > $#lines ? $#node_output_lines : $#lines;
@@ -124,7 +136,7 @@ $success = sub
 	# correct order, and there aren't any "extra" lines.
 	CondorTest::debug("Checking $scriptfile\n",1);
 	open(CHECK, "<$scriptfile") ||
-			die "Cannot open $scriptfile: $!\n";
+			die "Error: Cannot open $scriptfile: $!\n";
 	@lines = <CHECK>;
 	close(CHECK);
 	$max = $#script_output_lines > $#lines ? $#script_output_lines : $#lines;
@@ -139,12 +151,50 @@ $success = sub
 		}
 	}
 
+	# Check the node status file (for gittrac #4209).
+	CondorTest::debug("Checking $statusfile\n",1);
+	$line = "";
+	$passed = 0;
+	$canopen = open(OUT,"<$statusfile");
+	if (! (defined $canopen)) {
+		CondorTest::debug("Can not open node status file<$statusfile>:$!\n",1);
+		$diditpass = 0;
+	}
+	while(<OUT>) {
+		chomp();
+		$line = $_;
+		$target = $status_lines[0];
+		if( $line =~ /$target/ ) {
+			CondorTest::debug("$name: $line\n",1);
+			# Remove the target we just found from the array.
+			shift @status_lines;
+			if ($#status_lines < 0) {
+				last;
+			}
+		}
+	}
+	close(OUT);
+
+	if ($#status_lines >= 0) {
+		CondorTest::debug("failed missing node status lines:\n");
+		foreach $missing (@status_lines) {
+			print "  $missing\n";
+		}
+		$diditpass = 0;
+	}
+
 	if($diditpass == 0) {
-		die "All expected files and correct output failed\n";
+		die "Error: All expected files and correct output failed\n";
 	}
 };
 
-CondorTest::RegisterExitedSuccess( $testname, $success );
+$failure = sub
+{
+	die "Error: DAG is not expected to fail!\n";
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExitedFailure( $testname, $failure );
 CondorTest::RegisterExecute($testname, $executed );
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );
@@ -155,6 +205,6 @@ if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
-	die "$testname: CondorTest::RunTest() failed\n";
+	die "Error: $testname: CondorTest::RunTest() failed\n";
 }
 

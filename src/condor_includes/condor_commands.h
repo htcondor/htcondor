@@ -22,11 +22,17 @@
 #ifndef _CONDOR_COMMANDS_H
 #define _CONDOR_COMMANDS_H
 
+/* these control the command_table_generator.pl script that makes the command id <-> name lookup tables.
+NAMETABLE_DIRECTIVE:CLASS:BTranslation
+NAMETABLE_DIRECTIVE:TABLE:DCTranslation
+*/
+
 /****
 ** Queue Manager Commands
 ****/
-#define QMGMT_READ_CMD	1111
-#define QMGMT_WRITE_CMD	1112
+#define QMGMT_BASE		1110
+#define QMGMT_READ_CMD	(QMGMT_BASE+1)
+#define QMGMT_WRITE_CMD	(QMGMT_BASE+2)
 
 /* Scheduler Commands */
 /*
@@ -63,7 +69,7 @@
 //#define STARTD_INFO			(SCHED_VERS+14)		/* Not used */
 //#define SCHEDD_INFO			(SCHED_VERS+15)		/* Not used */
 #define NEGOTIATE			(SCHED_VERS+16) // 7.5.4+ negotiation command
-#define SEND_JOB_INFO		(SCHED_VERS+17)
+#define SEND_JOB_INFO		(SCHED_VERS+17)     // used in negotiation protocol
 #define NO_MORE_JOBS		(SCHED_VERS+18)		// used in negotiation protocol
 #define JOB_INFO			(SCHED_VERS+19)		// used in negotiation protocol
 //#define GIVE_STATUS			(SCHED_VERS+20)		/* Not used */
@@ -163,11 +169,14 @@
 #define CLEAR_DIRTY_JOB_ATTRS (SCHED_VERS+111) // schedd: clear dirty attributes for a job
 // These two commands originally used the same command int by mistake.
 // In 7.9.6, GET_PRIORITY_ROLLUP was assigned a new command int.
-#define GET_PRIORITY_ROLLUP_OLD (SCHED_VERS+112) // negotiator
+#define GET_PRIORITY_ROLLUP_OLD DRAIN_JOBS // negotiator
 #define DRAIN_JOBS (SCHED_VERS+112)
 #define CANCEL_DRAIN_JOBS (SCHED_VERS+113)
 #define GET_PRIORITY_ROLLUP (SCHED_VERS+114) // negotiator
 #define QUERY_SCHEDD_HISTORY (SCHED_VERS+115)
+#define QUERY_JOB_ADS (SCHED_VERS+116)
+#define SWAP_CLAIM_AND_ACTIVATION (SCHED_VERS+117) // swap claim & activation between two STARTD resources, for moving a job into a 'transfer' slot.
+#define SEND_RESOURCE_REQUEST_LIST	(SCHED_VERS+118)     // used in negotiation protocol
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0
@@ -219,6 +228,12 @@
 #define CA_CMD                  (CA_CMD_BASE+0) 
 #define CA_LOCATE_STARTER       (CA_CMD_BASE+1)
 #define CA_RECONNECT_JOB        (CA_CMD_BASE+2)
+
+/* these comments are parsed by command_table_generator.pl
+NAMETABLE_DIRECTIVE:BEGIN_SECTION:COLLECTOR
+NAMETABLE_DIRECTIVE:PARSE:const int
+NAMETABLE_DIRECTIVE:BASE:0
+*/
 
 /************
 *** Command ids used by the collector 
@@ -309,6 +324,10 @@ const int QUERY_GENERIC_ADS = 74;
 
 const int SHARED_PORT_CONNECT = 75;
 const int SHARED_PORT_PASS_SOCK = 76;
+
+/* these comments are used to control command_table_generator.pl
+NAMETABLE_DIRECTIVE:END_SECTION:collector
+*/
 
 /*
 *** Commands to the starter
@@ -500,5 +519,11 @@ const int SHARED_PORT_PASS_SOCK = 76;
 #define CONDOR_TRY_AGAIN	2
 #define CONDOR_ERROR	3
 
+/* Replies specific to the REQUEST_CLAIM command */
+#define REQUEST_CLAIM_LEFTOVERS		3
+#define REQUEST_CLAIM_PAIR			4
+
+/* Replies specific to the SWAP_CLAIM_AND_ACTIVATION command */
+#define SWAP_CLAIM_ALREADY_SWAPPED	4
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */

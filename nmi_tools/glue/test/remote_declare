@@ -24,6 +24,7 @@ use Getopt::Long;
 use vars qw/ @opt_testclasses /;
 use File::Basename;
 use File::Spec;
+use File::Copy;
 
 my $dir = dirname($0);
 unshift @INC, $dir;
@@ -42,14 +43,38 @@ my $TaskFile = File::Spec->catfile($BaseDir, "tasklist.nmi");
 my $UserdirTaskFile = File::Spec->catfile($BaseDir, "..", "tasklist.nmi");
 my $testdir = "condor_tests";
 
+######################################################################
+# Handle testoverride file if one exists. this is not the normal case.
+######################################################################
+my $TestOverride = File::Spec->catfile($BaseDir, $testdir, "testoverride");
+system("ls -R . ");
+print "Checking for test override file $TestOverride\n";
+if (-f "$TestOverride") {
+	print "****************************************************\n";
+	print "**** Found test override file\n****   $TestOverride\n";
+	print "****************************************************\n";
+	#copy("$TestOverride", \*STDOUT);
+	print "Open and list out:$TestOverride\n";
+	open(TO,"<$TestOverride") or die "Failed to open:$TestOverride :$!\n";
+	while (<TO>) {
+		print "$_";
+	}
+	close(TO);
+	print "****************************************************\n";
+	print "**** Copying to $TaskFile, $UserdirTaskFile\n";
+	print "**** and ignoring normal test lists/arguments\n";
+	print "****************************************************\n";
+	copy("$TestOverride", "$TaskFile");
+	copy("$TestOverride", "$UserdirTaskFile");
+	exit(0);
+}
+
 # Look for a specific file that contains overrides for the default timeouts for some tests
 my %CustomTimeouts = load_custom_timeout_file();
 my %RuncountChanges = load_custom_runcount_file();
 
-# file which contains the list of tests to run on Windows
-my $WinTestList = File::Spec->catfile($BaseDir, $testdir, "Windows_list");
-my $ShortWinTestList = File::Spec->catfile($BaseDir, $testdir, "Windows_shortlist");
-my $TestOverride = File::Spec->catfile($BaseDir, $testdir, "testoverride");
+# the skip file tells us to skip certain tests on this platform.
+my %SkipList = load_platform_skip_list();
 
 # Figure out what testclasses we should declare based on our
 # command-line arguments.  If none are given, we declare the testclass
@@ -80,61 +105,43 @@ open(USERTASKFILE, '>', $UserdirTaskFile ) || die "Can't open $UserdirTaskFile f
 
 my %tasklist;
 
-if( not TestGlue::is_windows() ) {
-    foreach my $class (@classlist) {
-    	print "****************************************************\n";
-    	print "**** Finding tests for class: '$class'\n";
-    	print "****************************************************\n";
-    	my $tests = findTests( $class, "top" );
-        %tasklist = (%tasklist, %$tests);
-    }
-}
-else {
-    # eat the file Windows_list into tasklist hash
-    foreach my $class (@classlist) {
-    	print "****************************************************\n";
-    	print "**** Finding Windows tests '$class'\n";
-    	print "****************************************************\n";
-        if($class eq "quick") {
-            open(WINDOWSTESTS, '<', $WinTestList) || die "Can't open $WinTestList: $!\n";
-        }
-        elsif($class eq "short") {
-            open( WINDOWSTESTS, '<', $ShortWinTestList) || die "Can't open $ShortWinTestList: $!\n";
-        }
-        else {
-            # if things got confused just run the hourly tests
-            print "Unknown test class provided for Windows: '$class' (only quick and short are supported)\n";
-            print "We will run the short tests in this undefined case.\n";
-            open( WINDOWSTESTS, '<', $ShortWinTestList) || die "Can't open $ShortWinTestList: $!\n";
-        }
-
-        # Load the tasks, one per line.  Skip comments (lines starting with #)
-        %tasklist = map { chomp; $_ => 1} grep !/^\s*\#/, <WINDOWSTESTS>;
-        print join("\n", sort keys %tasklist) . "\n";
-        close(WINDOWSTESTS);
-    }
+foreach my $class (@classlist) {
+    print "****************************************************\n";
+    print "**** Finding tests for class: '$class'\n";
+    print "****************************************************\n";
+    my $tests = findTests( $class, "top" );
+    %tasklist = (%tasklist, %$tests);
 }
 
 my $total_tests = scalar(keys %tasklist);
 print "-- Found $total_tests test(s) in all directories\n";
 
+my $skipped_count = 0;
+my $wrote_count = 0;
+
 print "****************************************************\n";
 print "**** Writing out tests to tasklist.nmi\n";
 print "****************************************************\n";
 foreach my $task (sort keys %tasklist) {
+    my $skip = defined($SkipList{$task}) ? 1 : 0;
+    if ($skip) {
+        $skipped_count += 1;
+        next;
+    }
+
     my $test_count = defined($RuncountChanges{$task}) ? $RuncountChanges{$task} : 1;
 
     my $prefix = "JOB ";
     my @serial_test_platforms = qw/x86_winnt_5.1 x86_64_winnt_6.1/;
     if(grep $_ eq $ENV{NMI_PLATFORM}, @serial_test_platforms) {
-	$prefix = "";
+        $prefix = "";
     }
 
     if(defined($CustomTimeouts{"$task"})) {
         print "CustomTimeout:$task $CustomTimeouts{$task}\n";
         foreach(1..$test_count) {
-	    print TASKFILE "$prefix$task-$_ $CustomTimeouts{$task}\n";
-	    print USERTASKFILE "$prefix$task-$_ $CustomTimeouts{$task}\n";
+            print TASKFILE "$prefix$task-$_ $CustomTimeouts{$task}\n";
+            print USERTASKFILE "$prefix$task-$_ $CustomTimeouts{$task}\n";
         }
     }
     else {
@@ -143,25 +150,11 @@ foreach my $task (sort keys %tasklist) {
             print USERTASKFILE "$prefix$task-$_\n";
         }
     }
+    $wrote_count += 1;
 }
 close( TASKFILE );
 close( USERTASKFILE );
-print "Wrote " . scalar(keys %tasklist) . " unique tests.\n";
-if( not TestGlue::is_windows() ) {
-	if(-f "testoverride") {
-		 system("cp testoverride ../tasklist.nmi");
-		system("cp testoverride tasklist.nmi");
-		print "But we are using your test list:\n";
-		system("cat ../tasklist.nmi");
-	}
-} else {
-	if(-f "$TestOverride") {
-		system("cp $TestOverride ../tasklist.nmi");
-		system("cp $TestOverride tasklist.nmi");
-		print "But we are using your test list:\n";
-		system("cat ../tasklist.nmi");
-	}
-}
+print "Wrote " . $wrote_count . " unique tests, skipped " . $skipped_count . ".\n";
 
 exit(0);
 
@@ -265,3 +258,45 @@ sub load_custom_runcount_file {
 
     return %runcounts;
 }
+
+sub load_platform_skip_list {
+    my %skips = ();
+
+    my $filename = "$ENV{NMI_PLATFORM}_SkipList";
+    my $SkipFile = File::Spec->catfile($BaseDir, $testdir, "$filename");
+
+    if( -f $SkipFile) {
+        print "Found a platform skip file at '$SkipFile'.  Loading it...\n";
+        open(SKIPS, '<', $SkipFile) || die "Failed to open $SkipFile for reading: $!\n";
+        while(<SKIPS>) {
+            if(/^\s*([\-\w]*)\s*$/) {
+                print "\tSkip: $1\n";
+                $skips{$1} = 1;
+            }
+        }
+        close(SKIPS);
+    }
+
+    # In addition to a platform specific skip file, Windows gets a generic skip file as well.
+    if (TestGlue::is_windows()) {
+       if ( ! -f $SkipFile) { 
+          $filename = "Windows_SkipList";
+          $SkipFile = File::Spec->catfile($BaseDir, $testdir, "$filename");
+          if( -f $SkipFile) {
+             print "Found a Windows skip file at '$SkipFile'.  Loading it...\n";
+             open(SKIPS, '<', $SkipFile) || die "Failed to open $SkipFile for reading: $!\n";
+             while(<SKIPS>) {
+                if(/^\s*([\-\w]*)\s*$/) {
+                    print "\tSkip: $1\n";
+                    $skips{$1} = 1;
+                }
+             }
+             close(SKIPS);
+          }
+       }
+    }
+
+    return %skips;
+}
+
+

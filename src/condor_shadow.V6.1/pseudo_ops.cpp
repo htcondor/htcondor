@@ -563,6 +563,58 @@ pseudo_ulog( ClassAd *ad )
 }
 
 int
+pseudo_phase( char *phase )
+{
+	RemoteResource *remote;
+	if (parallelMasterResource == NULL) {
+		remote = thisRemoteResource;
+	} else {
+		remote = parallelMasterResource;
+	}
+
+	// currently we only understand "output"
+	if (strcasecmp( phase, "output" ) != 0) {
+		dprintf(D_SYSCALLS,"pseudo_phase(%s) not understood, failed\n",phase);
+		return -1;
+	}
+
+	// modify our local attributes
+	time_t t = time(NULL);
+	ClassAd *ad = remote->getJobAd();
+	ASSERT(ad);
+	ad->Assign(ATTR_JOB_TRANSFERRING_OUTPUT,true);
+	ad->Assign(ATTR_JOB_TRANSFERRING_OUTPUT_TIME,t);
+	Shadow->updateJobInQueue(U_PERIODIC);
+
+	// prepare to write a phase transition event to the log
+	GenericEvent event;
+	ClassAd *ead;
+
+	// setInfoText truncates name to 128 bytes
+	MyString eventtext = "Job indicated transition to phase: ";
+	eventtext += phase;
+	event.setInfoText( eventtext.Value() );
+
+	ead = event.toClassAd();
+	ASSERT(ead);
+
+	// write the event
+	if( !Shadow->uLog.writeEvent( &event, ead ) ) {
+		MyString add_str;
+		sPrintAd(add_str, *ead);
+		dprintf(
+		  D_ALWAYS,
+		  "unable to log event in pseudo_phase: %s\n",
+		  add_str.Value());
+		return -1;
+	}
+
+	dprintf(D_SYSCALLS,"pseudo_phase(%s) succeeded\n",phase);
+
+	return 0;
+}
+
+int
 pseudo_get_job_attr( const char *name, MyString &expr )
 {
 	RemoteResource *remote;

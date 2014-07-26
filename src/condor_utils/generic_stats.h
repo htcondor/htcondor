@@ -1580,6 +1580,16 @@ public:
       return 0;
    }
 
+   stats_entry_base* GetProbe(const char * name, int & units)
+   {
+      pubitem item;
+      if (pub.lookup(name, item) >= 0) {
+         units = item.units;
+         return (stats_entry_base*)item.pitem;
+      }
+      return 0;
+   }
+
    // add an externally created probe to the pool
    // so we can use pool functions to Advance/Clear/Publish
    //

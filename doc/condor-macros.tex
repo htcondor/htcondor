@@ -6,7 +6,7 @@
 %  Set up version, author and copyright notices
 %
 \newcommand{\AuthorNotice}{Center for High Throughput Computing, University of Wisconsin--Madison}
-\newcommand{\VersionNotice}{Version 8.1.4}
+\newcommand{\VersionNotice}{Version 8.3.1}
 %\newcommand{\CondorR}{\Reg{Condor}}
 \newcommand{\CondorTM}{\TM{HTCondor}}
 
@@ -54,9 +54,9 @@
 \newcommand{\Expr}[1]{\texttt{#1}}		% Config file expression
 
 \newcommand{\MacroNI}[1]{\texttt{#1}}		% Config file macro, NO index
-\newcommand{\Macro}[1]{\texttt{#1} \index{#1 macro@\texttt{#1} macro} \index{configuration macro!\texttt{#1}}}		% Config file macro and index
-\newcommand{\MacroIndex}[1]{\index{#1 macro@\texttt{#1} macro} \index{configuration macro!\texttt{#1}}}		% index only of config file macro
-\newcommand{\MacroB}[1]{\texttt{#1} \index{configuration macro!\texttt{#1}}}		% bracketted Config file macro and index
+\newcommand{\Macro}[1]{\texttt{#1}\index{#1 macro@\texttt{#1} macro}\index{configuration macro!\texttt{#1}}}		% Config file macro and index
+\newcommand{\MacroIndex}[1]{\index{#1 macro@\texttt{#1} macro}\index{configuration macro!\texttt{#1}}}		% index only of config file macro
+\newcommand{\MacroB}[1]{\texttt{#1}\index{configuration macro!\texttt{#1}}}		% bracketted Config file macro and index
 
 \newcommand{\MacroUNI}[1]{\texttt{\$(#1)}}	% Config file macro's use, NO index
 \newcommand{\MacroU}[1]{\texttt{\$(#1)}\index{#1 macro@\texttt{#1} macro}\index{configuration macro!\texttt{#1}}}	% Config file macro's use and index
@@ -141,7 +141,8 @@
 \newcommand{\Code}[1]{\texttt{#1}}		% code in courier font
 
 % A command that is in a submit description file 
-\newcommand{\SubmitCmd}[1]{\textbf{#1}}		% Submit command
+\newcommand{\SubmitCmd}[1]{\textbf{#1}\index{submit commands!#1}}		% Submit command
+\newcommand{\SubmitCmdNI}[1]{\textbf{#1}}		% Submit command, no index entry
 
 % Make a nice box with a header to point out a tricky feature
 \newcommand{\Notice}[1] {\noindent {\bf Notice: }\\ \fbox{\parbox[t]{\textwidth}{#1}}}

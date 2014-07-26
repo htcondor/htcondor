@@ -20,15 +20,24 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "my_popen.h"
 #include "directory.h"
 #include "gangliad.h"
 
 char const *
 GangliaMetric::gangliaMetricType() const {
 	switch( type ) {
+    case AUTO: return "auto";
+    case FLOAT: return "float";
 	case DOUBLE: return "double";
 	case STRING: return "string";
-	case BOOLEAN: return "double";
+	case BOOLEAN: return "int8";
+    case INT8: return "int8";
+    case UINT8: return "uint8";
+    case INT16: return "int16";
+    case UINT16: return "uint16";
+    case INT32: return "int32";
+    case UINT32: return "uint32";
 	}
 	EXCEPT("Unexpected metric type: %d",type);
 	return NULL;
@@ -36,7 +45,7 @@ GangliaMetric::gangliaMetricType() const {
 
 int
 GangliaMetric::gangliaSlope() const {
-	return derivative ? GANGLIA_SLOPE_DERIVATIVE : GANGLIA_SLOPE_UNSPECIFIED;
+	return derivative ? GANGLIA_SLOPE_DERIVATIVE : GANGLIA_SLOPE_BOTH;
 }
 
 GangliaD::GangliaD():
@@ -45,7 +54,10 @@ GangliaD::GangliaD():
 	m_ganglia_context(NULL),
 	m_ganglia_config(NULL),
 	m_ganglia_channels(NULL),
-	m_ganglia_noop(0)
+	m_ganglia_noop(0),
+    m_gstat_argv(NULL),
+    m_send_data_for_all_hosts(false),
+    m_ganglia_metrics_sent(0)
 {
 }
 
@@ -174,6 +186,11 @@ GangliaD::initAndReconfig()
 		}
 	}
 
+	param(m_gstat_command, "GANGLIA_GSTAT_COMMAND");
+    split_args(m_gstat_command.c_str(), &m_gstat_argv);
+
+    m_send_data_for_all_hosts = param_boolean("GANGLIA_SEND_DATA_FOR_ALL_HOSTS", false);
+
 	StatsD::initAndReconfig("GANGLIAD");
 
 	// the interval we tell ganglia is the max time between updates
@@ -207,6 +224,51 @@ GangliaD::getDaemonIP(std::string const &machine,std::string &result) const
 	return StatsD::getDaemonIP(machine,result);
 }
 
+void
+GangliaD::initializeHostList()
+{
+    m_monitored_hosts.clear();
+    m_need_heartbeat.clear();
+    m_ganglia_metrics_sent = 0;
+
+	FILE *fp = my_popenv(m_gstat_argv,"r",1);
+	if( !fp ) {
+		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",m_gstat_command.c_str(),strerror(errno));
+		return;
+	}
+
+	char line[1024];
+	while( fgets(line,sizeof(line),fp) ) {
+        if (char *colon = strchr(line, ':')) {
+            *colon = 0;
+            // if number of CPUs > 0, this host is monitored by ganglia
+            if (atoi(colon + 1) > 0) {
+                m_monitored_hosts.insert(line);
+            }
+        }
+    }
+    my_pclose(fp);
+    dprintf(D_ALWAYS, "Ganglia is monitoring %ld hosts\n", m_monitored_hosts.size());
+}
+
+void
+GangliaD::sendHeartbeats()
+{
+    if (m_ganglia_metrics_sent) {
+        dprintf(D_ALWAYS, "Ganglia metrics sent: %d\n", m_ganglia_metrics_sent);
+        m_ganglia_metrics_sent = 0;
+    }
+
+    int heartbeats_sent = 0;
+	for( std::set< std::string >::iterator itr = m_need_heartbeat.begin();
+		 itr != m_need_heartbeat.end();
+		 itr++ )
+	{
+        ganglia_send_heartbeat(m_ganglia_context, m_ganglia_channels, itr->c_str());
+        heartbeats_sent++;
+	}
+    dprintf(D_ALWAYS, "Heartbeats sent: %d\n", heartbeats_sent);
+}
 
 void
 GangliaD::publishMetric(Metric const &m)
@@ -254,6 +316,14 @@ GangliaD::publishMetric(Metric const &m)
 				spoof_host += ".";
 			}
 		}
+        
+        if (m_monitored_hosts.find(metric.machine) == m_monitored_hosts.end()) {
+            if (m_send_data_for_all_hosts) {
+                m_need_heartbeat.insert(spoof_host);
+            } else {
+                return;
+            }
+        }
 	}
 
 	std::string value;
@@ -267,6 +337,7 @@ GangliaD::publishMetric(Metric const &m)
 
 	int slope = metric.gangliaSlope();
 
+    m_ganglia_metrics_sent++;
 	dprintf(D_FULLDEBUG,"%spublishing %s=%s, group=%s, units=%s, derivative=%d, type=%s, title=%s, desc=%s, cluster=%s, spoof_host=%s\n",
 			m_ganglia_noop ? "noop mode: " : "",
 			metric.name.c_str(), value.c_str(), metric.group.c_str(),  metric.units.c_str(), metric.derivative, metric.gangliaMetricType(), metric.title.c_str(), metric.desc.c_str(), metric.cluster.c_str(), spoof_host.c_str());

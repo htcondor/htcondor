@@ -60,6 +60,15 @@ my $firstappend_condor_config = '
 	NUM_SLOTS_TYPE_4 = 1
 ';
 
+my %memoryhash = (
+	slot1 => 500,
+	slot2 => 200,
+	slot3 => 700,
+	slot4 => 300,
+);
+
+
+my $testname = "basic_startd_slot_atttrs";
 
 $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"startdslotattrs");
 
@@ -78,14 +87,11 @@ my $return = "";
 my $executecount = 0;
 my $namelist = "";
 my $result = 1;
-my $test_name = "basic_startd_slot_atttrs";
 my $on_execute = sub {
 	print "********************************** OnExecute *****************************\n";
-	$namelist = GetSlotNames(3);
+	$namelist = GetSlotNames(4);
 	print "SlotNames:<$namelist>\n";
 	GetStartdSlotAttrs($namelist);
-	system("condor_status ");
-	#system("condor_status -l");
 	system("condor_rm $ClusterId");
 };
 
@@ -113,7 +119,7 @@ $result = SimpleJob::RunCheck(); # jobid 1
 
 $expect_return = 0;
 $result = SimpleJob::RunCheck(
-	test_name => "$test_name",
+	test_name => "$testname",
 	on_abort => $on_abort,
 	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	on_execute => $on_execute,
@@ -129,7 +135,6 @@ if($result == 1) {
 	print "bad\n\n\n";
 }
 
-
 CondorTest::EndTest();
 
 sub GetSlotNames
@@ -139,10 +144,10 @@ sub GetSlotNames
 	my $names = "";
 	my $count = 0;
 
-	my @name = `condor_status -format "%s\n" name`;
-
+	my @name = ();
+	runCondorTool("condor_status -af name",\@name,2,{emit_output=>0});
 	foreach my $try (@name) {
-		chomp($try);
+		CondorUtils::fullchomp($try);
 		if($count == 0) {
 			$names = $try;
 		} else {
@@ -165,49 +170,69 @@ sub GetStartdSlotAttrs
 	my $names = shift;
 	my @namearray = split /,/, $names;
 	my $namecount = @namearray;
-	my $count = 1;
-	my $measuredslot = "";
-	my $measuredslotmem = "";
-	my $memorydescription = "";
 	my @fullslot1 = ();
-	my $trycount = 0;
+	my $cmdstatus = 1;
+	my $simpleslot = "";
 
 	foreach my $slot (@namearray) {
-		$trycount = 0;
-		if($count == 1) {
-			$count += 1;
-			if($slot =~ /(.*?)@.*/) {
-				print "Found slot name: $1\n";
-				$measuredslot = $1;
-				$memorydescription = "$measuredslot" . "_memory";
-			}
-			@fullslot1 = `condor_status -debug -l $slot | grep Memory | sort`;
-			foreach my $thing (@fullslot1) {
-				chomp($thing);
-				#print "$slot: --- $thing ---\n";
-				if($thing =~ /^Memory\s+=\s+(\d+).*$/) {
-					print "$slot has $1 memory\n";
-					$measuredslotmem = $1;
-				}
-			}
+		# extract simple slot name for access to memory hash
+		if($slot =~ /^(slot\d).*$/) {
+			print "looking at $1 information\n";
+			$simpleslot = $1;
+		} else {
+			die "Something horribly wrong. Could not extract simple slot name\n";
 		}
-		my @results = `condor_status -debug -l $slot | grep slot | sort`;
-		my $statusres = @results;
-		print "condor_status for slot <$slot> returned <$statusres> lines\n";
-		foreach my $item (@results) {
-			chomp($item);
-			print "$slot: $item\n";
-			if($item =~ /^$memorydescription\s+=\s+(\d+)/) {
-				if($1 ne $measuredslotmem) {
-					die "Advertised memory for $measuredslot is $1 and should be $measuredslotmem\n";
-				}
+		# get slot memmory from condor_status
+		$cmdstatus = runCondorTool("condor_status $slot -af memory ",\@fullslot1,2,{emit_output=>0});
+		if(!$cmdstatus) {
+			print "This:condor_status $slot -af memory : should not have failed\n";
+		}
+		# there is but one line for memory
+		my $mem = "";
+		CondorUtils::fullchomp($fullslot1[0]);
+		$mem = $fullslot1[0];
+		if($mem == $memoryhash{$simpleslot}) {
+			print "condor status for $simpleslot reporting config requested memory\n";
+			CondorTest::RegisterResult(1,test_name,$testname);
+		} else {
+			print "condor status for $simpleslot NOT reporting config requested memory\n";
+			print "Configured:$memoryhash{$simpleslot} Reported:$mem\n";
+			CondorTest::RegisterResult(0,test_name,$testname);
+		}
+
+		#my @results = `condor_status -debug -l $slot | grep slot | sort`;
+		my @results = ();
+		$cmdstatus = runCondorTool("condor_status -debug -l $slot ",\@results, 2,{emit_output=>0});
+			if(!$cmdstatus) {
+				print "This:condor_status -debug -l $slot | grep slot | sort should not have failed\n";
 			}
-			if($item =~ /(slot\d_memory)\s.*/) {
-				#print "*************** $1 *********************\n";
-				if(exists $stardslotattrs{$1}) {
-					$stardslotattrs{$1} += 1;
+		my $statusres = @results;
+		#print "condor_status for slot <$slot> returned <$statusres> lines\n";
+		foreach my $item (@results) {
+			CondorUtils::fullchomp($item);
+			#print "$slot: $item\n";
+			if($item =~ /(slot\d_memory)\s*=\s*(\d+).*/) {
+				#ensure reported slot memory matches configured memory
+				my $memory = $2;
+				my $attr = $1;
+				# dig out simple slot for hash comparison
+				my $sslot = "";
+				if($attr =~ /(slot\d)/) { # does by definition
+					$sslot = $1;
+					if($memory == $memoryhash{$sslot}) {
+						print "$attr memory being advertised correctly to $slot\n";
+						CondorTest::RegisterResult(1,test_name,$testname);
+					} else {
+						print "$attr memory NOT being advertised correctly to $slot\n";
+						print "Configured:$memoryhash{$simpleslot} Reported:$memory\n";
+						CondorTest::RegisterResult(0,test_name,$testname);
+					}
+				}
+				#print "*************** $attr *********************\n";
+				if(exists $stardslotattrs{$attr}) {
+					$stardslotattrs{$attr} += 1;
 				} else {
-					$stardslotattrs{$1} = 1;
+					$stardslotattrs{$attr} = 1;
 				}
 			} elsif($item =~ /(slot\d_state)\s.*/) {
 				#print "*************** $1 *********************\n";
@@ -232,4 +257,6 @@ sub GetStartdSlotAttrs
 			die "Ad<$key> has $stardslotattrs{$key} and should be $namecount\n";
 		}
 	}
+	print "Slot attributes equally advertised across all slots\n";
+	CondorTest::RegisterResult(1,test_name,$testname);
 }

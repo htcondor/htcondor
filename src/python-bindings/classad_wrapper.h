@@ -47,6 +47,11 @@ struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassA
 
     ExprTreeHolder LookupExpr(const std::string &attr) const;
 
+    boost::python::object Flatten(boost::python::object input) const;
+
+    bool matches(boost::python::object) const;
+    bool symmetricMatch(boost::python::object) const;
+
     std::string toRepr();
 
     std::string toString();

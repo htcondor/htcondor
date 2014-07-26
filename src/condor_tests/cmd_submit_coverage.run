@@ -1,0 +1,118 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test check availability and usage contol of the new
+## local, resources in both a static configuration and in psolts.
+## It is model after what we did to test concurrency limits
+## as we are checking the same sorts of things. bt
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+my @submitfiles =
+(
+	"cmd_submit_coverage1.cmd",
+);
+
+my $ClusterId = 0;
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	WANT_SUSPEND = FALSE
+	NEGOTIATION_INTERVAL = 5
+	XSW_LIMIT = 2
+	ALL_DEBUG = D_ALWAYS
+	MACHINE_RESOURCE_Boats = 30
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"cmdsubmitcoverage");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "basickill",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+my $executecount = 0;
+my $result = 1;
+my $testname = "cmd_submit_coverage";
+
+my $on_execute = sub {
+	print "********************************** OnExecute *****************************\n";
+};
+
+my $on_hold = sub {
+	print "Expected to be on hold\n Calling CheckForSigTermIgnore \n";
+	runToolNTimes("condor_rm $ClusterId", 1);
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+	print "Evicted Without Checkpoint\n";
+};
+
+my $submitted = sub {
+	print "Submit occured\n";
+	runToolNTimes("condor_rm $ClusterId",1,0);
+};
+
+my $aborted = sub {
+	print "Abort expected\n";
+};
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
+#Do a job before setting tesing exit codes
+print "First test basic job\n";
+$result = SimpleJob::RunCheck(); # jobid 1
+
+#CondorTest::RegisterExecute($testname, $executed);
+#CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+#CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+my $res = 0;
+foreach my $file (@submitfiles) {
+	$res = CondorTest::RunTest($testname, $file, 0, $GetClusterId);
+	CondorTest::RegisterResult($res, "test_name", $testname);
+	if($res == 1) {
+		CondorTest::debug("$testname: SUCCESS\n",1);
+	} else {
+		CondorTest::debug("$testname: FAILED\n",1);
+	}
+}
+
+CondorTest::EndTest();

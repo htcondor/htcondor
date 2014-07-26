@@ -43,11 +43,16 @@ sub RunCheck
     my $result;
     my $count = 0;
     while(1) {
-	$result = CondorTest::SearchCondorLog($daemon,$match_regexp);
+
+		if(defined $args{all}) {
+			$result = CondorTest::SearchCondorLog($daemon,$match_regexp,$args{all});
+		} else {
+			$result = CondorTest::SearchCondorLog($daemon,$match_regexp);
+		}
 	
-	last if $result;
-	last if ($count >= $num_retries);
-	sleep(1);
+		last if $result;
+		last if ($count >= $num_retries);
+		sleep(1);
     }
 
     if( $fail_if_found ) {

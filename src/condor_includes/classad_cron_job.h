@@ -58,7 +58,8 @@ class ClassAdCronJob : public CronJob
 
   private:
 	virtual int ProcessOutput( const char *line );
-	virtual int Publish( const char *name, ClassAd *ad ) = 0;
+	virtual int ProcessOutputSep( const char *args );
+	virtual int Publish( const char *name, const char *sep_args, ClassAd *ad ) = 0;
 	virtual const ClassAdCronJobParams & Params( void ) const {
 		return static_cast<ClassAdCronJobParams &>(*m_params);
 	};
@@ -67,7 +68,8 @@ class ClassAdCronJob : public CronJob
 	};
 
 	ClassAd		*m_output_ad;
-	int			 m_output_ad_count;
+	int 		 m_output_ad_count; // number of attributes inserted in to m_output_ad
+	MyString	 m_output_ad_args;  // optional arguments from after the '-' that separates ads in the script output
 
 	Env          m_classad_env;
 };

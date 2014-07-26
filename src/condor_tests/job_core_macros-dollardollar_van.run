@@ -46,6 +46,10 @@ sub load_up_lines
 	}
 };
 
+my $statusmachines = "";
+my $wontbe = "";
+my $statusmemory = "";
+
 $success = sub
 {
     my %args = @_;
@@ -54,47 +58,134 @@ $success = sub
 	load_up_lines();
 	foreach my $item ( @lines )
 	{
-		CondorTest::debug("ARG -$item-\n",1);
+		#CondorTest::debug("ARG -$item-\n",1);
+		if($item =~ /^(.*?\..*?\..*)$/) {
+			print "MACHINE:$1\n";
+			$statusmachines = $1;
+		} elsif($item =~ /^(\/be\/here\/now).*$/) {
+			print "WONTBE:$1\n";
+			$wontbe = $1;
+			# last arg quit looking for these three things
+			last;
+		} elsif($item =~ /^(\d+)$/) {
+			$statusmemory = $1;
+			print "MEMORY:$statusmemory\n";
+		}
 	}
 
-	CondorTest::ParseMachineAds( $lines[1] );
+	#foreach my $name (@lines) {
+		#print "Line:$name\n";
+	#}
+
+	CondorTest::ParseMachineAds( $statusmachines );
 	%ads = CondorTest::FetchMachineAds();
 	my $machinemem = CondorTest::FetchMachineAdValue("memory");
+	print "MEMORY from condor_status:$memory\n";
 	my $wontbethere = CondorTest::FetchMachineAdValue("wontbethere");
+	my $machinename = CondorTest::FetchMachineAdValue("machine");
+	print "MACHINE from condor_status:$machinename\n";
+	$_ = $machinename;
+	s/"//g;
+	$machinename = $_;
 
-	CondorTest::debug("Alternate value is ---$wontbethere---\n",1);
-	if( $machinemem ne undef)
-	{
-		if($machinemem eq $lines[0])
-		{
-			CondorTest::debug("Good macro and condor_status agree --$machinemem--!\n",1);
-			CondorTest::debug("$lines[4] should match too\n",1);
-			if( $lines[4] =~ /^\s*MEMORY\s+=\s+(\d+)$/ )
-			{
-				CondorTest::debug("Memory = $1\n",1);
-				if( $1 eq $machinemem)
-				{
-					CondorTest::debug("We are happy......\n",1);
-				}
-				else
-				{
-					die "Memory via the environment failed\n";
-				}
-			}
-			else
-			{
-				die "not finding matching memory value from environment\n";
+	if(!(defined $machinemem)) {
+		RegisterResult(0,"test_name", $testname);
+	} else {
+		RegisterResult(1,"test_name", $testname);
+		print "Good got Mermory from machine ads:$machinemem\n";
+	}
+	
+	if(defined $wontbethere) {
+		RegisterResult(0,"test_name", $testname);
+	} else {
+		RegisterResult(1,"test_name", $testname);
+		print "Good  WONTBE is env and arg only\n";
+	}
+	
+	if(!(defined $machinename)) {
+		RegisterResult(0,"test_name", $testname);
+	} else {
+		RegisterResult(1,"test_name", $testname);
+		print "Good got machine from machine ads:$machinename\n";
+	}
+	
+	if($statusmemory eq $machinemem) {
+		RegisterResult(1,"test_name", $testname);
+		print "Arg memory and condor_status memory agree\n";
+	} else {
+		RegisterResult(0,"test_name", $testname);
+		print "BAD:Arg memory and condor_status memory disagree\n";
+	}
+
+	if($statusmachines eq $machinename) {
+		RegisterResult(1,"test_name", $testname);
+		print "Arg machine and condor_status machine agree\n";
+	} else {
+		RegisterResult(0,"test_name", $testname);
+		print "BAD:Arg machine and condor_status machine disagree\n";
+		print "Arg:$statusmachine vs Status:$machinename\n";
+	}
+
+	my $envmemfound = 0;
+	my $envmachinefound = 0;
+	my $envwontbefound = 0;
+
+	foreach my $name (@lines) {
+		#print "examine $name\n";
+		if( $name =~ /^\s*MEMORY\s+=\s+(\d+).*$/ ) {
+			if( $1 eq $machinemem) {
+				$envmemfound = 1;
+				RegisterResult(1,"test_name", $testname);
+				print "MEMORY matched\n";
+			} else {
+				print "Arg:$machinemem and Env:$1 MISMATCH\n";
+				RegisterResult(0,"test_name", $testname);
 			}
 		}
-		else
+		elsif( $name =~ /^\s*MACHINE\s+=\s+(.*?\..*?\..*?)\s*$/ )
 		{
-			die "machine $machine MISMATCH $machinemem/$lines[0]\n";
+			if( $1 eq $machinename) {
+				$envmachinefound = 1;
+				RegisterResult(1,"test_name", $testname);
+				print "MACHINE matched\n";
+			} else {
+				print "Arg:$machinename and Env:$1 MISMATCH\n";
+				RegisterResult(0,"test_name", $testname);
+			}
+		}
+		elsif( $name =~ /^\s*WONTBE\s+=\s+(.*?now).*$/ )
+		{
+			if( $1 eq $wontbe) {
+				$envwontbefound = 1;
+				RegisterResult(1,"test_name", $testname);
+				print "WONTBE matched\n";
+			} else {
+				print "Arg:$wontbethere and Env:$1 MISMATCH\n";
+				RegisterResult(0,"test_name", $testname);
+			}
 		}
 	}
-	else
-	{
-		die "Can't get memory Ad for machine $machine to compare to $lines[0]\n";
+
+	#my $envmemfound = 0;
+	#my $envmachinefound = 0;
+	#my $envwontbefound = 0;
+
+	if($envmemfound == 0) {
+		RegisterResult(0,"test_name", $testname);
+		print "Failed to find MEMORY in the jobs environment\n";
 	}
+
+	if($envmachinefound == 0) {
+		RegisterResult(0,"test_name", $testname);
+		print "Failed to find MACHINE in the jobs environment\n";
+	}
+
+	if($envwontbefound == 0) {
+		RegisterResult(0,"test_name", $testname);
+		print "Failed to find WONTBE in the jobs environment\n";
+	}
+
+	EndTest();
 
 };
 

@@ -23,6 +23,11 @@
 #include "condor_perms.h"
 #include <map>
 
+#define USE_GENERATED_CMD_TABLES
+#ifdef USE_GENERATED_CMD_TABLES
+   #include "command_name_tables.h"
+#else
+
 const struct Translation DCTranslation[] = {
 	{ "QMGMT_READ_CMD", QMGMT_READ_CMD }, 
 	{ "QMGMT_WRITE_CMD", QMGMT_WRITE_CMD }, 
@@ -44,6 +49,7 @@ const struct Translation DCTranslation[] = {
 	{ "NEGOTIATE", NEGOTIATE },
 	{ "NEGOTIATE_WITH_SIGATTRS", NEGOTIATE_WITH_SIGATTRS},
 	{ "SEND_JOB_INFO", SEND_JOB_INFO },
+	{ "SEND_RESOURCE_REQUEST_LIST", SEND_RESOURCE_REQUEST_LIST }
 	{ "NO_MORE_JOBS", NO_MORE_JOBS },
 	{ "JOB_INFO", JOB_INFO },
 //	{ "GIVE_STATUS", GIVE_STATUS },					/* Not used */
@@ -233,6 +239,8 @@ const struct Translation DCTranslation[] = {
 	{ "REPLICATION_SOLICIT_VERSION", REPLICATION_SOLICIT_VERSION },
 	{ "REPLICATION_SOLICIT_VERSION_REPLY", REPLICATION_SOLICIT_VERSION_REPLY },
 	{ "QUERY_SCHEDD_HISTORY", QUERY_SCHEDD_HISTORY },
+	{ "QUERY_JOB_ADS", QUERY_JOB_ADS },
+	{ "SWAP_CLAIM_AND_ACTIVATION", SWAP_CLAIM_AND_ACTIVATION },
 	{ "", 0 }
 };
 
@@ -303,6 +311,7 @@ const struct Translation CollectorTranslation[] = {
 	{ "", 0 }
 };
 
+#endif
 
 const struct Translation CAResultTranslation[] = {
 	{ "Success", CA_SUCCESS },
@@ -325,6 +334,101 @@ const struct Translation DrainingScheduleTranslation[] = {
 	{ "", 0 }
 };
 
+#ifdef USE_GENERATED_CMD_TABLES
+// binary search of an array of structures containing a member psz
+// find the (case insensitive) matching element in the array
+// and return a pointer to that element.
+template <typename T>
+const T * BinaryLookup (const T aTable[], int cElms, int id)
+{
+	if (cElms <= 0)
+		return NULL;
+
+	int ixLower = 0;
+	int ixUpper = cElms-1;
+	for (;;) {
+		if (ixLower > ixUpper)
+			return NULL; // return null for "not found"
+
+		int ix = (ixLower + ixUpper) / 2;
+		int iMatch = aTable[ix].id - id;
+		if (iMatch < 0)
+			ixLower = ix+1;
+		else if (iMatch > 0)
+			ixUpper = ix-1;
+		else
+			return &aTable[ix];
+	}
+}
+
+template <typename T>
+const T * BinaryLookupFromIndex (const int aIndex[], const T aTable[], int cElms, const char * name, int (*fncmp)(const char *, const char *))
+{
+	if (cElms <= 0)
+		return NULL;
+
+	int ixLower = 0;
+	int ixUpper = cElms-1;
+	for (;;) {
+		if (ixLower > ixUpper)
+			return NULL; // return null for "not found"
+
+		int ix = (ixLower + ixUpper) / 2;
+		int iMatch = fncmp(aTable[aIndex[ix]].name, name);
+		if (iMatch < 0)
+			ixLower = ix+1;
+		else if (iMatch > 0)
+			ixUpper = ix-1;
+		else
+			return &aTable[aIndex[ix]];
+	}
+}
+
+
+const char * getCommandString(int id)
+{
+	const BTranslation * ptr = BinaryLookup(
+			DCTranslation,
+			DCTranslation_count,
+			id);
+	if (ptr) return ptr->name;
+	return NULL;
+}
+
+int getCommandNum(const char * name)
+{
+	const BTranslation * ptr = BinaryLookupFromIndex(
+			DCTranslationIndexByName,
+			DCTranslation,
+			DCTranslation_count,
+			name,
+			strcasecmp);
+	if (ptr) return ptr->id;
+	return -1;
+}
+
+const char * getCollectorCommandString(int id)
+{
+	// collector commands are at the start of the DC command table, they are the 'unbased' (i.e. 0 based ones)
+	const BTranslation * pTable = &DCTranslation[DCTranslation_COLLECTOR_start];
+	int cItems = DCTranslation_COLLECTOR_count;
+	const BTranslation * ptr = BinaryLookup(pTable, cItems, id);
+	if (ptr) return ptr->name;
+	return NULL;
+}
+
+int getCollectorCommandNum(const char * name)
+{
+	// we have to do name lookup within the entire name table.
+	int cmd = getCommandNum(name);
+	// then check to see if we got back a collector command  id
+	if (cmd >= DCTranslation[DCTranslation_COLLECTOR_start].id &&
+		cmd <= DCTranslation[DCTranslation_COLLECTOR_start + DCTranslation_COLLECTOR_count -1].id)
+		return cmd;
+	return -1;
+}
+
+#else
 
 const char*
 getCommandString( int num )
@@ -335,6 +439,31 @@ getCommandString( int num )
 	}
 	return result;
 }
+
+
+int
+getCommandNum( const char* command )
+{
+	int result = getNumFromName( command, DCTranslation );
+	if( -1 == result ) {
+		return getCollectorCommandNum(command);
+	}
+	return result;
+}
+
+const char*
+getCollectorCommandString( int num )
+{
+	return getNameFromNum( num, CollectorTranslation );
+}
+
+int
+getCollectorCommandNum( const char* command )
+{
+	return getNumFromName( command, CollectorTranslation );
+}
+
+#endif
 
 // return the command name for known commmand or "command NNN" for unknown commands
 // returned pointer is valid forever and the caller does not free it
@@ -372,28 +501,6 @@ getUnknownCommandString(int num)
 	return pstr;
 }
 
-
-int
-getCommandNum( const char* command )
-{
-	int result = getNumFromName( command, DCTranslation );
-	if( -1 == result ) {
-		return getCollectorCommandNum(command);
-	}
-	return result;
-}
-
-const char*
-getCollectorCommandString( int num )
-{
-	return getNameFromNum( num, CollectorTranslation );
-}
-
-int
-getCollectorCommandNum( const char* command )
-{
-	return getNumFromName( command, CollectorTranslation );
-}
 
 const char*
 getCAResultString( CAResult r )
