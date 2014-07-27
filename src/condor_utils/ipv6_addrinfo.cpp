@@ -31,7 +31,7 @@ addrinfo get_default_hint()
 	ret.ai_flags = AI_ADDRCONFIG;
 #endif
 	ret.ai_flags |= AI_CANONNAME;
-
+	ret.ai_family = AF_UNSPEC;
 	ret.ai_socktype = SOCK_STREAM;
 	ret.ai_protocol = IPPROTO_TCP;
 	return ret;

@@ -51,7 +51,6 @@
 #if defined(HAVE_SD_DAEMON_H)
 #include "systemd/sd-daemon.h"
 int g_systemd_count = -2;
-bool g_usable_unixsock = true;
 #endif
 
 #ifdef WIN32
@@ -845,35 +844,6 @@ int daemon::RealStart( )
 			dprintf(D_ALWAYS, "Using passed TCP socket from systemd.\n");
 		}
 		jobopts |= usable_relisock ? DCJOBOPT_USE_SYSTEMD_INET_SOCKET : 0;
-	}
-	if (!strcmp(name_in_config_file, "COLLECTOR") && collector_uses_shared_port)
-	{
-		int fds = g_systemd_count == -2 ? sd_listen_fds(0) : g_systemd_count;
-		g_systemd_count = fds;
-		if (fds < 0)
-		{
-			EXCEPT("Failed to retrieve sockets from systemd");
-		}
-		if (fds == 0)
-		{
-			dprintf(D_FULLDEBUG, "No sockets passed from systemd\n");
-		}
-		else
-		{
-			dprintf(D_FULLDEBUG, "systemd passed %d sockets.\n", fds);
-		}
-		bool usable_unixsock = false;
-		for (int fd=SD_LISTEN_FDS_START; fd<SD_LISTEN_FDS_START+fds; fd++) {
-			if (sd_is_socket_unix(fd, SOCK_STREAM, 1, 0, 0)) { usable_unixsock = g_usable_unixsock; }
-		}
-		if (usable_unixsock)
-		{
-			dprintf(D_ALWAYS, "Using passed Unix socket from systemd.\n");
-		}
-		// Don't reuse the unix socket from systemd -- the collector has a tendency to
-		// delete it and make a new one on top, causing reuse to fail.
-		g_usable_unixsock = false;
-		jobopts |= usable_unixsock ? DCJOBOPT_USE_SYSTEMD_UNIX_SOCKET : 0;
 	}
 #endif // HAVE_SD_DAEMON_H
 

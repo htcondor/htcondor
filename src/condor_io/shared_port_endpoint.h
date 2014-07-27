@@ -36,7 +36,6 @@ class SharedPortEndpoint: Service {
  public:
 
 	SharedPortEndpoint(char const *sock_name=NULL);
-	SharedPortEndpoint(int fd);
 	~SharedPortEndpoint();
 
 	void InitAndReconfig();

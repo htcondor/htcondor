@@ -209,10 +209,16 @@ public:
 		if (!missing_daemons)
 		{
 			format_string = "READY=1\nSTATUS=%s\nWATCHDOG=1";
-			status = "OK";
+			status = "All daemons are responding";
 		}
 
-		sd_notifyf(0, format_string, status.c_str());
+		int result = sd_notifyf(0, format_string, status.c_str());
+		if (result == 0)
+		{
+			dprintf(D_ALWAYS, "systemd watchdog notification support disabled.\n");
+			daemonCore->Cancel_Timer(m_watchdog_timer);
+			m_watchdog_timer = -1;
+		}
 	}
 
 private:

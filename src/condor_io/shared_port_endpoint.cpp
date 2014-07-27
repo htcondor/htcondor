@@ -48,45 +48,6 @@ static char const *WINDOWS_DAEMON_SOCKET_DIR = "\\\\.\\pipe\\condor";
 bool SharedPortEndpoint::m_should_initialize_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
 
-SharedPortEndpoint::SharedPortEndpoint(int fd)
-	: m_is_file_socket(true),
-	  m_listening(false),
-	  m_registered_listener(false),
-	  m_retry_remote_addr_timer(-1),
-	  m_socket_check_timer(-1)
-{
-	union sockaddr_union {
-		struct sockaddr sa;
-		struct sockaddr_un un;
-		struct sockaddr_storage storage;
-	};
-	union sockaddr_union sockaddr;
-	memset(&sockaddr, 0, sizeof(sockaddr));
-	socklen_t l = sizeof(sockaddr);
-	if ((getsockname(fd, &sockaddr.sa, &l) < 0) || (l <= sizeof(sa_family_t)) || (sockaddr.sa.sa_family != AF_UNIX))
-	{
-		dprintf(D_ALWAYS, "Unable to initialize shared port endpoint from fd %d\n", fd);
-		return;
-	}
-
-	char *dirname = condor_dirname(sockaddr.un.sun_path);
-	m_socket_dir = dirname;
-	free(dirname);
-	m_local_id = condor_basename(sockaddr.un.sun_path);
-	m_full_name.formatstr(
-		"%s%c%s",m_socket_dir.Value(),DIR_DELIM_CHAR,m_local_id.Value());
-
-	if (m_listener_sock.attach_to_file_desc(fd))
-	{
-		m_listening = true;
-	}
-	else
-	{
-		m_socket_dir = "";
-	}
-	dprintf(D_ALWAYS, "Socket directory: %s\n", m_socket_dir.Value());
-}
-
 SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 	m_is_file_socket(true),
 	m_listening(false),
