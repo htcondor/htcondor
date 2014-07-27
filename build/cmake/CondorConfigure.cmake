@@ -414,14 +414,9 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	check_include_files("linux/personality.h" HAVE_LINUX_PERSONALITY_H)
 	check_include_files("linux/sockios.h" HAVE_LINUX_SOCKIOS_H)
 	check_include_files("X11/Xlib.h" HAVE_XLIB_H)
-	check_include_files("systemd/sd-daemon.h" HAVE_SD_DAEMON_H)
 
 	if (HAVE_XLIB_H)
 	  find_library(HAVE_X11 X11)
-	endif()
-
-	if (HAVE_SD_DAEMON_H)
-	  find_library(HAVE_SD_DAEMON systemd-daemon)
 	endif()
 
 	dprint("Threaded functionality only enabled in Linux, Windows, and Mac OS X > 10.6")

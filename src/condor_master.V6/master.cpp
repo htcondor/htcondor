@@ -55,10 +55,8 @@ extern int load_master_mgmt(void);
 #endif
 #endif
 
-#if defined(HAVE_SD_DAEMON_H)
-#include "systemd/sd-daemon.h"
+#include "systemd_manager.h"
 #include <sstream>
-#endif
 
 #ifdef WIN32
 
@@ -150,7 +148,6 @@ char	default_dc_daemon_list[] =
 // create an object of class daemons.
 class Daemons daemons;
 
-#if defined(HAVE_SD_DAEMON_H)
 class SystemdNotifier : public Service {
 
 public:
@@ -159,8 +156,10 @@ public:
 	void
 	config()
 	{
-		/* I would like to use sd_watchdog_enabled, but it appears to not yet be in Fedora. */
-		double watchdog_secs = param_integer("SYSTEMD_UPDATE_INTERVAL", 1);
+		const condor_utils::SystemdManager & sd = condor_utils::SystemdManager::GetInstance();
+		int watchdog_secs = sd.GetWatchdogUsecs() / 1e6 / 2;
+		if (watchdog_secs <= 0) { watchdog_secs = 1; }
+		if (watchdog_secs > 20) { watchdog_secs = 10; }
 		Timeslice ts;
 		ts.setDefaultInterval(watchdog_secs);
 		m_watchdog_timer = daemonCore->Register_Timer(ts, static_cast<TimerHandlercpp>(&SystemdNotifier::status_handler),
@@ -169,7 +168,7 @@ public:
 		{
 			dprintf(D_ALWAYS, "Failed to register systemd update timer.\n");
 		} else {
-			dprintf(D_FULLDEBUG, "Set systemd to be notified once every %.0f seconds.\n", watchdog_secs);
+			dprintf(D_FULLDEBUG, "Set systemd to be notified once every %d seconds.\n", watchdog_secs);
 		}
 	}
 
@@ -212,7 +211,8 @@ public:
 			status = "All daemons are responding";
 		}
 
-		int result = sd_notifyf(0, format_string, status.c_str());
+		const condor_utils::SystemdManager &sd = condor_utils::SystemdManager::GetInstance();
+		int result = sd.Notify(format_string, status.c_str());
 		if (result == 0)
 		{
 			dprintf(D_ALWAYS, "systemd watchdog notification support disabled.\n");
@@ -225,7 +225,6 @@ private:
 	int m_watchdog_timer;
 };
 SystemdNotifier g_systemd_notifier;
-#endif
 
 // called at exit to deallocate stuff so that memory checking tools are
 // happy and don't think we leaked any of this...
@@ -389,9 +388,7 @@ main_init( int argc, char* argv[] )
 	MasterPluginManager::Initialize();
 #endif
 
-#if defined(HAVE_SD_DAEMON_H)
 	g_systemd_notifier.config();
-#endif
 
 		// Register admin commands
 	daemonCore->Register_Command( RESTART, "RESTART",
@@ -949,11 +946,13 @@ init_daemon_list()
 		}
 
 			// start shared_port first for a cleaner startup
+		bool use_shared_port = false;
 		if( daemon_names.contains("SHARED_PORT") ) {
 			daemon_names.deleteCurrent();
 			daemon_names.rewind();
 			daemon_names.next();
 			daemon_names.insert( "SHARED_PORT" );
+			use_shared_port = true;
 		}
 		else if( SharedPortEndpoint::UseSharedPort() ) {
 			if( param_boolean("AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST",true) ) {
@@ -961,8 +960,20 @@ init_daemon_list()
 				daemon_names.rewind();
 				daemon_names.next();
 				daemon_names.insert( "SHARED_PORT" );
+				use_shared_port = true;
 			}
 		}
+			// In the case of a collector behind a shared port, we first
+			// start the collector, then the shared port.  That way, the collector
+			// is usable as soon as the shared port hits accept().
+		bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && use_shared_port;
+		if( collector_uses_shared_port && daemon_names.contains("COLLECTOR") ) {
+			daemon_names.deleteCurrent();
+			daemon_names.rewind();
+			daemon_names.next();
+			daemon_names.insert( "COLLECTOR" );
+		}
+
 		daemons.ordered_daemon_names.create_union( daemon_names, false );
 
 		daemon_names.rewind();
@@ -1111,10 +1122,6 @@ main_config()
 	} else {
 		daemons.DaemonsOff();
 	}
-#if defined(HAVE_SD_DAEMON_H)
-	g_systemd_notifier.config();
-#endif
-
     // Invalide session if necessary
     daemonCore->invalidateSessionCache();
 		// Re-register our timers, since their intervals might have

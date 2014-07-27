@@ -5916,13 +5916,6 @@ reconfig=true
 customization=seldom
 friendly_name=Send all logs to syslog instead of files
 
-[SYSTEMD_UPDATE_INTERVAL]
-default=1
-type=int
-reconfig=true
-customization=seldom
-friendly_name=Interval, in seconds, of when the master will update systemd with its status.
-
 [LOCAL_CONFIG_DIR_EXCLUDE_REGEXP]
 default=^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
 type=string

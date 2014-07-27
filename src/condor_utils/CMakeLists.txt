@@ -29,12 +29,6 @@ endif()
 
 condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
 
-if (HAVE_SD_DAEMON)
-  set(SD_LIBS systemd-daemon)
-else(HAVE_SD_DAEMON)
-  set(SD_LIBS )
-endif(HAVE_SD_DAEMON)
-
 ############ generate params
 add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h
 		COMMAND perl
@@ -83,7 +77,6 @@ endif()
 
 condor_shared_lib( condor_utils "${HeaderFiles};${SourceFiles};${EXTRA_SRCS}" )
 add_dependencies(condor_utils utils_genparams syscall_numbers )
-target_link_libraries(condor_utils ${SD_LIBS} )
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	set( UTILS_LIB_NAME "condor_utils_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
 else()
@@ -97,7 +90,6 @@ if (LINUX OR DARWIN)
    condor_static_lib( condor_utils_s "${HeaderFiles};${SourceFiles};${EXTRA_SRCS}" )
    add_dependencies( condor_utils_s utils_genparams syscall_numbers )
    set_target_properties( condor_utils_s PROPERTIES OUTPUT_NAME "${UTILS_LIB_NAME}" )
-   target_link_libraries(condor_utils_s ${SD_LIBS} )
 endif(LINUX OR DARWIN)
 
 

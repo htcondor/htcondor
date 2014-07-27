@@ -41,16 +41,12 @@
 #include "condor_sockaddr.h"
 #include "ipv6_hostname.h"
 #include "setenv.h"
+#include "systemd_manager.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "MasterPlugin.h"
 #endif
-#endif
-
-#if defined(HAVE_SD_DAEMON_H)
-#include "systemd/sd-daemon.h"
-int g_systemd_count = -2;
 #endif
 
 #ifdef WIN32
@@ -818,34 +814,16 @@ int daemon::RealStart( )
 #endif
 	}
 
-#if defined(HAVE_SD_DAEMON_H)
 	if (!strcmp(name_in_config_file,"SHARED_PORT"))
 	{
-		int fds = g_systemd_count == -2 ? sd_listen_fds(0) : g_systemd_count;
-		g_systemd_count = fds;
-		if (fds < 0)
-		{
-			EXCEPT("Failed to retrieve sockets from systemd");
-		}
-		if (fds == 0)
-		{
-			dprintf(D_FULLDEBUG, "No sockets passed from systemd\n");
-		}
-		else
-		{
-			dprintf(D_FULLDEBUG, "systemd passed %d sockets.\n", fds);
-		}
-		bool usable_relisock = false;
-		for (int fd=SD_LISTEN_FDS_START; fd<SD_LISTEN_FDS_START+fds; fd++) {
-			if (sd_is_socket(fd, 0, SOCK_STREAM, 1)) { usable_relisock = true; }
-		}
-		if (usable_relisock)
+		const condor_utils::SystemdManager & sd = condor_utils::SystemdManager::GetInstance();
+		const std::vector<int> &fds = sd.GetFDs();
+		if (fds.size())
 		{
 			dprintf(D_ALWAYS, "Using passed TCP socket from systemd.\n");
+			jobopts |= DCJOBOPT_USE_SYSTEMD_INET_SOCKET;
 		}
-		jobopts |= usable_relisock ? DCJOBOPT_USE_SYSTEMD_INET_SOCKET : 0;
 	}
-#endif // HAVE_SD_DAEMON_H
 
 	// If we are starting a collector and passed a "-sock" command in the command line,
 	// but didn't set the COLLECTOR_HOST to use shared port, have the collector listen on

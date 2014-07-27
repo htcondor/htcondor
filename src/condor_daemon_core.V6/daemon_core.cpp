@@ -117,10 +117,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #define CLONE_NEWPID 0x20000000
 #endif
 
-#if defined(HAVE_SD_DAEMON_H)
-#include <systemd/sd-daemon.h>
-int g_systemd_count = -2;
-#endif
+#include "systemd_manager.h"
 
 static const char* EMPTY_DESCRIP = "<NULL>";
 
@@ -6467,64 +6464,50 @@ int DaemonCore::Create_Process(
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",executable ? executable : "NULL");
 
 	bool initialized_socket = false;
-#if defined(HAVE_SD_DAEMON_H)
 	if (HAS_DCJOBOPT_USE_SYSTEMD_INET_SOCKET(job_opt_mask))
 	{
-		bool found_socket = false;
-		int fd;
-		int fds = g_systemd_count == -2 ? sd_listen_fds(0) : g_systemd_count;
-		g_systemd_count = fds;
-		if (fds <= 0)
+		const condor_utils::SystemdManager &sd = condor_utils::SystemdManager::GetInstance();
+		const std::vector<int> fds = sd.GetFDs();
+		if (!fds.size())
 		{
 			dprintf(D_ALWAYS, "Create_Process: requested to use systemd INET socket, but none passed.\n");
 			goto wrapup;
 		}
-		for (fd=SD_LISTEN_FDS_START; fd<SD_LISTEN_FDS_START+fds; fd++)
+		for (std::vector<int>::const_iterator it = fds.begin(); it != fds.end(); it++)
 		{
-			if (sd_is_socket(fd, 0, SOCK_STREAM, 1) >= 0)
+			// Create a duplicate socket - we give the duplicate FD to the relisock
+			// which will close it automatically.  We have to keep the copy from systemd
+			// in case if we need to respawn the daemon.  If we don't, we'll get an
+			// "Address already in use" error when we respawn.
+			int new_fd = dup(*it);
+			if (new_fd == -1)
 			{
-				found_socket = true;
-				// Create a duplicate socket - we give the duplicate FD to the relisock
-				// which will close it automatically.  We have to keep the copy from systemd
-				// in case if we need to respawn the daemon.  If we don't, we'll get an
-				// "Address already in use" error when we respawn.
-				int new_fd = dup(fd);
-				if (new_fd == -1)
-				{
-					dprintf(D_ALWAYS, "Failed to duplicate systemd TCP socket (errno=%d, %s).\n", errno, strerror(errno));
-					goto wrapup;
-				}
-				socks.push_back(SockPair());
-				socks.back().has_relisock(true);
-				if (!socks.back().rsock()->attach_to_file_desc(new_fd))
-				{
-					dprintf(D_ALWAYS, "Failed to attach systemd socket to ReliSock.\n");
-					goto wrapup;
-				}
-				break;
+				dprintf(D_ALWAYS, "Failed to duplicate systemd TCP socket (errno=%d, %s).\n", errno, strerror(errno));
+				goto wrapup;
 			}
-		}
-		if (!found_socket)
-		{
-			dprintf(D_FULLDEBUG, "Create_Process: unable to find systemd TCP socket\n");
-			goto wrapup;
-		}
-		int flags = fcntl(fd, F_GETFD);
-		if (flags == -1)
-		{
-			dprintf(D_ALWAYS, "Create_Process: Unable to get flags on systemd TCP socket.\n");
-			goto wrapup;
-		}
-		flags &= ~FD_CLOEXEC;
-		if (fcntl(fd, F_SETFD, flags) == -1)
-		{
-			dprintf(D_ALWAYS, "Create_Process: Unable to set flags on systemd TCP socket.\n");
-			goto wrapup;
+			socks.push_back(SockPair());
+			socks.back().has_relisock(true);
+			if (!socks.back().rsock()->attach_to_file_desc(new_fd))
+			{
+				dprintf(D_ALWAYS, "Failed to attach systemd socket to ReliSock.\n");
+				goto wrapup;
+			}
+			int flags = fcntl(*it, F_GETFD);
+			if (flags == -1)
+			{
+				dprintf(D_ALWAYS, "Create_Process: Unable to get flags on systemd TCP socket.\n");
+				goto wrapup;
+			}
+			flags &= ~FD_CLOEXEC;
+			if (fcntl(*it, F_SETFD, flags) == -1)
+			{
+				dprintf(D_ALWAYS, "Create_Process: Unable to set flags on systemd TCP socket.\n");
+				goto wrapup;
+			}
 		}
 		dprintf(D_FULLDEBUG, "Create_Process: Passing systemd TCP socket to child process.\n");
 		initialized_socket = true;
 	}
-#endif
 	// First do whatever error checking we can that is not platform specific
 
 	// check reaper_id validity.  note: reaper id of 0 means no reaper wanted.
