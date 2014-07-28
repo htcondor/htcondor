@@ -1487,6 +1487,7 @@ Dag::StartFinalNode()
 			// Now start up the final node.
 		_final_job->SetStatus( Job::STATUS_READY );
 		if ( StartNode( _final_job, false ) ) {
+debug_printf( DEBUG_QUIET, "DIAG 2110\n" );//TEMPTEMP
 			_finalNodeRun = true;
 			return true;
 		}
@@ -2955,28 +2956,50 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	Job::status_t dagJobStatus = Job::STATUS_SUBMITTED;
 	const char *statusNote = "";
 	if ( DoneSuccess( true ) ) {
+debug_printf( DEBUG_QUIET, "DIAG 2010\n" );//TEMPTEMP
 		dagJobStatus = Job::STATUS_DONE;
 		statusNote = "success";
 	} else if ( DoneFailed( true ) ) {
+debug_printf( DEBUG_QUIET, "DIAG 2020\n" );//TEMPTEMP
 		dagJobStatus = Job::STATUS_ERROR;
+		//TEMPTEMP -- should this be _dagIsAborted?
 		if ( _dagStatus == DAG_STATUS_ABORT ) {
 			statusNote = "aborted";
 		} else {
 			statusNote = "failed";
 		}
 	} else if ( DoneCycle( true ) ) {
+debug_printf( DEBUG_QUIET, "DIAG 2030\n" );//TEMPTEMP
 		dagJobStatus = Job::STATUS_ERROR;
 		statusNote = "cycle";
 	} else if ( held ) {
+debug_printf( DEBUG_QUIET, "DIAG 2040\n" );//TEMPTEMP
 		statusNote = "held";
 	} else if ( removed ) {
+debug_printf( DEBUG_QUIET, "DIAG 2050\n" );//TEMPTEMP
+		//TEMPTEMP -- shit -- what about final nodes here??
 		dagJobStatus = Job::STATUS_ERROR;
 		statusNote = "removed";
 	} else if ( _dagIsAborted ) {//TEMPTEMP?
+debug_printf( DEBUG_QUIET, "DIAG 2060\n" );//TEMPTEMP
 		//TEMPTEMP -- is this always right?  what about if we have a final node?
 		//TEMPTEMP -- maybe make a test version that writes to a new status file each time?
+#if 1//TEMPTEMP? (see job_dagman_abort-final-A)
+		//TEMPTEMP -- okay, FinalNodeRun() is the wrong test, because that's true when the node becomes ready
+		//TEMPTEPM? if ( HasFinalNode() && !FinalNodeRun() ) {
+		if ( HasFinalNode() && !FinishedRunning( true ) ) {//TEMPTEMP?
+debug_printf( DEBUG_QUIET, "DIAG 2061\n" );//TEMPTEMP
+			//TEMPTEMP -- submitted...
+			//TEMPTEMP -- maybe it should be "STATUS_SUBMITTED (aborted)"
+		} else {
+debug_printf( DEBUG_QUIET, "DIAG 2062\n" );//TEMPTEMP
+			dagJobStatus = Job::STATUS_ERROR;
+			statusNote = "aborted";
+		}
+#else //TEMPTEMP?
 		dagJobStatus = Job::STATUS_ERROR;
 		statusNote = "aborted";
+#endif //TEMPTEMP?
 	}
 	MyString statusStr = Job::status_t_names[dagJobStatus];
 	statusStr.trim();
@@ -3079,7 +3102,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		// existing file fails on Windows.
 		//
 	MyString statusFileName( _statusFileName );//TEMPTEMP -- change name?
-#if 1 // For testing, to enable manual checking of intermediate states...
+#if 0 // For testing, to enable manual checking of intermediate states...
 	static int statusFileCount = 0;
 	statusFileName += ++statusFileCount;
 	debug_printf( DEBUG_QUIET, "Writing node status file %s\n",
