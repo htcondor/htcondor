@@ -224,17 +224,20 @@ else {
 
 # we need a shorter path for socket dirs so we place file in condor_tests
 # which has the master folder dir in /tmp.
-if( not TestGlue::is_windows() ) {
-	my $privatetmploc = "/tmp/tds$$";
-	print "tmp loc:$privatetmploc\n";
-	my $socketdir = "condor_tests/SOCKETDIR";
-	system("mkdir $privatetmploc;ls /tmp");
-	open(SD,">$socketdir") or print "Failed to create:$socketdir:$!\n";
-	print SD "$privatetmploc\n";
-	close(SD);
-} else {
-	print "Not preparing SOCKETDIR. Believe it is windows\n";
-}
+#
+# SWITCH at top of personal condor does this now.
+#
+#if( not TestGlue::is_windows() ) {
+	#my $privatetmploc = "/tmp/tds$$";
+	#print "tmp loc:$privatetmploc\n";
+	#my $socketdir = "condor_tests/SOCKETDIR";
+	#system("mkdir $privatetmploc;ls /tmp");
+	#open(SD,">$socketdir") or print "Failed to create:$socketdir:$!\n";
+	#print SD "$privatetmploc\n";
+	#close(SD);
+#} else {
+	#print "Not preparing SOCKETDIR. Believe it is windows\n";
+#}
 
 # create initial configs
 #print "Caling prepare_for_configs: basedir:$BaseDir\n";

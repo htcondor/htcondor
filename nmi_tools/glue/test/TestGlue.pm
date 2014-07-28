@@ -395,24 +395,6 @@ sub CreateConfig {
 sub CreateLocalConfig {
 	my ($awkscript, $genericlocalconfig) = @_;
 
-	my $socketdir = "";
-	if($iswindows == 1) {
-        # windows does not have a path length limit
-	} else {
-		if(!(-f "condor_tests/SOCKETDIR")) {
-            print "Why can I not find condor_tests/SOCKETDIR?\n";
-			print "Where am I?\n";
-			system("pwd");
-        } else {
-            open(SD,"<condor_tests/SOCKETDIR") or print "Failed to open:condor_tests/SOCKETDIR:$!\n";
-            $socketdir = (<SD>);
-            chomp($socketdir);
-            print "Fetch master condor_tests/SOCKETDIR:$socketdir\n";
-            $socketdir = "$socketdir" . "/$$";
-            print "This tests socketdir:$socketdir\n";
-        }
-	}
-
 	#print "Modifying local config file\n";
 	my $logsize = 50000000;
 
