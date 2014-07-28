@@ -45,7 +45,6 @@ my $firstappend_condor_config = '
 	SIGNIFICANT_ATTRIBUTES = Procid
 	START = False
 	NEGOTIATOR_DEBUG = D_COMMAND, D_MATCH
-	USE_SHARED_PORT = False
 	NUM_CPUS = 12
 	USE_SHARED_PORT = false
 ';
