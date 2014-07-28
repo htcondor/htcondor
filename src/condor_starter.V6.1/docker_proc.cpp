@@ -31,7 +31,14 @@ DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ) {
 	// We should run with '-v /path/to/sandbox:/inner-path/to/sandbox'.
 	// .. and the IWD should probably be /inter-path/to/sandbox.  Use '-w'.
 
-	// TODO for laterz: figure out this self-hosting magic.
+	// TODO for laterz: figure out this self-hosting magic.  (We want to
+	// supply images via file transfer.)
+
+	// TODO for laterz: can we configure Docker to drop its overlay filesystem
+	// backing store(s) into the sandbox?  Even if so, we may still want to do
+	// a 'docker ps -a' on startup and nuke anything with our special name prefix
+	// in case we didn't get a change to 'docker stop' and 'docker rm' them
+	// before the machine went down or we crashed or whatever.
 }
 
 DockerProc::~DockerProc() { }
