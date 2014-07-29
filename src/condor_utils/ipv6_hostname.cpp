@@ -57,7 +57,6 @@ void init_local_hostname()
 	}
 
 		// Dig around for an IP address in the interfaces
-		// TODO WARNING: Will only return IPv4 addresses!
 	if( ! ipaddr_inited ) {
 		std::string ip;
 		if( ! network_interface_to_ip("NETWORK_INTERFACE", network_interface.Value(), ip, NULL)) {
