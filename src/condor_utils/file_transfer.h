@@ -43,8 +43,9 @@ typedef std::list<FileTransferItem> FileTransferList;
 
 
 struct CatalogEntry {
-	time_t		modification_time;
-	filesize_t	filesize;
+	time_t			modification_time;
+	filesize_t		filesize;
+	unsigned char	md5sum[MAC_SIZE];
 
 	// if support for hashes is added, it requires memory management of the
 	// data pointed to.  (hash table iterator copies Values, so you'll need a
@@ -413,7 +414,7 @@ class FileTransfer: public Service {
 	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable **catalog = NULL);
 
 	// called to lookup the catalog entry of file
-	bool LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize);
+	bool LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize, unsigned char * md5sum = NULL);
 
 	// Called internally by DoUpload() in order to handle common wrapup tasks.
 	int ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line);
@@ -472,6 +473,11 @@ class FileTransfer: public Service {
 	bool outputFileIsSpooled(char const *fname);
 
 	void callClientCallback();
+
+	// Using md5sum to determine if we need to send a file back (to the
+	// schedd) is expensive, so don't do it unless we have to (e.g.,
+	// kvm-assisted checkpointing).
+	bool useMD5Sums;
 };
 
 // returns 0 if no expiration

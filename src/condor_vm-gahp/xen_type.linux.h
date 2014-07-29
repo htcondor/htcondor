@@ -65,6 +65,7 @@ public:
 	virtual bool CreateConfigFile()=0;
 
 	virtual bool killVM();
+
 protected:
 	MyString makeVirshDiskString(void);
 	bool createISO();
@@ -83,6 +84,8 @@ protected:
 	// For the base class, this just prints out the classad
 	// attributes and the type for each attribute.
 	virtual bool CreateVirshConfigFile(const char* filename);
+
+	virtual bool RewriteSuspendFile();
 
 	SimpleList<XenDisk*> m_disk_list;
 
@@ -129,6 +132,7 @@ class KVMType : public VirshType
   static bool killVMFast(const char* script);
  protected:
   virtual bool CreateVirshConfigFile(const char * filename);
+  virtual bool RewriteSuspendFile();
 };
 
 #endif

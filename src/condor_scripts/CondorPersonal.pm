@@ -57,6 +57,7 @@ use CondorUtils;
 use CondorTest;
 
 
+my $btdebug = 0;
 my $iswindows = CondorUtils::is_windows();
 my $iscygwin = CondorUtils::is_cygwin_perl();
 my $iswindowsnativeperl = CondorUtils::is_windows_native_perl();
@@ -96,7 +97,9 @@ sub Initialize
 	} else {
 		$masterconfig = "$currentlocation" . "/Config/condor_config";
 	}
-	print "CondorPersonal::Initialize set MasterConfig:$masterconfig\n";
+	if($btdebug == 1) {
+		print "CondorPersonal::Initialize set MasterConfig:$masterconfig\n";
+	}
 }
 
 BEGIN {
@@ -228,7 +231,6 @@ my $UseNewRunning = 1;
 my $RunningTimeStamp = 0;
 
 my $topleveldir = getcwd();
-my $btdebug = 0;
 my $home = $topleveldir;
 my $localdir;
 my $condorlocaldir;
@@ -671,7 +673,9 @@ sub Reset
 
 sub SetUseNewRunning {
 	$UseNewRunning = 1;
-	print "Setting to use new isrunning function\n";
+	if($btdebug == 1) {
+		print "Setting to use new isrunning function\n";
+	}
 }
 
 
@@ -876,8 +880,10 @@ sub InstallPersonalCondor
 	} else {
 		$condorq = Which("condor_q");
 	}
-	print "InstallPersonalCondor: Which condor_q:$condorq\n";
-	print "InstallPersonalCondor: CONDOR_CONFIG in ENV:$tmpconfig\n";
+	if($btdebug == 1) {
+		print "InstallPersonalCondor: Which condor_q:$condorq\n";
+		print "InstallPersonalCondor: CONDOR_CONFIG in ENV:$tmpconfig\n";
+	}
 	if($tmpconfig =~ /^(.*\/)\w+$/) {
 		$configdir = $1;
 		#print "InstallPersonalCondor: CONFIG DIR:$configdir\n";
@@ -892,7 +898,9 @@ sub InstallPersonalCondor
 		# switch it to install mode.
 		 if(! -f "../../condor/sbin/condor_master") {
 		 	$condordistribution = "install";
-			print "NOT nightlies so switch to INSTALL mode\n";
+			if($btdebug == 1) {
+				print "NOT nightlies so switch to INSTALL mode\n";
+			}
 		 }
 	}
 
@@ -1008,23 +1016,7 @@ sub InstallPersonalCondor
 			}
 		}
 
-		#print "Before setting binary paths, sbinloc:$sbinloc binloc:$binloc\n";
-		#if($iswindows == 1) {
-			#if(is_windows_native_perl()) {
-				#$master = $sbinloc . "condor_master.exe";
-				#$submit = $binloc . "condor_submit.exe";
-			#} else { #cygwin
-				#$master = $sbinloc . "bin/condor_master.exe";
-				#$submit = $binloc . "bin/condor_submit.exe";
-			#}
-		#} else {
-			#$master = $sbinloc . "sbin/". "condor_master";
-			#$submit = $binloc . "condor_submit";
-		#}
-
-
 		debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
-
 
 		#print "Sandbox started rooted here: $topleveldir\n";
 		if(is_windows_native_perl()) {
@@ -1041,7 +1033,9 @@ sub InstallPersonalCondor
 		}
 	} elsif( $condordistribution eq "nightlies" ) {
 	if($iswindows == 1) {
-		print "condor distribution = nightlies\n";
+		if($btdebug == 1) {
+			print "condor distribution = nightlies\n";
+		}
 	}
 		# we want a mechanism by which to find the condor binaries
 		# we are testing. But we know where they are relative to us
@@ -1094,26 +1088,11 @@ sub InstallPersonalCondor
 			debug_flush();
 			die "Can not seem to locate Condor release binaries\n";
 		}
-		#$binloc = "../../condor/bin/";
-		#$sbinloc = "../../condor/";
 
 		debug( "My path to condor_q is $binloc and topleveldir is $topleveldir\n",$debuglevel);
-		print "NIGHTLIES: My path to condor_q is $binloc and topleveldir is $topleveldir\n";
-
-		#if($iswindows) {
-			#if(is_windows_native_perl()) {
-				#$master = $sbinloc .  "condor_master";
-				#$submit = $binloc . "condor_submit";
-		#} else { #cygwin
-			#$master = $sbinloc .  "condor_master";
-			#$submit = $binloc . "condor_submit";
-		#}
-	#} else {
-		#$master = $sbinloc . "sbin/" .  "condor_master";
-		#$submit = $binloc . "condor_submit";
-	#}
-
-
+		if($btdebug == 1) {
+			print "NIGHTLIES: My path to condor_q is $binloc and topleveldir is $topleveldir\n";
+		}
 
 		debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
 
@@ -1127,7 +1106,9 @@ sub InstallPersonalCondor
 		}
 	} elsif( -e $condordistribution ) {
 		if($iswindows == 1) {
-			print "condor distribution = other\n";
+			if($btdebug == 1) {
+				print "condor distribution = other\n";
+			}
 		}
 		# in this option we ought to run condor_configure
 		# to get a current config files but we'll do this
@@ -1577,10 +1558,14 @@ if($btdebug == 1) {
 		my $exec_result;
 		my $javabinary = "";
 		if($iswindows == 1) {
-			print "Windows JAVA setup: OS=$^O\n";
+			if($btdebug == 1) {
+				print "Windows JAVA setup: OS=$^O\n";
+			}
 			$javabinary = "java.exe";
 			if (is_windows_native_perl()) {
-			print "Java set up for windows_native_perl\n";
+				if($btdebug == 1) {
+					print "Java set up for windows_native_perl\n";
+				}
 			CondorUtils::dir_listing("c:\\windows");
 				if( -e "c:\\widows\\sysnative\\java.exe"){
 					$jvm = "c:\\windows\\sysnative\\java.exe";
@@ -1646,14 +1631,18 @@ if($btdebug == 1) {
 				#print "default_jvm_location is:$default_jvm_location\n";
 				if ( -f $default_jvm_location && -x $default_jvm_location) {
 					$jvm = $default_jvm_location;
-					print "Set JAVA to $jvm\n";
+					if($btdebug == 1) {
+						print "Set JAVA to $jvm\n";
+					}
 					last;
 				}
 			}
 		}
 		# if nothing is found, explain that, otherwise see if they just want to
 		# accept what I found.
-		print "Setting JAVA=$jvm\n";
+		if($btdebug == 1) {
+			print "Setting JAVA=$jvm\n";
+		}
 		# Now that we have an executable JVM, see if it is a Sun jvm because that
 		# JVM it supports the -Xmx argument then, which is used to specify the
 		# maximum size to which the heap can grow.
@@ -1883,7 +1872,9 @@ sub StartPersonalCondor
 	#my $fullconfig = "$topleveldir/$configfile";
 	
 	my $fullconfig = "$ENV{CONDOR_CONFIG}";
-	print "StartPersonalCondor: CONDOR_CONFIG from environment:$fullconfig\n";
+	if($btdebug == 1) {
+		print "StartPersonalCondor: CONDOR_CONFIG from environment:$fullconfig\n";
+	}
 
 	#print "StartPersonalCondor:fullconfig:$fullconfig\n";
 
@@ -1912,7 +1903,9 @@ sub StartPersonalCondor
 		$personalmaster = $localdir . "sbin/condor_master -f &";
 	}
 
-	print "personal master command:$personalmaster\n";
+	if($btdebug == 1) {
+		print "personal master command:$personalmaster\n";
+	}
 	# We may not want to wait for certain daemons to talk
 	# to each other on startup.
 
@@ -1949,7 +1942,9 @@ sub StartPersonalCondor
 			print "catch_startup_start seen. Calling runCondorTool\n";
 			runCondorTool("$personalmaster",$control{catch_startup_start},2,{emit_output=>1});
 		} else {
-			print "starting master with system\n"; 
+			if($btdebug == 1) {
+				print "starting master with system\n"; 
+			}
 			my $res = system("$personalmaster");
 			if($res != 0) {
 				print "Failed system call starting master\n";
@@ -3520,195 +3515,201 @@ sub IsThisNightly
 	}
 }
 
-sub TestCondorHereAlive
-{
-	my $location = shift;
-	my $condorconfig = "$location/condor_config";
-	my $Loglocation = $location . "/local/log";
-	my $whopids = $Loglocation . "/ALLPIDS";
-	my @toolreplies = ();
-	my $backupdaemonlist = "MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD";
-	my $daemonlist = "";
-	my @daemonreplies = ();
-	my %cwpids = ();
-	my @configeddaemons = ();
+#sub TestCondorHereAlive
+#{
+#	my $location = shift;
+#	my $condorconfig = "$location/condor_config";
+#	my $Loglocation = $location . "/local/log";
+#	my $whopids = $Loglocation . "/ALLPIDS";
+#	my @toolreplies = ();
+#	my $backupdaemonlist = "MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD";
+#	my $daemonlist = "";
+#	my @daemonreplies = ();
+#	my %cwpids = ();
+#	my @configeddaemons = ();
 
-	debug("TestCondorHereAlive: personal location: $location\n",1);
-	
-	print "TestCondorHereAlive: log location is $Loglocation\n";
-	# leave file with pids of running daemons here $location/WHOPIDS
-	my $previouscondor = CondorTest::GetPersonalCondorWithConfig($condorconfig);
-	if($previouscondor == 0) {
-		debug("TestCondorHereAlive: no condor instance matching:$location/condor_config\n",1);
-		return(0);
-	}
+#	debug("TestCondorHereAlive: personal location: $location\n",1);
+#	
+#	# leave file with pids of running daemons here $location/WHOPIDS
+#	my $previouscondor = CondorTest::GetPersonalCondorWithConfig($condorconfig);
+#	if($previouscondor == 0) {
+#		debug("TestCondorHereAlive: no condor instance matching:$location/condor_config\n",1);
+#		return(0);
+#	}
 
-	my $res = 0;
-	if($UseNewRunning == 1) {
-		$res = CollectWhoPids($Loglocation,"ALLPIDFILE");
-		if($res == 0) {
-			debug("KillDaemonPids: CollectWhoPids discovered this condor never started yet\n",1);
-			return(0);
-		}
-	}
+#	my $res = 0;
+#	if($UseNewRunning == 1) {
+#		$res = CollectWhoPids($Loglocation,"ALLPIDFILE");
+#		if($res == 0) {
+#			debug("KillDaemonPids: CollectWhoPids discovered this condor never started yet\n",1);
+#			return(0);
+#		}
+#	}
 
-	#We want to compare the current daemon_list if log dirs match
-	CondorTest::runCondorTool("condor_config_val log",\@toolreplies,2,{emit_output=>0});
-	my $chompedlog = $toolreplies[0];
-	CondorUtils::fullchomp($chompedlog);
-	print "TestCondorHereAlive location passed in is: $location\n";
-	print "TestCondorHereAlive ccv log is $chompedlog\n";
+#	#We want to compare the current daemon_list if log dirs match
+#	CondorTest::runCondorTool("condor_config_val log",\@toolreplies,2,{emit_output=>0});
+#	my $chompedlog = $toolreplies[0];
+#	CondorUtils::fullchomp($chompedlog);
+#	if($btdebug == 1) {
+#		print "TestCondorHereAlive location passed in is: $location\n";
+#		print "TestCondorHereAlive ccv log is $chompedlog\n";
+#	}
 
-	#can we rely on ccv daemon_list to know who we expect alive?
-	if($chompedlog eq $Loglocation) {
-		print "Log location being checked is current ccv log value\n";
-		CondorTest::runCondorTool("condor_config_val daemon_list",\@daemonreplies,2,{emit_output=>0});
-		$daemonlist = $daemonreplies[0];
-		CondorUtils::fullchomp($daemonlist);
-	} else {
-		print "Log location being checked is NOT current ccv log value\n";
-		print "Log created from passed location:$Loglocation\n";
-		print "ccv Log: $chompedlog\n";
-		$daemonlist = $backupdaemonlist;
-	}
-	print "Checking condor against this daemon list:$daemonlist\n";
+#	#can we rely on ccv daemon_list to know who we expect alive?
+#	if($chompedlog eq $Loglocation) {
+#		print "Log location being checked is current ccv log value\n";
+#		CondorTest::runCondorTool("condor_config_val daemon_list",\@daemonreplies,2,{emit_output=>0});
+#		$daemonlist = $daemonreplies[0];
+#		CondorUtils::fullchomp($daemonlist);
+#	} else {
+#		if($btdebug == 1) {
+#			print "Log location being checked is NOT current ccv log value\n";
+#			print "Log created from passed location:$Loglocation\n";
+#			print "ccv Log: $chompedlog\n";
+#		}
+#		$daemonlist = $backupdaemonlist;
+#	}
 
-	#Create hash from running daemons condor_who saw
-	system("cat $whopids");
-	open(WP,"<$whopids") or die "failed to open:$whopids :$!\n";
-	my $line = "";
-	while(<WP>) {
-		CondorUtils::fullchomp($_);
-		debug("Process: $_\n",1);
-		$line = $_;
-		if($line =~ /(\d+)\s+(\w+)/) {
-			CondorPersonal::debug( "valid daemon: $2 valid pid: $1\n",1);
-			$cwpids{uc $2} = $1;
-		}
-	}
-	close(WP);
-	foreach my $keys (sort keys %cwpids) {
-		CondorPersonal::debug( "$keys\n",1);
-	}
+#	if($btdebug == 1) {
+#		print "Checking condor against this daemon list:$daemonlist\n";
+#	}
 
-	#what daemons do we expect? Check daemon_list
-	$_ = $daemonlist;
-	s/\s//g;
-	CondorPersonal::debug( "Unpadded daemonlist is:$_\n",3);
-	$daemonlist = $_;
-	@configeddaemons = split /,/, $daemonlist;
+#	#Create hash from running daemons condor_who saw
+#	system("cat $whopids");
+#	open(WP,"<$whopids") or die "failed to open:$whopids :$!\n";
+#	my $line = "";
+#	while(<WP>) {
+#		CondorUtils::fullchomp($_);
+#		debug("Process: $_\n",1);
+#		$line = $_;
+#		if($line =~ /(\d+)\s+(\w+)/) {
+#			CondorPersonal::debug( "valid daemon: $2 valid pid: $1\n",1);
+#			$cwpids{uc $2} = $1;
+#		}
+#	}
+#	close(WP);
+#	foreach my $keys (sort keys %cwpids) {
+#		CondorPersonal::debug( "$keys\n",1);
+#	}
 
-	#OK , if master gone, kill all, report dead
-	#if all exists report alive
+#	#what daemons do we expect? Check daemon_list
+#	$_ = $daemonlist;
+#	s/\s//g;
+#	CondorPersonal::debug( "Unpadded daemonlist is:$_\n",3);
+#	$daemonlist = $_;
+#	@configeddaemons = split /,/, $daemonlist;
 
-	$res = "";
-	#if(!(exists $cwpids{MASTER})) {
-		#$res = CondorPersonal::CheckPids($whopids,"kill all");
-		#print "imposed sudden death, where are we now?\n";
-		#sleep(10);
-		#$res = CondorPersonal::CheckPids($whopids);
-		#print "After a bullet to the head: $res\n";
-		#return(0); # no pool alive at momment
-	#}
+#	#OK , if master gone, kill all, report dead
+#	#if all exists report alive
 
-	# lets check pids to actually being the binary for the requested daemon
+#	$res = "";
+#	#if(!(exists $cwpids{MASTER})) {
+#		#$res = CondorPersonal::CheckPids($whopids,"kill all");
+#		#print "imposed sudden death, where are we now?\n";
+#		#sleep(10);
+#		#$res = CondorPersonal::CheckPids($whopids);
+#		#print "After a bullet to the head: $res\n";
+#		#return(0); # no pool alive at momment
+#	#}
 
-	my @gooddaemons = ();
-	my $gooddaemonscnt = 0;
-	my @baddaemons = ();
-	my $baddaemonscnt = 0;
-	my $daemonbinary = "";
-	foreach my $daemon (@configeddaemons) {
-		@toolreplies = ();
-		my $daemonok = "";
-		my $lookuppid = 0;
-		CondorTest::runCondorTool("condor_config_val $daemon",\@toolreplies,2,{emit_output=>0});
-		$daemonbinary = $toolreplies[0];
-		fullchomp($daemonbinary);
-		# cut it down to just the name no path
-		$_ = $daemonbinary;
-		if(CondorUtils::is_windows() == 1) {
-			s/.*?\\(condor_.*)\s*/$1/;
-		} else {
-			s/.*?\/(condor_.*)\s*/$1/;
-		}
-		$daemonbinary = $_;
-		debug("TestCondorHereAlive: daemon: $daemon binary: $daemonbinary\n",1);
-		if(exists $cwpids{$daemon}) {
-			$lookuppid = $cwpids{$daemon};
-			if($lookuppid eq "0") {
-				push @baddaemons, $daemon;
-				next;
-			}
-			my $binonly = "";
-			CondorPersonal::debug("Validating $lookuppid is $daemonbinary\n",1);
-			# ccv master etc retrun full path to binary but tasklist when we find
-			# right pid has only the binary name. Ps on linux's also gives the full path.
-			# Extract binary only in windows. Also on windows insure exact match on pid.
-			if(CondorUtils::is_windows() == 1) {
-				if($daemonbinary =~ /\w:.*?(con.*)\s*$/) {
-					$binonly = $1;
-					debug("Window executable name:$binonly\n",1);
-					my @possibles = `tasklist | grep $lookuppid`;
-					# only act on exact match
-					foreach my $targ (@possibles) {
-						fullchomp($targ);
-						if($targ =~ /^.*?\s+(\d+)\s+.*$/) {
-							if($1 == $lookuppid) {
-								# check for binary in this line.
-								if($targ =~ /$binonly/) {
-									$daemonok = "ok";
-								}
-							}
-						}
-					}
-					if($daemonok eq "ok") {
-						push @gooddaemons, $daemon;
-					} else {
-						push @baddaemons, $daemon;
-					}
-				}
-			} else {
-				# first test is process still around
-				my @ps = `ps $lookuppid`;
-				my $cnt = @ps;
-				if($cnt == 1) {
-					# process gone
-					push @baddaemons, $daemon;
-					debug("Pid: $lookuppid gone {$daemon?}\n",1);
-				} elsif($cnt == 2) {
-					if($ps[1] =~ /$daemonbinary/) {
-						push @gooddaemons, $daemon;
-						debug("Daemon: $daemon running right binary\n",1);
-					} else {
-						push @baddaemons, $daemon;
-						debug("Daemon: $daemon NOT running right binary: $daemonbinary vs $ps[1]\n",1);
-					}
-				} else {
-					print "Why does ps on a single pid return more then 2 lines?\n";
-				}
+#	# lets check pids to actually being the binary for the requested daemon
 
-				# The test for it being what we were looking for
-			}
-			#if($daemonok ne "ok") {
-				#debug("At least one PID/Binary name mismatch $daemon/$lookuppid\n",1);
-				#KillDaemonPids($ENV{CONDOR_CONFIG});
-				#return(0); # no pool alive at momment
-			#}
-		} else {
-			debug("no PID entry for $daemon\n",1);
-			#KillDaemonPids($ENV{CONDOR_CONFIG});
-			#return(0); # no pool alive at momment
-		}
-	}
-	$baddaemonscnt = @baddaemons;
-	$gooddaemonscnt = @gooddaemons;
-	if($baddaemonscnt > 0) {
-		debug("TestCondorHereAlive returning 0, some bad daemons\n",1);
-		return(0);
-	}
-	return(1);
-}
+#	my @gooddaemons = ();
+#	my $gooddaemonscnt = 0;
+#	my @baddaemons = ();
+#	my $baddaemonscnt = 0;
+#	my $daemonbinary = "";
+#	foreach my $daemon (@configeddaemons) {
+#		@toolreplies = ();
+#		my $daemonok = "";
+#		my $lookuppid = 0;
+#		CondorTest::runCondorTool("condor_config_val $daemon",\@toolreplies,2,{emit_output=>0});
+#		$daemonbinary = $toolreplies[0];
+#		fullchomp($daemonbinary);
+#		# cut it down to just the name no path
+#		$_ = $daemonbinary;
+#		if(CondorUtils::is_windows() == 1) {
+#			s/.*?\\(condor_.*)\s*/$1/;
+#		} else {
+#			s/.*?\/(condor_.*)\s*/$1/;
+#		}
+#		$daemonbinary = $_;
+#		debug("TestCondorHereAlive: daemon: $daemon binary: $daemonbinary\n",1);
+#		if(exists $cwpids{$daemon}) {
+#			$lookuppid = $cwpids{$daemon};
+#			if($lookuppid eq "0") {
+#				push @baddaemons, $daemon;
+#				next;
+#			}
+#			my $binonly = "";
+#			CondorPersonal::debug("Validating $lookuppid is $daemonbinary\n",1);
+#			# ccv master etc retrun full path to binary but tasklist when we find
+#			# right pid has only the binary name. Ps on linux's also gives the full path.
+#			# Extract binary only in windows. Also on windows insure exact match on pid.
+#			if(CondorUtils::is_windows() == 1) {
+#				if($daemonbinary =~ /\w:.*?(con.*)\s*$/) {
+#					$binonly = $1;
+#					debug("Window executable name:$binonly\n",1);
+#					my @possibles = `tasklist | grep $lookuppid`;
+#					# only act on exact match
+#					foreach my $targ (@possibles) {
+#						fullchomp($targ);
+#						if($targ =~ /^.*?\s+(\d+)\s+.*$/) {
+#							if($1 == $lookuppid) {
+#								# check for binary in this line.
+#								if($targ =~ /$binonly/) {
+#									$daemonok = "ok";
+#								}
+#							}
+#						}
+#					}
+#					if($daemonok eq "ok") {
+#						push @gooddaemons, $daemon;
+#					} else {
+#						push @baddaemons, $daemon;
+#					}
+#				}
+#			} else {
+#				# first test is process still around
+#				my @ps = `ps $lookuppid`;
+#				my $cnt = @ps;
+#				if($cnt == 1) {
+#					# process gone
+#					push @baddaemons, $daemon;
+#					debug("Pid: $lookuppid gone {$daemon?}\n",1);
+#				} elsif($cnt == 2) {
+#					if($ps[1] =~ /$daemonbinary/) {
+#						push @gooddaemons, $daemon;
+#						debug("Daemon: $daemon running right binary\n",1);
+#					} else {
+#						push @baddaemons, $daemon;
+#						debug("Daemon: $daemon NOT running right binary: $daemonbinary vs $ps[1]\n",1);
+#					}
+#				} else {
+#					print "Why does ps on a single pid return more then 2 lines?\n";
+#				}
+
+#				# The test for it being what we were looking for
+#			}
+#			#if($daemonok ne "ok") {
+#				#debug("At least one PID/Binary name mismatch $daemon/$lookuppid\n",1);
+#				#KillDaemonPids($ENV{CONDOR_CONFIG});
+#				#return(0); # no pool alive at momment
+#			#}
+#		} else {
+#			debug("no PID entry for $daemon\n",1);
+#			#KillDaemonPids($ENV{CONDOR_CONFIG});
+#			#return(0); # no pool alive at momment
+#		}
+#	}
+#	$baddaemonscnt = @baddaemons;
+#	$gooddaemonscnt = @gooddaemons;
+#	if($baddaemonscnt > 0) {
+#		debug("TestCondorHereAlive returning 0, some bad daemons\n",1);
+#		return(0);
+#	}
+#	return(1);
+#}
 
 sub CheckNamedFWTimed
 {
@@ -3748,7 +3749,9 @@ sub DoInitialConfigCheck
 	my $paths = CondorUtils::WhereIsInstallDir($top,$iswindows,$iscygwin,$iswindowsnativeperl);
 	# path returned as installdir,wininstaldir
 	my @allpaths = split /,/, $paths;
-	print "install locations linux:$allpaths[0] windows:$allpaths[1]\n";
+	if($btdebug == 1) {
+		print "install locations linux:$allpaths[0] windows:$allpaths[1]\n";
+	}
 	$wininstalldir = $allpaths[1];
 	$installdir = $allpaths[0];
 	my $configdir = "$top/Config";

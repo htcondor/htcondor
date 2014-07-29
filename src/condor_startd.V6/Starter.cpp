@@ -28,7 +28,6 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "classad_merge.h"
-#include "dynuser.h"
 #include "condor_auth_x509.h"
 #include "setenv.h"
 #include "my_popen.h"
@@ -40,10 +39,6 @@
 
 #if defined(LINUX)
 #include "glexec_starter.linux.h"
-#endif
-
-#ifdef WIN32
-extern dynuser *myDynuser;
 #endif
 
 Starter::Starter()

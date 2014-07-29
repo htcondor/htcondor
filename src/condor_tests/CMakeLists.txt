@@ -188,6 +188,7 @@ if (BUILD_TESTING)
 	condor_pl_test (cmd_submit_coverage "Test condor_submit file entries" "core;quick;full;quicknolink")
 	condor_pl_test (cmd_submit_massive "Test condor_submit file massive" "core;quick;full;quicknolink")
 	condor_pl_test (lib_meta_knob  "Test meta knobs" "core;quick;full;quicknolink")
+	condor_pl_test (lib_include_cmd_config  "Test meta knobs" "core;quick;full;quicknolink")
 
 	if(WITH_GANGLIA)
           condor_pl_test(gangliad "Basic test of condor_gangliad." "core;quick;full;quicknolink")

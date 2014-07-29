@@ -482,6 +482,7 @@ my_popenv_impl( const char *const args[],
 	}
 		/* Handle case where exec fails */
 	if (fscanf(fh, "%d", &exit_code) == 1) {
+		dprintf(D_ALWAYS, "my_popenv: exec() failed\n");
 		fclose(fh);
 		close(pipe_d[0]);
 		close(pipe_d[1]);

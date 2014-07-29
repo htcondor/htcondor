@@ -30,7 +30,6 @@
 #include "condor_adtypes.h"
 #include "condor_query.h"
 #include "get_daemon_name.h"
-#include "get_full_hostname.h"
 #include "internet.h"
 #include "HashTable.h"
 #include "condor_daemon_core.h"

@@ -28,7 +28,6 @@
 #include "vanilla_proc.h"
 #include "starter.h"
 #include "syscall_numbers.h"
-#include "dynuser.h"
 #include "condor_config.h"
 #include "domain_tools.h"
 #include "classad_helpers.h"
@@ -40,7 +39,6 @@
 
 #ifdef WIN32
 #include "executable_scripts.WINDOWS.h"
-extern dynuser* myDynuser;
 #endif
 
 #if defined(HAVE_EVENTFD)
@@ -1101,12 +1099,5 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 
 bool VanillaProc::Ckpt() {
 	dprintf( D_FULLDEBUG, "Entering VanillaProc::Ckpt()\n" );
-	int userLevelCheckpoint = 0;
-	JobAd->LookupBool( "UserLevelCheckpoint", userLevelCheckpoint );
-	if( userLevelCheckpoint ) {
-		daemonCore->Send_Signal( JobPid, soft_kill_sig );
-		return true;
-	}
-
 	return OsProc::Ckpt();
 }

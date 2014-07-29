@@ -2096,36 +2096,30 @@ JICShadow::beginFileTransfer( void )
 			filetrans->setPeerVersion( *shadow_version );
 		}
 
+
 		//
-		// If we're doing vm-assisted checkpointing (and this is the physical
-		// starter), don't do file transfer.  (For now, we assume pre-staged
-		// images.  Eventually, we'll want to rewrite the job ad to transfer
-		// only the VM disk image(s).)
+		// FIXME: We do file transfer from the submit node if and only if
+		// 	(a) the job ad does not include checkpoint information (and we
+		//		therefore need the initial input data)
+		// OR
+		//	(b) the checkpoint information in the job indicates that the
+		//		the checkpoint is on the submit node.
 		//
-		// We can't do this earlier because transferring checkpoints depends
-		// on the filetrans object having been initialized.
+		// In the case of (b), we'd want to extend command int 999 so that
+		// we don't have to transfer the input files every time as well.
+		// (Presently, if you don't do the initial file transfer, you
+		// can't do intermediate file transfer.)
 		//
+		// It remains to be determined if this is the right place to handle
+		// the (a) case.  (We may want to handle large intermediate files
+		// with file transfer plug-ins or logic....)
+		//
+
 		int wantCheckpoint = 0, userLevelCheckpoint = 0;
 		job_ad->LookupBool( "WantCheckpoint", wantCheckpoint );
 		job_ad->LookupBool( "UserLevelCheckpoint", userLevelCheckpoint );
-		if( wantCheckpoint && ! userLevelCheckpoint ) {
-			//
-			// Right now, the shadow decides which files to send, and it
-			// doesn't distinguish between input and intermediate fields,
-			// so we can either skip job files on start-up xor get checkpoint
-			// files on a resume.
-			//
-			// This may not be worth fixing (by adding a new command to allow
-			// the starter to choose from the whilelist of files the shadow
-			// is willing to send), since nobody's going to want to host
-			// checkpoint files on their submit node /anyway/ -- in which
-			// case we can safely wholly ignore the shadow in the physical
-			// starter, which may be a good thing in itself.
-			//
-			// (The new command should probably just be an extensions of
-			// subcommand int 999, which converts the channel to classads.)
-			//
-		}
+		if( wantCheckpoint && ! userLevelCheckpoint ) { }
+
 
 		if( ! filetrans->DownloadFiles(false) ) { // do not block
 				// Error starting the non-blocking file transfer.  For

@@ -227,17 +227,21 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
         }
     }
 }
-system("$perl_exe batch_test.pl -d $compiler -t $testname");
-my $batchteststatus = $?;
+my $batchteststatus = system("$perl_exe batch_test.pl -d $compiler -t $testname");
+
+my @returns = TestGlue::ProcessReturn($batchteststatus);
+
+$batchteststatus = $returns[0];
+my $signal = $returns[1];
+
+if($signal != 0) {
+	print "a signal error was involved:$signal\n";
+}
 
 # figure out here if the test passed or failed.  
 my $teststatus;
 if( $batchteststatus != 0 ) {
-    $teststatus = 2;
 	CondorTest::RegisterResult(0,"test_name",$testname);
-}
-else {
-    $teststatus = 0;
 }
 
 if($need ne "") {
@@ -258,6 +262,12 @@ my $test_out      = "$testname.out";
 my $test_out_path = File::Spec->catfile($compiler_path, $test_out);
 my $test_err      = "$testname.err";
 my $test_err_path = File::Spec->catfile($compiler_path, $test_err);
+
+print "Looking for run.out file\n";
+print "compiler_path:$compiler_path run_out:$run_out run_out_path:$run_out_path compiler_path:$compiler_path\n";
+print "test_out:$test_out test_out_path:$test_out_path test_err:$test_err test_err_path:$test_err_path\n";
+print "Here now:\n";
+system("pwd;ls -lh $run_out_path");
 
 if( ! -f $run_out_path ) {
     if( $teststatus == 0 ) {
@@ -315,8 +325,8 @@ else {
     #out("\n\nERROR: failed to open $test_err_path: $!");
 #}
 
-print "********************** EXIT REMOTE_TASK: Status:$teststatus ******************\n";
-exit $teststatus;
+print "********************** EXIT REMOTE_TASK: Status:$batchteststatus ******************\n";
+exit $batchteststatus;
 
 ######################################################################
 # helper methods
@@ -377,7 +387,7 @@ sub showEnv {
 }
 
 sub StopTestPersonal {
-	CondorTest::EndTest();
+	CondorTest::EndTest("no_exit");
 }
 
 

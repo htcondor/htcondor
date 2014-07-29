@@ -183,6 +183,7 @@ sub Cleanup()
 # of the test is determined.
 sub EndTest
 {
+	my $no_exit = shift;
     my $extra_notes = "";
 
     my $exit_status = 0;
@@ -209,7 +210,11 @@ sub EndTest
 
     TestDebug( "\n\nFinal status for $testname: $result_str\n  $test_success_count check(s) passed\n  $test_failure_count check(s) failed$extra_notes\n", 1 );
 
-    exit($exit_status);
+	if(defined $no_exit) {
+		return($exit_status);
+	} else {
+    	exit($exit_status);
+	}
 }
 
 # This should be called in each check function to register the pass/fail result
@@ -3077,7 +3082,7 @@ sub KillPersonal
 	my $personal_config = shift;
 	my $logdir = "";
 	if($personal_config =~ /^(.*[\\\/])(.*)$/) {
-		TestDebug("LOG dir is $1/log\n",$debuglevel);
+		#TestDebug("LOG dir is $1/log\n",$debuglevel);
 		$logdir = $1 . "/log";
 	} else {
 		TestDebug("KillPersonal passed this config: $personal_config\n",2);

@@ -386,6 +386,7 @@ if ($isXML){
 my $hashsize = 0;
 my %test;
 my $reaped = 0;
+my $res = 0;
 
 foreach my $compiler (@compilers) {
 	# as long as we have tests to start, loop back again and start
@@ -429,12 +430,13 @@ foreach my $compiler (@compilers) {
 
 		$currentgroup += 1;
 		# run test directly. no more forking
-		my $res = DoChild($test_program, $test_retirement);
+		$res = DoChild($test_program, $test_retirement);
 		StartTestOutput($compiler, $test_program); 
+		CompleteTestOutput($compiler, $test_program, $res);
 		if($res == 0) {
-			print "$test_program succeeded\n";
+			print "batch_test says $test_program succeeded\n";
 		} else {
-			print "$test_program failed\n";
+			print "batch_test says $test_program failed\n";
 		}
 
 	} # end of foreach $test_program
@@ -445,13 +447,13 @@ foreach my $compiler (@compilers) {
 	}
 
 	# complete the tests when batching them up if some are left
-	$hashsize = keys %test;
-	debug("At end of compiler dir hash size:$hashsize\n",2);
-	if(($kindwait == 0) && ($hashsize > 0)) {
-		debug("At end of compiler dir about to wait\n",2);
-		$reaped = wait_for_test_children(\%test, $compiler);
-		$currentgroup -= $reaped;
-	}
+	#$hashsize = keys %test;
+	#debug("At end of compiler dir hash size:$hashsize\n",2);
+	#if(($kindwait == 0) && ($hashsize > 0)) {
+		#debug("At end of compiler dir about to wait\n",2);
+		#$reaped = wait_for_test_children(\%test, $compiler);
+		#$currentgroup -= $reaped;
+	#}
 
 	if($hush == 0) {
 		print "\n";
@@ -515,7 +517,17 @@ close SUMOUTF;
 	printf("Tests took %d:%02d:%02d (%d seconds)\n", $hours, $minutes, $seconds, $deltatime);
 }
 
-exit $num_failed;
+my @returns = CondorUtils::ProcessReturn($res);
+
+$res = $returns[0];
+my $signal = $returns[1];
+
+# note we exit with the results of last test tested. Only
+# thing looking at the status of batch_test is the batlag
+# test glue which runs only one test each call to batch_test
+# and this has no impact on workstation tests.
+print "Batch_test: about to exit($res/$signal)\n";
+exit $res;
 
 # Spin wait until $pid is no longer present or $max_wait (seconds) passes.
 # Returns 1 if process exited, 0 if we timed out.
@@ -564,50 +576,34 @@ sub StartTestOutput
 	}
 }
 
-# CompleteTestOutput($compiler,$test_program,$child,$status);
+# CompleteTestOutput($compiler,$test_program,$status);
 sub CompleteTestOutput
 {
 	my $compiler = shift;
 	my $test_name = shift;
-	my $child = shift;
 	my $status = shift;
 	my $failure = "";
 
 	debug(" *********** Completing test: $test_name *********** \n",2);
 	if( WIFEXITED( $status ) && WEXITSTATUS( $status ) == 0 )
 	{
-		if ($isXML){
-			print XML "<status>SUCCESS</status>\n";
-			if($groupsize == 0) {
-				print "succeeded\n";
-			} else {
-				#print "Xml: group size <$groupsize> test <$test_name>\n";
-				print "$test_name succeeded\n";
-			}
+		if($groupsize == 0) {
+			print "$test_name: succeeded\n";
 		} else {
-			if($groupsize == 0) {
-				print "$test_name: succeeded\n";
-			} else {
-				#print "Not Xml: group size <$groupsize> test <$test_name>\n";
-				print "$test_name succeeded\n";
-			}
+			#print "Not Xml: group size <$groupsize> test <$test_name>\n";
+			print "$test_name succeeded\n";
 		}
 		$num_success++;
 		@successful_tests = (@successful_tests, "$compiler/$test_name");
 	} else {
-		my $testname = "$test{$child}";
-		$testname = $testname . ".out";
-		$failure = `grep 'FAILURE' $testname`;
-		$failure =~ s/^.*FAILURE[: ]//;
-		CondorUtils::fullchomp($failure);
-		$failure = "$test_name: failed" if $failure =~ /^\s*$/;
+		#my $testname = "$test{$child}";
+		#$testname = $testname . ".out";
+		#$failure = `grep 'FAILURE' $testname`;
+		#$failure =~ s/^.*FAILURE[: ]//;
+		#CondorUtils::fullchomp($failure);
+		#$failure = "$test_name: failed" if $failure =~ /^\s*$/;
 		
-		if ($isXML){
-			print XML "<status>FAILURE</status>\n";
-			print "$failure\n";
-		} else {
-			print "$failure\n";
-		}
+		print "$test_name ***** FAILED *****\n";
 		$num_failed++;
 		@failed_tests = (@failed_tests, "$compiler/$test_name");
 	}
@@ -722,22 +718,23 @@ sub DoChild
 	copy($runout, $newrunout);
 	copy($cmdout, $newcmdout);
 
-	if($res != 0) { 
+	return($res);
+	#if($res != 0) { 
 	    #print "Perl test($test_program) returned <<$res>>!!! \n"; 
-	    exit(1); 
-	}
-	exit(0);
-
-	if($@) {
-		if($@ =~ /timeout/) {
-			print "\n$test_program            Timeout\n";
-			exit(1);
-		} else {
-			alarm(0);
-			exit(0);
-		}
-	}
-	exit(0);
+	    #exit(1); 
+	#}
+	#exit(0);
+#
+	#if($@) {
+		#if($@ =~ /timeout/) {
+			#print "\n$test_program            Timeout\n";
+			#exit(1);
+		#} else {
+			#alarm(0);
+			#exit(0);
+		#}
+	#}
+	#exit(0);
 }
 
 # Call down to Condor Perl Module for now
