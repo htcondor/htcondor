@@ -35,10 +35,13 @@ DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ) {
 	// supply images via file transfer.)
 
 	// TODO for laterz: can we configure Docker to drop its overlay filesystem
-	// backing store(s) into the sandbox?  Even if so, we may still want to do
-	// a 'docker ps -a' on startup and nuke anything with our special name prefix
-	// in case we didn't get a change to 'docker stop' and 'docker rm' them
-	// before the machine went down or we crashed or whatever.
+	// backing store(s) into the sandbox?  This seems like it might help to
+	// ensure clean-up.
+	//
+	// TODO for laterz: Perhaps instead, we can steal an idea from the VM
+	// universe and write the Docker ID out to disk (<sandbox>/../.dotfile)
+	// so that the startd can execute the docker if the starter crashes and
+	// again on startd start-up if necessary.
 }
 
 DockerProc::~DockerProc() { }
