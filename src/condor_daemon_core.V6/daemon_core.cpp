@@ -5919,6 +5919,17 @@ void CreateProcessForkit::exec() {
 	}
 		// END pid family environment id propogation 
 
+	MyString cookie;
+	bool has_cookie = m_envobject.GetEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", cookie);
+        if (m_want_command_port && !has_cookie) {
+                std::string value;
+                if (SharedPortEndpoint::GetDaemonSocketDir(value)) {
+                        m_envobject.SetEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", value.c_str());
+                }
+        } else if (!m_want_command_port && has_cookie) {
+                m_envobject.DeleteEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
+        }
+
 		// The child's environment:
 	m_unix_env = m_envobject.getStringArray();
 
@@ -6903,18 +6914,6 @@ int DaemonCore::Create_Process(
 			// be allocated on the heap with new [].
 		newenv = job_environ.getWindowsEnvironmentString();
 	}
-#ifdef LINUX
-	const char * cookie = newenv.GetEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE")
-	if (want_command_port) {
-		if (cookie == NULL) {
-			MyString value;
-			SharedPortEndpoint::paramDaemonSocketDir(value)
-			newenv.SetEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", value.Value());
-		}
-	} else if (cookie) { // There's no API for deleting from an environment.
-		newenv.SetEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", "unavailable");
-	}
-#endif
 	// end of dealing with the environment....
 
 	// Check if it's a 16-bit application

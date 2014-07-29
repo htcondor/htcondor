@@ -26,7 +26,7 @@
 #include <queue>
 
 #ifdef LINUX
-#define USE_ABSTRACT 1
+#define USE_ABSTRACT_DOMAIN_SOCKET 1
 #endif
 
 // SharedPortEndpoint receives connections forwarded from SharedPortServer.

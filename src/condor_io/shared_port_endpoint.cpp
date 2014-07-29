@@ -137,7 +137,7 @@ void
 SharedPortEndpoint::InitAndReconfig()
 {
 	std::string socket_dir;
-#if USE_ABSTRACT
+#if USE_ABSTRACT_DOMAIN_SOCKET
 	m_is_file_socket = false;
 #endif
 	if (!GetDaemonSocketDir(socket_dir)) {
@@ -253,8 +253,9 @@ SharedPortEndpoint::CreateListener()
 		return true;
 	}
 
-	m_full_name.formatstr(
-		"%s%c%s",m_socket_dir.Value(),DIR_DELIM_CHAR,m_local_id.Value());
+	std::stringstream ss;
+	ss << m_socket_dir.Value() << DIR_DELIM_CHAR << m_local_id.Value();
+	m_full_name = ss.str();
 
 	pipe_end = CreateNamedPipe(
 		m_full_name.Value(),
@@ -288,8 +289,9 @@ SharedPortEndpoint::CreateListener()
 	m_listener_sock.close();
 	m_listener_sock.assign(sock_fd);
 
-	m_full_name.formatstr(
-		"%s%c%s",m_socket_dir.Value(),DIR_DELIM_CHAR,m_local_id.Value());
+	std::stringstream ss;
+	ss << m_socket_dir.Value() << DIR_DELIM_CHAR << m_local_id.Value();
+	m_full_name = ss.str();
 
 	struct sockaddr_un named_sock_addr;
 	memset(&named_sock_addr, 0, sizeof(named_sock_addr));
@@ -1185,7 +1187,7 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 
 		std::string socket_dir;
 		bool is_file_socket = true;
-#ifdef USE_ABSTRACT
+#ifdef USE_ABSTRACT_DOMAIN_SOCKET
 		is_file_socket = false;
 #endif
 		if (!GetDaemonSocketDir(socket_dir)) {
@@ -1360,7 +1362,7 @@ void
 SharedPortEndpoint::RealInitializeDaemonSocketDir()
 {
 	std::string result;
-#ifdef USE_ABSTRACT
+#ifdef USE_ABSTRACT_DOMAIN_SOCKET
 		// Linux has some unique behavior.  We use a random cookie as a prefix to our
 		// shared port "directory" in the abstract Unix namespace.
 	char *keybuf = Condor_Crypt_Base::randomHexKey(32);
@@ -1368,18 +1370,21 @@ SharedPortEndpoint::RealInitializeDaemonSocketDir()
 		EXCEPT("SharedPortEndpoint: Unable to create a secure shared port cookie.\n");
 	}
 	result = keybuf;
+	free(keybuf);
+	keybuf = NULL;
 #elif defined(WIN32)
 	return;
 #else
 	if( !param(result, "DAEMON_SOCKET_DIR") ) {
 		EXCEPT("DAEMON_SOCKET_DIR must be defined");
 	}
-		// If set to "auto", we want to make sure that $(DAEMON_SOCKET_DIR)/collector isn't more than 108 characters
+		// If set to "auto", we want to make sure that $(DAEMON_SOCKET_DIR)/collector or $(DAEMON_SOCKET_DIR)/15337_9022_123456 isn't more than 108 characters
+		// Hence we assume the longest valid shared port ID is 18 characters.
 	if (result == "auto") {
 		struct sockaddr_un named_sock_addr;
 		const unsigned max_len = sizeof(named_sock_addr.sun_path)-1;
 		const char * default_name = macro_expand("$(LOCK)/daemon_sock");
-		if (strlen(default_name) + strlen("/collector") > max_len) {
+		if (strlen(default_name) + 18 > max_len) {
 			TemporaryPrivSentry tps(PRIV_CONDOR);
 				// NOTE we force the use of /tmp here - not using the HTCondor library routines;
 				// this is because HTCondor will look up the param TMP_DIR, which might also be
@@ -1411,17 +1416,20 @@ SharedPortEndpoint::GetAltDaemonSocketDir(std::string &result)
 	{
 		EXCEPT("DAEMON_SOCKET_DIR must be defined");
 	}
-		// If set to "auto", we want to make sure that $(DAEMON_SOCKET_DIR)/collector isn't more than 108 characters
+		// If set to "auto", we want to make sure that $(DAEMON_SOCKET_DIR)/collector or $(DAEMON_SOCKET_DIR)/15337_9022_123456 isn't more than 108 characters
+	std::string default_name;
 	if (result == "auto") {
-		struct sockaddr_un named_sock_addr;
-		const unsigned max_len = sizeof(named_sock_addr.sun_path)-1;
-		const char * default_name = macro_expand("$(LOCK)/daemon_sock");
-		if (strlen(default_name) + strlen("/collector") > max_len) {
-			dprintf(D_FULLDEBUG, "WARNING: DAEMON_SOCKET_DIR %s setting is too long.\n", default_name);
-			return false;
-		}
-		result = default_name;
+		default_name = macro_expand("$(LOCK)/daemon_sock");
+	} else {
+		default_name = result;
 	}
+	struct sockaddr_un named_sock_addr;
+	const unsigned max_len = sizeof(named_sock_addr.sun_path)-1;
+	if (strlen(default_name.c_str()) + 18 > max_len) {
+		dprintf(D_FULLDEBUG, "WARNING: DAEMON_SOCKET_DIR %s setting is too long.\n", default_name.c_str());
+		return false;
+	}
+	result = default_name;
 	return true;
 #endif
 	return false;
@@ -1440,6 +1448,7 @@ SharedPortEndpoint::GetDaemonSocketDir(std::string &result)
 	}
 	const char * known_dir = getenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
 	if (known_dir == NULL) {
+		dprintf(D_FULLDEBUG, "No shared_port cookie available; will fall back to using on-disk $(DAEMON_SOCKET_DIR)\n");
 		return false;
 	}
 	result = known_dir;

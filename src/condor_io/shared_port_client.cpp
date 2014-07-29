@@ -198,12 +198,9 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 		return FALSE;
 	}
 
-	MyString pipe_name;
-
-	std::string tmp_name;
-	SharedPortEndpoint::GetDaemonSocketDir(tmp_name);
-	pipe_name = tmp_name.c_str();
-	pipe_name.formatstr_cat("%c%s",DIR_DELIM_CHAR,shared_port_id);
+	std::string pipe_name;
+	SharedPortEndpoint::GetDaemonSocketDir(pipe_name);
+	formatstr_cat(pipe_name, "%c%s", DIR_DELIM_CHAR, shared_port_id);
 
 	MyString requested_by_buf;
 	if( !requested_by ) {
@@ -217,7 +214,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	while(true)
 	{
 		child_pipe = CreateFile(
-			pipe_name.Value(),
+			pipe_name.c_str(),
 			GENERIC_READ | GENERIC_WRITE,
 			0,
 			NULL,
@@ -230,7 +227,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 
 		if(GetLastError() == ERROR_PIPE_BUSY)
 		{
-			if (!WaitNamedPipe(pipe_name.Value(), 20000)) 
+			if (!WaitNamedPipe(pipe_name.c_str(), 20000)) 
 			{
 				dprintf(D_ALWAYS, "ERROR: SharedPortClient: Wait for named pipe for sending socket timed out: %d\n", GetLastError());
 				SharedPortClient::m_failPassSocketCalls++;
@@ -469,7 +466,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 	alt_named_sock_addr.sun_family = AF_UNIX;
 	unsigned named_sock_addr_len, alt_named_sock_addr_len = 0;
 	bool is_no_good;
-#if USE_ABSTRACT
+#if USE_ABSTRACT_DOMAIN_SOCKET
 	strncpy(named_sock_addr.sun_path+1, sock_name.c_str(), sizeof(named_sock_addr.sun_path)-2);
 	named_sock_addr_len = sizeof(named_sock_addr) - sizeof(named_sock_addr.sun_path) + 1 + strlen(named_sock_addr.sun_path+1);
 	is_no_good = strcmp(named_sock_addr.sun_path+1, sock_name.c_str());
@@ -482,6 +479,12 @@ SharedPortState::HandleUnbound(Stream *&s)
 		strncpy(alt_named_sock_addr.sun_path, alt_sock_name.c_str(), sizeof(named_sock_addr.sun_path)-1);
 		has_alt_socket = !strcmp(alt_named_sock_addr.sun_path, alt_sock_name.c_str());
 		alt_named_sock_addr_len = SUN_LEN(&alt_named_sock_addr);
+		if (!has_socket && !has_alt_socket) {
+			dprintf(D_ALWAYS,"ERROR: SharedPortClient: primary socket is not available and alternate socket name%s is too long: %s\n",
+				m_requested_by.c_str(),
+				alt_sock_name.c_str());
+			return FAILED;
+		}
 	}
 
 	if( is_no_good ) {
