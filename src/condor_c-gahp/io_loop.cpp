@@ -294,6 +294,7 @@ main_init( int argc, char ** const argv )
 										PRIV_UNKNOWN,
 										reaper_id,
 										FALSE,			// no command port
+										FALSE,			// no command port
 										NULL,
 										NULL,
 										NULL,

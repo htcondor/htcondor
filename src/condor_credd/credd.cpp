@@ -824,6 +824,7 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
 					PRIV_USER_FINAL,				// priv
 					myproxyGetDelegationReaperId,	// reaper_id
 					FALSE,							// want_command_port
+					FALSE,							// want_command_port
 					&myEnv,							// env
 					NULL,							// cwd		
 					NULL,							// family_info

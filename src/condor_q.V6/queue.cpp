@@ -3066,13 +3066,12 @@ static void init_output_mask()
 		mask.SetAutoSep(NULL," ",NULL,"\n");
 		mask.registerFormat ("%4d.", 5, FormatOptionAutoWidth | FormatOptionNoSuffix, ATTR_CLUSTER_ID);
 		mask.registerFormat ("%-3d", 3, FormatOptionAutoWidth | FormatOptionNoPrefix, ATTR_PROC_ID);
-		mask.registerFormat (NULL, -14, 0, format_owner_wide, ATTR_OWNER, "[????????????]" );
+		mask.registerFormat (NULL, -14, AltQuestion | AltWide, format_owner_wide, ATTR_OWNER /*, "[????????????]"*/ );
 		//mask.registerFormat(" ", "*bogus*", " ");  // force space
-		mask.registerFormat (NULL,  11, 0, format_q_date, ATTR_Q_DATE, "[????????????]");
+		mask.registerFormat (NULL,  11, AltQuestion | AltWide, format_q_date, ATTR_Q_DATE /*, "[????????????]"*/ );
 		//mask.registerFormat(" ", "*bogus*", " ");  // force space
-		mask.registerFormat (NULL,  12, 0, format_cpu_time,
-							  ATTR_JOB_REMOTE_USER_CPU,
-							  "[??????????]");
+		mask.registerFormat (NULL,  12, AltQuestion | AltWide, format_cpu_time,
+							 ATTR_JOB_REMOTE_USER_CPU /*, "[??????????]"*/);
 		if (dash_run && ! dash_goodput) {
 			mask_headings = (cputime) ? " ID\0 \0OWNER\0  SUBMITTED\0    CPU_TIME\0HOST(S)\0"
 			                          : " ID\0 \0OWNER\0  SUBMITTED\0    RUN_TIME\0HOST(S)\0";
@@ -3082,20 +3081,17 @@ static void init_output_mask()
 			// format_remote_host() is always called. We are
 			// actually displaying ATTR_REMOTE_HOST if defined,
 			// but we play some tricks if it isn't defined.
-			mask.registerFormat ( NULL, 0, 0, format_remote_host,
-								  ATTR_OWNER, "[????????????????]");
+			mask.registerFormat ( NULL, 0, AltQuestion | AltWide, format_remote_host,
+								  ATTR_OWNER /*, "[????????????????]"*/);
 		} else {			// goodput
 			mask_headings = (cputime) ? " ID\0 \0OWNER\0  SUBMITTED\0    CPU_TIME\0GOODPUT\0CPU_UTIL\0Mb/s\0"
 			                          : " ID\0 \0OWNER\0  SUBMITTED\0    RUN_TIME\0GOODPUT\0CPU_UTIL\0Mb/s\0";
-			mask.registerFormat (NULL, 8, 0, format_goodput,
-								  ATTR_JOB_STATUS,
-								  "[?????]");
-			mask.registerFormat (NULL, 9, 0, format_cpu_util,
-								  ATTR_JOB_REMOTE_USER_CPU,
-								  "[??????]");
-			mask.registerFormat (NULL, 7, 0, format_mbps,
-								  ATTR_BYTES_SENT,
-								  "[????]");
+			mask.registerFormat (NULL, 8, AltQuestion | AltWide, format_goodput,
+								 ATTR_JOB_STATUS /*, "[?????]"*/);
+			mask.registerFormat (NULL, 9, AltQuestion | AltWide, format_cpu_util,
+								 ATTR_JOB_REMOTE_USER_CPU /*, "[??????]"*/);
+			mask.registerFormat (NULL, 7, AltQuestion | AltWide, format_mbps,
+								 ATTR_BYTES_SENT /*, "[????]"*/);
 		}
 		//mask.registerFormat("\n", "*bogus*", "\n");  // force newline
 		usingPrintMask = true;
@@ -3104,15 +3100,15 @@ static void init_output_mask()
 		mask.SetAutoSep(NULL," ",NULL,"\n");
 		mask.registerFormat ("%4d.", 5, FormatOptionAutoWidth | FormatOptionNoSuffix, ATTR_CLUSTER_ID);
 		mask.registerFormat ("%-3d", 3, FormatOptionAutoWidth | FormatOptionNoPrefix,  ATTR_PROC_ID);
-		mask.registerFormat (NULL, -14, 0, format_owner_wide, ATTR_OWNER, "[?]" );
-		mask.registerFormat(NULL, -8, 0, format_globusStatus, ATTR_GLOBUS_STATUS, "[?]" );
+		mask.registerFormat (NULL, -14, AltQuestion | AltWide, format_owner_wide, ATTR_OWNER /*, "[?]"*/ );
+		mask.registerFormat(NULL, -8, AltQuestion | AltWide, format_globusStatus, ATTR_GLOBUS_STATUS /*, "[?]"*/ );
 		if (widescreen) {
-			mask.registerFormat(NULL, -30, FormatOptionAutoWidth | FormatOptionNoTruncate, 
-				format_globusHostAndJM, ATTR_GRID_RESOURCE, "fork    [?????]" );
+			mask.registerFormat(NULL, -30,  FormatOptionAlwaysCall | FormatOptionAutoWidth | FormatOptionNoTruncate,
+				format_globusHostAndJM, ATTR_GRID_RESOURCE);
 			mask.registerFormat("%v", -18, FormatOptionAutoWidth | FormatOptionNoTruncate, ATTR_JOB_CMD );
 		} else {
-			mask.registerFormat(NULL, 30, 0, 
-				format_globusHostAndJM, ATTR_JOB_CMD, "fork    [?????]" );
+			mask.registerFormat(NULL, 30, FormatOptionAlwaysCall,
+				format_globusHostAndJM, ATTR_JOB_CMD);
 			mask.registerFormat("%-18.18s", ATTR_JOB_CMD);
 		}
 		usingPrintMask = true;
@@ -3141,11 +3137,9 @@ static void init_output_mask()
 		mask.SetAutoSep(NULL," ",NULL,"\n");
 		mask.registerFormat ("%4d.", 5, FormatOptionAutoWidth | FormatOptionNoSuffix, ATTR_CLUSTER_ID);
 		mask.registerFormat ("%-3d", 3, FormatOptionAutoWidth | FormatOptionNoPrefix, ATTR_PROC_ID);
-		mask.registerFormat (NULL, -14, 0, format_owner_wide, ATTR_OWNER, "[????????????]" );
-		//mask.registerFormat(" ", "*bogus*", " ");  // force space
-		mask.registerFormat (NULL, 11, 0, format_q_date,
-							  ATTR_ENTERED_CURRENT_STATUS, "[????????????]");
-		//mask.registerFormat(" ", "*bogus*", " ");  // force space
+		mask.registerFormat (NULL, -14, AltQuestion | AltWide, format_owner_wide, ATTR_OWNER /*, "[????????????]"*/ );
+		mask.registerFormat (NULL, 11, AltQuestion | AltWide, format_q_date,
+							  ATTR_ENTERED_CURRENT_STATUS /*, "[????????????]"*/);
 		if (widescreen) {
 			mask.registerFormat("%v", -43, FormatOptionAutoWidth | FormatOptionNoTruncate, ATTR_HOLD_REASON );
 		} else {

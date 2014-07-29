@@ -22,6 +22,7 @@
 
 #define _POSIX_SOURCE
 
+#include "basename.h"
 #include "condor_common.h"
 #include "classad_log.h"
 #include "condor_debug.h"
@@ -331,7 +332,7 @@ ClassAdLog::ForceLog()
 		FlushLog();
 
 		// Then sync
-		if (condor_fsync(fileno(log_fp)) < 0) {
+		if (condor_fdatasync(fileno(log_fp)) < 0) {
 			EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
 		}
 
@@ -445,6 +446,33 @@ ClassAdLog::TruncLog()
 
 		return false;
 	}
+
+#ifndef WIN32
+	// POSIX does not provide any durability guarantees for rename().  Instead, we must
+	// open the parent directory and invoke fsync there.
+	char * parent_dir = condor_dirname( logFilename() );
+	if (parent_dir)
+	{
+		int parent_fd = safe_open_wrapper_follow(parent_dir, O_RDONLY);
+		if (parent_fd >= 0)
+		{
+			if (condor_fsync(parent_fd) == -1)
+			{
+				EXCEPT("Failed to fsync directory %s after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
+			}
+			close(parent_fd);
+		}
+		else
+		{
+			EXCEPT("Failed to open parent directory %s for fsync after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
+		}
+	}
+	else
+	{
+		dprintf(D_ALWAYS, "Failed to determine log's directory name\n");
+	}
+#endif
+
 	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE, 0600);
 	if (log_fd < 0) {
 		EXCEPT( "failed to open log in append mode: "
@@ -765,7 +793,7 @@ ClassAdLog::LogState(FILE *fp)
 	if (fflush(fp) !=0){
 	  EXCEPT("fflush of %s failed, errno = %d", logFilename(), errno);
 	}
-	if (condor_fsync(fileno(fp)) < 0) {
+	if (condor_fdatasync(fileno(fp)) < 0) {
 		EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
 	} 
 }

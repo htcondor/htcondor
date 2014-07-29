@@ -298,6 +298,15 @@ customization=seldom
 friendly_name=Soap SSL Port
 review=?
 
+[COLLECTOR_PORT]
+default=9618
+range=0,65536
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Default collector port
+review=?
+
 [SOCKET_LISTEN_BACKLOG]
 default=500
 range=1,
@@ -362,6 +371,12 @@ reconfig=true
 customization=seldom
 friendly_name=GSI Daemon Key
 review=?
+
+[GSS_ASSIST_GRIDMAP_CACHE_EXPIRATION]
+default=0
+type=int
+reconfig=true
+customization=seldom
 
 [VMWARE_NETWORKING_TYPE]
 default=
@@ -4222,7 +4237,7 @@ review=?
 tags=negotiator,matchmaker
 
 [PREEMPTION_RANK]
-default=
+default=(RemoteUserPrio * 1000000) - ifThenElse(isUndefined(TotalJobRuntime), 0, TotalJobRuntime)
 type=string
 reconfig=true
 customization=seldom
@@ -4231,7 +4246,7 @@ review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_PRE_JOB_RANK]
-default=RemoteOwner =?= UNDEFINED
+default=(10000000 * My.Rank) + (1000000 * (RemoteOwner =?= UNDEFINED)) - (100000 * Cpus) - Memory
 type=string
 reconfig=true
 customization=seldom
@@ -5675,7 +5690,7 @@ review=?
 tags=schedd
 
 [DAEMON_SOCKET_DIR]
-default=$(LOCK)/daemon_sock
+default=auto
 type=string
 reconfig=true
 customization=seldom
@@ -5692,12 +5707,20 @@ review=?
 
 [USE_SHARED_PORT]
 default=false
+win32_default=false
 version=7.5.0
 type=bool
 reconfig=true
 customization=seldom
 friendly_name=Use Shared Port
 review=?
+
+[SHARED_PORT_PORT]
+default=$(COLLECTOR_PORT)
+type=int
+reconfig=true
+customization=seldom
+friendly_name=TCP port used by condor_shared_port
 
 [AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST]
 default=true
@@ -5707,6 +5730,20 @@ reconfig=true
 customization=expert
 friendly_name=Auto Include Shared Port In Daemon List
 review=?
+
+[COLLECTOR_USES_SHARED_PORT]
+default=true
+version=8.1.4
+type=bool
+reconfig=true
+customization=expert
+
+[SHARED_PORT_DEFAULT_ID]
+default=
+version=8.1.4
+type=string
+reconfig=true
+customization=expert
 
 [CCB_HEARTBEAT_INTERVAL]
 default=300
@@ -5798,7 +5835,7 @@ review=?
 tags=shadow
 
 [CLAIM_WORKLIFE]
-default=3600
+default=1200
 type=int
 reconfig=true
 customization=seldom
@@ -6752,12 +6789,32 @@ friendly_name=Schedd Max File Descriptors
 usage=Set the limit on file descriptor usage for the scheduler.
 review=?
 
+[SHARED_PORT_MAX_FILE_DESCRIPTORS]
+default=4096
+range=0,
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Shared Port Max File Descriptors
+usage=Set the limit on file descriptor usage for condor_shared_port.
+review=?
+
 [USE_RESOURCE_REQUEST_COUNTS]
 default=true
 type=bool
 reconfig=true
 customization=seldom
 friendly_name=Use Resource Request Counts
+review=?
+tags=negotiator,matchmaker
+
+[NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE]
+default=20
+range=1,
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Size of Resource Request List
 review=?
 tags=negotiator,matchmaker
 
@@ -7435,13 +7492,13 @@ default=false
 [UWCS_PERIODIC_CHECKPOINT]
 default=$(LastCkpt) > (3 * $(HOUR) + $RANDOM_INTEGER(-30,30,1) * $(MINUTE) )
 [UWCS_NEGOTIATOR_PRE_JOB_RANK]
-default=RemoteOwner =?= UNDEFINED
+default=(10000000 * My.Rank) + (1000000 * (RemoteOwner =?= UNDEFINED)) - (100000 * Cpus) - Memory
 [UWCS_NEGOTIATOR_POST_JOB_RANK]
 default=(RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kflops) - SlotID - 1.0e10*(Offline=?=True))
 [UWCS_PREEMPTION_REQUIREMENTS]
 default=((SubmitterGroup =?= RemoteGroup) && ($(StateTimer) > (1 * $(HOUR))) && (RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2)) || (MY.NiceUser == True)
 [UWCS_PREEMPTION_RANK]
-default=(RemoteUserPrio * 1000000) - TARGET.ImageSize
+default=(RemoteUserPrio * 1000000) - ifThenElse(isUndefined(TotalJobRuntime), 0, TotalJobRuntime)
 
 # obsolete config file knobs to discard on upgrade
 [$UPGRADE.DISCARD]

@@ -87,14 +87,14 @@ NamedClassAdList::Replace( const char *name, ClassAd *newAd,
 {
 	NamedClassAd	*named_ad = Find( name );
 	if ( NULL == named_ad ) {
-		named_ad = new NamedClassAd( name, newAd );
+		named_ad = New( name, newAd );
 		if ( NULL == named_ad ) {
 			return -1;
 		}
 		dprintf( D_FULLDEBUG,
 				 "Adding '%s' to the 'extra' ClassAd list\n", name );
 		m_ads.push_back( named_ad );
-		return 0;
+		return report_diff;
 	}
 
 	// Did we find a match?

@@ -310,7 +310,7 @@ int store_cred_service(const char *user, const char *pw, int mode)
 	
 	// we'll need a wide-char version of the user name later
 	if ( user ) {
-		swprintf_s(userbuf, L"%S", user);
+		swprintf_s(userbuf, COUNTOF(userbuf), L"%S", user);
 	}
 
 	if (!can_switch_ids()) {
@@ -334,7 +334,7 @@ int store_cred_service(const char *user, const char *pw, int mode)
 			}
 
 			if (pw) {
-				swprintf_s(pwbuf, L"%S", pw); // make a wide-char copy first
+				swprintf_s(pwbuf, COUNTOF(pwbuf), L"%S", pw); // make a wide-char copy first
 			}
 
 			// call lsa_mgr api

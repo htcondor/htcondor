@@ -728,7 +728,8 @@ ReliSock::RcvMsg :: RcvMsg() :
 	m_remaining_read_length(0),
 	m_end(0),
 	m_tmp(NULL),
-	ready(0)
+	ready(0),
+	m_closed(false)
 {
 	memset( m_partial_cksum, 0, sizeof(m_partial_cksum) );
 }
@@ -779,6 +780,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 	}
 	if ( retval == -2 ) {	// -2 means peer just closed the socket
 		dprintf(D_FULLDEBUG,"IO: EOF reading packet header\n");
+		m_closed = true;
 		return FALSE;
 	}
 
@@ -1289,5 +1291,13 @@ ReliSock::setTargetSharedPortID( char const *id )
 
 bool
 ReliSock::msgReady() {
+	if (rcv_msg.ready) { return true; }
+	BlockingModeGuard sentry(this, true);
+	int retval = handle_incoming_packet();
+	if (retval == 2) {
+		dprintf(D_NETWORK, "msgReady would have blocked.\n");
+		m_read_would_block = true;
+		return false;
+	}
 	return rcv_msg.ready;
 }

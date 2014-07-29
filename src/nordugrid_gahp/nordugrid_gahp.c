@@ -2919,6 +2919,10 @@ main_activate_globus()
 {
 	int err;
 
+	err = globus_thread_set_model(GLOBUS_THREAD_MODEL_NONE);
+	if ( err != GLOBUS_SUCCESS ) {
+		return err;
+	}
 /*
 	err = globus_module_activate( GLOBUS_GRAM_CLIENT_MODULE );
 	if ( err != GLOBUS_SUCCESS ) {

@@ -247,6 +247,8 @@ my ($who, $host, $fullhost, $domain);
 my $no_config_modify=0;
 my %comment_hash;
 my @allparams;
+my @metaknobs = ();
+my $knobcount = 0;
 my %daemon_list = (MASTER => 1);	# We always want a master.
 my $logfile;
 my $printed_log_message = 0;
@@ -459,14 +461,17 @@ if ($opt_bosco) {
 elsif ($opt_make_personal_condor ||
     (defined($opt_release_dir) && !$opt_type)) {
 
-	$daemon_list{COLLECTOR} = 1;
-	$daemon_list{NEGOTIATOR} = 1;
-	$daemon_list{STARTD} = 1;
-	$daemon_list{SCHEDD} = 1;
+	#$daemon_list{COLLECTOR} = 1;
+	#$daemon_list{NEGOTIATOR} = 1;
+	#$daemon_list{STARTD} = 1;
+	#$daemon_list{SCHEDD} = 1;
+	# get rid of daemon list droped out after knobs
+	%daemon_list = ();
     $local_config{START}="TRUE";
     $local_config{PREEMPT}="FALSE";
     $local_config{SUSPEND}="FALSE";
     $local_config{KILL}="FALSE";
+	push (@metaknobs,"use role : personal");
 
     $cm=set_central_manager($fullhost);
     $local_config{COLLECTOR_NAME}="Personal Condor at $fullhost";
@@ -1484,6 +1489,14 @@ sub set_config_values ($$$) {
 
     open (TEMP, ">/tmp/set_config_values.temp.$$") || die "Unable to open /tmp/set_config_values.temp.$$ $!\n";
 
+	$knobcount = @metaknobs;
+	# If local config file and meta knobs set, drop them out now at beginning
+	if (($is_local) && ($knobcount > 0)) {
+		foreach my $knob (@metaknobs) {
+			print TEMP "$knob\n";
+		}
+	}
+    
     open (SOURCE, "<$file") || die "Unable to open file $file\n";
 
     while (<SOURCE>) {
@@ -1543,7 +1556,6 @@ sub set_config_values ($$$) {
 			print TEMP "$key = $value\n\n";
 		}
     }
-    
     close TEMP;
     close SOURCE;
     system("mv /tmp/set_config_values.temp.$$ $file") &&

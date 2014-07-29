@@ -736,8 +736,15 @@ ResMgr::adlist_register( StartdNamedClassAd *ad )
 	return extra_ads.Register( ad );
 }
 
+StartdNamedClassAd *
+ResMgr::adlist_find( const char * name )
+{
+	NamedClassAd * nad = extra_ads.Find(name);
+	return dynamic_cast<StartdNamedClassAd*>(nad);
+}
+
 int
-ResMgr::adlist_replace( const char *name, const char *prefix, ClassAd *newAd, bool report_diff )
+ResMgr::adlist_replace( const char *name, ClassAd *newAd, bool report_diff, const char *prefix )
 {
 	if( report_diff ) {
 		StringList ignore_list;
@@ -751,11 +758,6 @@ ResMgr::adlist_replace( const char *name, const char *prefix, ClassAd *newAd, bo
 	}
 }
 
-int
-ResMgr::adlist_delete( const char *name )
-{
-	return extra_ads.Delete( name );
-}
 
 int
 ResMgr::adlist_publish( unsigned r_id, ClassAd *resAd, amask_t mask )

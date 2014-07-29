@@ -1413,6 +1413,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			PRIV_USER_FINAL,
 			setup_reaper,
 			FALSE,
+			FALSE,
 			&setup_env,
 			GetWorkingDir(),
 			NULL,

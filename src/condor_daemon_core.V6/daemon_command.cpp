@@ -476,8 +476,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 }
 
 // Read the header.  Soap requests are handled here.
-// If this is not a soap request, pass on to ReadCommand to do the 
-// DC command protocol.
+// If this is not a soap request and is a registered command,
+// pass on to ReadCommand.
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 {
 	CondorError errstack;
@@ -490,7 +490,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 		// a daemoncore command int!  [not ever likely, since CEDAR ints are
 		// exapanded out to 8 bytes]  Still, in a perfect world we would replace
 		// with a more foolproof method.
-	char tmpbuf[5];
+	char tmpbuf[6];
 	memset(tmpbuf,0,sizeof(tmpbuf));
 	if ( m_is_tcp ) {
 			// TODO Should we be ignoring the return value of condor_read?
@@ -499,7 +499,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 	}
 #ifdef HAVE_EXT_GSOAP
 	if ( strstr(tmpbuf,"GET") ) {
-		if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
+		if ( param_boolean("USE_SHARED_PORT", true) ) {
+			dprintf(D_ALWAYS, "Received HTTP GET connection from %s -- DENIED because USE_SHARED_PORT=true\n", m_sock->peer_description());
+		}
+		else if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
 			// mini-web server requires READ authorization.
 			if ( daemonCore->Verify("HTTP GET", READ,m_sock->peer_addr(),NULL) ) {
 				m_is_http_get = true;
@@ -511,7 +514,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 		}
 	} else {
 		if ( strstr(tmpbuf,"POST") ) {
-			if ( param_boolean("ENABLE_SOAP",false) ) {
+			if ( param_boolean("USE_SHARED_PORT", true) ) {
+				dprintf(D_ALWAYS, "Received HTTP POST connection from %s -- DENIED because USE_SHARED_PORT=true\n", m_sock->peer_description());
+			}
+			else if ( param_boolean("ENABLE_SOAP",false) ) {
 				// SOAP requires SOAP authorization.
 				if ( daemonCore->Verify("HTTP POST",SOAP_PERM,m_sock->peer_addr(),NULL) ) {
 					m_is_http_post = true;
@@ -551,6 +557,39 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 		return CommandProtocolFinished;
 	}
 #endif // HAVE_EXT_GSOAP
+
+		// This was not a soap request; next, see if we have a special command
+		// handler for unknown command integers.
+		//
+		// We do manual CEDAR parsing here to look at the command int directly
+		// without consuming data from the socket.  The first few bytes are the
+		// size of the message, followed by the command int itself.
+	int tmp_req; memcpy(static_cast<void*>(&tmp_req), tmpbuf+1, sizeof(int));
+	tmp_req = ntohl(tmp_req);
+	if (daemonCore->HandleUnregistered() && (tmp_req >= 8)) {
+			// Peek at the command integer if one exists.
+		char tmpbuf2[8+5]; memset(tmpbuf2, 0, sizeof(tmpbuf2));
+		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
+			tmpbuf2, 8+5, 1, MSG_PEEK);
+		char *tmpbuf3 = tmpbuf2 + 5;
+		if (8-sizeof(int) > 0) { tmpbuf3 += 8-sizeof(int); } // Skip padding
+		memcpy(static_cast<void*>(&tmp_req), tmpbuf3, sizeof(int));
+		tmp_req = ntohl(tmp_req);
+
+			// Lookup the command integer in our command table to see if it is unregistered
+		int tmp_cmd_index;
+		if (!daemonCore->CommandNumToTableIndex(tmp_req, &tmp_cmd_index) && (daemonCore->HandleUnregisteredDCAuth() || (tmp_req != DC_AUTHENTICATE))) {
+			ScopedEnableParallel(false);
+
+			if( m_sock_had_no_deadline ) {
+					// unset the deadline we assigned in WaitForSocketData
+				m_sock->set_deadline(0);
+			}
+
+			m_result = daemonCore->CallUnregisteredCommandHandler(tmp_req, m_sock);
+			return CommandProtocolFinished;
+		}
+	}
 
 	m_state = CommandProtocolReadCommand;
 	return CommandProtocolContinue;

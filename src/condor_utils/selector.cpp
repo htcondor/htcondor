@@ -76,6 +76,8 @@ Selector::reset()
 	memset( save_write_fds, 0, fd_set_size * sizeof(fd_set) );
 	memset( save_except_fds, 0, fd_set_size * sizeof(fd_set) );
 #endif
+	m_single_shot = SINGLE_SHOT_VIRGIN;
+	memset(&m_poll, '\0', sizeof(m_poll));
 
 	if (IsDebugLevel(D_DAEMONCORE)) {
 		dprintf(D_DAEMONCORE | D_VERBOSE, "selector %p resetting\n", this);
@@ -167,6 +169,11 @@ Selector::add_fd( int fd, IO_FUNC interest )
 		free(fd_description);
 	}
 
+	bool new_fd = false;
+	if ((m_single_shot == SINGLE_SHOT_OK) && (m_poll.fd != fd)) {
+		new_fd = true;
+	}
+	m_poll.fd = fd;
 	switch( interest ) {
 
 	  case IO_READ:
@@ -175,6 +182,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 			EXCEPT( "Selector::add_fd(): read fd_set is full" );
 		}
 #endif
+		m_poll.events |= POLLIN;
 		FD_SET( fd, save_read_fds );
 		break;
 
@@ -184,6 +192,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 			EXCEPT( "Selector::add_fd(): write fd_set is full" );
 		}
 #endif
+		m_poll.events |= POLLOUT;
 		FD_SET( fd, save_write_fds );
 		break;
 
@@ -193,9 +202,18 @@ Selector::add_fd( int fd, IO_FUNC interest )
 			EXCEPT( "Selector::add_fd(): except fd_set is full" );
 		}
 #endif
+		m_poll.events |= POLLERR;
 		FD_SET( fd, save_except_fds );
 		break;
 
+	}
+	if ((m_single_shot == SINGLE_SHOT_VIRGIN) || ((m_single_shot == SINGLE_SHOT_OK) && (new_fd == false)))
+	{
+		m_single_shot = SINGLE_SHOT_OK;
+	}
+	else
+	{
+		m_single_shot = SINGLE_SHOT_SKIP;
 	}
 }
 
@@ -208,6 +226,8 @@ Selector::delete_fd( int fd, IO_FUNC interest )
 				fd, _fd_select_size-1 );
 	}
 #endif
+
+	m_single_shot = SINGLE_SHOT_SKIP;
 
 	if (IsDebugLevel(D_DAEMONCORE)) {
 		dprintf(D_DAEMONCORE | D_VERBOSE, "selector %p deleting fd %d\n", this, fd);
@@ -237,6 +257,11 @@ Selector::set_timeout( time_t sec, long usec )
 
 	timeout.tv_sec = sec;
 	timeout.tv_usec = usec;
+
+	if (usec)
+	{
+		m_single_shot = SINGLE_SHOT_SKIP;
+	}
 }
 
 void
@@ -274,11 +299,22 @@ Selector::execute()
 		// select() ignores its first argument on Windows. We still track
 		// max_fd for the display() functions.
 	start_thread_safe("select");
-	nfds = select( max_fd + 1, 
+#ifdef USE_POLL
+	if (m_single_shot == SINGLE_SHOT_OK)
+	{
+		nfds = poll(&m_poll, 1, 1000*tp->tv_sec + tp->tv_usec/1000);
+	}
+	else
+#else
+	m_single_shot = SINGLE_SHOT_SKIP;
+#endif
+	{
+		nfds = select( max_fd + 1,
 				  (SELECT_FDSET_PTR) read_fds, 
 				  (SELECT_FDSET_PTR) write_fds, 
 				  (SELECT_FDSET_PTR) except_fds, 
 				  tp );
+	}
 	_select_errno = errno;
 	stop_thread_safe("select");
 	_select_retval = nfds;
@@ -335,15 +371,15 @@ Selector::fd_ready( int fd, IO_FUNC interest )
 	switch( interest ) {
 
 	  case IO_READ:
-		return FD_ISSET( fd, read_fds );
+		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & POLLIN) : FD_ISSET( fd, read_fds );
 		break;
 
 	  case IO_WRITE:
-		return FD_ISSET( fd, write_fds );
+		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & POLLOUT) : FD_ISSET( fd, write_fds );
 		break;
 
 	  case IO_EXCEPT:
-		return FD_ISSET( fd, except_fds );
+		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & POLLERR) : FD_ISSET( fd, except_fds );
 		break;
 
 	}

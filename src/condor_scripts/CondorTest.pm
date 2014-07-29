@@ -1737,7 +1737,7 @@ sub changeDaemonState
 		die "Bad state given in changeScheddState: $state\n";
 	}
 
-	$status = runCondorTool($cmd,\@cmdarray1,2);
+	$status = runCondorTool($cmd,\@cmdarray1,2,{emit_output=>0});
 	if(!$status)
 	{
 		print "Test failure due to Condor Tool Failure: $cmd\n";
@@ -1749,8 +1749,7 @@ sub changeDaemonState
 	while($counter < $timeout ) {
 		$foundTotal = "no";
 		@cmdarray2 = {};
-		print "about to run $cmd try $counter previous sleep $sleeptime\n";
-		$status = CondorTest::runCondorTool($cmd,\@cmdarray2,2);
+		$status = CondorTest::runCondorTool($cmd,\@cmdarray2,2,{emit_output=>0});
 		if(!$status)
 		{
 			print "Test failure due to Condor Tool Failure: $cmd\n";
@@ -1759,17 +1758,17 @@ sub changeDaemonState
 
 		foreach my $line (@cmdarray2)
 		{
-			print "$line\n";
+			#print "$line\n";
 			if($daemon eq "schedd") {
 				if( $line =~ /.*Total.*/ ) {
 					# hmmmm  scheduler responding
-					print "Schedd running\n";
+					#print "Schedd running\n";
 					$foundTotal = "yes";
 				}
 			} elsif($daemon eq "startd") {
 				if( $line =~ /.*Backfill.*/ ) {
 					# hmmmm  Startd responding
-					print "Startd running\n";
+					#print "Startd running\n";
 					$foundTotal = "yes";
 				}
 			}
