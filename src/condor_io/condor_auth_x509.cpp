@@ -85,18 +85,11 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
 				EXCEPT("Failed to set the GSI_AUTHZ_CONF environment variable.\n");
 			}
 		}
-		// In 99% of cases, this is a no-op because the Globus threading model defaults
-		// to "none".  However, this can be overridden by a user's environment variable
-		// and I'd prefer to take no chances.  This call can fail if a globus module
-		// has already been activated (i.e., in the GAHP).  As the defaults are OK,
-		// the logging is done at FULLDEBUG, not ALWAYS.
-		if (globus_thread_set_model( GLOBUS_THREAD_MODEL_NONE ) != GLOBUS_SUCCESS) {
-			dprintf(D_FULLDEBUG, "Unable to explicitly turn-off Globus threading."
-				"  Will proceed with the default.\n");
+		if ( activate_globus_gsi() < 0 ) {
+			dprintf( D_ALWAYS, "Can't intialize GSI, authentication will fail: %s\n", x509_error_string() );
+		} else {
+			m_globusActivated = true;
 		}
-		globus_module_activate( GLOBUS_GSI_GSSAPI_MODULE );
-		globus_module_activate( GLOBUS_GSI_GSS_ASSIST_MODULE );
-		m_globusActivated = true;
 	}
 }
 

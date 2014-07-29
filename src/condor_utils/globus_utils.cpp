@@ -37,6 +37,8 @@ static const char * _globus_error_message = NULL;
 
 #define GRAM_STATUS_STR_LEN		8
 
+#define NOT_SUPPORTED_MSG "This version of Condor doesn't support GSI security"
+
 const char *
 GlobusJobStatusName( int status )
 {
@@ -92,15 +94,16 @@ set_error_string( const char *message )
  * something went wrong.
  */
 
-/* This function is only used when HAVE_EXT_GLOBUS is defined */
-#ifdef HAVE_EXT_GLOBUS
-static
 int
 activate_globus_gsi( void )
 {
-	static int globus_gsi_activated = 0;
+#if !defined(HAVE_EXT_GLOBUS)
+	set_error_string( NOT_SUPPORTED_MSG );
+	return -1;
+#else
+	static bool globus_gsi_activated = false;
 
-	if ( globus_gsi_activated != 0 ) {
+	if ( globus_gsi_activated ) {
 		return 0;
 	}
 
@@ -134,10 +137,10 @@ activate_globus_gsi( void )
 	}
 
 
-	globus_gsi_activated = 1;
+	globus_gsi_activated = true;
 	return 0;
-}
 #endif
+}
 
 /* Return the path to the X509 proxy file as determined by GSI/SSL.
  * Returns NULL if the filename can't be determined. Otherwise, the
@@ -726,7 +729,7 @@ x509_proxy_email( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
 	(void) proxy_file;
-	set_error_string( "This version of Condor doesn't support X509 credentials!" );
+	set_error_string( NOT_SUPPORTED_MSG );
 	return NULL;
 #else
 
@@ -756,7 +759,7 @@ x509_proxy_subject_name( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
 	(void) proxy_file;
-	set_error_string( "This version of Condor doesn't support X509 credentials!" );
+	set_error_string( NOT_SUPPORTED_MSG );
 	return NULL;
 #else
 	char *subject_name = NULL;
@@ -791,7 +794,7 @@ x509_proxy_identity_name( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
 	(void) proxy_file;
-	set_error_string( "This version of Condor doesn't support X509 credentials!" );
+	set_error_string( NOT_SUPPORTED_MSG );
 	return NULL;
 #else
 
@@ -818,7 +821,7 @@ x509_proxy_expiration_time( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
 	(void) proxy_file;
-	set_error_string( "This version of Condor doesn't support X509 credentials!" );
+	set_error_string( NOT_SUPPORTED_MSG );
 	return -1;
 #else
 
@@ -847,7 +850,7 @@ x509_proxy_seconds_until_expire( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
 	(void) proxy_file;
-	set_error_string( "This version of Condor doesn't support X509 credentials!" );
+	set_error_string( NOT_SUPPORTED_MSG );
 	return -1;
 #else
 
@@ -882,7 +885,7 @@ x509_proxy_try_import( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
 	(void) proxy_file;
-	set_error_string( "This version of Condor doesn't support X509 credentials!" );
+	set_error_string( NOT_SUPPORTED_MSG );
 	return -1;
 
 #else
@@ -946,7 +949,7 @@ check_x509_proxy( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
 	(void) proxy_file;
-	set_error_string( "This version of Condor doesn't support X509 credentials!" );
+	set_error_string( NOT_SUPPORTED_MSG );
 	return -1;
 
 #else
@@ -1057,7 +1060,7 @@ x509_send_delegation( const char *source_file,
 	(void) send_data_ptr;
 
 	_globus_error_message =
-		strdup( "This version of Condor doesn't support X509 credentials!");
+		strdup( NOT_SUPPORTED_MSG );
 	return -1;
 
 #else
@@ -1307,7 +1310,7 @@ x509_receive_delegation( const char *destination_file,
 	(void) send_data_func;			// Quiet compiler warnings
 	(void) send_data_ptr;			// Quiet compiler warnings
 	_globus_error_message =
-		strdup("This version of Condor doesn't support X509 credentials!");
+		strdup( NOT_SUPPORTED_MSG );
 	return -1;
 
 #else
