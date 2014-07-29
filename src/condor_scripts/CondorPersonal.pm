@@ -1473,18 +1473,11 @@ if($btdebug == 1) {
 
 	debug( "HMMMMMMMMMMM opening to write: $topleveldir/$personal_local\n",$debuglevel);
 
-<<<<<<< Updated upstream
 		if($MOVESOCKETDIR == 1) {
 			if( CondorUtils::is_windows() == 0 ){
 				print NEW "DAEMON_SOCKET_DIR = $socketdir\n";
 			}
 		}
-=======
-		if( CondorUtils::is_windows() == 0 ){
-			print NEW "DAEMON_SOCKET_DIR = $socketdir\n";
-		}
-		print NEW "USE_SHARED_PORT = True\n";
->>>>>>> Stashed changes
 		# Dan: Jan 30, '08 added D_NETWORK in order to debug condor_rm timeout
 		# print NEW "ALL_DEBUG = D_FULLDEBUG\n";
     	#print NEW "DEFAULT_DEBUG = D_FULLDEBUG\n";
