@@ -243,8 +243,6 @@ my $USESHARERPORT = 0;
 ##
 ########################################
 
-system("condor_config_val -v USE_SHARED_PORT");
-
 my $UseNewRunning = 1;
 my $RunningTimeStamp = 0;
 
