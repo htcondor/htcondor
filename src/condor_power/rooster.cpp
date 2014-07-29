@@ -252,6 +252,7 @@ Rooster::wakeUp(ClassAd *startd_ad)
 		PRIV_CONDOR_FINAL,
 		0,
 		FALSE,
+		FALSE,
 		NULL,
 		NULL,
 		NULL,

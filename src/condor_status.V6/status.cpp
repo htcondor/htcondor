@@ -103,7 +103,6 @@ char*       statistics = NULL;
 char*		genericType = NULL;
 CondorQuery *query;
 char		buffer[1024];
-ClassAdList result;
 char		*myName;
 vector<SortSpec> sortSpecs;
 bool            noSort = false; // set to true to disable sorting entirely
@@ -461,6 +460,7 @@ main (int argc, char *argv[])
 		}
 	}
 
+	ClassAdList result;
 	CondorError errstack;
 	if (NULL != ads_file) {
 		MyString req; // query requirements
@@ -667,6 +667,7 @@ usage ()
 		"\t-version\t\tPrint HTCondor version and exit\n"
 		"\t-diagnose\t\tPrint out query ad without performing query\n"
 		"    and [query-opt] is one of\n"
+		"\t-absent\t\t\tPrint information about absent resources\n"
 		"\t-avail\t\t\tPrint information about available resources\n"
 		"\t-ckptsrvr\t\tDisplay checkpoint server attributes\n"
 		"\t-claimed\t\tPrint information about claimed resources\n"

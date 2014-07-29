@@ -1049,9 +1049,19 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 		dprintf(D_ALWAYS,
 			"Unable to set OOM control to %s for starter: %u %s\n",
 				limits, errno, strerror(errno));
+			/* 
+				For reasons I don't understand, some newer kernels
+				are returning EINVAL for this write, even though they
+				would still deliver OOM to the starter.  Ignore the
+				error for now, and continue on and try to subscribe
+				to the event  #4435
+			*/
+/* #4435
 		close(event_ctrl_fd);
 		close(oom_fd2);
 		return 1;
+*/
+
 	}
 	close(oom_fd2);
 

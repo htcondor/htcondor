@@ -555,6 +555,9 @@
 /* Define to 1 if you have the '_stati64' function. (USED)*/
 #cmakedefine HAVE__STATI64 1
 
+/* Define to 1 if you have the fdatasync function (Linux) */
+#cmakedefine HAVE_FDATASYNC 1
+
 /* Define to 1 if the system has the type '__int64'. (USED)*/
 #cmakedefine HAVE___INT64 1
 
@@ -596,6 +599,12 @@
 
 /* Define to 1 if the compiler does not support C++11 but does support TR1 */
 #cmakedefine PREFER_TR1
+
+/* Define to 1 if the OS has support for epoll (Linux) */
+#cmakedefine CONDOR_HAVE_EPOLL
+
+/* Define to 1 if the OS has support for poll (Unix) */
+#cmakedefine CONDOR_HAVE_POLL
 
 /* Define to 1 if the OS has support for the TCP_KEEPALIVE setsockopt (Mac) */
 #cmakedefine HAVE_TCP_KEEPALIVE

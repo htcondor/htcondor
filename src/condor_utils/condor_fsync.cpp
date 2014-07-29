@@ -10,3 +10,18 @@ int condor_fsync(int fd, const char* /*path*/)
 
 	return fsync(fd);
 }
+
+int condor_fdatasync(int fd, const char* /*path*/)
+{
+	if (!condor_fsync_on)
+	{
+		return 0;
+	}
+
+#ifdef HAVE_FDATASYNC
+	return fdatasync(fd);
+#else
+	return fsync(fd);
+#endif
+}
+

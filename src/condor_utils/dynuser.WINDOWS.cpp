@@ -647,11 +647,11 @@ bool dynuser::add_users_group() {
 	tmp = param("DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP");
 	if (tmp) {
 		friendly_group_name = tmp;
-		swprintf_s(UserGroupName, L"%S", tmp);
+		swprintf_s(UserGroupName, COUNTOF(UserGroupName), L"%S", tmp);
 		free(tmp);
 	} else {
 		tmp = getUserGroupName();
-		swprintf_s(UserGroupName, L"%S", tmp);
+		swprintf_s(UserGroupName, COUNTOF(UserGroupName), L"%S", tmp);
 		delete[] tmp;
 	}
 	tmp = NULL;
@@ -696,11 +696,11 @@ bool dynuser::del_users_group() {
 
 	tmp = param("DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP");
 	if (tmp) {
-		swprintf_s(UserGroupName, L"%S", tmp);
+		swprintf_s(UserGroupName, COUNTOF(UserGroupName), L"%S", tmp);
 		free(tmp);
 	} else {
 		tmp = getUserGroupName();
-		swprintf_s(UserGroupName, L"%S", tmp);
+		swprintf_s(UserGroupName, COUNTOF(UserGroupName), L"%S", tmp);
 		delete[] tmp;
 	}
 	tmp = NULL;

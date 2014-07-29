@@ -27,6 +27,31 @@ x86_SL5
 x86_64_Solaris11
 x86_64_Ubuntu10
 
-# Test the SWAMP infrastructure.
-swamp:rhel-6.4-64
-swamp:ubuntu-12.04-64
+
+#
+# The officially-supported SWAMP platforms.
+#
+
+swamp:debian-6.0.9-64-01-batlab
+swamp:debian-7.5-64-01-batlab
+
+swamp:rhel-5.10-32-01-batlab
+swamp:rhel-5.10-64-01-batlab
+swamp:rhel-6.5-32-01-batlab
+swamp:rhel-6.5-64-01-batlab
+
+swamp:ubuntu-12.04-64-01-batlab
+swamp:ubuntu-14.04-64-01-batlab
+
+#
+# Other SWAMP platforms of interest.
+#
+
+swamp:fedora-19-64-01-batlab
+swamp:fedora-20-64-01-batlab
+
+swamp:scientific-5.10-32-01-batlab
+swamp:scientific-5.10-64-01-batlab
+swamp:scientific-6.5-32-01-batlab
+swamp:scientific-6.5-64-01-batlab
+

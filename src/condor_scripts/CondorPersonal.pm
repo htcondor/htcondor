@@ -226,6 +226,22 @@ my %daemon_logs =
 	"schedd" => "SchedLog",
 );
 
+########################################
+##
+## 7/28/14 bt
+##
+## Our normal test pass has the LOCKDIR to deep
+## to use a folder for shared ports handles
+## So the flag below relocates it to /tmp
+## Other switch turns on shared port for
+## every personal condor spun up
+##
+
+my $MOVESOCKETDIR = 0;
+my $USESHARERPORT = 0;
+##
+##
+########################################
 
 my $UseNewRunning = 1;
 my $RunningTimeStamp = 0;
@@ -1181,6 +1197,39 @@ sub TunePersonalCondor
 		}
 	}
 
+my $socketdir = "";
+
+	if($MOVESOCKETDIR == 1) {
+
+
+		# The tests get pretty long paths to LOCK_DIR making unix sockets exceed
+		# the max character length. So in remote_pre we create a folder to hold 
+		# the test run's socket folder. /tmp/tds$pid. We place this name we will
+		# need to configure each personal with in condor_tests/SOCKETDIR and we will
+		# configure with our own pid. Remote_post removes this top level directory.
+
+		if( CondorUtils::is_windows() == 0 ){
+			# windows does not have a path length limit
+			if(!(-f "SOCKETDIR")) {
+				print "Creating SOCKETDIR?\n";
+				my $privatetmploc = "/tmp/tds$$";
+				print "tmp loc:$privatetmploc\n";
+				$socketdir = "SOCKETDIR";
+				system("mkdir $privatetmploc;ls /tmp");
+				open(SD,">$socketdir") or print "Failed to create:$socketdir:$!\n";
+				print SD "$privatetmploc\n";
+				close(SD);
+			} else {
+				open(SD,"<SOCKETDIR") or print "Failed to open:SOCKETDIR:$!\n";
+				$socketdir = (<SD>);
+				chomp($socketdir);
+				print "Fetch master SOCKETDIR:$socketdir\n";
+				$socketdir = "$socketdir" . "/$$";
+				print "This tests socketdir:$socketdir\n";
+			}
+		}
+	}
+
 	#print " ****** TunePersonalCondor with localdir set to <$localdir>\n";
 
 	debug( "TunePersonalCondor setting LOCAL_DIR to $localdir\n",$debuglevel);
@@ -1424,11 +1473,21 @@ if($btdebug == 1) {
 
 	debug( "HMMMMMMMMMMM opening to write: $topleveldir/$personal_local\n",$debuglevel);
 
+		if($MOVESOCKETDIR == 1) {
+			if( CondorUtils::is_windows() == 0 ){
+				print NEW "DAEMON_SOCKET_DIR = $socketdir\n";
+			}
+		}
 		# Dan: Jan 30, '08 added D_NETWORK in order to debug condor_rm timeout
 		# print NEW "ALL_DEBUG = D_FULLDEBUG\n";
     	#print NEW "DEFAULT_DEBUG = D_FULLDEBUG\n";
 		# bill: 8/13/09 speed up dagman
 		print NEW "DAGMAN_USER_LOG_SCAN_INTERVAL = 1\n";
+
+		if($USESHARERPORT == 1) {
+			print NEW "USE_SHARED_PORT = True\n";
+		}
+
 		# bill make tools more forgiving of being busy
 		print NEW "TOOL_TIMEOUT_MULTIPLIER = 10\n";
 		print NEW "TOOL_DEBUG_ON_ERROR = D_ANY D_ALWAYS:2\n";
@@ -1576,10 +1635,31 @@ if($btdebug == 1) {
 				}
 			} else {
 				print "cygwin 64 bit windows\n";
+				my @whereresponse = ();
+				my $wherecount = 0;
 				#can't use which. its a linux tool and will lie about the path to java.
 				if (1) {
 					print "Running where $javabinary\n";
-					$jvm = `where $javabinary`;
+					#$jvm = `where $javabinary`;
+					@whereresponse = `where $javabinary`;
+					$wherecount = @whereresponse;
+					print "Where returned more then one response:$wherecount\n";
+					if($wherecount > 1) {
+						foreach my $targ (@whereresponse) {
+							if($targ =~ /sysnative/) {
+								$jvm = $targ;
+							}
+						}
+						if($jvm eq "") {
+							$jvm = $whereresponse[0];
+						}
+					} else {
+						$jvm = $whereresponse[0];
+					}
+
+
+
+
 					fullchomp($jvm);
 					$_ = $jvm;
 					s/\\/\\\\/g;
@@ -3792,8 +3872,8 @@ print CC $eof2;
 	}
 
 my $eof3 =  <<EOF1;
-use ROLE : PERSONAL
-use SECURITY : HOST_BASED
+USE ROLE : PERSONAL
+USE SECURITY : HOST_BASED
 EOF1
 print CC $eof3;
 

@@ -1265,7 +1265,7 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 		const char *fname;
 		if ( is_global_event ) fname = m_global_path;
 		else fname = log.path.c_str();
-		if ( condor_fsync( fileno( fp ), fname ) != 0 ) {
+		if ( condor_fdatasync( fileno( fp ), fname ) != 0 ) {
 		  dprintf( D_ALWAYS,
 				   "fsync() failed in WriteUserLog::writeEvent"
 				   " - errno %d (%s)\n",

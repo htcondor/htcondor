@@ -49,8 +49,8 @@ However, the following items are not supported in this version:
 transparent process checkpoint/migration and remote system calls are
 not supported.
 
-\item \SubmitCmd{grid} universe jobs may not be submitted from a
-Windows platform, unless the grid type is \SubmitCmd{condor}.
+\item \SubmitCmdNI{grid} universe jobs may not be submitted from a
+Windows platform, unless the grid type is \SubmitCmdNI{condor}.
 
 \item Accessing files via a network share that requires a Kerberos ticket
 (such as AFS) is not yet supported.
@@ -479,7 +479,7 @@ to the \Condor{shadow} running on the submit machine.
 The \Condor{shadow}
 places these files into the \SubmitCmd{initialdir} specified in the
 submit description file; 
-if no \SubmitCmd{initialdir} was specified,
+if no \SubmitCmdNI{initialdir} was specified,
 the files go into the directory where the user invoked \Condor{submit}.
 Once all the output files are safely transferred back,
 the job is removed from the queue.
@@ -500,7 +500,7 @@ At this point, if \SubmitCmd{when\_to\_transfer\_output} is set to
 \Expr{ON\_EXIT} (the default) in the job's submit description file,
 the job switches states, from Running to Idle,
 and no files are transferred back.
-If \SubmitCmd{when\_to\_transfer\_output} is set to \Expr{ON\_EXIT\_OR\_EVICT},
+If \SubmitCmdNI{when\_to\_transfer\_output} is set to \Expr{ON\_EXIT\_OR\_EVICT},
 then any files
 in the job's temporary working directory which were changed or modified are
 first sent back to the submitting machine.

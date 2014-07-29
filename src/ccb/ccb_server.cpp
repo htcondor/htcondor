@@ -25,6 +25,10 @@
 #include "util_lib_proto.h"
 #include "condor_open.h"
 
+#ifdef CONDOR_HAVE_EPOLL
+#include <sys/epoll.h>
+#endif
+
 static unsigned int
 ccbid_hash(const CCBID &ccbid) {
 	return ccbid;
@@ -75,7 +79,8 @@ CCBServer::CCBServer():
 	m_read_buffer_size(0),
 	m_write_buffer_size(0),
 	m_requests(ccbid_hash),
-	m_polling_timer(-1)
+	m_polling_timer(-1),
+	m_epfd(-1)
 {
 }
 
@@ -95,6 +100,11 @@ CCBServer::~CCBServer()
 	m_targets.startIterations();
 	while( m_targets.iterate(target) ) {
 		RemoveTarget(target);
+	}
+	if (-1 != m_epfd)
+	{
+		daemonCore->Close_Pipe(m_epfd);
+		m_epfd = -1;
 	}
 }
 
@@ -188,6 +198,42 @@ CCBServer::InitAndReconfig()
 		LoadReconnectInfo();
 	}
 
+#ifdef CONDOR_HAVE_EPOLL
+	if (-1 == (m_epfd = epoll_create1(EPOLL_CLOEXEC)))
+	{
+		dprintf(D_ALWAYS, "epoll file descriptor creation failed; will use periodic polling techniques: %s (errno=%d).\n", strerror(errno), errno);
+	}
+#endif
+
+	if (m_epfd >= 0)
+	{
+#ifndef WIN32
+			// Fool DC into talking to the epoll fd; note we only register the read side.
+		int pipes[2]; pipes[0] = -1; pipes[1] = -1;
+		int fd_to_replace = -1;
+		if (daemonCore->Create_Pipe(pipes, true) == -1 || pipes[0] == -1) {
+			dprintf(D_ALWAYS, "Unable to create a DC pipe for watching the epoll FD\n");
+			close(m_epfd);
+			m_epfd = -1;
+		}
+		daemonCore->Close_Pipe(pipes[1]);
+		if (daemonCore->Get_Pipe_FD(pipes[0], &fd_to_replace) == -1 || fd_to_replace == -1) {
+			dprintf(D_ALWAYS, "Unable to lookup pipe's FD\n");
+			close(m_epfd); m_epfd = -1;
+			daemonCore->Close_Pipe(pipes[0]);
+			return;
+		}
+		dup2(m_epfd, fd_to_replace);
+		fcntl(fd_to_replace, F_SETFL, FD_CLOEXEC);
+		close(m_epfd);
+		m_epfd = pipes[0];
+
+			// Inform DC we want to recieve notifications from this FD.
+		daemonCore->Register_Pipe(m_epfd,"CCB epoll FD", static_cast<PipeHandlercpp>(&CCBServer::EpollSockets),"CCB Epoll Handler", this, HANDLE_READ);
+#endif
+	}
+		// Either epoll is not available or creation of the epoll FD failed; in this case,
+		// we just periodically poll the FD for responses.
 	Timeslice poll_slice;
 	poll_slice.setTimeslice( // do not run more than this fraction of the time
 		param_double("CCB_POLLING_TIMESLICE",0.05) );
@@ -212,6 +258,105 @@ CCBServer::InitAndReconfig()
 }
 
 
+int
+CCBServer::EpollSockets(int)
+{
+	if (m_epfd == -1)
+	{
+		return -1;
+	}
+#ifdef CONDOR_HAVE_EPOLL
+	int epfd = -1;
+	if (daemonCore->Get_Pipe_FD(m_epfd, &epfd) == -1 || epfd == -1) {
+		dprintf(D_ALWAYS, "Unable to lookup epoll FD\n");
+		daemonCore->Close_Pipe(m_epfd);
+		m_epfd = -1;
+		return -1;
+	}
+	struct epoll_event events[10];
+	bool needs_poll = true;
+	unsigned counter = 0;
+	while (needs_poll && counter++ < 100)
+	{
+		needs_poll = false;
+		int result = epoll_wait(epfd, events, 10, 0);
+		if (result > 0)
+		{
+			for (int idx=0; idx<result; idx++)
+			{
+				CCBID id = events[idx].data.u64;
+				CCBTarget *target = NULL;
+				if (m_targets.lookup(id, target) == -1)
+				{
+					dprintf(D_FULLDEBUG, "No target found for CCBID %ld.\n", id);
+					continue;
+				}
+				if (target->getSock()->readReady())
+				{
+					HandleRequestResultsMsg(target);
+				}
+			}
+			// We always want to drain out the queue of events.
+			needs_poll = true;
+		}
+		else if ((result == -1) && (errno != EINTR))
+		{
+			dprintf(D_ALWAYS, "Error when waiting on epoll: %s (errno=%d).\n", strerror(errno), errno);
+		}
+			// Fall through silently on timeout or signal interrupt; DC will call us later.
+	}
+#endif
+	return 0;
+}
+
+void
+CCBServer::EpollAdd(CCBTarget *target)
+{
+	if ((-1 == m_epfd) || !target) {return;}
+#ifdef CONDOR_HAVE_EPOLL
+	int epfd = -1;
+	if (daemonCore->Get_Pipe_FD(m_epfd, &epfd) == -1 || epfd == -1) {
+		dprintf(D_ALWAYS, "Unable to lookup epoll FD\n");
+		daemonCore->Close_Pipe(m_epfd);
+		m_epfd = -1;
+		return;
+	}       
+		// We have epoll maintain the map of FD -> CCBID for us by taking
+		// advantage of the data field of the epoll event.  This way, when the
+		// epoll watch fires, we can do a hash table lookup for the target object.
+	struct epoll_event event;
+	event.events = EPOLLIN;
+	event.data.u64 = target->getCCBID();
+	dprintf(D_NETWORK, "Registering file descriptor %d with CCBID %ld.\n", target->getSock()->get_file_desc(), event.data.u64);
+	if (-1 == epoll_ctl(epfd, EPOLL_CTL_ADD, target->getSock()->get_file_desc(), &event))
+	{
+		dprintf(D_ALWAYS, "CCB: failed to add watch for target daemon %s with ccbid %lu: %s (errno=%d).\n", target->getSock()->peer_description(), target->getCCBID(), strerror(errno), errno);
+	}
+#endif
+}
+
+void
+CCBServer::EpollRemove(CCBTarget *target)
+{
+	if ((-1 == m_epfd) || !target) {return;}
+#ifdef CONDOR_HAVE_EPOLL
+	int epfd = -1;
+	if (daemonCore->Get_Pipe_FD(m_epfd, &epfd) == -1 || epfd == -1) {
+		dprintf(D_ALWAYS, "Unable to lookup epoll FD\n");
+		daemonCore->Close_Pipe(m_epfd);
+		m_epfd = -1;
+		return;
+	}       
+	struct epoll_event event;
+	event.events = EPOLLIN;
+	event.data.u64 = target->getCCBID();
+	if (-1 == epoll_ctl(epfd, EPOLL_CTL_DEL, target->getSock()->get_file_desc(), &event))
+	{       
+		dprintf(D_ALWAYS, "CCB: failed to delete watch for target daemon %s with ccbid %lu: %s (errno=%d).\n", target->getSock()->peer_description(), target->getCCBID(), strerror(errno), errno);
+	}
+#endif
+}
+
 void
 CCBServer::PollSockets()
 {
@@ -221,12 +366,14 @@ CCBServer::PollSockets()
 		// out of fear that the overhead of dealing with all of these
 		// sockets in every iteration of the select loop may be
 		// too much.
-
-	CCBTarget *target=NULL;
-	m_targets.startIterations();
-	while( m_targets.iterate(target) ) {
-		if( target->getSock()->readReady() ) {
-			HandleRequestResultsMsg(target);
+	if (m_epfd == -1)
+	{
+		CCBTarget *target=NULL;
+		m_targets.startIterations();
+		while( m_targets.iterate(target) ) {
+			if( target->getSock()->readReady() ) {
+				HandleRequestResultsMsg(target);
+			}
 		}
 	}
 
@@ -725,6 +872,7 @@ CCBServer::ReconnectTarget( CCBTarget *target, CCBID reconnect_cookie )
 	}
 
 	ASSERT( m_targets.insert(target->getCCBID(),target) == 0 );
+	EpollAdd(target);
 
 	dprintf(D_FULLDEBUG,"CCB: reconnected target daemon %s with ccbid %lu\n",
 			target->getSock()->peer_description(),
@@ -747,6 +895,7 @@ CCBServer::AddTarget( CCBTarget *target )
 		}
 
 		if( m_targets.insert(target->getCCBID(),target) == 0 ) {
+			EpollAdd(target);
 			break; // success
 		}
 
@@ -799,6 +948,7 @@ CCBServer::RemoveTarget( CCBTarget *target )
 		EXCEPT("CCB: failed to remove target ccbid=%lu, %s",
 			   target->getCCBID(), target->getSock()->peer_description());
 	}
+	EpollRemove(target);
 
 	dprintf(D_FULLDEBUG,"CCB: unregistered target daemon %s with ccbid %lu\n",
 			target->getSock()->peer_description(),
