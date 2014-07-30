@@ -185,10 +185,11 @@ master_exit(int retval)
 		// If we're positive that we are going to shut down,
 		// we should clean out the shared port directory if
 		// we created it.
-	if (SharedPortEndpoint::CreatedSharedPortDirectory()) {
+	std::string dirname;
+	if ( SharedPortEndpoint::CreatedSharedPortDirectory() &&
+		 SharedPortEndpoint::GetDaemonSocketDir(dirname) ) {
+
 		TemporaryPrivSentry tps(PRIV_CONDOR);
-		std::string dirname;
-		SharedPortEndpoint::GetDaemonSocketDir(dirname);
 		Directory d(dirname.c_str());
 		d.Remove_Entire_Directory();
 		if (-1 == rmdir(dirname.c_str())) {
