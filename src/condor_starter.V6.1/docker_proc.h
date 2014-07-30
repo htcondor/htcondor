@@ -31,6 +31,8 @@ class DockerProc : public VanillaProc {
 		virtual void PublishToEnv( Env * env );
 
 	private:
+
+		std::string containerID;
 };
 
 #endif /* _CONDOR_DOCKER_PROC_H */
