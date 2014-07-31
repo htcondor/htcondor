@@ -30,33 +30,33 @@
 
 extern CStarter *Starter;
 
-	//
-	// TODO: If the starter is running as root (maybe docker should be suid?)
-	// we can't allow the normal ssh-to-job code to run.  We'd also probably
-	// like ssh-to-job to connect to the docker/internal stuff anyway...
-	//
+//
+// TODO: If the starter is running as root (maybe docker should be suid?)
+// we can't allow the normal ssh-to-job code to run.  We'd also probably
+// like ssh-to-job to connect to the docker/internal stuff anyway...
+//
 
-	//
-	// TODO: Allow the use of HTCondor file-transfer to provide the image.
-	// May require understanding "self-hosting".
-	//
+//
+// TODO: Allow the use of HTCondor file-transfer to provide the image.
+// May require understanding "self-hosting".
+//
 
-	//
-	// TODO: Leverage the procd to gather usage information; Docker uses
-	// the full container ID as (part of) the cgroup identifier(s).
-	//
+//
+// TODO: Leverage the procd to gather usage information; Docker uses
+// the full container ID as (part of) the cgroup identifier(s).
+//
 
-	//
-	// TODO: Can we configure Docker to store its overlay filesystem in
-	// the sandbox?  Would that be useful for cleanup, or to help admins
-	// allocate disk space?
-	//
+//
+// TODO: Can we configure Docker to store its overlay filesystem in
+// the sandbox?  Would that be useful for cleanup, or to help admins
+// allocate disk space?
+//
 
-	//
-	// TODO: Write the container ID out to disk (<sandbox>../../.dotfile)
-	// like the VM universe so that the startd can clean up if the starter
-	// crashes and again, if necessary, on start-up.
-	//
+//
+// TODO: Write the container ID out to disk (<sandbox>../../.dotfile)
+// like the VM universe so that the startd can clean up if the starter
+// crashes and again, if necessary, on start-up.
+//
 
 DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ) { }
 
@@ -109,64 +109,180 @@ int DockerProc::StartJob() {
 	}
 	dprintf( D_FULLDEBUG, "DockerAPI::run() returned container ID '%s' and pid %d\n", containerID.c_str(), JobPid );
 
+	// TODO: Start a timer to poll for job usage updates.
+
+	++num_pids; // Used by OsProc::PublishUpdateAd().
 	return TRUE;
 }
 
-// TODO: Implement.
+
 bool DockerProc::JobReaper( int pid, int status ) {
 	dprintf( D_ALWAYS, "DockerProc::JobReaper()\n" );
+
+	//
+	// This should mean that the container has terminated.
+	//
+	if( pid == JobPid ) {
+		// TODO: Verify that the container has terminated.
+		// docker inspect -format <isRunning, exitCode?> ${containerID}
+		// TODO: Set status appropriately (as if it were from waitpid()).
+		// TODO: Record final job usage.
+
+		// We don't have to do any process clean-up, because container.
+		// We'll do the disk clean-up after we've transferred files.
+	}
+
+	// This helps to make ssh-to-job more plausible.
 	return VanillaProc::JobReaper( pid, status );
 }
 
-// TODO: Implement.
+
+//
+// JobExit() is called after file transfer.
+//
 bool DockerProc::JobExit() {
 	dprintf( D_ALWAYS, "DockerProc::JobExit()\n" );
+
+	// TODO: docker rm ${containerID}
+
 	return VanillaProc::JobExit();
 }
 
-// TODO: Implement.
 void DockerProc::Suspend() {
 	dprintf( D_ALWAYS, "DockerProc::Suspend()\n" );
-	VanillaProc::Suspend();
+
+	// TODO: docker pause ${containerID} only exists in Docker 1.1+.
+
+	is_suspended = true;
 }
 
-// TODO: Implement.
+
 void DockerProc::Continue() {
 	dprintf( D_ALWAYS, "DockerProc::Continue()\n" );
-	VanillaProc::Continue();
+
+	if( is_suspended ) {
+		// TODO: docker unpause ${containerID} only exists in Docker 1.1+.
+
+		is_suspended = false;
+	}
 }
 
-// TODO: Implement.
+//
+// Setting requested_exit allows OsProc::JobExit() to handle telling the
+// user why the job exited.
+//
+
 bool DockerProc::Remove() {
 	dprintf( D_ALWAYS, "DockerProc::Remove()\n" );
-	return VanillaProc::Remove();
+
+	if( is_suspended ) { Continue(); }
+	requested_exit = true;
+
+	// TODO: docker kill --signal=${rm_kill_sig} ${containerID}
+
+	// Do NOT send any signals to the waiting process.  It should only
+	// react when the container does.
+
+	// If rm_kill_sig is not SIGKILL, the process may linger.  Returning
+	// false indicates that shutdown is pending.
+	return false;
 }
 
-// TODO: Implement.
+
 bool DockerProc::Hold() {
 	dprintf( D_ALWAYS, "DockerProc::Hold()\n" );
-	return VanillaProc::Hold();
+
+	if( is_suspended ) { Continue(); }
+	requested_exit = true;
+
+	// TODO: docker kill --signal=${hold_kill_sig} ${containerID}
+
+	// Do NOT send any signals to the waiting process.  It should only
+	// react when the container does.
+
+	// If rm_kill_sig is not SIGKILL, the process may linger.  Returning
+	// false indicates that shutdown is pending.
+	return false;
 }
 
-// TODO: Implement.
+
 bool DockerProc::ShutdownGraceful() {
 	dprintf( D_ALWAYS, "DockerProc::ShutdownGraceful()\n" );
-	return VanillaProc::ShutdownGraceful();
+
+	if( containerID.empty() ) {
+		// We haven't started a Docker yet, probably because we're still
+		// doing file transfer.  Since we're all done, just return true;
+		// the FileTransfer object will clean itself up.
+		return true;
+	}
+
+	if( is_suspended ) { Continue(); }
+	requested_exit = true;
+
+	// TODO: rm_kill_sig defaults to soft_kill_sig
+	// TODO: docker kill --signal=${rm_kill_sig} ${containerID}
+
+	// Do NOT send any signals to the waiting process.  It should only
+	// react when the container does.
+
+	// If rm_kill_sig is not SIGKILL, the process may linger.  Returning
+	// false indicates that shutdown is pending.
+	return false;
 }
 
-// TODO: Implement.
+
 bool DockerProc::ShutdownFast() {
 	dprintf( D_ALWAYS, "DockerProc::ShutdownFast()\n" );
-	return VanillaProc::ShutdownFast();
+
+	if( containerID.empty() ) {
+		// We haven't started a Docker yet, probably because we're still
+		// doing file transfer.  Since we're all done, just return true;
+		// the FileTransfer object will clean itself up.
+		return true;
+	}
+
+	// There's no point unpausing the container (and possibly swapping
+	// it all back in again) if we're just going to be sending it a SIGKILL,
+	// so don't bother to Continue() the process if it's been suspended.
+	requested_exit = true;
+
+	// TODO: docker kill --signal=SIGKILL ${containerID}
+
+	// Do NOT send any signals to the waiting process.  It should only
+	// react when the container does.
+
+	// Based on the other comments, you'd expect this to return true.
+	// It could, but it's simpler to just to let the usual routines
+	// handle the job clean-up than to duplicate them all here.
+	return false;
 }
 
-// TODO: Implement.  Do NOT call VanillaProc::PublishUpdateAd(), because it
-// will report on the wrong process (the one we're using to generate a job-
-// termination event).
-bool DockerProc::PublishUpdateAd( ClassAd * jobAd ) {
+
+bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 	dprintf( D_ALWAYS, "DockerProc::PublishUpdateAd()\n" );
-	return true;
+
+	// TODO: get usage from procd somehow.  Set num_pids, if we can.  See
+	// VanillaProc::PublishUpdateAd() for the attributes to set.
+
+	//
+	// If we want to use the existing reporting code (probably a good
+	// idea), we'll need to make sure that m_proc_exited, is_checkpointed,
+	// is_suspended, num_pids, and dumped_core are set for OsProc; and that
+	// job_start_time, job_exit_time, and exit_status are set.
+	//
+	// We set is_suspended and num_pids already, except for the TODO above.
+	// DockerProc::JobReaper() already sets m_proc_exited, exit_code, and
+	// dumped_core (indirectly, via OsProc::JobReaper()).
+	//
+	// We will need to set is_checkpointed appropriately when we support it.
+	//
+	// TODO: We could approximate job_start_time and job_exit_time internally,
+	// or set them during our status polling.
+	//
+
+	return OsProc::PublishUpdateAd( ad );
 }
+
 
 // TODO: Implement.
 void DockerProc::PublishToEnv( Env * env ) {
