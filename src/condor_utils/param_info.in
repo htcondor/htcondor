@@ -1424,7 +1424,6 @@ friendly_name=Quill Should Reindex
 review=?
 tags=quill,jobqueuedbmanager
 
-[SCHEDD_NAME]
 [RECONNECT_BACKOFF_CEILING]
 default=300
 type=int

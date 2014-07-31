@@ -40,6 +40,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that only manifested on Linux 3.14 or more recent kernels, 
+which caused the \Condor{collector} to respond very slowly to queries.
+\Ticket{4489}
+
 \item Fixed a Windows platform bug that caused \Condor{status} to abort
 when \Macro{ENABLE\_CLASSAD\_CACHING} was set to \Expr{True}. 
 \Ticket{4459}
@@ -123,6 +127,16 @@ determination.
 \item Fixed a bug that could cause GSI security operations to fail if
 \Env{GLOBUS\_THREAD\_MODEL} was set in the environment.
 \Ticket{4464}
+
+\item Fixed a bug in \Condor{ft-gahp} that caused it to ignore the peer
+version given by the \Expr{CONDOR\_VERSION} command, causing it to think that
+its file transfer peer was the same version as itself.
+\Ticket{4473}
+
+\item Fixed the handling of optional authentication parameters given to
+\Prog{remote\_gahp}. This is used as part of the batch grid-type when
+submitting jobs to a remote system via \Prog{ssh}.
+\Ticket{4434}
 
 \end{itemize}
 
