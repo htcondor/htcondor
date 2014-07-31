@@ -168,6 +168,9 @@ its file transfer peer was the same version as itself.
 submitting jobs to a remote system via \Prog{ssh}.
 \Ticket{4434}
 
+\item Fixed a rare memory leak. The leak occurred when IPv6 was disabled, but the NETWORK\_INTERFACE and COLLECTOR\_HOST were set to IPv6 addresses.
+\Ticket{4502}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
