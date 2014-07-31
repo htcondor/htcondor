@@ -117,9 +117,11 @@ int DockerProc::StartJob() {
 
 	std::string sandboxPath = Starter->jic->jobRemoteIWD();
 
-	// The GlobalJobID is unsuitable by virtue its octothorpes.
+	// The GlobalJobID is unsuitable by virtue its octothorpes.  This is
+	// pretty good, but could be made even less likely to collide if it
+	// had a timestamp.
 	std::string dockerName;
-	formatstr( dockerName, "%s_%d_%d_%d",
+	formatstr( dockerName, "%s_cluster%d_proc%d_starterPID%d",
 		Starter->getMySlotName().c_str(),
 		Starter->jic->jobCluster(),
 		Starter->jic->jobProc(),
@@ -132,6 +134,7 @@ int DockerProc::StartJob() {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::run( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		return FALSE;
 	}
+	dprintf( D_FULLDEBUG, "DockerAPI::run() returned container ID '%s' and pid %d\n", containerID.c_str(), JobPid );
 
 	// TO DO : don't bother with the FamilyInfo.
 	// Take containerID and use it to initialize cgroup tracking.
@@ -162,37 +165,47 @@ bool DockerProc::JobReaper( int pid, int status ) {
 }
 
 bool DockerProc::JobExit() {
+	dprintf( D_ALWAYS, "DockerProc::JobExit()\n" );
 	return VanillaProc::JobExit();
 }
 
 void DockerProc::Suspend() {
+	dprintf( D_ALWAYS, "DockerProc::Suspend()\n" );
 	VanillaProc::Suspend();
 }
 
 void DockerProc::Continue() {
+	dprintf( D_ALWAYS, "DockerProc::Continue()\n" );
 	VanillaProc::Continue();
 }
 
 bool DockerProc::Remove() {
+	dprintf( D_ALWAYS, "DockerProc::Remove()\n" );
 	return VanillaProc::Remove();
 }
 
 bool DockerProc::Hold() {
+	dprintf( D_ALWAYS, "DockerProc::Hold()\n" );
 	return VanillaProc::Hold();
 }
 
 bool DockerProc::ShutdownGraceful() {
+	dprintf( D_ALWAYS, "DockerProc::ShutdownGraceful()\n" );
 	return VanillaProc::ShutdownGraceful();
 }
 
 bool DockerProc::ShutdownFast() {
+	dprintf( D_ALWAYS, "DockerProc::ShutdownFast()\n" );
 	return VanillaProc::ShutdownFast();
 }
 
 bool DockerProc::PublishUpdateAd( ClassAd * jobAd ) {
-	return VanillaProc::PublishUpdateAd( jobAd );
+	dprintf( D_ALWAYS, "DockerProc::PublishUpdateAd()\n" );
+	// return VanillaProc::PublishUpdateAd( jobAd );
+	return true;
 }
 
 void DockerProc::PublishToEnv( Env * env ) {
-	return VanillaProc::PublishToEnv( env );
+	dprintf( D_ALWAYS, "DockerProc::PublishToEnv()\n" );
+	return;
 }
