@@ -25,66 +25,38 @@
 #include "docker-api.h"
 
 
-
-// move this to condor_attributes.h
+// TODO: move this to condor_attributes.h
 #define ATTR_DOCKER_IMAGE_ID "DockerImageId"
 
 extern CStarter *Starter;
 
-
-
 	//
-	// TO DO:  If the starter is running as root (maybe docker should be suid?)
+	// TODO: If the starter is running as root (maybe docker should be suid?)
 	// we can't allow the normal ssh-to-job code to run.  We'd also probably
 	// like ssh-to-job to connect to the docker/internal stuff anyway...
 	//
 
-	// Extract the name of the desired Docker image from jobAd
-	// Ask Docker which cgroup it's going to use?
-	// Steal code from os_proc::StartJob() to do the stdio mangling
-	// ...
-
-	// We can run 'docker pull' to verify that it can find the image
-	// before we run 'docker run' to actually start it.  In fact, if
-	// we feel like being clever, we could have the startd use config
-	// to do the pull before we run a docker job at all, and advertise
-	// which ones we will know will work...
-
-	// To see currently-installed images, run 'docker images'.
-
-	// If we supply a name to 'docker run', we can use 'docker ps' to
-	// link the name to the (short) container ID.  We can then pass that
-	// to 'docker inspect' to get the (long) container ID, among other
-	// interesting bits.  The (long) container ID will let use grovel
-	// around in /sys/fs/cgroup if we need to (for usage information?).
 	//
-	// or instead docker ps -a --no-trunc for the full Docker ID.
-	// This allows the docker to accumulate usage before we can look at
-	// it, but there doesn't appear to be anything we can about that at
-	// the moment.
-
-	// The 'docker run' command hangs around for the duration of the
-	// instance, which means we can probably hand its PID off to UserProc
-	// and/or OSProc like we hand off the VM GAHP's PID.
-
-	// We should be able to leverage the procd for usage-gathering if
-	// we're clever -- assuming the (long) container ID suffices for
-	// its cgroup magic.
-
-	// We should run with '-v /path/to/sandbox:/inner-path/to/sandbox'.
-	// .. and the IWD should probably be /inter-path/to/sandbox.  Use '-w'.
-
-	// TODO for laterz: figure out this self-hosting magic.  (We want to
-	// supply images via file transfer.)
-
-	// TODO for laterz: can we configure Docker to drop its overlay filesystem
-	// backing store(s) into the sandbox?  This seems like it might help to
-	// ensure clean-up.
+	// TODO: Allow the use of HTCondor file-transfer to provide the image.
+	// May require understanding "self-hosting".
 	//
-	// TODO for laterz: Perhaps instead, we can steal an idea from the VM
-	// universe and write the Docker ID out to disk (<sandbox>/../.dotfile)
-	// so that the startd can execute the docker if the starter crashes and
-	// again on startd start-up if necessary.
+
+	//
+	// TODO: Leverage the procd to gather usage information; Docker uses
+	// the full container ID as (part of) the cgroup identifier(s).
+	//
+
+	//
+	// TODO: Can we configure Docker to store its overlay filesystem in
+	// the sandbox?  Would that be useful for cleanup, or to help admins
+	// allocate disk space?
+	//
+
+	//
+	// TODO: Write the container ID out to disk (<sandbox>../../.dotfile)
+	// like the VM universe so that the startd can clean up if the starter
+	// crashes and again, if necessary, on start-up.
+	//
 
 DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ) { }
 
@@ -101,10 +73,8 @@ int DockerProc::StartJob() {
 	JobAd->LookupString( ATTR_JOB_CMD, command );
 	dprintf( D_FULLDEBUG, "%s: '%s'\n", ATTR_JOB_CMD, command.c_str() );
 
-	// Warning: cargo cult approaching.
 	ArgList args;
 	args.SetArgV1SyntaxToCurrentPlatform();
-	// My cult doesn't set argv[0] to the command.
 	MyString argsError;
 	if( ! args.AppendArgsFromClassAd( JobAd, & argsError ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to read job arguments from job ad: '%s'.\n", argsError.c_str() );
@@ -113,13 +83,14 @@ int DockerProc::StartJob() {
 
 	// We can't just use Starter->GetJobEnv() because we need to change e.g.,
 	// _CONDOR_SCRATCH_DIR to be sensible for the chroot jail.
+	// TODO: pass requested job environment to Docker.
 	Env e;
 
 	std::string sandboxPath = Starter->jic->jobRemoteIWD();
 
-	// The GlobalJobID is unsuitable by virtue its octothorpes.  This is
-	// pretty good, but could be made even less likely to collide if it
-	// had a timestamp.
+	// The GlobalJobID is unsuitable by virtue its octothorpes.  This
+	// construction is informative, but could be made even less likely
+	// to collide if it had a timestamp.
 	std::string dockerName;
 	formatstr( dockerName, "%s_cluster%d_proc%d_starterPID%d",
 		Starter->getMySlotName().c_str(),
@@ -127,8 +98,10 @@ int DockerProc::StartJob() {
 		Starter->jic->jobProc(),
 		getpid() );
 
-	// We assume that DockerAPI::run() arranges for the reaper(s) to be called.
 	CondorError err;
+	// DockerAPI::run() returns a PID from daemonCore->Create_Process(), which
+	// makes it suitable for passing up into VanillaProc.  This combination
+	// will trigger the reaper(s) when the container terminates.
 	int rv = DockerAPI::run( dockerName, imageID, command, args, e, sandboxPath, containerID, JobPid, err );
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::run( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
@@ -136,75 +109,66 @@ int DockerProc::StartJob() {
 	}
 	dprintf( D_FULLDEBUG, "DockerAPI::run() returned container ID '%s' and pid %d\n", containerID.c_str(), JobPid );
 
-	// TO DO : don't bother with the FamilyInfo.
-	// Take containerID and use it to initialize cgroup tracking.
-	FamilyInfo fi;
-	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
-	// FIXME: approximate?
-	fi.cgroup = containerID.c_str();
-	// FIXME: Necessary?
-	// fi.isDocker = true;
-	// Is this pid the right one?
-/*
-	// This method is private.  We'll have to do some DC surgery.
-	if( ! daemonCore->Register_Family( JobPid, getpid(), fi.max_snapshot_interval,
-							 NULL, NULL, NULL, fi.cgroup, NULL ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Unable to register process family with the procd.\n" );
-		return FALSE;
-	}
-*/
-
-	// Immediately start our consumption metrics?
-
 	return TRUE;
 }
 
+// TODO: Implement.
 bool DockerProc::JobReaper( int pid, int status ) {
 	dprintf( D_ALWAYS, "DockerProc::JobReaper()\n" );
 	return VanillaProc::JobReaper( pid, status );
 }
 
+// TODO: Implement.
 bool DockerProc::JobExit() {
 	dprintf( D_ALWAYS, "DockerProc::JobExit()\n" );
 	return VanillaProc::JobExit();
 }
 
+// TODO: Implement.
 void DockerProc::Suspend() {
 	dprintf( D_ALWAYS, "DockerProc::Suspend()\n" );
 	VanillaProc::Suspend();
 }
 
+// TODO: Implement.
 void DockerProc::Continue() {
 	dprintf( D_ALWAYS, "DockerProc::Continue()\n" );
 	VanillaProc::Continue();
 }
 
+// TODO: Implement.
 bool DockerProc::Remove() {
 	dprintf( D_ALWAYS, "DockerProc::Remove()\n" );
 	return VanillaProc::Remove();
 }
 
+// TODO: Implement.
 bool DockerProc::Hold() {
 	dprintf( D_ALWAYS, "DockerProc::Hold()\n" );
 	return VanillaProc::Hold();
 }
 
+// TODO: Implement.
 bool DockerProc::ShutdownGraceful() {
 	dprintf( D_ALWAYS, "DockerProc::ShutdownGraceful()\n" );
 	return VanillaProc::ShutdownGraceful();
 }
 
+// TODO: Implement.
 bool DockerProc::ShutdownFast() {
 	dprintf( D_ALWAYS, "DockerProc::ShutdownFast()\n" );
 	return VanillaProc::ShutdownFast();
 }
 
+// TODO: Implement.  Do NOT call VanillaProc::PublishUpdateAd(), because it
+// will report on the wrong process (the one we're using to generate a job-
+// termination event).
 bool DockerProc::PublishUpdateAd( ClassAd * jobAd ) {
 	dprintf( D_ALWAYS, "DockerProc::PublishUpdateAd()\n" );
-	// return VanillaProc::PublishUpdateAd( jobAd );
 	return true;
 }
 
+// TODO: Implement.
 void DockerProc::PublishToEnv( Env * env ) {
 	dprintf( D_ALWAYS, "DockerProc::PublishToEnv()\n" );
 	return;

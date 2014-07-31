@@ -9,8 +9,11 @@
 
 #include "docker-api.h"
 
-//  sudo docker inspect --format 'ContainerId = {{.Id}} ; Pid = {{.State.Pid}} ; ExitCode = {{.State.ExitCode}}' <container-name>
-
+//
+// Because this executes docker run in detached mode, we don't actually
+// care if the image is stored locally or not (except to the extent that
+// remote image pull violates the principle of least astonishment).
+//
 int DockerAPI::run(
 	const std::string & dockerName,
 	const std::string & imageID,
@@ -24,22 +27,22 @@ int DockerAPI::run(
 {
 	ArgList al;
 	std::string docker;
-	// FIXME: do something sane about root permissions, if possible.
+	// TODO: something sane about root permissions, if possible.
 	if( ! param( docker, "DOCKER" ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DOCKER is undefined.\n" );
 		return -1;
 	}
 	al.AppendArg( docker );
 	al.AppendArg( "run" );
-	// TO-DO: Set up the environment.
+	// TODO: Set up the environment (in the container).
 	al.AppendArg( "--detach" );
 	al.AppendArg( "--name" );
 	al.AppendArg( dockerName );
+	// TODO: Map the external sanbox to the internal sandbox.
 	al.AppendArg( "--workdir" );
 	al.AppendArg( sandboxPath );
 	al.AppendArg( imageID );
 	al.AppendArg( command );
-	// Need i/o redirection.  Coordinate with DaemonCore's Create_Process();
 	al.AppendArgsFromArgList( args );
 
 	MyString displayString;
@@ -102,6 +105,9 @@ int DockerAPI::run(
 		return -6;
 	}
 
+	// If the output isn't exactly formatElements.number() lines wrong,
+	// something has gone wrong and we'll at least be able to print out
+	// the error message(s).
 	std::string correctOutput[ formatElements.number() ];
 	for( int i = 0; i < formatElements.number(); ++i ) {
 		if( fgets( buffer, 1024, dockerResults ) != NULL ) {
@@ -139,12 +145,14 @@ int DockerAPI::run(
 		return -5;
 	}
 
+	//
 	// It's convenient to have a process which suicides when the container
 	// terminates.  If 'docker logs --follow' does, using it allows us to
 	// trivially stream I/O, and since it /will/ do 'catch-up', we won't
-	// even miss any.
+	// even miss any.  [TODO]
 	//
 	// Calling daemonCore->Create_Process() handles much of this magic for us.
+	//
 
 	ArgList cl;
 	cl.AppendArg( docker );
@@ -175,7 +183,6 @@ int DockerAPI::run(
 	int dockersStdErr = pipeFDs[0];
 	childFDs[2] = pipeFDs[2];
 
-	// DCJOBOPT_SUSPEND_ON_EXEC might be handy for docker run.
 	int childPID = daemonCore->Create_Process( docker.c_str(), cl,
 		PRIV_UNKNOWN, 1, FALSE, FALSE, NULL, sandboxPath.c_str(),
 		& fi, NULL, childFDs );
