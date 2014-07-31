@@ -129,6 +129,11 @@ determination.
 \Env{GLOBUS\_THREAD\_MODEL} was set in the environment.
 \Ticket{4464}
 
+\item Fixed a bug in \Condor{ft-gahp} that caused it to ignore the peer
+version given by the CONDOR\_VERSION command, causing it to think that
+its file transfer peer is the same version as itself.
+\Ticket{4473}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
