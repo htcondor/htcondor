@@ -124,6 +124,9 @@ determination.
 \Env{GLOBUS\_THREAD\_MODEL} was set in the environment.
 \Ticket{4464}
 
+\item Fixed a rare memory leak. The leak occurred when IPv6 was disabled, but the NETWORK\_INTERFACE and COLLECTOR\_HOST were set to IPv6 addresses.
+\Ticket{4502}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
