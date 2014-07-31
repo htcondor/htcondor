@@ -134,6 +134,11 @@ version given by the CONDOR\_VERSION command, causing it to think that
 its file transfer peer is the same version as itself.
 \Ticket{4473}
 
+\item Fixed the handling of optional authentication parameters given to
+\Prog{remote\_gahp}. This is used as part of the batch grid-type when
+submitting jobs to a remote system via ssh.
+\Ticket{4434}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
