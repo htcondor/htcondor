@@ -209,6 +209,8 @@ CCBServer::InitAndReconfig()
 	{
 #ifndef WIN32
 			// Fool DC into talking to the epoll fd; note we only register the read side.
+			// Yes, this is fairly gross - the decision was taken to do this instead of having
+			// DC track arbitrary FDs just for this use case.
 		int pipes[2]; pipes[0] = -1; pipes[1] = -1;
 		int fd_to_replace = -1;
 		if (daemonCore->Create_Pipe(pipes, true) == -1 || pipes[0] == -1) {
