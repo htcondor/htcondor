@@ -21,6 +21,7 @@
 #include "condor_config.h"
 #include "condor_holdcodes.h"
 #include "basename.h"
+#include "selector.h"
 
 #include <classad/operators.h>
 
@@ -159,6 +160,62 @@ make_requirements(ExprTree *reqs, ShouldTransferFiles_t stf)
     return result;
 }
 
+bool
+putClassAdAndEOM(Sock & sock, classad::ClassAd &ad)
+{
+        if (sock.type() != Stream::reli_sock)
+	{
+		return putClassAd(&sock, ad) && sock.end_of_message();
+	}
+	ReliSock & rsock = static_cast<ReliSock&>(sock);
+
+	Selector selector;
+	selector.add_fd(sock.get_file_desc(), Selector::IO_WRITE);
+	int timeout = sock.timeout(0); sock.timeout(timeout);
+	timeout = timeout ? timeout : 20;
+	selector.set_timeout(timeout);
+	if (!putClassAd(&sock, ad, PUT_CLASSAD_NON_BLOCKING))
+	{
+		return false;
+	}
+	int retval = rsock.end_of_message_nonblocking();
+	while (true) {
+		if (rsock.clear_backlog_flag()) {
+			Py_BEGIN_ALLOW_THREADS
+			selector.execute();
+			Py_END_ALLOW_THREADS
+			if (selector.timed_out()) {THROW_EX(RuntimeError, "Timeout when trying to write to remote host");}
+		} else if (retval == 1) {
+			return true;
+		} else if (!retval) {
+			return false;
+		}
+		retval = rsock.finish_end_of_message();
+	}
+}
+
+bool
+getClassAdWithoutGIL(Sock &sock, classad::ClassAd &ad)
+{
+	Selector selector;
+	selector.add_fd(sock.get_file_desc(), Selector::IO_READ);
+	int timeout = sock.timeout(0); sock.timeout(timeout);
+	timeout = timeout ? timeout : 20;
+	selector.set_timeout(timeout);
+	int idx = 0;
+	while (!sock.msgReady())
+	{
+		printf("Begin wait\n");
+		Py_BEGIN_ALLOW_THREADS
+		selector.execute();
+		printf("End wait\n");
+		Py_END_ALLOW_THREADS
+		if (selector.timed_out()) {THROW_EX(RuntimeError, "Timeout when waiting for remote host");}
+		if (idx++ == 50) break;
+	}
+	return getClassAd(&sock, ad);
+}
+
 struct HistoryIterator
 {
     HistoryIterator(boost::shared_ptr<Sock> sock)
@@ -172,7 +229,7 @@ struct HistoryIterator
         if (m_count < 0) THROW_EX(StopIteration, "All ads processed");
 
         boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
-        if (!getClassAd(m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to receive remote ad.");
+        if (!getClassAdWithoutGIL(*m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to receive remote ad.");
         long long intVal;
         if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
         { // Last ad.
@@ -234,7 +291,7 @@ struct QueryIterator
         if (m_count < 0) THROW_EX(StopIteration, "All ads processed");
 
         boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
-        if (!getClassAd(m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to receive remote ad.");
+        if (!getClassAdWithoutGIL(*m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to receive remote ad.");
         if (!m_sock->end_of_message()) THROW_EX(RuntimeError, "Failed to get EOM after ad.");
         long long intVal;
         if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
@@ -792,7 +849,7 @@ struct Schedd {
 	}
 	boost::shared_ptr<Sock> sock_sentry(sock);
 
-	if (!putClassAd(sock, ad) || !sock->end_of_message()) THROW_EX(RuntimeError, "Unable to send request classad to schedd");
+	if (!putClassAdAndEOM(*sock, ad)) THROW_EX(RuntimeError, "Unable to send request classad to schedd");
 
         boost::shared_ptr<HistoryIterator> iter(new HistoryIterator(sock_sentry));
         return iter;
@@ -865,7 +922,7 @@ struct Schedd {
         }
         boost::shared_ptr<Sock> sock_sentry(sock);
 
-        if (!putClassAd(sock, ad) || !sock->end_of_message()) THROW_EX(RuntimeError, "Unable to send request classad to schedd");
+        if (!putClassAdAndEOM(*sock, ad)) THROW_EX(RuntimeError, "Unable to send request classad to schedd");
 
         boost::shared_ptr<QueryIterator> iter(new QueryIterator(sock_sentry));
         return iter;
