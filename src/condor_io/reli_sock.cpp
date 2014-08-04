@@ -1292,6 +1292,7 @@ ReliSock::setTargetSharedPortID( char const *id )
 bool
 ReliSock::msgReady() {
 	if (rcv_msg.ready) { return true; }
+		// NOTE: 'true' here indicates non-blocking.
 	BlockingModeGuard sentry(this, true);
 	int retval = handle_incoming_packet();
 	if (retval == 2) {
