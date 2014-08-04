@@ -16,6 +16,37 @@ New features will be added in the 8.3.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-2-3}Version 8.2.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.2.3 not yet released.
+%\item HTCondor version 8.2.3 released on Month Date, 2014.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a rare memory leak. The leak occurred when IPv6 was disabled, but the NETWORK\_INTERFACE and COLLECTOR\_HOST were set to IPv6 addresses.
+\Ticket{4502}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-2-2}Version 8.2.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -23,8 +54,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.2.2 not yet released.
-%\item HTCondor version 8.2.2 released on Month Date, 2014.
+\item HTCondor version 8.2.2 released on August 5, 2014.
 
 \end{itemize}
 
@@ -137,6 +167,14 @@ its file transfer peer was the same version as itself.
 \Prog{remote\_gahp}. This is used as part of the batch grid-type when
 submitting jobs to a remote system via \Prog{ssh}.
 \Ticket{4434}
+
+\item  Fixed a bug in the parsing the value set for the
+\Attr{Detected<Tag>} attribute of the output of a script specified by
+configuration variable \Macro{MACHINE\_RESOURCE\_INVENTORY\_<TAG>}.
+If the value of \Attr{Detected<Tag>} was not a string, 
+then it would not be parsed correctly. 
+As a result the resource quantity would be set to 0.
+\Ticket{4427}
 
 \end{itemize}
 
