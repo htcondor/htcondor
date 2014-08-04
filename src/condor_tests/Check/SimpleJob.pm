@@ -170,6 +170,12 @@ sub RunCheck
 	my $program = $args{runthis} || "x_sleep.pl";
     my $submit_fname = CondorTest::TempFileName("$testname.submit");
 
+	my $namecallback;
+	if(exists $args{return_submit_file_name}) {
+		$namecallback = $args{return_submit_file_name};
+		&$namecallback($submit_fname);
+	}
+
     open( SUBMIT, ">$submit_fname" ) || die "error writing to $submit_fname: $!\n";
     print SUBMIT "universe = $universe\n";
     print SUBMIT "executable = $program\n";
