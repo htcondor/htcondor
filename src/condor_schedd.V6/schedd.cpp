@@ -168,7 +168,7 @@ bool jobPrepNeedsThread( int cluster, int proc );
 bool jobCleanupNeedsThread( int cluster, int proc );
 bool jobExternallyManaged(ClassAd * ad);
 bool jobManagedDone(ClassAd * ad);
-int  count( ClassAd *job );
+int  count_a_job( ClassAd *job );
 static void WriteCompletionVisa(ClassAd* ad);
 
 
@@ -1128,8 +1128,10 @@ Scheduler::count_jobs()
 	SchedUniverseJobsRunning = 0;
 	LocalUniverseJobsIdle = 0;
 	LocalUniverseJobsRunning = 0;
+	stats.JobsRunning = 0;
 	stats.JobsRunningRuntimes = 0;
 	stats.JobsRunningSizes = 0;
+	scheduler.OtherPoolStats.ResetJobsRunning();
 
 	// clear owner table contents
 	time_t current_time = time(0);
@@ -1153,7 +1155,7 @@ Scheduler::count_jobs()
 		// job cluster ids, since we're about to re-create it.
 	dedicated_scheduler.clearDedicatedClusters();
 
-	WalkJobQueue((int(*)(ClassAd *)) count );
+	WalkJobQueue( count_a_job );
 
 	if( dedicated_scheduler.hasDedicatedClusters() ) {
 			// We found some dedicated clusters to service.  Wake up
@@ -1328,7 +1330,9 @@ Scheduler::count_jobs()
 
 		// log classad into sql log so that it can be updated to DB
 #ifdef HAVE_EXT_POSTGRESQL
-	FILESQL::daemonAdInsert(cad, "ScheddAd", FILEObj, prevLHF);
+	if ( FILEObj ) {
+		FILESQL::daemonAdInsert(cad, "ScheddAd", FILEObj, prevLHF);
+	}
 #endif
 
 #if defined(HAVE_DLOPEN)
@@ -1816,7 +1820,7 @@ int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
 
 	FamilyInfo fi;
 	pid_t pid = daemonCore->Create_Process(history_helper.c_str(), args, PRIV_ROOT, m_history_helper_rid,
-		false, NULL, NULL, NULL, inherit_list);
+		false, false, NULL, NULL, NULL, inherit_list);
 	if (!pid)
 	{
 		return sendHistoryErrorAd(state.GetStream(), 4, "Failed to launch history helper process");
@@ -1859,7 +1863,7 @@ sendDone(Stream *stream)
 struct QueryJobAdsContinuation : Service {
 
 	classad_shared_ptr<classad::ExprTree> requirements;
-	StringList projection;
+	classad::References projection;
 	ClassAdLog::filter_iterator it;
 	bool unfinished_eom;
 	bool registered_socket;
@@ -1900,12 +1904,16 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 			has_backlog = true;
 			break;
 		}
-		int proc, cluster;
-                tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
-                tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
-                //dprintf(D_FULLDEBUG, "Writing job %d.%d to wire\n", cluster,proc);
-                int retval = putClassAdNonblocking(sock, *tmp_ad, false, projection.isEmpty() ? NULL : &projection);
-                if (retval == 2) {
+		//if (IsFulldebug(D_FULLDEBUG)) {
+		//	int proc, cluster;
+		//	tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
+		//	tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
+		//	dprintf(D_FULLDEBUG, "Writing job %d.%d to wire\n", cluster,proc);
+		//}
+		int retval = putClassAd(sock, *tmp_ad,
+					PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
+					projection.empty() ? NULL : &projection);
+		if (retval == 2) {
 			//dprintf(D_FULLDEBUG, "Detecting backlog.\n");
                         has_backlog = true;
                 } else if (!retval) {
@@ -1955,23 +1963,14 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	}
 	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements->Copy());
 
-	classad::Value value;
-	classad::ExprList *list = NULL;
-	if ((queryAd.find(ATTR_PROJECTION) != queryAd.end()) &&
-		(!queryAd.EvaluateAttr(ATTR_PROJECTION, value) || !value.IsListValue(list)))
-	{
-		return sendJobErrorAd(stream, 2, "Unable to evaluate projection list");
-	}
 	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, 1000);
-	StringList &projection = continuation->projection;
-	if (list) for (classad::ExprList::const_iterator it = list->begin(); it != list->end(); it++) {
-		std::string attr;
-		if (!(*it)->Evaluate(value) || !value.IsStringValue(attr))
-		{
-			delete continuation;
-			return sendJobErrorAd(stream, 3, "Unable to convert projection list to string list");
+	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, continuation->projection, true);
+	if (proj_err < 0) {
+		delete continuation;
+		if (proj_err == -1) {
+			return sendJobErrorAd(stream, 2, "Unable to evaluate projection list");
 		}
-		projection.insert(attr.c_str());
+		return sendJobErrorAd(stream, 3, "Unable to convert projection list to string list");
 	}
 
 	return continuation->finish(stream);
@@ -1985,7 +1984,7 @@ clear_autocluster_id( ClassAd *job )
 }
 
 int
-count( ClassAd *job )
+count_a_job( ClassAd *job )
 {
 	int		status;
 	int		niceUser;
@@ -2241,17 +2240,23 @@ count( ClassAd *job )
 			// Don't update scheduler.Owners[OwnerNum].JobsRunning here.
 			// We do it in Scheduler::count_jobs().
 
-		int job_image_size = 0;
-		job->LookupInteger("ImageSize_RAW", job_image_size);
-		scheduler.stats.JobsRunningSizes += (int64_t)job_image_size * 1024;
-		OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
+			// if job is not idle, then update statistics for running jobs
+		if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
+			scheduler.stats.JobsRunning += 1;
+			OTHER.JobsRunning += 1;
 
-		int job_start_date = 0;
-		int job_running_time = 0;
-		if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
-			job_running_time = (now - job_start_date);
-		scheduler.stats.JobsRunningRuntimes += job_running_time;
-		OTHER.JobsRunningRuntimes += job_running_time;
+			int job_image_size = 0;
+			job->LookupInteger("ImageSize_RAW", job_image_size);
+			scheduler.stats.JobsRunningSizes += (int64_t)job_image_size * 1024;
+			OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
+
+			int job_start_date = 0;
+			int job_running_time = 0;
+			if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
+				job_running_time = (now - job_start_date);
+			scheduler.stats.JobsRunningRuntimes += job_running_time;
+			OTHER.JobsRunningRuntimes += job_running_time;
+		}
 	} else if (status == HELD) {
 		scheduler.JobsHeld++;
 		scheduler.Owners[OwnerNum].JobsHeld++;
@@ -7925,7 +7930,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	   Someday, hopefully soon, we'll fix this and spawn the
 	   shadow/handler with PRIV_USER_FINAL... */
 	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
-	                                  is_dc, env, NULL, fip, NULL, 
+	                                  is_dc, is_dc, env, NULL, fip, NULL, 
 	                                  std_fds_p, NULL, niceness,
 									  NULL, create_process_opts);
 	if( pid == FALSE ) {
@@ -8650,14 +8655,18 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		core_size = (size_t)core_size_truncated;
 		core_size_ptr = &core_size;
 	}
-	
+
+		// Scheduler universe jobs should not be told about the shadow
+		// command socket in the inherit buffer.
+	daemonCore->SetInheritParentSinful( NULL );
 	pid = daemonCore->Create_Process( a_out_name.Value(), args, PRIV_USER_FINAL, 
-	                                  shadowReaperId, FALSE,
+	                                  shadowReaperId, FALSE, FALSE,
 	                                  &envobject, iwd.Value(), NULL, NULL, inouterr,
 	                                  NULL, niceness, NULL,
 	                                  DCJOBOPT_NO_ENV_INHERIT,
 	                                  core_size_ptr );
-	
+	daemonCore->SetInheritParentSinful( MyShadowSockName );
+
 	// now close those open fds - we don't want them here.
 	for ( i=0 ; i<3 ; i++ ) {
 		if ( close( inouterr[i] ) == -1 ) {
@@ -10165,7 +10174,7 @@ Scheduler::child_exit(int pid, int status)
 		//
 	if ( srec_was_local_universe == true ) {
 		ClassAd *job_ad = GetJobAd( job_id.cluster, job_id.proc );
-		count( job_ad );
+		count_a_job( job_ad );
 	}
 
 		// If we're not trying to shutdown, now that either an agent
@@ -10559,6 +10568,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			stats.JobsCompletedRuntimes += job_running_time;
 		} else if (is_badput) {
 			stats.JobsAccumBadputTime += job_running_time;
+			if (reportException) { stats.JobsAccumExceptionalBadputTime += job_running_time; }
 			stats.JobsBadputSizes += (int64_t)job_image_size * 1024;
 			stats.JobsBadputRuntimes += job_running_time;
 		}
@@ -10573,6 +10583,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				OTHER.JobsCompletedRuntimes += job_running_time;
 			} else if (is_badput) {
 				OTHER.JobsAccumBadputTime += job_running_time;
+				if (reportException) { OTHER.JobsAccumExceptionalBadputTime += job_running_time; }
 				OTHER.JobsBadputSizes += (int64_t)job_image_size * 1024;
 				OTHER.JobsBadputRuntimes += job_running_time;
 			}
@@ -11617,6 +11628,10 @@ Scheduler::Init()
 		MyShadowSockName = strdup( shadowCommandrsock->get_sinful() );
 
 		sent_shadow_failure_email = FALSE;
+
+		// In the inherit buffer we pass to our children, tell them to use
+		// the shadow command socket.
+		daemonCore->SetInheritParentSinful( MyShadowSockName );
 	}
 		
 		// initialize our ShadowMgr, too.
@@ -12641,7 +12656,10 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 
 	if (GetAttributeInt(id->cluster, id->proc,
 						ATTR_JOB_UNIVERSE, &universe) < 0) {
-		dprintf(D_FULLDEBUG, "GetAttributeInt() failed\n");
+		// Failing to get the JOB_UNIVERSE is common 
+		// because the job may have left the queue.
+		// So in this case, just return FALSE, since a job
+		// not in the queue is most certainly not matched :)
 		return FALSE;
 	}
 
@@ -15008,6 +15026,7 @@ Scheduler::launch_local_startd() {
 										args,
 										PRIV_ROOT,
 										rid, 
+	                                  	1, /* is_dc */
 	                                  	1, /* is_dc */
 										&env, 
 										NULL, 

@@ -32,7 +32,7 @@ class StartdBenchJob: public StartdCronJob
 	int Initialize( void );
 
   private:
-	int Publish( const char *name, ClassAd *ad );
+	int Publish( const char *name, const char *args, ClassAd *ad );
 };
 
 #endif /* _STARTD_BENCH_JOB_H */

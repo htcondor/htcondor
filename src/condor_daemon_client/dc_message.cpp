@@ -23,7 +23,6 @@
 #include "condor_daemon_core.h"
 #include "daemon.h"
 #include "dc_message.h"
-#include "daemon_core_sock_adapter.h"
 
 DCMsg::DCMsg(int cmd):
 	m_cmd( cmd ),
@@ -306,7 +305,7 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 		// the SafeSock and another for a ReliSock to establish the
 		// security session.
 	Stream::stream_type st = msg->getStreamType();
-	if( daemonCoreSockAdapter.TooManyRegisteredSockets(-1,&error,st==Stream::safe_sock?2:1) ) {
+	if( daemonCore->TooManyRegisteredSockets(-1,&error,st==Stream::safe_sock?2:1) ) {
 			// Try again in a sec
 			// Eventually, it would be better to queue this centrally
 			// (i.e. in DaemonCore) rather than having an independent
@@ -465,7 +464,7 @@ void DCMessenger::startReceiveMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 
 	incRefCount();
 
-	int reg_rc = daemonCoreSockAdapter.
+	int reg_rc = daemonCore->
 		Register_Socket( sock, peerDescription(),
 						 (SocketHandlercpp)&DCMessenger::receiveMsgCallback,
 						 name.c_str(), this, ALLOW );
@@ -495,7 +494,7 @@ DCMessenger::receiveMsgCallback(Stream *sock)
 	m_callback_sock = NULL;
 	m_pending_operation = NOTHING_PENDING;
 
-	daemonCoreSockAdapter.Cancel_Socket( sock );
+	daemonCore->Cancel_Socket( sock );
 
 	ASSERT( sock );
 	readMsg( msg, (Sock *)sock );
@@ -569,7 +568,7 @@ DCMessenger::cancelMessage( classy_counted_ptr<DCMsg> msg )
 	else if( m_callback_sock && m_callback_sock->get_file_desc() != INVALID_SOCKET) {
 		m_callback_sock->close();
 			// force callback now so everything gets cleaned up properly
-		daemonCoreSockAdapter.CallSocketHandler( m_callback_sock );
+		daemonCore->CallSocketHandler( m_callback_sock );
 	}
 }
 
@@ -586,18 +585,18 @@ DCMessenger::startCommandAfterDelay( unsigned int delay, classy_counted_ptr<DCMs
 	qc->msg = msg;
 
 	incRefCount();
-	qc->timer_handle = daemonCoreSockAdapter.Register_Timer(
+	qc->timer_handle = daemonCore->Register_Timer(
 		delay,
 		(TimerHandlercpp)&DCMessenger::startCommandAfterDelay_alarm,
 		"DCMessenger::startCommandAfterDelay",
 		this );
 	ASSERT(qc->timer_handle != -1);
-	daemonCoreSockAdapter.Register_DataPtr( qc );
+	daemonCore->Register_DataPtr( qc );
 }
 
 void DCMessenger::startCommandAfterDelay_alarm()
 {
-	QueuedCommand *qc = (QueuedCommand *)daemonCoreSockAdapter.GetDataPtr();
+	QueuedCommand *qc = (QueuedCommand *)daemonCore->GetDataPtr();
 	ASSERT(qc);
 
 	startCommand(qc->msg);

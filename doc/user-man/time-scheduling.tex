@@ -274,11 +274,11 @@ all the values in the allowed values ranges.
    \begin{tabular}{ll}
    Submit Command & Allowed Values \\
    \hline
-   \SubmitCmd{cron\_minute} & 0 - 59 \\
-   \SubmitCmd{cron\_hour} & 0 - 23 \\
-   \SubmitCmd{cron\_day\_of\_month} & 1 - 31 \\
-   \SubmitCmd{cron\_month} & 1 - 12 \\
-   \SubmitCmd{cron\_day\_of\_week} & 0 - 7 (Sunday is 0 or 7)\\
+   \SubmitCmdNI{cron\_minute} & 0 - 59 \\
+   \SubmitCmdNI{cron\_hour} & 0 - 23 \\
+   \SubmitCmdNI{cron\_day\_of\_month} & 1 - 31 \\
+   \SubmitCmdNI{cron\_month} & 1 - 12 \\
+   \SubmitCmdNI{cron\_day\_of\_week} & 0 - 7 (Sunday is 0 or 7)\\
    \end{tabular}
    \end{center}
    \caption{The list of submit commands and their value ranges.}
@@ -286,8 +286,8 @@ all the values in the allowed values ranges.
 \end{table}
 
 The day of a job's execution can be specified 
-by both the \SubmitCmd{cron\_day\_of\_month} 
-and the \SubmitCmd{cron\_day\_of\_week} attributes. 
+by both the \SubmitCmdNI{cron\_day\_of\_month} 
+and the \SubmitCmdNI{cron\_day\_of\_week} attributes. 
 The day will be the logical or of both.
 
 The semantics allow more than one value to be specified 
@@ -325,8 +325,8 @@ ranges, lists, and steps (strides) within ranges.
       cron_minute = 15,20,25,30
       cron_hour   = 0-3,9-12,15
    \end{verbatim}
-   where this \SubmitCmd{cron\_minute} example represents (15,20,25,30)
-   and \SubmitCmd{cron\_hour} represents (0,1,2,3,9,10,11,12,15).
+   where this \SubmitCmdNI{cron\_minute} example represents (15,20,25,30)
+   and \SubmitCmdNI{cron\_hour} represents (0,1,2,3,9,10,11,12,15).
       
    \item[Steps]
    Steps select specific numbers from a range, based on an interval.
@@ -338,10 +338,10 @@ ranges, lists, and steps (strides) within ranges.
       cron_minute = 10-30/5
       cron_hour = */3
    \end{verbatim}
-   where this \SubmitCmd{cron\_minute} example specifies
+   where this \SubmitCmdNI{cron\_minute} example specifies
    every five minutes within the specified range 
    to represent (10,15,20,25,30),
-   and \SubmitCmd{cron\_hour} specifies every three hours of the day
+   and \SubmitCmdNI{cron\_hour} specifies every three hours of the day
    to represent (0,3,6,9,12,15,18,21).
    
 
@@ -366,7 +366,7 @@ Consider the submit description file example that includes
    cron_prep_time = 300
 \end{verbatim}
 The job is scheduled to begin execution at the top of every hour.
-Note that the setting of \SubmitCmd{cron\_hour} in this example
+Note that the setting of \SubmitCmdNI{cron\_hour} in this example
 is not required, as the default value will be \verb@*@, 
 specifying any and every hour of the day.
 The job will be matched and sent to an execution machine 
@@ -402,7 +402,7 @@ as seen by the time kept on the execution machine.
 
 When a job using the CronTab functionality is submitted to HTCondor, 
 use of at least one of the submit description file commands
-beginning with \SubmitCmd{cron\_} causes HTCondor
+beginning with \SubmitCmdNI{cron\_} causes HTCondor
 to calculate and set a deferral time for when the job should run. 
 A deferral time is determined based on the current time 
 rounded later in time to the next minute. 

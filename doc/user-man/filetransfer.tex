@@ -123,8 +123,6 @@ This specification is done within the job's submit description file.
 To enable the file transfer mechanism, place two commands
 in the job's submit description file:
 \SubmitCmd{should\_transfer\_files} and \SubmitCmd{when\_to\_transfer\_output}.
-\index{submit commands!should\_transfer\_files}
-\index{submit commands!when\_to\_transfer\_output}
 By default, they will be:
 
 \begin{verbatim}
@@ -159,7 +157,7 @@ on the shared file system.
 
 \end{enumerate}
 
-The \SubmitCmd{when\_to\_transfer\_output} command tells HTCondor when output
+The \SubmitCmdNI{when\_to\_transfer\_output} command tells HTCondor when output
 files are to be transferred back to the submit machine.
 The command takes on one of two possible values:
 
@@ -210,14 +208,14 @@ As an example, if job 735.0 is evicted, it will produce the directory
 
 The default values for these two submit commands make sense as
 used together.
-If only \SubmitCmd{should\_transfer\_files} is set, 
+If only \SubmitCmdNI{should\_transfer\_files} is set, 
 and set to the value \Expr{NO}, 
 then no output files will be transferred, and the value of
-\SubmitCmd{when\_to\_transfer\_output} is irrelevant.
-If only \SubmitCmd{when\_to\_transfer\_output} is set,
+\SubmitCmdNI{when\_to\_transfer\_output} is irrelevant.
+If only \SubmitCmdNI{when\_to\_transfer\_output} is set,
 and set to the value \Expr{ON\_EXIT\_OR\_EVICT},
 then the default value for an unspecified
-\SubmitCmd{should\_transfer\_files} will be \Expr{YES}.
+\SubmitCmdNI{should\_transfer\_files} will be \Expr{YES}.
 
 Note that the combination of
 \begin{verbatim}
@@ -238,7 +236,7 @@ is run on a remote machine.
 \begin{enumerate}
   \item the executable, as defined with the \SubmitCmd{executable} command
   \item the input, as defined with the \SubmitCmd{input} command
-  \item any jar files, for the \SubmitCmd{java} universe,
+  \item any jar files, for the \SubmitCmdNI{java} universe,
   as defined with the \SubmitCmd{jar\_files} command
 \end{enumerate}
 If the job requires other input files,
@@ -256,8 +254,8 @@ For example:
   transfer_input_files = file1,file2 
 \end{verbatim}
 This example explicitly enables the file transfer mechanism,
-and it transfers the executable, the file specified by the \SubmitCmd{input}
-command, any jar files specified by the \SubmitCmd{jar\_files} command,
+and it transfers the executable, the file specified by the \SubmitCmdNI{input}
+command, any jar files specified by the \SubmitCmdNI{jar\_files} command,
 and files \File{file1} and \File{file2}.
 
 % transfers back after execution
@@ -265,22 +263,22 @@ If the file transfer mechanism is enabled,
 HTCondor will transfer the following files from the execute machine
 back to the submit machine after the job exits.
 \begin{enumerate}
-  \item the output file, as defined with the \SubmitCmd{output} command
-  \item the error file, as defined with the \SubmitCmd{error} command
+  \item the output file, as defined with the \SubmitCmdNI{output} command
+  \item the error file, as defined with the \SubmitCmdNI{error} command
   \item any files created by the job in the remote scratch directory;
-this only occurs for jobs other than \SubmitCmd{grid}
-universe, and for HTCondor-C \SubmitCmd{grid} universe jobs;
+this only occurs for jobs other than \SubmitCmdNI{grid}
+universe, and for HTCondor-C \SubmitCmdNI{grid} universe jobs;
 directories created by the job within the remote scratch directory
 are ignored for this automatic detection of files to be transferred.
 \end{enumerate}
 
-A path given for \SubmitCmd{output} and \SubmitCmd{error} commands represents
+A path given for \SubmitCmdNI{output} and \SubmitCmdNI{error} commands represents
 a path on the submit machine.  If no path is specified, the directory
 specified with \SubmitCmd{initialdir} is used, and if that is not specified,
 the directory from which the job was submitted is used.
 At the time the job is submitted, zero-length files are created
 on the submit machine, at the given path for the files defined by the  
-\SubmitCmd{output} and \SubmitCmd{error} commands.
+\SubmitCmdNI{output} and \SubmitCmdNI{error} commands.
 This permits job submission failure, if these files cannot be written by
 HTCondor.
 
@@ -305,10 +303,10 @@ are named using only the base name.
 Therefore, each output file or directory must have a different name,
 even if they originate from different paths.
 
-For \SubmitCmd{grid} universe jobs other than than HTCondor-C grid jobs,
+For \SubmitCmdNI{grid} universe jobs other than than HTCondor-C grid jobs,
 files to be transferred 
 (other than standard output and standard error)
-must be specified using \SubmitCmd{transfer\_output\_files}
+must be specified using \SubmitCmdNI{transfer\_output\_files}
 in the submit description file, because automatic detection of new files
 created by the job does not take place.
 

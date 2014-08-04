@@ -47,6 +47,7 @@ install (FILES
 		#condor_config.local.generic
 		condor.init
 		condor.plist
+		condor_config.annotated
 		DESTINATION ${C_ETC_EXAMPLES})
 
 install (FILES

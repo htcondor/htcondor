@@ -1,3 +1,6 @@
+#TEMP -- either remove this after merge or add check to test...
+NODE_STATUS_FILE job_dagman_final-E.status
+
 CONFIG job_dagman_final-E.config
 
 NODE_STATUS_FILE job_dagman_final-E.status 600

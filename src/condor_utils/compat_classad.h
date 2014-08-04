@@ -50,6 +50,8 @@ class ClassAdFileParseHelper;
 
 bool ClassAdAttributeIsPrivate( char const *name );
 
+typedef std::set<std::string, classad::CaseIgnLTStr> AttrNameSet;
+
 	/** Print the ClassAd as an old ClassAd to the FILE
 		@param file The file handle to print to.
 		@return TRUE

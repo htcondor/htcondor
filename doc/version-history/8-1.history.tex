@@ -13,36 +13,6 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-1-7}Version 8.1.7}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\noindent Release Notes:
-
-\begin{itemize}
-
-\item HTCondor version 8.1.7 not yet released.
-%\item HTCondor version 8.1.7 released on Month Date, 2014.
-
-\end{itemize}
-
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Bugs Fixed:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-1-6}Version 8.1.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -50,8 +20,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.1.6 not yet released.
-%\item HTCondor version 8.1.6 released on Month Date, 2014.
+\item HTCondor version 8.1.6 released on May 22, 2014.
 
 \end{itemize}
 
@@ -59,6 +28,54 @@ The details of each version are described below.
 \noindent New Features:
 
 \begin{itemize}
+
+\item HTCondor can discover, schedule, and manage GPUs in an
+exceedingly simple way by inserting
+\begin{verbatim}
+  use feature : GPUs
+\end{verbatim}
+in the configuration file.
+The HTCondor wiki page, 
+\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToManageGpus},
+describes the capabilities.
+
+\item The grid universe can now be used to submit and manage jobs on
+a BOINC server, using the new grid type \SubmitCmdNI{boinc}.
+\Ticket{3540}
+
+\item Configuration has been enhanced in structure and with
+newly implemented semantics describing configuration.
+As part of this effort, most all configuration variables have
+compile-time defaults specified and incorporated into the code.
+Therefore, they no longer appear in the example, distributed
+configuration file.
+It is only when values change that these variables will be placed
+into a configuration file.
+For current installations wishing to transition to the new, stripped down
+configurations files, 
+the new \Opt{-writeconfig} option to \Condor{config\_val} will
+help to identify values different from defaults.
+New configuration semantics permit
+\begin{itemize}
+  \item the inclusion of configuration defined elsewhere.
+  See section~\ref{sec:Config-Include} for a description.
+  \item metaknobs, which incorporate predefined sets of configuration
+  that are commonly used.
+  See section~\ref{sec:Config-Metaknobs} for a description.
+  \item a simple if/else syntax for conditional specification of 
+  configuration. 
+  See section~\ref{sec:Config-IfElse} for a description.
+\end{itemize}
+\Ticket{4325}
+\Ticket{3894}
+\Ticket{4319}
+\Ticket{4031}
+\Ticket{4211}
+
+\item When hierarchical group quotas are used, and surplus
+sharing is enabled, the quotas are now correctly computed
+if slot weights are also enabled.
+\Ticket{4324}
 
 \item The default priority factor set for new users is now 1000.
 This was changed from a default value of 1, because a value of 1 
@@ -106,10 +123,47 @@ all of the GPUs.
 each job's environment.
 \Ticket{4233}
 
+\item New configuration variables \Macro{UDP\_NETWORK\_FRAGMENT\_SIZE} and
+	\Macro{UDP\_LOOPBACK\_FRAGMENT\_SIZE} added to control UDP message
+	fragmentation size over the network and loopback interface, 
+	respectively.
+\Ticket{4321}
+
 \item The new \Condor{pool\_job\_report} tool for Linux platforms
 composes and mails a report about all jobs run in the previous
 24 hours on all execute machines within the pool. 
 \Ticket{4267}
+
+\item HTCondor now publishes more I/O statistics as job ClassAd attributes.
+The new attributes are
+\Attr{BlockReads},
+\Attr{BlockWrites},
+\Attr{RecentBlockReads},
+\Attr{RecentBlockWrites},
+\Attr{RecentBlockReadKbytes}, and
+\Attr{RecentBlockWriteKbytes}.
+\Ticket{3850}
+
+\item The new job ClassAd attribute \Attr{SpoolOnEvict} facilitates
+the debugging of failed jobs.
+\Ticket{4292}
+
+\item Memory corruption mitigation is enabled by additional linker flags,
+when building HTCondor from source against system-shared
+libraries installed by the distribution.
+\Ticket{4153}
+
+\item An experimental new feature to overlap the transfer of job output
+with the execution of a subsequent job is documented with a link from
+the HTCondor wiki page, 
+\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=ExperimentalFeatures}.
+\Ticket{4291}
+
+\item An experimental new feature to provide custom output formatting
+for \Condor{q} and \Condor{status} is documented with a link from
+the HTCondor wiki page, 
+\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=ExperimentalFeatures}.
+\Ticket{4241}
 
 \end{itemize}
 
@@ -344,7 +398,7 @@ with Ganglia.
 \Ticket{3965}
 
 \item The grid universe can now be used to create and manage VM instances
-in Google Compute Engine (GCE), using the new grid type \SubmitCmd{gce}.
+in Google Compute Engine (GCE), using the new grid type \SubmitCmdNI{gce}.
 \Ticket{3833}
 
 \item As a scalability improvement for Unix platforms, 
@@ -1104,6 +1158,7 @@ monitoring file transfer activity:
 set defaults used by the new \Condor{dagman\_metrics\_reporter} executable,
 which reports metrics for DAGMan jobs running under Pegasus.
 \Ticket{3532}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

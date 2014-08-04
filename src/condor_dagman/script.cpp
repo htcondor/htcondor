@@ -144,7 +144,7 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
     }
 
 	_pid = daemonCore->Create_Process( cmd, args,
-									   PRIV_UNKNOWN, reaperId, FALSE,
+									   PRIV_UNKNOWN, reaperId, FALSE, FALSE,
 									   NULL, NULL, NULL, NULL, NULL, 0 );
     delete [] cmd;
 

@@ -37,7 +37,6 @@
 #include "condor_string.h"
 #include "string_list.h"
 #include "MyString.h"
-#include "get_full_hostname.h"
 #include "condor_random_num.h"
 #include "../condor_procapi/procapi.h"
 //#include "misc_utils.h"

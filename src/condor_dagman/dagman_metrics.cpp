@@ -246,6 +246,7 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 					PRIV_UNKNOWN,
 					1, // reaper
 					false, // no command port
+					false, // no command port
 					NULL, // just inherit env of parent
 					NULL, // no cwd
 					NULL, // no FamilyInfo

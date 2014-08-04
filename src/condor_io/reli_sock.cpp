@@ -106,17 +106,11 @@ ReliSock::listen()
         return FALSE;
     }
 
-	// many modern OS's now support a >5 backlog, so we ask for 500,
-	// but since we don't know how they behave when you ask for too
-	// many, if 200 doesn't work we try progressively smaller numbers.
-	// you may ask, why not just use SOMAXCONN ?  unfortunately,
-	// it is not correct on several platforms such as Solaris, which
-	// accepts an unlimited number of socks but sets SOMAXCONN to 5.
-	if( ::listen( _sock, 500 ) < 0 ) {
-		if( ::listen( _sock, 300 ) < 0 ) 
-		if( ::listen( _sock, 200 ) < 0 ) 
-		if( ::listen( _sock, 100 ) < 0 ) 
-		if( ::listen( _sock, 5 ) < 0 ) {
+	// Ask for a (configurable) large backlog of connections. If this
+	// value is too large, the OS will cap it at the kernel's current
+	// maxiumum. Why not just use SOMAXCONN? Unfortunately, it's a
+	// fairly small value (128) on many platforms.
+	if( ::listen( _sock, param_integer( "SOCKET_LISTEN_BACKLOG", 500 ) ) < 0 ) {
 
             char const *self_address = get_sinful();
             if( !self_address ) {
@@ -130,7 +124,6 @@ ReliSock::listen()
 #endif
 
 			return FALSE;
-		}
 	}
 
 	dprintf( D_NETWORK, "LISTEN %s fd=%d\n", sock_to_string(_sock),
@@ -735,7 +728,8 @@ ReliSock::RcvMsg :: RcvMsg() :
 	m_remaining_read_length(0),
 	m_end(0),
 	m_tmp(NULL),
-	ready(0)
+	ready(0),
+	m_closed(false)
 {
 	memset( m_partial_cksum, 0, sizeof(m_partial_cksum) );
 }
@@ -786,6 +780,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 	}
 	if ( retval == -2 ) {	// -2 means peer just closed the socket
 		dprintf(D_FULLDEBUG,"IO: EOF reading packet header\n");
+		m_closed = true;
 		return FALSE;
 	}
 
@@ -1296,5 +1291,14 @@ ReliSock::setTargetSharedPortID( char const *id )
 
 bool
 ReliSock::msgReady() {
+	if (rcv_msg.ready) { return true; }
+		// NOTE: 'true' here indicates non-blocking.
+	BlockingModeGuard sentry(this, true);
+	int retval = handle_incoming_packet();
+	if (retval == 2) {
+		dprintf(D_NETWORK, "msgReady would have blocked.\n");
+		m_read_would_block = true;
+		return false;
+	}
 	return rcv_msg.ready;
 }

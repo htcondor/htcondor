@@ -508,6 +508,9 @@ void
 ULogEvent::insertCommonIdentifiers(ClassAd &adToFill)
 {
 	//if( !adToFill ) return;
+	if(!scheddname) {
+		scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
+	}
 	if(scheddname) {
 	  adToFill.Assign("scheddname", scheddname);
 	}
@@ -1435,54 +1438,48 @@ int
 RemoteErrorEvent::writeEvent(FILE *file)
 {
 	char const *error_type = "Error";
-	char messagestr[512];
-
-	ClassAd tmpCl1, tmpCl2;
-	//ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
 	int retval;
-
-	snprintf(messagestr, 512, "Remote %s from %s on %s",
-			error_type,
-			daemon_name,
-			execute_host);
-
-	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
 	if(!critical_error) error_type = "Warning";
 
-	if (critical_error) {
-		tmpCl1.Assign("endts", (int)eventclock);
-		tmpCl1.Assign("endtype", ULOG_REMOTE_ERROR);
-		tmpCl1.Assign("endmessage", messagestr);
+	if (FILEObj) {
+		char messagestr[512];
+		ClassAd tmpCl1, tmpCl2;
 
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl2);
+		snprintf(messagestr, 512, "Remote %s from %s on %s",
+				 error_type,
+				 daemon_name,
+				 execute_host);
 
-		MyString tmp;
-		tmp.formatstr("endtype = null");
-		tmpCl2.Insert(tmp.Value());
+		if (critical_error) {
+			tmpCl1.Assign("endts", (int)eventclock);
+			tmpCl1.Assign("endtype", ULOG_REMOTE_ERROR);
+			tmpCl1.Assign("endmessage", messagestr);
+
+			// this inserts scheddname, cluster, proc, etc
+			insertCommonIdentifiers(tmpCl2);
+
+			MyString tmp;
+			tmp.formatstr("endtype = null");
+			tmpCl2.Insert(tmp.Value());
 
 			// critical error means this run is ended.
 			// condor_event.o is part of cplus_lib.a, which may be linked by
 			// non-daemons who wouldn't have initialized FILEObj. We don't
 			// need to log events for non-daemons.
-		if (FILEObj) {
 			if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2)
 				== QUILL_FAILURE) {
 				dprintf(D_ALWAYS, "Logging Event 5--- Error\n");
 				return 0; // return a error code, 0
 			}
-		}
-
-	} else {
+		} else {
 		        // this inserts scheddname, cluster, proc, etc
-        insertCommonIdentifiers(tmpCl1);
+			insertCommonIdentifiers(tmpCl1);
 
-		tmpCl1.Assign("eventtype", ULOG_REMOTE_ERROR);
-		tmpCl1.Assign("eventtime", (int)eventclock);
-		tmpCl1.Assign("description", messagestr);
+			tmpCl1.Assign("eventtype", ULOG_REMOTE_ERROR);
+			tmpCl1.Assign("eventtime", (int)eventclock);
+			tmpCl1.Assign("description", messagestr);
 
-		if (FILEObj) {
 			if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 				dprintf(D_ALWAYS, "Logging Event 5--- Error\n");
 				return 0; // return a error code, 0
@@ -1727,90 +1724,56 @@ ExecuteEvent::getExecuteHost()
 int
 ExecuteEvent::writeEvent (FILE *file)
 {
-	struct hostent *hp;
-	unsigned long addr = -1;
-	ClassAd tmpCl1, tmpCl2, tmpCl3;
-	//ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2, *tmpClP3 = &tmpCl3;
-	MyString tmp = "";
 	int retval;
 
-	//JobAd is defined in condor_shadow.V6/log_events.C and is simply
-	//defined as an external variable here
-
-	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-
-	if(scheddname)
-		dprintf(D_FULLDEBUG, "scheddname = %s\n", scheddname);
-	else
-		dprintf(D_FULLDEBUG, "scheddname is null\n");
-
-	if( !executeHost ) {
-		setExecuteHost("");
-	}
-
-	dprintf(D_FULLDEBUG, "executeHost = %s\n", executeHost);
-
-	char *start = index(executeHost, '<');
-	char *end = index(executeHost, ':');
-
-	if(start && end) {
-		char *tmpaddr;
-		tmpaddr = (char *) malloc(32 * sizeof(char));
-		tmpaddr = strncpy(tmpaddr, start+1, end-start-1);
-		tmpaddr[end-start-1] = '\0';
-
-		inet_pton(AF_INET, tmpaddr, &addr);
-
-		dprintf(D_FULLDEBUG, "start = %s\n", start);
-		dprintf(D_FULLDEBUG, "end = %s\n", end);
-		dprintf(D_FULLDEBUG, "tmpaddr = %s\n", tmpaddr);
-		free(tmpaddr);
-	}
-	else {
-		inet_pton(AF_INET, executeHost, &addr);
-	}
-
-	//hp = condor_gethostbyaddr((char *) &addr, sizeof(addr), AF_INET);
-	hp = gethostbyaddr((char *) &addr, sizeof(addr), AF_INET);
-	if(hp) {
-		dprintf(D_FULLDEBUG, "Executehost name = %s (hp->h_name) \n", hp->h_name);
-	}
-	else {
-		dprintf(D_FULLDEBUG, "Executehost name = %s (executeHost) \n", executeHost);
-	}
-
-	tmpCl1.Assign("endts", (int)eventclock);
-
-	tmp.formatstr("endtype = -1");
-	tmpCl1.Insert(tmp.Value());
-
-	tmp.formatstr("endmessage = \"UNKNOWN ERROR\"");
-	tmpCl1.Insert(tmp.Value());
-
-	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpCl2);
-
-	tmp.formatstr("endtype = null");
-	tmpCl2.Insert(tmp.Value());
-
 	if (FILEObj) {
+		ClassAd tmpCl1, tmpCl2, tmpCl3;
+		MyString tmp = "";
+
+		scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
+
+		if(scheddname)
+			dprintf(D_FULLDEBUG, "scheddname = %s\n", scheddname);
+		else
+			dprintf(D_FULLDEBUG, "scheddname is null\n");
+
+		if( !executeHost ) {
+			setExecuteHost("");
+		}
+
+		dprintf(D_FULLDEBUG, "executeHost = %s\n", executeHost);
+
+		dprintf(D_FULLDEBUG, "Executehost name = %s\n", remoteName ? remoteName : "" );
+
+		tmpCl1.Assign("endts", (int)eventclock);
+
+		tmp.formatstr("endtype = -1");
+		tmpCl1.Insert(tmp.Value());
+
+		tmp.formatstr("endmessage = \"UNKNOWN ERROR\"");
+		tmpCl1.Insert(tmp.Value());
+
+		// this inserts scheddname, cluster, proc, etc
+		insertCommonIdentifiers(tmpCl2);
+
+		tmp.formatstr("endtype = null");
+		tmpCl2.Insert(tmp.Value());
+
 		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 1--- Error\n");
 			return 0; // return a error code, 0
 		}
-	}
 
-	if( !remoteName ) {
-		setRemoteName("");
-	}
-	tmpCl3.Assign("machine_id", remoteName);
+		if( !remoteName ) {
+			setRemoteName("");
+		}
+		tmpCl3.Assign("machine_id", remoteName);
 
-	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpCl3);
+		// this inserts scheddname, cluster, proc, etc
+		insertCommonIdentifiers(tmpCl3);
 
-	tmpCl3.Assign("startts", (int)eventclock);
+		tmpCl3.Assign("startts", (int)eventclock);
 
-	if(FILEObj) {
 		if (FILEObj->file_newEvent("Runs", &tmpCl3) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 1--- Error\n");
 			return 0; // return a error code, 0
@@ -1898,24 +1861,22 @@ int
 ExecutableErrorEvent::writeEvent (FILE *file)
 {
 	int retval;
-	char messagestr[512];
-	ClassAd tmpCl1, tmpCl2;
-	//ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
-	MyString tmp = "";
-
-	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-
-	tmpCl1.Assign("endts", (int)eventclock);
-	tmpCl1.Assign("endtype", ULOG_EXECUTABLE_ERROR);
-	tmpCl1.Assign("endmessage", messagestr);
-
-	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpCl2);
-
-	tmp.formatstr( "endtype = null");
-	tmpCl2.Insert(tmp.Value());
 
 	if (FILEObj) {
+		char messagestr[512];
+		ClassAd tmpCl1, tmpCl2;
+		MyString tmp = "";
+
+		tmpCl1.Assign("endts", (int)eventclock);
+		tmpCl1.Assign("endtype", ULOG_EXECUTABLE_ERROR);
+		tmpCl1.Assign("endmessage", messagestr);
+
+		// this inserts scheddname, cluster, proc, etc
+		insertCommonIdentifiers(tmpCl2);
+
+		tmp.formatstr( "endtype = null");
+		tmpCl2.Insert(tmp.Value());
+
 		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 12--- Error\n");
 			return 0; // return a error code, 0
@@ -1926,17 +1887,14 @@ ExecutableErrorEvent::writeEvent (FILE *file)
 	{
 	  case CONDOR_EVENT_NOT_EXECUTABLE:
 		retval = fprintf (file, "(%d) Job file not executable.\n", errType);
-		sprintf(messagestr,  "Job file not executable");
 		break;
 
 	  case CONDOR_EVENT_BAD_LINK:
 		retval=fprintf(file,"(%d) Job not properly linked for Condor.\n", errType);
-		sprintf(messagestr,  "Job not properly linked for Condor");
 		break;
 
 	  default:
 		retval = fprintf (file, "(%d) [Bad error number.]\n", errType);
-		sprintf(messagestr,  "Unknown error");
 	}
 
 	if (retval < 0) return 0;
@@ -2021,23 +1979,20 @@ CheckpointedEvent::~CheckpointedEvent(void)
 int
 CheckpointedEvent::writeEvent (FILE *file)
 {
-	char messagestr[512];
-	ClassAd tmpCl1;
-	//ClassAd *tmpClP1 = &tmpCl1;
-
-	sprintf(messagestr,  "Job was checkpointed");
-
-	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-
-	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpCl1);
-
-	tmpCl1.Assign("eventtype", ULOG_CHECKPOINTED);
-	tmpCl1.Assign("eventtime", (int)eventclock);
-
-	tmpCl1.Assign("description", messagestr);
-
 	if (FILEObj) {
+		char messagestr[512];
+		ClassAd tmpCl1;
+
+		sprintf(messagestr,  "Job was checkpointed");
+
+		// this inserts scheddname, cluster, proc, etc
+		insertCommonIdentifiers(tmpCl1);
+
+		tmpCl1.Assign("eventtype", ULOG_CHECKPOINTED);
+		tmpCl1.Assign("eventtime", (int)eventclock);
+
+		tmpCl1.Assign("description", messagestr);
+
 		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 6--- Error\n");
 			return 0; // return a error code, 0
@@ -2316,19 +2271,6 @@ JobEvictedEvent::readEvent( FILE *file )
 int
 JobEvictedEvent::writeEvent( FILE *file )
 {
-  char messagestr[512], checkpointedstr[6], terminatestr[512];
-  ClassAd tmpCl1, tmpCl2;
-  //ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
-  MyString tmp = "";
-
-  //JobAd is defined in condor_shadow.V6/log_events.C and is simply
-  //defined as an external variable here
-
-  strcpy(checkpointedstr, "");
-  strcpy(messagestr, "");
-  strcpy(terminatestr, "");
-
-
   int retval;
 
   if( fprintf(file, "Job was evicted.\n\t") < 0 ) {
@@ -2337,16 +2279,10 @@ JobEvictedEvent::writeEvent( FILE *file )
 
   if( terminate_and_requeued ) {
     retval = fprintf( file, "(0) Job terminated and was requeued\n\t" );
-    sprintf(messagestr,  "Job evicted, terminated and was requeued");
-    strcpy(checkpointedstr, "false");
   } else if( checkpointed ) {
     retval = fprintf( file, "(1) Job was checkpointed.\n\t" );
-    sprintf(messagestr,  "Job evicted and was checkpointed");
-    strcpy(checkpointedstr, "true");
   } else {
     retval = fprintf( file, "(0) Job was not checkpointed.\n\t" );
-    sprintf(messagestr,  "Job evicted and was not checkpointed");
-    strcpy(checkpointedstr, "false");
   }
 
   if( retval < 0 ) {
@@ -2376,23 +2312,18 @@ JobEvictedEvent::writeEvent( FILE *file )
 		  return_value) < 0 ) {
 	return 0;
       }
-      sprintf(terminatestr,  " (1) Normal termination (return value %d)", return_value);
     }
     else {
       if( fprintf(file, "\t(0) Abnormal termination (signal %d)\n",
 		  signal_number) < 0 ) {
 	return 0;
       }
-      sprintf(terminatestr,  " (0) Abnormal termination (signal %d)", signal_number);
 
       if( core_file ) {
 	retval = fprintf( file, "\t(1) Corefile in: %s\n", core_file );
-	strcat(terminatestr, " (1) Corefile in: ");
-	strcat(terminatestr, core_file);
       }
       else {
 	retval = fprintf( file, "\t(0) No core file\n" );
-	strcat(terminatestr, " (0) No core file ");
       }
       if( retval < 0 ) {
 	return 0;
@@ -2403,8 +2334,6 @@ JobEvictedEvent::writeEvent( FILE *file )
       if( fprintf(file, "\t%s\n", reason) < 0 ) {
 	return 0;
       }
-      strcat(terminatestr,  " reason: ");
-      strcat(terminatestr,  reason);
     }
 
   }
@@ -2415,30 +2344,67 @@ JobEvictedEvent::writeEvent( FILE *file )
 		writeUsageAd(file, pusageAd);
 	}
 
-  scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
+	if (FILEObj) {
+		char messagestr[512], checkpointedstr[6], terminatestr[512];
+		ClassAd tmpCl1, tmpCl2;
+		MyString tmp = "";
 
-  tmpCl1.Assign("endts", (int)eventclock);
-  tmpCl1.Assign("endtype", ULOG_JOB_EVICTED);
+		strcpy(checkpointedstr, "");
+		strcpy(messagestr, "");
+		strcpy(terminatestr, "");
 
-  tmp.formatstr( "endmessage = \"%s%s\"", messagestr, terminatestr);
-  tmpCl1.Insert(tmp.Value());
+		if( terminate_and_requeued ) {
+			sprintf(messagestr,  "Job evicted, terminated and was requeued");
+			strcpy(checkpointedstr, "false");
+		} else if( checkpointed ) {
+			sprintf(messagestr,  "Job evicted and was checkpointed");
+			strcpy(checkpointedstr, "true");
+		} else {
+			sprintf(messagestr,  "Job evicted and was not checkpointed");
+			strcpy(checkpointedstr, "false");
+		}
 
-  tmpCl1.Assign("wascheckpointed", checkpointedstr);
-  tmpCl1.Assign("runbytessent", sent_bytes);
-  tmpCl1.Assign("runbytesreceived", recvd_bytes);
+		if(terminate_and_requeued ) {
+			if( normal ) {
+				sprintf(terminatestr,  " (1) Normal termination (return value %d)", return_value);
+			} else {
+				sprintf(terminatestr,  " (0) Abnormal termination (signal %d)", signal_number);
 
-  // this inserts scheddname, cluster, proc, etc
-  insertCommonIdentifiers(tmpCl2);
+				if( core_file ) {
+					strcat(terminatestr, " (1) Corefile in: ");
+					strcat(terminatestr, core_file);
+				} else {
+					strcat(terminatestr, " (0) No core file ");
+				}
+			}
 
-  tmp.formatstr( "endtype = null");
-  tmpCl2.Insert(tmp.Value());
+			if( reason ) {
+				strcat(terminatestr,  " reason: ");
+				strcat(terminatestr,  reason);
+			}
+		}
 
-  if (FILEObj) {
-	  if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
-		  dprintf(D_ALWAYS, "Logging Event 2 --- Error\n");
-		  return 0; // return a error code, 0
-	  }
-  }
+		tmpCl1.Assign("endts", (int)eventclock);
+		tmpCl1.Assign("endtype", ULOG_JOB_EVICTED);
+
+		tmp.formatstr( "endmessage = \"%s%s\"", messagestr, terminatestr);
+		tmpCl1.Insert(tmp.Value());
+
+		tmpCl1.Assign("wascheckpointed", checkpointedstr);
+		tmpCl1.Assign("runbytessent", sent_bytes);
+		tmpCl1.Assign("runbytesreceived", recvd_bytes);
+
+		// this inserts scheddname, cluster, proc, etc
+		insertCommonIdentifiers(tmpCl2);
+
+		tmp.formatstr( "endtype = null");
+		tmpCl2.Insert(tmp.Value());
+
+		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
+			dprintf(D_ALWAYS, "Logging Event 2 --- Error\n");
+			return 0; // return a error code, 0
+		}
+	}
 
   return 1;
 }
@@ -2608,26 +2574,23 @@ int
 JobAbortedEvent::writeEvent (FILE *file)
 {
 
-	char messagestr[512];
-	ClassAd tmpCl1;
-	//ClassAd *tmpClP1 = &tmpCl1;
-	MyString tmp = "";
-
-	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-
-	if (reason)
-		snprintf(messagestr,  512, "Job was aborted by the user: %s", reason);
-	else
-		sprintf(messagestr,  "Job was aborted by the user");
-
-	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpCl1);
-
-	tmpCl1.Assign("eventtype", ULOG_JOB_ABORTED);
-	tmpCl1.Assign("eventtime", (int)eventclock);
-	tmpCl1.Assign("description", messagestr);
-
 	if (FILEObj) {
+		char messagestr[512];
+		ClassAd tmpCl1;
+		MyString tmp = "";
+
+		if (reason)
+			snprintf(messagestr,  512, "Job was aborted by the user: %s", reason);
+		else
+			sprintf(messagestr,  "Job was aborted by the user");
+
+		// this inserts scheddname, cluster, proc, etc
+		insertCommonIdentifiers(tmpCl1);
+
+		tmpCl1.Assign("eventtype", ULOG_JOB_ABORTED);
+		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("description", messagestr);
+
 		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 7--- Error\n");
 			return 0; // return a error code, 0
@@ -2753,16 +2716,6 @@ TerminatedEvent::getCoreFile( void )
 int
 TerminatedEvent::writeEvent( FILE *file, const char* header )
 {
-  char messagestr[512];
-  ClassAd tmpCl1, tmpCl2;
-  //ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
-  MyString tmp = "";
-
-  //JobAd is defined in condor_shadow.V6/log_events.C and is simply
-  //defined as an external variable here
-
-  strcpy(messagestr, "");
-
 	int retval=0;
 
 	if( normal ) {
@@ -2770,7 +2723,6 @@ TerminatedEvent::writeEvent( FILE *file, const char* header )
 					returnValue) < 0 ) {
 			return 0;
 		}
-		sprintf(messagestr,  "(1) Normal termination (return value %d)", returnValue);
 
 	} else {
 		if( fprintf(file, "\t(0) Abnormal termination (signal %d)\n",
@@ -2778,16 +2730,11 @@ TerminatedEvent::writeEvent( FILE *file, const char* header )
 			return 0;
 		}
 
-		sprintf(messagestr,  "(0) Abnormal termination (signal %d)", signalNumber);
-
 		if( core_file ) {
 			retval = fprintf( file, "\t(1) Corefile in: %s\n\t",
 							  core_file );
-			strcat(messagestr, " (1) Corefile in: ");
-			strcat(messagestr, core_file);
 		} else {
 			retval = fprintf( file, "\t(0) No core file\n\t" );
-			strcat(messagestr, " (0) No core file ");
 		}
 	}
 
@@ -2819,18 +2766,34 @@ TerminatedEvent::writeEvent( FILE *file, const char* header )
 		writeUsageAd(file, pusageAd);
 	}
 
-	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-
-	tmpCl1.Assign("endmessage", messagestr);
-	tmpCl1.Assign("runbytessent", sent_bytes);
-	tmpCl1.Assign("runbytesreceived", recvd_bytes);
-
-	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpCl2);
-
-	tmpCl2.Assign("endts", (int)eventclock);
-
 	if (FILEObj) {
+		char messagestr[512];
+		ClassAd tmpCl1, tmpCl2;
+		MyString tmp = "";
+
+		strcpy(messagestr, "");
+
+		if( normal ) {
+			sprintf(messagestr,  "(1) Normal termination (return value %d)", returnValue);
+		} else {
+			sprintf(messagestr,  "(0) Abnormal termination (signal %d)", signalNumber);
+			if( core_file ) {
+				strcat(messagestr, " (1) Corefile in: ");
+				strcat(messagestr, core_file);
+			} else {
+				strcat(messagestr, " (0) No core file ");
+			}
+		}
+
+		tmpCl1.Assign("endmessage", messagestr);
+		tmpCl1.Assign("runbytessent", sent_bytes);
+		tmpCl1.Assign("runbytesreceived", recvd_bytes);
+
+		// this inserts scheddname, cluster, proc, etc
+		insertCommonIdentifiers(tmpCl2);
+
+		tmpCl2.Assign("endts", (int)eventclock);
+
 		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 3--- Error\n");
 			return 0; // return a error code, 0
@@ -2975,30 +2938,24 @@ JobTerminatedEvent::~JobTerminatedEvent(void)
 int
 JobTerminatedEvent::writeEvent (FILE *file)
 {
-  ClassAd tmpCl1, tmpCl2;
-  //ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
-  MyString tmp = "";
+	if (FILEObj) {
+		ClassAd tmpCl1, tmpCl2;
+		MyString tmp = "";
 
-  //JobAd is defined in condor_shadow.V6/log_events.C and is simply
-  //defined as an external variable here
+		tmpCl1.Assign("endts", (int)eventclock);
+		tmpCl1.Assign("endtype", ULOG_JOB_TERMINATED);
 
-  scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
+		// this inserts scheddname, cluster, proc, etc
+		insertCommonIdentifiers(tmpCl2);
 
-  tmpCl1.Assign("endts", (int)eventclock);
-  tmpCl1.Assign("endtype", ULOG_JOB_TERMINATED);
+		tmp.formatstr( "endtype = null");
+		tmpCl2.Insert(tmp.Value());
 
-  // this inserts scheddname, cluster, proc, etc
-  insertCommonIdentifiers(tmpCl2);
-
-  tmp.formatstr( "endtype = null");
-  tmpCl2.Insert(tmp.Value());
-
-  if (FILEObj) {
-	  if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
-		  dprintf(D_ALWAYS, "Logging Event 4--- Error\n");
-		  return 0; // return a error code, 0
-	  }
-  }
+		if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
+			dprintf(D_ALWAYS, "Logging Event 4--- Error\n");
+			return 0; // return a error code, 0
+		}
+	}
 
   if( fprintf(file, "Job terminated.\n") < 0 ) {
 	  return 0;
@@ -3310,49 +3267,44 @@ ShadowExceptionEvent::readEvent (FILE *file)
 int
 ShadowExceptionEvent::writeEvent (FILE *file)
 {
-	char messagestr[512];
-	ClassAd tmpCl1, tmpCl2;
-	//ClassAd *tmpClP1 = &tmpCl1, *tmpClP2 = &tmpCl2;
-	MyString tmp = "";
+	if (FILEObj) {
+		char messagestr[512];
+		ClassAd tmpCl1, tmpCl2;
+		MyString tmp = "";
 
-	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-
-	snprintf(messagestr, 512, "Shadow exception: %s", message);
-	messagestr[COUNTOF(messagestr)-1] = 0;
+		snprintf(messagestr, 512, "Shadow exception: %s", message);
+		messagestr[COUNTOF(messagestr)-1] = 0;
 
 		// remove the new line in the end if any
-	if  (messagestr[strlen(messagestr)-1] == '\n')
-		messagestr[strlen(messagestr)-1] = '\0';
+		if  (messagestr[strlen(messagestr)-1] == '\n')
+			messagestr[strlen(messagestr)-1] = '\0';
 
-	if (began_execution) {
-		tmpCl1.Assign("endts", (int)eventclock);
-		tmpCl1.Assign("endtype", ULOG_SHADOW_EXCEPTION);
-		tmpCl1.Assign("endmessage", messagestr);
-		tmpCl1.Assign("runbytessent", sent_bytes);
+		if (began_execution) {
+			tmpCl1.Assign("endts", (int)eventclock);
+			tmpCl1.Assign("endtype", ULOG_SHADOW_EXCEPTION);
+			tmpCl1.Assign("endmessage", messagestr);
+			tmpCl1.Assign("runbytessent", sent_bytes);
 
-		tmpCl1.Assign("runbytesreceived", recvd_bytes);
+			tmpCl1.Assign("runbytesreceived", recvd_bytes);
 
-		// this inserts scheddname, cluster, proc, etc
-		insertCommonIdentifiers(tmpCl2);
+			// this inserts scheddname, cluster, proc, etc
+			insertCommonIdentifiers(tmpCl2);
 
-		tmp.formatstr( "endtype = null");
-		tmpCl2.Insert(tmp.Value());
+			tmp.formatstr( "endtype = null");
+			tmpCl2.Insert(tmp.Value());
 
-		if (FILEObj) {
 			if (FILEObj->file_updateEvent("Runs", &tmpCl1, &tmpCl2) == QUILL_FAILURE) {
 				dprintf(D_ALWAYS, "Logging Event 13--- Error\n");
 				return 0; // return a error code, 0
 			}
-		}
-	} else {
-		// this inserts scheddname, cluster, proc, etc
-        insertCommonIdentifiers(tmpCl1);
+		} else {
+			// this inserts scheddname, cluster, proc, etc
+			insertCommonIdentifiers(tmpCl1);
 
-		tmpCl1.Assign("eventtype", ULOG_SHADOW_EXCEPTION);
-		tmpCl1.Assign("eventtime", (int)eventclock);
-		tmpCl1.Assign("description", messagestr);
+			tmpCl1.Assign("eventtype", ULOG_SHADOW_EXCEPTION);
+			tmpCl1.Assign("eventtime", (int)eventclock);
+			tmpCl1.Assign("description", messagestr);
 
-		if (FILEObj) {
 			if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 				dprintf(D_ALWAYS, "Logging Event 14 --- Error\n");
 				return 0; // return a error code, 0
@@ -3437,23 +3389,20 @@ JobSuspendedEvent::readEvent (FILE *file)
 int
 JobSuspendedEvent::writeEvent (FILE *file)
 {
-	char messagestr[512];
-	ClassAd tmpCl1;
-	//ClassAd *tmpClP1 = &tmpCl1;
-	MyString tmp = "";
-
-	sprintf(messagestr, "Job was suspended (Number of processes actually suspended: %d)", num_pids);
-
-	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-
-	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpCl1);
-
-	tmpCl1.Assign("eventtype", ULOG_JOB_SUSPENDED);
-	tmpCl1.Assign("eventtime", (int)eventclock);
-	tmpCl1.Assign("description", messagestr);
-
 	if (FILEObj) {
+		char messagestr[512];
+		ClassAd tmpCl1;
+		MyString tmp = "";
+
+		sprintf(messagestr, "Job was suspended (Number of processes actually suspended: %d)", num_pids);
+
+		// this inserts scheddname, cluster, proc, etc
+		insertCommonIdentifiers(tmpCl1);
+
+		tmpCl1.Assign("eventtype", ULOG_JOB_SUSPENDED);
+		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("description", messagestr);
+
 		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 8--- Error\n");
 			return 0; // return a error code, 0
@@ -3514,23 +3463,20 @@ JobUnsuspendedEvent::readEvent (FILE *file)
 int
 JobUnsuspendedEvent::writeEvent (FILE *file)
 {
-	char messagestr[512];
-	ClassAd tmpCl1;
-	//ClassAd *tmpClP1 = &tmpCl1;
-	MyString tmp = "";
-
-	sprintf(messagestr, "Job was unsuspended");
-
-	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-
-	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpCl1);
-
-	tmpCl1.Assign("eventtype", ULOG_JOB_UNSUSPENDED);
-	tmpCl1.Assign("eventtime", (int)eventclock);
-	tmpCl1.Assign("description", messagestr);
-
 	if (FILEObj) {
+		char messagestr[512];
+		ClassAd tmpCl1;
+		MyString tmp = "";
+
+		sprintf(messagestr, "Job was unsuspended");
+
+		// this inserts scheddname, cluster, proc, etc
+		insertCommonIdentifiers(tmpCl1);
+
+		tmpCl1.Assign("eventtype", ULOG_JOB_UNSUSPENDED);
+		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("description", messagestr);
+
  	    if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 9--- Error\n");
 			return 0; // return a error code, 0
@@ -3668,25 +3614,22 @@ JobHeldEvent::readEvent( FILE *file )
 int
 JobHeldEvent::writeEvent( FILE *file )
 {
-	char messagestr[512];
-	ClassAd tmpCl1;
-	//ClassAd *tmpClP1 = &tmpCl1;
-
-	if (reason)
-		snprintf(messagestr, 512, "Job was held: %s", reason);
-	else
-		sprintf(messagestr, "Job was held: reason unspecified");
-
-	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-
-	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpCl1);
-
-	tmpCl1.Assign("eventtype", ULOG_JOB_HELD);
-	tmpCl1.Assign("eventtime", (int)eventclock);
-	tmpCl1.Assign("description", messagestr);
-
 	if (FILEObj) {
+		char messagestr[512];
+		ClassAd tmpCl1;
+
+		if (reason)
+			snprintf(messagestr, 512, "Job was held: %s", reason);
+		else
+			sprintf(messagestr, "Job was held: reason unspecified");
+
+		// this inserts scheddname, cluster, proc, etc
+		insertCommonIdentifiers(tmpCl1);
+
+		tmpCl1.Assign("eventtype", ULOG_JOB_HELD);
+		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("description", messagestr);
+
 		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 10--- Error\n");
 			return 0; // return a error code, 0
@@ -3829,26 +3772,23 @@ JobReleasedEvent::readEvent( FILE *file )
 int
 JobReleasedEvent::writeEvent( FILE *file )
 {
-	char messagestr[512];
-	ClassAd tmpCl1;
-	//ClassAd *tmpClP1 = &tmpCl1;
-	MyString tmp = "";
-
-	if (reason)
-		snprintf(messagestr, 512, "Job was released: %s", reason);
-	else
-		sprintf(messagestr, "Job was released: reason unspecified");
-
-	scheddname = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
-
-	// this inserts scheddname, cluster, proc, etc
-	insertCommonIdentifiers(tmpCl1);
-
-	tmpCl1.Assign("eventtype", ULOG_JOB_RELEASED);
-	tmpCl1.Assign("eventtime", (int)eventclock);
-	tmpCl1.Assign("description", messagestr);
-
 	if (FILEObj) {
+		char messagestr[512];
+		ClassAd tmpCl1;
+		MyString tmp = "";
+
+		if (reason)
+			snprintf(messagestr, 512, "Job was released: %s", reason);
+		else
+			sprintf(messagestr, "Job was released: reason unspecified");
+
+		// this inserts scheddname, cluster, proc, etc
+		insertCommonIdentifiers(tmpCl1);
+
+		tmpCl1.Assign("eventtype", ULOG_JOB_RELEASED);
+		tmpCl1.Assign("eventtime", (int)eventclock);
+		tmpCl1.Assign("description", messagestr);
+
 		if (FILEObj->file_newEvent("Events", &tmpCl1) == QUILL_FAILURE) {
 			dprintf(D_ALWAYS, "Logging Event 11--- Error\n");
 			return 0; // return a error code, 0

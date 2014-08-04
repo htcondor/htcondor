@@ -9,15 +9,15 @@ Unicore is a Java-based grid scheduling system.
 See \URL{http://www.unicore.eu/} for more information about Unicore.
 
 HTCondor jobs may be submitted to
-Unicore resources using the \SubmitCmd{grid} universe.
+Unicore resources using the \SubmitCmdNI{grid} universe.
 The \SubmitCmd{grid\_resource} command specifies the name of the
 Unicore resource as follows:
 \begin{verbatim}
 grid_resource = unicore usite.example.com vsite
 \end{verbatim}
-\SubmitCmd{usite.example.com} is the host name of the Unicore gateway
+\SubmitCmdNI{usite.example.com} is the host name of the Unicore gateway
 machine to which the HTCondor job is to be submitted.
-\SubmitCmd{vsite} is the name of the Unicore virtual resource to which
+\SubmitCmdNI{vsite} is the name of the Unicore virtual resource to which
 the HTCondor job is to be submitted.
 
 Unicore uses certificates stored in a Java keystore file for

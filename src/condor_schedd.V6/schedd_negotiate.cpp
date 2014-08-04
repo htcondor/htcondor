@@ -70,6 +70,8 @@ ScheddNegotiate::ScheddNegotiate
 	m_current_auto_cluster_id(-1),
 	m_jobs_rejected(0),
 	m_jobs_matched(0),
+	m_num_resource_reqs_sent(0),
+	m_num_resource_reqs_to_send(0),
 	m_negotiation_finished(false),
 	m_operation(0)
 {
@@ -115,6 +117,19 @@ ScheddNegotiate::getRemotePool()
 bool
 ScheddNegotiate::nextJob()
 {
+	if ( m_num_resource_reqs_sent > 0 && m_num_resource_reqs_to_send == 0 ) {
+		// If we have already sent off a list of resource requests via
+		// sendResourceRequestList(), and we are not currently being asked
+		// by the negotiator to send more requests (or jobs), then
+		// we want nextJob() to essentially be a no-op here.
+		// In other words, when doing resource request lists, we want
+		// all the calls to nextJob() to be ignored unless we are
+		// in the process of sending a resource request list.
+		// Note that if we are talking to anything earlier than a v8.3.0
+		// negotiator, m_num_resource_reqs_sent will always be 0.
+		return true;
+	}
+
 	while( !m_jobs->empty() ) {
 		ResourceRequestCluster *cluster = m_jobs->front();
 		ASSERT( cluster );
@@ -259,7 +274,51 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 }
 
 bool
-ScheddNegotiate::sendJobInfo(Sock *sock)
+ScheddNegotiate::sendResourceRequestList(Sock *sock)
+{
+	while (m_num_resource_reqs_to_send > 0) {
+
+		nextJob();
+
+		if ( !sendJobInfo(sock, true) ) {
+			return false;
+		}
+
+		// If m_negotiation_finished==true, then no more jobs to send. But
+		// if we already sent some jobs in response to this request, we
+		// don't want to consider the negotitation finished since we still want
+		// to receive responses (e.g. matches) back from the negotiator.
+		if ( m_negotiation_finished ) {
+			if (m_num_resource_reqs_sent > 0 ) {
+				m_negotiation_finished = false;
+			}
+			break;
+		}
+
+		// When we call sendJobInfo next at the top of the loop,
+		// we don't want it to send all the individual jobs in the current cluster since
+		// we already sent an ad with a resource_request_count.  So we want
+		// to skip ahead to the next cluster.
+		if ( !m_jobs->empty() ) {
+			ResourceRequestCluster *cluster = m_jobs->front();
+			m_jobs->pop_front();
+			delete cluster;
+		}
+
+		m_num_resource_reqs_sent++;
+		m_num_resource_reqs_to_send--;
+	}
+
+	// Set m_num_resource_reqs_to_send to zero, as we are not sending
+	// any more reqs now, and this counter is inspected in nextJob()
+	m_num_resource_reqs_to_send = 0; 
+
+	return true;
+}
+
+
+bool
+ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 {
 		// The Negotiator wants us to send it a job. 
 
@@ -280,10 +339,43 @@ ScheddNegotiate::sendJobInfo(Sock *sock)
 	}
 
 		// request match diagnostics
-	m_current_job_ad.Assign(ATTR_WANT_MATCH_DIAGNOSTICS, true);
+		// 0 = no match diagnostics
+		// 1 = match diagnostics string
+		// 2 = match diagnostics string decorated w/ autocluster + jobid
+	m_current_job_ad.Assign(ATTR_WANT_MATCH_DIAGNOSTICS, (int) 2);
 
 		// Send the ad to the negotiator
-	if( !putClassAd(sock, m_current_job_ad) ) {
+	int putad_result = 0;
+	std::string auto_cluster_attrs;
+	if ( just_sig_attrs &&
+		 m_current_job_ad.LookupString(ATTR_AUTO_CLUSTER_ATTRS, auto_cluster_attrs) )
+	{
+		// don't send the entire job ad; just send significant attrs
+		classad::References sig_attrs;
+
+		StringTokenIterator list(auto_cluster_attrs);
+		const std::string *attr;
+		while ((attr = list.next_string())) { sig_attrs.insert(*attr); }
+
+		// besides significant attrs, we also always want to send these attrs cuz
+		// the matchmaker explicitly looks for them (for dprintfs or whatever).
+		sig_attrs.insert(ATTR_OWNER);
+		sig_attrs.insert(ATTR_CLUSTER_ID);
+		sig_attrs.insert(ATTR_PROC_ID);
+		sig_attrs.insert(ATTR_RESOURCE_REQUEST_COUNT);
+		sig_attrs.insert(ATTR_GLOBAL_JOB_ID);
+		sig_attrs.insert(ATTR_AUTO_CLUSTER_ID);
+		sig_attrs.insert(ATTR_WANT_MATCH_DIAGNOSTICS);
+		sig_attrs.insert(ATTR_WANT_CLAIMING);  // used for Condor-G matchmaking
+		// ship it!
+		putad_result = putClassAd(sock, m_current_job_ad, 0, &sig_attrs);
+	} else {
+		// send the entire classad.  perhaps we are doing this because the
+		// ad does not have ATTR_AUTO_CLUSTER_ATTRS defined for some reason,
+		// or perhaps we are doing this because we were explicitly told to do so.
+		putad_result = putClassAd(sock, m_current_job_ad);
+	}
+	if( !putad_result ) {
 		dprintf( D_ALWAYS,
 				 "Can't send job ad to mgr\n" );
 		sock->end_of_message();
@@ -313,17 +405,52 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		// Now carry out the negotiator's request that we just read.
 
 	switch( m_operation ) {
+
 	case REJECTED:
 		m_reject_reason = "Unknown reason";
-	case REJECTED_WITH_REASON:
+
+	case REJECTED_WITH_REASON: {
+		// To support resource request lists, the
+		// reject reason may end with "...|autocluster|cluster.proc|"
+		// if so, reset m_current_auto_cluster_id and m_current_job_id
+		// with the values contained in the reject reason, and truncate
+		// this information out of m_reject_reason.
+		int pos = m_reject_reason.FindChar('|');
+		if ( pos >= 0 ) {
+			m_reject_reason.Tokenize();
+			/*const char *reason =*/ m_reject_reason.GetNextToken("|",false);
+			const char *ac = m_reject_reason.GetNextToken("|",false);
+			const char *jobid = m_reject_reason.GetNextToken("|",false);
+			if (ac && jobid) {
+				int rr_cluster, rr_proc;
+				m_current_auto_cluster_id = atoi(ac);
+				StrToProcId(jobid,rr_cluster,rr_proc);
+				if (rr_cluster != m_current_job_id.cluster || rr_proc != m_current_job_id.proc) {
+					m_current_resources_delivered = 0;
+				}
+				m_current_job_id.cluster = rr_cluster;
+				m_current_job_id.proc = rr_proc;
+			}
+			m_reject_reason.setChar(pos,'\0');	// will truncate string at pos
+		}
 		scheduler_handleJobRejected( m_current_job_id, m_reject_reason.c_str() );
 		m_jobs_rejected++;
 		setAutoClusterRejected( m_current_auto_cluster_id );
 		nextJob();
 		break;
+	}
 
 	case SEND_JOB_INFO:
+		m_num_resource_reqs_sent = 0;  // clear counter of reqs sent this round
 		if( !sendJobInfo(sock) ) {
+				// We failed to talk to the negotiator, so close the socket.
+			return MESSAGE_FINISHED;
+		}
+		break;
+
+	case SEND_RESOURCE_REQUEST_LIST:
+		m_num_resource_reqs_sent = 0; // clear counter of reqs sent this round
+		if( !sendResourceRequestList(sock) ) {
 				// We failed to talk to the negotiator, so close the socket.
 			return MESSAGE_FINISHED;
 		}
@@ -331,15 +458,23 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 
 	case PERMISSION_AND_AD: {
 
-		// If the slot we matched is partitionable, edit it
-		// so it will look like the resulting dynamic slot. 
-		// NOTE: Seems like we no longer need to do this here,
-		// since we also do the fixup at claim time in
-		// contactStartd().  - Todd 1/12 <tannenba@cs.wisc.edu>
-		if( !fixupPartitionableSlot(&m_current_job_ad,&m_match_ad) )
-		{
-			nextJob();
-			break;
+		// When using request lists, one single
+		// "m_current_job_id" is kinda meaningless if we just sent a whole
+		// pile of jobs to the negotiator.  So we want to 
+		// reset m_current_job_id with the job id info embedded in the offer 
+		// that comes back from the negotiator (if it exists).  This will
+		// happen with an 8.3.0+ negotiator, and is needed when using
+		// resource request lists.  
+		int rr_cluster = -1;
+		int rr_proc = -1;
+		m_match_ad.LookupInteger(ATTR_RESOURCE_REQUEST_CLUSTER, rr_cluster);
+		m_match_ad.LookupInteger(ATTR_RESOURCE_REQUEST_PROC, rr_proc);
+		if (rr_cluster != -1 && rr_proc != -1) {
+			if (rr_cluster != m_current_job_id.cluster || rr_proc != m_current_job_id.proc) {
+				m_current_resources_delivered = 0;
+			}
+			m_current_job_id.cluster = rr_cluster;
+			m_current_job_id.proc = rr_proc;
 		}
 
 		m_current_resources_delivered++;
@@ -374,10 +509,11 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 
 		m_negotiation_finished = true;
 		break;
+
 	default:
 		EXCEPT("should never get here (negotiation op %d)",m_operation);
-	}
 
+	} // end of switch on m_operation
 
 	if( m_negotiation_finished ) {
 			// the following function takes ownership of sock
@@ -424,10 +560,19 @@ ScheddNegotiate::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 			return false;
 		}
 		break;
+
 	case REJECTED:
 		break;
 
 	case SEND_JOB_INFO:
+		break;
+
+	case SEND_RESOURCE_REQUEST_LIST:
+		if( !sock->code(m_num_resource_reqs_to_send) ) {
+			dprintf( D_ALWAYS,
+					 "Can't receive num_resource_reqs_to_send from negotiator\n" );
+			return false;
+		}
 		break;
 
 	case PERMISSION:

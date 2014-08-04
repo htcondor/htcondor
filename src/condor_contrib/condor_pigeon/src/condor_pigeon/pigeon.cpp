@@ -113,7 +113,7 @@ void Pigeon::initialize() {
   int fd_stdout = safe_open_wrapper(path, O_RDWR|O_CREAT, 0666);
   free(path);
   int fds[3] = {-1, fd_stdout, -1};
-  int mm_pid = daemonCore->Create_Process(proc,arglist,PRIV_CONDOR_FINAL, 0,FALSE,NULL,NULL,NULL,NULL,fds);
+  int mm_pid = daemonCore->Create_Process(proc,arglist,PRIV_CONDOR_FINAL, 0,FALSE,FALSE,NULL,NULL,NULL,NULL,fds);
   if (mm_pid <= 0) 
     EXCEPT("Failed to launch qpid process using Create_Process.\n ");
 
@@ -156,7 +156,7 @@ void Pigeon::initialize() {
   	qArglist.AppendArg(proc);
   	qArglist.AppendArg(hostname);
   	qArglist.AppendArg(portStr.c_str());
-  	mm_pid = daemonCore->Create_Process(proc,qArglist,PRIV_CONDOR_FINAL, 0,FALSE,NULL,NULL,NULL,NULL);
+  	mm_pid = daemonCore->Create_Process(proc,qArglist,PRIV_CONDOR_FINAL, 0,FALSE,FALSE,NULL,NULL,NULL,NULL);
   	if (mm_pid <= 0) 
 		EXCEPT("Failed to launch declareQueues process using Create_Process.\n ");
     free(proc);

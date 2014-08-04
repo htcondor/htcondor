@@ -397,7 +397,8 @@ email_developers_open(const char *subject)
 #else
         tmp = strdup("condor-admin@cs.wisc.edu");
 #endif
-    } else
+    }
+
     if (strcasecmp (tmp, "NONE") == 0) {
         free (tmp);
         return NULL;

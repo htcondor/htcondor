@@ -45,6 +45,12 @@ number, the release date, and the build identification number.
   the sum of the all of the time jobs which did not complete successfully 
   have spent running over the lifetime of this \Condor{schedd}.
 
+\index{ClassAd Scheduler attribute!JobsAccumExceptionalBadputTime}
+\item[\AdAttr{JobsAccumExceptionalBadputTime}:] A Statistics attribute 
+  defining the sum of the all of the time jobs which did not complete 
+  successfully due to \Condor{shadow} exceptions 
+  have spent running over the lifetime of this \Condor{schedd}.
+
 \index{ClassAd Scheduler attribute!JobsAccumRunningTime}
 \item[\AdAttr{JobsAccumRunningTime}:]  A Statistics attribute defining
   the sum of the all of the time jobs have spent running
@@ -629,12 +635,12 @@ number, the release date, and the build identification number.
 
 \index{ClassAd Scheduler attribute!TotalLocalIdleJobs}
 \item[\AdAttr{TotalLocalIdleJobs}:] The total number of 
-  \SubmitCmd{local} \SubmitCmd{ universe} jobs from this
+  \SubmitCmdNI{local} \SubmitCmd{universe} jobs from this
   \Condor{schedd} daemon that are currently idle.
 
 \index{ClassAd Scheduler attribute!TotalLocalRunningJobs}
 \item[\AdAttr{TotalLocalRunningJobs}:] The total number of 
-  \SubmitCmd{local} \SubmitCmd{ universe} jobs from this
+  \SubmitCmdNI{local} \SubmitCmd{universe} jobs from this
   \Condor{schedd} daemon that are currently running.
 
 \index{ClassAd Scheduler attribute!TotalRemovedJobs}
@@ -648,12 +654,12 @@ number, the release date, and the build identification number.
 
 \index{ClassAd Scheduler attribute!TotalSchedulerIdleJobs}
 \item[\AdAttr{TotalSchedulerIdleJobs}:] The total number of 
-  \SubmitCmd{scheduler} \SubmitCmd{ universe} jobs from this
+  \SubmitCmdNI{scheduler} \SubmitCmd{universe} jobs from this
   \Condor{schedd} daemon that are currently idle.
 
 \index{ClassAd Scheduler attribute!TotalSchedulerRunningJobs}
 \item[\AdAttr{TotalSchedulerRunningJobs}:] The total number of 
-  \SubmitCmd{scheduler} \SubmitCmd{ universe} jobs from this
+  \SubmitCmdNI{scheduler} \SubmitCmd{universe} jobs from this
   \Condor{schedd} daemon that are currently running.
 
 \index{ClassAd Scheduler attribute!TransferQueueUserExpr}

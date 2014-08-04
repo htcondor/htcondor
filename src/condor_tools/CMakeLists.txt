@@ -89,7 +89,7 @@ if (NOT WINDOWS)
 		if (NOT HAVE_STATIC_LIBDL)
 			message( FATAL_ERROR "Can't find libdl.a, needed for condor_ckpt_probe" )
 		endif()
-		add_executable( condor_ckpt_probe probe_process.cpp ../condor_ckpt/maps.c ../condor_utils/condor_pers.cpp ../safefile/safe_open.cpp )
+		add_executable( condor_ckpt_probe probe_process.cpp ../condor_ckpt/maps.c ../condor_utils/condor_pers.cpp ../safefile/safe_open.c )
 		install( TARGETS condor_ckpt_probe DESTINATION "${C_LIBEXEC}" )
         set_property( TARGET condor_ckpt_probe PROPERTY COMPILE_FLAGS -static )
         set_property( TARGET condor_ckpt_probe PROPERTY LINK_FLAGS -static )
@@ -127,13 +127,6 @@ if ( LINUX AND NOT CONDOR_PACKAGE_BUILD )
 	install( CODE "execute_process(COMMAND chmod -R u+w ${CMAKE_INSTALL_PREFIX}/lib/condor/)" )
 endif()
 
-if (CURL_FOUND)
-  if (WINDOWS)
-    condor_exe( config_fetch "file_fetch.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
-  else()
-    condor_exe( config_fetch "file_fetch.cpp" ${C_LIBEXEC} "${CURL_FOUND};${CONDOR_TOOL_LIBS}" OFF )
-  endif()
-endif()
 
 ############################################################
 # GPU Support

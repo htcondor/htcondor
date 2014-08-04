@@ -1171,8 +1171,10 @@ Read_config(const char* config_source,
 		} else if (op == ':') {
 		#ifdef WARN_COLON_FOR_PARAM_ASSIGN
 			if (opt_meta_colon < 2) { op = '='; } // change the op to = so that we don't "goto cleanup" below
-			// backward compat hack. the old config file used : syntax for RunBenchmarks, so this is just a warning for now.
-			else if (MATCH == strcasecmp(name, "RunBenchmarks")) { op = '='; }
+
+			// backward compat hack. the old config file used : syntax for RunBenchmarks,
+			// so grandfather this in. tread error as warning, tread warning as ignore.
+			if (MATCH == strcasecmp(name, "RunBenchmarks")) { op = '='; if (opt_meta_colon < 2) opt_meta_colon = 0; }
 
 			if (opt_meta_colon) {
 				fprintf( stderr, "Configuration %s \"%s\", Line %d: obsolete use of ':' for parameter assignment at %s : %s\n",

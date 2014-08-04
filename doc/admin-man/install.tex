@@ -943,6 +943,29 @@ Set the \Env{CONDOR\_CONFIG} environment variable
 to point to the new copy of the configuration,
 so the new version of HTCondor will use the new configuration when restarted.
 
+As of HTCondor version 8.2.0, 
+the default configuration file has been substantially reduced
+in size by defining compile-time default values for most configuration
+variables.
+Therefore,
+when upgrading from a version of HTCondor earlier than 8.2.0 
+to a more recent version,
+the option of reducing the size of the configuration file is an option.
+The goal is to identify and use only
+the configuration variable values that differ from 
+the compile-time default values.  
+This is facilitated by using \Condor{config\_val} with 
+the \OptArg{-writeconfig:upgrade} argument,
+to create a file that behaves the same as the current configuration, 
+but is much smaller,
+because values matching the default values (as well as some obsolete variables)
+have been removed.
+Items in the file created by running
+\Condor{config\_val} with the \OptArg{-writeconfig:upgrade} argument
+will be in the order that they were read from the original configuration files.
+This file is a convenient guide to stripping the cruft from 
+old configuration files.
+
 When upgrading from a version of HTCondor earlier than 6.8 to more recent version,
 note that the configuration settings must be modified for security reasons.
 Specifically, the \Macro{HOSTALLOW\_WRITE} configuration variable
@@ -1037,7 +1060,7 @@ the \Condor{off} command specifies the machine by host name.
 \begin{verbatim}
   condor_off -startd <hostname>
 \end{verbatim}
-A running \SubmitCmd{standard} universe job will be allowed to 
+A running \SubmitCmdNI{standard} universe job will be allowed to 
 take a checkpoint before the job is killed.
 A running job under another universe will be killed.
 If it is instead desired that the machine stops running jobs

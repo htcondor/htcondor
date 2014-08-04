@@ -34,12 +34,12 @@
 #include "condor_debug.h"
 #include "get_port_range.h"
 #include "condor_netdb.h"
-#include "daemon_core_sock_adapter.h"
 #include "selector.h"
 #include "authentication.h"
 #include "condor_sockfunc.h"
 #include "condor_ipv6.h"
 #include "condor_config.h"
+#include "condor_sinful.h"
 
 #if defined(WIN32)
 // <winsock2.h> already included...
@@ -65,8 +65,6 @@ void dprintf ( int flags, Sock & sock, const char *fmt, ... )
     _condor_dprintf_va( flags, (DPF_IDENT)sock.getUniqueId(), fmt, args );
     va_end( args );
 }
-
-DaemonCoreSockAdapterClass daemonCoreSockAdapter;
 
 unsigned int Sock::m_nextUniqueId = 1;
 
@@ -886,8 +884,6 @@ bool Sock::set_keepalive()
 int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 {
 	int current_size = 0;
-	int previous_size = 0;
-	int attempt_size = 0;
 	int command;
 	SOCKET_LENGTH_TYPE temp;
 
@@ -901,37 +897,14 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 
 	// Log the current size since Todd is curious.  :^)
 	temp = sizeof(int);
-	::getsockopt(_sock,SOL_SOCKET,command,
-			(char*)&current_size,(socklen_t*)&temp);
-	dprintf(D_FULLDEBUG,"Current Socket bufsize=%dk\n",
-		current_size / 1024);
 	current_size = 0;
+	getsockopt(_sock,SOL_SOCKET,command, (char*)&current_size,(socklen_t*)&temp);
+	dprintf(D_FULLDEBUG,"Current Socket bufsize=%dk\n", current_size / 1024);
 
-	/* 
-		We want to set the socket buffer size to be as close
-		to the desired size as possible.  Unfortunatly, there is no
-		contant defined which states the maximum size possible.  So
-		we keep raising it up 1k at a time until (a) we got up to the
-		desired value, or (b) it is not increasing anymore.  We ignore
-		the return value from setsockopt since on some platforms this 
-		could signal a value which is too low...
-	*/
-	 
-	do {
-		attempt_size += 1024;
-		if ( attempt_size > desired_size ) {
-			attempt_size = desired_size;
-		}
-		(void) setsockopt( SOL_SOCKET, command,
-						   (char*)&attempt_size, sizeof(int) );
+	setsockopt( SOL_SOCKET, command, (char*)&desired_size, sizeof(int) );
 
-		previous_size = current_size;
-		temp = sizeof(int);
-		::getsockopt( _sock, SOL_SOCKET, command,
- 					  (char*)&current_size, (socklen_t*)&temp );
-
-	} while ( ( previous_size < current_size ) &&
-			  ( attempt_size < desired_size  ) );
+	getsockopt( _sock, SOL_SOCKET, command, (char*)&current_size, (socklen_t*)&temp );
+	dprintf(D_ALWAYS,"Set Socket to bufsize=%dk\n", current_size / 1024);
 
 	return current_size;
 }
@@ -1601,6 +1574,12 @@ Sock::bytes_available_to_read()
 	return ret_val;
 }
 
+	// NOTE NOTE: this returns true in the same cases the select() syscall
+	// would return true.  This includes BOTH when a message is ready (such
+	// as a complete CEDAR message - if there's just an incomplete message,
+	// calling this will consume any bytes available on the socket) AND
+	// when the reli sock has been closed.  Take note that at least the CCB
+	// depends on this returning true when the reli sock is closed.
 bool
 Sock::readReady() {
 	Selector selector;
@@ -1615,11 +1594,20 @@ Sock::readReady() {
 		return true;
 	}
 
-	selector.add_fd( _sock, Selector::IO_READ );
-	selector.set_timeout( 0 );
-	selector.execute();
+	if (type() == Stream::safe_sock)
+	{
+		selector.add_fd( _sock, Selector::IO_READ );
+		selector.set_timeout( 0 );
+		selector.execute();
 
-	return selector.has_ready();
+		return selector.has_ready();
+	}
+	else if (type() == Stream::reli_sock)
+	{
+		ReliSock *relisock = static_cast<ReliSock*>(this);
+		return relisock->is_closed();
+	}
+	return false;
 }
 
 int

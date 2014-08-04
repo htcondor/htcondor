@@ -45,9 +45,12 @@ class SharedPortServer: Service {
 	MyString m_shared_port_server_ad_file;
 	int m_publish_addr_timer;
 	SharedPortClient m_shared_port_client;
+	std::string m_default_id;
 	ForkWork forker;
 
 	int HandleConnectRequest(int cmd,Stream *sock);
+	int HandleDefaultRequest(int cmd,Stream *sock);
+	int PassRequest(Sock *sock, const char *shared_port_id);
 	void PublishAddress();
 };
 

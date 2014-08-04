@@ -48,6 +48,10 @@
 #endif
 #endif
 
+#ifdef WIN32
+#include <sstream>
+#endif
+
 // these are defined in master.C
 extern int 		MasterLockFD;
 extern FileLock*	MasterLock;
@@ -549,8 +553,18 @@ int daemon::RealStart( )
 	int 	command_port = isDC ? TRUE : FALSE;
 	char const *daemon_sock = NULL;
 	MyString daemon_sock_buf;
+	std::string default_id;
 	char	buf[512];
 	ArgList args;
+
+	param(default_id, "SHARED_PORT_DEFAULT_ID");
+		// Windows has a global pipe namespace, meaning that several instances of
+		// HTCondor share the same default ID; we make it unique below.
+#ifdef WIN32
+	std::stringstream ss;
+	ss << default_id << "_" << getpid();
+	default_id = ss.str();
+#endif
 
 	// Copy a couple of checks from Start
 	dprintf( D_FULLDEBUG, "::RealStart; %s on_hold=%d\n", name_in_config_file, on_hold );
@@ -598,8 +612,9 @@ int daemon::RealStart( )
 		// evil in the security code where we're looking up host certs
 		// in the keytab file, we still need root afterall. :(
 	bool wants_condor_priv = false;
+	bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && param_boolean("USE_SHARED_PORT", false);
 		// Collector needs to listen on a well known port.
-	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
+	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 || (!strcmp(name_in_config_file, "SHARED_PORT") && collector_uses_shared_port) ) {
 
 			// Go through all of the
 			// collectors until we find the one for THIS machine. Then
@@ -658,8 +673,13 @@ int daemon::RealStart( )
 
 		if (command_port == -1) {
 				// strange....
-			command_port = COLLECTOR_PORT;
-			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", COLLECTOR_PORT);
+			int default_port = !strcmp(name_in_config_file, "SHARED_PORT") ? param_integer("SHARED_PORT_PORT", COLLECTOR_PORT) : param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
+			command_port = default_port;
+			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", default_port);
+		}
+
+		if (collector_uses_shared_port && !strcmp(name_in_config_file,"COLLECTOR")) {
+			daemon_sock = default_id.size() ? default_id.c_str() : "collector";
 		}
 
 		if( daemon_sock ) {
@@ -756,6 +776,7 @@ int daemon::RealStart( )
     // take command port from arguments( buf )
     // Don't mess with buf or tmp (they are not our variables) -
     // allocate them again
+    int udp_command_port = command_port;
     if ( isDC ) {
 		int i;
 		for(i=0;i<args.Count();i++) {
@@ -785,6 +806,32 @@ int daemon::RealStart( )
 	if( m_never_use_shared_port ) {
 		jobopts |= DCJOBOPT_NEVER_USE_SHARED_PORT;
 	}
+	if( !strcmp(name_in_config_file,"SHARED_PORT") ) {
+		jobopts |= DCJOBOPT_NO_UDP | DCJOBOPT_NEVER_USE_SHARED_PORT;
+#ifdef WIN32
+		env.SetEnv("_condor_SHARED_PORT_DEFAULT_ID", default_id.c_str());
+#endif
+	}
+	// If we are starting a collector and passed a "-sock" command in the command line,
+	// but didn't set the COLLECTOR_HOST to use shared port, have the collector listen on
+	// the UDP socket and not the TCP socket.  We assume that the TCP socket will be taken
+	// by the shared port daemon.
+	if( !strcmp(name_in_config_file,"COLLECTOR") && daemon_sock && command_port > 1 && collector_uses_shared_port ) {
+		udp_command_port = command_port;
+		command_port = 1;
+	} else {
+		udp_command_port = command_port;
+	}
+	if( daemon_sock ) {
+		dprintf (D_FULLDEBUG,"Starting daemon with shared port id %s\n",
+			daemon_sock);
+	}
+	if( command_port > 1 ) {
+		dprintf (D_FULLDEBUG, "Starting daemon on TCP port %d\n", command_port);
+		if( udp_command_port != command_port ) {
+			dprintf (D_FULLDEBUG, "Starting daemon on UDP port %d\n", command_port);
+		}
+	}
 
 	pid = daemonCore->Create_Process(
 				process_name,	// program to exec
@@ -792,6 +839,7 @@ int daemon::RealStart( )
 				priv_mode,		// privledge level
 				1,				// which reaper ID to use; use default reaper
 				command_port,	// port to use for command port; TRUE=choose one dynamically
+				udp_command_port,	// port to use for command port; TRUE=choose one dynamically
 				&env,			// environment
 				NULL,			// current working directory
 				&fi,
@@ -2752,9 +2800,11 @@ Daemons::UpdateCollector()
 #endif
 #endif
 
+	if ( FILEObj ) {
 		// log classad into sql log so that it can be updated to DB
-	FILESQL::daemonAdInsert(ad, "MasterAd", FILEObj, prevLHF);
-	
+		FILESQL::daemonAdInsert(ad, "MasterAd", FILEObj, prevLHF);
+	}
+
 		// Reset the timer so we don't do another period update until 
 	daemonCore->Reset_Timer( update_tid, update_interval, update_interval );
 

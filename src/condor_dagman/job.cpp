@@ -94,8 +94,7 @@ Job::~Job() {
 //---------------------------------------------------------------------------
 Job::Job( const job_type_t jobType, const char* jobName,
 			const char *directory, const char* cmdFile ) :
-	_jobType( jobType ), _preskip( PRE_SKIP_INVALID ),
-			_final( false ), append_default_log(true)
+	_jobType( jobType ), _preskip( PRE_SKIP_INVALID ), _final( false )
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -197,7 +196,7 @@ bool Job::Remove (const queue_t queue, const JobID_t jobID)
 
 //---------------------------------------------------------------------------
 bool
-Job::CheckForLogFile(bool usingDefault ) const
+Job::CheckForLogFile( bool usingDefault ) const
 {
 	bool tmpLogFileIsXml;
 	MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
@@ -783,8 +782,8 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			bool recovery, const char *defaultNodeLog, bool usingDefault )
 {
 	debug_printf( DEBUG_DEBUG_2,
-				"Attempting to monitor log file for node %s\n",
-				GetJobName() );
+				"Attempting to monitor log file for node %s; using default?: %d\n",
+				GetJobName(), usingDefault );
 
 	if ( _logIsMonitored ) {
 		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
@@ -795,78 +794,46 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
 				condorLogReader : storkLogReader;
 
-    std::string logFileStr;
-	if ( _jobType == TYPE_CONDOR ) {
-			// We check to see if the user has specified a log file
-			// If not, we give him a default
-    	MyString templogFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
-					_directory, _logFileIsXml, usingDefault);
-		logFileStr = templogFileStr.Value();
-	} else {
-		StringList logFiles;
-		MyString tmpResult = MultiLogFiles::loadLogFileNamesFromStorkSubFile(
-					_cmdFile, _directory, logFiles );
-		if ( tmpResult != "" ) {
-			debug_printf( DEBUG_QUIET, "Error getting Stork log file: %s\n",
-						tmpResult.Value() );
-			LogMonitorFailed();
-			return false;
-		} else if ( logFiles.number() != 1 ) {
-			debug_printf( DEBUG_QUIET, "Error: %d Stork log files found "
-						"in submit file %s; we want 1\n",
-						logFiles.number(), _cmdFile );
-			LogMonitorFailed();
-			return false;
-		} else {
-			logFiles.rewind();
-			logFileStr = logFiles.next();
-		}
+	MyString logFile;
+	if ( !FindLogFile( usingDefault, logFile ) ) {
+		LogMonitorFailed();
+		return false;
 	}
+	// Note:  logFile is "" here if usingDefault is true and this node
+	// is an HTCondor node (not Stork).
 
 		// Warn the user if the node's log file is in /tmp.
-	if ( logFileStr.find( "/tmp" ) == 0 ) {
+	if ( logFile.find( "/tmp" ) == 0 ) {
 		debug_printf( DEBUG_QUIET, "Warning: "
 					"Log file %s for node %s is in /tmp\n",
-					logFileStr.c_str(), GetJobName() );
-        check_warning_strictness( usingDefault ? DAG_STRICT_2 : DAG_STRICT_1 );
+					logFile.Value(), GetJobName() );
+			// If we're using the workflow log, we'll only ever get here
+			// for Stork nodes, because they can't use the workflow log.
+        check_warning_strictness( DAG_STRICT_1 );
 	}
 
-	if ( logFileStr == "" ) {
-		logFileStr = defaultNodeLog;
+	if ( logFile == "" ) {
+			// Using the workflow/default log file for this node.
+		logFile = defaultNodeLog;
 		_useDefaultLog = true;
 			// Default User log is never XML
-			// This could be specified in the submit file and should be
-			// ignored.
 		_logFileIsXml = false;
-		debug_printf( DEBUG_NORMAL, "Unable to get log file from "
-					"submit file %s (node %s); using default (%s)\n",
-					_cmdFile, GetJobName(), logFileStr.c_str() );
-		append_default_log = false;
-	} else {
-		append_default_log = usingDefault;
-		if( append_default_log ) {
-				// DAGman is not going to look at the user-specified log.
-				// It will look at the defaultNode log.
-			logFileStr = defaultNodeLog;
-			_useDefaultLog = false;
-			_logFileIsXml = false;
-		}
 	}
 
 		// This function returns true if the log file is on NFS and
 		// that is an error.  If the log file is on NFS, but nfsIsError
 		// is false, it prints a warning but returns false.
-	if ( MultiLogFiles::logFileNFSError( logFileStr.c_str(),
+	if ( MultiLogFiles::logFileNFSError( logFile.Value(),
 				nfsIsError ) ) {
 		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
-					logFileStr.c_str() );
+					logFile.Value() );
 		LogMonitorFailed();
 		return false;
 	}
 
 	delete [] _logFile;
 		// Saving log file here in case submit file gets changed.
-	_logFile = strnewp( logFileStr.c_str() );
+	_logFile = strnewp( logFile.Value() );
 	debug_printf( DEBUG_DEBUG_2, "Monitoring log file <%s> for node %s\n",
 				GetLogFile(), GetJobName() );
 	CondorError errstack;
@@ -1033,7 +1000,9 @@ Job::FixPriority(Dag& dag)
 	}
 }
 
-bool Job::SetCondorID(const CondorID& cid)
+//---------------------------------------------------------------------------
+bool
+Job::SetCondorID(const CondorID& cid)
 {
 	bool ret = true;
 	if(GetCluster() != -1) {
@@ -1046,7 +1015,9 @@ bool Job::SetCondorID(const CondorID& cid)
 	return ret;	
 }
 
-bool Job::Hold(int proc) 
+//---------------------------------------------------------------------------
+bool
+Job::Hold(int proc) 
 {
 	if( proc >= static_cast<int>( _onHold.size() ) ) {
 		_onHold.resize( proc+1, 0 );
@@ -1063,7 +1034,9 @@ bool Job::Hold(int proc)
 	return false;
 }
 
-bool Job::Release(int proc)
+//---------------------------------------------------------------------------
+bool
+Job::Release(int proc)
 {
 	if( proc >= static_cast<int>( _onHold.size() ) ) {
 		dprintf( D_FULLDEBUG, "Received release event for node %s, but job %d.%d "
@@ -1139,5 +1112,56 @@ Job::Cleanup()
 
 	std::vector<unsigned char> s2;
 	_gotEvents.swap(s2); // Free memory in _gotEvents
+}
 
+//---------------------------------------------------------------------------
+bool
+Job::FindLogFile( bool usingWorkflowLog, MyString &logFile )
+{
+	if ( _jobType == TYPE_CONDOR ) {
+		if ( usingWorkflowLog ) {
+				// Now, if we're using the workflow log file, we don't
+				// even look at the node's submit file.  (See gittrac
+				// #3843.)
+			logFile = "";
+
+		} else {
+				// We're not in workflow/default log mode, so get the
+				// log file (if any) from the submit file.
+    		logFile = MultiLogFiles::loadLogFileNameFromSubFile(
+						_cmdFile, _directory, _logFileIsXml, false );
+			if ( logFile == "" ) {
+				debug_printf( DEBUG_NORMAL, "Unable to get log file from "
+							"submit file %s (node %s); using default/workflow log\n",
+							_cmdFile, GetJobName() );
+				// Don't return false here, because not specifying the
+				// log file is not an error.
+			}
+		}
+
+	} else {
+			// Workflow/default log file mode is not supported for Stork
+			// nodes, so we always have to get the log file for a Stork
+			// node.
+		StringList logFiles;
+		MyString tmpResult = MultiLogFiles::loadLogFileNamesFromStorkSubFile(
+					_cmdFile, _directory, logFiles );
+		if ( tmpResult != "" ) {
+			debug_printf( DEBUG_QUIET, "Error getting Stork log file: %s\n",
+						tmpResult.Value() );
+			return false;
+
+		} else if ( logFiles.number() != 1 ) {
+			debug_printf( DEBUG_QUIET, "Error: %d Stork log files found "
+						"in submit file %s; we want 1\n",
+						logFiles.number(), _cmdFile );
+			return false;
+
+		} else {
+			logFiles.rewind();
+			logFile = logFiles.next();
+		}
+	}
+
+	return true;
 }

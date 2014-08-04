@@ -28,7 +28,6 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "classad_merge.h"
-#include "dynuser.h"
 #include "condor_auth_x509.h"
 #include "setenv.h"
 #include "my_popen.h"
@@ -40,10 +39,6 @@
 
 #if defined(LINUX)
 #include "glexec_starter.linux.h"
-#endif
-
-#ifdef WIN32
-extern dynuser *myDynuser;
 #endif
 
 Starter::Starter()
@@ -1010,7 +1005,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
-		                TRUE, env, NULL, &fi, inherit_list, std_fds );
+		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds );
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;
@@ -1124,6 +1119,7 @@ Starter::execOldStarter( void )
 	                                         args,         // arguments
 	                                         PRIV_ROOT,    // start as root
 	                                         main_reaper,  // reaper
+	                                         FALSE,        // no command port
 	                                         FALSE,        // no command port
 	                                         &env,
 	                                         NULL,         // inherit out cwd

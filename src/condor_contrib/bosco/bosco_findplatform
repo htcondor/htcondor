@@ -15,9 +15,10 @@ OSX="MAC"
 OSX_UNSUPPORTED="UNSUPPORTED"
 DEB6="DEB6"
 DEB7="DEB7"
+UBUNTU12="UBUNTU12"
 
 SUPPORTED_OSX = ['10.6', '10.7', '10.8', '10.9']
-SUPPORTED_PLATFORMS = [ RH5, RH6, RH7, OSX, DEB6, DEB7 ]
+SUPPORTED_PLATFORMS = [ RH5, RH6, RH7, OSX, DEB6, DEB7, UBUNTU12 ]
 
 # download URLs for the different platforms
 URL_DICT={
@@ -27,6 +28,7 @@ URL_DICT={
   RH5: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_RedHat5.tar.gz",
   RH6: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_RedHat6.tar.gz",
   RH7: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_RedHat7.tar.gz",
+  UBUNTU12: "ftp://ftp.cs.wisc.edu/condor/bosco/1.2/bosco-1.2-x86_64_Ubuntu12.tar.gz",
 }
 
 BIT32="32bit"
@@ -100,13 +102,17 @@ Codename:    oneiric
        if 'DISTRIB_DESCRIPTION' in line:
         return line[len('DISTRIB_DESCRIPTION='):]
     if 'DISTRIB_ID' in line:
-      if not 'Debian' in line:
+      if not 'Debian' in line and not 'Ubuntu' in line:
         return UNSUPPORTED
     if 'DISTRIB_RELEASE' in line:
+        # TODO These checks need to to be conditioned on whether the
+        #   distro is Debian or Ubuntu.
         if line[len('DISTRIB_RELEASE='):].startswith('6.'):
           retv=DEB6
         if line[len('DISTRIB_RELEASE='):].startswith('7.'):
           retv=DEB7
+        if line[len('DISTRIB_RELEASE='):].startswith('12.'):
+          retv=UBUNTU12
   return retv
 
 def findversion():
@@ -137,6 +143,9 @@ def findversion():
           return DEB6
         if mydist[1].startswith('7.'):
           return DEB7
+      if mydist[0].lower()=='ubuntu':
+        if mydist[1].startswith('12'):
+          return UBUNTU12
     if os.path.isfile('/etc/redhat-release'):
       return findversion_redhat()
     elif os.path.isfile('/etc/lsb-release'):

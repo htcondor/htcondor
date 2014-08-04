@@ -27,7 +27,6 @@
 #include "daemon.h"
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
-#include "daemon_core_sock_adapter.h"
 
 std::map< std::string, Timeslice > DCCollector::blacklist;
 
@@ -252,7 +251,8 @@ DCCollector::parseTCPInfo( void )
 		if( !(colon = strchr(host, ':')) ) {
 				// no colon, use the default port, and treat the given
 				// string as the address.
-			tcp_collector_port = COLLECTOR_PORT;
+			int default_port = param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
+			tcp_collector_port = default_port;
 			tcp_collector_addr = strnewp( tcp_collector_host );
 		} else { 
 				// there's a colon, so grab what's after it for the
@@ -275,10 +275,10 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 		return true;
 	}
 
-	if(!use_nonblocking_update || !daemonCoreSockAdapter.isEnabled()) {
+	if(!use_nonblocking_update || !daemonCore) {
 			// Either caller OR config may turn off nonblocking updates.
 			// In other words, both must be true to enable nonblocking.
-			// Also, must have daemonCoreSockAdapter enabled.
+			// Also, must have DaemonCore intialized.
 		nonblocking = false;
 	}
 

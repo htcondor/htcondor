@@ -919,6 +919,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 					PRIV_USER_FINAL,
 					myproxyGetDelegationReaperId,
 					FALSE,
+					FALSE,
 					&myEnv,
 					NULL,	// cwd
 					NULL,  // process family info

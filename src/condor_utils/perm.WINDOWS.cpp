@@ -507,6 +507,7 @@ bool perm::init( const char *accountname, const char *domain )
 	must_freesid = false;
 	
 	psid = (PSID) &sidBuffer;
+	sidBufferSize = sizeof(sidBuffer);
 
 	dprintf(D_FULLDEBUG,"perm::init() starting up for account (%s) "
 			"domain (%s)\n", accountname, ( domain ? domain : "NULL"));
@@ -538,6 +539,7 @@ bool perm::init( const char *accountname, const char *domain )
 		strncpy(qualified_account, accountname, 1023);
 	}
 
+	domainBufferSize = COUNTOF(domainBuffer);
 	if ( !LookupAccountName( NULL,			// System
 		qualified_account,					// Account name
 		psid, &sidBufferSize,				// Sid
@@ -793,7 +795,7 @@ perm::set_acls( const char *filename )
 	if ( ERROR_SUCCESS != err ) {
 		dprintf(D_ALWAYS, "perm::set_acls(%s): failed to get entries from ACL. "
 				"err=%d\n", filename, err);
-		LocalFree(oldDACL);
+		LocalFree(pSD);
 		return false;
 	}
 
@@ -810,7 +812,7 @@ perm::set_acls( const char *filename )
 					"in the ACL, so skipping the add\n");
 
 			LocalFree(entryList);
-			LocalFree(oldDACL);
+			LocalFree(pSD);
 			return true;
 		}
 	}
@@ -837,7 +839,7 @@ perm::set_acls( const char *filename )
 		dprintf(D_ALWAYS, "perm::set_acls(%s): failed to add new ACE "
 				"(err=%d)\n", filename, err);
 
-		LocalFree(oldDACL);
+		LocalFree(pSD);
 		return false;
 	}
 
@@ -878,7 +880,7 @@ perm::set_acls( const char *filename )
 	}
 
 	// clean up our memory.
-	LocalFree(oldDACL);
+	LocalFree(pSD);
 	LocalFree(newDACL);
 
 	if (err != ERROR_SUCCESS)

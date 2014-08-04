@@ -1,0 +1,127 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use strict;
+use warnings;
+use Cwd;
+
+my $cmd = 'cmd_q_status_format-check.cmd';
+my $cmdout = $cmd . ".out";
+my $testdesc =  'cmd_q_status_format-check';
+my $testname = "cmd_q_status_format-check";
+my $debuglevel = 2;
+
+my $whoami = "";
+
+my @qarrray = ();
+my @statarray = ();
+my $ClusterId = 0;
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
+my $submit = sub {
+	my %info = @_;
+	my $cmdq = "condor_q -format \"%s\" FOO";
+	my $cmdstat =  "condor_status -format \"%s\" FOO";
+
+	print "Running cmd $cmdq - ";
+	my $cmdstatus = CondorTest::runCondorTool($cmdq,\@qarrray,2);
+	if(!$cmdstatus)
+	{
+		print "bad\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmdq>\n",$debuglevel);
+		exit(1)
+	}
+
+	print "Running cmd $cmdstat - ";
+	my $cmdstatus = CondorTest::runCondorTool($cmdstat,\@statarray,2);
+	if(!$cmdstatus)
+	{
+		print "bad\n";
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmdstat>\n",$debuglevel);
+		exit(1)
+	}
+
+
+
+
+
+
+	print "ok\n";
+	my $submitline = "";
+
+	print "$ClusterId\n";
+
+
+	print "Looking at condor_q output\n";
+	foreach my $line (@qarrray) {
+		chomp($line);
+		CondorTest::debug("$line\n",$debuglevel);
+		print "$line\n";
+	}
+
+	print "Looking at condor_status output\n";
+	foreach my $line (@statarray) {
+		chomp($line);
+		CondorTest::debug("$line\n",$debuglevel);
+		print "$line\n";
+	}
+
+	print "bad\n";
+	$cmdq = "condor_rm $ClusterId";
+	$cmdstatus = CondorTest::runCondorTool($cmdq,\@qarrray,8);
+};
+
+my $aborted = sub {
+	CondorTest::debug("If all is good we abort our own job.......\n",$debuglevel);
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+};
+
+my $ExitSuccess = sub {
+	my %info = @_;
+};
+
+my $runresult = SimpleJob::RunCheck(
+	duration => 0,
+	on_abort => $aborted,
+	on_submit => $submit,
+	on_success => $ExitSuccess,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	GetClusterId => $GetClusterId,
+);
+
+

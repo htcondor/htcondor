@@ -448,6 +448,8 @@ CronJob::ProcessOutputQueue( void )
 		dprintf( D_FULLDEBUG, "%s: %d lines in Queue\n",
 				 GetName(), linecount );
 
+		status = ProcessOutputSep( m_stdOutBuf->GetQueueSep() );
+
 		// Read all of the data from the queue
 		char	*linebuf;
 		while( ( linebuf = m_stdOutBuf->GetLineFromQueue( ) ) != NULL ) {
@@ -524,6 +526,7 @@ CronJob::StartJobProcess( void )
 		final_args,			// argv
 		priv,				// Priviledge level
 		m_reaperId,			// ID Of reaper
+		FALSE,				// Command port?  No
 		FALSE,				// Command port?  No
 		&Params().GetEnv(), // Env to give to child
 		Params().GetCwd(),	// Starting CWD

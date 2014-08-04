@@ -1,0 +1,154 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test check availability and usage contol of the new
+## local, resources in both a static configuration and in psolts.
+## It is model after what we did to test concurrency limits
+## as we are checking the same sorts of things. bt
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+my $testname = "lib_include_cmd_config";
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	include : $(LOCAL_DIR)/../../../lib_include_cmd_config.pl CAPS1 |
+	include : $(LOCAL_DIR)/../../../lib_include_cmd_config1.txt
+	include: $(LOCAL_DIR)/../../../lib_include_cmd_config2.txt
+	include :$(LOCAL_DIR)/../../../lib_include_cmd_config3.txt
+	@include :$(LOCAL_DIR)/../../../lib_include_cmd_config4.txt
+	@INCLUDE : $(LOCAL_DIR)/../../../lib_include_cmd_config.pl CAPSAT1 |
+	INCLUDE : $(LOCAL_DIR)/../../../lib_include_cmd_config.pl CAPS2 |
+	@INCLUDE: $(LOCAL_DIR)/../../../lib_include_cmd_config.pl CAPSAT2 |
+	@INCLUDE :$(LOCAL_DIR)/../../../lib_include_cmd_config.pl CAPSAT3 |
+	@INCLUDE : $(LOCAL_DIR)/../../../lib_include_cmd_config.pl CAPSAT4|
+';
+
+# Interpretation ie expectd results
+#
+# The program being run sets prog.$ARG = true so
+# so base usage with include and INCLUDE produce prog.CAPS1 and prog.CAPS2
+# The variations of @include whitespace produce prog.CAPSAT1 -> prog.CAPSAT4
+# the 4 included files testing base and whitespace variation produce
+# files.caps1 = AA defined for the first include and then the next three
+# set the value to $(files.caps1)XX where XX is BB for 2, CC for 3 and DD
+# for 4.
+
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"includecmd");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "includecmd",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+my @array = ();
+my %response = ();
+
+runCondorTool("condor_config_val -dump CAPS",\@array,2,{emit_output=>0});
+
+# This test tests basic include function and variations of white space
+
+# take the array we got back from the dump and place what we got in a hash
+# to allow us to test for the existance of what we expect.
+
+print "Placing responses from config into a testing hash\n";
+foreach my $line (@array) {
+	if($line =~ /^(.*)\s+=\s+(.*)$/) {
+		$response{$1} = $2;
+		#print "$line";
+		#print "key:$1 value:$2\n";
+	}
+}
+
+print "Showing testing hash\n";
+foreach my $key (sort keys %response) {
+	print "$key = $response{$key}\n";
+}
+
+if(exists $response{"file.caps1"}) {
+	if($response{"file.caps1"} eq "AABBCCDD") {
+		RegisterResult(1, "test_name", $testname);
+		print "File inclusion and whitespace variations all work\n";
+	} else {
+		RegisterResult(0, "test_name", $testname);
+		print "At least one file inclusion faild\n";
+		print "Expected:AABBCCDD got:$response{\"file.caps1\"}\n";
+	}
+} else {
+	RegisterResult(0, "test_name", $testname);
+	print "File inclusion totally broken\n";
+}
+
+if(exists $response{"prog.CAPS1"}) {
+	RegisterResult(1, "test_name", $testname);
+	print "Base include program works\n";
+} else {
+	RegisterResult(0, "test_name", $testname);
+	print "Base include program does not work\n";
+}
+
+if(exists $response{"prog.CAPS2"}) {
+	RegisterResult(1, "test_name", $testname);
+	print "Base INCLUDE program works\n";
+} else {
+	RegisterResult(0, "test_name", $testname);
+	print "Base INCLUDE program does not work\n";
+}
+
+if(exists $response{"prog.CAPSAT1"}) {
+	RegisterResult(1, "test_name", $testname);
+	print "Base @include program works\n";
+} else {
+	RegisterResult(0, "test_name", $testname);
+	print "Base @include program does not work\n";
+}
+
+if(exists $response{"prog.CAPSAT2"}) {
+	RegisterResult(1, "test_name", $testname);
+	print "Base @INCLUDE whitespace variation 1 does work\n";
+} else {
+	RegisterResult(0, "test_name", $testname);
+	print "Base @INCLUDE whitespace variation 1 does not work\n";
+}
+
+if(exists $response{"prog.CAPSAT3"}) {
+	RegisterResult(1, "test_name", $testname);
+	print "Base @INCLUDE whitespace variation 2 does work\n";
+} else {
+	RegisterResult(0, "test_name", $testname);
+	print "Base @INCLUDE whitespace variation 2 does not work\n";
+}
+
+if(exists $response{"prog.CAPSAT4"}) {
+	RegisterResult(1, "test_name", $testname);
+	print "Base @INCLUDE whitespace variation 3 does work\n";
+} else {
+	RegisterResult(0, "test_name", $testname);
+	print "Base @INCLUDE whitespace variation 3 does not work\n";
+}
+
+CondorTest::EndTest();

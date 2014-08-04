@@ -258,7 +258,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	buff = batchType;
 	if ( gahp_args.Count() > 0 ) {
 		formatstr_cat( buff, "/%s", gahp_args.GetArg( 0 ) );
-		gahp_args.InsertArg( "batch_gahp", 1 );
+		gahp_args.AppendArg( "batch_gahp" );
 	}
 	gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 	free( gahp_path );
@@ -275,8 +275,8 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		}
 
 		formatstr( buff, "xfer/%s/%s", batchType, gahp_args.GetArg( 0 ) );
-		gahp_args.RemoveArg( 1 );
-		gahp_args.InsertArg( "condor_ft-gahp", 1 );
+		gahp_args.RemoveArg( gahp_args.Count() - 1 );
+		gahp_args.AppendArg( "condor_ft-gahp" );
 		m_xfer_gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 		free( gahp_path );
 

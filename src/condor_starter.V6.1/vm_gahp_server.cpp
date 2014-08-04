@@ -365,6 +365,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 			vmgahp_priv, 	//Priv state
 			1, 		//id for our registered reaper
 			FALSE, 		//do not want a command port
+			FALSE, 		//do not want a command port
 			job_env, 	//env
 			workingdir,	//cwd
 			family_info,		//family_info

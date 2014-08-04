@@ -44,6 +44,10 @@ LOCAL_CONFIG_DIR = $(LOCAL_DIR)/config
 use SECURITY : HOST_BASED
 ##  To expand your condor pool beyond a single host, set ALLOW_WRITE to match all of the hosts
 #ALLOW_WRITE = *.cs.wisc.edu
+##  FLOCK_FROM defines the machines that grant access to your pool via flocking. (i.e. these machines can join your pool).
+#FLOCK_FROM =
+##  FLOCK_TO defines the central managers that your schedd will advertise itself to (i.e. these pools will give matches to your schedd).
+#FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
 
 ##--------------------------------------------------------------------
 ## Values set by the condor_configure script:

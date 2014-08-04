@@ -232,6 +232,7 @@ UserDefinedToolsHibernator::enterState ( HibernatorBase::SLEEP_STATE state ) con
 		PRIV_CONDOR_FINAL,
 		m_reaper_id, 
 		FALSE, 
+		FALSE, 
 		NULL, 
 		NULL, 
 		&fi );	

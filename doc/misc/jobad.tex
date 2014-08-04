@@ -50,6 +50,40 @@ passed to the job, when those arguments are specified using the
 \item[\AdAttr{BatchQueue}:]  For grid universe jobs destined for 
 PBS, LSF or SGE, the name of the queue in the remote batch system.
 
+%%% ClassAd attribute: BlockReadKbytes
+\index{ClassAd job attribute!BlockReadKbytes}
+\index{BlockReadKbytes!job ClassAd attribute}
+\item[\AdAttr{BlockReadKbytes}:] The integer number of Kbytes
+read from disk for this job.
+
+%%% ClassAd attribute: BlockReads
+\index{ClassAd job attribute!BlockReads}
+\index{BlockReads!job ClassAd attribute}
+\item[\AdAttr{BlockReads}:] The integer number of disk blocks
+read for this job.
+
+%%% ClassAd attribute: BlockWriteKbytes
+\index{ClassAd job attribute!BlockWriteKbytes}
+\index{BlockWriteKbytes!job ClassAd attribute}
+\item[\AdAttr{BlockWriteKbytes}:] The integer number of Kbytes
+written to disk for this job.
+
+%%% ClassAd attribute: BlockWrites
+\index{ClassAd job attribute!BlockWrites}
+\index{BlockWrites!job ClassAd attribute}
+\item[\AdAttr{BlockWrites}:] The integer number of blocks
+written to disk for this job.
+
+%%% ClassAd attribute: BoincAuthenticatorFile
+\index{ClassAd job attribute!BoincAuthenticatorFile}
+\index{BoincAuthenticatorFile!job ClassAd attribute}
+\item[\AdAttr{BoincAuthenticatorFile}:] 
+Used for grid type boinc jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{boinc\_authenticator\_file}.
+Defines the path and file name of the file containing the authenticator
+string to use to authenticate to the BOINC service.
+
 %%% ClassAd attribute: CkptArch
 \index{ClassAd job attribute!CkptArch}
 \index{CkptArch!job ClassAd attribute}
@@ -367,10 +401,10 @@ job's submit description file a setting such as
   # 1 megabyte initial value
   +DiskUsage = 1024
 \end{verbatim}
-\SubmitCmd{vm} universe jobs will default to an initial value of the disk
+\SubmitCmdNI{vm} universe jobs will default to an initial value of the disk
 image size. 
 If not initialized by the job,
-non-\SubmitCmd{vm} universe jobs will default to an initial value of the 
+non-\SubmitCmdNI{vm} universe jobs will default to an initial value of the 
 sum of the job's executable and all input files.
 
 %%% ClassAd attribute: EC2AccessKeyId
@@ -622,7 +656,7 @@ Identifies the machine image of the instance.
 Used for grid type gce jobs;
 a string taken from the definition of the submit description file command
 \SubmitCmd{gce\_machine\_type}.
-Specifies the hardward profile that should be used for a GCE instance.
+Specifies the hardware profile that should be used for a GCE instance.
 
 %%% ClassAd attribute: GceMetadata
 \index{ClassAd job attribute!GceMetadata}
@@ -874,8 +908,8 @@ the number, the greater (better) the priority.
 \index{JobRunCount!job ClassAd attribute}
 \item[\AdAttr{JobRunCount}:]  This attribute is retained for backwards
   compatibility.  It may go away in the future.  It is equivalent to
-  \AdAttr{NumShadowStarts} for all universes except \SubmitCmd{scheduler}.
-  For the \SubmitCmd{scheduler} universe, this attribute is equivalent to
+  \AdAttr{NumShadowStarts} for all universes except \SubmitCmdNI{scheduler}.
+  For the \SubmitCmdNI{scheduler} universe, this attribute is equivalent to
   \AdAttr{NumJobStarts}.
 
 %%% ClassAd attribute: JobStartDate
@@ -1203,14 +1237,14 @@ negotiator.
   transient network failures or a \Condor{shadow} or \Condor{schedd}
   restart.
   This attribute is only defined for jobs that can reconnected:
-  those in the \SubmitCmd{vanilla} and \SubmitCmd{java} universes.
+  those in the \SubmitCmdNI{vanilla} and \SubmitCmdNI{java} universes.
 
 %%% ClassAd attribute: NumJobStarts
 \index{ClassAd job attribute!NumJobStarts}
 \index{NumJobStarts!job ClassAd attribute}
 \item[\AdAttr{NumJobStarts}:]  An integer count of the number of times the
   job started executing.
-  This is not (yet) defined for \SubmitCmd{standard} universe jobs.
+  This is not (yet) defined for \SubmitCmdNI{standard} universe jobs.
 
 %%% ClassAd attribute: NumPids
 \index{ClassAd job attribute!NumPids}
@@ -1236,9 +1270,9 @@ checkpoint attempted by this job during its lifetime.
 \item[\AdAttr{NumShadowStarts}:]  An integer count of the number of
   times a \Condor{shadow} daemon was started for a given job.
   This attribute is not defined for
-  \SubmitCmd{scheduler} universe jobs, since
+  \SubmitCmdNI{scheduler} universe jobs, since
   they do not have a \Condor{shadow} daemon associated with them.
-  For \SubmitCmd{local} universe jobs, this attribute \emph{is}
+  For \SubmitCmdNI{local} universe jobs, this attribute \emph{is}
   defined, even though the process that manages the job is technically
   a \Condor{starter} rather than a \Condor{shadow}.  
   This keeps the management of the
@@ -1342,6 +1376,34 @@ except there is no division by the number of processes sharing the pages.
 \item[\AdAttr{QDate}:]  Time at which the job was submitted to the job
 queue.  Measured in the
 number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+%%% ClassAd attribute: RecentBlockReadKbytes
+\index{ClassAd job attribute!RecentBlockReadKbytes}
+\index{RecentBlockReadKbytes!job ClassAd attribute}
+\item[\AdAttr{RecentBlockReadKbytes}:] The integer number of Kbytes
+read from disk for this job over the previous time interval defined
+by configuration variable \MacroNI{STATISTICS\_WINDOW\_SECONDS}.
+
+%%% ClassAd attribute: RecentBlockReads
+\index{ClassAd job attribute!RecentBlockReads}
+\index{RecentBlockReads!job ClassAd attribute}
+\item[\AdAttr{RecentBlockReads}:] The integer number of disk blocks
+read for this job over the previous time interval defined
+by configuration variable \MacroNI{STATISTICS\_WINDOW\_SECONDS}.
+
+%%% ClassAd attribute: RecentBlockWriteKbytes
+\index{ClassAd job attribute!RecentBlockWriteKbytes}
+\index{RecentBlockWriteKbytes!job ClassAd attribute}
+\item[\AdAttr{RecentBlockWriteKbytes}:] The integer number of Kbytes
+written to disk for this job over the previous time interval defined
+by configuration variable \MacroNI{STATISTICS\_WINDOW\_SECONDS}.
+
+%%% ClassAd attribute: RecentBlockWrites
+\index{ClassAd job attribute!RecentBlockWrites}
+\index{RecentBlockWrites!job ClassAd attribute}
+\item[\AdAttr{RecentBlockWrites}:] The integer number of blocks
+written to disk for this job over the previous time interval defined
+by configuration variable \MacroNI{STATISTICS\_WINDOW\_SECONDS}.
 
 %%% ClassAd attribute: ReleaseReason
 \index{ClassAd job attribute!ReleaseReason}
@@ -1719,7 +1781,7 @@ the user's credential is part of.
 \end{description}
 
 The following job ClassAd attributes are relevant only for
-\SubmitCmd{vm} universe jobs.
+\SubmitCmdNI{vm} universe jobs.
 
 \begin {description}
 %%% ClassAd attribute: VM_Checkpoint
@@ -1843,8 +1905,8 @@ This is a node in which one or more of the parent nodes has not yet finished.
 \index{DAG\_Status!job ClassAd attribute}
 \label{AttrDAGStatus}
 \item[\AdAttr{DAG\_Status}:]   
-The overall status of the DAG, with the same values as the \Env{\_DAG\_STATUS}
-macro.
+The overall status of the DAG, with the same values as the macro
+\Env{\$DAG\_STATUS} used in DAGMan FINAL nodes.
 \begin{center}
 \begin{table}[hbt]
 \begin{tabular}{|p{2cm}p{10cm}|} \hline

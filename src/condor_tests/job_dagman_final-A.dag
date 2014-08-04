@@ -1,3 +1,6 @@
+#TEMP -- either remove this after merge or add check to test...
+NODE_STATUS_FILE job_dagman_final-A.status
+
 JOBSTATE_LOG job_dagman_final-A.dag.jobstate.log
 NODE_STATUS_FILE job_dagman_final-A.status 600
 

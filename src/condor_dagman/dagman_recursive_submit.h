@@ -52,6 +52,7 @@ struct SubmitDagShallowOptions
 	bool runValgrind;
 	MyString primaryDagFile;
 	StringList	dagFiles;
+	bool doRecovery;
 
 	// non-command line options
 	MyString strLibOut;
@@ -82,6 +83,7 @@ struct SubmitDagShallowOptions
 		dumpRescueDag = false;
 		runValgrind = false;
 		primaryDagFile = "";
+		doRecovery = false;
 		copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
 		iDebugLevel = DEBUG_UNSET;
 	}
