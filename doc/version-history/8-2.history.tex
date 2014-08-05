@@ -56,6 +56,11 @@ The details of each version are described below.
 
 \item HTCondor version 8.2.2 released on August 5, 2014.
 
+\item This version of HTCondor includes a full port for 
+Red Hat Enterprise Linux 7.0 on the x86\_64 architecture.
+A full port includes support for the standard universe.
+\Ticket{4511}
+
 \end{itemize}
 
 \noindent New Features:
@@ -69,6 +74,13 @@ The details of each version are described below.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item When using the Windows installer,
+the choice of a new pool caused an invalid value in the configuration of 
+\Expr{\$\$(FULL\_HOSTNAME)} to be used, 
+instead of the correct value of \Expr{\$(FULL\_HOSTNAME)}.
+This prevented all daemons from talking to the \Condor{collector} daemon.
+\Ticket{4509}
 
 \item Fixed a bug that only manifested on Linux 3.14 or more recent kernels, 
 which caused the \Condor{collector} to respond very slowly to queries.
