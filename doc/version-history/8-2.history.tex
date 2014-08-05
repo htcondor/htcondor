@@ -44,6 +44,13 @@ A full port includes support for the standard universe.
 
 \begin{itemize}
 
+\item When using the Windows installer,
+the choice of a new pool caused an invalid value in the configuration of 
+\Expr{\$\$(FULL\_HOSTNAME)} to be used, 
+instead of the correct value of \Expr{\$(FULL\_HOSTNAME)}.
+This prevented all daemons from talking to the \Condor{collector} daemon.
+\Ticket{4509}
+
 \item Fixed a bug that only manifested on Linux 3.14 or more recent kernels, 
 which caused the \Condor{collector} to respond very slowly to queries.
 \Ticket{4489}
