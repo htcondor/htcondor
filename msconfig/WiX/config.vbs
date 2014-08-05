@@ -7,12 +7,14 @@ Function ReplaceConfig(configName, newValue, srcTxt)
   if matches.Count = 0 then
     re.Pattern = "^#" & configName & "[ \t]*=.+$"
     Set matches = re.Execute(srcText)
+    if matches.Count = 0 then
+      ' can't just append new attrib because of possible $$, so append dummy, then search and replace it with real stuff.
+      srcTxt = srcTxt & configName & " = _" & VbCrLf
+      re.Pattern = "^" & configName & "[ \t]*=.+$"
+      re.Execute(srcText)
+    end if
   end if
-  if matches.Count = 0 then
-    ReplaceConfig = srcTxt & configName & " = " & newValue & VbCrLf
-  else
-    ReplaceConfig = re.Replace(srcTxt, configName & " = " & newValue)
-  end if
+  ReplaceConfig = re.Replace(srcTxt, configName & " = " & newValue)
 End Function
 
 Function CreateConfig2()
@@ -50,7 +52,7 @@ Function CreateConfig2()
 
   Select Case Session.Property("NEWPOOL")
   Case "Y"
-   configTxt = ReplaceConfig("CONDOR_HOST", "$$(FULL_HOSTNAME)",configTxt)
+   configTxt = ReplaceConfig("CONDOR_HOST", "$(FULL_HOSTNAME)",configTxt)
    configTxt = ReplaceConfig("COLLECTOR_NAME",Session.Property("POOLNAME"),configTxt)
    daemonList = daemonList & " COLLECTOR NEGOTIATOR"
   Case "N"
