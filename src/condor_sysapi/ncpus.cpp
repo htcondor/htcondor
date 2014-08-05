@@ -183,7 +183,7 @@ sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 	int cpus = sysconf(_SC_NPROCESSORS_ONLN);
 	if( num_cpus ) *num_cpus = cpus;
 	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
-#elif defined(Darwin) || defined(CONDOR_FREEBSD)
+#elif defined(CONDOR_FREEBSD)
 	int mib[2], cpus;
 	size_t len;
 	mib[0] = CTL_HW;
@@ -192,6 +192,17 @@ sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 	sysctl(mib, 2, &cpus, &len, NULL, 0);
 	if( num_cpus ) *num_cpus = cpus;
 	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
+#elif defined(Darwin)
+	int cpus;
+	size_t len = sizeof(cpus);
+	if( num_cpus ) {
+		sysctlbyname("hw.physicalcpu_max", &cpus, &len, NULL, 0);
+		*num_cpus = cpus;
+	}
+	if( num_hyperthread_cpus ) {
+		sysctlbyname("hw.logicalcpu_max", &cpus, &len, NULL, 0);
+		*num_hyperthread_cpus = cpus;
+	}
 #else
 # error DO NOT KNOW HOW TO COMPUTE NUMBER OF CPUS ON THIS PLATFORM!
 #endif
