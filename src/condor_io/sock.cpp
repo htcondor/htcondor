@@ -551,6 +551,7 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 			addr.set_protocol(proto);
 			addr.set_addr_any();
 		} else {
+			// TODO IPv6: Get a proto specific local IPAddr, delete convert_to_ipv6
 			addr = get_local_ipaddr();
 			// what if the socket type does not match?
 			// e.g. addr is ipv6 but ipv6 mode is not turned on?
@@ -603,10 +604,17 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 
 int Sock::bind(bool outbound, int port, bool loopback)
 {
-	condor_protocol proto = CP_IPV4;
-	if(_condor_is_ipv6_mode()) {
-		proto = CP_IPV6;
+	condor_protocol proto = _who.get_protocol();
+
+		// TODO This should never be needed and is awful.
+		// If _who isn't set, call Sock::bind(condor_protocol) (below)
+	if(!_who.is_valid()) {
+		proto = CP_IPV4;
+		if(_condor_is_ipv6_mode()) { 
+			proto = CP_IPV6;
+		}
 	}
+
 	return bind(proto, outbound, port, loopback);
 }
 
@@ -675,6 +683,7 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 		} else if( (bool)_condor_bind_all_interfaces() ) {
 			addr.set_addr_any();
 		} else {
+			// TODO IPv6: Get a proto specific local IPAddr, delete convert_to_ipv6
 			addr = get_local_ipaddr();
 			if (addr.is_ipv4() && proto==CP_IPV6)
 				addr.convert_to_ipv6();
@@ -959,9 +968,6 @@ int Sock::do_connect(
 	if (!guess_address_string(host, port, _who)) {
 		return FALSE;
 	}
-
-	if (_condor_is_ipv6_mode() && _who.is_ipv4())
-		_who.convert_to_ipv6();
 
 		// current code handles sinful string and just hostname differently.
 		// however, why don't we just use sinful string at all?
