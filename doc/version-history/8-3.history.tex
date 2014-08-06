@@ -141,5 +141,10 @@ default case in which \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set
 to \Expr{True}.
 \Ticket{3843}
 
+\item Fixed a bug in the \Condor{schedd} daemon that caused the values
+of the ClassAd attributes \Attr{JobsRunningSizes} and 
+\Attr{ JobsRunningRuntimes} to be much larger than they should have been.
+\Ticket{4409}
+
 \end{itemize}
 
