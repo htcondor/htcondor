@@ -911,14 +911,18 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 		We want to set the socket buffer size to be as close
 		to the desired size as possible.  Unfortunatly, there is no
 		contant defined which states the maximum size possible.  So
-		we keep raising it up 1k at a time until (a) we got up to the
-		desired value, or (b) it is not increasing anymore.  We ignore
-		the return value from setsockopt since on some platforms this 
+		we keep raising it up 4k at a time until (a) we got up to the
+		desired value, or (b) it is not increasing anymore.
+		We also need to be careful to not quit early on a 3.14+ Linux kernel
+		which has a floor (minimum) buffer size that may be larger than our
+		current attempt (thus the check below to keep looping if
+		current_size > attempt_size).
+		We ignore the return value from setsockopt since on some platforms this
 		could signal a value which is too low...
 	*/
 	 
 	do {
-		attempt_size += 1024;
+		attempt_size += 4096;
 		if ( attempt_size > desired_size ) {
 			attempt_size = desired_size;
 		}
@@ -930,8 +934,8 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 		::getsockopt( _sock, SOL_SOCKET, command,
  					  (char*)&current_size, (socklen_t*)&temp );
 
-	} while ( ( previous_size < current_size ) &&
-			  ( attempt_size < desired_size  ) );
+	} while ( ((previous_size < current_size) || (current_size >= attempt_size)) &&
+			  (attempt_size < desired_size) );
 
 	return current_size;
 }
