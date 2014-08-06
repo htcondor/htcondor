@@ -20,10 +20,13 @@
 
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 
 
 my $testname = "job_partitionable_basic_van";
 my $test_passed = 0;
+my $callbacks = 1;
+my $callback_limit = 10;
 
 
 sub timed_callback {
@@ -41,7 +44,7 @@ sub timed_callback {
     foreach my $line (@resarray) {
 		chomp($line);
         my @f = split ' ', $line;
-        if ($f[0]=="P"  &&  $f[1]=="Unclaimed"  &&  $f[2]=="Idle"  &&  $f[3]=="2") {
+        if ($f[0]=="P"  &&  $f[1]=="Unclaimed"  &&  $f[2]=="Idle"  &&  $f[3]=="10") {
             $expected_pslots += 1;
         } elsif ($f[0]=="D"  &&  $f[1]=="Claimed"  &&  $f[2]=="Busy"  &&  $f[3]=="1") {
             $expected_dslots += 1;
@@ -54,21 +57,18 @@ sub timed_callback {
     # 5 partitionable slots unclaimed/idle with 2 slots left
     # 10 dynamic slots claimed/busy with 1 slot
     # and there should be no other slots
-	print "expected_pslots(5) <$expected_pslots> expected_dslots(10) <$expected_dslots> unexpected(0) <$unexpected>\n";
-    if ($expected_pslots==5  &&  $expected_dslots==10  &&  $unexpected==0) {
+	print "expected_pslots(1) <$expected_pslots> expected_dslots(10) <$expected_dslots> unexpected(0) <$unexpected>\n";
+    if ($expected_pslots==1  &&  $expected_dslots==10  &&  $unexpected==0) {
         $test_passed = 1;
 		print "SUCCESS!  Saw the correct breakdown of slots.\n";
 		print "Will now condor_rm job.\n";
 
-        # Remove this or it might run again, which will cause a failure the second time condor_rm runs
-        CondorTest::RemoveTimed($testname);
-
 		# Now remove 
 		my @adarray;
 		my $cmd = "condor_rm $cluster";
-		my $status = runToolNTimes($cmd,1);
+		my $status = runToolNTimes($cmd,1,0);
 		if(!$status) {
-	    	print "bad\n";
+	    	print "bad, runToolNTimes failed\n";
 	    	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n", 1);
 	    	exit(1)
 		}
@@ -79,7 +79,13 @@ sub timed_callback {
 		runToolNTimes("condor_status",1);
 		# Timed call backs only fire once now.
 		CondorTest::debug("Registering another callback to recheck in 15 seconds\n",1);
-		CondorTest::RegisterTimed($testname, \&timed_callback, 15);
+		$callbacks += 1;
+		if($callbacks < $callback_limit) {
+			CondorTest::RegisterTimed($testname, \&timed_callback, 15);
+		} else {
+			print "Callback limet exceeded:$callback_limit Failure\n";
+			exit(1);
+		}
     }
 }
 
@@ -94,7 +100,7 @@ sub exit_success_callback {
 my $abort = sub {
     # We will hit this if we condor_rm the job, which we do after seeing the correct pattern.
     if($test_passed) {
-	CondorTest::debug("Job successfully condor_rm'ed after seeing correct pattern.\n", 1);
+	#CondorTest::debug("Job successfully condor_rm'ed after seeing correct pattern.\n", 1);
     }
     else {
 	die "Job aborted, but \$test_passed is not True\n";
@@ -109,12 +115,12 @@ my $abort = sub {
 # slots like this test expects.
 my $append_condor_config = "
 DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-NEGOTIATOR_INTERVAL = 20
+NEGOTIATOR_INTERVAL = 5
 NUM_CPUS = 20
-SLOT_TYPE_1 = cpus=4
+SLOT_TYPE_1 = cpus=20
 SLOT_TYPE_1_PARTITIONABLE = TRUE
-NUM_SLOTS_TYPE_1 = 5
-CLAIM_PARTITIONABLE_LEFTOVERS = false
+NUM_SLOTS_TYPE_1 = 1
+CLAIM_PARTITIONABLE_LEFTOVERS = true
 ";
 
 CondorTest::StartCondorWithParams(
@@ -122,40 +128,36 @@ CondorTest::StartCondorWithParams(
 );
 
 
-my $job_log = "$testname.log";
-unlink $job_log;
-
-# submit 10 jobs
-my $submit_body = "
-universe = vanilla
-executable = x_sleep.pl
-log = $job_log
-output = $testname.out
-error = $testname.err
-notification = never
-request_memory = 1
-arguments = 60
-queue 10
-";
-
-my $submit_filename = CondorTest::TempFileName("$testname.submit");
-open(SUBMIT, ">$submit_filename") || die "Failed to open $submit_filename\n";
-print SUBMIT $submit_body;
-close(SUBMIT);
-
 my $on_evictedwithoutcheckpoint = sub {
-	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+	#CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
 };
-CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
 
-CondorTest::RegisterTimed($testname, \&timed_callback, 15);
-CondorTest::RegisterExitedSuccess($testname, \&exit_success_callback);
-CondorTest::RegisterAbort($testname, $abort);
+my $on_submit = sub {
+};
 
-if (CondorTest::RunTest($testname, $submit_filename, 0)) {
-    CondorTest::debug("$testname: SUCCESS\n",1);
-    exit(0);
+sub on_update {
+};
+
+$result = SimpleJob::RunCheck(
+	test_name => "$testname",
+	on_abort => $abort,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	on_execute => $on_execute,
+	on_submit => $on_submit,
+	on_imageupdated => \&on_update,
+	alt_timed => \&timed_callback,
+	on_success => \&exit_success_callback,
+	timeout => 15,
+	queue_sz => 10,
+	duration => 0,
+	request_memory => 1,
+	#GetClusterId => $GetClusterId,
+);
+print "******************** Test for KILL = TRUE\n";
+if($result == 1) {
+	print "ok\n\n\n";
+} else {
+	print "bad\n\n\n";
 }
-else {
-    die "$testname: CondorTest::RunTest() failed\n";
-}
+
+CondorTest::EndTest();

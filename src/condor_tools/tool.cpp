@@ -37,6 +37,7 @@
 #include "daemon_types.h"
 #include "sig_install.h"
 #include "command_strings.h"
+#include "match_prefix.h"
 #include "condor_distribution.h"
 #include "condor_query.h"
 #include "daemon_list.h"
@@ -524,7 +525,8 @@ main( int argc, char *argv[] )
 			}
 			break;
 		case 'd':
-			if (!(*tmp)[2] || (*tmp)[2] == 'e') {
+			// -de can be debug, but we don't want it to match -defrag!
+			if (is_dash_arg_prefix(*tmp, "debug", 1)) {
 				dprintf_set_tool_debug("TOOL", 0);
 			} else if ((*tmp)[2] == 'a')  {
 				subsys_check( MyName );
@@ -1326,13 +1328,10 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 				dprintf (D_FULLDEBUG, "TOOL: checking %s (%s,%s,%s)\n",
 						real_dt ? daemonString(real_dt) : "daemon", name, host, tmp);
 
-					/* See comment above, "Because we need..." */
-				ad->Assign( ATTR_NAME, name);
-
 					/* look for a couple variations */
-				if( ! strcasecmp(name, host) ) {
-					d = new Daemon( ad, real_dt, pool_addr );
-				} else if( ! strcasecmp(name, tmp) ) {
+				if( ! strcasecmp(name, host) || ! strcasecmp(name, tmp) ) {
+						/* See comment above, "Because we need..." */
+					ad->Assign( ATTR_NAME, name);
 					d = new Daemon( ad, real_dt, pool_addr );
 				}
 				free( tmp );

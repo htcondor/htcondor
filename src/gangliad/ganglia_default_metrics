@@ -1,26 +1,36 @@
 [
+  Name   = strcat(MyType,"CondorVersion");
+  Value  = CondorVersion;
+  Desc   = "Version String";
+  TargetType = "Scheduler,Negotiator";
+]
+[
   Name   = strcat(MyType,"UpdatesLost");
   Value  = UpdatesLost;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Number of ClassAd updates that were sent by this daemon but not received by the collector";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
   Name   = strcat(MyType,"UpdatesTotal");
   Value  = UpdatesTotal;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Number of ClassAd updates that were sent by this daemon";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  Name   = strcat(MyType,"DaemonCoreDutyCycle");
+  Name   = strcat(MyType,"RecentDaemonCoreDutyCycle");
   Value  = RecentDaemonCoreDutyCycle;
   Desc   = "Recent fraction of busy time in the daemon event loop";
-  TargetType = "Scheduler,Negotiator,Machine_slot1";
+  Scale  = 100;
+  Units  = "%";
+  TargetType = "Scheduler,Negotiator";
 ]
+/* Not a useful graph. Should be converted to a human readable string metric */
 [
   Name   = strcat(MyType,"MonitorSelfAge");
   Value  = MonitorSelfAge;
+  Verbosity = 99;
   Desc   = "Age of this daemon";
   Units  = "seconds";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
@@ -28,21 +38,24 @@
 [
   Name   = strcat(MyType,"MonitorSelfCPUUsage");
   Value  = MonitorSelfCPUUsage;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "The fraction of one CPU recently used by this daemon";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
   Name   = strcat(MyType,"MonitorSelfImageSize");
   Value  = MonitorSelfImageSize;
+  Verbosity = 1;
   Desc   = "Memory allocated to this daemon (i.e. virtual image size)";
-  Units  = "kbytes";
+  Units  = "bytes";
+  Scale  = 1024;
+  Type   = "float";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
   Name   = strcat(MyType,"MonitorSelfRegisteredSocketCount");
   Value  = MonitorSelfRegisteredSocketCount;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Number of sockets registered in this daemon's event loop";
   Units  = "sockets";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
@@ -50,15 +63,17 @@
 [
   Name   = strcat(MyType,"MonitorSelfResidentSetSize");
   Value  = MonitorSelfResidentSetSize;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "RAM allocated to this daemon";
-  Units  = "kbytes";
+  Units  = "bytes";
+  Scale  = 1024;
+  Type   = "float";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
   Name   = strcat(MyType,"MonitorSelfSecuritySessions");
   Value  = MonitorSelfSecuritySessions;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Number of security sessions in this daemon's cache";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
@@ -66,45 +81,57 @@
 [
   Name   = "JobsAccumBadputTime";
   Desc   = "Runtime of jobs that were aborted (removed or held) or (standard universe only) evicted without a checkpoint.";
-  Units  = "seconds";
+  Scale  = 0.000277778;
+  Units  = "hours";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsAccumExecuteTime";
   Desc   = "Time spent running jobs.  Does not include file transfer and other job handling time.";
-  Units  = "seconds";
+  Scale  = 0.000277778;
+  Units  = "hours";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsAccumPostExecuteTime";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Time spent processing a completed job (includes output file transfer)";
-  Units  = "seconds";
+  Scale  = 0.000277778;
+  Units  = "hours";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsAccumPreExecuteTime";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Time spent preparing to run a job (includes input file transfer)";
-  Units  = "";
+  Scale  = 0.000277778;
+  Units  = "hours";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsAccumRunningTime";
   Desc   = "Time spent running jobs that were not counted as badput (i.e. not removed or held).  Includes file transfer and other handling time.";
-  Units  = "seconds";
+  Units  = "hours";
+  Scale  = 0.000277778;
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsAccumTimeToStart";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Time between submit and running of a job";
-  Units  = "seconds";
+  Scale  = 0.000277778;
+  Units  = "hours";
+  Type   = "float";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsCheckpointed";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Number of job run attempts that were interrupted and successfully checkpointed";
   Units  = "jobs";
   TargetType = "Scheduler";
@@ -117,33 +144,35 @@
 ]
 [
   Name   = "JobsCoredumped";
+  Verbosity = 1;
   Desc   = "Number of jobs that crashed and generated a core file";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsDebugLogError";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Count of shadows that exited due to debug log errors";
   Units  = "shadows";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsExecFailed";
+  Verbosity = 1;
   Desc   = "Count of job run attempts that failed to execute the specified command";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsExited";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Count of job run attempts that have completed (successfully or not)";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsExitedAndClaimClosing";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Count of job run attempts that have completed when claim was not accepting additional jobs";
   Units  = "jobs";
   TargetType = "Scheduler";
@@ -159,61 +188,63 @@
 */
 [
   Name   = "JobsExitException";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Count of job run attempts that ended with a job handling exception (shadow exception)";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsKilled";
+  Verbosity = 1;
   Desc   = "Count of job run attempts in which the job was killed (i.e. evicted)";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsMissedDeferralTime";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Count of job run attempts that failed because the specified deferral time was missed";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsNotStarted";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Count of job run attempts that failed because the request to activate the claim failed";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsShadowNoMemory";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Count of job run attempts that failed because there was not enough memory (RESERVED_SWAP)";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsShouldHold";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Count of job run attempts that have resulted in the job going on hold";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsShouldRemove";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Count of job run attempts that have resulted in the job being removed (e.g. periodic_remove policy)";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsShouldRequeue";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Count of job run attempts that ended with the job being requeued due to handling failures or OnExitRemove=false";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "JobsStarted";
+  Verbosity = 1;
   Desc   = "Number of job run attempts started";
   Units  = "jobs";
   TargetType = "Scheduler";
@@ -226,46 +257,48 @@
 ]
 [
   Name   = "MaxJobsRunning";
+  Verbosity = 1;
   Desc   = "Configured limit on number of running jobs";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "NumUsers";
+  Verbosity = 1;
   Desc   = "Number of different users who currently have jobs in the queue";
   Units  = "users";
   TargetType = "Scheduler";
 ]
 [
   Name   = "RecentStatsLifetime";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Seconds elapsed since the beginning of the current stats collection window";
   Units  = "seconds";
   TargetType = "Scheduler";
 ]
 [
   Name   = "ScheddSwapExhausted";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Non-zero when jobs cannot be started due to RESERVED_SWAP";
   TargetType = "Scheduler";
 ]
 [
   Name   = "ShadowsRunning";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Number of shadow processes currently running";
   Units  = "shadows";
   TargetType = "Scheduler";
 ]
 [
   Name   = "ShadowsStarted";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Number of shadow processes started";
   Units  = "shadows";
   TargetType = "Scheduler";
 ]
 [
   Name   = "StatsLifetime";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Seconds of elapsed time since the beginning of the schedd lifetime stat collection window";
   Units  = "seconds";
   TargetType = "Scheduler";
@@ -320,20 +353,21 @@
 ]
 [
   Name   = "TotalLocalJobsIdle";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Number of local universe jobs in this schedd's queue";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "TotalLocalJobsRunning";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Number of running local universe jobs in this schedd's queue";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "TotalRemovedJobs";
+  Verbosity = 1;
   Desc   = "Number of jobs that are in the process of being removed";
   Units  = "jobs";
   TargetType = "Scheduler";
@@ -354,14 +388,14 @@
 ]
 [
   Name   = "TotalSchedulerJobsIdle";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Number of idle scheduler universe jobs in this schedd's queue";
   Units  = "jobs";
   TargetType = "Scheduler";
 ]
 [
   Name   = "TotalSchedulerJobsRunning";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Number of running scheduler universe jobs in this schedd's queue";
   Units  = "jobs";
   TargetType = "Scheduler";
@@ -372,7 +406,7 @@
   Title = strcat(Name, " Total Running Jobs");
   Aggregate = "SUM";
   Value = RunningJobs;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = strcat("Total number of running jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
@@ -382,7 +416,7 @@
   Name = strcat(Name, "RunningJobs");
   Title = strcat(Name, " Running Jobs");
   Value = RunningJobs;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = strcat("Number of running jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
@@ -393,7 +427,7 @@
   Title = strcat(Name, " Total Idle Jobs");
   Aggregate = "SUM";
   Value = IdleJobs;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = strcat("Total number of idle jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
@@ -403,7 +437,7 @@
   Name = strcat(Name, "IdleJobs");
   Title = strcat(Name, " Idle Jobs");
   Value = IdleJobs;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = strcat("Number of idle jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
@@ -414,7 +448,7 @@
   Title = strcat(Name, " Total Held Jobs");
   Aggregate = "SUM";
   Value = HeldJobs;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = strcat("Total number of held jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
@@ -424,7 +458,7 @@
   Name = strcat(Name, "HeldJobs");
   Title = strcat(Name, " Held Jobs");
   Value = HeldJobs;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = strcat("Number of held jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
@@ -435,7 +469,7 @@
   Title = strcat(Name, " Total Flocked Jobs");
   Aggregate = "SUM";
   Value = FlockedJobs;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = strcat("Total number of flocked jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
@@ -445,7 +479,7 @@
   Name = strcat(Name, "FlockedJobs");
   Title = strcat(Name, " Flocked Jobs");
   Value = FlockedJobs;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = strcat("Number of flocked jobs from user ", Name);
   Units  = "jobs";
   TargetType = "Submitter";
@@ -457,7 +491,7 @@
   Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Running Jobs");
   Aggregate = "SUM";
   Value = RunningJobs;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = strcat("Total number of running jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
   Units  = "jobs";
   TargetType = "Submitter";
@@ -468,7 +502,7 @@
   Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Idle Jobs");
   Aggregate = "SUM";
   Value = IdleJobs;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = strcat("Total number of idle jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
   Units  = "jobs";
   TargetType = "Submitter";
@@ -479,7 +513,7 @@
   Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Held Jobs");
   Aggregate = "SUM";
   Value = HeldJobs;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = strcat("Total number of held jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
   Units  = "jobs";
   TargetType = "Submitter";
@@ -490,7 +524,7 @@
   Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Flocked Jobs");
   Aggregate = "SUM";
   Value = FlockedJobs;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = strcat("Total number of flocked jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
   Units  = "jobs";
   TargetType = "Submitter";
@@ -500,6 +534,7 @@
 
 [
   Name   = "FileTransferDownloadBytes";
+  Verbosity = 1;
   Derivative = true;
   Title  = "File Transfer Download Bandwidth";
   Desc   = "Output transfers from jobs";
@@ -509,6 +544,7 @@
 ]
 [
   Name   = "FileTransferDownloadBytesPerSecond_5m";
+  Verbosity = 1;
   Desc   = "Rate of output transfers from jobs";
   Units  = "bytes/s";
   TargetType = "Scheduler";
@@ -517,7 +553,7 @@
 [
   Regex  = "Owner_([^_]*)_FileTransferDownloadBytesPerSecond_5m";
   Title = "\\1 Download Bytes Per Second";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Rate of output transfers from jobs by user \\1";
   Units  = "bytes/s";
   TargetType = "Scheduler";
@@ -525,13 +561,16 @@
 ]
 [
   Name   = "FileTransferFileReadLoad_5m";
+  Verbosity = 1;
   Desc   = "Number of file transfer processes reading input data from files";
   Units  = "processes";
   TargetType = "Scheduler";
   Group  = "HTCondor File Transfer";
 ]
+/* This looks like a mismatch of stuff */
 [
   Name   = "FileTransferFileReadSeconds";
+  Verbosity = 99;
   Derivative = true;
   Title  = "File Transfer File Read Load";
   Desc   = "Number of file transfer processes reading input data from files";
@@ -541,13 +580,16 @@
 ]
 [
   Name   = "FileTransferFileWriteLoad_5m";
+  Verbosity = 1;
   Desc   = "Number of file transfer processes writing output data to files";
   Units  = "processes";
   TargetType = "Scheduler";
   Group  = "HTCondor File Transfer";
 ]
+/* This looks like a mismatch of stuff */
 [
   Name   = "FileTransferFileWriteSeconds";
+  Verbosity = 99;
   Derivative = true;
   Title  = "File Transfer File Write Load";
   Desc   = "Number of file transfer processes writing output data to files";
@@ -557,13 +599,16 @@
 ]
 [
   Name   = "FileTransferNetReadLoad_5m";
+  Verbosity = 1;
   Desc   = "Number of file transfer processes reading output data from the network";
   Units  = "processes";
   TargetType = "Scheduler";
   Group  = "HTCondor File Transfer";
 ]
+/* This looks like a mismatch of stuff */
 [
   Name   = "FileTransferNetReadSeconds";
+  Verbosity = 99;
   Derivative = true;
   Desc   = "Number of file transfer processes reading output data from the network";
   Units  = "processes";
@@ -572,13 +617,16 @@
 ]
 [
   Name   = "FileTransferNetWriteLoad_5m";
+  Verbosity = 1;
   Desc   = "Number of file transfer processes writing input data to the network";
   Units  = "processes";
   TargetType = "Scheduler";
   Group  = "HTCondor File Transfer";
 ]
+/* This looks like a mismatch of stuff */
 [
   Name   = "FileTransferNetWriteSeconds";
+  Verbosity = 99;
   Derivative = true;
   Title  = "File Transfer Net Write Load";
   Desc   = "Number of file transfer processes writing input data to the network";
@@ -597,6 +645,7 @@
 ]
 [
   Name   = "FileTransferUploadBytesPerSecond_5m";
+  Verbosity = 1;
   Desc   = "Rate of input transfers to jobs";
   Units  = "bytes/s";
   TargetType = "Scheduler";
@@ -605,7 +654,7 @@
 [
   Regex  = "Owner_([^_]*)_FileTransferUploadBytesPerSecond_5m";
   Title = "\\1 Upload Bytes Per Second";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Rate of input transfers from jobs by user \\1";
   Units  = "bytes/s";
   TargetType = "Scheduler";
@@ -663,7 +712,7 @@
 ]
 [
   Aggregate = "MAX";
-  Name   = "Pool Min TransferQueueUploadWaitTime";
+  Name   = "Pool Max TransferQueueUploadWaitTime";
   Value  = TransferQueueUploadWaitTime;
   Desc   = "Oldest input file transfer waiting in the transfer queues reporting to this pool";
   Units  = "seconds";
@@ -672,13 +721,14 @@
 
 [
   Name   = "LastNegotiationCycleActiveSubmitterCount0";
+  Verbosity = 1;
   Desc   = "The number of job submitters considered in the negotiation cycle";
   Units  = "submitters";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCycleCandidateSlots0";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "The number of slot ClassAds considered for matchmaking (reduced by NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT if applicable)";
   Units  = "slots";
   TargetType = "Negotiator";
@@ -691,96 +741,104 @@
 ]
 [
   Name   = "LastNegotiationCycleMatches0";
+  Verbosity = 1;
   Desc   = "The number of successful matches that were made in the negotiation cycle";
   Units  = "matches";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCycleMatchRate0";
+  Verbosity = 1;
   Desc   = "Matches made per second during negotiation cycle";
   Units  = "matches/s";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCycleMatchRateSustained0";
+  Verbosity = 1;
   Desc   = "Matches made per second, including waiting time between negotiation cycles";
   Units  = "matches/s";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCycleNumIdleJobs0";
+  Verbosity = 1;
   Desc   = "The number of idle jobs belonging to job submitters";
   Units  = "jobs";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCycleNumJobsConsidered0";
+  Verbosity = 1;
   Desc   = "The number of jobs considered for matchmaking (may be mutch lower than idle jobs due to auto-cluster optimizations)";
   Units  = "jobs";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCycleNumSchedulers0";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "The number of schedds involved in negotiation for resources";
   Units  = "schedds";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCyclePeriod0";
+  Verbosity = 1;
   Desc   = "Seconds between the end of one cycle the the end of the next";
   Units  = "seconds";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCyclePhase1Duration0";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Duration of Phase 1: getting submitter and machine ClassAds";
   Units  = "seconds";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCyclePhase2Duration0";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Duration of Phase 2: filtering slots and processing accounting group configuration";
   Units  = "seconds";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCyclePhase3Duration0";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Phase 3 of the negotiation cycle: sorting submitters by priority";
   Units  = "seconds";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCyclePhase4Duration0";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Phase 4 of the negotiation cycle: matching slots to jobs";
   Units  = "seconds";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCycleRejections0";
+  Verbosity = 1;
   Desc   = "The number of rejections that occurred in the negotiation cycle (only one per auto-cluster)";
   Units  = "jobs";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCycleSlotShareIter0";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "The number of iterations in the negotiation cycle";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCycleTotalSlots0";
+  Verbosity = 1;
   Desc   = "The total number of slot ClassAds that matched NEGOTIATOR_SLOT_CONSTRAINT";
   Units  = "slots";
   TargetType = "Negotiator";
 ]
 [
   Name   = "LastNegotiationCycleTrimmedSlots0";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "The number of slot ClassAds considered for matchmaking, after filtering by Negotiator_CONSIDER_PREEMPTION, if applicable";
   Units  = "slots";
   TargetType = "Negotiator";
@@ -788,7 +846,7 @@
 
 [
   Name   = "ExpectedMachineGracefulDrainingBadput";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Job runtime that would be lost if graceful draining were initiated now.";
   Units  = "cpus*seconds";
   TargetType = "Machine_slot1";
@@ -796,47 +854,54 @@
 [
   Name   = "ExpectedMachineGracefulDrainingCompletion";
   Value  = ExpectedMachineGracefulDrainingCompletion - CurrentTime;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Time graceful draining could take to complete, assuming jobs take full retirement and vacate time and there is no suspension";
   Units  = "seconds";
   TargetType = "Machine_slot1";
 ]
 [
   Name   = "ExpectedMachineQuickDrainingBadput";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Job runtime that would be lost if quick draining were initiated now.";
   Units  = "cpus*seconds";
   TargetType = "Machine_slot1";
 ]
 [
   Name   = "ExpectedMachineQuickDrainingCompletion";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Time quick draining could take to complete, assuming jobs take full retirement and vacate time and there is no suspension";
   Units  = "seconds";
   TargetType = "Machine_slot1";
 ]
 [
-  Name   = "KFlops";
-  Verbosity = 1;
+  Name   = "Linpack";
+  Value  = KFlops;
+  Verbosity = 2;
   Desc   = "Linpack floating point benchmark";
-  Units  = "kflops";
+  Units  = "FLOPS";
+  Scale  = 1000;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [
-  Name   = "Mips";
-  Verbosity = 1;
+  Name   = "Dhrystone";
+  Value  = Mips;
+  Verbosity = 2;
   Desc   = "Dhrystone integer benchmark";
-  Units  = "mips";
+  Units  = "Iterations/sec";
+  Scale  = 1000000;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [
   Name   = "TotalCondorLoadAvg";
+  Verbosity = 1;
   Desc   = "The CPU load attributed to jobs";
   TargetType = "Machine_slot1";
 ]
 [
   Name   = "TotalCpus";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Number of cores";
   Units  = "cores";
   TargetType = "Machine_slot1";
@@ -845,34 +910,38 @@
   Aggregate = "SUM";
   Name   = "Cpus in Pool";
   Value  = TotalCpus;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Number of cores in the pool";
   Units  = "cores";
   TargetType = "Machine_slot1";
 ]
 [
   Name   = "TotalDisk";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Disk space in the job execute directory";
-  Units  = "KB";
+  Units  = "bytes";
+  Scale  = 1024;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [
   Name   = "TotalLoadAvg";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "System load average";
   TargetType = "Machine_slot1";
 ]
 [
   Name   = "TotalMemory";
-  Verbosity = 1;
-  Desc   = "RAM in MB";
-  Units  = "MB";
+  Verbosity = 2;
+  Desc   = "RAM";
+  Units  = "bytes";
+  Scale  = 1048576;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [
   Name   = "TotalSlots";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Number of slots";
   Units  = "slots";
   TargetType = "Machine_slot1";
@@ -887,33 +956,37 @@
 ]
 [
   Name   = "TotalMachineDrainingBadput";
+  Verbosity = 1;
   Desc   = "Job runtime that has been lost due to job evictions caused by draining";
   Units  = "cpus*seconds";
   TargetType = "Machine_slot1";
 ]
 [
   Name   = "TotalMachineDrainingUnclaimedTime";
+  Verbosity = 1;
   Desc   = "Time that has not been used due to draining";
   Units  = "cpus*seconds";
   TargetType = "Machine_slot1";
 ]
 [
   Name   = "TotalVirtualMemory";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Addressable memory (RAM plus swap)";
-  Units  = "KB";
+  Units  = "bytes";
+  Scale  = 1024;
+  Type   = "float";
   TargetType = "Machine_slot1";
 ]
 [
   Name   = "TotalPreemptions";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Total number of preempted jobs on this startd";
   Units  = "preemptions";
   TargetType = "Machine_slot1";
 ]
 [
   Name   = "TotalJobStarts";
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Total number of jobs started on this startd since boot";
   Units  = "jobs";
   TargetType = "Machine_slot1";
@@ -922,7 +995,7 @@
   Aggregate = "SUM";
   Name   = "Poolwide Preemptions";
   Value  = TotalPreemptions;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Poolwide Preemptions";
   Units  = "preemptions";
   TargetType = "Machine_slot1";
@@ -931,7 +1004,7 @@
   Aggregate = "SUM";
   Name   = "Poolwide Job Starts";
   Value  = TotalJobStarts;
-  Verbosity = 1;
+  Verbosity = 2;
   Desc   = "Poolwide Job Starts";
   Units  = "jobs";
   TargetType = "Machine_slot1";
@@ -941,4 +1014,68 @@
   Desc   = "Number of active AutoClusters in the schedd";
   Units  = "autoclusters";
   TargetType = "Scheduler";
+]
+[
+  Aggregate = "SUM";
+  Name   = "AutoClusters in Pool";
+  Value  = AutoClusters;
+  Desc   = "Number of active AutoClusters in schedds reporting to this pool";
+  Units  = "autoclusters";
+  TargetType = "Scheduler";
+]
+[
+  Name   = strcat(MyType,"WholeMachines");
+  Value  = WholeMachines;
+  Verbosity = 2;
+  Desc   = "Number of machines that were observed to be defragmented in the last polling interval";
+  TargetType = "Defrag";
+]
+[
+  Name   = strcat(MyType,"MachinesDraining");
+  Value  = MachinesDraining;
+  Verbosity = 2;
+  Desc   = "Number of machines that were observed to be draining in the last polling interval";
+  TargetType = "Defrag";
+]
+[
+  Name   = strcat(MyType,"RecentDrainSuccesses");
+  Value  = RecentDrainSuccesses;
+  Verbosity = 2;
+  Desc   = "Count of successful attempts to initiate draining during the past RecentStatsLifetime seconds";
+  TargetType = "Defrag";
+]
+[
+  Name   = strcat(MyType,"RecentDrainFailures");
+  Value  = RecentDrainFailures;
+  Verbosity = 2;
+  Desc   = "Count of failed attempts to initiate draining during the past RecentStatsLifetime seconds";
+  TargetType = "Defrag";
+]
+[
+  Name   = strcat(MyType,"AvgDrainingUnclaimed");
+  Value  = AvgDrainingUnclaimed;
+  Verbosity = 2;
+  Desc   = "Fraction of time CPUs in the pool have spent unclaimed by a user during draining of the machine";
+  TargetType = "Defrag";
+]
+[
+  Name   = strcat(MyType,"WholeMachinesPeak");
+  Value  = WholeMachinesPeak;
+  Verbosity = 2;
+  Desc   = "Largest number of machines that were ever observed to be simultaneously defragmented";
+  TargetType = "Defrag";
+]
+[
+  Name   = strcat(MyType,"AvgDrainingBadput");
+  Value  = AvgDrainingBadput;
+  Verbosity = 2;
+  Desc   = "Fraction of time CPUs in the pool have spent on jobs that were killed during draining of the machine";
+  TargetType = "Defrag";
+]
+[
+  Name   = strcat(MyType,"MachinesDrainingPeak");
+  Value  = MachinesDrainingPeak;
+  Verbosity = 2;
+  Desc   = "Largest number of machines that were ever observed to be draining";
+  TargetType = "Defrag";
 ]

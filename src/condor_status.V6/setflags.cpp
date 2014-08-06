@@ -18,14 +18,22 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_config.h"
 #include "condor_api.h"
 #include "condor_adtypes.h"
 #include "status_types.h"
 #include "totals.h"
 
+
 extern AdTypes	type;
 extern Mode		mode;
 extern ppOption	ppStyle;
+extern bool explicit_format;
+extern bool using_print_format;
+extern bool disable_user_print_files; // allow command line to defeat use of default user print files.
+extern int set_status_print_mask_from_stream (const char * streamid, bool is_filename);
+
+const char * getTypeStr ();
 
 const char *
 getPPStyleStr ()
@@ -83,6 +91,24 @@ setPPstyle (ppOption pps, int i, const char *argv)
 		if( pps != PP_XML && pps != PP_VERBOSE && pps != PP_CUSTOM ) {
 				// ignore this style setting and keep our existing setting
 			return;
+		}
+	}
+
+	// If setting a 'normal' output, check to see if there is a user-defined normal output
+	if ( ! disable_user_print_files && ! explicit_format
+		&& pps != PP_XML && pps != PP_VERBOSE && pps != PP_CUSTOM && pps != ppStyle) {
+		MyString param_name("STATUS_DEFAULT_"); param_name += getTypeStr(); param_name += "_PRINT_FORMAT_FILE";
+		char * pf_file = param(param_name.c_str());
+		if (pf_file) {
+			struct stat stat_buff;
+			if (0 != stat(pf_file, &stat_buff)) {
+				// do nothing, this is not an error.
+			} else if (set_status_print_mask_from_stream(pf_file, true) < 0) {
+				fprintf(stderr, "Warning: default %s select file '%s' is invalid\n", getTypeStr(), pf_file);
+			} else {
+				using_print_format = true;
+			}
+			free(pf_file);
 		}
 	}
 

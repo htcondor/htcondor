@@ -41,11 +41,13 @@
 #define ATTR_AGGREGATE "Aggregate"
 #define ATTR_AGGREGATE_GROUP "AggregateGroup"
 #define ATTR_IP "IP"
+#define ATTR_SCALE "Scale"
 
 Metric::Metric():
 	derivative(false),
 	verbosity(0),
-	type(DOUBLE),
+    scale(1.0),
+	type(AUTO),
 	aggregate(NO_AGGREGATE),
 	sum(0),
 	count(0),
@@ -84,6 +86,13 @@ Metric::evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &
 	if( !ad->EvaluateExpr(expr,result) ||
 		(type == STRING && !result.IsStringValue()) ||
 		(type == DOUBLE && !result.IsNumber()) ||
+        (type == FLOAT && !result.IsNumber()) ||
+        (type == INT8 && !result.IsIntegerValue()) ||
+        (type == UINT8 && !result.IsIntegerValue()) ||
+        (type == INT16 && !result.IsIntegerValue()) ||
+        (type == UINT16 && !result.IsIntegerValue()) ||
+        (type == INT32 && !result.IsIntegerValue()) ||
+        (type == UINT32 && !result.IsIntegerValue()) ||
 		(type == BOOLEAN && !result.IsBooleanValue()) )
 	{
 		retval = false;
@@ -283,16 +292,41 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	if( !evaluateOptionalString(ATTR_CLUSTER,cluster,metric_ad,daemon_ad,regex_groups) ) return false;
 
 	metric_ad.EvaluateAttrBool(ATTR_DERIVATIVE,derivative);
+    metric_ad.EvaluateAttrNumber(ATTR_SCALE,scale);
 
 	std::string type_str;
 	if( !evaluateOptionalString(ATTR_TYPE,type_str,metric_ad,daemon_ad,regex_groups) ) return false;
-	if( strcasecmp(type_str.c_str(),"double")==0 || type_str.empty() ) {
-		type = DOUBLE;
+	if( type_str.empty() ) {
+		type = AUTO;
 	}
-	else if( strcasecmp(type_str.c_str(),"string")==0 || type_str.empty() ) {
+	else if( strcasecmp(type_str.c_str(),"string")==0 ) {
 		type = STRING;
 	}
-	else if( strcasecmp(type_str.c_str(),"boolean")==0 || type_str.empty() ) {
+    else if( strcasecmp(type_str.c_str(),"int8")==0 ) {
+		type = INT8;
+	}
+    else if( strcasecmp(type_str.c_str(),"uint8")==0 ) {
+		type = UINT8;
+	}
+    else if( strcasecmp(type_str.c_str(),"int16")==0 ) {
+		type = INT16;
+	}
+    else if( strcasecmp(type_str.c_str(),"uint16")==0 ) {
+		type = UINT16;
+	}
+    else if( strcasecmp(type_str.c_str(),"int32")==0 ) {
+		type = INT32;
+	}
+    else if( strcasecmp(type_str.c_str(),"uint32")==0 ) {
+		type = UINT32;
+	}
+    else if( strcasecmp(type_str.c_str(),"float")==0 ) {
+		type = FLOAT;
+	}
+    else if( strcasecmp(type_str.c_str(),"double")==0 ) {
+		type = DOUBLE;
+	}
+	else if( strcasecmp(type_str.c_str(),"boolean")==0 ) {
 		type = BOOLEAN;
 	}
 	else {
@@ -315,6 +349,17 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	if( value.IsUndefinedValue() ) {
 		return false;
 	}
+    if ( type == AUTO ) {
+        if (value.IsBooleanValue() ) {
+            type = BOOLEAN;
+        } else if ( value.IsIntegerValue() )  {
+            type = INT32;
+        } else if ( value.IsNumber() ) {
+            type = FLOAT;
+        } else if ( value.IsStringValue() ) {
+            type = STRING;
+        }
+    }
 
 	if( isAggregateMetric() ) {
 		machine = statsd->getDefaultAggregateHost();
@@ -350,10 +395,12 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 bool
 Metric::getValueString(std::string &result) const {
 	switch( type ) {
+        case FLOAT:
 		case DOUBLE: {
 			double dbl = 0.0;
 			if( value.IsNumber(dbl) ) {
-				formatstr(result,"%f",dbl);
+                dbl *= scale;
+				formatstr(result,"%g",dbl);
 				return true;
 			}
 			break;
@@ -364,12 +411,30 @@ Metric::getValueString(std::string &result) const {
 			}
 			break;
 		}
+        case INT8:
+        case UINT8:
+        case INT16:
+        case UINT16:
+        case INT32:
+        case UINT32: {
+            int i = 0;
+            if( value.IsIntegerValue(i) ) {
+                i *= scale;
+                formatstr(result,"%d",i);
+                return true;
+            }
+            break;
+        }
 		case BOOLEAN: {
 			bool v = false;
 			if( value.IsBooleanValue(v) ) {
 				formatstr(result,"%d",v==true);
 				return true;
 			}
+			break;
+		}
+		case AUTO: {
+			// Shouldn't happen
 			break;
 		}
 	}
@@ -433,12 +498,20 @@ Metric::convertToNonAggregateValue() {
 		case MIN:
 		case MAX:
 		case SUM: {
-			value.SetRealValue(sum);
+            if (type == FLOAT || type == DOUBLE) {
+                value.SetRealValue(sum);
+            } else {
+                value.SetIntegerValue((int)sum);
+            }
 			break;
 		}
 		case AVG: {
 			if( count != 0 ) {
-				value.SetRealValue(sum/count);
+                if (type == FLOAT || type == DOUBLE) {
+                    value.SetRealValue(sum/count);
+                } else {
+                    value.SetIntegerValue((int)(sum/count));
+                }
 			}
 			else {
 				value.SetErrorValue();
@@ -453,6 +526,8 @@ StatsD::StatsD():
 	m_verbosity(0),
 	m_per_execute_node_metrics(true),
 	m_stats_pub_interval(0),
+	m_stats_heartbeat_interval(20),
+	m_stats_time_till_pub(0),
 	m_stats_pub_timer(-1),
 	m_derivative_publication_failed(0),
 	m_non_derivative_publication_failed(0),
@@ -479,7 +554,7 @@ StatsD::initAndReconfig(char const *service_name)
 
 	int old_stats_pub_interval = m_stats_pub_interval;
 	formatstr(param_name,"%s_INTERVAL",service_name);
-	m_stats_pub_interval = param_integer(param_name.c_str(),300);
+	m_stats_pub_interval = param_integer(param_name.c_str(),60);
 	if( m_stats_pub_interval < 0 ) {
 		dprintf(D_ALWAYS,
 				"%s is less than 0, so no stats publications will be made.\n",
@@ -491,16 +566,13 @@ StatsD::initAndReconfig(char const *service_name)
 	}
 	else if( m_stats_pub_timer >= 0 ) {
 		if( old_stats_pub_interval != m_stats_pub_interval ) {
-			daemonCore->Reset_Timer(
-				m_stats_pub_timer,
-				m_stats_pub_interval,
-				m_stats_pub_interval);
+            m_stats_time_till_pub = m_stats_time_till_pub + (m_stats_pub_interval - old_stats_pub_interval );
 		}
 	}
 	else {
 		m_stats_pub_timer = daemonCore->Register_Timer(
-			10 < m_stats_pub_interval ? 10 : m_stats_pub_interval,
-			m_stats_pub_interval,
+			m_stats_heartbeat_interval,
+			m_stats_heartbeat_interval,
 			(TimerHandlercpp)&StatsD::publishMetrics,
 			"Statsd::publishMetrics",
 			this );
@@ -676,7 +748,20 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 void
 StatsD::publishMetrics()
 {
-	dprintf(D_ALWAYS,"Gathering ClassAds\n");
+	dprintf(D_ALWAYS,"Starting update...\n");
+
+    double start_time = UtcTime::getTimeDouble();
+
+    m_stats_time_till_pub -= m_stats_heartbeat_interval;
+
+    if (m_stats_time_till_pub > 0) {
+        sendHeartbeats();
+        return;
+    }
+
+    m_stats_time_till_pub = m_stats_pub_interval;
+
+    initializeHostList();
 
 	// reset all aggregate sums, counts, etc.
 	clearAggregateMetrics();
@@ -720,7 +805,7 @@ StatsD::publishMetrics()
 		return;
 	}
 
-	dprintf(D_FULLDEBUG,"Got %d daemon ads\n",daemon_ads.MyLength());
+	dprintf(D_ALWAYS,"Got %d daemon ads\n",daemon_ads.MyLength());
 
 	mapDaemonIPs(daemon_ads,*collectors);
 
@@ -737,7 +822,15 @@ StatsD::publishMetrics()
 
 	publishAggregateMetrics();
 
-	dprintf(D_ALWAYS,"Done publishing\n");
+    sendHeartbeats();
+
+    // Did we take longer than a heartbeat period?
+    int heartbeats_missed = (int)(UtcTime::getTimeDouble() - start_time) /
+                            m_stats_heartbeat_interval;
+    if (heartbeats_missed) {
+        dprintf(D_ALWAYS, "Skipping %d heartbeats\n", heartbeats_missed);
+        m_stats_time_till_pub -= (heartbeats_missed * m_stats_heartbeat_interval);
+    }
 }
 
 void

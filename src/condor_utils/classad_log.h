@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2014, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -47,8 +47,6 @@
 #include "classad_hashtable.h"
 #include "log_transaction.h"
 
-#include <boost/iterator/transform_iterator.hpp>
-#include <boost/iterator/filter_iterator.hpp>
 
 typedef HashTable <HashKey, ClassAd *> ClassAdHashTable;
 
@@ -83,7 +81,7 @@ private:
 
 	ClassAdHashTable *m_table;
 	HashIterator<HashKey, ClassAd *> m_cur;
-	ClassAd *m_cur_ad;
+	bool m_found_ad;
 	const classad::ExprTree *m_requirements;
 	int m_timeslice_ms;
 	int m_done;
@@ -126,6 +124,10 @@ public:
 		// the events that might otherwise hang around in the output buffer
 		// for a long time.
 	void FlushLog();
+
+		// Force the log output buffer to non-volatile storage (disk).  
+		// This means doing both a flush and fsync.
+	void ForceLog();
 
 	bool AdExistsInTableOrTransaction(const char *key);
 
@@ -282,6 +284,8 @@ class LogBeginTransaction : public LogRecord {
 public:
 	LogBeginTransaction() { op_type = CondorLogOp_BeginTransaction; }
 	virtual ~LogBeginTransaction(){};
+
+	int Play(void *data_structure);
 private:
 
 	virtual int WriteBody(FILE* /*fp*/) {return 0;}
@@ -294,6 +298,8 @@ class LogEndTransaction : public LogRecord {
 public:
 	LogEndTransaction() { op_type = CondorLogOp_EndTransaction; }
 	virtual ~LogEndTransaction(){};
+
+	int Play(void *data_structure);
 private:
 	virtual int WriteBody(FILE* /*fp*/) {return 0;}
 	virtual int ReadBody(FILE* fp);

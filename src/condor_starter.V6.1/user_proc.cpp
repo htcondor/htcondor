@@ -39,6 +39,9 @@ UserProc::~UserProc()
 	if( name ) {
 		free( name );
 	}
+	if ( m_deleteJobAd ) {
+		delete JobAd;
+	}
 }
 
 
@@ -50,6 +53,7 @@ UserProc::initialize( void )
 	requested_exit = false;
 	m_proc_exited = false;
 	m_dedicated_account = NULL;
+	m_deleteJobAd = false;
 	job_universe = 0;  // we'll fill in a real value if we can...
 	int i;
 	for(i=0;i<3;i++) {

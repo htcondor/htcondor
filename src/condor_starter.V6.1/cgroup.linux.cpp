@@ -53,7 +53,7 @@ int CgroupManager::initialize()
 	// Initialize library and data structures
 	dprintf(D_FULLDEBUG, "Initializing cgroup library.\n");
 	cgroup_init();
-	void *handle;
+	void *handle=NULL;
 	controller_data info;
 	int ret = cgroup_get_all_controller_begin(&handle, &info);
 	while (ret == 0) {
@@ -71,7 +71,9 @@ int CgroupManager::initialize()
 		}
 		ret = cgroup_get_all_controller_next(&handle, &info);
 	}
-	cgroup_get_all_controller_end(&handle);
+	if (handle) {
+		cgroup_get_all_controller_end(&handle);
+	}
 	if (!isMounted(BLOCK_CONTROLLER)) {
 		dprintf(D_ALWAYS, "Cgroup controller for I/O statistics is not available.\n");
 	}
@@ -289,12 +291,10 @@ CgroupManager::destroy(Cgroup &cgroup)
 			dprintf(D_ALWAYS,
 				"Unable to completely remove cgroup %s for. %u %s\n",
 				cgroup_string.c_str(), err, cgroup_strerror(err));
-			return -1;
 		} else {
 			dprintf(D_FULLDEBUG,
 				"Deleted cgroup %s.\n",
 				cgroup_string.c_str());
-			return -1;
 		}
 		cgroup_free(&dcg);
 	}

@@ -133,6 +133,7 @@ int 	InteractiveJob = 0; /* true if job submitted with -interactive flag */
 int 	InteractiveSubmitFile = 0; /* true if using INTERACTIVE_SUBMIT_FILE */
 bool	verbose = false; // formerly: int Quiet = 1;
 bool	terse = false; // generate parsable output
+SetAttributeFlags_t setattrflags = 0; // flags to SetAttribute()
 bool	SubmitFromStdin = false;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
@@ -257,9 +258,10 @@ const char	*MemoryUsage	= "memory_usage";
 const char	*RequestCpus	= "request_cpus";
 const char	*RequestMemory	= "request_memory";
 const char	*RequestDisk	= "request_disk";
-const std::string  RequestPrefix  = "request_";
-std::set<std::string> fixedReqRes;
-std::set<std::string> stringReqRes;
+const char	*RequestPrefix  = "request_";
+typedef std::set<std::string,  classad::CaseIgnLTStr> ResSet;
+ResSet fixedReqRes;	 // a case-insenstive set
+ResSet stringReqRes;
 
 const char	*Universe		= "universe";
 const char	*MachineCount	= "machine_count";
@@ -424,6 +426,17 @@ const char* EC2VpcSubnet = "ec2_vpc_subnet";
 const char* EC2VpcIP = "ec2_vpc_ip";
 const char* EC2TagNames = "ec2_tag_names";
 const char* EC2SpotPrice = "ec2_spot_price";
+
+const char* BoincAuthenticatorFile = "boinc_authenticator_file";
+
+//
+// GCE Parameters
+//
+const char* GceImage = "gce_image";
+const char* GceAuthFile = "gce_auth_file";
+const char* GceMachineType = "gce_machine_type";
+const char* GceMetadata = "gce_metadata";
+const char* GceMetadataFile = "gce_metadata_file";
 
 //
 // Deltacloud Parameters
@@ -1721,13 +1734,15 @@ SetExecutable()
 	MyString	full_ename;
 	MyString buffer;
 
-	// In vm universe and ec2 grid jobs, 'Executable' parameter is not
-	// a real file but just the name of job.
+	// In vm universe and ec2/deltacloud/boinc grid jobs, 'Executable'
+	// parameter is not a real file but just the name of job.
 	if ( JobUniverse == CONDOR_UNIVERSE_VM ||
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
 		   ( strcasecmp( JobGridType, "ec2" ) == MATCH ||
-		     strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
+			 strcasecmp( JobGridType, "gce" ) == MATCH ||
+		     strcasecmp( JobGridType, "deltacloud" ) == MATCH ||
+			 strcasecmp( JobGridType, "boinc" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
 
@@ -2052,8 +2067,10 @@ SetUniverse()
 				(strcasecmp (JobGridType, "condor") == MATCH) ||
 				(strcasecmp (JobGridType, "nordugrid") == MATCH) ||
 				(strcasecmp (JobGridType, "ec2") == MATCH) ||
+				(strcasecmp (JobGridType, "gce") == MATCH) ||
 				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
+				(strcasecmp (JobGridType, "boinc") == MATCH) ||
 				(strcasecmp (JobGridType, "cream") == MATCH)){
 				// We're ok	
 				// Values are case-insensitive for gridmanager, so we don't need to change case			
@@ -2065,7 +2082,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt5, pbs, lsf, "
-						 "sge, nqs, condor, nordugrid, unicore, ec2, deltacloud, or cream\n" );
+						 "sge, nqs, condor, nordugrid, unicore, ec2, gce, deltacloud, cream, or boinc\n" );
 				exit( 1 );
 			}
 		}			
@@ -2595,22 +2612,19 @@ void SetFileOptions()
 void SetRequestResources() {
     HASHITER it = hash_iter_begin(SubmitMacroSet);
     for (;  !hash_iter_done(it);  hash_iter_next(it)) {
-        std::string key = hash_iter_key(it);
-        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        const char * key = hash_iter_key(it);
         // if key is not of form "request_xxx", ignore it:
-        if (key.compare(0, RequestPrefix.length(), RequestPrefix) != 0) continue;
+        if ( ! starts_with_ignore_case(key, RequestPrefix)) continue;
         // if key is one of the predefined request_cpus, request_memory, etc, also ignore it,
         // those have their own special handling:
         if (fixedReqRes.count(key) > 0) continue;
-        std::string rname = key.substr(RequestPrefix.length());
+        const char * rname = key + strlen(RequestPrefix);
         // resource name should be nonempty
-        if (rname.size() <= 0) continue;
-        // CamelCase it!
-        *(rname.begin()) = toupper(*(rname.begin()));
+        if ( ! *rname) continue;
         // could get this from 'it', but this prevents unused-line warnings:
-        std::string val = condor_param(key.c_str());
+        char * val = condor_param(key);
         std::string assign;
-        formatstr(assign, "%s%s = %s", ATTR_REQUEST_PREFIX, rname.c_str(), val.c_str());
+        formatstr(assign, "%s%s = %s", ATTR_REQUEST_PREFIX, rname, val);
         
         if (val[0]=='\"')
         {
@@ -5096,8 +5110,8 @@ SetUserLog()
 					}
 
 					// Check that the log file isn't on NFS
-					BOOLEAN nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
-					BOOLEAN	nfs = FALSE;
+					bool nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
+					bool nfs = false;
 
 					if ( nfs_is_error ) {
 						if ( fs_detect_nfs( ulog.c_str(), &nfs ) != 0 ) {
@@ -5691,6 +5705,102 @@ SetGridParams()
 		InsertJobExpr(buffer.Value());
 	}
 
+	if ( (tmp = condor_param( BoincAuthenticatorFile,
+							  ATTR_BOINC_AUTHENTICATOR_FILE )) ) {
+		// check authenticator file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open authenticator file %s (%s)\n", 
+								 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.formatstr( "%s = \"%s\"", ATTR_BOINC_AUTHENTICATOR_FILE,
+						  full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "boinc" ) == 0 ) {
+		fprintf(stderr, "\nERROR: BOINC jobs require a \"%s\" parameter\n", BoincAuthenticatorFile );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	//
+	// GCE grid-type submit attributes
+	//
+	if ( (tmp = condor_param( GceAuthFile, ATTR_GCE_AUTH_FILE )) ) {
+		// check auth file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open auth file %s (%s)\n", 
+						 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+
+			StatInfo si(full_path(tmp));
+			if (si.IsDirectory()) {
+				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				exit(1);
+			}
+		}
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_AUTH_FILE, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "gce" ) == 0 ) {
+		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", GceAuthFile );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( GceImage, ATTR_GCE_IMAGE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_IMAGE, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "gce" ) == 0 ) {
+		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", GceImage );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( GceMachineType, ATTR_GCE_MACHINE_TYPE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_MACHINE_TYPE, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "gce" ) == 0 ) {
+		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", GceMachineType );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	// GceMetadata is not a necessary parameter
+	// This is a comma-separated list of name/value pairs
+	if( (tmp = condor_param( GceMetadata, ATTR_GCE_METADATA )) ) {
+		StringList list( tmp, "," );
+		char *list_str = list.print_to_string();
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_METADATA, list_str );
+		InsertJobExpr( buffer.Value() );
+		free( list_str );
+	}
+
+	// GceMetadataFile is not a necessary parameter
+	if( (tmp = condor_param( GceMetadataFile, ATTR_GCE_METADATA_FILE )) ) {
+		// check metadata file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open metadata file %s (%s)\n", 
+								 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_METADATA_FILE, 
+				full_path(tmp) );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
 
 	//
 	// Deltacloud grid-type submit attributes
@@ -5871,6 +5981,9 @@ SetGSICredentials()
 //			InsertJobExpr(buffer);	
 			free( proxy_file );
 		} else {
+			char *full_proxy_file = strdup( full_path( proxy_file ) );
+			free( proxy_file );
+			proxy_file = full_proxy_file;
 #if defined(HAVE_EXT_GLOBUS)
 			if ( check_x509_proxy(proxy_file) != 0 ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
@@ -5943,7 +6056,7 @@ SetGSICredentials()
 #endif
 
 			(void) buffer.formatstr( "%s=\"%s\"", ATTR_X509_USER_PROXY, 
-						   full_path(proxy_file));
+						   proxy_file);
 			InsertJobExpr(buffer);	
 			free( proxy_file );
 		}
@@ -6959,23 +7072,20 @@ check_requirements( char const *orig, MyString &answer )
     // identify any custom pslot resource reqs and add them in:
     HASHITER it = hash_iter_begin(SubmitMacroSet);
     for (;  !hash_iter_done(it);  hash_iter_next(it)) {
-        std::string key = hash_iter_key(it);
-        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        const char * key = hash_iter_key(it);
         // if key is not of form "request_xxx", ignore it:
-        if (key.compare(0, RequestPrefix.length(), RequestPrefix) != 0) continue;
+        if ( ! starts_with_ignore_case(key, RequestPrefix)) continue;
         // if key is one of the predefined request_cpus, request_memory, etc, also ignore it,
         // those have their own special handling:
         if (fixedReqRes.count(key) > 0) continue;
-        std::string rname = key.substr(RequestPrefix.length());
+        const char * rname = key + strlen(RequestPrefix);
         // resource name should be nonempty
-        if (rname.size() <= 0) continue;
-        // CamelCase it!
-        *(rname.begin()) = toupper(*(rname.begin()));
+        if ( ! *rname) continue;
         std::string clause;
         if (stringReqRes.count(rname) > 0)
-            formatstr(clause, " && regexp(%s%s, TARGET.%s)", ATTR_REQUEST_PREFIX, rname.c_str(), rname.c_str());
+            formatstr(clause, " && regexp(%s%s, TARGET.%s)", ATTR_REQUEST_PREFIX, rname, rname);
         else
-            formatstr(clause, " && (TARGET.%s%s >= %s%s)", "", rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str());
+            formatstr(clause, " && (TARGET.%s%s >= %s%s)", "", rname, ATTR_REQUEST_PREFIX, rname);
         answer += clause;
     }
     hash_iter_delete(&it);
@@ -7426,12 +7536,17 @@ init_params()
 		param_boolean_crufty("WARN_ON_UNUSED_SUBMIT_FILE_MACROS",
 							 WarnOnUnusedMacros ? true : false) ? 1 : 0;
 
+	if ( param_boolean("SUBMIT_NOACK_ON_SETATTRIBUTE",true) ) {
+		setattrflags |= SetAttribute_NoAck;  // set noack flag
+	} else {
+		setattrflags &= ~SetAttribute_NoAck; // clear noack flag
+	}
+
     // the special "fixed" request_xxx forms
     fixedReqRes.clear();
     fixedReqRes.insert(RequestCpus);
     fixedReqRes.insert(RequestMemory);
     fixedReqRes.insert(RequestDisk);
-    stringReqRes.clear();
 }
 
 int
@@ -7575,7 +7690,6 @@ log_submit()
 	}
 }
 
-
 int
 SaveClassAd ()
 {
@@ -7586,12 +7700,17 @@ SaveClassAd ()
 	static ClassAd* current_cluster_ad = NULL;
 
 	if ( ProcId > 0 ) {
-		SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId);
+		SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId, setattrflags);
 	} else {
 		myprocid = -1;		// means this is a cluster ad
-		if( SetAttributeInt (ClusterId, myprocid, ATTR_CLUSTER_ID, ClusterId) == -1 ) {
-			fprintf( stderr, "\nERROR: Failed to set %s=%d for job %d.%d (%d)\n", 
+		if( SetAttributeInt (ClusterId, myprocid, ATTR_CLUSTER_ID, ClusterId, setattrflags) == -1 ) {
+			if( setattrflags & SetAttribute_NoAck ) {
+				fprintf( stderr, "\nERROR: Failed submission for job %d.%d - aborting entire submit\n",
+					ClusterId, ProcId);
+			} else {
+				fprintf( stderr, "\nERROR: Failed to set %s=%d for job %d.%d (%d)\n",
 					ATTR_CLUSTER_ID, ClusterId, ClusterId, ProcId, errno);
+			}
 			return -1;
 		}
 	}
@@ -7633,9 +7752,14 @@ SaveClassAd ()
 				}
 			}
 
-			if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
-				fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n", 
+			if( SetAttribute(ClusterId, myprocid, lhstr, rhstr, setattrflags) == -1 ) {
+				if( setattrflags & SetAttribute_NoAck ) {
+					fprintf( stderr, "\nERROR: Failed submission for job %d.%d - aborting entire submit\n",
+						ClusterId, ProcId);
+				} else {
+					fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n",
 						 lhstr, rhstr, ClusterId, ProcId, errno );
+				}
 				retval = -1;
 			}
 			myprocid = tmpProcId;
@@ -7646,9 +7770,14 @@ SaveClassAd ()
 	}
 
 	if ( ProcId == 0 ) {
-		if( SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId) == -1 ) {
-			fprintf( stderr, "\nERROR: Failed to set %s=%d for job %d.%d (%d)\n", 
+		if( SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId, setattrflags) == -1 ) {
+			if( setattrflags & SetAttribute_NoAck ) {
+				fprintf( stderr, "\nERROR: Failed submission for job %d.%d - aborting entire submit\n",
+					ClusterId, ProcId);
+			} else {
+				fprintf( stderr, "\nERROR: Failed to set %s=%d for job %d.%d (%d)\n",
 					 ATTR_PROC_ID, ProcId, ClusterId, ProcId, errno );
+			}
 			return -1;
 		}
 	}

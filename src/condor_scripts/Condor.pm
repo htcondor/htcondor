@@ -717,7 +717,7 @@ sub Monitor
 	# if this line is for another cluster, ignore
 	if ( $line =~ /^\d+\s+\(0*(\d+)\./ && $1 != $cluster )
 	{
-	    debug( "log line for cluster $1, not $cluster -- ignoring...\n" ,1);
+	    #debug( "log line for cluster $1, not $cluster -- ignoring...\n" ,1);
 	    next LINE;
 	}
 	
@@ -892,7 +892,6 @@ sub Monitor
 		$info{'imagesize'} = $3;
 
 	    debug( "Saw Image Size Update <$3>\n" ,2);
-		print "Saw Image Size Update <$3>\n";
 
 	    # read next line to see current Megs
 	    $line = <SUBMIT_LOG>;
@@ -935,8 +934,11 @@ sub Monitor
 		}
 
 		# execute callback if one is registered
-		&$ImageUpdatedCallback( %info )
-		    if defined $ImageUpdatedCallback;
+		    if (defined $ImageUpdatedCallback) {
+				&$ImageUpdatedCallback( %info );
+			} else {
+				print "Saw Image Size Update <$info{'imagesize'}>\n";
+			}
 
 	    next LINE;
 

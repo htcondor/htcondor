@@ -548,13 +548,10 @@ sub parseOptions
         }
 
         my(@condor_req_dirs) = qw( src );
-
-		if (!defined($opt_skip_doc ))
-		{ push @condor_req_dirs, 'doc'; }
-
-		if( ! defined($opt_externals) )
-		{ push @condor_req_dirs, 'externals'; }
-
+        if ($runtype eq "build") {
+           if( ! defined($opt_skip_doc )) { push @condor_req_dirs, 'doc'; }
+           if( ! defined($opt_externals) ) { push @condor_req_dirs, 'externals'; }
+        }
     	foreach my $subdir (@condor_req_dirs) {
               if( not -d "$opt_workspace/$subdir" ) {
                 print "ERROR: Workspace $opt_workspace does not not appear to be a Condor workspace (missing $opt_workspace/$subdir)\n";
@@ -953,7 +950,9 @@ sub checkoutSubmitInfo
     print "Attempting to fetch $submit_info from $tag...\n";
     my $cmd = "/bin/false FATAL ERROR, UNKNOWN VCS";
     if (defined($opt_git)) {
-	$cmd = "git archive --remote=$GITROOT_SRC $tag $submit_info | tar x";
+# This fails to find $tag on newer version of git.
+#	$cmd = "git archive --remote=$GITROOT_SRC $tag $submit_info | tar x";
+	$cmd = "git --git-dir=$GITROOT_SRC archive $tag $submit_info | tar x";
     }
 
     open( OUT, "$cmd 2>&1 |" ) ||
@@ -964,6 +963,7 @@ sub checkoutSubmitInfo
     if( $retval != 0 ) {
         print @output;
         print "FAILED (return value $retval)\n";
+	print "FAILED (command was '$cmd')\n";
         return 0;
     } 
     if( ! -f $submit_info ) {

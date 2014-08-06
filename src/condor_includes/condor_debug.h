@@ -253,6 +253,17 @@ int dprintf_SetExitCode(int code);
  */
 int fclose_wrapper( FILE *stream, int maxRetries );
 
+/* Windows-specific function to provide strerror() like functionality for
+ * Win32 and Winsock error codes. Returns an error string from a static
+ * buffer (no need to free it), just like strerror.
+ * errCode should come from GetLastError() or WSAGetLastError().
+ * If errCode is 0 (default), then GetLastErrorString will invoke
+ * GetLastError itself.
+ */
+#ifdef WIN32
+const char* GetLastErrorString(DWORD errCode=0);
+#endif
+
 /*
 **	Definition of exception macro
 */
@@ -337,6 +348,8 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 #  define PRAGMA_QUOTE(x)   #x
 #  define PRAGMA_QQUOTE(y)  PRAGMA_QUOTE(y)
 #  define PRAGMA_REMIND(str) __pragma(message(__FILE__ "(" PRAGMA_QQUOTE(__LINE__) ") : " str))
+#  define DEPRECATE_MSC __declspec(deprecated)
+#  define DEPRECATE_GCC
 # elif defined __GNUC__ // gcc emits file and line prefix automatically.
 #  if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 402
 #   define PRAGMA_QUOTE(x)  _Pragma(#x)
@@ -344,8 +357,12 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 #  else
 #   define PRAGMA_REMIND(str)
 #  endif
+#  define DEPRECATE_MSC
+#  define DEPRECATE_GCC __attribute__ ((deprecated))
 # else 
 #  define PRAGMA_REMIND(str)
+#  define DEPRECATE_MSC
+#  define DEPRECATE_GCC
 # endif
 #endif // REMIND
 
@@ -360,6 +377,8 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 # define DEBUG_BREAK_INTO_DEBUGGER ((void)0)
 # define DEBUG_WAIT_FOR_DEBUGGER(var,def) ((void)0)
 #endif
+
+#define dprintf_set_tool_debug(name, flags) dprintf_config_tool(name, flags)
 
 #endif /* CONDOR_DEBUG_H */
 
@@ -379,6 +398,3 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 #	define ASSERT(cond) CONDOR_ASSERT(cond)
 #	define assert(cond) CONDOR_ASSERT(cond)
 #endif	/* of ifdef WIN32 */
-
-#define dprintf_set_tool_debug(name, flags) dprintf_config_tool(name, flags)
-

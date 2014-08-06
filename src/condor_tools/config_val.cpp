@@ -134,7 +134,14 @@ usage(int retval = 1)
 		"\t-unused\t\tPrint only variables not used by the specified daemon\n"
 		"      these options apply when reading configuration files\n"
 		"\t-config\t\tPrint the locations of configuration files\n"
-		"\t-writeconfig <file>\tWrite non-default configuration to <file>\n"
+		"\t-writeconfig[:<filter>[,only]] <file>\tWrite configuration to <file>\n"
+		"\t\twhere <filter> is a comma separated filter option\n"
+		"\t\t\tdefault - compile time default values\n"
+		"\t\t\tdetected - detected values\n"
+		"\t\t\tenvironment - values read from environment\n"
+		"\t\t\tfile - values from config file(s)\n"
+		"\t\t\tonly - show only values that match the filter\n"
+		"\t\t\tupgrade - values changed by config files(s)\n"
 		//"\t-reconfig <file>\tReload configuration files and append <file>\n"
 		"\t-mixedcase\tPrint variable names as originally specified\n"
 		"\t-local-name <name>  Use local name for querying and expanding\n"
@@ -243,8 +250,12 @@ void print_as_type(const char * name, int as_type)
 		fprintf(stdout, " # eval: %s def=%d (%s)\n", bb ? "true" : "false", bval, bvalid ? "valid" : "invalid");
 	} else if (as_type == PARAM_TYPE_INT) {
 		int ivalid = -1, ilong = 0;
-		int ival = param_default_integer(name, NULL, &ivalid, &ilong);
+		int ival = param_default_integer(name, NULL, &ivalid, &ilong, NULL);
 		fprintf(stdout, " # eval: %d (%s%s)\n", ival, ivalid ? "valid" : "invalid", ilong ? ", long" : "");
+	} else if (as_type == PARAM_TYPE_LONG) {
+		int ivalid = -1;
+		long long ival = param_default_long(name, NULL, &ivalid);
+		fprintf(stdout, " # eval: %lld (%s long)\n", ival, ivalid ? "valid" : "invalid");
 	} else if (as_type == PARAM_TYPE_DOUBLE) {
 		int dvalid = -1;
 		double dval = param_default_double(name, NULL, &dvalid);
@@ -461,6 +472,7 @@ main( int argc, const char* argv[] )
 	bool    dash_default = false;
 	bool    stats_with_defaults = false;
 	const char * debug_flags = NULL;
+	const char * check_configif = NULL;
 
 #ifdef WIN32
 	// uncomment this if you need to debug crashes.
@@ -477,7 +489,20 @@ main( int argc, const char* argv[] )
 #if 1
 		// arguments that don't begin with "-" are params to be looked up.
 		if (*argv[i] != '-') {
-			params.append(strdup(argv[i]));
+			// allow "use category:value" syntax to query meta-params
+			if (MATCH == strcasecmp(argv[i], "use")) {
+				if (argv[i+1] && *argv[i+1] != '-') {
+					++i; // skip "use"
+					// save off the parameter name, prefixed with $ so that the code below we know it's a metaknob name.
+					std::string meta("$"); meta += argv[i];
+					params.append(strdup(meta.c_str()));
+				} else {
+					fprintf(stderr, "use should be followed by a category or category:option argument\n");
+					params.append(strdup("$"));
+				}
+			} else {
+				params.append(strdup(argv[i]));
+			}
 			continue;
 		}
 
@@ -651,6 +676,8 @@ main( int argc, const char* argv[] )
 		} else if (is_dash_arg_prefix(argv[i], "version", 3)) {
 			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			my_exit(0);
+		} else if (is_dash_arg_prefix(argv[i], "check-if", -1)) {
+			check_configif = use_next_arg("check-if", argv, i);
 		} else {
 			fprintf(stderr, "%s is not valid argument\n", argv[i]);
 			usage();
@@ -797,7 +824,7 @@ main( int argc, const char* argv[] )
 	if (write_config || stats_with_defaults) {
 		config_options |= CONFIG_OPT_KEEP_DEFAULTS;
 	}
-	config_host(host, 0, config_options);
+	config_host(host, config_options);
 	validate_config(false); // validate, but do not abort.
 	if (print_config_sources) {
 		PrintConfigSources();
@@ -810,7 +837,7 @@ main( int argc, const char* argv[] )
 
 		extern const char * simulated_local_config;
 		simulated_local_config = reconfig_source;
-		config_host(host, 0, config_options);
+		config_host(host, config_options);
 		if (print_config_sources) {
 			fprintf(stdout, "Reconfig with %s appended\n", reconfig_source);
 			PrintConfigSources();
@@ -825,6 +852,19 @@ main( int argc, const char* argv[] )
 
 	// temporary, to get rid of build warning.
 	if (dash_default) { fprintf(stderr, "-default not (yet) supported\n"); }
+
+	// handle check-if to valididate config's if/else parsing and help users to write
+	// valid if conditions.
+	if (check_configif) { 
+		std::string err_reason;
+		bool bb = false;
+		bool valid = config_test_if_expression(check_configif, bb, err_reason);
+		fprintf(stdout, "# %s: \"%s\" %s\n", 
+			valid ? "ok" : "not supported", 
+			check_configif, 
+			valid ? (bb ? "\ntrue" : "\nfalse") : err_reason.c_str());
+		exit(0);
+	}
 
 	if (write_config) {
 		if (ask_a_daemon) {
@@ -1045,12 +1085,12 @@ main( int argc, const char* argv[] )
 			MyString name_used, raw_value, file_and_line, def_value, usage_report;
 			bool raw_supported = false;
 			//fprintf(stderr, "param = %s\n", tmp);
-			if (tmp[0] == '$') {
+			if (tmp[0] == '$') { // a leading '$' indicates a meta-param
 				if (target) {
-					fprintf(stderr, "remote query not supported for %s\n", tmp);
+					fprintf(stderr, "remote query not supported for use %s\n", tmp+1);
 					my_exit(1);
 				}
-				PrintMetaParam(tmp);
+				PrintMetaParam(tmp+1);
 				continue;
 			}
 			if (target) {
@@ -1612,38 +1652,43 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 		my_exit( 1 );
 	}
 
-		// Now, process our strings for sanity.
-	char* param_name = strdup( param_value );
-	char* tmp = NULL;
+	while (isspace(*param_value)) ++param_value;
+	bool is_meta = starts_with_ignore_case(param_value, "use ");
 
-	if( set ) {
-		tmp = strchr( param_name, ':' );
-		if( ! tmp ) {
-			tmp = strchr( param_name, '=' );
-		}
-		if( ! tmp ) {
-			fprintf( stderr, "%s: Can't set configuration value (\"%s\")\n" 
-					 "You must specify \"macro_name = value\" or " 
-					 "\"expr_name : value\"\n", MyName, param_name );
+	char * config_name = NULL;
+	if (set || is_meta) {
+		config_name = is_valid_config_assignment(param_value);
+		if ( ! config_name) {
+			char * tmp = strchr(param_value, is_meta ? ':' : '=' );
+			#ifdef WARN_COLON_FOR_PARAM_ASSIGN
+			#else
+			char * tmp2 = strchr( param_name, ':' );
+			if ( ! tmp || (tmp2 && tmp2 < tmp)) tmp = tmp2;
+			#endif
+			std::string name;  name.append(param_value, 0, (int)(tmp - param_value));
+	
+			fprintf( stderr, "%s: Can't set configuration value (\"%s\")\n"
+					 "You must specify \"macro_name = value\""
+					#ifdef WARN_COLON_FOR_PARAM_ASSIGN
+					 " or \"use category:option\""
+					#else
+					 " or \"expr_name : value\""
+					#endif
+					 "\n", MyName, name.c_str() );
 			my_exit( 1 );
 		}
-			// If we're still here, we found a ':' or a '=', so, now,
-			// chop off everything except the attribute name
-			// (including spaces), so we can send that seperately. 
-		do {
-			*tmp = '\0';
-			tmp--;
-		} while( *tmp == ' ' );
 	} else {
 			// Want to do different sanity checking.
-		if( (tmp = strchr(param_name, ':')) || 
-			(tmp = strchr(param_name, '=')) ) {
-			fprintf( stderr, "%s: Can't unset configuration value (\"%s\")\n" 
-					 "To unset, you only specify the name of the attribute\n", 
-					 MyName, param_name );
+		char * tmp;
+		if( (tmp = strchr(param_value, ':')) || 
+			(tmp = strchr(param_value, '=')) ) {
+			fprintf( stderr, "%s: Can't unset configuration value (\"%s\")\n"
+					 "To unset, you only specify the name of the attribute\n",
+					 MyName, param_value);
 			my_exit( 1 );
 		}
-		tmp = strchr( param_name, ' ' );
+		config_name = strdup(param_value);
+		tmp = strchr(config_name, ' ');
 		if( tmp ) {
 			*tmp = '\0';
 		}
@@ -1652,22 +1697,17 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 		// At this point, in either set or unset mode, param_name
 		// should hold a valid name, so do a final check to make sure
 		// there are no spaces.
-	if( !is_valid_param_name(param_name) ) {
+	if( !is_valid_param_name(config_name + is_meta) ) {
 		fprintf( stderr, 
 				 "%s: Error: Configuration variable name (%s) is not valid, alphanumeric and _ only\n",
-				 MyName, param_name );
+				 MyName, config_name + is_meta );
 		my_exit( 1 );
 	}
 
 	if (!mixedcase) {
-		strlwr(param_name);		// make the config name case insensitive
+		strlwr(config_name);		// make the config name case insensitive
 	}
 
-		// We need a version with a newline at the end to make
-		// everything cool at the other end.
-	char* buf = (char*)malloc( strlen(param_value) + 2 );
-	ASSERT( buf != NULL );
-	sprintf( buf, "%s\n", param_value );
 
 	s.timeout( 30 );
 	do {
@@ -1692,8 +1732,8 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 	target->startCommand( cmd, &s );
 
 	s.encode();
-	if( !s.code(param_name) ) {
-		fprintf( stderr, "Can't send config name (%s)\n", param_name );
+	if( !s.code(config_name) ) {
+		fprintf( stderr, "Can't send config name (%s)\n", config_name + is_meta );
 		my_exit(1);
 	}
 	if( set ) {
@@ -1744,8 +1784,7 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 				 param_value, daemonString(dt), name, addr );
 	}
 
-	free( buf );
-	free( param_name );
+	free( config_name );
 }
 
 static void PrintConfigSources(void)
@@ -1966,14 +2005,14 @@ void PrintMetaParam(const char * name)
 		*parm++ = 0;
 	}
 
-	MACRO_TABLE_PAIR* ptable = param_meta_table(use+1);
+	MACRO_TABLE_PAIR* ptable = param_meta_table(use);
 	MACRO_DEF_ITEM * pdef = NULL;
 	if (ptable) {
 		// if only a metaknob category was passed, print out all of the 
 		// knob names in that category.
 		if ( ! *parm) {
 			if (ptable->cElms > 0) {
-				printf("$%s accepts\n", ptable->key);
+				printf("use %s accepts\n", ptable->key);
 				for (int ii = 0; ii < ptable->cElms; ++ii) {
 					printf("  %s\n", ptable->aTable[ii].key);
 				}
@@ -1984,12 +2023,12 @@ void PrintMetaParam(const char * name)
 		pdef = param_meta_table_lookup(ptable, parm);
 	}
 	if (pdef) {
-		printf("$%s:%s is\n%s\n", ptable->key, pdef->key, pdef->def->psz);
+		printf("use %s:%s is\n%s\n", ptable->key, pdef->key, pdef->def->psz);
 	} else {
 		MyString name_used(use);
 		if (ptable) { name_used.formatstr("%s:%s", use, parm); }
 		name_used.upper_case();
-		printf("Not defined: %s\n", name_used.c_str());
+		printf("Not defined: use %s\n", name_used.c_str());
 	}
 }
 
@@ -2211,6 +2250,12 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 			args.obsoleteif = &obsoleteif;
 		}
 
+		items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIFX");
+		if (items && items[0]) {
+			obsoleteif.initializeFromString(items);
+			args.obsoleteif = &obsoleteif;
+		}
+
 		#ifdef WIN32
 		// on Windows we shove in some defaults for VMWARE, we want to ignore them
 		// for upgrade if the user isn't using vmware
@@ -2218,7 +2263,7 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 		if (vm_type) { free(vm_type); }
 		else
 		{
-			const char * items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIF_VMWARE");
+			items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIF_VMWARE");
 			if (items && items[0]) {
 				obsoleteif.initializeFromString(items);
 				args.obsoleteif = &obsoleteif;

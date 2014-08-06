@@ -124,7 +124,6 @@ ganglia_init_gmetric(char const *_gmetric_path)
 {
 	char const *argv[] = {
 		_gmetric_path,
-		_gmetric_path,
 		"-h",
 		NULL
 	};
@@ -227,7 +226,6 @@ static bool
 gmetric_send(const char *group, const char *name, const char *value, const char *type, const char *units, int slope, const char *title, const char *desc, const char *spoof_host, const char *cluster, int tmax, int dmax)
 {
 	ArgList args;
-	args.AppendArg(gmetric_path.c_str());
 	args.AppendArg(gmetric_path.c_str());
 
 	if( !gmetric_conf_file.empty() ) {
@@ -362,6 +360,73 @@ ganglia_send(Ganglia_pool context, Ganglia_udp_send_channels channels, const cha
 		}
 		if( cluster && *cluster ) {
 			(*Ganglia_metadata_add_dl)(metric, const_cast<char*>("CLUSTER"), cluster);
+		}
+        if ((*Ganglia_metric_send_dl)(metric, channels))
+        {
+            retval = 2;
+        }
+    } else
+    {
+        retval = 3;
+    }
+	(*Ganglia_metric_destroy_dl)(metric);
+
+    return retval==0;
+}
+
+static bool
+gmetric_send_heartbeat(const char *spoof_host)
+{
+	ArgList args;
+	args.AppendArg(gmetric_path.c_str());
+
+	if( !gmetric_conf_file.empty() ) {
+		args.AppendArg("--conf");
+		args.AppendArg(gmetric_conf_file.c_str());
+	}
+	if( spoof_host ) {
+		args.AppendArg("--spoof");
+		args.AppendArg(spoof_host);
+	}
+
+	args.AppendArg("--heartbeat");
+
+	FILE *fp = my_popen(args,"r",1);
+	char line[1024];
+	std::string output;
+	if( !fp ) {
+		MyString display_args;
+		args.GetArgsStringForDisplay(&display_args);
+		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",display_args.Value(),strerror(errno));
+		return false;
+	}
+	while( fgets(line,sizeof(line),fp) ) {
+		output += line;
+	}
+	int rc = my_pclose(fp);
+	if( rc != 0 ) {
+		MyString display_args;
+		args.GetArgsStringForDisplay(&display_args);
+		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",display_args.Value(),output.c_str());
+		return false;
+	}
+	return true;
+}
+
+bool
+ganglia_send_heartbeat(Ganglia_pool context, Ganglia_udp_send_channels channels, const char *spoof_host)
+{
+	if( !libganglia ) {
+		return gmetric_send_heartbeat(spoof_host);
+	}
+    Ganglia_metric metric = (*Ganglia_metric_create_dl)(context);
+    if (!metric) return false;
+
+    int retval = 0;
+	if (!(*Ganglia_metric_set_dl)(metric, "heartbeat", 0, "uint32", "", 0, 0, 0))
+    {
+		if( spoof_host && *spoof_host ) {
+			(*Ganglia_metadata_add_dl)(metric, const_cast<char*>("SPOOF_HOST"), spoof_host);
 		}
         if ((*Ganglia_metric_send_dl)(metric, channels))
         {

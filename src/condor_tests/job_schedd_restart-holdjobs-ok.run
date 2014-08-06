@@ -20,80 +20,159 @@
 
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 
-$cmd_template = "job_schedd_restart-holdjobs-ok.template";
-$testdesc =  'job_schedd_restart-holdjobs-ok - Simple parallel job with security on';
 $testname = "job_schedd_restart-holdjobs-ok";
-$cmd = "job_schedd_restart-holdjobs-ok.cmd";
-$corename = "job_schedd_restart-holdjobs-ok";
-
-# where am I running
-$currenthost = CondorTest::getFqdnHost();
 
 print scalar localtime() . "\n";
 
-$mypid = $$;
-$mysaveme = $corename . ".saveme";
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+    WANT_SUSPEND = FALSE
+    NEGOTIATION_INTERVAL = 5
+    ALL_DEBUG = D_FULLDEBUG
+    NUM_CPUS = 6
+';
 
-if($mypid == 0) {
-	die "Saveme setup for test failed\n";
-}
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"scheddrestartrunningjobs");
 
-$mysubmitnm = $corename . $mypid . ".cmd";
-$mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
-$mysubmitnmlog = $corename . $mypid . ".log";
-$mysubmitnmerr = $corename . $mypid . ".err";
-$mysubmitnmout = $corename . $mypid . ".out";
-$mycorenm = $corename . ".cmd";
-$mycorenmcmdout = $corename . ".cmd.out";
-$mycorenmlog = $corename . ".log";
-$mycorenmerr = $corename . ".err";
-$mycorenmout = $corename . ".out";
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
 
-CondorTest::debug("Master PID is $mypid\n",1);
-CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
+CondorTest::StartCondorWithParams(
+    condor_name => "scheddrestartrunningjobs",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
 
-# get a remote scheduler running (side b)
-my $configrem = CondorTest::StartPersonal( "job_schedd_restart-holdjobs-ok", "x_param.scheddrestart" ,"scheddrestart");
-my @parallel = split /\+/, $configrem;
-my $parallelconfig = shift @parallel;
-my $parallelport = shift @parallel;
+my $alreadydone=0;
+$beforequeue = "job_schedd_restart-holdjobs.before";
+$afterqueue = "job_schedd_restart-holdjobs.after";
 
-CondorTest::debug("---Parallel config is $parallelconfig and remote port is $parallelport---\n",1);
-
-$ENV{CONDOR_CONFIG} = $parallelconfig;
-
-CondorTest::debug("Set config to $parallelconfig\n",1);
-
-my $result = system("./job_schedd_restart-holdjobs-ok.pl $mysubmitnm");
-CondorTest::debug("Result of job_schedd_restart-holdjobs-ok job is  $result\n",1);
-
-#fails due to directory matching pattern
-runcmd("cp *schedd_restart-holdjobs-ok* $mysaveme", {expect_result=>\&ANY});
-
-if( -e "$mysubmitnm" )
+my $submithandled = "no";
+$submitted = sub
 {
-	runcmd("cp $mysubmitnm $mycorenm");
-}
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $doneyet = "no";
 
-if( -e "$mysubmitnmout" )
-{
-	runcmd("cp $mysubmitnmcmdout $mycorenmcmdout");
-}
+	if($submithandled eq "no") {
+		$submithandled = "yes";
 
-if( -e "$mysubmitnmlog" )
-{
-	runcmd("cp $mysubmitnmlog $mycorenmlog");
-}
+		CondorTest::debug("submitted\n",1);
+		CondorTest::debug("Collecting queue details on $cluster\n",1);
+		my @adarray;
+		my $status = 1;
+		my $cmd = "condor_q $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+		if(!$status)
+		{
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+			exit(1)
+		}
 
-CondorTest::KillPersonal($parallelconfig);
-print scalar localtime() . "\n";
+		open(BEFORE,">$beforequeue") || die "Could not ope file for before stats $!\n";
+		foreach my $line (@adarray)
+		{
+			CondorTest::debug("$line\n",1);
+			print BEFORE "$line\n";
+		}
+		close(BEFORE);
 
-if($result != 0)
-{
-    # actuaal job failed but we allowed cleanup
-    exit(1);
-}
+		$status = CondorTest::changeDaemonState( "schedd", "off", 9 );
+		if(!$status)
+		{
+			CondorTest::debug("Test failure: could not turn scheduler off!\n",1);
+			exit(1)
+		}
 
-CondorTest::debug("job_schedd_restart-holdjobs-ok SUCCESS\n",1);
+		$status = CondorTest::changeDaemonState( "schedd", "on", 9 );
+		if(!$status)
+		{
+			CondorTest::debug("Test failure: could not turn scheduler on!\n",1);
+			exit(1)
+		}
+
+		CondorTest::debug("Collecting queue details on $cluster\n",1);
+		my @fdarray;
+		my $status = 1;
+		my $cmd = "condor_q $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@fdarray,2,{emit_output=>0});
+		if(!$status)
+		{
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+			exit(1)
+		}
+
+		open(AFTER,">$afterqueue") || die "Could not ope file for before stats $!\n";
+		foreach my $line (@fdarray)
+		{
+			CondorTest::debug("$line\n",1);
+			print AFTER "$line\n";
+		}
+		close(AFTER);
+
+		# Now compare the state of the job queue
+		my $afterstate;
+		my $beforestate;
+		foreach $before (@adarray) {
+			#print "Before:$before\n";
+			$after = shift(@fdarray);
+			#print "After:$after\n";
+			#handle submitter line
+			if($after =~ /^(-- Submitter.*<\d+\.\d+\.\d+\.\d+:)(\d+)(> : .*)$/) {
+				$af = $1 . $3;
+				if($before =~ /^(-- Submitter.*<\d+\.\d+\.\d+\.\d+:)(\d+)(> : .*)$/) {
+					$bf = $1 . $3;
+				} else {
+					die "Submitter lines from before and after don't line up\n";
+				}
+				if($af ne $bf ) {
+					die "Submitter lines from before and after don't match\n";
+				}
+			} 
+			#handle job line
+			elsif($after =~ /^(\d+\.\d+)\s+([\w\-]+)\s+(\d+\/\d+)\s+(\d+:\d+)\s+(\d+\+\d+:\d+:\d+)\s+([HRI]+)\s+(\d+)\s+(\d+\.\d+)\s+(.*)$/) {
+				#print "AF:$1 $2 $3 $4 $5 $6 $7 $8 $9\n";
+				$afterstate = $6;
+				if($before =~ /^(\d+\.\d+)\s+([\w\-]+)\s+(\d+\/\d+)\s+(\d+:\d+)\s+(\d+\+\d+:\d+:\d+)\s+([HRI]+)\s+(\d+)\s+(\d+\.\d+)\s+(.*)$/) {
+					#print "BF:$1 $2 $3 $4 $5 $6 $7 $8 $9\n";
+					$beforestate = $6;
+				} else {
+					die "jobs in after restart of schedd do not parse\n";
+				}
+				if(($afterstate ne $beforestate) || ($after ne $before)) {
+					CondorTest::debug("Before:$before(State:$beforestate)\n",1);
+					CondorTest::debug("After:$after(State:$afterstate)\n",1);
+					die "Job queue was not maintained!\n";
+				}
+			}
+			#handle label line
+			else {
+				# don't care
+			}
+		}
+		exit(0);
+	}
+};
+
+my $append_submit_commands = '
+hold  = true
+';
+
+$result = SimpleJob::RunCheck(
+    append_submit_commands => $appended_submit_info,
+    queue_sz => 1,
+	append_submit_commands=>$append_submit_commands,
+	runthis => "x_echo1234.pl",
+    #on_execute => $on_execute,
+    #on_disconnected => $on_disconnect,
+    #on_reconnected => $on_reconnected,
+    #on_success => $on_success,
+    on_submit => $submitted,
+	#on_abort => $on_abort,
+);
+
+CondorTest::EndTest();
+
 exit(0);

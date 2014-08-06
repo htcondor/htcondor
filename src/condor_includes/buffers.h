@@ -60,7 +60,7 @@ public:
 
 
 	int write(char const *peer_description,SOCKET sockd, int sz=-1, int timeout=0, bool non_blocking=false);
-	int read(char const *peer_description,SOCKET sockd, int sz=-1, int timeout=0);
+	int read(char const *peer_description,SOCKET sockd, int sz=-1, int timeout=0, bool non_blocking=false);
 
 	int flush(char const *peer_description,SOCKET sockd, void * hdr=0, int sz=0, int timeout=0, bool non_blocking=false);
 
@@ -105,6 +105,7 @@ public:
 
 
 	inline int consumed() { return !_tail || (_tail && _tail->consumed()); }
+	inline int num_untouched() { return _tail ? _tail->num_untouched() : 0; }
 
 	int put(Buf *);
 	void reset();

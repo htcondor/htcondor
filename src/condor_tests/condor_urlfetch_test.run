@@ -1,0 +1,106 @@
+use Cwd 'abs_path';
+use File::Basename;
+use File::Temp;
+use lib dirname( abs_path $0 );
+use CondorTest;
+use CondorPersonal;
+use CondorUtils;
+use Check::SimpleJob;
+
+use strict;
+use warnings;
+
+my $conf = 'URLTEST = 123456 '; #The local config file
+
+
+
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+    WANT_SUSPEND = FALSE
+    NEGOTIATION_INTERVAL = 5
+    NUM_CPUS = 6
+';
+
+my $testname = "condor_urlfetch_test";
+
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"condorurlfetchtest");
+
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
+
+CondorTest::StartCondorWithParams(
+    condor_name => "condorurlfetchtest",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+my $fileh;
+# creating line to be seen in local config file
+ open(FT, ">defaultlocal.txt") or die "can not opn defaultlocal.txt:$!\n";
+
+print FT "$conf\n";
+close(FT);
+
+print "Line to go into local file:$conf\n";
+my $forkpid = fork();
+if($forkpid == 0)
+{
+  system("python miniserver.py &");
+} else 
+{
+  sleep(1);
+  local $/=undef;
+
+  open FT, "pythonurl";
+  my $url = <FT> . "/" . "defaultlocal.txt";
+  print "URL:$url";
+  close FT;
+
+  my $configpath = "";
+  my @convaldump = ();
+  runCondorTool("condor_config_val -config", \@convaldump, 2, {emit_output => 1});
+  foreach my $line (@convaldump) {
+  	print "$line\n";
+  	if($line =~ /^\s*(.*?\/condor_config)\s*$/) {
+		fullchomp($1);
+		$configpath = $1;
+		last;
+	}
+  }
+  print "I think my config file is:$configpath\n";
+
+  my $newconfig = "$configpath" . ".new";
+  my $extraline = "";
+
+  print "$newconfig\n";
+
+  open(OF, "<$configpath") or die "Can't open $configpath: $!\n";
+  open(NF, ">$newconfig") or die "Can't open $newconfig: $!\n";
+  while (<OF>) {
+  	 print NF "$_";
+  }
+  $extraline = "LOCAL_CONFIG_FILE = condor_urlfetch _P(SUBSYSTEM) " . $url . " condor_config_file_cache";
+  print NF "$extraline\n";
+  close(OF);
+  close(NF);
+  system("mv $newconfig $configpath");
+
+  my $fetchedfh;
+  open($fetchedfh, "$(LOCAL_DIR)/condor_config_file_cache");
+  
+  runCondorToolNTimes("condor_restart",1,1);
+  sleep(40);
+
+  use File::Compare;
+  if(compare($fileh, $fetchedfh) != 0)
+  {
+    print "Error in downloading the config file";
+    exit("Error in downloading the config file");
+  }
+#condor_scripts condortests.pm    copy it to condor_tests
+}
+
+
+RegisterResult(1, "test_name", $testname);
+EndTest();
+exit(0);

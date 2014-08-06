@@ -647,17 +647,12 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 		// as well as whatever category it's currently in.
 		if (cat_and_flags & D_FAILURE) { basic_flag |= 1<<D_ERROR; }
 
-		PRAGMA_REMIND("TJ: fix this to distinguish between verbose:2 and verbose:3")
+		//PRAGMA_REMIND("TJ: fix this to distinguish between verbose:2 and verbose:3")
 		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++, ++ixOutput)
 		{
 			unsigned int choice = (*it).choice;
 			if (choice && !(choice & basic_flag) && !(choice & verbose_flag))
 				continue;
-
-			// for log files other than the first one, dont panic if we
-			// fail to write to the file.
-			PRAGMA_REMIND("TJ: move dont_panic flag into debug output vector")
-			//bool dont_panic = (ixOutput > 0) || DebugContinueOnOpenFailure;
 
 			/* Open and lock the log file */
 			bool   funlock_it = false;
@@ -669,10 +664,8 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 					debug_lock_it(&(*it), NULL, 0, it->dont_panic);
 					funlock_it = true;
 					break;
-			   #ifdef WIN32
-				case OUTPUT_DEBUG_STR:
+				case OUTPUT_DEBUG_STR: // recognise this on linux, it's part of the >BUFFER special case
 					break;
-			   #endif
 			}
 			
 			it->dprintfFunc(cat_and_flags, DebugHeaderOptions, info, message_buffer, &(*it));
@@ -810,7 +803,7 @@ debug_open_lock(void)
 #ifdef WIN32
 		// Use a mutex by default on Win32
 		//DebugLockIsMutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
-PRAGMA_REMIND("Figure out better way of doing this without relying on param!!!!")
+//PRAGMA_REMIND("Figure out better way of doing this without relying on param!!!!")
 		DebugLockIsMutex = TRUE;
 #else
 		// Use file locking by default on Unix.  We should 
@@ -1087,12 +1080,15 @@ debug_close_file(struct DebugFileInfo* it)
 static void 
 debug_close_all_files()
 {
-	FILE *debug_file_ptr = NULL;
-	std::vector<DebugFileInfo>::iterator it;
+	if ( ! DebugLogs) return;
 
+	std::vector<DebugFileInfo>::iterator it;
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		debug_file_ptr = (*it).debugFP;
+		if (it->outputTarget != FILE_OUT)
+			continue;
+
+		FILE *debug_file_ptr = (*it).debugFP;
 		if(!debug_file_ptr)
 			continue;
 		int close_result = fclose_wrapper( debug_file_ptr, FCLOSE_RETRY_MAX );
@@ -1544,12 +1540,10 @@ dprintf_touch_log()
 	}
 }
 
-BOOLEAN dprintf_retry_errno( int value );
-
-BOOLEAN dprintf_retry_errno( int value )
+bool dprintf_retry_errno( int value )
 {
 #ifdef WIN32
-	return FALSE;
+	return false;
 #else
 	return value == EINTR;
 #endif
@@ -1569,7 +1563,7 @@ fclose_wrapper( FILE *stream, int maxRetries )
 	int		result = 0;
 
 	int		retryCount = 0;
-	BOOLEAN	done = FALSE;
+	bool	done = FALSE;
 
 	ASSERT( maxRetries >= 0 );
 	while ( !done ) {
@@ -1580,10 +1574,10 @@ fclose_wrapper( FILE *stream, int maxRetries )
 				fprintf( stderr, "fclose_wrapper() failed after %d retries; "
 							"errno: %d (%s)\n",
 							retryCount, errno, strerror( errno ) );
-				done = TRUE;
+				done = true;
 			}
 		} else {
-			done = TRUE;
+			done = true;
 		}
 	}
 
@@ -1681,7 +1675,7 @@ const char * _condor_print_dprintf_info(DebugFileInfo & info, std::string & out)
 	const unsigned int all_category_bits = ((unsigned int)1 << (D_CATEGORY_COUNT-1)) | (((unsigned int)1 << (D_CATEGORY_COUNT-1))-1);
 
 	DebugOutputChoice base = info.choice;
-	PRAGMA_REMIND("TJ: remove this hack for the primary log because DebugFileInfo has no verbose member.")
+	//PRAGMA_REMIND("TJ: remove this hack for the primary log because DebugFileInfo has no verbose member.")
 	DebugOutputChoice verb = info.accepts_all ? AnyDebugVerboseListener : 0;
 	const unsigned int D_ALL_HDR_FLAGS = D_PID | D_FDS | D_CAT;
 	bool has_all_hdr_opts = (info.headerOpts & D_ALL_HDR_FLAGS) == D_ALL_HDR_FLAGS;

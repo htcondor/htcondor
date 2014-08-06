@@ -25,6 +25,17 @@
 #include "selector.h"
 #include "condor_threads.h"
 
+#ifndef SELECTOR_USE_POLL
+#define POLLIN 1
+#define POLLOUT 2
+#define POLLERR 3
+int poll(struct fake_pollfd *, int, int)
+{
+	errno = ENOSYS;
+	return -1;
+}
+#endif
+
 int Selector::_fd_select_size = -1;
 
 Selector::Selector()
@@ -76,6 +87,12 @@ Selector::reset()
 	memset( save_write_fds, 0, fd_set_size * sizeof(fd_set) );
 	memset( save_except_fds, 0, fd_set_size * sizeof(fd_set) );
 #endif
+#ifdef SELECTOR_USE_POLL
+	m_single_shot = SINGLE_SHOT_VIRGIN;
+#else
+	m_single_shot = SINGLE_SHOT_SKIP;
+#endif
+	memset(&m_poll, '\0', sizeof(m_poll));
 
 	if (IsDebugLevel(D_DAEMONCORE)) {
 		dprintf(D_DAEMONCORE | D_VERBOSE, "selector %p resetting\n", this);
@@ -167,6 +184,11 @@ Selector::add_fd( int fd, IO_FUNC interest )
 		free(fd_description);
 	}
 
+	bool new_fd = false;
+	if ((m_single_shot == SINGLE_SHOT_OK) && (m_poll.fd != fd)) {
+		new_fd = true;
+	}
+	m_poll.fd = fd;
 	switch( interest ) {
 
 	  case IO_READ:
@@ -175,6 +197,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 			EXCEPT( "Selector::add_fd(): read fd_set is full" );
 		}
 #endif
+		m_poll.events |= POLLIN;
 		FD_SET( fd, save_read_fds );
 		break;
 
@@ -184,6 +207,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 			EXCEPT( "Selector::add_fd(): write fd_set is full" );
 		}
 #endif
+		m_poll.events |= POLLOUT;
 		FD_SET( fd, save_write_fds );
 		break;
 
@@ -193,9 +217,18 @@ Selector::add_fd( int fd, IO_FUNC interest )
 			EXCEPT( "Selector::add_fd(): except fd_set is full" );
 		}
 #endif
+		m_poll.events |= POLLERR;
 		FD_SET( fd, save_except_fds );
 		break;
 
+	}
+	if ((m_single_shot == SINGLE_SHOT_VIRGIN) || ((m_single_shot == SINGLE_SHOT_OK) && (new_fd == false)))
+	{
+		m_single_shot = SINGLE_SHOT_OK;
+	}
+	else
+	{
+		m_single_shot = SINGLE_SHOT_SKIP;
 	}
 }
 
@@ -208,6 +241,8 @@ Selector::delete_fd( int fd, IO_FUNC interest )
 				fd, _fd_select_size-1 );
 	}
 #endif
+
+	m_single_shot = SINGLE_SHOT_SKIP;
 
 	if (IsDebugLevel(D_DAEMONCORE)) {
 		dprintf(D_DAEMONCORE | D_VERBOSE, "selector %p deleting fd %d\n", this, fd);
@@ -274,11 +309,18 @@ Selector::execute()
 		// select() ignores its first argument on Windows. We still track
 		// max_fd for the display() functions.
 	start_thread_safe("select");
-	nfds = select( max_fd + 1, 
+	if (m_single_shot == SINGLE_SHOT_OK)
+	{
+		nfds = poll(&m_poll, 1, tp ? (1000*tp->tv_sec + tp->tv_usec/1000) : -1);
+	}
+	else
+	{
+		nfds = select( max_fd + 1,
 				  (SELECT_FDSET_PTR) read_fds, 
 				  (SELECT_FDSET_PTR) write_fds, 
 				  (SELECT_FDSET_PTR) except_fds, 
 				  tp );
+	}
 	_select_errno = errno;
 	stop_thread_safe("select");
 	_select_retval = nfds;
@@ -335,15 +377,15 @@ Selector::fd_ready( int fd, IO_FUNC interest )
 	switch( interest ) {
 
 	  case IO_READ:
-		return FD_ISSET( fd, read_fds );
+		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & POLLIN) : FD_ISSET( fd, read_fds );
 		break;
 
 	  case IO_WRITE:
-		return FD_ISSET( fd, write_fds );
+		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & POLLOUT) : FD_ISSET( fd, write_fds );
 		break;
 
 	  case IO_EXCEPT:
-		return FD_ISSET( fd, except_fds );
+		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & POLLERR) : FD_ISSET( fd, except_fds );
 		break;
 
 	}

@@ -37,8 +37,7 @@ class StartdCronJob: public ClassAdCronJob
 	};
 
   private:
-	StartdNamedClassAd	*m_named_ad;
-	int Publish( const char *name, ClassAd *ad );
+	int Publish( const char *name, const char * sep_args, ClassAd *ad );
 };
 
 #endif /* _STARTD_CRON_JOB_H */

@@ -609,13 +609,11 @@ void NordugridJob::doEvaluateState()
 					gmState = GM_CANCEL;
 					break;
 				}
-				if ( exit_code > 128 ) {
-					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, true );
-					jobAd->Assign( ATTR_ON_EXIT_SIGNAL, exit_code - 128 );
-				} else {
-					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
-					jobAd->Assign( ATTR_ON_EXIT_CODE, exit_code );
-				}
+				// We can't distinguish between normal job exit and
+				// exit-by-signal.
+				// Assume it's always a normal exit.
+				jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+				jobAd->Assign( ATTR_ON_EXIT_CODE, exit_code );
 				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock * 60.0 );
 				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, cpu * 60.0 );
 				gmState = GM_STAGE_OUT;
@@ -1300,6 +1298,18 @@ void NordugridJob::NotifyNewRemoteStatus( const char *status )
 	}
 }
 
+// Return the filenames we should use for stdout and stderr in the job
+// directory on the ARC server. We used to name them _condor_stdout/err,
+// but that can cause problems if ARC is submitting into Condor.
+// ARC uses a wrapper script that redirects the job's output to filenames
+// given in the RSL and lets the batch scheduler capture the wrapper's
+// output. If Condor decides to name the wrapper's output files
+// _condor_stdout/err (like when Condor's file transfer is used),
+// the two outputs get intermingled.
+// So starting with 8.0.5, we generate more unique filenames, based on
+// the GlobalJobId attribute. For users who have jobs submitted when
+// upgrading to this version or beyond, we will try using the old names
+// when transferring output if we fail using the new names.
 void NordugridJob::GetRemoteStdoutNames( std::string &std_out, std::string &std_err, bool use_old_names )
 {
 	if ( use_old_names ) {

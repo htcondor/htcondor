@@ -448,6 +448,7 @@ int WritePipeEnd::write(const void* buffer, int len)
 		int ret = len;
 
 		if (m_async_io_error) {
+			if (ERROR_BROKEN_PIPE == m_async_io_error) errno = EPIPE;
 			ret = -1;
 		}
 		else {
@@ -456,6 +457,7 @@ int WritePipeEnd::write(const void* buffer, int len)
 			m_async_io_buf = new char[m_async_io_size];
 			memcpy(m_async_io_buf, buffer, m_async_io_size);
 			if (async_write_helper() == -1) {
+				if (ERROR_BROKEN_PIPE == m_async_io_error) errno = EPIPE;
 				ret = -1;
 			}
 			else {

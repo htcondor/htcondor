@@ -111,6 +111,11 @@ int condor_fsync(int, const char*)
 	return 0;
 }
 
+int condor_fdatasync(int, const char*)
+{
+	return 0;
+}
+
 BEGIN_C_DECLS
 void
 config( int, bool )

@@ -121,6 +121,9 @@ foreach $name (@outfiles) {
 	}
 }
 
+# Remove any existing rescue DAGs.
+runcmd("rm -f job_dagman_jobstate_log.dag.rescue*");
+
 $abnormal = sub 
 {
 	die "Want to see only submit, execute and successful completion\n";

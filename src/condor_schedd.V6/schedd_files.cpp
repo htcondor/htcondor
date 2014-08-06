@@ -177,6 +177,9 @@ void schedd_files_ins(
 void schedd_files(ClassAd *procad)
 
 {
+	if ( !FILEObj ) {
+		return;
+	}
 	FILEObj->file_lock();
 	schedd_files_ins(procad, ATTR_JOB_CMD);	
 	schedd_files_ins(procad, ATTR_JOB_INPUT);

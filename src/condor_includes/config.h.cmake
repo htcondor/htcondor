@@ -207,6 +207,9 @@
 /* Define to 1 if you have the 'access' function. */
 #cmakedefine HAVE_ACCESS 1
 
+/* Define to 1 if you have the 'access' function. */
+#cmakedefine HAVE_EUIDACCESS 1
+
 /* are we compiling support for any backfill systems (USED)*/
 #cmakedefine HAVE_BACKFILL 1
 
@@ -371,6 +374,9 @@
 
 /* Define to 1 if you have the <linux/sockios.h> header file. (USED)*/
 #cmakedefine HAVE_LINUX_SOCKIOS_H 1
+
+/* Define to 1 if you have the <linux/tcp.h> header file. (USED)*/
+#cmakedefine HAVE_LINUX_TCP_H 1
 
 /* Define to 1 if you have the <linux/types.h> header file. (USED)*/
 #cmakedefine HAVE_LINUX_TYPES_H 1
@@ -549,6 +555,9 @@
 /* Define to 1 if you have the '_stati64' function. (USED)*/
 #cmakedefine HAVE__STATI64 1
 
+/* Define to 1 if you have the fdatasync function (Linux) */
+#cmakedefine HAVE_FDATASYNC 1
+
 /* Define to 1 if the system has the type '__int64'. (USED)*/
 #cmakedefine HAVE___INT64 1
 
@@ -591,6 +600,12 @@
 /* Define to 1 if the compiler does not support C++11 but does support TR1 */
 #cmakedefine PREFER_TR1
 
+/* Define to 1 if the OS has support for epoll (Linux) */
+#cmakedefine CONDOR_HAVE_EPOLL
+
+/* Define to 1 if the OS has support for poll (Unix) */
+#cmakedefine CONDOR_HAVE_POLL
+
 /* Define to 1 if the OS has support for the TCP_KEEPALIVE setsockopt (Mac) */
 #cmakedefine HAVE_TCP_KEEPALIVE
 
@@ -602,5 +617,8 @@
 
 /* Define to 1 if the OS has support for the TCP_KEEPINTVL setsockopt */
 #cmakedefine HAVE_TCP_KEEPINTVL
+
+/* Define to 1 if the OS has support for the TCP_USER_TIMEOUT setsockopt */
+#cmakedefine HAVE_TCP_USER_TIMEOUT
 
 #endif

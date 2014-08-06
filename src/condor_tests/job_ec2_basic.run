@@ -78,10 +78,15 @@ if( ! defined( $port ) ) {
 }    
 
 #
-# Start up a personal condor.  Why I need to specify the last three
-# lines is something of a mystery.
+# Start up a personal condor.
+#
+# EC2_RESOURCE_TIMEOUT limits how long this test will hang if Something
+# 	Terrible has happened to the simulator.
+# GRIDMANAGER_JOB_PROBE_INTERVAL speeds up the test by checking for status
+#	changes every five seconds (instead of five minutes, IIRC)
 #
 my $append_condor_config = '
+    EC2_RESOURCE_TIMEOUT = 60
     EC2_GAHP_LOG = $(LOG)/ec2_gahp_log
     GRIDMANAGER_JOB_PROBE_INTERVAL = 5
     DAEMON_LIST = MASTER, SCHEDD, COLLECTOR, NEGOTIATOR, STARTD

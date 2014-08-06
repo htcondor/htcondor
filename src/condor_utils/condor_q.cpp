@@ -284,7 +284,7 @@ fetchQueueFromHost (ClassAdList &list, StringList &attrs, const char *host, char
 	if( schedd_version && *schedd_version ) {
 		CondorVersionInfo v(schedd_version);
 		useFastPath = v.built_since_version(6,9,3) ? 1 : 0;
-		if (v.built_since_version(8, 1, 4)) {
+		if (v.built_since_version(8, 1, 5)) {
 			useFastPath = 2;
 		}
 	}
@@ -376,7 +376,9 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	delete tree;
 
 	if (useFastPath == 2) {
-		return fetchQueueFromHostAndProcessV2(host, constraint, attrs, process_func, process_func_data, connect_timeout, errstack);
+		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, process_func, process_func_data, connect_timeout, errstack);
+		free( constraint);
+		return result;
 	}
 
 	/*
@@ -517,7 +519,7 @@ CondorQ::fetchQueueFromDBAndProcess ( const char *dbconn,
 	
 	while (ad != (ClassAd *) 0) {
 			// Process the data and insert it into the list
-		if ((*process_func) (ad, process_func_data) ) {
+		if ((*process_func) (process_func_data, ad) ) {
 			ad->Clear();
 			delete ad;
 		}

@@ -21,11 +21,6 @@
 #include "condor_common.h"
 #include "killfamily.h"
 #include "../condor_procapi/procapi.h"
-#include "dynuser.h"
-
-#ifdef WIN32
-extern dynuser *myDynuser;
-#endif
 
 KillFamily::KillFamily( pid_t pid, priv_state priv, int test_only )
 {

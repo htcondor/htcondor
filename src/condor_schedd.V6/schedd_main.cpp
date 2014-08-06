@@ -40,11 +40,9 @@
 #include "subsystem_info.h"
 #include "ipv6_hostname.h"
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
-#endif
 #endif
 
 extern "C"
@@ -101,27 +99,14 @@ main_init(int argc, char* argv[])
 		// each creating their own
 	daemonCore->Proc_Family_Init();
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
-		// Intialization of the plugin manager, i.e. loading all
-		// plugins, should be performed before the job queue log is
-		// read so plugins have a chance to learn about all jobs
-		// already in the queue
 	ClassAdLogPluginManager::Load();
-
-		// Load all ScheddPlugins. In reality this doesn't do much
-		// since initializing any plugin manager loads plugins for all
-		// plugin manager.
 	ScheddPluginManager::Load();
 
-		// Tell all ScheddPlugins to initialze themselves
 	ScheddPluginManager::EarlyInitialize();
-
-		// Tell all plugins to initialize themselves
 	ClassAdLogPluginManager::EarlyInitialize();
 #endif
-#endif
-	
+
 		// Initialize all the modules
 	scheduler.Init();
 	scheduler.Register();
@@ -178,14 +163,9 @@ main_init(int argc, char* argv[])
 		// Do a timeout now at startup to get the ball rolling...
 	scheduler.timeout();
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
-		// Tell all ScheddPlugins to initialze themselves
 	ScheddPluginManager::Initialize();
-
-		// Tell all plugins to initialize themselves
 	ClassAdLogPluginManager::Initialize();
-#endif
 #endif
 
 	daemonCore->InstallAuditingCallback( AuditLogNewConnection );

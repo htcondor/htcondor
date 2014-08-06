@@ -87,7 +87,7 @@
 
 #if ( defined USE_STATVFS )
 static int
-detect_nfs_statvfs( const char *path, BOOLEAN *is_nfs )
+detect_nfs_statvfs( const char *path, bool *is_nfs )
 {
 	int status;
 	struct statvfs	buf;
@@ -110,9 +110,9 @@ detect_nfs_statvfs( const char *path, BOOLEAN *is_nfs )
 		return -1;
 	}
 	if ( !strncmp( buf.f_basetype, "nfs", 3 ) ) {
-		*is_nfs = TRUE;
+		*is_nfs = true;
 	} else {
-		*is_nfs = FALSE;
+		*is_nfs = false;
 	}
 # ifdef FS_UTIL_TEST
 	printf( "detect_nfs_statvfs: f_basetype = %s -> %s\n",
@@ -123,7 +123,7 @@ detect_nfs_statvfs( const char *path, BOOLEAN *is_nfs )
 
 #elif( defined USE_STATFS )
 static int
-detect_nfs_statfs( const char *path, BOOLEAN *is_nfs )
+detect_nfs_statfs( const char *path, bool *is_nfs )
 {
 	int status;
 	struct statfs	buf;
@@ -169,9 +169,9 @@ detect_nfs_statfs( const char *path, BOOLEAN *is_nfs )
 	// 1st try: Look at the fstypename string
 # if defined HAVE_STRUCT_STATFS_F_FSTYPENAME
 	if ( !strncmp( buf.f_fstypename, "nfs", 3 ) ) {
-		*is_nfs = TRUE;
+		*is_nfs = true;
 	} else {
-		*is_nfs = FALSE;
+		*is_nfs = false;
 	}
 #  ifdef FS_UTIL_TEST
 	printf( "detect_nfs_statfs: f_fstypename = %s -> %s\n",
@@ -181,9 +181,9 @@ detect_nfs_statfs( const char *path, BOOLEAN *is_nfs )
 	// #2: Look at the f_type value
 # elif defined HAVE_STRUCT_STATFS_F_TYPE
 	if ( buf.f_type == NFS_SUPER_MAGIC ) {
-		*is_nfs = TRUE;
+		*is_nfs = true;
 	} else {
-		*is_nfs = FALSE;
+		*is_nfs = false;
 	}
 #  ifdef FS_UTIL_TEST
 	printf( "detect_nfs_statfs: f_type = %x -> %s\n",
@@ -206,7 +206,7 @@ detect_nfs_statfs( const char *path, BOOLEAN *is_nfs )
 
 int
 fs_detect_nfs( const char *path,
-			   BOOLEAN *is_nfs )
+			   bool *is_nfs )
 {
 #if defined USE_STATFS
 	return detect_nfs_statfs( path, is_nfs );
@@ -216,7 +216,7 @@ fs_detect_nfs( const char *path,
 #  if !defined(WIN32)
 #	warning "No valid fs type detection"
 #  endif
-	*is_nfs = FALSE;
+	*is_nfs = false;
 	return 0;
 #endif
 
@@ -227,7 +227,7 @@ int
 main( int argc, const char *argv[] )
 {
 	const char *path = argv[1];
-	BOOLEAN	is_nfs;
+	bool	is_nfs;
 
 	if ( argc != 2 ) {
 		fprintf( stderr, "usage: fs_util_test path\n" );

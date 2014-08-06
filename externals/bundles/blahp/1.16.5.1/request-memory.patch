@@ -42,7 +42,7 @@ diff -u -r org.glite.ce.blahp/src/scripts/condor_submit.sh org.glite.ce.blahp.pa
    echo -e $xtra_args >> $submit_file
  fi
  
-+if [ "x$req_mem" != "x"]
++if [ "x$req_mem" != "x" ]
 +then
 +  echo "request_memory = $req_mem" >> $submit_file
 +fi

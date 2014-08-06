@@ -46,6 +46,7 @@ typedef struct ScheddStatistics {
    stats_entry_recent<time_t> JobsAccumTimeToStart; // sum of all time jobs spent waiting to start
    stats_entry_recent<time_t> JobsAccumRunningTime; // sum of all time jobs spent running.
    stats_entry_recent<time_t> JobsAccumBadputTime;  // sum of all time jobs spent running badput
+   stats_entry_recent<time_t> JobsAccumExceptionalBadputTime;  // sum of all time jobs spent running badput and the shadow excepted
    stats_entry_recent<time_t> JobsAccumExecuteTime;  // sum of all time jobs spent executing the user code ((reap - start) - (pre + post))
    stats_entry_recent<time_t> JobsAccumPreExecuteTime;  // sum of all time jobs spent transferring input   (max(0, exec - start))
    stats_entry_recent<time_t> JobsAccumPostExecuteTime; // sum of all time jobs spent transferring output  (max(0, reap - post))
@@ -84,6 +85,7 @@ typedef struct ScheddStatistics {
    stats_entry_recent_histogram<time_t> JobsCompletedRuntimes;
    stats_entry_recent_histogram<time_t> JobsBadputRuntimes;
 
+   stats_entry_abs<int> JobsRunning; // number of running jobs, counted so that we can do BY_* and FOR_* counters
    stats_histogram<int64_t> JobsRunningSizes;
    stats_histogram<time_t>  JobsRunningRuntimes;
 
@@ -149,6 +151,7 @@ public:
    bool AnyEnabled();
    void DeferJobsSubmitted(int cluster, int proc);
    void CountJobsSubmitted(); // finish deferred counting of submitted jobs.
+   void ResetJobsRunning(); // reset jobs-running counters/histograms in preparation for count_jobs
 
    // returns a linked list of matches, and sets the last_incr_time of each to updateTime
    ScheddOtherStats * Matches(ClassAd & ad, time_t updateTime);

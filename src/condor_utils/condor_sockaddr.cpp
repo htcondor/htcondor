@@ -3,6 +3,19 @@
 #include "condor_sockaddr.h"
 #include "condor_netaddr.h"
 #include "ipv6_hostname.h"
+#include "condor_debug.h"
+
+
+MyString condor_protocol_to_str(condor_protocol p) {
+	switch(p) {
+		case CP_IPV4: return "IPv4";
+		case CP_IPV6: return "IPv6";
+		default: break; // Silence warnings
+	}
+	MyString ret;
+	ret.formatstr("Invalid protocol %d\n", int(p));
+	return ret;
+}
 
 typedef union sockaddr_storage_ptr_u {
         const struct sockaddr     *raw;
@@ -220,6 +233,8 @@ bool condor_sockaddr::from_sinful(const MyString& sinful) {
 // faithful reimplementation of 'string_to_sin' of internet.c
 bool condor_sockaddr::from_sinful(const char* sinful)
 {
+	if ( !sinful ) return false;
+
 	const char* addr = sinful;
 	bool ipv6 = false;
 	const char* addr_begin = NULL;
@@ -344,7 +359,7 @@ bool condor_sockaddr::from_ip_string(const char* ip_string)
 		return true;
 	} else if (inet_pton(AF_INET6, ip_string, &v6.sin6_addr) == 1) {
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
-		v6.sin6_len = sizeof(sockaddr_in);
+		v6.sin6_len = sizeof(sockaddr_in6);
 #endif
 		v6.sin6_family = AF_INET6;
 		v6.sin6_port = 0;
@@ -462,6 +477,14 @@ bool condor_sockaddr::is_private_network() const
 	return false;
 }
 
+void condor_sockaddr::set_protocol(condor_protocol proto) {
+	switch(proto) {
+		case CP_IPV4: set_ipv4(); break;
+		case CP_IPV6: set_ipv6(); break;
+		default: ASSERT(0); break;
+	}
+}
+
 void condor_sockaddr::set_ipv4() {
 	v4.sin_family = AF_INET;
 }
@@ -562,9 +585,14 @@ bool condor_sockaddr::operator==(const condor_sockaddr& rhs) const
 
 bool condor_sockaddr::is_link_local() const {
 	if (is_ipv4()) {
-		// it begins with 169.254 -> a9 fe
-		uint32_t mask = 0xa9fe0000;
-		return ((uint32_t)v4.sin_addr.s_addr & mask) == mask;
+		static struct in_addr link_mask;
+		static bool initialized = false;
+		if(!initialized) {
+			int converted = inet_pton(AF_INET, "169.254.0.0", &link_mask);
+			ASSERT(converted);
+			initialized = true;
+		}
+		return ((uint32_t)v4.sin_addr.s_addr & link_mask.s_addr) == link_mask.s_addr;
 	} else if (is_ipv6()) {
 		// it begins with fe80
 		return v6.sin6_addr.s6_addr[0] == 0xfe &&

@@ -16,15 +16,14 @@ New features will be added in the 8.1.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-0-6}Version 8.0.6}
+\subsection*{\label{sec:New-8-0-7}Version 8.0.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 8.0.6 not yet released.
-%\item HTCondor version 8.0.6 released on Month Date, 2013.
+\item HTCondor version 8.0.7 released on June 5, 2014.
 
 \end{itemize}
 
@@ -33,13 +32,161 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{ALWAYS\_USE\_LOCAL\_CKPT\_SERVER}
+forces all standard universe job checkpoints to be read from a checkpoint
+server running on the same machine where the job runs.  
+This is only useful
+when all the checkpoint servers are using a common shared file system.
+\Ticket{4265}
+
+\item The new configuration variable \Macro{JOB\_EXECDIR\_PERMISSIONS}
+defines the permissions on a job's scratch directory. 
+It defaults to setting permissions as \emph{0700}.
+\Ticket{4208}
+
+\item An experimental new feature allows the specification of 
+\Prog{icc} on the \Condor{compile} command line,
+instead of \Prog{cc} or \Prog{gcc}, to build standard universe programs 
+with the Intel C compiler. 
+\Ticket{4234}
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug  which caused the memory used by the \Condor{procd}
+grow arbitrarily in size when cgroup-based tracking was in effect.
+\Ticket{4343}
+
+\item Fixed a bug in which any job running on an execute node with a
+process name that had a space character caused the 
+\Condor{procd} to log a short read error repeatedly to the \File{ProcLog}.
+\Ticket{4235}
+
+\item Fixed a bug which would cause the \Condor{schedd} to
+repeatedly crash.
+This occurred when parallel universe jobs were running
+as the \Condor{schedd} was restarted, 
+and if the \Condor{startd} daemons in use by running jobs were 
+also shut down while the \Condor{schedd} was not running.
+\Ticket{4305}
+
+\item Fixed the parsing of the \Condor{q} command line,
+such that it looks for the entire option \Opt{-stream-results},
+instead of only the portion \Opt{-stream}.
+The code now matches what was previously documented in the manual page
+and in the usage output.
+\Ticket{4205}
+
+\item Fixed a bug in the grid universe that could allow a removed job to
+leave the queue without cleaning up all job state on the remote server.
+\Ticket{4216}
+
+\item Fixed the printing of nested ClassAds, so that the nested ClassAds
+can be read back properly.
+\Ticket{3772}
+
+\item Fixed a bug in the \Condor{starter} that could cause a crash if
+the job is evicted while a \Condor{ssh\_to\_job} command is active.
+\Ticket{4251}
+
+\item HTCondor executables are now linked on RHEL 5 platforms using
+both GNU and System V hash styles to support older Linux distributions,
+such as SUSE Enterprise Linux 10.
+\Ticket{4278}
+
+\item Fixed a bug in which \Condor{dagman} did not correctly update
+the node status file at the end of the run for any DAGs containing
+a FINAL node.
+\Ticket{4209}
+
+\item Fixed a bug in which \Condor{dagman} sometimes printed incorrect
+node status counts to the node status file.  Note that this fix also
+included changing one of the strings used as a node status from
+\Expr{"STATUS\_UNREADY"} to \Expr{"STATUS\_NOT\_READY"}.
+\Ticket{4248}
+
+\item Fixed a bug that caused the \Prog{nordugrid\_gahp} to crash if
+the NorduGrid ARC server returned an unexpected response during job
+submission.
+\Ticket{4318}
+
+\item Fixed a bug that caused the \Condor{startd} to crash when
+\Attr{NUM\_SLOTS} was set to 0 and a \Condor{reconfig} command was
+issued.
+\Ticket{4327}
+
+\item Under limited and unusual error conditions,
+the \Condor{schedd} and the \Condor{shadow} could treat a failed 
+file transfer as if it had succeeded.
+As a result, the \Condor{schedd} could try to run a job whose input
+files were not available, 
+or a job could leave the queue as completed,
+despite its output files not being transferred back from the executing
+machine.
+\Ticket{4328}
+
+\item The \Condor{shadow} no longer performs a DNS query while holding
+the lock for the job event logs.
+\Ticket{4377}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-6}Version 8.0.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.0.6 released on February 11, 2014.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item A full port, which includes support for the standard universe,
+is available for the Red Hat Enterprise Linux 7.0 \emph{Beta} release
+on the x86\_64 architecture.
+\Ticket{3629}
+
+\item HTCondor now forces proxies that it delegates 
+to be a minimum of 1024 bits.
+\Ticket{4168}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a rare bug in the \Condor{negotiator} where 
+completely disabled preemption achieved with
+\Expr{PREEMPTION\_REQUIREMENTS = False}
+might still cause a newly started job to be preempted.  
+This bug was much more likely when
+configuration variable \Macro{NEGOTIATOR\_CYCLE\_DELAY} was set lower 
+than the default value.
+\Ticket{4185}
+
+\item Fixed a bug in the \Condor{schedd} which would cause it
+to crash when running remotely submitted parallel universe jobs.
+\Ticket{4163}
+
+\item Fixed a bug with concurrency limits and partitionable slots,
+in which the partitionable slot would consume a concurrency token,
+even though the slot never runs jobs.  This would cause fewer jobs
+than desired to run.
+\Ticket{4145}
+
+\item Fixed a bug in which the Job Exit work fetch hook was prematurely killed.
+\Ticket{3669}
 
 \item When the Windows installer was told to use VMware,
 it configured a requirement for a 
@@ -52,6 +199,39 @@ This configuration has been removed, so that the file is no longer required.
 \item Fixed a crash of the \Condor{shadow}, triggered when a disconnect
 from the \Condor{starter} occurs just as the job terminates.
 \Ticket{4127}
+
+\item Modified the output of \Condor{q},
+such that when invoked with options \Opt{-userlog} and \Opt{-af},
+a blank line and a totals summary line are not displayed.
+\Ticket{4045}
+
+\item For hierarchical group quotas, 
+fixed an incorrect count of the number of jobs when applying a quota.
+\Ticket{4117}
+
+\item Fixed the HTCondor module \Procedure{send\_command} python binding;
+an incorrect argument was only the first character of the daemon's name,
+instead of the full name. 
+This affected the ability to turn off specific daemons,
+as sent to the \Condor{master}.
+\Ticket{4160}
+
+\item Fixed the transfer of files larger than 4Gbytes,
+such that they no longer stop before the transfer is completed.
+This bug presented itself on all Windows systems and on all
+platforms running on a 32-bit architecture.
+\Ticket{4150}
+
+\item Fixed a bug that caused \Condor{submit\_dag} to crash on very
+large DAG input files, such as those larger than 2 Gbytes.
+The new configuration variable \MacroNI{DAGMAN\_USE\_OLD\_DAG\_READER},
+as detailed in section~\ref{param:DAGmanUseOldDagReader},
+allows disabling the new file reader code put in place to fix the bug.
+\Ticket{4171}
+
+\item Fixed a bug that caused attempts to set the CPU affinity 
+on Windows platforms to be quietly ignored.
+\Ticket{4131}
 
 \end{itemize}
 
@@ -827,7 +1007,7 @@ if the job calls \Procedure{mmap} with an unsupported combination of flags.
 \Ticket{3565}
 
 \item Support for \Prog{VMware Workstation} and \Prog{VMware Player} 
-under the \SubmitCmd{vm} universe now works properly on Windows platforms.
+under the \SubmitCmdNI{vm} universe now works properly on Windows platforms.
 \Ticket{3627}
 
 % would have been in 7.9.7, but there was no 7.9.7 release

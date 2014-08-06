@@ -26,6 +26,7 @@
 #include "condor_adtypes.h"
 #include "condor_system.h"
 #include "condor_ipverify.h"
+#include "condor_md.h"
 
 #include <memory>
 
@@ -131,9 +132,9 @@ public:
     ///
 	int listen();
     /// FALSE means this is an incoming connection
-	inline int listen(int p) { if (!bind(FALSE,p)) return FALSE; return listen(); }
+	int listen(condor_protocol proto, int port);
     /// FALSE means this is an incoming connection
-	inline int listen(char *s) { if (!bind(FALSE,s)) return FALSE; return listen(); }
+	int listen(char *s);
 	bool isListenSock() { return _state == sock_special && _special_state == relisock_listen; }
 
     ///
@@ -257,7 +258,9 @@ public:
     const char * isIncomingDataMD5ed();
 
 	int clear_backlog_flag() {bool state = m_has_backlog; m_has_backlog = false; return state;}
+	int clear_read_block_flag() {bool state = m_read_would_block; m_read_would_block = false; return state;}
 
+	bool is_closed() {return rcv_msg.m_closed;}
 //	PROTECTED INTERFACE TO RELIABLE SOCKS
 //
 protected:
@@ -292,10 +295,14 @@ protected:
 
 	class RcvMsg {
 		
+		char m_partial_cksum[MAC_SIZE];
                 CONDOR_MD_MODE  mode_;
                 Condor_MD_MAC * mdChecker_;
 		ReliSock      * p_sock; //preserve parent pointer to use for condor_read/write
-		
+		bool		m_partial_packet; // A partial packet is stored.
+		size_t		m_remaining_read_length; // Length remaining on a partial packet
+		int		m_end; // The end status of the partial packet.
+		Buf		*m_tmp;
 	public:
 		RcvMsg();
                 ~RcvMsg();
@@ -304,7 +311,8 @@ protected:
 
 		ChainBuf	buf;
 		int			ready;
-                bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key);
+		bool m_closed;
+		bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key);
 	} rcv_msg;
 
 	class SndMsg {
@@ -352,6 +360,7 @@ protected:
 	bool m_auth_in_progress;
 
 	bool m_has_backlog;
+	bool m_read_would_block;
 	bool m_non_blocking;
 
 	virtual void setTargetSharedPortID( char const *id );

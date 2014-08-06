@@ -27,7 +27,7 @@
 class SSHDProc : public VanillaProc
 {
 public:
-	SSHDProc(ClassAd* jobAd) : VanillaProc(jobAd) { }
+	SSHDProc(ClassAd* job_ad, bool delete_ad = false);
 
 	virtual int SshStartJob(int std_fds[],char const *std_fnames[]);
 

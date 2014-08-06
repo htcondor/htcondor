@@ -1,0 +1,196 @@
+#!/bin/sh
+##**************************************************************
+##
+## Copyright (C) 1990-2014, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+
+# condor_startd_history_report
+#  Run this daily on a machine like the central manager that has ADMIN permission to all of the startds
+#  It will condor_fetchlog the startd job history from all the startds in the collector, and make a report
+#  about job runtimes, and mail it to the CONDOR_ADMIN.
+
+MAILTO=`condor_config_val CONDOR_ADMIN`
+
+PATH=/usr/sbin:/usr/bin:/bin:$PATH
+MAX_RUNTIME=25200
+
+mv hosts hosts.last
+mv histories.gz histories.last.gz
+
+rm -f JobReport
+rm -f JobReport.csv
+
+echo -n "HTCondor Job Durations report running at " >> JobReport
+date >> JobReport
+
+for host in `condor_status -const 'opsys == "LINUX"' -af Machine | sort -u`
+do
+
+	echo "$host" >> hosts
+	condor_fetchlog $host STARTD_HISTORY
+
+done 2> histories.errors | 
+condor_history -forward -f /dev/stdin -const 'formattime(CompletionDate, "%j") == formattime(time() - (24 * 3600), "%j")' -l | sed -e 's/^$/\*\*\*/' | gzip > histories.gz
+
+GoodStartds=`wc -l hosts`
+echo "Got data from $GoodStartds" >> JobReport
+
+echo >> JobReport
+echo >> JobReport
+
+gunzip < histories.gz | condor_history -forward -f /dev/stdin -const 'owner =!= "boinc" && JobUniverse == 5 && RemoteWallClockTime > 252000' -af User -af RemoteWallClockTime | grep -v Warning: > MaxJobPreemptedJobsDaily
+
+
+gunzip < histories.gz | condor_history -forwards -f /dev/stdin -const 'JobStatus == 4 && ExitBySignal == false && RemoteWallClockTime < 251000' -af User -af RemoteWallClockTime | grep -v Warning: > CompletedJobTimesDaily
+
+gunzip < histories.gz | condor_history -forwards -f /dev/stdin -const 'JobStatus =!= 4 && RemoteWallClockTime < 251000' -af User -af RemoteWallClockTime | grep -v Warning: | awk '{user[$1]+=$2} END {for (i in user) {print i, int(user[i]/3600)}}' > RemovedJobTimesDaily
+
+gunzip < histories.gz | condor_history -forwards -f /dev/stdin -const 'JobStatus == 4 && ExitBySignal == false && RemoteWallClockTime < 251000 && WantGlidein' -af User -af RemoteWallClockTime | grep -v Warning: | awk '{user[$1]+=$2} END {for (i in user) {print i, int(user[i]/3600)}}' > UserWantedGlidein
+
+gunzip < histories.gz | condor_history -forwards -f /dev/stdin -const 'JobStatus == 4 && ExitBySignal == false && RemoteWallClockTime < 251000' -format "%s " User -format "%d." ClusteriD -format "%d\n" ProcId | grep -v Warning: | sort | uniq -c | awk '{print $2}' | sort | uniq -c > UserDistinctJobs
+
+TotalJobs=`wc -l < CompletedJobTimesDaily`
+TotalHours=`awk '{s+=$2} END {print int(s/3600)}' < CompletedJobTimesDaily`
+
+printf "%-12s %30s %8s %8s %8s %6s %6s %8s  %8s  %8s %8s %8s %8s %8s\n" User Schedd Starts Restarted Total Short OSGable Removed 1st Median 3rd Max Mean SD >> JobReport
+printf "%-12s %30s %8s %8s %8s %6s %6s %8s  %8s  %8s %8s %8s %8s %8s\n" "" "" "" Jobs Hours Jobs Hours Hours Quartile Runtime Quartile Runtime Runtime >> JobReport
+echo >> JobReport
+
+printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n" User Schedd Starts Restarted Total Short OSGable Removed 1st Median 3rd Max Mean SD >> JobReport.csv
+
+for user in `awk '{print $1}' CompletedJobTimesDaily | sort -u`
+do
+	PerUserTotalStarts=0
+	PerUserMin=0
+	PerUser25th=0
+	PerUser50th=0
+	PerUser75th=0
+	PerUserMax=0
+
+	PerUserTotalStarts=`grep -c "^$user " < CompletedJobTimesDaily`
+	PerUserMin=`grep "^$user " < CompletedJobTimesDaily | sort -n -k 2 | awk '{print $2}' | sed -ne 1p`
+
+	line=$(($PerUserTotalStarts/4))
+	if [[ $line -eq 0 ]]
+	then
+		line=1
+	fi
+	PerUser25th=`grep "^$user " CompletedJobTimesDaily | sort -n -k 2 | awk '{print $2}' | sed -ne "${line}p"`
+
+	line=$(($PerUserTotalStarts/2))
+	if [[ $line -eq 0 ]]
+	then
+		line=1
+	fi
+	PerUser50th=`grep "^$user " CompletedJobTimesDaily | sort -n -k 2 | awk '{print $2}' | sed -ne "${line}p"`
+
+	line=$(($PerUserTotalStarts/4 * 3))
+	if [[ $line -eq 0 ]]
+	then
+		line=1
+	fi
+	PerUser75th=`grep "^$user " CompletedJobTimesDaily | sort -n -k 2 | awk '{print $2}' | sed -ne "${line}p"`
+	PerUserMax=`grep "^$user " < CompletedJobTimesDaily | sort -n -k 2 | awk '{print $2}' | sed -ne '$p'`
+
+	PerUserMean=0
+	PerUserMean=`grep "^$user " < CompletedJobTimesDaily | awk '{sum += $2} END {print int(sum/NR)}'`
+	PerUserSD=`grep "^$user " < CompletedJobTimesDaily | awk '{sum += $2;sumsq+=$2*$2} END {print int(sqrt(sumsq/NR - (sum/NR)**2))}'`
+
+	PerUserTotal=`grep "^$user " < CompletedJobTimesDaily | awk '{sum += $2} END {print sum}'`
+
+	PerUserShort=`grep "^$user " CompletedJobTimesDaily | awk '{if ($2 < 60) {print}}' | wc -l`
+
+	h=$(($PerUser25th/3600))
+	m=$((($PerUser25th - $h * 3600) / 60))
+	s=$(($PerUser25th%60))
+	PerUser25thStr=`printf "%02d:%02d" $h $m`
+
+	h=$(($PerUser50th/3600))
+	m=$((($PerUser50th - $h * 3600) / 60))
+	s=$(($PerUser50th%60))
+	PerUser50thStr=`printf "%02d:%02d" $h $m`
+
+	h=$(($PerUser75th/3600))
+	m=$((($PerUser75th - $h * 3600) / 60))
+	s=$(($PerUser75th%60))
+	PerUser75thStr=`printf "%02d:%02d" $h $m`
+
+	h=$(($PerUserMax/3600))
+	m=$((($PerUserMax - $h * 3600) / 60))
+	s=$(($PerUserMax%60))
+	PerUserMaxStr=`printf "%02d:%02d" $h $m`
+
+	h=$(($PerUserMean/3600))
+	m=$((($PerUserMean - $h * 3600) / 60))
+	s=$(($PerUserMean%60))
+	PerUserMeanStr=`printf "%02d:%02d" $h $m`
+
+	h=$(($PerUserSD/3600))
+	m=$((($PerUserSD - $h * 3600) / 60))
+	s=$(($PerUserSD%60))
+	PerUserSDStr=`printf "%02d:%02d" $h $m`
+
+	PerUserTotalStr=$(($PerUserTotal/3600))
+	
+	AccountingUser=${user%%@*}
+	AccountingSubmit=${user##${AccountingUser}}
+
+	PerUserPotentialGlidein=`grep "^$user " <  UserWantedGlidein | awk '{print $2}'`
+	if [ ${PerUserPotentialGlidein}"0" -eq "0" ]
+	then
+		PerUserPotentialGlidein=0
+	fi
+
+	PerUserDistinctJobs=`grep " $user\$" <  UserDistinctJobs | awk '{print $1}'`
+	if [ ${PerUserDistinctJobs}"0" -eq "0" ]
+	then
+		PerUserDistinctJobs=0
+	fi
+	PerUserRestartedJobs=$(($PerUserTotalStarts - $PerUserDistinctJobs))
+
+	PerUserRemovedHours=`grep "^$user " <  RemovedJobTimesDaily | awk '{print $2}'`
+	if [ ${PerUserRemovedHours}"0" -eq "0" ]
+	then
+		PerUserRemovedHours=0
+	fi
+
+	printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n" $AccountingUser $AccountingSubmit $PerUserTotalStarts $PerUserRestartedJobs $PerUserTotalStr $PerUserShort $PerUserPotentialGlidein $PerUserRemovedHours $PerUser25th $PerUser50th $PerUser75th $PerUserMax $PerUserMean $PerUserSD  | tr -d '@' >> JobReport.csv
+
+	printf "%-12s %30s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s %8s\n" $AccountingUser $AccountingSubmit $PerUserTotalStarts $PerUserRestartedJobs $PerUserTotalStr $PerUserShort $PerUserPotentialGlidein $PerUserRemovedHours $PerUser25thStr $PerUser50thStr $PerUser75thStr $PerUserMaxStr $PerUserMeanStr $PerUserSDStr 
+done | tr -d '@' | sort -k 5n >> JobReport
+
+
+echo >> JobReport
+echo "Total completed jobs yesterday: $TotalJobs" >> JobReport
+echo "Using a total of $TotalHours hours" >> JobReport
+
+
+cat >> JobReport <<EOF
+
+The following users have run vanilla jobs that have hit the MaxJobRetirementTime limit yesterday.
+
+# of	User
+Jobs
+----	----
+EOF
+
+awk '{print $1}' MaxJobPreemptedJobsDaily | sort | uniq -c | sort -n >> JobReport
+
+/bin/mailx -a JobReport.csv -s "HTCondor Job Durations Report" $MAILTO < JobReport
+
+exit 0

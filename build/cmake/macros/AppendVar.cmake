@@ -27,3 +27,10 @@ MACRO (APPEND_VAR _VAR _VAL)
 	set (${_VAR} ${${_VAR}} PARENT_SCOPE )
 
 ENDMACRO(APPEND_VAR)
+
+
+macro(append_target_property_flag _target _property _flag)
+    get_property(_val TARGET ${_target} PROPERTY ${_property})
+    set(_val "${_val} ${_flag}")
+    set_target_properties(${_target} PROPERTIES ${_property} ${_val})
+endmacro(append_target_property_flag)

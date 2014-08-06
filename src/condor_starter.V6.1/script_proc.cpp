@@ -260,6 +260,7 @@ ScriptProc::StartJob()
 	                                    PRIV_USER_FINAL,
 	                                    1,
 	                                    FALSE,
+	                                    FALSE,
 	                                    &job_env,
 	                                    Starter->jic->jobIWD(),
 	                                    NULL,

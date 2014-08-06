@@ -544,8 +544,8 @@ int main( int argc, char *argv[] )
 
 	// load the supplied config if specified
 	if (optional_config) {
-		process_config_source( optional_config, "special config", NULL, true);
-		//process_config_source( optional_config, "special config", get_local_hostname().Value(), true);
+		process_config_source( optional_config, 0, "special config", NULL, true);
+		//process_config_source( optional_config, 0, "special config", get_local_hostname().Value(), true);
 
 		// ZKM TODO FIXME check the success of loading the config
 	}
@@ -558,10 +558,7 @@ int main( int argc, char *argv[] )
 		}
 	}
 
-	if(daemon) {
-		delete daemon;
-		daemon = NULL;
-	}
+	delete daemon;
 
 	return (all_okay ? 0 : 1);
 

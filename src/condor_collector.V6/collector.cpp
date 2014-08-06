@@ -311,6 +311,9 @@ void CollectorDaemon::Init()
 
     }
 
+	// add an exponential moving average counter of updates received.
+	daemonCore->dc_stats.New("Collector", "UpdatesReceived", AS_COUNT | IS_CLS_SUM_EMA_RATE | IF_BASICPUB);
+
 	forkQuery.Initialize( );
 }
 
@@ -369,24 +372,32 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 
 		// See if query ad asks for server-side projection
 	string projection = "";
+		// turn projection string into a set of attributes
+	classad::References proj;
+	bool evaluate_projection = false;
+	if (cad.LookupString(ATTR_PROJECTION, projection) && ! projection.empty()) {
+		StringTokenIterator list(projection);
+		const std::string * attr;
+		while ((attr = list.next_string())) { proj.insert(*attr); }
+	} else if (cad.Lookup(ATTR_PROJECTION)) {
+		// if projection is not a simple string, then assume that evaluating it as a string in the context of the ad will work better
+		// (the negotiator sends this sort of projection)
+		evaluate_projection = true;
+	}
 
 	while ( (curr_ad=results.Next()) )
     {
-		StringList expanded_projection;
-		StringList *attr_whitelist=NULL;
-
-		projection = "";
-		cad.EvalString(ATTR_PROJECTION, curr_ad, projection);
-		SimpleList<MyString> projectionList;
-
-		::split_args(projection.c_str(), &projectionList);
-
-		if (projectionList.Number() > 0) {
-			computeProjection(curr_ad, &projectionList, expanded_projection);
-			attr_whitelist = &expanded_projection;
+		if (evaluate_projection) {
+			proj.clear();
+			projection.clear();
+			if (cad.EvalString(ATTR_PROJECTION, curr_ad, projection) && ! projection.empty()) {
+				StringTokenIterator list(projection);
+				const std::string * attr;
+				while ((attr = list.next_string())) { proj.insert(*attr); }
+			}
 		}
-		
-        if (!sock->code(more) || !putClassAd(sock, *curr_ad, false, attr_whitelist))
+
+        if (!sock->code(more) || !putClassAd(sock, *curr_ad, 0, proj.empty() ? NULL : &proj))
         {
             dprintf (D_ALWAYS,
                     "Error sending query result to client -- aborting\n");
@@ -687,6 +698,8 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 {
     int	insert;
 	ClassAd *cad;
+
+	daemonCore->dc_stats.AddToAnyProbe("UpdatesReceived", 1);
 
 	/* assume the ad is malformed... other functions set this value */
 	insert = -3;

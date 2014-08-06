@@ -50,6 +50,7 @@
 #include "sshd_proc.h"
 #include "condor_base64.h"
 #include "my_username.h"
+#include <Regex.h>
 
 extern "C" int get_random_int();
 extern void main_shutdown_fast();
@@ -386,8 +387,7 @@ CStarter::ShutdownGraceful( void )
 	if (!jobRunning) {
 		dprintf(D_FULLDEBUG, 
 				"Got ShutdownGraceful when no jobs running.\n");
-		this->allJobsDone();
-		return 1;
+		return ( this->allJobsDone() );
 	}	
 	return 0;
 }
@@ -1412,6 +1412,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			PRIV_USER_FINAL,
 			setup_reaper,
 			FALSE,
+			FALSE,
 			&setup_env,
 			GetWorkingDir(),
 			NULL,
@@ -1569,12 +1570,12 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	argarray = NULL;
 
 
-	ClassAd sshd_ad;
-	sshd_ad.CopyAttribute(ATTR_REMOTE_USER,jobad);
-	sshd_ad.CopyAttribute(ATTR_JOB_RUNAS_OWNER,jobad);
-	sshd_ad.Assign(ATTR_JOB_CMD,sshd.Value());
+	ClassAd *sshd_ad = new ClassAd;
+	sshd_ad->CopyAttribute(ATTR_REMOTE_USER,jobad);
+	sshd_ad->CopyAttribute(ATTR_JOB_RUNAS_OWNER,jobad);
+	sshd_ad->Assign(ATTR_JOB_CMD,sshd.Value());
 	CondorVersionInfo ver_info;
-	if( !sshd_arglist.InsertArgsIntoClassAd(&sshd_ad,&ver_info,&error_msg) ) {
+	if( !sshd_arglist.InsertArgsIntoClassAd(sshd_ad,&ver_info,&error_msg) ) {
 		return SSHDFailed(s,
 			"Failed to insert args into sshd job description: %s",
 			error_msg.Value());
@@ -1583,7 +1584,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// matter what we pass here.  Instead, we depend on sshd_shell_init
 		// to restore the environment that was saved by sshd_setup.
 		// However, we may as well pass the desired environment.
-	if( !setup_env.InsertEnvIntoClassAd(&sshd_ad,&error_msg,NULL,&ver_info) ) {
+	if( !setup_env.InsertEnvIntoClassAd(sshd_ad,&error_msg,NULL,&ver_info) ) {
 		return SSHDFailed(s,
 			"Failed to insert environment into sshd job description: %s",
 			error_msg.Value());
@@ -1623,7 +1624,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	std_fname[2] = sshd_log_fname.Value();
 
 
-	SSHDProc *proc = new SSHDProc(&sshd_ad);
+	SSHDProc *proc = new SSHDProc(sshd_ad, true);
 	if( !proc ) {
 		dprintf(D_ALWAYS,"Failed to create SSHDProc.\n");
 		return FALSE;
@@ -1898,8 +1899,9 @@ CStarter::createTempExecuteDir( void )
 			}
 
 			if ( efs_support ) {
-				wchar_t *WorkingDir_w = new wchar_t[WorkingDir.Length()+1];
-				swprintf(WorkingDir_w, L"%S", WorkingDir.Value());
+				size_t cch = WorkingDir.Length()+1;
+				wchar_t *WorkingDir_w = new wchar_t[cch];
+				swprintf_s(WorkingDir_w, cch, L"%S", WorkingDir.Value());
 				EncryptionDisable(WorkingDir_w, FALSE);
 				delete[] WorkingDir_w;
 				
@@ -3026,12 +3028,19 @@ CStarter::GetJobEnv( ClassAd *jobad, Env *job_env, MyString *env_errors )
 		// the mainjob's env...
 	PublishToEnv( job_env );
 	return true;
-}	
+}
+
+// helper function
+static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, const char * assigned, const char * tag);
 
 void
 CStarter::PublishToEnv( Env* proc_env )
 {
 	ASSERT(proc_env);
+
+		// Write BATCH_SYSTEM environment variable to indicate HTCondor is the batch system.
+	proc_env->SetEnv("BATCH_SYSTEM","HTCondor");
+
 	if( pre_script ) {
 		pre_script->PublishToEnv( proc_env );
 	}
@@ -3081,6 +3090,50 @@ CStarter::PublishToEnv( Env* proc_env )
  
 	MyString env_name;
 
+		// if there are non-fungible assigned resources (i.e. GPUs) pass those assignments down in the environment
+		// we look through all machine resource names looking for an attribute Assigned*, if we find one
+		// then we publish it's value in the environment as _CONDOR_Assigned*,  so for instance, if there is
+		// an AssignedGPU attribute in the machine add, there will be a _CONDOR_AssignedGPU environment
+		// variable with the same value.
+	ClassAd * mad = jic->machClassAd();
+	if (mad) {
+		MyString restags;
+		if (mad->LookupString(ATTR_MACHINE_RESOURCES, restags)) {
+			StringList tags(restags.c_str());
+			tags.rewind();
+			const char *tag;
+			while ((tag = tags.next())) {
+				MyString attr("Assigned"); attr += tag;
+
+				// we need to publish Assigned resources in the environment. the rules are 
+				// a bit wierd here. we publish if there are any assigned, we also always
+				// publish if there is a config knob ENVIRONMENT_FOR_Assigned<tag> even if
+				// there are none assigned, so long as there are any defined.
+				MyString env_name;
+				MyString param_name("ENVIRONMENT_FOR_"); param_name += attr;
+				param(env_name, param_name.c_str());
+
+				MyString assigned;
+				bool is_assigned = mad->LookupString(attr.c_str(), assigned);
+				if (is_assigned || (mad->Lookup(tag) &&  ! env_name.empty())) {
+
+					if ( ! is_assigned) {
+						param_name = "ENVIRONMENT_VALUE_FOR_UN"; param_name += attr;
+						param(assigned, param_name.c_str());
+					}
+
+					if ( ! env_name.empty()) {
+						SetEnvironmentForAssignedRes(proc_env, env_name.c_str(), assigned.c_str(), tag);
+					}
+
+					env_name = base;
+					env_name += attr;
+					proc_env->SetEnv(env_name.Value(), assigned.c_str());
+				}
+			}
+		}
+	}
+
 		// path to the output ad, if any
 	const char* output_ad = jic->getOutputAdFile();
 	if( output_ad && !(output_ad[0] == '-' && output_ad[1] == '\0') ) {
@@ -3128,16 +3181,161 @@ CStarter::PublishToEnv( Env* proc_env )
 	proc_env->SetEnv("TMP", GetWorkingDir()); // Windows
 }
 
+// parse an environment prototype string of the form  key[[=/regex/replace/] key2=/regex2/replace2/]
+// where the / that separates the parts of the regex can be any non-whitespace character
+//
+static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, const char * assigned, const char * tag)
+{
+	const char * env_id_separator = ","; // maybe get this from config someday?
+
+	// multiple prototypes are permitted.
+	for (;;) {
+		while (isspace(*proto)) ++proto;
+		if ( ! *proto) { return; }
+
+		std::string rhs = ""; // the value that we will (eventually) assign to the environment variable
+
+		dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment proto '%s'\n", tag, proto);
+
+		const char * peq = strchr(proto, '=');
+		if ( ! peq) {
+			// special case - if no equal sign, the proto is just an environment name
+			// HACK!! 
+			// very special case, when proto is CUDA_VISIBLE_DEVICES, or GPU_DEVICE_ORDINAL
+			// we know that we have to strip the alpha part of the GPU id, as well as any whitespace.
+			if (MATCH == strcmp(proto, "CUDA_VISIBLE_DEVICES") || MATCH == strcmp(proto, "GPU_DEVICE_ORDINAL")) {
+				// strip everthing but digits and , from the assigned gpus value
+				for (const char * p = assigned; *p; ++p) {
+					if (isdigit(*p) || *p == ',') rhs += *p;
+				}
+				assigned = rhs.c_str();
+			}
+			dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s setting env %s=%s\n", tag, proto, assigned);
+			proc_env->SetEnv(proto, assigned);
+			return;
+		}
+
+		std::string env_name;
+		env_name.insert(0, proto, 0, (size_t)(peq - proto));
+		++peq; while(isspace(*peq)) ++peq;
+		// the next character we see is the regex separator character
+		// usually it will be / but it could be any non-whitespace character
+		// we expect to see 3 of them. 
+		char chRe = *peq;
+		const char * pre = peq+1;
+		const char * psub = strchr(pre, chRe);
+		const char * pend = psub ? strchr(psub+1,chRe) : psub;
+		if ( ! psub || ! pend ) {
+			dprintf(D_ALWAYS|D_FAILURE, "Assigned%s environment '%s' ignored - missing replacment end marker: %s\n", tag, env_name.c_str(), peq);
+			break;
+		}
+		// at this point if your expression is /aa/bbb/
+		//                              peq----^^ ^   ^
+		//                              pre-----| |   |
+		//                              psub------|   |
+		//                              pend----------|
+
+		// compile the pattern of the regular expression.
+		std::string pat;
+		pat.insert(0, pre, 0, (psub - pre));
+
+		const char * errstr = NULL; int erroff= 0;
+		int re_opts = 0;
+		pcre *re = pcre_compile(pat.c_str(), re_opts, &errstr, &erroff, NULL);
+		if ( ! re) {
+			dprintf(D_ALWAYS | D_FAILURE, "Assigned%s environment '%s' regex error %s at offset %d in: %s\n",
+				tag, env_name.c_str(), errstr ? errstr : "", erroff, pat.c_str());
+			break;
+		}
+
+		// HACK! special magic for CUDA_VISIBLE_DEVICES
+		if (env_name == "CUDA_VISIBLE_DEVICES") {
+			// strip everthing but digits and , from the assigned gpus value
+			for (const char * p = assigned; *p; ++p) {
+				if (isdigit(*p) || *p == ',') rhs += *p;
+			}
+		} else {
+			const char * resid;
+			int cGroups = 0;
+			pcre_fullinfo(re, NULL, PCRE_INFO_CAPTURECOUNT, &cGroups);
+			int ovecsize = 3 * (cGroups + 1); // +1 for the string itself
+			int * ovector = (int *) malloc(ovecsize * sizeof(int));
+
+			dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' pattern: %s\n", tag, env_name.c_str(), peq);
+
+			StringList ids(assigned);
+			ids.rewind();
+			while ((resid = ids.next())) {
+				if ( ! rhs.empty()) { rhs += env_id_separator; }
+				int cchresid = (int)strlen(resid);
+				int status = pcre_exec(re, NULL, resid, cchresid, 0, 0, ovector, ovecsize);
+				if (status >= 0) {
+					const struct _pcre_vector { int start; int end; } * groups = (const struct _pcre_vector*)ovector;
+					dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' match at %d,%d of pattern: %s\n", tag, env_name.c_str(), groups[0].start, groups[0].end, pat.c_str());
+					if (groups[0].start > 0) { rhs.append(resid, 0, groups[0].start); }
+					const char * ps = psub;
+					while (*++ps && ps < pend) {
+						if (ps[0] == '$' && isdigit(ps[1])) {
+							int ngrp = *++ps - '0';
+							if (ngrp < status) { rhs.append(resid, groups[ngrp].start, groups[ngrp].end - groups[ngrp].start); }
+						} else {
+							rhs += *ps;
+						}
+					}
+					if (groups[0].end < cchresid) { rhs.append(resid, groups[0].end, cchresid - groups[0].end); }
+				} else {
+					dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' no-match of pattern: %s\n", tag, env_name.c_str(), pat.c_str());
+					rhs += resid;
+				}
+			}
+			free(ovector);
+		}
+
+		pcre_free(re);
+
+		proc_env->SetEnv(env_name.c_str(), rhs.c_str());
+
+		proto = pend+1;
+		if (*proto == ',') ++proto; // in case there is a comma separating the fields.
+	}
+}
 
 int
 CStarter::getMySlotNumber( void )
 {
-	
+	int slot_number = 0; // default to 0, let our caller decide how to interpret that.
+
+#if 1
+	MyString slot_name;
+	if (param(slot_name, "STARTER_SLOT_NAME")) {
+		// find the first number in the slot name, that's our slot number.
+		const char * tmp = slot_name.c_str();
+		while (*tmp && (*tmp < '0' || *tmp > '9')) ++tmp;
+		if (*tmp) slot_number = atoi(tmp);
+	} else {
+		// legacy (before 8.1.5), assume that the log filename ends with our slot name.
+		slot_name = this->getMySlotName();
+		if ( ! slot_name.empty()) {
+			MyString prefix;
+			if ( ! param(prefix, "STARTD_RESOURCE_PREFIX")) {
+				prefix = "slot";
+			}
+
+			const char * tmp = strstr(slot_name.c_str(), prefix.Value());
+			if (tmp) {
+				prefix += "%d";
+				if (sscanf(tmp, prefix.Value(), &slot_number) < 1) {
+					// if we couldn't parse it, leave it at 0.
+					slot_number = 0;
+				}
+			}
+		}
+	}
+#else
+
 	char *logappend = param("STARTER_LOG");		
 	char const *tmp = NULL;
 		
-	int slot_number = 0; // default to 0, let our caller decide how to 
-						 // interpret that.  
 			
 	if ( logappend ) {
 			// We currently use the extension of the starter log file
@@ -3165,18 +3363,21 @@ CStarter::getMySlotNumber( void )
 
 		free(logappend);
 	}
+#endif
 
 	return slot_number;
 }
 
 MyString
-CStarter::getMySlotName(void) {
-	
-	char *logappend = param("STARTER_LOG");		
-	const char *tmp = NULL;
-		
+CStarter::getMySlotName(void)
+{
 	MyString slotName = "";
-			
+	if (param(slotName, "STARTER_SLOT_NAME")) {
+		return slotName;
+	}
+
+	// legacy (before 8.1.5), assume that the log filename ends with our slot name.
+	char *logappend = param("STARTER_LOG");
 	if ( logappend ) {
 			// We currently use the extension of the starter log file
 			// name to determine which slot we are.  Strange.
@@ -3192,7 +3393,7 @@ CStarter::getMySlotName(void) {
 			prefix = ".slot";
 		}
 
-		tmp = strstr(log_basename, prefix.Value());
+		const char *tmp = strstr(log_basename, prefix.Value());
 		if ( tmp ) {				
 			slotName = (tmp + 1); // skip the .
 		} 

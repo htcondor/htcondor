@@ -556,8 +556,7 @@ static int parse_autoformat_arg(
 
 		const char * parg = argv[ixArg];
 		const char * pattr = parg;
-		void * cust_fmt = NULL;
-		FormatKind cust_kind = PRINTF_FMT;
+		CustomFormatFn cust_fmt;
 
 		// If the attribute/expression begins with # treat it as a magic
 		// identifier for one of the derived fields that we normally display.
@@ -565,25 +564,21 @@ static int parse_autoformat_arg(
 			/*
 			++parg;
 			if (MATCH == strcasecmp(parg, "SLOT") || MATCH == strcasecmp(parg, "SlotID")) {
-				cust_fmt = (void*)format_slot_id;
-				cust_kind = INT_CUSTOM_FMT;
+				cust_fmt = format_slot_id;
 				pattr = ATTR_SLOT_ID;
 				App.projection.AppendArg(pattr);
 				App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
 				App.projection.AppendArg(ATTR_NAME);
 			} else if (MATCH == strcasecmp(parg, "PID")) {
-				cust_fmt = (void*)format_jobid_pid;
-				cust_kind = STR_CUSTOM_FMT;
+				cust_fmt = format_jobid_pid;
 				pattr = ATTR_JOB_ID;
 				App.projection.AppendArg(pattr);
 			} else if (MATCH == strcasecmp(parg, "PROGRAM")) {
-				cust_fmt = (void*)format_jobid_program;
-				cust_kind = STR_CUSTOM_FMT;
+				cust_fmt = format_jobid_program;
 				pattr = ATTR_JOB_ID;
 				App.projection.AppendArg(pattr);
 			} else if (MATCH == strcasecmp(parg, "RUNTIME")) {
-				cust_fmt = (void*)format_int_runtime;
-				cust_kind = INT_CUSTOM_FMT;
+				cust_fmt = format_int_runtime;
 				pattr = ATTR_TOTAL_JOB_RUN_TIME;
 				App.projection.AppendArg(pattr);
 			} else {
@@ -621,24 +616,11 @@ static int parse_autoformat_arg(
 
 		lbl += fCapV ? "%V" : "%v";
 		if (diagnostic) {
-			printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for %x[%s]\n",
-				ixArg, lbl.Value(), wid, opts, (int)(long long)cust_fmt, pattr);
+			printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for %llx[%s]\n",
+				ixArg, lbl.Value(), wid, opts, (long long)(StringCustomFormat)cust_fmt, pattr);
 		}
 		if (cust_fmt) {
-			switch (cust_kind) {
-				case INT_CUSTOM_FMT:
-					print_mask.registerFormat(NULL, wid, opts, (IntCustomFmt)cust_fmt, pattr);
-					break;
-				case FLT_CUSTOM_FMT:
-					print_mask.registerFormat(NULL, wid, opts, (FloatCustomFmt)cust_fmt, pattr);
-					break;
-				case STR_CUSTOM_FMT:
-					print_mask.registerFormat(NULL, wid, opts, (StringCustomFmt)cust_fmt, pattr);
-					break;
-				default:
-					print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
-					break;
-			}
+			print_mask.registerFormat(NULL, wid, opts, cust_fmt, pattr);
 		} else {
 			print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
 		}
@@ -717,7 +699,7 @@ format_job_id(int clusterId, AttrList * ad, Formatter & /*fmt*/)
 }
 
 static const char *
-format_job_cmd_and_args(char * cmd, AttrList * ad, Formatter & /*fmt*/)
+format_job_cmd_and_args(const char * cmd, AttrList * ad, Formatter & /*fmt*/)
 {
 	static MyString ret;
 	ret = cmd;
@@ -740,6 +722,14 @@ static void AddPrintColumn(const char * heading, int width, int opts, const char
 	mask.registerFormat("%v", wid, opts, expr);
 }
 
+#if 1
+static void AddPrintColumn(const char * heading, int width, int opts, const char * attr, const CustomFormatFn & fmt)
+{
+	headings.Append(heading);
+	int wid = width ? width : strlen(heading);
+	mask.registerFormat(NULL, wid, opts, fmt, attr);
+}
+#else
 static void AddPrintColumn(const char * heading, int width, int opts, const char * attr, StringCustomFmt fmt)
 {
 	headings.Append(heading);
@@ -755,6 +745,7 @@ static void AddPrintColumn(const char * heading, int width, int opts, const char
 	int wid = width ? width : strlen(heading);
 	mask.registerFormat(NULL, wid, opts, fmt, attr);
 }
+#endif
 
 // setup display mask for default output
 static void init_default_custom_format()

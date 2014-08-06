@@ -23,9 +23,10 @@ use CondorUtils;
 
 
 my $testname = "job_consumption_policies_basic_van";
-my $negotiate_test_passed = 0;
-my $slot_test_passed = 0;
+my $negotiate_test_passed_or_failed = 0;
+my $slot_test_passed_or_failed = 0;
 my $execute_test_passed = 0;
+my $test_passed = 1; # set this to 0 if any subtest fails.
 my $executing = 0;
 
 
@@ -46,7 +47,7 @@ sub timed_callback {
     }
 
     # only do this check if it hasn't already passed:
-    if (!$negotiate_test_passed) {
+    if (!$negotiate_test_passed_or_failed) {
         my $neglog = trimws(`condor_config_val NEGOTIATOR_LOG`);
         my @logdata = `cat $neglog`;
 	my @slines = grep(/(Started Negotiation|Finished Negotiation|Successfully matched with)/, @logdata);
@@ -54,11 +55,13 @@ sub timed_callback {
         my %hist = ();
         my $last = "_";
         my $n = 0;
+        my $nt = 0;
         foreach $line (@slines) {
             # I require that I see all slot matches in single cycle, so quit
             # first cycle-end after I see first match:
             if ($started && ($line =~ /Finished/)) { last; } 
             if ($line =~ /matched with/) { 
+                $nt++;
                 $started = 1;
                 my @f = split / +/, $line;
                 my @f2 = split /@/, $f[5];
@@ -83,15 +86,20 @@ sub timed_callback {
         my $sz = scalar keys %hist;
         if (($sz == 4) && ($hist{"slot1"} == 5) && ($hist{"slot2"} == 4) && ($hist{"slot3"} == 3) && ($hist{"slot4"} == 1)) {
             print "negotiate test passed\n";
-            $negotiate_test_passed = 1;
+            $negotiate_test_passed_or_failed = 1;
+        } elsif ($nt == 13) {
+            print "negotiate test passed, but slot usage is unexpected: [";  print "$_=>$hist{$_}, " for (keys %hist);  print "]\n";
+            #foreach $line (@slines) { print $line; };
+            $negotiate_test_passed_or_failed = 1;
+            $test_passed = 0; # indicate failure, but keep going
         } else {
             # if it failed, wait a little until we check again
-            print "negotiate test did not pass yet, retry...\n";
+            print "negotiate test did not pass yet, saw only $nt jobs $sz slots: [";  print "$_=>$hist{$_}, " for (keys %hist);  print "], retry...\n";
             sleep(5);
         }
     }
 
-    if ($negotiate_test_passed && !$slot_test_passed) {
+    if ($negotiate_test_passed_or_failed && !$slot_test_passed_or_failed) {
         # notice I'm ignoring Disk - it's hard to check disk directly because you have to use a 
         # percentage or fraction, and that means I can't know ahead of time how much disk to expect
         my @res = `condor_status -constraint "SlotTypeID > 0" -format "%d" SlotTypeID -format " %d" SlotWeight -format " %d" Cpus -format " %d" Memory -format " %d\n" Tokens`;
@@ -120,28 +128,34 @@ sub timed_callback {
 
         my $sz = scalar keys %hist;
         my $sz2 = scalar keys %hist2;
-        if (($sz == 4) && ($hist{"1 0 0 95 0"} == 1) && ($hist{"2 0 1 0 0"} == 1) && ($hist{"3 0 5 100 0"} == 1) && ($hist{"4 0 0 0 0"} == 1) && ($sz2 == 4) && ($hist2{"-1 1 1 1 0"} == 5) && ($hist2{"-2 1 1 25 0"} == 4) && ($hist2{"-3 1 0 0 1"} == 3) && ($hist2{"-4 5 5 100 0"} == 1)) {
+        if (($sz == 4) && ($hist{"1 0 0 95 0"} == 1) && ($hist{"2 0 1 0 0"} == 1) && ($hist{"3 0 2 97 0"} == 1) && ($hist{"4 0 0 0 0"} == 1) && ($sz2 == 4) && ($hist2{"-1 1 1 1 0"} == 5) && ($hist2{"-2 1 1 25 0"} == 4) && ($hist2{"-3 1 1 1 1"} == 3) && ($hist2{"-4 5 5 100 0"} == 1)) {
             print "slot test passed\n";
-            $slot_test_passed = 1;
+            $slot_test_passed_or_failed = 1;
+        } elsif (scalar(@res2) == 13) {
+            print "slot test failed to find expected pattern of slot resources.\n";
+            $slot_test_passed_or_failed = 1;
+            $test_passed = 0;
         } else {
-            print "slot test did not pass yet, retry...\n";
-            sleep(5);
+            #print "slot test did not pass yet, retry...\n";
+            #sleep(5);
         }
     }
 
-    if ($slot_test_passed && !$execute_test_passed) {
+    if ($slot_test_passed_or_failed && !$execute_test_passed) {
         my @res = `condor_q -format "%s\n" ProcID -constraint 'JobStatus == 2'`;
         if (scalar(@res) == 13) {
             print "execute test passed\n";
             $execute_test_passed = 1;
         } else {
-            print "execute test did not pass yet, retry...\n";
-            sleep(5);
+            my $jobs = scalar(@res);
+            print "execute test failed, expected 13 executing jobs, only $jobs are seen\n";
+            $execute_test_passed = 1;
+            $test_passed = 0;
         }
     }
 	if($execute_test_passed == 1) { 
 		runToolNTimes("condor_rm -all",1,0);
-		CondorTest::RegisterResult($execute_test_passed,test_name,$testname);
+		CondorTest::RegisterResult($test_passed,test_name,$testname);
 		CondorTest::EndTest();
 	} else {
 		CondorTest::RegisterTimed($testname, \&timed_callback, 15);
@@ -161,7 +175,7 @@ sub execute_callback {
 
 sub exit_callback {
 	print "Ignoring exit call back. Jobs are sleep 0 now.\n";
-    #unless ($execute_test_passed  &&  $slot_test_passed  &&   $negotiate_test_passed) {
+    #unless ($execute_test_passed  &&  $slot_test_passed_or_failed  &&   $negotiate_test_passed_or_failed) {
         #die "Failed to find expected negotiation order or pattern of running jobs";
     #}
 }

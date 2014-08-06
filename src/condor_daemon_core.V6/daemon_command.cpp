@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2011 Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -63,7 +63,9 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 	m_policy(NULL),
 	m_key(NULL),
 	m_sid(NULL),
+	m_prev_sock_ent(NULL),
 	m_async_waiting_time(0),
+	m_comTable(daemonCore->comTable),
 	m_real_cmd(0),
 	m_auth_cmd(0),
 	m_new_session(false),
@@ -73,7 +75,6 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 	m_sock = dynamic_cast<Sock *>(sock);
 
 	m_sec_man = daemonCore->getSecMan();
-	m_comTable = daemonCore->comTable;
 
 	m_handle_req_start_time.getTime();
 
@@ -143,6 +144,9 @@ int DaemonCommandProtocol::doProtocol()
 		case CommandProtocolAcceptUDPRequest:
 			what_next = AcceptUDPRequest();
 			break;
+		case CommandProtocolReadHeader:
+			what_next = ReadHeader();
+			break;
 		case CommandProtocolReadCommand:
 			what_next = ReadCommand();
 			break;
@@ -178,12 +182,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 	}
 
 	int reg_rc = daemonCore->Register_Socket(
-		m_sock,
-		m_sock->peer_description(),
-		(SocketHandlercpp)&DaemonCommandProtocol::SocketCallback,
-		WaitForSocketDataString.c_str(),
-		this,
-		ALLOW);
+			m_sock,
+			m_sock->peer_description(),
+			(SocketHandlercpp)&DaemonCommandProtocol::SocketCallback,
+			WaitForSocketDataString.c_str(),
+			this,
+			ALLOW,
+			HANDLE_READ,
+			&m_prev_sock_ent);
 
 	if(reg_rc < 0) {
 		dprintf(D_ALWAYS, "DaemonCommandProtocol failed to process command from %s because "
@@ -214,7 +220,8 @@ DaemonCommandProtocol::SocketCallback( Stream *stream )
 	async_waiting_stop_time.getTime();
 	m_async_waiting_time += async_waiting_stop_time.difference(&m_async_waiting_start_time);
 
-	daemonCore->Cancel_Socket( stream );
+	daemonCore->Cancel_Socket( stream, m_prev_sock_ent );
+	m_prev_sock_ent = NULL;
 
 	int rc = doProtocol();
 
@@ -230,7 +237,7 @@ DaemonCommandProtocol::SocketCallback( Stream *stream )
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptTCPRequest()
 {
 
-	m_state = CommandProtocolReadCommand;
+	m_state = CommandProtocolReadHeader;
 
 		// we have just accepted a socket or perhaps been given a
 		// socket from HandleReqAsync().  if there is nothing
@@ -469,14 +476,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: UDP message is from %s.\n", who.c_str());
 		}
 
-		m_state = CommandProtocolReadCommand;
+		m_state = CommandProtocolReadHeader;
 		return CommandProtocolContinue;
 }
 
-// Read the command.  This function will either be followed by
-// Authenticate or ExecCommand(), depending on whether authentication
-// was requested.  Soap requests are also handled here.
-DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand()
+// Read the header.  Soap requests are handled here.
+// If this is not a soap request and is a registered command,
+// pass on to ReadCommand.
+DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 {
 	CondorError errstack;
 
@@ -488,7 +495,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		// a daemoncore command int!  [not ever likely, since CEDAR ints are
 		// exapanded out to 8 bytes]  Still, in a perfect world we would replace
 		// with a more foolproof method.
-	char tmpbuf[5];
+	char tmpbuf[6];
 	memset(tmpbuf,0,sizeof(tmpbuf));
 	if ( m_is_tcp ) {
 			// TODO Should we be ignoring the return value of condor_read?
@@ -497,7 +504,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 	}
 #ifdef HAVE_EXT_GSOAP
 	if ( strstr(tmpbuf,"GET") ) {
-		if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
+		if ( param_boolean("USE_SHARED_PORT", true) ) {
+			dprintf(D_ALWAYS, "Received HTTP GET connection from %s -- DENIED because USE_SHARED_PORT=true\n", m_sock->peer_description());
+		}
+		else if ( param_boolean("ENABLE_WEB_SERVER",false) ) {
 			// mini-web server requires READ authorization.
 			if ( daemonCore->Verify("HTTP GET", READ,m_sock->peer_addr(),NULL) ) {
 				m_is_http_get = true;
@@ -509,7 +519,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		}
 	} else {
 		if ( strstr(tmpbuf,"POST") ) {
-			if ( param_boolean("ENABLE_SOAP",false) ) {
+			if ( param_boolean("USE_SHARED_PORT", true) ) {
+				dprintf(D_ALWAYS, "Received HTTP POST connection from %s -- DENIED because USE_SHARED_PORT=true\n", m_sock->peer_description());
+			}
+			else if ( param_boolean("ENABLE_SOAP",false) ) {
 				// SOAP requires SOAP authorization.
 				if ( daemonCore->Verify("HTTP POST",SOAP_PERM,m_sock->peer_addr(),NULL) ) {
 					m_is_http_post = true;
@@ -550,13 +563,75 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 	}
 #endif // HAVE_EXT_GSOAP
 
-	// read in the command from the sock with a timeout value of just 1 second,
-	// since we know there is already some data waiting for us.
-	m_sock->timeout(1);
-	m_result = m_sock->code(m_req);
+		// This was not a soap request; next, see if we have a special command
+		// handler for unknown command integers.
+		//
+		// We do manual CEDAR parsing here to look at the command int directly
+		// without consuming data from the socket.  The first few bytes are the
+		// size of the message, followed by the command int itself.
+	int tmp_req; memcpy(static_cast<void*>(&tmp_req), tmpbuf+1, sizeof(int));
+	tmp_req = ntohl(tmp_req);
+	if (daemonCore->HandleUnregistered() && (tmp_req >= 8)) {
+			// Peek at the command integer if one exists.
+		char tmpbuf2[8+5]; memset(tmpbuf2, 0, sizeof(tmpbuf2));
+		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
+			tmpbuf2, 8+5, 1, MSG_PEEK);
+		char *tmpbuf3 = tmpbuf2 + 5;
+		if (8-sizeof(int) > 0) { tmpbuf3 += 8-sizeof(int); } // Skip padding
+		memcpy(static_cast<void*>(&tmp_req), tmpbuf3, sizeof(int));
+		tmp_req = ntohl(tmp_req);
+
+			// Lookup the command integer in our command table to see if it is unregistered
+		int tmp_cmd_index;
+		if (!daemonCore->CommandNumToTableIndex(tmp_req, &tmp_cmd_index) && (daemonCore->HandleUnregisteredDCAuth() || (tmp_req != DC_AUTHENTICATE))) {
+			ScopedEnableParallel(false);
+
+			if( m_sock_had_no_deadline ) {
+					// unset the deadline we assigned in WaitForSocketData
+				m_sock->set_deadline(0);
+			}
+
+			m_result = daemonCore->CallUnregisteredCommandHandler(tmp_req, m_sock);
+			return CommandProtocolFinished;
+		}
+	}
+
+	m_state = CommandProtocolReadCommand;
+	return CommandProtocolContinue;
+}
+
+// Read the command.  This function will either be followed by
+// Authenticate or ExecCommand(), depending on whether authentication
+// was requested.  Soap requests are also handled here.
+DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand()
+{
+	CondorError errstack;
+
+	m_sock->decode();
+
+	if (m_sock->type() == Stream::reli_sock) {
+		// While we know data is waiting for us, the CEDAR 'code' implementation will
+		// read in all the data to a EOM; this can be an arbitrary number of bytes, depending
+		// on which command is used.
+		bool read_would_block;
+		{
+			BlockingModeGuard guard(static_cast<ReliSock*>(m_sock), 1);
+			m_result = m_sock->code(m_req);
+			read_would_block = static_cast<ReliSock*>(m_sock)->clear_read_block_flag();
+		}
+		if (read_would_block)
+		{
+			dprintf(D_NETWORK, "CommandProtocol read would block; waiting for more data to arrive on the socket.\n");
+			return WaitForSocketData();
+		}
+	}
+	else
+	{
+		m_sock->timeout(1);
+		m_result = m_sock->code(m_req);
+	}
 	// For now, lets set a 20 second timeout, so all command handlers are called with
 	// a timeout of 20 seconds on their socket.
-	m_sock->timeout(20);
 	if(!m_result) {
 		char const *ip = m_sock->peer_ip_str();
 		if(!ip) {
@@ -567,6 +642,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		m_result = FALSE;
 		return CommandProtocolFinished;
 	}
+	m_sock->timeout(20);
 
 	if (m_req == DC_AUTHENTICATE) {
 
@@ -1543,6 +1619,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		}
 
 		m_result = daemonCore->CallCommandHandler(m_req,m_sock,false /*do not delete m_sock*/,true /*do check for payload*/,sec_time,0);
+
+		// update dc stats for number of commands handled, the time spent in this command handler
+		daemonCore->dc_stats.Commands += 1;
+		daemonCore->dc_stats.AddRuntime(getCommandStringSafe(m_req), handler_start_time.combined());
 	}
 
 	return CommandProtocolFinished;

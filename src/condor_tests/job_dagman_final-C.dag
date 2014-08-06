@@ -1,4 +1,4 @@
-NODE_STATUS_FILE job_dagman_final-C.status
+NODE_STATUS_FILE job_dagman_final-C.status 600
 
 # This node fails the first time around, then succeeds.  This is to make
 # sure DAG_STATUS is correct on node retries.

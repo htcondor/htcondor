@@ -28,7 +28,6 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "classad_merge.h"
-#include "dynuser.h"
 #include "condor_auth_x509.h"
 #include "setenv.h"
 #include "my_popen.h"
@@ -40,10 +39,6 @@
 
 #if defined(LINUX)
 #include "glexec_starter.linux.h"
-#endif
-
-#ifdef WIN32
-extern dynuser *myDynuser;
 #endif
 
 Starter::Starter()
@@ -775,20 +770,66 @@ Starter::execDCStarter( Stream* s )
 {
 	ArgList args;
 
-	char* hostname = s_claim->client()->host();
-	if ( resmgr->is_smp() ) {
-		// Note: the "-a" option is a daemon core option, so it
-		// must come first on the command line.
-		args.AppendArg("condor_starter");
-		args.AppendArg("-f");
-		args.AppendArg("-a");
-		args.AppendArg(s_claim->rip()->r_id_str);
-		args.AppendArg(hostname);
-	} else {
-		args.AppendArg("condor_starter");
-		args.AppendArg("-f");
-		args.AppendArg(hostname);
+	// decide whether we are going to pass a -slot-name argument to the starter
+	// by default we do things the pre 8.1.4 way
+	// we default to -slot-name, but that can be disabled by setting STARTER_LOG_NAME_APPEND = true
+	// otherwise the value of this param determines what we append.
+	bool slot_arg = false;
+	enum { APPEND_NOTHING, APPEND_SLOT, APPEND_CLUSTER, APPEND_JOBID } append = APPEND_SLOT;
+
+	// by default, single slots machines get no log append and no slot argument.
+	if ( ! resmgr->is_smp()) {
+		slot_arg = false;
+		append = APPEND_NOTHING;
 	}
+
+	MyString ext;
+	if (param(ext, "STARTER_LOG_NAME_APPEND")) {
+		slot_arg = true;
+		if (MATCH == strcasecmp(ext.c_str(), "Slot")) {
+			append = APPEND_SLOT;
+		} else if (MATCH == strcasecmp(ext.c_str(), "ClusterId") || MATCH == strcasecmp(ext.c_str(), "Cluster")) {
+			append = APPEND_CLUSTER;
+		} else if (MATCH == strcasecmp(ext.c_str(), "JobId")) {
+			append = APPEND_JOBID;
+		} else if (MATCH == strcasecmp(ext.c_str(), "false") || MATCH == strcasecmp(ext.c_str(), "0")) {
+			append = APPEND_NOTHING;
+		} else if (MATCH == strcasecmp(ext.c_str(), "true") || MATCH == strcasecmp(ext.c_str(), "1")) {
+			append = APPEND_SLOT;
+			slot_arg = false;
+		}
+	}
+
+
+	char* hostname = s_claim->client()->host();
+
+	args.AppendArg("condor_starter");
+	args.AppendArg("-f");
+
+	// Note: the "-a" option is a daemon core option, so it
+	// must come first on the command line.
+	if (append != APPEND_NOTHING) {
+		args.AppendArg("-a");
+		switch (append) {
+		case APPEND_CLUSTER: args.AppendArg(s_claim->cluster()); break;
+
+		case APPEND_JOBID: {
+			MyString jobid;
+			jobid.formatstr("%d.%d", s_claim->cluster(), s_claim->proc());
+			args.AppendArg(jobid.c_str());
+		} break;
+
+		default:
+		case APPEND_SLOT: args.AppendArg(s_claim->rip()->r_id_str); break;
+		}
+	}
+
+	if (slot_arg) {
+		args.AppendArg("-slot-name");
+		args.AppendArg(s_claim->rip()->r_id_str);
+	}
+
+	args.AppendArg(hostname);
 	execDCStarter( args, NULL, NULL, s );
 
 	return s_pid;
@@ -964,7 +1005,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
-		                TRUE, env, NULL, &fi, inherit_list, std_fds );
+		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds );
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;
@@ -1078,6 +1119,7 @@ Starter::execOldStarter( void )
 	                                         args,         // arguments
 	                                         PRIV_ROOT,    // start as root
 	                                         main_reaper,  // reaper
+	                                         FALSE,        // no command port
 	                                         FALSE,        // no command port
 	                                         &env,
 	                                         NULL,         // inherit out cwd

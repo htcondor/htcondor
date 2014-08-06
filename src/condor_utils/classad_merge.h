@@ -46,4 +46,10 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
  */
 void MergeClassAdsCleanly(ClassAd *merge_into, ClassAd *merge_from);
 
+/* Like MergeClassAds() but with a set of attributes that will not be merged
+ *
+ */
+int MergeClassAdsIgnoring(ClassAd *merge_into, ClassAd *merge_from,
+						  const AttrNameSet & ignore, bool mark_dirty = true);
+
 #endif

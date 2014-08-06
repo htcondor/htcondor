@@ -241,6 +241,8 @@ typedef enum
 } globus_gram_protocol_job_signal_t;
 
 
+int activate_globus_gsi();
+
 const char *GlobusJobStatusName( int status );
 
 char *get_x509_proxy_filename( void );

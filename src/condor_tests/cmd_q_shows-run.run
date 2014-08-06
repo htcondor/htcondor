@@ -19,11 +19,11 @@
 ##**************************************************************
 
 use CondorTest;
+use Check::SimpleJob;
+use CondorUtils;
 use strict;
 use warnings;
 
-my $cmd      = 'cmd_q_shows-run.cmd';
-my $testdesc =  'Condor_q shows jobs running - vanilla U';
 my $testname = "cmd_q_shows-run";
 my $debuglevel = 2;
 
@@ -33,10 +33,24 @@ sub HELD{5};
 sub RUNNING{2};
 
 my $alreadydone=0;
+my $ClusterId = 0;
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
 
 my $execute = sub {
-	my %args = @_;
-	my $cluster = $args{"cluster"};
 	if($alreadydone == 0) {
 		$alreadydone = 1;
 	} else {
@@ -44,27 +58,27 @@ my $execute = sub {
 	}
 
 	print "ok\n";
-	print "Cluster is - $cluster\n";
+	print "Cluster is - $ClusterId\n";
 	CondorTest::debug("Good, we can't look for a running job without one\n",$debuglevel);
 	my @adarray;
 	my $running = "no";
 	my $status = 1;
-	my $cmd = "condor_q -run $cluster";
-	print "Look for condor_q -run $cluster showing this as a running job - ";
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	my $cmd = "condor_q -run $ClusterId";
+	print "Look for condor_q -run $ClusterId showing this as a running job - ";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
 	if(!$status)
 	{
 		print "bad\n";
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		$cmd = "condor_rm $cluster";
+		$cmd = "condor_rm $ClusterId";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		exit(1)
 	}
 	foreach my $line (@adarray) {
 		chomp($line);
 		CondorTest::debug("$line\n",$debuglevel);
-		if($line =~ /^.*$cluster.*$/) {
-			CondorTest::debug("Cluster $cluster found running!\n",$debuglevel);
+		if($line =~ /^.*$ClusterId.*$/) {
+			CondorTest::debug("Cluster $ClusterId found running!\n",$debuglevel);
 			$running = "yes";
 			last;
 		}
@@ -72,13 +86,13 @@ my $execute = sub {
 
 	if($running eq "no") {
 		print "bad\n";
-		CondorTest::debug("Failed to find $cluster running with condor_q -run \n",$debuglevel);
+		CondorTest::debug("Failed to find $ClusterId running with condor_q -run \n",$debuglevel);
 		exit(1);
 	} else {
 		print "ok\n";
-		$cmd = "condor_rm $cluster";
-		print "Removing $cluster - ";
-		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		$cmd = "condor_rm $ClusterId";
+		print "Removing $ClusterId - ";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
 		if(!$status)
 		{
 			print "bad\n";
@@ -103,15 +117,14 @@ my $success = sub
 };
 
 print "Start a long runniing job - ";
-CondorTest::RegisterExecute($testname, $execute);
-CondorTest::RegisterAbort($testname, $abort);
-CondorTest::RegisterExitedSuccess($testname, $success);
-CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
 
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
-}
+my $runresult = SimpleJob::RunCheck(
+	duration => 0,
+	on_abort => $abort,
+	on_execute => $execute,
+	on_success => $success,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	GetClusterId => $GetClusterId,
+);
+
 

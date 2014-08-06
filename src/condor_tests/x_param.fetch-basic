@@ -1,8 +1,0 @@
-
-universe = vanilla
-type = jobs
-
-ports = dynamic
-condor = nightlies
-localpostsrc = x_fetch_configpostsrc
-daemon_list = master,startd

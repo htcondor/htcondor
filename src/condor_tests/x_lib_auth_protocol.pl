@@ -86,7 +86,7 @@ $executed = sub
 	my $status = 1;
 	my $cmd = "condor_q -debug";
 	#$status = CondorTest::runCondorTool($cmd,\@adarray,2,"Security");
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
 	if(!$status) {
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1);
@@ -114,7 +114,7 @@ $submitted = sub
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_q -l $cluster";
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
 	if(!$status) {
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 		exit(1);

@@ -33,6 +33,7 @@
 
 #include <map>
 #include <string>
+#include <stack>
 using std::string;
 
 class Resource;
@@ -73,24 +74,16 @@ const amask_t A_ALL_PUB	= (A_PUBLIC | A_ALL | A_EVALUATED | A_SHARED_SLOT);
 #define IS_SHARED_SLOT(mask) ((mask) & A_SHARED_SLOT)
 #define IS_ALL(mask)		((mask) & A_ALL)
 
-// This is used as a place-holder value when configuring slot shares of
-// system resources.  It is later updated by dividing the remaining resources
-// evenly between slots using AUTO_SHARE.
-const float AUTO_SHARE = 123;
-
-// The following avoids compiler warnings about == being dangerous
-// for floats.
-#define IS_AUTO_SHARE(share) ((int)share == (int)AUTO_SHARE)
-
-const float UNSET_SHARE = -9999;
-#define IS_UNSET_SHARE(share) (int(share) == int(UNSET_SHARE))
+// we cast share to int before comparison, because it might be a float
+// and we don't want the compiler to complain
+#define IS_AUTO_SHARE(share) ((int)share == AUTO_SHARE)
+const int AUTO_SHARE = -9999;
 
 // This is used as a place-holder value when configuring memory share
 // for a slot.  It is later updated by dividing the remaining resources
 // evenly between slots using AUTO_MEM.
-const int AUTO_MEM = -123;
-const int AUTO_RES = -9999;
-const int AUTO_CPU = -9999;
+const int AUTO_RES = AUTO_SHARE;
+
 
 // This is used with the AttribValue structure to identify the datatype
 // for the value (selects an entry in the union)
@@ -184,11 +177,24 @@ typedef struct _AttribValue {
 
 } AttribValue;
 
+//
+class FullSlotId
+{
+public: 
+	int id;   // static or partitionable id
+	int dyn_id; // dynamic id
+	FullSlotId(int i, int j=0) : id(i), dyn_id(j) {};
+};
+
 // Machine-wide attributes.  
 class MachAttributes
 {
 public:
-    typedef std::map<string, double> slotres_map_t;
+	typedef std::map<string, double, classad::CaseIgnLTStr> slotres_map_t;
+	typedef std::vector<std::string> slotres_assigned_ids_t;
+	typedef std::vector<FullSlotId> slotres_assigned_id_owners_t;
+	typedef std::map<string, slotres_assigned_ids_t, classad::CaseIgnLTStr> slotres_devIds_map_t;
+	typedef std::map<string, slotres_assigned_id_owners_t, classad::CaseIgnLTStr> slotres_devIdOwners_map_t;
 
 	MachAttributes();
 	~MachAttributes();
@@ -217,16 +223,20 @@ public:
 	void final_idle_dprintf();
 
 		// Functions to return the value of shared attributes
-	int				num_cpus()	{ return m_num_cpus; };
-	int				num_real_cpus()	{ return m_num_real_cpus; };
+	double			num_cpus()	{ return m_num_cpus; };
+	double			num_real_cpus()	{ return m_num_real_cpus; };
 	int				phys_mem()	{ return m_phys_mem; };
-	unsigned long   virt_mem()	{ return m_virt_mem; };
+	long long		virt_mem()	{ return m_virt_mem; };
 	float		load()			{ return m_load; };
 	float		condor_load()	{ return m_condor_load; };
 	time_t		keyboard_idle() { return m_idle; };
 	time_t		console_idle()	{ return m_console_idle; };
-    const slotres_map_t& machres() const { return m_machres_map; }
-    const ClassAd& machattr() const { return m_machres_attr; }
+	const slotres_map_t& machres() const { return m_machres_map; }
+	const slotres_devIds_map_t& machres_devIds() const { return m_machres_devIds_map; }
+	const ClassAd& machres_attrs() const { return m_machres_attr; }
+	const char * AllocateDevId(const std::string & tag, int assign_to, int assign_to_sub);
+	bool         ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assign_to, int was_assign_to_sub);
+	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
 
 private:
 
@@ -234,7 +244,7 @@ private:
 	float			m_load;
 	float			m_condor_load;
 	float			m_owner_load;
-	unsigned long   m_virt_mem;
+	long long		m_virt_mem;
 	time_t			m_idle;
 	time_t			m_console_idle;
 	int				m_mips;
@@ -250,11 +260,16 @@ private:
 	time_t			m_last_credd_test;
 #endif
 		// Static info
-	int				m_num_cpus;
-	int				m_num_real_cpus;
+	double			m_num_cpus;
+	double			m_num_real_cpus;
 	int				m_phys_mem;
-    slotres_map_t   m_machres_map;
-    ClassAd         m_machres_attr;
+	slotres_map_t   m_machres_map;
+	slotres_devIds_map_t m_machres_devIds_map;
+	slotres_devIds_map_t m_machres_offline_devIds_map;
+	slotres_devIdOwners_map_t m_machres_devIdOwners_map;
+	static bool init_machine_resource(MachAttributes * pme, HASHITER & it);
+	double init_machine_resource_from_script(const char * tag, const char * script_cmd);
+	ClassAd         m_machres_attr;
 
 	char*			m_arch;
 	char*			m_opsys;
@@ -302,17 +317,20 @@ class CpuAttributes
 {
 public:
     typedef MachAttributes::slotres_map_t slotres_map_t;
+	typedef MachAttributes::slotres_devIds_map_t slotres_devIds_map_t;
+	typedef MachAttributes::slotres_assigned_ids_t slotres_assigned_ids_t;
 
 	friend class AvailAttributes;
 
-	CpuAttributes( MachAttributes*, int slot_type, int num_cpus, 
-				   int num_phys_mem, float virt_mem_fraction,
-				   float disk_fraction,
-                   const slotres_map_t& slotres_map,
+	CpuAttributes( MachAttributes*, int slot_type, double num_cpus,
+				   int num_phys_mem, double virt_mem_fraction,
+				   double disk_fraction,
+				   const slotres_map_t& slotres_map,
 				   MyString &execute_dir, MyString &execute_partition_id );
 
 	void attach( Resource* );	// Attach to the given Resource
-									   
+	void bind_DevIds(int slot_id, int slot_sub_id);   // bind non-fungable resource ids to a slot
+	void unbind_DevIds(int slot_id, int slot_sub_id); // release non-fungable resource ids
 
 	void publish( ClassAd*, amask_t );  // Publish desired info to given CA
 	void compute( amask_t );			  // Actually recompute desired stats
@@ -334,14 +352,17 @@ public:
 	void dprintf( int, const char*, ... );
 	void show_totals( int );
 
-	int num_cpus() { return c_num_cpus; }
-	float get_disk() { return c_disk; }
-	float get_disk_fraction() { return c_disk_fraction; }
-	unsigned long get_total_disk() { return c_total_disk; }
+	double num_cpus() { return c_num_cpus; }
+	bool allow_fractional_cpus(bool allow) { bool old = c_allow_fractional_cpus; c_allow_fractional_cpus = allow; return old; }
+	long long get_disk() { return c_disk; }
+	double get_disk_fraction() { return c_disk_fraction; }
+	long long get_total_disk() { return c_total_disk; }
 	char const *executeDir() { return c_execute_dir.Value(); }
 	char const *executePartitionID() { return c_execute_partition_id.Value(); }
     const slotres_map_t& get_slotres_map() { return c_slotres_map; }
     const MachAttributes* get_mach_attr() { return map; }
+
+	static void swap_attributes(CpuAttributes & attra, CpuAttributes & attrb, int flags);
 
 	CpuAttributes& operator+=( CpuAttributes& rhs);
 	CpuAttributes& operator-=( CpuAttributes& rhs);
@@ -355,24 +376,26 @@ private:
 	float			c_owner_load;
 	time_t			c_idle;
 	time_t			c_console_idle;
-	unsigned long   c_virt_mem;
-	unsigned long   c_disk;
+	long long c_virt_mem;
+	long long c_disk;
 		// total_disk here means total disk space on the partition containing
 		// this slot's execute directory.  Since each slot may have an
 		// execute directory on a different partition, we have to store this
 		// here in the per-slot data structure, rather than in the machine-wide
 		// data structure.
-	unsigned long   c_total_disk;
+	long long c_total_disk;
 
 	int				c_phys_mem;
 	int				c_slot_mem;
-	int				c_num_cpus;    
+	bool			c_allow_fractional_cpus;
+	double			c_num_cpus;
     // custom slot resources
     slotres_map_t c_slotres_map;
     slotres_map_t c_slottot_map;
+	slotres_devIds_map_t c_slotres_ids_map;
 
     // totals
-	int			  c_num_slot_cpus;
+	double			c_num_slot_cpus;
 
 		// These hold the fractions of shared, dynamic resources
 		// that are allocated to this CPU.
@@ -406,7 +429,8 @@ public:
 	AvailAttributes( MachAttributes* map );
 
 	bool decrement( CpuAttributes* cap );
-	bool computeAutoShares( CpuAttributes* cap );
+	bool computeRemainder(slotres_map_t & remain_cap, slotres_map_t & remain_cnt);
+	bool computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_cap, slotres_map_t & remain_cnt);
 	void show_totals( int dprintf_mask, CpuAttributes *cap );
 
 private:

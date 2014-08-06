@@ -134,6 +134,7 @@ ProcFamily::migrate_to_cgroup(pid_t pid)
 			dprintf(D_PROCFAMILY,
 				"Unable to read original cgroup %s (ProcFamily %u): %u %s\n",
 				orig_cgroup_string, m_root_pid, err, cgroup_strerror(err));
+			cgroup_free(&orig_cgroup);
 			goto after_migrate;
 		}
 		if ((memory_controller = cgroup_get_controller(orig_cgroup, MEMORY_CONTROLLER_STR)) == NULL) {
@@ -157,6 +158,7 @@ ProcFamily::migrate_to_cgroup(pid_t pid)
 			goto after_migrate;
 		}
 		if (orig_migrate != 3) {
+			cgroup_free(&orig_cgroup);
 			orig_cgroup = cgroup_new_cgroup(orig_cgroup_string);
 			memory_controller = cgroup_add_controller(orig_cgroup, MEMORY_CONTROLLER_STR);
 			ASSERT (memory_controller != NULL); // Memory controller must already exist
@@ -185,7 +187,7 @@ after_migrate:
 	}
 
 	if (changed_orig) {
-		if ((orig_cgroup = cgroup_new_cgroup(orig_cgroup_string))) {
+		if ((orig_cgroup = cgroup_new_cgroup(orig_cgroup_string)) == NULL) {
 			goto after_restore;
 		}
 		if (((memory_controller = cgroup_add_controller(orig_cgroup, MEMORY_CONTROLLER_STR)) != NULL) &&
@@ -258,6 +260,7 @@ ProcFamily::set_cgroup(const std::string &cgroup_string)
 				"Some block IO accounting will be inaccurate (ProcFamily %u): %u %s\n",
 				m_cgroup_string.c_str(), m_root_pid, err, cgroup_strerror(err));
 		}
+		cgroup_free(&tmp_cgroup);
 	}
 
 	return 0;
@@ -494,7 +497,7 @@ ProcFamily::aggregate_usage_cgroup_blockio(ProcFamilyUsage* usage)
 	char line_contents[BLOCK_STATS_LINE_MAX], sep[]=" ", *tok_handle, *word, *info[3];
 	char blkio_stats_name[] = "blkio.io_service_bytes";
 	short ctr;
-	long int read_bytes=0, write_bytes=0;
+	int64_t read_bytes=0, write_bytes=0;
 	ret = cgroup_read_value_begin(BLOCK_CONTROLLER_STR, m_cgroup_string.c_str(),
 	                              blkio_stats_name, &handle, line_contents, BLOCK_STATS_LINE_MAX);
 	while (ret == 0) {
@@ -506,7 +509,7 @@ ProcFamily::aggregate_usage_cgroup_blockio(ProcFamilyUsage* usage)
 		}
 		if (ctr == 3) {
 			errno = 0;
-			long ctrval = strtol(info[2], NULL, 10);
+			int64_t ctrval = strtoll(info[2], NULL, 10);
 			if (errno) {
 				dprintf(D_FULLDEBUG, "Error parsing kernel value to a long: %s; %s\n",
 					 info[2], strerror(errno));
@@ -531,6 +534,59 @@ ProcFamily::aggregate_usage_cgroup_blockio(ProcFamilyUsage* usage)
 
 	usage->block_read_bytes = read_bytes;
 	usage->block_write_bytes = write_bytes;
+
+	return 0;
+}
+
+int
+ProcFamily::aggregate_usage_cgroup_blockio_io_serviced(ProcFamilyUsage* usage)
+{
+
+	if (!m_cm.isMounted(CgroupManager::BLOCK_CONTROLLER) || !m_cgroup.isValid())
+		return 1;
+
+	int ret;
+	void *handle;
+	char line_contents[BLOCK_STATS_LINE_MAX], sep[]=" ", *tok_handle, *word, *info[3];
+	char blkio_stats_name[] = "blkio.io_serviced";
+	short ctr;
+	int64_t reads=0, writes=0;
+	ret = cgroup_read_value_begin(BLOCK_CONTROLLER_STR, m_cgroup_string.c_str(),
+	                              blkio_stats_name, &handle, line_contents, BLOCK_STATS_LINE_MAX);
+	while (ret == 0) {
+		ctr = 0;
+		word = strtok_r(line_contents, sep, &tok_handle);
+		while (word && ctr < 3) {
+			info[ctr++] = word;
+			word = strtok_r(NULL, sep, &tok_handle);
+		}
+		if (ctr == 3) {
+			errno = 0;
+			int64_t ctrval = strtoll(info[2], NULL, 10);
+			if (errno) {
+				dprintf(D_FULLDEBUG, "Error parsing kernel value to a long: %s; %s\n",
+					 info[2], strerror(errno));
+				break;
+			}
+			if (strcmp(info[1], "Read") == 0) {
+				reads += ctrval;
+			} else if (strcmp(info[1], "Write") == 0) {
+				writes += ctrval;
+			}
+		}
+		ret = cgroup_read_value_next(&handle, line_contents, BLOCK_STATS_LINE_MAX);
+	}
+	if (handle != NULL) {
+		cgroup_read_value_end(&handle);
+	}
+
+	if (ret != ECGEOF) {
+		dprintf(D_ALWAYS, "Internal cgroup error when retrieving block statistics: %s\n", cgroup_strerror(ret));
+		return 1;
+	}
+
+	usage->block_reads = reads;
+	usage->block_writes = writes;
 
 	return 0;
 }
@@ -630,6 +686,7 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 	get_cpu_usage_cgroup(usage->user_cpu_time, usage->sys_cpu_time);
 
 	aggregate_usage_cgroup_blockio(usage);
+	aggregate_usage_cgroup_blockio_io_serviced(usage);
 
 	// Finally, update the list of tasks
 	if ((err = count_tasks_cgroup()) < 0) {
