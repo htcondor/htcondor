@@ -6907,7 +6907,12 @@ check_requirements( char const *orig, MyString &answer )
 	req_ad.GetExprReferences(answer.Value(),job_refs,machine_refs);
 
 	checks_arch = machine_refs.contains_anycase( ATTR_ARCH );
-	checks_opsys = machine_refs.contains_anycase( ATTR_OPSYS );
+	checks_opsys = machine_refs.contains_anycase( ATTR_OPSYS ) ||
+		machine_refs.contains_anycase( ATTR_OPSYS_AND_VER ) ||
+		machine_refs.contains_anycase( ATTR_OPSYS_LONG_NAME ) ||
+		machine_refs.contains_anycase( ATTR_OPSYS_SHORT_NAME ) ||
+		machine_refs.contains_anycase( ATTR_OPSYS_NAME ) ||
+		machine_refs.contains_anycase( ATTR_OPSYS_LEGACY );
 	checks_disk =  machine_refs.contains_anycase( ATTR_DISK );
 	checks_cpus =   machine_refs.contains_anycase( ATTR_CPUS );
 	checks_tdp =  machine_refs.contains_anycase( ATTR_HAS_TDP );
