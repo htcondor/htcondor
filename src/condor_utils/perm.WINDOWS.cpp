@@ -775,7 +775,9 @@ perm::set_acls( const char *filename )
 	}
 
 	// first get the file's old DACL so we can copy it into the new one.
-
+	// NOTE: oldDACL will be a pointer into the pSD structure - the code below
+	// will eventually call LocalFree(pSD), but should not call LocalFree(oldDACL) because
+	// the oldDACL is deallocated when the pSD is deallocated.
 	err = GetNamedSecurityInfo((char*)filename, SE_FILE_OBJECT,
 			DACL_SECURITY_INFORMATION, NULL, NULL, &oldDACL, NULL, &pSD);
 
