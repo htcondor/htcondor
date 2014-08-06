@@ -485,6 +485,12 @@ void condor_sockaddr::set_protocol(condor_protocol proto) {
 	}
 }
 
+condor_protocol condor_sockaddr::get_protocol() {
+	if(is_ipv4()) { return CP_IPV4; }
+	if(is_ipv6()) { return CP_IPV6; }
+	return CP_INVALID_MIN;
+}
+
 void condor_sockaddr::set_ipv4() {
 	v4.sin_family = AF_INET;
 }
