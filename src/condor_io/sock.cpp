@@ -886,6 +886,8 @@ bool Sock::set_keepalive()
 int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 {
 	int current_size = 0;
+	int previous_size = 0;
+	int attempt_size = 0;
 	int command;
 	SOCKET_LENGTH_TYPE temp;
 
@@ -899,14 +901,37 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 
 	// Log the current size since Todd is curious.  :^)
 	temp = sizeof(int);
+	::getsockopt(_sock,SOL_SOCKET,command,
+			(char*)&current_size,(socklen_t*)&temp);
+	dprintf(D_FULLDEBUG,"Current Socket bufsize=%dk\n",
+		current_size / 1024);
 	current_size = 0;
-	getsockopt(_sock,SOL_SOCKET,command, (char*)&current_size,(socklen_t*)&temp);
-	dprintf(D_FULLDEBUG,"Current Socket bufsize=%dk\n", current_size / 1024);
 
-	setsockopt( SOL_SOCKET, command, (char*)&desired_size, sizeof(int) );
+	/* 
+		We want to set the socket buffer size to be as close
+		to the desired size as possible.  Unfortunatly, there is no
+		contant defined which states the maximum size possible.  So
+		we keep raising it up 1k at a time until (a) we got up to the
+		desired value, or (b) it is not increasing anymore.  We ignore
+		the return value from setsockopt since on some platforms this 
+		could signal a value which is too low...
+	*/
+	 
+	do {
+		attempt_size += 1024;
+		if ( attempt_size > desired_size ) {
+			attempt_size = desired_size;
+		}
+		(void) setsockopt( SOL_SOCKET, command,
+						   (char*)&attempt_size, sizeof(int) );
 
-	getsockopt( _sock, SOL_SOCKET, command, (char*)&current_size, (socklen_t*)&temp );
-	dprintf(D_ALWAYS,"Set Socket to bufsize=%dk\n", current_size / 1024);
+		previous_size = current_size;
+		temp = sizeof(int);
+		::getsockopt( _sock, SOL_SOCKET, command,
+ 					  (char*)&current_size, (socklen_t*)&temp );
+
+	} while ( ( previous_size < current_size ) &&
+			  ( attempt_size < desired_size  ) );
 
 	return current_size;
 }
