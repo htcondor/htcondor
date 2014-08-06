@@ -69,6 +69,10 @@ can now return multiple ClassAds,
 and the hooks can specify which ClassAds their output should merge into.
 \Ticket{4398}
 
+\item Two new \Condor{schedd} ClassAd statistics attributes are
+available: \Attr{JobsRunning} and \Attr{JobsAccumExceptionalBadputTime}.
+\Ticket{4409}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -82,6 +86,11 @@ Strictly speaking, the bug is fixed only for the
 default case in which \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set
 to \Expr{True}.
 \Ticket{3843}
+
+\item Fixed a bug in the \Condor{schedd} daemon that caused the values
+of the ClassAd attributes \Attr{JobsRunningSizes} and 
+\Attr{ JobsRunningRuntimes} to be much larger than they should have been.
+\Ticket{4409}
 
 \end{itemize}
 
