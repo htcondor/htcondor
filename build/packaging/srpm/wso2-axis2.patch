@@ -1,0 +1,11 @@
+--- src/condor_contrib/aviary/src/Axis2SslProvider.cpp.orig	2012-01-08 20:31:54.000000000 -0600
++++ src/condor_contrib/aviary/src/common/Axis2SslProvider.cpp	2012-01-08 20:31:58.000000000 -0600
+@@ -131,7 +131,7 @@
+     axutil_stream_set_read(&(stream_impl->stream), m_env, axis2_ssl_stream_read);
+     axutil_stream_set_write(&(stream_impl->stream), m_env, axis2_ssl_stream_write);
+     axutil_stream_set_skip(&(stream_impl->stream), m_env, axis2_ssl_stream_skip);
+-    axutil_stream_set_peek(&(stream_impl->stream), m_env, axis2_ssl_stream_peek);
++    //axutil_stream_set_peek(&(stream_impl->stream), m_env, axis2_ssl_stream_peek);
+     
+     svr_conn->stream = &(stream_impl->stream);
+ 
