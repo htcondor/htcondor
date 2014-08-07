@@ -871,6 +871,7 @@ mkdir -p -m1777 %{buildroot}/%{_var}/lock/condor/local
 # Note we use %{_var}/lib instead of %{_sharedstatedir} for RHEL5 compatibility
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
 mkdir -p -m1777 %{buildroot}/%{_var}/lib/condor/execute
+
 cat >> %{buildroot}/%_sysconfdir/condor/condor_config.local << EOF
 CONDOR_DEVELOPERS = NONE
 CONDOR_HOST = \$(FULL_HOSTNAME)
@@ -885,12 +886,6 @@ EOF
 
 # this gets around a bug whose fix is not yet merged
 echo "TRUST_UID_DOMAIN = TRUE" >> %{buildroot}/%_sysconfdir/condor/condor_config.local
-
-# Be able to find shared libraries
-cat > %{buildroot}/%_sysconfdir/ld.so.conf.d/condor-x86_64.conf << EOF
-/usr/lib64/condor
-/usr/lib/condor
-EOF
 
 # no master shutdown program for now
 rm -f %{buildroot}/%{_sbindir}/condor_set_shutdown
@@ -1297,7 +1292,6 @@ rm -rf %{buildroot}
 %_sbindir/cream_gahp
 %_libexecdir/condor/condor_gpu_discovery
 %_sbindir/condor_vm_vmware
-%_sysconfdir/ld.so.conf.d/condor-x86_64.conf
 %config(noreplace) %_sysconfdir/condor/condor_config.local
 %config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics
 %defattr(-,condor,condor,-)
