@@ -36,7 +36,7 @@ Condor_Auth_Anonymous :: ~Condor_Auth_Anonymous()
 {
 }
 
-int Condor_Auth_Anonymous :: authenticate(const char * /* remoteHost */, CondorError* /* errstack */)
+int Condor_Auth_Anonymous :: authenticate(const char * /* remoteHost */, CondorError* /* errstack */, bool /*non_blocking*/)
 {
     int retval = 0;
     

@@ -976,6 +976,8 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		SendAuthInfo,
 		ReceiveAuthInfo,
 		Authenticate,
+		AuthenticateContinue,
+		AuthenticateFinish,
 		ReceivePostAuthInfo,
 	} m_state;
 
@@ -1000,6 +1002,8 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	StartCommandResult sendAuthInfo_inner();
 	StartCommandResult receiveAuthInfo_inner();
 	StartCommandResult authenticate_inner();
+	StartCommandResult authenticate_inner_continue();
+	StartCommandResult authenticate_inner_finish();
 	StartCommandResult receivePostAuthInfo_inner();
 
 		// This is called when the TCP auth attempt completes.
@@ -1212,6 +1216,12 @@ SecManStartCommand::startCommand_inner()
 			break;
 		case Authenticate:
 			result = authenticate_inner();
+			break;
+		case AuthenticateContinue:
+			result = authenticate_inner_continue();
+			break;
+		case AuthenticateFinish:
+			result = authenticate_inner_finish();
 			break;
 		case ReceivePostAuthInfo:
 			result = receivePostAuthInfo_inner();
@@ -1825,27 +1835,31 @@ SecManStartCommand::authenticate_inner()
 			}
 
 			int auth_timeout = m_sec_man.getSecTimeout( CLIENT_PERM );
-			bool auth_success = m_sock->authenticate(m_private_key, auth_methods, m_errstack,auth_timeout);
+			int auth_result = m_sock->authenticate(m_private_key, auth_methods, m_errstack, auth_timeout, true, NULL);
 
-			if (auth_methods) {  
+			if (auth_methods) {
 				free(auth_methods);
 			}
 
-			if( !auth_success ) {
+			if( auth_result == 2 ) {
+				m_state = AuthenticateContinue;
+				return WaitForSocketCallback();
+			} else if( !auth_result ) {
 				bool auth_required = true;
 				m_auth_info.LookupBool(ATTR_SEC_AUTH_REQUIRED,auth_required);
 
 				if( auth_required ) {
 					dprintf( D_ALWAYS,
-							 "SECMAN: required authentication with %s failed, so aborting command %s.\n",
-							 m_sock->peer_description(),
-							 m_cmd_description.Value());
+							"SECMAN: required authentication with %s failed, so aborting command %s.\n",
+							m_sock->peer_description(),
+							m_cmd_description.Value());
 					return StartCommandFailed;
 				}
 				dprintf( D_SECURITY|D_FULLDEBUG,
-						 "SECMAN: authentication with %s failed but was not required, so continuing.\n",
-						 m_sock->peer_description() );
+						"SECMAN: authentication with %s failed but was not required, so continuing.\n",
+						m_sock->peer_description() );
 			}
+
 		} else {
 			// !m_new_session is equivalent to use_session in this client.
 			if (!m_new_session) {
@@ -1857,8 +1871,46 @@ SecManStartCommand::authenticate_inner()
 				}
 			}
 		}
+	}
+        m_state = AuthenticateFinish;
+        return StartCommandContinue;
 
-		
+}
+
+StartCommandResult
+SecManStartCommand::authenticate_inner_continue()
+{
+	int auth_result = m_sock->authenticate_continue(m_errstack, true, NULL);
+
+	if( auth_result == 2 ) {
+		return WaitForSocketCallback();
+	} else if( !auth_result ) {
+		bool auth_required = true;
+		m_auth_info.LookupBool(ATTR_SEC_AUTH_REQUIRED,auth_required);
+
+		if( auth_required ) {
+			dprintf( D_ALWAYS,
+				"SECMAN: required authentication with %s failed, so aborting command %s.\n",
+                                                         m_sock->peer_description(),
+                                                         m_cmd_description.Value());
+			return StartCommandFailed;
+		}
+		dprintf( D_SECURITY|D_FULLDEBUG,
+			"SECMAN: authentication with %s failed but was not required, so continuing.\n",
+			m_sock->peer_description() );
+	}
+
+	m_state = AuthenticateFinish;
+	return StartCommandContinue;
+}
+
+StartCommandResult
+SecManStartCommand::authenticate_inner_finish()
+{
+	if( m_is_tcp ) {
+		SecMan::sec_feat_act will_enable_enc   = m_sec_man.sec_lookup_feat_act( m_auth_info, ATTR_SEC_ENCRYPTION );
+		SecMan::sec_feat_act will_enable_mac   = m_sec_man.sec_lookup_feat_act( m_auth_info, ATTR_SEC_INTEGRITY );
+
 		if (will_enable_mac == SecMan::SEC_FEAT_ACT_YES) {
 
 			if (!m_private_key) {
@@ -2809,7 +2861,7 @@ SecMan::authenticate_sock(Sock *s,DCpermission perm, CondorError* errstack)
 	getAuthenticationMethods( perm, &methods );
 	ASSERT(s);
 	int auth_timeout = getSecTimeout(perm);
-	return s->authenticate(methods.Value(),errstack,auth_timeout);
+	return s->authenticate( methods.Value(), errstack, auth_timeout, false );
 }
 
 int
@@ -2819,7 +2871,7 @@ SecMan::authenticate_sock(Sock *s,KeyInfo *&ki, DCpermission perm, CondorError* 
 	getAuthenticationMethods( perm, &methods );
 	ASSERT(s);
 	int auth_timeout = getSecTimeout(perm);
-	return s->authenticate(ki,methods.Value(),errstack,auth_timeout);
+	return s->authenticate( ki, methods.Value(), errstack, auth_timeout, false, NULL );
 }
 
 int

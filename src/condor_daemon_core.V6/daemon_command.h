@@ -40,6 +40,7 @@ private:
 		CommandProtocolReadHeader,
 		CommandProtocolReadCommand,
 		CommandProtocolAuthenticate,
+		CommandProtocolAuthenticateContinue,
 		CommandProtocolPostAuthenticate,
 		CommandProtocolExecCommand
 	} m_state;
@@ -80,6 +81,8 @@ private:
 	const static std::string WaitForSocketDataString;
 	int m_real_cmd;       // for DC_AUTHENTICATE, the final command to execute
 	int m_auth_cmd;       // for DC_AUTHENTICATE, the command the security session will be used for
+	int m_cmd_index;
+	CondorError *m_errstack;
 
 	bool m_new_session;
 	SecMan::sec_feat_act m_will_enable_encryption;
@@ -90,6 +93,8 @@ private:
 	CommandProtocolResult ReadHeader();
 	CommandProtocolResult ReadCommand();
 	CommandProtocolResult Authenticate();
+	CommandProtocolResult AuthenticateContinue();
+	CommandProtocolResult AuthenticateFinish(int auth_success, char *method_used);
 	CommandProtocolResult PostAuthenticate();
 	CommandProtocolResult ExecCommand();
 	CommandProtocolResult WaitForSocketData();

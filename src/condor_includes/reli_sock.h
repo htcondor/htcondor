@@ -28,6 +28,7 @@
 #include "condor_ipverify.h"
 #include "condor_md.h"
 
+#include <memory>
 
 /*
 **	R E L I A B L E    S O C K
@@ -241,9 +242,11 @@ public:
 	virtual int peek(char &);
 
     ///
-	int authenticate( const char* methods, CondorError* errstack, int auth_timeout );
+	int authenticate( const char* methods, CondorError* errstack, int auth_timeout, bool non_blocking );
     ///
-	int authenticate( KeyInfo *& key, const char* methods, CondorError* errstack, int auth_timeout, char **method_used=NULL );
+	int authenticate( KeyInfo *& key, const char* methods, CondorError* errstack, int auth_timeout, bool non_blocking, char **method_used );
+    ///
+	int authenticate_continue( CondorError* errstack, bool non_blocking, char **method_used );
     ///
 	int isClient() { return is_client; };
 
@@ -283,7 +286,7 @@ protected:
 	int prepare_for_nobuffering( stream_coding = stream_unknown);
 	int perform_authenticate( bool with_key, KeyInfo *& key, 
 							  const char* methods, CondorError* errstack,
-							  int auth_timeout, char **method_used );
+							  int auth_timeout, bool non_blocking, char **method_used );
 
 
 	/*
@@ -352,6 +355,9 @@ protected:
 
 		// after connecting, request to be routed to this daemon
 	char *m_target_shared_port_id;
+
+	Authentication *m_authob;
+	bool m_auth_in_progress;
 
 	bool m_has_backlog;
 	bool m_read_would_block;
