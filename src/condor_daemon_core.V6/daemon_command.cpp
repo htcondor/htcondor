@@ -68,6 +68,7 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 	m_comTable(daemonCore->comTable),
 	m_real_cmd(0),
 	m_auth_cmd(0),
+	m_errstack(NULL),
 	m_new_session(false),
 	m_will_enable_encryption(SecMan::SEC_FEAT_ACT_UNDEFINED),
 	m_will_enable_integrity(SecMan::SEC_FEAT_ACT_UNDEFINED)
@@ -97,6 +98,10 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 
 DaemonCommandProtocol::~DaemonCommandProtocol()
 {
+	if (m_errstack) {
+		delete m_errstack;
+		m_errstack = NULL;
+	}
 	if (m_policy) {
 		delete m_policy;
 	}
@@ -123,6 +128,7 @@ int DaemonCommandProtocol::doProtocol()
 			what_next = CommandProtocolFinished;
 		}
 		else if( m_nonblocking && m_sock->is_connect_pending() ) {
+			dprintf(D_SECURITY, "DaemonCommandProtocol: Waiting for connect.\n");
 			what_next = WaitForSocketData();
 		}
 		else if( m_is_tcp && !m_sock->is_connected()) {
@@ -151,6 +157,9 @@ int DaemonCommandProtocol::doProtocol()
 			break;
 		case CommandProtocolAuthenticate:
 			what_next = Authenticate();
+			break;
+		case CommandProtocolAuthenticateContinue:
+			what_next = AuthenticateContinue();
 			break;
 		case CommandProtocolPostAuthenticate:
 			what_next = PostAuthenticate();
@@ -240,6 +249,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptTCPReq
 		// available yet to read on this socket, we don't want to
 		// block when reading the command, so register it
 	if ( m_nonblocking && ((ReliSock *)m_sock)->bytes_available_to_read() < 4 ) {
+		dprintf(D_SECURITY, "DaemonCommandProtocol: Not enough bytes are ready for read.\n");
 		return WaitForSocketData();
 	}
 
@@ -687,8 +697,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 		// get the auth level of this command
 		// locate the hash table entry
-		int cmd_index = 0;
-		m_reqFound = daemonCore->CommandNumToTableIndex(m_auth_cmd,&cmd_index);
+		m_cmd_index = 0;
+		m_reqFound = daemonCore->CommandNumToTableIndex(m_auth_cmd,&m_cmd_index);
 
 		if (!m_reqFound) {
 			// we have no idea what command they want to send.
@@ -840,11 +850,11 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					// want to start one.  look at our security policy.
 				ClassAd our_policy;
 				if( ! m_sec_man->FillInSecurityPolicyAd(
-					m_comTable[cmd_index].perm,
+					m_comTable[m_cmd_index].perm,
 					&our_policy,
 					false,
 					false,
-					m_comTable[cmd_index].force_authentication ) )
+					m_comTable[m_cmd_index].force_authentication ) )
 				{
 						// our policy is invalid even without the other
 						// side getting involved.
@@ -1053,9 +1063,11 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate()
 {
-	CondorError errstack;
+	if (m_errstack) { delete m_errstack;}
+	m_errstack = new CondorError();
 
 	if( m_nonblocking && !m_sock->readReady() ) {
+		dprintf(D_SECURITY, "Returning to DC while we wait for socket to authenticate.\n");
 		return WaitForSocketData();
 	}
 
@@ -1074,21 +1086,43 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
 	}
 
-	int cmd_index = 0;
-	if( !daemonCore->CommandNumToTableIndex(m_auth_cmd,&cmd_index) ) {
+	m_cmd_index = 0;
+	if( !daemonCore->CommandNumToTableIndex(m_auth_cmd,&m_cmd_index) ) {
 		dprintf(D_ALWAYS, "DC_AUTHENTICATE: UNREGISTERED COMMAND %d in Authenticate()\n",m_auth_cmd);
 		m_result = FALSE;
 		free( auth_methods );
 		return CommandProtocolFinished;
 	}
 
-	int auth_timeout = daemonCore->getSecMan()->getSecTimeout( m_comTable[cmd_index].perm );
+	int auth_timeout = daemonCore->getSecMan()->getSecTimeout( m_comTable[m_cmd_index].perm );
 
 	m_sock->setAuthenticationMethodsTried(auth_methods);
 
 	char *method_used = NULL;
-	bool auth_success = m_sock->authenticate(m_key, auth_methods, &errstack, auth_timeout, &method_used);
+	int auth_success = m_sock->authenticate(m_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, &method_used);
+	free( auth_methods );
 
+	if (auth_success == 2) {
+		m_state = CommandProtocolAuthenticateContinue;
+		dprintf(D_SECURITY, "Will return to DC because authentication is incomplete.\n");
+		return WaitForSocketData();
+	}
+        return AuthenticateFinish(auth_success, method_used);
+}
+
+DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AuthenticateContinue()
+{
+	char *method_used = NULL;
+	int auth_result = m_sock->authenticate_continue(m_errstack, true, &method_used);
+	if (auth_result == 2) {
+		dprintf(D_SECURITY, "Will return to DC to continue authentication..\n");
+		return WaitForSocketData();
+	}
+	return AuthenticateFinish(auth_result, method_used);
+}
+
+DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AuthenticateFinish(int auth_success, char * method_used)
+{
 	if ( method_used ) {
 		m_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
 	}
@@ -1103,20 +1137,19 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 		}
 	}
 
-	free( auth_methods );
 	free( method_used );
 
-	if( m_comTable[cmd_index].force_authentication &&
+	if( m_comTable[m_cmd_index].force_authentication &&
 		!m_sock->isMappedFQU() )
 	{
 		dprintf(D_ALWAYS, "DC_AUTHENTICATE: authentication of %s did not result in a valid mapped user name, which is required for this command (%d %s), so aborting.\n",
 				m_sock->peer_description(),
 				m_auth_cmd,
-				m_comTable[cmd_index].command_descrip );
+				m_comTable[m_cmd_index].command_descrip );
 		if( !auth_success ) {
 			dprintf( D_ALWAYS,
 					 "DC_AUTHENTICATE: reason for authentication failure: %s\n",
-					 errstack.getFullText().c_str() );
+					 m_errstack->getFullText().c_str() );
 		}
 		m_result = FALSE;
 		return CommandProtocolFinished;
@@ -1143,7 +1176,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 			dprintf( D_ALWAYS,
 					 "DC_AUTHENTICATE: required authentication of %s failed: %s\n",
 					 m_sock->peer_ip_str(),
-					 errstack.getFullText().c_str() );
+					 m_errstack->getFullText().c_str() );
 			m_result = FALSE;
 			return CommandProtocolFinished;
 		}

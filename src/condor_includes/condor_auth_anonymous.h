@@ -37,7 +37,7 @@ class Condor_Auth_Anonymous : public Condor_Auth_Claim {
     // Destructor
     //------------------------------------------
 
-    int authenticate(const char * remoteHost, CondorError* errstack);
+    int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr -- host to authenticate

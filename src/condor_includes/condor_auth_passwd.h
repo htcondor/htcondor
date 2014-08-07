@@ -90,7 +90,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	/// Dtor
 	~Condor_Auth_Passwd();
 
-	int authenticate(const char * remoteHost, CondorError* errstack);
+	int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
 
 	/** Tells whether the authenticator is in a valid state, i.e.
 		authentication has been successfully performed sometime in the past,

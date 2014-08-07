@@ -372,10 +372,13 @@ public:
 	bool isAuthenticated() const;
 
     ///
-	virtual int authenticate(const char * auth_methods, CondorError* errstack, int timeout);
+	virtual int authenticate(const char * auth_methods, CondorError* errstack, int timeout, bool non_blocking);
     ///
 	// method_used should be freed by the caller when finished with it
-	virtual int authenticate(KeyInfo *&ki, const char * auth_methods, CondorError* errstack, int timeout, char **method_used=NULL);
+	virtual int authenticate(KeyInfo *&ki, const char * auth_methods, CondorError* errstack, int timeout, bool non_blocking, char **method_used);
+
+	// method_used should be freed by the caller when finished with it
+	virtual int authenticate_continue(CondorError* errstack, bool non_blocking, char **method_used);
 
 	/// if we are connecting, merges together Stream::get_deadline
 	/// and connect_timeout_time()
