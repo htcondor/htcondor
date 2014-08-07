@@ -1,3 +1,6 @@
+# This file is sourced before starting HTCondor via init script
+# It may be configured and will not be overwritten between upgrades
+
 ## Path:            Applications/condor
 ## Description:     Condor configuration
 ## ServiceRestart:  condor
@@ -153,3 +156,10 @@ CONDOR_OFF=""
 # defaults to $(CONDOR_SBIN)/condor_reconfig
 CONDOR_RECONFIG=""
 
+## Description: ulimit flags
+## Used by:	init-script
+## Type:	string
+## Default:	""
+#
+# Flags to be passed to ulimit command.
+ULIMIT_FLAGS=""

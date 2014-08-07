@@ -206,13 +206,13 @@ CCBServer::InitAndReconfig()
 			dprintf(D_ALWAYS, "epoll file descriptor creation failed; will use periodic polling techniques: %s (errno=%d).\n", strerror(errno), errno);
 		}
 
+		int pipes[2] = { -1, -1 };
+		int fd_to_replace = -1;
 		if (m_epfd >= 0)
 		{
 			// Fool DC into talking to the epoll fd; note we only register the read side.
 			// Yes, this is fairly gross - the decision was taken to do this instead of having
 			// DC track arbitrary FDs just for this use case.
-			int pipes[2]; pipes[0] = -1; pipes[1] = -1;
-			int fd_to_replace = -1;
 			if (daemonCore->Create_Pipe(pipes, true) == FALSE) {
 				dprintf(D_ALWAYS, "Unable to create a DC pipe for watching the epoll FD\n");
 				close(m_epfd);

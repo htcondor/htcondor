@@ -1,0 +1,130 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+
+$testname = "job_schedd_restart-endurance";
+
+# this new test is going to bounce the schedd as many times as possible 
+# to ensure we do not loose jobs as we see sometimes on windows. However
+# we suspect the issue there is windows killing jobs on a "restart".
+
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
+
+print scalar localtime() . "\n";
+
+my $jobstosubmit = 30;
+my $scheddrestarts = 30;
+my $restartcount = 0;
+my @jobarray = ();
+
+# Start with empty queue
+runToolNTimes("condor_rm  -all",1,0,{emit_output=>0});
+runToolNTimes("condor_submit sleep1.cmd",$jobstosubmit,0,{emit_output=>0});
+
+
+print "Lets look at queue\n";
+system("condor_q");
+my $countres = CountQueue($jobstosubmit);
+while($restartcount < $scheddrestarts) {
+	BounceSchedd();
+	print "Bounce Schedd iteration:$restartcount\n";
+	$countres = CountQueue($jobstosubmit);
+	if($countres != 0) {
+		CondorTest::RegisterResult(1, "tests_name", $testname);
+	}
+	$restartcount += 1;
+}
+
+if($countres == 0) {
+	CondorTest::RegisterResult(1, "tests_name", $testname);
+}
+
+$restartcount = 0;
+
+while($restartcount < $scheddrestarts) {
+	FastRestarts();
+	print "Fast Restarts iteration:$restartcount\n";
+	$countres = CountQueue($jobstosubmit);
+	if($countres != 0) {
+		CondorTest::RegisterResult(1, "tests_name", $testname);
+	}
+	$restartcount += 1;
+}
+
+if($countres == 0) {
+	CondorTest::RegisterResult(1, "tests_name", $testname);
+}
+
+CondorTest::EndTest();
+exit(0);
+
+sub CountQueue {
+	my $expected = shift;
+	my $count = 0;
+	my @queuescanner = ();
+	my $res = runCondorTool("condor_q",\@queuescanner,2,{emit_output=>0}); 
+	foreach my $line (@queuescanner) {
+		chomp($line);
+		#print "Inspect:$line\n";
+		if($line =~ /^\s*\d+\.\d+.*$/) {
+			$count += 1;
+			#print "Count:$count\n";
+		}
+	}
+	if($expected == $count) {
+		return(0);
+	} else { 
+		print "Expected:$expected Found:$count\n";
+		return(1);
+	}
+};
+
+sub FastRestarts {
+	my $res = runCondorTool("condor_restart -fast",\@queuescanner,2,{emit_output=>0}); 
+	$status = CondorTest::changeDaemonState( "schedd", "on", 9 );
+	if(!$status)
+	{
+		CondorTest::debug("Test failure: could not turn scheduler on!\n",1);
+		RegisterResult(0,"test_name",$testname);
+		return(1)
+	} 
+}
+
+sub BounceSchedd {
+	my $status = CondorTest::changeDaemonState( "schedd", "off", 9 );
+	if(!$status)
+	{
+		CondorTest::debug("Test failure: could not turn scheduler off!\n",1);
+		RegisterResult(0,"test_name",$testname);
+		return(1)
+	}
+
+	$status = CondorTest::changeDaemonState( "schedd", "on", 9 );
+	if(!$status)
+	{
+		CondorTest::debug("Test failure: could not turn scheduler on!\n",1);
+		RegisterResult(0,"test_name",$testname);
+		return(1)
+	} 
+}
