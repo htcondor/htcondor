@@ -30,7 +30,10 @@ $dagman_args = "-verbose";
 
 @logfiles = ("job_dagman_node_status.dag.dagman.out");
 
-@outfiles = ("job_dagman_node_status.status");
+@outfiles = ("job_dagman_node_status.status",
+	"job_dagman_node_status.status-A",
+	"job_dagman_node_status.status-C");
+
 # Lines must be found in order.
 @outlines = ("DagStatus = 5;.*STATUS_DONE \\(success\\)",
 	"NodesTotal = 12;",
