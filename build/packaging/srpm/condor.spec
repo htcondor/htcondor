@@ -338,7 +338,7 @@ Requires: mailx
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
-%if %blahp
+%if %blahp && ! %uw_build
 Requires: blahp >= 1.16.1
 %endif
 
