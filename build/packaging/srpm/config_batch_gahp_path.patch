@@ -1,0 +1,13 @@
+Index: condor-7.8.6/src/condor_examples/condor_config.generic
+===================================================================
+--- condor-7.8.6.orig/src/condor_examples/condor_config.generic	2012-12-21 16:28:50.000000000 -0600
++++ condor-7.8.6/src/condor_examples/condor_config.generic	2012-12-21 16:36:40.436753084 -0600
+@@ -1930,7 +1930,7 @@ C_GAHP_WORKER_THREAD_LOCK = /tmp/CGAHPWorkerLock.$(USERNAME)
+ ## Location of the PBS/LSF gahp and its associated binaries
+ ##
+ GLITE_LOCATION = $(LIBEXEC)/glite
+-BATCH_GAHP = $(GLITE_LOCATION)/bin/batch_gahp
++BATCH_GAHP = $(BIN)/blahpd
+ 
+ ##
+ ## The location of the wrapper for invoking the Unicore GAHP server
