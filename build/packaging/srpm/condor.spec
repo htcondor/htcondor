@@ -887,7 +887,6 @@ EOF
 echo "TRUST_UID_DOMAIN = TRUE" >> %{buildroot}/%_sysconfdir/condor/condor_config.local
 
 # Be able to find shared libraries
-mkdir %{buildroot}/%_sysconfdir/ld.so.conf.d
 cat > %{buildroot}/%_sysconfdir/ld.so.conf.d/condor-x86_64.conf << EOF
 /usr/lib64/condor
 /usr/lib/condor
