@@ -44,7 +44,7 @@ void
 ReliSock::init()
 {
 	m_auth_in_progress = false;
-	m_authob.reset();
+	m_authob = NULL;
 	m_has_backlog = false;
 	m_read_would_block = false;
 	m_non_blocking = false;
@@ -89,6 +89,10 @@ ReliSock::CloneStream()
 ReliSock::~ReliSock()
 {
 	close();
+	if ( m_authob ) {
+		delete m_authob;
+		m_authob = NULL;
+	}
 	if ( hostAddr ) {
 		free( hostAddr );
 		hostAddr = NULL;
@@ -1149,7 +1153,8 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 	}
 
     if (!triedAuthentication()) {
-		m_authob.reset(new Authentication(this));
+		if (m_authob) {delete m_authob;}
+		m_authob = new Authentication(this);
 		setTriedAuthentication(true);
 			// store if we are in encode or decode mode
 		in_encode_mode = is_encode();
@@ -1206,7 +1211,8 @@ int ReliSock::authenticate_continue(CondorError* errstack, bool non_blocking, ch
 	if ( m_authob->getFQAuthenticatedName() ) {
 		setAuthenticatedName( m_authob->getFQAuthenticatedName() );
 	}
-	m_authob.reset();
+	delete m_authob;
+	m_authob = NULL;
 	return result;
 }
 

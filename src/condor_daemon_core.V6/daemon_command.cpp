@@ -68,6 +68,7 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 	m_comTable(daemonCore->comTable),
 	m_real_cmd(0),
 	m_auth_cmd(0),
+	m_errstack(NULL),
 	m_new_session(false),
 	m_will_enable_encryption(SecMan::SEC_FEAT_ACT_UNDEFINED),
 	m_will_enable_integrity(SecMan::SEC_FEAT_ACT_UNDEFINED)
@@ -97,6 +98,10 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 
 DaemonCommandProtocol::~DaemonCommandProtocol()
 {
+	if (m_errstack) {
+		delete m_errstack;
+		m_errstack = NULL;
+	}
 	if (m_policy) {
 		delete m_policy;
 	}
@@ -1058,7 +1063,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate()
 {
-	m_errstack.reset(new CondorError());
+	if (m_errstack) { delete m_errstack;}
+	m_errstack = new CondorError();
 
 	if( m_nonblocking && !m_sock->readReady() ) {
 		dprintf(D_SECURITY, "Returning to DC while we wait for socket to authenticate.\n");
@@ -1093,7 +1099,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	m_sock->setAuthenticationMethodsTried(auth_methods);
 
 	char *method_used = NULL;
-	int auth_success = m_sock->authenticate(m_key, auth_methods, m_errstack.get(), auth_timeout, true, &method_used);
+	int auth_success = m_sock->authenticate(m_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, &method_used);
 	free( auth_methods );
 
 	if (auth_success == 2) {
@@ -1107,7 +1113,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AuthenticateContinue()
 {
 	char *method_used = NULL;
-	int auth_result = m_sock->authenticate_continue(m_errstack.get(), false, &method_used);
+	int auth_result = m_sock->authenticate_continue(m_errstack, true, &method_used);
 	if (auth_result == 2) {
 		dprintf(D_SECURITY, "Will return to DC to continue authentication..\n");
 		return WaitForSocketData();

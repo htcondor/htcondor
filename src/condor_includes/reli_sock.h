@@ -356,7 +356,7 @@ protected:
 		// after connecting, request to be routed to this daemon
 	char *m_target_shared_port_id;
 
-	std::auto_ptr<Authentication> m_authob;
+	Authentication *m_authob;
 	bool m_auth_in_progress;
 
 	bool m_has_backlog;

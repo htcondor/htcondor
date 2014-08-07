@@ -82,7 +82,7 @@ private:
 	int m_real_cmd;       // for DC_AUTHENTICATE, the final command to execute
 	int m_auth_cmd;       // for DC_AUTHENTICATE, the command the security session will be used for
 	int m_cmd_index;
-	std::auto_ptr<CondorError> m_errstack;
+	CondorError *m_errstack;
 
 	bool m_new_session;
 	SecMan::sec_feat_act m_will_enable_encryption;
