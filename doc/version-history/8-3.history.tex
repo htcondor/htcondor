@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item If cgroups are enabled on Linux, amount of swap space used by a
+job is now limited to the \Attr{VirtualMemory} size of the slot
+it is running on.
+\Ticket{4417}
+
 \item Added a configuration parameter, \Macro{COLLECTOR\_PORT}, which specifies
 the default port used by the \Condor{collector} daemon and command line tools.
 The default value is 9618 - the same port used in previous releases.
