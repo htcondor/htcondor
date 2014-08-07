@@ -768,7 +768,7 @@ export CMAKE_PREFIX_PATH=/usr
 %endif
 
 # Patch condor_config.generic for 64-bit rpm
-(cd src/condor_examples; patch < condor_config.generic.rpm.patch; patch < condor_config.generic.rpm64.patch)
+(cd src/condor_examples; patch < condor_config.generic.rpm.patch)
 
 %if %uw_build || %std_univ
 # build externals first to avoid dependency issues
@@ -818,14 +818,14 @@ mkdir -p %{buildroot}/%{_sysconfdir}/condor
 # than that. this is, so far, the best place to do this
 # specialization. we strip the "lib" or "lib64" part from _libdir and
 # stick it in the LIB variable in the config.
-#LIB=$(echo %{?_libdir} | sed -e 's:/usr/\(.*\):\1:')
-#if [ "$LIB" = "%_libdir" ]; then
-#  echo "_libdir does not contain /usr, sed expression needs attention"
-#  exit 1
-#fi
-#sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
-#  %{buildroot}/etc/examples/condor_config.generic \
-#  > %{buildroot}/%{_sysconfdir}/condor/condor_config
+LIB=$(echo %{?_libdir} | sed -e 's:/usr/\(.*\):\1:')
+if [ "$LIB" = "%_libdir" ]; then
+  echo "_libdir does not contain /usr, sed expression needs attention"
+  exit 1
+fi
+sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
+  %{buildroot}/etc/examples/condor_config.generic \
+  > %{buildroot}/%{_sysconfdir}/condor/condor_config
 
 # Install the basic configuration, a Personal HTCondor config. Allows for
 # yum install condor + service condor start and go.
