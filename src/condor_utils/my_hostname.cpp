@@ -435,7 +435,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
 			// machine as us.  We don't want to replace the default IP
 			// with this one, since nobody outside of this machine
 			// will be able to contact us on that IP.
-		return;
+		return;	
 	}
 	if( !IPMatchesNetworkInterfaceSetting(my_sock_ip) ) {
 		return;
@@ -467,18 +467,6 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
 		dprintf(D_NETWORK,"Replaced default IP %s with connection IP %s "
 				"in outgoing ClassAd attribute %s.\n",
 				my_default_ip,my_sock_ip,attr_name);
-	}
-}
-
-void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream& s)
-{
-	char *new_expr_string = NULL;
-	ConvertDefaultIPToSocketIP(attr_name,*expr_string,&new_expr_string,s);
-	if(new_expr_string) {
-		//The expression was updated.  Replace the old expression with
-		//the new one.
-		free(*expr_string);
-		*expr_string = new_expr_string;
 	}
 }
 

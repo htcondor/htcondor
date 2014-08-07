@@ -51,12 +51,6 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
 
 void ConfigConvertDefaultIPToSocketIP();
 
-// This is a convenient interface to ConvertDefaultIPToSocketIP().
-// If a replacement occurs, expr_string will be freed and replaced
-// with a new buffer allocated with malloc().  The caller should free it.
-
-void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream& s);
-
 // This interface to ConvertDefaultIPToSocketIP() takes a std::string
 // and modifies its contents.
 void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,Stream& s);
