@@ -88,7 +88,9 @@
 %define cream 0
 
 %define glexec 1
-%define parallel_setup 1
+
+# Temporarily turn parallel_setup off
+%define parallel_setup 0
 
 # These flags are meant for developers; it allows one to build HTCondor
 # based upon a git-derived tarball, instead of an upstream release tarball
@@ -830,7 +832,7 @@ sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
 # Install the basic configuration, a Personal HTCondor config. Allows for
 # yum install condor + service condor start and go.
 mkdir -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
-cp %{buildroot}/etc/examples/condor_config.local %{buildroot}/%{_sysconfdir}/condor/config.d/00personal_condor.config
+# cp %{buildroot}/etc/examples/condor_config.local %{buildroot}/%{_sysconfdir}/condor/config.d/00personal_condor.config
 %if %parallel_setup
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
@@ -1099,7 +1101,7 @@ rm -rf %{buildroot}
 %_datadir/condor/CondorTest.pm
 %_datadir/condor/CondorUtils.pm
 %dir %_sysconfdir/condor/config.d/
-%_sysconfdir/condor/config.d/00personal_condor.config
+#%_sysconfdir/condor/config.d/00personal_condor.config
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 %if %gsoap || %uw_build
 %dir %_datadir/condor/webservice/
