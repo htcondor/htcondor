@@ -237,6 +237,7 @@ job_dagman_loglink
 job_dagman_global_event_log-A
 job_dagman_global_event_log-B
 job_dagman_condor_restart
+job_schedd_restart-endurance
 job_dagman_suppress_notification
 job_dagman_suppress_notification-cmd_line
 job_dagman_classad
