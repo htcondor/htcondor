@@ -75,7 +75,7 @@ $failure = sub
 
 $success = sub 
 {
-	CondorTest::debug("Execution was a failure ... as expected\n",1);
+	CondorTest::debug("DAG failed as expected\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
 	# D_A.out should not exist
