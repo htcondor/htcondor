@@ -942,6 +942,14 @@ int Sock::setsockopt(int level, int optname, const void* optval, int optlen)
 {
 	ASSERT(_state != sock_virgin); 
 
+		// Don't bother with TCP options on Unix sockets.
+#ifndef WIN32
+        if ((_who.to_storage().ss_family == AF_FILE) && (level == SOL_TCP))
+	{
+		return true;
+	}
+#endif
+
 	/* cast optval from void* to char*, as some platforms (Windows!) require this */
 	if(::setsockopt(_sock, level, optname, static_cast<const char*>(optval), optlen) < 0)
 	{
@@ -1678,8 +1686,8 @@ Sock::timeout_no_timeout_multiplier(int sec)
 		int fcntl_flags;
 		if ( (fcntl_flags=fcntl(_sock, F_GETFL)) < 0 )
 			return -1;
-		fcntl_flags &= ~O_NONBLOCK;	// reset blocking mode
-		if ( fcntl(_sock,F_SETFL,fcntl_flags) == -1 )
+			// reset blocking mode
+		if ( ((fcntl_flags & O_NONBLOCK) == O_NONBLOCK) && fcntl(_sock,F_SETFL,fcntl_flags & ~O_NONBLOCK) == -1 )
 			return -1;
 #endif
 	} else {
@@ -1694,8 +1702,8 @@ Sock::timeout_no_timeout_multiplier(int sec)
 			int fcntl_flags;
 			if ( (fcntl_flags=fcntl(_sock, F_GETFL)) < 0 )
 				return -1;
-			fcntl_flags |= O_NONBLOCK;	// set nonblocking mode
-			if ( fcntl(_sock,F_SETFL,fcntl_flags) == -1 )
+				// set nonblocking mode
+			if ( ((fcntl_flags & O_NONBLOCK) == 0) && fcntl(_sock,F_SETFL,fcntl_flags | O_NONBLOCK) == -1 )
 				return -1;
 #endif
 		}
