@@ -944,7 +944,7 @@ int Sock::setsockopt(int level, int optname, const void* optval, int optlen)
 
 		// Don't bother with TCP options on Unix sockets.
 #ifndef WIN32
-        if ((_who.to_storage().ss_family == AF_FILE) && (level == SOL_TCP))
+        if ((_who.to_storage().ss_family == AF_LOCAL) && (level == IPPROTO_TCP))
 	{
 		return true;
 	}
