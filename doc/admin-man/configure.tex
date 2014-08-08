@@ -2749,13 +2749,13 @@ which use DaemonCore).
   \Condor{collector}, it will also place a copy of the ClassAd in this
   file. Currently, this setting only works for the \Condor{schedd}.
 
+\label{param:SubsysExprs}
+\label{param:SubsysAttrs}
 \index{SUBSYS\_ATTRS macro@\texttt{<SUBSYS>\_ATTRS} macro}
 \index{SUBSYS\_EXPRS macro@\texttt{<SUBSYS>\_EXPRS} macro}
-\MacroIndex{STARTD\_ATTRS}
-\MacroIndex{STARTD\_EXPRS}
-\label{param:SubsysExprs}
+\index{configuration macro!\texttt{STARTD\_ATTRS}}
+\index{configuration macro!\texttt{STARTD\_EXPRS}}
 \item[\MacroB{<SUBSYS>\_ATTRS} or
-\label{param:SubsysAttrs}
 \MacroB{<SUBSYS>\_EXPRS}]
   Allows any DaemonCore daemon to advertise arbitrary
   expressions from the configuration file in its ClassAd.  Give the
@@ -3905,8 +3905,12 @@ These macros control the \Condor{master}.
   see the specified values of \Env{TMP} and \Env{CONDOR\_CONFIG}.
 
 \label{param:SubsysArgs}
-\item[\MacroB{<SUBSYS>\_ARGS}]
   \index{SUBSYS\_ARGS macro@\texttt{<SUBSYS>\_ARGS} macro}
+  \index{configuration macro!\texttt{NEGOTIATOR\_ARGS}}
+  \index{configuration macro!\texttt{COLLECTOR\_ARGS}}
+  \index{configuration macro!\texttt{STARTD\_ARGS}}
+  \index{configuration macro!\texttt{SCHEDD\_ARGS}}
+\item[\MacroB{<SUBSYS>\_ARGS}]
   This macro allows
   the specification of additional command line arguments for any
   process spawned by the \Condor{master}.  List the desired arguments
