@@ -174,15 +174,13 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 			filename += "_";
 			filename += mypid;
 			filename += "_XXXXXXXXX";
-			dprintf( D_SECURITY, "FS_REMOTE: client template is %s\n", m_new_dir.c_str() );
+			dprintf( D_SECURITY, "FS_REMOTE: client template is %s\n", filename.c_str() );
 
 			int sync_fd;
-			{
-			std::vector<char> new_dir; new_dir.reserve(filename.size()+1);
-			memcpy(&new_dir[0], filename.Value(), filename.size()); new_dir[filename.size()] = '\0';
-			sync_fd = condor_mkstemp(&new_dir[0]);
-			m_new_dir = &new_dir[0];
-			}
+			char *new_dir = strdup(filename.Value());
+			sync_fd = condor_mkstemp(new_dir);
+			m_new_dir = new_dir;
+			free(new_dir);
 			if( sync_fd < 0 ) {
 				// path must be invalid?
 				//
@@ -217,12 +215,10 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 			dprintf( D_SECURITY, "FS: client template is %s\n", m_new_dir.c_str() );
 
 			int sync_fd;
-			{
-			std::vector<char> new_dir; new_dir.reserve(filename.size()+1);
-			memcpy(&new_dir[0], filename.Value(), filename.size()); new_dir[filename.size()] = '\0';
-			sync_fd = condor_mkstemp(&new_dir[0]);
-			m_new_dir = &new_dir[0];
-			}
+			char * new_dir = strdup(filename.Value());
+			sync_fd = condor_mkstemp(new_dir);
+			m_new_dir = new_dir;
+			free(new_dir);
 			if( sync_fd < 0 ) {
 				// path must be invalid?
 				//

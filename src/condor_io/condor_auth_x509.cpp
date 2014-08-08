@@ -112,13 +112,6 @@ Condor_Auth_X509 ::  ~Condor_Auth_X509()
 		gss_release_name( &minor_status, &m_gss_server_name );
 	}
 	gss_release_name(&minor_status, &m_client_name);
-
-	if (m_input_token->length >0)
-	{
-		free(m_input_token->value);
-		m_input_token->length = 0;
-	}
-
 }
 
 int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError* errstack, bool non_blocking)
@@ -126,12 +119,6 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
     int status = 1;
     int reply = 0;
 	token_status = 0;
-	// Can't use GSS_C_EMPTY_BUFFER because C++03 doesn't
-	// support initializer lists, even if C99 does.
-	//m_input_token_desc = GSS_C_EMPTY_BUFFER;
-	m_input_token_desc.length = 0;
-	m_input_token_desc.value = NULL;
-	m_input_token = &m_input_token_desc;
         m_input_chan_bindings = GSS_C_NO_CHANNEL_BINDINGS;
         m_mech_type = GSS_C_NO_OID;
 	m_state = GetClientPre;
@@ -1062,6 +1049,8 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 	OM_uint32				time_req;
 	gss_buffer_desc			output_token_desc = GSS_C_EMPTY_BUFFER;
 	gss_buffer_t			output_token = &output_token_desc;
+	gss_buffer_desc         input_token_desc;
+	gss_buffer_t            input_token;
 
 	m_state = GSSAuth;
 	do
@@ -1072,23 +1061,27 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 			return WouldBlock;
 		}
 
+		input_token_desc.length = 0;
+		input_token_desc.value = NULL;
+		input_token = &input_token_desc;
+
 		if ((token_status = relisock_gsi_get(
 			mySock_,
-			&m_input_token->value,
-			&m_input_token->length)) != 0)
+			&input_token->value,
+			&input_token->length)) != 0)
 		{
 			major_status =
 				GSS_S_DEFECTIVE_TOKEN | GSS_S_CALL_INACCESSIBLE_READ;
 			break;
 		}
 
-		dprintf(D_NETWORK, "gss_assist_accept_sec_context(1):inlen:%u\n", static_cast<unsigned>(m_input_token->length));
+		dprintf(D_NETWORK, "gss_assist_accept_sec_context(1):inlen:%u\n", static_cast<unsigned>(input_token->length));
 
 		major_status = gss_accept_sec_context(
 			&minor_status,
 			&context_handle,
 			credential_handle,
-			m_input_token,
+			input_token,
 			m_input_chan_bindings,
 			&m_client_name,
 			&m_mech_type,
@@ -1127,26 +1120,20 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 			break;
 		}
 
-		if (m_input_token->length >0)
+		if (input_token->length >0)
 		{
-			free(m_input_token->value);
-			m_input_token->length = 0;
+			free(input_token->value);
+			input_token->length = 0;
 		}
 	}
 	while (major_status & GSS_S_CONTINUE_NEEDED);
 
-	if (m_input_token->length >0)
+	if (input_token->length >0)
 	{
-		free(m_input_token->value);
-		m_input_token->length = 0;
+		free(input_token->value);
+		input_token->length = 0;
 	}
 
-	return authenticate_server_gss_complete(major_status, minor_status, errstack);
-}
-
-Condor_Auth_X509::CondorAuthX509Retval
-Condor_Auth_X509::authenticate_server_gss_complete(OM_uint32 major_status, OM_uint32 minor_status, CondorError* errstack)
-{
     m_status = 0;
     if ( (major_status != GSS_S_COMPLETE)) {
 		if (major_status == 655360) {

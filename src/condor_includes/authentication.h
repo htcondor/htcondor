@@ -53,7 +53,6 @@ class Authentication {
 
     int authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods, CondorError* errstack, int timeout, bool non_blocking );
     int authenticate_continue( CondorError* errstack, bool non_blocking );
-    int authenticate_finish( CondorError* errstack );
 
     //------------------------------------------
     // PURPOSE: To send the secret key over. this method
@@ -173,6 +172,8 @@ class Authentication {
     
     int handshake(MyString clientCanUse, bool non_blocking);
     int handshake_continue(MyString clientCanUse, bool non_blocking);
+
+    int authenticate_finish( CondorError* errstack );
 
     int exchangeKey(KeyInfo *& key);
     

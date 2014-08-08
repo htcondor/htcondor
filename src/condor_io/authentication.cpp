@@ -61,8 +61,11 @@ char const *CONDOR_CHILD_FQU = "condor@child";
 char const *CONDOR_PARENT_FQU = "condor@parent";
 
 Authentication::Authentication( ReliSock *sock )
-	: m_key(NULL),
-	  m_auth_timeout_time(0)
+	: m_auth(NULL),
+	  m_key(NULL),
+	  m_auth_timeout_time(0),
+	  m_continue_handshake(false),
+	  m_continue_auth(false)
 {
 // Do this regardless of the state of SKIP_AUTHENTICATION)
 // even if SKIP_AUTHENTICATION is true, we call sock->Timeout later
@@ -77,7 +80,14 @@ Authentication::~Authentication()
 #if !defined(SKIP_AUTHENTICATION)
 	mySock = NULL;
 
-	delete authenticator_;
+	if (authenticator_)
+	{
+		delete authenticator_;
+	}
+	if (m_auth)
+	{
+		delete m_auth;
+	}
 
 	if (method_used) {
 		free (method_used);
@@ -356,6 +366,7 @@ authenticate:
 			// name.  (string name is obtained above because there is currently
 			// no bitmask -> string map)
 			authenticator_ = m_auth;
+			m_auth = NULL;
 			auth_status = authenticator_->getMode();
 			if (m_method_name.size()) {
 				method_used = strdup(m_method_name.c_str());
