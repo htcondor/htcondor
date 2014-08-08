@@ -491,8 +491,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 // pass on to ReadCommand.
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 {
-	CondorError errstack;
-
 	m_sock->decode();
 
 		// Determine if incoming socket is HTTP over TCP, or if it is CEDAR.
@@ -611,8 +609,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 // was requested.  Soap requests are also handled here.
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand()
 {
-	CondorError errstack;
-
 	m_sock->decode();
 
 	if (m_sock->type() == Stream::reli_sock) {
