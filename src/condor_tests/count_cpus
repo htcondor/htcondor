@@ -1,0 +1,40 @@
+#!/bin/bash
+# this script prints out cpus and hyperthreads by looking at /proc/cpuinfo
+
+verbose=0
+diagnostic=0
+
+function parse_cpuinfo {
+
+  egrep 'physical |core ' $1 | awk '
+    /physical id/{ if(diag) { print $1, $2, $3, $4; } id=$4; hyper+=1; recs+=1}
+    /core id/{ jd=$4; cid=id ":" jd; aa[cid] = aa[cid] recs ","; if (diag) {printf "%s %s %s\n", id, jd, cid; } }
+    END { 
+      for (var in aa) { cores+=1; if (verbose) { printf "[%s]=%s cores=%d\n", var, aa[var], cores} }      
+      printf "Real_cores=%d, Hyper_cores=%d\n", cores, hyper;
+    }
+  ' verbose=$verbose diag=$diagnostic
+}
+
+# if args is a list of pids, print each one.
+#
+fn=/proc/cpuinfo
+if [[ $# -gt 0 ]]; then
+  for p in "$@"
+    do
+      if [[ $p == "-v" ]]; then
+        verbose=1
+      else
+        if [[ $p == "-d" ]]; then
+	  diagnostic=1
+	else
+          fn=$p
+	fi
+      fi
+    done
+fi
+
+echo reading $fn
+parse_cpuinfo $fn
+
+
