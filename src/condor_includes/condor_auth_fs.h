@@ -37,7 +37,9 @@ class Condor_Auth_FS : public Condor_Auth_Base {
     // Destructor
     //------------------------------------------
 
-    int authenticate(const char * remoteHost, CondorError* errstack);
+    int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
+    int authenticate_continue(CondorError* /*errstack*/, bool /*non_blocking*/);
+
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr -- host to authenticate
@@ -54,6 +56,7 @@ class Condor_Auth_FS : public Condor_Auth_Base {
 
  private:
 
+	std::string m_new_dir;
     int    remote_;
 };
 

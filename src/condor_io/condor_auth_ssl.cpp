@@ -42,7 +42,7 @@ Condor_Auth_SSL :: ~Condor_Auth_SSL()
 	if(m_crypto) delete(m_crypto);
 }
 
-int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /* errstack */)
+int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /* errstack */, bool /*non_blocking*/)
 {
     long err;
     char *buffer;

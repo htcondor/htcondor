@@ -57,7 +57,7 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     // Destructor
     //------------------------------------------
 
-    int authenticate(const char * remoteHost, CondorError* errstack);
+    int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr -- host to authenticate
@@ -103,11 +103,27 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
 
  private:
 
+	enum CondorAuthX509State {
+		GetClientPre = 100,
+		GSSAuth,
+		GetClientPost
+	};
+	enum CondorAuthX509Retval {
+		Fail = 0,
+		Success,
+		WouldBlock,
+		Continue
+	};
+
     int authenticate_self_gss(CondorError* errstack);
 
     int authenticate_client_gss(CondorError* errstack);
 
-    int authenticate_server_gss(CondorError* errstack);
+    CondorAuthX509Retval authenticate_server_gss(CondorError* errstack, bool non_blocking);
+    CondorAuthX509Retval authenticate_server_pre(CondorError* errstack, bool non_blocking);
+    CondorAuthX509Retval authenticate_server_gss_complete(OM_uint32, OM_uint32, CondorError* errstack);
+    CondorAuthX509Retval authenticate_server_gss_post(CondorError* errstack, bool non_blocking);
+	int authenticate_continue(CondorError* /*errstack*/, bool /*non_blocking*/);
 
     char * get_server_info();
 
@@ -145,9 +161,14 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     gss_cred_id_t       credential_handle;
     gss_ctx_id_t        context_handle ;
     gss_name_t          m_gss_server_name;
-    int                 token_status;
-    //X509_Credential *   my_credential;
-    OM_uint32	        ret_flags ;
+
+	// These are used during the globus auth on the server side.
+	gss_name_t		m_client_name;
+	int			token_status;
+	OM_uint32		ret_flags;
+	CondorAuthX509State	m_state;
+	int			m_status;
+
 	std::string			m_fqan;
 #ifdef WIN32
     typedef HashTable<MyString, MyString> Grid_Map_t;
