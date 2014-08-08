@@ -68,6 +68,7 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 	m_comTable(daemonCore->comTable),
 	m_real_cmd(0),
 	m_auth_cmd(0),
+	m_cmd_index(0),
 	m_errstack(NULL),
 	m_new_session(false),
 	m_will_enable_encryption(SecMan::SEC_FEAT_ACT_UNDEFINED),

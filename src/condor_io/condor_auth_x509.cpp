@@ -67,9 +67,11 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
       credential_handle(GSS_C_NO_CREDENTIAL),
       context_handle   (GSS_C_NO_CONTEXT),
       m_gss_server_name(NULL),
-	m_client_name(GSS_C_NO_NAME),
+      m_client_name(GSS_C_NO_NAME),
       token_status     (0),
-      ret_flags        (0)
+      ret_flags        (0),
+      m_state          (GetClientPre),
+      m_status         (1)
 {
 #ifdef WIN32
 	ParseMapFile();
@@ -119,8 +121,6 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
     int status = 1;
     int reply = 0;
 	token_status = 0;
-        m_input_chan_bindings = GSS_C_NO_CHANNEL_BINDINGS;
-        m_mech_type = GSS_C_NO_OID;
 	m_state = GetClientPre;
 
     //don't just return TRUE if isAuthenticated() == TRUE, since 
@@ -1082,9 +1082,9 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 			&context_handle,
 			credential_handle,
 			input_token,
-			m_input_chan_bindings,
+			GSS_C_NO_CHANNEL_BINDINGS,
 			&m_client_name,
-			&m_mech_type,
+			NULL,
 			output_token,
 			&ret_flags,
 			&time_req,

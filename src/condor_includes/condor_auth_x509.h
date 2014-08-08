@@ -163,8 +163,6 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     gss_name_t          m_gss_server_name;
 
 	// These are used during the globus auth on the server side.
-	gss_channel_bindings_t	m_input_chan_bindings;
-	gss_OID			m_mech_type;
 	gss_name_t		m_client_name;
 	int			token_status;
 	OM_uint32		ret_flags;

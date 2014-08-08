@@ -38,7 +38,6 @@ Condor_Auth_FS :: ~Condor_Auth_FS()
 
 int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* errstack, bool non_blocking)
 {
-	bool used_file = false;
 	int client_result = -1;
 	int server_result = -1;
 	int fail = -1 == 0;
@@ -132,8 +131,8 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 		}
 		set_priv(saved_priv);
 
-		dprintf( D_SECURITY, "AUTHENTICATE_FS%s: used %s %s, status: %d\n",
-				(remote_?"_REMOTE":""), (used_file?"file":"dir"),
+		dprintf( D_SECURITY, "AUTHENTICATE_FS%s: used dir %s, status: %d\n",
+				(remote_?"_REMOTE":""),
 				(new_dir ? new_dir : "(null)"), (server_result == 0) );
 
 		if ( new_dir ) {
@@ -193,9 +192,8 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				errstack->pushf("FS_REMOTE", 1002,
 						"condor_mkstemp(%s) failed: %s (%i)",
 						filename.Value(), strerror(en), en);
-				m_new_dir = "\0";				//the other process will expect an
-											//empty string on failure, so make
-											//the first char be null
+				m_new_dir = "";			//the other process will expect an
+										//empty string on failure
 			} else {
 				::close( sync_fd );
 				unlink( m_new_dir.c_str() );
@@ -211,8 +209,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				filename = "/tmp";
 			}
 			filename += "/FS_XXXXXXXXX";
-			m_new_dir = filename.Value();
-			dprintf( D_SECURITY, "FS: client template is %s\n", m_new_dir.c_str() );
+			dprintf( D_SECURITY, "FS: client template is %s\n", filename.c_str() );
 
 			int sync_fd;
 			char * new_dir = strdup(filename.Value());
@@ -231,9 +228,8 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				errstack->pushf("FS", 1002,
 						"condor_mkstemp(%s) failed: %s (%i)",
 						filename.Value(), strerror(en), en);
-				m_new_dir = "\0";				//the other process will expect an
-											//empty string on failure, so make
-											//the first char be null
+				m_new_dir = "";			//the other process will expect an
+										//empty string on failure
 			} else {
 				::close( sync_fd );
 				unlink( m_new_dir.c_str() );
