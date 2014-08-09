@@ -67,6 +67,8 @@
 #include <grp.h>
 #endif
 
+#include <algorithm>
+
 #include "file_sql.h"
 extern FILESQL *FILEObj;
 
@@ -114,8 +116,7 @@ class Service;
 
 bool        PrioRecArrayIsDirty = true;
 // spend at most this fraction of the time rebuilding the PrioRecArray
-const double PrioRecRebuildMaxTimeSlice = 0.05;
-const double PrioRecRebuildMaxTimeSliceWhenNoMatchFound = 0.1;
+const static double PrioRecRebuildMaxTimeSlice = 0.05;
 const double PrioRecRebuildMaxInterval = 20 * 60;
 Timeslice   PrioRecArrayTimeslice;
 prio_rec	PrioRecArray[INITIAL_MAX_PRIO_REC];
@@ -4870,10 +4871,10 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 
 	PrioRecArrayTimeslice.setMaxInterval( PrioRecRebuildMaxInterval );
 	if( no_match_found ) {
-		PrioRecArrayTimeslice.setTimeslice( PrioRecRebuildMaxTimeSliceWhenNoMatchFound );
+		PrioRecArrayTimeslice.setTimeslice( std::min(2*param_double("SCHEDD_INTERVAL_TIMESLICE", PrioRecRebuildMaxTimeSlice, 0, 1), 1.0) );
 	}
 	else {
-		PrioRecArrayTimeslice.setTimeslice( PrioRecRebuildMaxTimeSlice );
+		PrioRecArrayTimeslice.setTimeslice( param_double("SCHEDD_INTERVAL_TIMESLICE", PrioRecRebuildMaxTimeSlice, 0, 1) );
 	}
 
 	if( !PrioRecArrayTimeslice.isTimeToRun() ) {

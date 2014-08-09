@@ -3315,6 +3315,13 @@ friendly_name=Schedd Interval
 review=?
 tags=submit,submit
 
+[SCHEDD_INTERVAL_TIMESLICE]
+default=0.01
+type=double
+range=0.0,1.0
+tags=schedd
+review=?
+
 [DEFAULT_RANK_STANDARD]
 default=
 type=string

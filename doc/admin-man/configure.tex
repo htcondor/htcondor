@@ -6143,8 +6143,8 @@ MAX_JOBS_RUNNING	= \
   latest state of the job queue.  Therefore, this macro is used to
   adjust the bookkeeping interval so that it is done more frequently
   when the cost of doing so is relatively small, and less frequently
-  when the cost is high.  The default is 0.05, which means the schedd
-  will adapt its bookkeeping interval to consume no more than 5\% of the
+  when the cost is high.  The default is 0.01, which means the schedd
+  will adapt its bookkeeping interval to consume no more than 1\% of the
   total time available to the schedd.  The lower bound is configured by
   \Macro{SCHEDD\_MIN\_INTERVAL} (default 5 seconds), and the upper bound
   is configured by \Macro{SCHEDD\_INTERVAL} (default 300 seconds).

@@ -60,6 +60,11 @@ now override the global configuration, instead of the other way around.  This
 makes the user-specific configuration files more useful.
 \Ticket{3158}
 
+\item The \Macro{SCHEDD\_INTERVAL\_TIMESLICE}, which controls various housekeeping
+events in the \Condor{schedd} now defaults to 1\% (previously 5\%).  By default,
+housekeeping will now take up a maximum of 1\% of the \Condor{schedd}'s runtime.
+\Ticket{4484}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
