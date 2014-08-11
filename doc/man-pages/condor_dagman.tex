@@ -1,18 +1,19 @@
 \begin{ManPage}{\label{man-condor-dagman}\Condor{dagman}}{3}
 {meta scheduler of the jobs submitted as the nodes of a DAG or DAGs}
-\Synopsis
+\Synopsis 
 \SynProg{\Condor{dagman}}
-\Opt{-f}
-\Opt{-t}
-\OptArg{-l}{.}
+\Arg{-f}
+\Arg{-t}
+\Arg{-l .}
 \Opt{-help}
 
 \SynProg{\Condor{dagman}}
 \Opt{-version}
 
 \SynProg{\Condor{dagman}}
-\Opt{-f}
-\OptArg{-l}{.}
+\Arg{-f}
+\Arg{-l .}
+\OptArg{-csdversion}{version\_string}
 \oOptArg{-debug}{level}
 \oOptArg{-maxidle}{numberOfJobs}
 \oOptArg{-maxjobs}{numberOfJobs}
@@ -25,7 +26,6 @@
 \oOpt{-waitfordebug}
 \oOptArg{-autorescue}{0|1}
 \oOptArg{-dorescuefrom}{number}
-\OptArg{-csdversion}{version\_string}
 \oOpt{-allowversionmismatch}
 \oOpt{-DumpRescue}
 \oOpt{-verbose}
@@ -59,6 +59,15 @@ submission of the jobs within the DAG.
 
 All command line arguments to the \Prog{DaemonCore} library functions
 work for \Condor{dagman}.
+When invoked from the command line, \Condor{dagman} requires
+the arguments \Arg{-f -l .} to appear first on the command line,
+to be processed by \Prog{DaemonCore}.
+The \Opt{csdversion} must also be specified;
+at start up,
+\Condor{dagman} checks for a version mismatch with the
+\Condor{submit\_dag} version in this argument.
+The \Arg{-t} argument must also be present for the \Opt{-help}
+option, such that output is sent to the terminal.
 
 Arguments to \Condor{dagman} are either automatically set
 by \Condor{submit\_dag} 
@@ -168,10 +177,6 @@ output DAG input file lines as they are parsed
        run the specified rescue DAG number for the given DAG.  A value
        of 0 is the same as not specifying this option.  Specifying a
        nonexistent rescue DAG is a fatal error.}
-    \OptItem{\OptArg{-csdversion}{version\_string}}{\Arg{version\_string}
-       is the version of the \Condor{submit\_dag} program.  At startup,
-       \Condor{dagman} checks for a version mismatch with the
-       \Condor{submit\_dag} version in this argument.}
     \OptItem{\Opt{-allowversionmismatch}}{This optional argument causes
        \Condor{dagman} to allow a version mismatch between
        \Condor{dagman} itself and the \File{.condor.sub} file produced
@@ -276,9 +281,9 @@ output DAG input file lines as they are parsed
        in which \Condor{dagman} will not run the POST script if the PRE
        script fails.}
     \OptItem{\Opt{-DoRecovery}}{Causes \Condor{dagman} to start in recovery
-      mode.  (This means that it reads the relevant job user log(s) and
-      "catches up" to the given DAG's previous state before submitting
-      any new jobs.)}
+      mode.  This means that it reads the relevant job user log(s) and
+      catches up to the given DAG's previous state before submitting
+      any new jobs.}
     \OptItem{\OptArg{-dag}{filename}}{\Arg{filename} is the name of the
        DAG input file that is set as an argument to \Condor{submit\_dag},
        and passed to \Condor{dagman}.}
