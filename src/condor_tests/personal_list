@@ -1,4 +1,5 @@
 lib_procapi_pidtracking-byenv
+job_hyperthread_check
 job_core_killsignal_sched
 job_core_rmkillsig_sched
 job_dagman_large_dag
