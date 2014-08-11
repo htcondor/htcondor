@@ -1,6 +1,18 @@
 \begin{ManPage}{\label{man-condor-dagman}\Condor{dagman}}{3}
 {meta scheduler of the jobs submitted as the nodes of a DAG or DAGs}
-\Synopsis \SynProg{\Condor{dagman}}
+\Synopsis 
+\SynProg{\Condor{dagman}}
+\Arg{-f}
+\Arg{-t}
+\Arg{-l .}
+\Opt{-help}
+
+\SynProg{\Condor{dagman}}
+\Opt{-version}
+
+\SynProg{\Condor{dagman}}
+\Arg{-f}
+\Arg{-l .}
 \oOptArg{-debug}{level}
 \oOptArg{-maxidle}{numberOfJobs}
 \oOptArg{-maxjobs}{numberOfJobs}
@@ -45,6 +57,11 @@ submission of the jobs within the DAG.
 
 All command line arguments to the \Prog{DaemonCore} library functions
 work for \Condor{dagman}.
+When invoked from the command line, \Condor{dagman} requires
+the arguments \Arg{-f -l .} to appear first on the command line,
+to be processed by \Prog{DaemonCore}.
+The \Arg{-t} argument must also be present for the \Opt{-help}
+option, such that output is sent to the terminal.
 
 Arguments to \Condor{dagman} are either automatically set
 by \Condor{submit\_dag} 
