@@ -8480,6 +8480,22 @@ These macros affect the \Condor{negotiator}.
   where X equals number of consecutive jobs in the queue 
   within the same auto cluster.
 
+\label{param:NegotiatorResourceRequestListSize}
+\item[\Macro{NEGOTIATOR\_RESOURCE\_REQUEST\_LIST\_SIZE}]
+  An integer tuning parameter used by the \Condor{negotiator} to control 
+  the number of resource requests fetched from a \Condor{schedd} per 
+  network round-trip.
+  With higher values, 
+  the latency of negotiation can be significantly be reduced
+  when negotiating with a \Condor{schedd} running 
+  HTCondor version 8.3.0 or more recent,
+  especially over a wide-area network.
+  Setting this value too high, however,
+  could cause the \Condor{schedd} to unnecessarily block on network I/O.  
+  The default value is 20.  If \MacroNI{USE\_RESOURCE\_REQUEST\_COUNTS}
+  is set to \Expr{False}, then this variable will be unconditionally set
+  to a value of 1.
+
 \label{param:NegotiatorMatchExprs}
 \item[\Macro{NEGOTIATOR\_MATCH\_EXPRS}]
   A comma-separated list of macro names that are inserted as
