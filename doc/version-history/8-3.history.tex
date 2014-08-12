@@ -35,6 +35,13 @@ security session shared with the child daemon.
 This makes the initial communication between the daemons more efficient.
 \Ticket{4405}
 
+\item Negotiation cycle performance has been improved, especially
+over a wide-area network, by reducing network traffic and latency
+between a submit machine and a central manager.
+See configuration variable \Macro{NEGOTIATOR\_RESOURCE\_REQUEST\_LIST\_SIZE}
+in section~\ref{{param:NegotiatorResourceRequestListSize}.
+\Ticket{4460}
+
 \item The synchronization of the job event log was improved by only
 using \Procedure{fsync} where necessary and 
 \Procedure{fdatasync} where sufficient.  
