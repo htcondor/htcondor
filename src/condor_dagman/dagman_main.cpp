@@ -87,7 +87,7 @@ static void Usage() {
 			"\t\t[-Update_submit]\n"
 			"\t\t[-Import_env]\n"
             "\t\t[-Priority <int N>]\n"
-			"\t\t[-dont_use_default_node_log]\n"
+			"\t\t[-dont_use_default_node_log] (no longer allowed)\n"
 			"\t\t[-DoRecov]\n"
             "\twhere NAME is the name of your DAG.\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
@@ -922,8 +922,8 @@ void main_init (int argc, char ** const argv) {
     }
 
 	if ( !dagman._submitDagDeepOpts.always_use_node_log ) {
-        debug_printf( DEBUG_QUIET, "Warning: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer recommended and will probably be disabled in a future version\n" );
-		check_warning_strictness( DAG_STRICT_1 );
+        debug_printf( DEBUG_QUIET, "Error: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer allowed\n" );
+		DC_Exit( EXIT_ERROR );
 	}
 
 	//
