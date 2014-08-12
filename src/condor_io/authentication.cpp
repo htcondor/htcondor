@@ -34,6 +34,7 @@
 #include "condor_environ.h"
 #include "condor_ipverify.h"
 #include "CondorError.h"
+#include "globus_utils.h"
 
 
 
@@ -984,6 +985,10 @@ int Authentication::handshake(MyString my_methods, bool non_blocking) {
         dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the client\n");
         mySock->encode();
 		int method_bitmask = SecMan::getAuthBitmask(my_methods.Value());
+		if ( (method_bitmask & CAUTH_GSI) && activate_globus_gsi() != 0 ) {
+			dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
+			method_bitmask &= ~CAUTH_GSI;
+		}
         dprintf ( D_SECURITY, "HANDSHAKE: sending (methods == %i) to server\n", method_bitmask);
         if ( !mySock->code( method_bitmask ) || !mySock->end_of_message() ) {
             return -1;
@@ -1022,6 +1027,11 @@ Authentication::handshake_continue(MyString my_methods, bool non_blocking)
 	dprintf ( D_SECURITY, "HANDSHAKE: client sent (methods == %i)\n", client_methods);
 
 	shouldUseMethod = selectAuthenticationType( my_methods, client_methods );
+	if ( shouldUseMethod == CAUTH_GSI && activate_globus_gsi() != 0 ) {
+		dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
+		client_methods &= ~CAUTH_GSI;
+		shouldUseMethod = selectAuthenticationType( my_methods, client_methods );
+	}
 
 	dprintf ( D_SECURITY, "HANDSHAKE: i picked (method == %i)\n", shouldUseMethod);
 
