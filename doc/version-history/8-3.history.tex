@@ -43,6 +43,12 @@ This should provide a small reduction in disk I/O to
 the \Condor{schedd} daemon.
 \Ticket{4283}
 
+\item CPU usage by the \Condor{collector} has been reduced when
+handling normal queries from \Condor{status},
+and CPU usage by the \Condor{schedd} has been reduced when
+handling normal queries from \Condor{q}.
+\Ticket{4448}
+
 \item HTCondor can now internally cache the result of Globus authorization
 callouts.  
 The caching behavior is enabled by setting configuration variable
