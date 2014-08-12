@@ -31,19 +31,10 @@ HTCondor version 8.2.2.
 
 \begin{itemize}
 
-\item The job ClassAd attribute \Attr{DAG\_Status} is included in 
-the \File{dagman.out} file.
-\Ticket{4381}
-
 \item When a daemon creates a child daemon process, it also creates a
 security session shared with the child daemon.
 This makes the initial communication between the daemons more efficient.
 \Ticket{4405}
-
-\item The new \Opt{-DoRecovery} command line option for \Condor{dagman}
-and \Condor{submit\_dag} causes \Condor{dagman} to run in
-recovery mode.
-\Ticket{2218}
 
 \item The synchronization of the job event log was improved by only
 using \Procedure{fsync} where necessary and 
@@ -60,6 +51,15 @@ This feature will be useful for sites that use the Globus authorization
 callouts based only on DN and VOMS FQAN, and for sites that have 
 performance issues.
 \Ticket{4138}
+
+\item The job ClassAd attribute \Attr{DAG\_Status} is included in 
+the \File{dagman.out} file.
+\Ticket{4381}
+
+\item The new \Opt{-DoRecovery} command line option for \Condor{dagman}
+and \Condor{submit\_dag} causes \Condor{dagman} to run in
+recovery mode.
+\Ticket{2218}
 
 \item The new \Opt{-ads} option to \Condor{status} permits a set of ClassAds
 to be read from a file, processing the ClassAds as if they came from
