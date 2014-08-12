@@ -78,8 +78,7 @@ makes the user-specific configuration files more useful.
 
 \begin{itemize}
 
-\item HTCondor version 8.3.0 not yet released.
-%\item HTCondor version 8.3.0 released on Month Date, 2014.
+\item HTCondor version 8.3.0 released on August 12, 2014.
 This release contains all improvements and bug fixes from 
 HTCondor version 8.2.2.
 
@@ -90,19 +89,10 @@ HTCondor version 8.2.2.
 
 \begin{itemize}
 
-\item The job ClassAd attribute \Attr{DAG\_Status} is included in 
-the \File{dagman.out} file.
-\Ticket{4381}
-
 \item When a daemon creates a child daemon process, it also creates a
 security session shared with the child daemon.
 This makes the initial communication between the daemons more efficient.
 \Ticket{4405}
-
-\item Added a \Opt{-DoRecovery} command-line flag to \Condor{dagman}
-and \Condor{submit\_dag} that causes \Condor{dagman} to run in
-recovery mode (see ~\ref{man-condor-submit-dag}).
-\Ticket{2218}
 
 \item The synchronization of the job event log was improved by only
 using \Procedure{fsync} where necessary and 
@@ -110,6 +100,12 @@ using \Procedure{fsync} where necessary and
 This should provide a small reduction in disk I/O to 
 the \Condor{schedd} daemon.
 \Ticket{4283}
+
+\item CPU usage by the \Condor{collector} has been reduced when
+handling normal queries from \Condor{status},
+and CPU usage by the \Condor{schedd} has been reduced when
+handling normal queries from \Condor{q}.
+\Ticket{4448}
 
 \item HTCondor can now internally cache the result of Globus authorization
 callouts.  
@@ -119,6 +115,15 @@ This feature will be useful for sites that use the Globus authorization
 callouts based only on DN and VOMS FQAN, and for sites that have 
 performance issues.
 \Ticket{4138}
+
+\item The job ClassAd attribute \Attr{DAG\_Status} is included in 
+the \File{dagman.out} file.
+\Ticket{4381}
+
+\item The new \Opt{-DoRecovery} command line option for \Condor{dagman}
+and \Condor{submit\_dag} causes \Condor{dagman} to run in
+recovery mode.
+\Ticket{2218}
 
 \item The new \Opt{-ads} option to \Condor{status} permits a set of ClassAds
 to be read from a file, processing the ClassAds as if they came from
