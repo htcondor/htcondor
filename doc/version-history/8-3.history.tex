@@ -69,6 +69,11 @@ flag to \Condor{submit\_dag} is disabled and the
 longer be set to \Expr{False}).
 \Ticket{3994}
 
+\item The new \Condor{dagman} configuration macro
+\Macro{DAGMAN\_SUPPRESS\_JOB\_LOGS} allows users to prevent DAG node
+jobs from writing to the log file specified in their submit file.
+\Ticket{4353}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

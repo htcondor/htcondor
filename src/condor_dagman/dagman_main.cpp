@@ -140,6 +140,7 @@ Dagman::Dagman() :
 	_defaultPriority(0),
 	_claim_hold_time(20),
 	_doRecovery(false),
+	_suppressJobLogs(false),
 	_dagmanClassad(NULL)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
@@ -439,6 +440,12 @@ Dagman::Config()
 	if ( debugSetting ) {
 		free( debugSetting );
 	}
+
+	_suppressJobLogs = 
+				param_boolean( "DAGMAN_SUPPRESS_JOB_LOGS",
+				_suppressJobLogs );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_SUPPRESS_JOB_LOGS setting: %s\n",
+				_suppressJobLogs ? "True" : "False" );
 
 	// enable up the debug cache if needed
 	if (debug_cache_enabled) {
