@@ -84,7 +84,14 @@
 %if 0%{?hcc}
 %define blahp 0
 %define cream 0
+%if 0%{?rhel} >= 7
+%define aviary 0
+%else
 %define aviary 1
+%endif
+%if 0%{?rhel} >= 6
+%define std_univ 0
+%endif
 %endif
 
 # Temporarily turn cream off
@@ -209,7 +216,6 @@ Patch10: config_batch_gahp_path.patch
 
 # HCC patches
 # See gt3158
-Patch14: 0001-Apply-the-user-s-condor_config-last-rather-than-firs.patch
 Patch15: wso2-axis2.patch
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
@@ -656,7 +662,6 @@ exit 0
 %endif
 
 %if 0%{?hcc}
-%patch14 -p1
 %patch15 -p0
 %endif
 
@@ -1291,8 +1296,12 @@ rm -rf %{buildroot}
 %_sbindir/remote_gahp
 %_sbindir/nordugrid_gahp
 %_sbindir/gce_gahp
+%if %uw_build
 %_sbindir/boinc_gahp
+%endif
+%if %cream || %uw_build
 %_sbindir/cream_gahp
+%endif
 %_libexecdir/condor/condor_gpu_discovery
 %_sbindir/condor_vm_vmware
 %config(noreplace) %_sysconfdir/condor/condor_config.local
