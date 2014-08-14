@@ -2980,6 +2980,54 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   \Attr{JobLeaseDuration} may cause
   unnecessary job disconnects in pools with network issues.
 
+\label{param:CcbPollingInterval}
+\item[\Macro{CCB\_POLLING\_INTERVAL}] In seconds, the smallest amount 
+  of time that could go by before CCB would begin another round of polling to
+  check on already connected clients.
+  While the value of this variable does not change,
+  the actual interval used may be exceeded if the measured amount 
+  of time previously taken to poll to check on already connected clients 
+  exceeded the amount of time desired, 
+  as expressed with \MacroNI{CCB\_POLLING\_TIMESLICE}. 
+  The default value is 20 seconds.
+
+\label{param:CcbPollingMaxInterval}
+\item[\Macro{CCB\_POLLING\_MAX\_INTERVAL}] In seconds, the interval of time
+  after which polling to check on already connected clients must occur,
+  independent of any other factors.
+  The default value is 600 seconds.
+
+\label{param:CcbPollingTimeslice}
+\item[\Macro{CCB\_POLLING\_TIMESLICE}] A floating point fraction
+  representing the fractional amount of the total run time of CCB
+  to set as a target for the maximum amount of CCB running time used on 
+  polling to check on already connected clients.
+  The default value is 0.05.
+
+\label{param:CcbReadBuffer}
+\item[\Macro{CCB\_READ\_BUFFER}] The size of the kernel TCP read buffer 
+  in bytes for all sockets used by CCB.
+  The default value is 2Kbytes.
+
+\label{param:CcbWriteBuffer}
+\item[\Macro{CCB\_WRITE\_BUFFER}] The size of the kernel TCP write buffer 
+  in bytes for all sockets used by CCB.
+  The default value is 2Kbytes.
+
+\label{param:CcbSweepInterval}
+\item[\Macro{CCB\_SWEEP\_INTERVAL}]  The interval, in seconds,
+  between times when the CCB server writes its information about 
+  open TCP connections to a file. 
+  Crash recovery is accomplished using the information.
+  The default value is 1200 seconds (20 minutes).
+
+\label{param:CcbReconnectFile}
+\item[\Macro{CCB\_RECONNECT\_FILE}] The full path and file name of the
+  file that the CCB server writes its information about 
+  open TCP connections to a file.
+  Crash recovery is accomplished using the information.
+  The default value is \File{\$(SPOOL)/.ccb\_reconnect}.
+
 \label{param:UseSharedPort}
 \item[\Macro{USE\_SHARED\_PORT}] A boolean value that
   specifies whether an HTCondor process should rely on
