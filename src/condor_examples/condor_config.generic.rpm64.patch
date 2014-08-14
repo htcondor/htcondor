@@ -1,6 +1,6 @@
---- condor_config.patched	Wed May  7 17:33:29 2014
+--- condor_config.generic	Wed May  7 17:33:29 2014
 +++ condor_config.patched.X86_64	Wed May  7 17:37:09 2014
-@@ -58,7 +58,7 @@
+@@ -62,7 +62,7 @@
  SPOOL   = $(LOCAL_DIR)/lib/condor/spool
  EXECUTE = $(LOCAL_DIR)/lib/condor/execute
  BIN     = $(RELEASE_DIR)/bin

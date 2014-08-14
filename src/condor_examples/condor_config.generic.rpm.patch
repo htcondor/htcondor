@@ -29,8 +29,8 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##  Use a host-based security policy. By default CONDOR_HOST and the local machine will be allowed
-@@ -46,5 +44,24 @@
- #ALLOW_WRITE = *.cs.wisc.edu
+@@ -50,5 +48,24 @@
+ #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
 -## Values set by the condor_configure script:

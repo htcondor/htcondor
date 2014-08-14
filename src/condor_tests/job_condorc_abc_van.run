@@ -23,10 +23,17 @@ use CondorUtils;
 
 use Check::SimpleJob;
 
+my $append_condor_config = '
+  # reduce latency in test
+  CONDOR_JOB_POLL_INTERVAL = 10
+  USE_SHARED_PORT = false
+';
+
 # This is the "remote" pool where the job will run.
 my $poolC = CondorTest::StartCondorWithParams(
     condor_name => "poolC",
-    daemon_list => "MASTER, COLLECTOR, SCHEDD, STARTD, NEGOTIATOR"
+    daemon_list => "MASTER, COLLECTOR, SCHEDD, STARTD, NEGOTIATOR",
+    append_condor_config => $append_condor_config
 );
 
 my $poolC_collector = $poolC->GetCollectorAddress();
@@ -34,12 +41,6 @@ my $poolC_schedd_name =
     `condor_status -pool $poolC_collector -schedd -format "%s\n" Name`
     || die "Failed to query schedd name.";
 CondorUtils::fullchomp $poolC_schedd_name;
-
-
-my $append_condor_config = '
-  # reduce latency in test
-  CONDOR_JOB_POLL_INTERVAL = 10
-';
 
 # This is the "middle" pool where the job is resubmitted.
 my $poolB = CondorTest::StartCondorWithParams(

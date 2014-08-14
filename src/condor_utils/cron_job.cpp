@@ -527,6 +527,7 @@ CronJob::StartJobProcess( void )
 		priv,				// Priviledge level
 		m_reaperId,			// ID Of reaper
 		FALSE,				// Command port?  No
+		FALSE,				// Command port?  No
 		&Params().GetEnv(), // Env to give to child
 		Params().GetCwd(),	// Starting CWD
 		NULL,				// Process family info

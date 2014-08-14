@@ -95,7 +95,7 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, pr
 
 	int pid = daemonCore->
 		Create_Process(hook_path, final_args, priv,
-					  reaper_id, FALSE, env, NULL, &fi,
+					  reaper_id, FALSE, FALSE, env, NULL, &fi,
 					  NULL, std_fds);
 	client->setPid(pid);
 	if (pid == FALSE) {

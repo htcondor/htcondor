@@ -55,6 +55,18 @@ SharedPortServer::InitAndReconfig() {
 			this,
 			ALLOW );
 		ASSERT( rc >= 0 );
+
+		rc = daemonCore->Register_UnregisteredCommandHandler(
+			(CommandHandlercpp)&SharedPortServer::HandleDefaultRequest,
+			"SharedPortServer::HandleDefaultRequest",
+			this,
+			true);
+		ASSERT( rc >= 0 );
+	}
+
+	param(m_default_id, "SHARED_PORT_DEFAULT_ID");
+	if (param_boolean("USE_SHARED_PORT", false) && param_boolean("COLLECTOR_USES_SHARED_PORT", true) && !m_default_id.size()) {
+		m_default_id = "collector";
 	}
 
 	PublishAddress();
@@ -131,8 +143,6 @@ SharedPortServer::PublishAddress()
 int
 SharedPortServer::HandleConnectRequest(int,Stream *sock)
 {
-	int result = TRUE;
-
 	sock->decode();
 
 		// to avoid possible D-O-S attacks, we read into fixed-length buffers
@@ -201,6 +211,13 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 			m_shared_port_client.get_currentPendingPassSocketCalls(),
 			m_shared_port_client.get_maxPendingPassSocketCalls() );
 
+	return PassRequest(static_cast<Sock*>(sock), shared_port_id);
+}
+
+int
+SharedPortServer::PassRequest(Sock *sock, const char *shared_port_id)
+{
+	int result = TRUE;
 #if HAVE_SCM_RIGHTS_PASSFD
 		// Note: the HAVE_SCM_RIGHTS_PASSFD implementation of PassSocket()
 		// is nonblocking.  See gt #4094.
@@ -232,4 +249,17 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 #endif
 
 	return result;
+}
+
+int
+SharedPortServer::HandleDefaultRequest(int cmd,Stream *sock)
+{
+	if (!m_default_id.size()) {
+		dprintf(D_FULLDEBUG, "SharedPortServer: Got request for command %d from %s, but no default client specified.\n",
+			cmd, sock->peer_description());
+		return 0;
+	}
+	dprintf(D_FULLDEBUG, "SharedPortServer: Passing a request from %s for command %d to ID %s.\n",
+		sock->peer_description(), cmd, m_default_id.c_str()); 
+	return PassRequest(static_cast<Sock*>(sock), m_default_id.c_str());
 }

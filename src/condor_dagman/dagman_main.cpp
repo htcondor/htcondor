@@ -87,7 +87,7 @@ static void Usage() {
 			"\t\t[-Update_submit]\n"
 			"\t\t[-Import_env]\n"
             "\t\t[-Priority <int N>]\n"
-			"\t\t[-dont_use_default_node_log]\n"
+			"\t\t[-dont_use_default_node_log] (no longer allowed)\n"
 			"\t\t[-DoRecov]\n"
             "\twhere NAME is the name of your DAG.\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
@@ -140,6 +140,7 @@ Dagman::Dagman() :
 	_defaultPriority(0),
 	_claim_hold_time(20),
 	_doRecovery(false),
+	_suppressJobLogs(false),
 	_dagmanClassad(NULL)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
@@ -439,6 +440,12 @@ Dagman::Config()
 	if ( debugSetting ) {
 		free( debugSetting );
 	}
+
+	_suppressJobLogs = 
+				param_boolean( "DAGMAN_SUPPRESS_JOB_LOGS",
+				_suppressJobLogs );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_SUPPRESS_JOB_LOGS setting: %s\n",
+				_suppressJobLogs ? "True" : "False" );
 
 	// enable up the debug cache if needed
 	if (debug_cache_enabled) {
@@ -922,8 +929,8 @@ void main_init (int argc, char ** const argv) {
     }
 
 	if ( !dagman._submitDagDeepOpts.always_use_node_log ) {
-        debug_printf( DEBUG_QUIET, "Warning: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer recommended and will probably be disabled in a future version\n" );
-		check_warning_strictness( DAG_STRICT_1 );
+        debug_printf( DEBUG_QUIET, "Error: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer allowed\n" );
+		DC_Exit( EXIT_ERROR );
 	}
 
 	//

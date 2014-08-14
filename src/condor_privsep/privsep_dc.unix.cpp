@@ -89,6 +89,7 @@ privsep_create_process(const char* cmd,
 		PRIV_USER_FINAL, // priv states are ignored in priv sep mode
 		reaper_id,       // reaper id
 		FALSE,           // no command port
+		FALSE,           // no command port
 		NULL,            // we'll pass the job's real env via pipe
 		NULL,            // we'll pass the job's real iwd via pipe
 		family_info,     // tracking info for the ProcD

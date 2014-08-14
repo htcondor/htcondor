@@ -594,12 +594,26 @@ VanillaProc::StartJob()
 				uint64_t MemMb_big = MemMb;
 				m_memory_limit = MemMb_big;
 				climits.set_memory_limit_bytes(1024*1024*MemMb_big, mem_is_soft);
+
+				// Note that ATTR_VIRTUAL_MEMORY on Linux
+				// is sum of memory and swap, in Kilobytes
+
+				if (MachineAd->LookupInteger(ATTR_VIRTUAL_MEMORY, MemMb)) {
+					uint64_t VMemMb_big = MemMb;
+
+					if (MemMb > 0) {
+						climits.set_memsw_limit_bytes(1024*VMemMb_big);
+					}
+				} else {
+					dprintf(D_ALWAYS, "Not setting virtual memory limit in cgroup because "
+						"Virtual Memory attribute missing in machine ad.\n");
+				}
 			} else {
-				dprintf(D_ALWAYS, "Not setting memory soft limit in cgroup because "
+				dprintf(D_ALWAYS, "Not setting memory limit in cgroup because "
 					"Memory attribute missing in machine ad.\n");
 			}
 		} else if (mem_limit == "none") {
-			dprintf(D_FULLDEBUG, "Not enforcing memory soft limit.\n");
+			dprintf(D_FULLDEBUG, "Not enforcing memory limit.\n");
 		} else {
 			dprintf(D_ALWAYS, "Invalid value of CGROUP_MEMORY_LIMIT_POLICY: %s.  Ignoring.\n", mem_limit.c_str());
 		}

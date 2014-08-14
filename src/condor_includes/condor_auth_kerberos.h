@@ -46,7 +46,7 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // Destructor
     //------------------------------------------
 
-    int authenticate(const char * remoteHost, CondorError* errstack);
+    int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr -- host to authenticate

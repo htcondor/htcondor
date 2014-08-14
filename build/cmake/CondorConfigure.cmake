@@ -188,6 +188,9 @@ if( NOT WINDOWS)
 	check_symbol_exists(MS_SHARED  "sys/mount.h" HAVE_MS_SHARED)
 	check_symbol_exists(MS_SLAVE  "sys/mount.h" HAVE_MS_SLAVE)
 	check_symbol_exists(MS_REC  "sys/mount.h" HAVE_MS_REC)
+	# Python also defines HAVE_EPOLL; hence, we use non-standard 'CONDOR_HAVE_EPOLL' here.
+	check_symbol_exists(epoll_create1 "sys/epoll.h" CONDOR_HAVE_EPOLL)
+	check_symbol_exists(poll "sys/poll.h" CONDOR_HAVE_POLL)
 	check_symbol_exists(fdatasync "unistd.h" HAVE_FDATASYNC)
 
 	check_function_exists("access" HAVE_ACCESS)
@@ -674,7 +677,7 @@ else ()
         endif(LINUX)
 
 	# the following logic if for standard universe *only*
-	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION AND NOT PROPER)
+	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION)
 
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/glibc)
@@ -980,7 +983,7 @@ else(MSVC)
 
 	check_cxx_compiler_flag(-shared HAVE_CC_SHARED)
 
-	if ( NOT PROPER AND ${SYS_ARCH} MATCHES "86")
+	if ( NOT CLIPPED AND ${SYS_ARCH} MATCHES "86")
 
 		if (NOT ${SYS_ARCH} MATCHES "64" )
 			add_definitions( -DI386=${SYS_ARCH} )

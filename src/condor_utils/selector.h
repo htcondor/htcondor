@@ -23,6 +23,22 @@
 
 #include "condor_common.h"
 
+#ifdef CONDOR_HAVE_POLL
+#define SELECTOR_USE_POLL 1
+#endif
+
+#ifdef SELECTOR_USE_POLL
+#include <poll.h>
+#else
+// We define stubs for pollfd so we don't have to sprinkle our
+// code with ifdef's
+struct fake_pollfd {
+	int   fd;         /* file descriptor */
+	short events;     /* requested events */
+	short revents;    /* returned events */
+};
+#endif
+
 class Selector {
 public:
 	Selector();
@@ -54,6 +70,10 @@ public:
 	void display();
 
 private:
+	enum SINGLE_SHOT {
+		SINGLE_SHOT_VIRGIN, SINGLE_SHOT_OK, SINGLE_SHOT_SKIP
+	};
+
 	static int _fd_select_size;
 	fd_set	*read_fds, *save_read_fds;
 	fd_set	*write_fds, *save_write_fds;
@@ -65,6 +85,13 @@ private:
 	SELECTOR_STATE	state;
 	int		_select_retval;
 	int		_select_errno;
+
+	SINGLE_SHOT m_single_shot;
+#ifdef SELECTOR_USE_POLL
+	struct pollfd m_poll;
+#else
+	struct fake_pollfd m_poll;
+#endif
 };
 
 void display_fd_set( const char *msg, fd_set *set, int max,

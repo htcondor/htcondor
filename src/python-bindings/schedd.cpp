@@ -21,25 +21,31 @@
 #include "condor_config.h"
 #include "condor_holdcodes.h"
 #include "basename.h"
+#include "selector.h"
 
 #include <classad/operators.h>
 
 #include <boost/python.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/erase.hpp>
+#include <boost/version.hpp>
 
 #include "old_boost.h"
 #include "classad_wrapper.h"
 #include "exprtree_wrapper.h"
+#include "module_lock.h"
 
 using namespace boost::python;
 
 #define DO_ACTION(action_name) \
     reason_str = extract<std::string>(reason); \
+    { \
+    condor::ModuleLock ml; \
     if (use_ids) \
         result = schedd. action_name (&ids, reason_str.c_str(), NULL, AR_TOTALS); \
     else \
-        result = schedd. action_name (constraint.c_str(), reason_str.c_str(), NULL, AR_TOTALS);
+        result = schedd. action_name (constraint.c_str(), reason_str.c_str(), NULL, AR_TOTALS); \
+    }
 
 #define ADD_REQUIREMENT(parm, value) \
     if (boost::ifind_first(req_str, ATTR_ ##parm).begin() == req_str.end()) \
@@ -158,6 +164,60 @@ make_requirements(ExprTree *reqs, ShouldTransferFiles_t stf)
     return result;
 }
 
+bool
+putClassAdAndEOM(Sock & sock, classad::ClassAd &ad)
+{
+        if (sock.type() != Stream::reli_sock)
+	{
+		return putClassAd(&sock, ad) && sock.end_of_message();
+	}
+	ReliSock & rsock = static_cast<ReliSock&>(sock);
+
+	Selector selector;
+	selector.add_fd(sock.get_file_desc(), Selector::IO_WRITE);
+	int timeout = sock.timeout(0); sock.timeout(timeout);
+	timeout = timeout ? timeout : 20;
+	selector.set_timeout(timeout);
+	if (!putClassAd(&sock, ad, PUT_CLASSAD_NON_BLOCKING))
+	{
+		return false;
+	}
+	int retval = rsock.end_of_message_nonblocking();
+	while (true) {
+		if (rsock.clear_backlog_flag()) {
+			Py_BEGIN_ALLOW_THREADS
+			selector.execute();
+			Py_END_ALLOW_THREADS
+			if (selector.timed_out()) {THROW_EX(RuntimeError, "Timeout when trying to write to remote host");}
+		} else if (retval == 1) {
+			return true;
+		} else if (!retval) {
+			return false;
+		}
+		retval = rsock.finish_end_of_message();
+	}
+}
+
+bool
+getClassAdWithoutGIL(Sock &sock, classad::ClassAd &ad)
+{
+	Selector selector;
+	selector.add_fd(sock.get_file_desc(), Selector::IO_READ);
+	int timeout = sock.timeout(0); sock.timeout(timeout);
+	timeout = timeout ? timeout : 20;
+	selector.set_timeout(timeout);
+	int idx = 0;
+	while (!sock.msgReady())
+	{
+		Py_BEGIN_ALLOW_THREADS
+		selector.execute();
+		Py_END_ALLOW_THREADS
+		if (selector.timed_out()) {THROW_EX(RuntimeError, "Timeout when waiting for remote host");}
+		if (idx++ == 50) break;
+	}
+	return getClassAd(&sock, ad);
+}
+
 struct HistoryIterator
 {
     HistoryIterator(boost::shared_ptr<Sock> sock)
@@ -171,7 +231,7 @@ struct HistoryIterator
         if (m_count < 0) THROW_EX(StopIteration, "All ads processed");
 
         boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
-        if (!getClassAd(m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to receive remote ad.");
+        if (!getClassAdWithoutGIL(*m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to receive remote ad.");
         long long intVal;
         if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
         { // Last ad.
@@ -233,7 +293,7 @@ struct QueryIterator
         if (m_count < 0) THROW_EX(StopIteration, "All ads processed");
 
         boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
-        if (!getClassAd(m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to receive remote ad.");
+        if (!getClassAdWithoutGIL(*m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to receive remote ad.");
         if (!m_sock->end_of_message()) THROW_EX(RuntimeError, "Failed to get EOM after ad.");
         long long intVal;
         if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
@@ -264,6 +324,7 @@ struct query_process_helper
 {
     object callable;
     list output_list;
+    condor::ModuleLock *ml;
 };
 
 void
@@ -271,9 +332,10 @@ query_process_callback(void * data, classad_shared_ptr<ClassAd> ad)
 {
     if (PyErr_Occurred()) return;
 
+    query_process_helper *helper = static_cast<query_process_helper *>(data);
+    helper->ml->release();
     try
     {
-        query_process_helper *helper = static_cast<query_process_helper *>(data);
         boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
         wrapper->CopyFrom(*ad.get());
         object wrapper_obj = object(wrapper);
@@ -288,6 +350,7 @@ query_process_callback(void * data, classad_shared_ptr<ClassAd> ad)
         // Suppress the C++ exception.  HTCondor sure can't deal with it.
         // However, PyErr_Occurred will be set and we will no longer invoke the callback.
     }
+    helper->ml->acquire();
 }
 
 struct Schedd {
@@ -358,12 +421,17 @@ struct Schedd {
         ClassAdList jobs;
 
         list retval;
+        int fetchResult;
+        {
+        condor::ModuleLock ml;
         query_process_helper helper;
+        helper.ml = &ml;
         helper.callable = callback;
         helper.output_list = retval;
         void *helper_ptr = static_cast<void *>(&helper);
 
-        int fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, query_process_callback, helper_ptr, true, NULL);
+        fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, query_process_callback, helper_ptr, true, NULL);
+        }
 
         if (PyErr_Occurred())
         {
@@ -392,7 +460,12 @@ struct Schedd {
     {
         DCSchedd schedd(m_addr.c_str());
         Stream::stream_type st = schedd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
-        if (!schedd.sendCommand(RESCHEDULE, st, 0)) {
+        bool result;
+        {
+        condor::ModuleLock ml;
+        result = !schedd.sendCommand(RESCHEDULE, st, 0);
+        }
+        if (result) {
             dprintf(D_ALWAYS, "Can't send RESCHEDULE command to schedd.\n" );
         }
     }
@@ -450,9 +523,15 @@ struct Schedd {
                 reason_char = reason_str.c_str();
             }
             if (use_ids)
+            {
+                condor::ModuleLock ml;
                 result = schedd.holdJobs(&ids, reason_char, reason_code_char, NULL, AR_TOTALS);
+            }
             else
+            {
+                condor::ModuleLock ml;
                 result = schedd.holdJobs(constraint.c_str(), reason_char, reason_code_char, NULL, AR_TOTALS);
+            }
             break;
         case JA_RELEASE_JOBS:
             DO_ACTION(releaseJobs)
@@ -467,9 +546,15 @@ struct Schedd {
         case JA_VACATE_FAST_JOBS:
             vacate_type = action == JA_VACATE_JOBS ? VACATE_GRACEFUL : VACATE_FAST;
             if (use_ids)
+            {
+                condor::ModuleLock ml;
                 result = schedd.vacateJobs(&ids, vacate_type, NULL, AR_TOTALS);
+            }
             else
+            {
+                condor::ModuleLock ml;
                 result = schedd.vacateJobs(constraint.c_str(), vacate_type, NULL, AR_TOTALS);
+            }
             break;
         case JA_SUSPEND_JOBS:
             DO_ACTION(suspendJobs)
@@ -483,7 +568,7 @@ struct Schedd {
         }
         if (!result)
         {
-            PyErr_SetString(PyExc_RuntimeError, "Error when querying the schedd.");
+            PyErr_SetString(PyExc_RuntimeError, "Error when performing action on the schedd.");
             throw_error_already_set();
         }
 
@@ -514,7 +599,11 @@ struct Schedd {
     {
         ConnectionSentry sentry(*this); // Automatically connects / disconnects.
 
-        int cluster = NewCluster();
+        int cluster;
+        {
+        condor::ModuleLock ml;
+        cluster = NewCluster();
+        }
         if (cluster < 0)
         {
             PyErr_SetString(PyExc_RuntimeError, "Failed to create new cluster.");
@@ -558,16 +647,24 @@ struct Schedd {
         ad.Insert(ATTR_REQUIREMENTS, new_reqs);
 
         if (spool)
+        {
             make_spool(ad);
+        }
 
 	bool keep_results = false;
         extract<list> try_ad_results(ad_results);
         if (try_ad_results.check())
+        {
             keep_results = true;
+        }
 
         for (int idx=0; idx<count; idx++)
         {
-            int procid = NewProc (cluster);
+            int procid;
+            {
+            condor::ModuleLock ml;
+            procid = NewProc(cluster);
+            }
             if (procid < 0)
             {
                 PyErr_SetString(PyExc_RuntimeError, "Failed to create new proc id.");
@@ -582,6 +679,8 @@ struct Schedd {
             {
                 std::string rhs;
                 unparser.Unparse(rhs, it->second);
+                    // Note I don't release the GIL here - as we are in NoAck mode, assume this is just
+                    // buffering up data into the socket.
                 if (-1 == SetAttribute(cluster, procid, it->first.c_str(), rhs.c_str(), SetAttribute_NoAck))
                 {
                     PyErr_SetString(PyExc_ValueError, it->first.c_str());
@@ -621,9 +720,12 @@ struct Schedd {
         CondorError errstack;
         bool result;
         DCSchedd schedd(m_addr.c_str());
+        {
+        condor::ModuleLock ml;
         result = schedd.spoolJobFiles( len,
                                        &job_array[0],
                                        &errstack );
+        }
         if (!result)
         {
             PyErr_SetString(PyExc_RuntimeError, errstack.getFullText(true).c_str());
@@ -635,8 +737,15 @@ struct Schedd {
     {
         CondorError errstack;
         DCSchedd schedd(m_addr.c_str());
-        if (!schedd.receiveJobSandbox(jobs.c_str(), &errstack))
+        bool result;
+        {
+        condor::ModuleLock ml;
+        result = !schedd.receiveJobSandbox(jobs.c_str(), &errstack);
+        }
+        if (result)
+        {
             THROW_EX(RuntimeError, errstack.getFullText(true).c_str());
+        }
     }
 
     int refreshGSIProxy(int cluster, int proc, std::string proxy_filename, int lifetime=-1)
@@ -652,14 +761,23 @@ struct Schedd {
 
         DCSchedd schedd(m_addr.c_str());
         bool do_delegation = param_boolean("DELEGATE_JOB_GSI_CREDENTIALS", true);
-        if (do_delegation && !schedd.delegateGSIcredential(cluster, proc, proxy_filename.c_str(), lifetime ? now+lifetime : 0,
-                                                           &result_expiration, &errstack))
+        bool result;
+        {
+        condor::ModuleLock ml;
+        result = do_delegation && !schedd.delegateGSIcredential(cluster, proc, proxy_filename.c_str(), lifetime ? now+lifetime : 0,
+            &result_expiration, &errstack);
+        }
+        if (result)
         {
             THROW_EX(RuntimeError, errstack.getFullText(true).c_str());
         }
         else if (!do_delegation)
         {
-            if (!schedd.updateGSIcredential(cluster, proc, proxy_filename.c_str(), &errstack))
+            {
+            condor::ModuleLock ml;
+            result = !schedd.updateGSIcredential(cluster, proc, proxy_filename.c_str(), &errstack);
+            }
+            if (result)
             {
                 THROW_EX(RuntimeError, errstack.getFullText(true).c_str());
             }
@@ -718,11 +836,16 @@ struct Schedd {
 
         ConnectionSentry sentry(*this);
 
+        bool result;
         if (use_ids)
         {
             for (unsigned idx=0; idx<clusters.size(); idx++)
             {
-                if (-1 == SetAttribute(clusters[idx], procs[idx], attr.c_str(), val_str.c_str()))
+                {
+                condor::ModuleLock ml;
+                result = -1 == SetAttribute(clusters[idx], procs[idx], attr.c_str(), val_str.c_str());
+                }
+                if (result)
                 {
                     PyErr_SetString(PyExc_RuntimeError, "Unable to edit job");
                     throw_error_already_set();
@@ -731,7 +854,11 @@ struct Schedd {
         }
         else
         {
-            if (-1 == SetAttributeByConstraint(constraint.c_str(), attr.c_str(), val_str.c_str()))
+            {
+            condor::ModuleLock ml;
+            result = -1 == SetAttributeByConstraint(constraint.c_str(), attr.c_str(), val_str.c_str());
+            }
+            if (result)
             {
                 PyErr_SetString(PyExc_RuntimeError, "Unable to edit jobs matching constraint");
                 throw_error_already_set();
@@ -786,12 +913,18 @@ struct Schedd {
 
 	DCSchedd schedd(m_addr.c_str());
 	Sock* sock;
-	if (!(sock = schedd.startCommand(QUERY_SCHEDD_HISTORY, Stream::reli_sock, 0))) {
-		THROW_EX(RuntimeError, "Unable to connect to schedd");
-	}
-	boost::shared_ptr<Sock> sock_sentry(sock);
+        bool result;
+        {
+        condor::ModuleLock ml;
+        result = !(sock = schedd.startCommand(QUERY_SCHEDD_HISTORY, Stream::reli_sock, 0));
+        }
+        if (result)
+        {
+            THROW_EX(RuntimeError, "Unable to connect to schedd");
+        }
+        boost::shared_ptr<Sock> sock_sentry(sock);
 
-	if (!putClassAd(sock, ad) || !sock->end_of_message()) THROW_EX(RuntimeError, "Unable to send request classad to schedd");
+	if (!putClassAdAndEOM(*sock, ad)) THROW_EX(RuntimeError, "Unable to send request classad to schedd");
 
         boost::shared_ptr<HistoryIterator> iter(new HistoryIterator(sock_sentry));
         return iter;
@@ -806,7 +939,6 @@ struct Schedd {
 
     boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int match=-1)
     {
-
         std::string val_str;
 
         extract<ExprTreeHolder &> exprtree_extract(requirement);
@@ -859,12 +991,18 @@ struct Schedd {
 
         DCSchedd schedd(m_addr.c_str());
         Sock* sock;
-        if (!(sock = schedd.startCommand(QUERY_JOB_ADS, Stream::reli_sock, 0))) {
+        bool result;
+        {
+        condor::ModuleLock ml;
+        result = !(sock = schedd.startCommand(QUERY_JOB_ADS, Stream::reli_sock, 0));
+        }
+        if (result)
+        {
                 THROW_EX(RuntimeError, "Unable to connect to schedd");
         }
         boost::shared_ptr<Sock> sock_sentry(sock);
 
-        if (!putClassAd(sock, ad) || !sock->end_of_message()) THROW_EX(RuntimeError, "Unable to send request classad to schedd");
+        if (!putClassAdAndEOM(*sock, ad)) THROW_EX(RuntimeError, "Unable to send request classad to schedd");
 
         boost::shared_ptr<QueryIterator> iter(new QueryIterator(sock_sentry));
         return iter;
@@ -886,9 +1024,17 @@ ConnectionSentry::ConnectionSentry(Schedd &schedd, bool transaction, SetAttribut
         if (transaction && !continue_txn) { THROW_EX(RuntimeError, "Transaction already in progress for schedd."); }
         return;
     }
-    else if (ConnectQ(schedd.m_addr.c_str(), 0, false, NULL, NULL, schedd.m_version.c_str()) == 0)
+    else
     {
-        THROW_EX(RuntimeError, "Failed to connect to schedd.");
+        bool result;
+        {
+        condor::ModuleLock ml;
+        result = ConnectQ(schedd.m_addr.c_str(), 0, false, NULL, NULL, schedd.m_version.c_str()) == 0;
+        }
+        if (result)
+        {
+            THROW_EX(RuntimeError, "Failed to connect to schedd.");
+        }
     }
     schedd.m_connection = this;
     m_connected = true;
@@ -909,7 +1055,12 @@ ConnectionSentry::abort()
     if (m_transaction)
     {
         m_transaction = false;
-        if (AbortTransaction())
+        bool result;
+        {
+        condor::ModuleLock ml;
+        result = AbortTransaction();
+        }
+        if (result)
         {
             THROW_EX(RuntimeError, "Failed to abort transaction.");
         }
@@ -917,7 +1068,10 @@ ConnectionSentry::abort()
         {
             m_connected = false;
             m_schedd.m_connection = NULL;
+            {
+            condor::ModuleLock ml;
             DisconnectQ(NULL);
+            }
         }
     }
     else if (m_schedd.m_connection && m_schedd.m_connection != this)
@@ -956,14 +1110,22 @@ ConnectionSentry::disconnect()
     if (m_transaction)
     {
         m_transaction = false;
+        {
+        condor::ModuleLock ml;
         throw_commit_error = RemoteCommitTransaction(m_flags);
+        }
     }
     if (m_connected)
     {
         m_connected = false;
         m_schedd.m_connection = NULL;
         // WARNING: DisconnectQ returns a boolean; failure test is different from rest of qmgmt API.
-        if (!DisconnectQ(NULL))
+        bool result;
+        {
+        condor::ModuleLock ml;
+        result = !DisconnectQ(NULL);
+        }
+        if (result)
         {
             THROW_EX(RuntimeError, "Failed to commmit and disconnect from queue.");
         }
@@ -1008,8 +1170,10 @@ void export_schedd()
         ;
     register_ptr_to_python< boost::shared_ptr<ConnectionSentry> >();
 
+#if BOOST_VERSION >= 103400
     boost::python::docstring_options doc_options;
     doc_options.disable_cpp_signatures();
+#endif
     class_<Schedd>("Schedd", "A client class for the HTCondor schedd")
         .def(init<const ClassAdWrapper &>(":param ad: An ad containing the location of the schedd"))
         .def("query", &Schedd::query, query_overloads("Query the HTCondor schedd for jobs.\n"
@@ -1027,13 +1191,21 @@ void export_schedd()
             ":param count: Number of jobs to submit to cluster.\n"
             ":param spool: Set to true to spool files separately.\n"
             ":param ad_results: If set to a list, the resulting ClassAds will be added to the list post-submit.\n"
+#if BOOST_VERSION < 103400
+            ":return: Newly created cluster ID.", (boost::python::arg("ad"), boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::list())))
+#else
             ":return: Newly created cluster ID.", (boost::python::arg("self"), "ad", boost::python::arg("count")=1, boost::python::arg("spool")=false, boost::python::arg("ad_results")=boost::python::list())))
+#endif
         .def("spool", &Schedd::spool, "Spool a list of given ads to the remote HTCondor schedd.\n"
             ":param ads: A python list containing one or more ads to spool.\n")
         .def("transaction", &Schedd::transaction, transaction_overloads("Start a transaction with the schedd.\n"
             ":param flags: Transaction flags from the htcondor.TransactionFlags enum.\n"
             ":param continue_txn: Defaults to false; set to true to extend an ongoing transaction if present.  Otherwise, starting a new transaction while one is ongoing is an error.\n"
+#if BOOST_VERSION < 103400
+            ":return: Transaction context manager.\n", (boost::python::arg("flags")=0, boost::python::arg("continue_txn")=false))[boost::python::with_custodian_and_ward_postcall<1, 0>()])
+#else
             ":return: Transaction context manager.\n", (boost::python::arg("self"), boost::python::arg("flags")=0, boost::python::arg("continue_txn")=false))[boost::python::with_custodian_and_ward_postcall<1, 0>()])
+#endif
         .def("retrieve", &Schedd::retrieve, "Retrieve the output sandbox from one or more jobs.\n"
             ":param jobs: A expression string matching the list of job output sandboxes to retrieve.\n")
         .def("edit", &Schedd::edit, "Edit one or more jobs in the queue.\n"

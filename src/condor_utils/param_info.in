@@ -293,9 +293,18 @@ review=?
 default=128*1024
 range=1024,
 type=int
+reconfig=false
+customization=seldom
+friendly_name=Outgoing traffic TCP write size for Collector
+review=?
+
+[COLLECTOR_PORT]
+default=9618
+range=0,65536
+type=int
 reconfig=true
 customization=seldom
-friendly_name=Soap SSL Port
+friendly_name=Default collector port
 review=?
 
 [SOCKET_LISTEN_BACKLOG]
@@ -1424,7 +1433,6 @@ friendly_name=Quill Should Reindex
 review=?
 tags=quill,jobqueuedbmanager
 
-[SCHEDD_NAME]
 [RECONNECT_BACKOFF_CEILING]
 default=300
 type=int
@@ -2102,14 +2110,15 @@ friendly_name=Max Pid Collision Retry
 review=?
 tags=daemon_core,daemon_core
 
-[NEGOTIATOR_SOCKET_BUFSIZE]
-default=0
+[COLLECTOR_SOCKET_BUFSIZE]
+default=10000*1024
 type=int
-reconfig=true
+range=1024,
+reconfig=false
 customization=seldom
-friendly_name=Negotiator Socket Bufsize
+friendly_name=Collector read buffer size for incoming UDP traffic
 review=?
-tags=daemon_core,daemon_core
+tags=daemon_core,daemon_core,collector
 
 [TOUCH_LOG_INTERVAL]
 default=60
@@ -5681,7 +5690,7 @@ review=?
 tags=schedd
 
 [DAEMON_SOCKET_DIR]
-default=$(LOCK)/daemon_sock
+default=auto
 type=string
 reconfig=true
 customization=seldom
@@ -5698,12 +5707,20 @@ review=?
 
 [USE_SHARED_PORT]
 default=false
+win32_default=false
 version=7.5.0
 type=bool
 reconfig=true
 customization=seldom
 friendly_name=Use Shared Port
 review=?
+
+[SHARED_PORT_PORT]
+default=$(COLLECTOR_PORT)
+type=int
+reconfig=true
+customization=seldom
+friendly_name=TCP port used by condor_shared_port
 
 [AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST]
 default=true
@@ -5713,6 +5730,20 @@ reconfig=true
 customization=expert
 friendly_name=Auto Include Shared Port In Daemon List
 review=?
+
+[COLLECTOR_USES_SHARED_PORT]
+default=true
+version=8.1.4
+type=bool
+reconfig=true
+customization=expert
+
+[SHARED_PORT_DEFAULT_ID]
+default=
+version=8.1.4
+type=string
+reconfig=true
+customization=expert
 
 [CCB_HEARTBEAT_INTERVAL]
 default=300
@@ -6758,12 +6789,32 @@ friendly_name=Schedd Max File Descriptors
 usage=Set the limit on file descriptor usage for the scheduler.
 review=?
 
+[SHARED_PORT_MAX_FILE_DESCRIPTORS]
+default=4096
+range=0,
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Shared Port Max File Descriptors
+usage=Set the limit on file descriptor usage for condor_shared_port.
+review=?
+
 [USE_RESOURCE_REQUEST_COUNTS]
 default=true
 type=bool
 reconfig=true
 customization=seldom
 friendly_name=Use Resource Request Counts
+review=?
+tags=negotiator,matchmaker
+
+[NEGOTIATOR_RESOURCE_REQUEST_LIST_SIZE]
+default=20
+range=1,
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Size of Resource Request List
 review=?
 tags=negotiator,matchmaker
 

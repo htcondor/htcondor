@@ -43,6 +43,8 @@
 void
 ReliSock::init()
 {
+	m_auth_in_progress = false;
+	m_authob = NULL;
 	m_has_backlog = false;
 	m_read_would_block = false;
 	m_non_blocking = false;
@@ -87,6 +89,10 @@ ReliSock::CloneStream()
 ReliSock::~ReliSock()
 {
 	close();
+	if ( m_authob ) {
+		delete m_authob;
+		m_authob = NULL;
+	}
 	if ( hostAddr ) {
 		free( hostAddr );
 		hostAddr = NULL;
@@ -728,7 +734,8 @@ ReliSock::RcvMsg :: RcvMsg() :
 	m_remaining_read_length(0),
 	m_end(0),
 	m_tmp(NULL),
-	ready(0)
+	ready(0),
+	m_closed(false)
 {
 	memset( m_partial_cksum, 0, sizeof(m_partial_cksum) );
 }
@@ -779,6 +786,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 	}
 	if ( retval == -2 ) {	// -2 means peer just closed the socket
 		dprintf(D_FULLDEBUG,"IO: EOF reading packet header\n");
+		m_closed = true;
 		return FALSE;
 	}
 
@@ -1135,7 +1143,7 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 
 int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key, 
 								   const char* methods, CondorError* errstack,
-								   int auth_timeout, char **method_used)
+								   int auth_timeout, bool non_blocking, char **method_used)
 {
 	int in_encode_mode;
 	int result;
@@ -1145,16 +1153,20 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 	}
 
     if (!triedAuthentication()) {
-		Authentication authob(this);
+		if (m_authob) {delete m_authob;}
+		m_authob = new Authentication(this);
 		setTriedAuthentication(true);
 			// store if we are in encode or decode mode
 		in_encode_mode = is_encode();
 
 			// actually perform the authentication
 		if ( with_key ) {
-			result = authob.authenticate( hostAddr, key, methods, errstack, auth_timeout );
+			result = m_authob->authenticate( hostAddr, key, methods, errstack, auth_timeout, non_blocking );
 		} else {
-			result = authob.authenticate( hostAddr, methods, errstack, auth_timeout );
+			result = m_authob->authenticate( hostAddr, methods, errstack, auth_timeout, non_blocking );
+		}
+		if ( result == 2 ) {
+			m_auth_in_progress = true;
 		}
 			// restore stream mode (either encode or decode)
 		if ( in_encode_mode && is_decode() ) {
@@ -1165,16 +1177,9 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 			}
 		}
 
-		setFullyQualifiedUser(authob.getFullyQualifiedUser());
-
-		if( authob.getMethodUsed() ) {
-			setAuthenticationMethodUsed(authob.getMethodUsed());
-			if( method_used ) {
-				*method_used = strdup(authob.getMethodUsed());
-			}
-		}
-		if ( authob.getFQAuthenticatedName() ) {
-			setAuthenticatedName( authob.getFQAuthenticatedName() );
+		if (!m_auth_in_progress) {
+			int result2 = authenticate_continue(errstack, non_blocking, method_used);
+			return result ? result2 : 0;
 		}
 		return result;
     }
@@ -1183,16 +1188,44 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
     }
 }
 
-int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* errstack, int auth_timeout, char **method_used)
+int ReliSock::authenticate_continue(CondorError* errstack, bool non_blocking, char **method_used)
 {
-	return perform_authenticate(true,key,methods,errstack,auth_timeout,method_used);
+	int result = 1;
+	if( m_auth_in_progress )
+	{
+		result = m_authob->authenticate_continue(errstack, non_blocking);
+		if (result == 2) {
+			return result;
+		}
+	}
+	m_auth_in_progress = false;
+
+	setFullyQualifiedUser(m_authob->getFullyQualifiedUser());
+
+	if( m_authob->getMethodUsed() ) {
+		setAuthenticationMethodUsed(m_authob->getMethodUsed());
+		if( method_used ) {
+			*method_used = strdup(m_authob->getMethodUsed());
+		}
+	}
+	if ( m_authob->getFQAuthenticatedName() ) {
+		setAuthenticatedName( m_authob->getFQAuthenticatedName() );
+	}
+	delete m_authob;
+	m_authob = NULL;
+	return result;
+}
+
+int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* errstack, int auth_timeout, bool non_blocking, char **method_used)
+{
+	return perform_authenticate(true,key,methods,errstack,auth_timeout,non_blocking,method_used);
 }
 
 int 
-ReliSock::authenticate(const char* methods, CondorError* errstack,int auth_timeout ) 
+ReliSock::authenticate(const char* methods, CondorError* errstack, int auth_timeout, bool non_blocking) 
 {
 	KeyInfo *key = NULL;
-	return perform_authenticate(false,key,methods,errstack,auth_timeout,NULL);
+	return perform_authenticate(false,key,methods,errstack,auth_timeout,non_blocking,NULL);
 }
 
 bool
@@ -1289,5 +1322,14 @@ ReliSock::setTargetSharedPortID( char const *id )
 
 bool
 ReliSock::msgReady() {
+	if (rcv_msg.ready) { return true; }
+		// NOTE: 'true' here indicates non-blocking.
+	BlockingModeGuard sentry(this, true);
+	int retval = handle_incoming_packet();
+	if (retval == 2) {
+		dprintf(D_NETWORK, "msgReady would have blocked.\n");
+		m_read_would_block = true;
+		return false;
+	}
 	return rcv_msg.ready;
 }

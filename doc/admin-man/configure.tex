@@ -869,16 +869,16 @@ the changed value.
 
 \label{param:DetectedCpus}
 \item[\MacroU{DETECTED\_CPUS}]
-  The integer number of physical (non-hyperthreaded) CPUs, as given by
+  The integer number of physical (non hyper-threaded) CPUs, as given by
   \MacroUNI{DETECTED\_PHYSICAL\_CPUS}, when \Macro{COUNT\_HYPERTHREAD\_CPUS}
   is \Expr{True}.
-  The integer number of hyperthreaded CPUs, as given by
+  The integer number of hyper-threaded CPUs, as given by
   \MacroUNI{DETECTED\_CORES}, when \MacroNI{COUNT\_HYPERTHREAD\_CPUS}
   is \Expr{False}.
 
 \label{param:DetectedPhysicalCpus}
 \item[\MacroU{DETECTED\_PHYSICAL\_CPUS}]
-  The integer number of physical (non-hyperthreaded) CPUs.
+  The integer number of physical (non hyper-threaded) CPUs.
 
 \end{description}
 
@@ -934,7 +934,7 @@ determined automatically at run time but which can be overwritten.
 \label{param:DetectedCores}
 \item[\MacroU{DETECTED\_CORES}]
   The number of detected CPU cores.  
-  This includes hyper threaded cores, if there are any.
+  This includes hyper-threaded cores, if there are any.
 
 \label{param:Pid}
 \item[\MacroU{PID}]
@@ -1088,6 +1088,28 @@ File System Configuration File Entries''.
   With more than one running, updates are sent to all.
   With more than one running, queries are sent to one of 
   the \Condor{collector} daemons, chosen at random.
+
+\label{param:CollectorPort}
+\item[\Macro{COLLECTOR\_PORT}]
+  The default port used to contact the \Condor{collector}.  This parameter is
+  referenced if no port is given and there is no other means to find the
+  \Condor{collector} port.
+
+  This also controls the default port the \Condor{collector} listens on if
+  no port is specified.
+
+\label{param:SharedPortPort}
+\item[\Macro{SHARED\_PORT\_PORT}]
+  The default TCP port used by the \Condor{shared\_port}.  If \Macro{COLLECTOR\_USES\_SHARED\_PORT}
+  is \Expr{True} (the default value) and the \Condor{master} will launch a \Condor{collector},
+  then the \Condor{shared\_port} daemon will ignore this value and use the TCP port
+  assigned to the collector via the \Macro{COLLECTOR\_HOST} macro.
+
+  The default value is \Expr{\$(COLLECTOR\_PORT)}, currently 9618.  The special value
+  of \Expr{0} causes the \Condor{shared\_port} to use a randomly selected port.  \emph{Note}
+  that this causes all HTCondor hosts to use TCP port 9618 by default, differing from previous
+  behavior (previously, only the collector host used a fixed port).  To restore the prior
+  behavior, set \Macro{SHARED\_PORT\_PORT} to \Expr{0}.
 
 \label{param:NegotiatorHost} 
 \item[\Macro{NEGOTIATOR\_HOST}]
@@ -1806,31 +1828,79 @@ File System Configuration File Entries''.
 
 \label{param:StatisticsToPublish}
 \item[\Macro{STATISTICS\_TO\_PUBLISH}]
-  A comma and/or space separated list that identifies which daemons are to
-  publish Statistics attributes in their ClassAds, as well as a level of
-  verbosity to identify which attributes to include and which to omit from
-  the ClassAd. 
-  The syntax defines the two aspects by separating them with a colon;
-  the first aspect defines which daemon is to publish the statistics,
-  and the second aspect defines the verbosity.
+  A comma and/or space separated list that identifies which 
+  statistics collections are to place attributes in ClassAds. 
+  Additional information specifies a level of
+  verbosity and other identification of which attributes to include 
+  and which to omit from ClassAds. 
+  The special value \Expr{NONE} disables all publishing, so no statistics
+  will be published; no option is included.
+  For other list items that define this variable,
+  the syntax defines the two aspects by separating them with a colon.
+  The first aspect defines a collection, 
+  which may specify which daemon is to publish the statistics,
+  and the second aspect qualifies and refines the details of which attributes 
+  to publish for the collection, including a verbosity level.
+  If the first aspect is \Expr{ALL},
+  the option is applied to all collections.
+  If the first aspect is \Expr{DEFAULT},
+  the option is applied to all collections, 
+  with the intent that further list items will specify publishing that
+  is to be different than the default.
   This first aspect may be \Expr{SCHEDD} or \Expr{SCHEDULER} to publish
   Statistics attributes in the ClassAd of the \Condor{schedd}.
+  It may be \Expr{TRANSFER} to publish file transfer statistics.
+  It may be \Expr{STARTER} to publish
+  Statistics attributes in the ClassAd of the \Condor{starter}.
   Or, it may be \Expr{DC} or \Expr{DAEMONCORE} to publish 
-  DaemonCore statistics.  It may also be \Expr{TRANSFER} to publish
-  file transfer statistics.
-  After the colon may be the value \Expr{0}, \Expr{1}, \Expr{2}, or \Expr{3}.
-  A value of  \Expr{0} turns off the publishing of any Statistics attributes.
-  A value of  \Expr{1} is the default level, where some Statistics attributes
-  are published and others are omitted.
-  A value of  \Expr{2} is the verbose level, where all Statistics attributes
-  are published.
-  A value of  \Expr{3} is the super verbose level, which is currently unused,
-  but intended to be all Statistics attributes published at the verbose
-  level plus extra information.
+  DaemonCore statistics.  
+  One or more options are specified after the colon.
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{2cm}p{12cm}|} \hline
+\emph{Option} & \emph{Description} \\ \hline \hline
+0 & turns off the publishing of any statistics attributes \\ \hline
+1 & the default level, where some statistics attributes
+  are published and others are omitted \\ \hline
+2 & the verbose level, where all statistics attributes
+  are published \\ \hline
+3 & the super verbose level, which is currently unused,
+  but intended to be all statistics attributes published at the verbose
+  level plus extra information \\ \hline
+R & include attributes from the most recent time interval;
+the default \\ \hline
+!R & omit attributes from the most recent time interval \\ \hline
+D & include attributes for debugging \\ \hline
+!D & omit attributes for debugging; the default \\ \hline
+Z & include attributes even if the attribute's value is 0 \\ \hline
+!Z & omit attributes when the attribute's value is 0 \\ \hline
+L & include attributes that represent the lifetime value;
+the default \\ \hline
+!L & omit attributes that represent the lifetime value \\ \hline
+\end{tabular}
+\end{table}
+\end{center}
+
+  If this variable is not defined, then the default for each collection 
+  is used.
+  If this variable is defined, and the definition does not specify each
+  possible collection, then no statistics are published for those collections
+  not defined.
+  If an option specifies conflicting possibilities, such as \Expr{R!R},
+  then the last one takes precedence and is applied. 
+
   As an example, to cause a verbose setting of the publication of Statistics
-  attributes for the \Condor{schedd}:
+  attributes only for the \Condor{schedd}, and do not publish any other
+  Statistics attributes:
 \begin{verbatim}
   STATISTICS_TO_PUBLISH = SCHEDD:2
+\end{verbatim}
+  As a second example, to cause all collections other than 
+  those for \Expr{DAEMONCORE} to publish at a verbosity setting of \Expr{1},
+  and omit lifetime values, where the \Expr{DAEMONCORE} includes all
+  statistics at the verbose level:
+\begin{verbatim}
+  STATISTICS_TO_PUBLISH = DEFAULT:1!L, DC:2RDZL
 \end{verbatim}
   
 \label{param:StatisticsWindowSeconds}
@@ -2679,13 +2749,13 @@ which use DaemonCore).
   \Condor{collector}, it will also place a copy of the ClassAd in this
   file. Currently, this setting only works for the \Condor{schedd}.
 
+\label{param:SubsysExprs}
+\label{param:SubsysAttrs}
 \index{SUBSYS\_ATTRS macro@\texttt{<SUBSYS>\_ATTRS} macro}
 \index{SUBSYS\_EXPRS macro@\texttt{<SUBSYS>\_EXPRS} macro}
-\MacroIndex{STARTD\_ATTRS}
-\MacroIndex{STARTD\_EXPRS}
-\label{param:SubsysExprs}
+\index{configuration macro!\texttt{STARTD\_ATTRS}}
+\index{configuration macro!\texttt{STARTD\_EXPRS}}
 \item[\MacroB{<SUBSYS>\_ATTRS} or
-\label{param:SubsysAttrs}
 \MacroB{<SUBSYS>\_EXPRS}]
   Allows any DaemonCore daemon to advertise arbitrary
   expressions from the configuration file in its ClassAd.  Give the
@@ -2916,9 +2986,22 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   \Condor{shared\_port} for receiving incoming connections.  
   Under Unix, write access to the location defined by 
   \Macro{DAEMON\_SOCKET\_DIR} is required for this to take
-  effect.  The default is \Expr{False}.
+  effect.  The default is \Expr{True}.
   For more information about using
   a shared port, see page~\pageref{sec:Config-shared-port}.
+
+\label{param:CollectorUsesSharedPort}
+\item[\Macro{COLLECTOR\_USES\_SHARED\_PORT}] A boolean value that
+  specifies whether the \Condor{collector} uses the \Condor{shared\_port}
+  daemon.  When true, the \Condor{shared\_port} will transparently
+  proxy queries to the \Condor{collector} so users do not need to be aware of
+  the presence of the \Condor{shared\_port} when querying the collector
+  and configuring other daemons.  The default is \Expr{True}
+
+\label{param:SharedPortDefaultId}
+\item[\Macro{SHARED\_PORT\_DEFAULT\_ID}] When \Macro{COLLECTOR\_USES\_SHARED\_PORT}
+  is set to \Expr{True}, this is the shared port ID used by the \Condor{collector}.
+  This defaults to \Expr{collector} and will not need to be changed by most sites.
 
 \label{param:AutoIncludeSharedPortInDaemonList}
 \item[\Macro{AUTO\_INCLUDE\_SHARED\_PORT\_IN\_DAEMON\_LIST}] A boolean
@@ -3822,8 +3905,12 @@ These macros control the \Condor{master}.
   see the specified values of \Env{TMP} and \Env{CONDOR\_CONFIG}.
 
 \label{param:SubsysArgs}
-\item[\MacroB{<SUBSYS>\_ARGS}]
   \index{SUBSYS\_ARGS macro@\texttt{<SUBSYS>\_ARGS} macro}
+  \index{configuration macro!\texttt{NEGOTIATOR\_ARGS}}
+  \index{configuration macro!\texttt{COLLECTOR\_ARGS}}
+  \index{configuration macro!\texttt{STARTD\_ARGS}}
+  \index{configuration macro!\texttt{SCHEDD\_ARGS}}
+\item[\MacroB{<SUBSYS>\_ARGS}]
   This macro allows
   the specification of additional command line arguments for any
   process spawned by the \Condor{master}.  List the desired arguments
@@ -4762,7 +4849,7 @@ WANT_HOLD_REASON = \
 
 \label{param:CountHyperthreadCpus}
 \item[\Macro{COUNT\_HYPERTHREAD\_CPUS}]
-  This macro controls how HTCondor sees hyper threaded
+  This macro controls how HTCondor sees hyper-threaded
   processors. When set to \Expr{True} (the default), it includes virtual CPUs in
   the default value of \MacroNI{NUM\_CPUS}. On dedicated cluster nodes, 
   counting virtual CPUs can sometimes improve total throughput at the expense 
@@ -8393,6 +8480,22 @@ These macros affect the \Condor{negotiator}.
   where X equals number of consecutive jobs in the queue 
   within the same auto cluster.
 
+\label{param:NegotiatorResourceRequestListSize}
+\item[\Macro{NEGOTIATOR\_RESOURCE\_REQUEST\_LIST\_SIZE}]
+  An integer tuning parameter used by the \Condor{negotiator} to control 
+  the number of resource requests fetched from a \Condor{schedd} per 
+  network round-trip.
+  With higher values, 
+  the latency of negotiation can be significantly be reduced
+  when negotiating with a \Condor{schedd} running 
+  HTCondor version 8.3.0 or more recent,
+  especially over a wide-area network.
+  Setting this value too high, however,
+  could cause the \Condor{schedd} to unnecessarily block on network I/O.  
+  The default value is 20.  If \MacroNI{USE\_RESOURCE\_REQUEST\_COUNTS}
+  is set to \Expr{False}, then this variable will be unconditionally set
+  to a value of 1.
+
 \label{param:NegotiatorMatchExprs}
 \item[\Macro{NEGOTIATOR\_MATCH\_EXPRS}]
   A comma-separated list of macro names that are inserted as
@@ -10294,6 +10397,11 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanAlwaysUseNodeLog}
 \item[\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}]
+  \Bold{As of version 8.3.1, the value of this macro cannot be changed
+  from the default (\Expr{True}).}  (The non-workflow/default node log
+  feature has been disabled to
+  simplify the code and make certain planned features easier to
+  implement -- see \Ticket{3994})
   A boolean value defining whether \Condor{dagman} reads events from
   its default node log file, as defined by
   \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}, instead of from the log file(s)
@@ -10513,9 +10621,11 @@ section~\ref{sec:Security} on Security.
 \item[\Macro{GSS\_ASSIST\_GRIDMAP\_CACHE\_EXPIRATION}]
   The length of time, in seconds, to cache the result of the Globus mapping
   lookup result when using Globus to map certificates to HTCondor user names.
-  The lookup only occurs when the canonical name GSS\_ASSIST\_GRIDMAP is present
-  in the HTCondor mapfile.  This defaults to 0 seconds, a special value which
-  will disable all caching.  The cache uses the DN and VOMS FQAN as a key;
+  The lookup only occurs when the canonical name \Expr{GSS\_ASSIST\_GRIDMAP}
+  is present in the HTCondor map file.  
+  The default value is 0 seconds, 
+  which is a special value that disables caching.  
+  The cache uses the DN and VOMS FQAN as a key;
   very rare Globus configurations that utilize other certificate attributes
   for the mapping may cause the cache to return a different user than Globus.
 

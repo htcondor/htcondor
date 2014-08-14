@@ -76,7 +76,7 @@ $success = sub
 
 $failure = sub
 {
-	CondorTest::debug("failed as expected\n",1);
+	CondorTest::debug("DAG failed as expected\n",1);
 	CondorTest::debug("Verifying output\n",1);
 
 	$diditpass = 1;

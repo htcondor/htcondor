@@ -805,6 +805,7 @@ GahpServer::Startup()
 			PRIV_USER_FINAL,// Priv State ---- drop root if we have it
 			m_reaperid,		// id for our registered reaper
 			FALSE,			// do not want a command port
+			FALSE,			// do not want a command port
 			&newenv,	  	// env
 			NULL,			// cwd
 			NULL,			// process family info

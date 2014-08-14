@@ -227,6 +227,10 @@ class Dagman {
 		// True iff -DoRecov is specified on the command line.
 	bool _doRecovery;
 
+		// True iff we want to suppress jobs from writing to the
+		// log files specified in their submit files (see gittrac #4353).
+	bool _suppressJobLogs;
+
 	DagmanClassad *_dagmanClassad;
 };
 

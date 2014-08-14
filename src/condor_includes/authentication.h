@@ -40,7 +40,7 @@ class Authentication {
     
     ~Authentication();
     
-    int authenticate( char *hostAddr, const char* auth_methods, CondorError* errstack, int timeout);
+    int authenticate( char *hostAddr, const char* auth_methods, CondorError* errstack, int timeout, bool non_blocking );
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr     -- host to authenticate
@@ -48,9 +48,12 @@ class Authentication {
 	//          timeout      -- 0 for none, o.w. seconds before timing out
 	//                          -1 means use existing timeout
     // RETURNS: -1 -- failure
+    //           2 -- would block, continue later
     //------------------------------------------
 
-    int authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods, CondorError* errstack, int timeout);
+    int authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods, CondorError* errstack, int timeout, bool non_blocking );
+    int authenticate_continue( CondorError* errstack, bool non_blocking );
+
     //------------------------------------------
     // PURPOSE: To send the secret key over. this method
     //          is written to keep compatibility issues
@@ -167,7 +170,10 @@ class Authentication {
 #if !defined(SKIP_AUTHENTICATION)
     Authentication() {}; //should never be called, make private to help that!
     
-    int handshake(MyString clientCanUse);
+    int handshake(MyString clientCanUse, bool non_blocking);
+    int handshake_continue(MyString clientCanUse, bool non_blocking);
+
+    int authenticate_finish( CondorError* errstack );
 
     int exchangeKey(KeyInfo *& key);
     
@@ -179,7 +185,7 @@ class Authentication {
 
 #endif /* !SKIP_AUTHENTICATION */
     
-    int authenticate_inner( char *hostAddr, const char* auth_methods, CondorError* errstack, int timeout);
+    int authenticate_inner( char *hostAddr, const char* auth_methods, CondorError* errstack, int timeout, bool non_blocking);
     
     //------------------------------------------
     // Data (private)
@@ -188,10 +194,17 @@ class Authentication {
     ReliSock         *   mySock;
     int                  auth_status;
     char*                method_used;
+	std::string	m_method_name;
+	std::string	m_methods_to_try;
+	std::string	m_host_addr;
+	Condor_Auth_Base *m_auth;
+	KeyInfo		**m_key;
+	time_t		m_auth_timeout_time;
+	bool		m_continue_handshake;
+	bool		m_continue_auth;
 
 	static MapFile* global_map_file;
 	static bool global_map_file_load_attempted;
-	static bool globus_activated; // Only attempt activation once; NOT THREAD SAFE
 
 };
 

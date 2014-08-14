@@ -67,8 +67,11 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
       credential_handle(GSS_C_NO_CREDENTIAL),
       context_handle   (GSS_C_NO_CONTEXT),
       m_gss_server_name(NULL),
+      m_client_name(GSS_C_NO_NAME),
       token_status     (0),
-      ret_flags        (0)
+      ret_flags        (0),
+      m_state          (GetClientPre),
+      m_status         (1)
 {
 #ifdef WIN32
 	ParseMapFile();
@@ -85,18 +88,11 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
 				EXCEPT("Failed to set the GSI_AUTHZ_CONF environment variable.\n");
 			}
 		}
-		// In 99% of cases, this is a no-op because the Globus threading model defaults
-		// to "none".  However, this can be overridden by a user's environment variable
-		// and I'd prefer to take no chances.  This call can fail if a globus module
-		// has already been activated (i.e., in the GAHP).  As the defaults are OK,
-		// the logging is done at FULLDEBUG, not ALWAYS.
-		if (globus_thread_set_model( GLOBUS_THREAD_MODEL_NONE ) != GLOBUS_SUCCESS) {
-			dprintf(D_FULLDEBUG, "Unable to explicitly turn-off Globus threading."
-				"  Will proceed with the default.\n");
+		if ( activate_globus_gsi() < 0 ) {
+			dprintf( D_ALWAYS, "Can't intialize GSI, authentication will fail: %s\n", x509_error_string() );
+		} else {
+			m_globusActivated = true;
 		}
-		globus_module_activate( GLOBUS_GSI_GSSAPI_MODULE );
-		globus_module_activate( GLOBUS_GSI_GSS_ASSIST_MODULE );
-		m_globusActivated = true;
 	}
 }
 
@@ -104,26 +100,28 @@ Condor_Auth_X509 ::  ~Condor_Auth_X509()
 {
     // Delete context handle if exist
 
+	OM_uint32 minor_status = 0;
+
     if (context_handle) {
-        OM_uint32 minor_status = 0;
         gss_delete_sec_context(&minor_status,&context_handle,GSS_C_NO_BUFFER);
     }
 
     if (credential_handle != GSS_C_NO_CREDENTIAL) {
-        OM_uint32 major_status = 0; 
-        gss_release_cred(&major_status, &credential_handle);
+        gss_release_cred(&minor_status, &credential_handle);
     }
 
 	if( m_gss_server_name != NULL ) {
-		OM_uint32 major_status = 0;
-		gss_release_name( &major_status, &m_gss_server_name );
+		gss_release_name( &minor_status, &m_gss_server_name );
 	}
+	gss_release_name(&minor_status, &m_client_name);
 }
 
-int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError* errstack)
+int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError* errstack, bool non_blocking)
 {
     int status = 1;
     int reply = 0;
+	token_status = 0;
+	m_state = GetClientPre;
 
     //don't just return TRUE if isAuthenticated() == TRUE, since 
     //we should BALANCE calls of Authenticate() on client/server side
@@ -173,38 +171,24 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
 			}
 		}
 		else {
-			// I am server, first wait for the other side
-			mySock_->decode();
-			mySock_->code(reply);
-			mySock_->end_of_message();
-			
-			if (reply) {
-				mySock_->encode();
-				mySock_->code(status);
-				mySock_->end_of_message();
-			}
-			else {
-				errstack->push("GSI", GSI_ERR_REMOTE_SIDE_FAILED,
-						"Failed to authenticate because the remote (client) "
-						"side was not able to acquire its credentials.");
-				return 0;  // The other side failed, abort
+			m_state = GetClientPre;
+			CondorAuthX509Retval tmp_status = authenticate_server_pre(errstack, non_blocking);
+			if ((tmp_status == Fail) || (tmp_status == WouldBlock)) {
+				return static_cast<int>(tmp_status);
 			}
 		}
 
 		int gsi_auth_timeout = param_integer("GSI_AUTHENTICATION_TIMEOUT",-1);
-        int old_timeout=0;
+		int old_timeout=0;
 		if (gsi_auth_timeout>=0) {
 			old_timeout = mySock_->timeout(gsi_auth_timeout); 
 		}
         
-        switch ( mySock_->isClient() ) {
-        case 1: 
-            status = authenticate_client_gss(errstack);
-            break;
-        default: 
-            status = authenticate_server_gss(errstack);
-            break;
-        }
+		if ( mySock_->isClient() ) {
+			status = authenticate_client_gss(errstack);
+		} else {
+			status = static_cast<int>(authenticate_server_gss(errstack, non_blocking));
+		}
 
 		if (gsi_auth_timeout>=0) {
 			mySock_->timeout(old_timeout); //put it back to what it was before
@@ -990,33 +974,167 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 	return name_equal != 0;
 }
 
-int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
+int Condor_Auth_X509::authenticate_continue(CondorError* errstack, bool non_blocking)
 {
-    char *    GSSClientname;
-    int       status = 0;
-    OM_uint32 major_status = 0;
-    OM_uint32 minor_status = 0;
+	int gsi_auth_timeout = param_integer("GSI_AUTHENTICATION_TIMEOUT",-1);
+	int old_timeout=0;
+	if (gsi_auth_timeout>=0) {
+		old_timeout = mySock_->timeout(gsi_auth_timeout); 
+	}       
 
-    priv_state priv;
-    
-    priv = set_root_priv();
-    
-    major_status = globus_gss_assist_accept_sec_context(&minor_status,
-                                                        &context_handle, 
-                                                        credential_handle,
-                                                        &GSSClientname,
-                                                        &ret_flags, NULL,
-                                                        /* don't need user_to_user */
-                                                        &token_status,
-                                                        NULL,     /* don't delegate credential */
-                                                        relisock_gsi_get, 
-                                                        (void *) mySock_,
-                                                        relisock_gsi_put, 
-                                                        (void *) mySock_
-                                                        );
-    
-    set_priv(priv);
-    
+	CondorAuthX509Retval retval = Continue;
+	while (retval == Continue)
+	{
+		switch (m_state)
+		{
+		case GetClientPre:
+			retval = authenticate_server_pre(errstack, non_blocking);
+			break;
+		case GSSAuth:
+			retval = authenticate_server_gss(errstack, non_blocking);
+			break;
+		case GetClientPost:
+			retval = authenticate_server_gss_post(errstack, non_blocking);
+			break;
+		default:
+			retval = Fail;
+			break;
+		}
+	}
+
+	if (gsi_auth_timeout>=0) {
+		mySock_->timeout(old_timeout); //put it back to what it was before
+	}
+
+	return static_cast<int>(retval);
+}
+
+Condor_Auth_X509::CondorAuthX509Retval
+Condor_Auth_X509::authenticate_server_pre(CondorError* errstack, bool non_blocking)
+{
+
+	if (non_blocking && !mySock_->readReady())
+	{
+		dprintf(D_NETWORK, "Returning to DC as read would block in authenticate_server_pre\n");
+		return WouldBlock;
+	}
+	m_status = 1;
+	int reply;
+
+	mySock_->decode();
+	mySock_->code(reply);
+	mySock_->end_of_message();
+
+	if (reply) {
+		mySock_->encode();
+		mySock_->code(m_status);
+		mySock_->end_of_message();
+	}
+	else {
+		errstack->push("GSI", GSI_ERR_REMOTE_SIDE_FAILED,
+			"Failed to authenticate because the remote (client) "
+			"side was not able to acquire its credentials.");
+			return Fail;  // The other side failed, abort
+	}
+	m_state = GSSAuth;
+	return Continue;
+}
+
+Condor_Auth_X509::CondorAuthX509Retval
+Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocking)
+{
+	OM_uint32 major_status = GSS_S_COMPLETE;
+	OM_uint32 minor_status = 0;
+
+	OM_uint32				time_req;
+	gss_buffer_desc			output_token_desc = GSS_C_EMPTY_BUFFER;
+	gss_buffer_t			output_token = &output_token_desc;
+	gss_buffer_desc         input_token_desc;
+	gss_buffer_t            input_token;
+
+	m_state = GSSAuth;
+	do
+	{
+		if (non_blocking && !mySock_->readReady())
+		{
+			dprintf(D_NETWORK, "Returning to DC as read would block.\n");
+			return WouldBlock;
+		}
+
+		input_token_desc.length = 0;
+		input_token_desc.value = NULL;
+		input_token = &input_token_desc;
+
+		if ((token_status = relisock_gsi_get(
+			mySock_,
+			&input_token->value,
+			&input_token->length)) != 0)
+		{
+			major_status =
+				GSS_S_DEFECTIVE_TOKEN | GSS_S_CALL_INACCESSIBLE_READ;
+			break;
+		}
+
+		dprintf(D_NETWORK, "gss_assist_accept_sec_context(1):inlen:%u\n", static_cast<unsigned>(input_token->length));
+
+		major_status = gss_accept_sec_context(
+			&minor_status,
+			&context_handle,
+			credential_handle,
+			input_token,
+			GSS_C_NO_CHANNEL_BINDINGS,
+			&m_client_name,
+			NULL,
+			output_token,
+			&ret_flags,
+			&time_req,
+			NULL);
+
+		dprintf(D_NETWORK, "gss_assist_accept_sec_context(2)"
+			"maj:%8.8x:min:%8.8x:ret:%8.8x "
+			"outlen:%lu:context:%p\n",
+			(unsigned int) major_status,
+			(unsigned int) minor_status,
+			(unsigned int) ret_flags,
+			output_token->length,
+			context_handle);
+
+		if (output_token->length != 0)
+		{
+			if ((token_status = relisock_gsi_put(
+				mySock_,
+				output_token->value,
+				output_token->length)) != 0)
+			{
+				major_status =
+				GSS_S_DEFECTIVE_TOKEN | GSS_S_CALL_INACCESSIBLE_WRITE;
+			}
+			gss_release_buffer(&minor_status, output_token);
+		}
+		if (GSS_ERROR(major_status))
+		{
+			if (context_handle != GSS_C_NO_CONTEXT)
+			{
+				gss_delete_sec_context(&minor_status, &context_handle, GSS_C_NO_BUFFER);
+			}
+			break;
+		}
+
+		if (input_token->length >0)
+		{
+			free(input_token->value);
+			input_token->length = 0;
+		}
+	}
+	while (major_status & GSS_S_CONTINUE_NEEDED);
+
+	if (input_token->length >0)
+	{
+		free(input_token->value);
+		input_token->length = 0;
+	}
+
+    m_status = 0;
     if ( (major_status != GSS_S_COMPLETE)) {
 		if (major_status == 655360) {
 			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
@@ -1030,8 +1148,40 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
                   "Condor GSI authentication failure" );
     }
     else {
+
+		gss_buffer_desc                     tmp_buffer_desc = GSS_C_EMPTY_BUFFER;
+		gss_buffer_t                        tmp_buffer = &tmp_buffer_desc;
+		char * gss_name = NULL;
+		major_status = gss_display_name(&minor_status,
+			m_client_name,
+			tmp_buffer,
+			NULL);
+		if (major_status == GSS_S_COMPLETE)
+		{
+			gss_name = (char *)malloc(tmp_buffer->length+1);
+			if (gss_name)
+			{
+				memcpy(gss_name, tmp_buffer->value, tmp_buffer->length);
+				gss_name[tmp_buffer->length] = '\0';
+			}
+			else
+			{
+				errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED, "Unable to allocate buffer");
+				major_status = GSS_S_FAILURE;
+			}
+		}
+		else
+		{
+			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED, "Unable to determine remote client name.  Globus is reporting error (%u:%u)",
+				(unsigned)major_status, (unsigned)minor_status);
+		}
+		gss_release_buffer(&minor_status, tmp_buffer);
+
 		// store the raw subject name for later mapping
-		setAuthenticatedName(GSSClientname);
+		if (gss_name) {
+			setAuthenticatedName(gss_name);
+			free(gss_name);
+		}
 		setRemoteUser("gsi");
 		setRemoteDomain( UNMAPPED_DOMAIN );
 
@@ -1053,40 +1203,48 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
 
 		// XXX FIXME ZKM
 		// i am making failure to be mapped a non-fatal error at this point.
-		status = 1;
+		m_status = (major_status == GSS_S_COMPLETE);
 
         mySock_->encode();
-        if (!mySock_->code(status) || !mySock_->end_of_message()) {
+        if (!mySock_->code(m_status) || !mySock_->end_of_message()) {
 			errstack->push("GSI", GSI_ERR_COMMUNICATIONS_ERROR,
 				"Failed to authenticate with client.  Unable to send status");
             dprintf(D_SECURITY, "Unable to send final confirmation\n");
-            status = 0;
+            m_status = 0;
         }
+	}
 
-        if (status != 0) {
-            // Now, see if client likes me or not
-            mySock_->decode();
-            if (!mySock_->code(status) || !mySock_->end_of_message()) {
+	m_state = GetClientPost;
+	return (m_status == 0) ? Fail : Continue;
+}
+
+Condor_Auth_X509::CondorAuthX509Retval
+Condor_Auth_X509::authenticate_server_gss_post(CondorError* errstack, bool non_blocking)
+{
+	dprintf(D_FULLDEBUG, "Finishing authenticate_server_gss_post with status=%d\n", m_status);
+	if (m_status != 0) {
+		if (non_blocking && !mySock_->readReady()) {
+			dprintf(D_NETWORK, "Returning to DC because read would block in authenticate_server_gss_post\n");
+			return WouldBlock;
+		}
+		// Now, see if client likes me or not
+		mySock_->decode();
+		if (!mySock_->code(m_status) || !mySock_->end_of_message()) {
+			errstack->push("GSI", GSI_ERR_COMMUNICATIONS_ERROR,
+				"Failed to authenticate with client.  Unable to receive status");
+			dprintf(D_SECURITY, "Unable to receive client confirmation.\n");
+			m_status = 0;
+		}
+		else {
+			if (m_status == 0) {
 				errstack->push("GSI", GSI_ERR_COMMUNICATIONS_ERROR,
-					"Failed to authenticate with client.  Unable to receive status");
-                dprintf(D_SECURITY, "Unable to receive client confirmation.\n");
-                status = 0;
-            }
-            else {
-                if (status == 0) {
-					errstack->push("GSI", GSI_ERR_COMMUNICATIONS_ERROR,
-						"Failed to authenticate with client.  Client does not trust our certificate.  "
-						"You may want to check the GSI_DAEMON_NAME in the condor_config");
-                    dprintf(D_SECURITY, "Client rejected my certificate. Please check the GSI_DAEMON_NAME parameter in Condor's config file.\n");
-                }
-            }
-        }
-        
-        if (GSSClientname) {
-            free(GSSClientname);
-        }
-    }
-    return (status == 0) ? FALSE : TRUE;
+					"Failed to authenticate with client.  Client does not trust our certificate.  "
+					"You may want to check the GSI_DAEMON_NAME in the condor_config");
+				dprintf(D_SECURITY, "Client rejected my certificate. Please check the GSI_DAEMON_NAME parameter in Condor's config file.\n");
+			}
+		}
+	}
+	return (m_status == 0) ? Fail : Success;
 }
 
 void Condor_Auth_X509::setFQAN(const char *fqan) {
