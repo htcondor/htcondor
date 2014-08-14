@@ -29,6 +29,7 @@ lib_eventlog_base
 lib_procapi_pidtracking-snapshot
 lib_unit_tests
 file_transfer_submit
+job_slash_transfer
 
 job_aggressive_flocking
 job_basic_kill
