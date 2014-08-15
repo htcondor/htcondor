@@ -271,6 +271,9 @@ void configWrapper() { config(); }
 void export_config()
 {
     config_ex(CONFIG_OPT_NO_EXIT | CONFIG_OPT_WANT_META);
+    param_insert("ENABLE_CLASSAD_CACHING", "false");
+    classad::ClassAdSetExpressionCaching(false);
+
     def("version", CondorVersionWrapper, "Returns the version of HTCondor this module is linked against.");
     def("platform", CondorPlatformWrapper, "Returns the platform of HTCondor this module is running on.");
     def("reload_config", configWrapper, "Reload the HTCondor configuration from disk.");
