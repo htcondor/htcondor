@@ -6769,13 +6769,13 @@ find_idle_local_jobs( ClassAd *job )
 			if ( job->EvalBool(ATTR_REQUIREMENTS, &scheddAd, requirements) ) {
 				requirementsMet = (bool)requirements;
 				if ( !requirements ) {
-					dprintf( D_ALWAYS, "The %s attribute for job %d.%d "
+					dprintf( D_FULLDEBUG, "The %s attribute for job %d.%d "
 							 "evaluated to false. Unable to start job\n",
 							 ATTR_REQUIREMENTS, id.cluster, id.proc );
 				}
 			} else {
 				requirementsMet = false;
-				dprintf( D_ALWAYS, "The %s attribute for job %d.%d did "
+				dprintf( D_FULLDEBUG, "The %s attribute for job %d.%d did "
 						 "not evaluate. Unable to start job\n",
 						 ATTR_REQUIREMENTS, id.cluster, id.proc );
 			}
