@@ -74,6 +74,11 @@ longer be set to \Expr{False}).
 jobs from writing to the log file specified in their submit file.
 \Ticket{4353}
 
+\item Added optional \Expr{@(OWNER)} and \Expr{@(NODE\_NAME)} macros
+to the \Macro{DAGMAN\_DEFAULT\_NODE\_LOG} configuration macro.
+This makes it easier to avoid log file collisions.
+\Ticket{4334}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
