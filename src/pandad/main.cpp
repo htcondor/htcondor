@@ -9,7 +9,7 @@
 #include <pthread.h>
 
 #include "PipeBuffer.h"
-#include "Queue.h"
+#include "TimeSensitiveQueue.h"
 
 #include <curl/curl.h>
 
@@ -71,8 +71,14 @@ int main( int /* argc */, char ** /* argv */ ) {
 	// global mutex before creating any others.
 	pthread_mutex_lock( & bigGlobalMutex );
 
-	// A locking queue.
-	Queue< std::string > queue( queueSize, & bigGlobalMutex );
+	// A time-sensitive locking queue.
+	TimeSensitiveQueue< std::string > queue( queueSize, & bigGlobalMutex );
+
+	int gracePeriod = param_integer( "PANDA_QUEUE_GRACE" );
+	if( ! queue.allowGracePeriod( gracePeriod ) ) {
+		dprintf( D_ALWAYS, "Unable to allow queue a %d-second grace period, exiting.\n", gracePeriod );
+		exit( 1 );
+	}
 
 	// We only need one worker thread.
 	pthread_t workerThread;
@@ -368,7 +374,7 @@ std::string generatePostString( const CommandSet & commandSet ) {
 // FIXME: Obtain the log file's name from configuration.
 // FIXME: use safe_open().
 template< class T >
-void updateStatisticsLog( const Queue<T> & queue ) {
+void updateStatisticsLog( const TimeSensitiveQueue<T> & queue ) {
 	static unsigned previousQueueFullCount = UINT_MAX;
 	static unsigned previousBadCommandCount = UINT_MAX;
 	static unsigned previousCurlFailureCount = UINT_MAX;
@@ -423,7 +429,7 @@ void updateStatisticsLog( const Queue<T> & queue ) {
 }
 
 template< class T >
-bool sendCommands( CURL * curl, const std::string & url, const std::string & verb, const CommandSet & commandSet, char * curlErrorBuffer, unsigned long & responseCode, const Queue< T > & queue ) {
+bool sendCommands( CURL * curl, const std::string & url, const std::string & verb, const CommandSet & commandSet, char * curlErrorBuffer, unsigned long & responseCode, const TimeSensitiveQueue< T > & queue ) {
 	if( commandSet.size() == 0 ) { return false; }
 	std::string postString = generatePostString( commandSet );
 
@@ -475,7 +481,7 @@ size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str )
 }
 
 static void * workerFunction( void * ptr ) {
-	Queue< std::string > * queue = (Queue< std::string > *)ptr;
+	TimeSensitiveQueue< std::string > * queue = (TimeSensitiveQueue< std::string > *)ptr;
 	pthread_mutex_lock( & bigGlobalMutex );
 
 	// Do the command-independent curl set-up.
@@ -518,7 +524,7 @@ static void * workerFunction( void * ptr ) {
 		}
 
 		//
-		// Empty the qeueue.  We could easily add a limite here to smooth
+		// Empty the qeueue.  We could easily add a limit here to smooth
 		// out bursty schedd activity (e.g., 'queue 1000').
 		//
 		while( ! queue->empty() ) {

@@ -7824,3 +7824,9 @@ default=16384
 type=int
 review=tlmiller
 reconfig=false
+
+[PANDA_QUEUE_GRACE]
+default=3
+type=int
+reivew=tlmiller
+reconfig=false
