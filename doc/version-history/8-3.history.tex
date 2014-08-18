@@ -109,6 +109,12 @@ to the \Macro{DAGMAN\_DEFAULT\_NODE\_LOG} configuration macro.
 This makes it easier to avoid log file collisions.
 \Ticket{4334}
 
+\item \Condor{submit} will no longer insert an \Attr{OpSys} requirement
+	when one of \Attr{OpSysAndVer}, \Attr{OpSysLongName}, \Attr{OpSysName},
+	or \Attr{OpSysShortName} is already specified by the user in
+	the \Attr{Requirements} expression.
+\Ticket{4519}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
