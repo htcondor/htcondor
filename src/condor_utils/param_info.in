@@ -7820,10 +7820,10 @@ review=tlmiller
 reconfig=false
 
 [PANDA_QUEUE_SIZE]
-default=16384
+default=131072
 type=int
 review=tlmiller
-reconfig=false
+reconfig=true
 
 [PANDA_QUEUE_GRACE]
 default=3

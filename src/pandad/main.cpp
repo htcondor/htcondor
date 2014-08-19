@@ -106,6 +106,7 @@ int main( int /* argc */, char ** /* argv */ ) {
 		if( pb.isError() || pb.isEOF() ) {
 			dprintf( D_ALWAYS, "stdin closed, draining queue...\n" );
 			queue.drain();
+			// TODO: Dump the statistics log.
 			dprintf( D_ALWAYS, "stdin closed, ... done.  Exiting.\n" );
 			exit( 0 );
 		}
@@ -225,7 +226,7 @@ std::string & doValueCleanup( std::string & value ) {
 		else if( value == "true" ) { return value; }
 		else {
 			// JSON does not permit any other literal.
-			dprintf( D_ALWAYS, "Converting illegal literal '%s' into string.\n", value.c_str() );
+			dprintf( D_FULLDEBUG, "Converting illegal literal '%s' into string.\n", value.c_str() );
 
 			// Unfortunately, the alphabet for ClassAd expressions is less
 			// limited than the alphabet for ClassAd strings.
@@ -338,30 +339,6 @@ void constructCommand( const std::string & line ) {
 	}
 } // end constructCommand()
 
-std::string generatePostString( const CommandSet & commandSet ) {
-	std::string postFieldString = "[ ";
-	CommandSet::const_iterator i = commandSet.begin();
-	for( ; i != commandSet.end(); ++i ) {
-		const Command & c = i->second;
-
-		postFieldString += "{ ";
-
-		Command::const_iterator j = c.begin();
-		for( ; j != c.end(); ++j ) {
-			postFieldString += "\"" + j->first + "\": ";
-			postFieldString += j->second + ", ";
-		}
-		// Remove trailing ', '.
-		postFieldString.erase( postFieldString.length() - 2 );
-		postFieldString += " }, ";
-	}
-	// Remove trailing ', '.
-	postFieldString.erase( postFieldString.length() - 2 );
-	postFieldString += " ]";
-
-	return postFieldString;
-} // end generatePostString()
-
 #define SET_REQUIRED_CURL_OPTION( A, B, C ) { \
 	CURLcode rv##B = curl_easy_setopt( A, B, C ); \
 	if( rv##B != CURLE_OK ) { \
@@ -429,12 +406,9 @@ void updateStatisticsLog( const TimeSensitiveQueue<T> & queue ) {
 }
 
 template< class T >
-bool sendCommands( CURL * curl, const std::string & url, const std::string & verb, const CommandSet & commandSet, char * curlErrorBuffer, unsigned long & responseCode, const TimeSensitiveQueue< T > & queue ) {
-	if( commandSet.size() == 0 ) { return false; }
-	std::string postString = generatePostString( commandSet );
-
+bool sendPostField( const std::string & postString, CURL * curl, const std::string & url, const std::string & verb, char * curlErrorBuffer, unsigned long & responseCode, const TimeSensitiveQueue< T > & queue ) {
+dprintf( D_ALWAYS, "sendPostField(): body length %lu, url %s, verb %s.\n", postString.length(), url.c_str(), verb.c_str() );
 	++curlCalledCount;
-	commandsSentCount += commandSet.size();
 
 	dprintf( D_FULLDEBUG, "Sending commands to URL '%s'.\n", url.c_str() );
 	SET_REQUIRED_CURL_OPTION( curl, CURLOPT_URL, url.c_str() );
@@ -451,9 +425,7 @@ bool sendCommands( CURL * curl, const std::string & url, const std::string & ver
 	if( rv != CURLE_OK ) {
 		dprintf( D_ALWAYS, "Ignoring curl_easy_perform() error (%d): '%s'\n", rv, curl_easy_strerror( rv ) );
 		dprintf( D_ALWAYS, "curlErrorBuffer = '%s'\n", curlErrorBuffer );
-
-		// It would be nice, for performance monitoring, to dump some more
-		// information about the timed-out request here.
+		dprintf( D_ALWAYS, "Sending %s (url) %s (verb) %s (postString).\n", url.c_str(), verb.c_str(), postString.c_str() );
 
 		++curlFailureCount;
 		return false;
@@ -467,7 +439,57 @@ bool sendCommands( CURL * curl, const std::string & url, const std::string & ver
 	}
 
 	return true;
-} // end sendCommands()
+}
+
+template< class T >
+bool sendCommands( CURL * curl, const std::string & url, const std::string & verb, const CommandSet & commandSet, char * curlErrorBuffer, unsigned long & responseCode, const TimeSensitiveQueue< T > & queue ) {
+	if( commandSet.size() == 0 ) { return false; }
+
+	unsigned commandsInString = 0;
+	std::string postFieldString = "[ ";
+	CommandSet::const_iterator i = commandSet.begin();
+	for( ; i != commandSet.end(); ++i ) {
+		const Command & c = i->second;
+		postFieldString += "{ ";
+
+		Command::const_iterator j = c.begin();
+		for( ; j != c.end(); ++j ) {
+			postFieldString += "\"" + j->first + "\": ";
+			postFieldString += j->second + ", ";
+		}
+
+		// Remove trailing ', '.
+		postFieldString.erase( postFieldString.length() - 2 );
+		postFieldString += " }, ";
+		++commandsInString;
+
+		// If increased to 1024 * 1024, the PanDA service loses events.
+		if( postFieldString.length() > 512 * 1024) {
+			// Remove trailing ', '.
+			postFieldString.erase( postFieldString.length() - 2 );
+			postFieldString += " ]";
+
+			commandsSentCount += commandsInString;
+			if( ! sendPostField( postFieldString, curl, url, verb, curlErrorBuffer, responseCode, queue ) ) {
+				return false;
+			}
+
+			commandsInString = 0;
+			postFieldString = "[ ";
+		}
+	}
+
+	// Send what remains, if anything.
+	if( commandsInString > 0 ) {
+		postFieldString.erase( postFieldString.length() - 2 );
+		postFieldString += " ]";
+
+		commandsSentCount += commandsInString;
+		return sendPostField( postFieldString, curl, url, verb, curlErrorBuffer, responseCode, queue );
+	}
+
+	return true;
+}
 
 // Required for debugging.  Stolen from ec2_gahp/amazonCommands.cpp.
 size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str ) {
@@ -524,8 +546,11 @@ static void * workerFunction( void * ptr ) {
 		}
 
 		//
-		// Empty the qeueue.  We could easily add a limit here to smooth
-		// out bursty schedd activity (e.g., 'queue 1000').
+		// Empty the qeueue.
+		//
+		// We have to handle long sends in sendCommands() -- we otherwise
+		// don't know if each PUT's corresponding POST has made it to the
+		// server yet (and their API requires that it has).
 		//
 		while( ! queue->empty() ) {
 			constructCommand( queue->dequeue() );
@@ -541,6 +566,12 @@ static void * workerFunction( void * ptr ) {
 			unsigned newSize = param_integer( "PANDA_QUEUE_SIZE" );
 			dprintf( D_ALWAYS, "Changing queue to size %u on SIGHUP.\n", newSize );
 			queue->resize( newSize );
+
+			// FIXME: We could also reset PANDA_QUEUE_GRACE here.  (Update
+			// param_info.in to match.)
+
+			// FIXME: We could also reset PANDA_UPDATE_TIMEOUT here.  (Update
+			// param_info.in to match.)
 			reconfigure = false;
 		}
 
