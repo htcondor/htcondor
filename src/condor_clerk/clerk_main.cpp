@@ -47,6 +47,7 @@ CmDaemon::CmDaemon()
 	, m_CLIENT_TIMEOUT(30)
 	, m_QUERY_TIMEOUT(60)
 	, m_CLASSAD_LIFETIME(900)
+	, m_LOG_UPDATES(false)
 {
 }
 
@@ -82,26 +83,44 @@ const T * BinaryLookup (const T aTable[], int cElms, int id)
 	}
 }
 
+// Table to allow quick lookup of adtype from command id.
+// THIS MUST BE SORTED BY COMMAND ID!
 static const CmdAdTypePair aCommandToAdType[] = {
-	{ QUERY_STARTD_ADS,        STARTD_AD },		   // 5
-	{ QUERY_SCHEDD_ADS,        SCHEDD_AD },		   // 6
-	{ QUERY_MASTER_ADS,        MASTER_AD },		   // 7
-	{ QUERY_CKPT_SRVR_ADS,     CKPT_SRVR_AD },	   // 9
-	{ QUERY_STARTD_PVT_ADS,    STARTD_PVT_AD },	   // 10
-	{ QUERY_SUBMITTOR_ADS,     SUBMITTOR_AD },	   // 12
-	{ QUERY_COLLECTOR_ADS,     COLLECTOR_AD },	   // 20
-	{ QUERY_LICENSE_ADS,       LICENSE_AD },	   // 43
-	{ QUERY_STORAGE_ADS,       STORAGE_AD },	   // 46
-	{ QUERY_ANY_ADS,           ANY_AD },		   // 48
-	{ QUERY_NEGOTIATOR_ADS,    NEGOTIATOR_AD },	   // 50
-	{ QUERY_HAD_ADS,           HAD_AD },		   // 56
-	{ QUERY_XFER_SERVICE_ADS,  XFER_SERVICE_AD },  // 62
-	{ QUERY_LEASE_MANAGER_ADS, LEASE_MANAGER_AD }, // 65
-	{ QUERY_GRID_ADS,          GRID_AD },		   // 71
-	{ QUERY_GENERIC_ADS,       GENERIC_AD },	   // 74
+	{ UPDATE_STARTD_AD,        STARTD_AD },			// 0
+	{ UPDATE_SCHEDD_AD,        SCHEDD_AD },			// 1
+	{ UPDATE_MASTER_AD,        MASTER_AD },			// 2
+	{ UPDATE_CKPT_SRVR_AD,     CKPT_SRVR_AD },		// 4
+	{ QUERY_STARTD_ADS,        STARTD_AD },			// 5
+	{ QUERY_SCHEDD_ADS,        SCHEDD_AD },			// 6
+	{ QUERY_MASTER_ADS,        MASTER_AD },			// 7
+	{ QUERY_CKPT_SRVR_ADS,     CKPT_SRVR_AD },		// 9
+	{ QUERY_STARTD_PVT_ADS,    STARTD_PVT_AD },		// 10
+	{ UPDATE_SUBMITTOR_AD,     SUBMITTOR_AD },		// 11
+	{ QUERY_SUBMITTOR_ADS,     SUBMITTOR_AD },		// 12
+	{ UPDATE_COLLECTOR_AD,     COLLECTOR_AD },		// 19
+	{ QUERY_COLLECTOR_ADS,     COLLECTOR_AD },		// 20
+	{ UPDATE_LICENSE_AD,       LICENSE_AD },		// 42
+	{ QUERY_LICENSE_ADS,       LICENSE_AD },		// 43
+	{ UPDATE_STORAGE_AD,       STORAGE_AD },		// 45
+	{ QUERY_STORAGE_ADS,       STORAGE_AD },		// 46
+	{ QUERY_ANY_ADS,           ANY_AD },			// 48
+	{ UPDATE_NEGOTIATOR_AD,    NEGOTIATOR_AD },		// 49
+	{ QUERY_NEGOTIATOR_ADS,    NEGOTIATOR_AD },		// 50
+	{ UPDATE_HAD_AD,           HAD_AD },			// 55
+	{ QUERY_HAD_ADS,           HAD_AD },			// 56
+	{ UPDATE_AD_GENERIC,       GENERIC_AD },		// 58
+	{ UPDATE_XFER_SERVICE_AD,  XFER_SERVICE_AD },	// 61
+	{ QUERY_XFER_SERVICE_ADS,  XFER_SERVICE_AD },	// 62
+	{ UPDATE_LEASE_MANAGER_AD, LEASE_MANAGER_AD },	// 64
+	{ QUERY_LEASE_MANAGER_ADS, LEASE_MANAGER_AD },	// 65
+	{ UPDATE_GRID_AD,          GRID_AD },			// 70
+	{ QUERY_GRID_ADS,          GRID_AD },			// 71
+	{ MERGE_STARTD_AD,         STARTD_AD },			// 73
+	{ QUERY_GENERIC_ADS,       GENERIC_AD },		// 74
+
 };
 
-static AdTypes QueryCmdToAdType(int cmd) {
+AdTypes CollectorCmdToAdType(int cmd) {
 	const CmdAdTypePair * ptr = BinaryLookup(aCommandToAdType, NUMELMS(aCommandToAdType), cmd);
 	if (ptr) return ptr->atype;
 	return (AdTypes)-1;
@@ -156,58 +175,58 @@ void CmDaemon::Init()
 	if ( ! m_initialized) {
 
 		static const CmdPermPair querys[] = {
-			{ QUERY_STARTD_ADS,        READ },
-			{ QUERY_STARTD_PVT_ADS,    NEGOTIATOR },
-			{ QUERY_GENERIC_ADS,       READ },
-			{ QUERY_ANY_ADS,           READ },
-			{ QUERY_SCHEDD_ADS,        READ },
-			{ QUERY_GRID_ADS,          READ },
-			{ QUERY_MASTER_ADS,        READ },
-			{ QUERY_CKPT_SRVR_ADS,     READ },
-			{ QUERY_SUBMITTOR_ADS,     READ },
-			{ QUERY_LICENSE_ADS,       READ },
-			{ QUERY_COLLECTOR_ADS,     READ },
-			{ QUERY_STORAGE_ADS,       READ },
-			{ QUERY_NEGOTIATOR_ADS,    READ },
-			{ QUERY_HAD_ADS,           READ },
-			{ QUERY_XFER_SERVICE_ADS,  READ },
-			{ QUERY_LEASE_MANAGER_ADS, READ },
+			{ QUERY_STARTD_ADS,        READ },		// 5
+			{ QUERY_STARTD_PVT_ADS,    NEGOTIATOR },// 10
+			{ QUERY_GENERIC_ADS,       READ },		// 74
+			{ QUERY_ANY_ADS,           READ },		// 48
+			{ QUERY_SCHEDD_ADS,        READ },		// 6
+			{ QUERY_GRID_ADS,          READ },		// 71
+			{ QUERY_MASTER_ADS,        READ },		// 7
+			{ QUERY_CKPT_SRVR_ADS,     READ },		// 9
+			{ QUERY_SUBMITTOR_ADS,     READ },		// 12
+			{ QUERY_LICENSE_ADS,       READ },		// 43
+			{ QUERY_COLLECTOR_ADS,     READ },		// 20
+			{ QUERY_STORAGE_ADS,       READ },		// 46
+			{ QUERY_NEGOTIATOR_ADS,    READ },		// 50
+			{ QUERY_HAD_ADS,           READ },		// 56
+			{ QUERY_XFER_SERVICE_ADS,  READ },		// 62
+			{ QUERY_LEASE_MANAGER_ADS, READ },		// 65
 		};
 		RegisterHandlers(querys, NUMELMS(querys), (CommandHandlercpp)&CmDaemon::receive_query, "receive_query", this);
 
 		static const CmdPermPair invals[] = {
-			{ INVALIDATE_STARTD_ADS,        ADVERTISE_STARTD_PERM },
-			{ INVALIDATE_SCHEDD_ADS,        ADVERTISE_SCHEDD_PERM },
-			{ INVALIDATE_SUBMITTOR_ADS,     ADVERTISE_SCHEDD_PERM },
-			{ INVALIDATE_MASTER_ADS,        ADVERTISE_MASTER_PERM },
-			{ INVALIDATE_CKPT_SRVR_ADS,     DAEMON },
-			{ INVALIDATE_LICENSE_ADS,       DAEMON },
-			{ INVALIDATE_COLLECTOR_ADS,     DAEMON },
-			{ INVALIDATE_STORAGE_ADS,       DAEMON },
-			{ INVALIDATE_NEGOTIATOR_ADS,    NEGOTIATOR },
-			{ INVALIDATE_ADS_GENERIC,       DAEMON },
-			{ INVALIDATE_XFER_SERVICE_ADS,  DAEMON },
-			{ INVALIDATE_LEASE_MANAGER_ADS, DAEMON },
-			{ INVALIDATE_GRID_ADS,          DAEMON },
+			{ INVALIDATE_STARTD_ADS,        ADVERTISE_STARTD_PERM },	// 13
+			{ INVALIDATE_SCHEDD_ADS,        ADVERTISE_SCHEDD_PERM },	// 14
+			{ INVALIDATE_SUBMITTOR_ADS,     ADVERTISE_SCHEDD_PERM },	// 18
+			{ INVALIDATE_MASTER_ADS,        ADVERTISE_MASTER_PERM },	// 15
+			{ INVALIDATE_CKPT_SRVR_ADS,     DAEMON },					// 17
+			{ INVALIDATE_LICENSE_ADS,       DAEMON },					// 44
+			{ INVALIDATE_COLLECTOR_ADS,     DAEMON },					// 21
+			{ INVALIDATE_STORAGE_ADS,       DAEMON },					// 47
+			{ INVALIDATE_NEGOTIATOR_ADS,    NEGOTIATOR },				// 51
+			{ INVALIDATE_ADS_GENERIC,       DAEMON },					// 59
+			{ INVALIDATE_XFER_SERVICE_ADS,  DAEMON },					// 63
+			{ INVALIDATE_LEASE_MANAGER_ADS, DAEMON },					// 66
+			{ INVALIDATE_GRID_ADS,          DAEMON },					// 72
 		};
 		RegisterHandlers(invals, NUMELMS(invals), (CommandHandlercpp)&CmDaemon::receive_invalidation,"receive_invalidation", this);
 
 		static const CmdPermPair updates[] = {
-			{ UPDATE_STARTD_AD,             ADVERTISE_STARTD_PERM },
-			{ MERGE_STARTD_AD,              NEGOTIATOR },
-			{ UPDATE_AD_GENERIC,            DAEMON },
-			{ UPDATE_SCHEDD_AD,             ADVERTISE_SCHEDD_PERM },
-			{ UPDATE_SUBMITTOR_AD,          ADVERTISE_SCHEDD_PERM },
-			{ UPDATE_MASTER_AD,             ADVERTISE_MASTER_PERM },
-			{ UPDATE_CKPT_SRVR_AD,          DAEMON },
-			{ UPDATE_LICENSE_AD,            DAEMON },
-			{ UPDATE_COLLECTOR_AD,          ALLOW },
-			{ UPDATE_STORAGE_AD,            DAEMON },
-			{ UPDATE_NEGOTIATOR_AD,         NEGOTIATOR },
-			{ UPDATE_HAD_AD,                DAEMON },
-			{ UPDATE_XFER_SERVICE_AD,       DAEMON },
-			{ UPDATE_LEASE_MANAGER_AD,      DAEMON },
-			{ UPDATE_GRID_AD,               DAEMON },
+			{ UPDATE_STARTD_AD,             ADVERTISE_STARTD_PERM },	// 0
+			{ MERGE_STARTD_AD,              NEGOTIATOR },				// 73
+			{ UPDATE_AD_GENERIC,            DAEMON },					// 58
+			{ UPDATE_SCHEDD_AD,             ADVERTISE_SCHEDD_PERM },	// 1
+			{ UPDATE_SUBMITTOR_AD,          ADVERTISE_SCHEDD_PERM },	// 11
+			{ UPDATE_MASTER_AD,             ADVERTISE_MASTER_PERM },	// 2
+			{ UPDATE_CKPT_SRVR_AD,          DAEMON },					// 4
+			{ UPDATE_LICENSE_AD,            DAEMON },					// 42
+			{ UPDATE_COLLECTOR_AD,          ALLOW },					// 19
+			{ UPDATE_STORAGE_AD,            DAEMON },					// 45
+			{ UPDATE_NEGOTIATOR_AD,         NEGOTIATOR },				// 49
+			{ UPDATE_HAD_AD,                DAEMON },					// 55
+			{ UPDATE_XFER_SERVICE_AD,       DAEMON },					// 61
+			{ UPDATE_LEASE_MANAGER_AD,      DAEMON },					// 64
+			{ UPDATE_GRID_AD,               DAEMON },					// 70
 		};
 		RegisterHandlers(updates, NUMELMS(updates), (CommandHandlercpp)&CmDaemon::receive_update,"receive_update", this);
 
@@ -236,6 +255,7 @@ void CmDaemon::Config()
 	m_CLIENT_TIMEOUT = param_integer ("CLIENT_TIMEOUT",30);
 	m_QUERY_TIMEOUT = param_integer ("QUERY_TIMEOUT",60);
 	m_CLASSAD_LIFETIME = param_integer ("CLASSAD_LIFETIME",900);
+	m_LOG_UPDATES = param_boolean("LOG_UPDATES", false);
 
 	MyString upstreamCollector;
 	if ( ! ImTheCollector) { // just send updates to the collector like any other deamon
@@ -278,11 +298,105 @@ void CmDaemon::Shutdown(bool fast)
 	return;
 }
 
-
-int CmDaemon::receive_update(int, Stream*)
+int CmDaemon::StashSocket(ReliSock* sock)
 {
-	int rval = 0;
-	return rval;
+	if (daemonCore->SocketIsRegistered(sock)) {
+		return KEEP_STREAM;
+	}
+
+	const char * peer = sock->peer_description();
+
+	MyString msg;
+	if (daemonCore->TooManyRegisteredSockets(sock->get_file_desc(),&msg)) {
+		dprintf(D_ALWAYS, "WARNING: cannot register TCP update socket from %s: %s\n", peer, msg.c_str());
+		return FALSE;
+	}
+
+		// Register this socket w/ DaemonCore so we wake up if
+		// there's more data to read...
+	int rval = daemonCore->Register_Command_Socket(sock, "Update Socket");
+	if (rval < 0) {
+		dprintf(D_ALWAYS, "Failed to register TCP socket from %s for updates: error %d.\n", peer, rval);
+		return FALSE;
+	}
+
+	dprintf (D_FULLDEBUG, "Registered TCP socket from %s for updates.\n", peer);
+	return KEEP_STREAM;
+}
+
+
+int CmDaemon::receive_update(int command, Stream* stream)
+{
+	Sock * sock = (Sock*)stream;
+	//condor_sockaddr from = sock->peer_addr();
+
+	stats.UpdatesReceived += 1;
+	dprintf(D_ALWAYS | (m_LOG_UPDATES ? 0 : D_VERBOSE),
+		"Got %s adtype=%s\n", getCommandString(command), AdTypeToString(CollectorCmdToAdType(command)));
+
+		// Avoid lengthy blocking on communication with our peer.
+		// This command-handler should not get called until data
+		// is ready to read.
+	sock->timeout(1);
+
+	// process the given command
+	ClassAd *ad = getClassAd(sock);
+	if ( ! ad) {
+		stats.UpdatesFailed += 1;
+
+		dprintf (D_ALWAYS,"Command %d on Sock not follwed by ClassAd (or timeout occured)\n", command);
+		sock->end_of_message();
+		return FALSE;
+	}
+
+	// insert the authenticated user into the ad itself
+	const char* username = sock->getFullyQualifiedUser();
+	if (username) {
+		ad->Assign("AuthenticatedIdentity", username);
+	} else {
+		// remove it from the ad if it's not authenticated.
+		ad->Delete("AuthenticatedIdentity");
+	}
+
+	// for these commands, there will also be a private ad.
+	ClassAd * adPvt = NULL;
+	if (command == UPDATE_STARTD_AD || command == UPDATE_STARTD_AD_WITH_ACK) {
+		adPvt = getClassAd(sock);
+		if ( ! adPvt) {
+			dprintf(D_FULLDEBUG,"\t(Could not get startd's private ad)\n");
+		}
+	}
+
+	int rval = collect(command, ad, adPvt);
+	if (rval < 0) {
+		if (rval == -3)
+		{
+			/* this happens when we get a classad for which a hash key could
+				not been made. This occurs when certain attributes are needed
+				for the particular catagory the ad is destined for, but they
+				are not present in the ad. */
+			dprintf (D_ALWAYS, "Received malformed ad from command (%d). Ignoring.\n", command);
+		}
+
+		// don't leak the ad(s)!
+		delete ad;
+		delete adPvt;
+		return FALSE;
+	}
+
+	// get the end_of_message()
+	if ( ! sock->end_of_message()) {
+		dprintf(D_FULLDEBUG,"Warning: Command %d; maybe shedding data on eom\n", command);
+	}
+
+
+	if( sock->type() == Stream::reli_sock ) {
+			// stash this socket for future updates...
+		return this->StashSocket( (ReliSock *)sock );
+	}
+
+	// let daemon core clean up the socket
+	return TRUE;
 }
 
 int CmDaemon::receive_update_expect_ack(int, Stream*)
@@ -329,14 +443,14 @@ int CmDaemon::put_ad_v1(ClassAd *ad, Stream* sock, ClassAd & query, bool v0)
 	if ( ! sock->code(more)) {
 		return 0;
 	}
-#ifdef ENABLE_V0_PUT_CLASSAD
 	if (v0) {
+		#ifdef ENABLE_V0_PUT_CLASSAD
 		extern int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool exclude_private, StringList *attr_whitelist );
 		if ( ! _putClassAd_v0(sock, *ad, false, false, attr_whitelist)) {
 			return 0;
 		}
+		#endif
 	} else
-#endif
 	{
 		classad::References attrs;
 		classad::References * whitelist = NULL;
@@ -358,13 +472,17 @@ int CmDaemon::put_ad_v2(ClassAd &ad, Stream* sock, ClassAd & query)
 	classad::References * whitelist = NULL;
 	classad::References attrs;
 	ExprTree * proj_tree = query.Lookup(ATTR_PROJECTION);
-	const char * projection = NULL;
-	if (proj_tree && (proj_tree->GetKind() == ExprTree::LITERAL_NODE)) {
+	if (proj_tree) {
 		classad::Value val;
-		classad::Value::NumberFactor factor;
-		((classad::Literal*)proj_tree)->GetComponents(val, factor);
-		val.IsStringValue(projection);
-		if (projection) {
+		if (proj_tree->GetKind() == ExprTree::LITERAL_NODE) {
+			classad::Value::NumberFactor factor;
+			((classad::Literal*)proj_tree)->GetComponents(val, factor);
+		} else {
+			if (query.EvalAttr(ATTR_PROJECTION, &ad, val)) {
+			}
+		}
+		const char * projection = NULL;
+		if (val.IsStringValue(projection)) {
 			StringList proj_list(projection);
 			if ( ! proj_list.isEmpty()) {
 				proj_list.rewind();
@@ -408,13 +526,12 @@ int CmDaemon::put_ad_v3(ClassAd &ad, Stream* sock, const classad::References * w
 	return 1;
 }
 
-PRAGMA_REMIND("get rid of this hack variable.")
-static ClassAdList s_ads;
-
 int CmDaemon::receive_query(int command, Stream* sock)
 {
 	int rval = 0;
 	ClassAd query;  // the query ad
+
+	stats.QueriesReceived += 1;
 
 	int putver = param_integer(MY_SUBSYSTEM "_PUT_VERSION", 0);
 	dprintf(D_FULLDEBUG, "Daemon::receive_query(%d,...) called (v%d)\n", command, putver);
@@ -438,12 +555,13 @@ int CmDaemon::receive_query(int command, Stream* sock)
 	sock->timeout(m_CLIENT_TIMEOUT);
 
 	// Initial query handler
-	AdTypes whichAds = QueryCmdToAdType(command);
-	dprintf(D_FULLDEBUG, "Got %s\n", getCommandString(command));
+	AdTypes whichAds = CollectorCmdToAdType(command);
+	dprintf(D_FULLDEBUG, "Got %s adtype=%s\n", getCommandString(command), AdTypeToString(whichAds));
 
 	UtcTime begin(true);
 
 	// Perform the query
+	int cTotalAds = 0;
 	List<ClassAd> ads;
 	ForkStatus	fork_status = FORK_FAILED;
 	if (whichAds != (AdTypes)-1) {
@@ -453,7 +571,7 @@ int CmDaemon::receive_query(int command, Stream* sock)
 		} else {
 			// We are the child, or the fork failed, either way we want
 			// to actually perform the query now.
-			FetchAds (whichAds, query, ads);
+			FetchAds (whichAds, query, ads, &cTotalAds);
 		}
 	}
 
@@ -466,23 +584,24 @@ int CmDaemon::receive_query(int command, Stream* sock)
 
 	// declare this her so we can print it out later
 	int cAdsMatched = ads.Length();
-	int cAdsSkipped = s_ads.Length() - cAdsMatched;
+	int cAdsSkipped = cTotalAds - cAdsMatched;
 	ExprTree * filter_tree = query.Lookup(ATTR_REQUIREMENTS);
 
 	std::string projection;
-	if ( ! query.LookupString(ATTR_PROJECTION, projection)) { projection = ""; }
+	bool evaluate_projection = false;
+	if ( ! query.LookupString(ATTR_PROJECTION, projection)) {
+		projection = "";
+		if (query.Lookup(ATTR_PROJECTION)) { evaluate_projection = true; }
+	}
 
 	classad::References * whitelist = NULL;
 	classad::References attrs;
 	if (putver == 3) {
 		if ( ! projection.empty()) {
-			StringTokenIterator proj_list(projection);
-			proj_list.rewind();
+			StringTokenIterator list(projection);
 			const std::string * attr;
-			while ((attr = proj_list.next_string())) { 
-				attrs.insert(*attr); 
-				whitelist = &attrs;
-			}
+			while ((attr = list.next_string())) { attrs.insert(*attr); }
+			if ( ! attrs.empty()) { whitelist = &attrs; }
 		}
 	}
 
@@ -492,6 +611,17 @@ int CmDaemon::receive_query(int command, Stream* sock)
 	while ((ad = ads.Next())) {
 		int rval = 0;
 		if (putver == 3) {
+			if (evaluate_projection) {
+				projection.clear();
+				attrs.clear();
+				whitelist = NULL;
+				if (query.EvalString(ATTR_PROJECTION, ad, projection) && ! projection.empty()) {
+					StringTokenIterator list(projection);
+					const std::string * attr;
+					while ((attr = list.next_string())) { attrs.insert(*attr); }
+					if ( ! attrs.empty()) { whitelist = &attrs; }
+				}
+			}
 			rval = put_ad_v3(*ad, sock, whitelist);
 		} else if (putver == 2) {
 			rval = put_ad_v2(*ad, sock, query);
@@ -594,12 +724,58 @@ int CmDaemon::send_collector_ad()
 	return rval;
 }
 
+PRAGMA_REMIND("get rid of this hack variable.")
+static ClassAdList s_ads;
 
-int CmDaemon::FetchAds (AdTypes whichAds, ClassAd & query, List<ClassAd>& ads)
+int CmDaemon::FetchAds (AdTypes whichAds, ClassAd & query, List<ClassAd>& ads, int * pcTotalAds)
 {
 	int rval = 0;
 	dprintf(D_FULLDEBUG, "Daemon::FetchAds(%d,...) called\n", whichAds);
 
+#if 1
+	int cTotalAds = 0;
+	bool collector_iter = true;
+	CollectionIterator<ClassAd*>* c_ads = collect_get_iter(whichAds);
+	if (c_ads) {
+		if (c_ads->IsEmpty()) {
+			collect_free_iter(c_ads);
+			collector_iter = false;
+
+			// read ads from a file to populate the collector list
+			if (s_ads.Length() <= 0) {
+				MyString filename;
+				if (param(filename, MY_SUBSYSTEM "_ADS_FILE")) {
+					read_classad_file(filename.c_str(), s_ads, NULL);
+				}
+			}
+			c_ads = new CollectionIterFromClassadList(&s_ads);
+		}
+	}
+
+	ExprTree * constraint = query.LookupExpr(ATTR_REQUIREMENTS);
+
+	ClassAd * ad;
+	c_ads->Rewind();
+	while ((ad = c_ads->Next())) {
+		++cTotalAds;
+		if (constraint) {
+			bool val;
+			classad::Value result;
+			if ( ! EvalExprTree(constraint, ad, NULL, result) || ! result.IsBooleanValueEquiv(val) || ! val) {
+				continue; // no match - don't include this ad.
+			}
+		}
+		ads.Append(ad);
+	}
+
+	if (collector_iter) {
+		collect_free_iter(c_ads);
+	} else {
+		delete c_ads;
+	}
+	if (pcTotalAds) { *pcTotalAds = cTotalAds; }
+
+#else
 	// for now, read ads from a file to populate the collector list
 	if (s_ads.Length() <= 0) {
 		MyString filename;
@@ -623,7 +799,7 @@ int CmDaemon::FetchAds (AdTypes whichAds, ClassAd & query, List<ClassAd>& ads)
 		}
 		ads.Append(ad);
 	}
-
+#endif
 	return rval;
 }
 

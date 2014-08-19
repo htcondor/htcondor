@@ -25,6 +25,7 @@
 //#include "totals.h"
 #include "forkwork.h"
 #include "clerk_stats.h"
+#include "clerk_collect.h"
 
 #define MY_SUBSYSTEM "CLERK"
 
@@ -61,16 +62,23 @@ private:
 	int m_CLIENT_TIMEOUT;
 	int m_QUERY_TIMEOUT;
 	int m_CLASSAD_LIFETIME;
+	bool m_LOG_UPDATES;
 
-	int FetchAds (AdTypes whichAds, ClassAd & query, List<ClassAd>& ads);
+	int FetchAds (AdTypes whichAds, ClassAd & query, List<ClassAd>& ads, int * pcTotalAds);
 	int put_ad_v1(ClassAd *curr_ad, Stream* sock, ClassAd & query, bool v0);
 	int put_ad_v2(ClassAd &ad, Stream* sock, ClassAd & query);
 	int put_ad_v3(ClassAd &ad, Stream* sock, const classad::References * projection);
+
+		// register the socket to use with subsequent updates.
+	int StashSocket(ReliSock* sock);
 
 };
 
 #ifndef NUMELMS
   #define NUMELMS(aa) (int)(sizeof(aa)/sizeof((aa)[0]))
 #endif
+
+// lookup ad type from a command ad
+AdTypes CollectorCmdToAdType(int cmd);
 
 #endif

@@ -24,5 +24,4 @@ bool read_classad_file(const char *filename, ClassAdList &classads, const char *
 
 
 
-
 #endif

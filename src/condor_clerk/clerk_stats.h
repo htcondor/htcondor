@@ -37,6 +37,7 @@ typedef struct CmStatistics {
 
    stats_entry_abs<int>          TotalAds;
    stats_entry_sum_ema_rate<int64_t> UpdatesReceived;
+   stats_entry_sum_ema_rate<int64_t> UpdatesFailed;
    stats_entry_sum_ema_rate<int64_t> QueriesReceived;
 
    // non-published values
