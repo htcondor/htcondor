@@ -19,39 +19,42 @@ int DockerAPI::run(
 	const std::string & imageID,
 	const std::string & command,
 	const ArgList & args,
-	const Env & e,
+	const Env & /* env */,
 	const std::string & sandboxPath,
 	std::string & containerID,
 	int & pid,
-	CondorError & err )
+	CondorError & /* err */ )
 {
-	ArgList al;
+	//
+	// TODO: We currently assume that the system has been configured so that
+	// anyone (user) who can run an HTCondor job can also run docker.
+	//
+	ArgList runArgs;
 	std::string docker;
-	// TODO: something sane about root permissions, if possible.
 	if( ! param( docker, "DOCKER" ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DOCKER is undefined.\n" );
 		return -1;
 	}
-	al.AppendArg( docker );
-	al.AppendArg( "run" );
+	runArgs.AppendArg( docker );
+	runArgs.AppendArg( "run" );
 	// TODO: Set up the environment (in the container).
-	al.AppendArg( "--detach" );
-	al.AppendArg( "--name" );
-	al.AppendArg( dockerName );
+	runArgs.AppendArg( "--detach" );
+	runArgs.AppendArg( "--name" );
+	runArgs.AppendArg( dockerName );
 	// TODO: Map the external sanbox to the internal sandbox.
-	al.AppendArg( "--workdir" );
-	al.AppendArg( sandboxPath );
-	al.AppendArg( imageID );
-	al.AppendArg( command );
-	al.AppendArgsFromArgList( args );
+	runArgs.AppendArg( "--workdir" );
+	runArgs.AppendArg( sandboxPath );
+	runArgs.AppendArg( imageID );
+	runArgs.AppendArg( command );
+	runArgs.AppendArgsFromArgList( args );
 
 	MyString displayString;
-	al.GetArgsStringForDisplay( & displayString );
-	dprintf( D_FULLDEBUG, "Attempting to run '%s'\n", displayString.c_str() );
+	runArgs.GetArgsStringForLogging( & displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
 	// Read from Docker's combined output and error streams.  On success,
 	// it returns a 64-digit hex number.
-	FILE * dockerResults = my_popen( al, "r", 1 );
+	FILE * dockerResults = my_popen( runArgs, "r", 1 );
 	if( dockerResults == NULL ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
 		return -7;
@@ -81,31 +84,31 @@ int DockerAPI::run(
 	fclose( dockerResults );
 
 	// Use containerID to find the PID.
-	ArgList bl;
-	bl.AppendArg( docker );
-	bl.AppendArg( "inspect" );
-	bl.AppendArg( "--format" );
+	ArgList inspectArgs;
+	inspectArgs.AppendArg( docker );
+	inspectArgs.AppendArg( "inspect" );
+	inspectArgs.AppendArg( "--format" );
 	StringList formatElements(	"ContainerId=\"{{.Id}}\" "
 								"Pid={{.State.Pid}} "
 								"ExitCode={{.State.ExitCode}} "
 								"StartedAt=\"{{.State.StartedAt}}\" "
 								"FinishedAt=\"{{.State.FinishedAt}}\" " );
 	char * formatArg = formatElements.print_to_delimed_string( "\n" );
-	bl.AppendArg( formatArg );
+	inspectArgs.AppendArg( formatArg );
 	free( formatArg );
-	bl.AppendArg( containerID );
+	inspectArgs.AppendArg( containerID );
 
 	displayString = "";
-	bl.GetArgsStringForDisplay( & displayString );
-	dprintf( D_FULLDEBUG, "Attempting to run '%s'\n", displayString.c_str() );
+	inspectArgs.GetArgsStringForLogging( & displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
-	dockerResults = my_popen( bl, "r", 1 );
+	dockerResults = my_popen( inspectArgs, "r", 1 );
 	if( dockerResults == NULL ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Unable to run '%s'.\n", displayString.c_str() );
 		return -6;
 	}
 
-	// If the output isn't exactly formatElements.number() lines wrong,
+	// If the output isn't exactly formatElements.number() lines long,
 	// something has gone wrong and we'll at least be able to print out
 	// the error message(s).
 	std::string correctOutput[ formatElements.number() ];
@@ -135,7 +138,7 @@ int DockerAPI::run(
 
 	dprintf( D_FULLDEBUG, "docker inspect printed:\n" );
 	for( int i = 0; i < formatElements.number() && ! correctOutput[i].empty(); ++i ) {
-		dprintf( D_FULLDEBUG, "%s", correctOutput[i].c_str() );
+		dprintf( D_FULLDEBUG, "\t%s", correctOutput[i].c_str() );
 	}
 
 	// If the PID is 0, the job either terminated really quickly or
@@ -154,10 +157,10 @@ int DockerAPI::run(
 	// Calling daemonCore->Create_Process() handles much of this magic for us.
 	//
 
-	ArgList cl;
-	cl.AppendArg( docker );
-	cl.AppendArg( "wait" );
-	cl.AppendArg( containerID );
+	ArgList waitArgs;
+	waitArgs.AppendArg( docker );
+	waitArgs.AppendArg( "wait" );
+	waitArgs.AppendArg( containerID );
 
 	FamilyInfo fi;
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
@@ -173,17 +176,17 @@ int DockerAPI::run(
 		dprintf( D_ALWAYS | D_FAILURE, "Unable to create pipe to run Docker.\n" );
 		return -2;
 	}
-	int dockersStdOut = pipeFDs[0];
+	// int dockersStdOut = pipeFDs[0];
 	childFDs[1] = pipeFDs[1];
 
 	if( ! daemonCore->Create_Pipe( pipeFDs, false, false, true ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Unable to create pipe to run Docker.\n" );
 		return -2;
 	}
-	int dockersStdErr = pipeFDs[0];
-	childFDs[2] = pipeFDs[2];
+	// int dockersStdErr = pipeFDs[0];
+	childFDs[2] = pipeFDs[1];
 
-	int childPID = daemonCore->Create_Process( docker.c_str(), cl,
+	int childPID = daemonCore->Create_Process( docker.c_str(), waitArgs,
 		PRIV_UNKNOWN, 1, FALSE, FALSE, NULL, sandboxPath.c_str(),
 		& fi, NULL, childFDs );
 
@@ -195,3 +198,49 @@ int DockerAPI::run(
 
 	return 0;
 }
+
+int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
+	std::string docker;
+	if( ! param( docker, "DOCKER" ) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "DOCKER is undefined.\n" );
+		return -1;
+	}
+
+	ArgList rmArgs;
+	rmArgs.AppendArg( docker );
+	rmArgs.AppendArg( "rm" );
+	rmArgs.AppendArg( containerID.c_str() );
+
+	MyString displayString;
+	rmArgs.GetArgsStringForLogging( & displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+
+	// Read from Docker's combined output and error streams.
+	FILE * dockerResults = my_popen( rmArgs, "r", 1 );
+	if( dockerResults == NULL ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
+		return -2;
+	}
+
+	// On a success, Docker writes the containerID back out.
+	char buffer[1024];
+	if( NULL == fgets( buffer, 1024, dockerResults ) ) {
+		if( errno ) {
+			dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from Docker: '%s' (%d)\n", strerror( errno ), errno );
+			return -3;
+		}
+	}
+
+	int length = strlen( buffer );
+	if( length < 1 || strncmp( buffer, containerID.c_str(), length - 1 ) != 0 ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Docker remove failed, printing first few lines of output.\n" );
+		dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
+		while( NULL != fgets( buffer, 1024, dockerResults ) ) {
+			dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
+		}
+		return -4;
+	}
+
+	return 0;
+}
+

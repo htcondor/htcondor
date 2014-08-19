@@ -24,10 +24,6 @@
 #include "starter.h"
 #include "docker-api.h"
 
-
-// TODO: move this to condor_attributes.h
-#define ATTR_DOCKER_IMAGE_ID "DockerImageId"
-
 extern CStarter *Starter;
 
 //
@@ -124,7 +120,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 	//
 	if( pid == JobPid ) {
 		// TODO: Verify that the container has terminated.
-		// docker inspect -format <isRunning, exitCode?> ${containerID}
+		// docker inspect -format <isRunning, exitCode> ${containerID}
 		// TODO: Set status appropriately (as if it were from waitpid()).
 		// TODO: Record final job usage.
 
@@ -143,7 +139,13 @@ bool DockerProc::JobReaper( int pid, int status ) {
 bool DockerProc::JobExit() {
 	dprintf( D_ALWAYS, "DockerProc::JobExit()\n" );
 
-	// TODO: docker rm ${containerID}
+	CondorError error;
+	int rv = DockerAPI::rm( containerID, error );
+	if( rv < 0 ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to remove container '%s'.\n", containerID.c_str() );
+		// TODO: Arguably, we should suicide and let the startd have a go
+		// at cleaning this mess up.  But I'm not sure..
+	}
 
 	return VanillaProc::JobExit();
 }
@@ -285,7 +287,7 @@ bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 
 
 // TODO: Implement.
-void DockerProc::PublishToEnv( Env * env ) {
+void DockerProc::PublishToEnv( Env * /* env */ ) {
 	dprintf( D_ALWAYS, "DockerProc::PublishToEnv()\n" );
 	return;
 }

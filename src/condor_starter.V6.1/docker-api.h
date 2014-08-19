@@ -28,11 +28,10 @@ class DockerAPI {
 		 * @param arguments		...
 		 * @param environment	...
 		 * @param directory		...
-		 * @param containerID	...
-		 * @param pid			...
-		 * @param error			...
+		 * @param containerID	On success, will be set to the container's GUID.  Otherwise, unchagned.
+		 * @param pid			On success, will be set to the PID of a process which will terminate when the container does.  Otherwise, unchanged.
+		 * @param error			On success, unchanged.  Otherwise, [TODO].
 		 * @return 				0 on success, negative otherwise.
-		 * @see
 		 */
 		static int run(	const std::string & name,
 						const std::string & imageID,
@@ -44,10 +43,41 @@ class DockerAPI {
 						int & pid,
 						CondorError & error );
 
-		static int stop( const std::string & containerID, CondorError & err );
+		/**
+		 * Releases the disk space (but not the image) associated with
+		 * the given container.
+		 *
+		 * @param containerID	The Docker GUID.
+		 * @param error			....
+		 * @return				0 on success, negative otherwise.
+		 */
+		static int rm( const std::string & containerID, CondorError & err );
 
-		static int suspend( const std::string & containerID, CondorError & err );
+		/**
+		 * Sends the given signal to the specified container's primary process.
+		 *
+		 * @param containerID	The Docker GUID.
+		 * @param signal		The signal to send.
+		 * @param error			....
+		 * @return				0 on success, negative otherwise.
+		 */
+		static int kill( const std::string & containerID, int signal, CondorError & err );
 
+		// Only available in Docker 1.1 or later.
+		static int pause( const std::string & containerID, CondorError & err );
+
+		// Only available in Docker 1.1 or later.
+		static int unpause( const std::string & containerID, CondorError & err );
+
+		/**
+		 * Obtains the docker-inspect values State.Running and State.ExitCode.
+		 *
+		 * @param containerID	The Docker GUID.
+		 * @param isRunning		On success, will be set to State.Running.  Otherwise, unchanged.
+		 * @param exitCode		On success, will be set to State.ExitCode.  Otherwise, unchanged.
+		 * @param error			....
+		 * @return				0 on success, negative otherwise.
+		 */
 		static int getStatus( const std::string & containerID, bool isRunning, int & result, CondorError & err );
 };
 
