@@ -12,6 +12,36 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-3-2}Version 8.3.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.3.2 not yet released.
+%\item HTCondor version 8.3.2 released on Month Date, 2014.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-3-1}Version 8.3.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -73,6 +103,17 @@ longer be set to \Expr{False}).
 \Macro{DAGMAN\_SUPPRESS\_JOB\_LOGS} allows users to prevent DAG node
 jobs from writing to the log file specified in their submit file.
 \Ticket{4353}
+
+\item Added optional \Expr{@(OWNER)} and \Expr{@(NODE\_NAME)} macros
+to the \Macro{DAGMAN\_DEFAULT\_NODE\_LOG} configuration macro.
+This makes it easier to avoid log file collisions.
+\Ticket{4334}
+
+\item \Condor{submit} will no longer insert an \Attr{OpSys} requirement
+	when one of \Attr{OpSysAndVer}, \Attr{OpSysLongName}, \Attr{OpSysName},
+	or \Attr{OpSysShortName} is already specified by the user in
+	the \Attr{Requirements} expression.
+\Ticket{4519}
 
 \end{itemize}
 

@@ -545,7 +545,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 		dagman.dag->DumpNodeStatus( false, true );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
-	dagman.dag->ReportMetrics( exitVal );
+	if (dagman.dag) dagman.dag->ReportMetrics( exitVal );
 	tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	inShutdownRescue = false;
@@ -1320,11 +1320,17 @@ Dagman::ResolveDefaultLog()
 	char *dagDir = condor_dirname( primaryDagFile.Value() );
 	const char *dagFile = condor_basename( primaryDagFile.Value() );
 
+	MyString owner;
+	MyString nodeName;
+	dagman._dagmanClassad->GetInfo( owner, nodeName );
+
 	_defaultNodeLog.replaceString( "@(DAG_DIR)", dagDir );
 	_defaultNodeLog.replaceString( "@(DAG_FILE)", dagFile );
 	MyString cluster( DAGManJobId._cluster );
 	_defaultNodeLog.replaceString( "@(CLUSTER)", cluster.Value() );
 	free( dagDir );
+	_defaultNodeLog.replaceString( "@(OWNER)", owner.Value() );
+	_defaultNodeLog.replaceString( "@(NODE_NAME)", nodeName.Value() );
 
 	if ( _defaultNodeLog.find( "@" ) >= 0 ) {
 		debug_printf( DEBUG_QUIET, "Warning: "
