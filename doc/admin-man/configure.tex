@@ -12056,28 +12056,33 @@ see~\pageref{sec:shared-port-daemon}.
 
 \label{param:DaemonSocketDir}
 \item[\Macro{DAEMON\_SOCKET\_DIR}] This specifies the directory where
- Unix versions of HTCondor daemons will create named sockets so that incoming
- connections can be forwarded to them by \Condor{shared\_port}.  If
- this directory does not exist, it will be created. The maximum length
- of named socket paths plus names is restricted by the operating system,
- so it is important that this path not exceed 90 characters.
+  Unix versions of HTCondor daemons will create named sockets so that incoming
+  connections can be forwarded to them by \Condor{shared\_port}.  If
+  this directory does not exist, it will be created. The maximum length
+  of named socket paths plus names is restricted by the operating system,
+  leading to defaults that mitigate the issue.
 
-Write access to this directory grants permission to receive
- connections through the shared port.  By default, the directory is
- created to be owned by HTCondor and is made to be only writable by
- HTCondor.  One possible reason to broaden access to this directory is
- if execute nodes are accessed via CCB and the submit node is behind a
- firewall with only one open port (the port assigned to
- \Condor{shared\_port}).  In this case, commands that interact with
- the execute node such as \Condor{ssh\_to\_job} will not be able to
- operate unless run by a user with write access to
- \MacroNI{DAEMON\_SOCKET\_DIR}.  In this case, one could grant
- tmp-like permissions to this directory so that all users can receive
- CCB connections back through the firewall.  (But consider the wisdom
- of having a firewall in the first place if you are going to
- circumvent it in this way.)  The default
- \MacroNI{DAEMON\_SOCKET\_DIR} is \verb|$(LOCK)/daemon_sock|.  This
- directory must be on a local file system that supports named sockets.
+  Write access to this directory grants permission to receive
+  connections through the shared port.  By default, the directory is
+  created to be owned by HTCondor and is made to be only writable by
+  HTCondor.  One possible reason to broaden access to this directory is
+  if execute nodes are accessed via CCB and the submit node is behind a
+  firewall with only one open port (the port assigned to
+  \Condor{shared\_port}).  In this case, commands that interact with
+  the execute node such as \Condor{ssh\_to\_job} will not be able to
+  operate unless run by a user with write access to
+  \MacroNI{DAEMON\_SOCKET\_DIR}.  In this case, one could grant
+  tmp-like permissions to this directory so that all users can receive
+  CCB connections back through the firewall.
+  But, consider the wisdom of having a firewall in the first place,
+  if it will be circumvented it in this way.
+
+  The default value on Linux platforms is \Expr{auto},
+  using anonymous sockets.
+  The default value on non-Linux platforms is \Expr{\$(LOCK)/daemon\_sock}.
+  If the resulting directory name is too long,
+  the \Condor{master} attempts to create a directory in \File{/tmp}. 
+  This directory must be on a local file system that supports named sockets.
 
 \label{param:SharedPortArgs}
 \item[\Macro{SHARED\_PORT\_ARGS}] Like all daemons started by
