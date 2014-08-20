@@ -736,7 +736,7 @@ endif()
 
 #####################################
 # Do we want to link in the GSI libraries or dlopen() them at runtime?
-if (HAVE_EXT_GLOBUS AND LINUX)
+if (HAVE_EXT_GLOBUS AND LINUX AND NOT PROPER)
 	set( DLOPEN_GSI_LIBS TRUE )
 endif()
 
