@@ -248,19 +248,19 @@ activate_globus_gsi( void )
 #if defined(DLOPEN_GSI_LIBS)
 	void *dl_hdl;
 
-	if ( (dl_hdl = dlopen("libglobus_common.so.0.14.10", RTLD_LAZY)) == NULL ||
+	if ( (dl_hdl = dlopen("libglobus_common.so.0", RTLD_LAZY)) == NULL ||
 		 !(globus_module_activate_ptr = (int (*)(globus_module_descriptor_t*))dlsym(dl_hdl, "globus_module_activate")) ||
 		 !(globus_thread_set_model_ptr = (int (*)(const char*))dlsym(dl_hdl, "globus_thread_set_model")) ||
-		 (dl_hdl = dlopen("libglobus_callout.so.0.2.4", RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen("libglobus_proxy_ssl.so.1.3.1", RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen("libglobus_openssl_error.so.0.2.1", RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen("libglobus_openssl.so.0.3.3", RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen("libglobus_gsi_cert_utils.so.0.8.6", RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen("libglobus_gsi_sysconfig.so.1.4.3", RTLD_LAZY)) == NULL ||
+		 (dl_hdl = dlopen("libglobus_callout.so.0", RTLD_LAZY)) == NULL ||
+		 (dl_hdl = dlopen("libglobus_proxy_ssl.so.1", RTLD_LAZY)) == NULL ||
+		 (dl_hdl = dlopen("libglobus_openssl_error.so.0", RTLD_LAZY)) == NULL ||
+		 (dl_hdl = dlopen("libglobus_openssl.so.0", RTLD_LAZY)) == NULL ||
+		 (dl_hdl = dlopen("libglobus_gsi_cert_utils.so.0", RTLD_LAZY)) == NULL ||
+		 (dl_hdl = dlopen("libglobus_gsi_sysconfig.so.1", RTLD_LAZY)) == NULL ||
 		 !(globus_gsi_sysconfig_get_proxy_filename_unix_ptr = (globus_result_t (*)(char**, globus_gsi_proxy_file_type_t))dlsym(dl_hdl, "globus_gsi_sysconfig_get_proxy_filename_unix")) ||
-		 (dl_hdl = dlopen("libglobus_oldgaa.so.0.4.6", RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen("libglobus_gsi_callback.so.0.4.6", RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen("libglobus_gsi_credential.so.1.5.0", RTLD_LAZY))== NULL ||
+		 (dl_hdl = dlopen("libglobus_oldgaa.so.0", RTLD_LAZY)) == NULL ||
+		 (dl_hdl = dlopen("libglobus_gsi_callback.so.0", RTLD_LAZY)) == NULL ||
+		 (dl_hdl = dlopen("libglobus_gsi_credential.so.1", RTLD_LAZY))== NULL ||
 		 !(globus_gsi_cred_get_cert_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s*, X509**))dlsym(dl_hdl, "globus_gsi_cred_get_cert")) ||
 		 !(globus_gsi_cred_get_cert_chain_ptr = (globus_result_t (*)(globus_gsi_cred_handle_t, STACK_OF(X509)**))dlsym(dl_hdl, "globus_gsi_cred_get_cert_chain")) ||
 		 !(globus_gsi_cred_get_cert_type_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s*, globus_gsi_cert_utils_cert_type_t*))dlsym(dl_hdl, "globus_gsi_cred_get_cert_type")) ||
@@ -273,7 +273,7 @@ activate_globus_gsi( void )
 		 !(globus_gsi_cred_handle_init_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s**, globus_l_gsi_cred_handle_attrs_s*))dlsym(dl_hdl, "globus_gsi_cred_handle_init")) ||
 		 !(globus_gsi_cred_read_proxy_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s*, const char*))dlsym(dl_hdl, "globus_gsi_cred_read_proxy")) ||
 		 !(globus_gsi_cred_write_proxy_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s*, char*))dlsym(dl_hdl, "globus_gsi_cred_write_proxy")) ||
-		 (dl_hdl = dlopen("libglobus_gsi_proxy_core.so.0.6.2", RTLD_LAZY)) == NULL ||
+		 (dl_hdl = dlopen("libglobus_gsi_proxy_core.so.0", RTLD_LAZY)) == NULL ||
 		 !(globus_gsi_proxy_assemble_cred_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_s*, globus_l_gsi_cred_handle_s**, BIO*))dlsym(dl_hdl, "globus_gsi_proxy_assemble_cred")) ||
 		 !(globus_gsi_proxy_create_req_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_s*, BIO*))dlsym(dl_hdl, "globus_gsi_proxy_create_req")) ||
 		 !(globus_gsi_proxy_handle_attrs_destroy_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_attrs_s*))dlsym(dl_hdl, "globus_gsi_proxy_handle_attrs_destroy")) ||
@@ -288,7 +288,7 @@ activate_globus_gsi( void )
 		 !(globus_gsi_proxy_handle_set_type_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_s*, globus_gsi_cert_utils_cert_type_t))dlsym(dl_hdl, "globus_gsi_proxy_handle_set_type")) ||
 		 !(globus_gsi_proxy_inquire_req_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_s*, BIO*))dlsym(dl_hdl, "globus_gsi_proxy_inquire_req")) ||
 		 !(globus_gsi_proxy_sign_req_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_s*, globus_l_gsi_cred_handle_s*, BIO*))dlsym(dl_hdl, "globus_gsi_proxy_sign_req")) ||
-		 (dl_hdl = dlopen("libglobus_gssapi_gsi.so.4.6.10", RTLD_LAZY)) == NULL ||
+		 (dl_hdl = dlopen("libglobus_gssapi_gsi.so.4", RTLD_LAZY)) == NULL ||
 		 !(gss_accept_sec_context_ptr = (OM_uint32 (*)(OM_uint32 *, gss_ctx_id_t *, const gss_cred_id_t, const gss_buffer_t, const gss_channel_bindings_t, gss_name_t *, gss_OID *, gss_buffer_t, OM_uint32 *, OM_uint32 *, gss_cred_id_t *))dlsym(dl_hdl, "gss_accept_sec_context")) ||
 		 !(gss_compare_name_ptr = (OM_uint32 (*)(OM_uint32*, const gss_name_t, const gss_name_t, int*))dlsym(dl_hdl, "gss_compare_name")) ||
 		 !(gss_context_time_ptr = (OM_uint32 (*)(OM_uint32*, const gss_ctx_id_t, OM_uint32*))dlsym(dl_hdl, "gss_context_time")) ||
@@ -303,14 +303,14 @@ activate_globus_gsi( void )
 		 !(gss_unwrap_ptr = (OM_uint32 (*)(OM_uint32*, const gss_ctx_id_t, const gss_buffer_t, gss_buffer_t, int*, gss_qop_t*))dlsym(dl_hdl, "gss_unwrap")) ||
 		 !(gss_wrap_ptr = (OM_uint32 (*)(OM_uint32*, const gss_ctx_id_t, int, gss_qop_t, const gss_buffer_t, int*, gss_buffer_t))dlsym(dl_hdl, "gss_wrap")) ||
 		 !(gss_nt_host_ip_ptr = (gss_OID_desc **)dlsym(dl_hdl, "gss_nt_host_ip")) ||
-		 (dl_hdl = dlopen("libglobus_gss_assist.so.3.6.0", RTLD_LAZY)) == NULL ||
+		 (dl_hdl = dlopen("libglobus_gss_assist.so.3", RTLD_LAZY)) == NULL ||
 		 !(globus_gss_assist_display_status_str_ptr = (OM_uint32 (*)(char**, char*, OM_uint32, OM_uint32, int))dlsym(dl_hdl, "globus_gss_assist_display_status_str")) ||
 		 !(globus_gss_assist_map_and_authorize_ptr = (globus_result_t (*)(gss_ctx_id_t, char*, char*, char*, unsigned int))dlsym(dl_hdl, "globus_gss_assist_map_and_authorize")) ||
 		 !(globus_gss_assist_acquire_cred_ptr = (OM_uint32 (*)(OM_uint32*, gss_cred_usage_t, gss_cred_id_t*))dlsym(dl_hdl, "globus_gss_assist_acquire_cred")) ||
 		 !(globus_gss_assist_init_sec_context_ptr = (OM_uint32 (*)(OM_uint32*, const gss_cred_id_t, gss_ctx_id_t*, char*, OM_uint32, OM_uint32*, int*, int (*)(void*, void**, size_t*), void*, int (*)(void*, void*, size_t), void*))dlsym(dl_hdl, "globus_gss_assist_init_sec_context")) ||
 		 !(globus_i_gsi_gss_assist_module_ptr = (globus_module_descriptor_t*)dlsym(dl_hdl, "globus_i_gsi_gss_assist_module")) ||
 #if defined(HAVE_EXT_VOMS)
-		 (dl_hdl = dlopen("libvomsapi.so.1.0.0", RTLD_LAZY)) == NULL ||
+		 (dl_hdl = dlopen("libvomsapi.so.1", RTLD_LAZY)) == NULL ||
 		 !(VOMS_Destroy_ptr = (void (*)(vomsdata*))dlsym(dl_hdl, "VOMS_Destroy")) ||
 		 !(VOMS_ErrorMessage_ptr = (char* (*)(vomsdata*, int, char*, int))dlsym(dl_hdl, "VOMS_ErrorMessage")) ||
 		 !(VOMS_Init_ptr = (vomsdata* (*)(char*, char*))dlsym(dl_hdl, "VOMS_Init")) ||
