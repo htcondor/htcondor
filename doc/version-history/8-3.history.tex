@@ -69,21 +69,29 @@ the default port used by the \Condor{collector} daemon and command line tools.
 The default value is 9618 - the same port used in previous releases.
 \Ticket{4432}
 
-\item The \Condor{shared\_port} daemon is now enabled by default on new installs on
-non-Windows platforms.
-With this change, all HTCondor daemons will share port 9618 for all incoming TCP
-connections, greatly simplifying firewall configuration.  Only users of HTCondor-G
-submitting to Globus GRAM endpoints will need additional incoming TCP ports in
-the firewall.
+\item The \Condor{shared\_port} daemon is now enabled by default 
+for new installations on non-Windows platforms.
+With this change, 
+all HTCondor daemons will share port 9618 for all incoming TCP connections,
+greatly simplifying firewall configuration.  
+Only users of HTCondor-G submitting to Globus GRAM endpoints 
+will need additional incoming TCP ports in the firewall.
 
-\emph{Note} that this causes all HTCondor hosts to use TCP port 9618 by default,
-differing from previous behavior (previously, only the collector host used a 
-fixed port).  To restore the prior behavior, set \Macro{SHARED\_PORT\_PORT} to \Expr{0}.
+Note that this causes \emph{all} HTCondor hosts to use 
+TCP port 9618 by default,
+differing from previous behavior.
+Previously, only the \Condor{collector} host used a fixed port.
+To restore the previous behavior, 
+set the new configuration variable \Macro{SHARED\_PORT\_PORT} to \Expr{0}.
 \Ticket{3813}
 
-The \Condor{shared\_port} daemon will now work if \Macro{DAEMON\_SOCKET\_DIR} is
+\item The \Condor{shared\_port} daemon will now work 
+if the value of configuration variable \Macro{DAEMON\_SOCKET\_DIR} is
 longer than 100 characters in length.
 \Ticket{4465}
+
+\item Improvements to CCB increase performance.
+\Ticket{4453}
 
 \item The user-specific configuration file \Expr{~/.condor/condor\_config} will
 now override the global configuration, instead of the other way around.  This
