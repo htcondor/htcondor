@@ -200,6 +200,25 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 
 		set (GLIBC_PATCH patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-static-link-warning.patch && patch --binary -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.patch && patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-nscd.patch)
 
+	elseif( ${GLIBC_VERSION} STREQUAL "219" )
+		#
+		# Ubuntu 14 (LTS)
+		#
+		if( NOT ${SYS_ARCH} STREQUAL "X86_64" )
+			message( STATUS "HTCondor does not support 32-bit Ubuntu 14." )
+			set( GLIBC_DETECTED OFF )
+			set( CLIPPED ON PARENT_SCOPE )
+		endif()
+
+		set( VER 2.19-0ubuntu6 )
+		set( GLIBC_TARNAME glibc-2.19-0ubuntu6 )
+		set( GLIBC_FLAGS export CC=x86_64-linux-gnu-gcc-4.8 && export CXX=x86_64-linux-gnu-g++-4.8 && export AUTOCONF=false )
+		set( GLIBC_CONFIGURE ./configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --prefix=/usr --without-cvs --enable-add-ons=libidn,nptl --enable-profile --without-selinux --enable-stackguard-randomization --enable-obsolete-rpc "--with-pkgversion=Ubuntu EGLIBC 2.19-0ubuntu6" --with-bugurl=https://bugs.launchpad.net/ubuntu/+source/eglibc/+bugs --enable-pt_chown --with-headers=${GLIBC_BUILD_PREFIX}/debian/include --enable-kernel=2.6.24 --enable-multi-arch )
+
+		set( GLIBC_MAKE make -r )
+
+		# set( GLIBC_PATCH
+
 	else()
 		message(STATUS "Condor can not build standard universe for glibc version:${GLIBC_VERSION}")
 		set(GLIBC_DETECTED OFF)
