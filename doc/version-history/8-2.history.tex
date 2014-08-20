@@ -41,7 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a rare memory leak. The leak occurred when IPv6 was disabled, but the NETWORK\_INTERFACE and COLLECTOR\_HOST were set to IPv6 addresses.
+\item Fixed a rare memory leak. 
+The leak occurred when IPv6 was disabled, 
+but configuration variables \MacroNI{NETWORK\_INTERFACE} 
+and \MacroNI{COLLECTOR\_HOST} were set to IPv6 addresses.
 \Ticket{4502}
 
 \end{itemize}
@@ -54,7 +57,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.2.2 released on August 5, 2014.
+\item HTCondor version 8.2.2 released on August 7, 2014.
+
+\item This version of HTCondor includes a full port for 
+Red Hat Enterprise Linux 7.0 on the x86\_64 architecture.
+A full port includes support for the standard universe.
+\Ticket{4511}
+
+\item The RPM for RHEL 7 contains several subpackages for elements of HTCondor,
+modernizing the RPM-based installation.
+\Ticket{4518}
 
 \end{itemize}
 
@@ -70,6 +82,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item When using the Windows installer,
+the choice of a new pool caused an invalid value in the configuration of 
+\Expr{\$\$(FULL\_HOSTNAME)} to be used, 
+instead of the correct value of \Expr{\$(FULL\_HOSTNAME)}.
+This prevented all daemons from talking to the \Condor{collector} daemon.
+\Ticket{4509}
+
 \item Fixed a bug that only manifested on Linux 3.14 or more recent kernels, 
 which caused the \Condor{collector} to respond very slowly to queries.
 \Ticket{4489}
@@ -82,6 +101,9 @@ when \Macro{ENABLE\_CLASSAD\_CACHING} was set to \Expr{True}.
 on Linux platforms.
 All cores reported as full cores without hyper-threading. 
 \Ticket{4458}
+
+\item Fixed the detection of hyper-threaded cores on Mac OS X platforms.
+\Ticket{4516}
 
 \item Fixed a Windows platform bug that caused the \Condor{starter}
 to abort while creating the job sandbox.

@@ -293,9 +293,9 @@ review=?
 default=128*1024
 range=1024,
 type=int
-reconfig=true
+reconfig=false
 customization=seldom
-friendly_name=Soap SSL Port
+friendly_name=Outgoing traffic TCP write size for Collector
 review=?
 
 [COLLECTOR_PORT]
@@ -2110,14 +2110,15 @@ friendly_name=Max Pid Collision Retry
 review=?
 tags=daemon_core,daemon_core
 
-[NEGOTIATOR_SOCKET_BUFSIZE]
-default=0
+[COLLECTOR_SOCKET_BUFSIZE]
+default=10000*1024
 type=int
-reconfig=true
+range=1024,
+reconfig=false
 customization=seldom
-friendly_name=Negotiator Socket Bufsize
+friendly_name=Collector read buffer size for incoming UDP traffic
 review=?
-tags=daemon_core,daemon_core
+tags=daemon_core,daemon_core,collector
 
 [TOUCH_LOG_INTERVAL]
 default=60

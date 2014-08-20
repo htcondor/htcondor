@@ -199,43 +199,49 @@ CCBServer::InitAndReconfig()
 	}
 
 #ifdef CONDOR_HAVE_EPOLL
-	if (-1 == (m_epfd = epoll_create1(EPOLL_CLOEXEC)))
-	{
-		dprintf(D_ALWAYS, "epoll file descriptor creation failed; will use periodic polling techniques: %s (errno=%d).\n", strerror(errno), errno);
-	}
-#endif
+	// Keep our existing epoll fd, if we have one.
+	if (m_epfd == -1) {
+		if (-1 == (m_epfd = epoll_create1(EPOLL_CLOEXEC)))
+		{
+			dprintf(D_ALWAYS, "epoll file descriptor creation failed; will use periodic polling techniques: %s (errno=%d).\n", strerror(errno), errno);
+		}
 
-	if (m_epfd >= 0)
-	{
-#ifndef WIN32
+		int pipes[2] = { -1, -1 };
+		int fd_to_replace = -1;
+		if (m_epfd >= 0)
+		{
 			// Fool DC into talking to the epoll fd; note we only register the read side.
 			// Yes, this is fairly gross - the decision was taken to do this instead of having
 			// DC track arbitrary FDs just for this use case.
-		int pipes[2]; pipes[0] = -1; pipes[1] = -1;
-		int fd_to_replace = -1;
-		if (daemonCore->Create_Pipe(pipes, true) == -1 || pipes[0] == -1) {
-			dprintf(D_ALWAYS, "Unable to create a DC pipe for watching the epoll FD\n");
+			if (daemonCore->Create_Pipe(pipes, true) == FALSE) {
+				dprintf(D_ALWAYS, "Unable to create a DC pipe for watching the epoll FD\n");
+				close(m_epfd);
+				m_epfd = -1;
+			}
+		}
+		if (m_epfd >= 0) {
+			daemonCore->Close_Pipe(pipes[1]);
+			if (daemonCore->Get_Pipe_FD(pipes[0], &fd_to_replace) == FALSE) {
+				dprintf(D_ALWAYS, "Unable to lookup pipe's FD\n");
+				close(m_epfd);
+				m_epfd = -1;
+				daemonCore->Close_Pipe(pipes[0]);
+			}
+		}
+		if (m_epfd >= 0) {
+			dup2(m_epfd, fd_to_replace);
+			fcntl(fd_to_replace, F_SETFL, FD_CLOEXEC);
 			close(m_epfd);
-			m_epfd = -1;
-		}
-		daemonCore->Close_Pipe(pipes[1]);
-		if (daemonCore->Get_Pipe_FD(pipes[0], &fd_to_replace) == -1 || fd_to_replace == -1) {
-			dprintf(D_ALWAYS, "Unable to lookup pipe's FD\n");
-			close(m_epfd); m_epfd = -1;
-			daemonCore->Close_Pipe(pipes[0]);
-			return;
-		}
-		dup2(m_epfd, fd_to_replace);
-		fcntl(fd_to_replace, F_SETFL, FD_CLOEXEC);
-		close(m_epfd);
-		m_epfd = pipes[0];
+			m_epfd = pipes[0];
 
 			// Inform DC we want to recieve notifications from this FD.
-		daemonCore->Register_Pipe(m_epfd,"CCB epoll FD", static_cast<PipeHandlercpp>(&CCBServer::EpollSockets),"CCB Epoll Handler", this, HANDLE_READ);
-#endif
+			daemonCore->Register_Pipe(m_epfd,"CCB epoll FD", static_cast<PipeHandlercpp>(&CCBServer::EpollSockets),"CCB Epoll Handler", this, HANDLE_READ);
+		}
 	}
-		// Either epoll is not available or creation of the epoll FD failed; in this case,
-		// we just periodically poll the FD for responses.
+#endif
+
+		// Whether or not we can use epoll, we want to set up periodic
+		// polling for SweepReconnectInfo()
 	Timeslice poll_slice;
 	poll_slice.setTimeslice( // do not run more than this fraction of the time
 		param_double("CCB_POLLING_TIMESLICE",0.05) );

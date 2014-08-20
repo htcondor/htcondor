@@ -72,10 +72,17 @@ sub RunCheck
 	my $hold = $args{hold} || "False";
     my $user_log = $args{user_log} || CondorTest::TempFileName("$testname.user_log");
     my $output = $args{output} || "";
+	if($output eq "*") {
+		$output = "$testname.out";
+	}
     my $error = $args{error} || "";
+	if($error eq "*") {
+		$error = "$testname.err";
+	}
     my $streamoutput = $args{stream_output} || "";
     my $append_submit_commands = $args{append_submit_commands} || "";
     my $grid_resource = $args{grid_resource} || "";
+	my $transfer_input_files = $args{transfer_input_files} || "";
     my $should_transfer_files = $args{should_transfer_files} || "";
     my $when_to_transfer_output = $args{when_to_transfer_output} || "";
     my $duration = "1";
@@ -197,6 +204,9 @@ sub RunCheck
 	}
 	if($streamoutput ne "") {
 		print SUBMIT "stream_output = $streamoutput\n";
+	}
+	if( $transfer_input_files ne "" ) {
+		print SUBMIT "transfer_input_files = $transfer_input_files\n";
 	}
     if( $should_transfer_files ne "" ) {
 		print SUBMIT "should_transfer_files = $should_transfer_files\n";

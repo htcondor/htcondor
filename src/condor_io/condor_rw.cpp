@@ -106,8 +106,8 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 		int fcntl_flags;
 		if ( (fcntl_flags=fcntl(fd, F_GETFL)) < 0 )
 			return -1;
-		fcntl_flags |= O_NONBLOCK;      // set nonblocking mode
-		if ( fcntl(fd, F_SETFL, fcntl_flags) == -1 )
+			// set nonblocking mode
+		if ( ((fcntl_flags & O_NONBLOCK) == 0) && fcntl(fd, F_SETFL, fcntl_flags | O_NONBLOCK) == -1 )
 			return -1;
 #endif
 		nr = -2;
@@ -150,10 +150,8 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 		if (ioctlsocket(fd, FIONBIO, &mode) < 0)
 			return -1;
 #else
-		if ( (fcntl_flags=fcntl(fd, F_GETFL)) < 0 )
-			return -1;
-		fcntl_flags &= ~O_NONBLOCK;     // reset blocking mode
-		if ( fcntl(fd, F_SETFL, fcntl_flags) == -1 )
+			// reset flags to prior value
+		if ( ((fcntl_flags & O_NONBLOCK) == 0) && (fcntl(fd, F_SETFL, fcntl_flags) == -1) )
 			return -1;
 #endif
 		return nr;
@@ -341,8 +339,8 @@ condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, 
 		int fcntl_flags;
 		if ( (fcntl_flags=fcntl(fd, F_GETFL)) < 0 )
 			return -1;
-		fcntl_flags |= O_NONBLOCK;      // set nonblocking mode
-		if ( fcntl(fd, F_SETFL, fcntl_flags) == -1 )
+			// set nonblocking mode
+		if ( ((fcntl_flags & O_NONBLOCK) == 0) && fcntl(fd, F_SETFL, fcntl_flags | O_NONBLOCK) == -1 )
 			return -1;
 #endif
 		nw = -2;
@@ -382,10 +380,8 @@ condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, 
 		if (ioctlsocket(fd, FIONBIO, &mode) < 0)
 			return -1;
 #else
-		if ( (fcntl_flags=fcntl(fd, F_GETFL)) < 0 )
-			return -1;
-		fcntl_flags &= ~O_NONBLOCK;     // reset blocking mode
-		if ( fcntl(fd, F_SETFL, fcntl_flags) == -1 )
+			// reset flags to prior value
+		if ( ((fcntl_flags & O_NONBLOCK) == 0) && fcntl(fd, F_SETFL, fcntl_flags) == -1 )
 			return -1;
 #endif
 		return nw;

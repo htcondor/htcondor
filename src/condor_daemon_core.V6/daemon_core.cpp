@@ -8615,13 +8615,13 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		already_registered = true;
 
 			// register the command handler to take care of signals
-		daemonCore->Register_Command( DC_RAISESIGNAL, "DC_RAISESIGNAL",
+		daemonCore->Register_CommandWithPayload( DC_RAISESIGNAL, "DC_RAISESIGNAL",
 			(CommandHandlercpp)&DaemonCore::HandleSigCommand,
 			"HandleSigCommand()", daemonCore, DAEMON );
 
 			// this handler receives keepalive pings from our children, so
 			// we can detect if any of our kids are hung.
-		daemonCore->Register_Command( DC_CHILDALIVE,"DC_CHILDALIVE",
+		daemonCore->Register_CommandWithPayload( DC_CHILDALIVE,"DC_CHILDALIVE",
 			(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
 			"HandleChildAliveCommand", daemonCore, DAEMON,
 			D_FULLDEBUG );

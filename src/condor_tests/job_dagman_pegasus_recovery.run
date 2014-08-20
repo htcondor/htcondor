@@ -178,7 +178,6 @@ sub GenerateSubFile {
 
 	open(SUB, ">$submit_file") or die "Can't open submit file $submit_file\n";
 	foreach (@template) {
-		print "DIAG $_";
 		s/condor_dagman/$dagman_path/;
 		print SUB "$_";
 	}

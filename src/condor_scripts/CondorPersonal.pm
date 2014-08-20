@@ -1551,6 +1551,8 @@ if($btdebug == 1) {
 			print NEW "MASTER_ADDRESS_FILE = \$(LOG)/.master_address\n";
 			print NEW "COLLECTOR_ADDRESS_FILE = \$(LOG)/.collector_address\n";
 			print NEW "NEGOTIATOR_ADDRESS_FILE = \$(LOG)/.negotiator_address\n";
+    		print NEW "STARTD_ADDRESS_FILE = \$(LOG)/.startd_address\n";
+    		print NEW "SCHEDD_ADDRESS_FILE = \$(LOG)/.schedd_address\n";
 
 			print NEW "CONDOR_HOST = $condorhost\n";
 			

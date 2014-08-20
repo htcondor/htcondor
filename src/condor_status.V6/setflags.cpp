@@ -31,7 +31,8 @@ extern ppOption	ppStyle;
 extern bool explicit_format;
 extern bool using_print_format;
 extern bool disable_user_print_files; // allow command line to defeat use of default user print files.
-extern int set_status_print_mask_from_stream (const char * streamid, bool is_filename);
+extern const char * mode_constraint; // constraint expression set by setMode
+extern int set_status_print_mask_from_stream (const char * streamid, bool is_filename, const char ** pconstraint);
 
 const char * getTypeStr ();
 
@@ -103,7 +104,7 @@ setPPstyle (ppOption pps, int i, const char *argv)
 			struct stat stat_buff;
 			if (0 != stat(pf_file, &stat_buff)) {
 				// do nothing, this is not an error.
-			} else if (set_status_print_mask_from_stream(pf_file, true) < 0) {
+			} else if (set_status_print_mask_from_stream(pf_file, true, &mode_constraint) < 0) {
 				fprintf(stderr, "Warning: default %s select file '%s' is invalid\n", getTypeStr(), pf_file);
 			} else {
 				using_print_format = true;

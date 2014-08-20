@@ -292,7 +292,7 @@ class TestPythonBindings(WithDaemons):
         os.environ["_condor_SCHEDD_DEBUG"] = "D_FULLDEBUG|D_NETWORK"
         self.launch_daemons(["SCHEDD"])
         schedd = htcondor.Schedd()
-        submit_ad = classad.parse(open("tests/submit_large.ad"))
+        submit_ad = classad.parse(open("tests/submit.ad"))
         ads = []
         cluster = schedd.submit(submit_ad, 300, False, ads)
         ads = schedd.xquery("ClusterId == %d" % cluster)
@@ -346,7 +346,7 @@ class TestPythonBindings(WithDaemons):
         schedd = htcondor.Schedd()
         ad = classad.parse(open("tests/submit.ad"))
         result_ads = []
-        cluster = schedd.submit(submit_ad, 1, True, result_ads)
+        cluster = schedd.submit(ad, 1, True, result_ads)
         #print result_ads[0]
         schedd.spool(result_ads)
         for i in range(60):
