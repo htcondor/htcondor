@@ -574,7 +574,7 @@ our %submit_info = (
 		},
 	},
 	'x86_64_ubuntu_10.04.4' => 'x86_64_Ubuntu10',
-	
+
 	'x86_64_Ubuntu12' => {
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
@@ -589,12 +589,25 @@ our %submit_info = (
 		},
 	},
 
-	# This should work.
-	'x86_64_Ubuntu14'						=> 'x86_64_Ubuntu12',
+	# Only Ubuntu 14.04 has standard universe port.
+	'x86_64_Ubuntu14'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+				'-DCLIPPED:BOOL' => 'OFF',
+			 },
+			'prereqs'	=> [ @default_prereqs ],
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
 
 	# Add the SWAMP's (temporary) platform name
-	'swamp:ubuntu-12.04-64'	=> 'x86_64_Ubuntu12',
-	
+	'swamp:ubuntu-12.04-64'					=> 'x86_64_Ubuntu12',
+
 	##########################################################################
 	# Platform openSUSE
 	##########################################################################

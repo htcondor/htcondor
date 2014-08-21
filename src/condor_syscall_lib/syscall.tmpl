@@ -988,7 +988,7 @@ They are not needed for remote I/O or for the condor daemons.
 	int getpagesize();
 
 	int getgroups( int gidsetsize, gid_t grouplist[] ) 
-#if defined(LINUX) && CGV_MINOR >= 5
+#if defined(LINUX) && CGV_MINOR >= 5 && defined(I386)
 	/* I'm not sure why, but SYS_getgroups32 seems to be in fashion for this
 		glibc revision in the i386. The normal SYS_getgroups just returns
 		garbage... */
