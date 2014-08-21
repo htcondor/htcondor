@@ -68,13 +68,14 @@ now override the global configuration, instead of the other way around.  This
 makes the user-specific configuration files more useful.
 \Ticket{3158}
 
-\item \Condor{dagman} is now \emph{required} to run in workflow/default
-node log mode (previously workflow node log mode was the default, but
-DAGMan could be told to not use the workflow node log file).  (In
-other words, the \Opt{-dont\_use\_default\_node\_log} command-line
-flag to \Condor{submit\_dag} is disabled and the
-\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} configuration macro can no
-longer be set to \Expr{False}).
+\item The use of a single log file to write events and enforce the 
+dependencies of a DAG represented by a \Condor{dagman} instance is mandatory.
+To implement this,
+the \Opt{-dont\_use\_default\_node\_log} command-line
+option to \Condor{submit\_dag} is disabled,
+and an attempt to set configuration variable
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to \Expr{False} will generate an
+error.
 \Ticket{3994}
 
 \item The new \Condor{dagman} configuration macro
