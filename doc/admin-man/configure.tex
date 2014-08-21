@@ -10297,9 +10297,9 @@ in section~\ref{sec:DAG-configuration}.
 \item[\Macro{DAGMAN\_DEFAULT\_NODE\_LOG}]
   The default name of a file to be used as a job event log by all node jobs
   of a DAG.
-  Even if \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set to
-  \Expr{False}, the default log file will be used by any node jobs for which
-  a log file is not defined in the job's submit description file.
+  %Even if \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set to
+  %\Expr{False}, the default log file will be used by any node jobs for which
+  %a log file is not defined in the job's submit description file.
 
   The file name needs to be unique for each DAG,
   yet the standard job ClassAd attributes will not be available 
@@ -10450,31 +10450,31 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanAlwaysUseNodeLog}
 \item[\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}]
-  \Bold{As of version 8.3.1, the value of this macro cannot be changed
-  from the default (\Expr{True}).}  (The non-workflow/default node log
-  feature has been disabled to
-  simplify the code and make certain planned features easier to
-  implement -- see \Ticket{3994})
-  A boolean value defining whether \Condor{dagman} reads events from
-  its default node log file, as defined by
+  As of HTCondor version 8.3.1, the value is always the default 
+  value of \Expr{True}.  
+  Attempts to set it to \Expr{False} results in an error. 
+  This causes incompatibility with using a \Condor{submit} executable 
+  that is older than HTCondor version 7.9.0.
+  A boolean value that when \Expr{True}  causes \Condor{dagman} to read
+  events from its default node log file, as defined by
   \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}, instead of from the log file(s)
   defined in the node job submit description files.
-  If \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is \Expr{True},
+  When \Expr{True},
   \Condor{dagman} will read events only from the default log
   file, and POST script terminated events will
   be written only to the default log file, and not to the
   log file(s) defined in the node job submit description files.
   The default value is \Expr{True}.
-  This variable must be \Expr{False} if \Condor{dagman} from HTCondor
-  version 7.9.0 or later is submitting jobs to a \Condor{schedd} daemon
-  or using a \Condor{submit} executable that is older than 
-  HTCondor version 7.9.0.
-  As of HTCondor version 8.1.4, a value of \Expr{False} is no longer 
-  recommended, and doing so will produce a warning.  This
-  option will probably be entirely disabled in the future.
-  To run a DAG with \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} 
-  set to \Expr{False},
-  also set \Macro{DAGMAN\_USE\_STRICT} to 0.
+  %This variable must be \Expr{False} if \Condor{dagman} from HTCondor
+  %version 7.9.0 or later is submitting jobs to a \Condor{schedd} daemon
+  %or using a \Condor{submit} executable that is older than 
+  %HTCondor version 7.9.0.
+  %As of HTCondor version 8.1.4, a value of \Expr{False} is no longer 
+  %recommended, and doing so will produce a warning.  This
+  %option will probably be entirely disabled in the future.
+  %To run a DAG with \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} 
+  %set to \Expr{False},
+  %also set \Macro{DAGMAN\_USE\_STRICT} to 0.
 
 \label{param:DAGmanSuppressNotification}
 \item[\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION}]
