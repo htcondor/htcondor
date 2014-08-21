@@ -84,9 +84,6 @@
 %define aviary 1
 %endif
 
-# Temporarily turn cream off
-%define cream 0
-
 %define glexec 1
 
 # Temporarily turn parallel_setup off
@@ -168,6 +165,8 @@ Source4: condor.osg-sysconfig
 # % endif
 Source5: condor_config.local.dedicated.resource
 
+Source6: 10-batch_gahp_blahp.config
+
 %if %bundle_uw_externals
 Source101: blahp-1.16.5.1.tar.gz
 Source102: boost_1_49_0.tar.gz
@@ -200,9 +199,6 @@ Source123: zlib-1.2.3.tar.gz
 #% if 0%osg
 Patch8: osg_sysconfig_in_init_script.patch
 #% endif
-%if %blahp
-Patch10: config_batch_gahp_path.patch
-%endif
 
 # HCC patches
 # See gt3158
@@ -307,7 +303,7 @@ BuildRequires: libcgroup-devel >= 0.37
 Requires: libcgroup >= 0.37
 %endif
 
-%if %cream
+%if %cream && ! %uw_build
 BuildRequires: glite-ce-cream-client-devel
 BuildRequires: glite-lbjp-common-gsoap-plugin-devel
 BuildRequires: glite-ce-cream-utils
@@ -647,10 +643,6 @@ exit 0
 %endif
 
 %patch8 -p1
-
-%if %blahp && ! %uw_build
-%patch10 -p1 -b .config_batch_gahp_path
-%endif
 
 %if 0%{?hcc}
 %patch14 -p1
@@ -1038,6 +1030,10 @@ mv %{buildroot}%{_libexecdir}/condor/campus_factory/share/condor/condor_config.f
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/etc/campus_factory.conf %{buildroot}%{_sysconfdir}/condor/
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir}/condor/campus_factory
 
+%if %blahp && ! %uw_build
+install -p -m 0644 %{SOURCE6} %{buildroot}%{_sysconfdir}/condor/config.d/10-batch_gahp_blahp.config
+%endif
+
 %if %std_univ
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_rt0.o
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/libcomp_libgcc.a
@@ -1135,6 +1131,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/glite/bin/nqs_resume.sh
 %_libexecdir/condor/glite/bin/nqs_status.sh
 %_libexecdir/condor/glite/bin/nqs_submit.sh
+%if ! %uw_build
+%config(noreplace) %{_sysconfdir}/condor/config.d/10-batch_gahp_blahp.config
+%endif
 %endif
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster
@@ -1288,8 +1287,9 @@ rm -rf %{buildroot}
 %_sbindir/remote_gahp
 %_sbindir/nordugrid_gahp
 %_sbindir/gce_gahp
+%if %uw_build
 %_sbindir/boinc_gahp
-%_sbindir/cream_gahp
+%endif
 %_libexecdir/condor/condor_gpu_discovery
 %_sbindir/condor_vm_vmware
 %config(noreplace) %_sysconfdir/condor/condor_config.local
