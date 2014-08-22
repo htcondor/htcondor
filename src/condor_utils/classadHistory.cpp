@@ -117,7 +117,7 @@ OpenHistoryFile() {
 		// files where we can, but not where we can't.
 	if( !HistoryFile_fp ) {
 		int fd = safe_open_wrapper_follow(JobHistoryFileName,
-                O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE,
+                O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE|_O_NOINHERIT,
                 0644);
 		if( fd < 0 ) {
 			dprintf(D_ALWAYS,"ERROR opening history file (%s): %s\n",
