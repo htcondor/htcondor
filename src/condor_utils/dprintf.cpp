@@ -826,7 +826,7 @@ debug_open_lock(void)
 				}	
 			}
 			if (LockFd < 0) {
-				LockFd = _condor_open_lock_file(DebugLock,O_CREAT|O_WRONLY,0660);
+				LockFd = _condor_open_lock_file(DebugLock,O_CREAT|O_WRONLY|_O_NOINHERIT,0660);
 				if( LockFd < 0 ) {
 					save_errno = errno;
 					snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n", DebugLock );
