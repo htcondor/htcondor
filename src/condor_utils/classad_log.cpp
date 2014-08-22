@@ -168,7 +168,8 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 	historical_sequence_number = 1;
 	m_original_log_birthdate = time(NULL);
 
-	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_CREAT | O_LARGEFILE, 0600);
+	// TODO: this should open O_BINARY because on windows, text files have \r\n with the c-runtime magically adding/removing \r as needed.
+	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (log_fd < 0) {
 		EXCEPT("failed to open log %s, errno = %d", logFilename(), errno);
 	}
@@ -405,7 +406,7 @@ ClassAdLog::TruncLog()
 	}
 
 	tmp_log_filename.formatstr( "%s.tmp", logFilename());
-	new_log_fd = safe_open_wrapper_follow(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE, 0600);
+	new_log_fd = safe_open_wrapper_follow(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (new_log_fd < 0) {
 		dprintf(D_ALWAYS, "failed to rotate log: safe_open_wrapper(%s) returns %d\n",
 				tmp_log_filename.Value(), new_log_fd);
@@ -433,7 +434,7 @@ ClassAdLog::TruncLog()
 		// Beat a hasty retreat into the past.
 		historical_sequence_number--;
 
-		int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE, 0600);
+		int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 		if (log_fd < 0) {
 			EXCEPT("failed to reopen log %s, errno = %d after failing to rotate log.",logFilename(),errno);
 		}
@@ -445,7 +446,7 @@ ClassAdLog::TruncLog()
 
 		return false;
 	}
-	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE, 0600);
+	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (log_fd < 0) {
 		EXCEPT( "failed to open log in append mode: "
 			"safe_open_wrapper(%s) returns %d\n", logFilename(), log_fd);
