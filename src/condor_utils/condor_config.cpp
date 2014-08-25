@@ -118,7 +118,6 @@ void check_params();
 // External variables
 extern int	ConfigLineNo;
 }  /* End extern "C" */
-bool find_user_file(std::string &);
 
 
 // Global variables
@@ -981,14 +980,6 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	if(dirlist) { free(dirlist); dirlist = NULL; }
 	if(newdirlist) { free(newdirlist); newdirlist = NULL; }
 
-		// Now, insert overrides from the user config file
-	std::string file_location;
-	if (find_user_file(file_location))
-	{
-		process_config_source( file_location.c_str(), 1, "user local source", host, false );
-		local_config_sources.append(file_location.c_str());
-	}
-	
 		// Now, insert any macros defined in the environment.
 	char **my_environ = GetEnviron();
 	for( int i = 0; my_environ[i]; i++ ) {
@@ -1343,38 +1334,6 @@ find_global(int config_options)
 }
 
 
-// Find user-specific location of a file
-// Returns true if found, and puts the location in the file_location argument.
-// If not found, returns false.  The contents of file_location are undefined.
-bool
-find_user_file(std::string &file_location)
-{
-#ifdef UNIX
-	// $HOME/.condor/condor_config
-	struct passwd *pw = getpwuid( geteuid() );
-	std::stringstream ss;
-	if ( can_switch_ids() || !pw || !pw->pw_dir ) {
-		return false;
-	}
-	ss << pw->pw_dir << "/." << myDistro->Get() << "/" << myDistro->Get() << "_config";
-	file_location = ss.str();
-
-	int fd;
-	if ((fd = safe_open_wrapper_follow(file_location.c_str(), O_RDONLY)) < 0) {
-		return false;
-	} else {
-		close(fd);
-		dprintf(D_FULLDEBUG, "Reading condor configuration from '%s'\n", file_location.c_str());
-	}
-
-	return true;
-#else
-	// To get rid of warnings...
-	file_location = "";
-	return false;
-#endif
-}
-
 // Find location of specified file
 char*
 find_file(const char *env_name, const char *file_name, int config_options)
@@ -1434,15 +1393,21 @@ find_file(const char *env_name, const char *file_name, int config_options)
 	if (!config_source) {
 			// List of condor_config file locations we'll try to open.
 			// As soon as we find one, we'll stop looking.
-		const int locations_length = 3;
+		const int locations_length = 4;
 		MyString locations[locations_length];
+			// 1) $HOME/.condor/condor_config
+		struct passwd *pw = getpwuid( geteuid() );
+		if ( !can_switch_ids() && pw && pw->pw_dir ) {
+			formatstr( locations[0], "%s/.%s/%s", pw->pw_dir, myDistro->Get(),
+					 file_name );
+		}
 			// 2) /etc/condor/condor_config
-		locations[0].formatstr( "/etc/%s/%s", myDistro->Get(), file_name );
+		locations[1].formatstr( "/etc/%s/%s", myDistro->Get(), file_name );
 			// 3) /usr/local/etc/condor_config (FreeBSD)
-		locations[1].formatstr( "/usr/local/etc/%s", file_name );
+		locations[2].formatstr( "/usr/local/etc/%s", file_name );
 		if (tilde) {
 				// 4) ~condor/condor_config
-			locations[2].formatstr( "%s/%s", tilde, file_name );
+			locations[3].formatstr( "%s/%s", tilde, file_name );
 		}
 
 		int ctr;	
