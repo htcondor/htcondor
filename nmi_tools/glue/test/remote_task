@@ -266,8 +266,8 @@ my $test_err_path = File::Spec->catfile($compiler_path, $test_err);
 print "Looking for run.out file\n";
 print "compiler_path:$compiler_path run_out:$run_out run_out_path:$run_out_path compiler_path:$compiler_path\n";
 print "test_out:$test_out test_out_path:$test_out_path test_err:$test_err test_err_path:$test_err_path\n";
-print "Here now:\n";
-system("pwd;ls -lh $run_out_path");
+#print "Here now:\n";
+#system("pwd;ls -lh $run_out_path");
 
 if( ! -f $run_out_path ) {
     if( $teststatus == 0 ) {
