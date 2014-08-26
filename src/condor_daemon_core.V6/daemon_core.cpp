@@ -10581,7 +10581,7 @@ void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessi
 	msg->setSuccessDebugLevel(D_SECURITY);
 	msg->setRawProtocol(true);
 
-	if( m_invalidate_sessions_via_tcp ) {
+	if( !daemon->hasUDPCommandPort() || m_invalidate_sessions_via_tcp ) {
 		msg->setStreamType(Stream::reli_sock);
 	}
 	else {
