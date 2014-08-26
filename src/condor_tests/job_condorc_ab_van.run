@@ -23,10 +23,17 @@ use CondorUtils;
 
 use Check::SimpleJob;
 
+my $append_condor_config_B = '
+  # reduce latency in test
+	NEGOTIATOR_INTERVAL = 5
+	NEGOTIATOR_CYCLE_DELAY = 5
+';
+
 # This is the "remote" pool where the job will run.
 my $poolB = CondorTest::StartCondorWithParams(
     condor_name => "poolB",
-    daemon_list => "MASTER, COLLECTOR, SCHEDD, STARTD, NEGOTIATOR"
+    daemon_list => "MASTER, COLLECTOR, SCHEDD, STARTD, NEGOTIATOR",
+    append_condor_config => $append_condor_config_B,
 );
 
 my $poolB_collector = $poolB->GetCollectorAddress();
@@ -36,9 +43,10 @@ my $poolB_schedd_name =
 CondorUtils::fullchomp $poolB_schedd_name;
 
 
-my $append_condor_config = '
+my $append_condor_config_A = '
   # reduce latency in test
   CONDOR_JOB_POLL_INTERVAL = 10
+  GRIDMANAGER_JOB_PROBE_INTERVAL = 10
 ';
 
 # This is the "local" pool where the job is submitted.
@@ -46,14 +54,14 @@ my $append_condor_config = '
 CondorTest::StartCondorWithParams(
     condor_name => "poolA",
     daemon_list => "MASTER, COLLECTOR, SCHEDD",
-    append_condor_config => $append_condor_config
+    append_condor_config => $append_condor_config_A,
 );
 
 
 # verify that a job runs
 SimpleJob::RunCheck(
     universe => "grid",
-	timeout => 240,
+	timeout => 480,
     grid_resource => "condor $poolB_schedd_name $poolB_collector"
 );
 
