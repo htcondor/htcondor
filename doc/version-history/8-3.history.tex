@@ -89,6 +89,16 @@ This makes it easier to avoid log file collisions.
 	the \Attr{Requirements} expression.
 \Ticket{4519}
 
+\item The user-specific global configuration file \Expr{~/.condor/condor\_config} has
+been removed, and a user-specific override configuration file has been added.
+The user-specific override configuration file defaults to \Expr{~/.condor/user\_config}.
+If it exists it is parsed after all of the other configuration files and before the
+environment overrides are parsed.
+The new configuration parameter \Macro{USER\_CONFIG\_FILE} can be used to change the
+default filename or to disable this feature.
+This feature now works on Windows as well as Unix and Linux.
+\Ticket{3158}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
