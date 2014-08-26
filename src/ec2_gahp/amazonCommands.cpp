@@ -236,10 +236,7 @@ bool AmazonRequest::SendRequest() {
     // and are (currently) 20 characters long.
     //
     std::string keyID;
-    if( protocol == "x509" ) {
-        keyID = getenv( "USER" );
-        dprintf( D_FULLDEBUG, "Using '%s' as access key ID for x.509\n", keyID.c_str() );
-    } else {
+    if( protocol != "x509" ) {
         if( ! readShortFile( this->accessKeyFile, keyID ) ) {
             this->errorCode = "E_FILE_IO";
             this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
@@ -247,8 +244,8 @@ bool AmazonRequest::SendRequest() {
             return false;
         }
         if( keyID[ keyID.length() - 1 ] == '\n' ) { keyID.erase( keyID.length() - 1 ); }
+        query_parameters.insert( std::make_pair( "AWSAccessKeyId", keyID ) );
     }
-    query_parameters.insert( std::make_pair( "AWSAccessKeyId", keyID ) );
 
     //
     // This implementation computes signature version 2,
@@ -316,11 +313,11 @@ bool AmazonRequest::SendRequest() {
     // or SHA1 as the hash algorithm."
     std::string saKey;
     if( protocol == "x509" ) {
-        // If we we ever support the UploadImage action, we'll need to
+        // If we ever support the UploadImage action, we'll need to
         // extract the DN from the user's certificate here.  Otherwise,
         // since the x.509 implementation ignores the AWSAccessKeyId
         // and Signature, we can do whatever we want.
-        saKey = std::string( "<DN>/CN=UID:" ) + getenv( "USER" );
+        saKey = std::string( "not-the-DN" );
         dprintf( D_FULLDEBUG, "Using '%s' as secret key for x.509\n", saKey.c_str() );
     } else {
         if( ! readShortFile( this->secretKeyFile, saKey ) ) {
