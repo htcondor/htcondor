@@ -93,11 +93,6 @@ longer than 100 characters in length.
 \item Improvements to CCB increase performance.
 \Ticket{4453}
 
-\item The user-specific configuration file \Expr{~/.condor/condor\_config} will
-now override the global configuration, instead of the other way around.  This
-makes the user-specific configuration files more useful.
-\Ticket{3158}
-
 \item The use of a single log file to write events and enforce the 
 dependencies of a DAG represented by a \Condor{dagman} instance is mandatory.
 To implement this,
@@ -123,6 +118,16 @@ This makes it easier to avoid log file collisions.
 	or \Attr{OpSysShortName} is already specified by the user in
 	the \Attr{Requirements} expression.
 \Ticket{4519}
+
+\item The user-specific global configuration file \Expr{~/.condor/condor\_config} has
+been removed, and a user-specific override configuration file has been added.
+The user-specific override configuration file defaults to \Expr{~/.condor/user\_config}.
+If it exists it is parsed after all of the other configuration files and before the
+environment overrides are parsed.
+The new configuration parameter \Macro{USER\_CONFIG\_FILE} can be used to change the
+default filename or to disable this feature.
+This feature now works on Windows as well as Unix and Linux.
+\Ticket{3158}
 
 \end{itemize}
 
