@@ -8380,6 +8380,11 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	int i;
 	size_t *core_size_ptr = NULL;
 	char *ckpt_name = NULL;
+	std::string working_dir;
+	std::string execute_dir;
+	std::string job_ad_path;
+	bool wrote_job_ad = false;
+	bool directory_exists = false;
 
 	is_executable = false;
 
@@ -8569,7 +8574,41 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", error.Value(), errno );
 		cannot_open_files = true;
 	}
-	
+
+	execute_dir = param("EXECUTE");
+	formatstr(working_dir, "%s%cdir_%d_%d", execute_dir.c_str(), DIR_DELIM_CHAR, job_id->cluster, job_id->proc);
+	{
+	TemporaryPrivSentry tps(PRIV_CONDOR);
+	if( mkdir(working_dir.c_str(), 0755) < 0 ) {
+		if (errno == EEXIST) {
+			directory_exists = true;
+		} else {
+			dprintf( D_FAILURE|D_ALWAYS,
+				"couldn't create dir %s: (%s, errno=%d).\n",
+				working_dir.c_str(),
+				strerror(errno), errno );
+		}
+	} else {
+		directory_exists = true;
+	}
+
+	job_ad_path = working_dir + "/.job.ad";
+	if (directory_exists && !chdir(working_dir.c_str())) {
+		FILE *job_ad_fp = NULL;
+		if (!(job_ad_fp = safe_fopen_wrapper_follow(".job.ad", "w"))) {
+			dprintf ( D_FAILURE|D_ALWAYS, "Open of %s/.job.ad failed (%s, errno=%d).\n", working_dir.c_str(), strerror(errno), errno );
+		}
+		// fPrindAd does not have any usable error reporting.
+		fPrintAd(job_ad_fp, *userJob, true);
+		if (job_ad_fp) {
+			wrote_job_ad = true;
+			fclose(job_ad_fp);
+		}
+	} else if (directory_exists) {
+		dprintf( D_FAILURE|D_ALWAYS, "Error: chdir (%s) failed; unable to write job ad (%s, errno=%d).\n", working_dir.c_str(), strerror(errno), errno);
+	}
+	}
+
 	//change back to whence we came
 	if ( tmpCwd.Length() ) {
 		if (chdir(tmpCwd.Value())) {
@@ -8655,6 +8694,12 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		core_size = (size_t)core_size_truncated;
 		core_size_ptr = &core_size;
 	}
+
+		// Update the environment to point at the job ad.
+	if( wrote_job_ad && !envobject.SetEnv("_CONDOR_JOB_AD", job_ad_path.c_str()) ) {
+		dprintf( D_ALWAYS, "Failed to set _CONDOR_JOB_AD environment variable\n");
+	}
+
 
 		// Scheduler universe jobs should not be told about the shadow
 		// command socket in the inherit buffer.
@@ -10696,6 +10741,26 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 		}
 	}
 
+	std::string execute_dir_str = param("EXECUTE");
+	std::string dir_name;
+	formatstr(dir_name, "dir_%d_%d", job_id.cluster, job_id.proc);
+	Directory execute_dir( execute_dir_str.c_str(), PRIV_ROOT );
+	if ( execute_dir.Find_Named_Entry( dir_name.c_str() ) ) {
+
+		// since we chdir()'d to the execute directory, we can't
+		// delete it until we get out (at least on WIN32). So lets
+		// just chdir() to EXECUTE so we're sure we can remove it. 
+		if (chdir(execute_dir_str.c_str())) {
+			dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", execute_dir_str.c_str(), strerror(errno));
+		}
+
+		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", execute_dir_str.c_str(), DIR_DELIM_CHAR, dir_name.c_str() );
+		if (!execute_dir.Remove_Current_File()) {
+			dprintf( D_FAILURE|D_ALWAYS, "Failed to remove execute directory %s%c%s for scheduler universe job.\n", execute_dir_str.c_str(), DIR_DELIM_CHAR, dir_name.c_str() );
+		}
+	} else {
+		dprintf( D_ALWAYS, "Execute sub-directory (%s) missing.\n", dir_name.c_str() );
+	}
 
 	switch(action) {
 		case REMOVE_FROM_QUEUE:
