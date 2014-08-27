@@ -27,6 +27,7 @@
 #include "condor_attributes.h"
 #include "condor_netdb.h"
 #include "ipv6_hostname.h"
+#include "condor_sinful.h"
 
 static bool enable_convert_default_IP_to_socket_IP = true;
 static std::set< std::string > configured_network_interface_ips;
@@ -409,75 +410,66 @@ static bool IPMatchesNetworkInterfaceSetting(char const *ip)
 }
 
 
-static void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s)
-{
-	*new_expr_string = NULL;
-
-	if( !enable_convert_default_IP_to_socket_IP ) {
-		return;
-	}
-
-    if(!is_sender_ip_attr(attr_name)) {
-		return;
-	}
-
-	char const *my_default_ip = my_ip_string();
-	char const *my_sock_ip = s.my_ip_str();
-	if(!my_default_ip || !my_sock_ip) {
-		return;
-	}
-	if(strcmp(my_default_ip,my_sock_ip) == 0) {
-		return;
-	}
-	condor_sockaddr sock_addr;
-	if (sock_addr.from_ip_string(my_sock_ip) && sock_addr.is_loopback()) {
-            // We must be talking to another daemon on the same
-			// machine as us.  We don't want to replace the default IP
-			// with this one, since nobody outside of this machine
-			// will be able to contact us on that IP.
-		return;	
-	}
-	if( !IPMatchesNetworkInterfaceSetting(my_sock_ip) ) {
-		return;
-	}
-
-	char const *ref = strstr(old_expr_string,my_default_ip);
-	if(ref) {
-			// the match must not be followed by any trailing digits
-			// GOOD: <MMM.MMM.M.M:port?p>   (where M is a matching digit)
-			// BAD:  <MMM.MMM.M.MN:port?p>  (where N is a non-matching digit)
-		if( isdigit(ref[strlen(my_default_ip)]) ) {
-			ref = NULL;
-		}
-	}
-	if(ref) {
-            // Replace the default IP address with the one I am actually using.
-
-		int pos = ref-old_expr_string; // position of the reference
-		int my_default_ip_len = strlen(my_default_ip);
-		int my_sock_ip_len = strlen(my_sock_ip);
-
-		*new_expr_string = (char *)malloc(strlen(old_expr_string) + my_sock_ip_len - my_default_ip_len + 1);
-		ASSERT(*new_expr_string);
-
-		strncpy(*new_expr_string, old_expr_string,pos);
-		strcpy(*new_expr_string+pos, my_sock_ip);
-		strcpy(*new_expr_string+pos+my_sock_ip_len, old_expr_string+pos+my_default_ip_len);
-
-		dprintf(D_NETWORK,"Replaced default IP %s with connection IP %s "
-				"in outgoing ClassAd attribute %s.\n",
-				my_default_ip,my_sock_ip,attr_name);
-	}
-}
-
 void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,Stream& s)
 {
-	char *new_expr_string = NULL;
-	ConvertDefaultIPToSocketIP(attr_name,expr_string.c_str(),&new_expr_string,s);
-	if(new_expr_string) {
-		//The expression was updated.  Replace the old expression with
-		//the new one.
-		expr_string = new_expr_string;
-		free(new_expr_string);
-	}
+	if( ! enable_convert_default_IP_to_socket_IP ) { return; }
+
+    if( ! is_sender_ip_attr(attr_name) ) { return; }
+
+	if(expr_string.length() < 5) { return; } // Skip. Implausibly short.
+
+	condor_sockaddr my_default_addr = get_local_ipaddr();
+	MyString my_default_ip = my_default_addr.to_ip_string(true);
+	condor_sockaddr my_sockaddr;
+
+	// Skip if Stream doesn't have address associated with it
+	if( ! my_sockaddr.from_ip_string(s.my_ip_str()) ) { return; }
+	
+	if( my_default_addr == my_sockaddr ) { return; } // Skip doing a no-op
+
+	// Skip if we're talking over loopback; advertising loopback
+	// isn't useful to anyone.
+	if( my_sockaddr.is_loopback() ) { return; }
+
+	// Skip if we shouldn't be using this interface.
+	if( !IPMatchesNetworkInterfaceSetting(my_sockaddr.to_ip_string(false).Value()) ) { return; }
+
+	// Skip if it's not a string literal.
+	if(*(expr_string.rbegin()) != '"') { return; }
+
+	const char * delimiter = " = \"";
+	size_t delimpos = expr_string.find(delimiter);
+	// Skip if doesn't look like a string
+	if(delimpos == std::string::npos) { return; }
+
+	size_t string_start_pos = delimpos + strlen(delimiter);
+	// string_end_pos is one beyond last character of String literal.
+	size_t string_end_pos = expr_string.length() - 1;
+	size_t string_len = string_end_pos - string_start_pos;
+
+	// Skip if it doesn't look like a Sinful
+	if(expr_string[string_start_pos] != '<') { return; }
+	if(expr_string[string_end_pos - 1] != '>') { return; }
+
+	std::string old_addr = expr_string.substr(string_start_pos, string_len);
+
+	Sinful sin(old_addr.c_str());
+	if(!sin.valid()) { return; } // Skip. Not a Sinful apparently.
+	const char * sin_ip = sin.getHost();
+
+	// Skip if my default address isn't present.
+	if(strcmp(sin_ip, my_default_ip.Value()) != 0) { return; }
+
+	MyString my_sock_ip = my_sockaddr.to_ip_string(true);
+	sin.setHost(my_sock_ip.Value());
+
+	std::string new_expr = expr_string.substr(0, string_start_pos);
+	new_expr.append(sin.getSinful());
+	new_expr.append(expr_string.substr(string_end_pos));
+
+	expr_string = new_expr;
+
+	dprintf(D_NETWORK,"Replaced default IP %s with connection IP %s "
+			"in outgoing ClassAd attribute %s.\n",
+			my_default_ip.Value(), my_sock_ip.Value(), attr_name);
 }

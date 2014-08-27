@@ -112,15 +112,27 @@ public:
 		// address when inaddr_any)
 		
 		// if it fails on inet_ntop(), returns blank string.
-	MyString to_ip_string() const;
+		// decorate==true - Add additional decorations appropriate
+		//                  for the protocol. As of 2014 only puts
+		//                  square brackets around IPv6 addresses,
+		//                  eg "[::1]"
+	MyString to_ip_string(bool decorate=false) const;
 		// it it fails on inet_ntop(), returns NULL and given buf
 		// will not be modified.
-	const char* to_ip_string(char* buf, int len) const;
+		// decorate==true - Add additional decorations appropriate
+		//                  for the protocol. As of 2014 only puts
+		//                  square brackets around IPv6 addresses,
+		//                  eg "[::1]"
+	const char* to_ip_string(char* buf, int len, bool decorate=false) const;
 
 		// if it contains loopback address, it will return
 		// local ip address.
-	MyString to_ip_string_ex() const; 
-	const char* to_ip_string_ex(char* buf, int len) const;
+		// decorate==true - Add additional decorations appropriate
+		//                  for the protocol. As of 2014 only puts
+		//                  square brackets around IPv6 addresses,
+		//                  eg "[::1]"
+	MyString to_ip_string_ex(bool decorate=false) const; 
+	const char* to_ip_string_ex(char* buf, int len, bool decorate=false) const;
 
 	// if the address contained is ipv4, it converts to 
 	// IPv6-V4MAPPED address. caller must check is_ipv4() first.
