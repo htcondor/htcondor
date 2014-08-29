@@ -64,9 +64,10 @@ job is now limited to the \Attr{VirtualMemory} size of the slot
 it is running on.
 \Ticket{4417}
 
-\item Added a configuration parameter, \Macro{COLLECTOR\_PORT}, which specifies
+\item The new configuration variable \Macro{COLLECTOR\_PORT} specifies
 the default port used by the \Condor{collector} daemon and command line tools.
-The default value is 9618 - the same port used in previous releases.
+The default value is 9618.
+This default is the same port as has been used in previous HTCondor versions.
 \Ticket{4432}
 
 \item The \Condor{shared\_port} daemon is now enabled by default 
