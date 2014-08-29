@@ -41,6 +41,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Using \condor{compile} on programs which call posix\_memalign()
+will now work.
+\Ticket{4486}
+
+\item EC2 grid universe jobs which use the X.509 authentication method will
+no longer crash if \Env{USER} is not set.
+\Ticket{4540}
+
 \item Fixed a rare memory leak. 
 The leak occurred when IPv6 was disabled, 
 but configuration variables \MacroNI{NETWORK\_INTERFACE} 
