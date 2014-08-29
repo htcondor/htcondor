@@ -85,9 +85,10 @@ This makes it easier to avoid log file collisions.
 \Ticket{4334}
 
 \item \Condor{submit} will no longer insert an \Attr{OpSys} requirement
-	when one of \Attr{OpSysAndVer}, \Attr{OpSysLongName}, \Attr{OpSysName},
-	or \Attr{OpSysShortName} is already specified by the user in
-	the \Attr{Requirements} expression.
+for a job
+when one of \Attr{OpSysAndVer}, \Attr{OpSysLongName}, \Attr{OpSysName},
+or \Attr{OpSysShortName} is already specified by the user in
+the \Attr{Requirements} expression of the submit description file.
 \Ticket{4519}
 
 \item The user-specific global configuration file \Expr{~/.condor/condor\_config} has
