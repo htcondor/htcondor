@@ -1,9 +1,12 @@
 #! /usr/bin/env perl
 
+use CondorTest;
+
 print "Job for node $ARGV[0]\n";
 print "Condor_rm'ing parent DAGMan ($ARGV[1])\n";
 
-system("condor_rm $ARGV[1]");
+my @array = ();
+runCondorTool("condor_rm $ARGV[1]",\@array,2,{emit_output=>1});
 
 # Time for condor_rm to take effect before we finish...
 sleep(30);

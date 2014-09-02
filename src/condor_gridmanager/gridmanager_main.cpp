@@ -157,7 +157,8 @@ main_pre_dc_init( int argc, char* argv[] )
 		// We can't call daemonCore->Register_Priv_State() here because
 		// there's no daemonCore object yet. We'll call it in main_init().
 
-		free( owner );
+		free( myUserName );
+		myUserName = owner;
 	} else if ( is_root() ) {
 		dprintf( D_ALWAYS, "Don't know what user to run as!\n" );
 		DC_Exit( 1 );
