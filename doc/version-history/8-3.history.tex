@@ -29,14 +29,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item If cgroups are enabled on Linux, amount of swap space used by a
-job is now limited to the \Attr{VirtualMemory} size of the slot
-it is running on.
+\item If cgroups are enabled on Linux platforms, 
+the amount of swap space used by a job is now limited to the 
+size specified by the machine ClassAd attribute \Attr{VirtualMemory} 
+for the slot that the job is running on.
 \Ticket{4417}
 
-\item Added a configuration parameter, \Macro{COLLECTOR\_PORT}, which specifies
+\item The new configuration variable \Macro{COLLECTOR\_PORT} specifies
 the default port used by the \Condor{collector} daemon and command line tools.
-The default value is 9618 - the same port used in previous releases.
+The default value is 9618.
+This default is the same port as has been used in previous HTCondor versions.
 \Ticket{4432}
 
 \item The \Condor{shared\_port} daemon is now enabled by default 
@@ -73,9 +75,9 @@ and an attempt to set configuration variable
 error.
 \Ticket{3994}
 
-\item The new \Condor{dagman} configuration macro
+\item The new \Condor{dagman} configuration variable
 \Macro{DAGMAN\_SUPPRESS\_JOB\_LOGS} allows users to prevent DAG node
-jobs from writing to the log file specified in their submit file.
+jobs from writing to the log file specified in their submit description file.
 \Ticket{4353}
 
 \item Added optional \Expr{@(OWNER)} and \Expr{@(NODE\_NAME)} macros
@@ -84,9 +86,10 @@ This makes it easier to avoid log file collisions.
 \Ticket{4334}
 
 \item \Condor{submit} will no longer insert an \Attr{OpSys} requirement
-	when one of \Attr{OpSysAndVer}, \Attr{OpSysLongName}, \Attr{OpSysName},
-	or \Attr{OpSysShortName} is already specified by the user in
-	the \Attr{Requirements} expression.
+for a job
+when one of \Attr{OpSysAndVer}, \Attr{OpSysLongName}, \Attr{OpSysName},
+or \Attr{OpSysShortName} is already specified by the user in
+the \Attr{Requirements} expression of the submit description file.
 \Ticket{4519}
 
 \item The user-specific global configuration file \Expr{~/.condor/condor\_config} has

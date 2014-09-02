@@ -1091,12 +1091,12 @@ File System Configuration File Entries''.
 
 \label{param:CollectorPort}
 \item[\Macro{COLLECTOR\_PORT}]
-  The default port used to contact the \Condor{collector}.  This parameter is
-  referenced if no port is given and there is no other means to find the
-  \Condor{collector} port.
-
-  This also controls the default port the \Condor{collector} listens on if
+  The default port used when contacting the \Condor{collector}
+  and the default port the \Condor{collector} listens on if
   no port is specified.
+  This variable is referenced if no port is given
+  and there is no other means to find the \Condor{collector} port.
+  The default value is 9618.
 
 \label{param:SharedPortPort}
 \item[\Macro{SHARED\_PORT\_PORT}]
@@ -1107,7 +1107,7 @@ File System Configuration File Entries''.
   and use the TCP port assigned to the \Condor{collector} 
   via the \MacroNI{COLLECTOR\_HOST} macro.
 
-  The default value is \Expr{\$(COLLECTOR\_PORT)}, currently 9618.  
+  The default value is \MacroUNI{COLLECTOR\_PORT}, which defaults to 9618.  
   The special value of \Expr{0} causes the \Condor{shared\_port} 
   to use a randomly selected port.  
   Note that this causes all HTCondor hosts to use TCP port 9618 by default, 
@@ -10348,6 +10348,13 @@ in section~\ref{sec:DAG-configuration}.
   will cause failure when more than one DAG is run at the same time on a
   given submit machine.
   \end{itemize}
+
+\label{param:DAGManSuppressJobLogs}
+\item[\Macro{DAGMAN\_SUPPRESS\_JOB\_LOGS}]
+  A boolean value specifying whether events should be written to a log file
+  specified in a node job's submit description file.
+  The default value is \Expr{False}, such that events are written to
+  a log file specified by a node job.
 
 \label{param:DAGManGenerateSubDagSubmits}
 \item[\Macro{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS}]
