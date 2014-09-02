@@ -10349,6 +10349,13 @@ in section~\ref{sec:DAG-configuration}.
   given submit machine.
   \end{itemize}
 
+\label{param:DAGManSuppressJobLogs}
+\item[\Macro{DAGMAN\_SUPPRESS\_JOB\_LOGS}]
+  A boolean value specifying whether events should be written to a log file
+  specified in a node job's submit description file.
+  The default value is \Expr{False}, such that events are written to
+  a log file specified by a node job.
+
 \label{param:DAGManGenerateSubDagSubmits}
 \item[\Macro{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS}]
   A boolean value specifying whether \Condor{dagman} itself should
