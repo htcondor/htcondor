@@ -143,8 +143,16 @@ if (BUILD_TESTING)
 
 		if( ${SYS_ARCH} MATCHES "X86_64" )
 			if(  "${RPM_SYSTEM_NAME}" MATCHES "rhel5"
+			  OR "${RPM_SYSTEM_NAME}" MATCHES "rhel6"
+			  OR "${RPM_SYSTEM_NAME}" MATCHES "rhel7"
+			  OR "${RPM_SYSTEM_NAME}" MATCHES "sl6"
+			  OR "${RPM_SYSTEM_NAME}" MATCHES "sl6"
+			  OR "${SYSTEM_NAME}" MATCHES "Debian-6"
 			  OR "${SYSTEM_NAME}" MATCHES "Debian-7"
-			  OR "${RPM_SYSTEM_NAME}" MATCHES "rhel7" )
+			  OR "${SYSTEM_NAME}" MATCHES "Debian-8"
+			  # Debian testing.
+			  OR "${SYSTEM_NAME}" MATCHES "Debian-"
+			  OR "${SYSTEM_NAME}" MATCHES "Ubuntu-14" )
 				condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
 			endif()
 		endif()
@@ -180,6 +188,7 @@ if (BUILD_TESTING)
 	if (HAVE_EXT_GLOBUS)
 	condor_pl_test(lib_auth_protocol-gsi "GSI authentication test" "core;quick;full;quicknolink")
 	endif()
+	condor_pl_test(job_dagman_node_status_rm "Check status file shows condor_rm" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_large_dag "Test large DAG w/ recovery mode" "dagman;quick;full;quicknolink")
 	condor_pl_test(lib_shared_port_van "Test of shared port feature." "core;quick;full;quicknolink")
 	condor_pl_test(lib_shared_port-collector_van "Test of shared port feature with collector usage." "core;quick;full;quicknolink")

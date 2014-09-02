@@ -41,13 +41,22 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
+no longer causes a link error.
+\Ticket{4486}
+
+\item EC2 grid universe jobs which use the X.509 authentication method will
+no longer crash if environment variable \Env{USER} is not set.
+\Ticket{4540}
+
 \item Fixed a rare memory leak. 
 The leak occurred when IPv6 was disabled, 
 but configuration variables \MacroNI{NETWORK\_INTERFACE} 
 and \MacroNI{COLLECTOR\_HOST} were set to IPv6 addresses.
 \Ticket{4502}
 
-\item Fixed: \condor{qsub} mishandled setting a memory request with "-l mem=2048MB" or similar.
+\item Fixed a bug in which \Condor{qsub} mishandled setting a memory request 
+with a command line argument similar to \Opt{-l mem=2048MB}.
 \Ticket{4549}
 
 \end{itemize}

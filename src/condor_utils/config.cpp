@@ -1411,6 +1411,8 @@ void insert_source(const char * filename, MACRO_SET & set, MACRO_SOURCE & source
 	source.line = 0;
 	source.inside = false;
 	source.id = (int)set.sources.size();
+	source.meta_id = -1;
+	source.meta_off = -2;
 	set.sources.push_back(set.apool.insert(filename));
 }
 
