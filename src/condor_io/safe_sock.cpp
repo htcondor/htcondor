@@ -298,7 +298,7 @@ SafeSock::my_ip_str()
 	}
 
 	SafeSock s;
-	s.bind(true);
+	s.bind(_who.get_protocol(), true);
 
 	if (s._state != sock_bound) {
 		dprintf(D_ALWAYS,
