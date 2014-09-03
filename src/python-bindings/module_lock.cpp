@@ -11,7 +11,7 @@ pthread_mutex_t ModuleLock::m_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 ModuleLock::ModuleLock()
     : m_release_gil(!classad::ClassAdGetExpressionCaching()),
-      m_owned(false)
+      m_owned(false), m_save(0)
 {
     acquire();
 }

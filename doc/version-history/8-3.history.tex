@@ -12,6 +12,36 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-3-2}Version 8.3.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.3.2 not yet released.
+%\item HTCondor version 8.3.2 released on Month Date, 2014.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-3-1}Version 8.3.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -29,55 +59,78 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item If cgroups are enabled on Linux, amount of swap space used by a
-job is now limited to the \Attr{VirtualMemory} size of the slot
-it is running on.
+\item If cgroups are enabled on Linux platforms, 
+the amount of swap space used by a job is now limited to the 
+size specified by the machine ClassAd attribute \Attr{VirtualMemory} 
+for the slot that the job is running on.
 \Ticket{4417}
 
-\item Added a configuration parameter, \Macro{COLLECTOR\_PORT}, which specifies
+\item The new configuration variable \Macro{COLLECTOR\_PORT} specifies
 the default port used by the \Condor{collector} daemon and command line tools.
-The default value is 9618 - the same port used in previous releases.
+The default value is 9618.
+This default is the same port as has been used in previous HTCondor versions.
 \Ticket{4432}
 
-\item The \Condor{shared\_port} daemon is now enabled by default on new installs on
-non-Windows platforms.
-With this change, all HTCondor daemons will share port 9618 for all incoming TCP
-connections, greatly simplifying firewall configuration.  Only users of HTCondor-G
-submitting to Globus GRAM endpoints will need additional incoming TCP ports in
-the firewall.
+\item The \Condor{shared\_port} daemon is now enabled by default 
+for new installations on non-Windows platforms.
+With this change, 
+all HTCondor daemons will share port 9618 for all incoming TCP connections,
+greatly simplifying firewall configuration.  
+Only users of HTCondor-G submitting to Globus GRAM endpoints 
+will need additional incoming TCP ports in the firewall.
 
-\emph{Note} that this causes all HTCondor hosts to use TCP port 9618 by default,
-differing from previous behavior (previously, only the collector host used a 
-fixed port).  To restore the prior behavior, set \Macro{SHARED\_PORT\_PORT} to \Expr{0}.
+Note that this causes \emph{all} HTCondor hosts to use 
+TCP port 9618 by default,
+differing from previous behavior.
+Previously, only the \Condor{collector} host used a fixed port.
+To restore the previous behavior, 
+set the new configuration variable \Macro{SHARED\_PORT\_PORT} to \Expr{0}.
 \Ticket{3813}
 
-The \Condor{shared\_port} daemon will now work if \Macro{DAEMON\_SOCKET\_DIR} is
+\item The \Condor{shared\_port} daemon will now work 
+if the value of configuration variable \Macro{DAEMON\_SOCKET\_DIR} is
 longer than 100 characters in length.
 \Ticket{4465}
 
-\item The user-specific configuration file \Expr{~/.condor/condor\_config} will
-now override the global configuration, instead of the other way around.  This
-makes the user-specific configuration files more useful.
-\Ticket{3158}
+\item Improvements to CCB increase performance.
+\Ticket{4453}
 
-\item \Condor{dagman} is now \emph{required} to run in workflow/default
-node log mode (previously workflow node log mode was the default, but
-DAGMan could be told to not use the workflow node log file).  (In
-other words, the \Opt{-dont\_use\_default\_node\_log} command-line
-flag to \Condor{submit\_dag} is disabled and the
-\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} configuration macro can no
-longer be set to \Expr{False}).
+\item The use of a single log file to write events and enforce the 
+dependencies of a DAG represented by a \Condor{dagman} instance is mandatory.
+To implement this,
+the \Opt{-dont\_use\_default\_node\_log} command-line
+option to \Condor{submit\_dag} is disabled,
+and an attempt to set configuration variable
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to \Expr{False} will generate an
+error.
 \Ticket{3994}
 
-\item The new \Condor{dagman} configuration macro
+\item The new \Condor{dagman} configuration variable
 \Macro{DAGMAN\_SUPPRESS\_JOB\_LOGS} allows users to prevent DAG node
-jobs from writing to the log file specified in their submit file.
+jobs from writing to the log file specified in their submit description file.
 \Ticket{4353}
 
 \item Added optional \Expr{@(OWNER)} and \Expr{@(NODE\_NAME)} macros
 to the \Macro{DAGMAN\_DEFAULT\_NODE\_LOG} configuration macro.
 This makes it easier to avoid log file collisions.
 \Ticket{4334}
+
+\item \Condor{submit} will no longer insert an \Attr{OpSys} requirement
+for a job
+when one of \Attr{OpSysAndVer}, \Attr{OpSysLongName}, \Attr{OpSysName},
+or \Attr{OpSysShortName} is already specified by the user in
+the \Attr{Requirements} expression of the submit description file.
+\Ticket{4519}
+
+\item The user-specific global configuration file \Expr{~/.condor/condor\_config} has
+been removed, and a user-specific override configuration file has been added.
+The user-specific override configuration file defaults to \Expr{~/.condor/user\_config}.
+If it exists it is parsed after all of the other configuration files and before the
+environment overrides are parsed.
+The new configuration parameter \Macro{USER\_CONFIG\_FILE} can be used to change the
+default filename or to disable this feature.
+This feature now works on Windows as well as Unix and Linux.
+\Ticket{3158}
 
 \end{itemize}
 

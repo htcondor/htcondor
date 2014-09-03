@@ -193,11 +193,11 @@ sub WhereIsInstallDir {
 			my $crunched = `cygpath -m $top`;
 			fullchomp($crunched);
 			print "cygpath changed it to: \"$crunched\"\n";
-			my $ppwwdd = `pwd`;
-			print "pwd says: $ppwwdd\n";
+			#my $ppwwdd = `pwd`;
+			#print "pwd says: $ppwwdd\n";
 		} else {
-			my $ppwwdd = `cd`;
-			print"cd says: $ppwwdd\n";
+			#my $ppwwdd = `cd`;
+			#print"cd says: $ppwwdd\n";
 		}
 	}
 

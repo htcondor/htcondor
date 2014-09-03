@@ -695,50 +695,98 @@ sub DoTest
 {
     $handle              = shift || croak "missing handle argument";
     $submit_file      = shift ;
+
     my $wants_checkpoint = shift;
 	my $clusterIDcallback = shift;
 	my $dagman_args = 	shift;
+	my %args = ();
 
+	# global set
+	if(defined $handle) {
+		$args{testname} = $handle;
+	} else { 
+		die "DoTest must get a testname\n";
+	}
+
+	# global set
+	if(defined $submit_file) {
+		$args{submit_file} = $submit_file;
+	} else {
+		$args{submit_file} = "none";
+	}
+
+	# We will no longer  fail based on arg count.
+	#  We will shorten our actions based on subit file or not.
+	if( !(defined $wants_checkpoint)) {
+		#die "DoTest must get at least 3 args!!!!!\n";
+	} else {
+		$args{wants_checkpoint} = $wants_checkpoint;
+	}
+
+	if(defined $clusterIDcallback) {
+		$args{ClusterIdCallback} = $clusterIDcallback;
+	}
+
+	if(defined $dagman_args) {
+		$args{dagman_args} = $dagman_args;
+	}
+
+	#foreach my $key (sort keys %args) {
+		#print "$key:$args{$key}\n";
+	#}
+	StartTest(%args);
+
+}
+	
+
+sub StartTest 
+{
     my $status           = -1;
 	my $monitorpid = 0;
 	my $waitpid = 0;
 	my $monitorret = 0;
 	my $retval = 0;
+	my %args = @_;
 
-	#print "DoTest:$handle\n";
+
 	# Many of our tests want to use RegisterResult and EndTest
 	# but don't actually rely on RunTest to do the work. So
 	# I am enabling a mode where we can call RunTest just to register
 	# the test.
 	
-	if(!(defined $submit_file)) {
+	#my $testname = $args{testname}; 
+	#print "DoTest:$testname\n";
+
+	if($args{submit_file} eq "none") {
     	Condor::SetHandle($handle);
-		print "No submit file passedin. Only registering test\n";
+		print "No submit file passed in. Only registering test\n";
 		return($retval);
 	}
 	
-
 	$failed_coreERROR = "";
-	if( !(defined $wants_checkpoint)) {
-		die "DoTest must get at least 3 args!!!!!\n";
-	}
 
 	TestDebug("RunTest says test: $handle\n",2);;
 	# moved the reset to preserve callback registrations which includes
 	# an error callback at submit time..... Had to change timing
 	CondorTest::Reset();
 
-    croak "too many arguments" if shift;
+    #croak "too many arguments" if shift;
+	# maybe test for even number of args
 
     # this is kludgey :: needed to happen sooner for an error message callback in runcommand
     Condor::SetHandle($handle);
 
     # if we want a checkpoint, register a function to force a vacate
     # and register a function to check to make sure it happens
-	if( $wants_checkpoint )
-	{
-		Condor::RegisterExecute( \&ForceVacate );
-		#Condor::RegisterEvictedWithCheckpoint( sub { $checkpoints++ } );
+	if( exists $args{wants_checkpoint}) {
+		if($args{wants_checkpoint} != 0) {
+			Condor::RegisterExecute( \&ForceVacate );
+			#Condor::RegisterEvictedWithCheckpoint( sub { $checkpoints++ } );
+		} else {
+			if(defined $test{$handle}{"RegisterExecute"}) {
+				Condor::RegisterExecute($test{$handle}{"RegisterExecute"});
+			}
+		}
 	} else {
 		if(defined $test{$handle}{"RegisterExecute"}) {
 			Condor::RegisterExecute($test{$handle}{"RegisterExecute"});
@@ -778,21 +826,24 @@ sub DoTest
 	TestDebug( "Now submitting test job\n",4);
 	my $cluster = 0;
 
-	$teststrt = time();;
+	$teststrt = time();
     # submit the job and get the cluster id
-	if(!(defined $dagman_args)) {
-		#print "Regular Test....\n";
+	if(!(exists $args{dagman_args})) {
+		print "Regular Test....\n";
+		print "submit_file in DoTest:$submit_file\n";
+		system("cat $submit_file");
     	$cluster = Condor::TestSubmit( $submit_file );
 	} else {
 		print "Dagman Test....\n";
-    	$cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
+    	$cluster = Condor::TestSubmitDagman( $submit_file, $args{dagman_args} );
 		if($cluster == 0) {
 			print "*********** Dag Submit Failed ***********\n";
 		}
 	}
-    
-	if(defined $clusterIDcallback) {
-		&$clusterIDcallback($cluster);
+
+    if(exists $args{ClusterIdCallback}) {
+		my $clusteridcallback = $args{ClusterIdCallback};
+		&$clusteridcallback($cluster);
 	}
 
     # if condor_submit failed for some reason return an error
@@ -816,7 +867,11 @@ sub DoTest
 # test had always been lock-steped anyways so getting rid of the child
 # has had little change except that call backs can be fully functional now.
 		
-    	$monitorret = Condor::Monitor();
+		if(exists $args{no_monitor}) {
+			print "Skipping monitor\n";
+		} else {
+    		$monitorret = Condor::Monitor();
+		}
 		if(  $monitorret == 1 ) {
 			TestDebug( "Monitor happy to exit 0\n",4);
 		} else {
@@ -1203,8 +1258,10 @@ sub CheckRegistrations
     # if we wanted to know about Without checkpoints.....
     if( defined $test{$handle}{"RegisterEvictedWithoutCheckpoint"} )
     {
+		print "******** Registering EvictedWithoutCheckpoint handle:$handle ****************\n";
         Condor::RegisterEvictedWithoutCheckpoint( $test{$handle}{"RegisterEvictedWithoutCheckpoint"} );
     } else { 
+		print "******** NOT Registering EvictedWithoutCheckpoint handle:$handle ****************\n";
 		Condor::RegisterEvictedWithoutCheckpoint( sub {
 	    my %info = @_;
 	    die "$handle: FAILURE (Unexpected Eviction without checkpoint)\n";

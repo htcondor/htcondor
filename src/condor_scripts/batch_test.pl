@@ -583,9 +583,12 @@ sub CompleteTestOutput
 	my $test_name = shift;
 	my $status = shift;
 	my $failure = "";
+	my @statret = ();
 
 	debug(" *********** Completing test: $test_name *********** \n",2);
-	if( WIFEXITED( $status ) && WEXITSTATUS( $status ) == 0 )
+	@statret = CondorUtils::ProcessReturn($status);
+	if($statret[0] == 0)
+	#if( WIFEXITED( $status ) && WEXITSTATUS( $status ) == 0 )
 	{
 		if($groupsize == 0) {
 			print "$test_name: succeeded\n";

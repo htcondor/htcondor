@@ -41,11 +41,37 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
+no longer causes a link error.
+\Ticket{4486}
+
+\item EC2 grid universe jobs which use the X.509 authentication method will
+no longer crash if environment variable \Env{USER} is not set.
+\Ticket{4540}
+
 \item Fixed a rare memory leak. 
 The leak occurred when IPv6 was disabled, 
 but configuration variables \MacroNI{NETWORK\_INTERFACE} 
 and \MacroNI{COLLECTOR\_HOST} were set to IPv6 addresses.
 \Ticket{4502}
+
+\item Fixed a bug in which \Condor{qsub} mishandled setting a memory request 
+with a command line argument similar to \Opt{-l mem=2048MB}.
+\Ticket{4549}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item On Windows platforms only, issuing \Condor{rm} on a 
+\Condor{dagman} job does not work correctly.
+The \Condor{dagman} process is immediately killed,
+and it does not write a Rescue DAG or remove its node jobs.
+Note that this bug has probably existed since DAGMan was first
+implemented on the Windows platform.
+\Ticket{4566}
 
 \end{itemize}
 
