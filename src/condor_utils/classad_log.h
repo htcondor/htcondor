@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2014, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -47,12 +47,50 @@
 #include "classad_hashtable.h"
 #include "log_transaction.h"
 
+
 typedef HashTable <HashKey, ClassAd *> ClassAdHashTable;
 
 extern const char *EMPTY_CLASSAD_TYPE_NAME;
 
+class ClassAdLogFilterIterator;
+ClassAdLogFilterIterator BeginIterator(const classad::ExprTree &requirements, int timeslice_ms);
+ClassAdLogFilterIterator EndIterator();
+
+class ClassAdLogFilterIterator : std::iterator<std::input_iterator_tag, ClassAd* >
+{
+public:
+	ClassAdLogFilterIterator(const ClassAdLogFilterIterator &other);
+
+	~ClassAdLogFilterIterator() {}
+
+	ClassAd* operator *() const;
+
+	ClassAd* operator ->() const;
+
+	ClassAdLogFilterIterator operator++();
+	ClassAdLogFilterIterator operator++(int);
+
+	bool operator==(const ClassAdLogFilterIterator &rhs);
+	bool operator!=(const ClassAdLogFilterIterator &rhs) {return !(*this == rhs);}
+
+private:
+	friend ClassAdLogFilterIterator BeginIterator(const classad::ExprTree &requirements, int timeslice_ms);
+	friend ClassAdLogFilterIterator EndIterator();
+
+	ClassAdLogFilterIterator(ClassAdHashTable *table, const classad::ExprTree *requirements, int timeslice_ms, bool invalid=false);
+
+	ClassAdHashTable *m_table;
+	HashIterator<HashKey, ClassAd *> m_cur;
+	bool m_found_ad;
+	const classad::ExprTree *m_requirements;
+	int m_timeslice_ms;
+	int m_done;
+};
+
 class ClassAdLog {
 public:
+	typedef ClassAdLogFilterIterator filter_iterator;
+
 	ClassAdLog();
 	ClassAdLog(const char *filename,int max_historical_logs=0);
 	~ClassAdLog();
@@ -86,6 +124,10 @@ public:
 		// the events that might otherwise hang around in the output buffer
 		// for a long time.
 	void FlushLog();
+
+		// Force the log output buffer to non-volatile storage (disk).  
+		// This means doing both a flush and fsync.
+	void ForceLog();
 
 	bool AdExistsInTableOrTransaction(const char *key);
 
@@ -242,6 +284,8 @@ class LogBeginTransaction : public LogRecord {
 public:
 	LogBeginTransaction() { op_type = CondorLogOp_BeginTransaction; }
 	virtual ~LogBeginTransaction(){};
+
+	int Play(void *data_structure);
 private:
 
 	virtual int WriteBody(FILE* /*fp*/) {return 0;}
@@ -254,6 +298,8 @@ class LogEndTransaction : public LogRecord {
 public:
 	LogEndTransaction() { op_type = CondorLogOp_EndTransaction; }
 	virtual ~LogEndTransaction(){};
+
+	int Play(void *data_structure);
 private:
 	virtual int WriteBody(FILE* /*fp*/) {return 0;}
 	virtual int ReadBody(FILE* fp);

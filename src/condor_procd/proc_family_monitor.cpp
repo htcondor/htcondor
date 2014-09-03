@@ -522,6 +522,8 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 	// We initialize these to -1 to distinguish the "cannot record" and "no I/O" cases.
 	usage->block_read_bytes = -1;
 	usage->block_write_bytes = -1;
+    usage->block_reads = -1;
+    usage->block_writes = -1;
 	usage->num_procs = 0;
 	get_family_usage(tree, usage);
 

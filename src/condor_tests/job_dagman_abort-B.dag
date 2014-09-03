@@ -1,0 +1,23 @@
+# This is like abort-A, except that this DAG fails on abort instead
+# of succeeding.
+Config job_dagman_abort-B.cfg
+
+NODE_STATUS_FILE job_dagman_abort-B.status 600
+
+Job A job_dagman_abort-B-node-succeed.cmd
+Vars A nodename = "$(JOB)"
+
+Job B job_dagman_abort-B-node-succeed.cmd
+Vars B nodename = "$(JOB)"
+
+Job C job_dagman_abort-B-node-fail.cmd
+Vars C nodename = "$(JOB)"
+Script Post C job_dagman_abort-B-script.pl
+
+Job D job_dagman_abort-B-node-fail.cmd
+Vars D nodename = "$(JOB)"
+
+Abort-dag-on C 5 return 1
+
+PARENT A CHILD B
+PARENT B CHILD C D

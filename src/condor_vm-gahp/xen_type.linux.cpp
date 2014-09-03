@@ -711,7 +711,6 @@ VirshType::Status()
 	    m_cpu_time = info->cpuTime / 1000000000.0;
 	    m_result_msg += "Running";
 	    
-	    // Here is where we tack on utilization we only cate about the 
 	    m_result_msg += " ";
 	    m_result_msg += VMGAHP_STATUS_COMMAND_CPUUTILIZATION;
 	    m_result_msg += "=";
@@ -726,6 +725,9 @@ VirshType::Status()
 
 	    m_result_msg += percentUtilization;
 	    
+	    m_result_msg += " " VMGAHP_STATUS_COMMAND_CPUTIME "=";
+	    m_result_msg += m_cpu_time;
+
 	    LastCpuTime = CurrentCpuTime; 
 	    LastStamp = CurrentStamp;
 	    

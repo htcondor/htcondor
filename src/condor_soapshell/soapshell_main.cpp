@@ -366,6 +366,7 @@ do_process_request(const ClassAd *inputAd, ClassAd *resultAd, const int req_numb
 		                                     PRIV_UNKNOWN,		// priv_state - TODO
 		                                     0,					// reaper id - TODO
 		                                     FALSE,				// want_command_port
+		                                     FALSE,				// want_command_port
 		                                     &job_env,			// job environment
 		                                     iwd,				// job iwd
 		                                     NULL,				// family_info - TODO

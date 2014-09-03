@@ -133,7 +133,7 @@ class _condorInMsg
 
 static const int SAFE_MSG_MAX_PACKET_SIZE = 60000;
 static const int SAFE_MSG_HEADER_SIZE = 25;      
-static const int SAFE_MSG_FRAGMENT_SIZE = 1000;
+static const int DEFAULT_SAFE_MSG_FRAGMENT_SIZE = 1000;
 
 static const char* const SAFE_MSG_MAGIC = "MaGic6.0";
 
@@ -185,7 +185,11 @@ class _condorPacket
 
 		// fill the header part with given arguments, return length of the header
 		void makeHeader(bool last, int seqNo, _condorMsgID msgID, unsigned char * md = 0);
-        
+
+		// request size for outgoing datagram fragments; returns size
+		// actually used.
+		int set_MTU(const int mtu);
+
         const char * isDataMD5ed();
         const char * isDataEncrypted();   
         const unsigned char * md();
@@ -218,6 +222,8 @@ class _condorPacket
 		char dataGram[SAFE_MSG_MAX_PACKET_SIZE];/* marshalled packet
 		                                * including header and data */
 		_condorPacket* next;	// next packet
+		int m_SAFE_MSG_FRAGMENT_SIZE; // max size of udp datagram
+		int m_desired_fragment_size;  // desired max datagram size for next packet
 
         short            outgoingMdLen_;
         short            outgoingEidLen_;
@@ -259,6 +265,10 @@ class _condorOutMsg
         bool set_encryption_id(const char * keyId);
 		unsigned long getAvgMsgSize();
 
+		// request size for outgoing datagram fragments; returns size
+		// actually used.
+		int set_MTU(const int mtu);
+
 #ifdef DEBUG
 		// for deburgging purpose
 		int dumpMsg(const _condorMsgID mID);
@@ -270,4 +280,5 @@ class _condorOutMsg
 		_condorPacket* lastPacket;	// pointer to the last packet
 		unsigned long noMsgSent;
 		unsigned long avgMsgSize;
+		int m_mtu;	// requested size for data fragments
 };

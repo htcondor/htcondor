@@ -435,6 +435,10 @@ FILESQL *FILEObj = NULL;
 
 /*static */ FILESQL *
 FILESQL::createInstance(bool use_sql_log) { 
+	if ( !use_sql_log ) {
+		return NULL;
+	}
+
 	FILESQL *ptr = NULL;
 	MyString outfilename = "";
 

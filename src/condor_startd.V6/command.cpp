@@ -187,6 +187,75 @@ command_activate_claim( Service*, int cmd, Stream* stream )
 	return activate_claim( rip, stream );
 }
 
+// return TRUE on success.
+int swap_claim_and_activation(Resource * rip, ClassAd & opts, Stream* stream)
+{
+	int rval = NOT_OK;
+	Resource* rip_dest = NULL;
+	std::string idd;
+	if (opts.EvalString("DestinationSlotName", rip->r_cur->ad(), idd)) {
+		rip_dest = resmgr->get_by_name(idd.c_str());
+	} else if (opts.EvalString("DestinationClaimId", rip->r_cur->ad(), idd)) {
+		rip_dest = resmgr->get_by_cur_id(idd.c_str());
+	}
+
+	if (rip == rip_dest) {
+		rval = SWAP_CLAIM_ALREADY_SWAPPED; // trivial success, the source and destination were the same.
+	} else if ( ! rip_dest) {
+		dprintf(D_ALWAYS|D_FAILURE, "Destination slot not found when Swapping claims from %s to %s\n", rip->r_name, idd.c_str());
+		rval = NOT_OK;
+	} else if ( ! rip_dest->r_pair_name || MATCH != strcmp(rip_dest->r_pair_name, rip->r_name))  {
+		dprintf(D_ALWAYS|D_FAILURE, "Destination slot not valid when Swapping claims from %s to %s\n", rip->r_name, idd.c_str());
+		rval = NOT_OK;
+	} else if ( ! param_boolean("ALLOW_SLOT_PAIRING", false)) {
+		dprintf(D_ALWAYS, "Ignoring request to swap claims because ALLOW_SLOT_PAIRING is false\n");
+		rval = NOT_OK;
+	} else {
+		dprintf(D_FULLDEBUG, "Swapping claims from %s to %s\n", rip->r_name, rip_dest->r_name);
+		bool swapped = Resource::swap_claims(rip, rip_dest);
+		if ( ! swapped) {
+			dprintf(D_ALWAYS|D_FAILURE, "Failed swap claims from %s to %s\n", rip->r_name, rip_dest->r_name);
+		} else {
+			dprintf(D_ALWAYS, "Claim swap from %s to %s succeeded, updating ads\n", rip->r_id_str, rip_dest->r_id_str);
+
+			// Update the resource classads
+			rip->r_cur->publish( rip->r_classad, A_PUBLIC );
+			rip_dest->r_cur->publish( rip_dest->r_classad, A_PUBLIC );
+			rval = OK;
+		}
+	}
+
+	if (stream) { reply( stream, rval ); } // can remove the if when you remove the hacky testing code.
+	return FALSE; // don't return keep stream.
+}
+
+// handles commands that have a claim id, & classad
+//
+int
+command_with_opts_handler( Service*, int cmd, Stream* stream )
+{
+	int rval = FALSE;
+	ClassAd opts;
+	Resource* rip = stream_to_rip(stream, &opts);
+	if ( ! rip ) {
+		dprintf(D_ALWAYS, "Error: problem finding resource for %d (%s)\n", cmd, getCommandString(cmd));
+		return FALSE;
+	}
+
+	// The rest of these only make sense in claimed state
+	State s = rip->state();
+	if (s != claimed_state) {
+		rip->log_ignore(cmd, s);
+		return FALSE;
+	}
+
+	switch( cmd ) {
+	case SWAP_CLAIM_AND_ACTIVATION:
+		rval = swap_claim_and_activation(rip, opts, stream);
+		break;
+	}
+	return rval;
+}
 
 int
 command_vacate_all( Service*, int cmd, Stream* ) 
@@ -622,6 +691,40 @@ command_match_info( Service*, int cmd, Stream* stream )
 	return rval;
 }
 
+#if 0 // temporary code for testing swap_claim_and_activation
+void hack_test_claim_swap(StringList & args)
+{
+	args.rewind();
+	const char * ida = NULL;
+	const char * idb = NULL;
+	while ((idb = args.next())) {
+		if ( ! ida) ida = idb;
+		else break;
+	}
+	dprintf(D_ALWAYS, "Got command to swap claims for '%s' and '%s'\n", ida ? ida : "NULL", idb ? idb : "NULL");
+	if (ida && idb) {
+		Resource* ripa = resmgr->get_by_name(ida);
+		if ( ! ripa) {
+			dprintf(D_ALWAYS, "Could not find Resource for '%s'\n", ida);
+		} else {
+			const char * pair = ripa->r_pair_name;
+			bool pair_matches = MATCH == strcmp(pair, idb);
+			bool self_matches = MATCH == strcmp(ripa->r_name, idb);
+			dprintf(D_ALWAYS, "Found Resource for '%s', it's pair is '%s' request matches %s\n", 
+				ida, pair ? pair : "NULL", 
+				pair_matches ? "pair" : (self_matches ? "self" : "NO MATCH")
+				);
+
+			ClassAd opts;
+			opts.InsertAttr("DestinationSlotName", idb);
+			dprintf(D_ALWAYS, "calling swap_claim_and_activation\n");
+			int iret = swap_claim_and_activation(ripa, opts, NULL);
+			dprintf(D_ALWAYS, "swap_claim_and_activation returned %d\n", iret);
+		}
+	}
+}
+#endif
+
 
 int
 command_query_ads( Service*, int, Stream* stream) 
@@ -648,6 +751,13 @@ command_query_ads( Service*, int, Stream* stream)
    int      dc_publish_flags = daemonCore->dc_stats.PublishFlags;
    queryAd.LookupString("STATISTICS_TO_PUBLISH",stats_config);
    if ( ! stats_config.IsEmpty()) {
+#if 0 // HACK to test swapping claims without a schedd
+       dprintf(D_ALWAYS, "Got QUERY_STARTD_ADS with stats config: %s\n", stats_config.c_str());
+       if (starts_with_ignore_case(stats_config.c_str(), "swap:")) {
+		   StringList swap_args(stats_config.c_str()+5);
+		   hack_test_claim_swap(swap_args);
+       } else
+#endif
       daemonCore->dc_stats.PublishFlags = 
          generic_stats_ParseConfigString(stats_config.Value(), 
                                          "DC", "DAEMONCORE", 
@@ -1106,6 +1216,33 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		claim->client()->setaddr( client_addr );
 		free( client_addr );
 		client_addr = NULL;
+			// The schedd is asking us to preempt these claims to make
+			// the pslot it is really claiming bigger.  New in 8.1.6
+		int num_preempting = 0;
+		if (stream->code(num_preempting)) {
+			rip->dprintf(D_FULLDEBUG, "Schedd sending %d preempting claims.\n", num_preempting);
+			char **claims = (char **)malloc(sizeof(char *) * (num_preempting));
+			for (int i = 0; i < num_preempting; i++) {
+				claims[i] = NULL;
+				if (! stream->code(claims[i])) {
+					rip->dprintf( D_ALWAYS, "Can't receive preempting claim\n" );
+					for (int n = 0; n < i - 1; n++) {
+						free(claims[n]);
+					}
+					free(claims);
+					ABORT;
+				}
+				Resource *dslot = resmgr->get_by_any_id( claims[i] );
+				if( !dslot ) {
+					ClaimIdParser idp( claims[i] );
+					dprintf( D_ALWAYS, 
+							 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
+				}
+				dslot->kill_claim();
+				free(claims[i]);
+			}
+			free(claims);
+		}
 	} else {
 		rip->dprintf(D_FULLDEBUG, "Schedd using pre-v6.1.11 claim protocol\n");
 	}
@@ -1136,7 +1273,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		ABORT;
 	}
 
-    map<string, double> consumption;
+    consumption_map_t consumption;
     bool has_cp = cp_supports_policy(*rip->r_classad);
     if (has_cp) {
         cp_override_requested(*req_classad, *rip->r_classad, consumption);
@@ -1278,6 +1415,27 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		ABORT;
 	}
 
+
+	// if we are claiming this resource, also claim the buddy
+	bool and_pair = false;
+	if (rip->r_pair_name) {
+		Resource * ripb = resmgr->get_by_name(rip->r_pair_name);
+		if (ripb) {
+			req_classad->LookupBool("_condor_SEND_PAIRED_SLOT",and_pair);
+			// we did this to the main claim already, now we need to copy
+			// them to the buddy claim.
+			ripb->r_cur->setaliveint( claim->getaliveint() );
+			ripb->r_cur->client()->setaddr( claim->client()->addr() );
+
+			/* probably don't want to do any of this.
+			ripb->r_cur->setRequestStream( stream );
+			ripb->r_cur->setad( req_classad );
+			ripb->r_cur->setrank( rank );
+			ripb->r_cur->setoldrank( oldrank );
+			*/
+		}
+	}
+
 		// We decided to accept the request, save the schedd's
 		// stream, the rank and the classad of this request.
 	rip->r_cur->setRequestStream( stream );
@@ -1303,7 +1461,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// function after the preemption has completed when the startd
 		// is finally ready to reply to the and finish the claiming
 		// process.
-	accept_request_claim( rip, leftover_claim );
+	accept_request_claim( rip, leftover_claim, and_pair );
 
 		// We always need to return KEEP_STREAM so that daemon core
 		// doesn't try to delete the stream we've already deleted.
@@ -1342,12 +1500,13 @@ abort_accept_claim( Resource* rip, Stream* stream )
 
 
 bool
-accept_request_claim( Resource* rip, Claim* leftover_claim )
+accept_request_claim( Resource* rip, Claim* leftover_claim, bool and_pair )
 {
 	int interval = -1;
 	char *client_addr = NULL;
 	char RemoteOwner[512];
 	RemoteOwner[0] = '\0';
+	Resource * ripb = NULL;
 
 		// There should not be a pre claim object now.
 	ASSERT( rip->r_pre == NULL );
@@ -1357,18 +1516,30 @@ accept_request_claim( Resource* rip, Claim* leftover_claim )
 	Sock* sock = (Sock*)stream;
 
 	/* 
-		Reply of 0 (OK) means claim accepted.
-		Reply of 1 (NOT_OK) means claim rejected.
-		Reply of 3 means claim accepted by a partitionable slot,
-	      and the "leftovers" slot ad and claim id will be sent next.
+		Reply of 0 (NOT_OK) means claim rejected.
+		Reply of 1 (OK) means claim accepted.
+		Reply of 3 (REQUEST_CLAIM_LEFTOVERS) means claim accepted by a
+		  partitionable slot, and the "leftovers" slot ad and claim id
+		  will be sent next.
+		Reply of 4 (REQUEST_CLAIM_PAIR) means claim accepted by a slot
+		  that is paired, and the partner slot ad and claim id will be
+		  sent next.
 	*/
 	int cmd = OK;
 	if ( leftover_claim && leftover_claim->id() && 
 		 leftover_claim->rip()->r_classad ) 
 	{
 		// schedd wants leftovers, send reply code 3
-		cmd = 3;
+		cmd = REQUEST_CLAIM_LEFTOVERS;
 	}
+	else if (rip->r_pair_name) {
+		ripb = resmgr->get_by_name(rip->r_pair_name);
+		if (ripb && and_pair) {
+			cmd = REQUEST_CLAIM_PAIR;
+		}
+	}
+
+
 	stream->encode();
 	if( !stream->put( cmd ) ) {
 		rip->dprintf( D_ALWAYS, 
@@ -1376,7 +1547,7 @@ accept_request_claim( Resource* rip, Claim* leftover_claim )
 		abort_accept_claim( rip, stream );
 		return false;
 	}
-	if ( cmd == 3 ) 
+	if ( cmd == REQUEST_CLAIM_LEFTOVERS )
 	{
 		// schedd just claimed a dynamic slot, and it wants
 		// us to send back to the classad and the new claim id for
@@ -1392,6 +1563,21 @@ accept_request_claim( Resource* rip, Claim* leftover_claim )
 			return false;
 		}
 	}
+	else if (cmd == REQUEST_CLAIM_PAIR)
+	{
+		dprintf(D_FULLDEBUG,"Sending paired slot claim to schedd\n");
+		//PRAGMA_REMIND("remove these next two dprintfs later")
+		//dprintf(D_FULLDEBUG,"\tmain slot claim id is %s\n", rip->r_cur->id());
+		//dprintf(D_FULLDEBUG,"\tpaired slot claim id is %s\n", ripb->r_cur->id());
+		MyString claimId(ripb->r_cur->id());
+		if ( !stream->put(claimId) || ! putClassAd(stream, *ripb->r_classad)) {
+			rip->dprintf( D_ALWAYS,
+				"Can't send paired slot claim & ad to schedd.\n" );
+			abort_accept_claim( rip, stream );
+			return false;
+		}
+	}
+
 	if( !stream->end_of_message() ) {
 		rip->dprintf( D_ALWAYS, "Can't to send eom to schedd.\n" );
 		abort_accept_claim( rip, stream );
@@ -1423,6 +1609,10 @@ accept_request_claim( Resource* rip, Claim* leftover_claim )
 		}
 		stream->end_of_message();
 
+		if (ripb) {
+			ripb->r_cur->setaliveint(interval);
+			ripb->r_cur->client()->setaddr(client_addr);
+		}
 			// Now, store them into r_cur
 		rip->r_cur->setaliveint( interval );
 		rip->r_cur->client()->setaddr( client_addr );
@@ -1437,8 +1627,10 @@ accept_request_claim( Resource* rip, Claim* leftover_claim )
 		MyString ip = sock->peer_addr().to_ip_string();
 		rip->dprintf( D_FULLDEBUG,
 					  "Can't find hostname of client machine %s\n", ip.Value() );
+		if (ripb) { ripb->r_cur->client()->sethost(ip.Value()); }
 		rip->r_cur->client()->sethost(ip.Value());
 	} else {
+		if (ripb) { ripb->r_cur->client()->sethost(hostname.Value()); }
 		rip->r_cur->client()->sethost( hostname.Value() );
 	}
 
@@ -1451,6 +1643,7 @@ accept_request_claim( Resource* rip, Claim* leftover_claim )
 		RemoteOwner[0] = '\0';
 	}
 	if( '\0' != RemoteOwner[0] ) {
+		if (ripb) { ripb->r_cur->client()->setowner( RemoteOwner ); ripb->r_cur->client()->setuser( RemoteOwner ); }
 		rip->r_cur->client()->setowner( RemoteOwner );
 			// For now, we say the remote user is the same as the
 			// remote owner.  In the future, we might decide to leave
@@ -1465,6 +1658,7 @@ accept_request_claim( Resource* rip, Claim* leftover_claim )
 	char* acct_grp = NULL;
 	rip->r_cur->ad()->LookupString( ATTR_ACCOUNTING_GROUP, &acct_grp );
 	if( acct_grp ) {
+		if (ripb) { ripb->r_cur->client()->setAccountingGroup( acct_grp ); }
 		rip->r_cur->client()->setAccountingGroup( acct_grp );
 		free( acct_grp );
 		acct_grp = NULL;
@@ -1475,8 +1669,9 @@ accept_request_claim( Resource* rip, Claim* leftover_claim )
 		// Since we're done talking to this schedd, delete the stream.
 	rip->r_cur->setRequestStream( NULL );
 
-	rip->dprintf( D_FAILURE|D_ALWAYS, "State change: claiming protocol successful\n" );
+	rip->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
 	rip->change_state( claimed_state );
+	if (ripb) { ripb->change_state( claimed_state ); }
 	return true;
 }
 
@@ -1566,7 +1761,7 @@ activate_claim( Resource* rip, Stream* stream )
 		// See if machine and job meet each other's requirements, if
 		// so start the job and tell shadow, otherwise refuse and
 		// clean up.  
-    map<string, double> consumption;
+    consumption_map_t consumption;
     bool has_cp = cp_supports_policy(*mach_classad, false);
     bool cp_sufficient = true;
     if (has_cp) {
@@ -1767,7 +1962,7 @@ activate_claim( Resource* rip, Stream* stream )
 		// Finally, update all these things into the resource classad.
 	rip->r_cur->publish( rip->r_classad, A_PUBLIC );
 
-	rip->dprintf( D_FAILURE|D_ALWAYS, 
+	rip->dprintf( D_ALWAYS,
 				  "State change: claim-activation protocol successful\n" );
 	rip->change_state( busy_act );
 
@@ -1840,7 +2035,7 @@ match_info( Resource* rip, char* id )
 				// too long. 
 			rip->r_cur->start_match_timer();
 
-			rip->dprintf( D_FAILURE|D_ALWAYS, "State change: "
+			rip->dprintf( D_ALWAYS, "State change: "
 						  "match notification protocol successful\n" );
 
 #if HAVE_BACKFILL

@@ -50,6 +50,8 @@ class ClassAdFileParseHelper;
 
 bool ClassAdAttributeIsPrivate( char const *name );
 
+typedef std::set<std::string, classad::CaseIgnLTStr> AttrNameSet;
+
 	/** Print the ClassAd as an old ClassAd to the FILE
 		@param file The file handle to print to.
 		@return TRUE
@@ -137,6 +139,10 @@ class ClassAd : public classad::ClassAd
 
 	int Assign(char const *name,unsigned long value)
 	{ return InsertAttr( name, (long long)value) ? TRUE : FALSE; }
+#ifdef WIN32
+    int Assign(char const *name,unsigned long long value)
+	{ return InsertAttr( name, (long long)value) ? TRUE : FALSE; }
+#endif
 
 	int Assign(char const *name,float value)
 	{ return InsertAttr( name, (double)value) ? TRUE : FALSE; }

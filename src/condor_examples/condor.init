@@ -2,7 +2,7 @@
 #
 # condor	This script allows for starting and stopping Condor.
 #
-# chkconfig: 2345 98 10
+# chkconfig: - 98 10
 # description: Condor is a high throughput computing batch processing
 # 	       platform.
 # processname: condor_master
@@ -35,6 +35,9 @@ pidfile=/var/run/condor/$prog.pid
 # Check that networking is up
 [ "${NETWORKING}" = "no" ] && exit 1
 
+if [ -n "$ULIMIT_FLAGS" ]; then
+  ulimit $ULIMIT_FLAGS > /dev/null 2>&1
+fi
 
 start() {
     echo -n $"Starting Condor daemons: "
@@ -69,6 +72,12 @@ reload() {
     echo_success
     echo
     return $RETVAL
+}
+
+peaceful-off() {
+    condor_off -peaceful
+    rc=$?
+    exit $rc
 }
 
 #
@@ -226,8 +235,14 @@ case "$1" in
 	status -p $pidfile $prog
 	RETVAL=$?
 	;;
+
+    peaceful-off)
+	[ $running -eq 0 ] || exit 0
+	peaceful-off
+	RETVAL=$?
+       ;;
     *)
-	echo $"Usage: $0 {start|stop|restart|condrestart|try-restart|reload|force-reload|status}"
+	echo $"Usage: $0 {start|stop|restart|condrestart|try-restart|reload|force-reload|status|peaceful-off}"
 	RETVAL=2
 esac
 

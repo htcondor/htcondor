@@ -157,11 +157,14 @@ class ScheddNegotiate: public DCMsg {
 	int m_jobs_rejected;
 	int m_jobs_matched;
 
+	int m_num_resource_reqs_sent; // used when sending a resource request list
+	int m_num_resource_reqs_to_send; // used when sending a resource request list
+
 	bool m_negotiation_finished;
 
 		// data in message received from negotiator
 	int m_operation;             // the negotiation operation
-	std::string m_reject_reason; // why the job was rejected
+	MyString m_reject_reason; // why the job was rejected
 	std::string m_claim_id;      // the string "null" if none
 	ClassAd m_match_ad;          // the machine we matched to
 
@@ -175,7 +178,9 @@ class ScheddNegotiate: public DCMsg {
 		// marks the specified cluster as rejected
 	void setAutoClusterRejected(int auto_cluster_id);
 
-	bool sendJobInfo(Sock *sock);
+	bool sendJobInfo(Sock *sock, bool just_sig_attrs=false);
+
+	bool sendResourceRequestList(Sock *sock);
 
 		/////////////// DCMsg hooks ///////////////
 

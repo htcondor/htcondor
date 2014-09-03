@@ -53,7 +53,10 @@ the local pool.
 \index{ClassAd submitter attribute!WeightedIdleJobs}
 \index{WeightedIdleJobs@\Attr{WeightedIdleJobs}!submitter ClassAd attribute}
 \item[\AdAttr{WeightedIdleJobs}:] A total number of requested
-cores across all Idle jobs from the submitter.
+cores across all Idle jobs from the submitter, 
+weighted by the slot weight.  
+As an example, if \Expr{SLOT\_WEIGHT = CPUS}, 
+and a job requests two CPUs, the weight of that job is two.
 
 \index{ClassAd submitter attribute!WeightedRunningJobs}
 \index{WeightedRunningJobs@\Attr{WeightedRunningJobs}!submitter ClassAd attribute}

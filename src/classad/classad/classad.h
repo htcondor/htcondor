@@ -681,6 +681,10 @@ e		*/
 
 		/**@name Dirty Tracking */
         //@{
+		/** enable or disable dirty tracking for this ClassAd
+		 *  and return whether dirty track was previously enabled or disabled.
+		 */
+		bool       SetDirtyTracking(bool enable) { bool was_enabled = do_dirty_tracking; do_dirty_tracking = enable; return was_enabled; }
         /** Turn on dirty tracking for this ClassAd. 
          *  If tracking is on, every insert will label the attribute that was inserted
          *  as dirty. Dirty tracking is always turned off during Copy() and

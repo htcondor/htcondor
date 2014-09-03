@@ -82,8 +82,7 @@ by a \emph{priority factor} which may be defined on a per-user basis.
 Unless otherwise configured, 
 an initial priority factor for all users as they first submit jobs
 is set by the configuration variable \Macro{DEFAULT\_PRIO\_FACTOR},
-and defaults to the value 1.0.
-This default makes the EUP the same as the RUP.
+and defaults to the value 1000.0.
 If desired, the priority factors of
 specific users can be increased using \Condor{userprio},
 so that some are served preferentially.
@@ -152,7 +151,8 @@ To avoid this situation, the \Macro{PREEMPTION\_REQUIREMENTS}
 configuration variable is defined for and used only by 
 the \Condor{negotiator} daemon
 to specify the conditions that must be met for a preemption to
-occur.  It is usually defined to deny preemption if a current running
+occur.  When preemption is enabled,
+it is usually defined to deny preemption if a current running
 job has been running for a relatively short period of time.  This
 effectively limits the number of preemptions per resource per time
 interval.
@@ -161,8 +161,8 @@ due to user priority.  It does not have any effect if the machine's
 \MacroNI{RANK}
 expression prefers a different job, or if the machine's policy
 causes the job to vacate due to other activity on the machine.
-See section \ref{sec:Disabling Preemption} for a general discussion of
-limiting preemption.
+See section \ref{sec:DisablingPreemption} for the current default
+policy on preemption.
 
 The following ephemeral attributes may be used within policy definitions.
 Care should be taken when using these attributes, 
@@ -409,7 +409,8 @@ Otherwise, give the machine to the job that the job ranks highest.
 If the machine ranked highest is already running a job,
 we may preempt running job
 for the new job. 
-A default policy for preemption states that the user must
+When preemption is enabled,
+a reasonable policy states that the user must
 have a 20\Percent\  better priority in order for preemption to succeed.
 If the job has no preferences as to what sort of machine it gets,
 matchmaking gives it the first idle resource to meet its requirements.

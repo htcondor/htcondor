@@ -19,7 +19,7 @@ struct AttrPairToFirst :
 
 typedef boost::transform_iterator<AttrPairToFirst, classad::AttrList::iterator> AttrKeyIter;
 
-class ExprTreeHolder;
+struct ExprTreeHolder;
 
 struct AttrPairToSecond :
   public std::unary_function<std::pair<std::string, classad::ExprTree*> const&, boost::python::object>
@@ -46,6 +46,11 @@ struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassA
     void InsertAttrObject( const std::string &attr, boost::python::object value);
 
     ExprTreeHolder LookupExpr(const std::string &attr) const;
+
+    boost::python::object Flatten(boost::python::object input) const;
+
+    bool matches(boost::python::object) const;
+    bool symmetricMatch(boost::python::object) const;
 
     std::string toRepr();
 

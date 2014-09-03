@@ -27,7 +27,6 @@
 #include "condor_string.h"
 #include "condor_environ.h"
 #include "CondorError.h"
-#include "get_full_hostname.h"
 #include "openssl/rand.h"
 #include "condor_netdb.h"
 
@@ -43,7 +42,7 @@ Condor_Auth_SSL :: ~Condor_Auth_SSL()
 	if(m_crypto) delete(m_crypto);
 }
 
-int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /* errstack */)
+int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /* errstack */, bool /*non_blocking*/)
 {
     long err;
     char *buffer;

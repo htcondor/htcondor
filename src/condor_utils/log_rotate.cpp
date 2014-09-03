@@ -85,12 +85,13 @@ long long quantizeTimestamp(time_t tt, long long secs)
 
 
 #ifndef WIN32
+static
 int scandirectory(const char *dir, struct dirent ***namelist,
             int (*select)(const struct dirent *),
         int (*compar)(const void*, const void*) ) {
 	DIR *d;
 	struct dirent *entry;
-	register int i = 0;
+	int i = 0;
 	size_t entrysize;
 
 	if ((d=opendir(dir)) == NULL)
@@ -124,6 +125,7 @@ int scandirectory(const char *dir, struct dirent ***namelist,
 	return i;
 }
 
+static
 int doalphasort(const void *a, const void *b) {
         const struct dirent **d1 = (const struct dirent**)const_cast<void*>(a);
         const struct dirent **d2 = (const struct dirent**)const_cast<void*>(b);
@@ -284,6 +286,7 @@ static int isLogFilename(const char *filename) {
 
 #ifndef WIN32
 
+static
 int file_select(const struct dirent *entry) {
 	return isLogFilename(entry->d_name);
 }
@@ -300,6 +303,10 @@ char *findOldest(char *dirName, int *count) {
 	len = strlen(oldFile);
 	char *result = (char*)malloc(len+1 + strlen(dirName) + 1);
 	(void)sprintf(result, "%s%c%s", dirName, DIR_DELIM_CHAR, oldFile);
+	for(int i = 0; i < *count; i++) {
+		free(files[i]);
+	}
+	free(files);
 	return result;
 }
 #else

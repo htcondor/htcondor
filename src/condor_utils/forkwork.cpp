@@ -61,7 +61,7 @@ ForkWorker::Fork( void )
 			// to tell DC we're a forked child and that we want to
 			// exit via exec(), not using exit(), so that destructors
 			// don't get called...
-		daemonCore->Forked_Child_Wants_Exit_By_Exec( true );
+		daemonCore->Forked_Child_Wants_Fast_Exit( true );
 		parent = getppid( );
 		pid = -1;
 		return FORK_CHILD;
@@ -84,6 +84,7 @@ ForkWork::ForkWork( int max_workers )
 	max_workers = 0;
 # endif
 	maxWorkers = max_workers;
+	peakWorkers = 0;
 	reaperId = -1;
 	childExit = false;
 }
@@ -197,6 +198,7 @@ ForkWork::NewJob( void )
 	  if ( FORK_PARENT == status ) {
 		  dprintf( D_ALWAYS, "Number of Active Workers %d\n", workerList.Number());
 		  workerList.Append( worker );
+		  peakWorkers = MAX( peakWorkers, workerList.Number() );
 	  } else if ( FORK_FAILED == status ) {
 		  delete worker;
 	  } else {

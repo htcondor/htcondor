@@ -190,6 +190,10 @@ class Env {
 		// ASSERTS if it runs out of memory.
 	bool SetEnv( const MyString &, const MyString & );
 
+		// Removes an environment variable; returns true if the variable
+		// was previously in the environment.
+	bool DeleteEnv( const std::string & );
+
 		// Update ClassAd with new environment, possibly adjusting the
 		// format depending on the Condor version and opsys of the
 		// receiver.

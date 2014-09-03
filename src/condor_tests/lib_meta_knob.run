@@ -1,0 +1,669 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+
+my $paramfile = "param_info.in";
+my $testname = "lib_meta_knob";
+
+my %metaknobs = ();
+my $harvesting = 0;
+
+my %lookups = (
+	"CONDOR_HOST" => 1,
+	"DAEMON_LIST" => 1,
+	"DETECTED_MEMORY" => 1,
+	"GPU_DISCOVERY_EXTRA" => 1,
+	"LIBEXEC" => 1,
+	"NUM_CPUS" => 1,
+	"RELEASE_DIR" => 1,
+	"SBIN" => 1,
+);
+
+sub ccv_getval {
+	my $lookup = shift;
+	my @response = ();
+	my $cmd_retval = 0;
+	my $res = runCondorTool("condor_config_val $lookup",\@response,2,{emit_output=>0,expect_result=>\ANY},\$cmd_retval);
+	#print "ccv_getval: lookup:$lokup $res:$res cmd_retval:$cmd_retval\n";
+	if(($res == 1)&&($cmd_cmd_retval == 0)) {
+		my $value = $response[0];
+		fullchomp($value);
+		#print "returning $value\n";
+		return($value);
+	} else {
+		my $value = $response[0];
+		fullchomp($value);
+		print "ERROR down below: $value\n";
+		return("ccv of $lookup failed");
+	}
+};
+
+
+sub get_lookups {
+	foreach my $key (sort keys %lookups) {
+		#print "looking up $key\n";
+		$lookups{$key} = ccv_getval($key);
+	}
+};
+
+sub show_lookups {
+	foreach my $key (sort keys %lookups) {
+		print "$key: $lookups{$key}\n";
+	}
+};
+
+print "Here are the initial lookups:\n";
+show_lookups();
+my @submitfiles =	();
+
+my $pid = $$;
+my $ClusterId = 0;
+
+# we will be testing this role but first get our key
+# config setting for matching the effect of the role
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER
+	#use role : execute
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfigs");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfigs",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+
+#[$ROLE.Execute]
+#friendly_name=Settings for HTCondor Execute node
+#default : @end
+#	DAEMON_LIST=$(DAEMON_LIST) STARTD
+#@end
+#review=?
+
+get_lookups();
+
+$firstappend_condor_config = '
+	DAEMON_LIST = MASTER
+	use role : execute
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfig1");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfig1",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+
+print "These are the lookups we have:\n";
+show_lookups();
+
+#Now configure again with the role.
+
+my $expected = "$lookups{DAEMON_LIST} STARTD";
+my $reply = ccv_getval(DAEMON_LIST);
+
+if($expected ne $reply) {
+	print "Ececute role failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	#print "Execute role CONDOR_CONFIG:$ENV{CONDOR_CONFIG}\n";
+	print "Execute role\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "Ececute role confirmed\n";
+	RegisterResult(1,"test_name",$testname);
+}
+
+#[$ROLE.Personal]
+#friendly_name=Settings for Personal HTCondor
+#default : @end
+#	COLLECTOR_HOST=127.0.0.1:0
+#	DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
+#	RunBenchmarks=0
+#@end
+#review=?
+
+$firstappend_condor_config = '
+	DAEMON_LIST = 
+	use role : personal
+';
+
+my $counter = 0;
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfigs2");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfigs2",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+$expected = "MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD";
+$reply = ccv_getval(DAEMON_LIST);
+
+if($expected ne $reply) {
+	print "Personal DAEMON_LIST failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	print "Personal role CONDOR_CONFIG:$ENV{CONDOR_CONFIG}\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "Personal DAEMON_LIST confirmed\n";
+	RegisterResult(1,"test_name",$testname);
+	$counter += 1;
+}
+
+$expected = "127.0.0.1:0";
+$reply = ccv_getval(COLLECTOR_HOST);
+
+if($expected ne $reply) {
+	print "Personal COLLECTOR_HOST failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	print "Personal role CONDOR_CONFIG:$ENV{CONDOR_CONFIG}\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "Personal COLLECTOR_HOST confirmed\n";
+	RegisterResult(1,"test_name",$testname);
+	$counter += 1;
+}
+
+$expected = "0";
+$reply = ccv_getval(RunBenchMarks);
+
+if($expected ne $reply) {
+	print "Personal RunBenchMarks failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	print "Personal role CONDOR_CONFIG:$ENV{CONDOR_CONFIG}\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "Personal RunBenchMarks confirmed\n";
+	RegisterResult(1,"test_name",$testname);
+	$counter += 1;
+}
+
+if($counter == 3) {
+	print "Personal role complete\n";
+	RegisterResult(1,"test_name",$testname);
+} else {
+	print "One or more parts of personal role failed got $counter expected 3\n";
+	RegisterResult(0,"test_name",$testname);
+}
+
+$counter = 0;
+
+#[$ROLE.Submit]
+#friendly_name=Settings for HTCondor Execute node
+#default : @end
+#	DAEMON_LIST=$(DAEMON_LIST) SCHEDD
+#@end
+#review=?
+
+$firstappend_condor_config = '
+	DAEMON_LIST = MASTER
+	use role : submit
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfigs3");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfigs3",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+$expected = "$lookups{DAEMON_LIST} SCHEDD";
+$reply = ccv_getval(DAEMON_LIST);
+
+if($expected ne $reply) {
+	print "Submit DAEMON_LIST failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	print "Submit role CONDOR_CONFIG:$ENV{CONDOR_CONFIG}\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "Submit DAEMON_LIST confirmed\n";
+	RegisterResult(1,"test_name",$testname);
+}
+
+#[$ROLE.CentralManager]
+#friendly_name=Settings for HTCondor Execute node
+#default : @end
+#	DAEMON_LIST=$(DAEMON_LIST) COLLECTOR NEGOTIATOR
+#@end
+#review=?
+
+$firstappend_condor_config = '
+	DAEMON_LIST = MASTER
+	use role : centralmanager
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfigs4");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfigs4",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+$expected = "$lookups{DAEMON_LIST} COLLECTOR NEGOTIATOR";
+$reply = ccv_getval(DAEMON_LIST);
+
+if($expected ne $reply) {
+	print "Collector DAEMON_LIST failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	print "CentralManager role CONDOR_CONFIG:$ENV{CONDOR_CONFIG}\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "Collector DAEMON_LIST confirmed\n";
+	RegisterResult(1,"test_name",$testname);
+}
+
+#[$FEATURE.GPU_DISCOVERY]
+#friendly_name=Settings for to detect and use GPUs as custom resources
+#default : @end
+#	MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
+#	ENVIRONMENT_FOR_AssignedGPUs=CUDA_VISIBLE_DEVICES, GPU_DEVICE_ORDINAL
+#@end
+#review=?
+
+# Lets test an non-metaknob and ensure it is a config error. Since we
+# are not actually starting, it will be caught by the condor_config_val
+# oin the post tunepersonal condor when it tries to get the DAEMON_LIST
+
+$firstappend_condor_config = '
+	DAEMON_LIST = 
+	use feature : gpu_discovery
+';
+
+my $counter = 0;
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfig5");
+
+my @startupoutput_tune = ();
+my @startupoutput_start = ();
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfig5",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+	catch_startup_tune => \@startupoutput_tune,
+	catch_startup_start => \@startupoutput_start,
+);
+
+my $outputsize_tune = @startupoutput_tune;
+my $outputsize_start = @startupoutput_start;
+
+#print "****************** size of output: $outputsize_tune ************\n";
+
+if($outputsize_tune > 0) {
+	print "StartupError: $startupoutput_tune[0]\n";
+	print "Goood a bad meta-knob is caught by parser\n";
+	RegisterResult(1,"test_name",$testname);
+} else {
+	print "BAD parser did not detect a bogus meta-knob\n";
+	RegisterResult(0,"test_name",$testname);
+}
+
+$counter = 0;
+
+#[$FEATURE.GPUs]
+#friendly_name=Settings for to detect and use GPUs as custom resources
+#default : @end
+	#MACHINE_RESOURCE_INVENTORY_GPUs=$(LIBEXEC)/condor_gpu_discovery -properties $(GPU_DISCOVERY_EXTRA)
+	#ENVIRONMENT_FOR_AssignedGPUs=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES
+	#ENVIRONMENT_VALUE_FOR_UnAssignedGPUs=10000
+#@end
+#review=?
+
+$firstappend_condor_config = '
+	use feature : gpus
+';
+
+my $counter = 0;
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfigs6");
+
+my @startupoutput_tune = ();
+my @startupoutput_start = ();
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfigs6",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+$expected = "$lookups{LIBEXEC}/condor_gpu_discovery -properties ";
+$reply = ccv_getval(MACHINE_RESOURCE_INVENTORY_GPUs);
+
+if($expected ne $reply) {
+	print "GpuDiscovery MACHINE_RESOURCE_INVENTORY_GPUs failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	print "GpuDiscovery feature CONDOR_CONFIG:$ENV{CONDOR_CONFIG}\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "GpuDiscovery MACHINE_RESOURCE_INVENTORY_GPUs confirmed\n";
+	RegisterResult(1,"test_name",$testname);
+	$counter += 1;
+}
+
+$expected = "GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES";
+$reply = ccv_getval(ENVIRONMENT_FOR_AssignedGPUs);
+
+if($expected ne $reply) {
+	print "GpuDiscovery ENVIRONMENT_FOR_AssignedGPUs failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	print "GpuDiscovery feature CONDOR_CONFIG:$ENV{CONDOR_CONFIG}\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "GpuDiscovery ENVIRONMENT_FOR_AssignedGPUs confirmed\n";
+	RegisterResult(1,"test_name",$testname);
+	$counter += 1;
+}
+
+if($counter == 2) {
+	print "GpuDiscovery feature complete\n";
+	RegisterResult(1,"test_name",$testname);
+} else {
+	print "One or more parts of GpuDiscovery feature failed got $counter expected 2\n";
+	RegisterResult(0,"test_name",$testname);
+}
+
+$counter = 0;
+
+#[$FEATURE.VMWARE]
+#friendly_name=Settings for to use VMWARE with VM Universe
+#default : @end
+#	VM_TYPE=vmware
+#	VM_MEMORY=$(DETECTED_MEMORY)/($(NUM_CPUS)+1)
+#	VM_MAX_NUMBER=$(NUM_CPUS)
+#	VM_NETWORKING_TYPE=nat
+#	VM_NETWORKING_DEFAULT_TYPE=nat
+#	VMWARE_PERL=perl
+#	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware
+#	VMWARE_NAT_NETWORKING_TYPE=nat
+#	VMWARE_BRIDGE_NETWORKING_TYPE=bridged
+#	VMWARE_NETWORKING_TYPE=nat
+#	#VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
+#@end
+#review=?
+# create a hash of values we need to have to double check
+# the vaules generated by the meta knobs.
+
+my $firstappend_condor_config = '
+	use feature : vmware
+';
+
+my $counter = 0;
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfigs7");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfigs7",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+$expected = "$lookups{NUM_CPUS}";
+$reply = ccv_getval(VM_MAX_NUMBER);
+
+if($expected ne $reply) {
+	print "VMWARE VM_MAX_NUMBER failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	print "VMWARE feature CONDOR_CONFIG:$ENV{CONDOR_CONFIG}\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "VMWARE VM_MAX_NUMBER confirmed\n";
+	RegisterResult(1,"test_name",$testname);
+	$counter += 1;
+}
+
+$expected = "$lookups{SBIN}/condor_vm_vmware";
+$reply = ccv_getval(VMWARE_SCRIPT);
+
+if($expected ne $reply) {
+	print "VMWARE VMWARE_SCRIPT failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	print "VMWARE feature CONDOR_CONFIG:$ENV{CONDOR_CONFIG}\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "VMWARE VMWARE_SCRIPT confirmed\n";
+	RegisterResult(1,"test_name",$testname);
+	$counter += 1;
+}
+
+if($counter == 2) {
+	print "VMWARE feature complete\n";
+	RegisterResult(1,"test_name",$testname);
+} else {
+	print "One or more parts of VMWARE feature failed got $counter expected 2\n";
+	RegisterResult(0,"test_name",$testname);
+}
+
+##########################################################
+#
+# WHITE SPACE TESTING BELOW
+#
+##########################################################
+
+#[$ROLE.Execute]
+#friendly_name=Settings for HTCondor Execute node
+#default : @end
+#	DAEMON_LIST=$(DAEMON_LIST) STARTD
+#@end
+#review=?
+
+$firstappend_condor_config = '
+	DAEMON_LIST = MASTER
+	@use role : execute
+';
+
+print "****************** about to test -\@use role : execute- \n\n\n";
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfigs8");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfigs8",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+$expected = "$lookups{DAEMON_LIST} STARTD";
+$reply = ccv_getval(DAEMON_LIST);
+
+if($expected ne $reply) {
+	print "WhiteSpace:@use role : execute failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "WhiteSpace:@use role : execute worked\n";
+	RegisterResult(1,"test_name",$testname);
+}
+
+$firstappend_condor_config = '
+	DAEMON_LIST = MASTER
+	use role: execute
+';
+
+print "****************** about to test -use role: execute- \n\n\n";
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfigs9");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfigs9",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+$expected = "$lookups{DAEMON_LIST} STARTD";
+$reply = ccv_getval(DAEMON_LIST);
+
+if($expected ne $reply) {
+	print "WhiteSpace:use role: execute failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "WhiteSpace:use role: execute worked\n";
+	RegisterResult(1,"test_name",$testname);
+}
+
+$firstappend_condor_config = '
+	DAEMON_LIST = MASTER
+	use role :execute
+';
+
+print "****************** about to test -use role :execute- \n\n\n";
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfigs10");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfigs10",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+$expected = "$lookups{DAEMON_LIST} STARTD";
+$reply = ccv_getval(DAEMON_LIST);
+
+if($expected ne $reply) {
+	print "WhiteSpace:use role :execute failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "WhiteSpace:use role :execute worked\n";
+	RegisterResult(1,"test_name",$testname);
+}
+
+$firstappend_condor_config = '
+	DAEMON_LIST = MASTER
+	use role : execute 
+';
+
+print "****************** about to test -use role : execute - \n\n\n";
+
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfigs11");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfigs11",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+$expected = "$lookups{DAEMON_LIST} STARTD";
+$reply = ccv_getval(DAEMON_LIST);
+
+if($expected ne $reply) {
+	print "WhiteSpace:use role : execute < space after : failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "WhiteSpace:use role : execute < space after : worked\n";
+	RegisterResult(1,"test_name",$testname);
+}
+
+##########################################################
+#
+# CASE INSENSITIVITY TESTING BELOW
+#
+##########################################################
+
+#[$ROLE.Execute]
+#friendly_name=Settings for HTCondor Execute node
+#default : @end
+#	DAEMON_LIST=$(DAEMON_LIST) STARTD
+#@end
+#review=?
+
+$firstappend_condor_config = '
+	DAEMON_LIST = MASTER
+	USE ROLE : execute 
+';
+
+print "****************** about to test -USE ROLE : execute - \n\n\n";
+
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfigs12");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfigs12",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+$expected = "$lookups{DAEMON_LIST} STARTD";
+$reply = ccv_getval(DAEMON_LIST);
+
+if($expected ne $reply) {
+	print "Case TEST:USE ROLE : execute: failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "Case TEST:USE ROLE : execute: worked\n";
+	RegisterResult(1,"test_name",$testname);
+}
+
+$firstappend_condor_config = '
+	DAEMON_LIST = MASTER
+	UsE rOlE : eXeCuTe
+';
+
+print "****************** about to test -UsE rOlE : eXeCuTe - \n\n\n";
+
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"metaknobconfigs13");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "metaknobconfigs13",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+	do_not_start => "TRUE",
+);
+
+$expected = "$lookups{DAEMON_LIST} STARTD";
+$reply = ccv_getval(DAEMON_LIST);
+
+if($expected ne $reply) {
+	print "Case TEST:UsE rOlE : eXeCuTe: failed\n";
+	print "MISMATCH:$expected NE $reply\n";
+	RegisterResult(0,"test_name",$testname);
+} else {
+	print "Case TEST:UsE rOlE : eXeCuTe: worked\n";
+	RegisterResult(1,"test_name",$testname);
+}
+
+EndTest();
+

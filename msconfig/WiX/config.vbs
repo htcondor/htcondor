@@ -6,8 +6,15 @@ Function ReplaceConfig(configName, newValue, srcTxt)
   Set matches = re.Execute(srcTxt)
   if matches.Count = 0 then
     re.Pattern = "^#" & configName & "[ \t]*=.+$"
+    Set matches = re.Execute(srcText)
+    if matches.Count = 0 then
+      ' can't just append new attrib because of possible $$, so append dummy, then search and replace it with real stuff.
+      srcTxt = srcTxt & configName & " = _" & VbCrLf
+      re.Pattern = "^" & configName & "[ \t]*=.+$"
+      re.Execute(srcText)
+    end if
   end if
-  ReplaceConfig = re.Replace(srcTxt, configName & "=" & newValue)
+  ReplaceConfig = re.Replace(srcTxt, configName & " = " & newValue)
 End Function
 
 Function CreateConfig2()
@@ -29,13 +36,14 @@ Function CreateConfig2()
 
   Set Configfile = fso.OpenTextFile(path & "etc\condor_config.generic", 1, True)
   configTxt = Configfile.ReadAll
+  configTxt = configTxt & VbCrLf
   Configfile.Close
 
   configTxt = ReplaceConfig("RELEASE_DIR",strippedPath,configTxt)
 
   localConfig = Session.Property("LOCALCONFIG")
   if Left(localConfig, 4) = "http" Then
-     localConfigCmd = "config_fetch " & localConfig & " $$(LOCAL_DIR)\condor_config.local_cache |"
+     localConfigCmd = "condor_urlfetch -$$(SUBSYSTEM) " & localConfig & " $$(LOCAL_DIR)\condor_config.url_cache |"
      configTxt = ReplaceConfig("LOCAL_CONFIG_FILE",localConfigCmd,configTxt)
   Else
      configTxt = ReplaceConfig("LOCAL_CONFIG_FILE",localConfig,configTxt)
@@ -44,7 +52,7 @@ Function CreateConfig2()
 
   Select Case Session.Property("NEWPOOL")
   Case "Y"
-   configTxt = ReplaceConfig("CONDOR_HOST", "$$(FULL_HOSTNAME)",configTxt)
+   configTxt = ReplaceConfig("CONDOR_HOST", "$(FULL_HOSTNAME)",configTxt)
    configTxt = ReplaceConfig("COLLECTOR_NAME",Session.Property("POOLNAME"),configTxt)
    daemonList = daemonList & " COLLECTOR NEGOTIATOR"
   Case "N"

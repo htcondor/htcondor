@@ -75,7 +75,7 @@ static child_handle_t remove_child(FILE* fp)
 /*
 
   FILE *my_popenv(char *const args[], const char *mode, int want_stderr);
-  FILE *my_popen(ArgList &args, const char *mode, int want_stderr, Env *env_ptr);
+  FILE *my_popen(ArgList &args, const char *mode, int want_stderr, Env *env_ptr, bool drop_privs);
 
   This is a popen(3)-like function that intentionally avoids
   calling out to the shell in order to limit what can be done for
@@ -129,7 +129,8 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 
 	// create the pipe (and mark the parent's end as uninheritable)
 	if (CreatePipe(&hReadPipe, &hWritePipe, &saPipe, 0) == 0) {
-		dprintf(D_ALWAYS, "my_popen: CreatePipe failed\n");
+		DWORD err = GetLastError();
+		dprintf(D_ALWAYS, "my_popen: CreatePipe failed, err=%d\n", err);
 		return NULL;
 	}
 	if (read_mode) {
@@ -177,9 +178,10 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 	                       &pi);                   // receive PROCESS_INFORMATION
 	free(cmd);
 	if (result == 0) {
+		DWORD err = GetLastError();
 		CloseHandle(hParentPipe);
 		CloseHandle(hChildPipe);
-		dprintf(D_ALWAYS, "my_popen: CreateProcess failed\n");
+		dprintf(D_ALWAYS, "my_popen: CreateProcess failed err=%d\n", err);
 		return NULL;
 	}
 
@@ -211,8 +213,10 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 }
 
 FILE *
-my_popen(ArgList &args, const char *mode, int want_stderr, Env *zkmENV)
+my_popen(ArgList &args, const char *mode, int want_stderr, Env *zkmENV, bool drop_privs)
 {
+	/* drop_privs HAS NO EFFECT ON WINDOWS */
+
 	MyString cmdline, err;
 	if (!args.GetArgsStringWin32(&cmdline, 0, &err)) {
 		dprintf(D_ALWAYS, "my_popen: error making command line: %s\n", err.Value());
@@ -282,7 +286,8 @@ my_popenv_impl( const char *const args[],
                 const char * mode,
                 int want_stderr,
                 uid_t privsep_uid,
-				Env *env_ptr = 0)
+		Env *env_ptr = 0,
+		bool drop_privs = true )
 {
 	int	pipe_d[2], pipe_d2[2];
 	int	parent_reads;
@@ -412,12 +417,14 @@ my_popenv_impl( const char *const args[],
 			   We wrap some of the calls in if-statements to quiet some
 			   compilers that object to us not checking the return values.
 			*/
-		euid = geteuid();
-		egid = getegid();
-		if( seteuid( 0 ) ) { }
-		setgroups( 1, &egid );
-		if( setgid( egid ) ) { }
-		if( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
+		if (drop_privs) {
+			euid = geteuid();
+			egid = getegid();
+			if( seteuid( 0 ) ) { }
+			setgroups( 1, &egid );
+			if( setgid( egid ) ) { }
+			if( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
+		}
 
 			/* before we exec(), clear the signal mask and reset SIGPIPE
 			   to SIG_DFL
@@ -469,6 +476,13 @@ my_popenv_impl( const char *const args[],
 		close(pipe_d2[0]);
 		close(pipe_d[0]);
 		close(pipe_d[1]);
+
+		/* Ensure child process is dead, then wait for it to exit */
+		kill(pid, SIGKILL);
+		while( waitpid(pid,NULL,0) < 0 && errno == EINTR ) {
+			/* NOOP */
+		}
+
 		return NULL;
 	}
 		/* Handle case where exec fails */
@@ -476,6 +490,13 @@ my_popenv_impl( const char *const args[],
 		fclose(fh);
 		close(pipe_d[0]);
 		close(pipe_d[1]);
+
+		/* Ensure child process is dead, then wait for it to exit */
+		kill(pid, SIGKILL);
+		while( waitpid(pid,NULL,0) < 0 && errno == EINTR ) {
+			/* NOOP */
+		}
+
 		errno = exit_code;
 		return NULL;
 	}
@@ -538,19 +559,20 @@ my_popen_impl(ArgList &args,
               const char *mode,
               int want_stderr,
               uid_t privsep_uid,
-			  Env *env_ptr)
+              Env *env_ptr,
+              bool drop_privs = true)
 {
 	char **string_array = args.GetStringArray();
-	FILE *fp = my_popenv_impl(string_array, mode, want_stderr, privsep_uid, env_ptr);
+	FILE *fp = my_popenv_impl(string_array, mode, want_stderr, privsep_uid, env_ptr, drop_privs);
 	deleteStringArray(string_array);
 
 	return fp;
 }
 
 FILE*
-my_popen(ArgList &args, const char *mode, int want_stderr, Env *env_ptr)
+my_popen(ArgList &args, const char *mode, int want_stderr, Env *env_ptr, bool drop_privs)
 {
-	return my_popen_impl(args, mode, want_stderr, (uid_t)-1, env_ptr);
+	return my_popen_impl(args, mode, want_stderr, (uid_t)-1, env_ptr, drop_privs);
 }
 
 FILE*

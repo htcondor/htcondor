@@ -53,7 +53,7 @@ const int HourSec=MinuteSec*60;
 const int DaySec=HourSec*24;
 const int WeekSec=DaySec*7;
 const int MonthSec=DaySec*30;
-const int YearSec=DaySec*365;
+//const int YearSec=DaySec*365;
 
 //------------------------------------------------------------------------
 

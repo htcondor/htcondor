@@ -1,0 +1,243 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-8-3}Development Release Series 8.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is the development release series of HTCondor.
+The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-3-2}Version 8.3.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.3.2 not yet released.
+%\item HTCondor version 8.3.2 released on Month Date, 2014.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-3-1}Version 8.3.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.3.1 not yet released.
+%\item HTCondor version 8.3.1 released on Month Date, 2014.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item If cgroups are enabled on Linux platforms, 
+the amount of swap space used by a job is now limited to the 
+size specified by the machine ClassAd attribute \Attr{VirtualMemory} 
+for the slot that the job is running on.
+\Ticket{4417}
+
+\item The new configuration variable \Macro{COLLECTOR\_PORT} specifies
+the default port used by the \Condor{collector} daemon and command line tools.
+The default value is 9618.
+This default is the same port as has been used in previous HTCondor versions.
+\Ticket{4432}
+
+\item The \Condor{shared\_port} daemon is now enabled by default 
+for new installations on non-Windows platforms.
+With this change, 
+all HTCondor daemons will share port 9618 for all incoming TCP connections,
+greatly simplifying firewall configuration.  
+Only users of HTCondor-G submitting to Globus GRAM endpoints 
+will need additional incoming TCP ports in the firewall.
+
+Note that this causes \emph{all} HTCondor hosts to use 
+TCP port 9618 by default,
+differing from previous behavior.
+Previously, only the \Condor{collector} host used a fixed port.
+To restore the previous behavior, 
+set the new configuration variable \Macro{SHARED\_PORT\_PORT} to \Expr{0}.
+\Ticket{3813}
+
+\item The \Condor{shared\_port} daemon will now work 
+if the value of configuration variable \Macro{DAEMON\_SOCKET\_DIR} is
+longer than 100 characters in length.
+\Ticket{4465}
+
+\item Improvements to CCB increase performance.
+\Ticket{4453}
+
+\item The use of a single log file to write events and enforce the 
+dependencies of a DAG represented by a \Condor{dagman} instance is mandatory.
+To implement this,
+the \Opt{-dont\_use\_default\_node\_log} command-line
+option to \Condor{submit\_dag} is disabled,
+and an attempt to set configuration variable
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to \Expr{False} will generate an
+error.
+\Ticket{3994}
+
+\item The new \Condor{dagman} configuration variable
+\Macro{DAGMAN\_SUPPRESS\_JOB\_LOGS} allows users to prevent DAG node
+jobs from writing to the log file specified in their submit description file.
+\Ticket{4353}
+
+\item Added optional \Expr{@(OWNER)} and \Expr{@(NODE\_NAME)} macros
+to the \Macro{DAGMAN\_DEFAULT\_NODE\_LOG} configuration macro.
+This makes it easier to avoid log file collisions.
+\Ticket{4334}
+
+\item \Condor{submit} will no longer insert an \Attr{OpSys} requirement
+for a job
+when one of \Attr{OpSysAndVer}, \Attr{OpSysLongName}, \Attr{OpSysName},
+or \Attr{OpSysShortName} is already specified by the user in
+the \Attr{Requirements} expression of the submit description file.
+\Ticket{4519}
+
+\item The user-specific global configuration file \Expr{~/.condor/condor\_config} has
+been removed, and a user-specific override configuration file has been added.
+The user-specific override configuration file defaults to \Expr{~/.condor/user\_config}.
+If it exists it is parsed after all of the other configuration files and before the
+environment overrides are parsed.
+The new configuration parameter \Macro{USER\_CONFIG\_FILE} can be used to change the
+default filename or to disable this feature.
+This feature now works on Windows as well as Unix and Linux.
+\Ticket{3158}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-3-0}Version 8.3.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.3.0 released on August 12, 2014.
+This release contains all improvements and bug fixes from 
+HTCondor version 8.2.2.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item When a daemon creates a child daemon process, it also creates a
+security session shared with the child daemon.
+This makes the initial communication between the daemons more efficient.
+\Ticket{4405}
+
+\item Negotiation cycle performance has been improved, especially
+over a wide-area network, by reducing network traffic and latency
+between a submit machine and a central manager.
+The new configuration variable 
+\Macro{NEGOTIATOR\_RESOURCE\_REQUEST\_LIST\_SIZE}
+does performance tuning, as defined 
+in section~\ref{param:NegotiatorResourceRequestListSize}.
+\Ticket{4460}
+
+\item The synchronization of the job event log was improved by only
+using \Procedure{fsync} where necessary and 
+\Procedure{fdatasync} where sufficient.  
+This should provide a small reduction in disk I/O to 
+the \Condor{schedd} daemon.
+\Ticket{4283}
+
+\item CPU usage by the \Condor{collector} has been reduced when
+handling normal queries from \Condor{status},
+and CPU usage by the \Condor{schedd} has been reduced when
+handling normal queries from \Condor{q}.
+\Ticket{4448}
+
+\item HTCondor can now internally cache the result of Globus authorization
+callouts.  
+The caching behavior is enabled by setting configuration variable
+\Macro{GSS\_ASSIST\_GRIDMAP\_CACHE\_EXPIRATION} to a non-zero value.
+This feature will be useful for sites that use the Globus authorization
+callouts based only on DN and VOMS FQAN, and for sites that have 
+performance issues.
+\Ticket{4138}
+
+\item The job ClassAd attribute \Attr{DAG\_Status} is included in 
+the \File{dagman.out} file.
+\Ticket{4381}
+
+\item The new \Opt{-DoRecovery} command line option for \Condor{dagman}
+and \Condor{submit\_dag} causes \Condor{dagman} to run in
+recovery mode.
+\Ticket{2218}
+
+\item The new \Opt{-ads} option to \Condor{status} permits a set of ClassAds
+to be read from a file, processing the ClassAds as if they came from
+the \Condor{collector}.
+\Ticket{4414}
+
+\item Daemon ClassAd hooks implementing Startd Cron functionality  
+can now return multiple ClassAds,
+and the hooks can specify which ClassAds their output should merge into.
+\Ticket{4398}
+
+\item Two new \Condor{schedd} ClassAd statistics attributes are
+available: \Attr{JobsRunning} and \Attr{JobsAccumExceptionalBadputTime}.
+\Ticket{4409}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug that caused \Condor{dagman} to unnecessarily attempt
+to read node job submit description files, 
+which could cause spurious warnings when in recovery mode.
+Strictly speaking, the bug is fixed only for the
+default case in which \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set
+to \Expr{True}.
+\Ticket{3843}
+
+\item Fixed a bug in the \Condor{schedd} daemon that caused the values
+of the ClassAd attributes \Attr{JobsRunningSizes} and 
+\Attr{ JobsRunningRuntimes} to be much larger than they should have been.
+\Ticket{4409}
+
+\end{itemize}
+

@@ -18,6 +18,7 @@
 #include "compat_classad.h"
 
 #include "classad_wrapper.h"
+#include "module_lock.h"
 
 using namespace boost::python;
 
@@ -75,27 +76,39 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
 
     ClassAd ad_copy; ad_copy.CopyFrom(ad);
     Daemon d(&ad_copy, d_type, NULL);
-    if (!d.locate())
+    bool result;
+    {
+    condor::ModuleLock ml;
+    result = !d.locate();
+    }
+    if (result)
     {
         PyErr_SetString(PyExc_RuntimeError, "Unable to locate daemon.");
         throw_error_already_set();
     }
     ReliSock sock;
-    if (!sock.connect(d.addr()))
+    {
+    condor::ModuleLock ml;
+    result = !sock.connect(d.addr());
+    }
+    if (result)
     {
         PyErr_SetString(PyExc_RuntimeError, "Unable to connect to the remote daemon");
         throw_error_already_set();
     }
-    if (!d.startCommand(dc, &sock, 0, NULL))
+    {
+    condor::ModuleLock ml;
+    result = !d.startCommand(dc, &sock, 0, NULL);
+    }
+    if (result)
     {
         PyErr_SetString(PyExc_RuntimeError, "Failed to start command.");
         throw_error_already_set();
     }
     if (target.size())
     {
-        std::vector<unsigned char> target_cstr; target_cstr.reserve(target.size()+1);
-        memcpy(&target_cstr[0], target.c_str(), target.size()+1);
-        if (!sock.code(&target_cstr[0]))
+        std::string target_to_send = target;
+        if (!sock.code(target_to_send))
         {
             PyErr_SetString(PyExc_RuntimeError, "Failed to send target.");
             throw_error_already_set();

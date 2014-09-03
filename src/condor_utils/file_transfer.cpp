@@ -1323,6 +1323,7 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 		!sock->end_of_message() ) {
 		dprintf(D_FULLDEBUG,
 			    	"FileTransfer::HandleCommands failed to read transkey\n");
+		if (transkey) free(transkey);
 		return 0;
 	}
 	dprintf(D_FULLDEBUG,
@@ -1427,7 +1428,7 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		}
 		dprintf( D_ALWAYS, "%s\n", transobject->Info.error_desc.Value() );
 	} else {
-		if( WEXITSTATUS(exit_status) != 0 ) {
+		if( WEXITSTATUS(exit_status) == 1 ) {
 			dprintf( D_ALWAYS, "File transfer completed successfully.\n" );
 			transobject->Info.success = true;
 		} else {
@@ -1448,7 +1449,13 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 
 		// if we haven't already read the final status update, do it now
 	if( transobject->registered_xfer_pipe ) {
-		transobject->ReadTransferPipeMsg();
+		// It's possible that the pipe contains a progress update message
+		// followed by the final update message. Keep reading until we
+		// get the final message or encounter an error.
+		do {
+			transobject->ReadTransferPipeMsg();
+		} while ( transobject->Info.success &&
+				  transobject->Info.xfer_status != XFER_STATUS_DONE );
 	}
 
 	if( transobject->registered_xfer_pipe ) {
@@ -4242,8 +4249,12 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	plugin_args.AppendArg(dest);
 	dprintf(D_FULLDEBUG, "FILETRANSFER: invoking: %s %s %s\n", plugin.Value(), source, dest);
 
+	// determine if we want to run the plugin with root priv (if available).
+	// if so, drop_privs should be false.  the default is to drop privs.
+	bool drop_privs = !param_boolean("RUN_FILETRANSFER_PLUGINS_WITH_ROOT", false);
+
 	// invoke it
-	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env);
+	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env, drop_privs);
 	int plugin_status = my_pclose(plugin_pipe);
 
 	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", plugin_status);

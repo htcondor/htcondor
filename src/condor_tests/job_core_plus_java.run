@@ -25,6 +25,11 @@ $cmd = 'job_core_plus_java.cmd';
 $testdesc =  'Condor_submit correctly places things into JobAds - java U';
 $testname = "job_core_plus_java";
 
+my $javainit = CondorTest::JavaInitialize($testname);
+if($javainit == 0) {
+	die "No java found\n";
+}
+
 $success = sub 
 {
 	my %info = @_;
@@ -63,7 +68,7 @@ $execute = sub
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_q -l $cluster";
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
 	if(!$status)
 	{
 		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);

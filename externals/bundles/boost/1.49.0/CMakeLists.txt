@@ -106,7 +106,7 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 	endif()
 
 	set(BOOST_FILENAME boost_1_49_0)
-	condor_pre_external( BOOST ${BOOST_FILENAME}-p2 "lib;${INCLUDE_LOC}" "done")
+	condor_pre_external( BOOST ${BOOST_FILENAME}-p3 "lib;${INCLUDE_LOC}" "done")
 
 	set(BOOST_MIN_BUILD_DEP --with-thread --with-test --with-python)
 	#if( "${CONDOR_PLATFORM}" STREQUAL "x86_64_Fedora18" )
@@ -115,6 +115,7 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 	# when we update to a newer boost we should be able to remove this patch
 	if (LINUX)
 		set(BOOST_PATCH patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/boost.patch)
+		set(BOOST_MIN_BUILD_DEP ${BOOST_MIN_BUILD_DEP} --with-filesystem --with-regex --with-program_options --with-date_time)
 	else ()
 		set(BOOST_PATCH echo "nothing")
 	endif()

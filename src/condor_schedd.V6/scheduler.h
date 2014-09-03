@@ -153,13 +153,11 @@ class match_rec: public ClaimIdParser
 
     int     		status;
 	shadow_rec*		shadowRec;
-	int				alive_countdown;
 	int				num_exceptions;
 	int				entered_current_status;
 	ClassAd*		my_match_ad;
 	char*			user;
 	char*			pool;		// negotiator hostname if flocking; else NULL
-	bool			sent_alive_interval;
 	bool            is_dedicated; // true if this match belongs to ded. sched.
 	bool			allocated;	// For use by the DedicatedScheduler
 	bool			scheduled;	// For use by the DedicatedScheduler
@@ -170,6 +168,9 @@ class match_rec: public ClaimIdParser
 		// to support flocking, this will be set to the id of the
 		// punched hole
 	MyString*		auth_hole_id;
+
+	match_rec *m_paired_mrec;
+	bool m_can_start_jobs;
 
 	bool m_startd_sends_alives;
 
@@ -337,11 +338,11 @@ class Scheduler : public Service
 	void			send_all_jobs_prioritized(ReliSock*, struct sockaddr_in*);
 
 	friend	int		NewProc(int cluster_id);
-	friend	int		count(ClassAd *);
+	friend	int		count_a_job(ClassAd *);
 	friend	void	job_prio(ClassAd *);
 	friend  int		find_idle_local_jobs(ClassAd *);
 	friend	int		updateSchedDInterval( ClassAd* );
-    friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false);
+    friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
 	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify, bool log );
@@ -530,6 +531,10 @@ class Scheduler : public Service
 	HashTable <PROC_ID, ClassAd *> *resourcesByProcID;
   
 	bool usesLocalStartd() const { return m_use_startd_for_local;}
+
+	void swappedClaims( DCMsgCallback *cb );
+	bool CheckForClaimSwap(match_rec *rec);
+
 	
 private:
 	
@@ -657,6 +662,10 @@ private:
 	struct sockaddr_in	From;
 	int					Len; 
 
+	ExprTree* slotWeight;
+	ClassAd*  slotWeightMapAd;
+	bool			m_use_slot_weights;
+
 	// utility functions
 	int				count_jobs();
 	bool			fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level=-1); 
@@ -665,6 +674,7 @@ private:
 	int			command_history(int, Stream* stream);
 	int			history_helper_launcher(const HistoryHelperState &state);
 	int			history_helper_reaper(int, int);
+	int			command_query_job_ads(int, Stream* stream);
 	void   			check_claim_request_timeouts( void );
 	int				insert_owner(char const*);
 	void			child_exit(int, int);
@@ -804,6 +814,13 @@ private:
 	int m_local_startd_pid;
 	std::map<std::string, ClassAd *> m_unclaimedLocalStartds;
 	std::map<std::string, ClassAd *> m_claimedLocalStartds;
+
+    int m_userlog_file_cache_max;
+    time_t m_userlog_file_cache_clear_last;
+    int m_userlog_file_cache_clear_interval;
+    WriteUserLog::log_file_cache_map_t m_userlog_file_cache;
+    void userlog_file_cache_clear(bool force = false);
+    void userlog_file_cache_erase(const int& cluster, const int& proc);
 
 	// State for the history helper queue.
 	std::vector<HistoryHelperState> m_history_helper_queue;

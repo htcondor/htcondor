@@ -34,8 +34,8 @@ The user's submit description file (and the job's \SubmitCmd{universe})
 are independent of the flocking mechanism.
 
 Other forms of grid computing are enabled by using
-the \SubmitCmd{grid} \SubmitCmd{universe}
-and further specified with the \SubmitCmd{grid\_type}.
+the \SubmitCmdNI{grid} \SubmitCmdNI{universe}
+and further specified with the \SubmitCmdNI{grid\_type}.
 For any HTCondor job, 
 the job is submitted on a machine in the local HTCondor pool.
 The location where it is executed is identified as the remote machine
@@ -50,22 +50,22 @@ is to move the job from the local pool's job queue
 to the remote pool's job queue,
 it is called HTCondor-C.
 The job is submitted using the 
-\SubmitCmd{grid}
-\SubmitCmd{universe}, 
-and the \SubmitCmd{grid\_type} is \SubmitCmd{condor}.
+\SubmitCmdNI{grid}
+\SubmitCmdNI{universe}, 
+and the \SubmitCmdNI{grid\_type} is \SubmitCmdNI{condor}.
 HTCondor-C jobs have the advantage that once the job has moved
 to the remote pool's job queue,
 a network partition does not affect the execution of the job.
-A further advantage of HTCondor-C jobs is that the \SubmitCmd{universe}
+A further advantage of HTCondor-C jobs is that the \SubmitCmdNI{universe}
 of the job at the remote resource is not restricted. 
 
 When other middleware is running on the remote resource,
 such as Globus,
 HTCondor can still submit and manage jobs to be executed on
 remote resources.
-A \SubmitCmd{grid} \SubmitCmd{universe} job,
-with a \SubmitCmd{grid\_type} of
-\SubmitCmd{gt2} or \SubmitCmd{gt5}
+A \SubmitCmdNI{grid} \SubmitCmdNI{universe} job,
+with a \SubmitCmdNI{grid\_type} of
+\SubmitCmdNI{gt2} or \SubmitCmdNI{gt5}
 calls on Globus software to execute the job on a remote resource.
 Like HTCondor-C jobs, a network partition does not affect
 the execution of the job.
@@ -82,7 +82,7 @@ The remote resource appears to have joined the local HTCondor pool.
 A user submitting a job may then explicitly specify the
 remote resource as the execution site of a job.
 
-Starting with HTCondor Version 6.7.0, the \SubmitCmd{grid} universe
-replaces the \SubmitCmd{globus} universe.
-Further specification of a \SubmitCmd{grid} universe job is done
+Starting with HTCondor Version 6.7.0, the \SubmitCmdNI{grid} universe
+replaces the \SubmitCmdNI{globus} universe.
+Further specification of a \SubmitCmdNI{grid} universe job is done
 within the \SubmitCmd{grid\_resource} command in a submit description file.

@@ -22,6 +22,9 @@ use strict;
 use CondorTest;
 use Check::SimpleJob;
 
+my $smap_details = 1; # set this to non-zero for more detailed output
+my $smap_dump = 0;    # set this to non-zero to dump entire smap
+
 my $testname = CondorTest::GetDefaultTestName();
 my $temptest = CondorTest::TempFileName("$testname");
 
@@ -44,30 +47,62 @@ output = ' . $testname . '.out
 error  = ' . $testname . '.err
 ';
 
-my %memory_data = (
-	"x86_64_Ubuntu10" => "824", 
-	"x86_64_Fedora17" => "704", 
-	"x86_64_Fedora18" => "944", 
-	"x86_64_Fedora19" => "900",
-	"x86_64_Fedora20" => "900",
-	"x86_64_SL6" => "708", 
-	"x86_64_RedHat6" => "708", 
-	"x86_64_Debian6" => "908", 
-	"x86_64_Debian7" => "972", 
-	"x86_Debian6" => "564", 
-	"x86_64_RedHat5" => "676", 
-	"x86_64_Ubuntu12" => "856", 
-	"x86_RedHat6" => "528", 
-	"x86_SL5" => "508", 
-	"x86_RedHat5" => "496", 
+# expected memory for shadows by platform.
+# these are lowercase so that we can do case-insensitive lookup
+#
+# for X86_64 shadows
+my %memory_data64 = (
+	"debian6"  => "824",
+	"debian7"  => "896",
+	"fedora17" => "616",
+	"fedora18" => "868",
+	"fedora19" => "880",
+	"fedora20" => "880",
+	"redhat5"  => "588",
+	"redhat6"  => "624",
+	"redhat7"  => "888",
+	"sl6"      => "632",
+	"sl7"      => "632",
+	"ubuntu10" => "740",
+	"ubuntu12" => "884",
+);
+# for X86 shadows
+my %memory_data32 = (
+	"debian6" => "504",
+	"redhat5" => "448",
+	"redhat6" => "480",
+	"sl5"     => "452",
 );
 
+
+my $opsys;
+my $arch;
+if (CondorUtils::is_windows()) {
+   $arch = "x86"; # assume arch on windows.
+   $opsys = "Windows";
+} else {
+   my @plat = `condor_config_val arch opsysandver`;
+   chomp @plat;
+   $arch = $plat[0];	 # should really be checking the bitness of the shadow here
+   $opsys = $plat[1];
+}
+
+#my $nmi_platform = `condor_config_val CONDOR_BUILD_PLATFORM`; CondorUtils::fullchomp $nmi_platform;
+#print "Detected platform from ccv as $arch, $opsys, $nmi_platform. NMI_PLATFORM=$ENV{NMI_PLATFORM}.\n";
+
+my $random_addr = 0;
+if (-f "/proc/sys/kernel/randomize_va_space") { $random_addr = `cat /proc/sys/kernel/randomize_va_space`; chomp($random_addr); }
+print "Address randomization is $random_addr\n";
+
 my $tolerance = 1.05;
-my $platform = $ENV{NMI_PLATFORM};
-my $expectedmemory = $memory_data{$platform};
-print "Expected shadow memory = $expectedmemory\n";
+my $expectedmemory = 0;
+if ($arch =~ /64/) { 
+   $expectedmemory = $memory_data64{lc($opsys)};
+} else {
+   $expectedmemory = $memory_data32{lc($opsys)};
+}
 my $allowedmemory = ComputeMemLimit($tolerance, $expectedmemory);
-print "expected platform <$platform> memory usage <$allowedmemory>\n";
+print "Platform is $arch $opsys, expecting shadow memory = $expectedmemory, will error if > $allowedmemory.\n";
 
 # run a job and look at shadow memory usage
 my $on_ulog = sub {
@@ -77,7 +112,9 @@ my $on_ulog = sub {
   if ($text =~ /shadow_pid\s*=\s*(\d+)/) {
      my $pid = $1;
      CondorTest::debug("Got shadow PID: $pid.\n",1);
-     # CondorTest::runcmd("cat /proc/$pid/smaps");
+     CondorTest::runcmd("cat /proc/sys/kernel/randomize_va_space");
+     if (-f "/proc/self/personality") { CondorTest::runcmd("cat /proc/self/personality"); }
+     if ($smap_dump) { CondorTest::runcmd("cat /proc/$pid/smaps"); }
      smap_sum_verbose($pid);
   }
 };
@@ -101,6 +138,9 @@ sub smap_sum_verbose {
    $tot{Heap} = 0;
    $tot{Stack} = 0;
    $tot{LibData} = 0;
+   my $crypto_data = 0;
+
+   if ($smap_details) { printf "Private Prot Module\n"; }
 
    open (SMAP, "</proc/$pid/smaps");
    while (<SMAP>) {
@@ -123,7 +163,7 @@ sub smap_sum_verbose {
             } else {
                if ($lib eq "[heap]") { $tot{Heap} += $n; }
                elsif ($lib eq "[stack]") { $tot{Stack} += $n; }
-               elsif ($perm eq "rw-p") { $tot{LibData} += $n; }
+               elsif ($perm eq "rw-p") { $tot{LibData} += $n; if ($lib =~ /libcrypto.so/) { $crypto_data = $n; }}
                
                if ($lib =~ /condor_util/) { $tot{Utils} += $n; }
                elsif ($lib =~ /condor_/)  { $tot{Exec} += $n; }
@@ -132,6 +172,11 @@ sub smap_sum_verbose {
                   elsif ($lib =~ /classad/)  { $tot{Classad} += $n; }
                   else                       { $tot{Other} += $n; }
                } elsif ($lib =~ /lib/) { $tot{Other} += $n; }
+            }
+            if ($smap_details && $n) {
+               my $short_lib = $lib;
+               $short_lib =~ s|^.+/userdir/|/.../userdir/|;
+               printf "%7d %s %s\n", $n, $perm, $short_lib;
             }
          }
       }
@@ -143,14 +188,30 @@ sub smap_sum_verbose {
       $lbl = "$pid:$exe";
    }
 
+   printf "\n";
    print 'PID:Process            Total Dynamic =(Heap+Stack+Anon) LibRO LibData =(Exec+Utils+Clasad+Globus+System) Clean' . "\n";
    printf "%-22.22s %5d %7d %6d %5d %5d %5d %7d %6d %5d %6d %6d %6d %6d\n", $lbl, 
           $tot{Private_Dirty}, $tot{Heap}+$tot{Stack}+$tot{Anon}, $tot{Heap}, $tot{Stack}, $tot{Anon},
           $tot{LibRO}, $tot{LibData}, $tot{Exec}, $tot{Utils}, $tot{Classad}, $tot{Globus}, $tot{System}+$tot{Other},
           $tot{Private_Clean};
-		  if($tot{Private_Dirty} > $allowedmemory) {
-		  	die "Shadow on this platform is allowed to be this <$allowedmemory>, this is over <$tot{Private_Dirty}>\n";
-		  }
+
+   if ($allowedmemory) {
+      my $usedmem = $tot{Private_Dirty};
+      my $romem = $tot{LibRO};
+      if ($crypto_data > 12) {
+          $allowedmemory += $crypto_data;
+          print "libcrypto.so using $crypto_data of data, increasing allowed memory to $allowedmemory\n";
+      }
+      my $overmem = $usedmem - $allowedmemory;
+      if ($random_addr && $romem > 120) {
+          $allowedmemory += $romem - 100;
+      }
+      if($usedmem > $allowedmemory) {
+         die "Shadow private memory use is $usedmem which is $overmem more than allowed value of $allowedmemory for $arch $opsys\n";
+      } elsif ($overmem > 0) {
+         print "Shadow private memory use is $usedmem, which is $overmem more than expected, but address randomization is using $romem, so the test passes with a warning\n";
+      }
+   }
 }
 
 sub ComputeMemLimit

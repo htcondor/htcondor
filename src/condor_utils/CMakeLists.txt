@@ -19,24 +19,35 @@
 
 ##################################################
 # utils library
-file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs* 
-soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_hash.cpp param_info_init.c )
+if(WINDOWS)
+  file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs* dprintf_syslog*
+  soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_hash.cpp param_info_init.c )
+else()
+  file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs* 
+  soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_hash.cpp param_info_init.c )
+endif()
 
 condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
 
 ############ generate params
+add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h
+		COMMAND perl
+		ARGS ${CMAKE_CURRENT_SOURCE_DIR}/command_table_generator.pl -i ${CMAKE_CURRENT_SOURCE_DIR}/../condor_includes/condor_commands.h -o ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h
+		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../condor_includes/condor_commands.h ${CMAKE_CURRENT_SOURCE_DIR}/command_table_generator.pl)
+
 add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h
 		COMMAND perl
 		ARGS ${CMAKE_CURRENT_SOURCE_DIR}/param_table_generator.pl -i ${CMAKE_CURRENT_SOURCE_DIR}/param_info.in -o ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h -p ${PLATFORM}
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/param_info.in ${CMAKE_CURRENT_SOURCE_DIR}/param_table_generator.pl)
 
-add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h)
+add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h)
 
 if(UNIX)
 	set_source_files_properties(param_info.cpp PROPERTIES COMPILE_FLAGS -Wno-unused-parameter)
 endif(UNIX)
 
 ############ end generate params
+
 
 # These are source files that reside in other directories that we want to
 # include in libcondor_utils. They used to be in separate libraries.
@@ -101,7 +112,11 @@ if ( LINUX )
   set_target_properties( condor_utils PROPERTIES LINK_FLAGS "-Wl,--wrap=dprintf" )
 endif()
 
-target_link_libraries(condor_utils ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${POSTGRESQL_FOUND} ${COREDUMPER_FOUND} )
+if (DLOPEN_GSI_LIBS)
+	target_link_libraries(condor_utils ${CLASSADS_FOUND} ${PCRE_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${POSTGRESQL_FOUND} ${COREDUMPER_FOUND} )
+else()
+	target_link_libraries(condor_utils ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${POSTGRESQL_FOUND} ${COREDUMPER_FOUND} )
+endif()
 if ( DARWIN )
 	target_link_libraries( condor_utils ${IOKIT_FOUND} ${COREFOUNDATION_FOUND} resolv )
 	add_custom_command( TARGET condor_utils

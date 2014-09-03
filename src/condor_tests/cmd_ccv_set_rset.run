@@ -1,0 +1,576 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test check availability and usage contol of the new
+## local, resources in both a static configuration and in psolts.
+## It is model after what we did to test concurrency limits
+## as we are checking the same sorts of things. bt
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+my @submitfiles =	();
+
+my $pid = $$;
+my $ClusterId = 0;
+
+my $totalcpus = 6;
+my $totalgpus = 4;
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	WANT_SUSPEND = FALSE
+	NEGOTIATION_INTERVAL = 5
+	UPDATE_COLLECTOR_WITH_TCP = TRUE
+	ALL_DEBUG = D_FULLDEBUG
+	ENABLE_RUNTIME_CONFIG = TRUE
+	ENABLE_PERSISTENT_CONFIG = TRUE
+	PERSISTENT_CONFIG_DIR = $(spool)
+	SETTABLE_ATTRS_CONFIG = MYRSETVAR1, MYSETVAR1, MYRSETVAR2, MYSETVAR2
+	ALLOW_CONFIG = $(FULL_HOSTNAME)
+	NUM_CPUS = 6
+	MASTER_DEBUG = D_SECURITY:2 D_COMMAND:2
+';
+# don't forget PERSISTENT_CONFIG settings
+
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"ccvrsetset");
+
+my $testname = "cmd_ccv_set_rest";
+
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
+
+CondorTest::StartCondorWithParams(
+	condor_name => "ccvrsetset",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+#print "************************** CONDOR_CONFIG now set to:$ENV{CONDOR_CONFIG} ******************\n";
+
+
+my @configlines = ();
+my $configres = runCondorTool("condor_config_val -config",\@configlines,2,{emit_output=>1});
+
+if($configres != 1) {
+	print "Failed to get config file locations\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+#######################################################################################
+##
+##
+## RSET / RUNSET start here
+##
+##
+#######################################################################################
+
+my @toolarray = ();
+my $res = runCondorTool('condor_config_val -startd -rset "MYRSETVAR1=5"',\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly ran ccv -rset \n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Failed to run ccv -rset\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+print "Doing the reconfig needed to make attribute visible\n";
+@toolarray = ();
+$res = runCondorTool("condor_reconfig -startd",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Reconfig command went well.\n";
+} else {
+	print "Failed failure from reconfig comand\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+sleep(2); # let reconfig settle
+
+@toolarray = ();
+$res = runCondorTool("condor_config_val -startd MYRSETVAR1 ",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly requested rset attribute MYRSETVAR1 value\n";
+} else {
+	print "Failed to Correctly requested rset attribute MYRSETVAR1 value\n\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+my $goal = 0;
+foreach my $line (@toolarray) {
+	fullchomp($line);
+	if($line eq "5") {
+		$goal += 1;
+	}
+}
+
+if($goal == 1) {
+	print "saw first rset variable with expected value 5\n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Did not see first rset variable with expected value 5\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+print "Can we do a second and still see the first too?\n\n";
+
+my @toolarray = ();
+my $res = runCondorTool('condor_config_val -startd -rset "MYRSETVAR2=6"',\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly ran ccv -rset \n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Failed to run ccv -rset\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+print "Doing the reconfig needed to make attribute visible\n";
+@toolarray = ();
+$res = runCondorTool("condor_reconfig -startd",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Reconfig command went well.\n";
+} else {
+	print "Failed failure from reconfig comand\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+sleep(2); # let reconfig settle
+
+@toolarray = ();
+$res = runCondorTool("condor_config_val -startd MYRSETVAR2 ",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly requested rset attribute MYRSETVAR2 value\n";
+} else {
+	print "Failed to Correctly requested rset attribute MYRSETVAR2 value\n\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+my $goal = 0;
+foreach my $line (@toolarray) {
+	fullchomp($line);
+	if($line eq "6") {
+		$goal += 1;
+	}
+}
+
+if($goal == 1) {
+	print "saw second rset variable with expected value 6\n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Did not see second rset variable with expected value 6\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+@toolarray = ();
+$res = runCondorTool("condor_config_val -startd MYRSETVAR1 ",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly requested rset attribute MYRSETVAR1 value\n";
+} else {
+	print "Failed to Correctly requested rset attribute MYRSETVAR1 value\n\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+my $goal = 0;
+foreach my $line (@toolarray) {
+	fullchomp($line);
+	if($line eq "5") {
+		$goal += 1;
+	}
+}
+
+if($goal == 1) {
+	print "Can still see first rset variable with expected value 5\n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Can nologer see first rset variable with expected value 5\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+print "Now lets remove the second one we RSET using -runset\n";
+
+@toolarray = ();
+$res = runCondorTool('condor_config_val -startd -runset MYRSETVAR2',\@toolarray,2,{emit_output=>1});
+
+if($res == 1) {
+	print "Correctly ran ccv -runset \n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Failed to run ccv -runset\n";
+	RegisterResult(1,test_name,$testname);
+}
+
+print "Doing the reconfig needed to make attribute visible\n";
+@toolarray = ();
+$res = runCondorTool("condor_reconfig -startd",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Reconfig command went well.\n";
+} else {
+	print "Failed failure from reconfig comand\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+sleep(2); # let reconfig settle
+
+@toolarray = ();
+$res = runCondorTool("condor_config_val -startd MYRSETVAR2 ",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly requested rset attribute MYRSETVAR2 value\n";
+} else {
+	print "Failed to Correctly requested rset attribute MYRSETVAR2 value\n\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+my $goal = 0;
+foreach my $line (@toolarray) {
+	fullchomp($line);
+	if($line eq "6") {
+		$goal += 1;
+	}
+}
+
+if($goal == 1) {
+	print "saw second rset variable with expected value 6\n";
+	print "This is NOT what we expect from using -runset var\n";
+	RegisterResult(0,test_name,$testname);
+} else {
+	print "Did not see second rset variable with expected value 6\n";
+	print "This is what we expect from using -runset var\n";
+	RegisterResult(1,test_name,$testname);
+}
+
+runCondorTool("condor_restart -daemon startd",\@toolarray,2,{emit_output=>0});
+sleep(40);
+
+@toolarray = ();
+$res = runCondorTool("condor_config_val -startd MYRSETVAR1 ",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly requested rset attribute MYRSETVAR1 value\n";
+} else {
+	print "Failed to Correctly requested rset attribute MYRSETVAR1 value\n\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+my $goal = 0;
+foreach my $line (@toolarray) {
+	fullchomp($line);
+	if($line eq "6") {
+		$goal += 1;
+	}
+}
+
+if($goal == 1) {
+	print "saw first rset variable with expected value 6\n";
+	print "This is NOT what we expect from using -runset var\n";
+	RegisterResult(0,test_name,$testname);
+} else {
+	print "Did not see first rset variable with expected value 6\n";
+	print "This is what we expect from using -runset var\n";
+	RegisterResult(1,test_name,$testname);
+}
+
+#######################################################################################
+##
+##
+## SET / UNSET start here
+##
+##
+#######################################################################################
+
+@toolarray = ();
+$res = runCondorTool('condor_config_val -startd -set "MYSETVAR1=7"',\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly ran ccv -set \n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Failed to run ccv -set\n";
+	RegisterResult(1,test_name,$testname);
+}
+
+print "Doing the reconfig needed to make attribute visible\n";
+@toolarray = ();
+$res = runCondorTool("condor_reconfig -startd",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Reconfig command went well.\n";
+} else {
+	print "Failed failure from reconfig comand\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+sleep(2); # let reconfig settle
+
+@toolarray = ();
+$res = runCondorTool("condor_config_val -startd MYSETVAR1 ",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly requested set attribute MYSETVAR1 value\n";
+} else {
+	print "Failed to Correctly requested set attribute MYSETVAR1 value\n\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+my $goal = 0;
+foreach my $line (@toolarray) {
+	fullchomp($line);
+	if($line eq "7") {
+		$goal += 1;
+	}
+}
+
+if($goal == 1) {
+	print "saw first set variable with expected value 7\n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Did not see first set variable with expected value 7\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+print "Can we do a second and still see the first too?\n\n";
+
+my @toolarray = ();
+my $res = runCondorTool('condor_config_val -startd -set "MYSETVAR2=8"',\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly ran ccv -set \n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Failed to run ccv -set\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+print "Doing the reconfig needed to make attribute visible\n";
+@toolarray = ();
+$res = runCondorTool("condor_reconfig -startd",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Reconfig command went well.\n";
+} else {
+	print "Failed failure from reconfig comand\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+sleep(2); # let reconfig settle
+
+@toolarray = ();
+$res = runCondorTool("condor_config_val -startd MYSETVAR2 ",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly requested set attribute MYSETVAR2 value\n";
+} else {
+	print "Failed to Correctly requested set attribute MYSETVAR2 value\n\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+my $goal = 0;
+foreach my $line (@toolarray) {
+	fullchomp($line);
+	if($line eq "8") {
+		$goal += 1;
+	}
+}
+
+if($goal == 1) {
+	print "saw second set variable with expected value 8\n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Did not see second set variable with expected value 8\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+@toolarray = ();
+$res = runCondorTool("condor_config_val -startd MYSETVAR1 ",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly requested set attribute MYSETVAR1 value\n";
+} else {
+	print "Failed to Correctly requested set attribute MYSETVAR1 value\n\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+my $goal = 0;
+foreach my $line (@toolarray) {
+	fullchomp($line);
+	if($line eq "7") {
+		$goal += 1;
+	}
+}
+
+if($goal == 1) {
+	print "Can still see first set variable with expected value 7\n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Can nologer see first set variable with expected value 7\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+print "Now lets remove the second one we SET using -unset\n";
+
+@toolarray = ();
+$res = runCondorTool('condor_config_val -startd -unset MYSETVAR2',\@toolarray,2,{emit_output=>1});
+
+if($res == 1) {
+	print "Correctly ran ccv -unset \n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Failed to run ccv -unset\n";
+	RegisterResult(1,test_name,$testname);
+}
+
+print "Doing the reconfig needed to make attribute visible\n";
+@toolarray = ();
+$res = runCondorTool("condor_reconfig -startd",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Reconfig command went well.\n";
+} else {
+	print "Failed failure from reconfig comand\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+sleep(2); # let reconfig settle
+
+@toolarray = ();
+$res = runCondorTool("condor_config_val -startd MYSETVAR2 ",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly requested set attribute MYSETVAR2 value\n";
+} else {
+	print "Failed to Correctly requested set attribute MYSETVAR2 value\n\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+my $goal = 0;
+foreach my $line (@toolarray) {
+	fullchomp($line);
+	if($line eq "8") {
+		$goal += 1;
+	}
+}
+
+if($goal == 1) {
+	print "saw second set variable with expected value 8\n";
+	print "This is NOT what we expect from using -unset var\n";
+	RegisterResult(0,test_name,$testname);
+} else {
+	print "Did not see second set variable with expected value 8\n";
+	print "This is what we expect from using -unset var\n";
+	RegisterResult(1,test_name,$testname);
+}
+
+runCondorTool("condor_restart -daemon startd",\@toolarray,2,{emit_output=>0});
+sleep(40);
+
+@toolarray = ();
+$res = runCondorTool("condor_config_val -startd MYSETVAR1 ",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly requested set attribute MYSETVAR1 value\n";
+} else {
+	print "Failed to Correctly requested set attribute MYSETVAR1 value\n\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+my $goal = 0;
+foreach my $line (@toolarray) {
+	fullchomp($line);
+	if($line eq "7") {
+		$goal += 1;
+	}
+}
+
+if($goal == 1) {
+	print "saw first set variable with expected value 7\n";
+	print "This is what we expect from using -unset var\n";
+	RegisterResult(1,test_name,$testname);
+} else {
+	print "Did not see first set variable with expected value 7\n";
+	print "This is NOT what we expect from using -unset var\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+print "Did one removed with unset come back after the restart?\n";
+
+@toolarray = ();
+$res = runCondorTool("condor_config_val -startd MYSETVAR2 ",\@toolarray,2,{emit_output=>0});
+
+if($res == 1) {
+	print "Correctly requested set attribute MYSETVAR2 value\n";
+} else {
+	print "Failed to Correctly requested set attribute MYSETVAR2 value\n\n";
+	RegisterResult(0,test_name,$testname);
+}
+
+my $goal = 0;
+foreach my $line (@toolarray) {
+	fullchomp($line);
+	if($line eq "8") {
+		$goal += 1;
+	}
+}
+
+if($goal == 1) {
+	print "saw second set variable with expected value 8\n";
+	print "This is NOT what we expect from using -unset var\n";
+	print "It should not have come back after a restart\n";
+	RegisterResult(0,test_name,$testname);
+} else {
+	print "Did not see second set variable with expected value 8\n";
+	print "This is what we expect from using -unset var\n";
+	print "It should not have come back after a restart\n";
+	RegisterResult(1,test_name,$testname);
+}
+
+#@toolarray = ();
+#$res = runCondorTool("condor_reconfig -startd",\@toolarray,2,{emit_output=>0});
+#@toolarray = ();
+#$res = runCondorTool("condor_config_val -startd MYSETVAR1 ",\@toolarray,2,{emit_output=>0});
+#@toolarray = ();
+#runCondorTool("condor_restart -daemon startd",\@toolarray,2,{emit_output=>0});
+#sleep(40);
+
+#my $backup = CondorTest::PersonalBackUp($ENV{CONDOR_CONFIG});
+#if($backup == 1) {
+	#print "Condor back after restart\n";
+#} else {
+	#print "Condor failed to restart\n";
+#}
+
+#$res = runCondorTool("condor_config_val -startd MYSETVAR1 ",\@toolarray,2,{emit_output=>0});
+
+CondorTest::EndTest();
+
+exit(0);
+

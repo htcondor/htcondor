@@ -37,6 +37,8 @@ class HashKey
 public:
 	HashKey() { key = NULL; }
 	HashKey(const char *k) { key = strdup(k); }
+	HashKey(const MyString &k) { key = strdup(k.Value()); }
+	HashKey(const std::string &k) { key = strdup(k.c_str()); }
 	HashKey(const HashKey &hk) { key = strdup(hk.key); }
 	~HashKey() { if (key) free(key); }
 	void sprint(MyString &s);

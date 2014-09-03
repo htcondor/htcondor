@@ -1,0 +1,13 @@
+diff configure.ac configure.ac
+--- configure.ac
++++ configure.ac
+@@ -399,7 +399,8 @@ fi
+ dnl ---------- libcurl (m4/libcurl.m4) ------------------------------
+ 
+ if test "${enable_client}" = yes; then
+-   LIBCURL_CHECK_CONFIG([yes], [7.17.1], [haveCurl=yes], [haveCurl=no])
++dnl   LIBCURL_CHECK_CONFIG([yes], [7.17.1], [haveCurl=yes], [haveCurl=no])
++   LIBCURL_CHECK_CONFIG([yes], [7.15.1], [haveCurl=yes], [haveCurl=no])
+    
+    if test "${haveCurl}" != yes; then
+       AC_MSG_ERROR([

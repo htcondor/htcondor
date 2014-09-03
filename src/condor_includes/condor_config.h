@@ -36,7 +36,7 @@ namespace condor_params { typedef struct key_value_pair key_value_pair; }
 typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
 #else // ! __cplusplus
 typedef void* MACRO_SOURCES; // placeholder for use in C
-typedef struct key_value_pair { const char * key; const void * def} key_value_pair;
+typedef struct key_value_pair { const char * key; const void * def; } key_value_pair;
 typedef const struct key_value_pair MACRO_DEF_ITEM;
 #endif
 
@@ -46,7 +46,9 @@ typedef const struct key_value_pair MACRO_DEF_ITEM;
 #define PARAM_USE_COUNTING
 #define CALL_VIA_MACRO_SET
 #define MACRO_SET_KNOWS_DEFAULT
-#define COLON_DEFAULT_FOR_MACRO_EXPAND // enable $(FOO:default-value) and $(FOO:$(OTHER)) for config
+#define COLON_DEFAULT_FOR_MACRO_EXPAND  // enable $(FOO:default-value) and $(FOO:$(OTHER)) for config
+#define WARN_COLON_FOR_PARAM_ASSIGN   0 // parameter assigment with : (instead of =) is disallowed, a value of 0 is warn, 1 is fail
+#define CONFIG_MAX_NESTING_DEPTH 20     // the maximum depth of nesting/recursion for include & meta
 
 // structures for param/submit macro storage
 // These structures are carefully tuned to allow for minimal private memory
@@ -135,6 +137,12 @@ typedef struct macro_set {
 						ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 
+	// helper function, parse and/or evaluate string and return true if it is a valid boolean
+	// if it is a valid boolean, the value is returned in 'result', otherwise result is unchanged.
+	bool string_is_boolean_param(const char * string, bool& result, ClassAd *me = NULL, ClassAd *target = NULL, const char * name=NULL);
+	bool string_is_double_param(const char * string, double& result, ClassAd *me = NULL, ClassAd *target = NULL, const char * name=NULL, int* err_reason=NULL);
+	bool string_is_long_param(const char * string, long long& result, ClassAd *me = NULL, ClassAd *target = NULL, const char * name=NULL, int* err_reason=NULL);
+
 #if 1
 	const char * param_get_location(const MACRO_META * pmet, MyString & value);
 #else
@@ -194,10 +202,14 @@ extern "C" {
 	#define CONFIG_OPT_KEEP_DEFAULTS  0x02   // keep items that match defaults
 	#define CONFIG_OPT_OLD_COM_IN_CONT 0x04  // ignore # after \ (i.e. pre 8.1.3 comment/continue behavior)
 	#define CONFIG_OPT_SMART_COM_IN_CONT 0x08 // parse #opt:oldcomment/newcomment to decide comment behavior
-	void config();
-	void config_ex(int wantsQuiet, bool abort_if_invalid, int opt = CONFIG_OPT_WANT_META);
-	void config_host(const char* host, int wantsQuiet, int config_options);
-	void validate_config(bool abort_if_invalid);
+	#define CONFIG_OPT_COLON_IS_META_ONLY 0x10 // colon isn't valid for use in param assigments (only = is allowed)
+	#define CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO 0x80 // the defaults table is the table defined in param_info.in.
+	#define CONFIG_OPT_NO_EXIT 0x100 // If a config file is missing or the config is invalid, do not abort/exit the process.
+	#define CONFIG_OPT_WANT_QUIET 0x200 // Keep printing to stdout/err to a minimum
+	bool config();
+	bool config_ex(int opt);
+	bool config_host(const char* host, int config_options);
+	bool validate_config(bool abort_if_invalid);
 	void config_dump_string_pool(FILE * fh, const char * sep);
 	void config_dump_sources(FILE * fh, const char * sep);
 	const char * config_source_by_id(int source_id);
@@ -211,7 +223,7 @@ extern "C" {
 	int  set_persistent_config(char *admin, char *config);
 	int  set_runtime_config(char *admin, char *config);
 	int is_valid_param_name(const char *name);
-	char * parse_param_name_from_config(const char *config);
+	char * is_valid_config_assignment(const char *config);
 	// this function allows tests to pretend that a param was set to a given value.	
     void  param_insert(const char * name, const char * value);
 	/** Expand parameter references of the form "left$(middle)right".  
@@ -232,7 +244,7 @@ extern "C" {
 	NOTE: Returns malloc()ed memory; caller is responsible for calling free().
 	*/
 	char * expand_macro (const char *value, MACRO_SET& macro_set,
-						 const char *self=NULL, bool use_default_param_table=false,
+						 bool use_default_param_table=false,
 						 const char *subsys=NULL, int use=2);
 	// Iterator for the hash array managed by insert() and expand_macro().  See
 	// hash_iter_begin(), hash_iter_next(), hash_iter_key(), hash_iter_value(),
@@ -344,6 +356,7 @@ BEGIN_C_DECLS
 	void clear_macro_use_count (const char *name, MACRO_SET& macro_set);
 	int get_macro_use_count (const char *name, MACRO_SET& macro_set);
 	int get_macro_ref_count (const char *name, MACRO_SET& macro_set);
+	bool config_test_if_expression(const char * expr, bool & result, std::string & err_reason);
 
 #endif // __cplusplus
 
@@ -373,7 +386,7 @@ BEGIN_C_DECLS
 	int  param_boolean_int_without_default( const char* name, int default_value );
 	
 	// Process an additional chunk of file
-	void process_config_source(const char* filename, const char* sourcename, const char* host, int required);
+	void process_config_source(const char* filename, int depth, const char* sourcename, const char* host, int required);
 
 /* This function initialize GSI (maybe other) authentication related
    stuff Daemons that should use the condor daemon credentials should

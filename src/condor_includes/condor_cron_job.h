@@ -60,6 +60,7 @@ class CronJob : public Service
 
 	int ProcessOutputQueue( void );
 	virtual int ProcessOutput( const char * /*line*/ ) { return 0; };
+	virtual int ProcessOutputSep( const char * /*args*/ ) { return 0; };
 
 	// State information
 	CronJobState GetState( void ) const { return m_state; };

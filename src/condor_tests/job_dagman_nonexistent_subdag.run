@@ -81,7 +81,7 @@ $success = sub
 
 $failure = sub 
 {
-	CondorTest::debug("Execution was a failure ... as expected\n",1);
+	CondorTest::debug("DAG failed as expected\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
 	open OUTFILE, "<$outfile" || die "Cannot open $outfile\n";

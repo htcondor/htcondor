@@ -55,6 +55,18 @@ SharedPortServer::InitAndReconfig() {
 			this,
 			ALLOW );
 		ASSERT( rc >= 0 );
+
+		rc = daemonCore->Register_UnregisteredCommandHandler(
+			(CommandHandlercpp)&SharedPortServer::HandleDefaultRequest,
+			"SharedPortServer::HandleDefaultRequest",
+			this,
+			true);
+		ASSERT( rc >= 0 );
+	}
+
+	param(m_default_id, "SHARED_PORT_DEFAULT_ID");
+	if (param_boolean("USE_SHARED_PORT", false) && param_boolean("COLLECTOR_USES_SHARED_PORT", true) && !m_default_id.size()) {
+		m_default_id = "collector";
 	}
 
 	PublishAddress();
@@ -65,6 +77,8 @@ SharedPortServer::InitAndReconfig() {
 			// might remove it.  Rewriting it is also a way to
 			// guarantee that changes in our contact information will
 			// eventually be published.
+			// We also use this timer to periodically write some 
+			// operational metrics into the ad and into the log.
 
 		const int publish_addr_period = 300;
 
@@ -106,6 +120,23 @@ SharedPortServer::PublishAddress()
 	ClassAd ad;
 	ad.Assign(ATTR_MY_ADDRESS,daemonCore->publicNetworkIpAddr());
 
+	// Place some operational metrics into the daemon ad
+	ad.Assign("RequestsPendingCurrent",m_shared_port_client.get_currentPendingPassSocketCalls());
+	ad.Assign("RequestsPendingPeak",m_shared_port_client.get_maxPendingPassSocketCalls());
+	ad.Assign("RequestsSucceeded",m_shared_port_client.get_successPassSocketCalls());
+	ad.Assign("RequestsFailed",m_shared_port_client.get_failPassSocketCalls());
+	ad.Assign("RequestsBlocked",m_shared_port_client.get_wouldBlockPassSocketCalls());
+	ad.Assign("ForkedChildrenCurrent",forker.getNumWorkers());
+	ad.Assign("ForkedChildrenPeak",forker.getPeakWorkers());
+
+	// print the ad to our log file as D_ALWAYS for now, as a) it contains
+	// metrics that may be useful for debugging, and b) this method is 
+	// only invoked every 5 minutes by default
+	dprintf(D_ALWAYS, "About to update statistics in shared_port daemon ad file at %s :\n",
+			m_shared_port_server_ad_file.Value());
+	dPrintAd(D_ALWAYS|D_NOHEADER,ad);
+
+	// and now save the ad to disk
 	daemonCore->UpdateLocalAd(&ad,m_shared_port_server_ad_file.Value());
 }
 
@@ -174,10 +205,25 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 		}
 	}
 
-	dprintf(D_FULLDEBUG,
-			"SharedPortServer: request from %s to connect to %s%s.\n",
-			sock->peer_description(), shared_port_id, deadline_desc.Value());
+	dprintf( D_FULLDEBUG,
+			"SharedPortServer: request from %s to connect to %s%s. (CurPending=%u PeakPending=%u)\n",
+			sock->peer_description(), shared_port_id, deadline_desc.Value(),
+			m_shared_port_client.get_currentPendingPassSocketCalls(),
+			m_shared_port_client.get_maxPendingPassSocketCalls() );
 
+	return PassRequest(static_cast<Sock*>(sock), shared_port_id);
+}
+
+int
+SharedPortServer::PassRequest(Sock *sock, const char *shared_port_id)
+{
+	int result = TRUE;
+#if HAVE_SCM_RIGHTS_PASSFD
+		// Note: the HAVE_SCM_RIGHTS_PASSFD implementation of PassSocket()
+		// is nonblocking.  See gt #4094.
+		// Note: returns TRUE, FALSE, or KEEP_STREAM if operation is still pending...
+	result = m_shared_port_client.PassSocket((Sock *)sock, shared_port_id, NULL, true);
+#else
 		// Because of an ACK in the PassSocket protocol, this may block
 		// while waiting for the requested endpoint to respond.
 		// Therefore, we fork to try to stay responsive.  It is likely
@@ -200,6 +246,20 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 			forker.WorkerDone();
 		}
 	}
+#endif
 
-	return TRUE;
+	return result;
+}
+
+int
+SharedPortServer::HandleDefaultRequest(int cmd,Stream *sock)
+{
+	if (!m_default_id.size()) {
+		dprintf(D_FULLDEBUG, "SharedPortServer: Got request for command %d from %s, but no default client specified.\n",
+			cmd, sock->peer_description());
+		return 0;
+	}
+	dprintf(D_FULLDEBUG, "SharedPortServer: Passing a request from %s for command %d to ID %s.\n",
+		sock->peer_description(), cmd, m_default_id.c_str()); 
+	return PassRequest(static_cast<Sock*>(sock), m_default_id.c_str());
 }

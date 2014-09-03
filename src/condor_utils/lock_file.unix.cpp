@@ -41,7 +41,7 @@ static unsigned int _lock_file_num_retries = 0;
 */
 
 int
-lock_file_plain( int fd, LOCK_TYPE type, int do_block )
+lock_file_plain( int fd, LOCK_TYPE type, bool do_block )
 {
 	struct flock	f;
 	int				cmd;
@@ -131,7 +131,7 @@ lock_file_plain( int fd, LOCK_TYPE type, int do_block )
 }
 
 int
-lock_file( int fd, LOCK_TYPE type, int do_block )
+lock_file( int fd, LOCK_TYPE type, bool do_block )
 {
 	int rc;
 	int saved_errno;

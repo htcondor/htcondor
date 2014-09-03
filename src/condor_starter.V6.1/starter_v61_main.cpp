@@ -202,7 +202,7 @@ main_pre_dc_init( int argc, char* argv[] )
 		// up calling functions that rely on it being defined...  
 	if( argc == 2 && strncasecmp(argv[1],"-cla",4) == MATCH ) {
 			// needed for Java stuff
-		config_ex(true, true, 0);
+		config_ex(CONFIG_OPT_WANT_QUIET);
 
 			// Would like to log errors to stderr if stderr is not
 			// /dev/null to make it easier for users to debug, but not
@@ -357,6 +357,7 @@ parseArgs( int argc, char* argv [] )
 	char _header[] = "-header";
 	char _gridshell[] = "-gridshell";
 	char _schedd_addr[] = "-schedd-addr";
+	char _slot_name[] = "-slot-name";
 	char* target = NULL;
 
 	ASSERT( argc >= 2 );
@@ -399,6 +400,16 @@ parseArgs( int argc, char* argv [] )
 			free( schedd_addr );
 			schedd_addr = strdup( arg );
 			tmp++;	// consume the arg so we don't get confused 
+			continue;
+		}
+
+		if (opt_len >=4 && ! strncmp(opt, _slot_name, opt_len)) {
+			if( ! arg ) {
+				another( _slot_name );
+			}
+			config_insert( "STARTER_SLOT_NAME", arg );
+			dprintf( D_ALWAYS, "STARTER_SLOT_NAME is %s\n", arg);
+			tmp++; // consume the arg
 			continue;
 		}
 

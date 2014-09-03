@@ -36,15 +36,14 @@ Condor_Auth_FS :: ~Condor_Auth_FS()
 {
 }
 
-int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* errstack)
+int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* errstack, bool non_blocking)
 {
-	char *new_dir = NULL;
-	bool used_file = false;
 	int client_result = -1;
 	int server_result = -1;
 	int fail = -1 == 0;
 
 	if ( mySock_->isClient() ) {
+		char *new_dir = NULL;
 
 		// receive the directory name to create
 		mySock_->decode();
@@ -132,7 +131,17 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 		}
 		set_priv(saved_priv);
 
-		// leave new_dir allocated until after dprintf below
+		dprintf( D_SECURITY, "AUTHENTICATE_FS%s: used dir %s, status: %d\n",
+				(remote_?"_REMOTE":""),
+				(new_dir ? new_dir : "(null)"), (server_result == 0) );
+
+		if ( new_dir ) {
+			free( new_dir );
+		}
+
+		// this function returns TRUE on success, FALSE on failure,
+		// which is just the opposite of server_result.
+		return( server_result == 0 );
 
 	} else {
 
@@ -164,10 +173,13 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 			filename += "_";
 			filename += mypid;
 			filename += "_XXXXXXXXX";
-			new_dir = strdup( filename.Value() );
-			dprintf( D_SECURITY, "FS_REMOTE: client template is %s\n", new_dir );
+			dprintf( D_SECURITY, "FS_REMOTE: client template is %s\n", filename.c_str() );
 
-			int sync_fd = condor_mkstemp(new_dir);
+			int sync_fd;
+			char *new_dir = strdup(filename.Value());
+			sync_fd = condor_mkstemp(new_dir);
+			m_new_dir = new_dir;
+			free(new_dir);
 			if( sync_fd < 0 ) {
 				// path must be invalid?
 				//
@@ -180,13 +192,12 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				errstack->pushf("FS_REMOTE", 1002,
 						"condor_mkstemp(%s) failed: %s (%i)",
 						filename.Value(), strerror(en), en);
-				*new_dir = 0;				//the other process will expect an
-											//empty string on failure, so make
-											//the first char be null
+				m_new_dir = "";			//the other process will expect an
+										//empty string on failure
 			} else {
 				::close( sync_fd );
-				unlink( new_dir );
-				dprintf( D_SECURITY, "FS_REMOTE: client filename is %s\n", new_dir );
+				unlink( m_new_dir.c_str() );
+				dprintf( D_SECURITY, "FS_REMOTE: client filename is %s\n", m_new_dir.c_str() );
 			}
 		} else {
 			MyString filename;
@@ -198,10 +209,13 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				filename = "/tmp";
 			}
 			filename += "/FS_XXXXXXXXX";
-			new_dir = strdup( filename.Value() );
-			dprintf( D_SECURITY, "FS: client template is %s\n", new_dir );
+			dprintf( D_SECURITY, "FS: client template is %s\n", filename.c_str() );
 
-			int sync_fd = condor_mkstemp(new_dir);
+			int sync_fd;
+			char * new_dir = strdup(filename.Value());
+			sync_fd = condor_mkstemp(new_dir);
+			m_new_dir = new_dir;
+			free(new_dir);
 			if( sync_fd < 0 ) {
 				// path must be invalid?
 				//
@@ -214,13 +228,12 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				errstack->pushf("FS", 1002,
 						"condor_mkstemp(%s) failed: %s (%i)",
 						filename.Value(), strerror(en), en);
-				*new_dir = 0;				//the other process will expect an
-											//empty string on failure, so make
-											//the first char be null
+				m_new_dir = "";			//the other process will expect an
+										//empty string on failure
 			} else {
 				::close( sync_fd );
-				unlink( new_dir );
-				dprintf( D_SECURITY, "FS: client filename is %s\n", new_dir );
+				unlink( m_new_dir.c_str() );
+				dprintf( D_SECURITY, "FS: client filename is %s\n", m_new_dir.c_str() );
 			}			
 		}
 
@@ -228,196 +241,202 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 		// man page says string returned by tempnam has been malloc()'d
 		// except in the case of error, where we malloc an empty string.
 		mySock_->encode();
-		if (!mySock_->code( new_dir ) || !mySock_->end_of_message()) {
+		if (!mySock_->code( m_new_dir ) || !mySock_->end_of_message()) {
 			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
 				__FUNCTION__, __LINE__);
-			free(new_dir);
 			return fail;
 		}
+		return authenticate_continue(errstack, non_blocking);
+	}
+}
 
-		// see if the client claims success (it could be lying of course!)
-		mySock_->decode();
-		if (!mySock_->code( client_result ) || !mySock_->end_of_message()) {
-			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
-				__FUNCTION__, __LINE__);
-			free(new_dir);
-			return fail;
-		}
+int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocking)
+{
+	bool used_file = false;
+	int client_result = -1;
+	int server_result = -1;
+	int fail = -1 == 0;
 
-		// we're going to respond to the client with success or failure
-		mySock_->encode();
+	if( non_blocking && !mySock_->readReady() ) {
+		return 2;
+	}
 
-		// assume failure.  i am glass-half-empty man.
-		server_result = -1;
+	// see if the client claims success (it could be lying of course!)
+	mySock_->decode();
+	if (!mySock_->code( client_result ) || !mySock_->end_of_message()) {
+		dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
+			__FUNCTION__, __LINE__);
+		return fail;
+	}
 
-		// but first, we need to verify that everything is correct
-		if ( client_result != -1  && new_dir && *new_dir) {
+	// we're going to respond to the client with success or failure
+	mySock_->encode();
 
-			if (remote_) {
-				// now, if this is a remote filesystem, it is possibly NFS.
-				// before we stat the file, we need to do something that causes the
-				// NFS client to sync to the NFS server.  fsync() does not do this.
-				// in practice, creating a file or directory should force the NFS
-				// client to sync in order to avoid race conditions.
-				MyString filename_template = "/tmp";
+	// assume failure.  i am glass-half-empty man.
+	server_result = -1;
 
-				char * rendezvous_dir = param("FS_REMOTE_DIR");
-				if (rendezvous_dir) {
-					filename_template = rendezvous_dir;
-					free(rendezvous_dir);
-				}
+	// but first, we need to verify that everything is correct
+	if ( client_result != -1  && m_new_dir.size() && m_new_dir[0]) {
 
-				pid_t    mypid = 0;
+		if (remote_) {
+			// now, if this is a remote filesystem, it is possibly NFS.
+			// before we stat the file, we need to do something that causes the
+			// NFS client to sync to the NFS server.  fsync() does not do this.
+			// in practice, creating a file or directory should force the NFS
+			// client to sync in order to avoid race conditions.
+			MyString filename_template = "/tmp";
+
+			char * rendezvous_dir = param("FS_REMOTE_DIR");
+			if (rendezvous_dir) {
+				filename_template = rendezvous_dir;
+				free(rendezvous_dir);
+			}
+
+			pid_t    mypid = 0;
 #ifdef WIN32
-				mypid = ::GetCurrentProcessId();
+			mypid = ::GetCurrentProcessId();
 #else
-				mypid = ::getpid();
+			mypid = ::getpid();
 #endif
 
-				// construct the template. mkstemp modifies the string you pass
-				// in so we create a dup of it just in case MyString does
-				// anything funny or uses string spaces, etc.
-				filename_template += "/FS_REMOTE_";
-				filename_template += get_local_hostname();
-				filename_template += "_";
-				filename_template += mypid;
-				filename_template += "_XXXXXX";
-				char* filename_inout = strdup(filename_template.Value());
+			// construct the template. mkstemp modifies the string you pass
+			// in so we create a dup of it just in case MyString does
+			// anything funny or uses string spaces, etc.
+			filename_template += "/FS_REMOTE_";
+			filename_template += get_local_hostname();
+			filename_template += "_";
+			filename_template += mypid;
+			filename_template += "_XXXXXX";
+			char* filename_inout = strdup(filename_template.Value());
 
-				dprintf( D_SECURITY, "FS_REMOTE: sync filename is %s\n", filename_inout );
+			dprintf( D_SECURITY, "FS_REMOTE: sync filename is %s\n", filename_inout );
 
-				int sync_fd = condor_mkstemp(filename_inout);
-				if (sync_fd >= 0) {
-					::close(sync_fd);
-					unlink( filename_inout );
-				} else {
-					// we could have an else that fails here, but we may as well still
-					// check for the file -- this was just an attempt to make NFS sync.
-					// if the file still isn't there, we'll fail anyways.
-					dprintf( D_ALWAYS, "FS_REMOTE: warning, failed to make temp file %s\n", filename_inout );
-				}
-
-				free (filename_inout);
-
-				// at this point we should have created and deleted a unique file
-				// from the server side, forcing the nfs client to flush everything
-				// and sync with the server.  now, we can finally stat the file.
-			}
-
-			//check dir to ensure that claimant is owner
-			struct stat stat_buf;
-
-			// verify the dir's attributes by stat()ing the dir
-			if ( lstat( new_dir, &stat_buf ) < 0 ) {
-				server_result = -1;  
-				errstack->pushf((remote_?"FS_REMOTE":"FS"), 1004,
-						"Unable to lstat(%s)", new_dir);
+			int sync_fd = condor_mkstemp(filename_inout);
+			if (sync_fd >= 0) {
+				::close(sync_fd);
+				unlink( filename_inout );
 			} else {
-				// Authentication should fail if a) owner match fails, or b) the
-				// directory is either a hard or soft link (no links allowed
-				// because they could spoof the owner match).  -Todd 3/98
-				//
-				// also, it must now be a directory instead of a file, due to
-				// hardlink trickery where you could in fact create a hard link
-				// (with count 1!) as another user with the supplied filename.
-				// however, normal users cannot create hardlinks to
-				// directories, only root.  -Zach 8/06
-
-				// The test of link count is historical.  In btrfs,
-				// directories have link count 1, unlike other
-				// filesystems in which the link count is 2.  We do
-				// not believe there is any reason to care about the
-				// link count, but since it was already required to be
-				// 2, and we want to make it work on btrfs, we are
-				// making a conservative change in 7.6.5 that allows
-				// the link count to be 1 or 2.  -Dan 11/11
-
-				// The CREATE_LOCKS_ON_LOCAL_DISK code relies on
-				// creating directories with mode=0777 that may be
-				// owned by any user who happens to need a lock. This
-				// is especially true for users with running
-				// jobs. Because local lock code uses a tree of these
-				// directories, it is possibly for a malicious user to
-				// satify FS authentication requirements by renamed a
-				// target user's lock directory into /tmp. To avoid
-				// this attack, the server side must also fail
-				// authentication for any directories whose mode is
-				// not 0700. -matt July 2012
-
-				// assume it is wrong until we see otherwise
-				bool stat_is_okay = false;
-
-				if ((stat_buf.st_nlink == 1 || stat_buf.st_nlink == 2) &&
-					(!S_ISLNK(stat_buf.st_mode)) && // check for soft link
-					(S_ISDIR(stat_buf.st_mode)) &&      // check for directory
-					((stat_buf.st_mode & 07777) == 0700)) // check for mode=0700
-				{
-					// client created a directory as instructed
-					stat_is_okay = true;
-				} else {
-					// it wasn't proper.  however, there is a config knob for
-					// backwards compatibility that allows either a file or a
-					// directory.  THIS IS NOT SECURE.  it is off by default.
-					if (param_boolean("FS_ALLOW_UNSAFE", false)) {
-						if ((stat_buf.st_nlink == 1) &&	    // check hard link count
-							(!S_ISLNK(stat_buf.st_mode)) && // check for soft link
-							(S_ISREG(stat_buf.st_mode)) )   // check for regular file
-						{
-							stat_is_okay = true;
-							used_file = true;
-						}
-					}
-				}
-
-				if (!stat_is_okay) {
-					// something was wrong with the stat info
-					server_result = -1;
-					errstack->pushf((remote_?"FS_REMOTE":"FS"), 1005,
-							"Bad attributes on (%s)", new_dir);
-				} else {
-					// need to lookup username from dir and do setOwner()
-					char *tmpOwner = my_username( stat_buf.st_uid );
-					if (!tmpOwner) {
-						// this could happen if, for instance,
-						// getpwuid() failed.
-						server_result = -1;
-						errstack->pushf((remote_?"FS_REMOTE":"FS"), 1006,
-								"Unable to lookup uid %i", stat_buf.st_uid);
-					} else {
-						server_result = 0;	// 0 means success here. sigh.
-						setRemoteUser( tmpOwner );
-						setAuthenticatedName( tmpOwner );
-						free( tmpOwner );
-						setRemoteDomain( getLocalDomain() );
-					}
-				}
+				// we could have an else that fails here, but we may as well still
+				// check for the file -- this was just an attempt to make NFS sync.
+				// if the file still isn't there, we'll fail anyways.
+				dprintf( D_ALWAYS, "FS_REMOTE: warning, failed to make temp file %s\n", filename_inout );
 			}
+
+			free (filename_inout);
+
+			// at this point we should have created and deleted a unique file
+			// from the server side, forcing the nfs client to flush everything
+			// and sync with the server.  now, we can finally stat the file.
+		}
+
+		//check dir to ensure that claimant is owner
+		struct stat stat_buf;
+
+		// verify the dir's attributes by stat()ing the dir
+		if ( lstat( m_new_dir.c_str(), &stat_buf ) < 0 ) {
+			server_result = -1;  
+			errstack->pushf((remote_?"FS_REMOTE":"FS"), 1004,
+					"Unable to lstat(%s)", m_new_dir.c_str());
 		} else {
-			server_result = -1;
-			if (new_dir && *new_dir) {
-				errstack->pushf((remote_?"FS_REMOTE":"FS"), 1007,
-						"Client unable to create dir (%s)", new_dir);
-			}
-			// else we gave the client a bogus name to begin with!
-		}
+			// Authentication should fail if a) owner match fails, or b) the
+			// directory is either a hard or soft link (no links allowed
+			// because they could spoof the owner match).  -Todd 3/98
+			//
+			// also, it must now be a directory instead of a file, due to
+			// hardlink trickery where you could in fact create a hard link
+			// (with count 1!) as another user with the supplied filename.
+			// however, normal users cannot create hardlinks to
+			// directories, only root.  -Zach 8/06
 
-		if (!mySock_->code( server_result ) || !mySock_->end_of_message())
-		{
-			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
-				__FUNCTION__, __LINE__);
-			free(new_dir);
-			return fail;
+			// The test of link count is historical.  In btrfs,
+			// directories have link count 1, unlike other
+			// filesystems in which the link count is 2.  We do
+			// not believe there is any reason to care about the
+			// link count, but since it was already required to be
+			// 2, and we want to make it work on btrfs, we are
+			// making a conservative change in 7.6.5 that allows
+			// the link count to be 1 or 2.  -Dan 11/11
+
+			// The CREATE_LOCKS_ON_LOCAL_DISK code relies on
+			// creating directories with mode=0777 that may be
+			// owned by any user who happens to need a lock. This
+			// is especially true for users with running
+			// jobs. Because local lock code uses a tree of these
+			// directories, it is possibly for a malicious user to
+			// satify FS authentication requirements by renamed a
+			// target user's lock directory into /tmp. To avoid
+			// this attack, the server side must also fail
+			// authentication for any directories whose mode is
+			// not 0700. -matt July 2012
+
+			// assume it is wrong until we see otherwise
+			bool stat_is_okay = false;
+
+			if ((stat_buf.st_nlink == 1 || stat_buf.st_nlink == 2) &&
+				(!S_ISLNK(stat_buf.st_mode)) && // check for soft link
+				(S_ISDIR(stat_buf.st_mode)) &&      // check for directory
+				((stat_buf.st_mode & 07777) == 0700)) // check for mode=0700
+			{
+					// client created a directory as instructed
+				stat_is_okay = true;
+			} else {
+				// it wasn't proper.  however, there is a config knob for
+				// backwards compatibility that allows either a file or a
+				// directory.  THIS IS NOT SECURE.  it is off by default.
+				if (param_boolean("FS_ALLOW_UNSAFE", false)) {
+					if ((stat_buf.st_nlink == 1) &&	    // check hard link count
+						(!S_ISLNK(stat_buf.st_mode)) && // check for soft link
+						(S_ISREG(stat_buf.st_mode)) )   // check for regular file
+					{
+						stat_is_okay = true;
+						used_file = true;
+					}
+				}
+			}
+
+			if (!stat_is_okay) {
+				// something was wrong with the stat info
+				server_result = -1;
+				errstack->pushf((remote_?"FS_REMOTE":"FS"), 1005,
+						"Bad attributes on (%s)", m_new_dir.c_str());
+			} else {
+				// need to lookup username from dir and do setOwner()
+				char *tmpOwner = my_username( stat_buf.st_uid );
+				if (!tmpOwner) {
+					// this could happen if, for instance,
+					// getpwuid() failed.
+					server_result = -1;
+					errstack->pushf((remote_?"FS_REMOTE":"FS"), 1006,
+							"Unable to lookup uid %i", stat_buf.st_uid);
+				} else {
+					server_result = 0;	// 0 means success here. sigh.
+					setRemoteUser( tmpOwner );
+					setAuthenticatedName( tmpOwner );
+					free( tmpOwner );
+					setRemoteDomain( getLocalDomain() );
+				}
+			}
 		}
-		// leave new_dir allocated until after dprintf below
+	} else {
+		server_result = -1;
+		if (m_new_dir.size() && m_new_dir[0]) {
+			errstack->pushf((remote_?"FS_REMOTE":"FS"), 1007,
+					"Client unable to create dir (%s)", m_new_dir.c_str());
+		}
+		// else we gave the client a bogus name to begin with!
 	}
+
+	if (!mySock_->code( server_result ) || !mySock_->end_of_message())
+	{
+		dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
+			__FUNCTION__, __LINE__);
+		return fail;
+	}
+	// leave new_dir allocated until after dprintf below
 
 	dprintf( D_SECURITY, "AUTHENTICATE_FS%s: used %s %s, status: %d\n", 
 			(remote_?"_REMOTE":""), (used_file?"file":"dir"),
-			(new_dir ? new_dir : "(null)"), (server_result == 0) );
-
-	if ( new_dir ) {
-		free( new_dir );
-	}
+			(m_new_dir.size() ? m_new_dir.c_str() : "(null)"), (server_result == 0) );
 
 	// this function returns TRUE on success, FALSE on failure,
 	// which is just the opposite of server_result.

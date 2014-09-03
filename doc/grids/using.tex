@@ -39,7 +39,7 @@ The Globus Toolkit's Global Access to Secondary Storage (GASS) service provides
 \index{GASS (Global Access to Secondary Storage)}
 mechanisms for transferring data to and from a remote HTTP, FTP, or GASS server. 
 GASS is used by HTCondor for the 
-\SubmitCmd{gt2} grid type
+\SubmitCmdNI{gt2} grid type
 to transfer a job's files
 to and from the machine where the job is submitted and the remote resource.
 \item[GridFTP]
@@ -51,7 +51,7 @@ accepts to specify job information.
 \item[gatekeeper]
 A gatekeeper is a software daemon executing on a remote machine on
 the grid.
-It is relevant only to the \SubmitCmd{gt2} grid type,
+It is relevant only to the \SubmitCmdNI{gt2} grid type,
 and this daemon handles the initial communication between
 HTCondor and a remote resource.
 \item[jobmanager]
@@ -75,14 +75,14 @@ HTCondor detects and intelligently handles cases
 such as if the remote resource crashes.
 
 There are now two different versions of the GRAM protocol in common
-usage: \SubmitCmd{gt2} and \SubmitCmd{gt5}.
+usage: \SubmitCmdNI{gt2} and \SubmitCmdNI{gt5}.
 HTCondor supports both of them.
 \begin{description}
 \item[gt2]
 This initial GRAM protocol is used in Globus Toolkit versions 1 and 2.
 It is still used by many production systems.
 Where available in the other, more recent versions of the protocol,
-\SubmitCmd{gt2} is referred to as the pre-web services GRAM 
+\SubmitCmdNI{gt2} is referred to as the pre-web services GRAM 
 (or pre-WS GRAM) or GRAM2.
 
 \item[gt5]
@@ -100,16 +100,16 @@ HTCondor-G supports submitting jobs to remote resources running
 the Globus Toolkit's GRAM2 (or pre-WS GRAM) service. This flavor of GRAM
 is the most common.
 These HTCondor-G jobs are submitted the same as any other HTCondor job.
-The \SubmitCmd{universe} is \SubmitCmd{grid},
+The \SubmitCmdNI{universe} is \SubmitCmdNI{grid},
 and the pre-web services GRAM protocol is specified by
-setting the type of grid as \SubmitCmd{gt2} in the \SubmitCmd{grid\_resource}
+setting the type of grid as \SubmitCmdNI{gt2} in the \SubmitCmd{grid\_resource}
 command.
 
 \index{HTCondor-G!job submission}
 \index{HTCondor-G!proxy}
 \index{proxy}
-Under HTCondor, successful job submission to the \SubmitCmd{grid} 
-\SubmitCmd{universe} with \SubmitCmd{gt2}
+Under HTCondor, successful job submission to the \SubmitCmdNI{grid} 
+\SubmitCmdNI{universe} with \SubmitCmdNI{gt2}
 requires credentials.
 \index{HTCondor-G!X.509 certificate}
 An X.509 certificate is used to create a proxy,
@@ -120,12 +120,12 @@ please consult the Globus page at
 
 \URL{http://www-unix.globus.org/toolkit/docs/4.0/security/key-index.html}
 
-Before submitting a job to HTCondor under the \SubmitCmd{grid} universe,
+Before submitting a job to HTCondor under the \SubmitCmdNI{grid} universe,
 use \Prog{grid-proxy-init} to create a proxy.
 
 Here is a simple submit description file.
 \index{submit description file!grid universe}
-The example specifies a \SubmitCmd{gt2} job to be run on
+The example specifies a \SubmitCmdNI{gt2} job to be run on
 an NCSA machine.
 
 \begin{verbatim}
@@ -249,7 +249,7 @@ In this example, the executable (the binary) has been pre-staged.
 The executable is on the remote machine, and it is not to
 be transferred before execution.
 Note that the required 
-\SubmitCmd{grid\_resource} and \SubmitCmd{universe}
+\SubmitCmdNI{grid\_resource} and \SubmitCmdNI{universe}
 commands are present.
 The command
 \begin{verbatim}
@@ -258,7 +258,7 @@ transfer_executable = false
 within the submit description file identifies the executable
 as being pre-staged.
 In this case, the 
-\SubmitCmd{executable}
+\SubmitCmdNI{executable}
 command gives the path to the executable on the remote machine.
 
 A third example submits a Perl script to be run as a submitted
@@ -387,7 +387,7 @@ There are two optional submit description file commands
 of note:
 \SubmitCmd{x509userproxy} and
 \SubmitCmd{globus\_rsl}.
-The \SubmitCmd{x509userproxy} command specifies the path to
+The \SubmitCmdNI{x509userproxy} command specifies the path to
 an X.509 proxy.
 The command is of the form:
 \begin{verbatim}
@@ -402,9 +402,9 @@ looks for the proxy in the file
 where the characters \verb@XXXX@ in this file name are
 replaced with the Unix user id.
 
-The \SubmitCmd{globus\_rsl} command is used to add additional
+The \SubmitCmdNI{globus\_rsl} command is used to add additional
 attribute settings to a job's RSL string.
-The format of the \SubmitCmd{globus\_rsl} command is
+The format of the \SubmitCmdNI{globus\_rsl} command is
 \begin{verbatim}
 globus_rsl = (name=value)(name=value)
 \end{verbatim}
@@ -441,7 +441,7 @@ It does not matter whether gt2 or gt5 is specified.
 Disable this detection by setting
 the configuration variable \Macro{GRAM\_VERSION\_DETECTION} to \Expr{False}.
 If disabled, each resource must be accurately identified as either gt2 or gt5
-in the \SubmitCmd{grid\_resource} submit command.
+in the \SubmitCmdNI{grid\_resource} submit command.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:My-Proxy}Credential Management with \Prog{MyProxy}}
@@ -449,9 +449,9 @@ in the \SubmitCmd{grid\_resource} submit command.
 \index{proxy!renewal with \Prog{MyProxy}}
 HTCondor-G can use \Prog{MyProxy}
 software to automatically renew GSI proxies for
-\SubmitCmd{grid}
-\SubmitCmd{universe} jobs with grid type
-\SubmitCmd{gt2}.
+\SubmitCmdNI{grid}
+\SubmitCmdNI{universe} jobs with grid type
+\SubmitCmdNI{gt2}.
 \Prog{MyProxy} is a software component developed at
 NCSA and used widely throughout the grid community.
 For more information see:

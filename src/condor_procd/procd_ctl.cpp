@@ -439,9 +439,9 @@ get_usage(ProcFamilyClient& pfc, int argc, char* argv[])
 	}
 #endif
 	if (pfu.block_read_bytes >= 0)
-		printf("Bytes read from block devices (KB): %lu\n", pfu.block_read_bytes/1024);
+		printf("Bytes read from block devices (KB): %llu\n", (unsigned long long)(pfu.block_read_bytes/1024));
 	if (pfu.block_write_bytes >= 0)
-		printf("Bytes written to block devices (KB): %lu\n", pfu.block_write_bytes/1024);
+		printf("Bytes written to block devices (KB): %llu\n", (unsigned long long)(pfu.block_write_bytes/1024));
 	return 0;
 }
 

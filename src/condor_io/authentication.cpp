@@ -34,6 +34,7 @@
 #include "condor_environ.h"
 #include "condor_ipverify.h"
 #include "CondorError.h"
+#include "globus_utils.h"
 
 
 
@@ -50,7 +51,6 @@
 
 MapFile* Authentication::global_map_file = NULL;
 bool Authentication::global_map_file_load_attempted = false;
-bool Authentication::globus_activated = false;
 
 char const *UNMAPPED_DOMAIN = "unmapped";
 char const *MATCHSESSION_DOMAIN = "matchsession";
@@ -62,6 +62,11 @@ char const *CONDOR_CHILD_FQU = "condor@child";
 char const *CONDOR_PARENT_FQU = "condor@parent";
 
 Authentication::Authentication( ReliSock *sock )
+	: m_auth(NULL),
+	  m_key(NULL),
+	  m_auth_timeout_time(0),
+	  m_continue_handshake(false),
+	  m_continue_auth(false)
 {
 // Do this regardless of the state of SKIP_AUTHENTICATION)
 // even if SKIP_AUTHENTICATION is true, we call sock->Timeout later
@@ -76,7 +81,14 @@ Authentication::~Authentication()
 #if !defined(SKIP_AUTHENTICATION)
 	mySock = NULL;
 
-	delete authenticator_;
+	if (authenticator_)
+	{
+		delete authenticator_;
+	}
+	if (m_auth)
+	{
+		delete m_auth;
+	}
 
 	if (method_used) {
 		free (method_used);
@@ -86,28 +98,14 @@ Authentication::~Authentication()
 }
 
 int Authentication::authenticate( char *hostAddr, KeyInfo *& key, 
-								  const char* auth_methods, CondorError* errstack, int timeout)
+								  const char* auth_methods, CondorError* errstack, int timeout, bool non_blocking)
 {
-    int retval = authenticate(hostAddr, auth_methods, errstack, timeout);
-    
-#if !defined(SKIP_AUTHENTICATION)
-    if (retval) {        // will always try to exchange key!
-        // This is a hack for now, when we have only one authenticate method
-        // this will be gone
-        mySock->allow_empty_message_flag = FALSE;
-        retval = exchangeKey(key);
-		if ( !retval ) {
-			errstack->push("AUTHENTICATE",AUTHENTICATE_ERR_KEYEXCHANGE_FAILED,
-				"Failed to securely exchange session key");
-		}
-        mySock->allow_one_empty_message();
-    }
-#endif
-    return retval;
+	m_key = &key;
+	return authenticate(hostAddr, auth_methods, errstack, timeout, non_blocking);
 }
 
 int Authentication::authenticate( char *hostAddr, const char* auth_methods,
-		CondorError* errstack, int timeout)
+		CondorError* errstack, int timeout, bool non_blocking)
 {
 	int retval;
 	int old_timeout=0;
@@ -115,7 +113,7 @@ int Authentication::authenticate( char *hostAddr, const char* auth_methods,
 		old_timeout=mySock->timeout(timeout);
 	}
 
-	retval = authenticate_inner(hostAddr,auth_methods,errstack,timeout);
+	retval = authenticate_inner(hostAddr,auth_methods,errstack,timeout,non_blocking);
 
 	if (timeout>=0) {
 		mySock->timeout(old_timeout);
@@ -125,7 +123,7 @@ int Authentication::authenticate( char *hostAddr, const char* auth_methods,
 }
 
 int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods,
-		CondorError* errstack, int timeout)
+		CondorError* errstack, int timeout, bool non_blocking)
 {
 #if defined(SKIP_AUTHENTICATION)
 	dprintf(D_ALWAYS, "Skipping....\n");
@@ -135,96 +133,143 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 	*/
 	return 0;
 #else
-	Condor_Auth_Base * auth = NULL;
-	int auth_timeout_time = time(0) + timeout;
+	m_host_addr = hostAddr ? hostAddr : "(unknown)";
+	if (timeout > 0) {
+		dprintf( D_SECURITY, "AUTHENTICATE: setting timeout for %s to %d.\n", m_host_addr.c_str(), timeout);
+		m_auth_timeout_time = time(0) + timeout;
+	} else {
+		m_auth_timeout_time = 0;
+	}
 
 	if (IsDebugVerbose(D_SECURITY)) {
-		if (hostAddr) {
+		if (m_host_addr.size()) {
 			dprintf ( D_SECURITY, "AUTHENTICATE: in authenticate( addr == '%s', "
-					"methods == '%s')\n", hostAddr, auth_methods);
+					"methods == '%s')\n", m_host_addr.c_str(), auth_methods);
 		} else {
 			dprintf ( D_SECURITY, "AUTHENTICATE: in authenticate( addr == NULL, "
 					"methods == '%s')\n", auth_methods);
 		}
 	}
 
-	MyString methods_to_try = auth_methods;
+	m_methods_to_try = auth_methods;
 
+	m_continue_handshake = false;
+	m_continue_auth = false;
 	auth_status = CAUTH_NONE;
 	method_used = NULL;
+	m_auth = NULL;
+
+	return authenticate_continue(errstack, non_blocking);
+#endif
+}
+
+int Authentication::authenticate_continue( CondorError* errstack, bool non_blocking )
+{
+	// Check for continuations;
+	int firm = -1;
+	bool do_handshake = true;
+	if (m_continue_handshake) {
+		firm = handshake_continue(m_methods_to_try, non_blocking);
+		if ( firm == -2 ) {
+			dprintf(D_SECURITY, "AUTHENTICATE: handshake would still block\n");
+			return 2;
+		}
+		m_continue_handshake = false;
+		do_handshake = false;
+	}
+
+	int auth_rc = 0;
+	bool do_authenticate = true;
+	if (m_continue_auth) {
+		auth_rc = m_auth->authenticate_continue(errstack, non_blocking);
+		if (auth_rc == 2 ) {
+			dprintf(D_SECURITY, "AUTHENTICATE: auth would still block\n");
+			return 2;
+		}
+		m_continue_auth = false;
+		do_authenticate = false;
+		goto authenticate;
+	}
  
+	m_auth = NULL;
 	while (auth_status == CAUTH_NONE ) {
-		if (timeout>0 && auth_timeout_time <= time(0)) {
-			dprintf(D_SECURITY, "AUTHENTICATE: exceeded %ds timeout\n",
-					timeout);
-			errstack->pushf( "AUTHENTICATE", AUTHENTICATE_ERR_TIMEOUT, "exceeded %ds timeout during authentication", timeout );
+		if (m_auth_timeout_time>0 && m_auth_timeout_time <= time(0)) {
+			dprintf(D_SECURITY, "AUTHENTICATE: exceeded deadline %ld\n", m_auth_timeout_time);
+			errstack->pushf( "AUTHENTICATE", AUTHENTICATE_ERR_TIMEOUT, "exceeded %ld deadline during authentication", m_auth_timeout_time );
 			break;
 		}
 		if (IsDebugVerbose(D_SECURITY)) {
-			dprintf(D_SECURITY, "AUTHENTICATE: can still try these methods: %s\n", methods_to_try.Value());
+			dprintf(D_SECURITY, "AUTHENTICATE: can still try these methods: %s\n", m_methods_to_try.c_str());
 		}
 
-		int firm = handshake(methods_to_try);
+		if (do_handshake) {
+			firm = handshake(m_methods_to_try, non_blocking);
+		}
 
+		if ( firm == -2 ) {
+			dprintf(D_SECURITY, "AUTHENTICATE: handshake would block\n");
+			m_continue_handshake = true;
+			return 2;
+		}
 		if ( firm < 0 ) {
 			dprintf(D_ALWAYS, "AUTHENTICATE: handshake failed!\n");
 			errstack->push( "AUTHENTICATE", AUTHENTICATE_ERR_HANDSHAKE_FAILED, "Failure performing handshake" );
 			break;
 		}
 
-		char* method_name = NULL;
+		m_method_name = "";
 		switch ( firm ) {
 #if defined(HAVE_EXT_GLOBUS)
 			case CAUTH_GSI:
-				auth = new Condor_Auth_X509(mySock);
-				method_name = strdup("GSI");
+				m_auth = new Condor_Auth_X509(mySock);
+				m_method_name = "GSI";
 				break;
 #endif /* HAVE_EXT_GLOBUS */
 
 #ifdef HAVE_EXT_OPENSSL
-            case CAUTH_SSL:
-                auth = new Condor_Auth_SSL(mySock);
-                method_name = strdup("SSL");
-                break;
+			case CAUTH_SSL:
+				m_auth = new Condor_Auth_SSL(mySock);
+				m_method_name = "SSL";
+				break;
 #endif
 
 #if defined(HAVE_EXT_KRB5) 
 			case CAUTH_KERBEROS:
-				auth = new Condor_Auth_Kerberos(mySock);
-				method_name = strdup("KERBEROS");
+				m_auth = new Condor_Auth_Kerberos(mySock);
+				m_method_name = "KERBEROS";
 				break;
 #endif
 
 #ifdef HAVE_EXT_OPENSSL  // 3DES is the prequisite for passwd auth
 			case CAUTH_PASSWORD:
-				auth = new Condor_Auth_Passwd(mySock);
-				method_name = strdup("PASSWORD");
+				m_auth = new Condor_Auth_Passwd(mySock);
+				m_method_name = "PASSWORD";
 				break;
 #endif
  
 #if defined(WIN32)
 			case CAUTH_NTSSPI:
-				auth = new Condor_Auth_SSPI(mySock);
-				method_name = strdup("NTSSPI");
+				m_auth = new Condor_Auth_SSPI(mySock);
+				m_method_name = "NTSSPI";
 				break;
 #else
 			case CAUTH_FILESYSTEM:
-				auth = new Condor_Auth_FS(mySock);
-				method_name = strdup("FS");
+				m_auth = new Condor_Auth_FS(mySock);
+				m_method_name = "FS";
 				break;
 			case CAUTH_FILESYSTEM_REMOTE:
-				auth = new Condor_Auth_FS(mySock, 1);
-				method_name = strdup("FS_REMOTE");
+				m_auth = new Condor_Auth_FS(mySock, 1);
+				m_method_name = "FS_REMOTE";
 				break;
 #endif /* !defined(WIN32) */
 			case CAUTH_CLAIMTOBE:
-				auth = new Condor_Auth_Claim(mySock);
-				method_name = strdup("CLAIMTOBE");
+				m_auth = new Condor_Auth_Claim(mySock);
+				m_method_name = "CLAIMTOBE";
 				break;
  
 			case CAUTH_ANONYMOUS:
-				auth = new Condor_Auth_Anonymous(mySock);
-				method_name = strdup("ANONYMOUS");
+				m_auth = new Condor_Auth_Anonymous(mySock);
+				m_method_name = "ANONYMOUS";
 				break;
  
 			case CAUTH_NONE:
@@ -243,18 +288,32 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 
 		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf(D_SECURITY, "AUTHENTICATE: will try to use %d (%s)\n", firm,
-					(method_name?method_name:"?!?") );
+					(m_method_name.size()?m_method_name.c_str():"?!?") );
 		}
 
 		//------------------------------------------
 		// Now authenticate
 		//------------------------------------------
-		bool auth_rc = auth->authenticate(hostAddr, errstack);
+authenticate:
+		// Re-check deadline as handshake could have taken awhile.
+		if (m_auth_timeout_time>0 && m_auth_timeout_time <= time(0)) {
+			dprintf(D_SECURITY, "AUTHENTICATE: exceeded deadline %ld\n", m_auth_timeout_time);
+			errstack->pushf( "AUTHENTICATE", AUTHENTICATE_ERR_TIMEOUT, "exceeded %ld deadline during authentication", m_auth_timeout_time );
+			break;
+		}
+
+		if (do_authenticate) {
+			auth_rc = m_auth->authenticate(m_host_addr.c_str(), errstack, non_blocking);
+			if (auth_rc == 2) {
+				m_continue_auth = true;
+				return 2;
+			}
+		}
 
 			// check to see if the auth IP is the same as the socket IP
 		if( auth_rc ) {
 			char const *sockip = mySock->peer_ip_str();
-			char const *authip = auth->getRemoteHost() ;
+			char const *authip = m_auth->getRemoteHost() ;
 
 			auth_rc = !sockip || !authip || !strcmp(sockip,authip);
 
@@ -266,11 +325,11 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 		}
 
 		if( !auth_rc ) {
-			delete auth;
-			auth = NULL;
+			delete m_auth;
+			m_auth = NULL;
 
 			errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_METHOD_FAILED,
-					"Failed to authenticate using %s", method_name );
+					"Failed to authenticate using %s", m_method_name.c_str() );
 
 			//if authentication failed, try again after removing from client tries
 			if ( mySock->isClient() ) {
@@ -278,7 +337,7 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 				// better way to do this...  anyways, 'firm' is equal to the bit value
 				// of a particular method, so we'll just convert each item in the list
 				// and keep it if it's not that particular bit.
-				StringList meth_iter( methods_to_try.Value() );
+				StringList meth_iter( m_methods_to_try.c_str() );
 				meth_iter.rewind();
 				MyString new_list;
 				char *tmp = NULL;
@@ -296,28 +355,32 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 				}
 
 				// trust the copy constructor. :)
-				methods_to_try = new_list;
+				m_methods_to_try = new_list;
 			}
 
 			dprintf(D_SECURITY,"AUTHENTICATE: method %d (%s) failed.\n", firm,
-					(method_name?method_name:"?!?"));
+					(m_method_name.size()?m_method_name.c_str():"?!?"));
 		} else {
 			// authentication succeeded.  store the object (we may call upon
 			// its wrapper functions) and set the auth_status of this sock to
 			// the bitmask method we used and the method_used to the string
 			// name.  (string name is obtained above because there is currently
 			// no bitmask -> string map)
-			authenticator_ = auth;
+			authenticator_ = m_auth;
+			m_auth = NULL;
 			auth_status = authenticator_->getMode();
-			if (method_name) {
-				method_used = strdup(method_name);
+			if (m_method_name.size()) {
+				method_used = strdup(m_method_name.c_str());
 			} else {
 				method_used = NULL;
 			}
 		}
-		free (method_name);
 	}
+	return authenticate_finish(errstack);
+}
 
+int Authentication::authenticate_finish(CondorError *errstack)
+{
 	//if none of the methods succeeded, we fall thru to default "none" from above
 	int retval = ( auth_status != CAUTH_NONE );
 	if (IsDebugVerbose(D_SECURITY)) {
@@ -390,8 +453,23 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 	}
 
 	mySock->allow_one_empty_message();
+
+#if !defined(SKIP_AUTHENTICATION)
+	if (retval && retval != 2 && m_key != NULL) {        // will always try to exchange key!
+		// This is a hack for now, when we have only one authenticate method
+		// this will be gone
+		mySock->allow_empty_message_flag = FALSE;
+		retval = exchangeKey(*m_key);
+		if ( !retval ) {
+			errstack->push("AUTHENTICATE",AUTHENTICATE_ERR_KEYEXCHANGE_FAILED,
+			"Failed to securely exchange session key");
+		}
+		dprintf(D_SECURITY, "AUTHENTICATE: Result of end of authenticate is %d.\n", retval);
+		mySock->allow_one_empty_message();
+	}
+#endif
+
 	return ( retval );
-#endif /* SKIP_AUTHENTICATION */
 }
 
 void Authentication::reconfigMapFile()
@@ -434,15 +512,6 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	} else {
 		dprintf (D_SECURITY, "ZKM: map file already loaded.\n");
 	}
-
-#if defined(HAVE_EXT_GLOBUS)
-	if (globus_activated == false) {
-		dprintf (D_FULLDEBUG, "Activating Globus GSI_GSSAPI_ASSIST module.\n");
-		globus_module_activate(GLOBUS_GSI_GSS_ASSIST_MODULE);
-		globus_activated = true;
-	}
-#endif
-      
 
 	dprintf (D_SECURITY, "ZKM: attempting to map '%s'\n", authentication_name);
 
@@ -816,6 +885,7 @@ int Authentication :: unwrap(char*  input,
 
 int Authentication::exchangeKey(KeyInfo *& key)
 {
+	dprintf(D_SECURITY, "AUTHENTICATE: Exchanging keys with remote side.\n");
     int retval = 1;
     int hasKey, keyLength, protocol, duration;
     int outputLen, inputLen;
@@ -902,7 +972,7 @@ void Authentication::setAuthType( int state ) {
 }
 
 
-int Authentication::handshake(MyString my_methods) {
+int Authentication::handshake(MyString my_methods, bool non_blocking) {
 
     int shouldUseMethod = 0;
     
@@ -915,6 +985,10 @@ int Authentication::handshake(MyString my_methods) {
         dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the client\n");
         mySock->encode();
 		int method_bitmask = SecMan::getAuthBitmask(my_methods.Value());
+		if ( (method_bitmask & CAUTH_GSI) && activate_globus_gsi() != 0 ) {
+			dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
+			method_bitmask &= ~CAUTH_GSI;
+		}
         dprintf ( D_SECURITY, "HANDSHAKE: sending (methods == %i) to server\n", method_bitmask);
         if ( !mySock->code( method_bitmask ) || !mySock->end_of_message() ) {
             return -1;
@@ -928,33 +1002,48 @@ int Authentication::handshake(MyString my_methods) {
 
     } else {
 
-		//server
+	return handshake_continue(my_methods, non_blocking);
 
-		int client_methods = 0;
-        dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the server\n");
-        mySock->decode();
-        if ( !mySock->code( client_methods ) || !mySock->end_of_message() ) {
-            return -1;
-        }
-        dprintf ( D_SECURITY, "HANDSHAKE: client sent (methods == %i)\n", client_methods);
-        
-        shouldUseMethod = selectAuthenticationType( my_methods, client_methods );
-
-        dprintf ( D_SECURITY, "HANDSHAKE: i picked (method == %i)\n", shouldUseMethod);
-        
-        
-        mySock->encode();
-        if ( !mySock->code( shouldUseMethod ) || !mySock->end_of_message() ) {
-            return -1;
-        }
-        
-		dprintf ( D_SECURITY, "HANDSHAKE: client received (method == %i)\n", shouldUseMethod);
     }
 
     return( shouldUseMethod );
 }
 
+int
+Authentication::handshake_continue(MyString my_methods, bool non_blocking)
+{
+	//server
+	if( non_blocking && !mySock->readReady() ) {
+		return -2;
+	}
 
+	int shouldUseMethod = 0;
+	int client_methods = 0;
+	dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the server\n");
+	mySock->decode();
+	if ( !mySock->code( client_methods ) || !mySock->end_of_message() ) {
+		return -1;
+	}
+	dprintf ( D_SECURITY, "HANDSHAKE: client sent (methods == %i)\n", client_methods);
+
+	shouldUseMethod = selectAuthenticationType( my_methods, client_methods );
+	if ( shouldUseMethod == CAUTH_GSI && activate_globus_gsi() != 0 ) {
+		dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
+		client_methods &= ~CAUTH_GSI;
+		shouldUseMethod = selectAuthenticationType( my_methods, client_methods );
+	}
+
+	dprintf ( D_SECURITY, "HANDSHAKE: i picked (method == %i)\n", shouldUseMethod);
+
+
+	mySock->encode();
+	if ( !mySock->code( shouldUseMethod ) || !mySock->end_of_message() ) {
+		return -1;
+	}
+
+	dprintf ( D_SECURITY, "HANDSHAKE: client received (method == %i)\n", shouldUseMethod);
+	return shouldUseMethod;
+}
 
 int Authentication::selectAuthenticationType( MyString method_order, int remote_methods ) {
 

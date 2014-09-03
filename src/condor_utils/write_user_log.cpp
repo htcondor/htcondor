@@ -244,22 +244,41 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 	if ( m_userlog_enable ) {
 		for(std::vector<const char*>::const_iterator it = file.begin();
 				it != file.end(); ++it) {
-			log_file log(*it);
-			if(!openFile(log.path.c_str(), true, m_enable_locking, true,
-					log.lock, log.fp) ) {
+
+            if (log_file_cache != NULL) {
+                dprintf(D_FULLDEBUG, "WriteUserLog::initialize: looking up log file %s in cache\n", *it);
+                log_file_cache_map_t::iterator f(log_file_cache->find(*it));
+                if (f != log_file_cache->end()) {
+                    dprintf(D_FULLDEBUG, "WriteUserLog::initialize: found log file %s in cache, re-using\n", *it);
+                    logs.push_back(f->second);
+                    logs.back()->refset.insert(std::make_pair(c,p));
+                    continue;
+                }
+            }
+
+			log_file* log = new log_file(*it);
+			if(!openFile(log->path.c_str(), true, m_enable_locking, true,
+					log->lock, log->fp) ) {
 				dprintf(D_ALWAYS, "WriteUserLog::initialize: failed to open file %s\n",
-					log.path.c_str() );
+					log->path.c_str() );
 				ret = false;
+				delete log;
 				break;
 			} else {
 				dprintf(D_FULLDEBUG, "WriteUserLog::initialize: opened %s successfully\n",
-					log.path.c_str());
+					log->path.c_str());
 				logs.push_back(log);
+                if (log_file_cache != NULL) {
+                    dprintf(D_FULLDEBUG, "WriteUserLog::initialize: caching log file %s\n", *it);
+                    (*log_file_cache)[*it] = log;
+                    log->refset.insert(std::make_pair(c,p));
+                }
 			}
 		}
 	}
 	// At least one of our logs failed to be initialized
 	if(!ret) {
+        freeLogs();
 		logs.clear();
 	}
 	return !logs.empty() && internalInitialize( c, p, s, gjid );
@@ -405,7 +424,11 @@ WriteUserLog::Reset( void )
 	m_subproc = -1;
 
 	m_userlog_enable = true;
-	logs.clear();
+
+    freeLogs();
+   	logs.clear();
+    log_file_cache = NULL;
+
 	m_enable_fsync = true;
 	m_enable_locking = true;
 
@@ -541,9 +564,18 @@ WriteUserLog::log_file::~log_file()
 	}
 }
 
+void WriteUserLog::freeLogs() {
+    // we do this only if local log files aren't being cached
+    if (log_file_cache != NULL) return;
+    for (std::vector<log_file*>::iterator j(logs.begin());  j != logs.end();  ++j) {
+        delete *j;
+    }
+}
+
 void
 WriteUserLog::FreeLocalResources( void )
 {
+    freeLogs();
 	logs.clear();
 	if (m_gjid) {
 		free(m_gjid);
@@ -1233,7 +1265,7 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 		const char *fname;
 		if ( is_global_event ) fname = m_global_path;
 		else fname = log.path.c_str();
-		if ( condor_fsync( fileno( fp ), fname ) != 0 ) {
+		if ( condor_fdatasync( fileno( fp ), fname ) != 0 ) {
 		  dprintf( D_ALWAYS,
 				   "fsync() failed in WriteUserLog::writeEvent"
 				   " - errno %d (%s)\n",
@@ -1381,9 +1413,9 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	// write ulog event
 	bool ret = true;
 	if ( m_userlog_enable ) {
-		for(std::vector<log_file>::iterator p = logs.begin(); p != logs.end(); ++p) {
-			if( !p->fp || !p->lock) {
-				if(p->fp) {
+		for(std::vector<log_file*>::iterator p = logs.begin(); p != logs.end(); ++p) {
+			if( !(*p)->fp || !(*p)->lock) {
+				if((*p)->fp) {
 					dprintf( D_ALWAYS, "WriteUserLog: No user log lock!\n" );
 				}
 				continue;
@@ -1399,9 +1431,9 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 					break; // We are done caring about this event
 				}
 			}
-			if ( ! doWriteEvent(event, *p, false, false, (p == logs.begin()) && m_use_xml,
+			if ( ! doWriteEvent(event, **p, false, false, (p == logs.begin()) && m_use_xml,
 					param_jobad) ) {
-				dprintf( D_ALWAYS, "WARNING: WriteUserLog::writeEvent user doWriteEvent() failed on normal log %s!\n", p->path.c_str() );
+				dprintf( D_ALWAYS, "WARNING: WriteUserLog::writeEvent user doWriteEvent() failed on normal log %s!\n", (*p)->path.c_str() );
 				ret = false;
 			}
 			if( (p == logs.begin()) && param_jobad ) {
@@ -1411,7 +1443,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 				char *attrsToWrite = NULL;
 				param_jobad->LookupString("JobAdInformationAttrs",&attrsToWrite);
 				if( attrsToWrite && *attrsToWrite ) {
-					writeJobAdInfoEvent( attrsToWrite, *p, event, param_jobad, false,
+					writeJobAdInfoEvent( attrsToWrite, **p, event, param_jobad, false,
 						(p == logs.begin()) && m_use_xml);
 				}
 				free( attrsToWrite );

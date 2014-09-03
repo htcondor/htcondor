@@ -27,6 +27,11 @@ the new copy into place.
 
 */
 
+// tell windows not to generate warnings about posix names like fdopen
+// shouldn't really need to do this here, but this file isn't pulling in condor_common for some reason...
+#define _CRT_NONSTDC_NO_DEPRECATE
+#define _CRT_NONSTDC_NO_WARNINGS
+
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>

@@ -280,6 +280,29 @@ our %submit_info = (
 		},
 	},
 
+	# '0' instead of '8' since it's still in testing.
+	'x86_64_Debian0'	=> 'x86_64_Debian7',
+	'x86_64_Debian8'	=> 'x86_64_Debian7',
+
+	##########################################################################
+	# Platform RHEL 7 on x86_64
+	##########################################################################
+	'x86_64_RedHat7'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+			},
+			'prereqs'	=> [ ],
+			'xtests'	=>	undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+
 	##########################################################################
 	# Platform RedHat and SL
 	##########################################################################
@@ -306,6 +329,9 @@ our %submit_info = (
 	'x86_64_rhap_6.7'	=> 'x86_64_RedHat6',
 	'x86_64_rhap_6.8'	=> 'x86_64_RedHat6',
 	'x86_64_rhap_6.9'	=> 'x86_64_RedHat6',
+
+	# Add the SWAMP's (temporary) platform name
+	'swamp:rhel-6.4-64'	=> 'x86_64_RedHat6',
 
 	# for now SL6 is the same as RedHat6
 	'x86_64_SL6'	=> 'x86_64_RedHat6',
@@ -399,6 +425,10 @@ our %submit_info = (
 	'x86_sl_5.9'	=> 'x86_SL5',
 	'x86_sl_5.10'	=> 'x86_SL5',
 
+	# Assume the two other SL platforms are identical to their RH cousins.
+	'x86_64_SL5'	=> 'x86_64_RedHat5',
+	'x86_SL6'		=> 'x86_RedHat6',
+
 	##########################################################################
 	# Platform MacOSX
 	##########################################################################
@@ -419,6 +449,24 @@ our %submit_info = (
 	'x86_64_MacOSX7',	=> 'x86_64_MacOSX',
 	'x86_64_MacOSX8',	=> 'x86_64_MacOSX',
 	'x86_64_MacOSX9',	=> 'x86_64_MacOSX',
+
+	#
+	# The SWAMP platforms.
+	#
+	'swamp:debian-6.0.9-64-01-batlab'		=> 'x86_64_Debian6',
+	'swamp:debian-7.5-64-01-batlab'			=> 'x86_64_Debian7',
+	'swamp:rhel-5.10-32-01-batlab'			=> 'x86_RedHat5',
+	'swamp:rhel-6.5-32-01-batlab'			=> 'x86_RedHat6',
+	'swamp:rhel-5.10-64-01-batlab'			=> 'x86_64_RedHat5',
+	'swamp:rhel-6.5-64-01-batlab'			=> 'x86_64_RedHat6',
+	'swamp:ubuntu-12.04-64-01-batlab'		=> 'x86_64_Ubuntu12',
+	'swamp:ubuntu-14.04-64-01-batlab'		=> 'x86_64_Ubuntu14',
+	'swamp:fedora-19-64-01-batlab'			=> 'x86_64_Fedora19',
+	'swamp:fedora-20-64-01-batlab'			=> 'x86_64_Fedora20',
+	'swamp:scientific-5.10-32-01-batlab'	=> 'x86_SL5',
+	'swamp:scientific-5.10-64-01-batlab'	=> 'x86_64_SL5',
+	'swamp:scientific-6.5-32-01-batlab'		=> 'x86_SL6',
+	'swamp:scientific-6.5-64-01-batlab'		=> 'x86_64_SL6',
 
 
 	# These describe what a human, sadly, had to figure out about certain
@@ -530,7 +578,7 @@ our %submit_info = (
 		},
 	},
 	'x86_64_ubuntu_10.04.4' => 'x86_64_Ubuntu10',
-	
+
 	'x86_64_Ubuntu12' => {
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
@@ -544,7 +592,26 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
-	
+
+	# Only Ubuntu 14.04 has standard universe port.
+	'x86_64_Ubuntu14'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+				'-DCLIPPED:BOOL' => 'OFF',
+			 },
+			'prereqs'	=> [ @default_prereqs ],
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	# Add the SWAMP's (temporary) platform name
+	'swamp:ubuntu-12.04-64'					=> 'x86_64_Ubuntu12',
+
 	##########################################################################
 	# Platform openSUSE
 	##########################################################################

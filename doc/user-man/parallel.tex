@@ -32,7 +32,7 @@ for what is considered the single parallel job submitted.
 The \SubmitCmd{machine\_count} submit command identifies how 
 many machines (slots) are to be allocated.
 Each instance of the \SubmitCmd{queue} submit command acquires
-and claims the number of slots specified by \SubmitCmd{machine\_count}.
+and claims the number of slots specified by \SubmitCmdNI{machine\_count}.
 Each of these slots shares a common job ClassAd and
 will have the same \Attr{ProcId} job ClassAd attribute value.
 
@@ -140,7 +140,7 @@ when_to_transfer_output = ON_EXIT
 queue 
 \end{verbatim}
 
-This job specifies the \SubmitCmd{universe} as \SubmitCmd{parallel}, letting
+This job specifies the \SubmitCmdNI{universe} as \SubmitCmdNI{parallel}, letting
 HTCondor know that dedicated resources are required.  The
 \SubmitCmd{machine\_count} command identifies that eight machines are
 required for this job. 
@@ -381,7 +381,7 @@ modified for this MPI application.
 This script is invoked on each slot or core.
 The script, in turn, is expected to invoke the MPI application's executable.
 To know the MPI application's executable,
-it is the first in the list of \SubmitCmd{Arguments}.
+it is the first in the list of \SubmitCmd{arguments}.
 And, since HTCondor must transfer this executable to the machine where
 it will run,
 it is listed with the \SubmitCmd{transfer\_input\_files} command,

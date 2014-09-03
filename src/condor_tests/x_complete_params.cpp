@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <errno.h>
 #include <sys/types.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include <limits.h>
 #include <float.h>
 
@@ -44,10 +46,10 @@ int main(int argc,char **argv)
 		const struct condor_params::key_value_pair *kvpair = &(condor_params::defaults[idx]);
 		if ( ! kvpair->def) {
 			printf("%s = NULL\n", kvpair->key);
-			fprintf(fp,"%s,NULL\n",kvpair->key);
+			if (fp) fprintf(fp,"%s,NULL\n",kvpair->key);
 		} else {
 			printf("%s = \"%s\"\n", kvpair->key, kvpair->def->psz);
-			fprintf(fp,"%s,%s\n",kvpair->key,kvpair->def->psz);
+			if (fp) fprintf(fp,"%s,%s\n",kvpair->key,kvpair->def->psz);
 		}
 	}
 

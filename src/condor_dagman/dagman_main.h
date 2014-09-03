@@ -218,9 +218,18 @@ class Dagman {
 		// If _runPost is true, we run a POST script even if the PRE
 		// script for the node fails.
 	bool _runPost;
+
 		// Default priority that DAGman uses for nodes.
 	int _defaultPriority;
+
 	int _claim_hold_time;
+
+		// True iff -DoRecov is specified on the command line.
+	bool _doRecovery;
+
+		// True iff we want to suppress jobs from writing to the
+		// log files specified in their submit files (see gittrac #4353).
+	bool _suppressJobLogs;
 
 	DagmanClassad *_dagmanClassad;
 };

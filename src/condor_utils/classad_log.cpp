@@ -22,12 +22,14 @@
 
 #define _POSIX_SOURCE
 
+#include "basename.h"
 #include "condor_common.h"
 #include "classad_log.h"
 #include "condor_debug.h"
 #include "util_lib_proto.h"
 #include "classad_merge.h"
 #include "condor_fsync.h"
+#include "condor_attributes.h"
 
 #if defined(HAVE_DLOPEN)
 #include "ClassAdLogPlugin.h"
@@ -54,6 +56,100 @@ ptr = NULL;
 
 const char *EMPTY_CLASSAD_TYPE_NAME = "(empty)";
 
+ClassAdLogFilterIterator::ClassAdLogFilterIterator(ClassAdHashTable *table, const classad::ExprTree *requirements, int timeslice_ms, bool invalid)
+	: m_table(table),
+	  m_cur(table->begin()),
+	  m_found_ad(false),
+	  m_requirements(requirements),
+	  m_timeslice_ms(timeslice_ms),
+	  m_done(invalid)
+	{}
+
+ClassAdLogFilterIterator::ClassAdLogFilterIterator(const ClassAdLogFilterIterator &other)
+	: m_table(other.m_table),
+	  m_cur(other.m_cur),
+	  m_found_ad(other.m_found_ad),
+	  m_requirements(other.m_requirements),
+	  m_timeslice_ms(other.m_timeslice_ms),
+	  m_done(other.m_done)
+{
+}
+
+ClassAd* ClassAdLogFilterIterator::operator *() const {
+	if (m_done || (m_cur == m_table->end()) || !m_found_ad)
+	{
+		return NULL;
+	}
+	return (*m_cur).second;
+}
+
+ClassAdLogFilterIterator
+ClassAdLogFilterIterator::operator++(int)
+{
+	m_found_ad = false;
+	ClassAdLogFilterIterator cur = *this;
+	if (m_done) {
+		return cur;
+	}
+
+	HashIterator<HashKey, ClassAd*> end = m_table->end();
+	bool boolVal;
+	int intVal;
+	int miss_count = 0;
+	while (!(m_cur == end))
+	{
+		miss_count++;
+		if (miss_count == m_timeslice_ms)
+		{
+			break;
+		}
+		cur = *this;
+		ClassAd *tmp_ad = (*m_cur++).second;
+		if (!tmp_ad) continue;
+		if (m_requirements) {
+			classad::ExprTree &requirements = *const_cast<classad::ExprTree*>(m_requirements);
+			const classad::ClassAd *old_scope = requirements.GetParentScope();
+			requirements.SetParentScope( tmp_ad );
+				classad::Value result;
+			int retval = requirements.Evaluate(result);
+			requirements.SetParentScope(old_scope);
+			if (!retval) {
+				dprintf(D_FULLDEBUG, "Unable to evaluate ad.\n");
+				continue;
+			}
+
+			if (!(result.IsBooleanValue(boolVal) && boolVal) &&
+					!(result.IsIntegerValue(intVal) && intVal)) {
+				continue;
+			}
+		}
+		int tmp_int;
+		if (!tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, tmp_int) || !tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, tmp_int)) {
+			continue;
+		}
+                int proc, cluster;
+                tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
+                tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
+		cur.m_found_ad = true;
+		m_found_ad = true;
+		break;
+	}
+	if ((m_cur == end) && (!m_found_ad)) {
+		m_done = true;
+	}
+	return cur;
+}
+
+bool
+ClassAdLogFilterIterator::operator==(const ClassAdLogFilterIterator &other)
+{
+	if (m_table != other.m_table) return false;
+	if (m_done && other.m_done) return true;
+	if (m_done != other.m_done) return false;
+	if (!(m_cur == other.m_cur) ) return false;
+	return true;
+}
+
 ClassAdLog::ClassAdLog() : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 {
 	active_transaction = NULL;
@@ -69,11 +165,14 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 	active_transaction = NULL;
 	m_nondurable_level = 0;
 
+	bool open_read_only = max_historical_logs_arg < 0;
+	if (open_read_only) { max_historical_logs_arg = -max_historical_logs_arg; }
 	this->max_historical_logs = max_historical_logs_arg;
 	historical_sequence_number = 1;
 	m_original_log_birthdate = time(NULL);
 
-	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_CREAT | O_LARGEFILE, 0600);
+	// TODO: this should open O_BINARY because on windows, text files have \r\n with the c-runtime magically adding/removing \r as needed.
+	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (log_fd < 0) {
 		EXCEPT("failed to open log %s, errno = %d", logFilename(), errno);
 	}
@@ -149,8 +248,8 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 		// rotate the log anyway, we may as well just require the rotation
 		// to be successful.  In the case where rotation fails, we will
 		// probably soon fail to write to the log file anyway somewhere else.)
-		dprintf(D_ALWAYS,"Detected unterminated log entry in ClassAd Log %s."
-				" Forcing rotation.\n", logFilename());
+		dprintf(D_ALWAYS,"Detected unterminated log entry in ClassAd Log %s.%s\n",
+				logFilename(), open_read_only ? "" : " Forcing rotation.");
 		requires_successful_cleaning = true;
 	}
 	if (active_transaction) {	// abort incomplete transaction
@@ -160,8 +259,8 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 		if( !requires_successful_cleaning ) {
 			// For similar reasons as with broken log entries above,
 			// we need to force rotation.
-			dprintf(D_ALWAYS,"Detected unterminated transaction in ClassAd Log"
-					"%s. Forcing rotation.\n", logFilename());
+			dprintf(D_ALWAYS,"Detected unterminated transaction in ClassAd Log %s.%s\n",
+					logFilename(), open_read_only ? "" : " Forcing rotation.");
 			requires_successful_cleaning = true;
 		}
 	}
@@ -172,8 +271,11 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 		}
 	}
 	if( !is_clean || requires_successful_cleaning ) {
-		if( !TruncLog() && requires_successful_cleaning ) {
-			EXCEPT("Failed to rotate ClassAd log %s.\n", logFilename());
+		if (open_read_only && requires_successful_cleaning) {
+			EXCEPT("Log %s is corrupt and needs to be cleaned before restarting HTCondor", logFilename());
+		}
+		else if( !TruncLog() && requires_successful_cleaning ) {
+			EXCEPT("Failed to rotate ClassAd log %s.", logFilename());
 		}
 	}
 }
@@ -207,14 +309,7 @@ ClassAdLog::AppendLog(LogRecord *log)
 				EXCEPT("write to %s failed, errno = %d", logFilename(), errno);
 			}
 			if( m_nondurable_level == 0 ) {
-					//MD: flushing data -- using a file pointer
-				if (fflush(log_fp) !=0){
-					EXCEPT("flush to %s failed, errno = %d", logFilename(), errno);
-				}
-					//MD: syncing the data as done before
-				if (condor_fsync(fileno(log_fp)) < 0) {
-					EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
-				}
+				ForceLog();  // flush and fsync
 			}
 		}
 		log->Play((void *)&table);
@@ -231,6 +326,25 @@ ClassAdLog::FlushLog()
 		}
 	}
 }
+
+void
+ClassAdLog::ForceLog()
+{
+	// Force log changes to disk.  This involves first flushing
+	// the log from memory buffers, then fsyncing to disk.
+	if (log_fp!=NULL) {
+
+		// First flush
+		FlushLog();
+
+		// Then sync
+		if (condor_fdatasync(fileno(log_fp)) < 0) {
+			EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
+		}
+
+	}
+}
+
 
 bool
 ClassAdLog::SaveHistoricalLogs()
@@ -298,7 +412,7 @@ ClassAdLog::TruncLog()
 	}
 
 	tmp_log_filename.formatstr( "%s.tmp", logFilename());
-	new_log_fd = safe_open_wrapper_follow(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE, 0600);
+	new_log_fd = safe_open_wrapper_follow(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (new_log_fd < 0) {
 		dprintf(D_ALWAYS, "failed to rotate log: safe_open_wrapper(%s) returns %d\n",
 				tmp_log_filename.Value(), new_log_fd);
@@ -326,7 +440,7 @@ ClassAdLog::TruncLog()
 		// Beat a hasty retreat into the past.
 		historical_sequence_number--;
 
-		int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE, 0600);
+		int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 		if (log_fd < 0) {
 			EXCEPT("failed to reopen log %s, errno = %d after failing to rotate log.",logFilename(),errno);
 		}
@@ -338,7 +452,34 @@ ClassAdLog::TruncLog()
 
 		return false;
 	}
-	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE, 0600);
+
+#ifndef WIN32
+	// POSIX does not provide any durability guarantees for rename().  Instead, we must
+	// open the parent directory and invoke fsync there.
+	char * parent_dir = condor_dirname( logFilename() );
+	if (parent_dir)
+	{
+		int parent_fd = safe_open_wrapper_follow(parent_dir, O_RDONLY);
+		if (parent_fd >= 0)
+		{
+			if (condor_fsync(parent_fd) == -1)
+			{
+				EXCEPT("Failed to fsync directory %s after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
+			}
+			close(parent_fd);
+		}
+		else
+		{
+			EXCEPT("Failed to open parent directory %s for fsync after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
+		}
+	}
+	else
+	{
+		dprintf(D_ALWAYS, "Failed to determine log's directory name\n");
+	}
+#endif
+
+	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (log_fd < 0) {
 		EXCEPT( "failed to open log in append mode: "
 			"safe_open_wrapper(%s) returns %d\n", logFilename(), log_fd);
@@ -658,7 +799,7 @@ ClassAdLog::LogState(FILE *fp)
 	if (fflush(fp) !=0){
 	  EXCEPT("fflush of %s failed, errno = %d", logFilename(), errno);
 	}
-	if (condor_fsync(fileno(fp)) < 0) {
+	if (condor_fdatasync(fileno(fp)) < 0) {
 		EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
 	} 
 }
@@ -1036,6 +1177,15 @@ LogDeleteAttribute::WriteBody(FILE* fp)
 	return rval1 + rval;
 }
 
+int
+LogBeginTransaction::Play(void *){
+#if defined(HAVE_DLOPEN)
+	ClassAdLogPluginManager::BeginTransaction();
+#endif
+
+	return 1;
+}
+
 int 
 LogBeginTransaction::ReadBody(FILE* fp)
 {
@@ -1045,6 +1195,15 @@ LogBeginTransaction::ReadBody(FILE* fp)
 		return( -1 );
 	}
 	return( 1 );
+}
+
+int
+LogEndTransaction::Play(void *) {
+#if defined(HAVE_DLOPEN)
+	ClassAdLogPluginManager::EndTransaction();
+#endif
+
+	return 1;
 }
 
 int 
@@ -1122,7 +1281,16 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type)
     // transaction op).  A complete transaction with corruption is unrecoverable, and 
     // causes a fatal exception.
 	if (log_rec->ReadBody(fp) < 0  ||  log_rec->get_op_type() == CondorLogOp_Error) {
-        dprintf(D_ALWAYS, "WARNING: Encountered corrupt log record %lu (byte offset %lld)\n", recnum, pos);
+        dprintf(D_ALWAYS | D_ERROR, "WARNING: Encountered corrupt log record %lu (byte offset %lld)\n", recnum, pos);
+		// TODO: this ugly code attempts to reconstruct the corrupted line, fix it to just show the actual line.
+		const char *key, *name="", *value="";
+		key = log_rec->get_key(); if ( ! key) key = "";
+		if (log_rec->get_op_type() == CondorLogOp_SetAttribute) {
+			LogSetAttribute * log = (LogSetAttribute *)log_rec;
+			name = log->get_name(); if ( ! name) name = "";
+			value = log->get_value(); if ( ! value) value = "";
+		}
+		dprintf(D_ALWAYS | D_ERROR, "    %d %s %s %s\n", log_rec->get_op_type(), key, name, value);
 
 		char	line[ATTRLIST_MAX_EXPRESSION + 64];
 		int		op;

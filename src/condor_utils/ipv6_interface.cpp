@@ -12,23 +12,25 @@ static uint32_t scope_id = 0;
 uint32_t find_scope_id(const condor_sockaddr& addr) {
 	if (!addr.is_ipv6())
 		return 0;
-	ifaddrs* ifaddr;
+	ifaddrs* ifaddr = 0;
 	ifaddrs* ifa;
 
 	if (getifaddrs(&ifaddr))
 		return 0;
 
+	uint32_t result = (uint32_t)-1;
 	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
 		if (ifa->ifa_addr == NULL)
 			continue;
 
 		condor_sockaddr addr2(ifa->ifa_addr);
 		if (addr.compare_address(addr2)) {
-			return addr2.to_sin6().sin6_scope_id;
+			result = addr2.to_sin6().sin6_scope_id;
 		}
 	}
+	freeifaddrs(ifaddr);
 
-	return (uint32_t)-1;
+	return result;
 }
 
 uint32_t ipv6_get_scope_id() {

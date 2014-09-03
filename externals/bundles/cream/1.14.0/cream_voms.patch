@@ -1,0 +1,30 @@
+diff -u -r src.orig/interface/glite/ce/cream-client-api-c/certUtil.h src/interface/glite/ce/cream-client-api-c/certUtil.h
+--- src.orig/interface/glite/ce/cream-client-api-c/certUtil.h	2010-12-20 03:57:06.000000000 -0600
++++ src/interface/glite/ce/cream-client-api-c/certUtil.h	2014-02-28 10:36:12.627116068 -0600
+@@ -23,6 +23,11 @@
+  
+ #include "glite/ce/cream-client-api-c/auth_ex.h"
+ #include <string>
++// VOMS decides whether gssapi.h has been included by checking GSSAPI_H_,
++// but on modern linux it should check _GSSAPI_H_
++#if defined(_GSSAPI_H_) || defined(__GSSAPI__)
++#define GSSAPI_H_
++#endif
+ #include "voms/voms_api.h"
+ #include <openssl/pem.h>
+ 
+diff -u -r src.orig/interface/glite/ce/cream-client-api-c/VOMSWrapper.h src/interface/glite/ce/cream-client-api-c/VOMSWrapper.h
+--- src.orig/interface/glite/ce/cream-client-api-c/VOMSWrapper.h	2010-12-21 03:04:48.000000000 -0600
++++ src/interface/glite/ce/cream-client-api-c/VOMSWrapper.h	2014-02-28 10:36:49.234036081 -0600
+@@ -23,6 +23,11 @@
+ 
+ #include "glite/ce/cream-client-api-c/creamApiLogger.h"
+ #include "glite/ce/cream-client-api-c/auth_ex.h"
++// VOMS decides whether gssapi.h has been included by checking GSSAPI_H_,
++// but on modern linux it should check _GSSAPI_H_
++#if defined(_GSSAPI_H_) || defined(__GSSAPI__)
++#define GSSAPI_H_
++#endif
+ #include "voms/voms_api.h"
+ #include <vector>
+ #include <string>

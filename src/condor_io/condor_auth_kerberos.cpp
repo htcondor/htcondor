@@ -35,8 +35,8 @@ const char STR_KERBEROS_SERVER_KEYTAB[]   = "KERBEROS_SERVER_KEYTAB";
 const char STR_KERBEROS_SERVER_PRINCIPAL[]= "KERBEROS_SERVER_PRINCIPAL";
 const char STR_KERBEROS_SERVER_USER[]     = "KERBEROS_SERVER_USER";
 const char STR_KERBEROS_SERVER_SERVICE[]  = "KERBEROS_SERVER_SERVICE";
-const char STR_KERBEROS_CLIENT_KEYTAB[]   = "KERBEROS_CLIENT_KEYTAB";
-const char STR_KRB_FORMAT[]             = "FILE:%s/krb_condor_%s.stash";
+//const char STR_KERBEROS_CLIENT_KEYTAB[]   = "KERBEROS_CLIENT_KEYTAB";
+//const char STR_KRB_FORMAT[]             = "FILE:%s/krb_condor_%s.stash";
 const char STR_DEFAULT_CONDOR_SERVICE[] = "host";
 
 #define KERBEROS_ABORT   -1
@@ -99,7 +99,7 @@ Condor_Auth_Kerberos :: ~Condor_Auth_Kerberos()
     }
 }
 
-int Condor_Auth_Kerberos :: authenticate(const char * /* remoteHost */, CondorError* /* errstack */)
+int Condor_Auth_Kerberos :: authenticate(const char * /* remoteHost */, CondorError* /* errstack */, bool /*non_blocking*/)
 {
     int status = 0;
 

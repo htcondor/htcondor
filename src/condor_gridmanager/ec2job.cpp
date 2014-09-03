@@ -543,12 +543,11 @@ void EC2Job::doEvaluateState()
 							gmState = GM_SPOT_CANCEL;
 						}
 					} else {
-						// Because we have the client token, we know that
-						// we still have the SSH keypair from the previous
-						// execution of GM_SAVE_CLIENT_TOKEN.  We can therefore
-						// jump directly to GM_START_VM, where (using the
-						// client token), we will call RunInstances()
-						// idempotently.
+						// Our starting assumption is that we still have
+						// to start the instance, but if it already exists,
+						// the ClientToken will prevent us from creating
+						// a second one.
+						// We may change our mind based on the checks below.
 						gmState = GM_START_VM;
 
 						// As an optimization, if we already have the instance
@@ -579,6 +578,9 @@ void EC2Job::doEvaluateState()
 							// the real benefit is that invalid jobs won't
 							// stay on hold when the user removes them
 							// (because we won't try to start them).
+							// Additionally, if the ClientToken can't be
+							// used for idempotent submission, we have to
+							// check for existence of the instance.
 							gmState = GM_SEEK_INSTANCE_ID;
 						}
 					}
@@ -680,9 +682,9 @@ void EC2Job::doEvaluateState()
 					// success. We do this instead of checking whether
 					// the keypair exists during recovery.
 					// Each server type uses a different error message.
-					// Amazon: "InvalidKeyPair.Duplicate"
+					// Amazon, OpenSatck(Havana): "InvalidKeyPair.Duplicate"
 					// Eucalyptus: "Keypair already exists"
-					// OpenStack: "KeyPairExists"
+					// OpenStack(pre-Havana): "KeyPairExists"
 					// Nimbus: No error
 					if ( rc == 0 ||
 						 strstr( gahp->getErrorString(), "KeyPairExists" ) ||
@@ -691,6 +693,7 @@ void EC2Job::doEvaluateState()
 						m_keypair_created = true;
 						gmState = gmTargetState;
 					} else {
+						if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
 
 						// May need to add back retry logic, but why?
 						errorString = gahp->getErrorString();
@@ -798,6 +801,8 @@ void EC2Job::doEvaluateState()
 						daemonCore->Reset_Timer( evaluateStateTid,
 												 submitInterval );
 					} else {
+						if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
+
 						errorString = gahp->getErrorString();
 						dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s: %s\n",
 								procID.cluster, procID.proc,
@@ -1184,6 +1189,10 @@ void EC2Job::doEvaluateState()
 					// Bypasses the polling delay in GM_CANCEL_CHECK.
 					probeNow = true;
 				} else {
+					// Force us to wait a polling delay before checking
+					// to see if this worked.
+					probeNow = false;
+
 					rc = gahp->ec2_vm_stop( m_serviceUrl,
 											m_public_key_file,
 											m_private_key_file,
@@ -1195,20 +1204,36 @@ void EC2Job::doEvaluateState()
 						break;
 					}
 
+					//
+					// If the instance has already been purged, consider
+					// the cancel a success.
+					//
+					// Amazon: "InvalidInstanceID.NotFound"
+					// Eucalyptus: no HTTP error; false return with empty termination set
+					// OpenStack (Havana): "InvalidInstanceID.NotFound"
+					// OpenStack (Essex): "InstanceNotFound"
+					// Nimbus: no HTTP error; empty termination set
+					//
 					if( rc != 0 ) {
 						errorString = gahp->getErrorString();
-						dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
-								 procID.cluster, procID.proc,
-								 gahp_error_code.c_str(),
-							 	errorString.c_str() );
-						gmState = GM_HOLD;
-						break;
-					}
+						if( strstr( errorString.c_str(), "InstanceNotFound" ) ||
+							strstr( errorString.c_str(), "InvalidInstanceID.NotFound" ) ) {
+							remoteJobState = EC2_VM_STATE_PURGED;
+						} else {
+							if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
+							dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
+									 procID.cluster, procID.proc,
+									 gahp_error_code.c_str(),
+									 errorString.c_str() );
+							gmState = GM_HOLD;
+							break;
+						}
 
 					// We could save some time here for Amazon users by
 					// changing the EC2 GAHP to return the (new) state of
 					// the job.  If it's SHUTTINGDOWN, set probeNow.  We
 					// can't do this for OpenStack because we know they lie.
+					}
 				}
 
 				gmState = GM_CANCEL_CHECK;
@@ -1352,6 +1377,7 @@ void EC2Job::doEvaluateState()
 						// deleted the keypair ID yet, it'll still be in
 						// the job ad...
 						if( rc != 0 ) {
+							if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
 							errorString = gahp->getErrorString();
 							dprintf( D_ALWAYS, "(%d.%d) job destroy keypair (%s) failed: %s: %s\n",
 									 procID.cluster, procID.proc, m_key_pair.c_str(),
@@ -1438,6 +1464,7 @@ void EC2Job::doEvaluateState()
 					gmState = GM_SPOT_SUBMITTED;
 					break;
 				} else {
+					if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
 					errorString = gahp->getErrorString();
 					dprintf( D_ALWAYS, "(%d.%d) spot instance request failed: %s: %s\n",
 								procID.cluster, procID.proc,
@@ -1480,6 +1507,7 @@ void EC2Job::doEvaluateState()
 					}
 
 					if( rc != 0 ) {
+						if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
 						errorString = gahp->getErrorString();
 						dprintf( D_ALWAYS, "(%d.%d) spot request stop failed: %s: %s\n",
 									procID.cluster, procID.proc,
@@ -1565,6 +1593,7 @@ void EC2Job::doEvaluateState()
 
 				// If the command fails, put the job on hold.
 				if( rc != 0 ) {
+					if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
 					errorString = gahp->getErrorString();
 					dprintf( D_ALWAYS, "(%d.%d) spot request probe failed: %s: %s\n",
 								procID.cluster, procID.proc,
@@ -2083,6 +2112,7 @@ void EC2Job::associate_n_attach()
 			if ((condorState == REMOVED) || (condorState == HELD))
 				gmState = GM_DELETE;
 		default:
+			if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
 			dprintf(D_ALWAYS,
 					"Failed ec2_create_tags returned %s continuing w/job\n",
 					gahp_error_code.c_str());
@@ -2113,6 +2143,7 @@ void EC2Job::associate_n_attach()
 				if ( (condorState == REMOVED) || (condorState == HELD) )
 					gmState = GM_DELETE;
 			default:
+				if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
 				dprintf(D_ALWAYS,
 						"Failed ec2_associate_address returned %s continuing w/job\n",
 						gahp_error_code.c_str());
@@ -2157,6 +2188,7 @@ void EC2Job::associate_n_attach()
 					if ( (condorState == REMOVED) || (condorState == HELD) )
 						gmState = GM_DELETE;
 				default:
+					if( gahp_error_code == "E_CURL_IO" ) { myResource->RequestPing( this ); }
 					bcontinue=false;
 					dprintf(D_ALWAYS,
 							"Failed ec2_attach_volume returned %s continuing w/job\n",

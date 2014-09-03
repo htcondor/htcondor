@@ -1686,7 +1686,9 @@ bool DCSchedd::getJobConnectInfo(
 	MyString &starter_version,
 	MyString &slot_name,
 	MyString &error_msg,
-	bool &retry_is_sensible)
+	bool &retry_is_sensible,
+	int &job_status,
+	MyString &hold_reason)
 {
 	ClassAd input;
 	ClassAd output;
@@ -1742,9 +1744,11 @@ bool DCSchedd::getJobConnectInfo(
 	output.LookupBool(ATTR_RESULT,result);
 
 	if( !result ) {
+		output.LookupString(ATTR_HOLD_REASON,hold_reason);
 		output.LookupString(ATTR_ERROR_STRING,error_msg);
 		retry_is_sensible = false;
 		output.LookupBool(ATTR_RETRY,retry_is_sensible);
+		output.LookupInteger(ATTR_JOB_STATUS,job_status);
 	}
 	else {
 		output.LookupString(ATTR_STARTER_IP_ADDR,starter_addr);

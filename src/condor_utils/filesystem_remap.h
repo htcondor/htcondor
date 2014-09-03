@@ -22,7 +22,6 @@
 
 #include <string>
 #include <list>
-#include <map>
 #include <vector>
 #include <utility>
 
@@ -65,14 +64,6 @@ public:
 	 */
 	int AddMapping(std::string source, std::string dest);
 
-    /**
-     * Add a AddFuseMapping to the filesystem remap.
-     * @param exec: A source directory that will be remapped to the destination.
-     * @param dest: A destination directory
-     * @returns: 0 on success, -1 if the directories were not mappable.
-     */
-    int AddNamedMapping(const std::string & exec, const std::string & dest);
-    
 	/**
 	 * Performs the mappings known to this class.
 	 * This method does not touch the privilege settings - the caller is responsible
@@ -82,11 +73,6 @@ public:
 	 * @returns: 0 if everything went well, -1 if the remounts failed.
 	 */
 	int PerformMappings();
-    
-    /**
-     */
-    int cleanup();
-    
 
 	/**
 	 * Determine where a directory will be accessible from after the mapping.
@@ -132,7 +118,6 @@ private:
 	std::list<pair_strings> m_mappings;
 	std::list<pair_str_bool> m_mounts_shared;
 	std::list<pair_strings> m_mounts_autofs;
-    std::map<std::string, std::string> m_mounts_named;
 
 	bool m_remap_proc;
 

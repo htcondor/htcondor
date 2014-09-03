@@ -408,17 +408,19 @@ JICShadow::Continue( void )
 
 bool JICShadow::allJobsDone( void )
 {
-	bool r1, r2 = false;
 	ClassAd update_ad;
 
-	r1 = JobInfoCommunicator::allJobsDone();
+	bool r1 = JobInfoCommunicator::allJobsDone();
 
+	// Tell shadow job is done, and moving to job state transfer output
 	if (!m_did_transfer) {
 		publishJobExitAd( &update_ad );
-		r2 = updateShadow( &update_ad, true );
+		// Note if updateShadow() fails, it will dprintf into the log.
+		updateShadow( &update_ad, true );
 	}
 
-	return r1 || r2;
+	// only report success if our parent class is also done
+	return r1;
 }
 
 
@@ -431,6 +433,12 @@ JICShadow::transferOutput( bool &transient_failure )
 
 	if (m_did_transfer) {
 		return true;
+	}
+
+	bool spool_on_evict = true, tmp_value;
+	if (job_ad->EvaluateAttrBool("SpoolOnEvict", tmp_value))
+	{
+		spool_on_evict = tmp_value;
 	}
 
 	dprintf(D_FULLDEBUG, "JICShadow::transferOutput(void): Transferring...\n");
@@ -464,8 +472,9 @@ JICShadow::transferOutput( bool &transient_failure )
 			filetrans->addFileToExeptionList(CHIRP_CONFIG_FILENAME);
 		}
 	
-			// true if job exited on its own
-		bool final_transfer = (requested_exit == false);	
+			// true if job exited on its own or if we are set to not spool
+			// on eviction.
+		bool final_transfer = !spool_on_evict || (requested_exit == false);	
 
 			// The shadow may block on disk I/O for long periods of
 			// time, so set a big timeout on the starter's side of the

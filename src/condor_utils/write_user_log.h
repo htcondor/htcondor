@@ -27,6 +27,8 @@
 #include "condor_event.h"
 #include <string>
 #include <vector>
+#include <map>
+#include <set>
 #define XML_USERLOG_DEFAULT 0
 
 #ifdef HAVE_SYS_TYPES_H
@@ -73,6 +75,27 @@ class WriteUserLogState;
 class WriteUserLog
 {
   public:
+    typedef std::set<std::pair<int, int> > log_file_cache_refset_t;
+
+    struct log_file {
+    /** Copy of path to the log file */  std::string path;
+    /** The log file                 */  FILE     * fp;
+    /** The log file lock            */  FileLockBase *lock;
+    /** Implementation detail        */  mutable bool copied;
+
+      // set of jobs that are using this log file
+      log_file_cache_refset_t refset;
+
+      log_file(const char* p) : path(p), fp(NULL), lock(NULL),
+        copied(false) {}
+      log_file() : fp(NULL), lock(NULL), copied(false) {}
+      log_file(const log_file& orig);
+      ~log_file(); 
+      log_file& operator=(const log_file& rhs);
+    };
+
+    typedef std::map<std::string, log_file*> log_file_cache_map_t;
+
     ///
     WriteUserLog( bool disable_event_log = false );
     
@@ -178,6 +201,10 @@ class WriteUserLog
 	};
 
 	void setCreatorName(const char *);
+
+    void setLogFileCache(log_file_cache_map_t* cache) { log_file_cache = cache; }
+    void freeLogs();
+
 
 	/** Verify that the event log is initialized
 		@return true on success
@@ -328,19 +355,6 @@ class WriteUserLog
     int         m_subproc;
 
 	/** Write to the user log? */		 bool		m_userlog_enable;
-    struct log_file {
-    /** Copy of path to the log file */  std::string path;
-    /** The log file                 */  FILE     * fp;
-    /** The log file lock            */  FileLockBase *lock;
-    /** Implementation detail        */  mutable bool copied;
-
-      log_file(const char* p) : path(p), fp(NULL), lock(NULL),
-        copied(false) {}
-      log_file() : fp(NULL), lock(NULL), copied(false) {}
-      log_file(const log_file& orig);
-      ~log_file(); 
-      log_file& operator=(const log_file& rhs);
-    };
 	bool doWriteEvent( ULogEvent *event,
 		WriteUserLog::log_file& log,
 		bool is_global_event,
@@ -351,7 +365,9 @@ class WriteUserLog
 		WriteUserLog::log_file& log, ULogEvent *event, ClassAd *param_jobad,
 		bool is_global_event, bool use_xml );
 
-		std::vector<log_file> logs;
+	std::vector<log_file*> logs;
+    log_file_cache_map_t* log_file_cache;
+
 	bool doWriteGlobalEvent( ULogEvent *event, ClassAd *ad);
     /** Enable locking?              */  bool		m_enable_locking;
 	/** Enable fsync() after writes? */  bool       m_enable_fsync;

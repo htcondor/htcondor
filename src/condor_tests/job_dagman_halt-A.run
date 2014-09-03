@@ -154,7 +154,7 @@ $failure = sub
 			$checkline = shift @node_output_lines;
 			if ( ! (defined $checkline)) {
 				# Found all of the lines we expected.
-				break;
+				last;
 			}
 		}
 	}

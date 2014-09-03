@@ -54,6 +54,12 @@ class DagmanClassad {
 				int ready, int failed, int unready,
 				Dag::dag_status dagStatus, bool recovery );
 
+		/** Get information we need from our own ClassAd.
+			@param owner: A MyString to receive the Owner value.
+			@param nodeName: A MyString to receive the DAGNodeName value.
+		*/
+	void GetInfo( MyString &owner, MyString &nodeName );
+
   private:
 		/** Initialize metrics information related to our classad.
 		*/
@@ -75,6 +81,12 @@ class DagmanClassad {
 			@param attrVal The value of the attribute.
 		*/
 	void SetDagAttribute( const char *attrName, int attrVal );
+
+		/** Get the specified attribute (string) value from our ClassAd.
+			@param attrName: The name of the attribute.
+			@param attrVal: A MyString to receive the attribute value.
+		*/
+	bool GetDagAttribute( const char *attrName, MyString &attrVal );
 
 		// Whether this object is valid.
 	bool _valid;

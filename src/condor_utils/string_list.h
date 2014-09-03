@@ -37,11 +37,11 @@ public:
 
 	/** Note: the contains* methods have side affects -- they
 		change "current" to point at the location of the match */
-	BOOLEAN contains( const char * );
-	BOOLEAN substring( const char * );
-	BOOLEAN contains_anycase( const char * );
-	BOOLEAN contains_withwildcard( const char *str );
-	BOOLEAN contains_anycase_withwildcard( const char * );
+	bool contains( const char * );
+	bool substring( const char * );
+	bool contains_anycase( const char * );
+	bool contains_withwildcard( const char *str );
+	bool contains_anycase_withwildcard( const char * );
 		// str: string to find
 		// matches: if not NULL, list to insert matches into
 		// returns true if any matching entries found

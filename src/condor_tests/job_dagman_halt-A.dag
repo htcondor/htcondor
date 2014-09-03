@@ -1,3 +1,5 @@
+NODE_STATUS_FILE job_dagman_halt-A.status 600
+
 # This waits until the DAG is halted, sleeps, and then un-halts the DAG.
 Job NodeW1 job_dagman_halt-A-node.cmd
 Vars NodeW1 nodename="$(JOB)"
