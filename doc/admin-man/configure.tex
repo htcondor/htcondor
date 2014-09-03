@@ -10301,15 +10301,13 @@ in section~\ref{sec:DAG-configuration}.
   %\Expr{False}, the default log file will be used by any node jobs for which
   %a log file is not defined in the job's submit description file.
 
-  Note that the special variable names listed below are not HTCondor
-  configuration macros.
-  Therefore, this configuration macro uses a special syntax 
+  This configuration variable uses a special syntax 
   in which \Bold{\Expr{@}} instead of \Bold{\Expr{\$}} indicates
-  a evaluation of these special variables.  Note that normal
-  HTCondor configuration macros can also be used with the normal
-  \Bold{\Expr{\$}} syntax (see the examples below).
+  an evaluation of special variables.  
+  Normal HTCondor configuration macros may be used with the normal
+  \Bold{\Expr{\$}} syntax.
 
-  Special variables to be used only in this configuration macro:
+  Special variables to be used only in defining this configuration variable:
   \begin{itemize}
   \item \Expr{@(DAG\_DIR)}: The directory in which the primary DAG input file
   resides.
@@ -10319,10 +10317,10 @@ in section~\ref{sec:DAG-configuration}.
   It does not include the path.
   \item \Expr{@(CLUSTER)}: The \Attr{ClusterId} attribute of 
   the \Condor{dagman} job.
-  \item \Expr{@(OWNER)}: The username of the user who submitted the
+  \item \Expr{@(OWNER)}: The user name of the user who submitted the
   DAG.
-  \item \Expr{@(NODE\_NAME)}: For sub-DAGs, the node name of the sub-DAG
-  in the upper level DAG; for top-level DAGs, "undef".
+  \item \Expr{@(NODE\_NAME)}: For SUBDAGs, this is the node name of the SUBDAG
+  in the upper level DAG; for a top-level DAG, it is the string \Expr{"undef"}.
   \end{itemize}
 
   If not defined, 
@@ -10340,8 +10338,8 @@ in section~\ref{sec:DAG-configuration}.
   will need extra configuration to prevent \Condor{preen} from removing it;
   modify \MacroNI{VALID\_SPOOL\_FILES}.
   Removal of the default log file during a run will cause severe problems.
-  \item \Bold{The value defined for \MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} must
-  ensure that the file is unique for each DAG.}
+  \item The value defined for \MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} must
+  ensure that the file is unique for each DAG.
   Therefore, the value should always include \Expr{@(DAG\_FILE)}.
   For example,
   \begin{verbatim}
