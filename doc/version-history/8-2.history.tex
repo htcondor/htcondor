@@ -61,6 +61,19 @@ with a command line argument similar to \Opt{-l mem=2048MB}.
 
 \end{itemize}
 
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item On Windows only, doing a \Condor{rm} of a \Condor{dagman} job
+does not work correctly -- the \Condor{dagman} is immediately killed
+and does not write a rescue DAG or remove its node jobs.  (Note that
+this bug has probably existed since \Condor{dagman} was first
+implemented on Windows.)
+\Ticket{4566}
+
+\end{itemize}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-2-2}Version 8.2.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
