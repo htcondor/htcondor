@@ -78,11 +78,13 @@ error.
 \item The new \Condor{dagman} configuration variable
 \Macro{DAGMAN\_SUPPRESS\_JOB\_LOGS} allows users to prevent DAG node
 jobs from writing to the log file specified in their submit description file.
+See section~\ref{param:DAGManSuppressJobLogs} for details.
 \Ticket{4353}
 
 \item Added optional \Expr{@(OWNER)} and \Expr{@(NODE\_NAME)} macros
 to the \Macro{DAGMAN\_DEFAULT\_NODE\_LOG} configuration macro.
 This makes it easier to avoid log file collisions.
+See section~\ref{param:DAGManDefaultNodeLog} for details.
 \Ticket{4334}
 
 \item \Condor{submit} will no longer insert an \Attr{OpSys} requirement
