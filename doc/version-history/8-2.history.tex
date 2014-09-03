@@ -65,11 +65,12 @@ with a command line argument similar to \Opt{-l mem=2048MB}.
 
 \begin{itemize}
 
-\item On Windows only, doing a \Condor{rm} of a \Condor{dagman} job
-does not work correctly -- the \Condor{dagman} is immediately killed
-and does not write a rescue DAG or remove its node jobs.  (Note that
-this bug has probably existed since \Condor{dagman} was first
-implemented on Windows.)
+\item On Windows platforms only, issuing \Condor{rm} on a 
+\Condor{dagman} job does not work correctly.
+The \Condor{dagman} process is immediately killed,
+and it does not write a Rescue DAG or remove its node jobs.
+Note that this bug has probably existed since DAGMan was first
+implemented on the Windows platform.
 \Ticket{4566}
 
 \end{itemize}
