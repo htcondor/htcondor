@@ -620,13 +620,10 @@ VanillaProc::StartJob()
 	//
 	int retval = OsProc::StartJob(&fi, fs_remap);
 
-<<<<<<< HEAD
-=======
 	if (fs_remap != NULL) {
 		delete fs_remap;
 	}
 
->>>>>>> master
 #if defined(HAVE_EXT_LIBCGROUP)
 
 	// Set fairshare limits.  Note that retval == 1 indicates success, 0 is failure.

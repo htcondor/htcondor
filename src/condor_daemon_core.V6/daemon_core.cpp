@@ -104,11 +104,8 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "authentication.h"
 #include "condor_claimid_parser.h"
 #include "condor_email.h"
-<<<<<<< HEAD
 #include "NetworkPluginManager.h"
 
-=======
->>>>>>> master
 #include "valgrind.h"
 #include "ipv6_hostname.h"
 #include "daemon_command.h"

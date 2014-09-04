@@ -734,15 +734,15 @@ if (WANT_CONTRIB AND WITH_MANAGEMENT)
     add_definitions( -DWITH_MANAGEMENT )
 endif()
 
-<<<<<<< HEAD
+
 if (WANT_CONTRIB AND WITH_LARK)
     add_definitions( -DWITH_LARK )
-=======
+endif()
+
 #####################################
 # Do we want to link in the GSI libraries or dlopen() them at runtime?
 if (HAVE_EXT_GLOBUS AND LINUX AND NOT PROPER)
 	set( DLOPEN_GSI_LIBS TRUE )
->>>>>>> master
 endif()
 
 message(STATUS "********* External configuration complete (dropping config.h) *********")
