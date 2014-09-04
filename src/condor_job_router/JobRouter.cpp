@@ -237,16 +237,57 @@ JobRouter::config() {
 
 	RoutingTable *new_routes = new RoutingTable(200,hashFuncStdString,rejectDuplicateKeys);
 
-	char *router_defaults_str = param(PARAM_JOB_ROUTER_DEFAULTS);
+	char *router_defaults_char = param(PARAM_JOB_ROUTER_DEFAULTS);
 	classad::ClassAd router_defaults_ad;
-	if(router_defaults_str) {
+	if(router_defaults_char)
+	{
+		std::string router_defaults_str = router_defaults_char;
 		classad::ClassAdParser parser;
-		if(!parser.ParseClassAd(router_defaults_str,router_defaults_ad)) {
-			dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: Disabling job routing, because failed to parse %s classad: '%s'\n",PARAM_JOB_ROUTER_DEFAULTS,router_defaults_str);
+
+		// Parse a list of ads; similar to ParseRoutingEntries.
+		int offset = 0;
+		bool found_one = false;
+		while (1)
+		{
+			classad::ClassAd *route_temp_ad = NULL;
+			if(offset >= (int)router_defaults_str.size()) break;
+
+			int this_offset = offset; //save offset before eating an ad.
+
+			classad::ClassAdParser parser;
+			if (!(route_temp_ad = parser.ParseClassAd(router_defaults_str, offset)))
+			{
+				classad::ClassAd ad;
+				int final_offset = this_offset;
+				std::string final_routing_string = router_defaults_str;
+				final_routing_string += "\n[]"; // add an empty ClassAd
+
+				if (!(route_temp_ad = parser.ParseClassAd(final_routing_string, final_offset)))
+				{
+					// There must have been some trailing whitespace or
+					// comments after the last ClassAd, so the only reason
+					// ParseClassAd() failed was because there was no ad.
+					// Therefore, we are done.
+					break;
+				}
+				dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: Ignoring the malformed default entry in %s, starting here: %s\n", PARAM_JOB_ROUTER_DEFAULTS, router_defaults_str.c_str() + this_offset);
+
+				// skip any junk and try parsing the next route in the list
+				while((int)router_defaults_str.size() > offset && router_defaults_str[offset] != '[') { offset++; }
+			}
+			if (route_temp_ad)
+			{
+				found_one = true;
+				router_defaults_ad.Update(*route_temp_ad);
+			}
+		}
+		if (!found_one)
+		{
+			dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: Disabling job routing, because failed to parse %s classad: '%s'\n", PARAM_JOB_ROUTER_DEFAULTS, router_defaults_str.c_str());
 			m_enable_job_routing = false;
 		}
-		free(router_defaults_str);
 	}
+	if (router_defaults_char) {free(router_defaults_char);}
 	if(!m_enable_job_routing) {
 		delete new_routes;
 		return;
