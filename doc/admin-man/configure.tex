@@ -26,11 +26,6 @@ The HTCondor configuration files are used to customize how HTCondor
 operates at a given site.  The basic configuration as shipped with
 HTCondor works well for most sites.
 
-Several sample configuration files have been published, in addition to the
-basic configuration shipped with HTCondor.  Example configurations are
-available under the heading of ``Helpful guides to new users running HTCondor''
-at https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=GettingStarted.
-
 Each HTCondor program will, as part of its initialization process,
 configure itself by calling a library routine which parses the
 various configuration files that might be used, including pool-wide,
@@ -71,14 +66,15 @@ This prevents both the naive and the malicious HTCondor user
 from subverting the system through its configuration.
 The order in which items are parsed is
 \begin{enumerate}
-\item global configuration file
-\item local configuration file
-\item specific environment variables prefixed with \MacroNI{\_CONDOR\_}
+\item a single initial configuration file, which has historically
+been known as the global configuration file
+\item other configuration files that are referenced and parsed due 
+to specification within the single initial configuration file;
+these files have historically been known as local configuration files
+\item specific environment variables whose names are
+prefixed with \MacroNI{\_CONDOR\_}
 \end{enumerate}
 
-The locations for these files are as given in
-section~\ref{sec:Config-File-Locations} on
-page~\pageref{sec:Config-File-Locations}.
 
 Some HTCondor tools utilize environment variables to set their
 configuration.
@@ -95,6 +91,56 @@ as only specific variables are considered for definition
 in this manner, not any environment variables with
 the \MacroNI{\_CONDOR\_} prefix.
 
+The location of the single initial configuration file differs on
+Windows from Unix platforms. 
+For Unix platforms, 
+the location of the single initial configuration file starts at 
+the top of the following list.
+The first file that exists is used,
+and then remaining possible file locations from this list become irrelevant.
+
+\begin{enumerate}
+   \item the file specified by the \Env{CONDOR\_CONFIG} environment variable.
+   If there is a problem reading that file, HTCondor will print an error
+   message and exit right away.
+   \item \File{\$(HOME)/.condor/condor\_config}
+   \item \File{/etc/condor/condor\_config}
+   \item \File{/usr/local/etc/condor\_config}
+   \item \File{\Tilde condor/condor\_config}
+\end{enumerate}
+
+For Windows platforms, 
+the location of the single initial configuration file is determined by 
+the contents of the environment variable \Env{CONDOR\_CONFIG}.
+If this environment variable is not defined, 
+then the location is the registry value of 
+\Expr{HKEY\_LOCAL\_MACHINE/Software/Condor/CONDOR\_CONFIG}. 
+
+The single, initial configuration file may contain the specification 
+of one or more other configuration files, referred to here as
+local configuration files.
+Since more than one file may contain a definition of the same variable,
+and since the last definition of a variable sets the value, 
+the parse order of these local configuration files
+is fully specified here. 
+In order: 
+\begin{enumerate}
+   \item The value of configuration variable \Macro{LOCAL\_CONFIG\_DIR} lists 
+   one or more directories which contain configuration files. 
+   The list is parsed from left to right. 
+   The leftmost (first) in the list is parsed first. 
+   Within each directory, 
+   a lexicographical ordering by file name determines the ordering of 
+   file consideration.
+   \item The value of configuration variable \Macro{LOCAL\_CONFIG\_FILE} 
+   lists one or more configuration files. 
+   These listed files are parsed from  left to right.
+   The leftmost (first) in the list is parsed first.
+   \item If one of these steps changes the value (right hand side) of 
+   \MacroNI{LOCAL\_CONFIG\_DIR}, 
+   then \MacroNI{LOCAL\_CONFIG\_DIR} is processed for a second time,
+    using the changed list of directories.
+\end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-File-Macros}Configuration File Macros} 
