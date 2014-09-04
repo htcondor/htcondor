@@ -1,0 +1,580 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+CondorTest::SetUseNewRunning();
+
+my $testname = "job_max_running.run";
+my %children = ();
+my $submitfile = "";
+my $taskname = "";
+my $idles = 0;
+my $queuesize = 0;
+my $evictok = 0;
+my $prematureeviction = 0;
+my $idletolerance = 6;
+my %taskmorejobs = (
+	"maxjobs12" => 12,
+	"maxjobs6" => 12,
+	"maxjobs1" => 12,
+);
+
+my @host = `hostname`;
+fullchomp($host[0]);
+print "Running on:$host[0]\n";
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 12
+	MAX_JOBS_RUNNING = 8
+	NEGOTIATOR_INTERVAL = 5
+	ALL_DEBUG = 
+	';
+
+my $negotiatorcycle = 5;
+
+
+# OK First personal has no concurrency limits
+CondorTest::StartCondorWithParams(
+    append_condor_config => $firstappend_condor_config,
+	local_fresh => "TRUE",
+);
+
+
+my $on_submitnameknown = sub {
+	my $name = shift;
+	print "SUBMIT FILE NAME CALLBACK:$name\n";
+	$submitfile = $name;
+};
+
+my $on_abort = sub {
+		#system("date");
+		#print "Abort seen\n";
+};
+
+sub multi_timeout_callback
+{
+	print "LogCheck timeout expired!\n";
+	CondorTest::RegisterResult( 0, test_name, $testname );
+	system("date");
+	die "Log check timed out ?\n";
+};
+
+sub evictedwithoutcheckpoint 
+{
+	my %info = @_;
+	if($evictok == 1) {
+	} else {
+		print "evicted wothout checkpoint:$info{cluster}.$info{job}/	";
+		system("date");
+		$prematureeviction = 1;
+		$delayafterruntargethit = 0;
+	}	
+};
+
+my $Calledcheck_expectations = 0;
+
+my $expectation_timeout = 10;
+
+sub on_submit {
+	if($Calledcheck_expectations == 0) {
+  		CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);
+		print "Setting first checkexpectations callback in:$expectation_timeout\n";
+		$Calledcheck_expectations = 1;
+	}
+};
+
+my $result = 0;
+my $running_now = 0;
+my $done = 0;
+$Calledcheck_expectations = 0;
+my $checkexpectationfailed = 0;
+my $expect_idle = 0;
+my $expect_run = 0;
+my $expect_checks = 0;
+my $total_checks = 12;
+my $allow_too_few_idle_once = 0;
+my $delayafterruntargethit = 3;
+
+my $on_match = sub {
+	my $response = shift;
+	if($response eq "HitRetryLimit") {
+		print "About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+	}
+};
+
+sub check_expectations {
+	print "In check_expectations callback: $Calledcheck_expectations\n";
+	system("date");
+	runToolNTimes("condor_q",1,1,{emit_output=>0});
+
+	# what if we want to release a few jobs over time?
+	print "check_expectations: burst:$burst Remaining jobs:$taskmorejobs{$taskname}\n";
+	if($burst > 0) {
+		print "Have a special task:$taskname\n";
+		if($taskmorejobs{$taskname} > 0) {
+			print "It wants more jobs:$taskmorejobs{$taskname}\n";
+			print "submitfile to use is:$submitfile\n";
+			QueueMoreJobs($submitfile,$taskname,$burst);
+		}
+	}
+
+	CheckStatus();
+
+	if($prematureeviction == 1) {
+		print "There should be no evictions we have caused yet\n";
+		$evictok = 1;
+		$expect_run = 1000; # remove will let a job start, bump count way up now.
+		# this is bad: too many started and some killed off
+		RegisterResult(0,"test_name",$testname);
+		$checkexpectationfailed = 1;
+		runToolNTimes("condor_q",1,0);
+		runToolNTimes("condor_rm -all",1,0);
+		return(0);
+	}
+
+	CondorTest::RemoveTimed( "checkexpectations");
+	# things have gone on since we looked for clear wins
+	# so check now
+	if($done == 1) {
+		print "Saw done\n";
+		$expect_run = 1000; # remove will let a job start, bump count way up now.
+		return(1);
+	}
+	$expect_checks += 1;
+	print "Expect Checks This Test:$expect_checks\n";
+
+	print "In expectation_timeout: expect_checks:$expect_checks \n";
+	if($expect_checks >= $total_checks) {
+		if($running_now < $expect_run) {
+			runToolNTimes("condor_q",1,0);
+			$evictok = 1;
+			runToolNTimes("condor_rm -all",1,0);
+			print "Failure: Not getting enough jobs to run!\n";
+			CondorTest::RegisterResult(0, "test_name", $testname);
+			$checkexpectationfailed = 1;
+			$done = 1;
+			return(0);
+		}
+		if(($running_now == $expect_run)&&($expect_run == 0)) {
+			runToolNTimes("condor_q",1,0);
+			$evictok = 1;
+			runToolNTimes("condor_rm -all",1,0);
+			#print "Success - Zero jobs was expected!\n";
+			CondorTest::RegisterResult(1, "test_name", $testname);
+			$checkexpectationfailed = 0;
+			$done = 1;
+			return(1);
+		}
+	}
+
+	print "Watching for another job to start up\n";
+	# Started Negotiation Cycle A wait of about 10 seconds is caused here
+	# leading the next one to occur in about 20 seconds
+	#print "before multicheck\n";
+	#system("date");
+	CondorLog::RunCheckMultiple(
+		daemon => "Negotiator",
+		match_regexp => "Started Negotiation Cycle",
+		match_instances => 1,
+		match_callback => $on_match,
+		alt_timed => \&multi_timeout_callback,
+		match_timeout => 80,
+		match_new => "true",
+		no_result => "true",
+	);
+	#print "After multicheck\n";
+	#system("date");
+
+	if($expect_checks < $total_checks) {
+
+  		CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);
+	} else {
+		print "Too many checkexpectation callbacks.\n";
+	}
+};
+
+sub CheckStatus {
+	$running_now = CountRunning();
+	print "Running Now:$running_now ($expect_run) Idle:$idles ($expect_idle)\n";
+	if($delayafterruntargethit > 0) {
+		$delayafterruntargethit -= 1;
+		return(0);
+	}
+	if($running_now > $expect_run) {
+		# clearly unhappy
+		$checkexpectationfailed = 1; #we'll print bad and not ok
+		print "Running jobs <$running_now> exceeded concurrency limits <$expect_run>\n";
+		$expect_run = 1000; # remove will let a job start, bump count way up now.
+		$evictok = 1;
+		runToolNTimes("condor_rm -all",1,0);
+		$done = 1;
+		CondorTest::RegisterResult(0, "test_name", $testname);
+	}
+	# compare current running to expected total
+	if($running_now == $expect_run) {
+		print "Hit target for running jobs!\n";
+		# if we expect no idle jobs, don't check.
+		# remove jobs and return
+		if($expect_idle == 0) {
+			$done = 1;
+			$evictok = 1;
+			#print "Expected idle 0 and run number met, remove jobs\n";
+			runcmd("condor_rm -all");
+			#clearly done and happy
+		} else {
+			$idles = CountIdle($expect_idle);
+	print "Running Now:$running_now ($expect_run) Idle:$idles ($expect_idle)\n";
+			if($idles == $expect_idle) {
+				$done = 1;
+				#print "Runs met andexpected idle, About to remove these jobs\n";
+				$expect_run = 1000; # remove will let a job start, bump count way up now.
+				$evictok = 1;
+				runToolNTimes("condor_q",1,0);
+				runToolNTimes("condor_rm -all",1,0);
+			} else {
+				print "Not expected idle yet: Staging checkexpectations callback\n";
+  				#CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);
+			}
+		}
+	} else {
+		print "running $running_now expecting $expect_run: not removing jobs\n";
+		#print "Staging checkexpectations callback\n";
+  		#CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);
+	}
+};
+
+my $on_execute = sub {
+	print "Job Started\n";
+	CondorTest::debug("Job started running.\n",1);
+	#runToolNTimes("condor_q",1,1,{emit_output=>0});
+};
+ 
+my $on_imageupdated = sub {
+};
+
+sub SetIdleTolerance {
+	my $tolerance = shift;
+	$allow_too_few_idle_once = $tolerance;
+	print "Tolerance of no idle set:$allow_too_few_idle_once\n";
+};
+
+# enter most slots needed. We will verify
+my $neededslots = 5;
+my $haveslots = ExamineSlots($neededslots);
+
+if($haveslots < $neededslots) {
+	print "We need <$neededslots> but only have <$haveslots>\n";
+	system("condor_config_val -dump | sort");
+	system("condor_config_val -v NUM_CPUS");
+	die "We need <$neededslots> but only have <$haveslots>\n";
+}
+
+#Do a couple things before setting currency limits
+print "First test basic job\n";
+$result = SimpleJob::RunCheck();
+
+
+# then test behaviour of non cuncurrency jobs first
+# all from each batch should run. Remove and do next set.
+my $count = 0;
+$running_now = 0;
+# start initial test with 12 slots and $queuesize of 12
+$taskmorejobs{maxjobs} = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$taskname = "maxjobs12";
+$expect_checks = 0;
+$expect_run = 8;
+$expect_idle = 4;
+$burst = 12;
+if($burst > 0) {
+	$taskmorejobs{maxjobs12} -= $burst;
+	print "Before submiting taskmorejobs:$taskmorejobs{$taskname}\n"; 
+} 
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_imageupdated => $on_imageupdated,
+	on_execute => $on_execute,
+	queue_sz => $burst,
+	return_submit_file_name => $on_submitnameknown,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "First test basic job. 8 of 12 should run\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	if($prematureeviction == 1) {
+		print "bad: we saw jobs evict to meet MAX_JOBS_RUNNING constraint.\n";
+	} else {
+		print "bad: nnot enough jobs running or too many\n\n";
+	}
+}
+
+#CondorTest::EndTest();
+#exit(0);
+
+print "Test maxrunning 12 burst of 6\n";
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$delayafterruntargethit = 3;
+$checkexpectationfailed = 0;
+$taskname = "maxjobs6";
+$allow_too_few_idle_once = 6;
+$prematureeviction = 0;
+$expect_checks = 0;
+$expect_run = 8;
+$expect_idle = 4;
+$idles = 0;
+$burst = 6;
+$evictok = 0;
+if($burst > 0) {
+	$taskmorejobs{maxjobs6} -= $burst;
+	print "Before submiting taskmorejobs:$taskmorejobs{$taskname}\n"; 
+} 
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	return_submit_file_name => $on_submitnameknown,
+	on_submit => \&on_submit,
+	on_imageupdated => $on_imageupdated,
+	on_execute => $on_execute,
+	queue_sz => $burst,
+	duration => 0,
+	timeout => 600,
+);
+
+print "First test basic job. 8 of 12 should run: burst size:$burst\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	if($prematureeviction == 1) {
+		print "bad: we saw jobs evict to meet MAX_JOBS_RUNNING constraint.\n";
+	} else {
+		print "bad: nnot enough jobs running or too many\n\n";
+	}
+}
+
+print "Test maxrunning 12 burst of 6\n";
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$delayafterruntargethit = 3;
+$checkexpectationfailed = 0;
+$taskname = "maxjobs1";
+$allow_too_few_idle_once = 6;
+$prematureeviction = 0;
+$expect_checks = 0;
+$expect_run = 8;
+$expect_idle = 4;
+$idles = 0;
+$burst = 1;
+$evictok = 0;
+if($burst > 0) {
+	$taskmorejobs{maxjobs6} -= $burst;
+	print "Before submiting taskmorejobs:$taskmorejobs{$taskname}\n"; 
+} 
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	return_submit_file_name => $on_submitnameknown,
+	on_submit => \&on_submit,
+	on_imageupdated => $on_imageupdated,
+	on_execute => $on_execute,
+	queue_sz => $burst,
+	duration => 0,
+	timeout => 600,
+);
+
+print "First test basic job. 8 of 12 should run: burst size:$burst\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	if($prematureeviction == 1) {
+		print "bad: we saw jobs evict to meet MAX_JOBS_RUNNING constraint.\n";
+	} else {
+		print "bad: nnot enough jobs running or too many\n\n";
+	}
+}
+
+CondorTest::EndTest();
+exit(0);
+
+CondorTest::EndTest();
+
+sub CountRunning
+{
+	my $runcount = 0;
+	my $line = "";
+	my @goods = ();
+	my @direct = ();
+
+	runCondorTool("condor_q",\@goods,2,{emit_output => 0});
+	#runCondorTool("condor_status -direct",\@direct,2,{emit_output => 1});
+	foreach my $job (@goods) {
+		chomp($job);
+		$line = $job;
+		#print "JOB: $line\n";
+		if($line =~ /^.*?\sR\s.*$/) {
+			$runcount += 1;
+			#print "Run count now:$runcount\n";
+		} else {
+			#print "Parse error or Idle:$line\n";
+		}
+	}
+	return($runcount);
+}
+
+sub CountIdle
+{
+	my $expectidle = shift;
+	my $idlecount = 0;
+	my $line = "";
+	my @goods = ();
+
+	print "In count Idle:allow_too_few_idle_once=$allow_too_few_idle_once\n";
+	system("date");
+	#runcmd("condor_q");
+	runCondorTool("condor_q",\@goods,2,{emit_output => 0});
+	foreach my $job (@goods) {
+		chomp($job);
+		$line = $job;
+		#print "JOB: $line\n";
+		if($line =~ /^.*?\sI\s.*$/) {
+			$idlecount += 1;
+			print "Idle count now <$idlecount>, expecting <$expectidle>\n";
+		}
+	}
+	if($allow_too_few_idle_once > 1) {
+		# Case in point is a concurrency limit of one but two jobs
+		# start. Triggering a fail on too few idle, could be failing
+		# on a slow submit of the jobs. I'd rather fail on too many running
+		# so the fist check gets a pass.
+		# with sequential submits($burst = 0) submits happen much slower
+		# and tolerance of only 1 not suffecient
+		#$allow_too_few_idle_once = 0;
+		$allow_too_few_idle_once -= 1;
+	} else {
+		if($idlecount != $expectidle) {
+			runToolNTimes("condor_q", 1, 1);
+			die "Expected $expectidle idle but found $idlecount - die\n";
+		}
+	}
+
+	return($idlecount);
+}
+
+sub ExamineSlots
+{
+	my $waitforit = shift;
+	my $line = "";
+
+	my $available = 0;
+	my $looplimit = 24;
+	my $count = 24; # go just once
+	my @goods = ();
+	if(defined $waitforit) {
+		$count = 0; #enable looping with 10 second sleep
+	}
+	while($count <= $looplimit) {
+		$count += 1;
+		runCondorTool("condor_status",\@goods,2,{emit_output => 0});
+		foreach my $job (@goods) {
+			chomp($job);
+			$line = $job;
+			if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
+				#print "<$4> unclaimed <$1> Total slots\n";
+				$available = $4;
+			}
+		}
+		if(defined $waitforit) {
+			if($available >= $waitforit) {
+				last;
+			} else {
+				sleep 10;
+			}
+		} else{
+		}
+	}
+	return($available);
+}
+
+sub ExamineQueue
+{
+	my $line = "";
+
+	print "\nExpecting all jobs to be gone. Lets See.\n";
+	my @goods = ();
+	runCondorTool("condor_q",\@goods,2);
+	foreach my $job (@goods) {
+		chomp($job);
+		$line = $job;
+		print "JOB: $line\n";
+		if($line =~ /^\s*(\d+)\s*jobs; .*$/) {
+			$idlecount += 1;
+			print "<$1> jobs still running\n";
+		}
+	}
+	print "Total slots available here:\n\n";
+	system("condor_status");
+}
+
+sub QueueMoreJobs
+{
+	my $submitfile = shift;
+	my $taskname = shift;
+	my $queuesize = shift;
+	my $submits = 0;
+	print "QueueMoreJobs taskname:$taskname remaining:$taskmorejobs{$taskname}\n";
+	if($taskmorejobs{$taskname} > 0) {
+		my $taskcount = $taskmorejobs{$taskname} - $queuesize;
+		CondorTest::StartTest("testname" => "$testname","submit_file" => "$submitfile","wants_checkpoint" => 0, "no_monitor" => "true");
+		#my $pid = fork();
+
+		#if($pid == -1) {
+            #die "Fork error:$!\n";
+        #} elsif($pid == 0) {
+			## we want the same callbacks! we are request the same queue size as originally
+			#CondorTest::RunTest($testname,$submitfile,0);
+			#exit(0);
+        #} else {
+            # parent gets pid of child fork
+			# save pid
+			#$children{$pid} = 1;
+        #}
+		print "Additonal jobs wanted:$taskcount\n";
+		if($taskcount == 0) {
+			SetIdleTolerance($idletolerance);
+		}
+		$taskmorejobs{$taskname} = $taskcount;
+	}
+}

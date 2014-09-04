@@ -53,12 +53,15 @@ sub ccv_getval {
 	my $lookup = shift;
 	my @response = ();
 	my $cmd_retval = 0;
-	my $res = runCondorTool("condor_config_val $lookup",\@response,2,{emit_output=>0,expect_result=>\ANY},\$cmd_retval);
-	#print "ccv_getval: lookup:$lokup $res:$res cmd_retval:$cmd_retval\n";
+	my $res = runCondorTool("condor_config_val $lookup",\@response,2,{emit_output=>1,expect_result=>\ANY},\$cmd_retval);
+	print "ccv_getval: lookup:$lookup res:$res cmd_retval:$cmd_retval\n";
+	foreach my $lup (@response) {
+		print "- $lup -\n";
+	}
 	if(($res == 1)&&($cmd_cmd_retval == 0)) {
 		my $value = $response[0];
 		fullchomp($value);
-		#print "returning $value\n";
+		print "returning $value\n";
 		return($value);
 	} else {
 		my $value = $response[0];
@@ -97,12 +100,14 @@ CondorTest::StartCondorWithParams(
 	condor_name => "libinclude",
 	fresh_local => "TRUE",
 	condorlocalsrc => "$configfile",
-	do_not_start => "TRUE",
+	#do_not_start => "TRUE",
 );
 
+my $fetch = "";
 foreach my $term (@expected) {
-	my $fetch = ccv_getval($term);
-	print "Testing:$testing{$term}\n";
+	$fetch = "";
+	$fetch = ccv_getval($term);
+	print "Testing:$testing{$term} fetched value:$fetch\n";
 	if($expectedvalues{$term} eq $fetch) {
 		print "Good: $term expected as $expectedvalues{$term}\n"; 
 		RegisterResult(1,"test_name",$testname);

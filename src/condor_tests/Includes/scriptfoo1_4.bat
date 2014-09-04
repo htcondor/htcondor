@@ -1,1 +1,1 @@
-echo foo1 = 4
+@echo foo1 = 4
