@@ -551,6 +551,17 @@ DCStartd::requestClaim( ClaimType cType, const ClassAd* req_ad,
 
 
 bool
+DCStartd::updateMachineAd( const ClassAd * update, ClassAd * reply, int timeout ) {
+	setCmdStr( "updateMachineAd" );
+
+	ClassAd u( * update );
+	u.Assign( ATTR_COMMAND, getCommandString( CA_UPDATE_MACHINE_AD ) );
+
+	return sendCACmd( & u, reply, true, timeout );
+}
+
+
+bool
 DCStartd::activateClaim( const ClassAd* job_ad, ClassAd* reply, 
 						 int timeout ) 
 {

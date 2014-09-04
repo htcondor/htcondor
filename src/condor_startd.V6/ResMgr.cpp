@@ -30,7 +30,7 @@
 
 #include "slot_builder.h"
 
-ResMgr::ResMgr()
+ResMgr::ResMgr() : extras_classad( NULL )
 {
 	totals_classad = NULL;
 	config_classad = NULL;
@@ -142,6 +142,7 @@ double ResMgr::Stats::EndWalk(VoidResourceMember memberfunc, double before)
 ResMgr::~ResMgr()
 {
 	int i;
+	if( extras_classad ) delete extras_classad;
 	if( config_classad ) delete config_classad;
 	if( totals_classad ) delete totals_classad;
 	if( id_disp ) delete id_disp;
@@ -1252,8 +1253,106 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
     m_hibernation_manager->publish( *cp );
 #endif
 
+	if( extras_classad ) { cp->Update( * extras_classad ); }
 }
 
+
+void
+ResMgr::updateExtrasClassAd( ClassAd * cap ) {
+	// It turns out to be colossal pain to use the ClassAd for persistence.
+	static std::set< std::string > brokenUniverses;
+
+	if( ! cap ) { return; }
+	if( ! extras_classad ) { extras_classad = new ClassAd(); }
+
+	//
+	// The startd maintains the set broken universes and the invariants
+	// about [Last]BrokenReason.
+	//
+	// We begin by recomputing the set of broken universes.  We start with
+	// the existing set of broken universes, and add or remove universes
+	// as directed by the update ad.  (This obviates the need for the starter
+	// to know anything about job universes it's not currently launching.) If
+	// the state of a universe changes, we move its BrokenReason (if any)
+	// to LastBrokenReason.  If a universe remains broken but its
+	// BrokenReason changes, we also update LastBrokenReason appropriately.
+	//
+	// Note that this loop merges cap's attributes into extras_classad as soon
+	// as it knows the correct value for them.
+	//
+	// For future expandsion, note that there's nothing universe-specific
+	// about any of this; we could just handle <Feature>Broken, instead,
+	// and just have special handling for "<Name>Universe" <Feature>s.
+	//
+
+	cap->ResetExpr();
+	ExprTree * expr = NULL;
+	const char * attr = NULL;
+	while( cap->NextExpr( attr, expr ) ) {
+		const char * uo = strcasestr( attr, "UniverseBroken" );
+		if( uo == NULL ) {
+			if( strcasecmp( attr, "MyType" ) == 0 ) { continue; }
+			if( strcasecmp( attr, "TargetType" ) == 0 ) { continue; }
+			ExprTree * copy = expr->Copy();
+			extras_classad->Insert( attr, copy );
+			continue;
+		}
+
+		std::string universeName( attr, (size_t)(uo - attr) );
+		if( strcasecmp( uo, "UniverseBroken" ) != 0 ) { continue; }
+		ExprTree * copy = expr->Copy();
+		extras_classad->Insert( attr, copy );
+
+		std::string reasonName = universeName + "UniverseBrokenReason";
+		std::string lastReasonName = universeName + "UniverseLastBrokenReason";
+
+		int universeBroken;
+		assert( cap->LookupBool( attr, universeBroken ) );
+		if( universeBroken ) {
+			bool wasInserted = brokenUniverses.insert( universeName ).second;
+			if( wasInserted ) {
+				// A universe went from online to off.
+				extras_classad->CopyAttribute( lastReasonName.c_str(), reasonName.c_str() );
+				extras_classad->CopyAttribute( reasonName.c_str(), reasonName.c_str(), cap );
+			} else {
+				// Roll the reasons, if updated.
+				std::string oldReason, newReason;
+				extras_classad->LookupString( reasonName.c_str(), oldReason );
+				cap->LookupString( reasonName.c_str(), oldReason );
+				if( oldReason != newReason ) {
+					extras_classad->CopyAttribute( lastReasonName.c_str(), reasonName.c_str() );
+					extras_classad->CopyAttribute( reasonName.c_str(), reasonName.c_str(), cap );
+				}
+			}
+		} else {
+			if( brokenUniverses.erase( universeName ) ) {
+				// A universe went from broken to on.
+				extras_classad->CopyAttribute( lastReasonName.c_str(), reasonName.c_str() );
+				extras_classad->Assign( reasonName.c_str(), "undefined" );
+			}
+		}
+	}
+
+	//
+	// Construct the BrokenUniverses attribute and set it in extras_classad.
+	//
+	std::string ouListString;
+	if( brokenUniverses.empty() ) {
+		ouListString = "{}";
+	} else {
+		std::set< std::string >::const_iterator i = brokenUniverses.begin();
+		for( ; i != brokenUniverses.end(); ++i ) {
+			int brokenUniverseNumber = CondorUniverseNumber( i->c_str() );
+			formatstr( ouListString, "%s\"%s\", %d, ", ouListString.c_str(), i->c_str(), brokenUniverseNumber );
+			// ouListString += "\"" + *i + "\", " + itoa( brokenUniverseNumber ) + ", ";
+		}
+		// Remove the trailing ", ".
+		ouListString.erase( ouListString.length() - 2 );
+		ouListString = "{ " + ouListString + " }";
+	}
+	dprintf( D_ALWAYS, "BrokenUniverses = %s\n", ouListString.c_str() );
+	extras_classad->AssignExpr( "BrokenUniverses", ouListString.c_str() );
+}
 
 void
 ResMgr::publishSlotAttrs( ClassAd* cap )
@@ -1932,7 +2031,7 @@ ResMgr::disableResources( const MyString &state_str )
 		   machine so we don't allow new jobs to start while we are in
 		   the middle of hibernating.  We disable _after_ sending our
 		   update_with_ack(), because we want our machine to still be
-		   matchable while offline.  The negotiator knows to treat this
+		   matchable while broken.  The negotiator knows to treat this
 		   state specially. */
 		for ( i = 0; i < nresources; ++i ) {
 			resources[i]->disable();

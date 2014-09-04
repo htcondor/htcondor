@@ -39,6 +39,7 @@
 #include "vm_gahp_request.h"
 #include "../condor_vm-gahp/vmgahp_error_codes.h"
 #include "vm_univ_utils.h"
+#include "condor_daemon_client.h"
 
 extern CStarter *Starter;
 
@@ -145,6 +146,53 @@ VMProc::cleanup()
 	m_is_vacate_ckpt = false;
 }
 
+
+bool handleFTL( const char * reason ) {
+	if( reason != NULL ) {
+		//
+		// This will cause the shadow to suicide (updating the job log before it
+		// goes), which causes the job to be rescheduled.
+		//
+		std::string errorString;
+		formatstr( errorString, "An internal error prevented HTCondor "
+			"from starting the VM.  This job will be rescheduled.  "
+			"(%s).\n", reason );
+		Starter->jic->notifyStarterError( errorString.c_str(), true, 0, 0 );
+	}
+
+	//
+	// If we failed to launch the job (as opposed to aborted the takeoff
+	// because there was something wrong with the payload), we also need
+	// to force the startd to advertise this fact so other jobs can avoid
+	// this machine.
+	//
+	DCStartd startd( (const char * const)NULL, (const char * const)NULL );
+	if( ! startd.locate() ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Unable to locate startd: %s\n", startd.error() );
+		return false;
+	}
+
+	//
+	// The startd will update the list 'OfflineUniverses' for us.
+	//
+	ClassAd update;
+	if( reason != NULL ) {
+		update.Assign( "VMUniverseBroken", true );
+		update.Assign( "VMUniverseBrokenReason", reason );
+	} else {
+		update.Assign( "VMUniverseBroken", false );
+	}
+
+	ClassAd reply;
+	if( ! startd.updateMachineAd( & update, & reply ) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Unable to update machine ad: %s\n", startd.error() );
+		return false;
+	}
+
+	return true;
+}
+
+
 int
 VMProc::StartJob()
 {
@@ -153,7 +201,7 @@ VMProc::StartJob()
 
 	// set up a FamilyInfo structure to register a family
 	// with the ProcD in its call to DaemonCore::Create_Process
-	
+
 	FamilyInfo fi;
 
 	// take snapshots at no more than 15 seconds in between, by default
@@ -189,15 +237,15 @@ VMProc::StartJob()
 		return false;
 	}
 
-	// // // // // // 
-	// Get IWD 
-	// // // // // // 
+	// // // // // //
+	// Get IWD
+	// // // // // //
 	//const char* job_iwd = Starter->jic->jobRemoteIWD();
 	//dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
 
-	// // // // // // 
-	// Environment 
-	// // // // // // 
+	// // // // // //
+	// Environment
+	// // // // // //
 	// Now, instantiate an Env object so we can manipulate the
 	// environment as needed.
 	Env job_env;
@@ -222,9 +270,9 @@ VMProc::StartJob()
 	// the mainjob's env...
 	Starter->PublishToEnv( &job_env );
 
-	// // // // // // 
+	// // // // // //
 	// Misc + Exec
-	// // // // // // 
+	// // // // // //
 
 	// compute job's renice value by evaluating the machine's
 	// JOB_RENICE_INCREMENT in the context of the job ad...
@@ -275,7 +323,7 @@ VMProc::StartJob()
 	if( JobAd->LookupString( ATTR_JOB_CMD, vm_job_name) != 1 ) {
 		err_msg.formatstr("%s cannot be found in job classAd.", ATTR_JOB_CMD);
 		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
-		Starter->jic->notifyStarterError( err_msg.Value(), true, 
+		Starter->jic->notifyStarterError( err_msg.Value(), true,
 				CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
 		return false;
 	}
@@ -286,7 +334,7 @@ VMProc::StartJob()
 	if( JobAd->LookupString( ATTR_JOB_VM_TYPE, vm_type_name) != 1 ) {
 		err_msg.formatstr("%s cannot be found in job classAd.", ATTR_JOB_VM_TYPE);
 		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
-		Starter->jic->notifyStarterError( err_msg.Value(), true, 
+		Starter->jic->notifyStarterError( err_msg.Value(), true,
 				CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
 		return false;
 	}
@@ -340,7 +388,7 @@ VMProc::StartJob()
 	Starter->WriteRecoveryFile( &recovery_ad );
 
 	// //
-	// Now everything is ready to start a vmgahp server 
+	// Now everything is ready to start a vmgahp server
 	// //
 	dprintf( D_ALWAYS, "About to start new VM\n");
 	Starter->jic->notifyJobPreSpawn();
@@ -352,7 +400,7 @@ VMProc::StartJob()
 	ASSERT(m_vmgahp);
 
 	m_vmgahp->start_err_msg = "";
-	if( m_vmgahp->startUp(&job_env, Starter->GetWorkingDir(), nice_inc, 
+	if( m_vmgahp->startUp(&job_env, Starter->GetWorkingDir(), nice_inc,
 				&fi) == false ) {
 		JobPid = -1;
 		err_msg = "Failed to start vm-gahp server";
@@ -365,7 +413,7 @@ VMProc::StartJob()
 		Starter->jic->notifyStarterError( err_msg.Value(), true, 0, 0);
 
 		delete m_vmgahp;
-		m_vmgahp = NULL; 
+		m_vmgahp = NULL;
 		return false;
 	}
 
@@ -384,72 +432,127 @@ VMProc::StartJob()
 	int p_result;
 	p_result = new_req->vmStart(m_vm_type.Value(), Starter->GetWorkingDir());
 
-	// Because req is blocking mode, result should be VMGAHP_REQ_COMMAND_DONE
-	if(p_result != VMGAHP_REQ_COMMAND_DONE) {
-		err_msg = "Failed to create a new VM";
-		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
-		m_vmgahp->printSystemErrorMsg();
+	//
+	// Distinguish between failures that are HTCondor's fault (bugs), failures
+	// that are the user's fault (disk image is not in the specified format?),
+	// and failures that are the fault of the machine (libvirt is wedged).
+	//
 
-		reportErrorToStartd();
-		Starter->jic->notifyStarterError( err_msg.Value(), true, 0, 0);
+	//
+	// In this and subsequent result code lists, a trailing
+	// 	* (C) means [HT]Condor's fault
+	// 	* (U) mean user's fault
+	//	* and (M) mean machine's fault.
+	//	* (U?) means that the user screwed up but HTCondor could or should
+	//		have noticed before the bad data got all the way to the VM GAHP.
+	//	* (?) means that we don't what caused the failure.
+	//
+	// VMGahpRequest::vmStart() can return the following results:
+	//
+	// Failures:
+	// 		VMGAHP_REQ_COMMAND_ERROR (C) is an internal logic error.
+	// 		VMGAHP_REQ_COMMAND_NOT_SUPPORTED (C) is nonsensical.
+	// 		VMGAHP_REQ_VMTYPE_NOT_SUPPORTED (C) means a match-making failure.
+	// 		VMGAHP_REQ_COMMAND_PENDING (C) is logically impossible.
+	// 		VMGAHP_REQ_COMMAND_TIMED_OUT (?)
+	//
+	// Successes:
+	// 		VMGAHP_REQ_COMMAND_DONE
+	//
 
-		delete new_req;
-		delete m_vmgahp;
-		m_vmgahp = NULL;
-		// To make sure that vmgahp server exits
-		//daemonCore->Send_Signal(JobPid, SIGKILL);
-		daemonCore->Kill_Family(JobPid);
+	//
+	// We assume, for now, that the unknown failures aren't the user's fault.
+	//
+	if( p_result != VMGAHP_REQ_COMMAND_DONE ) {
+		handleFTL( VMGAHP_REQ_RETURN_TABLE[ p_result ] );
 		return false;
 	}
 
-	if( new_req->checkResult(err_msg) == false ) {
-		dprintf(D_ALWAYS, "%s\n", err_msg.Value());
-		m_vmgahp->printSystemErrorMsg();
+	//
+	// I've split checkResult() into two parts: the first checks that the
+	// result is valid, and the second its value.  An invalid result is
+	// obviously a (C)-type error.
+	//
+	if( ! new_req->hasValidResult() ) {
+		handleFTL( VMGAHP_ERR_INTERNAL );
+		return false;
+	}
 
-		if( !strcmp(err_msg.Value(), VMGAHP_ERR_INTERNAL) ||
-			!strcmp(err_msg.Value(), VMGAHP_ERR_CRITICAL) )  {
-			reportErrorToStartd();
+	//
+	// The GAHP can return the error strings listed below.
+	//
+	// VMGAHP_ERR_NO_JOBCLASSAD_INFO (C)
+	// VMGAHP_ERR_NO_SUPPORTED_VM_TYPE (C)
+	//
+	// from CreateConfigFile():
+	//		from parseCommonParamFromClassAd()
+	//			VMGAHP_ERR_JOBCLASSAD_NO_VM_MEMORY_PARAM (U?)
+	//			VMGAHP_ERR_JOBCLASSAD_TOO_MUCH_MEMORY_REQUEST (C)
+	//			VMGAHP_ERR_JOBCLASSAD_MISMATCHED_NETWORKING (C)
+	//			VMGAHP_ERR_JOBCLASSAD_MISMATCHED_NETWORKING_TYPE (C)
+	//			VMGAHP_ERR_CRITICAL (C)
+	//			VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT (C)
+	//			VMGAHP_ERR_CANNOT_CREATE_ARG_FILE (M)
+	//
+	//		VMGAHP_ERR_JOBCLASSAD_XEN_NO_KERNEL_PARAM (U?)
+	//		VMGAHP_ERR_CRITICAL (M)
+	//		VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT (U?)
+	//		VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND (U?)
+	//		VMGAHP_ERR_JOBCLASSAD_XEN_INITRD_NOT_FOUND (U?)
+	//		VMGAHP_ERR_JOBCLASSAD_XEN_NO_ROOT_DEVICE_PARAM (U?)
+	//		VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM (U?)
+	//		VMGAHP_ERR_JOBCLASSAD_XEN_INVALID_DISK_PARAM (U?)
+	//		VMGAHP_ERR_JOBCLASSAD_XEN_MISMATCHED_CHECKPOINT (U?)
+	//
+	//		VMGAHP_ERR_JOBCLASSAD_KVM_NO_DISK_PARAM (U?)
+	//		VMGAHP_ERR_JOBCLASSAD_KVM_INVALID_DISK_PARAM (U?)
+	//		VMGAHP_ERR_JOBCLASSAD_KVM_MISMATCHED_CHECKPOINT (U?)
+	//
+	//		VMGAHP_ERR_JOBCLASSAD_NO_VMWARE_VMX_PARAM (U?)
+	//		VMGAHP_ERR_INTERNAL (M)
+	//		VMGAHP_ERR_CRITICAL (M)
+	//
+	// from Start():
+	//		VMGAHP_ERR_INTERNAL (C)
+	//		VMGAHP_ERR_VM_INVALID_OPERATION (C)
+	//		VMGAHP_ERR_CRITICAL (C)
+	//		from condor_vm_vmware:
+	//			"Can't create vm with $vmconfig" (?)
+	//			"vmconfig $vmconfig does not exist" (C)
+	//			"vmconfig $vmconfig is not readable" (C)
+	//
+
+	Gahp_Args * result = new_req->getResult();
+	int resultNo = (int)strtol( result->argv[1], (char **)NULL, 10 );
+
+	//
+	// We assume, for now, that the unknown failures aren't the user's fault.
+	// We also, for now, don't distinguish between machine and Condor faults.
+	//
+	if( resultNo == 0 ) {
+		m_vm_id = (int)strtol( result->argv[2], (char **)NULL, 10 );
+
+		// A success with an invalid virtual machine ID is clearly a (C) error.
+		if( m_vm_id <= 0 ) {
+			handleFTL( VMGAHP_ERR_INTERNAL );
+			return false;
 		}
-
-		Starter->jic->notifyStarterError( err_msg.Value(), true, 
-				CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
-
-		delete new_req;
-		delete m_vmgahp;
-		m_vmgahp = NULL;
-		// To make sure that vmgahp server exits
-		//daemonCore->Send_Signal(JobPid, SIGKILL);
-		daemonCore->Kill_Family(JobPid);
+	} else {
+		const char * errorString = result->argv[2];
+		if( strcmp( NULLSTRING, errorString ) == 0 ) {
+			errorString = VMGAHP_ERR_INTERNAL;
+		}
+		handleFTL( errorString );
 		return false;
 	}
 
-	Gahp_Args *result_args;
-	result_args = new_req->getResult();
 
-	// Set virtual machine id
-	m_vm_id = (int)strtol(result_args->argv[2], (char **)NULL, 10);
-	if( m_vm_id <= 0 ) {
-		m_vm_id = 0;
-		dprintf(D_ALWAYS, "Received invalid virtual machine id from vm-gahp\n");
-		m_vmgahp->printSystemErrorMsg();
-
-		reportErrorToStartd();
-		Starter->jic->notifyStarterError( "VMGahp internal error", true, 0, 0);
-
-		delete new_req;
-		delete m_vmgahp;
-		m_vmgahp = NULL;
-		// To make sure that vmgahp server exits
-		//daemonCore->Send_Signal(JobPid, SIGKILL);
-		daemonCore->Kill_Family(JobPid);
-		return false;
-	}
 	delete new_req;
 	new_req = NULL;
 
 	m_vmgahp->setVMid(m_vm_id);
 
-	// We give considerable time(30 secs) to bring 
+	// We give considerable time(30 secs) to bring
 	// the just created VM into a fully compliant state
 	sleep(30);
 
@@ -480,6 +583,9 @@ VMProc::StartJob()
 	// Set job_start_time in user_proc.h
 	job_start_time.getTime();
 	dprintf( D_ALWAYS, "StartJob for VM succeeded\n");
+
+	// If we do manage to launch, clear the FTL attributes.
+	handleFTL( NULL );
 	return true;
 }
 

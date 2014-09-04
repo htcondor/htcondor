@@ -35,6 +35,15 @@
 
 #define NULLSTRING "NULL"
 
+const char * VMGAHP_REQ_RETURN_TABLE[] = {
+	"VMGAHP_REQ_COMMAND_PENDING",
+	"VMGAHP_REQ_COMMAND_DONE",
+	"VMGAHP_REQ_COMMAND_TIMED_OUT",
+	"VMGAHP_REQ_COMMAND_NOT_SUPPORTED",
+	"VMGAHP_REQ_VMTYPE_NOT_SUPPORTED",
+	"VMGAHP_REQ_COMMAND_ERROR"
+	};
+
 VMGahpRequest::VMGahpRequest(VMGahpServer *server)
 {
 	m_mode = NORMAL;
@@ -181,6 +190,25 @@ int
 VMGahpRequest::vmStart(const char *vm_type, const char *workingdir)
 {
 	static const char *command = "CONDOR_VM_START";
+
+#if defined(FAIL_OFTEN) 
+switch( rand() % 6 ) {
+	case 0:
+		return VMGAHP_REQ_COMMAND_PENDING;
+	case 1:
+		break;
+	case 2:
+		return VMGAHP_REQ_COMMAND_TIMED_OUT;
+	case 3:
+		return VMGAHP_REQ_COMMAND_NOT_SUPPORTED;
+	case 4:
+		return VMGAHP_REQ_VMTYPE_NOT_SUPPORTED;
+	case 5:
+		return VMGAHP_REQ_COMMAND_ERROR;
+	default:
+		break;
+}
+#endif /* defined( FAILED_OFTEN ) */
 
 	if( !vm_type || (getPendingStatus() != REQ_INITIALIZED)) {
 		return VMGAHP_REQ_COMMAND_ERROR;
@@ -398,16 +426,23 @@ VMGahpRequest::setResult(Gahp_Args *result)
 	m_pending_result = result;
 }
 
-Gahp_Args* 
+Gahp_Args*
 VMGahpRequest::getResult() {
 	return m_pending_result;
 }
 
-bool 
+bool
+VMGahpRequest::hasValidResult() {
+	if( !m_pending_result || m_pending_result->argc != 3 ) {
+		dprintf( D_ALWAYS, "Bad Result of VM Request('%s')\n", m_command.Value());
+		return false;
+	}
+	return true;
+}
+
+bool
 VMGahpRequest::checkResult(MyString& errmsg) {
-	if( !m_pending_result || m_pending_result->argc != 3) {
-		dprintf(D_ALWAYS, "Bad Result of VM Request('%s')\n", 
-				m_command.Value());
+	if( ! hasValidResult() ) {
 		errmsg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
