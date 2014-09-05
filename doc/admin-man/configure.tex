@@ -71,6 +71,16 @@ been known as the global configuration file
 \item other configuration files that are referenced and parsed due 
 to specification within the single initial configuration file;
 these files have historically been known as local configuration files
+\item If HTCondor daemons are \emph{not} running as \Login{root} on
+Unix platforms,
+parse file \File{\$(HOME)/.condor/user\_config} if it exists,
+or the file defined by configuration variable \Macro{USER\_CONFIG\_FILE}.
+
+If HTCondor daemons are \emph{not} running as Local System on 
+Windows platforms,
+parse file \verb@%USERPROFILE\.condor\user_config@ if it exists,
+or the file defined by configuration variable \Macro{USER\_CONFIG\_FILE}.
+
 \item specific environment variables whose names are
 prefixed with \MacroNI{\_CONDOR\_}
 \end{enumerate}
@@ -103,7 +113,6 @@ and then remaining possible file locations from this list become irrelevant.
    \item the file specified by the \Env{CONDOR\_CONFIG} environment variable.
    If there is a problem reading that file, HTCondor will print an error
    message and exit right away.
-   \item \File{\$(HOME)/.condor/condor\_config}
    \item \File{/etc/condor/condor\_config}
    \item \File{/usr/local/etc/condor\_config}
    \item \File{\Tilde condor/condor\_config}
@@ -1413,6 +1422,21 @@ File System Configuration File Entries''.
   The process is not recursive, so any directories found inside the directory
   being processed are ignored. 
   See also \MacroNI{LOCAL\_CONFIG\_DIR\_EXCLUDE\_REGEXP}.
+
+\label{param:UserConfigFile} 
+\item[\Macro{USER\_CONFIG\_FILE}]
+  The file name of a configuration file to be parsed after other
+  local configuration files and before environment variables set configuration.
+  Relevant only if HTCondor daemons are \emph{not} run as \Login{root}
+  on Unix platforms or Local System on Windows platforms. 
+  The default is \File{\$(HOME)/.condor/user\_config} on Unix platforms.
+  The default is \verb@%USERPROFILE\.condor\user_config@ on Windows platforms.
+  If a fully qualified path is given, that is used.
+  If a fully qualified path is \emph{not} given, 
+  then the Unix path \File{\$(HOME)/.condor/} prefixes the file name
+  given on Unix platforms,
+  or the Windows path \verb@%USERPROFILE\.condor\@ prefixes the file name
+  given on Windows platforms.
 
 \label{param:LocalConfigDirExcludeRegexp}
 \item[\Macro{LOCAL\_CONFIG\_DIR\_EXCLUDE\_REGEXP}]
