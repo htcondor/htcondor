@@ -65,6 +65,10 @@ and \MacroNI{COLLECTOR\_HOST} were set to IPv6 addresses.
 with a command line argument similar to \Opt{-l mem=2048MB}.
 \Ticket{4549}
 
+\item Fixed a bug that caused the \Condor{gridmanager} to fail to talk
+to the \Condor{schedd} if the user's account was in a Windows domain.
+\Ticket{4568}
+
 \end{itemize}
 
 \noindent Known Bugs:
