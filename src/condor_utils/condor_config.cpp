@@ -333,7 +333,7 @@ bool _allocation_pool::contains(const char * pb)
 void _allocation_pool::reserve(int cbReserve)
 {
 	// for now, just consume some memory, and then free it back to the pool
-	this->free(this->consume(cbReserve, 1));
+	this->free_everything_after(this->consume(cbReserve, 1));
 }
 
 // compact the pool, leaving at least this much free space.
@@ -366,7 +366,7 @@ void _allocation_pool::compact(int cbLeaveFree)
 
 // free an allocation and everything allocated after it.
 // may fail if pb is not the most recent allocation.
-void _allocation_pool::free(const char * pb)
+void _allocation_pool::free_everything_after(const char * pb)
 {
 	if ( ! pb || ! this->phunks || this->nHunk >= this->cMaxHunks) return;
 	ALLOC_HUNK * ph = &this->phunks[this->nHunk];

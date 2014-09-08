@@ -33,7 +33,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration parameter \Macro{NETWORK\_HOSTNAME} allows
+you to set what hostname HTCondor uses to identify the local machine.
+If \Macro{NETWORK\_HOSTNAME} isn't set, then HTCondor will use the
+gethostname() function to determine the machine's hostname.
+This parameter is useful if the machine has multiple network interfaces
+with different hostnames.
+\Ticket{4570}
 
 \end{itemize}
 
@@ -58,6 +64,10 @@ and \MacroNI{COLLECTOR\_HOST} were set to IPv6 addresses.
 \item Fixed a bug in which \Condor{qsub} mishandled setting a memory request 
 with a command line argument similar to \Opt{-l mem=2048MB}.
 \Ticket{4549}
+
+\item Fixed a bug that caused the \Condor{gridmanager} to fail to talk
+to the \Condor{schedd} if the user's account was in a Windows domain.
+\Ticket{4568}
 
 \end{itemize}
 
