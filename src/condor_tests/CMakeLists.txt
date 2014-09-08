@@ -164,6 +164,7 @@ if (BUILD_TESTING)
 	if(LINUX)
 
 		condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
+		condor_pl_test( job_hyperthread_check "hyper thread testing test" "quick;full;quicknolink" )
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
 		if ( WITH_LIBDELTACLOUD )
