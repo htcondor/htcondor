@@ -146,7 +146,6 @@ void _allocation_hunk::reserve(int cb)
 		this->pb = (char*)VirtualAlloc(NULL, cb, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 #else
 		this->pb = (char*)malloc(cb);
-		fprintf(stderr, "_allocation_hunk::reserve(%d) allocated %p\n", cb, this->pb);
 #endif
 		this->cbAlloc = cb;
 	} else {
@@ -163,7 +162,6 @@ void _allocation_pool::clear()
 #if 0 //def WIN32
 		if (this->phunks[ii].pb) { VirtualFree(this->phunks[ii].pb, this->phunks[ii].cbAlloc, MEM_RELEASE); }
 #else
-		fprintf(stderr, "_allocation_pool::clear() freeing %p for hunk %d\n", this->phunks[ii].pb, ii);
 		if (this->phunks[ii].pb) { free(this->phunks[ii].pb); }
 #endif
 		this->phunks[ii].pb = NULL;
