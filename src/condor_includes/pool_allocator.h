@@ -89,7 +89,7 @@ typedef struct _allocation_pool {
 	bool contains(const char * pb);
 	// free an allocation and everything allocated after it.
 	// may fail if pb is not the most recent allocation.
-	void free(const char * pb);
+	void free_everything_after(const char * pb);
 	// reserve space in the pool. (allocates at least this much contiguous from the system)
 	void reserve(int cbLeaveFree);
 	// compact the pool, leaving at least this much free space
