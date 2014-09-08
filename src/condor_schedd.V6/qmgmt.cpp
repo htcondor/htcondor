@@ -1303,7 +1303,11 @@ isQueueSuperUser( const char* user )
             continue;
         }
 #endif
+#if defined(WIN32) // usernames on Windows are case-insensitive.
+		if( strcasecmp( user, super_users[i] ) == 0 ) {
+#else
 		if( strcmp( user, super_users[i] ) == 0 ) {
+#endif
 			return true;
 		}
 	}
