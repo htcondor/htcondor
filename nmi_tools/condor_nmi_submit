@@ -798,7 +798,37 @@ sub getSubmitInfoNew
 
 	# We print out the full name of these platforms, even if they want a
 	# specified key.
-	print "Found platforms: " . join( ', ', @platforms ) . "\n"; 
+	# print "Found platforms: " . join( ', ', @platforms ) . "\n";
+
+	#
+	# Conform @platforms to an external whitelist.  This allows us to
+	# easily and temporarily turn off builds for some platform(s),
+	# without leaving a long tail in git.
+	#
+	my %allowedPlatforms;
+	my $file = "/home/condorauto/permitted-build-platforms";
+	if( ! open( IN, '<', $file ) ) {
+		print "WARNING -- unable to open /home/condorauto/permitted-build-platforms, permitting all platforms.\n";
+		print "Found platforms: " . join( ', ', @platforms ) . "\n";
+		return;
+	}
+	while( <IN> ) {
+		chomp;
+	    next if(/^\s*#/);
+	    next if(/^\s*$/);
+	    $allowedPlatforms{ $_ } = 1;
+	}
+	close( IN );
+
+	my $i = 0;
+	while( $i < scalar( @platforms ) ) {
+		my $platform = $platforms[$i];
+	    if( ! exists( $allowedPlatforms{ $platform  } ) ) {
+			splice( @platforms, $i, 1 );
+	    } else { ++$i; }
+	}
+
+	print "Found platforms: " . join( ', ', @platforms ) . "\n";
 }
 
 sub loadModule
@@ -1309,6 +1339,14 @@ sub writeCommonInfo
 		push @platform_names, $platform_name;
 	}
     print $fh "platforms = " . join(', ', @platform_names) . "\n";
+
+	# Intended so we can add DEBUG_PLATFORMS temporarily.
+	my $file = "/home/condorauto/append-to-builds";
+	open( IN, '<', $file ) or return;
+	while( my $line = <IN> ) {
+		print $fh $line;
+	}
+	close( IN );
 }
 
 sub writeBuildGlueNew
