@@ -824,6 +824,7 @@ Reconfiguration using \Condor{reconfig} will not be enough.
   \item \verb@MAX_NUM_CPUS@
   \item \verb@MAX_TRACKING_GID@
   \item \verb@MIN_TRACKING_GID@
+  \item \verb@NETWORK_HOSTNAME@
   \item \verb@NETWORK_INTERFACE@
   \item \verb@NUM_CPUS@
   \item \verb@PREEMPTION_REQUIREMENTS_STABLE@
@@ -3090,6 +3091,17 @@ on file descriptor requirements of CCB.  Changes to this configuration
 variable require a restart of HTCondor in order to take effect.  Also note
 that only if HTCondor is running as root will it be able to increase the
 limit above the hard limit (on maximum open files) that it inherits.
+
+\label{param:NetworkHostname}
+\item[\Macro{NETWORK\_HOSTNAME}]
+Normally, HTCondor uses the gethostname() function to query the OS about
+the hostname of the local machine. This parameter can be used to override
+the result of that query.
+Among other things, the hostname is used in the to identify daemons in
+an HTCondor pool, via the Machine and Name attributes of daemon ads.
+This parameter can be used when a machine has multiple network interfaces
+with different hostnames, and you want HTCondor to use a hostname that's
+not the primary one.
 
 \label{param:NetworkInterface}
 \item[\Macro{NETWORK\_INTERFACE}]
