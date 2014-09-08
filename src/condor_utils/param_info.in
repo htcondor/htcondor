@@ -2691,10 +2691,18 @@ customization=seldom
 friendly_name=No Dns
 review=?
 
+[NETWORK_HOSTNAME]
+default=
+type=string
+reconfig=false
+customization=seldom
+friendly_name=Network Hostname
+review=?
+
 [NETWORK_INTERFACE]
 default=
 type=string
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Network Interface
 review=?
