@@ -107,8 +107,7 @@ sub setup_test_environment {
         #$front_path .= ";" . File::Spec->catdir($ENV{SystemRoot}, "system32");
 
         set_env("PATH", "$front_path;$ENV{PATH};$end_path");
-
-		print "^^^^^^ Windows path set to:$ENV{PATH} ^^^^^^^^^^^^^^^^\n";
+	# print "^^^^^^ Windows path set to:$ENV{PATH} ^^^^^^^^^^^^^^^^\n";
 
         # Condor will want Win32-style paths for CONDOR_CONFIG
 		set_env("TESTS","$base_dir\\condor_tests");
