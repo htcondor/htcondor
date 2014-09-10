@@ -1439,6 +1439,12 @@ File System Configuration File Entries''.
   or the Windows path \verb@%USERPROFILE\.condor\@ prefixes the file name
   given on Windows platforms.
 
+  The ability of a user to use this user-specified configuration file 
+  can be disabled by setting this variable to the empty string:
+\begin{verbatim}
+  USER_CONFIG_FILE =
+\end{verbatim}
+
 \label{param:LocalConfigDirExcludeRegexp}
 \item[\Macro{LOCAL\_CONFIG\_DIR\_EXCLUDE\_REGEXP}]
   A regular expression that specifies file names to be ignored when
