@@ -104,6 +104,13 @@ Section~\ref{sec:Ordering-Config-File} describes the ordering
 in which configuration files are parsed.
 \Ticket{3158}
 
+\item The GSI security libraries are now loaded into memory only when GSI
+authentication is required.
+This reduces memory usage when GSI authentication isn't used.
+The memory reduction will be most noticeable when there are many
+\Condor{shadow} processes running.
+\Ticket{4483}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
