@@ -69,6 +69,25 @@ with a command line argument similar to \Opt{-l mem=2048MB}.
 to the \Condor{schedd} if the user's account was in a Windows domain.
 \Ticket{4568}
 
+\item On Windows, items in the QUEUE\_SUPER\_USERS list are now checked in a case-insensitive way,
+since usernames are case-insensitive on Windows.
+\Ticket{4579}
+
+\item Fixed a bug that could prevent the \Condor{schedd}'s job queue log from rotating
+on Windows.
+\Ticket{4548}
+
+\item Fixed a bug that caused all HTCondor daemons to leak a small amount of memory on reconfig.
+\Ticket{4582}
+
+\item Fixed a bug that caused \Condor{config\_val} \Opt{-verbose} to sometimes append incorrect meta-knob
+information to the file and line number information for a configuration variable.
+\Ticket{4559}
+
+\item Fixed a bug that sometimes prevented adding a .txt extension to the log file name of HTCondor
+deamon on Windows.
+\Ticket{4571}
+
 \end{itemize}
 
 \noindent Known Bugs:
