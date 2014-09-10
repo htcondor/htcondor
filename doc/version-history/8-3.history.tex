@@ -88,8 +88,12 @@ set the new configuration variable \Macro{SHARED\_PORT\_PORT} to \Expr{0}.
 \Ticket{3813}
 
 \item The \Condor{shared\_port} daemon will now work 
-if the value of configuration variable \Macro{DAEMON\_SOCKET\_DIR} is
-longer than 100 characters in length.
+if the default location for configuration variable
+\Macro{DAEMON\_SOCKET\_DIR} (\Expr{\$(LOCK)/daemon\_sock}) is longer
+than 90 characters in length.
+On Linux, abstract sockets are now the primary method for
+\Condor{shared\_port} to forward an incoming connection to the intended
+daemon.
 \Ticket{4465}
 
 \item Improvements to CCB increase performance.
@@ -133,6 +137,13 @@ default file name or disable this feature.
 Section~\ref{sec:Ordering-Config-File} describes the ordering
 in which configuration files are parsed.
 \Ticket{3158}
+
+\item The GSI security libraries are now loaded into memory only when GSI
+authentication is required.
+This reduces memory usage when GSI authentication is not used.
+The memory reduction will be most noticeable when there are many
+\Condor{shadow} processes running.
+\Ticket{4483}
 
 \end{itemize}
 
