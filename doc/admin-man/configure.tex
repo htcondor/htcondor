@@ -3116,7 +3116,7 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   \Condor{shared\_port} for receiving incoming connections.  
   Under Unix, write access to the location defined by 
   \Macro{DAEMON\_SOCKET\_DIR} is required for this to take
-  effect.  The default is \Expr{True}.
+  effect.  The default is \Expr{False}.
   For more information about using
   a shared port, see page~\pageref{sec:Config-shared-port}.
 
@@ -12159,7 +12159,7 @@ see~\pageref{sec:shared-port-daemon}.
   connections can be forwarded to them by \Condor{shared\_port}.  If
   this directory does not exist, it will be created. The maximum length
   of named socket paths plus names is restricted by the operating system,
-  leading to defaults that mitigate the issue.
+  so using a path that's longer than 90 characters may cause failures.
 
   Write access to this directory grants permission to receive
   connections through the shared port.  By default, the directory is
@@ -12176,12 +12176,30 @@ see~\pageref{sec:shared-port-daemon}.
   But, consider the wisdom of having a firewall in the first place,
   if it will be circumvented it in this way.
 
-  The default value on Linux platforms is \Expr{auto},
-  using anonymous sockets.
-  The default value on non-Linux platforms is \Expr{\$(LOCK)/daemon\_sock}.
-  If the resulting directory name is too long,
-  the \Condor{master} attempts to create a directory in \File{/tmp}. 
-  This directory must be on a local file system that supports named sockets.
+  On Linux, daemons use abstract named sockets instead of normal
+  named sockets.
+  Abstract sockets are not not tied to a file in the filesystem.
+  The \Condor{master} picks a random prefix for abstract socket names
+  and shares it privately with the other daemons.
+  When searching for the recipient of an incoming connection,
+  \Condor{shared\_port} will check for both an abstract socket and a
+  named socket in the directory indicated by \Macro{DAEMON\_SOCKET\_DIR}.
+  The latter allows command-line tools like \Condor{ssh\_to\_job} to
+  use \Condor{shared\_port} as described above.
+
+  The default value of \Macro{DAEMON\_SOCKET\_DIR} is \Expr{auto}.
+  This means to use the directory \Expr{\$(LOCK)/daemon\_sock}.
+  On unix platorms other than Linux, if that path is too long
+  (90 characters maximum), then instead the \Condor{master} will create a
+  directory under \Expr{/tmp} with a name that looks like
+  \Expr{/tmp/condor\_shared\_port\_XXXXXX} (where the X's are replaced
+  with random characters).
+  The \Condor{master} then tells the other daemons the exact name of
+  the directory it created and they use it.
+
+  If a different value is set for \Macro{DAEMON\_SOCKET\_DIR}, then that
+  directory is used, regardless of the length of its pathname.
+  Ensure that the length is not longer than 90 characters.
 
 \label{param:SharedPortArgs}
 \item[\Macro{SHARED\_PORT\_ARGS}] Like all daemons started by

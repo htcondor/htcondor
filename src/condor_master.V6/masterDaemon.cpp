@@ -558,6 +558,9 @@ int daemon::RealStart( )
 	ArgList args;
 
 	param(default_id, "SHARED_PORT_DEFAULT_ID");
+	if ( !default_id.size() ) {
+		default_id = "collector";
+	}
 		// Windows has a global pipe namespace, meaning that several instances of
 		// HTCondor share the same default ID; we make it unique below.
 #ifdef WIN32
@@ -679,7 +682,7 @@ int daemon::RealStart( )
 		}
 
 		if (collector_uses_shared_port && !strcmp(name_in_config_file,"COLLECTOR")) {
-			daemon_sock = default_id.size() ? default_id.c_str() : "collector";
+			daemon_sock = default_id.c_str();
 		}
 
 		if( daemon_sock ) {
