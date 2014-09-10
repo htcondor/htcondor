@@ -32,6 +32,10 @@ $dagman_args = "-verbose";
 @logfiles = ("job_dagman_node_status_rm.dag.dagman.out");
 
 @outfiles = ("job_dagman_node_status_rm.status");
+
+my $template = "job_dagman_node_status_rm_node.template";
+my $nodesubmit = "job_dagman_node_status_rm_node.cmd";
+
 # Lines must be found in order.
 @outlines = ("DagStatus = 6;.*STATUS_ERROR \\(removed\\)",
 	"NodesTotal = 1;",
@@ -56,21 +60,49 @@ sub RUNNING{2};
 
 # Get rid of any existing log files.
 foreach $name (@logfiles) {
-	if (-e $name) {
+	if (-e "$name") {
 		runcmd("rm -f $name");
 	}
 }
 
 # Get rid of any existing node status files.
 foreach $name (@outfiles) {
-	if (-e $name) {
+	if (-e "$name") {
 		runcmd("rm -f $name");
 	}
 }
 
+# node submit file varies for windows
+system("ls -l $template");
+open(TF,"<$template") or die "Failed to open:$template:$!\n";
+open(NS,">$nodesubmit") or die "Failed to create:$nodesubmit :$!\n";
+while (<TF>) {
+	my $line = $_;
+	fullchomp($line);
+	if(CondorUtils::is_windows()) {
+		if($line =~ /^\s*executable.*$/) {
+			print NS "executable = c:\\perl64\\bin\\perl.exe\n";
+		} elsif($line =~ /^\s*arguments.*$/) {
+			print NS "arguments =  \"job_dagman_node_status_rm_node.pl A \$(DAGManJobId)\"\n";
+		} else {
+			print NS "$line\n";
+		}
+	} else {
+		if($line =~ /^\s*executable.*$/) {
+			print NS "executable = job_dagman_node_status_rm_node.pl\n";
+		} elsif($line =~ /^\s*arguments.*$/) {
+			print NS "arguments =  \"A \$(DAGManJobId)\"\n";
+		} else {
+			print NS "$line\n";
+		}
+	}
+}
+close(TF);
+close(NS);
+
 $abnormal = sub 
 {
-	die "Want to see only submit, execute and successful completion\n";
+	die "saw exited abnormal: Die: Want to see only submit, execute and successful completion\n";
 };
 
 $aborted = sub 
@@ -114,7 +146,7 @@ $aborted = sub
 
 $held = sub 
 {
-	die "Held event NOT expected\n";
+	die "Die: Held event NOT expected\n";
 };
 
 $executed = sub
@@ -131,17 +163,17 @@ $submitted = sub
 
 $success = sub
 {
-	die("DAG is expected to be aborted.\n");
+	die("saw  success: Die: DAG is expected to be aborted.\n");
 };
 
 $failure = sub
 {
-	die("DAG is expected to be aborted.\n");
+	die("saw exited failure: Die:DAG is expected to be aborted.\n");
 };
 
 $evicted = sub
 {
-	CondorTest::debug("DAG was evicted as expected\n",1);
+	CondorTest::debug("saw eviction: DAG was evicted as expected\n",1);
 };
 
 sub CheckStatusFile {

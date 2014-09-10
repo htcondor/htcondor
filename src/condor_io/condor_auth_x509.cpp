@@ -89,7 +89,7 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
 			}
 		}
 		if ( activate_globus_gsi() < 0 ) {
-			dprintf( D_ALWAYS, "Can't intialize GSI, authentication will fail: %s\n", x509_error_string() );
+			dprintf( D_ALWAYS, "Can't initialize GSI, authentication will fail: %s\n", x509_error_string() );
 		} else {
 			m_globusActivated = true;
 		}
@@ -98,22 +98,25 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
 
 Condor_Auth_X509 ::  ~Condor_Auth_X509()
 {
+	if ( !m_globusActivated ) {
+		return;
+	}
     // Delete context handle if exist
 
 	OM_uint32 minor_status = 0;
 
     if (context_handle) {
-        gss_delete_sec_context(&minor_status,&context_handle,GSS_C_NO_BUFFER);
+        (*gss_delete_sec_context_ptr)(&minor_status,&context_handle,GSS_C_NO_BUFFER);
     }
 
     if (credential_handle != GSS_C_NO_CREDENTIAL) {
-        gss_release_cred(&minor_status, &credential_handle);
+        (*gss_release_cred_ptr)(&minor_status, &credential_handle);
     }
 
 	if( m_gss_server_name != NULL ) {
-		gss_release_name( &minor_status, &m_gss_server_name );
+		(*gss_release_name_ptr)( &minor_status, &m_gss_server_name );
 	}
-	gss_release_name(&minor_status, &m_client_name);
+	(*gss_release_name_ptr)(&minor_status, &m_client_name);
 }
 
 int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError* errstack, bool non_blocking)
@@ -211,13 +214,13 @@ int Condor_Auth_X509 :: wrap(char*  data_in,
     gss_buffer_desc output_token_desc = GSS_C_EMPTY_BUFFER;
     gss_buffer_t    output_token      = &output_token_desc;
     
-    if (!isValid())
+    if (!m_globusActivated || !isValid())
         return FALSE;	
     
     input_token->value  = (void *)data_in;
     input_token->length = length_in;
     
-    major_status = gss_wrap(&minor_status,
+    major_status = (*gss_wrap_ptr)(&minor_status,
                             context_handle,
                             0,
                             GSS_C_QOP_DEFAULT,
@@ -245,14 +248,14 @@ int Condor_Auth_X509 :: unwrap(char*  data_in,
     gss_buffer_desc output_token_desc = GSS_C_EMPTY_BUFFER;
     gss_buffer_t    output_token      = &output_token_desc;
     
-    if (!isValid()) {
+    if (!m_globusActivated || !isValid()) {
         return FALSE;
     }
     
     input_token -> value = (void *)data_in;
     input_token -> length = length_in;
     
-    major_status = gss_unwrap(&minor_status,
+    major_status = (*gss_unwrap_ptr)(&minor_status,
                               context_handle,
                               input_token,
                               output_token,
@@ -272,8 +275,12 @@ int Condor_Auth_X509 :: endTime() const
     OM_uint32 major_status;
 	OM_uint32 minor_status;
 	OM_uint32 time_rec;
-	
-	major_status = gss_context_time(&minor_status ,
+
+	if ( !m_globusActivated ) {
+		return -1;
+	}
+
+	major_status = (*gss_context_time_ptr)(&minor_status ,
                                     context_handle ,
                                     &time_rec);
 
@@ -294,10 +301,13 @@ void Condor_Auth_X509 :: print_log(OM_uint32 major_status,
                                    int       token_stat, 
                                    const char *    comment)
 {
+    if ( !m_globusActivated ) {
+        return;
+    }
     char* buffer;
     char *tmp = (char *)malloc(strlen(comment)+1);
     strcpy(tmp, comment);
-    globus_gss_assist_display_status_str(&buffer,
+    (*globus_gss_assist_display_status_str_ptr)(&buffer,
                                          tmp,
                                          major_status,
                                          minor_status,
@@ -462,7 +472,7 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 	//just extract username from /CN=<username>@<domain,etc>
 	OM_uint32 major_status = GSS_S_COMPLETE;
 	char *tmp_user = NULL;
-	char local_user[USER_NAME_MAX];
+	char local_user[USER_NAME_MAX] = "";
 
 // windows gsi does not currently include this function.  we use it on
 // unix, but implement our own on windows for now.
@@ -502,9 +512,13 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 		}
 	}
 
+	if ( !m_globusActivated ) {
+		major_status = GSS_S_FAILURE;
+	}
+
 	if ((tmp_user == NULL) && (major_status == GSS_S_COMPLETE)) {
 		char condor_str[] = "condor";
-		major_status = globus_gss_assist_map_and_authorize(
+		major_status = (*globus_gss_assist_map_and_authorize_ptr)(
 			context_handle,
 			condor_str, // Requested service name
 			NULL, // Requested user name; NULL for non-specified
@@ -625,9 +639,13 @@ char * Condor_Auth_X509::get_server_info()
     gss_OID     mech, name_type;
     gss_buffer_desc name_buf;
     char *      server = NULL;
-    
+
+    if ( !m_globusActivated ) {
+        return NULL;
+    }
+
     // Now, we do some authorization work 
-    major_status = gss_inquire_context(&minor_status,
+    major_status = (*gss_inquire_context_ptr)(&minor_status,
                                        context_handle,
                                        NULL,    
                                        &m_gss_server_name,
@@ -641,7 +659,7 @@ char * Condor_Auth_X509::get_server_info()
         return NULL;
     }
 
-	major_status = gss_display_name(&minor_status,
+	major_status = (*gss_display_name_ptr)(&minor_status,
 									m_gss_server_name,
 									&name_buf,
 									&name_type);
@@ -653,7 +671,7 @@ char * Condor_Auth_X509::get_server_info()
 	server = new char[name_buf.length+1];
 	memset(server, 0, name_buf.length+1);
 	memcpy(server, name_buf.value, name_buf.length);
-	gss_release_buffer( &minor_status, &name_buf );
+	(*gss_release_buffer_ptr)( &minor_status, &name_buf );
 
     return server;
 }   
@@ -666,6 +684,12 @@ int Condor_Auth_X509::authenticate_self_gss(CondorError* errstack)
     if ( credential_handle != GSS_C_NO_CREDENTIAL ) { // user already auth'd 
         dprintf( D_FULLDEBUG, "This process has a valid certificate & key\n" );
         return TRUE;
+    }
+
+    if ( !m_globusActivated ) {
+        errstack->push("GSI", GSI_ERR_ACQUIRING_SELF_CREDINTIAL_FAILED,
+                       "Failed to load Globus libraries.");
+        return FALSE;
     }
     
     // ensure all env vars are in place, acquire cred will fail otherwise 
@@ -681,11 +705,11 @@ int Condor_Auth_X509::authenticate_self_gss(CondorError* errstack)
         priv = set_root_priv();
     }
     
-    major_status = globus_gss_assist_acquire_cred(&minor_status,
+    major_status = (*globus_gss_assist_acquire_cred_ptr)(&minor_status,
                                                   GSS_C_BOTH, 
                                                   &credential_handle);
     if (major_status != GSS_S_COMPLETE) {
-        major_status = globus_gss_assist_acquire_cred(&minor_status,
+        major_status = (*globus_gss_assist_acquire_cred_ptr)(&minor_status,
                                                       GSS_C_BOTH,
                                                       &credential_handle);
     }
@@ -730,6 +754,12 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
     OM_uint32	minor_status = 0;
     int         status = 0;
 
+    if ( !m_globusActivated ) {
+        errstack->push("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+                       "Failed to load Globus libraries.");
+        return FALSE;
+    }
+
     priv_state priv = PRIV_UNKNOWN;
     
     if (isDaemon()) {
@@ -737,7 +767,7 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
     }
     
     char target_str[] = "GSI-NO-TARGET";
-    major_status = globus_gss_assist_init_sec_context(&minor_status,
+    major_status = (*globus_gss_assist_init_sec_context_ptr)(&minor_status,
                                                       credential_handle,
                                                       &context_handle,
                                                       target_str,
@@ -883,6 +913,12 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 		return true;
 	}
 
+    if ( !m_globusActivated ) {
+        errstack->push("GSI", GSI_ERR_DNS_CHECK_ERROR,
+                       "Failed to load Globus libraries.");
+        return false;
+    }
+
 	char const *server_dn = getAuthenticatedName();
 	if( !server_dn ) {
 		std::string msg;
@@ -940,9 +976,9 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 	gss_connect_name_buf.value = strdup(connect_name.c_str());
 	gss_connect_name_buf.length = connect_name.size()+1;
 
-	major_status = gss_import_name(&minor_status,
+	major_status = (*gss_import_name_ptr)(&minor_status,
 								   &gss_connect_name_buf,
-								   GLOBUS_GSS_C_NT_HOST_IP,
+								   *gss_nt_host_ip_ptr,
 								   &gss_connect_name);
 
 	free( gss_connect_name_buf.value );
@@ -955,12 +991,12 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 	}
 
 	int name_equal = 0;
-	major_status = gss_compare_name( &minor_status,
+	major_status = (*gss_compare_name_ptr)( &minor_status,
 									 m_gss_server_name,
 									 gss_connect_name,
 									 &name_equal );
 
-	gss_release_name( &major_status, &gss_connect_name );
+	(*gss_release_name_ptr)( &major_status, &gss_connect_name );
 
 	if( !name_equal ) {
 		std::string msg;
@@ -1052,6 +1088,12 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 	gss_buffer_desc         input_token_desc;
 	gss_buffer_t            input_token;
 
+    if ( !m_globusActivated ) {
+        errstack->push("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+                       "Failed to load Globus libraries.");
+        return Fail;
+    }
+
 	m_state = GSSAuth;
 	do
 	{
@@ -1077,7 +1119,7 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 
 		dprintf(D_NETWORK, "gss_assist_accept_sec_context(1):inlen:%u\n", static_cast<unsigned>(input_token->length));
 
-		major_status = gss_accept_sec_context(
+		major_status = (*gss_accept_sec_context_ptr)(
 			&minor_status,
 			&context_handle,
 			credential_handle,
@@ -1109,13 +1151,13 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 				major_status =
 				GSS_S_DEFECTIVE_TOKEN | GSS_S_CALL_INACCESSIBLE_WRITE;
 			}
-			gss_release_buffer(&minor_status, output_token);
+			(*gss_release_buffer_ptr)(&minor_status, output_token);
 		}
 		if (GSS_ERROR(major_status))
 		{
 			if (context_handle != GSS_C_NO_CONTEXT)
 			{
-				gss_delete_sec_context(&minor_status, &context_handle, GSS_C_NO_BUFFER);
+				(*gss_delete_sec_context_ptr)(&minor_status, &context_handle, GSS_C_NO_BUFFER);
 			}
 			break;
 		}
@@ -1152,7 +1194,7 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 		gss_buffer_desc                     tmp_buffer_desc = GSS_C_EMPTY_BUFFER;
 		gss_buffer_t                        tmp_buffer = &tmp_buffer_desc;
 		char * gss_name = NULL;
-		major_status = gss_display_name(&minor_status,
+		major_status = (*gss_display_name_ptr)(&minor_status,
 			m_client_name,
 			tmp_buffer,
 			NULL);
@@ -1175,7 +1217,7 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED, "Unable to determine remote client name.  Globus is reporting error (%u:%u)",
 				(unsigned)major_status, (unsigned)minor_status);
 		}
-		gss_release_buffer(&minor_status, tmp_buffer);
+		(*gss_release_buffer_ptr)(&minor_status, tmp_buffer);
 
 		// store the raw subject name for later mapping
 		if (gss_name) {

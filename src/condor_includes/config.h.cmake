@@ -621,4 +621,7 @@
 /* Define to 1 if the OS has support for the TCP_USER_TIMEOUT setsockopt */
 #cmakedefine HAVE_TCP_USER_TIMEOUT
 
+/* Define to 1 if the GSI libraries need to dlopen()d */
+#cmakedefine DLOPEN_GSI_LIBS
+
 #endif

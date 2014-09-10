@@ -26,11 +26,6 @@ The HTCondor configuration files are used to customize how HTCondor
 operates at a given site.  The basic configuration as shipped with
 HTCondor works well for most sites.
 
-Several sample configuration files have been published, in addition to the
-basic configuration shipped with HTCondor.  Example configurations are
-available under the heading of ``Helpful guides to new users running HTCondor''
-at https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=GettingStarted.
-
 Each HTCondor program will, as part of its initialization process,
 configure itself by calling a library routine which parses the
 various configuration files that might be used, including pool-wide,
@@ -71,14 +66,25 @@ This prevents both the naive and the malicious HTCondor user
 from subverting the system through its configuration.
 The order in which items are parsed is
 \begin{enumerate}
-\item global configuration file
-\item local configuration file
-\item specific environment variables prefixed with \MacroNI{\_CONDOR\_}
+\item a single initial configuration file, which has historically
+been known as the global configuration file
+\item other configuration files that are referenced and parsed due 
+to specification within the single initial configuration file;
+these files have historically been known as local configuration files
+\item If HTCondor daemons are \emph{not} running as \Login{root} on
+Unix platforms,
+parse file \File{\$(HOME)/.condor/user\_config} if it exists,
+or the file defined by configuration variable \Macro{USER\_CONFIG\_FILE}.
+
+If HTCondor daemons are \emph{not} running as Local System on 
+Windows platforms,
+parse file \verb@%USERPROFILE\.condor\user_config@ if it exists,
+or the file defined by configuration variable \Macro{USER\_CONFIG\_FILE}.
+
+\item specific environment variables whose names are
+prefixed with \MacroNI{\_CONDOR\_}
 \end{enumerate}
 
-The locations for these files are as given in
-section~\ref{sec:Config-File-Locations} on
-page~\pageref{sec:Config-File-Locations}.
 
 Some HTCondor tools utilize environment variables to set their
 configuration.
@@ -95,6 +101,55 @@ as only specific variables are considered for definition
 in this manner, not any environment variables with
 the \MacroNI{\_CONDOR\_} prefix.
 
+The location of the single initial configuration file differs on
+Windows from Unix platforms. 
+For Unix platforms, 
+the location of the single initial configuration file starts at 
+the top of the following list.
+The first file that exists is used,
+and then remaining possible file locations from this list become irrelevant.
+
+\begin{enumerate}
+   \item the file specified by the \Env{CONDOR\_CONFIG} environment variable.
+   If there is a problem reading that file, HTCondor will print an error
+   message and exit right away.
+   \item \File{/etc/condor/condor\_config}
+   \item \File{/usr/local/etc/condor\_config}
+   \item \File{\Tilde condor/condor\_config}
+\end{enumerate}
+
+For Windows platforms, 
+the location of the single initial configuration file is determined by 
+the contents of the environment variable \Env{CONDOR\_CONFIG}.
+If this environment variable is not defined, 
+then the location is the registry value of 
+\Expr{HKEY\_LOCAL\_MACHINE/Software/Condor/CONDOR\_CONFIG}. 
+
+The single, initial configuration file may contain the specification 
+of one or more other configuration files, referred to here as
+local configuration files.
+Since more than one file may contain a definition of the same variable,
+and since the last definition of a variable sets the value, 
+the parse order of these local configuration files
+is fully specified here. 
+In order: 
+\begin{enumerate}
+   \item The value of configuration variable \Macro{LOCAL\_CONFIG\_DIR} lists 
+   one or more directories which contain configuration files. 
+   The list is parsed from left to right. 
+   The leftmost (first) in the list is parsed first. 
+   Within each directory, 
+   a lexicographical ordering by file name determines the ordering of 
+   file consideration.
+   \item The value of configuration variable \Macro{LOCAL\_CONFIG\_FILE} 
+   lists one or more configuration files. 
+   These listed files are parsed from  left to right.
+   The leftmost (first) in the list is parsed first.
+   \item If one of these steps changes the value (right hand side) of 
+   \MacroNI{LOCAL\_CONFIG\_DIR}, 
+   then \MacroNI{LOCAL\_CONFIG\_DIR} is processed for a second time,
+    using the changed list of directories.
+\end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-File-Macros}Configuration File Macros} 
@@ -778,6 +833,7 @@ Reconfiguration using \Condor{reconfig} will not be enough.
   \item \verb@MAX_NUM_CPUS@
   \item \verb@MAX_TRACKING_GID@
   \item \verb@MIN_TRACKING_GID@
+  \item \verb@NETWORK_HOSTNAME@
   \item \verb@NETWORK_INTERFACE@
   \item \verb@NUM_CPUS@
   \item \verb@PREEMPTION_REQUIREMENTS_STABLE@
@@ -1091,25 +1147,30 @@ File System Configuration File Entries''.
 
 \label{param:CollectorPort}
 \item[\Macro{COLLECTOR\_PORT}]
-  The default port used to contact the \Condor{collector}.  This parameter is
-  referenced if no port is given and there is no other means to find the
-  \Condor{collector} port.
-
-  This also controls the default port the \Condor{collector} listens on if
+  The default port used when contacting the \Condor{collector}
+  and the default port the \Condor{collector} listens on if
   no port is specified.
+  This variable is referenced if no port is given
+  and there is no other means to find the \Condor{collector} port.
+  The default value is 9618.
 
 \label{param:SharedPortPort}
 \item[\Macro{SHARED\_PORT\_PORT}]
-  The default TCP port used by the \Condor{shared\_port}.  If \Macro{COLLECTOR\_USES\_SHARED\_PORT}
-  is \Expr{True} (the default value) and the \Condor{master} will launch a \Condor{collector},
-  then the \Condor{shared\_port} daemon will ignore this value and use the TCP port
-  assigned to the collector via the \Macro{COLLECTOR\_HOST} macro.
+  The default TCP port used by the \Condor{shared\_port} daemon.
+  If \MacroNI{COLLECTOR\_USES\_SHARED\_PORT} is \Expr{True}, the default value, 
+  and the \Condor{master} will launch a \Condor{collector},
+  then the \Condor{shared\_port} daemon will ignore this value 
+  and use the TCP port assigned to the \Condor{collector} 
+  via the \MacroNI{COLLECTOR\_HOST} macro.
 
-  The default value is \Expr{\$(COLLECTOR\_PORT)}, currently 9618.  The special value
-  of \Expr{0} causes the \Condor{shared\_port} to use a randomly selected port.  \emph{Note}
-  that this causes all HTCondor hosts to use TCP port 9618 by default, differing from previous
-  behavior (previously, only the collector host used a fixed port).  To restore the prior
-  behavior, set \Macro{SHARED\_PORT\_PORT} to \Expr{0}.
+  The default value is \MacroUNI{COLLECTOR\_PORT}, which defaults to 9618.  
+  The special value of \Expr{0} causes the \Condor{shared\_port} 
+  to use a randomly selected port.  
+  Note that this causes all HTCondor hosts to use TCP port 9618 by default, 
+  differing from previous behavior.
+  Previously, only the \Condor{collector} host used a fixed port.
+  To restore the previous behavior, 
+  set this variable to \Expr{0}.
 
 \label{param:NegotiatorHost} 
 \item[\Macro{NEGOTIATOR\_HOST}]
@@ -1362,6 +1423,21 @@ File System Configuration File Entries''.
   The process is not recursive, so any directories found inside the directory
   being processed are ignored. 
   See also \MacroNI{LOCAL\_CONFIG\_DIR\_EXCLUDE\_REGEXP}.
+
+\label{param:UserConfigFile} 
+\item[\Macro{USER\_CONFIG\_FILE}]
+  The file name of a configuration file to be parsed after other
+  local configuration files and before environment variables set configuration.
+  Relevant only if HTCondor daemons are \emph{not} run as \Login{root}
+  on Unix platforms or Local System on Windows platforms. 
+  The default is \File{\$(HOME)/.condor/user\_config} on Unix platforms.
+  The default is \verb@%USERPROFILE\.condor\user_config@ on Windows platforms.
+  If a fully qualified path is given, that is used.
+  If a fully qualified path is \emph{not} given, 
+  then the Unix path \File{\$(HOME)/.condor/} prefixes the file name
+  given on Unix platforms,
+  or the Windows path \verb@%USERPROFILE\.condor\@ prefixes the file name
+  given on Windows platforms.
 
 \label{param:LocalConfigDirExcludeRegexp}
 \item[\Macro{LOCAL\_CONFIG\_DIR\_EXCLUDE\_REGEXP}]
@@ -3079,6 +3155,17 @@ on file descriptor requirements of CCB.  Changes to this configuration
 variable require a restart of HTCondor in order to take effect.  Also note
 that only if HTCondor is running as root will it be able to increase the
 limit above the hard limit (on maximum open files) that it inherits.
+
+\label{param:NetworkHostname}
+\item[\Macro{NETWORK\_HOSTNAME}]
+Normally, HTCondor uses the gethostname() function to query the OS about
+the hostname of the local machine. This parameter can be used to override
+the result of that query.
+Among other things, the hostname is used in the to identify daemons in
+an HTCondor pool, via the Machine and Name attributes of daemon ads.
+This parameter can be used when a machine has multiple network interfaces
+with different hostnames, and you want HTCondor to use a hostname that's
+not the primary one.
 
 \label{param:NetworkInterface}
 \item[\Macro{NETWORK\_INTERFACE}]
@@ -10292,17 +10379,17 @@ in section~\ref{sec:DAG-configuration}.
 \item[\Macro{DAGMAN\_DEFAULT\_NODE\_LOG}]
   The default name of a file to be used as a job event log by all node jobs
   of a DAG.
-  Even if \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set to
-  \Expr{False}, the default log file will be used by any node jobs for which
-  a log file is not defined in the job's submit description file.
+  %Even if \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set to
+  %\Expr{False}, the default log file will be used by any node jobs for which
+  %a log file is not defined in the job's submit description file.
 
-  The file name needs to be unique for each DAG,
-  yet the standard job ClassAd attributes will not be available 
-  with the \Condor{dagman} job run under the scheduler universe. 
-  Therefore, as of version HTCondor version 8.1.3, 
-  a special macro syntax 
-  uses \Bold{\Expr{@}} instead of \Bold{\Expr{\$}} to indicate
-  a special evaluation for acquiring values.
+  This configuration variable uses a special syntax 
+  in which \Bold{\Expr{@}} instead of \Bold{\Expr{\$}} indicates
+  an evaluation of special variables.  
+  Normal HTCondor configuration macros may be used with the normal
+  \Bold{\Expr{\$}} syntax.
+
+  Special variables to be used only in defining this configuration variable:
   \begin{itemize}
   \item \Expr{@(DAG\_DIR)}: The directory in which the primary DAG input file
   resides.
@@ -10312,6 +10399,10 @@ in section~\ref{sec:DAG-configuration}.
   It does not include the path.
   \item \Expr{@(CLUSTER)}: The \Attr{ClusterId} attribute of 
   the \Condor{dagman} job.
+  \item \Expr{@(OWNER)}: The user name of the user who submitted the
+  DAG.
+  \item \Expr{@(NODE\_NAME)}: For SUBDAGs, this is the node name of the SUBDAG
+  in the upper level DAG; for a top-level DAG, it is the string \Expr{"undef"}.
   \end{itemize}
 
   If not defined, 
@@ -10324,13 +10415,13 @@ in section~\ref{sec:DAG-configuration}.
   because \Expr{\$(LOG)} is defined as \Expr{"."} for \Condor{dagman}.
   To place the default log file into the log directory,
   write the expression relative to a known directory,
-  as the example \Expr{\$(LOCAL\_DIR)/log}.
+  such as \Expr{\$(LOCAL\_DIR)/log} (see examples below).
   \item A default log file placed in the spool directory
   will need extra configuration to prevent \Condor{preen} from removing it;
   modify \MacroNI{VALID\_SPOOL\_FILES}.
   Removal of the default log file during a run will cause severe problems.
-  \item The value defined for \MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} must
-  ensure that the file is unique for each DAG.
+  \item \Bold{The value defined for \MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} must
+  ensure that the file is unique for each DAG.}
   Therefore, the value should always include \Expr{@(DAG\_FILE)}.
   For example,
   \begin{verbatim}
@@ -10343,6 +10434,13 @@ in section~\ref{sec:DAG-configuration}.
   will cause failure when more than one DAG is run at the same time on a
   given submit machine.
   \end{itemize}
+
+\label{param:DAGManSuppressJobLogs}
+\item[\Macro{DAGMAN\_SUPPRESS\_JOB\_LOGS}]
+  A boolean value specifying whether events should be written to a log file
+  specified in a node job's submit description file.
+  The default value is \Expr{False}, such that events are written to
+  a log file specified by a node job.
 
 \label{param:DAGManGenerateSubDagSubmits}
 \item[\Macro{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS}]
@@ -10445,31 +10543,31 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanAlwaysUseNodeLog}
 \item[\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}]
-  \Bold{As of version 8.3.1, the value of this macro cannot be changed
-  from the default (\Expr{True}).}  (The non-workflow/default node log
-  feature has been disabled to
-  simplify the code and make certain planned features easier to
-  implement -- see \Ticket{3994})
-  A boolean value defining whether \Condor{dagman} reads events from
-  its default node log file, as defined by
+  As of HTCondor version 8.3.1, the value is always the default 
+  value of \Expr{True}.  
+  Attempts to set it to \Expr{False} results in an error. 
+  This causes incompatibility with using a \Condor{submit} executable 
+  that is older than HTCondor version 7.9.0.
+  A boolean value that when \Expr{True}  causes \Condor{dagman} to read
+  events from its default node log file, as defined by
   \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}, instead of from the log file(s)
   defined in the node job submit description files.
-  If \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is \Expr{True},
+  When \Expr{True},
   \Condor{dagman} will read events only from the default log
   file, and POST script terminated events will
   be written only to the default log file, and not to the
   log file(s) defined in the node job submit description files.
   The default value is \Expr{True}.
-  This variable must be \Expr{False} if \Condor{dagman} from HTCondor
-  version 7.9.0 or later is submitting jobs to a \Condor{schedd} daemon
-  or using a \Condor{submit} executable that is older than 
-  HTCondor version 7.9.0.
-  As of HTCondor version 8.1.4, a value of \Expr{False} is no longer 
-  recommended, and doing so will produce a warning.  This
-  option will probably be entirely disabled in the future.
-  To run a DAG with \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} 
-  set to \Expr{False},
-  also set \Macro{DAGMAN\_USE\_STRICT} to 0.
+  %This variable must be \Expr{False} if \Condor{dagman} from HTCondor
+  %version 7.9.0 or later is submitting jobs to a \Condor{schedd} daemon
+  %or using a \Condor{submit} executable that is older than 
+  %HTCondor version 7.9.0.
+  %As of HTCondor version 8.1.4, a value of \Expr{False} is no longer 
+  %recommended, and doing so will produce a warning.  This
+  %option will probably be entirely disabled in the future.
+  %To run a DAG with \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} 
+  %set to \Expr{False},
+  %also set \Macro{DAGMAN\_USE\_STRICT} to 0.
 
 \label{param:DAGmanSuppressNotification}
 \item[\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION}]
@@ -12051,28 +12149,33 @@ see~\pageref{sec:shared-port-daemon}.
 
 \label{param:DaemonSocketDir}
 \item[\Macro{DAEMON\_SOCKET\_DIR}] This specifies the directory where
- Unix versions of HTCondor daemons will create named sockets so that incoming
- connections can be forwarded to them by \Condor{shared\_port}.  If
- this directory does not exist, it will be created. The maximum length
- of named socket paths plus names is restricted by the operating system,
- so it is important that this path not exceed 90 characters.
+  Unix versions of HTCondor daemons will create named sockets so that incoming
+  connections can be forwarded to them by \Condor{shared\_port}.  If
+  this directory does not exist, it will be created. The maximum length
+  of named socket paths plus names is restricted by the operating system,
+  leading to defaults that mitigate the issue.
 
-Write access to this directory grants permission to receive
- connections through the shared port.  By default, the directory is
- created to be owned by HTCondor and is made to be only writable by
- HTCondor.  One possible reason to broaden access to this directory is
- if execute nodes are accessed via CCB and the submit node is behind a
- firewall with only one open port (the port assigned to
- \Condor{shared\_port}).  In this case, commands that interact with
- the execute node such as \Condor{ssh\_to\_job} will not be able to
- operate unless run by a user with write access to
- \MacroNI{DAEMON\_SOCKET\_DIR}.  In this case, one could grant
- tmp-like permissions to this directory so that all users can receive
- CCB connections back through the firewall.  (But consider the wisdom
- of having a firewall in the first place if you are going to
- circumvent it in this way.)  The default
- \MacroNI{DAEMON\_SOCKET\_DIR} is \verb|$(LOCK)/daemon_sock|.  This
- directory must be on a local file system that supports named sockets.
+  Write access to this directory grants permission to receive
+  connections through the shared port.  By default, the directory is
+  created to be owned by HTCondor and is made to be only writable by
+  HTCondor.  One possible reason to broaden access to this directory is
+  if execute nodes are accessed via CCB and the submit node is behind a
+  firewall with only one open port (the port assigned to
+  \Condor{shared\_port}).  In this case, commands that interact with
+  the execute node such as \Condor{ssh\_to\_job} will not be able to
+  operate unless run by a user with write access to
+  \MacroNI{DAEMON\_SOCKET\_DIR}.  In this case, one could grant
+  tmp-like permissions to this directory so that all users can receive
+  CCB connections back through the firewall.
+  But, consider the wisdom of having a firewall in the first place,
+  if it will be circumvented it in this way.
+
+  The default value on Linux platforms is \Expr{auto},
+  using anonymous sockets.
+  The default value on non-Linux platforms is \Expr{\$(LOCK)/daemon\_sock}.
+  If the resulting directory name is too long,
+  the \Condor{master} attempts to create a directory in \File{/tmp}. 
+  This directory must be on a local file system that supports named sockets.
 
 \label{param:SharedPortArgs}
 \item[\Macro{SHARED\_PORT\_ARGS}] Like all daemons started by

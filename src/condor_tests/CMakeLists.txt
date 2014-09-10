@@ -62,6 +62,7 @@ if (BUILD_TESTING)
 	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
 	condor_exe_test(x_conditional_params.exe "x_conditional_params.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}" )
+	condor_exe_test(validate_job_queue.exe "validate_job_queue.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}" )
 	
 	# Not all of our gccs support -Wno-div-by-zero.
 	#if (UNIX)
@@ -142,8 +143,16 @@ if (BUILD_TESTING)
 
 		if( ${SYS_ARCH} MATCHES "X86_64" )
 			if(  "${RPM_SYSTEM_NAME}" MATCHES "rhel5"
+			  OR "${RPM_SYSTEM_NAME}" MATCHES "rhel6"
+			  OR "${RPM_SYSTEM_NAME}" MATCHES "rhel7"
+			  OR "${RPM_SYSTEM_NAME}" MATCHES "sl6"
+			  OR "${RPM_SYSTEM_NAME}" MATCHES "sl6"
+			  OR "${SYSTEM_NAME}" MATCHES "Debian-6"
 			  OR "${SYSTEM_NAME}" MATCHES "Debian-7"
-			  OR "${RPM_SYSTEM_NAME}" MATCHES "rhel7" )
+			  OR "${SYSTEM_NAME}" MATCHES "Debian-8"
+			  # Debian testing.
+			  OR "${SYSTEM_NAME}" MATCHES "Debian-"
+			  OR "${SYSTEM_NAME}" MATCHES "Ubuntu-14" )
 				condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
 			endif()
 		endif()
@@ -155,6 +164,7 @@ if (BUILD_TESTING)
 	if(LINUX)
 
 		condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
+		condor_pl_test( job_hyperthread_check "hyper thread testing test" "quick;full;quicknolink" )
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
 		if ( WITH_LIBDELTACLOUD )
@@ -179,6 +189,7 @@ if (BUILD_TESTING)
 	if (HAVE_EXT_GLOBUS)
 	condor_pl_test(lib_auth_protocol-gsi "GSI authentication test" "core;quick;full;quicknolink")
 	endif()
+	condor_pl_test(job_dagman_node_status_rm "Check status file shows condor_rm" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_large_dag "Test large DAG w/ recovery mode" "dagman;quick;full;quicknolink")
 	condor_pl_test(lib_shared_port_van "Test of shared port feature." "core;quick;full;quicknolink")
 	condor_pl_test(lib_shared_port-collector_van "Test of shared port feature with collector usage." "core;quick;full;quicknolink")

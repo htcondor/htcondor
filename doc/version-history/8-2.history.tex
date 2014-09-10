@@ -33,7 +33,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration parameter \Macro{NETWORK\_HOSTNAME} allows
+you to set what hostname HTCondor uses to identify the local machine.
+If \Macro{NETWORK\_HOSTNAME} isn't set, then HTCondor will use the
+gethostname() function to determine the machine's hostname.
+This parameter is useful if the machine has multiple network interfaces
+with different hostnames.
+\Ticket{4570}
 
 \end{itemize}
 
@@ -41,11 +47,60 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
+no longer causes a link error.
+\Ticket{4486}
+
+\item EC2 grid universe jobs which use the X.509 authentication method will
+no longer crash if environment variable \Env{USER} is not set.
+\Ticket{4540}
+
 \item Fixed a rare memory leak. 
 The leak occurred when IPv6 was disabled, 
 but configuration variables \MacroNI{NETWORK\_INTERFACE} 
 and \MacroNI{COLLECTOR\_HOST} were set to IPv6 addresses.
 \Ticket{4502}
+
+\item Fixed a bug in which \Condor{qsub} mishandled setting a memory request 
+with a command line argument similar to \Opt{-l mem=2048MB}.
+\Ticket{4549}
+
+\item Fixed a bug that caused the \Condor{gridmanager} to fail to talk
+to the \Condor{schedd} if the user's account was in a Windows domain.
+\Ticket{4568}
+
+\item On Windows, items in the QUEUE\_SUPER\_USERS list are now checked in a case-insensitive way,
+since usernames are case-insensitive on Windows.
+\Ticket{4579}
+
+\item Fixed a bug that could prevent the \Condor{schedd}'s job queue log from rotating
+on Windows.
+\Ticket{4548}
+
+\item Fixed a bug that caused all HTCondor daemons to leak a small amount of memory on reconfig.
+\Ticket{4582}
+
+\item Fixed a bug that caused \Condor{config\_val} \Opt{-verbose} to sometimes append incorrect meta-knob
+information to the file and line number information for a configuration variable.
+\Ticket{4559}
+
+\item Fixed a bug that sometimes prevented adding a .txt extension to the log file name of HTCondor
+deamon on Windows.
+\Ticket{4571}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item On Windows platforms only, issuing \Condor{rm} on a 
+\Condor{dagman} job does not work correctly.
+The \Condor{dagman} process is immediately killed,
+and it does not write a Rescue DAG or remove its node jobs.
+Note that this bug has probably existed since DAGMan was first
+implemented on the Windows platform.
+\Ticket{4566}
 
 \end{itemize}
 

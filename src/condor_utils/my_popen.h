@@ -49,7 +49,8 @@ END_C_DECLS
 FILE *my_popen( ArgList &args,
                 const char * mode,
                 int want_stderr,
-				Env *env_ptr = NULL);
+                Env *env_ptr = NULL,
+                bool drop_privs = true);
 int my_system( ArgList &args, Env *env_ptr = NULL );
 
 // PrivSep version

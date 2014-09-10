@@ -4151,8 +4151,12 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	plugin_args.AppendArg(dest);
 	dprintf(D_FULLDEBUG, "FILETRANSFER: invoking: %s %s %s\n", plugin.Value(), source, dest);
 
+	// determine if we want to run the plugin with root priv (if available).
+	// if so, drop_privs should be false.  the default is to drop privs.
+	bool drop_privs = !param_boolean("RUN_FILETRANSFER_PLUGINS_WITH_ROOT", false);
+
 	// invoke it
-	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env);
+	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env, drop_privs);
 	int plugin_status = my_pclose(plugin_pipe);
 
 	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", plugin_status);

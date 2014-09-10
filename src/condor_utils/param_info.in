@@ -300,7 +300,7 @@ review=?
 
 [COLLECTOR_PORT]
 default=9618
-range=0,65536
+range=0,65535
 type=int
 reconfig=true
 customization=seldom
@@ -2706,10 +2706,18 @@ customization=seldom
 friendly_name=No Dns
 review=?
 
+[NETWORK_HOSTNAME]
+default=
+type=string
+reconfig=false
+customization=seldom
+friendly_name=Network Hostname
+review=?
+
 [NETWORK_INTERFACE]
 default=
 type=string
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Network Interface
 review=?
@@ -3615,6 +3623,13 @@ friendly_name=Runtime Config Admin
 review=?
 tags=c++_util,condor_config
 
+[USER_CONFIG_FILE]
+default=user_config
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Name of User Config File
+tags=condor_config
 
 [ENABLE_PERSISTENT_CONFIG]
 default=false
