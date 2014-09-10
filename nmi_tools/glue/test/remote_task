@@ -96,7 +96,7 @@ if( ! $testname ) {
     c_die("Invalid input for testname\n");
 }
 
-out("Testname: '$testname'");
+out("REMOTE_TASK.$$ Testname: '$testname'");
 if( not TestGlue::is_windows() ) {
     if( $compiler ) {
         out("compiler is $compiler");
@@ -116,6 +116,7 @@ else {
 # Some of the tests fail because the schedd fsync can take 30 seconds
 # or more on busy nmi filesystems, which causes the tools to timeout.
 # Up the tool timeout multipler to try to deal with this.
+out("Setting _condor_TOOL_TIMEOUT_MULTIPLIER=4");
 $ENV{_condor_TOOL_TIMEOUT_MULTIPLIER}="4";
 
 chdir($test_dir) || c_die("Can't chdir($test_dir): $!\n");
@@ -128,16 +129,6 @@ chdir($test_dir) || c_die("Can't chdir($test_dir): $!\n");
 my $iswindows = CondorUtils::is_windows();
 my $iscygwin  = CondorUtils::is_cygwin_perl();
 
-# lets try to find needed windows initializations
-
-# remove . from path
-#CleanFromPath(".");
-# yet add in base dir of all tests and compiler directories
- #$ENV{PATH} = $ENV{PATH} . ":" . $BaseDir;
-# add 64 bit  location for java
-#if($iswindows && $iscygwin) {
-# $ENV{PATH} = $ENV{PATH} . ":/cygdrive/c/windows/sysnative:c:\\windows\\sysnative";
-#}
 
 # does this test need a personal?
 my $need = DoesTestNeedPersonal($testname);
@@ -147,18 +138,16 @@ if ($need ne "") {
 } else {
     #out("'$testname' does not require a personal HTCondor");
 }
-out("RUNNING '$testname'");
 
 # Now that we stash all debug messages, we'll only dump them all
 # when the test fails. This will be debugs at all levels.
-#system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated -v");
-#system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated");
+
 # must use cygwin perl on Windows for batch_test.pl
 my $perl_exe = "perl";
 if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     my $perlver = `$perl_exe -version`;
-    if ($perlver =~ /(This is perl .*)$/m) { $perlver = $1; }
-    out($perlver);
+    if ($perlver =~ /This is (perl .*)$/m) { $perlver = $1; }
+    out("First perl is $perlver.");
     if ( !$force_cygwin ) {
         out("attempting to run tests using current perl");
 	if ($ENV{PATH} =~ /[a-z]:\\condor\\bin;/i) {
@@ -175,20 +164,28 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
             $ENV{PATH} = $tmppath;
         }
     } elsif (!($perlver =~ /cygwin/i)) {
-        out("adding cygwin to the front of the path");
+        out("Adding cygwin to the front of the path to force the use of cygwin perl.");
         $ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
-	out("PATH=$ENV{PATH}");
+	#out("new PATH=$ENV{PATH}");
 
         $perlver = `$perl_exe -version`;
-	if ($perlver =~ /(This is perl .*)$/m) { $perlver = $1; }
-        out($perlver);
+	if ($perlver =~ /This is (perl .*)$/m) { $perlver = $1; }
+        out("First perl is now $perlver.");
         if (!($perlver =~ /cygwin/i)) {
             die "cygwin perl not found!\n";
         }
     }
+    #my $newpath = join("\n", split(';',$ENV{PATH}));
+    #out("PATH is now\n$newpath");
 }
-my $batchteststatus = system("$perl_exe batch_test.pl -d $compiler -t $testname");
 
+# alternative arguments for batch test...
+#system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated -v");
+#system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated");
+
+out("RUNNING batch_test.pl -t '$testname'\n---------");
+my $batchteststatus = system("$perl_exe batch_test.pl -d $compiler -t $testname");
+print "---------\n"; # we print here rather than using out() in order to bracket the batch test output with ----- above and below.
 my @returns = TestGlue::ProcessReturn($batchteststatus);
 
 $batchteststatus = $returns[0];
@@ -223,9 +220,9 @@ my $test_out_path = File::Spec->catfile($compiler_path, $test_out);
 my $test_err      = "$testname.err";
 my $test_err_path = File::Spec->catfile($compiler_path, $test_err);
 
-print "Looking for run.out file\n";
-print "compiler_path:$compiler_path run_out:$run_out run_out_path:$run_out_path compiler_path:$compiler_path\n";
-print "test_out:$test_out test_out_path:$test_out_path test_err:$test_err test_err_path:$test_err_path\n";
+out("Looking for run.out file");
+out("compiler_path:$compiler_path run_out:$run_out run_out_path:$run_out_path compiler_path:$compiler_path");
+out("test_out:$test_out test_out_path:$test_out_path test_err:$test_err test_err_path:$test_err_path");
 #print "Here now:\n";
 #system("pwd;ls -lh $run_out_path");
 
@@ -233,19 +230,19 @@ if( ! -f $run_out_path ) {
     if( $teststatus == 0 ) {
         # if the test passed but we don't have a run.out file, we
         # should consider that some kind of weird error
-        c_die("ERROR: test passed but $run_out does not exist!");
+        c_die("WTF ERROR: test passed but $run_out does not exist!");
     }
     else {
         # if the test failed, this isn't suprising.  we can print it, 
         # but we should just treat it as if the test failed, not an
         # internal error. 
-        out("\n\nTest failed and $run_out does not exist");
+        out("No test output... Test failed and $run_out does not exist");
     }
 }
 else {
     # spit out the contents of the run.out file to the stdout of the task
     if( open(RES, '<', $run_out_path) ) {
-        out("\n\n----- Start of $run_out -----");
+        out("Printing test output...\n\n----- Start of $run_out -----");
         while(<RES>) {
             print "$_";
         }
@@ -253,39 +250,12 @@ else {
         print "\n----- End of $run_out -----\n";
     }
     else {
-        out("\n\nERROR: failed to open $run_out_path: $!");
+        out("Printing test output...  ERROR: failed to open $run_out_path: $!");
     }
 }
 
-# add test.out and test.err to run output if they exist
 
-# spit out the contents of the test.out file to the stdout of the task
-#if( open(RES, '<', $test_out_path) ) {
-    #out("\n\n----- Start of $test_out -----");
-    #while(<RES>) {
-        #print "$_";
-    #}
-    #close RES;
-    #print "\n----- End of $test_out -----\n";
-#}
-#else {
-    #out("\n\nERROR: failed to open $test_out_path: $!");
-#}
-
-# spit err the contents of the test.err file to the stdout of the task
-#if( open(RES, '<', $test_err_path) ) {
-    #out("\n\n----- Start of $test_err -----");
-    #while(<RES>) {
-        #print "$_";
-    #}
-    #close RES;
-    #print "\n----- End of $test_err -----\n";
-#}
-#else {
-    #out("\n\nERROR: failed to open $test_err_path: $!");
-#}
-
-print "********************** EXIT REMOTE_TASK: Status:$batchteststatus ******************\n";
+print "\n********************** EXIT REMOTE_TASK.$$: Status:$batchteststatus ******************\n";
 exit $batchteststatus;
 
 ######################################################################
