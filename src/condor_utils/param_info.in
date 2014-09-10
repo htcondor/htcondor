@@ -5722,7 +5722,6 @@ review=?
 
 [USE_SHARED_PORT]
 default=false
-win32_default=false
 version=7.5.0
 type=bool
 reconfig=true
