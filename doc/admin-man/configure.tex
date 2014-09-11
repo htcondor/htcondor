@@ -3164,14 +3164,16 @@ limit above the hard limit (on maximum open files) that it inherits.
 
 \label{param:NetworkHostname}
 \item[\Macro{NETWORK\_HOSTNAME}]
-Normally, HTCondor uses the gethostname() function to query the OS about
-the hostname of the local machine. This parameter can be used to override
-the result of that query.
-Among other things, the hostname is used in the to identify daemons in
-an HTCondor pool, via the Machine and Name attributes of daemon ads.
-This parameter can be used when a machine has multiple network interfaces
-with different hostnames, and you want HTCondor to use a hostname that's
-not the primary one.
+The host name to use,
+overriding the value returned by
+\Procedure{gethostname}, which will be invoked by default
+to query the operating system to obtain the host name of the local machine. 
+Among other things, the host name is used to identify daemons in
+an HTCondor pool, via the \Attr{Machine} and \Attr{Name} attributes of 
+daemon ClassAds.
+This variable can be used when a machine has multiple network interfaces
+with different host names, 
+to use a host name that is not the primary one.
 
 \label{param:NetworkInterface}
 \item[\Macro{NETWORK\_INTERFACE}]
