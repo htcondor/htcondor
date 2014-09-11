@@ -70,7 +70,8 @@ with a command line argument similar to \Opt{-l mem=2048MB}.
 to the \Condor{schedd} if the user's account was in a Windows domain.
 \Ticket{4568}
 
-\item On Windows, items in the QUEUE\_SUPER\_USERS list are now checked in a case-insensitive way,
+\item On Windows platforms, users listed in the \Macro{QUEUE\_SUPER\_USERS} 
+configuration variable are now checked in a case-insensitive way,
 since user names are case-insensitive on Windows.
 \Ticket{4579}
 
