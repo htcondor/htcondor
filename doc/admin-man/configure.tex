@@ -3141,8 +3141,9 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   setting is \Expr{True}.
 
 \label{param:SubsysMaxFileDescriptors}
-\item[\MacroB{<SUBSYS>\_MAX\_FILE\_DESCRIPTORS}]
+\index{configuration macro!\texttt{SHARED\_PORT\_MAX\_FILE\_DESCRIPTORS}}
 \index{SUBSYS\_MAX\_FILE\_DESCRIPTORS macro@\texttt{<SUBSYS>\_MAX\_FILE\_DESCRIPTORS}}
+\item[\MacroB{<SUBSYS>\_MAX\_FILE\_DESCRIPTORS}]
 This setting is identical to \MacroNI{MAX\_FILE\_DESCRIPTORS}, but it
 only applies to a specific subsystem.  If the
 subsystem-specific setting is unspecified, \MacroNI{MAX\_FILE\_DESCRIPTORS}
@@ -3164,14 +3165,16 @@ limit above the hard limit (on maximum open files) that it inherits.
 
 \label{param:NetworkHostname}
 \item[\Macro{NETWORK\_HOSTNAME}]
-Normally, HTCondor uses the gethostname() function to query the OS about
-the hostname of the local machine. This parameter can be used to override
-the result of that query.
-Among other things, the hostname is used in the to identify daemons in
-an HTCondor pool, via the Machine and Name attributes of daemon ads.
-This parameter can be used when a machine has multiple network interfaces
-with different hostnames, and you want HTCondor to use a hostname that's
-not the primary one.
+The host name to use,
+overriding the value returned by
+\Procedure{gethostname}, which will be invoked by default
+to query the operating system to obtain the host name of the local machine. 
+Among other things, the host name is used to identify daemons in
+an HTCondor pool, via the \Attr{Machine} and \Attr{Name} attributes of 
+daemon ClassAds.
+This variable can be used when a machine has multiple network interfaces
+with different host names, 
+to use a host name that is not the primary one.
 
 \label{param:NetworkInterface}
 \item[\Macro{NETWORK\_INTERFACE}]
@@ -12159,46 +12162,48 @@ see~\pageref{sec:shared-port-daemon}.
   connections can be forwarded to them by \Condor{shared\_port}.  If
   this directory does not exist, it will be created. The maximum length
   of named socket paths plus names is restricted by the operating system,
-  so using a path that's longer than 90 characters may cause failures.
+  so using a path that is longer than 90 characters may cause failures.
 
   Write access to this directory grants permission to receive
   connections through the shared port.  By default, the directory is
   created to be owned by HTCondor and is made to be only writable by
   HTCondor.  One possible reason to broaden access to this directory is
   if execute nodes are accessed via CCB and the submit node is behind a
-  firewall with only one open port (the port assigned to
-  \Condor{shared\_port}).  In this case, commands that interact with
-  the execute node such as \Condor{ssh\_to\_job} will not be able to
-  operate unless run by a user with write access to
+  firewall with only one open port,
+  which is the port assigned to \Condor{shared\_port}.
+  In this case, commands that interact with the execute node, 
+  such as \Condor{ssh\_to\_job},
+  will not be able to operate unless run by a user with write access to
   \MacroNI{DAEMON\_SOCKET\_DIR}.  In this case, one could grant
   tmp-like permissions to this directory so that all users can receive
   CCB connections back through the firewall.
   But, consider the wisdom of having a firewall in the first place,
-  if it will be circumvented it in this way.
+  if it will be circumvented in this way.
 
-  On Linux, daemons use abstract named sockets instead of normal
-  named sockets.
-  Abstract sockets are not not tied to a file in the filesystem.
+  On Linux platforms, 
+  daemons use abstract named sockets instead of normal named sockets.
+  Abstract sockets are not not tied to a file in the file system.
   The \Condor{master} picks a random prefix for abstract socket names
   and shares it privately with the other daemons.
   When searching for the recipient of an incoming connection,
   \Condor{shared\_port} will check for both an abstract socket and a
-  named socket in the directory indicated by \Macro{DAEMON\_SOCKET\_DIR}.
-  The latter allows command-line tools like \Condor{ssh\_to\_job} to
-  use \Condor{shared\_port} as described above.
+  named socket in the directory indicated by this variable.
+  The named socket allows command-line tools such as \Condor{ssh\_to\_job} to
+  use \Condor{shared\_port} as described.
 
-  The default value of \Macro{DAEMON\_SOCKET\_DIR} is \Expr{auto}.
-  This means to use the directory \Expr{\$(LOCK)/daemon\_sock}.
-  On unix platorms other than Linux, if that path is too long
-  (90 characters maximum), then instead the \Condor{master} will create a
+  The default value is \Expr{auto},
+  causing the use of the directory \Expr{\$(LOCK)/daemon\_sock}.
+  On Unix platforms other than Linux, 
+  if that path is longer than the 90 characters maximum,
+  then the \Condor{master} will instead create a
   directory under \Expr{/tmp} with a name that looks like
-  \Expr{/tmp/condor\_shared\_port\_XXXXXX} (where the X's are replaced
-  with random characters).
+  \Expr{/tmp/condor\_shared\_port\_<XXXXXX>},
+  where \Expr{<XXXXXX>} is replaced with random characters.
   The \Condor{master} then tells the other daemons the exact name of
-  the directory it created and they use it.
+  the directory it created, and they use it.
 
-  If a different value is set for \Macro{DAEMON\_SOCKET\_DIR}, then that
-  directory is used, regardless of the length of its pathname.
+  If a different value is set for \MacroNI{DAEMON\_SOCKET\_DIR},
+  then that directory is used, without regard for the length of the path name.
   Ensure that the length is not longer than 90 characters.
 
 \label{param:SharedPortArgs}
