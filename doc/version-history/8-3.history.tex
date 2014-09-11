@@ -107,6 +107,14 @@ Section~\ref{sec:Ordering-Config-File} describes the ordering
 in which configuration files are parsed.
 \Ticket{3158}
 
+\item Daemons can now authenticate many client nework connections in
+parallel, rather than one at a time.
+This improves the scalability of daemons that receive many client
+connections, like the \Condor{schedd} and \Condor{collector}.
+The improvement is most noticeable when using the FS and GSI
+authentication methods.
+\Ticket{4137}
+
 \item The GSI security libraries are now loaded into memory only when GSI
 authentication is required.
 This reduces memory usage when GSI authentication is not used.
