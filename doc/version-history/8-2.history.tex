@@ -75,11 +75,12 @@ configuration variable are now checked in a case-insensitive way,
 since user names are case-insensitive on Windows.
 \Ticket{4579}
 
-\item Fixed a bug that could prevent the \Condor{schedd}'s job queue log from rotating
-on Windows.
+\item Fixed a bug that could prevent the \Condor{schedd} job queue log 
+from rotating on Windows platforms.
 \Ticket{4548}
 
-\item Fixed a bug that caused all HTCondor daemons to leak a small amount of memory on reconfig.
+\item Fixed a bug that caused all HTCondor daemons to leak 
+a small amount of memory upon reconfiguration.
 \Ticket{4582}
 
 \item Fixed a bug that caused \Condor{config\_val} \Opt{-verbose} to sometimes append incorrect meta-knob
