@@ -166,6 +166,7 @@ Source4: condor.osg-sysconfig
 Source5: condor_config.local.dedicated.resource
 
 Source6: 10-batch_gahp_blahp.config
+Source7: 00-restart_peaceful.config
 
 %if %bundle_uw_externals
 Source101: blahp-1.16.5.1.tar.gz
@@ -1034,6 +1035,10 @@ mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir
 install -p -m 0644 %{SOURCE6} %{buildroot}%{_sysconfdir}/condor/config.d/10-batch_gahp_blahp.config
 %endif
 
+%if %osg || %hcc
+install -p -m 0644 %{SOURCE7} %{buildroot}%{_sysconfdir}/condor/config.d/00-restart_peaceful.config
+%endif
+
 %if %std_univ
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/condor_rt0.o
 populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/libcomp_libgcc.a
@@ -1134,6 +1139,9 @@ rm -rf %{buildroot}
 %if ! %uw_build
 %config(noreplace) %{_sysconfdir}/condor/config.d/10-batch_gahp_blahp.config
 %endif
+%endif
+%if %osg || %hcc
+%config(noreplace) %{_sysconfdir}/condor/config.d/00-restart_peaceful.config
 %endif
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster
@@ -1722,6 +1730,21 @@ fi
 %endif
 
 %changelog
+* Wed Aug 27 2014 Carl Edquist <edquist@cs.wisc.edu> - 8.2.2-2.3
+- Include config file for MASTER_NEW_BINARY_RESTART = PEACEFUL (SOFTWARE-850)
+
+* Tue Aug 26 2014 Carl Edquist <edquist@cs.wisc.edu> - 8.2.2-2.2
+- Include peaceful_off patch (SOFTWARE-1307)
+
+* Mon Aug 25 2014 Carl Edquist <edquist@cs.wisc.edu> - 8.2.2-2.1
+- Include condor_gt4540_aws patch for #4540
+
+* Fri Aug 22 2014 Carl Edquist <edquist@cs.wisc.edu> - 8.2.2-2
+- Strict pass-through with fixes from 8.2.2-1.1
+
+* Thu Aug 21 2014 Carl Edquist <edquist@cs.wisc.edu> - 8.2.2-1.1
+- Update to 8.2.2 with build fixes for non-UW builds
+
 * Mon Sep 09 2013  <edquist@cs.wisc.edu> - 8.1.2-0.3
 - Include misc unpackaged files from 8.x.x
 
