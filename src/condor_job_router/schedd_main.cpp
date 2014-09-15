@@ -26,9 +26,37 @@
 #include "ClassAdLogReader.h"
 #include "Scheduler.h"
 #include "JobRouter.h"
+#include "JobLogMirror.h"
+#include "NewClassAdJobLogConsumer.h"
 
 
 JobRouter *job_router;
+
+//-------------------------------------------------------------
+Scheduler::Scheduler(char const *_alt_spool_param /*=NULL*/, int id /*=0*/)
+	: m_id(id)
+{
+	m_consumer = new NewClassAdJobLogConsumer();
+	m_mirror = new JobLogMirror(m_consumer, _alt_spool_param);
+}
+
+Scheduler::~Scheduler()
+{
+	delete m_mirror; // this has the side effect of deleting m_consumer.
+	m_mirror = NULL;
+	m_consumer = NULL;
+}
+
+classad::ClassAdCollection *Scheduler::GetClassAds()
+{
+	return m_consumer->GetClassAds();
+}
+
+void Scheduler::init() { m_mirror->init(); }
+void Scheduler::config() { m_mirror->config(); }
+void Scheduler::stop()  { m_mirror->stop(); }
+int  Scheduler::id() { return m_id; }
+
 
 //-------------------------------------------------------------
 
