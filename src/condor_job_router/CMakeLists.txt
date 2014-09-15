@@ -19,9 +19,11 @@
 
 if (NOT WIN_EXEC_NODE_ONLY)
 
-	condor_glob(JRHdrs JRSrcs "VanillaToGrid_main.cpp")
+	condor_glob(JRHdrs JRSrcs "VanillaToGrid_main.cpp;job_router_tool.cpp")
 
 	condor_exe( condor_job_router "${JRHdrs};${JRSrcs}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
+
+	condor_exe( condor_job_router_tool "job_router_tool.cpp;JobRouter.cpp;VanillaToGrid.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
 	if (WINDOWS)
 

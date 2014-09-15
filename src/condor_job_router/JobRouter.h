@@ -46,7 +46,7 @@ typedef HashTable<std::string,JobRoute *> RoutingTable;
 
 class JobRouter: public Service {
  public:
-	JobRouter();
+	JobRouter(bool as_tool=false);
 	virtual ~JobRouter();
 
 	// Add a new job to be managed by JobRouter.
@@ -72,6 +72,8 @@ class JobRouter: public Service {
 	void EvalAllSrcJobPeriodicExprs();
 
 	void config();
+	void set_schedds(Scheduler* schedd, Scheduler* schedd2); // let the tool mode push simulated schedulers
+	void dump_routes(FILE* hf); // dump the routing information to the given file.
 	void init();
 
 	//The JobRouter name is used to distinguish this daemon from
@@ -156,6 +158,8 @@ class JobRouter: public Service {
 
 	ClassAd m_public_ad;
 
+	bool m_operate_as_tool;
+
 	// Count jobs being managed.  (Excludes RETIRED jobs.)
 	int NumManagedJobs();
 
@@ -165,8 +169,10 @@ class JobRouter: public Service {
 	// the source schedd.
 	bool RemoveJob(RoutedJob *job);
 
+public:
 	// Find jobs to route.  Function calls AddJob() on each one.
 	void GetCandidateJobs();
+private:
 
 	// Resume management of any jobs we were routing in a previous life.
 	void AdoptOrphans();
