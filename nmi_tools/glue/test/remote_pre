@@ -30,13 +30,27 @@ use Env;
 use File::Copy;
 use File::Basename;
 
-my $dir = dirname($0);
-unshift @INC, $dir;
-require "TestGlue.pm";
+BEGIN {
+	my $dir = dirname($0);
+	unshift @INC, $dir;
+}
+
+use TestGlue;
 TestGlue::setup_test_environment();
 
 # Don't buffer output.
 $|=1;
+
+my $iswindows = TestGlue::is_windows();
+my $iscygwin  = TestGlue::is_cygwin_perl();
+
+#if($iswindows == 1) {
+#	if($iscygwin == 1) {
+#		TestGlue::out("Entering remote_pre using cygwin perl");
+#	} else {
+#		TestGlue::out("Entering remote_pre using active state perl");
+#	}
+#}
 
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 my $logsize = "50000000"; # size for logs of personal Condor
@@ -47,7 +61,7 @@ my $tarball_file = "CONDOR-TARBALL-NAME";
 
 if( -z "tasklist.nmi" ) {
     # our tasklist is empty, so don't do any real work
-    print "No tasks in tasklist.nmi, nothing to do\n";
+    out("No tasks in tasklist.nmi, nothing to do");
     exit 0;
 }
 
@@ -63,7 +77,7 @@ if( TestGlue::is_windows() ) {
     # In that case, no unzipping is needed. just rename release_dir to condor
     if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
 		if (-d "release_dir" && ! -d "condor") {
-		   print "Renaming release_dir/ to condor/\n";
+		   out("Renaming release_dir/ to condor/");
 		   rename("release_dir","condor");
 		   system("chmod a+x condor/bin/*");
 		   TestGlue::dir_listing("condor");
@@ -71,7 +85,7 @@ if( TestGlue::is_windows() ) {
 		   my ($release_zipfile) = glob("condor-*.zip");
 		   if ($release_zipfile) {
 			  $version = substr($release_zipfile, 0, -4);
-			  print "VERSION string is $version from $release_zipfile\n";
+			  out("VERSION string is $version from $release_zipfile");
 		   }
 		} 
     }
@@ -79,10 +93,10 @@ if( TestGlue::is_windows() ) {
     # if there is no release_dir, then look for a zip file
     # containing the condor binaries and unzip it.
     if (!(-d "condor")) {
-       print "Finding release zip file\n";
+       out("Finding release zip filen");
        my ($release_zipfile) = glob("condor-*.zip");
     
-       print "Release zip file is '$release_zipfile'\n";
+       out("Release zip file is '$release_zipfile'");
     
        if( ! $release_zipfile ) {
            die "Could not find a condor release zip file!\n";
@@ -99,12 +113,11 @@ if( TestGlue::is_windows() ) {
 		if (!(-f $zip_exe_path)) {
 		   $zip_exe_path = "msconfig\\unzip.exe";
 		}
-		print "Unzipping $release_zipfile using $zip_exe_path\n";
+		out("Unzipping $release_zipfile using $zip_exe_path");
 		system("$zip_exe_path $release_zipfile -d condor") && die "Can't unzip $release_zipfile: $!\n";
-		print "Unzipped $release_zipfile.\n";
 	    
 		(my $tmp_dir = basename($release_zipfile)) =~ s/\.zip$//;
-		print "\$tmp_dir = '$tmp_dir'\n";
+		out("\$tmp_dir = '$tmp_dir'\n");
 		TestGlue::dir_listing("condor");
 		my $tmp_dir_path = File::Spec->catdir("condor", $tmp_dir);
 		if( -d $tmp_dir_path ) {
@@ -118,14 +131,14 @@ if( TestGlue::is_windows() ) {
     }
 }
 else {
-    print "Finding release tarball\n";
+    out("Finding release tarball");
     open(TARBALL_FILE, '<', $tarball_file ) || die "Can't open $tarball_file: $!\n";
     while(<TARBALL_FILE>) {
         chomp;
         $release_tarball = $_;
     }
     
-    print "Release tarball is '$release_tarball'\n";
+    out("Release tarball is '$release_tarball'");
     
     if( ! $release_tarball ) {
         die "$tarball_file does not contain a filename!\n";
@@ -134,15 +147,14 @@ else {
         die "$release_tarball (from $tarball_file) does not exist!\n";
     }
     
-    print "Release tarball file exists:\n";
+    out("Release tarball file exists:");
     TestGlue::dir_listing($release_tarball);
 
-    print "Untarring $release_tarball ...\n";
+    out("Untarring $release_tarball ...");
     system("tar -xzvf $release_tarball" ) && die "Can't untar $release_tarball: $!\n";
-    print "Untarred $release_tarball.\n";
     
     ($version) = $release_tarball =~ /^(.*)\.[^.]+\.[^.]+$/;
-    print "VERSION string is $version from $release_tarball\n";
+    out("VERSION string is $version from $release_tarball");
 }
 
 ######################################################################

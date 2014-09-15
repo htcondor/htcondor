@@ -22,12 +22,16 @@ use strict;
 use warnings;
 use Cwd;
 use File::Spec;
-#use CondorTest;
-#use CondorUtils;
+
 
 package TestGlue;
 
+use POSIX qw/strftime/;
+
+use base 'Exporter';
 use Net::Domain qw(hostfqdn);
+
+our @EXPORT = qw(out is_windows is_cygwin_perl);
 
 my $installdir = "";
 my $wininstalldir = "";
@@ -914,5 +918,12 @@ sub ProcessReturn {
 	push @result, $signal;
 	return @result;
 }
+
+sub out {
+    my ($msg) = @_;
+    my $time = strftime("%H:%M:%S", localtime);
+    print "$time: $msg\n";
+}
+
 
 1;
