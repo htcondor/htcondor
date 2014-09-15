@@ -238,15 +238,20 @@ JobRouter::config() {
 
 	RoutingTable *new_routes = new RoutingTable(200,hashFuncStdString,rejectDuplicateKeys);
 
-	char *router_defaults_str = param(PARAM_JOB_ROUTER_DEFAULTS);
 	classad::ClassAd router_defaults_ad;
-	if(router_defaults_str) {
+	std::string router_defaults;
+	if (param(router_defaults, PARAM_JOB_ROUTER_DEFAULTS) && ! router_defaults.empty()) {
+		// if the param doesn't start with [, then wrap it in [] before parsing, so that the parser knows to expect new classad syntax.
+		if (router_defaults[0] != '[') {
+			router_defaults.insert(0, "[ ");
+			router_defaults.append(" ]");
+		}
 		classad::ClassAdParser parser;
-		if(!parser.ParseClassAd(router_defaults_str,router_defaults_ad)) {
-			dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: Disabling job routing, because failed to parse %s classad: '%s'\n",PARAM_JOB_ROUTER_DEFAULTS,router_defaults_str);
+		if ( ! parser.ParseClassAd(router_defaults, router_defaults_ad)) {
+			dprintf(D_ALWAYS|D_ERROR,"JobRouter CONFIGURATION ERROR: Disabling job routing, because failed to parse %s classad:\n%s\n",
+				PARAM_JOB_ROUTER_DEFAULTS, router_defaults.c_str());
 			m_enable_job_routing = false;
 		}
-		free(router_defaults_str);
 	}
 	if(!m_enable_job_routing) {
 		delete new_routes;
