@@ -343,6 +343,10 @@ bool condor_sockaddr::from_ip_string(const MyString& ip_string)
 
 bool condor_sockaddr::from_ip_string(const char* ip_string)
 {
+	// We're blowing an assertion on NULL input instead of 
+	// just returning false because this is catching bugs, where
+	// returning NULL would mask them.
+	ASSERT(ip_string);
 	if (inet_pton(AF_INET, ip_string, &v4.sin_addr) == 1) {
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
 		v4.sin_len = sizeof(sockaddr_in);
