@@ -746,7 +746,8 @@ JobRouter::ParseRoutingEntries( std::string const &routing_string, char const *p
 				break;
 			}
 
-			dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: Ignoring the malformed route entry in %s, starting here: %s\n",param_name,routing_string.c_str() + this_offset);
+			dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: Ignoring the malformed route entry in %s, at offset %d starting here:\n%s\n",
+				param_name, this_offset, routing_string.substr(this_offset, 79).c_str());
 
 			// skip any junk and try parsing the next route in the list
 			while((int)routing_string.size() > offset && routing_string[offset] != '[') offset++;
@@ -762,7 +763,8 @@ JobRouter::ParseRoutingEntries( std::string const &routing_string, char const *p
 
 			int override = route.OverrideRoutingEntry();
 			if( override < 0 ) {
-				dprintf(D_ALWAYS,"JobRouter CONFIGURATION WARNING while parsing %s: two route entries have the same name '%s' so the second one will override the first one; if you have not already explicitly given these routes a name with name=\"blah\", you may want to give them different names.  If you just want to suppress this warning, then define OverrideRoutingEntry=True/False in the second routing entry.\n",param_name,route.Name());
+				dprintf(D_ALWAYS,"JobRouter CONFIGURATION WARNING: while parsing %s two route entries have the same name '%s' so the second one will override the first one; if you have not already explicitly given these routes a name with name=\"blah\", you may want to give them different names.  If you just want to suppress this warning, then define OverrideRoutingEntry=True/False in the second routing entry.\n",
+					param_name,route.Name());
 				override = 1;
 			}
 			if( override > 0 ) {  // OverrideRoutingEntry=true
@@ -1151,20 +1153,34 @@ JobRouter::GetCandidateJobs() {
 	HashTable<std::string,std::string> constraint_list(200,hashFuncStdString,rejectDuplicateKeys);
 	std::string umbrella_constraint;
 
+	std::string dbuf("JobRouter: Checking for candidate jobs. routing table is:\n"
+		"Route Name             Submitted/Max        Idle/Max     Throttle");
+	if ( ! m_operate_as_tool) {
+		dbuf += " Recent: Started Succeeded Failed\n";
+	} else {
+		dbuf += "\n";
+	}
 	m_routes->startIterations();
 	while(m_routes->iterate(route)) {
-		dprintf(D_ALWAYS,
-		      "JobRouter (route=%s): %d submitted (max %d), %d idle (max %d), throttle: %s, recent stats: %d started, %d succeeded, %d failed.\n",
+		formatstr_cat(dbuf, "%-24s %7d/%7d %7d/%7d %8s",
 		      route->Name(),
 		      route->CurrentRoutedJobs(),
 		      route->MaxJobs(),
 		      route->CurrentIdleJobs(),
 		      route->MaxIdleJobs(),
-		      route->ThrottleDesc().c_str(),
+		      route->ThrottleDesc().c_str());
+		if ( ! m_operate_as_tool) {
+			formatstr_cat(dbuf, "         %7d %9d %6d\n",
 			  route->RecentRoutedJobs(),
 		      route->RecentSuccesses(),
-			  route->RecentFailures());
+			  route->RecentFailures()
+			);
+		} else {
+			dbuf += "\n";
+		}
 	}
+	dprintf(D_ALWAYS, "%s", dbuf.c_str());
+
 
 	if(!AcceptingMoreJobs()) return; //router is full
 
@@ -1246,11 +1262,11 @@ JobRouter::GetCandidateJobs() {
 		free(domain);
 	}
 
-	dprintf(D_FULLDEBUG,"JobRouter: umbrella constraint: %s\n",umbrella_constraint.c_str());
+	dprintf(D_FULLDEBUG,"JobRouter: Umbrella constraint: %s\n",umbrella_constraint.c_str());
 
 	constraint_tree = parser.ParseExpression(umbrella_constraint);
 	if(!constraint_tree) {
-		EXCEPT("JobRouter: Failed to parse umbrella constraint: '%s'\n",umbrella_constraint.c_str());
+		EXCEPT("JobRouter: Failed to parse umbrella constraint: %s\n",umbrella_constraint.c_str());
 	}
 
     query.Bind(ad_collection);
@@ -1277,6 +1293,8 @@ JobRouter::GetCandidateJobs() {
 		ad = ad_collection->GetClassAd(key);
 		ASSERT(ad);
 
+		if (m_operate_as_tool) { dprintf(D_FULLDEBUG, "JobRouter: Checking Job src=%s against all routes\n", key.c_str()); }
+
 		bool all_routes_full;
 		route = ChooseRoute(ad,&all_routes_full);
 		if(!route) {
@@ -1284,7 +1302,7 @@ JobRouter::GetCandidateJobs() {
 				dprintf(D_FULLDEBUG,"JobRouter: all routes are full (%d managed jobs).  Skipping further searches for candidate jobs.\n",NumManagedJobs());
 				break;
 			}
-			dprintf(D_FULLDEBUG,"JobRouter (src=%s): no route found\n",key.c_str());
+			dprintf(D_FULLDEBUG,"JobRouter: no route found for src=%s\n",key.c_str());
 			continue;
 		}
 
@@ -1307,7 +1325,7 @@ JobRouter::GetCandidateJobs() {
 		dprintf(D_FULLDEBUG,"JobRouter DEBUG (%s): combined = %s\n",job->JobDesc().c_str(),ClassAdToString(&job->src_ad).c_str());
 		*/
 
-		dprintf(D_FULLDEBUG,"JobRouter (%s): found candidate job\n",job->JobDesc().c_str());
+		dprintf(D_FULLDEBUG,"JobRouter: Found candidate job %s\n",job->JobDesc().c_str());
 		AddJob(job);
 		++cJobsAdded;
 
@@ -1336,6 +1354,7 @@ JobRouter::ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full) {
 
 		if(mad.EvaluateAttrBool("RightMatchesLeft", match) && match) {
 			matches.push_back(route);
+			if (m_operate_as_tool) { dprintf(D_FULLDEBUG, "JobRouter: \tRoute Matches: %s\n", route->Name()); }
 		}
 
 		mad.RemoveLeftAd();
