@@ -765,8 +765,9 @@ export CMAKE_PREFIX_PATH=/usr
        -DWITH_PYTHON_BINDINGS:BOOL=TRUE \
 %if %cgroups
         -DWITH_LIBCGROUP:BOOL=TRUE \
-        -DLIBCGROUP_FOUND_SEARCH_cgroup=/%{_lib}/libcgroup.so.1
+        -DLIBCGROUP_FOUND_SEARCH_cgroup=/%{_lib}/libcgroup.so.1 \
 %endif
+        -DWITH_LARK:BOOL=TRUE
 %endif
 
 # Patch condor_config.generic for 64-bit rpm
@@ -1315,6 +1316,10 @@ rm -rf %{buildroot}
 %dir %_var/lock/condor/local
 %dir %_var/run/condor
 %endif
+
+# Lark files
+%_libexecdir/condor/lark-plugin.so
+%_libexecdir/condor/lark_network_namespace_tester
 
 #################
 %files procd
