@@ -355,7 +355,7 @@ BridgeConfiguration::SetupPostForkChild()
 
 	std::string gw = "0.0.0.0";
 	std::string dev = internal_device;
-	if (!m_has_default_route) {
+	if (m_has_default_route) {
 		if (!m_ad->EvaluateAttrString(ATTR_GATEWAY, gw)) {
 			dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_GATEWAY " is missing.\n");
 			return 1;
