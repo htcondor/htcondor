@@ -110,7 +110,7 @@ bool            noSort = false; // set to true to disable sorting entirely
 bool            javaMode = false;
 bool			vmMode = false;
 bool			absentMode = false;
-bool			brokenMode = false;
+bool			offlineMode = false;
 char 		*target = NULL;
 const char * ads_file = NULL; // read classads from this file instead of querying them from the collector
 ClassAd		*targetAd = NULL;
@@ -302,12 +302,19 @@ main (int argc, char *argv[])
 
 	}
 
-	if(brokenMode) {
-		query->addANDConstraint( "size( BrokenUniverses ) != 0" );
+	if(offlineMode) {
+		query->addANDConstraint( "size( OfflineUniverses ) != 0" );
 
-		projList.AppendArg( "BrokenUniverses" );
+		projList.AppendArg( "OfflineUniverses" );
 
-		// How does one add a regex to a projection?
+		//
+		// Since we can't add a regex to a projection, explicitly list all
+		// the attributes we know about.
+		//
+
+		projList.AppendArg( "HasVM" );
+		projList.AppendArg( "VMOfflineReason" );
+		projList.AppendArg( "VMOfflineTime" );
 	}
 
 	if(absentMode) {
@@ -926,8 +933,8 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-absent", 3)) {
 			/*explicit_mode =*/ absentMode = true;
 		} else
-		if (matchPrefix (argv[i], "-broken", 3)) {
-			/*explicit_mode =*/ brokenMode = true;
+		if (matchPrefix (argv[i], "-offline", 3)) {
+			/*explicit_mode =*/ offlineMode = true;
 		} else
 		if (matchPrefix (argv[i], "-vm", 3)) {
 			/*explicit_mode =*/ vmMode = true;

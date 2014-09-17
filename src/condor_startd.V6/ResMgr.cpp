@@ -1260,98 +1260,85 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 void
 ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 	// It turns out to be colossal pain to use the ClassAd for persistence.
-	static std::set< std::string > brokenUniverses;
+	static std::set< std::string > offlineUniverses;
 
 	if( ! cap ) { return; }
 	if( ! extras_classad ) { extras_classad = new ClassAd(); }
 
 	//
-	// The startd maintains the set broken universes and the invariants
-	// about [Last]BrokenReason.
+	// The startd maintains the set offline universes, and the offline
+	// universe timestamps.
 	//
-	// We begin by recomputing the set of broken universes.  We start with
-	// the existing set of broken universes, and add or remove universes
-	// as directed by the update ad.  (This obviates the need for the starter
-	// to know anything about job universes it's not currently launching.) If
-	// the state of a universe changes, we move its BrokenReason (if any)
-	// to LastBrokenReason.  If a universe remains broken but its
-	// BrokenReason changes, we also update LastBrokenReason appropriately.
-	//
-	// Note that this loop merges cap's attributes into extras_classad as soon
-	// as it knows the correct value for them.
-	//
-	// For future expandsion, note that there's nothing universe-specific
-	// about any of this; we could just handle <Feature>Broken, instead,
-	// and just have special handling for "<Name>Universe" <Feature>s.
+	// We start with the current set of offline universes, and add or remove
+	// universes as directed by the update ad.  This obviates the need for
+	// the need for the starter to know anything about the state of the rest
+	// of the machine.
 	//
 
 	cap->ResetExpr();
 	ExprTree * expr = NULL;
 	const char * attr = NULL;
 	while( cap->NextExpr( attr, expr ) ) {
-		const char * uo = strcasestr( attr, "UniverseBroken" );
-		if( uo == NULL ) {
-			if( strcasecmp( attr, "MyType" ) == 0 ) { continue; }
-			if( strcasecmp( attr, "TargetType" ) == 0 ) { continue; }
-			ExprTree * copy = expr->Copy();
-			extras_classad->Insert( attr, copy );
-			continue;
-		}
+		//
+		// Copy the whole ad over, excepting special or computed attributes.
+		//
+		if( strcasecmp( attr, "MyType" ) == 0 ) { continue; }
+		if( strcasecmp( attr, "TargetType" ) == 0 ) { continue; }
+		if( strcasecmp( attr, "OfflineUniverses" ) == 0 ) { continue; }
+		if( strcasestr( attr, "OfflineReason" ) != NULL ) { continue; }
+		if( strcasestr( attr, "OfflineTime" ) != NULL ) { continue; }
 
-		std::string universeName( attr, (size_t)(uo - attr) );
-		if( strcasecmp( uo, "UniverseBroken" ) != 0 ) { continue; }
 		ExprTree * copy = expr->Copy();
 		extras_classad->Insert( attr, copy );
 
-		std::string reasonName = universeName + "UniverseBrokenReason";
-		std::string lastReasonName = universeName + "UniverseLastBrokenReason";
+		//
+		// Adjust OfflineUniverses based on the Has<Universe> attributes.
+		//
+		const char * uo = strcasestr( attr, "Has" );
+		if( uo != attr ) { continue; }
 
-		int universeBroken;
-		assert( cap->LookupBool( attr, universeBroken ) );
-		if( universeBroken ) {
-			bool wasInserted = brokenUniverses.insert( universeName ).second;
-			if( wasInserted ) {
-				// A universe went from online to off.
-				extras_classad->CopyAttribute( lastReasonName.c_str(), reasonName.c_str() );
-				extras_classad->CopyAttribute( reasonName.c_str(), reasonName.c_str(), cap );
-			} else {
-				// Roll the reasons, if updated.
-				std::string oldReason, newReason;
-				extras_classad->LookupString( reasonName.c_str(), oldReason );
-				cap->LookupString( reasonName.c_str(), oldReason );
-				if( oldReason != newReason ) {
-					extras_classad->CopyAttribute( lastReasonName.c_str(), reasonName.c_str() );
-					extras_classad->CopyAttribute( reasonName.c_str(), reasonName.c_str(), cap );
-				}
-			}
+		std::string universeName( attr + 3 );
+		if( CondorUniverseNumber( universeName.c_str() ) == 0 ) { continue; }
+
+		std::string reasonTime = universeName + "OfflineTime";
+		std::string reasonName = universeName + "OfflineReason";
+
+		int universeOnline;
+		assert( cap->LookupBool( attr, universeOnline ) );
+		if( ! universeOnline ) {
+			offlineUniverses.insert( universeName ).second;
+			extras_classad->Assign( reasonTime.c_str(), time( NULL ) );
+
+			std::string reason = "[unknown reason]";
+			cap->LookupString( reasonName.c_str(), reason );
+			extras_classad->Assign( reasonName.c_str(), reason.c_str() );
 		} else {
-			if( brokenUniverses.erase( universeName ) ) {
-				// A universe went from broken to on.
-				extras_classad->CopyAttribute( lastReasonName.c_str(), reasonName.c_str() );
-				extras_classad->Assign( reasonName.c_str(), "undefined" );
-			}
+			// The universe is online, so it can't have an offline reason
+			// or a time that it entered the offline state.
+			offlineUniverses.erase( universeName );
+			extras_classad->Assign( reasonTime.c_str(), "undefined" );
+			extras_classad->Assign( reasonName.c_str(), "undefined" );
 		}
 	}
 
 	//
-	// Construct the BrokenUniverses attribute and set it in extras_classad.
+	// Construct the OfflineUniverses attribute and set it in extras_classad.
 	//
 	std::string ouListString;
-	if( brokenUniverses.empty() ) {
+	if( offlineUniverses.empty() ) {
 		ouListString = "{}";
 	} else {
-		std::set< std::string >::const_iterator i = brokenUniverses.begin();
-		for( ; i != brokenUniverses.end(); ++i ) {
-			int brokenUniverseNumber = CondorUniverseNumber( i->c_str() );
-			formatstr( ouListString, "%s\"%s\", %d, ", ouListString.c_str(), i->c_str(), brokenUniverseNumber );
-			// ouListString += "\"" + *i + "\", " + itoa( brokenUniverseNumber ) + ", ";
+		std::set< std::string >::const_iterator i = offlineUniverses.begin();
+		for( ; i != offlineUniverses.end(); ++i ) {
+			int offlineUniverseNumber = CondorUniverseNumber( i->c_str() );
+			formatstr( ouListString, "%s\"%s\", %d, ", ouListString.c_str(), i->c_str(), offlineUniverseNumber );
 		}
 		// Remove the trailing ", ".
 		ouListString.erase( ouListString.length() - 2 );
 		ouListString = "{ " + ouListString + " }";
 	}
-	dprintf( D_ALWAYS, "BrokenUniverses = %s\n", ouListString.c_str() );
-	extras_classad->AssignExpr( "BrokenUniverses", ouListString.c_str() );
+	dprintf( D_ALWAYS, "OfflineUniverses = %s\n", ouListString.c_str() );
+	extras_classad->AssignExpr( "OfflineUniverses", ouListString.c_str() );
 }
 
 void

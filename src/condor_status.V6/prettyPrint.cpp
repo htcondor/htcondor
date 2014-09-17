@@ -37,7 +37,7 @@ extern bool invalid_fields_empty; // when true, print "" for invalid data instea
 extern bool javaMode;
 extern bool vmMode;
 extern bool absentMode;
-extern bool brokenMode;
+extern bool offlineMode;
 extern ClassAd *targetAd;
 
 extern char *format_time( int );
@@ -46,7 +46,7 @@ static int stashed_now = 0;
 
 void printStartdNormal 	(ClassAd *, bool first);
 void printStartdAbsent 	(ClassAd *, bool first);
-void printStartdBroken 	(ClassAd *, bool first);
+void printStartdOffline	(ClassAd *, bool first);
 void printScheddNormal 	(ClassAd *, bool first);
 
 #ifdef HAVE_EXT_POSTGRESQL
@@ -77,7 +77,7 @@ static const char *formatRealTime( int , AttrList * , Formatter &);
 static const char *formatRealDate( int , AttrList * , Formatter &);
 //static const char *formatFloat (double, AttrList *, Formatter &);
 static const char *formatLoadAvg (double, AttrList *, Formatter &);
-static const char *formatBrokenUniverses( const classad::Value &, AttrList *, struct Formatter & );
+static const char *formatOfflineUniverses( const classad::Value &, AttrList *, struct Formatter & );
 
 static void ppInit()
 {
@@ -338,8 +338,8 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 			  case PP_STARTD_NORMAL:
 				if (absentMode) {
 					printStartdAbsent (ad, (classad_index == 0));
-				} if( brokenMode ) {
-					printStartdBroken( ad, (classad_index == 0));
+				} if( offlineMode ) {
+					printStartdOffline( ad, (classad_index == 0));
 				} else {
 					printStartdNormal (ad, (classad_index == 0));
 				}
@@ -461,7 +461,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 
 // The strdup() make leak memory, but IsListValue() may as well?
 const char *
-formatBrokenUniverses( const classad::Value & value, AttrList *, struct Formatter & ) {
+formatOfflineUniverses( const classad::Value & value, AttrList *, struct Formatter & ) {
 	const classad::ExprList * list = NULL;
 	if( ! value.IsListValue( list ) ) {
 		return "[Attribute not a list.]";
@@ -486,13 +486,15 @@ formatBrokenUniverses( const classad::Value & value, AttrList *, struct Formatte
 }
 
 void
-printStartdBroken( ClassAd *ad, bool first ) {
+printStartdOffline( ClassAd *ad, bool first ) {
 	if( first ) {
 		ppInit();
 		ppSetColumn( ATTR_NAME, -34, ! wide_display );
 		// A custom printer for filtering out the ints would be handy.
-		ppSetColumn( "BrokenUniverses", Lbl( "Broken Universes" ),
-					 formatBrokenUniverses, -42, ! wide_display );
+		ppSetColumn( "OfflineUniverses", Lbl( "Offline Universes" ),
+					 formatOfflineUniverses, -42, ! wide_display );
+
+		// How should I print out the offline reasons and timestamps?
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}

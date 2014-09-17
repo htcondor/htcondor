@@ -177,10 +177,10 @@ bool handleFTL( const char * reason ) {
 	//
 	ClassAd update;
 	if( reason != NULL ) {
-		update.Assign( "VMUniverseBroken", true );
-		update.Assign( "VMUniverseBrokenReason", reason );
+		update.Assign( "HasVM", false );
+		update.Assign( "VMOfflineReason", reason );
 	} else {
-		update.Assign( "VMUniverseBroken", false );
+		update.Assign( "HasVM", true );
 	}
 
 	ClassAd reply;
