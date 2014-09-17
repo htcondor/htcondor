@@ -24,6 +24,8 @@
 #include "ClassAdLogParser.h"
 #include "ClassAdLogProber.h"
 
+#include "classad/classad_stl.h"
+
 enum PollResultType {
 	POLL_SUCCESS,
 	POLL_FAIL,
@@ -32,6 +34,103 @@ enum PollResultType {
 
 class ClassAdLogConsumer;
 
+class ClassAdLogIterator;
+
+class ClassAdLogIterEntry
+{
+public:
+	typedef enum {
+		INIT = 0,
+		ERR,
+		NOCHANGE,
+		RESET,
+		END,
+		NEW_CLASSAD = CondorLogOp_NewClassAd,
+		DESTROY_CLASSAD = CondorLogOp_DestroyClassAd,
+		SET_ATTRIBUTE = CondorLogOp_SetAttribute,
+		DELETE_ATTRIBUTE = CondorLogOp_DeleteAttribute
+	} EntryType;
+
+	EntryType getEntryType() const {return m_type;}
+	const std::string &getAdType() const {return m_adtype;}
+	const std::string &getAdTarget() const {return m_adtarget;}
+	const std::string &getKey() const {return m_key;}
+	const std::string &getValue() const {return m_value;}
+	const std::string &getName() const {return m_name;}
+
+	bool isDone() const {return m_type == ERR || m_type == NOCHANGE || m_type == END;}
+
+private:
+	friend class ClassAdLogIterator;
+
+	ClassAdLogIterEntry(EntryType type) : m_type(type) {}
+
+	void setAdType(const std::string &adtype) {m_adtype = adtype;}
+	void setAdTarget(const std::string &adtarget) {m_adtarget = adtarget;}
+	void setKey(const std::string &key) {m_key = key;}
+	void setValue(const std::string &value) {m_value = value;}
+	void setName(const std::string &name) {m_name = name;}
+
+	EntryType m_type;
+	std::string m_adtype;
+	std::string m_adtarget;
+	std::string m_key;
+	std::string m_value;
+	std::string m_name;
+};
+
+
+class FileSentry;
+
+
+class ClassAdLogReaderV2;
+
+
+class ClassAdLogIterator : std::iterator<std::input_iterator_tag, ClassAdLogIterEntry* >
+{
+	friend class ClassAdLogReaderV2;
+
+public:
+        ~ClassAdLogIterator() {}
+
+        ClassAdLogIterEntry* operator *() const {return m_current.get();}
+
+        ClassAdLogIterEntry* operator ->() const {return m_current.get();}
+
+        ClassAdLogIterator operator++();
+        ClassAdLogIterator operator++(int);
+
+        bool operator==(const ClassAdLogIterator &rhs);
+        bool operator!=(const ClassAdLogIterator &rhs) {return !(*this == rhs);}
+
+private:
+        ClassAdLogIterator(const std::string &fname);
+	ClassAdLogIterator() : m_current(new ClassAdLogIterEntry(ClassAdLogIterEntry::END)) {}
+
+	void Next();
+	bool Load();
+	bool Process(const ClassAdLogEntry &log_entry);
+
+	classad_shared_ptr<ClassAdLogParser> m_parser;
+        classad_shared_ptr<ClassAdLogProber> m_prober;
+	classad_shared_ptr<ClassAdLogIterEntry> m_current;
+	classad_shared_ptr<FileSentry> m_sentry;
+	std::string m_fname;
+	bool m_eof;
+};
+
+
+class ClassAdLogReaderV2 {
+
+public:
+	ClassAdLogReaderV2(const std::string &fname) : m_fname(fname) {}
+	ClassAdLogIterator begin() {return ClassAdLogIterator(m_fname);}
+	ClassAdLogIterator end() {return ClassAdLogIterator();}
+
+private:
+	std::string m_fname;
+};
+
 class ClassAdLogReader {
 public:
 	ClassAdLogReader(ClassAdLogConsumer *consumer);
@@ -39,6 +138,7 @@ public:
 	PollResultType Poll();
 	void SetClassAdLogFileName(char const *fname);
 	char const *GetClassAdLogFileName();
+
 private:
 	ClassAdLogConsumer *m_consumer;
 	ClassAdLogProber prober;
