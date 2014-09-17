@@ -293,14 +293,14 @@ review=?
 default=128*1024
 range=1024,
 type=int
-reconfig=true
+reconfig=false
 customization=seldom
-friendly_name=Soap SSL Port
+friendly_name=Outgoing traffic TCP write size for Collector
 review=?
 
 [COLLECTOR_PORT]
 default=9618
-range=0,65536
+range=0,65535
 type=int
 reconfig=true
 customization=seldom
@@ -2110,14 +2110,15 @@ friendly_name=Max Pid Collision Retry
 review=?
 tags=daemon_core,daemon_core
 
-[NEGOTIATOR_SOCKET_BUFSIZE]
-default=0
+[COLLECTOR_SOCKET_BUFSIZE]
+default=10000*1024
 type=int
-reconfig=true
+range=1024,
+reconfig=false
 customization=seldom
-friendly_name=Negotiator Socket Bufsize
+friendly_name=Collector read buffer size for incoming UDP traffic
 review=?
-tags=daemon_core,daemon_core
+tags=daemon_core,daemon_core,collector
 
 [TOUCH_LOG_INTERVAL]
 default=60
@@ -2705,10 +2706,18 @@ customization=seldom
 friendly_name=No Dns
 review=?
 
+[NETWORK_HOSTNAME]
+default=
+type=string
+reconfig=false
+customization=seldom
+friendly_name=Network Hostname
+review=?
+
 [NETWORK_INTERFACE]
 default=
 type=string
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Network Interface
 review=?
@@ -3614,6 +3623,13 @@ friendly_name=Runtime Config Admin
 review=?
 tags=c++_util,condor_config
 
+[USER_CONFIG_FILE]
+default=user_config
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Name of User Config File
+tags=condor_config
 
 [ENABLE_PERSISTENT_CONFIG]
 default=false
@@ -5706,7 +5722,6 @@ review=?
 
 [USE_SHARED_PORT]
 default=false
-win32_default=false
 version=7.5.0
 type=bool
 reconfig=true

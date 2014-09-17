@@ -97,6 +97,7 @@ bool        expert = false;
 bool		wide_display = false; // when true, don't truncate field data
 bool		invalid_fields_empty = false; // when true, print "" instead of "[?]" for missing data
 Mode		mode	= MODE_NOTSET;
+const char * mode_constraint = NULL; // constraint set by mode
 int			diagnose = 0;
 char*		direct = NULL;
 char*       statistics = NULL;
@@ -160,6 +161,10 @@ main (int argc, char *argv[])
 		dprintf_WriteOnErrorBuffer(stderr, true);
 		fprintf (stderr, "Error:  Out of memory\n");
 		exit (1);
+	}
+	// if a first-pass setMode set a mode_constraint, apply it now to the query object
+	if (mode_constraint && ! explicit_format) {
+		query->addANDConstraint(mode_constraint);
 	}
 
 	// set pretty print style implied by the type of entity being queried
@@ -558,13 +563,15 @@ const CustomFormatFnTable * getCondorStatusPrintFormats();
 
 int set_status_print_mask_from_stream (
 	const char * streamid,
-	bool is_filename)
+	bool is_filename,
+	const char ** pconstraint)
 {
 	std::string where_expr;
 	std::string messages;
 	StringList attrs;
 
 	SimpleInputStream * pstream = NULL;
+	*pconstraint = NULL;
 
 	FILE *file = NULL;
 	if (MATCH == strcmp("-", streamid)) {
@@ -593,10 +600,10 @@ int set_status_print_mask_from_stream (
 	delete pstream; pstream = NULL;
 	if ( ! err) {
 		if ( ! where_expr.empty()) {
-			const char * constraint = pm.store(where_expr.c_str());
-			if (query->addANDConstraint (constraint) != Q_OK) {
-				formatstr_cat(messages, "WHERE expression is not valid: %s\n", constraint);
-			}
+			*pconstraint = pm.store(where_expr.c_str());
+			//if ( ! validate_constraint(*pconstraint)) {
+			//	formatstr_cat(messages, "WHERE expression is not valid: %s\n", *pconstraint);
+			//}
 		}
 		// convert projection list into the format that condor status likes. because programmers.
 		attrs.rewind();
@@ -1227,9 +1234,12 @@ secondPass (int argc, char *argv[])
 			ppTotalStyle = ppStyle;
 			setPPstyle (PP_CUSTOM, i, argv[i]);
 			++i; // skip to the next argument.
-			if (set_status_print_mask_from_stream(argv[i], true) < 0) {
+			if (set_status_print_mask_from_stream(argv[i], true, &mode_constraint) < 0) {
 				fprintf(stderr, "Error: invalid select file %s\n", argv[i]);
 				exit (1);
+			}
+			if (mode_constraint) {
+				query->addANDConstraint(mode_constraint);
 			}
 			using_print_format = true; // so we can hack totals.
 			continue;

@@ -29,6 +29,18 @@ use File::Copy;
 my $dir = dirname($0);
 unshift @INC, $dir;
 require "TestGlue.pm";
+
+my $iswindows = TestGlue::is_windows();
+my $iscygwin  = TestGlue::is_cygwin_perl();
+
+#if($iswindows == 1) {
+#	if($iscygwin == 1) {
+#		TestGlue::out("Entering remote_declare using cygwin perl");
+#	} else {
+#		TestGlue::out("Entering declare using active state perl");
+#	}
+#}
+
 TestGlue::print_debug_header();
 TestGlue::setup_test_environment();
 
@@ -210,9 +222,9 @@ sub parseOptions {
     # allow comma separated list in addition to multiple occurrences.
     @opt_testclasses = split(/,/, join(',', @opt_testclasses));
 
-    if (!defined(@opt_testclasses)) {
-        die "Please supply a test class!\n";
-    }
+    #if (!defined(@opt_testclasses)) {
+        #die "Please supply a test class!\n";
+    #}
 }
 
 

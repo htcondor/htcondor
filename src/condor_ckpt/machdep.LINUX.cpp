@@ -28,7 +28,7 @@
 #include "condor_syscalls.h"
 #define __KERNEL__
 
-#if defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213) || defined(GLIBC217)
+#if defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213) || defined(GLIBC217) || defined(GLIBC219)
 #include <sys/user.h>
 #else
 #include <asm/page.h>

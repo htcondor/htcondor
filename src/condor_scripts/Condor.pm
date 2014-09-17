@@ -124,6 +124,7 @@ sub SetHandle
 {
 	my $handle = shift;
 	$submit_info{'handle'} = $handle;
+	print "Setting handle to $handle\n";;
 }
 
 

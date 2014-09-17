@@ -214,6 +214,9 @@ void DaemonCore::Stats::Init()
    DC_STATS_ADD_RECENT(Pool, PumpCycle,     IF_VERBOSEPUB);
    DC_STATS_ADD_DEF(Pool, Commands, IF_BASICPUB);
 
+   //extern stats_entry_probe<double> condor_fsync_runtime;
+   //Pool.AddProbe("DCfsync", &condor_fsync_runtime, "DCfsync", IF_BASICPUB | IF_RT_SUM);
+
    // Insert additional publish entries for the XXXDebug values
    //
    DC_STATS_PUB_DEBUG(Pool, SelectWaittime,  IF_BASICPUB);
@@ -229,6 +232,7 @@ void DaemonCore::Stats::Init()
    //DC_STATS_PUB_DEBUG(Pool, PipeBytes,     IF_BASICPUB);
    DC_STATS_PUB_DEBUG(Pool, DebugOuts,     IF_VERBOSEPUB);
    DC_STATS_PUB_DEBUG(Pool, PumpCycle,     IF_VERBOSEPUB);
+
 
    // clear all counters we just added to the pool
    Pool.Clear();
@@ -379,6 +383,40 @@ void DaemonCore::Stats::AddToSumEmaRate(const char * name, int val) {
       pstat->Add(val);
 }
 
+#ifdef USE_MIRON_PROBE_FOR_DC_RUNTIME_STATS
+
+double DaemonCore::Stats::AddRuntime(const char * name, double before)
+{
+   double now = UtcTime::getTimeDouble();
+   stats_entry_probe<double> * probe = Pool.GetProbe< stats_entry_probe<double> >(name);
+   if (probe)
+      probe->Add(now - before);
+   return now;
+}
+
+double DaemonCore::Stats::AddSample(const char * name, int as, double val)
+{
+   stats_entry_probe<double> * probe = Pool.GetProbe< stats_entry_probe<double> >(name);
+   if ( ! probe) {
+       MyString attr(name);
+       cleanStringForUseAsAttr(attr);
+       probe = Pool.NewProbe< stats_entry_probe<double> >(name, attr.Value(), as);
+   }
+
+   if (probe)
+      probe->Add(val);
+   return val;
+}
+
+double DaemonCore::Stats::AddRuntimeSample(const char * name, int as, double before) // returns current time.
+{
+   double now = UtcTime::getTimeDouble();
+   this->AddSample(name, as | IF_RT_SUM, now - before);
+   return now;
+}
+
+#else
+
 double DaemonCore::Stats::AddRuntime(const char * name, double before)
 {
    double now = UtcTime::getTimeDouble();
@@ -388,7 +426,7 @@ double DaemonCore::Stats::AddRuntime(const char * name, double before)
    return now;
 }
 
-stats_entry_recent<Probe> * DaemonCore::Stats::AddSample(const char * name, int as, double val)
+double DaemonCore::Stats::AddSample(const char * name, int as, double val)
 {
    stats_entry_recent<Probe> * probe = Pool.GetProbe< stats_entry_recent<Probe> >(name);
    if ( ! probe) {
@@ -404,9 +442,9 @@ stats_entry_recent<Probe> * DaemonCore::Stats::AddSample(const char * name, int 
        }
    }
 
-   if (probe) 
+   if (probe)
       probe->Add(val);
-   return probe;
+   return val;
 }
 
 double DaemonCore::Stats::AddRuntimeSample(const char * name, int as, double before) // returns current time.
@@ -415,6 +453,8 @@ double DaemonCore::Stats::AddRuntimeSample(const char * name, int as, double bef
    this->AddSample(name, as, now - before);
    return now;
 }
+
+#endif
 
 void* DaemonCore::Stats::New(const char * category, const char * name, int as)
 {
@@ -485,6 +525,18 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
          break;
 
       case AS_COUNT | IS_RCT:
+#ifdef USE_MIRON_PROBE_FOR_DC_RUNTIME_STATS
+         {
+         as &= ~(IS_CLASS_MASK);  // strip off IS_RTC class
+         as |= IS_CLS_PROBE | IF_RT_SUM; // and set IS_CLS_PROBE & IF_RT_SUM classes
+         stats_entry_probe<double> * probe =
+         Pool.NewProbe< stats_entry_probe<double> >(name, attr.Value(), as);
+         ret = probe;
+         }
+         break;
+#else
+          // fall through
+#endif
       case AS_RELTIME | IS_RCT:
          {
          stats_recent_counter_timer * probe =

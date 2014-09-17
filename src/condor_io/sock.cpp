@@ -893,6 +893,8 @@ bool Sock::set_keepalive()
 int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 {
 	int current_size = 0;
+	int previous_size = 0;
+	int attempt_size = 0;
 	int command;
 	SOCKET_LENGTH_TYPE temp;
 
@@ -906,14 +908,41 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 
 	// Log the current size since Todd is curious.  :^)
 	temp = sizeof(int);
+	::getsockopt(_sock,SOL_SOCKET,command,
+			(char*)&current_size,(socklen_t*)&temp);
+	dprintf(D_FULLDEBUG,"Current Socket bufsize=%dk\n",
+		current_size / 1024);
 	current_size = 0;
-	getsockopt(_sock,SOL_SOCKET,command, (char*)&current_size,(socklen_t*)&temp);
-	dprintf(D_FULLDEBUG,"Current Socket bufsize=%dk\n", current_size / 1024);
 
-	setsockopt( SOL_SOCKET, command, (char*)&desired_size, sizeof(int) );
+	/* 
+		We want to set the socket buffer size to be as close
+		to the desired size as possible.  Unfortunatly, there is no
+		contant defined which states the maximum size possible.  So
+		we keep raising it up 4k at a time until (a) we got up to the
+		desired value, or (b) it is not increasing anymore.
+		We also need to be careful to not quit early on a 3.14+ Linux kernel
+		which has a floor (minimum) buffer size that may be larger than our
+		current attempt (thus the check below to keep looping if
+		current_size > attempt_size).
+		We ignore the return value from setsockopt since on some platforms this
+		could signal a value which is too low...
+	*/
+	 
+	do {
+		attempt_size += 4096;
+		if ( attempt_size > desired_size ) {
+			attempt_size = desired_size;
+		}
+		(void) setsockopt( SOL_SOCKET, command,
+						   (char*)&attempt_size, sizeof(int) );
 
-	getsockopt( _sock, SOL_SOCKET, command, (char*)&current_size, (socklen_t*)&temp );
-	dprintf(D_ALWAYS,"Set Socket to bufsize=%dk\n", current_size / 1024);
+		previous_size = current_size;
+		temp = sizeof(int);
+		::getsockopt( _sock, SOL_SOCKET, command,
+ 					  (char*)&current_size, (socklen_t*)&temp );
+
+	} while ( ((previous_size < current_size) || (current_size >= attempt_size)) &&
+			  (attempt_size < desired_size) );
 
 	return current_size;
 }
@@ -921,6 +950,14 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 int Sock::setsockopt(int level, int optname, const void* optval, int optlen)
 {
 	ASSERT(_state != sock_virgin); 
+
+		// Don't bother with TCP options on Unix sockets.
+#ifndef WIN32
+        if ((_who.to_storage().ss_family == AF_LOCAL) && (level == IPPROTO_TCP))
+	{
+		return true;
+	}
+#endif
 
 	/* cast optval from void* to char*, as some platforms (Windows!) require this */
 	if(::setsockopt(_sock, level, optname, static_cast<const char*>(optval), optlen) < 0)
@@ -1655,8 +1692,8 @@ Sock::timeout_no_timeout_multiplier(int sec)
 		int fcntl_flags;
 		if ( (fcntl_flags=fcntl(_sock, F_GETFL)) < 0 )
 			return -1;
-		fcntl_flags &= ~O_NONBLOCK;	// reset blocking mode
-		if ( fcntl(_sock,F_SETFL,fcntl_flags) == -1 )
+			// reset blocking mode
+		if ( ((fcntl_flags & O_NONBLOCK) == O_NONBLOCK) && fcntl(_sock,F_SETFL,fcntl_flags & ~O_NONBLOCK) == -1 )
 			return -1;
 #endif
 	} else {
@@ -1671,8 +1708,8 @@ Sock::timeout_no_timeout_multiplier(int sec)
 			int fcntl_flags;
 			if ( (fcntl_flags=fcntl(_sock, F_GETFL)) < 0 )
 				return -1;
-			fcntl_flags |= O_NONBLOCK;	// set nonblocking mode
-			if ( fcntl(_sock,F_SETFL,fcntl_flags) == -1 )
+				// set nonblocking mode
+			if ( ((fcntl_flags & O_NONBLOCK) == 0) && fcntl(_sock,F_SETFL,fcntl_flags | O_NONBLOCK) == -1 )
 				return -1;
 #endif
 		}
@@ -2502,17 +2539,22 @@ bool Sock :: is_hdr_encrypt(){
 	return FALSE;
 }
 
-int Sock :: authenticate(KeyInfo *&, const char * /* methods */, CondorError* /* errstack */, int /*timeout*/, char ** /*method_used*/)
+int Sock :: authenticate(KeyInfo *&, const char * /* methods */, CondorError* /* errstack */, int /*timeout*/, bool /*non_blocking*/, char ** /*method_used*/)
 {
 	return -1;
 }
 
-int Sock :: authenticate(const char * /* methods */, CondorError* /* errstack */, int /*timeout*/)
+int Sock :: authenticate(const char * /* methods */, CondorError* /* errstack */, int /*timeout*/, bool /*non_blocking*/)
 {
 	/*
 	errstack->push("AUTHENTICATE", AUTHENTICATE_ERR_NOT_BUILT,
 			"Failure: This version of condor was not compiled with authentication enabled");
 	*/
+	return -1;
+}
+
+int Sock :: authenticate_continue(CondorError* /* errstack */, bool /*non_blocking*/, char ** /*method_used*/)
+{
 	return -1;
 }
 

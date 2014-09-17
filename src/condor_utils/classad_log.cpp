@@ -165,11 +165,14 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 	active_transaction = NULL;
 	m_nondurable_level = 0;
 
+	bool open_read_only = max_historical_logs_arg < 0;
+	if (open_read_only) { max_historical_logs_arg = -max_historical_logs_arg; }
 	this->max_historical_logs = max_historical_logs_arg;
 	historical_sequence_number = 1;
 	m_original_log_birthdate = time(NULL);
 
-	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_CREAT | O_LARGEFILE, 0600);
+	// TODO: this should open O_BINARY because on windows, text files have \r\n with the c-runtime magically adding/removing \r as needed.
+	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (log_fd < 0) {
 		EXCEPT("failed to open log %s, errno = %d", logFilename(), errno);
 	}
@@ -245,8 +248,8 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 		// rotate the log anyway, we may as well just require the rotation
 		// to be successful.  In the case where rotation fails, we will
 		// probably soon fail to write to the log file anyway somewhere else.)
-		dprintf(D_ALWAYS,"Detected unterminated log entry in ClassAd Log %s."
-				" Forcing rotation.\n", logFilename());
+		dprintf(D_ALWAYS,"Detected unterminated log entry in ClassAd Log %s.%s\n",
+				logFilename(), open_read_only ? "" : " Forcing rotation.");
 		requires_successful_cleaning = true;
 	}
 	if (active_transaction) {	// abort incomplete transaction
@@ -256,8 +259,8 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 		if( !requires_successful_cleaning ) {
 			// For similar reasons as with broken log entries above,
 			// we need to force rotation.
-			dprintf(D_ALWAYS,"Detected unterminated transaction in ClassAd Log"
-					"%s. Forcing rotation.\n", logFilename());
+			dprintf(D_ALWAYS,"Detected unterminated transaction in ClassAd Log %s.%s\n",
+					logFilename(), open_read_only ? "" : " Forcing rotation.");
 			requires_successful_cleaning = true;
 		}
 	}
@@ -268,8 +271,11 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 		}
 	}
 	if( !is_clean || requires_successful_cleaning ) {
-		if( !TruncLog() && requires_successful_cleaning ) {
-			EXCEPT("Failed to rotate ClassAd log %s.\n", logFilename());
+		if (open_read_only && requires_successful_cleaning) {
+			EXCEPT("Log %s is corrupt and needs to be cleaned before restarting HTCondor", logFilename());
+		}
+		else if( !TruncLog() && requires_successful_cleaning ) {
+			EXCEPT("Failed to rotate ClassAd log %s.", logFilename());
 		}
 	}
 }
@@ -406,7 +412,7 @@ ClassAdLog::TruncLog()
 	}
 
 	tmp_log_filename.formatstr( "%s.tmp", logFilename());
-	new_log_fd = safe_open_wrapper_follow(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE, 0600);
+	new_log_fd = safe_open_wrapper_follow(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (new_log_fd < 0) {
 		dprintf(D_ALWAYS, "failed to rotate log: safe_open_wrapper(%s) returns %d\n",
 				tmp_log_filename.Value(), new_log_fd);
@@ -434,7 +440,7 @@ ClassAdLog::TruncLog()
 		// Beat a hasty retreat into the past.
 		historical_sequence_number--;
 
-		int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE, 0600);
+		int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 		if (log_fd < 0) {
 			EXCEPT("failed to reopen log %s, errno = %d after failing to rotate log.",logFilename(),errno);
 		}
@@ -473,7 +479,7 @@ ClassAdLog::TruncLog()
 	}
 #endif
 
-	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE, 0600);
+	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (log_fd < 0) {
 		EXCEPT( "failed to open log in append mode: "
 			"safe_open_wrapper(%s) returns %d\n", logFilename(), log_fd);
@@ -1275,7 +1281,16 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type)
     // transaction op).  A complete transaction with corruption is unrecoverable, and 
     // causes a fatal exception.
 	if (log_rec->ReadBody(fp) < 0  ||  log_rec->get_op_type() == CondorLogOp_Error) {
-        dprintf(D_ALWAYS, "WARNING: Encountered corrupt log record %lu (byte offset %lld)\n", recnum, pos);
+        dprintf(D_ALWAYS | D_ERROR, "WARNING: Encountered corrupt log record %lu (byte offset %lld)\n", recnum, pos);
+		// TODO: this ugly code attempts to reconstruct the corrupted line, fix it to just show the actual line.
+		const char *key, *name="", *value="";
+		key = log_rec->get_key(); if ( ! key) key = "";
+		if (log_rec->get_op_type() == CondorLogOp_SetAttribute) {
+			LogSetAttribute * log = (LogSetAttribute *)log_rec;
+			name = log->get_name(); if ( ! name) name = "";
+			value = log->get_value(); if ( ! value) value = "";
+		}
+		dprintf(D_ALWAYS | D_ERROR, "    %d %s %s %s\n", log_rec->get_op_type(), key, name, value);
 
 		char	line[ATTRLIST_MAX_EXPRESSION + 64];
 		int		op;

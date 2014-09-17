@@ -49,7 +49,7 @@ $abnormal = sub
 
 $failure = sub 
 {
-	CondorTest::debug("DAG failed as it should\n");
+	CondorTest::debug("DAG failed as expected\n");
 	CondorTest::debug("Verifying output\n");
 	$diditpass = 1;
 

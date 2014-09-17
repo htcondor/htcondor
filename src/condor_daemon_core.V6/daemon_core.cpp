@@ -8615,13 +8615,13 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		already_registered = true;
 
 			// register the command handler to take care of signals
-		daemonCore->Register_Command( DC_RAISESIGNAL, "DC_RAISESIGNAL",
+		daemonCore->Register_CommandWithPayload( DC_RAISESIGNAL, "DC_RAISESIGNAL",
 			(CommandHandlercpp)&DaemonCore::HandleSigCommand,
 			"HandleSigCommand()", daemonCore, DAEMON );
 
 			// this handler receives keepalive pings from our children, so
 			// we can detect if any of our kids are hung.
-		daemonCore->Register_Command( DC_CHILDALIVE,"DC_CHILDALIVE",
+		daemonCore->Register_CommandWithPayload( DC_CHILDALIVE,"DC_CHILDALIVE",
 			(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
 			"HandleChildAliveCommand", daemonCore, DAEMON,
 			D_FULLDEBUG );
@@ -10660,7 +10660,7 @@ void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessi
 	msg->setSuccessDebugLevel(D_SECURITY);
 	msg->setRawProtocol(true);
 
-	if( m_invalidate_sessions_via_tcp ) {
+	if( !daemon->hasUDPCommandPort() || m_invalidate_sessions_via_tcp ) {
 		msg->setStreamType(Stream::reli_sock);
 	}
 	else {

@@ -27,6 +27,8 @@ x86_SL5
 x86_64_Solaris11
 x86_64_Ubuntu10
 
+# Build on the Debian 8 pre-release machine.
+x86_64_Debian0
 
 #
 # The officially-supported SWAMP platforms.

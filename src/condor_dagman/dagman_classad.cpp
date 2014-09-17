@@ -32,7 +32,7 @@ DagmanClassad::DagmanClassad( const CondorID &DAGManJobId ) :
 {
 	CondorID defaultCondorId;
 	if ( DAGManJobId == defaultCondorId ) {
-		debug_printf( DEBUG_QUIET, "No Condor ID available for DAGMan (running on command line?); DAG status will not be reported to classad\n" );
+		debug_printf( DEBUG_QUIET, "No Condor ID available for DAGMan (running on command line?); DAG status will not be reported to ClassAd\n" );
 		return;
 	}
 
@@ -42,7 +42,7 @@ DagmanClassad::DagmanClassad( const CondorID &DAGManJobId ) :
 	if ( !_schedd || !_schedd->locate() ) {
 		const char *errMsg = _schedd ? _schedd->error() : "?";
 		debug_printf( DEBUG_QUIET,
-					"WARNING: can't find address of local schedd for classad updates (%s)\n",
+					"WARNING: can't find address of local schedd for ClassAd updates (%s)\n",
 					errMsg );
 		check_warning_strictness( DAG_STRICT_3 );
 		return;
@@ -70,7 +70,7 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 
 	if ( !_valid ) {
 		debug_printf( DEBUG_VERBOSE,
-					"Skipping classad update -- DagmanClassad object is invalid\n" );
+					"Skipping ClassAd update -- DagmanClassad object is invalid\n" );
 		return;
 	}
 
@@ -91,6 +91,36 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 	SetDagAttribute( ATTR_DAG_IN_RECOVERY, recovery );
 
 	CloseConnection( queue );
+}
+
+//---------------------------------------------------------------------------
+void
+DagmanClassad::GetInfo( MyString &owner, MyString &nodeName )
+{
+	if ( !_valid ) {
+		debug_printf( DEBUG_VERBOSE,
+					"Skipping ClassAd query -- DagmanClassad object is invalid\n" );
+		return;
+	}
+
+	Qmgr_connection *queue = OpenConnection();
+	if ( !queue ) {
+		return;
+	}
+
+	if ( !GetDagAttribute( ATTR_OWNER, owner ) ) {
+		check_warning_strictness( DAG_STRICT_1 );
+		owner = "undef";
+	}
+
+	if ( !GetDagAttribute( ATTR_DAG_NODE_NAME, nodeName ) ) {
+		// We should only get this value if we're a sub-DAG.
+		nodeName = "undef";
+	}
+
+	CloseConnection( queue );
+
+	return;
 }
 
 //---------------------------------------------------------------------------
@@ -159,4 +189,22 @@ DagmanClassad::SetDagAttribute( const char *attrName, int attrVal )
 					  "WARNING: failed to set attribute %s\n", attrName );
 		check_warning_strictness( DAG_STRICT_3 );
 	}
+}
+
+//---------------------------------------------------------------------------
+bool
+DagmanClassad::GetDagAttribute( const char *attrName, MyString &attrVal )
+{
+	char *val;
+	if ( GetAttributeStringNew( _dagmanId._cluster, _dagmanId._proc,
+				attrName, &val ) != 0 ) {
+		debug_printf( DEBUG_QUIET,
+					  "Warning: failed to get attribute %s\n", attrName );
+		return false;
+	}
+
+	attrVal = val;
+	free( val );
+
+	return true;
 }

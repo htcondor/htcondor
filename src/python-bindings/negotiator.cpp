@@ -12,6 +12,7 @@
 
 #include "old_boost.h"
 #include "classad_wrapper.h"
+#include "module_lock.h"
 
 using namespace boost::python;
 
@@ -52,8 +53,13 @@ struct Negotiator {
     Negotiator()
     {
         Daemon neg( DT_NEGOTIATOR, 0, 0 );
+        bool result;
+        {
+        condor::ModuleLock ml;
+        result = neg.locate();
+        }
 
-        if (neg.locate())
+        if (result)
         {
             if (neg.addr())
             {
@@ -128,7 +134,12 @@ struct Negotiator {
     void resetAllUsage()
     {
         Daemon negotiator(DT_NEGOTIATOR, m_addr.c_str());
-        if (!negotiator.sendCommand(RESET_ALL_USAGE, Stream::reli_sock, 0) )
+        bool result;
+        {
+        condor::ModuleLock ml;
+        result = negotiator.sendCommand(RESET_ALL_USAGE, Stream::reli_sock, 0);
+        }
+        if (!result)
         {
                 THROW_EX(RuntimeError, "Failed to send RESET_ALL_USAGE command");
         }
@@ -148,8 +159,12 @@ struct Negotiator {
         }
         sock->decode();
         boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
-        if (!getClassAdNoTypes(sock.get(), *ad.get()) ||
-            !sock->end_of_message())
+        bool result;
+        {
+        condor::ModuleLock ml;
+        result = !getClassAdNoTypes(sock.get(), *ad.get()) || !sock->end_of_message();
+        }
+        if (result)
         {
             sock->close();
             THROW_EX(RuntimeError, "Failed to get classad from negotiator");
@@ -169,8 +184,12 @@ struct Negotiator {
 
         sock->decode();
         boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
-        if (!getClassAdNoTypes(sock.get(), *ad.get()) ||
-            !sock->end_of_message())
+        bool result;
+        {
+        condor::ModuleLock ml;
+        result = !getClassAdNoTypes(sock.get(), *ad.get()) || !sock->end_of_message();
+        }
+        if (result)
         {
             sock->close();
             THROW_EX(RuntimeError, "Failed to get classad from negotiator");
@@ -206,7 +225,12 @@ private:
     boost::shared_ptr<Sock> getSocket(int cmd)
     {
         Daemon negotiator(DT_NEGOTIATOR, m_addr.c_str());
-        boost::shared_ptr<Sock> sock(negotiator.startCommand(cmd, Stream::reli_sock, 0));
+        Sock *raw_sock;
+        {
+        condor::ModuleLock ml;
+        raw_sock = negotiator.startCommand(cmd, Stream::reli_sock, 0);
+        }
+        boost::shared_ptr<Sock> sock(raw_sock);
         if (!sock.get()) THROW_EX(RuntimeError, "Unable to connect to the negotiator");
         return sock;
     }
@@ -216,9 +240,13 @@ private:
         checkUser(user);
         boost::shared_ptr<Sock> sock = getSocket(cmd);
 
-        if (    !sock->put(user.c_str()) ||
-                !sock->put(val) ||
-                !sock->end_of_message()) {
+        bool retval;
+        {
+        condor::ModuleLock ml;
+        retval = !sock->put(user.c_str()) || !sock->put(val) || !sock->end_of_message();
+        }
+        if (retval)
+        {
             sock->close();
             THROW_EX(RuntimeError, "Failed to send command to negotiator\n" );
         }
@@ -230,9 +258,13 @@ private:
         checkUser(user);
         boost::shared_ptr<Sock> sock = getSocket(cmd);
 
-        if (    !sock->put(user.c_str()) ||
-                !sock->put(val) ||
-                !sock->end_of_message()) {
+        bool retval;
+        {
+        condor::ModuleLock ml;
+        retval = !sock->put(user.c_str()) || !sock->put(val) || !sock->end_of_message();
+        }
+        if (retval)
+        {
             sock->close();
             THROW_EX(RuntimeError, "Failed to send command to negotiator\n" );
         }
@@ -244,8 +276,13 @@ private:
         checkUser(user);
         boost::shared_ptr<Sock> sock = getSocket(cmd);
 
-        if (    !sock->put(user.c_str()) ||
-                !sock->end_of_message()) {
+        bool retval;
+        {
+        condor::ModuleLock ml;
+        retval = !sock->put(user.c_str()) || !sock->end_of_message();
+        }
+        if (retval)
+        {
             sock->close();
             THROW_EX(RuntimeError, "Failed to send command to negotiator\n" );
         }

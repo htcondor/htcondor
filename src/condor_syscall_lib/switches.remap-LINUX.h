@@ -21,6 +21,7 @@
 extern "C" {
 /* These remaps are needed by file_state.c */
 #if defined(FILE_TABLE)
+#include "condor_glibc_versions.h"
 
 REMAP_ONE( close, __close, int , int )
 REMAP_TWO( creat, __creat, int, const char*, mode_t )
@@ -37,7 +38,7 @@ REMAP_TWO( ftruncate, __ftruncate, int , int , off_t )
 REMAP_THREE( poll, __libc_poll, int , struct pollfd *, unsigned long , int )
 REMAP_THREE( poll, __poll, int , struct pollfd *, unsigned long , int )
 
-#if defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27)|| defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213) || defined(GLIBC217)
+#if CGV_MINOR >= 3
 	REMAP_TWO( ftruncate64, __ftruncate64, int , int , off64_t )
 #endif
 
@@ -49,7 +50,7 @@ REMAP_THREE_VARARGS( ioctl, __ioctl, int , unsigned long , unsigned long , int)
 
 REMAP_THREE( lseek, __lseek, off_t, int, off_t, int )
 
-#if defined(GLIBC21) || defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213) || defined(GLIBC217)
+#if CGV_MINOR >= 1
 REMAP_THREE( llseek, __llseek, off64_t, int, off64_t, int )
 REMAP_THREE( llseek, _llseek, off64_t, int, off64_t, int )
 REMAP_THREE( llseek, __lseek64, off64_t, int, off64_t, int )
@@ -67,7 +68,7 @@ REMAP_THREE( llseek, lseek64, long long int, int, long long int, int )
 
 REMAP_THREE_VARARGS( open, __open, int, const char *, int, int )
 
-#if defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213) || defined(GLIBC217)
+#if CGV_MINOR >= 3
 REMAP_THREE_VARARGS( open64, __open64, int, const char *, int, int )
 REMAP_THREE_VARARGS( open64, __libc_open64, int, const char *, int, int )
 #endif
@@ -75,13 +76,14 @@ REMAP_THREE_VARARGS( open64, __libc_open64, int, const char *, int, int )
 REMAP_THREE( read, __read, ssize_t, int, __ptr_t, size_t )
 
 REMAP_THREE( write, __write, ssize_t, int, const __ptr_t, size_t )
-#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213) || defined(GLIBC217)
+
+#if CGV_MINOR >= 2
 REMAP_THREE( write, __libc_write, ssize_t, int, const __ptr_t, size_t )
 #endif
 
 /* make a bunch of __libc remaps for the things that have fd's or paths.
-	These were new entry points in glibc22 */
-#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213) || defined(GLIBC217)
+	These were new entry points in glibc 2.2 */
+#if CGV_MINOR >= 2
 REMAP_ONE( close, __libc_close, int , int )
 REMAP_TWO( creat, __libc_creat, int, const char*, mode_t )
 REMAP_ONE( dup, __libc_dup, int, int )
@@ -89,7 +91,7 @@ REMAP_TWO( dup2, __libc_dup2, int, int, int )
 REMAP_ONE( fchdir, __libc_fchdir, int, int )
 REMAP_THREE_VARARGS( fcntl, __libc_fcntl, int , int , int , int)
 
-#if defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213) || defined(GLIBC217)
+#if CGV_MINOR >= 5
 /* According to the implementation of these function in glibc 2.5 they appear
 to be simple wrappers around their specific system call */
 REMAP_THREE_VARARGS( fcntl, __fcntl_nocancel, int , int , int , int )
@@ -111,7 +113,7 @@ REMAP_THREE_VARARGS( open, __libc_open, int, const char *, int, int )
 REMAP_THREE( read, __libc_read, ssize_t, int, __ptr_t, size_t )
 #endif
 
-#if defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213) || defined(GLIBC217)
+#if CGV_MINOR >= 3
 REMAP_THREE( lseek, __libc_lseek, off_t, int, off_t, int )
 REMAP_FIVE( select, __libc_select, int , int , fd_set *, fd_set *, fd_set *, struct timeval *)
 #endif
@@ -162,7 +164,7 @@ REMAP_TWO( getrlimit, __getrlimit, int , int , struct rlimit *)
 REMAP_TWO( gettimeofday, __gettimeofday, int , struct timeval *, struct timezone *)
 
 /* getuid is now a weak alias to __getuid */
-#if !defined(GLIBC22) && !defined(GLIBC23) && !defined(GLIBC24) && !defined(GLIBC25) && !defined(GLIBC27) && !defined(GLIBC211) && !defined(GLIBC212) && !defined(GLIBC213) && !defined(GLIBC217)
+#if CGV_MINOR < 2
 REMAP_ZERO( getuid, __getuid, uid_t )
 #endif
 
@@ -183,7 +185,7 @@ REMAP_THREE( msync, __libc_msync, int , void *, size_t , int )
 REMAP_TWO( munmap, __munmap, int, void *, size_t )
 REMAP_ONE( pipe, __pipe, int , int *)
 
-#if defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213) || defined(GLIBC217)
+#if CGV_MINOR >= 5
 REMAP_THREE( readlink, __readlink, ssize_t , const char *, char *, size_t )
 #else
 REMAP_THREE( readlink, __readlink, int , const char *, char *, size_t )
@@ -220,7 +222,7 @@ REMAP_ONE( umount, __umount, int , const char *)
 #endif
 
 /* uname is now a weak alias to __uname */
-#if !defined(GLIBC22) && !defined(GLIBC23) && !defined(GLIBC24) && !defined(GLIBC25) && !defined(GLIBC27) && !defined(GLIBC211) && !defined(GLIBC212) && !defined(GLIBC213) && !defined(GLIBC217)
+#if CGV_MINOR < 2
 REMAP_ONE( uname, __uname, int , struct utsname *)
 #endif
 
@@ -245,14 +247,14 @@ REMAP_FOUR( profil, __profil, int , char *, int , int , int );
 
 #if defined(GLIBC)
 
-#if !defined(GLIBC22) && !defined(GLIBC23) && !defined(GLIBC24) && !defined(GLIBC25) && !defined(GLIBC27) && !defined(GLIBC211) && !defined(GLIBC212) && !defined(GLIBC213) && !defined(GLIBC217)
+#if CGV_MINOR < 2
 /* clone has a much different prototype not supported by the stub generator
 	under glibc22 and later machines */
 REMAP_TWO( clone, __clone, pid_t , void *, unsigned long )
 #endif
 
 
-#if !defined(GLIBC27) && !defined(GLIBC211) && !defined(GLIBC212) && !defined(GLIBC213) && !defined(GLIBC217)
+#if CGV_MINOR < 7
 REMAP_TWO( fstat, __fstat, int , int , struct stat *)
 #endif
 
@@ -260,7 +262,7 @@ REMAP_TWO( getrusage, __getrusage, int, int, struct rusage *)
 REMAP_THREE( mknod, __mknod, int , const char *, mode_t , dev_t )
 REMAP_TWO( truncate, __truncate, int , const char *, off_t )
 
-#else 
+#else
 
 REMAP_ONE( fdatasync, __fdatasync, int , int )
 REMAP_TWO( getrusage, __getrusage, int, int , struct rusage *)
@@ -320,7 +322,7 @@ REMAP_FOUR( socketpair, __socketpair, int, int, int, int, int * )
 	FORTIFY feature (and subsequent API). I have to the best of my ability,
 	and without knowing the FORTIFY API (which I couldn't reliably find online),
 	copied the interface properly. The only confusion that really arises is
-	when there are two or more length values and it was hard to determine 
+	when there are two or more length values and it was hard to determine
 	which was the correct one. */
 
 /* If I were using glibc 2.4 here, I'd have to undefine everything I'm
@@ -354,11 +356,11 @@ int __sprintf_chk(char *s, int /* flags */, size_t /* slen */, const char *forma
 {
 	va_list arg;
 	int done;
- 
+
 	va_start(arg, format);
 	done = vsprintf(s, format, arg);
 	va_end(arg);
- 
+
 	return done;
 }
 
@@ -370,7 +372,7 @@ char * __strcpy_chk(char *dest, const char *src, size_t destlen)
 char * __fgets_chk(char *buf, size_t /* size */, int n, FILE *fp)
 {
 	/* it looks like n is the right parameter */
-	return fgets(buf, n, fp); 
+	return fgets(buf, n, fp);
 }
 
 char * __fgets_unlocked_chk(char *buf, size_t /* size */, int n, FILE *fp)
@@ -380,7 +382,7 @@ char * __fgets_unlocked_chk(char *buf, size_t /* size */, int n, FILE *fp)
 }
 
 
-wchar_t * __fgetws_chk(wchar_t *buf, size_t /* size */, int n, _IO_FILE *fp) 
+wchar_t * __fgetws_chk(wchar_t *buf, size_t /* size */, int n, _IO_FILE *fp)
 {
 	/* it looks like n is the right parameter */
 	return fgetws(buf, n, fp);
@@ -439,7 +441,7 @@ char * __getwd_chk(char *buf, size_t buflen)
 	return getcwd(buf, buflen);
 }
 
-size_t __mbsnrtowcs_chk(wchar_t *dst, const char **src, size_t nmc, 
+size_t __mbsnrtowcs_chk(wchar_t *dst, const char **src, size_t nmc,
 	size_t len, mbstate_t *ps, size_t /* dstlen */)
 {
 	/* I think len is the right one */
@@ -488,13 +490,13 @@ void * __memset_chk(void *dstpp, int c, size_t len, size_t /* dstlen */)
 }
 
 
-ssize_t __pread64_chk(int fd, void *buf, size_t nbytes, off64_t offset, 
+ssize_t __pread64_chk(int fd, void *buf, size_t nbytes, off64_t offset,
 	size_t /* buflen */)
 {
 	return pread64(fd, buf, nbytes, offset);
 }
 
-ssize_t __pread_chk(int fd, void *buf, size_t nbytes, off_t offset, 
+ssize_t __pread_chk(int fd, void *buf, size_t nbytes, off_t offset,
 	size_t /* buflen */)
 {
 	return pread(fd, buf, nbytes, offset);
@@ -526,9 +528,9 @@ ssize_t __recv_chk(int fd, void *buf, size_t n, size_t /* buflen */, int flags)
 	return recv(fd, buf, n, flags);
 }
 
-SOCKET_RECVFROM_TYPE __recvfrom_chk(int fd, SOCKET_DATA_TYPE buf, 
-	SOCKET_SENDRECV_LENGTH_TYPE n,  size_t /* buflen */, 
-	SOCKET_FLAGS_TYPE flags, SOCKET_ADDR_TYPE addr, 
+SOCKET_RECVFROM_TYPE __recvfrom_chk(int fd, SOCKET_DATA_TYPE buf,
+	SOCKET_SENDRECV_LENGTH_TYPE n,  size_t /* buflen */,
+	SOCKET_FLAGS_TYPE flags, SOCKET_ADDR_TYPE addr,
 	SOCKET_ALTERNATE_LENGTH_TYPE *addr_len)
 {
 	return recvfrom(fd, buf, n, flags, addr, addr_len);
@@ -674,7 +676,7 @@ wchar_t * __wcpcpy_chk(wchar_t *dest, const wchar_t *src, size_t destlen)
 	return wcpncpy(dest, src, destlen);
 }
 
-wchar_t * __wcpncpy_chk(wchar_t *dest, const wchar_t *src, size_t n, 
+wchar_t * __wcpncpy_chk(wchar_t *dest, const wchar_t *src, size_t n,
 	size_t /* destlen */)
 {
 	return wcpncpy(dest, src, n);
@@ -695,20 +697,20 @@ wchar_t * __wcscpy_chk(wchar_t *dest, const wchar_t *src, size_t /* n */)
 	return wcscpy(dest, src);
 }
 
-wchar_t * __wcsncat_chk(wchar_t *dest, const wchar_t *src, size_t n, 
+wchar_t * __wcsncat_chk(wchar_t *dest, const wchar_t *src, size_t n,
 	size_t /* destlen */)
 {
 	/* XXX I think n is right in this case */
 	return wcsncat(dest, src, n);
 }
 
-wchar_t * __wcsncpy_chk(wchar_t *dest, const wchar_t *src, size_t n, 
+wchar_t * __wcsncpy_chk(wchar_t *dest, const wchar_t *src, size_t n,
 	size_t /* destlen */)
 {
 	return wcsncpy(dest, src, n);
 }
 
-size_t __wcsnrtombs_chk(char *dst, __const wchar_t **src, size_t nwc, 
+size_t __wcsnrtombs_chk(char *dst, __const wchar_t **src, size_t nwc,
 	size_t len, mbstate_t *ps, size_t /* dstlen */)
 {
 	return wcsnrtombs(dst, src, nwc, len, ps);
@@ -720,7 +722,7 @@ size_t __wcsrtombs_chk(char *dst, __const wchar_t **src, size_t len,
 	return wcsrtombs(dst, src, len, ps);
 }
 
-size_t __wcstombs_chk(char *dst, __const wchar_t *src, size_t len, 
+size_t __wcstombs_chk(char *dst, __const wchar_t *src, size_t len,
 	size_t /* dstlen */)
 {
 	mbstate_t state;
@@ -774,7 +776,7 @@ int __wprintf_chk(int /* flag */, const wchar_t *format, ...)
 
 #endif /* GLIBC23 */
 
-#if defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213) || defined(GLIBC217)
+#if CGV_MINOR >= 5
 /* This forces malloc.o from libc.a to not be brought in, and allows stduniv
 	code to use the malloc-user.c API instead */
 REMAP_TWO( memalign, __libc_memalign, void*, size_t, size_t )
@@ -783,14 +785,3 @@ REMAP_TWO( memalign, __libc_memalign, void*, size_t, size_t )
 #endif /* REMOTE_SYSCALLS */
 
 }
-
-
-
-
-
-
-
-
-
-
-

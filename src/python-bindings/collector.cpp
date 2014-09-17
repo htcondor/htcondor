@@ -13,6 +13,8 @@
 #include "old_boost.h"
 #include "classad_wrapper.h"
 
+#include "module_lock.h"
+
 using namespace boost::python;
 
 AdTypes convert_to_ad_type(daemon_t d_type)
@@ -137,7 +139,11 @@ struct Collector {
         }
         ClassAdList adList;
 
-        QueryResult result = m_collectors->query(query, adList, NULL);
+        QueryResult result;
+        {
+        condor::ModuleLock ml;
+        result = m_collectors->query(query, adList, NULL);
+        }
 
         switch (result)
         {
@@ -325,6 +331,9 @@ struct Collector {
             {
                 const ClassAdWrapper wrapper = extract<const ClassAdWrapper>(ads[i]);
                 ad.CopyFrom(wrapper);
+                int result = 0;
+                {
+                condor::ModuleLock ml;
                 if (use_tcp)
                 {
                     if (!sock.get())
@@ -339,10 +348,10 @@ struct Collector {
                 {
                     sock.reset(collector->startCommand(command,Stream::safe_sock,20));
                 }
-                int result = 0;
                 if (sock.get()) {
                     result += putClassAd(sock.get(), ad);
                     result += sock->end_of_message();
+                }
                 }
                 if (result != 2) {
                     PyErr_SetString(PyExc_ValueError, "Failed to advertise to collector");

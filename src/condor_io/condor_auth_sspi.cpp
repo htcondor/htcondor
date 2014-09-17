@@ -475,7 +475,7 @@ Condor_Auth_SSPI::unwrap(char *   input,
 }
 
 int
-Condor_Auth_SSPI::authenticate(const char * remoteHost, CondorError* errstack)
+Condor_Auth_SSPI::authenticate(const char * remoteHost, CondorError* errstack, bool /*non_blocking*/)
 {
 	int ret_value;
 	CredHandle cred;

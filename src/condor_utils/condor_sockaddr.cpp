@@ -73,8 +73,6 @@ condor_sockaddr::condor_sockaddr(const sockaddr* sa)
 	} else if (sa->sa_family == AF_INET6) {
 		sockaddr_in6* sin6 = sock_address.in6;
 		v6 = *sin6;
-	} else {
-		clear();
 	}
 }
 
