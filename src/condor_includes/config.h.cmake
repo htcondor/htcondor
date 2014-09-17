@@ -624,4 +624,7 @@
 /* Define to 1 if the GSI libraries need to dlopen()d */
 #cmakedefine DLOPEN_GSI_LIBS
 
+/* Define to 1 if the OS has support for CLOCK_MONOTONIC */
+#cmakedefine HAVE_CLOCK_MONOTONIC
+
 #endif
