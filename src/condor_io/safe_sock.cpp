@@ -288,7 +288,7 @@ SafeSock::my_ip_str()
 	//connect that one, so as to leave the main one undisturbed.
 
 	if(_state != sock_connect) {
-		dprintf(D_ALWAYS,"ERROR: SafeSock::sender_ip_str() called on socket tht is not in connected state\n");
+		dprintf(D_ALWAYS,"ERROR: SafeSock::my_ip_str() called on socket that is not in connected state\n");
 		return NULL;
 	}
 
@@ -298,7 +298,11 @@ SafeSock::my_ip_str()
 	}
 
 	SafeSock s;
-	s.bind(_who.get_protocol(), true, 0, false);
+	if( ! s.bind(_who.get_protocol(), true, 0, false) )
+	{
+		dprintf(D_ALWAYS,"ERROR: SafeSock::my_ip_str()'s attempt to bind a new SafeSock failed.\n");
+		return NULL;
+	}
 
 	if (s._state != sock_bound) {
 		dprintf(D_ALWAYS,
