@@ -109,11 +109,21 @@ int main( int /* argc */, char ** /* argv */ ) {
 		}
 
 		if( pb.isError() || pb.isEOF() ) {
+			//
+			// This is the wrong order, but in the usual case where the schedd
+			// went away because of condor_off, the master is going to kill
+			// us in short order, and it's more useful (at least for now)
+			// to have lifetime statistics than to finish pending updates.
+			//
+			dprintf( D_ALWAYS, "stdin closed, logging final statistics...\n" );
+			updateStatisticsLog( queue, true );
+			dprintf( D_ALWAYS, "stdin closed, ... done.\n" );
+
 			dprintf( D_ALWAYS, "stdin closed, draining queue...\n" );
 			queue.drain();
-			// Force an update of our lifetime statistics.
-			updateStatisticsLog( queue, true );
-			dprintf( D_ALWAYS, "stdin closed, ... done.  Exiting.\n" );
+			dprintf( D_ALWAYS, "stdin closed, ... done.\n" );
+
+			dprintf( D_ALWAYS, "stdin closed, exit()ing.\n" );
 			exit( 0 );
 		}
 	}
@@ -361,11 +371,11 @@ void updateStatisticsLog( const TimeSensitiveQueue<T> & queue, bool forceUpdate 
 	static unsigned previousCurlFailureCount = UINT_MAX;
 	static unsigned previousBadResponseCodeCount = UINT_MAX;
 
-	if(	forceUpdate ||
-		 ( previousQueueFullCount == queue.queueFullCount
+	if(	previousQueueFullCount == queue.queueFullCount
 		  && previousBadCommandCount == badCommandCount
 		  && previousCurlFailureCount == curlFailureCount
-		  && previousBadResponseCodeCount == badResponseCodeCount )
+		  && previousBadResponseCodeCount == badResponseCodeCount
+		  && (! forceUpdate)
 		 ) {
 			return;
 	}
@@ -577,6 +587,7 @@ static void * workerFunction( void * ptr ) {
 			queue->resize( newSize );
 
 			timeout = param_integer( "PANDA_UPDATE_TIMEOUT" );
+			dprintf( D_ALWAYS, "Changing timeout to %d seconds on SIGHUP.\n", timeout );
 
 			// As presently implemented, calling allowGracePeriod() a second
 			// time will always fail, so we can't handle reconfiguring
