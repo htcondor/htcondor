@@ -177,7 +177,11 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	char *line;
 	int lineNumber = 0;
 
+	// Hmm -- this vars_to_save thing allows a VARS line to come before
+	// the corresponding JOB line.  Not sure why we need this or when
+	// it was put in (see gittrac #4602).  wenger 2014-09-18
 	std::list<std::string> vars_to_save;
+
 	//
 	// This loop will read every line of the input file
 	//
