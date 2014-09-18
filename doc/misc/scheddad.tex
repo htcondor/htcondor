@@ -45,6 +45,12 @@ number, the release date, and the build identification number.
   the sum of the all of the time jobs which did not complete successfully 
   have spent running over the lifetime of this \Condor{schedd}.
 
+\index{ClassAd Scheduler attribute!JobsAccumExceptionalBadputTime}
+\item[\AdAttr{JobsAccumExceptionalBadputTime}:] A Statistics attribute 
+  defining the sum of the all of the time jobs which did not complete 
+  successfully due to \Condor{shadow} exceptions 
+  have spent running over the lifetime of this \Condor{schedd}.
+
 \index{ClassAd Scheduler attribute!JobsAccumRunningTime}
 \item[\AdAttr{JobsAccumRunningTime}:]  A Statistics attribute defining
   the sum of the all of the time jobs have spent running
@@ -169,6 +175,10 @@ number, the release date, and the build identification number.
   have exited with a \Condor{shadow} exit code of 
   \Expr{JOB\_NOT\_STARTED}
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
+
+\index{ClassAd Scheduler attribute!JobsRunning}
+\item[\AdAttr{JobsRunning}:]  A Statistics attribute representing the number
+  of jobs currently running.
 
 % histogram statistic
 \index{ClassAd Scheduler attribute!JobsRunningRuntimes}

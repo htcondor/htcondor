@@ -62,26 +62,26 @@ my $firstappend_condor_config = '
 	endif
 	#expected result iftest1=one which is undefined
 
-	if 0
+	If 0
  		iftest2=one
-	else
+	Else
 		if 1
   			iftest2=two
 		else
   			iftest2=three
-		endif
+		Endif
 	endif
 	#expected result iftest2=two which is undefined
 
-	if 0
+	IF 0
  		iftest3=one
-	else
-		if 0
+	ELSE
+		IF 0
   			iftest3=two
-		else
+		ELSE
   			iftest3=three
-		endif
-	endif
+		ENDIF
+	ENDIF
 	#expected result iftest3=three which is undefined
 
 	if yes

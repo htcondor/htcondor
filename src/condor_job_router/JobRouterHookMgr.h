@@ -66,6 +66,10 @@ public:
 	static SimpleList<HOOK_RUN_INFO*> m_job_hook_list;
 
 private:
+	bool m_warn_cleanup;
+	bool m_warn_update;
+	bool m_warn_translate;
+	bool m_warn_exit;
 
 	// Number of hooks used by the Job Router
 	const int NUM_HOOKS;

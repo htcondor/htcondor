@@ -293,14 +293,14 @@ review=?
 default=128*1024
 range=1024,
 type=int
-reconfig=true
+reconfig=false
 customization=seldom
-friendly_name=Soap SSL Port
+friendly_name=Outgoing traffic TCP write size for Collector
 review=?
 
 [COLLECTOR_PORT]
 default=9618
-range=0,65536
+range=0,65535
 type=int
 reconfig=true
 customization=seldom
@@ -1433,7 +1433,6 @@ friendly_name=Quill Should Reindex
 review=?
 tags=quill,jobqueuedbmanager
 
-[SCHEDD_NAME]
 [RECONNECT_BACKOFF_CEILING]
 default=300
 type=int
@@ -2111,14 +2110,15 @@ friendly_name=Max Pid Collision Retry
 review=?
 tags=daemon_core,daemon_core
 
-[NEGOTIATOR_SOCKET_BUFSIZE]
-default=0
+[COLLECTOR_SOCKET_BUFSIZE]
+default=10000*1024
 type=int
-reconfig=true
+range=1024,
+reconfig=false
 customization=seldom
-friendly_name=Negotiator Socket Bufsize
+friendly_name=Collector read buffer size for incoming UDP traffic
 review=?
-tags=daemon_core,daemon_core
+tags=daemon_core,daemon_core,collector
 
 [TOUCH_LOG_INTERVAL]
 default=60
@@ -2706,10 +2706,18 @@ customization=seldom
 friendly_name=No Dns
 review=?
 
+[NETWORK_HOSTNAME]
+default=
+type=string
+reconfig=false
+customization=seldom
+friendly_name=Network Hostname
+review=?
+
 [NETWORK_INTERFACE]
 default=
 type=string
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Network Interface
 review=?
@@ -3615,6 +3623,13 @@ friendly_name=Runtime Config Admin
 review=?
 tags=c++_util,condor_config
 
+[USER_CONFIG_FILE]
+default=user_config
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Name of User Config File
+tags=condor_config
 
 [ENABLE_PERSISTENT_CONFIG]
 default=false
@@ -5690,7 +5705,7 @@ review=?
 tags=schedd
 
 [DAEMON_SOCKET_DIR]
-default=$(LOCK)/daemon_sock
+default=auto
 type=string
 reconfig=true
 customization=seldom
@@ -5714,6 +5729,13 @@ customization=seldom
 friendly_name=Use Shared Port
 review=?
 
+[SHARED_PORT_PORT]
+default=$(COLLECTOR_PORT)
+type=int
+reconfig=true
+customization=seldom
+friendly_name=TCP port used by condor_shared_port
+
 [AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST]
 default=true
 version=8.1.1
@@ -5722,6 +5744,20 @@ reconfig=true
 customization=expert
 friendly_name=Auto Include Shared Port In Daemon List
 review=?
+
+[COLLECTOR_USES_SHARED_PORT]
+default=true
+version=8.1.4
+type=bool
+reconfig=true
+customization=expert
+
+[SHARED_PORT_DEFAULT_ID]
+default=
+version=8.1.4
+type=string
+reconfig=true
+customization=expert
 
 [CCB_HEARTBEAT_INTERVAL]
 default=300

@@ -3,11 +3,12 @@
 Multiple Platforms} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-A single, global
-configuration file may be used for all platforms in an HTCondor pool, with only
-platform-specific settings placed in separate files.  This greatly
+A single, initial configuration file may be used for all platforms 
+in an HTCondor pool, 
+with  platform-specific settings placed in separate files.  
+This greatly
 simplifies administration of a heterogeneous pool by allowing
-changes of platform-independent, global settings in one place, instead of
+specification of platform-independent, global settings in one place, instead of
 separately for each platform.  This is made possible by treating the
 \Macro{LOCAL\_CONFIG\_FILE} configuration variable as a
 list of files, instead of a single file.  Of course, this only
@@ -16,34 +17,18 @@ pool, so that multiple machines can actually share a single set of
 configuration files.
 
 With multiple platforms, put all
-platform-independent settings (the vast majority) into the regular
-\File{condor\_config} file, which would be shared by all platforms.
-This global file would be the one that is found with the
-\Env{CONDOR\_CONFIG} environment variable, the user \Login{condor}'s home
-directory, or \File{/etc/condor/condor\_config}.
+platform-independent settings (the vast majority) into the 
+single initial configuration file, 
+which will be shared by all platforms.
 Then, set the \MacroNI{LOCAL\_CONFIG\_FILE} configuration variable from that
 global configuration file to specify both a platform-specific
 configuration file and
 optionally, a local, machine-specific configuration file.
 
-The order of file specification in the
-\MacroNI{LOCAL\_CONFIG\_FILE} configuration variable is important,
-because settings
-in files at the beginning of the list are overridden if the same
-settings occur in files later within the list.  So, if specifying the
-platform-specific file and then the machine-specific file, settings in
-the machine-specific file would override those in the
-platform-specific file (as is likely desired).  
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Specify-Platform-Files}Utilizing a
-Platform-Specific Configuration File} 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 The name of 
-platform-specific configuration files may be specified by using the
-\MacroNI{ARCH} and \MacroNI{OPSYS} configuration variables, as are defined
-automatically by HTCondor.
+platform-specific configuration files may be specified by using 
+\MacroUNI{ARCH} and \MacroUNI{OPSYS}, 
+as defined automatically by HTCondor.
 For example, for 32-bit Intel Windows 7
 machines and 64-bit Intel Linux machines,
 the files ought to be named:
@@ -56,8 +41,8 @@ the files ought to be named:
 Then, assuming these files are in the directory defined by the
 \MacroNI{ETC} configuration variable,
 and machine-specific configuration files are in
-the same directory, named by each machine's host name, the
-\Macro{LOCAL\_CONFIG\_FILE} configuration macro should be:
+the same directory, named by each machine's host name,
+\Macro{LOCAL\_CONFIG\_FILE} becomes:
 
 \footnotesize
 \begin{verbatim}

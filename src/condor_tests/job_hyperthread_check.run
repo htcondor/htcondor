@@ -1,0 +1,307 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+#use Check::CondorLog;
+use Check::ProcInfo;
+
+my $configfile = "";
+my $ClusterId = 0;
+my $testname =  "job_hyperthread_check";
+
+my %lookups = (
+	"COUNT_HYPERTHREAD_CPUS" => 1,
+	"DETECTED_CPUS" => 1,
+	"DETECTED_PHYSICAL_CPUS" => 1,
+	"DETECTED_CORES" => 1,
+);
+if( -f "/proc/cpuinfo") {
+	print "**************************************** /proc/cpuinfo ***********************************\n";
+	system("cat /proc/cpuinfo");
+	print "******************************************************************************************\n";
+}
+my $trueappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	COUNT_HYPERTHREAD_CPUS = True
+';
+
+my $trueconfigfile = CondorTest::CreateLocalConfig($trueappend_condor_config,"hyperthreadcheckT");
+
+my $falseappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	COUNT_HYPERTHREAD_CPUS = False
+';
+my $falseconfigfile = CondorTest::CreateLocalConfig($falseappend_condor_config,"hyperthreadcheckF");
+
+my $awktest = "awk \'\/ id\t+:\/\{if (\$1==\"core\") \{c\[id \":\" \$4\]+=1\} else \{id=\$4\}\}END\{for (k in c) print k, c\[k\]\}\' /proc/cpuinfo ";
+my $procreader = "./count_cpus";
+#
+# Validate our hyperthreading with COUNT_HYPERTHREAD_CPUS both true and false
+# depending on the default, we will test and switch it the other way and test again
+#
+
+my $done = 0;
+my $initialcountsetting = "";
+my $answer = "";
+
+my @parrams = ();
+
+print "Here are the initial lookups:\n";
+show_lookups();
+
+my $res = runCondorTool("condor_config_val -dump COUNT_HYPERTHREAD_CPUS",\@parrams,2,{emit_output=>1});
+
+if($res != 1) {
+	print "Getting value for COUNT_HYPERTHREAD_CPUS failed\n"
+} else {
+	foreach my $line (@parrams) {
+		if($line =~ /^\s*COUNT_HYPERTHREAD_CPUS\s+=\s+(\w+).*$/) {
+			print "Good we have the value for COUNT_HYPERTHREAD_CPUS:$1\n";
+			$answer = $1;
+			if($answer =~ /true/i) {
+				$initialcount = "TRUE";
+			} elsif($answer =~ /false/i) {
+				$initialcount = "FALSE";
+			} else {
+				print "No valid initial setting\n";
+			}
+		} else {
+			#print "Ignoring $line\n";
+		}
+	}
+}
+
+my @count = ();
+my @acount = ();
+my @vmcount = ();
+my $countres = "";
+my $acountres = "";
+my $vmcountres = "";
+
+$countres = CountCpus();
+$acountres = CountWithAwk();
+
+# lets get the two variances on what /proc/cpuinfo says
+
+@count = split /:/, $countres;
+@acount = split /:/, $acountres;
+
+# first array member is physical cores and second hyper threads
+# do they agree?
+
+if($count[0] == $acount[0]) {
+	print "Evidence says $count[0] cores\n";
+} else {
+	print "Two methods do not agree on real cores: $count[0]/$acount[0]\n";
+}
+
+if($count[1] == $acount[1]) {
+	print "Evidence says $count[1] Hyperthreads\n";
+} else {
+	print "Two methods do not agree on real hyperthread cores: $count[0]/$acount[0]\n";
+}
+
+# detection scheme does not work on VM's /proc/cpuinfo so we do a more simplistic test
+if(($count[0] == 0) && ($count[1] == 0)) {
+	$vmcountres = BasicProcCount("/proc/cpuinfo");
+	@count = split /:/, $vmcountres;
+}
+
+
+my $start = 1;
+my $hyperthread = 0;
+
+if($initialcount eq "TRUE") {
+	print "First testing will be with HYPERTHREADING ON\n";
+	$hyperthread = 1;
+} else {
+	print "First testing will be with HYPERTHREADING OFF\n";
+	$hyperthread = 0;
+}
+
+while( $done == 0 ) {
+	if($start != 1) {
+
+		if($hyperthread == 1) {
+			my $falsecondorinfo =CondorTest::StartCondorWithParams(
+				condor_name => "hyperthreadcheckF",
+				fresh_local => "TRUE",
+				condorlocalsrc => "$falseconfigfile",
+			);
+			$hyperthread = 0;
+		} else {
+			my $truecondorinfo =CondorTest::StartCondorWithParams(
+				condor_name => "hyperthreadcheckT",
+				fresh_local => "TRUE",
+				condorlocalsrc => "$trueconfigfile",
+			);
+			$hyperthread = 1;
+		}
+	}
+
+	# We either run with the condor we inherit at birth, or we start up
+	# the opposite mode of hyperthread detection. Get the condor setting
+	# after the possible condor change.
+
+	get_lookups();
+	show_lookups();
+
+
+	if($hyperthread == 1) {
+		if($lookups{"DETECTED_PHYSICAL_CPUS"} != $count[0]) {
+			print "BAD: Condor real cores:$lookups{\"DETECTED_PHYSICAL_CPUS\"} cpuinfo:$count[0]\n";
+			CondorTest::RegisterResult(0,"test_name","$testname");
+		} else {
+			print "Physicals cores MATCH\n";
+			CondorTest::RegisterResult(1,"test_name","$testname");
+		}
+		if($lookups{"DETECTED_CPUS"} != $count[1]) {
+			print "BAD: Condor HT cores:$lookups{\"DETECTED_CPUS\"} cpuinfo:$count[1]\n";
+			CondorTest::RegisterResult(0,"test_name","$testname");
+		} else {
+			print "Hyperthreaded cores MATCH\n";
+			CondorTest::RegisterResult(1,"test_name","$testname");
+		}
+	} else {
+		if($lookups{"DETECTED_PHYSICAL_CPUS"} != $count[0]) {
+			print "BAD: Condor real cores:$lookups{\"DETECTED_PHYSICAL_CPUS\"} cpuinfo:$count[0]\n";
+			CondorTest::RegisterResult(0,"test_name","$testname");
+		} else {
+			print "Physicals cores MATCH\n";
+			CondorTest::RegisterResult(1,"test_name","$testname");
+		}
+		if($lookups{"DETECTED_CPUS"} != $count[0]) {
+			print "BAD: Detected CPUs should be real cores. detected cores:$lookups{\"DETECTED_CPUS\"} physical cores:$count[0]\n";
+			CondorTest::RegisterResult(0,"test_name","$testname");
+		} else {
+			print "Detectec CPUS are and should be only physical cpus!!\n";
+			CondorTest::RegisterResult(1,"test_name","$testname");
+		}
+	}
+
+#CondorTest::RegisterResult(1,{test_name => $test_name});
+#CondorTest::RegisterResult(0,{test_name => $test_name});
+	if($start == 0) {
+		$done = 1;
+	}
+	$start = 0;
+	#$done = 1;
+}
+
+CondorTest::EndTest();
+
+sub ccv_getval {
+	my $lookup = shift;
+	my @response = ();
+	my $cmd_retval = 0;
+	my $res = runCondorTool("condor_config_val $lookup",\@response,2,{emit_output=>0,expect_result=>\ANY},\$cmd_retval);
+	#print "ccv_getval: lookup:$lokup $res:$res cmd_retval:$cmd_retval\n";
+	if(($res == 1)&&($cmd_cmd_retval == 0)) {
+		my $value = $response[0];
+		fullchomp($value);
+		#print "returning $value\n";
+		return($value);
+	} else {
+		my $value = $response[0];
+		fullchomp($value);
+		print "ERROR down below: $value\n";
+		return("ccv of $lookup failed");
+	}
+}
+
+
+sub get_lookups {
+	foreach my $key (sort keys %lookups) {
+		#print "looking up $key\n";
+		$lookups{$key} = ccv_getval($key);
+	}
+}
+
+sub show_lookups {
+	foreach my $key (sort keys %lookups) {
+		print "$key: $lookups{$key}\n";
+	}
+}
+
+sub CountCpus {
+	my @cpus = `$procreader`;
+	my $cores = 0;
+	my $hts = 0;
+	foreach my $line (@cpus) {
+		fullchomp($line);
+		if($line =~ /^\s*Real_cores=(\d+),\s+Hyper_cores=(\d+).*$/) {
+			$cores = $1;
+			$hts = $2;
+		}
+		print "$line\n";
+	}
+	print "cores:$cores hts:$hts\n";
+	return("$cores:$hts");
+}
+
+sub CountWithAwk {
+	my @cpus = `$awktest`;
+	my $cores = 0;
+	my $hts = 0;
+	foreach my $line (@cpus) {
+		fullchomp($line);
+		if($line =~ /^(\d+:\d+)\s+(\d+).*$/) {
+			$cores += 1;
+			$hts += $2;
+		}
+		print "$line\n";
+	}
+	print "cores:$cores hts:$hts\n";
+	return("$cores:$hts");
+}
+
+sub BasicProcCount {
+	my $file = shift;
+	my @keyarray;
+	my $cmd = "";
+	my $line = "";
+	my %prochash = ();
+	my $key = "";
+	my $cores = 0;
+	# no hyper threads if going this route, running on vm
+	my $hts = 0;
+
+	open(FI,"<$file") or die "Failed to open $file:$!\n";
+	while(<FI>) {
+		chomp($_);
+		$line = $_;
+		if($line =~ /^\s*processor\s+:\s+(\d+).*$/ ) {
+			$key = "proc$1";
+			if(exists $prochash{$key}) {
+				die "Trying to double count $key\n";
+			} else {
+				$prochash{$key} = 1;
+			}
+		}
+	}
+	close(FI);
+	@keyarray = keys %prochash;
+	$cores =  @keyarray;
+	$hts = $cores;
+	print "BasicProcessorCount for VM:We found $cores cores\n";
+	return("$cores:$hts");
+}

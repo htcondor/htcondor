@@ -35,16 +35,25 @@ void init_local_hostname()
 	char hostname[MAXHOSTNAMELEN];
 	int ret;
 
+	std::string network_hostname;
+	if (param(network_hostname, "NETWORK_HOSTNAME")) {
+		strncpy(hostname, network_hostname.c_str(), sizeof(hostname));
+		hostname[sizeof(hostname)-1] = '\0';
+
+		dprintf(D_HOSTNAME, "NETWORK_HOSTNAME says we are %s\n", hostname);
+	} else {
+
 		// [TODO:IPV6] condor_gethostname is not IPv6 safe.
 		// reimplement it.
-	ret = condor_gethostname(hostname, sizeof(hostname));
-	if (ret) {
-		dprintf(D_ALWAYS, "condor_gethostname() failed. Cannot initialize "
-				"local hostname, ip address, FQDN.\n");
-		return;
-	}
+		ret = condor_gethostname(hostname, sizeof(hostname));
+		if (ret) {
+			dprintf(D_ALWAYS, "condor_gethostname() failed. Cannot initialize "
+					"local hostname, ip address, FQDN.\n");
+			return;
+		}
 
-	dprintf(D_HOSTNAME, "condor_gethostname() claims we are %s\n", hostname);
+		dprintf(D_HOSTNAME, "condor_gethostname() claims we are %s\n", hostname);
+	}
 
 	// Fallback case.
 	local_hostname = hostname;
@@ -57,7 +66,6 @@ void init_local_hostname()
 	}
 
 		// Dig around for an IP address in the interfaces
-		// TODO WARNING: Will only return IPv4 addresses!
 	if( ! ipaddr_inited ) {
 		std::string ip;
 		if( ! network_interface_to_ip("NETWORK_INTERFACE", network_interface.Value(), ip, NULL)) {

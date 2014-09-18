@@ -38,6 +38,7 @@ double pfc_lc_rt_read_data = 0;
 class _lc_auto_save_runtime
 {
 public:
+#ifdef PROFILE_PROCAPI
    double & runtime;
    double   begin;
    double   begin_step;
@@ -50,7 +51,11 @@ public:
       begin_step = now; 
       return ret; 
    }
-   double   current_time() {
+#else
+   _lc_auto_save_runtime(double & store) {}
+   double step() { return 0; }
+#endif
+   double   current_time() const {
 #if defined(HAVE__FTIME)
 	struct _timeb timebuffer;
 	_ftime( &timebuffer );

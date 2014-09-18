@@ -8,6 +8,11 @@ cmd_wait_shows-all
 cmd_wait_shows-base
 cmd_wait_shows-notimeout
 cmd_wait_shows-partial
+# bug in windows disconnect/reconnect  reconnection failure
+job_schedd_restart-check_reconnect
+job_schedd_restart-runningjobs-ok
+# dagman gets a hard kill
+job_dagman_node_status_rm
 
 #Java tests turned off since java in refactor glue still not working windows 8
 # bt 6/3/14
@@ -26,6 +31,7 @@ lib_eventlog_base
 lib_procapi_pidtracking-snapshot
 lib_unit_tests
 file_transfer_submit
+job_slash_transfer
 
 job_aggressive_flocking
 job_basic_kill

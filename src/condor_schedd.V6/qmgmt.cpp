@@ -1303,7 +1303,11 @@ isQueueSuperUser( const char* user )
             continue;
         }
 #endif
+#if defined(WIN32) // usernames on Windows are case-insensitive.
+		if( strcasecmp( user, super_users[i] ) == 0 ) {
+#else
 		if( strcmp( user, super_users[i] ) == 0 ) {
+#endif
 			return true;
 		}
 	}
@@ -4804,11 +4808,24 @@ void DirtyPrioRecArray() {
 	PrioRecArrayIsDirty = true;
 }
 
+// runtime stats for count & time spent building the priorec array
+//
+typedef _condor_auto_save_runtime< stats_entry_probe<double> > condor_auto_runtime;
+stats_entry_probe<double> build_priorec_runtime;
+stats_entry_probe<double> build_priorec_mark_runtime;
+stats_entry_probe<double> build_priorec_walk_runtime;
+stats_entry_probe<double> build_priorec_sort_runtime;
+stats_entry_probe<double> build_priorec_sweep_runtime;
+
 static void DoBuildPrioRecArray() {
+	condor_auto_runtime rt(build_priorec_runtime);
+	double now = rt.begin;
 	scheduler.autocluster.mark();
+	build_priorec_mark_runtime += rt.tick(now);
 
 	N_PrioRecs = 0;
 	WalkJobQueue( get_job_prio );
+	build_priorec_walk_runtime += rt.tick(now);
 
 		// N_PrioRecs might be 0, if we have no jobs to run at the
 		// moment.  If so, we don't want to call qsort(), since that's
@@ -4819,9 +4836,11 @@ static void DoBuildPrioRecArray() {
 	if( N_PrioRecs ) {
 		qsort( (char *)PrioRec, N_PrioRecs, sizeof(PrioRec[0]),
 			   (int(*)(const void*, const void*))prio_compar );
+		build_priorec_sort_runtime += rt.tick(now);
 	}
 
 	scheduler.autocluster.sweep();
+	build_priorec_sweep_runtime += rt.tick(now);
 
 	if( !scheduler.shadow_prio_recs_consistent() ) {
 		scheduler.mail_problem_message();

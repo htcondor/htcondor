@@ -156,6 +156,7 @@ enum {
    IF_PUBKIND    = 0x0F00000, // category bits
    IF_NONZERO    = 0x1000000, // only publish non-zero values.
    IF_NOLIFETIME = 0x2000000, // don't publish lifetime values
+   IF_RT_SUM     = 0x4000000, // publish probe Sum value as Runtime
    IF_PUBMASK    = 0x0FF0000, // bits that affect publication
    };
 
@@ -1036,10 +1037,11 @@ public:
 // its 'value' field to hold the count of samples.  the value of the
 // samples themselves are not stored, only the sum, min and max are stored.
 //
-template <class T> class stats_entry_probe : protected stats_entry_count<T> {
+GCC_DIAG_OFF(float-equal)
+template <typename T> class stats_entry_probe : public stats_entry_count<T> {
 public:
    stats_entry_probe() 
-      : Max(std::numeric_limits<T>::min())
+      : Max(-(std::numeric_limits<T>::max()))
       , Min(std::numeric_limits<T>::max())
       , Sum(0)
       , SumSq(0) 
@@ -1058,7 +1060,7 @@ public:
 
    void Clear() {
       this->value = 0; // value is use to store the count of samples.
-      Max = std::numeric_limits<T>::min();
+      Max = -(std::numeric_limits<T>::max());
       Min = std::numeric_limits<T>::max();
       Sum = 0;
       SumSq = 0;
@@ -1073,9 +1075,9 @@ public:
       return Sum;
    }
 
-   T Count() { return this->value; }
+   T Count() const { return this->value; }
 
-   T Avg() {
+   T Avg() const {
       if (Count() > 0) {
          return this->Sum / Count();
       } else {
@@ -1083,7 +1085,7 @@ public:
       }
    }
 
-   T Var() {
+   T Var() const {
       if (Count() <= 1) {
          return this->Min;
       } else {
@@ -1092,7 +1094,7 @@ public:
       }
    }
 
-   T Std() {
+   T Std() const {
       if (Count() <= 1) {
          return this->Min;
       } else {
@@ -1108,6 +1110,7 @@ public:
    static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_probe<T>::Unpublish; };
    static void Delete(stats_entry_probe<T> * probe) { delete probe; }
 };
+GCC_DIAG_ON(float-equal)
 
 // --------------------------------------------------------------------
 //   Full Min/Max/Avg/Std Probe class for use with stats_entry_recent
@@ -1341,9 +1344,9 @@ T stats_histogram<T>::Add(T val)
     */
 
     return val;
-															}
+}
 
-															template<class T>
+template<class T>
 T stats_histogram<T>::Remove(T val)
 {
    int ix = 0;

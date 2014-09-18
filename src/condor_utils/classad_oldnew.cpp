@@ -643,7 +643,7 @@ int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::
 				}
 			}
 		}
-		ad.Remove("MY");
+		ad.Delete("MY");
 		classad::References::iterator my = expanded_whitelist.find("MY");
 		if (my != expanded_whitelist.end()) { expanded_whitelist.erase(my); }
 		whitelist = &expanded_whitelist;

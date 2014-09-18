@@ -16,6 +16,98 @@ New features will be added in the 8.3.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-2-3}Version 8.2.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.2.3 not yet released.
+%\item HTCondor version 8.2.3 released on Month Date, 2014.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item The new configuration variable \Macro{NETWORK\_HOSTNAME} sets
+the host name that HTCondor uses to identify the local machine.
+If \MacroNI{NETWORK\_HOSTNAME} is not set, 
+then HTCondor uses the \Procedure{gethostname} function to determine 
+the machine's host name.
+This variable is useful if a machine has multiple network interfaces
+with different host names.
+\Ticket{4570}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
+no longer causes a link error.
+\Ticket{4486}
+
+\item EC2 grid universe jobs which use the X.509 authentication method will
+no longer crash if environment variable \Env{USER} is not set.
+\Ticket{4540}
+
+\item Fixed a rare memory leak. 
+The leak occurred when IPv6 was disabled, 
+but configuration variables \MacroNI{NETWORK\_INTERFACE} 
+and \MacroNI{COLLECTOR\_HOST} were set to IPv6 addresses.
+\Ticket{4502}
+
+\item Fixed a bug in which \Condor{qsub} mishandled setting a memory request 
+with a command line argument similar to \Opt{-l mem=2048MB}.
+\Ticket{4549}
+
+\item Fixed a bug that caused the \Condor{gridmanager} to fail to talk
+to the \Condor{schedd} if the user's account was in a Windows domain.
+\Ticket{4568}
+
+\item On Windows platforms, users listed in the \Macro{QUEUE\_SUPER\_USERS} 
+configuration variable are now checked in a case-insensitive way,
+since user names are case-insensitive on Windows.
+\Ticket{4579}
+
+\item Fixed a bug that could prevent the \Condor{schedd} job queue log 
+from rotating on Windows platforms.
+\Ticket{4548}
+
+\item Fixed a bug that caused all HTCondor daemons to leak 
+a small amount of memory upon reconfiguration.
+\Ticket{4582}
+
+\item Fixed a bug that caused \Condor{config\_val} \Opt{-verbose} to sometimes append incorrect meta-knob
+information to the file and line number information for a configuration variable.
+\Ticket{4559}
+
+\item Fixed a bug that sometimes prevented adding a \File{.txt} file name
+extension to the log file name of an HTCondor daemon on Windows platforms.
+\Ticket{4571}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item On Windows platforms only, issuing \Condor{rm} on a 
+\Condor{dagman} job does not work correctly.
+The \Condor{dagman} process is immediately killed,
+and it does not write a Rescue DAG or remove its node jobs.
+Note that this bug has probably existed since DAGMan was first
+implemented on the Windows platform.
+\Ticket{4566}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-2-2}Version 8.2.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -23,8 +115,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.2.2 not yet released.
-%\item HTCondor version 8.2.2 released on Month Date, 2014.
+\item HTCondor version 8.2.2 released on August 7, 2014.
+
+\item This version of HTCondor includes a full port for 
+Red Hat Enterprise Linux 7.0 on the x86\_64 architecture.
+A full port includes support for the standard universe.
+\Ticket{4511}
+
+\item The RPM for RHEL 7 contains several subpackages for elements of HTCondor,
+modernizing the RPM-based installation.
+\Ticket{4518}
 
 \end{itemize}
 
@@ -40,6 +140,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item When using the Windows installer,
+the choice of a new pool caused an invalid value in the configuration of 
+\Expr{\$\$(FULL\_HOSTNAME)} to be used, 
+instead of the correct value of \Expr{\$(FULL\_HOSTNAME)}.
+This prevented all daemons from talking to the \Condor{collector} daemon.
+\Ticket{4509}
+
+\item Fixed a bug that only manifested on Linux 3.14 or more recent kernels, 
+which caused the \Condor{collector} to respond very slowly to queries.
+\Ticket{4489}
+
 \item Fixed a Windows platform bug that caused \Condor{status} to abort
 when \Macro{ENABLE\_CLASSAD\_CACHING} was set to \Expr{True}. 
 \Ticket{4459}
@@ -48,6 +159,9 @@ when \Macro{ENABLE\_CLASSAD\_CACHING} was set to \Expr{True}.
 on Linux platforms.
 All cores reported as full cores without hyper-threading. 
 \Ticket{4458}
+
+\item Fixed the detection of hyper-threaded cores on Mac OS X platforms.
+\Ticket{4516}
 
 \item Fixed a Windows platform bug that caused the \Condor{starter}
 to abort while creating the job sandbox.
@@ -123,6 +237,24 @@ determination.
 \item Fixed a bug that could cause GSI security operations to fail if
 \Env{GLOBUS\_THREAD\_MODEL} was set in the environment.
 \Ticket{4464}
+
+\item Fixed a bug in \Condor{ft-gahp} that caused it to ignore the peer
+version given by the \Expr{CONDOR\_VERSION} command, causing it to think that
+its file transfer peer was the same version as itself.
+\Ticket{4473}
+
+\item Fixed the handling of optional authentication parameters given to
+\Prog{remote\_gahp}. This is used as part of the batch grid-type when
+submitting jobs to a remote system via \Prog{ssh}.
+\Ticket{4434}
+
+\item  Fixed a bug in the parsing the value set for the
+\Attr{Detected<Tag>} attribute of the output of a script specified by
+configuration variable \Macro{MACHINE\_RESOURCE\_INVENTORY\_<TAG>}.
+If the value of \Attr{Detected<Tag>} was not a string, 
+then it would not be parsed correctly. 
+As a result the resource quantity would be set to 0.
+\Ticket{4427}
 
 \end{itemize}
 

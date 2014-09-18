@@ -350,6 +350,13 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		args.AppendArg( dmask.c_str() );
 	}
 
+		// Suppress the job's log file if that option is enabled.
+	if ( workflowLogFile && dm._suppressJobLogs ) {
+		debug_printf( DEBUG_VERBOSE, "Suppressing node job log file\n" );
+		args.AppendArg( "-a" );
+		args.AppendArg( "log = ''" );
+	}
+
 	ArgList parentNameArgs;
 	parentNameArgs.AppendArg( "-a" );
 	MyString parentNodeNames = MyString( "+DAGParentNodeNames = " ) +

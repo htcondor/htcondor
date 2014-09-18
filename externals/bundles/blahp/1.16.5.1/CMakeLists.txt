@@ -49,7 +49,7 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.5.1-p14 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.5.1-p15 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
@@ -87,6 +87,7 @@ if ( WITH_BLAHP )
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/${GLOBUS_M4_FILE} project/globus.m4 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/glite.m4 project/ &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/name-change.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/lsf-status.patch -p1 &&
 							mv config/blah.config.template config/batch_gahp.config.template
 						#--Configure step ----------
 						CONFIGURE_COMMAND export CPPFLAGS=${CPP11_FLAG} &&

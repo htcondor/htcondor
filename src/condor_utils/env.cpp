@@ -557,6 +557,19 @@ Env::SetEnv( const MyString & var, const MyString & val )
 }
 
 bool
+Env::DeleteEnv(const std::string & name)
+{
+	if (!name.size()) { return false; }
+
+	bool ret = (_envTable->remove(name.c_str()) == 0);
+
+#if defined(WIN32)
+	m_sorted_varnames.erase(name.c_str());
+#endif
+	return ret;
+}
+
+bool
 Env::getDelimitedStringV1or2Raw(ClassAd const *ad,MyString *result,MyString *error_msg)
 {
 	Clear();

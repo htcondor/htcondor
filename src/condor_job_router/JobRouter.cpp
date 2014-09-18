@@ -61,7 +61,10 @@ const char JR_ATTR_EDIT_JOB_IN_PLACE[] = "EditJobInPlace";
 
 const int THROTTLE_UPDATE_INTERVAL = 600;
 
-JobRouter::JobRouter(): m_jobs(5000,hashFuncStdString,rejectDuplicateKeys) {
+JobRouter::JobRouter(bool as_tool)
+	: m_jobs(5000,hashFuncStdString,rejectDuplicateKeys)
+	, m_operate_as_tool(as_tool)
+{
 	m_scheduler = NULL;
 	m_scheduler2 = NULL;
 	m_release_on_hold = true;
@@ -119,7 +122,7 @@ JobRouter::~JobRouter() {
 		delete m_hook_mgr;
 	}
 #endif
-	InvalidatePublicAd();
+	if ( ! m_operate_as_tool) { InvalidatePublicAd(); }
 
 	m_scheduler->stop();
 	delete m_scheduler;
@@ -138,7 +141,7 @@ JobRouter::init() {
 	m_hook_mgr->initialize();
 #endif
 	config();
-	GetInstanceLock();
+	if ( ! m_operate_as_tool) { GetInstanceLock(); }
 }
 
 void
@@ -177,8 +180,7 @@ JobRouter::config() {
 	m_enable_job_routing = true;
 
 	if( !m_scheduler ) {
-		NewClassAdJobLogConsumer *log_consumer = new NewClassAdJobLogConsumer();
-		m_scheduler = new Scheduler(log_consumer,"JOB_ROUTER_SCHEDD1_SPOOL");
+		m_scheduler = new Scheduler("JOB_ROUTER_SCHEDD1_SPOOL");
 		m_scheduler->init();
 	}
 
@@ -187,8 +189,7 @@ JobRouter::config() {
 		if( !m_scheduler2 ) {
 				// schedd2_spool is configured, but we have no schedd2, so create it
 			dprintf(D_ALWAYS,"Reading destination schedd spool %s\n",spool2.c_str());
-			NewClassAdJobLogConsumer *log_consumer2 = new NewClassAdJobLogConsumer();
-			m_scheduler2 = new Scheduler(log_consumer2,"JOB_ROUTER_SCHEDD2_SPOOL");
+			m_scheduler2 = new Scheduler("JOB_ROUTER_SCHEDD2_SPOOL");
 			m_scheduler2->init();
 		}
 	}
@@ -237,15 +238,20 @@ JobRouter::config() {
 
 	RoutingTable *new_routes = new RoutingTable(200,hashFuncStdString,rejectDuplicateKeys);
 
-	char *router_defaults_str = param(PARAM_JOB_ROUTER_DEFAULTS);
 	classad::ClassAd router_defaults_ad;
-	if(router_defaults_str) {
+	std::string router_defaults;
+	if (param(router_defaults, PARAM_JOB_ROUTER_DEFAULTS) && ! router_defaults.empty()) {
+		// if the param doesn't start with [, then wrap it in [] before parsing, so that the parser knows to expect new classad syntax.
+		if (router_defaults[0] != '[') {
+			router_defaults.insert(0, "[ ");
+			router_defaults.append(" ]");
+		}
 		classad::ClassAdParser parser;
-		if(!parser.ParseClassAd(router_defaults_str,router_defaults_ad)) {
-			dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: Disabling job routing, because failed to parse %s classad: '%s'\n",PARAM_JOB_ROUTER_DEFAULTS,router_defaults_str);
+		if ( ! parser.ParseClassAd(router_defaults, router_defaults_ad)) {
+			dprintf(D_ALWAYS|D_ERROR,"JobRouter CONFIGURATION ERROR: Disabling job routing, because failed to parse %s classad:\n%s\n",
+				PARAM_JOB_ROUTER_DEFAULTS, router_defaults.c_str());
 			m_enable_job_routing = false;
 		}
-		free(router_defaults_str);
 	}
 	if(!m_enable_job_routing) {
 		delete new_routes;
@@ -354,29 +360,31 @@ JobRouter::config() {
 	m_job_router_polling_period = param_integer("JOB_ROUTER_POLLING_PERIOD",10);
 
 		// clear previous timers
-	if (m_job_router_polling_timer >= 0) {
-		daemonCore->Cancel_Timer(m_job_router_polling_timer);
-	}
-	if (m_periodic_timer_id >= 0) {
-		daemonCore->Cancel_Timer(m_periodic_timer_id);
-	}
-		// register timer handlers
-	m_job_router_polling_timer = daemonCore->Register_Timer(
-								  0, 
-								  m_job_router_polling_period,
-								  (TimerHandlercpp)&JobRouter::Poll, 
-								  "JobRouter::Poll", this);
+	if ( ! m_operate_as_tool) {
+		if (m_job_router_polling_timer >= 0) {
+			daemonCore->Cancel_Timer(m_job_router_polling_timer);
+		}
+		if (m_periodic_timer_id >= 0) {
+			daemonCore->Cancel_Timer(m_periodic_timer_id);
+		}
+			// register timer handlers
+		m_job_router_polling_timer = daemonCore->Register_Timer(
+										0,
+										m_job_router_polling_period,
+										(TimerHandlercpp)&JobRouter::Poll,
+										"JobRouter::Poll", this);
 
-	if (periodic_interval.getMinInterval() > 0) {
-		m_periodic_timer_id = daemonCore->Register_Timer(periodic_interval, 
-								(TimerHandlercpp)&JobRouter::EvalAllSrcJobPeriodicExprs,
-								"JobRouter::EvalAllSrcJobPeriodicExprs",
-								this);
-		dprintf(D_FULLDEBUG, "JobRouter: Registered EvalAllSrcJobPeriodicExprs() to evaluate periodic expressions.\n");
-	}
-	else {
-		dprintf(D_FULLDEBUG, "JobRouter: Evaluation of periodic expressions disabled.\n");
-	}
+		if (periodic_interval.getMinInterval() > 0) {
+			m_periodic_timer_id = daemonCore->Register_Timer(periodic_interval, 
+									(TimerHandlercpp)&JobRouter::EvalAllSrcJobPeriodicExprs,
+									"JobRouter::EvalAllSrcJobPeriodicExprs",
+									this);
+			dprintf(D_FULLDEBUG, "JobRouter: Registered EvalAllSrcJobPeriodicExprs() to evaluate periodic expressions.\n");
+		}
+		else {
+			dprintf(D_FULLDEBUG, "JobRouter: Evaluation of periodic expressions disabled.\n");
+		}
+	} // ! m_operate_as_tool
 
 		// NOTE: if you change the default name, then you are breaking
 		// JobRouter's ability to adopt jobs ("orphans") left behind
@@ -390,25 +398,27 @@ JobRouter::config() {
 		EXCEPT("JOB_ROUTER_NAME must not be empty");
 	}
 
-	InitPublicAd();
+	if ( ! m_operate_as_tool) {
+		InitPublicAd();
 
-	int update_interval = param_integer("UPDATE_INTERVAL", 60);
-	if(m_public_ad_update_interval != update_interval) {
-		m_public_ad_update_interval = update_interval;
+		int update_interval = param_integer("UPDATE_INTERVAL", 60);
+		if(m_public_ad_update_interval != update_interval) {
+			m_public_ad_update_interval = update_interval;
 
-		if(m_public_ad_update_timer >= 0) {
-			daemonCore->Cancel_Timer(m_public_ad_update_timer);
-			m_public_ad_update_timer = -1;
+			if(m_public_ad_update_timer >= 0) {
+				daemonCore->Cancel_Timer(m_public_ad_update_timer);
+				m_public_ad_update_timer = -1;
+			}
+			dprintf(D_FULLDEBUG, "Setting update interval to %d\n",
+				m_public_ad_update_interval);
+			m_public_ad_update_timer = daemonCore->Register_Timer(
+				0,
+				m_public_ad_update_interval,
+				(TimerHandlercpp)&JobRouter::TimerHandler_UpdateCollector,
+				"JobRouter::TimerHandler_UpdateCollector",
+				this);
 		}
-		dprintf(D_FULLDEBUG, "Setting update interval to %d\n",
-			m_public_ad_update_interval);
-		m_public_ad_update_timer = daemonCore->Register_Timer(
-			0,
-			m_public_ad_update_interval,
-			(TimerHandlercpp)&JobRouter::TimerHandler_UpdateCollector,
-			"JobRouter::TimerHandler_UpdateCollector",
-			this);
-	}
+	} // ! m_operate_as_tool
 
 	param(m_schedd2_name_buf,"JOB_ROUTER_SCHEDD2_NAME");
 	param(m_schedd2_pool_buf,"JOB_ROUTER_SCHEDD2_POOL");
@@ -429,6 +439,54 @@ JobRouter::config() {
 	}
 }
 
+void JobRouter::dump_routes(FILE* hf) // dump the routing information to the given file.
+{
+	int ixRoute = 1;
+	JobRoute *route;
+	m_routes->startIterations();
+	while(m_routes->iterate(route)) {
+		/*
+		classad::ClassAd *RouteAd() {return &m_route_ad;}
+		char const *Name() {return m_name.c_str();}
+		int MaxJobs() {return m_max_jobs;}
+		int MaxIdleJobs() {return m_max_idle_jobs;}
+		int CurrentRoutedJobs() {return m_num_jobs;}
+		int TargetUniverse() {return m_target_universe;}
+		char const *GridResource() {return m_grid_resource.c_str();}
+		classad::ExprTree *RouteRequirementExpr() {return m_route_requirements;}
+		char const *RouteRequirementsString() {return m_route_requirements_str.c_str();}
+		std::string RouteString(); // returns a string describing the route
+		*/
+		fprintf(hf, "Route %d\n", ixRoute);
+		fprintf(hf, "Name         : \"%s\"\n", route->Name());
+		fprintf(hf, "Universe     : %d\n", route->TargetUniverse());
+		//fprintf(hf, "RoutedJobs   : %d\n", route->CurrentRoutedJobs());
+		fprintf(hf, "MaxJobs      : %d\n", route->MaxJobs());
+		fprintf(hf, "MaxIdleJobs  : %d\n", route->MaxIdleJobs());
+		fprintf(hf, "GridResource : %s\n", route->GridResource());
+		fprintf(hf, "Requirements : %s\n", route->RouteRequirementsString());
+
+		fprintf(hf, "ClassAd      : ");
+		std::string route_ad_string;
+		if (route->RouteStringPretty(route_ad_string)) {
+			fprintf(hf, "%s", route_ad_string.c_str());
+		}
+		fprintf(hf, "\n");
+
+		fprintf(hf, "\n");
+		++ixRoute;
+	}
+}
+
+
+void
+JobRouter::set_schedds(Scheduler* schedd, Scheduler* schedd2)
+{
+	ASSERT(m_operate_as_tool);
+	m_scheduler = schedd;
+	m_scheduler2 = schedd2;
+}
+
 classad::ClassAdCollection *
 JobRouter::GetSchedd1ClassAds() {
 	return m_scheduler->GetClassAds();
@@ -441,6 +499,7 @@ JobRouter::GetSchedd2ClassAds() {
 void
 JobRouter::InitPublicAd()
 {
+	ASSERT( ! m_operate_as_tool);
 	ASSERT (m_job_router_name.size() > 0);
 
 	char *valid_name = build_valid_daemon_name(m_job_router_name.c_str());
@@ -687,7 +746,8 @@ JobRouter::ParseRoutingEntries( std::string const &routing_string, char const *p
 				break;
 			}
 
-			dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: Ignoring the malformed route entry in %s, starting here: %s\n",param_name,routing_string.c_str() + this_offset);
+			dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: Ignoring the malformed route entry in %s, at offset %d starting here:\n%s\n",
+				param_name, this_offset, routing_string.substr(this_offset, 79).c_str());
 
 			// skip any junk and try parsing the next route in the list
 			while((int)routing_string.size() > offset && routing_string[offset] != '[') offset++;
@@ -703,7 +763,8 @@ JobRouter::ParseRoutingEntries( std::string const &routing_string, char const *p
 
 			int override = route.OverrideRoutingEntry();
 			if( override < 0 ) {
-				dprintf(D_ALWAYS,"JobRouter CONFIGURATION WARNING while parsing %s: two route entries have the same name '%s' so the second one will override the first one; if you have not already explicitly given these routes a name with name=\"blah\", you may want to give them different names.  If you just want to suppress this warning, then define OverrideRoutingEntry=True/False in the second routing entry.\n",param_name,route.Name());
+				dprintf(D_ALWAYS,"JobRouter CONFIGURATION WARNING: while parsing %s two route entries have the same name '%s' so the second one will override the first one; if you have not already explicitly given these routes a name with name=\"blah\", you may want to give them different names.  If you just want to suppress this warning, then define OverrideRoutingEntry=True/False in the second routing entry.\n",
+					param_name,route.Name());
 				override = 1;
 			}
 			if( override > 0 ) {  // OverrideRoutingEntry=true
@@ -1092,20 +1153,34 @@ JobRouter::GetCandidateJobs() {
 	HashTable<std::string,std::string> constraint_list(200,hashFuncStdString,rejectDuplicateKeys);
 	std::string umbrella_constraint;
 
+	std::string dbuf("JobRouter: Checking for candidate jobs. routing table is:\n"
+		"Route Name             Submitted/Max        Idle/Max     Throttle");
+	if ( ! m_operate_as_tool) {
+		dbuf += " Recent: Started Succeeded Failed\n";
+	} else {
+		dbuf += "\n";
+	}
 	m_routes->startIterations();
 	while(m_routes->iterate(route)) {
-		dprintf(D_ALWAYS,
-		      "JobRouter (route=%s): %d submitted (max %d), %d idle (max %d), throttle: %s, recent stats: %d started, %d succeeded, %d failed.\n",
+		formatstr_cat(dbuf, "%-24s %7d/%7d %7d/%7d %8s",
 		      route->Name(),
 		      route->CurrentRoutedJobs(),
 		      route->MaxJobs(),
 		      route->CurrentIdleJobs(),
 		      route->MaxIdleJobs(),
-		      route->ThrottleDesc().c_str(),
+		      route->ThrottleDesc().c_str());
+		if ( ! m_operate_as_tool) {
+			formatstr_cat(dbuf, "         %7d %9d %6d\n",
 			  route->RecentRoutedJobs(),
 		      route->RecentSuccesses(),
-			  route->RecentFailures());
+			  route->RecentFailures()
+			);
+		} else {
+			dbuf += "\n";
+		}
 	}
+	dprintf(D_ALWAYS, "%s", dbuf.c_str());
+
 
 	if(!AcceptingMoreJobs()) return; //router is full
 
@@ -1160,7 +1235,7 @@ JobRouter::GetCandidateJobs() {
 	umbrella_constraint += m_job_router_name;
 	umbrella_constraint += "\")";
 
-	if(!can_switch_ids()) {
+	if (m_operate_as_tool || !can_switch_ids()) {
 			// We are not running as root.  Ensure that we only try to
 			// manage jobs submitted by the same user we are running as.
 
@@ -1187,11 +1262,11 @@ JobRouter::GetCandidateJobs() {
 		free(domain);
 	}
 
-	dprintf(D_FULLDEBUG,"JobRouter: umbrella constraint: %s\n",umbrella_constraint.c_str());
+	dprintf(D_FULLDEBUG,"JobRouter: Umbrella constraint: %s\n",umbrella_constraint.c_str());
 
 	constraint_tree = parser.ParseExpression(umbrella_constraint);
 	if(!constraint_tree) {
-		EXCEPT("JobRouter: Failed to parse umbrella constraint: '%s'\n",umbrella_constraint.c_str());
+		EXCEPT("JobRouter: Failed to parse umbrella constraint: %s\n",umbrella_constraint.c_str());
 	}
 
     query.Bind(ad_collection);
@@ -1202,6 +1277,7 @@ JobRouter::GetCandidateJobs() {
 	}
 	delete constraint_tree;
 
+	int cJobsAdded = 0;
     query.ToFirst();
     if( query.Current(key) ) do {
 		if(!AcceptingMoreJobs()) {
@@ -1217,6 +1293,8 @@ JobRouter::GetCandidateJobs() {
 		ad = ad_collection->GetClassAd(key);
 		ASSERT(ad);
 
+		if (m_operate_as_tool) { dprintf(D_FULLDEBUG, "JobRouter: Checking Job src=%s against all routes\n", key.c_str()); }
+
 		bool all_routes_full;
 		route = ChooseRoute(ad,&all_routes_full);
 		if(!route) {
@@ -1224,7 +1302,7 @@ JobRouter::GetCandidateJobs() {
 				dprintf(D_FULLDEBUG,"JobRouter: all routes are full (%d managed jobs).  Skipping further searches for candidate jobs.\n",NumManagedJobs());
 				break;
 			}
-			dprintf(D_FULLDEBUG,"JobRouter (src=%s): no route found\n",key.c_str());
+			dprintf(D_FULLDEBUG,"JobRouter: no route found for src=%s\n",key.c_str());
 			continue;
 		}
 
@@ -1247,10 +1325,15 @@ JobRouter::GetCandidateJobs() {
 		dprintf(D_FULLDEBUG,"JobRouter DEBUG (%s): combined = %s\n",job->JobDesc().c_str(),ClassAdToString(&job->src_ad).c_str());
 		*/
 
-		dprintf(D_FULLDEBUG,"JobRouter (%s): found candidate job\n",job->JobDesc().c_str());
+		dprintf(D_FULLDEBUG,"JobRouter: Found candidate job %s\n",job->JobDesc().c_str());
 		AddJob(job);
+		++cJobsAdded;
 
     } while (query.Next(key));
+
+	if (m_operate_as_tool) {
+		dprintf(D_ALWAYS, "JobRouter: %d candidate jobs found\n", cJobsAdded);
+	}
 }
 
 JobRoute *
@@ -1271,6 +1354,7 @@ JobRouter::ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full) {
 
 		if(mad.EvaluateAttrBool("RightMatchesLeft", match) && match) {
 			matches.push_back(route);
+			if (m_operate_as_tool) { dprintf(D_FULLDEBUG, "JobRouter: \tRoute Matches: %s\n", route->Name()); }
 		}
 
 		mad.RemoveLeftAd();
@@ -2253,6 +2337,8 @@ JobRouter::InvalidatePublicAd() {
 	ClassAd invalidate_ad;
 	MyString line;
 
+	ASSERT( ! m_operate_as_tool);
+
 	SetMyTypeName(invalidate_ad, QUERY_ADTYPE);
 	SetTargetTypeName(invalidate_ad, "Job_Router");
 
@@ -2439,6 +2525,14 @@ JobRoute::RouteString() {
 	classad::ClassAdUnParser unparser;
 	unparser.Unparse(route_string,&m_route_ad);
 	return route_string;
+}
+
+bool JobRoute::RouteStringPretty(std::string & str) {
+	if (m_route_ad.size() <= 0)
+		return false;
+	classad::PrettyPrint unparser;
+	unparser.Unparse(str, &m_route_ad);
+	return !str.empty();
 }
 
 bool

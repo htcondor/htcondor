@@ -343,6 +343,72 @@ void stats_recent_counter_timer::PublishDebug(ClassAd & ad, const char * pattr, 
    this->runtime.PublishDebug(ad, attr.Value(), flags);
 }
 
+template <class T>
+void stats_entry_probe<T>::Publish(ClassAd & ad, const char * pattr, int flags) const
+{
+   // value holds the count of samples.
+   if ((flags & IF_NONZERO) && (this->value >= 0.0 && this->value <= 0.0))
+      return;
+
+   std::string base(pattr);
+   std::string attr;
+
+   // the IF_RT_SUM flag modifies the naming pattern for Miron probes so that the Sum is labeled
+   // as accumulated runtime and the count of samples has no suffix.  This makes them interchangeable
+   // with stats_recent_counter_timer probes.
+   if (flags & IF_RT_SUM) {
+      ad.Assign(base.c_str(), (long long)this->value);
+      base += "Runtime";
+      ad.Assign(base.c_str(), this->Sum);
+   } else {
+      // the default output for Miron probes is to use a std suffix for each bit of info.
+      attr = base; attr += "Count";
+      ad.Assign(attr.c_str(), this->Count());
+      attr = base; attr += "Sum";
+      ad.Assign(attr.c_str(), this->Sum);
+   }
+   if (this->Count() > 0) {
+      attr = base; attr += "Avg";
+      ad.Assign(attr.c_str(), this->Avg());
+
+      attr = base; attr += "Min";
+      ad.Assign(attr.c_str(), this->Min);
+
+      attr = base; attr += "Max";
+      ad.Assign(attr.c_str(), this->Max);
+
+      attr = base; attr += "Std";
+      ad.Assign(attr.c_str(), this->Std());
+   }
+}
+
+template <class T>
+void stats_entry_probe<T>::Unpublish(ClassAd & /*ad*/, const char * /*pattr*/) const
+{
+   /*
+   std::string attr;
+   std::string base(pattr);
+   if (flags & IF_RT_SUM) {
+      ad.Delete(base);
+      base += "Runtime";
+      ad.Delete(base);
+   } else {
+      attr = base; attr += "Count";
+      ad.Delete(attr);
+      attr = base; attr += "Sum";
+      ad.Delete(attr);
+   }
+   attr = base; attr += "Avg";
+   ad.Delete(attr);
+   attr = base; attr += "Min";
+   ad.Delete(attr);
+   attr = base; attr += "Max";
+   ad.Delete(attr);
+   attr = base; attr += "Std";
+   ad.Delete(attr);
+   */
+}
+
 // the Probe class is designed to be instantiated with
 // the stats_entry_recent template,  i.e. stats_entry_recent<Probe>
 // creates a probe that does full statistical sampling (min,max,avg,std)
@@ -1366,6 +1432,7 @@ template class stats_entry_sum_ema_rate<int>;
 template class stats_entry_sum_ema_rate<double>;
 template class stats_entry_ema<int>;
 template class stats_entry_ema<double>;
+template class stats_entry_probe<double>;
 
 //
 // This is how you use the generic_stats functions.

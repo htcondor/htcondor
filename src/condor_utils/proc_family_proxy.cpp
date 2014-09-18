@@ -31,7 +31,7 @@
 #include "procd_config.h"
 
 // enable PROCAPI profileing code.
-#define PROFILE_PROCAPI
+// #define PROFILE_PROCAPI
 
 // this class is just used to forward reap events to the real
 // ProcFamilyProxy object; we do this in a separate class to
@@ -549,6 +549,7 @@ ProcFamilyProxy::start_procd()
 		                                         args,
 		                                         PRIV_ROOT,
 		                                         m_reaper_id,
+		                                         FALSE,
 		                                         FALSE,
 		                                         &env,
 		                                         NULL,

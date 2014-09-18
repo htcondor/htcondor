@@ -76,6 +76,8 @@ class ProcFamilyInterface;
 template <class Key, class Value> class HashTable; // forward declaration
 class Probe;
 
+#define USE_MIRON_PROBE_FOR_DC_RUNTIME_STATS
+
 static const int KEEP_STREAM = 100;
 static const int CLOSE_STREAM = 101;
 static const int MAX_SOCKS_INHERITED = 4;
@@ -228,7 +230,6 @@ int BindAnyLocalCommandPort(ReliSock *rsock, SafeSock *ssock);
     TCP and UDP command socket */
 int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock, condor_protocol proto);
 
-
 class DCSignalMsg: public DCMsg {
  public:
 	DCSignalMsg(pid_t pid, int s): DCMsg(DC_RAISESIGNAL)
@@ -362,6 +363,14 @@ class DaemonCore : public Service
                           int                dprintf_flag     = D_COMMAND,
                           bool               force_authentication = false,
 						  int                wait_for_payload = 0);
+
+    int Register_UnregisteredCommandHandler (
+		CommandHandlercpp handlercpp,
+		const char       *handler_descrip,
+		Service          *s,
+		bool              include_auth);
+    bool HandleUnregistered() const {return m_unregisteredCommand.num;}
+    bool HandleUnregisteredDCAuth() const {return HandleUnregistered() && m_unregisteredCommand.is_cpp;}
 
 	/** Register_CommandWithPayload is the same as Register_Command
 		but with a different default for wait_for_payload.  By
@@ -738,6 +747,7 @@ class DaemonCore : public Service
 		// if delete_stream is true and the command handler does not return
 		// KEEP_STREAM, the stream is deleted
 	int CallCommandHandler(int req,Stream *stream,bool delete_stream=true,bool check_payload=true,float time_spent_on_sec=0,float time_spent_waiting_for_payload=0);
+	int CallUnregisteredCommandHandler(int req, Stream *stream);
 
 
 		// This function is called in order to have
@@ -1142,6 +1152,7 @@ class DaemonCore : public Service
         priv_state      priv                 = PRIV_UNKNOWN,
         int             reaper_id            = 1,
         int             want_commanand_port  = TRUE,
+        int             want_udp_comm_port   = TRUE,
         Env const       *env                 = NULL,
         const char      *cwd                 = NULL,
         FamilyInfo      *family_info         = NULL,
@@ -1567,7 +1578,7 @@ class DaemonCore : public Service
        void AddToProbe(const char * name, int64_t val);
        void AddToSumEmaRate(const char * name, int val);
        void AddToAnyProbe(const char * name, int val);
-       stats_entry_recent<Probe> * AddSample(const char * name, int as, double val);
+       double AddSample(const char * name, int as, double val);
        double AddRuntime(const char * name, double before); // returns current time.
        double AddRuntimeSample(const char * name, int as, double before);
 
@@ -1745,8 +1756,9 @@ class DaemonCore : public Service
 
     void                DumpCommandTable(int, const char* = NULL);
     int                 maxCommand;     // max number of command handlers
-    int                 nCommand;       // number of table entries used
-    ExtArray<CommandEnt> comTable;      // command table
+    int                 nCommand;       // number of command handlers used
+    ExtArray<CommandEnt>         comTable;       // command table
+    CommandEnt          m_unregisteredCommand;
 
     struct SignalEnt 
     {
@@ -2080,8 +2092,14 @@ class DaemonCore : public Service
  * bind() or BindAnyCommandPort()  as needed, listen() and
  * setsockopt() (for SO_REUSEADDR and TCP_NODELAY).
  *
- * @param port
- *   What port you want to bind to, or -1 if you don't care.
+ * @param tcp_port
+ *   What TCP port you want to bind to, or -1 if you don't care.
+ * @param udp_port
+ *   What UDP port you want to bind to, or -1 if you don't care.
+ *   If tcp_port is positive, then udp_port must be the same value.
+ *   If udp_port is positive, then tcp_port may still be -1.
+ *   This allows us to listen on a well-known udp port but let another
+ *   daemon (shared_port) listen on the corresponding tcp port.
  * @param socks
  *   Created socks will be pushed onto this list.
  * @param fatal
@@ -2094,7 +2112,7 @@ class DaemonCore : public Service
  * @see DaemonCore::InitDCCommandSock
  * @see DaemonCore::Create_Process
  */
-bool InitCommandSockets(int port, DaemonCore::SockPairVec & socks, bool want_udp, bool fatal);
+bool InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, bool want_udp, bool fatal);
 
 // helper class that uses C++ constructor/destructor to automatically
 // time a function call. 

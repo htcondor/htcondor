@@ -1411,6 +1411,8 @@ void insert_source(const char * filename, MACRO_SET & set, MACRO_SOURCE & source
 	source.line = 0;
 	source.inside = false;
 	source.id = (int)set.sources.size();
+	source.meta_id = -1;
+	source.meta_off = -2;
 	set.sources.push_back(set.apool.insert(filename));
 }
 
@@ -1446,7 +1448,9 @@ static bool same_param_value(
 				return false;
 			++a, ++b;
 		}
-		return true;
+		// we get here only if *a or *b is 0
+		// if both are 0, then this is a matching path, otherwise it isn't
+		return (*a)==(*b);
 	}
 #endif
 
