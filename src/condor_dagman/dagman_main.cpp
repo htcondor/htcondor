@@ -533,7 +533,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 		dagman.dag->DumpNodeStatus( false, true );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
-	dagman.dag->ReportMetrics( exitVal );
+	if (dagman.dag) dagman.dag->ReportMetrics( exitVal );
 	tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	inShutdownRescue = false;
