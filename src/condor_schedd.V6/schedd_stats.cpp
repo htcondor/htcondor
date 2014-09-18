@@ -162,6 +162,16 @@ void ScheddStatistics::Init(int fOtherPool)
       SCHEDD_STATS_ADD_VAL(Pool, ShadowsRunning,               IF_BASICPUB);
       SCHEDD_STATS_PUB_PEAK(Pool, ShadowsRunning,              IF_BASICPUB);
 
+      extern stats_entry_probe<double> build_priorec_runtime;
+      extern stats_entry_probe<double> build_priorec_mark_runtime;
+      extern stats_entry_probe<double> build_priorec_walk_runtime;
+      extern stats_entry_probe<double> build_priorec_sort_runtime;
+      extern stats_entry_probe<double> build_priorec_sweep_runtime;
+      Pool.AddProbe("SCBuildPrioRec",       &build_priorec_runtime,      "SCBuildPrioRec", IF_VERBOSEPUB | IF_RT_SUM);
+      Pool.AddProbe("SCBuildPrioRec_mark",  &build_priorec_mark_runtime, "SCBuildPrioRec_mark", IF_VERBOSEPUB | IF_RT_SUM);
+      Pool.AddProbe("SCBuildPrioRec_walk",  &build_priorec_walk_runtime, "SCBuildPrioRec_walk", IF_VERBOSEPUB | IF_RT_SUM);
+      Pool.AddProbe("SCBuildPrioRec_sort",  &build_priorec_sort_runtime, "SCBuildPrioRec_sort", IF_VERBOSEPUB | IF_RT_SUM);
+      Pool.AddProbe("SCBuildPrioRec_sweep", &build_priorec_sweep_runtime, "SCBuildPrioRec_sweep", IF_VERBOSEPUB | IF_RT_SUM);
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsSubmitted,  IF_BASICPUB);
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsStarted,  IF_BASICPUB);
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsCompleted,  IF_BASICPUB);

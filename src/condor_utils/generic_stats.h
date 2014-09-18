@@ -1037,7 +1037,8 @@ public:
 // its 'value' field to hold the count of samples.  the value of the
 // samples themselves are not stored, only the sum, min and max are stored.
 //
-template <class T> class stats_entry_probe : public stats_entry_count<T> {
+GCC_DIAG_OFF(float-equal)
+template <typename T> class stats_entry_probe : public stats_entry_count<T> {
 public:
    stats_entry_probe() 
       : Max(-(std::numeric_limits<T>::max()))
@@ -1109,6 +1110,7 @@ public:
    static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_probe<T>::Unpublish; };
    static void Delete(stats_entry_probe<T> * probe) { delete probe; }
 };
+GCC_DIAG_ON(float-equal)
 
 // --------------------------------------------------------------------
 //   Full Min/Max/Avg/Std Probe class for use with stats_entry_recent
@@ -1342,9 +1344,9 @@ T stats_histogram<T>::Add(T val)
     */
 
     return val;
-															}
+}
 
-															template<class T>
+template<class T>
 T stats_histogram<T>::Remove(T val)
 {
    int ix = 0;
