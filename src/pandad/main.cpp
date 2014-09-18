@@ -16,6 +16,8 @@
 #include <vector>
 #include <map>
 
+#include "safe_open.h"
+
 pthread_mutex_t bigGlobalMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Performance metrics.
@@ -352,7 +354,6 @@ void constructCommand( const std::string & line ) {
 	} \
 }
 
-// FIXME: use safe_open().
 template< class T >
 void updateStatisticsLog( const TimeSensitiveQueue<T> & queue, bool forceUpdate ) {
 	static unsigned previousQueueFullCount = UINT_MAX;
@@ -376,7 +377,7 @@ void updateStatisticsLog( const TimeSensitiveQueue<T> & queue, bool forceUpdate 
 	std::string statisticsLog = "/tmp/pandaStatisticsLog";
 	param( statisticsLog, "PANDA_STATISTICS_LOG" );
 
-	int fd = open( statisticsLog.c_str(), O_CREAT | O_APPEND | O_WRONLY | O_NONBLOCK, 00600 );
+	int fd = safe_create_keep_if_exists_follow( statisticsLog.c_str(), O_CREAT | O_APPEND | O_WRONLY | O_NONBLOCK, 00600 );
 	if( fd == -1 ) {
 		return;
 	}
