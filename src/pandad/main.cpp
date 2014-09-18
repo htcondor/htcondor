@@ -352,7 +352,6 @@ void constructCommand( const std::string & line ) {
 	} \
 }
 
-// FIXME: Obtain the log file's name from configuration.
 // FIXME: use safe_open().
 template< class T >
 void updateStatisticsLog( const TimeSensitiveQueue<T> & queue, bool forceUpdate ) {
@@ -374,7 +373,10 @@ void updateStatisticsLog( const TimeSensitiveQueue<T> & queue, bool forceUpdate 
 	previousCurlFailureCount = curlFailureCount;
 	previousBadResponseCodeCount = badResponseCodeCount;
 
-	int fd = open( "/tmp/pandaStatisticsLog", O_CREAT | O_APPEND | O_WRONLY | O_NONBLOCK, 00600 );
+	std::string statisticsLog = "/tmp/pandaStatisticsLog";
+	param( statisticsLog, "PANDA_STATISTICS_LOG" );
+
+	int fd = open( statisticsLog.c_str(), O_CREAT | O_APPEND | O_WRONLY | O_NONBLOCK, 00600 );
 	if( fd == -1 ) {
 		return;
 	}
@@ -573,11 +575,13 @@ static void * workerFunction( void * ptr ) {
 			dprintf( D_ALWAYS, "Changing queue to size %u on SIGHUP.\n", newSize );
 			queue->resize( newSize );
 
-			// FIXME: We could also reset PANDA_QUEUE_GRACE here.  (Update
-			// param_info.in to match.)
+			timeout = param_integer( "PANDA_UPDATE_TIMEOUT" );
 
-			// FIXME: We could also reset PANDA_UPDATE_TIMEOUT here.  (Update
-			// param_info.in to match.)
+			// As presently implemented, calling allowGracePeriod() a second
+			// time will always fail, so we can't handle reconfiguring
+			// PANDA_QUEUE_GRACE.  If someone complained, we could maybe
+			// make it work.
+
 			reconfigure = false;
 		}
 

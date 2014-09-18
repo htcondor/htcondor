@@ -7817,7 +7817,7 @@ reconfig=false
 default=0
 type=int
 review=tlmiller
-reconfig=false
+reconfig=true
 
 [PANDA_QUEUE_SIZE]
 default=131072
@@ -7830,3 +7830,9 @@ default=3
 type=int
 reivew=tlmiller
 reconfig=false
+
+[PANDA_STATISTICS_LOG]
+default=/tmp/pandaStatisticsLog
+type=string
+review=tlmiller
+reconfig=true
