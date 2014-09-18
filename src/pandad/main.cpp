@@ -26,6 +26,9 @@ unsigned curlCalledCount = 0;
 unsigned curlFailureCount = 0;
 unsigned badResponseCodeCount = 0;
 
+template< class T >
+void updateStatisticsLog( const TimeSensitiveQueue<T> & queue, bool forceUpdate = false );
+
 void configureSignals();
 static void * workerFunction( void * ptr );
 
@@ -106,7 +109,8 @@ int main( int /* argc */, char ** /* argv */ ) {
 		if( pb.isError() || pb.isEOF() ) {
 			dprintf( D_ALWAYS, "stdin closed, draining queue...\n" );
 			queue.drain();
-			// TODO: Dump the statistics log.
+			// Force an update of our lifetime statistics.
+			updateStatisticsLog( queue, true );
 			dprintf( D_ALWAYS, "stdin closed, ... done.  Exiting.\n" );
 			exit( 0 );
 		}
@@ -351,17 +355,19 @@ void constructCommand( const std::string & line ) {
 // FIXME: Obtain the log file's name from configuration.
 // FIXME: use safe_open().
 template< class T >
-void updateStatisticsLog( const TimeSensitiveQueue<T> & queue ) {
+void updateStatisticsLog( const TimeSensitiveQueue<T> & queue, bool forceUpdate ) {
 	static unsigned previousQueueFullCount = UINT_MAX;
 	static unsigned previousBadCommandCount = UINT_MAX;
 	static unsigned previousCurlFailureCount = UINT_MAX;
 	static unsigned previousBadResponseCodeCount = UINT_MAX;
 
-	if(  previousQueueFullCount == queue.queueFullCount
-	  && previousBadCommandCount == badCommandCount
-	  && previousCurlFailureCount == curlFailureCount
-	  && previousBadResponseCodeCount == badResponseCodeCount ) {
-	  		return;
+	if(	forceUpdate ||
+		 ( previousQueueFullCount == queue.queueFullCount
+		  && previousBadCommandCount == badCommandCount
+		  && previousCurlFailureCount == curlFailureCount
+		  && previousBadResponseCodeCount == badResponseCodeCount )
+		 ) {
+			return;
 	}
 	previousQueueFullCount = queue.queueFullCount;
 	previousBadCommandCount = badCommandCount;
