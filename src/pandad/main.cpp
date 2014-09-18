@@ -109,19 +109,17 @@ int main( int /* argc */, char ** /* argv */ ) {
 		}
 
 		if( pb.isError() || pb.isEOF() ) {
-			//
-			// This is the wrong order, but in the usual case where the schedd
-			// went away because of condor_off, the master is going to kill
-			// us in short order, and it's more useful (at least for now)
-			// to have lifetime statistics than to finish pending updates.
-			//
-			dprintf( D_ALWAYS, "stdin closed, logging final statistics...\n" );
+			dprintf( D_ALWAYS, "stdin closed, trying to log final statistics...\n" );
 			updateStatisticsLog( queue, true );
 			dprintf( D_ALWAYS, "stdin closed, ... done.\n" );
 
-			dprintf( D_ALWAYS, "stdin closed, draining queue...\n" );
-			queue.drain();
-			dprintf( D_ALWAYS, "stdin closed, ... done.\n" );
+			//
+			// Don't even bother to try to drain the queue; the master will
+			// kill us first, and it's not worth explaining to users.
+			//
+			// printf( D_ALWAYS, "stdin closed, draining queue...\n" );
+			// queue.drain();
+			// dprintf( D_ALWAYS, "stdin closed, ... done.\n" );
 
 			dprintf( D_ALWAYS, "stdin closed, exit()ing.\n" );
 			exit( 0 );
@@ -583,11 +581,15 @@ static void * workerFunction( void * ptr ) {
 		if( reconfigure ) {
 			config();
 			unsigned newSize = param_integer( "PANDA_QUEUE_SIZE" );
-			dprintf( D_ALWAYS, "Changing queue to size %u on SIGHUP.\n", newSize );
+			dprintf( D_ALWAYS, "SIGHUP: Queue size is now %u.\n", newSize );
 			queue->resize( newSize );
 
 			timeout = param_integer( "PANDA_UPDATE_TIMEOUT" );
-			dprintf( D_ALWAYS, "Changing timeout to %d seconds on SIGHUP.\n", timeout );
+			dprintf( D_ALWAYS, "SIGHUP: Timeout is now %d seconds.\n", timeout );
+
+			std::string statisticsLog = "/tmp/pandaStatisticsLog";
+			param( statisticsLog, "PANDA_STATISTICS_LOG" );
+			dprintf( D_ALWAYS, "SIGHUP: Statistics log file is now '%s'.\n", statisticsLog.c_str() );
 
 			// As presently implemented, calling allowGracePeriod() a second
 			// time will always fail, so we can't handle reconfiguring
