@@ -6,6 +6,8 @@
 #include <boost/python.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
+void registerFunction(boost::python::object function, boost::python::object name);
+
 struct ExprTreeHolder;
 
 struct AttrPairToFirst :
