@@ -2181,6 +2181,7 @@ void Dag::RemoveRunningScripts ( ) const {
 			}
         }
 	}
+
 	return;
 }
 
@@ -2904,7 +2905,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	bool tooSoon = (_minStatusUpdateTime > 0) &&
 				((startTime - _lastStatusUpdateTimestamp) <
 				_minStatusUpdateTime);
-	if ( tooSoon && !held && !removed && !FinishedRunning( true ) ) {
+	if ( tooSoon && !held && !removed && !FinishedRunning( true ) &&
+				!_dagIsAborted ) {
 		debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
 					"because min. status update time has not yet passed\n" );
 		return;
@@ -2962,33 +2964,46 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		//
 		// Print overall DAG status.
 		//
-	Job::status_t dagStatus = Job::STATUS_SUBMITTED;
+	Job::status_t dagJobStatus = Job::STATUS_SUBMITTED;
 	const char *statusNote = "";
 	if ( DoneSuccess( true ) ) {
-		dagStatus = Job::STATUS_DONE;
+		dagJobStatus = Job::STATUS_DONE;
 		statusNote = "success";
 	} else if ( DoneFailed( true ) ) {
-		dagStatus = Job::STATUS_ERROR;
+		dagJobStatus = Job::STATUS_ERROR;
 		if ( _dagStatus == DAG_STATUS_ABORT ) {
 			statusNote = "aborted";
 		} else {
 			statusNote = "failed";
 		}
 	} else if ( DoneCycle( true ) ) {
-		dagStatus = Job::STATUS_ERROR;
+		dagJobStatus = Job::STATUS_ERROR;
 		statusNote = "cycle";
 	} else if ( held ) {
 		statusNote = "held";
 	} else if ( removed ) {
-		dagStatus = Job::STATUS_ERROR;
-		statusNote = "removed";
+		if ( HasFinalNode() && !FinishedRunning( true ) ) {
+			dagJobStatus = Job::STATUS_SUBMITTED;
+			statusNote = "removed";
+		} else {
+			dagJobStatus = Job::STATUS_ERROR;
+			statusNote = "removed";
+		}
+	} else if ( _dagIsAborted ) {
+		if ( HasFinalNode() && !FinishedRunning( true ) ) {
+			dagJobStatus = Job::STATUS_SUBMITTED;
+			statusNote = "aborted";
+		} else {
+			dagJobStatus = Job::STATUS_ERROR;
+			statusNote = "aborted";
+		}
 	}
-	MyString statusStr = Job::status_t_names[dagStatus];
+	MyString statusStr = Job::status_t_names[dagJobStatus];
 	statusStr.trim();
 	statusStr += " (";
 	statusStr += statusNote;
 	statusStr += ")";
-	fprintf( outfile, "  DagStatus = %d; /* %s */\n", dagStatus,
+	fprintf( outfile, "  DagStatus = %d; /* %s */\n", dagJobStatus,
 				EscapeClassadString( statusStr.Value() ) );
 
 	fprintf( outfile, "  NodesTotal = %d;\n", NumNodes( true ) );
@@ -3083,12 +3098,19 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		// Note:  we do tolerant_unlink because renaming over an
 		// existing file fails on Windows.
 		//
-	tolerant_unlink( _statusFileName );
-	if ( rename( tmpStatusFile.Value(), _statusFileName ) != 0 ) {
+	MyString statusFileName( _statusFileName );
+#if 0 // For testing, to enable manual checking of intermediate states...
+	static int statusFileCount = 0;
+	statusFileName += ++statusFileCount;
+	debug_printf( DEBUG_QUIET, "Writing node status file %s\n",
+				statusFileName.Value() );
+#endif
+	tolerant_unlink( statusFileName.Value() );
+	if ( rename( tmpStatusFile.Value(), statusFileName.Value() ) != 0 ) {
 		debug_printf( DEBUG_NORMAL,
 					  "Warning: can't rename temporary node status "
 					  "file (%s) to permanent file (%s): %s\n",
-					  tmpStatusFile.Value(), _statusFileName,
+					  tmpStatusFile.Value(), statusFileName.Value(),
 					  strerror( errno ) );
 		check_warning_strictness( DAG_STRICT_1 );
 		return;

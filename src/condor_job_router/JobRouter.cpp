@@ -63,6 +63,10 @@ const int THROTTLE_UPDATE_INTERVAL = 600;
 
 JobRouter::JobRouter(bool as_tool)
 	: m_jobs(5000,hashFuncStdString,rejectDuplicateKeys)
+	, m_schedd2_name(NULL)
+	, m_schedd2_pool(NULL)
+	, m_schedd1_name(NULL)
+	, m_schedd1_pool(NULL)
 	, m_operate_as_tool(as_tool)
 {
 	m_scheduler = NULL;

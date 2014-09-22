@@ -91,6 +91,16 @@ information to the file and line number information for a configuration variable
 extension to the log file name of an HTCondor daemon on Windows platforms.
 \Ticket{4571}
 
+\item Fixed a bug that caused \Condor{dagman} to core dump if
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set to \Expr{False} and
+\Macro{DAGMAN\_USE\_STRICT} is set to 1 or higher.
+\Ticket{4600}
+
+\item Fixed a bug that caused the DAG node status file (if one is specified)
+to have the wrong final status for a DAG that is aborted by an
+\Arg{ABORT-DAG-ON} specification.
+\Ticket{4312}
+
 \end{itemize}
 
 \noindent Known Bugs:

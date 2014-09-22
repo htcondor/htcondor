@@ -542,7 +542,8 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 			return;
 		}
 		print_status();
-		dagman.dag->DumpNodeStatus( false, true );
+		bool removed = ( dagStatus == Dag::DAG_STATUS_RM );
+		dagman.dag->DumpNodeStatus( false, removed );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
 	if (dagman.dag) dagman.dag->ReportMetrics( exitVal );
