@@ -101,6 +101,7 @@ class JobRoute {
 	classad::ExprTree *RouteRequirementExpr() {return m_route_requirements;}
 	char const *RouteRequirementsString() {return m_route_requirements_str.c_str();}
 	std::string RouteString(); // returns a string describing the route
+	bool RouteStringPretty(std::string & str); // prints the route classad into str
 
 	// copy state from another route
 	void CopyState(JobRoute *route);
