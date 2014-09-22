@@ -96,6 +96,11 @@ extension to the log file name of an HTCondor daemon on Windows platforms.
 \Macro{DAGMAN\_USE\_STRICT} is set to 1 or higher.
 \Ticket{4600}
 
+\item Fixed a bug that caused the DAG node status file (if one is specified)
+to have the wrong final status for a DAG that is aborted by an
+\Arg{ABORT-DAG-ON} specification.
+\Ticket{4312}
+
 \end{itemize}
 
 \noindent Known Bugs:
