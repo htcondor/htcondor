@@ -32,7 +32,7 @@
 %if 0%{?rhel} >= 6
 %define cgroups 1
 %endif
-%if 0%{?rhel} > 7
+%if 0%{?rhel} >= 7
 %define systemd 1
 %endif
 
