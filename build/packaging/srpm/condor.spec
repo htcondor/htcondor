@@ -1038,7 +1038,7 @@ mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir
 install -p -m 0644 %{SOURCE6} %{buildroot}%{_sysconfdir}/condor/config.d/10-batch_gahp_blahp.config
 %endif
 
-%if %osg || %hcc
+%if 0%{?osg} || 0%{?hcc}
 install -p -m 0644 %{SOURCE7} %{buildroot}%{_sysconfdir}/condor/config.d/00-restart_peaceful.config
 %endif
 
@@ -1143,7 +1143,7 @@ rm -rf %{buildroot}
 %config(noreplace) %{_sysconfdir}/condor/config.d/10-batch_gahp_blahp.config
 %endif
 %endif
-%if %osg || %hcc
+%if 0%{?osg} || 0%{?hcc}
 %config(noreplace) %{_sysconfdir}/condor/config.d/00-restart_peaceful.config
 %endif
 %_libexecdir/condor/condor_limits_wrapper.sh
