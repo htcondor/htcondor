@@ -8,19 +8,39 @@ import threading
 import classad
 import htcondor
 
+SAMPLE_EVENT_TEXT = """\
+006 (23515.000.000) 04/09 17:55:39 Image size of job updated: 260
+        1  -  MemoryUsage of job (MB)
+        252  -  ResidentSetSize of job (KB)
+...
+"""
+
 class TestLogReader(unittest.TestCase):
 
     def setUp(self):
-        self.testfile = tempfile.NamedTemporaryFile()
-        self.testfile.write(open("tests/job_queue.log", "r").read())
+        self.testfile = tempfile.TemporaryFile()
+        self.testfile.write(open("tests/job.log", "r").read())
         self.testfile.flush()
-        self.reader = htcondor.LogReader(self.testfile.name)
-        self.sampleEvent = {'value': "bar", 'event': htcondor.EntryType.SetAttribute, 'key': '23605.0', 'name': 'Foo'}
+        self.testfile.seek(0)
+        self.reader = htcondor.read_events(self.testfile)
+        self.sampleEvent = { \
+            'MyType': "JobImageSizeEvent",
+            'EventTypeNumber': 6,
+            'Subproc': 0,
+            'Cluster': 23515,
+            'Proc': 0,
+            'MemoryUsage': 1, 
+            'Size': 260,
+            'ResidentSetSize': 252,
+            'CurrentTime': 0,
+            'EventTime': 0,
+        }
+        self.sampleEventText = SAMPLE_EVENT_TEXT
 
     def test_event_count(self):
         events = list(self.reader)
         #for event in events: print event
-        self.assertEquals(len(events), 16)
+        self.assertEquals(len(events), 6)
 
     def test_block(self):
         events = list(self.reader)
@@ -43,15 +63,15 @@ class TestLogReader(unittest.TestCase):
         t.setDaemon(True)
         t.start()
         self.reader.wait()
-        self.assertEquals(self.reader.next(), self.sampleEvent)
+        self.compareEvents(self.reader.next(), self.sampleEvent)
 
     def test_wait2(self):
         events = list(self.reader)
         t = threading.Thread(target=self.targetSleepAndWrite, name="Sleep and write event")
         t.setDaemon(True)
         t.start()
-        time.sleep(1.0)
-        print self.reader.next()
+        time.sleep(1)
+        self.compareEvents(self.reader.next(), self.sampleEvent)
 
     def test_nochange(self):
         events = list(self.reader)
@@ -63,26 +83,27 @@ class TestLogReader(unittest.TestCase):
 
     def targetSleepAndWrite(self):
         time.sleep(.4)
-        self.testfile.write('103 23605.0 Foo "bar"\n')
-        self.testfile.flush()
+        testfile = os.fdopen(os.dup(self.testfile.fileno()), "a")
+        testfile.write(self.sampleEventText)
+        testfile.flush()
         #print "Wrote event to %s." % self.testfile
 
     def test_invalid(self):
-        self.testfile.write('103 23605.0 Foo ::\n')
+        self.testfile.write("...\n...\n")
         self.testfile.flush()
-        events = list(self.reader)
-        #print "LastEvent", events[-1]
-        self.assertEquals(classad.Function("isError", events[-1]['value']).eval(), True)
+        self.assertRaises(ValueError, self.reader.next)
 
     def compareEvents(self, one, two):
-        keys1 = one.keys()
+        keys1 = list(one.keys())
         keys1.sort()
         keys1 = tuple(keys1)
-        keys2 = two.keys()
+        keys2 = list(two.keys())
         keys2.sort()
         keys2 = tuple(keys2)
         self.assertEquals(keys1, keys2)
         for key in keys1:
+            if key in ['EventTime', 'CurrentTime']:
+                continue
             self.assertEquals(one[key], two[key])
 
 
