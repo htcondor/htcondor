@@ -8557,6 +8557,16 @@ DaemonCore::InitDCCommandSocket( int command_port )
 			}
 		}
 
+		MyString proto = "";
+		if(it->has_relisock()) { proto = "TCP (ReliSock)"; }
+		if(it->has_safesock()) {
+			if(proto.length()) { proto += " and "; }
+			proto += "UDP (SafeSock)";
+		}
+		// TODO: That I need to twice override "fixing" wildcard addresses is terrible
+		// Something is wrong here and needs to be fixed.
+		dprintf(D_ALWAYS, "Daemoncore: Listening at %s on %s.\n",
+			it->rsock()->my_addr_wildcard_okay().to_sinful_wildcard_okay().Value(), proto.Value());
 	}
 
 	// TODO: This block should really be in the dc_socks loop above.
@@ -9715,6 +9725,8 @@ InitCommandSocket(condor_protocol proto, int port, int udp_port, DaemonCore::Soc
 				}
 			}
 		}
+		if (proto == CP_IPV6) { dprintf(D_ALWAYS, "Bound socket is ipv6: %d\n", rsock->my_addr().is_ipv6()); }
+		if (proto == CP_IPV4) { dprintf(D_ALWAYS, "Bound socket is ipv4: %d\n", rsock->my_addr().is_ipv4()); }
 		if( !rsock->listen() ) {
 			if (fatal) {
 				EXCEPT( "Failed to post listen on command ReliSock" );
@@ -10689,4 +10701,21 @@ bool DaemonCore::SockPair::has_safesock(bool b) {
 		m_ssock = counted_ptr<SafeSock>(new SafeSock);
 	}
 	return true;
+}
+
+int DaemonCore::find_interface_command_port_do_not_use(const condor_sockaddr & addr) {
+
+	// Boldly assuming all entries in dc_socks have relisocks and
+	// that all listen sockets for a given protocol use the same port
+	// As of Sept 2014, I believe these are true.  This function should
+	// go away long before these are violated.
+	for(SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); it++) {
+		ASSERT(it->has_relisock());
+		condor_sockaddr listen_addr = it->rsock()->my_addr();
+		if(addr.get_protocol() == listen_addr.get_protocol()) {
+			return listen_addr.get_port();
+		}
+	}
+	// No matching listen socket.
+	return 0;
 }

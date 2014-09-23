@@ -154,11 +154,16 @@ hostent* condor_gethostbyaddr_ipv6(const condor_sockaddr& addr)
 
 int condor_getsockname_ex(int sockfd, condor_sockaddr& addr)
 {
+	// TODO: If you have both IPv4 and IPv6 enabled, and sockfd
+	// is bound to 127.0.0.1, this will return an *IPv6* address!
+	// This is arguably wrong.  The deeper problem is that we're
+	// trying to return a singular address when that doesn't make
+	// any sense.
 	int ret;
 	ret = condor_getsockname(sockfd, addr);
 	if (ret == 0 && addr.is_addr_any()) {
 		unsigned short portno = addr.get_port();
-		addr = get_local_ipaddr();
+		addr = get_local_ipaddr(addr.get_protocol());
 		addr.set_port(portno);
 	}
 

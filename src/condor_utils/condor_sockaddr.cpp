@@ -450,7 +450,7 @@ MyString condor_sockaddr::to_ip_string_ex(bool decorate) const
 {
 		// no need to check is_valid()
 	if ( is_addr_any() )
-		return get_local_ipaddr().to_ip_string(decorate);
+		return get_local_ipaddr(get_protocol()).to_ip_string(decorate);
 	else
 		return to_ip_string(decorate);
 }
@@ -459,7 +459,7 @@ const char* condor_sockaddr::to_ip_string_ex(char* buf, int len, bool decorate) 
 {
 		// no need to check is_valid()
 	if (is_addr_any())
-		return get_local_ipaddr().to_ip_string(buf, len, decorate);
+		return get_local_ipaddr(get_protocol()).to_ip_string(buf, len, decorate);
 	else
 		return to_ip_string(buf, len, decorate);
 }

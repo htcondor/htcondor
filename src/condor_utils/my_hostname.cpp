@@ -410,6 +410,7 @@ static bool IPMatchesNetworkInterfaceSetting(char const *ip)
 }
 
 
+#include "condor_daemon_core.h"
 void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,Stream& s)
 {
 	if( ! enable_convert_default_IP_to_socket_IP ) { return; }
@@ -424,12 +425,23 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 
 	// Skip if Stream doesn't have address associated with it
 	if( ! my_sockaddr.from_ip_string(s.my_ip_str()) ) { return; }
+
+	// my_sockaddr's port is whatever we happen to be using at the moment;
+	// that will be meaningless if we established the connection.  What we
+	// want is the port someone could contact us on.  Go rummage for one.
+	int port = daemonCore->find_interface_command_port_do_not_use(my_sockaddr);
+	// If port is 0, there is no matching listen socket. There is nothing 
+	// useful we can rewrite it do, so just give up and hope the default
+	// is useful to someone.
+	if(port == 0) { return; }
+	my_sockaddr.set_port(port);
+
 	
 	if( my_default_addr == my_sockaddr ) { return; } // Skip doing a no-op
 
 	// Skip if we're talking over loopback; advertising loopback
 	// isn't useful to anyone.
-	if( my_sockaddr.is_loopback() ) { return; }
+	//if( my_sockaddr.is_loopback() ) { return; } // DISABLED FOR DEBUGGING
 
 	// Skip if we shouldn't be using this interface.
 	if( !IPMatchesNetworkInterfaceSetting(my_sockaddr.to_ip_string(false).Value()) ) { return; }
@@ -462,6 +474,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 
 	MyString my_sock_ip = my_sockaddr.to_ip_string(true);
 	sin.setHost(my_sock_ip.Value());
+	sin.setPort(my_sockaddr.get_port());
 
 	std::string new_expr = expr_string.substr(0, string_start_pos);
 	new_expr.append(sin.getSinful());

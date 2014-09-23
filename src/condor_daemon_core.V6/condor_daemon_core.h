@@ -1584,6 +1584,15 @@ class DaemonCore : public Service
 
 	} dc_stats;
 
+	// Do not use this function for anything. It's a temporary hack to get
+	// ConvertDefaultIPToSocketIP working in mixed-mode IPv4/IPv6.  The
+	// real goal is to eliminate ConvertDefaultIPToSocketIP, and eliminate
+	// the need for this.
+	//
+	// All that said: given a condor_sockaddr, this will look for the interface
+	// that best matches and will return its port.
+	int find_interface_command_port_do_not_use(const condor_sockaddr & addr);
+
   private:      
 
 		// do and our parents/children want/have a udp comment socket?
