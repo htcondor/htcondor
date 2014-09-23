@@ -284,6 +284,8 @@ public:
 
     /// my port and IP address in a class condor_sockaddr
 	condor_sockaddr my_addr();
+	condor_sockaddr my_addr_wildcard_okay();
+
 
 	/// my IP address, string version (e.g. "128.105.101.17")
 	virtual const char* my_ip_str();

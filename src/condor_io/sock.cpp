@@ -2224,6 +2224,14 @@ Sock::my_addr()
 	return addr;
 }
 
+condor_sockaddr
+Sock::my_addr_wildcard_okay() 
+{
+	condor_sockaddr addr;
+	condor_getsockname(_sock, addr);
+	return addr;
+}
+
 const char *
 Sock::my_ip_str()
 {
