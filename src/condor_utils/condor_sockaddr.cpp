@@ -216,6 +216,20 @@ const char* condor_sockaddr::to_sinful(char* buf, int len) const
 	return buf;
 }
 
+MyString condor_sockaddr::to_sinful_wildcard_okay() const
+{
+	// TODO: Implement in terms of Sinful object.
+	MyString ret;
+	char tmp[IP_STRING_BUF_SIZE];
+		// if it is not ipv4 or ipv6, to_ip_string will fail.
+	if ( !to_ip_string(tmp, IP_STRING_BUF_SIZE, true) )
+		return ret;
+
+	ret.formatstr("<%s:%d>", tmp, ntohs(v4.sin_port));
+
+	return ret;
+}
+
 bool condor_sockaddr::from_sinful(const MyString& sinful) {
 	return from_sinful(sinful.Value());
 }
@@ -493,7 +507,7 @@ void condor_sockaddr::set_protocol(condor_protocol proto) {
 	}
 }
 
-condor_protocol condor_sockaddr::get_protocol() {
+condor_protocol condor_sockaddr::get_protocol() const {
 	if(is_ipv4()) { return CP_IPV4; }
 	if(is_ipv6()) { return CP_IPV6; }
 	return CP_INVALID_MIN;

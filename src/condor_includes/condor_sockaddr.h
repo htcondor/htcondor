@@ -77,7 +77,7 @@ public:
 
 	// set ip version when you want to bind the address to a socket
 	void set_protocol(condor_protocol proto);
-	condor_protocol get_protocol();
+	condor_protocol get_protocol() const;
 	void set_ipv4();
 	void set_ipv6();
 
@@ -107,6 +107,7 @@ public:
 	bool from_sinful(const char* sinful);
 	MyString to_sinful() const;
 	const char* to_sinful(char* buf, int len) const;
+	MyString to_sinful_wildcard_okay() const;
 
 		// returns IP address string as it is. (i.e. not returning local ip
 		// address when inaddr_any)
