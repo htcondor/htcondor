@@ -33,6 +33,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The new configuration variable 
+\Macro{RUN\_FILETRANSFER\_PLUGINS\_WITH\_ROOT} permits file transfer
+plug-ins to run with \Login{root} privilege,
+when HTCondor daemons are run as \Login{root},
+and when set to the non-default value of \Expr{True}.
+\Ticket{4561}
+
 \item The new configuration variable \Macro{NETWORK\_HOSTNAME} sets
 the host name that HTCondor uses to identify the local machine.
 If \MacroNI{NETWORK\_HOSTNAME} is not set, 
