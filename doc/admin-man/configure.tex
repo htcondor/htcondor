@@ -7532,6 +7532,15 @@ REM Run the actual job now
   See section~\ref{sec:URL-transfer} for a description of the functionality
   required of a plug-in.
 
+\label{param:RunFiletransferPluginsWithRoot} 
+\item[\Macro{RUN\_FILETRANSFER\_PLUGINS\_WITH\_ROOT}]
+  A boolean value that defaults to \Expr{False},
+  causing file transfer plug-ins invoked for a job to run as the 
+  slot user or the job owner.
+  When set to \Expr{True},
+  file transfer plug-ins run as \Login{root},
+  provided the HTCondor daemons also run as \Login{root}.
+
 \label{param:EnableChirp} 
 \item[\Macro{ENABLE\_CHIRP}]
   A boolean value that defaults to \Expr{True}. An administrator
