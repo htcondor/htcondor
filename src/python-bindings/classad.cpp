@@ -611,7 +611,7 @@ attribute(std::string name)
 static void
 pythonFunctionTrampoline_internal(const char *name, const classad::ArgumentList& args, classad::EvalState& state, classad::Value& result)
 {
-    boost::python::object pyFunc = boost::python::import("classad").attr("_registered_functions")[name];
+    boost::python::object pyFunc = py_import("classad").attr("_registered_functions")[name];
 
     boost::python::list pyArgs;
     for (classad::ArgumentList::const_iterator it=args.begin(); it != args.end(); it++)
@@ -637,7 +637,7 @@ pythonFunctionTrampoline_internal(const char *name, const classad::ArgumentList&
         pyKw["state"] = wrapper;
     }
 
-    boost::python::object pyResult = boost::python::import("__main__").attr("__builtins__").attr("apply")(pyFunc, pyArgs, pyKw);
+    boost::python::object pyResult = py_import("__main__").attr("__builtins__").attr("apply")(pyFunc, pyArgs, pyKw);
     classad::ExprTree* exprTreeResult = convert_python_to_exprtree(pyResult);
     if (!exprTreeResult || !exprTreeResult->Evaluate(state, result))
     {
@@ -668,7 +668,7 @@ registerFunction(boost::python::object function, boost::python::object name)
         name = function.attr("__name__");
     }
     std::string classadName = boost::python::extract<std::string>(name);
-    boost::python::import("classad").attr("_registered_functions")[name] = function;
+    py_import("classad").attr("_registered_functions")[name] = function;
     classad::FunctionCall::RegisterFunction(classadName, pythonFunctionTrampoline);
 }
 
