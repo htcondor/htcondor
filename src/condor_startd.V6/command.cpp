@@ -1224,7 +1224,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			char **claims = (char **)malloc(sizeof(char *) * (num_preempting));
 			for (int i = 0; i < num_preempting; i++) {
 				claims[i] = NULL;
-				if (! stream->code(claims[i])) {
+				if (! stream->get_secret(claims[i])) {
 					rip->dprintf( D_ALWAYS, "Can't receive preempting claim\n" );
 					for (int n = 0; n < i - 1; n++) {
 						free(claims[n]);
@@ -1237,8 +1237,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					ClaimIdParser idp( claims[i] );
 					dprintf( D_ALWAYS, 
 							 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
+				} else {
+					dslot->kill_claim();
 				}
-				dslot->kill_claim();
 				free(claims[i]);
 			}
 			free(claims);

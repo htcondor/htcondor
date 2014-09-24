@@ -441,7 +441,26 @@ RESERVED_SWAP = 0
 and then send a \Condor{restart} to the submit machine.
 \end{enumerate}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:job-on-hold}Job in the Hold State}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{job!not running, on hold}
+A variety of errors and unusual conditions may cause a job to be placed
+into the Hold state.
+The job will stay in this state and in the job queue until
+conditions are corrected and \Condor{release} is invoked.
 
+A table listing the reasons why a job may be held is at
+section~\ref{HoldReasonCode-job-attribute}.
+A string identifying the reason that a particular job is in the 
+Hold state may be displayed by invoking \Condor{q}.
+For the example job ID 16.0, use:
+\begin{verbatim} 
+  condor_q  -hold  16.0
+\end{verbatim} 
+
+This command prints information about the job, including 
+the job ClassAd attribute \Attr{HoldReason}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:job-log-events}In the Job Event Log File}

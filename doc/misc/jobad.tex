@@ -23,7 +23,6 @@ information about accounting groups.
 accounting group.  This attribute is only present if an
 accounting group was requested by the submission.
 
-%%% ClassAd attribute: HoldKillSig
 %%% ClassAd attribute: AllRemoteHosts
 \index{ClassAd job attribute!AllRemoteHosts}
 \index{AllRemoteHosts!job ClassAd attribute}
@@ -575,15 +574,15 @@ will equal the number of seconds that the job has been on hold.
 
 %%% ClassAd attribute: Env
 \index{ClassAd job attribute!Env}
-\index{Args!job ClassAd attribute}
-\item[\AdAttr{Args}:]  A string representing the environment variables 
+\index{Env!job ClassAd attribute}
+\item[\AdAttr{Env}:]  A string representing the environment variables 
 passed to the job, when those arguments are specified using the
 \emph{old} syntax, as specified in section~\ref{man-condor-submit-environment}.
 
 %%% ClassAd attribute: Environment
 \index{ClassAd job attribute!Environment}
-\index{Arguments!job ClassAd attribute}
-\item[\AdAttr{Arguments}:]  A string representing the environment variables
+\index{Environment!job ClassAd attribute}
+\item[\AdAttr{Environment}:]  A string representing the environment variables
 passed to the job, when those arguments are specified using the
 \emph{new} syntax, as specified in section~\ref{man-condor-submit-environment}.
 
@@ -710,6 +709,7 @@ It can be used to determine if a job should be released or not.
 %%% ClassAd attribute: HoldReasonCode
 \index{ClassAd job attribute!HoldReasonCode}
 \index{HoldReasonCode!job ClassAd attribute}
+\label{HoldReasonCode-job-attribute}
 \item[\AdAttr{HoldReasonCode}:]    An integer value that represents the
 reason that a job was put on hold.
 
