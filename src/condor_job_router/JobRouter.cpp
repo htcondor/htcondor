@@ -1223,7 +1223,7 @@ JobRouter::GetCandidateJobs() {
 	umbrella_constraint += m_job_router_name;
 	umbrella_constraint += "\")";
 
-	if (m_operate_as_tool || !can_switch_ids()) {
+	if (!can_switch_ids()) {
 			// We are not running as root.  Ensure that we only try to
 			// manage jobs submitted by the same user we are running as.
 
