@@ -687,7 +687,7 @@ DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID jobid)
 }
 
 bool
-DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id,ClassAd &match_ad, char const *slot_name)
+DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *, ClassAd &match_ad, char const *slot_name)
 {
 	ASSERT( claim_id );
 	ASSERT( slot_name );
@@ -716,7 +716,7 @@ DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim
 		return false;
 	}
 
-	ContactStartdArgs *args = new ContactStartdArgs( claim_id, startd.addr(), true );
+	ContactStartdArgs *args = new ContactStartdArgs( claim_id, "", startd.addr(), true );
 
 	if( !scheduler.enqueueStartdContact(args) ) {
 		delete args;

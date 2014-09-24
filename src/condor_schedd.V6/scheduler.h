@@ -255,15 +255,17 @@ typedef enum {
 class ContactStartdArgs
 {
 public:
-	ContactStartdArgs( char const* the_claim_id, char* sinful, bool is_dedicated );
+	ContactStartdArgs( char const* the_claim_id, char const *extra_claims, char* sinful, bool is_dedicated );
 	~ContactStartdArgs();
 
 	char*		claimId( void )		{ return csa_claim_id; };
+	char*		extraClaims( void )	{ return csa_extra_claims; };
 	char*		sinful( void )		{ return csa_sinful; }
 	bool		isDedicated()		{ return csa_is_dedicated; }
 
 private:
 	char *csa_claim_id;
+	char *csa_extra_claims;
 	char *csa_sinful;
 	bool csa_is_dedicated;
 };
