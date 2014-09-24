@@ -695,6 +695,7 @@
 #define ATTR_WANT_DELAYED_UPDATES "WantDelayedUpdates"
 #define ATTR_WANT_MATCH_DIAGNOSTICS  "WantMatchDiagnostics"
 #define ATTR_WANT_PARALLEL_SCHEDULING_GROUPS  "WantParallelSchedulingGroups"
+#define ATTR_WANT_PSLOT_PREEMPTION  "WantPslotPreemption"
 #define ATTR_WANT_REMOTE_SYSCALLS  "WantRemoteSyscalls"
 #define ATTR_WANT_REMOTE_IO  "WantRemoteIO"
 #define ATTR_WANT_SCHEDD_COMPLETION_VISA  "WantCompletionVisaFromSchedD"

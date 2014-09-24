@@ -3375,11 +3375,17 @@ Matchmaker::OptimizeJobAdForMatchmaking(ClassAd *ad)
 	}
 }
 
+std::map<std::string, std::vector<std::string> > childClaimHash;
+
 void
 Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 {
 	ClassAd *ad;
 	startdPvtAdList.Open();
+
+	bool pslotPreempt = param_boolean("ALLOW_PSLOT_PREEMPTION", false);
+	childClaimHash.clear();
+
 	while( (ad = startdPvtAdList.Next()) ) {
 		MyString name;
 		MyString ip_addr;
@@ -3424,6 +3430,36 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
         } else {
             f->second.insert(claim_id);
         }
+	
+		if (pslotPreempt) {
+				// Only expected for pslots
+			std::string childClaims;
+					// Grab the classad vector of ids
+			int numKids = 0;
+			ad->LookupInteger(ATTR_NUM_DYNAMIC_SLOTS,numKids);
+			std::vector<std::string> claims;
+
+				// foreach entry in that vector
+			for (int kid = 0; kid < numKids; kid++) {
+				std::string childAttr;
+				formatstr(childAttr, "%s[%d]", ATTR_CHILD_CLAIM_IDS, kid);
+				ExprTree *et;
+				classad::Value result;
+	
+				ParseClassAdRvalExpr(childAttr.c_str(), et);
+				EvalExprTree(et, ad, NULL, result);
+				delete et;
+
+				std::string strValue;
+				if (result.IsStringValue(strValue)) {
+						// Finally, append this claimid to our list
+					claims.push_back(strValue);
+				}
+			}
+
+				// Put the newly-made vector of claims in the hash
+           	childClaimHash[key] = claims;
+		}
 	}
 	startdPvtAdList.Close();
 }
@@ -4214,9 +4250,11 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 
 		bool pslotRankMatch = false;
 		if (!is_a_match) {
-			if (param_boolean("ALLOW_PSLOT_PREEMPTION", true)) {
+			bool jobWantsMultiMatch = false;
+			request.LookupBool(ATTR_WANT_PSLOT_PREEMPTION, jobWantsMultiMatch);
+			if (param_boolean("ALLOW_PSLOT_PREEMPTION", false) && jobWantsMultiMatch) {
 				is_a_match = pslotMultiMatch(&request, candidate);
-				pslotRankMatch = true;
+				pslotRankMatch = is_a_match;
 			}
 		}
 
@@ -4641,7 +4679,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		}
 	}
 
-	// find the startd's claim id from the private a
+	// find the startd's claim id from the private ad
 	char const *claim_id = NULL;
     string claim_id_buf;
     ClaimIdHash::iterator claimset = claimIds.end();
@@ -4654,6 +4692,15 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
             return MM_BAD_MATCH;
         }
         claim_id_buf = *(claimset->second.begin());
+
+		// If there are extra preempting dslot claims, hand them out too
+		string extraClaims;
+		if (offer->LookupString("PreemptDslotClaims", extraClaims)) {
+			claim_id_buf += " ";
+			claim_id_buf += extraClaims;
+			offer->Delete("PreemptDslotClaims");
+		}
+
         claim_id = claim_id_buf.c_str();
 	} else {
 		// Claiming is *not* desired
@@ -5886,8 +5933,8 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine) {
 		// need to add custom resources here
 
 		// In rank order, see if by preempting one more dslot would cause pslot to match
-	for (int i = 0; i < numDslots && ranks[i].second < newRank; i++) {
-		int dSlot = ranks[i].first; // dslot index in childXXX list
+	for (int slot = 0; slot < numDslots && ranks[slot].second < newRank; slot++) {
+		int dSlot = ranks[slot].first; // dslot index in childXXX list
 
 			// for each splitable resource, get it from the dslot, and add to pslot
 		for (std::list<std::string>::iterator it = attrs.begin(); it != attrs.end(); it++) {
@@ -5924,36 +5971,22 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine) {
 		classad::MatchClassAd::UnoptimizeAdForMatchmaking(job);
 
 		if (IsAMatch(&mutatedMachine, job)) {
-			dprintf(D_FULLDEBUG, "Matched pslot by rank preempting %d dynamic slots\n", i + 1);
-			std::string claimsToPreempt = "{";
-			bool firstTime = true;
-			for (int child = 0; child < i + 1; child++) {
-				std::string childAttr;
-				formatstr(childAttr, "%s[%d]", ATTR_CHILD_CLAIM_IDS,child);
-				ExprTree *et;
-				classad::Value result;
-	
-				ParseClassAdRvalExpr(childAttr.c_str(), et);
-				EvalExprTree(et, machine, NULL, result);
-				delete et;
+			dprintf(D_FULLDEBUG, "Matched pslot by rank preempting %d dynamic slots\n", slot + 1);
+			std::string claimsToPreempt;
 
-				std::string strValue;
-				if (result.IsStringValue(strValue)) {
+			std::string name, ipaddr;
+			machine->LookupString(ATTR_NAME, name);
+			machine->LookupString(ATTR_MY_ADDRESS, ipaddr);
 
-					if (firstTime) {
-						firstTime = false;
-					} else {
-						claimsToPreempt += ",";
-					}
-					claimsToPreempt += '"';
-					claimsToPreempt += strValue;
-					claimsToPreempt += '"';
-				}
-
+				// Lookup the vector of claim ids for this startd
+			std::string key = name + ipaddr;
+			std::vector<std::string> v = childClaimHash[key];
+			for (int child = 0; child < slot + 1; child++) {
+				claimsToPreempt += v[child];
+				claimsToPreempt += " ";
 			}
-			claimsToPreempt += "}";
-			
-			machine->AssignExpr("PreemptDslotClaims", claimsToPreempt.c_str());
+
+			machine->Assign("PreemptDslotClaims", claimsToPreempt.c_str());
 			return true;
 		} 
 	}

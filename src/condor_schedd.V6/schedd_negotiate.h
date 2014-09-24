@@ -131,7 +131,7 @@ class ScheddNegotiate: public DCMsg {
 	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason) = 0;
 
 		// returns true if the match was successfully handled (so far)
-	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id,ClassAd &match_ad, char const *slot_name) = 0;
+	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name) = 0;
 
 	virtual void scheduler_handleNegotiationFinished( Sock *sock ) = 0;
 
@@ -163,6 +163,8 @@ class ScheddNegotiate: public DCMsg {
 	int m_operation;             // the negotiation operation
 	std::string m_reject_reason; // why the job was rejected
 	std::string m_claim_id;      // the string "null" if none
+	std::string m_extra_claims;
+
 	ClassAd m_match_ad;          // the machine we matched to
 
 		// Updates m_current_job_id to next job in the list
@@ -210,7 +212,7 @@ public:
 
 	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason);
 
-	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id,ClassAd &match_ad, char const *slot_name);
+	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name);
 
 	virtual void scheduler_handleNegotiationFinished( Sock *sock );
 

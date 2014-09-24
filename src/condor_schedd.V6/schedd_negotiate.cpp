@@ -358,7 +358,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 			break;
 		}
 
-		if( scheduler_handleMatch(m_current_job_id,m_claim_id.c_str(),m_match_ad,slot_name) )
+		if( scheduler_handleMatch(m_current_job_id,m_claim_id.c_str(),m_extra_claims.c_str(), m_match_ad,slot_name) )
 		{
 			m_jobs_matched++;
 		}
@@ -447,6 +447,12 @@ ScheddNegotiate::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 		}
 		m_claim_id = claim_id;
 		free( claim_id );
+
+		size_t space = m_claim_id.find(' ');
+		if (space != std::string::npos) {
+			m_extra_claims = m_claim_id.substr(space + 1, std::string::npos);
+			m_claim_id = m_claim_id.substr(0, space);
+		}
 
 		m_match_ad.Clear();
 
