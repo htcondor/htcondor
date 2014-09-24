@@ -47,7 +47,8 @@ public:
 			@param id The ClaimId, NULL if unknown
 		*/
 	DCStartd( const char* const name, const char* const pool,
-			  const char* const addr, const char* const id );
+			  const char* const addr, const char* const id,
+			  const char* const ids = NULL);
 
 	DCStartd( const ClassAd *ad, const char *pool = NULL );
 
@@ -205,6 +206,7 @@ public:
 
  private:
 	char* claim_id;
+	char* extra_ids;
 
 		// Helper methods
 	bool checkClaimId( void );
@@ -218,7 +220,7 @@ public:
 
 class ClaimStartdMsg: public DCMsg {
 public:
-	ClaimStartdMsg( char const *claim_id, ClassAd const *job_ad, char const *description, char const *scheduler_addr, int alive_interval );
+	ClaimStartdMsg( char const *claim_id, char const *extra_ids, ClassAd const *job_ad, char const *description, char const *scheduler_addr, int alive_interval );
 
 		// Functions that override DCMsg
 	bool writeMsg( DCMessenger *messenger, Sock *sock );
@@ -244,8 +246,10 @@ public:
 		{ return m_have_paired_slot ? &m_paired_startd_ad : NULL; }
 
 	const ClassAd *getJobAd() { return &m_job_ad;}
+	bool putExtraClaims(Sock *sock);
 private:
 	std::string m_claim_id;
+	std::string m_extra_claims;
 	ClassAd m_job_ad;
 	std::string m_description;
 	std::string m_scheduler_addr;

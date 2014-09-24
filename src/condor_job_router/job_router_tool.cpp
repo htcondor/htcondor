@@ -405,7 +405,7 @@ unsigned int hashFuncStdString( std::string const & key)
 }
 
 // 
-JobRouterHookMgr::JobRouterHookMgr() : HookClientMgr(), NUM_HOOKS(0), UNDEFINED("UNDEFINED"), m_hook_paths(MyStringHash) {}
+JobRouterHookMgr::JobRouterHookMgr() : HookClientMgr(), NUM_HOOKS(0), UNDEFINED("UNDEFINED"), m_default_hook_keyword(NULL), m_hook_paths(MyStringHash) {}
 JobRouterHookMgr::~JobRouterHookMgr() {};
 bool JobRouterHookMgr::initialize() { reconfig(); return true; /*HookClientMgr::initialize()*/; }
 bool JobRouterHookMgr::reconfig() { m_default_hook_keyword = param("JOB_ROUTER_HOOK_KEYWORD"); return true; }

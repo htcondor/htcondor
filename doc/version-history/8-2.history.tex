@@ -33,6 +33,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The new configuration variable 
+\Macro{RUN\_FILETRANSFER\_PLUGINS\_WITH\_ROOT} permits file transfer
+plug-ins to run with \Login{root} privilege,
+when HTCondor daemons are run as \Login{root},
+and when set to the non-default value of \Expr{True}.
+\Ticket{4561}
+
 \item The new configuration variable \Macro{NETWORK\_HOSTNAME} sets
 the host name that HTCondor uses to identify the local machine.
 If \MacroNI{NETWORK\_HOSTNAME} is not set, 
@@ -90,6 +97,16 @@ information to the file and line number information for a configuration variable
 \item Fixed a bug that sometimes prevented adding a \File{.txt} file name
 extension to the log file name of an HTCondor daemon on Windows platforms.
 \Ticket{4571}
+
+\item Fixed a bug that caused \Condor{dagman} to core dump if
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set to \Expr{False} and
+\Macro{DAGMAN\_USE\_STRICT} is set to 1 or higher.
+\Ticket{4600}
+
+\item Fixed a bug that caused the DAG node status file (if one is specified)
+to have the wrong final status for a DAG that is aborted by an
+\Arg{ABORT-DAG-ON} specification.
+\Ticket{4312}
 
 \end{itemize}
 

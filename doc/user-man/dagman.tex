@@ -1622,26 +1622,31 @@ of the node job, unless the job requests it using the submit command
 \index{DAGMan!Single submission of multiple, independent DAGs}
 
 A single use of \Condor{submit\_dag} may execute multiple, independent DAGs.
-Each independent DAG has its own DAG input file.
+Each independent DAG has its own, distinct DAG input file.
 These DAG input files are command-line arguments to
-\Condor{submit\_dag}
-(see the \Condor{submit\_dag} manual page at ~\ref{man-condor-submit-dag}).
+\Condor{submit\_dag}.
 
 Internally, all of the independent DAGs are combined
 into a single, larger DAG, with no dependencies between
 the original independent DAGs.
 As a result,
-any generated Rescue DAG file represents all of the input DAGs
-as a single DAG.
+any generated Rescue DAG file represents all of the original independent DAGs
+with a single DAG.
 The file name of this Rescue DAG is based on the DAG input file
-listed first within the command-line arguments to
-\Condor{submit\_dag} (unlike a single-DAG Rescue DAG file, however,
-the file name will be
-\File{\textless{whatever}\textgreater.dag\_multi.rescue} or
-\File{\textless{whatever}\textgreater.dag\_multi.rescueNNN},
-as opposed to
-just \File{\textless{whatever}\textgreater.dag.rescue}
-or \File{\textless{whatever}\textgreater.dag.rescueNNN}).
+listed first within the command-line arguments.
+For example, assume that three independent DAGs are submitted with
+\begin{verbatim}
+  condor_submit_dag A.dag B.dag C.dag
+\end{verbatim}
+The first listed is \File{A.dag}.
+The remainder of the specialized file name adds a suffix
+onto this first DAG input file name, \File{A.dag}.
+The suffix is \File{\_multi.rescue<XXX>},
+where \File{<XXX>} is substituted by the 3-digit number of the
+Rescue DAG created as defined in section~\ref{sec:DAGMan-rescue}.
+The first time a Rescue DAG is created for the example,
+it will have the file name \File{A.dag\_multi.rescue001}.
+
 Other files such
 as \File{dagman.out} and the lock file also have names based on this
 first DAG input file.
