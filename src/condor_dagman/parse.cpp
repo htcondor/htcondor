@@ -1605,7 +1605,7 @@ parse_splice(
 			debug_printf( DEBUG_QUIET,
 						"ERROR: %s (line %d): DIR requires a directory "
 						"specification\n", filename, lineNumber);
-			debug_printf( DEBUG_QUIET, "%s\n", example );
+			exampleSyntax( example );
 			return false;
 		}
 
@@ -1619,7 +1619,7 @@ parse_splice(
 			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
 						  "parameter \"%s\"\n", filename, lineNumber, 
 						  garbage.Value() );
-			debug_printf( DEBUG_QUIET, "%s\n", example );
+			exampleSyntax( example );
 			return false;
 	}
 
