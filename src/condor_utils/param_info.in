@@ -7841,3 +7841,11 @@ default: @end
 	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
 @end
 
+[RUN_FILETRANSFER_PLUGINS_WITH_ROOT]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Whether to invoke file transfer plugins as user or as root
+review=?
+
