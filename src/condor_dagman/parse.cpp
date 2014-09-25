@@ -742,7 +742,7 @@ parse_parent(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "PARENT p1 p2 p3 CHILD c1 c2 c3";
+	const char * example = "PARENT p1 [p2 p3 ...] CHILD c1 [c2 c3 ...]";
 	Dag *splice_dag;
 	
 	List<Job> parents;
@@ -1814,7 +1814,7 @@ parse_node_status_file(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "NODE_STATUS_FILE StatusFile [min update time]";
+	const char * example = "NODE_STATUS_FILE StatusFile [min update time] [ALWAYS-UPDATE]";
 
 	char *statusFileName = strtok(NULL, DELIMITERS);
 	if (statusFileName == NULL) {
@@ -1839,7 +1839,33 @@ parse_node_status_file(
 		}
 	}
 
-	dag->SetNodeStatusFileName( statusFileName, minUpdateTime );
+	bool alwaysUpdate = false;
+	char *alwaysUpdateStr = strtok( NULL, DELIMITERS );
+	if ( alwaysUpdateStr != NULL ) {
+		if ( strcasecmp( alwaysUpdateStr, "ALWAYS-UPDATE" ) == 0) {
+			alwaysUpdate = true;
+		} else {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
+						  "parameter \"%s\"\n", filename, lineNumber,
+						  alwaysUpdateStr );
+			exampleSyntax( example );
+			return false;
+		}
+	}
+
+	//
+	// Check for illegal extra tokens.
+	//
+	char *token = strtok( NULL, DELIMITERS );
+	if ( token != NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Extra token (%s) on NODE_STATUS_FILE line\n",
+					  filename, lineNumber, token );
+		exampleSyntax( example );
+		return false;
+	}
+
+	dag->SetNodeStatusFileName( statusFileName, minUpdateTime, alwaysUpdate );
 	return true;
 }
 

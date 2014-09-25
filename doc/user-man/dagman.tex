@@ -2802,6 +2802,7 @@ To enable this feature, the DAG input file must contain a line with the
 The syntax for a \Arg{NODE\_STATUS\_FILE} specification is
 
 \Opt{NODE\_STATUS\_FILE} \Arg{statusFileName} \oArg{minimumUpdateTime}
+\oOpt{ALWAYS-UPDATE}
 
 The status file is written on the machine on which the DAG is submitted;
 its location is given by \Arg{statusFileName},
@@ -2819,6 +2820,14 @@ no matter how small the \Arg{minimumUpdateTime} value.
 Also, the node status file will be updated when the DAG finishes,
 whether successful or not, even if \Arg{minimumUpdateTime} seconds
 have not elapsed since the last update.
+
+The optional \Arg{ALWAYS-UPDATE} keyword specifies that the
+node status file should be updated on every submission cycle,
+even if no nodes have changed status since the last time the
+file was updated.  (Note that the file will change slightly
+because the timestamps will be updated.)  You should probably
+\emph{not} enable the \Arg{ALWAYS-UPDATE} option if you have a
+very large DAG file.
 
 As an example, if the DAG input file contains the line
 \begin{verbatim}

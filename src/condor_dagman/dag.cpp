@@ -191,6 +191,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_statusFileName = NULL;
 	_statusFileOutdated = true;
 	_minStatusUpdateTime = 0;
+	_alwaysUpdateStatus = false;
 	_lastStatusUpdateTimestamp = 0;
 
 	_nextSubmitTime = 0;
@@ -2864,7 +2865,7 @@ Dag::DumpDotFile(void)
 */
 void 
 Dag::SetNodeStatusFileName( const char *statusFileName,
-			int minUpdateTime )
+			int minUpdateTime, bool alwaysUpdate )
 {
 	if ( _statusFileName != NULL ) {
 		debug_printf( DEBUG_NORMAL, "Warning: Attempt to set NODE_STATUS_FILE "
@@ -2875,6 +2876,7 @@ Dag::SetNodeStatusFileName( const char *statusFileName,
 	}
 	_statusFileName = strnewp( statusFileName );
 	_minStatusUpdateTime = minUpdateTime;
+	_alwaysUpdateStatus = alwaysUpdate;
 }
 
 //-------------------------------------------------------------------------
@@ -2895,7 +2897,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		return;
 	}
 	
-	if ( !_statusFileOutdated && !held && !removed ) {
+	if ( !_alwaysUpdateStatus && !_statusFileOutdated && !held && !removed ) {
 		debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
 					"because it is not yet outdated\n" );
 		return;
