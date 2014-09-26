@@ -42,7 +42,7 @@ void
 ProcFamilyServer::set_client_principal(char* p)
 {
 	if (!m_server->set_client_principal(p)) {
-		EXCEPT("ProcFamilyServer: error setting client principal\n");
+		EXCEPT("ProcFamilyServer: error setting client principal");
 	}
 }
 
@@ -60,7 +60,7 @@ ProcFamilyServer::read_from_client(void* buf, int len)
 	// better - for now, however, we give up in any case
 	//
 	if (!m_server->read_data(buf, len)) {
-		EXCEPT("ProcFamilyServer: error reading from client\n");
+		EXCEPT("ProcFamilyServer: error reading from client");
 	}
 }
 
@@ -393,7 +393,7 @@ ProcFamilyServer::wait_loop()
 			// clean up the procd process itself. This exact situation happened
 			// in the OSG use case for the proc.
 			if (m_server->consistent() == false) {
-				EXCEPT("ProcFamilyServer: Namedpipe reader isn't consistent\n");
+				EXCEPT("ProcFamilyServer: Namedpipe reader isn't consistent");
 			}
 
 			// take our periodic snapshot
@@ -408,7 +408,7 @@ ProcFamilyServer::wait_loop()
 		bool ok = m_server->accept_connection(snapshot_countdown,
 		                                      command_ready);
 		if (!ok) {
-			EXCEPT("ProcFamilyServer: failed trying to accept client\n");
+			EXCEPT("ProcFamilyServer: failed trying to accept client");
 		}
 		if (!command_ready) {
 			// timeout; make sure we execute the timer handler

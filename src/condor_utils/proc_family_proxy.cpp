@@ -460,17 +460,17 @@ ProcFamilyProxy::start_procd()
 		int min_tracking_gid = param_integer("MIN_TRACKING_GID", 0);
 		if (min_tracking_gid == 0) {
 			EXCEPT("USE_GID_PROCESS_TRACKING enabled, "
-			           "but MIN_TRACKING_GID is %d\n",
+			           "but MIN_TRACKING_GID is %d",
 			       min_tracking_gid);
 		}
 		int max_tracking_gid = param_integer("MAX_TRACKING_GID", 0);
 		if (max_tracking_gid == 0) {
 			EXCEPT("USE_GID_PROCESS_TRACKING enabled, "
-			           "but MAX_TRACKING_GID is %d\n",
+			           "but MAX_TRACKING_GID is %d",
 			       max_tracking_gid);
 		}
 		if (min_tracking_gid > max_tracking_gid) {
-			EXCEPT("invalid tracking gid range: %d - %d\n",
+			EXCEPT("invalid tracking gid range: %d - %d",
 			       min_tracking_gid,
 			       max_tracking_gid);
 		}

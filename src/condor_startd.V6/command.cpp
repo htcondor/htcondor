@@ -2433,7 +2433,7 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 		rval = cod_mgr->resume( s, &ad, claim );
 		break;
 	case CA_REQUEST_CLAIM:
-		EXCEPT( "Already handled CA_REQUEST_CLAIM, shouldn't be here\n" );
+		EXCEPT( "Already handled CA_REQUEST_CLAIM, shouldn't be here" );
 		break;
 	case CA_RENEW_LEASE_FOR_CLAIM:
 		rval = cod_mgr->renew( s, &ad, claim );

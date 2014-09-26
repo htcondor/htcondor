@@ -1214,7 +1214,7 @@ run_preen()
 
 	args = param("PREEN_ARGS");
 	if(!arglist.AppendArgsV1RawOrV2Quoted(args,&error_msg)) {
-		EXCEPT("ERROR: failed to parse preen args: %s\n",error_msg.Value());
+		EXCEPT("ERROR: failed to parse preen args: %s",error_msg.Value());
 	}
 	free(args);
 

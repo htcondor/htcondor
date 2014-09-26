@@ -143,7 +143,7 @@ static char * getWritePassword(const char *write_passwd_fname,
 	fp = safe_fopen_wrapper_follow(write_passwd_fname, "r");
 
 	if(fp == NULL) {
-		EXCEPT("Unable to open password file %s\n", write_passwd_fname);
+		EXCEPT("Unable to open password file %s", write_passwd_fname);
 	}
 	
 		//dprintf(D_ALWAYS, "prefix: %s\n", prefix);
@@ -175,7 +175,7 @@ static char * getWritePassword(const char *write_passwd_fname,
 
 	fclose(fp);
 	if (!found) {
-		EXCEPT("Unable to find password from file %s with prefix %s\n", write_passwd_fname, prefix);
+		EXCEPT("Unable to find password from file %s with prefix %s", write_passwd_fname, prefix);
 	}
 	free(prefix);
     

@@ -1459,14 +1459,14 @@ ResMgr::addResource( Resource *rip )
 	Resource** new_resources = NULL;
 
 	if( !rip ) {
-		EXCEPT("Error: attempt to add a NULL resource\n");
+		EXCEPT("Error: attempt to add a NULL resource");
 	}
 
 	calculateAffinityMask(rip);
 
 	new_resources = new Resource*[nresources + 1];
 	if( !new_resources ) {
-		EXCEPT("Failed to allocate memory for new resource\n");
+		EXCEPT("Failed to allocate memory for new resource");
 	}
 
 		// Copy over the old Resource pointers.  If nresources is 0

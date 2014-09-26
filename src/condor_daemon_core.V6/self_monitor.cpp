@@ -568,7 +568,7 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
          break;
 
       default:
-         EXCEPT("unsupported probe type\n");
+         EXCEPT("unsupported probe type");
          break;
       }
 

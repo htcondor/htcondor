@@ -56,7 +56,7 @@ JobLogMirror::config() {
 		spool = param("SPOOL");
 	}
 	if(!spool) {
-		EXCEPT("No SPOOL defined in config file.\n");
+		EXCEPT("No SPOOL defined in config file.");
 	}
 	else {
 		std::string job_log_fname(spool);

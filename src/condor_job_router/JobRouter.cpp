@@ -168,7 +168,7 @@ JobRouter::GetInstanceLock() {
 
 	lock->setBlocking(FALSE);
 	if(!lock->obtain(WRITE_LOCK)) {
-		EXCEPT("Failed to get lock on %s.\n",lock_fullname.c_str());
+		EXCEPT("Failed to get lock on %s.",lock_fullname.c_str());
 	}
 }
 
@@ -1001,7 +1001,7 @@ JobRouter::AdoptOrphans() {
 
 	constraint_tree = parser.ParseExpression(dest_jobs.c_str());
 	if(!constraint_tree) {
-		EXCEPT("JobRouter: Failed to parse orphan dest job constraint: '%s'\n",dest_jobs.c_str());
+		EXCEPT("JobRouter: Failed to parse orphan dest job constraint: '%s'",dest_jobs.c_str());
 	}
 
     query.Bind(ad_collection2);
@@ -1109,7 +1109,7 @@ JobRouter::AdoptOrphans() {
 
 	constraint_tree = parser.ParseExpression(src_jobs.c_str());
 	if(!constraint_tree) {
-		EXCEPT("JobRouter: Failed to parse orphan constraint: '%s'\n",src_jobs.c_str());
+		EXCEPT("JobRouter: Failed to parse orphan constraint: '%s'",src_jobs.c_str());
 	}
 
     query.Bind(ad_collection);
@@ -1270,7 +1270,7 @@ JobRouter::GetCandidateJobs() {
 
 	constraint_tree = parser.ParseExpression(umbrella_constraint);
 	if(!constraint_tree) {
-		EXCEPT("JobRouter: Failed to parse umbrella constraint: %s\n",umbrella_constraint.c_str());
+		EXCEPT("JobRouter: Failed to parse umbrella constraint: %s",umbrella_constraint.c_str());
 	}
 
     query.Bind(ad_collection);

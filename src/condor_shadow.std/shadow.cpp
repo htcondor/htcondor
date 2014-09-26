@@ -970,7 +970,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 
 	if (!JobAd)
 	{
-		EXCEPT( "update_job_status(): No job ad\n");
+		EXCEPT( "update_job_status(): No job ad");
 	}
 	JobAd->LookupInteger(ATTR_TOTAL_SUSPENSIONS, tot_sus);
 	JobAd->LookupInteger(ATTR_CUMULATIVE_SUSPENSION_TIME, cum_sus);

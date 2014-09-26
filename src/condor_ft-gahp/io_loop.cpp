@@ -370,7 +370,7 @@ stdin_pipe_handler(Service*, int) {
 
 				int fds[2];
 				if ( pipe( fds ) < 0 ) {
-					EXCEPT( "Failed to create pipe!\n" );
+					EXCEPT( "Failed to create pipe!" );
 				}
 				ChildErrorPipe = fds[1];
 				int tid = daemonCore->Create_Thread(do_command_download_sandbox, (void*)strdup(command), NULL, download_sandbox_reaper_id);
@@ -407,7 +407,7 @@ stdin_pipe_handler(Service*, int) {
 
 				int fds[2];
 				if ( pipe( fds ) < 0 ) {
-					EXCEPT( "Failed to create pipe!\n" );
+					EXCEPT( "Failed to create pipe!" );
 				}
 				ChildErrorPipe = fds[1];
 				int tid = daemonCore->Create_Thread(do_command_upload_sandbox, (void*)strdup(command), NULL, upload_sandbox_reaper_id);
@@ -443,7 +443,7 @@ stdin_pipe_handler(Service*, int) {
 
 				int fds[2];
 				if ( pipe( fds ) < 0 ) {
-					EXCEPT( "Failed to create pipe!\n" );
+					EXCEPT( "Failed to create pipe!" );
 				}
 				ChildErrorPipe = fds[1];
 				int tid = daemonCore->Create_Thread(do_command_destroy_sandbox, (void*)strdup(command), NULL, destroy_sandbox_reaper_id);

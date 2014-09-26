@@ -1010,7 +1010,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 
 		char *varname = strdup( my_environ[i] );
 		if( !varname ) {
-			EXCEPT( "Out of memory in %s:%d\n", __FILE__, __LINE__ );
+			EXCEPT( "Out of memory in %s:%d", __FILE__, __LINE__ );
 		}
 
 		// isolate variable name by finding & nulling the '=', and trimming spaces before and after 
@@ -1217,7 +1217,7 @@ get_exclude_regex(Regex &excludeFilesRegex)
 		}
 		if(!excludeFilesRegex.isInitialized() ) {
 			EXCEPT("Could not init regex "
-				   "to exclude files in %s\n", __FILE__);
+				   "to exclude files in %s", __FILE__);
 		}
 	}
 	free(excludeRegex);
@@ -2056,7 +2056,7 @@ param_with_default_abort(const char *name, int abort)
 		if (abort) {
 			EXCEPT("Param name '%s' did not have a definition in any of the "
 				   "usual namespaces or default table. Aborting since it MUST "
-				   "be defined.\n", name);
+				   "be defined.", name);
 		}
 		return NULL;
 	}

@@ -1012,7 +1012,7 @@ DedicatedScheduler::reaper( int pid, int status )
 			}
 			break;
 		case JOB_SHADOW_USAGE:
-			EXCEPT("shadow exited with incorrect usage!\n");
+			EXCEPT("shadow exited with incorrect usage!");
 			break;
 		case JOB_BAD_STATUS:
 			EXCEPT("shadow exited because job status != RUNNING");
@@ -1689,7 +1689,7 @@ DedicatedScheduler::sortResources( void )
 			unclaimed_resources->Append( res );
 			continue;
 		}
-		EXCEPT("DedicatedScheduler got unknown status for match %d\n", mrec->status);
+		EXCEPT("DedicatedScheduler got unknown status for match %d", mrec->status);
 	}
 
     duplicate_partitionable_res(unclaimed_resources);

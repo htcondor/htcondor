@@ -912,7 +912,7 @@ CCBServer::AddTarget( CCBTarget *target )
 				// That's odd: there is no conflicting ccbid, so why did
 				// the insert fail?!
 			EXCEPT( "CCB: failed to insert registered target ccbid %lu "
-					"for %s\n",
+					"for %s",
 					target->getCCBID(),
 					target->getSock()->peer_description());
 		}
@@ -981,7 +981,7 @@ CCBServer::AddRequest( CCBServerRequest *request, CCBTarget *target )
 				// That's odd: there is no conflicting id, so why did
 				// the insert fail?!
 			EXCEPT( "CCB: failed to insert request id %lu "
-					"for %s\n",
+					"for %s",
 					request->getRequestID(),
 					request->getSock()->peer_description());
 		}
@@ -1217,7 +1217,7 @@ CCBServer::OpenReconnectFile(bool only_if_exists)
 		if( only_if_exists && errno == ENOENT ) {
 			return false;
 		}
-		EXCEPT("CCB: Failed to open %s: %s\n",
+		EXCEPT("CCB: Failed to open %s: %s",
 			   m_reconnect_fname.Value(),strerror(errno));
 	}
 	return true;

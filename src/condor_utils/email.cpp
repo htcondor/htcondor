@@ -309,7 +309,7 @@ email_open_implementation( const char * final_args[])
 			user dir somewhere and not readable by the Condor Account. */
 		int ret = chdir("/");
 		if (ret == -1) {
-			EXCEPT("EMAIL PROCESS: Could not cd /\n");
+			EXCEPT("EMAIL PROCESS: Could not cd /");
 		}
 		umask(0);
 
@@ -324,7 +324,7 @@ email_open_implementation( const char * final_args[])
 		if (dup2(pipefds[0], STDIN_FILENO) < 0)
 		{
 			/* I hope this EXCEPT gets recorded somewhere */
-			EXCEPT("EMAIL PROCESS: Could not connect stdin to child!\n");
+			EXCEPT("EMAIL PROCESS: Could not connect stdin to child!");
 		}
 
 		/* close all other unneeded file descriptors including stdout and

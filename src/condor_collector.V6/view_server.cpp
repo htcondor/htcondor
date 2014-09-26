@@ -164,7 +164,7 @@ void ViewServer::Config()
 	if (!tmp) {
 		tmp=param("LOCAL_DIR");
 		if (!tmp) {
-			EXCEPT("No POOL_HISTORY_DIR or LOCAL_DIR directory specified in config file\n");
+			EXCEPT("No POOL_HISTORY_DIR or LOCAL_DIR directory specified in config file");
 		}
 		formatstr(history_dir_buf, "%s/ViewHist", tmp);
 	}
@@ -177,7 +177,7 @@ void ViewServer::Config()
 	dprintf(D_ALWAYS, "Configuration: SAMPLING_INTERVAL=%d, MAX_STORAGE=%d, MaxFileSize=%d, POOL_HISTORY_DIR=%s\n",HistoryInterval,MaxStorage,MaxFileSize,history_dir);
 
 	if(!IsDirectory(history_dir)) {
-		EXCEPT("POOL_HISTORY_DIR (%s) does not exist.\n",history_dir);
+		EXCEPT("POOL_HISTORY_DIR (%s) does not exist.",history_dir);
 	}
 
 	for (int i=0; i<DataSetCount; i++) {

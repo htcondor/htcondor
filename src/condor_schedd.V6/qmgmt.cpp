@@ -807,7 +807,7 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 
 		if( !SpooledJobFiles::createParentSpoolDirectories(job_ad) ) {
 			EXCEPT("Failed to create parent spool directories for "
-				   "%d.%d: %s: %s\n",
+				   "%d.%d: %s: %s",
 				   cluster,proc,new_path.c_str(),strerror(errno));
 		}
 
@@ -824,7 +824,7 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 				saved_priv = set_priv(PRIV_ROOT);
 
 				if( rename(old_tmp_path.c_str(),new_tmp_path.c_str())!= 0 ) {
-					EXCEPT("Failed to move %s to %s: %s\n",
+					EXCEPT("Failed to move %s to %s: %s",
 						   old_tmp_path.c_str(),
 						   new_tmp_path.c_str(),
 						   strerror(errno));
@@ -840,7 +840,7 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 		saved_priv = set_priv(PRIV_ROOT);
 
 		if( rename(old_path.c_str(),new_path.c_str())!= 0 ) {
-			EXCEPT("Failed to move %s to %s: %s\n",
+			EXCEPT("Failed to move %s to %s: %s",
 				   old_path.c_str(),
 				   new_path.c_str(),
 				   strerror(errno));
@@ -861,7 +861,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 	MyString spool;
 	if( !param(spool,"SPOOL") ) {
-		EXCEPT("SPOOL must be defined.\n");
+		EXCEPT("SPOOL must be defined.");
 	}
 
 	int spool_min_version = 0;
