@@ -1448,11 +1448,11 @@ _condor_dprintf_exit( int error_code, const char* msg )
 		snprintf( header, sizeof(header), "dprintf() had a fatal error in pid %d\n", (int)getpid() );
 		tail[0] = '\0';
 		if( error_code ) {
-			sprintf( tail, "errno: %d (%s)\n", error_code,
+			sprintf( tail, " errno: %d (%s)", error_code,
 					 strerror(error_code) );
 		}
 #ifndef WIN32			
-		sprintf( buf, "euid: %d, ruid: %d\n", (int)geteuid(),
+		sprintf( buf, " euid: %d, ruid: %d", (int)geteuid(),
 				 (int)getuid() );
 		strcat( tail, buf );
 #endif
@@ -1462,22 +1462,13 @@ _condor_dprintf_exit( int error_code, const char* msg )
 					  DebugLogDir, get_mySubSystemName() );
 			fail_fp = safe_fopen_wrapper_follow( buf, "wN",0644 );
 			if( fail_fp ) {
-				fprintf( fail_fp, "%s", header );
-				fprintf( fail_fp, "%s", msg );
-				if( tail[0] ) {
-					fprintf( fail_fp, "%s", tail );
-				}
+				fprintf( fail_fp, "%s%s%s\n", header, msg, tail );
 				fclose_wrapper( fail_fp, FCLOSE_RETRY_MAX );
 				wrote_warning = TRUE;
 			} 
 		}
 		if( ! wrote_warning ) {
-			fprintf( stderr, "%s", header );
-			fprintf( stderr, "%s", msg );
-			if( tail[0] ) {
-				fprintf( stderr, "%s", tail );
-			}
-
+			fprintf( stderr, "%s%s%s\n", header, msg, tail );
 		}
 			/* First, set a flag so we know not to try to keep using
 			   dprintf during the rest of this */
