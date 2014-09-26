@@ -1857,11 +1857,11 @@ void Matchmaker::hgq_construct_tree() {
     string group_sort_expr;
     if (!param(group_sort_expr, "GROUP_SORT_EXPR")) {
         // Should never fail! Default provided via param-info
-        EXCEPT("Failed to obtain value for GROUP_SORT_EXPR\n");
+        EXCEPT("Failed to obtain value for GROUP_SORT_EXPR");
     }
     ExprTree* test_sort_expr = NULL;
     if (ParseClassAdRvalExpr(group_sort_expr.c_str(), test_sort_expr)) {
-        EXCEPT("Failed to parse GROUP_SORT_EXPR = %s\n", group_sort_expr.c_str());
+        EXCEPT("Failed to parse GROUP_SORT_EXPR = %s", group_sort_expr.c_str());
     }
     delete test_sort_expr;
     for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
@@ -3563,7 +3563,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 		// Tell the schedd to limit negotiation to this job priority range
 		if ( want_globaljobprio && scheddAd->LookupInteger("JOBPRIO_MIN",jmin) ) {
 			if (!scheddAd->LookupInteger("JOBPRIO_MAX",jmax)) {
-				EXCEPT("SubmitterAd with JOBPRIO_MIN attr, but no JOBPRIO_MAX\n");
+				EXCEPT("SubmitterAd with JOBPRIO_MIN attr, but no JOBPRIO_MAX");
 			}
 			negotiate_ad.Assign("JOBPRIO_MIN",jmin);
 			negotiate_ad.Assign("JOBPRIO_MAX",jmax);
@@ -3601,7 +3601,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 		}
 	}
 	else {
-		EXCEPT("Unexpected negotiate_cmd=%d\n",negotiate_cmd);
+		EXCEPT("Unexpected negotiate_cmd=%d",negotiate_cmd);
 	}
 	if (!sock->end_of_message())
 	{

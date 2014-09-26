@@ -115,7 +115,7 @@ JobQueueDBManager::config(bool reconfig)
 		//figure out the location of the job_queue.log file
 	char *spool = param("SPOOL");
 	if(!spool) {
-		EXCEPT("No SPOOL variable found in config file\n");
+		EXCEPT("No SPOOL variable found in config file");
 	}
   
 	jobQueueLogFile = (char *) malloc(_POSIX_PATH_MAX * sizeof(char));
@@ -175,7 +175,7 @@ JobQueueDBManager::config(bool reconfig)
 		ret_st = DBObj->connectDB();
 		if (ret_st == QUILL_FAILURE) {
 			displayErrorMsg("config: unable to connect to DB--- ERROR");
-			EXCEPT("config: unable to connect to DB\n");
+			EXCEPT("config: unable to connect to DB");
 		}
 
 			/* the following will also throw an exception if the schema 

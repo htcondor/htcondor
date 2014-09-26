@@ -475,7 +475,7 @@ Starter::reallykill( int signo, int type )
 				 s_pid, signo, signame );
 		break;
 	default:
-		EXCEPT( "Unknown type (%d) in Starter::reallykill\n", type );
+		EXCEPT( "Unknown type (%d) in Starter::reallykill", type );
 	}
 
 	priv = set_root_priv();

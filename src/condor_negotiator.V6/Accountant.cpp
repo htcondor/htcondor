@@ -1351,7 +1351,7 @@ MyString Accountant::GetResourceName(ClassAd* ResourceAd)
   
   if (!ResourceAd->LookupString (ATTR_NAME, startdName)) {
     //This should never happen, because unnamed startd ads are rejected.
-    EXCEPT ("ERROR in Accountant::GetResourceName - Name not specified\n");
+    EXCEPT ("ERROR in Accountant::GetResourceName - Name not specified");
   }
   MyString Name=startdName;
   Name+="@";

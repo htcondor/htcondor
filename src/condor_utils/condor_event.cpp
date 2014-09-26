@@ -2138,7 +2138,7 @@ JobEvictedEvent::setReason( const char* reason_str )
     if( reason_str ) {
         reason = strnewp( reason_str );
         if( !reason ) {
-            EXCEPT( "ERROR: out of memory!\n" );
+            EXCEPT( "ERROR: out of memory!" );
         }
     }
 }
@@ -2159,7 +2159,7 @@ JobEvictedEvent::setCoreFile( const char* core_name )
 	if( core_name ) {
 		core_file = strnewp( core_name );
 		if( !core_file ) {
-			EXCEPT( "ERROR: out of memory!\n" );
+			EXCEPT( "ERROR: out of memory!" );
 		}
 	}
 }
@@ -2562,7 +2562,7 @@ JobAbortedEvent::setReason( const char* reason_str )
 	if( reason_str ) {
 		reason = strnewp( reason_str );
 		if( !reason ) {
-			EXCEPT( "ERROR: out of memory!\n" );
+			EXCEPT( "ERROR: out of memory!" );
 		}
 	}
 }
@@ -2708,7 +2708,7 @@ TerminatedEvent::setCoreFile( const char* core_name )
 	if( core_name ) {
 		core_file = strnewp( core_name );
 		if( !core_file ) {
-            EXCEPT( "ERROR: out of memory!\n" );
+            EXCEPT( "ERROR: out of memory!" );
 		}
 	}
 }
@@ -3552,7 +3552,7 @@ JobHeldEvent::setReason( const char* reason_str )
     if( reason_str ) {
         reason = strnewp( reason_str );
         if( !reason ) {
-            EXCEPT( "ERROR: out of memory!\n" );
+            EXCEPT( "ERROR: out of memory!" );
         }
     }
 }
@@ -3753,7 +3753,7 @@ JobReleasedEvent::setReason( const char* reason_str )
     if( reason_str ) {
         reason = strnewp( reason_str );
         if( !reason ) {
-            EXCEPT( "ERROR: out of memory!\n" );
+            EXCEPT( "ERROR: out of memory!" );
         }
     }
 }
@@ -4442,7 +4442,7 @@ JobDisconnectedEvent::setStartdAddr( const char* startd )
 	if( startd ) {
 		startd_addr = strnewp( startd );
 		if( !startd_addr ) {
-			EXCEPT( "ERROR: out of memory!\n" );
+			EXCEPT( "ERROR: out of memory!" );
 		}
 	}
 }
@@ -4458,7 +4458,7 @@ JobDisconnectedEvent::setStartdName( const char* name )
 	if( name ) {
 		startd_name = strnewp( name );
 		if( !startd_name ) {
-			EXCEPT( "ERROR: out of memory!\n" );
+			EXCEPT( "ERROR: out of memory!" );
 		}
 	}
 }
@@ -4474,7 +4474,7 @@ JobDisconnectedEvent::setDisconnectReason( const char* reason_str )
 	if( reason_str ) {
 		disconnect_reason = strnewp( reason_str );
 		if( !disconnect_reason ) {
-			EXCEPT( "ERROR: out of memory!\n" );
+			EXCEPT( "ERROR: out of memory!" );
 		}
 	}
 }
@@ -4490,7 +4490,7 @@ JobDisconnectedEvent::setNoReconnectReason( const char* reason_str )
 	if( reason_str ) {
 		no_reconnect_reason = strnewp( reason_str );
 		if( !no_reconnect_reason ) {
-			EXCEPT( "ERROR: out of memory!\n" );
+			EXCEPT( "ERROR: out of memory!" );
 		}
 		can_reconnect = false;
 	}
@@ -4744,7 +4744,7 @@ JobReconnectedEvent::setStartdAddr( const char* startd )
 	if( startd ) {
 		startd_addr = strnewp( startd );
 		if( !startd_addr ) {
-			EXCEPT( "ERROR: out of memory!\n" );
+			EXCEPT( "ERROR: out of memory!" );
 		}
 	}
 }
@@ -4760,7 +4760,7 @@ JobReconnectedEvent::setStartdName( const char* name )
 	if( name ) {
 		startd_name = strnewp( name );
 		if( !startd_name ) {
-			EXCEPT( "ERROR: out of memory!\n" );
+			EXCEPT( "ERROR: out of memory!" );
 		}
 	}
 }
@@ -4776,7 +4776,7 @@ JobReconnectedEvent::setStarterAddr( const char* starter )
 	if( starter ) {
 		starter_addr = strnewp( starter );
 		if( !starter_addr ) {
-			EXCEPT( "ERROR: out of memory!\n" );
+			EXCEPT( "ERROR: out of memory!" );
 		}
 	}
 }
@@ -4962,7 +4962,7 @@ JobReconnectFailedEvent::setReason( const char* reason_str )
 	if( reason_str ) {
 		reason = strnewp( reason_str );
 		if( !reason ) {
-			EXCEPT( "ERROR: out of memory!\n" );
+			EXCEPT( "ERROR: out of memory!" );
 		}
 	}
 }
@@ -4978,7 +4978,7 @@ JobReconnectFailedEvent::setStartdName( const char* name )
 	if( name ) {
 		startd_name = strnewp( name );
 		if( !startd_name ) {
-			EXCEPT( "ERROR: out of memory!\n" );
+			EXCEPT( "ERROR: out of memory!" );
 		}
 	}
 }

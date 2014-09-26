@@ -129,7 +129,7 @@ void Partition::set_pstate(PState pstate)
 			m_data->Assign(ATTR_PARTITION_STATE, "BACKED");
 			break;
 		default:
-			EXCEPT("Partition::set_pstate: Invalid pstate: %d\n", pstate);
+			EXCEPT("Partition::set_pstate: Invalid pstate: %d", pstate);
 			break;
 	}
 }
@@ -142,7 +142,7 @@ void Partition::set_pstate(MyString pstate)
 		pstate != "ASSIGNED" &&
 		pstate != "BACKED")
 	{
-		EXCEPT("Partition::set_pstate(): Invalid assignment string: %s\n",
+		EXCEPT("Partition::set_pstate(): Invalid assignment string: %s",
 			pstate.Value());
 	}
 
@@ -194,7 +194,7 @@ void Partition::set_pkind(PKind pkind)
 			m_data->Assign(ATTR_PARTITION_KIND, "VN");
 			break;
 		default:
-			EXCEPT("Partition::set_pstate: Invalid pkind: %d\n", pkind);
+			EXCEPT("Partition::set_pstate: Invalid pkind: %d", pkind);
 			break;
 	}
 }
@@ -205,7 +205,7 @@ void Partition::set_pkind(MyString pkind)
 		pkind != "DUAL" &&
 		pkind != "VN")
 	{
-		EXCEPT("Partition::set_pkind(): Invalid assignment string: %s\n",
+		EXCEPT("Partition::set_pkind(): Invalid assignment string: %s",
 			pkind.Value());
 	}
 

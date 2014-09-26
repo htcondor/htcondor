@@ -674,7 +674,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 							(ReaperHandler)&FileTransfer::Reaper,
 							"FileTransfer::Reaper()",NULL);
 		if (ReaperId == 1) {
-			EXCEPT("FileTransfer::Reaper() can not be the default reaper!\n");
+			EXCEPT("FileTransfer::Reaper() can not be the default reaper!");
 		}
 
 		// we also need to initialize the random number generator.  since
@@ -840,7 +840,7 @@ FileTransfer::DownloadFiles(bool blocking)
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadFiles\n");
 
 	if (ActiveTransferTid >= 0) {
-		EXCEPT("FileTransfer::DownloadFiles called during active transfer!\n");
+		EXCEPT("FileTransfer::DownloadFiles called during active transfer!");
 	}
 
 	// Make certain Init() was called.
@@ -1156,7 +1156,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 		final_transfer ? 1 : 0);
 
 	if (ActiveTransferTid >= 0) {
-		EXCEPT("FileTransfer::UpLoadFiles called during active transfer!\n");
+		EXCEPT("FileTransfer::UpLoadFiles called during active transfer!");
 	}
 
 	// Make certain Init() was called.
@@ -1555,7 +1555,7 @@ FileTransfer::ReadTransferPipeMsg()
 		}
 	}
 	else {
-		EXCEPT("Invalid file transfer pipe command %d\n",cmd);
+		EXCEPT("Invalid file transfer pipe command %d",cmd);
 	}
 
 	return true;
@@ -1618,7 +1618,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 	dprintf(D_FULLDEBUG,"entering FileTransfer::Download\n");
 	
 	if (ActiveTransferTid >= 0) {
-		EXCEPT("FileTransfer::Download called during active transfer!\n");
+		EXCEPT("FileTransfer::Download called during active transfer!");
 	}
 
 	Info.duration = 0;
@@ -2584,7 +2584,7 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	dprintf(D_FULLDEBUG,"entering FileTransfer::Upload\n");
 
 	if (ActiveTransferTid >= 0) {
-		EXCEPT("FileTransfer::Upload called during active transfer!\n");
+		EXCEPT("FileTransfer::Upload called during active transfer!");
 	}
 
 	Info.duration = 0;

@@ -289,7 +289,7 @@ CondorQuery::
 CondorQuery (const CondorQuery & /* from */)
 {
 		// Unimplemented!
-	EXCEPT( "CondorQuery copy constructor called, but unimplemented!\n" );
+	EXCEPT( "CondorQuery copy constructor called, but unimplemented!" );
 }
 
 
@@ -307,7 +307,7 @@ CondorQuery &CondorQuery::
 operator= (const CondorQuery &)
 {
 		// Unimplemented!
-	EXCEPT( "CondorQuery operator= called, but unimplemented!\n" );
+	EXCEPT( "CondorQuery operator= called, but unimplemented!" );
 	return *this;
 }
 

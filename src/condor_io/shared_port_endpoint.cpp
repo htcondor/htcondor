@@ -258,7 +258,7 @@ SharedPortEndpoint::CreateListener()
 	if(pipe_end == INVALID_HANDLE_VALUE)
 	{
 		DWORD error = GetLastError();
-		EXCEPT("SharedPortEndpoint: Failed to create named pipe: %d\n", error);
+		EXCEPT("SharedPortEndpoint: Failed to create named pipe: %d", error);
 	}
 
 #elif HAVE_SCM_RIGHTS_PASSFD
@@ -438,7 +438,7 @@ SharedPortEndpoint::StartListenerWin32()
 	thread_killed = CreateEvent(NULL, TRUE, FALSE, NULL);
 
 	if(thread_killed == INVALID_HANDLE_VALUE)
-		EXCEPT("SharedPortEndpoint: Failed to create cleanup event: %d\n", GetLastError());
+		EXCEPT("SharedPortEndpoint: Failed to create cleanup event: %d", GetLastError());
 
 	m_registered_listener = true;
 
@@ -578,7 +578,7 @@ SharedPortEndpoint::PipeListenerThread()
 				int write_success = send(sock_fd, wake, sizeof(char), 0);
 				//TODO: DO SOMETHING THREADSAFE HERE IN PLACE OF EXCEPT!!!!!!!!!!!!!!!!
 				if(write_success == SOCKET_ERROR)
-					EXCEPT("SharedPortEndpoint: Failed to write to select wakeup: %d\n", WSAGetLastError());
+					EXCEPT("SharedPortEndpoint: Failed to write to select wakeup: %d", WSAGetLastError());
 			}
 			
 //			dprintf(D_ALWAYS, "SharedPortEndpoint: Finished reading from pipe.\n");
@@ -1193,7 +1193,7 @@ SharedPortEndpoint::AddListenerToSelector(Selector &selector)
 #ifdef WIN32
 	
 	if(wake_select_dest)
-		EXCEPT("SharedPortEndpoint: AddListenerToSelector: Already registered.\n");
+		EXCEPT("SharedPortEndpoint: AddListenerToSelector: Already registered.");
 
 	wake_select_source = new ReliSock;
 	wake_select_dest = new ReliSock;
@@ -1211,7 +1211,7 @@ SharedPortEndpoint::RemoveListenerFromSelector(Selector &selector)
 {
 #ifdef WIN32
 	if(!wake_select_dest)
-		EXCEPT("SharedPortEndpoint: RemoveListenerFromSelector: Nothing registered.\n");
+		EXCEPT("SharedPortEndpoint: RemoveListenerFromSelector: Nothing registered.");
 	selector.delete_fd(wake_select_dest->get_file_desc(), Selector::IO_READ);
 #else
 	selector.delete_fd(m_listener_sock.get_file_desc(),Selector::IO_READ);
@@ -1222,7 +1222,7 @@ SharedPortEndpoint::CheckListenerReady(Selector &selector)
 {
 #ifdef WIN32
 	if(!wake_select_dest)
-		EXCEPT("SharedPortEndpoint: CheckListenerReady: Nothing registered.\n");
+		EXCEPT("SharedPortEndpoint: CheckListenerReady: Nothing registered.");
 	return selector.fd_ready(wake_select_dest->get_file_desc(),Selector::IO_READ);
 #else
 	return selector.fd_ready(m_listener_sock.get_file_desc(),Selector::IO_READ);
@@ -1274,7 +1274,7 @@ SharedPortEndpoint::ChownSocket(priv_state priv)
 		}
 	}
 
-	EXCEPT("Unexpected priv state in SharedPortEndpoint(%d)\n",(int)priv);
+	EXCEPT("Unexpected priv state in SharedPortEndpoint(%d)",(int)priv);
 	return false;
 #else
 #error HAVE_SHARED_PORT is defined, but no method for passing fds is enabled.

@@ -578,7 +578,7 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 	subEvent.submitEventLogNotes = strnewp( subEventNotes.Value() );
 
 	if ( !ulog.writeEvent( &subEvent ) ) {
-		EXCEPT( "Error: writing dummy submit event for NOOP node failed!\n" );
+		EXCEPT( "Error: writing dummy submit event for NOOP node failed!" );
 		return false;
 	}
 
@@ -592,7 +592,7 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 	termEvent.signalNumber = 0;
 
 	if ( !ulog.writeEvent( &termEvent ) ) {
-		EXCEPT( "Error: writing dummy terminated event for NOOP node failed!\n" );
+		EXCEPT( "Error: writing dummy terminated event for NOOP node failed!" );
 		return false;
 	}
 
@@ -641,7 +641,7 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 	pEvent.skipEventLogNotes = strnewp( pEventNotes.Value() );
 
 	if ( !ulog.writeEvent( &pEvent ) ) {
-		EXCEPT( "Error: writing PRESKIP event failed!\n" );
+		EXCEPT( "Error: writing PRESKIP event failed!" );
 		return false;
 	}
 	return true;

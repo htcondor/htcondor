@@ -258,7 +258,7 @@ SecMan::sec_req_param( const char* fmt, DCpermission auth_level, sec_req def ) {
 			MyString param_name;
 			char *value = getSecSetting( fmt, auth_level, &param_name );
 			if( res == SEC_REQ_INVALID ) {
-				EXCEPT( "SECMAN: %s=%s is invalid!\n",
+				EXCEPT( "SECMAN: %s=%s is invalid!",
 				        param_name.Value(), value ? value : "(null)" );
 			}
 			if( IsDebugVerbose(D_SECURITY) ) {
@@ -1218,7 +1218,7 @@ SecManStartCommand::startCommand_inner()
 			result = receivePostAuthInfo_inner();
 			break;
 		default:
-			EXCEPT("Unexpected state in SecManStartCommand: %d\n",m_state);
+			EXCEPT("Unexpected state in SecManStartCommand: %d",m_state);
 		}
 	} while( result == StartCommandContinue );
 

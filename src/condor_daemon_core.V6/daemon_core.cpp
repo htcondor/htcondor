@@ -2645,7 +2645,7 @@ DaemonCore::thread_switch_callback(void* & incoming_contextVP)
 	if ( !context.is_null() ) {
 		outgoing_context = (DCThreadState *) context->user_pointer_;
 		if (!outgoing_context) {
-				EXCEPT("ERROR: daemonCore - no thread context for tid %d\n",
+				EXCEPT("ERROR: daemonCore - no thread context for tid %d",
 						last_tid);
 		}
 	}
@@ -7407,7 +7407,7 @@ int DaemonCore::Create_Process(
 		//
 		if (sigmask != NULL) {
 			if (sigprocmask(SIG_SETMASK, &saved_mask, NULL) == -1) {
-				EXCEPT("Create_Process: sigprocmask error: %s (%d)\n",
+				EXCEPT("Create_Process: sigprocmask error: %s (%d)",
 				       strerror(errno),
 				       errno);
 			}

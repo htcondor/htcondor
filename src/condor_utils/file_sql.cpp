@@ -254,7 +254,7 @@ AttrList *FILESQL::file_readAttrList()
 	int EmptyFlag=0;
 
     if( !( ad=new AttrList(fp,"***\n", EndFlag, ErrorFlag, EmptyFlag) ) ){
-		EXCEPT("file_readAttrList Error:  Out of memory\n" );
+		EXCEPT("file_readAttrList Error:  Out of memory" );
     }
 
     if( ErrorFlag ) {

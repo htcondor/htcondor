@@ -1002,7 +1002,7 @@ MakeProc(ClassAd *ad, PROC *p)
 	MyString env_v1or2;
 	MyString env_error_msg;
 	if(!envobj.getDelimitedStringV1or2Raw(ad,&env_v1or2,&env_error_msg)) {
-		EXCEPT("Failed to parse environment string: %s\n",
+		EXCEPT("Failed to parse environment string: %s",
 			   env_error_msg.Value());
 	}
 	p->env_v1or2 = strdup(env_v1or2.Value());
@@ -1026,7 +1026,7 @@ MakeProc(ClassAd *ad, PROC *p)
 	MyString args_v1or2;
 	MyString error_msg;
 	if(!args.GetArgsStringV1or2Raw(ad,&args_v1or2,&error_msg)) {
-		EXCEPT("Failed to get V1or2 arguments string: %s\n",error_msg.Value());
+		EXCEPT("Failed to get V1or2 arguments string: %s",error_msg.Value());
 	}
 	p->args_v1or2[0] = strdup(args_v1or2.Value());
 

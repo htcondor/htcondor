@@ -390,7 +390,7 @@ daemon::DoConfig( bool init )
 	MyString env_error_msg;
 
 	if(!env_parser.MergeFromV1RawOrV2Quoted(env_string,&env_error_msg)) {
-		EXCEPT("ERROR: Failed to parse %s_ENVIRONMENT in config file: %s\n",
+		EXCEPT("ERROR: Failed to parse %s_ENVIRONMENT in config file: %s",
 		       name_in_config_file,
 			   env_error_msg.Value());
 	}

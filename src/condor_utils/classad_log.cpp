@@ -196,7 +196,7 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 		switch (log_rec->get_op_type()) {
         case CondorLogOp_Error:
             // this is defensive, ought to be caught in InstantiateLogEntry()
-            EXCEPT("ERROR: transaction record %lu was bad (byte offset %lld)\n", count, curr_log_entry_pos);
+            EXCEPT("ERROR: transaction record %lu was bad (byte offset %lld)", count, curr_log_entry_pos);
             break;
 		case CondorLogOp_BeginTransaction:
 			// this file contains transactions, so it must not
@@ -454,13 +454,13 @@ ClassAdLog::TruncLog()
 	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (log_fd < 0) {
 		EXCEPT( "failed to open log in append mode: "
-			"safe_open_wrapper(%s) returns %d\n", logFilename(), log_fd);
+			"safe_open_wrapper(%s) returns %d", logFilename(), log_fd);
 	}
 	log_fp = fdopen(log_fd, "a+");
 	if (log_fp == NULL) {
 		close(log_fd);
 		EXCEPT("failed to fdopen log in append mode: "
-			"fdopen(%s) returns %d\n", logFilename(), log_fd);
+			"fdopen(%s) returns %d", logFilename(), log_fd);
 	}
 
 	return true;
@@ -476,7 +476,7 @@ void
 ClassAdLog::DecNondurableCommitLevel(int old_level)
 {
 	if( --m_nondurable_level != old_level ) {
-		EXCEPT("ClassAdLog::DecNondurableCommitLevel(%d) with existing level %d\n",
+		EXCEPT("ClassAdLog::DecNondurableCommitLevel(%d) with existing level %d",
 			   old_level, m_nondurable_level+1);
 	}
 }

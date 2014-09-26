@@ -2432,7 +2432,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 	//job_ad->LookupInteger(ATTR_JOB_STATUS,mode);
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_STATUS, &mode);
 	if ( mode == -1 ) {
-		EXCEPT("In abort_job_myself: %s attribute not found in job %d.%d\n",
+		EXCEPT("In abort_job_myself: %s attribute not found in job %d.%d",
 				ATTR_JOB_STATUS,job_id.cluster, job_id.proc);
 	}
 
@@ -5904,7 +5904,7 @@ Scheduler::negotiate(int command, Stream* s)
 		}
 	}
 	else if( FlockCollectors ) {
-		EXCEPT("Unexpected negotiation command %d\n", command);
+		EXCEPT("Unexpected negotiation command %d", command);
 	}
 
 
@@ -7468,7 +7468,7 @@ Scheduler::isStillRunnable( int cluster, int proc, int &status )
 		break;
 
 	default:
-		EXCEPT( "StartJobHandler: Unknown status (%d) for job %d.%d\n",
+		EXCEPT( "StartJobHandler: Unknown status (%d) for job %d.%d",
 				status, cluster, proc ); 
 		break;
 	}
@@ -8180,7 +8180,7 @@ Scheduler::addRunnableJob( shadow_rec* srec )
 			 srec->job_id.cluster, srec->job_id.proc );
 
 	if( RunnableJobQueue.enqueue(srec) ) {
-		EXCEPT( "Cannot put job into run queue\n" );
+		EXCEPT( "Cannot put job into run queue" );
 	}
 
 	if( StartJobTimer<0 ) {
@@ -10372,7 +10372,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			break;
 
 		case JOB_SHADOW_USAGE:
-			EXCEPT( "%s exited with incorrect usage!\n", daemon_name.Value() );
+			EXCEPT( "%s exited with incorrect usage!", daemon_name.Value() );
 			break;
 
 		case JOB_BAD_STATUS:
@@ -11020,7 +11020,7 @@ Scheduler::Init()
 
 	if( Mail ) free( Mail );
 	if( ! (Mail=param("MAIL")) ) {
-		EXCEPT( "MAIL not specified in config file\n" );
+		EXCEPT( "MAIL not specified in config file" );
 	}	
 
 		// UidDomain will always be defined, since config() will put

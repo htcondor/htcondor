@@ -263,7 +263,7 @@ SSString::dispose ()
 		// Adjust the variables that track our strTable usage. 
 		context->number_of_slots_filled--;
 		if (context->number_of_slots_filled < 0) {
-			EXCEPT("StringSpace is algorithmically bad: number_of_slots_filled = %d!\n",
+			EXCEPT("StringSpace is algorithmically bad: number_of_slots_filled = %d!",
 				   context->number_of_slots_filled);
 		}
 		if (context->first_free_slot >= index) {

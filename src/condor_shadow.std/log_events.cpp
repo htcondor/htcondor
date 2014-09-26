@@ -115,7 +115,7 @@ initializeUserLog ()
 	if(!logfiles.empty()) {
 		if ( !ULog.initialize (Proc->owner, NULL, logfiles,
 				Proc->id.cluster, Proc->id.proc, 0, gjid.Value())) {
-			EXCEPT("Failed to initialize user log!\n");
+			EXCEPT("Failed to initialize user log!");
 		} else {
 			ULog.setUseXML(JobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) && use_xml);
 		}
@@ -406,7 +406,7 @@ void record_suspension_hack(unsigned int action)
 
 	if (!JobAd)
 	{
-		EXCEPT("Suspension code: Non-existant JobAd\n");
+		EXCEPT("Suspension code: Non-existant JobAd");
 	}
 
 	switch(action)
@@ -450,7 +450,7 @@ void record_suspension_hack(unsigned int action)
 			break;
 		}
 		default:
-			EXCEPT("record_suspension_hack(): Action event not recognized.\n");
+			EXCEPT("record_suspension_hack(): Action event not recognized.");
 			break;
 	}
 

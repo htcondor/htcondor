@@ -1319,7 +1319,7 @@ void CollectorDaemon::Config()
 	tmp = param(COLLECTOR_REQUIREMENTS);
 	MyString collector_req_err;
 	if( !collector.setCollectorRequirements( tmp, collector_req_err ) ) {
-		EXCEPT("Handling of '%s=%s' failed: %s\n",
+		EXCEPT("Handling of '%s=%s' failed: %s",
 			   COLLECTOR_REQUIREMENTS,
 			   tmp ? tmp : "(null)",
 			   collector_req_err.Value());

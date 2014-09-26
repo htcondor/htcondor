@@ -406,7 +406,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 				// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
 				char *lsubsys = param("SUBSYSTEM");//dprintf_param_funcs->param("SUBSYSTEM");
 				if ( ! DebugLogDir || ! lsubsys) {
-					EXCEPT("Unable to find LOG or SUBSYSTEM.\n");
+					EXCEPT("Unable to find LOG or SUBSYSTEM.");
 				}
 
 				formatstr(logPath, "%s%c%sLog", DebugLogDir, DIR_DELIM_CHAR, lsubsys);

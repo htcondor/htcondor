@@ -323,7 +323,7 @@ public:
    }
 
    int Unexpected() {
-      EXCEPT("Unexpected call to empty ring_buffer\n");
+      EXCEPT("Unexpected call to empty ring_buffer");
       return 0;
    }
 
@@ -1218,7 +1218,7 @@ public:
    stats_histogram& operator=(const stats_histogram<T>& sh);
    stats_histogram& operator=(int val) {
       if (val != 0) {
-          EXCEPT("Clearing operation on histogram with non-zero value\n");
+          EXCEPT("Clearing operation on histogram with non-zero value");
       }
       Clear();
       return *this;
@@ -1270,13 +1270,13 @@ stats_histogram<T>& stats_histogram<T>::Accumulate(const stats_histogram<T>& sh)
    // to add histograms, they must both be the same size (and have the same
    // limits array as well, should we check that?)
    if (this->cLevels != sh.cLevels) {
-       EXCEPT("attempt to add histogram of %d items to histogram of %d items\n",
+       EXCEPT("attempt to add histogram of %d items to histogram of %d items",
               sh.cLevels, this->cLevels);
        return *this;
    }
 
    if (this->levels != sh.levels) {
-       EXCEPT("Histogram level pointers are not the same.\n");
+       EXCEPT("Histogram level pointers are not the same.");
        return *this;
    }
 
@@ -1295,7 +1295,7 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
       Clear();
    } else if(this != &sh) {
       if(this->cLevels > 0 && this->cLevels != sh.cLevels){
-         EXCEPT("Tried to assign different sized histograms\n");
+         EXCEPT("Tried to assign different sized histograms");
       return *this;
       } else if(this->cLevels == 0) {
          this->cLevels = sh.cLevels;
@@ -1308,7 +1308,7 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
          for(int i=0;i<=cLevels;++i){
             this->data[i] = sh.data[i];
             if(this->levels[i] < sh.levels[i] || this->levels[i] > sh.levels[i]){
-               EXCEPT("Tried to assign different levels of histograms\n");
+               EXCEPT("Tried to assign different levels of histograms");
                return *this;
             }
          }

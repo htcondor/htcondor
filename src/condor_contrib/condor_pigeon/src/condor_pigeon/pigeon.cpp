@@ -87,7 +87,7 @@ void Pigeon::initialize() {
   char* proc= param("QPID_EXEC");
   if (!proc) {
   	dprintf(D_ALWAYS, "You need to specify the QPID executable as QPID_EXEC in your condor config \n");
-  	EXCEPT("No qpid executable (QPID_EXEC) specified!\n");
+  	EXCEPT("No qpid executable (QPID_EXEC) specified!");
   }
   const char *hostname = my_full_hostname() ;
   
@@ -115,7 +115,7 @@ void Pigeon::initialize() {
   int fds[3] = {-1, fd_stdout, -1};
   int mm_pid = daemonCore->Create_Process(proc,arglist,PRIV_CONDOR_FINAL, 0,FALSE,NULL,NULL,NULL,NULL,fds);
   if (mm_pid <= 0) 
-    EXCEPT("Failed to launch qpid process using Create_Process.\n ");
+    EXCEPT("Failed to launch qpid process using Create_Process.");
 
   dprintf(D_ALWAYS, "Launched qpid process pid=%d \n", mm_pid);
   sleep(10);
@@ -158,7 +158,7 @@ void Pigeon::initialize() {
   	qArglist.AppendArg(portStr.c_str());
   	mm_pid = daemonCore->Create_Process(proc,qArglist,PRIV_CONDOR_FINAL, 0,FALSE,NULL,NULL,NULL,NULL);
   	if (mm_pid <= 0) 
-		EXCEPT("Failed to launch declareQueues process using Create_Process.\n ");
+		EXCEPT("Failed to launch declareQueues process using Create_Process.");
     free(proc);
     free(execDir);
 	dprintf(D_ALWAYS, "QPID queues declared. \n");
@@ -206,7 +206,7 @@ int Pigeon::reaperResponse(int exit_pid, int exit_status) {
     initialize();
   }
   else if ( m_state != STATE_STOP_REQUESTED && exit_status != 0) {
-    EXCEPT("qpid daemon %d was killed unexpectedly\n", exit_pid);
+    EXCEPT("qpid daemon %d was killed unexpectedly", exit_pid);
   }
 
   m_state = STATE_NULL;

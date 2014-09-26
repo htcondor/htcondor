@@ -71,7 +71,7 @@ void Hadoop::initialize() {
         }
 
         if (m_hadoopHome == NULL)
-                EXCEPT("Misconfigured HDFS! Please specify a location of hadoop installation directory\n");                 
+                EXCEPT("Misconfigured HDFS! Please specify a location of hadoop installation directory");
         else {
                 Directory dir(m_hadoopHome.Value());
                 if (dir.Next() == NULL)
@@ -164,7 +164,7 @@ void Hadoop::writeCoreSiteFile() {
         MyString confFile;
         char *logdir = param("LOG");
         if (logdir == NULL) 
-            EXCEPT("Misconfigured HDFS!: log directory is not specified\n");
+            EXCEPT("Misconfigured HDFS!: log directory is not specified");
 
         confFile.sprintf("%s/%s", logdir, m_coreSiteFile.Value());
         free(logdir);
@@ -201,7 +201,7 @@ void Hadoop::writeConfigFile() {
         MyString confFile;
         char *logdir = param("LOG");
         if (logdir == NULL) 
-            EXCEPT("Misconfigured HDFS!: log directory is not specified\n");
+            EXCEPT("Misconfigured HDFS!: log directory is not specified");
 
         confFile.sprintf("%s/%s", logdir, m_hdfsSiteFile.Value());
         free(logdir);
@@ -400,7 +400,7 @@ int Hadoop::reaperResponse(int exit_pid, int exit_status) {
                 initialize();
         }
         else if ( m_state != STATE_STOP_REQUESTED && exit_status != 0) {
-            EXCEPT("hadoop daemon %d was killed unexpectedly\n", exit_pid);
+            EXCEPT("hadoop daemon %d was killed unexpectedly", exit_pid);
         }
 
         m_state = STATE_NULL;
@@ -587,7 +587,7 @@ void Hadoop::startService( NodeType type ) {
                         );
 
         if (m_pid == FALSE) 
-                EXCEPT("Failed to launch hadoop process using Create_Process.\n ");
+                EXCEPT("Failed to launch hadoop process using Create_Process.");
 
 		// And close our copy of the child's side of the pipes
 		daemonCore->Close_Pipe( childInOutErr[1]); // child side of stdout

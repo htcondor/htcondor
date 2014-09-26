@@ -471,7 +471,7 @@ bool ScheddOtherStatsMgr::Enable(
 	ExprTree *tree = NULL;
 	classad::ClassAdParser  parser;
 	if ( ! parser.ParseExpression(trig, tree)) {
-		EXCEPT("Schedd_stats: Invalid trigger expression for '%s' stats: '%s'\n", pre, trig);
+		EXCEPT("Schedd_stats: Invalid trigger expression for '%s' stats: '%s'", pre, trig);
 	}
 
 	bool was_enabled = false;

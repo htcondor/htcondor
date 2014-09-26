@@ -57,7 +57,7 @@ void display_startup_info( const STARTUP_INFO *s, int flags );
 #undef ASSERT
 #define ASSERT(cond) \
 	if( !(cond) ) { \
-		EXCEPT( "Assertion ERROR on (%s)\n", #cond ); \
+		EXCEPT( "Assertion ERROR on (%s)", #cond ); \
 	} else {\
 		dprintf( D_FULLDEBUG, "Assertion Ok on (%s)\n", #cond ); \
 	}
@@ -880,7 +880,7 @@ proc_exit()
 		return NO_CORE;
 
 	  default:
-		EXCEPT( "Unexpected proc state (%d)\n", state );
+		EXCEPT( "Unexpected proc state (%d)", state );
 	}
 
 		// Can never get here.
