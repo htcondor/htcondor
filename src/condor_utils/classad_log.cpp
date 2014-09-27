@@ -30,13 +30,10 @@
 #include "classad_merge.h"
 #include "condor_fsync.h"
 #include "condor_attributes.h"
+#include "stopwatch.h"
 
 #if defined(HAVE_DLOPEN)
 #include "ClassAdLogPlugin.h"
-#endif
-
-#ifdef HAVE_CLOCK_MONOTONIC
-#define CLASSAD_LOG_GETTIME
 #endif
 
 // explicitly instantiate the HashTable template
@@ -100,16 +97,8 @@ ClassAdLogFilterIterator::operator++(int)
 	bool boolVal;
 	int intVal;
 	int miss_count = 0;
-	int starttime_us, elapsed_us;
-#ifdef CLASSAD_LOG_GETTIME
-	struct timespec starttime;
-	clock_gettime(CLOCK_MONOTONIC_RAW, &starttime);
-	starttime_us = starttime.tv_nsec/1e3;
-#else
-	struct timeval starttime;
-	gettimeofday(&starttime, NULL);
-	starttime_us = starttime.tv_usec;
-#endif
+	Stopwatch sw;
+	sw.start();
 	while (!(m_cur == end))
 	{
 		miss_count++;
@@ -120,22 +109,8 @@ ClassAdLogFilterIterator::operator++(int)
 			// the rest of the iteration (6ms per 10k ads, or 600ms)
 			// for the whole queue, I consider this overhead
 			// acceptable.  BB, 09/2014.
-		if (miss_count % 500 == 0)
-		{
-#ifdef CLASSAD_LOG_GETTIME
-			struct timespec now;
-			clock_gettime(CLOCK_MONOTONIC_RAW, &now);
-			now.tv_sec -= starttime.tv_sec;
-			elapsed_us = now.tv_sec*1e6 + now.tv_nsec/1e3 - starttime_us;
-#else
-			struct timeval now;
-			gettimeofday(&now, NULL);
-			now.tv_sec -= starttime.tv_sec;
-			if (now.tv_sec < 0) {break;} // Clock jump backward
-			elapsed_us = now.tv_sec*1e6 + now.tv_usec - starttime_us;
-#endif
-			if (elapsed_us > m_timeslice_ms*1e3) { break; }
-		}
+		if ((miss_count % 500 == 0) && (sw.get_ms() > m_timeslice_ms)) {break;}
+
 		cur = *this;
 		ClassAd *tmp_ad = (*m_cur++).second;
 		if (!tmp_ad) continue;
