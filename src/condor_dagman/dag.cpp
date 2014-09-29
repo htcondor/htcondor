@@ -158,7 +158,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
  	_readyQ = new PrioritySimpleList<Job*>;
 	_submitQ = new Queue<Job*>;
 	if( !_readyQ || !_submitQ ) {
-		EXCEPT( "ERROR: out of memory (%s:%d)!\n", __FILE__, __LINE__ );
+		EXCEPT( "ERROR: out of memory (%s:%d)!", __FILE__, __LINE__ );
 	}
 
 	/* The ScriptQ object allocates daemoncore reapers, which are a
@@ -170,7 +170,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		_preScriptQ = new ScriptQ( this );
 		_postScriptQ = new ScriptQ( this );
 		if( !_preScriptQ || !_postScriptQ ) {
-			EXCEPT( "ERROR: out of memory (%s:%d)!\n", __FILE__, __LINE__ );
+			EXCEPT( "ERROR: out of memory (%s:%d)!", __FILE__, __LINE__ );
 		}
 	} else {
 		_preScriptQ = NULL;
@@ -1655,7 +1655,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 				ProcessFailedSubmit( job, dm.max_submit_attempts );
 				break; // break out of while loop
 			} else {
-				EXCEPT( "Illegal submit_result_t value: %d\n", submit_result );
+				EXCEPT( "Illegal submit_result_t value: %d", submit_result );
 			}
 		}
 	}
@@ -2356,7 +2356,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 	} else if( node->JobType() == Job::TYPE_STORK ) {
 		keyword = "DATA";
 	} else {
-		EXCEPT( "Illegal node type (%d)\n", node->JobType() );
+		EXCEPT( "Illegal node type (%d)", node->JobType() );
 	}
 
 	if ( !isPartial ) {
@@ -3936,7 +3936,7 @@ Dag::GetEventIDHash(bool isNoop, int jobType)
 		break;
 
 	default:
-		EXCEPT( "Illegal job type (%d)\n", jobType );
+		EXCEPT( "Illegal job type (%d)", jobType );
 		break;
 	}
 
@@ -3961,7 +3961,7 @@ Dag::GetEventIDHash(bool isNoop, int jobType) const
 		break;
 
 	default:
-		EXCEPT( "Illegal job type (%d)\n", jobType );
+		EXCEPT( "Illegal job type (%d)", jobType );
 		break;
 	}
 

@@ -155,7 +155,7 @@ void Defrag::config()
 	else {
 		m_draining_schedule = getDrainingScheduleNum(m_draining_schedule_str.c_str());
 		if( m_draining_schedule < 0 ) {
-			EXCEPT("Invalid draining schedule: %s\n",m_draining_schedule_str.c_str());
+			EXCEPT("Invalid draining schedule: %s",m_draining_schedule_str.c_str());
 		}
 	}
 
@@ -166,7 +166,7 @@ void Defrag::config()
 	}
 	else {
 		if( !m_rank_ad.AssignExpr(ATTR_RANK,rank.Value()) ) {
-			EXCEPT("Invalid expression for DEFRAG_RANK: %s\n",
+			EXCEPT("Invalid expression for DEFRAG_RANK: %s",
 				   rank.Value());
 		}
 	}
@@ -232,7 +232,7 @@ void Defrag::validateExpr(char const *constraint,char const *constraint_source)
 
 	if( ParseClassAdRvalExpr( constraint, requirements )!=0 || requirements==NULL )
 	{
-		EXCEPT("Invalid expression for %s: %s\n",
+		EXCEPT("Invalid expression for %s: %s",
 			   constraint_source,constraint);
 	}
 	delete requirements;
@@ -387,13 +387,13 @@ void Defrag::saveState()
 	formatstr(new_state_file,"%s.new",m_state_file.c_str());
 	FILE *fp;
 	if( !(fp = safe_fopen_wrapper_follow(new_state_file.c_str(), "w")) ) {
-		EXCEPT("failed to save state to %s\n",new_state_file.c_str());
+		EXCEPT("failed to save state to %s",new_state_file.c_str());
 	}
 	else {
 		fPrintAd(fp, ad);
 		fclose( fp );
 		if( rotate_file(new_state_file.c_str(),m_state_file.c_str())!=0 ) {
-			EXCEPT("failed to save state to %s\n",m_state_file.c_str());
+			EXCEPT("failed to save state to %s",m_state_file.c_str());
 		}
 	}
 }
@@ -406,7 +406,7 @@ void Defrag::loadState()
 			dprintf(D_ALWAYS,"State file %s does not yet exist.\n",m_state_file.c_str());
 		}
 		else {
-			EXCEPT("failed to load state from %s\n",m_state_file.c_str());
+			EXCEPT("failed to load state from %s",m_state_file.c_str());
 		}
 	}
 	else {

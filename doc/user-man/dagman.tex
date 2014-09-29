@@ -17,22 +17,20 @@ The Directed Acyclic Graph Manager (DAGMan) is a meta-scheduler for
 the execution of programs (computations). 
 DAGMan submits the programs to HTCondor in an order represented by
 a DAG and processes the results.
-A DAG input file describes the DAG, and
-further submit description file(s) are used by DAGMan
-when submitting programs to run under HTCondor.
+A \Term{DAG input file} describes the DAG.
 
 DAGMan is itself executed as a scheduler universe job
 within HTCondor.
-As DAGMan submits programs, it monitors log file(s) 
-to enforce the ordering required within the DAG.
-DAGMan is also responsible for scheduling, recovery, and reporting
-on the set of programs submitted to HTCondor.
+It submits the HTCondor jobs within nodes in such a way as to
+enforce the DAG's dependencies.
+DAGMan also handles recovery and reporting
+on the HTCondor jobs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGTerminology}DAGMan Terminology}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-To DAGMan, a node in a DAG may encompass more than a single
+A node within a DAG may encompass more than a single
 program submitted to run under HTCondor.
 Figure~\ref{fig:dagman-node} illustrates the elements of a node.
 
@@ -42,20 +40,16 @@ Figure~\ref{fig:dagman-node} illustrates the elements of a node.
 \caption{\label{fig:dagman-node}One Node within a DAG}
 \end{figure}
 
-At one time,
-the number of HTCondor jobs per node was restricted to one.
-This restriction is now relaxed such that all HTCondor jobs
-within a node must share a single cluster number.
-See the
-\Condor{submit} manual page
-for a further definition of a cluster.
-A limitation exists such that
-all jobs within the single cluster must use the same log file.
-Separate nodes within a DAG may use different log files.
+More than one HTCondor job may belong to a single node.
+All HTCondor jobs within a node must be within
+a single cluster, as given by the job ClassAd attribute \Attr{ClusterId}.
+%In addition,
+%all jobs within the single cluster must use the same log file.
+%Separate nodes within a DAG may use different log files.
 
 \emph{DAGMan enforces the dependencies within a DAG
-using the events recorded in a
-log file that is specified by the default configuration.}
+using the events recorded in a separate
+file that is specified by the default configuration.}
 
 As DAGMan schedules and submits jobs within nodes to HTCondor,
 these jobs are defined to succeed or fail based on their
@@ -64,7 +58,7 @@ This success or failure is propagated in well-defined ways to the level of
 a node within a DAG.
 Further progression of computation
 (towards completing the DAG)
-may be defined based upon the success or failure of one or more nodes.
+is based upon the success or failure of nodes.
 
 The failure of a single job within a cluster
 of multiple jobs
@@ -72,9 +66,8 @@ of multiple jobs
 causes the entire cluster of jobs to fail.
 Any other jobs within the failed cluster of jobs are
 immediately removed.
-Each node within a DAG is further defined to succeed or fail,
-based upon the return values of a PRE script, the job(s)
-within the cluster, and/or a POST script.
+Each node within a DAG may be further constrained  to succeed or fail
+based upon the return values of a PRE script and/or a POST script.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Input File Describing the DAG: the JOB, DATA, SCRIPT and PARENT...CHILD Key Words}

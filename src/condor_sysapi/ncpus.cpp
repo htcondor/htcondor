@@ -130,18 +130,18 @@ sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 							free(buffer);
 						buffer = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION)malloc(returnLength);
 						if(!buffer)
-							EXCEPT("Error: Failed to allocate space for SYSTEM_LOGICAL_PROCESSOR_INFORMATION\n");
+							EXCEPT("Error: Failed to allocate space for SYSTEM_LOGICAL_PROCESSOR_INFORMATION");
 					}
 					else
 					{
-						EXCEPT("Error: Failed to call GetLogicalProcessorInformation: %d\n", GetLastError());
+						EXCEPT("Error: Failed to call GetLogicalProcessorInformation: %d", GetLastError());
 					}
 				}
 				else
 				{
 					done = true;
 					if (!buffer)
-						EXCEPT("Error: Failed to get SYSTEM_LOGICAL_PROCESSOR_INFORMATION\n");
+						EXCEPT("Error: Failed to get SYSTEM_LOGICAL_PROCESSOR_INFORMATION");
 				}
 			}
 

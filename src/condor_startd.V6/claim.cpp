@@ -642,7 +642,7 @@ Claim::match_timed_out()
 			c = res_ip->r_pre_pre;
 		}
 		else {
-			EXCEPT("Unexpected timeout of claim id: %s\n",id());
+			EXCEPT("Unexpected timeout of claim id: %s",id());
 		}
 			// We need to generate a new preempting claim object,
 			// restore our reqexp, and update the CM. 

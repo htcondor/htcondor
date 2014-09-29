@@ -641,7 +641,7 @@ stats_histogram<T>& stats_histogram<T>::Accumulate(const stats_histogram<T>& sh)
 	// limits array as well, should we check that?)
 	if (this->cLevels != sh.cLevels) {
        #ifdef EXCEPT
-		EXCEPT("attempt to add histogram of %d items to histogram of %d items\n", 
+		EXCEPT("attempt to add histogram of %d items to histogram of %d items", 
 				sh.cLevels, this->cLevels);
        #else
         return *this;
@@ -650,7 +650,7 @@ stats_histogram<T>& stats_histogram<T>::Accumulate(const stats_histogram<T>& sh)
 
 	if (this->levels != sh.levels) {
        #ifdef EXCEPT
-		EXCEPT("Histogram level pointers are not the same.\n");
+		EXCEPT("Histogram level pointers are not the same.");
        #else
         return *this;
        #endif
@@ -671,7 +671,7 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
 		Clear();
 	} else if(this != &sh) {
 		if(this->cLevels > 0 && this->cLevels != sh.cLevels){
-			EXCEPT("Tried to assign different sized histograms\n");
+			EXCEPT("Tried to assign different sized histograms");
 			return *this;
 		} else if(this->cLevels == 0) {
 			this->cLevels = sh.cLevels;
@@ -684,7 +684,7 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
 			for(int i=0;i<=cLevels;++i){
 				this->data[i] = sh.data[i];
 				if(this->levels[i] < sh.levels[i] || this->levels[i] > sh.levels[i]){
-					EXCEPT("Tried to assign different levels of histograms\n");
+					EXCEPT("Tried to assign different levels of histograms");
 					return *this;	
 				}
 			}
@@ -750,7 +750,7 @@ int stats_histogram_ParseSizes(
          ++p;
 
       if ( ! is_digit(*p)) {
-         EXCEPT("Invalid input to ParseSizes at offset %d in '%s'\n", (int)(p-psz), psz);
+         EXCEPT("Invalid input to ParseSizes at offset %d in '%s'", (int)(p-psz), psz);
          break;
       }
 
@@ -795,7 +795,7 @@ int stats_histogram_ParseSizes(
 
 void stats_histogram_PrintSizes(MyString &  /*str*/, const  int64_t *  /*pSizes*/, int  /*cSizes*/)
 {
-   EXCEPT("stats_histogram::PrintSizes not implemented\n");
+   EXCEPT("stats_histogram::PrintSizes not implemented");
    // tj: WRITE THIS
 }
 
@@ -818,7 +818,7 @@ int stats_histogram_ParseTimes(
          ++p;
 
       if ( ! is_digit(*p)) {
-         EXCEPT("Invalid input to ParseTimes at offset %d in '%s'\n", (int)(p-psz), psz);
+         EXCEPT("Invalid input to ParseTimes at offset %d in '%s'", (int)(p-psz), psz);
          break;
       }
 
@@ -880,7 +880,7 @@ int stats_histogram_ParseTimes(
 
 void stats_histogram_times_PrintTimes(MyString &  /*str*/, const time_t *  /*pTimes*/, int /*cTimes*/)
 {
-   EXCEPT("stats_histogram::PrintTimes not implemented\n");
+   EXCEPT("stats_histogram::PrintTimes not implemented");
    // tj: WRITE THIS
 }
 

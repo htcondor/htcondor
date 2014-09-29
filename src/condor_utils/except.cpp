@@ -34,7 +34,7 @@ __stack_chk_fail() {
 
   backtrace(trace, 2);
   messages = backtrace_symbols(trace, 2);
-  EXCEPT("Stack overflow at: %s\n", messages[1]);
+  EXCEPT("Stack overflow at: %s", messages[1]);
 }
 */
 #endif
