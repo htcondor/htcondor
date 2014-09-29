@@ -101,9 +101,11 @@ information to the file and line number information for a configuration variable
 extension to the log file name of an HTCondor daemon on Windows platforms.
 \Ticket{4571}
 
-\item Fixed a bug that caused \Condor{dagman} to core dump if
-\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set to \Expr{False} and
-\Macro{DAGMAN\_USE\_STRICT} is set to 1 or higher.
+\item Fixed a bug that caused \Condor{dagman} to crash if
+configuration variable
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} was set to \Expr{False} and
+configuration variable
+\Macro{DAGMAN\_USE\_STRICT} was set to 1 or a higher value.
 \Ticket{4600}
 
 \item Fixed a bug that caused the DAG node status file (if one is specified)
