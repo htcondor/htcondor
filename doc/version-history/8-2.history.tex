@@ -68,6 +68,10 @@ the value will be parsed as if they are present.
 
 \begin{itemize}
 
+\item The RedHat 7 RPM contains the service file to start up 
+HTCondor via \Prog{systemd} instead of via \Prog{init} scripts.
+\Ticket{4534}
+
 \item Fixed bugs that prohibited the \Condor{startd} use of \MacroNI{RANK} 
 from preempting dynamic slots.
 \Ticket{4580}
