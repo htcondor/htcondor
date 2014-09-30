@@ -225,7 +225,7 @@ job_dagman_unlessexit: personal
 job_dagman_usedagdir: personal
 job_dagman_use_hold_claim: personal
 job_dagman_vars: personal
-job_dagman_rm: personal
+job_dagman_rm: cygwin,personal
 job_filexfer_base-input1_van: personal
 job_filexfer_base_van: personal
 job_filexfer_basic_van: personal
