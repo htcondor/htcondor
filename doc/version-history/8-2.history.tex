@@ -41,7 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that could cause removed jobs to return to idle status.
+If a running job was removed at the same time that an error occurred that
+caused the \Condor{shadow} to put the job on hold, the job would be put
+in the held status, but change to idle status when released.
+\Ticket{4619}
 
 \end{itemize}
 
@@ -53,8 +57,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.2.3 not yet released.
-%\item HTCondor version 8.2.3 released on Month Date, 2014.
+\item HTCondor version 8.2.3 released on October 1, 2014.
+
+\item This version of HTCondor includes a full port for 
+Ubuntu 14.04 on the x86\_64 architecture.
+A full port includes support for the standard universe.
+\Ticket{4562}
 
 \end{itemize}
 
@@ -79,13 +87,27 @@ This variable is useful if a machine has multiple network interfaces
 with different host names.
 \Ticket{4570}
 
+\item Configuration variable \Macro{JOB\_ROUTER\_DEFAULTS} tolerates
+the syntax of omitting the outer square brackets that would be 
+required by new ClassAd syntax,
+in order to facilitate appending to an existing value. 
+If the value of \MacroNI{JOB\_ROUTER\_DEFAULTS} does not have
+enclosing square brackets, 
+the value will be parsed as if they are present.
+\Ticket{4433}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item Fixed bugs prohibiting start RANK from preemption dynamic slots.
+\item The RedHat 7 RPM contains the service file to start up 
+HTCondor via \Prog{systemd} instead of via \Prog{init} scripts.
+\Ticket{4534}
+
+\item Fixed bugs that prohibited the \Condor{startd} use of \MacroNI{RANK} 
+from preempting dynamic slots.
 \Ticket{4580}
 
 \item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
@@ -131,15 +153,21 @@ information to the file and line number information for a configuration variable
 extension to the log file name of an HTCondor daemon on Windows platforms.
 \Ticket{4571}
 
-\item Fixed a bug that caused \Condor{dagman} to core dump if
-\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set to \Expr{False} and
-\Macro{DAGMAN\_USE\_STRICT} is set to 1 or higher.
+\item Fixed a bug that caused \Condor{dagman} to crash if
+configuration variable
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} was set to \Expr{False} and
+configuration variable
+\Macro{DAGMAN\_USE\_STRICT} was set to 1 or a higher value.
 \Ticket{4600}
 
 \item Fixed a bug that caused the DAG node status file (if one is specified)
 to have the wrong final status for a DAG that is aborted by an
 \Arg{ABORT-DAG-ON} specification.
 \Ticket{4312}
+
+\item Fixed a bug in the \Prog{batch\_gahp} that could cause it to fail
+when attempting to query the status of an LSF job.
+\Ticket{4592}
 
 \end{itemize}
 
