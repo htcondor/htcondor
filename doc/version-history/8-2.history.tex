@@ -68,7 +68,8 @@ the value will be parsed as if they are present.
 
 \begin{itemize}
 
-\item Fixed bugs prohibiting start RANK from preemption dynamic slots.
+\item Fixed bugs that prohibited the \Condor{startd} use of \MacroNI{RANK} 
+from preempting dynamic slots.
 \Ticket{4580}
 
 \item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
