@@ -53,6 +53,15 @@ This variable is useful if a machine has multiple network interfaces
 with different host names.
 \Ticket{4570}
 
+\item Configuration variable \Macro{JOB\_ROUTER\_DEFAULTS} tolerates
+the syntax of omitting the outer square brackets that would be 
+required by new ClassAd syntax,
+in order to facilitate appending to an existing value. 
+If the value of \MacroNI{JOB\_ROUTER\_DEFAULTS} does not have
+enclosing square brackets, 
+the value will be parsed as if they are present.
+\Ticket{4433}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
