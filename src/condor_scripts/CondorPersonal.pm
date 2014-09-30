@@ -1901,12 +1901,13 @@ sub StartPersonalCondor
 
 	#print "StartPersonalCondor:fullconfig:$fullconfig\n";
 
-	my $oldpath = $ENV{PATH};
-	my $newpath = $localdir . "sbin:" . $localdir . "bin:" . "$oldpath";
-	my $figpath = "";
-	$ENV{PATH} = $newpath;
+#		my $oldpath = $ENV{PATH};
+#		my $newpath = $localdir . "sbin:" . $localdir . "bin:" . "$oldpath";
+#		my $figpath = "";
+#		$ENV{PATH} = $newpath;
 
-	debug( "Using this path: --$newpath--\n",$debuglevel);
+#		debug( "Using this path: --$newpath--\n",$debuglevel);
+		my $figpath = "";
 
 	debug( "Want $configfile for config file\n",$debuglevel);
 
