@@ -41,7 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that could cause removed jobs to return to idle status.
+If a running job was removed at the same time that an error occurred that
+caused the \Condor{shadow} to put the job on hold, the job would be put
+in the held status, but change to idle status when released.
+\Ticket{4619}
 
 \end{itemize}
 
