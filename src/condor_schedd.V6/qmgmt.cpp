@@ -110,6 +110,12 @@ static Regex *queue_super_user_may_impersonate_regex = NULL;
 
 static void AddOwnerHistory(const MyString &user);
 
+typedef _condor_auto_save_runtime< stats_entry_probe<double> > condor_auto_runtime;
+
+schedd_runtime_probe WalkJobQ_runtime;
+schedd_runtime_probe WalkJobQ_mark_idle_runtime;
+schedd_runtime_probe WalkJobQ_get_job_prio_runtime;
+
 class Service;
 
 bool        PrioRecArrayIsDirty = true;
@@ -4760,8 +4766,9 @@ bool InWalkJobQueue() {
 }
 
 void
-WalkJobQueue(scan_func func)
+WalkJobQueue3(scan_func func, void* pv, schedd_runtime_probe & ftm)
 {
+	double begin = _condor_debug_get_time_double();
 	ClassAd *ad;
 	int rval = 0;
 
@@ -4774,7 +4781,7 @@ WalkJobQueue(scan_func func)
 
 	ad = GetNextJob(1);
 	while (ad != NULL && rval >= 0) {
-		rval = func(ad);
+		rval = func(ad, pv);
 		if (rval >= 0) {
 			FreeJobAd(ad);
 			ad = GetNextJob(0);
@@ -4782,6 +4789,10 @@ WalkJobQueue(scan_func func)
 	}
 	if (ad != NULL)
 		FreeJobAd(ad);
+
+	double runtime = _condor_debug_get_time_double() - begin;
+	ftm += runtime;
+	WalkJobQ_runtime += runtime;
 
 	in_walk_job_queue--;
 }
@@ -4810,22 +4821,21 @@ void DirtyPrioRecArray() {
 
 // runtime stats for count & time spent building the priorec array
 //
-typedef _condor_auto_save_runtime< stats_entry_probe<double> > condor_auto_runtime;
-stats_entry_probe<double> build_priorec_runtime;
-stats_entry_probe<double> build_priorec_mark_runtime;
-stats_entry_probe<double> build_priorec_walk_runtime;
-stats_entry_probe<double> build_priorec_sort_runtime;
-stats_entry_probe<double> build_priorec_sweep_runtime;
+schedd_runtime_probe BuildPrioRec_runtime;
+schedd_runtime_probe BuildPrioRec_mark_runtime;
+schedd_runtime_probe BuildPrioRec_walk_runtime;
+schedd_runtime_probe BuildPrioRec_sort_runtime;
+schedd_runtime_probe BuildPrioRec_sweep_runtime;
 
 static void DoBuildPrioRecArray() {
-	condor_auto_runtime rt(build_priorec_runtime);
+	condor_auto_runtime rt(BuildPrioRec_runtime);
 	double now = rt.begin;
 	scheduler.autocluster.mark();
-	build_priorec_mark_runtime += rt.tick(now);
+	BuildPrioRec_mark_runtime += rt.tick(now);
 
 	N_PrioRecs = 0;
 	WalkJobQueue( get_job_prio );
-	build_priorec_walk_runtime += rt.tick(now);
+	BuildPrioRec_walk_runtime += rt.tick(now);
 
 		// N_PrioRecs might be 0, if we have no jobs to run at the
 		// moment.  If so, we don't want to call qsort(), since that's
@@ -4836,11 +4846,11 @@ static void DoBuildPrioRecArray() {
 	if( N_PrioRecs ) {
 		qsort( (char *)PrioRec, N_PrioRecs, sizeof(PrioRec[0]),
 			   (int(*)(const void*, const void*))prio_compar );
-		build_priorec_sort_runtime += rt.tick(now);
+		BuildPrioRec_sort_runtime += rt.tick(now);
 	}
 
 	scheduler.autocluster.sweep();
-	build_priorec_sweep_runtime += rt.tick(now);
+	BuildPrioRec_sweep_runtime += rt.tick(now);
 
 	if( !scheduler.shadow_prio_recs_consistent() ) {
 		scheduler.mail_problem_message();

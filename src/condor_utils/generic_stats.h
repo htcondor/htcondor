@@ -1647,6 +1647,7 @@ public:
    }
 
    int RemoveProbe (const char * name); // remove from pool, will delete if owned by pool
+   int RemoveProbesByAddress(void * first, void * last); // remove all probes that point to between first & last (inclusive)
 
    /* tj: IMPLEMENT THIS
    double  SetSample(const char * probe_name, double sample);

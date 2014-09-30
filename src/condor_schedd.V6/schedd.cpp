@@ -171,6 +171,13 @@ bool jobManagedDone(ClassAd * ad);
 int  count_a_job( ClassAd *job );
 static void WriteCompletionVisa(ClassAd* ad);
 
+schedd_runtime_probe WalkJobQ_check_for_spool_zombies_runtime;
+schedd_runtime_probe WalkJobQ_count_a_job_runtime;
+schedd_runtime_probe WalkJobQ_PeriodicExprEval_runtime;
+schedd_runtime_probe WalkJobQ_clear_autocluster_id_runtime;
+schedd_runtime_probe WalkJobQ_find_idle_local_jobs_runtime;
+schedd_runtime_probe WalkJobQ_fixAttrUser_runtime;
+schedd_runtime_probe WalkJobQ_updateSchedDInterval_runtime;
 
 int	WallClockCkptInterval = 0;
 int STARTD_CONTACT_TIMEOUT = 45;  // how long to potentially block
@@ -547,6 +554,7 @@ static const int USER_HASH_SIZE = 100;
 Scheduler::Scheduler() :
     m_adSchedd(NULL),
     m_adBase(NULL),
+	OtherPoolStats(stats),
 	GridJobOwners(USER_HASH_SIZE, UserIdentity::HashFcn, updateDuplicateKeys),
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
@@ -585,7 +593,7 @@ Scheduler::Scheduler() :
 	m_need_reschedule = false;
 	m_send_reschedule_timer = -1;
 
-	stats.Init(0);
+	stats.InitMain();
 
 		//
 		// ClassAd attribute for evaluating whether to start
@@ -799,6 +807,7 @@ Scheduler::~Scheduler()
 		delete this->cronTabs;
 	}
 }
+
 
 // If a job has been spooling for 12 hours,
 // It may well be that the remote condor_submit died
@@ -1157,7 +1166,7 @@ Scheduler::count_jobs()
 		// job cluster ids, since we're about to re-create it.
 	dedicated_scheduler.clearDedicatedClusters();
 
-	WalkJobQueue( count_a_job );
+	WalkJobQueue(count_a_job);
 
 	if( dedicated_scheduler.hasDedicatedClusters() ) {
 			// We found some dedicated clusters to service.  Wake up
@@ -1299,16 +1308,16 @@ Scheduler::count_jobs()
 	// one last check for any newly-queued jobs
 	// this count is cumulative within the qmgmt package
 	// TJ: get daemon-core message-time here and pass into stats.Tick()
-	stats.Tick();
+	time_t now = stats.Tick();
 	stats.JobsSubmitted = GetJobQueuedCount();
 	stats.Autoclusters = autocluster.getNumAutoclusters();
 
-	OtherPoolStats.Tick();
+	OtherPoolStats.Tick(now);
 	// because cad is really m_adSchedd which is persistent, we have to 
 	// actively delete expired statistics atributes.
 	OtherPoolStats.UnpublishDisabled(*cad);
 	OtherPoolStats.RemoveDisabled();
-	OtherPoolStats.Publish(*cad);
+	OtherPoolStats.Publish(*cad, stats.PublishFlags);
 
 	// publish scheduler generic statistics
 	stats.Publish(*cad);
@@ -1984,6 +1993,7 @@ clear_autocluster_id( ClassAd *job )
 	job->Delete(ATTR_AUTO_CLUSTER_ID);
 	return 0;
 }
+
 
 int
 count_a_job( ClassAd *job )
@@ -5922,7 +5932,7 @@ Scheduler::negotiate(int command, Stream* s)
 	if ( sig_attrs_from_cm ) {
 		if ( autocluster.config(sig_attrs_from_cm) ) {
 			// clear out auto cluster id attributes
-			WalkJobQueue( (int(*)(ClassAd *))clear_autocluster_id );
+			WalkJobQueue(clear_autocluster_id);
 			DirtyPrioRecArray(); // should rebuild PrioRecArray
 		}
 		free(sig_attrs_from_cm);
@@ -7157,7 +7167,7 @@ Scheduler::StartLocalJobs()
 	if ( ExitWhenDone ) {
 		return;
 	}
-	WalkJobQueue( (int(*)(ClassAd *))find_idle_local_jobs );
+	WalkJobQueue(find_idle_local_jobs);
 }
 
 shadow_rec*
@@ -7695,11 +7705,11 @@ Scheduler::spawnShadow( shadow_rec* srec )
 			 mrec->description(), srec->pid );
 
     //time_t now = time(NULL);
-    stats.Tick();
+    time_t now = stats.Tick();
     stats.ShadowsStarted += 1;
     stats.ShadowsRunning = numShadows;
 
-	OtherPoolStats.Tick();
+	OtherPoolStats.Tick(now);
 
 		// If this is a reconnect shadow, update the mrec with some
 		// important info.  This usually happens in StartJobs(), but
@@ -7883,10 +7893,10 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 
 	srec->pid = 0; 
 	add_shadow_rec( srec );
-    stats.Tick();
+    time_t now = stats.Tick();
     stats.ShadowsRunning = numShadows;
 
-	OtherPoolStats.Tick();
+	OtherPoolStats.Tick(now);
 
 		// expand $$ stuff and persist expansions so they can be
 		// retrieved on restart for reconnect
@@ -8807,7 +8817,7 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
         int qdate = 0;
         GetAttributeInt(cluster, proc, ATTR_Q_DATE, &qdate);
 
-		scheduler.stats.Tick();
+		time_t now = scheduler.stats.Tick();
 		scheduler.stats.JobsStarted += 1;
 		scheduler.stats.JobsAccumTimeToStart += (current_time - qdate);
 
@@ -8823,7 +8833,7 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 				po->stats.JobsStarted += 1;
 				po->stats.JobsAccumTimeToStart += (current_time - qdate);
 			}
-			scheduler.OtherPoolStats.Tick();
+			scheduler.OtherPoolStats.Tick(now);
 		}
 	}
 
@@ -11026,7 +11036,7 @@ Scheduler::Init()
 				// this very often. :)
 			dprintf( D_FULLDEBUG, "UID_DOMAIN has changed.  "
 					 "Inserting new ATTR_USER into all classads.\n" );
-			WalkJobQueue((int(*)(ClassAd *)) fixAttrUser );
+			WalkJobQueue(fixAttrUser);
 			dirtyJobQueue();
 		}
 			// we're done with the old version, so don't leak memory 
@@ -11112,7 +11122,7 @@ Scheduler::Init()
 			// This will only update the job's that have the old
 			// ScheddInterval attribute defined
 			//
-			WalkJobQueue((int(*)(ClassAd*))::updateSchedDInterval);
+			WalkJobQueue3((scan_func)(::updateSchedDInterval), NULL, WalkJobQ_updateSchedDInterval_runtime);
 		}
 	}
 
@@ -11367,7 +11377,7 @@ Scheduler::Init()
 		names.truncate(0);
 
 		OtherPoolStats.RemoveDisabled();
-		OtherPoolStats.Reconfig();
+		OtherPoolStats.Reconfig(stats.RecentWindowMax, stats.RecentWindowQuantum);
 	}
 
 	/* default 5 megabytes */
@@ -12100,7 +12110,7 @@ void Scheduler::reconfig() {
 
 		// clear out auto cluster id attributes
 	if ( autocluster.config() ) {
-		WalkJobQueue( (int(*)(ClassAd *))clear_autocluster_id );
+		WalkJobQueue(clear_autocluster_id);
 	}
 
 	timeout();
@@ -14746,10 +14756,10 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 			"Shadow pid %d switching to job %d.%d.\n",
 			shadow_pid, new_job_id.cluster, new_job_id.proc );
 
-    stats.Tick();
+    time_t now = stats.Tick();
     stats.ShadowsRecycled += 1;
     stats.ShadowsRunning = numShadows;
-	OtherPoolStats.Tick();
+	OtherPoolStats.Tick(now);
 
 		// the add/delete_shadow_rec() functions update the job
 		// ads, so we need to do that here

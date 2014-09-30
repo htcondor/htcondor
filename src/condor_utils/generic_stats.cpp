@@ -978,6 +978,38 @@ int StatisticsPool::RemoveProbe (const char * name)
    return ret;
 }
 
+int StatisticsPool::RemoveProbesByAddress(void* first, void *last)
+{
+   int cRemoved = 0;
+
+   // first remove from the pub list
+   MyString key;
+   pubitem item;
+   pub.startIterations();
+   while (pub.iterate(key,item)) {
+      if (item.pitem < first || item.pitem > last)
+         continue;
+      pub.remove(key);
+   }
+
+   // then remove from the pool
+   void* probe;
+   poolitem item2;
+   pool.startIterations();
+   while (pool.iterate(probe,item2)) {
+      if (probe < first || probe > last)
+         continue;
+
+      ASSERT (!item2.fOwnedByPool);
+      if (item2.Delete) { item2.Delete(probe); }
+
+      pool.remove(probe);
+      ++cRemoved;
+   }
+
+   return cRemoved;
+}
+
 void StatisticsPool::InsertProbe (
    const char * name,       // unique name for the probe
    int          unit,       // identifies the probe class/type

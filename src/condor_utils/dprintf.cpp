@@ -52,6 +52,16 @@
 #include "log_rotate.h"
 #include "dprintf_internal.h"
 
+#if defined(HAVE__FTIME)
+# include <sys/timeb.h>
+#endif
+#if defined(HAVE_GETTIMEOFDAY)
+# include <sys/time.h>
+#endif
+#if defined(HAVE_CLOCK_GETTTIME)
+# include <time.h>
+#endif
+
 extern const char * const _condor_DebugCategoryNames[D_CATEGORY_COUNT];
 
 static FILE *debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool dont_panic);
@@ -217,6 +227,40 @@ int InDBX = 0;
 
 #define FCLOSE_RETRY_MAX 10
 
+
+double _condor_debug_get_time_double()
+{
+#if defined(HAVE_CLOCK_GETTIME)
+	struct timespec tm;
+	#ifdef HAVE_CLOCK_MONOTONIC_RAW
+	clock_gettime(CLOCK_MONOTONIC_RAW, &tm);
+	#else
+	clock_gettime(CLOCK_MONOTONIC, &tm);
+	#endif
+	return (double)tm.tv_sec + (tm.tv_nsec * 1.0e-9);
+#elif defined(WIN32)
+	LARGE_INTEGER li;
+	static bool initialized = false;
+	static double secs_per_tick = 0;
+	if ( ! initialized) {
+		QueryPerformanceFrequency(&li);
+		secs_per_tick = 1.0 / li.QuadPart;
+		initialized = true;
+	}
+	QueryPerformanceCounter(&li);
+	return li.QuadPart * secs_per_tick;
+#elif defined(HAVE_GETTIMEOFDAY)
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return (double)tv.tv_sec + (tv.tv_usec * 1.0e-6);
+#elif defined(HAVE__FTIME)
+	struct _timeb tm;
+	_ftime(&tm);
+	return (double)tm.time + (tm.millitm * 1.0e-3);
+#else
+    return 0.0;
+#endif
+}
 
 
 DebugFileInfo::~DebugFileInfo()

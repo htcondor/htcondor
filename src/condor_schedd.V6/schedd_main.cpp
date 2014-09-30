@@ -51,6 +51,8 @@ extern "C"
 }
 extern	void	mark_jobs_idle();
 extern  int     clear_autocluster_id( ClassAd *job );
+extern schedd_runtime_probe WalkJobQ_updateSchedDInterval_runtime;
+extern schedd_runtime_probe WalkJobQ_clear_autocluster_id_runtime;
 
 char*          Spool = NULL;
 char*          Name = NULL;
@@ -147,7 +149,7 @@ main_init(int argc, char* argv[])
 		// The below must happen _after_ InitJobQueue is called.
 	if ( scheduler.autocluster.config() ) {
 		// clear out auto cluster id attributes
-		WalkJobQueue( (int(*)(ClassAd *))clear_autocluster_id );
+		WalkJobQueue( clear_autocluster_id );
 	}
 	
 		//
@@ -155,7 +157,7 @@ main_init(int argc, char* argv[])
 		// have it defined. This will be for JobDeferral and
 		// CronTab jobs
 		//
-	WalkJobQueue( (int(*)(ClassAd *))::updateSchedDInterval );
+	WalkJobQueue3((scan_func)(::updateSchedDInterval), NULL, WalkJobQ_updateSchedDInterval_runtime );
 
 		// Initialize the dedicated scheduler stuff
 	dedicated_scheduler.initialize();
