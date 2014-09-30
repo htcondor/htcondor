@@ -2389,11 +2389,32 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 	else if ( strcasecmp( attr_name, ATTR_JOB_STATUS ) == 0 ) {
 			// If the status is being set, let's record the previous
-			// status. If there is no status, we default to an unused
-			// value.
-		int status = 0;
-		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
-		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status, flags );
+			// status, but only if it's different.
+			// When changing the status of a HELD job that was previously
+			// REMOVED, enforce that it has to go back to REMOVED.
+		int curr_status = 0;
+		int last_status = 0;
+		int release_status = 0;
+		int new_status = (int)strtol( attr_value, NULL, 10 );
+
+		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &curr_status );
+		GetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, &last_status );
+		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS_ON_RELEASE, &release_status );
+
+		if ( new_status != HELD && new_status != REMOVED &&
+			 ( curr_status == REMOVED || last_status == REMOVED ||
+			   release_status == REMOVED ) ) {
+			dprintf( D_ALWAYS, "SetAttribute violation: Attempt to change %s of removed job %d.%d to %d\n",
+					 ATTR_JOB_STATUS, cluster_id, proc_id, new_status );
+			return -1;
+		}
+		if ( curr_status == REMOVED && new_status == HELD &&
+			 release_status != REMOVED ) {
+			SetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS_ON_RELEASE, REMOVED, flags );
+		}
+		if ( new_status != curr_status && curr_status > 0 ) {
+			SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, curr_status, flags );
+		}
 	}
 #if defined(ADD_TARGET_SCOPING)
 /* Disable AddTargetRefs() for now
