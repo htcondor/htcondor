@@ -10461,11 +10461,14 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// no break, fall through and do the action
 
 		case JOB_SHOULD_HOLD: {
-			dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
-					 job_id.cluster, job_id.proc );
 				// Regardless of the state that the job currently
 				// is in, we'll put it on HOLD
-			set_job_status( job_id.cluster, job_id.proc, HELD );
+				// But let a REMOVED job stay that way.
+			if ( q_status != HELD && q_status != REMOVED ) {
+				dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
+						 job_id.cluster, job_id.proc );
+				set_job_status( job_id.cluster, job_id.proc, HELD );
+			}
 			is_badput = true;
 			
 				// If the job has a CronTab schedule, we will want
