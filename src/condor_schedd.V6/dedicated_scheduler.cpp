@@ -1040,10 +1040,12 @@ DedicatedScheduler::reaper( int pid, int status )
 			shutdownMpiJob( srec );
 			break;
 		case JOB_SHOULD_HOLD:
-			dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
-					 srec->job_id.cluster, srec->job_id.proc );
-			set_job_status( srec->job_id.cluster, srec->job_id.proc, 
-							HELD );
+			if ( q_status != HELD && q_status != REMOVED ) {
+				dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
+						 srec->job_id.cluster, srec->job_id.proc );
+				set_job_status( srec->job_id.cluster, srec->job_id.proc,
+								HELD );
+			}
 			shutdownMpiJob( srec );
 			break;
 		case DPRINTF_ERROR:
