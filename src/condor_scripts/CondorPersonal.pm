@@ -619,8 +619,7 @@ sub StartCondorWithParamsStart
 sub debug {
     my $string = shift;
     my $level = shift;
-	my $time = `date`;
-	fullchomp($time);
+	my $time = scalar(localtime());
 	push @debugcollection, "$time: CondorPersonal - $string";
 	if(!(defined $level) or ($level <= $DEBUGLEVEL)) {
 		if(defined $level) {

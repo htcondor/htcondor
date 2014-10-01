@@ -1710,7 +1710,7 @@ sub runToolNTimes
     my $count = 0;
     my $stop = 0;
     my @cmdout = ();
-    my @date = ();
+    my $date;
 	my @outarrray;
 	my $cmdstatus = 0;
     $stop = $goal;
@@ -1718,10 +1718,8 @@ sub runToolNTimes
     while($count < $stop) {
         @cmdout = ();
 		@outarrray = ();
-        @date = ();
-        @date = `date`;
-        CondorUtils::fullchomp $date[0];
-        #print "$date[0] $cmd $count\n";
+        $date = scalar(localtime());
+        #print "$date $cmd $count\n";
         #@cmdout = `$cmd`;
 		if(defined $haveoptions) {
 			$cmdstatus = runCondorTool($cmd, \@outarrray, 2, $haveoptions);
