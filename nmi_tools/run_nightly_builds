@@ -256,7 +256,7 @@ sub main
 	parse_command_line();
 	open_log();
 
-	logit "Starting: " . `date` . "\n";
+	logit "Starting: " . scalar(localtime()) . "\n";
 
 	update_clones();
 
@@ -264,7 +264,7 @@ sub main
 
 	submit_builds($tags);
 
-	logit "Finished: " . `date` . "\n";
+	logit "Finished: " . scalar(localtime()) . "\n";
 	close_log();
 
 	return 0;
