@@ -47,6 +47,10 @@ caused the \Condor{shadow} to put the job on hold, the job would be put
 in the held status, but change to idle status when released.
 \Ticket{4619}
 
+\item The HTCondor DRMAA library now works correctly when
+\Macro{SCHEDD\_HOST} is set in the configuration file.
+\Ticket{4629}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -106,9 +110,9 @@ the value will be parsed as if they are present.
 HTCondor via \Prog{systemd} instead of via \Prog{init} scripts.
 \Ticket{4534}
 
-\item Fixed bugs that prohibited the \Condor{startd} use of \MacroNI{RANK} 
-from preempting dynamic slots.
-\Ticket{4580}
+%\item Fixed bugs that prohibited the \Condor{startd} use of \MacroNI{RANK} 
+%from preempting dynamic slots.
+%\Ticket{4580}
 
 \item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
 no longer causes a link error.

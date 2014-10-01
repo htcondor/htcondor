@@ -1,0 +1,94 @@
+diff -u -r drmaa/auxDrmaa.c drmaa-patched/auxDrmaa.c
+--- drmaa/auxDrmaa.c	2014-02-07 11:35:01.000000000 -0600
++++ drmaa-patched/auxDrmaa.c	2014-07-03 13:22:57.000000000 -0500
+@@ -1791,14 +1791,14 @@
+ 	redirect = " 2>&1";
+ #endif
+ 
+-	// prepare command: "condor_hold -name scheddname cluster.process"
++	// prepare command: "condor_hold cluster.process"
+ 	if (strstr(jobid, schedd_name) != jobid) {
+ 		snprintf(error_diagnosis, error_diag_len, "Unexpected job id format");
+ 		return DRMAA_ERRNO_INVALID_JOB;
+ 	}
+ 
+ 	strcpy(clu_proc, jobid + strlen(schedd_name) + 1);	// 1 for schedd.clu.proc
+-	snprintf(cmd, sizeof(cmd), "%s %s %s%s", HOLD_CMD, schedd_name, clu_proc, redirect);
++	snprintf(cmd, sizeof(cmd), "%s %s%s", HOLD_CMD, clu_proc, redirect);
+ 
+ 	// execute command
+ 	fs = popen(cmd, "r");
+@@ -1851,7 +1851,7 @@
+ 	redirect = " 2>&1";
+ #endif
+ 
+-	// prepare command: "condor_release -name schedddname cluster.process"
++	// prepare command: "condor_release cluster.process"
+ 	if (strstr(jobid, schedd_name) != jobid) {
+ 		snprintf(error_diagnosis, error_diag_len, "Unexpected job id format");
+ 		return DRMAA_ERRNO_INVALID_JOB;
+@@ -1859,7 +1859,7 @@
+ 
+ 	// 1 for schedd.clu.proc
+ 	snprintf(clu_proc, sizeof(clu_proc), "%s", jobid + strlen(schedd_name) + 1);
+-	snprintf(cmd, sizeof(cmd), "%s %s %s%s", RELEASE_CMD, schedd_name, clu_proc, redirect);
++	snprintf(cmd, sizeof(cmd), "%s %s%s", RELEASE_CMD, clu_proc, redirect);
+ 
+ 	// execute command
+ 	DEBUG_PRINT1("Performing release operation: %s\n", cmd);
+@@ -1916,7 +1916,7 @@
+ 	redirect = " 2>&1";
+ #endif
+ 
+-	// prepare command: "condor_rm -name schedddname cluster.process"
++	// prepare command: "condor_rm cluster.process"
+ 	if (strstr(jobid, schedd_name) != jobid) {
+ 		snprintf(error_diagnosis, error_diag_len, "Unexpected job id format");
+ 		return DRMAA_ERRNO_INVALID_JOB;
+@@ -1924,7 +1924,7 @@
+ 
+ 	// 1 for schedd.clu.proc
+ 	snprintf(clu_proc, sizeof(clu_proc), "%s", jobid + strlen(schedd_name) + 1);
+-	snprintf(cmd, sizeof(cmd), "%s %s %s%s", TERMINATE_CMD, schedd_name, clu_proc, redirect);
++	snprintf(cmd, sizeof(cmd), "%s %s%s", TERMINATE_CMD, clu_proc, redirect);
+ 
+ 	// execute command
+ 	fs = popen(cmd, "r");
+@@ -2063,14 +2063,14 @@
+ 	redirect = " 2>&1";
+ #endif
+ 
+-	// prepare command: "condor_q -l -name scheddname cluster.process"
++	// prepare command: "condor_q -l cluster.process"
+ 	if (strstr(jobid, schedd_name) != jobid) {
+ 		snprintf(error_diagnosis, error_diag_len, "Unexpected job id format");
+ 		return DRMAA_ERRNO_INVALID_JOB;
+ 	}
+ 
+ 	strcpy(clu_proc, jobid + strlen(schedd_name) + 1);	// 1 for schedd.clu.proc
+-	snprintf(cmd, sizeof(cmd), "%s %s %s%s", QUEUE_CMD, schedd_name, clu_proc, redirect);
++	snprintf(cmd, sizeof(cmd), "%s %s%s", QUEUE_CMD, clu_proc, redirect);
+ 
+ 	DEBUG_PRINT1("Asking for job status with \"%s\"\n", cmd);
+ 
+diff -u -r drmaa/auxDrmaa.h drmaa-patched/auxDrmaa.h
+--- drmaa/auxDrmaa.h	2014-06-19 16:39:53.000000000 -0500
++++ drmaa-patched/auxDrmaa.h	2014-07-03 13:20:52.000000000 -0500
+@@ -185,13 +185,13 @@
+ #define SUBMIT_FILE_COL_SIZE 20	// size of column in submit file
+ #define SUBMIT_CMD "condor_submit"
+ #define SUBMIT_CMD_LEN 2000
+-#define HOLD_CMD "condor_hold -name"
++#define HOLD_CMD "condor_hold"
+ #define HOLD_CMD_LEN 2000
+-#define QUEUE_CMD "condor_q -l -name"
++#define QUEUE_CMD "condor_q -l"
+ #define QUEUE_CMD_LEN 2000
+-#define RELEASE_CMD "condor_release -name"
++#define RELEASE_CMD "condor_release"
+ #define RELEASE_CMD_LEN 2000
+-#define TERMINATE_CMD "condor_rm -name"
++#define TERMINATE_CMD "condor_rm"
+ #define TERMINATE_CMD_LEN 2000
+ #define MAX_READ_LEN 1024	// max # of bytes to read
+ #define JOBID_TOKENIZER "."
