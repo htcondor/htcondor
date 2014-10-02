@@ -52,8 +52,8 @@ my %securityoptions =
 my $RunningFile = "RunningTests";
 my $teststrt = 0;
 my $teststop = 0;
-my $DEBUGLEVEL = 4;
-my $debuglevel = 1;
+my $DEBUGLEVEL = 2;
+my $debuglevel = 3;
 
 my $UseNewRunning = 1;
 
@@ -883,7 +883,7 @@ sub StartTest
 # 			# child does monitor
 #     		$monitorret = Condor::Monitor();
 
-# 			TestDebug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
+# 			TestDebug( "Monitor did return on its own status<$monitorret>\n",4);
 #     		die "$handle: FAILURE (job never checkpointed)\n"
 # 			if $wants_checkpoint && $checkpoints < 1;
 
@@ -2855,6 +2855,12 @@ sub LoadWhoData
       my $self = shift;
       return $self->{collector_addr};
   }
+  sub GetCollectorPort
+  {
+      my $self = shift;
+	  my @addrparts = split /:/, $self->{collector_addr};
+	  return $addrparts[1];
+  }
 }
 
 sub PersonalBackUp 
@@ -2905,8 +2911,14 @@ sub GetPersonalCondorWithConfig
     my $tmp_config  = shift;
 	my $condor_config = "";
     if(CondorUtils::is_windows() == 1) {
-	    $condor_config = `cygpath -m $tmp_config`;
-		CondorUtils::fullchomp($condor_config);
+		if(is_windows_native_perl()) {
+			$_ = $tmp_config;
+			s/\//\\/g;
+			$condor_config = $_;
+		} else {
+	    	$condor_config = `cygpath -m $tmp_config`;
+			CondorUtils::fullchomp($condor_config);
+		}
 	} else {
 		$condor_config = $tmp_config;
 	}
@@ -2914,29 +2926,33 @@ sub GetPersonalCondorWithConfig
     for my $name ( keys %personal_condors ) {
         my $condor = $personal_condors{$name};
         if ( $condor->{condor_config} eq $condor_config ) {
-			#print "Found It!\n";
+			#print "Found It!->$condor->{condor_config}\n";
             return $condor;
         }
     }
     # look after verification that we have a unix type path
     if(CondorUtils::is_windows() == 1) {
-	    my $convertedpath = `cygpath -m $condor_config`;
-		CondorUtils::fullchomp($convertedpath);
-		print "RELooking for condor instance matching:$convertedpath\n";
-    	for my $name ( keys %personal_condors ) {
-        	my $condor = $personal_condors{$name};
-        	if ( $condor->{condor_config} eq $convertedpath ) {
-				#print "Found It!\n";
-            	return $condor;
-        	} else {
-				print "Consider:$condor->{condor_config}\n";
-				print "Lookup:$convertedpath\n";
-			}
-    	}
-		#print "Condor Instance Not created yet!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
-		#print "These exist\n";
-		#ListAllPersonalCondors();
-		return 0;
+		if(is_windows_native_perl()) {
+			#print "look after verification that we have a unix type path:$condor_config\n";
+		} else {
+	    	my $convertedpath = `cygpath -m $condor_config`;
+			CondorUtils::fullchomp($convertedpath);
+			#print "RELooking for condor instance matching:$convertedpath\n";
+    		for my $name ( keys %personal_condors ) {
+        		my $condor = $personal_condors{$name};
+        		if ( $condor->{condor_config} eq $convertedpath ) {
+					#print "Found It!\n";
+            		return $condor;
+        		} else {
+					#print "Consider:$condor->{condor_config}\n";
+					print "Lookup:$convertedpath\n";
+				}
+    		}
+			#print "Condor Instance Not created yet!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+			#print "These exist\n";
+			#ListAllPersonalCondors();
+			return 0;
+		}
     } else {
 	#print "Condor Instance Not created yet!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
 	return 0;
@@ -2978,10 +2994,18 @@ sub StartPersonal {
     my $collector_addr = CondorPersonal::FindCollectorAddress();
 
 	if(CondorUtils::is_windows() == 1) {
-		my $windowsconfig = `cygpath -m $condor_config`;
-		CondorUtils::fullchomp($windowsconfig);
-		print "New windows config <$windowsconfig>\n";
-		$condor_config = $windowsconfig;
+		if(is_windows_native_perl()) {
+			print "StartPersonal: native perl config:$condor_config\n";
+			$_ = $condor_config;
+			s/\//\\/g;
+			$condor_config = $_;
+			print "StartPersonal: native perl config after convert:$condor_config\n";
+		} else {
+			my $windowsconfig = `cygpath -m $condor_config`;
+			CondorUtils::fullchomp($windowsconfig);
+			print "New windows config <$windowsconfig>\n";
+			$condor_config = $windowsconfig;
+		}
 	}
 
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
@@ -3005,12 +3029,21 @@ sub CreateAndStoreCondorInstance
 	my $amalive = shift;
 
 	if(CondorUtils::is_windows() == 1) {
-		my $windowsconfig = `cygpath -m $condorconfig`;
-		CondorUtils::fullchomp($windowsconfig);
-		print "New windows config <$windowsconfig>\n";
-		$condorconfig = $windowsconfig;
+		if(is_windows_native_perl()) {
+			#print "CreateAndStoreCondorInstance: native perl config:$condorconfig\n";
+			$_ = $condorconfig;
+			s/\//\\/g;
+			$condorconfig = $_;
+			#print "StartPersonal: native perl config after convert:$condorconfig\n";
+		} else {
+			my $windowsconfig = `cygpath -m $condorconfig`;
+			CondorUtils::fullchomp($windowsconfig);
+			#print "New windows config <$windowsconfig>\n";
+			$condorconfig = $windowsconfig;
+		}
 	}
 
+	#print "\n\n\n\n***** NewPersonalInstance identified by:$condorconfig *****\n\n\n\n\n";
 	my $new_condor = new PersonalCondorInstance( $version, $condorconfig, $collectoraddr, $amalive );
 	$personal_condors{$version} = $new_condor;
 #print "Condor instance returned:  $new_condor\n";
