@@ -561,7 +561,6 @@ sub StartCondorWithParams
 	CondorPersonal::Reset();
 	debug( "StartCondor config_and_port is --$config_and_port--\n",$debuglevel);
 	debug( "Personal Condor Started\n",$debuglevel);
-	#system("date");
 	if($btdebug == 1) {
 		print  "Personal Condor Started\n";
 		print scalar localtime() . "\n";
@@ -1900,12 +1899,16 @@ sub StartPersonalCondor
 
 	#print "StartPersonalCondor:fullconfig:$fullconfig\n";
 
-#		my $oldpath = $ENV{PATH};
-#		my $newpath = $localdir . "sbin:" . $localdir . "bin:" . "$oldpath";
-#		my $figpath = "";
-#		$ENV{PATH} = $newpath;
+	my $oldpath = $ENV{PATH};
+	my $newpath;
+	if (is_windows_native_perl()) {
+		$newpath = $localdir . "\\bin;" . "$oldpath";
+	} else {
+		$newpath = $localdir . "sbin:" . $localdir . "bin:" . "$oldpath";
+	}
+	$ENV{PATH} = $newpath;
 
-#		debug( "Using this path: --$newpath--\n",$debuglevel);
+	debug( "PATH=$newpath\n",$debuglevel);
 		my $figpath = "";
 
 	debug( "Want $configfile for config file\n",$debuglevel);
@@ -2781,8 +2784,7 @@ sub CollectWhoData
 	#print "CollectWhoData for this Condor:<$ENV{CONDOR_CONFIG}>\n";
 
 	# Get condor instance for this config
-	#print "CollectWhoData start\n";
-	#system("date");
+	#print scalar(localtime()) . " CollectWhoData start\n";
 	my $usequick = 1;
 	my $condor = CondorTest::GetPersonalCondorWithConfig($ENV{CONDOR_CONFIG});
 
@@ -2875,8 +2877,7 @@ sub CollectWhoData
 			#print "CollectWhoData: Parse Error: $wholine\n";
 		}
 	}
-	#print "CollectWhoData done\n";
-	#system("date");
+	#print scalar(localtime()) . " CollectWhoData done\n";
 }
 #################################################################
 #
@@ -3160,7 +3161,7 @@ sub CheckPids
 	my $otherslive = 0;
 	my $howmanydeamons = 0;
 	
-	#system("date");
+	#print scalar(localtime()) . "\n";
 	if(defined $action) {
 		if($btdebug == 1) {
 			print "CheckPids: $pidfile Action: $action\n";
