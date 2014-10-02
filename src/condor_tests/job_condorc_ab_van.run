@@ -45,8 +45,17 @@ CondorUtils::fullchomp $poolB_schedd_name;
 
 my $append_condor_config_A = '
   # reduce latency in test
-  CONDOR_JOB_POLL_INTERVAL = 10
-  GRIDMANAGER_JOB_PROBE_INTERVAL = 10
+CONDOR_JOB_POLL_INTERVAL = 10
+GRIDMANAGER_JOB_PROBE_INTERVAL = 10
+# Gittrac Ticket 2889
+# This is ok when tests are running as a slot user but if/when we start running tests as root we will
+# need to put these into a directory with permissions 1777.
+# Relocate C_GAHP files to prevent collision from multiple tests (running on multiple slots) writing into /tmp\n";
+# If we are running tests as root we might need to relocate these to a directory with permissions 1777\n";
+C_GAHP_LOG = $(LOG)/CGAHPLog.$(USERNAME)
+C_GAHP_LOCK = $(LOCK)/CGAHPLock.$(USERNAME)
+C_GAHP_WORKER_THREAD_LOG = $(LOG)/CGAHPWorkerLog.$(USERNAME)
+C_GAHP_WORKER_THREAD_LOCK = $(LOCK)/CGAHPWorkerLock.$(USERNAME)
 ';
 
 # This is the "local" pool where the job is submitted.
