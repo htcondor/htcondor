@@ -1,6 +1,7 @@
 #! /usr/bin/env perl
 use strict;
 use warnings;
+use Cwd;
 use IPC::Open3;
 use Time::HiRes qw(tv_interval gettimeofday);
 use Archive::Tar;
@@ -597,7 +598,8 @@ sub CreateDir
 	my $cmdcount = @argsin;
 	my $ret = 0;
 	my $fullcmd = "";
-	#print  "CreateDir: $cmdline argcout:$cmdcount\n";
+	my $location = Cwd::getcwd();
+	#print  "\n\n\n\n\n******* CreateDir: $cmdline argcout:$cmdcount while here:$location *******\n\n\n\n\n";
 
 	my $amwindows = is_windows();
 
@@ -609,6 +611,7 @@ sub CreateDir
 				shift @argsin;
 			}
 			foreach my $dir (@argsin) {
+				#print "Want to make:$dir\n";
 				$_ = $dir;
 				s/\//\\/g;
 				s/\\/\\\\/g;
@@ -616,10 +619,18 @@ sub CreateDir
 				if(-d "$dir") {
 					next;
 				}
+				#print "$dir does not exist yet\n";
 				$fullcmd = "cmd /C mkdir $dir";
 				$ret = system("$fullcmd");
 				if($ret != 0) {
 					print "THIS:$fullcmd Failed\n";
+				} else {
+#						print "If this worked, it should exist now.\n";
+#						if(-d $dir) {
+#							print "Perl says it does.\n";
+#						} else {
+#							print "Perl says it does NOT.\n";
+#						}
 				}
 			}
 			return($ret);
