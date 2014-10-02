@@ -616,19 +616,24 @@ sub debug {
 sub debug_flush {
 	print "\nDEBUG_FLUSH:\n";
 	my $logdir = `condor_config_val log`;
-	$_ = $logdir;
-	s/\\/\//g;
-	$logdir = $_;
 	fullchomp($logdir);
+#	$logdir =~ s/\\/\//g;
 	print "\nLog directory: $logdir and contains:\n";
 	List("ls -lh $logdir");
-	#system("ls -lh $logdir");
+
+	# what daemons does condor_who see running/exited?
 	print "\ncondor_who -verb says:\n";
 	system("condor_who -verb");
+
+	# what is in our config files?
+	print "\ncondor_config_val -writeconfig:file says:\n";
+	system("condor_config_val -writeconfig:file -");
+
 	print "\nDebug collection starts now:\n";
 	foreach my $line (@debugcollection) {
-		print "$line\n";
+		print "$line";
 	}
+
 }
 
 sub DebugLevel

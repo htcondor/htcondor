@@ -661,35 +661,28 @@ sub CreateDir
 	return($ret);
 }
 
+# portable way to get a directory listing
+# the command ls is optional, (sigh) because that's the way it's used...
 sub List
 {
     my $cmdline = shift;
-	my @allargs = split /\s/, $cmdline;
-    my $amwindows = is_windows();
-    my $fullcmd = "";
 	my $ret = 0;
+	# strip off leading ls command (it's ok if its not there)
+	if ($cmdline =~ /^\s*ls\s+/) { $cmdline =~ s/^\s*ls\s+//; }
 
-    if($amwindows == 1) {
-		$fullcmd = "cmd /C dir ";
-
-		foreach my $patharg (@allargs) {
-			if($patharg =~ /cygdrive/) {
-				my $winpath = `cygpath -w $patharg`;
-        		CondorUtils::fullchomp($winpath);
-				$_ = $winpath;
-        		s/\\/\\\\/g;
-				$winpath = $_;
-				$fullcmd = $fullcmd . " $winpath";
-			} else {
-				$fullcmd = $fullcmd . " $patharg";
-	}
+	# on native windows, we are translating ls to dir, so we also need to strip the options
+	if (is_windows_native_perl()) {
+		if ($cmdline =~ /^\-([a-zA-Z]+)\s+(.*)$/ ) {
+			# translate flags?
+			#my $flags = $1;
+			$cmdline = $2;;
 		}
-
-		$ret = system("$fullcmd");
-	} else {
-		$fullcmd = "ls $cmdline";
-
-		$ret = system("$fullcmd");
+		$ret = system("cmd /C dir $cmdline");
+	} elsif (is_windows()) {
+		$cmdline =~ s/\\/\//g; # if windows, but not native, we need to convert \ to / before passing to ls.
+	}
+	else {
+		$ret = system("ls $cmdline");
 	}
 	return($ret);
 }
