@@ -128,7 +128,8 @@ job_core_time-deferral_van: cygwin
 job_cp_cclim_acctgrp_basic_van: cygwin
 job_dagman_abnormal_term_recovery_retries: personal
 job_dagman_abort-A: personal
-job_dagman_abort-final-A: personal
+job_dagman_abort-B: personal
+job_dagman_abort-final-A: cygwin,personal
 job_dagman_abort-final-B: personal
 job_dagman_always_run_post-A: personal
 job_dagman_always_run_post-B: personal
@@ -224,6 +225,7 @@ job_dagman_unlessexit: personal
 job_dagman_usedagdir: personal
 job_dagman_use_hold_claim: personal
 job_dagman_vars: personal
+job_dagman_rm: cygwin,personal
 job_filexfer_base-input1_van: personal
 job_filexfer_base_van: personal
 job_filexfer_basic_van: personal
@@ -231,9 +233,9 @@ job_filexfer_input-onegone_van: cygwin,personal
 job_filexfer_limitback_van: personal
 job_filexfer_md5-remote_van: cygwin,personal
 job_filexfer_minus1_van: personal
-job_filexfer_output_van: personal
+job_filexfer_output_van: cygwin,personal
 job_filexfer_output-withvacate_van: personal
-job_filexfer_sandbox-empty_van: personal
+job_filexfer_sandbox-empty_van: cygwin,personal
 job_filexfer_streamerr_van: personal
 job_filexfer_streamout_van: personal
 job_filexfer_trans-excut-true_van: cygwin,personal
@@ -269,8 +271,7 @@ job_startd_rank_preempt: cygwin
 job_starter_script-A: personal
 job_vmu_basic: personal
 job_vmu_ckpt: personal
-lib_auth_config: personal
-lib_auth_config: cygwin
+lib_auth_config: cygwin, personal
 lib_bt_shared_port-check-ports_van: cygwin
 lib_ccb_schedd: cygwin
 lib_ccb_schedd_privnet: cygwin

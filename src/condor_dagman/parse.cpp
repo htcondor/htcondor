@@ -177,7 +177,16 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	char *line;
 	int lineNumber = 0;
 
+	// Here we have a list to save VARS lines for which the corresponding
+	// node has not yet been defined when we first encounter the VARS
+	// line; such lines are saved and re-parsed at the end of the parsing
+	// process.  (This is for gittrac #1780: VARS values in top-level DAG
+	// should be able to be applied to splices; job_dagman_splice-R tests
+	// this functionality.)  Nathan Panike says that saving *all* of the
+	// VARS lines and parsing them at the end also causes problems.
+	// wenger 2014-09-21
 	std::list<std::string> vars_to_save;
+
 	//
 	// This loop will read every line of the input file
 	//
@@ -291,6 +300,9 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Example syntax is: Vars JobName var1="val1" var2="val2"
 		else if(strcasecmp(token, "VARS") == 0) {
 			vars_to_save.push_back(varline);	
+			// Note that we pop this line inside parse_vars() if we
+			// parse it successfully, so that we don't re-parse it at
+			// the end.
 			parsed_line_successfully = parse_vars(dag, filename, lineNumber, &vars_to_save);
 		}
 
@@ -382,6 +394,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	dag->LiftSplices(SELF);
 	dag->RecordInitialAndFinalNodes();
 	
+	// Okay, here we re-parse any VARS lines that didn't have corresponding
+	// node when we first read them.
 	for(std::list<std::string>::iterator p = vars_to_save.begin(); p != vars_to_save.end(); ++p) {
 		char* varline = strnewp(p->c_str());
 		strtok(varline, DELIMITERS); // Drop the VARS token
@@ -728,7 +742,7 @@ parse_parent(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "PARENT p1 p2 p3 CHILD c1 c2 c3";
+	const char * example = "PARENT p1 [p2 p3 ...] CHILD c1 [c2 c3 ...]";
 	Dag *splice_dag;
 	
 	List<Job> parents;
@@ -1591,7 +1605,7 @@ parse_splice(
 			debug_printf( DEBUG_QUIET,
 						"ERROR: %s (line %d): DIR requires a directory "
 						"specification\n", filename, lineNumber);
-			debug_printf( DEBUG_QUIET, "%s\n", example );
+			exampleSyntax( example );
 			return false;
 		}
 
@@ -1605,7 +1619,7 @@ parse_splice(
 			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
 						  "parameter \"%s\"\n", filename, lineNumber, 
 						  garbage.Value() );
-			debug_printf( DEBUG_QUIET, "%s\n", example );
+			exampleSyntax( example );
 			return false;
 	}
 
@@ -1800,7 +1814,7 @@ parse_node_status_file(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "NODE_STATUS_FILE StatusFile [min update time]";
+	const char * example = "NODE_STATUS_FILE StatusFile [min update time] [ALWAYS-UPDATE]";
 
 	char *statusFileName = strtok(NULL, DELIMITERS);
 	if (statusFileName == NULL) {
@@ -1825,7 +1839,33 @@ parse_node_status_file(
 		}
 	}
 
-	dag->SetNodeStatusFileName( statusFileName, minUpdateTime );
+	bool alwaysUpdate = false;
+	char *alwaysUpdateStr = strtok( NULL, DELIMITERS );
+	if ( alwaysUpdateStr != NULL ) {
+		if ( strcasecmp( alwaysUpdateStr, "ALWAYS-UPDATE" ) == 0) {
+			alwaysUpdate = true;
+		} else {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
+						  "parameter \"%s\"\n", filename, lineNumber,
+						  alwaysUpdateStr );
+			exampleSyntax( example );
+			return false;
+		}
+	}
+
+	//
+	// Check for illegal extra tokens.
+	//
+	char *token = strtok( NULL, DELIMITERS );
+	if ( token != NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Extra token (%s) on NODE_STATUS_FILE line\n",
+					  filename, lineNumber, token );
+		exampleSyntax( example );
+		return false;
+	}
+
+	dag->SetNodeStatusFileName( statusFileName, minUpdateTime, alwaysUpdate );
 	return true;
 }
 

@@ -214,8 +214,24 @@ void DaemonCore::Stats::Init()
    DC_STATS_ADD_RECENT(Pool, PumpCycle,     IF_VERBOSEPUB);
    DC_STATS_ADD_DEF(Pool, Commands, IF_BASICPUB);
 
-   //extern stats_entry_probe<double> condor_fsync_runtime;
-   //Pool.AddProbe("DCfsync", &condor_fsync_runtime, "DCfsync", IF_BASICPUB | IF_RT_SUM);
+   // insert entries that are stored in helper modules
+   //
+   extern stats_entry_probe<double> condor_fsync_runtime;
+   Pool.AddProbe("DCfsync", &condor_fsync_runtime, "DCfsync", IF_VERBOSEPUB | IF_RT_SUM);
+
+   extern stats_entry_probe<double> getaddrinfo_runtime; // count & runtime of all lookups, success and fail
+   extern stats_entry_probe<double> getaddrinfo_fast_runtime; // count & runtime of successful lookups that were faster than getaddrinfo_slow_limit
+   extern stats_entry_probe<double> getaddrinfo_slow_runtime; // count & runtime of successful lookups that were slower than getaddrinfo_slow_limit
+   extern stats_entry_probe<double> getaddrinfo_fail_runtime; // count & runtime of failed lookups
+   //extern double getaddrinfo_slow_limit;
+   //#define GAI_TAG "DNSLookup"
+   #define GAI_TAG "NameResolve"
+   Pool.AddProbe("DC" GAI_TAG,        &getaddrinfo_runtime,      "DC" GAI_TAG,        IF_VERBOSEPUB | IF_RT_SUM);
+   Pool.AddProbe("DC" GAI_TAG "Fast", &getaddrinfo_fast_runtime, "DC" GAI_TAG "Fast", IF_VERBOSEPUB | IF_RT_SUM);
+   Pool.AddProbe("DC" GAI_TAG "Slow", &getaddrinfo_slow_runtime, "DC" GAI_TAG "Slow", IF_VERBOSEPUB | IF_RT_SUM);
+   Pool.AddProbe("DC" GAI_TAG "Fail", &getaddrinfo_fail_runtime, "DC" GAI_TAG "Fail", IF_VERBOSEPUB | IF_RT_SUM);
+   #undef GAI_TAG
+
 
    // Insert additional publish entries for the XXXDebug values
    //
@@ -552,7 +568,7 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
          break;
 
       default:
-         EXCEPT("unsupported probe type\n");
+         EXCEPT("unsupported probe type");
          break;
       }
 

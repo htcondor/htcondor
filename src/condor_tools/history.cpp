@@ -240,8 +240,7 @@ main(int argc, char* argv[])
 		readfromfile = false;
     }
 #endif /* HAVE_EXT_POSTGRESQL */
-    else if (is_dash_arg_prefix(argv[i],"file",1)) {
-		PRAGMA_REMIND("tj: change -file to 2 char match after 7.9 series ends.")
+    else if (is_dash_arg_prefix(argv[i],"file",2)) {
 		if (i+1==argc || JobHistoryFileName) break;
 		i++;
 		JobHistoryFileName=argv[i];

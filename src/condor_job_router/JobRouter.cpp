@@ -63,6 +63,10 @@ const int THROTTLE_UPDATE_INTERVAL = 600;
 
 JobRouter::JobRouter(bool as_tool)
 	: m_jobs(5000,hashFuncStdString,rejectDuplicateKeys)
+	, m_schedd2_name(NULL)
+	, m_schedd2_pool(NULL)
+	, m_schedd1_name(NULL)
+	, m_schedd1_pool(NULL)
 	, m_operate_as_tool(as_tool)
 {
 	m_scheduler = NULL;
@@ -164,7 +168,7 @@ JobRouter::GetInstanceLock() {
 
 	lock->setBlocking(FALSE);
 	if(!lock->obtain(WRITE_LOCK)) {
-		EXCEPT("Failed to get lock on %s.\n",lock_fullname.c_str());
+		EXCEPT("Failed to get lock on %s.",lock_fullname.c_str());
 	}
 }
 
@@ -997,7 +1001,7 @@ JobRouter::AdoptOrphans() {
 
 	constraint_tree = parser.ParseExpression(dest_jobs.c_str());
 	if(!constraint_tree) {
-		EXCEPT("JobRouter: Failed to parse orphan dest job constraint: '%s'\n",dest_jobs.c_str());
+		EXCEPT("JobRouter: Failed to parse orphan dest job constraint: '%s'",dest_jobs.c_str());
 	}
 
     query.Bind(ad_collection2);
@@ -1105,7 +1109,7 @@ JobRouter::AdoptOrphans() {
 
 	constraint_tree = parser.ParseExpression(src_jobs.c_str());
 	if(!constraint_tree) {
-		EXCEPT("JobRouter: Failed to parse orphan constraint: '%s'\n",src_jobs.c_str());
+		EXCEPT("JobRouter: Failed to parse orphan constraint: '%s'",src_jobs.c_str());
 	}
 
     query.Bind(ad_collection);
@@ -1235,7 +1239,7 @@ JobRouter::GetCandidateJobs() {
 	umbrella_constraint += m_job_router_name;
 	umbrella_constraint += "\")";
 
-	if (m_operate_as_tool || !can_switch_ids()) {
+	if (!can_switch_ids()) {
 			// We are not running as root.  Ensure that we only try to
 			// manage jobs submitted by the same user we are running as.
 
@@ -1266,7 +1270,7 @@ JobRouter::GetCandidateJobs() {
 
 	constraint_tree = parser.ParseExpression(umbrella_constraint);
 	if(!constraint_tree) {
-		EXCEPT("JobRouter: Failed to parse umbrella constraint: %s\n",umbrella_constraint.c_str());
+		EXCEPT("JobRouter: Failed to parse umbrella constraint: %s",umbrella_constraint.c_str());
 	}
 
     query.Bind(ad_collection);

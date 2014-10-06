@@ -132,7 +132,7 @@ do_REMOTE_syscall()
 		} else {
 			error = strerror(errno);
 		}
-		EXCEPT("Unable to talk to job: %s\n",error);
+		EXCEPT("Unable to talk to job: %s",error);
 	}
 
 #if defined(SYSCALL_DEBUG)

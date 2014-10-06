@@ -375,7 +375,7 @@ void TTManager::createQuillAd(void) {
 
 	char *quill_name = param("QUILL_NAME");
 	if(!quill_name) {
-		EXCEPT("Cannot find variable QUILL_NAME in config file\n");
+		EXCEPT("Cannot find variable QUILL_NAME in config file");
 	}
 
 	if (param_boolean("QUILL_IS_REMOTELY_QUERYABLE", true) == true) {
@@ -392,7 +392,7 @@ void TTManager::createQuillAd(void) {
 	char *quill_query_passwd = param("QUILL_DB_QUERY_PASSWORD");
 	if(!quill_query_passwd) {
 		EXCEPT("Cannot find variable QUILL_DB_QUERY_PASSWORD "
-			   "in config file\n");
+			   "in config file");
 	}
   
 	sprintf( expr, "%s = \"%s\"", ATTR_QUILL_DB_QUERY_PASSWORD, 

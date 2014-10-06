@@ -1,6 +1,7 @@
 #! /usr/bin/env perl
 use strict;
 use warnings;
+use Cwd;
 use IPC::Open3;
 use Time::HiRes qw(tv_interval gettimeofday);
 use Archive::Tar;
@@ -597,7 +598,8 @@ sub CreateDir
 	my $cmdcount = @argsin;
 	my $ret = 0;
 	my $fullcmd = "";
-	#print  "CreateDir: $cmdline argcout:$cmdcount\n";
+	my $location = Cwd::getcwd();
+	#print  "\n\n\n\n\n******* CreateDir: $cmdline argcout:$cmdcount while here:$location *******\n\n\n\n\n";
 
 	my $amwindows = is_windows();
 
@@ -609,6 +611,7 @@ sub CreateDir
 				shift @argsin;
 			}
 			foreach my $dir (@argsin) {
+				#print "Want to make:$dir\n";
 				$_ = $dir;
 				s/\//\\/g;
 				s/\\/\\\\/g;
@@ -616,10 +619,18 @@ sub CreateDir
 				if(-d "$dir") {
 					next;
 				}
+				#print "$dir does not exist yet\n";
 				$fullcmd = "cmd /C mkdir $dir";
 				$ret = system("$fullcmd");
 				if($ret != 0) {
 					print "THIS:$fullcmd Failed\n";
+				} else {
+#						print "If this worked, it should exist now.\n";
+#						if(-d $dir) {
+#							print "Perl says it does.\n";
+#						} else {
+#							print "Perl says it does NOT.\n";
+#						}
 				}
 			}
 			return($ret);
@@ -661,35 +672,28 @@ sub CreateDir
 	return($ret);
 }
 
+# portable way to get a directory listing
+# the command ls is optional, (sigh) because that's the way it's used...
 sub List
 {
     my $cmdline = shift;
-	my @allargs = split /\s/, $cmdline;
-    my $amwindows = is_windows();
-    my $fullcmd = "";
 	my $ret = 0;
+	# strip off leading ls command (it's ok if its not there)
+	if ($cmdline =~ /^\s*ls\s+/) { $cmdline =~ s/^\s*ls\s+//; }
 
-    if($amwindows == 1) {
-		$fullcmd = "cmd /C dir ";
-
-		foreach my $patharg (@allargs) {
-			if($patharg =~ /cygdrive/) {
-				my $winpath = `cygpath -w $patharg`;
-        		CondorUtils::fullchomp($winpath);
-				$_ = $winpath;
-        		s/\\/\\\\/g;
-				$winpath = $_;
-				$fullcmd = $fullcmd . " $winpath";
-			} else {
-				$fullcmd = $fullcmd . " $patharg";
-	}
+	# on native windows, we are translating ls to dir, so we also need to strip the options
+	if (is_windows_native_perl()) {
+		if ($cmdline =~ /^\-([a-zA-Z]+)\s+(.*)$/ ) {
+			# translate flags?
+			#my $flags = $1;
+			$cmdline = $2;;
 		}
-
-		$ret = system("$fullcmd");
-	} else {
-		$fullcmd = "ls $cmdline";
-
-		$ret = system("$fullcmd");
+		$ret = system("cmd /C dir $cmdline");
+	} elsif (is_windows()) {
+		$cmdline =~ s/\\/\//g; # if windows, but not native, we need to convert \ to / before passing to ls.
+	}
+	else {
+		$ret = system("ls $cmdline");
 	}
 	return($ret);
 }

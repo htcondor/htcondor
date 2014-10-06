@@ -324,7 +324,7 @@ public:
    }
 
    int Unexpected() {
-      EXCEPT("Unexpected call to empty ring_buffer\n");
+      EXCEPT("Unexpected call to empty ring_buffer");
       return 0;
    }
 
@@ -1037,7 +1037,8 @@ public:
 // its 'value' field to hold the count of samples.  the value of the
 // samples themselves are not stored, only the sum, min and max are stored.
 //
-template <class T> class stats_entry_probe : public stats_entry_count<T> {
+GCC_DIAG_OFF(float-equal)
+template <typename T> class stats_entry_probe : public stats_entry_count<T> {
 public:
    stats_entry_probe() 
       : Max(-(std::numeric_limits<T>::max()))
@@ -1109,6 +1110,7 @@ public:
    static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_probe<T>::Unpublish; };
    static void Delete(stats_entry_probe<T> * probe) { delete probe; }
 };
+GCC_DIAG_ON(float-equal)
 
 // --------------------------------------------------------------------
 //   Full Min/Max/Avg/Std Probe class for use with stats_entry_recent
@@ -1219,7 +1221,7 @@ public:
    stats_histogram& operator=(const stats_histogram<T>& sh);
    stats_histogram& operator=(int val) {
       if (val != 0) {
-          EXCEPT("Clearing operation on histogram with non-zero value\n");
+          EXCEPT("Clearing operation on histogram with non-zero value");
       }
       Clear();
       return *this;
@@ -1271,13 +1273,13 @@ stats_histogram<T>& stats_histogram<T>::Accumulate(const stats_histogram<T>& sh)
    // to add histograms, they must both be the same size (and have the same
    // limits array as well, should we check that?)
    if (this->cLevels != sh.cLevels) {
-       EXCEPT("attempt to add histogram of %d items to histogram of %d items\n",
+       EXCEPT("attempt to add histogram of %d items to histogram of %d items",
               sh.cLevels, this->cLevels);
        return *this;
    }
 
    if (this->levels != sh.levels) {
-       EXCEPT("Histogram level pointers are not the same.\n");
+       EXCEPT("Histogram level pointers are not the same.");
        return *this;
    }
 
@@ -1296,7 +1298,7 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
       Clear();
    } else if(this != &sh) {
       if(this->cLevels > 0 && this->cLevels != sh.cLevels){
-         EXCEPT("Tried to assign different sized histograms\n");
+         EXCEPT("Tried to assign different sized histograms");
       return *this;
       } else if(this->cLevels == 0) {
          this->cLevels = sh.cLevels;
@@ -1309,7 +1311,7 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
          for(int i=0;i<=cLevels;++i){
             this->data[i] = sh.data[i];
             if(this->levels[i] < sh.levels[i] || this->levels[i] > sh.levels[i]){
-               EXCEPT("Tried to assign different levels of histograms\n");
+               EXCEPT("Tried to assign different levels of histograms");
                return *this;
             }
          }
@@ -1342,9 +1344,9 @@ T stats_histogram<T>::Add(T val)
     */
 
     return val;
-															}
+}
 
-															template<class T>
+template<class T>
 T stats_histogram<T>::Remove(T val)
 {
    int ix = 0;
@@ -1645,6 +1647,7 @@ public:
    }
 
    int RemoveProbe (const char * name); // remove from pool, will delete if owned by pool
+   int RemoveProbesByAddress(void * first, void * last); // remove all probes that point to between first & last (inclusive)
 
    /* tj: IMPLEMENT THIS
    double  SetSample(const char * probe_name, double sample);

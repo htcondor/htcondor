@@ -207,9 +207,9 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
             my $tmppath = $ENV{PATH};
             $tmppath =~ s/[a-z]:\\condor\\bin;//i;
             if ($^O =~ /MSWin32/) {
-	       		if ($tmppath =~ /[a-z]:\\cygwin\bin;/i) {
+	       		if ($tmppath =~ /[a-z]:\\cygwin\\bin;/i) {
                     out("removing cygwin from the path");
-                    $tmppath =~ s/[a-z]:\\cygwin\bin;//i;
+                    $tmppath =~ s/[a-z]:\\cygwin\\bin;//i;
 				}
 	    	}
             out("new PATH=$tmppath");
@@ -218,7 +218,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     } elsif (!($perlver =~ /cygwin/i)) {
         out("Adding cygwin to the front of the path to force the use of cygwin perl.");
         $ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
-		#out("new PATH=$ENV{PATH}");
+		out("new PATH=$ENV{PATH}");
 
         $perlver = `$perl_exe -version`;
 		if ($perlver =~ /This is (perl .*)$/m) { $perlver = $1; }

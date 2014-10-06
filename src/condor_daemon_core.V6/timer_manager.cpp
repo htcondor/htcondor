@@ -606,7 +606,7 @@ void TimerManager::RemoveTimer( Timer *timer, Timer *prev )
 {
 	if ( timer == NULL || ( prev && prev->next != timer ) ||
 		 ( !prev && timer != timer_list ) ) {
-		EXCEPT( "Bad call to TimerManager::RemoveTimer()!\n" );
+		EXCEPT( "Bad call to TimerManager::RemoveTimer()!" );
 	}
 
 	if ( timer == timer_list ) {

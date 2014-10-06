@@ -158,7 +158,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
  	_readyQ = new PrioritySimpleList<Job*>;
 	_submitQ = new Queue<Job*>;
 	if( !_readyQ || !_submitQ ) {
-		EXCEPT( "ERROR: out of memory (%s:%d)!\n", __FILE__, __LINE__ );
+		EXCEPT( "ERROR: out of memory (%s:%d)!", __FILE__, __LINE__ );
 	}
 
 	/* The ScriptQ object allocates daemoncore reapers, which are a
@@ -170,7 +170,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		_preScriptQ = new ScriptQ( this );
 		_postScriptQ = new ScriptQ( this );
 		if( !_preScriptQ || !_postScriptQ ) {
-			EXCEPT( "ERROR: out of memory (%s:%d)!\n", __FILE__, __LINE__ );
+			EXCEPT( "ERROR: out of memory (%s:%d)!", __FILE__, __LINE__ );
 		}
 	} else {
 		_preScriptQ = NULL;
@@ -191,6 +191,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_statusFileName = NULL;
 	_statusFileOutdated = true;
 	_minStatusUpdateTime = 0;
+	_alwaysUpdateStatus = false;
 	_lastStatusUpdateTimestamp = 0;
 
 	_nextSubmitTime = 0;
@@ -1654,7 +1655,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 				ProcessFailedSubmit( job, dm.max_submit_attempts );
 				break; // break out of while loop
 			} else {
-				EXCEPT( "Illegal submit_result_t value: %d\n", submit_result );
+				EXCEPT( "Illegal submit_result_t value: %d", submit_result );
 			}
 		}
 	}
@@ -2181,6 +2182,7 @@ void Dag::RemoveRunningScripts ( ) const {
 			}
         }
 	}
+
 	return;
 }
 
@@ -2354,7 +2356,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 	} else if( node->JobType() == Job::TYPE_STORK ) {
 		keyword = "DATA";
 	} else {
-		EXCEPT( "Illegal node type (%d)\n", node->JobType() );
+		EXCEPT( "Illegal node type (%d)", node->JobType() );
 	}
 
 	if ( !isPartial ) {
@@ -2863,7 +2865,7 @@ Dag::DumpDotFile(void)
 */
 void 
 Dag::SetNodeStatusFileName( const char *statusFileName,
-			int minUpdateTime )
+			int minUpdateTime, bool alwaysUpdate )
 {
 	if ( _statusFileName != NULL ) {
 		debug_printf( DEBUG_NORMAL, "Warning: Attempt to set NODE_STATUS_FILE "
@@ -2874,6 +2876,7 @@ Dag::SetNodeStatusFileName( const char *statusFileName,
 	}
 	_statusFileName = strnewp( statusFileName );
 	_minStatusUpdateTime = minUpdateTime;
+	_alwaysUpdateStatus = alwaysUpdate;
 }
 
 //-------------------------------------------------------------------------
@@ -2894,7 +2897,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		return;
 	}
 	
-	if ( !_statusFileOutdated && !held && !removed ) {
+	if ( !_alwaysUpdateStatus && !_statusFileOutdated && !held && !removed ) {
 		debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
 					"because it is not yet outdated\n" );
 		return;
@@ -2904,7 +2907,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	bool tooSoon = (_minStatusUpdateTime > 0) &&
 				((startTime - _lastStatusUpdateTimestamp) <
 				_minStatusUpdateTime);
-	if ( tooSoon && !held && !removed && !FinishedRunning( true ) ) {
+	if ( tooSoon && !held && !removed && !FinishedRunning( true ) &&
+				!_dagIsAborted ) {
 		debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
 					"because min. status update time has not yet passed\n" );
 		return;
@@ -2962,33 +2966,46 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		//
 		// Print overall DAG status.
 		//
-	Job::status_t dagStatus = Job::STATUS_SUBMITTED;
+	Job::status_t dagJobStatus = Job::STATUS_SUBMITTED;
 	const char *statusNote = "";
 	if ( DoneSuccess( true ) ) {
-		dagStatus = Job::STATUS_DONE;
+		dagJobStatus = Job::STATUS_DONE;
 		statusNote = "success";
 	} else if ( DoneFailed( true ) ) {
-		dagStatus = Job::STATUS_ERROR;
+		dagJobStatus = Job::STATUS_ERROR;
 		if ( _dagStatus == DAG_STATUS_ABORT ) {
 			statusNote = "aborted";
 		} else {
 			statusNote = "failed";
 		}
 	} else if ( DoneCycle( true ) ) {
-		dagStatus = Job::STATUS_ERROR;
+		dagJobStatus = Job::STATUS_ERROR;
 		statusNote = "cycle";
 	} else if ( held ) {
 		statusNote = "held";
 	} else if ( removed ) {
-		dagStatus = Job::STATUS_ERROR;
-		statusNote = "removed";
+		if ( HasFinalNode() && !FinishedRunning( true ) ) {
+			dagJobStatus = Job::STATUS_SUBMITTED;
+			statusNote = "removed";
+		} else {
+			dagJobStatus = Job::STATUS_ERROR;
+			statusNote = "removed";
+		}
+	} else if ( _dagIsAborted ) {
+		if ( HasFinalNode() && !FinishedRunning( true ) ) {
+			dagJobStatus = Job::STATUS_SUBMITTED;
+			statusNote = "aborted";
+		} else {
+			dagJobStatus = Job::STATUS_ERROR;
+			statusNote = "aborted";
+		}
 	}
-	MyString statusStr = Job::status_t_names[dagStatus];
+	MyString statusStr = Job::status_t_names[dagJobStatus];
 	statusStr.trim();
 	statusStr += " (";
 	statusStr += statusNote;
 	statusStr += ")";
-	fprintf( outfile, "  DagStatus = %d; /* %s */\n", dagStatus,
+	fprintf( outfile, "  DagStatus = %d; /* %s */\n", dagJobStatus,
 				EscapeClassadString( statusStr.Value() ) );
 
 	fprintf( outfile, "  NodesTotal = %d;\n", NumNodes( true ) );
@@ -3083,12 +3100,19 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		// Note:  we do tolerant_unlink because renaming over an
 		// existing file fails on Windows.
 		//
-	tolerant_unlink( _statusFileName );
-	if ( rename( tmpStatusFile.Value(), _statusFileName ) != 0 ) {
+	MyString statusFileName( _statusFileName );
+#if 0 // For testing, to enable manual checking of intermediate states...
+	static int statusFileCount = 0;
+	statusFileName += ++statusFileCount;
+	debug_printf( DEBUG_QUIET, "Writing node status file %s\n",
+				statusFileName.Value() );
+#endif
+	tolerant_unlink( statusFileName.Value() );
+	if ( rename( tmpStatusFile.Value(), statusFileName.Value() ) != 0 ) {
 		debug_printf( DEBUG_NORMAL,
 					  "Warning: can't rename temporary node status "
 					  "file (%s) to permanent file (%s): %s\n",
-					  tmpStatusFile.Value(), _statusFileName,
+					  tmpStatusFile.Value(), statusFileName.Value(),
 					  strerror( errno ) );
 		check_warning_strictness( DAG_STRICT_1 );
 		return;
@@ -3912,7 +3936,7 @@ Dag::GetEventIDHash(bool isNoop, int jobType)
 		break;
 
 	default:
-		EXCEPT( "Illegal job type (%d)\n", jobType );
+		EXCEPT( "Illegal job type (%d)", jobType );
 		break;
 	}
 
@@ -3937,7 +3961,7 @@ Dag::GetEventIDHash(bool isNoop, int jobType) const
 		break;
 
 	default:
-		EXCEPT( "Illegal job type (%d)\n", jobType );
+		EXCEPT( "Illegal job type (%d)", jobType );
 		break;
 	}
 

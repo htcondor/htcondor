@@ -193,7 +193,7 @@ boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) cons
         ScopeGuard guard(*m_expr, scope_ptr);
         if (!m_expr->Evaluate(value))
         {
-            PyErr_SetString(PyExc_TypeError, "Unable to evaluate expression");
+            if (!PyErr_Occurred()) { PyErr_SetString(PyExc_TypeError, "Unable to evaluate expression");}
             boost::python::throw_error_already_set();
         }
     }
@@ -202,7 +202,7 @@ boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) cons
         classad::EvalState state;
         if (!m_expr->Evaluate(state, value))
         {
-            PyErr_SetString(PyExc_TypeError, "Unable to evaluate expression");
+            if (!PyErr_Occurred()) {PyErr_SetString(PyExc_TypeError, "Unable to evaluate expression");}
             boost::python::throw_error_already_set();
         }
     }
@@ -562,6 +562,70 @@ attribute(std::string name)
     expr = classad::AttributeReference::MakeAttributeReference(NULL, name.c_str());
     ExprTreeHolder holder(expr);
     return holder;
+}
+
+static void
+pythonFunctionTrampoline_internal(const char *name, const classad::ArgumentList& args, classad::EvalState& state, classad::Value& result)
+{
+    boost::python::object pyFunc = py_import("classad").attr("_registered_functions")[name];
+
+    boost::python::list pyArgs;
+    for (classad::ArgumentList::const_iterator it=args.begin(); it != args.end(); it++)
+    {
+        ExprTreeHolder holder(*it, false);
+        if (holder.ShouldEvaluate())
+        {
+            pyArgs.append(holder.Evaluate());
+        }
+        else
+        {
+            classad::ExprTree * exprTree = (*it)->Copy();
+            ExprTreeHolder myExpr(exprTree, true);
+            pyArgs.append(myExpr);
+        }
+    }
+
+    boost::python::dict pyKw;
+    if (state.curAd)
+    {
+        boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
+        wrapper->CopyFrom(*(state.curAd));
+        pyKw["state"] = wrapper;
+    }
+
+    boost::python::object pyResult = py_import("__main__").attr("__builtins__").attr("apply")(pyFunc, pyArgs, pyKw);
+    classad::ExprTree* exprTreeResult = convert_python_to_exprtree(pyResult);
+    if (!exprTreeResult || !exprTreeResult->Evaluate(state, result))
+    {
+        THROW_EX(ValueError, "Unable to convert python function result to ClassAd value");
+    }
+}
+
+static bool
+pythonFunctionTrampoline(const char *name, const classad::ArgumentList& args, classad::EvalState& state, classad::Value& result)
+{
+    try
+    {
+        pythonFunctionTrampoline_internal(name, args, state, result);
+    }
+    catch (...) // If this is being invoked from python, this will *not* clear the python exception
+                // However, it does prevent an exception being thrown into the ClassAd code... which is not ready for it!
+    {
+        return false;
+    }
+    return true;
+}
+
+void
+registerFunction(boost::python::object function, boost::python::object name)
+{
+    if (name.ptr() == Py_None)
+    {
+        name = function.attr("__name__");
+    }
+    std::string classadName = boost::python::extract<std::string>(name);
+    py_import("classad").attr("_registered_functions")[name] = function;
+    classad::FunctionCall::RegisterFunction(classadName, pythonFunctionTrampoline);
 }
 
 static classad::ExprTree*

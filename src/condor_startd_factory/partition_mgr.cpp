@@ -65,7 +65,7 @@ void PartitionManager::query_available_partitions(char *script)
 	fin = my_popen(args, "r", TRUE);
 
 	if (fin == NULL) {
-		EXCEPT("Can't execute %s\n", script);
+		EXCEPT("Can't execute %s", script);
 	}
 
 	read_partitions(fin);

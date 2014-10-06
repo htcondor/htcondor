@@ -1,0 +1,11 @@
+diff -u -r patched/src/CMakeLists.txt patched2/src/CMakeLists.txt
+--- patched/src/CMakeLists.txt	2014-09-11 14:50:26.387553334 -0500
++++ patched2/src/CMakeLists.txt	2014-09-11 15:06:30.203958503 -0500
+@@ -64,6 +64,7 @@
+ 
+ add_definitions( -pipe -DWANT_NAMESPACES -DWANT_CLASSAD_NAMESPACE
+ -DHAVE_TIMEGM)
++add_definitions( -std=c++11 )
+ 
+ link_directories(${VOMS_LIBRARY_DIRS}
+                  ${GSOAP_LIBRARY_DIRS}

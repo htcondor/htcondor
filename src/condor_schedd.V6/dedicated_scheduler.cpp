@@ -687,7 +687,7 @@ DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID jobid)
 }
 
 bool
-DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id,ClassAd &match_ad, char const *slot_name)
+DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *, ClassAd &match_ad, char const *slot_name)
 {
 	ASSERT( claim_id );
 	ASSERT( slot_name );
@@ -716,7 +716,7 @@ DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim
 		return false;
 	}
 
-	ContactStartdArgs *args = new ContactStartdArgs( claim_id, startd.addr(), true );
+	ContactStartdArgs *args = new ContactStartdArgs( claim_id, "", startd.addr(), true );
 
 	if( !scheduler.enqueueStartdContact(args) ) {
 		delete args;
@@ -1012,7 +1012,7 @@ DedicatedScheduler::reaper( int pid, int status )
 			}
 			break;
 		case JOB_SHADOW_USAGE:
-			EXCEPT("shadow exited with incorrect usage!\n");
+			EXCEPT("shadow exited with incorrect usage!");
 			break;
 		case JOB_BAD_STATUS:
 			EXCEPT("shadow exited because job status != RUNNING");
@@ -1040,10 +1040,12 @@ DedicatedScheduler::reaper( int pid, int status )
 			shutdownMpiJob( srec );
 			break;
 		case JOB_SHOULD_HOLD:
-			dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
-					 srec->job_id.cluster, srec->job_id.proc );
-			set_job_status( srec->job_id.cluster, srec->job_id.proc, 
-							HELD );
+			if ( q_status != HELD && q_status != REMOVED ) {
+				dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
+						 srec->job_id.cluster, srec->job_id.proc );
+				set_job_status( srec->job_id.cluster, srec->job_id.proc,
+								HELD );
+			}
 			shutdownMpiJob( srec );
 			break;
 		case DPRINTF_ERROR:
@@ -1689,7 +1691,7 @@ DedicatedScheduler::sortResources( void )
 			unclaimed_resources->Append( res );
 			continue;
 		}
-		EXCEPT("DedicatedScheduler got unknown status for match %d\n", mrec->status);
+		EXCEPT("DedicatedScheduler got unknown status for match %d", mrec->status);
 	}
 
     duplicate_partitionable_res(unclaimed_resources);

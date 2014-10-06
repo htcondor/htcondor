@@ -142,9 +142,7 @@ my $idles = 0;
 	print "After: $cmd\n";
 
 	my $expected_count = 4;
-	if ($checkpslot eq "yes") {
-		$expected_count = 5;
-	}
+
 	if($count != $expected_count){
 		die "There are expected to be $expected_count resource unique ads. There were $count for Gpu\n";
 	}
