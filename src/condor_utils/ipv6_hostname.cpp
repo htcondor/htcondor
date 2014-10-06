@@ -21,6 +21,7 @@ static bool nodns_enabled()
 	return param_boolean("NO_DNS", false);
 }
 
+#ifdef TEST_DNS_TODO
 static void replace_higher_scoring_addr(const char * reason, condor_sockaddr & current, int & current_score,
 	const condor_sockaddr & potential, int potential_score) {
 	const char * result = "skipped for low score";
@@ -36,6 +37,7 @@ static void replace_higher_scoring_addr(const char * reason, condor_sockaddr & c
 		potential_score,
 		result);
 }
+#endif
 
 bool init_local_hostname_impl()
 {
@@ -80,6 +82,14 @@ bool init_local_hostname_impl()
 		} else {
 			dprintf(D_ALWAYS, "Unable to identify IP address from interfaces.  None match NETWORK_INTERFACE=%s. Problems are likely.\n", network_interface.Value());
 		}
+		if((!ipv4.empty()) && local_ipv4addr.from_ip_string(ipv4)) {
+			local_ipv4addr_initialized = true;
+			ASSERT(local_ipv4addr.is_ipv4());
+		}
+		if((!ipv6.empty()) && local_ipv6addr.from_ip_string(ipv6)) {
+			local_ipv6addr_initialized = true;
+			ASSERT(local_ipv6addr.is_ipv6());
+		}
 	}
 
 	bool local_fqdn_initialized = false;
@@ -91,17 +101,6 @@ bool init_local_hostname_impl()
 		if (!local_ipaddr_initialized) {
 			local_ipaddr = convert_hostname_to_ipaddr(local_hostname);
 			local_ipaddr_initialized = true;
-		}
-	}
-
-	if(local_ipaddr_initialized) {
-		if(local_ipaddr.is_ipv4()) {
-			local_ipv4addr = local_ipaddr;
-			local_ipv4addr_initialized = true;
-		}
-		if(local_ipaddr.is_ipv6()) {
-			local_ipv6addr = local_ipaddr;
-			local_ipv6addr_initialized = true;
 		}
 	}
 
@@ -127,9 +126,11 @@ bool init_local_hostname_impl()
 
 		if(gai_success) {
 			int local_hostname_desireability = 0;
+#ifdef TEST_DNS_TODO
 			int local_ipaddr_desireability = 0;
 			int local_ipv4addr_desireability = 0;
 			int local_ipv6addr_desireability = 0;
+#endif
 			while (addrinfo* info = ai.next()) {
 				const char* name = info->ai_canonname;
 				if (!name)
@@ -164,6 +165,7 @@ bool init_local_hostname_impl()
 				}
 				dprintf(D_HOSTNAME, "hostname: %s (score %d) %s\n", name, desireability, result);
 
+#ifdef TEST_DNS_TODO
 				// Resist urge to set local_ip*addr_initialized=true,
 				// We want to repeatedly retest this looking for 
 				// better results.
@@ -184,6 +186,7 @@ bool init_local_hostname_impl()
 						local_ipv6addr, local_ipv6addr_desireability, 
 						addr, desireability);
 				}
+#endif
 			}
 		}
 
