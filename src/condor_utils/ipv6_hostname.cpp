@@ -72,10 +72,9 @@ bool init_local_hostname_impl()
 	}
 
 	if( ! local_ipaddr_initialized ) {
-		std::string ip;
-		// [TODO:IPV6] network_interface_to_ip needs to return 2 addresses, best IPv4 and best IPv6. Also just return condor_sockaddrs.
-		if( network_interface_to_ip("NETWORK_INTERFACE", network_interface.Value(), ip, NULL)) {
-			ASSERT(local_ipaddr.from_ip_string(ip));
+		std::string ipv4, ipv6, ipbest;
+		if( network_interface_to_ip("NETWORK_INTERFACE", network_interface.Value(), ipv4, ipv6, ipbest, NULL)) {
+			ASSERT(local_ipaddr.from_ip_string(ipbest));
 			// If this fails, network_interface_to_ip returns something invalid.
 			local_ipaddr_initialized = true;
 		} else {
@@ -108,82 +107,86 @@ bool init_local_hostname_impl()
 
 	addrinfo_iterator ai;
 
-	const int MAX_TRIES = 20;
-	const int SLEEP_DUR = 3;
-	bool gai_success = false;
-	for(int try_count = 1; true; try_count++) {
-		addrinfo hint = get_default_hint();
-		hint.ai_family = AF_UNSPEC;
-		int ret = ipv6_getaddrinfo(test_hostname.Value(), NULL, ai, hint);
-		if(ret == 0) { gai_success = true; break; }
+	if( ! nodns_enabled() ) {
+		const int MAX_TRIES = 20;
+		const int SLEEP_DUR = 3;
+		bool gai_success = false;
+		for(int try_count = 1; true; try_count++) {
+			addrinfo hint = get_default_hint();
+			hint.ai_family = AF_UNSPEC;
+			int ret = ipv6_getaddrinfo(test_hostname.Value(), NULL, ai, hint);
+			if(ret == 0) { gai_success = true; break; }
 
-		dprintf(D_ALWAYS, "init_local_hostname: ipv6_getaddrinfo() could not look up %s: %s (%d). Try %d of %d. Sleeping for %d seconds\n", test_hostname.Value(), gai_strerror(ret), ret, try_count+1, MAX_TRIES, SLEEP_DUR);
-		if(try_count == MAX_TRIES) {
-			dprintf(D_ALWAYS, "init_local_hostname: ipv6_getaddrinfo() never succeeded. Giving up. Problems are likely\n");
-			break;
+			dprintf(D_ALWAYS, "init_local_hostname: ipv6_getaddrinfo() could not look up %s: %s (%d). Try %d of %d. Sleeping for %d seconds\n", test_hostname.Value(), gai_strerror(ret), ret, try_count+1, MAX_TRIES, SLEEP_DUR);
+			if(try_count == MAX_TRIES) {
+				dprintf(D_ALWAYS, "init_local_hostname: ipv6_getaddrinfo() never succeeded. Giving up. Problems are likely\n");
+				break;
+			}
+			sleep(SLEEP_DUR);
 		}
-	}
 
-	if(gai_success) {
-		int local_hostname_desireability = 0;
-		int local_ipaddr_desireability = 0;
-		int local_ipv4addr_desireability = 0;
-		int local_ipv6addr_desireability = 0;
-		while (addrinfo* info = ai.next()) {
-			const char* name = info->ai_canonname;
-			if (!name)
-				continue;
-			condor_sockaddr addr(info->ai_addr);
+		if(gai_success) {
+			int local_hostname_desireability = 0;
+			int local_ipaddr_desireability = 0;
+			int local_ipv4addr_desireability = 0;
+			int local_ipv6addr_desireability = 0;
+			while (addrinfo* info = ai.next()) {
+				const char* name = info->ai_canonname;
+				if (!name)
+					continue;
+				condor_sockaddr addr(info->ai_addr);
 
-			int desireability = 0;
-			if (addr.is_loopback())            { desireability = 1; }
-			else if(addr.is_private_network()) { desireability = 2; }
-			else                               { desireability = 3; }
+				int desireability = 0;
+				if (addr.is_loopback())            { desireability = 1; }
+				else if(addr.is_private_network()) { desireability = 2; }
+				else                               { desireability = 3; }
 
-			const char * result = "skipped for low score";
-			if(desireability > local_hostname_desireability) {
-				result = "new winner";
-				dprintf(D_HOSTNAME, "   I like it.\n");
-				local_hostname_desireability = desireability;
+				const char * result = "skipped for low score";
+				if(desireability > local_hostname_desireability) {
+					result = "new winner";
+					dprintf(D_HOSTNAME, "   I like it.\n");
+					local_hostname_desireability = desireability;
 
-				const char* dotpos = strchr(name, '.');
-				if (dotpos) { // consider it as a FQDN
-					local_fqdn = name;
-					local_hostname = local_fqdn.Substr(0, dotpos-name-1);
-				} else {
-					local_hostname = name;
-					local_fqdn = local_hostname;
-					MyString default_domain;
-					if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
-						if (default_domain[0] != '.')
-							local_fqdn += ".";
-						local_fqdn += default_domain;
+					const char* dotpos = strchr(name, '.');
+					if (dotpos) { // consider it as a FQDN
+						local_fqdn = name;
+						local_hostname = local_fqdn.Substr(0, dotpos-name-1);
+					} else {
+						local_hostname = name;
+						local_fqdn = local_hostname;
+						MyString default_domain;
+						if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
+							if (default_domain[0] != '.')
+								local_fqdn += ".";
+							local_fqdn += default_domain;
+						}
 					}
 				}
-			}
-			dprintf(D_HOSTNAME, "hostname: %s (score %d) %s\n", name, desireability, result);
+				dprintf(D_HOSTNAME, "hostname: %s (score %d) %s\n", name, desireability, result);
 
-			// Resist urge to set local_ip*addr_initialized=true,
-			// We want to repeatedly retest this looking for 
-			// better results.
-			if (!local_ipaddr_initialized) {
-				replace_higher_scoring_addr("IP", 
-					local_ipaddr, local_ipaddr_desireability, 
-					addr, desireability);
-			}
+				// Resist urge to set local_ip*addr_initialized=true,
+				// We want to repeatedly retest this looking for 
+				// better results.
+				if (!local_ipaddr_initialized) {
+					replace_higher_scoring_addr("IP", 
+						local_ipaddr, local_ipaddr_desireability, 
+						addr, desireability);
+				}
 
-			if (addr.is_ipv4() && !local_ipv4addr_initialized) {
-				replace_higher_scoring_addr("IPv4", 
-					local_ipv4addr, local_ipv4addr_desireability, 
-					addr, desireability);
-			}
+				if (addr.is_ipv4() && !local_ipv4addr_initialized) {
+					replace_higher_scoring_addr("IPv4", 
+						local_ipv4addr, local_ipv4addr_desireability, 
+						addr, desireability);
+				}
 
-			if (addr.is_ipv6() && !local_ipv6addr_initialized) {
-				replace_higher_scoring_addr("IPv6", 
-					local_ipv6addr, local_ipv6addr_desireability, 
-					addr, desireability);
+				if (addr.is_ipv6() && !local_ipv6addr_initialized) {
+					replace_higher_scoring_addr("IPv6", 
+						local_ipv6addr, local_ipv6addr_desireability, 
+						addr, desireability);
+				}
 			}
 		}
+
 	}
 
 	return true;

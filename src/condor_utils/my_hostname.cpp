@@ -83,7 +83,7 @@ const char* my_ip_string() {
 //}
 
 bool
-network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string &ip,std::set< std::string > *network_interface_ips)
+network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string & ipv4, std::string & ipv6, std::string & ipbest, std::set< std::string > *network_interface_ips)
 {
 	ASSERT( interface_pattern );
 	if( !interface_param_name ) {
@@ -96,15 +96,20 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 
 	condor_sockaddr addr;
 	if (addr.from_ip_string(interface_pattern)) {
-		ip = interface_pattern;
+		if(addr.is_ipv4()) {
+			ipv4 = interface_pattern;
+		} else {
+			ASSERT(addr.is_ipv6());
+			ipv6 = interface_pattern;
+		}
 		if( network_interface_ips ) {
-			network_interface_ips->insert( ip );
+			network_interface_ips->insert( interface_pattern );
 		}
 
 		dprintf(D_HOSTNAME,"%s=%s, so choosing IP %s\n",
 				interface_param_name,
 				interface_pattern,
-				ip.c_str());
+				addr.to_ip_string().Value());
 
 		return true;
 	}
@@ -123,7 +128,9 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		//   * loopback
 		// In case of a tie, choose the first device in the list.
 
-	int best_so_far = -1;
+	int best_so_far_v4 = -1;
+	int best_so_far_v6 = -1;
+	int best_overall = -1;
 
 	for(dev = dev_list.begin();
 		dev != dev_list.end();
@@ -166,28 +173,37 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		}
 
 		int desireability;
-
-		if (this_addr.is_loopback()) {
-			desireability = 1;
-		}
-		else if (this_addr.is_private_network()) {
-			desireability = 2;
-		}
-		else {
-			desireability = 3;
-		}
-
+		if (this_addr.is_loopback()) { desireability = 1; }
+		else if (this_addr.is_private_network()) { desireability = 2; }
+		else { desireability = 3; }
 		if(dev->is_up()) { desireability *= 10; }
+
+		int * best_so_far = 0;
+		std::string * ip = 0;
+		if(this_addr.is_ipv4()) {
+			best_so_far = & best_so_far_v4;
+			ip = & ipv4;
+		} else {
+			ASSERT(this_addr.is_ipv6());
+			best_so_far = & best_so_far_v6;
+			ip = & ipv6;
+		}
 
 		//dprintf(D_HOSTNAME, "Considering %s (Ranked at %d) as possible local hostname versus %s (%d)\n", addr.to_ip_string().Value(), desireability, ip.c_str(), desireability);
 
-		if( desireability > best_so_far ) {
-			best_so_far = desireability;
-			ip = dev->IP();
+		if( desireability > *best_so_far ) {
+			*best_so_far = desireability;
+			*ip = dev->IP();
 		}
+
+		if( desireability > best_overall ) {
+			best_overall = desireability;
+			ipbest = dev->IP();
+		}
+
 	}
 
-	if( best_so_far < 0 ) {
+	if( best_overall < 0 ) {
 		dprintf(D_ALWAYS,"Failed to convert %s=%s to an IP address.\n",
 				interface_param_name ? interface_param_name : "",
 				interface_pattern);
@@ -198,7 +214,7 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 			interface_param_name,
 			interface_pattern,
 			matches_str.c_str(),
-			ip.c_str());
+			ipbest.c_str());
 
 	return true;
 }
@@ -220,12 +236,16 @@ init_network_interfaces( int config_done )
 
 	network_interface_matches_all = (network_interface == "*");
 
-	std::string network_interface_ip;
+	std::string network_interface_ipv4;
+	std::string network_interface_ipv6;
+	std::string network_interface_best;
 	bool ok;
 	ok = network_interface_to_ip(
 		"NETWORK_INTERFACE",
 		network_interface.c_str(),
-		network_interface_ip,
+		network_interface_ipv4,
+		network_interface_ipv6,
+		network_interface_best,
 		&configured_network_interface_ips);
 
 	if( !ok ) {
@@ -419,12 +439,12 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 
 	if(expr_string.length() < 5) { return; } // Skip. Implausibly short.
 
-	condor_sockaddr my_default_addr = get_local_ipaddr();
-	MyString my_default_ip = my_default_addr.to_ip_string(true);
-	condor_sockaddr my_sockaddr;
-
 	// Skip if Stream doesn't have address associated with it
+	condor_sockaddr my_sockaddr;
 	if( ! my_sockaddr.from_ip_string(s.my_ip_str()) ) { return; }
+
+	condor_sockaddr my_default_addr = get_local_ipaddr(my_sockaddr.get_protocol());
+	MyString my_default_ip = my_default_addr.to_ip_string(true);
 
 	// my_sockaddr's port is whatever we happen to be using at the moment;
 	// that will be meaningless if we established the connection.  What we
