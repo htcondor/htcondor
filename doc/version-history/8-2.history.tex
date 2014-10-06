@@ -53,6 +53,10 @@ caused the \Condor{shadow} to put the job on hold, the job would be put
 in the held status, but change to idle status when released.
 \Ticket{4619}
 
+\item Fixed a bug that could cause a daemon to write to an old daemon log
+file after log rotation.
+\Ticket{3106}
+
 \item The HTCondor DRMAA library now works correctly when
 \Macro{SCHEDD\_HOST} is set in the configuration file.
 \Ticket{4629}
