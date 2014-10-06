@@ -120,7 +120,9 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 	std::vector<NetworkDeviceInfo> dev_list;
 	std::vector<NetworkDeviceInfo>::iterator dev;
 
-	sysapi_get_network_device_info(dev_list);
+	bool want_v4 = param_boolean("ENABLE_IPV4", true);
+	bool want_v6 = param_boolean("ENABLE_IPV6", true);
+	sysapi_get_network_device_info(dev_list, want_v4, want_v6);
 
 		// Order of preference:
 		//   * non-private IP
