@@ -1100,8 +1100,10 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
 			int port = ((Sock*)(*sockTable)[initial_command_sock()].iosock)->get_port();
+			std::string ipv4, ipv6;
 			std::string private_ip;
-			bool ok = network_interface_to_ip("PRIVATE_NETWORK_INTERFACE",tmp,private_ip);
+			bool ok = network_interface_to_ip("PRIVATE_NETWORK_INTERFACE",
+				tmp, ipv4, ipv6, private_ip);
 			if( !ok ) {
 				dprintf(D_ALWAYS,
 						"Failed to determine my private IP address using PRIVATE_NETWORK_INTERFACE=%s\n",
