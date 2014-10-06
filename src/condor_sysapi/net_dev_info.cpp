@@ -81,6 +81,7 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 
 	for(i=0;i<num_interfaces;i++) {
 		char const *ip = NULL;
+#error	Should also return IPv6 addresses
 		if( interfaces[i].iiAddress.Address.sa_family == AF_INET ) {
 			ip = inet_ntoa(((struct sockaddr_in *)&interfaces[i].iiAddress)->sin_addr);
 		}
