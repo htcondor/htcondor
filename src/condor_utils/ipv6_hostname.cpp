@@ -70,6 +70,14 @@ bool init_local_hostname_impl()
 		if(local_ipaddr_initialized == false &&
 			local_ipaddr.from_ip_string(network_interface)) {
 			local_ipaddr_initialized = true;
+			if(local_ipaddr.is_ipv4()) { 
+				local_ipv4addr = local_ipaddr;
+				local_ipv4addr_initialized = true;
+			}
+			if(local_ipaddr.is_ipv6()) { 
+				local_ipv6addr = local_ipaddr;
+				local_ipv6addr_initialized = true;
+			}
 		}
 	}
 
