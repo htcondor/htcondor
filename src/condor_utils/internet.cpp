@@ -540,7 +540,7 @@ NOTE: it looks like sin_addr may be modified even if the return
 int
 is_valid_sinful( const char *sinful )
 {
-	dprintf(D_HOSTNAME, "validate %s\n", sinful);
+	dprintf(D_HOSTNAME, "Checking if %s is a sinful address\n", sinful);
 	char addrbuf[INET6_ADDRSTRLEN];
 	const char* acc = sinful;
 	const char* tmp;
@@ -550,31 +550,31 @@ is_valid_sinful( const char *sinful )
 		return FALSE;
 
 	if (*acc != '<') {
-		dprintf(D_HOSTNAME, "is not begin with <\n");
+		dprintf(D_HOSTNAME, "%s is not a sinful address: does not begin with \"<\"\n", sinful);
 		return FALSE;
 	}
 	acc++;
 	if (*acc == '[') {
-		dprintf(D_HOSTNAME, "ipv6 address\n");
+		dprintf(D_HOSTNAME, "%s is an ipv6 address\n", sinful);
 		tmp = strchr(acc, ']');
 		if (!tmp) {
-			dprintf(D_HOSTNAME, "could not find ]\n");
+			dprintf(D_HOSTNAME, "%s is not a sinful address: could not find closing \"]\"\n", sinful);
 			return FALSE;
 		}
 		addr_begin = acc + 1;
 		addr_end = tmp;
 		// too long
 		if (addr_end - addr_begin > INET6_ADDRSTRLEN) {
-			dprintf(D_HOSTNAME, "addr too long %d\n", (int)(addr_end - addr_begin));
+			dprintf(D_HOSTNAME, "%s is not a sinful address: addr too long %d\n", sinful, (int)(addr_end - addr_begin));
 			return FALSE;
 		}
 
 		strncpy(addrbuf, addr_begin, addr_end - addr_begin);
 		addrbuf[addr_end - addr_begin] = '\0';
-		dprintf(D_HOSTNAME, "try to convert using inet_pton, %s\n", addrbuf);
+		dprintf(D_HOSTNAME, "tring to convert %s using inet_pton, %s\n", sinful, addrbuf);
 		in6_addr tmp_addr;
 		if (inet_pton(AF_INET6, addrbuf, &tmp_addr) <= 0) {
-			dprintf(D_HOSTNAME, "inet_pton failed\n");
+			dprintf(D_HOSTNAME, "%s is not a sinful address: inet_pton(AF_INET6, %s) failed\n", sinful, addrbuf);
 			return FALSE;
 		}
 		acc = tmp + 1;
@@ -589,16 +589,16 @@ is_valid_sinful( const char *sinful )
 		acc = acc + colon_pos;
 	}
 	if (*acc != ':') {
-		dprintf(D_HOSTNAME, "no colon found\n");
+		dprintf(D_HOSTNAME, "%s is not a sinful address: no colon found\n", sinful);
 		return FALSE;
 	}
 
 	tmp = strchr(acc, '>');
 	if (!tmp) {
-		dprintf(D_HOSTNAME, "no > found\n");
+		dprintf(D_HOSTNAME, "%s is not a sinful address: no closing \">\" found\n", sinful);
 		return FALSE;
 	}
-	dprintf(D_HOSTNAME, "success\n");
+	dprintf(D_HOSTNAME, "%s is a sinful address!\n", sinful);
 	return TRUE;
 }
 
