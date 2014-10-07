@@ -196,6 +196,8 @@ int		LockFd = -1;
 
 int		log_keep_open = 0;
 
+static bool DebugRotateLog = true;
+
 static	int DprintfBroken = 0;
 static	int DebugUnlockBroken = 0;
 #if !defined(WIN32) && defined(HAVE_PTHREADS)
@@ -1033,7 +1035,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 	}
 
 	//This is checking for a non-zero max length.  Zero is infinity.
-	if( it->maxLog && length >= it->maxLog ) {
+	if( DebugRotateLog && it->maxLog && length >= it->maxLog ) {
 		if( !locked ) {
 			/*
 			 * We only need to redo everything if there is a lock defined
@@ -1856,6 +1858,14 @@ dprintf_init_fork_child( ) {
 	if( LockFd >= 0 ) {
 		close( LockFd );
 		LockFd = -1;
+	}
+	DebugRotateLog = false;
+	log_keep_open = 0;
+	std::vector<DebugFileInfo>::iterator it;
+	for ( it = DebugLogs->begin(); it < DebugLogs->end(); it++ ) {
+		if ( it->outputTarget == FILE_OUT ) {
+			debug_unlock_it(&(*it));
+		}
 	}
 }
 

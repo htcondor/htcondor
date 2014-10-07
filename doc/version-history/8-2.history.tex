@@ -37,7 +37,7 @@ The details of each version are described below.
 file in the default location.
 \Ticket{4625}
 
-\item Fixed a bug where \Condor{router_q} would query the wrong queue if the
+\item Fixed a bug where \Condor{router\_q} would query the wrong queue if the
 job router were configured to route jobs away from the source.
 \Ticket{4599}
 
@@ -52,6 +52,10 @@ If a running job was removed at the same time that an error occurred that
 caused the \Condor{shadow} to put the job on hold, the job would be put
 in the held status, but change to idle status when released.
 \Ticket{4619}
+
+\item Fixed a bug that could cause a daemon to write to an old daemon log
+file after log rotation.
+\Ticket{3106}
 
 \item The HTCondor DRMAA library now works correctly when
 \Macro{SCHEDD\_HOST} is set in the configuration file.
