@@ -909,13 +909,11 @@ Scheduler::timeout()
 	 * call preempt() here if we are shutting down.  When shutting down, we have
 	 * a timer which is progressively preempting just one job at a time.
 	 */
-	int real_jobs = numShadows - SchedUniverseJobsRunning 
-		- LocalUniverseJobsRunning;
-	if( (real_jobs > MaxJobsRunning) && (!ExitWhenDone) ) {
+	if( (numShadows > MaxJobsRunning) && (!ExitWhenDone) ) {
 		dprintf( D_ALWAYS, 
 				 "Preempting %d jobs due to MAX_JOBS_RUNNING change\n",
-				 (real_jobs - MaxJobsRunning) );
-		preempt( real_jobs - MaxJobsRunning );
+				 (numShadows - MaxJobsRunning) );
+		preempt( numShadows - MaxJobsRunning );
 		m_need_reschedule = false;
 	}
 
@@ -9035,7 +9033,11 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
 struct shadow_rec *
 Scheduler::add_shadow_rec( shadow_rec* new_rec )
 {
-	numShadows++;
+	if ( new_rec->universe != CONDOR_UNIVERSE_SCHEDULER &&
+		 new_rec->universe != CONDOR_UNIVERSE_LOCAL ) {
+
+		numShadows++;
+	}
 	if( new_rec->pid ) {
 		shadowsByPid->insert(new_rec->pid, new_rec);
 	}
@@ -9421,8 +9423,11 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		close(rec->conn_fd);
 	}
 
+	if ( rec->universe != CONDOR_UNIVERSE_SCHEDULER &&
+		 rec->universe != CONDOR_UNIVERSE_LOCAL ) {
+		numShadows -= 1;
+	}
 	delete rec;
-	numShadows -= 1;
 	if( ExitWhenDone && numShadows == 0 ) {
 		return;
 	}
@@ -9634,15 +9639,8 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 	bool preempt_sched = force_sched_jobs;
 
 	dprintf( D_ALWAYS, "Called preempt( %d )%s%s\n", n, 
-			 force_sched_jobs  ? " forcing scheduler univ preemptions" : "",
+			 force_sched_jobs  ? " forcing scheduler/local univ preemptions" : "",
 			 ExitWhenDone ? " for a graceful shutdown" : "" );
-
-	if( n >= numShadows-SchedUniverseJobsRunning-LocalUniverseJobsRunning ) {
-			// we only want to start preempting scheduler/local
-			// universe jobs once all the shadows have been
-			// preempted...
-		preempt_sched = true;
-	}
 
 	shadowsByPid->startIterations();
 
@@ -9786,8 +9784,10 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 		  weren't trying to preempt scheduler but we still have n to
 		  preempt, try again and force scheduler preemptions.
 		  derek <wright@cs.wisc.edu> 2005-04-01
+
+		  We only want to do this if we're shutting down.
 		*/ 
-	if( n > 0 && preempt_sched == false ) {
+	if( n > 0 && preempt_sched == false && ExitWhenDone ) {
 		preempt( n, true );
 	}
 }
@@ -12138,7 +12138,7 @@ Scheduler::update_local_ad_file()
 void
 Scheduler::attempt_shutdown()
 {
-	if ( numShadows ) {
+	if ( numShadows || SchedUniverseJobsRunning || LocalUniverseJobsRunning ) {
 		if( !daemonCore->GetPeacefulShutdown() ) {
 			preempt( JobStopCount );
 		}
@@ -12159,7 +12159,8 @@ Scheduler::shutdown_graceful()
 	dprintf( D_FULLDEBUG, "Now in shutdown_graceful\n" );
 
 	// If there's nothing to do, shutdown
-	if(  ( numShadows == 0 ) &&
+	if(  ( numShadows == 0 ) && SchedUniverseJobsRunning == 0 &&
+		 LocalUniverseJobsRunning == 0 &&
 		 ( CronJobMgr && ( CronJobMgr->ShutdownOk() ) )  ) {
 		schedd_exit();
 	}
