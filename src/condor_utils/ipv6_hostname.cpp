@@ -194,6 +194,13 @@ bool init_local_hostname_impl()
 						local_ipv6addr, local_ipv6addr_desireability, 
 						addr, desireability);
 				}
+#else
+	// Make Fedora quit complaining.
+	if( local_ipv4addr_initialized && local_ipv6addr_initialized && local_fqdn_initialized ) {
+		local_ipv4addr_initialized = false;
+		local_ipv6addr_initialized = false;
+		local_fqdn_initialized = false;
+	}
 #endif
 			}
 		}
