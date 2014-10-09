@@ -968,14 +968,6 @@ sub TunePersonalCondor
 		$mpid = $$;
 	}
 
-	if($btdebug == 1) {
-		if(!(defined $returnarrayref)) {
-			print "TunePersonalCondor: ---------------- NOT SEEING returnarrayref ---------\n";
-		} else {
-			print "TunePersonalCondor: ---------------- SEEING returnarrayref ---------\n";
-		}
-	}
-
 my $socketdir = "";
 
 	if($MOVESOCKETDIR == 1) {
