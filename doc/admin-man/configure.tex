@@ -6004,14 +6004,11 @@ These macros control the \Condor{schedd}.
 
 \label{param:MaxJobsRunning}
 \item[\Macro{MAX\_JOBS\_RUNNING}]
-  An integer representing a limit on the number of processes
+  An integer representing a limit on the number of \Condor{shadow} processes
   spawned by a given \Condor{schedd} daemon,
-  for all job universes except the grid universe. 
-  The number of processes limit includes \Condor{shadow} processes,
-  scheduler universe processes, including \Condor{dagman}, and
-  local universe \Condor{starter} processes.
+  for all job universes except grid, scheduler, and local universe. 
   Limiting the number of running scheduler and local universe
-  jobs below the upper limit set by \MacroNI{MAX\_JOBS\_RUNNING} is best
+  jobs can be
   done using \MacroNI{START\_LOCAL\_UNIVERSE} and
   \MacroNI{START\_SCHEDULER\_UNIVERSE}.
   The actual number of allowed \Condor{shadow} daemons may be reduced,
