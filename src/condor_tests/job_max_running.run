@@ -23,8 +23,6 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-CondorTest::SetUseNewRunning();
-
 my $testname = "job_max_running.run";
 my %children = ();
 my $submitfile = "";
