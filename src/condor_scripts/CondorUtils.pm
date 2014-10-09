@@ -606,6 +606,7 @@ sub CreateDir
 	my $winpath = "";
 	if($amwindows == 1) {
 		if(is_windows_native_perl()) {
+			#print "CreateDir:windows_native_perl\n";
 			# what if a linux path first?
 			if($argsin[0] eq "-p") {
 				shift @argsin;
@@ -625,14 +626,16 @@ sub CreateDir
 				if($ret != 0) {
 					print "THIS:$fullcmd Failed\n";
 				} else {
-#						print "If this worked, it should exist now.\n";
-#						if(-d $dir) {
-#							print "Perl says it does.\n";
-#						} else {
-#							print "Perl says it does NOT.\n";
-#						}
+						#print "THIS:$fullcmd worked\n";
+						#print "If this worked, it should exist now.\n";
+						#if(-d $dir) {
+							#print "Perl says it does.\n";
+						#} else {
+							#print "Perl says it does NOT.\n";
+						#}
 				}
 			}
+			#print "CreateDir returning now: Return value from CreateDir:$ret\n";
 			return($ret);
 		} else {
 			if($argsin[0] eq "-p") {
@@ -762,24 +765,44 @@ sub CopyIt
     my @argsin = split /\s/, $cmdline;
     my $cmdcount = @argsin;
 
+	if($btdebug == 1) {
+		print "CopyIt command line passed in:$cmdline\n";
+	}
     if($amwindows == 1) {
-        $winsrc = `cygpath -w $argsin[0]`;
-        $windest = `cygpath -w $argsin[1]`;
-        CondorUtils::fullchomp($winsrc);
-        CondorUtils::fullchomp($windest);
-        $_ = $winsrc;
-        s/\\/\\\\/g;
-        $winsrc = $_;
-        $_ = $windest;
-        s/\\/\\\\/g;
-        $windest = $_;
-        $fullcmd = "xcopy $winsrc $windest /Y";
-        if($dashr eq "yes") {
-            $fullcmd = $fullcmd . " /s /e";
-        }
+		if(is_windows_native_perl()) {
+			#print "CopyIt: windows_native_perl\n";
+			$winsrc = $argsin[0];
+			$windest = $argsin[1];
+			#print "native perl:\n";
+			# check target
+			$windest =~ s/\//\\/g;
+        	$fullcmd = "xcopy $winsrc $windest /Y";
+			#print "native perl:$fullcmd\n";
+        	if($dashr eq "yes") {
+            	$fullcmd = $fullcmd . " /s /e";
+				#print "native perl -r:$fullcmd\n";
+        	}
+		} else {
+        	$winsrc = `cygpath -w $argsin[0]`;
+        	$windest = `cygpath -w $argsin[1]`;
+        	CondorUtils::fullchomp($winsrc);
+        	CondorUtils::fullchomp($windest);
+        	$_ = $winsrc;
+        	s/\\/\\\\/g;
+        	$winsrc = $_;
+        	$_ = $windest;
+        	s/\\/\\\\/g;
+        	$windest = $_;
+        	$fullcmd = "xcopy $winsrc $windest /Y";
+        	if($dashr eq "yes") {
+            	$fullcmd = $fullcmd . " /s /e";
+        	}
 
+		}
         $ret = system("$fullcmd");
-		#print "Tried to create dir got ret value:$ret cmd:$fullcmd\n";
+		if($btdebug == 1) {
+			print "Tried to create dir got ret value:$ret cmd:$fullcmd\n";
+		}
     } else {
         $fullcmd = "cp ";
         if($dashr eq "yes") {
@@ -789,6 +812,10 @@ sub CopyIt
         $ret = system("$fullcmd");
 		#print "Tried to create dir got ret value:$ret path:$cmdline\n";
     }
+	if($btdebug == 1) {
+		print "CopyIt returning:$ret\n";
+	}
+	
     return($ret);
 }
 
@@ -809,16 +836,24 @@ sub MoveIt
 	my $cmdcount = @argsin;
 
 	if($amwindows == 1) {
-		$winsrc = `cygpath -w $argsin[0]`;
-		$windest = `cygpath -w $argsin[1]`;
-		CondorUtils::fullchomp($winsrc);
-		CondorUtils::fullchomp($windest);
-		$_ = $winsrc;
-		s/\\/\\\\/g;
-		$winsrc = $_;
-		$_ = $windest;
-		s/\\/\\\\/g;
-		$windest = $_;
+		if(is_windows_native_perl()) {
+			#print "MoveIt:windows_native_perl\n";
+			$winsrc =  $argsin[0];
+			$windest = $argsin[1];
+			$winsrc =~ s/\//\\/g;
+			$windest =~ s/\//\\/g;
+		} else {
+			$winsrc = `cygpath -w $argsin[0]`;
+			$windest = `cygpath -w $argsin[1]`;
+			CondorUtils::fullchomp($winsrc);
+			CondorUtils::fullchomp($windest);
+			$_ = $winsrc;
+			s/\\/\\\\/g;
+			$winsrc = $_;
+			$_ = $windest;
+			s/\\/\\\\/g;
+			$windest = $_;
+		}
 		$fullcmd = "cmd /C move $winsrc $windest";
 
 		$ret = system("$fullcmd");
@@ -843,9 +878,12 @@ sub TarExtract
 	my $winpath = "";
 	my $tarobject = Archive::Tar->new;
 	if($amwindows == 1) {
-		$winpath = `cygpath -w $archive`;
-		CondorUtils::fullchomp($winpath);
-		$archive = $winpath;
+		if( is_windows_native_perl() ) {
+        } else {
+            $winpath = `cygpath -w $archive`;
+            CondorUtils::fullchomp($winpath);
+            $archive = $winpath;
+        }
 	}
 	$tarobject->read($archive);
 	$tarobject->extract();
