@@ -564,6 +564,7 @@ in6_addr condor_sockaddr::to_ipv6_address() const
 	return ret;
 }
 
+#if 0
 void condor_sockaddr::convert_to_ipv6() {
 	// only ipv4 addressn can be converted
 	if (!is_ipv4())
@@ -575,6 +576,7 @@ void condor_sockaddr::convert_to_ipv6() {
 	set_port(port);
 	v6.sin6_addr = addr;
 }
+#endif
 
 bool condor_sockaddr::compare_address(const condor_sockaddr& addr) const
 {

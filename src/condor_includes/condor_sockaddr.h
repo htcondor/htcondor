@@ -135,9 +135,11 @@ public:
 	MyString to_ip_string_ex(bool decorate=false) const; 
 	const char* to_ip_string_ex(char* buf, int len, bool decorate=false) const;
 
+#if 0
 	// if the address contained is ipv4, it converts to 
 	// IPv6-V4MAPPED address. caller must check is_ipv4() first.
 	void convert_to_ipv6();
+#endif
 
 	void clear();
 
