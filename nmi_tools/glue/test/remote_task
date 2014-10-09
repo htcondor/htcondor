@@ -209,10 +209,11 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
             if ($^O =~ /MSWin32/) {
 	       		if ($tmppath =~ /[a-z]:\\cygwin\\bin;/i) {
                     out("removing cygwin from the path");
-                    $tmppath =~ s/[a-z]:\\cygwin\\bin;//i;
+					#out("Before removal:$tmppath\n");
+                    $tmppath =~ s/[a-z]:\\cygwin\\bin;//ig;
 				}
 	    	}
-            out("new PATH=$tmppath");
+            #out("new PATH=$tmppath");
             $ENV{PATH} = $tmppath;
         }
     } elsif (!($perlver =~ /cygwin/i)) {

@@ -55,8 +55,6 @@ my $teststop = 0;
 my $DEBUGLEVEL = 2;
 my $debuglevel = 3;
 
-my $UseNewRunning = 1;
-
 my $MAX_CHECKPOINTS = 2;
 my $MAX_VACATES = 3;
 my $MAX_CORES = 10;
@@ -829,9 +827,9 @@ sub StartTest
 	$teststrt = time();
     # submit the job and get the cluster id
 	if(!(exists $args{dagman_args})) {
-		print "Regular Test....\n";
-		print "submit_file in DoTest:$submit_file\n";
-		system("cat $submit_file");
+		#print "Regular Test....\n";
+		#print "submit_file in DoTest:$submit_file\n";
+		#system("cat $submit_file");
     	$cluster = Condor::TestSubmit( $submit_file );
 	} else {
 		print "Dagman Test....\n";
@@ -878,41 +876,6 @@ sub StartTest
 			TestDebug( "Monitor not happy to exit 1\n",4);
 		}
 		$retval = $monitorret;
-# 		$monitorpid = fork();
-# 		if($monitorpid == 0) {
-# 			# child does monitor
-#     		$monitorret = Condor::Monitor();
-
-# 			TestDebug( "Monitor did return on its own status<$monitorret>\n",4);
-#     		die "$handle: FAILURE (job never checkpointed)\n"
-# 			if $wants_checkpoint && $checkpoints < 1;
-
-# 			if(  $monitorret == 1 ) {
-# 				TestDebug( "child happy to exit 0\n",4);
-# 				exit(0);
-# 			} else {
-# 				TestDebug( "child not happy to exit 1\n",4);
-# 				exit(1);
-# 			}
-# 		} else {
-# 			# parent cleans up
-# 			$waitpid = waitpid($monitorpid, 0);
-# 			if($waitpid == -1) {
-# 				TestDebug( "No such process <<$monitorpid>>\n",4);
-# 			} else {
-# 				$retval = $?;
-# 				TestDebug( "Child status was <<$retval>>\n",4);
-# 				if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 )
-# 				{
-# 					TestDebug( "Monitor done and status good!\n",4);
-# 					$retval = 1;
-# 				} else {
-# 					$status = WEXITSTATUS( $retval );
-# 					TestDebug( "Monitor done and status bad<<$status>>!\n",4);
-# 					$retval = 0;
-# 				}
-# 			}
-# 		}
 	}
 
 	TestDebug( "************** condor_monitor back ************************ \n",4);
@@ -986,13 +949,7 @@ sub StartTest
 			#print "KillDaemonPids called on this config file: $config\n";
 			my $condor = GetPersonalCondorWithConfig($config);
 			$condor->SetCondorDirection("down");
-			if($UseNewRunning == 1) {
-				#print "KillPersonal UseNewRunning set to yes. Calling KillDaemons\n";
-				CondorPersonal::KillDaemons($config);
-			} else {
-				#print "KillPersonal UseNewRunning set to no. Calling KillDaemonPids\n";
-				CondorPersonal::KillDaemonPids($config);
-			}
+			CondorPersonal::KillDaemons($config);
 		} else {
 			print "No config setting to call KillDaemonPids with\n";
 		}
@@ -1258,10 +1215,10 @@ sub CheckRegistrations
     # if we wanted to know about Without checkpoints.....
     if( defined $test{$handle}{"RegisterEvictedWithoutCheckpoint"} )
     {
-		print "******** Registering EvictedWithoutCheckpoint handle:$handle ****************\n";
+		#print "******** Registering EvictedWithoutCheckpoint handle:$handle ****************\n";
         Condor::RegisterEvictedWithoutCheckpoint( $test{$handle}{"RegisterEvictedWithoutCheckpoint"} );
     } else { 
-		print "******** NOT Registering EvictedWithoutCheckpoint handle:$handle ****************\n";
+		#print "******** NOT Registering EvictedWithoutCheckpoint handle:$handle ****************\n";
 		Condor::RegisterEvictedWithoutCheckpoint( sub {
 	    my %info = @_;
 	    die "$handle: FAILURE (Unexpected Eviction without checkpoint)\n";
@@ -2219,23 +2176,6 @@ sub SearchCondorLogMultiple
 				}
 				last;
 		}
-			#if($tolerance == 0) {
-				#CondorTest::TestDebug("SearchCondorLogMultiple: About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",1);
-				#if(defined $findcallback) {
-					#&$findcallback("HitRetryLimit");
-				#}
-				#last;
-			#} else {
-				#if($foundanything > 0) {
-					#CondorTest::TestDebug("SearchCondorLogMultiple: Using builtin tolerance\n",1);
-					#$tolerance -= 1;
-					#$tried = 1;
-				#} else {
-					#$tolerance = 0;
-					#$tried -= 2;
-				#}
-			#}
-		#}
 	}
 	if($found < $goal) {
 		return(0);
@@ -2426,12 +2366,6 @@ sub debug {
     }
 }
 
-sub SetUseNewRunning {
-	CondorPersonal::SetUseNewRunning();
-	$UseNewRunning = 1;
-	print "Set new running check in CondorPersonal\n";
-}
-
 sub timestamp {
     return strftime("%H:%M:%S", localtime);
 }
@@ -2574,6 +2508,12 @@ sub slurp {
       bless $self, $class;
       return $self;
   }
+  sub GetDaemonAndPid
+  {
+      my $self = shift;
+	  my $onedaemon = "$self->{daemon}" . ",$self->{pid}";
+	  return($onedaemon);
+  }
   sub DisplayWhoDataInstance
   {
       my $self = shift;
@@ -2691,6 +2631,30 @@ sub LoadWhoData
 	  	#print "$daemonkey: $self->{personal_who_data}->{$daemonkey}\n";
 		$self->{personal_who_data}->{$daemonkey}->DisplayWhoDataInstance();
 	  }
+  }
+  sub WritePidsFile
+  {
+      my $self = shift;
+	  my $file = shift;
+	  my $piddata = "";
+	  my %refer = (
+	  	"Schedd" => "condor_schedd",
+		"Negotiator" => "condor_negotiator",
+		"Collector" => "condor_collector",
+		"Startd" => "condor_startd",
+		"Master" => "MASTER",
+	  );
+	  open(PF,">$file") or print "PIDS file create failed:$!\n";
+	  foreach my $daemonkey (keys %{$self->{personal_who_data}}) {
+	  	#print "$daemonkey: $self->{personal_who_data}->{$daemonkey}\n";
+		$piddata = $self->{personal_who_data}->{$daemonkey}->GetDaemonAndPid();
+		#print "$piddata\n";
+		my @pidandname = split /,/, $piddata;
+		my $line = "$pidandname[1] $refer{$pidandname[0]}";
+		print PF "$line\n";
+		#print "$line\n";
+	  }
+	  close(PF);
   }
   sub CollectorSeesSchedd
   {
@@ -2912,6 +2876,7 @@ sub GetPersonalCondorWithConfig
 	my $condor_config = "";
     if(CondorUtils::is_windows() == 1) {
 		if(is_windows_native_perl()) {
+			print "GetPersonalCondorWithConfig: windows_native_perl\n";
 			$_ = $tmp_config;
 			s/\//\\/g;
 			$condor_config = $_;
@@ -2933,7 +2898,7 @@ sub GetPersonalCondorWithConfig
     # look after verification that we have a unix type path
     if(CondorUtils::is_windows() == 1) {
 		if(is_windows_native_perl()) {
-			#print "look after verification that we have a unix type path:$condor_config\n";
+			print "look after verification that we have a unix type path:$condor_config\n";
 		} else {
 	    	my $convertedpath = `cygpath -m $condor_config`;
 			CondorUtils::fullchomp($convertedpath);
@@ -2945,17 +2910,31 @@ sub GetPersonalCondorWithConfig
             		return $condor;
         		} else {
 					#print "Consider:$condor->{condor_config}\n";
-					print "Lookup:$convertedpath\n";
+					#print "Lookup:$convertedpath\n";
 				}
     		}
-			#print "Condor Instance Not created yet!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+			print "Condor Instance Not created yet!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
 			#print "These exist\n";
 			#ListAllPersonalCondors();
 			return 0;
 		}
     } else {
-	#print "Condor Instance Not created yet!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+	print "Condor Instance Not created yet!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
 	return 0;
+	}
+}
+
+sub CreatePidsFile {
+	# use config to get acondor instance
+	my $logdir = `condor_config_val log`;
+	CondorUtils::fullchomp($logdir);
+	my $pidsfile = $logdir . "/PIDS";
+	my $config = $ENV{CONDOR_CONFIG};
+	my $condor_instance = GetPersonalCondorWithConfig($config);
+	if($condor_instance != 0) {
+		$condor_instance->WritePidsFile($pidsfile);
+	} else {
+		die "Failed to fetch our condor_instance\n";
 	}
 }
 
@@ -3034,11 +3013,11 @@ sub CreateAndStoreCondorInstance
 			$_ = $condorconfig;
 			s/\//\\/g;
 			$condorconfig = $_;
-			#print "StartPersonal: native perl config after convert:$condorconfig\n";
+			print "StartPersonal: native perl config after convert:$condorconfig\n";
 		} else {
 			my $windowsconfig = `cygpath -m $condorconfig`;
 			CondorUtils::fullchomp($windowsconfig);
-			#print "New windows config <$windowsconfig>\n";
+			print "New windows config <$windowsconfig>\n";
 			$condorconfig = $windowsconfig;
 		}
 	}
@@ -3118,11 +3097,8 @@ sub StartCondorWithParams
 
     #my $new_condor = new PersonalCondorInstance( $condor_name, $condor_config, $collector_addr, 1 );
 	my $new_condor = GetPersonalCondorWithConfig($condor_config);
-	#$new_condor->{collector_addr} = $collector_addr;
 	$new_condor->SetCollectorAddress($collector_addr);
 	$new_condor->SetCondorAlive(1);
-	#$new_condor->DisplayWhoDataInstances();
-	#$new_condor->{is_running} = 1;
 
     $personal_condors{$condor_name} = $new_condor;
 
@@ -3180,15 +3156,7 @@ sub KillPersonal
 	# mark the direction we are going is down/off
 	my $condor = GetPersonalCondorWithConfig($personal_config);
 	$condor->SetCondorDirection("down");
-	#CondorPersonal::KillDaemonPids($personal_config);
-	if($UseNewRunning == 1) {
-		#print "KillPersonal UseNewRunning set to yes. Calling KillDaemons\n";
-		CondorPersonal::KillDaemons($personal_config);
-	} else {
-		#print "KillPersonal UseNewRunning set to no. Calling KillDaemonPids\n";
-		CondorPersonal::KillDaemonPids($personal_config);
-	}
-	#CondorPersonal::KillDaemons($personal_config);
+	CondorPersonal::KillDaemons($personal_config);
 
 	if ( $condor ) {
 	    $condor->{is_running} = 0;
@@ -3231,13 +3199,19 @@ sub CoreCheck {
 	my $fullpath = "";
 	
 	if(CondorUtils::is_windows() == 1) {
-		#print "CoreCheck for windows\n";
-		$logdir =~ s/\\/\//g;
-		#print "old log dir <$logdir>\n";
-		my $windowslogdir = `cygpath -m $logdir`;
-		#print "New windows path <$windowslogdir>\n";
-		CondorUtils::fullchomp($windowslogdir);
-		$logdir = $windowslogdir;
+		my $windowslogdir = "";
+		if(is_windows_native_perl()) {
+			print "CoreCheck:windows_native_perl\n";
+			$logdir =~ s/\//\\/g;
+		} else {
+			#print "CoreCheck for windows\n";
+			$logdir =~ s/\\/\//g;
+			#print "old log dir <$logdir>\n";
+			$windowslogdir = `cygpath -m $logdir`;
+			#print "New windows path <$windowslogdir>\n";
+			CondorUtils::fullchomp($windowslogdir);
+			$logdir = $windowslogdir;
+		}
 	}
 
 	if(defined $test) {
