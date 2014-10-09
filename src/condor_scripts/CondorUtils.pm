@@ -675,6 +675,18 @@ sub CreateDir
 	return($ret);
 }
 
+# pretty print a time string, if no args are passed uses localtime() as the time.
+# the output is formatted as YYYY-MM-DD HH:MM:SS (which is sortable)
+# if the last argument is 'T', then only the time is printed.
+sub TimeStr
+{
+	my $ac = scalar(@_);
+	my $T = $ac > 0 && $_[$ac-1] eq 'T';
+	if ($ac < 5) { @_ = localtime(); }
+	if ($T) { return sprintf "%02d:%02d:%02d", @_[reverse 0..3]; }
+	return sprintf '%d-%02d-%02d %02d:%02d:%02d', $_[5]+1900, $_[4]+1, @_[reverse 0..3];
+}
+
 # portable way to get a directory listing
 # the command ls is optional, (sigh) because that's the way it's used...
 sub List

@@ -33,15 +33,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug where \Condor{router\_q} would query the wrong queue if the
-job router were configured to route jobs away from the source.
-\Ticket{4599}
-
+\item None.
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in which \Condor{router\_q} queried the wrong queue
+if the job router was configured to route jobs away from the source.
+\Ticket{4599}
 
 \item Fixed a bug that prevented \Condor{chirp} from finding its configuration
 file in the default location.

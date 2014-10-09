@@ -509,7 +509,7 @@ sub StartCondorWithParamsStart
 sub debug {
     my $string = shift;
     my $level = shift;
-	my $time = scalar(localtime());
+	my $time = CondorUtils::TimeStr();
 	push @debugcollection, "$time: CondorPersonal - $string";
 	if(!(defined $level) or ($level <= $DEBUGLEVEL)) {
 		if(defined $level) {
@@ -1620,7 +1620,7 @@ sub CollectWhoData
 	#print "CollectWhoData for this Condor:<$ENV{CONDOR_CONFIG}>\n";
 
 	# Get condor instance for this config
-	#print scalar(localtime()) . " CollectWhoData start\n";
+	#print CondorUtils::TimeStr() . " CollectWhoData start\n";
 	my $usequick = 1;
 	my $condor = CondorTest::GetPersonalCondorWithConfig($ENV{CONDOR_CONFIG});
 
@@ -1707,7 +1707,7 @@ sub CollectWhoData
 			#print "CollectWhoData: Parse Error: $wholine\n";
 		}
 	}
-	#print scalar(localtime()) . " CollectWhoData done\n";
+	#print CondorUtils::TimeStr() . " CollectWhoData done\n";
 }
 
 sub KillDaemons
