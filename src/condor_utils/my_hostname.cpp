@@ -379,8 +379,8 @@ init_network_interfaces( int config_done )
 
 static bool is_sender_ip_attr(char const *attr_name)
 {
-    if(strcmp(attr_name,ATTR_MY_ADDRESS) == 0) return true;
-    if(strcmp(attr_name,ATTR_TRANSFER_SOCKET) == 0) return true;
+    if(strcasecmp(attr_name,ATTR_MY_ADDRESS) == 0) return true;
+    if(strcasecmp(attr_name,ATTR_TRANSFER_SOCKET) == 0) return true;
 	size_t attr_name_len = strlen(attr_name);
     if(attr_name_len >= 6 && strcasecmp(attr_name+attr_name_len-6,"IpAddr") == 0)
 	{
@@ -445,8 +445,8 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	condor_sockaddr my_sockaddr;
 	if( ! my_sockaddr.from_ip_string(s.my_ip_str()) ) { return; }
 
-	condor_sockaddr my_default_addr = get_local_ipaddr(my_sockaddr.get_protocol());
-	MyString my_default_ip = my_default_addr.to_ip_string(true);
+	condor_sockaddr my_default_v4addr = get_local_ipaddr(CP_IPV4);
+	condor_sockaddr my_default_v6addr = get_local_ipaddr(CP_IPV6);
 
 	// my_sockaddr's port is whatever we happen to be using at the moment;
 	// that will be meaningless if we established the connection.  What we
@@ -459,7 +459,8 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	my_sockaddr.set_port(port);
 
 	
-	if( my_default_addr == my_sockaddr ) { return; } // Skip doing a no-op
+	if( my_default_v4addr == my_sockaddr ) { return; } // Skip doing a no-op
+	if( my_default_v6addr == my_sockaddr ) { return; } // Skip doing a no-op
 
 	// Skip if we're talking over loopback; advertising loopback
 	// isn't useful to anyone.
@@ -489,10 +490,12 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 
 	Sinful sin(old_addr.c_str());
 	if(!sin.valid()) { return; } // Skip. Not a Sinful apparently.
-	const char * sin_ip = sin.getHost();
+
+	condor_sockaddr old_sockaddr;
+	old_sockaddr.from_sinful(sin.getSinful());
 
 	// Skip if my default address isn't present.
-	if(strcmp(sin_ip, my_default_ip.Value()) != 0) { return; }
+	if( old_sockaddr != my_default_v4addr && old_sockaddr != my_default_v6addr) { return; }
 
 	MyString my_sock_ip = my_sockaddr.to_ip_string(true);
 	sin.setHost(my_sock_ip.Value());
@@ -506,5 +509,5 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 
 	dprintf(D_NETWORK,"Replaced default IP %s with connection IP %s "
 			"in outgoing ClassAd attribute %s.\n",
-			my_default_ip.Value(), my_sock_ip.Value(), attr_name);
+			old_addr.c_str(), sin.getSinful(), attr_name);
 }
