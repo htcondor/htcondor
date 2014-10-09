@@ -642,7 +642,8 @@ int daemon::RealStart( )
 					my_daemon->fullHostname (),
 					my_daemon->port () );
 
-				if (same_host (my_hostname, 
+				if( strcmp( my_daemon->fullHostname(), "localhost" ) == 0 ||
+					same_host (my_hostname, 
 							   my_daemon->fullHostname())) {
 					Sinful sinful( my_daemon->addr() );
 					if( sinful.getSharedPortID() ) {
