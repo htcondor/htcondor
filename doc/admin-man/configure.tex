@@ -7536,15 +7536,17 @@ REM Run the actual job now
 \item[\Macro{RUN\_FILETRANSFER\_PLUGINS\_WITH\_ROOT}]
   A boolean value that affects only Unix platforms and defaults to \Expr{False},
   causing file transfer plug-ins invoked for a job to run with both
-  the real and the effective UID set to the job owner.
-  The group is set to the job owner's primary group, 
+  the real and the effective UID set to user that the job runs as.
+  The user that the job runs as may be the job owner, \Login{nobody},
+  or the slot user.
+  The group is set to primary group of the user that the job runs as, 
   and all supplemental groups are dropped.
   The default gives the behavior exhibited prior to the existence of
   this configuration variable.
   When set to \Expr{True},
   file transfer plug-ins are invoked with a real UID of 0 (\Login{root}),
   provided the HTCondor daemons also run as \Login{root}.
-  The effective UID is set to the job owner.
+  The effective UID is set to the user that the job runs as.
 
   This configuration variable can permit plug-ins to do privileged operations,
   such as access a credential protected by file system permissions.
