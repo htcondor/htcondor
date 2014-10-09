@@ -551,12 +551,11 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 			addr.set_protocol(proto);
 			addr.set_addr_any();
 		} else {
-			// TODO IPv6: Get a proto specific local IPAddr, delete convert_to_ipv6
-			addr = get_local_ipaddr();
-			// what if the socket type does not match?
-			// e.g. addr is ipv6 but ipv6 mode is not turned on?
-			if (addr.is_ipv4() && proto==CP_IPV6)
-				addr.convert_to_ipv6();
+			addr = get_local_ipaddr(proto);
+			if(!addr.is_valid()) {
+				dprintf(D_ALWAYS, "Asked to bind to a single %s interface, but cannot find a suitable interface\n", condor_protocol_to_str(proto).Value());
+				return FALSE;
+			}
 		}
 		addr.set_port((unsigned short)this_trial++);
 
