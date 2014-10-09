@@ -40,6 +40,16 @@ this option causes the node status file to be overwritten even if
 no nodes have changed status since the file was last written.)
 \Ticket{4607}
 
+\item The configuration parameter \Macro{MAX\_JOBS\_RUNNING} has been
+modified that that it only applies to job universes that require a
+\Condor{shadow} process.
+Scheduler and local universe jobs are no longer affected by this
+parameter.
+The number of running scheduler and local universe jobs can be controlled
+with the paramters \Macro{START\_SCHEDULER\_UNIVERSE} and
+\Macro{START\_LOCAL\_UNIVERSE}, respectively.
+\Ticket{4589}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
