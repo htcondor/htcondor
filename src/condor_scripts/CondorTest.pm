@@ -1675,7 +1675,7 @@ sub runToolNTimes
     while($count < $stop) {
         @cmdout = ();
 		@outarrray = ();
-        $date = CondorUtils::TimeStr(T);
+        $date = CondorUtils::TimeStr('T');
         #print "$date $cmd $count\n";
         #@cmdout = `$cmd`;
 		if(defined $haveoptions) {
