@@ -40,14 +40,14 @@ this option causes the node status file to be overwritten even if
 no nodes have changed status since the file was last written.)
 \Ticket{4607}
 
-\item The configuration parameter \Macro{MAX\_JOBS\_RUNNING} has been
-modified that that it only applies to job universes that require a
+\item Configuration variable \Macro{MAX\_JOBS\_RUNNING} has been
+modified such that it only applies to job universes that require a
 \Condor{shadow} process.
 Scheduler and local universe jobs are no longer affected by this
-parameter.
+variable.
 The number of running scheduler and local universe jobs can be controlled
-with the paramters \Macro{START\_SCHEDULER\_UNIVERSE} and
-\Macro{START\_LOCAL\_UNIVERSE}, respectively.
+with configuration variables \MacroNI{START\_SCHEDULER\_UNIVERSE} and
+\MacroNI{START\_LOCAL\_UNIVERSE}, respectively.
 \Ticket{4589}
 
 \end{itemize}
@@ -163,7 +163,7 @@ Section~\ref{sec:Ordering-Config-File} describes the ordering
 in which configuration files are parsed.
 \Ticket{3158}
 
-\item Daemons now authenticate many client nework connections in
+\item Daemons now authenticate many client network connections in
 parallel, rather than one at a time.
 This improves the scalability of daemons that receive many client
 connections, like the \Condor{schedd} and \Condor{collector}.
