@@ -683,10 +683,11 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 		} else if( (bool)_condor_bind_all_interfaces() ) {
 			addr.set_addr_any();
 		} else {
-			// TODO IPv6: Get a proto specific local IPAddr, delete convert_to_ipv6
-			addr = get_local_ipaddr();
-			if (addr.is_ipv4() && proto==CP_IPV6)
-				addr.convert_to_ipv6();
+			addr = get_local_ipaddr(proto);
+			if(!addr.is_valid()) {
+				dprintf(D_ALWAYS, "Asked to bind to a single %s interface, but cannot find a suitable interface\n", condor_protocol_to_str(proto).Value());
+				return FALSE;
+			}
 		}
 		addr.set_port((unsigned short)port);
 
