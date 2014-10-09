@@ -21,9 +21,11 @@ The \texttt{htcondor} module provides a client interface to the various
 HTCondor daemons. It tries to provide functionality similar to the HTCondor 
 command line tools.
 
+% 16cm is the largest width that can be handled by the pdf.
+% It looks wrong in the html version.
 \textbf{\texttt{htcondor} module functions:}
 \begin{flushleft}
-\begin{tabular}{|p{14cm}|} \hline
+\begin{tabular}{|p{16cm}|} \hline
 \texttt{platform( )}
 
 Returns the platform of HTCondor this module is running on.
@@ -91,6 +93,7 @@ The logging level is controlled by \MacroNI{TOOL\_DEBUG}.
 Enable debugging output from HTCondor, where output is sent to a file.
 The log level is controlled by \MacroNI{TOOL\_DEBUG},
 and the file used is controlled by \MacroNI{TOOL\_LOG}.
+\\ \hline
 
 \end{tabular}
 \end{flushleft}
@@ -101,7 +104,7 @@ in the current HTCondor configuration.
 
 \textbf{The \texttt{Schedd} class:}
 \begin{flushleft}
-\begin{tabular}{|p{14cm}|} \hline
+\begin{tabular}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( classad )}
 
@@ -189,6 +192,23 @@ Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
 daemon to project along.
 It defaults to having the \Condor{schedd} daemon return all attributes.
 \\ \hline
+
+\texttt{history( (object) requirements, (list) projection, (int) match )}
+
+Request history records from the \Condor{schedd} daemon.
+Returns an iterator to a set of ClassAds representing completed jobs.
+
+Parameter \texttt{requirements} is either an \texttt{ExprTree} or a string 
+that can be parsed as an expression.
+The expression represents the requirements that all returned jobs should match. 
+
+Parameter \texttt{projection} is a list of all the ClassAd attributes
+that are to be included for each job. 
+The empty list causes all attributes to be included.
+
+Parameter \texttt{match} is an integer cap on the number of jobs to include. 
+\\ \hline
+
 \texttt{submit( ad, count = 1, spool = false, ad\_results = None )}
 
 Submit one or more jobs to the \Condor{schedd} daemon.
@@ -250,13 +270,14 @@ A value of -1 specifies to use the value of configuration variable
 Note that, depending on the lifetime
 of the proxy in \texttt{filename}, the resulting lifetime may be shorter
 than the desired lifetime.
+\\ \hline
 
 \end{tabular}
 \end{flushleft}
 
 \textbf{The \texttt{Collector} class:}
 \begin{flushleft}
-\begin{tabular}{|p{14cm}|} \hline
+\begin{tabular}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( pool = None )}
 
@@ -322,7 +343,7 @@ Defaults to \texttt{True}.
 
 \textbf{The \texttt{Negotiator} class:}
 \begin{flushleft}
-\begin{tabular}{|p{14cm}|} \hline
+\begin{tabular}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( (ClassAd)ad = None ) }
 
@@ -420,7 +441,7 @@ then all future commands will fail with strange connection errors.
 This is the only mechanism to invalidate in-memory sessions.
 
 \begin{flushleft}
-\begin{tabular}{|p{14cm}|} \hline
+\begin{tabular}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( )}
 
@@ -458,7 +479,7 @@ try; if not given, \texttt{DC\_NOP} will be used.
 
 \textbf{Module enums:}
 \begin{flushleft}
-\begin{tabular}{|p{14cm}|} \hline
+\begin{tabular}{|p{16cm}|} \hline
 
 \texttt{AdTypes}
 
@@ -584,7 +605,7 @@ and the object can take lists, dictionaries, and ClassAds as values.
 
 \textbf{\texttt{classad} module functions:}
 \begin{flushleft}
-\begin{tabular}{|p{14cm}|} \hline
+\begin{tabular}{|p{16cm}|} \hline
 \texttt{parse( input )}
 
 Parse input into a ClassAd.  
@@ -633,7 +654,7 @@ Python strings, floats, integers, and booleans have equivalent literals.
 
 \textbf{Standard Python object methods for the \Expr{ClassAd} class:}
 \begin{flushleft}
-\begin{tabular}{|p{14cm}|} \hline
+\begin{tabular}{|p{16cm}|} \hline
 
 \texttt{\_\_init\_\_( str )}
 
@@ -659,7 +680,7 @@ For example, \Expr{[ Foo = "bar"; ]} may be returned.
 
 \textbf{The \texttt{classad} object has the following dictionary-like methods:}
 \begin{flushleft}
-\begin{tabular}{|p{14cm}|} \hline
+\begin{tabular}{|p{16cm}|} \hline
 \texttt{items( )}
 
 Returns an iterator of tuples. Each item returned by the iterator 
@@ -725,7 +746,7 @@ Returns nothing.
 
 \textbf{Additional methods:}
 \begin{flushleft}
-\begin{tabular}{|p{14cm}|} \hline
+\begin{tabular}{|p{16cm}|} \hline
 \texttt{eval( attr )}
 
 Evaluate the value given a ClassAd attribute \texttt{attr}.
@@ -811,7 +832,7 @@ produce an error until it is evaluated with a call to \Code{bool()} or the
 
 \textbf{\texttt{ExprTree} class methods:}
 \begin{flushleft}
-\begin{tabular}{|p{14cm}|} \hline
+\begin{tabular}{|p{16cm}|} \hline
 \texttt{\_\_init\_\_( str )}
 
 Parse the string \texttt{str} to create an \texttt{ExprTree}.
