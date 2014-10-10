@@ -35,8 +35,6 @@ void ScheddStatistics::Reconfig()
 
     this->RecentWindowMax = param_integer("STATISTICS_WINDOW_SECONDS", 1200, quantum, INT_MAX);
 
-
-
     this->PublishFlags    = IF_BASICPUB | IF_RECENTPUB;
     char * tmp = param("STATISTICS_TO_PUBLISH");
     if (tmp) {
@@ -44,6 +42,11 @@ void ScheddStatistics::Reconfig()
        free(tmp);
     }
     SetWindowSize(this->RecentWindowMax);
+
+    std::string strWhitelist;
+    if (param(strWhitelist, "STATISTICS_TO_PUBLISH_LIST")) {
+       this->Pool.SetVerbosities(strWhitelist.c_str(), this->PublishFlags, true);
+    }
 
     //stats_histogram_sizes::init_sizes_from_param("MAX_HIST_SIZES_LEVELS");
     //JobSizes.reconfig();
@@ -94,7 +97,7 @@ void ScheddJobCounters::InitJobCounters(StatisticsPool &Pool, int base_verbosity
    JobsBadputRuntimes.set_levels(default_job_hist_lifes, COUNTOF(default_job_hist_lifes));
 
    int if_poolbasic = (base_verbosity>IF_BASICPUB) ? IF_VERBOSEPUB : IF_BASICPUB;
-   int if_poolverbose = (base_verbosity>IF_BASICPUB) ? IF_NEVER : IF_BASICPUB;
+   int if_poolverbose = (base_verbosity>IF_BASICPUB) ? IF_HYPERPUB : IF_BASICPUB;
 
    // insert static items into the stats pool so we can use the pool 
    // to Advance and Clear.  these items also publish the overall value

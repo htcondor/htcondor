@@ -112,7 +112,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen,
 	}
 
     if (daemonCore) {
-       daemonCore->dc_stats.New("Timer", event_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+       daemonCore->dc_stats.NewProbe("Timer", event_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
     }
 
     new_timer->handler = handler;
