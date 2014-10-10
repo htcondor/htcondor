@@ -145,10 +145,7 @@ bool init_local_hostname_impl()
 					continue;
 				condor_sockaddr addr(info->ai_addr);
 
-				int desireability = 0;
-				if (addr.is_loopback())            { desireability = 1; }
-				else if(addr.is_private_network()) { desireability = 2; }
-				else                               { desireability = 3; }
+				int desireability = addr.desirability();
 
 				const char * result = "skipped for low score";
 				if(desireability > local_hostname_desireability) {

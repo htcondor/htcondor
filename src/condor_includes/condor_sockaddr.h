@@ -141,6 +141,13 @@ public:
 	void convert_to_ipv6();
 #endif
 
+	// How desirable is this address for public use?  Prefers public addresses
+	// over private addresses.  Higher numbers are more desirable.  The number
+	// will be less than 10000.  No other promises are made; do NOT make
+	// decisions based on specific numbers, only compare relative numbers to
+	// identify more desireable addresses.
+	int desirability() const;
+
 	void clear();
 
 	// returns as sockaddr_storage. 

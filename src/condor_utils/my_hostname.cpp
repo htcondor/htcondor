@@ -174,10 +174,7 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 			network_interface_ips->insert( dev->IP() );
 		}
 
-		int desireability;
-		if (this_addr.is_loopback()) { desireability = 1; }
-		else if (this_addr.is_private_network()) { desireability = 2; }
-		else { desireability = 3; }
+		int desireability = this_addr.desirability();
 		if(dev->is_up()) { desireability *= 10; }
 
 		int * best_so_far = 0;

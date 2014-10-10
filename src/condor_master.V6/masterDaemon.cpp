@@ -641,10 +641,18 @@ int daemon::RealStart( )
 					"Matching '%s:%d'\n", 
 					my_daemon->fullHostname (),
 					my_daemon->port () );
+				
+				MyString cm_sinful = my_daemon->addr();
+				condor_sockaddr cm_sockaddr;
+				cm_sockaddr.from_sinful(cm_sinful);
+				MyString cm_hostname;
+				if(my_daemon->fullHostname()) {
+					cm_hostname = my_daemon->fullHostname();
+				}
 
-				if( strcmp( my_daemon->fullHostname(), "localhost" ) == 0 ||
+				if( cm_sockaddr.is_loopback() ||
 					same_host (my_hostname, 
-							   my_daemon->fullHostname())) {
+							   cm_hostname.Value())) {
 					Sinful sinful( my_daemon->addr() );
 					if( sinful.getSharedPortID() ) {
 							// collector is using a shared port
