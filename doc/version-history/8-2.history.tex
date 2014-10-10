@@ -62,6 +62,12 @@ file after log rotation.
 \Macro{SCHEDD\_HOST} is set in the configuration file.
 \Ticket{4629}
 
+\item The (previously-undocumented)
+\Macro{HISTORY\_HELPER\_MAX\_CONCURRENCY} configuration macro incorrectly
+defaulted to 10,000 rather than the correct value of 2.  This has been
+fixed.
+\Ticket{4644}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
