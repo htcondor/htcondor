@@ -6771,8 +6771,9 @@ tags=negotiator,matchmaker
 
 [HISTORY_HELPER_MAX_HISTORY]
 default=10000
+range=0,
 type=int
-reconfig=false
+reconfig=true
 customization=seldom
 friendly_name=History Helper max number of history ads
 usage=Set the limit on the number of history ads remote history will consider
@@ -6782,7 +6783,7 @@ review=?
 default=2
 range=0,
 type=int
-reconfig=false
+reconfig=true
 customization=seldom
 friendly_name=History Helper max number of helper sub-processes
 usage=Set the limit on the number of condor_history_helper sub-processes

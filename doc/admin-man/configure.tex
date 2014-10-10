@@ -1568,6 +1568,22 @@ File System Configuration File Entries''.
   rotated, and this rotation would cause the number of backups to be
   too large, the oldest file is removed. 
 
+\label{param:HistoryHelperMaxConcurrency}
+\item[\Macro{HISTORY\_HELPER\_MAX\_CONCURRENCY}]
+  This specifies the maximum number of concurrent remote \Condor{history}
+  queries allowed at a time (defaults to 2).  When this maximum is exceeded,
+  further queries will be queued in a non-blocking manner. Setting this option
+  to 0 disables remote history access. A remote history access is defined
+  as an invocation of \Condor{history} that specifies a \Opt{-name} option
+  to query a \Condor{schedd} running on a remote machine.
+
+\label{param:HistoryHelperMaxHistory}
+\item[\Macro{HISTORY\_HELPER\_MAX\_HISTORY}]
+  This specifies the maximum number of ads to parse on behalf of remote history
+  clients.  The default is 10,000.  This allows the system administrator to
+  indirectly manage the maximum amount of CPU time spent on each client.
+  Setting this option to 0 disables remote history access.
+
 \label{param:MaxJobQueueLogRotations}
 \item[\Macro{MAX\_JOB\_QUEUE\_LOG\_ROTATIONS}]
   The schedd periodically rotates the job queue database file in order
