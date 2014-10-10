@@ -308,6 +308,12 @@ TransferQueueManager::InitAndReconfig() {
 
 	m_disk_throttle_excess.ConfigureEMAHorizons(ema_config);
 	m_disk_throttle_shortfall.ConfigureEMAHorizons(ema_config);
+
+	// do this after configuring EMA horizons so that attribute names are known.
+	std::string strWhitelist;
+	if (param(strWhitelist, "STATISTICS_TO_PUBLISH_LIST")) {
+		m_stat_pool.SetVerbosities(strWhitelist.c_str(), m_publish_flags, true);
+	}
 }
 
 void

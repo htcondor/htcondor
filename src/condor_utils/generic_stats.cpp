@@ -367,7 +367,7 @@ void stats_entry_probe<T>::Publish(ClassAd & ad, const char * pattr, int flags) 
       attr = base; attr += "Sum";
       ad.Assign(attr.c_str(), this->Sum);
    }
-   if (this->Count() > 0) {
+   if (this->Count() > 0 || ((flags & IF_PUBLEVEL) == IF_HYPERPUB)) {
       attr = base; attr += "Avg";
       ad.Assign(attr.c_str(), this->Avg());
 
@@ -1024,7 +1024,7 @@ void StatisticsPool::InsertProbe (
    FN_STATS_ENTRY_SETRECENTMAX fnsrm,
    FN_STATS_ENTRY_DELETE  fndel) // Destructor
 {
-   pubitem item = { unit, flags, fOwned, probe, pattr, fnpub, fnunp };
+   pubitem item = { unit, flags, fOwned, false, 0, probe, pattr, fnpub, fnunp };
    pub.insert(name, item);
 
    poolitem pi = { unit, fOwned, fnadv, fnclr, fnsrm, fndel };
@@ -1041,7 +1041,7 @@ void StatisticsPool::InsertPublish (
    FN_STATS_ENTRY_PUBLISH fnpub, // publish method
    FN_STATS_ENTRY_UNPUBLISH fnunp) // unpublish method
 {
-   pubitem item = { unit, flags, fOwned, probe, pattr, fnpub, fnunp };
+   pubitem item = { unit, flags, fOwned, false, 0, probe, pattr, fnpub, fnunp };
    pub.insert(name, item);
 }
 
@@ -1114,6 +1114,73 @@ void StatisticsPool::SetRecentMax(int window, int quantum)
          }
       }
 }
+
+/* set probe verbosites using a whitelist as a comma, and/or space separated list of attributes.
+ * probes that publish attributes that match the list are set to pub_flags,
+ * if set_nonmatching is true, then probes that don't match the are set to nonmatch_pub_flags
+ */
+int StatisticsPool::SetVerbosities(const char * attrs_list, int pub_flags, bool restore_nonmatching /*= false*/)
+{
+   if ( ! attrs_list || ! attrs_list[0]) return 0;
+
+   classad::References attrs;
+   StringTokenIterator list(attrs_list);
+   const std::string * attr;
+   while ((attr = list.next_string())) { attrs.insert(*attr); }
+   return SetVerbosities(attrs, pub_flags, restore_nonmatching);
+}
+
+/* call this to set verbosites using a whitelist.
+ * probes that publish attributes that match the list are set to pub_flags,
+ * if set_nonmatching is true, then probes that don't match the are set to nonmatch_pub_flags
+ */
+int StatisticsPool::SetVerbosities(classad::References & attrs, int pub_flags, bool restore_nonmatching /*= false*/)
+{
+   pubitem * pitem;
+   const MyString * name;
+   ClassAd tmp;
+
+   pub.startIterations();
+   while (pub.iterate_nocopy(&name, &pitem)) {
+      pubitem & item = *pitem;
+      if ( ! item.Publish) continue;
+
+      // if the base attribute name matches, the it's a match
+      const char * pattr = item.pattr ? item.pattr : name->Value();
+      bool attr_match = attrs.find(pattr) != attrs.end();
+
+      // if this is a multi-attribute probe we have to check against actual
+      // publication attributes to be sure that it's not a match.
+      int probe_class = item.units & IS_CLASS_MASK;
+      bool multi_attrib = (probe_class == IS_CLS_PROBE) || (probe_class > IS_RECENTTQ);
+      if ( ! attr_match && multi_attrib) {
+         // publish attribute so we can match them against the whitelist
+         tmp.Clear();
+         stats_entry_base * probe = (stats_entry_base *)item.pitem;
+         (probe->*(item.Publish))(tmp, pattr, (item.flags & ~IF_NONZERO) | IF_HYPERPUB);
+
+         // look to see if any of the published attributes match the whitelist.
+         for (classad::AttrList::const_iterator it = tmp.begin(); it != tmp.end(); ++it) {
+            if (attrs.find(it->first) != attrs.end()) { attr_match = true; break; }
+         }
+      }
+
+      // if we have a match, adjust the pub flags
+      if (attr_match) {
+         int new_flags = (item.flags & ~IF_PUBLEVEL) | (pub_flags & IF_PUBLEVEL);
+         if ( ! item.fWhitelisted && (new_flags != item.flags)) {
+            item.fWhitelisted = true;
+            item.def_verbosity = (unsigned short)(item.flags >> 16);
+         }
+         item.flags = new_flags;
+      } else if (restore_nonmatching && item.fWhitelisted) {
+         item.flags = (item.flags & ~IF_PUBLEVEL) | (((unsigned int)item.def_verbosity << 16) & IF_PUBLEVEL);
+         item.fWhitelisted = false;
+      }
+   }
+   return 0;
+}
+
 
 void StatisticsPool::Publish(ClassAd & ad, int flags) const
 {
@@ -1310,7 +1377,8 @@ void stats_entry_sum_ema_rate<T>::Publish(ClassAd & ad, const char * pattr, int 
 	if (flags & this->PubEMA) {
 		for(size_t i = this->ema.size(); i--; ) {
 			stats_ema_config::horizon_config &config = this->ema_config->horizons[i];
-			if( (flags & stats_entry_ema_base<T>::PubSuppressInsufficientDataEMA) && this->ema[i].insufficientData(config) ) {
+			if( (flags & stats_entry_ema_base<T>::PubSuppressInsufficientDataEMA) && this->ema[i].insufficientData(config)
+				&& ((flags & IF_PUBLEVEL) < IF_HYPERPUB)) {
 				continue;
 			}
 			if( !(flags & this->PubDecorateAttr) ) {
@@ -1358,7 +1426,8 @@ void stats_entry_ema<T>::Publish(ClassAd & ad, const char * pattr, int flags) co
 	if (flags & this->PubEMA) {
 		for(size_t i = this->ema.size(); i--; ) {
 			stats_ema_config::horizon_config &config = this->ema_config->horizons[i];
-			if( (flags & stats_entry_ema_base<T>::PubSuppressInsufficientDataEMA) && this->ema[i].insufficientData(config) ) {
+			if( (flags & stats_entry_ema_base<T>::PubSuppressInsufficientDataEMA) && this->ema[i].insufficientData(config) 
+				&& ((flags & IF_PUBLEVEL) < IF_HYPERPUB)) {
 				continue;
 			}
 			if( !(flags & this->PubDecorateAttr) ) {

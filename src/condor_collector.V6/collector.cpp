@@ -312,7 +312,7 @@ void CollectorDaemon::Init()
     }
 
 	// add an exponential moving average counter of updates received.
-	daemonCore->dc_stats.New("Collector", "UpdatesReceived", AS_COUNT | IS_CLS_SUM_EMA_RATE | IF_BASICPUB);
+	daemonCore->dc_stats.NewProbe("Collector", "UpdatesReceived", AS_COUNT | IS_CLS_SUM_EMA_RATE | IF_BASICPUB);
 
 	forkQuery.Initialize( );
 }
