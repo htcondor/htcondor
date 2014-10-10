@@ -92,7 +92,9 @@ print "\n\n\n\n\n\n*************** collector port:$parallelport **************\n
 #CondorTest::debug("Set config to $parallelconfig\n",$debuglevel);
 
 #print "Looking for schedd for Basic Parallel Test\n";
-runcmd("condor_status -pool $currenthost:$parallelport -schedd -format '%s\\n' Name");
+# runcmd("condor_status -pool $currenthost:$parallelport -schedd -format '%s\\n' Name");
+# If we've configured Condor properly, why do we need to specify the pool?
+runcmd("condor_status -schedd -format '%s\\n' Name");
 
 my $line;
 open(CSUB,">$mysubmitnm") || die "Can't open new submit file $mysubmitnm: $!\n";
