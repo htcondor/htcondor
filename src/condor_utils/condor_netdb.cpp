@@ -132,7 +132,10 @@ condor_gethostbyname_ipv6(const char* name) {
 	// AI_ADDRCONFIG is supported since Windows Server 2008 SDK.
     hints.ai_flags = AI_CANONNAME;
 #else
-    hints.ai_flags = AI_ADDRCONFIG | AI_CANONNAME;
+    // Unfortunately, Ubuntu 10 and 12 disagree with everyone else about
+    // what AI_ADDRCONFIG means, so we need to ask for all addresses and
+    // filter on our end.
+    hints.ai_flags = AI_CANONNAME;
 #endif 
 
     e = getaddrinfo(name, NULL, &hints, &res);

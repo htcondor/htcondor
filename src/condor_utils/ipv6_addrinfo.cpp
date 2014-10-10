@@ -30,7 +30,10 @@ addrinfo get_default_hint()
 	addrinfo ret;
 	memset(&ret, 0, sizeof(ret));
 #ifndef WIN32
-	ret.ai_flags = AI_ADDRCONFIG;
+	// Unfortunately, Ubuntu 10 and 12 disagree with everyone else about
+	// what AI_ADDRCONFIG means, so we need to ask for all addresses and
+	// filter on our end.
+	// ret.ai_flags = AI_ADDRCONFIG;
 #endif
 	ret.ai_flags |= AI_CANONNAME;
 
