@@ -83,7 +83,10 @@ my $new_condor_instance = CondorTest::StartCondorWithParams(
 my $parallelport = $new_condor_instance->GetCollectorPort();
 
 #print "Looking for schedd for Basic Parallel Test\n";
-runcmd("condor_status -pool $currenthost:$parallelport -schedd -format '%s\\n' Name");
+# runcmd("condor_status -pool $currenthost:$parallelport -schedd -format '%s\\n' Name");
+# If we've configured Condor correctly, why do we need the pool?
+# For that matter, isn't this entirely superflous given the new startup code?
+runcmd("condor_status -schedd -format '%s\\n' Name");
 
 # Edit submit file to submit to scheduler at remote (side b) schedd.
 my $line;
