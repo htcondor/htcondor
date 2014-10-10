@@ -7514,8 +7514,12 @@ int DaemonCore::Create_Process(
 					// still be holding the port open in this lower
 					// stack frame...
 				for(SockPairVec::iterator it = socks.begin(); it != socks.end(); it++) {
-					it->rsock()->close();
-					it->ssock()->close();
+					if ( it->has_relisock()) {
+						it->rsock()->close();
+					}
+					if ( it->has_safesock()) {
+						it->ssock()->close();
+					}
 				}
 				dprintf( D_ALWAYS, "Re-trying Create_Process() to avoid "
 						 "PID re-use\n" );
