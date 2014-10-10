@@ -6779,7 +6779,7 @@ usage=Set the limit on the number of history ads remote history will consider
 review=?
 
 [HISTORY_HELPER_MAX_CONCURRENCY]
-default=10000
+default=2
 range=0,
 type=int
 reconfig=false
