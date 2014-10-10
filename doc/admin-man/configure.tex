@@ -1627,8 +1627,8 @@ File System Configuration File Entries''.
 
 \label{param:HistoryHelperMaxConcurrency}
 \item[\Macro{HISTORY\_HELPER\_MAX\_CONCURRENCY}]
-  This specifies the maximum number of concurrent remote \Condor{history}
-  queries allowed at a time (defaults to 2).  When this maximum is exceeded,
+  Specifies the maximum number of concurrent remote \Condor{history}
+  queries allowed at a time; defaults to 2.  When this maximum is exceeded,
   further queries will be queued in a non-blocking manner. Setting this option
   to 0 disables remote history access. A remote history access is defined
   as an invocation of \Condor{history} that specifies a \Opt{-name} option
@@ -1636,16 +1636,17 @@ File System Configuration File Entries''.
 
 \label{param:HistoryHelperMaxHistory}
 \item[\Macro{HISTORY\_HELPER\_MAX\_HISTORY}]
-  This specifies the maximum number of ads to parse on behalf of remote history
+  Specifies the maximum number of ClassAds to parse on behalf of remote history
   clients.  The default is 10,000.  This allows the system administrator to
   indirectly manage the maximum amount of CPU time spent on each client.
   Setting this option to 0 disables remote history access.
 
 \label{param:MaxJobQueueLogRotations}
 \item[\Macro{MAX\_JOB\_QUEUE\_LOG\_ROTATIONS}]
-  The schedd periodically rotates the job queue database file in order
-  to save disk space.  This option controls how many rotated files are
-  saved.  It defaults to 1, which means there may be up to two history
+  The \Condor{schedd} daemon periodically rotates the job queue database file,
+  in order to save disk space.  
+  This option controls how many rotated files are saved.  
+  It defaults to 1, which means there may be up to two history
   files (the previous one, which was rotated out of use, and the current one
   that is being written to).  When the job queue file is rotated,
   and this rotation would cause the number of backups to be larger
