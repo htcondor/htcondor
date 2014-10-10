@@ -67,6 +67,10 @@ configuration variable \Macro{HISTORY\_HELPER\_MAX\_CONCURRENCY}.
 It incorrectly defaulted to 10000, rather than the correct value of 2.
 \Ticket{4644}
 
+\item Fixed a rare bug that could cause a daemon to core dump with
+a log message of ``child failed because PID XXX is still in use by DaemonCore''.
+\Ticket{4646}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
