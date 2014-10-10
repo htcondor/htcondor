@@ -2708,8 +2708,8 @@ sub LoadWhoData
 			my @statarray = ();
 			CondorTest::runCondorTool("condor_status -schedd -autoformat MyAddress Name",\@statarray,0,{emit_output=>0});
 			foreach my $line (@statarray) {
-			#<128.105.109.64:49860 Look for beginning of sinful string
-				if( $line =~ /^<\d+\.\d+\.\d+\.\d+:\d+.*$/) {
+				if( $line =~ /^<\[[:0-9A-Za-z]+]:\d+.*$/ ||
+				    $line =~ /^<\d+\.\d+\.\d+\.\d+:\d+.*$/ ) {
 					#print "Got a sinful string for schedd:$line\n";
 					return("yes");
 				}
@@ -2858,8 +2858,10 @@ sub LoadWhoData
   sub GetCollectorPort
   {
       my $self = shift;
-	  my @addrparts = split /:/, $self->{collector_addr};
-	  return $addrparts[1];
+      # I don't /think/ we use colons in the sinful string after the port
+      # number, but since we do before (for IPv6)...
+      my @addrparts = split /:/, $self->{collector_addr};
+      return $addrparts[ scalar( @addrparts ) ];
   }
 }
 
