@@ -250,7 +250,13 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		EXCEPT("Invalid argument(s) for DaemonCore constructor");
 	}
 
-    dc_stats.Init(); // initilize statistics.
+	SubsystemType styp = get_mySubSystem()->getType();
+	bool enable_stats = (styp == SUBSYSTEM_TYPE_MASTER)
+					|| (styp == SUBSYSTEM_TYPE_COLLECTOR)
+					|| (styp == SUBSYSTEM_TYPE_NEGOTIATOR)
+					|| (styp == SUBSYSTEM_TYPE_SCHEDD)
+					|| (styp == SUBSYSTEM_TYPE_STARTD);
+    dc_stats.Init(enable_stats); // initilize statistics.
     dc_stats.SetWindowSize(20*60);
 
 	if ( PidSize == 0 )
@@ -951,7 +957,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 		nCommand++;
 	}
 
-	dc_stats.New("Command", getCommandStringSafe(command), AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+	dc_stats.NewProbe("Command", getCommandStringSafe(command), AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
 	// Found a blank entry at index i. Now add in the new data.
 	comTable[i].num = command;
@@ -1266,7 +1272,7 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		return -1;
     }
 
-    dc_stats.New("Signal", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+    dc_stats.NewProbe("Signal", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
 	// Semantics dictate that certain signals CANNOT be caught!
 	// In addition, allow SIGCHLD to be automatically replaced (for backwards
@@ -1423,7 +1429,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		EXCEPT("DaemonCore: Socket table messed up");
 	}
 
-    dc_stats.New("Socket", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+    dc_stats.NewProbe("Socket", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
     //if (iosock_descrip && iosock_descrip[0] && ! strcmp(handler_descrip, "DC Command Handler"))
     //   dc_stats.New("Command", iosock_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
@@ -1905,7 +1911,7 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
         }
 	}
 
-    dc_stats.New("Pipe", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+    dc_stats.NewProbe("Pipe", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
 	// Found a blank entry at index i. Now add in the new data.
 	(*pipeTable)[i].pentry = NULL;
@@ -2643,7 +2649,7 @@ DaemonCore::thread_switch_callback(void* & incoming_contextVP)
 	if ( !context.is_null() ) {
 		outgoing_context = (DCThreadState *) context->user_pointer_;
 		if (!outgoing_context) {
-				EXCEPT("ERROR: daemonCore - no thread context for tid %d\n",
+				EXCEPT("ERROR: daemonCore - no thread context for tid %d",
 						last_tid);
 		}
 	}
@@ -7472,7 +7478,7 @@ int DaemonCore::Create_Process(
 		//
 		if (sigmask != NULL) {
 			if (sigprocmask(SIG_SETMASK, &saved_mask, NULL) == -1) {
-				EXCEPT("Create_Process: sigprocmask error: %s (%d)\n",
+				EXCEPT("Create_Process: sigprocmask error: %s (%d)",
 				       strerror(errno),
 				       errno);
 			}
@@ -7579,8 +7585,12 @@ int DaemonCore::Create_Process(
 					// still be holding the port open in this lower
 					// stack frame...
 				for(SockPairVec::iterator it = socks.begin(); it != socks.end(); it++) {
-					it->rsock()->close();
-					it->ssock()->close();
+					if ( it->has_relisock()) {
+						it->rsock()->close();
+					}
+					if ( it->has_safesock()) {
+						it->ssock()->close();
+					}
 				}
 				dprintf( D_ALWAYS, "Re-trying Create_Process() to avoid "
 						 "PID re-use\n" );

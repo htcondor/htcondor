@@ -74,7 +74,7 @@ reload() {
     return $RETVAL
 }
 
-peaceful-off() {
+peaceful_off() {
     condor_off -peaceful
     rc=$?
     exit $rc
@@ -238,7 +238,7 @@ case "$1" in
 
     peaceful-off)
 	[ $running -eq 0 ] || exit 0
-	peaceful-off
+	peaceful_off
 	RETVAL=$?
        ;;
     *)

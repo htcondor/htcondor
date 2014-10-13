@@ -447,6 +447,18 @@ my_popenv_impl( const char *const args[],
 			char **m_unix_env = NULL;
 			m_unix_env = env_ptr->getStringArray();
 			execve(cmd.Value(), const_cast<char *const*>(args), m_unix_env );
+
+				// delete the memory even though we're on our way out
+				// if exec failed.
+			if (m_unix_env) {
+				int i = 0;
+				while (m_unix_env[i]) {
+					delete m_unix_env[i];
+					i++;
+				}
+				delete [] m_unix_env;
+			}
+
 		} else {
 			execvp(cmd.Value(), const_cast<char *const*>(args) );
 		}

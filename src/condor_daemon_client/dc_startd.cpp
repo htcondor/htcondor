@@ -33,11 +33,12 @@ DCStartd::DCStartd( const char* tName, const char* tPool )
 	: Daemon( DT_STARTD, tName, tPool )
 {
 	claim_id = NULL;
+	extra_ids = NULL;
 }
 
 
 DCStartd::DCStartd( const char* tName, const char* tPool, const char* tAddr,
-					const char* tId )
+					const char* tId , const char *ids)
 	: Daemon( DT_STARTD, tName, tPool )
 {
 	if( tAddr ) {
@@ -49,11 +50,16 @@ DCStartd::DCStartd( const char* tName, const char* tPool, const char* tAddr,
 	if( tId ) {
 		claim_id = strnewp( tId );
 	}
+
+	extra_ids = NULL;
+	if( ids && (strlen(ids) > 0)) {
+		extra_ids = strnewp( ids );
+	}
 }
 
 DCStartd::DCStartd( const ClassAd *ad, const char *tPool )
 	: Daemon(ad,DT_STARTD,tPool),
-	  claim_id(NULL)
+	  claim_id(NULL), extra_ids(NULL)
 {
 }
 
@@ -61,6 +67,9 @@ DCStartd::~DCStartd( void )
 {
 	if( claim_id ) {
 		delete [] claim_id;
+	}
+	if( extra_ids ) {
+		delete [] extra_ids;
 	}
 }
 
@@ -80,11 +89,14 @@ DCStartd::setClaimId( const char* id )
 }
 
 
-ClaimStartdMsg::ClaimStartdMsg( char const *the_claim_id, ClassAd const *job_ad, char const *the_description, char const *scheduler_addr, int alive_interval ):
+ClaimStartdMsg::ClaimStartdMsg( char const *the_claim_id, char const *extra_claims, ClassAd const *job_ad, char const *the_description, char const *scheduler_addr, int alive_interval ):
  DCMsg(REQUEST_CLAIM)
 {
 
 	m_claim_id = the_claim_id;
+	if (extra_claims) {
+		m_extra_claims = extra_claims;
+	}
 	m_job_ad = *job_ad;
 	m_description = the_description;
 	m_scheduler_addr = scheduler_addr;
@@ -126,7 +138,8 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 	if( !sock->put_secret( m_claim_id.c_str() ) ||
 	    !putClassAd( sock, m_job_ad ) ||
 	    !sock->put( scheduler_addr_to_send.c_str() ) ||
-	    !sock->put( m_alive_interval ) )
+	    !sock->put( m_alive_interval ) ||
+		!this->putExtraClaims(sock))
 	{
 		dprintf(failureDebugLevel(),
 				"Couldn't encode request claim to startd %s\n",
@@ -135,6 +148,39 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		return false;
 	}
 		// end_of_message() is done by caller
+	return true;
+}
+
+bool
+ClaimStartdMsg::putExtraClaims(Sock *sock) {
+
+	if (m_extra_claims.length() == 0) {
+		return sock->put(0);
+	}
+
+	size_t begin = 0;
+	size_t end = 0;
+	std::list<std::string> claims;
+
+	while ((end = m_extra_claims.find(' ', begin)) != std::string::npos) {
+		std::string claim = m_extra_claims.substr(begin, end - begin);
+		claims.push_back(claim);
+		begin = end + 1;
+	}
+	
+	int num_extra_claims = claims.size();
+	if (!sock->put(num_extra_claims)) {
+		return false;
+	}
+
+	while (num_extra_claims--) {
+		if (!sock->put_secret(claims.front().c_str())) {
+			return false;
+		}
+		
+		claims.pop_front();
+	}
+	
 	return true;
 }
 
@@ -227,7 +273,7 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 	ASSERT( checkClaimId() );
 	ASSERT( checkAddr() );
 
-	classy_counted_ptr<ClaimStartdMsg> msg = new ClaimStartdMsg( claim_id, req_ad, description, scheduler_addr, alive_interval );
+	classy_counted_ptr<ClaimStartdMsg> msg = new ClaimStartdMsg( claim_id, extra_ids, req_ad, description, scheduler_addr, alive_interval );
 
 	ASSERT( msg.get() );
 	msg->setCallback(cb);

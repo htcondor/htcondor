@@ -29,7 +29,26 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item A new python binding was added to allow python functions
+be registered with the ClassAds library.  This allows python
+functions to be invoked from within ClassAds.
+\Ticket{4598}
+
+\item Added the \Arg{ALWAYS-UPDATE} option for DAGMan node status
+files (see section~\ref{sec:DAG-node-status} for details).  (Specifying
+this option causes the node status file to be overwritten even if
+no nodes have changed status since the file was last written.)
+\Ticket{4607}
+
+\item Configuration variable \Macro{MAX\_JOBS\_RUNNING} has been
+modified such that it only applies to job universes that require a
+\Condor{shadow} process.
+Scheduler and local universe jobs are no longer affected by this
+variable.
+The number of running scheduler and local universe jobs can be controlled
+with configuration variables \MacroNI{START\_SCHEDULER\_UNIVERSE} and
+\MacroNI{START\_LOCAL\_UNIVERSE}, respectively.
+\Ticket{4589}
 
 \end{itemize}
 
@@ -37,7 +56,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Updated the CREAM client library used in the cream\_gahp.
+This fixes the delegation of RFC format proxies, in addition to other
+bug fixes.
+\Ticket{4596}
+
+\item Fixed a bug that could cause DAGMan to segfault (rather than
+printing an appropriate error message) on some DAG file syntax errors.
+\Ticket{4616}
 
 \end{itemize}
 
@@ -49,8 +75,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.3.1 not yet released.
-%\item HTCondor version 8.3.1 released on Month Date, 2014.
+\item HTCondor version 8.3.1 released on September 11, 2014.
 
 \end{itemize}
 
@@ -71,25 +96,29 @@ The default value is 9618.
 This default is the same port as has been used in previous HTCondor versions.
 \Ticket{4432}
 
-\item The \Condor{shared\_port} daemon is now enabled by default 
-for new installations on non-Windows platforms.
-With this change, 
-all HTCondor daemons will share port 9618 for all incoming TCP connections,
-greatly simplifying firewall configuration.  
-Only users of HTCondor-G submitting to Globus GRAM endpoints 
-will need additional incoming TCP ports in the firewall.
-
-Note that this causes \emph{all} HTCondor hosts to use 
-TCP port 9618 by default,
-differing from previous behavior.
-Previously, only the \Condor{collector} host used a fixed port.
-To restore the previous behavior, 
-set the new configuration variable \Macro{SHARED\_PORT\_PORT} to \Expr{0}.
-\Ticket{3813}
+%\item The \Condor{shared\_port} daemon is now enabled by default 
+%for new installations on non-Windows platforms.
+%With this change, 
+%all HTCondor daemons will share port 9618 for all incoming TCP connections,
+%greatly simplifying firewall configuration.  
+%Only users of HTCondor-G submitting to Globus GRAM endpoints 
+%will need additional incoming TCP ports in the firewall.
+%
+%Note that this causes \emph{all} HTCondor hosts to use 
+%TCP port 9618 by default,
+%differing from previous behavior.
+%Previously, only the \Condor{collector} host used a fixed port.
+%To restore the previous behavior, 
+%set the new configuration variable \Macro{SHARED\_PORT\_PORT} to \Expr{0}.
+%\Ticket{3813}
 
 \item The \Condor{shared\_port} daemon will now work 
-if the value of configuration variable \Macro{DAEMON\_SOCKET\_DIR} is
-longer than 100 characters in length.
+if the default location given by configuration variable
+\Macro{DAEMON\_SOCKET\_DIR}, which is \Expr{\$(LOCK)/daemon\_sock},
+is longer than 90 characters in length.
+On Linux platforms, abstract sockets are now the primary method for
+\Condor{shared\_port} to forward an incoming connection to the intended
+daemon.
 \Ticket{4465}
 
 \item Improvements to CCB increase performance.
@@ -124,15 +153,34 @@ or \Attr{OpSysShortName} is already specified by the user in
 the \Attr{Requirements} expression of the submit description file.
 \Ticket{4519}
 
-\item The user-specific global configuration file \Expr{~/.condor/condor\_config} has
-been removed, and a user-specific override configuration file has been added.
-The user-specific override configuration file defaults to \Expr{~/.condor/user\_config}.
-If it exists it is parsed after all of the other configuration files and before the
-environment overrides are parsed.
-The new configuration parameter \Macro{USER\_CONFIG\_FILE} can be used to change the
-default filename or to disable this feature.
-This feature now works on Windows as well as Unix and Linux.
+\item The configuration file \Expr{\$(HOME)/.condor/condor\_config}
+is no longer considered for the single, initial, global configuration file.
+Instead, a user-specific configuration file has been added as the
+last file parsed.
+The new configuration variable \Macro{USER\_CONFIG\_FILE} may change the
+default file name or disable this feature.
+Section~\ref{sec:Ordering-Config-File} describes the ordering
+in which configuration files are parsed.
 \Ticket{3158}
+
+\item Daemons now authenticate many client network connections in
+parallel, rather than one at a time.
+This improves the scalability of daemons that receive many client
+connections, like the \Condor{schedd} and \Condor{collector}.
+The improvement is most noticeable when using the FS and GSI
+authentication methods.
+\Ticket{4137}
+
+\item The GSI security libraries are now loaded into memory only when GSI
+authentication is required.
+This reduces memory usage when GSI authentication is not used.
+The memory reduction will be most noticeable when there are many
+\Condor{shadow} processes running.
+\Ticket{4483}
+
+\item Implemented fine-grained locking in the HTCondor python module to
+allow other python threads to run during HTCondor calls.
+\Ticket{4507}
 
 \end{itemize}
 

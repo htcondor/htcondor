@@ -352,55 +352,23 @@ will be HTCondor's malfunction, not your whole machine.
 
 \label{sec:Config-File-Locations}
 \begin{description}
-\item[Configuration Files] There are a number of configuration files
-that allow you
-different levels of control over how HTCondor is configured at each
-machine in your pool.  
+\item[Configuration Files] There may be more than one configuration file.
+They allow
+different levels of control over how HTCondor is configured on each
+machine in the pool.  
 The global configuration file is shared by all machines in the pool.
 For ease of administration, this file should be located on a shared
 file system, if possible.
-In addition, there is a local
-configuration file for each machine, where you can override settings in the
-global file.  This allows you to have different daemons running,
+Local configuration files override settings in the
+global file permitting different daemons to run,
 different policies for when to start and stop HTCondor jobs, and so on.
-You can also have configuration files specific to each platform in your pool.
-See
-section~\ref{sec:Multiple-Platforms} on
-page~\pageref{sec:Multiple-Platforms} about Configuring HTCondor for
+There may be configuration files specific to each platform in the pool.
+See section~\ref{sec:Multiple-Platforms} on about Configuring HTCondor for
 Multiple Platforms for details.
 
 \index{configuration files!location}
-In general, there are a number of places that HTCondor will look to find
-its configuration files.  The first file it looks for is the global configuration
-file.  These locations are searched in order until a configuration file is
-found.  If none contain a valid configuration file, HTCondor will print an
-error message and exit:
-\begin{enumerate}
-   \item File specified in the \Env{CONDOR\_CONFIG} environment variable
-   \item \File{\$(HOME)/.condor/condor\_config}
-   \item \File{/etc/condor/condor\_config}
-   \item \File{/usr/local/etc/condor\_config}
-   \item \File{\Tilde condor/condor\_config}
-   \item Files in the directory specified by the configuration variable 
-\Macro{LOCAL\_CONFIG\_DIR}.
-\end{enumerate}
-
-If you specify a file in the \Env{CONDOR\_CONFIG} environment variable
-and there's a problem reading that file, HTCondor will print an error
-message and exit right away, instead of continuing to search the other
-options.
-However, if no \Env{CONDOR\_CONFIG} environment variable is set,
-HTCondor will search through the other options.
-
-Next, HTCondor tries to load the local configuration file(s).
-The only way to specify the local configuration file(s) is in the global configuration
-file, with the \Macro{LOCAL\_CONFIG\_FILE} macro.  If that macro is not
-set, no local configuration file is used.  This macro can be a list of files
-or a single file.
-
-If configured, HTCondor also uses the \Macro{LOCAL\_CONFIG\_DIR} setting get a
-directory where a list of configuration files is held.  The files are searched
-for configuration settings.
+The location of configuration files is specified in
+section~\ref{sec:Ordering-Config-File}.
 
 \item[Release Directory]
 

@@ -90,13 +90,13 @@ my $UseNewRunning = 1;
 my $starttime = time();
 
 my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-print "$time: batch_test.pl starting up ($^O perl)\n";
+print "batch_test $$: ($^O perl) starting at $time\n";
 
 my $iswindows = CondorUtils::is_windows();
 my $iscygwin  = CondorUtils::is_cygwin_perl();
 
 # configuration options
-my $test_retirement = 3600;	# seconds for an individual test timeout - 30 minutes
+my $test_retirement = 1800;	# seconds for an individual test timeout - 30 minutes
 my $BaseDir = getcwd();
 my $hush = 1;
 my $cmd_prompt = 0;
@@ -116,7 +116,7 @@ my $wantcurrentdaemons = 1; # dont set up a new testing pool in condor_tests/Tes
 my $pretestsetuponly = 0; # only get the personal condor in place
 
 # set up to recover from tests which hang
-$SIG{ALRM} = sub { die "timeout" };
+$SIG{ALRM} = sub { die "!batch_test:test timed out!\n" };
 
 my @compilers;
 my @successful_tests;
@@ -260,7 +260,8 @@ if($pretestsetuponly == 1) {
 	exit(0);
 }
 
-print "Ready for Testing\n";
+$time = strftime("%H:%M:%S", localtime);
+print "batch_test $$: Ready for Testing at $time\n";
 
 # figure out what tests to try to run.  first, figure out what
 # compilers we're trying to test.  if that was given on the command
@@ -434,9 +435,9 @@ foreach my $compiler (@compilers) {
 		StartTestOutput($compiler, $test_program); 
 		CompleteTestOutput($compiler, $test_program, $res);
 		if($res == 0) {
-			print "batch_test says $test_program succeeded\n";
+			print "batch_test $$: $test_program Succeeded\n";
 		} else {
-			print "batch_test says $test_program failed\n";
+			print "batch_test $$: $test_program failed\n";
 		}
 
 	} # end of foreach $test_program
@@ -526,7 +527,8 @@ my $signal = $returns[1];
 # thing looking at the status of batch_test is the batlag
 # test glue which runs only one test each call to batch_test
 # and this has no impact on workstation tests.
-print "Batch_test: about to exit($res/$signal)\n";
+print "Batch_test $$: exiting with status=$res signal=$signal\n";
+alarm(0); # revoke overall timeout
 exit $res;
 
 # Spin wait until $pid is no longer present or $max_wait (seconds) passes.
@@ -591,10 +593,10 @@ sub CompleteTestOutput
 	#if( WIFEXITED( $status ) && WEXITSTATUS( $status ) == 0 )
 	{
 		if($groupsize == 0) {
-			print "$test_name: succeeded\n";
+			print "$test_name: succeeded!\n";
 		} else {
 			#print "Not Xml: group size <$groupsize> test <$test_name>\n";
-			print "$test_name succeeded\n";
+			print "$test_name; succeeded!\n";
 		}
 		$num_success++;
 		@successful_tests = (@successful_tests, "$compiler/$test_name");

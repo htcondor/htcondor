@@ -1402,7 +1402,7 @@ main( int argc, char *argv[] )
 					break;
 
 				default:
-					EXCEPT("PROGRAMMER ERROR: Unknown sandbox transfer method\n");
+					EXCEPT("PROGRAMMER ERROR: Unknown sandbox transfer method");
 					break;
 			}
 		}

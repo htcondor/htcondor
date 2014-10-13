@@ -1438,7 +1438,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
     sigemptyset (&(sa1.sa_mask));
     sa1.sa_flags = 0;
     if (sigaction (SIGFPE, &sa1, &sa2)) {
-       CLASSAD_EXCEPT("Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)\n",
+       CLASSAD_EXCEPT("Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)",
 			errno);
     }
 #endif
@@ -1469,7 +1469,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 #if 0
 #ifndef WIN32 
     if (sigaction (SIGFPE, &sa2, &sa1)) {
-        CLASSAD_EXCEPT( "Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)\n",
+        CLASSAD_EXCEPT( "Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)",
 			errno);
     }
 #endif

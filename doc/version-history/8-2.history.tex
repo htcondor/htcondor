@@ -16,15 +16,15 @@ New features will be added in the 8.3.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-2-3}Version 8.2.3}
+\subsection*{\label{sec:New-8-2-4}Version 8.2.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 8.2.3 not yet released.
-%\item HTCondor version 8.2.3 released on Month Date, 2014.
+\item HTCondor version 8.2.4 not yet released.
+%\item HTCondor version 8.2.4 released on Month Date, 2014.
 
 \end{itemize}
 
@@ -34,12 +34,105 @@ The details of each version are described below.
 \begin{itemize}
 
 \item None.
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug in which \Condor{router\_q} queried the wrong queue
+if the job router was configured to route jobs away from the source.
+\Ticket{4599}
+
+\item Fixed a bug that prevented \Condor{chirp} from finding its configuration
+file in the default location.
+\Ticket{4625}
+
+\item Fixed a bug that could cause removed jobs to return to idle status.
+If a running job was removed at the same time that an error occurred that
+caused the \Condor{shadow} to put the job on hold, the job would be put
+in the held status, but change to idle status when released.
+\Ticket{4619}
+
+\item Fixed a bug that could cause a daemon to write to an old daemon log
+file after log rotation.
+\Ticket{3106}
+
+\item The HTCondor DRMAA library now works correctly when
+\Macro{SCHEDD\_HOST} is set in the configuration file.
+\Ticket{4629}
+
+\item Fixed the default value of the previously undocumented 
+configuration variable \Macro{HISTORY\_HELPER\_MAX\_CONCURRENCY}.
+It incorrectly defaulted to 10000, rather than the correct value of 2.
+\Ticket{4644}
+
+\item Fixed a rare bug that could cause a daemon to core dump with
+a log message of ``child failed because PID XXX is still in use by DaemonCore''.
+\Ticket{4646}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-2-3}Version 8.2.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.2.3 released on October 1, 2014.
+
+\item This version of HTCondor includes a full port for 
+Ubuntu 14.04 on the x86\_64 architecture.
+A full port includes support for the standard universe.
+\Ticket{4562}
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item The new configuration variable 
+\Macro{RUN\_FILETRANSFER\_PLUGINS\_WITH\_ROOT} permits file transfer
+plug-ins to run with \Login{root} privilege,
+when HTCondor daemons are run as \Login{root},
+and when set to the non-default value of \Expr{True}.
+\Ticket{4561}
+
+\item The new configuration variable \Macro{NETWORK\_HOSTNAME} sets
+the host name that HTCondor uses to identify the local machine.
+If \MacroNI{NETWORK\_HOSTNAME} is not set, 
+then HTCondor uses the \Procedure{gethostname} function to determine 
+the machine's host name.
+This variable is useful if a machine has multiple network interfaces
+with different host names.
+\Ticket{4570}
+
+\item Configuration variable \Macro{JOB\_ROUTER\_DEFAULTS} tolerates
+the syntax of omitting the outer square brackets that would be 
+required by new ClassAd syntax,
+in order to facilitate appending to an existing value. 
+If the value of \MacroNI{JOB\_ROUTER\_DEFAULTS} does not have
+enclosing square brackets, 
+the value will be parsed as if they are present.
+\Ticket{4433}
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item The RedHat 7 RPM contains the service file to start up 
+HTCondor via \Prog{systemd} instead of via \Prog{init} scripts.
+\Ticket{4534}
+
+%\item Fixed bugs that prohibited the \Condor{startd} use of \MacroNI{RANK} 
+%from preempting dynamic slots.
+%\Ticket{4580}
 
 \item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
 no longer causes a link error.
@@ -58,6 +151,47 @@ and \MacroNI{COLLECTOR\_HOST} were set to IPv6 addresses.
 \item Fixed a bug in which \Condor{qsub} mishandled setting a memory request 
 with a command line argument similar to \Opt{-l mem=2048MB}.
 \Ticket{4549}
+
+\item Fixed a bug that caused the \Condor{gridmanager} to fail to talk
+to the \Condor{schedd} if the user's account was in a Windows domain.
+\Ticket{4568}
+
+\item On Windows platforms, users listed in the \Macro{QUEUE\_SUPER\_USERS} 
+configuration variable are now checked in a case-insensitive way,
+since user names are case-insensitive on Windows.
+\Ticket{4579}
+
+\item Fixed a bug that could prevent the \Condor{schedd} job queue log 
+from rotating on Windows platforms.
+\Ticket{4548}
+
+\item Fixed a bug that caused all HTCondor daemons to leak 
+a small amount of memory upon reconfiguration.
+\Ticket{4582}
+
+\item Fixed a bug that caused \Condor{config\_val} \Opt{-verbose} to sometimes append incorrect meta-knob
+information to the file and line number information for a configuration variable.
+\Ticket{4559}
+
+\item Fixed a bug that sometimes prevented adding a \File{.txt} file name
+extension to the log file name of an HTCondor daemon on Windows platforms.
+\Ticket{4571}
+
+\item Fixed a bug that caused \Condor{dagman} to crash if
+configuration variable
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} was set to \Expr{False} and
+configuration variable
+\Macro{DAGMAN\_USE\_STRICT} was set to 1 or a higher value.
+\Ticket{4600}
+
+\item Fixed a bug that caused the DAG node status file (if one is specified)
+to have the wrong final status for a DAG that is aborted by an
+\Arg{ABORT-DAG-ON} specification.
+\Ticket{4312}
+
+\item Fixed a bug in the \Prog{batch\_gahp} that could cause it to fail
+when attempting to query the status of an LSF job.
+\Ticket{4592}
 
 \end{itemize}
 

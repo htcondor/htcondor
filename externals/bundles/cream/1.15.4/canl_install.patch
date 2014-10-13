@@ -1,0 +1,36 @@
+--- Makefile	2014-08-22 11:00:10.300655517 -0500
++++ Makefile.patched	2014-08-22 12:07:42.876549635 -0500
+@@ -159,24 +159,24 @@
+ 
+ check:
+ 
+-install: all
++install:
+ 	mkdir -p ${DESTDIR}${PREFIX}${prefix}/bin
+ 	mkdir -p ${DESTDIR}${PREFIX}${prefix}/${libdir}
+ 	mkdir -p ${DESTDIR}${PREFIX}${prefix}/include
+ 	mkdir -p ${DESTDIR}${PREFIX}${docdir}
+-	${INSTALL} -m 755 server ${DESTDIR}${PREFIX}${prefix}/bin/emi-canl-server
+-	${INSTALL} -m 755 client ${DESTDIR}${PREFIX}${prefix}/bin/emi-canl-client
+-	${INSTALL} -m 755 proxy \
+-		${DESTDIR}${PREFIX}${prefix}/bin/emi-canl-proxy-init
+-	${INSTALL} -m 755 delegation \
+-		${DESTDIR}${PREFIX}${prefix}/bin/emi-canl-delegation
++	#${INSTALL} -m 755 server ${DESTDIR}${PREFIX}${prefix}/bin/emi-canl-server
++	#${INSTALL} -m 755 client ${DESTDIR}${PREFIX}${prefix}/bin/emi-canl-client
++	#${INSTALL} -m 755 proxy \
++	#	${DESTDIR}${PREFIX}${prefix}/bin/emi-canl-proxy-init
++	#${INSTALL} -m 755 delegation \
++	#	${DESTDIR}${PREFIX}${prefix}/bin/emi-canl-delegation
+ 	${INSTALL} -m 755 ${LIBCANL} ${DESTDIR}${PREFIX}${prefix}/${libdir}
+ 	${INSTALL} -m 644 ${top_srcdir}/src/canl.h \
+ 		${top_srcdir}/src/canl_ssl.h canl_err.h \
+ 		${top_srcdir}/src/canl_cred.h \
+ 		${DESTDIR}${PREFIX}${prefix}/include
+-	${INSTALL} -m 644 canl.pdf ${DESTDIR}${PREFIX}${docdir}
+-	${INSTALL} -m 644 README ${DESTDIR}${PREFIX}${docdir}
++	#${INSTALL} -m 644 canl.pdf ${DESTDIR}${PREFIX}${docdir}
++	#${INSTALL} -m 644 README ${DESTDIR}${PREFIX}${docdir}
+ 
+ stage: all
+ 	$(MAKE) install PREFIX=${stagedir}

@@ -1,6 +1,7 @@
 #! /usr/bin/env perl
 use strict;
 use warnings;
+use Cwd;
 use IPC::Open3;
 use Time::HiRes qw(tv_interval gettimeofday);
 use Archive::Tar;
@@ -597,18 +598,21 @@ sub CreateDir
 	my $cmdcount = @argsin;
 	my $ret = 0;
 	my $fullcmd = "";
-	#print  "CreateDir: $cmdline argcout:$cmdcount\n";
+	my $location = Cwd::getcwd();
+	#print  "\n\n\n\n\n******* CreateDir: $cmdline argcout:$cmdcount while here:$location *******\n\n\n\n\n";
 
 	my $amwindows = is_windows();
 
 	my $winpath = "";
 	if($amwindows == 1) {
 		if(is_windows_native_perl()) {
+			#print "CreateDir:windows_native_perl\n";
 			# what if a linux path first?
 			if($argsin[0] eq "-p") {
 				shift @argsin;
 			}
 			foreach my $dir (@argsin) {
+				#print "Want to make:$dir\n";
 				$_ = $dir;
 				s/\//\\/g;
 				s/\\/\\\\/g;
@@ -616,12 +620,22 @@ sub CreateDir
 				if(-d "$dir") {
 					next;
 				}
+				#print "$dir does not exist yet\n";
 				$fullcmd = "cmd /C mkdir $dir";
 				$ret = system("$fullcmd");
 				if($ret != 0) {
 					print "THIS:$fullcmd Failed\n";
+				} else {
+						#print "THIS:$fullcmd worked\n";
+						#print "If this worked, it should exist now.\n";
+						#if(-d $dir) {
+							#print "Perl says it does.\n";
+						#} else {
+							#print "Perl says it does NOT.\n";
+						#}
 				}
 			}
+			#print "CreateDir returning now: Return value from CreateDir:$ret\n";
 			return($ret);
 		} else {
 			if($argsin[0] eq "-p") {
@@ -661,35 +675,40 @@ sub CreateDir
 	return($ret);
 }
 
+# pretty print a time string, if no args are passed uses localtime() as the time.
+# the output is formatted as YYYY-MM-DD HH:MM:SS (which is sortable)
+# if the last argument is 'T', then only the time is printed.
+sub TimeStr
+{
+	my $ac = scalar(@_);
+	my $T = $ac > 0 && $_[$ac-1] eq 'T';
+	if ($ac < 5) { @_ = localtime(); }
+	if ($T) { return sprintf "%02d:%02d:%02d", @_[reverse 0..3]; }
+	return sprintf '%d-%02d-%02d %02d:%02d:%02d', $_[5]+1900, $_[4]+1, @_[reverse 0..3];
+}
+
+# portable way to get a directory listing
+# the command ls is optional, (sigh) because that's the way it's used...
 sub List
 {
     my $cmdline = shift;
-	my @allargs = split /\s/, $cmdline;
-    my $amwindows = is_windows();
-    my $fullcmd = "";
 	my $ret = 0;
+	# strip off leading ls command (it's ok if its not there)
+	if ($cmdline =~ /^\s*ls\s+/) { $cmdline =~ s/^\s*ls\s+//; }
 
-    if($amwindows == 1) {
-		$fullcmd = "cmd /C dir ";
-
-		foreach my $patharg (@allargs) {
-			if($patharg =~ /cygdrive/) {
-				my $winpath = `cygpath -w $patharg`;
-        		CondorUtils::fullchomp($winpath);
-				$_ = $winpath;
-        		s/\\/\\\\/g;
-				$winpath = $_;
-				$fullcmd = $fullcmd . " $winpath";
-			} else {
-				$fullcmd = $fullcmd . " $patharg";
-	}
+	# on native windows, we are translating ls to dir, so we also need to strip the options
+	if (is_windows_native_perl()) {
+		if ($cmdline =~ /^\-([a-zA-Z]+)\s+(.*)$/ ) {
+			# translate flags?
+			#my $flags = $1;
+			$cmdline = $2;;
 		}
-
-		$ret = system("$fullcmd");
-	} else {
-		$fullcmd = "ls $cmdline";
-
-		$ret = system("$fullcmd");
+		$ret = system("cmd /C dir $cmdline");
+	} elsif (is_windows()) {
+		$cmdline =~ s/\\/\//g; # if windows, but not native, we need to convert \ to / before passing to ls.
+	}
+	else {
+		$ret = system("ls $cmdline");
 	}
 	return($ret);
 }
@@ -758,24 +777,44 @@ sub CopyIt
     my @argsin = split /\s/, $cmdline;
     my $cmdcount = @argsin;
 
+	if($btdebug == 1) {
+		print "CopyIt command line passed in:$cmdline\n";
+	}
     if($amwindows == 1) {
-        $winsrc = `cygpath -w $argsin[0]`;
-        $windest = `cygpath -w $argsin[1]`;
-        CondorUtils::fullchomp($winsrc);
-        CondorUtils::fullchomp($windest);
-        $_ = $winsrc;
-        s/\\/\\\\/g;
-        $winsrc = $_;
-        $_ = $windest;
-        s/\\/\\\\/g;
-        $windest = $_;
-        $fullcmd = "xcopy $winsrc $windest /Y";
-        if($dashr eq "yes") {
-            $fullcmd = $fullcmd . " /s /e";
-        }
+		if(is_windows_native_perl()) {
+			#print "CopyIt: windows_native_perl\n";
+			$winsrc = $argsin[0];
+			$windest = $argsin[1];
+			#print "native perl:\n";
+			# check target
+			$windest =~ s/\//\\/g;
+        	$fullcmd = "xcopy $winsrc $windest /Y";
+			#print "native perl:$fullcmd\n";
+        	if($dashr eq "yes") {
+            	$fullcmd = $fullcmd . " /s /e";
+				#print "native perl -r:$fullcmd\n";
+        	}
+		} else {
+        	$winsrc = `cygpath -w $argsin[0]`;
+        	$windest = `cygpath -w $argsin[1]`;
+        	CondorUtils::fullchomp($winsrc);
+        	CondorUtils::fullchomp($windest);
+        	$_ = $winsrc;
+        	s/\\/\\\\/g;
+        	$winsrc = $_;
+        	$_ = $windest;
+        	s/\\/\\\\/g;
+        	$windest = $_;
+        	$fullcmd = "xcopy $winsrc $windest /Y";
+        	if($dashr eq "yes") {
+            	$fullcmd = $fullcmd . " /s /e";
+        	}
 
+		}
         $ret = system("$fullcmd");
-		#print "Tried to create dir got ret value:$ret cmd:$fullcmd\n";
+		if($btdebug == 1) {
+			print "Tried to create dir got ret value:$ret cmd:$fullcmd\n";
+		}
     } else {
         $fullcmd = "cp ";
         if($dashr eq "yes") {
@@ -785,6 +824,10 @@ sub CopyIt
         $ret = system("$fullcmd");
 		#print "Tried to create dir got ret value:$ret path:$cmdline\n";
     }
+	if($btdebug == 1) {
+		print "CopyIt returning:$ret\n";
+	}
+	
     return($ret);
 }
 
@@ -805,16 +848,24 @@ sub MoveIt
 	my $cmdcount = @argsin;
 
 	if($amwindows == 1) {
-		$winsrc = `cygpath -w $argsin[0]`;
-		$windest = `cygpath -w $argsin[1]`;
-		CondorUtils::fullchomp($winsrc);
-		CondorUtils::fullchomp($windest);
-		$_ = $winsrc;
-		s/\\/\\\\/g;
-		$winsrc = $_;
-		$_ = $windest;
-		s/\\/\\\\/g;
-		$windest = $_;
+		if(is_windows_native_perl()) {
+			#print "MoveIt:windows_native_perl\n";
+			$winsrc =  $argsin[0];
+			$windest = $argsin[1];
+			$winsrc =~ s/\//\\/g;
+			$windest =~ s/\//\\/g;
+		} else {
+			$winsrc = `cygpath -w $argsin[0]`;
+			$windest = `cygpath -w $argsin[1]`;
+			CondorUtils::fullchomp($winsrc);
+			CondorUtils::fullchomp($windest);
+			$_ = $winsrc;
+			s/\\/\\\\/g;
+			$winsrc = $_;
+			$_ = $windest;
+			s/\\/\\\\/g;
+			$windest = $_;
+		}
 		$fullcmd = "cmd /C move $winsrc $windest";
 
 		$ret = system("$fullcmd");
@@ -839,9 +890,12 @@ sub TarExtract
 	my $winpath = "";
 	my $tarobject = Archive::Tar->new;
 	if($amwindows == 1) {
-		$winpath = `cygpath -w $archive`;
-		CondorUtils::fullchomp($winpath);
-		$archive = $winpath;
+		if( is_windows_native_perl() ) {
+        } else {
+            $winpath = `cygpath -w $archive`;
+            CondorUtils::fullchomp($winpath);
+            $archive = $winpath;
+        }
 	}
 	$tarobject->read($archive);
 	$tarobject->extract();

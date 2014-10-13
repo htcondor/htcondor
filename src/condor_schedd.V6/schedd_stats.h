@@ -22,26 +22,25 @@
 
 #include <generic_stats.h>
 
-// this struct is used to contain statistics values for the Scheduler class.
-// the values are published using the names as shown here. so for instance
-// the ClassAd that we publish into will have "JobsSubmitted=32" if the
-// JobsSubmitted field below contains the value 32. 
+// this struct is used to contain statistics values about Jobs for the Scheduler class.
+// it is separated out from general Schedd statistics so that we can create an instance
+// of this class for each SCHEDD_COLLECT_STATS_BY_* config knob.
 //
-typedef struct ScheddStatistics {
+typedef struct ScheddJobCounters {
 
-   // these are used by generic tick
-   time_t StatsLifetime;         // the total time covered by this set of statistics
-   time_t StatsLastUpdateTime;   // last time that statistics were last updated. (a freshness time)
-   time_t RecentStatsLifetime;   // actual time span of current RecentXXX data.
-   time_t RecentStatsTickTime;   // last time Recent values Advanced
+   stats_entry_abs<int> JobsRunning; // number of running jobs, counted so that we can do BY_* and FOR_* counters
+   stats_histogram<int64_t> JobsRunningSizes;
+   stats_histogram<time_t>  JobsRunningRuntimes;
 
-   // basic job counts
    stats_entry_recent<int> JobsSubmitted;        // jobs submitted over lifetime of schedd
    stats_entry_recent<int> JobsStarted;          // jobs started over schedd lifetime
    stats_entry_recent<int> JobsExited;           // jobs exited (success or failure) over schedd lifetime
    stats_entry_recent<int> JobsCompleted;        // jobs successfully completed over schedd lifetime
 
-   stats_entry_recent<int> Autoclusters;		 // number of active autoclusters
+   stats_entry_recent_histogram<int64_t> JobsCompletedSizes;
+   stats_entry_recent_histogram<int64_t> JobsBadputSizes;
+   stats_entry_recent_histogram<time_t> JobsCompletedRuntimes;
+   stats_entry_recent_histogram<time_t> JobsBadputRuntimes;
 
    stats_entry_recent<time_t> JobsAccumTimeToStart; // sum of all time jobs spent waiting to start
    stats_entry_recent<time_t> JobsAccumRunningTime; // sum of all time jobs spent running.
@@ -73,6 +72,39 @@ typedef struct ScheddStatistics {
    stats_entry_recent<int> JobsShouldHold;            // jobs that exited with JOB_SHOULD_HOLD
    stats_entry_recent<int> JobsDebugLogError;         // jobs that exited with DPRINTF_ERROR
 
+   void InitJobCounters(StatisticsPool &Pool, int base_verbosity);
+
+} ScheddJobCounters;
+
+typedef struct ScheddJobStatistics : public ScheddJobCounters {
+
+   StatisticsPool Pool;          // pool of statistics probes and Publish attrib names
+
+   // methods
+   //
+   void InitOther(int window, int quantum);
+   void Clear() { Pool.Clear(); }
+   void Advance(int cAdvance) { if (cAdvance) Pool.Advance(cAdvance); }
+   void SetWindowSize(int window, int quantum);
+   void Publish(ClassAd & ad, int flags) const { Pool.Publish(ad, flags); }
+
+} ScheddJobStatistics;
+
+// this struct is used to contain statistics values for the Scheduler class.
+// the values are published using the names as shown here. so for instance
+// the ClassAd that we publish into will have "ShadowsRunning=32" if the
+// ShadowsRunning field below contains the value 32. 
+//
+typedef struct ScheddStatistics : public ScheddJobCounters {
+
+   // these are used by generic tick
+   time_t StatsLifetime;         // the total time covered by this set of statistics
+   time_t StatsLastUpdateTime;   // last time that statistics were last updated. (a freshness time)
+   time_t RecentStatsLifetime;   // actual time span of current RecentXXX data.
+   time_t RecentStatsTickTime;   // last time Recent values Advanced
+
+   stats_entry_recent<int> Autoclusters;   // number of active autoclusters
+
    // counts of shadow processes
    stats_entry_abs<int> ShadowsRunning;          // current number of running shadows, also tracks the peak value.
    stats_entry_recent<int> ShadowsStarted;       // number of shadow processes that have been started
@@ -80,26 +112,19 @@ typedef struct ScheddStatistics {
    //stats_entry_recent<int> ShadowExceptions;     // number of times shadows have excepted
    stats_entry_recent<int> ShadowsReconnections; // number of times shadows have reconnected
 
-   stats_entry_recent_histogram<int64_t> JobsCompletedSizes;
-   stats_entry_recent_histogram<int64_t> JobsBadputSizes;
-   stats_entry_recent_histogram<time_t> JobsCompletedRuntimes;
-   stats_entry_recent_histogram<time_t> JobsBadputRuntimes;
-
-   stats_entry_abs<int> JobsRunning; // number of running jobs, counted so that we can do BY_* and FOR_* counters
-   stats_histogram<int64_t> JobsRunningSizes;
-   stats_histogram<time_t>  JobsRunningRuntimes;
 
    // non-published values
    time_t InitTime;            // last time we init'ed the structure
    int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
    int    RecentWindowQuantum;
    int    PublishFlags;
+   int    AdvanceAtLastTick;
 
    StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names
 
    // methods
    //
-   void Init(int fOtherPool);
+   void InitMain();
    void Clear();
    time_t Tick(time_t now=0); // call this when time may have changed to update StatsUpdateTime, etc.
    void Reconfig();
@@ -111,14 +136,14 @@ typedef struct ScheddStatistics {
 
    } ScheddStatistics;
 
-// this class is used by ScheddOtherStatsMgr to hold a schedd statistics set
+// this class is used by ScheddOtherStatsMgr to hold a schedd job statistics set
 class ScheddOtherStats {
 public:
    ScheddOtherStats();
    ~ScheddOtherStats();
 
    ScheddOtherStats * next;	// used to temporarily build a linked list of stats matching a ClassAd
-   ScheddStatistics stats;
+   ScheddJobStatistics stats;
    MyString     prefix;
    MyString     trigger;
    ExprTree *   trigger_expr;
@@ -131,17 +156,18 @@ public:
 
 class ScheddOtherStatsMgr {
 public:
-   ScheddOtherStatsMgr() 
-     : pools(10, MyStringHash, updateDuplicateKeys)
+   ScheddOtherStatsMgr(ScheddStatistics & stats)
+     : config(stats)
+	 , pools(10, MyStringHash, updateDuplicateKeys)
    {};
 
    void Clear();
-   time_t Tick(time_t now=0); // call this when time may have changed to update StatsUpdateTime, etc.
-   void Reconfig();
-   void SetWindowSize(int window);
-   void Publish(ClassAd & ad);
+   time_t Tick(time_t now); // call this when time may have changed to update StatsUpdateTime, etc.
+   void Reconfig(int window, int quantum);
+   void SetWindowSize(int window, int quantum);
+   //void Publish(ClassAd & ad);
    void Publish(ClassAd & ad, int flags);
-   void Publish(ClassAd & ad, const char * config);
+   //void Publish(ClassAd & ad, const char * config);
    void UnpublishDisabled(ClassAd & ad);
 
    // add an entry in the pools hash (by pre), if by==true, also add an entry in the by hash
@@ -157,8 +183,11 @@ public:
    ScheddOtherStats * Matches(ClassAd & ad, time_t updateTime);
 
 private:
+   ScheddStatistics & config;  // ref to ScheddStatistics that we pull config from
    HashTable<MyString, ScheddOtherStats*> pools; // pools of stats and triggers (for Enable)
    std::map<int,int> deferred_jobs_submitted; // key=cluster, value=max_proc.
 };
+
+class schedd_runtime_probe : public stats_entry_probe<double> {};
 
 #endif /* _SCHEDD_STATS_H */

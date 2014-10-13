@@ -355,7 +355,7 @@ CondorTest::debug("$coreName test SUCCESS!\n",1);
 
 #CondorTest::KillPersonal($remconfig);
 #CondorTest::KillPersonal($locconfig);
-#system("date");
+#print scalar(localtime()) . "\n";
 
 #if( $result != 0 )
 #{

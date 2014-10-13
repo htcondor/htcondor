@@ -641,7 +641,7 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorErr
 	case StartCommandContinue: //impossible!
 		break;
 	}
-	EXCEPT("startCommand(nonblocking=false) returned an unexpected result: %d\n",rc);
+	EXCEPT("startCommand(nonblocking=false) returned an unexpected result: %d",rc);
 	return false;
 }
 
@@ -666,7 +666,7 @@ Daemon::startSubCommand( int cmd, int subcmd, Stream::stream_type st, int timeou
 	case StartCommandContinue: //impossible!
 		break;
 	}
-	EXCEPT("startCommand(blocking=true) returned an unexpected result: %d\n",rc);
+	EXCEPT("startCommand(blocking=true) returned an unexpected result: %d",rc);
 	return NULL;
 }
 
@@ -691,7 +691,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError*
 	case StartCommandContinue: //impossible!
 		break;
 	}
-	EXCEPT("startCommand(blocking=true) returned an unexpected result: %d\n",rc);
+	EXCEPT("startCommand(blocking=true) returned an unexpected result: %d",rc);
 	return NULL;
 }
 
@@ -730,7 +730,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, c
 	case StartCommandContinue: //impossible!
 		break;
 	}
-	EXCEPT("startCommand(nonblocking=false) returned an unexpected result: %d\n",rc);
+	EXCEPT("startCommand(nonblocking=false) returned an unexpected result: %d",rc);
 	return false;
 }
 

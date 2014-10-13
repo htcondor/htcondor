@@ -392,12 +392,12 @@ CCBListener::HandleCCBRegistrationReply( ClassAd &msg )
 	if( !msg.LookupString(ATTR_CCBID,m_ccbid) ) {
 		MyString msg_str;
 		sPrintAd(msg_str, msg);
-		EXCEPT("CCBListener: no ccbid in registration reply: %s\n",
+		EXCEPT("CCBListener: no ccbid in registration reply: %s",
 			   msg_str.Value() );
 	}
 	msg.LookupString(ATTR_CLAIM_ID,m_reconnect_cookie);
 	dprintf(D_ALWAYS,
-			"CCBListener: registered with CCB server %s as ccbid %s\n",
+			"CCBListener: registered with CCB server %s as ccbid %s",
 			m_ccb_address.Value(),
 			m_ccbid.Value() );
 

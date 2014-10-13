@@ -49,7 +49,7 @@ extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
 extern const char* JOB_AD_FILENAME;
 extern const char* MACHINE_AD_FILENAME;
-const char* CHIRP_CONFIG_FILENAME = ".chirp_config";
+const char* CHIRP_CONFIG_FILENAME = ".chirp.config";
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32

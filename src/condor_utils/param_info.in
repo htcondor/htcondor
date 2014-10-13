@@ -2706,10 +2706,18 @@ customization=seldom
 friendly_name=No Dns
 review=?
 
+[NETWORK_HOSTNAME]
+default=
+type=string
+reconfig=false
+customization=seldom
+friendly_name=Network Hostname
+review=?
+
 [NETWORK_INTERFACE]
 default=
 type=string
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Network Interface
 review=?
@@ -5714,7 +5722,6 @@ review=?
 
 [USE_SHARED_PORT]
 default=false
-win32_default=false
 version=7.5.0
 type=bool
 reconfig=true
@@ -6827,18 +6834,19 @@ tags=negotiator,matchmaker
 
 [HISTORY_HELPER_MAX_HISTORY]
 default=10000
+range=0,
 type=int
-reconfig=false
+reconfig=true
 customization=seldom
 friendly_name=History Helper max number of history ads
 usage=Set the limit on the number of history ads remote history will consider
 review=?
 
 [HISTORY_HELPER_MAX_CONCURRENCY]
-default=10000
+default=2
 range=0,
 type=int
-reconfig=false
+reconfig=true
 customization=seldom
 friendly_name=History Helper max number of helper sub-processes
 usage=Set the limit on the number of condor_history_helper sub-processes
@@ -7833,4 +7841,12 @@ default: @end
 	# cross-advertise these slot attributes in all other slots
 	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
 @end
+
+[RUN_FILETRANSFER_PLUGINS_WITH_ROOT]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Whether to invoke file transfer plugins as user or as root
+review=?
 

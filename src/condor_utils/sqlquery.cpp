@@ -403,7 +403,7 @@ createQueryString(query_types qtype, void **parameters) {
 	  break;
 	  
   default:
-	EXCEPT("Incorrect query type specified\n");
+	EXCEPT("Incorrect query type specified");
 	return -1;
   }
   return 1;

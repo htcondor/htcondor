@@ -64,7 +64,7 @@ void segment_parse(Segment *seg, char *line)
 
 	/* sanity check */
 	if (strlen(wspc) >= PATH_MAX) {
-		EXCEPT("segment_parse(): path is too large!\n");
+		EXCEPT("segment_parse(): path is too large!");
 	}
 
 	strcpy(seg->path, wspc);

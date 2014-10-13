@@ -297,14 +297,18 @@ extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2)
 #if defined(__cplusplus)
 bool debug_open_fds(std::map<int,bool> &open_fds);
 
+extern double _condor_debug_get_time_double();
+
+template <typename T>
 class _condor_auto_save_runtime
 {
 public:
-    _condor_auto_save_runtime(double & store); // save result here
-    ~_condor_auto_save_runtime();
-    double   current_runtime();
-    double & runtime;
-    double   begin;
+	_condor_auto_save_runtime(T & store) : runtime(store), begin(0) { begin = _condor_debug_get_time_double(); }; // save result here
+	~_condor_auto_save_runtime() { runtime += current_runtime(); };
+	double current_runtime() { return _condor_debug_get_time_double() - begin; }
+	double tick(double & last) { double now = _condor_debug_get_time_double(); double diff = now - last; last = now; return diff; }
+	T & runtime;
+	double   begin;
 };
 
 #endif // defined(__cplusplus)

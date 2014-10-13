@@ -171,7 +171,7 @@ public:
 		ret_st = this->execQuery(sql_str, num_result);
 
 		if ((ret_st != QUILL_SUCCESS) || (num_result != 1)) {
-			EXCEPT("schema version not found or incorrect\n");
+			EXCEPT("schema version not found or incorrect");
 		} else {
 			int major, minor, back_to_major, back_to_minor;
 			major = atoi(this->getValue(0,0));
@@ -184,7 +184,7 @@ public:
 			
 				this->releaseQueryResult();
 			
-				EXCEPT("schema version not correct\n");
+				EXCEPT("schema version not correct");
 			}
 		}
 		free(sql_str);

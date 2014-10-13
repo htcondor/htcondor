@@ -57,7 +57,7 @@ void WorkloadManager::query_workloads(char *script)
 	fin = my_popen(args, "r", TRUE);
 
 	if (fin == NULL) {
-		EXCEPT("Can't execute %s\n", script);
+		EXCEPT("Can't execute %s", script);
 	}
 
 	// wipe out whatever was there initially.

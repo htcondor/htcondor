@@ -333,7 +333,7 @@ bool _allocation_pool::contains(const char * pb)
 void _allocation_pool::reserve(int cbReserve)
 {
 	// for now, just consume some memory, and then free it back to the pool
-	this->free(this->consume(cbReserve, 1));
+	this->free_everything_after(this->consume(cbReserve, 1));
 }
 
 // compact the pool, leaving at least this much free space.
@@ -366,7 +366,7 @@ void _allocation_pool::compact(int cbLeaveFree)
 
 // free an allocation and everything allocated after it.
 // may fail if pb is not the most recent allocation.
-void _allocation_pool::free(const char * pb)
+void _allocation_pool::free_everything_after(const char * pb)
 {
 	if ( ! pb || ! this->phunks || this->nHunk >= this->cMaxHunks) return;
 	ALLOC_HUNK * ph = &this->phunks[this->nHunk];
@@ -1010,7 +1010,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 
 		char *varname = strdup( my_environ[i] );
 		if( !varname ) {
-			EXCEPT( "Out of memory in %s:%d\n", __FILE__, __LINE__ );
+			EXCEPT( "Out of memory in %s:%d", __FILE__, __LINE__ );
 		}
 
 		// isolate variable name by finding & nulling the '=', and trimming spaces before and after 
@@ -1217,7 +1217,7 @@ get_exclude_regex(Regex &excludeFilesRegex)
 		}
 		if(!excludeFilesRegex.isInitialized() ) {
 			EXCEPT("Could not init regex "
-				   "to exclude files in %s\n", __FILE__);
+				   "to exclude files in %s", __FILE__);
 		}
 	}
 	free(excludeRegex);
@@ -2056,7 +2056,7 @@ param_with_default_abort(const char *name, int abort)
 		if (abort) {
 			EXCEPT("Param name '%s' did not have a definition in any of the "
 				   "usual namespaces or default table. Aborting since it MUST "
-				   "be defined.\n", name);
+				   "be defined.", name);
 		}
 		return NULL;
 	}

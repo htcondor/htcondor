@@ -92,8 +92,10 @@ if($res != 1) {
 
 my @count = ();
 my @acount = ();
+my @vmcount = ();
 my $countres = "";
 my $acountres = "";
+my $vmcountres = "";
 
 $countres = CountCpus();
 $acountres = CountWithAwk();
@@ -117,6 +119,13 @@ if($count[1] == $acount[1]) {
 } else {
 	print "Two methods do not agree on real hyperthread cores: $count[0]/$acount[0]\n";
 }
+
+# detection scheme does not work on VM's /proc/cpuinfo so we do a more simplistic test
+if(($count[0] == 0) && ($count[1] == 0)) {
+	$vmcountres = BasicProcCount("/proc/cpuinfo");
+	@count = split /:/, $vmcountres;
+}
+
 
 my $start = 1;
 my $hyperthread = 0;
@@ -265,3 +274,34 @@ sub CountWithAwk {
 	return("$cores:$hts");
 }
 
+sub BasicProcCount {
+	my $file = shift;
+	my @keyarray;
+	my $cmd = "";
+	my $line = "";
+	my %prochash = ();
+	my $key = "";
+	my $cores = 0;
+	# no hyper threads if going this route, running on vm
+	my $hts = 0;
+
+	open(FI,"<$file") or die "Failed to open $file:$!\n";
+	while(<FI>) {
+		chomp($_);
+		$line = $_;
+		if($line =~ /^\s*processor\s+:\s+(\d+).*$/ ) {
+			$key = "proc$1";
+			if(exists $prochash{$key}) {
+				die "Trying to double count $key\n";
+			} else {
+				$prochash{$key} = 1;
+			}
+		}
+	}
+	close(FI);
+	@keyarray = keys %prochash;
+	$cores =  @keyarray;
+	$hts = $cores;
+	print "BasicProcessorCount for VM:We found $cores cores\n";
+	return("$cores:$hts");
+}

@@ -530,7 +530,7 @@ class Dag {
 	void DumpDotFile(void);
 
 	void SetNodeStatusFileName( const char *statusFileName,
-				int minUpdateTime );
+				int minUpdateTime, bool alwaysUpdate = false );
 	void DumpNodeStatus( bool held, bool removed );
 
 		/** Set the reject flag to true for this DAG; if it hasn't been
@@ -1082,6 +1082,10 @@ private:
 		// Minimum time between updates (so we can avoid trying to
 		// write the file too often, e.g., for large DAGs).
 	int _minStatusUpdateTime;
+
+		// If this is true, we update the node status file even if
+		// nothing has changed (defaults to false).
+	bool _alwaysUpdateStatus;
 
 		// Last time the status file was written.
 	time_t _lastStatusUpdateTimestamp;

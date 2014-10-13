@@ -955,7 +955,7 @@ UserProc::handle_termination( int exit_st )
 					if it had already been setup somehow, then that is a logic
 					error and I'd need to find out why/where */
 				if (core_name != NULL) {
-					EXCEPT( "core_name should have been NULL!\n" );
+					EXCEPT( "core_name should have been NULL!" );
 				}
 
 				/* this gets deleted when this objects destructs */
@@ -1403,14 +1403,14 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 
 	MyString args_errors;
 	if(!args.AppendArgsV1or2Raw(s.args_v1or2,&args_errors)) {
-		EXCEPT("ERROR: Failed to parse arguments string: %s\n%s\n",
+		EXCEPT("ERROR: Failed to parse arguments string: %s\n%s",
 			   args_errors.Value(),s.args_v1or2);
 	}
 
 		// set up environment as an object
 	MyString env_errors;
 	if(!env_obj.MergeFromV1or2Raw( s.env_v1or2,&env_errors )) {
-		EXCEPT("ERROR: Failed to parse environment string: %s\n%s\n",
+		EXCEPT("ERROR: Failed to parse environment string: %s\n%s",
 			   env_errors.Value(),s.env_v1or2);
 	}
 

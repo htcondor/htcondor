@@ -57,18 +57,30 @@ my $mycorenmout = $corename . ".out";
 
 #print "Master PID is $mypid\n";
 #print "Master PID submit file is $mysubmitnm\n";
+my $version = "jobcorechirppar";
 
-# get a remote scheduler running (side b)
-my $configrem = CondorTest::StartPersonal( "job_core_chirp_par", "x_param.chirpparallel" ,"parallel");
-my @parallel = split /\+/, $configrem;
-my $parallelconfig = shift @parallel;
-my $parallelport = shift @parallel;
+my $firstappend_condor_config = "
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	ALL_DEBUG = 
+	# set up dedicated scheduler
+	# Adding Dedicated Scheduler parrallel Universe;
+	DedicatedScheduler = \"DedicatedScheduler\@schedd$mypid$version\@$currenthost\"
+	STARTD_EXPRS = \$(STARTD_EXPRS), DedicatedScheduler
+	SCHEDD_DEBUG = D_FULLDEBUG
+	SCHEDD_NAME = schedd$mypid$version
+	NUM_CPUS = 8
+	SUSPEND = FALSE
+";
+ 
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"$version");
 
-CondorTest::debug("---Parallel config is $parallelconfig and remote port is $parallelport---\n",$debuglevel);
+my $new_condor_instance = CondorTest::StartCondorWithParams(
+	condor_name => "$version",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
 
-$ENV{CONDOR_CONFIG} = $parallelconfig;
-
-CondorTest::debug("Set config to $parallelconfig\n",$debuglevel);
+my $parallelport = $new_condor_instance->GetCollectorPort();
 
 #print "Looking for schedd for Basic Parallel Test\n";
 runcmd("condor_status -pool $currenthost:$parallelport -schedd -format '%s\\n' Name");
@@ -120,8 +132,46 @@ runcmd("./x_chirpio_mkdata.pl --message='Testing message'");
 # remove marker files which pace parallel job
 runcmd("rm -rf ALLDONE WRITEDONE");
 
-my $result = system("./job_core_chirp_par.pl $mysubmitnm");
-CondorTest::debug("Result of chirp paarallel  job is  $result\n",$debuglevel);
+my $cmdfinal = $mysubmitnm;
+
+CondorTest::debug("Submit file for this test is $cmdfinal\n",$debuglevel);
+
+my $aborted = sub {
+	my %info = @_;
+	my $done;
+	die "Abort event not expected!\n";
+};
+
+my $held = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+
+	die "Held event not expected.....\n";
+};
+
+my $executed = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	CondorTest::debug("Parallel job executed\n",$debuglevel);
+};
+
+my $success = sub
+{
+	CondorTest::debug("Success: Parallel Test ok\n",$debuglevel);
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExecute($testname, $executed);
+
+if( CondorTest::RunTest($testname, $cmdfinal, 0) ) {
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
+	CondorTest::RegisterResult(1,"test_name","$testname");
+} else {
+	CondorTest::RegisterResult(0,"test_name","$testname");
+}
+
 
 #fails due to directory matching pattern 
 runcmd("cp *job_core_chirp_par* $mysaveme", {expect_result=>\&ANY});
@@ -141,14 +191,8 @@ if( -e "$mysubmitnmlog" )
 	runcmd("cp $mysubmitnmlog $mycorenmlog");
 }
 
-CondorTest::KillPersonal($parallelconfig);
 print scalar localtime() . "\n";
 
-if($result != 0)
-{
-	# actuaal job failed but we allowed cleanup
-	exit(1);
-}
+CondorTest::EndTest();
 
-CondorTest::debug("job_core_chirp_par SUCCESS\n",$debuglevel);
 exit(0);

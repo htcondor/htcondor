@@ -1969,7 +1969,7 @@ char * Sock::serialize(char *buf)
 	// here we want to restore our state from the incoming buffer
 	i = sscanf(buf,"%u*%d*%d*%d*%lu*%lu*%n",&passed_sock,(int*)&_state,&_timeout,&tried_authentication,(unsigned long *)&fqulen,(unsigned long *)&verstring_len,&pos);
 	if (i!=6) {
-		EXCEPT("Failed to parse serialized socket information (%d,%d): '%s'\n",i,pos,buf);
+		EXCEPT("Failed to parse serialized socket information (%d,%d): '%s'",i,pos,buf);
 	}
 	buf += pos;
 
@@ -1983,7 +1983,7 @@ char * Sock::serialize(char *buf)
 	free(fqubuf);
 	buf += fqulen;
 	if( *buf != '*' ) {
-		EXCEPT("Failed to parse serialized socket fqu (%lu): '%s'\n",(unsigned long)fqulen,buf);
+		EXCEPT("Failed to parse serialized socket fqu (%lu): '%s'",(unsigned long)fqulen,buf);
 	}
 	buf++;
 
@@ -2004,7 +2004,7 @@ char * Sock::serialize(char *buf)
 	free( verstring );
 	buf += verstring_len;
 	if( *buf != '*' ) {
-		EXCEPT("Failed to parse serialized peer version string (%lu): '%s'\n",(unsigned long)verstring_len,buf);
+		EXCEPT("Failed to parse serialized peer version string (%lu): '%s'",(unsigned long)verstring_len,buf);
 	}
 	buf++;
 

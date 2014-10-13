@@ -850,12 +850,12 @@ ProcAPI::fillProcInfoEnv(piPTR pi)
 			if (env_buffer == NULL) {
 				env_buffer = (char*)malloc(sizeof(char) * read_size);
 				if ( env_buffer == NULL ) {
-					EXCEPT( "Procapi::getProcInfo: Out of memory!\n");
+					EXCEPT( "Procapi::getProcInfo: Out of memory!");
 				}
 			} else {
 				env_buffer = (char*)realloc(env_buffer, read_size * multiplier);
 				if ( env_buffer == NULL ) {
-					EXCEPT( "Procapi::getProcInfo: Out of memory!\n");
+					EXCEPT( "Procapi::getProcInfo: Out of memory!");
 				}
 				multiplier++;
 			}
@@ -888,7 +888,7 @@ ProcAPI::fillProcInfoEnv(piPTR pi)
 		char **env_environ;
 		env_environ = (char**)malloc(sizeof(char *) * (entries + 1));
 		if (env_environ == NULL) {
-			EXCEPT( "Procapi::getProcInfo: Out of memory!\n");
+			EXCEPT( "Procapi::getProcInfo: Out of memory!");
 		}
 
 		// set up the pointers from the env_environ into the env_buffer
@@ -918,7 +918,7 @@ ProcAPI::fillProcInfoEnv(piPTR pi)
 			== PIDENVID_OVERSIZED)
 		{
 			EXCEPT("ProcAPI::getProcInfo: Discovered too many ancestor id "
-					"environment variables in pid %u. Programmer Error.\n",
+					"environment variables in pid %u. Programmer Error.",
 					pi->pid);
 		}
 
@@ -1365,7 +1365,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
     kprocbuf = kp = (struct kinfo_proc *)malloc(bufSize);
 	if (kp == NULL) {
-		EXCEPT("ProcAPI: getProcInfo() Out of memory!\n");
+		EXCEPT("ProcAPI: getProcInfo() Out of memory!");
 	}
 
     if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
@@ -1622,7 +1622,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 	kprocbuf = kp = (struct kinfo_proc *)malloc(bufSize);
 	if (kp == NULL) {
-		EXCEPT("ProcAPI: getProcInfo() Out of memory!\n");
+		EXCEPT("ProcAPI: getProcInfo() Out of memory!");
 	}
 
 	if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
