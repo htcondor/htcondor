@@ -23,8 +23,9 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
+# This line is superflous (as it's the default) and breaks things for IPv6 testing.
+#   COLLECTOR_HOST = $(IP_ADDRESS):0
 my $append_condor_config = '
-  COLLECTOR_HOST = $(IP_ADDRESS):0
   VIEW_COLLECTOR = $(COLLECTOR)
   VIEW_COLLECTOR_ARGS = -local-name VIEW_COLLECTOR
   VIEW_COLLECTOR.COLLECTOR_LOG = $(LOG)/ViewCollectorLog
