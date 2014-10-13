@@ -149,15 +149,14 @@ VMProc::cleanup()
 
 bool handleFTL( const char * reason ) {
 	if( reason != NULL ) {
-		//
-		// This will cause the shadow to suicide (updating the job log before it
-		// goes), which causes the job to be rescheduled.
-		//
+		dprintf( D_ALWAYS, "Failed to launch VM universe job (%s).\n", reason );
+
 		std::string errorString;
 		formatstr( errorString, "An internal error prevented HTCondor "
 			"from starting the VM.  This job will be rescheduled.  "
 			"(%s).\n", reason );
-		Starter->jic->notifyStarterError( errorString.c_str(), true, 0, 0 );
+		Starter->jic->notifyStarterError( errorString.c_str(), false, 0, 0 );
+		Starter->jic->notifyJobExit( -1, JOB_SHOULD_REQUEUE, NULL );
 	}
 
 	//
@@ -236,12 +235,6 @@ VMProc::StartJob()
 		dprintf(D_ALWAYS, "No JobAd in VMProc::StartJob()!\n");
 		return false;
 	}
-
-	// // // // // //
-	// Get IWD
-	// // // // // //
-	//const char* job_iwd = Starter->jic->jobRemoteIWD();
-	//dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
 
 	// // // // // //
 	// Environment
@@ -430,7 +423,32 @@ VMProc::StartJob()
 	new_req->setTimeout(m_vmoperation_timeout + 120);
 
 	int p_result;
-	p_result = new_req->vmStart(m_vm_type.Value(), Starter->GetWorkingDir());
+	if( param_integer( "VMU_TESTING" ) == 1 ) {
+		switch( rand() % 6 ) {
+			case 0:
+				p_result = VMGAHP_REQ_COMMAND_PENDING;
+				break;
+			case 1:
+			default:
+				p_result = new_req->vmStart( m_vm_type.Value(), Starter->GetWorkingDir() );
+				break;
+			case 2:
+				p_result = VMGAHP_REQ_COMMAND_TIMED_OUT;
+				break;
+			case 3:
+				p_result = VMGAHP_REQ_COMMAND_NOT_SUPPORTED;
+				break;
+			case 4:
+				p_result = VMGAHP_REQ_VMTYPE_NOT_SUPPORTED;
+				break;
+			case 5:
+				p_result = VMGAHP_REQ_COMMAND_ERROR;
+				break;
+		}
+	} else {
+		p_result = new_req->vmStart( m_vm_type.Value(), Starter->GetWorkingDir() );
+	}
+
 
 	//
 	// Distinguish between failures that are HTCondor's fault (bugs), failures
@@ -461,11 +479,31 @@ VMProc::StartJob()
 	//
 
 	//
-	// We assume, for now, that the unknown failures aren't the user's fault.
+	// We assume, for now, that a request timing out is a machine problem.
 	//
 	if( p_result != VMGAHP_REQ_COMMAND_DONE ) {
+		m_vmgahp->printSystemErrorMsg();
+		// reportErrorToStartd() forces the startd to re-run its VM universe
+		// check(s).  This may result in the startd and the starter disagreeing
+		// about whether the VM universe is working, so don't do it.
+		// reportErrorToStartd();
+
 		handleFTL( VMGAHP_REQ_RETURN_TABLE[ p_result ] );
+
+		delete new_req;
+		delete m_vmgahp;
+		m_vmgahp = NULL;
+
+		// Make sure the VM GAHP is dead.
+		daemonCore->Kill_Family( JobPid );
+
 		return false;
+	}
+
+
+	if( param_integer( "VMU_TESTING" ) == 2 ) {
+		// A newly-constructed request can not have a valid result.
+		new_req = new VMGahpRequest( new_req->getVMGahpServer() );
 	}
 
 	//
@@ -474,7 +512,21 @@ VMProc::StartJob()
 	// obviously a (C)-type error.
 	//
 	if( ! new_req->hasValidResult() ) {
+		m_vmgahp->printSystemErrorMsg();
+		// reportErrorToStartd() forces the startd to re-run its VM universe
+		// check(s).  This may result in the startd and the starter disagreeing
+		// about whether the VM universe is working, so don't do it.
+		// reportErrorToStartd();
+
 		handleFTL( VMGAHP_ERR_INTERNAL );
+
+		delete new_req;
+		delete m_vmgahp;
+		m_vmgahp = NULL;
+
+		// Make sure the VM GAHP is dead.
+		daemonCore->Kill_Family( JobPid );
+
 		return false;
 	}
 
@@ -525,6 +577,21 @@ VMProc::StartJob()
 	Gahp_Args * result = new_req->getResult();
 	int resultNo = (int)strtol( result->argv[1], (char **)NULL, 10 );
 
+	if( param_integer( "VMU_TESTING" ) == 3 ) {
+		resultNo = 1;
+		result->reset();
+		result->add_arg( strdup( "x" ) );
+		result->add_arg( strdup( "y" ) );
+		// These two were somewhat arbitrarily chosen, but it'd take more
+		// time than it's worth to create the exhaustive list to randomly
+		// select from.
+		if( rand() % 2 == 0 ) {
+			result->add_arg( strdup( "VMGAHP_ERR_JOBCLASSAD_XEN_MISMATCHED_CHECKPOINT" ) );
+		} else {
+			result->add_arg( strdup( "VMGAHP_ERR_JOBCLASSAD_MISMATCHED_NETWORKING" ) );
+		}
+	}
+
 	//
 	// We assume, for now, that the unknown failures aren't the user's fault.
 	// We also, for now, don't distinguish between machine and Condor faults.
@@ -538,11 +605,53 @@ VMProc::StartJob()
 			return false;
 		}
 	} else {
-		const char * errorString = result->argv[2];
+		char * errorString = strdup( result->argv[2] );
 		if( strcmp( NULLSTRING, errorString ) == 0 ) {
-			errorString = VMGAHP_ERR_INTERNAL;
+			free( errorString );
+			errorString = strdup( VMGAHP_ERR_INTERNAL );
 		}
+
+		m_vmgahp->printSystemErrorMsg();
+
+		delete new_req;
+		delete m_vmgahp;
+		m_vmgahp = NULL;
+		daemonCore->Kill_Family( JobPid );
+
+		const char * const holdingErrors[] = {
+			"VMGAHP_ERR_JOBCLASSAD_NO_VM_MEMORY_PARAM",
+			"VMGAHP_ERR_JOBCLASSAD_XEN_NO_KERNEL_PARAM"
+			"VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT",
+			"VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND",
+			"VMGAHP_ERR_JOBCLASSAD_XEN_INITRD_NOT_FOUND",
+			"VMGAHP_ERR_JOBCLASSAD_XEN_NO_ROOT_DEVICE_PARAM",
+			"VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM",
+			"VMGAHP_ERR_JOBCLASSAD_XEN_INVALID_DISK_PARAM",
+			"VMGAHP_ERR_JOBCLASSAD_XEN_MISMATCHED_CHECKPOINT",
+			"VMGAHP_ERR_JOBCLASSAD_KVM_NO_DISK_PARAM",
+			"VMGAHP_ERR_JOBCLASSAD_KVM_INVALID_DISK_PARAM",
+			"VMGAHP_ERR_JOBCLASSAD_KVM_MISMATCHED_CHECKPOINT",
+			"VMGAHP_ERR_JOBCLASSAD_NO_VMWARE_VMX_PARAM"
+			};
+		unsigned holdingErrorCount = sizeof( holdingErrors ) / sizeof(  const char * const );
+		for( unsigned i = 0; i < holdingErrorCount; ++i ) {
+			if( strcmp( holdingErrors[i], errorString ) == 0 ) {
+				dprintf( D_ALWAYS, "Job failed to launch, potentially because of a user's mistake. (%s)  Putting the job on hold.\n", errorString );
+
+				std::string holdReason;
+				formatstr( holdReason, "%s", errorString );
+				// Using i for the hold reason subcode is entirely arbitrary,
+				// but may assist in writing periodic release expressions,
+				// which I understand to be the point.
+				Starter->jic->notifyStarterError( holdReason.c_str(), true, CONDOR_HOLD_CODE_FailedToCreateProcess, i );
+
+				free( errorString );
+				return false;
+			}
+		}
+
 		handleFTL( errorString );
+		free( errorString );
 		return false;
 	}
 

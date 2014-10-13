@@ -824,11 +824,31 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 {
 	u_log->logStarterError( err_msg, critical );
 
-	if( REMOTE_CONDOR_ulog_error(hold_reason_code, hold_reason_subcode, err_msg) < 0 ) {
-		dprintf( D_ALWAYS, 
-				 "Failed to send starter error string to Shadow.\n" );
-		return false;
+	if( critical ) {
+		if( REMOTE_CONDOR_ulog_error(hold_reason_code, hold_reason_subcode, err_msg) < 0 ) {
+			dprintf( D_ALWAYS, 
+					 "Failed to send starter error string to Shadow.\n" );
+			return false;
+		}
+	} else {
+		ClassAd * ad;
+		RemoteErrorEvent event;
+		event.setErrorText( err_msg );
+		event.setDaemonName( "starter" );
+		event.setCriticalError( false );
+		event.setHoldReasonCode( hold_reason_code );
+		event.setHoldReasonSubCode( hold_reason_subcode );
+		ad = event.toClassAd();
+		ASSERT( ad );
+		int rv = REMOTE_CONDOR_ulog( ad );
+		delete ad;
+		if( rv ) {
+			dprintf( D_ALWAYS,
+					 "Failed to send starter error string to Shadow.\n" );
+			return false;
+		}
 	}
+
 	return true;
 }
 

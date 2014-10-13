@@ -191,25 +191,6 @@ VMGahpRequest::vmStart(const char *vm_type, const char *workingdir)
 {
 	static const char *command = "CONDOR_VM_START";
 
-// #if defined(FAIL_OFTEN) 
-switch( rand() % 6 ) {
-	case 0:
-		return VMGAHP_REQ_COMMAND_PENDING;
-	case 1:
-		break;
-	case 2:
-		return VMGAHP_REQ_COMMAND_TIMED_OUT;
-	case 3:
-		return VMGAHP_REQ_COMMAND_NOT_SUPPORTED;
-	case 4:
-		return VMGAHP_REQ_VMTYPE_NOT_SUPPORTED;
-	case 5:
-		return VMGAHP_REQ_COMMAND_ERROR;
-	default:
-		break;
-}
-// #endif /* defined( FAILED_OFTEN ) */
-
 	if( !vm_type || (getPendingStatus() != REQ_INITIALIZED)) {
 		return VMGAHP_REQ_COMMAND_ERROR;
 	}

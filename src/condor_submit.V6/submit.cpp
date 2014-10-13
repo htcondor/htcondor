@@ -6970,7 +6970,7 @@ check_requirements( char const *orig, MyString &answer )
 		if( !checks_vm ) {
 			answer += "&& (TARGET.";
 			answer += ATTR_HAS_VM;
-			answer += ")";
+			answer += " =?= true)";
 		}
 		// add vm_type to requirements
 		bool checks_vmtype = false;
