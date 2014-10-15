@@ -10721,3 +10721,16 @@ int DaemonCore::find_interface_command_port_do_not_use(const condor_sockaddr & a
 	// No matching listen socket.
 	return 0;
 }
+
+bool DaemonCore::is_command_port_do_not_use(const condor_sockaddr & addr) {
+	// Boldly assuming all entries in dc_socks have relisocks and
+	// that all listen sockets for a given protocol use the same port
+	// As of Sept 2014, I believe these are true.  This function should
+	// go away long before these are violated.
+	for(SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); it++) {
+		ASSERT(it->has_relisock());
+		condor_sockaddr listen_addr = it->rsock()->my_addr();
+		if(listen_addr == addr) { return true; }
+	}
+	return false;
+}

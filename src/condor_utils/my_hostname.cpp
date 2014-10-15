@@ -442,9 +442,6 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	condor_sockaddr my_sockaddr;
 	if( ! my_sockaddr.from_ip_string(s.my_ip_str()) ) { return; }
 
-	condor_sockaddr my_default_v4addr = get_local_ipaddr(CP_IPV4);
-	condor_sockaddr my_default_v6addr = get_local_ipaddr(CP_IPV6);
-
 	// my_sockaddr's port is whatever we happen to be using at the moment;
 	// that will be meaningless if we established the connection.  What we
 	// want is the port someone could contact us on.  Go rummage for one.
@@ -456,9 +453,6 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	my_sockaddr.set_port(port);
 
 	
-	if( my_default_v4addr == my_sockaddr ) { return; } // Skip doing a no-op
-	if( my_default_v6addr == my_sockaddr ) { return; } // Skip doing a no-op
-
 	// Skip if we're talking over loopback; advertising loopback
 	// isn't useful to anyone.
 	//if( my_sockaddr.is_loopback() ) { return; } // DISABLED FOR DEBUGGING
@@ -492,7 +486,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	old_sockaddr.from_sinful(sin.getSinful());
 
 	// Skip if my default address isn't present.
-	if( old_sockaddr != my_default_v4addr && old_sockaddr != my_default_v6addr) { return; }
+	if( ! daemonCore->is_command_port_do_not_use(my_sockaddr)) { return; }
 
 	MyString my_sock_ip = my_sockaddr.to_ip_string(true);
 	sin.setHost(my_sock_ip.Value());
