@@ -23,8 +23,9 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
+# This line is superflous (as it's the default) and breaks things for IPv6 testing.
+#   COLLECTOR_HOST = $(IP_ADDRESS):0
 my $append_condor_config = '
-  COLLECTOR_HOST = $(IP_ADDRESS):0
   VIEW_COLLECTOR = $(COLLECTOR)
   VIEW_COLLECTOR_ARGS = -local-name VIEW_COLLECTOR
   VIEW_COLLECTOR.COLLECTOR_LOG = $(LOG)/ViewCollectorLog
@@ -66,12 +67,16 @@ close(IN);
 print "The first line of the View Collector address file ($view_addr_file):\n";
 print "\t$first_line";
 
+# I'm beginning to think we should really have some perl in the modules
+# to parse sinfuls for people...
 my $view_port;
 if ($first_line =~ /<[\d.]+:(\d+)>/) {
     $view_port = $1;
 } elsif ($first_line =~ /<[\d.]+:(\d+\?sock=[a-f_\d]+)>/) {
     $view_port = $1;
 	print "Viewport with shared port on:$view_port\n";
+} elsif ( $first_line =~ /<\[[\d:]+]:(\d+)>/ ) {
+	$view_port = $1;
 } else {
     print "Cannot figure out what port the view collector is running on.\n";
     print "The first line of the view address file is:\n";

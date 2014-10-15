@@ -2858,10 +2858,8 @@ sub LoadWhoData
   sub GetCollectorPort
   {
       my $self = shift;
-      # I don't /think/ we use colons in the sinful string after the port
-      # number, but since we do before (for IPv6)...
       my @addrparts = split /:/, $self->{collector_addr};
-      return $addrparts[ scalar( @addrparts ) ];
+      return $addrparts[ -1 ];
   }
 }
 
