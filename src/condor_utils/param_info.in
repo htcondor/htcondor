@@ -5622,8 +5622,8 @@ review=?
 tags=ccb,ccb
 
 [DEBUG_TIME_FORMAT]
-# The default has a trailing space...
-default=%m/%d/%y %H:%M:%S 
+# The default used to have a trailing space, it was removed in 8.3.2
+default=%m/%d/%y %H:%M:%S
 type=string
 reconfig=true
 customization=seldom

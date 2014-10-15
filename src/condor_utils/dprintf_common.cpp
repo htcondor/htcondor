@@ -188,6 +188,10 @@ _condor_parse_merge_debug_flags(
 				hdr = D_CAT;
 			} else if( strcasecmp(flag, "D_SUB_SECOND") == 0 ) {
 				hdr = D_SUB_SECOND;
+			} else if( strcasecmp(flag, "D_TIMESTAMP") == 0 ) {
+				hdr = D_TIMESTAMP;
+			} else if( strcasecmp(flag, "D_BACKTRACE") == 0 ) {
+				hdr = D_BACKTRACE;
 			} else if( strcasecmp(flag, "D_FULLDEBUG") == 0 ) {
 				fulldebug = (flag_verbosity > 0);
 				flag_verbosity *= 2; // so D_FULLDEBUG:1 ends up as D_ALWAYS:2
