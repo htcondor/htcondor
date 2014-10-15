@@ -27,11 +27,15 @@ elseif(${OS_NAME} MATCHES "WIN")
 	set(WINDOWS ON)
 
 	# The following is necessary for sdk/ddk version to compile against.
-	# lowest common denominator is winxp (for now)
+	# lowest common denominator is WinXP-SP3, except when building with vc9, then we can't count on sdk support.
 	add_definitions(-DWINDOWS)
 	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WINXP)
 	add_definitions(-DWINVER=_WIN32_WINNT_WINXP)
-	add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
+	if (MSVC90)
+	    add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
+	else()
+	    add_definitions(-DNTDDI_VERSION=NTDDI_WINXPSP3)
+	endif()
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 	
 	if(MSVC11)

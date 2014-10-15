@@ -87,6 +87,15 @@ const char *GetNextToken(const char *delim, bool skipBlankTokens);
 
 void join(const std::vector< std::string > &v, char const *delim, std::string &result);
 
+// scan an input string for path separators, returning a pointer into the input string that is
+// the first charactter after the last input separator. (i.e. the filename part). if the input
+// string contains no path separater, the return is the same as the input, if the input string
+// ends with a path separater, the return is a pointer to the null terminator.
+const char * filename_from_path(const char * pathname);
+inline char * filename_from_path(char * pathname) { return const_cast<char*>(filename_from_path(const_cast<const char *>(pathname))); }
+size_t filename_offset_from_path(std::string & pathname);
+inline std::string filename_from_path(std::string & pathname) { return pathname.substr(filename_offset_from_path(pathname)); }
+
 // Returns true iff (s) casts to <T>, and all of (s) is consumed,
 // i.e. if (s) is an exact representation of a value of <T>, no more and
 // no less.
