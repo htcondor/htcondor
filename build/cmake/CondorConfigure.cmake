@@ -203,6 +203,7 @@ if( NOT WINDOWS)
 	if (NOT ${OS_NAME} STREQUAL "DARWIN")
 		check_symbol_exists(_POSIX_MONOTONIC_CLOCK "unistd.h" HAVE_CLOCK_GETTIME)
 		check_symbol_exists(CLOCK_MONOTONIC_RAW "time.h" HAVE_CLOCK_MONOTONIC_RAW)
+		check_symbol_exists(CLOCK_REALTIME_COARSE "time.h" HAVE_CLOCK_REALTIME_COARSE)
 	endif()
 
 	check_function_exists("access" HAVE_ACCESS)
