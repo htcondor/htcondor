@@ -1835,7 +1835,7 @@ SecManStartCommand::authenticate_inner()
 			}
 
 			int auth_timeout = m_sec_man.getSecTimeout( CLIENT_PERM );
-			int auth_result = m_sock->authenticate(m_private_key, auth_methods, m_errstack, auth_timeout, true, NULL);
+			int auth_result = m_sock->authenticate(m_private_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, NULL);
 
 			if (auth_methods) {
 				free(auth_methods);
