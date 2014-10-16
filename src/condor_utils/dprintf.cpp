@@ -72,7 +72,7 @@
 // define this to have D_TIMESTAMP|D_SUB_SECOND be microseconds rather than milliseconds
 // this is useful mostly when trying to put log entries from multiple daemons on the same
 // machine in order
-#define D_SUB_SECOND_IS_MICROSECONDS
+//#define D_SUB_SECOND_IS_MICROSECONDS
 
 extern const char * const _condor_DebugCategoryNames[D_CATEGORY_COUNT];
 
@@ -707,7 +707,11 @@ static time_t _condor_dprintf_gettime(DebugHeaderInfo &info, unsigned int hdr_fl
 		}
 	#elif defined(HAVE_CLOCK_GETTIME)
 		struct timespec tm;
+		#if ! defined(D_SUB_SECOND_IS_MICROSECONDS) && defined(HAVE_CLOCK_REALTIME_COARSE)
+		clock_gettime(CLOCK_REALTIME_COARSE, &tm);
+		#else
 		clock_gettime(CLOCK_REALTIME, &tm);
+		#endif
 		info.clock_now = tm.tv_sec;
 		info.microseconds = tm.tv_nsec / 1000;
 	#elif defined(HAVE_GETTIMEOFDAY)
