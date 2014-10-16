@@ -598,6 +598,11 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	// Also, there's no one to delete the Sock.
 	ASSERT(!nonblocking || callback_fn);
 
+	if (IsDebugLevel(D_COMMAND)) {
+		const char * addr = this->addr();
+		dprintf (D_COMMAND, "Daemon::startCommand(%s,...) making connection to %s\n", getCommandStringSafe(cmd), addr ? addr : "?");
+	}
+
 	*sock = makeConnectedSocket(st,timeout,0,errstack,nonblocking);
 	if( ! *sock ) {
 		if ( callback_fn ) {
