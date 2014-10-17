@@ -201,18 +201,12 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	if( m_failure_injection == NULL ) { m_failure_injection = ""; }
 	dprintf( D_FULLDEBUG, "GM_FAILURE_INJECTION = %s\n", m_failure_injection );
 
-	// lookup the elastic IP
 	jobAd->LookupString( ATTR_EC2_ELASTIC_IP, m_elastic_ip );
-
 	jobAd->LookupString( ATTR_EC2_EBS_VOLUMES, m_ebs_volumes );
-
-	// lookup the elastic IP
 	jobAd->LookupString( ATTR_EC2_AVAILABILITY_ZONE, m_availability_zone );
-
 	jobAd->LookupString( ATTR_EC2_VPC_SUBNET, m_vpc_subnet );
-
 	jobAd->LookupString( ATTR_EC2_VPC_IP, m_vpc_ip );
-
+	jobAd->LookupString( ATTR_EC2_BLOCK_DEVICE_MAPPING, m_block_device_mapping );
 
 	// if user assigns both user_data and user_data_file, the two will
 	// be concatenated by the gahp
@@ -763,6 +757,7 @@ void EC2Job::doEvaluateState()
 											 m_vpc_subnet,
 											 m_vpc_ip,
 											 m_client_token,
+											 m_block_device_mapping,
 											 *m_group_names,
 											 instance_id,
 											 gahp_error_code);
