@@ -486,7 +486,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	old_sockaddr.from_sinful(sin.getSinful());
 
 	// Skip if my default address isn't present.
-	if( ! daemonCore->is_command_port_do_not_use(my_sockaddr)) { return; }
+	if( ! daemonCore->is_command_port_do_not_use(old_sockaddr)) { return; }
 
 	MyString my_sock_ip = my_sockaddr.to_ip_string(true);
 	sin.setHost(my_sock_ip.Value());
