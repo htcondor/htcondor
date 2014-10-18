@@ -6099,7 +6099,6 @@ int GahpClient::ec2_vm_start( std::string service_url,
 
 	// Generate request line
 
-	// keypair/user_data/user_data_file is a required field. when empty, need to be replaced by "NULL"
 	if ( keypair.empty() ) keypair = NULLSTRING;
 	if ( user_data.empty() ) user_data = NULLSTRING;
 	if ( user_data_file.empty() ) user_data_file = NULLSTRING;
@@ -6108,10 +6107,8 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	if ( vpc_subnet.empty() ) vpc_subnet = NULLSTRING;
 	if ( vpc_ip.empty() ) vpc_ip = NULLSTRING;
 	if ( client_token.empty() ) client_token = NULLSTRING;
+	if ( block_device_mapping.empty() ) block_device_mapping = NULLSTRING;
 
-	// groupnames is optional, but since it is the last argument, don't need to set it as "NULL"
-	// XXX: You probably should specify a NULL for all "optional" parameters -matt
-						
 	std::string reqline;
 
 	char* esc1 = strdup( escapeGahpString(service_url) );
