@@ -270,10 +270,11 @@ sub set_domain_settings();
 sub set_central_manager ( $ );
 sub set_config_values ( $$$ );
 sub set_java_jvm_path();
-sub make_personal_condor();
+#sub make_personal_condor();
 sub get_config_value( $;$ );
 sub debug( $ );
-sub read_config_file_comments();
+sub set_config_comments();
+#sub read_config_file_comments();
 #sub is_dynamic( $ );
 sub which( $ );
 sub myproxy();
@@ -295,7 +296,7 @@ if ($opt_install_log) {
 }
 
 # Hashes to store values that will go into config files
-my %local_config=();
+my %append_config=();
 my %global_config=();
 
 # Detrmine UID, domain, etc
@@ -315,7 +316,7 @@ if ($opt_owner) {
 
 if (defined ($opt_release_dir) || $opt_owner) {
     my $gid=(getpwuid ($owner))[3]; #Get group id
-    $local_config{CONDOR_IDS}="$owner.$gid";
+    $append_config{CONDOR_IDS}="$owner.$gid";
 }
 
 my @pwuid=getpwuid ($owner);
@@ -379,7 +380,8 @@ END_BAD_PREFIX_DIR
 		 system ("mv $old_local_dir/execute $local_dir")) &&
 		 die "\nUnable to move log, spool, execute directories to new local directory: \"$local_dir\"\n\n";
 		condor_init ($local_dir);
-		$local_config{LOCAL_DIR}=$local_dir;
+		#$append_config{LOCAL_DIR}=$local_dir;
+		$global_config{LOCAL_DIR}=$local_dir;
     }
 }
 debug ("Install directory: $release_dir");
@@ -418,10 +420,11 @@ if ($opt_central_manager) {
     }
 }
 
-# Path to ganglia.d for condor_gangliad configuration
-if ( -d "${release_dir}/etc/condor/ganglia.d" ) {
-	$local_config{GANGLIAD_METRICS_CONFIG_DIR}="${release_dir}/etc/condor/ganglia.d";
-}
+#tj - removing because this is the default value
+## Path to ganglia.d for condor_gangliad configuration
+#if ( -d "${release_dir}/etc/condor/ganglia.d" ) {
+#	$append_config{GANGLIAD_METRICS_CONFIG_DIR}='${release_dir}/etc/condor/ganglia.d';
+#}
 
 
 # Determine daemons needed to run and other settings based on
@@ -431,26 +434,26 @@ if ( -d "${release_dir}/etc/condor/ganglia.d" ) {
 #  --make-personal_condor
 
 if ($opt_bosco) {
-    $local_config{START}="";
-    $local_config{PREEMPT}="";
-    $local_config{SUSPEND}="";
-    $local_config{KILL}="";
+    $append_config{START}="";
+    $append_config{PREEMPT}="";
+    $append_config{SUSPEND}="";
+    $append_config{KILL}="";
     
-    $local_config{COLLECTOR_NAME}="";
+    $append_config{COLLECTOR_NAME}="";
 
-	$local_config{IS_BOSCO}="True";
-    $local_config{CREATE_CORE_FILES }="False";
-    $local_config{CONDOR_ADMIN}=" ";
-    $local_config{PREEN_ARGS}="-r";
-    $local_config{NETWORK_INTERFACE}="127.0.0.1";
+    $append_config{IS_BOSCO}="True";
+    $append_config{CREATE_CORE_FILES }="False";
+    $append_config{CONDOR_ADMIN}=" ";
+    $append_config{PREEN_ARGS}="-r";
+    $append_config{NETWORK_INTERFACE}="127.0.0.1";
 
-	$daemon_list{SCHEDD} = 1;
+    $daemon_list{SCHEDD} = 1;
     $daemon_list{COLLECTOR} = 1;
     $daemon_list{NEGOTIATOR} = 1;
     $daemon_list{STARTD} = 1;
 
     $cm=set_central_manager($fullhost);
-    $local_config{COLLECTOR_NAME}="Personal Condor at $fullhost";
+    $append_config{COLLECTOR_NAME}="Personal Condor at $fullhost";
 
     # Campus Factory configuration
     my $config_dir=$local_dir . "/config";
@@ -461,31 +464,37 @@ if ($opt_bosco) {
 elsif ($opt_make_personal_condor ||
     (defined($opt_release_dir) && !$opt_type)) {
 
-	#$daemon_list{COLLECTOR} = 1;
-	#$daemon_list{NEGOTIATOR} = 1;
-	#$daemon_list{STARTD} = 1;
-	#$daemon_list{SCHEDD} = 1;
-	# get rid of daemon list droped out after knobs
-	%daemon_list = ();
-    $local_config{START}="TRUE";
-    $local_config{PREEMPT}="FALSE";
-    $local_config{SUSPEND}="FALSE";
-    $local_config{KILL}="FALSE";
-	push (@metaknobs,"use role : personal");
+    # we will use the personal role, so we don't want to set DAEMON_LIST
+    %daemon_list = ();
+# these are the defaults as of 8.1.5
+#    $append_config{START}="TRUE";
+#    $append_config{PREEMPT}="FALSE";
+#    $append_config{SUSPEND}="FALSE";
+#    $append_config{KILL}="FALSE";
 
-    $cm=set_central_manager($fullhost);
-    $local_config{COLLECTOR_NAME}="Personal Condor at $fullhost";
+    push (@metaknobs,"use ROLE : Personal");
+    $comment_hash{"use ROLE : Personal"}="\n##  Configure a personal HTCondor pool.";
+    $append_config{COLLECTOR_NAME}='Personal Condor at $(CONDOR_HOST)';
+
+    if ($fullhost =~ /^localhost/) {
+	# dont want to configure CONDOR_HOST=localhost because the personal role
+	# already does something more clever than that, so don't call set_central_manager()
+	$cm=$fullhost;
+	$append_config{NETWORK_INTERFACE}='$(CONDOR_HOST)';
+    } else {
+	$cm=set_central_manager($fullhost);
+    }
 }
 elsif ($opt_type) {
 
     my @types=split(/\,/, $opt_type);
 
-    $local_config{START}="";
-    $local_config{PREEMPT}="";
-    $local_config{SUSPEND}="";
-    $local_config{KILL}="";
+    $append_config{START}="";
+    $append_config{PREEMPT}="";
+    $append_config{SUSPEND}="";
+    $append_config{KILL}="";
     
-    $local_config{COLLECTOR_NAME}="";
+    $append_config{COLLECTOR_NAME}="";
 
     foreach $type (@types) {
 		if ($type eq "execute") {
@@ -516,21 +525,22 @@ if ($opt_owner) {
     condor_init ($local_dir);
 }
 
+#tj- removing because we no longer modify the local config file
 # Backup old local config file
-unless (defined($opt_release_dir)) {
-    
-    chomp (my $backup_local_config_file=$local_config_file . ".backup." . $timestamp);
-    debug ("\nBacking up local config file to: $backup_local_config_file");
-    system ("cp $local_config_file $backup_local_config_file");
-}
+#unless (defined($opt_release_dir)) {
+#    chomp (my $backup_local_config_file=$local_config_file . ".backup." . $timestamp);
+#    debug ("\nBacking up local config file to: $backup_local_config_file");
+#    system ("cp $local_config_file $backup_local_config_file");
+#}
 
-# Write out values to local and global config files
+# Write out values to global config file
 unless ($no_config_modify) {
-    read_config_file_comments();
+    #read_config_file_comments();
+    set_config_comments();
 
-    $local_config{DAEMON_LIST}=join(', ', sort keys %daemon_list );
-    set_config_values (\%local_config, $local_config_file, 1);
+    $append_config{DAEMON_LIST}=join(' ', sort keys %daemon_list );
     set_config_values (\%global_config, $config_file, 0);
+    set_config_values (\%append_config, $config_file, 1);
 }
 
 
@@ -906,7 +916,7 @@ sub install( $ )
 	foreach my $d ( @release_dirs ) {
 		my $dir = "$release_src_dir/$d";
 		if ( ! -d $dir ) {
-			push( @missing, $d );
+			push( @missing, $d ) if ( ! ($d eq 'man'));
 		}
 	}
 
@@ -1207,12 +1217,12 @@ sub install( $ )
 		close( TARXF );
 	}
 
-    $local_config{RELEASE_DIR}="$release_dir";
-    
+    $global_config{RELEASE_DIR}="$release_dir";
+
     # Create config file, unless one exists
 
     $config_file="$release_dir/etc/condor_config";
-    
+
     # If the config file already exists, we're done
     if ( -f $config_file ) {
 		debug ("\nThis is an upgrade installation. Will not modify config files.\n");
@@ -1227,11 +1237,13 @@ sub install( $ )
 
     if ($opt_local_dir) {
 		$local_dir=condor_init ($opt_local_dir);
-		$local_config{LOCAL_DIR}="$opt_local_dir";
+		#$append_config{LOCAL_DIR}="$opt_local_dir";
+		$global_config{LOCAL_DIR}="$opt_local_dir";
     } else { 
 		# Set up local directory
 		$local_dir=condor_init ("$release_dir/local.$host");
-		$local_config{LOCAL_DIR}="$release_dir/local.\$(HOSTNAME)";
+		#$append_config{LOCAL_DIR}="$release_dir/local.\$(HOSTNAME)";
+		$global_config{LOCAL_DIR}="$release_dir/local.\$(HOSTNAME)";
     }
 
     # Create local config file
@@ -1242,11 +1254,11 @@ sub install( $ )
 
     # make_personal_condor();
     # Don't assume the CONDOR_HOST will be defined (e.g. Condor-G)
-    #$local_config{CONDOR_HOST}=$host;
+    #$append_config{CONDOR_HOST}=$host;
 
-    $local_config{UID_DOMAIN}="\$(FULL_HOSTNAME)";
-    $local_config{FILESYSTEM_DOMAIN}="\$(FULL_HOSTNAME)";
-    $local_config{LOCK}="/tmp/condor-lock.".rand();
+    $append_config{UID_DOMAIN}="\$(FULL_HOSTNAME)";
+    $append_config{FILESYSTEM_DOMAIN}="\$(FULL_HOSTNAME)";
+    $append_config{LOCK}="/tmp/condor-lock.".rand();
 
     # This is necessary so that if no collector host is specified, 
     # Condor doesn't start using "central-manager-hostname.your.domain"
@@ -1420,8 +1432,8 @@ sub check_release_dir( $ ) {
 }
 
 sub set_mail_settings() {
-    $local_config{CONDOR_ADMIN}="$who\@$fullhost";
-    debug ("Setting CONDOR_ADMIN to \"$local_config{CONDOR_ADMIN}\" If this is not your preferred email address, please modify CONDOR_ADMIN in the configuration file");
+    $append_config{CONDOR_ADMIN}="$who\@$fullhost";
+    debug ("Setting CONDOR_ADMIN to \"$append_config{CONDOR_ADMIN}\" If this is not your preferred email address, please modify CONDOR_ADMIN in the configuration file");
     
     my $mail_path;
     
@@ -1436,21 +1448,21 @@ sub set_mail_settings() {
   }   
     
     if (-f $mail_path && -x $mail_path) {
-		$local_config{MAIL}=$mail_path;
+		$append_config{MAIL}=$mail_path;
     }
     else {
 		foreach $mail_path ( "/bin/mailx", "/usr/sbin/mailx",
 							 "/usr/ucb/mailx", "/usr/bin/mail",
 							 "/usr/ucb/mail", "/bin/mail" ) {
 			if (-f $mail_path && -x $mail_path) {
-				$local_config{MAIL}=$mail_path;
+				$append_config{MAIL}=$mail_path;
 				last;
 			}
 		}
     }
 
-    if ( $local_config{MAIL} ) {
-		debug ("Setting mail path to: $local_config{MAIL}");
+    if ( $append_config{MAIL} ) {
+		debug ("Setting mail path to: $append_config{MAIL}");
     } else {
 		warn "\n\n WARNING: Unable to find mail program! Condor will not be \n
 able to send status notifications until MAIL parameter is configured.\n";
@@ -1463,8 +1475,8 @@ able to send status notifications until MAIL parameter is configured.\n";
 sub set_domain_settings() {
     debug ("Setting FILESYSTEM_DOMAIN and UID_DOMAIN to $domain");
 
-    $local_config{FILESYSTEM_DOMAIN}=$domain;
-    $local_config{UID_DOMAIN}=$domain; 
+    $append_config{FILESYSTEM_DOMAIN}=$domain;
+    $append_config{UID_DOMAIN}=$domain;
 }
 
 sub set_central_manager ( $ ) {
@@ -1474,7 +1486,7 @@ sub set_central_manager ( $ ) {
 		warn "\nWARNING: Unable to contact central manager: $cm!\n";
     }
 
-    $local_config{CONDOR_HOST}=$cm;
+    $append_config{CONDOR_HOST}=$cm;
     return $cm;
 }
 
@@ -1489,14 +1501,6 @@ sub set_config_values ($$$) {
 
     open (TEMP, ">/tmp/set_config_values.temp.$$") || die "Unable to open /tmp/set_config_values.temp.$$ $!\n";
 
-	$knobcount = @metaknobs;
-	# If local config file and meta knobs set, drop them out now at beginning
-	if (($is_local) && ($knobcount > 0)) {
-		foreach my $knob (@metaknobs) {
-			print TEMP "$knob\n";
-		}
-	}
-    
     open (SOURCE, "<$file") || die "Unable to open file $file\n";
 
     while (<SOURCE>) {
@@ -1505,25 +1509,40 @@ sub set_config_values ($$$) {
 		  
 		  
 		  foreach my $key (@keylist) {
-			  if ($line =~ m/^\s*$key\s*=.*/) {
-				  #print TEMP "#$ line\n";  # Comment the old line
-
-				  if (exists $hashref->{$key}) {
-					  my $value=$hashref->{$key};
-					  &debug ("$key=$value");
-					  if ($value) {
-						  print TEMP "$key = $value\n";
-					  }
-					  delete $hashref->{$key};
-				  }
-				  last SWITCH; 
-			  } elsif ($line =~ m/^\#\s*$key\s*=.*/) {
-				  last SWITCH;
-			  }
+			my $matches = 0;
+			if ($line =~ m/^\s*$key\s*=.*/) {
+			    $matches = 1; # matches
+			}  elsif ($line =~ m/^\#\s*$key\s*=.*/) {
+			    $matches = 2; # matches a commented out line
+			}
+			if ($matches) {
+			    # if it matches a commented out line, preserve the commented out line (comments show default values)
+			    if ($matches == 2) { print TEMP "$line\n"; }
+			    if (exists $hashref->{$key}) {
+				my $value=$hashref->{$key};
+				&debug ("$key=$value");
+				if ($value) {
+				    print TEMP "$key = $value\n";
+				}
+				delete $hashref->{$key};
+			    }
+			    last SWITCH;
+			}
 		  }
 		  
 		  print TEMP "$line\n";
       } # SWITCH
+    }
+
+    # Print metaknobs at the top of the 'append here' section
+    $knobcount = @metaknobs;
+    if (($knobcount > 0) && $is_local) {
+	foreach my $knob (@metaknobs) {
+		my $comment = $comment_hash{$knob};
+		if ($comment) { print TEMP "$comment\n"; }
+		print TEMP "$knob\n";
+	}
+	print TEMP "\n";
     }
 
     # Print out the keys that are in @allparams
@@ -1535,13 +1554,14 @@ sub set_config_values ($$$) {
 			if ($is_local) {
 				my $comment = $comment_hash{$key};
 				if ($comment) {
-					print TEMP "\n$comment\n";
+					print TEMP "$comment\n";
 				}
 			}
-			print TEMP "$key = $value\n\n";
+			print TEMP "$key = $value\n";
 			delete $hashref->{$key};
 		}
     }
+    print TEMP "\n";
 
     # Print out all the remaining values
     while (my ($key, $value) = each %$hashref) {
@@ -1553,7 +1573,7 @@ sub set_config_values ($$$) {
 					print TEMP "\n$comment\n";
 				}
 			}
-			print TEMP "$key = $value\n\n";
+			print TEMP "$key = $value\n";
 		}
     }
     close TEMP;
@@ -1629,19 +1649,20 @@ my $java_jvm_maxmem_arg = "";
 	    $java_jvm_maxmem_arg = "";
 	}
 
-        $local_config{JAVA}=$jvm;
-        $local_config{JAVA_MAXHEAP_ARGUMENT}=$java_jvm_maxmem_arg;
+        $append_config{JAVA}=$jvm;
+        $append_config{JAVA_MAXHEAP_ARGUMENT}=$java_jvm_maxmem_arg;
 
 }
 
-sub make_personal_condor() {
-	$daemon_list{COLLECTOR} = 1;
-	$daemon_list{NEGOTIATOR} = 1;
-	$daemon_list{STARTD} = 1;
-	$daemon_list{SCHEDD} = 1;
-    $local_config{START}="TRUE";
-    $cm=set_central_manager($fullhost);
-}
+#tj-8.2 this is obsolete
+#sub make_personal_condor() {
+#	$daemon_list{COLLECTOR} = 1;
+#	$daemon_list{NEGOTIATOR} = 1;
+#	$daemon_list{STARTD} = 1;
+#	$daemon_list{SCHEDD} = 1;
+#    $append_config{START}="TRUE";
+#    $cm=set_central_manager($fullhost);
+#}
 
 sub get_config_value($;$) {
     my ($key,$cnf_file)=@_;
@@ -1664,6 +1685,37 @@ sub debug( $ ) {
     }
 }
 
+# control the output order of generated config statements and set comments. 
+# a \n will be automatically appended when the comment is printed.
+#
+sub set_config_comments() {
+    push (@allparams, 'DAEMON_LIST');
+    push (@allparams, 'CONDOR_HOST');
+    push (@allparams, 'NETWORK_INTERFACE');
+    push (@allparams, 'COLLECTOR_HOST');
+    push (@allparams, 'COLLECTOR_NAME');
+
+    $comment_hash{UID_DOMAIN}="\n##  What is considered local for UIDs and for files";
+    push (@allparams, 'UID_DOMAIN');
+    push (@allparams, 'FILESYSTEM_DOMAIN');
+
+    $comment_hash{LOCK}="\n##  unique lock file on the local filesystem";
+    push (@allparams, 'LOCK');
+
+    $comment_hash{CONDOR_IDS}="\n##  The user/group ID <uid>.<gid> of the \"Condor\" user";
+    push (@allparams, 'CONDOR_IDS');
+
+    $comment_hash{CONDOR_ADMIN}="\n## When something goes wrong with condor at your site, who should get the email?";
+    push (@allparams, 'CONDOR_ADMIN');
+    push (@allparams, 'MAIL');
+
+    $comment_hash{JAVA}="\n##  java";
+    push (@allparams, 'JAVA');
+    push (@allparams, 'JAVA_MAXHEAP_ARGUMENT');
+}
+
+#tj - as of 8.1.5 the base config has virtually no comments to scrape, so this function does nothing useful
+#
 sub read_config_file_comments() {
 	my $current_comment = "";
 	my $key;
@@ -1714,7 +1766,7 @@ sub which( $ ) {
 sub myproxy() {
 	my $myproxy_get_delegation = which "myproxy-get-delegation";
 	if ($myproxy_get_delegation) {
-		$local_config{MYPROXY_GET_DELEGATION} = $myproxy_get_delegation;
+		$append_config{MYPROXY_GET_DELEGATION} = $myproxy_get_delegation;
 	}
 }
 
@@ -1729,9 +1781,9 @@ sub credd() {
     }
 	my $cred_dir_mode = 0700;
 	chmod $cred_dir_mode, $cred_dir or die "chmod $cred_dir: $!";
-	$local_config{CRED_STORE_DIR} = '$(LOCAL_DIR)/cred_dir';
+	$append_config{CRED_STORE_DIR} = '$(LOCAL_DIR)/cred_dir';
 
-	unless ( $local_config{MYPROXY_GET_DELEGATION} ) {
+	unless ( $append_config{MYPROXY_GET_DELEGATION} ) {
 		warn<<EOF;
 myproxy-get-delegation not found in PATH.  To enable GSI proxy auto-refresh,
 edit MYPROXY_GET_DELEGATION configuration macro.
