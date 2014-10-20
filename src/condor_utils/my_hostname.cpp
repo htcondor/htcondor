@@ -29,7 +29,7 @@
 #include "ipv6_hostname.h"
 #include "condor_sinful.h"
 
-static bool enable_convert_default_IP_to_socket_IP = true;
+static bool enable_convert_default_IP_to_socket_IP = false;
 static std::set< std::string > configured_network_interface_ips;
 static bool network_interface_matches_all;
 
@@ -394,6 +394,12 @@ void ConfigConvertDefaultIPToSocketIP()
 //		init_ipaddr(0);
 //	}
 
+	if(daemonCore == NULL) {
+		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because a full DaemonCore object is not available.\n");
+		enable_convert_default_IP_to_socket_IP = false;
+		return;
+	}
+
 	enable_convert_default_IP_to_socket_IP = true;
 
 	/*
@@ -446,9 +452,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	// that will be meaningless if we established the connection.  What we
 	// want is the port someone could contact us on.  Go rummage for one.
 	int port = 0;
-	if( daemonCore ) {
-		daemonCore->find_interface_command_port_do_not_use(my_sockaddr);
-	}
+	daemonCore->find_interface_command_port_do_not_use(my_sockaddr);
 	// If port is 0, there is no matching listen socket. There is nothing 
 	// useful we can rewrite it do, so just give up and hope the default
 	// is useful to someone.
