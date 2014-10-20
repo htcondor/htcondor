@@ -447,7 +447,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	// want is the port someone could contact us on.  Go rummage for one.
 	int port = 0;
 	if( daemonCore ) {
-		daemonCore->find_interface_command_port_do_not_use(my_sockaddr);
+		port = daemonCore->find_interface_command_port_do_not_use(my_sockaddr);
 	}
 	// If port is 0, there is no matching listen socket. There is nothing 
 	// useful we can rewrite it do, so just give up and hope the default
