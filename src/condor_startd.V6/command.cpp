@@ -1847,18 +1847,40 @@ activate_claim( Resource* rip, Stream* stream )
 	} 
 #ifndef WIN32
 	else {
+		//
+		// This should be exclusively for the standard universe.
+		//
+		// FIXME: If there's a non-standard universe starter, we probably
+		// shouldn't blow an assert if the stream isn't IP-based.
+		//
+		// FIXME: It's a bit late to reject the job, but it's probably not
+		// worth trying to run IPv6 jobs in the standard universe.
+		//
+		condor_sockaddr streamSA;
+		assert( streamSA.from_ip_string( stream->my_ip_str() ) );
 
-			// Set up the two starter ports and send them to the shadow
+		if( streamSA.is_ipv6() ) {
+			dprintf( D_ALWAYS, "WARNING -- request to run standard-universe job via IPv6.  Expect problems.\n" );
+		}
+
+		//
+		// Be sure to create only IPv4 sockets.
+		//
 		stRec.version_num = VERSION_FOR_FLOCK;
-		sock_1 = create_port(&rsock_1);
-		sock_2 = create_port(&rsock_2);
+
+		rsock_1.bind( CP_IPV4, false, 0, false );
+		rsock_1.listen();
+		sock_1 = rsock_1.get_file_desc();
 		stRec.ports.port1 = rsock_1.get_port();
+
+		rsock_2.bind( CP_IPV4, false, 0, false );
+		rsock_2.listen();
+		sock_2 = rsock_2.get_file_desc();
 		stRec.ports.port2 = rsock_2.get_port();
 
 		stRec.server_name = strdup( my_full_hostname() );
-	
-			// Send our local IP address, too.
-		
+
+		// Send our local IP address, too.
 		// stRec.ip_addr actually is never used.
 		// Just make sure that it does not have 0 value.
 		condor_sockaddr local_addr = get_local_ipaddr();
