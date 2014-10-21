@@ -1126,7 +1126,7 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 {
 #ifndef HAVE_SHARED_PORT
 	if( why_not ) {
-		why_not->sprintf("shared ports not supported on this platform");
+		*why_not = "shared ports not supported on this platform";
 	}
 	return false;
 #else
