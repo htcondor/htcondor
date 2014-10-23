@@ -84,16 +84,6 @@ my $parallelport = $new_condor_instance->GetCollectorPort();
 
 print "\n\n\n\n\n\n*************** collector port:$parallelport **************\n\n\n\n\n";
 
-#CondorTest::debug("---Parallel config is $parallelconfig and remote port is $parallelport---\n",$debuglevel);
-
-#$ENV{CONDOR_CONFIG} = $parallelconfig;
-
-#
-#CondorTest::debug("Set config to $parallelconfig\n",$debuglevel);
-
-#print "Looking for schedd for Basic Parallel Test\n";
-# runcmd("condor_status -pool $currenthost:$parallelport -schedd -format '%s\\n' Name");
-# If we've configured Condor properly, why do we need to specify the pool?
 runcmd("condor_status -schedd -format '%s\\n' Name");
 
 my $line;
