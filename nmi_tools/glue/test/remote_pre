@@ -201,8 +201,6 @@ if( TestGlue::is_windows() ) {
 
 print "Condor version: $version\n";
 
-print "CONGIGURING PERSONAL CONDOR\n";
-
 # I'm not 100% certain wtf this actually does. 
 if( not TestGlue::is_windows() ) {
     mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
@@ -234,3 +232,59 @@ if( not TestGlue::is_windows() ) {
 	# tweeking personal condors we have our condor_paths
 	# and CONDOR_CONFIG. 
 }
+
+#Look for condor_tests/testconfigappend which we want at the end
+#of the main config file
+print "CONGIGURING PERSONAL CONDOR\n";
+print "TESTS set to:$ENV{TESTS}\n";
+print "CONDOR_CONFIG set to:$ENV{CONDOR_CONFIG}\n";
+
+my $testconfigappend = "$ENV{TESTS}";
+my $newconfigfile = "$ENV{CONDOR_CONFIG}";
+my $oldconfigfile = "$ENV{CONDOR_CONFIG}";
+my $mainconfigfile = "$ENV{CONDOR_CONFIG}";
+if( not TestGlue::is_windows() ) {
+	$testconfigappend = $testconfigappend . "/testconfigappend";
+	$newconfigfile = $newconfigfile . "new";
+	$oldconfigfile = $oldconfigfile . "old";
+} else {
+	$testconfigappend = $testconfigappend . "\\testconfigappend";
+	$newconfigfile = $newconfigfile . "new";
+	$oldconfigfile = $oldconfigfile . "old";
+}
+
+if(-f $testconfigappend) {
+	print "Triggere to modify master config with testconfigappend file!\n";
+	open(MAIN,"<$mainconfigfile") or die "Failed to open original config files:$mainconfigfile :$!\n";
+	open(NEW,">$newconfigfile") or die "Failed to open/create new config:$newconfigfile :$!\n";
+	open(APP,"<$testconfigappend") or die "failed to open additions:$testconfigappend :$!\n";
+
+	while (<MAIN>) {
+		print NEW "$_";
+	}
+
+	while (<APP>) {
+		print NEW "$_";
+	}
+
+	close(MAIN);
+	close(NEW);
+	close(APP);
+	system("mv $mainconfigfile $oldconfigfile");
+	system("mv $newconfigfile $mainconfigfile");
+
+	print "Displaying new main config file:\n";
+	open(MAIN,"<$mainconfigfile") or die "Failed to open original config files:$mainconfigfile :$!\n";
+	while (<MAIN>) {
+		print "$_";
+	}
+	close(MAIN);
+} else {
+	print "No config append requested\n";
+}
+
+
+
+
+
+
