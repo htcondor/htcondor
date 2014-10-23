@@ -385,9 +385,6 @@ static bool is_sender_ip_attr(char const *attr_name)
     return false;
 }
 
-// Only needed for this next function; #include should be deleted
-// when ConfigConertDefaultIPToSocketIP is.
-#include "condor_daemon_core.h"
 void ConfigConvertDefaultIPToSocketIP()
 {
 		// do not need to call init_ipaddr() since init_ipaddr() has no effect
@@ -396,11 +393,6 @@ void ConfigConvertDefaultIPToSocketIP()
 //		init_ipaddr(0);
 //	}
 
-	if(daemonCore == NULL) {
-		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because a full DaemonCore object is not available.\n");
-		enable_convert_default_IP_to_socket_IP = false;
-		return;
-	}
 
 	enable_convert_default_IP_to_socket_IP = true;
 
@@ -437,9 +429,17 @@ static bool IPMatchesNetworkInterfaceSetting(char const *ip)
 }
 
 
+// Only needed for this next function; #include should be deleted
+// when ConvertDefaultIPToSocketIP is.
 #include "condor_daemon_core.h"
 void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,Stream& s)
 {
+	// We can't practically do a conversion if daemonCore isn't present
+	// happens in standard universe.  We can't move this test into 
+	// ConfigConvertDefaultIPToSocketIP because it gets called before 
+	// daemonCore is created.
+	if(daemonCore == NULL) { return; }
+
 	if( ! enable_convert_default_IP_to_socket_IP ) { return; }
 
     if( ! is_sender_ip_attr(attr_name) ) { return; }
