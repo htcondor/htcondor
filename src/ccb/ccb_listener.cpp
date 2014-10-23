@@ -397,7 +397,7 @@ CCBListener::HandleCCBRegistrationReply( ClassAd &msg )
 	}
 	msg.LookupString(ATTR_CLAIM_ID,m_reconnect_cookie);
 	dprintf(D_ALWAYS,
-			"CCBListener: registered with CCB server %s as ccbid %s",
+			"CCBListener: registered with CCB server %s as ccbid %s\n",
 			m_ccb_address.Value(),
 			m_ccbid.Value() );
 
