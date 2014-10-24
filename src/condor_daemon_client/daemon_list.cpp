@@ -269,28 +269,91 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 	return success_count;
 }
 
+
 QueryResult
 CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *errstack) {
 
-	int num_collectors = this->number();
-	if (num_collectors < 1) {
-		return Q_NO_COLLECTOR_HOST;
+	std::vector<DCCollector *> vCollectors; vCollectors.reserve(this->number());
+	DCCollector *daemon;
+	this->rewind();
+	while (this->next(daemon)) {vCollectors.push_back(daemon);}
+	if (vCollectors.size() < 1) {return Q_NO_COLLECTOR_HOST;}
+
+	std::string query_expr_str;
+	if (!param(query_expr_str, "COLLECTOR_QUERY_EXPR")) {query_expr_str = "false";}
+	classad::ClassAdParser parser;
+	classad::ExprTree *query_expr_raw;
+	if (!parser.ParseExpression(query_expr_str, query_expr_raw))
+	{
+		dprintf(D_ALWAYS, "Invalid ClassAd expression for COLLECTOR_QUERY_EXPR: %s\n", query_expr_str.c_str());
+		return Q_INVALID_CONFIG;
+	}
+	std::auto_ptr<ExprTree> query_expr(query_expr_raw);
+	classad::Value val;
+	bool boolVal;
+	if (query_expr->GetKind() == classad::ExprTree::LITERAL_NODE)
+	{
+		static_cast<classad::Literal *>(query_expr.get())->GetValue(val);
+		if (val.IsBooleanValue(boolVal) && !boolVal)
+		{
+			return query_one(cQuery, adList, errstack, vCollectors);
+		}
 	}
 
-	std::vector<DCCollector *> vCollectors;
+	// First, determine the 
+	CondorQuery collQuery(COLLECTOR_AD);
+	collQuery.addANDConstraint(query_expr_str.c_str());
+	const char *myAddress[2]; myAddress[0] = ATTR_MY_ADDRESS; myAddress[1] = NULL;
+	collQuery.setDesiredAttrs(myAddress);
+	ClassAdList collList;
+	QueryResult collQueryResult;
+	if (Q_OK != (collQueryResult = query_one(collQuery, collList, errstack, vCollectors)))
+	{
+		return collQueryResult;
+	}
+	if (collList.Length() == 0)
+	{
+		dprintf(D_FULLDEBUG, "COLLECTOR_QUERY_EXPR (%s) returned no collector ads.\n", query_expr_str.c_str());
+		return Q_NO_COLLECTOR_HOST;
+	}
+	std::vector<DCCollector *> subCollectors;
+	return query_all(cQuery, adList, errstack, collList);
+}
+
+
+QueryResult
+CollectorList::query_all(CondorQuery & cQuery, ClassAdList & adList, CondorError *errstack, ClassAdList &collectors)
+{
+	std::vector<DCCollector *> vCollectors; vCollectors.push_back(NULL);
+	collectors.Rewind();
+	ClassAd *coll;
+	QueryResult lastError = Q_OK;
+	unsigned success_cnt = 0;
+	while ((coll = collectors.Next()))
+	{
+		std::string addr;
+		if (coll->EvaluateAttrString(ATTR_MY_ADDRESS, addr))
+		{
+			std::auto_ptr<DCCollector> coll_ptr(new DCCollector(addr.c_str()));
+			vCollectors[0] = coll_ptr.get();
+			QueryResult result = query_one(cQuery, adList, errstack, vCollectors);
+			if (Q_OK != result) {lastError = result;}
+			else {success_cnt++;}
+		}
+	}
+	return success_cnt ? Q_OK : lastError;
+}
+
+
+QueryResult
+CollectorList::query_one(CondorQuery & cQuery, ClassAdList & adList, CondorError *errstack, std::vector<DCCollector *> vCollectors) {
+
 	DCCollector * daemon;
 	QueryResult result = Q_COMMUNICATION_ERROR;
 
 	bool problems_resolving = false;
 
-	
-	// switch containers for easier random access.
-	this->rewind();
-	while (this->next(daemon)) {
-		vCollectors.push_back(daemon);
-	}
-	
-
+	unsigned num_collectors = vCollectors.size();
 	while ( vCollectors.size() ) {
 		// choose a random collector in the list to query.
 		unsigned int idx = get_random_int() % vCollectors.size() ;

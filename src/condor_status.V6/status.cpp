@@ -474,15 +474,15 @@ main (int argc, char *argv[])
 		if (read_classad_file(ads_file, result, constraint)) {
 			q = Q_OK;
 		}
-	} else if (NULL != addr) {
+	} else {
+		// If addr is NULL:
+			//obtain list of collectors from the config and submit query that way
+		// else:
 			// this case executes if pool was provided, or if in "direct" mode with
 			// subsystem that corresponds to a daemon (above).
 			// Here 'addr' represents either the host:port of requested pool, or
 			// alternatively the host:port of daemon associated with requested subsystem (direct mode)
-		q = query->fetchAds (result, addr, &errstack);
-	} else {
-			// otherwise obtain list of collectors and submit query that way
-		CollectorList * collectors = CollectorList::create();
+		CollectorList * collectors = CollectorList::create(addr);
 		q = collectors->query (*query, result, &errstack);
 		delete collectors;
 	}

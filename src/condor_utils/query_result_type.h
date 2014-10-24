@@ -30,7 +30,8 @@ enum QueryResult
 	Q_PARSE_ERROR		 	= 3,	// constraints could not be parsed
 	Q_COMMUNICATION_ERROR 	= 4,	// failed communication with collector
 	Q_INVALID_QUERY			= 5,	// query type not supported/implemented
-	Q_NO_COLLECTOR_HOST     = 6		// could not determine collector host
+	Q_NO_COLLECTOR_HOST     = 6,		// could not determine collector host
+	Q_INVALID_CONFIG	= 7	// Unable to query due to bad config.
 };
 
 #endif

@@ -117,6 +117,11 @@ class CollectorList : public DaemonList {
     bool next( Daemon* &);
     bool Next( Daemon* &);
 
+private:
+		// Query all the collectors listed until one returns successfully.
+	QueryResult query_one(CondorQuery & cQuery, ClassAdList & adList, CondorError *errstack, std::vector<DCCollector *> vCollectors);
+		// Query all the collectors listed in sequence.  Returns Q_OK if at least one returned successfully.
+	QueryResult query_all(CondorQuery & cQuery, ClassAdList & adList, CondorError *errstack, ClassAdList &collectors);
 };
 
 

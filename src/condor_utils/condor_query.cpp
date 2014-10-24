@@ -622,6 +622,7 @@ getStrQueryResult(QueryResult q)
 	    case Q_COMMUNICATION_ERROR:	return "communication error";
 	    case Q_INVALID_QUERY:		return "invalid query";
 	    case Q_NO_COLLECTOR_HOST:	return "can't find collector";
+	case Q_INVALID_CONFIG:		return "invalid client configuration";
 		default:
 			return "unknown error";
 	}

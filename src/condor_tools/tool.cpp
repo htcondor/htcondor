@@ -1203,13 +1203,10 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 	}
 
 
-	if (pool_addr) {
-		q_result = query.fetchAds(ads, pool_addr, &errstack);
-	} else {
-		CollectorList * collectors = CollectorList::create();
-		q_result = collectors->query (query, ads);
-		delete collectors;
-	}
+	CollectorList * collectors = CollectorList::create(pool_addr);
+	q_result = collectors->query (query, ads, &errstack);
+	delete collectors;
+
 	if( q_result != Q_OK ) {
 		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 		fprintf( stderr, "ERROR: can't connect to %s\n",
