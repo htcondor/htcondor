@@ -1104,7 +1104,7 @@ BaseShadow::logEvictEvent( int exitReason )
 		break;
 	default:
 		dprintf( D_ALWAYS, 
-				 "logEvictEvent with unknown reason (%d), aborting\n",
+				 "logEvictEvent with unknown reason (%d), not logging.\n",
 				 exitReason ); 
 		return;
 	}
