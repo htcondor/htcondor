@@ -3110,7 +3110,7 @@ void DaemonCore::Driver()
 		dprintf( D_ALWAYS, "Done with stdout & stderr tests\n" );
 	}
 
-	double runtime = UtcTime::getTimeDouble();
+	double runtime = _condor_debug_get_time_double();
 	double group_runtime = runtime;
     double pump_cycle_begin_time = runtime;
 
@@ -3164,7 +3164,7 @@ void DaemonCore::Driver()
 #endif
 
         // accumulate signal runtime (including timers) as SignalRuntime
-        runtime = UtcTime::getTimeDouble();
+        runtime = _condor_debug_get_time_double();
         dc_stats.SignalRuntime += (runtime - group_runtime);
         group_runtime = runtime;
 
@@ -3194,7 +3194,7 @@ void DaemonCore::Driver()
 		}
 
         // accumulate signal runtime (including timers) as SignalRuntime
-        //runtime = UtcTime::getTimeDouble();
+        //runtime = _condor_debug_get_time_double();
         dc_stats.TimerRuntime += (runtime - group_runtime);
         group_runtime = runtime;
 
@@ -3332,10 +3332,10 @@ void DaemonCore::Driver()
 
 		selector.execute();
 
-        // update statistics on time spent waiting in select.
-        runtime = UtcTime::getTimeDouble();
-        dc_stats.SelectWaittime += (runtime - group_runtime);
-        //dc_stats.StatsLifetime = now - dc_stats.InitTime;
+		// update statistics on time spent waiting in select.
+		runtime = _condor_debug_get_time_double();
+		dc_stats.SelectWaittime += (runtime - group_runtime);
+		//dc_stats.StatsLifetime = now - dc_stats.InitTime;
 
 		tmpErrno = errno;
 
@@ -3406,7 +3406,7 @@ void DaemonCore::Driver()
 		// in the main loop.
 		CondorThreads::enable_parallel(false);
 
-        runtime = group_runtime = UtcTime::getTimeDouble();
+		runtime = group_runtime = _condor_debug_get_time_double();
 
 		if ( selector.has_ready() ||
 			 ( selector.timed_out() && 
@@ -3500,9 +3500,9 @@ void DaemonCore::Driver()
 				}	// end of if valid sock entry
 			}	// end of for loop through all sock entries
 
-            runtime = UtcTime::getTimeDouble();
-            dc_stats.SocketRuntime += (runtime - group_runtime);
-            group_runtime = runtime;
+			runtime = _condor_debug_get_time_double();
+			dc_stats.SocketRuntime += (runtime - group_runtime);
+			group_runtime = runtime;
 
 			// scan through the pipe table to find which ones select() set
 			for(i = 0; i < nPipe; i++) {
@@ -3534,7 +3534,7 @@ void DaemonCore::Driver()
 
 
 			// Now loop through all pipe entries, calling handlers if required.
-            runtime = UtcTime::getTimeDouble();
+			runtime = _condor_debug_get_time_double();
 			for(i = 0; i < nPipe; i++) {
 				if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry...
 
@@ -3628,8 +3628,8 @@ void DaemonCore::Driver()
 						}
 #endif
 
-                        // update per-handler runtime statistics
-                        runtime = dc_stats.AddRuntime((*pipeTable)[i].handler_descrip, runtime);
+						// update per-handler runtime statistics
+						runtime = dc_stats.AddRuntime((*pipeTable)[i].handler_descrip, runtime);
 
 						if ( (*pipeTable)[i].call_handler == true ) {
 							// looks like the handler called Cancel_Pipe(),
@@ -3644,9 +3644,9 @@ void DaemonCore::Driver()
 			}	// for 0 thru nPipe checking if call_handler is true
 
 
-            runtime = UtcTime::getTimeDouble();
-            dc_stats.PipeRuntime += (runtime - group_runtime);
-            group_runtime = runtime;
+			runtime = _condor_debug_get_time_double();
+			dc_stats.PipeRuntime += (runtime - group_runtime);
+			group_runtime = runtime;
 
 			// Now loop through all sock entries, calling handlers if required.
 			for(i = 0; i < nSock; i++) {
@@ -3700,22 +3700,22 @@ void DaemonCore::Driver()
 						recheck_status = true;
 						CallSocketHandler( i, true );
 
-                        // update per-handler runtime statistics
-                        runtime = dc_stats.AddRuntime((*sockTable)[i].handler_descrip, runtime);
+						// update per-handler runtime statistics
+						runtime = dc_stats.AddRuntime((*sockTable)[i].handler_descrip, runtime);
 
 					}	// if call_handler is True
 				}	// if valid entry in sockTable
 			}	// for 0 thru nSock checking if call_handler is true
 
-            runtime = UtcTime::getTimeDouble();
-            dc_stats.SocketRuntime += (runtime - group_runtime);
-            group_runtime = runtime;
+			runtime = _condor_debug_get_time_double();
+			dc_stats.SocketRuntime += (runtime - group_runtime);
+			group_runtime = runtime;
 
 
 		}	// if rv > 0
 
-        dc_stats.PumpCycle += (runtime - pump_cycle_begin_time);
-        pump_cycle_begin_time = runtime;
+		dc_stats.PumpCycle += (runtime - pump_cycle_begin_time);
+		pump_cycle_begin_time = runtime;
 
 	}	// end of infinite for loop
 }
@@ -3846,6 +3846,7 @@ void
 DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stream* asock )
 {
 	char *handlerName = NULL;
+	double handler_start_time=0;
 	int result=0;
 
 		// if the user provided a handler for this socket, then
@@ -3859,16 +3860,18 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 
 		// log a message
 	if ( (*sockTable)[i].handler || (*sockTable)[i].handlercpp )
-		{
+	{
+		if (IsDebugLevel(D_DAEMONCORE)) {
 			dprintf(D_DAEMONCORE,
 					"Calling Handler <%s> for Socket <%s>\n",
 					(*sockTable)[i].handler_descrip,
 					(*sockTable)[i].iosock_descrip);
+		}
+		if (IsDebugLevel(D_COMMAND)) {
 			handlerName = strdup((*sockTable)[i].handler_descrip);
 			dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
-
-		UtcTime handler_start_time;
-		handler_start_time.getTime();
+			handler_start_time = _condor_debug_get_time_double();
+		}
 
 	if ( (*sockTable)[i].handler ) {
 			// a C handler
@@ -3878,12 +3881,11 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 		result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
 		}
 
-		UtcTime handler_stop_time;
-		handler_stop_time.getTime();
-		float handler_time = handler_stop_time.difference(&handler_start_time);
-
-		dprintf(D_COMMAND, "Return from Handler <%s> %.4fs\n", handlerName, handler_time);
-		free(handlerName);
+		if (IsDebugLevel(D_COMMAND)) {
+			double handler_time = _condor_debug_get_time_double() - handler_start_time;
+			dprintf(D_COMMAND, "Return from Handler <%s> %.6fs\n", handlerName, handler_time);
+			free(handlerName);
+		}
 	}
 	else if( default_to_HandleCommand ) {
 			// no handler registered, so this is a command
@@ -4009,6 +4011,7 @@ DaemonCore::HandleReqPayloadReady(Stream *stream)
 int
 DaemonCore::CallUnregisteredCommandHandler(int req, Stream *stream)
 {
+	double handler_start_time=0;
 	if (!m_unregisteredCommand.num) {
 		dprintf(D_ALWAYS,
 			"Received %s command (%d) (%s) from %s %s\n",
@@ -4025,8 +4028,7 @@ DaemonCore::CallUnregisteredCommandHandler(int req, Stream *stream)
 			req,
 			stream->peer_description());
 
-	UtcTime handler_start_time;
-	handler_start_time.getTime();
+	handler_start_time = _condor_debug_get_time_double();
 
 	// call the handler function; first curr_dataptr for GetDataPtr()
 	curr_dataptr = &(m_unregisteredCommand.data_ptr);
@@ -4037,9 +4039,7 @@ DaemonCore::CallUnregisteredCommandHandler(int req, Stream *stream)
 
 	curr_dataptr = NULL;
 
-	UtcTime handler_stop_time;
-	handler_stop_time.getTime();
-	float handler_time = handler_stop_time.difference(&handler_start_time);
+	double handler_time = _condor_debug_get_time_double() - handler_start_time;
 
 	dprintf(D_COMMAND, "Return from HandleUnregisteredReq <%s, %d> (handler: %.3fs)\n", m_unregisteredCommand.handler_descrip, req, handler_time);
 
@@ -4051,6 +4051,7 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 {
 	int result = FALSE;
 	int index = 0;
+	double handler_start_time=0;
 	bool reqFound = CommandNumToTableIndex(req,&index);
 	char const *user = NULL;
 	Sock *sock = (Sock *)stream;
@@ -4094,17 +4095,17 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 		if( !user ) {
 			user = "";
 		}
-		MSC_SUPPRESS_WARNING(6011) // can't sure sure that stream is not NULL
-		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
-				comTable[index].handler_descrip,
-				inServiceCommandSocket_flag,
-				req,
-				comTable[index].command_descrip,
-				user,
-				stream->peer_description());
-
-		UtcTime handler_start_time;
-		handler_start_time.getTime();
+		if (IsDebugLevel(D_COMMAND)) {
+			MSC_SUPPRESS_WARNING(6011) // can't be sure that stream is not NULL
+			dprintf(D_COMMAND, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
+					comTable[index].handler_descrip,
+					inServiceCommandSocket_flag,
+					req,
+					comTable[index].command_descrip,
+					user,
+					stream->peer_description());
+			handler_start_time = _condor_debug_get_time_double();
+		}
 
 		// call the handler function; first curr_dataptr for GetDataPtr()
 		curr_dataptr = &(comTable[index].data_ptr);
@@ -4122,11 +4123,11 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 		// clear curr_dataptr
 		curr_dataptr = NULL;
 
-		UtcTime handler_stop_time;
-		handler_stop_time.getTime();
-		float handler_time = handler_stop_time.difference(&handler_start_time);
-
-		dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.3fs, sec: %.3fs, payload: %.3fs)\n", comTable[index].handler_descrip, handler_time, time_spent_on_sec, time_spent_waiting_for_payload );
+		if (IsDebugLevel(D_COMMAND)) {
+			double handler_time = _condor_debug_get_time_double() - handler_start_time;
+			dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.6fs, sec: %.3fs, payload: %.3fs)\n", 
+					comTable[index].handler_descrip, handler_time, time_spent_on_sec, time_spent_waiting_for_payload );
+		}
 
 	}
 
@@ -5216,8 +5217,8 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			    const char* cgroup,
                             const char* glexec_proxy)
 {
-    double begintime = UtcTime::getTimeDouble();
-   	double runtime = begintime;
+	double begintime = _condor_debug_get_time_double();
+	double runtime = begintime;
 
 	bool success = false;
 	bool family_registered = false;
@@ -5231,7 +5232,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		goto REGISTER_FAMILY_DONE;
 	}
 	family_registered = true;
-    runtime = dc_stats.AddRuntimeSample("DCRregister_subfamily", IF_VERBOSEPUB, runtime);
+	runtime = dc_stats.AddRuntimeSample("DCRregister_subfamily", IF_VERBOSEPUB, runtime);
 	if (penvid != NULL) {
 		if (!m_proc_family->track_family_via_environment(child_pid, *penvid)) {
 			dprintf(D_ALWAYS,
@@ -5240,7 +5241,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 					child_pid);
 			goto REGISTER_FAMILY_DONE;
 		}
-       runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_env", IF_VERBOSEPUB, runtime);
+		runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_env", IF_VERBOSEPUB, runtime);
 	}
 	if (login != NULL) {
 		if (!m_proc_family->track_family_via_login(child_pid, login)) {
@@ -5251,7 +5252,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			        login);
 			goto REGISTER_FAMILY_DONE;
 		}
-       runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_login", IF_VERBOSEPUB, runtime);
+		runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_login", IF_VERBOSEPUB, runtime);
 	}
 	if (group != NULL) {
 #if defined(LINUX)
@@ -5296,7 +5297,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			        child_pid);
 			goto REGISTER_FAMILY_DONE;
 		}
-       runtime = dc_stats.AddRuntimeSample("DCRuse_glexec_for_family", IF_VERBOSEPUB, runtime);
+		runtime = dc_stats.AddRuntimeSample("DCRuse_glexec_for_family", IF_VERBOSEPUB, runtime);
 	}
 	success = true;
 REGISTER_FAMILY_DONE:
@@ -5307,10 +5308,10 @@ REGISTER_FAMILY_DONE:
 			            "with root %u\n",
 			        child_pid);
 		}
-        runtime = dc_stats.AddRuntimeSample("DCRunregister_family", IF_VERBOSEPUB, runtime);
+		runtime = dc_stats.AddRuntimeSample("DCRunregister_family", IF_VERBOSEPUB, runtime);
 	}
 
-    runtime = dc_stats.AddRuntimeSample("DCRegister_Family", IF_VERBOSEPUB, begintime);
+	runtime = dc_stats.AddRuntimeSample("DCRegister_Family", IF_VERBOSEPUB, begintime);
 
 	return success;
 }
@@ -6473,7 +6474,7 @@ int DaemonCore::Create_Process(
 	bool want_udp = !HAS_DCJOBOPT_NO_UDP(job_opt_mask) && m_wants_dc_udp;
 	bool enabled_shared_endpoint = false;
 
-	double runtime = UtcTime::getTimeDouble();
+	double runtime = _condor_debug_get_time_double();
     double create_process_begin_time = runtime;
     double delta_runtime = 0;
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",executable ? executable : "NULL");
@@ -7185,13 +7186,13 @@ int DaemonCore::Create_Process(
 		cwdBackup = cwd;
 	}
 		
-    runtime = dc_stats.AddRuntimeSample("DCCreate_Process000", IF_VERBOSEPUB, runtime);
+	//runtime = dc_stats.AddRuntimeSample("DCCreate_Process000", IF_VERBOSEPUB, runtime);
 
    	if ( priv != PRIV_USER_FINAL || !can_switch_ids() ) {
 		cp_result = ::CreateProcess(bIs16Bit ? NULL : executable,(char*)strArgs.Value(),NULL,
 			NULL,inherit_handles, create_process_flags,newenv,cwdBackup,&si,&piProcess);
 
-        runtime = dc_stats.AddRuntimeSample("DCCreateProcessW32", IF_VERBOSEPUB, runtime);
+		//runtime = dc_stats.AddRuntimeSample("DCCreateProcessW32", IF_VERBOSEPUB, runtime);
 
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
@@ -7241,7 +7242,7 @@ int DaemonCore::Create_Process(
 			(char *)strArgs.Value(),NULL,NULL, inherit_handles,
 			create_process_flags, newenv,cwdBackup,&si,&piProcess);
 
-        runtime = dc_stats.AddRuntimeSample("DCCreateProcessAsUser", IF_VERBOSEPUB, runtime);
+		//runtime = dc_stats.AddRuntimeSample("DCCreateProcessAsUser", IF_VERBOSEPUB, runtime);
 
 		set_priv(s);
 	}
@@ -7808,8 +7809,8 @@ PRAGMA_REMIND("adesmet: Assuming the first address is the one to use.")
 	}
 #endif
 
-    runtime = UtcTime::getTimeDouble();
-    delta_runtime = (runtime - create_process_begin_time);
+	runtime = _condor_debug_get_time_double();
+	delta_runtime = (runtime - create_process_begin_time);
 	dprintf(D_DAEMONCORE,
 		"Child Process: pid %lu at %s (%.2f sec)\n",
 		(unsigned long)newpid, 
@@ -7846,8 +7847,8 @@ PRAGMA_REMIND("adesmet: Assuming the first address is the one to use.")
 		}
 	}
 
-    runtime = dc_stats.AddRuntimeSample("DCCreate_Process001", IF_VERBOSEPUB, runtime);
-    runtime = dc_stats.AddRuntimeSample("DCCreate_ProcessTot", IF_VERBOSEPUB, create_process_begin_time);
+	//runtime = dc_stats.AddRuntimeSample("DCCreate_Process001", IF_VERBOSEPUB, runtime);
+	runtime = dc_stats.AddRuntimeSample("DCCreate_ProcessTot", IF_VERBOSEPUB, create_process_begin_time);
     if ((runtime - create_process_begin_time) > delta_runtime + 0.5) {
 	   dprintf(D_DAEMONCORE,
            "Warning: cleanup from Create_Process took %.3f sec, Create_Process took %.3f sec overall\n",

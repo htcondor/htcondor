@@ -1700,6 +1700,11 @@ bool DCSchedd::getJobConnectInfo(
 	}
 	input.Assign(ATTR_SESSION_INFO,session_info);
 
+	if (IsDebugLevel(D_COMMAND)) {
+		dprintf (D_COMMAND, "DCSchedd::getJobConnectInfo(%s,...) making connection to %s\n",
+			getCommandStringSafe(GET_JOB_CONNECT_INFO), _addr ? _addr : "NULL");
+	}
+
 	ReliSock sock;
 	if( !connectSock(&sock,timeout,errstack) ) {
 		error_msg = "Failed to connect to schedd";
@@ -1764,6 +1769,11 @@ bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad
 {
 	int timeout = 300;
 	CondorError errstack;
+
+	if (IsDebugLevel(D_COMMAND)) {
+		dprintf (D_COMMAND, "DCSchedd::recycleShadow(%s,...) making connection to %s\n",
+			getCommandStringSafe(RECYCLE_SHADOW), _addr ? _addr : "NULL");
+	}
 
 	ReliSock sock;
 	if( !connectSock(&sock,timeout,&errstack) ) {
