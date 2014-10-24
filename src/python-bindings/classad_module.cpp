@@ -21,6 +21,23 @@ std::string ClassadLibraryVersion()
     return val;
 }
 
+
+static
+std::string GetLastError()
+{
+    return classad::CondorErrMsg;
+}
+
+
+static
+void RegisterLibrary(const std::string &libraryName)
+{
+    if (!classad::FunctionCall::RegisterSharedLibraryFunctions(libraryName.c_str()))
+    {
+        THROW_EX(RuntimeError, "Failed to load shared library.");
+    }
+}
+
 std::string quote(std::string input)
 {
     classad::Value val; val.SetStringValue(input);
@@ -106,6 +123,9 @@ BOOST_PYTHON_MODULE(classad)
     using namespace boost::python;
 
     def("version", ClassadLibraryVersion, "Return the version of the linked ClassAd library.");
+
+    def("lastError", GetLastError, "The last error that occurred in the ClassAd library.");
+    def("registerLibrary", RegisterLibrary, "Register a shared library of ClassAd functions.");
 
     def("parse", parseString, return_value_policy<manage_new_object>());
     def("parse", parseFile, return_value_policy<manage_new_object>(),

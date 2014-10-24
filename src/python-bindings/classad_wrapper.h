@@ -8,6 +8,8 @@
 
 void registerFunction(boost::python::object function, boost::python::object name);
 
+classad::ExprTree* convert_python_to_exprtree(boost::python::object value);
+
 struct ExprTreeHolder;
 
 struct AttrPairToFirst :

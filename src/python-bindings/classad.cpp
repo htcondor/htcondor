@@ -22,8 +22,6 @@
    #define PyString_Check(op)  PyBytes_Check(op)
 #endif
 
-static classad::ExprTree*
-convert_python_to_exprtree(boost::python::object value);
 
 void
 ExprTreeHolder::init()
@@ -701,7 +699,7 @@ registerFunction(boost::python::object function, boost::python::object name)
     classad::FunctionCall::RegisterFunction(classadName, pythonFunctionTrampoline);
 }
 
-static classad::ExprTree*
+classad::ExprTree*
 convert_python_to_exprtree(boost::python::object value)
 {
     boost::python::extract<ExprTreeHolder&> expr_obj(value);
