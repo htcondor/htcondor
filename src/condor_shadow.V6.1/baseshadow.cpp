@@ -158,6 +158,9 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 
 	// handle system calls with Owner's privilege
 // XXX this belong here?  We'll see...
+	// Calling init_user_ids() while in user priv causes badness.
+	// Make sure we're in another priv state.
+	set_condor_priv();
 	if ( !init_user_ids(owner.Value(), domain.Value())) {
 		dprintf(D_ALWAYS, "init_user_ids() failed as user %s\n",owner.Value() );
 		// uids.C will EXCEPT when we set_user_priv() now

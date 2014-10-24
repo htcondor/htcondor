@@ -71,6 +71,12 @@ It incorrectly defaulted to 10000, rather than the correct value of 2.
 a log message of ``child failed because PID XXX is still in use by DaemonCore''.
 \Ticket{4646}
 
+\item Fixed a bug in \Condor{shadow} that caused the user's supplemental
+groups to be unset when the shadow process is reused to run another job.
+This could result in the job being held with the hold reason
+``Failed to initialize user log to <path>''.
+\Ticket{4672}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
