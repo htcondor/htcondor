@@ -225,7 +225,6 @@ my $USESHARERPORT = 0;
 ##
 ########################################
 
-my $UseNewRunning = 1;
 my $RunningTimeStamp = 0;
 
 my $topleveldir = getcwd();
