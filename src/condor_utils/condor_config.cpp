@@ -2671,7 +2671,7 @@ param_boolean( const char *name, bool default_value, bool do_log,
 char *
 macro_expand( const char *str )
 {
-	return expand_macro(str, ConfigMacroSet);
+	return expand_macro(str, ConfigMacroSet, true, get_mySubSystem()->getName());
 }
 
 char *

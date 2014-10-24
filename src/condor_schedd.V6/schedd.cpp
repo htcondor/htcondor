@@ -1812,8 +1812,11 @@ int Scheduler::history_helper_reaper(int, int) {
 int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
 
 	std::string history_helper;
-	param(history_helper, "HISTORY_HELPER", "$(LIBEXEC)/condor_history_helper");
-        history_helper = macro_expand(history_helper.c_str());
+	if ( !param(history_helper, "HISTORY_HELPER") ) {
+		char *tmp = macro_expand("$(LIBEXEC)/condor_history_helper");
+		history_helper = tmp;
+		free(tmp);
+	}
 	ArgList args;
 	args.AppendArg("condor_history_helper");
 	args.AppendArg("-f");
