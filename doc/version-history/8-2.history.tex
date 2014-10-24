@@ -77,6 +77,11 @@ This could result in the job being held with the hold reason
 ``Failed to initialize user log to <path>''.
 \Ticket{4672}
 
+\item Fixed a bug in \Condor{schedd} that caused remote \Condor{history}
+commands to fail if \Macro{LIBEXEC} wasn't explicitly set in the
+configuration file.
+\Ticket{4678}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
