@@ -2505,6 +2505,10 @@ At this point, DAGMan produces the Rescue DAG and exits.
 A Rescue DAG is also produced if the
 \Condor{dagman} job itself is removed with \Condor{rm}, or if
 an \Arg{ABORT-DAG-ON} with a non-zero return value is triggered.
+\Bold{Note that, ON WINDOWS, doing a \Condor{rm} of a running
+DAG does not generate a Rescue DAG.  However, re-submitting
+the original DAG will invoke a lower-level recovery functionality,
+and will produce similar behavior to using a Rescue DAG.}
 
 By default, if a Rescue DAG exists, it will be used when you
 re-submit the original DAG file.  If more than one Rescue DAG
