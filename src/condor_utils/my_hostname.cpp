@@ -435,46 +435,71 @@ static bool IPMatchesNetworkInterfaceSetting(char const *ip)
 void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,Stream& s)
 {
 	// We can't practically do a conversion if daemonCore isn't present
-	// happens in standard universe.  We can't move this test into 
-	// ConfigConvertDefaultIPToSocketIP because it gets called before 
+	// happens in standard universe.  We can't move this test into
+	// ConfigConvertDefaultIPToSocketIP because it gets called before
 	// daemonCore is created.
-	if(daemonCore == NULL) { return; }
+	if( daemonCore == NULL ) {
+		dprintf( D_FULLDEBUG, "Address rewriting: disabled: no daemon core.\n" );
+		return;
+	}
 
-	if( ! enable_convert_default_IP_to_socket_IP ) { return; }
+	if( ! enable_convert_default_IP_to_socket_IP ) {
+		dprintf( D_FULLDEBUG, "Address rewriting: disabled: by configuration.\n" );
+		return;
+	}
 
-    if( ! is_sender_ip_attr(attr_name) ) { return; }
+	if( expr_string.length() < 5 ) {
+		dprintf( D_FULLDEBUG, "Address rewriting: rejected for attribute '%s': '%s' is not long enough to be an IP address.\n", attr_name, expr_string.c_str() );
+		return;
+	}
 
-	if(expr_string.length() < 5) { return; } // Skip. Implausibly short.
+	if( ! is_sender_ip_attr(attr_name) ) {
+		dprintf( D_FULLDEBUG, "Address rewriting: rejected: '%s' is not an attribute which might contain the sender's IP address.\n", attr_name );
+		return;
+	}
 
 	// Skip if Stream doesn't have address associated with it
 	condor_sockaddr my_sockaddr;
-	if( ! my_sockaddr.from_ip_string(s.my_ip_str()) ) { return; }
+	if( ! my_sockaddr.from_ip_string(s.my_ip_str()) ) {
+		dprintf( D_FULLDEBUG, "Address rewriting: failed for attribute '%s' (%s): failed to generate socket address from stream's IP string (%s).\n", attr_name, expr_string.c_str(), s.my_ip_str() );
+		return;
+	}
 
 	// my_sockaddr's port is whatever we happen to be using at the moment;
 	// that will be meaningless if we established the connection.  What we
 	// want is the port someone could contact us on.  Go rummage for one.
-	int port = daemonCore->find_interface_command_port_do_not_use(my_sockaddr);
-	// If port is 0, there is no matching listen socket. There is nothing 
+	int port = daemonCore->find_interface_command_port_do_not_use( my_sockaddr );
+
+	// If port is 0, there is no matching listen socket. There is nothing
 	// useful we can rewrite it do, so just give up and hope the default
 	// is useful to someone.
-	if(port == 0) { return; }
+	if( port == 0 ) {
+		dprintf( D_FULLDEBUG, "Address rewriting: failed for attribute '%s' (%s): unable to find command port for outbound interface '%s'.\n", attr_name, expr_string.c_str(), s.my_ip_str() );
+		return;
+	}
 	my_sockaddr.set_port(port);
 
-	
-	// Skip if we're talking over loopback; advertising loopback
-	// isn't useful to anyone.
-	//if( my_sockaddr.is_loopback() ) { return; } // DISABLED FOR DEBUGGING
+	// We have to be subtle about rewriting loopback addresses; see below.
 
 	// Skip if we shouldn't be using this interface.
-	if( !IPMatchesNetworkInterfaceSetting(my_sockaddr.to_ip_string(false).Value()) ) { return; }
+	if( ! IPMatchesNetworkInterfaceSetting( my_sockaddr.to_ip_string( false ).Value() ) ) {
+		dprintf( D_FULLDEBUG, "Address rewriting: rejected for attribute '%s' (%s): outbound interface '%s' is disabled.\n", attr_name, expr_string.c_str(), my_sockaddr.to_ip_string( false ).Value() );
+		return;
+	}
 
 	// Skip if it's not a string literal.
-	if(*(expr_string.rbegin()) != '"') { return; }
+	if(*(expr_string.rbegin()) != '"') {
+		dprintf( D_FULLDEBUG, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
+		return;
+	}
 
 	const char * delimiter = " = \"";
 	size_t delimpos = expr_string.find(delimiter);
 	// Skip if doesn't look like a string
-	if(delimpos == std::string::npos) { return; }
+	if(delimpos == std::string::npos) {
+		dprintf( D_FULLDEBUG, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
+		return;
+	}
 
 	size_t string_start_pos = delimpos + strlen(delimiter);
 	// string_end_pos is one beyond last character of String literal.
@@ -482,19 +507,51 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	size_t string_len = string_end_pos - string_start_pos;
 
 	// Skip if it doesn't look like a Sinful
-	if(expr_string[string_start_pos] != '<') { return; }
-	if(expr_string[string_end_pos - 1] != '>') { return; }
+	if(expr_string[string_start_pos] != '<') {
+		dprintf( D_FULLDEBUG, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
+		return;
+	}
+	if(expr_string[string_end_pos - 1] != '>') {
+		dprintf( D_FULLDEBUG, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
+		return;
+	}
 
 	std::string old_addr = expr_string.substr(string_start_pos, string_len);
 
 	Sinful sin(old_addr.c_str());
-	if(!sin.valid()) { return; } // Skip. Not a Sinful apparently.
+	if(!sin.valid()) {
+		dprintf( D_FULLDEBUG, "Address rewriting: failed for attribute '%s' (%s): parsed value does not appear to be a sinful.\n", attr_name, expr_string.c_str() );
+		return;
+	}
 
 	condor_sockaddr old_sockaddr;
 	old_sockaddr.from_sinful(sin.getSinful());
 
 	// Skip if my default address isn't present.
-	if( ! daemonCore->is_command_port_do_not_use(old_sockaddr)) { return; }
+	if( ! daemonCore->is_command_port_do_not_use(old_sockaddr)) {
+		dprintf( D_FULLDEBUG, "Address rewriting: refused for attribute '%s' (%s): not one of my command sockets.\n", attr_name, expr_string.c_str() );
+		return;
+	}
+
+	//
+	// Although it's never useful to rewrite from a non-loopback to a loop-
+	// back address, if there's more than one loopback address on a machine,
+	// (generally but not always because the machine supports more than one
+	// protocol), it's OK to rewrite from one to the other.
+	//
+	// Doing this is any other situation breaks, among other things,
+	// ssh-to-job.  (In a design hack, the starter sends its external
+	// address to the startd over the job-update socket, as part of every
+	// job update ClassAd.  This causes rewriting to happen, but as the
+	// the startd explicity binds the job-update socket to the loopback
+	// address -- presumambly to ensure that it always works -- we need
+	// to make sure we don't rewrite ATTR_STARTER_IP_ADDR when sending
+	// job updates.  *sigh*)
+	//
+	if( ! (old_sockaddr.is_loopback() && my_sockaddr.is_loopback() ) ) {
+		dprintf( D_FULLDEBUG, "Address rewriting: refused for attribute '%s' (%s): outbound interface is loopback but default interface is not.\n", attr_name, expr_string.c_str() );
+		return;
+	}
 
 	MyString my_sock_ip = my_sockaddr.to_ip_string(true);
 	sin.setHost(my_sock_ip.Value());
@@ -506,7 +563,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 
 	expr_string = new_expr;
 
-	dprintf(D_NETWORK,"Replaced default IP %s with connection IP %s "
+	dprintf(D_NETWORK|D_FULLDEBUG, "Replaced default IP %s with connection IP %s "
 			"in outgoing ClassAd attribute %s.\n",
 			old_addr.c_str(), sin.getSinful(), attr_name);
 }
