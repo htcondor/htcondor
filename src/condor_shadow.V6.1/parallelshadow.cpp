@@ -407,14 +407,14 @@ ParallelShadow::spawnNode( MpiResource* rr )
 
 
 void 
-ParallelShadow::cleanUp( void )
+ParallelShadow::cleanUp( bool graceful )
 {
 	// kill all the starters
 	MpiResource *r;
 	int i;
     for( i=0 ; i<=ResourceList.getlast() ; i++ ) {
 		r = ResourceList[i];
-		r->killStarter();
+		r->killStarter(graceful);
 	}		
 }
 

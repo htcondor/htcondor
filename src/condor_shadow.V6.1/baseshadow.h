@@ -360,7 +360,7 @@ class BaseShadow : public Service
 		/** Do whatever cleanup (like killing starter(s)) that's
 			required before the shadow can exit.
 		*/
-	virtual void cleanUp( void ) = 0;
+	virtual void cleanUp( bool graceful=false ) = 0;
 
 		/** Did this shadow's job exit by a signal or not?  This is
 			virtual since each kind of shadow will need to implement a

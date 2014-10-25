@@ -476,7 +476,13 @@ void BaseShadow::removeJobPre( const char* reason )
 			 getCluster(), getProc(), reason );
 
 	// cleanup this shadow (kill starters, etc)
-	cleanUp();
+	bool spool_on_evict = true, tmp_value;
+	if (jobAd->EvaluateAttrBool("SpoolOnEvict", tmp_value))
+	{
+		spool_on_evict = tmp_value;
+	}
+	
+	cleanUp(!spool_on_evict);
 
 	// Put the reason in our job ad.
 	int size = strlen( reason ) + strlen( ATTR_REMOVE_REASON ) + 4;
@@ -716,8 +722,14 @@ BaseShadow::evictJob( int reason )
 		DC_Exit( reason );
 	}
 
+	bool spool_on_evict = true, tmp_value;
+	if (jobAd->EvaluateAttrBool("SpoolOnEvict", tmp_value))
+	{
+		spool_on_evict = tmp_value;
+	}
+
 		// cleanup this shadow (kill starters, etc)
-	cleanUp();
+	cleanUp(!spool_on_evict);
 
 		// write stuff to user log:
 	logEvictEvent( reason );
