@@ -600,7 +600,7 @@ e		*/
          *  @param fullNames true if you want full names (like other.foo)
          *  @return true on success, false on failure. 
          */
-		bool GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames );
+		bool GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames ) const;
 
         /** Return a list of attribute references in the expression that are not 
          *  contained within this ClassAd.
@@ -609,7 +609,7 @@ e		*/
          *  @param refs The list of references
          *  @return true on success, false on failure. 
          */
-		bool GetExternalReferences(const ExprTree *tree, PortReferences &refs);
+		bool GetExternalReferences(const ExprTree *tree, PortReferences &refs) const;
 		//@}
 
 
@@ -621,7 +621,7 @@ e		*/
          *  @param fullNames true if you want full names (like other.foo)
          *  @return true on success, false on failure. 
          */
-        bool GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames);
+        bool GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames) const;
 
 #if defined( EXPERIMENTAL )
 		bool AddRectangle( const ExprTree *tree, Rectangles &r, 
@@ -732,14 +732,14 @@ e		*/
 		friend 	class EvalState;
 		friend 	class ClassAdIterator;
 
-		bool _GetExternalReferences( const ExprTree *, ClassAd *, 
-					EvalState &, References&, bool fullNames );
+		bool _GetExternalReferences( const ExprTree *, const ClassAd *, 
+					EvalState &, References&, bool fullNames ) const;
 
-		bool _GetExternalReferences( const ExprTree *, ClassAd *, 
-					EvalState &, PortReferences& );
+		bool _GetExternalReferences( const ExprTree *, const ClassAd *, 
+					EvalState &, PortReferences& ) const;
 
-        bool _GetInternalReferences(const ExprTree *expr, ClassAd *ad,
-            EvalState &state, References& refs, bool fullNames);
+        bool _GetInternalReferences(const ExprTree *expr, const ClassAd *ad,
+            EvalState &state, References& refs, bool fullNames) const;
 #if defined( EXPERIMENTAL )
 		bool _MakeRectangles(const ExprTree*,const std::string&,Rectangles&, bool);
 		bool _CheckRef( ExprTree *, const std::string & );
