@@ -1813,7 +1813,7 @@ int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
 
 	std::string history_helper;
 	if ( !param(history_helper, "HISTORY_HELPER") ) {
-		char *tmp = macro_expand("$(LIBEXEC)/condor_history_helper");
+		char *tmp = expand_param("$(LIBEXEC)/condor_history_helper");
 		history_helper = tmp;
 		free(tmp);
 	}
