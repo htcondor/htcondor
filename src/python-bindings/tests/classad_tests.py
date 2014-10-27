@@ -273,6 +273,12 @@ class TestClassad(unittest.TestCase):
         self.assertEquals(classad.ExprTree('size(myIntersect({1, 2}, {2, 3}))').eval(), 1)
         self.assertEquals(classad.ExprTree('myIntersect({1, 2}, {2, 3})[0]').eval(), 2)
 
+    def test_refs(self):
+        ad = classad.ClassAd({"bar": 2})
+        expr = classad.ExprTree("foo =?= bar")
+        self.assertEquals(ad.externalRefs(expr), ["foo"])
+        self.assertEquals(ad.internalRefs(expr), ["bar"])
+
 if __name__ == '__main__':
     unittest.main()
 

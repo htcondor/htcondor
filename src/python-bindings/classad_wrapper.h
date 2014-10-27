@@ -78,6 +78,10 @@ struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassA
 
     void update(boost::python::object source);
 
+    boost::python::list externalRefs(boost::python::object expr) const;
+
+    boost::python::list internalRefs(boost::python::object expr) const;
+
     ClassAdWrapper();
 
     ClassAdWrapper(const std::string &str);
