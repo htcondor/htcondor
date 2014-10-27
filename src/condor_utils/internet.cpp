@@ -1069,7 +1069,9 @@ getSockAddr(int sockfd)
     // if getsockname returns INADDR_ANY, we rely upon get_local_addr() since returning
     // 0.0.0.0 is not a good idea.
     if (sa_in.sin_addr.s_addr == ntohl(INADDR_ANY)) {
-    	condor_sockaddr myaddr = get_local_ipaddr();
+    	// This is standad universe -only code at this point, so we know
+    	// we want an IPv4 address.
+    	condor_sockaddr myaddr = get_local_ipaddr( CP_IPV4 );
     	sa_in.sin_addr = myaddr.to_sin().sin_addr;
     }
     return &sa_in;
