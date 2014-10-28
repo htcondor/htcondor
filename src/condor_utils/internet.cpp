@@ -1069,10 +1069,14 @@ getSockAddr(int sockfd)
     // if getsockname returns INADDR_ANY, we rely upon get_local_addr() since returning
     // 0.0.0.0 is not a good idea.
     if (sa_in.sin_addr.s_addr == ntohl(INADDR_ANY)) {
-    	// This is standad universe -only code at this point, so we know
-    	// we want an IPv4 address.
-    	condor_sockaddr myaddr = get_local_ipaddr( CP_IPV4 );
-    	sa_in.sin_addr = myaddr.to_sin().sin_addr;
+        // This is standad universe -only code at this point, so we know
+        // we want an IPv4 address.
+        condor_sockaddr myaddr = get_local_ipaddr( CP_IPV4 );
+        sa_in.sin_addr = myaddr.to_sin().sin_addr;
+        // This can happen, I think, if we're running in IPv6-only mode.
+        // It may make sense to check for ENABLE_IPV4 (if not an actual
+        // IPv4 interface) when the checkpoint server starts up, instead.
+        assert( sa_in.sin_addr.s_addr != ntohl(INADDR_ANY) );
     }
     return &sa_in;
 }
