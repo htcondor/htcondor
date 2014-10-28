@@ -621,7 +621,7 @@ static condor_sockaddr getserveraddr()
 	for( unsigned i = 0; i < addrs.size(); ++i ) {
 		if( addrs[i].is_ipv4() ) { return addrs[i]; }
 	}
-	assert( false );
+	return condor_sockaddr::null;
 }
 
 static int ckpt_server_number;
