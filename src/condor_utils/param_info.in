@@ -2878,6 +2878,15 @@ friendly_name=Startd Sends Alives
 review=?
 tags=startd,command
 
+[STARTER_HANDLES_ALIVES]
+default=true
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Startd should only send alives when slot idle
+review=?
+tags=schedd,claim
+
 [VM_GAHP_CONFIG]
 default=
 type=string

@@ -442,7 +442,18 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 		}
 	} else {
 		// Don't know the version of the startd, assume false
+		// unless STARTER_HANDLES_ALIVES is true.  If STARTER_HANDLES_ALIVES
+		// is true, we want to assume startd will send alives otherwise
+		// on a schedd restart the schedd will keep sending alives to all
+		// reconnected jobs because it will never actually receive an alive
+		// from the startd.  The downside of this logic is a v8.3.2+ schedd can
+		// no longer successfully reconnect to a startd older than v7.5.5
+		// assuming STARTER_HANDLES_ALIVES is set to the default of true.
+		// I think this is a reasonable compromise.  -Todd Tannenbaum 10/2014
 		m_startd_sends_alives = false;
+		if ( param_boolean("STARTER_HANDLES_ALIVES",true) ) {
+			m_startd_sends_alives = true;
+		}
 	}
 
 	keep_while_idle = 0;
@@ -6143,9 +6154,13 @@ Scheduler::contactStartd( ContactStartdArgs* args )
     jobAd->CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, mrec->my_match_ad);
     jobAd->CopyAttribute(ATTR_REMOTE_AUTOREGROUP, mrec->my_match_ad);
 
-		// Setup to claim the slot asynchronously
+	// Tell the startd side who should send alives... startd or schedd
+	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, mrec->m_startd_sends_alives );	
+	// Tell the startd if to should not send alives if starter is alive
+	jobAd->Assign( ATTR_STARTER_HANDLES_ALIVES, 
+					param_boolean("STARTER_HANDLES_ALIVES",true) );
 
-	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, mrec->m_startd_sends_alives );
+	// Setup to claim the slot asynchronously
 
 	classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
 		(DCMsgCallback::CppFunction)&Scheduler::claimedStartd,
@@ -12814,6 +12829,7 @@ Scheduler::sendAlives()
 {
 	match_rec	*mrec;
 	int		  	numsent=0;
+	bool starter_handles_alives = param_boolean("STARTER_HANDLES_ALIVES",true);
 
 		/*
 		  we need to timestamp any job ad with the last time we sent a
@@ -12845,7 +12861,14 @@ Scheduler::sendAlives()
 	while (matches->iterate(mrec) == 1) {
 		if( mrec->status == M_ACTIVE ) {
 			int renew_time;
-			if ( mrec->m_startd_sends_alives ) {
+			if ( starter_handles_alives && 
+				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
+			{
+				// If we're trusting the existance of the shadow to 
+				// keep the claim alive (because of kernel sockopt keepalives),
+				// set ATTR_LAST_JOB_LEASE_RENEWAL to the current time.
+				renew_time = now;
+			} else if ( mrec->m_startd_sends_alives ) {
 				// if the startd sends alives, then the ATTR_LAST_JOB_LEASE_RENEWAL
 				// is updated someplace else in RAM only when we receive a keepalive
 				// ping from the startd.  So here
