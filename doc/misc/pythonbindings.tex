@@ -824,6 +824,20 @@ Returns \texttt{true} if it does.
 
 Returns \texttt{true} if the given \texttt{ad} matches this and this matches
 \Code{ad}.  Equivalent to \texttt{self.matches(ad) and ad.matches(self)}.
+
+\\ \hline
+\texttt{externalRefs( expr )}
+
+Returns a python list of external references found in \texttt{expr}.  An
+``external reference" is any attribute in the expression which is not
+found in the \texttt{ClassAd}.
+
+\\ \hline
+\texttt{internalRefs( expr )}
+
+Returns a python list of internal references found in \texttt{expr}.  An
+``internal reference" is any attribute in the expression which is
+found in the \texttt{ClassAd}.
 \\ \hline
 
 \end{tabular}
