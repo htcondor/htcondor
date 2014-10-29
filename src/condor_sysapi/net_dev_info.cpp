@@ -36,7 +36,7 @@ static bool net_devices_cache_want_ipv6;
 
 #include <Ws2ipdef.h>
 
-bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
+bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices, bool want_ipv4, bool want_ipv6)
 {
 	int i,num_interfaces=0,max_interfaces=20;
 	LPINTERFACE_INFO interfaces=NULL;
@@ -83,8 +83,10 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 
 	for(i=0;i<num_interfaces;i++) {
 		char const *ip = NULL;
-#error	Should also return IPv6 addresses
-		if( interfaces[i].iiAddress.Address.sa_family == AF_INET ) {
+		if( interfaces[i].iiAddress.Address.sa_family == AF_INET && !want_ipv4) { continue; }
+		if( interfaces[i].iiAddress.Address.sa_family == AF_INET6 && !want_ipv6) { continue; }
+		if( interfaces[i].iiAddress.Address.sa_family == AF_INET ||
+			interfaces[i].iiAddress.Address.sa_family == AF_INET6) {
 			ip = inet_ntoa(((struct sockaddr_in *)&interfaces[i].iiAddress)->sin_addr);
 		}
 		if( ip ) {
