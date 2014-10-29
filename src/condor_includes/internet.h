@@ -137,10 +137,6 @@ int _condor_local_bind( int is_outgoing, int fd );
 //char *ipport_to_string(const unsigned int ip, const unsigned short port);
 char *prt_fds(int maxfd, fd_set *fds);
 
-/* Get the address that a socket is bound to */
-// @ret: NULL if failed; non-NULL if succeed
-//struct sockaddr_in *getSockAddr(int sockfd);
-
 // generates sinful string.
 // it detects whether given ip address is IPv4 or IPv6.
 int generate_sinful(char* buf, int len, const char* ip, int port);

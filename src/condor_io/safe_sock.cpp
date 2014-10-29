@@ -281,11 +281,9 @@ MSC_DISABLE_WARNING(6262) // function uses 64k of stack
 const char *
 SafeSock::my_ip_str()
 {
-	//In order to call getSockAddr(_sock), we would need to call
-	//::connect() on _sock, which changes semantics on what other
-	//calls are valid on _sock (e.g. must use send() on some platforms
-	//instead of sendto()).  Therefore, we create a new sock and
-	//connect that one, so as to leave the main one undisturbed.
+	//
+	// FIXME: Do we still need to create and destroy a socket every time?
+	//
 
 	if(_state != sock_connect) {
 		dprintf(D_ALWAYS,"ERROR: SafeSock::my_ip_str() called on socket that is not in connected state\n");
@@ -307,7 +305,7 @@ SafeSock::my_ip_str()
 	if (s._state != sock_bound) {
 		dprintf(D_ALWAYS,
 		        "SafeSock::my_ip_str() failed to bind: _state = %d\n",
-			  s._state); 
+			  s._state);
 		return NULL;
 	}
 
