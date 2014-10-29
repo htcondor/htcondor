@@ -6415,6 +6415,9 @@ MAX_JOBS_RUNNING	= \
 
 \label{param:StartdSendsAlives}
 \item[\Macro{STARTD\_SENDS\_ALIVES}]
+  Note:  This setting is deprecated, and may go away in a future version
+  of HTCondor. This setting is mainly useful when running mixing very
+  old \Condor{schedd} daemons with newer pools.
   A boolean value that defaults to \Expr{True},
   causing keep alive messages to be sent from the \Condor{startd} to the
   \Condor{schedd} by TCP during a claim.
