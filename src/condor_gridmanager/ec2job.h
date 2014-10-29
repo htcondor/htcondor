@@ -120,6 +120,7 @@ private:
 	
 	std::string m_ami_id;
 	std::string m_client_token;
+	std::string m_block_device_mapping;
 	StringList* m_group_names;
 	
 	std::string m_spot_price;

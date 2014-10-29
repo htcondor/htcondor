@@ -35,8 +35,6 @@ void ScheddStatistics::Reconfig()
 
     this->RecentWindowMax = param_integer("STATISTICS_WINDOW_SECONDS", 1200, quantum, INT_MAX);
 
-
-
     this->PublishFlags    = IF_BASICPUB | IF_RECENTPUB;
     char * tmp = param("STATISTICS_TO_PUBLISH");
     if (tmp) {
@@ -44,6 +42,11 @@ void ScheddStatistics::Reconfig()
        free(tmp);
     }
     SetWindowSize(this->RecentWindowMax);
+
+    std::string strWhitelist;
+    if (param(strWhitelist, "STATISTICS_TO_PUBLISH_LIST")) {
+       this->Pool.SetVerbosities(strWhitelist.c_str(), this->PublishFlags, true);
+    }
 
     //stats_histogram_sizes::init_sizes_from_param("MAX_HIST_SIZES_LEVELS");
     //JobSizes.reconfig();
@@ -63,14 +66,7 @@ void ScheddStatistics::SetWindowSize(int window)
 #define SCHEDD_STATS_PUB_PEAK(pool,name,as)    STATS_POOL_PUB_PEAK(pool, "", name, as) 
 #define SCHEDD_STATS_PUB_DEBUG(pool,name,as)   STATS_POOL_PUB_DEBUG(pool, "", name, as) 
 
-static const char default_sizes_set[] = "64Kb, 256Kb, 1Mb, 4Mb, 16Mb, 64Mb, 256Mb, 1Gb, 4Gb, 16Gb, 64Gb, 256Gb";
-static const char default_lifes_set[] = "30Sec, 1Min, 3Min, 10Min, 30Min, 1Hr, 3Hr, 6Hr, 12Hr, 1Day, 2Day, 4Day, 8Day, 16Day";
-
-//
-//
-void ScheddStatistics::Init(int fOtherPool)
-{
-   static const int64_t sizes[] = {
+static const int64_t default_job_hist_sizes[] = {
       (int64_t)0x10000 * 0x1,        (int64_t)0x10000 * 0x4,      // 64Kb, 256Kb
       (int64_t)0x10000 * 0x10,       (int64_t)0x10000 * 0x40,     //  1Mb,   4Mb
       (int64_t)0x10000 * 0x100,      (int64_t)0x10000 * 0x400,    // 16Mb,  64Mb
@@ -78,11 +74,8 @@ void ScheddStatistics::Init(int fOtherPool)
       (int64_t)0x10000 * 0x10000,    (int64_t)0x10000 * 0x40000,  //  4Gb,  16Gb
       (int64_t)0x10000 * 0x100000,   (int64_t)0x10000 * 0x400000, // 64Gb, 256Gb
       };
-   JobsRunningSizes.set_levels(sizes, COUNTOF(sizes));
-   JobsCompletedSizes.set_levels(sizes, COUNTOF(sizes));
-   JobsBadputSizes.set_levels(sizes, COUNTOF(sizes));
-
-   static const time_t lifes[] = {
+static const char default_sizes_set[] = "64Kb, 256Kb, 1Mb, 4Mb, 16Mb, 64Mb, 256Mb, 1Gb, 4Gb, 16Gb, 64Gb, 256Gb";
+static const time_t default_job_hist_lifes[] = {
       (time_t)30,            (time_t) 1 * 60,        // 30 Sec,  1 Min
       (time_t) 3 * 60,       (time_t)10 * 60,        //  3 Min, 10 Min,
       (time_t)30 * 60,       (time_t) 1 * 60*60,     // 30 Min,  1 Hr,
@@ -91,32 +84,26 @@ void ScheddStatistics::Init(int fOtherPool)
       (time_t) 2 * 24*60*60, (time_t) 4 * 24*60*60,  //  2 Day   4 Day,
       (time_t) 8 * 24*60*60, (time_t)16 * 24*60*60,  //  8 Day  16 Day,
       };
-   JobsRunningRuntimes.set_levels(lifes, COUNTOF(lifes));
-   JobsCompletedRuntimes.set_levels(lifes, COUNTOF(lifes));
-   JobsBadputRuntimes.set_levels(lifes, COUNTOF(lifes));
+static const char default_lifes_set[] = "30Sec, 1Min, 3Min, 10Min, 30Min, 1Hr, 3Hr, 6Hr, 12Hr, 1Day, 2Day, 4Day, 8Day, 16Day";
 
-   Clear();
-   // default window size to 1 quantum, we may set it to something else later.
-   if ( ! this->RecentWindowQuantum) this->RecentWindowQuantum = 1;
-   this->RecentWindowMax = this->RecentWindowQuantum;
+void ScheddJobCounters::InitJobCounters(StatisticsPool &Pool, int base_verbosity)
+{
+   JobsRunningSizes.set_levels(default_job_hist_sizes, COUNTOF(default_job_hist_sizes));
+   JobsCompletedSizes.set_levels(default_job_hist_sizes, COUNTOF(default_job_hist_sizes));
+   JobsBadputSizes.set_levels(default_job_hist_sizes, COUNTOF(default_job_hist_sizes));
 
-   // publish primary statistics (!fOtherPool) at BASIC (verbosity 1)
-   // but publish OtherPool (BY_nnn and FOR_xxx) sets at verbosity 2 or 3.
-   // Prior to 8.1.2 we didn't pay any attention to the fOtherPool
-   // flag when setting the verbosity of the stat, but this resulted in
-   // too many verbosity 1 stats and the schedd would take too long to
-   // update the collector. So for 8.1.2 we flattened the verbosity levels
-   // for the main stats so that the otherpool stats could all be at a higher level.
-   int if_poolbasic = fOtherPool ? IF_VERBOSEPUB : IF_BASICPUB;
-   int if_poolverbose = fOtherPool ? IF_NEVER : IF_BASICPUB;
+   JobsRunningRuntimes.set_levels(default_job_hist_lifes, COUNTOF(default_job_hist_lifes));
+   JobsCompletedRuntimes.set_levels(default_job_hist_lifes, COUNTOF(default_job_hist_lifes));
+   JobsBadputRuntimes.set_levels(default_job_hist_lifes, COUNTOF(default_job_hist_lifes));
+
+   int if_poolbasic = (base_verbosity>IF_BASICPUB) ? IF_VERBOSEPUB : IF_BASICPUB;
+   int if_poolverbose = (base_verbosity>IF_BASICPUB) ? IF_HYPERPUB : IF_BASICPUB;
 
    // insert static items into the stats pool so we can use the pool 
    // to Advance and Clear.  these items also publish the overall value
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsSubmitted,        if_poolbasic);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsStarted,          if_poolbasic);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsExited,           if_poolbasic);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsCompleted,        if_poolbasic);
-   SCHEDD_STATS_ADD_RECENT(Pool, Autoclusters,         if_poolbasic);
 
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumTimeToStart, if_poolbasic);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumBadputTime,  if_poolbasic);
@@ -154,29 +141,77 @@ void ScheddStatistics::Init(int fOtherPool)
    SCHEDD_STATS_ADD_VAL(Pool, JobsRunningSizes,             if_poolbasic);
    SCHEDD_STATS_ADD_VAL(Pool, JobsRunningRuntimes,          if_poolbasic);
 
-   if ( ! fOtherPool){
-      SCHEDD_STATS_ADD_RECENT(Pool, ShadowsStarted,            IF_BASICPUB);
-      SCHEDD_STATS_ADD_RECENT(Pool, ShadowsRecycled,           IF_VERBOSEPUB);
-      SCHEDD_STATS_ADD_RECENT(Pool, ShadowsReconnections,      IF_VERBOSEPUB);
-
-      SCHEDD_STATS_ADD_VAL(Pool, ShadowsRunning,               IF_BASICPUB);
-      SCHEDD_STATS_PUB_PEAK(Pool, ShadowsRunning,              IF_BASICPUB);
-
-      extern stats_entry_probe<double> build_priorec_runtime;
-      extern stats_entry_probe<double> build_priorec_mark_runtime;
-      extern stats_entry_probe<double> build_priorec_walk_runtime;
-      extern stats_entry_probe<double> build_priorec_sort_runtime;
-      extern stats_entry_probe<double> build_priorec_sweep_runtime;
-      Pool.AddProbe("SCBuildPrioRec",       &build_priorec_runtime,      "SCBuildPrioRec", IF_VERBOSEPUB | IF_RT_SUM);
-      Pool.AddProbe("SCBuildPrioRec_mark",  &build_priorec_mark_runtime, "SCBuildPrioRec_mark", IF_VERBOSEPUB | IF_RT_SUM);
-      Pool.AddProbe("SCBuildPrioRec_walk",  &build_priorec_walk_runtime, "SCBuildPrioRec_walk", IF_VERBOSEPUB | IF_RT_SUM);
-      Pool.AddProbe("SCBuildPrioRec_sort",  &build_priorec_sort_runtime, "SCBuildPrioRec_sort", IF_VERBOSEPUB | IF_RT_SUM);
-      Pool.AddProbe("SCBuildPrioRec_sweep", &build_priorec_sweep_runtime, "SCBuildPrioRec_sweep", IF_VERBOSEPUB | IF_RT_SUM);
-   //SCHEDD_STATS_PUB_DEBUG(Pool, JobsSubmitted,  IF_BASICPUB);
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsStarted,  IF_BASICPUB);
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsCompleted,  IF_BASICPUB);
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsCompletedSizes,  IF_BASICPUB);
-   }
+}
+
+   // publish primary statistics (!fOtherPool) at BASIC (verbosity 1)
+   // but publish OtherPool (BY_nnn and FOR_xxx) sets at verbosity 2 or 3.
+   // Prior to 8.1.2 we didn't pay any attention to the fOtherPool
+   // flag when setting the verbosity of the stat, but this resulted in
+   // too many verbosity 1 stats and the schedd would take too long to
+   // update the collector. So for 8.1.2 we flattened the verbosity levels
+   // for the main stats so that the otherpool stats could all be at a higher level.
+
+void ScheddJobStatistics::InitOther(int window, int quantum)
+{
+   Pool.Clear();
+   InitJobCounters(Pool, IF_VERBOSEPUB);
+   Pool.SetRecentMax(window, quantum);
+}
+
+void ScheddJobStatistics::SetWindowSize(int window, int quantum)
+{
+   Pool.SetRecentMax(window, quantum);
+}
+
+// extern a schedd_runtime_probe and then add that into the given stats pool.
+#define SCHEDD_STATS_ADD_EXTERN_RUNTIME(pool, name, ifpub) extern schedd_runtime_probe name##_runtime;\
+	(pool).AddProbe("SC" # name, &name##_runtime, "SC" #name, ifpub | IF_RT_SUM)
+
+//
+//
+void ScheddStatistics::InitMain()
+{
+   Clear();
+   // default window size to 1 quantum, we may set it to something else later.
+   if ( ! this->RecentWindowQuantum) this->RecentWindowQuantum = 1;
+   this->RecentWindowMax = this->RecentWindowQuantum;
+
+   InitJobCounters(Pool, IF_BASICPUB);
+
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsSubmitted,        IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, Autoclusters,         IF_BASICPUB);
+
+   SCHEDD_STATS_ADD_RECENT(Pool, ShadowsStarted,            IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, ShadowsRecycled,           IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, ShadowsReconnections,      IF_VERBOSEPUB);
+
+   SCHEDD_STATS_ADD_VAL(Pool, ShadowsRunning,               IF_BASICPUB);
+   SCHEDD_STATS_PUB_PEAK(Pool, ShadowsRunning,              IF_BASICPUB);
+
+   // SCHEDD runtime stats for various expensive processes
+   //
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, BuildPrioRec,       IF_VERBOSEPUB);
+   //SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, BuildPrioRec_mark,  IF_VERBOSEPUB);
+   //SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, BuildPrioRec_walk,  IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, BuildPrioRec_sort,  IF_VERBOSEPUB);
+   //SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, BuildPrioRec_sweep, IF_VERBOSEPUB);
+
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ, IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_check_for_spool_zombies, IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_count_a_job,             IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_PeriodicExprEval,        IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_clear_autocluster_id,    IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_find_idle_local_jobs,    IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_fixAttrUser,             IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_updateSchedDInterval,    IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_mark_idle,               IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_get_job_prio,            IF_VERBOSEPUB);
+
+
+   //SCHEDD_STATS_PUB_DEBUG(Pool, JobsSubmitted,  IF_BASICPUB);
 }
 
 void ScheddStatistics::Clear()
@@ -212,6 +247,7 @@ time_t ScheddStatistics::Tick(time_t now)
    if (cAdvance)
       Pool.Advance(cAdvance);
 
+   AdvanceAtLastTick = cAdvance;
    return now;
 }
 
@@ -287,9 +323,10 @@ void ScheddOtherStatsMgr::Clear()
 	pools.clear();
 }
 
-time_t ScheddOtherStatsMgr::Tick(time_t now/*=0*/) // call this when time may have changed to update StatsUpdateTime, etc.
+time_t ScheddOtherStatsMgr::Tick(time_t now) // call this when time may have changed to update StatsUpdateTime, etc.
 {
-	if ( ! now) now = time(NULL);
+	ASSERT(now == config.StatsLastUpdateTime);
+	int cAdvance = config.AdvanceAtLastTick;
 
 	// update deferred counts of submitted jobs by/for expression
 	CountJobsSubmitted();
@@ -297,7 +334,7 @@ time_t ScheddOtherStatsMgr::Tick(time_t now/*=0*/) // call this when time may ha
 	ScheddOtherStats* po = NULL;
 	pools.startIterations();
 	while (pools.iterate(po)) {
-		po->stats.Tick(now);
+		if (cAdvance) { po->stats.Advance(cAdvance); }
 		if ( ! po->sets.empty()) {
 			for (std::map<std::string, ScheddOtherStats*>::iterator it = po->sets.begin();
 				 it != po->sets.end(); 
@@ -310,7 +347,7 @@ time_t ScheddOtherStatsMgr::Tick(time_t now/*=0*/) // call this when time may ha
 					((po2->last_match_time + po2->lifetime) < now)) {
 					po2->enabled = false;
 				} else {
-					po2->stats.Tick(now);
+					if (cAdvance) { po2->stats.Advance(cAdvance); }
 				}
 			}
 		}
@@ -318,12 +355,12 @@ time_t ScheddOtherStatsMgr::Tick(time_t now/*=0*/) // call this when time may ha
 	return now;
 }
 
-void ScheddOtherStatsMgr::Reconfig()
+void ScheddOtherStatsMgr::Reconfig(int window, int quantum)
 {
 	ScheddOtherStats* po = NULL;
 	pools.startIterations();
 	while (pools.iterate(po)) {
-		po->stats.Reconfig();
+		po->stats.SetWindowSize(window, quantum);
 		if ( ! po->sets.empty()) {
 			for (std::map<std::string, ScheddOtherStats*>::iterator it = po->sets.begin();
 				 it != po->sets.end();
@@ -333,17 +370,13 @@ void ScheddOtherStatsMgr::Reconfig()
 				// and resize the recent window arrays if needed.
 				//
 				ScheddOtherStats* po2 = it->second;
-				po2->stats.PublishFlags = po->stats.PublishFlags;
-				if (po2->stats.RecentWindowMax != po->stats.RecentWindowMax ||
-					po2->stats.RecentWindowQuantum != po->stats.RecentWindowQuantum) {
-					po2->stats.RecentWindowQuantum = po->stats.RecentWindowQuantum;
-					po2->stats.SetWindowSize(po->stats.RecentWindowMax);
-				}
+				po2->stats.SetWindowSize(window, quantum);
 			}
 		}
 	}
 }
 
+#if 0
 void ScheddOtherStatsMgr::Publish(ClassAd & ad)
 {
 	ScheddOtherStats* po = NULL;
@@ -368,6 +401,7 @@ void ScheddOtherStatsMgr::Publish(ClassAd & ad)
 		}
 	}
 }
+#endif
 
 void ScheddOtherStatsMgr::Publish(ClassAd & ad, int flags)
 {
@@ -525,8 +559,7 @@ bool ScheddOtherStatsMgr::Enable(
 		po = new ScheddOtherStats();
 		ASSERT(po);
 		po->prefix = pre;
-		po->stats.Init(true);
-		po->stats.Reconfig();
+		po->stats.InitOther(config.RecentWindowMax, config.RecentStatsLifetime);
 		pools.insert(pre, po);
 	} else {
 		was_enabled = po->enabled;
@@ -692,10 +725,7 @@ ScheddOtherStats * ScheddOtherStatsMgr::Matches(ClassAd & ad, time_t updateTime)
 			po2->prefix.formatstr("%s_%s_", po->prefix.Value(), str.c_str());
 			cleanStringForUseAsAttr(po2->prefix, '_', false);
 
-			po2->stats.Init(true);
-			po2->stats.PublishFlags = po->stats.PublishFlags;
-			po2->stats.RecentWindowQuantum = po->stats.RecentWindowQuantum;
-			po2->stats.SetWindowSize(po->stats.RecentWindowMax);
+			po2->stats.InitOther(config.RecentWindowMax, config.RecentWindowQuantum);
 			po2->lifetime = po->lifetime;
 
 			po2->enabled = true;

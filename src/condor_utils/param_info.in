@@ -2878,6 +2878,15 @@ friendly_name=Startd Sends Alives
 review=?
 tags=startd,command
 
+[STARTER_HANDLES_ALIVES]
+default=true
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Startd should only send alives when slot idle
+review=?
+tags=schedd,claim
+
 [VM_GAHP_CONFIG]
 default=
 type=string
@@ -5622,8 +5631,8 @@ review=?
 tags=ccb,ccb
 
 [DEBUG_TIME_FORMAT]
-# The default has a trailing space...
-default=%m/%d/%y %H:%M:%S 
+# The default used to have a trailing space, it was removed in 8.3.2
+default=%m/%d/%y %H:%M:%S
 type=string
 reconfig=true
 customization=seldom
@@ -6834,18 +6843,19 @@ tags=negotiator,matchmaker
 
 [HISTORY_HELPER_MAX_HISTORY]
 default=10000
+range=0,
 type=int
-reconfig=false
+reconfig=true
 customization=seldom
 friendly_name=History Helper max number of history ads
 usage=Set the limit on the number of history ads remote history will consider
 review=?
 
 [HISTORY_HELPER_MAX_CONCURRENCY]
-default=10000
+default=2
 range=0,
 type=int
-reconfig=false
+reconfig=true
 customization=seldom
 friendly_name=History Helper max number of helper sub-processes
 usage=Set the limit on the number of condor_history_helper sub-processes

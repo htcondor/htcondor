@@ -598,6 +598,11 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	// Also, there's no one to delete the Sock.
 	ASSERT(!nonblocking || callback_fn);
 
+	if (IsDebugLevel(D_COMMAND)) {
+		const char * addr = this->addr();
+		dprintf (D_COMMAND, "Daemon::startCommand(%s,...) making connection to %s\n", getCommandStringSafe(cmd), addr ? addr : "NULL");
+	}
+
 	*sock = makeConnectedSocket(st,timeout,0,errstack,nonblocking);
 	if( ! *sock ) {
 		if ( callback_fn ) {
@@ -810,6 +815,11 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 
 	if( timeout >= 0 ) {
 		cmd_sock->timeout( timeout );
+	}
+
+	if (IsDebugLevel(D_COMMAND)) {
+		dprintf (D_COMMAND, "Daemon::sendCACmd(%s,...) making connection to %s\n",
+			getCommandStringSafe(CA_CMD), _addr ? _addr : "NULL");
 	}
 
 	if( ! connectSock(cmd_sock) ) {
@@ -2296,6 +2306,11 @@ Daemon::getTimeOffset( long &offset )
 		//
 	offset = TIME_OFFSET_DEFAULT;
 
+	if (IsDebugLevel(D_COMMAND)) {
+		dprintf (D_COMMAND, "Daemon::getTimeOffset(%s,...) making connection to %s\n",
+			getCommandStringSafe(DC_TIME_OFFSET), _addr ? _addr : "NULL");
+	}
+
 		//
 		// First establish a socket to the other daemon
 		//
@@ -2345,6 +2360,10 @@ Daemon::getTimeOffsetRange( long &min_range, long &max_range )
 		//
 	min_range = max_range = TIME_OFFSET_DEFAULT;
 
+	if (IsDebugLevel(D_COMMAND)) {
+		dprintf (D_COMMAND, "Daemon::getTimeOffsetRange(%s,...) making connection to %s\n",
+			getCommandStringSafe(DC_TIME_OFFSET), _addr ? _addr : "NULL");
+	}
 		//
 		// First establish a socket to the other daemon
 		//

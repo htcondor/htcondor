@@ -26,6 +26,7 @@
 #include "user_proc.h"
 #include "job_info_communicator.h"
 #include "condor_privsep_helper.h"
+#include "exit.h"
 
 #if defined(LINUX)
 #include "glexec_privsep_helper.linux.h"

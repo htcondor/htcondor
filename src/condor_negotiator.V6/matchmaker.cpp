@@ -3523,6 +3523,12 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 			// not in the cache already, create a new connection and
 			// add it to the cache.  We want to use a Daemon object to
 			// send the first command so we setup a security session. 
+
+		if (IsDebugLevel(D_COMMAND)) {
+			int cmd = negotiate_cmd;
+			dprintf (D_COMMAND, "Matchmaker::negotiate(%s,...) making connection to %s\n", getCommandStringSafe(cmd), scheddAddr.Value());
+		}
+
 		Daemon schedd( scheddAd, DT_SCHEDD, 0 );
 		sock = schedd.reliSock( NegotiatorTimeout );
 		if( ! sock ) {

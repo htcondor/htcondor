@@ -36,14 +36,12 @@ my $dbinstalllog =  "catchallsignals.out";
 # Set an alarm
 sub sigterm_handler()
 {
-	system("date");
-	print "Caught sigterm; ignoring \n";
+	print scalar(localtime()) . " Caught sigterm; ignoring \n";
 };
 
 sub sigint_handler()
 {
-	system("date");
-	print "Caught sigint; ignoring \n";
+	print scalar(localtime()) . " Caught sigint; ignoring \n";
 };
 sub handler()
 {
@@ -83,7 +81,7 @@ $SIG{RTMIN} = \&handler;
 
 while(1)
 {
-	system("date");
+	print scalar(localtime()) . "\n";
 	sleep(1);
 }
 

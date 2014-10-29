@@ -1625,11 +1625,28 @@ File System Configuration File Entries''.
   rotated, and this rotation would cause the number of backups to be
   too large, the oldest file is removed. 
 
+\label{param:HistoryHelperMaxConcurrency}
+\item[\Macro{HISTORY\_HELPER\_MAX\_CONCURRENCY}]
+  Specifies the maximum number of concurrent remote \Condor{history}
+  queries allowed at a time; defaults to 2.  When this maximum is exceeded,
+  further queries will be queued in a non-blocking manner. Setting this option
+  to 0 disables remote history access. A remote history access is defined
+  as an invocation of \Condor{history} that specifies a \Opt{-name} option
+  to query a \Condor{schedd} running on a remote machine.
+
+\label{param:HistoryHelperMaxHistory}
+\item[\Macro{HISTORY\_HELPER\_MAX\_HISTORY}]
+  Specifies the maximum number of ClassAds to parse on behalf of remote history
+  clients.  The default is 10,000.  This allows the system administrator to
+  indirectly manage the maximum amount of CPU time spent on each client.
+  Setting this option to 0 disables remote history access.
+
 \label{param:MaxJobQueueLogRotations}
 \item[\Macro{MAX\_JOB\_QUEUE\_LOG\_ROTATIONS}]
-  The schedd periodically rotates the job queue database file in order
-  to save disk space.  This option controls how many rotated files are
-  saved.  It defaults to 1, which means there may be up to two history
+  The \Condor{schedd} daemon periodically rotates the job queue database file,
+  in order to save disk space.  
+  This option controls how many rotated files are saved.  
+  It defaults to 1, which means there may be up to two history
   files (the previous one, which was rotated out of use, and the current one
   that is being written to).  When the job queue file is rotated,
   and this rotation would cause the number of backups to be larger
@@ -6004,14 +6021,11 @@ These macros control the \Condor{schedd}.
 
 \label{param:MaxJobsRunning}
 \item[\Macro{MAX\_JOBS\_RUNNING}]
-  An integer representing a limit on the number of processes
+  An integer representing a limit on the number of \Condor{shadow} processes
   spawned by a given \Condor{schedd} daemon,
-  for all job universes except the grid universe. 
-  The number of processes limit includes \Condor{shadow} processes,
-  scheduler universe processes, including \Condor{dagman}, and
-  local universe \Condor{starter} processes.
+  for all job universes except grid, scheduler, and local universe. 
   Limiting the number of running scheduler and local universe
-  jobs below the upper limit set by \MacroNI{MAX\_JOBS\_RUNNING} is best
+  jobs can be
   done using \MacroNI{START\_LOCAL\_UNIVERSE} and
   \MacroNI{START\_SCHEDULER\_UNIVERSE}.
   The actual number of allowed \Condor{shadow} daemons may be reduced,
@@ -6401,6 +6415,9 @@ MAX_JOBS_RUNNING	= \
 
 \label{param:StartdSendsAlives}
 \item[\Macro{STARTD\_SENDS\_ALIVES}]
+  Note:  This setting is deprecated, and may go away in a future version
+  of HTCondor. This setting is mainly useful when running mixing very
+  old \Condor{schedd} daemons with newer pools.
   A boolean value that defaults to \Expr{True},
   causing keep alive messages to be sent from the \Condor{startd} to the
   \Condor{schedd} by TCP during a claim.
@@ -7487,8 +7504,19 @@ REM Run the actual job now
   cannot keep up with large bursts of activity, such as many jobs all
   completing at the same time.
 
+\label{param:AssignCpuAffinity} 
+\item[\Macro{ASSIGN\_CPU\_AFFINITY}]
+  A boolean expression that defaults to \Expr{False}.
+  When \Expr{True},
+  each job under this startd is confined to using only as many
+  cores as the slots has been configured for.  When using partitionable
+  slots, each job will be bound to as many cores as it requests with
+  request\_cpus.  When \Expr{True}, overrides any settings specified by
+  \MacroNI{ENFORCE\_CPU\_AFFINITY}.
+
 \label{param:EnforceCpuAffinity} 
 \item[\Macro{ENFORCE\_CPU\_AFFINITY}]
+  Deprecated by \MacroNI{ASSIGN\_CPU\_AFFINITY}.
   A boolean value that defaults to \Expr{False}.  When \Expr{False},
   the affinity of jobs and their descendants to a CPU is not enforced.
   When \Expr{True}, HTCondor jobs and their descendants maintain their
@@ -7504,15 +7532,6 @@ REM Run the actual job now
   while CPU cores are numbered beginning with the value 0.
   This affinity list only takes effect if
   \Expr{ENFORCE\_CPU\_AFFINITY = True}.
-
-\label{param:AssignCpuAffinity} 
-\item[\Macro{ASSIGN\_CPU\_AFFINITY}]
-  A boolean expression that defaults to \Expr{False}.
-  When \Expr{True},
-  CPU affinity is automatically set and enforced to be one slot per core.
-  This permits affinity to work well with dynamic slots. 
-  Also when \Expr{True}, overrides any settings specified by
-  \MacroNI{ENFORCE\_CPU\_AFFINITY}.
 
 \label{param:EnableURLTransfers} 
 \item[\Macro{ENABLE\_URL\_TRANSFERS}]
@@ -7534,12 +7553,24 @@ REM Run the actual job now
 
 \label{param:RunFiletransferPluginsWithRoot} 
 \item[\Macro{RUN\_FILETRANSFER\_PLUGINS\_WITH\_ROOT}]
-  A boolean value that defaults to \Expr{False},
-  causing file transfer plug-ins invoked for a job to run as the 
-  slot user or the job owner.
+  A boolean value that affects only Unix platforms and defaults to \Expr{False},
+  causing file transfer plug-ins invoked for a job to run with both
+  the real and the effective UID set to user that the job runs as.
+  The user that the job runs as may be the job owner, \Login{nobody},
+  or the slot user.
+  The group is set to primary group of the user that the job runs as, 
+  and all supplemental groups are dropped.
+  The default gives the behavior exhibited prior to the existence of
+  this configuration variable.
   When set to \Expr{True},
-  file transfer plug-ins run as \Login{root},
+  file transfer plug-ins are invoked with a real UID of 0 (\Login{root}),
   provided the HTCondor daemons also run as \Login{root}.
+  The effective UID is set to the user that the job runs as.
+
+  This configuration variable can permit plug-ins to do privileged operations,
+  such as access a credential protected by file system permissions.
+  The default value is recommended unless privileged operations are 
+  required.
 
 \label{param:EnableChirp} 
 \item[\Macro{ENABLE\_CHIRP}]
@@ -9532,6 +9563,7 @@ These macros affect the \Condor{job\_router} daemon.
   daemon's routing table.
   Where an attribute is set outside of these defaults,
   that attribute value takes precedence.
+  The enclosing square brackets are optional.
 
 \label{param:JobRouterEntries}
 \item[\Macro{JOB\_ROUTER\_ENTRIES}]

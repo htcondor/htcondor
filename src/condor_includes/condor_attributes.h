@@ -570,6 +570,7 @@
 #define ATTR_STARTD_IP_ADDR  "StartdIpAddr"
 #define ATTR_STARTD_PRINCIPAL  "StartdPrincipal"
 #define ATTR_STARTD_SENDS_ALIVES  "StartdSendsAlives"
+#define ATTR_STARTER_HANDLES_ALIVES "_condor_StartdHandlesAlives"
 #define ATTR_STATE  "State"
 #define ATTR_STARTER_IP_ADDR  "StarterIpAddr"
 #define ATTR_STARTER_ABILITY_LIST  "StarterAbilityList"
@@ -911,6 +912,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_EC2_SPOT_REQUEST_ID  "EC2SpotRequestID"
 #define ATTR_EC2_STATUS_REASON_CODE  "EC2StatusReasonCode"
 #define ATTR_EC2_SERVER_TYPE  "EC2ServerType"
+#define ATTR_EC2_BLOCK_DEVICE_MAPPING "EC2BlockDeviceMapping"
 
 //************* End of changes for EC2 Jobs *****************//
 

@@ -69,9 +69,9 @@ $timed = sub
 	die "Job should have ended by now. file transfer broken!\n";
 };
 
-runcmd("mkdir -p ../ftjob");
-runcmd("cp x_job_filexfer_testjob.pl ../ftjob");
-runcmd("chmod 775 ../ftjob/x_job_filexfer_testjob.pl");
+#runcmd("mkdir -p ../ftjob");
+#runcmd("cp x_job_filexfer_testjob.pl ../ftjob");
+#runcmd("chmod 775 ../ftjob/x_job_filexfer_testjob.pl");
 
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterAbort($testname, $abort);

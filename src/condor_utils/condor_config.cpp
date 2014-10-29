@@ -2191,7 +2191,6 @@ param_integer( const char *name, int &value,
 		return false;
 	}
 
-#if 1
 	int err_reason = 0;
 	bool valid = string_is_long_param(string, long_result, me, target, name, &err_reason);
 	if ( ! valid) {
@@ -2213,45 +2212,6 @@ param_integer( const char *name, int &value,
 		long_result = default_value;
 	}
 	result = long_result;
-#else
-	char *endptr = NULL;
-	long_result = strtol(string,&endptr,10);
-	result = long_result;
-
-	ASSERT(endptr);
-	if( endptr != string ) {
-		while( isspace(*endptr) ) {
-			endptr++;
-		}
-	}
-	bool valid = (endptr != string && *endptr == '\0');
-
-	if( !valid ) {
-		// For efficiency, we first tried to read the value as a
-		// simple literal.  Since that didn't work, now try parsing it
-		// as an expression.
-		ClassAd rhs;
-		if( me ) {
-			rhs = *me;
-		}
-		if( !rhs.AssignExpr( name, string ) ) {
-			EXCEPT("Invalid expression for %s (%s) "
-				   "in condor configuration.  Please set it to "
-				   "an integer expression in the range %d to %d "
-				   "(default %d).",
-				   name,string,min_value,max_value,default_value);
-		}
-
-		if( !rhs.EvalInteger(name,target,result) ) {
-			EXCEPT("Invalid result (not an integer) for %s (%s) "
-				   "in condor configuration.  Please set it to "
-				   "an integer expression in the range %d to %d "
-				   "(default %d).",
-				   name,string,min_value,max_value,default_value);
-		}
-		long_result = result;
-	}
-#endif
 
 	if( (int)result != long_result ) {
 		EXCEPT( "%s in the condor configuration is out of bounds for"
@@ -2405,7 +2365,6 @@ param_double( const char *name, double default_value,
 		return default_value;
 	}
 
-#if 1
 	int err_reason = 0;
 	bool valid = string_is_double_param(string, result, me, target, name, &err_reason);
 	if( !valid ) {
@@ -2426,44 +2385,6 @@ param_double( const char *name, double default_value,
 		}
 		result = default_value;
 	}
-#else
-	char *endptr = NULL;
-	result = strtod(string,&endptr);
-
-	ASSERT(endptr);
-	if( endptr != string ) {
-		while( isspace(*endptr) ) {
-			endptr++;
-		}
-	}
-	bool valid = (endptr != string && *endptr == '\0');
-	if( !valid ) {
-		// For efficiency, we first tried to read the value as a
-		// simple literal.  Since that didn't work, now try parsing it
-		// as an expression.
-		ClassAd rhs;
-		float float_result = 0.0;
-		if( me ) {
-			rhs = *me;
-		}
-		if( !rhs.AssignExpr( name, string ) ) {
-			EXCEPT("Invalid expression for %s (%s) "
-				   "in condor configuration.  Please set it to "
-				   "a numeric expression in the range %lg to %lg "
-				   "(default %lg).",
-				   name,string,min_value,max_value,default_value);
-		}
-
-		if( !rhs.EvalFloat(name,target,float_result) ) {
-			EXCEPT("Invalid result (not a number) for %s (%s) "
-				   "in condor configuration.  Please set it to "
-				   "a numeric expression in the range %lg to %lg "
-				   "(default %lg).",
-				   name,string,min_value,max_value,default_value);
-		}
-		result = float_result;
-	}
-#endif
 
 	if( result < min_value ) {
 		EXCEPT( "%s in the condor configuration is too low (%s)."
@@ -2605,57 +2526,7 @@ param_boolean( const char *name, bool default_value, bool do_log,
 		return default_value;
 	}
 
-#if 1
 	valid = string_is_boolean_param(string, result, me, target, name);
-#else
-	char *endptr;
-
-	endptr = string;
-	if( strncasecmp(endptr,"true",4) == 0 ) {
-		endptr+=4;
-		result = true;
-	}
-	else if( strncasecmp(endptr,"1",1) == 0 ) {
-		endptr+=1;
-		result = true;
-	}
-	else if( strncasecmp(endptr,"false",5) == 0 ) {
-		endptr+=5;
-		result = false;
-	}
-	else if( strncasecmp(endptr,"0",1) == 0 ) {
-		endptr+=1;
-		result = false;
-	}
-	else {
-		valid = false;
-	}
-
-	while( isspace(*endptr) ) {
-		endptr++;
-	}
-	if( *endptr != '\0' ) {
-		valid = false;
-	}
-
-	if( !valid ) {
-		// For efficiency, we first tried to read the value as a
-		// simple literal.  Since that didn't work, now try parsing it
-		// as an expression.
-		int int_value = default_value;
-		ClassAd rhs;
-		if( me ) {
-			rhs = *me;
-		}
-
-		if( rhs.AssignExpr( name, string ) &&
-			rhs.EvalBool(name,target,int_value) )
-		{
-			result = (int_value != 0);
-			valid = true;
-		}
-	}
-#endif
 
 	if( !valid ) {
 		EXCEPT( "%s in the condor configuration  is not a valid boolean (\"%s\")."
@@ -2669,9 +2540,9 @@ param_boolean( const char *name, bool default_value, bool do_log,
 }
 
 char *
-macro_expand( const char *str )
+expand_param( const char *str )
 {
-	return expand_macro(str, ConfigMacroSet);
+	return expand_macro(str, ConfigMacroSet, true, get_mySubSystem()->getName());
 }
 
 char *
@@ -2694,8 +2565,6 @@ param_boolean_int( const char *name, int default_value ) {
     return param_boolean(name, default_bool) ? 1 : 0;
 }
 
-#if 1
-
 const char * param_get_location(const MACRO_META * pmet, MyString & value)
 {
 	value = config_source_by_id(pmet->source_id);
@@ -2709,31 +2578,6 @@ const char * param_get_location(const MACRO_META * pmet, MyString & value)
 	return value.c_str();
 }
 
-#else
-
-// Note that the line_number can be -1 if the filename isn't a real
-// filename, but something like <Internal> or <Environment>
-bool param_get_location(
-	const char *parameter,
-	MyString  &filename,
-	int       &line_number)
-{
-	bool found_it = false;
-
-	MACRO_ITEM * pi = find_macro_item(parameter, ConfigMacroSet);
-	if (pi) {
-		found_it = true;
-		if (ConfigMacroSet.metat) {
-			MACRO_META * pmi = &ConfigMacroSet.metat[pi - ConfigMacroSet.table];
-			if (pmi->source_id >= 0 && pmi->source_id < (int)ConfigMacroSet.sources.size()) {
-				filename = ConfigMacroSet.sources[pmi->source_id];
-				line_number = pmi->source_line;
-			}
-		}
-	}
-	return found_it;
-}
-#endif
 
 // find an item and return a hash iterator that points to it.
 bool param_find_item (
@@ -2859,8 +2703,6 @@ const char * hash_iter_def_value(HASHITER& it)
 	return param_exact_default_string(name);
 }
 
-#if 1
-
 const char * param_get_info(
 	const char * name,
 	const char * subsys,
@@ -2883,32 +2725,6 @@ const char * param_get_info(
 	return val;
 }
 
-#else
-
-const char * param_get_info(
-	const char * name,
-	const char * subsys,
-	const char * local,
-	const char ** pdef_val,
-	MyString &name_used,
-	int & use_count,
-	int & ref_count,
-	MyString &filename,
-	int &line_number)
-{
-	const char * val = NULL;
-	if (pdef_val) { *pdef_val = NULL; }
-
-	HASHITER it(ConfigMacroSet, 0);
-	if (param_find_item(name, subsys, local, name_used, it)) {
-		val = hash_iter_info(it, use_count, ref_count, filename, line_number);
-		if (pdef_val) {
-			*pdef_val = hash_iter_def_value(it);
-		}
-	}
-	return val;
-}
-#endif
 
 void
 reinsert_specials( const char* host )

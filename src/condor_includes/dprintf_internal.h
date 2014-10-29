@@ -35,8 +35,12 @@ typedef _Longlong int64_t;
 struct DebugFileInfo;
 typedef struct DebugHeaderInfo {
    time_t clock_now;
+   int    microseconds; // fractions of a second within the current second (will be 0 unless D_SUB_SECOND is specified)
    struct tm * tm;
    DPF_IDENT  ident; // caller supplied identity, used by D_AUDIT
+   int        backtrace_id;  // per-process unique identifier for this backtrace
+   int        num_backtrace; // number of valid entries in the backtrace array
+   void **    backtrace;     // if non null, pointer to an array of void* pointers containing the backtrace (set when D_BACKTRACE is specified)
 }  DebugHeaderInfo;
 
 typedef void (*DprintfFuncPtr)(int, int, DebugHeaderInfo &, const char*, DebugFileInfo*);

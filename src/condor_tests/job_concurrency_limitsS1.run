@@ -23,8 +23,6 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-CondorTest::SetUseNewRunning();
-
 my $testname = "job_concurrency_limitsS0.run";
 my %children = ();
 my $submitfile = "";
@@ -71,22 +69,20 @@ my $on_submitnameknown = sub {
 };
 
 my $on_abort = sub {
-		#system("date");
-		#print "Abort seen\n";
+	#print scalar(localtime()) . " Abort seen\n"
 };
 
 sub multi_timeout_callback
 {
 	print "LogCheck timeout expired!\n";
 	CondorTest::RegisterResult( 0, test_name, $testname );
-	system("date");
-	die "Log check timed out ?\n";
+	my $time = scalar(localtime());
+	die "Log check timed out at $time - ?\n";
 };
 
 sub evictedwithoutcheckpoint 
 {
-		system("date");
-		#print "evicted wothout checkpoint\n";
+	print scalar(localtime()) . " evicted wothout checkpoint\n";
 };
 
 my $Calledcheck_expectations = 0;
@@ -120,8 +116,7 @@ my $on_match = sub {
 };
 
 sub check_expectations {
-	print "In check_expectations callback: $Calledcheck_expectations\n";
-	system("date");
+	print scalar(localtime()) . " In check_expectations callback: $Calledcheck_expectations\n";
 	runToolNTimes("condor_q",1,1,{emit_output=>0});
 
 	# what if we want to release a few jobs over time?
@@ -172,8 +167,7 @@ sub check_expectations {
 	print "Watching for another job to start up\n";
 	# Started Negotiation Cycle A wait of about 10 seconds is caused here
 	# leading the next one to occur in about 20 seconds
-	#print "before multicheck\n";
-	#system("date");
+	#print scalar(localtime()) . " before multicheck\n";
 	CondorLog::RunCheckMultiple(
 		daemon => "Negotiator",
 		match_regexp => "Started Negotiation Cycle",
@@ -184,8 +178,7 @@ sub check_expectations {
 		match_new => "true",
 		no_result => "true",
 	);
-	#print "After multicheck\n";
-	#system("date");
+	#print scalar(localtime()) . " After multicheck\n";
 
 	if($expect_checks < $total_checks) {
 
@@ -507,8 +500,7 @@ sub CountIdle
 	my $line = "";
 	my @goods = ();
 
-	print "In count Idle:allow_too_few_idle_once=$allow_too_few_idle_once\n";
-	system("date");
+	print scalar(localtime()) . " In count Idle:allow_too_few_idle_once=$allow_too_few_idle_once\n";
 	#runcmd("condor_q");
 	runCondorTool("condor_q",\@goods,2,{emit_output => 0});
 	foreach my $job (@goods) {

@@ -6075,6 +6075,7 @@ int GahpClient::ec2_vm_start( std::string service_url,
 							  std::string vpc_subnet,
 							  std::string vpc_ip,
 							  std::string client_token,
+							  std::string block_device_mapping,
 							  StringList & groupnames,
 							  std::string &instance_id,
 							  std::string &error_code)
@@ -6098,7 +6099,6 @@ int GahpClient::ec2_vm_start( std::string service_url,
 
 	// Generate request line
 
-	// keypair/user_data/user_data_file is a required field. when empty, need to be replaced by "NULL"
 	if ( keypair.empty() ) keypair = NULLSTRING;
 	if ( user_data.empty() ) user_data = NULLSTRING;
 	if ( user_data_file.empty() ) user_data_file = NULLSTRING;
@@ -6107,10 +6107,8 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	if ( vpc_subnet.empty() ) vpc_subnet = NULLSTRING;
 	if ( vpc_ip.empty() ) vpc_ip = NULLSTRING;
 	if ( client_token.empty() ) client_token = NULLSTRING;
+	if ( block_device_mapping.empty() ) block_device_mapping = NULLSTRING;
 
-	// groupnames is optional, but since it is the last argument, don't need to set it as "NULL"
-	// XXX: You probably should specify a NULL for all "optional" parameters -matt
-						
 	std::string reqline;
 
 	char* esc1 = strdup( escapeGahpString(service_url) );
@@ -6120,18 +6118,14 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	char* esc5 = strdup( escapeGahpString(keypair) );
 	char* esc6 = strdup( escapeGahpString(user_data) );
 	char* esc7 = strdup( escapeGahpString(user_data_file) );
-
-	// currently we support the following instance type:
-	// 1. m1.small
-	// 2. m1.large
-	// 3. m1.xlarge
 	char* esc8 = strdup( escapeGahpString(instance_type) );
 	char* esc9 = strdup( escapeGahpString(availability_zone) );
 	char* esc10 = strdup( escapeGahpString(vpc_subnet) );
 	char* esc11 = strdup( escapeGahpString(vpc_ip) );
 	char* esc12 = strdup( escapeGahpString(client_token) );
+	char* esc13 = strdup( escapeGahpString(block_device_mapping) );
 
-	int x = formatstr(reqline, "%s %s %s %s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9, esc10, esc11, esc12 );
+	int x = formatstr(reqline, "%s %s %s %s %s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9, esc10, esc11, esc12, esc13 );
 
 	free( esc1 );
 	free( esc2 );
@@ -6145,6 +6139,7 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	free( esc10 );
 	free( esc11 );
 	free( esc12 );
+	free( esc13 );
 	ASSERT( x > 0 );
 
 	const char * group_name;

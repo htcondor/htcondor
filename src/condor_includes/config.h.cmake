@@ -339,6 +339,12 @@
 /* Define to 1 if you have the 'gettimeofday' function. (USED)*/
 #cmakedefine HAVE_GETTIMEOFDAY 1
 
+/* Define to 1 if you have the 'clock_gettime' function. (USED)*/
+#cmakedefine HAVE_CLOCK_GETTIME 1
+/* Define to 1 if 'clock_gettime' function and CLOCK_MONOTONIC_RAW defined. (USED)*/
+#cmakedefine HAVE_CLOCK_MONOTONIC_RAW 1
+#cmakedefine HAVE_CLOCK_REALTIME_COARSE 1
+
 ///* are we using the GNU linker (USED)- I want to remove this comments are untrue*/
 //#cmakedefine HAVE_GNU_LD 1
 

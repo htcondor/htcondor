@@ -208,7 +208,7 @@ int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, 
 	CommandLineToArgvW to extract a list of arguments instead of parsing
 	the string using a delimiter.
 	*/
-	LPWSTR cmdLine = GetCommandLineW();
+	LPWSTR cmdLine = GetCommandLineW();	 // do not free this pointer!
 	if(!cmdLine)
 	{
 		return GetLastError();
@@ -240,7 +240,6 @@ int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, 
 			return GetLastError();
 		}
 	}
-	LocalFree((HLOCAL)cmdLine);
 	LocalFree((HLOCAL)cmdArgs);
 
 	// check to see if we are running as a service, and if we are

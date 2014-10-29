@@ -429,6 +429,7 @@ void ClassAdWrapper::update(boost::python::object source)
     }
 }
 
+
 boost::python::object ClassAdWrapper::Flatten(boost::python::object input) const
 {
     classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(input));
@@ -448,6 +449,34 @@ boost::python::object ClassAdWrapper::Flatten(boost::python::object input) const
         return boost::python::object(holder);
     }
 }
+
+boost::python::list ClassAdWrapper::externalRefs(boost::python::object input) const
+{
+    classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(input));
+    classad::References refs;
+    if (!static_cast<const classad::ClassAd*>(this)->GetExternalReferences(expr.get(), refs, true))
+    {
+        THROW_EX(ValueError, "Unable to determine external references.");
+    }
+    boost::python::list results;
+    for (classad::References::const_iterator it = refs.begin(); it != refs.end(); it++) { results.append(*it); }
+    return results;
+}
+
+
+boost::python::list ClassAdWrapper::internalRefs(boost::python::object input) const
+{
+    classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(input));
+    classad::References refs;
+    if (!static_cast<const classad::ClassAd*>(this)->GetInternalReferences(expr.get(), refs, true))
+    {
+        THROW_EX(ValueError, "Unable to determine external references.");
+    }
+    boost::python::list results;
+    for (classad::References::const_iterator it = refs.begin(); it != refs.end(); it++) { results.append(*it); }
+    return results;
+}
+
 
 bool ClassAdWrapper::matches(boost::python::object obj) const
 {

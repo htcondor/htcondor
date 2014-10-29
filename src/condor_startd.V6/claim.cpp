@@ -37,6 +37,9 @@
 // for startdClaimIdFile
 #include "misc_utils.h"
 
+// for starter exit codes
+#include "exit.h"
+
 ///////////////////////////////////////////////////////////////////////////
 // Claim
 ///////////////////////////////////////////////////////////////////////////
@@ -897,6 +900,15 @@ Claim::startLeaseTimer()
 		// No direction from the schedd or config file. 
 		startd_sends_alives = false;
 	}
+
+	// If startd is sending the alives, look to see if the schedd is requesting 
+	// that we let only send alives when there is no starter present (i.e. when
+	// the claim is idle).  
+	c_starter_handles_alives = false;  // default to false unless schedd tells us
+	if (c_ad) {
+		c_ad->LookupBool( ATTR_STARTER_HANDLES_ALIVES, c_starter_handles_alives );
+	}
+
 	if ( startd_sends_alives &&
 		 c_type != CLAIM_COD &&
 		 c_lease_duration > 0 )	// prevent divide by zero
@@ -946,6 +958,16 @@ void
 Claim::sendAlive()
 {
 	const char* c_addr = NULL;
+
+	if ( c_starter_handles_alives && isActive() ) {
+			// If the starter is dealing with the alive protocol,
+			// then we only need to send alives when claimed/idle.
+			// In this instance, the claim is active and thus 
+			// there is a starter... so just push forward the lease
+			// without making any connections.
+		alive();	// this will push forward the lease & alive expiration timer
+		return;
+	}
 
 	if ( c_client ) {
 		c_addr = c_client->addr();
@@ -1132,7 +1154,7 @@ Claim::sendAliveResponseHandler( Stream *sock )
 void
 Claim::leaseExpired()
 {
-	c_lease_tid = -1;
+	cancelLeaseTimer();  // cancel timer(s) in case we are being called directly
 
 	if( c_type == CLAIM_COD ) {
 		dprintf( D_FAILURE|D_ALWAYS, "COD claim %s lease expired "
@@ -1180,7 +1202,9 @@ Claim::alive( bool alive_from_schedd )
 {
 	dprintf( D_PROTOCOL, "Keep alive for ClaimId %s job %d.%d%s\n", 
 			 publicClaimId(), c_cluster, c_proc,
-			 alive_from_schedd ? ", received from schedd" : "" );
+			 c_starter_handles_alives && isActive() ? 
+				" auto refreshed because starter running" : 
+				alive_from_schedd ? ", received from schedd" : " sent to schedd" );
 
 		// Process an alive command.  This is called whenever we
 		// "heard" from the schedd since a claim was created, 
@@ -1189,6 +1213,7 @@ Claim::alive( bool alive_from_schedd )
 		//  2 - an acknowledgement from the schedd to an alive
 		//      sent by the startd.
 		//  3 - a claim activation.
+		//  4 - a starter is still running and c_starter_handles_alives==True
 
 		// First push forward our lease timer.
 	if( c_lease_tid == -1 ) {
@@ -1433,9 +1458,22 @@ Claim::starterExited( int status )
 		// info, including the starter object itself.
 	resetClaim();
 
-		// finally, let our resource know that our starter exited, so
-		// it can do the right thing.
-	c_rip->starterExited( this );
+		// If exit code of starter is 0, it is a normal exit.
+		// If exit code of starter is 1, starter failed to startup 
+		// If exit code of starter is 2, it lost connection to the shadow
+	if ( WIFEXITED(status) && 
+		 WEXITSTATUS(status) == STARTER_EXIT_LOST_SHADOW_CONNECTION ) 
+	{
+			// starter lost connection to shadow, treat it as if the
+			// lease on the slot expired.
+		leaseExpired();
+	} else {
+			// finally, let our resource know that our starter exited, so
+			// it can do the right thing.
+			// note we do not do this if we called leaseExpired, because
+			// leaseExpired() will destroy r_state in Resource object.
+		c_rip->starterExited( this );
+	}
 }
 
 

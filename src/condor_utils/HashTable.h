@@ -178,6 +178,7 @@ class HashTable {
   int  iterate (Value &value);
   int  getCurrentKey (Index &index);
   int  iterate (Index &index, Value &value);
+  int  iterate_nocopy(const Index ** pindex, Value ** pvalue);
 
   iterator begin() {return iterator(this, 0);}
   iterator end() {return iterator(this, -1);}
@@ -757,6 +758,42 @@ iterate (Index &index, Value &v)
 
 	index = currentItem->index;
 	v = currentItem->value;
+	return 1;
+}
+
+
+template <class Index, class Value>
+int HashTable<Index,Value>::
+iterate_nocopy (const Index **pindex, Value ** pv)
+{
+    // try to get next item in the current bucket chain ...
+    if (currentItem) {
+        currentItem = currentItem->next;
+    
+        // ... if successful, return OK
+        if (currentItem) {
+            *pindex = &currentItem->index;
+            *pv = &currentItem->value;
+            return 1;
+       }
+    }
+
+		// the current bucket chain is expended, so find the next non-NULL
+		// bucket and continue from there
+	do {
+		currentBucket++;
+		if (currentBucket >= tableSize) {
+			// end of hash table ... no more entries
+			currentBucket = -1;
+			currentItem = 0;
+
+			return 0;
+		}
+		currentItem = ht[currentBucket];
+	} while ( !currentItem );
+
+	*pindex = &currentItem->index;
+	*pv = &currentItem->value;
 	return 1;
 }
 

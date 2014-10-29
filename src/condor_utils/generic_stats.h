@@ -149,7 +149,7 @@ enum {
    IF_ALWAYS     = 0x0000000, // publish regardless of publishing request
    IF_BASICPUB   = 0x0010000, // publish if 'basic' publishing is requested
    IF_VERBOSEPUB = 0x0020000, // publish if 'verbose' publishing is requested.
-   IF_NEVER      = 0x0030000, // publish if 'diagnostic' publishing is requested
+   IF_HYPERPUB   = 0x0030000, // publish if 'diagnostic' publishing is requested
    IF_RECENTPUB  = 0x0040000, // publish if 'recent' publishing is requested.
    IF_DEBUGPUB   = 0x0080000, // publish if 'debug' publishing is requested.
    IF_PUBLEVEL   = 0x0030000, // level bits
@@ -1647,6 +1647,14 @@ public:
    }
 
    int RemoveProbe (const char * name); // remove from pool, will delete if owned by pool
+   int RemoveProbesByAddress(void * first, void * last); // remove all probes that point to between first & last (inclusive)
+
+   /* call this to set verbosites using a whitelist
+    * probes that publish attributes that match the list are set to pub_flags,
+    * if set_nonmatching is true, then probes that don't match the are set to nonmatch_pub_flags
+    */
+   int SetVerbosities(const char * attrs_list, int pub_flags, bool restore_nonmatching = false);
+   int SetVerbosities(classad::References & attrs, int pub_flags, bool restore_nonmatching = false);
 
    /* tj: IMPLEMENT THIS
    double  SetSample(const char * probe_name, double sample);
@@ -1667,7 +1675,9 @@ private:
    struct pubitem {
       int    units;    // copied from the class->unit, identifies the class and type of probe
       int    flags;    // passed to Publish
-      int    fOwnedByPool;
+      bool   fOwnedByPool;
+      bool   fWhitelisted;
+      unsigned short def_verbosity;
       void * pitem;    // pointer to stats_entry_base derived class instance class/struct
       const char * pattr; // if non-null passed to Publish, if null name is passed.
       FN_STATS_ENTRY_PUBLISH Publish;

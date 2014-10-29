@@ -78,9 +78,20 @@ while true; do
   fi
 done
 
+SECOND_FLAG=
+if condor_config_val JOB_ROUTER_SCHEDD2_NAME 2>&1 > /dev/null; then
+	SECOND_SCHEDD=`condor_config_val JOB_ROUTER_SCHEDD2_NAME 2> /dev/null`
+	SECOND_FLAG="-name ${SECOND_SCHEDD} "
+fi
+
+if condor_config_val JOB_ROUTER_SCHEDD2_POOL 2>&1 > /dev/null; then
+	SECOND_POOL=`condor_config_val JOB_ROUTER_SCHEDD2_POOL 2> /dev/null`
+	SECOND_FLAG="$SECOND_FLAG -pool ${SECOND_POOL}"
+fi
+
 if [ "$show_route_summary" = "1" ]; then
   awk 'BEGIN {printf("%7s %2s %-20s %s\n","JOBS","ST","Route","GridResource")}'
-  condor_q -constraint "$CONSTRAINT" -f "%s," JobStatus -f "%s," RouteName -f "%s" GridResource -f "\n" eol |
+  condor_q ${SECOND_FLAG} -constraint "$CONSTRAINT" -f "%s," JobStatus -f "%s," RouteName -f "%s" GridResource -f "\n" eol |
     awk -F, '{
       jobstatus=$1;
       if(jobstatus == 0) jobstatus = "U";

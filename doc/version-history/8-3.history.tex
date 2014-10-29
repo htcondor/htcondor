@@ -34,11 +34,25 @@ be registered with the ClassAds library.  This allows python
 functions to be invoked from within ClassAds.
 \Ticket{4598}
 
+\item A new python binding was added to allow the ClassAd object
+to determine internal and external references from an expression.
+\Ticket{4681}
+
 \item Added the \Arg{ALWAYS-UPDATE} option for DAGMan node status
 files (see section~\ref{sec:DAG-node-status} for details).  (Specifying
 this option causes the node status file to be overwritten even if
 no nodes have changed status since the file was last written.)
 \Ticket{4607}
+
+\item Configuration variable \Macro{MAX\_JOBS\_RUNNING} has been
+modified such that it only applies to job universes that require a
+\Condor{shadow} process.
+Scheduler and local universe jobs are no longer affected by this
+variable.
+The number of running scheduler and local universe jobs can be controlled
+with configuration variables \MacroNI{START\_SCHEDULER\_UNIVERSE} and
+\MacroNI{START\_LOCAL\_UNIVERSE}, respectively.
+\Ticket{4589}
 
 \end{itemize}
 
@@ -50,6 +64,14 @@ no nodes have changed status since the file was last written.)
 This fixes the delegation of RFC format proxies, in addition to other
 bug fixes.
 \Ticket{4596}
+
+\item Fixed a bug that could cause DAGMan to segfault (rather than
+printing an appropriate error message) on some DAG file syntax errors.
+\Ticket{4616}
+
+\item Fixed a bug that could cause shared port to fail on Mac OS X if
+\Macro{LOCK} wasn't explicitly set in the configuration file.
+\Ticket{4678}
 
 \item Fixed a bug that caused both \Condor{dagman} and the schedd
 to generate commands to remove \Condor{dagman}'s node jobs when
@@ -156,7 +178,7 @@ Section~\ref{sec:Ordering-Config-File} describes the ordering
 in which configuration files are parsed.
 \Ticket{3158}
 
-\item Daemons now authenticate many client nework connections in
+\item Daemons now authenticate many client network connections in
 parallel, rather than one at a time.
 This improves the scalability of daemons that receive many client
 connections, like the \Condor{schedd} and \Condor{collector}.

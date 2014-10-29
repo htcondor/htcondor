@@ -1126,7 +1126,7 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 {
 #ifndef HAVE_SHARED_PORT
 	if( why_not ) {
-		why_not->sprintf("shared ports not supported on this platform");
+		*why_not = "shared ports not supported on this platform";
 	}
 	return false;
 #else
@@ -1383,7 +1383,7 @@ SharedPortEndpoint::RealInitializeDaemonSocketDir()
 	if (result == "auto") {
 		struct sockaddr_un named_sock_addr;
 		const unsigned max_len = sizeof(named_sock_addr.sun_path)-1;
-		const char * default_name = macro_expand("$(LOCK)/daemon_sock");
+		char * default_name = expand_param("$(LOCK)/daemon_sock");
 		if (strlen(default_name) + 18 > max_len) {
 			TemporaryPrivSentry tps(PRIV_CONDOR);
 				// NOTE we force the use of /tmp here - not using the HTCondor library routines;
@@ -1400,6 +1400,7 @@ SharedPortEndpoint::RealInitializeDaemonSocketDir()
 		} else {
 			result = default_name;
 		}
+		free( default_name );
 	}
 #endif
 #ifndef WIN32
@@ -1419,7 +1420,9 @@ SharedPortEndpoint::GetAltDaemonSocketDir(std::string &result)
 		// If set to "auto", we want to make sure that $(DAEMON_SOCKET_DIR)/collector or $(DAEMON_SOCKET_DIR)/15337_9022_123456 isn't more than 108 characters
 	std::string default_name;
 	if (result == "auto") {
-		default_name = macro_expand("$(LOCK)/daemon_sock");
+		char *tmp = expand_param("$(LOCK)/daemon_sock");
+		default_name = tmp;
+		free(tmp);
 	} else {
 		default_name = result;
 	}

@@ -396,11 +396,13 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	
 	// Okay, here we re-parse any VARS lines that didn't have corresponding
 	// node when we first read them.
-	for(std::list<std::string>::iterator p = vars_to_save.begin(); p != vars_to_save.end(); ++p) {
-		char* varline = strnewp(p->c_str());
-		strtok(varline, DELIMITERS); // Drop the VARS token
-		bool parsed_line_successfully = parse_vars(dag,filename,0,0);
-		if(!parsed_line_successfully) {
+	for ( std::list<std::string>::iterator p = vars_to_save.begin();
+				p != vars_to_save.end(); ++p ) {
+		char* varline = strnewp( p->c_str() );
+		char * token = strtok( varline, DELIMITERS ); // Drop the VARS token
+		ASSERT( token );
+		bool parsed_line_successfully = parse_vars( dag,filename, 0, 0 );
+		if ( !parsed_line_successfully ) {
 			delete[] varline;
 			return false;
 		}
@@ -426,6 +428,11 @@ parse_subdag( Dag *dag, Job::job_type_t nodeType,
 			const char* dagFile, int lineNum, const char *directory )
 {
 	const char *inlineOrExt = strtok( NULL, DELIMITERS );
+	if ( !inlineOrExt ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): SUBDAG needs "
+					"EXTERNAL keyword\n", dagFile, lineNum);
+		return false;
+	}
 	if ( !strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
 		return parse_node( dag, nodeType, nodeTypeKeyword, dagFile,
 					lineNum, directory, " EXTERNAL", "dagfile" );
@@ -477,8 +484,8 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 	}
 
 		// next token (if any) is "DIR" "NOOP", or "DONE" (in that order)
-	const char* nextTok = strtok( NULL, DELIMITERS );
 	TmpDir nodeDir;
+	const char* nextTok = strtok( NULL, DELIMITERS );
 	if ( nextTok ) {
 		if (strcasecmp(nextTok, "DIR") == 0) {
 			if ( strcmp(directory, "") ) {
@@ -520,8 +527,8 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 		}
 	}
 
-	if( nextTok ) {
-		if( strcasecmp( nextTok, "DONE" ) == 0 ) {
+	if ( nextTok ) {
+		if ( strcasecmp( nextTok, "DONE" ) == 0 ) {
 			done = true;
 		} else {
 			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
@@ -533,7 +540,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 	}
 
 		// anything else is garbage
-	if( nextTok ) {
+	if ( nextTok ) {
 			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
 						  "parameter \"%s\"\n", dagFile, lineNum, nextTok );
 			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
@@ -561,6 +568,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 		dagSubmitFile = submitFile;
 		dagSubmitFile += DAG_SUBMIT_FILE_SUFFIX;
 		submitFile = dagSubmitFile.Value();
+
 	} else if ( strstr( submitFile, DAG_SUBMIT_FILE_SUFFIX) ) {
 			// If the submit file name ends in ".condor.sub", we assume
 			// that this node is a nested DAG, and set the DAG filename
@@ -627,11 +635,11 @@ parse_script(
 	//
 	bool   post;
 	char * prepost = strtok (NULL, DELIMITERS);
-	if (prepost == NULL) goto MISSING_PREPOST;
-	else if (!strcasecmp (prepost, "PRE" )) post = false;
-	else if (!strcasecmp (prepost, "POST")) post = true;
-	else {
-	MISSING_PREPOST:
+	if ( prepost && !strcasecmp (prepost, "PRE" ) ) {
+		post = false;
+	} else if ( prepost && !strcasecmp (prepost, "POST") ) {
+		post = true;
+	} else {
 		debug_printf( DEBUG_QUIET, "%s (line %d): "
 					  "After specifying \"SCRIPT\", you must "
 					  "indicate if you want \"PRE\" or \"POST\"\n",
@@ -643,15 +651,18 @@ parse_script(
 	//
 	// Third token is the JobName
 	//
-	const char *jobName = strtok(NULL, DELIMITERS);
-	const char *jobNameOrig = jobName; // for error output
-	const char * rest = jobName; // For subsequent tokens
-	if (jobName == NULL) {
+	const char *jobName = strtok( NULL, DELIMITERS );
+	if ( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
-	} else if (isReservedWord(jobName)) {
+	}
+
+	const char *jobNameOrig = jobName; // for error output
+	const char *rest = jobName; // For subsequent tokens
+
+	if ( isReservedWord( jobName ) ) {
 		debug_printf( DEBUG_QUIET,
 					  "%s (line %d): JobName cannot be a reserved word\n",
 					  filename, lineNumber );
@@ -899,7 +910,6 @@ parse_retry(
 	const char *example = "Retry JobName 3 [UNLESS-EXIT 42]";
 	
 	const char *jobName = strtok( NULL, DELIMITERS );
-	const char *jobNameOrig = jobName; // for error output
 	if( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET,
 					  "%s (line %d): Missing job name\n",
@@ -908,6 +918,7 @@ parse_retry(
 		return false;
 	}
 
+	const char *jobNameOrig = jobName; // for error output
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
 	
@@ -926,8 +937,8 @@ parse_retry(
 		return false;
 	}
 	
-	char *s = strtok( NULL, DELIMITERS );
-	if( s == NULL ) {
+	char *token = strtok( NULL, DELIMITERS );
+	if( token == NULL ) {
 		debug_printf( DEBUG_QUIET, 
 					  "%s (line %d): Missing Retry value\n",
 					  filename, lineNumber );
@@ -936,11 +947,11 @@ parse_retry(
 	}
 	
 	char *tmp;
-	job->retry_max = (int)strtol( s, &tmp, 10 );
-	if( tmp == s ) {
+	job->retry_max = (int)strtol( token, &tmp, 10 );
+	if( tmp == token ) {
 		debug_printf( DEBUG_QUIET,
 					  "%s (line %d): Invalid Retry value \"%s\"\n",
-					  filename, lineNumber, s );
+					  filename, lineNumber, token );
 		exampleSyntax( example );
 		return false;
 	}
@@ -954,27 +965,27 @@ parse_retry(
 	}
 
     // Check for optional retry-abort value
-    s = strtok( NULL, DELIMITERS );
-    if ( s != NULL ) {
-        if ( strcasecmp ( s, "UNLESS-EXIT" ) != 0 ) {
+    token = strtok( NULL, DELIMITERS );
+    if ( token != NULL ) {
+        if ( strcasecmp ( token, "UNLESS-EXIT" ) != 0 ) {
             debug_printf( DEBUG_QUIET, "%s (line %d) Invalid retry option: %s\n", 
-                          filename, lineNumber, s);
+                          filename, lineNumber, token );
             exampleSyntax( example );
             return false;
         }
         else {
-            s = strtok( NULL, DELIMITERS );
-            if ( s == NULL ) {
+            token = strtok( NULL, DELIMITERS );
+            if ( token == NULL ) {
                 debug_printf( DEBUG_QUIET, "%s (line %d) Missing parameter for UNLESS-EXIT\n",
                               filename, lineNumber);
                 exampleSyntax( example );
                 return false;
             } 
             char *unless_exit_end;
-            int unless_exit = strtol(s, &unless_exit_end, 10);
+            int unless_exit = strtol( token, &unless_exit_end, 10 );
             if (*unless_exit_end != 0) {
                 debug_printf( DEBUG_QUIET, "%s (line %d) Bad parameter for UNLESS-EXIT: %s\n",
-                              filename, lineNumber, s);
+                              filename, lineNumber, token );
                 exampleSyntax( example );
                 return false;
             }
@@ -1005,8 +1016,7 @@ parse_abort(
 	
 		// Job name.
 	const char *jobName = strtok( NULL, DELIMITERS );
-	const char *jobNameOrig = jobName; // for error output
-	if( jobName == NULL ) {
+	if ( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET,
 					  "%s (line %d): Missing job name\n",
 					  filename, lineNumber );
@@ -1014,6 +1024,7 @@ parse_abort(
 		return false;
 	}
 
+	const char *jobNameOrig = jobName; // for error output
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
 	
@@ -1034,7 +1045,7 @@ parse_abort(
 	
 		// Node abort value.
 	char *abortValStr = strtok( NULL, DELIMITERS );
-	if( abortValStr == NULL ) {
+	if ( abortValStr == NULL ) {
 		debug_printf( DEBUG_QUIET, 
 					  "%s (line %d): Missing ABORT-ON node value\n",
 					  filename, lineNumber );
@@ -1119,8 +1130,8 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 		                  "[OVERWRITE | DONT-OVERWRITE] "
 		                  "[INCLUDE <dot-file-header>]";
 	
-	char *dot_file_name = strtok(NULL, DELIMITERS);
-	if (dot_file_name == NULL) {
+	char *dot_file_name = strtok( NULL, DELIMITERS );
+	if ( dot_file_name == NULL ) {
 		debug_printf( DEBUG_QUIET,
 					  "%s (line %d): Missing dot file name,\n",
 					  filename, lineNumber );
@@ -1129,7 +1140,7 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 	}
 
 	char *token;
-	while ((token = strtok(NULL, DELIMITERS)) != NULL) {
+	while ( (token = strtok( NULL, DELIMITERS ) ) != NULL ) {
 		if (strcasecmp(token, "UPDATE") == 0) {
 			dag->SetDotFileUpdate(true);
 		} else if (strcasecmp(token, "DONT-UPDATE") == 0) {
@@ -1167,17 +1178,15 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 //-----------------------------------------------------------------------------
 static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list<std::string>* varq) {
 	const char* example = "Vars JobName VarName1=\"value1\" VarName2=\"value2\"";
-	MyString varName;
-	MyString varValue;
-
 	const char *jobName = strtok( NULL, DELIMITERS );
-	const char *jobNameOrig = jobName; // for error output
-	if(jobName == NULL) {
-		debug_printf(DEBUG_QUIET, "%s (line %d): Missing job name\n", filename, lineNumber);
+	if ( jobName == NULL ) {
+		debug_printf(DEBUG_QUIET, "%s (line %d): Missing job name\n",
+					filename, lineNumber);
 		exampleSyntax(example);
 		return false;
 	}
 
+	const char *jobNameOrig = jobName; // for error output
 	MyString tmpJobName = munge_job_name(jobName);
 	jobName = tmpJobName.Value();
 
@@ -1199,20 +1208,23 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 		}
 	}
 
-	char *str = strtok(NULL, "\n"); // just get all the rest -- we'll be doing this by hand
+	char *str = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
 
 	int numPairs;
-	for(numPairs = 0; ; numPairs++) {  // for each name="value" pair
+	for ( numPairs = 0; ; numPairs++ ) {  // for each name="value" pair
+		if ( str == NULL ) { // this happens when the above strtok returns NULL
+			break;
+		}
 
 			// Fix PR 854 (multiple macronames per VARS line don't work).
-		varName = "";
-		varValue = "";
+		MyString varName( "" );
+		MyString varValue( "" );
 
-		if(str == NULL) // this happens when the above strtok returns NULL
-			break;
-		while(isspace(*str))
+		while ( isspace( *str ) ) {
 			str++;
-		if(*str == '\0') {
+		}
+
+		if ( *str == '\0' ) {
 			break;
 		}
 
@@ -1368,18 +1380,20 @@ parse_priority(
 	//
 	// Next token is the JobName
 	//
-	const char *jobName = strtok(NULL, DELIMITERS);
-	const char *jobNameOrig = jobName; // for error output
-	if (jobName == NULL) {
+	const char *jobName = strtok( NULL, DELIMITERS );
+	if ( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
-	} else if (isReservedWord(jobName)) {
+	}
+
+	const char *jobNameOrig = jobName; // for error output
+	if ( isReservedWord( jobName ) ) {
 		debug_printf( DEBUG_QUIET,
 					  "%s (line %d): JobName cannot be a reserved word\n",
 					  filename, lineNumber );
-		exampleSyntax (example);
+		exampleSyntax( example );
 		return false;
 	} else {
 		debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
@@ -1470,13 +1484,15 @@ parse_category(
 	// Next token is the JobName
 	//
 	const char *jobName = strtok(NULL, DELIMITERS);
-	const char *jobNameOrig = jobName; // for error output
-	if (jobName == NULL) {
+	if ( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
-	} else if (isReservedWord(jobName)) {
+	}
+
+	const char *jobNameOrig = jobName; // for error output
+	if (isReservedWord(jobName)) {
 		debug_printf( DEBUG_QUIET,
 					  "%s (line %d): JobName cannot be a reserved word\n",
 					  filename, lineNumber );
@@ -1547,13 +1563,13 @@ parse_splice(
 {
 	const char *example = "SPLICE SpliceName SpliceFileName [DIR directory]";
 	Dag *splice_dag = NULL;
-	MyString spliceName, spliceFile;
 	MyString errMsg;
 
 	//
 	// Next token is the splice name
 	// 
-	spliceName = strtok(NULL, DELIMITERS);
+	MyString spliceName = strtok( NULL, DELIMITERS );
+	// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
 	if ( spliceName == "" ) {
 		debug_printf( DEBUG_QUIET, 
 					  "%s (line %d): Missing SPLICE name\n",
@@ -1581,7 +1597,8 @@ parse_splice(
 	//
 	// Next token is the splice file name
 	// 
-	spliceFile = strtok(NULL, DELIMITERS);
+	MyString spliceFile = strtok( NULL, DELIMITERS );
+	// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
 	if ( spliceFile == "" ) {
 		debug_printf( DEBUG_QUIET, 
 					  "%s (line %d): Missing SPLICE file name\n",
@@ -1598,9 +1615,11 @@ parse_splice(
 	MyString directory = ".";
 
 	dirTok.upper_case();
+	// Note: this if is okay even if strtok() returns NULL. wenger 2014-10-07
 	if ( dirTok == "DIR" ) {
 		// parse the directory name
 		directory = strtok( NULL, DELIMITERS );
+		// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
 		if ( directory == "" ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: %s (line %d): DIR requires a directory "
@@ -1608,13 +1627,13 @@ parse_splice(
 			exampleSyntax( example );
 			return false;
 		}
-
 	}
 
 	// 
 	// anything else is garbage
 	//
 	MyString garbage = strtok( 0, DELIMITERS );
+	// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
 	if( garbage != "" ) {
 			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
 						  "parameter \"%s\"\n", filename, lineNumber, 
@@ -1962,13 +1981,15 @@ parse_pre_skip( Dag  *dag,
 		// second token is the JobName
 		//
 	const char *jobName = strtok( NULL, DELIMITERS );
-	const char *jobNameOrig = jobName; // for error output
 	if ( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
 				filename, lineNumber );
 		exampleSyntax( example );
 		return false;
-	} else if ( isReservedWord(jobName) ) {
+	}
+
+	const char *jobNameOrig = jobName; // for error output
+	if ( isReservedWord(jobName) ) {
 		debug_printf( DEBUG_QUIET,
 				"%s (line %d): JobName cannot be a reserved word\n",
 				filename, lineNumber );
@@ -2045,8 +2066,7 @@ parse_done(
 	const char *example = "Done JobName";
 	
 	const char *jobName = strtok( NULL, DELIMITERS );
-	const char *jobNameOrig = jobName; // for error output
-	if( jobName == NULL ) {
+	if ( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET,
 					  "%s (line %d): Missing job name\n",
 					  filename, lineNumber );
@@ -2054,6 +2074,7 @@ parse_done(
 		return false;
 	}
 
+	const char *jobNameOrig = jobName; // for error output
 	MyString tmpJobName = munge_job_name( jobName );
 	jobName = tmpJobName.Value();
 
