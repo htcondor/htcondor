@@ -17,6 +17,10 @@
  *
  ***************************************************************/
 
+ 
+#define _XOPEN_SOURCE /* glibc2 needs this */
+#include <time.h>
+
 #include "condor_common.h"
 #include "internet.h"
 #include "condor_daemon_core.h"
@@ -27,9 +31,11 @@
 #include "stdsoap2.h"
 #include "soap_core.h"
 #include "condor_open.h"
+#include "stat_wrapper.h"
 
 #include "mimetypes.h"
 #include "condor_sockfunc.h"
+#include "soap_hash_name.h"
 
 #ifdef WIN32
 #define realpath(P,B) _fullpath((B),(P),_MAX_PATH)
@@ -49,9 +55,22 @@ struct soap *ssl_soap;
 
 extern SOAP_NMAC struct Namespace namespaces[];
 
+const int DTTM_SIZE = 35;
+
+static struct userconfig {
+	int (*fposthdr)(struct soap*, const char*, const char*);
+	char dttmstr[DTTM_SIZE];
+} userflags;
+
+const char *const DAYDTMONYRTIMEZONEFMT = "%a, %d %b %Y %X %Z";
+
+double startm = 0.0;
+
 int handle_soap_ssl_socket(Service *, Stream *stream);
 
 int get_handler(struct soap *soap);
+int posthdr_addfield(struct soap *soap_ptr, const char *key, const char *val);
+
 
 struct soap *
 dc_soap_accept(Sock *socket, const struct soap *soap)
@@ -108,6 +127,10 @@ dc_soap_free(struct soap *soap)
 void
 dc_soap_init(struct soap *&soap)
 {
+	timeval tim;
+    gettimeofday(&tim, NULL);
+    startm =tim.tv_sec+(tim.tv_usec/1000000.0);	
+    
 	if (NULL == soap) {
 		soap = soap_new();
 	}
@@ -122,6 +145,14 @@ dc_soap_init(struct soap *&soap)
 	soap->recv_timeout = 20;
 
 	soap->fget = get_handler;
+	if (soap->fposthdr != NULL) {
+	  userflags.dttmstr[0] = '\0';
+	  userflags.fposthdr = soap->fposthdr;
+	  dprintf(D_DAEMONCORE, "Saving original soap->fposthdr\n");
+  	  soap->user = (void *) &userflags;
+  	  soap->fposthdr = posthdr_addfield;
+	} else dprintf(D_DAEMONCORE, "No soap->fposthdr to save\n");
+
 
 #ifdef HAVE_EXT_OPENSSL
 	bool enable_soap_ssl = param_boolean("ENABLE_SOAP_SSL", false);
@@ -179,6 +210,11 @@ dc_soap_init(struct soap *&soap)
 			soap_set_namespaces(ssl_soap, namespaces);
 
 			ssl_soap->fget = get_handler;
+			if (ssl_soap->fposthdr != NULL) {
+			  dprintf(D_ALWAYS, "Saving original ssl_soap->fposthdr\n");
+			  ssl_soap->user = (void *) ssl_soap->fposthdr;
+			  ssl_soap->fposthdr = posthdr_addfield;
+			} else dprintf(D_ALWAYS, "No ssl_soap->fposthdr to save\n");
 
 			ssl_soap->send_timeout = 20;
 			ssl_soap->recv_timeout = 20;
@@ -516,6 +552,54 @@ static char *file_ext(const char *filename) {
   return strdup(ext);
 }
 
+
+int posthdr_addfield(struct soap *soap_ptr, const char *key, const char *val)
+{
+	struct userconfig *userptr = (struct userconfig *) (soap_ptr->user);
+	if (userptr == NULL) {
+		dprintf(D_ALWAYS, "fposthdr: NULL user member.\n");
+		return (1);
+	}
+	int retval = userptr->fposthdr(soap_ptr, key, val);
+	
+	if (retval == 0 && key != NULL && strcmp(key, "Content-Length") == 0) {
+		// Output Last-Modified after Content-Length field.
+		retval = userptr->fposthdr(soap_ptr, "Last-Modified", userptr->dttmstr);
+		if  (retval == 0) {
+			time_t expirTm = time(NULL);
+			expirTm += 300; // Give 5 minutes expiration time
+			char currTm[DTTM_SIZE];
+			strftime(currTm, DTTM_SIZE, DAYDTMONYRTIMEZONEFMT, gmtime(&expirTm));
+			retval = userptr->fposthdr(soap_ptr, "Expires", currTm);
+			// retval = userptr->fposthdr(soap_ptr, "Cache-Control", "s-maxage=300");
+		}
+		dprintf(D_DAEMONCORE, "fposthdr: added Last-Modified and max-age\n");
+	}
+	return (retval);
+}
+
+
+// Compares two date-time strings in a standard format and returns 0 if
+// they're equal (or an error occurs), 1 if dttm1 is greater, and -1 if
+// dttm1 is smaller.
+int cmp_dttm_strs(const char *dttm1, const char *dttm2)
+{
+	struct tm time1, time2;
+	if (strptime(dttm1, DAYDTMONYRTIMEZONEFMT, &time1) != NULL &&
+		strptime(dttm2, DAYDTMONYRTIMEZONEFMT, &time2) != NULL) {
+		time_t int_tm1, int_tm2;
+		if ((int_tm1 = mktime(&time1)) != -1 && (int_tm2 = mktime(&time2)) != -1) {
+			if (int_tm1 == int_tm2)
+				return (0);
+			else if (int_tm1 > int_tm2)
+				return (1);
+			else return (-1);
+		}
+	}
+	return (0);	// Unknown, so return 0.
+}
+
+
 int serve_file(struct soap *soap, const char *name, const char *type) { 
   FILE *fstr;
   size_t r;
@@ -529,7 +613,6 @@ int serve_file(struct soap *soap, const char *name, const char *type) {
   if (!web_root_dir) {
     return 404;
   } 
-  
   if (realpath(web_root_dir, buf)) {
     web_root_realpath = strdup(buf);
   }
@@ -539,6 +622,11 @@ int serve_file(struct soap *soap, const char *name, const char *type) {
     return 404;
   } 
   
+  if (param_boolean("ENABLE_HASH_NAME", false)) {
+  	  const char *plain_name = NULL;
+  	  if ((plain_name = condor_soap::get_plain_name(web_root_realpath, name)) != NULL)
+  	  	  name = plain_name;
+  }
   char * full_name = dircat(web_root_realpath,name);
   char * full_name_realpath = NULL;
   if (realpath(full_name, buf)) {
@@ -585,27 +673,74 @@ int serve_file(struct soap *soap, const char *name, const char *type) {
   }
 
   soap->http_content = type;
+  
+	char imsdate[DTTM_SIZE];
+	imsdate[0] = '\0';
+	dprintf(D_DAEMONCORE, "Buffer: %s.\n", soap->buf);
+	const char *imsptr;
+	if ((imsptr = strstr(soap->buf, "If-Modified-Since:")) != NULL) {
+		imsptr += 18;		// Skip over IMS part
+		// Skip over spaces
+		while (*imsptr == ' ')
+			++imsptr;
+		const unsigned int DTTMLEN = 29;
+		unsigned int fieldlen = strlen(imsptr);
+		if (fieldlen > DTTMLEN)
+			fieldlen = DTTMLEN;
+		strncpy(imsdate, imsptr, fieldlen);
+		imsdate[fieldlen] = '\0';
+		dprintf(D_DAEMONCORE, "ims date: %s.\n", imsdate);
+	}
 
-  if (soap_begin_send(soap) || soap_response(soap, SOAP_FILE)) {
+  if (soap_begin_send(soap)) {
     fclose(fstr);
     return soap->error;
   }
-
-  while ((r = fread(bbb, 1, sizeof(bbb), fstr))) {
-    if (soap_send_raw(soap, bbb, r) != SOAP_OK) {
-      if (soap_end_send(soap) != SOAP_OK) {
-	fclose(fstr);
-	return soap->error;
-      }
-    }
+  
+  bool file_modified = true;	// Assume file modified and should be sent.
+  if (param_boolean("ENABLE_HASH_NAME", false)) {
+	  StatWrapper modtime;
+	  if (modtime.Stat(buf) == 0) {
+		  const StatStructType *statrec = modtime.GetBuf();
+		  time_t filemtime = statrec->st_mtime;
+		  struct userconfig *userptr = (struct userconfig *) (soap->user);
+		  if (userptr != NULL) {
+			  strftime(userptr->dttmstr, DTTM_SIZE, DAYDTMONYRTIMEZONEFMT,
+				  gmtime(&filemtime));
+			  dprintf(D_DAEMONCORE, "Copied mod dttm into user: %s.\n", userptr->dttmstr);
+			  if (strlen(imsdate) > 0)
+			  	file_modified = (cmp_dttm_strs(imsdate, userptr->dttmstr) == -1);
+		  }
+	   } else dprintf(D_DAEMONCORE, "Cannot stat file %s, %d.\n",
+		   buf, modtime.GetRc());
   }
-
-  /* Did we break out of the above loop because 
-     of an error reading from fd? */
-  if (ferror(fstr)) {
+  
+  if (soap_response(soap, SOAP_FILE)) {
     fclose(fstr);
-    soap->error = SOAP_HTTP_ERROR;
-    return 500;
+    return soap->error;
+  }
+ 
+	if (file_modified) {	// Don't send file if not modified since IMS
+		dprintf(D_DAEMONCORE, "Sending file contents\n");
+		while ((r = fread(bbb, 1, sizeof(bbb), fstr))) {
+			if (soap_send_raw(soap, bbb, r) != SOAP_OK) {
+				if (soap_end_send(soap) != SOAP_OK) {
+			fclose(fstr);
+			return soap->error;
+				}
+			}
+		}
+		
+		/* Did we break out of the above loop because 
+			 of an error reading from fd? */
+		if (ferror(fstr)) {
+			fclose(fstr);
+			soap->error = SOAP_HTTP_ERROR;
+			return 500;
+		}
+  } else {
+  	soap->status = 304;
+		dprintf(D_DAEMONCORE, "File not changed since IMS date -- not sending it\n");
   }
 
   fclose(fstr);
