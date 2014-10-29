@@ -51,6 +51,13 @@ This fixes the delegation of RFC format proxies, in addition to other
 bug fixes.
 \Ticket{4596}
 
+\item Fixed a bug that caused both \Condor{dagman} and the schedd
+to generate commands to remove \Condor{dagman}'s node jobs when
+\Condor{dagman} itself is \Condor{rm}'ed.  Now only the schedd
+generates the command, avoiding the extra load of running two
+identical commands.
+\Ticket{4618}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
