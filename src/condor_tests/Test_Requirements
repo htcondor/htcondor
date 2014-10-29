@@ -34,6 +34,7 @@ condor_view_classad_types: cygwin
 defrag: cygwin
 file_transfer_submit: personal
 gangliad: personal
+job_ligo_x86-64-chkpttst: IPv4
 job_ckpt_combo-sanity_std: personal, IPv4
 job_ckpt_constructor_std: personal, IPv4
 job_ckpt_dup_std: personal, IPv4
@@ -51,8 +52,9 @@ job_ckpt_memory-file_std: personal, IPv4
 job_ckpt_open-async-ckpt_std: personal, IPv4
 job_ckpt_open-N-parallel_std: personal, IPv4
 job_ckpt_signals_std: personal, IPv4
-job_ckpt_socket-support_std: person, IPv4al
+job_ckpt_socket-support_std: personal, IPv4
 job_ckpt_stack_std: personal, IPv4
+job_ckpt_stack_with_ckpt_server_std: IPv4
 job_concurrency_limitsP0: cygwin
 job_concurrency_limitsP1: cygwin
 job_concurrency_limitsP: cygwin
