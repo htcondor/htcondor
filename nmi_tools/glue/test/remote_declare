@@ -337,17 +337,26 @@ sub load_platform_skip_list {
 sub parseAppendFile {
 	my $appendFile = ();
 
-	my $appendConfigFile = "condor_tests/testconfigappend";
+	my $appendConfigFile = "testconfigappend";
+	my @dirs = ( $ENV{BASE_DIR}, "condor_tests" );
+	foreach my $dir (@dirs) {
+		my $fullPath = File::Spec->catfile( $dir, $appendConfigFile );
+		if( -f $fullPath ) {
+			$appendConfigFile = $fullPath;
+			last;
+		}
+	}
 
-	if( -e $appendConfigFile ) {
+	if( -f $appendConfigFile ) {
 		open( PAF, "< ${appendConfigFile}" ) or die( "Unable to open '$appendConfigFile', aborting.\n" );
 
 		while( my $line = <PAF> ) {
 			TestGlue::fullchomp( $line );
-			$line =~ m/^\s*([^=\s]+)\s*=\s*([^\s]*)\s*$/;
-			my( $attr, $value ) = ( $1, $2 );
-			print( "Found config to append: '$attr' = '$value'.\n" );
-			$appendFile->{ $attr } = $value;
+			if( $line =~ m/^\s*([^=\s]+)\s*=\s*([^\s]*)\s*$/ ) {
+				my( $attr, $value ) = ( $1, $2 );
+				print( "Found config to append: '$attr' = '$value'.\n" );
+				$appendFile->{ $attr } = $value;
+			}
 		}
 
 		close( PAF );
