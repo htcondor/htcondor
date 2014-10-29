@@ -8380,6 +8380,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	int i;
 	size_t *core_size_ptr = NULL;
 	char *ckpt_name = NULL;
+	// This is the temporary directory we create for the job, but it
+	// is not where we run the job. We put the .job.ad file here.
 	std::string job_execute_dir;
 	std::string job_ad_path;
 	bool wrote_job_ad = false;
@@ -8592,9 +8594,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 
 		if(directory_exists) {
 			// construct the full path to the job ad file
-			std::string job_ad_filename;
-			param(job_ad_filename, "JOB_AD_FILENAME", ".job.ad");
-			job_ad_path = job_execute_dir + DIR_DELIM_CHAR + job_ad_filename;
+			job_ad_path = job_execute_dir + DIR_DELIM_CHAR + ".job.ad";
 
 			// write it
 			FILE *job_ad_fp = NULL;
