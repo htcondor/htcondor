@@ -1029,6 +1029,7 @@ tcp_connect( const char *host, int port )
 	struct addrinfo* result = 0;
 	int success;
 	SOCKET fd;
+	struct addrinfo hint;
 	union {
 		struct sockaddr_in6 v6;
 		struct sockaddr_in v4;
@@ -1040,7 +1041,6 @@ tcp_connect( const char *host, int port )
 
 	// Ubuntu 10 and 12 don't implement AI_ADDRCONFIG the same way
 	// everyone else does, so we have to turn it off explicitly.
-	struct addrinfo hint;
 	memset( & hint, 0, sizeof(hint) );
 	hint.ai_family = AF_UNSPEC;
 	hint.ai_flags = AI_CANONNAME;
