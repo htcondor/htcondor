@@ -154,6 +154,17 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 bool
 ClaimStartdMsg::putExtraClaims(Sock *sock) {
 
+	const CondorVersionInfo *cvi = sock->get_peer_version();
+
+	if (!cvi) {
+		return true;
+	}
+
+		// Older versions of condor don't know about this
+	if (!cvi->built_since_version(8,2,2)) {
+		return true;
+	}
+
 	if (m_extra_claims.length() == 0) {
 		return sock->put(0);
 	}
