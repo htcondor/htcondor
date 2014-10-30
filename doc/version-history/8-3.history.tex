@@ -54,6 +54,13 @@ with configuration variables \MacroNI{START\_SCHEDULER\_UNIVERSE} and
 \MacroNI{START\_LOCAL\_UNIVERSE}, respectively.
 \Ticket{4589}
 
+\item HTCondor now sets environment variable \Env{\_CONDOR\_JOB\_AD} for
+scheduler universe jobs. The value is the path to a file which contains
+the job ad as it was when the job was started.
+This feature already exists for vanilla, parallel, java, and local
+universe jobs.
+\Ticket{4558}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
