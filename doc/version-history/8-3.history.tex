@@ -34,6 +34,10 @@ be registered with the ClassAds library.  This allows python
 functions to be invoked from within ClassAds.
 \Ticket{4598}
 
+\item A new python binding was added to allow the ClassAd object
+to determine internal and external references from an expression.
+\Ticket{4681}
+
 \item Added the \Arg{ALWAYS-UPDATE} option for DAGMan node status
 files (see section~\ref{sec:DAG-node-status} for details).  (Specifying
 this option causes the node status file to be overwritten even if
@@ -50,6 +54,13 @@ with configuration variables \MacroNI{START\_SCHEDULER\_UNIVERSE} and
 \MacroNI{START\_LOCAL\_UNIVERSE}, respectively.
 \Ticket{4589}
 
+\item HTCondor now sets environment variable \Env{\_CONDOR\_JOB\_AD} for
+scheduler universe jobs. The value is the path to a file which contains
+the job ad as it was when the job was started.
+This feature already exists for vanilla, parallel, java, and local
+universe jobs.
+\Ticket{4558}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -64,6 +75,17 @@ bug fixes.
 \item Fixed a bug that could cause DAGMan to segfault (rather than
 printing an appropriate error message) on some DAG file syntax errors.
 \Ticket{4616}
+
+\item Fixed a bug that could cause shared port to fail on Mac OS X if
+\Macro{LOCK} wasn't explicitly set in the configuration file.
+\Ticket{4678}
+
+\item Fixed a bug that caused both \Condor{dagman} and the schedd
+to generate commands to remove \Condor{dagman}'s node jobs when
+\Condor{dagman} itself is \Condor{rm}'ed.  Now only the schedd
+generates the command, avoiding the extra load of running two
+identical commands.
+\Ticket{4618}
 
 \end{itemize}
 

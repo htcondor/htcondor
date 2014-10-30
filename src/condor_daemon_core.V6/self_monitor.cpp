@@ -446,7 +446,7 @@ double DaemonCore::Stats::AddSample(const char * name, int as, double val)
 
 double DaemonCore::Stats::AddRuntimeSample(const char * name, int as, double before) // returns current time.
 {
-   double now = UtcTime::getTimeDouble();
+   double now = _condor_debug_get_time_double();
    if ( ! this->enabled) return now;
 
    this->AddSample(name, as | IF_RT_SUM, now - before);
@@ -493,7 +493,7 @@ double DaemonCore::Stats::AddRuntimeSample(const char * name, int as, double bef
 {
    if ( ! this->enabled) return;
 
-   double now = UtcTime::getTimeDouble();
+   double now = _condor_debug_get_time_double();
    this->AddSample(name, as, now - before);
    return now;
 }

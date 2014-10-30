@@ -1527,7 +1527,7 @@ bool Sock::test_connection()
 #else
 		setConnectFailureErrno(errno,"getsockopt");
 #endif
-        dprintf(D_ALWAYS, "Sock::test_connection - getsockopt failed\n");
+        dprintf(D_NETWORK, "Sock::test_connection - getsockopt failed\n");
         return false;
     }
     // return result

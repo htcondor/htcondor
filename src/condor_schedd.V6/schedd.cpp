@@ -442,7 +442,18 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 		}
 	} else {
 		// Don't know the version of the startd, assume false
+		// unless STARTER_HANDLES_ALIVES is true.  If STARTER_HANDLES_ALIVES
+		// is true, we want to assume startd will send alives otherwise
+		// on a schedd restart the schedd will keep sending alives to all
+		// reconnected jobs because it will never actually receive an alive
+		// from the startd.  The downside of this logic is a v8.3.2+ schedd can
+		// no longer successfully reconnect to a startd older than v7.5.5
+		// assuming STARTER_HANDLES_ALIVES is set to the default of true.
+		// I think this is a reasonable compromise.  -Todd Tannenbaum 10/2014
 		m_startd_sends_alives = false;
+		if ( param_boolean("STARTER_HANDLES_ALIVES",true) ) {
+			m_startd_sends_alives = true;
+		}
 	}
 
 	keep_while_idle = 0;
@@ -1812,8 +1823,11 @@ int Scheduler::history_helper_reaper(int, int) {
 int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
 
 	std::string history_helper;
-	param(history_helper, "HISTORY_HELPER", "$(LIBEXEC)/condor_history_helper");
-        history_helper = macro_expand(history_helper.c_str());
+	if ( !param(history_helper, "HISTORY_HELPER") ) {
+		char *tmp = expand_param("$(LIBEXEC)/condor_history_helper");
+		history_helper = tmp;
+		free(tmp);
+	}
 	ArgList args;
 	args.AppendArg("condor_history_helper");
 	args.AppendArg("-f");
@@ -6140,9 +6154,13 @@ Scheduler::contactStartd( ContactStartdArgs* args )
     jobAd->CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, mrec->my_match_ad);
     jobAd->CopyAttribute(ATTR_REMOTE_AUTOREGROUP, mrec->my_match_ad);
 
-		// Setup to claim the slot asynchronously
+	// Tell the startd side who should send alives... startd or schedd
+	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, mrec->m_startd_sends_alives );	
+	// Tell the startd if to should not send alives if starter is alive
+	jobAd->Assign( ATTR_STARTER_HANDLES_ALIVES, 
+					param_boolean("STARTER_HANDLES_ALIVES",true) );
 
-	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, mrec->m_startd_sends_alives );
+	// Setup to claim the slot asynchronously
 
 	classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
 		(DCMsgCallback::CppFunction)&Scheduler::claimedStartd,
@@ -8390,6 +8408,12 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	int i;
 	size_t *core_size_ptr = NULL;
 	char *ckpt_name = NULL;
+	// This is the temporary directory we create for the job, but it
+	// is not where we run the job. We put the .job.ad file here.
+	std::string job_execute_dir;
+	std::string job_ad_path;
+	bool wrote_job_ad = false;
+	bool directory_exists = false;
 
 	is_executable = false;
 
@@ -8579,7 +8603,40 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", error.Value(), errno );
 		cannot_open_files = true;
 	}
-	
+
+	formatstr(job_execute_dir, "%s%cdir_%d_%d", LocalUnivExecuteDir, DIR_DELIM_CHAR, job_id->cluster, job_id->proc);
+	{
+		TemporaryPrivSentry tps(PRIV_CONDOR);
+		if( mkdir(job_execute_dir.c_str(), 0755) < 0 ) {
+			if (errno == EEXIST) {
+				directory_exists = true;
+			} else {
+				dprintf( D_FAILURE|D_ALWAYS,
+					"couldn't create dir %s: (%s, errno=%d).\n",
+					job_execute_dir.c_str(),
+					strerror(errno), errno );
+			}
+		} else {
+			directory_exists = true;
+		}
+
+		if(directory_exists) {
+			// construct the full path to the job ad file
+			job_ad_path = job_execute_dir + DIR_DELIM_CHAR + ".job.ad";
+
+			// write it
+			FILE *job_ad_fp = NULL;
+			if (!(job_ad_fp = safe_fopen_wrapper_follow(job_ad_path.c_str(), "w"))) {
+				dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed (%s, errno=%d).\n", job_ad_path.c_str(), strerror(errno), errno );
+			} else {
+				// fPrindAd does not have any usable error reporting.
+				fPrintAd(job_ad_fp, *userJob, true);
+				wrote_job_ad = true;
+				fclose(job_ad_fp);
+			}
+		}
+	}
+
 	//change back to whence we came
 	if ( tmpCwd.Length() ) {
 		if (chdir(tmpCwd.Value())) {
@@ -8665,6 +8722,12 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		core_size = (size_t)core_size_truncated;
 		core_size_ptr = &core_size;
 	}
+
+		// Update the environment to point at the job ad.
+	if( wrote_job_ad && !envobject.SetEnv("_CONDOR_JOB_AD", job_ad_path.c_str()) ) {
+		dprintf( D_ALWAYS, "Failed to set _CONDOR_JOB_AD environment variable\n");
+	}
+
 
 		// Scheduler universe jobs should not be told about the shadow
 		// command socket in the inherit buffer.
@@ -10637,6 +10700,18 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 	job_id.cluster = srec->job_id.cluster;
 	job_id.proc = srec->job_id.proc;
 
+	std::string dir_name;
+	formatstr(dir_name, "dir_%d_%d", job_id.cluster, job_id.proc);
+	Directory execute_dir( LocalUnivExecuteDir, PRIV_CONDOR );
+	if ( execute_dir.Find_Named_Entry( dir_name.c_str() ) ) {
+		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", LocalUnivExecuteDir, DIR_DELIM_CHAR, dir_name.c_str() );
+		if (!execute_dir.Remove_Current_File()) {
+			dprintf( D_FAILURE|D_ALWAYS, "Failed to remove execute directory %s%c%s for scheduler universe job.\n", LocalUnivExecuteDir, DIR_DELIM_CHAR, dir_name.c_str() );
+		}
+	} else {
+		dprintf( D_ALWAYS, "Execute sub-directory (%s) missing in %s.\n", dir_name.c_str(), LocalUnivExecuteDir );
+	}
+
 	if ( daemonCore->Was_Not_Responding(pid) ) {
 		// this job was killed by daemon core because it was hung.
 		// just restart the job.
@@ -10710,7 +10785,6 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			reason = "Unknown user policy expression";
 		}
 	}
-
 
 	switch(action) {
 		case REMOVE_FROM_QUEUE:
@@ -12811,6 +12885,7 @@ Scheduler::sendAlives()
 {
 	match_rec	*mrec;
 	int		  	numsent=0;
+	bool starter_handles_alives = param_boolean("STARTER_HANDLES_ALIVES",true);
 
 		/*
 		  we need to timestamp any job ad with the last time we sent a
@@ -12842,7 +12917,14 @@ Scheduler::sendAlives()
 	while (matches->iterate(mrec) == 1) {
 		if( mrec->status == M_ACTIVE ) {
 			int renew_time;
-			if ( mrec->m_startd_sends_alives ) {
+			if ( starter_handles_alives && 
+				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
+			{
+				// If we're trusting the existance of the shadow to 
+				// keep the claim alive (because of kernel sockopt keepalives),
+				// set ATTR_LAST_JOB_LEASE_RENEWAL to the current time.
+				renew_time = now;
+			} else if ( mrec->m_startd_sends_alives ) {
 				// if the startd sends alives, then the ATTR_LAST_JOB_LEASE_RENEWAL
 				// is updated someplace else in RAM only when we receive a keepalive
 				// ping from the startd.  So here

@@ -118,6 +118,15 @@
 /* The daemon exited and does not want to be restarted automatically. */
 #define DAEMON_NO_RESTART (EXIT_CODE_OFFSET - 1)
 
+/***********************************************************************
+  Exit codes for condor_starter to the condor_startd.
+  Yes they should be offset, but for now they are not.
+  Note that when the starter is running under the schedd (local universe)
+  it will use the shadow exit codes above.
+***********************************************************************/
+#define STARTER_EXIT_NORMAL 0 
+#define STARTER_EXIT_GENERAL_FAILURE 1
+#define STARTER_EXIT_LOST_SHADOW_CONNECTION 2
 
 BEGIN_C_DECLS
 int generate_exit_code( int input_code );

@@ -144,6 +144,7 @@ GangliaD::initAndReconfig()
 		}
 		if( !libname.empty() ) {
 			if( libname == m_ganglia_libname ) {
+				libganglia_initialized = true;
 				dprintf(D_ALWAYS,"Already loaded libganglia %s\n",libname.c_str());
 				// I have observed instabilities when reloading the library, so
 				// it is best to not do that unless it is really necessary.

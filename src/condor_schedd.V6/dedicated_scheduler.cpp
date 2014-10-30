@@ -927,6 +927,8 @@ DedicatedScheduler::sendAlives( void )
 {
 	match_rec	*mrec;
 	int		  	numsent=0;
+	int now = (int)time(0);
+	bool starter_handles_alives = param_boolean("STARTER_HANDLES_ALIVES",true);
 
 	BeginTransaction();
 
@@ -940,11 +942,19 @@ DedicatedScheduler::sendAlives( void )
 		}
 
 		if (mrec->m_startd_sends_alives && (mrec->status == M_ACTIVE)) {
-
 				// in receive_startd_update, we've updated the lease time only in the job ad
 				// actually write it to the job log here in one big transaction.
 			int renew_time = 0;
-			GetAttributeInt(mrec->cluster,mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
+			if ( starter_handles_alives && 
+				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
+			{
+				// If we're trusting the existance of the shadow to 
+				// keep the claim alive (because of kernel sockopt keepalives),
+				// set ATTR_LAST_JOB_LEASE_RENEWAL to the current time.
+				renew_time = now;
+			} else {
+				GetAttributeInt(mrec->cluster,mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
+			}
 			SetAttributeInt( mrec->cluster, mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL, renew_time ); 
 		}
 	}

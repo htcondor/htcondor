@@ -857,6 +857,11 @@ FileTransfer::DownloadFiles(bool blocking)
 
 		sock.timeout(clientSockTimeout);
 
+		if (IsDebugLevel(D_COMMAND)) {
+			dprintf (D_COMMAND, "FileTransfer::DownloadFiles(%s,...) making connection to %s\n",
+				getCommandStringSafe(FILETRANS_UPLOAD), TransSock ? TransSock : "NULL");
+		}
+
 		Daemon d( DT_ANY, TransSock );
 
 		if ( !d.connectSock(&sock,0) ) {
@@ -1218,6 +1223,11 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 		}
 
 		sock.timeout(clientSockTimeout);
+
+		if (IsDebugLevel(D_COMMAND)) {
+			dprintf (D_COMMAND, "FileTransfer::UploadFiles(%s,...) making connection to %s\n",
+				getCommandStringSafe(FILETRANS_DOWNLOAD), TransSock ? TransSock : "NULL");
+		}
 
 		Daemon d( DT_ANY, TransSock );
 

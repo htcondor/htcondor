@@ -53,6 +53,7 @@ enum SpliceLayer {
 class Dagman;
 class MyString;
 class DagmanMetrics;
+class CondorID;
 
 // used for RelinquishNodeOwnership and AssumeOwnershipofNodes
 // This class owns the containers with which it was constructed, but
@@ -458,8 +459,18 @@ class Dag {
         when the Dagman Condor job itself is removed by the user via
         condor_rm.  This function <b>is not</b> called when the schedd
         kills Dagman.
+		@param dmJobId: the Condor ID of this DAGMan job.
+		@param removeCondorJobs: iff true we, remove our Condor node jobs.
+			This is set to false when DAGMan itself is condor_rm'ed,
+			because in that case the schedd removes the node jobs.
+		@param bForce: iff true, we run the command to remove Condor
+			node jobs even if we don't think we have any -- I think this
+			is in case we have a failure in recovery mode before we've
+			read the logs.  Setting bForce to true automatically
+			implies removeCondorJobs.
     */
-    void RemoveRunningJobs ( const Dagman &, bool bForce=false) const;
+    void RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
+				bool bForce ) const;
 
     /** Remove all pre- and post-scripts that are currently running.
 	All currently running scripts will be killed via daemoncore.

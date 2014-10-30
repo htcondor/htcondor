@@ -1140,7 +1140,7 @@ EvaluateAttrList( const string &attr, ExprList *&l ) const
 #endif
 
 bool ClassAd::
-GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames )
+GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames ) const
 {
     EvalState       state;
 
@@ -1152,8 +1152,8 @@ GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames )
 
 
 bool ClassAd::
-_GetExternalReferences( const ExprTree *expr, ClassAd *ad, 
-	EvalState &state, References& refs, bool fullNames )
+_GetExternalReferences( const ExprTree *expr, const ClassAd *ad, 
+	EvalState &state, References& refs, bool fullNames ) const
 {
     switch( expr->GetKind( ) ) {
         case LITERAL_NODE:
@@ -1332,7 +1332,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 }
 
 bool ClassAd::
-GetExternalReferences( const ExprTree *tree, PortReferences &refs )
+GetExternalReferences( const ExprTree *tree, PortReferences &refs ) const
 {
     EvalState       state;
 
@@ -1344,8 +1344,8 @@ GetExternalReferences( const ExprTree *tree, PortReferences &refs )
 }
 
 bool ClassAd::
-_GetExternalReferences( const ExprTree *expr, ClassAd *ad, 
-	EvalState &state, PortReferences& refs )
+_GetExternalReferences( const ExprTree *expr, const ClassAd *ad, 
+	EvalState &state, PortReferences& refs ) const
 {
     switch( expr->GetKind( ) ) {
         case LITERAL_NODE:
@@ -1484,7 +1484,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 
 
 bool ClassAd::
-GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames)
+GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames) const
 {
     EvalState state;
     state.rootAd = this;
@@ -1495,8 +1495,8 @@ GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames)
 
 //this is closely modelled off of _GetExternalReferences in the new_classads.
 bool ClassAd::
-_GetInternalReferences( const ExprTree *expr, ClassAd *ad,
-        EvalState &state, References& refs, bool fullNames)
+_GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
+        EvalState &state, References& refs, bool fullNames) const
 {
 
     switch( expr->GetKind() ){

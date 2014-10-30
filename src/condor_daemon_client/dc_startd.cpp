@@ -154,6 +154,17 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 bool
 ClaimStartdMsg::putExtraClaims(Sock *sock) {
 
+	const CondorVersionInfo *cvi = sock->get_peer_version();
+
+	if (!cvi) {
+		return true;
+	}
+
+		// Older versions of condor don't know about this
+	if (!cvi->built_since_version(8,2,2)) {
+		return true;
+	}
+
 	if (m_extra_claims.length() == 0) {
 		return sock->put(0);
 	}
@@ -311,6 +322,11 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 		// if this claim is associated with a security session
 	ClaimIdParser cidp(claim_id);
 	char const *sec_session = cidp.secSessionId();
+
+	if (IsDebugLevel(D_COMMAND)) {
+		int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
+		dprintf (D_COMMAND, "DCStartd::deactivateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+	}
 
 	bool  result;
 	ReliSock reli_sock;
@@ -897,6 +913,11 @@ DCStartd::vacateClaim( const char* name_vacate )
 {
 	setCmdStr( "vacateClaim" );
 
+	if (IsDebugLevel(D_COMMAND)) {
+		int cmd = VACATE_CLAIM;
+		dprintf (D_COMMAND, "DCStartd::vacateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+	}
+
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
@@ -948,6 +969,11 @@ DCStartd::_suspendClaim( )
 	ClaimIdParser cidp(claim_id);
 	char const *sec_session = cidp.secSessionId();
 	
+	if (IsDebugLevel(D_COMMAND)) {
+		int cmd = SUSPEND_CLAIM;
+		dprintf (D_COMMAND, "DCStartd::_suspendClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+	}
+
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
@@ -1001,6 +1027,11 @@ DCStartd::_continueClaim( )
 	ClaimIdParser cidp(claim_id);
 	char const *sec_session = cidp.secSessionId();
 	
+	if (IsDebugLevel(D_COMMAND)) {
+		int cmd = CONTINUE_CLAIM;
+		dprintf (D_COMMAND, "DCStartd::_continueClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+	}
+
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
@@ -1046,6 +1077,11 @@ DCStartd::checkpointJob( const char* name_ckpt )
 			 name_ckpt );
 
 	setCmdStr( "checkpointJob" );
+
+	if (IsDebugLevel(D_COMMAND)) {
+		int cmd = PCKPT_JOB;
+		dprintf (D_COMMAND, "DCStartd::checkpointJob(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr ? _addr : "NULL");
+	}
 
 	bool  result;
 	ReliSock reli_sock;

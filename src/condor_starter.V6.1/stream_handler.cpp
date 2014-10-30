@@ -21,8 +21,10 @@
 #include "condor_common.h"
 #include "stream_handler.h"
 #include "NTsenders.h"
+#include "starter.h"
+#include "jic_shadow.h"
 
-extern ReliSock *syscall_sock;
+extern CStarter *Starter;
 
 /*static*/ int StreamHandler::num_handlers = 0;
 
@@ -284,11 +286,10 @@ StreamHandler::Reconnect() {
 
 void
 StreamHandler::Disconnect() {
-
 	dprintf(D_ALWAYS, "Streaming i/o handler disconnecting %s from shadow\n", filename.Value());
 	connected=false;
 	daemonCore->Cancel_Pipe(handler_pipe);
-	syscall_sock->close();
+	Starter->jic->disconnect();
 }
 
 // On reconnect, the submit OS may have crashed and lost our precious

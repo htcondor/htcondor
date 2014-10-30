@@ -2084,12 +2084,17 @@ Dag::NumNodesDone( bool includeFinal ) const
 // that is now in schedd.cpp.  We are keeping this here for now in case
 // someone needs to run a 7.5.6 DAGMan with an older schedd.
 // wenger 2011-01-26
-void Dag::RemoveRunningJobs ( const Dagman &dm, bool bForce) const {
+// Note 2: We need to keep this indefinitely for the ABORT-DAG-ON case,
+// where we need to condor_rm any running node jobs, and the schedd
+// won't do it for us.  wenger 2014-10-29.
+void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
+			bool bForce) const {
 
-	debug_printf( DEBUG_NORMAL, "Removing any/all submitted Condor/"
-				"Stork jobs...\n");
+	if ( bForce ) removeCondorJobs = true;
 
-	ArgList args;
+	const char *conJobs = removeCondorJobs ? "Condor/" : "";
+	debug_printf( DEBUG_NORMAL, "Removing any/all submitted %s"
+				"Stork jobs...\n", conJobs );
 
 		// first, remove all Condor jobs submitted by this DAGMan
 		// Make sure we have at least one Condor (not Stork) job before
@@ -2105,7 +2110,9 @@ void Dag::RemoveRunningJobs ( const Dagman &dm, bool bForce) const {
 		}
 	}
 
-	if ( haveCondorJob ) {
+	ArgList args;
+
+	if ( removeCondorJobs && haveCondorJob ) {
 		MyString constraint;
 
 		args.Clear();
@@ -2113,13 +2120,12 @@ void Dag::RemoveRunningJobs ( const Dagman &dm, bool bForce) const {
 		args.AppendArg( "-const" );
 
 		constraint.formatstr( "%s =?= %d", ATTR_DAGMAN_JOB_ID,
-					dm.DAGManJobId._cluster );
+					dmJobId._cluster );
 		args.AppendArg( constraint.Value() );
 		if ( util_popen( args ) != 0 ) {
 			debug_printf( DEBUG_NORMAL, "Error removing DAGMan jobs\n");
 		}
 	}
-		
 
 		// Okay, now remove any Stork jobs.
     ListIterator<Job> iList(_jobs);
@@ -2133,7 +2139,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm, bool bForce) const {
 		if( job->JobType() == Job::TYPE_STORK &&
 			job->GetStatus() == Job::STATUS_SUBMITTED ) {
 			args.Clear();
-			args.AppendArg( dm.storkRmExe );
+			args.AppendArg( _storkRmExe );
 			args.AppendArg( job->GetCluster() );
 			if ( util_popen( args ) != 0 ) {
 				debug_printf( DEBUG_NORMAL, "Error removing Stork job\n");

@@ -161,6 +161,8 @@ BOOST_PYTHON_MODULE(classad)
         .def("flatten", &ClassAdWrapper::Flatten, "Partially evaluate a given expression.")
         .def("matches", &ClassAdWrapper::matches, "Returns true if this ad matches the given ClassAd")
         .def("symmetricMatch", &ClassAdWrapper::symmetricMatch, "Returns true if this ad and the given ad match each other")
+        .def("externalRefs", &ClassAdWrapper::externalRefs, "Returns the references of the given expression which are not in this ClassAd")
+        .def("internalRefs", &ClassAdWrapper::internalRefs, "Returns the references of the given expression which are in this ClassAd.")
         ;
 
     class_<ExprTreeHolder>("ExprTree", "An expression in the ClassAd language", init<std::string>())
