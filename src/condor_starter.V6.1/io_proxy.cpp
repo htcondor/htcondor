@@ -66,7 +66,8 @@ int IOProxy::connect_callback( Stream * /*stream*/ )
 
 	success = server->accept(*client);
 	if(success) {
-		if(get_local_ipaddr().compare_address(client->peer_addr())) {
+		// TODO: This is arbitrarily picking IPv4.  Should we match protocol of *client?
+		if(get_local_ipaddr(CP_IPV4).compare_address(client->peer_addr())) {
 			dprintf(D_FULLDEBUG,"IOProxy: accepting connection from %s\n",client->peer_ip_str());
 			accept_client = true;
 		} else {

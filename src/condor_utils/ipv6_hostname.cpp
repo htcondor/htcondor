@@ -140,6 +140,8 @@ bool init_local_hostname_impl()
 			int local_ipv6addr_desireability = 0;
 #endif
 			while (addrinfo* info = ai.next()) {
+				// TODO: the only time ai_canonname should be set is the first
+				// record. Why are we testing its desirability?
 				const char* name = info->ai_canonname;
 				if (!name)
 					continue;
@@ -365,7 +367,7 @@ MyString get_hostname(const condor_sockaddr& addr) {
 	// just like sin_to_string(), if given address is 0.0.0.0 or equivalent,
 	// it changes to local IP address.
 	if (addr.is_addr_any())
-		targ_addr = get_local_ipaddr();
+		targ_addr = get_local_ipaddr(addr.get_protocol());
 	else
 		targ_addr = addr;
 

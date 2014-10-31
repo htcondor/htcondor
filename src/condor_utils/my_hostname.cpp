@@ -57,7 +57,8 @@ const char* my_full_hostname() {
 
 const char* my_ip_string() {
     static MyString __my_ip_string;
-    __my_ip_string = get_local_ipaddr().to_ip_string();
+	// TODO: Picking IPv4 arbitrarily.
+    __my_ip_string = get_local_ipaddr(CP_IPV4).to_ip_string();
     return __my_ip_string.Value();
 }
 

@@ -672,7 +672,8 @@ handle_dynamic_dirs()
 	}
 	int mypid = daemonCore->getpid();
 	char buf[256];
-	sprintf( buf, "%s-%d", get_local_ipaddr().to_ip_string().Value(), mypid );
+	// TODO: Picking IPv4 arbitrarily.
+	sprintf( buf, "%s-%d", get_local_ipaddr(CP_IPV4).to_ip_string().Value(), mypid );
 
 	set_dynamic_dir( "LOG", buf );
 	set_dynamic_dir( "SPOOL", buf );

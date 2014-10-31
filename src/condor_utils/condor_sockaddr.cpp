@@ -30,12 +30,12 @@ int condor_sockaddr::desirability() const {
 	// IPv6 link local addresses are useless.  You can't use them without a
 	// scope-id, and we can't determine the scope-id that someone else will
 	// need.
-	if(is_ipv6() && is_link_local()) { return 0; }
+	if(is_ipv6() && is_link_local()) { return 1; }
 
-	if(is_loopback()) { return 1; }
-	if(is_private_network()) { return 2; }
+	if(is_loopback()) { return 2; }
 	if(is_link_local()) { return 3; }
-	return 4;
+	if(is_private_network()) { return 4; }
+	return 5;
 }
 
 

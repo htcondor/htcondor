@@ -1082,8 +1082,8 @@ create_tcp_port( unsigned int *ip, u_short *port, int *fd )
 void
 get_host_addr( unsigned int *ip_addr )
 {
-	// [TODO:IPV6]
-	condor_sockaddr myaddr = get_local_ipaddr();
+	// TODO: This is arbitrarily chosing IPv4. Frankly, no one should use this function, it's awful.
+	condor_sockaddr myaddr = get_local_ipaddr(CP_IPV4);
 	sockaddr_in saddr = myaddr.to_sin();
 	*ip_addr = ntohl(saddr.sin_addr.s_addr);
 	display_ip_addr( *ip_addr );

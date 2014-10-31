@@ -26,7 +26,7 @@
 
 void init_local_hostname();
 
-condor_sockaddr get_local_ipaddr(condor_protocol proto=CP_IPV6);
+condor_sockaddr get_local_ipaddr(condor_protocol proto);
 MyString get_local_hostname();
 MyString get_local_fqdn();
 
