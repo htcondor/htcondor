@@ -1675,10 +1675,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 
 //---------------------------------------------------------------------------
 int
-Dag::PreScriptReaper( const char* nodeName, int status )
+Dag::PreScriptReaper( Job *job, int status )
 {
-	ASSERT( nodeName != NULL );
-	Job* job = FindNodeByName( nodeName );
 	ASSERT( job != NULL );
 	if ( job->GetStatus() != Job::STATUS_PRERUN ) {
 		EXCEPT( "Error: node %s is not in PRERUN state", job->GetJobName() );
@@ -1838,17 +1836,10 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 // done not when the reaper is called, but in ProcessLogEvents when
 // the log event (written by the reaper) is seen...
 int
-Dag::PostScriptReaper( const char* nodeName, int status )
+Dag::PostScriptReaper( Job *job, int status )
 {
-	ASSERT( nodeName != NULL );
-	Job* job = FindNodeByName( nodeName );
 	ASSERT( job != NULL );
-	return PostScriptSubReaper( job, status );
-}
 
-int 
-Dag::PostScriptSubReaper( Job* job, int status )
-{
 	if ( job->GetStatus() != Job::STATUS_POSTRUN ) {
 		EXCEPT( "Node %s is not in POSTRUN state",
 			job->GetJobName() );
@@ -2088,8 +2079,8 @@ Dag::NumNodesDone( bool includeFinal ) const
 // where we need to condor_rm any running node jobs, and the schedd
 // won't do it for us.  wenger 2014-10-29.
 void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
-			bool bForce) const {
-
+			bool bForce) const
+{
 	if ( bForce ) removeCondorJobs = true;
 
 	const char *conJobs = removeCondorJobs ? "Condor/" : "";
@@ -2969,26 +2960,50 @@ Dag::DumpNodeStatus( bool held, bool removed )
 				(unsigned long)startTime,
 				EscapeClassadString( timeStr.Value() ) );
 
+		// If markNodesError is true, this means that we want to mark
+		// nodes in the PRERUN, SUBMITTED, and POSTRUN states as being
+		// in the ERROR state.  This is because if, for example, we're
+		// condor_rm'ed, we won't see the ABORTED events for node jobs
+		// that get removed, but we're *assuming* they will get removed.
+		// (See gittrac #4686.)  We only want to do this the very last
+		// time we dump out the node status file, to make sure that we
+		// don't erroneously mark a running final node (if we have one)
+		// as finished unsuccessfully.
+	bool markNodesError = false;
+
 		//
 		// Print overall DAG status.
 		//
 	Job::status_t dagJobStatus = Job::STATUS_SUBMITTED;
 	const char *statusNote = "";
+
 	if ( DoneSuccess( true ) ) {
 		dagJobStatus = Job::STATUS_DONE;
 		statusNote = "success";
+			// In case we have a combination of abort-dag-on and final
+			// node, and we get here before seeing ABORTED events for
+			// node jobs that got removed.
+		markNodesError = true;
+
 	} else if ( DoneFailed( true ) ) {
 		dagJobStatus = Job::STATUS_ERROR;
 		if ( _dagStatus == DAG_STATUS_ABORT ) {
 			statusNote = "aborted";
+			markNodesError = true;
 		} else {
 			statusNote = "failed";
+				// In case we're halted and nodes are waiting for
+				// deferred PRE or POST scripts.
+			markNodesError = true;
 		}
+
 	} else if ( DoneCycle( true ) ) {
 		dagJobStatus = Job::STATUS_ERROR;
 		statusNote = "cycle";
+
 	} else if ( held ) {
 		statusNote = "held";
+
 	} else if ( removed ) {
 		if ( HasFinalNode() && !FinishedRunning( true ) ) {
 			dagJobStatus = Job::STATUS_SUBMITTED;
@@ -2996,6 +3011,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		} else {
 			dagJobStatus = Job::STATUS_ERROR;
 			statusNote = "removed";
+			markNodesError = true;
 		}
 	} else if ( _dagIsAborted ) {
 		if ( HasFinalNode() && !FinishedRunning( true ) ) {
@@ -3004,8 +3020,10 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		} else {
 			dagJobStatus = Job::STATUS_ERROR;
 			statusNote = "aborted";
+			markNodesError = true;
 		}
 	}
+
 	MyString statusStr = Job::status_t_names[dagJobStatus];
 	statusStr.trim();
 	statusStr += " (";
@@ -3014,16 +3032,34 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	fprintf( outfile, "  DagStatus = %d; /* %s */\n", dagJobStatus,
 				EscapeClassadString( statusStr.Value() ) );
 
+	int nodesPre = PreRunNodeCount();
+	int nodesQueued = NumJobsSubmitted();
+	int nodesPost = PostRunNodeCount();
+	int nodesFailed = NumNodesFailed();
+	int nodesHeld = NumHeldJobProcs();
+	int nodesIdle = NumIdleJobProcs();
+	if ( markNodesError ) {
+			// Adjust state counts to reflect "pending" removes of node
+			// jobs, etc.
+		nodesFailed += nodesPre;
+		nodesPre = 0;
+		nodesFailed += nodesQueued;
+		nodesQueued = 0;
+		nodesFailed += nodesPost;
+		nodesPost = 0;
+		nodesHeld = 0;
+		nodesIdle = 0;
+	}
 	fprintf( outfile, "  NodesTotal = %d;\n", NumNodes( true ) );
 	fprintf( outfile, "  NodesDone = %d;\n", NumNodesDone( true ) );
-	fprintf( outfile, "  NodesPre = %d;\n", PreRunNodeCount() );
-	fprintf( outfile, "  NodesQueued = %d;\n", NumJobsSubmitted() );
-	fprintf( outfile, "  NodesPost = %d;\n", PostRunNodeCount() );
+	fprintf( outfile, "  NodesPre = %d;\n", nodesPre );
+	fprintf( outfile, "  NodesQueued = %d;\n", nodesQueued );
+	fprintf( outfile, "  NodesPost = %d;\n", nodesPost );
 	fprintf( outfile, "  NodesReady = %d;\n", NumNodesReady() );
 	fprintf( outfile, "  NodesUnready = %d;\n",NumNodesUnready( true ) );
-	fprintf( outfile, "  NodesFailed = %d;\n", NumNodesFailed() );
-	fprintf( outfile, "  JobProcsHeld = %d;\n", NumHeldJobProcs() );
-	fprintf( outfile, "  JobProcsIdle = %d;\n", NumIdleJobProcs() );
+	fprintf( outfile, "  NodesFailed = %d;\n", nodesFailed );
+	fprintf( outfile, "  JobProcsHeld = %d;\n", nodesHeld );
+	fprintf( outfile, "  JobProcsIdle = %d;\n", nodesIdle );
 	fprintf( outfile, "]\n" );
 
 		//
@@ -3034,6 +3070,10 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	while ( it.Next( node ) ) {
 		fprintf( outfile, "[\n" );
 		fprintf( outfile, "  Type = \"NodeStatus\";\n" );
+
+		int jobProcsQueued = node->_queuedNodeJobProcs;
+		int jobProcsHeld = node->_jobProcsOnHold;
+
 		Job::status_t status = node->GetStatus();
 		const char *nodeNote = "";
 		if ( status == Job::STATUS_READY ) {
@@ -3044,12 +3084,33 @@ Dag::DumpNodeStatus( bool held, bool removed )
 				// See Job::_job_type_names for other strings.
 				status = Job::STATUS_NOT_READY;
 			}
+
 		} else if ( status == Job::STATUS_SUBMITTED ) {
-			nodeNote = node->GetIsIdle() ? "idle" : "not_idle";
-			// Note: add info here about whether the job(s) are
-			// held, once that code is integrated.
+			if ( markNodesError ) {
+				status = Job::STATUS_ERROR;
+				nodeNote = "Was STATUS_SUBMITTED";
+				jobProcsQueued = 0;
+				jobProcsHeld = 0;
+			} else {
+				nodeNote = node->GetIsIdle() ? "idle" : "not_idle";
+				// Note: add info here about whether the job(s) are
+				// held, once that code is integrated.
+			}
+
 		} else if ( status == Job::STATUS_ERROR ) {
 			nodeNote = node->error_text;
+
+		} else if ( status == Job::STATUS_PRERUN ) {
+			if ( markNodesError ) {
+				status = Job::STATUS_ERROR;
+				nodeNote = "Was STATUS_PRERUN";
+			}
+
+		} else if ( status == Job::STATUS_POSTRUN ) {
+			if ( markNodesError ) {
+				status = Job::STATUS_ERROR;
+				nodeNote = "Was STATUS_POSTRUN";
+			}
 		}
 
 		fprintf( outfile, "  Node = %s;\n",
@@ -3063,11 +3124,10 @@ Dag::DumpNodeStatus( bool held, bool removed )
 					EscapeClassadString( nodeNote ) );
 		fprintf( outfile, "  RetryCount = %d;\n", node->GetRetries() );
 		// fprintf( outfile, "  /* JobProcsTotal = xxx; */\n" );
-		fprintf( outfile, "  JobProcsQueued = %d;\n",
-					node->_queuedNodeJobProcs );
+		fprintf( outfile, "  JobProcsQueued = %d;\n", jobProcsQueued );
 		// fprintf( outfile, "  /* JobProcsRunning = xxx; */\n" );
 		// fprintf( outfile, "  /* JobProcsIdle = xxx; */\n" );
-		fprintf( outfile, "  JobProcsHeld = %d;\n", node->_jobProcsOnHold );
+		fprintf( outfile, "  JobProcsHeld = %d;\n", jobProcsHeld );
 
 		fprintf( outfile, "]\n" );
 	}

@@ -30,7 +30,9 @@
 
 #include "slot_builder.h"
 
-ResMgr::ResMgr()
+#include "strcasestr.h"
+
+ResMgr::ResMgr() : extras_classad( NULL )
 {
 	totals_classad = NULL;
 	config_classad = NULL;
@@ -142,6 +144,7 @@ double ResMgr::Stats::EndWalk(VoidResourceMember memberfunc, double before)
 ResMgr::~ResMgr()
 {
 	int i;
+	if( extras_classad ) delete extras_classad;
 	if( config_classad ) delete config_classad;
 	if( totals_classad ) delete totals_classad;
 	if( id_disp ) delete id_disp;
@@ -1252,8 +1255,93 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
     m_hibernation_manager->publish( *cp );
 #endif
 
+	if( extras_classad ) { cp->Update( * extras_classad ); }
 }
 
+
+void
+ResMgr::updateExtrasClassAd( ClassAd * cap ) {
+	// It turns out to be colossal pain to use the ClassAd for persistence.
+	static std::set< std::string > offlineUniverses;
+
+	if( ! cap ) { return; }
+	if( ! extras_classad ) { extras_classad = new ClassAd(); }
+
+	//
+	// The startd maintains the set offline universes, and the offline
+	// universe timestamps.
+	//
+	// We start with the current set of offline universes, and add or remove
+	// universes as directed by the update ad.  This obviates the need for
+	// the need for the starter to know anything about the state of the rest
+	// of the machine.
+	//
+
+	cap->ResetExpr();
+	ExprTree * expr = NULL;
+	const char * attr = NULL;
+	while( cap->NextExpr( attr, expr ) ) {
+		//
+		// Copy the whole ad over, excepting special or computed attributes.
+		//
+		if( strcasecmp( attr, "MyType" ) == 0 ) { continue; }
+		if( strcasecmp( attr, "TargetType" ) == 0 ) { continue; }
+		if( strcasecmp( attr, "OfflineUniverses" ) == 0 ) { continue; }
+		if( strcasestr( attr, "OfflineReason" ) != NULL ) { continue; }
+		if( strcasestr( attr, "OfflineTime" ) != NULL ) { continue; }
+
+		ExprTree * copy = expr->Copy();
+		extras_classad->Insert( attr, copy );
+
+		//
+		// Adjust OfflineUniverses based on the Has<Universe> attributes.
+		//
+		const char * uo = strcasestr( attr, "Has" );
+		if( uo != attr ) { continue; }
+
+		std::string universeName( attr + 3 );
+		if( CondorUniverseNumber( universeName.c_str() ) == 0 ) { continue; }
+
+		std::string reasonTime = universeName + "OfflineTime";
+		std::string reasonName = universeName + "OfflineReason";
+
+		int universeOnline = 0;
+		assert( cap->LookupBool( attr, universeOnline ) );
+		if( ! universeOnline ) {
+			offlineUniverses.insert( universeName ).second;
+			extras_classad->Assign( reasonTime.c_str(), time( NULL ) );
+
+			std::string reason = "[unknown reason]";
+			cap->LookupString( reasonName.c_str(), reason );
+			extras_classad->Assign( reasonName.c_str(), reason.c_str() );
+		} else {
+			// The universe is online, so it can't have an offline reason
+			// or a time that it entered the offline state.
+			offlineUniverses.erase( universeName );
+			extras_classad->Assign( reasonTime.c_str(), "undefined" );
+			extras_classad->Assign( reasonName.c_str(), "undefined" );
+		}
+	}
+
+	//
+	// Construct the OfflineUniverses attribute and set it in extras_classad.
+	//
+	std::string ouListString;
+	if( offlineUniverses.empty() ) {
+		ouListString = "{}";
+	} else {
+		std::set< std::string >::const_iterator i = offlineUniverses.begin();
+		for( ; i != offlineUniverses.end(); ++i ) {
+			int offlineUniverseNumber = CondorUniverseNumber( i->c_str() );
+			formatstr( ouListString, "%s\"%s\", %d, ", ouListString.c_str(), i->c_str(), offlineUniverseNumber );
+		}
+		// Remove the trailing ", ".
+		ouListString.erase( ouListString.length() - 2 );
+		ouListString = "{ " + ouListString + " }";
+	}
+	dprintf( D_ALWAYS, "OfflineUniverses = %s\n", ouListString.c_str() );
+	extras_classad->AssignExpr( "OfflineUniverses", ouListString.c_str() );
+}
 
 void
 ResMgr::publishSlotAttrs( ClassAd* cap )
@@ -1932,7 +2020,7 @@ ResMgr::disableResources( const MyString &state_str )
 		   machine so we don't allow new jobs to start while we are in
 		   the middle of hibernating.  We disable _after_ sending our
 		   update_with_ack(), because we want our machine to still be
-		   matchable while offline.  The negotiator knows to treat this
+		   matchable while broken.  The negotiator knows to treat this
 		   state specially. */
 		for ( i = 0; i < nresources; ++i ) {
 			resources[i]->disable();

@@ -1694,7 +1694,7 @@ KVMType::CreateConfigFile()
 	if( m_classAd.LookupString(VMPARAM_VM_DISK, kvm_disk) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n",
 				VMPARAM_VM_DISK);
-		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM;
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_KVM_NO_DISK_PARAM;
 		return false;
 	}
 	kvm_disk.trim();

@@ -204,6 +204,8 @@ public:
 		// call error() to get a descriptive error message
 	bool cancelDrainJobs(char const *request_id);
 
+	bool updateMachineAd( const ClassAd * update, ClassAd * reply, int timeout = -1 );
+
  private:
 	char* claim_id;
 	char* extra_ids;

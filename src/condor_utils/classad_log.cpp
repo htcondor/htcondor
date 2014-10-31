@@ -30,6 +30,7 @@
 #include "classad_merge.h"
 #include "condor_fsync.h"
 #include "condor_attributes.h"
+#include "stopwatch.h"
 
 #if defined(HAVE_DLOPEN)
 #include "ClassAdLogPlugin.h"
@@ -96,13 +97,20 @@ ClassAdLogFilterIterator::operator++(int)
 	bool boolVal;
 	int intVal;
 	int miss_count = 0;
+	Stopwatch sw;
+	sw.start();
 	while (!(m_cur == end))
 	{
 		miss_count++;
-		if (miss_count == m_timeslice_ms)
-		{
-			break;
-		}
+			// 500 was chosen here based on a queue of 1M jobs and
+			// estimated 30ns per clock_gettime call - resulting in
+			// an overhead of 0.06 ms from the timing calls to iterate
+			// through a whole queue.  Compared to the cost of doing
+			// the rest of the iteration (6ms per 10k ads, or 600ms)
+			// for the whole queue, I consider this overhead
+			// acceptable.  BB, 09/2014.
+		if ((miss_count % 500 == 0) && (sw.get_ms() > m_timeslice_ms)) {break;}
+
 		cur = *this;
 		ClassAd *tmp_ad = (*m_cur++).second;
 		if (!tmp_ad) continue;

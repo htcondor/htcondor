@@ -38,7 +38,7 @@ use CondorPersonal;
 
 use base 'Exporter';
 
-our @EXPORT = qw(runCondorTool runToolNTimes RegisterResult EndTest);
+our @EXPORT = qw(PrintTimeStamp timestamp runCondorTool runToolNTimes RegisterResult EndTest);
 
 my %securityoptions =
 (
@@ -2364,6 +2364,11 @@ sub debug {
     elsif($level <= $DEBUGLEVEL) {
     	print timestamp() . " Test: $msg";
     }
+}
+
+sub PrintTimeStamp {
+	my $timing = timestamp();
+	print "now: $timing\n";
 }
 
 sub timestamp {
