@@ -223,7 +223,7 @@ if ( WITH_CREAM )
 			#--Patch step ----------
 			PATCH_COMMAND ${CREAM_PATCH}
 			#--Configure step ----------
-			CONFIGURE_COMMAND PATH=${CREAMSOAP_INSTALL_LOC}/bin:$ENV{PATH} cmake 
+			CONFIGURE_COMMAND PATH=${CREAMSOAP_INSTALL_LOC}/bin:$ENV{PATH} ${CMAKE_COMMAND} 
 				-DCMAKE_INSTALL_PREFIX:string=${CREAM_INSTALL_LOC} 
 				-DWSDL_PATH:string=${CREAM_WSDL_INSTALL_LOC}/share/wsdl/cream-ce 
 				-DGSOAP_INCLUDE_DIRS:string=${CREAMSOAP_INSTALL_LOC}/include 
