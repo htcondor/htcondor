@@ -30,6 +30,8 @@
 
 #include "slot_builder.h"
 
+#include "strcasestr.h"
+
 ResMgr::ResMgr() : extras_classad( NULL )
 {
 	totals_classad = NULL;
@@ -1303,7 +1305,7 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 		std::string reasonTime = universeName + "OfflineTime";
 		std::string reasonName = universeName + "OfflineReason";
 
-		int universeOnline;
+		int universeOnline = 0;
 		assert( cap->LookupBool( attr, universeOnline ) );
 		if( ! universeOnline ) {
 			offlineUniverses.insert( universeName ).second;
