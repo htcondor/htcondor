@@ -3,12 +3,7 @@
 
 #include "config.h"
 
-// Yes - clock_gettime is significantly faster than gettimeofday.
-// The overhead of clock_gettime is around 30ns or less; still would
-// recommend to using this sparingly!
-#ifdef HAVE_CLOCK_MONOTONIC_RAW
-#define STOPWATCH_CLOCK_MONOTONIC
-#endif
+extern double _condor_debug_get_time_double();
 
 class Stopwatch {
 public:
@@ -22,69 +17,63 @@ public:
 
     void start()
     {
-#ifdef STOPWATCH_CLOCK_MONOTONIC
-        clock_gettime(CLOCK_MONOTONIC_RAW, &m_start);
-#else
-        gettimeofday(&m_start, NULL);
-#endif
+        m_start_s = _condor_debug_get_time_double();
         m_running = true;
     }
 
     double stop()
     {
-#ifdef STOPWATCH_CLOCK_MONOTONIC
-        struct timespec tp;
-        clock_gettime(CLOCK_MONOTONIC_RAW, &tp);
-        m_accum_ms += static_cast<double>(tp.tv_sec - m_start.tv_sec)*1000. + static_cast<double>(tp.tv_nsec - m_start.tv_nsec)/1000000.;
-#else
-        struct timeval tp;
-        gettimeofday(&tp, 0);
-        m_accum_ms += static_cast<double>(tp.tv_sec + m_start.tv_sec)*1000. + static_cast<double>(tp.tv_usec - m_start.tv_usec)/1000.;
-#endif
+        m_accum_ms += (_condor_debug_get_time_double() - m_start_s)*1000;
         m_running = false;
         return m_accum_ms;
     }
 
     double get_ms()
     {
-        double change = 0;
+        double change_ms = 0;
         if (m_running)
         {
-#ifdef STOPWATCH_CLOCK_MONOTONIC
-            struct timespec tp;
-            clock_gettime(CLOCK_MONOTONIC_RAW, &tp);
-            change = static_cast<double>(tp.tv_sec - m_start.tv_sec)*1000. + static_cast<double>(tp.tv_nsec - m_start.tv_nsec)/1000000.;
-#else
-            struct timeval tp;
-            gettimeofday(&tp, 0);
-            change = static_cast<double>(tp.tv_sec + m_start.tv_sec)*1000. + static_cast<double>(tp.tv_usec - m_start.tv_usec)/1000.;
-#endif
+            change_ms = (_condor_debug_get_time_double() - m_start_s)*1000;
         }
-        return m_accum_ms + change;
+        return m_accum_ms + change_ms;
     }
 
 
     void reset()
     {
-#ifdef STOPWATCH_CLOCK_MONOTONIC
-        m_start.tv_sec = 0;
-        m_start.tv_nsec = 0;
-#else
-        m_start.tv_sec = 0;
-        m_start.tv_usec = 0;
-#endif
+        m_start_s = 0;
+        m_accum_ms = 0;
     }
+
+
+    bool is_running() {return m_running;}
 
 private:
 
-#ifdef STOPWATCH_CLOCK_MONOTONIC
-    struct timespec m_start;
-#else
-    struct timeval m_start;
-#endif
+    double m_start_s;
     double m_accum_ms;
     bool m_running;
 
+};
+
+class StopwatchSentry
+{
+public:
+	StopwatchSentry(Stopwatch &watch)
+		: m_started(!watch.is_running()),
+		  m_watch(watch)
+	{
+		if (m_started) {watch.start();}
+	}
+
+	~StopwatchSentry()
+	{
+		if (m_started) {m_watch.stop();}
+	}
+
+private:
+	bool m_started;
+	Stopwatch &m_watch;
 };
 
 #endif
