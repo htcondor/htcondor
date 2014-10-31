@@ -39,7 +39,7 @@ public:
 #else
         struct timeval tp;
         gettimeofday(&tp, 0);
-        m_accum_ms += static_cast<double(tp.tv_sec + m_start.tv_sec)*1000. + static_cast<double>(tp.tv_usec - m_start.tv_usec)/1000.;
+        m_accum_ms += static_cast<double>(tp.tv_sec + m_start.tv_sec)*1000. + static_cast<double>(tp.tv_usec - m_start.tv_usec)/1000.;
 #endif
         m_running = false;
         return m_accum_ms;
@@ -57,7 +57,7 @@ public:
 #else
             struct timeval tp;
             gettimeofday(&tp, 0);
-            change = static_cast<double(tp.tv_sec + m_start.tv_sec)*1000. + static_cast<double>(tp.tv_usec - m_start.tv_usec)/1000.;
+            change = static_cast<double>(tp.tv_sec + m_start.tv_sec)*1000. + static_cast<double>(tp.tv_usec - m_start.tv_usec)/1000.;
 #endif
         }
         return m_accum_ms + change;
