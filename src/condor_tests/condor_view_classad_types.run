@@ -66,7 +66,7 @@ print "\t$first_line";
 
 # FIXME: Write a single shared module for parsing sinful strings.
 my $viewCollector = $first_line;
-chomp( $viewCollector );
+CondorUtils::fullchomp( $viewCollector );
 if( ! ($viewCollector =~ m/^</ && $viewCollector =~ m/>$/) ) {
 	print( "'${viewCollector}' doesn't look like a sinful.\n" );
     print( "The first line of the view address file was:\n" );
