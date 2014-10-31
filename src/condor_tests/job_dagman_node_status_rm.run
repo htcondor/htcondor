@@ -41,15 +41,15 @@ my $nodesubmit = "job_dagman_node_status_rm_node.cmd";
 	"NodesTotal = 1;",
 	"NodesDone = 0;",
 	"NodesPre = 0;",
-	"NodesQueued = 1;",
+	"NodesQueued = 0;",
 	"NodesPost = 0;",
 	"NodesReady = 0;",
 	"NodesUnready = 0;",
-	"NodesFailed = 0;",
+	"NodesFailed = 1;",
 	"JobProcsHeld = 0;",
-	"JobProcsIdle = [01];", # Not sure if we can rely on job being idle
+	"JobProcsIdle = 0;",
 	"Node = \"A\";",
-	"NodeStatus = 3;.*STATUS_SUBMITTED");
+	"NodeStatus = 6;.*STATUS_ERROR");
 
 my $killedchosen = 0;
 

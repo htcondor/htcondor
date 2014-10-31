@@ -63,12 +63,12 @@ $statusfile = "job_dagman_final-I.status";
 @statuslines = ("DagStatus = 5;.*STATUS_DONE \\(success\\)",
     "NodesTotal = 5;",
     "NodesDone = 3;",
-    "NodesPre = 1;",
+    "NodesPre = 0;",
     "NodesQueued = 0;",
     "NodesPost = 0;",
     "NodesReady = 0;",
     "NodesUnready = 1;",
-    "NodesFailed = 0;",
+    "NodesFailed = 1;",
     "JobProcsHeld = 0;",
     "JobProcsIdle = 0;",
 	"Node = \"I_A\";",
@@ -78,7 +78,7 @@ $statusfile = "job_dagman_final-I.status";
 	"Node = \"I_C1\";",
 	"NodeStatus = 0;.*STATUS_NOT_READY",
 	"Node = \"I_C2\";",
-	"NodeStatus = 2;.*STATUS_PRERUN",
+	"NodeStatus = 6;.*STATUS_ERROR",
 	"Node = \"I_D\";",
 	"NodeStatus = 5;.*STATUS_DONE");
 
