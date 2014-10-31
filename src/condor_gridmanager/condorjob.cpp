@@ -541,9 +541,7 @@ void CondorJob::doEvaluateState()
 				break;
 			}
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				errorString = "Repeated submit attempts (GAHP reports:";
-				errorString += gahp->getErrorString();
-				errorString += ")";
+				errorString = gahp->getErrorString();
 				gmState = GM_HOLD;
 				break;
 			}
@@ -578,8 +576,6 @@ void CondorJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				lastSubmitAttempt = time(NULL);
-				numSubmitAttempts++;
 				if ( rc == GLOBUS_SUCCESS ) {
 					SetRemoteJobId( job_id_string );
 					WriteGridSubmitEventToUserLog( jobAd );
@@ -626,7 +622,6 @@ void CondorJob::doEvaluateState()
 					} else {
 						// unhandled error
 						if ( !resourcePingComplete /* && connect failure */ ) {
-							numSubmitAttempts--;
 							connect_failure = true;
 							break;
 						}
@@ -634,6 +629,8 @@ void CondorJob::doEvaluateState()
 						reevaluate_state = true;
 					}
 				}
+				lastSubmitAttempt = time(NULL);
+				numSubmitAttempts++;
 				if ( job_id_string != NULL ) {
 					free( job_id_string );
 				}
