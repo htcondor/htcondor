@@ -109,7 +109,8 @@ vector<SortSpec> sortSpecs;
 bool            noSort = false; // set to true to disable sorting entirely
 bool            javaMode = false;
 bool			vmMode = false;
-bool        absentMode = false;
+bool			absentMode = false;
+bool			offlineMode = false;
 char 		*target = NULL;
 const char * ads_file = NULL; // read classads from this file instead of querying them from the collector
 ClassAd		*targetAd = NULL;
@@ -300,7 +301,22 @@ main (int argc, char *argv[])
 		projList.AppendArg(ATTR_JAVA_VERSION);
 
 	}
-	
+
+	if(offlineMode) {
+		query->addANDConstraint( "size( OfflineUniverses ) != 0" );
+
+		projList.AppendArg( "OfflineUniverses" );
+
+		//
+		// Since we can't add a regex to a projection, explicitly list all
+		// the attributes we know about.
+		//
+
+		projList.AppendArg( "HasVM" );
+		projList.AppendArg( "VMOfflineReason" );
+		projList.AppendArg( "VMOfflineTime" );
+	}
+
 	if(absentMode) {
 	    sprintf( buffer, "%s == TRUE", ATTR_ABSENT );
 	    if (diagnose) {
@@ -916,6 +932,9 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-absent", 3)) {
 			/*explicit_mode =*/ absentMode = true;
+		} else
+		if (matchPrefix (argv[i], "-offline", 3)) {
+			/*explicit_mode =*/ offlineMode = true;
 		} else
 		if (matchPrefix (argv[i], "-vm", 3)) {
 			/*explicit_mode =*/ vmMode = true;

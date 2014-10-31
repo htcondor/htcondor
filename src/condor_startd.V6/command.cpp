@@ -2293,6 +2293,33 @@ cleanup:
 
 
 int
+caUpdateMachineAd( Stream * s, char * c, ClassAd * ad ) {
+	//
+	// Update the machine ad (for the lifetime of this startd).
+	//
+	resmgr->updateExtrasClassAd( ad );
+
+	// Force an update to the collector right away.
+	resmgr->update_all();
+
+	if( false ) {
+		std::string errorMessage = "Unable to update machine ad.";
+		sendErrorReply( s, c, CA_FAILURE, errorMessage.c_str() );
+		return FALSE;
+	}
+
+	ClassAd reply;
+	reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
+	if( ! sendCAReply( s, c, & reply ) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to send update machine ad reply.\n" );
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+int
 command_classad_handler( Service*, int dc_cmd, Stream* s )
 {
 	int rval=0;
@@ -2319,6 +2346,12 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 	}
 
 	switch( cmd ) {
+	case CA_UPDATE_MACHINE_AD:
+		rval = caUpdateMachineAd( s, cmd_str, & ad );
+		free( cmd_str );
+		return rval;
+		break;
+
 	case CA_LOCATE_STARTER:
 			// special case, since it's not really about claims at
 			// all, but instead are worrying about trying to find a

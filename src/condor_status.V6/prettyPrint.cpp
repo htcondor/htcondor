@@ -37,6 +37,7 @@ extern bool invalid_fields_empty; // when true, print "" for invalid data instea
 extern bool javaMode;
 extern bool vmMode;
 extern bool absentMode;
+extern bool offlineMode;
 extern ClassAd *targetAd;
 
 extern char *format_time( int );
@@ -45,6 +46,7 @@ static int stashed_now = 0;
 
 void printStartdNormal 	(ClassAd *, bool first);
 void printStartdAbsent 	(ClassAd *, bool first);
+void printStartdOffline	(ClassAd *, bool first);
 void printScheddNormal 	(ClassAd *, bool first);
 
 #ifdef HAVE_EXT_POSTGRESQL
@@ -75,6 +77,7 @@ static const char *formatRealTime( int , AttrList * , Formatter &);
 static const char *formatRealDate( int , AttrList * , Formatter &);
 //static const char *formatFloat (double, AttrList *, Formatter &);
 static const char *formatLoadAvg (double, AttrList *, Formatter &);
+static const char *formatOfflineUniverses( const classad::Value &, AttrList *, struct Formatter & );
 
 static void ppInit()
 {
@@ -335,6 +338,8 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 			  case PP_STARTD_NORMAL:
 				if (absentMode) {
 					printStartdAbsent (ad, (classad_index == 0));
+				} if( offlineMode ) {
+					printStartdOffline( ad, (classad_index == 0));
 				} else {
 					printStartdNormal (ad, (classad_index == 0));
 				}
@@ -453,6 +458,53 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	if (adList.MyLength() > 0 && totals) totals->displayTotals(stdout, 20);
 }
 
+
+// The strdup() make leak memory, but IsListValue() may as well?
+const char *
+formatOfflineUniverses( const classad::Value & value, AttrList *, struct Formatter & ) {
+	const classad::ExprList * list = NULL;
+	if( ! value.IsListValue( list ) ) {
+		return "[Attribute not a list.]";
+	}
+
+	std::string prettyList;
+	classad::ExprList::const_iterator i = list->begin();
+	for( ; i != list->end(); ++i ) {
+		classad::Value value;
+		if( ! (*i)->Evaluate( value ) ) { continue; }
+
+		std::string universeName;
+		if( value.IsStringValue( universeName ) ) {
+			prettyList += universeName + ", ";
+		}
+	}
+	if( prettyList.length() > 0 ) {
+		prettyList.erase( prettyList.length() - 2 );
+	}
+
+	return strdup( prettyList.c_str() );
+}
+
+void
+printStartdOffline( ClassAd *ad, bool first ) {
+	if( first ) {
+		ppInit();
+		ppSetColumn( ATTR_NAME, -34, ! wide_display );
+		// A custom printer for filtering out the ints would be handy.
+		ppSetColumn( "OfflineUniverses", Lbl( "Offline Universes" ),
+					 formatOfflineUniverses, -42, ! wide_display );
+
+		// How should I print out the offline reasons and timestamps?
+
+		ppDisplayHeadings(stdout, ad, "\n");
+	}
+
+	if( ad ) {
+		pm.display( stdout, ad );
+	}
+
+	return;
+}
 
 void
 printStartdAbsent (ClassAd *ad, bool first)

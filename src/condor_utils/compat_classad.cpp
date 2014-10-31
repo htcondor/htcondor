@@ -686,6 +686,8 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 		m_initConfig = true;
 	}
 
+	DisableDirtyTracking();
+
 		// Compatibility ads are born with this to emulate the special
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
 		// but that shouldn't be problem unless someone is deliberately

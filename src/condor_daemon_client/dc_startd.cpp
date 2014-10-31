@@ -154,6 +154,17 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 bool
 ClaimStartdMsg::putExtraClaims(Sock *sock) {
 
+	const CondorVersionInfo *cvi = sock->get_peer_version();
+
+	if (!cvi) {
+		return true;
+	}
+
+		// Older versions of condor don't know about this
+	if (!cvi->built_since_version(8,2,2)) {
+		return true;
+	}
+
 	if (m_extra_claims.length() == 0) {
 		return sock->put(0);
 	}
@@ -598,6 +609,17 @@ DCStartd::requestClaim( ClaimType cType, const ClassAd* req_ad,
 	req.Insert( buf );
 
 	return sendCACmd( &req, reply, true, timeout );
+}
+
+
+bool
+DCStartd::updateMachineAd( const ClassAd * update, ClassAd * reply, int timeout ) {
+	setCmdStr( "updateMachineAd" );
+
+	ClassAd u( * update );
+	u.Assign( ATTR_COMMAND, getCommandString( CA_UPDATE_MACHINE_AD ) );
+
+	return sendCACmd( & u, reply, true, timeout );
 }
 
 
