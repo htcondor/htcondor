@@ -86,6 +86,14 @@ configuration file.
 that gemtric was being used when \Condor{reconfig} was invoked.
 \Ticket{4680}
 
+\item For grid-type \SubmitCmdNI{condor} grid universe jobs, if commands
+to the remote \Condor{schedd} fail but the daemon appears to be running,
+then the affected jobs will be placed in the HELD status.
+Previously, any failure to talk to the remote daemon would result in
+the \Condor{gridmanager} considering it temporarily unavailable and
+waiting for it to become available again.
+\Ticket{4557}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
