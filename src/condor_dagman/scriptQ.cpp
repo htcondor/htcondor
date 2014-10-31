@@ -114,9 +114,9 @@ ScriptQ::Run( Script *script )
 	// wenger 2007-11-08
 	const int returnVal = 1<<8;
 	if( ! script->_post ) {
-		_dag->PreScriptReaper( script->GetNodeName(), returnVal );
+		_dag->PreScriptReaper( script->GetNode(), returnVal );
 	} else {
-		_dag->PostScriptReaper( script->GetNodeName(), returnVal );
+		_dag->PostScriptReaper( script->GetNode(), returnVal );
 	}
 
 	return 0;
@@ -175,9 +175,9 @@ ScriptQ::ScriptReaper( int pid, int status )
 
 	// call appropriate DAG reaper
 	if( ! script->_post ) {
-		_dag->PreScriptReaper( script->GetNodeName(), status );
+		_dag->PreScriptReaper( script->GetNode(), status );
 	} else {
-		_dag->PostScriptReaper( script->GetNodeName(), status );
+		_dag->PostScriptReaper( script->GetNode(), status );
 	}
 
 	// if there's another script waiting to run, run it now

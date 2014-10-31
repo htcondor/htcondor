@@ -1675,10 +1675,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 
 //---------------------------------------------------------------------------
 int
-Dag::PreScriptReaper( const char* nodeName, int status )
+Dag::PreScriptReaper( Job *job, int status )
 {
-	ASSERT( nodeName != NULL );
-	Job* job = FindNodeByName( nodeName );
 	ASSERT( job != NULL );
 	if ( job->GetStatus() != Job::STATUS_PRERUN ) {
 		EXCEPT( "Error: node %s is not in PRERUN state", job->GetJobName() );
@@ -1838,20 +1836,10 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 // done not when the reaper is called, but in ProcessLogEvents when
 // the log event (written by the reaper) is seen...
 int
-Dag::PostScriptReaper( const char* nodeName, int status )
+Dag::PostScriptReaper( Job *job, int status )
 {
-	ASSERT( nodeName != NULL );
-	Job* job = FindNodeByName( nodeName );
 	ASSERT( job != NULL );
-	return PostScriptSubReaper( job, status );
-}
 
-// Hmm -- I don't understand why we have two methods here -- 
-// Dag::PostScriptReaper() is the only place that calls
-// Dag::PostScriptSubReaper().  wenger 2014-10-30
-int 
-Dag::PostScriptSubReaper( Job* job, int status )
-{
 	if ( job->GetStatus() != Job::STATUS_POSTRUN ) {
 		EXCEPT( "Node %s is not in POSTRUN state",
 			job->GetJobName() );

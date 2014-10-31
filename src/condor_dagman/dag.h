@@ -511,9 +511,8 @@ class Dag {
 				const char * dagFile, bool parseFailed = false,
 				bool isPartial = false) /* const */;
 
-	int PreScriptReaper( const char* nodeName, int status );
-	int PostScriptReaper( const char* nodeName, int status );
-	int PostScriptSubReaper( Job *job, int status );
+	int PreScriptReaper( Job *job, int status );
+	int PostScriptReaper( Job *job, int status );
 
 	void PrintReadyQ( debug_level_t level ) const;
 
