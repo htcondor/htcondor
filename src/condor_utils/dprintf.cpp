@@ -686,11 +686,12 @@ static time_t _condor_dprintf_gettime(DebugHeaderInfo &info, unsigned int hdr_fl
 	#if defined WIN32
 		// Windows8 has GetSystemTimePreciseAsFileTime which returns sub-microsecond system times.
 		static bool check_for_precise = false;
-		void (WINAPI*get_precise_time)(unsigned long long * ft) = NULL;
-		BOOLEAN (WINAPI* time_to_1970)(unsigned long long * ft, unsigned long * epoch_time);
+		static void (WINAPI*get_precise_time)(unsigned long long * ft) = NULL;
+		static BOOLEAN (WINAPI* time_to_1970)(unsigned long long * ft, unsigned long * epoch_time);
 		if ( ! check_for_precise) {
 			*(FARPROC*)&get_precise_time = GetProcAddress(GetModuleHandle("Kernel32.dll"), "GetSystemTimePreciseAsFileTime");
 			*(FARPROC*)&time_to_1970 = GetProcAddress(GetModuleHandle("ntdll.dll"), "RtlTimeToSecondsSince1970");
+			check_for_precise = true;
 		}
 		unsigned long long nanos = 0;
 		if (get_precise_time) {
