@@ -41,7 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed an inconsistency where \Macro{JOB\_RENICE\_INCREMENT},
+if not set, defaulted to 10 in vanilla universe and 0 in standard 
+universe.  Now defaults to 0 everywhere, which matches what
+the documentation says.
+\Ticket{4697}
 
 \end{itemize}
 
