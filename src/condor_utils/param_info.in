@@ -4047,7 +4047,7 @@ review=?
 tags=starter,os_proc
 
 [JOB_RENICE_INCREMENT]
-default=
+default=0
 win32_default=10
 type=string
 reconfig=true
