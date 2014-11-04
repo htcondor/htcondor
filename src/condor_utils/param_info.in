@@ -5102,6 +5102,15 @@ friendly_name=Schedd Backup Spool
 review=?
 tags=schedd,schedd_main
 
+[SCHEDD_QUERY_WORKERS]
+default=8
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Schedd forked workers
+review=?
+tags=schedd
+
 [X_RUNS_HERE]
 default=
 type=string
@@ -6790,7 +6799,7 @@ usage=Set the limit on the number of condor_history_helper sub-processes
 review=?
 
 [CONDOR_Q_USE_V3_PROTOCOL]
-default=true
+default=false
 type=bool
 reconfig=false
 customization=devel
