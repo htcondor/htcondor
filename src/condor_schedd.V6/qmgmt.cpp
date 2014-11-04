@@ -611,7 +611,7 @@ InitQmgmt()
 	}
 
 	schedd_forker.Initialize();
-	int max_schedd_forkers = param_integer ("SCHEDD_QUERY_WORKERS",3,0);
+	int max_schedd_forkers = param_integer ("SCHEDD_QUERY_WORKERS",8,0);
 	schedd_forker.setMaxWorkers( max_schedd_forkers );
 
 	cluster_initial_val = param_integer("SCHEDD_CLUSTER_INITIAL_VALUE",1,1);
