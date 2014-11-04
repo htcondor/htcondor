@@ -101,27 +101,33 @@ It incorrectly defaulted to 10000, rather than the correct value of 2.
 a log message of ``child failed because PID XXX is still in use by DaemonCore''.
 \Ticket{4646}
 
-\item Fixed a bug in \Condor{shadow} that caused the user's supplemental
-groups to be unset when the shadow process is reused to run another job.
-This could result in the job being held with the hold reason
-``Failed to initialize user log to <path>''.
+\item Fixed a bug in the \Condor{shadow} daemon that caused 
+the user's supplemental
+groups to be unset when the \Condor{shadow} process is reused 
+to run another job.
+This could result in the job being held with a hold reason of
+\AdStr{Failed to initialize user log to <path>}.
 \Ticket{4672}
 
-\item Fixed a bug in \Condor{schedd} that caused remote \Condor{history}
-commands to fail if \Macro{LIBEXEC} wasn't explicitly set in the
-configuration file.
+\item Fixed a bug in the \Condor{schedd} daemon
+that caused remote \Condor{history}
+commands to fail if the configuration variable \Macro{LIBEXEC} was not 
+explicitly set in a configuration file.
 \Ticket{4678}
 
-\item Fixed a bug in \Condor{ganglia} that caused it to incorrecly log
-that gemtric was being used when \Condor{reconfig} was invoked.
+\item Fixed a bug in the \Condor{ganglia} daemon
+that caused it to incorrectly log
+that \Prog{gmetric} was being used when \Condor{reconfig} was invoked.
 \Ticket{4680}
 
-\item For grid-type \SubmitCmdNI{condor} grid universe jobs, if commands
+\item For grid type \SubmitCmdNI{condor} grid universe jobs, if commands
 to the remote \Condor{schedd} fail but the daemon appears to be running,
-then the affected jobs will be placed in the HELD status.
+then affected jobs will be placed in the Hold state.
 Previously, any failure to talk to the remote daemon would result in
-the \Condor{gridmanager} considering it temporarily unavailable and
-waiting for it to become available again.
+the \Condor{gridmanager} considering the remote \Condor{schedd} 
+temporarily unavailable,
+and the \Condor{gridmanager} waited for the remote \Condor{schedd}
+to become available again.
 \Ticket{4557}
 
 \end{itemize}
