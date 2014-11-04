@@ -6208,7 +6208,7 @@ MAX_JOBS_RUNNING	= \
 \item[\Macro{SCHEDD\_QUERY\_WORKERS}]
   This specifies the maximum number of concurrent sub-processes that
   the \Condor{schedd} will spawn to handle queries.  The setting is
-  ignored in Windows.  In Unix, the default is 3.  If the limit is
+  ignored in Windows.  In Unix, the default is 8.  If the limit is
   reached, the next query will be handled in the \Condor{schedd}'s main
   process.
 
