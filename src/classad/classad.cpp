@@ -407,7 +407,7 @@ bool ClassAd::Insert( const std::string& serialized_nvp)
   size_t bpos = 0;
   
   // comes in as "name = value" "name= value" or "name =value"
-  npos=pos=serialized_nvp.find("=");
+  npos=pos=serialized_nvp.find('=');
   
   // only try to process if the string is valid 
   if ( pos != string::npos  )
