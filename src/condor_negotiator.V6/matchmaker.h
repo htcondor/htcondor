@@ -282,7 +282,7 @@ class Matchmaker : public Service
 		static unsigned int HashFunc(const MyString &Key);
 		friend int comparisonFunction (AttrList *, AttrList *,
 										void *);
-		bool pslotMultiMatch(ClassAd *job, ClassAd *machine);
+		bool pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio);
 
 		/** trimStartdAds will throw out startd ads have no business being 
 			visible to the matchmaking engine, but were fetched from the 
@@ -316,6 +316,7 @@ class Matchmaker : public Service
 		int  MaxTimePerSubmitter;   // how long to talk to any one submitter
 		int  MaxTimePerSpin;        // How long per pie spin
 		ExprTree *PreemptionReq;	// only preempt if true
+		ExprTree *PreemptionReqPslot;	// only preempt pslots if true
 		ExprTree *PreemptionRank; 	// rank preemption candidates
 		bool preemption_req_unstable;
 		bool preemption_rank_unstable;
