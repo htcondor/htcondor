@@ -2344,7 +2344,7 @@ int main(int /*argc*/, char ** /*argv*/)
 		// include in UW builds of Condor.
 		// If we load the library with dlopen() first, then lt_dlopen()
 		// will find it.
-	void *dl_ptr = dlopen( "libglobus_thread_pthread.so.0", RTLD_LAZY);
+	void *dl_ptr = dlopen( "libglobus_thread_pthread.so", RTLD_LAZY);
 	if ( dl_ptr == NULL ) {
 		fprintf( stderr, "Failed to open globus_thread_pthread.\n" );
 		return 1;
