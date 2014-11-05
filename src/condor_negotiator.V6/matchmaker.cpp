@@ -246,6 +246,7 @@ Matchmaker ()
 
 	AccountantHost  = NULL;
 	PreemptionReq = NULL;
+	PreemptionReqPslot = NULL;
 	PreemptionRank = NULL;
 	NegotiatorPreJobRank = NULL;
 	NegotiatorPostJobRank = NULL;
@@ -339,6 +340,7 @@ Matchmaker::
 	delete rankCondStd;
 	delete rankCondPrioPreempt;
 	delete PreemptionReq;
+	delete PreemptionReqPslot;
 	delete PreemptionRank;
 	delete NegotiatorPreJobRank;
 	delete NegotiatorPostJobRank;
@@ -510,6 +512,29 @@ reinitialize ()
 		tmp = NULL;
 	} else {
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = None\n");
+	}
+
+	// get PreemptionReqPslot expression
+	if (PreemptionReqPslot) delete PreemptionReqPslot;
+	PreemptionReqPslot = NULL;
+	tmp = param("PREEMPTION_REQUIREMENTS_PSLOT");
+	if( tmp ) {
+		if( ParseClassAdRvalExpr(tmp, PreemptionReqPslot) ) {
+			EXCEPT ("Error parsing PREEMPTION_REQUIREMENTS_PSLOT expression: %s",
+					tmp);
+		}
+#if defined(ADD_TARGET_SCOPING)
+		if(PreemptionReqPslot){
+			ExprTree *tmp_expr = AddTargetRefs( PreemptionReqPslot, TargetJobAttrs );
+			delete PreemptionReqPslot;
+			PreemptionReqPslot = tmp_expr;
+		}
+#endif
+		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS_PSLOT = %s\n", tmp);
+		free( tmp );
+		tmp = NULL;
+	} else {
+		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS_PSLOT = None\n");
 	}
 
 	NegotiatorMatchExprNames.clearAll();
@@ -4200,7 +4225,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			bool jobWantsMultiMatch = false;
 			request.LookupBool(ATTR_WANT_PSLOT_PREEMPTION, jobWantsMultiMatch);
 			if (param_boolean("ALLOW_PSLOT_PREEMPTION", false) && jobWantsMultiMatch) {
-				is_a_match = pslotMultiMatch(&request, candidate);
+				is_a_match = pslotMultiMatch(&request, candidate, preemptPrio);
 				pslotRankMatch = is_a_match;
 			}
 		}
@@ -5833,7 +5858,7 @@ bool rankPairCompare(std::pair<int,double> lhs, std::pair<int,double> rhs) {
 	// job with preempted resources from a dynamic slot.
 	// Only consider startd RANK for now.
 bool
-Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine) {
+Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) {
 	bool isPartitionable = false;
 
 	machine->LookupBool(ATTR_SLOT_PARTITIONABLE, isPartitionable);
@@ -5896,6 +5921,65 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine) {
 		// In rank order, see if by preempting one more dslot would cause pslot to match
 	for (int slot = 0; slot < numDslots && ranks[slot].second < newRank; slot++) {
 		int dSlot = ranks[slot].first; // dslot index in childXXX list
+
+			// if ranks are the same, consider preemption just based on user prio iff
+			// 1) userprio of preempting user > exiting user + delta
+			// 2) preemption requirements match
+		if (ranks[slot].second == newRank) {
+
+			// If not preemptionreq pslot for this slot, punt
+			if (!PreemptionReqPslot) {
+				continue;
+			}
+
+			// Find the RemoteOwner for this dslot, via pslot's childremoteOwner list
+			std::string ownerAttr;
+			std::string remoteOwner;
+
+			formatstr(ownerAttr, "My.childRemoteOwner[%d]", dSlot);
+			ExprTree *et;
+			classad::Value result;
+
+			ParseClassAdRvalExpr(ownerAttr.c_str(), et);
+			EvalExprTree(et, machine, NULL, result);
+			delete et;
+
+			if (!result.IsStringValue(remoteOwner)) {
+				// couldn't parse or evaluate, give up on this dslot
+				continue;
+			}
+		
+			if (accountant.GetPriority(remoteOwner) < preemptPrio + PriorityDelta) {
+				// this slot's user prio is better than preempter.  
+				// (and ranks are equal). Don't consider preempting it
+				continue;
+			}
+
+				// Insert the index of the dslot we are considering
+				// for preemption requirements use
+			mutatedMachine.Assign("CandidateSlot", dSlot);
+
+				// if PreemptionRequirementsPslot evals to true, below 
+				// will be true
+			result.SetBooleanValue(false);
+
+				// Evalute preemption req pslot into result
+			EvalExprTree(PreemptionReqPslot, &mutatedMachine,job,result);
+
+				// and undo it for the next time
+			mutatedMachine.Remove("CandidateSlot");
+
+			bool shouldPreempt = false;
+			if (!result.IsBooleanValue(shouldPreempt) || (shouldPreempt == false)) {
+				// didn't eval to boolean or eval'ed to false.  Ignore this slot
+				continue;
+			}
+			
+			// Finally, if we made it here, this slot is a candidate for preemption,
+			// fall through and try to merge its resources into the pslot to match
+			// and preempt this one.		
+
+		}
 
 			// for each splitable resource, get it from the dslot, and add to pslot
 		for (std::list<std::string>::iterator it = attrs.begin(); it != attrs.end(); it++) {
