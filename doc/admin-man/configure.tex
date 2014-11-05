@@ -6275,9 +6275,19 @@ MAX_JOBS_RUNNING	= \
 \item[\Macro{SCHEDD\_QUERY\_WORKERS}]
   This specifies the maximum number of concurrent sub-processes that
   the \Condor{schedd} will spawn to handle queries.  The setting is
-  ignored in Windows.  In Unix, the default is 3.  If the limit is
+  ignored in Windows.  In Unix, the default is 8.  If the limit is
   reached, the next query will be handled in the \Condor{schedd}'s main
   process.
+
+\label{param:CondorQUseV3Protocol}
+\item[\Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL}]
+  A boolean value that, when \Expr{True},
+  causes the \Condor{schedd} to use an algorithm that responds to 
+  \Condor{q} requests by \emph{not} forking itself to handle each request.
+  It instead handles the requests in a non-blocking way.
+  The default value is \Expr{False},
+  as many \Condor{q} requests coupled with a busy \Condor{schedd}
+  can cause an exceptionally slow response to the \Condor{q} requests.
 
 \label{param:ScheddInterval}
 \item[\Macro{SCHEDD\_INTERVAL}]
@@ -7312,7 +7322,7 @@ These settings affect the \Condor{starter}.
   a value less than 0 is treated as 0.
   For values outside this range, a Windows machine ignores the value
   and uses the default instead.
-  The default value is 10, which maps to the idle priority class on
+  The default value is 0, on Unix, and the idle priority class on
   a Windows machine.
 
 \label{param:StarterLocalLogging}

@@ -4078,7 +4078,7 @@ review=?
 tags=starter,os_proc
 
 [JOB_RENICE_INCREMENT]
-default=
+default=0
 win32_default=10
 type=string
 reconfig=true
@@ -5132,6 +5132,15 @@ customization=seldom
 friendly_name=Schedd Backup Spool
 review=?
 tags=schedd,schedd_main
+
+[SCHEDD_QUERY_WORKERS]
+default=8
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Schedd forked workers
+review=?
+tags=schedd
 
 [X_RUNS_HERE]
 default=
@@ -6862,7 +6871,7 @@ usage=Set the limit on the number of condor_history_helper sub-processes
 review=?
 
 [CONDOR_Q_USE_V3_PROTOCOL]
-default=true
+default=false
 type=bool
 reconfig=false
 customization=devel
