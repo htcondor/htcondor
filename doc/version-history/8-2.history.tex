@@ -40,10 +40,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Changed the default value of \Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL}
-from true to false.  This works around slowness running condor\_q with this protocol
-when querying schedulers with large numbers of jobs in them.  Also raised
-the default value of \Macro{SCHEDD\_QUERY\_WORKERS} from 3 to 8.
+\item Changed the default value of configuration variable
+\Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL} from \Expr{True} to \Expr{False},
+and raised the default value of configuration variable
+\Macro{SCHEDD\_QUERY\_WORKERS} from 3 to 8.
+This works around \Condor{schedd} performance issues caused by using 
+this protocol when querying schedulers that handle large numbers of jobs.
 \Ticket{4696}
 
 \item Fixed a bug in which \Condor{router\_q} queried the wrong queue

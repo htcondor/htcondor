@@ -6212,6 +6212,16 @@ MAX_JOBS_RUNNING	= \
   reached, the next query will be handled in the \Condor{schedd}'s main
   process.
 
+\label{param:CondorQUseV3Protocol}
+\item[\Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL}]
+  A boolean value that, when \Expr{True},
+  causes the \Condor{schedd} to use an algorithm that responds to 
+  \Condor{q} requests by \emph{not} forking itself to handle each request.
+  It instead handles the requests in a non-blocking way.
+  The default value is \Expr{False},
+  as many \Condor{q} requests coupled with a busy \Condor{schedd}
+  can cause an exceptionally slow response to the \Condor{q} requests.
+
 \label{param:ScheddInterval}
 \item[\Macro{SCHEDD\_INTERVAL}]
   This macro determines the maximum interval for both how often the
