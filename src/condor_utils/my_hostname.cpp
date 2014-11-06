@@ -440,29 +440,29 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	// ConfigConvertDefaultIPToSocketIP because it gets called before
 	// daemonCore is created.
 	if( daemonCore == NULL ) {
-		dprintf( D_FULLDEBUG, "Address rewriting: disabled: no daemon core.\n" );
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: disabled: no daemon core.\n" );
 		return;
 	}
 
 	if( ! enable_convert_default_IP_to_socket_IP ) {
-		dprintf( D_FULLDEBUG, "Address rewriting: disabled: by configuration.\n" );
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: disabled: by configuration.\n" );
 		return;
 	}
 
 	if( expr_string.length() < 5 ) {
-		dprintf( D_FULLDEBUG, "Address rewriting: rejected for attribute '%s': '%s' is not long enough to be an IP address.\n", attr_name, expr_string.c_str() );
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: rejected for attribute '%s': '%s' is not long enough to be an IP address.\n", attr_name, expr_string.c_str() );
 		return;
 	}
 
 	if( ! is_sender_ip_attr(attr_name) ) {
-		dprintf( D_FULLDEBUG, "Address rewriting: rejected: '%s' is not an attribute which might contain the sender's IP address.\n", attr_name );
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: rejected: '%s' is not an attribute which might contain the sender's IP address.\n", attr_name );
 		return;
 	}
 
 	// Skip if Stream doesn't have address associated with it
 	condor_sockaddr my_sockaddr;
 	if( ! my_sockaddr.from_ip_string(s.my_ip_str()) ) {
-		dprintf( D_FULLDEBUG, "Address rewriting: failed for attribute '%s' (%s): failed to generate socket address from stream's IP string (%s).\n", attr_name, expr_string.c_str(), s.my_ip_str() );
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to generate socket address from stream's IP string (%s).\n", attr_name, expr_string.c_str(), s.my_ip_str() );
 		return;
 	}
 
@@ -475,7 +475,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	// useful we can rewrite it do, so just give up and hope the default
 	// is useful to someone.
 	if( port == 0 ) {
-		dprintf( D_FULLDEBUG, "Address rewriting: failed for attribute '%s' (%s): unable to find command port for outbound interface '%s'.\n", attr_name, expr_string.c_str(), s.my_ip_str() );
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): unable to find command port for outbound interface '%s'.\n", attr_name, expr_string.c_str(), s.my_ip_str() );
 		return;
 	}
 	my_sockaddr.set_port(port);
@@ -484,13 +484,13 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 
 	// Skip if we shouldn't be using this interface.
 	if( ! IPMatchesNetworkInterfaceSetting( my_sockaddr.to_ip_string( false ).Value() ) ) {
-		dprintf( D_FULLDEBUG, "Address rewriting: rejected for attribute '%s' (%s): outbound interface '%s' is disabled.\n", attr_name, expr_string.c_str(), my_sockaddr.to_ip_string( false ).Value() );
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: rejected for attribute '%s' (%s): outbound interface '%s' is disabled.\n", attr_name, expr_string.c_str(), my_sockaddr.to_ip_string( false ).Value() );
 		return;
 	}
 
 	// Skip if it's not a string literal.
 	if(*(expr_string.rbegin()) != '"') {
-		dprintf( D_FULLDEBUG, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
 		return;
 	}
 
@@ -498,7 +498,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	size_t delimpos = expr_string.find(delimiter);
 	// Skip if doesn't look like a string
 	if(delimpos == std::string::npos) {
-		dprintf( D_FULLDEBUG, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
 		return;
 	}
 
@@ -509,11 +509,11 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 
 	// Skip if it doesn't look like a Sinful
 	if(expr_string[string_start_pos] != '<') {
-		dprintf( D_FULLDEBUG, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
 		return;
 	}
 	if(expr_string[string_end_pos - 1] != '>') {
-		dprintf( D_FULLDEBUG, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
 		return;
 	}
 
@@ -521,7 +521,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 
 	Sinful sin(old_addr.c_str());
 	if(!sin.valid()) {
-		dprintf( D_FULLDEBUG, "Address rewriting: failed for attribute '%s' (%s): parsed value does not appear to be a sinful.\n", attr_name, expr_string.c_str() );
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): parsed value does not appear to be a sinful.\n", attr_name, expr_string.c_str() );
 		return;
 	}
 
@@ -530,7 +530,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 
 	// Skip if my default address isn't present.
 	if( ! daemonCore->is_command_port_do_not_use(old_sockaddr)) {
-		dprintf( D_FULLDEBUG, "Address rewriting: refused for attribute '%s' (%s): not one of my command sockets.\n", attr_name, expr_string.c_str() );
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute '%s' (%s): not one of my command sockets.\n", attr_name, expr_string.c_str() );
 		return;
 	}
 
@@ -550,7 +550,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	// job updates.  *sigh*)
 	//
 	if( (! old_sockaddr.is_loopback()) && my_sockaddr.is_loopback() ) {
-		dprintf( D_FULLDEBUG, "Address rewriting: refused for attribute '%s' (%s): outbound interface is loopback but default interface is not.\n", attr_name, expr_string.c_str() );
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute '%s' (%s): outbound interface is loopback but default interface is not.\n", attr_name, expr_string.c_str() );
 		return;
 	}
 
@@ -564,7 +564,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 
 	expr_string = new_expr;
 
-	dprintf(D_NETWORK|D_FULLDEBUG, "Replaced default IP %s with connection IP %s "
+	dprintf(D_NETWORK, "Replaced default IP %s with connection IP %s "
 			"in outgoing ClassAd attribute %s.\n",
 			old_addr.c_str(), sin.getSinful(), attr_name);
 }
