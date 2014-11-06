@@ -705,11 +705,13 @@ SharedPortState::HandleResp(Stream *&s)
 	int status = 0;
 	bool result;
 
-	bool read_would_block;
+	bool read_would_block = false;
 	{
-		BlockingModeGuard guard(sock, 1);
+		BlockingModeGuard guard(sock, m_non_blocking);
 		result = sock->code(status);
-		read_would_block = sock->clear_read_block_flag();
+		if ( m_non_blocking ) {
+			read_would_block = sock->clear_read_block_flag();
+		}
 	}
 	if (read_would_block)
 	{
@@ -718,7 +720,7 @@ SharedPortState::HandleResp(Stream *&s)
 			dprintf(D_ALWAYS, "SharedPortClient - server response deadline has passed for %s%s\n", m_sock_name.c_str(), m_requested_by.c_str());
 			return FAILED;
 		}
-		dprintf(D_ALWAYS, "SharedPortCliient read would block; waiting for result for SHARED_PORT_PASS_FD to %s%s.\n", m_sock_name.c_str(), m_requested_by.c_str());
+		dprintf(D_ALWAYS, "SharedPortClient read would block; waiting for result for SHARED_PORT_PASS_FD to %s%s.\n", m_sock_name.c_str(), m_requested_by.c_str());
 		return WAIT;
 	}
 
