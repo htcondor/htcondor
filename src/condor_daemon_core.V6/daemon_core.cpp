@@ -7702,7 +7702,7 @@ int DaemonCore::Create_Process(
 			pidtmp->shared_port_fname = shared_port_endpoint.GetSocketFileName();
 		}
 		else if ( want_command_port != FALSE ) {
-PRAGMA_REMIND("adesmet: Assuming the first address is the one to use.")
+//PRAGMA_REMIND("adesmet: Assuming the first address is the one to use. TODOIPV6")
 			if(socks.begin() != socks.end()) {
 				Sinful sinful(sock_to_string(socks.begin()->rsock()->_sock));
 				if( !want_udp ) {
