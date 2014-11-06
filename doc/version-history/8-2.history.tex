@@ -40,8 +40,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug wherein \Condor{schedd} versions 8.2 could
-not send jobs to, or claim \Condor{startd}s running 8.0 or older.
+\item Fixed a bug in which a \Condor{schedd} daemon of an 8.2 version
+could not send jobs to, 
+or obtain a claim on a \Condor{startd} daemon of an 8.0 or previous version.
 \Ticket{4687}
 
 \item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
