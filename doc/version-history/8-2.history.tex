@@ -44,6 +44,10 @@ The details of each version are described below.
 not send jobs to, or claim \Condor{startd}s running 8.0 or older.
 \Ticket{4687}
 
+\item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
+no longer causes a link error.
+\Ticket{4486}
+
 \item Changed the default value of configuration variable
 \Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL} from \Expr{True} to \Expr{False},
 and raised the default value of configuration variable
@@ -188,10 +192,6 @@ HTCondor via \Prog{systemd} instead of via \Prog{init} scripts.
 %\item Fixed bugs that prohibited the \Condor{startd} use of \MacroNI{RANK} 
 %from preempting dynamic slots.
 %\Ticket{4580}
-
-\item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
-no longer causes a link error.
-\Ticket{4486}
 
 \item EC2 grid universe jobs which use the X.509 authentication method will
 no longer crash if environment variable \Env{USER} is not set.
