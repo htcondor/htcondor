@@ -40,6 +40,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug wherein \Condor{schedd} versions 8.2 could
+not send jobs to, or claim \Condor{startd}s running 8.0 or older.
+\Ticket{4687}
+
 \item Changed the default value of configuration variable
 \Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL} from \Expr{True} to \Expr{False},
 and raised the default value of configuration variable
