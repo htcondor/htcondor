@@ -74,6 +74,10 @@ the documentation says.
 
 \begin{itemize}
 
+\item Fixed a bug wherein \Condor{schedd} versions 8.2 could
+not send jobs to, or claim \Condor{startd}s running 8.0 or older.
+\Ticket{4687}
+
 \item Changed the default value of configuration variable
 \Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL} from \Expr{True} to \Expr{False},
 and raised the default value of configuration variable
@@ -141,6 +145,19 @@ temporarily unavailable,
 and the \Condor{gridmanager} waited for the remote \Condor{schedd}
 to become available again.
 \Ticket{4557}
+
+\item Fixed a bug that caused the \Condor{startd} to report available disk
+attributes in bytes rather than Kibibytes on Windows.
+\Ticket{4638}
+
+\item Fixed a bug that resulted in the \Condor{kbdd} on Windows sometimes
+exiting with error 0xC0000374 which indicates heap corruption.
+\Ticket{4634}
+
+\item Changed the \Condor{master} to work around a bug in the c-runtime
+on Windows that resulted in the \Condor{master} restarting whenever the
+system clock was changed to account for daylight savings time.
+\Ticket{3572}
 
 \end{itemize}
 
