@@ -108,6 +108,19 @@ and the \Condor{gridmanager} waited for the remote \Condor{schedd}
 to become available again.
 \Ticket{4557}
 
+\item Fixed a bug that caused the \Condor{startd} to report available disk
+attributes in bytes rather than Kibibytes on Windows.
+\Ticket{4638}
+
+\item Fixed a bug that resulted in the \Condor{kbdd} on Windows sometimes
+exiting with error 0xC0000374 which indicates heap corruption.
+\Ticket{4634}
+
+\item Changed the \Condor{master} to work around a bug in the c-runtime
+on Windows that resulted in the \Condor{master} restarting whenever the
+system clock was changed to account for daylight savings time.
+\Ticket{3572}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
