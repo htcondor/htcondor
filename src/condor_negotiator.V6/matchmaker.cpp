@@ -2558,7 +2558,12 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				/* result parameters: */
 			pieLeft);
 
-        if (!ConsiderPreemption && (pieLeft <= 0)) break;
+		if (!ConsiderPreemption && (pieLeft <= 0)) {
+			dprintf(D_ALWAYS,
+				"Halting negotiation: no slots available to match (preemption disabled,%d trimmed slots,pieLeft=%.3f)\n",
+				startdAds.MyLength(),pieLeft);
+			break;
+		}
 
         if (1 == spin_pie) {
             // Sort the schedd list in decreasing priority order
@@ -2587,8 +2592,9 @@ negotiateWithGroup ( int untrimmed_num_startds,
 		// ----- Negotiate with the schedds in the sorted list
 		dprintf( D_ALWAYS, "Phase 4.%d:  Negotiating with schedds ...\n",
 			spin_pie );
-		dprintf (D_FULLDEBUG, "    numSlots = %d\n", numStartdAds);
+		dprintf (D_FULLDEBUG, "    numSlots = %d (after trimming=%d)\n", numStartdAds,startdAds.MyLength());
 		dprintf (D_FULLDEBUG, "    slotWeightTotal = %f\n", slotWeightTotal);
+		dprintf (D_FULLDEBUG, "    minSlotWeight = %f\n", minSlotWeight);
 		dprintf (D_FULLDEBUG, "    pieLeft = %.3f\n", pieLeft);
 		dprintf (D_FULLDEBUG, "    NormalFactor = %f\n", normalFactor);
 		dprintf (D_FULLDEBUG, "    MaxPrioValue = %f\n", maxPrioValue);
@@ -2598,6 +2604,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
         // "schedd" seems to be used interchangeably with "submitter" here
 		while( (schedd = scheddAds.Next()) )
 		{
+sleep(1); // TODDT REMOVE ME!
             if (!ignore_submitter_limit && (NULL != groupName) && (accountant.GetWeightedResourcesUsed(groupName) >= groupQuota)) {
                 // If we met group quota, and if we're respecting submitter limits, halt.
                 // (output message at top of outer loop above)
@@ -2730,25 +2737,26 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					"  Negotiation with %s skipped because MAX_TIME_PER_CYCLE of %d secs exceeded\n",
 					scheddName.Value(),MaxTimePerCycle);
 				result = MM_DONE;
+			} else if ((submitterLimit < minSlotWeight || pieLeft < minSlotWeight) && (!ignore_submitter_limit)) {
+				dprintf(D_ALWAYS,
+					"  Negotiation with %s skipped as submitterLimit < minSlotWeight\n",
+					scheddName.Value());
+				result = MM_RESUME;
 			} else {
-				if ((submitterLimit < minSlotWeight || pieLeft < minSlotWeight) && (!ignore_submitter_limit)) {
-					result = MM_RESUME;
-				} else {
-					int numMatched = 0;
-					time_t deadline = startTime + 
-						MIN(MaxTimePerSpin, MIN(remainingTimeForThisCycle,remainingTimeForThisSubmitter));
-                    if (negotiation_cycle_stats[0]->active_submitters.count(scheddName.Value()) <= 0) {
-                        negotiation_cycle_stats[0]->num_idle_jobs += num_idle_jobs;
-                    }
-					negotiation_cycle_stats[0]->active_submitters.insert(scheddName.Value());
-					negotiation_cycle_stats[0]->active_schedds.insert(scheddAddr.Value());
-					result=negotiate(groupName, scheddName.Value(), schedd, submitterPrio,
-                                  submitterLimit, submitterLimitUnclaimed,
-								  startdAds, claimIds, 
-								  ignore_submitter_limit,
-								  deadline, numMatched, pieLeft);
-					updateNegCycleEndTime(startTime, schedd);
-				}
+				int numMatched = 0;
+				time_t deadline = startTime + 
+					MIN(MaxTimePerSpin, MIN(remainingTimeForThisCycle,remainingTimeForThisSubmitter));
+                if (negotiation_cycle_stats[0]->active_submitters.count(scheddName.Value()) <= 0) {
+                    negotiation_cycle_stats[0]->num_idle_jobs += num_idle_jobs;
+                }
+				negotiation_cycle_stats[0]->active_submitters.insert(scheddName.Value());
+				negotiation_cycle_stats[0]->active_schedds.insert(scheddAddr.Value());
+				result=negotiate(groupName, scheddName.Value(), schedd, submitterPrio,
+                              submitterLimit, submitterLimitUnclaimed,
+							  startdAds, claimIds, 
+							  ignore_submitter_limit,
+							  deadline, numMatched, pieLeft);
+				updateNegCycleEndTime(startTime, schedd);
 			}
 
 			switch (result)
