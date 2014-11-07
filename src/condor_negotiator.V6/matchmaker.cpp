@@ -2731,7 +2731,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					scheddName.Value(),MaxTimePerCycle);
 				result = MM_DONE;
 			} else {
-				if ((submitterLimit < minSlotWeight || pieLeft < minSlotWeight) && (spin_pie > 1)) {
+				if ((submitterLimit < minSlotWeight || pieLeft < minSlotWeight) && (!ignore_submitter_limit)) {
 					result = MM_RESUME;
 				} else {
 					int numMatched = 0;
