@@ -6643,7 +6643,7 @@ review=?
 tags=c++_util,condor_config
 
 [GANGLIAD_METRICS_CONFIG_DIR]
-default=$(RELEASE_DIR)/etc/condor/ganglia.d
+default=/etc/condor/ganglia.d
 type=path
 reconfig=true
 customization=seldom
