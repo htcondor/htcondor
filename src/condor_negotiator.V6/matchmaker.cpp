@@ -2604,7 +2604,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
         // "schedd" seems to be used interchangeably with "submitter" here
 		while( (schedd = scheddAds.Next()) )
 		{
-sleep(1); // TODDT REMOVE ME!
             if (!ignore_submitter_limit && (NULL != groupName) && (accountant.GetWeightedResourcesUsed(groupName) >= groupQuota)) {
                 // If we met group quota, and if we're respecting submitter limits, halt.
                 // (output message at top of outer loop above)
@@ -2737,9 +2736,9 @@ sleep(1); // TODDT REMOVE ME!
 					"  Negotiation with %s skipped because MAX_TIME_PER_CYCLE of %d secs exceeded\n",
 					scheddName.Value(),MaxTimePerCycle);
 				result = MM_DONE;
-			} else if ((submitterLimit < minSlotWeight || pieLeft < minSlotWeight) && (!ignore_submitter_limit)) {
+			} else if ((pieLeft < minSlotWeight) && (!ignore_submitter_limit)) {
 				dprintf(D_ALWAYS,
-					"  Negotiation with %s skipped as submitterLimit < minSlotWeight\n",
+					"  Negotiation with %s skipped as pieLeft < minSlotWeight\n",
 					scheddName.Value());
 				result = MM_RESUME;
 			} else {
