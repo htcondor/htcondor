@@ -143,9 +143,9 @@ Recognized metric attribute names and their use:
     The scale factor is used when the value is not in the basic unit
     or a human-interpretable unit. For example, duty cycle is commonly
     expressed as a percent, but the HTCondor value ranges from 0 to 1.
-    So, duty cycle is scaled by 100. Some metrics are reported in Kbytes.
+    So, duty cycle is scaled by 100. Some metrics are reported in KiB.
     Scaling by 1024 allows Ganglia to pick the appropriate units,
-    such as number of bytes rather than number of Kbytes. 
+    such as number of bytes rather than number of KiB. 
     When scaling by large values, converting to
     the \verb|"float"| type is recommended.
 

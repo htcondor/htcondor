@@ -90,7 +90,7 @@ the attribute's value is computed by evaluating the machine's
 %
 \index{ClassAd machine attribute!Disk}
 \item[\AdAttr{Disk}:] The amount of disk space on this machine available for
-the job in Kbytes ( e.g. 23000 = 23 megabytes ).  Specifically, this
+the job in KiB ( e.g. 23000 = 23 megabytes ).  Specifically, this
 is the amount of disk space available in the directory specified in
 the HTCondor configuration files by the \Macro{EXECUTE} macro, minus any
 space reserved with the \Macro{RESERVED\_DISK} macro.
@@ -313,7 +313,7 @@ benchmark.
 
 \index{ClassAd machine attribute!MonitorSelfImageSize}
 \item[\AdAttr{MonitorSelfImageSize}:] The amount of virtual memory consumed by
-  this daemon in Kbytes.
+  this daemon in KiB.
 
 \index{ClassAd machine attribute!MonitorSelfRegisteredSocketCount}
 \item[\AdAttr{MonitorSelfRegisteredSocketCount}:] The current number of sockets
@@ -321,7 +321,7 @@ benchmark.
 
 \index{ClassAd machine attribute!MonitorSelfResidentSetSize}
 \item[\AdAttr{MonitorSelfResidentSetSize}:] The amount of resident memory
-  used by this daemon in Kbytes.
+  used by this daemon in KiB.
 
 \index{ClassAd machine attribute!MonitorSelfSecuritySessions}
 \item[\AdAttr{MonitorSelfSecuritySessions}:] The number of open (cached)
@@ -772,7 +772,7 @@ This will only be present if \Macro{ALLOW\_VM\_CRUFT} is TRUE.
 %
 \index{ClassAd machine attribute!VirtualMemory}
 \item[\AdAttr{VirtualMemory}:] The amount of currently available virtual memory 
-(swap space) expressed in Kbytes.
+(swap space) expressed in KiB.
 On Linux platforms, it is the sum of paging space and physical memory, 
 which more accurately represents the virtual memory size of the machine. 
 %

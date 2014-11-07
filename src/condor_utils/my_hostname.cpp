@@ -549,7 +549,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	// to make sure we don't rewrite ATTR_STARTER_IP_ADDR when sending
 	// job updates.  *sigh*)
 	//
-	if( ! (old_sockaddr.is_loopback() && my_sockaddr.is_loopback() ) ) {
+	if( (! old_sockaddr.is_loopback()) && my_sockaddr.is_loopback() ) {
 		dprintf( D_FULLDEBUG, "Address rewriting: refused for attribute '%s' (%s): outbound interface is loopback but default interface is not.\n", attr_name, expr_string.c_str() );
 		return;
 	}
