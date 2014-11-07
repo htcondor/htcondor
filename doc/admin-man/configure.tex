@@ -976,7 +976,7 @@ determined automatically at run time but which can be overwritten.
 
 \label{param:DetectedMemory}
 \item[\MacroU{DETECTED\_MEMORY}]
-  The amount of detected physical memory (RAM) in Mbytes.
+  The amount of detected physical memory (RAM) in MiB.
 
 \label{param:DetectedCores}
 \item[\MacroU{DETECTED\_CORES}]
@@ -1482,7 +1482,7 @@ File System Configuration File Entries''.
 
 \label{param:ReservedSwap}
 \item[\Macro{RESERVED\_SWAP}]
-  The amount of swap space in Mbytes to reserve for this machine.
+  The amount of swap space in MiB to reserve for this machine.
   HTCondor will not start up more \Condor{shadow} processes if the
   amount of free swap space on this machine falls below this level.
   The default value is 0, which disables this check.
@@ -2039,7 +2039,7 @@ of the subsystem corresponding to the daemon.
   Controls the maximum size in bytes or amount of time that a
   log will be allowed to grow. 
   For any log not specified, the default is \MacroU{MAX\_DEFAULT\_LOG},
-  which currently defaults to 10Mbytes in size.
+  which currently defaults to 10  MiB in size.
   Values are specified with the same syntax as \Macro{MAX\_DEFAULT\_LOG}.
 
   Note that a log file for the \Condor{procd} does not use this configuration
@@ -2060,7 +2060,7 @@ of the subsystem corresponding to the daemon.
   The \File{.old} files are overwritten each time the maximum 
   number of rotated files (determined by the value of
   \MacroNI{MAX\_NUM\_<SUBSYS>\_LOG}) is exceeded.
-  The default value is 10 Mbytes in size.
+  The default value is 10 MiB in size.
   A value of 0 specifies that the file may grow without bounds. 
   A single integer value is specified; without a suffix, it defaults to
   specifying a size in bytes.  A suffix is case insensitive, except for
@@ -2069,10 +2069,10 @@ of the subsystem corresponding to the daemon.
   letter is present. Therefore, use the following suffixes to
   qualify the integer:
   \item{\Expr{Bytes} for bytes}
-  \item{\Expr{Kb} for kilobytes}
-  \item{\Expr{Mb} for megabytes}
-  \item{\Expr{Gb} for gigabytes}
-  \item{\Expr{Tb} for terabytes}
+  \item{\Expr{Kb} for KiB, $2^{10}$ numbers of bytes}
+  \item{\Expr{Mb} for MiB, $2^{20}$ numbers of bytes}
+  \item{\Expr{Gb} for GiB, $2^{30}$ numbers of bytes}
+  \item{\Expr{Tb} for TiB, $2^{40}$ numbers of bytes}
   \item{\Expr{Sec} for seconds}
   \item{\Expr{Min} for minutes}
   \item{\Expr{Hr} for hours}
@@ -2565,7 +2565,7 @@ but across all users and user's jobs.
   then be saved to a file with the suffix .old.
   The .old  files are overwritten each time the log is saved.
   A value of 0 specifies that the file may grow without bounds (and
-  disables rotation).   The default is 1 Mbyte.
+  disables rotation).   The default is 1 MiB.
   For backwards compatibility, \MacroNI{MAX\_EVENT\_LOG} will be used if
   \MacroNI{EVENT\_LOG\_MAX\_SIZE} is not defined.
   If \MacroNI{EVENT\_LOG} is not defined, this parameter has no effect.
@@ -3049,12 +3049,12 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
 \label{param:CcbReadBuffer}
 \item[\Macro{CCB\_READ\_BUFFER}] The size of the kernel TCP read buffer 
   in bytes for all sockets used by CCB.
-  The default value is 2Kbytes.
+  The default value is 2 KiB.
 
 \label{param:CcbWriteBuffer}
 \item[\Macro{CCB\_WRITE\_BUFFER}] The size of the kernel TCP write buffer 
   in bytes for all sockets used by CCB.
-  The default value is 2Kbytes.
+  The default value is 2 KiB.
 
 \label{param:CcbSweepInterval}
 \item[\Macro{CCB\_SWEEP\_INTERVAL}]  The interval, in seconds,
@@ -3813,7 +3813,7 @@ for details on installing and running a checkpoint server.
   directory the checkpoint server should use to store checkpoint files.
   Depending on the size of the pool and the size of the jobs submitted,
   this directory and its subdirectories might
-  need to store many Mbytes of data.
+  need to store many MiB of data.
 
 \label{param:UseCkptServer}
 \item[\Macro{USE\_CKPT\_SERVER}]
@@ -6137,7 +6137,7 @@ MAX_JOBS_RUNNING	= \
 \label{param:MaxTransferInputMB}
 \item[\Macro{MAX\_TRANSFER\_INPUT\_MB}]
   This integer expression specifies the maximum allowed total size in
-  Mbytes of the input files that are transferred for a job.  This
+  MiB of the input files that are transferred for a job.  This
   expression does \emph{not} apply to grid universe, standard universe, or
   files transferred via file transfer plug-ins.  The expression may
   refer to attributes of the job.  
@@ -6157,7 +6157,7 @@ MAX_JOBS_RUNNING	= \
 \label{param:MaxTransferOutputMB}
 \item[\Macro{MAX\_TRANSFER\_OUTPUT\_MB}]
   This integer expression specifies the maximum allowed total size in
-  Mbytes of the output files that are transferred for a job.  This
+  MiB of the output files that are transferred for a job.  This
   expression does \emph{not} apply to grid universe, standard universe, or
   files transferred via file transfer plug-ins.  
   The expression may refer to attributes of the job.
@@ -6390,7 +6390,7 @@ MAX_JOBS_RUNNING	= \
 \label{param:ShadowSizeEstimate}
 \item[\Macro{SHADOW\_SIZE\_ESTIMATE}]
   The estimated private virtual memory size of each
-  \Condor{shadow} process in Kbytes.
+  \Condor{shadow} process in  KiB.
   This value is only used if \MacroNI{RESERVED\_SWAP} is non-zero.
   The default value is 800.
 
@@ -7567,7 +7567,7 @@ REM Run the actual job now
 \label{param:StarterRlimitAs} 
 \item[ \Macro{STARTER\_RLIMIT\_AS}]
   An integer ClassAd expression, 
-  expressed in Mbytes,
+  expressed in MiB,
   evaluated by the \Condor{starter} to set the \Code{RLIMIT\_AS} parameter
   of the \Procedure{setrlimit} system call.
   This limits the virtual memory size of each process in the user job.  
@@ -7649,7 +7649,7 @@ Configuration File Entries}
 
 \label{param:JobDefaultRequestMemory}
 \item[\Macro{JOB\_DEFAULT\_REQUESTMEMORY}]
-  The amount of memory in Mbytes to acquire for a job, 
+  The amount of memory in MiB to acquire for a job, 
   if the job does not specify how much it needs using the 
   \SubmitCmd{request\_memory} submit command.
   If this variable is not defined, then the default is defined by
@@ -7660,7 +7660,7 @@ Configuration File Entries}
 
 \label{param:JobDefaultRequestDisk}
 \item[\Macro{JOB\_DEFAULT\_REQUESTDISK}]
-  The amount of disk in Kbytes to acquire for a job,
+  The amount of disk in  KiB to acquire for a job,
   if the job does not specify how much it needs using the 
   \SubmitCmd{request\_disk} submit command.
   If the job defines the value, then that value takes precedence. 
@@ -8086,7 +8086,7 @@ These macros affect the \Condor{collector}.
   information will be discarded.
   Thus, the larger this parameter's value is, the larger the time
   range for which history will be available.  The default value is
-  10000000 (10 Mbytes).
+  10000000 (10 MB).
 
 \label{param:PoolHistorySamplingInterval}
 \item[\Macro{POOL\_HISTORY\_SAMPLING\_INTERVAL}]
@@ -9025,7 +9025,7 @@ Configuration File Macros}
   file is overwritten each time the log is saved, thus the maximum
   space devoted to logging will be twice the
   maximum length of this log file.  A value of 0 specifies that the
-  file may grow without bounds.  The default is 10 Mbyte.
+  file may grow without bounds.  The default is 10 MiB.
 
 \label{param:ProcdAddress}
 \item[\Macro{PROCD\_ADDRESS}]
@@ -11104,7 +11104,7 @@ They specify items related to the \Condor{vm-gahp}.
 
 \label{param:VMMemory}
 \item[\Macro{VM\_MEMORY}]
-  An integer specifying the maximum amount of memory in Mbytes
+  An integer specifying the maximum amount of memory in MiB
   to be shared among the VM universe jobs run on this machine.
 
 \label{param:VMMaxNumber}
@@ -11524,7 +11524,7 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
   thus the maximum space devoted to logging is twice the maximum length
   of this log file.
   A value of 0 specifies that this file may grow without bounds.
-  The default is 1 Mbyte.
+  The default is 1 MiB.
 
 \label{param:HADDebug}
 \item[\Macro{HAD\_DEBUG}]
@@ -11612,7 +11612,7 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
   thus the maximum space devoted to logging is twice the maximum length
   of this log file.
   A value of 0 specifies that this file may grow without bounds.
-  The default is 1 Mbyte.
+  The default is 1 MiB.
 
 \label{param:ReplicationDebug}
 \item[\Macro{REPLICATION\_DEBUG}]
@@ -11644,7 +11644,7 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
   Controls the maximum length in bytes to which the \Condor{transferer}
   daemon log will be allowed to grow.
   A value of 0 specifies that this file may grow without bounds.
-  The default is 1 Mbyte.
+  The default is 1 MiB.
 
 \end{description}
 
