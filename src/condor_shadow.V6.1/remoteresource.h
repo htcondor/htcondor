@@ -412,6 +412,8 @@ class RemoteResource : public Service {
 	bool m_want_delayed;
 	StringList m_delayed_update_prefix;
 
+	bool m_match_auth;
+
 		// If we specially create a security session for file transfer,
 		// this records all the information we need to know about it.
 		// We use the ClaimIdParser class for convenience, because it

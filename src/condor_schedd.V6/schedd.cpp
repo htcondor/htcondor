@@ -86,6 +86,7 @@
 #include "forkwork.h"
 #include "condor_open.h"
 #include "schedd_negotiate.h"
+#include "match_auth_verify.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
 #include "globus_utils.h"
@@ -394,7 +395,11 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 
 	bool suppress_sec_session = true;
 
-	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+	std::string validUsers;
+	std::string fquser;
+	formatstr(fquser, "%s@%s", the_user, scheduler.uidDomain());
+	if (param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) && allow_match_auth(fquser, my_match_ad))
+	{
 		if( secSessionId() == NULL ) {
 			dprintf(D_FULLDEBUG,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: did not create security session from claim id, because claim id does not contain session information: %s\n",publicClaimId());
 		}
@@ -8132,6 +8137,18 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			// our caller will deal with cleaning up the srec
 			// as appropriate...  
 		return false;
+	}
+
+		// If trying to use match authentication, let the shadow know
+		// the authenticated identity of the match ad; it'll use this
+		// to determine whether it permits match auth.
+	if (srec->match && srec->match->my_match_ad)
+	{
+		std::string auth_id;
+		if (srec->match->my_match_ad->EvaluateAttrString(ATTR_AUTHENTICATED_IDENTITY, auth_id))
+		{
+			job_ad->InsertAttr(ATTR_AUTHENTICATED_IDENTITY, auth_id);
+		}
 	}
 
 

@@ -139,6 +139,15 @@ customization=normal
 friendly_name=CCB Address
 review=?
 
+[SETTABLE_ATTRS_MATCH_AUTH]
+# Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
+default=
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Settable Attribute Match auth startd
+review=?
+
 [SETTABLE_ATTRS_ADVERTISE_MASTER]
 # Eeewwww. This follows a form of SETTABLE_ATTRS_<PERM-LEVEL>
 default=
@@ -1297,6 +1306,24 @@ customization=seldom
 friendly_name=Sec Enable Match Password Authentication
 review=?
 tags=shadow,remoteresource
+
+[ALLOW_MATCH_AUTH]
+default=*
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Valid startd identities in the collector for match authentication
+review=?
+tags=schedd
+
+[DENY_MATCH_AUTH]
+default=
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Invalid startd identities in the collector for match authentication
+review=?
+tags=schedd
 
 [DELEGATE_JOB_GSI_CREDENTIALS]
 default=true

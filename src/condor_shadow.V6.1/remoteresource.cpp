@@ -33,6 +33,7 @@
 #include "condor_claimid_parser.h"
 #include "authentication.h"
 #include "globus_utils.h"
+#include "match_auth_verify.h"
 
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
 
@@ -375,7 +376,8 @@ StarterDelegateX509Proxy(DCStarter *dc_starter, const char * filename, time_t ex
 
 RemoteResource::RemoteResource( BaseShadow *shad ) 
 	: m_want_remote_updates(false),
-	  m_want_delayed(true)
+	  m_want_delayed(true),
+	  m_match_auth(false)
 {
 	shadow = shad;
 	dc_startd = NULL;
@@ -443,7 +445,7 @@ RemoteResource::~RemoteResource()
 		proxy_check_tid = -1;
 	}
 
-	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+	if (m_match_auth) {
 		if( m_claim_session.secSessionId() ) {
 			daemonCore->getSecMan()->invalidateKey( m_claim_session.secSessionId() );
 		}
@@ -1013,8 +1015,30 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 		EXCEPT( "in RemoteResource::setStartdInfo() without name or addr" );
 	}
 
+	classad::ClassAd match_ad;
+	std::string the_user;
+	if (shadow->getJobAd())
+	{
+		classad::ClassAd &tmpAd = *shadow->getJobAd();
+		if (tmpAd.EvaluateAttrString(ATTR_USER, the_user))
+		{
+			match_ad.InsertAttr(ATTR_USER, the_user);
+		}
+		std::string machineId;
+		if (tmpAd.EvaluateAttrString(ATTR_AUTHENTICATED_IDENTITY, machineId))
+		{
+			match_ad.InsertAttr(ATTR_AUTHENTICATED_IDENTITY, machineId);
+		}
+		std::string startdAddr;
+		if (tmpAd.EvaluateAttrString(ATTR_STARTD_IP_ADDR, startdAddr))
+		{
+			match_ad.InsertAttr(ATTR_MY_ADDRESS, startdAddr);
+		}
+	}
+	m_match_auth = param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", false) && allow_match_auth(the_user, &match_ad);
+
 	m_claim_session = ClaimIdParser(claim_id);
-	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+	if (m_match_auth) {
 		if( m_claim_session.secSessionId() == NULL ) {
 			dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: warning - failed to create security session from claim id %s because claim has no session information, likely because the matched startd has SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION set to False\n",m_claim_session.publicClaimId());
 		}
@@ -1276,6 +1300,29 @@ void
 RemoteResource::setJobAd( ClassAd *jA )
 {
 	this->jobAd = jA;
+
+	classad::ClassAd match_ad;
+	std::string the_user;
+	if (jobAd)
+	{
+		classad::ClassAd &tmpAd = *jobAd;
+		if (tmpAd.EvaluateAttrString(ATTR_USER, the_user))
+		{
+			match_ad.InsertAttr(ATTR_USER, the_user);
+		}
+		std::string machineId;
+		if (tmpAd.EvaluateAttrString(ATTR_AUTHENTICATED_IDENTITY, machineId))
+		{
+			match_ad.InsertAttr(ATTR_AUTHENTICATED_IDENTITY, machineId);
+		}
+		std::string startdAddr;
+		if (tmpAd.EvaluateAttrString(ATTR_STARTD_IP_ADDR, startdAddr))
+		{
+			match_ad.InsertAttr(ATTR_MY_ADDRESS, startdAddr);
+		}
+	}
+	dprintf(D_SECURITY, "Checking match auth for user %s.\n", the_user.c_str());
+	m_match_auth = param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", false) && allow_match_auth(the_user, &match_ad);
 
 		// now, see if anything we care about is defined in the ad.
 		// this prevents us (for example) from logging another
@@ -2650,7 +2697,7 @@ RemoteResource::getSecSessionInfo(
 	MyString &filetrans_session_info,
 	MyString &filetrans_session_key)
 {
-	if( !param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+	if (!m_match_auth) {
 		dprintf(D_ALWAYS,"Request for security session info from starter, but SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION is not True, so ignoring.\n");
 		return false;
 	}
