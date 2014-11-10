@@ -74,6 +74,15 @@ the documentation says.
 
 \begin{itemize}
 
+\item Fixed a bug in which a \Condor{schedd} daemon of an 8.2 version
+could not send jobs to, 
+or obtain a claim on a \Condor{startd} daemon of an 8.0 or previous version.
+\Ticket{4687}
+
+\item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
+no longer causes a link error.
+\Ticket{4486}
+
 \item Changed the default value of configuration variable
 \Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL} from \Expr{True} to \Expr{False},
 and raised the default value of configuration variable
@@ -110,7 +119,8 @@ It incorrectly defaulted to 10000, rather than the correct value of 2.
 \Ticket{4644}
 
 \item Fixed a rare bug that could cause a daemon to core dump with
-a log message of ``child failed because PID XXX is still in use by DaemonCore''.
+a log message of 
+\AdStr{child failed because PID XXX is still in use by DaemonCore}.
 \Ticket{4646}
 
 \item Fixed a bug in the \Condor{shadow} daemon that caused 
@@ -141,6 +151,20 @@ temporarily unavailable,
 and the \Condor{gridmanager} waited for the remote \Condor{schedd}
 to become available again.
 \Ticket{4557}
+
+\item Fixed a bug that caused the \Condor{startd} to report available disk
+attributes in bytes rather than kibibytes on Windows platforms.
+\Ticket{4638}
+
+\item Fixed a bug that resulted in the \Condor{kbdd} on Windows platforms
+sometimes exiting with error 0xC0000374, 
+which indicates heap corruption.
+\Ticket{4634}
+
+\item Changed the \Condor{master} to work around a bug in the C Runtime
+on Windows platforms that resulted in the \Condor{master} restarting 
+whenever the system clock was changed to account for daylight savings time.
+\Ticket{3572}
 
 \end{itemize}
 
@@ -204,10 +228,6 @@ HTCondor via \Prog{systemd} instead of via \Prog{init} scripts.
 %\item Fixed bugs that prohibited the \Condor{startd} use of \MacroNI{RANK} 
 %from preempting dynamic slots.
 %\Ticket{4580}
-
-\item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
-no longer causes a link error.
-\Ticket{4486}
 
 \item EC2 grid universe jobs which use the X.509 authentication method will
 no longer crash if environment variable \Env{USER} is not set.
