@@ -873,7 +873,7 @@ mkdir -p -m1777 %{buildroot}/%{_var}/lock/condor/local
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
 mkdir -p -m1777 %{buildroot}/%{_var}/lib/condor/execute
 
-cat >> %{buildroot}/%_sysconfdir/condor/condor_config.local << EOF
+cat >> %{buildroot}/%_sysconfdir/condor/condor_config << EOF
 CONDOR_DEVELOPERS = NONE
 CONDOR_HOST = \$(FULL_HOSTNAME)
 COLLECTOR_NAME = Personal Condor
@@ -884,9 +884,6 @@ KILL = FALSE
 DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD
 NEGOTIATOR_INTERVAL = 20
 EOF
-
-# this gets around a bug whose fix is not yet merged
-echo "TRUST_UID_DOMAIN = TRUE" >> %{buildroot}/%_sysconfdir/condor/condor_config.local
 
 # no master shutdown program for now
 rm -f %{buildroot}/%{_sbindir}/condor_set_shutdown
@@ -1309,7 +1306,6 @@ rm -rf %{buildroot}
 %endif
 %_libexecdir/condor/condor_gpu_discovery
 %_sbindir/condor_vm_vmware
-%config(noreplace) %_sysconfdir/condor/condor_config.local
 %config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics
 %defattr(-,condor,condor,-)
 %dir %_var/lib/condor/
