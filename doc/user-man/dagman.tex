@@ -2876,10 +2876,12 @@ have not elapsed since the last update.
 The optional \Arg{ALWAYS-UPDATE} keyword specifies that the
 node status file should be updated on every submission cycle,
 even if no nodes have changed status since the last time the
-file was updated.  (Note that the file will change slightly
-because the timestamps will be updated.)  You should probably
-\emph{not} enable the \Arg{ALWAYS-UPDATE} option if you have a
-very large DAG file.
+file was updated.
+The file will change slightly,
+because timestamps will be updated.
+For performance reasons,
+large DAGs with approximately 10,000 or more nodes
+are poor candidates for using the \Arg{ALWAYS-UPDATE} option.
 
 As an example, if the DAG input file contains the line
 \begin{verbatim}
