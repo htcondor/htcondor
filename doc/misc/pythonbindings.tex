@@ -829,15 +829,17 @@ Returns \texttt{true} if the given \texttt{ad} matches this and this matches
 \\ \hline
 \texttt{externalRefs( expr )}
 
-Returns a python list of external references found in \texttt{expr}.  An
-``external reference" is any attribute in the expression which is not
+Returns a python list of external references found in \texttt{expr}.  
+In this context, 
+an external reference is any attribute in the expression which is \emph{not}
 found in the \texttt{ClassAd}.
 
 \\ \hline
 \texttt{internalRefs( expr )}
 
-Returns a python list of internal references found in \texttt{expr}.  An
-``internal reference" is any attribute in the expression which is
+Returns a python list of internal references found in \texttt{expr}.  
+In this context, 
+an internal reference is any attribute in the expression which is
 found in the \texttt{ClassAd}.
 \\ \hline
 
