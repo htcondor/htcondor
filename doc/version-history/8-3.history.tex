@@ -91,6 +91,12 @@ generates the command, avoiding the extra load of running two
 identical commands.
 \Ticket{4618}
 
+\item Fixed a bug that caused the DAGMan node status file (see
+section~\ref{sec:DAG-node-status} for details) to not reflect the
+final status of a DAG when the DAG is removed with \Condor{rm} or
+aborted by an ABORT-DAG-ON specification.
+\Ticket{4686}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
