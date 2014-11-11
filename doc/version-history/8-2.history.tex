@@ -40,6 +40,21 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Corrected the default value of configuration variable
+\MacroNI{GANGLIAD\_METRICS\_CONFIG\_DIR} to be
+\File{/etc/condor/ganglia.d} in the RPM and Debian distributions.
+With the bug,
+the \Condor{gangliad} daemon would fail to start
+when it could not locate this incorrectly specified directory. 
+\Ticket{4709}
+
+\item The RPM and Debian distributions no longer include a configuration
+file called \File{condor\_config.local},
+as this file is reserved for the use of local administration.
+And, \Condor{install} or \Condor{configure} no longer create
+file \File{condor\_config.local}; they instead append to \File{condor\_config}.
+\Ticket{4552}
+
 \item Fixed a bug in which a \Condor{schedd} daemon of an 8.2 version
 could not send jobs to, 
 or obtain a claim on a \Condor{startd} daemon of an 8.0 or previous version.
