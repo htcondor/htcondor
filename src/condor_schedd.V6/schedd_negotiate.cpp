@@ -344,6 +344,10 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		// 2 = match diagnostics string decorated w/ autocluster + jobid
 	m_current_job_ad.Assign(ATTR_WANT_MATCH_DIAGNOSTICS, (int) 2);
 
+	m_current_job_ad.Assign(ATTR_WANT_PSLOT_PREEMPTION,
+		param_boolean("ALLOW_PSLOT_PREEMPTION", false));
+
+
 		// Send the ad to the negotiator
 	int putad_result = 0;
 	std::string auto_cluster_attrs;
@@ -366,6 +370,7 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		sig_attrs.insert(ATTR_GLOBAL_JOB_ID);
 		sig_attrs.insert(ATTR_AUTO_CLUSTER_ID);
 		sig_attrs.insert(ATTR_WANT_MATCH_DIAGNOSTICS);
+		sig_attrs.insert(ATTR_WANT_PSLOT_PREEMPTION);
 		sig_attrs.insert(ATTR_WANT_CLAIMING);  // used for Condor-G matchmaking
 		// ship it!
 		putad_result = putClassAd(sock, m_current_job_ad, 0, &sig_attrs);
