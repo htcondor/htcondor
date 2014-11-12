@@ -6912,11 +6912,15 @@ int DaemonCore::Create_Process(
 			ixvar++;
 		}
 
-			// now, add in the inherit buf
-		job_environ.SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
 
-		if( !privateinheritbuf.IsEmpty() )
-			job_environ.SetEnv( EnvGetName( ENV_PRIVATE ), privateinheritbuf.Value() );
+		if( HAS_DCJOBOPT_ENV_INHERIT(job_opt_mask) && HAS_DCJOBOPT_CONDOR_ENV_INHERIT(job_opt_mask) ) {
+			job_environ.SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
+
+			if( !privateinheritbuf.IsEmpty() ) {
+				job_environ.SetEnv( EnvGetName( ENV_PRIVATE ), privateinheritbuf.Value() );
+			}
+		}
+
 
 			// and finally, get it all back as a NULL delimited string.
 			// remember to deallocate this with delete [] since it will
@@ -7702,7 +7706,7 @@ int DaemonCore::Create_Process(
 			pidtmp->shared_port_fname = shared_port_endpoint.GetSocketFileName();
 		}
 		else if ( want_command_port != FALSE ) {
-PRAGMA_REMIND("adesmet: Assuming the first address is the one to use.")
+//PRAGMA_REMIND("adesmet: Assuming the first address is the one to use. TODOIPV6")
 			if(socks.begin() != socks.end()) {
 				Sinful sinful(sock_to_string(socks.begin()->rsock()->_sock));
 				if( !want_udp ) {

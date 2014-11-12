@@ -59,19 +59,21 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item A new python binding was added to allow python functions
+\item The new python binding \Procedure{register} has been added 
+to allow python functions
 be registered with the ClassAds library.  This allows python
 functions to be invoked from within ClassAds.
 \Ticket{4598}
 
-\item A new python binding was added to allow the ClassAd object
+\item The new python bindings \Procedure{externalRefs} and 
+\Procedure{internalRefs} have been added to allow the ClassAd object
 to determine internal and external references from an expression.
 \Ticket{4681}
 
-\item Added the \Arg{ALWAYS-UPDATE} option for DAGMan node status
-files (see section~\ref{sec:DAG-node-status} for details).  (Specifying
-this option causes the node status file to be overwritten even if
-no nodes have changed status since the file was last written.)
+\item Added the DAGMan feature of \Arg{ALWAYS-UPDATE} for updates
+of a DAGMan node status file. 
+Specifying this causes the node status file to be overwritten,
+even if no nodes have changed status since the file was last written.
 \Ticket{4607}
 
 \item Configuration variable \Macro{MAX\_JOBS\_RUNNING} has been
@@ -120,6 +122,12 @@ to generate commands to remove \Condor{dagman}'s node jobs when
 generates the command, avoiding the extra load of running two
 identical commands.
 \Ticket{4618}
+
+\item Fixed a bug that caused the DAGMan node status file (see
+section~\ref{sec:DAG-node-status} for details) to not reflect the
+final status of a DAG when the DAG is removed with \Condor{rm} or
+aborted by an ABORT-DAG-ON specification.
+\Ticket{4686}
 
 \end{itemize}
 
