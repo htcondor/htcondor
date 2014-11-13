@@ -279,6 +279,10 @@ ScheddNegotiate::sendJobInfo(Sock *sock)
 		return false;
 	}
 
+		// If schedd wants pslot preemption, advertise here
+	m_current_job_ad.Assign(ATTR_WANT_PSLOT_PREEMPTION,
+		param_boolean("ALLOW_PSLOT_PREEMPTION", false));
+		
 		// request match diagnostics
 	m_current_job_ad.Assign(ATTR_WANT_MATCH_DIAGNOSTICS, true);
 
