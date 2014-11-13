@@ -359,7 +359,7 @@ int SafeSock::connect(
 	/* assigned to the stream if needed		*/
 	/* TRUE means this is an outgoing connection */
 	if (_state == sock_virgin || _state == sock_assigned) {
-		bind(true);
+		bind( _who.get_protocol(), true, 0, false );
 	}
 
 	if (_state != sock_bound) {

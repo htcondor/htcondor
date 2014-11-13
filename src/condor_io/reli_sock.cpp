@@ -150,14 +150,14 @@ int ReliSock::listen(condor_protocol proto, int port)
 	return listen();
 }
 
-/// FALSE means this is an incoming connection
+#if defined( DEPRECATED_SOCKET_CALLS )
 int ReliSock::listen(char *s)
 {
 	if (!bind(false, s))
 		return FALSE;
 	return listen();
 }
-
+#endif /* DEPRECATED_SOCKET_CALLS */
 
 int 
 ReliSock::accept( ReliSock	&c )
@@ -199,7 +199,7 @@ ReliSock::accept( ReliSock	&c )
 
 	}
 
-	c.assign(c_sock);
+	c.assignSocket(c_sock);
 	c.enter_connected_state("ACCEPT");
 	c.decode();
 
@@ -1228,6 +1228,8 @@ ReliSock::authenticate(const char* methods, CondorError* errstack, int auth_time
 	return perform_authenticate(false,key,methods,errstack,auth_timeout,non_blocking,NULL);
 }
 
+#if defined( DEPRECATED_SOCKET_CALLS )
+
 bool
 ReliSock::connect_socketpair(ReliSock &sock,bool use_standard_interface)
 {
@@ -1273,6 +1275,64 @@ ReliSock::connect_socketpair(ReliSock &sock,bool use_standard_interface)
 	return true;
 }
 
+#else
+
+bool
+ReliSock::connect_socketpair_impl( ReliSock & sock, condor_protocol proto, bool isLoopback ) {
+	if( ! bind( proto, false, 0, isLoopback ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to bind() this.\n" );
+		return false;
+	}
+
+	ReliSock tmp;
+	if( ! tmp.bind( proto, false, 0, isLoopback ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to bind() that.\n" );
+		return false;
+	}
+
+	if( !tmp.listen() ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to listen() on that.\n" );
+		return false;
+	}
+
+	if( !connect( tmp.my_ip_str(), tmp.get_port() ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to connect() to that.\n" );
+		return false;
+	}
+
+	if( ! tmp.accept( sock ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to accept() that.\n" );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+ReliSock::connect_socketpair( ReliSock & sock, char const * asIfConnectingTo ) {
+	condor_sockaddr aictAddr;
+	if( ! aictAddr.from_ip_string( asIfConnectingTo ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): '%s' not a valid IP string.\n", asIfConnectingTo );
+		return false;
+	}
+
+	return connect_socketpair_impl( sock, aictAddr.get_protocol(), aictAddr.is_loopback() );
+}
+
+bool
+ReliSock::connect_socketpair( ReliSock & sock ) {
+	condor_protocol proto = CP_IPV4;
+	bool ipV4Enabled = param_boolean( "ENABLE_IPV4", true );
+	bool ipV6Enabled = param_boolean( "ENABLE_IPV6", false );
+	if( ipV6Enabled && (! ipV4Enabled) ) {
+		proto = CP_IPV6;
+	}
+
+	return connect_socketpair_impl( sock, proto, true );
+}
+
+#endif /* DEPRECATED_SOCKET_CALLS */
+
 void
 ReliSock::enter_reverse_connecting_state()
 {
@@ -1293,7 +1353,7 @@ ReliSock::exit_reverse_connecting_state(ReliSock *sock)
 	_state = sock_virgin;
 
 	if( sock ) {
-		int assign_rc = assign(sock->get_file_desc());
+		int assign_rc = assignSocket(sock->get_file_desc());
 		ASSERT( assign_rc );
 		isClient(true);
 		if( sock->_state == sock_connect ) {

@@ -512,7 +512,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 	setsockopt(named_sock_fd, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
 
 	ReliSock *named_sock = new ReliSock();
-	named_sock->assign(named_sock_fd);
+	named_sock->assignDomainSocket( named_sock_fd );
 	named_sock->set_deadline( m_sock->get_deadline() );
 
 	// If non_blocking requested, put socket into nonblocking mode.

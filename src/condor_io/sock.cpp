@@ -335,7 +335,7 @@ int Sock::assign(
 	int socket_fd = WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO, 
 					  FROM_PROTOCOL_INFO, pProtoInfo, 0, 0);
 
-	return assign( socket_fd );
+	return assignSocket( socket_fd );
 }
 #endif
 
@@ -417,33 +417,85 @@ int Sock::move_descriptor_up()
 	return TRUE;
 }
 
-int Sock::assign(SOCKET sockd)
-{
-	condor_protocol proto = CP_IPV4;
-	if (_condor_is_ipv6_mode())
-		proto = CP_IPV6;
-	return assign(proto, sockd);
+//
+// Moving all assignments of INVALID_SOCKET into their own function
+// dramatically simplifies the logic for assign()ing sockets without
+// an explicit protoco argument.
+//
+
+int Sock::assignInvalidSocket() {
+	ASSERT( _who.is_valid() );
+	return assignSocket( _who.get_protocol(), INVALID_SOCKET );
 }
 
-int Sock::assign(condor_protocol proto, SOCKET sockd)
-{
-	int		my_type = SOCK_DGRAM;
+int Sock::assignInvalidSocket( condor_protocol proto ) {
+	return assignSocket( proto, INVALID_SOCKET );
+}
 
-	if (_state != sock_virgin) return FALSE;
+int Sock::assignSocket( SOCKET sockd ) {
+	ASSERT( sockd != INVALID_SOCKET );
 
-	if (sockd != INVALID_SOCKET){
-		_sock = sockd;		/* Could we check for correct protocol ? */
-		/* should we check that sockd matches to IPv6 mode? */
+	condor_sockaddr sockAddr;
+	ASSERT( condor_getsockname( sockd, sockAddr ) == 0 );
+	condor_protocol sockProto = sockAddr.get_protocol();
+
+	if( _who.is_valid() ) {
+		ASSERT( _who.get_protocol() == sockProto );
+	}
+
+	return assignSocket( sockProto, sockd );
+}
+
+//
+// Domain sockets don't have a useful protocol or address.
+//
+int Sock::assignDomainSocket( SOCKET sockd ) {
+	ASSERT( sockd != INVALID_SOCKET );
+
+	_sock = sockd;
+	_state = sock_assigned;
+	_who.clear();
+
+	if( _timeout > 0 ) {
+		timeout_no_timeout_multiplier( _timeout );
+	}
+
+	// This wasn't here originally, but it seems like it should be --
+	// clearing the caches is at worst a performance hit, but it may
+	// also be a correctness fix.
+	addr_changed();
+	return TRUE;
+}
+
+int Sock::assignSocket( condor_protocol proto, SOCKET sockd ) {
+	if( _state != sock_virgin ) { return FALSE; }
+
+	if( sockd != INVALID_SOCKET ) {
+		condor_sockaddr sockAddr;
+		ASSERT( condor_getsockname( sockd, sockAddr ) == 0 );
+		condor_protocol sockProto = sockAddr.get_protocol();
+		ASSERT( sockProto == proto );
+
+		_sock = sockd;
 		_state = sock_assigned;
-
 		_who.clear();
-		condor_getpeername(_sock, _who);
+		condor_getpeername( _sock, _who );
 
-		if ( _timeout > 0 ) {
+		if( _timeout > 0 ) {
 			timeout_no_timeout_multiplier( _timeout );
 		}
+
+		// This wasn't here originally, but it seems like it should be --
+		// clearing the caches is at worst a performance hit, but it may
+		// also be a correctness fix.
+		addr_changed();
 		return TRUE;
 	}
+
+	//
+	// At some point, we should probably rename assignInvalid*() to create()
+	// and move this implementation there.
+	//
 
 	int af_type = 0;
 	switch(proto) {
@@ -452,6 +504,7 @@ int Sock::assign(condor_protocol proto, SOCKET sockd)
 		default: ASSERT(false);
 	}
 
+	int my_type = 0;
 	switch(type()){
 		case safe_sock:
 			my_type = SOCK_DGRAM;
@@ -601,24 +654,23 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 	return FALSE;
 }
 
+#if defined( DEPRECATED_SOCKET_CALLS )
 int Sock::bind(bool outbound, int port, bool loopback)
 {
-	condor_protocol proto = _who.get_protocol();
-
-		// TODO This should never be needed and is awful.
-		// If _who isn't set, call Sock::bind(condor_protocol) (below)
-	if(!_who.is_valid()) {
-		proto = CP_IPV4;
-		if(_condor_is_ipv6_mode()) { 
-			proto = CP_IPV6;
-		}
+	if( ! _who.is_valid() ) {
+		EXCEPT( "Invalid socket address in deprecated call to Sock::bind(); unable to determine protocol, aborting." );
 	}
 
-	return bind(proto, outbound, port, loopback);
+	return bind( _who.get_protocol(), outbound, port, loopback );
 }
+#endif /* DEPRECATED_SOCKET_CALLS */
 
 int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 {
+	if( proto <= CP_INVALID_MIN || proto >= CP_INVALID_MAX ) {
+		EXCEPT( "Unknown protocol (%d) in Sock::bind(); aborting.", proto );
+	}
+
 	condor_sockaddr addr;
 	int bind_return_value;
 
@@ -631,7 +683,7 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
     }
 
 	// if stream not assigned to a sock, do it now	*/
-	if (_state == sock_virgin) assign(proto);
+	if (_state == sock_virgin) assignInvalidSocket( proto );
 
 	if (_state != sock_assigned) {
 		dprintf(D_ALWAYS, "Sock::bind - _state is not correct\n");
@@ -751,10 +803,12 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 	return TRUE;
 }
 
+#if defined( DEPRECATED_SOCKET_CALLS )
 bool Sock::bind_to_loopback(bool outbound,int port)
 {
 	return bind(outbound,port,true) == TRUE;
 }
+#endif /* DEPRECATED_SOCKET_CALLS */
 
 bool Sock::set_keepalive()
 {
@@ -859,7 +913,7 @@ bool Sock::set_keepalive()
 	alive.keepaliveinterval = 5 * 1000;
 
 	// if stream not assigned to a sock, do it now before WSAIoctl calls.
-	if (_state == sock_virgin) assign();
+	if (_state == sock_virgin) assignInvalidSocket();
 
 	DWORD BytesReturned = 0;  // useless pointer needed for winsock call
 
@@ -1031,7 +1085,7 @@ int Sock::do_connect(
 		/* assigned to the stream if needed		*/
 		/* TRUE means this is an outgoing connection */
 	if (_state == sock_virgin || _state == sock_assigned) {
-		bind(true);
+		bind( _who.get_protocol(), true, 0, false );
 	}
 
 	if (_state != sock_bound) return FALSE;
@@ -1458,7 +1512,7 @@ Sock::cancel_connect()
 	_state = sock_virgin;
 		
 		// now create a new socket
-	if (assign() == FALSE) {
+	if (assignInvalidSocket() == FALSE) {
 		dprintf(D_ALWAYS,
 			"assign() failed after a failed connect!\n");
 		connect_state.connect_refused = true; // better give up
@@ -1467,7 +1521,7 @@ Sock::cancel_connect()
 
 	// finally, bind the socket
 	/* TRUE means this is an outgoing connection */
-	if( !bind(true) ) {
+	if( ! bind( _who.get_protocol(), true, 0, false ) ) {
 		connect_state.connect_refused = true; // better give up
 	}
 

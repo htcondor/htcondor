@@ -287,7 +287,7 @@ SharedPortEndpoint::CreateListener()
 	}
 
 	m_listener_sock.close();
-	m_listener_sock.assign(sock_fd);
+	m_listener_sock.assignDomainSocket( sock_fd );
 
 	std::stringstream ss;
 	ss << m_socket_dir.Value() << DIR_DELIM_CHAR << m_local_id.Value();
@@ -1021,7 +1021,7 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 	if( !remote_sock ) {
 		remote_sock = new ReliSock();
 	}
-	remote_sock->assign( passed_fd );
+	remote_sock->assignSocket( passed_fd );
 	remote_sock->enter_connected_state();
 	remote_sock->isClient(false);
 

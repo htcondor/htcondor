@@ -9676,7 +9676,7 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock, condor_protocol proto)
 static bool assign_sock(condor_protocol proto, Sock * sock, bool fatal)
 {
 	ASSERT(sock);
-	if( sock->assign(proto) ) return true;
+	if( sock->assignInvalidSocket( proto ) ) return true;
 
 	const char * type;
 	switch(sock->type()) {
