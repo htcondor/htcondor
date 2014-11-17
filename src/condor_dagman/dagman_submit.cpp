@@ -333,7 +333,6 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			args.AppendArg(dlog.c_str());
 			debug_printf( DEBUG_VERBOSE, "Adding a DAGMan auxiliary log %s\n", defaultLog );
 				// Now append the mask
-				// TEMPTEMP -- set up the mask string once...
 			args.AppendArg( "-a" );
 			std::string dmask("+");
 			dmask += ATTR_DAGMAN_WORKFLOW_MASK;

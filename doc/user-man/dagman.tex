@@ -1286,6 +1286,7 @@ The node priority affects the order in which nodes that are ready
 at the same time will be submitted.  Note that node priority does
 \emph{not} override the DAG dependencies.
 
+#TEMPTEMP -- this isn't so true anymore, since priorities are propagated to the actual condor priority for the job
 Node priority is mainly relevant if
 node submission is throttled via the \Arg{-maxjobs} or \Arg{-maxidle}
 command-line arguments or the \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED} or
@@ -1318,6 +1319,11 @@ DAG
 This will cause node C to be submitted before node B.
 Without this priority setting for node C, node B would be submitted first.
 
+#TEMPTEMP -- need note about priority not being passed to condor_submit if not explicitly set
+#TEMPTEMP -- although if overall DAG priority overrides non-set node priority, that overrides submit file prio
+#TEMPTEMP -- note that if a node's priority is not explicitly set, that does not override a child node's priority
+
+#TEMPTEMP -- need to add something here about the priority of the DAG itself,e specially for sub-DAGs
 Priorities are propagated to children, to SUBDAGs, 
 and to the HTCondor job itself,
 via the \Attr{JobPrio} attribute in the job's ClassAd. 

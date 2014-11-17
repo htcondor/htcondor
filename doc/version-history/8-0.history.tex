@@ -33,7 +33,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item TEMPTEMP -- added checks for illegal VARS names -- add link
 
 \end{itemize}
 
@@ -52,6 +52,11 @@ This configuration has been removed, so that the file is no longer required.
 \item Fixed a crash in the \Condor{shadow} triggered when a disconnect
 occurs just as the job terminates.
 \Ticket{4127}
+
+\item TEMPTEMP -- prios in rescue DAGs
+\Ticket{4102}
+
+\tiem TEMPTEMP -- dag node priority of 0 is the same whether set explicitly or implicitly?  (affects child either way)
 
 \end{itemize}
 
