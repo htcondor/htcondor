@@ -395,6 +395,19 @@ CondorVersionInfo::get_version_string() const
 	return VersionData_to_string( myversion );
 }
 
+bool
+CondorVersionInfo::get_version(std::string &result) const
+{
+	char *result_char = get_version_string();
+	if (result_char)
+	{
+		result = result_char;
+		free(result_char);
+		return true;
+	}
+	return false;
+}
+
 char *
 CondorVersionInfo::VersionData_to_string(VersionData_t const &ver) const
 {

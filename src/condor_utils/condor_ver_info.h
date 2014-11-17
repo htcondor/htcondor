@@ -97,6 +97,11 @@ public:
 		// Returns NULL on error.
 	char *get_version_string() const;
 
+		// Constructs the version string from version info.
+		// Caller supplies the resulting string; returns false
+		// on error.
+	bool get_version(std::string & version) const;
+
 	typedef struct VersionData {
 		int MajorVer;
 		int MinorVer;

@@ -373,6 +373,15 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 			errstack ? errstack->getFullText().c_str() : "" );
 		return false;
 	}
+	const CondorVersionInfo *version_info = rsock.get_peer_version();
+	if (version_info)
+	{
+		set_version(*version_info);
+	}
+	else
+	{
+		dprintf( D_HOSTNAME, "Unable to determine version info from peer socket.\n");
+	}
 
 	rsock.encode();
 
@@ -931,6 +940,15 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		dprintf( D_ALWAYS, "DCSchedd: authentication failure: %s\n",
 				 errstack ? errstack->getFullText().c_str() : "" );
 		return false;
+	}
+	const CondorVersionInfo *version_info = rsock.get_peer_version();
+	if (version_info)
+	{
+		set_version(*version_info);
+	}
+	else
+	{
+		dprintf( D_HOSTNAME, "Unable to determine version info from peer socket.\n");
 	}
 
 	rsock.encode();

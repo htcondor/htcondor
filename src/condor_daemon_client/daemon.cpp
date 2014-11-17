@@ -305,6 +305,26 @@ Daemon::version( void )
 }
 
 
+bool
+Daemon::set_version( const CondorVersionInfo &version )
+{
+	std::string version_string;
+	if (version.get_version(version_string))
+	{
+		_tried_init_version = true;
+		delete _version;
+		dprintf(D_HOSTNAME, "Setting remote daemon version to %s.\n", version_string.c_str());
+		_version = strdup(version_string.c_str());
+		return true;
+	}
+	else
+	{
+		dprintf(D_HOSTNAME, "Failed to parse daemon version to string.\n");
+	}
+	return false;
+}
+
+
 char*
 Daemon::platform( void )
 {

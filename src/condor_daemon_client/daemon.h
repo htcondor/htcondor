@@ -177,6 +177,11 @@ public:
 		*/
 	char* version( void );
 
+		/**
+		 * Set the version of the daemon (overrides the logic in version()).
+		 */
+	bool set_version( const CondorVersionInfo &info );
+
 		/** 
 			@return The platform string of this daemon, or NULL if we
 			don't know it.
