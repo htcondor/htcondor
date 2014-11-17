@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that caused file transfer to/from an 8.0 or older
+\Condor{schedd} to fail when using the Python bindings, or when using
+the -address option with \Condor{submit} or \Condor{transfer\_data}.
+\Ticket{4720}
+
 \item Fixed an inconsistency where \Macro{JOB\_RENICE\_INCREMENT},
 if not set, defaulted to 10 in vanilla universe and 0 in standard 
 universe.  Now defaults to 0 everywhere, which matches what
