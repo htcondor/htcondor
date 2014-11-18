@@ -466,6 +466,44 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 		return;
 	}
 
+
+	// Skip if it's not a string literal.
+	if(*(expr_string.rbegin()) != '"') {
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse. Missing closing double quotation mark.\n", attr_name, expr_string.c_str() );
+		return;
+	}
+
+	const char * delimiter = " = \"";
+	size_t delimpos = expr_string.find(delimiter);
+	// Skip if doesn't look like a string
+	if(delimpos == std::string::npos) {
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse. Missing assignment.\n", attr_name, expr_string.c_str() );
+		return;
+	}
+
+	size_t string_start_pos = delimpos + strlen(delimiter);
+	// string_end_pos is one beyond last character of String literal.
+	size_t string_end_pos = expr_string.length() - 1;
+	size_t string_len = string_end_pos - string_start_pos;
+
+	// Skip if it doesn't look like a Sinful
+	if(expr_string[string_start_pos] != '<') {
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse. Missing opening <.\n", attr_name, expr_string.c_str() );
+		return;
+	}
+	if(expr_string[string_end_pos - 1] != '>') {
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse. Missing closing >.\n", attr_name, expr_string.c_str() );
+		return;
+	}
+
+	std::string old_addr = expr_string.substr(string_start_pos, string_len);
+	std::string my_sinful = daemonCore->InfoCommandSinfulString();
+
+	Sinful sin(old_addr.c_str());
+	condor_sockaddr old_sockaddr;
+	old_sockaddr.from_sinful(sin.getSinful());
+
+
 	// my_sockaddr's port is whatever we happen to be using at the moment;
 	// that will be meaningless if we established the connection.  What we
 	// want is the port someone could contact us on.  Go rummage for one.
@@ -480,59 +518,52 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	}
 	my_sockaddr.set_port(port);
 
-	// We have to be subtle about rewriting loopback addresses; see below.
+	bool do_rewrite = old_addr == my_sinful;
+	// We're going to do a bunch of old logic as a double-check against the 
+	// new logic.  When we finally purge this code, we can replace
+	// the above with a simple
+	// "if(my_sinful != old_addr){dprintf(); return;}"
+	const bool DOUBLE_CHECK = true;
+	if(DOUBLE_CHECK) {
+		// Skip if we shouldn't be using this interface.
+		if( ! IPMatchesNetworkInterfaceSetting( my_sockaddr.to_ip_string( false ).Value() ) ) {
+			if(do_rewrite) {
+				dprintf( D_ALWAYS, "Address rewriting: Warning: attribute '%s' %s == %s, but that address is in the disabled interface %s.\n",
+					attr_name, old_addr.c_str(), my_sinful.c_str(), my_sockaddr.to_ip_string(false).Value());
+			}
+			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: rejected for attribute '%s' (%s): outbound interface '%s' is disabled.\n", attr_name, expr_string.c_str(), my_sockaddr.to_ip_string( false ).Value() );
+			return;
+		}
 
-	// Skip if we shouldn't be using this interface.
-	if( ! IPMatchesNetworkInterfaceSetting( my_sockaddr.to_ip_string( false ).Value() ) ) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: rejected for attribute '%s' (%s): outbound interface '%s' is disabled.\n", attr_name, expr_string.c_str(), my_sockaddr.to_ip_string( false ).Value() );
-		return;
+		if(!sin.valid()) {
+			if(do_rewrite) {
+				dprintf( D_ALWAYS, "Address rewriting: Warning: attribute '%s' %s == %s, but that address could not be parsed.\n",
+					attr_name, old_addr.c_str(), my_sinful.c_str());
+			}
+			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): parsed value does not appear to be a sinful.\n", attr_name, expr_string.c_str() );
+			return;
+		}
+
+		// Skip if my default address isn't present.
+		if( ! daemonCore->is_command_port_do_not_use(old_sockaddr)) {
+			if(do_rewrite) {
+				dprintf( D_ALWAYS, "Address rewriting: Warning: attribute '%s' %s == %s, but that address is not one of my command sockets.\n",
+					attr_name, old_addr.c_str(), my_sinful.c_str());
+			}
+			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute '%s' (%s): not one of my command sockets.\n", attr_name, expr_string.c_str() );
+			return;
+		}
+
+		if(!do_rewrite) {
+			dprintf( D_ALWAYS, "Address rewriting: Warning: attribute '%s' %s != %s, but the old tests think they should match.\n",
+				attr_name, old_addr.c_str(), my_sinful.c_str());
+		}
 	}
 
-	// Skip if it's not a string literal.
-	if(*(expr_string.rbegin()) != '"') {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
+	if( do_rewrite == false) {
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused: the address isn't my default address. (Default: %s, found in ad: %s)\n", my_sinful.c_str(), old_addr.c_str());
 		return;
-	}
-
-	const char * delimiter = " = \"";
-	size_t delimpos = expr_string.find(delimiter);
-	// Skip if doesn't look like a string
-	if(delimpos == std::string::npos) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
-		return;
-	}
-
-	size_t string_start_pos = delimpos + strlen(delimiter);
-	// string_end_pos is one beyond last character of String literal.
-	size_t string_end_pos = expr_string.length() - 1;
-	size_t string_len = string_end_pos - string_start_pos;
-
-	// Skip if it doesn't look like a Sinful
-	if(expr_string[string_start_pos] != '<') {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
-		return;
-	}
-	if(expr_string[string_end_pos - 1] != '>') {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): failed to parse.\n", attr_name, expr_string.c_str() );
-		return;
-	}
-
-	std::string old_addr = expr_string.substr(string_start_pos, string_len);
-
-	Sinful sin(old_addr.c_str());
-	if(!sin.valid()) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): parsed value does not appear to be a sinful.\n", attr_name, expr_string.c_str() );
-		return;
-	}
-
-	condor_sockaddr old_sockaddr;
-	old_sockaddr.from_sinful(sin.getSinful());
-
-	// Skip if my default address isn't present.
-	if( ! daemonCore->is_command_port_do_not_use(old_sockaddr)) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute '%s' (%s): not one of my command sockets.\n", attr_name, expr_string.c_str() );
-		return;
-	}
+	} 
 
 	//
 	// Although it's never useful to rewrite from a non-loopback to a loop-
@@ -564,7 +595,7 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 
 	expr_string = new_expr;
 
-	dprintf(D_NETWORK, "Replaced default IP %s with connection IP %s "
+	dprintf(D_NETWORK, "Address rewriting: Replaced default IP %s with connection IP %s "
 			"in outgoing ClassAd attribute %s.\n",
 			old_addr.c_str(), sin.getSinful(), attr_name);
 }
