@@ -420,7 +420,7 @@ void DaemonCore::Stats::AddToSumEmaRate(const char * name, int val) {
 
 double DaemonCore::Stats::AddRuntime(const char * name, double before)
 {
-   double now = UtcTime::getTimeDouble();
+   double now = _condor_debug_get_time_double();
    if ( ! this->enabled) return now;
    stats_entry_probe<double> * probe = Pool.GetProbe< stats_entry_probe<double> >(name);
    if (probe)
@@ -459,7 +459,7 @@ double DaemonCore::Stats::AddRuntime(const char * name, double before)
 {
    if ( ! this->enabled) return;
 
-   double now = UtcTime::getTimeDouble();
+   double now = _condor_debug_get_time_double();
    stats_recent_counter_timer * probe = Pool.GetProbe<stats_recent_counter_timer>(name);
    if (probe)
       probe->Add(now - before);
@@ -622,13 +622,13 @@ dc_stats_auto_runtime_probe::dc_stats_auto_runtime_probe(const char * name, int 
        }
    }
    if (this->probe)
-       this->begin = UtcTime::getTimeDouble();
+       this->begin = _condor_debug_get_time_double();
 }
 
 dc_stats_auto_runtime_probe::~dc_stats_auto_runtime_probe()
 {
    if (this->probe) {
-      double now = UtcTime::getTimeDouble();
+      double now = _condor_debug_get_time_double();
       this->probe->Add(now - this->begin);
    }
 }
