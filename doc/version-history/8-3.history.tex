@@ -73,6 +73,11 @@ submitting to single-protocol execute nodes. This is preliminary work.
 
 \begin{itemize}
 
+\item Fixed a bug introduced in HTCondor 8.3.1 that caused daemons to be
+unreachable if they were configured to use the shared port daemon but the
+\Condor{master} was not.
+\Ticket{4603}
+
 \item Updated the CREAM client library used in the cream\_gahp.
 This fixes the delegation of RFC format proxies, in addition to other
 bug fixes.
