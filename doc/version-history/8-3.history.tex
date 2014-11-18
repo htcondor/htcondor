@@ -94,10 +94,12 @@ generates the command, avoiding the extra load of running two
 identical commands.
 \Ticket{4618}
 
-\item Fixed a bug that caused the DAGMan node status file (see
-section~\ref{sec:DAG-node-status} for details) to not reflect the
-final status of a DAG when the DAG is removed with \Condor{rm} or
-aborted by an ABORT-DAG-ON specification.
+\item Fixed a bug that caused the DAGMan node status file,
+as detailed in section~\ref{sec:DAG-node-status},
+to not reflect the final status of a DAG when the DAG is removed
+by issuing a \Condor{rm} command,
+or when the DAG is
+aborted due to an ABORT-DAG-ON specification in the DAG input file.
 \Ticket{4686}
 
 \end{itemize}
