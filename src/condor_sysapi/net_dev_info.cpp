@@ -124,8 +124,23 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 		char const *name = ifap->ifa_name;
 
 		if( ! ifap->ifa_addr ) { continue; }
-		if(ifap->ifa_addr->sa_family == AF_INET && !want_ipv4) { continue; }
-		if(ifap->ifa_addr->sa_family == AF_INET6 && !want_ipv6) { continue; }
+		// if(ifap->ifa_addr->sa_family == AF_INET && !want_ipv4) { continue; }
+		// if(ifap->ifa_addr->sa_family == AF_INET6 && !want_ipv6) { continue; }
+		//
+		// Is there really any reason to check interfaces which aren't
+		// AF_INET or AF_INET6?
+		//
+		switch( ifap->ifa_addr->sa_family ) {
+			case AF_INET:
+				if( ! want_ipv4 ) { continue; }
+				break;
+			case AF_INET6:
+				if( ! want_ipv6 ) { continue; }
+				break;
+			default:
+				continue;
+		}
+
 		condor_sockaddr addr(ifap->ifa_addr);
 
 		ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);

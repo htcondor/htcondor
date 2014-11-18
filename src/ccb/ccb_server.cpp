@@ -172,12 +172,27 @@ CCBServer::InitAndReconfig()
 	else {
 		char *spool = param("SPOOL");
 		ASSERT( spool );
+
+		// IPv6 "hostnames" may be address literals, and Windows really
+		// doesn't like colons in its filenames.
+		char * myHost = NULL;
 		Sinful my_addr( daemonCore->publicNetworkIpAddr() );
+		if( my_addr.getHost() ) {
+			myHost = strdup( my_addr.getHost() );
+			for( unsigned i = 0; i < strlen( myHost ); ++i ) {
+				if( myHost[i] == ':' ) { myHost[i] = '-'; }
+			}
+		} else {
+			myHost = strdup( "localhost" );
+		}
+
 		m_reconnect_fname.formatstr("%s%c%s-%s.ccb_reconnect",
 			spool,
 			DIR_DELIM_CHAR,
 			my_addr.getHost() ? my_addr.getHost() : "localhost",
 			my_addr.getPort() ? my_addr.getPort() : "0");
+
+		free( myHost );
 		free( spool );
 	}
 
