@@ -379,6 +379,17 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		return false;
 	}
 
+	// If we don't already know the version of the schedd, try to pull
+	// it out of CEDAR. It's important to know for the FileTransfer
+	// protocol.
+	const CondorVersionInfo *peer_version = rsock.get_peer_version();
+	if ( _version == NULL && peer_version != NULL ) {
+		_version = peer_version->get_version_string();
+	}
+	if ( _version == NULL ) {
+		dprintf( D_ALWAYS, "Unable to determine schedd version for file transfer\n" );
+	}
+
 	rsock.encode();
 
 		// Send our version if using the new command
@@ -982,6 +993,17 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		dprintf( D_ALWAYS, "DCSchedd: authentication failure: %s\n",
 				 errstack ? errstack->getFullText().c_str() : "" );
 		return false;
+	}
+
+	// If we don't already know the version of the schedd, try to pull
+	// it out of CEDAR. It's important to know for the FileTransfer
+	// protocol.
+	const CondorVersionInfo *peer_version = rsock.get_peer_version();
+	if ( _version == NULL && peer_version != NULL ) {
+		_version = peer_version->get_version_string();
+	}
+	if ( _version == NULL ) {
+		dprintf( D_ALWAYS, "Unable to determine schedd version for file transfer\n" );
 	}
 
 	rsock.encode();
