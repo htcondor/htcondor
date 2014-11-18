@@ -1,0 +1,3 @@
+Job NodeA job_dagman_gt4727-lower-nodeA.cmd
+Retry NodeA 3
+Final NodeF job_dagman_gt4727-lower-nodeF.cmd
