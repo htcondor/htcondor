@@ -1302,6 +1302,10 @@ main_pre_command_sock_init()
 			SharedPortServer::RemoveDeadAddressFile();
 		}
 	}
+
+	if ( param_boolean( "USE_SHARED_PORT", false ) ) {
+		SharedPortEndpoint::InitializeDaemonSocketDir();
+	}
 }
 
 #ifdef WIN32
@@ -1336,7 +1340,6 @@ main( int argc, char **argv )
 #endif
 
 	set_mySubSystem( "MASTER", SUBSYSTEM_TYPE_MASTER );
-	SharedPortEndpoint::InitializeDaemonSocketDir();
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

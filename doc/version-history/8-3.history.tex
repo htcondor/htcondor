@@ -103,13 +103,19 @@ submitting to single-protocol execute nodes. This is preliminary work.
 
 \begin{itemize}
 
-\item Updated the CREAM client library used in the cream\_gahp.
+\item Fixed a bug introduced in HTCondor 8.3.1 that caused daemons to be
+unreachable if they were configured to use the shared port daemon but the
+\Condor{master} was not.
+\Ticket{4603}
+
+\item Updated the CREAM client library used in the \Prog{cream\_gahp}.
 This fixes the delegation of RFC format proxies, in addition to other
 bug fixes.
 \Ticket{4596}
 
-\item Fixed a bug that could cause DAGMan to segfault (rather than
-printing an appropriate error message) on some DAG file syntax errors.
+\item Fixed a bug that could cause a segmentation fault of \Condor{dagman}
+for some DAG input file syntax errors,
+rather than printing an appropriate error message.
 \Ticket{4616}
 
 \item Fixed a bug that could cause shared port to fail on Mac OS X if
@@ -123,10 +129,12 @@ generates the command, avoiding the extra load of running two
 identical commands.
 \Ticket{4618}
 
-\item Fixed a bug that caused the DAGMan node status file (see
-section~\ref{sec:DAG-node-status} for details) to not reflect the
-final status of a DAG when the DAG is removed with \Condor{rm} or
-aborted by an ABORT-DAG-ON specification.
+\item Fixed a bug that caused the DAGMan node status file,
+as detailed in section~\ref{sec:DAG-node-status},
+to not reflect the final status of a DAG when the DAG is removed
+by issuing a \Condor{rm} command,
+or when the DAG is
+aborted due to an ABORT-DAG-ON specification in the DAG input file.
 \Ticket{4686}
 
 \end{itemize}

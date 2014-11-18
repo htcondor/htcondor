@@ -597,10 +597,10 @@ void TestProbe()
 
    stats.Runtime.SetRecentMax(5);
 
-   double runtime = UtcTime::getTimeDouble();
+   double runtime = _condor_debug_get_time_double();
 
    sleep(2);
-   double now = UtcTime::getTimeDouble();
+   double now = _condor_debug_get_time_double();
    stats.Runtime += (now - runtime);
    now = runtime;
 

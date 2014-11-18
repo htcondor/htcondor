@@ -45,7 +45,7 @@
 static char const *WINDOWS_DAEMON_SOCKET_DIR = "\\\\.\\pipe\\condor";
 #endif
 
-bool SharedPortEndpoint::m_should_initialize_socket_dir = false;
+bool SharedPortEndpoint::m_initialized_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
 
 SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
@@ -1355,12 +1355,11 @@ SharedPortEndpoint::MakeDaemonSocketDir()
 void
 SharedPortEndpoint::InitializeDaemonSocketDir()
 {
-	m_should_initialize_socket_dir = true;
-}
+	if ( m_initialized_socket_dir ) {
+		return;
+	}
+	m_initialized_socket_dir = true;
 
-void
-SharedPortEndpoint::RealInitializeDaemonSocketDir()
-{
 	std::string result;
 #ifdef USE_ABSTRACT_DOMAIN_SOCKET
 		// Linux has some unique behavior.  We use a random cookie as a prefix to our
@@ -1445,10 +1444,6 @@ SharedPortEndpoint::GetDaemonSocketDir(std::string &result)
 #ifdef WIN32
 	result = WINDOWS_DAEMON_SOCKET_DIR;
 #else
-	if (m_should_initialize_socket_dir) {
-		RealInitializeDaemonSocketDir();
-		m_should_initialize_socket_dir = false;
-	}
 	const char * known_dir = getenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
 	if (known_dir == NULL) {
 		dprintf(D_FULLDEBUG, "No shared_port cookie available; will fall back to using on-disk $(DAEMON_SOCKET_DIR)\n");
