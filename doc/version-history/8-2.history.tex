@@ -41,6 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where \Condor{submit} in interactive mode did
+not properly handle the \Opt{name} command line option.
+\Ticket{4728}
+
 \item Fixed a bug that caused file transfer to/from an 8.0 or older
 \Condor{schedd} to fail when using the Python bindings, or when using
 the -address option with \Condor{submit} or \Condor{transfer\_data}.
