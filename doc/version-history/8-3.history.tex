@@ -78,8 +78,9 @@ This fixes the delegation of RFC format proxies, in addition to other
 bug fixes.
 \Ticket{4596}
 
-\item Fixed a bug that could cause DAGMan to segfault (rather than
-printing an appropriate error message) on some DAG file syntax errors.
+\item Fixed a bug that could cause a segmentation fault of \Condor{dagman}
+for some DAG input file syntax errors,
+rather than printing an appropriate error message.
 \Ticket{4616}
 
 \item Fixed a bug that could cause shared port to fail on Mac OS X if
