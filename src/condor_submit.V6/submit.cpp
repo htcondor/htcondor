@@ -1467,7 +1467,7 @@ main( int argc, char *argv[] )
 			sshargs[i++] = PoolName;
 		}
 		if (ScheddName) {
-			sshargs[i++] = "-pool";
+			sshargs[i++] = "-name";
 			sshargs[i++] = ScheddName;
 		}
 		sprintf(jobid,"%d.0",ClusterId);
