@@ -41,6 +41,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where \Condor{submit} in interactive mode did
+not properly handle the \Opt{name} command line option.
+\Ticket{4728}
+
+\item Fixed a bug that caused file transfer to/from an 8.0 or older
+\Condor{schedd} to fail when using the Python bindings, or when using
+the -address option with \Condor{submit} or \Condor{transfer\_data}.
+\Ticket{4720}
+
 \item Fixed an inconsistency where \Macro{JOB\_RENICE\_INCREMENT},
 if not set, defaulted to 10 in vanilla universe and 0 in standard 
 universe.  Now defaults to 0 everywhere, which matches what
@@ -57,8 +66,7 @@ the documentation says.
 
 \begin{itemize}
 
-\item HTCondor version 8.2.4 not yet released.
-%\item HTCondor version 8.2.4 released on Month Date, 2014.
+\item HTCondor version 8.2.4 released on Nov. 12, 2014.
 
 \end{itemize}
 
@@ -74,15 +82,20 @@ the documentation says.
 
 \begin{itemize}
 
+% 1
 \item Fixed a bug in which a \Condor{schedd} daemon of an 8.2 version
 could not send jobs to, 
 or obtain a claim on a \Condor{startd} daemon of an 8.0 or previous version.
 \Ticket{4687}
 
-\item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
-no longer causes a link error.
-\Ticket{4486}
+% 2
+\item Fixed a bug that could cause removed jobs to return to idle status.
+If a running job was removed at the same time that an error occurred that
+caused the \Condor{shadow} to put the job on hold, the job would be put
+in the held status, but change to idle status when released.
+\Ticket{4619}
 
+% 3
 \item Changed the default value of configuration variable
 \Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL} from \Expr{True} to \Expr{False},
 and raised the default value of configuration variable
@@ -91,38 +104,30 @@ This works around \Condor{schedd} performance issues caused by using
 this protocol when querying schedulers that handle large numbers of jobs.
 \Ticket{4696}
 
-\item Fixed a bug in which \Condor{router\_q} queried the wrong queue
-if the job router was configured to route jobs away from the source.
-\Ticket{4599}
+% 4
+\item Fixed a bug that resulted in the \Condor{kbdd} on Windows platforms
+sometimes exiting with error 0xC0000374, 
+which indicates heap corruption.
+\Ticket{4634}
 
-\item Fixed a bug that prevented \Condor{chirp} from finding its configuration
-file in the default location.
-\Ticket{4625}
+% 5
+\item Fixed a bug that caused the \Condor{startd} to report available disk
+attributes in bytes rather than kibibytes on Windows platforms.
+\Ticket{4638}
 
-\item Fixed a bug that could cause removed jobs to return to idle status.
-If a running job was removed at the same time that an error occurred that
-caused the \Condor{shadow} to put the job on hold, the job would be put
-in the held status, but change to idle status when released.
-\Ticket{4619}
+% 6
+\item Changed the \Condor{master} to work around a bug in the C Runtime
+on Windows platforms that resulted in the \Condor{master} restarting 
+whenever the system clock was changed to account for daylight savings time.
+\Ticket{3572}
 
-\item Fixed a bug that could cause a daemon to write to an old daemon log
-file after log rotation.
-\Ticket{3106}
-
-\item The HTCondor DRMAA library now works correctly when
-\Macro{SCHEDD\_HOST} is set in the configuration file.
-\Ticket{4629}
-
-\item Fixed the default value of the previously undocumented 
-configuration variable \Macro{HISTORY\_HELPER\_MAX\_CONCURRENCY}.
-It incorrectly defaulted to 10000, rather than the correct value of 2.
-\Ticket{4644}
-
+% 7
 \item Fixed a rare bug that could cause a daemon to core dump with
 a log message of 
 \AdStr{child failed because PID XXX is still in use by DaemonCore}.
 \Ticket{4646}
 
+% 8
 \item Fixed a bug in the \Condor{shadow} daemon that caused 
 the user's supplemental
 groups to be unset when the \Condor{shadow} process is reused 
@@ -131,17 +136,53 @@ This could result in the job being held with a hold reason of
 \AdStr{Failed to initialize user log to <path>}.
 \Ticket{4672}
 
+%9
+\item The RPM and Debian distributions no longer include a configuration
+file called \File{condor\_config.local},
+as this file is reserved for the use of local administration.
+And, \Condor{install} or \Condor{configure} no longer create
+file \File{condor\_config.local}; they instead append to \File{condor\_config}.
+\Ticket{4552}
+
+% 10
+\item Using \Condor{compile} on programs which call \Procedure{posix\_memalign}
+no longer causes a link error.
+\Ticket{4486}
+
+% 11
+\item Fixed a bug in which \Condor{router\_q} queried the wrong queue
+if the job router was configured to route jobs away from the source.
+\Ticket{4599}
+
+% 12
+\item Fixed a bug that prevented \Condor{chirp} from finding its configuration
+file in the default location.
+\Ticket{4625}
+
+% 13
+\item Fixed a bug that could cause a daemon to write to an old daemon log
+file after log rotation.
+\Ticket{3106}
+
+% 14
+\item The HTCondor DRMAA library now works correctly when
+\Macro{SCHEDD\_HOST} is set in the configuration file.
+\Ticket{4629}
+
+% 15
+\item Fixed the default value of the previously undocumented 
+configuration variable \Macro{HISTORY\_HELPER\_MAX\_CONCURRENCY}.
+It incorrectly defaulted to 10000, rather than the correct value of 2.
+\Ticket{4644}
+
+% 16
 \item Fixed a bug in the \Condor{schedd} daemon
 that caused remote \Condor{history}
 commands to fail if the configuration variable \Macro{LIBEXEC} was not 
 explicitly set in a configuration file.
 \Ticket{4678}
 
-\item Fixed a bug in the \Condor{ganglia} daemon
-that caused it to incorrectly log
-that \Prog{gmetric} was being used when \Condor{reconfig} was invoked.
-\Ticket{4680}
-
+% 17
 \item For grid type \SubmitCmdNI{condor} grid universe jobs, if commands
 to the remote \Condor{schedd} fail but the daemon appears to be running,
 then affected jobs will be placed in the Hold state.
@@ -152,19 +193,20 @@ and the \Condor{gridmanager} waited for the remote \Condor{schedd}
 to become available again.
 \Ticket{4557}
 
-\item Fixed a bug that caused the \Condor{startd} to report available disk
-attributes in bytes rather than kibibytes on Windows platforms.
-\Ticket{4638}
+% 18
+\item Fixed a bug in the \Condor{ganglia} daemon
+that caused it to incorrectly log
+that \Prog{gmetric} was being used when \Condor{reconfig} was invoked.
+\Ticket{4680}
 
-\item Fixed a bug that resulted in the \Condor{kbdd} on Windows platforms
-sometimes exiting with error 0xC0000374, 
-which indicates heap corruption.
-\Ticket{4634}
-
-\item Changed the \Condor{master} to work around a bug in the C Runtime
-on Windows platforms that resulted in the \Condor{master} restarting 
-whenever the system clock was changed to account for daylight savings time.
-\Ticket{3572}
+% 19
+\item Corrected the default value of configuration variable
+\MacroNI{GANGLIAD\_METRICS\_CONFIG\_DIR} to be
+\File{/etc/condor/ganglia.d} in the RPM and Debian distributions.
+With the bug,
+the \Condor{gangliad} daemon would fail to start
+when it could not locate this incorrectly specified directory. 
+\Ticket{4709}
 
 \end{itemize}
 

@@ -1,0 +1,10 @@
+executable           	= ./x_echostring.pl
+arguments		= job_dagman_gt4727-lower-nodeA OK
+# Make condor_submit fail...
+universe             	= xxx
+notification         	= NEVER
+getenv               	= true
+output			= job_dagman_gt4727-lower-nodeA.out
+error			= job_dagman_gt4727-lower-nodeA.err
+queue
+

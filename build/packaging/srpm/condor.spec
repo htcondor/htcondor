@@ -868,7 +868,7 @@ mkdir -p -m1777 %{buildroot}/%{_var}/lock/condor/local
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
 mkdir -p -m1777 %{buildroot}/%{_var}/lib/condor/execute
 
-cat >> %{buildroot}/%_sysconfdir/condor/condor_config.local << EOF
+cat >> %{buildroot}/%_sysconfdir/condor/condor_config << EOF
 CONDOR_DEVELOPERS = NONE
 CONDOR_HOST = \$(FULL_HOSTNAME)
 COLLECTOR_NAME = Personal Condor
@@ -879,9 +879,6 @@ KILL = FALSE
 DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD
 NEGOTIATOR_INTERVAL = 20
 EOF
-
-# this gets around a bug whose fix is not yet merged
-echo "TRUST_UID_DOMAIN = TRUE" >> %{buildroot}/%_sysconfdir/condor/condor_config.local
 
 # no master shutdown program for now
 rm -f %{buildroot}/%{_sbindir}/condor_set_shutdown
@@ -1304,7 +1301,6 @@ rm -rf %{buildroot}
 %endif
 %_libexecdir/condor/condor_gpu_discovery
 %_sbindir/condor_vm_vmware
-%config(noreplace) %_sysconfdir/condor/condor_config.local
 %config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics
 %defattr(-,condor,condor,-)
 %dir %_var/lib/condor/
@@ -1718,6 +1714,34 @@ fi
 %post -n condor
 /sbin/chkconfig --add condor
 /sbin/ldconfig
+
+#Recover any condor_config.local.rpmsave files created by 8.2.4 upgrade
+# If there is a saved condor_config.local, place it into the configuration directory
+if [ -f /etc/condor/condor_config.local.rpmsave ]; then
+    # Configuration directory should already be there
+    if [ ! -d /etc/condor/condor.d ]; then
+        mkdir /etc/condor/condor.d
+    fi
+    # Make sure that we don't overwrite something in the configuration directory
+    if [ ! -f /etc/condor/condor.d/zz-condor_config.local ]; then
+        file="/etc/condor/condor.d/zz-condor_config.local"
+    else
+        i="1"
+        while [ -f /etc/condor/condor.d/zz-condor_config.local.$i ]; do
+            i=$[$i+1]
+        done
+        file="/etc/condor/condor.d/zz-condor_config.local.$i"
+    fi
+
+cat <<EOF > $file
+# This file recovered from /etc/condor/condor_config.local.rpmsave
+# during rpm update on `date`
+#
+EOF
+
+    cat /etc/condor/condor_config.local.rpmsave >> $file 
+    rm -f /etc/condor/condor_config.local.rpmsave
+fi
 
 %preun -n condor
 if [ $1 = 0 ]; then
