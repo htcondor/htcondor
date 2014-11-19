@@ -166,7 +166,7 @@ if( NOT WINDOWS)
 	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
 	find_multiple( "resolv" HAVE_LIBRESOLV )
     find_multiple ("dl" HAVE_LIBDL )
-	find_multiple ("ltdl" HAVE_LIBLTDL )
+	find_library( HAVE_LIBLTDL "ltdl" )
 	find_multiple( "cares" HAVE_LIBCARES )
 	# On RedHat6, there's a libcares19 package, but no libcares
 	find_multiple( "cares19" HAVE_LIBCARES19 )
@@ -417,6 +417,8 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 
 	set(LINUX ON)
 	set( CONDOR_BUILD_SHARED_LIBS TRUE )
+
+	find_so_name(LIBLTDL_SO ${HAVE_LIBLTDL})
 
 	set(DOES_SAVE_SIGSTATE ON)
 	check_symbol_exists(SIOCETHTOOL "linux/sockios.h" HAVE_DECL_SIOCETHTOOL)
