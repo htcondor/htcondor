@@ -90,6 +90,7 @@ class UserLogFilesize_t : public UserLogInt64_t
 // ***************************
 WriteUserLog::WriteUserLog( bool disable_event_log )
 {
+	log_file_cache = NULL;
 	Reset( );
 	m_global_disable = disable_event_log;
 }
@@ -105,6 +106,7 @@ WriteUserLog::WriteUserLog (const char *owner,
 							int s,
 							bool xml)
 {
+	log_file_cache = NULL;
 	Reset( );
 	m_use_xml = xml;
 	
@@ -127,6 +129,7 @@ WriteUserLog::WriteUserLog (const char *owner,
 							int s,
 							bool xml)
 {
+	log_file_cache = NULL;
 	Reset( );
 	m_use_xml = xml;
 	
@@ -148,6 +151,7 @@ WriteUserLog::WriteUserLog (const char *owner,
 							bool xml,
 							const char *gjid)
 {
+	log_file_cache = NULL;
 	Reset();
 	m_use_xml = xml;
 
@@ -168,6 +172,7 @@ WriteUserLog::WriteUserLog (const char *owner,
 							bool xml,
 							const char *gjid)
 {
+	log_file_cache = NULL;
 	Reset();
 	m_use_xml = xml;
 
