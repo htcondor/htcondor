@@ -24,7 +24,6 @@
 #include "extArray.h"
 #include "MyString.h"
 
-extern "C" 
 PROC_ID
 getProcByString( const char* str )
 {
@@ -71,6 +70,21 @@ bool StrToProcId(char const *str, int &cluster, int &proc) {
 	cluster = atoi(str);
 	proc = atoi(tmp);
 	return true;
+}
+
+void JOB_ID_KEY::sprint(MyString &s) const 
+{
+	s.formatstr("%d.%d", this->cluster, this->proc);
+}
+
+unsigned int JOB_ID_KEY::hash(const JOB_ID_KEY &key)
+{
+	return key.cluster + key.proc * 97;
+}
+
+unsigned int hashFunction(const JOB_ID_KEY &key)
+{
+	return key.cluster + key.proc*97;
 }
 
 

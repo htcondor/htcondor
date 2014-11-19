@@ -36,8 +36,6 @@
 #include "ClassAdLogPlugin.h"
 #endif
 
-// explicitly instantiate the HashTable template
-
 /***** Prevent calling free multiple times in this code *****/
 /* This fixes bugs where we would segfault when reading in
  * a corrupted log file, because memory would be deallocated
@@ -57,43 +55,18 @@ ptr = NULL;
 
 const char *EMPTY_CLASSAD_TYPE_NAME = "(empty)";
 
-ClassAdLogFilterIterator::ClassAdLogFilterIterator(ClassAdHashTable *table, const classad::ExprTree *requirements, int timeslice_ms, bool invalid)
-	: m_table(table),
-	  m_cur(table->begin()),
-	  m_found_ad(false),
-	  m_requirements(requirements),
-	  m_timeslice_ms(timeslice_ms),
-	  m_done(invalid)
-	{}
 
-ClassAdLogFilterIterator::ClassAdLogFilterIterator(const ClassAdLogFilterIterator &other)
-	: m_table(other.m_table),
-	  m_cur(other.m_cur),
-	  m_found_ad(other.m_found_ad),
-	  m_requirements(other.m_requirements),
-	  m_timeslice_ms(other.m_timeslice_ms),
-	  m_done(other.m_done)
-{
-}
-
-ClassAd* ClassAdLogFilterIterator::operator *() const {
-	if (m_done || (m_cur == m_table->end()) || !m_found_ad)
-	{
-		return NULL;
-	}
-	return (*m_cur).second;
-}
-
-ClassAdLogFilterIterator
-ClassAdLogFilterIterator::operator++(int)
+template <typename K, typename AltK>
+typename ClassAdLog<K,AltK>::filter_iterator
+ClassAdLog<K,AltK>::filter_iterator::operator++(int)
 {
 	m_found_ad = false;
-	ClassAdLogFilterIterator cur = *this;
+	typename ClassAdLog<K,AltK>::filter_iterator cur = *this;
 	if (m_done) {
 		return cur;
 	}
 
-	HashIterator<HashKey, ClassAd*> end = m_table->end();
+	HashIterator<K, ClassAd*> end = m_table->end();
 	bool boolVal;
 	int intVal;
 	int miss_count = 0;
@@ -148,17 +121,8 @@ ClassAdLogFilterIterator::operator++(int)
 	return cur;
 }
 
-bool
-ClassAdLogFilterIterator::operator==(const ClassAdLogFilterIterator &other)
-{
-	if (m_table != other.m_table) return false;
-	if (m_done && other.m_done) return true;
-	if (m_done != other.m_done) return false;
-	if (!(m_cur == other.m_cur) ) return false;
-	return true;
-}
-
-ClassAdLog::ClassAdLog() : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
+template <typename K, typename AltK>
+ClassAdLog<K,AltK>::ClassAdLog() : table(CLASSAD_LOG_HASHTABLE_SIZE, K::hash)
 {
 	active_transaction = NULL;
 	log_fp = NULL;
@@ -167,7 +131,8 @@ ClassAdLog::ClassAdLog() : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 	historical_sequence_number = 0;
 }
 
-ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
+template <typename K, typename AltK>
+ClassAdLog<K,AltK>::ClassAdLog(const char *filename,int max_historical_logs_arg) : table(CLASSAD_LOG_HASHTABLE_SIZE, K::hash)
 {
 	log_filename_buf = filename;
 	active_transaction = NULL;
@@ -224,7 +189,8 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 				dprintf(D_ALWAYS, "Warning: Encountered unmatched end transaction in %s, "
 						"log may be bogus...", filename);
 			} else {
-				active_transaction->Commit(NULL, (void *)&table); // commit in memory only
+				ClassAdLogTable<K> la(table);
+				active_transaction->Commit(NULL, &la); // commit in memory only
 				delete active_transaction;
 				active_transaction = NULL;
 			}
@@ -242,7 +208,8 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 			if (active_transaction) {
 				active_transaction->AppendLog(log_rec);
 			} else {
-				log_rec->Play((void *)&table);
+				ClassAdLogTable<K> la(table);
+				log_rec->Play((void *)&la);
 				delete log_rec;
 			}
 		}
@@ -288,7 +255,8 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 	}
 }
 
-ClassAdLog::~ClassAdLog()
+template <typename K, typename AltK>
+ClassAdLog<K,AltK>::~ClassAdLog()
 {
 	if (active_transaction) delete active_transaction;
 
@@ -296,13 +264,15 @@ ClassAdLog::~ClassAdLog()
 	// inserted, so we delete them here...
 	table.startIterations();
 	ClassAd *ad;
-	HashKey key;
+	K key;
 	while (table.iterate(key, ad) == 1) {
 		delete ad;
 	}
 }
+
+template <typename K, typename AltK>
 void
-ClassAdLog::AppendLog(LogRecord *log)
+ClassAdLog<K,AltK>::AppendLog(LogRecord *log)
 {
 	if (active_transaction) {
 		if (active_transaction->EmptyTransaction()) {
@@ -320,13 +290,15 @@ ClassAdLog::AppendLog(LogRecord *log)
 				ForceLog();  // flush and fsync
 			}
 		}
-		log->Play((void *)&table);
+		ClassAdLogTable<K> la(table);
+		log->Play((void *)&la);
 		delete log;
 	}
 }
 
+template <typename K, typename AltK>
 void
-ClassAdLog::FlushLog()
+ClassAdLog<K,AltK>::FlushLog()
 {
 	if (log_fp!=NULL) {
 		if (fflush(log_fp) !=0){
@@ -335,8 +307,9 @@ ClassAdLog::FlushLog()
 	}
 }
 
+template <typename K, typename AltK>
 void
-ClassAdLog::ForceLog()
+ClassAdLog<K,AltK>::ForceLog()
 {
 	// Force log changes to disk.  This involves first flushing
 	// the log from memory buffers, then fsyncing to disk.
@@ -354,8 +327,9 @@ ClassAdLog::ForceLog()
 }
 
 
+template <typename K, typename AltK>
 bool
-ClassAdLog::SaveHistoricalLogs()
+ClassAdLog<K,AltK>::SaveHistoricalLogs()
 {
 	if(!max_historical_logs) return true;
 
@@ -395,18 +369,21 @@ ClassAdLog::SaveHistoricalLogs()
 	return true;
 }
 
+template <typename K, typename AltK>
 void
-ClassAdLog::SetMaxHistoricalLogs(int max) {
+ClassAdLog<K,AltK>::SetMaxHistoricalLogs(int max) {
 	this->max_historical_logs = max;
 }
 
+template <typename K, typename AltK>
 int
-ClassAdLog::GetMaxHistoricalLogs() {
+ClassAdLog<K,AltK>::GetMaxHistoricalLogs() {
 	return max_historical_logs;
 }
 
+template <typename K, typename AltK>
 bool
-ClassAdLog::TruncLog()
+ClassAdLog<K,AltK>::TruncLog()
 {
 	MyString	tmp_log_filename;
 	int new_log_fd;
@@ -502,14 +479,16 @@ ClassAdLog::TruncLog()
 	return true;
 }
 
+template <typename K, typename AltK>
 int
-ClassAdLog::IncNondurableCommitLevel()
+ClassAdLog<K,AltK>::IncNondurableCommitLevel()
 {
 	return m_nondurable_level++;
 }
 
+template <typename K, typename AltK>
 void
-ClassAdLog::DecNondurableCommitLevel(int old_level)
+ClassAdLog<K,AltK>::DecNondurableCommitLevel(int old_level)
 {
 	if( --m_nondurable_level != old_level ) {
 		EXCEPT("ClassAdLog::DecNondurableCommitLevel(%d) with existing level %d",
@@ -517,15 +496,17 @@ ClassAdLog::DecNondurableCommitLevel(int old_level)
 	}
 }
 
+template <typename K, typename AltK>
 void
-ClassAdLog::BeginTransaction()
+ClassAdLog<K,AltK>::BeginTransaction()
 {
 	ASSERT(!active_transaction);
 	active_transaction = new Transaction();
 }
 
+template <typename K, typename AltK>
 bool
-ClassAdLog::AbortTransaction()
+ClassAdLog<K,AltK>::AbortTransaction()
 {
 	// Sometimes we do an AbortTransaction() when we don't know if there was
 	// an active transaction.  This is allowed.
@@ -537,8 +518,9 @@ ClassAdLog::AbortTransaction()
 	return false;
 }
 
+template <typename K, typename AltK>
 void
-ClassAdLog::CommitTransaction()
+ClassAdLog<K,AltK>::CommitTransaction()
 {
 	// Sometimes we do a CommitTransaction() when we don't know if there was
 	// an active transaction.  This is allowed.
@@ -547,27 +529,30 @@ ClassAdLog::CommitTransaction()
 		LogEndTransaction *log = new LogEndTransaction;
 		active_transaction->AppendLog(log);
 		bool nondurable = m_nondurable_level > 0;
-		active_transaction->Commit(log_fp, (void *)&table, nondurable );
+		ClassAdLogTable<K> la(table);
+		active_transaction->Commit(log_fp, &la, nondurable );
 	}
 	delete active_transaction;
 	active_transaction = NULL;
 }
 
+template <typename K, typename AltK>
 void
-ClassAdLog::CommitNondurableTransaction()
+ClassAdLog<K,AltK>::CommitNondurableTransaction()
 {
 	int old_level = IncNondurableCommitLevel();
 	CommitTransaction();
 	DecNondurableCommitLevel( old_level );
 }
 
+template <typename K, typename AltK>
 bool
-ClassAdLog::AdExistsInTableOrTransaction(const char *key)
+ClassAdLog<K,AltK>::AdExistsInTableOrTransaction(AltK key)
 {
 	bool adexists = false;
 
 		// first see if it exists in the "commited" hashtable
-	HashKey hkey(key);
+	K hkey(key);
 	ClassAd *ad = NULL;
 	table.lookup(hkey, ad);
 	if ( ad ) {
@@ -601,8 +586,9 @@ ClassAdLog::AdExistsInTableOrTransaction(const char *key)
 }
 
 
+template <typename K, typename AltK>
 int 
-ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
+ClassAdLog<K,AltK>::LookupInTransaction(AltK key, const char *name, char *&val)
 {
 	ClassAd *ad = NULL;
 
@@ -611,8 +597,9 @@ ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 	return ExamineTransaction(key, name, val, ad);
 }
 
+template <typename K, typename AltK>
 bool
-ClassAdLog::AddAttrsFromTransaction(const char *key, ClassAd &ad)
+ClassAdLog<K,AltK>::AddAttrsFromTransaction(AltK key, ClassAd &ad)
 {
 	char *val = NULL;
 	ClassAd *attrsFromTransaction;
@@ -637,8 +624,9 @@ ClassAdLog::AddAttrsFromTransaction(const char *key, ClassAd &ad)
 	return false;
 }
 
+template <typename K, typename AltK>
 int
-ClassAdLog::ExamineTransaction(const char *key, const char *name, char *&val, ClassAd* &ad)
+ClassAdLog<K,AltK>::ExamineTransaction(AltK key, const char *name, char *&val, ClassAd* &ad)
 {
 	bool AdDeleted=false, ValDeleted=false, ValFound=false;
 	int attrsAdded = 0;
@@ -730,16 +718,18 @@ ClassAdLog::ExamineTransaction(const char *key, const char *name, char *&val, Cl
 	}
 }
 
+template <typename K, typename AltK>
 Transaction *
-ClassAdLog::getActiveTransaction()
+ClassAdLog<K,AltK>::getActiveTransaction()
 {
 	Transaction *ret_value = active_transaction;
 	active_transaction = NULL;	// it is IMPORTANT that we reset active_tranasction to NULL here!
 	return ret_value;
 }
 
+template <typename K, typename AltK>
 bool
-ClassAdLog::setActiveTransaction(Transaction* & transaction)
+ClassAdLog<K,AltK>::setActiveTransaction(Transaction* & transaction)
 {
 	if ( active_transaction ) {
 		return false;
@@ -753,13 +743,14 @@ ClassAdLog::setActiveTransaction(Transaction* & transaction)
 }
 
 
+template <typename K, typename AltK>
 void
-ClassAdLog::LogState(FILE *fp)
+ClassAdLog<K,AltK>::LogState(FILE *fp)
 {
 	LogRecord	*log=NULL;
 	ClassAd		*ad=NULL;
 	ExprTree	*expr=NULL;
-	HashKey		hashval;
+	K			hashval;
 	MyString	key;
 	const char	*attr_name = NULL;
 
@@ -882,12 +873,12 @@ int
 LogNewClassAd::Play(void *data_structure)
 {
 	int result;
-	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
+	LoggableClassAdTable *table = (LoggableClassAdTable *)data_structure;
 	ClassAd	*ad = new ClassAd();
 	SetMyTypeName(*ad, mytype);
 	SetTargetTypeName(*ad, targettype);
 	ad->EnableDirtyTracking();
-	result = table->insert(HashKey(key), ad);
+	result = table->insert(key, ad) ? 0 : -1;
 
 #if defined(HAVE_DLOPEN)
 	ClassAdLogPluginManager::NewClassAd(key);
@@ -973,11 +964,10 @@ LogDestroyClassAd::~LogDestroyClassAd()
 int
 LogDestroyClassAd::Play(void *data_structure)
 {
-	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
-	HashKey hkey(key);
+	LoggableClassAdTable *table = (LoggableClassAdTable *)data_structure;
 	ClassAd *ad;
 
-	if (table->lookup(hkey, ad) < 0) {
+	if ( ! table->lookup(key, ad)) {
 		return -1;
 	}
 
@@ -986,7 +976,7 @@ LogDestroyClassAd::Play(void *data_structure)
 #endif
 
 	delete ad;
-	return table->remove(hkey);
+	return table->remove(key) ? 0 : -1;
 }
 
 int
@@ -1027,10 +1017,10 @@ LogSetAttribute::~LogSetAttribute()
 int
 LogSetAttribute::Play(void *data_structure)
 {
-	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
+	LoggableClassAdTable *table = (LoggableClassAdTable *)data_structure;
 	int rval;
 	ClassAd *ad = 0;
-	if (table->lookup(HashKey(key), ad) < 0)
+	if ( ! table->lookup(key, ad))
 		return -1;
     if (value_expr) {
 		// Such a shame, do we really need to make a
@@ -1150,9 +1140,9 @@ LogDeleteAttribute::~LogDeleteAttribute()
 int
 LogDeleteAttribute::Play(void *data_structure)
 {
-	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
+	LoggableClassAdTable *table = (LoggableClassAdTable *)data_structure;
 	ClassAd *ad = 0;
-	if (table->lookup(HashKey(key), ad) < 0)
+	if ( ! table->lookup(key, ad))
 		return -1;
 
 #if defined(HAVE_DLOPEN)
@@ -1346,7 +1336,8 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type)
 	return log_rec;
 }
 
-void ClassAdLog::ListNewAdsInTransaction( std::list<std::string> &new_keys )
+template <typename K, typename AltK>
+void ClassAdLog<K,AltK>::ListNewAdsInTransaction( std::list<std::string> &new_keys )
 {
 	if( !active_transaction ) {
 		return;
@@ -1354,3 +1345,11 @@ void ClassAdLog::ListNewAdsInTransaction( std::list<std::string> &new_keys )
 
 	active_transaction->InTransactionListKeysWithOpType( CondorLogOp_NewClassAd, new_keys );
 }
+
+// Force instantiation of the 8.2 style ClassAdLog
+//
+template class ClassAdLog<HashKey,const char*>;
+
+// Force instantiation of type needed by the 8.3 qmgmt code.
+//
+template class ClassAdLog<JOB_ID_KEY,const char*>;

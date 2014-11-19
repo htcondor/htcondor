@@ -67,6 +67,13 @@
 #include <grp.h>
 #endif
 
+typedef GenericClassAdCollection<JobQueueKey, const char*> JobQueueType;
+#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+// force instantiation of the template types needed by the JobQueue
+template class ClassAdLog<JOB_ID_KEY,const char*>;
+template class GenericClassAdCollection<JOB_ID_KEY,const char*>;
+#endif
+
 #include "file_sql.h"
 extern FILESQL *FILEObj;
 
@@ -93,7 +100,7 @@ int		do_Q_request(ReliSock *,bool &may_fork);
 void	FindPrioJob(PROC_ID &);
 
 static bool qmgmt_was_initialized = false;
-static ClassAdCollection *JobQueue = 0;
+static JobQueueType *JobQueue = 0;
 static StringList DirtyJobIDs;
 static std::set<int> DirtyPidsSignaled;
 static int next_cluster_num = -1;
@@ -163,18 +170,16 @@ static const char *default_super_user =
 #endif
 
 //static int allow_remote_submit = FALSE;
-ClassAdLog::filter_iterator
-BeginIterator(const classad::ExprTree &requirements, int timeslice_ms)
+JobQueueLogType::filter_iterator
+GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms)
 {
-	ClassAdLog::filter_iterator it(JobQueue ? &JobQueue->table : NULL, &requirements, timeslice_ms);
-	return it;
+	return JobQueue->GetFilteredIterator(requirements, timeslice_ms);
 }
 
-ClassAdLog::filter_iterator
-EndIterator()
+JobQueueLogType::filter_iterator
+GetJobQueueIteratorEnd()
 {
-	ClassAdLog::filter_iterator it(JobQueue ? &JobQueue->table : NULL, NULL, 0, true);
-	return it;
+	return JobQueue->GetIteratorEnd();
 }
 
 static inline
@@ -191,6 +196,20 @@ StrToId(const char *str,int & cluster,int & proc)
 	if( !StrToProcId(str,cluster,proc) ) {
 		EXCEPT("Qmgmt: Malformed key - '%s'",str);
 	}
+}
+
+static
+void
+KeyToId(JobQueueKey &key,int & cluster,int & proc)
+{
+#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+	cluster = key.cluster;
+	proc = key.proc;
+#else
+	if( !StrToProcId(str,cluster,proc) ) {
+		EXCEPT("Qmgmt: Malformed key - '%s'",str);
+	}
+#endif
 }
 
 static
@@ -874,7 +893,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	int spool_cur_version = 0;
 	CheckSpoolVersion(spool.Value(),SPOOL_MIN_VERSION_SCHEDD_SUPPORTS,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS,spool_min_version,spool_cur_version);
 
-	JobQueue = new ClassAdCollection(job_queue_name,max_historical_logs);
+	JobQueue = new JobQueueType(job_queue_name,max_historical_logs);
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(37,compute_clustersize_hash);
 	TotalJobsCount = 0;
 
@@ -882,7 +901,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	   this header ad just stores the next available cluster number. */
 	ClassAd *ad = NULL;
 	ClassAd *clusterad = NULL;
-	HashKey key;
+	JobQueueKey key;
 	int 	cluster_num, cluster, proc, universe;
 	int		stored_cluster_num;
 	bool	CreatedAd = false;
@@ -927,9 +946,17 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	next_cluster_num = cluster_initial_val;
 	JobQueue->StartIterateAllClassAds();
 	while (JobQueue->IterateAllClassAds(ad,key)) {
+	#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+		cluster_num = key.cluster;
+		if ( key.cluster <= 0 || key.proc < 0 ) continue;  // skip cluster & header ads
+		else {
+			char tmp[PROC_ID_STR_BUFLEN];
+			ProcIdToStr(key.cluster, key.proc, tmp); // in case we need to generate an dprintf message.
+	#else
 		const char *tmp = key.value();
 		if ( *tmp == '0' ) continue;	// skip cluster & header ads
 		if ( (cluster_num = atoi(tmp)) ) {
+	#endif
 
 			// find highest cluster, set next_cluster_num to one increment higher
 			if (cluster_num >= next_cluster_num) {
@@ -2036,7 +2063,7 @@ int DestroyCluster(int cluster_id, const char* reason)
 	ClassAd				*ad=NULL;
 	int					c, proc_id;
 //	LogDestroyClassAd	*log;
-	HashKey				key;
+	JobQueueKey			key;
 
 	// cannot destroy the header cluster(s)
 	if ( cluster_id < 1 ) {
@@ -2047,7 +2074,7 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 	// Find all jobs in this cluster and remove them.
 	while(JobQueue->IterateAllClassAds(ad,key)) {
-		StrToId(key.value(),c,proc_id);
+		KeyToId(key,c,proc_id);
 		if (c == cluster_id && proc_id > -1) {
 				// Only the owner can delete a cluster
 				if ( Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
@@ -2115,7 +2142,7 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 				cleanup_ckpt_files(cluster_id,proc_id, NULL );
 
-				JobQueue->DestroyClassAd(key.value());
+				JobQueue->DestroyClassAd(key);
 
 					// remove any match (startd) ad stored w/ this job
 				if ( scheduler.resourcesByProcID ) {
@@ -2151,12 +2178,12 @@ SetAttributeByConstraint(const char *constraint, const char *attr_name,
 	ClassAd	*ad;
 	int cluster_num, proc_num;
 	int found_one = 0, had_error = 0;
-	HashKey key;
+	JobQueueKey key;
 
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->IterateAllClassAds(ad,key)) {
 		// check for CLUSTER_ID>0 and proc_id >= 0 to avoid header ad/cluster ads
-		StrToId(key.value(),cluster_num,proc_num);
+		KeyToId(key,cluster_num,proc_num);
 		if ( (cluster_num > 0) &&
 			 (proc_num > -1) &&
 			 EvalBool(ad, constraint)) {
@@ -3097,15 +3124,20 @@ AbortTransactionAndRecomputeClusters()
 		*/
 		ClusterSizeHashTable->clear();
 		ClassAd *ad;
-		HashKey key;
-		const char *tmp;
+		JobQueueKey key;
 		int 	*numOfProcs = NULL;	
 		int cluster_num;
 		JobQueue->StartIterateAllClassAds();
 		while (JobQueue->IterateAllClassAds(ad,key)) {
-			tmp = key.value();
+		#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+			cluster_num = key.cluster;
+			if ( ! cluster_num) continue;  // skip cluster & header ads
+			else {
+		#else
+			const char *tmp = key.value();
 			if ( *tmp == '0' ) continue;	// skip cluster & header ads
 			if ( (cluster_num = atoi(tmp)) ) {
+		#endif
 				// count up number of procs in cluster, update ClusterSizeHashTable
 				if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
 					// First proc we've seen in this cluster; set size to 1
@@ -4244,11 +4276,15 @@ ClassAd *
 GetJobByConstraint(const char *constraint)
 {
 	ClassAd	*ad;
-	HashKey key;
+	JobQueueKey key;
 
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->IterateAllClassAds(ad,key)) {
+	#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+		if ( key.cluster > 0 && key.proc >= 0 && // avoid cluster and header ads
+	#else
 		if ( *(key.value()) != '0' &&	// avoid cluster and header ads
+	#endif
 			EvalBool(ad, constraint)) {
 				return ad;
 		}
@@ -4268,14 +4304,18 @@ ClassAd *
 GetNextJobByConstraint(const char *constraint, int initScan)
 {
 	ClassAd	*ad;
-	HashKey key;
+	JobQueueKey key;
 
 	if (initScan) {
 		JobQueue->StartIterateAllClassAds();
 	}
 
 	while(JobQueue->IterateAllClassAds(ad,key)) {
+	#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+		if ( key.cluster > 0 && key.proc >= 0 && // avoid cluster and header ads
+	#else
 		if ( *(key.value()) != '0' &&	// avoid cluster and header ads
+	#endif
 			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
 			return ad;
 		}
@@ -4311,24 +4351,30 @@ ClassAd *
 GetNextJobByCluster(int c, int initScan)
 {
 	ClassAd	*ad;
-	HashKey key;
-	char cluster[25];
-	int len;
+	JobQueueKey key;
 
 	if ( c < 1 ) {
 		return NULL;
 	}
 
+#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+#else
+	char cluster[25];
 	snprintf(cluster,25,"%d.",c);
 	cluster[COUNTOF(cluster)-1] = 0; // force null term.
-	len = strlen(cluster);
+	int len = strlen(cluster);
+#endif
 
 	if (initScan) {
 		JobQueue->StartIterateAllClassAds();
 	}
 
 	while(JobQueue->IterateAllClassAds(ad,key)) {
+	#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+		if ( c == key.cluster ) {
+	#else
 		if ( strncmp(cluster,key.value(),len) == 0 ) {
+	#endif
 			return ad;
 		}
 	}

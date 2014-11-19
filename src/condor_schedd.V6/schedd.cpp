@@ -1887,7 +1887,7 @@ struct QueryJobAdsContinuation : Service {
 
 	classad_shared_ptr<classad::ExprTree> requirements;
 	classad::References projection;
-	ClassAdLog::filter_iterator it;
+	JobQueueLogType::filter_iterator it;
 	bool unfinished_eom;
 	bool registered_socket;
 
@@ -1897,7 +1897,7 @@ struct QueryJobAdsContinuation : Service {
 
 QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int timeslice_ms)
 	: requirements(requirements_),
-	  it(BeginIterator(*requirements, timeslice_ms)),
+	  it(GetJobQueueIterator(*requirements, timeslice_ms)),
 	  unfinished_eom(false),
 	  registered_socket(false)
 {
@@ -1905,9 +1905,9 @@ QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::Exp
 
 int
 QueryJobAdsContinuation::finish(Stream *stream) {
-        ReliSock *sock = static_cast<ReliSock*>(stream);
-        ClassAdLog::filter_iterator end = EndIterator();
-        bool has_backlog = false;
+	ReliSock *sock = static_cast<ReliSock*>(stream);
+	JobQueueLogType::filter_iterator end = GetJobQueueIteratorEnd();
+	bool has_backlog = false;
 
 	if (unfinished_eom) {
 		int retval = sock->finish_end_of_message();

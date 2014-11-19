@@ -105,8 +105,20 @@ bool rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 ClassAd* GetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions);
 ClassAd* GetNextJobByCluster( int, int );
 
-ClassAdLog::filter_iterator BeginIterator(const classad::ExprTree &requirements, int timeslice_ms);
-ClassAdLog::filter_iterator EndIterator();
+#define JOB_QUEUE_KEY_IS_PROC_ID 1
+#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+ // new for 8.3, use a non-string type as the key for the JobQueue
+ typedef JOB_ID_KEY JobQueueKey;
+ typedef ClassAdLog<JOB_ID_KEY, const char*> JobQueueLogType;
+ typedef ClassAdLog<HashKey, const char*> OldJobQueueLogType;
+#else
+ // the 8.2 JobQueue types
+ typedef HashKey JobQueueKey;
+ typedef ClassAdLog<HashKey, const char*> JobQueueLogType;
+#endif
+
+JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
+JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
 
 int get_myproxy_password_handler(Service *, int, Stream *sock);
 
