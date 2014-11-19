@@ -95,11 +95,11 @@ if configuration variable \MacroNI{LOCK} was not explicitly set
 in a configuration file.
 \Ticket{4678}
 
-\item Fixed a bug that caused both \Condor{dagman} and the schedd
-to generate commands to remove \Condor{dagman}'s node jobs when
-\Condor{dagman} itself is \Condor{rm}'ed.  Now only the schedd
-generates the command, avoiding the extra load of running two
-identical commands.
+\item Fixed a bug that caused both \Condor{dagman} and the \Condor{schedd}
+daemon to generate commands to remove \Condor{dagman}'s node jobs when
+the \Condor{dagman} job is the target of \Condor{rm}.
+Now, only the \Condor{schedd} generates the command, 
+avoiding the extra load of running two identical commands.
 \Ticket{4618}
 
 \item Fixed a bug that caused the DAGMan node status file,
