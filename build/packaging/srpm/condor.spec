@@ -1264,7 +1264,7 @@ rm -rf %{buildroot}
 %_bindir/condor_tail
 %_bindir/condor_qsub
 %_bindir/condor_pool_job_report
-%_bindir/condor_job_router_tool
+%_bindir/condor_job_router_info
 # reconfig_schedd, restart
 # sbin/condor is a link for master_off, off, on, reconfig,
 %_sbindir/condor_advertise
@@ -1719,6 +1719,34 @@ fi
 %post -n condor
 /sbin/chkconfig --add condor
 /sbin/ldconfig
+
+#Recover any condor_config.local.rpmsave files created by 8.2.4 upgrade
+# If there is a saved condor_config.local, place it into the configuration directory
+if [ -f /etc/condor/condor_config.local.rpmsave ]; then
+    # Configuration directory should already be there
+    if [ ! -d /etc/condor/condor.d ]; then
+        mkdir /etc/condor/condor.d
+    fi
+    # Make sure that we don't overwrite something in the configuration directory
+    if [ ! -f /etc/condor/condor.d/zz-condor_config.local ]; then
+        file="/etc/condor/condor.d/zz-condor_config.local"
+    else
+        i="1"
+        while [ -f /etc/condor/condor.d/zz-condor_config.local.$i ]; do
+            i=$[$i+1]
+        done
+        file="/etc/condor/condor.d/zz-condor_config.local.$i"
+    fi
+
+cat <<EOF > $file
+# This file recovered from /etc/condor/condor_config.local.rpmsave
+# during rpm update on `date`
+#
+EOF
+
+    cat /etc/condor/condor_config.local.rpmsave >> $file 
+    rm -f /etc/condor/condor_config.local.rpmsave
+fi
 
 %preun -n condor
 if [ $1 = 0 ]; then
