@@ -89,8 +89,10 @@ for some DAG input file syntax errors,
 rather than printing an appropriate error message.
 \Ticket{4616}
 
-\item Fixed a bug that could cause shared port to fail on Mac OS X if
-\Macro{LOCK} wasn't explicitly set in the configuration file.
+\item Fixed a bug that could cause the \Condor{shared\_port} daemon
+to fail on Mac OS X platforms,
+if configuration variable \MacroNI{LOCK} was not explicitly set 
+in a configuration file.
 \Ticket{4678}
 
 \item Fixed a bug that caused both \Condor{dagman} and the schedd
