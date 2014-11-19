@@ -22,6 +22,7 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "util_lib_proto.h"
+#include "condor_auth_ssl.h"
 
 #if defined(DLOPEN_GSI_LIBS)
 #include <dlfcn.h>
@@ -242,6 +243,15 @@ activate_globus_gsi( void )
 		return 0;
 	}
 	if ( activation_failed ) {
+		return -1;
+	}
+
+	if ( Condor_Auth_SSL::Initialize() == false ) {
+		// Error in the dlopen/sym calls for libssl, return failure.
+		std::string buf;
+		formatstr( buf, "Failed to open SSL library" );
+		set_error_string( buf.c_str() );
+		activation_failed = true;
 		return -1;
 	}
 

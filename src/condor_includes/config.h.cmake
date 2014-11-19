@@ -630,4 +630,15 @@
 /* Define to 1 if the GSI libraries need to dlopen()d */
 #cmakedefine DLOPEN_GSI_LIBS
 
+/* Define to 1 if libssl and the kerberos libraries need to dlopen()d */
+#cmakedefine DLOPEN_SECURITY_LIBS
+
+/* SO-versioned names for libraries that we may need to dlopen() */
+#cmakedefine LIBCOM_ERR_SO "${LIBCOM_ERR_SO}"
+#cmakedefine LIBKRB5SUPPORT_SO "${LIBKRB5SUPPORT_SO}"
+#cmakedefine LIBK5CRYPTO_SO "${LIBK5CRYPTO_SO}"
+#cmakedefine LIBKRB5_SO "${LIBKRB5_SO}"
+#cmakedefine LIBGSSAPI_KRB5_SO "${LIBGSSAPI_KRB5_SO}"
+#cmakedefine LIBSSL_SO "${LIBSSL_SO}"
+
 #endif
