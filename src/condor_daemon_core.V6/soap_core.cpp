@@ -567,13 +567,14 @@ int posthdr_addfield(struct soap *soap_ptr, const char *key, const char *val)
 		retval = userptr->fposthdr(soap_ptr, "Last-Modified", userptr->dttmstr);
 		if  (retval == 0) {
 			time_t expirTm = time(NULL);
-			expirTm += 300; // Give 5 minutes expiration time
+			int expireKnob = param_integer("CACHE_FILE_EXPIRE_TIME", 1200); // Default to 20 minutes.
+			expirTm += expireKnob;
 			char currTm[DTTM_SIZE];
 			strftime(currTm, DTTM_SIZE, DAYDTMONYRTIMEZONEFMT, gmtime(&expirTm));
 			retval = userptr->fposthdr(soap_ptr, "Expires", currTm);
-			// retval = userptr->fposthdr(soap_ptr, "Cache-Control", "s-maxage=300");
+			// "Expires" is used because Squid seems to ignore "max-age".
 		}
-		dprintf(D_DAEMONCORE, "fposthdr: added Last-Modified and max-age\n");
+		dprintf(D_DAEMONCORE, "fposthdr: added Last-Modified and Expires\n");
 	}
 	return (retval);
 }
