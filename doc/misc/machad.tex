@@ -76,8 +76,10 @@ The value can be modified with \Macro{SLOTS\_CONNECTED\_TO\_CONSOLE}
 as defined at ~\ref{param:SlotsConnectedToConsole}.
 %
 \index{ClassAd machine attribute!Cpus}
-\item[\AdAttr{Cpus}:]  The number of CPUs in this slot.
+\item[\AdAttr{Cpus}:]  The number of CPUs (cores) in this slot.
 It is 1 for a single CPU slot, 2 for a dual CPU slot, etc.
+For a partitionable slot, it is the remaining number of CPUs
+in the partitionable slot. 
 %
 \index{ClassAd machine attribute!CurrentRank}
 \item[\AdAttr{CurrentRank}:] A float which represents this machine
@@ -652,7 +654,7 @@ by HTCondor summed across all slots on the machine,
 either from remote jobs or running benchmarks.
 %
 \index{ClassAd machine attribute!TotalCpus}
-\item[\AdAttr{TotalCpus}:] The number of CPUs that are on the machine.
+\item[\AdAttr{TotalCpus}:] The number of CPUs (cores) that are on the machine.
 This is in contrast with \Attr{Cpus},
 which is the number of CPUs in the slot.
 %
@@ -679,6 +681,10 @@ checkpointing.
 total machine-wide time in cpu-seconds that has not been used
 (i.e. not matched to a job submitter) due to draining since this
 \Condor{startd} began executing.
+%
+\index{ClassAd machine attribute!TotalSlotCpus}
+\item[\AdAttr{TotalSlotCpus}:] The number of CPUs (cores) in this slot.
+For static slots, this value will be the same as in \Attr{Cpus}.
 %
 \index{ClassAd machine attribute!TotalSlotDisk}
 \item[\AdAttr{TotalSlotDisk}:] The quantity of disk space in KiB
