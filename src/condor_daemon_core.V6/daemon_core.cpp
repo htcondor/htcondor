@@ -3660,7 +3660,7 @@ void DaemonCore::Driver()
 
                         dc_stats.SockMessages += 1;
 
-						if ( recheck_status &&
+						if ( recheck_status && ((*sockTable)[i].handler_type == HANDLE_READ) &&
 							 ((*sockTable)[i].is_connect_pending == false) )
 						{
 							// we have already called at least one callback handler.  what
