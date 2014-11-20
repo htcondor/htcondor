@@ -304,7 +304,10 @@ evaluated in the context of the job ClassAd, so it may refer to job
 attributes as well as machine attributes.
 %
 \index{ClassAd machine attribute!Memory}
-\item[\AdAttr{Memory}:] The amount of RAM in MiB.
+\item[\AdAttr{Memory}:] The amount of RAM in MiB in this slot.
+For static slots, this value will be the same as in \Attr{TotalSlotMemory}.
+For a partitionable slot, this value will be the quantity remaining
+in the partitionable slot.
 %
 \index{ClassAd machine attribute!Mips}
 \item[\AdAttr{Mips}:] Relative integer performance as determined via a Dhrystone
@@ -682,6 +685,13 @@ total machine-wide time in cpu-seconds that has not been used
 (i.e. not matched to a job submitter) due to draining since this
 \Condor{startd} began executing.
 %
+\index{ClassAd machine attribute!TotalMemory}
+\item[\AdAttr{TotalMemory}:] The quantity of RAM in MiB
+available across the machine (not the slot).
+For partitionable slots,
+where there is one partitionable slot per machine, this value will be
+the same as machine ClassAd attribute \Attr{TotalSlotMemory}.
+%
 \index{ClassAd machine attribute!TotalSlotCpus}
 \item[\AdAttr{TotalSlotCpus}:] The number of CPUs (cores) in this slot.
 For static slots, this value will be the same as in \Attr{Cpus}.
@@ -692,6 +702,13 @@ given to this slot.  For static slots, this value will be the same as
 machine ClassAd attribute \Attr{Disk}.  For partitionable slots,
 where there is one partitionable slot per machine, this value will be
 the same as machine ClassAd attribute \Attr{TotalDisk}.
+%
+\index{ClassAd machine attribute!TotalSlotMemory}
+\item[\AdAttr{TotalSlotMemory}:] The quantity of RAM in MiB
+given to this slot.  For static slots, this value will be the same as
+machine ClassAd attribute \Attr{Memory}.  For partitionable slots,
+where there is one partitionable slot per machine, this value will be
+the same as machine ClassAd attribute \Attr{TotalMemory}.
 %
 \index{ClassAd machine attribute!TotalSlots}
 \item[\AdAttr{TotalSlots}:] A sum of the static slots, partitionable slots,
