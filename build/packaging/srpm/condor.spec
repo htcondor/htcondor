@@ -1715,32 +1715,44 @@ fi
 /sbin/chkconfig --add condor
 /sbin/ldconfig
 
-#Recover any condor_config.local.rpmsave files created by 8.2.4 upgrade
-# If there is a saved condor_config.local, place it into the configuration directory
+%posttrans -n condor
+# If there is a saved condor_config.local, recover it
 if [ -f /etc/condor/condor_config.local.rpmsave ]; then
-    # Configuration directory should already be there
-    if [ ! -d /etc/condor/condor.d ]; then
-        mkdir /etc/condor/condor.d
-    fi
-    # Make sure that we don't overwrite something in the configuration directory
-    if [ ! -f /etc/condor/condor.d/zz-condor_config.local ]; then
-        file="/etc/condor/condor.d/zz-condor_config.local"
-    else
-        i="1"
-        while [ -f /etc/condor/condor.d/zz-condor_config.local.$i ]; do
-            i=$[$i+1]
-        done
-        file="/etc/condor/condor.d/zz-condor_config.local.$i"
-    fi
+    if [ ! -f /etc/condor/condor_config.local ]; then
+        mv /etc/condor/condor_config.local.rpmsave \
+           /etc/condor/condor_config.local
+
+        # Drop a README file to tell what we have done
+        # Make sure that we don't overwrite a previous README
+        if [ ! -f /etc/condor/README.condor_config.local ]; then
+            file="/etc/condor/README.condor_config.local"
+        else
+            i="1"
+            while [ -f /etc/condor/README.condor_config.local.$i ]; do
+                i=$((i+1))
+            done
+            file="/etc/condor/README.condor_config.local.$i"
+        fi
 
 cat <<EOF > $file
-# This file recovered from /etc/condor/condor_config.local.rpmsave
-# during rpm update on `date`
-#
+On `date`, while installing or upgrading to
+HTCondor %version, the /etc/condor directory contained a file named
+"condor_config.local.rpmsave" but did not contain one named
+"condor_config.local".  This situation may be the result of prior
+modifications to "condor_config.local" that were preserved after the
+HTCondor RPM stopped including that file.  In any case, the contents
+of the old "condor_config.local.rpmsave" file may still be useful.
+So after the install it was moved back into place and this README
+file was created.  Here is a directory listing for the restored file
+at that time:
+
+`ls -l /etc/condor/condor_config.local`
+
+See the "Configuration" section (3.3) of the HTCondor manual for more
+information on configuration files.
 EOF
 
-    cat /etc/condor/condor_config.local.rpmsave >> $file 
-    rm -f /etc/condor/condor_config.local.rpmsave
+    fi
 fi
 
 %preun -n condor
