@@ -869,15 +869,8 @@ mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
 mkdir -p -m1777 %{buildroot}/%{_var}/lib/condor/execute
 
 cat >> %{buildroot}/%_sysconfdir/condor/condor_config << EOF
-CONDOR_DEVELOPERS = NONE
 CONDOR_HOST = \$(FULL_HOSTNAME)
-COLLECTOR_NAME = Personal Condor
-START = TRUE
-SUSPEND = FALSE
-PREEMPT = FALSE
-KILL = FALSE
 DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD
-NEGOTIATOR_INTERVAL = 20
 EOF
 
 # no master shutdown program for now
