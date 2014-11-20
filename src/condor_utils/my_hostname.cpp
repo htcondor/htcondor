@@ -435,27 +435,34 @@ static bool IPMatchesNetworkInterfaceSetting(char const *ip)
 #include "condor_daemon_core.h"
 void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,Stream& s)
 {
-	// We can't practically do a conversion if daemonCore isn't present
+	static bool loggedNullDCMessage = false;
+	static bool loggedConfigMessage = false;
+
+	// We can't practically do a conversion if daemonCore isn't present; this
 	// happens in standard universe.  We can't move this test into
 	// ConfigConvertDefaultIPToSocketIP because it gets called before
 	// daemonCore is created.
 	if( daemonCore == NULL ) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: disabled: no daemon core.\n" );
+		if( ! loggedNullDCMessage ) {
+			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: disabled: no daemon core.\n" );
+			loggedNullDCMessage = true;
+		}
 		return;
 	}
 
 	if( ! enable_convert_default_IP_to_socket_IP ) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: disabled: by configuration.\n" );
-		return;
-	}
-
-	if( expr_string.length() < 5 ) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: rejected for attribute '%s': '%s' is not long enough to be an IP address.\n", attr_name, expr_string.c_str() );
+		if( ! loggedConfigMessage ) {
+			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: disabled: by configuration.\n" );
+			loggedConfigMessage = true;
+		}
 		return;
 	}
 
 	if( ! is_sender_ip_attr(attr_name) ) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: rejected: '%s' is not an attribute which might contain the sender's IP address.\n", attr_name );
+		// Reduce log spam.  Since all of our subsequent messages include the
+		// attribute name, we don't have to print a message noting that we
+		// tried to rewrite it.
+		// dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: '%s' is not an attribute which might contain the sender's IP address.\n", attr_name );
 		return;
 	}
 
@@ -561,9 +568,9 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	}
 
 	if( do_rewrite == false) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused: the address isn't my default address. (Default: %s, found in ad: %s)\n", my_sinful.c_str(), old_addr.c_str());
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute %s (%s): the address isn't my default address. (Default: %s, found in ad: %s)\n", attr_name, expr_string.c_str(), my_sinful.c_str(), old_addr.c_str());
 		return;
-	} 
+	}
 
 	//
 	// Although it's never useful to rewrite from a non-loopback to a loop-
