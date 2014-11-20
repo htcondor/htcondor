@@ -510,21 +510,6 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 	condor_sockaddr old_sockaddr;
 	old_sockaddr.from_sinful(sin.getSinful());
 
-
-	// my_sockaddr's port is whatever we happen to be using at the moment;
-	// that will be meaningless if we established the connection.  What we
-	// want is the port someone could contact us on.  Go rummage for one.
-	int port = daemonCore->find_interface_command_port_do_not_use( my_sockaddr );
-
-	// If port is 0, there is no matching listen socket. There is nothing
-	// useful we can rewrite it do, so just give up and hope the default
-	// is useful to someone.
-	if( port == 0 ) {
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): unable to find command port for outbound interface '%s'.\n", attr_name, expr_string.c_str(), s.my_ip_str() );
-		return;
-	}
-	my_sockaddr.set_port(port);
-
 	bool do_rewrite = old_addr == my_sinful;
 	// We're going to do a bunch of old logic as a double-check against the 
 	// new logic.  When we finally purge this code, we can replace
@@ -548,16 +533,6 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 					attr_name, old_addr.c_str(), my_sinful.c_str());
 			}
 			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): parsed value does not appear to be a sinful.\n", attr_name, expr_string.c_str() );
-			return;
-		}
-
-		// Skip if my default address isn't present.
-		if( ! daemonCore->is_command_port_do_not_use(old_sockaddr)) {
-			if(do_rewrite) {
-				dprintf( D_ALWAYS, "Address rewriting: Warning: attribute '%s' %s == %s, but that address is not one of my command sockets.\n",
-					attr_name, old_addr.c_str(), my_sinful.c_str());
-			}
-			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute '%s' (%s): not one of my command sockets.\n", attr_name, expr_string.c_str() );
 			return;
 		}
 
@@ -592,9 +567,38 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,S
 		return;
 	}
 
+	bool rewrite_port = true;
+	if(sin.getSharedPortID() != NULL) {
+		// We're using shared port, so "our" port is actually the
+		// shared port daemons. We shouldn't be messing with that.
+		// We'll rewrite the host on the bold assumption that shared
+		// port daemon and I both use the same IP addresses.
+		rewrite_port = false;
+	}
+
 	MyString my_sock_ip = my_sockaddr.to_ip_string(true);
 	sin.setHost(my_sock_ip.Value());
-	sin.setPort(my_sockaddr.get_port());
+	if(rewrite_port) {
+		// my_sockaddr's port is whatever we happen to be using at the moment;
+		// that will be meaningless if we established the connection.  What we
+		// want is the port someone could contact us on.  Go rummage for one.
+		int port = daemonCore->find_interface_command_port_do_not_use( my_sockaddr );
+
+		// If port is 0, there is no matching listen socket. There is nothing
+		// useful we can rewrite it do, so just give up and hope the default
+		// is useful to someone.
+		if( port == 0 ) {
+			dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: failed for attribute '%s' (%s): unable to find command port for outbound interface '%s'.\n", attr_name, expr_string.c_str(), s.my_ip_str() );
+			return;
+		}
+
+		sin.setPort(port);
+	}
+
+	if(sin.getSinful() == old_addr) {
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute '%s' (%s): socket is using same address as the default one; rewrite would do nothing.\n", attr_name, expr_string.c_str() );
+		return;
+	}
 
 	std::string new_expr = expr_string.substr(0, string_start_pos);
 	new_expr.append(sin.getSinful());
