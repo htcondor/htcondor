@@ -11,14 +11,12 @@ condor_netaddr::condor_netaddr(const condor_sockaddr& base,
 }
 
 bool condor_netaddr::match(const condor_sockaddr& target) const {
+	// An unitialized network matches nothing.
 	if (maskbit_ == (unsigned int)-1) {
-		return false; // uninitialized
+		return false;
 	}
 
-	// check if address type is same
-	//
-	// what is correct policy for matching between IPv4 address and
-	// IPv4-mapped-IPv6 address?
+	// An address of the wrong type can't match.
 	if (base_.get_aftype() != target.get_aftype()) {
 		return false;
 	}
@@ -113,20 +111,32 @@ bool condor_netaddr::from_net_string(const char* net) {
 			}
 		}
 	} else {
-		// if there is no slash ('/'), it should be IPv4 and
-		// wildcard format
-		//
-		// e.g. 128.105.*
+		const char * colon = strchr( net, ':' );
+		if( colon == NULL ) {
+			// IPv4 literal or asterisk.
 
-		in_addr base;
-		in_addr mask;
-		if (!is_ipv4_addr_implementation(net, &base, &mask, 1))
-			return false;
+			in_addr base;
+			in_addr mask;
+			if( ! is_ipv4_addr_implementation( net, &base, &mask, 1 ) ) {
+				return false;
+			}
 
-		base_ = condor_sockaddr(base, 0);
-		maskbit_ = convert_maskaddr_to_maskbit(*(uint32_t*)&mask);
-		if (maskbit_ == (unsigned)-1)
-			return false;
+			base_ = condor_sockaddr(base, 0);
+			maskbit_ = convert_maskaddr_to_maskbit(*(uint32_t*)&mask);
+			if( maskbit_ == (unsigned)-1 ) {
+				return false;
+			}
+		} else {
+			// IPv6 literal
+			struct in6_addr in6a;
+			if( inet_pton( AF_INET6, net, & in6a ) == 1 ) {
+				base_ = condor_sockaddr( in6a );
+				maskbit_ = 128;
+				return true;
+			} else {
+				return false;
+			}
+		}
 	}
 	return true;
 }
