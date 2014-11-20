@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Updated the post install script in the RPM packages to preserve
+the \File{/etc/condor/condor\_config.local} file if it was modified since
+the last installation.
+\Ticket{4731}
+
 \item Fixed a bug in which \Condor{submit} in interactive mode did
 not properly handle the \Opt{-name} command line option.
 \Ticket{4728}
