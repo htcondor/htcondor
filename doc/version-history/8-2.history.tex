@@ -66,6 +66,10 @@ information wasn't reported by the remote server.
 \item Updated Windows builds of HTCondor to use the latest version of OpenSSL.
 \Ticket{4733}
 
+\item Fixed a bug in \Condor{urlfetch} that caused it to sometimes not fetch the URL when
+it should have because the cache file did not exist.
+\Ticket{4732}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
