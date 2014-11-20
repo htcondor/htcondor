@@ -32,7 +32,7 @@ using namespace std;
 
 const int HASHNAMELEN = 17;
 
-int main(int, char **)
+int obsolete_main(int, char **)
 {
 	map<string, unsigned char *> hashmap;
 	const int MAXLNLEN = (PATH_MAX * 10) + 1;
