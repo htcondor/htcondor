@@ -90,10 +90,15 @@ the attribute's value is computed by evaluating the machine's
 %
 \index{ClassAd machine attribute!Disk}
 \item[\AdAttr{Disk}:] The amount of disk space on this machine available for
-the job in KiB ( e.g. 23000 = 23 megabytes ).  Specifically, this
+the job in KiB (for example, 23000 = 23 MiB).  Specifically, this
 is the amount of disk space available in the directory specified in
 the HTCondor configuration files by the \Macro{EXECUTE} macro, minus any
 space reserved with the \Macro{RESERVED\_DISK} macro.
+For static slots, this value will be the same as
+machine ClassAd attribute \Attr{TotalSlotDisk}.  
+For partitionable slots,
+this value will be the quantity of disk space remaining in the partitionable
+slot.
 %
 \index{ClassAd machine attribute!Draining}
 \item[\AdAttr{Draining}:] This attribute is \Expr{True} when the slot
@@ -297,7 +302,7 @@ evaluated in the context of the job ClassAd, so it may refer to job
 attributes as well as machine attributes.
 %
 \index{ClassAd machine attribute!Memory}
-\item[\AdAttr{Memory}:] The amount of RAM in megabytes.
+\item[\AdAttr{Memory}:] The amount of RAM in MiB.
 %
 \index{ClassAd machine attribute!Mips}
 \item[\AdAttr{Mips}:] Relative integer performance as determined via a Dhrystone
@@ -651,6 +656,13 @@ either from remote jobs or running benchmarks.
 This is in contrast with \Attr{Cpus},
 which is the number of CPUs in the slot.
 %
+\index{ClassAd machine attribute!TotalDisk}
+\item[\AdAttr{TotalDisk}:] The quantity of disk space in KiB
+available across the machine (not the slot).
+For partitionable slots,
+where there is one partitionable slot per machine, this value will be
+the same as machine ClassAd attribute \Attr{TotalSlotDisk}.
+%
 \index{ClassAd machine attribute!TotalLoadAvg}
 \item[\AdAttr{TotalLoadAvg}:] A floating point number representing the 
 current load average summed across all slots on the machine.
@@ -667,6 +679,13 @@ checkpointing.
 total machine-wide time in cpu-seconds that has not been used
 (i.e. not matched to a job submitter) due to draining since this
 \Condor{startd} began executing.
+%
+\index{ClassAd machine attribute!TotalSlotDisk}
+\item[\AdAttr{TotalSlotDisk}:] The quantity of disk space in KiB
+given to this slot.  For static slots, this value will be the same as
+machine ClassAd attribute \Attr{Disk}.  For partitionable slots,
+where there is one partitionable slot per machine, this value will be
+the same as machine ClassAd attribute \Attr{TotalDisk}.
 %
 \index{ClassAd machine attribute!TotalSlots}
 \item[\AdAttr{TotalSlots}:] A sum of the static slots, partitionable slots,
