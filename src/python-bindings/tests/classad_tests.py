@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import re
+import types
 import classad
 import datetime
 import unittest
@@ -72,6 +73,25 @@ class TestClassad(unittest.TestCase):
         ad = classad.ClassAd()
         ad["foo"] = classad.ExprTree('regexps("foo (bar)", "foo bar", "\\\\1")')
         self.assertEqual(ad.eval("foo"), "bar")
+
+    def test_list_conversion(self):
+        ad = dict(classad.ClassAd("[a = {1,2,3}]"))
+        self.assertTrue(isinstance(ad["a"], types.ListType))
+        self.assertTrue(isinstance(ad["a"][0], types.LongType))
+        def listAdd(a, b): return a+b
+        classad.register(listAdd)
+        self.assertEqual(classad.ExprTree("listAdd({1,2}, {3,4})")[0], 1)
+
+    def test_dict_conversion(self):
+        ad = classad.ClassAd({'a': [1,2, {}]})
+        dict_ad = dict(ad)
+        self.assertTrue(isinstance(dict_ad["a"][2], types.DictType))
+        self.assertEqual(classad.ClassAd(dict_ad).__repr__(), "[ a = { 1,2,[  ] } ]")
+        ad = classad.ClassAd("[a = [b = {1,2,3}]]")
+        inner_list = dict(ad)['a']['b']
+        self.assertTrue(isinstance(inner_list, types.ListType))
+        self.assertTrue(isinstance(inner_list[0], types.LongType))
+        self.assertTrue(isinstance(ad['a'], types.DictType))
 
     def test_ad_assignment(self):
         ad = classad.ClassAd()
@@ -214,7 +234,7 @@ class TestClassad(unittest.TestCase):
 
     def test_subscript(self):
         ad = classad.ClassAd({'foo': [0,1,2,3]})
-        expr = classad.Attribute("foo")[2]
+        expr = classad.Attribute("foo")._get(2)
         self.assertTrue(isinstance(expr, classad.ExprTree))
         self.assertEquals(expr.eval(), classad.Value.Undefined)
         self.assertEquals(expr.eval(ad), 2)

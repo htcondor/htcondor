@@ -61,10 +61,12 @@ bool ExprTreeHolder::ShouldEvaluate() const
     {
         classad::CachedExprEnvelope *expr = static_cast<classad::CachedExprEnvelope*>(m_expr);
         return expr->get()->GetKind() == classad::ExprTree::LITERAL_NODE ||
-               expr->get()->GetKind() == classad::ExprTree::CLASSAD_NODE;
+               expr->get()->GetKind() == classad::ExprTree::CLASSAD_NODE ||
+               expr->get()->GetKind() == classad::ExprTree::EXPR_LIST_NODE;
     }
     return m_expr->GetKind() == classad::ExprTree::LITERAL_NODE ||
-           m_expr->GetKind() == classad::ExprTree::CLASSAD_NODE;
+           m_expr->GetKind() == classad::ExprTree::CLASSAD_NODE ||
+           m_expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE;
 }
 
 class ScopeGuard
@@ -108,7 +110,7 @@ convert_value_to_python(const classad::Value &value)
         value.IsClassAdValue(advalue);
         wrap.reset(new ClassAdWrapper());
         wrap->CopyFrom(*advalue);
-        result = boost::python::object(wrap);
+        result = boost::python::dict(wrap);
         break;
     case classad::Value::BOOLEAN_VALUE:
         value.IsBooleanValue(boolvalue);
@@ -159,7 +161,14 @@ convert_value_to_python(const classad::Value &value)
         {
             classad::ExprTree *exprTree = (*it)->Copy();
             ExprTreeHolder exprHolder(exprTree, true);
-            result.attr("append")(exprHolder);
+            if (exprHolder.ShouldEvaluate())
+            {
+                result.attr("append")(exprHolder.Evaluate());
+            }
+            else
+            {
+                result.attr("append")(exprHolder);
+            }
         }
         break;
     }
@@ -209,10 +218,25 @@ boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) cons
     return convert_value_to_python(value);
 }
 
+
+bool
+isKind(classad::ExprTree &expr, classad::ExprTree::NodeKind kind)
+{
+    return (expr.GetKind() == kind) || ((expr.GetKind() == classad::ExprTree::EXPR_ENVELOPE) && (static_cast<classad::CachedExprEnvelope&>(expr).get()->GetKind() == kind));
+}
+
+
+ExprTreeHolder
+ExprTreeHolder::subscript(boost::python::object input)
+{
+    classad::ExprTree *expr = convert_python_to_exprtree(input);
+    ExprTreeHolder holder(classad::Operation::MakeOperation(classad::Operation::SUBSCRIPT_OP, m_expr->Copy(), expr), true);
+    return holder;
+}
+
 boost::python::object ExprTreeHolder::getItem(boost::python::object input)
 {
-    if (m_expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE ||
-        (m_expr->GetKind() == classad::ExprTree::EXPR_ENVELOPE && (static_cast<classad::CachedExprEnvelope*>(m_expr)->get()->GetKind() == classad::ExprTree::EXPR_LIST_NODE)))
+    if (isKind(*m_expr, classad::ExprTree::EXPR_LIST_NODE))
     {
         ssize_t idx = boost::python::extract<ssize_t>(input);
         std::vector<classad::ExprTree*> exprs;
@@ -236,16 +260,34 @@ boost::python::object ExprTreeHolder::getItem(boost::python::object input)
         if (holder.ShouldEvaluate()) { return holder.Evaluate(); }
         return boost::python::object(holder);
     }
-    else if (m_expr->GetKind() == classad::ExprTree::LITERAL_NODE ||
-        (m_expr->GetKind() == classad::ExprTree::EXPR_ENVELOPE && (static_cast<classad::CachedExprEnvelope*>(m_expr)->get()->GetKind() == classad::ExprTree::LITERAL_NODE)))
+    else if (isKind(*m_expr, classad::ExprTree::LITERAL_NODE))
     {
         return Evaluate()[input];
     }
     else
-    {
-        classad::ExprTree *expr = convert_python_to_exprtree(input);
-        ExprTreeHolder holder(classad::Operation::MakeOperation(classad::Operation::SUBSCRIPT_OP, m_expr->Copy(), expr));
-        return boost::python::object(holder);
+    {   // We need to evaluate first to see if we can subscript this expression.
+        classad::EvalState state;
+        classad::Value value;
+        if (!m_expr->Evaluate(state, value))
+        {
+            if (!PyErr_Occurred()) {PyErr_SetString(PyExc_RuntimeError, "Unable to evaluate expression");}
+            boost::python::throw_error_already_set();
+        }
+        classad::ExprList *listExpr = NULL;
+        if (value.IsStringValue())
+        {
+            return convert_value_to_python(value)[input];
+        }
+        else if (value.IsListValue(listExpr))
+        {
+            ExprTreeHolder holder(listExpr, true);
+            return holder.getItem(input);
+        }
+        else
+        {
+            THROW_EX(TypeError, "ClassAd expression is unsubscriptable.");
+        }
+        return boost::python::object();
     }
 }
 
@@ -444,7 +486,7 @@ boost::python::object ClassAdWrapper::Flatten(boost::python::object input) const
     }
     else
     {
-        ExprTreeHolder holder(output);
+        ExprTreeHolder holder(output, true);
         return boost::python::object(holder);
     }
 }
@@ -522,6 +564,8 @@ literal(boost::python::object value)
         {
             THROW_EX(ValueError, "Unable to convert expression to literal")
         }
+        ExprTreeHolder holder(expr, true);
+        return holder;
     }
     ExprTreeHolder holder(expr);
     return holder;
@@ -560,7 +604,7 @@ attribute(std::string name)
 {
     classad::ExprTree *expr;
     expr = classad::AttributeReference::MakeAttributeReference(NULL, name.c_str());
-    ExprTreeHolder holder(expr);
+    ExprTreeHolder holder(expr, true);
     return holder;
 }
 
@@ -640,6 +684,24 @@ convert_python_to_exprtree(boost::python::object value)
     {
         boost::python::dict dict = boost::python::extract<boost::python::dict>(value);
         return new ClassAdWrapper(dict);
+    }
+    if (PyMapping_Check(value.ptr()))
+    {
+        PyObject *keys = PyMapping_Keys(value.ptr());
+        if (!keys) {THROW_EX(RuntimeError, "Unable to convert mapping to keys");}
+        ClassAdWrapper *ad = new ClassAdWrapper();
+        boost::python::object iter = boost::python::object(boost::python::handle<>(keys));
+        while (true)
+        {
+            PyObject *pyobj = PyIter_Next(iter.ptr());
+            if (!pyobj) {break;}
+            boost::python::object key_obj = boost::python::object(boost::python::handle<>(pyobj));
+            std::string key_str = boost::python::extract<std::string>(key_obj);
+            boost::python::object val = value[key_obj];
+            classad::ExprTree *val_expr = convert_python_to_exprtree(val);
+            ad->Insert(key_str, val_expr);
+        }
+        return ad;
     }
     PyObject *py_iter = PyObject_GetIter(value.ptr());
     if (py_iter)
