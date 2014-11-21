@@ -242,7 +242,7 @@ JobRouter::config() {
 
 	RoutingTable *new_routes = new RoutingTable(200,hashFuncStdString,rejectDuplicateKeys);
 
-	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", true);
+	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
 
 	classad::ClassAd router_defaults_ad;
 	std::string router_defaults;
