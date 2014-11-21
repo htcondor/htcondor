@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Updated the post install script in the RPM packages to preserve
+the \File{/etc/condor/condor\_config.local} file if it was modified since
+the last installation.
+\Ticket{4731}
+
 \item Fixed a bug in which \Condor{submit} in interactive mode did
 not properly handle the \Opt{-name} command line option.
 \Ticket{4728}
@@ -57,6 +62,18 @@ if not explicitly set, defaulted to the value 10
 for vanilla universe jobs and to the value 0 for standard universe jobs.
 It now defaults to 0, which matches the documentation.
 \Ticket{4697}
+
+\item Fixed a bug that caused nordugrid grid jobs to be held with
+a hold reason of ``Unspecified gridmanager error'' when runtime
+information wasn't reported by the remote server.
+\Ticket{4736}
+
+\item Updated Windows builds of HTCondor to use the latest version of OpenSSL.
+\Ticket{4733}
+
+\item Fixed a bug in \Condor{urlfetch} that caused it to sometimes not fetch the URL when
+it should have because the cache file did not exist.
+\Ticket{4732}
 
 \end{itemize}
 
