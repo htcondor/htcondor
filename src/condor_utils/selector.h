@@ -60,14 +60,14 @@ public:
 	void set_timeout( timeval tv );
 	void unset_timeout();
 	void execute();
-	int select_retval();
-	int select_errno();
-	bool has_ready();
-	bool timed_out();
-	bool signalled();
-	bool failed();
-	bool fd_ready( int fd, IO_FUNC interest );
-	void display();
+	int select_retval() const;
+	int select_errno() const;
+	bool has_ready() const;
+	bool timed_out() const;
+	bool signalled() const;
+	bool failed() const;
+	bool fd_ready( int fd, IO_FUNC interest ) const;
+	void display() const;
 
 private:
 	enum SINGLE_SHOT {

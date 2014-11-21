@@ -80,6 +80,7 @@ class Sock : public Stream {
 //
 public:
 
+	friend class SockManager;
 	friend class DaemonCore;
 	friend class Daemon;
 	friend class SecMan;

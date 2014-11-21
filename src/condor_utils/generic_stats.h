@@ -20,7 +20,9 @@
 #ifndef _GENERIC_STATS_H
 #define _GENERIC_STATS_H
 
+#include "compat_classad.h"
 #include "classy_counted_ptr.h"
+#include "HashTable.h"
 
 // To use generic statistics:
 //   * declare your probes as class (or struct) members
@@ -447,7 +449,7 @@ public:
 // that ClassAd's don't support and do the right thing.
 //
 template <class T>
-inline int ClassAdAssign(ClassAd & ad, const char * pattr, T value) {
+inline int ClassAdAssign(compat_classad::ClassAd & ad, const char * pattr, T value) {
    return ad.Assign(pattr, value);
 }
 /*
@@ -458,7 +460,7 @@ inline int ClassAdAssign(ClassAd & ad, const char * pattr, int64_t value) {
 */
 
 template <class T>
-inline int ClassAdAssign2(ClassAd & ad, const char * pattr1, const char * pattr2, T value) {
+inline int ClassAdAssign2(compat_classad::ClassAd & ad, const char * pattr1, const char * pattr2, T value) {
    MyString attr(pattr1);
    attr += pattr2;
    return ClassAdAssign(ad, attr.Value(), value);
@@ -473,8 +475,8 @@ inline int ClassAdAssign2(ClassAd & ad, const char * pattr1, const char * pattr2
 // base class for all statistics probes
 //
 class stats_entry_base;
-typedef void (stats_entry_base::*FN_STATS_ENTRY_PUBLISH)(ClassAd & ad, const char * pattr, int flags) const;
-typedef void (stats_entry_base::*FN_STATS_ENTRY_UNPUBLISH)(ClassAd & ad, const char * pattr) const;
+typedef void (stats_entry_base::*FN_STATS_ENTRY_PUBLISH)(compat_classad::ClassAd & ad, const char * pattr, int flags) const;
+typedef void (stats_entry_base::*FN_STATS_ENTRY_UNPUBLISH)(compat_classad::ClassAd & ad, const char * pattr) const;
 typedef void (stats_entry_base::*FN_STATS_ENTRY_ADVANCE)(int cAdvance);
 typedef void (stats_entry_base::*FN_STATS_ENTRY_SETRECENTMAX)(int cRecent);
 typedef void (stats_entry_base::*FN_STATS_ENTRY_CLEAR)(void);
@@ -501,11 +503,11 @@ template <class T> class stats_entry_count : public stats_entry_base {
 public:
    stats_entry_count() : value(0) {}
    T value;
-   void Publish(ClassAd & ad, const char * pattr, int flags) const { 
+   void Publish(compat_classad::ClassAd & ad, const char * pattr, int flags) const { 
       (void)flags;
       ClassAdAssign(ad, pattr, value); 
       };
-   void Unpublish(ClassAd & ad, const char * pattr) const {
+   void Unpublish(compat_classad::ClassAd & ad, const char * pattr) const {
       ad.Delete(pattr);
       };
    static const int unit = IS_CLS_COUNT | stats_entry_type<T>::id;
@@ -527,7 +529,7 @@ public:
    static const int PubLargest = 2;
    static const int PubDecorateAttr = 0x100;
    static const int PubDefault = PubValue | PubLargest | PubDecorateAttr;
-   void Publish(ClassAd & ad, const char * pattr, int flags) const { 
+   void Publish(compat_classad::ClassAd & ad, const char * pattr, int flags) const { 
       if ( ! flags) flags = PubDefault;
       if (flags & this->PubValue)
          ClassAdAssign(ad, pattr, this->value); 
@@ -538,7 +540,7 @@ public:
             ClassAdAssign(ad, pattr, largest); 
       }
    }
-   void Unpublish(ClassAd & ad, const char * pattr) const {
+   void Unpublish(compat_classad::ClassAd & ad, const char * pattr) const {
       ad.Delete(pattr);
       MyString attr(pattr);
       attr += "Peak";
@@ -682,8 +684,8 @@ public:
 	static const int PubDecorateLoadAttr = 0x200;
 	static const int PubSuppressInsufficientDataEMA = 0x300;
 
-	void Publish(ClassAd & ad, const char * pattr, int flags) const;
-	void Unpublish(ClassAd & ad, const char * pattr) const;
+	void Publish(compat_classad::ClassAd & ad, const char * pattr, int flags) const;
+	void Unpublish(compat_classad::ClassAd & ad, const char * pattr) const;
 };
 
 template <class T> class stats_entry_sum_ema_rate : public stats_entry_ema_base<T> {
@@ -739,8 +741,8 @@ public:
 		stats_entry_sum_ema_rate<T>::PubDecorateLoadAttr |
 		stats_entry_sum_ema_rate<T>::PubSuppressInsufficientDataEMA;
 
-	void Publish(ClassAd & ad, const char * pattr, int flags) const;
-	void Unpublish(ClassAd & ad, const char * pattr) const;
+	void Publish(compat_classad::ClassAd & ad, const char * pattr, int flags) const;
+	void Unpublish(compat_classad::ClassAd & ad, const char * pattr) const;
 
 		// callback methods/fetchers for use by the StatisticsPool class
 	static const int unit = IS_CLS_SUM_EMA_RATE | stats_entry_type<T>::id;
@@ -794,8 +796,8 @@ public:
 		stats_entry_sum_ema_rate<T>::PubSuppressInsufficientDataEMA;
 
 
-	void Publish(ClassAd & ad, const char * pattr, int flags) const;
-	void Unpublish(ClassAd & ad, const char * pattr) const;
+	void Publish(compat_classad::ClassAd & ad, const char * pattr, int flags) const;
+	void Unpublish(compat_classad::ClassAd & ad, const char * pattr) const;
 
 		// callback methods/fetchers for use by the StatisticsPool class
 	static const int unit = IS_CLS_EMA | stats_entry_type<T>::id;
@@ -827,7 +829,7 @@ public:
    static const int PubDecorateAttr = 0x100;
    static const int PubValueAndRecent = PubValue | PubRecent | PubDecorateAttr;
    static const int PubDefault = PubValueAndRecent;
-   void Publish(ClassAd & ad, const char * pattr, int flags) const { 
+   void Publish(compat_classad::ClassAd & ad, const char * pattr, int flags) const { 
       if ( ! flags) flags = PubDefault;
       if ((flags & IF_NONZERO) && stats_entry_is_zero(this->value)) return;
       if (flags & this->PubValue)
@@ -842,14 +844,14 @@ public:
          PublishDebug(ad, pattr, flags);
       }
    }
-   void Unpublish(ClassAd & ad, const char * pattr) const {
+   void Unpublish(compat_classad::ClassAd & ad, const char * pattr) const {
       ad.Delete(pattr);
       MyString attr;
       attr.formatstr("Recent%s", pattr);
       ad.Delete(attr.Value());
       };
 
-   void PublishDebug(ClassAd & ad, const char * pattr, int flags) const;
+   void PublishDebug(compat_classad::ClassAd & ad, const char * pattr, int flags) const;
 
    void Clear() {
       this->value = 0;
@@ -959,7 +961,7 @@ public:
    static const int PubDecorateAttr = 0x100;
    static const int PubValueAndRecent = PubValue | PubRecent | PubDecorateAttr;
    static const int PubDefault = PubValueAndRecent;
-   void Publish(ClassAd & ad, const char * pattr, int flags) const { 
+   void Publish(compat_classad::ClassAd & ad, const char * pattr, int flags) const { 
       if ( ! flags) flags = PubDefault;
       if (flags & this->PubValue)
          ClassAdAssign(ad, pattr, this->value); 
@@ -1055,8 +1057,8 @@ protected:
    T SumSq;      // Sum of samples squared
 
 public:
-   void Publish(ClassAd & ad, const char * pattr, int flags) const;
-   void Unpublish(ClassAd & ad, const char * pattr) const;
+   void Publish(compat_classad::ClassAd & ad, const char * pattr, int flags) const;
+   void Unpublish(compat_classad::ClassAd & ad, const char * pattr) const;
 
    void Clear() {
       this->value = 0; // value is use to store the count of samples.
@@ -1157,9 +1159,9 @@ public:
 };
 
 //template <> void stats_entry_recent<Probe>::AdvanceBy(int cSlots);
-template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pattr, int flags) const;
-template <> void stats_entry_recent<Probe>::Unpublish(ClassAd& ad, const char * pattr) const;
-int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe);
+template <> void stats_entry_recent<Probe>::Publish(compat_classad::ClassAd& ad, const char * pattr, int flags) const;
+template <> void stats_entry_recent<Probe>::Unpublish(compat_classad::ClassAd& ad, const char * pattr) const;
+int ClassAdAssign(compat_classad::ClassAd & ad, const char * pattr, const Probe& probe);
 
 // --------------------------------------------------------------------
 //  statistcs probe for histogram data.
@@ -1203,12 +1205,12 @@ public:
             }
          }
       }
-   void Publish(ClassAd & ad, const char * pattr, int  /*flags*/) const {
+   void Publish(compat_classad::ClassAd & ad, const char * pattr, int  /*flags*/) const {
       MyString str;
       this->AppendToString(str);
       ad.Assign(pattr, str);
       }
-   void Unpublish(ClassAd & ad, const char * pattr) { ad.Delete(pattr); }
+   void Unpublish(compat_classad::ClassAd & ad, const char * pattr) { ad.Delete(pattr); }
 
    T Add(T val);
    T Remove(T val);
@@ -1414,7 +1416,7 @@ public:
       }
    }
 
-   void Publish(ClassAd & ad, const char * pattr, int flags) { 
+   void Publish(compat_classad::ClassAd & ad, const char * pattr, int flags) { 
       if ( ! flags) flags = this->PubDefault;
       if ((flags & IF_NONZERO) && this->value.cLevels <= 0) return;
       if (flags & this->PubValue) {
@@ -1436,7 +1438,7 @@ public:
       }
    }
 
-   void PublishDebug(ClassAd & ad, const char * pattr, int flags) const;
+   void PublishDebug(compat_classad::ClassAd & ad, const char * pattr, int flags) const;
 
    T operator+=(T val) { return Add(val); }
 
@@ -1477,9 +1479,9 @@ public:
    static const int PubDecorateAttr = 0x100;
    static const int PubValueAndRecent = PubValue | PubRecent | PubDecorateAttr;
    static const int PubDefault = PubValueAndRecent;
-   void Publish(ClassAd & ad, const char * pattr, int flags) const;
-   void PublishDebug(ClassAd & ad, const char * pattr, int flags) const;
-   void Unpublish(ClassAd & ad, const char * pattr) const;
+   void Publish(compat_classad::ClassAd & ad, const char * pattr, int flags) const;
+   void PublishDebug(compat_classad::ClassAd & ad, const char * pattr, int flags) const;
+   void Unpublish(compat_classad::ClassAd & ad, const char * pattr) const;
 
    // callback methods/fetchers for use by the StatisticsPool class
    static const int unit = IS_RCT | stats_entry_type<int>::id;
@@ -1666,10 +1668,10 @@ public:
    void ClearRecent();
    void SetRecentMax(int window, int quantum);
    int  Advance(int cAdvance);
-   void Publish(ClassAd & ad, int flags) const;
-   void Publish(ClassAd & ad, const char * prefix, int flags) const;
-   void Unpublish(ClassAd & ad) const;
-   void Unpublish(ClassAd & ad, const char * prefix) const;
+   void Publish(compat_classad::ClassAd & ad, int flags) const;
+   void Publish(compat_classad::ClassAd & ad, const char * prefix, int flags) const;
+   void Unpublish(compat_classad::ClassAd & ad) const;
+   void Unpublish(compat_classad::ClassAd & ad, const char * prefix) const;
 
 private:
    struct pubitem {

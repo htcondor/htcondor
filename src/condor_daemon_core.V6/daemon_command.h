@@ -25,6 +25,7 @@
 class DaemonCommandProtocol: Service, public ClassyCountedPtr {
 
 	friend class DaemonCore;
+	friend class SockManager;
 
 public:
 	DaemonCommandProtocol(Stream* sock,bool is_command_sock);

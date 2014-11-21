@@ -32,6 +32,8 @@
 #define _CONDOR_DAEMON_CORE_H_
 
 #include "condor_common.h"
+#include "dc_typedefs.h"
+#include "dc_socket_manager.h"
 #include "condor_uid.h"
 #include "condor_io.h"
 #include "dc_service.h"
@@ -63,6 +65,7 @@
 #include "filesystem_remap.h"
 #include "counted_ptr.h"
 #include <vector>
+
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -108,65 +111,6 @@ extern void (*dc_main_shutdown_fast)();
 extern void (*dc_main_shutdown_graceful)();
 extern void (*dc_main_pre_dc_init)(int argc, char *argv[]);
 extern void (*dc_main_pre_command_sock_init)();
-
-/** @name Typedefs for Callback Procedures
- */
-//@{
-///
-typedef int     (*CommandHandler)(Service*,int,Stream*);
-
-///
-typedef int     (Service::*CommandHandlercpp)(int,Stream*);
-
-///
-typedef int     (*SignalHandler)(Service*,int);
-
-///
-typedef int     (Service::*SignalHandlercpp)(int);
-
-///
-typedef int     (*SocketHandler)(Service*,Stream*);
-
-///
-typedef int     (Service::*SocketHandlercpp)(Stream*);
-
-///
-typedef int     (*PipeHandler)(Service*,int);
-
-///
-typedef int     (Service::*PipeHandlercpp)(int);
-
-///
-typedef int     (*ReaperHandler)(Service*,int pid,int exit_status);
-
-///
-typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
-
-///
-typedef int		(*ThreadStartFunc)(void *,Stream*);
-
-/// Register with RegisterTimeSkipCallback. Call when clock skips.  First
-//variable is opaque data pointer passed to RegisterTimeSkipCallback.  Second
-//variable is the _rough_ unexpected change in time (negative for backwards).
-typedef void	(*TimeSkipFunc)(void *,int);
-
-/** Does work in thread.  For Create_Thread_With_Data.
-	@see Create_Thread_With_Data
-*/
-
-typedef int	(*DataThreadWorkerFunc)(int data_n1, int data_n2, void * data_vp);
-
-/** Reports to parent when thread finishes.  For Create_Thread_With_Data.
-	@see Create_Thread_With_Data
-*/
-typedef int	(*DataThreadReaperFunc)(int data_n1, int data_n2, void * data_vp, int exit_status);
-//@}
-
-typedef enum { 
-	HANDLE_READ=1,
-	HANDLE_WRITE,
-	HANDLE_READ_WRITE
-} HandlerType;
 
 // some constants for HandleSig().
 #define _DC_RAISESIGNAL 1
@@ -734,7 +678,7 @@ class DaemonCore : public Service
     int Cancel_Socket ( Stream * insock, void *prev_entry = NULL );
 
 		// Returns true if the given socket is already registered.
-	bool SocketIsRegistered( Stream *sock );
+	bool SocketIsRegistered( Stream *sock ) {return m_sock_manager.isRegistered(sock);}
 
 		// Call the registered socket handler for this socket
 		// sock - previously registered socket
@@ -749,20 +693,13 @@ class DaemonCore : public Service
 	int CallCommandHandler(int req,Stream *stream,bool delete_stream=true,bool check_payload=true,float time_spent_on_sec=0,float time_spent_waiting_for_payload=0);
 	int CallUnregisteredCommandHandler(int req, Stream *stream);
 
-
-		// This function is called in order to have
-		// TooManyRegisteredSockets() take into account an extra socket
-		// that is waiting for a timer or other callback to complete.
-	void incrementPendingSockets() { nPendingSockets++; }
-
-		// This function must be called after incrementPendingSockets()
-		// when the socket is being (or about to be) destroyed.
-	void decrementPendingSockets() { nPendingSockets--; }
+	void incrementPendingSockets() {m_sock_manager.incPending();}
+	void decrementPendingSockets() {m_sock_manager.decPending();}
 
 	/**
 	   @return Number of currently registered sockets.
 	 */
-	int RegisteredSocketCount();
+	int RegisteredSocketCount() {return m_sock_manager.registeredSocketCount();}
 
 	/** This function is specifically tailored for testing if it is
 		ok to register a new socket (e.g. for non-blocking connect).
@@ -785,12 +722,6 @@ class DaemonCore : public Service
 	 */
 	int FileDescriptorSafetyLimit();
 
-    /** Not_Yet_Documented
-        @param insock           Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int Lookup_Socket ( Stream * iosock );
-	//@}
 
 	/** @name Pipe events.
 	 */
@@ -1393,7 +1324,7 @@ class DaemonCore : public Service
         // a spell to secure SOAP communication using SSL. Ttam worked
         // diligently trying to find the best way to integrate his SSL
         // work. He knew that all SOAP communications came in on one
-        // port, the initial_command_sock, and he wanted to SOAP SSL
+        // port, the initial command sock, and he wanted to SOAP SSL
         // communication to as well. Unfortunately, he was thwarted by
         // SSL's evil multiple versions. Ttam could simply not create
         // a simple way to tell if messages sent to daemons were
@@ -1423,7 +1354,7 @@ class DaemonCore : public Service
         // Ttam set out to perform it. A soap_ssl_sock was created
         // that would hold the special number identifying the SOAP SSL
         // port, and during a SOAP transaction not only would the
-        // initial_command_sock be allowed to accept messages, but the
+        // initial command sock be allowed to accept messages, but the
         // soap_ssl_sock would as well. Unfortunately, the
         // soap_ssl_sock had to be set from the land of soap_core.C
         // and not daemon_core.C, but that was of little consequence
@@ -1751,12 +1682,6 @@ class DaemonCore : public Service
 
 	MyString GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated);
 
-	// Returns first command socket in our list. In general, you
-	// probably want to spin over sockTable looking for it->command_sock==true,
-	// this is a transitional function for the old initial_command_sock 
-	// variable.  Returns index into sockTable, -1 if none available.
-	int initial_command_sock() const;
-
     struct CommandEnt
     {
         int             num;
@@ -1800,32 +1725,8 @@ class DaemonCore : public Service
     ExtArray<SignalEnt> sigTable;    // signal table
     volatile int        sent_signal; // TRUE if a signal handler sends a signal
 
-    struct SockEnt
-    {
-        Sock*           iosock;
-        SocketHandler   handler;
-        SocketHandlercpp    handlercpp;
-        Service*        service; 
-        char*           iosock_descrip;
-        char*           handler_descrip;
-        void*           data_ptr;
-        DCpermission    perm;
-        bool            is_cpp;
-		bool			is_connect_pending;
-		bool			is_reverse_connect_pending;
-		bool			call_handler;
-		bool			waiting_for_data;
-		bool			remove_asap;	// remove when being_serviced==false
-		HandlerType		handler_type;
-		int				servicing_tid;	// tid servicing this socket
-		bool            is_command_sock;
-    };
+	SockManager m_sock_manager;
     void              DumpSocketTable(int, const char* = NULL);
-    int               maxSocket;  // number of socket handlers to start with
-    int               nSock;      // number of socket handler slots in use use
-	int				  nRegisteredSocks; // number of sockets registered, always < nSock
-	int               nPendingSockets; // number of sockets waiting on timers or any other callbacks
-    ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
   	struct soap		  *soap;
 
 		// number of file descriptors in use past which we should start
@@ -2186,6 +2087,7 @@ extern void dc_reconfig();
 */
 
 extern DaemonCore* daemonCore;
+
 #endif
 
 

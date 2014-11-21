@@ -346,19 +346,19 @@ Selector::execute()
 }
 
 int
-Selector::select_retval()
+Selector::select_retval() const
 {
 	return _select_retval;
 }
 
 int
-Selector::select_errno()
+Selector::select_errno() const
 {
 	return _select_errno;
 }
 
 bool
-Selector::fd_ready( int fd, IO_FUNC interest )
+Selector::fd_ready( int fd, IO_FUNC interest ) const
 {
 	if( state != FDS_READY && state != TIMED_OUT ) {
 		EXCEPT(
@@ -395,31 +395,31 @@ Selector::fd_ready( int fd, IO_FUNC interest )
 }
 
 bool
-Selector::timed_out()
+Selector::timed_out() const
 {
 	return state == TIMED_OUT;
 }
 
 bool
-Selector::signalled()
+Selector::signalled() const
 {
 	return state == SIGNALLED;
 }
 
 bool
-Selector::failed()
+Selector::failed() const
 {
 	return state == FAILED;
 }
 
 bool
-Selector::has_ready()
+Selector::has_ready() const
 {
 	return state == FDS_READY;
 }
 
 void
-Selector::display()
+Selector::display() const
 {
 
 	switch( state ) {
