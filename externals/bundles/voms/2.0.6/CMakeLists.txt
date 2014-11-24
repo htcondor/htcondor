@@ -168,6 +168,12 @@ if ( WITH_VOMS )
 	endif(NOT PROPER)
 
 	if (VOMS_FOUND)
+
+		if( DLOPEN_SECURITY_LIBS )
+			find_so_name( LIBVOMSAPI_SO ${VOMS_FOUND} )
+			set( LIBVOMSAPI_SO ${LIBVOMSAPI_SO} PARENT_SCOPE )
+		endif()
+
 		message ( STATUS "external configured (VOMS_FOUND=${VOMS_FOUND})" )
 		set( HAVE_EXT_VOMS ON PARENT_SCOPE )
 		set( VOMS_FOUND ${VOMS_FOUND} PARENT_SCOPE )

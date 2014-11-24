@@ -166,7 +166,7 @@ if( NOT WINDOWS)
 	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
 	find_multiple( "resolv" HAVE_LIBRESOLV )
     find_multiple ("dl" HAVE_LIBDL )
-	find_multiple ("ltdl" HAVE_LIBLTDL )
+	find_library( HAVE_LIBLTDL "ltdl" )
 	find_multiple( "cares" HAVE_LIBCARES )
 	# On RedHat6, there's a libcares19 package, but no libcares
 	find_multiple( "cares19" HAVE_LIBCARES19 )
@@ -407,6 +407,7 @@ if (${OS_NAME} STREQUAL "SUNOS")
 	endif()
 	add_definitions(-D_STRUCTURED_PROC)
 	set(HAS_INET_NTOA ON)
+	include_directories( "/usr/include/kerberosv5" )
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lkstat -lelf -lnsl -lsocket")
 
 	#update for solaris builds to use pre-reqs namely binutils in this case
@@ -416,6 +417,8 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 
 	set(LINUX ON)
 	set( CONDOR_BUILD_SHARED_LIBS TRUE )
+
+	find_so_name(LIBLTDL_SO ${HAVE_LIBLTDL})
 
 	set(DOES_SAVE_SIGSTATE ON)
 	check_symbol_exists(SIOCETHTOOL "linux/sockios.h" HAVE_DECL_SIOCETHTOOL)
@@ -630,6 +633,12 @@ if (LINUX
 endif()
 
 
+#####################################
+# Do we want to link in libssl and kerberos or dlopen() them at runtime?
+if (LINUX AND NOT PROPER)
+	set( DLOPEN_SECURITY_LIBS TRUE )
+endif()
+
 ###########################################
 #if (NOT MSVC11) 
 #endif()
@@ -644,7 +653,7 @@ if (WINDOWS)
       set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32.tar.gz)
     endif()
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.54.0)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1j)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.33)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.33.0)
@@ -666,9 +675,9 @@ else ()
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/2011.05.24-r31)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)

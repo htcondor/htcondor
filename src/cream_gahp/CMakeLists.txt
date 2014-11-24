@@ -36,7 +36,7 @@ if ( HAVE_EXT_CREAM )
 	condor_exe( cream_gahp
 		"cream_gahp_server.cpp"
 		${C_SBIN}
-		"${CREAM_FOUND};${OPENSSL_FOUND};${GLOBUS_THR_FOUND};${VOMS_FOUND};${CLASSADS_FOUND};${PCRE_FOUND};${CARES_LIB};${ZLIB_FOUND}"
+		"${CREAM_FOUND};${VOMS_FOUND};${GLOBUS_THR_FOUND};${CLASSADS_FOUND};${LIBSSL_FOUND};${LIBCRYPTO_FOUND};${PCRE_FOUND};${CARES_LIB};${ZLIB_FOUND}"
 		OFF )
 
 	# Check cream_gahp's shared library dependencies and copy a
