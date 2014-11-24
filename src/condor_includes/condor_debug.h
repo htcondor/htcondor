@@ -300,16 +300,25 @@ bool debug_open_fds(std::map<int,bool> &open_fds);
 
 extern double _condor_debug_get_time_double();
 
-template <typename T>
-class _condor_auto_save_runtime
+class _condor_runtime
 {
 public:
-	_condor_auto_save_runtime(T & store) : runtime(store), begin(0) { begin = _condor_debug_get_time_double(); }; // save result here
-	~_condor_auto_save_runtime() { runtime += current_runtime(); };
-	double current_runtime() { return _condor_debug_get_time_double() - begin; }
+	_condor_runtime() : begin(0) { begin = _condor_debug_get_time_double(); }; // save result here
+	double elapsed_runtime() { return _condor_debug_get_time_double() - begin; }
 	double tick(double & last) { double now = _condor_debug_get_time_double(); double diff = now - last; last = now; return diff; }
+	double reset() { return tick(begin); } // resets begin to now and returns the difference between now and former begin.
+	double begin;
+};
+
+// use this class to automatically add time runtime between constructor and destructor
+// into the given variable.
+template <typename T>
+class _condor_auto_accum_runtime : public _condor_runtime
+{
+public:
+	_condor_auto_accum_runtime(T & store) : runtime(store) { }; // remember where to save result
+	~_condor_auto_accum_runtime() { runtime += elapsed_runtime(); };
 	T & runtime;
-	double   begin;
 };
 
 #endif // defined(__cplusplus)
