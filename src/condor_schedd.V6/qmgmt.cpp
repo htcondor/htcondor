@@ -110,7 +110,7 @@ static Regex *queue_super_user_may_impersonate_regex = NULL;
 
 static void AddOwnerHistory(const MyString &user);
 
-typedef _condor_auto_save_runtime< stats_entry_probe<double> > condor_auto_runtime;
+typedef _condor_auto_accum_runtime< stats_entry_probe<double> > condor_auto_runtime;
 
 schedd_runtime_probe WalkJobQ_runtime;
 schedd_runtime_probe WalkJobQ_mark_idle_runtime;
