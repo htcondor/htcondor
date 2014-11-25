@@ -122,130 +122,156 @@ if (WITH_GLOBUS)
 							INSTALL_DIR ${GLOBUS_INSTALL_LOC}
 							INSTALL_COMMAND touch ${GLOBUS_INSTALL_LOC}/done)
 
-			## Set all the config information
-			if ( LINUX )
-				set( LIBGLOBUS_COMMON_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_common.so" )
-				set( LIBGLOBUS_CALLOUT_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.so" )
-				set( LIBGLOBUS_PROXY_SSL_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.so" )
-				set( LIBGLOBUS_OPENSSL_ERROR_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.so" )
-				set( LIBGLOBUS_OPENSSL_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.so" )
-				set( LIBGLOBUS_GSI_CERT_UTILS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.so" )
-				set( LIBGLOBUS_OLDGAA_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.so" )
-				set( LIBGLOBUS_GSI_SYSCONFIG_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.so" )
-				set( LIBGLOBUS_GSI_CALLBACK_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.so" )
-				set( LIBGLOBUS_GSI_CREDENTIAL_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.so" )
-				set( LIBGLOBUS_GSI_PROXY_CORE_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.so" )
-				set( LIBGLOBUS_GSSAPI_GSI_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.so" )
-				set( LIBGLOBUS_GSS_ASSIST_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.so" )
+		## Set all the config information
+		if ( LINUX )
+			set( LIBGLOBUS_COMMON_SO "libglobus_common.so.0" PARENT_SCOPE )
+			set( LIBGLOBUS_CALLOUT_SO "libglobus_callout.so.0" PARENT_SCOPE )
+			set( LIBGLOBUS_PROXY_SSL_SO "libglobus_proxy_ssl.so.1" PARENT_SCOPE )
+			set( LIBGLOBUS_OPENSSL_ERROR_SO "libglobus_openssl_error.so.0" PARENT_SCOPE )
+			set( LIBGLOBUS_OPENSSL_SO "libglobus_openssl.so.0" PARENT_SCOPE )
+			set( LIBGLOBUS_GSI_CERT_UTILS_SO "libglobus_gsi_cert_utils.so.0" PARENT_SCOPE )
+			set( LIBGLOBUS_OLDGAA_SO "libglobus_oldgaa.so.0" PARENT_SCOPE )
+			set( LIBGLOBUS_GSI_SYSCONFIG_SO "libglobus_gsi_sysconfig.so.1" PARENT_SCOPE )
+			set( LIBGLOBUS_GSI_CALLBACK_SO "libglobus_gsi_callback.so.0" PARENT_SCOPE )
+			set( LIBGLOBUS_GSI_CREDENTIAL_SO "libglobus_gsi_credential.so.1" PARENT_SCOPE )
+			set( LIBGLOBUS_GSI_PROXY_CORE_SO "libglobus_gsi_proxy_core.so.0" PARENT_SCOPE )
+			set( LIBGLOBUS_GSSAPI_GSI_SO "libglobus_gssapi_gsi.so.4" PARENT_SCOPE )
+			set( LIBGLOBUS_GSS_ASSIST_SO "libglobus_gss_assist.so.3" PARENT_SCOPE )
 
-				set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.so;${HAVE_LIBLTDL}")
-				set (GLOBUS_FOUND_STATIC "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.a;${HAVE_LIBLTDL}")
-			elseif( DARWIN )
-				set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.dylib")
-				set (GLOBUS_FOUND_STATIC "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.a;${GLOBUS_INSTALL_LOC}/lib/libltdl.a")
-			else()
-				set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.a")
-				set (GLOBUS_FOUND_STATIC "${GLOBUS_FOUND}")
-			endif()
+			set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.so;${HAVE_LIBLTDL}")
+			set (GLOBUS_FOUND_STATIC "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.a;${HAVE_LIBLTDL}")
+		elseif( DARWIN )
+			set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.dylib")
+			set (GLOBUS_FOUND_STATIC "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.a;${GLOBUS_INSTALL_LOC}/lib/libltdl.a")
+		else()
+			set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.a")
+			set (GLOBUS_FOUND_STATIC "${GLOBUS_FOUND}")
+		endif()
 			
-			# primarily used by cream 
-			foreach (_glob_lib ${GLOBUS_FOUND})
-				string(REPLACE "${GLOBUS_FLAVOR}" "${GLOBUS_FLAVOR}pthr" _glob_thr_lib ${_glob_lib} )
-				append_var(GLOBUS_THR_FOUND "${_glob_thr_lib}")
-			endforeach(_glob_lib)
+		# primarily used by cream 
+		foreach (_glob_lib ${GLOBUS_FOUND})
+			string(REPLACE "${GLOBUS_FLAVOR}" "${GLOBUS_FLAVOR}pthr" _glob_thr_lib ${_glob_lib} )
+			append_var(GLOBUS_THR_FOUND "${_glob_thr_lib}")
+		endforeach(_glob_lib)
 
-			if ( LINUX )
-				set (GLOBUS_GRID_UNIVERSE_COMMON
+		if ( LINUX )
+			set (GLOBUS_GRID_UNIVERSE_COMMON
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_error.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_xio.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_io.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_rsl.so")
-			elseif ( DARWIN )
-				set (GLOBUS_GRID_UNIVERSE_COMMON
+		elseif ( DARWIN )
+			set (GLOBUS_GRID_UNIVERSE_COMMON
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_error.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_xio.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_io.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_rsl.dylib")
-			else()
-				set (GLOBUS_GRID_UNIVERSE_COMMON
+		else()
+			set (GLOBUS_GRID_UNIVERSE_COMMON
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_error.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_xio.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_io.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_rsl.a")
-			endif()
+		endif()
 			
-			if ( LINUX )
-				set (GLOBUS_GRID_UNIVERSE_GT2
+		if ( LINUX )
+			set (GLOBUS_GRID_UNIVERSE_GT2
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gass_transfer.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_client.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_protocol.so")
-			elseif ( DARWIN )
-				set (GLOBUS_GRID_UNIVERSE_GT2
+		elseif ( DARWIN )
+			set (GLOBUS_GRID_UNIVERSE_GT2
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gass_transfer.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_client.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_protocol.dylib")
-			else()
-				set (GLOBUS_GRID_UNIVERSE_GT2
+		else()
+			set (GLOBUS_GRID_UNIVERSE_GT2
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gass_transfer.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_client.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_protocol.a")
-			endif()
+		endif()
 
-			if ( LINUX )
-				set (GLOBUS_GRID_UNIVERSE_NORDUGRID
+		if ( LINUX )
+			set (GLOBUS_GRID_UNIVERSE_NORDUGRID
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.so")
-			elseif ( DARWIN )
-				set (GLOBUS_GRID_UNIVERSE_NORDUGRID
+		elseif ( DARWIN )
+			set (GLOBUS_GRID_UNIVERSE_NORDUGRID
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.dylib")
-			else()
-				set (GLOBUS_GRID_UNIVERSE_NORDUGRID
+		else()
+			set (GLOBUS_GRID_UNIVERSE_NORDUGRID
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.a")
+		endif()
+
+		condor_post_external( globus include/globus OFF )
+
+		if ( LINUX )
+			# Install the Globus libraries manually.
+			# In order to use an install(FILES) command,
+			# we'd have to explicitly list evey file.
+			# We can't use a file(GLOB) because that's
+			# evaluated when cmake is run, which may be
+			# before the external is built.
+			install( CODE "execute_process(COMMAND mkdir -p \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+			install( CODE "execute_process(COMMAND find ${GLOBUS_INSTALL_LOC}/lib -maxdepth 1 -name *.so*
+				COMMAND xargs -isrc cp -a src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+			if ( CONDOR_STRIP_PACKAGES )
+				# Strip the libraries manually.
+				# Since cmake didn't create the libraries
+				# itself, it doesn't know to strip them.
+				install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libglobus*.so*
+					COMMAND xargs strip)" )
 			endif()
+		endif()
+		if ( DARWIN )
+			# Install the Globus libraries manually.
+			# In order to use an install(FILES) command,
+			# we'd have to explicitly list evey file.
+			# We can't use a file(GLOB) because that's
+			# evaluated when cmake is run, which may be
+			# before the external is built.
+			install( CODE "execute_process(COMMAND mkdir -p \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+			install( CODE "execute_process(COMMAND find ${GLOBUS_INSTALL_LOC}/lib -maxdepth 1 -name *.dylib*
+				COMMAND xargs -I src cp -pPR src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
 
-			condor_post_external( globus include/globus OFF )
+			# Fix up the share library dependencies
+			install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libglobus*.dylib*
+				 COMMAND xargs ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs)" )
 
-			if ( LINUX )
-				# Install the Globus libraries manually.
-				# In order to use an install(FILES) command,
-				# we'd have to explicitly list evey file.
-				# We can't use a file(GLOB) because that's
-				# evaluated when cmake is run, which may be
-				# before the external is built.
-				install( CODE "execute_process(COMMAND mkdir -p \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
-				install( CODE "execute_process(COMMAND find ${GLOBUS_INSTALL_LOC}/lib -maxdepth 1 -name *.so*
-					COMMAND xargs -isrc cp -a src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
-				if ( CONDOR_STRIP_PACKAGES )
-					# Strip the libraries manually.
-					# Since cmake didn't create the libraries
-					# itself, it doesn't know to strip them.
-					install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libglobus*.so*
-						COMMAND xargs strip)" )
-				endif()
-			endif()
-			if ( DARWIN )
-				# Install the Globus libraries manually.
-				# In order to use an install(FILES) command,
-				# we'd have to explicitly list evey file.
-				# We can't use a file(GLOB) because that's
-				# evaluated when cmake is run, which may be
-				# before the external is built.
-				install( CODE "execute_process(COMMAND mkdir -p \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
-				install( CODE "execute_process(COMMAND find ${GLOBUS_INSTALL_LOC}/lib -maxdepth 1 -name *.dylib*
-					COMMAND xargs -I src cp -pPR src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
-
-				# Fix up the share library dependencies
+			if ( CONDOR_STRIP_PACKAGES )
+				# Strip the libraries manually.
+				# Since cmake didn't create the libraries
+				# itself, it doesn't know to strip them.
 				install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libglobus*.dylib*
-					 COMMAND xargs ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs)" )
-
-				if ( CONDOR_STRIP_PACKAGES )
-					# Strip the libraries manually.
-					# Since cmake didn't create the libraries
-					# itself, it doesn't know to strip them.
-					install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libglobus*.dylib*
-						COMMAND xargs strip -x)" )
-				endif()
+					COMMAND xargs strip -x)" )
 			endif()
+		endif()
 
 	else( NOT PROPER )
 
 		find_library( LIBGLOBUS_COMMON_FOUND "globus_common" )
+		find_so_name( LIBGLOBUS_COMMON_SO ${LIBGLOBUS_COMMON_FOUND} )
+		set( LIBGLOBUS_COMMON_SO ${LIBGLOBUS_COMMON_SO} PARENT_SCOPE )
 		find_library( LIBGLOBUS_CALLOUT_FOUND "globus_callout" )
+		find_so_name( LIBGLOBUS_CALLOUT_SO ${LIBGLOBUS_CALLOUT_FOUND} )
+		set( LIBGLOBUS_CALLOUT_SO ${LIBGLOBUS_CALLOUT_SO} PARENT_SCOPE )
 		find_library( LIBGLOBUS_PROXY_SSL_FOUND "globus_proxy_ssl" )
+		find_so_name( LIBGLOBUS_PROXY_SSL_SO ${LIBGLOBUS_PROXY_SSL_FOUND} )
+		set( LIBGLOBUS_PROXY_SSL_SO ${LIBGLOBUS_PROXY_SSL_SO} PARENT_SCOPE )
 		find_library( LIBGLOBUS_OPENSSL_ERROR_FOUND "globus_openssl_error" )
+		find_so_name( LIBGLOBUS_OPENSSL_ERROR_SO ${LIBGLOBUS_OPENSSL_ERROR_FOUND} )
+		set( LIBGLOBUS_OPENSSL_ERROR_SO ${LIBGLOBUS_OPENSSL_ERROR_SO} PARENT_SCOPE )
 		find_library( LIBGLOBUS_OPENSSL_FOUND "globus_openssl" )
+		find_so_name( LIBGLOBUS_OPENSSL_SO ${LIBGLOBUS_OPENSSL_FOUND} )
+		set( LIBGLOBUS_OPENSSL_SO ${LIBGLOBUS_OPENSSL_SO} PARENT_SCOPE )
 		find_library( LIBGLOBUS_GSI_CERT_UTILS_FOUND "globus_gsi_cert_utils" )
+		find_so_name( LIBGLOBUS_GSI_CERT_UTILS_SO ${LIBGLOBUS_GSI_CERT_UTILS_FOUND} )
+		set( LIBGLOBUS_GSI_CERT_UTILS_SO ${LIBGLOBUS_GSI_CERT_UTILS_SO} PARENT_SCOPE )
 		find_library( LIBGLOBUS_OLDGAA_FOUND "globus_oldgaa" )
+		find_so_name( LIBGLOBUS_OLDGAA_SO ${LIBGLOBUS_OLDGAA_FOUND} )
+		set( LIBGLOBUS_OLDGAA_SO ${LIBGLOBUS_OLDGAA_SO} PARENT_SCOPE )
 		find_library( LIBGLOBUS_GSI_SYSCONFIG_FOUND "globus_gsi_sysconfig" )
+		find_so_name( LIBGLOBUS_GSI_SYSCONFIG_SO ${LIBGLOBUS_GSI_SYSCONFIG_FOUND} )
+		set( LIBGLOBUS_GSI_SYSCONFIG_SO ${LIBGLOBUS_GSI_SYSCONFIG_SO} PARENT_SCOPE )
 		find_library( LIBGLOBUS_GSI_CALLBACK_FOUND "globus_gsi_callback" )
+		find_so_name( LIBGLOBUS_GSI_CALLBACK_SO ${LIBGLOBUS_GSI_CALLBACK_FOUND} )
+		set( LIBGLOBUS_GSI_CALLBACK_SO ${LIBGLOBUS_GSI_CALLBACK_SO} PARENT_SCOPE )
 		find_library( LIBGLOBUS_GSI_CREDENTIAL_FOUND "globus_gsi_credential" )
+		find_so_name( LIBGLOBUS_GSI_CREDENTIAL_SO ${LIBGLOBUS_GSI_CREDENTIAL_FOUND} )
+		set( LIBGLOBUS_GSI_CREDENTIAL_SO ${LIBGLOBUS_GSI_CREDENTIAL_SO} PARENT_SCOPE )
 		find_library( LIBGLOBUS_GSI_PROXY_CORE_FOUND "globus_gsi_proxy_core" )
+		find_so_name( LIBGLOBUS_GSI_PROXY_CORE_SO ${LIBGLOBUS_GSI_PROXY_CORE_FOUND} )
+		set( LIBGLOBUS_GSI_PROXY_CORE_SO ${LIBGLOBUS_GSI_PROXY_CORE_SO} PARENT_SCOPE )
 		find_library( LIBGLOBUS_GSSAPI_GSI_FOUND "globus_gssapi_gsi" )
+		find_so_name( LIBGLOBUS_GSSAPI_GSI_SO ${LIBGLOBUS_GSSAPI_GSI_FOUND} )
+		set( LIBGLOBUS_GSSAPI_GSI_SO ${LIBGLOBUS_GSSAPI_GSI_SO} PARENT_SCOPE )
 		find_library( LIBGLOBUS_GSS_ASSIST_FOUND "globus_gss_assist" )
+		find_so_name( LIBGLOBUS_GSS_ASSIST_SO ${LIBGLOBUS_GSS_ASSIST_FOUND} )
+		set( LIBGLOBUS_GSS_ASSIST_SO ${LIBGLOBUS_GSS_ASSIST_SO} PARENT_SCOPE )
 
 		find_multiple( "globus_gss_assist;globus_gssapi_gsi;globus_gsi_proxy_core;globus_gsi_credential;globus_gsi_callback;globus_gsi_sysconfig;globus_oldgaa;globus_gsi_cert_utils;globus_openssl;globus_openssl_error;globus_proxy_ssl;globus_callout;globus_common;ltdl" GLOBUS_FOUND )
 		find_multiple( "globus_gssapi_error;globus_xio;globus_io;globus_rsl" GLOBUS_GRID_UNIVERSE_COMMON )
@@ -258,35 +284,6 @@ if (WITH_GLOBUS)
 	endif(NOT PROPER)
 
 	if (GLOBUS_FOUND)
-
-		if( DLOPEN_SECURITY_LIBS )
-			find_so_name( LIBGLOBUS_COMMON_SO ${LIBGLOBUS_COMMON_FOUND} )
-			set( LIBGLOBUS_COMMON_SO ${LIBGLOBUS_COMMON_SO} PARENT_SCOPE )
-			find_so_name( LIBGLOBUS_CALLOUT_SO ${LIBGLOBUS_CALLOUT_FOUND} )
-			set( LIBGLOBUS_CALLOUT_SO ${LIBGLOBUS_CALLOUT_SO} PARENT_SCOPE )
-			find_so_name( LIBGLOBUS_PROXY_SSL_SO ${LIBGLOBUS_PROXY_SSL_FOUND} )
-			set( LIBGLOBUS_PROXY_SSL_SO ${LIBGLOBUS_PROXY_SSL_SO} PARENT_SCOPE )
-			find_so_name( LIBGLOBUS_OPENSSL_ERROR_SO ${LIBGLOBUS_OPENSSL_ERROR_FOUND} )
-			set( LIBGLOBUS_OPENSSL_ERROR_SO ${LIBGLOBUS_OPENSSL_ERROR_SO} PARENT_SCOPE )
-			find_so_name( LIBGLOBUS_OPENSSL_SO ${LIBGLOBUS_OPENSSL_FOUND} )
-			set( LIBGLOBUS_OPENSSL_SO ${LIBGLOBUS_OPENSSL_SO} PARENT_SCOPE )
-			find_so_name( LIBGLOBUS_GSI_CERT_UTILS_SO ${LIBGLOBUS_GSI_CERT_UTILS_FOUND} )
-			set( LIBGLOBUS_GSI_CERT_UTILS_SO ${LIBGLOBUS_GSI_CERT_UTILS_SO} PARENT_SCOPE )
-			find_so_name( LIBGLOBUS_OLDGAA_SO ${LIBGLOBUS_OLDGAA_FOUND} )
-			set( LIBGLOBUS_OLDGAA_SO ${LIBGLOBUS_OLDGAA_SO} PARENT_SCOPE )
-			find_so_name( LIBGLOBUS_GSI_SYSCONFIG_SO ${LIBGLOBUS_GSI_SYSCONFIG_FOUND} )
-			set( LIBGLOBUS_GSI_SYSCONFIG_SO ${LIBGLOBUS_GSI_SYSCONFIG_SO} PARENT_SCOPE )
-			find_so_name( LIBGLOBUS_GSI_CALLBACK_SO ${LIBGLOBUS_GSI_CALLBACK_FOUND} )
-			set( LIBGLOBUS_GSI_CALLBACK_SO ${LIBGLOBUS_GSI_CALLBACK_SO} PARENT_SCOPE )
-			find_so_name( LIBGLOBUS_GSI_CREDENTIAL_SO ${LIBGLOBUS_GSI_CREDENTIAL_FOUND} )
-			set( LIBGLOBUS_GSI_CREDENTIAL_SO ${LIBGLOBUS_GSI_CREDENTIAL_SO} PARENT_SCOPE )
-			find_so_name( LIBGLOBUS_GSI_PROXY_CORE_SO ${LIBGLOBUS_GSI_PROXY_CORE_FOUND} )
-			set( LIBGLOBUS_GSI_PROXY_CORE_SO ${LIBGLOBUS_GSI_PROXY_CORE_SO} PARENT_SCOPE )
-			find_so_name( LIBGLOBUS_GSSAPI_GSI_SO ${LIBGLOBUS_GSSAPI_GSI_FOUND} )
-			set( LIBGLOBUS_GSSAPI_GSI_SO ${LIBGLOBUS_GSSAPI_GSI_SO} PARENT_SCOPE )
-			find_so_name( LIBGLOBUS_GSS_ASSIST_SO ${LIBGLOBUS_GSS_ASSIST_FOUND} )
-			set( LIBGLOBUS_GSS_ASSIST_SO ${LIBGLOBUS_GSS_ASSIST_SO} PARENT_SCOPE )
-		endif()
 
 		message( STATUS "external configured (GLOBUS_FOUND=${GLOBUS_FOUND})" )
 		set( HAVE_EXT_GLOBUS ON PARENT_SCOPE )
