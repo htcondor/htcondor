@@ -300,7 +300,8 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 
 	jobProxy = AcquireProxy( jobAd, error_string,
 							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
-	if ( jobProxy == NULL && error_string != "" ) {
+	// If we're removing the job, ignore a bad/missing proxy file.
+	if ( jobProxy == NULL && error_string != "" && condorState != REMOVED) {
 		goto error_exit;
 	}
 
