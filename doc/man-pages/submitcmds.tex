@@ -352,9 +352,13 @@ For example, HTCondor will place a log entry into this file
 when and where the job begins running,
 when the job produces a checkpoint, or moves (migrates) to another machine,
 and when the job completes.
-Most users find specifying a \SubmitCmd{log} file to be handy;
-its use is recommended. If no \SubmitCmd{log} entry is specified, 
+Most users find specifying a \SubmitCmdNI{log} file to be handy;
+its use is recommended. If no \SubmitCmdNI{log} entry is specified, 
 HTCondor does not create a log for this cluster.
+If a relative path is specified, it is relative to the 
+current working directory as the job is submitted or
+the directory specified by submit command \SubmitCmdNI{initialdir}
+on the submit machine.
 
 %%%%%%%%%%%%%%%%%%%
 %% log_xml
