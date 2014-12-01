@@ -42,7 +42,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a race condition that could cause the transfer of output files
+for Condor-C jobs (i.e. grid universe jobs with grid-type ``condor'') to
+fail.
+\Ticket{3379}
 
 \end{itemize}
 
@@ -54,8 +57,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.2.5 not yet released.
-%\item HTCondor version 8.2.5 released on Month Date, 2014.
+\item HTCondor version 8.2.5 released on December 1, 2014.
 
 \end{itemize}
 
@@ -72,21 +74,35 @@ The details of each version are described below.
 
 \begin{itemize}
 
+% 1
 \item Updated the post install script in the RPM packages,
 to preserve file \File{/etc/condor/condor\_config.local}, 
 if this file was modified since the last installation.
 \Ticket{4731}
 
-\item Fixed a bug in which \Condor{submit} in interactive mode did
-not properly handle the \Opt{-name} command line option.
-\Ticket{4728}
+% 2
+\item Updated Windows builds of HTCondor to use the latest version of OpenSSL.
+\Ticket{4733}
 
+% 3
 \item Fixed a bug that caused file transfer to or from a \Condor{schedd} 
 daemon version 8.0 or older
 to fail when using the Python bindings, or when using
 the \Opt{-address} option with \Condor{submit} or \Condor{transfer\_data}.
 \Ticket{4720}
 
+% 4
+\item Fixed a bug in \Condor{urlfetch} that caused it to sometimes 
+not fetch the URL when it should have,
+because the cache file did not exist.
+\Ticket{4732}
+
+% 5
+\item Fixed a bug that prevented grid-type batch jobs from being removed
+if they had an X.509 proxy that had been deleted.
+\Ticket{3072}
+
+% 6
 \item Fixed an inconsistency in which configuration variable
 \MacroNI{JOB\_RENICE\_INCREMENT},
 if not explicitly set, defaulted to the value 10 
@@ -94,23 +110,22 @@ for vanilla universe jobs and to the value 0 for standard universe jobs.
 It now defaults to 0, which matches the documentation.
 \Ticket{4697}
 
-\item Fixed a bug that caused nordugrid grid jobs to be held with
-the hold reason \AdStr{Unspecified gridmanager error}
-when runtime information was not reported by the remote server.
-\Ticket{4736}
+% 7
+\item Fixed a bug in which \Condor{submit} in interactive mode did
+not properly handle the \Opt{-name} command line option.
+\Ticket{4728}
 
-\item Updated Windows builds of HTCondor to use the latest version of OpenSSL.
-\Ticket{4733}
-
-\item Fixed a bug in \Condor{urlfetch} that caused it to sometimes 
-not fetch the URL when it should have,
-because the cache file did not exist.
-\Ticket{4732}
-
+% 8
 \item Fixed a bug in error checking while performing job output file
 transfer for jobs in which job ClassAd attribute \Attr{OutputDestination}
 is used.
 \Ticket{4739}
+
+% 9
+\item Fixed a bug that caused nordugrid grid jobs to be held with
+the hold reason \AdStr{Unspecified gridmanager error}
+when runtime information was not reported by the remote server.
+\Ticket{4736}
 
 \end{itemize}
 
