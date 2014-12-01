@@ -128,6 +128,7 @@ job_core_time-deferral_van: cygwin
 job_cp_cclim_acctgrp_basic_van: cygwin
 job_dagman_abnormal_term_recovery_retries: personal
 job_dagman_abort-A: personal
+job_dagman_abort-B: personal
 job_dagman_abort-final-A: cygwin,personal
 job_dagman_abort-final-B: personal
 job_dagman_always_run_post-A: personal

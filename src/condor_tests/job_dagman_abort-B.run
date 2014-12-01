@@ -59,11 +59,77 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
+my @failcmd = (
+	"executable           	= ./x_dagman_retry-monitor.pl",
+	"arguments		= 5",
+	"universe             	= scheduler",
+	"notification         	= NEVER",
+	"getenv               	= true",
+	"output			= job_dagman_abort-B-node.\$(nodename).out",
+	"error			= job_dagman_abort-B-node.err",
+	"queue",
+);
+
+my @goodcmd = (
+	"executable              = /bin/echo",
+	"arguments               = job_dagman_abort-B-node.cmd \$(nodename) OK",
+	"universe                = scheduler",
+	"notification            = NEVER",
+	"getenv                  = true",
+	"output                  = job_dagman_abort-B-node.\$(nodename).out",
+	"error                   = job_dagman_abort-B-node.err",
+	"queue",
+);
+
 # clean out old output files
+my $iswindows = is_windows();
+
 foreach $name (@outfiles) {
-	runcmd("rm -f $name.out $name.err");
+	if($iswindows == 1) {
+		runcmd("del /F /Q $name.out $name.err");
+	} else {
+		runcmd("rm -f $name.out $name.err");
+	}
 }
-runcmd("rm -f $statusfile");
+if($iswindows == 1) {
+	runcmd("del /F /Q $statusfile
+	");
+} else {
+	runcmd("rm -f $statusfile");
+}
+
+
+open(FCMD,">job_dagman_abort-B-node-fail.cmd") or die "failed tom open:job_dagman_abort-B-node-fail.cmd:$!\n";
+
+foreach my $line (@failcmd) {
+	if($line =~ /^executable.*/) {
+		if($iswindows == 1) {
+			print FCMD "executable = makeexit.bat\n";
+		} else {
+			print FCMD "$line\n";
+		}
+	} else {
+		print FCMD "$line\n";
+	}
+}
+
+close(FCMD);
+
+open(GCMD,">job_dagman_abort-B-node-succeed.cmd") or die "failed tom open:job_dagman_abort-B-node-succeed.cmd:$!\n";
+
+foreach my $line (@goodcmd) {
+	if($line =~ /^executable.*/) {
+		if($iswindows == 1) {
+			print GCMD "executable = echo.bat\n";
+		} else {
+			print GCMD "$line\n";
+		}
+	} else {
+		print GCMD "$line\n";
+	}
+}
+
+close(GCMD);
 
 $abnormal = sub 
 {
