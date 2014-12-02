@@ -424,7 +424,7 @@ int Sock::move_descriptor_up()
 //
 
 int Sock::assignInvalidSocket() {
-	ASSERT( _who.is_valid() );
+	ABEND( _who.is_valid() );
 	return assignSocket( _who.get_protocol(), INVALID_SOCKET );
 }
 
@@ -433,14 +433,25 @@ int Sock::assignInvalidSocket( condor_protocol proto ) {
 }
 
 int Sock::assignSocket( SOCKET sockd ) {
-	ASSERT( sockd != INVALID_SOCKET );
+	ABEND( sockd != INVALID_SOCKET );
 
 	condor_sockaddr sockAddr;
-	ASSERT( condor_getsockname( sockd, sockAddr ) == 0 );
+	ABEND( condor_getsockname( sockd, sockAddr ) == 0 );
 	condor_protocol sockProto = sockAddr.get_protocol();
 
 	if( _who.is_valid() ) {
-		ASSERT( _who.get_protocol() == sockProto );
+		condor_protocol objectProto = _who.get_protocol();
+		// If we're accepting a socket via shared port as part of a CCB
+		// callback, then it's legitimate for the object protocol and the
+		// socket protocol to differ.
+		if( sockProto == PF_UNIX && objectProto != PF_UNIX ) {
+			// dprintf( D_ALWAYS, "[tlm] assigning PF_UNIX socket to object connecting to %s.\n", get_connect_addr() );
+			Sinful s( get_connect_addr() );
+			ABEND( s.getCCBContact() != NULL && s.getSharedPortID() != NULL );
+		} else {
+			// dprintf( D_ALWAYS, "[tlm] assigning socket of protocol %d to object of protocol %d.\n", sockProto, objectProto );
+			ABEND( sockProto == objectProto );
+		}
 	}
 
 	return assignSocket( sockProto, sockd );
@@ -450,7 +461,7 @@ int Sock::assignSocket( SOCKET sockd ) {
 // Domain sockets don't have a useful protocol or address.
 //
 int Sock::assignDomainSocket( SOCKET sockd ) {
-	ASSERT( sockd != INVALID_SOCKET );
+	ABEND( sockd != INVALID_SOCKET );
 
 	_sock = sockd;
 	_state = sock_assigned;
@@ -472,9 +483,9 @@ int Sock::assignSocket( condor_protocol proto, SOCKET sockd ) {
 
 	if( sockd != INVALID_SOCKET ) {
 		condor_sockaddr sockAddr;
-		ASSERT( condor_getsockname( sockd, sockAddr ) == 0 );
+		ABEND( condor_getsockname( sockd, sockAddr ) == 0 );
 		condor_protocol sockProto = sockAddr.get_protocol();
-		ASSERT( sockProto == proto );
+		ABEND( sockProto == proto );
 
 		_sock = sockd;
 		_state = sock_assigned;
