@@ -23,7 +23,30 @@ Listed here are details of the logs, to aid in identification.
 \item[daemon logs]
 \item[job queue log]
 \item[event log]
+  The event log is an optional, chronological list of events that occur
+  for all jobs and all users.
+  The events logged are the same as those that would go into a job event
+  log.
+  The file name is set by configuration variable \Macro{EVENT\_LOG}.
+  The log is created only if this configuration variable is set.
+
+  Configuration variables that affect the event log, 
+  setting details such as
+  the maximum size to which this log may grow and details of file rotation
+  and locking are
+  \begin{description}
+  \item [\Macro{EVENT\_LOG\_MAX\_SIZE}] 
+  \item [\Macro{EVENT\_LOG\_MAX\_ROTATIONS}]
+  \item [\Macro{EVENT\_LOG\_LOCKING}]
+  \item [\Macro{EVENT\_LOG\_FSYNC}]
+  \item [\Macro{EVENT\_LOG\_ROTATION\_LOCK}]
+  \item [\Macro{EVENT\_LOG\_JOB\_AD\_INFORMATION\_ATTRS}]
+  \item [\Macro{EVENT\_LOG\_USE\_XML}]
+  \end{description}
+
+  
 \item[accountant log]
+\item[negotiator match log]
 \end{description}
 \MoreTodo
 
