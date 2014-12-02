@@ -98,6 +98,7 @@ if ( WITH_VOMS )
 
 		set( VOMS_FOUND_STATIC "${VOMS_INSTALL_LOC}/lib/libvomsapi.a" )
 		if ( LINUX )
+			set( LIBVOMSAPI_SO "libvomsapi.so.1" PARENT_SCOPE )
 			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi.so" )
 		elseif ( DARWIN )
 			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi.dylib" )
@@ -164,15 +165,12 @@ if ( WITH_VOMS )
 	else(NOT PROPER)
 
 		find_multiple( "vomsapi" VOMS_FOUND)
+		find_so_name( LIBVOMSAPI_SO ${VOMS_FOUND} )
+		set( LIBVOMSAPI_SO ${LIBVOMSAPI_SO} PARENT_SCOPE )
 
 	endif(NOT PROPER)
 
 	if (VOMS_FOUND)
-
-		if( DLOPEN_SECURITY_LIBS )
-			find_so_name( LIBVOMSAPI_SO ${VOMS_FOUND} )
-			set( LIBVOMSAPI_SO ${LIBVOMSAPI_SO} PARENT_SCOPE )
-		endif()
 
 		message ( STATUS "external configured (VOMS_FOUND=${VOMS_FOUND})" )
 		set( HAVE_EXT_VOMS ON PARENT_SCOPE )

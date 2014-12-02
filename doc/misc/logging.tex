@@ -1,0 +1,35 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:logging}Logging in HTCondor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{logging|(}
+HTCondor records many types of information in a variety of logs.
+Administration may require locating and using the
+contents of a log to debug issues.
+Listed here are details of the logs, to aid in identification.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:job-systemlogs}Job and Daemon Logs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+\item[job event log]
+  The job event log is an optional, chronological list of events that occur
+  as a job runs.
+  The submit description file for the job requests a job event log with
+  the submit command \SubmitCmd{log}.
+  The log is created and remains on the submit machine.
+  Contents of the log are detailed in section~\ref{sec:job-log-events}.
+  Examples of events are that the job is running,
+  that the job  is placed on hold, or that the job completed.
+\item[daemon logs]
+\item[job queue log]
+\item[event log]
+\item[accountant log]
+\end{description}
+\MoreTodo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGMan-logs}DAGMan Logs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\MoreTodo
+
+\index{logging|)}
