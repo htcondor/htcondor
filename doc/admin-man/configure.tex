@@ -2026,10 +2026,15 @@ of the subsystem corresponding to the daemon.
 \label{param:SubsysLog}
 \item[\MacroB{<SUBSYS>\_LOG}]
 \index{SUBSYS\_LOG macro@\texttt{<SUBSYS>\_LOG} macro}
-  The name of
-  the log file for a given subsystem.  For example,
+  Defines the path and file name of the log file for a given subsystem.  
+  For example,
   \MacroUNI{STARTD\_LOG} gives the location of the log file for
-  \Condor{startd}. The default is \File{\$(LOG)/<SUBSYS>LOG}.
+  the \Condor{startd} daemon. 
+  The default value for most daemons is the daemon's name in camel case,
+  concatenated with \File{Log}.
+  For example, the default log defined for the \Condor{master} daemon
+  is \File{\$(LOG)/MasterLog}.
+  The default value for other subsystems is \File{\$(LOG)/<SUBSYS>LOG}.
   If the log file cannot be written to,
   then the daemon will attempt to log this into a new file of the name
   \File{\$(LOG)/dprintf\_failure.<SUBSYS>} before the daemon exits.
