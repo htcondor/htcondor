@@ -22,6 +22,22 @@ Listed here are details of the logs, to aid in identification.
   that the job  is placed on hold, or that the job completed.
 \item[daemon logs]
 \item[job queue log]
+  A representation of the current job queue. 
+  The file name is set by configuration variable \Macro{JOB\_QUEUE\_LOG},
+  and defaults to \File{\$(SPOOL)/job\_queue.log}.
+  Configuration variables that affect the job queue log are 
+  \begin{description}
+  \item [\Macro{SCHEDD\_BACKUP\_SPOOL}] 
+  \item [\Macro{ROTATE\_HISTORY\_DAILY}] 
+  \item [\Macro{ROTATE\_HISTORY\_MONTHLY}] 
+  \end{description}
+\item[\Condor{schedd} audit log]
+  Configuration variables that affect the audit log are 
+  \begin{description}
+  \item [\Macro{SCHEDD\_AUDIT\_LOG}] 
+  \item [\Macro{MAX\_SCHEDD\_AUDIT\_LOG}] 
+  \item [\Macro{MAX\_NUM\_SCHEDD\_AUDIT\_LOG}] 
+  \end{description}
 \item[event log]
   The event log is an optional, chronological list of events that occur
   for all jobs and all users.
