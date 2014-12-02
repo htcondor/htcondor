@@ -7660,7 +7660,7 @@ Configuration File Entries}
   If this variable is not defined, then the default is defined by
   the expression
 \begin{verbatim}
-  ifThenElse(MemoryUsage =!= UNDEFINED,MemoryUsage,1)
+  ifThenElse(MemoryUsage =!= UNDEFINED,MemoryUsage,(ImageSize+1023)/1024)
 \end{verbatim}
 
 \label{param:JobDefaultRequestDisk}
