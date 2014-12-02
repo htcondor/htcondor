@@ -49,26 +49,68 @@
 
 extern const char *EMPTY_CLASSAD_TYPE_NAME;
 
-template <typename K, typename AltK>
+// used to store a ClassAd and some other stuff in a condor hashtable.
+#define USE_DERIVED_AD_AND_STUFF 1
+class ClassAdAndStuff : public ClassAd {
+public:
+	int id;
+
+	ClassAdAndStuff(int _id=0) : id(_id) {}
+	//ClassAdAndStuff( const ClassAd &ad );
+	//ClassAdAndStuff( const classad::ClassAd &ad );
+	virtual ~ClassAdAndStuff() {};
+};
+typedef ClassAdAndStuff* AD_AND_STUFF;
+
+
+template <typename AD>
+class ConstructClassAdLogTableEntry : public ConstructLogEntry
+{
+public:
+	virtual ClassAd* New() const { return new AD(); }
+	virtual void Delete(ClassAd*& val) const { delete val; }
+};
+
+template <>
+class ConstructClassAdLogTableEntry<ClassAd*> : public ConstructLogEntry
+{
+public:
+	virtual ClassAd* New() const { return new ClassAd(); }
+	virtual void Delete(ClassAd*& val) const { delete val; }
+};
+
+#ifdef USE_DERIVED_AD_AND_STUFF
+template <>
+class ConstructClassAdLogTableEntry<ClassAdAndStuff*> : public ConstructLogEntry
+{
+public:
+	virtual ClassAd* New() const { return new ClassAdAndStuff(); }
+	virtual void Delete(ClassAd* &val) const { delete val; }
+};
+#endif
+
+const ConstructClassAdLogTableEntry<ClassAd*> DefaultMakeClassAdLogTableEntry;
+
+template <typename K, typename AltK, typename AD>
 class ClassAdLog {
 public:
 
-	ClassAdLog();
-	ClassAdLog(const char *filename,int max_historical_logs=0);
+	ClassAdLog(const ConstructLogEntry* pc=NULL);
+	ClassAdLog(const char *filename,int max_historical_logs=0,const ConstructLogEntry* pc=NULL);
 	~ClassAdLog();
 
 	// define an stl type iterator, but one that can filter based on a requirements expression
-	class filter_iterator : std::iterator<std::input_iterator_tag, ClassAd*> {
+	class filter_iterator : std::iterator<std::input_iterator_tag, AD> {
 		private:
-			HashTable<K,ClassAd*> *m_table;
-			HashIterator<K,ClassAd*> m_cur;
+			HashTable<K,AD> *m_table;
+			HashIterator<K,AD> m_cur;
 			bool m_found_ad;
 			const classad::ExprTree *m_requirements;
 			int m_timeslice_ms;
 			int m_done;
 
 		public:
-			filter_iterator(ClassAdLog<K,AltK> &log, const classad::ExprTree *requirements, int timeslice_ms, bool invalid=false)
+			filter_iterator(ClassAdLog<K,AltK,AD> &log, const classad::ExprTree *requirements, int timeslice_ms, bool invalid=false)
 				: m_table(&log.table)
 				, m_cur(log.table.begin())
 				, m_found_ad(false)
@@ -84,12 +126,12 @@ public:
 				, m_done(other.m_done) {}
 
 			~filter_iterator() {}
-			ClassAd* operator *() const {
+			AD operator *() const {
 				if (m_done || (m_cur == m_table->end()) || !m_found_ad)
-					return NULL;
+					return AD(NULL);
 				return (*m_cur).second;
 			}
-			ClassAd* operator ->() const;
+			AD operator ->() const;
 			filter_iterator operator++();
 			filter_iterator operator++(int);
 			bool operator==(const filter_iterator &rhs) {
@@ -149,7 +191,13 @@ public:
 	// added into the ad, false if not.
 	bool AddAttrsFromTransaction(AltK key, ClassAd &ad);
 
-	HashTable<K,ClassAd*> table;
+	HashTable<K,AD> table;
+
+	// user-replacable helper class for creating and destroying values for the hashtable
+	// this allows a user of the classad log to put a class derived from ClassAd in the hashtable
+	// without the ClassAdLog code needing to know all about it.
+	const ConstructLogEntry * make_table_entry;
+	const ConstructLogEntry& GetTableEntryMaker() { if (make_table_entry) return *make_table_entry; return DefaultMakeClassAdLogTableEntry; }
 
 	// When the log is truncated (i.e. compacted), old logs
 	// may be saved, up to some limit.  The default is not
@@ -232,21 +280,40 @@ protected:
 // accessiable to the LogRecord classes without requiring them to know about the ClassAdLog.
 // Instances of this class are constructed and passed to the Transaction methods and to the Play() method
 // of the LogRecord classes.
-template <typename K>
+template <typename K, typename AD>
 class ClassAdLogTable : public LoggableClassAdTable {
 public:
-	ClassAdLogTable(HashTable<K,ClassAd*> & _table) : table(_table) {}
+	ClassAdLogTable(HashTable<K,AD> & _table) : table(_table) {}
 	virtual ~ClassAdLogTable() {};
-	virtual bool lookup(const char * key, ClassAd*& ad) { return table.lookup(K(key), ad) >= 0; }
+	virtual bool lookup(const char * key, ClassAd*& ad) { AD Ad; int iret = table.lookup(K(key), Ad); ad=Ad; return iret >= 0; }
 	virtual bool remove(const char * key) { return table.remove(K(key)) >= 0; }
-	virtual bool insert(const char * key, ClassAd * ad) { return table.insert(K(key), ad) >= 0; }
+	virtual bool insert(const char * key, ClassAd * ad) { int iret = table.insert(K(key), AD(ad)); return iret >= 0; }
 protected:
-	HashTable<K,ClassAd*> & table;
+	HashTable<K,AD> & table;
 };
+
+#ifdef USE_DERIVED_AD_AND_STUFF
+template <>
+class ClassAdLogTable<JOB_ID_KEY,AD_AND_STUFF> : public LoggableClassAdTable {
+public:
+	ClassAdLogTable(HashTable<JOB_ID_KEY,AD_AND_STUFF> & _table) : table(_table) {}
+	virtual ~ClassAdLogTable() {};
+	virtual bool lookup(const char * key, ClassAd*& ad) { AD_AND_STUFF Ad; int iret = table.lookup(JOB_ID_KEY(key), Ad); ad=Ad; return iret >= 0; }
+	virtual bool remove(const char * key) { return table.remove(JOB_ID_KEY(key)) >= 0; }
+	virtual bool insert(const char * key, ClassAd * ad) {
+		AD_AND_STUFF Ad = new ClassAdAndStuff();
+		Ad->Update(*ad); delete ad; // TODO: transfer ownership of attributes from ad to Ad
+		int iret = table.insert(JOB_ID_KEY(key), Ad);
+		return iret >= 0;
+	}
+protected:
+	HashTable<JOB_ID_KEY,AD_AND_STUFF> & table;
+};
+#endif
 
 class LogNewClassAd : public LogRecord {
 public:
-	LogNewClassAd(const char *key, const char *mytype, const char *targettype);
+	LogNewClassAd(const char *key, const char *mytype, const char *targettype, const ConstructLogEntry & ctor_in = DefaultMakeClassAdLogTableEntry);
 	virtual ~LogNewClassAd();
 	int Play(void * data_structure); // data_structure should be of type LoggableClassAdTable *
 	virtual char const *get_key() { return key; }
@@ -257,6 +324,7 @@ private:
 	virtual int WriteBody(FILE *fp);
 	virtual int ReadBody(FILE* fp);
 
+	const ConstructLogEntry & ctor;
 	char *key;
 	char *mytype;
 	char *targettype;
@@ -265,7 +333,7 @@ private:
 
 class LogDestroyClassAd : public LogRecord {
 public:
-	LogDestroyClassAd(const char *key);
+	LogDestroyClassAd(const char *key, const ConstructLogEntry & ctor_in = DefaultMakeClassAdLogTableEntry);
 	virtual ~LogDestroyClassAd();
 	int Play(void *data_structure); // data_structure should be of type LoggableClassAdTable *
 	virtual char const *get_key() { return key; }
@@ -274,6 +342,7 @@ private:
 	virtual int WriteBody(FILE* fp) { int r=fwrite(key, sizeof(char), strlen(key), fp); return r < ((int)strlen(key)) ? -1 : r;}
 	virtual int ReadBody(FILE* fp);
 
+	const ConstructLogEntry & ctor;
 	char *key;
 };
 
@@ -342,6 +411,6 @@ private:
 	virtual char const *get_key() {return NULL;}
 };
 
-LogRecord* InstantiateLogEntry(FILE* fp, unsigned long recnum, int type);
+LogRecord* InstantiateLogEntry(FILE* fp, unsigned long recnum, int type, const ConstructLogEntry & ctor);
 
 #endif

@@ -67,11 +67,11 @@
 #include <grp.h>
 #endif
 
-typedef GenericClassAdCollection<JobQueueKey, const char*> JobQueueType;
+typedef GenericClassAdCollection<JobQueueKey, const char*,JobQueuePayload> JobQueueType;
 #ifdef JOB_QUEUE_KEY_IS_PROC_ID
 // force instantiation of the template types needed by the JobQueue
-template class ClassAdLog<JOB_ID_KEY,const char*>;
-template class GenericClassAdCollection<JOB_ID_KEY,const char*>;
+template class ClassAdLog<JOB_ID_KEY,const char*,JobQueuePayload>;
+template class GenericClassAdCollection<JOB_ID_KEY,const char*,JobQueuePayload>;
 #endif
 
 #include "file_sql.h"
@@ -893,7 +893,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	int spool_cur_version = 0;
 	CheckSpoolVersion(spool.Value(),SPOOL_MIN_VERSION_SCHEDD_SUPPORTS,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS,spool_min_version,spool_cur_version);
 
-	JobQueue = new JobQueueType(job_queue_name,max_historical_logs);
+	JobQueue = new JobQueueType(new ConstructClassAdLogTableEntry<JobQueuePayload>(),job_queue_name,max_historical_logs);
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(37,compute_clustersize_hash);
 	TotalJobsCount = 0;
 
@@ -1917,7 +1917,6 @@ int DestroyProc(int cluster_id, int proc_id)
 {
 	char				key[PROC_ID_STR_BUFLEN];
 	ClassAd				*ad = NULL;
-//	LogDestroyClassAd	*log;
 
 	IdToStr(cluster_id,proc_id,key);
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -2062,7 +2061,6 @@ int DestroyCluster(int cluster_id, const char* reason)
 {
 	ClassAd				*ad=NULL;
 	int					c, proc_id;
-//	LogDestroyClassAd	*log;
 	JobQueueKey			key;
 
 	// cannot destroy the header cluster(s)
@@ -2136,9 +2134,6 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 				// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
 				WritePerJobHistoryFile(ad, false);
-
-//				log = new LogDestroyClassAd(key);
-//				JobQueue->AppendLog(log);
 
 				cleanup_ckpt_files(cluster_id,proc_id, NULL );
 

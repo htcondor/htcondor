@@ -27,5 +27,5 @@
 // Force instantiation of the Generic ClassAdCollection that uses HashKey as the key type.
 // (i.e. the old pre-template ClassAdCollection). This the one used by most ad-hock users of
 // this class, but not by the schedd.
-template class GenericClassAdCollection<HashKey,const char*>;
+template class GenericClassAdCollection<HashKey,const char*,ClassAd*>;
 

@@ -27,21 +27,31 @@
 #include "MyString.h"
 #include "classad_log.h"
 
+// these two definitions allow us to dereference a template type
+//template<typename> struct dereference;
+//template <typename T> struct dereference<T*> { typedef typename T type; };
+// for example:
+// if AD is type foo*, then
+//    AD cad = new typename dereference<AD>::type();
+// expands to
+//    foo * cad = new foo();
+
+
 // The GenericClassAdCollection is a thin wrapper around the ClassAdLog class
 // It provides helper functions and a layer of abstraction.
 // It does not provide (or rather, it *no longer* provides) any collection management
 
-template <typename K, typename AltK>
-class GenericClassAdCollection : private ClassAdLog<K, AltK> {
+template <typename K, typename AltK, typename AD>
+class GenericClassAdCollection : private ClassAdLog<K, AltK, AD> {
 
 public:
 
-  typename ClassAdLog<K,AltK>::filter_iterator GetFilteredIterator(const classad::ExprTree &requirements, int timeslice_ms) {
-    typename ClassAdLog<K,AltK>::filter_iterator it(*this, &requirements, timeslice_ms);
+  typename ClassAdLog<K,AltK,AD>::filter_iterator GetFilteredIterator(const classad::ExprTree &requirements, int timeslice_ms) {
+    typename ClassAdLog<K,AltK,AD>::filter_iterator it(*this, &requirements, timeslice_ms);
     return it;
   }
-  typename ClassAdLog<K,AltK>::filter_iterator GetIteratorEnd() {
-    typename ClassAdLog<K,AltK>::filter_iterator it(*this, NULL, 0, true);
+  typename ClassAdLog<K,AltK,AD>::filter_iterator GetIteratorEnd() {
+    typename ClassAdLog<K,AltK,AD>::filter_iterator it(*this, NULL, 0, true);
     return it;
   }
 
@@ -55,15 +65,18 @@ public:
       empty repository.
     @return nothing
   */
-  GenericClassAdCollection() {};
+  GenericClassAdCollection(const ConstructLogEntry * pctor)
+	: ClassAdLog<K,AltK,AD>(pctor)
+  {
+  }
 
   /** Constructor (initialization). It reads the log file and initializes
       the class-ads (that are read from the log file) in memory.
     @param filename the name of the log file.
     @return nothing
   */
-  GenericClassAdCollection(const char* filename,int max_historical_logs=0)
-	: ClassAdLog<K,AltK>(filename,max_historical_logs)
+  GenericClassAdCollection(const ConstructLogEntry * pctor,const char* filename,int max_historical_logs=0)
+	: ClassAdLog<K,AltK,AD>(filename,max_historical_logs,pctor)
   {
   }
 
@@ -85,56 +98,56 @@ public:
   /** Begin a transaction
     @return nothing
   */
-  void BeginTransaction() { ClassAdLog<K,AltK>::BeginTransaction(); }
+  void BeginTransaction() { ClassAdLog<K,AltK,AD>::BeginTransaction(); }
 
   /** Commit a transaction
     @return nothing
   */
-  void CommitTransaction() { ClassAdLog<K,AltK>::CommitTransaction(); }
+  void CommitTransaction() { ClassAdLog<K,AltK,AD>::CommitTransaction(); }
 
   /** Commit a transaction without forcing a sync to disk
     @return nothing
   */
-  void CommitNondurableTransaction() { ClassAdLog<K,AltK>::CommitNondurableTransaction(); }
+  void CommitNondurableTransaction() { ClassAdLog<K,AltK,AD>::CommitNondurableTransaction(); }
 
   /** Abort a transaction
     @return true if a transaction aborted, false if no transaction active
   */
-  bool AbortTransaction() { return ClassAdLog<K,AltK>::AbortTransaction(); }
+  bool AbortTransaction() { return ClassAdLog<K,AltK,AD>::AbortTransaction(); }
 
-  bool InTransaction() { return ClassAdLog<K,AltK>::InTransaction(); }
+  bool InTransaction() { return ClassAdLog<K,AltK,AD>::InTransaction(); }
 
   /** Get a list of all new keys created in this transaction
 	  @param new_keys List object to populate
    */
   void ListNewAdsInTransaction( std::list<std::string> &new_keys ) {
-	  return ClassAdLog<K,AltK>::ListNewAdsInTransaction( new_keys );
+	  return ClassAdLog<K,AltK,AD>::ListNewAdsInTransaction( new_keys );
   }
 
 	  // increase non-durable commit level
 	  // if > 0, begin non-durable commits
 	  // return old level
-  int IncNondurableCommitLevel() { return ClassAdLog<K,AltK>::IncNondurableCommitLevel(); }
+  int IncNondurableCommitLevel() { return ClassAdLog<K,AltK,AD>::IncNondurableCommitLevel(); }
 	  // decrease non-durable commit level and verify that it
 	  // matches old_level
 	  // if == 0, resume durable commits
-  void DecNondurableCommitLevel(int old_level ) { ClassAdLog<K,AltK>::DecNondurableCommitLevel( old_level ); }
+  void DecNondurableCommitLevel(int old_level ) { ClassAdLog<K,AltK,AD>::DecNondurableCommitLevel( old_level ); }
 
 		// Flush the log output buffer (but do not fsync).
 		// This is useful if non-durable events have been recently logged.
 		// Flushing will allow other processes that read the log to see
 		// the events that might otherwise hang around in the output buffer
 		// for a long time.
-  void FlushLog() { ClassAdLog<K,AltK>::FlushLog(); }
+  void FlushLog() { ClassAdLog<K,AltK,AD>::FlushLog(); }
 
   		// Force the log output buffer to non-volatile storage (disk).  
 		// This means doing both a flush and fsync.
-  void ForceLog() { ClassAdLog<K,AltK>::ForceLog(); }
+  void ForceLog() { ClassAdLog<K,AltK,AD>::ForceLog(); }
 
   ///
-  Transaction* getActiveTransaction() { return ClassAdLog<K,AltK>::getActiveTransaction(); }
+  Transaction* getActiveTransaction() { return ClassAdLog<K,AltK,AD>::getActiveTransaction(); }
   ///
-  bool setActiveTransaction(Transaction* & transaction) { return ClassAdLog<K,AltK>::setActiveTransaction(transaction); }
+  bool setActiveTransaction(Transaction* & transaction) { return ClassAdLog<K,AltK,AD>::setActiveTransaction(transaction); }
 
 
   /** Lookup an attribute's value in the current transaction. 
@@ -143,18 +156,18 @@ public:
       @param val the value of the attrinute (output parameter).
       @return true on success, false otherwise.
   */
-  bool LookupInTransaction(AltK key, const char *name, char *&val) { return (ClassAdLog<K,AltK>::LookupInTransaction(key,name,val)==1); }
+  bool LookupInTransaction(AltK key, const char *name, char *&val) { return (ClassAdLog<K,AltK,AD>::LookupInTransaction(key,name,val)==1); }
   
   /** Truncate the log file by creating a new "checkpoint" of the repository
     @return true on success; false if log could not be rotated (in which
 	case we are continuing to use the old log file)
   */
-  bool TruncLog() { return ClassAdLog<K,AltK>::TruncLog(); }
+  bool TruncLog() { return ClassAdLog<K,AltK,AD>::TruncLog(); }
 
-  void SetMaxHistoricalLogs(int max) { ClassAdLog<K,AltK>::SetMaxHistoricalLogs(max); }
-  int GetMaxHistoricalLogs() { return ClassAdLog<K,AltK>::GetMaxHistoricalLogs(); }
+  void SetMaxHistoricalLogs(int max) { ClassAdLog<K,AltK,AD>::SetMaxHistoricalLogs(max); }
+  int GetMaxHistoricalLogs() { return ClassAdLog<K,AltK,AD>::GetMaxHistoricalLogs(); }
 
-  time_t GetOrigLogBirthdate() { return ClassAdLog<K,AltK>::GetOrigLogBirthdate(); }
+  time_t GetOrigLogBirthdate() { return ClassAdLog<K,AltK,AD>::GetOrigLogBirthdate(); }
 
   //@}
   //------------------------------------------------------------------------
@@ -170,9 +183,10 @@ public:
       @return true on success, false otherwise.
   */
   bool NewClassAd(AltK key, const char* mytype, const char* targettype) {
-	this->AppendLog(new LogNewClassAd(key,mytype,targettype));
+	this->AppendLog(new LogNewClassAd(key,mytype,targettype, this->GetTableEntryMaker()));
 	return true;
   }
+
 
   /** Insert a new class-ad with the specified key.
       The new class-ad will be a copy of the ad supplied.
@@ -180,8 +194,8 @@ public:
       @param ad The class-ad to copy into the repository.
       @return true on success, false otherwise.
   */
-  bool NewClassAd(AltK key, ClassAd* ad) {
-	LogRecord* log = new LogNewClassAd(key,GetMyTypeName(*ad),GetTargetTypeName(*ad));
+  bool NewClassAd(AltK key, AD ad) {
+	LogRecord* log = new LogNewClassAd(key,GetMyTypeName(*ad),GetTargetTypeName(*ad), this->GetTableEntryMaker());
 	this->AppendLog(log);
 	const char *name;
 	ExprTree* expr;
@@ -199,12 +213,12 @@ public:
       @return true on success, false otherwise.
   */
   bool DestroyClassAd(AltK key) {
-	this->AppendLog(new LogDestroyClassAd(key));
+	this->AppendLog(new LogDestroyClassAd(key, this->GetTableEntryMaker()));
 	return true;
   }
   bool DestroyClassAd(const K & key) {
 	MyString str; key.sprint(str);
-	this->AppendLog(new LogDestroyClassAd(str.c_str()));
+	this->AppendLog(new LogDestroyClassAd(str.c_str(), this->GetTableEntryMaker()));
 	return true;
   }
 
@@ -235,10 +249,11 @@ public:
       @return true on success, false otherwise.
   */
   bool ClearClassAdDirtyBits(AltK key) {
-	ClassAd* ad = NULL;
-	if (this->table.lookup(K(key),ad)==-1)
+	AD Ad = NULL;
+	if (this->table.lookup(K(key),Ad) < 0)
 		return false;
-	ad->ClearAllDirtyFlags();
+	ClassAd* cad = Ad;
+	cad->ClearAllDirtyFlags();
 	return true;
   }
 
@@ -249,9 +264,19 @@ public:
       @param Ad A pointer to the class-ad (output parameter).
       @return true on success, false otherwise.
   */
-  bool LookupClassAd(AltK key, ClassAd*& Ad) { return 0 == this->table.lookup(K(key), Ad); }
+  bool Lookup(K & key, AD & Ad) { return this->table.lookup(key, Ad) >= 0; }
+  bool LookupClassAd(AltK key, ClassAd*& cad) {
+	AD Ad(0); // shouldn't have to init this here, but g++ can't figure out that it will never be used unless it's first initialized.
+	if (this->table.lookup(K(key), Ad) < 0)
+		return false;
+	cad = Ad;
+	return true;
+  }
 
-  bool AddAttrsFromTransaction(AltK key, ClassAd & ad) { return ClassAdLog<K,AltK>::AddAttrsFromTransaction(key,ad); }
+  bool Iterate(AD & Ad)         { return this->table.iterate(Ad) == 1; }
+  bool Iterate(K& key, AD& Ad)  { return this->table.iterate(key,Ad) == 1; }
+
+  bool AddAttrsFromTransaction(AltK key, ClassAd & ad) { return ClassAdLog<K,AltK,AD>::AddAttrsFromTransaction(key,ad); }
   
   /** Start iterations on all class-ads in the repository.
       @return nothing.
@@ -262,17 +287,29 @@ public:
       @param Ad A pointer to next the class-ad (output parameter).
       @return true on success, false otherwise.
   */
-  bool IterateAllClassAds(ClassAd*& Ad) { return 1 == this->table.iterate(Ad); }
+  bool IterateAllClassAds(ClassAd*& cad) {
+	AD Ad(0);
+	if ( !  this->Iterate(Ad))
+		return false;
+	cad = Ad;
+	return true;
+  }
 
   /** Get the next class-ad in the repository and its key.
       @param Ad A pointer to next the class-ad (output parameter).
 	  @param KeyBuf A pointer to a buffer which will receive the key (output param).
       @return true on success, false otherwise.
   */
-  bool IterateAllClassAds(ClassAd*& Ad, K& KeyBuf) { return 1 == this->table.iterate(KeyBuf,Ad); }
+  bool IterateAllClassAds(ClassAd*& cad, K& KeyBuf) {
+	AD Ad(0);
+	if ( ! this->Iterate(KeyBuf, Ad))
+		return false;
+	cad = Ad;
+	return true;
+  }
 
 };
 
-typedef GenericClassAdCollection<HashKey, const char*> ClassAdCollection;
+typedef GenericClassAdCollection<HashKey, const char*, ClassAd*> ClassAdCollection;
 
 #endif

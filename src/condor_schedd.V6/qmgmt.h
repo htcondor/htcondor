@@ -107,13 +107,15 @@ ClassAd* GetNextJobByCluster( int, int );
 
 #define JOB_QUEUE_KEY_IS_PROC_ID 1
 #ifdef JOB_QUEUE_KEY_IS_PROC_ID
- // new for 8.3, use a non-string type as the key for the JobQueue
+ // new for 8.3, use a non-string type as the key for the JobQueue, and a classad wrapper for the payload.
  typedef JOB_ID_KEY JobQueueKey;
- typedef ClassAdLog<JOB_ID_KEY, const char*> JobQueueLogType;
- typedef ClassAdLog<HashKey, const char*> OldJobQueueLogType;
+ typedef AD_AND_STUFF JobQueuePayload;
+ typedef ClassAdLog<JOB_ID_KEY, const char*,JobQueuePayload> JobQueueLogType;
+ //typedef ClassAdLog<HashKey, const char*,ClassAd*> OldJobQueueLogType;
 #else
  // the 8.2 JobQueue types
  typedef HashKey JobQueueKey;
+ typedef ClassAd* JobQueuePayload;
  typedef ClassAdLog<HashKey, const char*> JobQueueLogType;
 #endif
 
