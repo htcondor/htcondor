@@ -360,36 +360,13 @@ bool Dag::Bootstrap (bool recovery)
 // Hmm -- maybe something pretty simple -- if the whole DAG isn't done, the final node can't be done...
 // What if failed node was submitted and failed, rather than not getting submitted? -- probably need to make a test for that...
 		if ( _final_job && _final_job->GetStatus() == Job::STATUS_DONE ) {
-#if 0 //TEMPTEMP
-			//TEMPTEMP -- this will cause problems if last non-final node finished while DAGMan was held...  Hmm -- maybe check if all non-final nodes are done?
-			_final_job->SetStatus( Job::STATUS_NOT_READY );
-			--_numNodesDone;
-        	debug_printf( DEBUG_NORMAL, "Set final node status to STATUS_NOT_READY\n" );
-#endif //TEMPTEMP
-#if 0 //TEMPTEMP
-			//TEMPTEMP -- I *really* don't think I want to do this, but I want to see what effect it has
-			_finalNodeRun = true;
-        	debug_printf( DEBUG_NORMAL, "Set _finalNodeRun to true\n" );
-#endif //TEMPTEMP
-#if 0 //TEMPTEMP
-			if ( !FinishedRunning( true ) ) {
-				--_numNodesDone;
-				//TEMPTEMP -- why is FinishedRunning true when NodeA is unready?!?
-				if ( FinishedRunning( false ) ) {
-					_final_job->SetStatus( Job::STATUS_READY );
-        			debug_printf( DEBUG_NORMAL, "Set final node status to STATUS_READY\n" );
-				} else {
-					_final_job->SetStatus( Job::STATUS_NOT_READY );
-        			debug_printf( DEBUG_NORMAL, "Set final node status to STATUS_NOT_READY\n" );
-				}
-			}
-#endif //TEMPTEMP
-
 #if 1 //TEMPTEMP
 			if ( !FinishedRunning( true ) ) {
 				--_numNodesDone;
 				//TEMPTEMP -- why is FinishedRunning true when NodeA is unready?!?
 				_final_job->SetStatus( Job::STATUS_NOT_READY );
+				_final_job->countedAsDone = false;
+				//TEMPTEMP -- look for other things that should be reset
         		debug_printf( DEBUG_NORMAL, "Set final node status to STATUS_NOT_READY\n" );
 			}
 #endif //TEMPTEMP
@@ -4121,6 +4098,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
     	if( node->JobType() == Job::TYPE_CONDOR ) {
 	  		node->_submitTries++;
 			if ( node->GetNoop() ) {
+				debug_printf( DEBUG_NORMAL, "Fake submit for NOOP node\n" );
       			submit_success = fake_condor_submit( condorID, 0,
 							node->GetJobName(), node->GetDirectory(),
 							_use_default_node_log ? DefaultNodeLog():

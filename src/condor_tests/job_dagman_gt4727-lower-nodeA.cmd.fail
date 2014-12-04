@@ -7,4 +7,3 @@ getenv               	= true
 output			= job_dagman_gt4727-lower-nodeA.out
 error			= job_dagman_gt4727-lower-nodeA.err
 queue
-

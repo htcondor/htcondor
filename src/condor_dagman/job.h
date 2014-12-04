@@ -622,7 +622,6 @@ private:
 		// Whether the log file is XML.
 	bool _logFileIsXml;
 
-
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to Condor).
 	bool _noop;
