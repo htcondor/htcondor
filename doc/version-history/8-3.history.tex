@@ -176,22 +176,6 @@ The default value is 9618.
 This default is the same port as has been used in previous HTCondor versions.
 \Ticket{4432}
 
-%\item The \Condor{shared\_port} daemon is now enabled by default 
-%for new installations on non-Windows platforms.
-%With this change, 
-%all HTCondor daemons will share port 9618 for all incoming TCP connections,
-%greatly simplifying firewall configuration.  
-%Only users of HTCondor-G submitting to Globus GRAM endpoints 
-%will need additional incoming TCP ports in the firewall.
-%
-%Note that this causes \emph{all} HTCondor hosts to use 
-%TCP port 9618 by default,
-%differing from previous behavior.
-%Previously, only the \Condor{collector} host used a fixed port.
-%To restore the previous behavior, 
-%set the new configuration variable \Macro{SHARED\_PORT\_PORT} to \Expr{0}.
-%\Ticket{3813}
-
 \item The \Condor{shared\_port} daemon will now work 
 if the default location given by configuration variable
 \Macro{DAEMON\_SOCKET\_DIR}, which is \Expr{\$(LOCK)/daemon\_sock},
