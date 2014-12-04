@@ -9742,8 +9742,8 @@ InitCommandSocket(condor_protocol proto, int port, int udp_port, DaemonCore::Soc
 				}
 			}
 		}
-		if (proto == CP_IPV6) { dprintf(D_ALWAYS, "Bound socket is ipv6: %d\n", rsock->my_addr().is_ipv6()); }
-		if (proto == CP_IPV4) { dprintf(D_ALWAYS, "Bound socket is ipv4: %d\n", rsock->my_addr().is_ipv4()); }
+		// if (proto == CP_IPV6) { dprintf(D_ALWAYS, "Bound socket is ipv6: %d\n", rsock->my_addr().is_ipv6()); }
+		// if (proto == CP_IPV4) { dprintf(D_ALWAYS, "Bound socket is ipv4: %d\n", rsock->my_addr().is_ipv4()); }
 		if( !rsock->listen() ) {
 			if (fatal) {
 				EXCEPT( "Failed to post listen on command ReliSock" );
@@ -9861,7 +9861,7 @@ InitCommandSockets(int port, int udp_port, DaemonCore::SockPairVec & socks, bool
 
 	DaemonCore::SockPairVec new_socks;
 
-	// Arbitrary constant, borrowed from bind().
+	// Arbitrary constant, borrowed from bindAnyCommandPort().
 	int retries = 1000;
 	do {
 
@@ -9899,18 +9899,28 @@ InitCommandSockets(int port, int udp_port, DaemonCore::SockPairVec & socks, bool
 			new_socks.push_back(sock_pair);
 		}
 
-		if( targetTCPPort != port && targetUDPPort != udp_port ) {
+		if( param_boolean( "ENABLE_IPV4", true ) && param_boolean("ENABLE_IPV6", true ) ) {
+			if( targetTCPPort != port && targetUDPPort != udp_port ) {
 				DaemonCore::SockPair ipv6_socks = new_socks[1];
 				counted_ptr<ReliSock> rs = ipv6_socks.rsock();
 				int ipv6Port = rs->get_port();
 
 				if( ipv6Port != targetTCPPort ) {
+					dprintf( D_FULLDEBUG, "Bound to IPv4 port %d, but then bound to IPv6 command port %d.\n", targetTCPPort, port );
+					new_socks.clear();
 					--retries;
 				} else {
-					retries = 0;
+					retries = -1;
 				}
+			}
+		} else {
+			retries = -1;
 		}
 	} while( retries > 0 );
+
+	if( retries == 0 ) {
+		EXCEPT( "Failed to bind to the same port on IPv4 and IPv6.\n" );
+	}
 
 	// Delay inserting new socks until the end so that if we fail and
 	// return false, we're certain that socks is unchanged.
