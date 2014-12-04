@@ -5,7 +5,7 @@
 
 bool condor_fsync_on = true;
 
-typedef _condor_auto_save_runtime< stats_entry_probe<double> > condor_auto_runtime;
+typedef _condor_auto_accum_runtime< stats_entry_probe<double> > condor_auto_runtime;
 stats_entry_probe<double> condor_fsync_runtime; // this holds the count and runtime of fsync calls.
 
 int condor_fsync(int fd, const char* /*path*/)

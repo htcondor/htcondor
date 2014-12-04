@@ -1996,7 +1996,24 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 		return sendJobErrorAd(stream, 3, "Unable to convert projection list to string list");
 	}
 
-	return continuation->finish(stream);
+	ForkStatus fork_status = schedd_forker.NewJob();
+	if (fork_status == FORK_PARENT)
+	{ // Successfully forked a child - as far as the schedd cares, this worked.
+	  // Throw away the socket and move on.
+		return true;
+	}
+	else if (fork_status == FORK_CHILD)
+	{ // Respond to the query from the child.
+		int retval;
+		while ((retval = continuation->finish(stream)) == KEEP_STREAM) {}
+		_exit(!retval);
+		ASSERT( false );
+		while (true) {}
+	}
+	else // BUSY or FAILED
+	{ // Write the response; let DC handle the callbacks.
+		return continuation->finish(stream);
+	}
 }
 
 int 

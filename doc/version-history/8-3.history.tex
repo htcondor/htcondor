@@ -87,8 +87,9 @@ with configuration variables \MacroNI{START\_SCHEDULER\_UNIVERSE} and
 \Ticket{4589}
 
 \item HTCondor now sets environment variable \Env{\_CONDOR\_JOB\_AD} for
-scheduler universe jobs. The value is the path to a file which contains
-the job ad as it was when the job was started.
+scheduler universe jobs. 
+Its value will be the path to a file which contains
+the job ClassAd as it was when the job was started.
 This feature already exists for vanilla, parallel, java, and local
 universe jobs.
 \Ticket{4558}
@@ -97,36 +98,50 @@ universe jobs.
 submitting to single-protocol execute nodes. This is preliminary work.
 \Ticket{4494}
 
+\item The new \Opt{-debug} option to \Condor{userprio} sends
+debug output to \File{stderr}.
+\Ticket{4636}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item Updated the CREAM client library used in the cream\_gahp.
+\item Fixed a bug introduced in HTCondor 8.3.1 that caused daemons to be
+unreachable if they were configured to use the shared port daemon but the
+\Condor{master} was not.
+\Ticket{4603}
+
+\item Updated the CREAM client library used in the \Prog{cream\_gahp}.
 This fixes the delegation of RFC format proxies, in addition to other
 bug fixes.
 \Ticket{4596}
 
-\item Fixed a bug that could cause DAGMan to segfault (rather than
-printing an appropriate error message) on some DAG file syntax errors.
+\item Fixed a bug that could cause a segmentation fault of \Condor{dagman}
+for some DAG input file syntax errors,
+rather than printing an appropriate error message.
 \Ticket{4616}
 
-\item Fixed a bug that could cause shared port to fail on Mac OS X if
-\Macro{LOCK} wasn't explicitly set in the configuration file.
+\item Fixed a bug that could cause the \Condor{shared\_port} daemon
+to fail on Mac OS X platforms,
+if configuration variable \MacroNI{LOCK} was not explicitly set 
+in a configuration file.
 \Ticket{4678}
 
-\item Fixed a bug that caused both \Condor{dagman} and the schedd
-to generate commands to remove \Condor{dagman}'s node jobs when
-\Condor{dagman} itself is \Condor{rm}'ed.  Now only the schedd
-generates the command, avoiding the extra load of running two
-identical commands.
+\item Fixed a bug that caused both \Condor{dagman} and the \Condor{schedd}
+daemon to generate commands to remove \Condor{dagman}'s node jobs when
+the \Condor{dagman} job is the target of \Condor{rm}.
+Now, only the \Condor{schedd} generates the command, 
+avoiding the extra load of running two identical commands.
 \Ticket{4618}
 
-\item Fixed a bug that caused the DAGMan node status file (see
-section~\ref{sec:DAG-node-status} for details) to not reflect the
-final status of a DAG when the DAG is removed with \Condor{rm} or
-aborted by an ABORT-DAG-ON specification.
+\item Fixed a bug that caused the DAGMan node status file,
+as detailed in section~\ref{sec:DAG-node-status},
+to not reflect the final status of a DAG when the DAG is removed
+by issuing a \Condor{rm} command,
+or when the DAG is
+aborted due to an ABORT-DAG-ON specification in the DAG input file.
 \Ticket{4686}
 
 \end{itemize}

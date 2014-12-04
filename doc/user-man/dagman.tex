@@ -70,12 +70,14 @@ Each node within a DAG may be further constrained  to succeed or fail
 based upon the return values of a PRE script and/or a POST script.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Input File Describing the DAG: the JOB, DATA, SCRIPT and PARENT...CHILD Key Words}
+\subsection{The DAG Input File: the JOB, DATA, PARENT...CHILD, and SCRIPT Key Words}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!DAG input file}
 The input file used by DAGMan is called a DAG input file.
-All items are optional, but there must be at least one \Arg{JOB}
+It specifies the nodes of the DAG as well as the dependencies
+that order the DAG.
+All items are optional, except that there must be at least one \Arg{JOB}
 or \Arg{DATA} item.
 
 Comments may be placed in the DAG input file.
@@ -235,6 +237,50 @@ may be run in parallel.
 \end{verbatim}
 \normalsize
 
+%----------------------------
+\label{dagman:ParentChild}
+\index{DAGMan input file!PARENT \Dots CHILD key word}
+\item \Bold{PARENT \Dots CHILD}
+
+The \Arg{PARENT} and \Arg{CHILD} key words specify the
+dependencies within the DAG.
+\index{DAGMan!describing dependencies}
+Nodes are parents and/or children within the DAG.
+A parent node must be completed successfully before
+any of its children may be started.
+A child node may only be started once
+all its parents have successfully completed.
+
+The syntax of a dependency line within the DAG input file:
+
+\Opt{PARENT} \Arg{ParentJobName\Dots} \Opt{CHILD} \Arg{ChildJobName\Dots}
+
+The \Arg{PARENT} key word is followed by one or more
+\Arg{ParentJobName}s.
+The \Arg{CHILD} key word is followed by one or more
+\Arg{ChildJobName}s.
+Each child job depends on every parent job within the line.
+A single line in the input file can specify the dependencies from one or more
+parents to one or more children.
+The diamond-shaped DAG example specifies the dependencies with
+\begin{verbatim}
+PARENT A CHILD B C
+PARENT B C CHILD D
+\end{verbatim}
+
+As a further example, the line
+\begin{verbatim}
+PARENT p1 p2 CHILD c1 c2
+\end{verbatim}
+produces four dependencies:
+\begin{enumerate}
+\item{\verb@p1@ to \verb@c1@}
+\item{\verb@p1@ to \verb@c2@}
+\item{\verb@p2@ to \verb@c1@}
+\item{\verb@p2@ to \verb@c2@}
+\end{enumerate}
+
+%----------------------------
 \label{dagman:SCRIPT}
 \index{DAGMan input file!SCRIPT key word}
 \item \Bold{SCRIPT}
@@ -521,44 +567,9 @@ of the compressed file:
 % $ % this comment just has a dollar sign so that emacs will not think
 %	  we're inside of a math section and will draw things more nicely
 
-
-\label{dagman:ParentChild}
-\index{DAGMan input file!PARENT \Dots CHILD key word}
-\item \Bold{PARENT \Dots CHILD}
-
-The \Arg{PARENT} and \Arg{CHILD} key words specify the
-dependencies within the DAG.
-\index{DAGMan!describing dependencies}
-Nodes are parents and/or children within the DAG.
-A parent node must be completed successfully before
-any of its children may be started.
-A child node may only be started once
-all its parents have successfully completed.
-
-The syntax of a dependency line within the DAG input file:
-
-\Opt{PARENT} \Arg{ParentJobName\Dots} \Opt{CHILD} \Arg{ChildJobName\Dots}
-
-The \Arg{PARENT} key word is followed by one or more
-\Arg{ParentJobName}s.
-The \Arg{CHILD} key word is followed by one or more
-\Arg{ChildJobName}s.
-Each child job depends on every parent job within the line.
-A single line in the input file can specify the dependencies from one or more
-parents to one or more children.
-As an example, the line
-\begin{verbatim}
-PARENT p1 p2 CHILD c1 c2
-\end{verbatim}
-produces four dependencies:
-\begin{enumerate}
-\item{\verb@p1@ to \verb@c1@}
-\item{\verb@p1@ to \verb@c2@}
-\item{\verb@p2@ to \verb@c1@}
-\item{\verb@p2@ to \verb@c2@}
-\end{enumerate}
-
 \end{itemize}
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Submit Description File Contents}

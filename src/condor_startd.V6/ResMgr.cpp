@@ -115,19 +115,19 @@ void ResMgr::Stats::Init()
 
 double ResMgr::Stats::BeginRuntime(stats_recent_counter_timer &  /*probe*/)
 {
-   return UtcTime::getTimeDouble();
+   return _condor_debug_get_time_double();
 }
 
 double ResMgr::Stats::EndRuntime(stats_recent_counter_timer & probe, double before)
 {
-   double now = UtcTime::getTimeDouble();
+   double now = _condor_debug_get_time_double();
    probe.Add(now - before);
    return now;
 }
 
 double ResMgr::Stats::BeginWalk(VoidResourceMember  /*memberfunc*/)
 {
-   return UtcTime::getTimeDouble();
+   return _condor_debug_get_time_double();
 }
 
 double ResMgr::Stats::EndWalk(VoidResourceMember memberfunc, double before)

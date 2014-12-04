@@ -86,11 +86,29 @@ static const char * use_next_arg(const char * arg, const char * argv[], int & i)
 	return NULL;
 }
 
+static StringList saved_dprintfs;
+static void print_saved_dprintfs(FILE* hf)
+{
+	saved_dprintfs.rewind();
+	const char * line;
+	while ((line = saved_dprintfs.next())) {
+		fprintf(hf, "%s", line);
+	}
+	saved_dprintfs.clearAll();
+}
+
+
 bool g_silence_dprintf = false;
+bool g_save_dprintfs = false;
 void _dprintf_intercept(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo)
 {
 	//if (cat_and_flags & D_FULLDEBUG) return;
-	if (g_silence_dprintf) return;
+	if (g_silence_dprintf) {
+		if (g_save_dprintfs) {
+			saved_dprintfs.append(message);
+		}
+		return;
+	}
 	if (is_arg_prefix("JobRouter", message, 9)) { message += 9; if (*message == ':') ++message; if (*message == ' ') ++message; }
 	int cch = strlen(message);
 	fprintf(stdout, &"\n%s"[(cch > 150) ? 0 : 1], message);
@@ -195,10 +213,18 @@ int main(int argc, const char *argv[])
 	}
 
 	g_silence_dprintf = dash_diagnostic ? false : true;
+	g_save_dprintfs = true;
 	JobRouter job_router(true);
 	job_router.set_schedds(schedd, schedd2);
 	job_router.init();
 	g_silence_dprintf = false;
+	g_save_dprintfs = false;
+
+	// if the job router is not enabled at this point, say so, and print out saved dprintfs.
+	if ( ! job_router.isEnabled()) {
+		print_saved_dprintfs(stderr);
+		fprintf(stderr, "JobRouter is disabled.\n");
+	}
 
 	if (dash_config) {
 		fprintf (stdout, "\n\n");

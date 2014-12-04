@@ -2027,7 +2027,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			// examine subcommand
 			//
 			int      subcommand = 0;
-			if(!file_info.LookupInteger("Result",subcommand)) {
+			if(!file_info.LookupInteger("SubCommand",subcommand)) {
 				subcommand = -1;
 			}
 

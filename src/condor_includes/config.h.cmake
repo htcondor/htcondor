@@ -630,4 +630,30 @@
 /* Define to 1 if the GSI libraries need to dlopen()d */
 #cmakedefine DLOPEN_GSI_LIBS
 
+/* Define to 1 if libssl and the kerberos libraries need to dlopen()d */
+#cmakedefine DLOPEN_SECURITY_LIBS
+
+/* SO-versioned names for libraries that we may need to dlopen() */
+#cmakedefine LIBCOM_ERR_SO "${LIBCOM_ERR_SO}"
+#cmakedefine LIBKRB5SUPPORT_SO "${LIBKRB5SUPPORT_SO}"
+#cmakedefine LIBK5CRYPTO_SO "${LIBK5CRYPTO_SO}"
+#cmakedefine LIBKRB5_SO "${LIBKRB5_SO}"
+#cmakedefine LIBGSSAPI_KRB5_SO "${LIBGSSAPI_KRB5_SO}"
+#cmakedefine LIBSSL_SO "${LIBSSL_SO}"
+#cmakedefine LIBLTDL_SO "${LIBLTDL_SO}"
+#cmakedefine LIBGLOBUS_COMMON_SO "${LIBGLOBUS_COMMON_SO}"
+#cmakedefine LIBGLOBUS_CALLOUT_SO "${LIBGLOBUS_CALLOUT_SO}"
+#cmakedefine LIBGLOBUS_PROXY_SSL_SO "${LIBGLOBUS_PROXY_SSL_SO}"
+#cmakedefine LIBGLOBUS_OPENSSL_ERROR_SO "${LIBGLOBUS_OPENSSL_ERROR_SO}"
+#cmakedefine LIBGLOBUS_OPENSSL_SO "${LIBGLOBUS_OPENSSL_SO}"
+#cmakedefine LIBGLOBUS_GSI_CERT_UTILS_SO "${LIBGLOBUS_GSI_CERT_UTILS_SO}"
+#cmakedefine LIBGLOBUS_OLDGAA_SO "${LIBGLOBUS_OLDGAA_SO}"
+#cmakedefine LIBGLOBUS_GSI_SYSCONFIG_SO "${LIBGLOBUS_GSI_SYSCONFIG_SO}"
+#cmakedefine LIBGLOBUS_GSI_CALLBACK_SO "${LIBGLOBUS_GSI_CALLBACK_SO}"
+#cmakedefine LIBGLOBUS_GSI_CREDENTIAL_SO "${LIBGLOBUS_GSI_CREDENTIAL_SO}"
+#cmakedefine LIBGLOBUS_GSI_PROXY_CORE_SO "${LIBGLOBUS_GSI_PROXY_CORE_SO}"
+#cmakedefine LIBGLOBUS_GSSAPI_GSI_SO "${LIBGLOBUS_GSSAPI_GSI_SO}"
+#cmakedefine LIBGLOBUS_GSS_ASSIST_SO "${LIBGLOBUS_GSS_ASSIST_SO}"
+#cmakedefine LIBVOMSAPI_SO "${LIBVOMSAPI_SO}"
+
 #endif

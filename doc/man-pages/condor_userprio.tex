@@ -4,8 +4,12 @@
 \index{condor\_userprio command}
 
 \Synopsis \SynProg{\Condor{userprio}}
+\Opt{-help}
+
+\SynProg{\Condor{userprio}}
 \oOptArg{-pool}{centralmanagerhostname[:portnumber]}
 \oOpt{Edit option} $|$ \oOpt{Display options}
+\oOptArg{-inputfile}{filename}
 
 \Description 
 \Condor{userprio} either modifies priority-related information
@@ -59,6 +63,9 @@ specifying an Edit Option requires the ADMINISTRATOR level of access.
 
 \begin{Options}
 
+\OptItem{\Opt{-help}}
+  {Display usage information and exit.}
+
 \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
   {Contact the specified \Arg{centralmanagerhostname} with an
   optional port number, instead of the local central manager. 
@@ -68,6 +75,12 @@ specifying an Edit Option requires the ADMINISTRATOR level of access.
   This is slightly different than most HTCondor tools
   that support a \Opt{-pool} option,
   and instead expect the host name (and port) of the \Condor{collector}.}
+
+\OptItem{\OptArg{-inputfile}{filename}}
+  {Introduced for debugging purposes,
+   read priority information from \Arg{filename}.
+   The contents of \Arg{filename} are expected to be the same as captured
+   output from running a \texttt{condor\_userprio -long} command.}
 
 \OptItem{\OptArg{-delete}{username}}
   {(Edit option) Remove the specified \Arg{username} from HTCondor's accounting.}
@@ -109,6 +122,13 @@ specifying an Edit Option requires the ADMINISTRATOR level of access.
 \OptItem{\Opt{-allusers}}
   {(Display option) Display information for all the users 
   who have some recorded accumulated usage.}
+
+\OptItem{\Opt{-debug[:<opts>]}}
+  {(Display option) Without \Opt{:<opts>} specified, 
+  use configured debug level to send debugging output to \File{stderr}.
+  With \Opt{:<opts>} specified, these options are debug levels that
+  override any configured debug levels for this command's execution
+  to send debugging output to \File{stderr}.}
 
 \OptItem{\Opt{-flat}}
   {(Display option) Display information such that users within hierarchical
