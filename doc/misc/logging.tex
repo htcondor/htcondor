@@ -21,15 +21,67 @@ Listed here are details of the logs, to aid in identification.
   Examples of events are that the job is running,
   that the job  is placed on hold, or that the job completed.
 \item[daemon logs]
+  Each daemon configured to have a log writes events relevant to that daemon.
+  Each event written consists of a timestamp and message.
+  The name of the file is set by the value of configuration variable
+  \Macro{<SUBSYS>\_LOG}, where \MacroNI{<SUBSYS>} is replaced by the name
+  of the daemon.
+  The log is not permitted to grow without bound;
+  log rotation takes place after a configurable maximum size or length of time
+  is encountered.
+  This maximum is specified by configuration variable 
+  \Macro{MAX\_<SUBSYS>\_LOG}.
+
+  Which events are logged for a particular daemon are determined by 
+  the value of configuration variable \Macro{<SUBSYS>\_DEBUG}.
+  The possible values for \MacroNI{<SUBSYS>\_DEBUG} categorize events,
+  such that it is possible to control the level and quantity of events
+  written to the daemon's log.
+
+  Configuration variables that affect daemon logs are 
+  \begin{description}
+  \item [\Macro{MAX\_NUM\_<SUBSYS>\_LOG}] 
+  \item [\Macro{TRUNC\_<SUBSYS>\_LOG\_ON\_OPEN}] 
+  \item [\Macro{<SUBSYS>\_LOG\_KEEP\_OPEN}] 
+  \item [\Macro{<SUBSYS>\_LOCK}] 
+  \item [\Macro{FILE\_LOCK\_VIA\_MUTEX}] 
+  \item [\Macro{TOUCH\_LOG\_INTERVAL}] 
+  \item [\Macro{LOGS\_USE\_TIMESTAMP}] 
+  \end{description}
+
+  Daemon logs are often investigated to accomplish administrative debugging.
+  \Condor{config\_val} can be used to determine the location and file name
+  of the daemon log.
+  For example, to display the location of the log for the \Condor{collector} 
+  daemon, use
+\begin{verbatim}
+  condor_config_val COLLECTOR_LOG
+\end{verbatim}
+
 \item[job queue log]
-  A representation of the current job queue. 
+  The job queue log is a transactional representation of the current job queue. 
+  If the \Condor{schedd} crashes, the job queue can be rebuilt using
+  this log.
   The file name is set by configuration variable \Macro{JOB\_QUEUE\_LOG},
   and defaults to \File{\$(SPOOL)/job\_queue.log}.
+
+  Within the log,
+  each transaction is identified with an integer value and followed where
+  appropriate with other values relevant to the transaction.
+  To reduce the size of the log and remove any transactions that are 
+  no longer relevant,
+  a copy of the log is kept
+  by renaming the log at each time interval defined by configuration variable
+  \MacroNI{QUEUE\_CLEAN\_INTERVAL}, 
+  and then a new log is written with only current and relevant transactions. 
+
   Configuration variables that affect the job queue log are 
   \begin{description}
   \item [\Macro{SCHEDD\_BACKUP\_SPOOL}] 
   \item [\Macro{ROTATE\_HISTORY\_DAILY}] 
   \item [\Macro{ROTATE\_HISTORY\_MONTHLY}] 
+  \item [\Macro{QUEUE\_CLEAN\_INTERVAL}] 
+  \item [\Macro{MAX\_JOB\_QUEUE\_LOG\_ROTATIONS}] 
   \end{description}
 \item[\Condor{schedd} audit log]
   Configuration variables that affect the audit log are 
