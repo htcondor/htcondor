@@ -112,15 +112,8 @@ public:
 			                                use normal interface
 			@returns true on success, false on failure.
 		 */
-#if defined( DEPRECATED_SOCKET_CALLS )
-	bool connect_socketpair(ReliSock &dest,bool use_standard_interface=false);
-#else
 	bool connect_socketpair( ReliSock & dest );
 	bool connect_socketpair( ReliSock & dest, char const * asIfConnectingTo );
-private:
-	bool connect_socketpair_impl( ReliSock & dest, condor_protocol proto, bool isLoopback );
-public:
-#endif /* DEPRECATED_SOCKET_CALLS */
 
     ///
 	ReliSock();
@@ -141,9 +134,6 @@ public:
 	int listen();
     /// FALSE means this is an incoming connection
 	int listen(condor_protocol proto, int port);
-#if defined( DEPRECATED_SOCKET_CALLS )
-	int listen(char *s);
-#endif /* DEPRECATED_SOCKET_CALLS */
 	bool isListenSock() { return _state == sock_special && _special_state == relisock_listen; }
 
     ///
@@ -375,6 +365,9 @@ protected:
 	virtual void setTargetSharedPortID( char const *id );
 	virtual bool sendTargetSharedPortID();
 	char const *getTargetSharedPortID() { return m_target_shared_port_id; }
+
+private:
+	bool connect_socketpair_impl( ReliSock & dest, condor_protocol proto, bool isLoopback );
 };
 
 class BlockingModeGuard {

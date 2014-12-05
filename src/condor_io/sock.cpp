@@ -665,17 +665,6 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 	return FALSE;
 }
 
-#if defined( DEPRECATED_SOCKET_CALLS )
-int Sock::bind(bool outbound, int port, bool loopback)
-{
-	if( ! _who.is_valid() ) {
-		EXCEPT( "Invalid socket address in deprecated call to Sock::bind(); unable to determine protocol, aborting." );
-	}
-
-	return bind( _who.get_protocol(), outbound, port, loopback );
-}
-#endif /* DEPRECATED_SOCKET_CALLS */
-
 int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 {
 	if( proto <= CP_INVALID_MIN || proto >= CP_INVALID_MAX ) {
@@ -813,13 +802,6 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 
 	return TRUE;
 }
-
-#if defined( DEPRECATED_SOCKET_CALLS )
-bool Sock::bind_to_loopback(bool outbound,int port)
-{
-	return bind(outbound,port,true) == TRUE;
-}
-#endif /* DEPRECATED_SOCKET_CALLS */
 
 bool Sock::set_keepalive()
 {

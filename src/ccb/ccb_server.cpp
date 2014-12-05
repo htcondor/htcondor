@@ -476,8 +476,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 	ConvertDefaultIPToSocketIP( ATTR_MY_ADDRESS, exprString, * stream );
 	std::string rewrittenAddress = exprString.substr( strlen( ATTR_MY_ADDRESS ) + 5 );
 	rewrittenAddress.resize( rewrittenAddress.size() - 2 );
-//	dprintf( D_NETWORK | D_FULLDEBUG, "Will send %s instead of %s to CCB client %s.\n", rewrittenAddress.c_str(), m_address.Value(), sock->my_ip_str() );
-	dprintf( D_ALWAYS, "Will send %s instead of %s to CCB client %s.\n", rewrittenAddress.c_str(), m_address.Value(), sock->my_ip_str() );
+	dprintf( D_NETWORK | D_VERBOSE, "Will send %s instead of %s to CCB client %s.\n", rewrittenAddress.c_str(), m_address.Value(), sock->my_ip_str() );
 	CCBIDToContactString( rewrittenAddress.c_str(), target->getCCBID(), ccb_contact );
 
 	CCBIDToString( reconnect_info->getReconnectCookie(),reconnect_cookie_str );

@@ -150,15 +150,6 @@ int ReliSock::listen(condor_protocol proto, int port)
 	return listen();
 }
 
-#if defined( DEPRECATED_SOCKET_CALLS )
-int ReliSock::listen(char *s)
-{
-	if (!bind(false, s))
-		return FALSE;
-	return listen();
-}
-#endif /* DEPRECATED_SOCKET_CALLS */
-
 int 
 ReliSock::accept( ReliSock	&c )
 {
@@ -1228,55 +1219,6 @@ ReliSock::authenticate(const char* methods, CondorError* errstack, int auth_time
 	return perform_authenticate(false,key,methods,errstack,auth_timeout,non_blocking,NULL);
 }
 
-#if defined( DEPRECATED_SOCKET_CALLS )
-
-bool
-ReliSock::connect_socketpair(ReliSock &sock,bool use_standard_interface)
-{
-	ReliSock tmp_srv;
-
-	if( use_standard_interface ) {
-		if( !bind(false) ) {
-			dprintf(D_ALWAYS, "connect_socketpair: failed in bind()\n");
-			return false;
-		}
-	}
-	else if( !bind_to_loopback(false) ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in bind_to_loopback()\n");
-		return false;
-	}
-
-	if( use_standard_interface ) {
-		if( !tmp_srv.bind(false) ) {
-			dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.bind()\n");
-			return false;
-		}
-	}
-	else if( !tmp_srv.bind_to_loopback(false) ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.bind_to_loopback()\n");
-		return false;
-	}
-
-	if( !tmp_srv.listen() ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.listen()\n");
-		return false;
-	}
-
-	if( !connect(tmp_srv.my_ip_str(),tmp_srv.get_port()) ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.get_port()\n");
-		return false;
-	}
-
-	if( !tmp_srv.accept( sock ) ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.accept()\n");
-		return false;
-	}
-
-	return true;
-}
-
-#else
-
 bool
 ReliSock::connect_socketpair_impl( ReliSock & sock, condor_protocol proto, bool isLoopback ) {
 	if( ! bind( proto, false, 0, isLoopback ) ) {
@@ -1330,8 +1272,6 @@ ReliSock::connect_socketpair( ReliSock & sock ) {
 
 	return connect_socketpair_impl( sock, proto, true );
 }
-
-#endif /* DEPRECATED_SOCKET_CALLS */
 
 void
 ReliSock::enter_reverse_connecting_state()

@@ -160,12 +160,6 @@ public:
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
 
-#if defined( DEPRECATED_SOCKET_CALLS )
-	int bind(bool outbound, int port=0, bool loopback=false);
-	inline int bind(bool outbound, char *s) { return bind(outbound, getportbyserv(s)); }
-	bool bind_to_loopback(bool outbound=false, int port=0);
-#endif /* DEPRECATED_SOCKET_CALLS */
-
 	int bind(condor_protocol proto, bool outbound, int port, bool loopback);
 
     int setsockopt(int, int, const void*, int);
