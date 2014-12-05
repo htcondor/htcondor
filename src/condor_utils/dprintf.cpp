@@ -1840,6 +1840,7 @@ dprintf_wrapup_fork_child( ) {
 		   safe to close the lock file.  If parent closes all
 		   fds anyway, then this is redundant.
 		*/
+	DebugRotateLog = true;
 	if( LockFd >= 0 ) {
 		close( LockFd );
 		LockFd = -1;
