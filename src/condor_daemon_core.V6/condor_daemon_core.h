@@ -1711,6 +1711,8 @@ class DaemonCore : public Service
 #ifdef HAVE_CLONE
 	bool m_use_clone_to_create_processes;
 	bool UseCloneToCreateProcesses() { return m_use_clone_to_create_processes; }
+#else
+	bool UseCloneToCreateProcesses() { return false; }
 #endif
 
 	void Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking);

@@ -5706,7 +5706,8 @@ void CreateProcessForkit::exec() {
 
 		// make sure we're not going to try to share the lock file
 		// with our parent (if it's been defined).
-	dprintf_init_fork_child();
+	bool cloned = daemonCore->UseCloneToCreateProcesses();
+	dprintf_init_fork_child( cloned );
 
 		// close the read end of our error pipe and set the
 		// close-on-exec flag on the write end
@@ -6225,7 +6226,7 @@ void CreateProcessForkit::exec() {
 		// once again, make sure that if the dprintf code opened a
 		// lock file and has an fd, that we close it before we
 		// exec() so we don't leak it.
-	dprintf_wrapup_fork_child();
+	dprintf_wrapup_fork_child( cloned );
 
 	bool found;
 	for ( int j=3 ; j < openfds ; j++ ) {
