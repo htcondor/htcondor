@@ -779,7 +779,7 @@ doContactSchedd()
 					// the matched ad.
 					delete next_ad;
 					next_ad = NULL;
-					next_ad = GetJobAd(procID.cluster,procID.proc);
+					next_ad = GetJobAd_as_ClassAd(procID.cluster,procID.proc);
 					if ( next_ad == NULL && errno == ETIMEDOUT ) {
 						failure_line_num = __LINE__;
 						commit_transaction = false;

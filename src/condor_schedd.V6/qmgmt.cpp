@@ -67,9 +67,74 @@
 #include <grp.h>
 #endif
 
-typedef GenericClassAdCollection<JobQueueKey, const char*,JobQueuePayload> JobQueueType;
-#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+// Do filtered iteration in a way that is specific to the job queue
+//
+template <typename K, typename AltK, typename AD>
+typename ClassAdLog<K,AltK,AD>::filter_iterator
+ClassAdLog<K,AltK,AD>::filter_iterator::operator++(int)
+{
+	m_found_ad = false;
+	typename ClassAdLog<K,AltK,AD>::filter_iterator cur = *this;
+	if (m_done) {
+		return cur;
+	}
+
+	HashIterator<K, AD> end = m_table->end();
+	bool boolVal;
+	int intVal;
+	int miss_count = 0;
+	Stopwatch sw;
+	sw.start();
+	while (!(m_cur == end))
+	{
+		miss_count++;
+			// 500 was chosen here based on a queue of 1M jobs and
+			// estimated 30ns per clock_gettime call - resulting in
+			// an overhead of 0.06 ms from the timing calls to iterate
+			// through a whole queue.  Compared to the cost of doing
+			// the rest of the iteration (6ms per 10k ads, or 600ms)
+			// for the whole queue, I consider this overhead
+			// acceptable.  BB, 09/2014.
+		if ((miss_count % 500 == 0) && (sw.get_ms() > m_timeslice_ms)) {break;}
+
+		cur = *this;
+		ClassAd *tmp_ad = (*m_cur++).second;
+		if (!tmp_ad) continue;
+		if (m_requirements) {
+			classad::ExprTree &requirements = *const_cast<classad::ExprTree*>(m_requirements);
+			const classad::ClassAd *old_scope = requirements.GetParentScope();
+			requirements.SetParentScope( tmp_ad );
+			classad::Value result;
+			int retval = requirements.Evaluate(result);
+			requirements.SetParentScope(old_scope);
+			if (!retval) {
+				dprintf(D_FULLDEBUG, "Unable to evaluate ad.\n");
+				continue;
+			}
+
+			if (!(result.IsBooleanValue(boolVal) && boolVal) &&
+					!(result.IsIntegerValue(intVal) && intVal)) {
+				continue;
+			}
+		}
+		int tmp_int;
+		if (!tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, tmp_int) || !tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, tmp_int)) {
+			continue;
+		}
+		cur.m_found_ad = true;
+		m_found_ad = true;
+		break;
+	}
+	if ((m_cur == end) && (!m_found_ad)) {
+		m_done = true;
+	}
+	return cur;
+}
+
 // force instantiation of the template types needed by the JobQueue
+typedef GenericClassAdCollection<JobQueueKey, const char*,JobQueuePayload> JobQueueType;
+template class ClassAdLog<JobQueueKey,const char*,JobQueuePayload>;
+#if 0 //def USE_JOB_QUEUE_JOB
 template class ClassAdLog<JOB_ID_KEY,const char*,JobQueuePayload>;
 template class GenericClassAdCollection<JOB_ID_KEY,const char*,JobQueuePayload>;
 #endif
@@ -138,7 +203,7 @@ HashTable<int,int> *PrioRecAutoClusterRejected = NULL;
 
 static int 	MAX_PRIO_REC=INITIAL_MAX_PRIO_REC ;	// INITIAL_MAX_* in prio_rec.h
 
-const char HeaderKey[] = "0.0";
+JOB_ID_KEY_BUF HeaderKey(0,0);
 
 ForkWork schedd_forker;
 
@@ -169,6 +234,8 @@ static const char *default_super_user =
 	"root";
 #endif
 
+
+
 //static int allow_remote_submit = FALSE;
 JobQueueLogType::filter_iterator
 GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms)
@@ -184,12 +251,42 @@ GetJobQueueIteratorEnd()
 
 static inline
 void
-IdToStr(int cluster, int proc, char *buf)
+DeadIdToStr(int cluster, int proc, char *buf)
 {
 	ProcIdToStr(cluster,proc,buf);
 }
 
-static
+#ifdef USE_JOB_QUEUE_JOB
+typedef JOB_ID_KEY_BUF JobQueueKeyBuf;
+static inline JobQueueKey& IdToKey(int cluster, int proc, JobQueueKey& key)
+{
+	key.cluster = cluster;
+	key.proc = proc;
+	return key;
+}
+typedef char JobQueueKeyStrBuf[PROC_ID_STR_BUFLEN];
+static inline const char * KeyToStr(const JobQueueKey& key, JobQueueKeyStrBuf& buf) {
+	ProcIdToStr(key.cluster, key.proc, buf);
+	return buf;
+}
+static inline const JobQueueKey& StrToKey(const char * job_id_str, JobQueueKey& key) {
+	StrToProcId(job_id_str, key.cluster, key.proc);
+	return key;
+}
+#else
+typedef char JobQueueKeyBuf[PROC_ID_STR_BUFLEN];
+const char * IdToKey(int cluster, int proc, JobQueueKeyBuf& buf)
+{
+	ProcIdToStr(cluster,proc,buf);
+	return buf;
+}
+typedef char JobQueueKeyStrBuf;
+static inline const char * KeyToStr(const JobQueueKey& key, JobQueueKeyStrBuf& buf) {
+	return key;
+}
+#endif
+
+static inline
 void
 StrToId(const char *str,int & cluster,int & proc)
 {
@@ -202,10 +299,11 @@ static
 void
 KeyToId(JobQueueKey &key,int & cluster,int & proc)
 {
-#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+#ifdef USE_JOB_QUEUE_JOB
 	cluster = key.cluster;
 	proc = key.proc;
 #else
+	const char * str = key.value();
 	if( !StrToProcId(str,cluster,proc) ) {
 		EXCEPT("Qmgmt: Malformed key - '%s'",str);
 	}
@@ -216,8 +314,8 @@ static
 void
 ClusterCleanup(int cluster_id)
 {
-	char key[PROC_ID_STR_BUFLEN];
-	IdToStr(cluster_id,-1,key);
+	JobQueueKeyBuf key;
+	IdToKey(cluster_id,-1,key);
 
 	// pull out the owner and hash used for ickpt sharing
 	MyString hash;
@@ -905,7 +1003,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	int 	cluster_num, cluster, proc, universe;
 	int		stored_cluster_num;
 	bool	CreatedAd = false;
-	char	cluster_str[PROC_ID_STR_BUFLEN];
+	JobQueueKeyBuf cluster_key;
 	MyString	owner;
 	MyString	user;
 	MyString	correct_user;
@@ -916,10 +1014,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 	if (!JobQueue->LookupClassAd(HeaderKey, ad)) {
 		// we failed to find header ad, so create one
-//		LogNewClassAd *log = new LogNewClassAd(HeaderKey, JOB_ADTYPE,
-//											   STARTD_ADTYPE);
-//		JobQueue->AppendLog(log);
-		JobQueue->NewClassAd(HeaderKey, JOB_ADTYPE, STARTD_ADTYPE);
+		JobQueue->NewClassAd(HeaderKey.c_str(), JOB_ADTYPE, STARTD_ADTYPE);
 		CreatedAd = true;
 	}
 
@@ -946,7 +1041,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	next_cluster_num = cluster_initial_val;
 	JobQueue->StartIterateAllClassAds();
 	while (JobQueue->IterateAllClassAds(ad,key)) {
-	#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+	#ifdef USE_JOB_QUEUE_JOB
 		cluster_num = key.cluster;
 		if ( key.cluster <= 0 || key.proc < 0 ) continue;  // skip cluster & header ads
 		else {
@@ -964,8 +1059,8 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			}
 
 			// link all proc ads to their cluster ad, if there is one
-			IdToStr(cluster_num,-1,cluster_str);
-			if ( JobQueue->LookupClassAd(cluster_str,clusterad) ) {
+			IdToKey(cluster_num,-1,cluster_key);
+			if ( JobQueue->LookupClassAd(cluster_key,clusterad) ) {
 				ad->ChainToAd(clusterad);
 			}
 
@@ -1173,12 +1268,9 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
     }
 
 	if ( stored_cluster_num == 0 ) {
-		snprintf(cluster_str, PROC_ID_STR_BUFLEN, "%d", next_cluster_num);
-//		LogSetAttribute *log = new LogSetAttribute(HeaderKey,
-//												   ATTR_NEXT_CLUSTER_NUM,
-//												   cluster_str);
-//		JobQueue->AppendLog(log);
-		JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
+		char tmp[PROC_ID_STR_BUFLEN];
+		snprintf(tmp, sizeof(tmp), "%d", next_cluster_num);
+		JobQueue->SetAttribute(HeaderKey.c_str(), ATTR_NEXT_CLUSTER_NUM, tmp);
 	} else {
         // This sanity check is not applicable if a maximum cluster value was set,  
         // since in that case wrapped cluster-ids are a valid condition.
@@ -1425,14 +1517,14 @@ QmgmtSetEffectiveOwner(char const *o)
 bool
 OwnerCheck(int cluster_id,int proc_id)
 {
-	char				key[PROC_ID_STR_BUFLEN];
 	ClassAd				*ad = NULL;
 
 	if (!Q_SOCK) {
 		return 0;
 	}
 
-	IdToStr(cluster_id,proc_id,key);
+	JobQueueKeyBuf key;
+	IdToKey(cluster_id,proc_id,key);
 	if (!JobQueue->LookupClassAd(key, ad)) {
 		return 0;
 	}
@@ -1800,8 +1892,6 @@ InitializeConnection( const char *  /*owner*/, const char *  /*domain*/ )
 int
 NewCluster()
 {
-//	LogSetAttribute *log;
-	char cluster_str[PROC_ID_STR_BUFLEN];
 
 	if( Q_SOCK && !OwnerCheck(NULL, Q_SOCK->getOwner()  ) ) {
 		dprintf( D_FULLDEBUG, "NewCluser(): OwnerCheck failed\n" );
@@ -1834,23 +1924,22 @@ NewCluster()
     }
 
     // check for collision with an existing cluster id
-    char test_cluster_key[PROC_ID_STR_BUFLEN];
+    JobQueueKeyBuf test_cluster_key;
     ClassAd* test_cluster_ad;
-	IdToStr(active_cluster_num,-1,test_cluster_key);
+    IdToKey(active_cluster_num,-1,test_cluster_key);
     if (JobQueue->LookupClassAd(test_cluster_key, test_cluster_ad)) {
         dprintf(D_ALWAYS, "NewCluster(): collision with existing cluster id %d\n", active_cluster_num);
         return -3;
     }
 
-	snprintf(cluster_str, PROC_ID_STR_BUFLEN, "%d", next_cluster_num);
-//	log = new LogSetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
-//	JobQueue->AppendLog(log);
-	JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
+	char cluster_str[PROC_ID_STR_BUFLEN];
+	snprintf(cluster_str, sizeof(cluster_str), "%d", next_cluster_num);
+	JobQueue->SetAttribute(HeaderKey.c_str(), ATTR_NEXT_CLUSTER_NUM, cluster_str);
 
 	// put a new classad in the transaction log to serve as the cluster ad
-	char cluster_key[PROC_ID_STR_BUFLEN];
-	IdToStr(active_cluster_num,-1,cluster_key);
-	JobQueue->NewClassAd(cluster_key, JOB_ADTYPE, STARTD_ADTYPE);
+	JobQueueKeyBuf cluster_key;
+	IdToKey(active_cluster_num,-1,cluster_key);
+	JobQueue->NewClassAd(cluster_key.c_str(), JOB_ADTYPE, STARTD_ADTYPE);
 
 	return active_cluster_num;
 }
@@ -1860,8 +1949,7 @@ int
 NewProc(int cluster_id)
 {
 	int				proc_id;
-	char			key[PROC_ID_STR_BUFLEN];
-//	LogNewClassAd	*log;
+	JobQueueKeyBuf	key;
 
 	if( Q_SOCK && !OwnerCheck(NULL, Q_SOCK->getOwner() ) ) {
 		return -1;
@@ -1881,10 +1969,8 @@ NewProc(int cluster_id)
 	}
 
 	proc_id = next_proc_num++;
-	IdToStr(cluster_id,proc_id,key);
-//	log = new LogNewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
-//	JobQueue->AppendLog(log);
-	JobQueue->NewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
+	IdToKey(cluster_id,proc_id,key);
+	JobQueue->NewClassAd(key.c_str(), JOB_ADTYPE, STARTD_ADTYPE);
 
 	IncrementClusterSize(cluster_id);
     job_queued_count += 1;
@@ -1906,7 +1992,7 @@ NewProc(int cluster_id)
 		gjid += now;
 	}
 	gjid += "\"";
-	JobQueue->SetAttribute( key, ATTR_GLOBAL_JOB_ID, gjid.Value() );
+	JobQueue->SetAttribute(key.c_str(), ATTR_GLOBAL_JOB_ID, gjid.Value());
 
 	return proc_id;
 }
@@ -1915,10 +2001,10 @@ int 	DestroyMyProxyPassword (int cluster_id, int proc_id);
 
 int DestroyProc(int cluster_id, int proc_id)
 {
-	char				key[PROC_ID_STR_BUFLEN];
+	JobQueueKeyBuf		key;
 	ClassAd				*ad = NULL;
 
-	IdToStr(cluster_id,proc_id,key);
+	IdToKey(cluster_id,proc_id,key);
 	if (!JobQueue->LookupClassAd(key, ad)) {
 		return DESTROYPROC_ENOENT;
 	}
@@ -1955,7 +2041,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	int leave_job_in_q = 0;
 	{
 		ClassAd completeAd(*ad);
-		JobQueue->AddAttrsFromTransaction(key,completeAd);
+		JobQueue->AddAttrsFromTransaction(key.c_str(),completeAd);
 		completeAd.EvalBool(ATTR_JOB_LEAVE_IN_QUEUE,NULL,leave_job_in_q);
 		if ( leave_job_in_q ) {
 			return DESTROYPROC_SUCCESS_DELAY;
@@ -2018,7 +2104,7 @@ int DestroyProc(int cluster_id, int proc_id)
 			// job cluster, since that's going to really confuse the
 			// shadow.
 		ClassAd *otherAd = NULL;
-		char	otherKey[PROC_ID_STR_BUFLEN];
+		JobQueueKeyBuf otherKey;
 		int otherProc = -1;
 
 		bool stillLooking = true;
@@ -2026,7 +2112,7 @@ int DestroyProc(int cluster_id, int proc_id)
 			otherProc++;
 			if (otherProc == proc_id) continue; // skip this proc
 
-			IdToStr(cluster_id,otherProc,otherKey);
+			IdToKey(cluster_id,otherProc,otherKey);
 			if (!JobQueue->LookupClassAd(otherKey, otherAd)) {
 				stillLooking = false;
 			} else {
@@ -2204,8 +2290,7 @@ int
 SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			 const char *attr_value, SetAttributeFlags_t flags)
 {
-//	LogSetAttribute	*log;
-	char			key[PROC_ID_STR_BUFLEN];
+	JOB_ID_KEY_BUF key;
 	ClassAd			*ad = NULL;
 	MyString		new_value;
 
@@ -2232,7 +2317,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		return -1;
 	}
 
-	IdToStr(cluster_id,proc_id,key);
+	IdToKey(cluster_id,proc_id,key);
 
 	if (JobQueue->LookupClassAd(key, ad)) {
 		if ( Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
@@ -2511,7 +2596,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// first, store the actual value
 			MyString raw_attribute = attr_name;
 			raw_attribute += "_RAW";
-			JobQueue->SetAttribute(key, raw_attribute.Value(), attr_value, flags & SETDIRTY);
+			JobQueue->SetAttribute(key.c_str(), raw_attribute.Value(), attr_value, flags & SETDIRTY);
 			if( flags & SHOULDLOG ) {
 				char* old_val = NULL;
 				ExprTree *ltree;
@@ -2519,7 +2604,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				if( ltree ) {
 					old_val = const_cast<char*>(ExprTreeToString(ltree));
 				}
-				scheduler.WriteAttrChangeToUserLog(key, raw_attribute.Value(), attr_value, old_val);
+				scheduler.WriteAttrChangeToUserLog(key.c_str(), raw_attribute.Value(), attr_value, old_val);
 			}
 
 			int ivalue;
@@ -2616,7 +2701,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		old_nondurable_level = JobQueue->IncNondurableCommitLevel();
 	}
 
-	JobQueue->SetAttribute(key, attr_name, attr_value, flags & SETDIRTY);
+	JobQueue->SetAttribute(key.c_str(), attr_name, attr_value, flags & SETDIRTY);
 	if( flags & SHOULDLOG ) {
 		char* old_val = NULL;
 		ExprTree *tree;
@@ -2624,7 +2709,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		if( tree ) {
 			old_val = const_cast<char*>(ExprTreeToString(tree));
 		}
-		scheduler.WriteAttrChangeToUserLog(key, attr_name, attr_value, old_val);
+		scheduler.WriteAttrChangeToUserLog(key.c_str(), attr_name, attr_value, old_val);
 	}
 
 	int status;
@@ -2647,10 +2732,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( ad ) ) ) ) {
 
 		// Add the key to list of dirty classads
-		if( ! DirtyJobIDs.contains( key ) &&
-			SendDirtyJobAdNotification( key ) ) {
+		if( ! DirtyJobIDs.contains( key.c_str() ) &&
+			SendDirtyJobAdNotification( (PROC_ID)key ) ) {
 
-			DirtyJobIDs.append( key );
+			DirtyJobIDs.append( key.c_str() );
 
 			// Start timer to ensure notice is confirmed
 			if( dirty_notice_timer_id <= 0 ) {
@@ -2670,12 +2755,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 }
 
 bool
-SendDirtyJobAdNotification(char *job_id_str)
+SendDirtyJobAdNotification(const PROC_ID & job_id)
 {
-	PROC_ID job_id;
 	int pid = -1;
 
-	StrToId(job_id_str, job_id.cluster, job_id.proc);
 	shadow_rec *srec = scheduler.FindSrecByProcID(job_id);
 	if( srec ) {
 		pid = srec->pid;
@@ -2700,18 +2783,19 @@ SendDirtyJobAdNotification(char *job_id_str)
 void
 PeriodicDirtyAttributeNotification()
 {
-	char	*job_id;
+	char	*job_id_str;
 
 	DirtyPidsSignaled.clear();
 
 	DirtyJobIDs.rewind();
-	while( (job_id = DirtyJobIDs.next()) != NULL ) {
-		if ( SendDirtyJobAdNotification(job_id) == false ) {
+	while( (job_id_str = DirtyJobIDs.next()) != NULL ) {
+		JOB_ID_KEY key(job_id_str);
+		if ( SendDirtyJobAdNotification(key) == false ) {
 			// There's no shadow/gridmanager for this job.
 			// Mark it clean and remove it from the dirty list.
 			// We can't call MarkJobClean() here, as that would
 			// disrupt our traversal of DirtyJobIDs.
-			JobQueue->ClearClassAdDirtyBits(job_id);
+			JobQueue->ClearClassAdDirtyBits(key);
 			DirtyJobIDs.deleteCurrent();
 		}
 	}
@@ -2988,9 +3072,8 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 	// Also, if EVENT_LOG is defined in condor_config, we will write
 	// submit events into the EVENT_LOG here.
 	if ( !new_ad_keys.empty() ) {
-		int cluster_id;
+		JobQueueKeyBuf job_id;
 		int old_cluster_id = -10;
-		int proc_id;
 		ClassAd *procad = NULL;
 		ClassAd *clusterad = NULL;
 
@@ -2999,29 +3082,30 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 		std::list<std::string>::iterator it;
 		for( it = new_ad_keys.begin(); it != new_ad_keys.end(); it++ ) {
 			++counter;
-			char const *key = it->c_str();
-			StrToId(key,cluster_id,proc_id);
+
+			job_id.set(it->c_str());
+
 			// do we want to fsync the userLog?
 			bool doFsync = false;
-			if( proc_id == -1 ) {
+			if( job_id.proc == -1 ) {
 				continue; // skip over cluster ads
 			}
 			// we want to fsync per cluster and on the last ad
 			if ( old_cluster_id == -10 ) {
-				old_cluster_id = cluster_id;
+				old_cluster_id = job_id.cluster;
 			}
-			if ( old_cluster_id != cluster_id || counter == ad_keys_size ) {
+			if ( old_cluster_id != job_id.cluster || counter == ad_keys_size ) {
 				doFsync = true;
-				old_cluster_id = cluster_id;
+				old_cluster_id = job_id.cluster;
 			}
 
-			char cluster_key[PROC_ID_STR_BUFLEN];
-			IdToStr(cluster_id,-1,cluster_key);
+			JobQueueKeyBuf cluster_key;
+			IdToKey(job_id.cluster,-1,cluster_key);
 
 			if ( JobQueue->LookupClassAd(cluster_key, clusterad) &&
-				 JobQueue->LookupClassAd(key,procad))
+				 JobQueue->LookupClassAd(job_id,procad))
 			{
-				dprintf(D_FULLDEBUG,"New job: %s\n",key);
+				dprintf(D_FULLDEBUG,"New job: %s\n",job_id.c_str());
 
 					// chain proc ads to cluster ad
 				procad->ChainToAd(clusterad);
@@ -3038,7 +3122,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 				procad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_code);
 				if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE_SpoolingInput ) {
 					JobQueue->BeginTransaction();
-					rewriteSpooledJobAd(procad, cluster_id, proc_id, false);
+					rewriteSpooledJobAd(procad, job_id.cluster, job_id.proc, false);
 					JobQueue->CommitNondurableTransaction();
 					ScheduleJobQueueLogFlush();
 					SpooledJobFiles::createJobSpoolDirectory(procad,PRIV_UNKNOWN);
@@ -3051,9 +3135,9 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 					// they are responsible for writing the submit event
 					// to the user log.
 					if ( vers.built_since_version( 7, 5, 4 ) ) {
-						PROC_ID job_id;
-						job_id.cluster = cluster_id;
-						job_id.proc = proc_id;
+						//PROC_ID job_id = key;
+						//job_id.cluster = cluster_id;
+						//job_id.proc = proc_id;
 						scheduler.WriteSubmitToUserLog( job_id, doFsync );
 					}
 				}
@@ -3062,8 +3146,8 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 				iDup = procad->PruneChildAd();
 				iTotal = procad->size();
 				
-				dprintf(D_FULLDEBUG,"New job: %s, Duplicate Keys: %d, Total Keys: %d \n",key, iDup, iTotal);
-			}	
+				dprintf(D_FULLDEBUG,"New job: %s, Duplicate Keys: %d, Total Keys: %d \n", job_id.c_str(), iDup, iTotal);
+			}
 
 			int max_xfer_input_mb = -1;
 			param_integer("MAX_TRANSFER_INPUT_MB",max_xfer_input_mb,true,-1,false,INT_MIN,INT_MAX,procad);
@@ -3079,7 +3163,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 						formatstr(hold_reason,"%s (%d) is greater than %s (%d) at submit time",
 								  ATTR_TRANSFER_INPUT_SIZE_MB, (int)xfer_input_size_mb,
 								  "MAX_TRANSFER_INPUT_MB", (int)max_xfer_input_mb);
-						holdJob(cluster_id,proc_id,hold_reason.c_str(),
+						holdJob(job_id.cluster, job_id.proc, hold_reason.c_str(),
 								CONDOR_HOLD_CODE_MaxTransferInputSizeExceeded, 0);
 					}
 				}
@@ -3124,7 +3208,7 @@ AbortTransactionAndRecomputeClusters()
 		int cluster_num;
 		JobQueue->StartIterateAllClassAds();
 		while (JobQueue->IterateAllClassAds(ad,key)) {
-		#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+		#ifdef USE_JOB_QUEUE_JOB
 			cluster_num = key.cluster;
 			if ( ! cluster_num) continue;  // skip cluster & header ads
 			else {
@@ -3152,12 +3236,12 @@ int
 GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val)
 {
 	ClassAd	*ad;
-	char	key[PROC_ID_STR_BUFLEN];
+	JobQueueKeyBuf	key;
 	char	*attr_val;
 
-	IdToStr(cluster_id,proc_id,key);
+	IdToKey(cluster_id,proc_id,key);
 
-	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
+	if( JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
 		ClassAd tmp_ad;
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
@@ -3180,12 +3264,12 @@ int
 GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 {
 	ClassAd	*ad;
-	char	key[PROC_ID_STR_BUFLEN];
+	JobQueueKeyBuf key;
 	char	*attr_val;
 
-	IdToStr(cluster_id,proc_id,key);
+	IdToKey(cluster_id,proc_id,key);
 
-	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
+	if( JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
 		ClassAd tmp_ad;
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
@@ -3208,12 +3292,12 @@ int
 GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, int *val)
 {
 	ClassAd	*ad;
-	char	key[PROC_ID_STR_BUFLEN];
+	JobQueueKeyBuf key;
 	char	*attr_val;
 
-	IdToStr(cluster_id,proc_id,key);
+	IdToKey(cluster_id,proc_id,key);
 
-	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
+	if( JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
 		ClassAd tmp_ad;
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
@@ -3240,14 +3324,14 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 					   char **val )
 {
 	ClassAd	*ad;
-	char	key[PROC_ID_STR_BUFLEN];
+	JobQueueKeyBuf key;
 	char	*attr_val;
 
 	*val = NULL;
 
-	IdToStr(cluster_id,proc_id,key);
+	IdToKey(cluster_id,proc_id,key);
 
-	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
+	if( JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
 		ClassAd tmp_ad;
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
@@ -3275,12 +3359,12 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 					MyString &val )
 {
 	ClassAd	*ad = NULL;
-	char	key[PROC_ID_STR_BUFLEN];
 	char	*attr_val;
 
-	IdToStr(cluster_id,proc_id,key);
+	JobQueueKeyBuf key;
+	IdToKey(cluster_id,proc_id,key);
 
-	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
+	if( JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
 		ClassAd tmp_ad;
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
@@ -3307,15 +3391,15 @@ int
 GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **val)
 {
 	ClassAd		*ad;
-	char		key[PROC_ID_STR_BUFLEN];
 	ExprTree	*tree;
 	char		*attr_val;
 
 	*val = NULL;
 
-	IdToStr(cluster_id,proc_id,key);
+	JobQueueKeyBuf key;
+	IdToKey(cluster_id,proc_id,key);
 
-	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
+	if( JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
 		*val = attr_val;
 		return 1;
 	}
@@ -3339,12 +3423,12 @@ int
 GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 {
 	ClassAd 	*ad = NULL;
-	char		key[PROC_ID_STR_BUFLEN];
 	char		*val;
 	const char	*name;
 	ExprTree 	*expr;
 
-	IdToStr(cluster_id,proc_id,key);
+	JobQueueKeyBuf key;
+	IdToKey(cluster_id,proc_id,key);
 
 	if(!JobQueue->LookupClassAd(key, ad)) {
 		return -1;
@@ -3355,7 +3439,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 	{
 		if(!ClassAdAttributeIsPrivate(name))
 		{
-			if(!JobQueue->LookupInTransaction(key, name, val) )
+			if(!JobQueue->LookupInTransaction(key.c_str(), name, val) )
 			{
 				ExprTree * pTree = expr->Copy();
 				updated_attrs->Insert(name, pTree, false);
@@ -3376,14 +3460,13 @@ int
 DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 {
 	ClassAd				*ad = NULL;
-	char				key[PROC_ID_STR_BUFLEN];
-//	LogDeleteAttribute	*log;
 	char				*attr_val = NULL;
 
-	IdToStr(cluster_id,proc_id,key);
+	JobQueueKeyBuf key;
+	IdToKey(cluster_id,proc_id,key);
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
-		if( ! JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
+		if( ! JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val) ) {
 			return -1;
 		}
 	}
@@ -3400,9 +3483,7 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 		return -1;
 	}
 
-//	log = new LogDeleteAttribute(key, attr_name);
-//	JobQueue->AppendLog(log);
-	JobQueue->DeleteAttribute(key, attr_name);
+	JobQueue->DeleteAttribute(key.c_str(), attr_name);
 
 	JobQueueDirty = true;
 
@@ -3410,25 +3491,11 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 }
 
 void
-MarkJobClean(PROC_ID job_id)
+MarkJobClean(PROC_ID proc_id)
 {
-
-	MarkJobClean(job_id.cluster, job_id.proc);
-}
-
-void
-MarkJobClean(int cluster_id, int proc_id)
-{
-	char	key[PROC_ID_STR_BUFLEN];
-
-	IdToStr(cluster_id,proc_id,key);
-	MarkJobClean(key);
-}
-
-void
-MarkJobClean(const char* job_id_str)
-{
-	if(JobQueue->ClearClassAdDirtyBits(job_id_str))
+	JobQueueKeyBuf job_id(proc_id);
+	const char * job_id_str = job_id.c_str();
+	if (JobQueue->ClearClassAdDirtyBits(job_id))
 	{
 		dprintf(D_FULLDEBUG, "Cleared dirty attributes for job %s\n", job_id_str);
 	}
@@ -3441,6 +3508,20 @@ MarkJobClean(const char* job_id_str)
 		daemonCore->Cancel_Timer(dirty_notice_timer_id);
 		dirty_notice_timer_id = -1;
 	}
+}
+
+void
+MarkJobClean(const char* job_id_str)
+{
+	JobQueueKeyBuf key(job_id_str);
+	MarkJobClean(key.id());
+}
+
+void
+MarkJobClean(int cluster_id, int proc_id)
+{
+	PROC_ID key = {cluster_id, proc_id};
+	MarkJobClean(key);
 }
 
 ClassAd *
@@ -4207,75 +4288,88 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 // Rather than worry about symbol collision with libcondorutils, do the link
 // to the schedd's GetJobAd() statically here and export a different name.
 ClassAd * ScheddGetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions) {
-	return GetJobAd( cluster_id, proc_id, expStartdAd, persist_expansions );
+	return GetJobAd_as_ClassAd( cluster_id, proc_id, expStartdAd, persist_expansions );
 }
 
-ClassAd *
-GetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions)
+JobQueueJob *
+GetJobAd(const PROC_ID &job_id)
 {
-	char	key[PROC_ID_STR_BUFLEN];
-	ClassAd	*ad = NULL;
-
-	IdToStr(cluster_id,proc_id,key);
-	if (JobQueue && JobQueue->LookupClassAd(key, ad)) {
-		if ( !expStartdAd ) {
-			// we're done, return the ad.
-			return ad;
-		}
-
-		ClassAd *startd_ad = NULL;
-		PROC_ID job_id;
-		job_id.cluster = cluster_id;
-		job_id.proc = proc_id;
-
-		// find the startd ad.  this is done differently if the job
-		// is a globus universe jobs or not.
-		int	job_universe = -1;
-		ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
-		if ( job_universe == CONDOR_UNIVERSE_GRID ) {
-			// Globus job... find "startd ad" via our simple
-			// hash table.
-			scheduler.resourcesByProcID->lookup(job_id,startd_ad);
-		} else {
-			// Not a Globus job... find startd ad via the match rec
-			match_rec *mrec;
-			if ((job_universe == CONDOR_UNIVERSE_PARALLEL) ||
-				(job_universe == CONDOR_UNIVERSE_MPI)) {
-			 	mrec = dedicated_scheduler.FindMRecByJobID( job_id );
-			} else {
-			 	mrec = scheduler.FindMrecByJobID( job_id );
-			}
-
-			if( mrec ) {
-				startd_ad = mrec->my_match_ad;
-			} else {
-				// no match rec, probably a local universe type job.
-				// set startd_ad to NULL and continue on - after all,
-				// the expression we are expanding may not even reference
-				// a startd attribute.
-				startd_ad = NULL;
-			}
-			
-		}
-
-		return dollarDollarExpand(cluster_id, proc_id, ad, startd_ad, persist_expansions);
-
-	} else {
-		// we could not find this job ad
-		return NULL;
+	JobQueueJob	*job = NULL;
+	if (JobQueue && JobQueue->Lookup(JobQueueKey(job_id), job)) {
+		return job;
 	}
+	return NULL;
+}
+
+JobQueueJob*
+GetJobAd(int cluster_id, int proc_id)
+{
+	return GetJobAd(JOB_ID_KEY(cluster_id, proc_id));
+}
+
+ClassAd* GetExpandedJobAd(const PROC_ID& job_id, bool persist_expansions)
+{
+	JobQueueJob *job = GetJobAd(job_id);
+	if ( ! job)
+		return NULL;
+
+	ClassAd *ad = job;
+	ClassAd *startd_ad = NULL;
+
+	// find the startd ad.  this is done differently if the job
+	// is a globus universe jobs or not.
+	int	job_universe = -1;
+	ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
+	if ( job_universe == CONDOR_UNIVERSE_GRID ) {
+		// Globus job... find "startd ad" via our simple
+		// hash table.
+		scheduler.resourcesByProcID->lookup(job_id,startd_ad);
+	} else {
+		// Not a Globus job... find startd ad via the match rec
+		match_rec *mrec;
+		if ((job_universe == CONDOR_UNIVERSE_PARALLEL) ||
+			(job_universe == CONDOR_UNIVERSE_MPI)) {
+			mrec = dedicated_scheduler.FindMRecByJobID( job_id );
+		} else {
+			mrec = scheduler.FindMrecByJobID( job_id );
+		}
+
+		if( mrec ) {
+			startd_ad = mrec->my_match_ad;
+		} else {
+			// no match rec, probably a local universe type job.
+			// set startd_ad to NULL and continue on - after all,
+			// the expression we are expanding may not even reference
+			// a startd attribute.
+			startd_ad = NULL;
+		}
+
+	}
+
+	return dollarDollarExpand(job_id.cluster, job_id.proc, ad, startd_ad, persist_expansions);
+}
+
+// We have to define this to prevent the version in qmgmt_stubs from being pulled into the schedd.
+ClassAd * GetJobAd_as_ClassAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions) {
+	ClassAd* ad = NULL;
+	if (expStartdAd) {
+		ad = GetExpandedJobAd(JOB_ID_KEY(cluster_id, proc_id), persist_expansions);
+	} else {
+		ad = GetJobAd(JOB_ID_KEY(cluster_id, proc_id));
+	}
+	return ad;
 }
 
 
-ClassAd *
+JobQueueJob *
 GetJobByConstraint(const char *constraint)
 {
-	ClassAd	*ad;
+	JobQueueJob	*ad;
 	JobQueueKey key;
 
 	JobQueue->StartIterateAllClassAds();
-	while(JobQueue->IterateAllClassAds(ad,key)) {
-	#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+	while(JobQueue->Iterate(key,ad)) {
+	#ifdef USE_JOB_QUEUE_JOB
 		if ( key.cluster > 0 && key.proc >= 0 && // avoid cluster and header ads
 	#else
 		if ( *(key.value()) != '0' &&	// avoid cluster and header ads
@@ -4286,6 +4380,8 @@ GetJobByConstraint(const char *constraint)
 	}
 	return NULL;
 }
+
+ClassAd * GetJobByConstraint_as_ClassAd(const char *constraint) { return GetJobByConstraint(constraint); }
 
 
 ClassAd *
@@ -4306,7 +4402,7 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 	}
 
 	while(JobQueue->IterateAllClassAds(ad,key)) {
-	#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+	#ifdef USE_JOB_QUEUE_JOB
 		if ( key.cluster > 0 && key.proc >= 0 && // avoid cluster and header ads
 	#else
 		if ( *(key.value()) != '0' &&	// avoid cluster and header ads
@@ -4330,7 +4426,8 @@ GetNextDirtyJobByConstraint(const char *constraint, int initScan)
 	}
 
 	while( (job_id_str = DirtyJobIDs.next( )) != NULL ) {
-		if( !JobQueue->LookupClassAd( job_id_str, ad ) ) {
+		JOB_ID_KEY job_id(job_id_str);
+		if( !JobQueue->LookupClassAd( job_id, ad ) ) {
 			dprintf(D_ALWAYS, "Warning: Job %s is marked dirty, but could not find in the job queue.  Skipping\n", job_id_str);
 			continue;
 		}
@@ -4342,18 +4439,19 @@ GetNextDirtyJobByConstraint(const char *constraint, int initScan)
 	return NULL;
 }
 
-ClassAd *
+JobQueueJob *
 GetNextJobByCluster(int c, int initScan)
 {
-	ClassAd	*ad;
 	JobQueueKey key;
 
 	if ( c < 1 ) {
 		return NULL;
 	}
 
-#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+#ifdef USE_JOB_QUEUE_JOB
+	JobQueueJob	*ad;
 #else
+	ClassAd	*ad;
 	char cluster[25];
 	snprintf(cluster,25,"%d.",c);
 	cluster[COUNTOF(cluster)-1] = 0; // force null term.
@@ -4364,10 +4462,11 @@ GetNextJobByCluster(int c, int initScan)
 		JobQueue->StartIterateAllClassAds();
 	}
 
-	while(JobQueue->IterateAllClassAds(ad,key)) {
-	#ifdef JOB_QUEUE_KEY_IS_PROC_ID
+	#ifdef USE_JOB_QUEUE_JOB
+	while(JobQueue->Iterate(key,ad)) {
 		if ( c == key.cluster ) {
 	#else
+	while(JobQueue->IterateAllClassAds(ad,key)) {
 		if ( strncmp(cluster,key.value(),len) == 0 ) {
 	#endif
 			return ad;

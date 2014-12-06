@@ -26,7 +26,6 @@
 #include "../condor_utils/CondorError.h"
 #include "condor_classad.h"
 
-
 typedef struct {
 	bool dummy;
 } Qmgr_connection;
@@ -255,12 +254,12 @@ int DeleteAttribute(int cluster, int proc, const char *attr);
         they can be reconstructed after restart of the schedd.
 	@return NULL on failure; the job ClassAd on success
 */
-ClassAd *GetJobAd(int cluster_id, int proc_id, bool expStardAttrs = false, bool persist_expansions = true );
+ClassAd *GetJobAd_as_ClassAd(int cluster_id, int proc_id, bool expStardAttrs = false, bool persist_expansions = true );
 
 /** Efficiently get the first job ClassAd which matches the constraint.
 	@return NULL on failure; the job ClassAd on success
 */
-ClassAd *GetJobByConstraint(const char *constraint);
+ClassAd *GetJobByConstraint_as_ClassAd(const char *constraint);
 /** Efficiently get the all jobs ClassAd which matches the constraint.
 */
 void GetAllJobsByConstraint(const char *constraint, const char *proj,ClassAdList &list);

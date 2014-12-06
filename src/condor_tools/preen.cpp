@@ -617,7 +617,7 @@ proc_exists( int cluster, int proc )
 {
 	ClassAd *ad;
 
-	if ((ad = GetJobAd(cluster,proc)) != NULL) {
+	if ((ad = GetJobAd_as_ClassAd(cluster,proc)) != NULL) {
 		FreeJobAd(ad);
 		return true;
 	}

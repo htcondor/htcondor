@@ -36,10 +36,10 @@
 // expands to
 //    foo * cad = new foo();
 
-
 // The GenericClassAdCollection is a thin wrapper around the ClassAdLog class
 // It provides helper functions and a layer of abstraction.
 // It does not provide (or rather, it *no longer* provides) any collection management
+// At present either K or AltK *must* be of type (const char *), or various things to not compile
 
 template <typename K, typename AltK, typename AD>
 class GenericClassAdCollection : private ClassAdLog<K, AltK, AD> {
@@ -156,7 +156,14 @@ public:
       @param val the value of the attrinute (output parameter).
       @return true on success, false otherwise.
   */
+#if 0 //def COL_USE_NATIVE_KEYS
+  bool LookupInTransaction(const K& key, const char *name, char *&val) {
+	MyString str; key.sprint(str);
+	return 1 == ClassAdLog<K,AltK,AD>::LookupInTransaction(str.c_str(),name,val);
+  }
+#else
   bool LookupInTransaction(AltK key, const char *name, char *&val) { return (ClassAdLog<K,AltK,AD>::LookupInTransaction(key,name,val)==1); }
+#endif
   
   /** Truncate the log file by creating a new "checkpoint" of the repository
     @return true on success; false if log could not be rotated (in which
@@ -182,10 +189,18 @@ public:
       @param targettype The class-ad's TargetType attribute value.
       @return true on success, false otherwise.
   */
+#if 0 ///def COL_USE_NATIVE_KEYS
+  bool NewClassAd(const K& key, const char* mytype, const char* targettype) {
+	MyString str; key.sprint(str);
+	this->AppendLog(new LogNewClassAd(str.c_str(),mytype,targettype, this->GetTableEntryMaker()));
+	return true;
+  }
+#else
   bool NewClassAd(AltK key, const char* mytype, const char* targettype) {
 	this->AppendLog(new LogNewClassAd(key,mytype,targettype, this->GetTableEntryMaker()));
 	return true;
   }
+#endif
 
 
   /** Insert a new class-ad with the specified key.
@@ -204,7 +219,6 @@ public:
 		log = new LogSetAttribute(key,name,ExprTreeToString(expr));
 		this->AppendLog(log);
 	}
-	// return AddClassAd(0,key);
 	return true;
   }
 
@@ -229,28 +243,44 @@ public:
       @param is_dirty the parameter should be marked dirty in the classad.
       @return true on success, false otherwise.
   */
+#if 0 //def COL_USE_NATIVE_KEYS
+  bool SetAttribute(const K& key, const char* name, const char* value, const bool is_dirty=false) {
+	MyString str; key.sprint(str);
+	this->AppendLog(new LogSetAttribute(str.c_str(),name,value,is_dirty));
+	return true;
+  }
+#else
   bool SetAttribute(AltK key, const char* name, const char* value, const bool is_dirty=false) {
 	this->AppendLog(new LogSetAttribute(key,name,value,is_dirty));
 	return true;
   }
+#endif
 
   /** Delete an attribute in a class-ad.
       @param key The class-ad's key.
       @param name the name of the attribute.
       @return true on success, false otherwise.
   */
+#if 0 // def COL_USE_NATIVE_KEYS
+  bool DeleteAttribute(const K& key, const char* name) {
+	MyString str; key.sprint(str);
+	this->AppendLog(new LogDeleteAttribute(str.c_str(),name));
+	return true;
+  }
+#else
   bool DeleteAttribute(AltK key, const char* name) {
 	this->AppendLog(new LogDeleteAttribute(key,name));
 	return true;
   }
+#endif
 
   /** Clear all parameter dirty bits in a class-ad.
       @param key The class-ad's key.
       @return true on success, false otherwise.
   */
-  bool ClearClassAdDirtyBits(AltK key) {
-	AD Ad = NULL;
-	if (this->table.lookup(K(key),Ad) < 0)
+  bool ClearClassAdDirtyBits(const K& key) {
+	AD Ad;
+	if (this->table.lookup(key,Ad) < 0)
 		return false;
 	ClassAd* cad = Ad;
 	cad->ClearAllDirtyFlags();
@@ -264,11 +294,12 @@ public:
       @param Ad A pointer to the class-ad (output parameter).
       @return true on success, false otherwise.
   */
-  bool Lookup(K & key, AD & Ad) { return this->table.lookup(key, Ad) >= 0; }
-  bool LookupClassAd(AltK key, ClassAd*& cad) {
+  bool Lookup(const K & key, AD & Ad) { return this->table.lookup(key, Ad) >= 0; }
+  bool LookupClassAd(const K& key, ClassAd*& cad) {
 	AD Ad(0); // shouldn't have to init this here, but g++ can't figure out that it will never be used unless it's first initialized.
-	if (this->table.lookup(K(key), Ad) < 0)
+	if (this->table.lookup(key, Ad) <0) {
 		return false;
+	}
 	cad = Ad;
 	return true;
   }
@@ -310,6 +341,7 @@ public:
 
 };
 
+// Declare the old (non-templated) ClassAdCollection as a specialization of this type
 typedef GenericClassAdCollection<HashKey, const char*, ClassAd*> ClassAdCollection;
 
 #endif

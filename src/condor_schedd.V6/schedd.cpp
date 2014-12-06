@@ -4958,7 +4958,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				// authorized to vacate this job, and if so,
 				// record that we found this job_id and we're
 				// done.
-			ClassAd *cad = GetJobAd( tmp_id.cluster, tmp_id.proc, false );
+			ClassAd *cad = GetJobAd(tmp_id);
 			if( ! cad ) {
 					// Maybe change EXCEPT to print to the audit log with D_AUDIT
 				EXCEPT( "impossible: GetJobAd(%d.%d) returned false "
@@ -6110,7 +6110,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		jobAd = dedicated_scheduler.GetMatchRequestAd( mrec );
 	}
 	else {
-		jobAd = GetJobAd( mrec->cluster, mrec->proc, true, false );
+		jobAd = GetExpandedJobAd(JOB_ID_KEY(mrec->cluster, mrec->proc), false);
 	}
 	if( ! jobAd ) {
 			// The match rec may have been deleted by now if the job
@@ -6119,7 +6119,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 
 		char const *reason = "find/expand";
 		if( !args->isDedicated() ) {
-			if( GetJobAd( cluster, proc, false ) ) {
+			if( GetJobAd(cluster, proc) ) {
 				reason = "expand";
 			}
 			else {
@@ -7313,7 +7313,7 @@ Scheduler::StartJobHandler()
 				// We've just called callAboutToSpawnJobHandler on procid 0,
 				// now call it on the rest of them
 			proc = 1;
-			while( GetJobAd( cluster, proc, false)) {
+			while( GetJobAd(cluster, proc) ) {
 				callAboutToSpawnJobHandler( cluster, proc, srec);
 				proc++;
 			}
@@ -7455,7 +7455,7 @@ Scheduler::startTransferd( int cluster, int proc )
 bool
 Scheduler::isStillRunnable( int cluster, int proc, int &status )
 {
-	ClassAd* job = GetJobAd( cluster, proc, false );
+	ClassAd* job = GetJobAd( cluster, proc );
 	if( ! job ) {
 			// job ad disappeared, definitely not still runnable.
 		dprintf( D_FULLDEBUG,
@@ -7933,13 +7933,13 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 
 		// expand $$ stuff and persist expansions so they can be
 		// retrieved on restart for reconnect
-	job_ad = GetJobAd( job_id->cluster, job_id->proc, true, true );
+	job_ad = GetExpandedJobAd( *job_id, true );
 	if( ! job_ad ) {
 			// this might happen if the job is asking for
 			// something in $$() that doesn't exist in the machine
 			// ad and/or if the machine ad is already gone for some
 			// reason.  so, verify the job is still here...
-		if( ! GetJobAd(job_id->cluster, job_id->proc, false) ) {
+		if( ! GetJobAd(*job_id) ) {
 			EXCEPT( "Impossible: GetJobAd() returned NULL for %d.%d " 
 					"but that job is already known to exist",
 					job_id->cluster, job_id->proc );
@@ -10002,7 +10002,7 @@ Scheduler::expand_mpi_procs(StringList *job_ids, StringList *expanded_ids) {
 		
 		
 		int proc_index = 0;
-		while( (GetJobAd(p.cluster, proc_index, false) )) {
+		while( (GetJobAd(p.cluster, proc_index) )) {
 			snprintf(buf, 40, "%d.%d", p.cluster, proc_index);
 			if (! expanded_ids->contains(buf)) {
 				expanded_ids->append(buf);
@@ -12877,7 +12877,7 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 			// handler method sendAlives().  We do this for scalability; we
 			// may have thousands of startds sending us updates...
 		if ( match->status == M_ACTIVE ) {
-			job_ad = GetJobAd(match->cluster, match->proc, false);
+			job_ad = GetJobAd(match->cluster, match->proc);
 			if (job_ad) {
 				job_ad->Assign(ATTR_LAST_JOB_LEASE_RENEWAL, (int)time(0));
 			}
@@ -14900,7 +14900,7 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 
 	ClassAd *new_ad = NULL;
 	if( new_job_id.proc >= 0 ) {
-		new_ad = GetJobAd(new_job_id.cluster, new_job_id.proc ,true, true);
+		new_ad = GetExpandedJobAd(new_job_id, true);
 		if( !new_ad ) {
 			dprintf(D_ALWAYS,
 					"Failed to expand job ad when switching shadow %d "

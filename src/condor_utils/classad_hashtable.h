@@ -47,7 +47,7 @@ public:
     friend bool operator== (const HashKey &, const HashKey &);
 	friend unsigned int hashFunction(const HashKey &key);
 	static unsigned int hash(const HashKey &);
-private:
+protected:
 	char *key;
 };
 

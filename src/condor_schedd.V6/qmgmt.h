@@ -76,6 +76,18 @@ class QmgmtPeer {
 };
 
 
+#define USE_JOB_QUEUE_JOB 1
+
+// used to store a ClassAd and some other stuff in a condor hashtable.
+class JobQueueJob : public ClassAd {
+public:
+	int id;
+
+	JobQueueJob(int _id=0) : id(_id) {}
+	//JobQueueJob( const ClassAd &ad );
+	//JobQueueJob( const classad::ClassAd &ad );
+	virtual ~JobQueueJob() {};
+};
 
 
 void CloseJobHistoryFile();
@@ -84,7 +96,7 @@ time_t GetOriginalJobQueueBirthdate();
 void DestroyJobQueue( void );
 int handle_q(Service *, int, Stream *sock);
 void dirtyJobQueue( void );
-bool SendDirtyJobAdNotification(char *job_id_str);
+bool SendDirtyJobAdNotification(const PROC_ID& job_id);
 
 bool isQueueSuperUser( const char* user );
 
@@ -102,25 +114,120 @@ bool BuildPrioRecArray(bool no_match_found=false);
 void DirtyPrioRecArray();
 extern ClassAd *dollarDollarExpand(int cid, int pid, ClassAd *job, ClassAd *res, bool persist_expansions);
 bool rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad);
-ClassAd* GetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions);
-ClassAd* GetNextJobByCluster( int, int );
-
-#define JOB_QUEUE_KEY_IS_PROC_ID 1
-#ifdef JOB_QUEUE_KEY_IS_PROC_ID
- // new for 8.3, use a non-string type as the key for the JobQueue, and a classad wrapper for the payload.
- typedef JOB_ID_KEY JobQueueKey;
- typedef AD_AND_STUFF JobQueuePayload;
- typedef ClassAdLog<JOB_ID_KEY, const char*,JobQueuePayload> JobQueueLogType;
- //typedef ClassAdLog<HashKey, const char*,ClassAd*> OldJobQueueLogType;
+#if 1
+JobQueueJob* GetJobAd(const PROC_ID& jid);
+JobQueueJob* GetJobAd(int cluster, int proc);
+ClassAd* GetExpandedJobAd(const PROC_ID& jid, bool persist_expansions);
+JobQueueJob* GetNextJobByCluster( int, int );
 #else
+JobQueueJob* GetJobAd(int cluster_id, int proc_id, bool expStartdAd=false, bool persist_expansions=true);
+JobQueueJob* GetNextJobByCluster( int, int );
+#endif
+
+// this class combines a JOB_ID_KEY with a cached string representation of the key
+class JOB_ID_KEY_BUF : public JOB_ID_KEY {
+public:
+	char job_id_str[PROC_ID_STR_BUFLEN];
+	JOB_ID_KEY_BUF() { cluster = proc = 0; job_id_str[0] = 0; }
+	//operator const char*() { return this->c_str(); }
+	const char * c_str() {
+		if ( ! job_id_str[0])
+			ProcIdToStr(cluster, proc, job_id_str);
+		return job_id_str;
+	}
+	const PROC_ID& id() {
+		return *(PROC_ID*)this;
+	}
+	void set(const char * jid) {
+		if ( ! jid || ! jid[0]) {
+			cluster =  proc = 0;
+			job_id_str[0] = 0;
+			return;
+		}
+		strncpy(job_id_str, jid, sizeof(job_id_str));
+		job_id_str[sizeof(job_id_str)-1] = 0;
+		StrToProcId(job_id_str, cluster, proc);
+	}
+	void set(int c, int p) {
+		cluster = c; proc = p;
+		job_id_str[0] = 0; // this will force re-rendering of the string
+	}
+	void sprint(MyString & s) { s = this->c_str(); }
+	JOB_ID_KEY_BUF(const char * jid)          : JOB_ID_KEY(0,0) { set(jid); }
+	JOB_ID_KEY_BUF(int c, int p)              : JOB_ID_KEY(c,p) { job_id_str[0] = 0; }
+	JOB_ID_KEY_BUF(const JOB_ID_KEY_BUF& rhs) : JOB_ID_KEY(rhs.cluster, rhs.proc) { job_id_str[0] = 0; }
+	JOB_ID_KEY_BUF(const JOB_ID_KEY& rhs)     : JOB_ID_KEY(rhs.cluster, rhs.proc) { job_id_str[0] = 0; }
+};
+
+#ifdef USE_JOB_QUEUE_JOB
+
+// specialize the helper class for create/destroy of hashtable entries for the ClassAdLog class
+template <>
+class ConstructClassAdLogTableEntry<JobQueueJob*> : public ConstructLogEntry
+{
+public:
+	virtual ClassAd* New() const { return new JobQueueJob(); }
+	virtual void Delete(ClassAd* &val) const { delete val; }
+};
+
+// specialize the helper class for used by ClassAdLog transactional insert/remove functions
+template <>
+class ClassAdLogTable<JOB_ID_KEY,JobQueueJob*> : public LoggableClassAdTable {
+public:
+	ClassAdLogTable(HashTable<JOB_ID_KEY,JobQueueJob*> & _table) : table(_table) {}
+	virtual ~ClassAdLogTable() {};
+	virtual bool lookup(const char * key, ClassAd*& ad) {
+		JobQueueJob* Ad=NULL;
+		JOB_ID_KEY k(key);
+		int iret = table.lookup(k, Ad);
+		ad=Ad;
+		return iret >= 0;
+	}
+	virtual bool remove(const char * key) { JOB_ID_KEY k(key); return table.remove(k) >= 0; }
+	virtual bool insert(const char * key, ClassAd * ad) {
+		JOB_ID_KEY k(key);
+		JobQueueJob* Ad = new JobQueueJob();  // TODO: find out of we can count on ad already being a JobQueueJob*
+		Ad->Update(*ad); delete ad; // TODO: transfer ownership of attributes from ad to Ad? I think this ad is always nearly empty.
+		int iret = table.insert(k, Ad);
+		return iret >= 0;
+	}
+	virtual void startIterations() { table.startIterations(); } // begin iterations
+	virtual bool nextIteration(const char*& key, ClassAd*&ad) {
+		JobQueueJob* Ad=NULL;
+		current_key.set(NULL); // make sure to clear out the string value for the current key
+		int iret = table.iterate(current_key, Ad);
+		if (iret != 1) {
+			key = NULL;
+			ad = NULL;
+			return false;
+		}
+		key = current_key.c_str();
+		ad = Ad;
+		return true;
+	}
+protected:
+	HashTable<JOB_ID_KEY,JobQueueJob*> & table;
+	JOB_ID_KEY_BUF current_key; // used during iteration, so we can return a const char *
+};
+
+// new for 8.3, use a non-string type as the key for the JobQueue
+// and a type derived from ClassAd for the payload.
+typedef JOB_ID_KEY JobQueueKey;
+typedef JobQueueJob* JobQueuePayload;
+typedef ClassAdLog<JOB_ID_KEY, const char*,JobQueueJob*> JobQueueLogType;
+
+#else // ! USE_JOB_QUEUE_JOB
+
  // the 8.2 JobQueue types
  typedef HashKey JobQueueKey;
  typedef ClassAd* JobQueuePayload;
- typedef ClassAdLog<HashKey, const char*> JobQueueLogType;
-#endif
+ typedef ClassAdLog<HashKey, const char*, ClassAd*> JobQueueLogType;
+
+#endif // ! USE_JOB_QUEUE_JOB
 
 JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
 JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
+
 
 int get_myproxy_password_handler(Service *, int, Stream *sock);
 

@@ -784,14 +784,14 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 					// The GridManager depends on the fact that the following call
 					// expands $$ and saves the expansions to disk in case of
 					// restart.
-					ad = GetJobAd( cluster_id, proc_id, true, true );
+					ad = GetJobAd_as_ClassAd( cluster_id, proc_id, true, true );
 					// note : since we expanded the ad, ad is now a deep
 					// copy of the ad in memory, so we must delete it below.
 				} else {
 					// Since we don't expand macros here, we need to make a
 					// deep copy for the code below (at least according to the
 					// original comment), despite appearances.
-					ClassAd *cluster_ad = GetJobAd( cluster_id, proc_id, false, false );
+					ClassAd *cluster_ad = GetJobAd_as_ClassAd( cluster_id, proc_id, false, false );
 					if ( cluster_ad ) {
 						ad = new ClassAd(*cluster_ad);
 					}
@@ -799,7 +799,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			} else if( proc_id == -1 ) {
 				// allow cluster ad to be queried as required by preen, but
 				// do NOT ask to expand $$() macros in a cluster ad!
-				ClassAd *cluster_ad = GetJobAd( cluster_id, proc_id, false, false );
+				ClassAd *cluster_ad = GetJobAd_as_ClassAd( cluster_id, proc_id, false, false );
 				// since we did not expand, ad is not a deep copy.
 				// thus we deep copy it now, since the below code assumes
 				// "ad" is a deep copy and therefore below we can set
@@ -842,7 +842,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		ad = GetJobByConstraint( constraint );
+		ad = GetJobByConstraint_as_ClassAd( constraint );
 		terrno = errno;
 		rval = ad ? 0 : -1;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
