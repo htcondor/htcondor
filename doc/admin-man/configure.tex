@@ -1164,13 +1164,15 @@ File System Configuration File Entries''.
   via the \MacroNI{COLLECTOR\_HOST} macro.
 
   The default value is \MacroUNI{COLLECTOR\_PORT}, which defaults to 9618.  
-  The special value of \Expr{0} causes the \Condor{shared\_port} 
-  to use a randomly selected port.  
   Note that this causes all HTCondor hosts to use TCP port 9618 by default, 
   differing from previous behavior.
   Previously, only the \Condor{collector} host used a fixed port.
   To restore the previous behavior, 
-  set this variable to \Expr{0}.
+  set this variable to \Expr{0}.  This causes the \Condor{shared\_port}
+  to use a randomly selected port (in the range
+  \MacroNI{LOWPORT} - \MacroNI{HIGHPORT};
+  see section \ref{sec:Ports-Firewalls}).
+
 
 \label{param:NegotiatorHost} 
 \item[\Macro{NEGOTIATOR\_HOST}]
@@ -2083,10 +2085,15 @@ of the subsystem corresponding to the daemon.
 \label{param:SubsysLog}
 \item[\MacroB{<SUBSYS>\_LOG}]
 \index{SUBSYS\_LOG macro@\texttt{<SUBSYS>\_LOG} macro}
-  The name of
-  the log file for a given subsystem.  For example,
+  Defines the path and file name of the log file for a given subsystem.  
+  For example,
   \MacroUNI{STARTD\_LOG} gives the location of the log file for
-  \Condor{startd}. The default is \File{\$(LOG)/<SUBSYS>LOG}.
+  the \Condor{startd} daemon. 
+  The default value for most daemons is the daemon's name in camel case,
+  concatenated with \File{Log}.
+  For example, the default log defined for the \Condor{master} daemon
+  is \File{\$(LOG)/MasterLog}.
+  The default value for other subsystems is \File{\$(LOG)/<SUBSYS>LOG}.
   If the log file cannot be written to,
   then the daemon will attempt to log this into a new file of the name
   \File{\$(LOG)/dprintf\_failure.<SUBSYS>} before the daemon exits.
@@ -12268,8 +12275,8 @@ see~\pageref{sec:shared-port-daemon}.
 SHARED_PORT_ARGS = -p 4080
 \end{verbatim}
 
-If no port is specified, a port will be dynamically chosen; it may be
-different each time HTCondor is started.  In order to decrease the
+If no port is specified, port 9618 will be used.  To specify that HTCondor
+dynamically chose a port, use port number 0.  In order to decrease the
 duration of possible communication errors resulting from HTCondor or just
 \Condor{shared\_port} itself restarting, it is recommended that a fixed
 port be used instead of a dynamic one.
