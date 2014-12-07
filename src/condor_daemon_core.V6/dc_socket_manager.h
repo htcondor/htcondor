@@ -53,13 +53,7 @@ struct SockEnt
 class SockManager
 {
 public:
-	SockManager() :
-	m_registered(0),
-	m_pending(0),
-	m_pos_comm(0),
-	m_pos_all(0)
-	{
-	}
+	SockManager();
 
 	unsigned getSockCount() const {return m_command_socks.size() + m_socks.size();}
 	unsigned getRegisteredSockCount() const {return m_registered;}
@@ -96,6 +90,7 @@ public:
 	{
 		m_sel_all.execute();
 		m_pos_all = 0;
+		m_epoll_fired = false;
 	}
 
 	int getReadyCommandSocket();
@@ -103,6 +98,7 @@ public:
 		// Return the socket table entry # of a socket which is either ready or
 		// has a deadline, and that deadline has passed.
 	int getReadySocket(time_t now);
+	int getReadySocketEpoll(time_t now);
 
 	int getSocketIndex(Stream *sock)
 	{
@@ -145,7 +141,7 @@ public:
 	unsigned registeredSocketCount() {return m_pending + m_registered;}
 
 	int registerCommandSocket(Stream *iosock, const char* iosock_descrip, const char *handler_descrip, Service* s, DCpermission perm, HandlerType handler_type, int is_cpp, void **prev_entry);
-	int registerSocket(Stream *iosock, const char* iosock_descrip, SocketHandler handler, SocketHandlercpp handlercpp, const char *handler_descrip, Service* s, DCpermission perm, HandlerType handler_type, int is_cpp, void **prev_entry);
+	int registerSocket(Stream *iosock, const char* iosock_descrip, SocketHandler handler, SocketHandlercpp handlercpp, const char *handler_descrip, Service* s, DCpermission perm, HandlerType handler_type, int is_cpp, bool is_superuser, void **prev_entry);
 	int cancelSocket(Stream* insock, void *prev_entry);
 	bool isRegistered(Stream* stream);
 
@@ -156,8 +152,11 @@ private:
 
 	unsigned m_registered; // number of sockets registered, always < getSockCount()
 	unsigned m_pending; // number of sockets waiting on timers or any other callbacks
+
+	int m_epoll_fd;
+
 		// Note that command sockets have a concept of the "initial" socket; hence,
-		// this is the only ordered table we keep.
+		// ordering is significant.
 	std::vector<int> m_command_socks;
 	std::vector<SockEnt> m_socks;
 
@@ -165,6 +164,8 @@ private:
 	Selector m_sel_all;
 	unsigned m_pos_comm;
 	unsigned m_pos_all;
+	time_t m_timeout_sweep;
+	bool m_epoll_fired;
 };
 
 #endif

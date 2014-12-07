@@ -1365,7 +1365,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 	else
 	{
-		return m_sock_manager.registerSocket(iosock, iosock_descrip, handler, handlercpp, handler_descrip, s, perm, handler_type, is_cpp, prev_entry);
+		return m_sock_manager.registerSocket(iosock, iosock_descrip, handler, handlercpp, handler_descrip, s, perm, handler_type, is_cpp, false, prev_entry);
 	}
 }
 
@@ -3084,6 +3084,7 @@ void DaemonCore::Driver()
 			if ( superuser_command_arrived ) {
 				dprintf(D_ALWAYS,"Received a superuser command\n");
 			}
+			superuser_command_arrived = false;
 
 			runtime = _condor_debug_get_time_double();
 			dc_stats.SocketRuntime += (runtime - group_runtime);

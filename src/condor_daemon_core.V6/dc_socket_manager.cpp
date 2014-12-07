@@ -10,6 +10,9 @@
 extern void **curr_dataptr;
 extern void **curr_regdataptr;
 
+#ifdef CONDOR_HAVE_EPOLL
+#include <sys/epoll.h>
+#endif
 
 static void
 registerFD(int fd, Selector &selector, HandlerType handler_type)
@@ -30,6 +33,34 @@ registerFD(int fd, Selector &selector, HandlerType handler_type)
 	}
 }
 
+
+static void
+registerFDEpoll(int fd, int efd, int idx, HandlerType handler_type)
+{
+#ifdef CONDOR_HAVE_EPOLL
+	struct epoll_event event;
+	event.data.u64 = idx;
+	event.events = 0;
+	switch (handler_type)
+	{
+		case HANDLE_READ:
+			event.events = EPOLLIN;
+			break;
+		case HANDLE_READ_WRITE:
+			event.events = EPOLLIN;
+			// Fall through!
+		case HANDLE_WRITE:
+			event.events |= EPOLLOUT;
+			// Fall through!
+		case HANDLE_NONE:
+			break;
+	}
+	if (-1 == epoll_ctl(efd, EPOLL_CTL_ADD, fd, &event))
+	{
+		if (errno!=EEXIST) {dprintf(D_ALWAYS, "DaemonCore: failed to add watch for FD %d.\n", fd);}
+	}
+#endif
+}
 
 static void
 registerFD(SockEnt &ent, Selector &selector)
@@ -61,6 +92,17 @@ removeFD(int fd, Selector &selector, HandlerType handler_type)
 }
 
 static void
+removeFDEpoll(int fd, int efd)
+{
+#ifdef CONDOR_HAVE_EPOLL
+	if (-1 == epoll_ctl(efd, EPOLL_CTL_DEL, fd, NULL))
+	{
+		dprintf(D_ALWAYS, "DaemonCore: Failed to remove FD %d from epoll.\n", fd);
+	}
+#endif
+}
+
+static void
 removeFD(SockEnt &ent, Selector &selector)
 {
 	if (!ent.iosock) {return;}
@@ -68,6 +110,26 @@ removeFD(SockEnt &ent, Selector &selector)
 	removeFD(fd, selector, ent.handler_type);
 	ent.is_registered = false;
 }
+
+
+SockManager::SockManager()
+	: m_registered(0),
+	  m_pending(0),
+	  m_epoll_fd(-1),
+	  m_pos_comm(0),
+	  m_pos_all(0),
+	  m_timeout_sweep(0),
+	  m_epoll_fired(false)
+{
+#ifdef CONDOR_HAVE_EPOLL
+	if (-1 == (m_epoll_fd = epoll_create1(EPOLL_CLOEXEC)))
+	{
+		dprintf(D_ALWAYS, "epoll file descriptor creation failed; will use periodic polling techniques: %s (errno=%d).\n", strerror(errno), errno);
+	}
+	registerFD(m_epoll_fd, m_sel_all, HANDLE_READ);
+#endif
+}
+
 
 
 int
@@ -79,10 +141,11 @@ SockManager::registerCommandSocket(Stream *iosock, const char* iosock_descrip,
 	// handler and a NULL handlercpp - this means a command socket, so use
 	// the default daemon core socket handler which strips off the command.
 	// SO, a blank table entry is defined as a NULL iosock field.
-	int result = registerSocket(iosock, iosock_descrip, NULL, NULL, handler_descrip, s, perm, handler_type, is_cpp, prev_entry);
+	int result = registerSocket(iosock, iosock_descrip, NULL, NULL, handler_descrip, s, perm, handler_type, is_cpp, false, prev_entry);
 
 	if (result < 0) {return result;}
 
+	registerFD(m_socks[result], m_sel_comm);
 	m_command_socks.push_back(result);
 	m_socks[result].is_command_sock = true;
 
@@ -93,7 +156,7 @@ SockManager::registerCommandSocket(Stream *iosock, const char* iosock_descrip,
 int
 SockManager::registerSocket(Stream *iosock, const char* iosock_descrip,
 	SocketHandler handler, SocketHandlercpp handlercpp, const char *handler_descrip,
-	Service* service, DCpermission perm, HandlerType handler_type, int is_cpp, void **prev_entry)
+	Service* service, DCpermission perm, HandlerType handler_type, int is_cpp, bool is_superuser, void **prev_entry)
 {
 	if ( prev_entry ) {
 		*prev_entry = NULL;
@@ -240,8 +303,19 @@ SockManager::registerSocket(Stream *iosock, const char* iosock_descrip,
 	}
 	if (ent.is_connect_pending && (ent.handler || ent.handlercpp))
 	{	// Note we do not do this for command sockets - we assume these are already connected!
-		m_sel_all.add_fd(fd_to_register, Selector::IO_EXCEPT);
-		m_sel_all.add_fd(fd_to_register, Selector::IO_WRITE);
+		if (m_epoll_fd == -1)
+		{
+			m_sel_all.add_fd(fd_to_register, Selector::IO_EXCEPT);
+			m_sel_all.add_fd(fd_to_register, Selector::IO_WRITE);
+		}
+		else
+		{
+			registerFDEpoll(fd_to_register, m_epoll_fd, idx, HANDLE_WRITE);
+		}
+	}
+	else if (m_epoll_fd >= 0)
+	{
+		registerFDEpoll(fd_to_register, m_epoll_fd, idx, ent.handler_type);
 	}
 	else
 	{
@@ -307,13 +381,23 @@ SockManager::cancelSocket(Stream* insock, void *prev_entry)
 		}
 		else
 		{
-			removeFD(ent, m_sel_all);
-			if (ent.is_connect_pending)
+			if (m_epoll_fd == -1)
 			{
-				m_sel_all.delete_fd(ent.iosock->get_file_desc(), Selector::IO_WRITE);
-				m_sel_all.delete_fd(ent.iosock->get_file_desc(), Selector::IO_EXCEPT);
+				removeFD(ent, m_sel_all);
 			}
-			if (ent.is_command_sock) {removeFD(ent, m_sel_comm);}
+			else
+			{
+				removeFDEpoll(ent.iosock->get_file_desc(), m_epoll_fd);
+				if (ent.is_connect_pending)
+				{
+					m_sel_all.delete_fd(ent.iosock->get_file_desc(), Selector::IO_WRITE);
+					m_sel_all.delete_fd(ent.iosock->get_file_desc(), Selector::IO_EXCEPT);
+				}
+			}
+			if (ent.is_command_sock)
+			{
+				removeFD(ent, m_sel_comm);
+			}
 			ent.iosock = NULL;
 		}
 	}
@@ -354,7 +438,8 @@ time_t
 SockManager::updateSelector()
 {
 	time_t min_deadline = 0;
-	for (std::vector<SockEnt>::iterator it=m_socks.begin(); it!=m_socks.end(); it++)
+	int idx=0;
+	for (std::vector<SockEnt>::iterator it=m_socks.begin(); it!=m_socks.end(); it++, idx++)
 	{
 		if (!it->iosock || (it->servicing_tid != 0)) {continue;}
 		else if (it->remove_asap)
@@ -363,9 +448,17 @@ SockManager::updateSelector()
 			continue;
 		}
 		else if (it->is_reverse_connect_pending || it->is_connect_pending) {continue;}
-		else if (it->is_registered)
+		else if (!it->is_registered && it->iosock)
 		{
-			registerFD(*it, m_sel_all);
+			if (m_epoll_fd == -1)
+			{
+				registerFD(*it, m_sel_all);
+			}
+			else
+			{
+				registerFDEpoll(it->iosock->get_file_desc(), m_epoll_fd, idx, it->handler_type);
+			}
+			it->is_registered = true;
 		}
 		time_t deadline = it->iosock->get_deadline();
 		if (deadline)
@@ -447,8 +540,68 @@ SockManager::getReadyCommandSocket()
 
 
 int
+SockManager::getReadySocketEpoll(time_t now)
+{
+#ifdef CONDOR_HAVE_EPOLL
+	std::vector<epoll_event> events; events.reserve(10);
+	int nfds = epoll_wait(m_epoll_fd, &events[0], 10, 0);
+	if (-1 == nfds)
+	{
+		if (errno != EINTR) {dprintf(D_ALWAYS, "DaemonCore: epoll failure (errno=%d, %s).\n", errno, strerror(errno));}
+		return -1;
+	}
+
+	for (int idx=0; idx<nfds; idx++)
+	{
+		int sock_idx = events[idx].data.u64;
+		SockEnt &ent = m_socks[sock_idx];
+		if (!ent.iosock || ent.remove_asap || ent.servicing_tid || ent.is_reverse_connect_pending)
+		{
+			continue;
+		}
+		if (ent.is_connect_pending && (events[idx].events & (EPOLLOUT|EPOLLERR)) && (ent.iosock->do_connect_finish() != CEDAR_EWOULDBLOCK))
+		{
+			ent.call_handler = true;
+			return sock_idx;
+		}
+		else
+		{
+			ent.call_handler = true;
+			return sock_idx;
+		}
+	}
+	if (now > m_timeout_sweep)
+	{
+		for (std::vector<SockEnt>::iterator it=m_socks.begin()+m_pos_all; it!=m_socks.end(); it++, m_pos_all++)
+		{
+			if (!it->iosock || it->remove_asap || it->servicing_tid || it->is_reverse_connect_pending)
+			{
+				continue;
+			}
+			time_t deadline = it->iosock->get_deadline();
+			if (deadline && (deadline < now))
+			{
+				it->call_handler = true;
+				return m_pos_all++;
+			}
+		}
+		m_timeout_sweep = now;
+	}
+	return -1; 
+#else
+	return -1;
+#endif
+}
+
+
+int
 SockManager::getReadySocket(time_t now)
 {
+	if (m_epoll_fd >= 0)
+	{
+		return getReadySocketEpoll(now);
+	}
+
 	bool recheck = (m_pos_all > 0);
 	for (std::vector<SockEnt>::iterator it=m_socks.begin()+m_pos_all; it!=m_socks.end(); it++, m_pos_all++)
 	{
