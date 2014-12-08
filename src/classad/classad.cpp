@@ -1564,6 +1564,10 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                 //WOULD INSERT "" IF tree == NULL! BAD! FIXME
                 refs.insert(nameToAddToRefs);
 
+                /* This code is fishy and likely needs to be completely
+                 * removed. Just disable it for now, as we're still
+                 * fixing bugs in this code when dealing with nested
+                 * ads.
                 ExprTree *followRef;
                 //TODO: If we get to this point, must there be a prefix?
                 //  FIGURE OUT WHAT A SIMPLE / ABSOLUTE ATTR IS
@@ -1576,6 +1580,7 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                     return _GetInternalReferences(followRef, ad,
                                         state, refs, fullNames);
                 }
+                */
 
                 //otherwise, if the tree didn't evaluate to a classad,
                 //we have a problemo, mon.
