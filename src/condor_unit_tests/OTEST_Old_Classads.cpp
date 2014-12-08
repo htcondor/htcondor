@@ -1540,9 +1540,9 @@ static bool test_get_references_complex_true_internal() {
 	emit_test("Test that GetReferences() puts the references of the classad "
 		"into the StringList for internal references.");
     const char* classad_string = "\tMemory = 60\n\t\tDisk = 40\n\t\tOS = Linux"
-		"\n\t\tX = 4\n\t\tRequirements = ((ImageSize > Memory) && "
+		"\n\t\tX = 4\n\t\tFoo = Bar\n\t\tBar = True\n\t\tRequirements = ((ImageSize > Memory) && "
 		"(AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > "
-		"Disk)) && foo(X, XX)";
+		"Disk)) && func(X, XX) && My.Foo";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	StringList* internal_references = new StringList;
@@ -1551,13 +1551,17 @@ static bool test_get_references_complex_true_internal() {
 		*external_references);
 	bool expect = true;
 	bool result = internal_references->contains("Memory") &&
-		internal_references->contains("Disk");
+		internal_references->contains("Disk") &&
+		internal_references->contains("Foo") &&
+		internal_references->contains("Bar") &&
+		internal_references->contains("X") &&
+		internal_references->number() == 5;
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_param("Attribute", "Requirements");
 	emit_param("StringList", "Internal References");
 	emit_param("StringList", "External References");
-	emit_param("Contains", "Memory, Disk");
+	emit_param("Contains", "Memory, Disk, X, Foo, Bar");
 	emit_output_expected_header();
 	emit_param("Contains References", "%s", tfstr(expect));
 	emit_output_actual_header();
