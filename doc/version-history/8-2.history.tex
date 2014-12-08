@@ -42,6 +42,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug introduced in HTCondor 8.2.4 that caused the daemon log
+file of the \Condor{schedd} to not rotate when
+\Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES} was set to \Expr{True}.
+\Ticket{4753}
+
 \item Fixed a race condition that could cause the transfer of output files
 for Condor-C jobs (i.e. grid universe jobs with grid-type ``condor'') to
 fail.
