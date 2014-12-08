@@ -127,14 +127,49 @@ bool condor_netaddr::from_net_string(const char* net) {
 				return false;
 			}
 		} else {
-			// IPv6 literal
-			struct in6_addr in6a;
-			if( inet_pton( AF_INET6, net, & in6a ) == 1 ) {
-				base_ = condor_sockaddr( in6a );
-				maskbit_ = 128;
-				return true;
+			// IPv6 literal or asterisk.
+			const char * asterisk = strchr( net, '*' );
+			if( asterisk == NULL ) {
+				struct in6_addr in6a;
+				if( inet_pton( AF_INET6, net, & in6a ) == 1 ) {
+					base_ = condor_sockaddr( in6a );
+					maskbit_ = 128;
+					return true;
+				} else {
+					return false;
+				}
 			} else {
-				return false;
+				//
+				// Like IPv4, require that the asterisk be on a boundary.
+				// That way, we don't need to guess at how many zeroes the
+				// administrator actually wanted.
+				//
+				const char * rcolon = strrchr( net, ':' );
+				if( asterisk - rcolon != 1 ) {
+					return false;
+				}
+
+				char * safenet = strdup( net );
+				assert( safenet != NULL );
+				char * safeasterisk = strchr( safenet, '*' );
+				assert( safeasterisk != NULL );
+				* safeasterisk = ':';
+
+				struct in6_addr in6a;
+				int rv = inet_pton( AF_INET6, safenet, & in6a );
+				free( safenet );
+				if( rv == 1 ) {
+					base_ = condor_sockaddr( in6a );
+				} else {
+					return false;
+				}
+
+				maskbit_ = 0;
+				for( const char * ptr = net; * ptr != '\0'; ++ptr ) {
+					if( * ptr == ':' ) { maskbit_ += 16; }
+				}
+
+				return true;
 			}
 		}
 	}

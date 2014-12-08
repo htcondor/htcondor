@@ -47,9 +47,10 @@ public:
 	// (*) in place of a the rightmost quad; as a dotted quad followed by a
 	// slash follwed by the dotted quad of the netmask; or as a dotted quad
 	// followed by a slash followed by an integer specifying the number of
-	// mask bits.  An IPv6 network may only be specified as an IPv6 literal
+	// mask bits.  An IPv6 network may be specified as an IPv6 literal
 	// followed by a slash followed by an integer specifying the number of
-	// mask bits.  Examples:
+	// mask bits; or as an IPv6 literal with the second of its trailing
+	// colons replaced by a star.  Examples:
 	//
 	// 128.104.100.22
 	//
@@ -59,6 +60,7 @@ public:
 	//
 	// 2607:f388:107c:501:1b:21ff:feca:51f0
 	// 2607:f388:107c:501::/60
+	// 2607:f388:107c:501:*
 	//
 	bool from_net_string(const char* net);
 };
