@@ -827,7 +827,7 @@ if [ -n "$resource_list" ]; then
 #			cput=*) shift;; #ignore
 #			epilogue=*) shift;; #NEED DAGMan or PostCmd
 			file=*) file_value=${resource_type#*=}
-				file_value="echo $file_value | tr a-z A-Z" #Uppercase
+				file_value=`echo $file_value | tr a-z A-Z` #Uppercase
 				printf "request_disk = $file_value\n" >> $submit_file;;
 			host=*) host_value=${resource_type#*=}
 				host_string="\"Machine == $host_value\""
