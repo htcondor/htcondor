@@ -7371,6 +7371,10 @@ check_open( const char *name, int flags )
 
 	strPathname = full_path(name);
 
+	// is the last character a path separator?
+	int namelen = strlen(name);
+	bool trailing_slash = namelen > 0 && IS_ANY_DIR_DELIM_CHAR(name[namelen-1]);
+
 		/* This is only for MPI.  We test for our string that
 		   we replaced "$(NODE)" with, and replace it with "0".  Thus, 
 		   we will really only try and access the 0th file only */
@@ -7394,8 +7398,8 @@ check_open( const char *name, int flags )
 
 	if ( !DisableFileChecks ) {
 		if( (fd=safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
-			// note: Windows does not set errno to EISDIR for directories, instead you get back EACCESS
-			if( ( errno == EISDIR || errno == EACCES ) &&
+			// note: Windows does not set errno to EISDIR for directories, instead you get back EACCESS (or ENOENT?)
+			if( (trailing_slash || errno == EISDIR || errno == EACCES) &&
 	                   check_directory( strPathname.Value(), flags, errno ) ) {
 					// Entries in the transfer output list may be
 					// files or directories; no way to tell in
