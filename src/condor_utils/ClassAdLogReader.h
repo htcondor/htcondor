@@ -40,15 +40,15 @@ class ClassAdLogIterEntry
 {
 public:
 	typedef enum {
-		INIT = 0,
-		ERR,
-		NOCHANGE,
-		RESET,
-		END,
+		ET_INIT = 0,
+		ET_ERR,
+		ET_NOCHANGE,
+		ET_RESET,
+		ET_END,
 		NEW_CLASSAD = CondorLogOp_NewClassAd,
 		DESTROY_CLASSAD = CondorLogOp_DestroyClassAd,
 		SET_ATTRIBUTE = CondorLogOp_SetAttribute,
-		DELETE_ATTRIBUTE = CondorLogOp_DeleteAttribute
+		DELETE_ATTRIBUTE = CondorLogOp_DeleteAttribute,
 	} EntryType;
 
 	EntryType getEntryType() const {return m_type;}
@@ -58,7 +58,7 @@ public:
 	const std::string &getValue() const {return m_value;}
 	const std::string &getName() const {return m_name;}
 
-	bool isDone() const {return m_type == ERR || m_type == NOCHANGE || m_type == END;}
+	bool isDone() const {return m_type == ET_ERR || m_type == ET_NOCHANGE || m_type == ET_END;}
 
 private:
 	friend class ClassAdLogIterator;
@@ -105,7 +105,7 @@ public:
 
 private:
         ClassAdLogIterator(const std::string &fname);
-	ClassAdLogIterator() : m_current(new ClassAdLogIterEntry(ClassAdLogIterEntry::END)) {}
+	ClassAdLogIterator() : m_current(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_END)) {}
 
 	void Next();
 	bool Load();

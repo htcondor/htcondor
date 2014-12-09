@@ -105,7 +105,7 @@ ClassAdLogIterator::Next()
 	ProbeResultType probe_st;
 	FileOpErrCode fst;
 
-	if (!m_eof || (m_current.get() && m_current->getEntryType() == ClassAdLogIterEntry::INIT))
+	if (!m_eof || (m_current.get() && m_current->getEntryType() == ClassAdLogIterEntry::ET_INIT))
 	{
 		Load();
 		if (m_eof)
@@ -123,7 +123,7 @@ ClassAdLogIterator::Next()
 		fst = m_parser->openFile();
 		if(fst == FILE_OPEN_ERROR) {
 			dprintf(D_ALWAYS, "Failed to open %s: errno=%d\n", m_parser->getJobQueueName(), errno);
-			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ERR));
+			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_ERR));
 			return;
 		}
 		//m_sentry.reset(new FileSentry(m_parser->getFilePointer()));
@@ -138,12 +138,12 @@ ClassAdLogIterator::Next()
 		case INIT_QUILL:
 			//printf("Other.\n");
 			m_parser->setNextOffset(0);
-			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::INIT));
+			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_INIT));
 			return;
 		case COMPRESSED:
 		case PROBE_ERROR:
 			m_parser->setNextOffset(0);
-			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::RESET));
+			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_RESET));
 			//printf("Error.\n");
 			return;
 		case ADDITION:
@@ -152,11 +152,11 @@ ClassAdLogIterator::Next()
 			return;
 		case NO_CHANGE:
 			//printf("No change.\n");
-			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::NOCHANGE));
+			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_NOCHANGE));
 			break;
 		case PROBE_FATAL_ERROR:
 			//printf("Fatal error.\n");
-			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ERR));
+			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_ERR));
 			return;
 	}
 	m_parser->closeFile();
@@ -190,13 +190,13 @@ ClassAdLogIterator::Load()
 	if (err != FILE_READ_EOF)
 	{
 		dprintf(D_ALWAYS, "error reading from %s: %d, %d\n", m_fname.c_str(), err, errno);
-		m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ERR));
+		m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_ERR));
 	}
 	else
 	{
 		//printf("Hit EOF.\n");
 		m_parser->closeFile();
-		m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::NOCHANGE));
+		m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_NOCHANGE));
 		m_eof = true;
 	}
 	return true;
@@ -238,7 +238,7 @@ ClassAdLogIterator::Process(const ClassAdLogEntry &log_entry)
 		return false;
 	default:
 		dprintf(D_ALWAYS, "error reading %s: Unsupported Job Queue Command\n", m_fname.c_str());
-		m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ERR));
+		m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_ERR));
 	}
 	return true;
 }
