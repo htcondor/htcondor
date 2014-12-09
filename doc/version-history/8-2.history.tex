@@ -17,6 +17,36 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-2-7}Version 8.2.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.2.7 not yet released.
+%\item HTCondor version 8.2.7 released on Month Date, 2014.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-2-6}Version 8.2.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -42,18 +72,20 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug introduced in HTCondor 8.2.4 that caused the daemon log
-file of the \Condor{schedd} to not rotate when
+\item Fixed a bug introduced in HTCondor version 8.2.4 that caused the 
+\Condor{schedd} daemon log file to not rotate when
+configuration variable 
 \Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES} was set to \Expr{True}.
 \Ticket{4753}
 
 \item Fixed a race condition that could cause the transfer of output files
-for Condor-C jobs (i.e. grid universe jobs with grid-type ``condor'') to
-fail.
+for HTCondor-C jobs to fail.
+HTCondor-C jobs are \SubmitCmdNI{grid} \SubmitCmdNI{universe} jobs 
+with a grid type of \SubmitCmdNI{condor}.
 \Ticket{3379}
 
 \item Fixed a bug in which \Condor{qsub} mishandled setting a disk space
-request with a command line argument similar to \Opt{-l file=2048MB}.
+request with a command line argument of the form \Opt{-l file=2048MB}.
 \Ticket{4606}
 
 \end{itemize}
