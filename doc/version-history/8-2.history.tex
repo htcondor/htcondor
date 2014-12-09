@@ -49,8 +49,9 @@ configuration variable
 \Ticket{4753}
 
 \item Fixed a race condition that could cause the transfer of output files
-for Condor-C jobs (i.e. grid universe jobs with grid-type ``condor'') to
-fail.
+for HTCondor-C jobs to fail.
+HTCondor-C jobs are \SubmitCmdNI{grid} \SubmitCmdNI{universe} jobs 
+with a grid type of \SubmitCmdNI{condor}.
 \Ticket{3379}
 
 \item Fixed a bug in which \Condor{qsub} mishandled setting a disk space
