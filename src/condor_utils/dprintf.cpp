@@ -2264,27 +2264,36 @@ dprintf_after_shared_mem_clone() {
 }
 
 void
-dprintf_init_fork_child( ) {
+dprintf_init_fork_child( bool cloned ) {
 	if( LockFd >= 0 ) {
 		close( LockFd );
 		LockFd = -1;
 	}
-	DebugRotateLog = false;
-	log_keep_open = 0;
-	std::vector<DebugFileInfo>::iterator it;
-	for ( it = DebugLogs->begin(); it < DebugLogs->end(); it++ ) {
-		if ( it->outputTarget == FILE_OUT ) {
-			debug_unlock_it(&(*it));
+	if ( !cloned ) {
+		DebugRotateLog = false;
+		log_keep_open = 0;
+		std::vector<DebugFileInfo>::iterator it;
+		for ( it = DebugLogs->begin(); it < DebugLogs->end(); it++ ) {
+			if ( it->outputTarget == FILE_OUT ) {
+				debug_unlock_it(&(*it));
+			}
 		}
 	}
 }
 
 void
-dprintf_wrapup_fork_child( ) {
+dprintf_wrapup_fork_child( bool cloned ) {
 		/* Child pledges not to call dprintf any more, so it is
 		   safe to close the lock file.  If parent closes all
 		   fds anyway, then this is redundant.
 		*/
+	if ( !cloned ) {
+		// We don't need to restore these values in a non-cloned child,
+		// because dprintf() won't be called again and we're not sharing
+		// memory with the parent process.
+		//DebugRotateLog = true;
+		//log_keep_open = ?
+	}
 	if( LockFd >= 0 ) {
 		close( LockFd );
 		LockFd = -1;
