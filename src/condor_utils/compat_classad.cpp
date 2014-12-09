@@ -1569,11 +1569,13 @@ fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringLi
 void
 dPrintAd( int level, const classad::ClassAd &ad )
 {
-	MyString buffer;
+	if ( IsDebugCatAndVerbosity( level ) ) {
+		MyString buffer;
 
-	sPrintAd( buffer, ad, true );
+		sPrintAd( buffer, ad, true );
 
-	dprintf( level|D_NOHEADER, "%s", buffer.Value() );
+		dprintf( level|D_NOHEADER, "%s", buffer.Value() );
+	}
 }
 
 int
