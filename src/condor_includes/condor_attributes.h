@@ -451,7 +451,6 @@
 #define ATTR_NODE  "Node"
 #define ATTR_NORDUGRID_RSL  "NordugridRSL"
 #define ATTR_NOTIFY_USER  "NotifyUser"
-#define ATTR_NOTIFY_JOB_SCHEDULER  "NotifyJobScheduler"
 #define ATTR_NT_DOMAIN  "NTDomain"
 #define ATTR_TRANSFER_QUEUE_USER_EXPR "TransferQueueUserExpr"
 //extern const char ATTR_WINDOWS_VERSION [];

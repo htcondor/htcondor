@@ -1569,11 +1569,13 @@ fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringLi
 void
 dPrintAd( int level, const classad::ClassAd &ad )
 {
-	MyString buffer;
+	if ( IsDebugCatAndVerbosity( level ) ) {
+		MyString buffer;
 
-	sPrintAd( buffer, ad, true );
+		sPrintAd( buffer, ad, true );
 
-	dprintf( level|D_NOHEADER, "%s", buffer.Value() );
+		dprintf( level|D_NOHEADER, "%s", buffer.Value() );
+	}
 }
 
 int
@@ -2154,6 +2156,7 @@ _GetReferences(classad::ExprTree *tree,
 	classad::References int_refs_set;
 	classad::References::iterator set_itr;
 
+	getTheMyRef( this );
 	bool ok = true;
 	if( !GetExternalReferences(tree, ext_refs_set, true) ) {
 		ok = false;
@@ -2161,6 +2164,7 @@ _GetReferences(classad::ExprTree *tree,
 	if( !GetInternalReferences(tree, int_refs_set, true) ) {
 		ok = false;
 	}
+	releaseTheMyRef( this );
 	if( !ok ) {
 		dprintf(D_FULLDEBUG,"warning: failed to get all attribute references in ClassAd (perhaps caused by circular reference).\n");
 		dPrintAd(D_FULLDEBUG, *this);
@@ -2189,9 +2193,6 @@ _GetReferences(classad::ExprTree *tree,
 			AppendReference( external_refs, &set_itr->c_str()[6] );
 		} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
 			AppendReference( external_refs, &set_itr->c_str()[7] );
-		} else if ( strncasecmp( name, "my.", 3 ) == 0 ) {
-				// this one is actually in internal reference!
-			AppendReference( internal_refs, &set_itr->c_str()[3] );
 		} else {
 			AppendReference( external_refs, set_itr->c_str() );
 		}
@@ -2199,7 +2200,10 @@ _GetReferences(classad::ExprTree *tree,
 
 	for ( set_itr = int_refs_set.begin(); set_itr != int_refs_set.end();
 		  set_itr++ ) {
-		AppendReference( internal_refs, set_itr->c_str() );
+		const char *name = set_itr->c_str();
+		if ( strncasecmp( name, "my.", 3 ) ) {
+			AppendReference( internal_refs, set_itr->c_str() );
+		}
 	}
 }
 

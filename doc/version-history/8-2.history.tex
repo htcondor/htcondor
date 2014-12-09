@@ -17,15 +17,15 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-2-6}Version 8.2.6}
+\subsection*{\label{sec:New-8-2-7}Version 8.2.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 8.2.6 not yet released.
-%\item HTCondor version 8.2.6 released on Month Date, 2014.
+\item HTCondor version 8.2.7 not yet released.
+%\item HTCondor version 8.2.7 released on Month Date, 2014.
 
 \end{itemize}
 
@@ -42,10 +42,62 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-2-6}Version 8.2.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.2.6 not yet released.
+%\item HTCondor version 8.2.6 released on Month Date, 2014.
+
+\item It has come to our attention that memory usage by the \Prog{ec2\_gahp}
+may grow without bound in certain situations, particularly when jobs use
+\Expr{x509://} URLs.  The problem lies in a dependency of \Prog{ec2\_gahp},
+libcurl.  We believe the libcurl developers fixed this problem in version
+7.24.0, and we've verified that version 7.38.0 does not have this problem.  If
+you see the \Prog{ec2\_gahp}'s memory usage becoming too large, consider
+upgrading your installation of libcurl.  If your operating system vendor
+does not provide a new enough version of libcurl, you may need to build a
+more recent version, and set \Macro{EC2\_GAHP} to a wrapper script which
+ensures that the \Prog{ec2\_gahp} uses that version.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug introduced in HTCondor version 8.2.4 that caused the 
+\Condor{schedd} daemon log file to not rotate when
+configuration variable 
+\Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES} was set to \Expr{True}.
+\Ticket{4753}
+
 \item Fixed a race condition that could cause the transfer of output files
-for Condor-C jobs (i.e. grid universe jobs with grid-type ``condor'') to
-fail.
+for HTCondor-C jobs to fail.
+HTCondor-C jobs are \SubmitCmdNI{grid} \SubmitCmdNI{universe} jobs 
+with a grid type of \SubmitCmdNI{condor}.
 \Ticket{3379}
+
+\item Fixed a bug in which \Condor{qsub} mishandled setting a disk space
+request with a command line argument of the form \Opt{-l file=2048MB}.
+\Ticket{4606}
 
 \end{itemize}
 

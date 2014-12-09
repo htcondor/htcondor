@@ -1154,23 +1154,6 @@ File System Configuration File Entries''.
   and there is no other means to find the \Condor{collector} port.
   The default value is 9618.
 
-\label{param:SharedPortPort}
-\item[\Macro{SHARED\_PORT\_PORT}]
-  The default TCP port used by the \Condor{shared\_port} daemon.
-  If \MacroNI{COLLECTOR\_USES\_SHARED\_PORT} is \Expr{True}, the default value, 
-  and the \Condor{master} will launch a \Condor{collector},
-  then the \Condor{shared\_port} daemon will ignore this value 
-  and use the TCP port assigned to the \Condor{collector} 
-  via the \MacroNI{COLLECTOR\_HOST} macro.
-
-  The default value is \MacroUNI{COLLECTOR\_PORT}, which defaults to 9618.  
-  The special value of \Expr{0} causes the \Condor{shared\_port} 
-  to use a randomly selected port.  
-  Note that this causes all HTCondor hosts to use TCP port 9618 by default, 
-  differing from previous behavior.
-  Previously, only the \Condor{collector} host used a fixed port.
-  To restore the previous behavior, 
-  set this variable to \Expr{0}.
 
 \label{param:NegotiatorHost} 
 \item[\Macro{NEGOTIATOR\_HOST}]
@@ -3131,16 +3114,6 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   open TCP connections to a file.
   Crash recovery is accomplished using the information.
   The default value is \File{\$(SPOOL)/.ccb\_reconnect}.
-
-\label{param:UseSharedPort}
-\item[\Macro{USE\_SHARED\_PORT}] A boolean value that
-  specifies whether an HTCondor process should rely on
-  \Condor{shared\_port} for receiving incoming connections.  
-  Under Unix, write access to the location defined by 
-  \Macro{DAEMON\_SOCKET\_DIR} is required for this to take
-  effect.  The default is \Expr{False}.
-  For more information about using
-  a shared port, see page~\pageref{sec:Config-shared-port}.
 
 \label{param:CollectorUsesSharedPort}
 \item[\Macro{COLLECTOR\_USES\_SHARED\_PORT}] A boolean value that
@@ -12194,10 +12167,39 @@ for details on how to do this.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!condor\_shared\_port configuration variables}
 These configuration variables affect the \Condor{shared\_port} daemon.
-For general discussion of \Condor{shared\_port},
+For general discussion of the \Condor{shared\_port} daemon,
 see~\pageref{sec:shared-port-daemon}.
 
 \begin{description}
+
+\label{param:UseSharedPort}
+\item[\Macro{USE\_SHARED\_PORT}] A boolean value that
+  specifies whether HTCondor daemons should rely on the
+  \Condor{shared\_port} daemon for receiving incoming connections.  
+  Under Unix, write access to the location defined by 
+  \Macro{DAEMON\_SOCKET\_DIR} is required for this to take effect.
+  The default is \Expr{False}.
+
+\label{param:SharedPortPort}
+\item[\Macro{SHARED\_PORT\_PORT}]
+  The default TCP port used by the \Condor{shared\_port} daemon.
+  If \MacroNI{COLLECTOR\_USES\_SHARED\_PORT} is the default value 
+  of \Expr{True},
+  and the \Condor{master} launches a \Condor{collector} daemon,
+  then the \Condor{shared\_port} daemon will ignore this value 
+  and use the TCP port assigned to the \Condor{collector} 
+  via the \MacroNI{COLLECTOR\_HOST} configuration variable.
+
+  The default value is \MacroUNI{COLLECTOR\_PORT}, which defaults to 9618.  
+  Note that this causes all HTCondor hosts to use TCP port 9618 by default, 
+  differing from previous behavior.
+  The previous behavior has only the \Condor{collector} host using a fixed port.
+  To restore this previous behavior, 
+  set \MacroNI{SHARED\_PORT\_PORT} to \Expr{0},
+  which will cause the \Condor{shared\_port} daemon
+  to use a randomly selected port in the range
+  \MacroNI{LOWPORT} - \MacroNI{HIGHPORT},
+  as defined in section \ref{sec:Ports-Firewalls}.
 
 \label{param:SharedPortDaemonAdFile}
 \item[\Macro{SHARED\_PORT\_DAEMON\_AD\_FILE}]
@@ -12263,21 +12265,19 @@ see~\pageref{sec:shared-port-daemon}.
   Ensure that the length is not longer than 90 characters.
 
 \label{param:SharedPortArgs}
-\item[\Macro{SHARED\_PORT\_ARGS}] Like all daemons started by
- \Condor{master}, \Condor{shared\_port} arguments can be customized.
-  One reason to do this is to specify the port number that
- \Condor{shared\_port} should use.  For example, the following line
- configures \Condor{shared\_port} to use port 4080.
+\item[\Macro{SHARED\_PORT\_ARGS}] Like all daemons started by the
+  \Condor{master} daemon, the command line arguments to the invocation
+  of the \Condor{shared\_port} daemon can be customized.
+  The arguments can be used to specify a non-default port number for the
+  \Condor{shared\_port} daemon as in this example, which specifies port 4080:
 
 \begin{verbatim}
-SHARED_PORT_ARGS = -p 4080
+  SHARED_PORT_ARGS = -p 4080
 \end{verbatim}
+  It is recommended to use configuration variable 
+  \MacroNI{SHARED\_PORT\_PORT} to set a non-default port number,
+  instead of using this configuration variable.
 
-If no port is specified, a port will be dynamically chosen; it may be
-different each time HTCondor is started.  In order to decrease the
-duration of possible communication errors resulting from HTCondor or just
-\Condor{shared\_port} itself restarting, it is recommended that a fixed
-port be used instead of a dynamic one.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

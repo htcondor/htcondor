@@ -124,9 +124,9 @@ bool init_local_hostname_impl()
 			int ret = ipv6_getaddrinfo(test_hostname.Value(), NULL, ai, hint);
 			if(ret == 0) { gai_success = true; break; }
 
-			dprintf(D_ALWAYS, "init_local_hostname: ipv6_getaddrinfo() could not look up %s: %s (%d). Try %d of %d. Sleeping for %d seconds\n", test_hostname.Value(), gai_strerror(ret), ret, try_count+1, MAX_TRIES, SLEEP_DUR);
+			dprintf(D_ALWAYS, "init_local_hostname_impl: ipv6_getaddrinfo() could not look up %s: %s (%d). Try %d of %d. Sleeping for %d seconds\n", test_hostname.Value(), gai_strerror(ret), ret, try_count+1, MAX_TRIES, SLEEP_DUR);
 			if(try_count == MAX_TRIES) {
-				dprintf(D_ALWAYS, "init_local_hostname: ipv6_getaddrinfo() never succeeded. Giving up. Problems are likely\n");
+				dprintf(D_ALWAYS, "init_local_hostname_impl: ipv6_getaddrinfo() never succeeded. Giving up. Problems are likely\n");
 				break;
 			}
 			sleep(SLEEP_DUR);
@@ -209,20 +209,24 @@ bool init_local_hostname_impl()
 	return true;
 }
 
-void init_local_hostname() {
-	static bool initialized = false;
-	if(initialized) { return; }
-	initialized = init_local_hostname_impl();
-	if(!initialized) {
-		dprintf(D_ALWAYS, "Something went wrong identifying my hostname and IP address.");
+void reset_local_hostname() {
+	if( ! init_local_hostname_impl() ) {
+		dprintf( D_ALWAYS, "Something went wrong identifying my hostname and IP address.\n" );
+		hostname_initialized = false;
+	} else {
+		dprintf( D_ALWAYS, "I am: hostname: %s, fully qualified doman name: %s, IP: %s, IPv4: %s, IPv6: %s\n", local_hostname.Value(), local_fqdn.Value(), local_ipaddr.to_ip_string().Value(), local_ipv4addr.to_ip_string().Value(), local_ipv6addr.to_ip_string().Value() );
+		hostname_initialized = true;
 	}
-	dprintf(D_ALWAYS, "I am: hostname: %s, fully qualified doman name: %s, IP: %s, IPv4: %s, IPv6: %s\n", local_hostname.Value(), local_fqdn.Value(), local_ipaddr.to_ip_string().Value(), local_ipv4addr.to_ip_string().Value(), local_ipv6addr.to_ip_string().Value());
+}
+
+void init_local_hostname() {
+	if( hostname_initialized ) { return; }
+	reset_local_hostname();
 }
 
 condor_sockaddr get_local_ipaddr(condor_protocol proto)
 {
-	if (!hostname_initialized)
-		init_local_hostname();
+	init_local_hostname();
 	if ((proto == CP_IPV4) && local_ipv4addr.is_ipv4()) { return local_ipv4addr; }
 	if ((proto == CP_IPV6) && local_ipv6addr.is_ipv6()) { return local_ipv6addr; }
 	return local_ipaddr;
@@ -230,15 +234,13 @@ condor_sockaddr get_local_ipaddr(condor_protocol proto)
 
 MyString get_local_hostname()
 {
-	if (!hostname_initialized)
-		init_local_hostname();
+	init_local_hostname();
 	return local_hostname;
 }
 
 MyString get_local_fqdn()
 {
-	if (!hostname_initialized)
-		init_local_hostname();
+	init_local_hostname();
 	return local_fqdn;
 }
 

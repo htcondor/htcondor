@@ -24,6 +24,18 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
         list(APPEND _SRCS ${CMAKE_SOURCE_DIR}/src/condor_utils/condor_version.cpp)
     endif()
     ADD_PRECOMPILED_HEADER()
+    if ( WINDOWS )
+        # Add windows version information to the exe 
+        # Refer to http://msdn.microsoft.com/en-us/library/aa381058(VS.85).aspx
+        # for more info.
+        STRING(REGEX REPLACE "^([0-9]+)\\.[0-9]+\\.[0-9]+" "\\1" CONDOR_MAJOR_VERSION "${VERSION}")
+        STRING(REGEX REPLACE "^[0-9]+\\.([0-9])+\\.[0-9]+" "\\1" CONDOR_MINOR_VERSION "${VERSION}")
+        STRING(REGEX REPLACE "^[0-9]+\\.[0-9]+\\.([0-9]+)" "\\1" CONDOR_BUILD_NUMBER  "${VERSION}")
+        set(CONDOR_EXECUTABLE_NAME ${_CNDR_TARGET})
+
+        CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/msconfig/versioninfo.rc.in ${CMAKE_CURRENT_BINARY_DIR}/versioninfo_exe.rc)
+        list(APPEND _SRCS ${CMAKE_CURRENT_BINARY_DIR}/versioninfo_exe.rc)
+    endif( WINDOWS )
 
     add_executable( ${_CNDR_TARGET} ${_SRCS})
 
@@ -37,8 +49,7 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
     endif()
     
     # the following will install the .pdb files, some hackery needs to occur because of build configuration is not known till runtime.
-    if ( WINDOWS )      
-
+    if ( WINDOWS )   
         set( ${_CNDR_TARGET}_pdb ${_COPY_PDBS} )
 
         if ( ${_CNDR_TARGET}_pdb )

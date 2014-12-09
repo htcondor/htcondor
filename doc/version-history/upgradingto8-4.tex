@@ -17,7 +17,14 @@ Here is a list of items that administrators should be aware of.
 
 \item New configuration and changes to existing configuration:
   \begin{itemize}
-  \item None.
+
+\item If enabled, the \Condor{shared\_port} daemon will now use port 9618
+instead of the previous default, which was to randomly select a port from
+the allowed range (from \MacroNI{LOWPORT} to \MacroNI{HIGHPORT}; see section
+see section \ref{sec:Ports-Firewalls}).  To restore \Condor{shared\_port}'s
+previous behavior, set \MacroNI{SHARED\_PORT\_PORT} to \Expr{0}.
+\Ticket{4752}
+
   \end{itemize}
 
 \item None.

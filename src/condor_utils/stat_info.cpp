@@ -33,7 +33,7 @@
 
 StatInfo::StatInfo( const char *path )
 {
-	char *s, *last = NULL;
+	char *s, *last = NULL, *trail_slash = NULL, chslash;
 	fullpath = strnewp( path );
 	dirpath = strnewp( path );
 
@@ -43,17 +43,26 @@ StatInfo::StatInfo( const char *path )
 		// NULL in the first character after the delim character so
 		// that the dirpath always contains the directory delim.
 	for( s = dirpath; s && *s != '\0'; s++ ) {
-        if( *s == '\\' || *s == '/' ) {
+		if( *s == '\\' || *s == '/' ) {
 			last = s;
-        }
-    }
+		}
+	}
 	if( last != NULL && last[1] ) {
 		filename = strnewp( &last[1] ); 
 		last[1] = '\0';
 	} else {
 		filename = NULL;
+		if (last != NULL) {
+			// we only get here if the input path ended with a dir separator
+			// we can't stat that on windows, and *nix does't care, so we remove it.
+			trail_slash = &fullpath[last - dirpath];
+		}
 	}
+	// remove trailing slash before we stat, and then put it back after. this fixes #4747
+	// why do we put it back?  because things crash if we don't and this is a stable series fix.
+	if (trail_slash) { chslash = *trail_slash; *trail_slash = 0; }
 	stat_file( fullpath );
+	if (trail_slash) { *trail_slash = chslash; }
 }
 
 StatInfo::StatInfo( const char *param_dirpath,
