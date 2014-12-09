@@ -51,8 +51,7 @@ ClassAd*
 DCSchedd::holdJobs( const char* constraint, const char* reason,
 					const char *reason_code,
 					CondorError * errstack,
-					action_result_type_t result_type,
-					bool notify_scheduler )
+					action_result_type_t result_type )
 {
 	if( ! constraint ) {
 		dprintf( D_ALWAYS, "DCSchedd::holdJobs: "
@@ -61,15 +60,14 @@ DCSchedd::holdJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_HOLD_JOBS, constraint, NULL, 
 					  reason, ATTR_HOLD_REASON, reason_code, ATTR_HOLD_REASON_SUBCODE, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::removeJobs( const char* constraint, const char* reason,
 					  CondorError * errstack,
-					  action_result_type_t result_type,
-					  bool notify_scheduler )
+					  action_result_type_t result_type )
 {
 	if( ! constraint ) {
 		dprintf( D_ALWAYS, "DCSchedd::removeJobs: "
@@ -78,15 +76,14 @@ DCSchedd::removeJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_REMOVE_JOBS, constraint, NULL,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::removeXJobs( const char* constraint, const char* reason,
 					   CondorError * errstack,
-					   action_result_type_t result_type,
-					   bool notify_scheduler )
+					   action_result_type_t result_type )
 {
 	if( ! constraint ) {
 		dprintf( D_ALWAYS, "DCSchedd::removeXJobs: "
@@ -95,15 +92,14 @@ DCSchedd::removeXJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_REMOVE_X_JOBS, constraint, NULL,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::releaseJobs( const char* constraint, const char* reason,
 					   CondorError * errstack,
-					   action_result_type_t result_type,
-					   bool notify_scheduler )
+					   action_result_type_t result_type )
 {
 	if( ! constraint ) {
 		dprintf( D_ALWAYS, "DCSchedd::releaseJobs: "
@@ -112,7 +108,7 @@ DCSchedd::releaseJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_RELEASE_JOBS, constraint, NULL,
 					  reason, ATTR_RELEASE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
@@ -120,8 +116,7 @@ ClassAd*
 DCSchedd::holdJobs( StringList* ids, const char* reason,
 					const char* reason_code,
 					CondorError * errstack,
-					action_result_type_t result_type,
-					bool notify_scheduler )
+					action_result_type_t result_type )
 {
 	if( ! ids ) {
 		dprintf( D_ALWAYS, "DCSchedd::holdJobs: "
@@ -132,15 +127,14 @@ DCSchedd::holdJobs( StringList* ids, const char* reason,
 					  ATTR_HOLD_REASON,
 					  reason_code, ATTR_HOLD_REASON_SUBCODE,
 					  result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::removeJobs( StringList* ids, const char* reason,
 					CondorError * errstack,
-					action_result_type_t result_type,
-					bool notify_scheduler )
+					action_result_type_t result_type )
 {
 	if( ! ids ) {
 		dprintf( D_ALWAYS, "DCSchedd::removeJobs: "
@@ -149,15 +143,14 @@ DCSchedd::removeJobs( StringList* ids, const char* reason,
 	}
 	return actOnJobs( JA_REMOVE_JOBS, NULL, ids,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::removeXJobs( StringList* ids, const char* reason,
 					   CondorError * errstack,
-					   action_result_type_t result_type,
-					   bool notify_scheduler )
+					   action_result_type_t result_type )
 {
 	if( ! ids ) {
 		dprintf( D_ALWAYS, "DCSchedd::removeXJobs: "
@@ -166,15 +159,14 @@ DCSchedd::removeXJobs( StringList* ids, const char* reason,
 	}
 	return actOnJobs( JA_REMOVE_X_JOBS, NULL, ids,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::releaseJobs( StringList* ids, const char* reason,
 					   CondorError * errstack,
-					   action_result_type_t result_type,
-					   bool notify_scheduler )
+					   action_result_type_t result_type )
 {
 	if( ! ids ) {
 		dprintf( D_ALWAYS, "DCSchedd::releaseJobs: "
@@ -183,15 +175,14 @@ DCSchedd::releaseJobs( StringList* ids, const char* reason,
 	}
 	return actOnJobs( JA_RELEASE_JOBS, NULL, ids,
 					  reason, ATTR_RELEASE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::vacateJobs( const char* constraint, VacateType vacate_type,
 					  CondorError * errstack,
-					  action_result_type_t result_type,
-					  bool notify_scheduler )
+					  action_result_type_t result_type )
 {
 	if( ! constraint ) {
 		dprintf( D_ALWAYS, "DCSchedd::vacateJobs: "
@@ -205,15 +196,14 @@ DCSchedd::vacateJobs( const char* constraint, VacateType vacate_type,
 		cmd = JA_VACATE_JOBS;
 	}
 	return actOnJobs( cmd, constraint, NULL, NULL, NULL, NULL, NULL,
-					  result_type, notify_scheduler, errstack );
+					  result_type, errstack );
 }
 
 
 ClassAd*
 DCSchedd::vacateJobs( StringList* ids, VacateType vacate_type,
 					  CondorError * errstack,
-					  action_result_type_t result_type,
-					  bool notify_scheduler )
+					  action_result_type_t result_type )
 {
 	if( ! ids ) {
 		dprintf( D_ALWAYS, "DCSchedd::vacateJobs: "
@@ -227,15 +217,14 @@ DCSchedd::vacateJobs( StringList* ids, VacateType vacate_type,
 		cmd = JA_VACATE_JOBS;
 	}
 	return actOnJobs( cmd, NULL, ids, NULL, NULL, NULL, NULL,
-					  result_type, notify_scheduler, errstack );
+					  result_type, errstack );
 }
 
 
 ClassAd*
 DCSchedd::suspendJobs( StringList* ids, const char* reason,
 					CondorError * errstack,
-					action_result_type_t result_type,
-					bool notify_scheduler )
+					action_result_type_t result_type )
 {
 	if( ! ids ) {
 		dprintf( D_ALWAYS, "DCSchedd::suspendJobs: "
@@ -244,15 +233,14 @@ DCSchedd::suspendJobs( StringList* ids, const char* reason,
 	}
 	return actOnJobs( JA_SUSPEND_JOBS, NULL, ids,
 					  reason, ATTR_SUSPEND_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::suspendJobs( const char* constraint, const char* reason,
 					  CondorError * errstack,
-					  action_result_type_t result_type,
-					  bool notify_scheduler )
+					  action_result_type_t result_type )
 {
 	if( ! constraint ) {
 		dprintf( D_ALWAYS, "DCSchedd::suspendJobs: "
@@ -261,14 +249,13 @@ DCSchedd::suspendJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_SUSPEND_JOBS, constraint, NULL,
 					  reason, ATTR_SUSPEND_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 ClassAd*
 DCSchedd::continueJobs( StringList* ids, const char* reason,
 					CondorError * errstack,
-					action_result_type_t result_type,
-					bool notify_scheduler )
+					action_result_type_t result_type )
 {
 	if( ! ids ) {
 		dprintf( D_ALWAYS, "DCSchedd::continueJobs: "
@@ -277,15 +264,14 @@ DCSchedd::continueJobs( StringList* ids, const char* reason,
 	}
 	return actOnJobs( JA_CONTINUE_JOBS, NULL, ids,
 					  reason, ATTR_CONTINUE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::continueJobs( const char* constraint, const char* reason,
 					  CondorError * errstack,
-					  action_result_type_t result_type,
-					  bool notify_scheduler )
+					  action_result_type_t result_type )
 {
 	if( ! constraint ) {
 		dprintf( D_ALWAYS, "DCSchedd::continueJobs: "
@@ -294,7 +280,7 @@ DCSchedd::continueJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_CONTINUE_JOBS, constraint, NULL,
 					  reason, ATTR_CONTINUE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
@@ -308,7 +294,7 @@ DCSchedd::clearDirtyAttrs( StringList* ids, CondorError * errstack,
 		return NULL;
 	}
 	return actOnJobs( JA_CLEAR_DIRTY_JOB_ATTRS, NULL, ids, NULL, NULL,
-					  NULL, NULL, result_type, false, errstack );
+					  NULL, NULL, result_type, errstack );
 }
 
 
@@ -1336,7 +1322,6 @@ DCSchedd::actOnJobs( JobAction action,
 					 const char* reason, const char* reason_attr,
 					 const char* reason_code, const char* reason_code_attr,
 					 action_result_type_t result_type,
-					 bool notify_scheduler,
 					 CondorError * errstack )
 {
 	char* tmp = NULL;
@@ -1355,10 +1340,6 @@ DCSchedd::actOnJobs( JobAction action,
 	
 	sprintf( buf, "%s = %d", ATTR_ACTION_RESULT_TYPE, 
 			 (int)result_type );
-	cmd_ad.Insert( buf );
-
-	sprintf( buf, "%s = %s", ATTR_NOTIFY_JOB_SCHEDULER, 
-			 notify_scheduler ? "True" : "False" );
 	cmd_ad.Insert( buf );
 
 	if( constraint ) {
