@@ -251,9 +251,8 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 
 		// chown the src job sandbox to the user if appropriate
 	if( result == CJR_OK && !target_is_sandboxed ) {
-		ClassAd old_job_ad(ad); // TODO: get rid of this copy
-		if( SpooledJobFiles::jobRequiresSpoolDirectory(&old_job_ad) ) {
-			if( !SpooledJobFiles::createJobSpoolDirectory(&old_job_ad,PRIV_USER) ) {
+		if( SpooledJobFiles::jobRequiresSpoolDirectory(&ad) ) {
+			if( !SpooledJobFiles::createJobSpoolDirectory(&ad,PRIV_USER) ) {
 				if( error_details ) {
 					error_details->formatstr("Failed to create/chown source job spool directory to the user.");
 				}
@@ -309,9 +308,8 @@ bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad,
 
 		// chown the src job sandbox back to condor is appropriate
 	if( !target_is_sandboxed ) {
-		ClassAd old_job_ad(job_ad); // TODO: get rid of this copy
-		if( SpooledJobFiles::jobRequiresSpoolDirectory(&old_job_ad) ) {
-			SpooledJobFiles::chownSpoolDirectoryToCondor(&old_job_ad);
+		if( SpooledJobFiles::jobRequiresSpoolDirectory(&job_ad) ) {
+			SpooledJobFiles::chownSpoolDirectoryToCondor(&job_ad);
 		}
 	}
 
