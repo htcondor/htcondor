@@ -67,6 +67,10 @@ int rec_touch_file(char *path, mode_t file_mode, mode_t directory_mode , int pos
 */
 int rec_clean_up(char *path, int depth, int pos = -1);
 
-
+#ifdef WIN32
+inline int IS_ANY_DIR_DELIM_CHAR(int ch) { return ch == DIR_DELIM_CHAR || ch == '/'; }
+#else
+inline int IS_ANY_DIR_DELIM_CHAR(int ch) { return ch == DIR_DELIM_CHAR; }
+#endif
 
 #endif
