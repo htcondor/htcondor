@@ -82,6 +82,10 @@ for Condor-C jobs (i.e. grid universe jobs with grid-type ``condor'') to
 fail.
 \Ticket{3379}
 
+\item Fixed a bug in which \Condor{qsub} mishandled setting a disk space
+request with a command line argument similar to \Opt{-l file=2048MB}.
+\Ticket{4606}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
