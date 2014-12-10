@@ -2251,16 +2251,22 @@ dprintf_dump_stack(void) {
 #endif // HAVE_BACKTRACE
 
 #else // !WIN32
+// LockFd and DebugRotateLog are values that a clone child will modify,
+// but we must ensure the values in the parent process are preserved
+// after the child exec()s or exits.
 static int ParentLockFd = -1;
+static bool ParentDebugRotateLog = true;
 
 void
 dprintf_before_shared_mem_clone() {
 	ParentLockFd = LockFd;
+	ParentDebugRotateLog = DebugRotateLog;
 }
 
 void
 dprintf_after_shared_mem_clone() {
 	LockFd = ParentLockFd;
+	DebugRotateLog = ParentDebugRotateLog;
 }
 
 void
@@ -2269,8 +2275,16 @@ dprintf_init_fork_child( bool cloned ) {
 		close( LockFd );
 		LockFd = -1;
 	}
+	// Avoid opening or closing files while in a cloned child process,
+	// since we're sharing the parent's memory but have our own copy of
+	// of the file descriptors. The LockFd is an exception, for which
+	// we have extra handling code.
+	// For forked child processes, don't do log rotation and reopen the
+	// log file on every dprintf(). That avoids a race between parent
+	// and child that can result in the parent writing to a rotated log
+	// file.
+	DebugRotateLog = false;
 	if ( !cloned ) {
-		DebugRotateLog = false;
 		log_keep_open = 0;
 		std::vector<DebugFileInfo>::iterator it;
 		for ( it = DebugLogs->begin(); it < DebugLogs->end(); it++ ) {
@@ -2287,16 +2301,18 @@ dprintf_wrapup_fork_child( bool cloned ) {
 		   safe to close the lock file.  If parent closes all
 		   fds anyway, then this is redundant.
 		*/
+	if( LockFd >= 0 ) {
+		close( LockFd );
+		LockFd = -1;
+	}
 	if ( !cloned ) {
 		// We don't need to restore these values in a non-cloned child,
 		// because dprintf() won't be called again and we're not sharing
 		// memory with the parent process.
+		// In a cloned child, the parent restores the original value of
+		// DebugRotateLog when it resumes execution.
 		//DebugRotateLog = true;
 		//log_keep_open = ?
-	}
-	if( LockFd >= 0 ) {
-		close( LockFd );
-		LockFd = -1;
 	}
 }
 

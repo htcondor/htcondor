@@ -1,0 +1,9 @@
+DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+ALL_DEBUG =
+NUM_CPUS = 8
+# slot type 1: a traditional cpu-centric policy
+SLOT_TYPE_1 = cpus=100%,memory=100%,disk=100%
+SLOT_TYPE_1_PARTITIONABLE = True
+NUM_SLOTS_TYPE_1 = 1
+NEGOTIATOR_INTERVAL = 5
+queuesize = 4

@@ -2410,11 +2410,8 @@ Scheduler::insert_owner(char const* owner)
 static bool IsSchedulerUniverse( shadow_rec* srec );
 static bool IsLocalUniverse( shadow_rec* srec );
 
-extern "C" {
-
 void
-abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
-				  bool notify )
+abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 {
 	shadow_rec *srec;
 	int mode;
@@ -2435,10 +2432,9 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 	// are removing the job).
 
     dprintf( D_FULLDEBUG, 
-			 "abort_job_myself: %d.%d action:%s log_hold:%s notify:%s\n", 
+			 "abort_job_myself: %d.%d action:%s log_hold:%s\n",
 			 job_id.cluster, job_id.proc, getJobActionString(action),
-			 log_hold ? "true" : "false",
-			 notify ? "true" : "false" );
+			 log_hold ? "true" : "false" );
 
 		// Note: job_ad should *NOT* be deallocated, so we don't need
 		// to worry about deleting it before every return case, etc.
@@ -2499,13 +2495,6 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			}
 		}
 		if ( job_managed  ) {
-			if( ! notify ) {
-					// caller explicitly does not the gridmanager notified??
-					// buyer had better beware, but we will honor what
-					// we are told.  
-					// nothing to do
-				return;
-			}
 			MyString owner;
 			MyString domain;
 			job_ad->LookupString(ATTR_OWNER,owner);
@@ -2553,10 +2542,6 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 				  vs. rm vs. vacate kill signals than the shadow is.
 				  -Derek Wright <wright@cs.wisc.edu> 2004-10-28
 				*/
-			if( ! notify ) {
-					// nothing to do
-				return;
-			}
 			dprintf( D_FULLDEBUG, "Found shadow record for job %d.%d\n",
 					 job_id.cluster, job_id.proc );
 
@@ -2590,11 +2575,6 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 
 		} else if( job_universe != CONDOR_UNIVERSE_SCHEDULER ) {
             
-			if( ! notify ) {
-					// nothing to do
-				return;
-			}
-
                 /* if there is a match printout the info */
 			if (srec->match) {
 				dprintf( D_FULLDEBUG,
@@ -2659,7 +2639,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 #endif
 				holdJob(job_id.cluster, job_id.proc, msg.Value(), 
 						CONDOR_HOLD_CODE_FailedToAccessUserAccount, 0,
-					false, false, true, false, false);
+					false, true, false, false);
 				return;
 			}
 			int kill_sig = -1;
@@ -2751,8 +2731,6 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 		}
 	}
 }
-
-} /* End of extern "C" */
 
 /*
 For a given job, determine if the schedd is the responsible
@@ -2862,7 +2840,7 @@ PeriodicExprEval( ClassAd *jobad )
 			if(status!=HELD) {
 				holdJob(cluster, proc, reason.Value(),
 						reason_code, reason_subcode,
-						true, false, false, false, false);
+						true, false, false, false);
 			}
 			break;
 		case RELEASE_FROM_HOLD:
@@ -4506,7 +4484,6 @@ Scheduler::actOnJobs(int, Stream* s)
 	char *reason = NULL;
 	const char *reason_attr_name = NULL;
 	ReliSock* rsock = (ReliSock*)s;
-	bool notify = true;
 	bool needs_transaction = true;
 	action_result_type_t result_type = AR_TOTALS;
 	int hold_reason_subcode = 0;
@@ -4564,10 +4541,9 @@ Scheduler::actOnJobs(int, Stream* s)
 		   ATTR_ACTION_IDS - a string with a comma seperated list of
 		                     job ids to act on
 
-		   In addition, it might also include:
-		   ATTR_NOTIFY_JOB_SCHEDULER (true or false)
-		   and one of: ATTR_REMOVE_REASON, ATTR_RELEASE_REASON, or
-		               ATTR_HOLD_REASON
+		   In addition, it might also include one of:
+					ATTR_REMOVE_REASON, ATTR_RELEASE_REASON, or
+					ATTR_HOLD_REASON
 
 		   It may optionally contain ATTR_HOLD_REASON_SUBCODE.
 		*/
@@ -4640,12 +4616,6 @@ Scheduler::actOnJobs(int, Stream* s)
 	}
 
 	int foo;
-	if( ! command_ad.LookupBool(ATTR_NOTIFY_JOB_SCHEDULER, foo) ) {
-		notify = true;
-	} else {
-		notify = (bool) foo;
-	}
-
 		// Default to summary.  Only give long results if they
 		// specifically ask for it.  If they didn't specify or
 		// specified something that we don't understand, just give
@@ -5081,7 +5051,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		if( jobs[i].cluster == -1 ) {
 			continue;
 		}
-		enqueueActOnJobMyself( jobs[i], action, notify, true );
+		enqueueActOnJobMyself( jobs[i], action, true );
 	}
 
 		// In case we have removed jobs that were queued to run, scan
@@ -5103,12 +5073,11 @@ Scheduler::actOnJobs(int, Stream* s)
 
 class ActOnJobRec: public ServiceData {
 public:
-	ActOnJobRec(PROC_ID job_id, JobAction action, bool notify, bool log):
-		m_job_id(job_id.cluster,job_id.proc,-1), m_action(action), m_notify(notify), m_log(log) {}
+	ActOnJobRec(PROC_ID job_id, JobAction action, bool log):
+		m_job_id(job_id.cluster,job_id.proc,-1), m_action(action), m_log(log) {}
 
 	CondorID m_job_id;
 	JobAction m_action;
-	bool m_notify;
 	bool m_log;
 
 		/** These are not actually used, because we are
@@ -5122,13 +5091,7 @@ ActOnJobRec::ServiceDataCompare( ServiceData const* other ) const
 {
 	ActOnJobRec const *o = (ActOnJobRec const *)other;
 
-	if( m_notify < o->m_notify ) {
-		return -1;
-	}
-	else if( m_notify > o->m_notify ) {
-		return 1;
-	}
-	else if( m_action < o->m_action ) {
+	if( m_action < o->m_action ) {
 		return -1;
 	}
 	else if( m_action > o->m_action ) {
@@ -5144,9 +5107,9 @@ ActOnJobRec::HashFn( ) const
 }
 
 void
-Scheduler::enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify, bool log )
+Scheduler::enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool log )
 {
-	ActOnJobRec *act_rec = new ActOnJobRec( job_id, action, notify, log );
+	ActOnJobRec *act_rec = new ActOnJobRec( job_id, action, log );
 	bool stopping_job = false;
 
 	if( action == JA_HOLD_JOBS ||
@@ -5216,7 +5179,6 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 	ActOnJobRec *act_rec = (ActOnJobRec *)data;
 
 	JobAction action = act_rec->m_action;
-	bool notify = act_rec->m_notify;
 	bool log    = act_rec->m_log;
 	PROC_ID job_id;
 	job_id.cluster = act_rec->m_job_id._cluster;
@@ -5235,7 +5197,7 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 	case JA_REMOVE_JOBS:
 	case JA_VACATE_JOBS:
 	case JA_VACATE_FAST_JOBS: {
-		abort_job_myself( job_id, action, log, notify );		
+		abort_job_myself( job_id, action, log );
 
 			//
 			// Changes here to fix gittrac #741 and #1490:
@@ -8160,7 +8122,7 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 		// human intervention
 	holdJob( job_id.cluster, job_id.proc, hold_reason, 
 			 CONDOR_HOLD_CODE_NoCompatibleShadow, 0,
-			 true, true, true, *notify_admin );
+			 true, true, *notify_admin );
 
 		// regardless of what it used to be, we need to record that we
 		// no longer want to notify the admin for this kind of error
@@ -8265,7 +8227,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 		holdJob( job_id->cluster, job_id->proc,
 				 "No condor_starter installed that supports local universe",
 				 CONDOR_HOLD_CODE_NoCompatibleShadow, 0,
-				 false, true, notify_admin, true );
+				 false, notify_admin, true );
 		notify_admin = false;
 		return;
 	}
@@ -8504,7 +8466,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 #endif
 		holdJob(job_id->cluster, job_id->proc, tmpstr.Value(),
 				CONDOR_HOLD_CODE_FailedToAccessUserAccount, 0,
-				false, false, true, false, false);
+				false, true, false, false);
 		goto wrapup;
 	}
 
@@ -8533,7 +8495,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			holdJob(job_id->cluster, job_id->proc, 
 				"Spooled executable is not executable!",
 					CONDOR_HOLD_CODE_FailedToCreateProcess, EACCES,
-				false, false, true, false, false );
+				false, true, false, false );
 
 			delete filestat;
 			filestat = NULL;
@@ -8558,7 +8520,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			holdJob(job_id->cluster, job_id->proc, 
 				"Executable unknown - not specified in job ad!",
 					CONDOR_HOLD_CODE_FailedToCreateProcess, ENOENT,
-				false, false, true, false, false );
+				false, true, false, false );
 			goto wrapup;
 		}
 
@@ -8582,7 +8544,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			set_priv( priv );  // back to regular privs...
 			holdJob(job_id->cluster, job_id->proc, tmpstr.Value(),
 					CONDOR_HOLD_CODE_FailedToCreateProcess, EACCES,
-					false, false, true, false, false);
+					false, true, false, false);
 			goto wrapup;
 		}
 	}
@@ -10841,7 +10803,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				// delete_shadow_rec will do that later
 			holdJob(job_id.cluster, job_id.proc, reason.Value(),
 					reason_code, reason_subcode,
-				true,false,false,false,false,false);
+				true,false,false,false,false);
 			break;
 
 		case RELEASE_FROM_HOLD:
@@ -10859,7 +10821,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				 job_id.cluster, job_id.proc, reason.Value());
 			holdJob(job_id.cluster, job_id.proc, reason.Value(),
 					reason_code, reason_subcode,
-				true,false,false,false,true);
+				true,false,false,true);
 			break;
 
 		default:
@@ -10873,7 +10835,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			reason2 += reason;
 			holdJob(job_id.cluster, job_id.proc, reason2.Value(),
 					CONDOR_HOLD_CODE_JobPolicyUndefined, 0,
-				true,false,false,false,true);
+				true,false,false,true);
 			break;
 	}
 
@@ -13647,7 +13609,7 @@ abortJobRaw( int cluster, int proc, const char *reason )
 	fixReasonAttrs( job_id, JA_REMOVE_JOBS );
 
 	// Abort the job now
-	abort_job_myself( job_id, JA_REMOVE_JOBS, true, true );
+	abort_job_myself( job_id, JA_REMOVE_JOBS, true );
 	dprintf( D_ALWAYS, "Job %d.%d aborted: %s\n", cluster, proc, reason );
 
 	return true;
@@ -13781,7 +13743,7 @@ Does not start or end a transaction.
 static bool
 holdJobRaw( int cluster, int proc, const char* reason,
 			int reason_code, int reason_subcode,
-		 bool notify_shadow, bool email_user,
+		 bool email_user,
 		 bool email_admin, bool system_hold )
 {
 	int status;
@@ -13870,11 +13832,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 	// replacing this with the call to enqueueActOnJobMyself
 	// in holdJob AFTER the transaction; otherwise the job status
 	// doesn't get properly updated for some reason
-	//abort_job_myself( tmp_id, JA_HOLD_JOBS, true, notify_shadow );
-        if(!notify_shadow)	
-	{
-		dprintf( D_ALWAYS, "notify_shadow set to false but will still notify- this should not be optional\n");
-	}
+	//abort_job_myself( tmp_id, JA_HOLD_JOBS, true );
 
 		// finally, email anyone our caller wants us to email.
 	if( email_user || email_admin ) {
@@ -13911,7 +13869,7 @@ Performs a complete transaction if desired.
 bool
 holdJob( int cluster, int proc, const char* reason,
 		 int reason_code, int reason_subcode,
-		 bool use_transaction, bool notify_shadow, bool email_user,
+		 bool use_transaction, bool email_user,
 		 bool email_admin, bool system_hold, bool write_to_user_log )
 {
 	bool result;
@@ -13920,7 +13878,7 @@ holdJob( int cluster, int proc, const char* reason,
 		BeginTransaction();
 	}
 
-	result = holdJobRaw(cluster,proc,reason,reason_code,reason_subcode,notify_shadow,email_user,email_admin,system_hold);
+	result = holdJobRaw(cluster,proc,reason,reason_code,reason_subcode,email_user,email_admin,system_hold);
 
 	if(use_transaction) {
 		if(result) {
@@ -13936,7 +13894,7 @@ holdJob( int cluster, int proc, const char* reason,
 		PROC_ID id;
 		id.cluster = cluster;
 		id.proc = proc;
-		scheduler.enqueueActOnJobMyself(id,JA_HOLD_JOBS, true, write_to_user_log);
+		scheduler.enqueueActOnJobMyself(id,JA_HOLD_JOBS, write_to_user_log);
 	}
 
 	return result;
@@ -14676,14 +14634,13 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			//
 			// Throw the job on hold. For this call we want to:
 			// 	use_transaction - true
-			//	notify_shadow	- false
 			//	email_user		- true
 			//	email_admin		- false
 			//	system_hold		- false
 			//
 		holdJob( id.cluster, id.proc, reason.Value(),
 				 CONDOR_HOLD_CODE_InvalidCronSettings, 0,
-				 true, false, true, false, false );
+				 true, true, false, false );
 	}
 	
 	return ( valid );

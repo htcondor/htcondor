@@ -3794,6 +3794,33 @@ sub CreateLocalConfig
     return($name);
 }
 
+# we want to produce a temporary file to use as a fresh start
+# # through StartCondorWithParams. This is from an array reference
+sub CreateLocalConfigFromArrayRef
+{
+	my $arrayref = shift;
+	my $name = shift;
+	my $extratext = shift;
+	$name = "$name$$";
+	open(FI,">$name") or die "Failed to create local config starter file: $name:$!\n";
+	#print "Created: $name\n";
+	foreach my $line (@{$arrayref}) {
+		print FI "$line\n";
+	}
+	if(defined $extratext) {
+		print FI "$extratext";
+	}
+	close(FI);
+	my @configarray = ();
+	runCondorTool("cat $name",\@configarray,2,{emit_output=>0});
+	print "\nIncorporating the following into the local config file:\n\n";
+	foreach my $line (@configarray) {
+		print "$line";
+	}
+	print "\n";
+	return($name);
+}
+
 sub VerifyNoJobsInState
 {
 	my $state = shift;
