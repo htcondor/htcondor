@@ -339,6 +339,8 @@ public:
 	return true;
   }
 
+  // this is for DEBUG PURPOSES ONLY!!!
+  HashTable<K,AD>* Table() { return &this->table; }
 };
 
 // Declare the old (non-templated) ClassAdCollection as a specialization of this type

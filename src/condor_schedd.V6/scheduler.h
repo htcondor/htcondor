@@ -82,7 +82,8 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure );
 // This needs to be here because it causes problems in schedd_main.C 
 // with new compilers (gcc 4.1+)
 //
-extern int updateSchedDInterval( ClassAd* );
+class JobQueueJob;
+extern int updateSchedDInterval( JobQueueJob*, JOB_ID_KEY&, void* );
 
 class match_rec;
 
@@ -343,7 +344,7 @@ class Scheduler : public Service
 	friend	int		count_a_job(ClassAd *);
 	friend	void	job_prio(ClassAd *);
 	friend  int		find_idle_local_jobs(ClassAd *);
-	friend	int		updateSchedDInterval( ClassAd* );
+	friend	int		updateSchedDInterval(JobQueueJob*, JOB_ID_KEY&, void* );
     friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
@@ -833,7 +834,9 @@ private:
 
 
 // Other prototypes
-int		get_job_prio(ClassAd *ad);
+class JobQueueJob;
+struct JOB_ID_KEY;
+int get_job_prio(JobQueueJob *ad, JOB_ID_KEY& key, void* user);
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec );
 extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);

@@ -169,6 +169,7 @@ bool jobCleanupNeedsThread( int cluster, int proc );
 bool jobExternallyManaged(ClassAd * ad);
 bool jobManagedDone(ClassAd * ad);
 int  count_a_job( ClassAd *job );
+void mark_jobs_idle();
 static void WriteCompletionVisa(ClassAd* ad);
 
 schedd_runtime_probe WalkJobQ_check_for_spool_zombies_runtime;
@@ -2017,9 +2018,10 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 }
 
 int 
-clear_autocluster_id( ClassAd *job )
+clear_autocluster_id(JobQueueJob *job, JOB_ID_KEY & /*jid*/, void *)
 {
 	job->Delete(ATTR_AUTO_CLUSTER_ID);
+	job->autocluster_id = -1;
 	return 0;
 }
 
@@ -5961,7 +5963,7 @@ Scheduler::negotiate(int command, Stream* s)
 	if ( sig_attrs_from_cm ) {
 		if ( autocluster.config(sig_attrs_from_cm) ) {
 			// clear out auto cluster id attributes
-			WalkJobQueue(clear_autocluster_id);
+			WalkJobQueue2(clear_autocluster_id, NULL);
 			DirtyPrioRecArray(); // should rebuild PrioRecArray
 		}
 		free(sig_attrs_from_cm);
@@ -6683,7 +6685,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
  * @return true if no error occurred, false otherwise
  **/
 int
-updateSchedDInterval( ClassAd *job )
+updateSchedDInterval( JobQueueJob *job, JOB_ID_KEY& id, void* /*user*/ )
 {
 		//
 		// Check if the job has the ScheddInterval attribute set
@@ -6695,15 +6697,36 @@ updateSchedDInterval( ClassAd *job )
 			// are unable to update the job ad
 			//
 		if ( ! job->Assign( ATTR_SCHEDD_INTERVAL, (int)scheduler.SchedDInterval.getMaxInterval() ) ) {
-			PROC_ID id;
-			job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
-			job->LookupInteger(ATTR_PROC_ID, id.proc);
 			dprintf( D_ALWAYS, "Failed to update job %d.%d's %s attribute!\n",
 							   id.cluster, id.proc, ATTR_SCHEDD_INTERVAL );
 		}
 	}
 	return ( true );
 }
+
+// stuff in the schedd that must be initialzed after InitJobQueue
+void
+PostInitJobQueue()
+{
+	mark_jobs_idle();
+
+		// The below must happen _after_ InitJobQueue is called.
+	if ( scheduler.autocluster.config() ) {
+		// clear out auto cluster id attributes
+		WalkJobQueue2(clear_autocluster_id, NULL);
+	}
+
+		//
+		// Update the SchedDInterval attributes in jobs if they
+		// have it defined. This will be for JobDeferral and
+		// CronTab jobs
+		//
+	WalkJobQueue2(updateSchedDInterval, NULL);
+
+	extern int dump_job_q_stats(int cat);
+	dump_job_q_stats(D_ALWAYS);
+}
+
 
 int
 find_idle_local_jobs( ClassAd *job )
@@ -11216,7 +11239,7 @@ Scheduler::Init()
 			// This will only update the job's that have the old
 			// ScheddInterval attribute defined
 			//
-			WalkJobQueue3((scan_func)(::updateSchedDInterval), NULL, WalkJobQ_updateSchedDInterval_runtime);
+			WalkJobQueue2(updateSchedDInterval, NULL);
 		}
 	}
 
@@ -12204,7 +12227,7 @@ void Scheduler::reconfig() {
 
 		// clear out auto cluster id attributes
 	if ( autocluster.config() ) {
-		WalkJobQueue(clear_autocluster_id);
+		WalkJobQueue2(clear_autocluster_id, NULL);
 	}
 
 	timeout();

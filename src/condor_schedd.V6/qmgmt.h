@@ -78,15 +78,56 @@ class QmgmtPeer {
 
 #define USE_JOB_QUEUE_JOB 1
 
-// used to store a ClassAd and some other stuff in a condor hashtable.
+// used to store a ClassAd + runtime information in a condor hashtable.
 class JobQueueJob : public ClassAd {
 public:
-	int id;
+	JOB_ID_KEY jid;
+	char entry_type;    // one of entry_type_xxx enum codes, 0 is unknown
+	char universe;
+	char future_status; // FUTURE: keep this in sync with job status
+	bool unused2;       // spare to align to 4 byte boundary
 
-	JobQueueJob(int _id=0) : id(_id) {}
+	int autocluster_id;
+protected:
+	JobQueueJob * link; // FUTURE: jobs are linked to clusters.
+	int future_num_procs_or_hosts; // FUTURE: num_procs if cluster, num hosts if job
+
+public:
+	JobQueueJob(int _etype=0)
+		: jid(0,0)
+		, entry_type(_etype)
+		, universe(0)
+		, future_status(0) // JOB_STATUS_MIN
+		, autocluster_id(0)
+		, future_num_procs_or_hosts(0)
+	{}
+	virtual ~JobQueueJob() {};
+
+	enum {
+		entry_type_unknown=0,
+		entry_type_header,
+		entry_type_cluster,
+		entry_type_job,
+	};
+	bool IsType(char _type) { if ( ! entry_type) this->PopulateFromAd(); return entry_type==_type; }
+	bool IsJob() { return IsType(entry_type_job); }
+	bool IsHeader() { return IsType(entry_type_cluster); }
+	bool IsCluster() { return IsType(entry_type_header); }
+	// FUTURE:
+	int NumProcs() { if (entry_type == entry_type_cluster) return future_num_procs_or_hosts; return 0; }
+	int IncrementNumProcs() { if (entry_type == entry_type_cluster) return ++future_num_procs_or_hosts; return 0; }
+	int NumHosts() { if (entry_type == entry_type_job) return future_num_procs_or_hosts; return 0; }
+
 	//JobQueueJob( const ClassAd &ad );
 	//JobQueueJob( const classad::ClassAd &ad );
-	virtual ~JobQueueJob() {};
+
+	void PopulateFromAd(); // populate this structure from contained ClassAd state
+	// if this object is a job object, it can be linked to it's cluster object
+	JobQueueJob * Cluster() { if (entry_type == entry_type_job) return link; return NULL; }
+	void SetCluster(JobQueueJob* _link) {
+		if (entry_type == entry_type_unknown) entry_type = entry_type_job;
+		if (entry_type == entry_type_job) link = _link;
+	}
 };
 
 
@@ -228,6 +269,10 @@ typedef ClassAdLog<JOB_ID_KEY, const char*,JobQueueJob*> JobQueueLogType;
 JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
 JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
 
+class schedd_runtime_probe;
+typedef int (*queue_scan_func)(JobQueueJob *ad, const JobQueueKey& key, void* user);
+void WalkJobQueue3(queue_scan_func fn, void* pv, schedd_runtime_probe & ftm);
+#define WalkJobQueue2(fn,pv) WalkJobQueue3( (queue_scan_func)(fn), pv, WalkJobQ_ ## fn ## _runtime )
 
 int get_myproxy_password_handler(Service *, int, Stream *sock);
 
