@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 Activity = "Busy"
 Arch = "X86_64"
 AuthenticatedIdentity = "unauthenticated@unmapped"
@@ -598,16 +597,3 @@ UtsnameVersion = "#1 SMP Fri Dec 13 06:58:20 EST 2013"
 VirtualMemory = 6165423
 WakeOnLanEnabledFlags = "NONE"
 WakeOnLanSupportedFlags = "NONE"
-=======
-Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime
-
-slot1@ingwe.cs.wis LINUX      X86_64 Claimed   Busy      0.000 3985  0+00:00:09
-slot2@ingwe.cs.wis LINUX      X86_64 Claimed   Busy      0.000 3985  0+00:00:09
-slot3@ingwe.cs.wis LINUX      X86_64 Unclaimed Idle      0.130 3985  0+00:00:26
-slot4@ingwe.cs.wis LINUX      X86_64 Unclaimed Idle      0.000 3985  0+00:00:27
-                     Total Owner Claimed Unclaimed Matched Preempting Backfill
-
-        X86_64/LINUX     4     0       2         2       0          0        0
-
-               Total     4     0       2         2       0          0        0
->>>>>>> Stashed changes

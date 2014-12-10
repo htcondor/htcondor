@@ -43,7 +43,6 @@ my $expectedrunning = 0;
 my $pid = $$;
 my $testname = "condor_status_dash_ads";
 my $AdSaveLoc = "$testname" . ".saveme/$pid"; 
-<<<<<<< Updated upstream
 
 my @thisconfig;
 my $variance = "";
@@ -55,19 +54,12 @@ CreateDir("-p $AdSaveLoc");
 my $AdSaveLocDir = "$AdSaveLoc/CurrentSavedAd";
 my $VarianceStash = "StatusAds";
 my $VarianceConfigs = "StatusConfigs";
-=======
-my $AdSaveLocDir = "$AdSaveLoc/CurrentSavedAd";
-my $VarianceStash = "StatusAds";
->>>>>>> Stashed changes
 my $running = 0;
 
 my @thisvariance;
 my $makemyads = 1;
-<<<<<<< Updated upstream
 my @condorstatusbefore = ();
 my @condorstatusafter = ();
-=======
->>>>>>> Stashed changes
 
 my $on_submit = sub {
 };
@@ -77,17 +69,13 @@ my $on_success = sub {
 
 my $on_execute = sub {
 	$running += 1;
-<<<<<<< Updated upstream
 	my $mismatches = 0;
-=======
->>>>>>> Stashed changes
 	if($running == $expectedrunning) {
 		print "Checking Variance:$variance\n";
 		sleep(10);
 		runToolNTimes("condor_q",1,1,{emit_output=>0});
 		CollectVariance($variance);
 		SaveVariance($variance);
-<<<<<<< Updated upstream
 		$mismatches = CompareVariance($variance);
 		if($mismatches == 0) {
 			RegisterResult(1,"test_name","$testname");
@@ -95,10 +83,6 @@ my $on_execute = sub {
 			print "There were $mismatches differences between master ad file and what -ads file got us\n";
 			RegisterResult(0,"test_name","$testname");
 		}
-=======
-		CompareVariance($variance);
-		RegisterResult(1,"test_name","$testname");
->>>>>>> Stashed changes
 		runToolNTimes("condor_rm -all",1,1,{emit_output=>0});
 	} else {
 		print "Waiting for expected number of running jobs: Have:$running Need:$expectedrunning\n";
@@ -114,33 +98,11 @@ my $on_abort = sub {
 my $on_evictedwithoutcheckpoint = sub {
 };
 
-<<<<<<< Updated upstream
-=======
-my $firstappend_condor_config = '
-	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 5
-	COLLECTOR_UPDATE_INTERVAL = 5
-	NUM_CPUS = 4
-';
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"condorstatusdashads1");
-
-# First order up the config we want to save and reload later
-
-CondorTest::StartCondorWithParams(
-	condor_name => "condorstatusdashads1",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
-
->>>>>>> Stashed changes
 # Do once after we have the location where all the personals will be created
 if(!(-d $AdSaveLoc)) {
 	CondorTest::EndTest();
 	exit(1);
 } else {
-<<<<<<< Updated upstream
 	CreateDir("-p  $AdSaveLocDir");
 }
 print "Checking directory structure in:$AdSaveLoc\n";
@@ -264,104 +226,17 @@ sub CheckSimilarity{
 	}
 	return($ret);
 }
-=======
-	system("mkdir -p  $AdSaveLocDir");
-}
-print "Checking directory structure in:$AdSaveLoc\n";
-system("ls $AdSaveLoc");
-
-$expectedrunning = 2;
-$variance = "basic4slot";
-$result = SimpleJob::RunCheck(
-    #append_submit_commands => $appended_submit_info,
-    queue_sz =>  2,
-	duration => 0,
-	test_name => $testname,
-    on_execute => $on_execute,
-    on_success => $on_success,
-    on_submit => $on_submit,
-    on_abort => $on_abort,
-    on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
-);
-
-$running = 0; #reset for next variance
-
-system("ls $AdSaveLoc");
-CondorTest::EndTest();
-exit(0);
-# set collector ads from saved file
-my @myads = ();
-my $status = runCondorTool("condor_status -l",\@myads,2,{emit_output=>0});
-
-#Do a job before setting tesing exit codes
-print "First test basic job\n";
-my $result = SimpleJob::RunCheck(); # jobid 1
-
-open(MA, ">myads") or die "Failed to open: myads:$!\n";
-foreach my $line (@myads) {
-	fullchomp($line);
-	print MA "$line\n";
-}
-
-my $firstappend_condor_config = '
-	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 5
-	COLLECTOR_UPDATE_INTERVAL = 5
-	NUM_CPUS = 6
-';
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"condorstatusdashads2");
-
-# First order up the config we want to save and reload later
-
-CondorTest::StartCondorWithParams(
-	condor_name => "condorstatusdashads2",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
-
-#Do a job before setting tesing exit codes
-print "First test basic job\n";
-my $result = SimpleJob::RunCheck(); # jobid 1
-
-# set collector ads from saved file
-my @myads = ();
-my $status = runCondorTool("condor_status -ads myads",\@myads,2,{emit_output=>0});
-
-my $thisad = "";
-my $line = "";
-
-open(MA, "<myads") or die "Failed to open: myads:$!\n";
-while (<MA>) {
-	fullchomp($_);
-	$line = $_;
-	$thisad = shift @myads;
-	if($thisad ne $line) {
-		print "Mismatch: AD:$thisad File:$line ---\n";
-	}
-}
-
-CondorTest::EndTest();
-
-exit(0);
->>>>>>> Stashed changes
 
 sub CollectVariance {
 	my $variance = shift;
 	print "Collecting Variance:$variance\n";
 	@thisvariance = ();
-<<<<<<< Updated upstream
 	runCondorTool("condor_status -l",\@thisvariance,2,{emit_output=>0});
-=======
-	runCondorTool("condor_status",\@thisvariance,2,{emit_output=>1});
->>>>>>> Stashed changes
 } 
 
 sub SaveVariance {
 	my $variance = shift;
 	my $variancefile = "$AdSaveLocDir" . "/$variance";
-<<<<<<< Updated upstream
 	my @sortedvariance;
 	print "Save location for:$variance is:$variancefile\n";
 	SortMyAds(\@thisvariance,\@sortedvariance);
@@ -369,18 +244,10 @@ sub SaveVariance {
 	foreach my $line (@sortedvariance) {
 			fullchomp($line);
 			print VAR "$line\n";
-=======
-	print "Save location for:$variance is:$variancefile\n";
-	open(VAR, ">$variancefile") or die "Failed to open:$variancefile because:$!\n";
-	foreach my $line (@thisvariance) {
-		fullchomp($line);
-		print VAR "$line\n";
->>>>>>> Stashed changes
 	}
 	close(VAR);
 } 
 
-<<<<<<< Updated upstream
 sub SortMyAds {
 	my $presortarrayref = shift;
 	my $sortedarrayref = shift;
@@ -497,17 +364,5 @@ sub CompareVariance {
 	print "Checking for master variance\n";
 	print "Returning from CompareVariance: mismatches:$mismatch\n";
 	return($mismatch);
-=======
-sub CompareVariance {
-	my $variance = shift;
-	my $mastervariance = "$VarianceStash/$variance";
-	if(!(-f "$mastervariance") {
-		print "Have these variances and looking for:$variance\n";
-		system("ls $VarianceStash");
-		die "Have no master variance:$mastervariance\n";
-	} else {
-	}
-	print "Checking for master variance
->>>>>>> Stashed changes
 } 
 
