@@ -112,15 +112,15 @@ A very simple DAG input file for this diamond-shaped DAG is
 \end{verbatim}
 \normalsize
 
-A set of basic key words appearing in a DAG input file is described below.
+A set of basic keywords appearing in a DAG input file is described below.
 
 \begin{itemize}
 
 \label{dagman:JOB}
-\index{DAGMan input file!JOB key word}
+\index{DAGMan input file!JOB keyword}
 \item \Bold{JOB}
 
-The \Arg{JOB} key word specifies a job to be managed by HTCondor.
+The \Arg{JOB} keyword specifies an HTCondor job.
 The syntax used for each \Arg{JOB} entry is
 
 \Opt{JOB} \Arg{JobName} \Arg{SubmitDescriptionFileName}
@@ -129,15 +129,14 @@ The syntax used for each \Arg{JOB} entry is
 A \Arg{JOB} entry maps a \Arg{JobName} to an HTCondor submit description file.
 The \Arg{JobName} uniquely identifies nodes within the
 DAGMan input file and in output messages.
-Note that the name for each node within the DAG
-must be unique.
+Each node name, given by \Arg{JobName}, within the DAG must be unique.
 
-The key words \Arg{JOB}, \Arg{DIR}, \Arg{NOOP}, and \Arg{DONE}
+The keywords \Arg{JOB}, \Arg{DIR}, \Arg{NOOP}, and \Arg{DONE}
 are not case sensitive.
 Therefore, \Arg{DONE}, \Arg{Done}, and \Arg{done} are all equivalent.
 The values defined for \Arg{JobName} and \Arg{SubmitDescriptionFileName}
-are case sensitive, as file names in
-the Unix file system are case sensitive.
+are case sensitive, as file names 
+in a file system are case sensitive.
 The \Arg{JobName} can be any string that contains no white space, except
 for the strings \Arg{PARENT} and \Arg{CHILD} (in upper, lower, or mixed
 case).
@@ -145,7 +144,7 @@ case).
 Note that \Arg{DIR}, \Arg{NOOP}, and \Arg{DONE}, if used, must appear
 in the order shown above.
 
-The \Arg{DIR} option specifies a working directory
+The optional \Arg{DIR} keyword specifies a working directory
 for this node,
 from which the HTCondor job will be submitted,
 and from which a \Arg{PRE} and/or
@@ -196,10 +195,10 @@ A node marked with \Arg{DONE} will not have a PRE or POST script run,
 and the HTCondor job will not be submitted.
 
 \label{dagman:DATA}
-\index{DAGMan input file!DATA key word}
+\index{DAGMan input file!DATA keyword}
 \item \Bold{DATA}
 
-The \Arg{DATA} key word specifies a job to be managed by the Stork data
+The \Arg{DATA} keyword specifies a job to be managed by the Stork data
 placement server.  
 Stork software is provided by the Stork project.
 Please refer to their website: 
@@ -211,8 +210,8 @@ The syntax used for each \Arg{DATA} entry is
 \oOptArg{DIR}{directory} \oOpt{NOOP} \oOpt{DONE}
 
 A \Arg{DATA} entry maps a \Arg{JobName} to a Stork submit description file.
-In all other respects, the \Arg{DATA} key word is identical to the
-\Arg{JOB} key word.
+In all other respects, the \Arg{DATA} keyword is identical to the
+\Arg{JOB} keyword.
 
 The keywords \Arg{DIR}, \Arg{NOOP} and \Arg{DONE} 
 follow the same rules and restrictions, and they have the same effect
@@ -239,10 +238,10 @@ may be run in parallel.
 
 %----------------------------
 \label{dagman:ParentChild}
-\index{DAGMan input file!PARENT \Dots CHILD key word}
+\index{DAGMan input file!PARENT \Dots CHILD keyword}
 \item \Bold{PARENT \Dots CHILD}
 
-The \Arg{PARENT} and \Arg{CHILD} key words specify the
+The \Arg{PARENT} and \Arg{CHILD} keywords specify the
 dependencies within the DAG.
 \index{DAGMan!describing dependencies}
 Nodes are parents and/or children within the DAG.
@@ -251,13 +250,13 @@ any of its children may be started.
 A child node may only be started once
 all its parents have successfully completed.
 
-The syntax of a dependency line within the DAG input file:
+The syntax used for each dependency entry is
 
 \Opt{PARENT} \Arg{ParentJobName\Dots} \Opt{CHILD} \Arg{ChildJobName\Dots}
 
-The \Arg{PARENT} key word is followed by one or more
+The \Arg{PARENT} keyword is followed by one or more
 \Arg{ParentJobName}s.
-The \Arg{CHILD} key word is followed by one or more
+The \Arg{CHILD} keyword is followed by one or more
 \Arg{ChildJobName}s.
 Each child job depends on every parent job within the line.
 A single line in the input file can specify the dependencies from one or more
@@ -282,16 +281,16 @@ produces four dependencies:
 
 %----------------------------
 \label{dagman:SCRIPT}
-\index{DAGMan input file!SCRIPT key word}
+\index{DAGMan input file!SCRIPT keyword}
 \item \Bold{SCRIPT}
 \index{DAGMan!PRE and POST scripts}
 
-The \Arg{SCRIPT} key word specifies
+The \Arg{SCRIPT} keyword specifies
 processing that is done either before a job within
-the DAG is submitted to HTCondor or Stork for execution
+a node is submitted to HTCondor or Stork for execution
 or after
 a job within
-the DAG completes its execution.
+a node completes its execution.
 \index{DAGMan!PRE script}
 Processing done before a job is submitted to HTCondor or Stork is
 called a \Arg{PRE} script.
@@ -299,28 +298,24 @@ Processing done after a job completes
 its execution under HTCondor or Stork is
 \index{DAGMan!POST script}
 called a \Arg{POST} script.
-A node in the DAG is comprised of the job together with
-\Arg{PRE} and/or \Arg{POST} scripts.
 
-\Arg{PRE} and \Arg{POST} script lines within the DAG input file
-use the syntax:
+The syntax used for each \Arg{PRE} or \Arg{POST} entry is
 
 \Opt{SCRIPT} \Opt{PRE} \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
 \Opt{SCRIPT} \Opt{POST}  \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
-The \Arg{SCRIPT} key word identifies the type of line within
-the DAG input file.
-The \Arg{PRE} or \Arg{POST} key word
-specifies the relative timing of when the script is to be run.
+The \Arg{SCRIPT} keyword is followed by either
+the \Arg{PRE} or \Arg{POST} keyword,
+which specifies the relative timing of when the script is to be run.
 The \Arg{JobName} specifies the node to which the script is attached.
 The \Arg{ExecutableName}
 specifies the script to be executed, 
-and it may not contain spaces.
-The Optional \Arg{arguments} are command line arguments to the script,
+and the executable name may not contain spaces.
+The optional \Arg{arguments} are command line arguments to the script,
 and spaces delimit the arguments.
 Both \Arg{ExecutableName} and optional \Arg{arguments} are
-case sensitive; they have their case preserved.
+case sensitive.
 
 Scripts are optional for each job, and
 any scripts are executed on the machine
@@ -410,7 +405,7 @@ node  & S & F & S${}^\ast$ & F          & S & F & S & F & S & F & S & S & F & F 
 \end{table}
 \end{center}
 
-\index{DAGMan input file!PRE\_SKIP key word}
+\index{DAGMan input file!PRE\_SKIP keyword}
 \index{DAGMan!PRE\_SKIP command}
 The behavior of DAGMan with respect to node success or failure can be changed 
 with the addition of a \Arg{PRE\_SKIP} command. 
@@ -984,12 +979,12 @@ If one exists, it is removed.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{dagman:retry}Retrying Failed Nodes or Stopping the Entire DAG}
 
-\index{DAGMan input file!RETRY key word}
+\index{DAGMan input file!RETRY keyword}
 \index{DAGMan!RETRY of failed nodes}
-\index{DAGMan input file!ABORT-DAG-ON key word}
+\index{DAGMan input file!ABORT-DAG-ON keyword}
 \index{DAGMan!ABORT-DAG-ON}
 
-The \Arg{RETRY} key word provides a
+The \Arg{RETRY} keyword provides a
 way to retry failed nodes.
 The use of retry is optional.
 The syntax for retry is
@@ -1027,7 +1022,7 @@ if it continues to fail.
 If the node is marked as successful, then further retries do not occur.
 
 Retry of a node may be short circuited using the
-optional key word \Arg{UNLESS-EXIT} (followed by an
+optional keyword \Arg{UNLESS-EXIT} (followed by an
 integer exit value).
 If the node exits with the specified integer exit value,
 then no further processing will be done
@@ -1040,7 +1035,7 @@ The variable \Env{\$MAX\_RETRIES} is the value set for
 \Arg{NumberOfRetries}.
 
 
-The \Arg{ABORT-DAG-ON} key word provides a way
+The \Arg{ABORT-DAG-ON} keyword provides a way
 to abort the entire DAG if a given node returns a specific exit
 code.  The syntax for \Arg{ABORT-DAG-ON} is
 
@@ -1070,7 +1065,7 @@ even if the node has retry specified.
 
 When a DAG aborts, by default it exits with the node return value that
 caused the abort.  This can be changed by 
-using  the optional \Arg{RETURN} key word along
+using  the optional \Arg{RETURN} keyword along
 with specifying the desired \Arg{DAGReturnValue}.
 The DAG abort return value
 can be used for DAGs within DAGs,
@@ -1106,11 +1101,11 @@ If this abort occurs, the return value for the DAG is 1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{dagman:VARS}Variable Values Associated with Nodes}
-\index{DAGMan input file!VARS key word}
+\index{DAGMan input file!VARS keyword}
 
 \index{DAGMan!VARS (macro for submit description file)}
 \index{VARS}
-The \Arg{VARS} key word provides a
+The \Arg{VARS} keyword provides a
 method for defining a macro that can be referenced in the
 node's submit description file.
 These macros are defined on a per-node basis, using the
@@ -1380,9 +1375,9 @@ which is the first retry and the value 1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Setting Priorities for Nodes}
-\index{DAGMan input file!PRIORITY key word}
+\index{DAGMan input file!PRIORITY keyword}
 
-The \Arg{PRIORITY} key word assigns a priority to a DAG node.
+The \Arg{PRIORITY} keyword assigns a priority to a DAG node.
 The syntax for \Arg{PRIORITY} is
 
 \Opt{PRIORITY} \Arg{JobName} \Arg{PriorityValue}
@@ -1473,22 +1468,22 @@ will \emph{not} tend to be the same.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-node-category}Limiting the Number of Submitted Job Clusters within a DAG}
 
-\index{DAGMan input file!CATEGORY key word}
-\index{DAGMan input file!MAXJOBS key word}
+\index{DAGMan input file!CATEGORY keyword}
+\index{DAGMan input file!MAXJOBS keyword}
 
 In order to limit the number of submitted job clusters within a DAG,
 the nodes may be placed into categories by assignment of a name.
 Then, a maximum number of submitted clusters may be specified
 for each category.
 
-The \Arg{CATEGORY} key word assigns a category name to a DAG node.
+The \Arg{CATEGORY} keyword assigns a category name to a DAG node.
 The syntax for \Arg{CATEGORY} is
 
 \Opt{CATEGORY} \Arg{JobName} \Arg{CategoryName}
 
 Category names cannot contain white space.
 
-The \Arg{MAXJOBS} key word limits the number of submitted job clusters
+The \Arg{MAXJOBS} keyword limits the number of submitted job clusters
 on a per category basis.
 The syntax for \Arg{MAXJOBS} is
 
@@ -1515,7 +1510,7 @@ categories and splices.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-configuration}Configuration Specific to a DAG}
-\index{DAGMan input file!CONFIG key word}
+\index{DAGMan input file!CONFIG keyword}
 \index{DAGMan!CONFIG}
 \index{DAGMan!configuration specific to a DAG}
 
@@ -1674,7 +1669,7 @@ to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
 \subsubsection{\label{sec:DAGsinDAGs}A DAG Within a DAG Is a SUBDAG}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!DAGs within DAGs}
-\index{DAGMan input file!SUBDAG key word}
+\index{DAGMan input file!SUBDAG keyword}
 
 The organization and dependencies of the jobs within a DAG
 are the keys to its utility.
@@ -1944,7 +1939,7 @@ must be specified accordingly.
 \subsubsection{\label{sec:DAGSplicing}DAG Splicing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!Splicing DAGs}
-\index{DAGMan input file!SPLICE key word}
+\index{DAGMan input file!SPLICE keyword}
 
 A weakness in scalability exists when submitting a DAG within a DAG.
 Each executing independent DAG requires its own invocation of
@@ -2359,7 +2354,7 @@ at a higher level, the splice name must be included.
 \subsubsection{\label{sec:DAGFinalNode}FINAL node}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!DAG FINAL node}
-\index{DAGMan input file!FINAL key word}
+\index{DAGMan input file!FINAL keyword}
 
 A FINAL node is a single and special node that is always run at 
 the end of the DAG,
@@ -2368,7 +2363,7 @@ A FINAL node can be used
 for tasks such as cleaning up intermediate files and checking the output
 of previous nodes.
 
-The \Arg{FINAL} key word specifies a job to be run at the end of
+The \Arg{FINAL} keyword specifies a job to be run at the end of
 the DAG.  The syntax used for the \Arg{FINAL} entry is
 
 \Opt{FINAL} \Arg{JobName} \Arg{SubmitDescriptionFileName}
@@ -2378,7 +2373,7 @@ The FINAL node is identified by \Arg{JobName}, and the HTCondor job
 is described by the contents of the HTCondor submit description file
 given by \Arg{SubmitDescriptionFileName}.
 
-The key words \Arg{DIR} and \Arg{NOOP} are not case sensitive.
+The keywords \Arg{DIR} and \Arg{NOOP} are not case sensitive.
 Note that \Arg{DIR} and \Arg{NOOP}, if used, must appear
 in the order shown above.
 See section~\ref{dagman:JOB} for the descriptions of these two keywords.
@@ -2860,7 +2855,7 @@ such that the user or a script can monitor this status.
 This file is periodically rewritten
 while the DAG runs.
 To enable this feature, the DAG input file must contain a line with the
-\Arg{NODE\_STATUS\_FILE} key word.
+\Arg{NODE\_STATUS\_FILE} keyword.
 
 The syntax for a \Arg{NODE\_STATUS\_FILE} specification is
 
@@ -2976,7 +2971,7 @@ yet running.
 \item 6 (\verb@STATUS_ERROR@): The node has failed.
 \end{itemize}
 
-A \Arg{NODE\_STATUS\_FILE} key word inside any splice is ignored.
+A \Arg{NODE\_STATUS\_FILE} keyword inside any splice is ignored.
 If multiple DAG files are specified on the \Condor{submit\_dag} command line,
 and more than one specifies a node status file,
 the first specification takes precedence.
