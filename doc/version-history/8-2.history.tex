@@ -28,11 +28,10 @@ The details of each version are described below.
 %\item HTCondor version 8.2.6 released on Month Date, 2014.
 
 \item Memory usage of the \Prog{ec2\_gahp}
-may grow without bound due to a dependency on a version of \Prog{libcurl}
-that has a bug. 
+may grow without bound due to a bug in some versions of \Prog{libcurl}.
 This occurs when jobs use \Expr{x509://} URLs.  
-Testing shows that \Prog{libcurl} version 7.38.0 does not have this issue,
-and version 7.24.0 does.
+Testing shows that \Prog{libcurl} version 7.38.0 does not have this issue.
+The fix may have been introduced as early as version 7.24.0.
 Therefore,
 if this problem occurs, 
 consider upgrading the installation of \Prog{libcurl}.
