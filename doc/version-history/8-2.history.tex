@@ -57,16 +57,21 @@ The details of each version are described below.
 \item HTCondor version 8.2.6 not yet released.
 %\item HTCondor version 8.2.6 released on Month Date, 2014.
 
-\item It has come to our attention that memory usage by the \Prog{ec2\_gahp}
-may grow without bound in certain situations, particularly when jobs use
-\Expr{x509://} URLs.  The problem lies in a dependency of \Prog{ec2\_gahp},
-libcurl.  We believe the libcurl developers fixed this problem in version
-7.24.0, and we've verified that version 7.38.0 does not have this problem.  If
-you see the \Prog{ec2\_gahp}'s memory usage becoming too large, consider
-upgrading your installation of libcurl.  If your operating system vendor
-does not provide a new enough version of libcurl, you may need to build a
-more recent version, and set \Macro{EC2\_GAHP} to a wrapper script which
-ensures that the \Prog{ec2\_gahp} uses that version.
+\item Memory usage of the \Prog{ec2\_gahp}
+may grow without bound due to a dependency on a version of \Prog{libcurl}
+that has a bug. 
+This occurs when jobs use \Expr{x509://} URLs.  
+Testing shows that \Prog{libcurl} version 7.38.0 does not have this issue,
+and version 7.24.0 does.
+Therefore,
+if this problem occurs, 
+consider upgrading the installation of \Prog{libcurl}.
+For operating systems whose vendor
+does not provide a new enough version of \Prog{libcurl}, 
+build a more recent version, 
+and use the configuration of \Macro{EC2\_GAHP} to specify
+a wrapper script that sets up and invokes an \Prog{ec2\_gahp} which
+uses the updated \Prog{libcurl}.
 
 \end{itemize}
 
@@ -82,6 +87,10 @@ ensures that the \Prog{ec2\_gahp} uses that version.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Corrected command line arguments to \Prog{/bin/mail},
+adding the option to use \Prog{sendmail}.
+\Ticket{4764}
 
 \item Fixed a bug introduced in HTCondor version 8.2.4 that caused the 
 \Condor{schedd} daemon log file to not rotate when
