@@ -1001,11 +1001,12 @@ and it is named using the base name of the original path.  For
 example, \File{/path/to/input\_file} becomes \File{input\_file} in the job's
 scratch directory.
 
-A directory may be specified using a trailing path separator.
-An example of a trailing path separator is the slash character on Unix
-platforms; a directory example using a trailing path separator
+A directory may be specified by appending the forward slash character (/)
+as a trailing path separator.
+This syntax is used for both Windows and Linux submit hosts.
+A directory example using a trailing path separator
 is \File{input\_data/}. 
-When a directory is specified with a trailing path separator,
+When a directory is specified with the trailing path separator,
 the contents of the directory are
 transferred,  but the directory itself is not transferred.
 It is as if each of the items
