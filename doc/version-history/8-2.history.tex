@@ -74,6 +74,16 @@ HTCondor-C jobs are \SubmitCmdNI{grid} \SubmitCmdNI{universe} jobs
 with a grid type of \SubmitCmdNI{condor}.
 \Ticket{3379}
 
+\item Fixed a bug in the Windows version of \Condor{submit}
+that prevented a job from being submitted,
+if a directory specified with the submit command
+\SubmitCmdNI{transfer\_input\_files} contained a trailing forward slash
+character (/).  
+\Condor{submit} failed with an error message indicating that 
+the directory could not be accessed,
+even when there was no problem accessing the directory.
+\Ticket{4747}
+
 \item Fixed a bug in which \Condor{qsub} mishandled setting a disk space
 request with a command line argument of the form \Opt{-l file=2048MB}.
 \Ticket{4606}
