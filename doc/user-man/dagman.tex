@@ -285,19 +285,18 @@ produces four dependencies:
 \item \Bold{SCRIPT}
 \index{DAGMan!PRE and POST scripts}
 
-The \Arg{SCRIPT} keyword specifies
+The optional \Arg{SCRIPT} keyword specifies
 processing that is done either before a job within
-a node is submitted to HTCondor or Stork for execution
-or after
-a job within
-a node completes its execution.
+a node is submitted
+or after a job within a node completes its execution.
 \index{DAGMan!PRE script}
-Processing done before a job is submitted to HTCondor or Stork is
+Processing done before a job is submitted is
 called a \Arg{PRE} script.
-Processing done after a job completes
-its execution under HTCondor or Stork is
+Processing done after a job completes its execution is
 \index{DAGMan!POST script}
 called a \Arg{POST} script.
+It causes a shell script (Unix) or batch file (Windows) to be
+executed.
 
 The syntax used for each \Arg{PRE} or \Arg{POST} entry is
 
@@ -308,41 +307,42 @@ The syntax used for each \Arg{PRE} or \Arg{POST} entry is
 The \Arg{SCRIPT} keyword is followed by either
 the \Arg{PRE} or \Arg{POST} keyword,
 which specifies the relative timing of when the script is to be run.
-The \Arg{JobName} specifies the node to which the script is attached.
+The \Arg{JobName} identifies the node to which the script is attached.
 The \Arg{ExecutableName}
-specifies the script to be executed, 
+specifies the shell script/batch file to be executed, 
 and the executable name may not contain spaces.
 The optional \Arg{arguments} are command line arguments to the script,
 and spaces delimit the arguments.
 Both \Arg{ExecutableName} and optional \Arg{arguments} are
 case sensitive.
 
-Scripts are optional for each job, and
-any scripts are executed on the machine
-from which the DAG is submitted; this is not necessarily
-the same machine upon which the node's HTCondor or Stork job is run.
+Scripts are executed on the submit machine;
+the submit machine is not necessarily
+the same machine upon which the node's job is run.
 Further, a single cluster of HTCondor jobs may be
 spread across several machines.
 
 A PRE script is commonly used
-to place files in a staging area for the cluster of jobs to use.
+to place files in a staging area for the jobs to use.
 A POST script is commonly used
-to clean up or remove files once the cluster of jobs is finished running.
+to clean up or remove files once jobs are finished running.
 An example uses PRE and POST scripts to stage files
 that are stored on tape.
 The PRE script reads compressed input files from the tape drive,
-and it uncompresses them, placing the input files in the current directory.
-The cluster of HTCondor jobs reads these input files
-and produces output files.
+uncompresses them, and places the resulting files in the current directory.
+The HTCondor jobs can then use these files,
+producing output files.
 The POST script compresses the output files, writes them out to
-the tape, and then removes both the staged input files and the output files.
+the tape, and then removes both the staged files and the output files.
 
-DAGMan takes note of the exit value of the scripts as well as the job or jobs
-within the cluster.  
-A script with an exit value not equal to 0 fails.  
+Progress towards completion of the DAG is based upon
+the success of the nodes within the DAG.
+The success of a node is based upon the success of 
+the job(s), PRE script, and POST script.
+A PRE or POST script with an exit value not equal to 0 fails.  
 If the PRE script fails, 
 then the job does not run, but the POST script does run.
-The exit value of the POST script determines the success of the job. 
+The exit value of the POST script determines the success of the node. 
 If this behavior is not desired, 
 the configuration variable \MacroNI{DAGMAN\_ALWAYS\_RUN\_POST} 
 should be set to \Expr{False};
