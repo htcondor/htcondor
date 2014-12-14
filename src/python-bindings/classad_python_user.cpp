@@ -1,4 +1,8 @@
 
+#include "condor_common.h"
+#include "condor_config.h"
+#include "string_list.h"
+
 #include <sstream>
 
 #include "old_boost.h"
@@ -38,8 +42,30 @@ extern "C"
             Py_SetProgramName(pname);
             Py_InitializeEx(0);
         }
-        printf("Loading python_invoke module.\n");
         return functions;
+    }
+
+    void Register(void)
+    {
+        std::string modulesStr;
+        if (!param(modulesStr, "CLASSAD_USER_PYTHON_MODULES"))
+        {
+            return;
+        }
+        StringList modules(modulesStr.c_str());
+        modules.rewind();
+        const char *tmpMod;
+        while ((tmpMod = modules.next()))
+        {
+            try
+            {
+                boost::python::import(boost::python::str(tmpMod));
+            }
+            catch (...)
+            {
+                // Ignore for now.
+            }
+        }
     }
 }
 
@@ -79,6 +105,8 @@ python_invoke_internal (boost::python::object                        pyFunc,
                         classad::EvalState                          &state,
                         classad::Value                              &result)
 {
+    bool acceptState = checkAcceptsState(pyFunc);
+
     classad::ArgumentList::const_iterator args = arguments.begin();
     args++; args++;
 
@@ -99,7 +127,7 @@ python_invoke_internal (boost::python::object                        pyFunc,
     }
 
     boost::python::dict pyKw;
-    if (state.curAd)
+    if (acceptState && state.curAd)
     {
         boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
         wrapper->CopyFrom(*(state.curAd));
@@ -141,6 +169,35 @@ python_invoke (const char *                 name,
     {
         return problemExpression("Unable to evaluate first argument to string.", arguments[0], result);
     }
+    std::string modulesStr;
+    if (param(modulesStr, "CLASSAD_USER_PYTHON_MODULES"))
+    {
+        StringList modules(modulesStr.c_str());
+        modules.rewind();
+        const char *tmpMod;
+        bool whitelisted = false;
+        while ((tmpMod = modules.next()))
+        {
+            if (modulesStr == tmpMod)
+            {
+                whitelisted = true;
+                break;
+            }
+        }
+        if (!whitelisted)
+        {
+            classad::CondorErrMsg = "Requested module " + moduleName + " is not in the list of CLASSAD_USER_PYTHON_MODULES.";
+            result.SetErrorValue();
+            return false;
+        }
+    }
+    else
+    {
+        classad::CondorErrMsg = "CLASSAD_USER_PYTHON_MODULES config option is not set.";
+        result.SetErrorValue();
+        return false;
+    }
+
     if (!arguments[1]->Evaluate(state, val))
     {
         return problemExpression("Unable to evaluate second argument.", arguments[1], result);
@@ -150,28 +207,35 @@ python_invoke (const char *                 name,
     {
         return problemExpression("Unable to evaluate second argument to string.", arguments[1], result);
     }
-
-    boost::python::object module = boost::python::import(boost::python::str(moduleName));
-    boost::python::object pyFunc = module.attr(functionName.c_str());
+    if (functionName[0] == '_')
+    {
+        classad::CondorErrMsg = "Function names starting with underscore are forbidden (" + functionName + ").";
+        result.SetErrorValue();
+        return false;
+    }
 
     try
     {
+        boost::python::object module = boost::python::import(boost::python::str(moduleName));
+        boost::python::object pyFunc = module.attr(functionName.c_str());
         return python_invoke_internal(pyFunc, arguments, state, result);
     }
     catch (boost::python::error_already_set)
     {
         result.SetErrorValue();
+        printf("Python exception occurred.\n");
         if (PyErr_Occurred()) {
             classad::CondorErrMsg = handle_pyerror(); 
+            PyErr_Clear();
         }
-        return false;
+        return true;
     }
     catch (...) // If this is being invoked from python, this will *not* clear the python exception
                 // However, it does prevent an exception being thrown into the ClassAd code... which is not ready for it!
     {
         classad::CondorErrMsg = "Unknown C++ exception caught.";
         result.SetErrorValue();
-        return false;
+        return true;
     }
 }
 

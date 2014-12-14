@@ -635,10 +635,26 @@ attribute(std::string name)
     return holder;
 }
 
+
+bool
+checkAcceptsState(boost::python::object pyFunc)
+{
+    boost::python::object varnames = pyFunc.attr("__code__").attr("co_varnames");
+    ssize_t len = py_len(varnames);
+    for (int idx=0; idx<len; idx++)
+    {
+        std::string varname = boost::python::extract<std::string>(varnames[idx]);
+        if (varname == "state") {return true;}
+    }
+    return false;
+}
+
+
 static void
 pythonFunctionTrampoline_internal(const char *name, const classad::ArgumentList& args, classad::EvalState& state, classad::Value& result)
 {
     boost::python::object pyFunc = py_import("classad").attr("_registered_functions")[name];
+    bool acceptState = checkAcceptsState(pyFunc);
 
     boost::python::list pyArgs;
     for (classad::ArgumentList::const_iterator it=args.begin(); it != args.end(); it++)
@@ -657,7 +673,7 @@ pythonFunctionTrampoline_internal(const char *name, const classad::ArgumentList&
     }
 
     boost::python::dict pyKw;
-    if (state.curAd)
+    if (acceptState && state.curAd)
     {
         boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
         wrapper->CopyFrom(*(state.curAd));
@@ -682,7 +698,8 @@ pythonFunctionTrampoline(const char *name, const classad::ArgumentList& args, cl
     catch (...) // If this is being invoked from python, this will *not* clear the python exception
                 // However, it does prevent an exception being thrown into the ClassAd code... which is not ready for it!
     {
-        return false;
+        result.SetErrorValue();
+        return true;
     }
     return true;
 }

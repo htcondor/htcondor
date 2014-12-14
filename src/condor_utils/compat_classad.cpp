@@ -27,6 +27,10 @@
 #include "Regex.h"
 #include "classad/classadCache.h"
 
+#if defined(HAVE_DLOPEN)
+#include <dlfcn.h>
+#endif
+
 using namespace std;
 
 // gcc 4.3.4 doesn't seem to define FLT_MIN on OpenSolaris 2009.06
@@ -73,6 +77,33 @@ Reconfig()
 					dprintf( D_ALWAYS, "Failed to load ClassAd user library %s: %s\n",
 							 new_lib, classad::CondorErrMsg.c_str() );
 				}
+			}
+		}
+	}
+
+	std::string user_python;
+	if (param(user_python, "CLASSAD_USER_PYTHON_MODULES"))
+	{
+		std::string loc;
+		if (param(loc, "CLASSAD_USER_PYTHON_LIB") && !ClassAdUserLibs.contains(loc.c_str()))
+		{
+			if (classad::FunctionCall::RegisterSharedLibraryFunctions(loc.c_str()))
+			{
+				ClassAdUserLibs.append(loc.c_str());
+#if defined(HAVE_DLOPEN)
+				void *dl_hdl = dlopen(loc.c_str(), RTLD_LAZY);
+				if (dl_hdl) // Not warning on failure as the RegisterSharedLibraryFunctions should have done that.
+				{
+					void (*registerfn)(void) = (void (*)(void))dlsym(dl_hdl, "Register");
+					if (registerfn) {registerfn();}
+					dlclose(dl_hdl);
+				}
+#endif
+			}
+			else
+			{
+				dprintf(D_ALWAYS, "Failed to load ClassAd user python library %s: %s\n",
+					loc.c_str(), classad::CondorErrMsg.c_str());
 			}
 		}
 	}

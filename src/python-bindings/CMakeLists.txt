@@ -43,11 +43,12 @@ if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND Boost_PYTHON_LIBRARY AND NOT 
   # This is to be used as a CLASSAD_USER_LIBS extension so we can invoke
   # python functions.
   add_library( classad_python_user SHARED classad_python_user.cpp )
-  target_link_libraries( classad_python_user ${PYTHON_LIBRARIES} )
+  target_link_libraries( classad_python_user condor_utils pyclassad )
   set_target_properties(classad_python_user PROPERTIES SUFFIX ".so" )
   if ( NOT CMAKE_SKIP_RPATH )
     set_target_properties(classad_python_user PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
   endif()
+  install ( TARGETS classad_python_user DESTINATION "${C_LIBEXEC}" )
 
 
   set_source_files_properties(config.cpp collector.cpp negotiator.cpp secman.cpp dc_tool.cpp schedd.cpp classad.cpp classad_module.cpp classad_parsers.cpp event.cpp PROPERTIES COMPILE_FLAGS "-Wno-strict-aliasing -Wno-cast-qual -Wno-deprecated -Wno-write-strings")
