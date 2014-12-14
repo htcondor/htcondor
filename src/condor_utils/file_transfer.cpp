@@ -1672,6 +1672,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		download_info *info = (download_info *)malloc(sizeof(download_info));
 		ASSERT ( info );
 		info->myobj = this;
+
 		ActiveTransferTid = daemonCore->
 			Create_Thread((ThreadStartFunc)&FileTransfer::DownloadThread,
 						  (void *)info, s, ReaperId);
@@ -1698,9 +1699,37 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 {
 	filesize_t	total_bytes;
 
-	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadThread\n");
 	FileTransfer * myobj = ((download_info *)arg)->myobj;
 	int status = myobj->DoDownload( &total_bytes, (ReliSock *)s );
+
+// HTCache Code BEGIN
+	if(strcmp(get_mySubSystem()->getName(),"STARTER")==0) {
+		MyString HTCacheFiles;
+		if( !myobj->jobAd.LookupString("HTCACHE",HTCacheFiles) ) {
+			dprintf(D_ALWAYS,"HTCache: no files, skipping!\n");
+		} else {
+			dprintf(D_ALWAYS,"HTCache: files are %s\n", HTCacheFiles.c_str());
+			dprintf(D_ALWAYS,"HTCache: Begin Sleep 20\n");
+			sleep(20);
+			dprintf(D_ALWAYS,"HTCache: End Sleep 20\n");
+
+			// Using HTCacheFiles, format a request to the
+			// HTCache daemon.  Let's assume it's running locally
+			// on port 9988 for now.
+			MyString HTCache_request;
+
+			StringList cfiles(HTCacheFiles.c_str());
+
+			// COUNT localhost:9988
+			dprintf(D_ALWAYS,"ZKM: %i %s\n", cfiles.number(), "localhost:9988");
+			char *p;
+			cfiles.rewind();
+			while ( (p = cfiles.next()) ) {
+				dprintf(D_ALWAYS,"ZKM: %s\n", p);
+			}
+		}
+	}
+// HTCache Code END
 
 	if(!myobj->WriteStatusToTransferPipe(total_bytes)) {
 		return 0;
