@@ -83,8 +83,9 @@ the directory could not be accessed,
 even when there was no problem accessing the directory.
 \Ticket{4747}
 
-\item Fixed a problem with the ownership of the \File{/var/lock/condor}
-directory on RHEL 7 systems that prevented HTCondor from starting.
+\item Fixed a problem that prevented HTCondor from starting
+on RHEL 7 platforms.
+The ownership of the directory \File{/var/lock/condor/} was incorrect.
 \Ticket{4775}
 
 \item Fixed a bug in which \Condor{qsub} mishandled setting a disk space
