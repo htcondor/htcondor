@@ -106,8 +106,6 @@ Dagman::Dagman() :
 	paused (false),
 	condorSubmitExe (NULL),
 	condorRmExe (NULL),
-	storkSubmitExe (NULL),
-	storkRmExe (NULL),
 	submit_delay (0),
 	max_submit_attempts (6),
 	max_submits_per_interval (5), // so Coverity is happy
@@ -358,18 +356,16 @@ Dagman::Config()
 		ASSERT( condorRmExe );
 	}
 
-	free( storkSubmitExe );
-	storkSubmitExe = param( "DAGMAN_STORK_SUBMIT_EXE" );
-	if( !storkSubmitExe ) {
-		storkSubmitExe = strdup( "stork_submit" );
-		ASSERT( storkSubmitExe );
+	if ( param_boolean( "DAGMAN_STORK_SUBMIT_EXE", false ) ) {
+		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_STORK_SUBMIT_EXE is "
+					"no longer supported\n" );
+		check_warning_strictness( DAG_STRICT_1 );
 	}
 
-	free( storkRmExe );
-	storkRmExe = param( "DAGMAN_STORK_RM_EXE" );
-	if( !storkRmExe ) {
-		storkRmExe = strdup( "stork_rm" );
-		ASSERT( storkRmExe );
+	if ( param_boolean( "DAGMAN_STORK_RM_EXE", false ) ) {
+		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_STORK_RM_EXE is "
+					"no longer supported\n" );
+		check_warning_strictness( DAG_STRICT_1 );
 	}
 
 	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES",
@@ -1021,7 +1017,7 @@ void main_init (int argc, char ** const argv) {
 						  dagman.allowLogError, dagman.useDagDir,
 						  dagman.maxIdle, dagman.retrySubmitFirst,
 						  dagman.retryNodeFirst, dagman.condorRmExe,
-						  dagman.storkRmExe, &dagman.DAGManJobId,
+						  &dagman.DAGManJobId,
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
 						  dagman._defaultNodeLog.Value(),
 						  dagman._generateSubdagSubmits,

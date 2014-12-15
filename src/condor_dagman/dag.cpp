@@ -88,7 +88,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  bool allowLogError,
 		  bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		  bool retryNodeFirst, const char *condorRmExe,
-		  const char *storkRmExe, const CondorID *DAGManJobID,
+		  const CondorID *DAGManJobID,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
 		  const char *defaultNodeLog, bool generateSubdagSubmits,
 		  SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice,
@@ -103,7 +103,6 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_nodeNameHash		  (NODE_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
 	_nodeIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
 	_condorIDHash		  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
-	_storkIDHash		  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
 	_noopIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
     _numNodesDone         (0),
     _numNodesFailed       (0),
@@ -116,12 +115,11 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	m_retrySubmitFirst	  (retrySubmitFirst),
 	m_retryNodeFirst	  (retryNodeFirst),
 	_condorRmExe		  (condorRmExe),
-	_storkRmExe			  (storkRmExe),
 	_DAGManJobId		  (DAGManJobID),
 	_preRunNodeCount	  (0),
 	_postRunNodeCount	  (0),
 	_checkCondorEvents    (),
-	_checkStorkEvents     (),
+	//TEMPTEMP _checkStorkEvents     (),
 	_maxJobsDeferredCount (0),
 	_maxIdleDeferredCount (0),
 	_catThrottleDeferredCount (0),
@@ -890,10 +888,12 @@ Dag::RemoveBatchJob(Job *node) {
 		args.AppendArg( constraint.Value() );
 		break;
 
+#if 0 //TEMPTEMP?
 	case Job::TYPE_STORK:
 		args.AppendArg( _storkRmExe );
 		args.AppendArg( node->GetCluster() );
 		break;
+#endif //TEMPTEMP?
 
 	default:
 		EXCEPT( "Illegal job (%d) type for node %s", node->JobType(),
@@ -1415,7 +1415,7 @@ void
 Dag::SetAllowEvents( int allowEvents)
 {
 	_checkCondorEvents.SetAllowEvents( allowEvents );
-	_checkStorkEvents.SetAllowEvents( allowEvents );
+	//TEMPTEMP _checkStorkEvents.SetAllowEvents( allowEvents );
 }
 
 //-------------------------------------------------------------------------
@@ -1869,6 +1869,7 @@ Dag::PostScriptReaper( Job *job, int status )
 		// could cause some backwards-compatibility problems).  wenger
 		// 2006-01-12.
 	if ( job->JobType() == Job::TYPE_STORK ) {
+#if 0 //TEMPTEMP
 			// Kludgey fix for Gnats PR 554 -- we are bypassing the whole
 			// writing of the ULOG_POST_SCRIPT_TERMINATED event because
 			// Stork doesn't use the UserLog code, and therefore presumably
@@ -1880,6 +1881,7 @@ Dag::PostScriptReaper( Job *job, int status )
 		e.proc = job->GetProc();
 		e.subproc = job->GetSubProc();
 		ProcessPostTermEvent(&e, job, _recovery);
+#endif //TEMPTEMP
 	} else {
 
 		e.cluster = job->GetCluster();
@@ -2123,6 +2125,7 @@ void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
 		}
 	}
 
+#if 0 //TEMPTEMP
 		// Okay, now remove any Stork jobs.
     ListIterator<Job> iList(_jobs);
     while (iList.Next(job)) {
@@ -2142,6 +2145,7 @@ void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
 			}
         }
 	}
+#endif //TEMPTEMP
 
 	return;
 }
@@ -2355,8 +2359,10 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 		keyword = "FINAL";
 	} else if ( node->JobType() == Job::TYPE_CONDOR ) {
 		keyword = node->GetDagFile() ? "SUBDAG EXTERNAL" : "JOB";
+#if 0 //TEMPTEMP
 	} else if( node->JobType() == Job::TYPE_STORK ) {
 		keyword = "DATA";
+#endif //TEMPTEMP
 	} else {
 		EXCEPT( "Illegal node type (%d)", node->JobType() );
 	}
@@ -3272,6 +3278,7 @@ Dag::CheckAllJobs()
 		debug_printf( DEBUG_DEBUG_1, "All Condor job events okay\n");
 	}
 
+#if 0 //TEMPTEMP
 	result = _checkStorkEvents.CheckAllJobs(jobError);
 	if ( result == CheckEvents::EVENT_ERROR ) {
 		debug_printf( DEBUG_QUIET, "Error checking Stork job events: %s\n",
@@ -3285,6 +3292,7 @@ Dag::CheckAllJobs()
 	} else {
 		debug_printf( DEBUG_DEBUG_1, "All Stork job events okay\n");
 	}
+#endif //TEMPTEMP
 }
 
 //-------------------------------------------------------------------------
@@ -3901,8 +3909,10 @@ Dag::EventSanityCheck( int logsource, const ULogEvent* event,
 
 	if ( logsource == CONDORLOG ) {
 		checkResult = _checkCondorEvents.CheckAnEvent( event, eventError );
+#if 0 //TEMPTEMP
 	} else if ( logsource == DAPLOG ) {
 		checkResult = _checkStorkEvents.CheckAnEvent( event, eventError );
+#endif //TEMPTEMP
 	}
 
 	if( checkResult == CheckEvents::EVENT_OKAY ) {
@@ -4002,9 +4012,11 @@ Dag::GetEventIDHash(bool isNoop, int jobType)
 		return &_condorIDHash;
 		break;
 
+#if 0 //TEMPTEMP
 	case Job::TYPE_STORK:
 		return &_storkIDHash;
 		break;
+#endif //TEMPTEMP
 
 	default:
 		EXCEPT( "Illegal job type (%d)", jobType );
@@ -4027,9 +4039,11 @@ Dag::GetEventIDHash(bool isNoop, int jobType) const
 		return &_condorIDHash;
 		break;
 
+#if 0 //TEMPTEMP
 	case Job::TYPE_STORK:
 		return &_storkIDHash;
 		break;
+#endif //TEMPTEMP
 
 	default:
 		EXCEPT( "Illegal job type (%d)", jobType );
@@ -4128,6 +4142,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		// line.  wenger 2009-08-14
 	if ( !_allowLogError && node->JobType() == Job::TYPE_STORK &&
 				!node->CheckForLogFile( false ) ) {
+#if 0 //TEMPTEMP
 		debug_printf( DEBUG_NORMAL, "ERROR: No 'log =' value found in "
 					"submit file %s for node %s\n", node->GetCmdFile(),
 					node->GetJobName() );
@@ -4141,6 +4156,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			_dagStatus = DAG_STATUS_NODE_FAILED;
 		}
 		result = SUBMIT_RESULT_NO_SUBMIT;
+#endif //TEMPTEMP
 
 	} else {
 		debug_printf( DEBUG_NORMAL, "Submitting %s Node %s job(s)...\n",
@@ -4170,6 +4186,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 							ProhibitMultiJobs(),
 							node->NumChildren() > 0 && dm._claim_hold_time > 0 );
 			}
+#if 0 //TEMPTEMP
     	} else if( node->JobType() == Job::TYPE_STORK ) {
 	  		node->_submitTries++;
 			if ( node->GetNoop() ) {
@@ -4182,6 +4199,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
       			submit_success = stork_submit( dm, node->GetCmdFile(),
 						condorID, node->GetJobName(), node->GetDirectory() );
 			}
+#endif //TEMPTEMP
     	} else {
 	    	debug_printf( DEBUG_QUIET, "Illegal job type: %d\n",
 						node->JobType() );

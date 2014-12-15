@@ -65,6 +65,7 @@ parse_condor_submit( const char *buffer, int &jobProcCount, int &cluster )
   return true;
 }
 
+#if 0 //TEMPTEMP
 //-------------------------------------------------------------------------
 /** Parse output from stork_submit, determine the number of job procs
     and the cluster.
@@ -88,6 +89,7 @@ parse_stork_submit( const char *buffer, int &jobProcCount, int &cluster )
   jobProcCount = 1;
   return true;
 }
+#endif //TEMPTEMP
 
 //-------------------------------------------------------------------------
 static bool
@@ -136,9 +138,11 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
 	  // We should also check whether we got more than one cluster, and
 	  // either deal with it correctly or generate an error message.
 	parseFnc = parse_condor_submit;
+#if 0 //TEMPTEMP
   } else if ( type == Job::TYPE_STORK ) {
     marker = "assigned id";
 	parseFnc = parse_stork_submit;
+#endif //TEMPTEMP
   } else {
 	debug_printf( DEBUG_QUIET, "Illegal job type: %d\n", type );
 	ASSERT(false);
@@ -201,12 +205,14 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
   	  return true;
   }
 
+#if 0 //TEMPTEMP
   // Stork job specs have only 1 dimension.  The Stork user log forces the proc
   // and sub-proc ids to "-1", so do the same here for the returned submit id.
   if ( type == Job::TYPE_STORK ) {
 	  condorID._proc = -1;
 	  condorID._subproc = -1;
   }
+#endif //TEMPTEMP
 
   	// Check for multiple job procs if configured to disallow that.
   if ( prohibitMultiJobs && (jobProcCount > 1) ) {
@@ -448,6 +454,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	return success;
 }
 
+#if 0 //TEMPTEMP
 //-------------------------------------------------------------------------
 bool
 stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
@@ -484,6 +491,7 @@ stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
   return success;
 }
+#endif //TEMPTEMP
 
 //-------------------------------------------------------------------------
 // Subproc ID for "fake" events (for NOOP jobs).

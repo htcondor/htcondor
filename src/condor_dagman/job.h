@@ -82,7 +82,7 @@ class Job {
 	typedef enum {
 		TYPE_CONDOR,
 		TYPE_STORK,
-	 } job_type_t;
+	 } job_type_t; //TEMPTEMP -- get rid of this?
   
     /** Enumeration for specifying which queue for Add() and Remove().
         If you change this enum, you *must* also update queue_t_names
@@ -178,7 +178,7 @@ class Job {
 	const char* GetPreScriptName() const;
 	const char* GetPostScriptName() const;
 	const char* JobTypeString() const;
-	job_type_t JobType() const;
+	job_type_t JobType() const; //TEMPTEMP -- get rid of this?
 
 	bool AddPreScript( const char *cmd, MyString &whynot );
 	bool AddPreSkip( int exitCode, MyString &whynot );
@@ -566,7 +566,7 @@ private:
     static const char* _job_type_names[];
 
 		// type of job (e.g., Condor, Stork, etc.)
-	job_type_t _jobType;
+	job_type_t _jobType; //TEMPTEMP -- get rid of this?
 
 		// Directory to cd to before running the job or the PRE and POST
 		// scripts.

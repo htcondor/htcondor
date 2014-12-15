@@ -226,6 +226,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 					   "submitfile" );
 		}
 
+#if 0 //TEMPTEMP
 		// Handle a Stork job spec
 		// Example Syntax is:  DATA j1 j1.dapsubmit [DONE]
 		//
@@ -247,6 +248,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile");
 		}
+#endif //TEMPTEMP
 
 		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
@@ -1662,7 +1664,7 @@ parse_splice(
 							dag->RetrySubmitFirst(),
 							dag->RetryNodeFirst(),
 							dag->CondorRmExe(),
-							dag->StorkRmExe(),
+							//TEMPTEMP dag->StorkRmExe(),
 							dag->DAGManJobId(),
 							dag->ProhibitMultiJobs(),
 							dag->SubmitDepthFirst(),

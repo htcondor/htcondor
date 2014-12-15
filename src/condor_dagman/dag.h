@@ -115,7 +115,6 @@ class Dag {
 		@param retryNodeFirst whether, when a node fails and has retries,
 			   to put the node at the head of the ready queue
 		@param condorRmExe executable to remove Condor jobs
-		@param storkRmExe executable to remove Stork jobs
 		@param DAGManJobId Condor ID of this DAGMan process
 		@param prohibitMultiJobs whether submit files queueing multiple
 			   job procs are prohibited
@@ -139,7 +138,7 @@ class Dag {
 		 bool allowLogError,
 		 bool useDagDir, int maxIdleJobProcs, bool retrySubmitFirst,
 		 bool retryNodeFirst, const char *condorRmExe,
-		 const char *storkRmExe, const CondorID *DAGManJobId,
+		 const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
 		 SubmitDagDeepOptions *submitDagDeepOpts,
@@ -303,6 +302,7 @@ class Dag {
         @param condorID the CondorID of the job in the DAG
         @return address of Job object, or NULL if not found
     */
+	//TEMPTEMP -- get rid of logsource?
     Job * FindNodeByEventID (int logsource, const CondorID condorID ) const;
 
     /** Ask whether a node name exists in the DAG
@@ -638,9 +638,6 @@ class Dag {
 
 	// do not free this pointer
 	const char* CondorRmExe(void) { return _condorRmExe; }
-
-	// do not free this pointer
-	const char* StorkRmExe(void) { return _storkRmExe; }
 
 	const CondorID* DAGManJobId(void) { return _DAGManJobId; }
 
@@ -994,10 +991,6 @@ private:
 	// procs in the same cluster map to the same node).
 	HashTable<int, Job *>			_condorIDHash;
 
-	// Hash by StorkID (really just by the cluster ID because all
-	// procs in the same cluster map to the same node).
-	HashTable<int, Job *>			_storkIDHash;
-
 	// NOOP nodes are indexed by subprocID.
 	HashTable<int, Job *>			_noopIDHash;
 
@@ -1043,9 +1036,6 @@ private:
 
 		// Executable to remove Condor jobs.
 	const char *	_condorRmExe;
-
-		// Executable to remove Stork jobs.
-	const char *	_storkRmExe;
 
 		// Condor ID of this DAGMan process.
 	const CondorID *	_DAGManJobId;
@@ -1103,7 +1093,7 @@ private:
 		// Separate event checkers for Condor and Stork here because
 		// IDs could collide.
 	CheckEvents	_checkCondorEvents;
-	CheckEvents	_checkStorkEvents;
+	//TEMPTEMP CheckEvents	_checkStorkEvents;
 
 		// Total count of jobs deferred because of MaxJobs limit (note
 		// that a single job getting deferred multiple times is counted
