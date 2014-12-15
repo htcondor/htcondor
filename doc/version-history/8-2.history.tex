@@ -113,6 +113,10 @@ the directory could not be accessed,
 even when there was no problem accessing the directory.
 \Ticket{4747}
 
+\item Fixed a problem with the ownership of the \File{/var/lock/condor}
+directory on RHEL 7 systems that prevented HTCondor from starting.
+\Ticket{4775}
+
 \item Fixed a bug in which \Condor{qsub} mishandled setting a disk space
 request with a command line argument of the form \Opt{-l file=2048MB}.
 \Ticket{4606}

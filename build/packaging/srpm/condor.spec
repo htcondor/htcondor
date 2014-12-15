@@ -1305,11 +1305,10 @@ rm -rf %{buildroot}
 %dir %_var/lib/condor/execute/
 %dir %_var/log/condor/
 %dir %_var/lib/condor/spool/
+%dir %_var/lock/condor
 %if %systemd
-%ghost %dir %_var/lock/condor/
 %ghost %dir %_var/run/condor/
 %else
-%dir %_var/lock/condor
 %dir %_var/lock/condor/local
 %dir %_var/run/condor
 %endif
