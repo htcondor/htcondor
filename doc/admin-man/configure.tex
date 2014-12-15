@@ -1466,6 +1466,12 @@ File System Configuration File Entries''.
   The \Condor{schedd} will not
   function unless \MacroNI{MAIL} is defined.
 
+\label{param:Sendmail}
+\item[\Macro{SENDMAIL}]
+  The full path to the \Prog{sendmail} executable.  
+  If defined, 
+  \Prog{sendmail} is used instead of the mail program defined by \MacroNI{MAIL}.
+
 \label{param:MailFrom}
 \item[\Macro{MAIL\_FROM}]
   The e-mail address that notification e-mails appear to come from.
