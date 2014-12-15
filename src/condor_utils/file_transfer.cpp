@@ -1704,33 +1704,83 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 
 // HTCache Code BEGIN
 	if(strcmp(get_mySubSystem()->getName(),"STARTER")==0) {
+		char cwd[1024];
+		getcwd(cwd, 1024);
+		uid_t whoami = get_user_uid();
+		dprintf(D_ALWAYS, "ZKM: In DownloadThread, pid %d, uid %i, dir %s\n", getpid(), whoami, cwd);
 		MyString HTCacheFiles;
 		if( !myobj->jobAd.LookupString("HTCACHE",HTCacheFiles) ) {
 			dprintf(D_ALWAYS,"HTCache: no files, skipping!\n");
 		} else {
 			dprintf(D_ALWAYS,"HTCache: files are %s\n", HTCacheFiles.c_str());
-			dprintf(D_ALWAYS,"HTCache: Begin Sleep 20\n");
-			sleep(20);
-			dprintf(D_ALWAYS,"HTCache: End Sleep 20\n");
+//			dprintf(D_ALWAYS,"HTCache: Begin Sleep 20\n");
+//			sleep(20);
+//			dprintf(D_ALWAYS,"HTCache: End Sleep 20\n");
 
 			// Using HTCacheFiles, format a request to the
 			// HTCache daemon.  Let's assume it's running locally
 			// on port 9988 for now.
-			MyString HTCache_request;
-
+			MyString htc_header;
 			StringList cfiles(HTCacheFiles.c_str());
+			int htc_count = cfiles.number();
+			htc_header.formatstr("V1 STAGE\n%i %s %i %s", htc_count, "128.104.55.20:9988", whoami, cwd);
+			dprintf(D_ALWAYS,"ZKM: HTC: %s\n", htc_header.c_str());
 
-			// COUNT localhost:9988
-			dprintf(D_ALWAYS,"ZKM: %i %s\n", cfiles.number(), "localhost:9988");
-			char *p;
+			MyString htc_files[htc_count];
 			cfiles.rewind();
-			while ( (p = cfiles.next()) ) {
-				dprintf(D_ALWAYS,"ZKM: %s\n", p);
+			for(int i=0; i<htc_count; i++) {
+				MyString e = cfiles.next();
+				e.replaceString(":"," ");
+				htc_files[i] = e;
+				dprintf(D_ALWAYS,"ZKM: HTC: %s\n", htc_files[i].c_str());
 			}
+
+			int sock;
+			struct sockaddr_in server;
+			char result_buf[1024];
+			FILE* fp;
+
+			//Create socket
+			sock = socket(AF_INET , SOCK_STREAM , 0);
+			if (sock == -1) {
+				dprintf(D_ALWAYS, "ZKM: HTC: Could not create socket\n");
+				goto skip_htcache;
+			}
+
+			server.sin_addr.s_addr = inet_addr("127.0.0.1");
+			server.sin_family = AF_INET;
+			server.sin_port = htons( 9977 );
+
+			//Connect to remote server
+			if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0) {
+				dprintf(D_ALWAYS, "ZKM: HTC: Could not connect\n");
+				goto skip_htcache;
+			}
+
+			fp = fdopen(sock, "a+");
+			if( ! fp ) {
+				dprintf( D_ALWAYS, "ZKM: Failed to fdopen %i\n", sock );
+				goto skip_htcache;
+			}
+
+			dprintf(D_ALWAYS,"ZKM: SEND: header put_line_raw %s\n", htc_header.c_str());
+			// result is -1 for error
+			fprintf(fp, "%s\n", htc_header.c_str());
+
+			for(int i = 0; i<cfiles.number(); i++) {
+				dprintf(D_ALWAYS,"ZKM: SEND: entry put_line_raw %s\n", htc_files[i].c_str());
+				fprintf(fp, "%s\n", htc_files[i].c_str());
+			}
+
+			dprintf(D_ALWAYS,"ZKM: GET\n");
+			fgets(result_buf, 1024, fp);
+			fclose(fp);
+
+			dprintf(D_ALWAYS,"ZKM: RESULT: %s\n", result_buf);
 		}
 	}
+skip_htcache:
 // HTCache Code END
-
 	if(!myobj->WriteStatusToTransferPipe(total_bytes)) {
 		return 0;
 	}
