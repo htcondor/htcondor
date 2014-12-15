@@ -1940,6 +1940,17 @@ This command is optional, unless \SubmitCmd{ec2\_ebs\_volumes} is set.
 As an example, one current zone is \Expr{us-east-1b}.
 
 %%%%%%%%%%%%%%%%%%%
+%% ec2_block_device_mapping
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_block\_device\_mapping}
+\label{condor-submit-ec2-block-device-mapping}
+\item[ec2\_block\_device\_mapping = $<$block-device$>$:$<$kernel-device$>$,$<$block-device$>$:$<$kernel-device$>$, \Dots]
+For grid type \SubmitCmdNI{ec2} jobs,
+specifies the block device to kernel device mapping.
+This command is optional.
+
+%%%%%%%%%%%%%%%%%%%
 %% ec2_ebs_volumes
 %%%%%%%%%%%%%%%%%%%
 
