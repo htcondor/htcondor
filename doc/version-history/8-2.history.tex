@@ -54,8 +54,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.2.6 not yet released.
-%\item HTCondor version 8.2.6 released on Month Date, 2014.
+\item HTCondor version 8.2.6 released on December 16, 2014.
 
 \item Memory usage of the \Prog{ec2\_gahp}
 may grow without bound due to a bug in some versions of \Prog{libcurl}.
@@ -113,8 +112,9 @@ the directory could not be accessed,
 even when there was no problem accessing the directory.
 \Ticket{4747}
 
-\item Fixed a problem with the ownership of the \File{/var/lock/condor}
-directory on RHEL 7 systems that prevented HTCondor from starting.
+\item Fixed a problem that prevented HTCondor from starting
+on RHEL 7 platforms.
+The ownership of the directory \File{/var/lock/condor/} was incorrect.
 \Ticket{4775}
 
 \item Fixed a bug in which \Condor{qsub} mishandled setting a disk space
