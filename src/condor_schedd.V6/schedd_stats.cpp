@@ -191,6 +191,12 @@ void ScheddStatistics::InitMain()
    SCHEDD_STATS_ADD_VAL(Pool, ShadowsRunning,               IF_BASICPUB);
    SCHEDD_STATS_PUB_PEAK(Pool, ShadowsRunning,              IF_BASICPUB);
 
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsFailed, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsLeaseExpired, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsSucceeded, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsAttempting, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsBadput, IF_BASICPUB);
+
    // SCHEDD runtime stats for various expensive processes
    //
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, BuildPrioRec,       IF_VERBOSEPUB);

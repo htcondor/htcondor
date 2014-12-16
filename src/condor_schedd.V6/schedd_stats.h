@@ -105,6 +105,21 @@ typedef struct ScheddStatistics : public ScheddJobCounters {
 
    stats_entry_recent<int> Autoclusters;   // number of active autoclusters
 
+   // These track how successful the schedd was at reconnecting to
+   // running jobs after the last restart.
+   // How many reconnect attempts failed.
+   stats_entry_abs<int> JobsRestartReconnectsFailed;
+   // How many reconnects weren't attempted because the lease was
+   // already expired when the schedd started up.
+   stats_entry_abs<int> JobsRestartReconnectsLeaseExpired;
+   // How many reconnect attmepts succeeded.
+   stats_entry_abs<int> JobsRestartReconnectsSucceeded;
+   // How many reconnect attempts are currently in progress.
+   stats_entry_abs<int> JobsRestartReconnectsAttempting;
+   // How much cumulative job runtime was lost due to failure to
+   // reconnect to running jobs.
+   stats_histogram<int64_t> JobsRestartReconnectsBadput;
+
    // counts of shadow processes
    stats_entry_abs<int> ShadowsRunning;          // current number of running shadows, also tracks the peak value.
    stats_entry_recent<int> ShadowsStarted;       // number of shadow processes that have been started
