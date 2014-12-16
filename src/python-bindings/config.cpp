@@ -6,13 +6,289 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_version.h"
+#include "condor_attributes.h"
+#include "daemon.h"
 #include "param_info.h"
 
 #include <boost/python.hpp>
 
 #include "old_boost.h"
+#include "classad_wrapper.h"
 
 using namespace boost::python;
+
+void
+do_start_command(int cmd, ReliSock &rsock, const ClassAdWrapper &ad)
+{
+    std::string addr_str;
+    if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, addr_str))
+    {
+        THROW_EX(ValueError, "Address not available in location ClassAd.");
+    }
+    ClassAd ad_copy; ad_copy.CopyFrom(ad);
+    Daemon target(&ad_copy, DT_GENERIC, NULL);
+
+    const char *addr;
+    const char* name;
+    bool connect_error = true;
+    do
+    {
+        addr = target.addr();
+        name = target.name();
+        if (!name) {name="";}
+
+        if (rsock.connect(addr, 0))
+        {
+            connect_error = false;
+            break;
+        }
+    }
+    while (target.nextValidCm());
+
+    if (connect_error)
+    {
+        THROW_EX(RuntimeError, "Failed to connect to daemon");
+    }
+    target.startCommand(cmd, &rsock, 30);
+}
+
+std::string
+get_remote_param(const ClassAdWrapper &ad, std::string param)
+{
+    ReliSock rsock;
+    do_start_command(CONFIG_VAL, rsock, ad);
+
+    rsock.encode();
+    if (!rsock.code(param))
+    {
+        THROW_EX(RuntimeError, "Can't send requested param name.");
+    }
+    if (!rsock.end_of_message())
+    {
+        THROW_EX(RuntimeError, "Can't send EOM for param name.");
+    }
+
+    std::string val;
+    rsock.decode();
+    if (!rsock.code(val))
+    {
+        THROW_EX(RuntimeError, "Can't receive reply from daemon for param value.");
+    }
+    if (!rsock.end_of_message())
+    {
+        THROW_EX(RuntimeError, "Can't receive EOM from daemon for param value.");
+    }
+
+    return val;
+}
+
+
+static boost::python::object
+get_remote_names(const ClassAdWrapper &ad)
+{
+    boost::python::object retval = boost::python::list();
+
+    ReliSock rsock;
+    do_start_command(DC_CONFIG_VAL, rsock, ad);
+
+    rsock.encode();
+
+    std::string names = "?names";
+    if (!rsock.put(names))
+    {
+        THROW_EX(RuntimeError, "Failed to send request for parameter names.");
+    }
+    if (!rsock.end_of_message())
+    {
+        THROW_EX(RuntimeError, "Failed to send EOM for parameter names.");
+    }
+
+    rsock.decode();
+    std::string val;
+    if (!rsock.code(val))
+    {
+        THROW_EX(RuntimeError, "Cannot receive reply for parameter names.");
+    }
+    if (val == "Not defined")
+    {
+        if (!rsock.end_of_message())
+        {
+            THROW_EX(RuntimeError, "Unable to receive EOM from remote daemon (unsupported version).");
+        }
+        if (get_remote_param(ad, "MASTER") == "Not defined")
+        {
+            THROW_EX(RuntimeError, "Not authorized to query remote daemon.");
+        }
+        else {THROW_EX(RuntimeError, "Remote daemon is an unsupported version; 8.1.2 or later is required.");}
+    }
+    if (val[0] == '!')
+    {
+        rsock.end_of_message();
+        THROW_EX(RuntimeError, "Remote daemon failed to get parameter name list");
+    }
+    if (!val.empty())
+    {
+        retval.attr("append")(val);
+    }
+    while (!rsock.peek_end_of_message())
+    {
+        if (!rsock.code(val))
+        {
+            THROW_EX(RuntimeError, "Failed to read parameter name.");
+        }
+        retval.attr("append")(val);
+    }
+    if (!rsock.end_of_message())
+    {
+        THROW_EX(RuntimeError, "Failed to receive final EOM for parameter names");
+    }
+    return retval;
+}
+
+
+struct RemoteParam
+{
+    RemoteParam(const ClassAdWrapper &ad)
+    {
+        m_ad.CopyFrom(ad);
+        refresh();
+    }
+
+
+    bool contains(const std::string &attr)
+    {
+        cache_attrs();
+        return m_attrs.attr("__contains__")(attr);
+    }
+
+
+    object getitem(const std::string &attr)
+    {
+        return getitem_impl(attr, object(), true);
+    }
+
+
+    object get(const std::string &attr, object default_val)
+    {
+        return getitem_impl(attr, default_val, false);
+    }
+
+
+    object getitem_impl(const std::string &attr, object default_val, bool throw_exception)
+    {
+        if (!contains(attr))
+        {
+            if (throw_exception) {THROW_EX(KeyError, attr.c_str());}
+            else {return default_val;}
+        }
+        boost::python::object result(cache_lookup(attr));
+        return result;
+    }
+
+
+    void setitem(const std::string &)
+    {
+        THROW_EX(NotImplementedError, "Setting remote daemon configuration not implemented.");
+    }
+
+
+    boost::python::object setdefault(const std::string &, boost::python::object)
+    {
+        THROW_EX(NotImplementedError, "Setting remote daemon configuration not implemented.");
+    }
+
+
+    void update(boost::python::object)
+    {
+        THROW_EX(NotImplementedError, "Setting remote daemon configuration not implemented.");
+    }
+
+
+    boost::python::list keys()
+    {
+        boost::python::list result;
+        cache_attrs();
+        result.attr("extend")(m_attrs);
+        return result;
+    }
+
+
+    object iter()
+    {
+        return keys().attr("__iter__")();
+    }
+
+
+    boost::python::list items()
+    {
+        boost::python::list result;
+        cache_attrs();
+        while (true)
+        {
+            boost::python::object next_obj;
+            try
+            {
+                PyObject *next_obj_ptr = m_attrs.ptr()->ob_type->tp_iternext(m_attrs.ptr());
+                if (next_obj_ptr == NULL) {THROW_EX(StopIteration, "All remote variables processed.");}
+                next_obj = boost::python::object(boost::python::handle<>(next_obj_ptr));
+                if (PyErr_Occurred()) throw boost::python::error_already_set();
+            }
+            catch (const boost::python::error_already_set&)
+            {
+                if (PyErr_ExceptionMatches(PyExc_StopIteration))
+                {
+                    break;
+                }
+                boost::python::throw_error_already_set();
+            }
+            std::string attr = boost::python::extract<std::string>(next_obj);
+            std::string value = cache_lookup(attr);
+            result.append(boost::python::make_tuple(attr, value));
+        }
+    }
+
+
+    void refresh()
+    {
+        m_attrs = boost::python::import("__main__").attr("__builtins__").attr("set")();
+        m_lookup = boost::python::dict();
+        m_queried_attrs = false;
+    }
+
+
+    size_t len()
+    {
+        cache_attrs();
+        return py_len(m_attrs);
+    }
+
+
+    void cache_attrs()
+    {
+        if (m_queried_attrs) {return;}
+        m_attrs.attr("update")(get_remote_names(m_ad));
+        m_queried_attrs = true;
+    }
+
+
+    std::string cache_lookup(const std::string &attr)
+    {
+        if (m_lookup.attr("__contains__")(attr))
+        {
+            return boost::python::extract<std::string>(m_lookup[attr]);
+        }
+        std::string result = get_remote_param(m_ad, attr);
+        m_lookup[attr] = result;
+        return result;
+    }
+
+
+private:
+    ClassAdWrapper m_ad;
+    boost::python::object m_attrs;
+    boost::python::dict m_lookup;
+    bool m_queried_attrs;
+};
 
 struct Param
 {
@@ -292,4 +568,17 @@ void export_config()
     object param = object(Param());
     param.attr("__doc__") = "A dictionary-like object containing the HTCondor configuration.";
     scope().attr("param") = param;
+
+    class_<RemoteParam>("RemoteParam", boost::python::init<const ClassAdWrapper &>(":param ad: An ad containing the location of the remote daemon."))
+        .def("__getitem__", &RemoteParam::getitem)
+        .def("__setitem__", &RemoteParam::setitem)
+        .def("__contains__", &RemoteParam::contains)
+        .def("setdefault", &RemoteParam::setdefault)
+        .def("get", &RemoteParam::get, "Returns the value associated with the remote parameter; if the parameter is not defined, return the default argument.  Default is None.", (arg("self"), arg("key"), arg("default")=boost::python::object()))
+        .def("keys", &RemoteParam::keys)
+        .def("__iter__", &RemoteParam::iter)
+        .def("__len__", &RemoteParam::len)
+        .def("items", &RemoteParam::items)
+        .def("update", &RemoteParam::update)
+        ;
 }
