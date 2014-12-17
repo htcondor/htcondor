@@ -61,8 +61,6 @@ const char * Job::status_t_names[] = {
 // NOTE: must be kept in sync with the job_type_t enum
 const char* Job::_job_type_names[] = {
     "Condor",
-    //TEMPTEMP? "Stork",
-    //TEMPTEMP? "No-Op",
 };
 
 //---------------------------------------------------------------------------
@@ -92,9 +90,9 @@ Job::~Job() {
 }
 
 //---------------------------------------------------------------------------
-Job::Job( const job_type_t jobType, const char* jobName,
+Job::Job( const char* jobName,
 			const char *directory, const char* cmdFile ) :
-	_jobType( jobType ), _preskip( PRE_SKIP_INVALID ), _final( false )
+	_preskip( PRE_SKIP_INVALID ), _final( false )
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -674,14 +672,14 @@ Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
 Job::job_type_t
 Job::JobType() const
 {
-    return _jobType;
+    return TYPE_CONDOR;
 }
 
 
 const char*
 Job::JobTypeString() const
 {
-    return _job_type_names[_jobType];
+    return _job_type_names[TYPE_CONDOR];
 }
 
 
@@ -1115,7 +1113,8 @@ Job::Cleanup()
 bool
 Job::FindLogFile( bool usingWorkflowLog, MyString &logFile )
 {
-	if ( _jobType == TYPE_CONDOR ) {
+	//TEMPTEMP -- get rid of this if
+	//TEMPTEMP if ( _jobType == TYPE_CONDOR ) {
 		if ( usingWorkflowLog ) {
 				// Now, if we're using the workflow log file, we don't
 				// even look at the node's submit file.  (See gittrac
@@ -1135,32 +1134,7 @@ Job::FindLogFile( bool usingWorkflowLog, MyString &logFile )
 				// log file is not an error.
 			}
 		}
-
-	} else {
-#if 0 //TEMPTEMP
-			// Workflow/default log file mode is not supported for Stork
-			// nodes, so we always have to get the log file for a Stork
-			// node.
-		StringList logFiles;
-		MyString tmpResult = MultiLogFiles::loadLogFileNamesFromStorkSubFile(
-					_cmdFile, _directory, logFiles );
-		if ( tmpResult != "" ) {
-			debug_printf( DEBUG_QUIET, "Error getting Stork log file: %s\n",
-						tmpResult.Value() );
-			return false;
-
-		} else if ( logFiles.number() != 1 ) {
-			debug_printf( DEBUG_QUIET, "Error: %d Stork log files found "
-						"in submit file %s; we want 1\n",
-						logFiles.number(), _cmdFile );
-			return false;
-
-		} else {
-			logFiles.rewind();
-			logFile = logFiles.next();
-		}
-#endif //TEMPTEMP
-	}
+	//TEMPTEMP }
 
 	return true;
 }

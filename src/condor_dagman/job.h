@@ -81,7 +81,6 @@ class Job {
         // NOTE: must be kept in sync with enum Log_source
 	typedef enum {
 		TYPE_CONDOR,
-		//TEMPTEMP? TYPE_STORK,
 	 } job_type_t; //TEMPTEMP -- get rid of this?
   
     /** Enumeration for specifying which queue for Add() and Remove().
@@ -157,13 +156,12 @@ class Job {
 	static int NOOP_NODE_PROCID;
   
     /** Constructor
-        @param jobType Type of job in dag file.
         @param jobName Name of job in dag file.  String is deep copied.
 		@param directory Directory to run the node in, "" if current
 		       directory.  String is deep copied.
         @param cmdFile Path to condor cmd file.  String is deep copied.
     */
-    Job( const job_type_t jobType, const char* jobName,
+    Job( const char* jobName,
 				const char* directory, const char* cmdFile ); 
   
     ~Job();
@@ -177,7 +175,7 @@ class Job {
 	inline int GetRetries() const { return retries; }
 	const char* GetPreScriptName() const;
 	const char* GetPostScriptName() const;
-	const char* JobTypeString() const;
+	const char* JobTypeString() const; //TEMPTEMP -- get rid of this?
 	job_type_t JobType() const; //TEMPTEMP -- get rid of this?
 
 	bool AddPreScript( const char *cmd, MyString &whynot );
@@ -565,7 +563,7 @@ private:
     static const char* _job_type_names[];
 
 		// type of job (e.g., Condor, Stork, etc.)
-	job_type_t _jobType; //TEMPTEMP -- get rid of this?
+	//TEMPTEMP job_type_t _jobType; //TEMPTEMP -- get rid of this?
 
 		// Directory to cd to before running the job or the PRE and POST
 		// scripts.

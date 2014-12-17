@@ -327,23 +327,13 @@ bool Dag::Bootstrap (bool recovery)
 			// on a combination of Condor and Stork events -- we probably
 			// need a loop around the event processing.  wenger 2009-06-18.
 		if( CondorLogFileCount() > 0 ) {
-			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
+			if( !ProcessLogEvents( recovery ) ) {
 				_recovery = false;
 				debug_cache_stop_caching();
 				_jobstateLog.WriteRecoveryFailure();
 				return false;
 			}
 		}
-#if 0 //TEMPTEMP
-		if( StorkLogFileCount() > 0 ) {
-			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
-				_recovery = false;
-				debug_cache_stop_caching();
-				_jobstateLog.WriteRecoveryFailure();
-				return false;
-			}
-		}
-#endif //TEMPTEMP
 
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
 		jobs.ToBeforeFirst();
@@ -466,30 +456,12 @@ Dag::DetectCondorLogGrowth () {
     return growth;
 }
 
-#if 0 //TEMPTEMP
-//-------------------------------------------------------------------------
-bool Dag::DetectDaPLogGrowth () {
-
-	if( StorkLogFileCount() <= 0 ) {
-		return false;
-	}
-
-	bool growth = _storkLogRdr.detectLogGrowth();
-    debug_printf( DEBUG_DEBUG_4, "%s\n",
-				  growth ? "Log GREW!" : "No log growth..." );
-    return growth;
-}
-#endif //TEMPTEMP
-
 //-------------------------------------------------------------------------
 // Developer's Note: returning false tells main_timer to abort the DAG
-bool Dag::ProcessLogEvents (int logsource, bool recovery) {
+bool Dag::ProcessLogEvents (bool recovery) {
 
-	//TEMPTEMP -- get rid of this if?
-	if ( logsource == CONDORLOG ) {
-		debug_printf( DEBUG_VERBOSE, "Currently monitoring %d Condor "
-					"log file(s)\n", _condorLogRdr.activeLogFileCount() );
-	}
+	debug_printf( DEBUG_VERBOSE, "Currently monitoring %d Condor "
+				"log file(s)\n", _condorLogRdr.activeLogFileCount() );
 
 	bool done = false;  // Keep scanning until ULOG_NO_EVENT
 	bool result = true;
@@ -498,12 +470,9 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 		ULogEvent* e = NULL;
 		ULogEventOutcome outcome = ULOG_NO_EVENT;
 
-		//TEMPTEMP -- get rid of this if?
-		if ( logsource == CONDORLOG ) {
-			outcome = _condorLogRdr.readEvent(e);
-		}
+		outcome = _condorLogRdr.readEvent(e);
 
-		bool tmpResult = ProcessOneEvent( logsource, outcome, e, recovery,
+		bool tmpResult = ProcessOneEvent( outcome, e, recovery,
 					done );
 			// If ProcessOneEvent returns false, the result here must
 			// be false.
@@ -516,7 +485,7 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 	}
 
 	if (DEBUG_LEVEL(DEBUG_VERBOSE) && recovery) {
-		const char *name = (logsource == CONDORLOG) ? "Condor" : "Stork";
+		const char *name = "Condor";
 		debug_printf( DEBUG_NORMAL, "    ------------------------------\n");
 		debug_printf( DEBUG_NORMAL, "       %s Recovery Complete\n", name);
 		debug_printf( DEBUG_NORMAL, "    ------------------------------\n");
@@ -535,7 +504,7 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 
 //---------------------------------------------------------------------------
 // Developer's Note: returning false tells main_timer to abort the DAG
-bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
+bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 		const ULogEvent *event, bool recovery, bool &done) {
 
 	bool result = true;
@@ -591,14 +560,14 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 		{
 			ASSERT( event != NULL );
 			bool submitEventIsSane;
-			Job *job = LogEventNodeLookup( logsource, event,
+			Job *job = LogEventNodeLookup( event,
 						submitEventIsSane );
 			PrintEvent( DEBUG_VERBOSE, event, job, recovery );
 			if( !job ) {
 					// event is for a job outside this DAG; ignore it
 				break;
 			}
-			if( !EventSanityCheck( logsource, event, job, &result ) ) {
+			if( !EventSanityCheck( event, job, &result ) ) {
 					// this event is "impossible"; we will either
 					// abort the DAG (if result was set to false) or
 					// ignore it and hope for the best...
@@ -875,26 +844,16 @@ Dag::RemoveBatchJob(Job *node) {
 	ArgList args;
 	MyString constraint;
 
-	//TEMPTEMP -- get rid of this switch?
-	switch ( node->JobType() ) {
-	case Job::TYPE_CONDOR:
-		args.AppendArg( _condorRmExe );
-		args.AppendArg( "-const" );
+	args.AppendArg( _condorRmExe );
+	args.AppendArg( "-const" );
 
-			// Adding this DAGMan's cluster ID as a constraint to
-			// be extra-careful to avoid removing someone else's
-			// job.
-		constraint.formatstr( "%s =?= %d && %s =?= %d",
-					ATTR_DAGMAN_JOB_ID, _DAGManJobId->_cluster,
-					ATTR_CLUSTER_ID, node->GetCluster() );
-		args.AppendArg( constraint.Value() );
-		break;
-
-	default:
-		EXCEPT( "Illegal job (%d) type for node %s", node->JobType(),
-					node->GetJobName() );
-		break;
-	}
+		// Adding this DAGMan's cluster ID as a constraint to
+		// be extra-careful to avoid removing someone else's
+		// job.
+	constraint.formatstr( "%s =?= %d && %s =?= %d",
+				ATTR_DAGMAN_JOB_ID, _DAGManJobId->_cluster,
+				ATTR_CLUSTER_ID, node->GetCluster() );
+	args.AppendArg( constraint.Value() );
 	
 	MyString display;
 	args.GetArgsStringForDisplay( &display );
@@ -1363,7 +1322,7 @@ Dag::NodeExists( const char* nodeName ) const
 }
 
 //---------------------------------------------------------------------------
-Job * Dag::FindNodeByEventID ( int logsource, const CondorID condorID ) const {
+Job * Dag::FindNodeByEventID ( const CondorID condorID ) const {
 	if ( condorID._cluster == -1 ) {
 		return NULL;
 	}
@@ -1371,7 +1330,7 @@ Job * Dag::FindNodeByEventID ( int logsource, const CondorID condorID ) const {
 	Job *	node = NULL;
 	bool isNoop = JobIsNoop( condorID );
 	int id = GetIndexID( condorID );
-	if ( GetEventIDHash( isNoop, logsource )->lookup(id, node) != 0 ) {
+	if ( GetEventIDHash( isNoop )->lookup(id, node) != 0 ) {
 			// Note: eventually get rid of the "(might be because of
 			// node retries)" message here, and have code that explicitly
 			// figures out whether the node was not found because of a
@@ -2068,28 +2027,15 @@ void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
 {
 	if ( bForce ) removeCondorJobs = true;
 
-	const char *conJobs = removeCondorJobs ? "Condor/" : "";
-	debug_printf( DEBUG_NORMAL, "Removing any/all submitted %s"
-				"Stork jobs...\n", conJobs );
-
-		// first, remove all Condor jobs submitted by this DAGMan
-		// Make sure we have at least one Condor (not Stork) job before
-		// we call condor_rm...
-	bool	haveCondorJob = bForce;
-    ListIterator<Job> jobList(_jobs);
-    Job * job;
-    while (jobList.Next(job)) {
-		ASSERT( job != NULL );
-		//TEMPTEMP -- get rid of this if?
-		if ( job->JobType() == Job::TYPE_CONDOR ) {
-			haveCondorJob = true;
-			break;
-		}
-	}
+	// Hmm -- should we check here if we have jobs queued? wenger 2014-12-17
+	bool	haveCondorJob = true;
 
 	ArgList args;
 
 	if ( removeCondorJobs && haveCondorJob ) {
+		debug_printf( DEBUG_NORMAL, "Removing any/all submitted "
+					"Condor jobs...\n" );
+
 		MyString constraint;
 
 		args.Clear();
@@ -2314,11 +2260,8 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 	const char *keyword = "";
 	if ( node->GetFinal() ) {
 		keyword = "FINAL";
-	//TEMPTEMP -- get rid of this if?
-	} else if ( node->JobType() == Job::TYPE_CONDOR ) {
-		keyword = node->GetDagFile() ? "SUBDAG EXTERNAL" : "JOB";
 	} else {
-		EXCEPT( "Illegal node type (%d)", node->JobType() );
+		keyword = node->GetDagFile() ? "SUBDAG EXTERNAL" : "JOB";
 	}
 
 	if ( !isPartial ) {
@@ -2564,10 +2507,8 @@ Dag::RestartNode( Job *node, bool recovery )
 			// Note: the if checking against the default condor ID
 			// should *always* be true here, but checking just to be safe.
 		if ( !(node->GetID() == _defaultCondorId) ) {
-			//TEMPTEMP -- get rid of logsource?
-			int logsource = CONDORLOG;
 			int id = GetIndexID( node->GetID() );
-			if ( GetEventIDHash( node->GetNoop(), logsource )->remove( id )
+			if ( GetEventIDHash( node->GetNoop() )->remove( id )
 						!= 0 ) {
 				EXCEPT( "Event ID hash table error!" );
 			}
@@ -3690,7 +3631,7 @@ Dag::RemoveDependency( Job *parent, Job *child, MyString &whynot )
 
 //---------------------------------------------------------------------------
 Job*
-Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
+Dag::LogEventNodeLookup( const ULogEvent* event,
 			bool &submitEventIsSane )
 {
 	ASSERT( event );
@@ -3706,7 +3647,7 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 	if ( event->eventNumber != ULOG_SUBMIT &&
 				event->eventNumber != ULOG_PRESKIP ) {
 		
-	  node = FindNodeByEventID( logsource, condorID );
+	  node = FindNodeByEventID( condorID );
 	  if( node ) {
 	    return node;
 	  }
@@ -3750,7 +3691,7 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 					ASSERT( isNoop == node->GetNoop() );
 					int id = GetIndexID( condorID );
 					HashTable<int, Job *> *ht =
-								GetEventIDHash( isNoop, logsource );
+								GetEventIDHash( isNoop );
 					if ( ht->lookup(id, tmpNode) != 0 ) {
 							// Node not found.
 						int insertResult = ht->insert( id, node );
@@ -3794,7 +3735,7 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 				bool isNoop = JobIsNoop( condorID );
 				int id = GetIndexID( condorID );
 				HashTable<int, Job *> *ht =
-							GetEventIDHash( isNoop, logsource );
+							GetEventIDHash( isNoop );
 				if ( ht->lookup(id, tmpNode) != 0 ) {
 						// Node not found.
 					int insertResult = ht->insert( id, node );
@@ -3836,7 +3777,7 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 // (additionally sets *result=false if DAG should be aborted)
 
 bool
-Dag::EventSanityCheck( int logsource, const ULogEvent* event,
+Dag::EventSanityCheck( const ULogEvent* event,
 			const Job* node, bool* result )
 {
 	ASSERT( event );
@@ -3845,10 +3786,7 @@ Dag::EventSanityCheck( int logsource, const ULogEvent* event,
 	MyString eventError;
 	CheckEvents::check_event_result_t checkResult = CheckEvents::EVENT_OKAY;
 
-	//TEMPTEMP -- get rid of this if?
-	if ( logsource == CONDORLOG ) {
-		checkResult = _checkCondorEvents.CheckAnEvent( event, eventError );
-	}
+	checkResult = _checkCondorEvents.CheckAnEvent( event, eventError );
 
 	if( checkResult == CheckEvents::EVENT_OKAY ) {
 		debug_printf( DEBUG_DEBUG_1, "Event is okay\n" );
@@ -3936,46 +3874,24 @@ Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node )
 
 //---------------------------------------------------------------------------
 HashTable<int, Job *> *
-Dag::GetEventIDHash(bool isNoop, int jobType)
+Dag::GetEventIDHash(bool isNoop)
 {
 	if ( isNoop ) {
 		return &_noopIDHash;
 	}
 
-	//TEMPTEMP -- get rid of this switch?
-	switch (jobType) {
-	case Job::TYPE_CONDOR:
-		return &_condorIDHash;
-		break;
-
-	default:
-		EXCEPT( "Illegal job type (%d)", jobType );
-		break;
-	}
-
-	return NULL;
+	return &_condorIDHash;
 }
 
 //---------------------------------------------------------------------------
 const HashTable<int, Job *> *
-Dag::GetEventIDHash(bool isNoop, int jobType) const
+Dag::GetEventIDHash(bool isNoop) const
 {
 	if ( isNoop ) {
 		return &_noopIDHash;
 	}
 
-	//TEMPTEMP -- get rid of this switch?
-	switch (jobType) {
-	case Job::TYPE_CONDOR:
-		return &_condorIDHash;
-		break;
-
-	default:
-		EXCEPT( "Illegal job type (%d)", jobType );
-		break;
-	}
-
-	return NULL;
+	return &_condorIDHash;
 }
 
 // NOTE: dag addnode/removenode/adddep/removedep methods don't
@@ -4021,8 +3937,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 	if ( node->GetCluster() != _defaultCondorId._cluster ) {
 		ASSERT( JobIsNoop( condorID ) == node->GetNoop() );
 		int id = GetIndexID( node->GetID() );
-		int removeResult = GetEventIDHash( node->GetNoop(),
-					node->JobType() )->remove( id );
+		int removeResult = GetEventIDHash( node->GetNoop() )->remove( id );
 		ASSERT( removeResult == 0 );
 	}
 	node->SetCondorID( _defaultCondorId );
@@ -4038,7 +3953,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		// Do condor_submit_dag -no_submit if this is a nested DAG node
 		// and lazy submit file generation is enabled (this must be
 		// done before we try to monitor the log file).
-   	if ( node->JobType() == Job::TYPE_CONDOR && !node->GetNoop() &&
+   	if ( !node->GetNoop() &&
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
 		bool isRetry = node->GetRetries() > 0;
 		priority_swapper ps( node->_hasNodePriority, node->_nodePriority, _submitDagDeepOpts->priority);
@@ -4061,53 +3976,34 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		return SUBMIT_RESULT_NO_SUBMIT;
 	}
 
-		// We now only check for missing log files for Stork jobs because
-		// of the default log file feature; that doesn't work for Stork
-		// jobs because we can't specify the log file on the command
-		// line.  wenger 2009-08-14
-#if 0 //TEMPTEMP
-	if ( !_allowLogError && node->JobType() == Job::TYPE_STORK &&
-				!node->CheckForLogFile( false ) ) {
-		//TEMPTEMP -- get rid of this if?
+	debug_printf( DEBUG_NORMAL, "Submitting %s Node %s job(s)...\n",
+			  	node->JobTypeString(), node->GetJobName() );
 
+	bool submit_success = false;
+
+ 	node->_submitTries++;
+	if ( node->GetNoop() ) {
+   		submit_success = fake_condor_submit( condorID, 0,
+					node->GetJobName(), node->GetDirectory(),
+					node->GetLogFile() ,
+					node->GetLogFileIsXml() );
 	} else {
-#endif //TEMPTEMP
-		debug_printf( DEBUG_NORMAL, "Submitting %s Node %s job(s)...\n",
-				  	node->JobTypeString(), node->GetJobName() );
+		const char *logFile = node->UsingDefaultLog() ?
+					node->GetLogFile() : NULL;
+			// Note: assigning the ParentListString() return value
+			// to a variable here, instead of just passing it directly
+			// to condor_submit(), fixes a memory leak(!).
+			// wenger 2008-12-18
+		MyString parents = ParentListString( node );
+   		submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
+					node->GetJobName(), parents,
+					node->varsFromDag, node->GetRetries(),
+					node->GetDirectory(), logFile,
+					ProhibitMultiJobs(),
+					node->NumChildren() > 0 && dm._claim_hold_time > 0 );
+	}
 
-		bool submit_success = false;
-
-		//TEMPTEMP -- get rid of this if?
-    	if( node->JobType() == Job::TYPE_CONDOR ) {
-	  		node->_submitTries++;
-			if ( node->GetNoop() ) {
-      			submit_success = fake_condor_submit( condorID, 0,
-							node->GetJobName(), node->GetDirectory(),
-							node->GetLogFile() ,
-							node->GetLogFileIsXml() );
-			} else {
-				const char *logFile = node->UsingDefaultLog() ?
-							node->GetLogFile() : NULL;
-					// Note: assigning the ParentListString() return value
-					// to a variable here, instead of just passing it directly
-					// to condor_submit(), fixes a memory leak(!).
-					// wenger 2008-12-18
-				MyString parents = ParentListString( node );
-      			submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
-							node->GetJobName(), parents,
-							node->varsFromDag, node->GetRetries(),
-							node->GetDirectory(), logFile,
-							ProhibitMultiJobs(),
-							node->NumChildren() > 0 && dm._claim_hold_time > 0 );
-			}
-    	} else {
-	    	debug_printf( DEBUG_QUIET, "Illegal job type: %d\n",
-						node->JobType() );
-			ASSERT(false);
-		}
-
-		result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;
-	//TEMPTEMP }
+	result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;
 
 	return result;
 }
@@ -4143,8 +4039,7 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 	node->SetCondorID( condorID );
 	ASSERT( JobIsNoop( node->GetID() ) == node->GetNoop() );
 	int id = GetIndexID( node->GetID() );
-	int insertResult = GetEventIDHash( node->GetNoop(), node->JobType() )->
-				insert( id, node );
+	int insertResult = GetEventIDHash( node->GetNoop() )->insert( id, node );
 	ASSERT( insertResult == 0 );
 
 	debug_printf( DEBUG_VERBOSE, "\tassigned %s ID (%d.%d.%d)\n",

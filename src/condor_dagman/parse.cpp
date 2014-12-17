@@ -52,12 +52,12 @@ static bool _useDagDir = false;
 static int _thisDagNum = -1;
 static bool _mungeNames = true;
 
-static bool parse_subdag( Dag *dag, Job::job_type_t nodeType,
+static bool parse_subdag( Dag *dag,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory);
 
-static bool parse_node( Dag *dag, Job::job_type_t nodeType,
+static bool parse_node( Dag *dag,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory, const char *inlineOrExt,
@@ -221,7 +221,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		//
 		if(strcasecmp(token, "JOB") == 0) {
 			parsed_line_successfully = parse_node( dag, 
-					   Job::TYPE_CONDOR, token,
+					   token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
 		}
@@ -246,14 +246,13 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
 			parsed_line_successfully = parse_subdag( dag, 
-						Job::TYPE_CONDOR,
 						token, filename, lineNumber, tmpDirectory.Value() );
 		}
 
 		// Handle a FINAL spec
 		else if(strcasecmp(token, "FINAL") == 0) {
 			parsed_line_successfully = parse_node( dag, 
-					   Job::TYPE_CONDOR, token,
+					   token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
 		}
@@ -418,7 +417,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 }
 
 static bool 
-parse_subdag( Dag *dag, Job::job_type_t nodeType,
+parse_subdag( Dag *dag, 
 			const char* nodeTypeKeyword,
 			const char* dagFile, int lineNum, const char *directory )
 {
@@ -429,7 +428,7 @@ parse_subdag( Dag *dag, Job::job_type_t nodeType,
 		return false;
 	}
 	if ( !strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
-		return parse_node( dag, nodeType, nodeTypeKeyword, dagFile,
+		return parse_node( dag, nodeTypeKeyword, dagFile,
 					lineNum, directory, " EXTERNAL", "dagfile" );
 	}
 
@@ -439,7 +438,7 @@ parse_subdag( Dag *dag, Job::job_type_t nodeType,
 }
 
 static bool 
-parse_node( Dag *dag, Job::job_type_t nodeType,
+parse_node( Dag *dag, 
 			const char* nodeTypeKeyword,
 			const char* dagFile, int lineNum, const char *directory,
 			const char *inlineOrExt, const char *submitOrDagFile)
@@ -578,7 +577,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 
 	// looks ok, so add it
 	bool isFinal = strcasecmp( nodeTypeKeyword, "FINAL" ) == MATCH;
-	if( !AddNode( dag, nodeType, nodeName, directory,
+	if( !AddNode( dag, nodeName, directory,
 				submitFile, NULL, NULL, noop, done, isFinal, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",

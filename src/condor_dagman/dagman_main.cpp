@@ -1448,26 +1448,14 @@ void condor_event_timer () {
 
 	// If the log has grown
 	if( dagman.dag->DetectCondorLogGrowth() ) {
-		if( dagman.dag->ProcessLogEvents( CONDORLOG ) == false ) {
+		if( dagman.dag->ProcessLogEvents() == false ) {
 			debug_printf( DEBUG_NORMAL,
-						"ProcessLogEvents(CONDORLOG) returned false\n" );
+						"ProcessLogEvents() returned false\n" );
 			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
 			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 			return;
 		}
 	}
-
-#if 0 //TEMPTEMP
-	if( dagman.dag->DetectDaPLogGrowth() ) {
-		if( dagman.dag->ProcessLogEvents( DAPLOG ) == false ) {
-			debug_printf( DEBUG_NORMAL,
-						"ProcessLogEvents(DAPLOG) returned false\n" );
-			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
-			return;
-		}
-	}
-#endif //TEMPTEMP
 
     // print status if anything's changed (or we're in a high debug level)
     if( prevJobsDone != dagman.dag->NumNodesDone( true )

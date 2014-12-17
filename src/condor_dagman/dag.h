@@ -38,12 +38,6 @@
 #include "dagman_recursive_submit.h"
 #include "jobstate_log.h"
 
-// NOTE: must be kept in sync with Job::job_type_t
-enum Log_source{
-  CONDORLOG = Job::TYPE_CONDOR,
-  //TEMPTEMP DAPLOG = Job::TYPE_STORK
-};
-
 // Which layer of splices do we want to lift?
 enum SpliceLayer {
 	SELF,
@@ -190,16 +184,14 @@ class Dag {
 
     
     bool DetectCondorLogGrowth();
-    //TEMPTEMP bool DetectDaPLogGrowth();            //<--DAP
 
     /** Force the Dag to process all new events in the condor log file.
         This may cause the state of some jobs to change.
 
-		@param logsource The type of log from which events should be read.
         @param recover Process Log in Recover Mode, from beginning to end
         @return true on success, false on failure
     */
-    bool ProcessLogEvents (int logsource, bool recovery = false); //<--DAP
+    bool ProcessLogEvents (bool recovery = false);
 
 	/** Process a single event.  Note that this is called every time
 			we attempt to read the user log, so we may or may not have
@@ -212,7 +204,7 @@ class Dag {
 			function).
 		@return True if the DAG should continue, false if we should abort.
 	*/
-	bool ProcessOneEvent (int logsource, ULogEventOutcome outcome, const ULogEvent *event,
+	bool ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 			bool recovery, bool &done);
 
 	/** Process an abort or executable error event.
@@ -297,13 +289,11 @@ class Dag {
     */
     Job * FindNodeByName (const char * jobName) const;
 
-    /** Get pointer to job with condor or stork ID condorID
-		@param logsource The type of log from which events should be read.
+    /** Get pointer to job with condor ID condorID
         @param condorID the CondorID of the job in the DAG
         @return address of Job object, or NULL if not found
     */
-	//TEMPTEMP -- get rid of logsource?
-    Job * FindNodeByEventID (int logsource, const CondorID condorID ) const;
+    Job * FindNodeByEventID ( const CondorID condorID ) const;
 
     /** Ask whether a node name exists in the DAG
         @param nodeName the name of the node in the DAG
@@ -827,7 +817,7 @@ class Dag {
 		SUBMIT_RESULT_NO_SUBMIT,
 	} submit_result_t;
 
-	/** Submit the Condor or Stork job for a node, including doing
+	/** Submit the Condor job for a node, including doing
 		some higher-level work such as sleeping before the actual submit
 		if necessary.
 		@param the appropriate Dagman object
@@ -838,15 +828,13 @@ class Dag {
 	submit_result_t SubmitNodeJob( const Dagman &dm, Job *node,
 				CondorID &condorID );
 
-	/** Do the post-processing of a successful submit of a Condor or
-		Stork job.
+	/** Do the post-processing of a successful submit of a Condor job.
 		@param the node for which the job was just submitted
 		@param the Condor ID of the associated job
 	*/	
 	void ProcessSuccessfulSubmit( Job *node, const CondorID &condorID );
 
-	/** Do the post-processing of a failed submit of a Condor or
-		Stork job.
+	/** Do the post-processing of a failed submit of a Condor job.
 		@param the node for which the job was just submitted
 		@param the maximum number of submit attempts allowed for a job.
 	*/
@@ -896,12 +884,12 @@ class Dag {
 	bool CheckForDagAbort(Job *job, const char *type);
 
 		// takes a userlog event and returns the corresponding node
-	Job* LogEventNodeLookup( int logsource, const ULogEvent* event,
+	Job* LogEventNodeLookup( const ULogEvent* event,
 				bool &submitEventIsSane );
 
 		// check whether a userlog event is sane, or "impossible"
 
-	bool EventSanityCheck( int logsource, const ULogEvent* event,
+	bool EventSanityCheck( const ULogEvent* event,
 						const Job* node, bool* result );
 
 		// compares a submit event's job ID with the one that appeared
@@ -910,24 +898,17 @@ class Dag {
 
 	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node );
 
-		/** Get the appropriate hash table for event ID->node mapping,
-			according to whether this is a Condor or Stork node.
+		/** Get the appropriate hash table for event ID->node mapping.
 			@param whether the node is a NOOP node
-			@param the node type/logsource (Condor or Stork) (see
-				Log_source and Job::job_type_t)
 			@return a pointer to the appropriate hash table
 		*/
-	HashTable<int, Job *> *		GetEventIDHash(bool isNoop, int jobType);
+	HashTable<int, Job *> *		GetEventIDHash(bool isNoop);
 
-		/** Get the appropriate hash table for event ID->node mapping,
-			according to whether this is a Condor or Stork node.
+		/** Get the appropriate hash table for event ID->node mapping.
 			@param whether the node is a NOOP node
-			@param the node type/logsource (Condor or Stork) (see
-				Log_source and Job::job_type_t)
 			@return a pointer to the appropriate hash table
 		*/
-	const HashTable<int, Job *> *		GetEventIDHash(bool isNoop,
-				int jobType) const;
+	const HashTable<int, Job *> *		GetEventIDHash(bool isNoop) const;
 
 	// run DAGs in directories from DAG file paths if true
 	bool _useDagDir;
@@ -935,20 +916,14 @@ class Dag {
     // Documentation on ReadUserLog is present in condor_utils
 	ReadMultipleUserLogs _condorLogRdr;
 
-		// Object to read events from Stork logs.
-		//TEMPTEMP -- get rid of this
-	ReadMultipleUserLogs	_storkLogRdr;
-
 		/** Get the total number of node job user log files we'll be
 			accessing.
 			@return The total number of log files.
 		*/
-	int TotalLogFileCount() { return CondorLogFileCount() +
-				StorkLogFileCount(); }
+	int TotalLogFileCount() { return CondorLogFileCount(); }
+				
 
 	int CondorLogFileCount() { return _condorLogRdr.totalLogFileCount(); }
-
-	int StorkLogFileCount() { return _storkLogRdr.totalLogFileCount(); }
 
 		/** Write information for the given node to a rescue DAG.
 			@param fp: file pointer to the rescue DAG file
@@ -1091,8 +1066,6 @@ private:
 		// Last time the status file was written.
 	time_t _lastStatusUpdateTimestamp;
 
-		// Separate event checkers for Condor and Stork here because
-		// IDs could collide.
 	CheckEvents	_checkCondorEvents;
 
 		// Total count of jobs deferred because of MaxJobs limit (note
