@@ -618,7 +618,7 @@ e		*/
          *  @param tree The ExprTree for the expression that has references 
          *      that you wish to know about. 
          *  @param refs The list of references
-         *  @param fullNames true if you want full names (like other.foo)
+         *  @param fullNames ignored
          *  @return true on success, false on failure. 
          */
         bool GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames) const;

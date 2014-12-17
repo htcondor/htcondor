@@ -68,6 +68,13 @@ void ClassAdLibraryVersion(string &version_string)
     return;
 }
 
+// TODO If C++11 is available, then we can use the more concise
+//   initialization (currently commented out).
+static std::string specialAttrNamesInit[] = {"toplevel", "root", "self", "parent"};
+static References specialAttrNames(specialAttrNamesInit,
+		specialAttrNamesInit + sizeof(specialAttrNamesInit)/sizeof(specialAttrNamesInit[0]));
+//static References specialAttrNames {"toplevel", "root", "self", "parent"};
+
 ClassAd::
 ClassAd ()
 {
@@ -632,8 +639,18 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 			return( EVAL_OK );
 		}
 
-		superScope = current->parentScope;
-		if(strcasecmp(name.c_str( ),"toplevel")==0 || 
+		if ( state.rootAd == current ) {
+			superScope = NULL;
+		} else {
+			superScope = current->parentScope;
+		}
+		if ( specialAttrNames.find(name) == specialAttrNames.end() ) {
+			// continue searching from the superScope ...
+			current = superScope;
+			if( current == this ) {		// NAC - simple loop checker
+				return( EVAL_UNDEF );
+			}
+		} else if(strcasecmp(name.c_str( ),"toplevel")==0 ||
 				strcasecmp(name.c_str( ),"root")==0){
 			// if the "toplevel" attribute was requested ...
 			expr = (ClassAd*)state.rootAd;
@@ -647,14 +664,8 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 			return( expr ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), "parent" ) == 0 ) {
 			// the lexical parent
-			expr = (ClassAd*)state.curAd->parentScope;
+			expr = (ClassAd*)superScope;
 			return( expr ? EVAL_OK : EVAL_UNDEF );
-		} else {
-			// continue searching from the superScope ...
-			current = superScope;
-			if( current == this ) {		// NAC - simple loop checker
-				return( EVAL_UNDEF );
-			}
 		}
 	}	
 
@@ -1523,64 +1534,24 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
                     return false;
                 }
             } else {
+                bool orig_inAttrRefScope = state.inAttrRefScope;
+                state.inAttrRefScope = true;
+                bool rv = _GetInternalReferences( tree, ad, state, refs, fullNames );
+                state.inAttrRefScope = orig_inAttrRefScope;
+                if ( !rv ) {
+                    return false;
+                }
+
                 if (!tree->Evaluate(state, val) ) {
                     return false;
                 }
 
-                /*
-                 *
-                 * [
-                 * A = 3;
-                 * B = { 1, 3, 5};
-                 * C = D.A + 1;
-                 * D = [ A = E; B = 4; ];
-                 * E = 4;
-                 * ];
-                 */
-
+                // TODO Do we need extra handling for list values?
+                //   Should types other than undefined, error, or list
+                //   cause a failure?
                 if( val.IsUndefinedValue() ) {
                     return true;
                 }
-
-                string nameToAddToRefs = "";
-
-                string prefixStr;
-
-                if(tree != NULL)
-                {
-                    ClassAdUnParser unparser;
-                    //TODO: figure out how this would handle "B.D.G"
-                    unparser.Unparse(prefixStr, tree);
-                    //fullNameCpy = prefixStr;
-                    nameToAddToRefs = prefixStr;
-
-                    if(fullNames)
-                    {
-                        nameToAddToRefs += ".";
-                        nameToAddToRefs += attr;
-                    }
-                }
-
-                //WOULD INSERT "" IF tree == NULL! BAD! FIXME
-                refs.insert(nameToAddToRefs);
-
-                /* This code is fishy and likely needs to be completely
-                 * removed. Just disable it for now, as we're still
-                 * fixing bugs in this code when dealing with nested
-                 * ads.
-                ExprTree *followRef;
-                //TODO: If we get to this point, must there be a prefix?
-                //  FIGURE OUT WHAT A SIMPLE / ABSOLUTE ATTR IS
-                followRef = ad->Lookup(prefixStr);
-                //this is checking to see if the prefix is in
-                //  this classad or not.
-                // if not, then we just let the loop continue
-                if(followRef != NULL)
-                {
-                    return _GetInternalReferences(followRef, ad,
-                                        state, refs, fullNames);
-                }
-                */
 
                 //otherwise, if the tree didn't evaluate to a classad,
                 //we have a problemo, mon.
@@ -1609,7 +1580,10 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
 
                 case EVAL_OK:   {
                     //whoo, it's internal.
-                    refs.insert(attr);
+                    if ( state.curAd == state.rootAd &&
+                         specialAttrNames.find(attr) == specialAttrNames.end()) {
+                        refs.insert(attr);
+                    }
                     if( state.depth_remaining <= 0 ) {
                         state.curAd = curAd;
                         return false;
@@ -1678,6 +1652,13 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
             //also recurse on subtrees...
             vector< pair<string, ExprTree*> >               attrs;
             vector< pair<string, ExprTree*> >:: iterator    itr;
+
+            // If this ClassAd is only being used here as the scoping
+            // for an attribute reference, don't recurse into all of
+            // its attributes.
+            if ( state.inAttrRefScope ) {
+                return true;
+            }
 
             ((const ClassAd*)expr)->GetComponents(attrs);
             for(itr = attrs.begin(); itr != attrs.end(); itr++){
