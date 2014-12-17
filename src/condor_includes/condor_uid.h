@@ -144,10 +144,15 @@ bool is_same_user(const char user1[], const char user2[], CompareUsersOpt opt);
 extern passwd_cache* pcache(void);
 #endif
 
+namespace classad {
+	class ClassAd;
+}
 // An object that automatically returns the previous privilege level when destroyed
 class TemporaryPrivSentry {
 
 public:
+	TemporaryPrivSentry(const classad::ClassAd &ad);
+
 	TemporaryPrivSentry(priv_state dest_state) {
 		m_orig_state = set_priv(dest_state);
 	}

@@ -44,3 +44,9 @@ priv_state set_user_priv_from_ad(classad::ClassAd const &ad)
 
 	return set_user_priv();
 }
+
+TemporaryPrivSentry::TemporaryPrivSentry(const classad::ClassAd &ad)
+{
+	m_orig_state = set_user_priv_from_ad(ad);
+}       
+
