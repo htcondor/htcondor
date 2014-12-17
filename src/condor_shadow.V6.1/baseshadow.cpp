@@ -936,6 +936,36 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 	}
 }
 
+static bool
+WriteHistoryFile(const classad::ClassAd &ad)
+{
+        std::string history_file;
+        if (!ad.EvaluateAttrString(ATTR_HISTORY_FILE, history_file)) {return false;}
+
+	TemporaryPrivSentry tps(ad);
+	int fd = safe_open_wrapper_follow(history_file.c_str(), O_APPEND|O_WRONLY);
+	if (fd == -1)
+	{
+		dprintf(D_ALWAYS,
+			"ERROR: Invalid log file: \"%s\" (errno=%d, %s)\n",
+			history_file.c_str(), errno, strerror(errno));
+			return false;
+	}
+	classad::ClassAdUnParser unparser;
+	unparser.SetOldClassAd(true);
+	std::string buf;
+	unparser.Unparse(buf, &ad);
+	buf += "\n";
+	if (-1 == full_write(fd, buf.c_str(), buf.size()))
+	{
+		dprintf(D_ALWAYS,
+			"ERROR: Unable to write to log file \"%s\" (errno=%d, %s).\n",
+			history_file.c_str(), errno, strerror(errno));
+			return false;
+	}
+	return true;
+}
+
 // kind defaults to US_NORMAL.
 void
 BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
@@ -1003,6 +1033,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 			event.setCoreFile( corefile.Value() );
 		}
 
+		WriteHistoryFile(*jobAd);
 		if (!uLog.writeEvent (&event,jobAd)) {
 			dprintf (D_ALWAYS,"Unable to log "
 				 	"ULOG_JOB_TERMINATED event\n");
@@ -1083,7 +1114,8 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		event.pusageAd = puAd;
 	}
 #endif
-	
+
+	WriteHistoryFile(*jobAd);	
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS,"Unable to log "
 				 "ULOG_JOB_TERMINATED event\n");

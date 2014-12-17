@@ -674,6 +674,7 @@
 #define ATTR_UID_DOMAIN  "UidDomain"
 #define ATTR_ULOG_FILE  "UserLog"
 #define ATTR_ULOG_USE_XML  "UserLogUseXML"
+#define ATTR_HISTORY_FILE "History"
 #define ATTR_UPDATE_INTERVAL  "UpdateInterval"
 #define ATTR_CLASSAD_LIFETIME  "ClassAdLifetime"
 #define ATTR_UPDATE_PRIO  "UpdatePrio"

@@ -269,6 +269,7 @@ const char	*NotifyUser		= "notify_user";
 const char	*EmailAttributes = "email_attributes";
 const char	*ExitRequirements = "exit_requirements";
 const char	*UserLogFile	= "log";
+const char	*HistoryFile	= "history";
 const char	*UseLogUseXML	= "log_xml";
 const char	*DagmanLogFile	= "dagman_log";
 const char	*CoreSize		= "coresize";
@@ -510,6 +511,7 @@ void 	SetIWD();
 void 	ComputeIWD();
 void	SetUserLog();
 void    SetUserLogXML();
+void	SetHistoryFile();
 void	SetCoreSize();
 void	SetFileOptions();
 #if !defined(WIN32)
@@ -5081,6 +5083,89 @@ check_iwd( char const *iwd )
 	}
 }
 
+static void
+WarnAboutNFS(const std::string &log)
+{
+	// Check that the log file isn't on NFS
+	bool nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
+	bool nfs = false;
+
+	if (!nfs_is_error) { return; }
+
+	if ( fs_detect_nfs( log.c_str(), &nfs ) != 0 ) {
+		fprintf(stderr,
+			"\nWARNING: Can't determine whether log file %s is on NFS\n",
+			log.c_str() );
+	} else if ( nfs ) {
+		fprintf(stderr,
+			"\nERROR: Log file %s is on NFS.\nThis could cause"
+			" log file corruption. Condor has been configured to"
+			" prohibit log files on NFS.\n",
+		log.c_str() );
+		DoCleanup(0,0,NULL);
+		exit( 1 );
+	}
+}
+
+static void
+LogFileChecks(const std::string &log)
+{
+	if (!DumpClassAdToFile)
+	{
+		// check that the log is a valid path
+		if (!DisableFileChecks)
+		{
+			FILE* test = safe_fopen_wrapper_follow(log.c_str(), "a+", 0664);
+			if (!test)
+			{
+				fprintf(stderr,
+					"\nERROR: Invalid log file: \"%s\" (%s)\n", log.c_str(),
+					strerror(errno));
+					exit(1);
+			}
+			else
+			{
+				fclose(test);
+			}
+		}
+
+		WarnAboutNFS(log);
+	}
+}
+
+static bool
+HandleLogFile(char *input_log, std::string &log_fname)
+{
+	if (!input_log) {return false;}
+	const char *input_log_path_char = full_path(input_log);
+	if (!input_log_path_char)
+	{
+		free(input_log);
+		return false;
+	}
+	std::string log_path(input_log_path_char);
+	free(input_log);
+	LogFileChecks(log_path);
+
+	MyString mlog(log_path.c_str());
+	check_and_universalize_path(mlog);
+	log_fname = mlog;
+	return true;
+}
+
+void
+SetHistoryFile()
+{
+	char *history = condor_param(HistoryFile, ATTR_HISTORY_FILE);
+	std::string history_fname;
+	if (HandleLogFile(history, history_fname))
+	{
+		std::stringstream ss;
+		ss << ATTR_HISTORY_FILE << " = " << "\"" << history_fname << "\"";
+		InsertJobExpr(ss.str().c_str());
+	} 
+}
+
 void
 SetUserLog()
 {
@@ -5090,62 +5175,12 @@ SetUserLog()
 			*p && *q; ++p, ++q) {
 		char *ulog_entry = condor_param( *p, *q );
 
-		if(ulog_entry) {
-			std::string buffer;
-			std::string current_userlog(ulog_entry);
-			const char* ulog_pcc = full_path(current_userlog.c_str());
-			if(ulog_pcc) {
-				std::string ulog(ulog_pcc);
-				if ( !DumpClassAdToFile ) {
-					// check that the log is a valid path
-					if ( !DisableFileChecks ) {
-						FILE* test = safe_fopen_wrapper_follow(ulog.c_str(), "a+", 0664);
-						if (!test) {
-							fprintf(stderr,
-									"\nERROR: Invalid log file: \"%s\" (%s)\n", ulog.c_str(),
-									strerror(errno));
-							exit( 1 );
-						} else {
-							fclose(test);
-						}
-					}
-
-					// Check that the log file isn't on NFS
-					bool nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
-					bool nfs = false;
-
-					if ( nfs_is_error ) {
-						if ( fs_detect_nfs( ulog.c_str(), &nfs ) != 0 ) {
-							fprintf(stderr,
-									"\nWARNING: Can't determine whether log file %s is on NFS\n",
-									ulog.c_str() );
-						} else if ( nfs ) {
-
-							fprintf(stderr,
-									"\nERROR: Log file %s is on NFS.\nThis could cause"
-									" log file corruption. Condor has been configured to"
-									" prohibit log files on NFS.\n",
-									ulog.c_str() );
-
-							DoCleanup(0,0,NULL);
-							exit( 1 );
-
-						}
-					}
-				}
-
-				MyString mulog(ulog.c_str());
-				check_and_universalize_path(mulog);
-				buffer += mulog.Value();
-				UserLogSpecified = true;
-			}
-			std::string logExpr(*q);
-			logExpr += " = ";
-			logExpr += "\"";
-			logExpr += buffer;
-			logExpr += "\"";
-			InsertJobExpr(logExpr.c_str());
-			free(ulog_entry);
+		std::string log_fname;
+		if (HandleLogFile(ulog_entry, log_fname))
+		{
+			std::stringstream ss;
+			ss << *q << " = " << "\"" << log_fname << "\"";
+			InsertJobExpr(ss.str().c_str());
 		}
 	}
 }
@@ -6656,6 +6691,7 @@ queue(int num)
         // really a command, needs to happen before any calls to check_open
 		SetJobDisableFileChecks();
 
+		SetHistoryFile();
 		SetUserLog();
 		SetUserLogXML();
 		SetCoreSize();

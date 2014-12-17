@@ -3262,6 +3262,45 @@ namespace {
 		}
 	}
 }
+
+bool
+Scheduler::WriteHistoryFile(PROC_ID job_id)
+{
+	const ClassAd *ad = GetJobAd(job_id.cluster, job_id.proc);
+	if (!ad)
+	{
+		dprintf(D_FULLDEBUG, "Unable to find job ad for %d.%d in order to write history file.\n", job_id.cluster, job_id.proc);
+		return false;
+	}
+	std::string history_file;
+	if (!ad->EvaluateAttrString(ATTR_HISTORY_FILE, history_file)) {return false;}
+
+	{
+		TemporaryPrivSentry tps(*ad);
+		int fd = safe_open_wrapper_follow(history_file.c_str(), O_APPEND|O_WRONLY);
+		if (fd == -1)
+		{
+			dprintf(D_FULLDEBUG,
+				"ERROR: Invalid log file: \"%s\" (errno=%d, %s)\n",
+				history_file.c_str(), errno, strerror(errno));
+			return false;
+		}
+		classad::ClassAdUnParser unparser;
+		unparser.SetOldClassAd(true);
+		std::string buf;
+		unparser.Unparse(buf, ad);
+		buf += "\n";
+		if (-1 == full_write(fd, buf.c_str(), buf.size()))
+		{
+			dprintf(D_ALWAYS,
+				"ERROR: Unable to write to log file \"%s\" (errno=%d, %s).\n",
+				history_file.c_str(), errno, strerror(errno));
+			return false;
+		}
+	}
+	return true;
+}
+
 // Initialize a WriteUserLog object for a given job and return a pointer to
 // the WriteUserLog object created.  This object can then be used to write
 // events and must be deleted when you're done.  This returns NULL if
@@ -3395,11 +3434,13 @@ Scheduler::WriteSubmitToUserLog( PROC_ID job_id, bool do_fsync )
 bool
 Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 {
+	WriteHistoryFile(job_id);
 	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
 	}
+
 	JobAbortedEvent event;
 
 	char* reason = NULL;
@@ -3566,11 +3607,13 @@ Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed )
 bool
 Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status ) 
 {
+	WriteHistoryFile(job_id);
 	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
 	}
+
 	JobTerminatedEvent event;
 	struct rusage r;
 	memset( &r, 0, sizeof(struct rusage) );

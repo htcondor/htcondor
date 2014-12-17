@@ -400,6 +400,7 @@ class Scheduler : public Service
 	bool			availableTransferd( int cluster, int proc, 
 						TransferDaemon *&td_ref ); 
 	bool			startTransferd( int cluster, int proc ); 
+	bool			WriteHistoryFile(PROC_ID job_id);
 	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
 	bool			WriteSubmitToUserLog( PROC_ID job_id, bool do_fsync );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
