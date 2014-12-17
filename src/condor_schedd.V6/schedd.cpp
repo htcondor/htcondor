@@ -6600,6 +6600,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		return;
 	}
 	
+	stats.JobsRestartReconnectsAttempting += 1;
 
 	mrec->setStatus( M_CLAIMED );  // it's claimed now.  we'll set
 								   // this to active as soon as we
@@ -6627,6 +6628,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	srec->conn_fd = -1;
 	srec->isZombie = FALSE; 
 	srec->is_reconnect = true;
+	srec->reconnect_succeeded = false;
 	srec->keepClaimAttributes = false;
 
 		// the match_rec also needs to point to the srec...
@@ -8796,6 +8798,7 @@ shadow_rec::shadow_rec():
 	removed(FALSE),
 	isZombie(FALSE),
 	is_reconnect(false),
+	reconnect_succeeded(false),
 	keepClaimAttributes(false),
 	recycle_shadow_stream(NULL),
 	exit_already_handled(false)
@@ -8830,6 +8833,7 @@ Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, int univ,
 	new_rec->conn_fd = fd;
 	new_rec->isZombie = FALSE; 
 	new_rec->is_reconnect = false;
+	new_rec->reconnect_succeeded = false;
 	new_rec->keepClaimAttributes = false;
 	
 	if (pid) {

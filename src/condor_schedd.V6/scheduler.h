@@ -97,6 +97,7 @@ struct shadow_rec
 	int				removed;
 	bool			isZombie;	// added for Maui by stolley
 	bool			is_reconnect;
+	bool			reconnect_succeeded;
 		//
 		// This flag will cause the schedd to keep certain claim
 		// attributes for jobs with leases during a graceful shutdown
@@ -537,6 +538,10 @@ class Scheduler : public Service
 	void swappedClaims( DCMsgCallback *cb );
 	bool CheckForClaimSwap(match_rec *rec);
 
+	// generic statistics pool for scheduler, in schedd_stats.h
+	ScheddStatistics stats;
+	ScheddOtherStatsMgr OtherPoolStats;
+
 	
 private:
 	
@@ -588,10 +593,6 @@ private:
 	int				SchedUniverseJobsRunning;
 	int				LocalUniverseJobsIdle;
 	int				LocalUniverseJobsRunning;
-
-    // generic statistics pool for scheduler, in schedd_stats.h
-    ScheddStatistics stats;
-	ScheddOtherStatsMgr OtherPoolStats;
 
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
