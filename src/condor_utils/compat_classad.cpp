@@ -2201,7 +2201,7 @@ _GetReferences(classad::ExprTree *tree,
 	for ( set_itr = int_refs_set.begin(); set_itr != int_refs_set.end();
 		  set_itr++ ) {
 		const char *name = set_itr->c_str();
-		if ( strncasecmp( name, "my.", 3 ) ) {
+		if ( strcasecmp( name, "my" ) ) {
 			AppendReference( internal_refs, set_itr->c_str() );
 		}
 	}
