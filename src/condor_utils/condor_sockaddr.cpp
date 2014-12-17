@@ -79,14 +79,24 @@ condor_sockaddr::condor_sockaddr(const in6_addr& in6, unsigned short port)
 
 condor_sockaddr::condor_sockaddr(const sockaddr* sa)
 {
-	sockaddr_storage_ptr sock_address;
-	sock_address.raw = sa;
-	if (sa->sa_family == AF_INET) {
-		sockaddr_in* sin = sock_address.in;
-		init(sin->sin_addr.s_addr, sin->sin_port);
-	} else if (sa->sa_family == AF_INET6) {
-		sockaddr_in6* sin6 = sock_address.in6;
-		v6 = *sin6;
+	// Now that we actually assign a value on every path that exits the
+	// constructor, this call to clear() is probably unnecessary; on the
+	// other hand, it's nice to have the addresses end with a long
+	// string of zeroes when looking at them in the debugger.
+	clear();
+	switch( sa->sa_family ) {
+		case AF_INET:
+			v4 = * (const sockaddr_in *)sa;
+			break;
+		case AF_INET6:
+			v6 = * (const sockaddr_in6 *)sa;
+			break;
+		case AF_UNIX:
+			storage = * (const sockaddr_storage *)sa;
+			break;
+		default:
+			EXCEPT( "Attempted to construct condor_sockaddr with unrecognized address family (%d), aborting.", sa->sa_family );
+			break;
 	}
 }
 

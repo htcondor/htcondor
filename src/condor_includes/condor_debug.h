@@ -357,6 +357,14 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
         (ptr)->ru_stime.tv_usec ); \
 }
 
+#ifndef ABEND
+#define ABEND(cond) \
+	if( !(cond) ) { \
+		dprintf( D_ERROR | D_BACKTRACE, "Failed to assert (%s) at %s, line %d; aborting.\n", #cond, __FILE__, __LINE__ ); \
+		abort(); \
+	}
+#endif /* ABEND */
+
 #ifndef PRAGMA_REMIND
 # ifdef _MSC_VER // for Microsoft C, prefix file and line to the the message
 #  define PRAGMA_QUOTE(x)   #x

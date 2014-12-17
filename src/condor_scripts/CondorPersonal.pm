@@ -1154,7 +1154,6 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 	}
 	close(TEMPLATE);
 	print NEW "LOCAL_DIR = $mytoppath\n";
-	print NEW "CONDOR_HOST = \$(FULL_HOSTNAME)\n";
 	close(NEW);
 
 	open(NEW,">$topleveldir/$personal_local")  || die "Can not open template: $!\n";
@@ -1201,7 +1200,6 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 				print NEW "PERIODIC_EXPR_TIMESLICE = .99\n";
 				print NEW "JOB_START_DELAY = 0\n";
 				print NEW "LOCK = \$(LOG)\n";
-				print NEW "COLLECTOR_HOST = \$(CONDOR_HOST):0\n";
 				if($iswindows == 1) {
 				#print NEW "PROCD_LOG = \$(LOG)/ProcLog\n";
 					print NEW "# Adding procd pipe for windows\n";

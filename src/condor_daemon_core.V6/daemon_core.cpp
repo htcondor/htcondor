@@ -9677,7 +9677,7 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock, condor_protocol proto)
 static bool assign_sock(condor_protocol proto, Sock * sock, bool fatal)
 {
 	ASSERT(sock);
-	if( sock->assign(proto) ) return true;
+	if( sock->assignInvalidSocket( proto ) ) return true;
 
 	const char * type;
 	switch(sock->type()) {
@@ -9743,8 +9743,8 @@ InitCommandSocket(condor_protocol proto, int port, int udp_port, DaemonCore::Soc
 				}
 			}
 		}
-		if (proto == CP_IPV6) { dprintf(D_ALWAYS, "Bound socket is ipv6: %d\n", rsock->my_addr().is_ipv6()); }
-		if (proto == CP_IPV4) { dprintf(D_ALWAYS, "Bound socket is ipv4: %d\n", rsock->my_addr().is_ipv4()); }
+		// if (proto == CP_IPV6) { dprintf(D_ALWAYS, "Bound socket is ipv6: %d\n", rsock->my_addr().is_ipv6()); }
+		// if (proto == CP_IPV4) { dprintf(D_ALWAYS, "Bound socket is ipv4: %d\n", rsock->my_addr().is_ipv4()); }
 		if( !rsock->listen() ) {
 			if (fatal) {
 				EXCEPT( "Failed to post listen on command ReliSock" );
@@ -9862,22 +9862,65 @@ InitCommandSockets(int port, int udp_port, DaemonCore::SockPairVec & socks, bool
 
 	DaemonCore::SockPairVec new_socks;
 
-	if(param_boolean("ENABLE_IPV4", true)) {
-		DaemonCore::SockPair sock_pair;
-		if( ! InitCommandSocket(CP_IPV4, port, udp_port, sock_pair, want_udp, fatal)) {
-			dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket.\n");
-			return false;
-		}
-                new_socks.push_back(sock_pair);
-        }
+	// Arbitrary constant, borrowed from bindAnyCommandPort().
+	int retries = 1000;
+	do {
 
-	if(param_boolean("ENABLE_IPV6", true)) {
-		DaemonCore::SockPair sock_pair;
-		if( ! InitCommandSocket(CP_IPV6, port, udp_port, sock_pair, want_udp, fatal)) {
-			dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv6 command socket.\n");
-			return false;
+		if(param_boolean("ENABLE_IPV4", true)) {
+			DaemonCore::SockPair sock_pair;
+			if( ! InitCommandSocket(CP_IPV4, port, udp_port, sock_pair, want_udp, fatal)) {
+				dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket.\n");
+				return false;
+			}
+			new_socks.push_back(sock_pair);
 		}
-		new_socks.push_back(sock_pair);
+
+		// If we're creating command sockets for both protocols, try to make
+		// the port numbers match.  Mixed-mode shared port has no chance of
+		// working, otherwise, until we switch an address representation that
+		// can include both protocols' address(es).
+		int targetTCPPort = port;
+		int targetUDPPort = udp_port;
+		if( param_boolean( "ENABLE_IPV4", true ) && param_boolean("ENABLE_IPV6", true ) ) {
+			// If port and udp_port are both static, we don't have to do anything.
+			if( port <= 1 || udp_port <= 1 ) {
+				// Determine which port IPv4 got, and try to get that port for IPv6.
+				DaemonCore::SockPair ipv4_socks = new_socks[0];
+				counted_ptr<ReliSock> rs = ipv4_socks.rsock();
+				targetTCPPort = targetUDPPort = rs->get_port();
+			}
+		}
+
+		if(param_boolean("ENABLE_IPV6", true)) {
+			DaemonCore::SockPair sock_pair;
+			if( ! InitCommandSocket(CP_IPV6, targetTCPPort, targetUDPPort, sock_pair, want_udp, fatal)) {
+				dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv6 command socket.\n");
+				return false;
+			}
+			new_socks.push_back(sock_pair);
+		}
+
+		if( param_boolean( "ENABLE_IPV4", true ) && param_boolean("ENABLE_IPV6", true ) ) {
+			if( targetTCPPort != port && targetUDPPort != udp_port ) {
+				DaemonCore::SockPair ipv6_socks = new_socks[1];
+				counted_ptr<ReliSock> rs = ipv6_socks.rsock();
+				int ipv6Port = rs->get_port();
+
+				if( ipv6Port != targetTCPPort ) {
+					dprintf( D_FULLDEBUG, "Bound to IPv4 port %d, but then bound to IPv6 command port %d.\n", targetTCPPort, port );
+					new_socks.clear();
+					--retries;
+				} else {
+					retries = -1;
+				}
+			}
+		} else {
+			retries = -1;
+		}
+	} while( retries > 0 );
+
+	if( retries == 0 ) {
+		EXCEPT( "Failed to bind to the same port on IPv4 and IPv6.\n" );
 	}
 
 	// Delay inserting new socks until the end so that if we fail and
