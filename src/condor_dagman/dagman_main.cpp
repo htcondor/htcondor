@@ -1457,6 +1457,7 @@ void condor_event_timer () {
 		}
 	}
 
+#if 0 //TEMPTEMP
 	if( dagman.dag->DetectDaPLogGrowth() ) {
 		if( dagman.dag->ProcessLogEvents( DAPLOG ) == false ) {
 			debug_printf( DEBUG_NORMAL,
@@ -1466,6 +1467,7 @@ void condor_event_timer () {
 			return;
 		}
 	}
+#endif //TEMPTEMP
 
     // print status if anything's changed (or we're in a high debug level)
     if( prevJobsDone != dagman.dag->NumNodesDone( true )

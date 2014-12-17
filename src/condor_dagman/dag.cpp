@@ -119,7 +119,6 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_preRunNodeCount	  (0),
 	_postRunNodeCount	  (0),
 	_checkCondorEvents    (),
-	//TEMPTEMP _checkStorkEvents     (),
 	_maxJobsDeferredCount (0),
 	_maxIdleDeferredCount (0),
 	_catThrottleDeferredCount (0),
@@ -314,8 +313,9 @@ bool Dag::Bootstrap (bool recovery)
    		jobs.ToBeforeFirst();
    		while( jobs.Next( job ) ) {
 			if ( job->CanSubmit() ) {
-				if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-							_nfsLogIsError, recovery, _defaultNodeLog, _use_default_node_log ) ) {
+				if ( !job->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
+							recovery, _defaultNodeLog,
+							_use_default_node_log ) ) {
 					debug_cache_stop_caching();
 					_jobstateLog.WriteRecoveryFailure();
 					return false;
@@ -334,6 +334,7 @@ bool Dag::Bootstrap (bool recovery)
 				return false;
 			}
 		}
+#if 0 //TEMPTEMP
 		if( StorkLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
 				_recovery = false;
@@ -342,6 +343,7 @@ bool Dag::Bootstrap (bool recovery)
 				return false;
 			}
 		}
+#endif //TEMPTEMP
 
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
 		jobs.ToBeforeFirst();
@@ -464,6 +466,7 @@ Dag::DetectCondorLogGrowth () {
     return growth;
 }
 
+#if 0 //TEMPTEMP
 //-------------------------------------------------------------------------
 bool Dag::DetectDaPLogGrowth () {
 
@@ -476,17 +479,16 @@ bool Dag::DetectDaPLogGrowth () {
 				  growth ? "Log GREW!" : "No log growth..." );
     return growth;
 }
+#endif //TEMPTEMP
 
 //-------------------------------------------------------------------------
 // Developer's Note: returning false tells main_timer to abort the DAG
 bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 
+	//TEMPTEMP -- get rid of this if?
 	if ( logsource == CONDORLOG ) {
 		debug_printf( DEBUG_VERBOSE, "Currently monitoring %d Condor "
 					"log file(s)\n", _condorLogRdr.activeLogFileCount() );
-	} else if ( logsource == DAPLOG ) {
-		debug_printf( DEBUG_VERBOSE, "Currently monitoring %d Stork "
-					"log file(s)\n", _storkLogRdr.activeLogFileCount() );
 	}
 
 	bool done = false;  // Keep scanning until ULOG_NO_EVENT
@@ -496,10 +498,9 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 		ULogEvent* e = NULL;
 		ULogEventOutcome outcome = ULOG_NO_EVENT;
 
+		//TEMPTEMP -- get rid of this if?
 		if ( logsource == CONDORLOG ) {
 			outcome = _condorLogRdr.readEvent(e);
-		} else if ( logsource == DAPLOG ){
-			outcome = _storkLogRdr.readEvent(e);
 		}
 
 		bool tmpResult = ProcessOneEvent( logsource, outcome, e, recovery,
@@ -685,7 +686,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 
 			case ULOG_PRESKIP:
 				TerminateJob( job, recovery );
-				job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+				job->UnmonitorLogFile( _condorLogRdr );
 				if(!recovery) {
 					--_preRunNodeCount;
 				}
@@ -874,6 +875,7 @@ Dag::RemoveBatchJob(Job *node) {
 	ArgList args;
 	MyString constraint;
 
+	//TEMPTEMP -- get rid of this switch?
 	switch ( node->JobType() ) {
 	case Job::TYPE_CONDOR:
 		args.AppendArg( _condorRmExe );
@@ -887,13 +889,6 @@ Dag::RemoveBatchJob(Job *node) {
 					ATTR_CLUSTER_ID, node->GetCluster() );
 		args.AppendArg( constraint.Value() );
 		break;
-
-#if 0 //TEMPTEMP?
-	case Job::TYPE_STORK:
-		args.AppendArg( _storkRmExe );
-		args.AppendArg( node->GetCluster() );
-		break;
-#endif //TEMPTEMP?
 
 	default:
 		EXCEPT( "Illegal job (%d) type for node %s", node->JobType(),
@@ -923,7 +918,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	ASSERT ( _isSplice == false );
 
 	if ( job->_queuedNodeJobProcs == 0 ) {
-		(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+		(void)job->UnmonitorLogFile( _condorLogRdr );
 
 			// Log job success or failure if necessary.
 		_jobstateLog.WriteJobSuccessOrFailure( job );
@@ -969,8 +964,9 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			if ( recovery ) {
 				job->SetStatus( Job::STATUS_POSTRUN );
 				_postRunNodeCount++;
-				(void)job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-						_nfsLogIsError, _recovery, _defaultNodeLog, _use_default_node_log );
+				(void)job->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
+							_recovery, _defaultNodeLog,
+							_use_default_node_log );
 			} else {
 				(void)RunPostScript( job, _alwaysRunPost, 0 );
 			}
@@ -988,7 +984,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
 	if( job ) {
-		(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+		(void)job->UnmonitorLogFile( _condorLogRdr );
 
 			// Note: "|| recovery" below is somewhat of a "quick and dirty"
 			// fix to Gnats PR 357.  The first part of the assert can fail
@@ -1415,7 +1411,6 @@ void
 Dag::SetAllowEvents( int allowEvents)
 {
 	_checkCondorEvents.SetAllowEvents( allowEvents );
-	//TEMPTEMP _checkStorkEvents.SetAllowEvents( allowEvents );
 }
 
 //-------------------------------------------------------------------------
@@ -1736,7 +1731,7 @@ Dag::PreScriptReaper( Job *job, int status )
 			CondorID id;
 				// This might be the first time we watch the file, so we
 				// monitor it.
-			if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,
+			if ( !job->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
 					_recovery, _defaultNodeLog, _use_default_node_log ) ) {
 				return 0;
 			}
@@ -1822,7 +1817,7 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 	// a POST script is specified for the job, so run it
 	// We are told to ignore the result of the PRE script
 	job->SetStatus( Job::STATUS_POSTRUN );
-	if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+	if ( !job->MonitorLogFile( _condorLogRdr, 
 			_nfsLogIsError, _recovery, _defaultNodeLog, _use_default_node_log ) ) {
 		debug_printf(DEBUG_QUIET, "Unable to monitor user logfile for node %s\n",
 			job->GetJobName() );
@@ -1868,63 +1863,46 @@ Dag::PostScriptReaper( Job *job, int status )
 		// script terminated events for Stork jobs here (although that
 		// could cause some backwards-compatibility problems).  wenger
 		// 2006-01-12.
-	if ( job->JobType() == Job::TYPE_STORK ) {
-#if 0 //TEMPTEMP
-			// Kludgey fix for Gnats PR 554 -- we are bypassing the whole
-			// writing of the ULOG_POST_SCRIPT_TERMINATED event because
-			// Stork doesn't use the UserLog code, and therefore presumably
-			// doesn't have the correct file locking on the log file.
-			// This means that in recovery mode we'll end up running this
-			// POST script again even if we successfully ran it already.
-			// wenger 2005-10-04.
-		e.cluster = job->GetCluster();
-		e.proc = job->GetProc();
-		e.subproc = job->GetSubProc();
-		ProcessPostTermEvent(&e, job, _recovery);
-#endif //TEMPTEMP
-	} else {
+	e.cluster = job->GetCluster();
+	e.proc = job->GetProc();
+	e.subproc = job->GetSubProc();
+	WriteUserLog ulog;
+		// Disabling the global log (EventLog) fixes the main problem
+		// in gittrac #934 (if you can't write to the global log the
+		// write to the user log also fails, and DAGMan hangs
+		// waiting for the event that wasn't written).
+	ulog.setEnableGlobalLog( false );
+	ulog.setUseXML( !_use_default_node_log && job->GetLogFileIsXml() );
+		// For NOOP jobs, we need the proc and subproc values;
+		// for "real" jobs, they are not significant.
+	int procID = job->GetNoop() ? job->GetProc() : 0;
+	int subprocID = job->GetNoop() ? job->GetSubProc() : 0;
+	const char* s = _use_default_node_log ? DefaultNodeLog() :
+		job->GetLogFile();
+	if( !s ) { 
+			// User did not specify a log
+			// We specify one for him
+			// Default log is never in XML format
+		s = DefaultNodeLog();
+		ulog.setUseXML( false );
+	}
+	debug_printf( DEBUG_QUIET, "Initializing logfile %s, %d, %d, %d\n",
+		s, job->GetCluster(), procID, subprocID );
+	ulog.initialize( std::vector<const char*>(1,s), job->GetCluster(),
+		procID, subprocID, NULL );
 
-		e.cluster = job->GetCluster();
-		e.proc = job->GetProc();
-		e.subproc = job->GetSubProc();
-		WriteUserLog ulog;
-			// Disabling the global log (EventLog) fixes the main problem
-			// in gittrac #934 (if you can't write to the global log the
-			// write to the user log also fails, and DAGMan hangs
-			// waiting for the event that wasn't written).
-		ulog.setEnableGlobalLog( false );
-		ulog.setUseXML( !_use_default_node_log && job->GetLogFileIsXml() );
-			// For NOOP jobs, we need the proc and subproc values;
-			// for "real" jobs, they are not significant.
-		int procID = job->GetNoop() ? job->GetProc() : 0;
-		int subprocID = job->GetNoop() ? job->GetSubProc() : 0;
-		const char* s = _use_default_node_log ? DefaultNodeLog() :
-			job->GetLogFile();
-		if( !s ) { 
-				// User did not specify a log
-				// We specify one for him
-				// Default log is never in XML format
-			s = DefaultNodeLog();
-			ulog.setUseXML( false );
-		}
-		debug_printf( DEBUG_QUIET, "Initializing logfile %s, %d, %d, %d\n",
-			s, job->GetCluster(), procID, subprocID );
-		ulog.initialize( std::vector<const char*>(1,s), job->GetCluster(),
-			procID, subprocID, NULL );
-
-		for(int write_attempts = 0;;++write_attempts) {
-			if( !ulog.writeEvent( &e ) ) {
-				if( write_attempts >= 2 ) {
-					debug_printf( DEBUG_QUIET,
-							"Unable to log ULOG_POST_SCRIPT_TERMINATED event\n" );
-					// Exit here, because otherwise we'll wait forever to see
-					// the event that we just failed to write (see gittrac #934).
-					// wenger 2009-11-12.
-					main_shutdown_rescue( EXIT_ERROR, DAG_STATUS_ERROR );
-				}
-			} else {
-				break;
+	for(int write_attempts = 0;;++write_attempts) {
+		if( !ulog.writeEvent( &e ) ) {
+			if( write_attempts >= 2 ) {
+				debug_printf( DEBUG_QUIET,
+						"Unable to log ULOG_POST_SCRIPT_TERMINATED event\n" );
+				// Exit here, because otherwise we'll wait forever to see
+				// the event that we just failed to write (see gittrac #934).
+				// wenger 2009-11-12.
+				main_shutdown_rescue( EXIT_ERROR, DAG_STATUS_ERROR );
 			}
+		} else {
+			break;
 		}
 	}
 	return true;
@@ -2102,6 +2080,7 @@ void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
     Job * job;
     while (jobList.Next(job)) {
 		ASSERT( job != NULL );
+		//TEMPTEMP -- get rid of this if?
 		if ( job->JobType() == Job::TYPE_CONDOR ) {
 			haveCondorJob = true;
 			break;
@@ -2124,28 +2103,6 @@ void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
 			debug_printf( DEBUG_NORMAL, "Error removing DAGMan jobs\n");
 		}
 	}
-
-#if 0 //TEMPTEMP
-		// Okay, now remove any Stork jobs.
-    ListIterator<Job> iList(_jobs);
-    while (iList.Next(job)) {
-		ASSERT( job != NULL );
-			// if node has a Stork job that is presently submitted,
-			// remove it individually (this is necessary because
-			// DAGMan's job ID can't currently be inserted into the
-			// Stork job ad, and thus we can't do a "stork_rm -const..." 
-			// like we do with Condor; this should be fixed)
-		if( job->JobType() == Job::TYPE_STORK &&
-			job->GetStatus() == Job::STATUS_SUBMITTED ) {
-			args.Clear();
-			args.AppendArg( _storkRmExe );
-			args.AppendArg( job->GetCluster() );
-			if ( util_popen( args ) != 0 ) {
-				debug_printf( DEBUG_NORMAL, "Error removing Stork job\n");
-			}
-        }
-	}
-#endif //TEMPTEMP
 
 	return;
 }
@@ -2357,12 +2314,9 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 	const char *keyword = "";
 	if ( node->GetFinal() ) {
 		keyword = "FINAL";
+	//TEMPTEMP -- get rid of this if?
 	} else if ( node->JobType() == Job::TYPE_CONDOR ) {
 		keyword = node->GetDagFile() ? "SUBDAG EXTERNAL" : "JOB";
-#if 0 //TEMPTEMP
-	} else if( node->JobType() == Job::TYPE_STORK ) {
-		keyword = "DATA";
-#endif //TEMPTEMP
 	} else {
 		EXCEPT( "Illegal node type (%d)", node->JobType() );
 	}
@@ -2532,7 +2486,7 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 				if ( recovery ) {
 						// We need to monitor the log file for the node that's
 						// newly ready.
-					(void)child->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+					(void)child->MonitorLogFile( _condorLogRdr, 
 								_nfsLogIsError, recovery, _defaultNodeLog, _use_default_node_log);
 				} else {
 						// If child has no more parents in its waiting queue,
@@ -2610,8 +2564,8 @@ Dag::RestartNode( Job *node, bool recovery )
 			// Note: the if checking against the default condor ID
 			// should *always* be true here, but checking just to be safe.
 		if ( !(node->GetID() == _defaultCondorId) ) {
-			int logsource = node->JobType() == Job::TYPE_CONDOR ? CONDORLOG :
-						DAPLOG;
+			//TEMPTEMP -- get rid of logsource?
+			int logsource = CONDORLOG;
 			int id = GetIndexID( node->GetID() );
 			if ( GetEventIDHash( node->GetNoop(), logsource )->remove( id )
 						!= 0 ) {
@@ -2623,7 +2577,7 @@ Dag::RestartNode( Job *node, bool recovery )
 		// has retried nodes).  (See SubmitNodeJob() for where this
 		// gets done during "normal" running.)
 		node->SetCondorID( _defaultCondorId );
-		(void)node->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+		(void)node->MonitorLogFile( _condorLogRdr, 
 					_nfsLogIsError, recovery, _defaultNodeLog, _use_default_node_log );
 	}
 }
@@ -3277,22 +3231,6 @@ Dag::CheckAllJobs()
 	} else {
 		debug_printf( DEBUG_DEBUG_1, "All Condor job events okay\n");
 	}
-
-#if 0 //TEMPTEMP
-	result = _checkStorkEvents.CheckAllJobs(jobError);
-	if ( result == CheckEvents::EVENT_ERROR ) {
-		debug_printf( DEBUG_QUIET, "Error checking Stork job events: %s\n",
-				jobError.Value() );
-		ASSERT( false );
-	} else if ( result == CheckEvents::EVENT_BAD_EVENT ||
-				result == CheckEvents::EVENT_WARNING ) {
-		debug_printf( DEBUG_NORMAL, "Warning checking Stork job events: %s\n",
-				jobError.Value() );
-		check_warning_strictness( DAG_STRICT_3 );
-	} else {
-		debug_printf( DEBUG_DEBUG_1, "All Stork job events okay\n");
-	}
-#endif //TEMPTEMP
 }
 
 //-------------------------------------------------------------------------
@@ -3907,12 +3845,9 @@ Dag::EventSanityCheck( int logsource, const ULogEvent* event,
 	MyString eventError;
 	CheckEvents::check_event_result_t checkResult = CheckEvents::EVENT_OKAY;
 
+	//TEMPTEMP -- get rid of this if?
 	if ( logsource == CONDORLOG ) {
 		checkResult = _checkCondorEvents.CheckAnEvent( event, eventError );
-#if 0 //TEMPTEMP
-	} else if ( logsource == DAPLOG ) {
-		checkResult = _checkStorkEvents.CheckAnEvent( event, eventError );
-#endif //TEMPTEMP
 	}
 
 	if( checkResult == CheckEvents::EVENT_OKAY ) {
@@ -4007,16 +3942,11 @@ Dag::GetEventIDHash(bool isNoop, int jobType)
 		return &_noopIDHash;
 	}
 
+	//TEMPTEMP -- get rid of this switch?
 	switch (jobType) {
 	case Job::TYPE_CONDOR:
 		return &_condorIDHash;
 		break;
-
-#if 0 //TEMPTEMP
-	case Job::TYPE_STORK:
-		return &_storkIDHash;
-		break;
-#endif //TEMPTEMP
 
 	default:
 		EXCEPT( "Illegal job type (%d)", jobType );
@@ -4034,16 +3964,11 @@ Dag::GetEventIDHash(bool isNoop, int jobType) const
 		return &_noopIDHash;
 	}
 
+	//TEMPTEMP -- get rid of this switch?
 	switch (jobType) {
 	case Job::TYPE_CONDOR:
 		return &_condorIDHash;
 		break;
-
-#if 0 //TEMPTEMP
-	case Job::TYPE_STORK:
-		return &_storkIDHash;
-		break;
-#endif //TEMPTEMP
 
 	default:
 		EXCEPT( "Illegal job type (%d)", jobType );
@@ -4129,7 +4054,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		}
 	}
 
-	if ( !node->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,
+	if ( !node->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
 			_recovery, _defaultNodeLog, _use_default_node_log ) ) {
 		debug_printf( DEBUG_QUIET, "ERROR: Failed to monitor log for node %s.\n",
 			node->GetJobName() );
@@ -4140,30 +4065,19 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		// of the default log file feature; that doesn't work for Stork
 		// jobs because we can't specify the log file on the command
 		// line.  wenger 2009-08-14
+#if 0 //TEMPTEMP
 	if ( !_allowLogError && node->JobType() == Job::TYPE_STORK &&
 				!node->CheckForLogFile( false ) ) {
-#if 0 //TEMPTEMP
-		debug_printf( DEBUG_NORMAL, "ERROR: No 'log =' value found in "
-					"submit file %s for node %s\n", node->GetCmdFile(),
-					node->GetJobName() );
-		node->TerminateFailure();
-		snprintf( node->error_text, JOB_ERROR_TEXT_MAXLEN,
-					"No 'log =' value found in submit file %s",
-					node->GetCmdFile() );
-	  	_numNodesFailed++;
-		_metrics->NodeFinished( node->GetDagFile() != NULL, false );
-		if ( _dagStatus == DAG_STATUS_OK ) {
-			_dagStatus = DAG_STATUS_NODE_FAILED;
-		}
-		result = SUBMIT_RESULT_NO_SUBMIT;
-#endif //TEMPTEMP
+		//TEMPTEMP -- get rid of this if?
 
 	} else {
+#endif //TEMPTEMP
 		debug_printf( DEBUG_NORMAL, "Submitting %s Node %s job(s)...\n",
 				  	node->JobTypeString(), node->GetJobName() );
 
 		bool submit_success = false;
 
+		//TEMPTEMP -- get rid of this if?
     	if( node->JobType() == Job::TYPE_CONDOR ) {
 	  		node->_submitTries++;
 			if ( node->GetNoop() ) {
@@ -4186,20 +4100,6 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 							ProhibitMultiJobs(),
 							node->NumChildren() > 0 && dm._claim_hold_time > 0 );
 			}
-#if 0 //TEMPTEMP
-    	} else if( node->JobType() == Job::TYPE_STORK ) {
-	  		node->_submitTries++;
-			if ( node->GetNoop() ) {
-      			submit_success = fake_condor_submit( condorID, 0,
-							node->GetJobName(), node->GetDirectory(),
-							node->GetLogFile(),
-							node->GetLogFileIsXml() );
-
-			} else {
-      			submit_success = stork_submit( dm, node->GetCmdFile(),
-						condorID, node->GetJobName(), node->GetDirectory() );
-			}
-#endif //TEMPTEMP
     	} else {
 	    	debug_printf( DEBUG_QUIET, "Illegal job type: %d\n",
 						node->JobType() );
@@ -4207,7 +4107,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		}
 
 		result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;
-	}
+	//TEMPTEMP }
 
 	return result;
 }
@@ -4267,7 +4167,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
 
-	(void)node->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+	(void)node->UnmonitorLogFile( _condorLogRdr );
 
 	if ( node->_submitTries >= max_submit_attempts ) {
 			// We're out of submit attempts, treat this as a submit failure.

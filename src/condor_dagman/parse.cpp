@@ -226,29 +226,22 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 					   "submitfile" );
 		}
 
-#if 0 //TEMPTEMP
 		// Handle a Stork job spec
 		// Example Syntax is:  DATA j1 j1.dapsubmit [DONE]
 		//
 		else if	(strcasecmp(token, "DAP") == 0) {	// DEPRECATED!
-			parsed_line_successfully = parse_node( dag,
-					   Job::TYPE_STORK, token,
-					   filename, lineNumber, tmpDirectory.Value(), "",
-					   "submitfile" );
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"Warning: the DAP token is deprecated and may be unsupported "
-				"in a future release.  Use the DATA token\n",
+				"ERROR: the DAP token is no longer supported\n",
 				filename, lineNumber );
-			check_warning_strictness( DAG_STRICT_2 );
+			parsed_line_successfully = false;
 		}
 
 		else if	(strcasecmp(token, "DATA") == 0) {
-			parsed_line_successfully = parse_node( dag,
-					   Job::TYPE_STORK, token,
-					   filename, lineNumber, tmpDirectory.Value(), "",
-					   "submitfile");
+			debug_printf( DEBUG_QUIET, "%s (line %d): "
+				"ERROR: the DATA token is no longer supported\n",
+				filename, lineNumber );
+			parsed_line_successfully = false;
 		}
-#endif //TEMPTEMP
 
 		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
@@ -1664,7 +1657,6 @@ parse_splice(
 							dag->RetrySubmitFirst(),
 							dag->RetryNodeFirst(),
 							dag->CondorRmExe(),
-							//TEMPTEMP dag->StorkRmExe(),
 							dag->DAGManJobId(),
 							dag->ProhibitMultiJobs(),
 							dag->SubmitDepthFirst(),

@@ -81,7 +81,7 @@ class Job {
         // NOTE: must be kept in sync with enum Log_source
 	typedef enum {
 		TYPE_CONDOR,
-		TYPE_STORK,
+		//TEMPTEMP? TYPE_STORK,
 	 } job_type_t; //TEMPTEMP -- get rid of this?
   
     /** Enumeration for specifying which queue for Add() and Remove().
@@ -361,7 +361,7 @@ class Job {
 		@return true if successful, false if failed
 	*/
 	bool MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
-				ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
+				bool nfsIsError,
 				bool recovery, const char *defaultNodeLog, bool usingDefault );
 
 	/** Unmonitor this node's Condor or Stork log file with the
@@ -370,8 +370,7 @@ class Job {
 		@param logReader: the multiple log reader
 		@return true if successful, false if failed
 	*/
-	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader,
-				ReadMultipleUserLogs &storkLogReader );
+	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader );
 
 		// Whether this node is using the default node log file.
 	bool UsingDefaultLog() const { return _useDefaultLog; }

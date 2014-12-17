@@ -65,32 +65,6 @@ parse_condor_submit( const char *buffer, int &jobProcCount, int &cluster )
   return true;
 }
 
-#if 0 //TEMPTEMP
-//-------------------------------------------------------------------------
-/** Parse output from stork_submit, determine the number of job procs
-    and the cluster.
-	@param buffer containing the line to be parsed
-	@param integer to be filled in with the number of job procs generated
-	       by the stork_submit
-	@param integer to be filled in with the cluster ID
-	@return true iff the line was correctly parsed
-*/
-static bool
-parse_stork_submit( const char *buffer, int &jobProcCount, int &cluster )
-{
-  // The initial space is to make the sscanf match zero or more leading
-  // whitespace that may exist in the buffer.
-  if ( 1 != sscanf( buffer, " Request assigned id: %d", &cluster) ) {
-	debug_printf( DEBUG_QUIET, "ERROR: parse_stork_submit failed:\n\t%s\n",
-				buffer );
-    return false;
-  }
-
-  jobProcCount = 1;
-  return true;
-}
-#endif //TEMPTEMP
-
 //-------------------------------------------------------------------------
 static bool
 submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
@@ -126,6 +100,7 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
   const char *marker = NULL;
   parse_submit_fnc parseFnc = NULL;
 
+  //TEMPTEMP -- get rid of this if?
   if ( type == Job::TYPE_CONDOR ) {
     marker = " submitted to cluster ";
 
@@ -138,11 +113,6 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
 	  // We should also check whether we got more than one cluster, and
 	  // either deal with it correctly or generate an error message.
 	parseFnc = parse_condor_submit;
-#if 0 //TEMPTEMP
-  } else if ( type == Job::TYPE_STORK ) {
-    marker = "assigned id";
-	parseFnc = parse_stork_submit;
-#endif //TEMPTEMP
   } else {
 	debug_printf( DEBUG_QUIET, "Illegal job type: %d\n", type );
 	ASSERT(false);
@@ -204,15 +174,6 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
 		// don't retry" -- see gittrac #3685.)
   	  return true;
   }
-
-#if 0 //TEMPTEMP
-  // Stork job specs have only 1 dimension.  The Stork user log forces the proc
-  // and sub-proc ids to "-1", so do the same here for the returned submit id.
-  if ( type == Job::TYPE_STORK ) {
-	  condorID._proc = -1;
-	  condorID._subproc = -1;
-  }
-#endif //TEMPTEMP
 
   	// Check for multiple job procs if configured to disallow that.
   if ( prohibitMultiJobs && (jobProcCount > 1) ) {
@@ -453,45 +414,6 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 	return success;
 }
-
-#if 0 //TEMPTEMP
-//-------------------------------------------------------------------------
-bool
-stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
-			   const char* DAGNodeName, const char* directory )
-{
-	TmpDir		tmpDir;
-	MyString	errMsg;
-	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
-		debug_printf( DEBUG_QUIET,
-				"Could not change to DAG directory %s: %s\n",
-				directory, errMsg.Value() );
-		return false;
-	}
-
-  ArgList args;
-
-  args.AppendArg( dm.storkSubmitExe );
-  args.AppendArg( "-lognotes" );
-
-  MyString logNotes = MyString( "DAG Node: " ) + DAGNodeName;
-  args.AppendArg( logNotes.Value() );
-
-  args.AppendArg( cmdFile );
-
-  bool success = do_submit( args, condorID, Job::TYPE_STORK,
-  			dm.prohibitMultiJobs );
-
-	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
-		debug_printf( DEBUG_QUIET,
-				"Could not change to original directory: %s\n",
-				errMsg.Value() );
-		success = false;
-	}
-
-  return success;
-}
-#endif //TEMPTEMP
 
 //-------------------------------------------------------------------------
 // Subproc ID for "fake" events (for NOOP jobs).

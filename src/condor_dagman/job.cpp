@@ -61,8 +61,8 @@ const char * Job::status_t_names[] = {
 // NOTE: must be kept in sync with the job_type_t enum
 const char* Job::_job_type_names[] = {
     "Condor",
-    "Stork",
-    "No-Op",
+    //TEMPTEMP? "Stork",
+    //TEMPTEMP? "No-Op",
 };
 
 //---------------------------------------------------------------------------
@@ -778,7 +778,7 @@ Job::SetDagFile(const char *dagFile)
 //---------------------------------------------------------------------------
 bool
 Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
-			ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
+			bool nfsIsError,
 			bool recovery, const char *defaultNodeLog, bool usingDefault )
 {
 	debug_printf( DEBUG_DEBUG_2,
@@ -791,8 +791,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		return true;
 	}
 
-	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
-				condorLogReader : storkLogReader;
+	ReadMultipleUserLogs &logReader = condorLogReader;
 
 	MyString logFile;
 	if ( !FindLogFile( usingDefault, logFile ) ) {
@@ -854,8 +853,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 
 //---------------------------------------------------------------------------
 bool
-Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
-			ReadMultipleUserLogs &storkLogReader )
+Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader )
 {
 	debug_printf( DEBUG_DEBUG_2, "Unmonitoring log file <%s> for node %s\n",
 				GetLogFile(), GetJobName() );
@@ -866,8 +864,7 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		return true;
 	}
 
-	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
-				condorLogReader : storkLogReader;
+	ReadMultipleUserLogs &logReader = condorLogReader;
 
 	debug_printf( DEBUG_DEBUG_1, "Unmonitoring log file <%s> for node %s\n",
 				GetLogFile(), GetJobName() );
@@ -1140,6 +1137,7 @@ Job::FindLogFile( bool usingWorkflowLog, MyString &logFile )
 		}
 
 	} else {
+#if 0 //TEMPTEMP
 			// Workflow/default log file mode is not supported for Stork
 			// nodes, so we always have to get the log file for a Stork
 			// node.
@@ -1161,6 +1159,7 @@ Job::FindLogFile( bool usingWorkflowLog, MyString &logFile )
 			logFiles.rewind();
 			logFile = logFiles.next();
 		}
+#endif //TEMPTEMP
 	}
 
 	return true;

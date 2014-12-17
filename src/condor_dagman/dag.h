@@ -41,7 +41,7 @@
 // NOTE: must be kept in sync with Job::job_type_t
 enum Log_source{
   CONDORLOG = Job::TYPE_CONDOR,
-  DAPLOG = Job::TYPE_STORK
+  //TEMPTEMP DAPLOG = Job::TYPE_STORK
 };
 
 // Which layer of splices do we want to lift?
@@ -190,7 +190,7 @@ class Dag {
 
     
     bool DetectCondorLogGrowth();
-    bool DetectDaPLogGrowth();            //<--DAP
+    //TEMPTEMP bool DetectDaPLogGrowth();            //<--DAP
 
     /** Force the Dag to process all new events in the condor log file.
         This may cause the state of some jobs to change.
@@ -936,6 +936,7 @@ class Dag {
 	ReadMultipleUserLogs _condorLogRdr;
 
 		// Object to read events from Stork logs.
+		//TEMPTEMP -- get rid of this
 	ReadMultipleUserLogs	_storkLogRdr;
 
 		/** Get the total number of node job user log files we'll be
@@ -1093,7 +1094,6 @@ private:
 		// Separate event checkers for Condor and Stork here because
 		// IDs could collide.
 	CheckEvents	_checkCondorEvents;
-	//TEMPTEMP CheckEvents	_checkStorkEvents;
 
 		// Total count of jobs deferred because of MaxJobs limit (note
 		// that a single job getting deferred multiple times is counted

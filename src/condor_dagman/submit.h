@@ -58,11 +58,6 @@ bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					const char* directory, const char *worflowLogFile,
 					bool prohibitMultiJobs, bool hold_claim );
 
-#if 0 //TEMPTEMP
-bool stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
-				   const char* DAGNodeName, const char* directory );
-#endif //TEMPTEMP
-
 void set_fake_condorID( int subprocID );
 
 bool fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
