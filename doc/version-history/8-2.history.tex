@@ -42,7 +42,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a race condition that prevented jobs from being held when
+the job went over its memory allocation.  On hosts where memory.use\_hierarchy
+was set to 1 in the memory cgroup controller, jobs would frequently receive
+the SIGKILL signal or be requeued with a shadow exception instead of
+being put on hold for going over memory. \Ticket{4774}
 
 \end{itemize}
 
