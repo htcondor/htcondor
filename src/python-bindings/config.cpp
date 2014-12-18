@@ -52,6 +52,30 @@ do_start_command(int cmd, ReliSock &rsock, const ClassAdWrapper &ad)
     target.startCommand(cmd, &rsock, 30);
 }
 
+
+void
+set_remote_param(const ClassAdWrapper &ad, std::string param, std::string value)
+{
+    if (!is_valid_param_name(param.c_str())) {THROW_EX(ValueError, "Invalid parameter name.");}
+
+    ReliSock rsock;
+    do_start_command(DC_CONFIG_RUNTIME, rsock, ad);
+
+    rsock.encode();
+    if (!rsock.code(param)) {THROW_EX(RuntimeError, "Can't send param name.");}
+    std::stringstream ss;
+    ss << param << " = " << value;
+    if (!rsock.put(ss.str())) {THROW_EX(RuntimeError, "Can't send parameter value.");}
+    if (!rsock.end_of_message()) {THROW_EX(RuntimeError, "Can't send EOM for param set.");}
+
+    int rval = 0;
+    rsock.decode();
+    if (!rsock.code(rval)) {THROW_EX(RuntimeError, "Can't get parameter set response.");}
+    if (!rsock.end_of_message()) {THROW_EX(RuntimeError, "Can't get EOM for parameter set.");}
+    if (rval < 0) {THROW_EX(RuntimeError, "Failed to set remote daemon parameter.");}
+}
+
+
 std::string
 get_remote_param(const ClassAdWrapper &ad, std::string param)
 {
@@ -155,6 +179,14 @@ struct RemoteParam
     }
 
 
+    void delitem(const std::string &attr)
+    {
+        if (!contains(attr)) {THROW_EX(KeyError, attr.c_str());}
+
+        set_remote_param(m_ad, attr, "");
+    }
+
+
     bool contains(const std::string &attr)
     {
         cache_attrs();
@@ -186,21 +218,51 @@ struct RemoteParam
     }
 
 
-    void setitem(const std::string &)
+    void setitem(const std::string &attr, const std::string &val)
     {
-        THROW_EX(NotImplementedError, "Setting remote daemon configuration not implemented.");
+        m_lookup[attr] = val;
+        m_attrs.attr("add")(attr);
+        set_remote_param(m_ad, attr, val);
     }
 
 
-    boost::python::object setdefault(const std::string &, boost::python::object)
+    boost::python::object setdefault(const std::string &attr, const std::string &defaultval)
     {
-        THROW_EX(NotImplementedError, "Setting remote daemon configuration not implemented.");
+        if (!contains(attr))
+        {
+            setitem(attr, defaultval);
+            boost::python::object result(defaultval);
+            return result;
+        }
+        boost::python::object result(cache_lookup(attr));
+        return result;
     }
 
 
-    void update(boost::python::object)
+    void update(boost::python::object source)
     {
-        THROW_EX(NotImplementedError, "Setting remote daemon configuration not implemented.");
+        // See if we have a dictionary-like object.
+        if (py_hasattr(source, "items"))
+        {
+            return this->update(source.attr("items")());
+        }
+        if (!py_hasattr(source, "__iter__")) { THROW_EX(ValueError, "Must provide a dictionary-like object to update()"); }
+
+        object iter = source.attr("__iter__")();
+        while (true) {
+            PyObject *pyobj = PyIter_Next(iter.ptr());
+            if (!pyobj) break;
+            if (PyErr_Occurred()) {
+                throw_error_already_set();
+            }
+
+            object obj = object(handle<>(pyobj));
+
+            tuple tup = extract<tuple>(obj);
+            std::string attr = extract<std::string>(tup[0]);
+            std::string value = extract<std::string>(tup[1]);
+            setitem(attr, value);
+        }
     }
 
 
@@ -245,6 +307,7 @@ struct RemoteParam
             std::string value = cache_lookup(attr);
             result.append(boost::python::make_tuple(attr, value));
         }
+        return result;
     }
 
 
@@ -578,7 +641,9 @@ void export_config()
         .def("keys", &RemoteParam::keys)
         .def("__iter__", &RemoteParam::iter)
         .def("__len__", &RemoteParam::len)
+        .def("__delitem__", &RemoteParam::delitem)
         .def("items", &RemoteParam::items)
         .def("update", &RemoteParam::update)
+        .def("refresh", &RemoteParam::refresh)
         ;
 }
