@@ -10361,6 +10361,14 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// Based on the job's exit code, we will perform different actions
 		// on the job
 		//
+	if ( exit_code == JOB_RECONNECT_FAILED ) {
+		// Treat JOB_RECONNECT_FAILED exit code just like JOB_SHOULD_REQUEUE,
+		// except also update a few JobRestartReconnect statistics.
+		exit_code = JOB_SHOULD_REQUEUE;
+		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+		scheduler.stats.JobsRestartReconnectsFailed += 1;
+		scheduler.stats.JobsRestartReconnectsBadput += job_running_time;
+	}
 	switch( exit_code ) {
 		case JOB_NO_MEM:
 			this->swap_space_exhausted();
@@ -11027,7 +11035,7 @@ Scheduler::Init()
 
     stats.Reconfig();
 
-	PRAGMA_REMIND("TJ: These should be moved into the default config table")
+	// PRAGMA_REMIND("TJ: These should be moved into the default config table")
 		// set defaults for rounding attributes for autoclustering
 		// only set these values if nothing is specified in condor_config.
 	MyString tmpstr;
