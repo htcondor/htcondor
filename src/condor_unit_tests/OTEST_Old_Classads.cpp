@@ -5985,7 +5985,7 @@ static bool test_formattime_current_options() {
 		attempts++;
 	}while(attempts < 10 && strcmp(actual, expect) != MATCH);
 	emit_input_header();
-	emit_param("ClassAd", classad_string);
+	emit_param("ClassAd", "%s", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
 	emit_param("STRING", "");

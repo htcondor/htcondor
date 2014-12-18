@@ -509,9 +509,6 @@ void SetTargetTypeName(classad::ClassAd &ad, const char *);
 const char*	GetTargetTypeName(const classad::ClassAd& ad);
 
 
-void getTheMyRef( classad::ClassAd *ad );
-void releaseTheMyRef( classad::ClassAd *ad );
-
 classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
 									  classad::ClassAd *target );
 void releaseTheMatchAd();
