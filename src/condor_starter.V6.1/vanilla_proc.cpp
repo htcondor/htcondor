@@ -711,6 +711,7 @@ VanillaProc::JobReaper(int pid, int status)
 			// the OOM killer.  Hence, we have to be ready for a SIGKILL to be delivered
 			// by the kernel at the same time we get the notification.  Hence, if we
 			// see an exit signal, we must also check the event file descriptor.
+#if defined(LINUX)
 		int efd = -1;
 		if ((m_oom_efd >= 0) && daemonCore->Get_Pipe_FD(m_oom_efd, &efd) && (efd != -1))
 		{
@@ -723,6 +724,7 @@ VanillaProc::JobReaper(int pid, int status)
 				outOfMemoryEvent(m_oom_efd);
 			}
 		}
+#endif
 
 			// To make sure that no job processes are still lingering
 			// on the machine, call Kill_Family().
