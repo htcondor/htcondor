@@ -317,6 +317,14 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 
 		case EVAL_OK:
 		{
+			// Don't flatten or inline a classad that's referred to
+			// by an attribute.
+			if ( tree->GetKind() == CLASSAD_NODE ) {
+				ntree = Copy( );
+				val.SetUndefinedValue( );
+				return true;
+			}
+
 			if( state.depth_remaining <= 0 ) {
 				val.SetErrorValue();
 				state.curAd = curAd;

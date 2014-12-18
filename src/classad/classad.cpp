@@ -68,16 +68,34 @@ void ClassAdLibraryVersion(string &version_string)
     return;
 }
 
-// TODO If C++11 is available, then we can use the more concise
-//   initialization (currently commented out).
-static std::string specialAttrNamesInit[] = {"toplevel", "root", "self", "parent"};
-static References specialAttrNames(specialAttrNamesInit,
-		specialAttrNamesInit + sizeof(specialAttrNamesInit)/sizeof(specialAttrNamesInit[0]));
-//static References specialAttrNames {"toplevel", "root", "self", "parent"};
+static References *specialAttrNames = NULL;
+static void init_specialAttrNames() {
+	specialAttrNames = new References;
+	specialAttrNames->insert( "toplevel" );
+	specialAttrNames->insert( "root" );
+	specialAttrNames->insert( "self" );
+	specialAttrNames->insert( "parent" );
+}
+
+void SetOldClassAdSemantics(bool enable)
+{
+	_useOldClassAdSemantics = enable;
+	if ( specialAttrNames == NULL ) {
+		init_specialAttrNames();
+	}
+	if ( enable ) {
+		specialAttrNames->insert( "my" );
+	} else {
+		specialAttrNames->erase( "my" );
+	}
+}
 
 ClassAd::
 ClassAd ()
 {
+	if ( specialAttrNames == NULL ) {
+		init_specialAttrNames();
+	}
 	EnableDirtyTracking();
 	chained_parent_ad = NULL;
 	alternateScope = NULL;
@@ -644,7 +662,7 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 		} else {
 			superScope = current->parentScope;
 		}
-		if ( specialAttrNames.find(name) == specialAttrNames.end() ) {
+		if ( specialAttrNames->find(name) == specialAttrNames->end() ) {
 			// continue searching from the superScope ...
 			current = superScope;
 			if( current == this ) {		// NAC - simple loop checker
@@ -658,7 +676,8 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 				return EVAL_FAIL;  	// NAC
 			}						// NAC
 			return( expr ? EVAL_OK : EVAL_UNDEF );
-		} else if( strcasecmp( name.c_str( ), "self" ) == 0 ) {
+		} else if( strcasecmp( name.c_str( ), "self" ) == 0 ||
+				   strcasecmp( name.c_str( ), "my" ) == 0 ) {
 			// if the "self" ad was requested
 			expr = (ClassAd*)state.curAd;
 			return( expr ? EVAL_OK : EVAL_UNDEF );
@@ -1581,7 +1600,7 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
                 case EVAL_OK:   {
                     //whoo, it's internal.
                     if ( state.curAd == state.rootAd &&
-                         specialAttrNames.find(attr) == specialAttrNames.end()) {
+                         specialAttrNames->find(attr) == specialAttrNames->end()) {
                         refs.insert(attr);
                     }
                     if( state.depth_remaining <= 0 ) {

@@ -52,7 +52,10 @@ bool ClassAdGetExpressionCaching();
 // This flag is only meant for use in Condor, which is transitioning
 // from an older version of ClassAds with slightly different evaluation
 // semantics. It will be removed without warning in a future release.
+// The function SetOldClassAdSemantics() should be used instead of
+// directly setting _useOldClassAdSemantics.
 extern bool _useOldClassAdSemantics;
+void SetOldClassAdSemantics(bool enable);
 
 template <class T>
 void val_str(std::string & szOut, const T & tValue)
