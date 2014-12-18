@@ -365,7 +365,7 @@ EvalMatchExpr(ExprTree *match_expr)
 
 	if( EvaluateExpr( match_expr, val ) ) {
 		bool result = false;
-		if( val.IsBooleanValue( result ) ) {
+		if( val.IsBooleanValueEquiv( result ) ) {
 			return result;
 		}
 		long long int_result = 0;
