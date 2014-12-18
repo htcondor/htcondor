@@ -110,6 +110,9 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
       the machine name, the virtual machine software version,
       the state of machine, the virtual machine memory,
       and the type of networking.}
+    \OptItem{\Opt{-offline}}{(Query option) Query \Condor{startd} ClassAds,
+      and display, for each machine with at least one offline universe,
+      which universes are offline for it.}
     \OptItem{\OptArg{-attributes}{Attr1[,Attr2 \Dots]}}{(Display option)
       Explicitly list the attributes in a comma separated list
       which should be displayed when using the \Opt{-xml} or \Opt{-long}
