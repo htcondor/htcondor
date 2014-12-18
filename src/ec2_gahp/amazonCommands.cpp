@@ -49,6 +49,21 @@ const char * nullStringIfEmpty( const std::string & str ) {
     else { return str.c_str(); }
 }
 
+// Utility function.
+void trim( std::string & str ) {
+	size_t size = str.size();
+	if( size == 0 ) { return; }
+
+	size_t end = size - 1;
+	while( end > 0 && isspace( str[end] ) ) { --end; }
+	if( end != size - 1 ) { str.erase( end + 1 ); }
+
+	size = str.size();
+	size_t begin = 0;
+	while( begin < size && isspace( str[begin] ) ) { ++begin; }
+	if( begin != 0 ) { str.erase( 0, begin ); }
+}
+
 //
 // This function should not be called for anything in query_parameters,
 // except for by AmazonQuery::SendRequest().
@@ -243,7 +258,7 @@ bool AmazonRequest::SendRequest() {
             dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
             return false;
         }
-        if( keyID[ keyID.length() - 1 ] == '\n' ) { keyID.erase( keyID.length() - 1 ); }
+        trim( keyID );
         query_parameters.insert( std::make_pair( "AWSAccessKeyId", keyID ) );
     }
 
@@ -326,7 +341,7 @@ bool AmazonRequest::SendRequest() {
             dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
             return false;
         }
-        if( saKey[ saKey.length() - 1 ] == '\n' ) { saKey.erase( saKey.length() - 1 ); }
+        trim( saKey );
     }
 
     unsigned int mdLength = 0;
