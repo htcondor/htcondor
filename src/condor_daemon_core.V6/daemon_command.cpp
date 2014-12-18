@@ -1589,9 +1589,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		// Handlers should start out w/ parallel mode disabled by default
 		ScopedEnableParallel(false);
 
-		UtcTime handler_start_time;
-		handler_start_time.getTime();
-		float sec_time = handler_start_time.difference(&m_handle_req_start_time);
+		UtcTime handler_start_time(true);
+		double sec_time = handler_start_time.difference(&m_handle_req_start_time);
 		sec_time -= m_async_waiting_time;
 
 		if( m_sock_had_no_deadline ) {
@@ -1599,11 +1598,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 			m_sock->set_deadline(0);
 		}
 
+		double begin_time = _condor_debug_get_time_double(); // dc_stats.AddRuntime uses this as a timebase, not UtcTime
+
 		m_result = daemonCore->CallCommandHandler(m_req,m_sock,false /*do not delete m_sock*/,true /*do check for payload*/,sec_time,0);
 
 		// update dc stats for number of commands handled, the time spent in this command handler
 		daemonCore->dc_stats.Commands += 1;
-		daemonCore->dc_stats.AddRuntime(getCommandStringSafe(m_req), handler_start_time.combined());
+		daemonCore->dc_stats.AddRuntime(getCommandStringSafe(m_req), begin_time);
 	}
 
 	return CommandProtocolFinished;
