@@ -62,6 +62,11 @@ This version contains all bug fixes from HTCondor version 8.2.5.
 
 \begin{itemize}
 
+\item Improve handling of failures to launch VM jobs.  Failures which do
+not appear to the fault of the job now cause the job to be rescheduled and
+the node to stop advertising the ability to run VMs.
+\Ticket{4375}
+
 \item Add ability to specify the block device mapping for EC2 jobs.
 \Ticket{4657}
 
