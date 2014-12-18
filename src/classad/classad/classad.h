@@ -442,8 +442,7 @@ e		*/
 		*/
 		bool EvaluateAttrString( const std::string &attr, std::string &buf ) const;
 
-		/** Evaluates an attribute to a boolean.  A pointer to the string is 
-				returned.
+		/** Evaluates an attribute to a boolean.
 			@param attr The name of the attribute.
 			@param boolValue The value of the attribute.
 			@return true if attrName evaluated to a boolean value, false 
@@ -451,6 +450,15 @@ e		*/
 		*/
 		bool EvaluateAttrBool( const std::string &attr, bool& boolValue ) const;
 
+		/** Evaluates an attribute to a boolean. If old ClassAd semantics
+				are enabled, then numerical values will be converted to the
+				appropriate boolean value.
+			@param attr The name of the attribute.
+			@param boolValue The value of the attribute.
+			@return true if attrName evaluated to a boolean value, false 
+				otherwise.
+		*/
+		bool EvaluateAttrBoolEquiv( const std::string &attr, bool& boolValue ) const;
 		/** Evaluates an attribute to a ClassAd.  A pointer to the ClassAd is 
 				returned. You do not own the ClassAd--do not free it.
 			@param attr The name of the attribute.
