@@ -303,8 +303,9 @@ MPIMasterProc::checkPortFile( void )
 				// At this point, we can actually do our pseudo
 				// syscall to tell the shadow.  First, create the
 				// string we need and stuff it in a ClassAd 
+				// // TODO: Arbitrarily chooses IPv4, shouldn't?
 			sprintf( buf, "%s=\"%s:%d\"", ATTR_MPI_MASTER_ADDR, 
-					 get_local_ipaddr().to_ip_string().Value(), port );
+					 get_local_ipaddr(CP_IPV4).to_ip_string().Value(), port );
 			ClassAd ad;
 			ad.Insert( buf );
 

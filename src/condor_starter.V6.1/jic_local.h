@@ -138,6 +138,10 @@ public:
 		 */
 	int reconnect( ReliSock* s, ClassAd* ad );
 
+		/** Someone is attempting to disconnect to this job.
+		 */
+	void disconnect();
+
 
 		// // // // // // // // // // // //
 		// Notfication to our controller

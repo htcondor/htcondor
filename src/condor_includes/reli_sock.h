@@ -102,7 +102,7 @@ public:
 
 	virtual void cancel_reverse_connect();
 
-	virtual int do_shared_port_local_connect( char const *shared_port_id, bool nonblocking );
+	virtual int do_shared_port_local_connect( char const *shared_port_id, bool nonblocking,char const *sharedPortIP );
 
 		/** Connect this socket to another socket (s).
 			An implementation of socketpair() that works on windows as well
@@ -112,7 +112,8 @@ public:
 			                                use normal interface
 			@returns true on success, false on failure.
 		 */
-	bool connect_socketpair(ReliSock &dest,bool use_standard_interface=false);
+	bool connect_socketpair( ReliSock & dest );
+	bool connect_socketpair( ReliSock & dest, char const * asIfConnectingTo );
 
     ///
 	ReliSock();
@@ -133,8 +134,6 @@ public:
 	int listen();
     /// FALSE means this is an incoming connection
 	int listen(condor_protocol proto, int port);
-    /// FALSE means this is an incoming connection
-	int listen(char *s);
 	bool isListenSock() { return _state == sock_special && _special_state == relisock_listen; }
 
     ///
@@ -366,6 +365,9 @@ protected:
 	virtual void setTargetSharedPortID( char const *id );
 	virtual bool sendTargetSharedPortID();
 	char const *getTargetSharedPortID() { return m_target_shared_port_id; }
+
+private:
+	bool connect_socketpair_impl( ReliSock & dest, condor_protocol proto, bool isLoopback );
 };
 
 class BlockingModeGuard {

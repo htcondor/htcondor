@@ -89,7 +89,6 @@ my @minimal_build_configure_args =
 	 '-DWITH_GLOBUS:BOOL'		 => 'OFF',
 	 '-DWITH_GSOAP:BOOL'		 => 'OFF',
 	 '-DWITH_HADOOP:BOOL'		 => 'OFF',
-	 '-DWITH_KRB5:BOOL'			 => 'OFF',
 	 '-DWITH_LIBDELTACLOUD:BOOL' => 'OFF',
 	 '-DWITH_LIBVIRT:BOOL'		 => 'OFF',
 	 '-DWITH_LIBXML2:BOOL'		 => 'OFF',
@@ -524,7 +523,6 @@ our %submit_info = (
 			# we can use ssh_to_job on solaris if we use the proper kerberose
 			# this is OK since we build kerberose only for batlab.
 			'configure_args' => { @default_build_configure_args,
-								  '-DWITH_KRB5:BOOL' => 'OFF',
 								  '-DWITH_GSOAP:BOOL' => 'OFF', 
 								  '-DWITH_CURL:BOOL' => 'OFF',
 								  #'-DHAVE_SSH_TO_JOB:BOOL' => 'OFF',

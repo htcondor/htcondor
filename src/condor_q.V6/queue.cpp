@@ -3645,7 +3645,7 @@ process_job_and_render_to_dag_map(void *,  classad_shared_ptr<ClassAd> job)
 static bool
 show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath)
 {
-	bool use_v3 = param_boolean("CONDOR_Q_USE_V3_PROTOCOL", true);
+	bool use_v3 = param_boolean("CONDOR_Q_USE_V3_PROTOCOL", false);
 	if ((useFastPath == 2) && !use_v3) {
 		useFastPath = 1;
 	}

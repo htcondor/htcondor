@@ -1560,11 +1560,12 @@ class DaemonCore : public Service
 	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
        int    RecentWindowQuantum;
        int    PublishFlags;        // verbositiy of publishing
+	   bool   enabled;            // set to true to enable statistics, otherwise the pool will be empty and AddProbe calls will quietly fail.
 
 	   // helper methods
 	   //Stats();
 	   //~Stats();
-	   void Init();
+	   void Init(bool enable);
        void Reconfig();
 	   void Clear();
 	   time_t Tick(time_t now=0); // call this when time may have changed to update StatsLastUpdateTime, etc.
@@ -1573,7 +1574,7 @@ class DaemonCore : public Service
 	   void Publish(ClassAd & ad, int flags) const;
        void Publish(ClassAd & ad, const char * config) const;
 	   void Unpublish(ClassAd & ad) const;
-       void* New(const char * category, const char * name, int as);
+       void* NewProbe(const char * category, const char * name, int as);
        void AddToProbe(const char * name, int val);
        void AddToProbe(const char * name, int64_t val);
        void AddToSumEmaRate(const char * name, int val);
@@ -1583,6 +1584,24 @@ class DaemonCore : public Service
        double AddRuntimeSample(const char * name, int as, double before);
 
 	} dc_stats;
+
+	// Do not use this function for anything. It's a temporary hack to get
+	// ConvertDefaultIPToSocketIP working in mixed-mode IPv4/IPv6.  The
+	// real goal is to eliminate ConvertDefaultIPToSocketIP, and eliminate
+	// the need for this.
+	//
+	// All that said: given a condor_sockaddr, this will look for the interface
+	// that best matches and will return its port.
+	int find_interface_command_port_do_not_use(const condor_sockaddr & addr);
+
+	// Do not use this function for anything. It's a temporary hack to get
+	// ConvertDefaultIPToSocketIP working in mixed-mode IPv4/IPv6.  The
+	// real goal is to eliminate ConvertDefaultIPToSocketIP, and eliminate
+	// the need for this.
+	//
+	// All that said: given a condor_sockaddr, determine if it describes
+	// one of our command ports.
+	bool is_command_port_do_not_use(const condor_sockaddr & addr);
 
   private:      
 
@@ -1726,6 +1745,8 @@ class DaemonCore : public Service
 #ifdef HAVE_CLONE
 	bool m_use_clone_to_create_processes;
 	bool UseCloneToCreateProcesses() { return m_use_clone_to_create_processes; }
+#else
+	bool UseCloneToCreateProcesses() { return false; }
 #endif
 
 	void Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking);

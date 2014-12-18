@@ -1,4 +1,4 @@
-NODE_STATUS_FILE job_dagman_node_status.status 3
+NODE_STATUS_FILE job_dagman_node_status.status 3 ALWAYS-UPDATE
 
 Job A job_dagman_node_status.cmd
 Vars A nodename="$(JOB)" copystatus="1"

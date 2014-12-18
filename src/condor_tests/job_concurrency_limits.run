@@ -57,8 +57,8 @@ sub multi_timeout_callback
 {
 	print "LogCheck timeout expired!\n";
 	CondorTest::RegisterResult( 0, test_name, $testname );
-	system("date");
-	die "Log check timed out ?\n";
+	my $time = scalar(localtime());
+	die "Log check timed out at $time - ?\n";
 };
 
 sub evictedwithoutcheckpoint 
@@ -95,7 +95,7 @@ my $on_match = sub {
 };
 
 sub check_expectations {
-	#system("date");
+	#print scalar(localtime()) . "\n";
 	CondorTest::RemoveTimed( "checkexpectations");
 	# things have gone on since we looked for clear wins
 	# so check now
@@ -131,8 +131,7 @@ sub check_expectations {
 	#print "Watching for another job to start up\n";
 	# Started Negotiation Cycle A wait of about 10 seconds is caused here
 	# leading the next one to occur in about 20 seconds
-	#print "before multicheck\n";
-	#system("date");
+	#print scalar(localtime()) . " before multicheck\n";
 	CondorLog::RunCheckMultiple(
 		daemon => "Negotiator",
 		match_regexp => "Started Negotiation Cycle",
@@ -143,8 +142,7 @@ sub check_expectations {
 		match_new => "true",
 		no_result => "true",
 	);
-	#print "After multicheck\n";
-	#system("date");
+	#print scalar(localtime()) . " After multicheck\n";
 
 	if($expect_checks < $total_checks) {
   		CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);

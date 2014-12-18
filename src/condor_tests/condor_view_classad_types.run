@@ -24,7 +24,6 @@ use Check::SimpleJob;
 use Check::CondorLog;
 
 my $append_condor_config = '
-  COLLECTOR_HOST = $(IP_ADDRESS):0
   VIEW_COLLECTOR = $(COLLECTOR)
   VIEW_COLLECTOR_ARGS = -local-name VIEW_COLLECTOR
   VIEW_COLLECTOR.COLLECTOR_LOG = $(LOG)/ViewCollectorLog
@@ -35,14 +34,13 @@ my $append_condor_config = '
 
   CONDOR_VIEW_CLASSAD_TYPES = Negotiator
 
-  ALLOW_CONFIG = $(FULL_HOSTNAME)
   SETTABLE_ATTRS_CONFIG = CONDOR_VIEW_CLASSAD_TYPES, CONDOR_VIEW_HOST
   ENABLE_RUNTIME_CONFIG = TRUE
 
-  # Just on the off chance the default security settings dont cover this
-  ALLOW_ADVERTISE = $(FULL_HOSTNAME), $(IP_ADDRESS), 127.0.0.1
-  ALLOW_NEGOTIATOR = $(FULL_HOSTNAME), $(IP_ADDRESS), 127.0.0.1
-  ALLOW_ADMINISTRATOR = $(FULL_HOSTNAME), $(IP_ADDRESS), 127.0.0.1
+  ALLOW_CONFIG = $(ALLOW_CONFIG), $(FULL_HOSTNAME)
+  ALLOW_ADVERTISE = $(ALLOW_ADVERTISE), $(FULL_HOSTNAME), $(IP_ADDRESS), 127.0.0.1
+  ALLOW_NEGOTIATOR = $(ALLOW_NEGOTIATOR), $(FULL_HOSTNAME), $(IP_ADDRESS), 127.0.0.1
+  ALLOW_ADMINISTRATOR = $(ALLOW_ADMINISTRATOR), $(FULL_HOSTNAME), $(IP_ADDRESS), 127.0.0.1
 ';
 
 CondorTest::StartCondorWithParams(
@@ -66,21 +64,31 @@ close(IN);
 print "The first line of the View Collector address file ($view_addr_file):\n";
 print "\t$first_line";
 
-my $view_port;
-if ($first_line =~ /<[\d.]+:(\d+)>/) {
-    $view_port = $1;
-} elsif ($first_line =~ /<[\d.]+:(\d+\?sock=[a-f_\d]+)>/) {
-    $view_port = $1;
-	print "Viewport with shared port on:$view_port\n";
+# FIXME: Write a single shared module for parsing sinful strings.
+my $viewCollector = $first_line;
+CondorUtils::fullchomp( $viewCollector );
+if( ! ($viewCollector =~ m/^</ && $viewCollector =~ m/>$/) ) {
+	print( "'${viewCollector}' doesn't look like a sinful.\n" );
+    print( "The first line of the view address file was:\n" );
+    print( $first_line );
+	exit( 1 );
+}
+$viewCollector =~ s/^<//;
+$viewCollector =~ s/>$//;
+
+if( $viewCollector =~ m/^[[][\d:]+]:\d+/ ) {
+	print( "'${viewCollector}' looks like an IPv6 address.\n" );
+} elsif( $viewCollector =~ m/^\d+\.\d+\.\d+\.\d+:\d+/ ) {
+	print( "'${viewCollector}' looks like an IPv4 address.\n" );
 } else {
-    print "Cannot figure out what port the view collector is running on.\n";
-    print "The first line of the view address file is:\n";
-    print $first_line;
-    exit 1;
+	print( "'${viewCollector}' doesn't look like an address.\n" );
+    print( "The first line of the view address file was:\n" );
+    print( $first_line );
+	exit( 1 );
 }
 
 # Note: you must run condor_reconfig after rset'ing a variable
-system("condor_config_val -collector -rset 'CONDOR_VIEW_HOST=\$(IP_ADDRESS):$view_port'; condor_reconfig -collector");
+system("condor_config_val -collector -rset 'CONDOR_VIEW_HOST=${viewCollector}'; condor_reconfig -collector");
 
 # Validate that we set this properly
 my $cmd = "condor_config_val -collector CONDOR_VIEW_HOST";
@@ -152,7 +160,7 @@ $loopcount = 0;
 $done = "no";
 while( $done eq "no") {
     $loopcount += 1;
-    chomp(my @cmd = `condor_status -pool \"<127.0.0.1:$view_port>\" -startd -format \"%s\\n\" Name`);
+    chomp(my @cmd = `condor_status -pool \"${viewCollector}\" -startd -format \"%s\\n\" Name`);
 
     if (@cmd) {
 	$done = "yes";

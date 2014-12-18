@@ -164,6 +164,11 @@ void DaemonCore::Stats::Reconfig()
     }
     SetWindowSize(this->RecentWindowMax);
 
+    std::string strWhitelist;
+    if (param(strWhitelist, "STATISTICS_TO_PUBLISH_LIST")) {
+       this->Pool.SetVerbosities(strWhitelist.c_str(), this->PublishFlags, true);
+    }
+
     std::string timespans;
     param(timespans,"DCSTATISTICS_TIMESPANS");
 
@@ -188,12 +193,14 @@ void DaemonCore::Stats::SetWindowSize(int window)
 // this is for first time initialization before calling SetWindowSize,
 // use the Clear() method to reset stats after the window size has been set.
 //
-void DaemonCore::Stats::Init() 
+void DaemonCore::Stats::Init(bool enable)
 { 
    Clear();
+   this->enabled = enable;
    this->RecentWindowQuantum = configured_statistics_window_quantum();
    this->RecentWindowMax = this->RecentWindowQuantum; 
    this->PublishFlags    = -1;
+   if ( ! enable) return;
 
    // insert static items into the stats pool so we can use the pool 
    // to Advance and Clear.  these items also publish the overall value
@@ -280,6 +287,8 @@ void DaemonCore::Stats::Publish(ClassAd & ad, const char * config) const
 
 void DaemonCore::Stats::Publish(ClassAd & ad, int flags) const
 {
+   if ( ! this->enabled) return;
+
    if ((flags & IF_PUBLEVEL) > 0) {
       ad.Assign("DCStatsLifetime", (int)StatsLifetime);
       if (flags & IF_VERBOSEPUB)
@@ -348,6 +357,8 @@ time_t DaemonCore::Stats::Tick(time_t now)
 
 void DaemonCore::Stats::AddToProbe(const char * name, int val)
 {
+   if ( ! this->enabled) return;
+
    stats_entry_recent<int>* pstat = Pool.GetProbe<stats_entry_recent<int> >(name);
    if (pstat)
       pstat->Add(val);
@@ -355,6 +366,8 @@ void DaemonCore::Stats::AddToProbe(const char * name, int val)
 
 void DaemonCore::Stats::AddToProbe(const char * name, int64_t val)
 {
+   if ( ! this->enabled) return;
+
    stats_entry_recent<int64_t>* pstat = Pool.GetProbe<stats_entry_recent<int64_t> >(name);
    if (pstat)
       pstat->Add(val);
@@ -362,6 +375,8 @@ void DaemonCore::Stats::AddToProbe(const char * name, int64_t val)
 
 void DaemonCore::Stats::AddToAnyProbe(const char * name, int val)
 {
+   if ( ! this->enabled) return;
+
    int units;
    stats_entry_base* pbase = Pool.GetProbe(name, units);
    if (pbase) {
@@ -394,6 +409,8 @@ void DaemonCore::Stats::AddToAnyProbe(const char * name, int val)
 }
 
 void DaemonCore::Stats::AddToSumEmaRate(const char * name, int val) {
+   if ( ! this->enabled) return;
+
    stats_entry_sum_ema_rate<int>* pstat = Pool.GetProbe<stats_entry_sum_ema_rate<int> >(name);
    if (pstat)
       pstat->Add(val);
@@ -403,7 +420,8 @@ void DaemonCore::Stats::AddToSumEmaRate(const char * name, int val) {
 
 double DaemonCore::Stats::AddRuntime(const char * name, double before)
 {
-   double now = UtcTime::getTimeDouble();
+   double now = _condor_debug_get_time_double();
+   if ( ! this->enabled) return now;
    stats_entry_probe<double> * probe = Pool.GetProbe< stats_entry_probe<double> >(name);
    if (probe)
       probe->Add(now - before);
@@ -412,6 +430,8 @@ double DaemonCore::Stats::AddRuntime(const char * name, double before)
 
 double DaemonCore::Stats::AddSample(const char * name, int as, double val)
 {
+   if ( ! this->enabled) return val;
+
    stats_entry_probe<double> * probe = Pool.GetProbe< stats_entry_probe<double> >(name);
    if ( ! probe) {
        MyString attr(name);
@@ -426,7 +446,9 @@ double DaemonCore::Stats::AddSample(const char * name, int as, double val)
 
 double DaemonCore::Stats::AddRuntimeSample(const char * name, int as, double before) // returns current time.
 {
-   double now = UtcTime::getTimeDouble();
+   double now = _condor_debug_get_time_double();
+   if ( ! this->enabled) return now;
+
    this->AddSample(name, as | IF_RT_SUM, now - before);
    return now;
 }
@@ -435,7 +457,9 @@ double DaemonCore::Stats::AddRuntimeSample(const char * name, int as, double bef
 
 double DaemonCore::Stats::AddRuntime(const char * name, double before)
 {
-   double now = UtcTime::getTimeDouble();
+   if ( ! this->enabled) return;
+
+   double now = _condor_debug_get_time_double();
    stats_recent_counter_timer * probe = Pool.GetProbe<stats_recent_counter_timer>(name);
    if (probe)
       probe->Add(now - before);
@@ -444,6 +468,8 @@ double DaemonCore::Stats::AddRuntime(const char * name, double before)
 
 double DaemonCore::Stats::AddSample(const char * name, int as, double val)
 {
+   if ( ! this->enabled) return;
+
    stats_entry_recent<Probe> * probe = Pool.GetProbe< stats_entry_recent<Probe> >(name);
    if ( ! probe) {
        MyString attr;
@@ -465,15 +491,19 @@ double DaemonCore::Stats::AddSample(const char * name, int as, double val)
 
 double DaemonCore::Stats::AddRuntimeSample(const char * name, int as, double before) // returns current time.
 {
-   double now = UtcTime::getTimeDouble();
+   if ( ! this->enabled) return;
+
+   double now = _condor_debug_get_time_double();
    this->AddSample(name, as, now - before);
    return now;
 }
 
 #endif
 
-void* DaemonCore::Stats::New(const char * category, const char * name, int as)
+void* DaemonCore::Stats::NewProbe(const char * category, const char * name, int as)
 {
+   if ( ! this->enabled) return NULL;
+
    MyString attr;
    attr.formatstr("DC%s_%s", category, name);
    cleanStringForUseAsAttr(attr);
@@ -568,7 +598,7 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
          break;
 
       default:
-         EXCEPT("unsupported probe type\n");
+         EXCEPT("unsupported probe type");
          break;
       }
 
@@ -577,6 +607,8 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
 
 dc_stats_auto_runtime_probe::dc_stats_auto_runtime_probe(const char * name, int as)
 {
+   if ( ! daemonCore->dc_stats.enabled) { this->probe = NULL; return; }
+
    StatisticsPool * pool = &daemonCore->dc_stats.Pool;
    this->probe = pool->GetProbe< stats_entry_recent<Probe> >(name);
    if ( ! this->probe) {
@@ -590,13 +622,13 @@ dc_stats_auto_runtime_probe::dc_stats_auto_runtime_probe(const char * name, int 
        }
    }
    if (this->probe)
-       this->begin = UtcTime::getTimeDouble();
+       this->begin = _condor_debug_get_time_double();
 }
 
 dc_stats_auto_runtime_probe::~dc_stats_auto_runtime_probe()
 {
    if (this->probe) {
-      double now = UtcTime::getTimeDouble();
+      double now = _condor_debug_get_time_double();
       this->probe->Add(now - this->begin);
    }
 }

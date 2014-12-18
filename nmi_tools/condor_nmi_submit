@@ -45,6 +45,7 @@ use vars qw/ $opt_build $opt_test
     $opt_buildid $opt_test_src $opt_test_timeout $opt_test_class
     $opt_input_platform $opt_tests_at_once $opt_coverity_analysis
 	$opt_ignore_missing_platforms $opt_test_sources_from_workspace
+	$opt_append_config_dir
 
     /;
 
@@ -370,6 +371,7 @@ sub parseOptions
 		   'tests-at-once=i' => \$opt_tests_at_once,
 		   'ignore-missing-platforms' => \$opt_ignore_missing_platforms,
 		   'test-sources-from-workspace' => \$opt_test_sources_from_workspace,
+		   'append-config-dir=s' => \$opt_append_config_dir,
     );
 
     if( !$rc ) {
@@ -592,6 +594,18 @@ sub parseOptions
 
 	if( defined($opt_private_build) ) {
 		$private_build = $opt_private_build;
+	}
+
+	if( defined( $opt_append_config_dir ) ) {
+		if( ! -d $opt_append_config_dir ) {
+			print( "No such directory '${opt_append_config_dir}'.\n" );
+			myExit( 1 );
+		}
+
+		if( ! -f "${opt_append_config_dir}/testconfigappend" ) {
+			print( "The append-config-dir must contain a file name 'testconfigappend'.\n" );
+			myExit( 1 );
+		}
 	}
 }
 
@@ -1738,11 +1752,17 @@ sub generateSharedFetchFiles
 
     my @fetch_files;
 
-    if( defined($opt_nmi_glue) ) { 
+    if( defined($opt_nmi_glue) ) {
         my $glue_file = $runtype . "_glue.src";
         makeFetchFileSCP( $glue_file, $opt_nmi_glue, "recursive" );
         push( @fetch_files, "$glue_file" );
     }
+
+	if( defined( $opt_append_config_dir ) ) {
+		my $appendFile = "append_config_dir.src";
+		makeFetchFileSCP( $appendFile, "${opt_append_config_dir}/testconfigappend" );
+		push( @fetch_files, $appendFile );
+	}
 
     return @fetch_files;
 }

@@ -46,11 +46,33 @@
 #include "file_lock.h"
 #if HAVE_BACKTRACE
 #include "execinfo.h"
+#elif defined WIN32
+# if NTDDI_VERSION > NTDDI_WINXP
+#   include "winnt.h" // for CaptureStackBackTrace
+#   include <DbgHelp.h> // for symbol lookup
+#   define HAVE_BACKTRACE
+    static bool backtrace_have_symbols = false;
+# endif
 #endif
 #include "util_lib_proto.h"		// for mkargv() proto
 #include "condor_threads.h"
 #include "log_rotate.h"
 #include "dprintf_internal.h"
+
+#if defined(HAVE__FTIME)
+# include <sys/timeb.h>
+#endif
+#if defined(HAVE_GETTIMEOFDAY)
+# include <sys/time.h>
+#endif
+#if defined(HAVE_CLOCK_GETTTIME)
+# include <time.h>
+#endif
+
+// define this to have D_TIMESTAMP|D_SUB_SECOND be microseconds rather than milliseconds
+// this is useful mostly when trying to put log entries from multiple daemons on the same
+// machine in order
+//#define D_SUB_SECOND_IS_MICROSECONDS
 
 extern const char * const _condor_DebugCategoryNames[D_CATEGORY_COUNT];
 
@@ -121,7 +143,6 @@ time_t	DebugLastMod = 0;
  * If LOGS_USE_TIMESTAMP is enabled, we will print out Unix timestamps
  * instead of the standard date format in all the log messages
  */
-int		DebugUseTimestamps = 0;
 char *	DebugTimeFormat = NULL;
 
 /*
@@ -186,6 +207,8 @@ int		LockFd = -1;
 
 int		log_keep_open = 0;
 
+static bool DebugRotateLog = true;
+
 static	int DprintfBroken = 0;
 static	int DebugUnlockBroken = 0;
 #if !defined(WIN32) && defined(HAVE_PTHREADS)
@@ -217,6 +240,43 @@ int InDBX = 0;
 
 #define FCLOSE_RETRY_MAX 10
 
+// fetch a monotonic timer intended for measuring the time spent
+// doing various things.  this timer can NOT be counted on to
+// track wall clock time.  The seconds value might be epoch time
+// or it might be uptime depending on which system clock is used.
+double _condor_debug_get_time_double()
+{
+#if defined(HAVE_CLOCK_GETTIME)
+	struct timespec tm;
+	#ifdef HAVE_CLOCK_MONOTONIC_RAW
+	clock_gettime(CLOCK_MONOTONIC_RAW, &tm);
+	#else
+	clock_gettime(CLOCK_MONOTONIC, &tm);
+	#endif
+	return (double)tm.tv_sec + (tm.tv_nsec * 1.0e-9);
+#elif defined(WIN32)
+	LARGE_INTEGER li;
+	static bool initialized = false;
+	static double secs_per_tick = 0;
+	if ( ! initialized) {
+		QueryPerformanceFrequency(&li);
+		secs_per_tick = 1.0 / li.QuadPart;
+		initialized = true;
+	}
+	QueryPerformanceCounter(&li);
+	return li.QuadPart * secs_per_tick;
+#elif defined(HAVE_GETTIMEOFDAY)
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return (double)tv.tv_sec + (tv.tv_usec * 1.0e-6);
+#elif defined(HAVE__FTIME)
+	struct _timeb tm;
+	_ftime(&tm);
+	return (double)tm.time + (tm.millitm * 1.0e-3);
+#else
+    return 0.0;
+#endif
+}
 
 
 DebugFileInfo::~DebugFileInfo()
@@ -250,7 +310,7 @@ static char *formatTimeHeader(struct tm *tm) {
 	if (firstTime) {
 		firstTime = 0;
 		if (!DebugTimeFormat) {
-			DebugTimeFormat = strdup("%m/%d/%y %H:%M:%S ");
+			DebugTimeFormat = strdup("%m/%d/%y %H:%M:%S");
 		}
 	}
 	strftime(timebuf, 80, DebugTimeFormat, tm);
@@ -260,7 +320,6 @@ static char *formatTimeHeader(struct tm *tm) {
 const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info)
 {
 	time_t clock_now = info.clock_now;
-	//struct tm *tm    = info.ptm;
 
 	static char *buf = NULL;
 	static int buflen = 0;
@@ -272,23 +331,38 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 	int my_tid;
 	FILE* local_fp = NULL;
 
-	hdr_flags |= (cat_and_flags & ~D_CATEGORY_RESERVED_MASK);
+	hdr_flags |= (cat_and_flags & ~D_CATEGORY_RESERVED_MASK); // pick up flags passed directly to dprintf call
 	unsigned char cat = (unsigned char)(cat_and_flags & D_CATEGORY_MASK);
-	bool UseTimestamps = DebugUseTimestamps;
 
 		/* Print the message with the time and a nice identifier */
 	if( ! (hdr_flags & D_NOHEADER)) {
-		if ( UseTimestamps ) {
+		if (hdr_flags & D_TIMESTAMP) {
 				// Casting clock_now to int to get rid of compile
 				// warning.  Probably format should be %ld, and
 				// we should cast to long int, but I'm afraid of
 				// changing the output format.  wenger 2009-02-24.
-			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(%d) ", (int)clock_now );
+			if (hdr_flags & D_SUB_SECOND) {
+				#ifdef D_SUB_SECOND_IS_MICROSECONDS
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%06d ", (int)clock_now, info.microseconds );
+				#else
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%03d ", (int)clock_now, (info.microseconds+500)/1000 );
+				#endif
+			} else {
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d ", (int)clock_now );
+			}
 			if( rc < 0 ) {
 				sprintf_errno = errno;
 			}
 		} else {
-			rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s", formatTimeHeader(info.tm));
+			if (hdr_flags & D_SUB_SECOND) {
+				#ifdef D_SUB_SECOND_IS_MICROSECONDS
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%06d ", formatTimeHeader(info.tm), info.microseconds );
+				#else
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s.%03d ", formatTimeHeader(info.tm), (info.microseconds+500)/1000 );
+				#endif
+			} else {
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s ", formatTimeHeader(info.tm));
+			}
 			if( rc < 0 ) {
 				sprintf_errno = errno;
 			}
@@ -338,6 +412,13 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 
 		if (hdr_flags & D_IDENT) {
 			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(cid:%llu) ", info.ident );
+			if( rc < 0 ) {
+				sprintf_errno = errno;
+			}
+		}
+
+		if (hdr_flags & D_BACKTRACE) {
+			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(bt:%04x:%d) ", info.backtrace_id, info.num_backtrace );
 			if( rc < 0 ) {
 				sprintf_errno = errno;
 			}
@@ -401,6 +482,98 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, c
 		_condor_dprintf_exit(errno, "Error writing to debug message\n");	
 	}
 
+	if ((hdr_flags & D_BACKTRACE) && info.num_backtrace && info.backtrace) {
+	#ifdef HAVE_BACKTRACE
+		static unsigned int trace_mask[0x10000/32] = {0};
+		int ix_mask = info.backtrace_id / 32;
+		int mask_bit = 1<<(info.backtrace_id%32);
+		if ( ! (trace_mask[ix_mask] & mask_bit)) {
+			trace_mask[ix_mask] |= mask_bit;
+			rc = sprintf_realloc(&buffer, &bufpos, &buflen, "\tBacktrace bt:%04x:%d is\n", info.backtrace_id, info.num_backtrace);
+			#ifdef WIN32
+			if (true) {
+				#ifdef _DBGHELP_
+				if ( ! backtrace_have_symbols) {
+					static bool tried_sym_init = false;
+					if ( ! tried_sym_init) {
+						tried_sym_init = true;
+						backtrace_have_symbols = SymInitialize(GetCurrentProcess(),NULL,TRUE);
+					}
+				}
+				#endif
+				char szModule[MAX_PATH], szFileAndLine[MAX_PATH];
+				for (int ix = 0; ix < info.num_backtrace; ++ix) {
+					void * pfn = info.backtrace[ix];
+					#ifdef _DBGHELP_
+					if (backtrace_have_symbols) {
+						DWORD displace32 = 0;
+						IMAGEHLP_LINE64 li; li.SizeOfStruct = sizeof(li);
+						if (SymGetLineFromAddr64(GetCurrentProcess(), (DWORD64)(ULONG_PTR)pfn, &displace32, &li)) {
+							// we want to print only the part of the file path that is inside the HTCondor source tree
+							PCHAR pszFile = li.FileName;
+							for (PCHAR p = pszFile; *p; ++p) {
+								if (*p == '/' || *p == '\\') {
+									pszFile = p+1;
+									if ((p[1] == 's') && (p[2] == 'r') && (p[3]=='c') && (p[4]='\\' || p[4] == '/')){
+										pszFile = p+5; break;
+									}
+								}
+							}
+							sprintf_s(szFileAndLine, COUNTOF(szFileAndLine), "%s(%d) ", pszFile, li.LineNumber);
+						} else {
+							szFileAndLine[0] = 0;
+						}
+						DWORD64 displacement = 0;
+						SYMBOL_INFO * psym = (SYMBOL_INFO*)szModule;
+						psym->SizeOfStruct = sizeof(SYMBOL_INFO);
+						psym->MaxNameLen = 1 + (sizeof(szModule) - sizeof(SYMBOL_INFO)) / sizeof(psym->Name[0]);
+						if (SymFromAddr(GetCurrentProcess(), (DWORD64)(ULONG_PTR)pfn, &displacement, psym)) {
+							int off = (int)((ULONG64)pfn - (ULONG64)psym->Address);
+							sprintf_realloc(&buffer, &bufpos, &buflen, "\t%p %s%s+%d\n", pfn, szFileAndLine, psym->Name, off);
+							continue;
+						}
+					}
+					#endif // _DGBHELP_
+					MEMORY_BASIC_INFORMATION mbi;
+					SIZE_T cb = VirtualQuery (pfn, &mbi, sizeof(mbi));
+					int off = (int)((const char*)pfn - (const char*)mbi.AllocationBase);
+					if (cb == sizeof(mbi) && mbi.AllocationBase > 0) {
+						if (GetModuleFileNameA ((HMODULE)mbi.AllocationBase, szModule, COUNTOF(szModule))) {
+							// print only the part after the last path separator.
+							char * pname = filename_from_path(szModule);
+							sprintf_realloc(&buffer, &bufpos, &buflen, "\t%p %s+%d\n", pfn, pname, off);
+						} else {
+							sprintf_realloc(&buffer, &bufpos, &buflen, "\t%p %p+%d\n", pfn, (void*)mbi.AllocationBase, off);
+						}
+					} else {
+						sprintf_realloc(&buffer, &bufpos, &buflen, "\t%p\n", pfn);
+					}
+				}
+			}
+			#else // ! WIN32
+			char ** syms =  backtrace_symbols(info.backtrace, info.num_backtrace);
+			if (syms) {
+				for (int jj = 0; jj < info.num_backtrace; ++jj) {
+					const char * sym = syms[jj];
+					// strip off path, keep only filename
+					//sym = filename_from_path(sym);
+					rc = sprintf_realloc(&buffer, &bufpos, &buflen, "\t%s\n", sym);
+					if (rc < 0) break;
+				}
+				free(syms);
+			}
+			#endif
+			else {
+				buffer[bufpos-1] = ' ';
+				for (int jj = 0; jj < info.num_backtrace; ++jj) {
+					const char * fmt = (jj+1 == info.num_backtrace) ? "%p\n" : "%p, ";
+					rc = sprintf_realloc(&buffer, &bufpos, &buflen, fmt, info.backtrace[jj]);
+				}
+			}
+		}
+	#endif // HAVE_BACKTRACE
+	}
+
 		// We attempt to write the log record with one call to
 		// write(), because then O_APPEND will ensure (on
 		// compliant file systems) that writes from different
@@ -454,6 +627,120 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, DebugHeaderInfo &info, De
 	dbgInfo->dprintfFunc(cat_and_flags, hdr_flags, info, buf, dbgInfo);
 }
 
+// forward ref to the function that helps use remove dprintf calls from the call stack
+static bool is_dprintf_function_addr(const void * pfn);
+
+/* _condor_dprintf_getbacktrace
+ * fill in backtrace in the DebugHeaderInfo structure, paying attention to dprintf flags
+ * and returning modified dprintf flags if requested.
+ */
+static int _condor_dprintf_getbacktrace(DebugHeaderInfo &info, unsigned int hdr_flags, unsigned int * phdr_flags_out = NULL)
+{
+	info.backtrace = NULL;
+	info.backtrace_id = 0;
+	info.num_backtrace = 0;
+#ifdef HAVE_BACKTRACE
+	if (hdr_flags & D_BACKTRACE) {
+		static void * tracebuf[50];
+		info.backtrace = tracebuf;
+		#ifdef WIN32
+		int num_trace = CaptureStackBackTrace(0, COUNTOF(tracebuf), tracebuf, NULL);
+		#else
+		int num_trace = backtrace(tracebuf, COUNTOF(tracebuf));
+		#endif
+		// skip over the dprintf calls themselves, beginning the backtrace in the caller of dprintf.
+		int skip = 0;
+		for (skip = 0; skip < num_trace; ++skip) {
+			if ( ! is_dprintf_function_addr(tracebuf[skip]))
+				break;
+		}
+		//if (skip > 0) { --skip; } // keep at least the first dprintf call.
+		info.num_backtrace = num_trace - skip;
+		info.backtrace = &tracebuf[skip];
+		if (info.num_backtrace <= 0) {
+			hdr_flags &= ~D_BACKTRACE;
+			info.num_backtrace = 0;
+		} else {
+			unsigned short * ps = (unsigned short *)info.backtrace;
+			unsigned int id = 0;
+			for (int ii = 0; ii < info.num_backtrace * (int)(sizeof(void*)/sizeof(short)); ++ii) {
+				id += ps[ii];
+			}
+			info.backtrace_id = (id & 0xFFFF) ^ (id >> 16);
+		}
+	}
+#else
+	hdr_flags &= ~D_BACKTRACE;
+#endif
+	if (phdr_flags_out) *phdr_flags_out = hdr_flags;
+	return info.num_backtrace;
+}
+
+/* _condor_dprintf_gettime
+ * fill in current time in the DebugHeaderInfo structure, paying attention to dprintf flags
+ * and returning modified dprintf flags if requested.
+ */
+static time_t _condor_dprintf_gettime(DebugHeaderInfo &info, unsigned int hdr_flags, unsigned int * phdr_flags_out = NULL)
+{
+	if (hdr_flags & D_SUB_SECOND) {
+	#if defined WIN32
+		// Windows8 has GetSystemTimePreciseAsFileTime which returns sub-microsecond system times.
+		static bool check_for_precise = false;
+		static void (WINAPI*get_precise_time)(unsigned long long * ft) = NULL;
+		static BOOLEAN (WINAPI* time_to_1970)(unsigned long long * ft, unsigned long * epoch_time);
+		if ( ! check_for_precise) {
+			*(FARPROC*)&get_precise_time = GetProcAddress(GetModuleHandle("Kernel32.dll"), "GetSystemTimePreciseAsFileTime");
+			*(FARPROC*)&time_to_1970 = GetProcAddress(GetModuleHandle("ntdll.dll"), "RtlTimeToSecondsSince1970");
+			check_for_precise = true;
+		}
+		unsigned long long nanos = 0;
+		if (get_precise_time) {
+			get_precise_time(&nanos);
+			unsigned long now = 0;
+			time_to_1970(&nanos, &now);
+			info.clock_now = now;
+			info.microseconds = (int)((nanos / 10) % 1000000);
+		} else {
+			struct _timeb tv;
+			_ftime(&tv);
+			info.clock_now = tv.time;
+			info.microseconds = tv.millitm * 1000;
+		}
+	#elif defined(HAVE_CLOCK_GETTIME)
+		struct timespec tm;
+		#if ! defined(D_SUB_SECOND_IS_MICROSECONDS) && defined(HAVE_CLOCK_REALTIME_COARSE)
+		clock_gettime(CLOCK_REALTIME_COARSE, &tm);
+		#else
+		clock_gettime(CLOCK_REALTIME, &tm);
+		#endif
+		info.clock_now = tm.tv_sec;
+		info.microseconds = tm.tv_nsec / 1000;
+	#elif defined(HAVE_GETTIMEOFDAY)
+		struct timeval	tv;
+		gettimeofday(&tv, NULL);
+		info.clock_now = tv.tv_sec;
+		info.microseconds = tv.tv_usec;
+	#elif defined(HAVE__FTIME)
+		struct _timeb tv;
+		_ftime(&tv);
+		info.clock_now = tv.time;
+		info.microseconds = tv.millitm * 1000;
+	#else
+		hdr_flags &= ~D_SUB_SECOND;
+		(void)time(&info.clock_now);
+		info.microseconds = 0;
+	#endif
+	} else {
+		(void)time(&info.clock_now);
+		info.microseconds = 0;
+	}
+	if ( ! (hdr_flags & D_TIMESTAMP)) {
+		info.tm = localtime(&info.clock_now);
+	}
+	if (phdr_flags_out) *phdr_flags_out = hdr_flags;
+	return info.clock_now;
+}
+
 /* _condor_dfprintf
  * This function is used internally by the dprintf system wherever
  * it wants to write directly to the open debug log.
@@ -463,15 +750,14 @@ _condor_dfprintf( struct DebugFileInfo* it, const char* fmt, ... )
 {
 	DebugHeaderInfo info;
     va_list args;
+	unsigned int hdr_flags = DebugHeaderOptions;
 
 	memset((void*)&info,0,sizeof(info)); // just to stop Purify UMR errors
-	(void)time(  &info.clock_now );
-	if ( ! DebugUseTimestamps ) {
-		info.tm = localtime( &info.clock_now );
-	}
+	_condor_dprintf_gettime(info, hdr_flags, &hdr_flags);
+	if (hdr_flags & D_BACKTRACE) _condor_dprintf_getbacktrace(info, hdr_flags, &hdr_flags);
 
     va_start( args, fmt );
-	_condor_dfprintf_va(D_ALWAYS, DebugHeaderOptions, info,it,fmt,args);
+	_condor_dfprintf_va(D_ALWAYS, hdr_flags, info,it,fmt,args);
     va_end( args );
 }
 
@@ -610,10 +896,9 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 			   loop.  -Derek 9/14 */
 		memset((void*)&info,0,sizeof(info)); // just to stop Purify UMR errors
 		info.ident = ident;
-		(void)time(&info.clock_now);
-		if ( ! DebugUseTimestamps ) {
-			info.tm = localtime(&info.clock_now);
-		}
+		unsigned int hdr_flags = DebugHeaderOptions;
+		_condor_dprintf_gettime(info, hdr_flags, &hdr_flags);
+		if (hdr_flags & D_BACKTRACE) _condor_dprintf_getbacktrace(info, hdr_flags, &hdr_flags);
 	
 		#ifdef va_copy
 		va_list copyargs;
@@ -635,7 +920,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 			backup.outputTarget = STD_ERR;
 			backup.debugFP = stderr;
 			backup.dprintfFunc = _dprintf_global_func;
-			backup.dprintfFunc(cat_and_flags, DebugHeaderOptions, info, message_buffer, &backup);
+			backup.dprintfFunc(cat_and_flags, hdr_flags, info, message_buffer, &backup);
 			backup.debugFP = NULL; // don't allow destructor to free stderr
 		}
 
@@ -668,7 +953,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 					break;
 			}
 			
-			it->dprintfFunc(cat_and_flags, DebugHeaderOptions, info, message_buffer, &(*it));
+			it->dprintfFunc(cat_and_flags, hdr_flags, info, message_buffer, &(*it));
 			if (funlock_it) {
 				debug_unlock_it(&(*it));
 			}
@@ -989,7 +1274,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 	}
 
 	//This is checking for a non-zero max length.  Zero is infinity.
-	if( it->maxLog && length >= it->maxLog ) {
+	if( DebugRotateLog && it->maxLog && length >= it->maxLog ) {
 		if( !locked ) {
 			/*
 			 * We only need to redo everything if there is a lock defined
@@ -1433,12 +1718,12 @@ _condor_dprintf_exit( int error_code, const char* msg )
 	if( !DprintfBroken ) {
 		(void)time( &clock_now );
 
-		if ( DebugUseTimestamps ) {
+		if (DebugHeaderOptions & D_TIMESTAMP) {
 				// Casting clock_now to int to get rid of compile warning.
 				// Probably format should be %ld, and we should cast to long
 				// int, but I'm afraid of changing the output format.
 				// wenger 2009-02-24.
-			snprintf( header, sizeof(header), "(%d) ", (int)clock_now );
+			snprintf( header, sizeof(header), "%d ", (int)clock_now );
 		} else {
 			tm = localtime( &clock_now );
 			snprintf( header, sizeof(header), "%d/%d %02d:%02d:%02d ",
@@ -1448,11 +1733,11 @@ _condor_dprintf_exit( int error_code, const char* msg )
 		snprintf( header, sizeof(header), "dprintf() had a fatal error in pid %d\n", (int)getpid() );
 		tail[0] = '\0';
 		if( error_code ) {
-			sprintf( tail, "errno: %d (%s)\n", error_code,
+			sprintf( tail, " errno: %d (%s)", error_code,
 					 strerror(error_code) );
 		}
 #ifndef WIN32			
-		sprintf( buf, "euid: %d, ruid: %d\n", (int)geteuid(),
+		sprintf( buf, " euid: %d, ruid: %d", (int)geteuid(),
 				 (int)getuid() );
 		strcat( tail, buf );
 #endif
@@ -1462,22 +1747,13 @@ _condor_dprintf_exit( int error_code, const char* msg )
 					  DebugLogDir, get_mySubSystemName() );
 			fail_fp = safe_fopen_wrapper_follow( buf, "wN",0644 );
 			if( fail_fp ) {
-				fprintf( fail_fp, "%s", header );
-				fprintf( fail_fp, "%s", msg );
-				if( tail[0] ) {
-					fprintf( fail_fp, "%s", tail );
-				}
+				fprintf( fail_fp, "%s%s%s\n", header, msg, tail );
 				fclose_wrapper( fail_fp, FCLOSE_RETRY_MAX );
 				wrote_warning = TRUE;
 			} 
 		}
 		if( ! wrote_warning ) {
-			fprintf( stderr, "%s", header );
-			fprintf( stderr, "%s", msg );
-			if( tail[0] ) {
-				fprintf( stderr, "%s", tail );
-			}
-
+			fprintf( stderr, "%s%s%s\n", header, msg, tail );
 		}
 			/* First, set a flag so we know not to try to keep using
 			   dprintf during the rest of this */
@@ -1715,6 +1991,73 @@ void dprintf_print_daemon_header(void)
 	}
 }
 
+#ifdef HAVE_BACKTRACE
+// a simple function to write strings & ints to a file without allocating any memory.
+// This function is for use in situations (such as during an abort) when we want to log
+// some things to the file but can't safely malloc. if the msg string contains a %
+// then this code assumes that it will be followed by a number indicating an index into
+// the args array which will be printed as an integer at that point in the output.
+// optionally, there can be an s, x or X between the % and the integer. s indicates
+// that args[n] is a null-terminated pointer to a string.  x and X print args[n] as
+// hex. X prints leading zeros and x does not.
+static int
+safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned long *args,unsigned int num_args)
+{
+	unsigned int arg_index;
+	unsigned int digit,arg;
+	char intbuf[50];
+	char *intbuf_pos;
+
+	int r = 0;
+	for(;*msg;msg++) {
+		if( *msg != '%' ) {
+			r = write(fd,msg,1);
+		}
+		else {
+			bool is_hex = msg[1] == 'x'; if (is_hex) ++msg; // hex without leading zeros
+			bool is_HEX = msg[1] == 'X'; if (is_HEX) ++msg; // hex with leading zeros
+			bool is_str = msg[1] == 's'; if (is_str) ++msg;
+				// format is % followed by index of argument in args array
+			arg_index = *(++msg)-'0';
+			if( arg_index >= num_args || !*msg ) {
+				r = write(fd," INVALID! ",10);
+				break;
+			}
+			if (is_str) {
+				char * psz = (char*)(args[arg_index]);
+				unsigned int cb = 0; while (psz[cb]) ++cb;
+				r = write(fd,psz,cb);
+			} else {
+				arg = args[arg_index];
+				intbuf_pos=intbuf;
+				if (is_hex || is_HEX) {
+					for (int ii = 0; ii < (int)sizeof(arg)*2; ++ii) {
+						digit = arg % 16;
+						*(intbuf_pos++) = (digit < 10) ? (digit + '0') : (digit - 10 + 'A');
+						arg /= 16;
+						if (!arg && is_hex) break;
+					};
+				} else {
+					do {
+						digit = arg % 10;
+						*(intbuf_pos++) = digit + '0';
+						arg /= 10;  // integer division, shifts base-10 digits right
+					} while( arg ); // terminate when no more non-zero digits
+				}
+
+					// intbuf now contains the base-10 digits of arg
+					// in order of least to most significant
+				while( intbuf_pos-- > intbuf ) {
+					r = write(fd,intbuf_pos,1);
+				}
+			}
+		}
+	}
+	return r;
+}
+#endif // HAVE_BACKTRACE
+
+
 #ifdef WIN32
 static int 
 lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
@@ -1801,31 +2144,159 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 
 	return result;
 }
-#endif  // of Win32
 
-#ifndef WIN32
+#ifdef HAVE_BACKTRACE
+
+// a WIN32 implementation of the linux function backtrace_symbols_fd.
+// this function  needs DbgHelp.dll to show symbols, but can do module name and offset without it.
+// WinXP sp3 or later is needed to collect the backtrace.
+static void backtrace_symbols_fd(void* trace[], int cFrames, int fd)
+{
+	unsigned long args[3];
+	char szModule[MAX_PATH];
+	for (int ix = 0; ix < cFrames; ++ix) {
+#ifdef X86_64
+		PRAGMA_REMIND("write win64 backtrace printing.")
+		args[0] = (ULONG_PTR)trace[ix];
+		//void* imageBase;
+		//RtlPcToFileHeader(trace[ix], &imageBase);
+		void* imageBase = 0;
+		RtlPcToFileHeader(trace[ix], &imageBase);
+		args[1] = (ULONG_PTR)imageBase;
+		args[2] = args[0] - (ULONG_PTR)imageBase;
+		safe_async_simple_fwrite_fd(fd,"  %X0 %x1 + %2\n",args,3);
+#else // 32bit
+		args[0] = (unsigned long)trace[ix];
+	#ifdef _DBGHELP_
+		if (backtrace_have_symbols) {
+			DWORD64 displacement = 0;
+			SYMBOL_INFO * psym = (SYMBOL_INFO*)szModule;
+			psym->SizeOfStruct = sizeof(SYMBOL_INFO);
+			psym->MaxNameLen = 1 + (sizeof(szModule) - sizeof(SYMBOL_INFO)) / sizeof(psym->Name[0]);
+			if (SymFromAddr(GetCurrentProcess(), (DWORD64)(ULONG_PTR)trace[ix], &displacement, psym)) {
+				args[1] = (unsigned long)psym->Name;
+				args[2] = args[0] - (unsigned long)psym->Address;
+				safe_async_simple_fwrite_fd(fd,"  %X0 %s1 + %2\n",args,3);
+				continue;
+			}
+		}
+	#endif // _DGBHELP_
+		MEMORY_BASIC_INFORMATION mbi;
+		SIZE_T cb = VirtualQuery (trace[ix], &mbi, sizeof(mbi));
+		if (cb == sizeof(mbi) && mbi.AllocationBase > 0) {
+			if (GetModuleFileNameA ((HMODULE)mbi.AllocationBase, szModule, COUNTOF(szModule))) {
+				args[1] = (unsigned long)szModule;
+				// print only the part after the last path separator.
+				args[1] = (unsigned long)filename_from_path(szModule);
+				args[2] = args[0] - (unsigned long)mbi.AllocationBase;
+				safe_async_simple_fwrite_fd(fd,"  %X0 %s1 + %2\n",args,3);
+			} else {
+				args[1] = (unsigned long)mbi.AllocationBase;
+				args[2] = args[0] - (unsigned long)mbi.AllocationBase;
+				safe_async_simple_fwrite_fd(fd,"  %X0 0x%x1 + %2\n",args,3);
+			}
+		} else {
+			safe_async_simple_fwrite_fd(fd,"  %X0\n",args,1);
+		}
+#endif // X86_64
+	}
+}
+
+void
+dprintf_dump_stack(void) {
+	int fd;
+	unsigned long args[3];
+	void* trace[50];
+	int cFrames = CaptureStackBackTrace(0, COUNTOF(trace), trace, NULL);
+
+		/* In case we are dumping stack in the segfault handler, we
+		   want this to be as simple as possible.  Calling malloc()
+		   could be fatal, since the heap may be trashed.  Therefore,
+		   we dispense with some of the formalities... */
+
+	if (DprintfBroken || !_condor_dprintf_works || DebugLogs->empty()) {
+			// Note that although this would appear to enable
+			// backtrace printing to stderr before dprintf is
+			// configured, the backtrace sighandler is only installed
+			// when dprintf is configured, so we won't even get here
+			// in that case.  Therefore, most command-line tools need
+			// -debug to enable the backtrace.
+		fd = 2;
+	}
+	else {
+		fd = safe_open_wrapper_follow(DebugLogs->begin()->logPath.c_str(),O_APPEND|O_WRONLY|O_CREAT,0644);
+		if( fd==-1 ) {
+			fd=2;
+		}
+	}
+
+		// sprintf() and other convenient string-handling functions
+		// are not officially async-signal safe, so use a crude replacement
+	args[0] = (unsigned long)GetCurrentProcessId();
+	args[1] = (unsigned long)time(NULL);
+	args[2] = (unsigned long)cFrames;
+	safe_async_simple_fwrite_fd(fd,"Stack dump for process %0 at timestamp %1 (%2 frames)\n",args,3);
+
+	backtrace_symbols_fd(trace,cFrames,fd);
+
+	if (fd!=2) {
+		close(fd);
+	}
+}
+#else // !HAVE_BACKTRACE
+void
+dprintf_dump_stack(void) {
+	// this version of Windows does not support backtrace.
+}
+#endif // HAVE_BACKTRACE
+
+#else // !WIN32
+// LockFd and DebugRotateLog are values that a clone child will modify,
+// but we must ensure the values in the parent process are preserved
+// after the child exec()s or exits.
 static int ParentLockFd = -1;
+static bool ParentDebugRotateLog = true;
 
 void
 dprintf_before_shared_mem_clone() {
 	ParentLockFd = LockFd;
+	ParentDebugRotateLog = DebugRotateLog;
 }
 
 void
 dprintf_after_shared_mem_clone() {
 	LockFd = ParentLockFd;
+	DebugRotateLog = ParentDebugRotateLog;
 }
 
 void
-dprintf_init_fork_child( ) {
+dprintf_init_fork_child( bool cloned ) {
 	if( LockFd >= 0 ) {
 		close( LockFd );
 		LockFd = -1;
 	}
+	// Avoid opening or closing files while in a cloned child process,
+	// since we're sharing the parent's memory but have our own copy of
+	// of the file descriptors. The LockFd is an exception, for which
+	// we have extra handling code.
+	// For forked child processes, don't do log rotation and reopen the
+	// log file on every dprintf(). That avoids a race between parent
+	// and child that can result in the parent writing to a rotated log
+	// file.
+	DebugRotateLog = false;
+	if ( !cloned ) {
+		log_keep_open = 0;
+		std::vector<DebugFileInfo>::iterator it;
+		for ( it = DebugLogs->begin(); it < DebugLogs->end(); it++ ) {
+			if ( it->outputTarget == FILE_OUT ) {
+				debug_unlock_it(&(*it));
+			}
+		}
+	}
 }
 
 void
-dprintf_wrapup_fork_child( ) {
+dprintf_wrapup_fork_child( bool cloned ) {
 		/* Child pledges not to call dprintf any more, so it is
 		   safe to close the lock file.  If parent closes all
 		   fds anyway, then this is redundant.
@@ -1834,47 +2305,18 @@ dprintf_wrapup_fork_child( ) {
 		close( LockFd );
 		LockFd = -1;
 	}
+	if ( !cloned ) {
+		// We don't need to restore these values in a non-cloned child,
+		// because dprintf() won't be called again and we're not sharing
+		// memory with the parent process.
+		// In a cloned child, the parent restores the original value of
+		// DebugRotateLog when it resumes execution.
+		//DebugRotateLog = true;
+		//log_keep_open = ?
+	}
 }
 
 #if HAVE_BACKTRACE
-
-static int
-safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned int num_args)
-{
-	unsigned int arg_index;
-	unsigned int digit,arg;
-	char intbuf[50];
-	char *intbuf_pos;
-
-	int r = 0;
-	for(;*msg;msg++) {
-		if( *msg != '%' ) {
-			r = write(fd,msg,1);
-		}
-		else {
-				// format is % followed by index of argument in args array
-			arg_index = *(++msg)-'0';
-			if( arg_index >= num_args || !*msg ) {
-				r = write(fd," INVALID! ",10);
-				break;
-			}
-			arg = args[arg_index];
-			intbuf_pos=intbuf;
-			do {
-				digit = arg % 10;
-				*(intbuf_pos++) = digit + '0';
-				arg /= 10;  // integer division, shifts base-10 digits right
-			} while( arg ); // terminate when no more non-zero digits
-
-				// intbuf now contains the base-10 digits of arg
-				// in order of least to most significant
-			while( intbuf_pos-- > intbuf ) {
-				r = write(fd,intbuf_pos,1);
-			}
-		}
-	}
-	return r;
-}
 
 void
 dprintf_dump_stack(void) {
@@ -1884,7 +2326,7 @@ dprintf_dump_stack(void) {
 	int fd;
 	void *trace[50];
 	int trace_size;
-	unsigned int args[3];
+	unsigned long args[3];
 
 		/* In case we are dumping stack in the segfault handler, we
 		   want this to be as simple as possible.  Calling malloc()
@@ -1954,9 +2396,9 @@ dprintf_dump_stack(void) {
 
 		// sprintf() and other convenient string-handling functions
 		// are not officially async-signal safe, so use a crude replacement
-	args[0] = (unsigned int)getpid();
-	args[1] = (unsigned int)time(NULL);
-	args[2] = (unsigned int)trace_size;
+	args[0] = (unsigned long)getpid();
+	args[1] = (unsigned long)time(NULL);
+	args[2] = (unsigned long)trace_size;
 	safe_async_simple_fwrite_fd(fd,"Stack dump for process %0 at timestamp %1 (%2 frames)\n",args,3);
 
 	backtrace_symbols_fd(trace,trace_size,fd);
@@ -1964,6 +2406,13 @@ dprintf_dump_stack(void) {
 	if (fd!=2) {
 		close(fd);
 	}
+}
+
+#else // ! HAVE_BACKTRACE
+
+void
+dprintf_dump_stack(void) {
+		// this platform does not support backtrace()
 }
 #endif
 
@@ -1985,12 +2434,6 @@ bool debug_open_fds(std::map<int,bool> &open_fds)
 	return found;
 }
 
-#if !defined(HAVE_BACKTRACE)
-void
-dprintf_dump_stack(void) {
-		// this platform does not support backtrace()
-}
-#endif
 
 void _dprintf_to_buffer(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo)
 {
@@ -2012,3 +2455,43 @@ void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, DebugHeaderInfo & in
 	OutputDebugStringA(message);
 }
 #endif
+
+
+// get pointers to the two dprintf entry points, because we can't refer to their addresses any other way.
+#ifdef __cplusplus
+extern "C" {
+#endif
+typedef void (*DPRINTF_C_FN)(int, const char *, ...);
+static const DPRINTF_C_FN dprintf_c_addr = &dprintf;
+#ifdef __cplusplus
+}
+#endif
+typedef void (*DPRINTF_CPP_FN)(int, const char *, ...);
+static const DPRINTF_CPP_FN dprintf_cpp_addr = &dprintf;
+
+/*
+ * this should be the last function in the dprintf module so that it can see all of the statics
+ */
+static bool is_dprintf_function_addr(const void * pfn)
+{
+	static const struct {
+		const char * pfn;
+		unsigned long length;
+	} afns[] = {
+		{ (const char*)&_condor_dprintf_getbacktrace, 0x200 },
+		{ (const char*)&_condor_dprintf_va, 0x800 },
+		{ (const char*)&_condor_dfprintf, 0x100 },
+		{ (const char*)dprintf_c_addr, 0x100 },
+		{ (const char*)dprintf_cpp_addr, 0x100 },
+	};
+
+	#define PTRDIFF(p1,p2) (unsigned long)((const char*)p1 - (const char *)p2)
+
+	for (int ii = 0; ii < (int)COUNTOF(afns); ++ii) {
+		if (pfn >= afns[ii].pfn && PTRDIFF(pfn, afns[ii].pfn) < afns[ii].length) {
+			return true;
+		}
+	}
+	return false;
+}
+

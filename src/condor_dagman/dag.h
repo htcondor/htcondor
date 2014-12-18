@@ -53,6 +53,7 @@ enum SpliceLayer {
 class Dagman;
 class MyString;
 class DagmanMetrics;
+class CondorID;
 
 // used for RelinquishNodeOwnership and AssumeOwnershipofNodes
 // This class owns the containers with which it was constructed, but
@@ -458,8 +459,18 @@ class Dag {
         when the Dagman Condor job itself is removed by the user via
         condor_rm.  This function <b>is not</b> called when the schedd
         kills Dagman.
+		@param dmJobId: the Condor ID of this DAGMan job.
+		@param removeCondorJobs: iff true we, remove our Condor node jobs.
+			This is set to false when DAGMan itself is condor_rm'ed,
+			because in that case the schedd removes the node jobs.
+		@param bForce: iff true, we run the command to remove Condor
+			node jobs even if we don't think we have any -- I think this
+			is in case we have a failure in recovery mode before we've
+			read the logs.  Setting bForce to true automatically
+			implies removeCondorJobs.
     */
-    void RemoveRunningJobs ( const Dagman &, bool bForce=false) const;
+    void RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
+				bool bForce ) const;
 
     /** Remove all pre- and post-scripts that are currently running.
 	All currently running scripts will be killed via daemoncore.
@@ -500,9 +511,8 @@ class Dag {
 				const char * dagFile, bool parseFailed = false,
 				bool isPartial = false) /* const */;
 
-	int PreScriptReaper( const char* nodeName, int status );
-	int PostScriptReaper( const char* nodeName, int status );
-	int PostScriptSubReaper( Job *job, int status );
+	int PreScriptReaper( Job *job, int status );
+	int PostScriptReaper( Job *job, int status );
 
 	void PrintReadyQ( debug_level_t level ) const;
 
@@ -530,7 +540,7 @@ class Dag {
 	void DumpDotFile(void);
 
 	void SetNodeStatusFileName( const char *statusFileName,
-				int minUpdateTime );
+				int minUpdateTime, bool alwaysUpdate = false );
 	void DumpNodeStatus( bool held, bool removed );
 
 		/** Set the reject flag to true for this DAG; if it hasn't been
@@ -1082,6 +1092,10 @@ private:
 		// Minimum time between updates (so we can avoid trying to
 		// write the file too often, e.g., for large DAGs).
 	int _minStatusUpdateTime;
+
+		// If this is true, we update the node status file even if
+		// nothing has changed (defaults to false).
+	bool _alwaysUpdateStatus;
 
 		// Last time the status file was written.
 	time_t _lastStatusUpdateTimestamp;

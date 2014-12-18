@@ -426,6 +426,7 @@ const char* EC2VpcSubnet = "ec2_vpc_subnet";
 const char* EC2VpcIP = "ec2_vpc_ip";
 const char* EC2TagNames = "ec2_tag_names";
 const char* EC2SpotPrice = "ec2_spot_price";
+const char* EC2BlockDeviceMapping = "ec2_block_device_mapping";
 
 const char* BoincAuthenticatorFile = "boinc_authenticator_file";
 
@@ -1402,7 +1403,7 @@ main( int argc, char *argv[] )
 					break;
 
 				default:
-					EXCEPT("PROGRAMMER ERROR: Unknown sandbox transfer method\n");
+					EXCEPT("PROGRAMMER ERROR: Unknown sandbox transfer method");
 					break;
 			}
 		}
@@ -1467,7 +1468,7 @@ main( int argc, char *argv[] )
 			sshargs[i++] = PoolName;
 		}
 		if (ScheddName) {
-			sshargs[i++] = "-pool";
+			sshargs[i++] = "-name";
 			sshargs[i++] = ScheddName;
 		}
 		sprintf(jobid,"%d.0",ClusterId);
@@ -5595,14 +5596,22 @@ SetGridParams()
         free( tmp );
         InsertJobExpr( buffer.Value() );
     }
-	
+
 	// EC2SpotPrice is not a necessary parameter
 	if( (tmp = condor_param( EC2SpotPrice, ATTR_EC2_SPOT_PRICE )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_SPOT_PRICE, tmp);
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
-	}	
-	
+	}
+
+	// EC2BlockDeviceMapping is not a necessary parameter
+	if( (tmp = condor_param( EC2BlockDeviceMapping, ATTR_EC2_BLOCK_DEVICE_MAPPING )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_BLOCK_DEVICE_MAPPING, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+		bKeyPairPresent=true;
+	}
+
 	// EC2UserData is not a necessary parameter
 	if( (tmp = condor_param( EC2UserData, ATTR_EC2_USER_DATA )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_USER_DATA, tmp);
@@ -6970,7 +6979,7 @@ check_requirements( char const *orig, MyString &answer )
 		if( !checks_vm ) {
 			answer += "&& (TARGET.";
 			answer += ATTR_HAS_VM;
-			answer += ")";
+			answer += " =?= true)";
 		}
 		// add vm_type to requirements
 		bool checks_vmtype = false;
@@ -7362,6 +7371,10 @@ check_open( const char *name, int flags )
 
 	strPathname = full_path(name);
 
+	// is the last character a path separator?
+	int namelen = strlen(name);
+	bool trailing_slash = namelen > 0 && IS_ANY_DIR_DELIM_CHAR(name[namelen-1]);
+
 		/* This is only for MPI.  We test for our string that
 		   we replaced "$(NODE)" with, and replace it with "0".  Thus, 
 		   we will really only try and access the 0th file only */
@@ -7385,8 +7398,8 @@ check_open( const char *name, int flags )
 
 	if ( !DisableFileChecks ) {
 		if( (fd=safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
-			// note: Windows does not set errno to EISDIR for directories, instead you get back EACCESS
-			if( ( errno == EISDIR || errno == EACCES ) &&
+			// note: Windows does not set errno to EISDIR for directories, instead you get back EACCESS (or ENOENT?)
+			if( (trailing_slash || errno == EISDIR || errno == EACCES) &&
 	                   check_directory( strPathname.Value(), flags, errno ) ) {
 					// Entries in the transfer output list may be
 					// files or directories; no way to tell in

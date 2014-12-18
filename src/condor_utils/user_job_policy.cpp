@@ -73,7 +73,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 	
 	if (jad == NULL)
 	{
-		EXCEPT( "Could not evaluate user policy due to job ad being NULL!\n" );
+		EXCEPT( "Could not evaluate user policy due to job ad being NULL!" );
 	}
 
 	/* Set up the default response of do nothing. The caller should

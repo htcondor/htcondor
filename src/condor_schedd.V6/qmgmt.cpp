@@ -110,6 +110,12 @@ static Regex *queue_super_user_may_impersonate_regex = NULL;
 
 static void AddOwnerHistory(const MyString &user);
 
+typedef _condor_auto_accum_runtime< stats_entry_probe<double> > condor_auto_runtime;
+
+schedd_runtime_probe WalkJobQ_runtime;
+schedd_runtime_probe WalkJobQ_mark_idle_runtime;
+schedd_runtime_probe WalkJobQ_get_job_prio_runtime;
+
 class Service;
 
 bool        PrioRecArrayIsDirty = true;
@@ -611,7 +617,7 @@ InitQmgmt()
 	}
 
 	schedd_forker.Initialize();
-	int max_schedd_forkers = param_integer ("SCHEDD_QUERY_WORKERS",3,0);
+	int max_schedd_forkers = param_integer ("SCHEDD_QUERY_WORKERS",8,0);
 	schedd_forker.setMaxWorkers( max_schedd_forkers );
 
 	cluster_initial_val = param_integer("SCHEDD_CLUSTER_INITIAL_VALUE",1,1);
@@ -807,7 +813,7 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 
 		if( !SpooledJobFiles::createParentSpoolDirectories(job_ad) ) {
 			EXCEPT("Failed to create parent spool directories for "
-				   "%d.%d: %s: %s\n",
+				   "%d.%d: %s: %s",
 				   cluster,proc,new_path.c_str(),strerror(errno));
 		}
 
@@ -824,7 +830,7 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 				saved_priv = set_priv(PRIV_ROOT);
 
 				if( rename(old_tmp_path.c_str(),new_tmp_path.c_str())!= 0 ) {
-					EXCEPT("Failed to move %s to %s: %s\n",
+					EXCEPT("Failed to move %s to %s: %s",
 						   old_tmp_path.c_str(),
 						   new_tmp_path.c_str(),
 						   strerror(errno));
@@ -840,7 +846,7 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 		saved_priv = set_priv(PRIV_ROOT);
 
 		if( rename(old_path.c_str(),new_path.c_str())!= 0 ) {
-			EXCEPT("Failed to move %s to %s: %s\n",
+			EXCEPT("Failed to move %s to %s: %s",
 				   old_path.c_str(),
 				   new_path.c_str(),
 				   strerror(errno));
@@ -861,7 +867,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 	MyString spool;
 	if( !param(spool,"SPOOL") ) {
-		EXCEPT("SPOOL must be defined.\n");
+		EXCEPT("SPOOL must be defined.");
 	}
 
 	int spool_min_version = 0;
@@ -2393,11 +2399,32 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 	else if ( strcasecmp( attr_name, ATTR_JOB_STATUS ) == 0 ) {
 			// If the status is being set, let's record the previous
-			// status. If there is no status, we default to an unused
-			// value.
-		int status = 0;
-		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
-		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status, flags );
+			// status, but only if it's different.
+			// When changing the status of a HELD job that was previously
+			// REMOVED, enforce that it has to go back to REMOVED.
+		int curr_status = 0;
+		int last_status = 0;
+		int release_status = 0;
+		int new_status = (int)strtol( attr_value, NULL, 10 );
+
+		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &curr_status );
+		GetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, &last_status );
+		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS_ON_RELEASE, &release_status );
+
+		if ( new_status != HELD && new_status != REMOVED &&
+			 ( curr_status == REMOVED || last_status == REMOVED ||
+			   release_status == REMOVED ) ) {
+			dprintf( D_ALWAYS, "SetAttribute violation: Attempt to change %s of removed job %d.%d to %d\n",
+					 ATTR_JOB_STATUS, cluster_id, proc_id, new_status );
+			return -1;
+		}
+		if ( curr_status == REMOVED && new_status == HELD &&
+			 release_status != REMOVED ) {
+			SetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS_ON_RELEASE, REMOVED, flags );
+		}
+		if ( new_status != curr_status && curr_status > 0 ) {
+			SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, curr_status, flags );
+		}
 	}
 #if defined(ADD_TARGET_SCOPING)
 /* Disable AddTargetRefs() for now
@@ -4760,8 +4787,9 @@ bool InWalkJobQueue() {
 }
 
 void
-WalkJobQueue(scan_func func)
+WalkJobQueue3(scan_func func, void* pv, schedd_runtime_probe & ftm)
 {
+	double begin = _condor_debug_get_time_double();
 	ClassAd *ad;
 	int rval = 0;
 
@@ -4774,7 +4802,7 @@ WalkJobQueue(scan_func func)
 
 	ad = GetNextJob(1);
 	while (ad != NULL && rval >= 0) {
-		rval = func(ad);
+		rval = func(ad, pv);
 		if (rval >= 0) {
 			FreeJobAd(ad);
 			ad = GetNextJob(0);
@@ -4782,6 +4810,10 @@ WalkJobQueue(scan_func func)
 	}
 	if (ad != NULL)
 		FreeJobAd(ad);
+
+	double runtime = _condor_debug_get_time_double() - begin;
+	ftm += runtime;
+	WalkJobQ_runtime += runtime;
 
 	in_walk_job_queue--;
 }
@@ -4810,22 +4842,21 @@ void DirtyPrioRecArray() {
 
 // runtime stats for count & time spent building the priorec array
 //
-typedef _condor_auto_save_runtime< stats_entry_probe<double> > condor_auto_runtime;
-stats_entry_probe<double> build_priorec_runtime;
-stats_entry_probe<double> build_priorec_mark_runtime;
-stats_entry_probe<double> build_priorec_walk_runtime;
-stats_entry_probe<double> build_priorec_sort_runtime;
-stats_entry_probe<double> build_priorec_sweep_runtime;
+schedd_runtime_probe BuildPrioRec_runtime;
+schedd_runtime_probe BuildPrioRec_mark_runtime;
+schedd_runtime_probe BuildPrioRec_walk_runtime;
+schedd_runtime_probe BuildPrioRec_sort_runtime;
+schedd_runtime_probe BuildPrioRec_sweep_runtime;
 
 static void DoBuildPrioRecArray() {
-	condor_auto_runtime rt(build_priorec_runtime);
+	condor_auto_runtime rt(BuildPrioRec_runtime);
 	double now = rt.begin;
 	scheduler.autocluster.mark();
-	build_priorec_mark_runtime += rt.tick(now);
+	BuildPrioRec_mark_runtime += rt.tick(now);
 
 	N_PrioRecs = 0;
 	WalkJobQueue( get_job_prio );
-	build_priorec_walk_runtime += rt.tick(now);
+	BuildPrioRec_walk_runtime += rt.tick(now);
 
 		// N_PrioRecs might be 0, if we have no jobs to run at the
 		// moment.  If so, we don't want to call qsort(), since that's
@@ -4836,11 +4867,11 @@ static void DoBuildPrioRecArray() {
 	if( N_PrioRecs ) {
 		qsort( (char *)PrioRec, N_PrioRecs, sizeof(PrioRec[0]),
 			   (int(*)(const void*, const void*))prio_compar );
-		build_priorec_sort_runtime += rt.tick(now);
+		BuildPrioRec_sort_runtime += rt.tick(now);
 	}
 
 	scheduler.autocluster.sweep();
-	build_priorec_sweep_runtime += rt.tick(now);
+	BuildPrioRec_sweep_runtime += rt.tick(now);
 
 	if( !scheduler.shadow_prio_recs_consistent() ) {
 		scheduler.mail_problem_message();

@@ -215,7 +215,7 @@ produce_output()
 
 	if( MailFlag ) {
 		if( (mailer=email_open(PreenAdmin, subject.Value())) == NULL ) {
-			EXCEPT( "Can't do email_open(\"%s\", \"%s\")\n",PreenAdmin,subject.Value());
+			EXCEPT( "Can't do email_open(\"%s\", \"%s\")",PreenAdmin,subject.Value());
 		}
 	} else {
 		mailer = stdout;
@@ -801,17 +801,17 @@ init_params()
 {
 	Spool = param("SPOOL");
     if( Spool == NULL ) {
-        EXCEPT( "SPOOL not specified in config file\n" );
+        EXCEPT( "SPOOL not specified in config file" );
     }
 
 	Log = param("LOG");
     if( Log == NULL ) {
-        EXCEPT( "LOG not specified in config file\n" );
+        EXCEPT( "LOG not specified in config file" );
     }
 
 	DaemonSockDir = param("DAEMON_SOCKET_DIR");
 	if( DaemonSockDir == NULL ) {
-		EXCEPT("DAEMON_SOCKET_DIR not defined\n");
+		EXCEPT("DAEMON_SOCKET_DIR not defined");
 	}
 
 	char *Execute = param("EXECUTE");

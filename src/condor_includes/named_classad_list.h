@@ -29,7 +29,7 @@ class NamedClassAdList
 {
   public:
 	NamedClassAdList( void );
-	~NamedClassAdList( void );
+	virtual ~NamedClassAdList( void );
 
 	NamedClassAd *Find( const char *name );
 	NamedClassAd *Find( NamedClassAd &ad ) {

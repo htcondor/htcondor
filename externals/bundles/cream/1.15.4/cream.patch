@@ -1,0 +1,128 @@
+diff -u -r orig/src/AbsCreamProxy.cpp patched/src/AbsCreamProxy.cpp
+--- orig/src/AbsCreamProxy.cpp	2014-03-25 10:00:19.000000000 -0500
++++ patched/src/AbsCreamProxy.cpp	2014-08-25 15:27:29.014441900 -0500
+@@ -171,13 +171,13 @@
+       }
+       
+       
+-      if(!boost::filesystem::exists( boost::filesystem::path(m_certfile, boost::filesystem::native ) ) ) {
++      if(!boost::filesystem::exists( boost::filesystem::path(m_certfile ) ) ) {
+ 	glite_gsplugin_free_context( m_ctx );
+ 	m_ctx = NULL;
+ 	throw auth_ex("Missing certificate file [" + m_certfile + "]");
+       }
+ 	  
+-      if(!boost::filesystem::exists( boost::filesystem::path(m_keyfile, boost::filesystem::native ) ) ) {
++      if(!boost::filesystem::exists( boost::filesystem::path(m_keyfile ) ) ) {
+ 	glite_gsplugin_free_context( m_ctx );
+ 	m_ctx = NULL;
+ 	throw auth_ex("Missing key file [" + m_keyfile + "]");
+diff -u -r orig/src/CMakeLists.txt patched/src/CMakeLists.txt
+--- orig/src/CMakeLists.txt	2014-03-25 10:00:19.000000000 -0500
++++ patched/src/CMakeLists.txt	2014-08-25 15:43:57.720558512 -0500
+@@ -43,16 +43,12 @@
+ set(CMAKE_CXX_FLAGS_DEBUG "-g -Wall")
+ set(AUTODIR "autogen")
+ 
+-find_package(PkgConfig REQUIRED)
+-pkg_check_modules(GSOAP gsoapssl++)
+-pkg_check_modules(LOG4CPP log4cpp)
+-pkg_check_modules(VOMS voms-2.0)
+-pkg_check_modules(GRIDSITE_OPENSSL gridsite-openssl)
+-pkg_check_modules(CLASSAD emi-classad-ns)
+-pkg_check_modules(GLOBUS_GSSAPI_GSI globus-gssapi-gsi)
++# Instead of using PkgConfig to find the dependent packages, we'll
++# define the <pkg>_INCLUDE_DIRS macros on the command line.
++# Since we're making a static library, we don't care about the
++# library macros used for linking a shared library.
+ 
+ set(Boost_USE_MULTITHREADED ON)
+-find_package( Boost COMPONENTS date_time filesystem regex thread)
+ 
+ execute_process(COMMAND soapcpp2 -v
+                 ERROR_VARIABLE GSOAP_DISCLAIMER)
+@@ -79,6 +75,9 @@
+                     ${LOG4CPP_INCLUDE_DIRS}
+                     ${Boost_INCLUDE_DIRS}
+                     ${GLOBUS_GSSAPI_GSI_INCLUDE_DIRS}
++                    ${GLITE_GSS_INCLUDE_DIRS}
++                    ${GLITE_PLUGIN_INCLUDE_DIRS}
++                    ${GRIDSITE_OPENSSL_INCLUDE_DIRS}
+                     ${PROJECT_SOURCE_DIR}/interface
+                     ${CMAKE_CURRENT_BINARY_DIR}/${AUTODIR})
+ 
+@@ -91,7 +90,7 @@
+                                   -t ${CMAKE_CURRENT_SOURCE_DIR}/typemap.dat
+                                   ${WSDL_PATH}/org.glite.ce-cream2_service.wsdl 
+                                   ${WSDL_PATH}/www.gridsite.org-delegation-2.0.0.wsdl
+-                   COMMAND soapcpp2 -I/usr/include -I/usr/include/gsoap -I/usr/share/gsoap/import
++                   COMMAND soapcpp2 -I/usr/include -I${GSOAP_INCLUDE_DIRS} -I${GSOAP_INCLUDE_DIRS}/../share/gsoap/import
+                                     -p CREAM_CLIENT -n -d ${AUTODIR} ${AUTODIR}/glite/ce/cream-client-api-c/cream_service.h
+                    COMMAND sed 's|CREAM_CLIENTH.h|glite/ce/cream-client-api-c/cream_client_soapH.h|g' ${AUTODIR}/CREAM_CLIENT.nsmap 
+                            > ${AUTODIR}/glite/ce/cream-client-api-c/CREAM_CLIENT.nsmap
+@@ -101,7 +100,7 @@
+ 
+ add_custom_target(cream_stubs ALL DEPENDS ${AUTODIR}/CREAM_CLIENTClient.cpp ${AUTODIR}/CREAM_CLIENTC.cpp)
+ 
+-add_library(glite_ce_cream_client_soap SHARED ${AUTODIR}/CREAM_CLIENTClient.cpp
++add_library(glite_ce_cream_client_soap STATIC ${AUTODIR}/CREAM_CLIENTClient.cpp
+                                               ${AUTODIR}/CREAM_CLIENTC.cpp
+                                               ExceptionFactory.cpp
+                                               JobInfoWrapper.cpp
+@@ -131,8 +130,6 @@
+                                               CreamProxy_AcceptNewJobSubmissions.cpp
+                                               CreamProxy_QueryEvent.cpp)
+ 
+-set_target_properties(glite_ce_cream_client_soap PROPERTIES VERSION 0.0.0 SOVERSION 0)
+-
+ target_link_libraries(glite_ce_cream_client_soap ${CLASSAD_LIBRARIES}
+                                                  ${VOMS_LIBRARIES}
+                                                  ${GSOAP_LIBRARIES}
+@@ -141,7 +138,7 @@
+                                                  ${Boost_LIBRARIES})
+ 
+ 
+-add_library(glite_ce_cream_client_util SHARED CEUrl.cpp
++add_library(glite_ce_cream_client_util STATIC CEUrl.cpp
+                                               creamApiLogger.cpp
+                                               job_statuses.cpp
+                                               ConfigurationManager.cpp
+@@ -149,8 +146,6 @@
+                                               scoped_timer.cpp
+                                               VOMSWrapper.cpp)
+ 
+-set_target_properties(glite_ce_cream_client_util PROPERTIES VERSION 0.0.0 SOVERSION 0)
+-
+ target_link_libraries(glite_ce_cream_client_util ${CLASSAD_LIBRARIES}
+                                                  ${VOMS_LIBRARIES}
+                                                  ${GSOAP_LIBRARIES}
+@@ -159,7 +154,7 @@
+                                                  ${Boost_LIBRARIES})
+ 
+ install(TARGETS glite_ce_cream_client_soap glite_ce_cream_client_util
+-        LIBRARY DESTINATION usr/${LIBSUBDIR})
++        ARCHIVE DESTINATION usr/lib)
+ 
+ install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${AUTODIR}/glite/ce/cream-client-api-c/
+         DESTINATION usr/include/glite/ce/cream-client-api-c
+diff -u -r orig/src/ConfigurationManager.cpp patched/src/ConfigurationManager.cpp
+--- orig/src/ConfigurationManager.cpp	2014-03-25 10:00:19.000000000 -0500
++++ patched/src/ConfigurationManager.cpp	2014-08-25 15:36:47.462007940 -0500
+@@ -26,7 +26,7 @@
+ #include <unistd.h>
+ #include <cerrno>
+ 
+-#include "classad_distribution.h"
++#include "classad/classad_distribution.h"
+ #include "glite/ce/cream-client-api-c/creamApiLogger.h"
+ #include "glite/ce/cream-client-api-c/ConfigurationManager.h"
+ 
+@@ -150,7 +150,7 @@
+ 
+ //       else throw util::file_ex(strerror(saveerr));
+ //     }
+-  if(!boost::filesystem::exists( boost::filesystem::path(filename, boost::filesystem::native) ))
++  if(!boost::filesystem::exists( boost::filesystem::path(filename) ))
+     throw util::file_ex( string("file")+ filename + " doest not exist");
+   
+   ifstream input( filename );

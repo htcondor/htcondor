@@ -1,4 +1,3 @@
-##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
@@ -124,7 +123,7 @@ sub SetHandle
 {
 	my $handle = shift;
 	$submit_info{'handle'} = $handle;
-	print "Setting handle to $handle\n";;
+	#print "Setting handle to $handle\n";;
 }
 
 

@@ -55,32 +55,7 @@ sysapi_disk_space_raw(const char *filename)
 		&TotalNumberOfFreeBytes) == 0) {
 		return -1;
 	} else {
-#if 1
-		return FreeBytesAvailableToCaller.QuadPart;
-#else
-		// we have to shift everything down 10 bits since we report the number
-		// of kbytes free. There's a HighPart and a LowPart, so it gets a little ugly.
-
-		// first shift the low part (divide by 1024 to get it into kbytes)
-		t_lo = FreeBytesAvailableToCaller.LowPart;
-		t_lo = t_lo >> 10;
-		// now grab the lowest 10 bits in the high part
-		t_hi = FreeBytesAvailableToCaller.HighPart;
-		temp = lowest_ten_mask & t_hi;
-		// shift the high part 10 bits to get it into kbytes
-		t_hi = t_hi >> 10;
-		
-		// shift the lowest 10 bits from the high part up to the 
-		// highest 10 bits, and stick them into the low part
-		temp = temp << 22;
-		t_lo |= temp;
-
-		if (t_hi > 0) {
-			return INT_MAX;
-		} else {
-			return (int)t_lo;
-		}
-#endif
+		return FreeBytesAvailableToCaller.QuadPart / 1024;
 	}
 }
 
@@ -198,13 +173,8 @@ long long sysapi_disk_space_raw(const char * filename)
 #else
 	struct statfs statfsbuf;
 #endif
-#if 1
 	long long free_kbytes;
 	double kbytes_per_block;
-#else
-	double free_kbytes;
-	float kbytes_per_block;
-#endif
 
 	sysapi_internal_reconfig();
 
@@ -245,15 +215,7 @@ long long sysapi_disk_space_raw(const char * filename)
 	kbytes_per_block = ( (unsigned long)statfsbuf.f_bsize / 1024.0 );
 #endif
 
-#if 1
 	free_kbytes = (long long)(statfsbuf.f_bavail * kbytes_per_block);
-#else
-	free_kbytes = (double)statfsbuf.f_bavail * (double)kbytes_per_block; 
-	if(free_kbytes > INT_MAX) {
-		dprintf( D_ALWAYS, "sysapi_disk_space_raw: Free disk space kbytes overflow, capping to INT_MAX\n");
-		return(INT_MAX);
-	}
-#endif
 
 	return free_kbytes;
 }

@@ -523,12 +523,18 @@ VirshType::Suspend()
 	int result = virDomainSave(dom, tmpfilename.Value());
 	virDomainFree(dom);
 	set_priv(priv);
+
 	if( result != 0 ) {
-		// Read error output
-// 		char *temp = cmd_out.print_to_delimed_string("/");
-// 		m_result_msg = temp;
-// 		free( temp );
 		unlink(tmpfilename.Value());
+		return false;
+	}
+
+	priv = set_root_priv();
+	result = chown( tmpfilename.Value(), get_user_uid(), get_user_gid() );
+	set_priv( priv );
+
+	if( result != 0 ) {
+		dprintf( D_ALWAYS, "Error changing ownership of checkpoint: %d (%s), failing.\n", errno, strerror( errno ) );
 		return false;
 	}
 
@@ -728,9 +734,20 @@ VirshType::Status()
 	    m_result_msg += " " VMGAHP_STATUS_COMMAND_CPUTIME "=";
 	    m_result_msg += m_cpu_time;
 
-	    LastCpuTime = CurrentCpuTime; 
+	    LastCpuTime = CurrentCpuTime;
 	    LastStamp = CurrentStamp;
-	    
+
+	    // Memory usage is in kbytes.
+	    if( info->memory != 0 ) {
+	    	m_result_msg += " " VMGAHP_STATUS_COMMAND_MEMORY "=";
+	    	m_result_msg += (long long)(info->memory);
+	    }
+
+	    if( info->maxMem != 0 ) {
+	    	m_result_msg += " " VMGAHP_STATUS_COMMAND_MAX_MEMORY "=";
+	    	m_result_msg += (long long)(info->maxMem);
+	    }
+
 	    virDomainFree(dom);
 	    return true;
 	  }
@@ -1677,7 +1694,7 @@ KVMType::CreateConfigFile()
 	if( m_classAd.LookupString(VMPARAM_VM_DISK, kvm_disk) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n",
 				VMPARAM_VM_DISK);
-		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM;
+		m_result_msg = VMGAHP_ERR_JOBCLASSAD_KVM_NO_DISK_PARAM;
 		return false;
 	}
 	kvm_disk.trim();

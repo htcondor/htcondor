@@ -31,7 +31,8 @@ typedef struct {
 	bool dummy;
 } Qmgr_connection;
 
-typedef int (*scan_func)(ClassAd *ad);
+typedef int (*scan_func)(ClassAd *ad, void* user);
+typedef int (*obsolete_scan_func)(ClassAd *ad);
 
 typedef unsigned char SetAttributeFlags_t;
 const SetAttributeFlags_t NONDURABLE = (1<<0); // do not fsync
@@ -303,7 +304,10 @@ int SendSpoolFileBytes(char const *filename);
 int SendSpoolFileIfNeeded(ClassAd& ad);
 
 /* This function is not reentrant!  Do not call it recursively. */
-void WalkJobQueue(scan_func);
+class schedd_runtime_probe;
+void WalkJobQueue3(scan_func fn, void* pv, schedd_runtime_probe & ftm);
+// convert calls to the old walkjobqueue function into the new form automatically
+#define WalkJobQueue(fn) WalkJobQueue3( (scan_func)(fn), NULL, WalkJobQ_ ## fn ## _runtime )
 
 bool InWalkJobQueue();
 

@@ -246,12 +246,12 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 				dprintf(D_SYSCALLS | D_VERBOSE,"File %s maps to url %s, peer version is %d.%d.%d\n", path, url, 
 					    vi ? vi->getMajorVer() : 0, vi ? vi->getMinorVer() : 0, vi ? vi->getSubMinorVer() : 0);
 				if (vi && ! vi->built_since_version(7,9,6)) {
-					EXCEPT("File %s maps to url %s, which I don't know how to open.\n",path,url);
+					EXCEPT("File %s maps to url %s, which I don't know how to open.",path,url);
 				}
 				strncpy(path,url,CHIRP_LINE_MAX);
 			}
 		} else {
-			EXCEPT("Unable to map file %s to a url: %s\n",path,strerror(errno));
+			EXCEPT("Unable to map file %s to a url: %s",path,strerror(errno));
 		}
 
 		dprintf(D_SYSCALLS,"Which simplifies to file %s\n",path);

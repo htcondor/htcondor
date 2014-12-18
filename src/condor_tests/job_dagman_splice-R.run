@@ -18,6 +18,9 @@
 ##
 ##**************************************************************
 
+# This tests gittrac #1780: VARS values in top-level DAG should be able
+# to be applied to splice.
+
 use CondorTest;
 use CondorUtils;
 
@@ -45,17 +48,17 @@ sub RUNNING{2};
 
 $abnormal = sub 
 {
-	die "Want to see only submit, execute and successful completion\n";
+	die "ERROR: Want to see only submit, execute and successful completion\n";
 };
 
 $aborted = sub 
 {
-	die "Abort event NOT expected\n";
+	die "ERROR: Abort event NOT expected\n";
 };
 
 $held = sub 
 {
-	die "Held event NOT expected\n";
+	die "ERROR: Held event NOT expected\n";
 };
 
 $executed = sub
@@ -72,11 +75,11 @@ $submitted = sub
 
 $success = sub
 {
-	open INPUT, "<job_dagman_splice-R-lower.out" || die "Could not open job_dagman_splice-R-lower.out";
+	open INPUT, "<job_dagman_splice-R-lower.out" || die "ERROR: Could not open job_dagman_splice-R-lower.out";
 	my @input = <INPUT>;
-	die "Expected only one line in job_dagman_splice-R-lower.out\n" if ((scalar @input)>1);
+	die "ERROR: Expected only one line in job_dagman_splice-R-lower.out\n" if ((scalar @input)>1);
 	chomp(@input);
-	die "Expected only to see \"bar\" in job_dagman_splice-R-lower.out\n" if($input[0] ne "bar");
+	die "ERROR: Expected only to see \"bar\" in job_dagman_splice-R-lower.out\n" if($input[0] ne "bar");
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);

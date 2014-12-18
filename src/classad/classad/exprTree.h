@@ -48,6 +48,7 @@ class EvalState {
 
 		bool		flattenAndInline;	// NAC
 		bool		debug;
+		bool		inAttrRefScope;
 
 		// Cache_to_free are the things in the cache that must be
 		// freed when this gets deleted. The problem is that we put

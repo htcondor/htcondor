@@ -67,7 +67,8 @@ usage(int retval = 1)
 		"\t-version\tPrint HTCondor version and exit\n"
 		"\t-config\t\tPrint configured routes\n"
 		"\t-match-jobs\tMatch jobs to routes and print the first match\n"
-		"\t-job-ads <file>\tWhen operation requires job ClassAds, Read them from <file>\n"
+		"\t-ignore-prior-routing\tRemove routing attributes from the job ClassAd and set JobStatus to IDLE before matching\n"
+		"\t-jobads <file>\tWhen operation requires job ClassAds, Read them from <file>\n\t\t\tIf <file> is -, read from stdin\n"
 		"\n"
 		);
 	my_exit(retval);
@@ -85,11 +86,29 @@ static const char * use_next_arg(const char * arg, const char * argv[], int & i)
 	return NULL;
 }
 
+static StringList saved_dprintfs;
+static void print_saved_dprintfs(FILE* hf)
+{
+	saved_dprintfs.rewind();
+	const char * line;
+	while ((line = saved_dprintfs.next())) {
+		fprintf(hf, "%s", line);
+	}
+	saved_dprintfs.clearAll();
+}
+
+
 bool g_silence_dprintf = false;
+bool g_save_dprintfs = false;
 void _dprintf_intercept(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo)
 {
 	//if (cat_and_flags & D_FULLDEBUG) return;
-	if (g_silence_dprintf) return;
+	if (g_silence_dprintf) {
+		if (g_save_dprintfs) {
+			saved_dprintfs.append(message);
+		}
+		return;
+	}
 	if (is_arg_prefix("JobRouter", message, 9)) { message += 9; if (*message == ':') ++message; if (*message == ' ') ++message; }
 	int cch = strlen(message);
 	fprintf(stdout, &"\n%s"[(cch > 150) ? 0 : 1], message);
@@ -136,6 +155,7 @@ int main(int argc, const char *argv[])
 	bool dash_match_jobs = false;
 	bool dash_diagnostic = false;
 	bool dash_d_always = true;
+	bool dash_ignore_prior_routing = false;
 	//bool dash_d_fulldebug = false;
 
 	g_jobs = new classad::ClassAdCollection();
@@ -159,8 +179,10 @@ int main(int argc, const char *argv[])
 			dash_config = true;
 		} else if (is_dash_arg_prefix(argv[i], "match-jobs", 2)) {
 			dash_match_jobs = true;
-		} else if (is_dash_arg_prefix(argv[i], "job-ads", 1)) {
-			const char * filename = use_next_arg("job-ads", argv, i);
+		} else if (is_dash_arg_prefix(argv[i], "ignore-prior-routing", 2)) {
+			dash_ignore_prior_routing = true;
+		} else if (is_dash_arg_prefix(argv[i], "jobads", 1)) {
+			const char * filename = use_next_arg("jobads", argv, i);
 			job_files.append(filename);
 		} else if (*argv[i] != '-') {
 			// arguments that don't begin with "-" are bare arguments
@@ -191,10 +213,18 @@ int main(int argc, const char *argv[])
 	}
 
 	g_silence_dprintf = dash_diagnostic ? false : true;
+	g_save_dprintfs = true;
 	JobRouter job_router(true);
 	job_router.set_schedds(schedd, schedd2);
 	job_router.init();
 	g_silence_dprintf = false;
+	g_save_dprintfs = false;
+
+	// if the job router is not enabled at this point, say so, and print out saved dprintfs.
+	if ( ! job_router.isEnabled()) {
+		print_saved_dprintfs(stderr);
+		fprintf(stderr, "JobRouter is disabled.\n");
+	}
 
 	if (dash_config) {
 		fprintf (stdout, "\n\n");
@@ -205,8 +235,25 @@ int main(int argc, const char *argv[])
 		job_files.rewind();
 		const char * filename;
 		while ((filename = job_files.next())) {
-			 read_classad_file(filename, *g_jobs, NULL);
+			read_classad_file(filename, *g_jobs, NULL);
 		}
+	}
+
+	if (dash_ignore_prior_routing) {
+		// strip attributes that indicate that the job has already been routed
+		std::string key;
+		classad::LocalCollectionQuery query;
+		query.Bind(g_jobs);
+		query.Query("root");
+		query.ToFirst();
+		if (query.Current(key)) do {
+			classad::ClassAd *ad = g_jobs->GetClassAd(key);
+			ad->Delete("Managed");
+			ad->Delete("RoutedBy");
+			ad->Delete("StageInStart");
+			ad->Delete("StageInFinish");
+			ad->InsertAttr("JobStatus", 1); // pretend job is idle so that it will route.
+		} while (query.Next(key));
 	}
 
 	if (dash_match_jobs) {
@@ -300,7 +347,14 @@ static bool read_classad_file(const char *filename, classad::ClassAdCollection &
 {
 	bool success = false;
 
-	FILE* file = safe_fopen_wrapper_follow(filename, "r");
+	FILE* file = NULL;
+	bool  read_from_stdin = false;
+	if (MATCH == strcmp(filename, "-")) {
+		read_from_stdin = true;
+		file = stdin;
+	} else {
+		file = safe_fopen_wrapper_follow(filename, "r");
+	}
 	if (file == NULL) {
 		fprintf(stderr, "Can't open file of job ads: %s\n", filename);
 		return false;
@@ -350,7 +404,7 @@ static bool read_classad_file(const char *filename, classad::ClassAdCollection &
 			}
 		}
 
-		fclose(file);
+		if ( ! read_from_stdin) { fclose(file); }
 	}
 	return success;
 }
@@ -405,7 +459,7 @@ unsigned int hashFuncStdString( std::string const & key)
 }
 
 // 
-JobRouterHookMgr::JobRouterHookMgr() : HookClientMgr(), NUM_HOOKS(0), UNDEFINED("UNDEFINED"), m_hook_paths(MyStringHash) {}
+JobRouterHookMgr::JobRouterHookMgr() : HookClientMgr(), NUM_HOOKS(0), UNDEFINED("UNDEFINED"), m_default_hook_keyword(NULL), m_hook_paths(MyStringHash) {}
 JobRouterHookMgr::~JobRouterHookMgr() {};
 bool JobRouterHookMgr::initialize() { reconfig(); return true; /*HookClientMgr::initialize()*/; }
 bool JobRouterHookMgr::reconfig() { m_default_hook_keyword = param("JOB_ROUTER_HOOK_KEYWORD"); return true; }

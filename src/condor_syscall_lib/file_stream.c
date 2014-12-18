@@ -61,13 +61,13 @@ int open_file_stream( const char *file, int flags, size_t *len )
 	mode = REMOTE_CONDOR_file_info((char*)file, &pipe_fd, &local_path );
 
 	if( mode < 0 ) {
-		EXCEPT( "CONDOR_file_info failed in open_file_stream\n" );
+		EXCEPT( "CONDOR_file_info failed in open_file_stream" );
 	}
 
 	if( mode == IS_PRE_OPEN ) {
 		fprintf( stderr, "CONDOR ERROR: The shadow says a stream file "
 				 "is a pre-opened pipe!\n" );
-		EXCEPT( "The shadow says a stream file is a pre-opened pipe!\n" );
+		EXCEPT( "The shadow says a stream file is a pre-opened pipe!" );
 	}
 
 		/* Try to access it using local system calls */

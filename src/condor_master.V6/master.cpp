@@ -1164,6 +1164,25 @@ StopStateT StringToStopState(const char * psz)
 time_t
 GetTimeStamp(char* file)
 {
+#ifdef WIN32
+	ULARGE_INTEGER nanos;
+	HANDLE hfile = CreateFile(file, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+	if (hfile == INVALID_HANDLE_VALUE) {
+		return (time_t)-1;
+	} else {
+		BOOL fGotTime = GetFileTime(hfile, NULL, NULL, (FILETIME*)&nanos);
+		CloseHandle(hfile);
+		if ( ! fGotTime) {
+			return (time_t)-1;
+		}
+	}
+	// Windows filetimes are in 100 nanosecond intervals since January 1, 1601 (UTC)
+	// NOTE: FAT records times on-disk in localtime, so daylight savings time can end up changing what is reported
+	// the good news is NTFS stores UTC, so it doesn't have that problem.
+	ULONGLONG nt_sec = nanos.QuadPart / (10 * 1000 * 1000); // convert to seconds,
+	time_t epoch_sec = nt_sec - 11644473600; // convert from Windows 1600 epoch, to unix 1970 epoch
+	return epoch_sec;
+#else
 	struct stat sbuf;
 	
 	if( stat(file, &sbuf) < 0 ) {
@@ -1171,6 +1190,7 @@ GetTimeStamp(char* file)
 	}
 	
 	return( sbuf.st_mtime );
+#endif
 }
 
 
@@ -1214,7 +1234,7 @@ run_preen()
 
 	args = param("PREEN_ARGS");
 	if(!arglist.AppendArgsV1RawOrV2Quoted(args,&error_msg)) {
-		EXCEPT("ERROR: failed to parse preen args: %s\n",error_msg.Value());
+		EXCEPT("ERROR: failed to parse preen args: %s",error_msg.Value());
 	}
 	free(args);
 
@@ -1282,6 +1302,10 @@ main_pre_command_sock_init()
 			SharedPortServer::RemoveDeadAddressFile();
 		}
 	}
+
+	if ( param_boolean( "USE_SHARED_PORT", false ) ) {
+		SharedPortEndpoint::InitializeDaemonSocketDir();
+	}
 }
 
 #ifdef WIN32
@@ -1316,7 +1340,6 @@ main( int argc, char **argv )
 #endif
 
 	set_mySubSystem( "MASTER", SUBSYSTEM_TYPE_MASTER );
-	SharedPortEndpoint::InitializeDaemonSocketDir();
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

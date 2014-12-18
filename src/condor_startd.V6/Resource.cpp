@@ -2404,6 +2404,7 @@ Resource::publish_private( ClassAd *ad )
 
 	if (get_feature() == PARTITIONABLE_SLOT) {
 		ad->AssignExpr(ATTR_CHILD_CLAIM_IDS, makeChildClaimIds().c_str());
+		ad->Assign(ATTR_NUM_DYNAMIC_SLOTS, m_children.size());
 	}
 }
 
@@ -3435,13 +3436,14 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 void
 Resource::publishDynamicChildSummaries(ClassAd *cap) {
 
-		// If set, turn off the whole thing
-	if (param_boolean("ALLOW_PSLOT_PREEMPTION", true) == false) {
+	cap->Assign(ATTR_NUM_DYNAMIC_SLOTS, m_children.size());
+
+		// If not set, turn off the whole thing
+	if (param_boolean("ALLOW_PSLOT_PREEMPTION", false) == false) {
 		return;
 	}
 
-	cap->Assign(ATTR_NUM_DYNAMIC_SLOTS, m_children.size());
-	cap->AssignExpr(ATTR_CHILD_CLAIM_IDS, makeChildClaimIds().c_str());
+	//cap->AssignExpr(ATTR_CHILD_CLAIM_IDS, makeChildClaimIds().c_str());
 
 	// List of attrs to rollup from dynamic ads into lists
 	// in the partitionable ad

@@ -214,8 +214,10 @@ public:
 	
 	ClassAd*	totals_classad;
 	ClassAd*	config_classad;
+	ClassAd*	extras_classad;
 
 	void		init_config_classad( void );
+	void		updateExtrasClassAd( ClassAd * cap );
 
 	void		addResource( Resource* );
 	bool		removeResource( Resource* );

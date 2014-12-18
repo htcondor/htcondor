@@ -374,7 +374,8 @@ Sinful::regenerateSinful()
 	// generate "<host:port?params>"
 
 	m_sinful = "<";
-	if (m_host.find(':') != std::string::npos) {
+	if (m_host.find(':') != std::string::npos &&
+		m_host.find('[') == std::string::npos) {
 		m_sinful += "[";
 		m_sinful += m_host;
 		m_sinful += "]";

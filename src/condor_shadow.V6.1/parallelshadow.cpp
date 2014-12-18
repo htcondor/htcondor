@@ -217,10 +217,10 @@ ParallelShadow::getResources( void )
 		
 	sock->encode();
 	if( ! sock->code(job_cluster) ) {
-		EXCEPT( "Can't send cluster (%d) to schedd\n", job_cluster );
+		EXCEPT( "Can't send cluster (%d) to schedd", job_cluster );
 	}
 	if( ! sock->code(claim_id) ) {
-		EXCEPT( "Can't send ClaimId to schedd\n" );
+		EXCEPT( "Can't send ClaimId to schedd" );
 	}
 
 		// Now that we sent this, free the memory that was allocated
@@ -229,7 +229,7 @@ ParallelShadow::getResources( void )
 	claim_id = NULL;
 
 	if( ! sock->end_of_message() ) {
-		EXCEPT( "Can't send EOM to schedd\n" );
+		EXCEPT( "Can't send EOM to schedd" );
 	}
 	
 		// Ok, that's all we need to send, now we can read the data

@@ -107,7 +107,19 @@ Select which configuration to use for the \SubmitCmdNI{ec2} grid type
 with the \SubmitCmd{ec2\_instance\_type} submit description file command.
 HTCondor provides no default.
 
-Each virtual machine instance can be given up to 16Kbytes of unique data, 
+Certain instance types provide additional block devices whose names must be
+mapped on to kernel device names in order to be used.  The
+\SubmitCmd{ec2\_block\_device\_mapping} submit description file command
+allows you to specify these maps.  A map is a device name followed by a
+colon followed by kernel name; maps are separated by commas or space.  For
+instance, to specify that the first ephemeral device should be \Expr{/dev/sdb}
+and the second \Expr{/dev/sdc}:
+
+\begin{verbatim}
+ec2_block_device_mapping = ephemeral0:/dev/sdb, ephemeral1:/dev/sdc
+\end{verbatim}
+
+Each virtual machine instance can be given up to 16 KiB of unique data, 
 accessible by the instance by connecting to a well-known address.
 This makes it easy for many instances to share the same VM image,
 but perform different work.

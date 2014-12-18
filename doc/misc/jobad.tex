@@ -23,7 +23,6 @@ information about accounting groups.
 accounting group.  This attribute is only present if an
 accounting group was requested by the submission.
 
-%%% ClassAd attribute: HoldKillSig
 %%% ClassAd attribute: AllRemoteHosts
 \index{ClassAd job attribute!AllRemoteHosts}
 \index{AllRemoteHosts!job ClassAd attribute}
@@ -53,7 +52,7 @@ PBS, LSF or SGE, the name of the queue in the remote batch system.
 %%% ClassAd attribute: BlockReadKbytes
 \index{ClassAd job attribute!BlockReadKbytes}
 \index{BlockReadKbytes!job ClassAd attribute}
-\item[\AdAttr{BlockReadKbytes}:] The integer number of Kbytes
+\item[\AdAttr{BlockReadKbytes}:] The integer number of KiB
 read from disk for this job.
 
 %%% ClassAd attribute: BlockReads
@@ -65,7 +64,7 @@ read for this job.
 %%% ClassAd attribute: BlockWriteKbytes
 \index{ClassAd job attribute!BlockWriteKbytes}
 \index{BlockWriteKbytes!job ClassAd attribute}
-\item[\AdAttr{BlockWriteKbytes}:] The integer number of Kbytes
+\item[\AdAttr{BlockWriteKbytes}:] The integer number of KiB
 written to disk for this job.
 
 %%% ClassAd attribute: BlockWrites
@@ -393,7 +392,7 @@ with the Deltacloud service for a grid-type deltacloud job.
 %%% ClassAd attribute: DiskUsage
 \index{ClassAd job attribute!DiskUsage}
 \index{DiskUsage!job ClassAd attribute}
-\item[\AdAttr{DiskUsage}:] Amount of disk space (Kbytes) in the HTCondor
+\item[\AdAttr{DiskUsage}:] Amount of disk space (KiB) in the HTCondor
 execute directory on the execute machine that this job has used.
 An initial value may be set at the job's request, placing into the
 job's submit description file a setting such as
@@ -425,6 +424,16 @@ Used for grid type ec2 jobs;
 a string taken from the definition of the submit description file command
 \SubmitCmd{ec2\_ami\_id}.
 Identifies the machine image of the instance.
+
+%%% ClassAd attribute: EC2BlockDeviceMapping
+\index{ClassAd job attribute!EC2BlockDeviceMapping}
+\index{EC2BlockDeviceMapping!job ClassAd attribute}
+\item[\AdAttr{EC2BlockDeviceMapping}:] 
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_block\_device\_mapping}.
+Defines the map from block device names to kernel device names
+for the instance.
 
 %%% ClassAd attribute: EC2ElasticIp
 \index{ClassAd job attribute!EC2ElasticIp}
@@ -575,22 +584,22 @@ will equal the number of seconds that the job has been on hold.
 
 %%% ClassAd attribute: Env
 \index{ClassAd job attribute!Env}
-\index{Args!job ClassAd attribute}
-\item[\AdAttr{Args}:]  A string representing the environment variables 
+\index{Env!job ClassAd attribute}
+\item[\AdAttr{Env}:]  A string representing the environment variables 
 passed to the job, when those arguments are specified using the
 \emph{old} syntax, as specified in section~\ref{man-condor-submit-environment}.
 
 %%% ClassAd attribute: Environment
 \index{ClassAd job attribute!Environment}
-\index{Arguments!job ClassAd attribute}
-\item[\AdAttr{Arguments}:]  A string representing the environment variables
+\index{Environment!job ClassAd attribute}
+\item[\AdAttr{Environment}:]  A string representing the environment variables
 passed to the job, when those arguments are specified using the
 \emph{new} syntax, as specified in section~\ref{man-condor-submit-environment}.
 
 %%% ClassAd attribute: ExecutableSize
 \index{ClassAd job attribute!ExecutableSize}
 \index{ExecutableSize!job ClassAd attribute}
-\item[\AdAttr{ExecutableSize}:]  Size of the executable in Kbytes.
+\item[\AdAttr{ExecutableSize}:]  Size of the executable in KiB.
 
 %%% ClassAd attribute: ExitBySignal
 \index{ClassAd job attribute!ExitBySignal}
@@ -710,6 +719,7 @@ It can be used to determine if a job should be released or not.
 %%% ClassAd attribute: HoldReasonCode
 \index{ClassAd job attribute!HoldReasonCode}
 \index{HoldReasonCode!job ClassAd attribute}
+\label{HoldReasonCode-job-attribute}
 \item[\AdAttr{HoldReasonCode}:]    An integer value that represents the
 reason that a job was put on hold.
 
@@ -787,7 +797,7 @@ a set of job hooks, and added to the ClassAd once a job is fetched.
 \index{ImageSize!job ClassAd attribute}
 \item[\AdAttr{ImageSize}:]  Maximum observed memory image size
 (i.e. virtual memory) of the
-job in Kbytes.  The initial value is equal to the size of the
+job in KiB.  The initial value is equal to the size of the
 executable for non-vm universe jobs, and 0 for vm universe jobs.
 When the job writes a checkpoint, the \AdAttr{ImageSize}
 attribute is set to the size of the checkpoint file (since the
@@ -1307,6 +1317,12 @@ must not form a cyclic removal of jobs,
 or the \Condor{schedd} will go into an infinite loop 
 when any of the jobs is removed.
 
+%%% ClassAd attribute: OutputDestination
+\index{ClassAd job attribute!OutputDestination}
+\index{OutputDestination!job ClassAd attribute}
+\item[\AdAttr{OutputDestination}:]  A URL, as defined by submit command
+\SubmitCmdNI{output\_destination}.
+
 %%% ClassAd attribute: Owner
 \index{ClassAd job attribute!Owner}
 \index{Owner!job ClassAd attribute}
@@ -1358,7 +1374,7 @@ system PIDs.
 \index{ProportionalSetSizeKb!job ClassAd attribute}
 \item[\AdAttr{ProportionalSetSizeKb}:]
 On Linux execute machines with kernel version more recent than 2.6.27,
-this is the maximum observed proportional set size (PSS) in Kbytes,
+this is the maximum observed proportional set size (PSS) in KiB,
 summed across all processes in the job.
 If the execute machine does not
 support monitoring of PSS or PSS has not yet been measured,
@@ -1380,7 +1396,7 @@ number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 %%% ClassAd attribute: RecentBlockReadKbytes
 \index{ClassAd job attribute!RecentBlockReadKbytes}
 \index{RecentBlockReadKbytes!job ClassAd attribute}
-\item[\AdAttr{RecentBlockReadKbytes}:] The integer number of Kbytes
+\item[\AdAttr{RecentBlockReadKbytes}:] The integer number of KiB
 read from disk for this job over the previous time interval defined
 by configuration variable \MacroNI{STATISTICS\_WINDOW\_SECONDS}.
 
@@ -1394,7 +1410,7 @@ by configuration variable \MacroNI{STATISTICS\_WINDOW\_SECONDS}.
 %%% ClassAd attribute: RecentBlockWriteKbytes
 \index{ClassAd job attribute!RecentBlockWriteKbytes}
 \index{RecentBlockWriteKbytes!job ClassAd attribute}
-\item[\AdAttr{RecentBlockWriteKbytes}:] The integer number of Kbytes
+\item[\AdAttr{RecentBlockWriteKbytes}:] The integer number of KiB
 written to disk for this job over the previous time interval defined
 by configuration variable \MacroNI{STATISTICS\_WINDOW\_SECONDS}.
 
@@ -1475,7 +1491,7 @@ it is the minimum number of CPUs that are needed in the created dynamic slot.
 %%% ClassAd attribute: RequestDisk
 \index{ClassAd job attribute!RequestDisk}
 \index{RequestDisk!job ClassAd attribute}
-\item[\AdAttr{RequestDisk}:]  The amount of disk space in Kbytes requested 
+\item[\AdAttr{RequestDisk}:]  The amount of disk space in KiB requested 
 for this job.
 If dynamic \Condor{startd} provisioning is enabled,
 it is the minimum amount of disk space needed in the created dynamic slot.
@@ -1500,7 +1516,7 @@ configuration variable \Macro{JOB\_DEFAULT\_REQUESTMEMORY}.
 \index{ClassAd job attribute!ResidentSetSize}
 \index{ResidentSetSize!job ClassAd attribute}
 \item[\AdAttr{ResidentSetSize}:]  Maximum observed
-physical memory in use by the job in Kbytes while running.
+physical memory in use by the job in KiB while running.
 
 %%% ClassAd attribute: StackSize
 \index{ClassAd job attribute!StackSize}
