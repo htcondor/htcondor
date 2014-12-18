@@ -406,6 +406,12 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 		// reconnected, we can safely log our reconnect event
 	logReconnectedEvent();
 
+		// Since our reconnect worked, clear attemptingReconnectAtStartup
+		// flag so if we disconnect again and fail, we will exit
+		// with JOB_SHOULD_REQUEUE instead of JOB_RECONNECT_FAILED.
+		// See gt #4783.
+	attemptingReconnectAtStartup = false;
+
 		// Update NumJobReconnects in the schedd
 		// TODO Should we do the update through the job_updater?
 	int job_reconnect_cnt = 0;
