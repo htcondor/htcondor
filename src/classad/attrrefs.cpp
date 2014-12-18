@@ -167,13 +167,11 @@ _Evaluate (EvalState &state, Value &val) const
 			return false;
 
 		case EVAL_ERROR:
-		case PROP_ERROR:
 			val.SetErrorValue();
 			state.curAd = curAd;
 			return true;
 
 		case EVAL_UNDEF:
-		case PROP_UNDEF:
 			val.SetUndefinedValue();
 			state.curAd = curAd;
 			return true;
@@ -219,12 +217,10 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 			break;
 
 		case EVAL_ERROR:
-		case PROP_ERROR:
 			val.SetErrorValue( );
 			break;
 
 		case EVAL_UNDEF:
-		case PROP_UNDEF:
 			val.SetUndefinedValue( );
 			break;
 
@@ -276,13 +272,11 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 			return false;
 
 		case EVAL_ERROR:
-		case PROP_ERROR:
 			val.SetErrorValue();
 			state.curAd = curAd;
 			return true;
 
 		case EVAL_UNDEF:
-		case PROP_UNDEF:
 			if( expr && state.flattenAndInline ) {
 				ExprTree *expr_ntree = NULL;
 				Value expr_val;
@@ -381,9 +375,9 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 		}
 
 		if( val.IsUndefinedValue( ) ) {
-			return( PROP_UNDEF );
+			return( EVAL_UNDEF );
 		} else if( val.IsErrorValue( ) ) {
-			return( PROP_ERROR );
+			return( EVAL_ERROR );
 		}
 		
 		if( !val.IsClassAdValue( current ) && !val.IsListValue( adList ) ) {

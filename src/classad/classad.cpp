@@ -1268,6 +1268,7 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 					return( rval );
 				}
 
+                case EVAL_FAIL:
                 default:    
                         // enh??
                     return( false );
@@ -1435,6 +1436,7 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 					return( rval );
 				}
 
+                case EVAL_FAIL:
                 default:    
                         // enh??
                     return( false );
@@ -1618,6 +1620,7 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
                 break;
                                 }
 
+                case EVAL_FAIL:
                 default:
                     // "enh??"
                     return false;

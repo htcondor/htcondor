@@ -183,9 +183,7 @@ class ExprTree
 			EVAL_FAIL,
 			EVAL_OK,
 			EVAL_UNDEF,
-			PROP_UNDEF,
-			EVAL_ERROR,
-			PROP_ERROR
+			EVAL_ERROR
 		};
 
 
