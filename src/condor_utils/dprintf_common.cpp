@@ -31,6 +31,7 @@
 #include "condor_uid.h"
 
 
+
 /* 
    This should default to 0 so we only get dprintf() messages if we
    actually request them somewhere, either in dprintf_config(), or the
@@ -187,6 +188,10 @@ _condor_parse_merge_debug_flags(
 				hdr = D_CAT;
 			} else if( strcasecmp(flag, "D_SUB_SECOND") == 0 ) {
 				hdr = D_SUB_SECOND;
+			} else if( strcasecmp(flag, "D_TIMESTAMP") == 0 ) {
+				hdr = D_TIMESTAMP;
+			} else if( strcasecmp(flag, "D_BACKTRACE") == 0 ) {
+				hdr = D_BACKTRACE;
 			} else if( strcasecmp(flag, "D_FULLDEBUG") == 0 ) {
 				fulldebug = (flag_verbosity > 0);
 				flag_verbosity *= 2; // so D_FULLDEBUG:1 ends up as D_ALWAYS:2
@@ -268,38 +273,6 @@ _condor_set_debug_flags( const char *strflags, int cat_and_flags )
 	AnyDebugVerboseListener = verbose;
 }
 
-#if defined(HAVE__FTIME)
-# include <sys/timeb.h>
-#endif
-
-static double _condor_debug_get_time_double()
-{
-#if defined(HAVE__FTIME)
-	struct _timeb timebuffer;
-	_ftime( &timebuffer );
-	return ( timebuffer.time + (timebuffer.millitm * 0.001) );
-#elif defined(HAVE_GETTIMEOFDAY)
-	struct timeval	tv;
-	gettimeofday( &tv, NULL );
-	return ( tv.tv_sec + ( tv.tv_usec * 0.000001 ) );
-#else
-    return 0.0;
-#endif
-}
-
-_condor_auto_save_runtime::_condor_auto_save_runtime(double & store)
-   : runtime(store)
-{
-   this->begin = _condor_debug_get_time_double();
-}
-double _condor_auto_save_runtime::current_runtime()
-{
-   return _condor_debug_get_time_double() - begin;
-}
-_condor_auto_save_runtime::~_condor_auto_save_runtime()
-{
-   runtime = current_runtime();
-}
 
 #if 0
 /*

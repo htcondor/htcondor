@@ -149,13 +149,14 @@ enum {
    IF_ALWAYS     = 0x0000000, // publish regardless of publishing request
    IF_BASICPUB   = 0x0010000, // publish if 'basic' publishing is requested
    IF_VERBOSEPUB = 0x0020000, // publish if 'verbose' publishing is requested.
-   IF_NEVER      = 0x0030000, // publish if 'diagnostic' publishing is requested
+   IF_HYPERPUB   = 0x0030000, // publish if 'diagnostic' publishing is requested
    IF_RECENTPUB  = 0x0040000, // publish if 'recent' publishing is requested.
    IF_DEBUGPUB   = 0x0080000, // publish if 'debug' publishing is requested.
    IF_PUBLEVEL   = 0x0030000, // level bits
    IF_PUBKIND    = 0x0F00000, // category bits
    IF_NONZERO    = 0x1000000, // only publish non-zero values.
    IF_NOLIFETIME = 0x2000000, // don't publish lifetime values
+   IF_RT_SUM     = 0x4000000, // publish probe Sum value as Runtime
    IF_PUBMASK    = 0x0FF0000, // bits that affect publication
    };
 
@@ -323,7 +324,7 @@ public:
    }
 
    int Unexpected() {
-      EXCEPT("Unexpected call to empty ring_buffer\n");
+      EXCEPT("Unexpected call to empty ring_buffer");
       return 0;
    }
 
@@ -1036,10 +1037,11 @@ public:
 // its 'value' field to hold the count of samples.  the value of the
 // samples themselves are not stored, only the sum, min and max are stored.
 //
-template <class T> class stats_entry_probe : protected stats_entry_count<T> {
+GCC_DIAG_OFF(float-equal)
+template <typename T> class stats_entry_probe : public stats_entry_count<T> {
 public:
    stats_entry_probe() 
-      : Max(std::numeric_limits<T>::min())
+      : Max(-(std::numeric_limits<T>::max()))
       , Min(std::numeric_limits<T>::max())
       , Sum(0)
       , SumSq(0) 
@@ -1058,7 +1060,7 @@ public:
 
    void Clear() {
       this->value = 0; // value is use to store the count of samples.
-      Max = std::numeric_limits<T>::min();
+      Max = -(std::numeric_limits<T>::max());
       Min = std::numeric_limits<T>::max();
       Sum = 0;
       SumSq = 0;
@@ -1073,9 +1075,9 @@ public:
       return Sum;
    }
 
-   T Count() { return this->value; }
+   T Count() const { return this->value; }
 
-   T Avg() {
+   T Avg() const {
       if (Count() > 0) {
          return this->Sum / Count();
       } else {
@@ -1083,7 +1085,7 @@ public:
       }
    }
 
-   T Var() {
+   T Var() const {
       if (Count() <= 1) {
          return this->Min;
       } else {
@@ -1092,7 +1094,7 @@ public:
       }
    }
 
-   T Std() {
+   T Std() const {
       if (Count() <= 1) {
          return this->Min;
       } else {
@@ -1108,6 +1110,7 @@ public:
    static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_probe<T>::Unpublish; };
    static void Delete(stats_entry_probe<T> * probe) { delete probe; }
 };
+GCC_DIAG_ON(float-equal)
 
 // --------------------------------------------------------------------
 //   Full Min/Max/Avg/Std Probe class for use with stats_entry_recent
@@ -1218,7 +1221,7 @@ public:
    stats_histogram& operator=(const stats_histogram<T>& sh);
    stats_histogram& operator=(int val) {
       if (val != 0) {
-          EXCEPT("Clearing operation on histogram with non-zero value\n");
+          EXCEPT("Clearing operation on histogram with non-zero value");
       }
       Clear();
       return *this;
@@ -1270,13 +1273,13 @@ stats_histogram<T>& stats_histogram<T>::Accumulate(const stats_histogram<T>& sh)
    // to add histograms, they must both be the same size (and have the same
    // limits array as well, should we check that?)
    if (this->cLevels != sh.cLevels) {
-       EXCEPT("attempt to add histogram of %d items to histogram of %d items\n",
+       EXCEPT("attempt to add histogram of %d items to histogram of %d items",
               sh.cLevels, this->cLevels);
        return *this;
    }
 
    if (this->levels != sh.levels) {
-       EXCEPT("Histogram level pointers are not the same.\n");
+       EXCEPT("Histogram level pointers are not the same.");
        return *this;
    }
 
@@ -1295,7 +1298,7 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
       Clear();
    } else if(this != &sh) {
       if(this->cLevels > 0 && this->cLevels != sh.cLevels){
-         EXCEPT("Tried to assign different sized histograms\n");
+         EXCEPT("Tried to assign different sized histograms");
       return *this;
       } else if(this->cLevels == 0) {
          this->cLevels = sh.cLevels;
@@ -1308,7 +1311,7 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
          for(int i=0;i<=cLevels;++i){
             this->data[i] = sh.data[i];
             if(this->levels[i] < sh.levels[i] || this->levels[i] > sh.levels[i]){
-               EXCEPT("Tried to assign different levels of histograms\n");
+               EXCEPT("Tried to assign different levels of histograms");
                return *this;
             }
          }
@@ -1341,9 +1344,9 @@ T stats_histogram<T>::Add(T val)
     */
 
     return val;
-															}
+}
 
-															template<class T>
+template<class T>
 T stats_histogram<T>::Remove(T val)
 {
    int ix = 0;
@@ -1644,6 +1647,14 @@ public:
    }
 
    int RemoveProbe (const char * name); // remove from pool, will delete if owned by pool
+   int RemoveProbesByAddress(void * first, void * last); // remove all probes that point to between first & last (inclusive)
+
+   /* call this to set verbosites using a whitelist
+    * probes that publish attributes that match the list are set to pub_flags,
+    * if set_nonmatching is true, then probes that don't match the are set to nonmatch_pub_flags
+    */
+   int SetVerbosities(const char * attrs_list, int pub_flags, bool restore_nonmatching = false);
+   int SetVerbosities(classad::References & attrs, int pub_flags, bool restore_nonmatching = false);
 
    /* tj: IMPLEMENT THIS
    double  SetSample(const char * probe_name, double sample);
@@ -1664,7 +1675,9 @@ private:
    struct pubitem {
       int    units;    // copied from the class->unit, identifies the class and type of probe
       int    flags;    // passed to Publish
-      int    fOwnedByPool;
+      bool   fOwnedByPool;
+      bool   fWhitelisted;
+      unsigned short def_verbosity;
       void * pitem;    // pointer to stats_entry_base derived class instance class/struct
       const char * pattr; // if non-null passed to Publish, if null name is passed.
       FN_STATS_ENTRY_PUBLISH Publish;

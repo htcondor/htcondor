@@ -134,6 +134,8 @@ BOOST_PYTHON_MODULE(classad)
     def("Function", boost::python::raw_function(function, 1));
     def("Attribute", attribute, "Convert a string to a ClassAd reference.");
 
+    def("register", registerFunction, "Register a python function as a ClassAd function.", (boost::python::arg("function"), boost::python::arg("name")=boost::python::object()));
+
     class_<ClassAdWrapper, boost::noncopyable>("ClassAd", "A classified advertisement.")
         .def(init<std::string>())
         .def(init<boost::python::dict>())
@@ -159,12 +161,15 @@ BOOST_PYTHON_MODULE(classad)
         .def("flatten", &ClassAdWrapper::Flatten, "Partially evaluate a given expression.")
         .def("matches", &ClassAdWrapper::matches, "Returns true if this ad matches the given ClassAd")
         .def("symmetricMatch", &ClassAdWrapper::symmetricMatch, "Returns true if this ad and the given ad match each other")
+        .def("externalRefs", &ClassAdWrapper::externalRefs, "Returns the references of the given expression which are not in this ClassAd")
+        .def("internalRefs", &ClassAdWrapper::internalRefs, "Returns the references of the given expression which are in this ClassAd.")
         ;
 
     class_<ExprTreeHolder>("ExprTree", "An expression in the ClassAd language", init<std::string>())
         .def("__str__", &ExprTreeHolder::toString)
         .def("__repr__", &ExprTreeHolder::toRepr)
         .def("__getitem__", &ExprTreeHolder::getItem, condor::classad_expr_return_policy<>())
+        .def("_get", &ExprTreeHolder::subscript, condor::classad_expr_return_policy<>())
         .def("eval", &ExprTreeHolder::Evaluate, evaluate_overloads("Evalaute the expression, possibly within context of a ClassAd"))
         .def("__nonzero__", &ExprTreeHolder::__nonzero__)
         .def("sameAs", &ExprTreeHolder::SameAs, "Returns true if given ExprTree is same as this one.")
@@ -220,5 +225,7 @@ BOOST_PYTHON_MODULE(classad)
         &classad_from_python_dict::convertible,
         &classad_from_python_dict::construct,
         boost::python::type_id<ClassAdWrapper>());
+
+    boost::python::scope().attr("_registered_functions") = boost::python::dict();
 
 }

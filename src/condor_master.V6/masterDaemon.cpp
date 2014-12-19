@@ -394,7 +394,7 @@ daemon::DoConfig( bool init )
 	MyString env_error_msg;
 
 	if(!env_parser.MergeFromV1RawOrV2Quoted(env_string,&env_error_msg)) {
-		EXCEPT("ERROR: Failed to parse %s_ENVIRONMENT in config file: %s\n",
+		EXCEPT("ERROR: Failed to parse %s_ENVIRONMENT in config file: %s",
 		       name_in_config_file,
 			   env_error_msg.Value());
 	}
@@ -641,9 +641,18 @@ int daemon::RealStart( )
 					"Matching '%s:%d'\n", 
 					my_daemon->fullHostname (),
 					my_daemon->port () );
+				
+				MyString cm_sinful = my_daemon->addr();
+				condor_sockaddr cm_sockaddr;
+				cm_sockaddr.from_sinful(cm_sinful);
+				MyString cm_hostname;
+				if(my_daemon->fullHostname()) {
+					cm_hostname = my_daemon->fullHostname();
+				}
 
-				if (same_host (my_hostname, 
-							   my_daemon->fullHostname())) {
+				if( cm_sockaddr.is_loopback() ||
+					same_host (my_hostname, 
+							   cm_hostname.Value())) {
 					Sinful sinful( my_daemon->addr() );
 					if( sinful.getSharedPortID() ) {
 							// collector is using a shared port

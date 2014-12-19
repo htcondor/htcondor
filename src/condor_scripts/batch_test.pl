@@ -82,8 +82,8 @@ use CondorUtils;
 #
 #################################################################
 
-Condor::DebugLevel(1);
-CondorPersonal::DebugLevel(1);
+Condor::DebugLevel(5);
+CondorPersonal::DebugLevel(5);
 my @debugcollection = ();
 my $UseNewRunning = 1;
 

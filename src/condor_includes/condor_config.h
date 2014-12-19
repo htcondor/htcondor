@@ -276,6 +276,21 @@ bool param_find_item (const char * name, const char * subsys, const char * local
 void foreach_param(int options, bool (*fn)(void* user, HASHITER& it), void* user);
 void foreach_param_matching(Regex & re, int options, bool (*fn)(void* user, HASHITER& it), void* user);
 
+/*
+expand_param(), expand config variables $() against the current config table and return an strdup'd string with the result
+the char* return value should be freed using free()
+*/
+BEGIN_C_DECLS
+char * expand_param (const char *str); // same as below but defaults subsys and use flags
+END_C_DECLS
+char * expand_param (const char *str, const char *subsys, int use);
+inline bool expand_param (const char *str, std::string & expanded) {
+	char * p = expand_param(str);
+	if (!p) return false;
+	expanded = p;
+	return true;
+}
+
 // Write out a config file of values from the param table.
 // Returns 0 on success and -1 on failure.
 #define WRITE_MACRO_OPT_DEFAULT_VALUES  0x01 // include default values
@@ -360,12 +375,6 @@ BEGIN_C_DECLS
 
 #endif // __cplusplus
 
-	/*
-	As expand_macro() (above), but assumes the table 'ConfigTab' which is
-	of size TABLESIZE.
-	*/
-	char * macro_expand ( const char *name );
-	char * expand_param (const char *str, const char *subsys, int use);
 
 	struct _macro_stats {
 		int cbStrings;

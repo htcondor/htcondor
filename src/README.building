@@ -101,6 +101,85 @@ platforms, there are several ways to explore the build options:
 BUILDING CONDOR ON WIN32
 ==================================
 
+1. Install your tools (make sure to have their paths added to system path)
+	a) Visual Studio 2012 
+		* (64-bit tools not needed atm, but good to install for future) 
+	b) Perl
+	    * http://www.activestate.com/activeperl/downloads
+	c) Python (if python bindings are desired) (3.4+ version is fine)
+		* https://www.python.org/downloads/
+	d) CMake
+		* http://www.cmake.org/download/
+	e) Git
+		* http://git-scm.com/download/win
+	f) Wix (if you wish to craft installer msi file)
+		* http://wix.codeplex.com/ 
+	g) 7-zip 
+		* http://www.7-zip.org/download.html
+
+2. Configure your environment
+	a) You can invoke any shell you wish but make sure that the paths 
+		to the tools are available. Additionally you should add an additional
+		path (b) for building in Windows.  These can be added after the source 
+		code is on the system since the paths are relative to the condor source.
+		1) I use the command prompt shell provided with Visual Studio installation.
+			This sets up the paths to the Visual Studio toolsets automatically. 
+			e.g.
+				"C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Microsoft Visual Studio 2012\Visual Studio Tools\Developer Command Prompt for VS2012.lnk" 
+	b)Add <PATH_TO_CONDOR_SRC>\condor\msconfig to path
+
+3. Get the source code. 
+	a) in an environment shell change directories to where you would like the condor
+		folder created by the git clone command. 
+	b) clone the condor repository
+		1) git clone http://condor-git.cs.wisc.edu/repos/condor.git
+	This will take a while and once done you will have the condor source tree in the current
+	working directory. 
+	* remember to add the condor\msconfig to your path
+
+4. build condor
+	There are 2 methods to build condor 1. in source build and 2. out of source build
+	a) in source build
+		This method builds the binaries within the source tree. 
+		1) cd to within the condor folder.
+		2) Generate the Visual Studio solution files with CMake
+			cmake -G "Visual Studio 11 2012"
+	b) out of source builds
+		This method preserves the source tree and creates all files out side of the source tree
+		1) cd to within the condor folder and set _condor_sources environment variable
+			cd condor
+			set _condor_sources=%CD%
+		2) Make a directory somewhere else you would like to build and cd there
+			md c:\src\build_dest
+			cd /d c:\src\build_dest
+		3) Generate the Visual Studio solution files with CMake
+			cmake CMakeLists.txt -G "Visual Studio 11 2012" %_condor_sources%
+	c) Build condor
+		1) within the IDE
+			a) Launch Visual Studio editor and open the CONDOR.sln
+			b) Select the build type Debug or RelWithDebInfo (Release is being deprecated)
+			c) Choose the All_BUILD project
+			d) build
+		2) with the command line
+			a) With devenv
+				devenv CONDOR.sln /Build RelWithDebInfo or
+			   	devenv CONDOR.sln /Build Debug
+			b) With msbuild
+				msbuild CONDOR.sln /t:ALL_BUILD /p:Configuration:RelWithDebugInfo or
+				msbuild CONDOR.sln /t:ALL_BUILD /p:Configuration:Debug
+
+5. Creating installer
+	An msi style installer can be created with included scripts and with the aid of the Wix tools.
+	a) Copy the build sources to an installer staging area with cmake. (this will create a directory 
+		at the CMAKE_INSTALL_PREFIX path)
+			cmake -DBUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH=c:\src\installer\release_dir -P cmake_install.cmake
+	b) Change directory to the copied location and run the do_wix.bat batch file
+		cd c:\src\installer\release_dir
+		etc\WiX\do_wix.bat %CD% c:\src\installer\Condor_installer.msi
+
+=================================
+OLD instructions as of 11-6-2014
+=================================
 1. Make certain that you have Microsoft Visual C++ 6.0 installed,
 	and that you have the "bin" directory to Visual C++ in your path.
 	For example, by default VC++ 6.0 will install into:

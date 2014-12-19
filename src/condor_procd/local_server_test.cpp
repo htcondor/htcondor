@@ -36,13 +36,13 @@ main()
 	LocalServer* server = new LocalServer;
 	ASSERT(server != NULL);
 	if (!server->initialize(PIPE_ADDR)) {
-		EXCEPT("unable to initialize LocalServer\n");
+		EXCEPT("unable to initialize LocalServer");
 	}
 
 	while (true) {
 		bool ready;
 		if (!server->accept_connection(10, ready)) {
-			EXCEPT("error in LocalServer::accept_connection\n");
+			EXCEPT("error in LocalServer::accept_connection");
 		}
 		if (ready) {
 			char c;

@@ -338,11 +338,19 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		return false;
 	}
 
+		// If schedd wants pslot preemption, advertise here
+	m_current_job_ad.Assign(ATTR_WANT_PSLOT_PREEMPTION,
+		param_boolean("ALLOW_PSLOT_PREEMPTION", false));
+		
 		// request match diagnostics
 		// 0 = no match diagnostics
 		// 1 = match diagnostics string
 		// 2 = match diagnostics string decorated w/ autocluster + jobid
 	m_current_job_ad.Assign(ATTR_WANT_MATCH_DIAGNOSTICS, (int) 2);
+
+	m_current_job_ad.Assign(ATTR_WANT_PSLOT_PREEMPTION,
+		param_boolean("ALLOW_PSLOT_PREEMPTION", false));
+
 
 		// Send the ad to the negotiator
 	int putad_result = 0;
@@ -366,6 +374,7 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		sig_attrs.insert(ATTR_GLOBAL_JOB_ID);
 		sig_attrs.insert(ATTR_AUTO_CLUSTER_ID);
 		sig_attrs.insert(ATTR_WANT_MATCH_DIAGNOSTICS);
+		sig_attrs.insert(ATTR_WANT_PSLOT_PREEMPTION);
 		sig_attrs.insert(ATTR_WANT_CLAIMING);  // used for Condor-G matchmaking
 		// ship it!
 		putad_result = putClassAd(sock, m_current_job_ad, 0, &sig_attrs);
@@ -493,7 +502,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 			break;
 		}
 
-		if( scheduler_handleMatch(m_current_job_id,m_claim_id.c_str(),m_match_ad,slot_name) )
+		if( scheduler_handleMatch(m_current_job_id,m_claim_id.c_str(),m_extra_claims.c_str(), m_match_ad,slot_name) )
 		{
 			m_jobs_matched++;
 		}
@@ -592,6 +601,12 @@ ScheddNegotiate::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 		}
 		m_claim_id = claim_id;
 		free( claim_id );
+
+		size_t space = m_claim_id.find(' ');
+		if (space != std::string::npos) {
+			m_extra_claims = m_claim_id.substr(space + 1, std::string::npos);
+			m_claim_id = m_claim_id.substr(0, space);
+		}
 
 		m_match_ad.Clear();
 

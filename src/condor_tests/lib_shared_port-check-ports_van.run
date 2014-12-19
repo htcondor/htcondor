@@ -38,18 +38,31 @@ $execute = sub {
 	$logdir =~ s/\012+$//;
 	$logdir =~ s/\015+$//;
 
+	CondorTest::CreatePidsFile();
+
 	# get the pids associated with this personal condor
 	my $pid = $logdir . "/PIDS";
+	my @pids;
+	my $line = "";
 	open(PID_FILE, "<$pid") || die "Can't open pid file $pid.";
 
-	# get just the pid from each line in file
-	my @pid_file_contents = <PID_FILE>;
-	my @pids;
-	foreach(@pid_file_contents) {
-		chomp;
-		my @temp = split(/[\ \n]/, $_);
-		push(@pids, @temp[0]);
+	#print "Opening Pidfile:$pid\n";
+	#system("ls -l $pid");
+	while (<PID_FILE>) {
+		$_ =~ s/\012+$//;
+		$_ =~ s/\015+$//;
+		$line = $_;
+		#print "process:$line\n";
+		my @temp = split(/[\ \n]/, $line);
+		push @pids, $temp[0];
+		#print "save pid:$temp[0]\n";
 	}
+	close(PID_FILE);
+	print "PIDS we care about:";
+	foreach my $pid (@pids) {
+		print " $pid";
+	}
+	print "\n";
 
 	# get the pid for the shadow
     my $shadow_log_location = `condor_config_val SHADOW_log`;
@@ -80,10 +93,12 @@ $execute = sub {
 		if($line =~ /^.*?LISTEN\s+(\d+)\/.*$/) {
 			$foundpid = $1;
 		}
+		#print "For line:$line\n";
 		# go through all the pids
 		for($i = 0; $i < @pids && $match == 0; $i++) {
 			# check if this is a daemon we care about
 			
+			#print "found pid: $foundpid this pid:@pids[$i], every equal?\n";
 			if("$foundpid" eq "@pids[$i]") {
 				print "Found an expected daemon\n";
 			#if(index($_, @pids[$i] . '/', 0) != -1) {
@@ -94,10 +109,12 @@ $execute = sub {
 				{
 					$unexpected_listening_daemon = 0;
 					CondorTest::debug("Error: unexpected daemon has open listening tcp port ($line)\n", 1);
+					print "Error: unexpected daemon has open listening tcp port ($line)\n";
 				}
 				else
 				{
 					$found_listening_daemon = 1;
+					#print "Listening ok: $line\n";
 				}
 			}
 		}

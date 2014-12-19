@@ -250,7 +250,13 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		EXCEPT("Invalid argument(s) for DaemonCore constructor");
 	}
 
-    dc_stats.Init(); // initilize statistics.
+	SubsystemType styp = get_mySubSystem()->getType();
+	bool enable_stats = (styp == SUBSYSTEM_TYPE_MASTER)
+					|| (styp == SUBSYSTEM_TYPE_COLLECTOR)
+					|| (styp == SUBSYSTEM_TYPE_NEGOTIATOR)
+					|| (styp == SUBSYSTEM_TYPE_SCHEDD)
+					|| (styp == SUBSYSTEM_TYPE_STARTD);
+    dc_stats.Init(enable_stats); // initilize statistics.
     dc_stats.SetWindowSize(20*60);
 
 	if ( PidSize == 0 )
@@ -951,7 +957,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 		nCommand++;
 	}
 
-	dc_stats.New("Command", getCommandStringSafe(command), AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+	dc_stats.NewProbe("Command", getCommandStringSafe(command), AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
 	// Found a blank entry at index i. Now add in the new data.
 	comTable[i].num = command;
@@ -1100,8 +1106,10 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
 			int port = ((Sock*)(*sockTable)[initial_command_sock()].iosock)->get_port();
+			std::string ipv4, ipv6;
 			std::string private_ip;
-			bool ok = network_interface_to_ip("PRIVATE_NETWORK_INTERFACE",tmp,private_ip);
+			bool ok = network_interface_to_ip("PRIVATE_NETWORK_INTERFACE",
+				tmp, ipv4, ipv6, private_ip);
 			if( !ok ) {
 				dprintf(D_ALWAYS,
 						"Failed to determine my private IP address using PRIVATE_NETWORK_INTERFACE=%s\n",
@@ -1266,7 +1274,7 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		return -1;
     }
 
-    dc_stats.New("Signal", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+    dc_stats.NewProbe("Signal", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
 	// Semantics dictate that certain signals CANNOT be caught!
 	// In addition, allow SIGCHLD to be automatically replaced (for backwards
@@ -1423,7 +1431,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		EXCEPT("DaemonCore: Socket table messed up");
 	}
 
-    dc_stats.New("Socket", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+    dc_stats.NewProbe("Socket", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
     //if (iosock_descrip && iosock_descrip[0] && ! strcmp(handler_descrip, "DC Command Handler"))
     //   dc_stats.New("Command", iosock_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
@@ -1905,7 +1913,7 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
         }
 	}
 
-    dc_stats.New("Pipe", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+    dc_stats.NewProbe("Pipe", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
 	// Found a blank entry at index i. Now add in the new data.
 	(*pipeTable)[i].pentry = NULL;
@@ -2643,7 +2651,7 @@ DaemonCore::thread_switch_callback(void* & incoming_contextVP)
 	if ( !context.is_null() ) {
 		outgoing_context = (DCThreadState *) context->user_pointer_;
 		if (!outgoing_context) {
-				EXCEPT("ERROR: daemonCore - no thread context for tid %d\n",
+				EXCEPT("ERROR: daemonCore - no thread context for tid %d",
 						last_tid);
 		}
 	}
@@ -3104,7 +3112,7 @@ void DaemonCore::Driver()
 		dprintf( D_ALWAYS, "Done with stdout & stderr tests\n" );
 	}
 
-	double runtime = UtcTime::getTimeDouble();
+	double runtime = _condor_debug_get_time_double();
 	double group_runtime = runtime;
     double pump_cycle_begin_time = runtime;
 
@@ -3158,7 +3166,7 @@ void DaemonCore::Driver()
 #endif
 
         // accumulate signal runtime (including timers) as SignalRuntime
-        runtime = UtcTime::getTimeDouble();
+        runtime = _condor_debug_get_time_double();
         dc_stats.SignalRuntime += (runtime - group_runtime);
         group_runtime = runtime;
 
@@ -3188,7 +3196,7 @@ void DaemonCore::Driver()
 		}
 
         // accumulate signal runtime (including timers) as SignalRuntime
-        //runtime = UtcTime::getTimeDouble();
+        //runtime = _condor_debug_get_time_double();
         dc_stats.TimerRuntime += (runtime - group_runtime);
         group_runtime = runtime;
 
@@ -3326,10 +3334,10 @@ void DaemonCore::Driver()
 
 		selector.execute();
 
-        // update statistics on time spent waiting in select.
-        runtime = UtcTime::getTimeDouble();
-        dc_stats.SelectWaittime += (runtime - group_runtime);
-        //dc_stats.StatsLifetime = now - dc_stats.InitTime;
+		// update statistics on time spent waiting in select.
+		runtime = _condor_debug_get_time_double();
+		dc_stats.SelectWaittime += (runtime - group_runtime);
+		//dc_stats.StatsLifetime = now - dc_stats.InitTime;
 
 		tmpErrno = errno;
 
@@ -3400,7 +3408,7 @@ void DaemonCore::Driver()
 		// in the main loop.
 		CondorThreads::enable_parallel(false);
 
-        runtime = group_runtime = UtcTime::getTimeDouble();
+		runtime = group_runtime = _condor_debug_get_time_double();
 
 		if ( selector.has_ready() ||
 			 ( selector.timed_out() && 
@@ -3494,9 +3502,9 @@ void DaemonCore::Driver()
 				}	// end of if valid sock entry
 			}	// end of for loop through all sock entries
 
-            runtime = UtcTime::getTimeDouble();
-            dc_stats.SocketRuntime += (runtime - group_runtime);
-            group_runtime = runtime;
+			runtime = _condor_debug_get_time_double();
+			dc_stats.SocketRuntime += (runtime - group_runtime);
+			group_runtime = runtime;
 
 			// scan through the pipe table to find which ones select() set
 			for(i = 0; i < nPipe; i++) {
@@ -3528,7 +3536,7 @@ void DaemonCore::Driver()
 
 
 			// Now loop through all pipe entries, calling handlers if required.
-            runtime = UtcTime::getTimeDouble();
+			runtime = _condor_debug_get_time_double();
 			for(i = 0; i < nPipe; i++) {
 				if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry...
 
@@ -3622,8 +3630,8 @@ void DaemonCore::Driver()
 						}
 #endif
 
-                        // update per-handler runtime statistics
-                        runtime = dc_stats.AddRuntime((*pipeTable)[i].handler_descrip, runtime);
+						// update per-handler runtime statistics
+						runtime = dc_stats.AddRuntime((*pipeTable)[i].handler_descrip, runtime);
 
 						if ( (*pipeTable)[i].call_handler == true ) {
 							// looks like the handler called Cancel_Pipe(),
@@ -3638,9 +3646,9 @@ void DaemonCore::Driver()
 			}	// for 0 thru nPipe checking if call_handler is true
 
 
-            runtime = UtcTime::getTimeDouble();
-            dc_stats.PipeRuntime += (runtime - group_runtime);
-            group_runtime = runtime;
+			runtime = _condor_debug_get_time_double();
+			dc_stats.PipeRuntime += (runtime - group_runtime);
+			group_runtime = runtime;
 
 			// Now loop through all sock entries, calling handlers if required.
 			for(i = 0; i < nSock; i++) {
@@ -3652,7 +3660,7 @@ void DaemonCore::Driver()
 
                         dc_stats.SockMessages += 1;
 
-						if ( recheck_status &&
+						if ( recheck_status && ((*sockTable)[i].handler_type == HANDLE_READ) &&
 							 ((*sockTable)[i].is_connect_pending == false) )
 						{
 							// we have already called at least one callback handler.  what
@@ -3694,22 +3702,22 @@ void DaemonCore::Driver()
 						recheck_status = true;
 						CallSocketHandler( i, true );
 
-                        // update per-handler runtime statistics
-                        runtime = dc_stats.AddRuntime((*sockTable)[i].handler_descrip, runtime);
+						// update per-handler runtime statistics
+						runtime = dc_stats.AddRuntime((*sockTable)[i].handler_descrip, runtime);
 
 					}	// if call_handler is True
 				}	// if valid entry in sockTable
 			}	// for 0 thru nSock checking if call_handler is true
 
-            runtime = UtcTime::getTimeDouble();
-            dc_stats.SocketRuntime += (runtime - group_runtime);
-            group_runtime = runtime;
+			runtime = _condor_debug_get_time_double();
+			dc_stats.SocketRuntime += (runtime - group_runtime);
+			group_runtime = runtime;
 
 
 		}	// if rv > 0
 
-        dc_stats.PumpCycle += (runtime - pump_cycle_begin_time);
-        pump_cycle_begin_time = runtime;
+		dc_stats.PumpCycle += (runtime - pump_cycle_begin_time);
+		pump_cycle_begin_time = runtime;
 
 	}	// end of infinite for loop
 }
@@ -3840,6 +3848,7 @@ void
 DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stream* asock )
 {
 	char *handlerName = NULL;
+	double handler_start_time=0;
 	int result=0;
 
 		// if the user provided a handler for this socket, then
@@ -3853,16 +3862,18 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 
 		// log a message
 	if ( (*sockTable)[i].handler || (*sockTable)[i].handlercpp )
-		{
+	{
+		if (IsDebugLevel(D_DAEMONCORE)) {
 			dprintf(D_DAEMONCORE,
 					"Calling Handler <%s> for Socket <%s>\n",
 					(*sockTable)[i].handler_descrip,
 					(*sockTable)[i].iosock_descrip);
+		}
+		if (IsDebugLevel(D_COMMAND)) {
 			handlerName = strdup((*sockTable)[i].handler_descrip);
 			dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
-
-		UtcTime handler_start_time;
-		handler_start_time.getTime();
+			handler_start_time = _condor_debug_get_time_double();
+		}
 
 	if ( (*sockTable)[i].handler ) {
 			// a C handler
@@ -3872,12 +3883,11 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 		result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
 		}
 
-		UtcTime handler_stop_time;
-		handler_stop_time.getTime();
-		float handler_time = handler_stop_time.difference(&handler_start_time);
-
-		dprintf(D_COMMAND, "Return from Handler <%s> %.4fs\n", handlerName, handler_time);
-		free(handlerName);
+		if (IsDebugLevel(D_COMMAND)) {
+			double handler_time = _condor_debug_get_time_double() - handler_start_time;
+			dprintf(D_COMMAND, "Return from Handler <%s> %.6fs\n", handlerName, handler_time);
+			free(handlerName);
+		}
 	}
 	else if( default_to_HandleCommand ) {
 			// no handler registered, so this is a command
@@ -4003,6 +4013,7 @@ DaemonCore::HandleReqPayloadReady(Stream *stream)
 int
 DaemonCore::CallUnregisteredCommandHandler(int req, Stream *stream)
 {
+	double handler_start_time=0;
 	if (!m_unregisteredCommand.num) {
 		dprintf(D_ALWAYS,
 			"Received %s command (%d) (%s) from %s %s\n",
@@ -4019,8 +4030,7 @@ DaemonCore::CallUnregisteredCommandHandler(int req, Stream *stream)
 			req,
 			stream->peer_description());
 
-	UtcTime handler_start_time;
-	handler_start_time.getTime();
+	handler_start_time = _condor_debug_get_time_double();
 
 	// call the handler function; first curr_dataptr for GetDataPtr()
 	curr_dataptr = &(m_unregisteredCommand.data_ptr);
@@ -4031,9 +4041,7 @@ DaemonCore::CallUnregisteredCommandHandler(int req, Stream *stream)
 
 	curr_dataptr = NULL;
 
-	UtcTime handler_stop_time;
-	handler_stop_time.getTime();
-	float handler_time = handler_stop_time.difference(&handler_start_time);
+	double handler_time = _condor_debug_get_time_double() - handler_start_time;
 
 	dprintf(D_COMMAND, "Return from HandleUnregisteredReq <%s, %d> (handler: %.3fs)\n", m_unregisteredCommand.handler_descrip, req, handler_time);
 
@@ -4045,6 +4053,7 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 {
 	int result = FALSE;
 	int index = 0;
+	double handler_start_time=0;
 	bool reqFound = CommandNumToTableIndex(req,&index);
 	char const *user = NULL;
 	Sock *sock = (Sock *)stream;
@@ -4088,17 +4097,17 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 		if( !user ) {
 			user = "";
 		}
-		MSC_SUPPRESS_WARNING(6011) // can't sure sure that stream is not NULL
-		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
-				comTable[index].handler_descrip,
-				inServiceCommandSocket_flag,
-				req,
-				comTable[index].command_descrip,
-				user,
-				stream->peer_description());
-
-		UtcTime handler_start_time;
-		handler_start_time.getTime();
+		if (IsDebugLevel(D_COMMAND)) {
+			MSC_SUPPRESS_WARNING(6011) // can't be sure that stream is not NULL
+			dprintf(D_COMMAND, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
+					comTable[index].handler_descrip,
+					inServiceCommandSocket_flag,
+					req,
+					comTable[index].command_descrip,
+					user,
+					stream->peer_description());
+			handler_start_time = _condor_debug_get_time_double();
+		}
 
 		// call the handler function; first curr_dataptr for GetDataPtr()
 		curr_dataptr = &(comTable[index].data_ptr);
@@ -4116,11 +4125,11 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 		// clear curr_dataptr
 		curr_dataptr = NULL;
 
-		UtcTime handler_stop_time;
-		handler_stop_time.getTime();
-		float handler_time = handler_stop_time.difference(&handler_start_time);
-
-		dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.3fs, sec: %.3fs, payload: %.3fs)\n", comTable[index].handler_descrip, handler_time, time_spent_on_sec, time_spent_waiting_for_payload );
+		if (IsDebugLevel(D_COMMAND)) {
+			double handler_time = _condor_debug_get_time_double() - handler_start_time;
+			dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.6fs, sec: %.3fs, payload: %.3fs)\n", 
+					comTable[index].handler_descrip, handler_time, time_spent_on_sec, time_spent_waiting_for_payload );
+		}
 
 	}
 
@@ -5210,8 +5219,8 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			    const char* cgroup,
                             const char* glexec_proxy)
 {
-    double begintime = UtcTime::getTimeDouble();
-   	double runtime = begintime;
+	double begintime = _condor_debug_get_time_double();
+	double runtime = begintime;
 
 	bool success = false;
 	bool family_registered = false;
@@ -5225,7 +5234,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		goto REGISTER_FAMILY_DONE;
 	}
 	family_registered = true;
-    runtime = dc_stats.AddRuntimeSample("DCRregister_subfamily", IF_VERBOSEPUB, runtime);
+	runtime = dc_stats.AddRuntimeSample("DCRregister_subfamily", IF_VERBOSEPUB, runtime);
 	if (penvid != NULL) {
 		if (!m_proc_family->track_family_via_environment(child_pid, *penvid)) {
 			dprintf(D_ALWAYS,
@@ -5234,7 +5243,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 					child_pid);
 			goto REGISTER_FAMILY_DONE;
 		}
-       runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_env", IF_VERBOSEPUB, runtime);
+		runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_env", IF_VERBOSEPUB, runtime);
 	}
 	if (login != NULL) {
 		if (!m_proc_family->track_family_via_login(child_pid, login)) {
@@ -5245,7 +5254,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			        login);
 			goto REGISTER_FAMILY_DONE;
 		}
-       runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_login", IF_VERBOSEPUB, runtime);
+		runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_login", IF_VERBOSEPUB, runtime);
 	}
 	if (group != NULL) {
 #if defined(LINUX)
@@ -5290,7 +5299,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			        child_pid);
 			goto REGISTER_FAMILY_DONE;
 		}
-       runtime = dc_stats.AddRuntimeSample("DCRuse_glexec_for_family", IF_VERBOSEPUB, runtime);
+		runtime = dc_stats.AddRuntimeSample("DCRuse_glexec_for_family", IF_VERBOSEPUB, runtime);
 	}
 	success = true;
 REGISTER_FAMILY_DONE:
@@ -5301,10 +5310,10 @@ REGISTER_FAMILY_DONE:
 			            "with root %u\n",
 			        child_pid);
 		}
-        runtime = dc_stats.AddRuntimeSample("DCRunregister_family", IF_VERBOSEPUB, runtime);
+		runtime = dc_stats.AddRuntimeSample("DCRunregister_family", IF_VERBOSEPUB, runtime);
 	}
 
-    runtime = dc_stats.AddRuntimeSample("DCRegister_Family", IF_VERBOSEPUB, begintime);
+	runtime = dc_stats.AddRuntimeSample("DCRegister_Family", IF_VERBOSEPUB, begintime);
 
 	return success;
 }
@@ -5744,7 +5753,8 @@ void CreateProcessForkit::exec() {
 
 		// make sure we're not going to try to share the lock file
 		// with our parent (if it's been defined).
-	dprintf_init_fork_child();
+	bool cloned = daemonCore->UseCloneToCreateProcesses();
+	dprintf_init_fork_child( cloned );
 
 		// close the read end of our error pipe and set the
 		// close-on-exec flag on the write end
@@ -6274,7 +6284,7 @@ void CreateProcessForkit::exec() {
 		// once again, make sure that if the dprintf code opened a
 		// lock file and has an fd, that we close it before we
 		// exec() so we don't leak it.
-	dprintf_wrapup_fork_child();
+	dprintf_wrapup_fork_child( cloned );
 
 	bool found;
 	for ( int j=3 ; j < openfds ; j++ ) {
@@ -6467,7 +6477,7 @@ int DaemonCore::Create_Process(
 	bool want_udp = !HAS_DCJOBOPT_NO_UDP(job_opt_mask) && m_wants_dc_udp;
 	bool enabled_shared_endpoint = false;
 
-	double runtime = UtcTime::getTimeDouble();
+	double runtime = _condor_debug_get_time_double();
     double create_process_begin_time = runtime;
     double delta_runtime = 0;
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",executable ? executable : "NULL");
@@ -6903,11 +6913,15 @@ int DaemonCore::Create_Process(
 			ixvar++;
 		}
 
-			// now, add in the inherit buf
-		job_environ.SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
 
-		if( !privateinheritbuf.IsEmpty() )
-			job_environ.SetEnv( EnvGetName( ENV_PRIVATE ), privateinheritbuf.Value() );
+		if( HAS_DCJOBOPT_ENV_INHERIT(job_opt_mask) && HAS_DCJOBOPT_CONDOR_ENV_INHERIT(job_opt_mask) ) {
+			job_environ.SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
+
+			if( !privateinheritbuf.IsEmpty() ) {
+				job_environ.SetEnv( EnvGetName( ENV_PRIVATE ), privateinheritbuf.Value() );
+			}
+		}
+
 
 			// and finally, get it all back as a NULL delimited string.
 			// remember to deallocate this with delete [] since it will
@@ -7179,13 +7193,13 @@ int DaemonCore::Create_Process(
 		cwdBackup = cwd;
 	}
 		
-    runtime = dc_stats.AddRuntimeSample("DCCreate_Process000", IF_VERBOSEPUB, runtime);
+	//runtime = dc_stats.AddRuntimeSample("DCCreate_Process000", IF_VERBOSEPUB, runtime);
 
    	if ( priv != PRIV_USER_FINAL || !can_switch_ids() ) {
 		cp_result = ::CreateProcess(bIs16Bit ? NULL : executable,(char*)strArgs.Value(),NULL,
 			NULL,inherit_handles, create_process_flags,newenv,cwdBackup,&si,&piProcess);
 
-        runtime = dc_stats.AddRuntimeSample("DCCreateProcessW32", IF_VERBOSEPUB, runtime);
+		//runtime = dc_stats.AddRuntimeSample("DCCreateProcessW32", IF_VERBOSEPUB, runtime);
 
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
@@ -7235,7 +7249,7 @@ int DaemonCore::Create_Process(
 			(char *)strArgs.Value(),NULL,NULL, inherit_handles,
 			create_process_flags, newenv,cwdBackup,&si,&piProcess);
 
-        runtime = dc_stats.AddRuntimeSample("DCCreateProcessAsUser", IF_VERBOSEPUB, runtime);
+		//runtime = dc_stats.AddRuntimeSample("DCCreateProcessAsUser", IF_VERBOSEPUB, runtime);
 
 		set_priv(s);
 	}
@@ -7472,7 +7486,7 @@ int DaemonCore::Create_Process(
 		//
 		if (sigmask != NULL) {
 			if (sigprocmask(SIG_SETMASK, &saved_mask, NULL) == -1) {
-				EXCEPT("Create_Process: sigprocmask error: %s (%d)\n",
+				EXCEPT("Create_Process: sigprocmask error: %s (%d)",
 				       strerror(errno),
 				       errno);
 			}
@@ -7579,8 +7593,12 @@ int DaemonCore::Create_Process(
 					// still be holding the port open in this lower
 					// stack frame...
 				for(SockPairVec::iterator it = socks.begin(); it != socks.end(); it++) {
-					it->rsock()->close();
-					it->ssock()->close();
+					if ( it->has_relisock()) {
+						it->rsock()->close();
+					}
+					if ( it->has_safesock()) {
+						it->ssock()->close();
+					}
 				}
 				dprintf( D_ALWAYS, "Re-trying Create_Process() to avoid "
 						 "PID re-use\n" );
@@ -7689,7 +7707,7 @@ int DaemonCore::Create_Process(
 			pidtmp->shared_port_fname = shared_port_endpoint.GetSocketFileName();
 		}
 		else if ( want_command_port != FALSE ) {
-PRAGMA_REMIND("adesmet: Assuming the first address is the one to use.")
+//PRAGMA_REMIND("adesmet: Assuming the first address is the one to use. TODOIPV6")
 			if(socks.begin() != socks.end()) {
 				Sinful sinful(sock_to_string(socks.begin()->rsock()->_sock));
 				if( !want_udp ) {
@@ -7798,8 +7816,8 @@ PRAGMA_REMIND("adesmet: Assuming the first address is the one to use.")
 	}
 #endif
 
-    runtime = UtcTime::getTimeDouble();
-    delta_runtime = (runtime - create_process_begin_time);
+	runtime = _condor_debug_get_time_double();
+	delta_runtime = (runtime - create_process_begin_time);
 	dprintf(D_DAEMONCORE,
 		"Child Process: pid %lu at %s (%.2f sec)\n",
 		(unsigned long)newpid, 
@@ -7836,8 +7854,8 @@ PRAGMA_REMIND("adesmet: Assuming the first address is the one to use.")
 		}
 	}
 
-    runtime = dc_stats.AddRuntimeSample("DCCreate_Process001", IF_VERBOSEPUB, runtime);
-    runtime = dc_stats.AddRuntimeSample("DCCreate_ProcessTot", IF_VERBOSEPUB, create_process_begin_time);
+	//runtime = dc_stats.AddRuntimeSample("DCCreate_Process001", IF_VERBOSEPUB, runtime);
+	runtime = dc_stats.AddRuntimeSample("DCCreate_ProcessTot", IF_VERBOSEPUB, create_process_begin_time);
     if ((runtime - create_process_begin_time) > delta_runtime + 0.5) {
 	   dprintf(D_DAEMONCORE,
            "Warning: cleanup from Create_Process took %.3f sec, Create_Process took %.3f sec overall\n",
@@ -8557,6 +8575,16 @@ DaemonCore::InitDCCommandSocket( int command_port )
 			}
 		}
 
+		MyString proto = "";
+		if(it->has_relisock()) { proto = "TCP (ReliSock)"; }
+		if(it->has_safesock()) {
+			if(proto.length()) { proto += " and "; }
+			proto += "UDP (SafeSock)";
+		}
+		// TODO: That I need to twice override "fixing" wildcard addresses is terrible
+		// Something is wrong here and needs to be fixed.
+		dprintf(D_ALWAYS, "Daemoncore: Listening at %s on %s.\n",
+			it->rsock()->my_addr_wildcard_okay().to_sinful_wildcard_okay().Value(), proto.Value());
 	}
 
 	// TODO: This block should really be in the dc_socks loop above.
@@ -9649,7 +9677,7 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock, condor_protocol proto)
 static bool assign_sock(condor_protocol proto, Sock * sock, bool fatal)
 {
 	ASSERT(sock);
-	if( sock->assign(proto) ) return true;
+	if( sock->assignInvalidSocket( proto ) ) return true;
 
 	const char * type;
 	switch(sock->type()) {
@@ -9715,6 +9743,8 @@ InitCommandSocket(condor_protocol proto, int port, int udp_port, DaemonCore::Soc
 				}
 			}
 		}
+		// if (proto == CP_IPV6) { dprintf(D_ALWAYS, "Bound socket is ipv6: %d\n", rsock->my_addr().is_ipv6()); }
+		// if (proto == CP_IPV4) { dprintf(D_ALWAYS, "Bound socket is ipv4: %d\n", rsock->my_addr().is_ipv4()); }
 		if( !rsock->listen() ) {
 			if (fatal) {
 				EXCEPT( "Failed to post listen on command ReliSock" );
@@ -9832,22 +9862,65 @@ InitCommandSockets(int port, int udp_port, DaemonCore::SockPairVec & socks, bool
 
 	DaemonCore::SockPairVec new_socks;
 
-	if(param_boolean("ENABLE_IPV4", true)) {
-		DaemonCore::SockPair sock_pair;
-		if( ! InitCommandSocket(CP_IPV4, port, udp_port, sock_pair, want_udp, fatal)) {
-			dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket.\n");
-			return false;
-		}
-                new_socks.push_back(sock_pair);
-        }
+	// Arbitrary constant, borrowed from bindAnyCommandPort().
+	int retries = 1000;
+	do {
 
-	if(param_boolean("ENABLE_IPV6", true)) {
-		DaemonCore::SockPair sock_pair;
-		if( ! InitCommandSocket(CP_IPV6, port, udp_port, sock_pair, want_udp, fatal)) {
-			dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv6 command socket.\n");
-			return false;
+		if(param_boolean("ENABLE_IPV4", true)) {
+			DaemonCore::SockPair sock_pair;
+			if( ! InitCommandSocket(CP_IPV4, port, udp_port, sock_pair, want_udp, fatal)) {
+				dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket.\n");
+				return false;
+			}
+			new_socks.push_back(sock_pair);
 		}
-		new_socks.push_back(sock_pair);
+
+		// If we're creating command sockets for both protocols, try to make
+		// the port numbers match.  Mixed-mode shared port has no chance of
+		// working, otherwise, until we switch an address representation that
+		// can include both protocols' address(es).
+		int targetTCPPort = port;
+		int targetUDPPort = udp_port;
+		if( param_boolean( "ENABLE_IPV4", true ) && param_boolean("ENABLE_IPV6", true ) ) {
+			// If port and udp_port are both static, we don't have to do anything.
+			if( port <= 1 || udp_port <= 1 ) {
+				// Determine which port IPv4 got, and try to get that port for IPv6.
+				DaemonCore::SockPair ipv4_socks = new_socks[0];
+				counted_ptr<ReliSock> rs = ipv4_socks.rsock();
+				targetTCPPort = targetUDPPort = rs->get_port();
+			}
+		}
+
+		if(param_boolean("ENABLE_IPV6", true)) {
+			DaemonCore::SockPair sock_pair;
+			if( ! InitCommandSocket(CP_IPV6, targetTCPPort, targetUDPPort, sock_pair, want_udp, fatal)) {
+				dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv6 command socket.\n");
+				return false;
+			}
+			new_socks.push_back(sock_pair);
+		}
+
+		if( param_boolean( "ENABLE_IPV4", true ) && param_boolean("ENABLE_IPV6", true ) ) {
+			if( targetTCPPort != port && targetUDPPort != udp_port ) {
+				DaemonCore::SockPair ipv6_socks = new_socks[1];
+				counted_ptr<ReliSock> rs = ipv6_socks.rsock();
+				int ipv6Port = rs->get_port();
+
+				if( ipv6Port != targetTCPPort ) {
+					dprintf( D_FULLDEBUG, "Bound to IPv4 port %d, but then bound to IPv6 command port %d.\n", targetTCPPort, port );
+					new_socks.clear();
+					--retries;
+				} else {
+					retries = -1;
+				}
+			}
+		} else {
+			retries = -1;
+		}
+	} while( retries > 0 );
+
+	if( retries == 0 ) {
+		EXCEPT( "Failed to bind to the same port on IPv4 and IPv6.\n" );
 	}
 
 	// Delay inserting new socks until the end so that if we fail and
@@ -10689,4 +10762,34 @@ bool DaemonCore::SockPair::has_safesock(bool b) {
 		m_ssock = counted_ptr<SafeSock>(new SafeSock);
 	}
 	return true;
+}
+
+int DaemonCore::find_interface_command_port_do_not_use(const condor_sockaddr & addr) {
+
+	// Boldly assuming all entries in dc_socks have relisocks and
+	// that all listen sockets for a given protocol use the same port
+	// As of Sept 2014, I believe these are true.  This function should
+	// go away long before these are violated.
+	for(SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); it++) {
+		ASSERT(it->has_relisock());
+		condor_sockaddr listen_addr = it->rsock()->my_addr();
+		if(addr.get_protocol() == listen_addr.get_protocol()) {
+			return listen_addr.get_port();
+		}
+	}
+	// No matching listen socket.
+	return 0;
+}
+
+bool DaemonCore::is_command_port_do_not_use(const condor_sockaddr & addr) {
+	// Boldly assuming all entries in dc_socks have relisocks and
+	// that all listen sockets for a given protocol use the same port
+	// As of Sept 2014, I believe these are true.  This function should
+	// go away long before these are violated.
+	for(SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); it++) {
+		ASSERT(it->has_relisock());
+		condor_sockaddr listen_addr = it->rsock()->my_addr();
+		if(listen_addr == addr) { return true; }
+	}
+	return false;
 }

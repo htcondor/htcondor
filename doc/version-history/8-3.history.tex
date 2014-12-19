@@ -12,6 +12,42 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-3-3}Version 8.3.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.3.3 not yet released.
+%\item HTCondor version 8.3.3 released on Month Date, 2014.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item \Condor{dagman} now prints the hold reason to the \File{dagman.out}
+file when node jobs go on hold.
+\Ticket{4766}
+
+\item The python bindings can be used to query and set config variables
+of running daemons.
+\Ticket{4778}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-3-2}Version 8.3.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -21,6 +57,7 @@ The details of each version are described below.
 
 \item HTCondor version 8.3.2 not yet released.
 %\item HTCondor version 8.3.2 released on Month Date, 2014.
+This version contains all bug fixes from HTCondor version 8.2.5.
 
 \end{itemize}
 
@@ -29,7 +66,56 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Improve handling of failures to launch VM jobs.  Failures which do
+not appear to the fault of the job now cause the job to be rescheduled and
+the node to stop advertising the ability to run VMs.
+\Ticket{4375}
+
+\item Add ability to specify the block device mapping for EC2 jobs.
+\Ticket{4657}
+
+\item The new python binding \Procedure{register} has been added 
+to allow python functions
+be registered with the ClassAds library.  This allows python
+functions to be invoked from within ClassAds.
+\Ticket{4598}
+
+\item The new python bindings \Procedure{externalRefs} and 
+\Procedure{internalRefs} have been added to allow the ClassAd object
+to determine internal and external references from an expression.
+\Ticket{4681}
+
+\item Added the DAGMan feature of \Arg{ALWAYS-UPDATE} for updates
+of a DAGMan node status file. 
+Specifying this causes the node status file to be overwritten,
+even if no nodes have changed status since the file was last written.
+\Ticket{4607}
+
+\item Configuration variable \Macro{MAX\_JOBS\_RUNNING} has been
+modified such that it only applies to job universes that require a
+\Condor{shadow} process.
+Scheduler and local universe jobs are no longer affected by this
+variable.
+The number of running scheduler and local universe jobs can be controlled
+with configuration variables \MacroNI{START\_SCHEDULER\_UNIVERSE} and
+\MacroNI{START\_LOCAL\_UNIVERSE}, respectively.
+\Ticket{4589}
+
+\item HTCondor now sets environment variable \Env{\_CONDOR\_JOB\_AD} for
+scheduler universe jobs. 
+Its value will be the path to a file which contains
+the job ClassAd as it was when the job was started.
+This feature already exists for vanilla, parallel, java, and local
+universe jobs.
+\Ticket{4558}
+
+\item It is now possible run a dual-protocol (IPv4 and IPv6) submit node
+submitting to single-protocol execute nodes. This is preliminary work.
+\Ticket{4494}
+
+\item The new \Opt{-debug} option to \Condor{userprio} sends
+debug output to \File{stderr}.
+\Ticket{4636}
 
 \end{itemize}
 
@@ -37,7 +123,41 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug introduced in HTCondor 8.3.1 that caused daemons to be
+unreachable if they were configured to use the shared port daemon but the
+\Condor{master} was not.
+\Ticket{4603}
+
+\item Updated the CREAM client library used in the \Prog{cream\_gahp}.
+This fixes the delegation of RFC format proxies, in addition to other
+bug fixes.
+\Ticket{4596}
+
+\item Fixed a bug that could cause a segmentation fault of \Condor{dagman}
+for some DAG input file syntax errors,
+rather than printing an appropriate error message.
+\Ticket{4616}
+
+\item Fixed a bug that could cause the \Condor{shared\_port} daemon
+to fail on Mac OS X platforms,
+if configuration variable \MacroNI{LOCK} was not explicitly set 
+in a configuration file.
+\Ticket{4678}
+
+\item Fixed a bug that caused both \Condor{dagman} and the \Condor{schedd}
+daemon to generate commands to remove \Condor{dagman}'s node jobs when
+the \Condor{dagman} job is the target of \Condor{rm}.
+Now, only the \Condor{schedd} generates the command, 
+avoiding the extra load of running two identical commands.
+\Ticket{4618}
+
+\item Fixed a bug that caused the DAGMan node status file,
+as detailed in section~\ref{sec:DAG-node-status},
+to not reflect the final status of a DAG when the DAG is removed
+by issuing a \Condor{rm} command,
+or when the DAG is
+aborted due to an ABORT-DAG-ON specification in the DAG input file.
+\Ticket{4686}
 
 \end{itemize}
 
@@ -69,22 +189,6 @@ the default port used by the \Condor{collector} daemon and command line tools.
 The default value is 9618.
 This default is the same port as has been used in previous HTCondor versions.
 \Ticket{4432}
-
-%\item The \Condor{shared\_port} daemon is now enabled by default 
-%for new installations on non-Windows platforms.
-%With this change, 
-%all HTCondor daemons will share port 9618 for all incoming TCP connections,
-%greatly simplifying firewall configuration.  
-%Only users of HTCondor-G submitting to Globus GRAM endpoints 
-%will need additional incoming TCP ports in the firewall.
-%
-%Note that this causes \emph{all} HTCondor hosts to use 
-%TCP port 9618 by default,
-%differing from previous behavior.
-%Previously, only the \Condor{collector} host used a fixed port.
-%To restore the previous behavior, 
-%set the new configuration variable \Macro{SHARED\_PORT\_PORT} to \Expr{0}.
-%\Ticket{3813}
 
 \item The \Condor{shared\_port} daemon will now work 
 if the default location given by configuration variable
@@ -137,7 +241,7 @@ Section~\ref{sec:Ordering-Config-File} describes the ordering
 in which configuration files are parsed.
 \Ticket{3158}
 
-\item Daemons now authenticate many client nework connections in
+\item Daemons now authenticate many client network connections in
 parallel, rather than one at a time.
 This improves the scalability of daemons that receive many client
 connections, like the \Condor{schedd} and \Condor{collector}.

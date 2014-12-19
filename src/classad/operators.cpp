@@ -1438,7 +1438,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
     sigemptyset (&(sa1.sa_mask));
     sa1.sa_flags = 0;
     if (sigaction (SIGFPE, &sa1, &sa2)) {
-       CLASSAD_EXCEPT("Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)\n",
+       CLASSAD_EXCEPT("Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)",
 			errno);
     }
 #endif
@@ -1469,7 +1469,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 #if 0
 #ifndef WIN32 
     if (sigaction (SIGFPE, &sa2, &sa1)) {
-        CLASSAD_EXCEPT( "Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)\n",
+        CLASSAD_EXCEPT( "Warning! ClassAd: Failed sigaction for SIGFPE (errno=%d)",
 			errno);
     }
 #endif
@@ -2015,10 +2015,9 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree ) const
 			// check if selector expression collapsed to a non-undefined value
 			if( !fChild1 && !eval1.IsUndefinedValue() ) {
 				bool   		b; 
-				Value::ValueType	vt = eval1.GetType();
 
-				// if the selector is not boolean, propagate error
-				if( vt!=Value::BOOLEAN_VALUE ) {
+				// if the selector is not boolean-equivalent, propagate error
+				if( !eval1.IsBooleanValueEquiv(b) ) {
 					val.SetErrorValue();	
 					eval1.Clear();
 					tree = NULL;
@@ -2026,7 +2025,7 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree ) const
 				}
 
 				// eval1 is either a real or an integer
-				if(	eval1.IsBooleanValue(b) && b!=0 ) {
+				if( b ) {
 					return child2->Flatten( state, val, tree );	
 				} else {
 					return child3->Flatten( state, val, tree );	
@@ -2238,10 +2237,10 @@ flatten( EvalState &state, Value &val, ExprTree *&tree ) const
 
 	// check if selector expression collapsed to a non-undefined value
 	if( !fChild1 && !eval1.IsUndefinedValue() ) {
-		Value::ValueType vt = eval1.GetType();
+		bool bval = false;
 
-		// if the selector is not boolean, propagate error
-		if( vt!=Value::BOOLEAN_VALUE ) {
+		// if the selector is not boolean-equivalent, propagate error
+		if( !eval1.IsBooleanValueEquiv(bval) ) {
 			val.SetErrorValue();
 			eval1.Clear();
 			tree = NULL;
@@ -2249,8 +2248,7 @@ flatten( EvalState &state, Value &val, ExprTree *&tree ) const
 		}
 
 		// eval1 is either a real or an integer
-		bool bval = false;
-		if (eval1.IsBooleanValue(bval) && bval) {
+		if (bval) {
 			return child2->Flatten( state, val, tree );
 		} else {
 			return child3->Flatten( state, val, tree );

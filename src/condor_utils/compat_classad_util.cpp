@@ -227,8 +227,6 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 	expr->SetParentScope( source );
 	if ( target && target != source ) {
 		mad = compat_classad::getTheMatchAd( source, target );
-	} else {
-		compat_classad::getTheMyRef( source );
 	}
 	if ( !source->EvaluateExpr( expr, result ) ) {
 		rc = FALSE;
@@ -236,8 +234,6 @@ int EvalExprTree( classad::ExprTree *expr, compat_classad::ClassAd *source,
 
 	if ( mad ) {
 		compat_classad::releaseTheMatchAd();
-	} else {
-		compat_classad::releaseTheMyRef( source );
 	}
 	expr->SetParentScope( old_scope );
 

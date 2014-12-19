@@ -99,7 +99,13 @@ DownloadReplicaTransferer::transferFileCommand( )
 	// remote sockets with 'listeningSocket'
     listeningSocket.doNotEnforceMinimalCONNECT_TIMEOUT( );
 
-    if( ! listeningSocket.bind( FALSE ) || ! listeningSocket.listen( ) ) {
+	// TODO: HAD is probably IPv4-only for the foreseeable future, if for
+	// no other reason than it transfers the sinful as a string rather than
+	// a classad (and so rewriting can't happen).
+	//
+	// This may have, but probably did not, work in IPv6-only mode.  It's
+	// easy to check for that and try IPv6 instead, just to see...
+    if( ! listeningSocket.bind( CP_IPV4, false, 0, false ) || ! listeningSocket.listen( ) ) {
 		temporarySocket.close( );
 		listeningSocket.close( );
 

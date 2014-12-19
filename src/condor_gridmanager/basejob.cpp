@@ -310,7 +310,7 @@ void BaseJob::DoneWithJob()
 
 		default:
 		{
-			EXCEPT("BaseJob::DoneWithJob called with unexpected state %s (%d)\n", getJobStatusString(condorState), condorState);
+			EXCEPT("BaseJob::DoneWithJob called with unexpected state %s (%d)", getJobStatusString(condorState), condorState);
 		}
 		break;
 	}

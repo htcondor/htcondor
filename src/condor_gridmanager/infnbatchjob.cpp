@@ -300,7 +300,8 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 
 	jobProxy = AcquireProxy( jobAd, error_string,
 							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
-	if ( jobProxy == NULL && error_string != "" ) {
+	// If we're removing the job, ignore a bad/missing proxy file.
+	if ( jobProxy == NULL && error_string != "" && condorState != REMOVED) {
 		goto error_exit;
 	}
 
@@ -558,6 +559,7 @@ void INFNBatchJob::doEvaluateState()
 				while ( *old_addr != '\0' && *old_addr != '?' && *old_addr != '>' ) {
 					old_addr++;
 				}
+				// TODO IPV6: Rolling your own sinfuls WILL break soon.
 				formatstr( new_addr, "<127.0.0.1:%d%s",
 						   m_xfer_gahp->getSshForwardPort(), old_addr );
 				gahpAd->Assign( ATTR_TRANSFER_SOCKET, new_addr );
@@ -814,6 +816,7 @@ void INFNBatchJob::doEvaluateState()
 				while ( *old_addr != '\0' && *old_addr != '?' && *old_addr != '>' ) {
 					old_addr++;
 				}
+				// TODO IPV6: Rolling your own sinfuls WILL break soon.
 				formatstr( new_addr, "<127.0.0.1:%d%s",
 						   m_xfer_gahp->getSshForwardPort(), old_addr );
 				gahpAd->Assign( ATTR_TRANSFER_SOCKET, new_addr );

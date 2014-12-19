@@ -30,6 +30,7 @@
 #include "classad_merge.h"
 #include "condor_fsync.h"
 #include "condor_attributes.h"
+#include "stopwatch.h"
 
 #if defined(HAVE_DLOPEN)
 #include "ClassAdLogPlugin.h"
@@ -96,13 +97,20 @@ ClassAdLogFilterIterator::operator++(int)
 	bool boolVal;
 	int intVal;
 	int miss_count = 0;
+	Stopwatch sw;
+	sw.start();
 	while (!(m_cur == end))
 	{
 		miss_count++;
-		if (miss_count == m_timeslice_ms)
-		{
-			break;
-		}
+			// 500 was chosen here based on a queue of 1M jobs and
+			// estimated 30ns per clock_gettime call - resulting in
+			// an overhead of 0.06 ms from the timing calls to iterate
+			// through a whole queue.  Compared to the cost of doing
+			// the rest of the iteration (6ms per 10k ads, or 600ms)
+			// for the whole queue, I consider this overhead
+			// acceptable.  BB, 09/2014.
+		if ((miss_count % 500 == 0) && (sw.get_ms() > m_timeslice_ms)) {break;}
+
 		cur = *this;
 		ClassAd *tmp_ad = (*m_cur++).second;
 		if (!tmp_ad) continue;
@@ -197,7 +205,7 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 		switch (log_rec->get_op_type()) {
         case CondorLogOp_Error:
             // this is defensive, ought to be caught in InstantiateLogEntry()
-            EXCEPT("ERROR: transaction record %lu was bad (byte offset %lld)\n", count, curr_log_entry_pos);
+            EXCEPT("ERROR: transaction record %lu was bad (byte offset %lld)", count, curr_log_entry_pos);
             break;
 		case CondorLogOp_BeginTransaction:
 			// this file contains transactions, so it must not
@@ -482,13 +490,13 @@ ClassAdLog::TruncLog()
 	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (log_fd < 0) {
 		EXCEPT( "failed to open log in append mode: "
-			"safe_open_wrapper(%s) returns %d\n", logFilename(), log_fd);
+			"safe_open_wrapper(%s) returns %d", logFilename(), log_fd);
 	}
 	log_fp = fdopen(log_fd, "a+");
 	if (log_fp == NULL) {
 		close(log_fd);
 		EXCEPT("failed to fdopen log in append mode: "
-			"fdopen(%s) returns %d\n", logFilename(), log_fd);
+			"fdopen(%s) returns %d", logFilename(), log_fd);
 	}
 
 	return true;
@@ -504,7 +512,7 @@ void
 ClassAdLog::DecNondurableCommitLevel(int old_level)
 {
 	if( --m_nondurable_level != old_level ) {
-		EXCEPT("ClassAdLog::DecNondurableCommitLevel(%d) with existing level %d\n",
+		EXCEPT("ClassAdLog::DecNondurableCommitLevel(%d) with existing level %d",
 			   old_level, m_nondurable_level+1);
 	}
 }

@@ -76,8 +76,10 @@ The value can be modified with \Macro{SLOTS\_CONNECTED\_TO\_CONSOLE}
 as defined at ~\ref{param:SlotsConnectedToConsole}.
 %
 \index{ClassAd machine attribute!Cpus}
-\item[\AdAttr{Cpus}:]  The number of CPUs in this slot.
+\item[\AdAttr{Cpus}:]  The number of CPUs (cores) in this slot.
 It is 1 for a single CPU slot, 2 for a dual CPU slot, etc.
+For a partitionable slot, it is the remaining number of CPUs
+in the partitionable slot. 
 %
 \index{ClassAd machine attribute!CurrentRank}
 \item[\AdAttr{CurrentRank}:] A float which represents this machine
@@ -90,10 +92,15 @@ the attribute's value is computed by evaluating the machine's
 %
 \index{ClassAd machine attribute!Disk}
 \item[\AdAttr{Disk}:] The amount of disk space on this machine available for
-the job in Kbytes ( e.g. 23000 = 23 megabytes ).  Specifically, this
+the job in KiB (for example, 23000 = 23 MiB).  Specifically, this
 is the amount of disk space available in the directory specified in
 the HTCondor configuration files by the \Macro{EXECUTE} macro, minus any
 space reserved with the \Macro{RESERVED\_DISK} macro.
+For static slots, this value will be the same as
+machine ClassAd attribute \Attr{TotalSlotDisk}.  
+For partitionable slots,
+this value will be the quantity of disk space remaining in the partitionable
+slot.
 %
 \index{ClassAd machine attribute!Draining}
 \item[\AdAttr{Draining}:] This attribute is \Expr{True} when the slot
@@ -190,9 +197,10 @@ if the machine being advertised supports
 the SSSE 3 instructions, and \Expr{Undefined} otherwise.
 %
 \index{ClassAd machine attribute!HasVM}
-\item[\AdAttr{HasVM}:] A boolean value added to the machine ClassAd
-when the configuration triggers the detection of virtual machine
-software.
+\item[\AdAttr{HasVM}:] If the configuration triggers the detection of
+virtual machine software, a boolean value reporting the success thereof;
+otherwise undefined.  May also become \Expr{False} if HTCondor determines
+that it can't start a VM (even if the appropriate software is detected).
 %
 \index{ClassAd machine attribute!IsWakeAble}
 \item[\AdAttr{IsWakeAble}:] A boolean value that when \Expr{True} identifies
@@ -297,7 +305,10 @@ evaluated in the context of the job ClassAd, so it may refer to job
 attributes as well as machine attributes.
 %
 \index{ClassAd machine attribute!Memory}
-\item[\AdAttr{Memory}:] The amount of RAM in megabytes.
+\item[\AdAttr{Memory}:] The amount of RAM in MiB in this slot.
+For static slots, this value will be the same as in \Attr{TotalSlotMemory}.
+For a partitionable slot, this value will be the quantity remaining
+in the partitionable slot.
 %
 \index{ClassAd machine attribute!Mips}
 \item[\AdAttr{Mips}:] Relative integer performance as determined via a Dhrystone
@@ -313,7 +324,7 @@ benchmark.
 
 \index{ClassAd machine attribute!MonitorSelfImageSize}
 \item[\AdAttr{MonitorSelfImageSize}:] The amount of virtual memory consumed by
-  this daemon in Kbytes.
+  this daemon in KiB.
 
 \index{ClassAd machine attribute!MonitorSelfRegisteredSocketCount}
 \item[\AdAttr{MonitorSelfRegisteredSocketCount}:] The current number of sockets
@@ -321,7 +332,7 @@ benchmark.
 
 \index{ClassAd machine attribute!MonitorSelfResidentSetSize}
 \item[\AdAttr{MonitorSelfResidentSetSize}:] The amount of resident memory
-  used by this daemon in Kbytes.
+  used by this daemon in KiB.
 
 \index{ClassAd machine attribute!MonitorSelfSecuritySessions}
 \item[\AdAttr{MonitorSelfSecuritySessions}:] The number of open (cached)
@@ -359,6 +370,19 @@ instances of a user-defined machine resource,
 identified by \Attr{name}. 
 Each instance is currently unavailable for purposes of match making.
 %
+\index{ClassAd machine attribute!OfflineUniverses}
+\label{OfflineUnverses-machine-attribute}
+\item[\AdAttr{OfflineUniverses}:] A ClassAd list that specifies which
+job universes are presently offline, both as strings and as the corresponding
+job universe number.  Could be used the the startd to refuse to start jobs
+in offline universes:
+
+\begin{verbatim}
+START = OfflineUniverses is undefined || (! member( JobUniverse, OfflineUniverses ))
+\end{verbatim}
+
+May currently only contain \Expr{"VM"} and \Expr{13}.
+%
 \index{ClassAd machine attribute!OpSys}
 \label{OpSys-machine-attribute}
 \item[\AdAttr{OpSys}:] String describing the operating system running on this
@@ -368,7 +392,7 @@ definitions:
 	\begin{description}
 	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x,
 	LINUX 2.4.x, LINUX 2.6.x, or LINUX 3.10.0 kernel systems, as well as Scientific Linux 
-        and Ubuntu 12.04
+        and Ubuntu versions 12.04 and 14.04
 	\item[\AdStr{OSX}:] for Darwin
 	\item[\AdStr{FREEBSD7}:] for FreeBSD 7
 	\item[\AdStr{FREEBSD8}:] for FreeBSD 8
@@ -396,6 +420,7 @@ concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
 	\item[\AdStr{Debian5}:] for Debian Linux version 5
 	\item[\AdStr{Debian6}:] for Debian Linux version 6
 	\item[\AdStr{Ubuntu12}:] for Ubuntu 12.04
+	\item[\AdStr{Ubuntu14}:] for Ubuntu 14.04
 	\item[\AdStr{SL5}:] for Scientific Linux version 5
 	\item[\AdStr{SL6}:] for Scientific Linux version 6
 	\item[\AdStr{SLFermi5}:] for Fermi's Scientific Linux version 5
@@ -436,7 +461,8 @@ concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
 Currently supported operating systems have the following string
 definitions:
 	\begin{description}
-	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x, LINUX 2.4.x, LINUX 2.6.x, or LINUX 3.10.0 kernel systems, as well as Scientific Linux and  Ubuntu 12.04 versions
+	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x, LINUX 2.4.x, LINUX 2.6.x, or LINUX 3.10.0 kernel systems, as well as Scientific Linux and  Ubuntu 
+versions 12.04 and 14.04
 	\item[\AdStr{OSX}:] for Darwin
 	\item[\AdStr{FREEBSD7}:] for FreeBSD version 7
 	\item[\AdStr{FREEBSD8}:] for FreeBSD version 8
@@ -455,6 +481,7 @@ with extra characters stripped off Debian versions.
 	\item[\AdStr{Red Hat Enterprise Linux Server release 6.2 (Santiago)}:] for RedHat Linux version 6
 	\item[\AdStr{Red Hat Enterprise Linux Server release 7.0 (Maipo)}:] for RedHat Linux version 7.0
 	\item[\AdStr{Ubuntu 12.04.3 LTS}:] for Ubuntu 12.04 point release 3 
+	\item[\AdStr{Ubuntu 14.04.1 LTS}:] for Ubuntu 14.04 point release 1 
 	\item[\AdStr{Fedora release 16 (Verne)}:] for Fedora Linux version 16
 	\item[\AdStr{MacOSX 6.5}:] for MacOS version 10.6.5 (Snow Leopard)
 	\item[\AdStr{MacOSX 7.3}:] for MacOS version 10.7.3 (Lion)
@@ -474,6 +501,7 @@ and derived platforms such as Scientific Linux
 and derived platforms such as Scientific Linux
 	\item[\Expr{7}:] for RedHat Linux version 7
 	\item[\Expr{12}:] for Ubuntu 12.04
+	\item[\Expr{14}:] for Ubuntu 14.04
 	\item[\Expr{16}:] for Fedora Linux version 16
 	\item[\Expr{6}:] for MacOS version 10.6.5 (Snow Leopard)
 	\item[\Expr{7}:] for MacOS version 10.7.3 (Lion)
@@ -490,7 +518,7 @@ and derived platforms such as Scientific Linux
 	\begin{description}
 	\item[\AdStr{RedHat}:] for RedHat Linux version 6 and 7
 	\item[\AdStr{Fedora}:] for Fedora Linux version 16
-	\item[\AdStr{Ubuntu}:] for Ubuntu 12.04
+	\item[\AdStr{Ubuntu}:] for Ubuntu versions 12.04 and 14.04
 	\item[\AdStr{SnowLeopard}:] for MacOS version 10.6.5 (Snow Leopard)
 	\item[\AdStr{Lion}:] for MacOS version 10.7.3 (Lion)
 	\item[\AdStr{FREEBSD}:] for FreeBSD version 7 or 8
@@ -511,7 +539,7 @@ the operating system.
 	\item[\AdStr{RedHat}:] for RedHat Linux version 5, 6 or 7
 	\item[\AdStr{Fedora}:] for Fedora Linux version 16
 	\item[\AdStr{Debian}:] for Debian Linux version 5 or 6
-	\item[\AdStr{Ubuntu}:] for Ubuntu 12.04
+	\item[\AdStr{Ubuntu}:] for Ubuntu versions 12.04 and 14.04
 	\item[\AdStr{MacOSX}:] for MacOS version 10.6.5 (Snow Leopard) or 
 for MacOS version 10.7.3 (Lion)
 	\item[\AdStr{FreeBSD}:] for FreeBSD version 7 or 8
@@ -533,6 +561,7 @@ version number.
 	\item[\Expr{602}:] for RedHat Linux version 6.2
 	\item[\Expr{1600}:] for Fedora Linux version 16.0
 	\item[\Expr{1204}:] for Ubuntu 12.04
+	\item[\Expr{1404}:] for Ubuntu 14.04
 	\item[\Expr{704}:] for FreeBSD version 7.4
 	\item[\Expr{802}:] for FreeBSD version 8.2
 	\item[\Expr{605}:] for MacOS version 10.6.5 (Snow Leopard)
@@ -642,9 +671,16 @@ by HTCondor summed across all slots on the machine,
 either from remote jobs or running benchmarks.
 %
 \index{ClassAd machine attribute!TotalCpus}
-\item[\AdAttr{TotalCpus}:] The number of CPUs that are on the machine.
+\item[\AdAttr{TotalCpus}:] The number of CPUs (cores) that are on the machine.
 This is in contrast with \Attr{Cpus},
 which is the number of CPUs in the slot.
+%
+\index{ClassAd machine attribute!TotalDisk}
+\item[\AdAttr{TotalDisk}:] The quantity of disk space in KiB
+available across the machine (not the slot).
+For partitionable slots,
+where there is one partitionable slot per machine, this value will be
+the same as machine ClassAd attribute \Attr{TotalSlotDisk}.
 %
 \index{ClassAd machine attribute!TotalLoadAvg}
 \item[\AdAttr{TotalLoadAvg}:] A floating point number representing the 
@@ -662,6 +698,35 @@ checkpointing.
 total machine-wide time in cpu-seconds that has not been used
 (i.e. not matched to a job submitter) due to draining since this
 \Condor{startd} began executing.
+%
+\index{ClassAd machine attribute!TotalMemory}
+\item[\AdAttr{TotalMemory}:] The quantity of RAM in MiB
+available across the machine (not the slot).
+For partitionable slots,
+where there is one partitionable slot per machine, this value will be
+the same as machine ClassAd attribute \Attr{TotalSlotMemory}.
+%
+\index{ClassAd machine attribute!TotalSlotCpus}
+\item[\AdAttr{TotalSlotCpus}:] The number of CPUs (cores) in this slot.
+For static slots, this value will be the same as in \Attr{Cpus}.
+%
+\index{ClassAd machine attribute!TotalSlotDisk}
+\item[\AdAttr{TotalSlotDisk}:] The quantity of disk space in KiB
+given to this slot.  For static slots, this value will be the same as
+machine ClassAd attribute \Attr{Disk}.  For partitionable slots,
+where there is one partitionable slot per machine, this value will be
+the same as machine ClassAd attribute \Attr{TotalDisk}.
+%
+\index{ClassAd machine attribute!TotalSlotMemory}
+\item[\AdAttr{TotalSlotMemory}:] The quantity of RAM in MiB
+given to this slot.  For static slots, this value will be the same as
+machine ClassAd attribute \Attr{Memory}.  For partitionable slots,
+where there is one partitionable slot per machine, this value will be
+the same as machine ClassAd attribute \Attr{TotalMemory}.
+%
+\index{ClassAd machine attribute!TotalSlots}
+\item[\AdAttr{TotalSlots}:] A sum of the static slots, partitionable slots,
+and dynamic slots on the machine at the current time.
 %
 \index{ClassAd machine attribute!TotalTimeBackfillBusy}
 \item[\AdAttr{TotalTimeBackfillBusy}:] The number of seconds
@@ -767,7 +832,7 @@ This will only be present if \Macro{ALLOW\_VM\_CRUFT} is TRUE.
 %
 \index{ClassAd machine attribute!VirtualMemory}
 \item[\AdAttr{VirtualMemory}:] The amount of currently available virtual memory 
-(swap space) expressed in Kbytes.
+(swap space) expressed in KiB.
 On Linux platforms, it is the sum of paging space and physical memory, 
 which more accurately represents the virtual memory size of the machine. 
 %
@@ -794,6 +859,13 @@ is allowed for virtual machines on this machine.
 \item[\AdAttr{VM\_Type}:] The type of virtual machine software that can run
 on this machine.  The value is set by the configuration variable
 \Macro{VM\_TYPE}.
+%
+\index{ClassAd machine attribute!VMOfflineReason}
+\item[\AdAttr{VMOfflineReason}:]  The reason the VM universe went offline
+(usually because a VM universe job failed to launch).
+%
+\index{ClassAd machine attribute!VMOfflineTime}
+\item[\AdAttr{VMOfflineTime}:]  The time that the VM universe went offline.
 %
 \index{ClassAd machine attribute!WindowsBuildNumber}
 \item[\AdAttr{WindowsBuildNumber}:] An integer, extracted from the

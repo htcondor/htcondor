@@ -330,10 +330,14 @@ struct query_process_helper
 void
 query_process_callback(void * data, classad_shared_ptr<ClassAd> ad)
 {
-    if (PyErr_Occurred()) return;
-
     query_process_helper *helper = static_cast<query_process_helper *>(data);
     helper->ml->release();
+    if (PyErr_Occurred())
+    {
+        helper->ml->acquire();
+        return;
+    }
+
     try
     {
         boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());

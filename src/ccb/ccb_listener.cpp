@@ -144,6 +144,10 @@ CCBListener::SendMsgToCCB(ClassAd &msg,bool blocking)
 			}
 		}
 		else if( !m_waiting_for_connect ) {
+			if (IsDebugLevel(D_COMMAND)) {
+				const char * addr = ccb.addr();
+				dprintf (D_COMMAND, "CCBListener::SendMsgToCCB(%s,...) making non-blocking connection to %s\n", getCommandStringSafe(cmd), addr ? addr : "NULL");
+			}
 			m_sock = ccb.makeConnectedSocket(Stream::reli_sock, CCB_TIMEOUT, 0, NULL, true /*nonblocking*/ );
 			if( !m_sock ) {
 				Disconnected();
@@ -392,7 +396,7 @@ CCBListener::HandleCCBRegistrationReply( ClassAd &msg )
 	if( !msg.LookupString(ATTR_CCBID,m_ccbid) ) {
 		MyString msg_str;
 		sPrintAd(msg_str, msg);
-		EXCEPT("CCBListener: no ccbid in registration reply: %s\n",
+		EXCEPT("CCBListener: no ccbid in registration reply: %s",
 			   msg_str.Value() );
 	}
 	msg.LookupString(ATTR_CLAIM_ID,m_reconnect_cookie);

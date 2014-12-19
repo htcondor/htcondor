@@ -1224,7 +1224,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			char **claims = (char **)malloc(sizeof(char *) * (num_preempting));
 			for (int i = 0; i < num_preempting; i++) {
 				claims[i] = NULL;
-				if (! stream->code(claims[i])) {
+				if (! stream->get_secret(claims[i])) {
 					rip->dprintf( D_ALWAYS, "Can't receive preempting claim\n" );
 					for (int n = 0; n < i - 1; n++) {
 						free(claims[n]);
@@ -1237,8 +1237,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					ClaimIdParser idp( claims[i] );
 					dprintf( D_ALWAYS, 
 							 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
+				} else {
+					dslot->kill_claim();
 				}
-				dslot->kill_claim();
 				free(claims[i]);
 			}
 			free(claims);
@@ -1846,21 +1847,44 @@ activate_claim( Resource* rip, Stream* stream )
 	} 
 #ifndef WIN32
 	else {
+		//
+		// This should be exclusively for the standard universe.
+		//
+		// FIXME: If there's a non-standard universe starter, we probably
+		// shouldn't blow an assert if the stream isn't IP-based.
+		//
+		// FIXME: It's a bit late to reject the job, but it's probably not
+		// worth trying to run IPv6 jobs in the standard universe.
+		//
+		condor_sockaddr streamSA;
+		assert( streamSA.from_ip_string( stream->my_ip_str() ) );
 
-			// Set up the two starter ports and send them to the shadow
+		if( streamSA.is_ipv6() ) {
+			dprintf( D_ALWAYS, "WARNING -- request to run standard-universe job via IPv6.  Expect problems.\n" );
+		}
+
+		//
+		// Be sure to create only IPv4 sockets.
+		//
 		stRec.version_num = VERSION_FOR_FLOCK;
-		sock_1 = create_port(&rsock_1);
-		sock_2 = create_port(&rsock_2);
+
+		rsock_1.bind( CP_IPV4, false, 0, false );
+		rsock_1.listen();
+		sock_1 = rsock_1.get_file_desc();
 		stRec.ports.port1 = rsock_1.get_port();
+
+		rsock_2.bind( CP_IPV4, false, 0, false );
+		rsock_2.listen();
+		sock_2 = rsock_2.get_file_desc();
 		stRec.ports.port2 = rsock_2.get_port();
 
 		stRec.server_name = strdup( my_full_hostname() );
-	
-			// Send our local IP address, too.
-		
+
+		// Send our local IP address, too.
 		// stRec.ip_addr actually is never used.
 		// Just make sure that it does not have 0 value.
-		condor_sockaddr local_addr = get_local_ipaddr();
+		// // TODO: Arbitrarily picking IPv4 
+		condor_sockaddr local_addr = get_local_ipaddr(CP_IPV4);
 		struct in_addr local_in_addr = local_addr.to_sin().sin_addr;
 		memcpy( &stRec.ip_addr, &local_in_addr, sizeof(struct in_addr) );
 
@@ -2292,6 +2316,33 @@ cleanup:
 
 
 int
+caUpdateMachineAd( Stream * s, char * c, ClassAd * ad ) {
+	//
+	// Update the machine ad (for the lifetime of this startd).
+	//
+	resmgr->updateExtrasClassAd( ad );
+
+	// Force an update to the collector right away.
+	resmgr->update_all();
+
+	if( false ) {
+		std::string errorMessage = "Unable to update machine ad.";
+		sendErrorReply( s, c, CA_FAILURE, errorMessage.c_str() );
+		return FALSE;
+	}
+
+	ClassAd reply;
+	reply.Assign( ATTR_RESULT, getCAResultString( CA_SUCCESS ) );
+	if( ! sendCAReply( s, c, & reply ) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to send update machine ad reply.\n" );
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+int
 command_classad_handler( Service*, int dc_cmd, Stream* s )
 {
 	int rval=0;
@@ -2318,6 +2369,12 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 	}
 
 	switch( cmd ) {
+	case CA_UPDATE_MACHINE_AD:
+		rval = caUpdateMachineAd( s, cmd_str, & ad );
+		free( cmd_str );
+		return rval;
+		break;
+
 	case CA_LOCATE_STARTER:
 			// special case, since it's not really about claims at
 			// all, but instead are worrying about trying to find a
@@ -2432,7 +2489,7 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 		rval = cod_mgr->resume( s, &ad, claim );
 		break;
 	case CA_REQUEST_CLAIM:
-		EXCEPT( "Already handled CA_REQUEST_CLAIM, shouldn't be here\n" );
+		EXCEPT( "Already handled CA_REQUEST_CLAIM, shouldn't be here" );
 		break;
 	case CA_RENEW_LEASE_FOR_CLAIM:
 		rval = cod_mgr->renew( s, &ad, claim );

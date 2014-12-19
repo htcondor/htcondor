@@ -49,6 +49,21 @@ const char * nullStringIfEmpty( const std::string & str ) {
     else { return str.c_str(); }
 }
 
+// Utility function.
+void trim( std::string & str ) {
+	size_t size = str.size();
+	if( size == 0 ) { return; }
+
+	size_t end = size - 1;
+	while( end > 0 && isspace( str[end] ) ) { --end; }
+	if( end != size - 1 ) { str.erase( end + 1 ); }
+
+	size = str.size();
+	size_t begin = 0;
+	while( begin < size && isspace( str[begin] ) ) { ++begin; }
+	if( begin != 0 ) { str.erase( 0, begin ); }
+}
+
 //
 // This function should not be called for anything in query_parameters,
 // except for by AmazonQuery::SendRequest().
@@ -243,7 +258,7 @@ bool AmazonRequest::SendRequest() {
             dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
             return false;
         }
-        if( keyID[ keyID.length() - 1 ] == '\n' ) { keyID.erase( keyID.length() - 1 ); }
+        trim( keyID );
         query_parameters.insert( std::make_pair( "AWSAccessKeyId", keyID ) );
     }
 
@@ -326,7 +341,7 @@ bool AmazonRequest::SendRequest() {
             dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
             return false;
         }
-        if( saKey[ saKey.length() - 1 ] == '\n' ) { saKey.erase( saKey.length() - 1 ); }
+        trim( saKey );
     }
 
     unsigned int mdLength = 0;
@@ -705,10 +720,10 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     int requestID;
     get_int( argv[1], & requestID );
 
-    if( ! verify_min_number_args( argc, 14 ) ) {
+    if( ! verify_min_number_args( argc, 15 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
         dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-                 argc, 14, argv[0] );
+                 argc, 15, argv[0] );
         return false;
     }
 
@@ -748,9 +763,32 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
         vmStartRequest.query_parameters[ "ClientToken" ] = argv[13];
     }
 
-    for( int i = 14; i < argc; ++i ) {
+	if( strcasecmp( argv[14], NULLSTRING ) ) {
+		// We can't pass an arbitrarily long list of block device mappings
+		// because we're already using that to pass security group names.
+		StringList mappings( argv[14] );
+		mappings.rewind();
+		char * mapping = NULL;
+		for( int i = 1; (mapping = mappings.next()) != NULL; ++i ) {
+			StringList pair( mapping, ":" );
+			pair.rewind();
+			if( pair.number() != 2 ) {
+				dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping );
+			}
+
+			std::ostringstream virtualName;
+			virtualName << "BlockDeviceMapping." << i << ".VirtualName";
+			vmStartRequest.query_parameters[ virtualName.str() ] = pair.next();
+
+			std::ostringstream deviceName;
+			deviceName << "BlockDeviceMapping." << i << ".DeviceName";
+			vmStartRequest.query_parameters[ deviceName.str() ] = pair.next();
+		}
+	}
+
+    for( int i = 15; i < argc; ++i ) {
         std::ostringstream groupName;
-        groupName << "SecurityGroup." << ( i - 13 + 1 );
+        groupName << "SecurityGroup." << ( i - 15 + 1 );
         vmStartRequest.query_parameters[ groupName.str() ] = argv[ i ];
     }
 

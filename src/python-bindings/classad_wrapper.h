@@ -6,6 +6,8 @@
 #include <boost/python.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
+void registerFunction(boost::python::object function, boost::python::object name);
+
 struct ExprTreeHolder;
 
 struct AttrPairToFirst :
@@ -75,6 +77,10 @@ struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassA
     boost::python::object setdefault(const std::string attr, boost::python::object result=boost::python::object());
 
     void update(boost::python::object source);
+
+    boost::python::list externalRefs(boost::python::object expr) const;
+
+    boost::python::list internalRefs(boost::python::object expr) const;
 
     ClassAdWrapper();
 

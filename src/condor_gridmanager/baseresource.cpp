@@ -408,7 +408,7 @@ bool BaseResource::RequestSubmit( BaseJob *job )
 
 	if ( submitsAllowed.Length() < jobLimit &&
 		 submitsWanted.Length() > 0 ) {
-		EXCEPT("In BaseResource for %s, SubmitsWanted is not empty and SubmitsAllowed is not full\n",resourceName);
+		EXCEPT("In BaseResource for %s, SubmitsWanted is not empty and SubmitsAllowed is not full",resourceName);
 	}
 	if ( submitsAllowed.Length() < jobLimit ) {
 		submitsAllowed.Append( job );
@@ -845,7 +845,7 @@ int BaseResource::DoBatchStatus()
 				return 0;
 
 			default:
-				EXCEPT("BaseResource::DoBatchStatus: Unknown BatchStatusResult %d\n", (int)bsr);
+				EXCEPT("BaseResource::DoBatchStatus: Unknown BatchStatusResult %d", (int)bsr);
 		}
 
 	} else {
@@ -867,7 +867,7 @@ int BaseResource::DoBatchStatus()
 				return 0;
 
 			default:
-				EXCEPT("BaseResource::DoBatchStatus: Unknown BatchStatusResult %d\n", (int)bsr);
+				EXCEPT("BaseResource::DoBatchStatus: Unknown BatchStatusResult %d", (int)bsr);
 		}
 	}
 	return 0;

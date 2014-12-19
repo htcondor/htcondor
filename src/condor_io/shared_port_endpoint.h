@@ -127,9 +127,8 @@ class SharedPortEndpoint: Service {
 	static bool CreatedSharedPortDirectory() {return m_created_shared_port_dir;}
 
  private:
-	static void RealInitializeDaemonSocketDir();
 	static bool m_created_shared_port_dir;
-	static bool m_should_initialize_socket_dir;
+	static bool m_initialized_socket_dir;
 
 	bool m_is_file_socket; // Set to false if we are using a Linux abstract socket.
 	bool m_listening;
