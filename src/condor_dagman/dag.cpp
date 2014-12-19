@@ -1,3 +1,4 @@
+//TEMPTEMP -- should I back out the log changes and do a commit that's only the Stork removal?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -134,7 +135,6 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_reject			  (false),
 	_alwaysRunPost		  (true),
 	_defaultPriority	  (0),
-	_use_default_node_log  (true),
 	_metrics			  (NULL)
 {
 
@@ -209,9 +209,6 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_dagFiles.rewind();
 	_haltFile = HaltFileName( _dagFiles.next() );
 	_dagStatus = DAG_STATUS_OK;
-	if( submitDagDeepOpts ) {
-		_use_default_node_log = submitDagDeepOpts->always_use_node_log;
-	}
 	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
 	if(_nfsLogIsError) {
 		bool userlog_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
@@ -313,9 +310,8 @@ bool Dag::Bootstrap (bool recovery)
    		jobs.ToBeforeFirst();
    		while( jobs.Next( job ) ) {
 			if ( job->CanSubmit() ) {
-				if ( !job->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
-							recovery, _defaultNodeLog,
-							_use_default_node_log ) ) {
+				if ( !job->MonitorLogFile( _condorLogRdr,
+							_nfsLogIsError, recovery, _defaultNodeLog ) ) {
 					debug_cache_stop_caching();
 					_jobstateLog.WriteRecoveryFailure();
 					return false;
@@ -921,8 +917,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 				job->SetStatus( Job::STATUS_POSTRUN );
 				_postRunNodeCount++;
 				(void)job->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
-							_recovery, _defaultNodeLog,
-							_use_default_node_log );
+							_recovery, _defaultNodeLog );
 			} else {
 				(void)RunPostScript( job, _alwaysRunPost, 0 );
 			}
@@ -1510,7 +1505,6 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		_preScriptQ->RunAllWaitingScripts();
 	}
 
-	bool didLogSleep = false;
 	while( numSubmitsThisCycle < dm.max_submits_per_interval ) {
 
 //		PrintReadyQ( DEBUG_DEBUG_4 );
@@ -1567,36 +1561,6 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			deferredJobs.Prepend( job, -job->_nodePriority );
 			_catThrottleDeferredCount++;
 		} else {
-				// The problem here is that we wouldn't need to sleep if
-				// we only have one total log file *after* we monitor the
-				// log file for the job we're going to submit.  I guess
-				// we could be smarter and move this test somewhere else,
-				// but I'm not going to deal with that right now.
-				// wenger 2009-05-27
-
-				// Okay, we're just going to skip the sleep if we're
-				// using the single workflow log file.  I think we
-				// shouldn't worry about being smart in any other cases.
-				// wenger 2013-01-24
-			if( !_use_default_node_log && dm.submit_delay == 0 && !didLogSleep ) {
-					// if we don't already have a submit_delay, sleep for one
-					// second here, so we can be sure that this job's submit
-					// event will be unambiguously later than the termination
-					// events of its parents, given that userlog timestamps
-					// only have a resolution of one second.  (Because of the
-					// new feature allowing distinct userlogs for each node, we
-					// can't just rely on the physical order in a single log
-					// file.)
-
-					// We sleep at most once per submit cycle, because
-					// we don't really have to worry about getting events
-					// for "sibling" nodes in the exact order they occurred.
-				debug_printf( DEBUG_VERBOSE,
-							"Sleeping for one second for log "
-							"file consistency\n" );
-				sleep( 1 );
-				didLogSleep = true;
-			}
 
     		CondorID condorID(0,0,0);
 			submit_result_t submit_result = SubmitNodeJob( dm, job, condorID );
@@ -1688,14 +1652,12 @@ Dag::PreScriptReaper( Job *job, int status )
 				// This might be the first time we watch the file, so we
 				// monitor it.
 			if ( !job->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
-					_recovery, _defaultNodeLog, _use_default_node_log ) ) {
+					_recovery, _defaultNodeLog ) ) {
 				return 0;
 			}
 				
-			if(!writePreSkipEvent( id, job, job->GetJobName(),
-					job->GetDirectory(), _use_default_node_log ? DefaultNodeLog():
-					job->GetLogFile() , !_use_default_node_log
-					&& job->GetLogFileIsXml() ) ) {
+			if ( !writePreSkipEvent( id, job, job->GetJobName(),
+					job->GetDirectory(), DefaultNodeLog(), false ) ) {
 				debug_printf( DEBUG_NORMAL, "Failed to write PRE_SKIP event for node %s\n",
 					job->GetJobName() );
 				main_shutdown_rescue( EXIT_ERROR, DAG_STATUS_ERROR );
@@ -1774,7 +1736,7 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 	// We are told to ignore the result of the PRE script
 	job->SetStatus( Job::STATUS_POSTRUN );
 	if ( !job->MonitorLogFile( _condorLogRdr, 
-			_nfsLogIsError, _recovery, _defaultNodeLog, _use_default_node_log ) ) {
+			_nfsLogIsError, _recovery, _defaultNodeLog ) ) {
 		debug_printf(DEBUG_QUIET, "Unable to monitor user logfile for node %s\n",
 			job->GetJobName() );
 		debug_printf(DEBUG_QUIET, "Not running the POST script\n" );
@@ -1814,6 +1776,7 @@ Dag::PostScriptReaper( Job *job, int status )
 		e.returnValue = WEXITSTATUS( status );
 	}
 
+//TEMPTEMP -- this needs tons of cleanup...
 	e.cluster = job->GetCluster();
 	e.proc = job->GetProc();
 	e.subproc = job->GetSubProc();
@@ -1823,14 +1786,14 @@ Dag::PostScriptReaper( Job *job, int status )
 		// write to the user log also fails, and DAGMan hangs
 		// waiting for the event that wasn't written).
 	ulog.setEnableGlobalLog( false );
-	ulog.setUseXML( !_use_default_node_log && job->GetLogFileIsXml() );
+	ulog.setUseXML( false );
 		// For NOOP jobs, we need the proc and subproc values;
 		// for "real" jobs, they are not significant.
 	int procID = job->GetNoop() ? job->GetProc() : 0;
 	int subprocID = job->GetNoop() ? job->GetSubProc() : 0;
-	const char* s = _use_default_node_log ? DefaultNodeLog() :
-		job->GetLogFile();
+	const char* s = DefaultNodeLog();
 	if( !s ) { 
+		//TEMPTEMP -- probably don't need this...
 			// User did not specify a log
 			// We specify one for him
 			// Default log is never in XML format
@@ -2422,7 +2385,7 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 						// We need to monitor the log file for the node that's
 						// newly ready.
 					(void)child->MonitorLogFile( _condorLogRdr, 
-								_nfsLogIsError, recovery, _defaultNodeLog, _use_default_node_log);
+								_nfsLogIsError, recovery, _defaultNodeLog );
 				} else {
 						// If child has no more parents in its waiting queue,
 						// submit it.
@@ -2511,7 +2474,7 @@ Dag::RestartNode( Job *node, bool recovery )
 		// gets done during "normal" running.)
 		node->SetCondorID( _defaultCondorId );
 		(void)node->MonitorLogFile( _condorLogRdr, 
-					_nfsLogIsError, recovery, _defaultNodeLog, _use_default_node_log );
+					_nfsLogIsError, recovery, _defaultNodeLog );
 	}
 }
 
@@ -3962,7 +3925,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 	}
 
 	if ( !node->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
-			_recovery, _defaultNodeLog, _use_default_node_log ) ) {
+			_recovery, _defaultNodeLog ) ) {
 		debug_printf( DEBUG_QUIET, "ERROR: Failed to monitor log for node %s.\n",
 			node->GetJobName() );
 		return SUBMIT_RESULT_NO_SUBMIT;

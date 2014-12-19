@@ -226,6 +226,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 					   "submitfile" );
 		}
 
+#if 0 //TEMPTEMP
 		// Handle a Stork job spec
 		// Example Syntax is:  DATA j1 j1.dapsubmit [DONE]
 		//
@@ -242,6 +243,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 				filename, lineNumber );
 			parsed_line_successfully = false;
 		}
+#endif //TEMPTEMP
 
 		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {

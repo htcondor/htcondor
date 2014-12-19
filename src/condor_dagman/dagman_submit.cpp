@@ -65,7 +65,6 @@ parse_condor_submit( const char *buffer, int &jobProcCount, int &cluster )
   return true;
 }
 
-//-------------------------------------------------------------------------
 static bool
 submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 {
@@ -406,7 +405,6 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	return success;
 }
 
-//-------------------------------------------------------------------------
 // Subproc ID for "fake" events (for NOOP jobs).
 static int _subprocID = 0;
 

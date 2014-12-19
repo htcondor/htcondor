@@ -738,8 +738,9 @@ Job::SetDagFile(const char *dagFile)
 bool
 Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			bool nfsIsError,
-			bool recovery, const char *defaultNodeLog, bool usingDefault )
+			bool recovery, const char *defaultNodeLog )
 {
+	bool usingDefault = true;//TEMPTEMP!!
 	debug_printf( DEBUG_DEBUG_2,
 				"Attempting to monitor log file for node %s; using default?: %d\n",
 				GetJobName(), usingDefault );

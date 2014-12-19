@@ -238,6 +238,7 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
 				_defaultPriority );
 
+	//TEMPTEMP -- print warning or error if this is false
 	_submitDagDeepOpts.always_use_node_log = param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ALWAYS_USE_NODE_LOG setting: %s\n",
 				_submitDagDeepOpts.always_use_node_log ? "True" : "False" );
@@ -1315,13 +1316,8 @@ Dagman::CheckLogFileMode( const CondorVersionInfo &submitFileVersion )
 void
 Dagman::DisableDefaultLog()
 {
+	ASSERT( false );//TEMPTEMP -- get rid of this method altogether
 	dagman._submitDagDeepOpts.always_use_node_log = false;
-		// Note:  we have to explicitly turn off the default
-		// log file here because
-		// _submitDagDeepOpts.always_use_node_log is
-		// referenced in the Dag constructor, so just
-		// changing that here won't do us any good.
-	dagman.dag->UseDefaultNodeLog(false);
 }
 
 //---------------------------------------------------------------------------

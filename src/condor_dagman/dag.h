@@ -760,7 +760,6 @@ class Dag {
 	*/
 	inline bool Recovery() const { return _recovery; }
 
-	inline void UseDefaultNodeLog(bool useit) { _use_default_node_log = useit; }
   private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
@@ -1193,12 +1192,6 @@ private:
 		// The name of the halt file (we halt the DAG if that file exists).
 	MyString _haltFile;
 	
-		// Whether to use the default node log as *the* log
-		// for writing and reading events.  If false, use the user log
-		// This must be false if dagman is communicating with a pre-7.9.0
-		// schedd/shadow or submit.
-	bool _use_default_node_log;
-
 		// Object to deal with reporting DAGMan metrics (to Pegasus).
 	DagmanMetrics *_metrics;
 };

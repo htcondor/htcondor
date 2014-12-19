@@ -116,6 +116,7 @@ struct SubmitDagDeepOptions
 		// Defaults to true
 		// Set to false if this dagman is going to be communicating
 		// with pre-7.9.0 schedd/shadow/submit
+	//TEMPTEMP -- get rid of this...
 	bool always_use_node_log;		 	
 	bool suppress_notification;
 

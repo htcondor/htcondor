@@ -66,6 +66,7 @@ bool fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 
 int get_fake_condorID();
 
+//TEMPTEMP -- get rid of logIsXml
 bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName, 
 			   const char* directory, const char *logFile, bool logIsXml );
 

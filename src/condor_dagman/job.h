@@ -1,3 +1,4 @@
+//TEMPTEMP -- crap -- is some of the old code still needed for Stork? -- ah -- see #4550: Eliminate DAGMan support for Stork jobs
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -316,7 +317,7 @@ class Job {
 		@param prefix: the prefix to be joined to the directory using "/"
 		@return void
 	*/
-	void PrefixDirectory(MyString &prefix);
+	void PrefixDirectory( MyString &prefix );
 
 	/** Set the DAG file (if any) for this node.  (This is set for nested
 			DAGs defined with the "SUBDAG" keyword.)
@@ -343,9 +344,10 @@ class Job {
 			log at the DAG level
 		@return true if successful, false if failed
 	*/
+	//TEMPTEMP -- maybe get rid of this...
 	bool MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 				bool nfsIsError,
-				bool recovery, const char *defaultNodeLog, bool usingDefault );
+				bool recovery, const char *defaultNodeLog );
 
 	/** Unmonitor this node's Condor log file with the
 		multiple log reader.  (Must be called after everything is done
@@ -353,20 +355,24 @@ class Job {
 		@param logReader: the multiple log reader
 		@return true if successful, false if failed
 	*/
+	//TEMPTEMP -- maybe get rid of this...
 	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader );
 
 		// Whether this node is using the default node log file.
+	//TEMPTEMP -- get rid of this...
 	bool UsingDefaultLog() const { return _useDefaultLog; }
 
 	/** Get the log file for this node.
 		@return the name of this node's log file.
 	*/
+	//TEMPTEMP -- get rid of this...
 	const char *GetLogFile() const { return _logFile; }
 
 	/** Get whether this node's log file is XML (versus "standard"
 		format).
 		@return true iff the log file is XML.
 	*/
+	//TEMPTEMP -- get rid of this...
 	bool GetLogFileIsXml() const { return _logFileIsXml; }
 
 	/** Get the jobstate.log job tag for this node.
