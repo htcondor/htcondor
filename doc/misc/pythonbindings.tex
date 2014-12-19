@@ -621,6 +621,13 @@ Parse old ClassAd format input into a ClassAd.
 \texttt{version( )}
 
 Return the version of the linked ClassAd library.
+
+\\ \hline
+\texttt{lastError( )}
+
+Return the string representation of the last error to occur in the
+ClassAd library.
+
 \\ \hline
 \texttt{Attribute( name )}
 
@@ -654,6 +661,13 @@ This allows the invocation of the python function from
 within a ClassAd evaluation context.  
 The optional parameter, \texttt{name}, provides an alternate name for
 the function within the ClassAd library.
+
+\\ \hline
+\texttt{registerLibrary( path )}
+
+Given a filesystem \texttt{path}, attempt to load it as a shared library
+of ClassAd functions.  See the documentation for \Macro{CLASSAD\_USER\_LIBS}
+for more information about loadable libraries for ClassAd functions.
 
 \\ \hline
 
