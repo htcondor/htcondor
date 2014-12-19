@@ -1,0 +1,83 @@
+\begin{ManPage}{\Condor{update\_machine\_ad}}{1}{Update a machine ad.}
+\label{man-condor-update-machine-ad}
+\index{HTCondor commands!condor\_update\_machine\_ad}
+\index{condor\_update\_machine\_ad command}
+
+\Synopsis \SynProg{\Condor{update\_machine\_ad}}
+\oOptArg{-pool}{centralmanagerhostname[:portnumber]}
+\oOptArg{-name}{nameofstartd}
+\oOpt{-help}
+\oOpt{-version}
+\Arg{path/to/update-ad}
+
+\Description
+\Condor{update\_machine\_ad} updates the specified startd's machine ad using
+the specified update ad.  The update persists until the startd restarts.
+If no file is specified on the command line, \Condor{update\_machine\_ad}
+will read the update ad from standard in instead.
+
+An update ad is a ClassAd; see elsewhere in the manual for a full
+description. Briefly, a ClassAd consists of one or more lines which
+\emph{must} be terminated by newlines, including the last one.  Lines
+are of the form
+
+\begin{verbatim}
+<attribute> = <value>
+\end{verbatim}
+
+Changes to certain attributes will cause the startd to regenerate others.
+For example, setting \AdAttr{HasVM} will cause \AdAttr{OfflineUniverses},
+\AdAttr{VMOfflineTime}, and \AdAttr{VMOfflineReason} to change.
+
+\begin{Options}
+\OptItem{-pool}{Which pool to query.}
+\OptItem{-name}{Which startd to update.}
+\OptItem{-help}{Print brief help.}
+\OptItem{-version}{Print the HTCondor version.}
+\end{Options}
+
+\GenRem
+
+This tool is intended for the use of system administrators when dealing
+with offline universes.  The example below shows how to use this tool to
+turn the VM universe back online.  This can be useful if the startd's START
+expression would otherwise prevent a VM universe job from starting (and if
+succesful, turning the VM universe online).
+
+\Examples
+
+To turn the VM universe back online:
+
+\begin{verbatim}
+echo "HasVM = true
+" | condor_update_machine_ad
+\end{verbatim}
+
+Note that there \emph{must} be a trailing newline.
+
+To turn the VM universe offline:
+
+\begin{verbatim}
+echo "HasVM = true
+" | condor_update_machine_ad
+\end{verbatim}
+
+To turn the VM universe offline and specify a reason:
+
+\begin{verbatim}
+echo "HasVM = true
+VMOfflineReason = \"Cosmic rays.\"
+" | condor_update_machine_ad
+\end{verbatim}
+
+Note that the quotes around the reason are required (by ClassAds) and must
+be escaped (because of the shell).  Using an update ad file may be preferrable
+in these situations, because you don't have to do both ClassAd and shell
+quoting.
+
+\ExitStatus
+
+\Condor{update\_machine\_ad} will exit with a status value of 0 (zero) upon
+success, and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}
