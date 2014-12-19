@@ -4807,6 +4807,16 @@ PrintQ()
 	dprintf(D_ALWAYS, "****End of Queue*********\n");
 }
 
+// probes for timing the autoclustering code
+schedd_runtime_probe GetAutoCluster_runtime;
+schedd_runtime_probe GetAutoCluster_hit_runtime;
+schedd_runtime_probe GetAutoCluster_signature_runtime;
+schedd_runtime_probe GetAutoCluster_cchit_runtime;
+double last_autocluster_runtime;
+bool   last_autocluster_make_sig;
+int    last_autocluster_type=0;
+int    last_autocluster_classad_cache_hit=0;
+stats_entry_abs<int> SCGetAutoClusterType;
 
 // Returns cur_hosts so that another function in the scheduler can
 // update JobsRunning and keep the scheduler and queue manager
@@ -4830,6 +4840,12 @@ int get_job_prio(JobQueueJob *job, JOB_ID_KEY & jid, void *)
 
 	owner[0] = 0;
 
+		// Note, we should use this method instead of just looking up
+		// ATTR_USER directly, since that includes UidDomain, which we
+		// don't want for this purpose...
+	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
+	job->LookupInteger(ATTR_PROC_ID, id.proc);
+
 		// We must call getAutoClusterid() in get_job_prio!!!  We CANNOT
 		// return from this function before we call getAutoClusterid(), so call
 		// it early on (before any returns) right now.  The reason for this is
@@ -4838,8 +4854,19 @@ int get_job_prio(JobQueueJob *job, JOB_ID_KEY & jid, void *)
 		// autocluster information for this job will be removed, causing the schedd
 		// to ASSERT later on in the autocluster code. 
 		// Quesitons?  Ask Todd <tannenba@cs.wisc.edu> 01/04
-	int auto_id = scheduler.autocluster.getAutoClusterid(job);
+	last_autocluster_runtime = 0;
+	last_autocluster_classad_cache_hit = 1;
+	last_autocluster_make_sig = false;
+
+	int auto_id = scheduler.autocluster.getAutoClusterid(job, id);
 	job->autocluster_id = auto_id;
+
+	//job->autocluster_id = auto_id;
+	GetAutoCluster_runtime += last_autocluster_runtime;
+	if (last_autocluster_make_sig) { GetAutoCluster_signature_runtime += last_autocluster_runtime; }
+	else { GetAutoCluster_hit_runtime += last_autocluster_runtime; }
+	SCGetAutoClusterType = last_autocluster_type;
+	GetAutoCluster_cchit_runtime += last_autocluster_classad_cache_hit;
 
 	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 	ASSERT(universe == job->universe);
@@ -4892,13 +4919,13 @@ int get_job_prio(JobQueueJob *job, JOB_ID_KEY & jid, void *)
 		powner += cch;
 		cremain -= cch;
 	}
+		// Note, we should use this method instead of just looking up
+		// ATTR_USER directly, since that includes UidDomain, which we
+		// don't want for this purpose...
 	job->LookupString(ATTR_ACCOUNTING_GROUP, powner, cremain);  // TODDCORE
 	if (*powner == '\0') {
 		job->LookupString(ATTR_OWNER, powner, cremain);
 	}
-		// Note, we should use this method instead of just looking up
-		// ATTR_USER directly, since that includes UidDomain, which we
-		// don't want for this purpose...
 
     // No longer judge whether or not a job can run by looking at its status.
     // Rather look at if it has all the hosts that it wanted.

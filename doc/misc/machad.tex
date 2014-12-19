@@ -197,9 +197,10 @@ if the machine being advertised supports
 the SSSE 3 instructions, and \Expr{Undefined} otherwise.
 %
 \index{ClassAd machine attribute!HasVM}
-\item[\AdAttr{HasVM}:] A boolean value added to the machine ClassAd
-when the configuration triggers the detection of virtual machine
-software.
+\item[\AdAttr{HasVM}:] If the configuration triggers the detection of
+virtual machine software, a boolean value reporting the success thereof;
+otherwise undefined.  May also become \Expr{False} if HTCondor determines
+that it can't start a VM (even if the appropriate software is detected).
 %
 \index{ClassAd machine attribute!IsWakeAble}
 \item[\AdAttr{IsWakeAble}:] A boolean value that when \Expr{True} identifies
@@ -368,6 +369,19 @@ vulture.cs.wisc.edu.
 instances of a user-defined machine resource,
 identified by \Attr{name}. 
 Each instance is currently unavailable for purposes of match making.
+%
+\index{ClassAd machine attribute!OfflineUniverses}
+\label{OfflineUnverses-machine-attribute}
+\item[\AdAttr{OfflineUniverses}:] A ClassAd list that specifies which
+job universes are presently offline, both as strings and as the corresponding
+job universe number.  Could be used the the startd to refuse to start jobs
+in offline universes:
+
+\begin{verbatim}
+START = OfflineUniverses is undefined || (! member( JobUniverse, OfflineUniverses ))
+\end{verbatim}
+
+May currently only contain \Expr{"VM"} and \Expr{13}.
 %
 \index{ClassAd machine attribute!OpSys}
 \label{OpSys-machine-attribute}
@@ -845,6 +859,13 @@ is allowed for virtual machines on this machine.
 \item[\AdAttr{VM\_Type}:] The type of virtual machine software that can run
 on this machine.  The value is set by the configuration variable
 \Macro{VM\_TYPE}.
+%
+\index{ClassAd machine attribute!VMOfflineReason}
+\item[\AdAttr{VMOfflineReason}:]  The reason the VM universe went offline
+(usually because a VM universe job failed to launch).
+%
+\index{ClassAd machine attribute!VMOfflineTime}
+\item[\AdAttr{VMOfflineTime}:]  The time that the VM universe went offline.
 %
 \index{ClassAd machine attribute!WindowsBuildNumber}
 \item[\AdAttr{WindowsBuildNumber}:] An integer, extracted from the

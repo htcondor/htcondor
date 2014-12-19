@@ -55,7 +55,7 @@ void ClassAd::
 Reconfig()
 {
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
-	classad::_useOldClassAdSemantics = !m_strictEvaluation;
+	classad::SetOldClassAdSemantics( !m_strictEvaluation );
 
 	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
 
@@ -75,22 +75,6 @@ Reconfig()
 				}
 			}
 		}
-	}
-}
-
-void getTheMyRef( classad::ClassAd *ad )
-{
-	if ( !ClassAd::m_strictEvaluation ) {
-		ExprTree * pExpr=classad::AttributeReference::MakeAttributeReference( NULL, "self" );
-		ad->Insert( "my", pExpr );
-	}
-}
-
-void releaseTheMyRef( classad::ClassAd *ad )
-{
-	if ( !ClassAd::m_strictEvaluation ) {
-		ad->Delete("my");
-		ad->MarkAttributeClean( "my" );
 	}
 }
 
@@ -1187,11 +1171,9 @@ EvalAttr( const char *name, classad::ClassAd *target, classad::Value & value)
 	int rc = 0;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, value ) ) {
 			rc = 1;
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1216,12 +1198,10 @@ EvalString( const char *name, classad::ClassAd *target, char *value )
 	string strVal;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttrString( name, strVal ) ) {
 			strcpy( value, strVal.c_str( ) );
 			rc = 1;
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1253,7 +1233,6 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
 	int rc = 0;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttrString( name, strVal ) ) {
 
             *value = (char *)malloc(strlen(strVal.c_str()) + 1);
@@ -1264,7 +1243,6 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
                 rc = 0;
             }
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1325,11 +1303,9 @@ EvalInteger (const char *name, classad::ClassAd *target, long long &value)
 	classad::Value val;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) { 
 			rc = 1;
 		}
-		releaseTheMyRef( this );
 	}
 	else 
 	{
@@ -1384,7 +1360,6 @@ EvalFloat (const char *name, classad::ClassAd *target, double &value)
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
 				value = doubleVal;
@@ -1399,7 +1374,6 @@ EvalFloat (const char *name, classad::ClassAd *target, double &value)
 				rc = 1;
 			}
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1451,7 +1425,6 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) {
 			if( val.IsBooleanValue( boolVal ) ) {
 				value = boolVal ? 1 : 0;
@@ -1464,7 +1437,6 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				rc = 1;
 			}
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -2156,7 +2128,6 @@ _GetReferences(classad::ExprTree *tree,
 	classad::References int_refs_set;
 	classad::References::iterator set_itr;
 
-	getTheMyRef( this );
 	bool ok = true;
 	if( !GetExternalReferences(tree, ext_refs_set, true) ) {
 		ok = false;
@@ -2164,7 +2135,6 @@ _GetReferences(classad::ExprTree *tree,
 	if( !GetInternalReferences(tree, int_refs_set, true) ) {
 		ok = false;
 	}
-	releaseTheMyRef( this );
 	if( !ok ) {
 		dprintf(D_FULLDEBUG,"warning: failed to get all attribute references in ClassAd (perhaps caused by circular reference).\n");
 		dPrintAd(D_FULLDEBUG, *this);
@@ -2200,10 +2170,7 @@ _GetReferences(classad::ExprTree *tree,
 
 	for ( set_itr = int_refs_set.begin(); set_itr != int_refs_set.end();
 		  set_itr++ ) {
-		const char *name = set_itr->c_str();
-		if ( strcasecmp( name, "my" ) ) {
-			AppendReference( internal_refs, set_itr->c_str() );
-		}
+		AppendReference( internal_refs, set_itr->c_str() );
 	}
 }
 
