@@ -1915,7 +1915,21 @@ File System Configuration File Entries''.
 \item[\Macro{CLASSAD\_USER\_LIBS}]
   A comma separated list of paths to shared libraries that contain
   additional ClassAd functions to be used during ClassAd evaluation.
-  
+
+\label{param:ClassadUserPythonModules}
+\item[\Macro{CLASSAD\_USER\_PYTHON\_MODULES}]
+  A comma separated list of python modules to load to be used during ClassAd
+  evaluation.  If module \Expr{foo} is in this list, then function \Expr{bar}
+  can be invoked in ClassAds via the expression \Expr{python\_invoke("foo", "bar", ...)}.
+  Any further arguments are converted from ClassAd expressions to python; the
+  functions return value is converted back to ClassAds.
+  The python modules are loaded at configuration time, so any module-level statements
+  are executed.  Module writers can invoke \Expr{classad.register} at the module-level
+  in order to use python functions directly.
+
+  Functions executed by ClassAds should be non-blocking and have no side-effects;
+  otherwise, unpredictable HTCondor behavior may occur.
+
 \label{param:CondorFsync}
 \item[\Macro{CONDOR\_FSYNC}]
   A boolean value that controls whether HTCondor calls \Procedure{fsync} when

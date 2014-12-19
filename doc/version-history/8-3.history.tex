@@ -29,7 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Python functions can be invoked directly from ClassAd expressions within HTCondor
+daemons.  A system administrator must set the \Macro{CLASSAD\_USER\_PYTHON\_MODULES}
+configuration macro to specify the python modules that are accessible from
+within ClassAds.
+\Ticket{4773}
 
 \end{itemize}
 
