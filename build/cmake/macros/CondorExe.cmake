@@ -61,7 +61,7 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
         #add updated manifest only for VS2012 and above
         if(NOT (MSVC_VERSION LESS 1700))
             add_custom_command( TARGET ${_CNDR_TARGET} POST_BUILD 
-                COMMAND mt.exe /manifest ${CMAKE_SOURCE_DIR}/msconfig/win7.manifest /outputresource:${CMAKE_CURRENT_BINARY_DIR}/$(Configuration)/${_CNDR_TARGET}.exe)
+                COMMAND mt.exe -nologo /manifest ${CMAKE_SOURCE_DIR}/msconfig/win7.manifest /outputresource:${CMAKE_CURRENT_BINARY_DIR}/$(Configuration)/${_CNDR_TARGET}.exe)
         endif(NOT (MSVC_VERSION LESS 1700))
 
     endif( WINDOWS )
