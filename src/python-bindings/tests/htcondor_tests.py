@@ -182,7 +182,7 @@ class TestPythonBindings(WithDaemons):
         os.environ["_condor_ENABLE_RUNTIME_CONFIG"] = "TRUE"
         self.launch_daemons(["COLLECTOR"])
         del os.environ["_condor_SETTABLE_ATTRS_READ"]
-        htcondor.param["TOOL_DEBUG"] = "D_NETWORK|D_SECURITY"
+        #htcondor.param["TOOL_DEBUG"] = "D_NETWORK|D_SECURITY"
         htcondor.enable_debug()
         coll = htcondor.Collector()
         coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
@@ -197,7 +197,8 @@ class TestPythonBindings(WithDaemons):
         del rparam["FOO"]
         rparam2.refresh()
         htcondor.send_command(coll_ad, htcondor.DaemonCommands.Reconfig)
-        self.assertEquals(rparam2["FOO"], "Not defined")
+        self.assertTrue("FOO" not in rparam2)
+        self.assertTrue(("ENABLE_CHIRP_DELAYED", "true") in rparam2.items())
 
     def testDaemon(self):
         self.launch_daemons(["COLLECTOR"])

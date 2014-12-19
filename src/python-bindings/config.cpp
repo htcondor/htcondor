@@ -190,7 +190,9 @@ struct RemoteParam
     bool contains(const std::string &attr)
     {
         cache_attrs();
-        return m_attrs.attr("__contains__")(attr);
+        if (!m_attrs.attr("__contains__")(attr)) {return false;}
+        std::string value = cache_lookup(attr);
+        return value != "Not defined";
     }
 
 
@@ -285,12 +287,13 @@ struct RemoteParam
     {
         boost::python::list result;
         cache_attrs();
+        boost::python::object iter_obj = m_attrs.attr("__iter__")();
         while (true)
         {
             boost::python::object next_obj;
             try
             {
-                PyObject *next_obj_ptr = m_attrs.ptr()->ob_type->tp_iternext(m_attrs.ptr());
+                PyObject *next_obj_ptr = iter_obj.ptr()->ob_type->tp_iternext(iter_obj.ptr());
                 if (next_obj_ptr == NULL) {THROW_EX(StopIteration, "All remote variables processed.");}
                 next_obj = boost::python::object(boost::python::handle<>(next_obj_ptr));
                 if (PyErr_Occurred()) throw boost::python::error_already_set();
