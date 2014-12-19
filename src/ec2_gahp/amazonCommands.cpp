@@ -41,27 +41,13 @@
 #include <curl/curl.h>
 #include "thread_control.h"
 #include <expat.h>
+#include "stl_string_utils.h"
 
 #define NULLSTRING "NULL"
 
 const char * nullStringIfEmpty( const std::string & str ) {
     if( str.empty() ) { return NULLSTRING; }
     else { return str.c_str(); }
-}
-
-// Utility function.
-void trim( std::string & str ) {
-	size_t size = str.size();
-	if( size == 0 ) { return; }
-
-	size_t end = size - 1;
-	while( end > 0 && isspace( str[end] ) ) { --end; }
-	if( end != size - 1 ) { str.erase( end + 1 ); }
-
-	size = str.size();
-	size_t begin = 0;
-	while( begin < size && isspace( str[begin] ) ) { ++begin; }
-	if( begin != 0 ) { str.erase( 0, begin ); }
 }
 
 //
