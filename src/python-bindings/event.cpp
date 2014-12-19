@@ -30,24 +30,15 @@ EventIterator::get_filename(std::string &fname)
 {
     int fd = fileno(m_source);
     std::stringstream ss;
-    ss << "/proc/self/" << fd;
+    ss << "/proc/self/fd/" << fd;
     std::string proc_fname = ss.str();
-    struct stat source;
-    if (-1 == lstat(proc_fname.c_str(), &source))
-    {
-        return false;
-    }
-    std::vector<char> linkname; linkname.reserve(source.st_size+1);
+    std::vector<char> linkname; linkname.reserve(1024);
     ssize_t link_size;
-    if (-1 == (link_size = readlink(proc_fname.c_str(), &linkname[0], source.st_size+1)))
+    if (-1 == (link_size = readlink(proc_fname.c_str(), &linkname[0], 1023)))
     {
          return false;
     }
-    if (link_size > source.st_size)
-    {
-        return false;
-    }
-    linkname[source.st_size] = '\0';
+    linkname[link_size] = '\0';
 
     fname = &linkname[0];
     return true;

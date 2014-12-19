@@ -1,7 +1,6 @@
 
 import os
 import time
-import tempfile
 import unittest
 import threading
 
@@ -15,13 +14,17 @@ SAMPLE_EVENT_TEXT = """\
 ...
 """
 
-class TestLogReader(unittest.TestCase):
+class TestEventReader(unittest.TestCase):
 
     def setUp(self):
-        self.testfile = tempfile.TemporaryFile()
+        # Note we cannot use a temporary file here; the event reader
+        # is based on *filenames* (which are not visible for TemporaryFile),
+        # not file descriptors.
+        self.testname = "tests/test_event_reader.log"
+        self.testfile = open(self.testname, "w")
         self.testfile.write(open("tests/job.log", "r").read())
         self.testfile.flush()
-        self.testfile.seek(0)
+        self.testfile = open(self.testname, "r")
         self.reader = htcondor.read_events(self.testfile)
         self.sampleEvent = { \
             'MyType': "JobImageSizeEvent",
@@ -59,6 +62,7 @@ class TestLogReader(unittest.TestCase):
 
     def test_wait(self):
         events = list(self.reader)
+        self.assertEquals(len(events), 6)
         t = threading.Thread(target=self.targetSleepAndWrite, name="Sleep and write event")
         t.setDaemon(True)
         t.start()
@@ -83,14 +87,18 @@ class TestLogReader(unittest.TestCase):
 
     def targetSleepAndWrite(self):
         time.sleep(.4)
-        testfile = os.fdopen(os.dup(self.testfile.fileno()), "a")
+        testfile = open(self.testname, "a")
         testfile.write(self.sampleEventText)
         testfile.flush()
         #print "Wrote event to %s." % self.testfile
 
     def test_invalid(self):
-        self.testfile.write("...\n...\n")
-        self.testfile.flush()
+        events = list(self.reader)
+        self.assertEquals(len(events), 6)
+        file2 = open(self.testname, "a")
+        file2.write("...\n...\n")
+        file2.flush()
+        file2.close()
         self.assertRaises(ValueError, self.reader.next)
 
     def compareEvents(self, one, two):
