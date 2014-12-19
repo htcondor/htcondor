@@ -26,9 +26,16 @@
 
 
 // a handy little structure used in a lot of places
-typedef struct {
+typedef struct PROC_ID {
 	int		cluster;
 	int		proc;
+#if defined(__cplusplus)
+	bool operator<(const PROC_ID& cp) const {
+		int diff = cp.cluster - this->cluster;
+		if ( ! diff) diff = cp.proc - this->proc;
+		return diff < 0;
+	}
+#endif
 } PROC_ID;
 
 #if defined(__cplusplus)

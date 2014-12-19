@@ -1077,6 +1077,8 @@ public:
 
    T Count() const { return this->value; }
 
+   T Total() const { return this->Sum; }
+
    T Avg() const {
       if (Count() > 0) {
          return this->Sum / Count();

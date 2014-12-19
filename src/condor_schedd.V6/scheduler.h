@@ -677,6 +677,7 @@ private:
 	int			history_helper_launcher(const HistoryHelperState &state);
 	int			history_helper_reaper(int, int);
 	int			command_query_job_ads(int, Stream* stream);
+	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	void   			check_claim_request_timeouts( void );
 	int				insert_owner(char const*);
 	void			child_exit(int, int);

@@ -1978,6 +1978,13 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 		return FALSE;
 	}
 
+	// if the groupby or useautocluster attributes exist and are true
+	bool query_autocluster = false;
+	queryAd.LookupBool("QueryDefaultAutocluster", query_autocluster);
+	if (query_autocluster) {
+		return command_query_job_aggregates(queryAd, stream);
+	}
+
 	classad::ExprTree *requirements = queryAd.Lookup(ATTR_REQUIREMENTS);
 	if (!requirements) {
 		classad::Value val; val.SetBooleanValue(true);
@@ -2015,6 +2022,190 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 		return continuation->finish(stream);
 	}
 }
+
+void * BeginJobAggregation(const char * projection, bool create_if_not, const char * constraint)
+{
+	JobAggregationResults *jar = NULL;
+	if (create_if_not) {
+		jar = scheduler.autocluster.aggregateOn(false, projection, constraint);
+	} else {
+		jar = new JobAggregationResults(scheduler.autocluster, projection, true);
+	}
+	return (void*)jar;
+}
+ClassAd *GetNextJobAggregate(void * aggregation, bool first)
+{
+	if ( ! aggregation)
+		return NULL;
+	JobAggregationResults *jar = (JobAggregationResults*)aggregation;
+	if (first) { jar->rewind(); }
+	return jar->next();
+}
+void ReleaseAggregationAd(void *aggregation, ClassAd * ad)
+{
+	if (aggregation) {
+		ASSERT(ad);
+		return;
+	}
+}
+void ReleaseAggregation(void *aggregation)
+{
+	if (aggregation) {
+		JobAggregationResults *jar = (JobAggregationResults*)aggregation;
+		delete jar;
+	}
+}
+
+struct QueryAggregatesContinuation : Service {
+
+	void * aggregator;
+	char * projection;
+	char * constraint;
+	int    timeslice;
+	classad::References proj;
+	bool unfinished_eom;
+	bool registered_socket;
+	ClassAd * curr_ad;
+
+	QueryAggregatesContinuation(void * aggregator_, char * _projection, char * _constraint, int timeslice_ms=0);
+	~QueryAggregatesContinuation();
+	int finish(Stream *);
+};
+
+QueryAggregatesContinuation::QueryAggregatesContinuation(void * aggregator_, char * projection_, char * constraint_, int timeslice_ms)
+	: aggregator(aggregator_)
+	, projection(projection_)
+	, constraint(constraint_)
+	, timeslice(timeslice_ms)
+	, unfinished_eom(false)
+	, registered_socket(false)
+	, curr_ad(NULL)
+{
+	curr_ad = GetNextJobAggregate(aggregator, true);
+}
+
+QueryAggregatesContinuation::~QueryAggregatesContinuation()
+{
+	if (projection) free(projection); projection = NULL;
+	if (constraint) free(constraint); constraint = NULL;
+	if (aggregator) {
+		if (curr_ad) { ReleaseAggregationAd(aggregator, curr_ad); curr_ad = NULL; }
+		ReleaseAggregation(aggregator);
+		aggregator = NULL;
+	}
+}
+
+
+int
+QueryAggregatesContinuation::finish(Stream *stream) {
+	ReliSock *sock = static_cast<ReliSock*>(stream);
+	bool has_backlog = false;
+
+	if (unfinished_eom) {
+		int retval = sock->finish_end_of_message();
+		if (sock->clear_backlog_flag()) {
+			return KEEP_STREAM;
+		} else if (retval == 1) {
+			unfinished_eom = false;
+		} else if (!retval) {
+			delete this;
+			return sendJobErrorAd(sock, 5, "Failed to write EOM to wire");
+		}
+	}
+	while (curr_ad && !has_backlog) {
+		if (IsFulldebug(D_FULLDEBUG)) {
+			int id=-1, job_count=-1;
+			if ( ! curr_ad->EvaluateAttrInt(ATTR_AUTO_CLUSTER_ID, id)) curr_ad->EvaluateAttrInt("Id", id);
+			curr_ad->EvaluateAttrInt("JobCount", job_count);
+			dprintf(D_FULLDEBUG, "Writing autocluster %d,%d to wire\n", id, job_count);
+		}
+		int retval = putClassAd(sock, *curr_ad,
+					PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
+					proj.empty() ? NULL : &proj);
+		if (retval == 2) {
+			dprintf(D_FULLDEBUG, "Detecting backlog.\n");
+			has_backlog = true;
+		} else if (!retval) {
+			delete this;
+			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
+		}
+		retval = sock->end_of_message_nonblocking();
+		if (sock->clear_backlog_flag()) {
+			dprintf(D_FULLDEBUG, "Socket EOM will block.\n");
+			unfinished_eom = true;
+			has_backlog = true;
+		}
+		ReleaseAggregationAd(aggregator, curr_ad);
+		curr_ad = GetNextJobAggregate(aggregator, false);
+	}
+	if (has_backlog && !registered_socket) {
+		int retval = daemonCore->Register_Socket(stream, "Client Response",
+			(SocketHandlercpp)&QueryAggregatesContinuation::finish,
+			"Query Aggregates Continuation", this, ALLOW, HANDLE_WRITE);
+		if (retval < 0) {
+			delete this;
+			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
+		}
+		registered_socket = true;
+	} else if (!has_backlog) {
+		dprintf(D_FULLDEBUG, "Finishing condor_q aggregation.\n");
+		delete this;
+		return sendDone(sock);
+	}
+	return KEEP_STREAM;
+}
+
+int Scheduler::command_query_job_aggregates(ClassAd &queryAd, Stream* stream)
+{
+	char *constraint = NULL;
+	classad::ExprTree *requirements_expr = queryAd.Lookup(ATTR_REQUIREMENTS);
+	if (requirements_expr) {
+		constraint = strdup(ExprTreeToString(requirements_expr));
+	}
+
+	char *projection = NULL;
+	queryAd.LookupString(ATTR_PROJECTION, &projection);
+
+	void *aggregation = BeginJobAggregation(projection, false, constraint);
+	if ( ! aggregation) {
+		free(projection);
+		free(constraint);
+		projection = NULL;
+		return -1;
+	}
+
+	QueryAggregatesContinuation *continuation = new QueryAggregatesContinuation(aggregation, projection, constraint, 1000);
+	/*
+	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, continuation->projection, true);
+	if (proj_err < 0) {
+		delete continuation;
+		if (proj_err == -1) {
+			return sendJobErrorAd(stream, 2, "Unable to evaluate projection list");
+		}
+		return sendJobErrorAd(stream, 3, "Unable to convert projection list to string list");
+	}
+	*/
+
+	ForkStatus fork_status = schedd_forker.NewJob();
+	if (fork_status == FORK_PARENT)
+	{ // Successfully forked a child - as far as the schedd cares, this worked.
+	  // Throw away the socket and move on.
+		return true;
+	}
+	else if (fork_status == FORK_CHILD)
+	{ // Respond to the query from the child.
+		int retval;
+		while ((retval = continuation->finish(stream)) == KEEP_STREAM) {}
+		_exit(!retval);
+		ASSERT( false );
+		while (true) {}
+	}
+	else // BUSY or FAILED
+	{ // Write the response; let DC handle the callbacks.
+		return continuation->finish(stream);
+	}
+}
+
 
 int 
 clear_autocluster_id( ClassAd *job )
