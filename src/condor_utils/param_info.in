@@ -3212,6 +3212,24 @@ friendly_name=Classad Lib Path
 review=?
 tags=classad,ast
 
+[CLASSAD_USER_PYTHON_LIB]
+default=$(LIBEXEC)/libclassad_python_user.so
+type=string
+reconfig=true
+customization=seldom
+friendly_name=ClassAd python library path
+review=?
+tags=classad
+
+[CLASSAD_USER_PYTHON_MODULES]
+default=
+type=string
+reconfig=true
+customization=seldom
+friendly_name=ClassAd python modules
+review=?
+tags=classad
+
 [ENABLE_CLASSAD_CACHING]
 default=true
 win32_default=false
