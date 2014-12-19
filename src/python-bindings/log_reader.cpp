@@ -65,7 +65,7 @@ LogReader::wait_internal(int timeout_ms)
     if (timeout_ms == 0) {return;}
     int time_remaining = timeout_ms;
     int step = 1000;
-    while (m_iter->getEntryType() == ClassAdLogIterEntry::NOCHANGE)
+    while (m_iter->getEntryType() == ClassAdLogIterEntry::ET_NOCHANGE)
     {
         struct pollfd fd;
         fd.fd = watch();
@@ -132,7 +132,7 @@ LogReader::poll(int timeout_ms)
 {
     ++m_iter;
     wait_internal(timeout_ms);
-    if (m_iter->getEntryType() == ClassAdLogIterEntry::NOCHANGE) {return boost::python::object();}
+    if (m_iter->getEntryType() == ClassAdLogIterEntry::ET_NOCHANGE) {return boost::python::object();}
     return convert_to_dict(*(*m_iter));
 }
 
@@ -142,7 +142,7 @@ LogReader::next()
 {
     if (m_watch.get()) {m_watch->clear();}
 
-    if (m_blocking && m_iter->getEntryType() == ClassAdLogIterEntry::NOCHANGE)
+    if (m_blocking && m_iter->getEntryType() == ClassAdLogIterEntry::ET_NOCHANGE)
     {
         wait_internal(-1);
         m_watch->clear();
@@ -165,10 +165,10 @@ LogReader::next()
 void export_log_reader()
 {
     boost::python::enum_<ClassAdLogIterEntry::EntryType>("EntryType")
-        .value("Init", ClassAdLogIterEntry::INIT)
-        .value("Error", ClassAdLogIterEntry::ERR)
-        .value("NoChange", ClassAdLogIterEntry::NOCHANGE)
-        .value("Reset", ClassAdLogIterEntry::RESET)
+        .value("Init", ClassAdLogIterEntry::ET_INIT)
+        .value("Error", ClassAdLogIterEntry::ET_ERR)
+        .value("NoChange", ClassAdLogIterEntry::ET_NOCHANGE)
+        .value("Reset", ClassAdLogIterEntry::ET_RESET)
         .value("NewClassAd", ClassAdLogIterEntry::NEW_CLASSAD)
         .value("DestroyClassAd", ClassAdLogIterEntry::DESTROY_CLASSAD)
         .value("SetAttribute", ClassAdLogIterEntry::SET_ATTRIBUTE)
