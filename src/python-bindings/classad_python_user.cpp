@@ -227,10 +227,12 @@ python_invoke (const char *                 name,
     catch (boost::python::error_already_set)
     {
         result.SetErrorValue();
-        printf("Python exception occurred.\n");
-        if (PyErr_Occurred()) {
+        if (PyErr_Occurred())
+        {
             classad::CondorErrMsg = handle_pyerror(); 
-            PyErr_Clear();
+            // Keep around any python exceptions on the off-chance we
+            // return to a python context in the future.
+            //PyErr_Clear();
         }
         return true;
     }

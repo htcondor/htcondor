@@ -198,19 +198,21 @@ boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) cons
     if (origParent || scope_ptr)
     {
         ScopeGuard guard(*m_expr, scope_ptr);
-        if (!m_expr->Evaluate(value))
+        bool evalresult = m_expr->Evaluate(value);
+        if (PyErr_Occurred()) {boost::python::throw_error_already_set();}
+        if (!evalresult)
         {
-            if (!PyErr_Occurred()) { PyErr_SetString(PyExc_TypeError, "Unable to evaluate expression");}
-            boost::python::throw_error_already_set();
+            THROW_EX(TypeError, "Unable to evaluate expression");
         }
     }
     else
     {
         classad::EvalState state;
-        if (!m_expr->Evaluate(state, value))
+        bool evalresult = m_expr->Evaluate(state, value);
+        if (PyErr_Occurred()) {boost::python::throw_error_already_set();}
+        if (!evalresult)
         {
-            if (!PyErr_Occurred()) {PyErr_SetString(PyExc_TypeError, "Unable to evaluate expression");}
-            boost::python::throw_error_already_set();
+            THROW_EX(TypeError, "Unable to evaluate expression");
         }
     }
     return convert_value_to_python(value);
@@ -699,7 +701,6 @@ pythonFunctionTrampoline(const char *name, const classad::ArgumentList& args, cl
                 // However, it does prevent an exception being thrown into the ClassAd code... which is not ready for it!
     {
         result.SetErrorValue();
-        return true;
     }
     return true;
 }
