@@ -81,12 +81,15 @@ Reconfig()
 		}
 	}
 
-	std::string user_python;
-	if (param(user_python, "CLASSAD_USER_PYTHON_MODULES"))
+	char *user_python_char = param("CLASSAD_USER_PYTHON_MODULES");
+	if (user_python_char)
 	{
-		std::string loc;
-		if (param(loc, "CLASSAD_USER_PYTHON_LIB") && !ClassAdUserLibs.contains(loc.c_str()))
+		std::string user_python(user_python_char);
+		free(user_python_char); user_python_char = NULL;
+		char *loc_char = param("CLASSAD_USER_PYTHON_LIB");
+		if (loc_char && !ClassAdUserLibs.contains(loc_char))
 		{
+			std::string loc(loc_char);
 			if (classad::FunctionCall::RegisterSharedLibraryFunctions(loc.c_str()))
 			{
 				ClassAdUserLibs.append(loc.c_str());
@@ -106,6 +109,7 @@ Reconfig()
 					loc.c_str(), classad::CondorErrMsg.c_str());
 			}
 		}
+		if (loc_char) {free(loc_char);}
 	}
 }
 
