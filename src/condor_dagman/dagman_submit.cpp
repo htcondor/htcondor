@@ -67,8 +67,7 @@ parse_condor_submit( const char *buffer, int &jobProcCount, int &cluster )
 
 //-------------------------------------------------------------------------
 static bool
-submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
-			bool prohibitMultiJobs )
+submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 {
   MyString cmd; // for debug output
   args.GetArgsStringForDisplay( &cmd );
@@ -82,8 +81,8 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
   }
   
   //----------------------------------------------------------------------
-  // Parse submit command output for a Condor/Stork job ID.  This
-  // desperately needs to be replaced by Condor/Stork submit APIs.
+  // Parse submit command output for a Condor job ID.  This
+  // desperately needs to be replaced by Condor submit APIs.
   //
   // Typical condor_submit output for Condor v6 looks like:
   //
@@ -100,28 +99,22 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
   const char *marker = NULL;
   parse_submit_fnc parseFnc = NULL;
 
-  //TEMPTEMP -- get rid of this if?
-  if ( type == Job::TYPE_CONDOR ) {
-    marker = " submitted to cluster ";
+  marker = " submitted to cluster ";
 
-	  // Note: we *could* check how many jobs got submitted here, and
-	  // correlate that with how many submit events we see later on.
-	  // I'm not worrying about that for now...  wenger 2006-02-07.
-	  // We also have to check the number of jobs to get an accurate
-	  // count of submitted jobs to report in the dagman.out file.
+  // Note: we *could* check how many jobs got submitted here, and
+  // correlate that with how many submit events we see later on.
+  // I'm not worrying about that for now...  wenger 2006-02-07.
+  // We also have to check the number of jobs to get an accurate
+  // count of submitted jobs to report in the dagman.out file.
 
-	  // We should also check whether we got more than one cluster, and
-	  // either deal with it correctly or generate an error message.
-	parseFnc = parse_condor_submit;
-  } else {
-	debug_printf( DEBUG_QUIET, "Illegal job type: %d\n", type );
-	ASSERT(false);
-  }
+  // We should also check whether we got more than one cluster, and
+  // either deal with it correctly or generate an error message.
+  parseFnc = parse_condor_submit;
   
-  // Take all of the output (both stdout and stderr) from condor_submit
-  // or stork_submit, and echo it to the dagman.out file.  Look for
-  // the line (if any) containing the word "cluster" (Condor) or
-  // "assigned id" (Stork).  If we don't find such a line, something
+  // Take all of the output (both stdout and stderr) from condor_submit,
+  // and echo it to the dagman.out file.  Look for
+  // the line (if any) containing the word "cluster" (Condor).
+  // If we don't find such a line, something
   // went wrong with the submit, so we return false.  The caller of this
   // function can retry the submit by repeatedly calling this function.
 
@@ -190,8 +183,7 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
 // NOTE: this and submit_try should probably be merged into a single
 // method -- submit_batch_job or something like that.  wenger/pfc 2006-04-05.
 static bool
-do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType,
-			bool prohibitMultiJobs )
+do_submit( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 {
 	MyString cmd; // for debug output
 	args.GetArgsStringForDisplay( &cmd );
@@ -199,7 +191,7 @@ do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType,
   
 	bool success = false;
 
-	success = submit_try( args, condorID, jobType, prohibitMultiJobs );
+	success = submit_try( args, condorID, prohibitMultiJobs );
 
 	if( !success ) {
 	    debug_printf( DEBUG_QUIET, "ERROR: submit attempt failed\n" );
@@ -402,8 +394,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 	args.AppendArg( cmdFile );
 
-	bool success = do_submit( args, condorID, Job::TYPE_CONDOR,
-				dm.prohibitMultiJobs );
+	bool success = do_submit( args, condorID, dm.prohibitMultiJobs );
 
 	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
 		debug_printf( DEBUG_QUIET,

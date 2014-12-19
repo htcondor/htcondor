@@ -58,12 +58,6 @@ const char * Job::status_t_names[] = {
 };
 
 //---------------------------------------------------------------------------
-// NOTE: must be kept in sync with the job_type_t enum
-const char* Job::_job_type_names[] = {
-    "Condor",
-};
-
-//---------------------------------------------------------------------------
 Job::~Job() {
 	delete [] _directory;
 	delete [] _cmdFile;
@@ -191,16 +185,6 @@ bool Job::Remove (const queue_t queue, const JobID_t jobID)
 
 	return true;
 }  
-
-//---------------------------------------------------------------------------
-bool
-Job::CheckForLogFile( bool usingDefault ) const
-{
-	bool tmpLogFileIsXml;
-	MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
-				_directory, tmpLogFileIsXml, usingDefault );
-	return (logFile != "");
-}
 
 //---------------------------------------------------------------------------
 void Job::Dump ( const Dag *dag ) const {
@@ -668,29 +652,6 @@ Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
 	return true;
 }
 
-
-Job::job_type_t
-Job::JobType() const
-{
-    return TYPE_CONDOR;
-}
-
-
-const char*
-Job::JobTypeString() const
-{
-    return _job_type_names[TYPE_CONDOR];
-}
-
-
-/*
-const char* Job::JobIdString() const
-{
-
-}
-*/
-
-
 int
 Job::NumParents() const
 {
@@ -796,16 +757,13 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		LogMonitorFailed();
 		return false;
 	}
-	// Note:  logFile is "" here if usingDefault is true and this node
-	// is an HTCondor node (not Stork).
+	// Note:  logFile is "" here if usingDefault is true.
 
 		// Warn the user if the node's log file is in /tmp.
 	if ( logFile.find( "/tmp" ) == 0 ) {
 		debug_printf( DEBUG_QUIET, "Warning: "
 					"Log file %s for node %s is in /tmp\n",
 					logFile.Value(), GetJobName() );
-			// If we're using the workflow log, we'll only ever get here
-			// for Stork nodes, because they can't use the workflow log.
         check_warning_strictness( DAG_STRICT_1 );
 	}
 
@@ -1113,28 +1071,25 @@ Job::Cleanup()
 bool
 Job::FindLogFile( bool usingWorkflowLog, MyString &logFile )
 {
-	//TEMPTEMP -- get rid of this if
-	//TEMPTEMP if ( _jobType == TYPE_CONDOR ) {
-		if ( usingWorkflowLog ) {
-				// Now, if we're using the workflow log file, we don't
-				// even look at the node's submit file.  (See gittrac
-				// #3843.)
-			logFile = "";
+	if ( usingWorkflowLog ) {
+			// Now, if we're using the workflow log file, we don't
+			// even look at the node's submit file.  (See gittrac
+			// #3843.)
+		logFile = "";
 
-		} else {
-				// We're not in workflow/default log mode, so get the
-				// log file (if any) from the submit file.
-    		logFile = MultiLogFiles::loadLogFileNameFromSubFile(
-						_cmdFile, _directory, _logFileIsXml, false );
-			if ( logFile == "" ) {
-				debug_printf( DEBUG_NORMAL, "Unable to get log file from "
-							"submit file %s (node %s); using default/workflow log\n",
-							_cmdFile, GetJobName() );
-				// Don't return false here, because not specifying the
-				// log file is not an error.
-			}
+	} else {
+			// We're not in workflow/default log mode, so get the
+			// log file (if any) from the submit file.
+   		logFile = MultiLogFiles::loadLogFileNameFromSubFile(
+					_cmdFile, _directory, _logFileIsXml, false );
+		if ( logFile == "" ) {
+			debug_printf( DEBUG_NORMAL, "Unable to get log file from "
+						"submit file %s (node %s); using default/workflow log\n",
+						_cmdFile, GetJobName() );
+			// Don't return false here, because not specifying the
+			// log file is not an error.
 		}
-	//TEMPTEMP }
+	}
 
 	return true;
 }

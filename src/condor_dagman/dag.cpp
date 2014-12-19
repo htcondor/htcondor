@@ -22,7 +22,7 @@
 // We are calling a *node* the combination of pre-script, job, and
 // post-script.
 // We are calling a *job* essentially what results from one invocation
-// of condor_submit or stork_submit.
+// of condor_submit.
 // We are calling a *job proc* an individual batch system process within
 // a cluster.
 // So nodes-to-jobs is 1-to-1; jobs to job procs is 1-to-n.
@@ -323,9 +323,6 @@ bool Dag::Bootstrap (bool recovery)
 			}
 		}
 
-			// Note: I just realized that this will almost certainly fail
-			// on a combination of Condor and Stork events -- we probably
-			// need a loop around the event processing.  wenger 2009-06-18.
 		if( CondorLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( recovery ) ) {
 				_recovery = false;
@@ -1817,11 +1814,6 @@ Dag::PostScriptReaper( Job *job, int status )
 		e.returnValue = WEXITSTATUS( status );
 	}
 
-		// Note: after 6.7.15 is released, we'll be disabling the old-style
-		// Stork logs, so we should probably go ahead and write the POST
-		// script terminated events for Stork jobs here (although that
-		// could cause some backwards-compatibility problems).  wenger
-		// 2006-01-12.
 	e.cluster = job->GetCluster();
 	e.proc = job->GetProc();
 	e.subproc = job->GetSubProc();

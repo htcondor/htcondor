@@ -75,13 +75,6 @@ typedef int JobID_t;
      queue) are put on the DAG's ready list.  */
 class Job {
   public:
-
-        // possible kinds of job (e.g., Condor, Stork, etc.)
-        // NOTE: must be kept in sync with _job_type_strings[]
-        // NOTE: must be kept in sync with enum Log_source
-	typedef enum {
-		TYPE_CONDOR,
-	 } job_type_t; //TEMPTEMP -- get rid of this?
   
     /** Enumeration for specifying which queue for Add() and Remove().
         If you change this enum, you *must* also update queue_t_names
@@ -175,8 +168,7 @@ class Job {
 	inline int GetRetries() const { return retries; }
 	const char* GetPreScriptName() const;
 	const char* GetPostScriptName() const;
-	const char* JobTypeString() const; //TEMPTEMP -- get rid of this?
-	job_type_t JobType() const; //TEMPTEMP -- get rid of this?
+	static const char* JobTypeString() { return "Condor"; }
 
 	bool AddPreScript( const char *cmd, MyString &whynot );
 	bool AddPreSkip( int exitCode, MyString &whynot );
@@ -219,14 +211,6 @@ class Job {
     */
     bool Remove (const queue_t queue, const JobID_t jobID);
 
-	/** Check whether the submit file for this job has a log file
-	    defined.
-		@param usingDefault is true if DAGman is watching the
-			default node log
-		@return true iff the submit file defines a log file
-	*/
-	bool CheckForLogFile( bool usingDefault ) const;
-
     /** Returns true if a queue is empty (has no jobs)
         @param queue Selects which queue to look at
         @return true: queue is empty, false: otherwise
@@ -265,6 +249,7 @@ class Job {
 			@return true: specified node is our child, false: otherwise
 		*/
 	bool HasChild( Job* child );
+
 		/** Is the specified node a parent of this node?
 			@param child Pointer to the node to check for parenthood.
 			@return true: specified node is our parent, false: otherwise
@@ -347,7 +332,7 @@ class Job {
 		return _dagFile;
 	}
 
-	/** Monitor this node's Condor or Stork log file with the
+	/** Monitor this node's Condor or file with the
 		multiple log reader.  (Must be called before this node's
 		job is submitted.)
 		@param logReader: the multiple log reader
@@ -362,7 +347,7 @@ class Job {
 				bool nfsIsError,
 				bool recovery, const char *defaultNodeLog, bool usingDefault );
 
-	/** Unmonitor this node's Condor or Stork log file with the
+	/** Unmonitor this node's Condor log file with the
 		multiple log reader.  (Must be called after everything is done
 		for this node.)
 		@param logReader: the multiple log reader
@@ -558,12 +543,6 @@ private:
 		// Mark this node as failed because of an error in monitoring
 		// the log file.
   	void LogMonitorFailed();
-
-        // strings for job_type_t (e.g., "Condor, "Stork", etc.)
-    static const char* _job_type_names[];
-
-		// type of job (e.g., Condor, Stork, etc.)
-	//TEMPTEMP job_type_t _jobType; //TEMPTEMP -- get rid of this?
 
 		// Directory to cd to before running the job or the PRE and POST
 		// scripts.
