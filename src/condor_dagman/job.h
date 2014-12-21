@@ -1,4 +1,3 @@
-//TEMPTEMP -- crap -- is some of the old code still needed for Stork? -- ah -- see #4550: Eliminate DAGMan support for Stork jobs
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -333,6 +332,7 @@ class Job {
 		return _dagFile;
 	}
 
+#if 0 //TEMPTEMP
 	/** Monitor this node's Condor or file with the
 		multiple log reader.  (Must be called before this node's
 		job is submitted.)
@@ -357,23 +357,24 @@ class Job {
 	*/
 	//TEMPTEMP -- maybe get rid of this...
 	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader );
+#endif //TEMPTEMP
 
 		// Whether this node is using the default node log file.
 	//TEMPTEMP -- get rid of this...
-	bool UsingDefaultLog() const { return _useDefaultLog; }
+	//TEMPTEMP bool UsingDefaultLog() const { return _useDefaultLog; }
 
 	/** Get the log file for this node.
 		@return the name of this node's log file.
 	*/
 	//TEMPTEMP -- get rid of this...
-	const char *GetLogFile() const { return _logFile; }
+	//TEMPTEMP const char *GetLogFile() const { return _logFile; }
 
 	/** Get whether this node's log file is XML (versus "standard"
 		format).
 		@return true iff the log file is XML.
 	*/
 	//TEMPTEMP -- get rid of this...
-	bool GetLogFileIsXml() const { return _logFileIsXml; }
+	//TEMPTEMP bool GetLogFileIsXml() const { return _logFileIsXml; }
 
 	/** Get the jobstate.log job tag for this node.
 		@return The job tag (can be "local"; if no tag is specified,
@@ -538,7 +539,7 @@ private:
 			@param logFile: a MyString to hold the log file name
 			@return true on success, false otherwise
 		*/
-	bool FindLogFile( bool usingWorkflowLog, MyString &logFile );
+	//TEMPTEMP bool FindLogFile( bool usingWorkflowLog, MyString &logFile );
 
 		/** _onHold[proc] is nonzero if the condor job 
  			with ProcId == proc is on hold, and zero
@@ -548,7 +549,7 @@ private:
 
 		// Mark this node as failed because of an error in monitoring
 		// the log file.
-  	void LogMonitorFailed();
+  	//TEMPTEMP void LogMonitorFailed();
 
 		// Directory to cd to before running the job or the PRE and POST
 		// scripts.
@@ -604,17 +605,17 @@ private:
 	ThrottleByCategory::ThrottleInfo *_throttleInfo;
 
 		// Whether this node's log file is currently being monitored.
-	bool _logIsMonitored;
+	//TEMPTEMP bool _logIsMonitored;
 
 		// Whether this node uses the default user log file.
-	bool _useDefaultLog;
+	//TEMPTEMP bool _useDefaultLog;
 
 		// The log file for this job -- it will be assigned the default
 		// log file name if no log file is specified in the submit file.
-	char *_logFile;
+	//TEMPTEMP char *_logFile;
 
 		// Whether the log file is XML.
-	bool _logFileIsXml;
+	//TEMPTEMP bool _logFileIsXml;
 
 
 		// Whether this is a noop job (shouldn't actually be submitted

@@ -1367,6 +1367,19 @@ Dagman::ResolveDefaultLog()
 					DAG_STRICT_1 : DAG_STRICT_2 );
 	}
 
+#if 0 //TEMPTEMP -- implement this here!
+		// This function returns true if the log file is on NFS and
+		// that is an error.  If the log file is on NFS, but nfsIsError
+		// is false, it prints a warning but returns false.
+	if ( MultiLogFiles::logFileNFSError( logFile.Value(),
+				nfsIsError ) ) {
+		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
+					logFile.Value() );
+		LogMonitorFailed();
+		return false;
+	}
+#endif //TEMPTEMP
+
 	debug_printf( DEBUG_NORMAL, "Default node log file is: <%s>\n",
 				_defaultNodeLog.Value() );
 }

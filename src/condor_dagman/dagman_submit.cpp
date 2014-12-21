@@ -282,6 +282,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				"submit_event_notes = DAG Node: " ) + DAGNodeName;
 	args.AppendArg( submitEventNotes.Value() );
 
+//TEMPTEMP -- assert that workflowLog is non-null
 		// workflowLogFile is non-null here if we need to tell the schedd to
 		// use that file as the default/workflow log for this node.
 	if ( workflowLogFile ) {

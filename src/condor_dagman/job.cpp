@@ -68,7 +68,7 @@ Job::~Job() {
     // as of 6/2004 we don't yet use that.  For details, see:
     // http://support.microsoft.com/support/kb/articles/Q131/3/22.asp
 	delete [] _jobName;
-	delete [] _logFile;
+	//TEMPTEMP delete [] _logFile;
 
 	varsFromDag->Rewind();
 	NodeVar *var;
@@ -105,8 +105,8 @@ Job::Job( const char* jobName,
 	_cmdFile = strnewp (cmdFile);
 	_dagFile = NULL;
 	_throttleInfo = NULL;
-	_logIsMonitored = false;
-	_useDefaultLog = false;
+	//TEMPTEMP _logIsMonitored = false;
+	//TEMPTEMP _useDefaultLog = false;
 
     // _condorID struct initializes itself
 
@@ -131,8 +131,8 @@ Job::Job( const char* jobName,
 	_hasNodePriority = false;
 	_nodePriority = 0;
 
-	_logFile = NULL;
-	_logFileIsXml = false;
+	//TEMPTEMP _logFile = NULL;
+	//TEMPTEMP _logFileIsXml = false;
 
 	_noop = false;
 
@@ -734,6 +734,7 @@ Job::SetDagFile(const char *dagFile)
 	_dagFile = strnewp( dagFile );
 }
 
+#if 0 //TEMPTEMP
 //---------------------------------------------------------------------------
 bool
 Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
@@ -751,6 +752,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		return true;
 	}
 
+#if 0 //TEMPTEMP
 	ReadMultipleUserLogs &logReader = condorLogReader;
 
 	MyString logFile;
@@ -760,6 +762,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	}
 	// Note:  logFile is "" here if usingDefault is true.
 
+//TEMPTEMP -- move this to a different place!
 		// Warn the user if the node's log file is in /tmp.
 	if ( logFile.find( "/tmp" ) == 0 ) {
 		debug_printf( DEBUG_QUIET, "Warning: "
@@ -771,11 +774,13 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	if ( logFile == "" ) {
 			// Using the workflow/default log file for this node.
 		logFile = defaultNodeLog;
-		_useDefaultLog = true;
+		//TEMPTEMP _useDefaultLog = true;
 			// Default User log is never XML
 		_logFileIsXml = false;
 	}
+#endif //TEMPTEMP
 
+#if 0 //TEMPTEMP -- move this to a different place!
 		// This function returns true if the log file is on NFS and
 		// that is an error.  If the log file is on NFS, but nfsIsError
 		// is false, it prints a warning but returns false.
@@ -786,14 +791,17 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		LogMonitorFailed();
 		return false;
 	}
+#endif //TEMPTEMP
 
+#if 0 //TEMPTEMP
 	delete [] _logFile;
 		// Saving log file here in case submit file gets changed.
 	_logFile = strnewp( logFile.Value() );
+#endif //TEMPTEMP
 	debug_printf( DEBUG_DEBUG_2, "Monitoring log file <%s> for node %s\n",
 				GetLogFile(), GetJobName() );
 	CondorError errstack;
-	if ( !logReader.monitorLogFile( GetLogFile(), !recovery, errstack ) ) {
+	if ( !logReader.monitorLogFile( defaultNodeLog, !recovery, errstack ) ) {
 		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
 					"ERROR: Unable to monitor log file for node %s",
 					GetJobName() );
@@ -845,6 +853,7 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader )
 	return result;
 }
 
+//TEMPTEMP -- get rid of this
 //---------------------------------------------------------------------------
 void
 Job::LogMonitorFailed()
@@ -860,6 +869,7 @@ Job::LogMonitorFailed()
 		}
 	}
 }
+#endif //TEMPTEMP
 
 //---------------------------------------------------------------------------
 const char *
@@ -1068,6 +1078,7 @@ Job::Cleanup()
 	_gotEvents.swap(s2); // Free memory in _gotEvents
 }
 
+#if 0 //TEMPTEMP
 //---------------------------------------------------------------------------
 bool
 Job::FindLogFile( bool usingWorkflowLog, MyString &logFile )
@@ -1094,3 +1105,4 @@ Job::FindLogFile( bool usingWorkflowLog, MyString &logFile )
 
 	return true;
 }
+#endif //TEMPTEMP

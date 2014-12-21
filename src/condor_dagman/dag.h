@@ -949,6 +949,12 @@ class Dag {
 	*/
 	const char *EscapeClassadString( const char* strIn );
 
+		//TEMPTEMP -- document
+	bool MonitorLogFile();
+
+		//TEMPTEMP -- document
+	bool UnmonitorLogFile();
+
 protected:
     /// List of Job objects
     List<Job>     _jobs;

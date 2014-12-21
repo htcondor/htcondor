@@ -1,4 +1,3 @@
-//TEMPTEMP -- should I back out the log changes and do a commit that's only the Stork removal?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -221,12 +220,18 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		}
 	}
 
+		//TEMPTEMP -- is this the right place for this?
+	(void) MonitorLogFile();
+
 	return;
 }
 
 //-------------------------------------------------------------------------
 Dag::~Dag()
 {
+		//TEMPTEMP -- is this the right place for this?
+	(void) UnmonitorLogFile();
+
 		// remember kids, delete is safe *even* if ptr == NULL...
 
     // delete all jobs in _jobs
@@ -306,6 +311,7 @@ bool Dag::Bootstrap (bool recovery)
 
 		debug_cache_start_caching();
 
+#if 0 //TEMPTEMP
 			// Here we're monitoring the log files of all ready nodes.
    		jobs.ToBeforeFirst();
    		while( jobs.Next( job ) ) {
@@ -318,6 +324,7 @@ bool Dag::Bootstrap (bool recovery)
 				}
 			}
 		}
+#endif //TEMPTEMP
 
 		if( CondorLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( recovery ) ) {
@@ -648,7 +655,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 
 			case ULOG_PRESKIP:
 				TerminateJob( job, recovery );
-				job->UnmonitorLogFile( _condorLogRdr );
+				//TEMPTEMP job->UnmonitorLogFile( _condorLogRdr );
 				if(!recovery) {
 					--_preRunNodeCount;
 				}
@@ -870,7 +877,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	ASSERT ( _isSplice == false );
 
 	if ( job->_queuedNodeJobProcs == 0 ) {
-		(void)job->UnmonitorLogFile( _condorLogRdr );
+		//TEMPTEMP (void)job->UnmonitorLogFile( _condorLogRdr );
 
 			// Log job success or failure if necessary.
 		_jobstateLog.WriteJobSuccessOrFailure( job );
@@ -916,8 +923,8 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			if ( recovery ) {
 				job->SetStatus( Job::STATUS_POSTRUN );
 				_postRunNodeCount++;
-				(void)job->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
-							_recovery, _defaultNodeLog );
+				//TEMPTEMP (void)job->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
+							//TEMPTEMP _recovery, _defaultNodeLog );
 			} else {
 				(void)RunPostScript( job, _alwaysRunPost, 0 );
 			}
@@ -935,7 +942,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
 	if( job ) {
-		(void)job->UnmonitorLogFile( _condorLogRdr );
+		//TEMPTEMP (void)job->UnmonitorLogFile( _condorLogRdr );
 
 			// Note: "|| recovery" below is somewhat of a "quick and dirty"
 			// fix to Gnats PR 357.  The first part of the assert can fail
@@ -1651,10 +1658,10 @@ Dag::PreScriptReaper( Job *job, int status )
 			CondorID id;
 				// This might be the first time we watch the file, so we
 				// monitor it.
-			if ( !job->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
-					_recovery, _defaultNodeLog ) ) {
-				return 0;
-			}
+			//TEMPTEMP if ( !job->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
+					//TEMPTEMP _recovery, _defaultNodeLog ) ) {
+				//TEMPTEMP return 0;
+			//TEMPTEMP }
 				
 			if ( !writePreSkipEvent( id, job, job->GetJobName(),
 					job->GetDirectory(), DefaultNodeLog(), false ) ) {
@@ -1735,6 +1742,7 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 	// a POST script is specified for the job, so run it
 	// We are told to ignore the result of the PRE script
 	job->SetStatus( Job::STATUS_POSTRUN );
+#if 0 //TEMPTEMP
 	if ( !job->MonitorLogFile( _condorLogRdr, 
 			_nfsLogIsError, _recovery, _defaultNodeLog ) ) {
 		debug_printf(DEBUG_QUIET, "Unable to monitor user logfile for node %s\n",
@@ -1742,6 +1750,7 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 		debug_printf(DEBUG_QUIET, "Not running the POST script\n" );
 		return false;
 	}
+#endif //TEMPTEMP
 	if ( incrementRunCount ) {
 		_postRunNodeCount++;
 	}
@@ -2384,8 +2393,8 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 				if ( recovery ) {
 						// We need to monitor the log file for the node that's
 						// newly ready.
-					(void)child->MonitorLogFile( _condorLogRdr, 
-								_nfsLogIsError, recovery, _defaultNodeLog );
+					//TEMPTEMP (void)child->MonitorLogFile( _condorLogRdr, 
+								//TEMPTEMP _nfsLogIsError, recovery, _defaultNodeLog );
 				} else {
 						// If child has no more parents in its waiting queue,
 						// submit it.
@@ -2473,8 +2482,8 @@ Dag::RestartNode( Job *node, bool recovery )
 		// has retried nodes).  (See SubmitNodeJob() for where this
 		// gets done during "normal" running.)
 		node->SetCondorID( _defaultCondorId );
-		(void)node->MonitorLogFile( _condorLogRdr, 
-					_nfsLogIsError, recovery, _defaultNodeLog );
+		//TEMPTEMP (void)node->MonitorLogFile( _condorLogRdr, 
+					//TEMPTEMP _nfsLogIsError, recovery, _defaultNodeLog );
 	}
 }
 
@@ -3062,6 +3071,50 @@ Dag::EscapeClassadString( const char* strIn )
 	unparse.Unparse( tmpStr, tmpValue );
 
 	return tmpStr.c_str();
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::MonitorLogFile()
+{
+	debug_printf( DEBUG_DEBUG_2,
+				"Attempting to monitor log file <%s>\n", _defaultNodeLog );
+
+	CondorError errstack;
+	if ( !_condorLogRdr.monitorLogFile( _defaultNodeLog, !_recovery,
+				errstack ) ) {
+		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
+					"ERROR: Unable to monitor log file <%s>\n",
+					_defaultNodeLog );
+		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText().c_str() );
+		EXCEPT( "Fatal log file monitoring error!" );
+		return false;
+	}
+
+	//TEMPTEMP _logIsMonitored = true;
+
+	return true;
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::UnmonitorLogFile()
+{
+	debug_printf( DEBUG_DEBUG_2, "Unmonitoring log file <%s>\n",
+				_defaultNodeLog );
+
+	CondorError errstack;
+	bool result = _condorLogRdr.unmonitorLogFile( _defaultNodeLog,
+				errstack );
+	if ( !result ) {
+		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
+					"ERROR: Unable to unmonitor log file <%s>\n",
+					_defaultNodeLog );
+		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText().c_str() );
+		EXCEPT( "Fatal log file monitoring error!" );
+	}
+
+	return result;
 }
 
 //-------------------------------------------------------------------------
@@ -3924,12 +3977,14 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		}
 	}
 
+#if 0 //TEMPTEMP
 	if ( !node->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
 			_recovery, _defaultNodeLog ) ) {
 		debug_printf( DEBUG_QUIET, "ERROR: Failed to monitor log for node %s.\n",
 			node->GetJobName() );
 		return SUBMIT_RESULT_NO_SUBMIT;
 	}
+#endif //TEMPTEMP
 
 	debug_printf( DEBUG_NORMAL, "Submitting %s Node %s job(s)...\n",
 			  	node->JobTypeString(), node->GetJobName() );
@@ -3940,11 +3995,9 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 	if ( node->GetNoop() ) {
    		submit_success = fake_condor_submit( condorID, 0,
 					node->GetJobName(), node->GetDirectory(),
-					node->GetLogFile() ,
-					node->GetLogFileIsXml() );
+					_defaultNodeLog,
+					false/*TEMPTEMP*/ );
 	} else {
-		const char *logFile = node->UsingDefaultLog() ?
-					node->GetLogFile() : NULL;
 			// Note: assigning the ParentListString() return value
 			// to a variable here, instead of just passing it directly
 			// to condor_submit(), fixes a memory leak(!).
@@ -3953,7 +4006,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
    		submit_success = condor_submit( dm, node->GetCmdFile(), condorID,
 					node->GetJobName(), parents,
 					node->varsFromDag, node->GetRetries(),
-					node->GetDirectory(), logFile,
+					node->GetDirectory(), _defaultNodeLog,
 					ProhibitMultiJobs(),
 					node->NumChildren() > 0 && dm._claim_hold_time > 0 );
 	}
@@ -4017,7 +4070,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
 
-	(void)node->UnmonitorLogFile( _condorLogRdr );
+	//TEMPTEMP (void)node->UnmonitorLogFile( _condorLogRdr );
 
 	if ( node->_submitTries >= max_submit_attempts ) {
 			// We're out of submit attempts, treat this as a submit failure.
