@@ -1991,6 +1991,16 @@ the default \\ \hline
   STATISTICS_TO_PUBLISH = DEFAULT:1!L, DC:2RDZL
 \end{verbatim}
   
+\label{param:StatisticsToPublish}
+\item[\Macro{STATISTICS\_TO\_PUBLISH\_LIST}]
+  A comma and/or space separated list of statistics attribute names
+  that should be published in updates to the collector even though
+  the verbosity specified in \MacroNI{STATISTICS\_TO\_PUBLISH} would
+  not normally send them.  This setting has the effect of redefining
+  the verbosity level of the statistics attributes that it mentions so that
+  they will always match the current statistics publication level as
+  specified in \MacroNI{STATISTICS\_TO\_PUBLISH}.
+
 \label{param:StatisticsWindowSeconds}
 \item[\Macro{STATISTICS\_WINDOW\_SECONDS}]
   An integer value that controls the time window size, in seconds, for
@@ -13003,7 +13013,8 @@ in ClassAds that the \Condor{collector} daemon has.
   \MacroNI{GANGLIA\_VERBOSITY} is set to 1 or higher in the
   \Condor{gangliad} configuration \emph{and}
   \MacroNI{STATISTICS\_TO\_PUBLISH} in the \Condor{schedd} configuration
-  contains \Expr{TRANSFER:2}.
+  contains \Expr{TRANSFER:2}, or if the \MacroNI{STATISTICS\_TO\_PUBLISH\_LIST}
+  contains the desired attributes explictly.
 
 \label{param:GangliadRequirements}
 \item[\Macro{GANGLIAD\_REQUIREMENTS}] An optional boolean ClassAd expression
