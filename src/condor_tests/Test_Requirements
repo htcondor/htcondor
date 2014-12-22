@@ -11,18 +11,6 @@ cmd_q_shows-pool: cygwin
 cmd_q_shows-run: personal
 cmd_q_shows-sub: cygwin, personal
 cmd_q_shows-xml: personal
-cmd_status_shows-absent: cygwin
-cmd_status_shows-any: cygwin
-cmd_status_shows-avail: cygwin
-cmd_status_shows-claim: cygwin
-cmd_status_shows-constraint: cygwin
-cmd_status_shows-format: cygwin
-cmd_status_shows-master: cygwin
-cmd_status_shows-negotiator: cygwin
-cmd_status_shows-schedd: cygwin
-cmd_status_shows-startd: cygwin
-cmd_status_shows-state: cygwin
-cmd_status_shows-submitters: cygwin
 cmd_submit_coverage: cygwin
 cmd_submit_massive: cygwin
 cmd_wait_shows-all: personal

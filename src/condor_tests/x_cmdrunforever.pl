@@ -19,11 +19,12 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use strict;
 use warnings;
 
 
-my $debuglevel = 2;
+my $debuglevel = 1;
 my $pid = $ARGV[0];
 
 
@@ -36,7 +37,7 @@ my $line = "";
 open(TEMPLATE,"<$template") or die "Can not open $template: $!\n";
 open(CMD,">$cmd") or die "Can not open $cmd: $!\n";
 while(<TEMPLATE>) {
-	chomp();
+	fullchomp();
 	$line = $_;
 	if($line =~ /^\s*log\s*=.*$/) {
 		print CMD "log = $testname$pid.log\n";
