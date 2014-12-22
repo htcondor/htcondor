@@ -895,6 +895,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_EC2_KEY_PAIR  "EC2KeyPair"
 #define ATTR_EC2_KEY_PAIR_FILE  "EC2KeyPairFile"
 #define ATTR_EC2_SECURITY_GROUPS  "EC2SecurityGroups"
+#define ATTR_EC2_SECURITY_IDS  "EC2SecurityIDs"
 #define ATTR_EC2_USER_DATA  "EC2UserData"
 #define ATTR_EC2_USER_DATA_FILE  "EC2UserDataFile"
 #define ATTR_EC2_REMOTE_VM_NAME  "EC2RemoteVirtualMachineName"
@@ -912,6 +913,8 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_EC2_STATUS_REASON_CODE  "EC2StatusReasonCode"
 #define ATTR_EC2_SERVER_TYPE  "EC2ServerType"
 #define ATTR_EC2_BLOCK_DEVICE_MAPPING "EC2BlockDeviceMapping"
+#define ATTR_EC2_PARAM_NAMES  "EC2ParamNames"
+#define ATTR_EC2_PARAM_PREFIX  "EC2Param"
 
 //************* End of changes for EC2 Jobs *****************//
 

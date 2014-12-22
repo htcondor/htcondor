@@ -158,7 +158,7 @@ ClassAdLogProber::probe(ClassAdLogEntry *curCALogEntry,
 		   "fsize: %ld\t\tmtime: %ld", 
 		   (long)filestat.st_size, (long)filestat.st_mtime);
 #else
-		dprintf(D_ALWAYS,"ERROR: calling stat()\n");
+		dprintf(D_ALWAYS,"ERROR: calling stat() on %p - %s (errno=%d)\n", job_queue_fp, strerror(errno), errno);
 	
 	dprintf(D_FULLDEBUG, "=== Current Probing Information ===\n");
 	dprintf(D_FULLDEBUG, "fsize: %ld\t\tmtime: %ld\n", 

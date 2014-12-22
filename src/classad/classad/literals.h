@@ -22,6 +22,7 @@
 #define __CLASSAD_LITERALS_H__
 
 #include <vector>
+#include "exprTree.h"
 
 namespace classad {
 

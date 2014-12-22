@@ -6062,11 +6062,30 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
+void addStringListToRequestLine( StringList & sl, std::string & reqLine ) {
+	const char * text;
+	char * escapedText;
+
+	sl.rewind();
+	int count = 0;
+	if( sl.number() > 0 ) {
+		while( (text = sl.next()) ) {
+			escapedText = strdup( escapeGahpString( text ) );
+			formatstr_cat( reqLine, " %s", escapedText );
+			free( escapedText );
+			++count;
+		}
+	}
+	ASSERT( count == sl.number() );
+
+	formatstr_cat( reqLine, " %s", NULLSTRING );
+}
+
 //  Start VM
 int GahpClient::ec2_vm_start( std::string service_url,
 							  std::string publickeyfile,
 							  std::string privatekeyfile,
-							  std::string ami_id, 
+							  std::string ami_id,
 							  std::string keypair,
 							  std::string user_data,
 							  std::string user_data_file,
@@ -6077,6 +6096,8 @@ int GahpClient::ec2_vm_start( std::string service_url,
 							  std::string client_token,
 							  std::string block_device_mapping,
 							  StringList & groupnames,
+							  StringList & groupids,
+							  StringList & parametersAndValues,
 							  std::string &instance_id,
 							  std::string &error_code)
 {
@@ -6142,21 +6163,10 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	free( esc13 );
 	ASSERT( x > 0 );
 
-	const char * group_name;
-	int cnt = 0;
-	char * esc_groupname;
+	addStringListToRequestLine( groupnames, reqline );
+	addStringListToRequestLine( groupids, reqline );
+	addStringListToRequestLine( parametersAndValues, reqline );
 
-	// get multiple group names from string list
-	groupnames.rewind();
-	if ( groupnames.number() > 0 ) {
-		while ( (group_name = groupnames.next()) ) {
-			esc_groupname = strdup( escapeGahpString(group_name) );
-			formatstr_cat(reqline, " %s", esc_groupname);
-			cnt++;
-			free( esc_groupname );
-		}
-	}
-	ASSERT( cnt == groupnames.number() );
 	const char *buf = reqline.c_str();
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {
