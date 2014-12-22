@@ -34,9 +34,12 @@ This version contains all bug fixes from HTCondor version 8.2.5.
 9618 by default.
 \Ticket{3813}
 
-\item Improve handling of failures to launch VM jobs.  Failures which do
-not appear to the fault of the job now cause the job to be rescheduled and
-the node to stop advertising the ability to run VMs.
+\item Improved the handling when vm universe jobs failure to start.
+Failures which do
+not appear to be the fault of the job now cause the job to be rescheduled and
+the machine stops advertising the ability to run vm universe jobs.
+The new \Condor{condor\_update\_machine\_ad} tool facilitates changing
+the machine ClassAd.
 \Ticket{4375}
 
 \item Add ability to specify the block device mapping for EC2 jobs.
