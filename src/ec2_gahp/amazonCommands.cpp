@@ -811,16 +811,13 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     	}
 
 		std::ostringstream parameterName;
-		const char * parameterValue = NULLSTRING;
     	switch( which ) {
     		case vsaListType::groupNames:
     			parameterName << "SecurityGroup." << positionInList;
-    			parameterValue = argv[i];
     			++positionInList;
     			break;
     		case vsaListType::groupIDs:
     			parameterName << "SecurityGroupId." << positionInList;
-    			parameterValue = argv[i];
     			++positionInList;
     			break;
     		case vsaListType::parameters:
@@ -829,7 +826,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     				dprintf( D_ALWAYS, "Found parameter '%s' without value, ignoring it.\n", argv[i] );
     				continue;
     			}
-    			parameterValue = argv[++i];
+    			++i;
     			break;
     	}
 
