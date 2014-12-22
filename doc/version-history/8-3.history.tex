@@ -123,6 +123,23 @@ submitting to single-protocol execute nodes. This is preliminary work.
 debug output to \File{stderr}.
 \Ticket{4636}
 
+\item HTCondor daemons now support a whitelist of statistics attributes to
+publish in their add to the \Condor{collector}.  This is intented to ease
+configuration on systems that use Gangia for monitoring.
+\Ticket{4645}
+
+\item New statistics have been added to the \Condor{schedd} to monitor runtime
+spent doing DNS queries, using fsync, and rebuilding the priority list for
+negotiation.  Also additional attributes for average, maximum and minimum
+have been added to runtime statistics for command handlers for all HTCondor daemons.
+These changes are intended to help direct future scalability work.
+\Ticket{4593}
+\Ticket{4595}
+
+\item A new logging option, \MacroNI{D\_SUB\_SECOND}, enables millisecond resolution
+timestamps in daemon logs.
+\Ticket{4660}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
