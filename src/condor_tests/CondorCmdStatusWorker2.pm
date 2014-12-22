@@ -129,7 +129,13 @@ sub SetUp
 	#$ENV{CONDOR_CONFIG} = $pool2;
 
 	# start two jobs which run till killed
-	$cmd = "./x_cmdrunforever.pl A$unique";
+
+	if(is_windows()) {
+		$cmd = "x_cmdrunforever.pl B$unique";
+	} else {
+		$cmd = "./x_cmdrunforever.pl B$unique";
+	}
+
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
@@ -137,7 +143,12 @@ sub SetUp
 		exit(1)
 	}
 
-	$cmd = "./x_cmdrunforever.pl B$unique";
+	if(is_windows()) {
+		$cmd = "x_cmdrunforever.pl B$unique";
+	} else {
+		$cmd = "./x_cmdrunforever.pl B$unique";
+	}
+
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
@@ -181,7 +192,11 @@ sub SetUp
 
 	# start two jobs which run till killed
 	#$cmd = "condor_submit ./x_cmdrunforever.cmd2";
-	$cmd = "./x_cmdrunforever.pl C$unique";
+	if(is_windows()) {
+		$cmd = "x_cmdrunforever.pl B$unique";
+	} else {
+		$cmd = "./x_cmdrunforever.pl B$unique";
+	}
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{
@@ -189,7 +204,12 @@ sub SetUp
 		exit(1)
 	}
 
-	$cmd = "./x_cmdrunforever.pl D$unique";
+	if(is_windows()) {
+		$cmd = "x_cmdrunforever.pl B$unique";
+	} else {
+		$cmd = "./x_cmdrunforever.pl B$unique";
+	}
+
 	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
 	if(!$cmdstatus)
 	{

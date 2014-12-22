@@ -78,7 +78,7 @@ if($stable == 1) {
 
 	print "Looking for 2 or more Claimed slots with condor_status -state -format ... - ";
 	while($count < $nattempts) {
-		my $cmd = "condor_status -state -format \"%s\n\" State ";
+		my $cmd = 'condor_status -state -format "%s\n" State ';
 		my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
     	if(!$cmdstatus)
     	{
@@ -91,9 +91,10 @@ if($stable == 1) {
 		CondorTest::debug("Looking for exactly 4 claimed startds\n",$debuglevel);
 		$numclaimed = 0;
 		foreach my $line (@adarray) {
+			fullchomp($line);
 			if($line =~ /^\s*Claimed\s*$/) {
 				CondorTest::debug("found claimed: $line\n",$debuglevel);
-				$numclaimed = $numclaimed + 1;;
+				$numclaimed = $numclaimed + 1;
 			} else {
 				#print "skip: $line\n";
 			}

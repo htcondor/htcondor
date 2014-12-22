@@ -75,10 +75,16 @@ my $numany = 0;
 my %discoveries = ();
 my @expectations = ("Submitter", "Negotiator", "DaemonMaster", "Scheduler", "Machine");
 
+my $cmd = "";
+
 if($stable == 1) {
 	print "Looking for 5 Ad types - ";
 	# process one of each ad type and then compare with expected list
-	my $cmd = "condor_status -any -format \"%s:\" MyType -format \"%s\n\" Name";
+	if(is_windows()) {
+		$cmd = 'condor_status -any -format "%s:" MyType -format "%s\n" Name';
+	} else {
+		$cmd = "condor_status -any -format \"%s:\" MyType -format \"%s\n\" Name";
+	}
 	CondorTest::debug("Looking at -any($cmd)\n",$debuglevel);
 	my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
     if(!$cmdstatus)
@@ -90,6 +96,7 @@ if($stable == 1) {
     }
 	
 	foreach my $line (@adarray) {
+		fullchomp($line);
 		CondorTest::debug("-any: $line\n",$debuglevel);
 		if( $line =~ /^(\w+):(.*)$/ ) {
 			if( !(exists $discoveries{$1})) {
@@ -102,6 +109,7 @@ if($stable == 1) {
 	}
 
 	foreach my $search (@expectations) {
+		
 		# it had best be in the hash!
 		if(! (exists $discoveries{$search})) {
 			print "bad\n";
