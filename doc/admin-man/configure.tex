@@ -1991,7 +1991,7 @@ the default \\ \hline
   STATISTICS_TO_PUBLISH = DEFAULT:1!L, DC:2RDZL
 \end{verbatim}
   
-\label{param:StatisticsToPublish}
+\label{param:StatisticsToPublishList}
 \item[\Macro{STATISTICS\_TO\_PUBLISH\_LIST}]
   A comma and/or space separated list of statistics attribute names
   that should be published in updates to the collector even though
@@ -2556,6 +2556,26 @@ of the subsystem corresponding to the daemon.
     This may be used to filter log output by the level or 
     tag it, for example, identifying all
     logging output at level \Dflag{SECURITY}, or \Dflag{ACCOUNTANT}.
+
+  \label{dflag:timestamp}
+  \item[\Dflag{TIMESTAMP}]
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_TIMESTAMP@\texttt{D\_TIMESTAMP}}
+    This flag is different from the other flags, because it is
+    used to change the formatting of all log messages that are printed,
+    as opposed to specifying what kinds of messages should be printed.
+    If \Dflag{TIMESTAMP} is set, the time at the beginning of each line in the
+    log file with be a number of seconds since the start of the Unix era. This
+    form of timestamp can be more convenient for tools to process.
+
+  \label{dflag:subsecond}
+  \item[\Dflag{SUB\_SECOND}]
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_SUB\_SECOND@\texttt{D\_SUB\_SECOND}}
+    This flag is different from the other flags, because it is
+    used to change the formatting of all log messages that are printed,
+    as opposed to specifying what kinds of messages should be printed.
+    If \Dflag{SUB\_SECOND} is set, the time at the beginning of each line in the
+    log file will contain a fractional part to the seconds field that is accurate
+    to the millsecond.
 
   \end{description}
 
