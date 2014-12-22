@@ -30,6 +30,10 @@ This version contains all bug fixes from HTCondor version 8.2.5.
 
 \begin{itemize}
 
+\item The port used by the \Condor{shared\_port} daemon is now
+9618 by default.
+\Ticket{3813}
+
 \item Improve handling of failures to launch VM jobs.  Failures which do
 not appear to the fault of the job now cause the job to be rescheduled and
 the node to stop advertising the ability to run VMs.
