@@ -23,6 +23,9 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "subsystem_info.h"
+#include "file_transfer.h"
+
+using namespace std;
 
 /*
 class DCCached : public Daemon
@@ -52,13 +55,17 @@ class CacheDaemon : public Service
 
          // Command handlers
         int commandHandler_Test(int command, Stream *stream);
+        int reaper_handler(int pid, int exit_status);
 };
+
+// static ClassAd jobad;
+// static FileTransfer filetrans;
 
 
 int
 CacheDaemon::commandHandler_Test(int command, Stream *stream)
 {
-	dprintf(D_ALWAYS, "entered command hanlder = %d\n", command);
+	dprintf(D_ALWAYS, "entered command handler = %d\n", command);
 	char *data = NULL;
 	int sendval = 59;
 	stream->decode();
@@ -90,7 +97,52 @@ CacheDaemon::commandHandler_Test(int command, Stream *stream)
 }
 
 
+typedef map<string, unsigned char *> stringMap;
 
+
+void getJobAd(ClassAd *const jobad, stringMap *const hashmap)
+{
+	const int MAXLNLEN = (PATH_MAX * 10) + 1;
+	MyString jobadln;
+	char filelist[MAXLNLEN];
+	while (jobadln.readLine(stdin) && jobadln != "***") {
+		if (jobadln.size() > 1) {	// More than just newline
+			// printf("line = %s.\n", jobadln.Value());
+			if (jobadln[0] != '#' && jobad->Insert(jobadln.Value()) == false) {
+				printf("ClassAd Insert failed. Exiting.\n");
+				return;
+			}
+			if (strncmp(jobadln.Value(), "TransferInput =", 15) == 0) {
+				if (sscanf(jobadln.Value(), "TransferInput = \"%s", filelist) == 1) {
+					if (filelist[strlen(filelist) - 1] == '"')
+						filelist[strlen(filelist) - 1] = '\0';
+					// printf("filelist = %s.\n", filelist);
+					char filenam[PATH_MAX + 1], restlist[MAXLNLEN];
+					restlist[0] = '\0';
+					while(sscanf(filelist, "%[^,],%s", filenam, restlist) == 2 ||
+						sscanf(filelist, "%[^,]", filenam) == 1) {
+						// printf("file = %s, rest = %s.\n", filenam, restlist);
+						strcpy(filelist, restlist);
+						restlist[0] = '\0';
+						unsigned char result[100];
+						memcpy(result,
+							Condor_MD_MAC::computeOnce((unsigned char *) filenam, strlen(filenam)),
+							17);
+						// printf("output = ");
+						for (int ind = 0; ind < 16; ++ind)
+							printf("%x", result[ind]);
+						printf("\n");
+						hashmap->insert(pair<string, unsigned char *>(filenam, result));
+					}
+					printf("file = %s.\n", filenam);
+				}
+			}
+		}
+	}
+	printf("line = %s.\n", jobadln.Value());
+	printf("map size = %ld\n", hashmap->size());
+	printf("classad size = %d\n", jobad->size());
+}
 
 
 //-------------------------------------------------------------
@@ -103,6 +155,19 @@ void usage(char* name)
 
 //-------------------------------------------------------------
 
+int CacheDaemon::reaper_handler(int pid, int exit_status)
+{
+	if( WIFSIGNALED(exit_status) ) {
+	   dprintf( D_ALWAYS, "Unknown process exited, pid=%d, signal=%d\n", pid,
+						WTERMSIG(exit_status) );
+	} else {
+		dprintf( D_ALWAYS, "Unknown process exited, pid=%d, status=%d\n", pid,
+						WEXITSTATUS(exit_status) );
+	}
+	return TRUE;
+}
+	
+	
 void main_init(int argc, char *argv[])
 {
 	if(argc > 2)
@@ -117,6 +182,31 @@ void main_init(int argc, char *argv[])
 			(CommandHandlercpp)&CacheDaemon::commandHandler_Test,
 			"command_handler", (Service *) &service));
 	} else dprintf(D_ALWAYS, "null pointer\n");
+	static ClassAd jobad;
+	stringMap hashmap;
+	getJobAd(&jobad, &hashmap);
+
+	daemonCore->Register_Reaper("Reaper",
+        (ReaperHandlercpp)&CacheDaemon::reaper_handler, "Reaper",
+        (Service *) &service);
+
+	static FileTransfer filetrans;
+	if (filetrans.Init(&jobad, false, PRIV_USER, false) == 0) {
+		// Don't check perms, don't use file catalog.
+		dprintf(D_ALWAYS, "Can't init filetrans.\n");
+		return;
+	}
+	string tkey;
+	if (jobad.LookupString( ATTR_TRANSFER_KEY, tkey ))
+		dprintf(D_ALWAYS, "Transfer key = %s\n", tkey.c_str());
+	else dprintf(D_ALWAYS, "No transfer key\n");
+	string socket;
+	if (jobad.LookupString( ATTR_TRANSFER_SOCKET, socket ))
+		dprintf(D_ALWAYS, "Socket = %s\n", socket.c_str());
+	else dprintf(D_ALWAYS, "No socket\n");
+	
+
+	// Need full init for shadow/starter
 }
 
 //-------------------------------------------------------------
