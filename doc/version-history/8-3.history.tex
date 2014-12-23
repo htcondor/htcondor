@@ -30,6 +30,10 @@ This version contains all bug fixes from HTCondor version 8.2.5.
 
 \begin{itemize}
 
+\item It is now possible run a dual-protocol (IPv4 and IPv6) submit node,
+submitting to single-protocol execute nodes. This is preliminary work.
+\Ticket{4494}
+
 \item The port used by the \Condor{shared\_port} daemon is now
 9618 by default.
 \Ticket{3813}
@@ -79,10 +83,6 @@ the job ClassAd as it was when the job was started.
 This feature already exists for vanilla, parallel, java, and local
 universe jobs.
 \Ticket{4558}
-
-\item It is now possible run a dual-protocol (IPv4 and IPv6) submit node
-submitting to single-protocol execute nodes. This is preliminary work.
-\Ticket{4494}
 
 \item The new \Opt{-debug} option to \Condor{userprio} sends
 debug output to \File{stderr}.
