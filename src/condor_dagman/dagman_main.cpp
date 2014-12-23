@@ -239,9 +239,11 @@ Dagman::Config()
 				_defaultPriority );
 
 	//TEMPTEMP -- print warning or error if this is false
+#if 0 //TEMPTEMP
 	_submitDagDeepOpts.always_use_node_log = param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ALWAYS_USE_NODE_LOG setting: %s\n",
 				_submitDagDeepOpts.always_use_node_log ? "True" : "False" );
+#endif //TEMPTEMP
 
 	_submitDagDeepOpts.suppress_notification = param_boolean(
 		"DAGMAN_SUPPRESS_NOTIFICATION",
@@ -816,8 +818,11 @@ void main_init (int argc, char ** const argv) {
 			}
 			dagman._submitDagDeepOpts.priority = atoi(argv[i]);
 
+//TEMPTEMP -- error or warning here...
+#if 0 //TEMPTEMP
 		} else if( !strcasecmp( "-dont_use_default_node_log", argv[i] ) ) {
 			dagman._submitDagDeepOpts.always_use_node_log = false;
+#endif //TEMPTEMP
 
 		} else if ( !strcasecmp( "-dorecov", argv[i] ) ) {
 			dagman._doRecovery = true;
@@ -930,10 +935,12 @@ void main_init (int argc, char ** const argv) {
         Usage();
     }
 
+#if 0 //TEMPTEMP
 	if ( !dagman._submitDagDeepOpts.always_use_node_log ) {
         debug_printf( DEBUG_QUIET, "Error: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer allowed\n" );
 		DC_Exit( EXIT_ERROR );
 	}
+#endif //TEMPTEMP
 
 	//
 	// ...done checking arguments.
@@ -1230,13 +1237,7 @@ void main_init (int argc, char ** const argv) {
 		}
 
         if ( recovery ) {
-				// Not using the default node log is the backward
-				// compatible thing to do, so if using the default
-				// log file is already disabled, we don't have to
-				// do any checking.
-			if ( dagman._submitDagDeepOpts.always_use_node_log ) { 
-				dagman.CheckLogFileMode( submitFileVersion );
-			}
+			dagman.CheckLogFileMode( submitFileVersion );
 		}
 
 			//
@@ -1281,6 +1282,7 @@ Dagman::CheckLogFileMode( const CondorVersionInfo &submitFileVersion )
 				"you probably know what to do to resolve the problem...\n");
 
 		} else {
+				//TEMPTEMP -- need to get rid of this...
 				// Pre-7.9.0 -- default log wasn't implemented yet, so
 				// we need to use individual logs from submit files.
 			debug_printf( DEBUG_QUIET, "Submit file version indicates submit is too old. "
@@ -1317,7 +1319,7 @@ void
 Dagman::DisableDefaultLog()
 {
 	ASSERT( false );//TEMPTEMP -- get rid of this method altogether
-	dagman._submitDagDeepOpts.always_use_node_log = false;
+	//TEMPTEMP? dagman._submitDagDeepOpts.always_use_node_log = false;
 }
 
 //---------------------------------------------------------------------------
@@ -1344,8 +1346,7 @@ Dagman::ResolveDefaultLog()
 					"default node log file %s contains an '@' character -- "
 					"unresolved macro substituion?\n",
 					_defaultNodeLog.Value() );
-		check_warning_strictness( _submitDagDeepOpts.always_use_node_log ?
-					DAG_STRICT_1 : DAG_STRICT_2 );
+		check_warning_strictness( DAG_STRICT_1 );
 	}
 
 		// Force default log file path to be absolute so it works
@@ -1363,8 +1364,7 @@ Dagman::ResolveDefaultLog()
 		debug_printf( DEBUG_QUIET, "Warning: "
 					"default node log file %s is in /tmp\n",
 					_defaultNodeLog.Value() );
-		check_warning_strictness( _submitDagDeepOpts.always_use_node_log ?
-					DAG_STRICT_1 : DAG_STRICT_2 );
+		check_warning_strictness( DAG_STRICT_1 );
 	}
 
 #if 0 //TEMPTEMP -- implement this here!

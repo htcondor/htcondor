@@ -61,13 +61,11 @@ bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 void set_fake_condorID( int subprocID );
 
 bool fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
-					const char* directory, const char *logFile,
-					bool logIsXml );
+					const char* directory, const char *logFile );
 
 int get_fake_condorID();
 
-//TEMPTEMP -- get rid of logIsXml
 bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName, 
-			   const char* directory, const char *logFile, bool logIsXml );
+			   const char* directory, const char *logFile );
 
 #endif /* #ifndef CONDOR_SUBMIT_H */

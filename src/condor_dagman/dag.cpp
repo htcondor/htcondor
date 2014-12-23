@@ -220,9 +220,6 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		}
 	}
 
-		//TEMPTEMP -- is this the right place for this?
-	(void) MonitorLogFile();
-
 	return;
 }
 
@@ -293,9 +290,12 @@ bool Dag::Bootstrap (bool recovery)
     debug_printf( DEBUG_VERBOSE, "Number of pre-completed nodes: %d\n",
 				  NumNodesDone( true ) );
     
-    if (recovery) {
-		_recovery = true;
+	_recovery = recovery;
 
+		//TEMPTEMP -- is this the right place for this?
+	(void) MonitorLogFile();
+
+    if (recovery) {
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode... "
 					">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" );
 		_jobstateLog.WriteRecoveryStarted();
@@ -310,21 +310,6 @@ bool Dag::Bootstrap (bool recovery)
 		// debug_cache_stop_caching() are effectively noops.
 
 		debug_cache_start_caching();
-
-#if 0 //TEMPTEMP
-			// Here we're monitoring the log files of all ready nodes.
-   		jobs.ToBeforeFirst();
-   		while( jobs.Next( job ) ) {
-			if ( job->CanSubmit() ) {
-				if ( !job->MonitorLogFile( _condorLogRdr,
-							_nfsLogIsError, recovery, _defaultNodeLog ) ) {
-					debug_cache_stop_caching();
-					_jobstateLog.WriteRecoveryFailure();
-					return false;
-				}
-			}
-		}
-#endif //TEMPTEMP
 
 		if( CondorLogFileCount() > 0 ) {
 			if( !ProcessLogEvents( recovery ) ) {
@@ -655,7 +640,6 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 
 			case ULOG_PRESKIP:
 				TerminateJob( job, recovery );
-				//TEMPTEMP job->UnmonitorLogFile( _condorLogRdr );
 				if(!recovery) {
 					--_preRunNodeCount;
 				}
@@ -877,8 +861,6 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	ASSERT ( _isSplice == false );
 
 	if ( job->_queuedNodeJobProcs == 0 ) {
-		//TEMPTEMP (void)job->UnmonitorLogFile( _condorLogRdr );
-
 			// Log job success or failure if necessary.
 		_jobstateLog.WriteJobSuccessOrFailure( job );
 	}
@@ -923,8 +905,6 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			if ( recovery ) {
 				job->SetStatus( Job::STATUS_POSTRUN );
 				_postRunNodeCount++;
-				//TEMPTEMP (void)job->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
-							//TEMPTEMP _recovery, _defaultNodeLog );
 			} else {
 				(void)RunPostScript( job, _alwaysRunPost, 0 );
 			}
@@ -942,8 +922,6 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
 	if( job ) {
-		//TEMPTEMP (void)job->UnmonitorLogFile( _condorLogRdr );
-
 			// Note: "|| recovery" below is somewhat of a "quick and dirty"
 			// fix to Gnats PR 357.  The first part of the assert can fail
 			// in recovery mode because if any retries of a node failed
@@ -1656,15 +1634,8 @@ Dag::PreScriptReaper( Job *job, int status )
 
 				// Mark the node as a skipped node.
 			CondorID id;
-				// This might be the first time we watch the file, so we
-				// monitor it.
-			//TEMPTEMP if ( !job->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
-					//TEMPTEMP _recovery, _defaultNodeLog ) ) {
-				//TEMPTEMP return 0;
-			//TEMPTEMP }
-				
 			if ( !writePreSkipEvent( id, job, job->GetJobName(),
-					job->GetDirectory(), DefaultNodeLog(), false ) ) {
+					job->GetDirectory(), DefaultNodeLog() ) ) {
 				debug_printf( DEBUG_NORMAL, "Failed to write PRE_SKIP event for node %s\n",
 					job->GetJobName() );
 				main_shutdown_rescue( EXIT_ERROR, DAG_STATUS_ERROR );
@@ -1742,15 +1713,6 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 	// a POST script is specified for the job, so run it
 	// We are told to ignore the result of the PRE script
 	job->SetStatus( Job::STATUS_POSTRUN );
-#if 0 //TEMPTEMP
-	if ( !job->MonitorLogFile( _condorLogRdr, 
-			_nfsLogIsError, _recovery, _defaultNodeLog ) ) {
-		debug_printf(DEBUG_QUIET, "Unable to monitor user logfile for node %s\n",
-			job->GetJobName() );
-		debug_printf(DEBUG_QUIET, "Not running the POST script\n" );
-		return false;
-	}
-#endif //TEMPTEMP
 	if ( incrementRunCount ) {
 		_postRunNodeCount++;
 	}
@@ -1772,23 +1734,25 @@ Dag::PostScriptReaper( Job *job, int status )
 			job->GetJobName() );
 	}
 
-	PostScriptTerminatedEvent e;
+	PostScriptTerminatedEvent event;
 	
-	e.dagNodeName = strnewp( job->GetJobName() );
+	event.dagNodeName = strnewp( job->GetJobName() );
 
 	if( WIFSIGNALED( status ) ) {
 		debug_printf( DEBUG_QUIET, "POST script died on signal %d\n", status );
-		e.normal = false;
-		e.signalNumber = status;
+		event.normal = false;
+		event.signalNumber = status;
 	} else {
-		e.normal = true;
-		e.returnValue = WEXITSTATUS( status );
+		event.normal = true;
+		event.returnValue = WEXITSTATUS( status );
 	}
 
-//TEMPTEMP -- this needs tons of cleanup...
-	e.cluster = job->GetCluster();
-	e.proc = job->GetProc();
-	e.subproc = job->GetSubProc();
+		// For NOOP jobs, we need the proc and subproc values;
+		// for "real" jobs, they are not significant.
+	event.cluster = job->GetCluster();
+	event.proc = job->GetNoop() ? job->GetProc() : 0;
+	event.subproc = job->GetNoop() ? job->GetSubProc() : 0;
+
 	WriteUserLog ulog;
 		// Disabling the global log (EventLog) fixes the main problem
 		// in gittrac #934 (if you can't write to the global log the
@@ -1796,26 +1760,15 @@ Dag::PostScriptReaper( Job *job, int status )
 		// waiting for the event that wasn't written).
 	ulog.setEnableGlobalLog( false );
 	ulog.setUseXML( false );
-		// For NOOP jobs, we need the proc and subproc values;
-		// for "real" jobs, they are not significant.
-	int procID = job->GetNoop() ? job->GetProc() : 0;
-	int subprocID = job->GetNoop() ? job->GetSubProc() : 0;
-	const char* s = DefaultNodeLog();
-	if( !s ) { 
-		//TEMPTEMP -- probably don't need this...
-			// User did not specify a log
-			// We specify one for him
-			// Default log is never in XML format
-		s = DefaultNodeLog();
-		ulog.setUseXML( false );
-	}
-	debug_printf( DEBUG_QUIET, "Initializing logfile %s, %d, %d, %d\n",
-		s, job->GetCluster(), procID, subprocID );
-	ulog.initialize( std::vector<const char*>(1,s), job->GetCluster(),
-		procID, subprocID, NULL );
+
+	debug_printf( DEBUG_QUIET,
+				"Initializing user log writer for %s, (%d.%d.%d)\n",
+				DefaultNodeLog(), event.cluster, event.proc, event.subproc );
+	ulog.initialize( DefaultNodeLog(), event.cluster, event.proc,
+				event.subproc, NULL );
 
 	for(int write_attempts = 0;;++write_attempts) {
-		if( !ulog.writeEvent( &e ) ) {
+		if( !ulog.writeEvent( &event ) ) {
 			if( write_attempts >= 2 ) {
 				debug_printf( DEBUG_QUIET,
 						"Unable to log ULOG_POST_SCRIPT_TERMINATED event\n" );
@@ -2390,12 +2343,7 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 				// If we're bootstrapping, we don't want to do anything
 				// here.
 			if ( !bootstrap ) {
-				if ( recovery ) {
-						// We need to monitor the log file for the node that's
-						// newly ready.
-					//TEMPTEMP (void)child->MonitorLogFile( _condorLogRdr, 
-								//TEMPTEMP _nfsLogIsError, recovery, _defaultNodeLog );
-				} else {
+				if ( !recovery ) {
 						// If child has no more parents in its waiting queue,
 						// submit it.
 					StartNode( child, false );
@@ -2482,8 +2430,6 @@ Dag::RestartNode( Job *node, bool recovery )
 		// has retried nodes).  (See SubmitNodeJob() for where this
 		// gets done during "normal" running.)
 		node->SetCondorID( _defaultCondorId );
-		//TEMPTEMP (void)node->MonitorLogFile( _condorLogRdr, 
-					//TEMPTEMP _nfsLogIsError, recovery, _defaultNodeLog );
 	}
 }
 
@@ -3090,8 +3036,6 @@ Dag::MonitorLogFile()
 		EXCEPT( "Fatal log file monitoring error!" );
 		return false;
 	}
-
-	//TEMPTEMP _logIsMonitored = true;
 
 	return true;
 }
@@ -3977,15 +3921,6 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		}
 	}
 
-#if 0 //TEMPTEMP
-	if ( !node->MonitorLogFile( _condorLogRdr, _nfsLogIsError,
-			_recovery, _defaultNodeLog ) ) {
-		debug_printf( DEBUG_QUIET, "ERROR: Failed to monitor log for node %s.\n",
-			node->GetJobName() );
-		return SUBMIT_RESULT_NO_SUBMIT;
-	}
-#endif //TEMPTEMP
-
 	debug_printf( DEBUG_NORMAL, "Submitting %s Node %s job(s)...\n",
 			  	node->JobTypeString(), node->GetJobName() );
 
@@ -3995,8 +3930,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 	if ( node->GetNoop() ) {
    		submit_success = fake_condor_submit( condorID, 0,
 					node->GetJobName(), node->GetDirectory(),
-					_defaultNodeLog,
-					false/*TEMPTEMP*/ );
+					_defaultNodeLog );
 	} else {
 			// Note: assigning the ParentListString() return value
 			// to a variable here, instead of just passing it directly
@@ -4069,8 +4003,6 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	int thisSubmitDelay = _nextSubmitDelay;
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
-
-	//TEMPTEMP (void)node->UnmonitorLogFile( _condorLogRdr );
 
 	if ( node->_submitTries >= max_submit_attempts ) {
 			// We're out of submit attempts, treat this as a submit failure.

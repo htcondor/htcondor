@@ -282,32 +282,29 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				"submit_event_notes = DAG Node: " ) + DAGNodeName;
 	args.AppendArg( submitEventNotes.Value() );
 
-//TEMPTEMP -- assert that workflowLog is non-null
-		// workflowLogFile is non-null here if we need to tell the schedd to
-		// use that file as the default/workflow log for this node.
-	if ( workflowLogFile ) {
-			// We need to append the DAGman default log file to
-			// the log file list
-		args.AppendArg( "-a" );
-		std::string dlog( "dagman_log = " );
-		dlog += workflowLogFile;
-		args.AppendArg( dlog.c_str() );
-		debug_printf( DEBUG_VERBOSE, "Adding a DAGMan workflow log %s\n",
-					workflowLogFile );
+	ASSERT( workflowLogFile );
 
-			// Now append the mask
-		debug_printf( DEBUG_VERBOSE, "Masking the events recorded in the DAGMAN workflow log\n" );
-		args.AppendArg( "-a" );
-		std::string dmask("+");
-		dmask += ATTR_DAGMAN_WORKFLOW_MASK;
-		dmask += " = \"";
-		const char *eventMask = getEventMask();
-		debug_printf( DEBUG_VERBOSE, "Mask for workflow log is %s\n",
-					eventMask );
-		dmask += eventMask;
-		dmask += "\"";
-		args.AppendArg( dmask.c_str() );
-	}
+		// We need to append the DAGman default log file to
+		// the log file list
+	args.AppendArg( "-a" );
+	std::string dlog( "dagman_log = " );
+	dlog += workflowLogFile;
+	args.AppendArg( dlog.c_str() );
+	debug_printf( DEBUG_VERBOSE, "Adding a DAGMan workflow log %s\n",
+				workflowLogFile );
+
+		// Now append the mask
+	debug_printf( DEBUG_VERBOSE, "Masking the events recorded in the DAGMAN workflow log\n" );
+	args.AppendArg( "-a" );
+	std::string dmask("+");
+	dmask += ATTR_DAGMAN_WORKFLOW_MASK;
+	dmask += " = \"";
+	const char *eventMask = getEventMask();
+	debug_printf( DEBUG_VERBOSE, "Mask for workflow log is %s\n",
+				eventMask );
+	dmask += eventMask;
+	dmask += "\"";
+	args.AppendArg( dmask.c_str() );
 
 		// Suppress the job's log file if that option is enabled.
 	if ( workflowLogFile && dm._suppressJobLogs ) {
@@ -424,7 +421,7 @@ get_fake_condorID()
 //-------------------------------------------------------------------------
 bool
 fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName, 
-			   const char* directory, const char *logFile, bool logIsXml )
+			   const char* directory, const char *logFile )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -449,8 +446,8 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 
 	WriteUserLog ulog;
 	ulog.setEnableGlobalLog( false );
-	ulog.setUseXML( logIsXml );
-	ulog.initialize( std::vector<const char*>(1,logFile), condorID._cluster,
+	ulog.setUseXML( false );
+	ulog.initialize( logFile, condorID._cluster,
 		condorID._proc, condorID._subproc, NULL );
 
 	SubmitEvent subEvent;
@@ -490,7 +487,7 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 }
 
 bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName, 
-			   const char* directory, const char *logFile, bool logIsXml )
+			   const char* directory, const char *logFile )
 {
 	TmpDir tmpDir;
 	MyString	errMsg;
@@ -516,7 +513,7 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 
 	WriteUserLog ulog;
 	ulog.setEnableGlobalLog( false );
-	ulog.setUseXML( logIsXml );
+	ulog.setUseXML( false );
 	ulog.initialize( std::vector<const char*>(1,logFile), condorID._cluster,
 		condorID._proc, condorID._subproc, NULL );
 

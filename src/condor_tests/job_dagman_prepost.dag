@@ -1,4 +1,5 @@
-Job     NODE0         job_dagman_prepost-node.cmd
+# Make sure PRE and POST scripts work right with NOOP node.
+Job     NODE0         job_dagman_prepost-node.cmd NOOP
 Job     NODE1         job_dagman_prepost-node.cmd
 Job     NODE2         job_dagman_prepost-node.cmd
 Job     NODE3         job_dagman_prepost-node.cmd

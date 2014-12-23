@@ -838,9 +838,11 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	args.AppendArg(deepOpts.autoRescue);
 	args.AppendArg("-DoRescueFrom");
 	args.AppendArg(deepOpts.doRescueFrom);
+#if 0 //TEMPTEMP
 	if(!deepOpts.always_use_node_log) {
 		args.AppendArg("-dont_use_default_node_log");
 	}
+#endif //TEMPTEMP
 
 	shallowOpts.dagFiles.rewind();
 	while ( (dagFile = shallowOpts.dagFiles.next()) != NULL ) {

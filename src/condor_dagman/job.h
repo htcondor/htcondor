@@ -332,50 +332,6 @@ class Job {
 		return _dagFile;
 	}
 
-#if 0 //TEMPTEMP
-	/** Monitor this node's Condor or file with the
-		multiple log reader.  (Must be called before this node's
-		job is submitted.)
-		@param logReader: the multiple log reader
-		@param recovery: whether we're in recovery mode
-		@param defaultNodeLog: the default log file to be used if the
-			node's submit file doesn't define a log file
-		@param usingDefault: whether we're using the default/workflow
-			log at the DAG level
-		@return true if successful, false if failed
-	*/
-	//TEMPTEMP -- maybe get rid of this...
-	bool MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
-				bool nfsIsError,
-				bool recovery, const char *defaultNodeLog );
-
-	/** Unmonitor this node's Condor log file with the
-		multiple log reader.  (Must be called after everything is done
-		for this node.)
-		@param logReader: the multiple log reader
-		@return true if successful, false if failed
-	*/
-	//TEMPTEMP -- maybe get rid of this...
-	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader );
-#endif //TEMPTEMP
-
-		// Whether this node is using the default node log file.
-	//TEMPTEMP -- get rid of this...
-	//TEMPTEMP bool UsingDefaultLog() const { return _useDefaultLog; }
-
-	/** Get the log file for this node.
-		@return the name of this node's log file.
-	*/
-	//TEMPTEMP -- get rid of this...
-	//TEMPTEMP const char *GetLogFile() const { return _logFile; }
-
-	/** Get whether this node's log file is XML (versus "standard"
-		format).
-		@return true iff the log file is XML.
-	*/
-	//TEMPTEMP -- get rid of this...
-	//TEMPTEMP bool GetLogFileIsXml() const { return _logFileIsXml; }
-
 	/** Get the jobstate.log job tag for this node.
 		@return The job tag (can be "local"; if no tag is specified,
 			the value will be "-").
@@ -530,26 +486,11 @@ private:
 		*/
 	void Cleanup();
 
-		/** Get the log file specified in the given submit file, if
-			any.  Note that if the job is an HTCondor job and
-			usingWorkflowLog is true, this method will return "" for
-			the log file name.
-			@param usingWorkflowLog: true iff we're using the workflow
-				log file to monitor jobs
-			@param logFile: a MyString to hold the log file name
-			@return true on success, false otherwise
-		*/
-	//TEMPTEMP bool FindLogFile( bool usingWorkflowLog, MyString &logFile );
-
 		/** _onHold[proc] is nonzero if the condor job 
  			with ProcId == proc is on hold, and zero
 			otherwise
 		*/
 	std::vector<unsigned char> _onHold;	
-
-		// Mark this node as failed because of an error in monitoring
-		// the log file.
-  	//TEMPTEMP void LogMonitorFailed();
 
 		// Directory to cd to before running the job or the PRE and POST
 		// scripts.
@@ -603,20 +544,6 @@ private:
 		// This node's category; points to an object "owned" by the
 		// ThrottleByCategory object.
 	ThrottleByCategory::ThrottleInfo *_throttleInfo;
-
-		// Whether this node's log file is currently being monitored.
-	//TEMPTEMP bool _logIsMonitored;
-
-		// Whether this node uses the default user log file.
-	//TEMPTEMP bool _useDefaultLog;
-
-		// The log file for this job -- it will be assigned the default
-		// log file name if no log file is specified in the submit file.
-	//TEMPTEMP char *_logFile;
-
-		// Whether the log file is XML.
-	//TEMPTEMP bool _logFileIsXml;
-
 
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to Condor).
