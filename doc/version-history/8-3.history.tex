@@ -21,7 +21,7 @@ The details of each version are described below.
 
 \item HTCondor version 8.3.2 not yet released.
 %\item HTCondor version 8.3.2 released on Month Date, 2014.
-This version contains all bug fixes from HTCondor version 8.2.5.
+This version contains all bug fixes from HTCondor version 8.2.6.
 
 \end{itemize}
 
@@ -46,7 +46,17 @@ The new \Condor{condor\_update\_machine\_ad} tool facilitates changing
 the machine ClassAd.
 \Ticket{4375}
 
-\item Add ability to specify the block device mapping for EC2 jobs.
+\item The memory footprint of the \Condor{shadow} has been
+reduced when \Prog{Kerberos} or SSL authentication methods are not used, 
+as these libraries are now loaded on demand at run time.
+\Ticket{374} 
+
+\item The responsiveness of a busy \Condor{schedd} daemon to queries
+has been improved.
+\Ticket{4735} 
+\Ticket{4594} 
+
+\item Added the ability to specify the block device mapping for EC2 jobs.
 \Ticket{4657}
 
 \item The new python binding \Procedure{register} has been added 
@@ -59,6 +69,13 @@ functions to be invoked from within ClassAds.
 \Procedure{internalRefs} have been added to allow the ClassAd object
 to determine internal and external references from an expression.
 \Ticket{4681}
+
+\item When the \Condor{startd} has a live \Condor{starter}, 
+claim keep alives are sent
+by the existing TCP connection between the \Condor{starter} and \Condor{schedd},
+rather than creating a new connection to the 
+\Condor{schedd} from the \Condor{starter}.
+\Ticket{4491}
 
 \item Added the DAGMan feature of \Arg{ALWAYS-UPDATE} for updates
 of a DAGMan node status file. 
@@ -75,6 +92,10 @@ The number of running scheduler and local universe jobs can be controlled
 with configuration variables \MacroNI{START\_SCHEDULER\_UNIVERSE} and
 \MacroNI{START\_LOCAL\_UNIVERSE}, respectively.
 \Ticket{4589}
+
+\item The specific versions of Globus GSI libraries to be loaded at run time
+are determined at compile time. 
+\Ticket{4585} 
 
 \item HTCondor now sets environment variable \Env{\_CONDOR\_JOB\_AD} for
 scheduler universe jobs. 
@@ -104,8 +125,8 @@ These changes are intended to help direct future scalability work.
 \Ticket{4593}
 \Ticket{4595}
 
-\item A new logging option, \MacroNI{D\_SUB\_SECOND}, enables millisecond resolution
-timestamps in daemon logs.
+\item The new daemon logging level, \Dflag{SUB\_SECOND}, 
+enables millisecond resolution timestamps in daemon logs.
 \Ticket{4660}
 
 \end{itemize}
@@ -114,9 +135,9 @@ timestamps in daemon logs.
 
 \begin{itemize}
 
-\item Fixed a bug introduced in HTCondor 8.3.1 that caused daemons to be
-unreachable if they were configured to use the shared port daemon but the
-\Condor{master} was not.
+\item Fixed a bug introduced in HTCondor version 8.3.1 that caused daemons to be
+unreachable if they were configured to use the \Condor{shared\_port} daemon,
+but the \Condor{master} was not.
 \Ticket{4603}
 
 \item Updated the CREAM client library used in the \Prog{cream\_gahp}.
