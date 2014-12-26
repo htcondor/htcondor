@@ -24,12 +24,18 @@
 
 #include "condor_error_codes.h"
 
+namespace classad {
+class ExprTree;
+class ClassAd;
+}
+
 class CondorError {
 
 	public:
 		CondorError();
 		~CondorError();
 		CondorError(CondorError&);
+		CondorError(const classad::ClassAd &ad);
 		CondorError& operator=(CondorError&);
 		void push( const char* subsys, int code, const char* message );
 		void pushf( const char* subsys, int code, const char* format, ... ) CHECK_PRINTF_FORMAT(4,5); 
@@ -41,6 +47,9 @@ class CondorError {
 
 		bool  pop();
 		void  clear();
+
+		static bool hasSerializedError(classad::ClassAd const &ad);
+		bool serialize(classad::ExprTree &ad) const;
 
 	private:
 		void init();

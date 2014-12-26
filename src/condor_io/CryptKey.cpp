@@ -21,6 +21,8 @@
 #include "condor_common.h"
 #include "CryptKey.h"
 #include "condor_debug.h"
+#include "condor_base64.h"
+#include "classad/classad.h"
 
 KeyInfo:: KeyInfo()
     : keyData_    (0),
@@ -82,6 +84,53 @@ void KeyInfo :: init(unsigned char * keyData, int keyDataLen)
     else {
         keyDataLen_ = 0;
     }
+}
+
+KeyInfo::KeyInfo(classad::ClassAd const &ad) :
+	keyData_(NULL),
+	keyDataLen_(0),
+	protocol_(CONDOR_NO_PROTOCOL),
+	duration_(0)
+{
+	std::string encoded;
+	if (ad.EvaluateAttrString("KeyInfoData", encoded))
+	{
+		condor_base64_decode(encoded.c_str(), &keyData_, &keyDataLen_);
+	}
+	int tmp;
+	if (ad.EvaluateAttrInt("KeyInfoDuration", tmp))
+	{
+		duration_ = tmp;
+	}
+	if (ad.EvaluateAttrInt("KeyInfoProtocol", tmp))
+	{
+		protocol_ = static_cast<Protocol>(tmp);
+	}
+}
+
+
+bool
+KeyInfo::hasSerializedKey(classad::ClassAd const &ad)
+{
+        return ad.Lookup("KeyInfoProtocol");
+}
+
+
+bool
+KeyInfo::serialize(classad::ClassAd &ad) const
+{
+	// TODO: Check error codes.
+	if ((keyDataLen_ > 0) && keyData_)
+	{
+		char *encoded = condor_base64_encode(keyData_, keyDataLen_);
+		// NOTE: condor_base64_decode only works if there's a newline in the string.
+		std::string encoded2 = encoded;
+		ad.InsertAttr("KeyInfoData", encoded2 + "\n");
+		free(encoded); encoded=NULL;
+	}
+	ad.InsertAttr("KeyInfoDuration", duration_);
+	ad.InsertAttr("KeyInfoProtocol", protocol_);
+	return true;
 }
 
 KeyInfo :: ~KeyInfo()

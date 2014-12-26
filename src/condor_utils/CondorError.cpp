@@ -21,6 +21,8 @@
 #include "CondorError.h"
 #include "condor_snutils.h"
 #include "condor_debug.h"
+#include "classad/exprList.h"
+#include "classad/classad.h"
 
 #include <sstream>
 
@@ -50,6 +52,74 @@ void CondorError::init() {
 	_code = 0;
 	_message = 0;
 	_next = 0;
+}
+
+CondorError::CondorError(classad::ClassAd const &ad) :
+	_subsys(NULL),
+	_code(0),
+	_message(NULL),
+	_next(NULL)
+{
+	classad::ExprTree *expr = ad.Lookup("CondorError");
+	if (!expr || (expr->GetKind() != classad::ExprTree::EXPR_LIST_NODE)) {return;}
+
+	classad::ExprList &list = *static_cast<classad::ExprList*>(expr);
+	std::vector<classad::ExprTree*> vec;
+	list.GetComponents(vec);
+	CondorError *cur = this;
+	for (std::vector<classad::ExprTree*>::const_iterator it=vec.begin(); it!=vec.end(); /* increment done inside loop */)
+	{
+		if (!(*it) || (*it)->GetKind() != classad::ExprTree::CLASSAD_NODE) {break;}
+		classad::ClassAd &errAd = *static_cast<classad::ClassAd*>(*it);
+		std::string tmp;
+		if (errAd.EvaluateAttrString("Subsys", tmp))
+		{
+			cur->_subsys = strdup(tmp.c_str());
+		}
+		if (errAd.EvaluateAttrString("Message", tmp))
+		{
+			cur->_message = strdup(tmp.c_str());
+		}
+		int tmpcode;
+		if (errAd.EvaluateAttrInt("Code", tmpcode))
+		{
+			cur->_code = tmpcode;
+		}
+		if (++it != vec.end())
+		{
+			cur->_next = new CondorError();
+			cur = cur->_next;
+		}
+	}
+}
+
+
+bool
+CondorError::hasSerializedError(classad::ClassAd const &ad)
+{
+	return ad.Lookup("CondorError");
+}
+
+
+bool
+CondorError::serialize(classad::ExprTree &expr) const
+{
+	// TODO: check error codes.
+	if (expr.GetKind() == classad::ExprTree::CLASSAD_NODE)
+	{
+		std::vector<classad::ExprTree *>vec;
+		classad::ExprTree *list = classad::ExprList::MakeExprList(vec);
+		static_cast<classad::ClassAd&>(expr).Insert("CondorError", list);
+		return serialize(*list);
+	}
+	else if (expr.GetKind() != classad::ExprTree::EXPR_LIST_NODE) {return false;}
+	classad::ClassAd *ad = new classad::ClassAd();
+	if (_subsys) {ad->InsertAttr("Subsys", _subsys);}
+	ad->InsertAttr("Code", _code);
+	if (_message) {ad->InsertAttr("Message", _message);}
+	static_cast<classad::ExprList &>(expr).push_back(ad);
+	if (_next) {_next->serialize(expr);}
+	return true;
 }
 
 void CondorError::clear() {

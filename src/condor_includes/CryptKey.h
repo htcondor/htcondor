@@ -27,6 +27,10 @@ enum Protocol {
     CONDOR_3DES
 };
 
+namespace classad {
+class ClassAd;
+}
+
 class KeyInfo {
  public:
     KeyInfo();
@@ -38,6 +42,10 @@ class KeyInfo {
             int             keyDataLen,
             Protocol        protocol = CONDOR_NO_PROTOCOL,
             int             duration = 0);
+
+    // Construct the key from a ClassAd.
+    KeyInfo(const classad::ClassAd &ad);
+
     //------------------------------------------
     // Construct a key object
     //------------------------------------------
@@ -50,6 +58,11 @@ class KeyInfo {
     KeyInfo& operator=(const KeyInfo& copy);
 
     ~KeyInfo();
+
+    bool hasSerializedKey(classad::ClassAd const &ad);
+
+    // Add all the necessary key serialization to a classad.
+    bool serialize(classad::ClassAd &ad) const;
 
     const unsigned char * getKeyData() const;
     //------------------------------------------
