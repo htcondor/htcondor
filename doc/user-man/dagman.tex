@@ -407,22 +407,6 @@ F  & not run & not run & \Bold{F}  \\
 \end{table}
 \end{center}
 
-\index{DAGMan input file!PRE\_SKIP keyword}
-\index{DAGMan!PRE\_SKIP command}
-The behavior of DAGMan with respect to node success or failure can also
-be changed 
-with the addition of a \Arg{PRE\_SKIP} command. 
-A \Arg{PRE\_SKIP} line within the DAG input file uses the syntax: 
-
-\Opt{PRE\_SKIP} \Arg{JobName} \Arg{non-zero-exit-code}
-
-The PRE script of a node identified by \Arg{JobName} that exits with the value 
-given by \Arg{non-zero-exit-code}
-skips the remainder of the node entirely.  
-Both the job associated with the node and
-any POST script will not be executed,
-and the node will be marked as successful.
-
 \Bold{Special script argument macros}
 
 The five macros \Expr{\$JOB}, \Expr{\$RETRY}, \Expr{\$MAX\_RETRIES}, 
@@ -431,29 +415,11 @@ DAG input file as arguments passed to a PRE or POST script.
 The three macros \Expr{\$JOBID}, \Expr{\$RETURN}, 
 and \Expr{\$PRE\_SCRIPT\_RETURN} can
 be used as arguments to POST scripts.
-The use of these variables must be as an individual command
+The use of these variables is limited to being used
+as an individual command
 line \Arg{argument} to the script,
 surrounded by spaces, in order to cause the substitution of the
 variable's value.
-The example POST script specification
-\begin{verbatim}
-  SCRIPT POST A stage-out job_status $RETURN 
-\end{verbatim}
-where the node job returned a value of -1
-invokes the POST script with
-\begin{verbatim}
-  stage-out job_status -1
-\end{verbatim}
-The slightly different example POST script specification
-\begin{verbatim}
-  SCRIPT POST A stage-out job_status=$RETURN 
-\end{verbatim}
-invokes the POST script with
-\begin{verbatim}
-  stage-out job_status=$RETURN
-\end{verbatim}
-There is no space between the \Expr{=} sign and the variable \Expr{\$RETURN},
-so there is no substitution of the variable's value.
 
 The special macros are as follows:
 
@@ -525,11 +491,34 @@ the POST script can use this to see if the PRE script exited
 with an error condition, and assign success or failure to the node, as
 appropriate.
 
-\item \Expr{\$DAG\_STATUS} and \Expr{\$FAILED\_COUNT} are documented in
-section ~\ref{sec:DAGFinalNode} below.
+%\item \Expr{\$DAG\_STATUS} and \Expr{\$FAILED\_COUNT} are documented in
+%section ~\ref{sec:DAGFinalNode} below.
+%\begin{itemize}
+\index{DAGMan!DAG_STATUS@\verb^$DAG_STATUS^ value}
+\item \Env{\$DAG\_STATUS} is the status of the DAG.
+Note that this macro's value and definition is unrelated to the attribute 
+named \Attr{DagStatus} as defined for use in a node status file.
+This macro's value is the same as the job ClassAd attribute \Attr{DAG\_Status}
+that is defined within the \Condor{dagman} job's ClassAd.
+This macro may have the following values:
+\begin{itemize}
+\item 0: OK
+\item 1: error; an error condition different than those listed here
+\item 2: one or more nodes in the DAG have failed
+\item 3: the DAG has been aborted by an ABORT-DAG-ON specification
+\item 4: removed; the DAG has been removed by \Condor{rm}
+\item 5: cycle; a cycle was found in the DAG
+\item 6: halted; the DAG has been halted (see section ~\ref{sec:DagSuspend})
 \end{itemize}
 
-\Bold{Example}
+\index{DAGMan!FAILED_COUNT@\verb^$FAILED_COUNT^ value}
+\item \Env{\$FAILED\_COUNT} is defined by the number of nodes that have failed in the
+DAG.
+
+\end{itemize}
+
+
+\Bold{Examples that use PRE or POST scripts}
 
 As an example, consider the diamond-shaped DAG example.
 Suppose the PRE script expands a compressed file 
@@ -560,6 +549,44 @@ of the compressed file:
     #!/bin/csh
     gunzip $argv[1]$argv[2]
 \end{verbatim}
+
+A second example uses the \Expr{\$RETURN} macro in a
+POST script specification:
+\begin{verbatim}
+  SCRIPT POST A stage-out job_status $RETURN 
+\end{verbatim}
+A node job returns a value of -1 invokes the POST script with
+\begin{verbatim}
+  stage-out job_status -1
+\end{verbatim}
+The slightly different example POST script specification
+\begin{verbatim}
+  SCRIPT POST A stage-out job_status=$RETURN 
+\end{verbatim}
+invokes the POST script with
+\begin{verbatim}
+  stage-out job_status=$RETURN
+\end{verbatim}
+There is no space between the \Expr{=} sign and the variable \Expr{\$RETURN},
+so there is no substitution of the variable's value.
+
+\label{dagman:PRE-SKIP}
+\index{DAGMan input file!PRE\_SKIP keyword}
+\index{DAGMan!PRE\_SKIP command}
+\item \Bold{PRE\_SCRIPT}
+
+The behavior of DAGMan with respect to node success or failure can
+be changed with the addition of a \Arg{PRE\_SKIP} command. 
+A \Arg{PRE\_SKIP} line within the DAG input file uses the syntax: 
+
+\Opt{PRE\_SKIP} \Arg{JobName} \Arg{non-zero-exit-code}
+
+The PRE script of a node identified by \Arg{JobName} that exits with the value 
+given by \Arg{non-zero-exit-code}
+skips the remainder of the node entirely.  
+Neither the job associated with the node nor
+the POST script will be executed,
+and the node will be marked as successful.
 
 % $ % this comment just has a dollar sign so that emacs will not think
 %	  we're inside of a math section and will draw things more nicely
@@ -2364,21 +2391,24 @@ even if previous nodes in the DAG have failed.
 A FINAL node can be used
 for tasks such as cleaning up intermediate files and checking the output
 of previous nodes.
+The \Arg{FINAL} keyword in the DAG input file specifies 
+a node job to be run at the end of the DAG.  
 
-The \Arg{FINAL} keyword specifies a job to be run at the end of
-the DAG.  The syntax used for the \Arg{FINAL} entry is
+The syntax used for the \Arg{FINAL} entry is
 
 \Opt{FINAL} \Arg{JobName} \Arg{SubmitDescriptionFileName}
 \oOptArg{DIR}{directory} \oOpt{NOOP}
 
-The FINAL node is identified by \Arg{JobName}, and the HTCondor job
+The FINAL node within the DAG is identified by \Arg{JobName}, 
+and the HTCondor job
 is described by the contents of the HTCondor submit description file
 given by \Arg{SubmitDescriptionFileName}.
 
-The keywords \Arg{DIR} and \Arg{NOOP} are not case sensitive.
-Note that \Arg{DIR} and \Arg{NOOP}, if used, must appear
-in the order shown above.
-See section~\ref{dagman:JOB} for the descriptions of these two keywords.
+The keywords \Arg{DIR} and \Arg{NOOP} 
+are as detailed in section~\ref{dagman:JOB}.
+If both \Arg{DIR} and \Arg{NOOP} are used, 
+they must appear in the order shown within the syntax specification.
+
 There may only be one FINAL node in a DAG.
 A parse error will be logged by the \Condor{dagman} job in the
 \File{dagman.out} file,
@@ -2394,47 +2424,17 @@ If \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} is set to \Expr{False} and
 a cycle is detected during the course of the run, 
 the FINAL node \emph{will} be run.
 
-An important consideration in using a FINAL node is that the
-success or failure of the FINAL node overrides all previous status
-in determining the success or failure of the entire DAG.
-This includes a status specified by any ABORT-DAG-ON specification
+The success or failure of the FINAL node 
+determines the success or failure of the entire DAG,
+overriding the status of all previous nodes.
+This includes any status specified by any ABORT-DAG-ON specification
 that has taken effect.
-For example, if some nodes of a DAG fail,
+If some nodes of a DAG fail,
 but the FINAL node succeeds, the DAG will be considered successful.
 Therefore, it is important
 to be careful about setting the exit status of the FINAL node.
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
-\begin{description}
-\item[FINAL node-related macros]
-\end{description}
-
-Two special macros have been introduced for use by FINAL nodes:
-\Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}.
-These macros may also be used by other nodes.
-
-\begin{itemize}
-\index{DAGMan!DAG_STATUS@\verb^$DAG_STATUS^ value}
-\item \Env{\$DAG\_STATUS} is the status of the DAG.
-Note that this macro's value and definition is unrelated to the attribute 
-named \Attr{DagStatus} as defined for use in a node status file.
-This macro's value is the same as the job ClassAd attribute \Attr{DAG\_Status}
-that is defined within the \Condor{dagman} job's ClassAd.
-This macro may have the following values:
-\begin{itemize}
-\item 0: OK
-\item 1: error; an error condition different than those listed here
-\item 2: one or more nodes in the DAG have failed
-\item 3: the DAG has been aborted by an ABORT-DAG-ON specification
-\item 4: removed; the DAG has been removed by \Condor{rm}
-\item 5: cycle; a cycle was found in the DAG
-\item 6: halted; the DAG has been halted (see section ~\ref{sec:DagSuspend})
-\end{itemize}
-
-\index{DAGMan!FAILED_COUNT@\verb^$FAILED_COUNT^ value}
-\item \Env{\$FAILED\_COUNT} is defined by the number of nodes that have failed in the
-DAG.
-\end{itemize}
 
 The \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT} macros can be used both
 as PRE and POST script arguments, and in node job submit description files.
@@ -2477,12 +2477,7 @@ and partial contents of the Perl PRE script, \File{final\_pre.pl}:
 \end{verbatim}
 
 
-% Note: this is an alternative to subsubsubsection, which we don't have.
-\begin{description}
-\item[FINAL node limitations]
-\end{description}
-
-There are restrictions on usage of a FINAL node.
+There are restrictions on the use of a FINAL node.
 There is no DONE option for the HTCondor job.
 And, other nodes may \emph{not} reference the FINAL node in specifications of 
 \begin{itemize}
