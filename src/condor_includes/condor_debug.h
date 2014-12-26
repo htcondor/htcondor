@@ -211,15 +211,6 @@ void dprintf_before_shared_mem_clone( void );
 /* must call this after clone(CLONE_VM|CLONE_VFORK) returns */
 void dprintf_after_shared_mem_clone( void );
 
-/* must call this upon entering child of fork() if child calls dprintf */
-void dprintf_init_fork_child( void );
-
-/* call this when done with dprintf in child of fork()
- * This is not necessary if child is just going to exit.  It just
- * ensures that nothing gets inherited by exec().
- */
-void dprintf_wrapup_fork_child( void );
-
 void dprintf_dump_stack(void);
 
 time_t dprintf_last_modification(void);
@@ -296,6 +287,15 @@ extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2)
 #endif
 
 #if defined(__cplusplus)
+/* must call this upon entering child of fork() if child calls dprintf */
+void dprintf_init_fork_child( bool cloned = false );
+
+/* call this when done with dprintf in child of fork()
+ * This is not necessary if child is just going to exit.  It just
+ * ensures that nothing gets inherited by exec().
+ */
+void dprintf_wrapup_fork_child( bool cloned = false );
+
 bool debug_open_fds(std::map<int,bool> &open_fds);
 
 extern double _condor_debug_get_time_double();
@@ -356,6 +356,14 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
         dprintf( flags, "(ptr)->ru_stime = %d.%06d\n", (ptr)->ru_stime.tv_sec,\
         (ptr)->ru_stime.tv_usec ); \
 }
+
+#ifndef ABEND
+#define ABEND(cond) \
+	if( !(cond) ) { \
+		dprintf( D_ERROR | D_BACKTRACE, "Failed to assert (%s) at %s, line %d; aborting.\n", #cond, __FILE__, __LINE__ ); \
+		abort(); \
+	}
+#endif /* ABEND */
 
 #ifndef PRAGMA_REMIND
 # ifdef _MSC_VER // for Microsoft C, prefix file and line to the the message

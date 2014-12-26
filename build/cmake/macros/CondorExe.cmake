@@ -24,6 +24,18 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
         list(APPEND _SRCS ${CMAKE_SOURCE_DIR}/src/condor_utils/condor_version.cpp)
     endif()
     ADD_PRECOMPILED_HEADER()
+    if ( WINDOWS )
+        # Add windows version information to the exe 
+        # Refer to http://msdn.microsoft.com/en-us/library/aa381058(VS.85).aspx
+        # for more info.
+        STRING(REGEX REPLACE "^([0-9]+)\\.[0-9]+\\.[0-9]+" "\\1" CONDOR_MAJOR_VERSION "${VERSION}")
+        STRING(REGEX REPLACE "^[0-9]+\\.([0-9])+\\.[0-9]+" "\\1" CONDOR_MINOR_VERSION "${VERSION}")
+        STRING(REGEX REPLACE "^[0-9]+\\.[0-9]+\\.([0-9]+)" "\\1" CONDOR_BUILD_NUMBER  "${VERSION}")
+        set(CONDOR_EXECUTABLE_NAME ${_CNDR_TARGET})
+
+        CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/msconfig/versioninfo.rc.in ${CMAKE_CURRENT_BINARY_DIR}/versioninfo_exe.rc)
+        list(APPEND _SRCS ${CMAKE_CURRENT_BINARY_DIR}/versioninfo_exe.rc)
+    endif( WINDOWS )
 
     add_executable( ${_CNDR_TARGET} ${_SRCS})
 
@@ -37,8 +49,7 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
     endif()
     
     # the following will install the .pdb files, some hackery needs to occur because of build configuration is not known till runtime.
-    if ( WINDOWS )      
-
+    if ( WINDOWS )   
         set( ${_CNDR_TARGET}_pdb ${_COPY_PDBS} )
 
         if ( ${_CNDR_TARGET}_pdb )
@@ -50,7 +61,7 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
         #add updated manifest only for VS2012 and above
         if(NOT (MSVC_VERSION LESS 1700))
             add_custom_command( TARGET ${_CNDR_TARGET} POST_BUILD 
-                COMMAND mt.exe /manifest ${CMAKE_SOURCE_DIR}/msconfig/win7.manifest /outputresource:${CMAKE_CURRENT_BINARY_DIR}/$(Configuration)/${_CNDR_TARGET}.exe)
+                COMMAND mt.exe -nologo /manifest ${CMAKE_SOURCE_DIR}/msconfig/win7.manifest /outputresource:${CMAKE_CURRENT_BINARY_DIR}/$(Configuration)/${_CNDR_TARGET}.exe)
         endif(NOT (MSVC_VERSION LESS 1700))
 
     endif( WINDOWS )

@@ -172,12 +172,27 @@ CCBServer::InitAndReconfig()
 	else {
 		char *spool = param("SPOOL");
 		ASSERT( spool );
+
+		// IPv6 "hostnames" may be address literals, and Windows really
+		// doesn't like colons in its filenames.
+		char * myHost = NULL;
 		Sinful my_addr( daemonCore->publicNetworkIpAddr() );
+		if( my_addr.getHost() ) {
+			myHost = strdup( my_addr.getHost() );
+			for( unsigned i = 0; i < strlen( myHost ); ++i ) {
+				if( myHost[i] == ':' ) { myHost[i] = '-'; }
+			}
+		} else {
+			myHost = strdup( "localhost" );
+		}
+
 		m_reconnect_fname.formatstr("%s%c%s-%s.ccb_reconnect",
 			spool,
 			DIR_DELIM_CHAR,
 			my_addr.getHost() ? my_addr.getHost() : "localhost",
 			my_addr.getPort() ? my_addr.getPort() : "0");
+
+		free( myHost );
 		free( spool );
 	}
 
@@ -443,13 +458,28 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 
 	ClassAd reply_msg;
 	MyString ccb_contact;
-	CCBIDToString( reconnect_info->getReconnectCookie(),reconnect_cookie_str );
+
+
 		// We send our address as part of the CCB contact string, rather
 		// than letting the target daemon fill it in.  This is to give us
 		// potential flexibility on the CCB server side to do things like
 		// assign different targets to different CCB server sub-processes,
 		// each with their own command port.
-	CCBIDToContactString( m_address.Value(), target->getCCBID(), ccb_contact );
+
+	//
+	// We need to reply with a contact string of the proper protocol.  At
+	// some point, we'll just send /all/ of our command sockets, but for
+	// now, just use the rewriter (and lie to make sure it happens).
+	//
+	std::string exprString;
+	formatstr( exprString, "%s = \"<%s>\"", ATTR_MY_ADDRESS, m_address.Value() );
+	ConvertDefaultIPToSocketIP( ATTR_MY_ADDRESS, exprString, * stream );
+	std::string rewrittenAddress = exprString.substr( strlen( ATTR_MY_ADDRESS ) + 5 );
+	rewrittenAddress.resize( rewrittenAddress.size() - 2 );
+	dprintf( D_NETWORK | D_VERBOSE, "Will send %s instead of %s to CCB client %s.\n", rewrittenAddress.c_str(), m_address.Value(), sock->my_ip_str() );
+	CCBIDToContactString( rewrittenAddress.c_str(), target->getCCBID(), ccb_contact );
+
+	CCBIDToString( reconnect_info->getReconnectCookie(),reconnect_cookie_str );
 
 	reply_msg.Assign(ATTR_CCBID,ccb_contact.Value());
 	reply_msg.Assign(ATTR_COMMAND,CCB_REGISTER);

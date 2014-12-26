@@ -41,6 +41,7 @@
 #include <curl/curl.h>
 #include "thread_control.h"
 #include <expat.h>
+#include "stl_string_utils.h"
 
 #define NULLSTRING "NULL"
 
@@ -243,7 +244,7 @@ bool AmazonRequest::SendRequest() {
             dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
             return false;
         }
-        if( keyID[ keyID.length() - 1 ] == '\n' ) { keyID.erase( keyID.length() - 1 ); }
+        trim( keyID );
         query_parameters.insert( std::make_pair( "AWSAccessKeyId", keyID ) );
     }
 
@@ -326,7 +327,7 @@ bool AmazonRequest::SendRequest() {
             dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
             return false;
         }
-        if( saKey[ saKey.length() - 1 ] == '\n' ) { saKey.erase( saKey.length() - 1 ); }
+        trim( saKey );
     }
 
     unsigned int mdLength = 0;
@@ -693,9 +694,11 @@ bool AmazonVMStart::SendRequest() {
     return result;
 }
 
-// Expecting: EC2_VM_START <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <ami-id> <keypair> <userdata> <userdatafile> <instancetype> <groupname> <groupname> ..
-// <groupname> are optional ones.
-// we support multiple groupnames
+// Expecting:
+// EC2_VM_START	<req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
+// 				<ami-id> <keypair> <userdata> <userdatafile> <instancetype>
+//				<security-group-name>* <NULLSTRING>
+//				<security-group-id>* <NULLSTRING>
 bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_string) {
     assert( strcasecmp( argv[0], "EC2_VM_START" ) == 0 );
 
@@ -771,10 +774,63 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
 		}
 	}
 
+	// We could have split up the block device mapping like this, but since
+	// we were inventing a syntax anyway, it wasn't too hard to make the
+	// parser simple.  Rather than risk a quoting problem with security
+	// names or group IDs, we just introduce a convention that we terminate
+	// each list with the null string.
+	unsigned positionInList = 0;
+
+	// This is all hilariously wrong.
+	class vsaListType {
+		public:
+			enum Type {	first = 0,
+						groupNames = 0,
+						groupIDs = 1,
+						parameters = 2,
+						last = 2 };
+			vsaListType() : type( first ) {};
+			vsaListType & operator++() {
+				int t = (int)type;
+				++t;
+				if( first <= t && t <= last ) {
+					type = (Type)t;
+				}
+				return * this;
+			}
+			operator int() { return (int)type; }
+		private:
+			Type type;
+	};
+	vsaListType which;
     for( int i = 15; i < argc; ++i ) {
-        std::ostringstream groupName;
-        groupName << "SecurityGroup." << ( i - 15 + 1 );
-        vmStartRequest.query_parameters[ groupName.str() ] = argv[ i ];
+    	if( strcasecmp( argv[i], NULLSTRING ) == 0 ) {
+    		++which;
+    		positionInList = 0;
+    		continue;
+    	}
+
+		std::ostringstream parameterName;
+    	switch( which ) {
+    		case vsaListType::groupNames:
+    			parameterName << "SecurityGroup." << positionInList;
+    			++positionInList;
+    			break;
+    		case vsaListType::groupIDs:
+    			parameterName << "SecurityGroupId." << positionInList;
+    			++positionInList;
+    			break;
+    		case vsaListType::parameters:
+    			parameterName << argv[i];
+    			if( ! ( i + 1 < argc ) ) {
+    				dprintf( D_ALWAYS, "Found parameter '%s' without value, ignoring it.\n", argv[i] );
+    				continue;
+    			}
+    			++i;
+    			break;
+    	}
+
+    	vmStartRequest.query_parameters[ parameterName.str() ] = argv[ i ];
     }
 
     //

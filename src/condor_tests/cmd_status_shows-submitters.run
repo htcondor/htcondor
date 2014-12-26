@@ -82,7 +82,7 @@ if($stable == 1) {
 
 	print "Looking for at least 2 claimed slots - ";
     while($count < $nattempts) {
-        $cmd = "condor_status -claimed -format \"%s\\n\" name";
+        $cmd = 'condor_status -claimed -format "%s\n" name';
         CondorTest::debug("Looking for exactly 4 claimed slots\n",$debuglevel);
         $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
         if(!$cmdstatus)
@@ -136,7 +136,7 @@ if($done == 1) {
 
 	print "Looking for at least 2 jobs - ";
 	while($count < $nattempts) {
-		$cmd = "condor_status -submitters -format \"<%s:\" Name -format \"%s:\" Machine -format \"%d>\n\" RunningJobs";
+		$cmd = 'condor_status -submitters -format "<%s:" Name -format "%s:" Machine -format "%d>\n" RunningJobs';
 		#$cmd = "condor_status -submitters -l ";
 		CondorTest::debug("Looking at -submitters($cmd)\n",$debuglevel);
 		$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);

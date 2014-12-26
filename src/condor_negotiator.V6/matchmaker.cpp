@@ -2736,7 +2736,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					"  Negotiation with %s skipped because MAX_TIME_PER_CYCLE of %d secs exceeded\n",
 					scheddName.Value(),MaxTimePerCycle);
 				result = MM_DONE;
-			} else if ((pieLeft < minSlotWeight) && (!ignore_submitter_limit)) {
+			} else if ((submitterLimit < minSlotWeight || pieLeft < minSlotWeight) && (spin_pie > 1)) {
 				dprintf(D_ALWAYS,
 					"  Negotiation with %s skipped as pieLeft < minSlotWeight\n",
 					scheddName.Value());

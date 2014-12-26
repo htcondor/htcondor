@@ -1154,23 +1154,6 @@ File System Configuration File Entries''.
   and there is no other means to find the \Condor{collector} port.
   The default value is 9618.
 
-\label{param:SharedPortPort}
-\item[\Macro{SHARED\_PORT\_PORT}]
-  The default TCP port used by the \Condor{shared\_port} daemon.
-  If \MacroNI{COLLECTOR\_USES\_SHARED\_PORT} is \Expr{True}, the default value, 
-  and the \Condor{master} will launch a \Condor{collector},
-  then the \Condor{shared\_port} daemon will ignore this value 
-  and use the TCP port assigned to the \Condor{collector} 
-  via the \MacroNI{COLLECTOR\_HOST} macro.
-
-  The default value is \MacroUNI{COLLECTOR\_PORT}, which defaults to 9618.  
-  The special value of \Expr{0} causes the \Condor{shared\_port} 
-  to use a randomly selected port.  
-  Note that this causes all HTCondor hosts to use TCP port 9618 by default, 
-  differing from previous behavior.
-  Previously, only the \Condor{collector} host used a fixed port.
-  To restore the previous behavior, 
-  set this variable to \Expr{0}.
 
 \label{param:NegotiatorHost} 
 \item[\Macro{NEGOTIATOR\_HOST}]
@@ -1522,6 +1505,12 @@ File System Configuration File Entries''.
   and \File{/usr/bin/mail} on all other platforms.
   The \Condor{schedd} will not
   function unless \MacroNI{MAIL} is defined.
+
+\label{param:Sendmail}
+\item[\Macro{SENDMAIL}]
+  The full path to the \Prog{sendmail} executable.  
+  If defined, 
+  \Prog{sendmail} is used instead of the mail program defined by \MacroNI{MAIL}.
 
 \label{param:MailFrom}
 \item[\Macro{MAIL\_FROM}]
@@ -1913,7 +1902,21 @@ File System Configuration File Entries''.
 \item[\Macro{CLASSAD\_USER\_LIBS}]
   A comma separated list of paths to shared libraries that contain
   additional ClassAd functions to be used during ClassAd evaluation.
-  
+
+\label{param:ClassadUserPythonModules}
+\item[\Macro{CLASSAD\_USER\_PYTHON\_MODULES}]
+  A comma separated list of python modules to load to be used during ClassAd
+  evaluation.  If module \Expr{foo} is in this list, then function \Expr{bar}
+  can be invoked in ClassAds via the expression \Expr{python\_invoke("foo", "bar", ...)}.
+  Any further arguments are converted from ClassAd expressions to python; the
+  functions return value is converted back to ClassAds.
+  The python modules are loaded at configuration time, so any module-level statements
+  are executed.  Module writers can invoke \Expr{classad.register} at the module-level
+  in order to use python functions directly.
+
+  Functions executed by ClassAds should be non-blocking and have no side-effects;
+  otherwise, unpredictable HTCondor behavior may occur.
+
 \label{param:CondorFsync}
 \item[\Macro{CONDOR\_FSYNC}]
   A boolean value that controls whether HTCondor calls \Procedure{fsync} when
@@ -2002,6 +2005,18 @@ the default \\ \hline
   STATISTICS_TO_PUBLISH = DEFAULT:1!L, DC:2RDZL
 \end{verbatim}
   
+\label{param:StatisticsToPublishList}
+\item[\Macro{STATISTICS\_TO\_PUBLISH\_LIST}]
+  A comma and/or space separated list of statistics attribute names
+  that should be published in updates to the \Condor{collector} daemon,
+  even though
+  the verbosity specified in \MacroNI{STATISTICS\_TO\_PUBLISH} would
+  not normally send them.  This setting has the effect of redefining
+  the verbosity level of the statistics attributes that it mentions,
+  so that
+  they will always match the current statistics publication level as
+  specified in \MacroNI{STATISTICS\_TO\_PUBLISH}.
+
 \label{param:StatisticsWindowSeconds}
 \item[\Macro{STATISTICS\_WINDOW\_SECONDS}]
   An integer value that controls the time window size, in seconds, for
@@ -2083,10 +2098,15 @@ of the subsystem corresponding to the daemon.
 \label{param:SubsysLog}
 \item[\MacroB{<SUBSYS>\_LOG}]
 \index{SUBSYS\_LOG macro@\texttt{<SUBSYS>\_LOG} macro}
-  The name of
-  the log file for a given subsystem.  For example,
+  Defines the path and file name of the log file for a given subsystem.  
+  For example,
   \MacroUNI{STARTD\_LOG} gives the location of the log file for
-  \Condor{startd}. The default is \File{\$(LOG)/<SUBSYS>LOG}.
+  the \Condor{startd} daemon. 
+  The default value for most daemons is the daemon's name in camel case,
+  concatenated with \File{Log}.
+  For example, the default log defined for the \Condor{master} daemon
+  is \File{\$(LOG)/MasterLog}.
+  The default value for other subsystems is \File{\$(LOG)/<SUBSYS>LOG}.
   If the log file cannot be written to,
   then the daemon will attempt to log this into a new file of the name
   \File{\$(LOG)/dprintf\_failure.<SUBSYS>} before the daemon exits.
@@ -2552,6 +2572,26 @@ of the subsystem corresponding to the daemon.
     This may be used to filter log output by the level or 
     tag it, for example, identifying all
     logging output at level \Dflag{SECURITY}, or \Dflag{ACCOUNTANT}.
+
+  \label{dflag:timestamp}
+  \item[\Dflag{TIMESTAMP}]
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_TIMESTAMP@\texttt{D\_TIMESTAMP}}
+    This flag is different from the other flags, because it is
+    used to change the formatting of all log messages that are printed,
+    as opposed to specifying what kinds of messages should be printed.
+    If \Dflag{TIMESTAMP} is set, the time at the beginning of each line in the
+    log file with be a number of seconds since the start of the Unix era. This
+    form of timestamp can be more convenient for tools to process.
+
+  \label{dflag:subsecond}
+  \item[\Dflag{SUB\_SECOND}]
+    \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_SUB\_SECOND@\texttt{D\_SUB\_SECOND}}
+    This flag is different from the other flags, because it is
+    used to change the formatting of all log messages that are printed,
+    as opposed to specifying what kinds of messages should be printed.
+    If \Dflag{SUB\_SECOND} is set, the time at the beginning of each line in the
+    log file will contain a fractional part to the seconds field that is accurate
+    to the millsecond.
 
   \end{description}
 
@@ -3126,16 +3166,6 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   open TCP connections to a file.
   Crash recovery is accomplished using the information.
   The default value is \File{\$(SPOOL)/.ccb\_reconnect}.
-
-\label{param:UseSharedPort}
-\item[\Macro{USE\_SHARED\_PORT}] A boolean value that
-  specifies whether an HTCondor process should rely on
-  \Condor{shared\_port} for receiving incoming connections.  
-  Under Unix, write access to the location defined by 
-  \Macro{DAEMON\_SOCKET\_DIR} is required for this to take
-  effect.  The default is \Expr{False}.
-  For more information about using
-  a shared port, see page~\pageref{sec:Config-shared-port}.
 
 \label{param:CollectorUsesSharedPort}
 \item[\Macro{COLLECTOR\_USES\_SHARED\_PORT}] A boolean value that
@@ -7727,7 +7757,7 @@ Configuration File Entries}
   If this variable is not defined, then the default is defined by
   the expression
 \begin{verbatim}
-  ifThenElse(MemoryUsage =!= UNDEFINED,MemoryUsage,1)
+  ifThenElse(MemoryUsage =!= UNDEFINED,MemoryUsage,(ImageSize+1023)/1024)
 \end{verbatim}
 
 \label{param:JobDefaultRequestDisk}
@@ -12189,10 +12219,39 @@ for details on how to do this.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!condor\_shared\_port configuration variables}
 These configuration variables affect the \Condor{shared\_port} daemon.
-For general discussion of \Condor{shared\_port},
+For general discussion of the \Condor{shared\_port} daemon,
 see~\pageref{sec:shared-port-daemon}.
 
 \begin{description}
+
+\label{param:UseSharedPort}
+\item[\Macro{USE\_SHARED\_PORT}] A boolean value that
+  specifies whether HTCondor daemons should rely on the
+  \Condor{shared\_port} daemon for receiving incoming connections.  
+  Under Unix, write access to the location defined by 
+  \Macro{DAEMON\_SOCKET\_DIR} is required for this to take effect.
+  The default is \Expr{False}.
+
+\label{param:SharedPortPort}
+\item[\Macro{SHARED\_PORT\_PORT}]
+  The default TCP port used by the \Condor{shared\_port} daemon.
+  If \MacroNI{COLLECTOR\_USES\_SHARED\_PORT} is the default value 
+  of \Expr{True},
+  and the \Condor{master} launches a \Condor{collector} daemon,
+  then the \Condor{shared\_port} daemon will ignore this value 
+  and use the TCP port assigned to the \Condor{collector} 
+  via the \MacroNI{COLLECTOR\_HOST} configuration variable.
+
+  The default value is \MacroUNI{COLLECTOR\_PORT}, which defaults to 9618.  
+  Note that this causes all HTCondor hosts to use TCP port 9618 by default, 
+  differing from previous behavior.
+  The previous behavior has only the \Condor{collector} host using a fixed port.
+  To restore this previous behavior, 
+  set \MacroNI{SHARED\_PORT\_PORT} to \Expr{0},
+  which will cause the \Condor{shared\_port} daemon
+  to use a randomly selected port in the range
+  \MacroNI{LOWPORT} - \MacroNI{HIGHPORT},
+  as defined in section \ref{sec:Ports-Firewalls}.
 
 \label{param:SharedPortDaemonAdFile}
 \item[\Macro{SHARED\_PORT\_DAEMON\_AD\_FILE}]
@@ -12258,21 +12317,19 @@ see~\pageref{sec:shared-port-daemon}.
   Ensure that the length is not longer than 90 characters.
 
 \label{param:SharedPortArgs}
-\item[\Macro{SHARED\_PORT\_ARGS}] Like all daemons started by
- \Condor{master}, \Condor{shared\_port} arguments can be customized.
-  One reason to do this is to specify the port number that
- \Condor{shared\_port} should use.  For example, the following line
- configures \Condor{shared\_port} to use port 4080.
+\item[\Macro{SHARED\_PORT\_ARGS}] Like all daemons started by the
+  \Condor{master} daemon, the command line arguments to the invocation
+  of the \Condor{shared\_port} daemon can be customized.
+  The arguments can be used to specify a non-default port number for the
+  \Condor{shared\_port} daemon as in this example, which specifies port 4080:
 
 \begin{verbatim}
-SHARED_PORT_ARGS = -p 4080
+  SHARED_PORT_ARGS = -p 4080
 \end{verbatim}
+  It is recommended to use configuration variable 
+  \MacroNI{SHARED\_PORT\_PORT} to set a non-default port number,
+  instead of using this configuration variable.
 
-If no port is specified, a port will be dynamically chosen; it may be
-different each time HTCondor is started.  In order to decrease the
-duration of possible communication errors resulting from HTCondor or just
-\Condor{shared\_port} itself restarting, it is recommended that a fixed
-port be used instead of a dynamic one.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -12992,7 +13049,8 @@ in ClassAds that the \Condor{collector} daemon has.
   \MacroNI{GANGLIA\_VERBOSITY} is set to 1 or higher in the
   \Condor{gangliad} configuration \emph{and}
   \MacroNI{STATISTICS\_TO\_PUBLISH} in the \Condor{schedd} configuration
-  contains \Expr{TRANSFER:2}.
+  contains \Expr{TRANSFER:2}, or if the \MacroNI{STATISTICS\_TO\_PUBLISH\_LIST}
+  contains the desired attributes explictly.
 
 \label{param:GangliadRequirements}
 \item[\Macro{GANGLIAD\_REQUIREMENTS}] An optional boolean ClassAd expression

@@ -1059,8 +1059,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		// is set, we need to re-initialize my_full_hostname().
 	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
 		free( tmp );
-		//init_full_hostname();
-		init_local_hostname();
+		reset_local_hostname();
 	}
 
 		// Also, we should be safe to process the NETWORK_INTERFACE
@@ -1072,7 +1071,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		// on configuration settings such as NETWORK_INTERFACE.
 		// Therefore, force the cache to be reset, now that the
 		// configuration has been loaded.
-	init_local_hostname();
+	reset_local_hostname();
 
 		// Re-insert the special macros.  We don't want the user to
 		// override them, since it's not going to work.
@@ -1107,6 +1106,10 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		dprintf(D_FULLDEBUG, "FSYNC while writing user logs turned off.\n");
 
 	(void)SetSyscalls( scm );
+
+		// Re-initialize the ClassAd compat data (in case if CLASSAD_USER_LIBS is set).
+	ClassAd::Reconfig();
+
 	return true;
 }
 

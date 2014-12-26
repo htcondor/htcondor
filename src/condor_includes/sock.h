@@ -96,7 +96,7 @@ public:
 	virtual int handle_incoming_packet() = 0;
 
 	/** Connect the socket to a remote peer.
-		@param host Hostname of peer, either a DNS name or an IP address, or 
+		@param host Hostname of peer, either a DNS name or an IP address, or
 		an IP address and port together in the format "&lt;IP:PORT&gt;", such as 
 		<p> &lt;128.105.44.66:3354&gt;
 		<b>Note:</b> The "&lt;" and "&gt;" are required when giving both the
@@ -105,14 +105,14 @@ public:
 		then the port parameter is ignored.
 		@param do_not_block If false, then the connect call will block until
 		completion or until timeout.  If true, then the connect call will
-		return immediately with TRUE, FALSE, or CEDAR_EWOULDBLOCK.  If 
-		CEDAR_EWOULDBLOCK is returned, the user should call 
-		do_connect_finish() when select says this socket is writeable to 
-		find out if the CEDAR connection process has really completed.  
+		return immediately with TRUE, FALSE, or CEDAR_EWOULDBLOCK.  If
+		CEDAR_EWOULDBLOCK is returned, the user should call
+		do_connect_finish() when select says this socket is writeable to
+		find out if the CEDAR connection process has really completed.
 		In Condor this is usually accomplished by calling DaemonCore's
 		Register_Socket() method.
-		@return TRUE if connection succeeded, FALSE on failure, or 
-		CEDAR_EWOULDBLOCK if parameter do_not_block is set to true and 
+		@return TRUE if connection succeeded, FALSE on failure, or
+		CEDAR_EWOULDBLOCK if parameter do_not_block is set to true and
 		the call would block.
 		@see do_connect_finish
 	*/
@@ -124,34 +124,46 @@ public:
 		which can be passed to getportbyserv().
 	*/
 	inline int connect(char const *host, char *service, bool do_not_block = false) { 
-		return connect(host,getportbyserv(service),do_not_block); 
+		return connect(host,getportbyserv(service),do_not_block);
 	}
 
 
 	/** Install this function as the asynchronous handler.  When a handler is installed, it is invoked whenever data arrives on the socket.  Setting the handler to zero disables asynchronous notification.  */
-
 	int set_async_handler( CedarHandler *handler );
 
-	
-	//	Socket services
+	//
+	// This set of functions replaces assign().
+	//
+	// assignSocket() specifies a socket FD for this socket to use.  It
+	// must have been created with AF_INET or AF_INET6.  The socket's protocol
+	// and type MUST match the Sock's protocol and type.
+	//
+	// assignInvalidSocket() should probably be called reinitialize(); it
+	// calls socket() as appropriate for its existing type and protocol.  The
+	// Sock MUST have an existing protocol.
+	//
+	// assignDomainSocket() specifies a (unix) domain socket FD for this
+	// socket to use.  It must have been created with AF_UNX (AF_LOCAL).
 	//
 
-//PRAGMA_REMIND("adesmet: DEPRECATED")
-	int assign(SOCKET =INVALID_SOCKET);
+	//
+	// These functions should probably be pruned and replace by a smaller
+	// set of protected functions and a constructor which accepts a
+	// socket FD; we could then use a placement constructor if necessary.
+	//
 
-	int assign(condor_protocol proto, SOCKET =INVALID_SOCKET);
+	int assignSocket( SOCKET s );
+	int assignSocket( condor_protocol proto, SOCKET s );
+	int assignInvalidSocket();
+	int assignInvalidSocket( condor_protocol proto );
+	int assignDomainSocket( SOCKET s );
 #if defined(WIN32) && defined(_WINSOCK2API_)
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
 
-//PRAGMA_REMIND("adesmet: DEPRECATED")
-	int bind(bool outbound, int port=0, bool loopback=false);
-
 	int bind(condor_protocol proto, bool outbound, int port, bool loopback);
 
-	bool bind_to_loopback(bool outbound=false, int port=0);
-
-    int setsockopt(int, int, const void*, int); 
+    int setsockopt(int, int, const void*, int);
 
 	/**  Set the size of the operating system buffers (in the IP stack) for
 		 this socket.
@@ -169,9 +181,6 @@ public:
 		@return false if any system call errors, true otherwise.
 	*/
 	bool set_keepalive();
-
-//PRAGMA_REMIND("adesmet: deprecated")
-	inline int bind(bool outbound, char *s) { return bind(outbound, getportbyserv(s)); }
 
 	int close();
 	/** if any operation takes more than sec seconds, timeout
@@ -445,7 +454,7 @@ protected:
 
 	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking) = 0;
 	virtual void cancel_reverse_connect() = 0;
-	virtual int do_shared_port_local_connect( char const *shared_port_id,bool nonblocking ) = 0;
+	virtual int do_shared_port_local_connect( char const *shared_port_id,bool nonblocking,char const *sharedPortIP ) = 0;
 
 	void set_connect_addr(char const *addr);
 

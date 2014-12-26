@@ -33,7 +33,7 @@ use Check::CondorLog;
 use Time::Local;
 use Cwd;
 
-my $test_name = "job_test_log_rotaion";
+my $test_name = "job_test_log_rotation";
 CondorTest::RunTest($test_name);
 
 my $killconfig = $ARGV[0];
@@ -372,10 +372,28 @@ sub GetLogsString
 	my @sortedpatterns = ();
 	my @reversepatterns =  ();
 	my $sorteddstring = "";
+	my $size = 0;
+	my $count = 0;
+	my $string = "";
 
-	#print "Check pattern: $pattern from here: ";
-	system("pwd;ls");
+	print "Check pattern: $pattern from here: ";
+	DirLs();
 	@patterns = `ls $pattern.*`;
+	$size = @patterns;
+	print "There are $size matching patterns\n";
+	while($count < $size)
+	{
+		# remove possible white space
+		$string = $patterns[$count];
+		print "Consider:$string\n";
+
+		if($string =~ /\s*(.*?)\s*/) {
+			$patterns[$count] = $1;
+			print "Changed to :$1:\n";
+		}
+		$count += 1;
+	}
+
 	@sortedpatterns = sort @patterns;
 	print "Sorted logs:\n";
 	foreach my $target (@sortedpatterns) {
@@ -446,7 +464,7 @@ sub ValidateLogs
 
 	CondorTest::RegisterResult($seqresult, "test_name", $test_name);
 
-	print "Sequene validation of:$logs: ";
+	print "Sequence validation of:$logs: ";
 	if($seqresult == 1) {
 		print "OK\n";
 	} else {
@@ -574,9 +592,9 @@ sub LogTimeCheck
 				#print "$1\n";
 				#$StartTime = parsedate("$1");
 				if($StartTime == 0) {
-					$StartTime = timelocal($6,$5,$4,$2,$1,$3);
+					$StartTime = timelocal($6,$5,$4,$2,($1 - 1),$3);
 				} else {
-					$EndTime = timelocal($6,$5,$4,$2,$1,$3);
+					$EndTime = timelocal($6,$5,$4,$2,($1 - 1),$3);
 				}
 			}
 		}

@@ -359,6 +359,7 @@ CondorQ::fetchQueueFromDB (ClassAdList &list,
 int
 CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 										StringList &attrs,
+										int fetch_opts,
 										condor_q_process_func process_func,
 										void * process_func_data,
 										int useFastPath,
@@ -376,9 +377,13 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	delete tree;
 
 	if (useFastPath == 2) {
-		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, process_func, process_func_data, connect_timeout, errstack);
+		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, fetch_opts, process_func, process_func_data, connect_timeout, errstack);
 		free( constraint);
 		return result;
+	}
+
+	if (fetch_opts == fetch_DefaultAutoCluster) {
+		return Q_UNSUPPORTED_OPTION_ERROR;
 	}
 
 	/*
@@ -406,6 +411,7 @@ int
 CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 					const char *constraint,
 					StringList &attrs,
+					int fetch_opts,
 					condor_q_process_func process_func,
 					void * process_func_data,
 					int connect_timeout,
@@ -416,20 +422,18 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 	parser.ParseExpression(constraint, expr);
 	if (!expr) return Q_INVALID_REQUIREMENTS;
 
-	classad::ExprList *projList = new classad::ExprList();
-	if (!projList) return Q_INTERNAL_ERROR;
-	attrs.rewind();
-	const char *attr;
-	while ((attr = attrs.next())) {
-		classad::Value value; value.SetStringValue(attr);
-		classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
-		if (!entry) return Q_INTERNAL_ERROR;
-		projList->push_back(entry);
-	}
 	classad::ClassAd ad;
 	ad.Insert(ATTR_REQUIREMENTS, expr);
-	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
-	ad.Insert(ATTR_PROJECTION, projTree);
+
+	char *projection = attrs.print_to_delimed_string(",");
+	if (projection) {
+		ad.InsertAttr(ATTR_PROJECTION, projection);
+		free(projection);
+	}
+
+	if (fetch_opts == fetch_DefaultAutoCluster) {
+		ad.InsertAttr("QueryDefaultAutocluster", true);
+	}
 
 	DCSchedd schedd(host);
 	Sock* sock;

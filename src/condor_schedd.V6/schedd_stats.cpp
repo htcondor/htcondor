@@ -210,6 +210,13 @@ void ScheddStatistics::InitMain()
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_mark_idle,               IF_VERBOSEPUB);
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_get_job_prio,            IF_VERBOSEPUB);
 
+   // timings for the autocluster code
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, GetAutoCluster,           IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, GetAutoCluster_hit,       IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, GetAutoCluster_signature, IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, GetAutoCluster_cchit,     IF_VERBOSEPUB);
+   extern stats_entry_abs<int> SCGetAutoClusterType;
+   SCHEDD_STATS_ADD_VAL(Pool, SCGetAutoClusterType, IF_VERBOSEPUB);
 
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsSubmitted,  IF_BASICPUB);
 }

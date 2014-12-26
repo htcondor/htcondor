@@ -17,15 +17,15 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-2-6}Version 8.2.6}
+\subsection*{\label{sec:New-8-2-7}Version 8.2.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 8.2.6 not yet released.
-%\item HTCondor version 8.2.6 released on Month Date, 2014.
+\item HTCondor version 8.2.7 not yet released.
+%\item HTCondor version 8.2.7 released on Month Date, 2014.
 
 \end{itemize}
 
@@ -42,7 +42,94 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a usability problem with EC2 grid universe jobs.
+HTCondor now ignores trailing white space characters within the files
+identifies by submit commands \SubmitCmdNI{ec2\_access\_key\_id}
+and \SubmitCmdNI{ec2\_secret\_access\_key}.
+\Ticket{4791}
+
+\item Fixed a race condition that prevented jobs from being held when
+the job went over its memory allocation.  On hosts where memory.use\_hierarchy
+was set to 1 in the memory cgroup controller, jobs would frequently receive
+the SIGKILL signal or be requeued with a shadow exception instead of
+being put on hold for going over memory. \Ticket{4774}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-2-6}Version 8.2.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.2.6 released on December 16, 2014.
+
+\item Memory usage of the \Prog{ec2\_gahp}
+may grow without bound due to a bug in some versions of \Prog{libcurl}.
+This occurs when jobs use \Expr{x509://} URLs.  
+Testing shows that \Prog{libcurl} version 7.38.0 does not have this issue.
+The fix may have been introduced as early as version 7.24.0.
+Therefore,
+if this problem occurs, 
+consider upgrading the installation of \Prog{libcurl}.
+For operating systems whose vendor
+does not provide a new enough version of \Prog{libcurl}, 
+build a more recent version, 
+and use the configuration of \Macro{EC2\_GAHP} to specify
+a wrapper script that sets up and invokes an \Prog{ec2\_gahp} which
+uses the updated \Prog{libcurl}.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
 \item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Corrected command line arguments to \Prog{/bin/mail},
+adding the option to use \Prog{sendmail}.
+\Ticket{4764}
+
+\item Fixed a bug introduced in HTCondor version 8.2.4 that caused the 
+\Condor{schedd} daemon log file to not rotate when
+configuration variable 
+\Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES} was set to \Expr{True}.
+\Ticket{4753}
+
+\item Fixed a race condition that could cause the transfer of output files
+for HTCondor-C jobs to fail.
+HTCondor-C jobs are \SubmitCmdNI{grid} \SubmitCmdNI{universe} jobs 
+with a grid type of \SubmitCmdNI{condor}.
+\Ticket{3379}
+
+\item Fixed a bug in the Windows version of \Condor{submit}
+that prevented a job from being submitted,
+if a directory specified with the submit command
+\SubmitCmdNI{transfer\_input\_files} contained a trailing forward slash
+character (/).  
+\Condor{submit} failed with an error message indicating that 
+the directory could not be accessed,
+even when there was no problem accessing the directory.
+\Ticket{4747}
+
+\item Fixed a problem that prevented HTCondor from starting
+on RHEL 7 platforms.
+The ownership of the directory \File{/var/lock/condor/} was incorrect.
+\Ticket{4775}
+
+\item Fixed a bug in which \Condor{qsub} mishandled setting a disk space
+request with a command line argument of the form \Opt{-l file=2048MB}.
+\Ticket{4606}
 
 \end{itemize}
 
@@ -54,8 +141,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.2.5 not yet released.
-%\item HTCondor version 8.2.5 released on Month Date, 2014.
+\item HTCondor version 8.2.5 released on December 1, 2014.
 
 \end{itemize}
 
@@ -72,21 +158,35 @@ The details of each version are described below.
 
 \begin{itemize}
 
+% 1
 \item Updated the post install script in the RPM packages,
 to preserve file \File{/etc/condor/condor\_config.local}, 
 if this file was modified since the last installation.
 \Ticket{4731}
 
-\item Fixed a bug in which \Condor{submit} in interactive mode did
-not properly handle the \Opt{-name} command line option.
-\Ticket{4728}
+% 2
+\item Updated Windows builds of HTCondor to use the latest version of OpenSSL.
+\Ticket{4733}
 
+% 3
 \item Fixed a bug that caused file transfer to or from a \Condor{schedd} 
 daemon version 8.0 or older
 to fail when using the Python bindings, or when using
 the \Opt{-address} option with \Condor{submit} or \Condor{transfer\_data}.
 \Ticket{4720}
 
+% 4
+\item Fixed a bug in \Condor{urlfetch} that caused it to sometimes 
+not fetch the URL when it should have,
+because the cache file did not exist.
+\Ticket{4732}
+
+% 5
+\item Fixed a bug that prevented grid-type batch jobs from being removed
+if they had an X.509 proxy that had been deleted.
+\Ticket{3072}
+
+% 6
 \item Fixed an inconsistency in which configuration variable
 \MacroNI{JOB\_RENICE\_INCREMENT},
 if not explicitly set, defaulted to the value 10 
@@ -94,23 +194,22 @@ for vanilla universe jobs and to the value 0 for standard universe jobs.
 It now defaults to 0, which matches the documentation.
 \Ticket{4697}
 
-\item Fixed a bug that caused nordugrid grid jobs to be held with
-the hold reason \AdStr{Unspecified gridmanager error}
-when runtime information was not reported by the remote server.
-\Ticket{4736}
+% 7
+\item Fixed a bug in which \Condor{submit} in interactive mode did
+not properly handle the \Opt{-name} command line option.
+\Ticket{4728}
 
-\item Updated Windows builds of HTCondor to use the latest version of OpenSSL.
-\Ticket{4733}
-
-\item Fixed a bug in \Condor{urlfetch} that caused it to sometimes 
-not fetch the URL when it should have,
-because the cache file did not exist.
-\Ticket{4732}
-
+% 8
 \item Fixed a bug in error checking while performing job output file
 transfer for jobs in which job ClassAd attribute \Attr{OutputDestination}
 is used.
 \Ticket{4739}
+
+% 9
+\item Fixed a bug that caused nordugrid grid jobs to be held with
+the hold reason \AdStr{Unspecified gridmanager error}
+when runtime information was not reported by the remote server.
+\Ticket{4736}
 
 \end{itemize}
 

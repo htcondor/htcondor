@@ -208,6 +208,40 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	jobAd->LookupString( ATTR_EC2_VPC_IP, m_vpc_ip );
 	jobAd->LookupString( ATTR_EC2_BLOCK_DEVICE_MAPPING, m_block_device_mapping );
 
+	// There's no reason not to build the list of group names here, as well.
+	{
+		std::string securityIDs;
+		m_group_ids = new StringList();
+		jobAd->LookupString( ATTR_EC2_SECURITY_IDS, securityIDs );
+		if( ! securityIDs.empty() ) {
+			m_group_ids->initializeFromString( securityIDs.c_str() );
+		}
+	}
+
+	{
+		std::string paramNames;
+		m_parameters_and_values = new StringList();
+		jobAd->LookupString( ATTR_EC2_PARAM_NAMES, paramNames );
+		if( ! paramNames.empty() ) {
+			StringList paramNameList( paramNames.c_str() );
+
+			const char * paramName = NULL;
+			paramNameList.rewind();
+			while( (paramName = paramNameList.next()) ) {
+				std::string jobAdName;
+				std::string paramValue;
+				formatstr( jobAdName, "%s_%s", ATTR_EC2_PARAM_PREFIX, paramName );
+				jobAd->LookupString( jobAdName.c_str(), paramValue );
+				if( paramValue.empty() ) {
+					dprintf( D_ALWAYS, "EC2 parameter '%s' had no corresponding value, ignoring.\n", paramName );
+					continue;
+				}
+				m_parameters_and_values->append( paramName );
+				m_parameters_and_values->append( paramValue.c_str() );
+			}
+		}
+	}
+
 	// if user assigns both user_data and user_data_file, the two will
 	// be concatenated by the gahp
 	jobAd->LookupString( ATTR_EC2_USER_DATA_FILE, m_user_data_file );
@@ -759,6 +793,8 @@ void EC2Job::doEvaluateState()
 											 m_client_token,
 											 m_block_device_mapping,
 											 *m_group_names,
+											 *m_group_ids,
+											 *m_parameters_and_values,
 											 instance_id,
 											 gahp_error_code);
 

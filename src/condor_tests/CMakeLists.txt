@@ -340,6 +340,8 @@ if (BUILD_TESTING)
 	#condor_pl_test(lib_auth_protocol-negot-prt3 "4 way negotiation test - last 8" "core;quick;full;quicknolink")
 	#condor_pl_test(lib_auth_protocol-negot-prt4 "4 way negotiation test - last 8" "core;quick;full;quicknolink")
 	##### generic cmd tests
+
+	condor_pl_test(condor_status_dash_ads "Condor_status -any works as expected" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_status_shows-any "Condor_status -any works as expected" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_status_shows-submitters "Condor_status -submitters works as expected" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_status_shows-negotiator "Condor_status -negotiator works as expected" "core;quick;full;quicknolink")

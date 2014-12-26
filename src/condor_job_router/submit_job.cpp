@@ -35,6 +35,7 @@
 #include "classad/classad_distribution.h"
 #include "file_transfer.h"
 #include "exit.h"
+#include "condor_holdcodes.h"
 #include "spooled_job_files.h"
 
 	// Simplify my error handling and reporting code
@@ -251,9 +252,8 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 
 		// chown the src job sandbox to the user if appropriate
 	if( result == CJR_OK && !target_is_sandboxed ) {
-		ClassAd old_job_ad(ad); // TODO: get rid of this copy
-		if( SpooledJobFiles::jobRequiresSpoolDirectory(&old_job_ad) ) {
-			if( !SpooledJobFiles::createJobSpoolDirectory(&old_job_ad,PRIV_USER) ) {
+		if( SpooledJobFiles::jobRequiresSpoolDirectory(&ad) ) {
+			if( !SpooledJobFiles::createJobSpoolDirectory(&ad,PRIV_USER) ) {
 				if( error_details ) {
 					error_details->formatstr("Failed to create/chown source job spool directory to the user.");
 				}
@@ -309,9 +309,8 @@ bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad,
 
 		// chown the src job sandbox back to condor is appropriate
 	if( !target_is_sandboxed ) {
-		ClassAd old_job_ad(job_ad); // TODO: get rid of this copy
-		if( SpooledJobFiles::jobRequiresSpoolDirectory(&old_job_ad) ) {
-			SpooledJobFiles::chownSpoolDirectoryToCondor(&old_job_ad);
+		if( SpooledJobFiles::jobRequiresSpoolDirectory(&job_ad) ) {
+			SpooledJobFiles::chownSpoolDirectoryToCondor(&job_ad);
 		}
 	}
 
@@ -456,6 +455,7 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		// we need to submit on hold (taken from condor_submit.V6/submit.C)
 		src.Assign(ATTR_JOB_STATUS, 5); // 5==HELD
 		src.Assign(ATTR_HOLD_REASON, "Spooling input data files");
+		src.Assign(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput);
 
 			// See the comment in the function body of ExpandInputFileList
 			// for an explanation of what is going on here.
@@ -797,11 +797,12 @@ static bool remove_job_with_current_privs(int cluster, int proc, char const *rea
 		return false;
 	}
 
-	MyString constraint;
-	constraint.formatstr("(ClusterId==%d&&ProcId==%d)", cluster, proc);
+	std::string id_str;
+	formatstr(id_str, "%d.%d", cluster, proc);
+	StringList job_ids(id_str.c_str());
 	ClassAd *result_ad;
 
-	result_ad = schedd.removeJobs(constraint.Value(), reason, &errstack, AR_LONG);
+	result_ad = schedd.removeJobs(&job_ids, reason, &errstack, AR_LONG);
 
 	PROC_ID job_id;
 	job_id.cluster = cluster;

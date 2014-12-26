@@ -4394,7 +4394,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 #endif
 
 	size_t srclen = file_xfer_item.src_name.length();
-	bool trailing_slash = srclen > 0 && src_path[srclen-1] == DIR_DELIM_CHAR;
+	bool trailing_slash = srclen > 0 && IS_ANY_DIR_DELIM_CHAR(src_path[srclen-1]);
 
 	file_xfer_item.is_symlink = st.IsSymlink();
 	file_xfer_item.is_directory = st.IsDirectory();

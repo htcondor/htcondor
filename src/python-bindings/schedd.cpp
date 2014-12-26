@@ -425,6 +425,7 @@ struct Schedd {
         ClassAdList jobs;
 
         list retval;
+        int fetch_opts = 0; // CondorQ::fetch_* options
         int fetchResult;
         {
         condor::ModuleLock ml;
@@ -434,7 +435,7 @@ struct Schedd {
         helper.output_list = retval;
         void *helper_ptr = static_cast<void *>(&helper);
 
-        fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, query_process_callback, helper_ptr, true, NULL);
+        fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, fetch_opts, query_process_callback, helper_ptr, true, NULL);
         }
 
         if (PyErr_Occurred())
