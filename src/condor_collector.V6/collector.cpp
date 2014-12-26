@@ -1439,6 +1439,11 @@ void CollectorDaemon::Config()
 		filterAbsentAds = false;
 	}
 
+#ifdef LINUX
+	m_auth_server.Reconfig();
+	daemonCore->setAuthServer(&m_auth_server);
+#endif
+
 	return;
 }
 

@@ -27,6 +27,9 @@
 #include "totals.h"
 #include "forkwork.h"
 
+#ifdef LINUX
+#include "../auth_server/auth_server_client.h"
+#endif
 #include "collector_engine.h"
 #include "collector_stats.h"
 #include "dc_collector.h"
@@ -184,6 +187,9 @@ private:
 
 	static int setAttrLastHeardFrom( ClassAd* cad, unsigned long time );
 
+#ifdef LINUX
+	htcondor::AuthServerClient m_auth_server;
+#endif
 };
 
 #endif
