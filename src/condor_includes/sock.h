@@ -152,6 +152,7 @@ public:
 	//
 
 	int assignSocket( SOCKET s );
+	int assignConnectedSocket( SOCKET s );
 	int assignSocket( condor_protocol proto, SOCKET s );
 	int assignInvalidSocket();
 	int assignInvalidSocket( condor_protocol proto );
@@ -458,12 +459,12 @@ protected:
 	void set_connect_addr(char const *addr);
 
 	inline SOCKET get_socket (void) { return _sock; }
-	char * serialize(char *);
+	const char * serialize(const char *);
 	static void close_serialized_socket(char const *buf);
 	char * serialize() const;
-    char * serializeCryptoInfo(char * buf);
+    const char * serializeCryptoInfo(const char * buf);
     char * serializeCryptoInfo() const;
-    char * serializeMdInfo(char * buf);
+    const char * serializeMdInfo(const char * buf);
     char * serializeMdInfo() const;
         
 	virtual int encrypt(bool);

@@ -141,7 +141,7 @@ protected:
 
 	enum safesock_state { safesock_none, safesock_listen };
 
-	char * serialize(char *);
+	const char * serialize(const char *);
 	char * serialize() const;
 	inline bool same(const _condorMsgID msgA,
 					 const _condorMsgID msgB)

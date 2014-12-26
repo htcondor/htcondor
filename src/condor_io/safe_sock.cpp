@@ -817,10 +817,11 @@ char * SafeSock::serialize() const
 	return( parent_state );
 }
 
-char * SafeSock::serialize(char *buf)
+const char * SafeSock::serialize(const char *buf)
 {
 	char * sinful_string = NULL;
-	char *ptmp, *ptr = NULL;
+	const char *ptmp;
+	const char *ptr = NULL;
     
 	ASSERT(buf);
 	// here we want to restore our state from the incoming buffer

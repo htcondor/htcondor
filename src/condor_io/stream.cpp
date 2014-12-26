@@ -433,6 +433,27 @@ Stream::code( char	*&s, int		&len)
 }
 
 
+int
+Stream::code_fd(int &fd)
+{
+	switch (_coding)
+	{
+		case stream_encode:
+			return put_fd(fd);
+		case stream_decode:
+			return get_fd(fd);
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code_fd(int &fd) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code_fd(int &fd)'s _coding is illegal!");
+			break;
+	}
+
+	return false;
+}
+
+
 int 
 Stream::code_bytes_bool(void *p, int l)
 {

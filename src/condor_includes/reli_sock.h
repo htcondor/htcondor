@@ -53,9 +53,16 @@ class Condor_MD_MAC;
 
 class BlockingModeGuard;
 
+namespace htcondor {
+class AuthServer;
+class AuthServerClient;
+}
+
 class ReliSock : public Sock {
 	friend class Authentication;
 	friend class BlockingModeGuard;
+	friend class htcondor::AuthServer;
+	friend class htcondor::AuthServerClient;
 
 //	PUBLIC INTERFACE TO RELIABLE SOCKS
 //
@@ -115,6 +122,9 @@ public:
 	bool connect_socketpair( ReliSock & dest );
 	bool connect_socketpair( ReliSock & dest, char const * asIfConnectingTo );
 
+		// Connect this socket to another using Unix domain sockets.
+	bool unix_socketpair(ReliSock &other);
+
     ///
 	ReliSock();
 
@@ -155,6 +165,9 @@ public:
 	int put_bytes_nobuffer(char *buf, int length, int send_size=1);
     ///
 	int get_bytes_nobuffer(char *buffer, int max_length, int receive_size=1);
+
+	virtual int put_fd(int);
+	virtual int get_fd(int &);
 
     /// returns <0 on failure, 0 for ok
 	//  failure codes: GET_FILE_OPEN_FAILED  (errno contains specific error)
@@ -274,12 +287,12 @@ protected:
 	**	Types
 	*/
 
-	enum relisock_state { relisock_none, relisock_listen };
+	enum relisock_state { relisock_none, relisock_listen, relisock_domain };
 
 	/*
 	**	Methods
 	*/
-	char * serialize(char *);	// restore state from buffer
+	const char * serialize(const char *);	// restore state from buffer
 	char * serialize() const;	// save state into buffer
 
 	int prepare_for_nobuffering( stream_coding = stream_unknown);
@@ -287,6 +300,8 @@ protected:
 							  const char* methods, CondorError* errstack,
 							  int auth_timeout, bool non_blocking, char **method_used );
 
+	int get_fd_domain(int &fd);
+	int put_fd_domain(int fd);
 
 	/*
 	**	Data structures

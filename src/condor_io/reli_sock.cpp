@@ -308,6 +308,119 @@ ReliSock::get_bytes_raw( char *buffer, int length )
 	return condor_read(peer_description(),_sock,buffer,length,_timeout);
 }
 
+int
+ReliSock::put_fd(int fd)
+{
+	if (_special_state == relisock_domain)
+	{
+		return put_fd_domain(fd);
+	}
+	else
+	{	// TODO: pass FD to local TCP clients by writing files to /tmp
+		// in a manner to FS auth.
+		return 0;
+	}
+}
+
+int
+ReliSock::get_fd(int &fd)
+{
+	if (_special_state == relisock_domain)
+	{
+		return get_fd_domain(fd);
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+int
+ReliSock::put_fd_domain(int fd)
+{
+	// Send protocol header, then flush the buffers.
+	this->put("PASSFD");
+	this->put(1);
+	this->end_of_message();
+	struct msghdr msg; memset(&msg, 0, sizeof(msg));
+	struct cmsghdr *cmsg;
+	int myfds[1]; myfds[0] = fd;
+	char buf[CMSG_SPACE(sizeof(myfds))];
+	msg.msg_control = buf;
+	msg.msg_controllen = sizeof(buf);
+	cmsg = CMSG_FIRSTHDR(&msg);
+	cmsg->cmsg_level = SOL_SOCKET;
+	cmsg->cmsg_type = SCM_RIGHTS;
+	cmsg->cmsg_len = CMSG_LEN(sizeof( myfds));
+	int *fdptr = (int *)(CMSG_DATA(cmsg));
+	memcpy(fdptr, myfds, sizeof(myfds));
+	msg.msg_controllen = cmsg->cmsg_len;
+	struct iovec iov;
+	char ok[] = "OK";
+	iov.iov_base = ok;
+	iov.iov_len = 2;
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+
+	if (sendmsg(_sock, &msg, 0) < 0)
+	{
+		put(errno);
+		return 0;
+	}
+	else
+	{
+		put(0);
+		return 1;
+	}
+}
+
+int
+ReliSock::get_fd_domain(int &fd)
+{
+	// Get protocol header
+	std::string header;
+	this->code(header);
+	if (header != "PASSFD") {return 0;}
+	int vers;
+	this->code(vers);
+	if (vers != 1) {return 0;}
+	if (!end_of_message()) {return 0;}
+	struct msghdr msg; memset(&msg, 0, sizeof(struct msghdr));
+	char data[3], cdata[128];
+	struct iovec iov;
+	iov.iov_base = data;
+	iov.iov_len = sizeof(data)-1;
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	msg.msg_control = cdata;
+	msg.msg_controllen = sizeof(cdata);
+	bool found_fd = false;
+	if (recvmsg(_sock, &msg, 0) < 0)
+	{
+		return 0;
+	}
+	data[iov.iov_len] = '\0';
+	if (strcmp(data, "OK"))
+	{
+		dprintf(D_ALWAYS, "Invalid response from other side of FD passing.\n");
+		return 0;
+	}
+	struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+	while (cmsg != NULL)
+	{
+		if ((cmsg->cmsg_level == SOL_SOCKET) && (cmsg->cmsg_type == SCM_RIGHTS))
+		{
+			fd = *(int *)CMSG_DATA(cmsg);
+			found_fd = true;
+		}
+		cmsg = CMSG_NXTHDR(&msg, cmsg);
+	}
+	int errorcode;
+	if (!get(errorcode)) {return 0;}
+	if (errorcode) {return 0;}
+	return found_fd;
+}
+
 int 
 ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
 {
@@ -1021,18 +1134,18 @@ ReliSock::serialize() const
 	return( parent_state );
 }
 
-char * 
-ReliSock::serialize(char *buf)
+const char * 
+ReliSock::serialize(const char *buf)
 {
 	char * sinful_string = NULL;
 	char fqu[256];
-	char *ptmp, * ptr = NULL;
+	const char * ptr = NULL;
 	int len = 0;
 
     ASSERT(buf);
 
 	// first, let our parent class restore its state
-    ptmp = Sock::serialize(buf);
+    const char *ptmp = Sock::serialize(buf);
     ASSERT( ptmp );
     int itmp;
     int citems = sscanf(ptmp,"%d*",&itmp);
@@ -1248,6 +1361,29 @@ ReliSock::connect_socketpair_impl( ReliSock & sock, condor_protocol proto, bool 
 	}
 
 	return true;
+}
+
+bool
+ReliSock::unix_socketpair(ReliSock &other)
+{
+#ifdef WIN32
+	dprintf(D_ALWAYS, "Tried to invoke socketpair on Windows.\n");
+	return false;
+#else
+	int socks[2]; socks[0] = -1; socks[1] = -1;
+	if (-1 == socketpair(AF_UNIX, SOCK_STREAM, 0, socks) || (socks[0] == -1) || (socks[1] == -1))
+	{
+		dprintf(D_ALWAYS, "socketpair(): failed to create a pair of Unix sockets (errno=%d, %s).\n", errno, strerror(errno));
+		return false;
+	}
+	this->assignDomainSocket(socks[0]);
+	this->_state = Sock::sock_connect;
+	this->_special_state = ReliSock::relisock_domain;
+	other.assignDomainSocket(socks[1]);
+	other._state = Sock::sock_connect;
+	other._special_state = ReliSock::relisock_domain;
+	return true;
+#endif
 }
 
 bool

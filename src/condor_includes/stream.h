@@ -368,6 +368,8 @@ public:
     ///
 	int code(struct rlimit64 *x)	{ return code(*x); }
 #endif
+    ///
+	int code_fd(int &fd);
     //@}
 
     //@}
@@ -393,7 +395,7 @@ public:
 	int put(const MyString &);
 	int put(const std::string &);
 	int put(char const *, int);
-
+	virtual int put_fd(int) {return 0;}
 
 	//	get operations
 	//
@@ -415,6 +417,7 @@ public:
 
 	int get(MyString &);
 	int get(std::string &);
+	virtual int get_fd(int &) {return 0;}
 
 		// This function assigns the argument to a freshly mallocated string
 		// or NULL.  The caller should free the string.
@@ -623,7 +626,7 @@ protected:
 
 	// serialize object (save/restore object state to an ascii string)
 	//
-	virtual char * serialize(char *) = 0;
+	virtual const char * serialize(const char *) = 0;
 	virtual char * serialize() const = 0;
 
 	/*

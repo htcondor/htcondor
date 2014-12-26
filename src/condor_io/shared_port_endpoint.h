@@ -82,7 +82,7 @@ class SharedPortEndpoint: Service {
 
 		// Restore state of object stored with serialize().
 		// Returns pointer to anything trailing in inherit_buf.
-	char *deserialize(char *inherit_buf);
+	const char *deserialize(const char *inherit_buf);
 
 		// Do not remove named socket when we stop listening.
 		// Used in parent process when passing this object to a child.

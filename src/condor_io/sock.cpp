@@ -432,6 +432,18 @@ int Sock::assignInvalidSocket( condor_protocol proto ) {
 	return assignSocket( proto, INVALID_SOCKET );
 }
 
+int
+Sock::assignConnectedSocket(SOCKET sockd)
+{
+	int result = assignSocket(sockd);
+	if (result)
+	{
+		_state = sock_connect;
+	}
+
+	return result;
+}
+
 int Sock::assignSocket( SOCKET sockd ) {
 	ABEND( sockd != INVALID_SOCKET );
 
@@ -1853,10 +1865,10 @@ char * Sock::serializeMdInfo() const
 	return( outbuf );
 }
 
-char * Sock::serializeCryptoInfo(char * buf)
+const char * Sock::serializeCryptoInfo(const char * buf)
 {
 	unsigned char * kserial = NULL;
-    char * ptmp = buf;
+    const char * ptmp = buf;
     int    len = 0, encoded_len = 0;
     int protocol = CONDOR_NO_PROTOCOL;
 
@@ -1916,10 +1928,10 @@ char * Sock::serializeCryptoInfo(char * buf)
 	return ptmp;
 }
 
-char * Sock::serializeMdInfo(char * buf)
+const char * Sock::serializeMdInfo(const char * buf)
 {
 	unsigned char * kmd = NULL;
-    char * ptmp = buf;
+    const char * ptmp = buf;
     int    len = 0, encoded_len = 0;
 
     // kmd may be a problem since reli_sock also has stuff after
@@ -2008,7 +2020,7 @@ Sock::close_serialized_socket(char const *buf)
 	::close(passed_sock);
 }
 
-char * Sock::serialize(char *buf)
+const char * Sock::serialize(const char *buf)
 {
 	int i;
 	SOCKET passed_sock;

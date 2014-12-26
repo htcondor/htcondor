@@ -1083,10 +1083,10 @@ SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 	return true;
 }
 
-char *
-SharedPortEndpoint::deserialize(char *inherit_buf)
+const char *
+SharedPortEndpoint::deserialize(const char *inherit_buf)
 {
-	char *ptr;
+	const char *ptr;
 	ptr = strchr(inherit_buf,'*');
 	ASSERT( ptr );
 	m_full_name.formatstr("%.*s",(int)(ptr-inherit_buf),inherit_buf);
