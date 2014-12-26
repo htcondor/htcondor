@@ -42,9 +42,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a usability problem with EC2 jobs: HTCondor now ignores
-trailing whitespace in the \SubmitCmdNI{ec2\_access\_key\_id}
-and \SubmitCmdNI{ec2\_secret\_access\_key} files.
+\item Fixed a usability problem with EC2 grid universe jobs.
+HTCondor now ignores trailing white space characters within the files
+identifies by submit commands \SubmitCmdNI{ec2\_access\_key\_id}
+and \SubmitCmdNI{ec2\_secret\_access\_key}.
 \Ticket{4791}
 
 \item Fixed a race condition that prevented jobs from being held when
