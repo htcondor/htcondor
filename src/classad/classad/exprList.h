@@ -21,6 +21,8 @@
 #ifndef __CLASSAD_EXPR_LIST_H__
 #define __CLASSAD_EXPR_LIST_H__
 
+#include "classad/exprTree.h"
+
 #include <vector>
 
 namespace classad {
