@@ -307,6 +307,20 @@ customization=seldom
 friendly_name=Default collector port
 review=?
 
+[AUTH_SERVER]
+default=$(LIBEXEC)/condor_auth_server
+type=string
+reconfig=true
+customization=never
+friendly_name=Authorization server for the Collector
+
+[AUTH_SERVER_WORKERS]
+default=0
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Number of worker processes for the condor_auth_server
+
 [SOCKET_LISTEN_BACKLOG]
 default=500
 range=1,

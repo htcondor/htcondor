@@ -1,0 +1,11 @@
+
+#ifndef __AUTH_SERVER_CONSTANTS_H_
+#define __AUTH_SERVER_CONSTANTS_H_
+
+typedef enum {
+	AUTH_SERVER_ALIVE,
+	AUTH_SERVER_STOP,
+	AUTH_SERVER_HANDLE
+} AuthServerCodes;
+
+#endif
