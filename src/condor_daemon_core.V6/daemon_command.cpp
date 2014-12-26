@@ -39,6 +39,9 @@
 #include "ipv6_hostname.h"
 #include "daemon_command.h"
 
+#ifdef LINUX
+#include "../auth_server/auth_server_client.h"
+#endif
 
 static unsigned int ZZZZZ = 0;
 static int ZZZ_always_increase() {
@@ -64,6 +67,7 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 	m_key(NULL),
 	m_sid(NULL),
 	m_prev_sock_ent(NULL),
+	m_auth_server(NULL),
 	m_async_waiting_time(0),
 	m_comTable(daemonCore->comTable),
 	m_real_cmd(0),
@@ -171,8 +175,13 @@ int DaemonCommandProtocol::doProtocol()
 		}
 	}
 
-	if( what_next == CommandProtocolInProgress ) {
+	if( what_next == CommandProtocolInProgress )
+	{
 		return KEEP_STREAM;
+	}
+	else if (what_next == CommandProtocolExternal)
+	{
+		return false;
 	}
 
 	return finalize();
@@ -1043,7 +1052,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_state = CommandProtocolAuthenticate;
 					return CommandProtocolContinue;
 
-
 				} else {
 					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: not authenticating.\n");
@@ -1060,20 +1068,21 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate()
 {
-	if (m_errstack) { delete m_errstack;}
-	m_errstack = new CondorError();
-
-	if( m_nonblocking && !m_sock->readReady() ) {
+		// If there's an auth server, don't look at "readReady" right now;
+		// we'll want the auth server to consume those bytes in the child process.
+	if( m_nonblocking && !m_auth_server && !m_sock->readReady() ) {
 		dprintf(D_SECURITY, "Returning to DC while we wait for socket to authenticate.\n");
 		return WaitForSocketData();
 	}
 
+	if (m_errstack) { delete m_errstack;}
+	m_errstack = new CondorError();
+
 	// we know the ..METHODS_LIST attribute exists since it was put
 	// in by us.  pre 6.5.0 protocol does not put it in.
-	char * auth_methods = NULL;
-	m_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods);
-
-	if (!auth_methods) {
+	std::string auth_methods;
+	if (!m_policy->EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, auth_methods))
+	{
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: no auth methods in response ad from %s, failing!\n", m_sock->peer_description());
 		m_result = FALSE;
 		return CommandProtocolFinished;
@@ -1085,11 +1094,24 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 	int auth_timeout = daemonCore->getSecMan()->getSecTimeout( m_comTable[m_cmd_index].perm );
 
-	m_sock->setAuthenticationMethodsTried(auth_methods);
+	m_sock->setAuthenticationMethodsTried(auth_methods.c_str());
+
+#ifdef LINUX
+	if ((m_auth_server && m_sock->type() == Stream::reli_sock) && (m_auth_server->PassSocket(*static_cast<ReliSock*>(m_sock), this, m_key, auth_methods.c_str(), *m_errstack, auth_timeout)))
+	{
+		if (daemonCore->SocketIsRegistered(m_sock)) {daemonCore->Cancel_Socket(m_sock);}
+		m_sock = NULL;
+		return CommandProtocolExternal;
+	}
+#endif
+
+	if( m_nonblocking && !m_sock->readReady() ) {
+		dprintf(D_SECURITY, "Returning to DC while we wait for socket to authenticate.\n");
+		return WaitForSocketData();
+	}
 
 	char *method_used = NULL;
-	int auth_success = m_sock->authenticate(m_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, &method_used);
-	free( auth_methods );
+	int auth_success = m_sock->authenticate(m_key, auth_methods.c_str(), m_errstack, auth_timeout, m_nonblocking, &method_used);
 
 	if (auth_success == 2) {
 		m_state = CommandProtocolAuthenticateContinue;
@@ -1098,6 +1120,20 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	}
         return AuthenticateFinish(auth_success, method_used);
 }
+
+
+void
+DaemonCommandProtocol::FinishExternalAuth(int auth_result, const std::string & method_used, ReliSock *sock, CondorError *errstack)
+{
+	delete m_errstack;
+	m_errstack = errstack;
+	m_sock = sock;
+	char * method_used_char = strdup(method_used.c_str());
+	AuthenticateFinish(auth_result, method_used_char);
+	doProtocol();
+	decRefCount();
+}
+
 
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AuthenticateContinue()
 {
@@ -1177,6 +1213,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::PostAuthenticate()
 {
+	dprintf(D_SECURITY, "Starting post-authenticate step.\n");
 	if (m_will_enable_integrity == SecMan::SEC_FEAT_ACT_YES) {
 
 		if (!m_key) {

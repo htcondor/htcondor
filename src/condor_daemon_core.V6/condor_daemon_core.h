@@ -73,6 +73,10 @@ class ProcFamilyInterface;
 
 #define DEBUG_SETTABLE_ATTR_LISTS 0
 
+namespace htcondor {
+class AuthServerClient;
+}
+
 template <class Key, class Value> class HashTable; // forward declaration
 class Probe;
 
@@ -299,6 +303,10 @@ class DaemonCore : public Service
     void reconfig();
 
 	void refreshDNS();
+
+#ifdef LINUX
+	void setAuthServer(htcondor::AuthServerClient * server) {m_auth_server = server;}
+#endif
 
     /** Not_Yet_Documented
         @param perm Not_Yet_Documented
@@ -1603,6 +1611,8 @@ class DaemonCore : public Service
 	// one of our command ports.
 	bool is_command_port_do_not_use(const condor_sockaddr & addr);
 
+	void setNeverUseCCB(bool ccb) {m_never_use_ccb = ccb;}
+
   private:      
 
 		// do and our parents/children want/have a udp comment socket?
@@ -1889,6 +1899,11 @@ class DaemonCore : public Service
     int                 nextReapId;     // next reaper id to use
     ExtArray<ReapEnt>  reapTable;      // reaper table
     int                 defaultReaper;
+
+	bool m_never_use_ccb;
+#ifdef LINUX
+	htcondor::AuthServerClient *m_auth_server;
+#endif
 
     class PidEntry : public Service
     {

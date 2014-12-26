@@ -242,7 +242,10 @@ static unsigned int compute_pid_hash(const pid_t &key)
 
 DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 				int SocSize,int ReapSize,int PipeSize)
-	: comTable(32), sigTable(10), reapTable(4)
+	: comTable(32), sigTable(10), reapTable(4), m_never_use_ccb(false)
+#ifdef LINUX
+	, m_auth_server(NULL)
+#endif
 {
 
 	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || PidSize < 0 || ReapSize < 0)
@@ -2875,7 +2878,8 @@ DaemonCore::reconfig(void) {
 
 	bool never_use_ccb =
 		get_mySubSystem()->isType(SUBSYSTEM_TYPE_GAHP) ||
-		get_mySubSystem()->isType(SUBSYSTEM_TYPE_DAGMAN);
+		get_mySubSystem()->isType(SUBSYSTEM_TYPE_DAGMAN) ||
+		m_never_use_ccb;
 
 	if( !never_use_ccb ) {
 		if( !m_ccb_listeners ) {
@@ -4312,6 +4316,10 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		if( SocketIsRegistered(asock) ) {
 			is_command_sock = true;
 		}
+		if (insock->type() == Stream::reli_sock && ((ReliSock *)insock)->isListenSock())
+		{
+			always_keep_stream = true;
+		}
 	}
 	else {
 		ASSERT( insock );
@@ -4340,6 +4348,12 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 	}
 
 	classy_counted_ptr<DaemonCommandProtocol> r = new DaemonCommandProtocol(asock,is_command_sock);
+#ifdef LINUX
+	if (m_auth_server)
+	{
+		r->setAuthServer(m_auth_server);
+	}
+#endif
 
 	int result = r->doProtocol();
 
@@ -9471,9 +9485,9 @@ int DaemonCore::SendAliveToParent()
 	static bool first_time = true;
 	int number_of_tries = 3;
 
-	dprintf(D_FULLDEBUG,"DaemonCore: in SendAliveToParent()\n");
+	dprintf(D_FULLDEBUG,"DaemonCore: in SendAliveToParent(); want send childalive %d.\n", m_want_send_child_alive);
 
-	if ( !ppid ) {
+	if ( !ppid || !m_want_send_child_alive ) {
 		// no daemon core parent, nothing to send
 		return FALSE;
 	}

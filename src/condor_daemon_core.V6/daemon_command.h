@@ -25,11 +25,13 @@
 class DaemonCommandProtocol: Service, public ClassyCountedPtr {
 
 	friend class DaemonCore;
+	friend class htcondor::AuthServerClient;
 
 public:
-	DaemonCommandProtocol(Stream* sock,bool is_command_sock);
+	DaemonCommandProtocol(Stream* sock, bool is_command_sock);
 	~DaemonCommandProtocol();
 
+	void setAuthServer(htcondor::AuthServerClient *server) {m_auth_server = server;}
 	int doProtocol();
 
 private:
@@ -48,7 +50,8 @@ private:
 	enum CommandProtocolResult {
 		CommandProtocolContinue,
 		CommandProtocolFinished,
-		CommandProtocolInProgress
+		CommandProtocolInProgress,
+		CommandProtocolExternal
 	};
 
 	Sock   *m_sock;
@@ -72,6 +75,7 @@ private:
 	KeyInfo *m_key;
 	char    *m_sid;
 	void *m_prev_sock_ent;
+	htcondor::AuthServerClient *m_auth_server;
 
 	UtcTime m_handle_req_start_time;
 	UtcTime m_async_waiting_start_time;
@@ -94,6 +98,7 @@ private:
 	CommandProtocolResult ReadCommand();
 	CommandProtocolResult Authenticate();
 	CommandProtocolResult AuthenticateContinue();
+	void FinishExternalAuth(int auth_result, const std::string &method_used, ReliSock *sock, CondorError* errstack);
 	CommandProtocolResult AuthenticateFinish(int auth_success, char *method_used);
 	CommandProtocolResult PostAuthenticate();
 	CommandProtocolResult ExecCommand();
