@@ -41,6 +41,7 @@ struct SockEnt
 	call_handler(false),
 	waiting_for_data(false),
 	remove_asap(false),
+	is_registered(false),
 	handler_type(HANDLE_NONE),
 	servicing_tid(0),
 	is_command_sock(false)

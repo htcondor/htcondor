@@ -543,8 +543,9 @@ int
 SockManager::getReadySocketEpoll(time_t now)
 {
 #ifdef CONDOR_HAVE_EPOLL
-	std::vector<epoll_event> events; events.reserve(10);
-	int nfds = epoll_wait(m_epoll_fd, &events[0], 10, 0);
+	static const unsigned EPOLL_EVENTS = 2;
+	std::vector<epoll_event> events; events.reserve(EPOLL_EVENTS);
+	int nfds = epoll_wait(m_epoll_fd, &events[0], EPOLL_EVENTS, 0);
 	if (-1 == nfds)
 	{
 		if (errno != EINTR) {dprintf(D_ALWAYS, "DaemonCore: epoll failure (errno=%d, %s).\n", errno, strerror(errno));}

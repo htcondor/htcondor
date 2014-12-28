@@ -2973,6 +2973,7 @@ void DaemonCore::Driver()
 			dprintf(D_ALWAYS, "PERF: entering select\n");
 		}
 
+		m_sock_manager.watchFDs(watchFDs);
 		m_sock_manager.execute();
 		const Selector &selector = m_sock_manager.getSelector();
 
@@ -3232,6 +3233,7 @@ void DaemonCore::Driver()
 
 
 			runtime = _condor_debug_get_time_double();
+			float start_runtime = runtime;
 			dc_stats.PipeRuntime += (runtime - group_runtime);
 			group_runtime = runtime;
 
@@ -3269,6 +3271,7 @@ void DaemonCore::Driver()
 
 					// update per-handler runtime statistics
 				runtime = dc_stats.AddRuntime(ent.handler_descrip.c_str(), runtime);
+				if (runtime - start_runtime > 1.0) {break;}
 			}	// for 0 thru nSock checking if call_handler is true
 
 			runtime = _condor_debug_get_time_double();
