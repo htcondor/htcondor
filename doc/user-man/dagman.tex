@@ -520,12 +520,10 @@ DAG.
 
 \Bold{Examples that use PRE or POST scripts}
 
-As an example, consider the diamond-shaped DAG example.
-Suppose the PRE script expands a compressed file 
-needed as input to nodes B and C.
-The file is named of the form
-\File{\Arg{JobName}.gz}.
-The DAG input file becomes 
+Examples use the diamond-shaped DAG.
+A first example uses a PRE script to expand a compressed file 
+needed as input to each of the HTCondor jobs of nodes B and C.
+The DAG input file:
 
 \footnotesize
 \begin{verbatim}
@@ -542,24 +540,35 @@ The DAG input file becomes
 \end{verbatim}
 \normalsize
 
-The script \File{pre.csh} uses the arguments to form the file name
-of the compressed file:
+The script \File{pre.csh} uses its command line arguments to form the file name
+of the compressed file.
+The script contains
 
 \begin{verbatim}
-    #!/bin/csh
-    gunzip $argv[1]$argv[2]
+  #!/bin/csh
+  gunzip $argv[1]$argv[2]
 \end{verbatim}
 
-A second example uses the \Expr{\$RETURN} macro in a
-POST script specification:
+Therefore, the PRE script invokes  
+\begin{verbatim}
+  gunzip B.gz
+\end{verbatim}
+for node B, which uncompresses file \File{B.gz},
+placing the result in file \File{B}.
+
+A second example uses the \Expr{\$RETURN} macro.
+The DAG input file contains the POST script specification:
 \begin{verbatim}
   SCRIPT POST A stage-out job_status $RETURN 
 \end{verbatim}
-A node job returns a value of -1 invokes the POST script with
+If the HTCondor job of node A exits with the value -1,
+the POST script is invoked as
 \begin{verbatim}
   stage-out job_status -1
 \end{verbatim}
+
 The slightly different example POST script specification
+in the DAG input file
 \begin{verbatim}
   SCRIPT POST A stage-out job_status=$RETURN 
 \end{verbatim}
@@ -567,13 +576,15 @@ invokes the POST script with
 \begin{verbatim}
   stage-out job_status=$RETURN
 \end{verbatim}
-There is no space between the \Expr{=} sign and the variable \Expr{\$RETURN},
-so there is no substitution of the variable's value.
+
+This example shows that when
+there is no space between the \Expr{=} sign and the variable \Expr{\$RETURN},
+there is no substitution of the macro's value.
 
 \label{dagman:PRE-SKIP}
 \index{DAGMan input file!PRE\_SKIP keyword}
 \index{DAGMan!PRE\_SKIP command}
-\item \Bold{PRE\_SCRIPT}
+\item \Bold{PRE\_SKIP}
 
 The behavior of DAGMan with respect to node success or failure can
 be changed with the addition of a \Arg{PRE\_SKIP} command. 
