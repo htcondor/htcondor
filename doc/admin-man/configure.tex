@@ -2008,10 +2008,12 @@ the default \\ \hline
 \label{param:StatisticsToPublishList}
 \item[\Macro{STATISTICS\_TO\_PUBLISH\_LIST}]
   A comma and/or space separated list of statistics attribute names
-  that should be published in updates to the collector even though
+  that should be published in updates to the \Condor{collector} daemon,
+  even though
   the verbosity specified in \MacroNI{STATISTICS\_TO\_PUBLISH} would
   not normally send them.  This setting has the effect of redefining
-  the verbosity level of the statistics attributes that it mentions so that
+  the verbosity level of the statistics attributes that it mentions,
+  so that
   they will always match the current statistics publication level as
   specified in \MacroNI{STATISTICS\_TO\_PUBLISH}.
 

@@ -381,6 +381,7 @@ bool AutoCluster::config(const char* significant_target_attrs)
 {
 	bool sig_attrs_changed = false;
 	char *new_sig_attrs =  param ("SIGNIFICANT_ATTRIBUTES");
+	const std::string * attr; // used in various loops
 
 	dprintf(D_FULLDEBUG,
 		"AutoCluster:config(%s) invoked\n",
@@ -418,10 +419,16 @@ bool AutoCluster::config(const char* significant_target_attrs)
 		required_attrs.insert(ATTR_NICE_USER);
 		required_attrs.insert(ATTR_CONCURRENCY_LIMITS);
 
+		// If the configuration specifies a whitelist of attributes, add them to the required attrs list
+		std::string other_attrs;
+		if (param(other_attrs, "ADD_SIGNIFICANT_ATTRIBUTES")) {
+			StringTokenIterator it(other_attrs);
+			while ((attr = it.next_string())) { required_attrs.insert(*attr); }
+		}
+
 		// walk the input string, removing attributes from the required_attrs set if the are already
-		// in the input.
+		// in the input, we do this because we want to preserve the order of the input significant attrs
 		StringTokenIterator list(significant_target_attrs);
-		const std::string * attr;
 		while ((attr = list.next_string())) { 
 			if (required_attrs.size() <= 0) break;
 			classad::References::iterator it = required_attrs.find(*attr);
@@ -430,14 +437,51 @@ bool AutoCluster::config(const char* significant_target_attrs)
 			}
 		}
 
-		// set new_sig_attrs to the union of the required attrs and the input attrs
-		if (required_attrs.size() > 0) {
-			// using a temporary string list not the most efficient way to do this, but it shouldn't be happening often....
-			StringList attrs(significant_target_attrs);
-			for (classad::References::iterator it = required_attrs.begin(); it != required_attrs.end(); ++it) {
-				attrs.insert(it->c_str());
+		// If the configuration specifies a blacklist of attributes,
+		// build up a set of banned attrs.
+		classad::References banned_attrs;
+		if (param(other_attrs, "REMOVE_SIGNIFICANT_ATTRIBUTES")) {
+			StringTokenIterator it(other_attrs);
+			while ((attr = it.next_string())) {
+				if ( ! required_attrs.empty()) {
+					classad::References::iterator it = required_attrs.find(*attr);
+					if (it != required_attrs.end()) {
+						required_attrs.erase(it);
+						continue; // no need to add it to the banned list we already know it's not in the input string.
+					}
+				}
+				banned_attrs.insert(*attr);
 			}
-			new_sig_attrs = attrs.print_to_string();
+		}
+
+
+		// set new_sig_attrs to the union of the input attrs with the banned attrs remove
+		// and the required attrs appended.
+		if (required_attrs.size() > 0 || banned_attrs.size() > 0) {
+			std::string attrs;
+			attrs.reserve(strlen(significant_target_attrs) + required_attrs.size()*30);
+
+			// list still contains the unmodified input significant_target_attrs
+			// so we can just iterate them again looking for banned attrs.
+			list.rewind();
+			while ((attr = list.next_string())) { 
+				if ( ! banned_attrs.empty()) {
+					classad::References::iterator it = banned_attrs.find(*attr);
+					if (it != banned_attrs.end()) {
+						continue; // skip this one
+					}
+				}
+				attrs.append(attr->c_str());
+				attrs.append(" ");
+			}
+
+			// now append the required attrs that were not banned and not already in the input list.
+			for (classad::References::iterator it = required_attrs.begin(); it != required_attrs.end(); ++it) {
+				attrs.append(it->c_str());
+				attrs.append(" ");
+			}
+			trim(attrs);
+			new_sig_attrs = strdup(attrs.c_str());
 		} else {
 			// input has all of the required attrs, we can just copy it.
 			new_sig_attrs = strdup(significant_target_attrs);
