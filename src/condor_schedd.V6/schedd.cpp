@@ -2215,6 +2215,67 @@ clear_autocluster_id( ClassAd *job )
 }
 
 
+/*
+ * Take a job and gather all schedd-wide statistics (anything *not* per-Owner and
+ * may affect matchmaking).
+ *
+ * This allows the Run / Idle count to be realistic for "condor_status -schedd", even
+ * for jobs we did not service ourselves.
+ */
+int
+count_a_job_global_stats(ClassAd &job, int max_hosts, int cur_hosts, int status, time_t now)
+{
+    ScheddOtherStats * other_stats = NULL;
+    if (scheduler.OtherPoolStats.AnyEnabled()) {
+        other_stats = scheduler.OtherPoolStats.Matches(job, now);
+    }
+    #define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
+
+    if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
+	/*
+	 * Not all universes track CurrentHosts and MaxHosts; if there's no information,
+	 * simply increment Running or Idle by 1.
+	 */
+	if ((status == RUNNING || status == TRANSFERRING_OUTPUT) && !cur_hosts)
+	{
+		scheduler.JobsRunning += 1;
+	}
+	else if ((status == IDLE) && !max_hosts)
+	{
+		scheduler.JobsIdle += 1;
+	}
+	else
+	{
+		scheduler.JobsRunning += cur_hosts;
+		scheduler.JobsIdle += (max_hosts - cur_hosts);
+	}
+
+            // if job is not idle, then update statistics for running jobs
+        if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
+            scheduler.stats.JobsRunning += 1;
+            OTHER.JobsRunning += 1;
+
+            int job_image_size = 0;
+            job.LookupInteger("ImageSize_RAW", job_image_size);
+            scheduler.stats.JobsRunningSizes += (int64_t)job_image_size * 1024;
+            OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
+
+            int job_start_date = 0;
+            int job_running_time = 0;
+            if (job.LookupInteger(ATTR_JOB_START_DATE, job_start_date))
+                job_running_time = (now - job_start_date);
+            scheduler.stats.JobsRunningRuntimes += job_running_time;
+            OTHER.JobsRunningRuntimes += job_running_time;
+        }
+    } else if (status == HELD) {
+        scheduler.JobsHeld++;
+    } else if (status == REMOVED) {
+        scheduler.JobsRemoved++;
+    }
+    #undef OTHER
+    return 0;
+}
+
 int
 count_a_job( ClassAd *job )
 {
@@ -2322,14 +2383,7 @@ count_a_job( ClassAd *job )
 	// increment our count of the number of job ads in the queue
 	scheduler.JobsTotalAds++;
 
-	// build a list of other stats pools that match this job
-	//
 	time_t now = time(NULL);
-	ScheddOtherStats * other_stats = NULL;
-	if (scheduler.OtherPoolStats.AnyEnabled()) {
-		other_stats = scheduler.OtherPoolStats.Matches(*job,now);
-	}
-	#define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
 
 	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
 	// this function makes its own copies of the memory passed in 
@@ -2376,6 +2430,7 @@ count_a_job( ClassAd *job )
 
 		// bailout now, since all the crud below is only for jobs
 		// which the schedd needs to service
+		count_a_job_global_stats(*job, max_hosts, cur_hosts, status, now);
 		return 0;
 	} 
 
@@ -2430,14 +2485,15 @@ count_a_job( ClassAd *job )
 			// If we do not need to do matchmaking on this job (i.e.
 			// service this globus universe job), than we can bailout now.
 		if (!want_service) {
+			count_a_job_global_stats(*job, max_hosts, cur_hosts, status, now);
 			return 0;
 		}
 		status = real_status;	// set status back for below logic...
 	}
 
+	count_a_job_global_stats(*job, max_hosts, cur_hosts, status, now);
+
 	if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
-		scheduler.JobsRunning += cur_hosts;
-		scheduler.JobsIdle += (max_hosts - cur_hosts);
 
 			// Update Owner array PrioSet iff knob USE_GLOBAL_JOB_PRIOS is true
 			// and iff job is looking for more matches (max-hosts - cur_hosts)
@@ -2472,31 +2528,10 @@ count_a_job( ClassAd *job )
 			// Don't update scheduler.Owners[OwnerNum].JobsRunning here.
 			// We do it in Scheduler::count_jobs().
 
-			// if job is not idle, then update statistics for running jobs
-		if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
-			scheduler.stats.JobsRunning += 1;
-			OTHER.JobsRunning += 1;
-
-			int job_image_size = 0;
-			job->LookupInteger("ImageSize_RAW", job_image_size);
-			scheduler.stats.JobsRunningSizes += (int64_t)job_image_size * 1024;
-			OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
-
-			int job_start_date = 0;
-			int job_running_time = 0;
-			if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
-				job_running_time = (now - job_start_date);
-			scheduler.stats.JobsRunningRuntimes += job_running_time;
-			OTHER.JobsRunningRuntimes += job_running_time;
-		}
 	} else if (status == HELD) {
-		scheduler.JobsHeld++;
 		scheduler.Owners[OwnerNum].JobsHeld++;
-	} else if (status == REMOVED) {
-		scheduler.JobsRemoved++;
 	}
 
-	#undef OTHER
 	return 0;
 }
 
