@@ -5674,7 +5674,18 @@ SetGridParams()
 		InsertJobExpr( buffer.Value() );
 		set_condor_param_used( key );
 
-		if( ! paramNames.contains_anycase( paramName ) ) {
+		bool found = false;
+		paramNames.rewind();
+		char * existingPN = NULL;
+		while( (existingPN = paramNames.next()) != NULL ) {
+			std::string converted = existingPN;
+			std::replace( converted.begin(), converted.end(), '.', '_' );
+			if( strcasecmp( converted.c_str(), paramName ) == 0 ) {
+				found = true;
+				break;
+			}
+		}
+		if( ! found ) {
 			paramNames.append( paramName );
 		}
 	}

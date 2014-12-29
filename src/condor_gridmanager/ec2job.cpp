@@ -36,6 +36,8 @@
 #include "ec2job.h"
 #include "condor_config.h"
 
+#include <algorithm>
+
 using namespace std;
 
 #define GM_INIT							0
@@ -228,9 +230,11 @@ EC2Job::EC2Job( ClassAd *classad ) :
 			const char * paramName = NULL;
 			paramNameList.rewind();
 			while( (paramName = paramNameList.next()) ) {
-				std::string jobAdName;
 				std::string paramValue;
-				formatstr( jobAdName, "%s_%s", ATTR_EC2_PARAM_PREFIX, paramName );
+				std::string jobAdName = paramName;
+				std::replace( jobAdName.begin(), jobAdName.end(), '.', '_' );
+				formatstr( jobAdName, "%s_%s", ATTR_EC2_PARAM_PREFIX, jobAdName.c_str() );
+
 				jobAd->LookupString( jobAdName.c_str(), paramValue );
 				if( paramValue.empty() ) {
 					dprintf( D_ALWAYS, "EC2 parameter '%s' had no corresponding value, ignoring.\n", paramName );
