@@ -54,12 +54,8 @@ foreach $name (@logfiles) {
 	}
 }
 
-# Get rid of the rescue DAGs we should have at the end.
-foreach $name (@rescuedags) {
-	if (-e $name) {
-		runcmd("rm -f $name");
-	}
-}
+# Get rid of all related rescue DAGs.
+runcmd("rm -f job_dagman_rescue_recov*rescue???");
 
 $abnormal = sub 
 {
