@@ -33,6 +33,7 @@
 #include "daemon.h"
 #include "condor_distribution.h"
 #include "condor_attributes.h"
+#include "match_prefix.h"
 // for std::sort
 #include <algorithm> 
 
@@ -239,31 +240,13 @@ struct LineRecLT {
     }
 };
 
-
-bool IsArg(const char * parg, const char * pval, int must_match_length = -1) {
-   if (*parg != '-') return false;
-   ++parg;
-   if (*parg == '-') ++parg; // allow -- as well as - for an arg prefix.
-   if (*parg != *pval) return false;
-
-   // do argument matching based on a minimum prefix. when we run out
-   // of characters in parg we must be at a \0 or no match and we
-   // must have matched at least must_match_length characters or no match
-   int match_length = 0;
-   while (*parg == *pval) {
-      ++match_length;
-      ++parg; ++pval;
-      if (!*pval) break;
-   }
-   if (*parg) return false;
-   if (must_match_length < 0) return (*pval == 0);
-   return match_length >= must_match_length;
-}
+// map local IsArg functions to the condor_utils is_dash_arg functions
+#define IsArg is_dash_arg_prefix
+#define IsArgColon is_dash_arg_colon_prefix
 
 int
 main(int argc, char* argv[])
 {
-
   bool LongFlag=false;
   bool HierFlag=true;
   int ResetUsage=0;
@@ -278,6 +261,7 @@ main(int argc, char* argv[])
   int UserPrioFile=0;
   std::string pool;
   bool GroupRollup = false;
+  const char * pcolon = NULL; // used to parse -arg:opt arguments
 
   myDistro->Init( argc, argv );
   config();
@@ -325,6 +309,14 @@ main(int argc, char* argv[])
     }
     else if (IsArg(argv[i],"long",1)) {
       LongFlag=true;
+    }
+    else if (IsArgColon(argv[i],"debug",&pcolon,1)) {
+      if (pcolon && pcolon[1]) {
+        set_debug_flags( ++pcolon, 0 );
+        // for now we also need to do this because dprintf_set_tool_debug reset global debug flags based on it
+        param_insert("TOOL_DEBUG", pcolon);
+      }
+      dprintf_set_tool_debug("TOOL", 0);
     }
     else if (IsArg(argv[i],"hierarchical",2) || IsArg(argv[i],"heir")) {
       HierFlag=true;
@@ -1473,8 +1465,9 @@ static void usage(char* name) {
   fprintf( stderr, "usage: %s [options] [edit-option | display-options]\n"
      "\twhere [options] are\n"
      "\t\t-pool <host>\t\tUse host as the central manager to query\n"
-	 "\t\t-inputfile <file>\tDisplay priorities from <file>\n"
+     "\t\t-inputfile <file>\tDisplay priorities from <file>\n"
      "\t\t-help\t\t\tThis Screen\n"
+     "\t\t-debug[:<opts>]\t\tSend debug output to stderr, <opts> overrides TOOL_DEBUG\n"
      "\twhere [edit-option] is one of\n"
      "\t\t-resetusage <user>\tReset usage data for <user>\n"
      "\t\t-resetall\t\tReset all useage data\n"

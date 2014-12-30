@@ -32,7 +32,6 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-
 my $ClusterId = 0;
 my $expect_return = 0;
 
@@ -186,15 +185,13 @@ sub RunNTimes
 	my $count = 0;
 	my $stop = 0;
 	my @cmdout = ();
-	my @date = ();
+	my $date;
 	$stop = $goal;
 
 	while($count < $stop) {
 		@cmdout = ();
-		@date = ();
-		@date = `date`;
-		chomp $date[0];
-		print "$date[0] $cmd $count\n";
+		$date = scalar(localtime());
+		print "$date $cmd $count\n";
 		@cmdout = `$cmd`;
 
 		if(defined $wantoutput) {

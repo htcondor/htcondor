@@ -335,6 +335,7 @@ private:
 	Sock*		c_alive_inprogress_sock;	// NULL if no alive in progress
 	int			c_lease_duration; // Duration of our claim/job lease
 	int			c_aliveint;		// Alive interval for this claim
+	bool		c_starter_handles_alives;  // if true, don't send alives when starter running
 
 	char*		c_cod_keyword;	// COD keyword for this claim, if any
 	int			c_has_job_ad;	// Do we have a job ad for the COD claim?

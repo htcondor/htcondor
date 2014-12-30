@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2014, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -416,6 +416,7 @@ const char* EC2AmiID = "ec2_ami_id";
 const char* EC2UserData = "ec2_user_data";
 const char* EC2UserDataFile = "ec2_user_data_file";
 const char* EC2SecurityGroups = "ec2_security_groups";
+const char* EC2SecurityIDs = "ec2_security_ids";
 const char* EC2KeyPair = "ec2_keypair";
 const char* EC2KeyPairFile = "ec2_keypair_file";
 const char* EC2InstanceType = "ec2_instance_type";
@@ -426,6 +427,9 @@ const char* EC2VpcSubnet = "ec2_vpc_subnet";
 const char* EC2VpcIP = "ec2_vpc_ip";
 const char* EC2TagNames = "ec2_tag_names";
 const char* EC2SpotPrice = "ec2_spot_price";
+const char* EC2BlockDeviceMapping = "ec2_block_device_mapping";
+const char* EC2ParamNames = "ec2_parameter_names";
+const char* EC2ParamPrefix = "ec2_parameter_";
 
 const char* BoincAuthenticatorFile = "boinc_authenticator_file";
 
@@ -1402,7 +1406,7 @@ main( int argc, char *argv[] )
 					break;
 
 				default:
-					EXCEPT("PROGRAMMER ERROR: Unknown sandbox transfer method\n");
+					EXCEPT("PROGRAMMER ERROR: Unknown sandbox transfer method");
 					break;
 			}
 		}
@@ -1467,7 +1471,7 @@ main( int argc, char *argv[] )
 			sshargs[i++] = PoolName;
 		}
 		if (ScheddName) {
-			sshargs[i++] = "-pool";
+			sshargs[i++] = "-name";
 			sshargs[i++] = ScheddName;
 		}
 		sprintf(jobid,"%d.0",ClusterId);
@@ -5514,14 +5518,21 @@ SetGridParams()
 	      InsertJobExpr( buffer.Value() );
 	    }
 	}
-	
-	// EC2GroupName is not a necessary parameter
+
+	// Optional.
 	if( (tmp = condor_param( EC2SecurityGroups, ATTR_EC2_SECURITY_GROUPS )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_SECURITY_GROUPS, tmp );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
 	}
-	
+
+	// Optional.
+	if( (tmp = condor_param( EC2SecurityIDs, ATTR_EC2_SECURITY_IDS )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_SECURITY_IDS, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
 	if ( (tmp = condor_param( EC2AmiID, ATTR_EC2_AMI_ID )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_AMI_ID, tmp );
 		InsertJobExpr( buffer.Value() );
@@ -5595,14 +5606,22 @@ SetGridParams()
         free( tmp );
         InsertJobExpr( buffer.Value() );
     }
-	
+
 	// EC2SpotPrice is not a necessary parameter
 	if( (tmp = condor_param( EC2SpotPrice, ATTR_EC2_SPOT_PRICE )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_SPOT_PRICE, tmp);
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
-	}	
-	
+	}
+
+	// EC2BlockDeviceMapping is not a necessary parameter
+	if( (tmp = condor_param( EC2BlockDeviceMapping, ATTR_EC2_BLOCK_DEVICE_MAPPING )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_BLOCK_DEVICE_MAPPING, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+		bKeyPairPresent=true;
+	}
+
 	// EC2UserData is not a necessary parameter
 	if( (tmp = condor_param( EC2UserData, ATTR_EC2_USER_DATA )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_USER_DATA, tmp);
@@ -5626,6 +5645,59 @@ SetGridParams()
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
 	}
+
+	//
+	// Handle arbitrary EC2 RunInstances parameters.
+	//
+	StringList paramNames;
+	if( (tmp = condor_param( EC2ParamNames, ATTR_EC2_PARAM_NAMES )) ) {
+		paramNames.initializeFromString( tmp );
+		free( tmp );
+	}
+
+	unsigned prefixLength = strlen( EC2ParamPrefix );
+	HASHITER smsIter = hash_iter_begin( SubmitMacroSet );
+	for( ; ! hash_iter_done( smsIter ); hash_iter_next( smsIter ) ) {
+		const char * key = hash_iter_key( smsIter );
+
+		if( strcasecmp( key, EC2ParamNames ) == 0 ) {
+			continue;
+		}
+
+		if( strncasecmp( key, EC2ParamPrefix, prefixLength ) != 0 ) {
+			continue;
+		}
+
+		const char * paramName = &key[prefixLength];
+		const char * paramValue = hash_iter_value( smsIter );
+		buffer.formatstr( "%s_%s = \"%s\"", ATTR_EC2_PARAM_PREFIX, paramName, paramValue );
+		InsertJobExpr( buffer.Value() );
+		set_condor_param_used( key );
+
+		bool found = false;
+		paramNames.rewind();
+		char * existingPN = NULL;
+		while( (existingPN = paramNames.next()) != NULL ) {
+			std::string converted = existingPN;
+			std::replace( converted.begin(), converted.end(), '.', '_' );
+			if( strcasecmp( converted.c_str(), paramName ) == 0 ) {
+				found = true;
+				break;
+			}
+		}
+		if( ! found ) {
+			paramNames.append( paramName );
+		}
+	}
+	hash_iter_delete( & smsIter );
+
+	if( ! paramNames.isEmpty() ) {
+		char * paramNamesStr = paramNames.print_to_delimed_string( ", " );
+		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_PARAM_NAMES, paramNamesStr );
+		free( paramNamesStr );
+		InsertJobExpr( buffer.Value() );
+	}
+
 
 		//
 		// Handle EC2 tags - don't require user to specify the list of tag names
@@ -6907,7 +6979,12 @@ check_requirements( char const *orig, MyString &answer )
 	req_ad.GetExprReferences(answer.Value(),job_refs,machine_refs);
 
 	checks_arch = machine_refs.contains_anycase( ATTR_ARCH );
-	checks_opsys = machine_refs.contains_anycase( ATTR_OPSYS );
+	checks_opsys = machine_refs.contains_anycase( ATTR_OPSYS ) ||
+		machine_refs.contains_anycase( ATTR_OPSYS_AND_VER ) ||
+		machine_refs.contains_anycase( ATTR_OPSYS_LONG_NAME ) ||
+		machine_refs.contains_anycase( ATTR_OPSYS_SHORT_NAME ) ||
+		machine_refs.contains_anycase( ATTR_OPSYS_NAME ) ||
+		machine_refs.contains_anycase( ATTR_OPSYS_LEGACY );
 	checks_disk =  machine_refs.contains_anycase( ATTR_DISK );
 	checks_cpus =   machine_refs.contains_anycase( ATTR_CPUS );
 	checks_tdp =  machine_refs.contains_anycase( ATTR_HAS_TDP );
@@ -6965,7 +7042,7 @@ check_requirements( char const *orig, MyString &answer )
 		if( !checks_vm ) {
 			answer += "&& (TARGET.";
 			answer += ATTR_HAS_VM;
-			answer += ")";
+			answer += " =?= true)";
 		}
 		// add vm_type to requirements
 		bool checks_vmtype = false;
@@ -7357,6 +7434,10 @@ check_open( const char *name, int flags )
 
 	strPathname = full_path(name);
 
+	// is the last character a path separator?
+	int namelen = strlen(name);
+	bool trailing_slash = namelen > 0 && IS_ANY_DIR_DELIM_CHAR(name[namelen-1]);
+
 		/* This is only for MPI.  We test for our string that
 		   we replaced "$(NODE)" with, and replace it with "0".  Thus, 
 		   we will really only try and access the 0th file only */
@@ -7380,8 +7461,8 @@ check_open( const char *name, int flags )
 
 	if ( !DisableFileChecks ) {
 		if( (fd=safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
-			// note: Windows does not set errno to EISDIR for directories, instead you get back EACCESS
-			if( ( errno == EISDIR || errno == EACCES ) &&
+			// note: Windows does not set errno to EISDIR for directories, instead you get back EACCESS (or ENOENT?)
+			if( (trailing_slash || errno == EISDIR || errno == EACCES) &&
 	                   check_directory( strPathname.Value(), flags, errno ) ) {
 					// Entries in the transfer output list may be
 					// files or directories; no way to tell in

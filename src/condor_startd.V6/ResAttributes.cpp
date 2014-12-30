@@ -622,7 +622,7 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 	FILE * fp = my_popen(args, "r", FALSE);
 	if ( ! fp) {
 		//PRAGMA_REMIND("tj: should failure to run a res inventory script really bring down the startd?")
-		EXCEPT("Failed to execute local resource '%s' inventory script \"%s\"\n", tag, script_cmd);
+		EXCEPT("Failed to execute local resource '%s' inventory script \"%s\"", tag, script_cmd);
 	} else {
 		int error = 0;
 		bool is_eof = false;
@@ -768,7 +768,7 @@ void MachAttributes::init_machine_resources() {
 			continue;
 		}
 		if ( ! disallowed.isEmpty() && disallowed.contains_anycase(tag)) {
-			EXCEPT("fatal error - MACHINE_RESOURCE_%s is invalid, '%s' is a reserved resource name\n", tag, tag);
+			EXCEPT("fatal error - MACHINE_RESOURCE_%s is invalid, '%s' is a reserved resource name", tag, tag);
 			continue;
 		}
 		dprintf(D_ALWAYS, "Local machine resource %s = %g\n", tag, it->second);
@@ -1208,7 +1208,7 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable re
 			for (int ii = 0; ii < cAssigned; ++ii) {
 				const char * id = map->AllocateDevId(j->first, slot_id, slot_sub_id);
 				if ( ! id) {
-					EXCEPT("Failed to bind local resource '%s' \n", j->first.c_str());
+					EXCEPT("Failed to bind local resource '%s'", j->first.c_str());
 				} else {
 					c_slotres_ids_map[j->first].push_back(id);
 				}

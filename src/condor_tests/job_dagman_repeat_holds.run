@@ -85,8 +85,7 @@ $success = sub
 
 $failure = sub
 {
-	CondorTest::debug("executed unsuccessfully\n",1);
-	die "failure unexpected\n";
+	die "Error: DAG is not expected to fail!\n";
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success );

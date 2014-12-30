@@ -36,7 +36,6 @@ using std::string;
 
 extern char		*DebugLock;
 extern const char* const _condor_DebugCategoryNames[D_CATEGORY_COUNT];
-extern int		DebugUseTimestamps;
 extern int		DebugContinueOnOpenFailure;
 extern int		log_keep_open;
 extern char*	DebugTimeFormat;
@@ -137,9 +136,9 @@ dprintf_config_tool(const char* subsys, int /*flags*/)
 	If LOGS_USE_TIMESTAMP is enabled, we will print out Unix timestamps
 	instead of the standard date format in all the log messages
 	*/
-	DebugUseTimestamps = param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );//dprintf_param_funcs->param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
-	if (DebugUseTimestamps) HeaderOpts |= D_TIMESTAMP;
-	char * time_format = param( "DEBUG_TIME_FORMAT" );//dprintf_param_funcs->param( "DEBUG_TIME_FORMAT" );
+	int UseTimestamps = param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
+	if (UseTimestamps) HeaderOpts |= D_TIMESTAMP;
+	char * time_format = param( "DEBUG_TIME_FORMAT" );
 	if (time_format) {
 		if(DebugTimeFormat)
 			free(DebugTimeFormat);
@@ -354,8 +353,8 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 	If LOGS_USE_TIMESTAMP is enabled, we will print out Unix timestamps
 	instead of the standard date format in all the log messages
 	*/
-	DebugUseTimestamps = param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );//dprintf_param_funcs->param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
-	if (DebugUseTimestamps) HeaderOpts |= D_TIMESTAMP;
+	int UseTimestamps = param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );//dprintf_param_funcs->param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
+	if (UseTimestamps) HeaderOpts |= D_TIMESTAMP;
 	char * time_format = param( "DEBUG_TIME_FORMAT" );//dprintf_param_funcs->param( "DEBUG_TIME_FORMAT" );
 	if (time_format) {
 		if(DebugTimeFormat)
@@ -406,7 +405,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 				// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
 				char *lsubsys = param("SUBSYSTEM");//dprintf_param_funcs->param("SUBSYSTEM");
 				if ( ! DebugLogDir || ! lsubsys) {
-					EXCEPT("Unable to find LOG or SUBSYSTEM.\n");
+					EXCEPT("Unable to find LOG or SUBSYSTEM.");
 				}
 
 				formatstr(logPath, "%s%c%sLog", DebugLogDir, DIR_DELIM_CHAR, lsubsys);

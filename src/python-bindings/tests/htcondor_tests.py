@@ -167,6 +167,39 @@ class WithDaemons(unittest.TestCase):
 
 class TestPythonBindings(WithDaemons):
 
+    def testRemoteParam(self):
+        os.environ["_condor_FOO"] = "BAR"
+        self.launch_daemons(["COLLECTOR"])
+        coll = htcondor.Collector()
+        coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
+        rparam = htcondor.RemoteParam(coll_ad)
+        self.assertTrue("FOO" in rparam)
+        self.assertEquals(rparam["FOO"], "BAR")
+        self.assertTrue(len(rparam.keys()) > 100)
+
+    def testRemoteSetParam(self):
+        os.environ["_condor_SETTABLE_ATTRS_READ"] = "FOO"
+        os.environ["_condor_ENABLE_RUNTIME_CONFIG"] = "TRUE"
+        self.launch_daemons(["COLLECTOR"])
+        del os.environ["_condor_SETTABLE_ATTRS_READ"]
+        #htcondor.param["TOOL_DEBUG"] = "D_NETWORK|D_SECURITY"
+        htcondor.enable_debug()
+        coll = htcondor.Collector()
+        coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
+        rparam = htcondor.RemoteParam(coll_ad)
+        self.assertTrue("FOO" not in rparam)
+        rparam["FOO"] = "BAR"
+        htcondor.send_command(coll_ad, htcondor.DaemonCommands.Reconfig)
+        rparam2 = htcondor.RemoteParam(coll_ad)
+        self.assertTrue(rparam2.get("FOO"))
+        self.assertTrue("FOO" in rparam2)
+        self.assertEquals(rparam2["FOO"], "BAR")
+        del rparam["FOO"]
+        rparam2.refresh()
+        htcondor.send_command(coll_ad, htcondor.DaemonCommands.Reconfig)
+        self.assertTrue("FOO" not in rparam2)
+        self.assertTrue(("ENABLE_CHIRP_DELAYED", "true") in rparam2.items())
+
     def testDaemon(self):
         self.launch_daemons(["COLLECTOR"])
 
@@ -292,7 +325,7 @@ class TestPythonBindings(WithDaemons):
         os.environ["_condor_SCHEDD_DEBUG"] = "D_FULLDEBUG|D_NETWORK"
         self.launch_daemons(["SCHEDD"])
         schedd = htcondor.Schedd()
-        submit_ad = classad.parse(open("tests/submit_large.ad"))
+        submit_ad = classad.parse(open("tests/submit.ad"))
         ads = []
         cluster = schedd.submit(submit_ad, 300, False, ads)
         ads = schedd.xquery("ClusterId == %d" % cluster)
@@ -346,7 +379,7 @@ class TestPythonBindings(WithDaemons):
         schedd = htcondor.Schedd()
         ad = classad.parse(open("tests/submit.ad"))
         result_ads = []
-        cluster = schedd.submit(submit_ad, 1, True, result_ads)
+        cluster = schedd.submit(ad, 1, True, result_ads)
         #print result_ads[0]
         schedd.spool(result_ads)
         for i in range(60):

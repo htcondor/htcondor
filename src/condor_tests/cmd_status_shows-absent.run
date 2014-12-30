@@ -73,7 +73,10 @@ addAd( \%presentAds, %adTemplate,
 #
 my $verifyFH;
 my %verifiedAdNames;
-my $verifyCommand = qq/condor_status -f '%s\n' Name -const '(TRUE || Absent)' /;
+
+my $verifyCommandA = 'condor_status -f "%s\n" Name -const ';
+my $verifyCommandB = '"(TRUE || Absent)"';
+my $verifyCommand = $verifyCommandA . $verifyCommandB;
 my $childPID = open( $verifyFH, '-|', $verifyCommand );
 if( $childPID == 0 ) {
     failTestWithReason( "Unable to fetch advertised ads.\n" );
@@ -95,7 +98,7 @@ if( ! ( subset( \%presentAds, \%verifiedAdNames ) && subset( \%presentAds, \%ver
 #
 my $absentFH;
 my %absentAdNames;
-my $absentCommand = qq/condor_status -absent -f "%s\n" Name/;
+my $absentCommand = 'condor_status -absent -f "%s\n" Name';
 $childPID = open( $absentFH, '-|', $absentCommand );
 if( $childPID == 0 ) {
     failTestWithReason( "Unable to fetch absent ads.\n" );

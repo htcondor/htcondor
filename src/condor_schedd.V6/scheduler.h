@@ -255,15 +255,17 @@ typedef enum {
 class ContactStartdArgs
 {
 public:
-	ContactStartdArgs( char const* the_claim_id, char* sinful, bool is_dedicated );
+	ContactStartdArgs( char const* the_claim_id, char const *extra_claims, char* sinful, bool is_dedicated );
 	~ContactStartdArgs();
 
 	char*		claimId( void )		{ return csa_claim_id; };
+	char*		extraClaims( void )	{ return csa_extra_claims; };
 	char*		sinful( void )		{ return csa_sinful; }
 	bool		isDedicated()		{ return csa_is_dedicated; }
 
 private:
 	char *csa_claim_id;
+	char *csa_extra_claims;
 	char *csa_sinful;
 	bool csa_is_dedicated;
 };
@@ -345,7 +347,7 @@ class Scheduler : public Service
     friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
-	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify, bool log );
+	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool log );
 	int             actOnJobMyselfHandler( ServiceData* data );
 	int				updateGSICred(int, Stream* s);
 	void            setNextJobDelay( ClassAd *job_ad, ClassAd *machine_ad );
@@ -675,6 +677,7 @@ private:
 	int			history_helper_launcher(const HistoryHelperState &state);
 	int			history_helper_reaper(int, int);
 	int			command_query_job_ads(int, Stream* stream);
+	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	void   			check_claim_request_timeouts( void );
 	int				insert_owner(char const*);
 	void			child_exit(int, int);
@@ -846,7 +849,6 @@ extern bool abortJobsByConstraint( const char *constraint, const char *reason, b
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
 					 int reason_code=0, int reason_subcode=0,
 					 bool use_transaction = false, 
-					 bool notify_shadow = true,  
 					 bool email_user = false, bool email_admin = false,
 					 bool system_hold = true,
 					 bool write_to_user_log = true);

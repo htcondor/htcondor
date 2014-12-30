@@ -30,10 +30,51 @@
 #include "openssl/rand.h"
 #include "condor_netdb.h"
 
+#if defined(DLOPEN_SECURITY_LIBS)
+#include <dlfcn.h>
+#include "condor_auth_kerberos.h"
+#endif
+
+// Symbols from libssl
+static long (*SSL_CTX_ctrl_ptr)(SSL_CTX *, int, long, void *) = NULL;
+static void (*SSL_CTX_free_ptr)(SSL_CTX *) = NULL;
+static int (*SSL_CTX_load_verify_locations_ptr)(SSL_CTX *, const char *, const char *) = NULL;
+#if OPENSSL_VERSION_NUMBER < 0x10000000L
+static SSL_CTX *(*SSL_CTX_new_ptr)(SSL_METHOD *) = NULL;
+#else
+static SSL_CTX *(*SSL_CTX_new_ptr)(const SSL_METHOD *) = NULL;
+#endif
+static int (*SSL_CTX_set_cipher_list_ptr)(SSL_CTX *, const char *) = NULL;
+static void (*SSL_CTX_set_verify_ptr)(SSL_CTX *, int, int (*)(int, X509_STORE_CTX *)) = NULL;
+static void (*SSL_CTX_set_verify_depth_ptr)(SSL_CTX *, int) = NULL;
+static int (*SSL_CTX_use_PrivateKey_file_ptr)(SSL_CTX *, const char *, int) = NULL;
+static int (*SSL_CTX_use_certificate_chain_file_ptr)(SSL_CTX *, const char *) = NULL;
+static int (*SSL_accept_ptr)(SSL *) = NULL;
+static int (*SSL_connect_ptr)(SSL *) = NULL;
+static void (*SSL_free_ptr)(SSL *) = NULL;
+static int (*SSL_get_error_ptr)(const SSL *, int) = NULL;
+static X509 *(*SSL_get_peer_certificate_ptr)(const SSL *) = NULL;
+static long (*SSL_get_verify_result_ptr)(const SSL *) = NULL;
+static int (*SSL_library_init_ptr)() = NULL;
+static void (*SSL_load_error_strings_ptr)() = NULL;
+static SSL *(*SSL_new_ptr)(SSL_CTX *) = NULL;
+static int (*SSL_read_ptr)(SSL *, void *, int) = NULL;
+static void (*SSL_set_bio_ptr)(SSL *, BIO *, BIO *) = NULL;
+static int (*SSL_write_ptr)(SSL *, const void *, int) = NULL;
+#if OPENSSL_VERSION_NUMBER < 0x10000000L
+static SSL_METHOD *(*SSLv23_method_ptr)() = NULL;
+#else
+static const SSL_METHOD *(*SSLv23_method_ptr)() = NULL;
+#endif
+
+bool Condor_Auth_SSL::m_initTried = false;
+bool Condor_Auth_SSL::m_initSuccess = false;
+
 Condor_Auth_SSL :: Condor_Auth_SSL(ReliSock * sock, int /* remote */)
     : Condor_Auth_Base    ( sock, CAUTH_SSL )
 {
 	m_crypto = NULL;
+	ASSERT( Initialize() == true );
 }
 
 Condor_Auth_SSL :: ~Condor_Auth_SSL()
@@ -42,7 +83,94 @@ Condor_Auth_SSL :: ~Condor_Auth_SSL()
 	if(m_crypto) delete(m_crypto);
 }
 
-int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /* errstack */)
+bool Condor_Auth_SSL::Initialize()
+{
+	if ( m_initTried ) {
+		return m_initSuccess;
+	}
+
+#if defined(DLOPEN_SECURITY_LIBS)
+	void *dl_hdl;
+
+	dlerror();
+
+	if ( Condor_Auth_Kerberos::Initialize() == false ||
+		 (dl_hdl = dlopen(LIBSSL_SO, RTLD_LAZY)) == NULL ||
+		 !(SSL_CTX_ctrl_ptr = (long (*)(SSL_CTX *, int, long, void *))dlsym(dl_hdl, "SSL_CTX_ctrl")) ||
+		 !(SSL_CTX_free_ptr = (void (*)(SSL_CTX *))dlsym(dl_hdl, "SSL_CTX_free")) ||
+		 !(SSL_CTX_load_verify_locations_ptr = (int (*)(SSL_CTX *, const char *, const char *))dlsym(dl_hdl, "SSL_CTX_load_verify_locations")) ||
+#if OPENSSL_VERSION_NUMBER < 0x10000000L
+		 !(SSL_CTX_new_ptr = (SSL_CTX *(*)(SSL_METHOD *))dlsym(dl_hdl, "SSL_CTX_new")) ||
+#else
+		 !(SSL_CTX_new_ptr = (SSL_CTX *(*)(const SSL_METHOD *))dlsym(dl_hdl, "SSL_CTX_new")) ||
+#endif
+		 !(SSL_CTX_set_cipher_list_ptr = (int (*)(SSL_CTX *, const char *))dlsym(dl_hdl, "SSL_CTX_set_cipher_list")) ||
+		 !(SSL_CTX_set_verify_ptr = (void (*)(SSL_CTX *, int, int (*)(int, X509_STORE_CTX *)))dlsym(dl_hdl, "SSL_CTX_set_verify")) ||
+		 !(SSL_CTX_set_verify_depth_ptr = (void (*)(SSL_CTX *, int))dlsym(dl_hdl, "SSL_CTX_set_verify_depth")) ||
+		 !(SSL_CTX_use_PrivateKey_file_ptr = (int (*)(SSL_CTX *, const char *, int))dlsym(dl_hdl, "SSL_CTX_use_PrivateKey_file")) ||
+		 !(SSL_CTX_use_certificate_chain_file_ptr = (int (*)(SSL_CTX *, const char *))dlsym(dl_hdl, "SSL_CTX_use_certificate_chain_file")) ||
+		 !(SSL_accept_ptr = (int (*)(SSL *))dlsym(dl_hdl, "SSL_accept")) ||
+		 !(SSL_connect_ptr = (int (*)(SSL *))dlsym(dl_hdl, "SSL_connect")) ||
+		 !(SSL_free_ptr = (void (*)(SSL *))dlsym(dl_hdl, "SSL_free")) ||
+		 !(SSL_get_error_ptr = (int (*)(const SSL *, int))dlsym(dl_hdl, "SSL_get_error")) ||
+		 !(SSL_get_peer_certificate_ptr = (X509 *(*)(const SSL *))dlsym(dl_hdl, "SSL_get_peer_certificate")) ||
+		 !(SSL_get_verify_result_ptr = (long (*)(const SSL *))dlsym(dl_hdl, "SSL_get_verify_result")) ||
+		 !(SSL_library_init_ptr = (int (*)())dlsym(dl_hdl, "SSL_library_init")) ||
+		 !(SSL_load_error_strings_ptr = (void (*)())dlsym(dl_hdl, "SSL_load_error_strings")) ||
+		 !(SSL_new_ptr = (SSL *(*)(SSL_CTX *))dlsym(dl_hdl, "SSL_new")) ||
+		 !(SSL_read_ptr = (int (*)(SSL *, void *, int))dlsym(dl_hdl, "SSL_read")) ||
+		 !(SSL_set_bio_ptr = (void (*)(SSL *, BIO *, BIO *))dlsym(dl_hdl, "SSL_set_bio")) ||
+		 !(SSL_write_ptr = (int (*)(SSL *, const void *, int))dlsym(dl_hdl, "SSL_write")) ||
+#if OPENSSL_VERSION_NUMBER < 0x10000000L
+		 !(SSLv23_method_ptr = (SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
+#else
+		 !(SSLv23_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
+#endif
+		 ) {
+
+		// Error in the dlopen/sym calls, return failure.
+		// If dlerror() returns NULL, then assume the failure was in
+		// Condor_Auth_Kerberos::Initialize(), which already printed
+		// an error message.
+		 const char *err_msg = dlerror();
+		if ( err_msg ) {
+			dprintf( D_ALWAYS, "Failed to open OpenSSL library: %s\n", err_msg );
+		}
+		m_initSuccess = false;
+	} else {
+		m_initSuccess = true;
+	}
+#else
+	SSL_CTX_ctrl_ptr = SSL_CTX_ctrl;
+	SSL_CTX_free_ptr = SSL_CTX_free;
+	SSL_CTX_load_verify_locations_ptr = SSL_CTX_load_verify_locations;
+	SSL_CTX_new_ptr = SSL_CTX_new;
+	SSL_CTX_set_cipher_list_ptr = SSL_CTX_set_cipher_list;
+	SSL_CTX_set_verify_ptr = SSL_CTX_set_verify;
+	SSL_CTX_set_verify_depth_ptr = SSL_CTX_set_verify_depth;
+	SSL_CTX_use_PrivateKey_file_ptr = SSL_CTX_use_PrivateKey_file;
+	SSL_CTX_use_certificate_chain_file_ptr = SSL_CTX_use_certificate_chain_file;
+	SSL_accept_ptr = SSL_accept;
+	SSL_connect_ptr = SSL_connect;
+	SSL_free_ptr = SSL_free;
+	SSL_get_error_ptr = SSL_get_error;
+	SSL_get_peer_certificate_ptr = SSL_get_peer_certificate;
+	SSL_get_verify_result_ptr = SSL_get_verify_result;
+	SSL_library_init_ptr = SSL_library_init;
+	SSL_load_error_strings_ptr = SSL_load_error_strings;
+	SSL_new_ptr = SSL_new;
+	SSL_read_ptr = SSL_read;
+	SSL_set_bio_ptr = SSL_set_bio;
+	SSL_write_ptr = SSL_write;
+	SSLv23_method_ptr = SSLv23_method;
+	m_initSuccess = true;
+#endif
+
+	m_initTried = true;
+	return m_initSuccess;
+}
+
+int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /* errstack */, bool /*non_blocking*/)
 {
     long err;
     char *buffer;
@@ -92,7 +220,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
             ouch( "Error creating buffer for SSL authentication\n" );
             client_status = AUTH_SSL_ERROR;
         }
-        if( !(ssl = SSL_new( ctx )) ) {
+        if( !(ssl = (*SSL_new_ptr)( ctx )) ) {
             ouch( "Error creating SSL context\n" );
             client_status = AUTH_SSL_ERROR;
         }
@@ -103,7 +231,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
             return fail;
         }
 
-        SSL_set_bio( ssl, conn_in, conn_out );
+        (*SSL_set_bio_ptr)( ssl, conn_in, conn_out );
 
         done = 0;
         round_ctr = 0;
@@ -114,14 +242,14 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         while( !done ) {
             if( client_status != AUTH_SSL_HOLDING ) {
                 ouch("Trying to connect.\n");
-                ssl_status = SSL_connect( ssl );
+                ssl_status = (*SSL_connect_ptr)( ssl );
                 dprintf(D_SECURITY, "Tried to connect: %d\n", ssl_status);
             }
             if( ssl_status < 1 ) {
                 client_status = AUTH_SSL_QUITTING;
                 done = 1;
                 //ouch( "Error performing SSL authentication\n" );
-                err = SSL_get_error( ssl, ssl_status );
+                err = (*SSL_get_error_ptr)( ssl, ssl_status );
                 switch( err ) {
                 case SSL_ERROR_ZERO_RETURN:
                     ouch("SSL: connection has been closed.\n");
@@ -220,11 +348,11 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
                 break;
             }
             if( client_status != AUTH_SSL_HOLDING) {
-                ssl_status = SSL_read(ssl, 
+                ssl_status = (*SSL_read_ptr)(ssl, 
 									  session_key, AUTH_SSL_SESSION_KEY_LEN);
             }
             if(ssl_status < 1) {
-                err = SSL_get_error( ssl, ssl_status);
+                err = (*SSL_get_error_ptr)( ssl, ssl_status);
                 switch( err ) {
                 case SSL_ERROR_WANT_READ:
                 case SSL_ERROR_WANT_WRITE:
@@ -283,7 +411,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
             ouch( "Error creating buffer for SSL authentication\n" );
             server_status = AUTH_SSL_ERROR;
         }
-        if (!(ssl = SSL_new(ctx))) {
+        if (!(ssl = (*SSL_new_ptr)(ctx))) {
             ouch("Error creating SSL context\n");
             server_status = AUTH_SSL_ERROR;
         }
@@ -296,20 +424,20 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
         }
   
         // SSL_set_accept_state(ssl); // Do I really have to do this?
-        SSL_set_bio(ssl, conn_in, conn_out);
+        (*SSL_set_bio_ptr)(ssl, conn_in, conn_out);
 
         done = 0;
         round_ctr = 0;
         while( !done ) {
             if( server_status != AUTH_SSL_HOLDING ) {
                 ouch("Trying to accept.\n");
-                ssl_status = SSL_accept( ssl );
+                ssl_status = (*SSL_accept_ptr)( ssl );
                 dprintf(D_SECURITY, "Accept returned %d.\n", ssl_status);
             }
             if( ssl_status < 1 ) {
                 server_status = AUTH_SSL_QUITTING;
                 done = 1;
-                err = SSL_get_error( ssl, ssl_status );
+                err = (*SSL_get_error_ptr)( ssl, ssl_status );
                 switch( err ) {
                 case SSL_ERROR_ZERO_RETURN:
                     ouch("SSL: connection has been closed.\n");
@@ -412,11 +540,11 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
                 break;
             }
             if( server_status != AUTH_SSL_HOLDING ) {
-                ssl_status = SSL_write(ssl, 
+                ssl_status = (*SSL_write_ptr)(ssl, 
 									   session_key, AUTH_SSL_SESSION_KEY_LEN);
             }
             if(ssl_status < 1) {
-                err = SSL_get_error( ssl, ssl_status);
+                err = (*SSL_get_error_ptr)( ssl, ssl_status);
                 switch( err ) {
                 case SSL_ERROR_WANT_READ:
                 case SSL_ERROR_WANT_WRITE:
@@ -465,7 +593,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
     }
 
     char subjectname[1024];
-    X509 *peer = SSL_get_peer_certificate(ssl);
+    X509 *peer = (*SSL_get_peer_certificate_ptr)(ssl);
     X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
     setAuthenticatedName( subjectname );
     setRemoteUser( "ssl" );
@@ -473,8 +601,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /*
 
     dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", subjectname);
 		//free(key);
-	SSL_CTX_free(ctx);
-	SSL_free(ssl);
+	(*SSL_CTX_free_ptr)(ctx);
+	(*SSL_free_ptr)(ssl);
 		//BIO_free(conn_in); // Thanks, valgrind.
 		//BIO_free(conn_out);
 	free(buffer);
@@ -619,10 +747,10 @@ Condor_Auth_SSL::unwrap(char *   input,
 
 int Condor_Auth_SSL :: init_OpenSSL(void)
 {
-    if (!SSL_library_init()) {
+    if (!(*SSL_library_init_ptr)()) {
         return AUTH_SSL_ERROR;
     }
-    SSL_load_error_strings();
+    (*SSL_load_error_strings_ptr)();
     // seed_pnrg(); TODO: 
     return AUTH_SSL_A_OK;
 }
@@ -852,7 +980,7 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int /* role */ )
      * require a client certificate.
      * (Comment from book.  -Ian)
      */
-    cert = SSL_get_peer_certificate(ssl);
+    cert = (*SSL_get_peer_certificate_ptr)(ssl);
     if( cert == NULL ) {
         dprintf(D_SECURITY,"SSL_get_peer_certificate returned null.\n" );
         goto err_occured;
@@ -878,7 +1006,7 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int /* role */ )
     if(role == AUTH_SSL_ROLE_SERVER) {
         X509_free( cert );
         ouch("Server role: returning from post connection check.\n");
-        return SSL_get_verify_result( ssl );
+        return (*SSL_get_verify_result_ptr)( ssl );
     } // else ROLE_CLIENT: check dns (arg 2) against cn
     if ((extcount = X509_get_ext_count(cert)) > 0) {
         int i;
@@ -943,7 +1071,7 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int /* role */ )
     ouch("Returning SSL_get_verify_result.\n");
     
     X509_free(cert);
-    return SSL_get_verify_result(ssl);
+    return (*SSL_get_verify_result_ptr)(ssl);
  
 err_occured:
     if (cert)
@@ -991,35 +1119,37 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     if(keyfile)    dprintf( D_SECURITY, "KEYFILE:    '%s'\n", keyfile    );
     if(cipherlist) dprintf( D_SECURITY, "CIPHERLIST: '%s'\n", cipherlist );
         
-    ctx = SSL_CTX_new( SSLv23_method(  ) );
+    ctx = (*SSL_CTX_new_ptr)( (*SSLv23_method_ptr)(  ) );
 	if(!ctx) {
 		ouch( "Error creating new SSL context.\n");
 		goto setup_server_ctx_err;
 	}
 
 	// disable SSLv2.  it has vulnerabilities.
-	SSL_CTX_set_options( ctx, SSL_OP_NO_SSLv2 );
+	//SSL_CTX_set_options( ctx, SSL_OP_NO_SSLv2 );
+	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_NO_SSLv2, NULL );
 
-    if( SSL_CTX_load_verify_locations( ctx, cafile, cadir ) != 1 ) {
+    if( (*SSL_CTX_load_verify_locations_ptr)( ctx, cafile, cadir ) != 1 ) {
         ouch( "Error loading CA file and/or directory\n" );
 		goto setup_server_ctx_err;
     }
-    if( SSL_CTX_use_certificate_chain_file( ctx, certfile ) != 1 ) {
+    if( (*SSL_CTX_use_certificate_chain_file_ptr)( ctx, certfile ) != 1 ) {
         ouch( "Error loading certificate from file" );
         goto setup_server_ctx_err;
     }
     priv = set_root_priv();
-    if( SSL_CTX_use_PrivateKey_file( ctx, keyfile, SSL_FILETYPE_PEM) != 1 ) {
+    if( (*SSL_CTX_use_PrivateKey_file_ptr)( ctx, keyfile, SSL_FILETYPE_PEM) != 1 ) {
         set_priv(priv);
         ouch( "Error loading private key from file" );
         goto setup_server_ctx_err;
     }
     set_priv(priv);
 		// TODO where's this?
-    SSL_CTX_set_verify( ctx, SSL_VERIFY_PEER, verify_callback ); 
-    SSL_CTX_set_verify_depth( ctx, 4 ); // TODO arbitrary?
-    SSL_CTX_set_options( ctx, SSL_OP_ALL|SSL_OP_NO_SSLv2 );
-    if(SSL_CTX_set_cipher_list( ctx, cipherlist ) != 1 ) {
+    (*SSL_CTX_set_verify_ptr)( ctx, SSL_VERIFY_PEER, verify_callback ); 
+    (*SSL_CTX_set_verify_depth_ptr)( ctx, 4 ); // TODO arbitrary?
+    //SSL_CTX_set_options( ctx, SSL_OP_ALL|SSL_OP_NO_SSLv2 );
+    (*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_OPTIONS, SSL_OP_ALL|SSL_OP_NO_SSLv2, NULL );
+    if((*SSL_CTX_set_cipher_list_ptr)( ctx, cipherlist ) != 1 ) {
         ouch( "Error setting cipher list (no valid ciphers)\n" );
         goto setup_server_ctx_err;
     }
@@ -1035,7 +1165,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     if(certfile)        free(certfile);
     if(keyfile)         free(keyfile);
     if(cipherlist)      free(cipherlist);
-	if(ctx)		        SSL_CTX_free(ctx);
+	if(ctx)		        (*SSL_CTX_free_ptr)(ctx);
     return NULL;
 }
 

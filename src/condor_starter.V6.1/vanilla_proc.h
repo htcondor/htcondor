@@ -64,6 +64,8 @@ class VanillaProc : public OsProc
 public:
 	VanillaProc(ClassAd* jobAd);
 
+	virtual ~VanillaProc();
+
 		/** call OsProc::StartJob(), make a new ProcFamily with new
 			process as head. */
 	virtual int StartJob();
@@ -116,8 +118,10 @@ private:
 	// Configure OOM killer for this job
 	int m_memory_limit; // Memory limit, in MB.
 	int m_oom_fd; // The file descriptor which recieves events
-	int m_oom_efd; // The event FD to watch
+	int m_oom_efd; // The event FD "pipe" to watch
+	int m_oom_efd2; // The other end of m_oom_efd.
 	int setupOOMScore(int new_score);
+	void cleanupOOM();
 	int outOfMemoryEvent(int fd);
 	int setupOOMEvent(const std::string & cgroup_string);
 

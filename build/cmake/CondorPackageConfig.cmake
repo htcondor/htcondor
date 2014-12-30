@@ -155,12 +155,12 @@ if ( ${OS_NAME} STREQUAL "LINUX" )
 		if ( ${SYSTEM_NAME} MATCHES "rhel3" )
 			message (FATAL_ERROR "ERROR: RHEL3 is EOL you are trying to build new packages on a deprecated platform")
 		else()
-			set( CONDOR_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor" )
+			set( CONDOR_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor:/usr/lib/condor" )
 			set( EXTERNALS_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor:/usr/lib/condor" )
 			set( PYTHON_RPATH "$ORIGIN/../:/lib:/usr/lib:$ORIGIN/../condor" )
 		endif()
 	else()
-		set( CONDOR_RPATH "$ORIGIN/../lib:/lib64:/usr/lib64:$ORIGIN/../lib/condor" )
+		set( CONDOR_RPATH "$ORIGIN/../lib:/lib64:/usr/lib64:$ORIGIN/../lib/condor:/usr/lib64/condor" )
 		set( EXTERNALS_RPATH "$ORIGIN/../lib:/lib64:/usr/lib64:$ORIGIN/../lib/condor:/usr/lib64/condor" )
 		set( PYTHON_RPATH "$ORIGIN/../:/lib64:/usr/lib64:$ORIGIN/../condor" )
 	endif()
@@ -217,7 +217,7 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 		set (VC_CRT_MSM Microsoft_VC90_CRT_x86.msm)
 		find_file( CPACK_VC_POLICY_MODULE 
 			policy_9_0_Microsoft_VC90_CRT_x86.msm
-               		"C:/Program Files/Common Files/Merge Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
+               		"C:/Program Files/Common Files/Merge Modules" "C:/Program Files (x86)/Common Files/Merge Modules" )
 		set (WIX_MERGE_MODLES "<Merge Id=\"VCPolicy\" Language=\"1033\" DiskId=\"1\" SourceFile=\"${CPACK_VC_POLICY_MODULE}\"/>")
 		set (WIX_MERGE_REFS "<MergeRef Id=\"VCPolicy\"/>")
 		set (MSVCVER vc90)
@@ -237,7 +237,7 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	# look for the all important C-runtime
 	find_file( CPACK_VC_MERGE_MODULE 
 		${VC_CRT_MSM}
-		"C:/Program Files/Common Files/Merge Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
+		"C:/Program Files/Common Files/Merge Modules" "C:/Program Files (x86)/Common Files/Merge Modules" )
 
 	set (WIX_MERGE_MODLES "<Merge Id=\"VCCRT\" Language=\"1033\" DiskId=\"1\" SourceFile=\"${CPACK_VC_MERGE_MODULE}\"/>\n${WIX_MERGE_MODLES}")
 	set (WIX_MERGE_REFS "<MergeRef Id=\"VCCRT\"/>\n${WIX_MERGE_REFS}")

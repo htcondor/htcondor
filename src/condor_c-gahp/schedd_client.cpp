@@ -560,10 +560,12 @@ doContactSchedd()
 
 	// Try connecting to the queue
 	Qmgr_connection * qmgr_connection;
-	
-	if ((qmgr_connection = ConnectQ(dc_schedd.addr(), QMGMT_TIMEOUT, false, NULL, NULL, dc_schedd.version() )) == NULL) {
+
+	errstack.clear();
+	if ((qmgr_connection = ConnectQ(dc_schedd.addr(), QMGMT_TIMEOUT, false, &errstack, NULL, dc_schedd.version() )) == NULL) {
 		error = TRUE;
-		formatstr( error_msg, "Error connecting to schedd %s", ScheddAddr );
+		formatstr( error_msg, "Error connecting to schedd %s: %s", ScheddAddr,
+				   errstack.getFullText().c_str() );
 		dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 	} else {
 		errno = 0;
@@ -571,6 +573,11 @@ doContactSchedd()
 		if ( errno == ETIMEDOUT ) {
 			failure_line_num = __LINE__;
 			failure_errno = errno;
+			dprintf( D_ALWAYS, "Network error talking to schedd at line %d in "
+					 "doContactSchedd(), probably an authorization failure\n",
+					 failure_line_num );
+			formatstr( error_msg, "Network error talking to schedd, "
+					   "probably an authorization failure" );
 			goto contact_schedd_disconnect;
 		}
 	}
@@ -707,8 +714,6 @@ update_report_result:
 	command_queue.Rewind();
 	while (command_queue.Next(current_command)) {
 		
-		error = FALSE;
-
 		if (current_command->status != SchedDRequest::SDCS_NEW)
 			continue;
 
@@ -721,10 +726,7 @@ update_report_result:
 		}
 
 		std::string success_job_ids="";
-		if (qmgr_connection == NULL) {
-			formatstr( error_msg, "Error connecting to schedd %s", ScheddAddr );
-			error = TRUE;
-		} else {
+		if (qmgr_connection != NULL) {
 			error = FALSE;
 			errno = 0;
 			BeginTransaction();
@@ -1132,15 +1134,17 @@ submit_report_result:
 			// incomplete commands and mark them as failed.
 			// TODO Consider retrying these commands, rather than
 			//   immediately marking them as failed.
-		if ( failure_errno == ETIMEDOUT ) {
-			dprintf( D_ALWAYS, "Timed out talking to schedd at line %d in "
-					 "doContactSchedd()\n", failure_line_num );
-			formatstr( error_msg, "Timed out talking to schedd" );
-		} else {
-			dprintf( D_ALWAYS, "Error talking to schedd at line %d in "
-					 "doContactSchedd(), errno=%d (%s)\n", failure_line_num,
-					 failure_errno, strerror(failure_errno) );
-			formatstr( error_msg, "Error talking to schedd" );
+		if ( error_msg.empty() ) {
+			if ( failure_errno == ETIMEDOUT ) {
+				dprintf( D_ALWAYS, "Network error talking to schedd at line %d in "
+						 "doContactSchedd()\n", failure_line_num );
+				formatstr( error_msg, "Network error talking to schedd" );
+			} else {
+				dprintf( D_ALWAYS, "Error talking to schedd at line %d in "
+						 "doContactSchedd(), errno=%d (%s)\n", failure_line_num,
+						 failure_errno, strerror(failure_errno) );
+				formatstr( error_msg, "Error talking to schedd" );
+			}
 		}
 		command_queue.Rewind();
 		while (command_queue.Next(current_command)) {

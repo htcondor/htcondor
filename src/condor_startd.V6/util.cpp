@@ -381,6 +381,7 @@ cleanup_execute_dir(int pid, char const *exec_path)
 #endif  /* UNIX */
 }
 
+#if defined( DEPRECATED_SOCKET_CALLS )
 int
 create_port( ReliSock* rsock )
 {
@@ -389,6 +390,7 @@ create_port( ReliSock* rsock )
 	rsock->listen();
 	return rsock->get_file_desc();
 }
+#endif /* DEPRECATED_SOCKET_CALLS */
 
 
 bool

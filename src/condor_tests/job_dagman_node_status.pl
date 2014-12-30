@@ -2,4 +2,21 @@
 
 print "Node $ARGV[0]\n";
 
-sleep(10);
+if ($ARGV[1]) {
+	$infile = "job_dagman_node_status.status";
+	$outfile = $infile . "-" . $ARGV[0];
+
+	# Make sure node status file is regenerated *after* this node starts
+	# before we copy it.
+	if (-e $infile) {
+		system("rm $infile");
+	}
+	while (! -e $infile) {
+		sleep(5);
+	}
+
+	print "  Saving $infile to $outfile\n";
+	system("cp $infile $outfile");
+} else {
+	sleep(10);
+}

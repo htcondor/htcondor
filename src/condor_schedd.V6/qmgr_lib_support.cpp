@@ -232,14 +232,14 @@ SendSpoolFileBytes(char const *filename)
 
 
 void
-WalkJobQueue(scan_func func)
+WalkJobQueue3(scan_func func, void* pv, schedd_runtime_probe & /*ftm*/)
 {
 	ClassAd *ad;
 	int rval = 0;
 
 	ad = GetNextJob(1);
 	while (ad != NULL && rval >= 0) {
-		rval = func(ad);
+		rval = func(ad, pv);
 		if (rval >= 0) {
 			FreeJobAd(ad);
 			ad = GetNextJob(0);

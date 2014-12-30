@@ -27,6 +27,10 @@
 #include "Regex.h"
 #include "classad/classadCache.h"
 
+#if defined(HAVE_DLOPEN)
+#include <dlfcn.h>
+#endif
+
 using namespace std;
 
 // gcc 4.3.4 doesn't seem to define FLT_MIN on OpenSolaris 2009.06
@@ -55,7 +59,7 @@ void ClassAd::
 Reconfig()
 {
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
-	classad::_useOldClassAdSemantics = !m_strictEvaluation;
+	classad::SetOldClassAdSemantics( !m_strictEvaluation );
 
 	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
 
@@ -76,21 +80,36 @@ Reconfig()
 			}
 		}
 	}
-}
 
-void getTheMyRef( classad::ClassAd *ad )
-{
-	if ( !ClassAd::m_strictEvaluation ) {
-		ExprTree * pExpr=classad::AttributeReference::MakeAttributeReference( NULL, "self" );
-		ad->Insert( "my", pExpr );
-	}
-}
-
-void releaseTheMyRef( classad::ClassAd *ad )
-{
-	if ( !ClassAd::m_strictEvaluation ) {
-		ad->Delete("my");
-		ad->MarkAttributeClean( "my" );
+	char *user_python_char = param("CLASSAD_USER_PYTHON_MODULES");
+	if (user_python_char)
+	{
+		std::string user_python(user_python_char);
+		free(user_python_char); user_python_char = NULL;
+		char *loc_char = param("CLASSAD_USER_PYTHON_LIB");
+		if (loc_char && !ClassAdUserLibs.contains(loc_char))
+		{
+			std::string loc(loc_char);
+			if (classad::FunctionCall::RegisterSharedLibraryFunctions(loc.c_str()))
+			{
+				ClassAdUserLibs.append(loc.c_str());
+#if defined(HAVE_DLOPEN)
+				void *dl_hdl = dlopen(loc.c_str(), RTLD_LAZY);
+				if (dl_hdl) // Not warning on failure as the RegisterSharedLibraryFunctions should have done that.
+				{
+					void (*registerfn)(void) = (void (*)(void))dlsym(dl_hdl, "Register");
+					if (registerfn) {registerfn();}
+					dlclose(dl_hdl);
+				}
+#endif
+			}
+			else
+			{
+				dprintf(D_ALWAYS, "Failed to load ClassAd user python library %s: %s\n",
+					loc.c_str(), classad::CondorErrMsg.c_str());
+			}
+		}
+		if (loc_char) {free(loc_char);}
 	}
 }
 
@@ -686,6 +705,8 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 		m_initConfig = true;
 	}
 
+	DisableDirtyTracking();
+
 		// Compatibility ads are born with this to emulate the special
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
 		// but that shouldn't be problem unless someone is deliberately
@@ -1185,11 +1206,9 @@ EvalAttr( const char *name, classad::ClassAd *target, classad::Value & value)
 	int rc = 0;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, value ) ) {
 			rc = 1;
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1214,12 +1233,10 @@ EvalString( const char *name, classad::ClassAd *target, char *value )
 	string strVal;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttrString( name, strVal ) ) {
 			strcpy( value, strVal.c_str( ) );
 			rc = 1;
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1251,7 +1268,6 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
 	int rc = 0;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttrString( name, strVal ) ) {
 
             *value = (char *)malloc(strlen(strVal.c_str()) + 1);
@@ -1262,7 +1278,6 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
                 rc = 0;
             }
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1323,11 +1338,9 @@ EvalInteger (const char *name, classad::ClassAd *target, long long &value)
 	classad::Value val;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) { 
 			rc = 1;
 		}
-		releaseTheMyRef( this );
 	}
 	else 
 	{
@@ -1382,7 +1395,6 @@ EvalFloat (const char *name, classad::ClassAd *target, double &value)
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
 				value = doubleVal;
@@ -1397,7 +1409,6 @@ EvalFloat (const char *name, classad::ClassAd *target, double &value)
 				rc = 1;
 			}
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1449,7 +1460,6 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) {
 			if( val.IsBooleanValue( boolVal ) ) {
 				value = boolVal ? 1 : 0;
@@ -1462,7 +1472,6 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				rc = 1;
 			}
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1567,11 +1576,13 @@ fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringLi
 void
 dPrintAd( int level, const classad::ClassAd &ad )
 {
-	MyString buffer;
+	if ( IsDebugCatAndVerbosity( level ) ) {
+		MyString buffer;
 
-	sPrintAd( buffer, ad, true );
+		sPrintAd( buffer, ad, true );
 
-	dprintf( level|D_NOHEADER, "%s", buffer.Value() );
+		dprintf( level|D_NOHEADER, "%s", buffer.Value() );
+	}
 }
 
 int
@@ -2187,9 +2198,6 @@ _GetReferences(classad::ExprTree *tree,
 			AppendReference( external_refs, &set_itr->c_str()[6] );
 		} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
 			AppendReference( external_refs, &set_itr->c_str()[7] );
-		} else if ( strncasecmp( name, "my.", 3 ) == 0 ) {
-				// this one is actually in internal reference!
-			AppendReference( internal_refs, &set_itr->c_str()[3] );
 		} else {
 			AppendReference( external_refs, set_itr->c_str() );
 		}

@@ -92,7 +92,7 @@ void Rooster::config()
 	m_wakeup_args.Clear();
 	MyString error_msg;
 	if( !m_wakeup_args.AppendArgsV2Quoted(m_wakeup_cmd.Value(),&error_msg) ) {
-		EXCEPT("Invalid wakeup command %s: %s\n",
+		EXCEPT("Invalid wakeup command %s: %s",
 			   m_wakeup_cmd.Value(), error_msg.Value());
 	}
 
@@ -103,7 +103,7 @@ void Rooster::config()
 	}
 	else {
 		if( !m_rank_ad.AssignExpr(ATTR_RANK,rank.Value()) ) {
-			EXCEPT("Invalid expression for ROOSTER_UNHIBERNATE_RANK: %s\n",
+			EXCEPT("Invalid expression for ROOSTER_UNHIBERNATE_RANK: %s",
 				   rank.Value());
 		}
 	}
@@ -142,7 +142,7 @@ void Rooster::poll()
 
 	if( ParseClassAdRvalExpr( m_unhibernate_constraint.Value(), requirements )!=0 || requirements==NULL )
 	{
-		EXCEPT("Invalid expression for ROOSTER_UNHIBERNATE: %s\n",
+		EXCEPT("Invalid expression for ROOSTER_UNHIBERNATE: %s",
 			   m_unhibernate_constraint.Value());
 	}
 

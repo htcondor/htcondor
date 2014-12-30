@@ -326,6 +326,13 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 	m_callback_msg = msg;
 	m_callback_sock = m_sock.get();
 	if( !m_callback_sock ) {
+
+		if (IsDebugLevel(D_COMMAND)) {
+			const char * addr = m_daemon->addr();
+			const int cmd = msg->m_cmd;
+			dprintf (D_COMMAND, "DCMessenger::startCommand(%s,...) making non-blocking connection to %s\n", getCommandStringSafe(cmd), addr ? addr : "NULL");
+		}
+
 		const bool nonblocking = true;
 		m_callback_sock = m_daemon->makeConnectedSocket(st,msg->getTimeout(),msg->getDeadline(),&msg->m_errstack,nonblocking);
 		if( !m_callback_sock ) {

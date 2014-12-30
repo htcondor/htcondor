@@ -70,7 +70,11 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
     // Destructor
     //------------------------------------------
 
-    int authenticate(const char * remoteHost, CondorError* errstack);
+    static bool Initialize();
+    // Perform one-time initialization, primarily dlopen()ing libssl
+    // on linux. Returns true on success, false on failure.
+
+    int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr -- host to authenticate
@@ -89,6 +93,9 @@ class Condor_Auth_SSL : public Condor_Auth_Base {
     int unwrap(char* input, int input_len, char*& output, int& output_len);
 
  private:
+
+	static bool m_initTried;
+	static bool m_initSuccess;
 
     int init_OpenSSL(void);
     SSL_CTX *setup_ssl_ctx(bool is_server);

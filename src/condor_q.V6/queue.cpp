@@ -58,6 +58,8 @@
 #include "classad/classadCache.h" // for CachedExprEnvelope
 #include "pool_allocator.h"
 
+//#define AUTOCLUSTER_2_Q_HACK
+
 // pass the exit code through dprintf_SetExitCode so that it knows
 // whether to print out the on-error buffer or not.
 #define exit(n) (exit)(dprintf_SetExitCode(n))
@@ -182,6 +184,7 @@ static unsigned int direct = DIRECT_ALL;
 
 static 	int dash_long = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_held = 0;
 static  int use_xml = 0;
+static  int dash_autocluster = 0;
 static  bool widescreen = false;
 //static  int  use_old_code = true;
 static  bool expert = false;
@@ -1486,6 +1489,10 @@ processCommandLineArguments (int argc, char *argv[])
 			querySchedds = true;
 		} 
 		else
+		if (is_arg_colon_prefix (arg, "autocluster", &pcolon, 2)) {
+			dash_autocluster = 1;
+		}
+		else
 		if (is_arg_prefix(arg, "attributes", 2)) {
 			if( argc <= i+1 ) {
 				fprintf( stderr, "Error: Argument -attributes requires "
@@ -1608,6 +1615,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 			mask.SetAutoSep(NULL, pcolpre, pcolsux, "\n");
 			customHeadFoot = HF_BARE;
+			if (fheadings) { customHeadFoot = (printmask_headerfooter_t)(customHeadFoot & ~HF_NOHEADER); }
 			usingPrintMask = true;
 			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
 			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
@@ -3146,6 +3154,14 @@ static void init_output_mask()
 			mask.registerFormat("%-43.43s", ATTR_HOLD_REASON);
 		}
 		usingPrintMask = true;
+	} else if (dash_autocluster && ! usingPrintMask) {
+		mask_headings = " AUTO_ID\0JOB_COUNT\0";
+		mask.SetAutoSep(NULL, " ", NULL, "\n");
+		mask.registerFormat("%8d", 8, FormatOptionAutoWidth, ATTR_AUTO_CLUSTER_ID);
+		mask.registerFormat("%9d", 9, FormatOptionAutoWidth, "JobCount");
+		usingPrintMask = true;
+		summarize = false;
+		customHeadFoot = HF_NOSUMMARY;
 	}
 
 	if (mask_headings) {
@@ -3482,7 +3498,7 @@ static const char * render_job_text(ClassAd *job, std::string & result_text)
 	if (use_xml) {
 		sPrintAdAsXML(result_text, *job, attrs.isEmpty() ? NULL : &attrs);
 	} else if (dash_long) {
-		sPrintAd(result_text, *job, false, attrs.isEmpty() ? NULL : &attrs);
+		sPrintAd(result_text, *job, false, (dash_autocluster || attrs.isEmpty()) ? NULL : &attrs);
 		result_text += "\n";
 	} else if (better_analyze) {
 		ASSERT(0); // should never get here.
@@ -3525,8 +3541,13 @@ static bool
 insert_job_output_into_dag_map(ClassAd * job, const char * job_output)
 {
 	clusterProcString * tempCPS = new clusterProcString;
-	job->LookupInteger( ATTR_CLUSTER_ID, tempCPS->cluster );
-	job->LookupInteger( ATTR_PROC_ID, tempCPS->proc );
+	if (dash_autocluster) {
+		job->LookupInteger( ATTR_AUTO_CLUSTER_ID, tempCPS->cluster );
+		tempCPS->proc = 0;
+	} else {
+		job->LookupInteger( ATTR_CLUSTER_ID, tempCPS->cluster );
+		job->LookupInteger( ATTR_PROC_ID, tempCPS->proc );
+	}
 
 	// If it's not a DAGMan job (and this includes the DAGMan process
 	// itself), then set the dagman_cluster_id equal to cluster so that
@@ -3645,10 +3666,6 @@ process_job_and_render_to_dag_map(void *,  classad_shared_ptr<ClassAd> job)
 static bool
 show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath)
 {
-	bool use_v3 = param_boolean("CONDOR_Q_USE_V3_PROTOCOL", true);
-	if ((useFastPath == 2) && !use_v3) {
-		useFastPath = 1;
-	}
 	// initialize counters
 	malformed = idle = running = held = completed = suspended = 0;
 
@@ -3691,13 +3708,24 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		pvProcess = &dag_map;
 	}
 
-	int fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, pfnProcess, pvProcess, useFastPath, &errstack);
+	int fetch_opts = 0;
+	if (dash_autocluster) {
+		fetch_opts = CondorQ::fetch_DefaultAutoCluster;
+	}
+	bool use_v3 = dash_autocluster || param_boolean("CONDOR_Q_USE_V3_PROTOCOL", true);
+	if ((useFastPath == 2) && !use_v3) {
+		useFastPath = 1;
+	}
+	int fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, fetch_opts, pfnProcess, pvProcess, useFastPath, &errstack);
 	if (fetchResult != Q_OK) {
 		// The parse + fetch failed, print out why
 		switch(fetchResult) {
 		case Q_PARSE_ERROR:
 		case Q_INVALID_CATEGORY:
 			fprintf(stderr, "\n-- Parse error in constraint expression \"%s\"\n", user_job_constraint);
+			break;
+		case Q_UNSUPPORTED_OPTION_ERROR:
+			fprintf(stderr, "\n-- Unsupported query option at: %s : %s\n", scheddAddress, scheddMachine);
 			break;
 		default:
 			fprintf(stderr,

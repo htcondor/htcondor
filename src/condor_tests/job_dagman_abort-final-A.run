@@ -30,20 +30,23 @@ $dagman_args = "-verbose";
 $statusfile = "job_dagman_abort-final-A.status";
 # Lines must be found in order.
 @statuslines = ("DagStatus = 6;.*STATUS_ERROR \\(failed\\)",
-    "NodesTotal = 5;",
+    "NodesTotal = 6;",
     "NodesDone = 2;",
     "NodesPre = 0;",
     "NodesQueued = 0;",
     "NodesPost = 0;",
     "NodesReady = 0;",
     "NodesUnready = 1;",
-    "NodesFailed = 2;",
+    "NodesFailed = 3;",
     "JobProcsHeld = 0;",
     "JobProcsIdle = 0;",
 	"Node = \"A\";",
 	"NodeStatus = 5;.*STATUS_DONE",
 	"Node = \"B\";",
 	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"C2\";",
+	"NodeStatus = 6;.*STATUS_ERROR",
+	"ULOG_JOB_ABORTED",
 	"Node = \"C\";",
 	"NodeStatus = 6;.*STATUS_ERROR",
 	"Node = \"D\";",
@@ -103,7 +106,7 @@ $success = sub
 
 $failure = sub
 {
-	CondorTest::debug("executed successfully\n",1);
+	CondorTest::debug("DAG failed as expected\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
 	foreach $name (@outfiles) {

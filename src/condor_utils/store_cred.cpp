@@ -604,7 +604,8 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 
 		MyString my_fqdn_str = get_local_fqdn();
 		MyString my_hostname_str = get_local_hostname();
-		MyString my_ip_str = get_local_ipaddr().to_ip_string();
+		// TODO: Arbitrarily picking IPv4
+		MyString my_ip_str = get_local_ipaddr(CP_IPV4).to_ip_string();
 
 		// figure out if we're on the CREDD_HOST
 		bool on_credd_host = (strcasecmp(my_fqdn_str.Value(), credd_host) == MATCH);

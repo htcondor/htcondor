@@ -335,7 +335,7 @@ int Sock::assign(
 	int socket_fd = WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO, 
 					  FROM_PROTOCOL_INFO, pProtoInfo, 0, 0);
 
-	return assign( socket_fd );
+	return assignSocket( socket_fd );
 }
 #endif
 
@@ -417,33 +417,96 @@ int Sock::move_descriptor_up()
 	return TRUE;
 }
 
-int Sock::assign(SOCKET sockd)
-{
-	condor_protocol proto = CP_IPV4;
-	if (_condor_is_ipv6_mode())
-		proto = CP_IPV6;
-	return assign(proto, sockd);
+//
+// Moving all assignments of INVALID_SOCKET into their own function
+// dramatically simplifies the logic for assign()ing sockets without
+// an explicit protoco argument.
+//
+
+int Sock::assignInvalidSocket() {
+	ABEND( _who.is_valid() );
+	return assignSocket( _who.get_protocol(), INVALID_SOCKET );
 }
 
-int Sock::assign(condor_protocol proto, SOCKET sockd)
-{
-	int		my_type = SOCK_DGRAM;
+int Sock::assignInvalidSocket( condor_protocol proto ) {
+	return assignSocket( proto, INVALID_SOCKET );
+}
 
-	if (_state != sock_virgin) return FALSE;
+int Sock::assignSocket( SOCKET sockd ) {
+	ABEND( sockd != INVALID_SOCKET );
 
-	if (sockd != INVALID_SOCKET){
-		_sock = sockd;		/* Could we check for correct protocol ? */
-		/* should we check that sockd matches to IPv6 mode? */
+	condor_sockaddr sockAddr;
+	ABEND( condor_getsockname( sockd, sockAddr ) == 0 );
+	condor_protocol sockProto = sockAddr.get_protocol();
+
+	if( _who.is_valid() ) {
+		condor_protocol objectProto = _who.get_protocol();
+		// If we're accepting a socket via shared port as part of a CCB
+		// callback, then it's legitimate for the object protocol and the
+		// socket protocol to differ.
+		if( sockProto == PF_UNIX && objectProto != PF_UNIX ) {
+			// dprintf( D_ALWAYS, "[tlm] assigning PF_UNIX socket to object connecting to %s.\n", get_connect_addr() );
+			Sinful s( get_connect_addr() );
+			ABEND( s.getCCBContact() != NULL && s.getSharedPortID() != NULL );
+		} else {
+			// dprintf( D_ALWAYS, "[tlm] assigning socket of protocol %d to object of protocol %d.\n", sockProto, objectProto );
+			ABEND( sockProto == objectProto );
+		}
+	}
+
+	return assignSocket( sockProto, sockd );
+}
+
+//
+// Domain sockets don't have a useful protocol or address.
+//
+int Sock::assignDomainSocket( SOCKET sockd ) {
+	ABEND( sockd != INVALID_SOCKET );
+
+	_sock = sockd;
+	_state = sock_assigned;
+	_who.clear();
+
+	if( _timeout > 0 ) {
+		timeout_no_timeout_multiplier( _timeout );
+	}
+
+	// This wasn't here originally, but it seems like it should be --
+	// clearing the caches is at worst a performance hit, but it may
+	// also be a correctness fix.
+	addr_changed();
+	return TRUE;
+}
+
+int Sock::assignSocket( condor_protocol proto, SOCKET sockd ) {
+	if( _state != sock_virgin ) { return FALSE; }
+
+	if( sockd != INVALID_SOCKET ) {
+		condor_sockaddr sockAddr;
+		ABEND( condor_getsockname( sockd, sockAddr ) == 0 );
+		condor_protocol sockProto = sockAddr.get_protocol();
+		ABEND( sockProto == proto );
+
+		_sock = sockd;
 		_state = sock_assigned;
-
 		_who.clear();
-		condor_getpeername(_sock, _who);
+		condor_getpeername( _sock, _who );
 
-		if ( _timeout > 0 ) {
+		if( _timeout > 0 ) {
 			timeout_no_timeout_multiplier( _timeout );
 		}
+
+		// This wasn't here originally, but it seems like it should be --
+		// clearing the caches is at worst a performance hit, but it may
+		// also be a correctness fix.
+		addr_changed();
 		return TRUE;
 	}
+
+	//
+	// At some point, we should probably rename assignInvalid*() to create()
+	// and move this implementation there.
+	//
 
 	int af_type = 0;
 	switch(proto) {
@@ -452,6 +515,7 @@ int Sock::assign(condor_protocol proto, SOCKET sockd)
 		default: ASSERT(false);
 	}
 
+	int my_type = 0;
 	switch(type()){
 		case safe_sock:
 			my_type = SOCK_DGRAM;
@@ -551,11 +615,11 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 			addr.set_protocol(proto);
 			addr.set_addr_any();
 		} else {
-			addr = get_local_ipaddr();
-			// what if the socket type does not match?
-			// e.g. addr is ipv6 but ipv6 mode is not turned on?
-			if (addr.is_ipv4() && proto==CP_IPV6)
-				addr.convert_to_ipv6();
+			addr = get_local_ipaddr(proto);
+			if(!addr.is_valid()) {
+				dprintf(D_ALWAYS, "Asked to bind to a single %s interface, but cannot find a suitable interface\n", condor_protocol_to_str(proto).Value());
+				return FALSE;
+			}
 		}
 		addr.set_port((unsigned short)this_trial++);
 
@@ -601,17 +665,12 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 	return FALSE;
 }
 
-int Sock::bind(bool outbound, int port, bool loopback)
-{
-	condor_protocol proto = CP_IPV4;
-	if(_condor_is_ipv6_mode()) {
-		proto = CP_IPV6;
-	}
-	return bind(proto, outbound, port, loopback);
-}
-
 int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 {
+	if( proto <= CP_INVALID_MIN || proto >= CP_INVALID_MAX ) {
+		EXCEPT( "Unknown protocol (%d) in Sock::bind(); aborting.", proto );
+	}
+
 	condor_sockaddr addr;
 	int bind_return_value;
 
@@ -624,7 +683,7 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
     }
 
 	// if stream not assigned to a sock, do it now	*/
-	if (_state == sock_virgin) assign(proto);
+	if (_state == sock_virgin) assignInvalidSocket( proto );
 
 	if (_state != sock_assigned) {
 		dprintf(D_ALWAYS, "Sock::bind - _state is not correct\n");
@@ -675,9 +734,11 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 		} else if( (bool)_condor_bind_all_interfaces() ) {
 			addr.set_addr_any();
 		} else {
-			addr = get_local_ipaddr();
-			if (addr.is_ipv4() && proto==CP_IPV6)
-				addr.convert_to_ipv6();
+			addr = get_local_ipaddr(proto);
+			if(!addr.is_valid()) {
+				dprintf(D_ALWAYS, "Asked to bind to a single %s interface, but cannot find a suitable interface\n", condor_protocol_to_str(proto).Value());
+				return FALSE;
+			}
 		}
 		addr.set_port((unsigned short)port);
 
@@ -740,11 +801,6 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 	}
 
 	return TRUE;
-}
-
-bool Sock::bind_to_loopback(bool outbound,int port)
-{
-	return bind(outbound,port,true) == TRUE;
 }
 
 bool Sock::set_keepalive()
@@ -850,7 +906,7 @@ bool Sock::set_keepalive()
 	alive.keepaliveinterval = 5 * 1000;
 
 	// if stream not assigned to a sock, do it now before WSAIoctl calls.
-	if (_state == sock_virgin) assign();
+	if (_state == sock_virgin) assignInvalidSocket();
 
 	DWORD BytesReturned = 0;  // useless pointer needed for winsock call
 
@@ -909,14 +965,18 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 		We want to set the socket buffer size to be as close
 		to the desired size as possible.  Unfortunatly, there is no
 		contant defined which states the maximum size possible.  So
-		we keep raising it up 1k at a time until (a) we got up to the
-		desired value, or (b) it is not increasing anymore.  We ignore
-		the return value from setsockopt since on some platforms this 
+		we keep raising it up 4k at a time until (a) we got up to the
+		desired value, or (b) it is not increasing anymore.
+		We also need to be careful to not quit early on a 3.14+ Linux kernel
+		which has a floor (minimum) buffer size that may be larger than our
+		current attempt (thus the check below to keep looping if
+		current_size > attempt_size).
+		We ignore the return value from setsockopt since on some platforms this
 		could signal a value which is too low...
 	*/
 	 
 	do {
-		attempt_size += 1024;
+		attempt_size += 4096;
 		if ( attempt_size > desired_size ) {
 			attempt_size = desired_size;
 		}
@@ -928,8 +988,8 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 		::getsockopt( _sock, SOL_SOCKET, command,
  					  (char*)&current_size, (socklen_t*)&temp );
 
-	} while ( ( previous_size < current_size ) &&
-			  ( attempt_size < desired_size  ) );
+	} while ( ((previous_size < current_size) || (current_size >= attempt_size)) &&
+			  (attempt_size < desired_size) );
 
 	return current_size;
 }
@@ -937,6 +997,14 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 int Sock::setsockopt(int level, int optname, const void* optval, int optlen)
 {
 	ASSERT(_state != sock_virgin); 
+
+		// Don't bother with TCP options on Unix sockets.
+#ifndef WIN32
+        if ((_who.to_storage().ss_family == AF_LOCAL) && (level == IPPROTO_TCP))
+	{
+		return true;
+	}
+#endif
 
 	/* cast optval from void* to char*, as some platforms (Windows!) require this */
 	if(::setsockopt(_sock, level, optname, static_cast<const char*>(optval), optlen) < 0)
@@ -985,9 +1053,6 @@ int Sock::do_connect(
 		return FALSE;
 	}
 
-	if (_condor_is_ipv6_mode() && _who.is_ipv4())
-		_who.convert_to_ipv6();
-
 		// current code handles sinful string and just hostname differently.
 		// however, why don't we just use sinful string at all?
 	if (host[0] == '<') {
@@ -1013,7 +1078,7 @@ int Sock::do_connect(
 		/* assigned to the stream if needed		*/
 		/* TRUE means this is an outgoing connection */
 	if (_state == sock_virgin || _state == sock_assigned) {
-		bind(true);
+		bind( _who.get_protocol(), true, 0, false );
 	}
 
 	if (_state != sock_bound) return FALSE;
@@ -1440,7 +1505,7 @@ Sock::cancel_connect()
 	_state = sock_virgin;
 		
 		// now create a new socket
-	if (assign() == FALSE) {
+	if (assignInvalidSocket() == FALSE) {
 		dprintf(D_ALWAYS,
 			"assign() failed after a failed connect!\n");
 		connect_state.connect_refused = true; // better give up
@@ -1449,7 +1514,7 @@ Sock::cancel_connect()
 
 	// finally, bind the socket
 	/* TRUE means this is an outgoing connection */
-	if( !bind(true) ) {
+	if( ! bind( _who.get_protocol(), true, 0, false ) ) {
 		connect_state.connect_refused = true; // better give up
 	}
 
@@ -1509,7 +1574,7 @@ bool Sock::test_connection()
 #else
 		setConnectFailureErrno(errno,"getsockopt");
 #endif
-        dprintf(D_ALWAYS, "Sock::test_connection - getsockopt failed\n");
+        dprintf(D_NETWORK, "Sock::test_connection - getsockopt failed\n");
         return false;
     }
     // return result
@@ -1674,8 +1739,8 @@ Sock::timeout_no_timeout_multiplier(int sec)
 		int fcntl_flags;
 		if ( (fcntl_flags=fcntl(_sock, F_GETFL)) < 0 )
 			return -1;
-		fcntl_flags &= ~O_NONBLOCK;	// reset blocking mode
-		if ( fcntl(_sock,F_SETFL,fcntl_flags) == -1 )
+			// reset blocking mode
+		if ( ((fcntl_flags & O_NONBLOCK) == O_NONBLOCK) && fcntl(_sock,F_SETFL,fcntl_flags & ~O_NONBLOCK) == -1 )
 			return -1;
 #endif
 	} else {
@@ -1690,8 +1755,8 @@ Sock::timeout_no_timeout_multiplier(int sec)
 			int fcntl_flags;
 			if ( (fcntl_flags=fcntl(_sock, F_GETFL)) < 0 )
 				return -1;
-			fcntl_flags |= O_NONBLOCK;	// set nonblocking mode
-			if ( fcntl(_sock,F_SETFL,fcntl_flags) == -1 )
+				// set nonblocking mode
+			if ( ((fcntl_flags & O_NONBLOCK) == 0) && fcntl(_sock,F_SETFL,fcntl_flags | O_NONBLOCK) == -1 )
 				return -1;
 #endif
 		}
@@ -1957,7 +2022,7 @@ char * Sock::serialize(char *buf)
 	// here we want to restore our state from the incoming buffer
 	i = sscanf(buf,"%u*%d*%d*%d*%lu*%lu*%n",&passed_sock,(int*)&_state,&_timeout,&tried_authentication,(unsigned long *)&fqulen,(unsigned long *)&verstring_len,&pos);
 	if (i!=6) {
-		EXCEPT("Failed to parse serialized socket information (%d,%d): '%s'\n",i,pos,buf);
+		EXCEPT("Failed to parse serialized socket information (%d,%d): '%s'",i,pos,buf);
 	}
 	buf += pos;
 
@@ -1971,7 +2036,7 @@ char * Sock::serialize(char *buf)
 	free(fqubuf);
 	buf += fqulen;
 	if( *buf != '*' ) {
-		EXCEPT("Failed to parse serialized socket fqu (%lu): '%s'\n",(unsigned long)fqulen,buf);
+		EXCEPT("Failed to parse serialized socket fqu (%lu): '%s'",(unsigned long)fqulen,buf);
 	}
 	buf++;
 
@@ -1992,7 +2057,7 @@ char * Sock::serialize(char *buf)
 	free( verstring );
 	buf += verstring_len;
 	if( *buf != '*' ) {
-		EXCEPT("Failed to parse serialized peer version string (%lu): '%s'\n",(unsigned long)verstring_len,buf);
+		EXCEPT("Failed to parse serialized peer version string (%lu): '%s'",(unsigned long)verstring_len,buf);
 	}
 	buf++;
 
@@ -2203,6 +2268,14 @@ Sock::my_addr()
 {
 	condor_sockaddr addr;
 	condor_getsockname_ex(_sock, addr);
+	return addr;
+}
+
+condor_sockaddr
+Sock::my_addr_wildcard_okay() 
+{
+	condor_sockaddr addr;
+	condor_getsockname(_sock, addr);
 	return addr;
 }
 
@@ -2521,17 +2594,22 @@ bool Sock :: is_hdr_encrypt(){
 	return FALSE;
 }
 
-int Sock :: authenticate(KeyInfo *&, const char * /* methods */, CondorError* /* errstack */, int /*timeout*/, char ** /*method_used*/)
+int Sock :: authenticate(KeyInfo *&, const char * /* methods */, CondorError* /* errstack */, int /*timeout*/, bool /*non_blocking*/, char ** /*method_used*/)
 {
 	return -1;
 }
 
-int Sock :: authenticate(const char * /* methods */, CondorError* /* errstack */, int /*timeout*/)
+int Sock :: authenticate(const char * /* methods */, CondorError* /* errstack */, int /*timeout*/, bool /*non_blocking*/)
 {
 	/*
 	errstack->push("AUTHENTICATE", AUTHENTICATE_ERR_NOT_BUILT,
 			"Failure: This version of condor was not compiled with authentication enabled");
 	*/
+	return -1;
+}
+
+int Sock :: authenticate_continue(CondorError* /* errstack */, bool /*non_blocking*/, char ** /*method_used*/)
+{
 	return -1;
 }
 

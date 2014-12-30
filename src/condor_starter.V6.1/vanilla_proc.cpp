@@ -36,6 +36,7 @@
 #include "env.h"
 #include "subsystem_info.h"
 #include "cgroup_limits.h"
+#include "selector.h"
 
 #ifdef WIN32
 #include "executable_scripts.WINDOWS.h"
@@ -137,12 +138,18 @@ void StarterStatistics::Publish(ClassAd& ad, int flags) const {
 VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd),
 	m_memory_limit(-1),
 	m_oom_fd(-1),
-	m_oom_efd(-1)
+	m_oom_efd(-1),
+	m_oom_efd2(-1)
 {
     m_statistics.Init();
 #if !defined(WIN32)
 	m_escalation_tid = -1;
 #endif
+}
+
+VanillaProc::~VanillaProc()
+{
+	cleanupOOM();
 }
 
 int
@@ -594,12 +601,26 @@ VanillaProc::StartJob()
 				uint64_t MemMb_big = MemMb;
 				m_memory_limit = MemMb_big;
 				climits.set_memory_limit_bytes(1024*1024*MemMb_big, mem_is_soft);
+
+				// Note that ATTR_VIRTUAL_MEMORY on Linux
+				// is sum of memory and swap, in Kilobytes
+
+				if (MachineAd->LookupInteger(ATTR_VIRTUAL_MEMORY, MemMb)) {
+					uint64_t VMemMb_big = MemMb;
+
+					if (MemMb > 0) {
+						climits.set_memsw_limit_bytes(1024*VMemMb_big);
+					}
+				} else {
+					dprintf(D_ALWAYS, "Not setting virtual memory limit in cgroup because "
+						"Virtual Memory attribute missing in machine ad.\n");
+				}
 			} else {
-				dprintf(D_ALWAYS, "Not setting memory soft limit in cgroup because "
+				dprintf(D_ALWAYS, "Not setting memory limit in cgroup because "
 					"Memory attribute missing in machine ad.\n");
 			}
 		} else if (mem_limit == "none") {
-			dprintf(D_FULLDEBUG, "Not enforcing memory soft limit.\n");
+			dprintf(D_FULLDEBUG, "Not enforcing memory limit.\n");
 		} else {
 			dprintf(D_ALWAYS, "Invalid value of CGROUP_MEMORY_LIMIT_POLICY: %s.  Ignoring.\n", mem_limit.c_str());
 		}
@@ -697,6 +718,25 @@ VanillaProc::JobReaper(int pid, int status)
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
 
 	if (pid == JobPid) {
+
+			// On newer kernels if memory.use_hierarchy==1, then we cannot disable
+			// the OOM killer.  Hence, we have to be ready for a SIGKILL to be delivered
+			// by the kernel at the same time we get the notification.  Hence, if we
+			// see an exit signal, we must also check the event file descriptor.
+#if defined(LINUX)
+		int efd = -1;
+		if ((m_oom_efd >= 0) && daemonCore->Get_Pipe_FD(m_oom_efd, &efd) && (efd != -1))
+		{
+			Selector selector;
+			selector.add_fd(efd, Selector::IO_READ);
+			selector.set_timeout(0);
+			selector.execute();
+			if (!selector.failed() && !selector.timed_out() && selector.has_ready() && selector.fd_ready(efd, Selector::IO_READ))
+			{
+				outOfMemoryEvent(m_oom_efd);
+			}
+		}
+#endif
 
 			// To make sure that no job processes are still lingering
 			// on the machine, call Kill_Family().
@@ -850,17 +890,30 @@ VanillaProc::finishShutdownFast()
 	//   -gquinn, 2007-11-14
 	daemonCore->Kill_Family(JobPid);
 
-	if (m_oom_efd >= 0) {
-		dprintf(D_FULLDEBUG, "Closing event FD pipe in shutdown %d.\n", m_oom_efd);
+	if (m_oom_efd != -1) {dprintf(D_FULLDEBUG, "Closing event FD pipe in shutdown %d.\n", m_oom_efd);}
+	cleanupOOM();
+
+	return false;	// shutdown is pending, so return false
+}
+
+/*
+ * Clean up any file descriptors associated with the OOM control.
+ */
+void
+VanillaProc::cleanupOOM()
+{
+	if (m_oom_efd != -1)
+	{
 		daemonCore->Close_Pipe(m_oom_efd);
+		daemonCore->Close_Pipe(m_oom_efd2);
 		m_oom_efd = -1;
+		m_oom_efd2 = -1;
 	}
-	if (m_oom_fd >= 0) {
+	if (m_oom_fd != -1)
+	{
 		close(m_oom_fd);
 		m_oom_fd = -1;
 	}
-
-	return false;	// shutdown is pending, so return false
 }
 
 /*
@@ -881,11 +934,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 	// If we have no jobs left, prolly just cgroup removed, so do nothing and return
 	if (num_pids == 0) {
 		dprintf(D_FULLDEBUG, "Closing event FD pipe %d.\n", m_oom_efd);
-		daemonCore->Close_Pipe(m_oom_efd);
-		close(m_oom_fd);
-		m_oom_efd = -1;
-		m_oom_fd = -1;
-
+		cleanupOOM();
 		return 0;
 	}
 
@@ -904,10 +953,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 	}
 
 	dprintf(D_FULLDEBUG, "Closing event FD pipe %d.\n", m_oom_efd);
-	daemonCore->Close_Pipe(m_oom_efd);
-	close(m_oom_fd);
-	m_oom_efd = -1;
-	m_oom_fd = -1;
+	cleanupOOM();
 
 	Starter->ShutdownFast();
 
@@ -974,8 +1020,8 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 	return 0;
 #else
 	// Initialize the event descriptor
-	m_oom_efd = eventfd(0, EFD_CLOEXEC);
-	if (m_oom_efd == -1) {
+	int tmp_efd = eventfd(0, EFD_CLOEXEC);
+	if (tmp_efd == -1) {
 		dprintf(D_ALWAYS,
 			"Unable to create new event FD for starter: %u %s\n",
 			errno, strerror(errno));
@@ -1046,28 +1092,37 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 	const char limits [] = "1";
         ssize_t nwritten = full_write(oom_fd2, &limits, 1);
 	if (nwritten < 0) {
-		dprintf(D_ALWAYS,
-			"Unable to set OOM control to %s for starter: %u %s\n",
-				limits, errno, strerror(errno));
-			/* 
-				For reasons I don't understand, some newer kernels
-				are returning EINVAL for this write, even though they
-				would still deliver OOM to the starter.  Ignore the
-				error for now, and continue on and try to subscribe
-				to the event  #4435
-			*/
-/* #4435
-		close(event_ctrl_fd);
-		close(oom_fd2);
-		return 1;
-*/
+		/* Newer kernels return EINVAL if you attempt to enable OOM management
+		 * on a cgroup where use_hierarchy is set to 1 and it is not the parent
+		 * cgroup.
+		 *
+		 * This is a common setup, so we log and move along.
+		 *
+		 * See also #4435.
+		 */
+		if (errno == EINVAL)
+		{
+			dprintf(D_FULLDEBUG, "Unable to setup OOM killer management because"
+				" memory.use_hierarchy is enabled for this cgroup; consider"
+				" disabling it for this host or set BASE_CGROUP=/.  The hold"
+				" message for an OOM event may not be reliably set.\n");
+		}
+		else
+		{
+			dprintf(D_ALWAYS, "Failure when attempting to enable OOM killer "
+				" management for this job (errno=%d, %s).\n", errno, strerror(errno));
+			close(event_ctrl_fd);
+			close(oom_fd2);
+			close(tmp_efd);
+			return 1;
+		}
 
 	}
 	close(oom_fd2);
 
 	// Create the subscription string:
 	std::stringstream sub_ss;
-	sub_ss << m_oom_efd << " " << m_oom_fd;
+	sub_ss << tmp_efd << " " << m_oom_fd;
 	std::string sub_str = sub_ss.str();
 
 	if ((nwritten = full_write(event_ctrl_fd, sub_str.c_str(), sub_str.size())) < 0) {
@@ -1075,6 +1130,7 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 			"Unable to write into event control file for starter: %u %s\n",
 			errno, strerror(errno));
 		close(event_ctrl_fd);
+		close(tmp_efd);
 		return 1;
 	}
 	close(event_ctrl_fd);
@@ -1082,28 +1138,37 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 	// Fool DC into talking to the eventfd
 	int pipes[2]; pipes[0] = -1; pipes[1] = -1;
 	int fd_to_replace = -1;
-	if (daemonCore->Create_Pipe(pipes, true) == -1 || pipes[0] == -1) {
+	if (!daemonCore->Create_Pipe(pipes, true) || pipes[0] == -1) {
 		dprintf(D_ALWAYS, "Unable to create a DC pipe\n");
-		close(m_oom_efd);
-		m_oom_efd = -1;
+		close(tmp_efd);
 		close(m_oom_fd);
 		m_oom_fd = -1;
 		return 1;
 	}
-	if ( daemonCore->Get_Pipe_FD(pipes[0], &fd_to_replace) == -1 || fd_to_replace == -1) {
+	if (!daemonCore->Get_Pipe_FD(pipes[0], &fd_to_replace) || fd_to_replace == -1) {
 		dprintf(D_ALWAYS, "Unable to lookup pipe's FD\n");
-		close(m_oom_efd); m_oom_efd = -1;
+		close(tmp_efd);
 		close(m_oom_fd); m_oom_fd = -1;
 		daemonCore->Close_Pipe(pipes[0]);
 		daemonCore->Close_Pipe(pipes[1]);
 		return 1;
 	}
-	dup3(m_oom_efd, fd_to_replace, O_CLOEXEC);
-	close(m_oom_efd);
+	dup3(tmp_efd, fd_to_replace, O_CLOEXEC);
+	close(tmp_efd);
 	m_oom_efd = pipes[0];
+	m_oom_efd2 = pipes[1];
 
 	// Inform DC we want to recieve notifications from this FD.
-	daemonCore->Register_Pipe(pipes[0],"OOM event fd", static_cast<PipeHandlercpp>(&VanillaProc::outOfMemoryEvent),"OOM Event Handler",this,HANDLE_READ);
+	if (-1 == daemonCore->Register_Pipe(pipes[0],"OOM event fd", static_cast<PipeHandlercpp>(&VanillaProc::outOfMemoryEvent),"OOM Event Handler",this,HANDLE_READ))
+	{
+		dprintf(D_ALWAYS, "Failed to register OOM event FD pipe.\n");
+		daemonCore->Close_Pipe(pipes[0]);
+		daemonCore->Close_Pipe(pipes[1]);
+		m_oom_fd = -1;
+		m_oom_efd = -1;
+		m_oom_efd2 = -1;
+	}
+	dprintf(D_FULLDEBUG, "Subscribed the starter to OOM notification for this cgroup; jobs triggering an OOM will be put on hold.\n");
 	return 0;
 #endif
 }

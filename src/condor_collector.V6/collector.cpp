@@ -312,7 +312,7 @@ void CollectorDaemon::Init()
     }
 
 	// add an exponential moving average counter of updates received.
-	daemonCore->dc_stats.New("Collector", "UpdatesReceived", AS_COUNT | IS_CLS_SUM_EMA_RATE | IF_BASICPUB);
+	daemonCore->dc_stats.NewProbe("Collector", "UpdatesReceived", AS_COUNT | IS_CLS_SUM_EMA_RATE | IF_BASICPUB);
 
 	forkQuery.Initialize( );
 }
@@ -1327,7 +1327,7 @@ void CollectorDaemon::Config()
 	tmp = param(COLLECTOR_REQUIREMENTS);
 	MyString collector_req_err;
 	if( !collector.setCollectorRequirements( tmp, collector_req_err ) ) {
-		EXCEPT("Handling of '%s=%s' failed: %s\n",
+		EXCEPT("Handling of '%s=%s' failed: %s",
 			   COLLECTOR_REQUIREMENTS,
 			   tmp ? tmp : "(null)",
 			   collector_req_err.Value());

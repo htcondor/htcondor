@@ -98,9 +98,10 @@ enum {
 
 
 // format-modifying flags to change the appearance of the dprintf line
+#define D_BACKTRACE     (1<<24) // print stack backtrace
 #define D_IDENT         (1<<25) // 
-#define D_SUB_SECOND    (1<<26) // future: print sub-second timestamp
-#define D_TIMESTAMP     (1<<27) // future: print unix timestamp rather than human-readable time.
+#define D_SUB_SECOND    (1<<26) // print sub-second timestamp
+#define D_TIMESTAMP     (1<<27) // print unix timestamp rather than human-readable time.
 #define D_PID           (1<<28)
 #define D_FDS           (1<<29)
 #define D_CAT           (1<<30)
@@ -210,15 +211,6 @@ void dprintf_before_shared_mem_clone( void );
 /* must call this after clone(CLONE_VM|CLONE_VFORK) returns */
 void dprintf_after_shared_mem_clone( void );
 
-/* must call this upon entering child of fork() if child calls dprintf */
-void dprintf_init_fork_child( void );
-
-/* call this when done with dprintf in child of fork()
- * This is not necessary if child is just going to exit.  It just
- * ensures that nothing gets inherited by exec().
- */
-void dprintf_wrapup_fork_child( void );
-
 void dprintf_dump_stack(void);
 
 time_t dprintf_last_modification(void);
@@ -295,16 +287,38 @@ extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2)
 #endif
 
 #if defined(__cplusplus)
+/* must call this upon entering child of fork() if child calls dprintf */
+void dprintf_init_fork_child( bool cloned = false );
+
+/* call this when done with dprintf in child of fork()
+ * This is not necessary if child is just going to exit.  It just
+ * ensures that nothing gets inherited by exec().
+ */
+void dprintf_wrapup_fork_child( bool cloned = false );
+
 bool debug_open_fds(std::map<int,bool> &open_fds);
 
-class _condor_auto_save_runtime
+extern double _condor_debug_get_time_double();
+
+class _condor_runtime
 {
 public:
-    _condor_auto_save_runtime(double & store); // save result here
-    ~_condor_auto_save_runtime();
-    double   current_runtime();
-    double & runtime;
-    double   begin;
+	_condor_runtime() : begin(0) { begin = _condor_debug_get_time_double(); }; // save result here
+	double elapsed_runtime() { return _condor_debug_get_time_double() - begin; }
+	double tick(double & last) { double now = _condor_debug_get_time_double(); double diff = now - last; last = now; return diff; }
+	double reset() { return tick(begin); } // resets begin to now and returns the difference between now and former begin.
+	double begin;
+};
+
+// use this class to automatically add time runtime between constructor and destructor
+// into the given variable.
+template <typename T>
+class _condor_auto_accum_runtime : public _condor_runtime
+{
+public:
+	_condor_auto_accum_runtime(T & store) : runtime(store) { }; // remember where to save result
+	~_condor_auto_accum_runtime() { runtime += elapsed_runtime(); };
+	T & runtime;
 };
 
 #endif // defined(__cplusplus)
@@ -342,6 +356,14 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
         dprintf( flags, "(ptr)->ru_stime = %d.%06d\n", (ptr)->ru_stime.tv_sec,\
         (ptr)->ru_stime.tv_usec ); \
 }
+
+#ifndef ABEND
+#define ABEND(cond) \
+	if( !(cond) ) { \
+		dprintf( D_ERROR | D_BACKTRACE, "Failed to assert (%s) at %s, line %d; aborting.\n", #cond, __FILE__, __LINE__ ); \
+		abort(); \
+	}
+#endif /* ABEND */
 
 #ifndef PRAGMA_REMIND
 # ifdef _MSC_VER // for Microsoft C, prefix file and line to the the message

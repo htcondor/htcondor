@@ -1,0 +1,83 @@
+processor	: 0
+vendor_id	: AuthenticAMD
+cpu family	: 6
+model		: 13
+model name	: QEMU Virtual CPU version (cpu64-rhel6)
+stepping	: 3
+microcode	: 0x1000065
+cpu MHz		: 2399.912
+cache size	: 512 KB
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 4
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 syscall nx lm nopl pni cx16 hypervisor lahf_lm abm sse4a
+bogomips	: 4799.82
+TLB size	: 1024 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 1
+vendor_id	: AuthenticAMD
+cpu family	: 6
+model		: 13
+model name	: QEMU Virtual CPU version (cpu64-rhel6)
+stepping	: 3
+microcode	: 0x1000065
+cpu MHz		: 2399.912
+cache size	: 512 KB
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 4
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 syscall nx lm nopl pni cx16 hypervisor lahf_lm abm sse4a
+bogomips	: 4799.82
+TLB size	: 1024 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 2
+vendor_id	: AuthenticAMD
+cpu family	: 6
+model		: 13
+model name	: QEMU Virtual CPU version (cpu64-rhel6)
+stepping	: 3
+microcode	: 0x1000065
+cpu MHz		: 2399.912
+cache size	: 512 KB
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 4
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 syscall nx lm nopl pni cx16 hypervisor lahf_lm abm sse4a
+bogomips	: 4799.82
+TLB size	: 1024 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 3
+vendor_id	: AuthenticAMD
+cpu family	: 6
+model		: 13
+model name	: QEMU Virtual CPU version (cpu64-rhel6)
+stepping	: 3
+microcode	: 0x1000065
+cpu MHz		: 2399.912
+cache size	: 512 KB
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 4
+wp		: yes
+flags		: fpu de pse tsc msr pae mce cx8 apic mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 syscall nx lm nopl pni cx16 hypervisor lahf_lm abm sse4a
+bogomips	: 4799.82
+TLB size	: 1024 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:

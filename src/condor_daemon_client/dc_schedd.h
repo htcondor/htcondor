@@ -71,8 +71,6 @@ public:
 			@param reason Why the action is being done
 			@param reason_code The hold subcode
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
@@ -80,24 +78,20 @@ public:
 	ClassAd* holdJobs( const char* constraint, const char* reason,
 					   const char* reason_code,
 					   CondorError * errstack,
-					   action_result_type_t result_type = AR_TOTALS,
-					   bool notify_scheduler = true );
+					   action_result_type_t result_type = AR_TOTALS );
 
 		/** Remove all jobs that match the given constraint.
 			Set ATTR_REMOVE_REASON to the given reason.
 			@param constraint What jobs to act on
 			@param reason Why the action is being done
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* removeJobs( const char* constraint, const char* reason,
 						 CondorError * errstack,
-						 action_result_type_t result_type = AR_TOTALS,
-						 bool notify_scheduler = true );
+						 action_result_type_t result_type = AR_TOTALS );
 
 		/** Force the local removal of jobs in the X state that match
 			the given constraint, regardless of whether they've been
@@ -106,32 +100,26 @@ public:
 			@param constraint What jobs to act on
 			@param reason Why the action is being done
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* removeXJobs( const char* constraint, const char* reason,
 						  CondorError * errstack,
-						  action_result_type_t result_type = AR_TOTALS,
-						  bool notify_scheduler = true );
+						  action_result_type_t result_type = AR_TOTALS );
 
 		/** Release all jobs that match the given constraint.
 			Set ATTR_RELEASE_REASON to the given reason.
 			@param constraint What jobs to act on
 			@param reason Why the action is being done
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* releaseJobs( const char* constraint, const char* reason,
 						  CondorError * errstack,
-						  action_result_type_t result_type = AR_TOTALS,
-						  bool notify_scheduler = true );
+						  action_result_type_t result_type = AR_TOTALS );
 
 		/** Hold all jobs specified in the given StringList.  The list
 			should contain a comma-seperated list of cluster.proc job
@@ -139,8 +127,6 @@ public:
 			@param constraint What jobs to act on
 			@param reason Why the action is being done
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
@@ -148,8 +134,7 @@ public:
 	ClassAd* holdJobs( StringList* ids, const char* reason,
 					   const char* reason_code,
 					   CondorError * errstack,
-					   action_result_type_t result_type = AR_LONG,
-					   bool notify_scheduler = true );
+					   action_result_type_t result_type = AR_LONG );
 
 		/** Remove all jobs specified in the given StringList.  The
 			list should contain a comma-seperated list of cluster.proc
@@ -158,16 +143,13 @@ public:
 			@param constraint What jobs to act on
 			@param reason Why the action is being done
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* removeJobs( StringList* ids, const char* reason,
 						 CondorError * errstack,
-						 action_result_type_t result_type = AR_LONG,
-						 bool notify_scheduler = true );
+						 action_result_type_t result_type = AR_LONG );
 
 		/** Force the local removal of jobs in the X state specified
 			in the given StringList, regardless of whether they've
@@ -177,16 +159,13 @@ public:
 			@param constraint What jobs to act on
 			@param reason Why the action is being done
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* removeXJobs( StringList* ids, const char* reason,
 						  CondorError * errstack,
-						  action_result_type_t result_type = AR_LONG,
-						  bool notify_scheduler = true );
+						  action_result_type_t result_type = AR_LONG );
 
 		/** Release all jobs specified in the given StringList.  The
 			list should contain a comma-seperated list of cluster.proc
@@ -195,16 +174,13 @@ public:
 			@param constraint What jobs to act on
 			@param reason Why the action is being done
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* releaseJobs( StringList* ids, const char* reason,
 						  CondorError * errstack,
-						  action_result_type_t result_type = AR_LONG,
-						  bool notify_scheduler = true );
+						  action_result_type_t result_type = AR_LONG );
 
 
 		/** Vacate all jobs specified in the given StringList.  The list
@@ -213,31 +189,25 @@ public:
 			@param ids What jobs to act on
 			@param vacate_type Graceful or fast vacate?
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* vacateJobs( StringList* ids, VacateType vacate_type,
 						 CondorError * errstack,
-						 action_result_type_t result_type = AR_LONG,
-						 bool notify_scheduler = true );
+						 action_result_type_t result_type = AR_LONG );
 
 		/** Vacate all jobs that match the given constraint.
 			@param constraint What jobs to act on
 			@param vacate_type Graceful or fast vacate?
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* vacateJobs( const char* constraint, VacateType vacate_type,
 						 CondorError * errstack,
-						 action_result_type_t result_type = AR_TOTALS,
-						 bool notify_scheduler = true );
+						 action_result_type_t result_type = AR_TOTALS );
 
 	
 	/** Suspend all jobs specified in the given StringList.  The list
@@ -246,31 +216,25 @@ public:
 			@param ids What jobs to act on
 			@param vacate_type Graceful or fast vacate?
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* suspendJobs( StringList* ids, const char* reason,
 						 CondorError * errstack,
-						 action_result_type_t result_type = AR_LONG,
-						 bool notify_scheduler = true );
+						 action_result_type_t result_type = AR_LONG );
 	
 	/** Suspend all jobs that match the given constraint.
 			@param constraint What jobs to act on
 			@param reason Why the action is being done
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* suspendJobs( const char* constraint, const char* reason,
 						  CondorError * errstack,
-						  action_result_type_t result_type = AR_TOTALS,
-						  bool notify_scheduler = true );
+						  action_result_type_t result_type = AR_TOTALS );
 	
 	/** Continue all jobs specified in the given StringList.  The list
 			should contain a comma-seperated list of cluster.proc job
@@ -278,31 +242,25 @@ public:
 			@param ids What jobs to act on
 			@param vacate_type Graceful or fast vacate?
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* continueJobs( StringList* ids, const char* reason,
 						 CondorError * errstack,
-						 action_result_type_t result_type = AR_LONG,
-						 bool notify_scheduler = true );
+						 action_result_type_t result_type = AR_LONG );
 	
 		/** Continue all jobs that match the given constraint.
 			@param constraint What jobs to act on
 			@param reason Why the action is being done
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* continueJobs( const char* constraint, const char* reason,
 						  CondorError * errstack,
-						  action_result_type_t result_type = AR_TOTALS,
-						  bool notify_scheduler = true );
+						  action_result_type_t result_type = AR_TOTALS );
 	
 	/** Clear dirty attributes for a list of job ids
 			@param ids What jobs to act on
@@ -405,8 +363,6 @@ private:
 			@param reason_code A string such as an error code
 			@param reason_code_attr_name Attribute name for the reason_code
 			@param result_type What kind of results you want
-			@param notify_scheduler Should the schedd notify the
- 			controlling scheduler for this job?
 			@return ClassAd containing results of this action, or NULL
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
@@ -416,7 +372,7 @@ private:
 						const char* reason, const char* reason_attr,
 						const char* reason_code, const char* reason_code_attr,
 						action_result_type_t result_type,
-						bool notify_scheduler, CondorError * errstack );
+						CondorError * errstack );
 
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );

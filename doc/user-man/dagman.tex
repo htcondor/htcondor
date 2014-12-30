@@ -17,22 +17,20 @@ The Directed Acyclic Graph Manager (DAGMan) is a meta-scheduler for
 the execution of programs (computations). 
 DAGMan submits the programs to HTCondor in an order represented by
 a DAG and processes the results.
-A DAG input file describes the DAG, and
-further submit description file(s) are used by DAGMan
-when submitting programs to run under HTCondor.
+A \Term{DAG input file} describes the DAG.
 
 DAGMan is itself executed as a scheduler universe job
 within HTCondor.
-As DAGMan submits programs, it monitors log file(s) 
-to enforce the ordering required within the DAG.
-DAGMan is also responsible for scheduling, recovery, and reporting
-on the set of programs submitted to HTCondor.
+It submits the HTCondor jobs within nodes in such a way as to
+enforce the DAG's dependencies.
+DAGMan also handles recovery and reporting
+on the HTCondor jobs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGTerminology}DAGMan Terminology}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-To DAGMan, a node in a DAG may encompass more than a single
+A node within a DAG may encompass more than a single
 program submitted to run under HTCondor.
 Figure~\ref{fig:dagman-node} illustrates the elements of a node.
 
@@ -42,20 +40,16 @@ Figure~\ref{fig:dagman-node} illustrates the elements of a node.
 \caption{\label{fig:dagman-node}One Node within a DAG}
 \end{figure}
 
-At one time,
-the number of HTCondor jobs per node was restricted to one.
-This restriction is now relaxed such that all HTCondor jobs
-within a node must share a single cluster number.
-See the
-\Condor{submit} manual page
-for a further definition of a cluster.
-A limitation exists such that
-all jobs within the single cluster must use the same log file.
-Separate nodes within a DAG may use different log files.
+More than one HTCondor job may belong to a single node.
+All HTCondor jobs within a node must be within
+a single cluster, as given by the job ClassAd attribute \Attr{ClusterId}.
+%In addition,
+%all jobs within the single cluster must use the same log file.
+%Separate nodes within a DAG may use different log files.
 
 \emph{DAGMan enforces the dependencies within a DAG
-using the events recorded in a
-log file that is specified by the default configuration.}
+using the events recorded in a separate
+file that is specified by the default configuration.}
 
 As DAGMan schedules and submits jobs within nodes to HTCondor,
 these jobs are defined to succeed or fail based on their
@@ -64,7 +58,7 @@ This success or failure is propagated in well-defined ways to the level of
 a node within a DAG.
 Further progression of computation
 (towards completing the DAG)
-may be defined based upon the success or failure of one or more nodes.
+is based upon the success or failure of nodes.
 
 The failure of a single job within a cluster
 of multiple jobs
@@ -72,17 +66,18 @@ of multiple jobs
 causes the entire cluster of jobs to fail.
 Any other jobs within the failed cluster of jobs are
 immediately removed.
-Each node within a DAG is further defined to succeed or fail,
-based upon the return values of a PRE script, the job(s)
-within the cluster, and/or a POST script.
+Each node within a DAG may be further constrained  to succeed or fail
+based upon the return values of a PRE script and/or a POST script.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Input File Describing the DAG: the JOB, DATA, SCRIPT and PARENT...CHILD Key Words}
+\subsection{The DAG Input File: the JOB, DATA, PARENT...CHILD, and SCRIPT Key Words}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!DAG input file}
 The input file used by DAGMan is called a DAG input file.
-All items are optional, but there must be at least one \Arg{JOB}
+It specifies the nodes of the DAG as well as the dependencies
+that order the DAG.
+All items are optional, except that there must be at least one \Arg{JOB}
 or \Arg{DATA} item.
 
 Comments may be placed in the DAG input file.
@@ -117,15 +112,15 @@ A very simple DAG input file for this diamond-shaped DAG is
 \end{verbatim}
 \normalsize
 
-A set of basic key words appearing in a DAG input file is described below.
+A set of basic keywords appearing in a DAG input file is described below.
 
 \begin{itemize}
 
 \label{dagman:JOB}
-\index{DAGMan input file!JOB key word}
+\index{DAGMan input file!JOB keyword}
 \item \Bold{JOB}
 
-The \Arg{JOB} key word specifies a job to be managed by HTCondor.
+The \Arg{JOB} keyword specifies an HTCondor job.
 The syntax used for each \Arg{JOB} entry is
 
 \Opt{JOB} \Arg{JobName} \Arg{SubmitDescriptionFileName}
@@ -134,15 +129,14 @@ The syntax used for each \Arg{JOB} entry is
 A \Arg{JOB} entry maps a \Arg{JobName} to an HTCondor submit description file.
 The \Arg{JobName} uniquely identifies nodes within the
 DAGMan input file and in output messages.
-Note that the name for each node within the DAG
-must be unique.
+Each node name, given by \Arg{JobName}, within the DAG must be unique.
 
-The key words \Arg{JOB}, \Arg{DIR}, \Arg{NOOP}, and \Arg{DONE}
+The keywords \Arg{JOB}, \Arg{DIR}, \Arg{NOOP}, and \Arg{DONE}
 are not case sensitive.
 Therefore, \Arg{DONE}, \Arg{Done}, and \Arg{done} are all equivalent.
 The values defined for \Arg{JobName} and \Arg{SubmitDescriptionFileName}
-are case sensitive, as file names in
-the Unix file system are case sensitive.
+are case sensitive, as file names 
+in a file system are case sensitive.
 The \Arg{JobName} can be any string that contains no white space, except
 for the strings \Arg{PARENT} and \Arg{CHILD} (in upper, lower, or mixed
 case).
@@ -150,17 +144,17 @@ case).
 Note that \Arg{DIR}, \Arg{NOOP}, and \Arg{DONE}, if used, must appear
 in the order shown above.
 
-The \Arg{DIR} option specifies a working directory
+The optional \Arg{DIR} keyword specifies a working directory
 for this node,
 from which the HTCondor job will be submitted,
 and from which a \Arg{PRE} and/or
 \Arg{POST} script will be run.
 Note that a DAG containing \Arg{DIR} specifications cannot
 be run in conjunction with the \Arg{-usedagdir} command-line
-argument to \Condor{submit\_dag}.  A rescue DAG generated by
+argument to \Condor{submit\_dag}.  A Rescue DAG generated by
 a DAG run with the \Arg{-usedagdir} argument will contain
 \Arg{DIR} specifications, so the \Arg{-usedagdir} argument is
-automatically disregarded when running a rescue DAG.
+automatically disregarded when running a Rescue DAG.
 
 \label{dagman:NOOP}
 The optional \Arg{NOOP} keyword identifies that the HTCondor job within
@@ -186,9 +180,9 @@ because DAGMan generates dummy submission and termination events for the job.
 
 The optional \Arg{DONE} keyword identifies a node as being already
 completed.
-This is mainly used by rescue DAGs generated by DAGMan itself,
+This is mainly used by Rescue DAGs generated by DAGMan itself,
 in the event of a failure to complete the workflow.
-Nodes with the \Arg{DONE} keyword are not executed when the rescue DAG is run,
+Nodes with the \Arg{DONE} keyword are not executed when the Rescue DAG is run,
 allowing the workflow to pick up from the previous endpoint.  Users
 should generally not use the \Arg{DONE} keyword.
 The \Arg{NOOP} keyword is more flexible in avoiding
@@ -201,10 +195,10 @@ A node marked with \Arg{DONE} will not have a PRE or POST script run,
 and the HTCondor job will not be submitted.
 
 \label{dagman:DATA}
-\index{DAGMan input file!DATA key word}
+\index{DAGMan input file!DATA keyword}
 \item \Bold{DATA}
 
-The \Arg{DATA} key word specifies a job to be managed by the Stork data
+The \Arg{DATA} keyword specifies a job to be managed by the Stork data
 placement server.  
 Stork software is provided by the Stork project.
 Please refer to their website: 
@@ -216,8 +210,8 @@ The syntax used for each \Arg{DATA} entry is
 \oOptArg{DIR}{directory} \oOpt{NOOP} \oOpt{DONE}
 
 A \Arg{DATA} entry maps a \Arg{JobName} to a Stork submit description file.
-In all other respects, the \Arg{DATA} key word is identical to the
-\Arg{JOB} key word.
+In all other respects, the \Arg{DATA} keyword is identical to the
+\Arg{JOB} keyword.
 
 The keywords \Arg{DIR}, \Arg{NOOP} and \Arg{DONE} 
 follow the same rules and restrictions, and they have the same effect
@@ -242,150 +236,183 @@ may be run in parallel.
 \end{verbatim}
 \normalsize
 
+%----------------------------
+\label{dagman:ParentChild}
+\index{DAGMan input file!PARENT \Dots CHILD keyword}
+\item \Bold{PARENT \Dots CHILD}
+
+The \Arg{PARENT} and \Arg{CHILD} keywords specify the
+dependencies within the DAG.
+\index{DAGMan!describing dependencies}
+Nodes are parents and/or children within the DAG.
+A parent node must be completed successfully before
+any of its children may be started.
+A child node may only be started once
+all its parents have successfully completed.
+
+The syntax used for each dependency entry is
+
+\Opt{PARENT} \Arg{ParentJobName\Dots} \Opt{CHILD} \Arg{ChildJobName\Dots}
+
+The \Arg{PARENT} keyword is followed by one or more
+\Arg{ParentJobName}s.
+The \Arg{CHILD} keyword is followed by one or more
+\Arg{ChildJobName}s.
+Each child job depends on every parent job within the line.
+A single line in the input file can specify the dependencies from one or more
+parents to one or more children.
+The diamond-shaped DAG example may specify the dependencies with
+\begin{verbatim}
+PARENT A CHILD B C
+PARENT B C CHILD D
+\end{verbatim}
+An alternative specification for the diamond-shaped DAG
+may specify some or all of the dependencies on separate lines:
+\begin{verbatim}
+PARENT A CHILD B C
+PARENT B CHILD D
+PARENT C CHILD D
+\end{verbatim}
+
+As a further example, the line
+\begin{verbatim}
+PARENT p1 p2 CHILD c1 c2
+\end{verbatim}
+produces four dependencies:
+\begin{enumerate}
+\item{\verb@p1@ to \verb@c1@}
+\item{\verb@p1@ to \verb@c2@}
+\item{\verb@p2@ to \verb@c1@}
+\item{\verb@p2@ to \verb@c2@}
+\end{enumerate}
+
+%----------------------------
 \label{dagman:SCRIPT}
-\index{DAGMan input file!SCRIPT key word}
+\index{DAGMan input file!SCRIPT keyword}
 \item \Bold{SCRIPT}
 \index{DAGMan!PRE and POST scripts}
 
-The \Arg{SCRIPT} key word specifies
+The optional \Arg{SCRIPT} keyword specifies
 processing that is done either before a job within
-the DAG is submitted to HTCondor or Stork for execution
-or after
-a job within
-the DAG completes its execution.
+a node is submitted
+or after a job within a node completes its execution.
 \index{DAGMan!PRE script}
-Processing done before a job is submitted to HTCondor or Stork is
+Processing done before a job is submitted is
 called a \Arg{PRE} script.
-Processing done after a job completes
-its execution under HTCondor or Stork is
+Processing done after a job completes its execution is
 \index{DAGMan!POST script}
 called a \Arg{POST} script.
-A node in the DAG is comprised of the job together with
-\Arg{PRE} and/or \Arg{POST} scripts.
+It causes a shell script (Unix) or batch file (Windows) to be
+executed.
 
-\Arg{PRE} and \Arg{POST} script lines within the DAG input file
-use the syntax:
+The syntax used for each \Arg{PRE} or \Arg{POST} entry is
 
 \Opt{SCRIPT} \Opt{PRE} \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
 \Opt{SCRIPT} \Opt{POST}  \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
-The \Arg{SCRIPT} key word identifies the type of line within
-the DAG input file.
-The \Arg{PRE} or \Arg{POST} key word
-specifies the relative timing of when the script is to be run.
-The \Arg{JobName} specifies the node to which the script is attached.
+The \Arg{SCRIPT} keyword is followed by either
+the \Arg{PRE} or \Arg{POST} keyword,
+which specifies the relative timing of when the script is to be run.
+The \Arg{JobName} identifies the node to which the script is attached.
 The \Arg{ExecutableName}
-specifies the script to be executed, 
-and it may not contain spaces.
-The Optional \Arg{arguments} are command line arguments to the script,
+specifies the shell script/batch file to be executed, 
+and the executable name may not contain spaces.
+The optional \Arg{arguments} are command line arguments to the script,
 and spaces delimit the arguments.
 Both \Arg{ExecutableName} and optional \Arg{arguments} are
-case sensitive; they have their case preserved.
+case sensitive.
 
-Scripts are optional for each job, and
-any scripts are executed on the machine
-from which the DAG is submitted; this is not necessarily
-the same machine upon which the node's HTCondor or Stork job is run.
+Scripts are executed on the submit machine;
+the submit machine is not necessarily
+the same machine upon which the node's job is run.
 Further, a single cluster of HTCondor jobs may be
 spread across several machines.
 
 A PRE script is commonly used
-to place files in a staging area for the cluster of jobs to use.
+to place files in a staging area for the jobs to use.
 A POST script is commonly used
-to clean up or remove files once the cluster of jobs is finished running.
+to clean up or remove files once jobs are finished running.
 An example uses PRE and POST scripts to stage files
 that are stored on tape.
 The PRE script reads compressed input files from the tape drive,
-and it uncompresses them, placing the input files in the current directory.
-The cluster of HTCondor jobs reads these input files
-and produces output files.
+uncompresses them, and places the resulting files in the current directory.
+The HTCondor jobs can then use these files,
+producing output files.
 The POST script compresses the output files, writes them out to
-the tape, and then removes both the staged input files and the output files.
+the tape, and then removes both the staged files and the output files.
 
-DAGMan takes note of the exit value of the scripts as well as the job or jobs
-within the cluster.  
-A script with an exit value not equal to 0 fails.  
+Progress towards completion of the DAG is based upon
+the success of the nodes within the DAG.
+The success of a node is based upon the success of 
+the job(s), PRE script, and POST script.
+A job, PRE script, or POST script with an exit value not equal to 0 fails.  
 If the PRE script fails, 
 then the job does not run, but the POST script does run.
-The exit value of the POST script determines the success of the job. 
-If this behavior is not desired, 
-the configuration variable \MacroNI{DAGMAN\_ALWAYS\_RUN\_POST} 
-should be set to \Expr{False};
-then \Condor{dagman} will not run the POST script if the PRE script fails---%
-the node will instead simply fail, 
-with neither the job nor the POST script being executed.
-If the PRE script succeeds, the HTCondor or Stork job is submitted.
-If the job or any one of the jobs within the single cluster fails and there is
-no POST script, 
-the DAG node is marked as failed.  
-An exit value not equal to 0 indicates program failure,
-except as indicated by the \Arg{PRE\_SKIP} command:
-if a PRE script exits with the PRE\_SKIP value, 
-then the node succeeds and the job and the POST script are both skipped.  
-It is therefore important that a
-successful program return the exit value 0. 
-It is good practice to always
-explicitly specify a return value in the PRE script,
-returning 0 in the case of success.
-Otherwise,
-the return code of the last completed process is returned,
-which can lead to unexpected results. 
+The exit value of the POST script determines the success of the node. 
+Table~\ref{NodeS-F-ARP} lists the definition of node success and
+failure for all variations of scripts and job success and failure.
+In this table, a dash (\Expr{-}) represents the case where a script
+does not exist for the DAG, \Bold{S} represents success, 
+and  \Bold{F} represents failure.
 
-If the job fails and there is a POST script,
-node failure is determined by the exit value of the POST script.
-A failing value from the POST script marks the node as failed.
-A succeeding value from the POST script (even with a failed
-job) marks the node as successful.
-Therefore, the POST script may need to consider the return
-value from the job.
+The behavior when the PRE script fails may
+may be changed to \emph{not} run the POST script
+by setting configuration variable \MacroNI{DAGMAN\_ALWAYS\_RUN\_POST} 
+to \Expr{False}.
+With this, the failure of the PRE script
+means that the job does not run, and the POST script is not run.
+Table~\ref{NodeS-F} lists the definition of node success and
+failure only for the cases where the PRE script fails.
 
-By default, the POST script is run regardless of the job's
-return value. As for the PRE script, it is recommended to 
-specify return values explicitly in the POST script. 
-Otherwise the return code of the last completed process 
-is returned, which can lead to unexpected results. 
-
-A node not marked as failed at any point is successful.
-Table~\ref{Node-success-failure}
-summarizes the success or failure of an entire node
-for all possibilities.
-An \Arg{S} stands for success,
-an \Arg{F} stands for failure,
-and the dash character (\Arg{-}) identifies that there is no script. The
-asterisk (${}^\ast$) indicates that the POST script is run, unless
-\MacroNI{DAGMAN\_ALWAYS\_RUN\_POST} is \Expr{False}, in which case the node
-will simply fail, as described above.
+%An exit value not equal to 0 indicates program failure,
+%except as indicated by the \Arg{PRE\_SKIP} command:
+%if a PRE script exits with the PRE\_SKIP value, 
+%then the node succeeds and the job and the POST script are both skipped.  
+%It is therefore important that a
+%successful program return the exit value 0. 
+%It is good practice to always
+%explicitly specify a return value in the PRE script,
+%returning 0 in the case of success.
+%Otherwise,
+%the return code of the last completed process is returned,
+%which can lead to unexpected results. 
 
 \begin{center}
 \begin{table}[hbt]
-\begin{tabular}{|c||cccccccccccccc|} \hline
-PRE   & - & - & F          & F          & S & S & - & - & - & - & S & S & S & S  \\
-JOB   & S & F & not run    & not run    & S & F & S & S & F & F & S & F & F & S  \\
-POST  & - & - & S${}^\ast$ & F${}^\ast$ & - & - & S & F & S & F & S & S & F & F  \\
-\hline \hline
-node  & S & F & S${}^\ast$ & F          & S & F & S & F & S & F & S & S & F & F  \\
+\begin{tabular}{|c|c|c|c|} \hline
+PRE  & JOB & POST & \Bold{Node}  \\
+-  & S & - & \Bold{S}  \\
+-  & F & - & \Bold{F}  \\
+-  & S & S & \Bold{S}  \\
+-  & S & F & \Bold{F}  \\
+-  & F & S & \Bold{S}  \\
+S  & S & - & \Bold{S}  \\
+S  & F & - & \Bold{F}  \\
+S  & S & S & \Bold{S}  \\
+S  & F & S & \Bold{S}  \\
+S  & F & F & \Bold{F}  \\
+S  & S & F & \Bold{F}  \\
+F  & not run & - & \Bold{F}  \\
+F  & not run & S & \Bold{S}  \\
+F  & not run & F & \Bold{F}  \\
 \hline
 \end{tabular}
-\caption{\label{Node-success-failure}Node success or failure definition }
+\caption{\label{NodeS-F-ARP}Node \Bold{S}uccess or \Bold{F}ailure definition with \Expr{ DAGMAN\_ALWAYS\_RUN\_POST = True} }
 \end{table}
 \end{center}
 
-\index{DAGMan input file!PRE\_SKIP key word}
-\index{DAGMan!PRE\_SKIP command}
-The behavior of DAGMan with respect to node success or failure can be changed 
-with the addition of a \Arg{PRE\_SKIP} command. 
-A \Arg{PRE\_SKIP} line within the DAG input file uses the syntax: 
-
-\Opt{PRE\_SKIP} \Arg{JobName} \Arg{non-zero-exit-code}
-
-A DAG input file with this command uses the exit value from the
-PRE script of the node specified by \Arg{JobName}. 
-If the PRE script terminates with the exit code \Arg{non-zero-exit-code},
-then the remainder of the node is skipped entirely.  
-Both the job associated with the node and
-any POST script will not be executed,
-and the node will be marked as successful.
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|c|c|c|c|} \hline
+PRE  & JOB & POST & \Bold{Node}  \\
+\hline
+F  & not run & - & \Bold{F}  \\
+F  & not run & not run & \Bold{F}  \\
+\end{tabular}
+\caption{\label{NodeS-F}Node success or failure definition with \Expr{DAGMAN\_ALWAYS\_RUN\_POST = False} }
+\end{table}
+\end{center}
 
 \Bold{Special script argument macros}
 
@@ -395,29 +422,11 @@ DAG input file as arguments passed to a PRE or POST script.
 The three macros \Expr{\$JOBID}, \Expr{\$RETURN}, 
 and \Expr{\$PRE\_SCRIPT\_RETURN} can
 be used as arguments to POST scripts.
-The use of these variables must be as an individual command
+The use of these variables is limited to being used
+as an individual command
 line \Arg{argument} to the script,
 surrounded by spaces, in order to cause the substitution of the
 variable's value.
-The example POST script specification
-\begin{verbatim}
-  SCRIPT POST A stage-out job_status $RETURN 
-\end{verbatim}
-where the node job returned a value of -1
-invokes the POST script with
-\begin{verbatim}
-  stage-out job_status -1
-\end{verbatim}
-The slightly different example POST script specification
-\begin{verbatim}
-  SCRIPT POST A stage-out job_status=$RETURN 
-\end{verbatim}
-invokes the POST script with
-\begin{verbatim}
-  stage-out job_status=$RETURN
-\end{verbatim}
-There is no space between the \Expr{=} sign and the variable \Expr{\$RETURN},
-so there is no substitution of the variable's value.
 
 The special macros are as follows:
 
@@ -489,18 +498,39 @@ the POST script can use this to see if the PRE script exited
 with an error condition, and assign success or failure to the node, as
 appropriate.
 
-\item \Expr{\$DAG\_STATUS} and \Expr{\$FAILED\_COUNT} are documented in
-section ~\ref{sec:DAGFinalNode} below.
+%\item \Expr{\$DAG\_STATUS} and \Expr{\$FAILED\_COUNT} are documented in
+%section ~\ref{sec:DAGFinalNode} below.
+%\begin{itemize}
+\index{DAGMan!DAG_STATUS@\verb^$DAG_STATUS^ value}
+\item \Env{\$DAG\_STATUS} is the status of the DAG.
+Note that this macro's value and definition is unrelated to the attribute 
+named \Attr{DagStatus} as defined for use in a node status file.
+This macro's value is the same as the job ClassAd attribute \Attr{DAG\_Status}
+that is defined within the \Condor{dagman} job's ClassAd.
+This macro may have the following values:
+\begin{itemize}
+\item 0: OK
+\item 1: error; an error condition different than those listed here
+\item 2: one or more nodes in the DAG have failed
+\item 3: the DAG has been aborted by an ABORT-DAG-ON specification
+\item 4: removed; the DAG has been removed by \Condor{rm}
+\item 5: cycle; a cycle was found in the DAG
+\item 6: halted; the DAG has been halted (see section ~\ref{sec:DagSuspend})
 \end{itemize}
 
-\Bold{Example}
+\index{DAGMan!FAILED_COUNT@\verb^$FAILED_COUNT^ value}
+\item \Env{\$FAILED\_COUNT} is defined by the number of nodes that have failed in the
+DAG.
 
-As an example, consider the diamond-shaped DAG example.
-Suppose the PRE script expands a compressed file 
-needed as input to nodes B and C.
-The file is named of the form
-\File{\Arg{JobName}.gz}.
-The DAG input file becomes 
+\end{itemize}
+
+
+\Bold{Examples that use PRE or POST scripts}
+
+Examples use the diamond-shaped DAG.
+A first example uses a PRE script to expand a compressed file 
+needed as input to each of the HTCondor jobs of nodes B and C.
+The DAG input file:
 
 \footnotesize
 \begin{verbatim}
@@ -517,55 +547,71 @@ The DAG input file becomes
 \end{verbatim}
 \normalsize
 
-The script \File{pre.csh} uses the arguments to form the file name
-of the compressed file:
+The script \File{pre.csh} uses its command line arguments to form the file name
+of the compressed file.
+The script contains
 
 \begin{verbatim}
-    #!/bin/csh
-    gunzip $argv[1]$argv[2]
+  #!/bin/csh
+  gunzip $argv[1]$argv[2]
 \end{verbatim}
+
+Therefore, the PRE script invokes  
+\begin{verbatim}
+  gunzip B.gz
+\end{verbatim}
+for node B, which uncompresses file \File{B.gz},
+placing the result in file \File{B}.
+
+A second example uses the \Expr{\$RETURN} macro.
+The DAG input file contains the POST script specification:
+\begin{verbatim}
+  SCRIPT POST A stage-out job_status $RETURN 
+\end{verbatim}
+If the HTCondor job of node A exits with the value -1,
+the POST script is invoked as
+\begin{verbatim}
+  stage-out job_status -1
+\end{verbatim}
+
+The slightly different example POST script specification
+in the DAG input file
+\begin{verbatim}
+  SCRIPT POST A stage-out job_status=$RETURN 
+\end{verbatim}
+invokes the POST script with
+\begin{verbatim}
+  stage-out job_status=$RETURN
+\end{verbatim}
+
+This example shows that when
+there is no space between the \Expr{=} sign and the variable \Expr{\$RETURN},
+there is no substitution of the macro's value.
+
+\label{dagman:PRE-SKIP}
+\index{DAGMan input file!PRE\_SKIP keyword}
+\index{DAGMan!PRE\_SKIP command}
+\item \Bold{PRE\_SKIP}
+
+The behavior of DAGMan with respect to node success or failure can
+be changed with the addition of a \Arg{PRE\_SKIP} command. 
+A \Arg{PRE\_SKIP} line within the DAG input file uses the syntax: 
+
+\Opt{PRE\_SKIP} \Arg{JobName} \Arg{non-zero-exit-code}
+
+The PRE script of a node identified by \Arg{JobName} that exits with the value 
+given by \Arg{non-zero-exit-code}
+skips the remainder of the node entirely.  
+Neither the job associated with the node nor
+the POST script will be executed,
+and the node will be marked as successful.
 
 % $ % this comment just has a dollar sign so that emacs will not think
 %	  we're inside of a math section and will draw things more nicely
 
-
-\label{dagman:ParentChild}
-\index{DAGMan input file!PARENT \Dots CHILD key word}
-\item \Bold{PARENT \Dots CHILD}
-
-The \Arg{PARENT} and \Arg{CHILD} key words specify the
-dependencies within the DAG.
-\index{DAGMan!describing dependencies}
-Nodes are parents and/or children within the DAG.
-A parent node must be completed successfully before
-any of its children may be started.
-A child node may only be started once
-all its parents have successfully completed.
-
-The syntax of a dependency line within the DAG input file:
-
-\Opt{PARENT} \Arg{ParentJobName\Dots} \Opt{CHILD} \Arg{ChildJobName\Dots}
-
-The \Arg{PARENT} key word is followed by one or more
-\Arg{ParentJobName}s.
-The \Arg{CHILD} key word is followed by one or more
-\Arg{ChildJobName}s.
-Each child job depends on every parent job within the line.
-A single line in the input file can specify the dependencies from one or more
-parents to one or more children.
-As an example, the line
-\begin{verbatim}
-PARENT p1 p2 CHILD c1 c2
-\end{verbatim}
-produces four dependencies:
-\begin{enumerate}
-\item{\verb@p1@ to \verb@c1@}
-\item{\verb@p1@ to \verb@c2@}
-\item{\verb@p2@ to \verb@c1@}
-\item{\verb@p2@ to \verb@c2@}
-\end{enumerate}
-
 \end{itemize}
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Submit Description File Contents}
@@ -574,91 +620,14 @@ produces four dependencies:
 \index{DAGMan!submit description file with}
 \index{DAGMan!usage of log files}
 Each node in a DAG may use a unique submit description file.
-One key limitation is that
+A key limitation is that
 each HTCondor submit description file must submit jobs
-described by a single cluster number.
-At the present time DAGMan cannot deal with a submit file producing
+described by a single cluster number;
+DAGMan cannot deal with a submit description file producing
 multiple job clusters.
 
-%At one time, DAGMan required that all jobs within all nodes
-%specify the same, single log file.
-%This is no longer the case.
-%However, if the DAG utilizes a large number of
-%separate log files, performance may suffer.
-%Therefore, it is better to have
-%fewer, or even only a single log file.
-%
-%\index{DAGMan!lazy log file evaluation}
-%As of HTCondor version 7.3.2, DAGMan's handling of log files
-%significantly changed to improve resource usage and efficiency.  
-%Prior to HTCondor version 7.3.2, 
-%DAGMan assembled a list of all relevant log files at start up, 
-%by looking at all of the submit description files for all of the nodes.
-%It kept the log files open for the duration of the DAG.
-%Beginning with HTCondor version 7.3.2, DAGMan delays opening and using 
-%the submit description file until just before it is going to submit the job.
-%At that point, DAGMan reads the submit description file to discover 
-%the job's log file.
-%And, DAGMan monitors only the log files that are relevant
-%to the jobs currently queued, 
-%or associated with nodes for which a POST script is running.
-%
-%The advantages of the new "lazy log file evaluation" scheme are:
-%
-%\begin{itemize}
-%
-%\item The \Condor{dagman} executable uses fewer file descriptors.
-%In specific,
-%DAGMan must keep a file descriptor open for each unique log file,
-%and operating systems limit the number of open file descriptors;
-%HTCondor's most severe limit is 2048 on Windows platforms.
-%
-%\item It is much easier to have one node of a DAG produce the
-%submit description file for a descendant node in the DAG.
-%
-%\end{itemize}
-%
-%There is one known disadvantage of the lazy log file evaluation scheme:
-%
-%\begin{itemize}
-%
-%\item Because the log files are internally identified by inode
-%numbers, it is possible that errors may arise where log files for
-%a given DAG are spread across more than one device.
-%This permits two unique files to have the same inode number.
-%We hope to have this problem fixed soon.
-%
-%\end{itemize}
-
-%\index{DAGMan!default log file specification}
-%%Another new feature in HTCondor version 7.3.2 was the use of 
-%DAGMan assigns 
-%default node job user logs,
-%if a log file is not specified within a job's submit description file.
-%In HTCondor versions earlier than 7.3.2, 
-%it was a fatal error if the submit description
-%file for a node job did not specify a log file.
-%The file used as the default node log is controlled by the
-%\MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} configuration variable.
-%A complete description is at section~\ref{param:DAGManDefaultNodeLog}.
-%Nodes specifying a log file and other nodes using the default log
-%file can be mixed in a single DAG.
-%Allowing DAGMan to specify a single log file for an entire DAG, 
-%especially a wide DAG,
-%reduces the number of concurrently open file descriptors.
-
-%Log files for node jobs should not be placed on NFS, 
-%unless both configuration variables
-%\Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK} and \Macro{ENABLE\_USERLOG\_LOCKING}
-%are \Expr{True}. 
-%Without these settings, NFS file locking is not reliable,
-%occasionally resulting in simultaneous acquisition of locks on a single
-%log file by both the \Condor{schedd} daemon and the \Condor{dagman} job. 
-%Partially written events by the \Condor{schedd} cause errors
-%for \Condor{dagman}.
-%
-Here is a DAG input file for the diamond-shaped DAG, 
-where each node uses the same submit description file.
+Consider again the diamond-shaped DAG example, 
+where each node job uses the same submit description file.
 
 \begin{verbatim}
     # File name: diamond.dag
@@ -689,10 +658,8 @@ for this DAG:
 Since each node uses the same HTCondor submit description file,
 this implies that each node within the DAG runs the
 same job.
-The \MacroUNI{cluster} macro
+The \MacroUNI{Cluster} macro
 produces unique file names for each job's output.
-As the HTCondor job within each node
-causes a separate job submission, each has a unique cluster number.
 
 \index{ClassAd job attribute!DAGParentNodeNames}
 \index{DAGParentNodeNames!job ClassAd attribute}
@@ -713,34 +680,36 @@ the job.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{dagman:submitdag}DAG Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!job submission}
 
-A DAG is submitted using the program \Condor{submit\_dag}.
-See the manual
+A DAG is submitted using the tool \Condor{submit\_dag}.
+The manual
 page~\pageref{man-condor-submit-dag}
-for complete details.
-A simple submission has the syntax
+details the command.
+The simplest of DAG submissions has the syntax
 
 \Condor{submit\_dag} \Arg{DAGInputFileName}
 
-\index{DAGMan!job submission}
+and the current working directory contains the DAG input file.
+
 The diamond-shaped DAG example may be submitted with
 
 \begin{verbatim}
 condor_submit_dag diamond.dag
 \end{verbatim}
-In order to guarantee recoverability, the DAGMan program itself
-is run as an HTCondor job.
+
+To increase robustness and guarantee recoverability, the 
+\Condor{dagman} process is run as an HTCondor job.
 As such, it needs a submit description file.
-\Condor{submit\_dag} produces this needed submit description file,
-naming it by appending \File{.condor.sub} to the \Arg{DAGInputFileName}.
-This submit description file may be edited if the DAG is
-submitted with
+\Condor{submit\_dag} generates this needed submit description file,
+naming it by appending \File{.condor.sub} to the name of the DAG input file.
+This submit description file may be edited if the DAG is submitted with
 
 \begin{verbatim}
 condor_submit_dag -no_submit diamond.dag
 \end{verbatim}
-causing \Condor{submit\_dag} to generate the submit description file,
-but not submit DAGMan to HTCondor.
+causing \Condor{submit\_dag} to create the submit description file,
+but not submit \Condor{dagman} to HTCondor.
 To submit the DAG, once the submit description file is edited,
 use
 
@@ -748,49 +717,49 @@ use
 condor_submit diamond.dag.condor.sub
 \end{verbatim}
 
-An optional argument to \Condor{submit\_dag}, \Arg{-maxjobs}, 
-is used to specify the maximum number of batch jobs that DAGMan may
+Submit machines with limited resources are supported by
+command line options that place limits on the submission and handling 
+of HTCondor jobs and PRE and POST scripts. 
+Presented here are descriptions of the command line options
+to \Condor{submit\_dag}.
+These same limits can be set in configuration.
+Each limit is applied within a single DAG.
+
+The \Arg{-maxjobs} option 
+specifies the maximum number of job clusters that \Condor{dagman} may
 submit at one time.
-It is commonly used when 
+Since each node may represent a single cluster of jobs,
+this limit restricts the number of nodes that can be submitted at a time.
+It is commonly used when
 there is a limited amount of input file staging capacity.
-As a specific example, consider a case where each job will
-require 4 Mbytes of input files,
-and the jobs will run in a directory with a volume of 100 Mbytes
+As a specific example, consider a case where each node represents
+a single HTCondor job that requires 4 MB of input files,
+and the jobs will run in a directory with a volume of 100 MB
 of free space.
 Using the argument \Arg{-maxjobs 25} guarantees that a maximum
-of 25 jobs, using a maximum of 100 Mbytes of space,
-will be submitted to HTCondor and/or Stork at one time.
+of 25 jobs, using a maximum of 100 MB of space,
+will be submitted to HTCondor at one time.
 
-% -maxscripts has been replaced with -maxpre and -maxpost
-% Similarly, the \Arg{maxscripts} argument is used to specify the
-% maximum number of PRE and POST scripts running at one time.
-While the \Arg{-maxjobs} argument is used to limit the number
-of batch system jobs submitted at one time,
-it may be desirable to limit the number of scripts running
+Since PRE and POST scripts run on the submit machine,
+it may be desirable to limit the number of PRE or POST scripts running
 at one time.
-The optional \Arg{-maxpre} argument limits the number of PRE
+The optional \Arg{-maxpre} command line argument limits the number of PRE
 scripts that may be running at one time,
-while the optional \Arg{-maxpost} argument limits the number of POST
+and the optional \Arg{-maxpost} command line argument limits the number of POST
 scripts that may be running at one time.
 
-An optional argument to \Condor{submit\_dag}, \Arg{-maxidle}, 
-is used to limit the number of idle jobs within a given DAG.
-When the number of idle node jobs in the DAG reaches the specified
-value, \Condor{dagman} will stop submitting jobs, even if there
-are ready nodes in the DAG.  Once some of the idle jobs start to
-run, \Condor{dagman} will resume submitting jobs.  Note that this
-parameter only limits the number of idle jobs submitted by a
-given instance of \Condor{dagman}. Idle jobs submitted by other sources
-(including other \Condor{dagman} runs) are ignored. 
-Also, \Condor{dagman}
-does not do anything special to the submit description file.
-If a submit description file contains
-\Expr{queue 5000} and there is a specification for the \Arg{-maxidle} 
-argument of 250, 
-\Condor{dagman} will submit the file, 
-and a new cluster of 5000 jobs will be submitted to the \Condor{schedd}.
-In this case, no further jobs will be submitted by \Condor{dagman}
-until the number of idle jobs falls below 250. 
+The number of idle jobs within a given DAG may be limited with
+the optional command line argument \Arg{-maxidle}. 
+\Condor{dagman} will not submit further clusters of jobs 
+until the number of idle node jobs in the DAG goes below this
+specified value,
+even if there are ready nodes in the DAG.
+Note that while the \Arg{-maxjobs} option limits the number of clusters
+of jobs submitted,
+there can be more than one job per cluster.
+This \Arg{-maxidle} option is applied using counts of jobs,
+not counts of clusters.
+Therefore, it can prevent further clusters from being submitted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGPaths}File Paths in DAGs}
@@ -980,12 +949,12 @@ If one exists, it is removed.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{dagman:retry}Retrying Failed Nodes or Stopping the Entire DAG}
 
-\index{DAGMan input file!RETRY key word}
+\index{DAGMan input file!RETRY keyword}
 \index{DAGMan!RETRY of failed nodes}
-\index{DAGMan input file!ABORT-DAG-ON key word}
+\index{DAGMan input file!ABORT-DAG-ON keyword}
 \index{DAGMan!ABORT-DAG-ON}
 
-The \Arg{RETRY} key word provides a
+The \Arg{RETRY} keyword provides a
 way to retry failed nodes.
 The use of retry is optional.
 The syntax for retry is
@@ -1023,7 +992,7 @@ if it continues to fail.
 If the node is marked as successful, then further retries do not occur.
 
 Retry of a node may be short circuited using the
-optional key word \Arg{UNLESS-EXIT} (followed by an
+optional keyword \Arg{UNLESS-EXIT} (followed by an
 integer exit value).
 If the node exits with the specified integer exit value,
 then no further processing will be done
@@ -1036,7 +1005,7 @@ The variable \Env{\$MAX\_RETRIES} is the value set for
 \Arg{NumberOfRetries}.
 
 
-The \Arg{ABORT-DAG-ON} key word provides a way
+The \Arg{ABORT-DAG-ON} keyword provides a way
 to abort the entire DAG if a given node returns a specific exit
 code.  The syntax for \Arg{ABORT-DAG-ON} is
 
@@ -1066,7 +1035,7 @@ even if the node has retry specified.
 
 When a DAG aborts, by default it exits with the node return value that
 caused the abort.  This can be changed by 
-using  the optional \Arg{RETURN} key word along
+using  the optional \Arg{RETURN} keyword along
 with specifying the desired \Arg{DAGReturnValue}.
 The DAG abort return value
 can be used for DAGs within DAGs,
@@ -1102,11 +1071,11 @@ If this abort occurs, the return value for the DAG is 1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{dagman:VARS}Variable Values Associated with Nodes}
-\index{DAGMan input file!VARS key word}
+\index{DAGMan input file!VARS keyword}
 
 \index{DAGMan!VARS (macro for submit description file)}
 \index{VARS}
-The \Arg{VARS} key word provides a
+The \Arg{VARS} keyword provides a
 method for defining a macro that can be referenced in the
 node's submit description file.
 These macros are defined on a per-node basis, using the
@@ -1376,9 +1345,9 @@ which is the first retry and the value 1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Setting Priorities for Nodes}
-\index{DAGMan input file!PRIORITY key word}
+\index{DAGMan input file!PRIORITY keyword}
 
-The \Arg{PRIORITY} key word assigns a priority to a DAG node.
+The \Arg{PRIORITY} keyword assigns a priority to a DAG node.
 The syntax for \Arg{PRIORITY} is
 
 \Opt{PRIORITY} \Arg{JobName} \Arg{PriorityValue}
@@ -1469,22 +1438,22 @@ will \emph{not} tend to be the same.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-node-category}Limiting the Number of Submitted Job Clusters within a DAG}
 
-\index{DAGMan input file!CATEGORY key word}
-\index{DAGMan input file!MAXJOBS key word}
+\index{DAGMan input file!CATEGORY keyword}
+\index{DAGMan input file!MAXJOBS keyword}
 
 In order to limit the number of submitted job clusters within a DAG,
 the nodes may be placed into categories by assignment of a name.
 Then, a maximum number of submitted clusters may be specified
 for each category.
 
-The \Arg{CATEGORY} key word assigns a category name to a DAG node.
+The \Arg{CATEGORY} keyword assigns a category name to a DAG node.
 The syntax for \Arg{CATEGORY} is
 
 \Opt{CATEGORY} \Arg{JobName} \Arg{CategoryName}
 
 Category names cannot contain white space.
 
-The \Arg{MAXJOBS} key word limits the number of submitted job clusters
+The \Arg{MAXJOBS} keyword limits the number of submitted job clusters
 on a per category basis.
 The syntax for \Arg{MAXJOBS} is
 
@@ -1511,7 +1480,7 @@ categories and splices.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-configuration}Configuration Specific to a DAG}
-\index{DAGMan input file!CONFIG key word}
+\index{DAGMan input file!CONFIG keyword}
 \index{DAGMan!CONFIG}
 \index{DAGMan!configuration specific to a DAG}
 
@@ -1622,26 +1591,31 @@ of the node job, unless the job requests it using the submit command
 \index{DAGMan!Single submission of multiple, independent DAGs}
 
 A single use of \Condor{submit\_dag} may execute multiple, independent DAGs.
-Each independent DAG has its own DAG input file.
+Each independent DAG has its own, distinct DAG input file.
 These DAG input files are command-line arguments to
-\Condor{submit\_dag}
-(see the \Condor{submit\_dag} manual page at ~\ref{man-condor-submit-dag}).
+\Condor{submit\_dag}.
 
 Internally, all of the independent DAGs are combined
 into a single, larger DAG, with no dependencies between
 the original independent DAGs.
 As a result,
-any generated rescue DAG file represents all of the input DAGs
-as a single DAG.
-The file name of this rescue DAG is based on the DAG input file
-listed first within the command-line arguments to
-\Condor{submit\_dag} (unlike a single-DAG rescue DAG file, however,
-the file name will be
-\File{\textless{whatever}\textgreater.dag\_multi.rescue} or
-\File{\textless{whatever}\textgreater.dag\_multi.rescueNNN},
-as opposed to
-just \File{\textless{whatever}\textgreater.dag.rescue}
-or \File{\textless{whatever}\textgreater.dag.rescueNNN}).
+any generated Rescue DAG file represents all of the original independent DAGs
+with a single DAG.
+The file name of this Rescue DAG is based on the DAG input file
+listed first within the command-line arguments.
+For example, assume that three independent DAGs are submitted with
+\begin{verbatim}
+  condor_submit_dag A.dag B.dag C.dag
+\end{verbatim}
+The first listed is \File{A.dag}.
+The remainder of the specialized file name adds a suffix
+onto this first DAG input file name, \File{A.dag}.
+The suffix is \File{\_multi.rescue<XXX>},
+where \File{<XXX>} is substituted by the 3-digit number of the
+Rescue DAG created as defined in section~\ref{sec:DAGMan-rescue}.
+The first time a Rescue DAG is created for the example,
+it will have the file name \File{A.dag\_multi.rescue001}.
+
 Other files such
 as \File{dagman.out} and the lock file also have names based on this
 first DAG input file.
@@ -1665,7 +1639,7 @@ to \Expr{False} (see ~\ref{param:DAGManMungeNodeNames}).
 \subsubsection{\label{sec:DAGsinDAGs}A DAG Within a DAG Is a SUBDAG}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!DAGs within DAGs}
-\index{DAGMan input file!SUBDAG key word}
+\index{DAGMan input file!SUBDAG keyword}
 
 The organization and dependencies of the jobs within a DAG
 are the keys to its utility.
@@ -1904,25 +1878,22 @@ The outer DAG is submitted as before, with the command
 
 \item{Interaction with Rescue DAGs}
 
-When using nested DAGs, we strongly recommend that you use
-"new-style" rescue DAGs. This is the default.  Using "new-style"
-rescue DAGs will automatically run the proper rescue DAG(s) if
+When using nested DAGs, the use of new-style Rescue DAGs is the default.  
+Rescue DAGs will automatically run the proper Rescue DAG(s) if
 there is a failure in the work flow.  For example, if one of the
-nodes in \File{inner.dag} fails, this will produce a rescue
-DAG for inner.dag (named \File{inner.dag.rescue.001}, etc.).  Then,
+nodes in \File{inner.dag} fails, this will produce a Rescue
+DAG for \File{inner.dag} (named \File{inner.dag.rescue.001}).
+Then,
 since \File{inner.dag} failed, node B of \File{diamond.dag} will fail,
-producing a rescue DAG for \File{diamond.dag}
+producing a Rescue DAG for \File{diamond.dag}
 (named \File{diamond.dag.rescue.001}, etc.).  
 If the command
 \begin{verbatim}
 condor_submit_dag diamond.dag
 \end{verbatim}
-is re-run, the most recent outer rescue
+is re-run, the most recent outer Rescue
 DAG will be run, and this will re-run the inner DAG, which will
-in turn run the most recent inner rescue DAG.  
-The use of
-"old-style" rescue DAGs will require the renaming of the 
-inner rescue DAG or manually running it.
+in turn run the most recent inner Rescue DAG.  
 
 \item{File Paths}
 
@@ -1938,7 +1909,7 @@ must be specified accordingly.
 \subsubsection{\label{sec:DAGSplicing}DAG Splicing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!Splicing DAGs}
-\index{DAGMan input file!SPLICE key word}
+\index{DAGMan input file!SPLICE keyword}
 
 A weakness in scalability exists when submitting a DAG within a DAG.
 Each executing independent DAG requires its own invocation of
@@ -1946,7 +1917,7 @@ Each executing independent DAG requires its own invocation of
 The scaling issue presents itself when
 the same semantic DAG is reused hundreds or thousands of times
 in a larger DAG.
-Further, there may be many rescue DAGs created if a problem occurs.
+Further, there may be many Rescue DAGs created if a problem occurs.
 To alleviate these concerns, the DAGMan language introduces
 the concept of graph splicing.
 
@@ -2207,8 +2178,8 @@ specification will have their \Arg{DIR} specification untouched.
 Note that a DAG containing \Arg{DIR} specifications cannot be run
 in conjunction with the \Arg{-usedagdir} command-line argument to
 \Condor{submit\_dag}.
-A rescue DAG generated by a DAG run with the \Arg{-usedagdir} argument
-will contain DIR specifications, so the rescue DAG must be run
+A Rescue DAG generated by a DAG run with the \Arg{-usedagdir} argument
+will contain DIR specifications, so the Rescue DAG must be run
 \emph{without} the \Arg{-usedagdir} argument.
 
 
@@ -2353,7 +2324,7 @@ at a higher level, the splice name must be included.
 \subsubsection{\label{sec:DAGFinalNode}FINAL node}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!DAG FINAL node}
-\index{DAGMan input file!FINAL key word}
+\index{DAGMan input file!FINAL keyword}
 
 A FINAL node is a single and special node that is always run at 
 the end of the DAG,
@@ -2361,21 +2332,24 @@ even if previous nodes in the DAG have failed.
 A FINAL node can be used
 for tasks such as cleaning up intermediate files and checking the output
 of previous nodes.
+The \Arg{FINAL} keyword in the DAG input file specifies 
+a node job to be run at the end of the DAG.  
 
-The \Arg{FINAL} key word specifies a job to be run at the end of
-the DAG.  The syntax used for the \Arg{FINAL} entry is
+The syntax used for the \Arg{FINAL} entry is
 
 \Opt{FINAL} \Arg{JobName} \Arg{SubmitDescriptionFileName}
 \oOptArg{DIR}{directory} \oOpt{NOOP}
 
-The FINAL node is identified by \Arg{JobName}, and the HTCondor job
+The FINAL node within the DAG is identified by \Arg{JobName}, 
+and the HTCondor job
 is described by the contents of the HTCondor submit description file
 given by \Arg{SubmitDescriptionFileName}.
 
-The key words \Arg{DIR} and \Arg{NOOP} are not case sensitive.
-Note that \Arg{DIR} and \Arg{NOOP}, if used, must appear
-in the order shown above.
-See section~\ref{dagman:JOB} for the descriptions of these two keywords.
+The keywords \Arg{DIR} and \Arg{NOOP} 
+are as detailed in section~\ref{dagman:JOB}.
+If both \Arg{DIR} and \Arg{NOOP} are used, 
+they must appear in the order shown within the syntax specification.
+
 There may only be one FINAL node in a DAG.
 A parse error will be logged by the \Condor{dagman} job in the
 \File{dagman.out} file,
@@ -2391,47 +2365,17 @@ If \Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} is set to \Expr{False} and
 a cycle is detected during the course of the run, 
 the FINAL node \emph{will} be run.
 
-An important consideration in using a FINAL node is that the
-success or failure of the FINAL node overrides all previous status
-in determining the success or failure of the entire DAG.
-This includes a status specified by any ABORT-DAG-ON specification
+The success or failure of the FINAL node 
+determines the success or failure of the entire DAG,
+overriding the status of all previous nodes.
+This includes any status specified by any ABORT-DAG-ON specification
 that has taken effect.
-For example, if some nodes of a DAG fail,
+If some nodes of a DAG fail,
 but the FINAL node succeeds, the DAG will be considered successful.
 Therefore, it is important
 to be careful about setting the exit status of the FINAL node.
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
-\begin{description}
-\item[FINAL node-related macros]
-\end{description}
-
-Two special macros have been introduced for use by FINAL nodes:
-\Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}.
-These macros may also be used by other nodes.
-
-\begin{itemize}
-\index{DAGMan!DAG_STATUS@\verb^$DAG_STATUS^ value}
-\item \Env{\$DAG\_STATUS} is the status of the DAG.
-Note that this macro's value and definition is unrelated to the attribute 
-named \Attr{DagStatus} as defined for use in a node status file.
-This macro's value is the same as the job ClassAd attribute \Attr{DAG\_Status}
-that is defined within the \Condor{dagman} job's ClassAd.
-This macro may have the following values:
-\begin{itemize}
-\item 0: OK
-\item 1: error; an error condition different than those listed here
-\item 2: one or more nodes in the DAG have failed
-\item 3: the DAG has been aborted by an ABORT-DAG-ON specification
-\item 4: removed; the DAG has been removed by \Condor{rm}
-\item 5: cycle; a cycle was found in the DAG
-\item 6: halted; the DAG has been halted (see section ~\ref{sec:DagSuspend})
-\end{itemize}
-
-\index{DAGMan!FAILED_COUNT@\verb^$FAILED_COUNT^ value}
-\item \Env{\$FAILED\_COUNT} is defined by the number of nodes that have failed in the
-DAG.
-\end{itemize}
 
 The \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT} macros can be used both
 as PRE and POST script arguments, and in node job submit description files.
@@ -2474,12 +2418,7 @@ and partial contents of the Perl PRE script, \File{final\_pre.pl}:
 \end{verbatim}
 
 
-% Note: this is an alternative to subsubsubsection, which we don't have.
-\begin{description}
-\item[FINAL node limitations]
-\end{description}
-
-There are restrictions on usage of a FINAL node.
+There are restrictions on the use of a FINAL node.
 There is no DONE option for the HTCondor job.
 And, other nodes may \emph{not} reference the FINAL node in specifications of 
 \begin{itemize}
@@ -2495,72 +2434,35 @@ And, other nodes may \emph{not} reference the FINAL node in specifications of
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!Rescue DAG}
-DAGMan can help with the re-running of uncompleted portions of a DAG, 
-when one or more nodes result in failure,
-or when a running DAG is removed with \Condor{rm}.
-If any node in the DAG fails,
+Any time a DAG exits unsuccessfully (for example, if some nodes fail
+or the running DAG is removed with \Condor{rm}), DAGMan generates
+a Rescue DAG.  The Rescue DAG records the state of the DAG (such as which
+nodes completed successfully), and can be used to re-try the DAG
+without re-running nodes that already completed successfully.  (Note
+that an \Arg{ABORT-DAG-ON} returning 0 constitutes a successful
+DAG completion, and therefore a rescue DAG is not generated.)
+
+If a node in the DAG fails, the DAG does not exit immediately;
 the remainder of the DAG is continued until no more forward
 progress can be made based on the DAG's dependencies.
-At this point, DAGMan produces a file called a Rescue DAG.  
+At this point, DAGMan produces the Rescue DAG and exits.
 A Rescue DAG is also produced if the
-\Condor{dagman} job itself is removed with \Condor{rm}.
+\Condor{dagman} job itself is removed with \Condor{rm}, or if
+an \Arg{ABORT-DAG-ON} with a non-zero return value is triggered.
+\Bold{Note that, ON WINDOWS, doing a \Condor{rm} of a running
+DAG does not generate a Rescue DAG.  However, re-submitting
+the original DAG will invoke a lower-level recovery functionality,
+and will produce similar behavior to using a Rescue DAG.}
 
-If the DAG is resubmitted utilizing the Rescue DAG,
-the successfully completed nodes will not be re-executed.
-As of HTCondor version 7.7.2, the Rescue DAG file is a partial DAG file. 
-
-A partial Rescue DAG file contains only information about which nodes are done,
-and the number of retries remaining for nodes with retries.  
-It does not contain information such as the actual
-DAG structure and the specification of the submit file for each node job.  
-Partial Rescue DAGs are automatically parsed in combination with
-the original DAG file, 
-which contains information about the DAG structure.  
-This updated implementation means that a change in the original DAG input file,
-such as specifying a different submit description file for a node job,
-will take effect when running the partial Rescue DAG.
-
-The previous behavior of producing full DAG input file 
-is implemented by setting the configuration variable
-\Macro{DAGMAN\_WRITE\_PARTIAL\_RESCUE} to the non-default 
-value of \Expr{False}.  
-
-Note that the removal of a node from the original DAG input file, 
-together with a \Arg{DONE} specification in the Rescue DAG 
-for a node that no longer exists is a warning,
-as opposed to an error, 
-unless the \Macro{DAGMAN\_USE\_STRICT} configuration
-variable is set to a value of 1 or higher.  
-Comment out the line with \Arg{DONE} in the partial Rescue DAG file
-to avoid a warning or error.
-
-To run a full Rescue DAG,
-either one left over from an older version of DAGMan, 
-or one produced by setting \Macro{DAGMAN\_WRITE\_PARTIAL\_RESCUE} 
-to \Expr{False}, 
-directly specify the full Rescue DAG file instead of the original DAG file.
-For example:
-
-\begin{verbatim}
-  condor_submit_dag my.dag.rescue002
-\end{verbatim}
-
-Re-submission of the original DAG input file causes \Condor{dagman} to try to
-parse the Rescue DAG file in combination with the original DAG input file, 
-which will result in failure if the Rescue DAG is a full Rescue DAG file.
-
-Note that if multiple DAG input files are specified on the
-\Condor{submit\_dag} command line,
-a single Rescue DAG encompassing all of the input DAGs is generated.
-
-If the Rescue DAG file is generated before all retries
-of a node are completed, 
-then the Rescue DAG file will also contain \Arg{Retry} entries.
-The number of retries will be set to the appropriate remaining
-number of retries.
-The configuration variable \Macro{DAGMAN\_RESET\_RETRIES\_UPON\_RESCUE}, 
-section~\ref{param:DAGManResetRetriesUponRescue},
-controls whether or not node retries are reset in a Rescue DAG.
+By default, if a Rescue DAG exists, it will be used when you
+re-submit the original DAG file.  If more than one Rescue DAG
+exists, the newest one will be used.  By using the Rescue DAG,
+DAGMan will avoid re-running nodes that completed successfully
+in the previous run.
+\Bold{Note that passing the \Arg{-force} option to \Condor{submit\_dag}
+or \Condor{dagman} will cause \Condor{dagman} to not use any existing
+rescue DAG.  This means that previously-completed node jobs will be
+re-run.}
 
 The granularity defining success or failure
 in the Rescue DAG is the node.
@@ -2569,7 +2471,7 @@ all parts of the node will be re-run,
 even if some parts were successful the first time.
 For example, if a node's PRE script
 succeeds, but then the node's HTCondor job cluster fails,
-the entire node, which includes the PRE script will be re-run.
+the entire node (including the PRE script) will be re-run.
 A job cluster may result in the submission of multiple HTCondor jobs.
 If one of the multiple jobs fails, the node fails.
 Therefore, the Rescue DAG will
@@ -2580,19 +2482,33 @@ not just the one(s) that failed.
 Statistics about the failed DAG execution are presented as
 comments at the beginning of the Rescue DAG input file.
 
-The Rescue DAG is automatically generated by \Condor{dagman} when a node
-within the DAG fails or when \Condor{dagman} itself is removed
-with \Condor{rm}.
-The file name of the Rescue DAG, and usage of the Rescue
-DAG changed from explicit specification to implicit usage
-beginning with HTCondor version 7.1.0.
-Current naming of the Rescue DAG appends the string
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{dagman:rescue_dag_naming}
+\begin{description}
+\item[Rescue DAG Naming]
+\end{description}
+
+The file name of the Rescue DAG is obtained by
+appending the string
 \verb@.rescue<XXX>@ to the original DAG input file name.
 Values for \verb@<XXX>@ start at \verb@001@ and continue
 to \verb@002@, \verb@003@, and beyond.
-If a Rescue DAG exists,
+The configuration variable \Macro{DAGMAN\_MAX\_RESCUE\_NUM}
+sets a maximum value for \verb@<XXX>@;
+see section~\ref{param:DAGManMaxRescueNum} for the complete definition
+of this configuration variable.  If you hit the
+\Macro{DAGMAN\_MAX\_RESCUE\_NUM} limit, the last Rescue DAG file
+is overwritten if the DAG fails again.
+
+If a Rescue DAG exists when the original DAG is re-submitted,
 the Rescue DAG with the largest magnitude value for \verb@<XXX>@
 will be used, and its usage is implied.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{dagman:rescue_dag_example}
+\begin{description}
+\item[Example]
+\end{description}
 
 Here is an example showing file naming and DAG submission
 for the case of a failed DAG.
@@ -2615,6 +2531,12 @@ as with the first two submissions, but not repeated here,
 then this third submission uses the Rescue DAG file \File{my.dag.rescue002},
 because it exists, and because the value \verb@002@ is larger
 in magnitude than \verb@001@.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{dagman:rescue_dag_backtracking}
+\begin{description}
+\item[Backtracking to an Older Rescue DAG]
+\end{description}
 
 To explicitly specify a particular Rescue DAG,
 use the optional command-line argument \Arg{-dorescuefrom}
@@ -2643,10 +2565,86 @@ renamed to be \File{my.dag.rescue003.old},
 while the existing Rescue DAG \File{my.dag.rescue004} is
 renamed to be \File{my.dag.rescue004.old}.
 
-The configuration variable \Macro{DAGMAN\_MAX\_RESCUE\_NUM}
-sets a maximum value for \verb@XXX@.
-See section~\ref{param:DAGManMaxRescueNum} for the complete definition
-of this configuration variable.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{dagman:rescue_special_cases}
+\begin{description}
+\item[Special Cases]
+\end{description}
+
+Note that if multiple DAG input files are specified on the
+\Condor{submit\_dag} command line,
+a single Rescue DAG encompassing all of the input DAGs is generated.
+A DAG file containing splices also produces a single Rescue DAG file.
+On the other hand, a DAG containing sub-DAGs will produce a
+separate Rescue DAG for each sub-DAG that is queued (and for the
+top-level DAG).
+
+If the Rescue DAG file is generated before all retries
+of a node are completed, 
+then the Rescue DAG file will also contain \Arg{Retry} entries.
+The number of retries will be set to the appropriate remaining
+number of retries.
+The configuration variable \Macro{DAGMAN\_RESET\_RETRIES\_UPON\_RESCUE}, 
+section~\ref{param:DAGManResetRetriesUponRescue},
+controls whether or not node retries are reset in a Rescue DAG.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{dagman:partial_full_rescue_dag}
+\begin{description}
+\item[Partial versus Full Rescue DAGs]
+\end{description}
+
+As of HTCondor version 7.7.2, the Rescue DAG file is a partial DAG file,
+not a complete DAG input file as in the past.
+
+A partial Rescue DAG file contains only information about which nodes are done,
+and the number of retries remaining for nodes with retries.  
+It does not contain information such as the actual
+DAG structure and the specification of the submit description file 
+for each node job.  
+Partial Rescue DAGs are automatically parsed in combination with
+the original DAG input file, 
+which contains information about the DAG structure.  
+This updated implementation means that a change in the original DAG input file,
+such as specifying a different submit description file for a node job,
+will take effect when running the partial Rescue DAG.
+In other words, you can fix mistakes in the original DAG file while
+still gaining the benefit of using the Rescue DAG.
+
+To use a partial Rescue DAG, you \emph{must} re-run \Condor{submit\_dag}
+on the original DAG file, not the Rescue DAG file.
+
+Note that the existence of a DONE specification in a partial Rescue DAG for
+a node that no longer exists in the original DAG input file
+is a warning, as opposed to an error, 
+unless the \Macro{DAGMAN\_USE\_STRICT} configuration
+variable is set to a value of 1 or higher (which is now the default).  
+Comment out the line with \Arg{DONE} in the partial Rescue DAG file
+to avoid a warning or error.
+
+The previous (prior to version 7.7.2) behavior of producing full DAG input file 
+as the Rescue DAG 
+is obtained by setting the configuration variable
+\Macro{DAGMAN\_WRITE\_PARTIAL\_RESCUE} to the non-default 
+value of \Expr{False}.  
+\Bold{Note that the option to generate full Rescue DAGs is likely to
+disappear some time during the 8.3 series.}
+
+To run a full Rescue DAG,
+either one left over from an older version of DAGMan, 
+or one produced by setting \Macro{DAGMAN\_WRITE\_PARTIAL\_RESCUE} 
+to \Expr{False}, 
+directly specify the full Rescue DAG file on the command line
+instead of the original DAG file.
+For example:
+
+\begin{verbatim}
+  condor_submit_dag my.dag.rescue002
+\end{verbatim}
+
+Attempting to re-submit the original DAG file, if the Rescue DAG file
+is a complete DAG, will result in a parse failure.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2655,7 +2653,7 @@ of this configuration variable.
 \item[Rescue DAG Generated When There Are Parse Errors]
 \end{description}
 
-Starting in HTCondor version 7.5.5,
+Starting in HTCondor version 7.5.5, passing
 the \Opt{-DumpRescue} option to either \Condor{dagman} or \Condor{submit\_dag}
 causes \Condor{dagman} to output a Rescue DAG file, 
 even if the parsing of a DAG input file fails.
@@ -2695,32 +2693,6 @@ such that if the incomplete Rescue DAG could be run,
 it could erroneously be perceived as
 having successfully executed the desired workflow, when, in fact,
 it did not.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{description}
-\item[Outdated Naming of Rescue DAG]
-\end{description}
-As of HTCondor version 7.7.2, the following file naming scheme is 
-no longer available.
-
-Prior to HTCondor version 7.1.0, the naming of a Rescue DAG
-appended the string \File{.rescue} to the existing DAG input
-file name. 
-And, the Rescue DAG file would be explicitly placed in 
-the command line that submitted it.
-For example,  a first submission
-\begin{verbatim}
-  condor_submit_dag  my.dag
-\end{verbatim}
-Assuming that this DAG failed, the file \File{my.dag.rescue}
-would be created.
-To run this Rescue DAG, the submission command is
-\begin{verbatim}
-  condor_submit_dag  my.dag.rescue
-\end{verbatim}
-If this Rescue DAG also failed, a new Rescue DAG named
-\File{my.dag.rescue.rescue} would be created.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Visualizing DAGs with \Prog{dot}}
@@ -2821,11 +2793,12 @@ such that the user or a script can monitor this status.
 This file is periodically rewritten
 while the DAG runs.
 To enable this feature, the DAG input file must contain a line with the
-\Arg{NODE\_STATUS\_FILE} key word.
+\Arg{NODE\_STATUS\_FILE} keyword.
 
 The syntax for a \Arg{NODE\_STATUS\_FILE} specification is
 
 \Opt{NODE\_STATUS\_FILE} \Arg{statusFileName} \oArg{minimumUpdateTime}
+\oOpt{ALWAYS-UPDATE}
 
 The status file is written on the machine on which the DAG is submitted;
 its location is given by \Arg{statusFileName},
@@ -2843,6 +2816,16 @@ no matter how small the \Arg{minimumUpdateTime} value.
 Also, the node status file will be updated when the DAG finishes,
 whether successful or not, even if \Arg{minimumUpdateTime} seconds
 have not elapsed since the last update.
+
+The optional \Arg{ALWAYS-UPDATE} keyword specifies that the
+node status file should be updated on every submission cycle,
+even if no nodes have changed status since the last time the
+file was updated.
+The file will change slightly,
+because timestamps will be updated.
+For performance reasons,
+large DAGs with approximately 10,000 or more nodes
+are poor candidates for using the \Arg{ALWAYS-UPDATE} option.
 
 As an example, if the DAG input file contains the line
 \begin{verbatim}
@@ -2926,7 +2909,7 @@ yet running.
 \item 6 (\verb@STATUS_ERROR@): The node has failed.
 \end{itemize}
 
-A \Arg{NODE\_STATUS\_FILE} key word inside any splice is ignored.
+A \Arg{NODE\_STATUS\_FILE} keyword inside any splice is ignored.
 If multiple DAG files are specified on the \Condor{submit\_dag} command line,
 and more than one specifies a node status file,
 the first specification takes precedence.
@@ -3057,10 +3040,10 @@ that starts at one.
 It is associated with each attempt at running a node.
 If a node is retried, it gets a new sequence number;
 a submit failure does not result in a new sequence number.
-When a rescue DAG is run,
+When a Rescue DAG is run,
 the sequence numbers pick up from where they left off within the previous
 attempt at running the DAG.
-Note that this only applies if the rescue
+Note that this only applies if the Rescue
 DAG is run automatically or with the \Arg{-dorescuefrom} command-line option.
 
 \end{description}

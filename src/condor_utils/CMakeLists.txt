@@ -112,18 +112,19 @@ if ( LINUX )
   set_target_properties( condor_utils PROPERTIES LINK_FLAGS "-Wl,--wrap=dprintf" )
 endif()
 
-target_link_libraries(condor_utils ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${POSTGRESQL_FOUND} ${COREDUMPER_FOUND} )
+if (DLOPEN_GSI_LIBS)
+	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${POSTGRESQL_FOUND} ${COREDUMPER_FOUND} )
+else()
+	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${POSTGRESQL_FOUND} ${COREDUMPER_FOUND} )
+endif()
 if ( DARWIN )
 	target_link_libraries( condor_utils ${IOKIT_FOUND} ${COREFOUNDATION_FOUND} resolv )
 	add_custom_command( TARGET condor_utils
 		POST_BUILD
 		COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs lib${UTILS_LIB_NAME}.dylib )
 endif()
-if(WINDOWS)
-	add_dependencies(condor_utils utils_genparams syscall_numbers )
-else()
-	add_dependencies(condor_utils utils_genparams syscall_numbers configure_safefile)
-endif()
+
+add_dependencies(condor_utils utils_genparams syscall_numbers )
 
 ##################################################
 # condorapi & tests
@@ -144,12 +145,12 @@ if (HAVE_LIBDL)
 	set(APILIBDEP dl)
 endif()
 
-target_link_libraries(condorapi ${CLASSADS_FOUND};${APILIBDEP})
+target_link_libraries(condorapi ${CLASSADS_FOUND};${APILIBDEP};${RT_FOUND})
 
 if (LINUX OR DARWIN)
 	condor_shared_lib( condorapi_shared "${ApiSrcs}" )
 	add_dependencies( condorapi_shared condor_utils )
-	target_link_libraries(condorapi_shared ${CLASSADS_FOUND};${APILIBDEP})
+	target_link_libraries(condorapi_shared ${CLASSADS_FOUND};${APILIBDEP};${RT_FOUND})
 	set_target_properties( condorapi_shared PROPERTIES OUTPUT_NAME condorapi )
 endif()
 

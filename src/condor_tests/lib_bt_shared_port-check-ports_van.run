@@ -40,6 +40,8 @@ $on_execute = sub {
 		print "nstat: $line\n"
 	}
 
+	CondorTest::CreatePidsFile();
+
 	# allow netstat to fail as some nmi platforms (macos_10.4) don't support it
 	if($netstatlength == 0) {
 		CondorTest::debug("Warning: 'netstat -tlpn | grep condor' failed, skipping tcp port checks\n",1);

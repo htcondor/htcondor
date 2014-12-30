@@ -34,8 +34,6 @@ use Check::CondorLog;
 my $ClusterId = 0;
 my $mismatch = 0;
 
-CondorTest::SetUseNewRunning();
-
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	WANT_SUSPEND = FALSE

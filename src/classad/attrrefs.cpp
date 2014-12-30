@@ -167,13 +167,11 @@ _Evaluate (EvalState &state, Value &val) const
 			return false;
 
 		case EVAL_ERROR:
-		case PROP_ERROR:
 			val.SetErrorValue();
 			state.curAd = curAd;
 			return true;
 
 		case EVAL_UNDEF:
-		case PROP_UNDEF:
 			val.SetUndefinedValue();
 			state.curAd = curAd;
 			return true;
@@ -219,12 +217,10 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 			break;
 
 		case EVAL_ERROR:
-		case PROP_ERROR:
 			val.SetErrorValue( );
 			break;
 
 		case EVAL_UNDEF:
-		case PROP_UNDEF:
 			val.SetUndefinedValue( );
 			break;
 
@@ -276,13 +272,11 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 			return false;
 
 		case EVAL_ERROR:
-		case PROP_ERROR:
 			val.SetErrorValue();
 			state.curAd = curAd;
 			return true;
 
 		case EVAL_UNDEF:
-		case PROP_UNDEF:
 			if( expr && state.flattenAndInline ) {
 				ExprTree *expr_ntree = NULL;
 				Value expr_val;
@@ -317,6 +311,14 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 
 		case EVAL_OK:
 		{
+			// Don't flatten or inline a classad that's referred to
+			// by an attribute.
+			if ( tree->GetKind() == CLASSAD_NODE ) {
+				ntree = Copy( );
+				val.SetUndefinedValue( );
+				return true;
+			}
+
 			if( state.depth_remaining <= 0 ) {
 				val.SetErrorValue();
 				state.curAd = curAd;
@@ -373,9 +375,9 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 		}
 
 		if( val.IsUndefinedValue( ) ) {
-			return( PROP_UNDEF );
+			return( EVAL_UNDEF );
 		} else if( val.IsErrorValue( ) ) {
-			return( PROP_ERROR );
+			return( EVAL_ERROR );
 		}
 		
 		if( !val.IsClassAdValue( current ) && !val.IsListValue( adList ) ) {
@@ -441,7 +443,7 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 		 */
 	if (!current) { return EVAL_UNDEF; }
 	int rc = current->LookupInScope( attributeStr, tree, state );
-	if ( !expr && rc == EVAL_UNDEF && current->alternateScope ) {
+	if ( !expr && !absolute && rc == EVAL_UNDEF && current->alternateScope ) {
 		rc = current->alternateScope->LookupInScope( attributeStr, tree, state );
 	}
 	return rc;
