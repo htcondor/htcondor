@@ -765,10 +765,10 @@ VMProc::process_vm_status_result(Gahp_Args *result_args)
 		      m_vm_utilization = (float)strtod(tmp_value.Value(), (char **)NULL);
 		} else if ( !strcasecmp( tmp_name.Value(), VMGAHP_STATUS_COMMAND_MEMORY ) ) {
 			// This comes from the GAHP in kbytes.
-			m_vm_memory = strtol( tmp_value.Value(), (char **)NULL, 10 );
+			m_vm_memory = strtoul( tmp_value.Value(), (char **)NULL, 10 );
 		} else if ( !strcasecmp( tmp_name.Value(), VMGAHP_STATUS_COMMAND_MAX_MEMORY ) ) {
 			// This comes from the GAHP in kbytes.
-			m_vm_max_memory = strtol( tmp_value.Value(), (char **)NULL, 10 );
+			m_vm_max_memory = strtoul( tmp_value.Value(), (char **)NULL, 10 );
 		}
 	}
 
