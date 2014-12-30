@@ -261,10 +261,17 @@ The \Arg{CHILD} keyword is followed by one or more
 Each child job depends on every parent job within the line.
 A single line in the input file can specify the dependencies from one or more
 parents to one or more children.
-The diamond-shaped DAG example specifies the dependencies with
+The diamond-shaped DAG example may specify the dependencies with
 \begin{verbatim}
 PARENT A CHILD B C
 PARENT B C CHILD D
+\end{verbatim}
+An alternative specification for the diamond-shaped DAG
+may specify some or all of the dependencies on separate lines:
+\begin{verbatim}
+PARENT A CHILD B C
+PARENT B CHILD D
+PARENT C CHILD D
 \end{verbatim}
 
 As a further example, the line
