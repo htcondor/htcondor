@@ -520,12 +520,10 @@ DAG.
 
 \Bold{Examples that use PRE or POST scripts}
 
-As an example, consider the diamond-shaped DAG example.
-Suppose the PRE script expands a compressed file 
-needed as input to nodes B and C.
-The file is named of the form
-\File{\Arg{JobName}.gz}.
-The DAG input file becomes 
+Examples use the diamond-shaped DAG.
+A first example uses a PRE script to expand a compressed file 
+needed as input to each of the HTCondor jobs of nodes B and C.
+The DAG input file:
 
 \footnotesize
 \begin{verbatim}
@@ -542,24 +540,35 @@ The DAG input file becomes
 \end{verbatim}
 \normalsize
 
-The script \File{pre.csh} uses the arguments to form the file name
-of the compressed file:
+The script \File{pre.csh} uses its command line arguments to form the file name
+of the compressed file.
+The script contains
 
 \begin{verbatim}
-    #!/bin/csh
-    gunzip $argv[1]$argv[2]
+  #!/bin/csh
+  gunzip $argv[1]$argv[2]
 \end{verbatim}
 
-A second example uses the \Expr{\$RETURN} macro in a
-POST script specification:
+Therefore, the PRE script invokes  
+\begin{verbatim}
+  gunzip B.gz
+\end{verbatim}
+for node B, which uncompresses file \File{B.gz},
+placing the result in file \File{B}.
+
+A second example uses the \Expr{\$RETURN} macro.
+The DAG input file contains the POST script specification:
 \begin{verbatim}
   SCRIPT POST A stage-out job_status $RETURN 
 \end{verbatim}
-A node job returns a value of -1 invokes the POST script with
+If the HTCondor job of node A exits with the value -1,
+the POST script is invoked as
 \begin{verbatim}
   stage-out job_status -1
 \end{verbatim}
+
 The slightly different example POST script specification
+in the DAG input file
 \begin{verbatim}
   SCRIPT POST A stage-out job_status=$RETURN 
 \end{verbatim}
@@ -567,13 +576,15 @@ invokes the POST script with
 \begin{verbatim}
   stage-out job_status=$RETURN
 \end{verbatim}
-There is no space between the \Expr{=} sign and the variable \Expr{\$RETURN},
-so there is no substitution of the variable's value.
+
+This example shows that when
+there is no space between the \Expr{=} sign and the variable \Expr{\$RETURN},
+there is no substitution of the macro's value.
 
 \label{dagman:PRE-SKIP}
 \index{DAGMan input file!PRE\_SKIP keyword}
 \index{DAGMan!PRE\_SKIP command}
-\item \Bold{PRE\_SCRIPT}
+\item \Bold{PRE\_SKIP}
 
 The behavior of DAGMan with respect to node success or failure can
 be changed with the addition of a \Arg{PRE\_SKIP} command. 
@@ -602,91 +613,14 @@ and the node will be marked as successful.
 \index{DAGMan!submit description file with}
 \index{DAGMan!usage of log files}
 Each node in a DAG may use a unique submit description file.
-One key limitation is that
+A key limitation is that
 each HTCondor submit description file must submit jobs
-described by a single cluster number.
-At the present time DAGMan cannot deal with a submit file producing
+described by a single cluster number;
+DAGMan cannot deal with a submit description file producing
 multiple job clusters.
 
-%At one time, DAGMan required that all jobs within all nodes
-%specify the same, single log file.
-%This is no longer the case.
-%However, if the DAG utilizes a large number of
-%separate log files, performance may suffer.
-%Therefore, it is better to have
-%fewer, or even only a single log file.
-%
-%\index{DAGMan!lazy log file evaluation}
-%As of HTCondor version 7.3.2, DAGMan's handling of log files
-%significantly changed to improve resource usage and efficiency.  
-%Prior to HTCondor version 7.3.2, 
-%DAGMan assembled a list of all relevant log files at start up, 
-%by looking at all of the submit description files for all of the nodes.
-%It kept the log files open for the duration of the DAG.
-%Beginning with HTCondor version 7.3.2, DAGMan delays opening and using 
-%the submit description file until just before it is going to submit the job.
-%At that point, DAGMan reads the submit description file to discover 
-%the job's log file.
-%And, DAGMan monitors only the log files that are relevant
-%to the jobs currently queued, 
-%or associated with nodes for which a POST script is running.
-%
-%The advantages of the new "lazy log file evaluation" scheme are:
-%
-%\begin{itemize}
-%
-%\item The \Condor{dagman} executable uses fewer file descriptors.
-%In specific,
-%DAGMan must keep a file descriptor open for each unique log file,
-%and operating systems limit the number of open file descriptors;
-%HTCondor's most severe limit is 2048 on Windows platforms.
-%
-%\item It is much easier to have one node of a DAG produce the
-%submit description file for a descendant node in the DAG.
-%
-%\end{itemize}
-%
-%There is one known disadvantage of the lazy log file evaluation scheme:
-%
-%\begin{itemize}
-%
-%\item Because the log files are internally identified by inode
-%numbers, it is possible that errors may arise where log files for
-%a given DAG are spread across more than one device.
-%This permits two unique files to have the same inode number.
-%We hope to have this problem fixed soon.
-%
-%\end{itemize}
-
-%\index{DAGMan!default log file specification}
-%%Another new feature in HTCondor version 7.3.2 was the use of 
-%DAGMan assigns 
-%default node job user logs,
-%if a log file is not specified within a job's submit description file.
-%In HTCondor versions earlier than 7.3.2, 
-%it was a fatal error if the submit description
-%file for a node job did not specify a log file.
-%The file used as the default node log is controlled by the
-%\MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} configuration variable.
-%A complete description is at section~\ref{param:DAGManDefaultNodeLog}.
-%Nodes specifying a log file and other nodes using the default log
-%file can be mixed in a single DAG.
-%Allowing DAGMan to specify a single log file for an entire DAG, 
-%especially a wide DAG,
-%reduces the number of concurrently open file descriptors.
-
-%Log files for node jobs should not be placed on NFS, 
-%unless both configuration variables
-%\Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK} and \Macro{ENABLE\_USERLOG\_LOCKING}
-%are \Expr{True}. 
-%Without these settings, NFS file locking is not reliable,
-%occasionally resulting in simultaneous acquisition of locks on a single
-%log file by both the \Condor{schedd} daemon and the \Condor{dagman} job. 
-%Partially written events by the \Condor{schedd} cause errors
-%for \Condor{dagman}.
-%
-Here is a DAG input file for the diamond-shaped DAG, 
-where each node uses the same submit description file.
+Consider again the diamond-shaped DAG example, 
+where each node job uses the same submit description file.
 
 \begin{verbatim}
     # File name: diamond.dag
@@ -717,10 +651,8 @@ for this DAG:
 Since each node uses the same HTCondor submit description file,
 this implies that each node within the DAG runs the
 same job.
-The \MacroUNI{cluster} macro
+The \MacroUNI{Cluster} macro
 produces unique file names for each job's output.
-As the HTCondor job within each node
-causes a separate job submission, each has a unique cluster number.
 
 \index{ClassAd job attribute!DAGParentNodeNames}
 \index{DAGParentNodeNames!job ClassAd attribute}
@@ -741,34 +673,36 @@ the job.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{dagman:submitdag}DAG Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!job submission}
 
-A DAG is submitted using the program \Condor{submit\_dag}.
-See the manual
+A DAG is submitted using the tool \Condor{submit\_dag}.
+The manual
 page~\pageref{man-condor-submit-dag}
-for complete details.
-A simple submission has the syntax
+details the command.
+The simplest of DAG submissions has the syntax
 
 \Condor{submit\_dag} \Arg{DAGInputFileName}
 
-\index{DAGMan!job submission}
+and the current working directory contains the DAG input file.
+
 The diamond-shaped DAG example may be submitted with
 
 \begin{verbatim}
 condor_submit_dag diamond.dag
 \end{verbatim}
-In order to guarantee recoverability, the DAGMan program itself
-is run as an HTCondor job.
+
+To increase robustness and guarantee recoverability, the 
+\Condor{dagman} process is run as an HTCondor job.
 As such, it needs a submit description file.
-\Condor{submit\_dag} produces this needed submit description file,
-naming it by appending \File{.condor.sub} to the \Arg{DAGInputFileName}.
-This submit description file may be edited if the DAG is
-submitted with
+\Condor{submit\_dag} generates this needed submit description file,
+naming it by appending \File{.condor.sub} to the name of the DAG input file.
+This submit description file may be edited if the DAG is submitted with
 
 \begin{verbatim}
 condor_submit_dag -no_submit diamond.dag
 \end{verbatim}
-causing \Condor{submit\_dag} to generate the submit description file,
-but not submit DAGMan to HTCondor.
+causing \Condor{submit\_dag} to create the submit description file,
+but not submit \Condor{dagman} to HTCondor.
 To submit the DAG, once the submit description file is edited,
 use
 
@@ -776,49 +710,49 @@ use
 condor_submit diamond.dag.condor.sub
 \end{verbatim}
 
-An optional argument to \Condor{submit\_dag}, \Arg{-maxjobs}, 
-is used to specify the maximum number of batch jobs that DAGMan may
+Submit machines with limited resources are supported by
+command line options that place limits on the submission and handling 
+of HTCondor jobs and PRE and POST scripts. 
+Presented here are descriptions of the command line options
+to \Condor{submit\_dag}.
+These same limits can be set in configuration.
+Each limit is applied within a single DAG.
+
+The \Arg{-maxjobs} option 
+specifies the maximum number of job clusters that \Condor{dagman} may
 submit at one time.
-It is commonly used when 
+Since each node may represent a single cluster of jobs,
+this limit restricts the number of nodes that can be submitted at a time.
+It is commonly used when
 there is a limited amount of input file staging capacity.
-As a specific example, consider a case where each job will
-require 4 Mbytes of input files,
-and the jobs will run in a directory with a volume of 100 Mbytes
+As a specific example, consider a case where each node represents
+a single HTCondor job that requires 4 MB of input files,
+and the jobs will run in a directory with a volume of 100 MB
 of free space.
 Using the argument \Arg{-maxjobs 25} guarantees that a maximum
-of 25 jobs, using a maximum of 100 Mbytes of space,
-will be submitted to HTCondor and/or Stork at one time.
+of 25 jobs, using a maximum of 100 MB of space,
+will be submitted to HTCondor at one time.
 
-% -maxscripts has been replaced with -maxpre and -maxpost
-% Similarly, the \Arg{maxscripts} argument is used to specify the
-% maximum number of PRE and POST scripts running at one time.
-While the \Arg{-maxjobs} argument is used to limit the number
-of batch system jobs submitted at one time,
-it may be desirable to limit the number of scripts running
+Since PRE and POST scripts run on the submit machine,
+it may be desirable to limit the number of PRE or POST scripts running
 at one time.
-The optional \Arg{-maxpre} argument limits the number of PRE
+The optional \Arg{-maxpre} command line argument limits the number of PRE
 scripts that may be running at one time,
-while the optional \Arg{-maxpost} argument limits the number of POST
+and the optional \Arg{-maxpost} command line argument limits the number of POST
 scripts that may be running at one time.
 
-An optional argument to \Condor{submit\_dag}, \Arg{-maxidle}, 
-is used to limit the number of idle jobs within a given DAG.
-When the number of idle node jobs in the DAG reaches the specified
-value, \Condor{dagman} will stop submitting jobs, even if there
-are ready nodes in the DAG.  Once some of the idle jobs start to
-run, \Condor{dagman} will resume submitting jobs.  Note that this
-parameter only limits the number of idle jobs submitted by a
-given instance of \Condor{dagman}. Idle jobs submitted by other sources
-(including other \Condor{dagman} runs) are ignored. 
-Also, \Condor{dagman}
-does not do anything special to the submit description file.
-If a submit description file contains
-\Expr{queue 5000} and there is a specification for the \Arg{-maxidle} 
-argument of 250, 
-\Condor{dagman} will submit the file, 
-and a new cluster of 5000 jobs will be submitted to the \Condor{schedd}.
-In this case, no further jobs will be submitted by \Condor{dagman}
-until the number of idle jobs falls below 250. 
+The number of idle jobs within a given DAG may be limited with
+the optional command line argument \Arg{-maxidle}. 
+\Condor{dagman} will not submit further clusters of jobs 
+until the number of idle node jobs in the DAG goes below this
+specified value,
+even if there are ready nodes in the DAG.
+Note that while the \Arg{-maxjobs} option limits the number of clusters
+of jobs submitted,
+there can be more than one job per cluster.
+This \Arg{-maxidle} option is applied using counts of jobs,
+not counts of clusters.
+Therefore, it can prevent further clusters from being submitted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGPaths}File Paths in DAGs}
