@@ -653,7 +653,7 @@ int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::
 	ReliSock* rsock = static_cast<ReliSock*>(sock);
 	if (non_blocking && rsock)
 	{
-		BlockingModeGuard(rsock, true);
+		BlockingModeGuard guard(rsock, true);
 		if (whitelist) {
 			retval = _putClassAd(sock, ad, options, *whitelist);
 		} else {
