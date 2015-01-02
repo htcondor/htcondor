@@ -189,6 +189,7 @@ static  bool widescreen = false;
 //static  int  use_old_code = true;
 static  bool expert = false;
 static  bool verbose = false; // note: this is !!NOT the same as -long !!!
+static  int g_match_limit = -1;
 
 static 	int malformed, running, idle, held, suspended, completed, removed;
 
@@ -1235,6 +1236,19 @@ processCommandLineArguments (int argc, char *argv[])
 			dash_long = 1;
 			summarize = 0;
 			customHeadFoot = HF_BARE;
+		}
+		else
+		if (is_arg_prefix (arg, "match", 1)) {
+			if (++i >= argc) {
+				fprintf(stderr, "Error: Argument -match requires the max number of results as an argument.\n");
+				exit(1);
+			}
+			char *endptr;
+			g_match_limit = strtol(argv[i], &endptr, 10);
+			if (errno || (*endptr != '\0'))
+			{
+				fprintf(stderr, "Error: Unable to convert argument (%s) to a number for -match.\n", argv[i]);
+			}
 		}
 		else
 		if (is_arg_prefix (arg, "pool", 1)) {
@@ -3716,7 +3730,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	if ((useFastPath == 2) && !use_v3) {
 		useFastPath = 1;
 	}
-	int fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, fetch_opts, pfnProcess, pvProcess, useFastPath, &errstack);
+	int fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack);
 	if (fetchResult != Q_OK) {
 		// The parse + fetch failed, print out why
 		switch(fetchResult) {

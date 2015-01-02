@@ -360,6 +360,7 @@ int
 CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 										StringList &attrs,
 										int fetch_opts,
+										int match_limit,
 										condor_q_process_func process_func,
 										void * process_func_data,
 										int useFastPath,
@@ -377,7 +378,7 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	delete tree;
 
 	if (useFastPath == 2) {
-		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, fetch_opts, process_func, process_func_data, connect_timeout, errstack);
+		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, fetch_opts, match_limit, process_func, process_func_data, connect_timeout, errstack);
 		free( constraint);
 		return result;
 	}
@@ -412,6 +413,7 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 					const char *constraint,
 					StringList &attrs,
 					int fetch_opts,
+					int match_limit,
 					condor_q_process_func process_func,
 					void * process_func_data,
 					int connect_timeout,
@@ -433,6 +435,11 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 
 	if (fetch_opts == fetch_DefaultAutoCluster) {
 		ad.InsertAttr("QueryDefaultAutocluster", true);
+	}
+
+	if (match_limit >= 0)
+	{
+		ad.InsertAttr(ATTR_NUM_MATCHES, match_limit);
 	}
 
 	DCSchedd schedd(host);

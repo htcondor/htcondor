@@ -404,7 +404,7 @@ struct Schedd {
         if (m_connection) { m_connection->abort(); }
     }
 
-    object query(const std::string &constraint="", list attrs=list(), object callback=object())
+    object query(const std::string &constraint="", list attrs=list(), object callback=object(), int match_limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default)
     {
         CondorQ q;
 
@@ -425,7 +425,6 @@ struct Schedd {
         ClassAdList jobs;
 
         list retval;
-        int fetch_opts = 0; // CondorQ::fetch_* options
         int fetchResult;
         {
         condor::ModuleLock ml;
@@ -435,7 +434,7 @@ struct Schedd {
         helper.output_list = retval;
         void *helper_ptr = static_cast<void *>(&helper);
 
-        fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, fetch_opts, query_process_callback, helper_ptr, true, NULL);
+        fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, fetch_opts, match_limit, query_process_callback, helper_ptr, true, NULL);
         }
 
         if (PyErr_Occurred())
@@ -942,7 +941,7 @@ struct Schedd {
         return sentry_ptr;
     }
 
-    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int match=-1)
+    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int match=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default)
     {
         std::string val_str;
 
@@ -990,6 +989,10 @@ struct Schedd {
         classad::ClassAd ad;
         ad.Insert(ATTR_REQUIREMENTS, expr_copy);
         ad.InsertAttr(ATTR_NUM_MATCHES, match);
+	if (fetch_opts)
+	{
+		ad.InsertAttr("QueryDefaultAutocluster", fetch_opts);
+	}
 
         classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
         ad.Insert(ATTR_PROJECTION, projTree);
@@ -1144,8 +1147,8 @@ ConnectionSentry::~ConnectionSentry()
     disconnect();
 }
 
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 3);
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(xquery_overloads, xquery, 0, 3);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 5);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(xquery_overloads, xquery, 0, 4);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(submit_overloads, submit, 1, 4);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(transaction_overloads, transaction, 0, 2);
 
@@ -1169,6 +1172,11 @@ void export_schedd()
         .value("ShouldLog", SHOULDLOG)
         ;
 
+    enum_<CondorQ::QueryFetchOpts>("QueryOpts")
+        .value("Default", CondorQ::fetch_Default)
+        .value("AutoCluster", CondorQ::fetch_DefaultAutoCluster)
+        ;
+
     class_<ConnectionSentry>("Transaction", "An ongoing transaction in the HTCondor schedd", no_init)
         .def("__enter__", &ConnectionSentry::enter)
         .def("__exit__", &ConnectionSentry::exit)
@@ -1185,7 +1193,15 @@ void export_schedd()
             ":param constraint: An optional constraint for filtering out jobs; defaults to 'true'\n"
             ":param attr_list: A list of attributes for the schedd to project along.  Defaults to having the schedd return all attributes.\n"
             ":param callback: A callback function to be invoked for each ad; the return value (if not None) is added to the list.\n"
-            ":return: A list of matching jobs, containing the requested attributes."))
+            ":param match: Number of matches to return.\n"
+            ":param opts: Any one of the QueryOpts enum.\n"
+            ":return: A list of matching jobs, containing the requested attributes.",
+#if BOOST_VERSION < 103400
+            (boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("match")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+#else
+            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("match")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+#endif
+            ))
         .def("act", &Schedd::actOnJobs2)
         .def("act", &Schedd::actOnJobs, "Change status of job(s) in the schedd.\n"
             ":param action: Action to perform; must be from enum JobAction.\n"
@@ -1236,7 +1252,14 @@ void export_schedd()
             ":param requirements: Either a ExprTree or a string that can be parsed as an expression; requirements all returned jobs should match.\n"
             ":param projection: The attributes to return; an empty list signifies all attributes.\n"
             ":param match: Number of matches to return.\n"
-            ":return: An iterator for the matching job ads"))
+            ":param opts: Any one of the QueryOpts enum.\n"
+            ":return: An iterator for the matching job ads",
+#if BOOST_VERSION < 103400
+            (boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("match")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+#else
+            (boost::python::arg("self"), boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("match")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+#endif
+            ))
         ;
 
     class_<HistoryIterator>("HistoryIterator", no_init)
