@@ -1788,7 +1788,7 @@ int Scheduler::command_history(int, Stream* stream)
 		ss << attr;
 	}
 
-	int matchCount;
+	int matchCount = -1;
 	if (!queryAd.EvaluateAttr(ATTR_NUM_MATCHES, value) || !value.IsIntegerValue(matchCount))
 	{
 		matchCount = -1;
@@ -1888,16 +1888,20 @@ struct QueryJobAdsContinuation : Service {
 	classad_shared_ptr<classad::ExprTree> requirements;
 	classad::References projection;
 	ClassAdLog::filter_iterator it;
+	int match_limit;
+	int match_count;
 	bool unfinished_eom;
 	bool registered_socket;
 
-	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int timeslice_ms=0);
+	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int match, int timeslice_ms=0);
 	int finish(Stream *);
 };
 
-QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int timeslice_ms)
+QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int match, int timeslice_ms)
 	: requirements(requirements_),
 	  it(BeginIterator(*requirements, timeslice_ms)),
+	  match_limit(match),
+	  match_count(0),
 	  unfinished_eom(false),
 	  registered_socket(false)
 {
@@ -1907,6 +1911,10 @@ int
 QueryJobAdsContinuation::finish(Stream *stream) {
         ReliSock *sock = static_cast<ReliSock*>(stream);
         ClassAdLog::filter_iterator end = EndIterator();
+	if (match_limit >= 0 && (match_count >= match_limit))
+	{
+		it = end;
+	}
         bool has_backlog = false;
 
 	if (unfinished_eom) {
@@ -1936,6 +1944,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		int retval = putClassAd(sock, *tmp_ad,
 					PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
 					projection.empty() ? NULL : &projection);
+		match_count++;
 		if (retval == 2) {
 			//dprintf(D_FULLDEBUG, "Detecting backlog.\n");
                         has_backlog = true;
@@ -1949,6 +1958,10 @@ QueryJobAdsContinuation::finish(Stream *stream) {
                         unfinished_eom = true;
 			has_backlog = true;
                 }
+		if (match_limit >= 0 && (match_count >= match_limit))
+		{
+			it = end;
+		}
         }
         if (has_backlog && !registered_socket) {
 		int retval = daemonCore->Register_Socket(stream, "Client Response",
@@ -1993,7 +2006,13 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	}
 	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements->Copy());
 
-	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, 1000);
+	int matchLimit=-1;
+	if (!queryAd.EvaluateAttrInt(ATTR_NUM_MATCHES, matchLimit))
+	{
+		matchLimit = -1;
+	}
+
+	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, matchLimit, 1000);
 	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, continuation->projection, true);
 	if (proj_err < 0) {
 		delete continuation;
