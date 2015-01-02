@@ -770,63 +770,117 @@ Therefore, it can prevent further clusters from being submitted.
 DAG input file and the associated HTCondor submit description files
 are relative to the current
 working directory when \Condor{submit\_dag} is run.  
+This works well for submitting a single DAG.
+It presents problems when multiple independent DAGs are submitted
+with a single invocation of \Condor{submit\_dag}.
+Each of these independent DAGs would logically be in its own directory, 
+such that it could be run or tested independent of other DAGs.
+Thus, all references to files will be designed to be relative to
+the DAG's own directory.
 
-Note that 
-relative paths in submit description files can be modified by the submit command
-\SubmitCmd{initialdir}; 
-see the \Condor{submit} manual page at ~\ref{man-condor-submit} 
-for more details on this command.
-The remainder of this discussion ignores \SubmitCmd{initialdir}.
+%Note that 
+%relative paths in submit description files can be modified by the submit command
+%\SubmitCmd{initialdir}; 
+%see the \Condor{submit} manual page at ~\ref{man-condor-submit} 
+%for more details on this command.
+%The remainder of this discussion ignores \SubmitCmd{initialdir}.
 
-For example, assume that a directory called \File{parent}
-contains two subdirectories called \File{dag1} and
-\File{dag2}, and that \File{dag1} contains the DAG input file \File{one.dag}
-and \File{dag2} contains the DAG input file \File{two.dag}.
-Assume that each DAG is set up to be run
-from its own directory, resulting in correct behavior for the DAG
-in \File{dag1} with the command
+Consider an example DAG within a directory named \File{dag1}.
+There would be a DAG input file, named \File{one.dag} for this example.
+Assume the contents of this DAG input file specify a node job with
 \begin{verbatim}
-cd dag1; condor_submit_dag one.dag
+  JOB A  A.submit
+\end{verbatim}
+Further assume that partial contents of submit description file 
+\File{A.submit} specify
+\begin{verbatim}
+  executable = programA
+  input      = A.input
 \end{verbatim}
 
-In most cases, path names relative to the current working directory 
-is the desired behavior.
-However, if running
-multiple DAGs with a single \Condor{dagman} command, 
-and each set of DAG input files is in its own directory, 
-the paths will not be correct. 
-In this case,
-the \Arg{-usedagdir} command line argument to \Condor{submit\_dag}
-will run each DAG as if \Condor{submit\_dag} had been run 
+Directory contents are 
+\begin{verbatim}
+    dag1 (directory)
+          one.dag
+          A.submit
+          programA
+          A.input
+\end{verbatim}
+
+All file paths are correct relative to the \File{dag1} directory.
+Submission of this example DAG sets the current working directory
+to \File{dag1} and invokes \Condor{submit\_dag}:
+\begin{verbatim}
+  cd dag1
+  condor_submit_dag one.dag
+\end{verbatim}
+
+Expand this example such that there are now two independent DAGs,
+and each is contained within its own directory. 
+For simplicity, assume that the DAG in \File{dag2} has remarkably
+similar files and file naming as the DAG in \File{dag1}.
+Assume that the directory contents are 
+\begin{verbatim}
+    parent (directory)
+         dag1 (directory)
+               one.dag
+               A.submit
+               programA
+               A.input
+         dag2 (directory)
+               two.dag
+               B.submit
+               programB
+               B.input
+\end{verbatim}
+
+The goal is to use a single invocation of \Condor{submit\_dag}
+to run both dag1 and dag2.
+The invocation
+\begin{verbatim}
+  cd parent
+  condor_submit_dag dag1/one.dag dag2/two.dag
+\end{verbatim}
+\emph{does not work}.
+Path names are now relative to \File{parent}, 
+which is \emph{not} the desired behavior.
+
+The solution is 
+the \Arg{-usedagdir} command line argument to \Condor{submit\_dag}.
+This feature runs each DAG as if \Condor{submit\_dag} had been run 
 in the directory in which the relevant DAG file exists.
-With the current working directory
-is \File{parent}, run 
+A working invocation is
 \begin{verbatim}
-condor_submit_dag -usedagdir dag1/one.dag dag2/two.dag
+  cd parent
+  condor_submit_dag -usedagdir dag1/one.dag dag2/two.dag
 \end{verbatim}
-The directory will be correct for each of the two DAGs,
-and output files will be placed in the correct directory.
-The File{.dagman.out} file will also be in the correct directory.
 
-If all paths in the DAG input file(s) and the relevant submit
-description files are absolute,
-the \Arg{-usedagdir} argument is not needed;
-however, using absolute paths is NOT generally a good idea.
-
-For a DAG that \emph{does not} use \Arg{-usedagdir}, 
-relative paths can still work for multiple DAGs, 
-if all file paths are given relative to
-the current working directory as \Condor{submit\_dag} is executed.
-This implies that DAGs in separate directories
-cannot be submitted from their own directories;
-submission only works from the parent directory the paths are set up for.
-
-With the \Arg{-usedagdir} argument, any created 
-Rescue DAG file will be written to
-the current working directory.
-The Rescue DAG should be run from that directory.
+Output files will be placed in the correct directory, and
+the \File{.dagman.out} file will also be in the correct directory.
+A Rescue DAG file will be written to
+the current working directory, which is the directory when
+\Condor{submit\_dag} is invoked.
+The Rescue DAG should be run from that same current working directory.
 The Rescue DAG includes all the path information necessary to
 run each node job in the proper directory.
+
+%If all paths in the DAG input file(s) and the relevant submit
+%description files are absolute,
+%the \Arg{-usedagdir} argument is not needed;
+%however, using absolute paths is NOT generally a good idea.
+
+%For a DAG that \emph{does not} use \Arg{-usedagdir}, 
+%relative paths can still work for multiple DAGs, 
+%if all file paths are given relative to
+%the current working directory as \Condor{submit\_dag} is executed.
+%This implies that DAGs in separate directories
+%cannot be submitted from their own directories;
+%submission only works from the parent directory the paths are set up for.
+
+Use of \Arg{-usedagdir} does \emph{not} work in conjunction with
+a JOB node specification within the DAG input file using
+the \Arg{DIR} keyword.
+Using both will be detected and generate an error. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Job Monitoring, Job Failure, and Job Removal}
