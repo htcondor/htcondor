@@ -101,9 +101,9 @@ typedef struct tagTimer Timer;
 class TimerManager
 {
   public:
-    
-    ///
-    TimerManager();
+
+    static TimerManager &GetTimerManager();
+
     ///
     ~TimerManager();
 
@@ -216,6 +216,9 @@ class TimerManager
     void Start();
     
   private:
+
+    ///
+    TimerManager();
     
     int NewTimer (Service*   s,
                   unsigned   deltawhen,
