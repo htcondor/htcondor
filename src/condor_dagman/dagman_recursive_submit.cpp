@@ -127,12 +127,6 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg( deepOpts.priority );
 	}
 
-#if 0 //TEMPTEMP
-	if( !deepOpts.always_use_node_log ) {
-		args.AppendArg( "-dont_use_default_node_log" );
-	}
-#endif //TEMPTEMP
-
 	if( deepOpts.suppress_notification ) {
 		args.AppendArg( "-suppress_notification" );
 	} else {

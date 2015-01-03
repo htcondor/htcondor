@@ -226,8 +226,9 @@ Dag::Dag( /* const */ StringList &dagFiles,
 //-------------------------------------------------------------------------
 Dag::~Dag()
 {
-		//TEMPTEMP -- is this the right place for this?
-	(void) UnmonitorLogFile();
+	if ( _condorLogRdr.activeLogFileCount() > 0 ) {
+		(void) UnmonitorLogFile();
+	}
 
 		// remember kids, delete is safe *even* if ptr == NULL...
 
@@ -292,7 +293,6 @@ bool Dag::Bootstrap (bool recovery)
     
 	_recovery = recovery;
 
-		//TEMPTEMP -- is this the right place for this?
 	(void) MonitorLogFile();
 
     if (recovery) {
