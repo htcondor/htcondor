@@ -334,6 +334,8 @@ class Scheduler : public Service
 		// requires a new round of negotiation
 	void            needReschedule();
 
+	int handle_q(int, Stream *);
+
 	// [IPV6] These two functions are never called by others.
 	// It is non-IPv6 compatible, though.
 	void			send_all_jobs(ReliSock*, struct sockaddr_in*);
@@ -541,7 +543,8 @@ class Scheduler : public Service
 private:
 	
 	// information about this scheduler
-	ClassAd*		m_adSchedd;
+	classad_shared_ptr<classad::ExprTree> m_submitReq;
+	classad_shared_ptr<ClassAd>		m_adSchedd;
     ClassAd*        m_adBase;
 	Scheduler*		myself;
 

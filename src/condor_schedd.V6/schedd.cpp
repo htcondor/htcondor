@@ -563,7 +563,6 @@ ContactStartdArgs::~ContactStartdArgs()
 static const int USER_HASH_SIZE = 100;
 
 Scheduler::Scheduler() :
-    m_adSchedd(NULL),
     m_adBase(NULL),
 	OtherPoolStats(stats),
 	GridJobOwners(USER_HASH_SIZE, UserIdentity::HashFcn, updateDuplicateKeys),
@@ -695,7 +694,6 @@ Scheduler::Scheduler() :
 
 Scheduler::~Scheduler()
 {
-	delete m_adSchedd;
     delete m_adBase;
 	if (MyShadowSockName)
 		free(MyShadowSockName);
@@ -1130,7 +1128,7 @@ void Scheduler::userlog_file_cache_erase(const int& cluster, const int& proc) {
 int
 Scheduler::count_jobs()
 {
-	ClassAd * cad = m_adSchedd;
+	ClassAd * cad = m_adSchedd.get();
 	int		i, j;
 
 	 // copy owner data to old-owners table
@@ -11787,7 +11785,6 @@ Scheduler::Init()
 		// Initialize our classad
 		//////////////////////////////////////////////////////////////
 	if( m_adBase ) delete m_adBase;
-	if( m_adSchedd ) delete m_adSchedd;
 	m_adBase = new ClassAd();
 
     // first put attributes into the Base ad that we want to
@@ -11807,7 +11804,7 @@ Scheduler::Init()
     // make a base add for use with chained submitter ads as a copy of the schedd ad
     // and fill in some standard attribs that will change only on reconfig. 
     // the rest are added in count_jobs()
-    m_adSchedd = new ClassAd(*m_adBase);
+    m_adSchedd.reset(new ClassAd(*m_adBase));
 	SetMyTypeName(*m_adSchedd, SCHEDD_ADTYPE);
 	m_adSchedd->Assign(ATTR_NAME, Name);
 	
@@ -11982,6 +11979,18 @@ Scheduler::Init()
 	slotWeightMapAd = new ClassAd;
 	slotWeightMapAd->initFromString(sswma.c_str());
 
+	std::string commit_reqs;
+	classad::ExprTree *submitReq = NULL;
+	if (param(commit_reqs, "SUBMIT_REQUIREMENTS"))
+	{
+		classad::ClassAdParser parser;
+		if (!(submitReq = parser.ParseExpression(commit_reqs)))
+		{
+			dprintf(D_ALWAYS, "Unable to parse SUBMIT_REQUIREMENTS: %s.  Ignoring\n", commit_reqs.c_str());
+		}
+	}
+	m_submitReq.reset(submitReq);
+
 	first_time_in_init = false;
 }
 
@@ -12096,7 +12105,7 @@ Scheduler::Register()
 	// This is ok, because authorization to do write operations is verified
 	// internally in the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_READ_CMD, "QMGMT_READ_CMD",
-								  (CommandHandler)&handle_q,
+								  (CommandHandler)&::handle_q,
 								  "handle_q", NULL, READ, D_FULLDEBUG );
 
 	// This command always requires authentication.  Therefore, it is
@@ -12105,8 +12114,8 @@ Scheduler::Register()
 	// security session that has to be authenticated every time in
 	// the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_WRITE_CMD, "QMGMT_WRITE_CMD",
-								  (CommandHandler)&handle_q,
-								  "handle_q", NULL, WRITE, D_FULLDEBUG,
+								  (CommandHandlercpp)&Scheduler::handle_q,
+								  "handle_q", this, WRITE, D_FULLDEBUG,
 								  true /* force authentication */ );
 
 	daemonCore->Register_Command( DUMP_STATE, "DUMP_STATE",
@@ -12259,6 +12268,18 @@ Scheduler::RegisterTimers()
 }
 
 
+int
+Scheduler::handle_q(int cmd, Stream *stream)
+{
+	SetCommitRequirements(m_submitReq, m_adSchedd);
+	int retval = ::handle_q(NULL, cmd, stream);
+	classad_shared_ptr<classad::ClassAd> nullAd;
+	classad_shared_ptr<classad::ExprTree> nullReq;
+	SetCommitRequirements(nullReq, nullAd);
+	return retval;
+}
+
+
 extern "C" {
 int
 prio_compar(prio_rec* a, prio_rec* b)
@@ -12374,7 +12395,7 @@ void Scheduler::reconfig() {
 void
 Scheduler::update_local_ad_file() 
 {
-	daemonCore->UpdateLocalAd(m_adSchedd);
+	daemonCore->UpdateLocalAd(m_adSchedd.get());
 	return;
 }
 
@@ -14508,7 +14529,7 @@ Scheduler::claimLocalStartd()
 void
 Scheduler::addCronTabClassAd( ClassAd *jobAd )
 {
-	if ( NULL == m_adSchedd ) return;
+	if ( NULL == m_adSchedd.get() ) return;
 	CronTab *cronTab = NULL;
 	PROC_ID id;
 	jobAd->LookupInteger( ATTR_CLUSTER_ID, id.cluster );
