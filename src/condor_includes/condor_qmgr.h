@@ -197,11 +197,24 @@ int BeginTransaction();
 */
 int RemoteCommitTransaction(SetAttributeFlags_t flags=0);
 
-/** The difference between this and RemoteCommitTransaction is that
-	this function never returns if there is a failure.  This function
-	should only be called from the schedd.
-*/
-void CommitTransaction(SetAttributeFlags_t flags=0);
+/**
+ *  CommitTransaction is the schedd-side implementation of committing a
+ *  transaction.
+ *
+ *  Note this previously never failed - it can now with the introduction
+ *  of SetCommitRequirements.  This means that, currently, CommitTransaction
+ *  can only fail *if* new ads are submitted.
+ */
+int CommitTransaction(SetAttributeFlags_t flags=0);
+
+/**
+ * Set a commit requirement; if any new job ClassAd in a transaction does
+ * not pass the commit requirement (evalauted as a match ad with the commit_target_ad
+ * as the "MY" ad).
+ */
+void SetCommitRequirements(classad_shared_ptr<classad::ExprTree> commit_req, classad_shared_ptr<classad::ClassAd> commit_target_ad);
+classad_shared_ptr<classad::ExprTree> GetCommitRequirement();
+classad_shared_ptr<classad::ClassAd> GetCommitTargetAd();
 
 int AbortTransaction();
 void AbortTransactionAndRecomputeClusters();

@@ -152,6 +152,9 @@ static int dirty_notice_interval = 0;
 static void PeriodicDirtyAttributeNotification();
 static void ScheduleJobQueueLogFlush();
 
+classad_shared_ptr<classad::ExprTree> g_commit_req;
+classad_shared_ptr<classad::ClassAd> g_commit_target_ad;
+
 bool qmgmt_all_users_trusted = false;
 static char	**super_users = NULL;
 static int	num_super_users = 0;
@@ -2944,12 +2947,47 @@ BeginTransaction()
 }
 
 
-void
+int
 CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 {
 	std::list<std::string> new_ad_keys;
 		// get a list of all new ads being created in this transaction
 	JobQueue->ListNewAdsInTransaction( new_ad_keys );
+
+	if (g_commit_req.get()) for (std::list<std::string>::const_iterator it=new_ad_keys.begin(); it!=new_ad_keys.end(); it++)
+	{
+		char const *key = it->c_str();
+		int cluster_id;
+		int proc_id;
+		ClassAd *procad = NULL;
+		ClassAd *clusterad = NULL;
+
+		StrToId(key, cluster_id, proc_id);
+		if (proc_id == -1)
+		{
+			continue; // skip over cluster ads
+		}
+		char cluster_key[PROC_ID_STR_BUFLEN];
+		IdToStr(cluster_id,- 1, cluster_key);
+
+		if (!JobQueue->LookupClassAd(cluster_key, clusterad) || !JobQueue->LookupClassAd(key, procad))
+		{
+			errno = EINVAL;
+			return -1;
+		}
+		procad->ChainToAd(clusterad);
+
+		classad::MatchClassAdDoesNotOwn matchad(procad, g_commit_target_ad.get());
+		classad::ExprTree *priorReqs = procad->Lookup(ATTR_REQUIREMENTS);
+		procad->InsertAttr(ATTR_REQUIREMENTS, g_commit_req.get());
+		bool matches = matchad.leftMatchesRight();
+		procad->Insert(ATTR_REQUIREMENTS, priorReqs);
+		if (!matches)
+		{
+			errno = EINVAL;
+			return -1;
+		}
+	}
 
 	if( flags & NONDURABLE ) {
 		JobQueue->CommitNondurableTransaction();
@@ -3067,6 +3105,27 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 	}	// end of if a new cluster(s) submitted
 
 	xact_start_time = 0;
+	return 0;
+}
+
+
+void
+SetCommitRequirements(classad_shared_ptr<classad::ExprTree> commit_req, classad_shared_ptr<classad::ClassAd> commit_target_ad)
+{
+	g_commit_req = commit_req;
+	g_commit_target_ad = commit_target_ad;
+}
+
+
+classad_shared_ptr<classad::ExprTree> GetCommitRequirement()
+{
+	return g_commit_req;
+}
+
+
+classad_shared_ptr<classad::ClassAd> GetCommitTargetAd()
+{
+	return g_commit_target_ad;
 }
 
 int

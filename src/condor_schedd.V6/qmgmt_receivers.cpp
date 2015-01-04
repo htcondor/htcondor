@@ -504,9 +504,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		CommitTransaction( flags );
-			// CommitTransaction() never returns on failure
-		rval = 0;
+		rval = CommitTransaction( flags );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
 
