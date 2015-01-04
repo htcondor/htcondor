@@ -220,6 +220,19 @@ class MatchClassAd : public ClassAd
 		bool EvalMatchExpr(ExprTree *match_expr);
 };
 
+class MatchClassAdDoesNotOwn : public MatchClassAd
+{
+public:
+	MatchClassAdDoesNotOwn() : MatchClassAd() {}
+	MatchClassAdDoesNotOwn(ClassAd* al, ClassAd* ar) : MatchClassAd(al, ar) {}
+
+	virtual ~MatchClassAdDoesNotOwn()
+	{
+		RemoveLeftAd();
+		RemoveRightAd();
+	}
+};
+
 } // classad
 
 #endif
