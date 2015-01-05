@@ -1108,6 +1108,18 @@ If this file exists, HTCondor assumes that the job wrapper has failed
 and copies the contents of the file to the StarterLog for the administrator
 to debug the problem.
 
+\item \Env{CONDOR\_IDS}
+\index{CONDOR\_IDS environment variable}
+\index{environment variables!CONDOR\_IDS}
+overrides the value of configuration variable \MacroNI{CONDOR\_IDS},
+when set in the environment.
+
+\item \Env{CONDOR\_ID}
+\index{CONDOR\_ID environment variable}
+\index{environment variables!CONDOR\_ID}
+is set for scheduler universe jobs to be the same as the \Attr{ClusterId}
+attribute.
+
 \end{itemize}
 
 
