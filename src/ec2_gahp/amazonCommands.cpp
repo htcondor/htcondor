@@ -715,16 +715,62 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
         return false;
     }
 
-    // Fill in required attributes & parameters.
+    // Fill in required attributes.
     AmazonVMStart vmStartRequest;
     vmStartRequest.serviceURL = argv[2];
     vmStartRequest.accessKeyFile = argv[3];
     vmStartRequest.secretKeyFile = argv[4];
+
+	// Fill in user-specified parameters.  (Also handles security groups
+	// and security group IDS.)
+	//
+	// We could have split up the block device mapping like this, but since
+	// we were inventing a syntax anyway, it wasn't too hard to make the
+	// parser simple.  Rather than risk a quoting problem with security
+	// names or group IDs, we just introduce a convention that we terminate
+	// each list with the null string.
+
+	unsigned positionInList = 0;
+	unsigned which = 0;
+	for( int i = 15; i < argc; ++i ) {
+		if( strcasecmp( argv[i], NULLSTRING ) == 0 ) {
+			++which;
+			positionInList = 0;
+			continue;
+		}
+
+		std::ostringstream parameterName;
+		switch( which ) {
+			case 0:
+				parameterName << "SecurityGroup." << positionInList;
+				++positionInList;
+				break;
+			case 1:
+				parameterName << "SecurityGroupId." << positionInList;
+				++positionInList;
+				break;
+			case 2:
+				parameterName << argv[i];
+				if( ! ( i + 1 < argc ) ) {
+					dprintf( D_ALWAYS, "Found parameter '%s' without value, ignoring it.\n", argv[i] );
+					continue;
+				}
+				++i;
+				break;
+			default:
+				dprintf( D_ALWAYS, "Found unexpected null strings at end of variable-count parameter lists.  Ignoring.\n" );
+				continue;
+		}
+
+		vmStartRequest.query_parameters[ parameterName.str() ] = argv[ i ];
+	}
+
+    // Fill in required parameters.
     vmStartRequest.query_parameters[ "Action" ] = "RunInstances";
     vmStartRequest.query_parameters[ "ImageId" ] = argv[5];
     vmStartRequest.query_parameters[ "MinCount" ] = "1";
     vmStartRequest.query_parameters[ "MaxCount" ] = "1";
-	vmStartRequest.query_parameters[ "InstanceInitiatedShutdownBehavior" ] = "terminate";
+    vmStartRequest.query_parameters[ "InstanceInitiatedShutdownBehavior" ] = "terminate";
 
     // Fill in optional parameters.
     if( strcasecmp( argv[6], NULLSTRING ) ) {
@@ -773,65 +819,6 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
 			vmStartRequest.query_parameters[ deviceName.str() ] = pair.next();
 		}
 	}
-
-	// We could have split up the block device mapping like this, but since
-	// we were inventing a syntax anyway, it wasn't too hard to make the
-	// parser simple.  Rather than risk a quoting problem with security
-	// names or group IDs, we just introduce a convention that we terminate
-	// each list with the null string.
-	unsigned positionInList = 0;
-
-	// This is all hilariously wrong.
-	class vsaListType {
-		public:
-			enum Type {	first = 0,
-						groupNames = 0,
-						groupIDs = 1,
-						parameters = 2,
-						last = 2 };
-			vsaListType() : type( first ) {};
-			vsaListType & operator++() {
-				int t = (int)type;
-				++t;
-				if( first <= t && t <= last ) {
-					type = (Type)t;
-				}
-				return * this;
-			}
-			operator int() { return (int)type; }
-		private:
-			Type type;
-	};
-	vsaListType which;
-    for( int i = 15; i < argc; ++i ) {
-    	if( strcasecmp( argv[i], NULLSTRING ) == 0 ) {
-    		++which;
-    		positionInList = 0;
-    		continue;
-    	}
-
-		std::ostringstream parameterName;
-    	switch( which ) {
-    		case vsaListType::groupNames:
-    			parameterName << "SecurityGroup." << positionInList;
-    			++positionInList;
-    			break;
-    		case vsaListType::groupIDs:
-    			parameterName << "SecurityGroupId." << positionInList;
-    			++positionInList;
-    			break;
-    		case vsaListType::parameters:
-    			parameterName << argv[i];
-    			if( ! ( i + 1 < argc ) ) {
-    				dprintf( D_ALWAYS, "Found parameter '%s' without value, ignoring it.\n", argv[i] );
-    				continue;
-    			}
-    			++i;
-    			break;
-    	}
-
-    	vmStartRequest.query_parameters[ parameterName.str() ] = argv[ i ];
-    }
 
     //
     // Handle user data.

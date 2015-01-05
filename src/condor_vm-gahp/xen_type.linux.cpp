@@ -697,6 +697,7 @@ VirshType::Status()
 
 	virDomainInfo _info;
 	virDomainInfoPtr info = &_info;
+	memset( info, 0, sizeof( virDomainInfo ) );
 	if(virDomainGetInfo(dom, info) < 0)
 	  {
 	    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
@@ -704,33 +705,33 @@ VirshType::Status()
 	    return false;
 	  }
 	if(info->state == VIR_DOMAIN_RUNNING || info->state == VIR_DOMAIN_BLOCKED)
-	  { 
-	    static unsigned long long LastCpuTime = 0; 
-	    static time_t LastStamp = time(0); 
-	    
+	  {
+	    static unsigned long long LastCpuTime = 0;
+	    static time_t LastStamp = time(0);
+
 	    time_t CurrentStamp = time(0);
-	    unsigned long long CurrentCpuTime= info->cpuTime;
-	    double percentUtilization=1.0;
-	    
+	    unsigned long long CurrentCpuTime = info->cpuTime;
+	    double percentUtilization = 1.0;
+
 	    setVMStatus(VM_RUNNING);
 	    // libvirt reports cputime in nanoseconds
 	    m_cpu_time = info->cpuTime / 1000000000.0;
 	    m_result_msg += "Running";
-	    
+
 	    m_result_msg += " ";
 	    m_result_msg += VMGAHP_STATUS_COMMAND_CPUUTILIZATION;
 	    m_result_msg += "=";
-	    
+
 	    if ( (CurrentStamp - LastStamp) > 0 )
 	    {
-	      // Old calc method because of libvirt version mismatches. 
+	      // Old calc method because of libvirt version mismatches.
 	      // courtesy of http://people.redhat.com/~rjones/virt-top/faq.html#calccpu 
 	      percentUtilization = (1.0 * (CurrentCpuTime-LastCpuTime) ) / ((CurrentStamp - LastStamp)*info->nrVirtCpu*1000000000.0);
 	      vmprintf(D_FULLDEBUG, "Computing utilization %f = (%llu) / (%d * %d * 1000000000.0)\n",percentUtilization, (CurrentCpuTime-LastCpuTime), (int) (CurrentStamp - LastStamp), info->nrVirtCpu );
 	    }
 
 	    m_result_msg += percentUtilization;
-	    
+
 	    m_result_msg += " " VMGAHP_STATUS_COMMAND_CPUTIME "=";
 	    m_result_msg += m_cpu_time;
 
@@ -739,15 +740,14 @@ VirshType::Status()
 
 	    // Memory usage is in kbytes.
 	    if( info->memory != 0 ) {
-	    	m_result_msg += " " VMGAHP_STATUS_COMMAND_MEMORY "=";
-	    	m_result_msg += (long long)(info->memory);
+	    	formatstr( m_result_msg, "%s %s=%lu", m_result_msg.c_str(), VMGAHP_STATUS_COMMAND_MEMORY, info->memory );
 	    }
 
 	    if( info->maxMem != 0 ) {
-	    	m_result_msg += " " VMGAHP_STATUS_COMMAND_MAX_MEMORY "=";
-	    	m_result_msg += (long long)(info->maxMem);
+	    	formatstr( m_result_msg, "%s %s=%lu", m_result_msg.c_str(), VMGAHP_STATUS_COMMAND_MAX_MEMORY, info->maxMem );
 	    }
 
+		vmprintf( D_FULLDEBUG, "Reporting status: %s\n", m_result_msg.c_str() );
 	    virDomainFree(dom);
 	    return true;
 	  }
