@@ -179,6 +179,7 @@ class HashTable {
   int  getCurrentKey (Index &index);
   int  iterate (Index &index, Value &value);
   int  iterate_nocopy(const Index ** pindex, Value ** pvalue);
+  int  iterate_stats(int & ix_bucket, int & ix_item);
 
   iterator begin() {return iterator(this, 0);}
   iterator end() {return iterator(this, -1);}
@@ -797,6 +798,41 @@ iterate_nocopy (const Index **pindex, Value ** pv)
 	return 1;
 }
 
+// this iterator helps to gather statistics about the hashtable fill ratio
+template <class Index, class Value>
+int HashTable<Index,Value>::
+iterate_stats (int & ix_bucket, int & ix_item)
+{
+	// try to get next item in the current bucket chain ...
+	if (currentItem) {
+		currentItem = currentItem->next;
+
+		// ... if successful, return OK
+		if (currentItem) {
+			++ix_item;
+			return 1;
+		}
+	}
+
+		// the current bucket chain is expended, so find the next non-NULL
+		// bucket and continue from there
+	do {
+		currentBucket++;
+		if (currentBucket >= tableSize) {
+			// end of hash table ... no more entries
+			currentBucket = -1;
+			currentItem = 0;
+			ix_bucket = -1;
+			ix_item = tableSize;
+			return 0;
+		}
+		currentItem = ht[currentBucket];
+	} while ( !currentItem );
+
+	ix_bucket = currentBucket;
+	ix_item = 0;
+	return 1;
+}
 
 template <class Index, class Value>
 int HashTable<Index,Value>::walk( int (*walkfunc) ( Value value ) )

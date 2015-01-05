@@ -29,6 +29,7 @@
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
+#include "qmgmt.h"
 #include "condor_qmgr.h"
 #include "qmgmt_constants.h"
 
@@ -785,17 +786,17 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 					// The GridManager depends on the fact that the following call
 					// expands $$ and saves the expansions to disk in case of
 					// restart.
-					ad = GetJobAd( cluster_id, proc_id, true, true );
+					ad = GetJobAd_as_ClassAd( cluster_id, proc_id, true, true );
 					delete_ad = true;
 					// note : since we expanded the ad, ad is now a deep
 					// copy of the ad in memory, so we must delete it below.
 				} else {
-					ad = GetJobAd( cluster_id, proc_id, false, false );
+					ad = GetJobAd_as_ClassAd( cluster_id, proc_id, false, false );
 				}
 			} else if( proc_id == -1 ) {
 				// allow cluster ad to be queried as required by preen, but
 				// do NOT ask to expand $$() macros in a cluster ad!
-				ad = GetJobAd( cluster_id, proc_id, false, false );
+				ad = GetJobAd_as_ClassAd( cluster_id, proc_id, false, false );
 			}
 		}
 		terrno = errno;
@@ -829,7 +830,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		ad = GetJobByConstraint( constraint );
+		ad = GetJobByConstraint_as_ClassAd( constraint );
 		terrno = errno;
 		rval = ad ? 0 : -1;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );

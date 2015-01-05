@@ -25,11 +25,10 @@
 
 #include "condor_classad.h"
 #include <generic_stats.h>
-//#include "string_list.h"
 
 class JobIdSet;
 class JobAggregationResults;
-typedef ClassAd JobQueueJob;
+class JobQueueJob;
 
 class JobCluster {
 public:
@@ -40,7 +39,7 @@ public:
 #ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
 	void keepJobIds(bool keep) { keep_job_ids = keep; }
 #endif
-	int getClusterid(JobQueueJob &job, PROC_ID & jid, bool expand_refs, std::string * final_list);
+	int getClusterid(JobQueueJob &job, bool expand_refs, std::string * final_list);
 	int size();
 	void clear();
 #ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
@@ -56,7 +55,7 @@ protected:
 	typedef std::map<int, JobIdSet> JobIdSetMap;
 	JobIdSetMap cluster_use; // map clusterId to a set of jobIds
 	std::set<int> cluster_gone; // holds the set of deleted clusters until the next garbage collect pass
-	JobIdSetMap::iterator find(const PROC_ID & jid); // get current cluster id for a given job
+	JobIdSetMap::iterator find(const JOB_ID_KEY & jid); // get current cluster id for a given job
 #endif
 	int next_id;
 	const char *significant_attrs;
@@ -112,7 +111,7 @@ public:
 		@return The autocluster id for this job, or -1 if it cannot
 		be computed.
 	*/
-	int getAutoClusterid(JobQueueJob *job, PROC_ID & jid);
+	int getAutoClusterid(JobQueueJob *job);
 
 		// garbage collection methods...
 
@@ -139,9 +138,7 @@ public:
 	/** called just before setAttribute sets an attribute value so that we can decide whether
 	  * or not to invalidate the autocluster
 	  */
-#ifdef ALLOW_ON_THE_FLY_AGGREGATION
 	void preSetAttribute(JobQueueJob & job, const char * attr, const char * value, int flags);
-#endif
 
 	/** Return number of active autoclusters
 	  */
