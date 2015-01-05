@@ -1170,7 +1170,7 @@ Claim::leaseExpired()
 	}
 
 	dprintf( D_FAILURE|D_ALWAYS, "State change: claim lease expired "
-			 "(condor_schedd gone?)\n" );
+			 "(condor_schedd gone?), evicting claim\n" );
 
 		// Kill the claim.
 	finishKillClaim();
@@ -1464,16 +1464,31 @@ Claim::starterExited( int status )
 	if ( WIFEXITED(status) && 
 		 WEXITSTATUS(status) == STARTER_EXIT_LOST_SHADOW_CONNECTION ) 
 	{
-			// starter lost connection to shadow, treat it as if the
+			// Starter lost connection to shadow, treat it as if the
 			// lease on the slot expired.
-		leaseExpired();
-	} else {
-			// finally, let our resource know that our starter exited, so
-			// it can do the right thing.
-			// note we do not do this if we called leaseExpired, because
-			// leaseExpired() will destroy r_state in Resource object.
-		c_rip->starterExited( this );
+			// We do not just directly call leaseExpired() here, since
+			// that will remove some state in the Resource object that
+			// the call to starterExited() below will want to inspect.
+			// So instead, just set a zero second timer to call leaseExpired().
+			// This way, starterExited() below gets to do the right thing, including
+			// perhaps giving the resource away to a preempting claim... and
+			// yet if this claim object still exists after starterExited() does its thing, 
+			// when the timer goes off we will be sure to destroy this claim and
+			// put the resource back to Unclaimed. See gt#4807.  Todd Tannenbaum 1/15
+		if( c_lease_tid == -1 ) {
+			startLeaseTimer();
+		}
+		daemonCore->Reset_Timer( c_lease_tid, 0 );
 	}
+
+		// Finally, let our resource know that our starter exited, so
+		// it can do the right thing.
+		// This should be done as the last thing in this method; it
+		// is possible that starterExited may destroy this object.
+	c_rip->starterExited( this );
+
+	// Think twice about doing anything after returning from starterExited(),
+	// as perhaps this claim object has now been destroyed.
 }
 
 
