@@ -26,12 +26,20 @@
 #include "../condor_utils/CondorError.h"
 #include "condor_classad.h"
 
+// this header declares functions for external clients of the schedd, but it is also included by the schedd itself
+// this can cause nasty link errors if the schedd tries to pull in parts of the external api, so
+// if this header file is included before qmgmt.h, then some function prototypes have the external prototype
+// if qmgmt.h is included before this header, then we get the schedd internal prototype instead.
+// for the most part internal declarations understand JobQueueJob, external declarations have ClassAd instead.
+#ifndef SCHEDD_INTERNAL_DECLARATIONS
+ #define SCHEDD_EXTERNAL_DECLARATIONS
+#endif
+
+
 typedef struct {
 	bool dummy;
 } Qmgr_connection;
 
-typedef int (*scan_func)(ClassAd *ad, void* user);
-typedef int (*obsolete_scan_func)(ClassAd *ad);
 
 typedef unsigned char SetAttributeFlags_t;
 const SetAttributeFlags_t NONDURABLE = (1<<0); // do not fsync
@@ -244,6 +252,9 @@ int GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs);
 */
 int DeleteAttribute(int cluster, int proc, const char *attr);
 
+#ifdef SCHEDD_INTERNAL_DECLARATIONS
+//we DON'T want to see the external qmanager's definitions of GetJob*** because schedds internal implemtation is different
+#else
 /** Efficiently get the entire job ClassAd.
 	The caller MUST call FreeJobAd when the ad is no longer in use. 
 	@param cluster_id Cluster number of ad to fetch
@@ -254,12 +265,12 @@ int DeleteAttribute(int cluster, int proc, const char *attr);
         they can be reconstructed after restart of the schedd.
 	@return NULL on failure; the job ClassAd on success
 */
-ClassAd *GetJobAd_as_ClassAd(int cluster_id, int proc_id, bool expStardAttrs = false, bool persist_expansions = true );
+ClassAd *GetJobAd(int cluster_id, int proc_id, bool expStardAttrs = false, bool persist_expansions = true );
 
 /** Efficiently get the first job ClassAd which matches the constraint.
 	@return NULL on failure; the job ClassAd on success
 */
-ClassAd *GetJobByConstraint_as_ClassAd(const char *constraint);
+ClassAd *GetJobByConstraint(const char *constraint);
 /** Efficiently get the all jobs ClassAd which matches the constraint.
 */
 void GetAllJobsByConstraint(const char *constraint, const char *proj,ClassAdList &list);
@@ -283,6 +294,9 @@ ClassAd *GetNextDirtyJobByConstraint(const char *constraint, int initScan);
 */
 void FreeJobAd(ClassAd *&ad);
 
+#endif
+
+
 /** Initiate transfer of job's initial checkpoint file (the executable).
 	Follow with a call to SendSpoolFileBytes.
 	@param filename Name of initial checkpoint file destination
@@ -302,27 +316,20 @@ int SendSpoolFileBytes(char const *filename);
 */
 int SendSpoolFileIfNeeded(ClassAd& ad);
 
+#ifdef SCHEDD_INTERNAL_DECLARATIONS
+//we DON'T want to see the external qmanager's definition of WalkJobQueue in the schedd because the internal implementation is very different.
+#else
 /* This function is not reentrant!  Do not call it recursively. */
-class schedd_runtime_probe;
-void WalkJobQueue3(scan_func fn, void* pv, schedd_runtime_probe & ftm);
+typedef int (*scan_func)(ClassAd *ad, void* user);
+//typedef int (*obsolete_scan_func)(ClassAd *ad);
+void WalkJobQueue(scan_func fn, void* pv);
 // convert calls to the old walkjobqueue function into the new form automatically
-#define WalkJobQueue(fn) WalkJobQueue3( (scan_func)(fn), NULL, WalkJobQ_ ## fn ## _runtime )
+#endif
 
-bool InWalkJobQueue();
-
-void InitQmgmt();
-void InitJobQueue(const char *job_queue_name,int max_historical_logs);
-void CleanJobQueue();
-bool setQSock( ReliSock* rsock );
-void unsetQSock();
-void MarkJobClean(PROC_ID job_id);
-void MarkJobClean(int cluster_id, int proc_id);
-void MarkJobClean(const char* job_id_str);
 
 int rusage_to_float(const struct rusage &, double *, double *);
 int float_to_rusage(double, double, struct rusage *);
 
-bool Reschedule();
 
 #define SetAttributeExpr(cl, pr, name, val) SetAttribute(cl, pr, name, val);
 #define SetAttributeExprByConstraint(con, name, val) SetAttributeByConstraint(con, name, val);

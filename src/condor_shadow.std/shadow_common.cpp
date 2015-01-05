@@ -745,7 +745,7 @@ InitJobAd(int cluster, int proc)
 	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT, true)) {
 		EXCEPT("Failed to connect to schedd!");
 	}
-	JobAd = GetJobAd_as_ClassAd( cluster, proc );
+	JobAd = GetJobAd( cluster, proc );
 	DisconnectQ(NULL);
 	checkForDebugging( JobAd );
   }

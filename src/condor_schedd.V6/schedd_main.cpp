@@ -30,6 +30,7 @@
 
 #include "condor_daemon_core.h"
 #include "util_lib_proto.h"
+#include "qmgmt.h"
 #include "condor_qmgr.h"
 #include "scheduler.h"
 #include "dedicated_scheduler.h"
@@ -50,7 +51,6 @@ extern "C"
 	int		ReadLog(char*);
 }
 
-extern void PostInitJobQueue();
 
 char*          Spool = NULL;
 char*          Name = NULL;

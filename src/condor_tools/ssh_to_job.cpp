@@ -419,7 +419,7 @@ bool SSHToJob::execute_ssh()
 			logError( "Can't connect to schedd\n" );
 			return false;
 		}
-		ClassAd * jobAd = GetJobAd_as_ClassAd( m_jobid.cluster, m_jobid.proc );
+		ClassAd * jobAd = GetJobAd( m_jobid.cluster, m_jobid.proc );
 		DisconnectQ( q );
 
 		// We may have failed to fetch the ad, or the job may have left the q.

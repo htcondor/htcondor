@@ -27,6 +27,12 @@
 #include "condor_sockaddr.h"
 #include "classad_log.h"
 
+// this header declares functions internal to the schedd, it should not be included by code external to the schedd
+// and it should always be included before condor_qmgr.h so that it can disable external prototype declaraions in that file. 
+#define SCHEDD_INTERNAL_DECLARATIONS
+#ifdef SCHEDD_EXTERNAL_DECLARATIONS
+#error This header must be included before condor_qmgr.h for code internal to the SCHEDD, and not at all for external code
+#endif
 
 void PrintQ();
 class Service;
@@ -155,15 +161,29 @@ bool BuildPrioRecArray(bool no_match_found=false);
 void DirtyPrioRecArray();
 extern ClassAd *dollarDollarExpand(int cid, int pid, ClassAd *job, ClassAd *res, bool persist_expansions);
 bool rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad);
-#if 1
+
+// The returned expanded ad is a copy of the job classad, and must be deleted
+ClassAd* GetExpandedJobAd(const PROC_ID& jid, bool persist_expansions);
+
+#ifdef SCHEDD_INTERNAL_DECLARATIONS
 JobQueueJob* GetJobAd(const PROC_ID& jid);
 JobQueueJob* GetJobAd(int cluster, int proc);
-ClassAd* GetExpandedJobAd(const PROC_ID& jid, bool persist_expansions);
+ClassAd * GetJobAd_as_ClassAd(int cluster_id, int proc_id, bool expStardAttrs = false, bool persist_expansions = true );
+ClassAd *GetJobByConstraint_as_ClassAd(const char *constraint);
+ClassAd *GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan);
+#define FreeJobAd(ad) ad = NULL
+
+JobQueueJob* GetNextJob(int initScan);
 JobQueueJob* GetNextJobByCluster( int, int );
-#else
-JobQueueJob* GetJobAd(int cluster_id, int proc_id, bool expStartdAd=false, bool persist_expansions=true);
-JobQueueJob* GetNextJobByCluster( int, int );
+JobQueueJob* GetNextJobByConstraint(const char *constraint, int initScan);
+JobQueueJob* GetNextDirtyJobByConstraint(const char *constraint, int initScan);
 #endif
+
+void * BeginJobAggregation(const char * projection, bool create_if_not, const char * constraint);
+ClassAd *GetNextJobAggregate(void * aggregation, bool first);
+void ReleaseAggregationAd(void *aggregation, ClassAd * ad);
+void ReleaseAggregation(void *aggregation);
+
 
 // this class combines a JOB_ID_KEY with a cached string representation of the key
 class JOB_ID_KEY_BUF : public JOB_ID_KEY {
@@ -208,7 +228,7 @@ class ConstructClassAdLogTableEntry<JobQueueJob*> : public ConstructLogEntry
 {
 public:
 	virtual ClassAd* New() const { return new JobQueueJob(); }
-	virtual void Delete(ClassAd* &val) const { delete val; }
+	virtual void Delete(ClassAd* &val) const;
 };
 
 // specialize the helper class for used by ClassAdLog transactional insert/remove functions
@@ -269,10 +289,28 @@ typedef ClassAdLog<JOB_ID_KEY, const char*,JobQueueJob*> JobQueueLogType;
 JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
 JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
 
+
 class schedd_runtime_probe;
-typedef int (*queue_scan_func)(JobQueueJob *ad, const JobQueueKey& key, void* user);
-void WalkJobQueue3(queue_scan_func fn, void* pv, schedd_runtime_probe & ftm);
-#define WalkJobQueue2(fn,pv) WalkJobQueue3( (queue_scan_func)(fn), pv, WalkJobQ_ ## fn ## _runtime )
+typedef int (*queue_classad_scan_func)(ClassAd *ad, void* user);
+void WalkJobQueue3(queue_classad_scan_func fn, void* pv, schedd_runtime_probe & ftm);
+typedef int (*queue_job_scan_func)(JobQueueJob *ad, const JobQueueKey& key, void* user);
+void WalkJobQueue3(queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm);
+#define WalkJobQueue(fn) WalkJobQueue3( (fn), NULL, WalkJobQ_ ## fn ## _runtime )
+#define WalkJobQueue2(fn,pv) WalkJobQueue3( (fn), (pv), WalkJobQ_ ## fn ## _runtime )
+
+bool InWalkJobQueue();
+
+void InitQmgmt();
+void InitJobQueue(const char *job_queue_name,int max_historical_logs);
+void PostInitJobQueue();
+void CleanJobQueue();
+bool setQSock( ReliSock* rsock );
+void unsetQSock();
+void MarkJobClean(PROC_ID job_id);
+void MarkJobClean(int cluster_id, int proc_id);
+void MarkJobClean(const char* job_id_str);
+
+bool Reschedule();
 
 int get_myproxy_password_handler(Service *, int, Stream *sock);
 

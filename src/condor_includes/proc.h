@@ -25,7 +25,8 @@
 #include "condor_header_features.h"
 
 
-// a handy little structure used in a lot of places
+// a handy little structure used in a lot of places it has to remain a c style struct
+// because some c code (I'm looking at you std-u) depends on it.
 typedef struct PROC_ID {
 	int		cluster;
 	int		proc;
@@ -38,19 +39,11 @@ typedef struct PROC_ID {
 #endif
 } PROC_ID;
 
+
 #if defined(__cplusplus)
 class MyString;
 template <class Item> class ExtArray;
 #endif
-
-
-// a handy little structure used in a lot of places, it has to remain a c style struct
-// because some c code (I'm looking at you std-u) depends on it.
-typedef struct PROC_ID {
-	int		cluster;
-	int		proc;
-} PROC_ID;
-
 
 /*
 **	Possible notification options
@@ -124,7 +117,7 @@ typedef struct JOB_ID_KEY {
 	JOB_ID_KEY(const PROC_ID & rhs) : cluster(rhs.cluster), proc(rhs.proc) {}
 	// constructing JOB_ID_KEY(NULL) ends up calling this constructor because there is no single int constructor - ClassAdLog depends on that...
 	JOB_ID_KEY(const char * job_id_str) : cluster(0), proc(0) { if (job_id_str) set(job_id_str); }
-	operator PROC_ID() { return *((PROC_ID*)this); }
+	operator const PROC_ID() const { return *((const PROC_ID*)this); }
 	void sprint(MyString &s) const;
 	bool set(const char * job_id_str) { return StrToProcId(job_id_str, this->cluster, this->proc); }
 	static unsigned int hash(const JOB_ID_KEY &);

@@ -141,7 +141,7 @@ unsigned int inline MurmurHash32x2_nofinal(unsigned int u1, unsigned int u2) {
 	return h1;
 }
 
-#define JOB_HASH_ALGOR 3
+#define JOB_HASH_ALGOR 2
 int job_hash_algorithm = JOB_HASH_ALGOR;
 
 #if JOB_HASH_ALGOR == 0

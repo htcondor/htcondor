@@ -29,6 +29,7 @@
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
+#include "qmgmt.h"
 #include "condor_qmgr.h"
 #include "qmgmt_constants.h"
 

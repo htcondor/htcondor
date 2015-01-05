@@ -83,7 +83,7 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure );
 // with new compilers (gcc 4.1+)
 //
 class JobQueueJob;
-extern int updateSchedDInterval( JobQueueJob*, JOB_ID_KEY&, void* );
+extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 
 class match_rec;
 
@@ -341,10 +341,10 @@ class Scheduler : public Service
 	void			send_all_jobs_prioritized(ReliSock*, struct sockaddr_in*);
 
 	friend	int		NewProc(int cluster_id);
-	friend	int		count_a_job(ClassAd *);
-	friend	void	job_prio(ClassAd *);
-	friend  int		find_idle_local_jobs(ClassAd *);
-	friend	int		updateSchedDInterval(JobQueueJob*, JOB_ID_KEY&, void* );
+	friend	int		count_a_job(JobQueueJob*, const JOB_ID_KEY&, void* );
+//	friend	void	job_prio(ClassAd *);
+	friend  int		find_idle_local_jobs(ClassAd *, void*);
+	friend	int		updateSchedDInterval(JobQueueJob*, const JOB_ID_KEY&, void* );
     friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
@@ -837,7 +837,7 @@ private:
 // Other prototypes
 class JobQueueJob;
 struct JOB_ID_KEY;
-int get_job_prio(JobQueueJob *ad, JOB_ID_KEY& key, void* user);
+int get_job_prio(JobQueueJob *ad, const JOB_ID_KEY& key, void* user);
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec );
 extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);

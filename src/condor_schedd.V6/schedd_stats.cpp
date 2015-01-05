@@ -23,6 +23,7 @@
 #include "schedd_stats.h"
 #include "condor_config.h"
 #include "classad_helpers.h"
+#include "qmgmt.h"
 
 void ScheddStatistics::Reconfig()
 {
@@ -471,10 +472,6 @@ void ScheddOtherStatsMgr::DeferJobsSubmitted(int cluster, int proc)
 		deferred_jobs_submitted[cluster] = proc;
 	}
 }
-
-// from condor_qmgr.h...
-extern ClassAd *GetJobAd_as_ClassAd(int cluster_id, int proc_id, bool expStardAttrs = false, bool persist_expansions = true );
-extern void FreeJobAd(ClassAd *&ad);
 
 // finish deferred counting of submitted jobs.
 void ScheddOtherStatsMgr::CountJobsSubmitted()

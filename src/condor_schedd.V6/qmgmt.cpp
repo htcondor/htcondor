@@ -318,6 +318,23 @@ KeyToId(JobQueueKey &key,int & cluster,int & proc)
 #endif
 }
 
+// This is where we can clean up any data structures that refer to the job object
+void
+ConstructClassAdLogTableEntry<JobQueueJob*>::Delete(ClassAd* &ad) const
+{
+	if ( ! ad) return;
+	JobQueueJob * job = (JobQueueJob*)ad;
+	if (job->jid.cluster > 0) {
+		if (job->jid.proc < 0) {
+			// this is a cluster
+		} else {
+			// this is a job
+			PRAGMA_REMIND("tj: decrement autocluster use count here??")
+		}
+	}
+	delete ad;
+}
+
 static
 void
 ClusterCleanup(int cluster_id)
@@ -2686,23 +2703,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 */
 #endif
 
-	// If any of the attrs used to create the signature are
-	// changed, then delete the ATTR_AUTO_CLUSTER_ID, since
-	// the signature needs to be recomputed as it may have changed.
-	// Note we do this whether or not the transaction is committed - that
-	// is ok, and actually is probably more efficient than hitting disk.
+	// give the autocluster code a chance to invalidate (or rebuild)
+	// based on the changed attribute.
 	if (job) {
-		char * sigAttrs = NULL;
-		job->LookupString(ATTR_AUTO_CLUSTER_ATTRS,&sigAttrs);
-		if ( sigAttrs ) {
-			StringList attrs(sigAttrs);
-			if ( attrs.contains_anycase(attr_name) ) {
-				job->Delete(ATTR_AUTO_CLUSTER_ID);
-				job->Delete(ATTR_AUTO_CLUSTER_ATTRS);
-			}
-			free(sigAttrs);
-			sigAttrs = NULL;
-		}
+		scheduler.autocluster.preSetAttribute(*job, attr_name, attr_value, flags);
 	}
 
 	// This block handles rounding of attributes.
@@ -4428,11 +4432,6 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 	return true;
 }
 
-// Rather than worry about symbol collision with libcondorutils, do the link
-// to the schedd's GetJobAd() statically here and export a different name.
-ClassAd * ScheddGetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions) {
-	return GetJobAd_as_ClassAd( cluster_id, proc_id, expStartdAd, persist_expansions );
-}
 
 JobQueueJob *
 GetJobAd(const PROC_ID &job_id)
@@ -4524,27 +4523,29 @@ GetJobByConstraint(const char *constraint)
 	return NULL;
 }
 
-ClassAd * GetJobByConstraint_as_ClassAd(const char *constraint) { return GetJobByConstraint(constraint); }
+// declare this so that we don't try and pull in the one in send_stubs
+ClassAd * GetJobByConstraint_as_ClassAd(const char *constraint) {
+	return GetJobByConstraint(constraint);
+}
 
-
-ClassAd *
+JobQueueJob *
 GetNextJob(int initScan)
 {
 	return GetNextJobByConstraint(NULL, initScan);
 }
 
 
-ClassAd *
+JobQueueJob *
 GetNextJobByConstraint(const char *constraint, int initScan)
 {
-	ClassAd	*ad;
+	JobQueueJob *ad;
 	JobQueueKey key;
 
 	if (initScan) {
 		JobQueue->StartIterateAllClassAds();
 	}
 
-	while(JobQueue->IterateAllClassAds(ad,key)) {
+	while(JobQueue->Iterate(key,ad)) {
 	#ifdef USE_JOB_QUEUE_JOB
 		if ( key.cluster > 0 && key.proc >= 0 && // avoid cluster and header ads
 	#else
@@ -4557,11 +4558,15 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 	return NULL;
 }
 
+// declare this so that we don't try and pull in the one in send_stubs
+ClassAd * GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan) {
+	return GetNextJobByConstraint(constraint, initScan);
+}
 
-ClassAd *
+JobQueueJob *
 GetNextDirtyJobByConstraint(const char *constraint, int initScan)
 {
-	ClassAd *ad = NULL;
+	JobQueueJob *ad = NULL;
 	char *job_id_str;
 
 	if (initScan) {
@@ -4570,7 +4575,7 @@ GetNextDirtyJobByConstraint(const char *constraint, int initScan)
 
 	while( (job_id_str = DirtyJobIDs.next( )) != NULL ) {
 		JOB_ID_KEY job_id(job_id_str);
-		if( !JobQueue->LookupClassAd( job_id, ad ) ) {
+		if( !JobQueue->Lookup( job_id, ad ) ) {
 			dprintf(D_ALWAYS, "Warning: Job %s is marked dirty, but could not find in the job queue.  Skipping\n", job_id_str);
 			continue;
 		}
@@ -4619,11 +4624,13 @@ GetNextJobByCluster(int c, int initScan)
 	return NULL;
 }
 
+/*
 void
 FreeJobAd(ClassAd *&ad)
 {
 	ad = NULL;
 }
+*/
 
 static int
 RecvSpoolFileBytes(const char *path)
@@ -4821,7 +4828,7 @@ stats_entry_abs<int> SCGetAutoClusterType;
 // Returns cur_hosts so that another function in the scheduler can
 // update JobsRunning and keep the scheduler and queue manager
 // seperate. 
-int get_job_prio(JobQueueJob *job, JOB_ID_KEY & jid, void *)
+int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 {
     int     job_prio, 
             pre_job_prio1, 
@@ -4840,12 +4847,6 @@ int get_job_prio(JobQueueJob *job, JOB_ID_KEY & jid, void *)
 
 	owner[0] = 0;
 
-		// Note, we should use this method instead of just looking up
-		// ATTR_USER directly, since that includes UidDomain, which we
-		// don't want for this purpose...
-	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
-	job->LookupInteger(ATTR_PROC_ID, id.proc);
-
 		// We must call getAutoClusterid() in get_job_prio!!!  We CANNOT
 		// return from this function before we call getAutoClusterid(), so call
 		// it early on (before any returns) right now.  The reason for this is
@@ -4858,8 +4859,14 @@ int get_job_prio(JobQueueJob *job, JOB_ID_KEY & jid, void *)
 	last_autocluster_classad_cache_hit = 1;
 	last_autocluster_make_sig = false;
 
-	int auto_id = scheduler.autocluster.getAutoClusterid(job, id);
+	int auto_id = scheduler.autocluster.getAutoClusterid(job);
 	job->autocluster_id = auto_id;
+
+	GetAutoCluster_runtime += last_autocluster_runtime;
+	if (last_autocluster_make_sig) { GetAutoCluster_signature_runtime += last_autocluster_runtime; }
+	else { GetAutoCluster_hit_runtime += last_autocluster_runtime; }
+	SCGetAutoClusterType = last_autocluster_type;
+	GetAutoCluster_cchit_runtime += last_autocluster_classad_cache_hit;
 
 	//job->autocluster_id = auto_id;
 	GetAutoCluster_runtime += last_autocluster_runtime;
@@ -4987,7 +4994,7 @@ jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 
 extern void mark_job_stopped(PROC_ID* job_id);
 
-int mark_idle(ClassAd *job)
+int mark_idle(ClassAd *job, void*)
 {
     int     status, cluster, proc, hosts, universe;
 	PROC_ID	job_id;
@@ -5098,7 +5105,7 @@ bool InWalkJobQueue() {
 }
 
 void
-WalkJobQueue3(scan_func func, void* pv, schedd_runtime_probe & ftm)
+WalkJobQueue3(queue_classad_scan_func func, void* pv, schedd_runtime_probe & ftm)
 {
 	double begin = _condor_debug_get_time_double();
 	ClassAd *ad;
@@ -5129,10 +5136,11 @@ WalkJobQueue3(scan_func func, void* pv, schedd_runtime_probe & ftm)
 	in_walk_job_queue--;
 }
 
+
 #ifdef USE_JOB_QUEUE_JOB
 // this function for use only inside the schedd, external clients will use the one above...
 void
-WalkJobQueue3(queue_scan_func func, void* pv, schedd_runtime_probe & ftm)
+WalkJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
 {
 	double begin = _condor_debug_get_time_double();
 
@@ -5221,7 +5229,7 @@ int dump_job_q_stats(int cat)
 */
 void mark_jobs_idle()
 {
-    WalkJobQueue( mark_idle );
+    WalkJobQueue(mark_idle);
 
 	// mark_idle() may have made a lot of commits in non-durable mode in 
 	// order to speed up recovery after a crash, so recovery does not incur
@@ -5251,7 +5259,7 @@ static void DoBuildPrioRecArray() {
 	BuildPrioRec_mark_runtime += rt.tick(now);
 
 	N_PrioRecs = 0;
-	WalkJobQueue2(get_job_prio, NULL);
+	WalkJobQueue(get_job_prio);
 	BuildPrioRec_walk_runtime += rt.tick(now);
 
 		// N_PrioRecs might be 0, if we have no jobs to run at the

@@ -112,8 +112,8 @@ extern char *gen_ckpt_name();
 
 extern GridUniverseLogic* _gridlogic;
 
-#include "condor_qmgr.h"
 #include "qmgmt.h"
+#include "condor_qmgr.h"
 #include "condor_vm_universe_types.h"
 #include "enum_utils.h"
 
@@ -159,7 +159,7 @@ void send_vacate(match_rec*, int);
 void mark_job_stopped(PROC_ID*);
 void mark_job_running(PROC_ID*);
 void mark_serial_job_running( PROC_ID *job_id );
-int fixAttrUser( ClassAd *job );
+int fixAttrUser( ClassAd *job, void* );
 shadow_rec * find_shadow_rec(PROC_ID*);
 bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
@@ -168,7 +168,7 @@ bool jobPrepNeedsThread( int cluster, int proc );
 bool jobCleanupNeedsThread( int cluster, int proc );
 bool jobExternallyManaged(ClassAd * ad);
 bool jobManagedDone(ClassAd * ad);
-int  count_a_job( ClassAd *job );
+int  count_a_job( JobQueueJob *job, const JOB_ID_KEY& jid, void* user);
 void mark_jobs_idle();
 static void WriteCompletionVisa(ClassAd* ad);
 
@@ -824,7 +824,7 @@ Scheduler::~Scheduler()
 // If a job has been spooling for 12 hours,
 // It may well be that the remote condor_submit died
 // So we kill this job
-int check_for_spool_zombies(ClassAd *ad)
+int check_for_spool_zombies(ClassAd *ad, void*)
 {
 	int cluster;
 	if( !ad->LookupInteger( ATTR_CLUSTER_ID, cluster) ) {
@@ -1921,7 +1921,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 			return sendJobErrorAd(sock, 5, "Failed to write EOM to wire");
 		}
 	}
-        while ((it != end) && !has_backlog) {
+	while ((it != end) && !has_backlog) {
 		ClassAd* tmp_ad = *it++;
 		if (!tmp_ad) {
 			// Return to DC in case if our time ran out.
@@ -1939,19 +1939,19 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 					projection.empty() ? NULL : &projection);
 		if (retval == 2) {
 			//dprintf(D_FULLDEBUG, "Detecting backlog.\n");
-                        has_backlog = true;
-                } else if (!retval) {
-			delete this;
-                        return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
-                }
-                retval = sock->end_of_message_nonblocking();
-                if (sock->clear_backlog_flag()) {
-			//dprintf(D_FULLDEBUG, "Socket EOM will block.\n");
-                        unfinished_eom = true;
 			has_backlog = true;
-                }
-        }
-        if (has_backlog && !registered_socket) {
+		} else if (!retval) {
+			delete this;
+			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
+		}
+		retval = sock->end_of_message_nonblocking();
+		if (sock->clear_backlog_flag()) {
+			//dprintf(D_FULLDEBUG, "Socket EOM will block.\n");
+			unfinished_eom = true;
+			has_backlog = true;
+		}
+	}
+	if (has_backlog && !registered_socket) {
 		int retval = daemonCore->Register_Socket(stream, "Client Response",
 			(SocketHandlercpp)&QueryJobAdsContinuation::finish,
 			"Query Job Ads Continuation", this, ALLOW, HANDLE_WRITE);
@@ -1960,7 +1960,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
 		}
 		registered_socket = true;
-        } else if (!has_backlog) {
+	} else if (!has_backlog) {
 		//dprintf(D_FULLDEBUG, "Finishing condor_q.\n");
 		delete this;
 		return sendDone(sock);
@@ -1980,9 +1980,11 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	}
 
 	// if the groupby or useautocluster attributes exist and are true
+	bool group_by = false;
+	//queryAd.LookupBool("ProjectionIsGroupBy", group_by);
 	bool query_autocluster = false;
 	queryAd.LookupBool("QueryDefaultAutocluster", query_autocluster);
-	if (query_autocluster) {
+	if (query_autocluster || group_by) {
 		return command_query_job_aggregates(queryAd, stream);
 	}
 
@@ -2209,7 +2211,7 @@ int Scheduler::command_query_job_aggregates(ClassAd &queryAd, Stream* stream)
 
 
 int 
-clear_autocluster_id(JobQueueJob *job, JOB_ID_KEY & /*jid*/, void *)
+clear_autocluster_id(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *)
 {
 	job->Delete(ATTR_AUTO_CLUSTER_ID);
 	job->autocluster_id = -1;
@@ -2218,7 +2220,7 @@ clear_autocluster_id(JobQueueJob *job, JOB_ID_KEY & /*jid*/, void *)
 
 
 int
-count_a_job( ClassAd *job )
+count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 {
 	int		status;
 	int		niceUser;
@@ -2995,7 +2997,7 @@ and abort, hold, or release the job as necessary.
 */
 
 static int
-PeriodicExprEval( ClassAd *jobad )
+PeriodicExprEval( ClassAd *jobad, void* )
 {
 	int cluster=-1, proc=-1, status=-1, action=-1;
 
@@ -4957,8 +4959,8 @@ Scheduler::actOnJobs(int, Stream* s)
 			// do what we want.  Instead, we'll just iterate through
 			// the Q ourselves so we know exactly what jobs we hit. 
 
-		ClassAd* (*GetNextJobFunc) (const char *, int);
-		ClassAd* job_ad;
+		JobQueueJob* (*GetNextJobFunc) (const char *, int);
+		JobQueueJob* job_ad;
 		if( action == JA_CLEAR_DIRTY_JOB_ATTRS )
 		{
 			GetNextJobFunc = &GetNextDirtyJobByConstraint;
@@ -4971,11 +4973,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		     job_ad;
 		     job_ad = (*GetNextJobFunc)( constraint, 0 ))
 		{
-			if(	job_ad->LookupInteger(ATTR_CLUSTER_ID,tmp_id.cluster) &&
-				job_ad->LookupInteger(ATTR_PROC_ID,tmp_id.proc) ) 
-			{
-				jobs[num_matches++] = tmp_id;
-			} 
+			jobs[num_matches++] = job_ad->jid;
 		}
 		free( constraint );
 		constraint = NULL;
@@ -6116,7 +6114,7 @@ Scheduler::negotiate(int command, Stream* s)
 	if ( sig_attrs_from_cm ) {
 		if ( autocluster.config(sig_attrs_from_cm) ) {
 			// clear out auto cluster id attributes
-			WalkJobQueue2(clear_autocluster_id, NULL);
+			WalkJobQueue(clear_autocluster_id);
 			DirtyPrioRecArray(); // should rebuild PrioRecArray
 		}
 		free(sig_attrs_from_cm);
@@ -6838,7 +6836,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
  * @return true if no error occurred, false otherwise
  **/
 int
-updateSchedDInterval( JobQueueJob *job, JOB_ID_KEY& id, void* /*user*/ )
+updateSchedDInterval( JobQueueJob *job, const JOB_ID_KEY& id, void* /*user*/ )
 {
 		//
 		// Check if the job has the ScheddInterval attribute set
@@ -6866,7 +6864,7 @@ PostInitJobQueue()
 		// The below must happen _after_ InitJobQueue is called.
 	if ( scheduler.autocluster.config() ) {
 		// clear out auto cluster id attributes
-		WalkJobQueue2(clear_autocluster_id, NULL);
+		WalkJobQueue(clear_autocluster_id);
 	}
 
 		//
@@ -6874,7 +6872,7 @@ PostInitJobQueue()
 		// have it defined. This will be for JobDeferral and
 		// CronTab jobs
 		//
-	WalkJobQueue2(updateSchedDInterval, NULL);
+	WalkJobQueue(updateSchedDInterval);
 
 	extern int dump_job_q_stats(int cat);
 	dump_job_q_stats(D_ALWAYS);
@@ -6882,7 +6880,7 @@ PostInitJobQueue()
 
 
 int
-find_idle_local_jobs( ClassAd *job )
+find_idle_local_jobs( ClassAd *job, void* )
 {
 	int	status;
 	int	cur_hosts;
@@ -10441,8 +10439,8 @@ Scheduler::child_exit(int pid, int status)
 		// if need be.
 		//
 	if ( srec_was_local_universe == true ) {
-		ClassAd *job_ad = GetJobAd( job_id.cluster, job_id.proc );
-		count_a_job( job_ad );
+		JobQueueJob *job_ad = GetJobAd(job_id);
+		count_a_job( job_ad, job_ad->jid, NULL);
 	}
 
 		// If we're not trying to shutdown, now that either an agent
@@ -11392,7 +11390,7 @@ Scheduler::Init()
 			// This will only update the job's that have the old
 			// ScheddInterval attribute defined
 			//
-			WalkJobQueue2(updateSchedDInterval, NULL);
+			WalkJobQueue(updateSchedDInterval);
 		}
 	}
 
@@ -12380,7 +12378,7 @@ void Scheduler::reconfig() {
 
 		// clear out auto cluster id attributes
 	if ( autocluster.config() ) {
-		WalkJobQueue2(clear_autocluster_id, NULL);
+		WalkJobQueue(clear_autocluster_id);
 	}
 
 	timeout();
@@ -13628,7 +13626,7 @@ Scheduler::dumpState(int, Stream* s) {
 }
 
 int
-fixAttrUser( ClassAd *job )
+fixAttrUser( ClassAd *job, void* )
 {
 	int nice_user = 0;
 	MyString owner;

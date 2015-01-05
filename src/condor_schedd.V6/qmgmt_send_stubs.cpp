@@ -660,7 +660,7 @@ CloseSocket()
 }
 
 ClassAd *
-GetJobAd_as_ClassAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/, bool /*persist_expansions*/ )
+GetJobAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/, bool /*persist_expansions*/ )
 {
 	int	rval = -1;
 
@@ -695,7 +695,7 @@ GetJobAd_as_ClassAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/, bool 
 
 
 ClassAd *
-GetJobByConstraint_as_ClassAd( char const *constraint )
+GetJobByConstraint( char const *constraint )
 {
 	int	rval = -1;
 
