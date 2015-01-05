@@ -22,13 +22,18 @@
 #include "condor_netdb.h"
 #include "MyString.h"
 #include "condor_ipv6.h"
+#include "condor_classad.h" // generic stats needs these definitions.
+#include "generic_stats.h"
 
 addrinfo get_default_hint()
 {
 	addrinfo ret;
 	memset(&ret, 0, sizeof(ret));
 #ifndef WIN32
-	ret.ai_flags = AI_ADDRCONFIG;
+	// Unfortunately, Ubuntu 10 and 12 disagree with everyone else about
+	// what AI_ADDRCONFIG means, so we need to ask for all addresses and
+	// filter on our end.
+	// ret.ai_flags = AI_ADDRCONFIG;
 #endif
 	ret.ai_flags |= AI_CANONNAME;
 	ret.ai_family = AF_UNSPEC;
@@ -121,13 +126,33 @@ bool find_any_ipv4(addrinfo_iterator& ai, sockaddr_in& sin)
 	return false;
 }
 
+// these stats keep track of the cost of DNS lookups
+//
+stats_entry_probe<double> getaddrinfo_runtime; // count & runtime of all lookups, success and fail
+stats_entry_probe<double> getaddrinfo_fast_runtime; // count & runtime of successful lookups that were faster than getaddrinfo_slow_limit
+stats_entry_probe<double> getaddrinfo_slow_runtime; // count & runtime of successful lookups that were slower than getaddrinfo_slow_limit
+stats_entry_probe<double> getaddrinfo_fail_runtime; // count & runtime of failed lookups
+double getaddrinfo_slow_limit = 2.0;
+void (*getaddrinfo_slow_callback)(const char *node, const char *service, double timediff) = NULL;
 
 int ipv6_getaddrinfo(const char *node, const char *service,
 		addrinfo_iterator& ai, const addrinfo& hint)
 {
 	addrinfo* res = NULL;
+	double begin = _condor_debug_get_time_double();
 	int e = getaddrinfo(node, service, &hint, &res );
-	if (e!=0) return e;
+	double timediff = _condor_debug_get_time_double() - begin;
+	getaddrinfo_runtime += timediff;
+	if (e!=0) {
+		getaddrinfo_fail_runtime += timediff;
+		return e;
+	}
+	if (timediff > getaddrinfo_slow_limit) {
+		getaddrinfo_slow_runtime += timediff;
+		if (getaddrinfo_slow_callback) getaddrinfo_slow_callback(node, service, timediff);
+	} else {
+		getaddrinfo_fast_runtime += timediff;
+	}
 	ai = addrinfo_iterator(res);
 	return 0;
 }

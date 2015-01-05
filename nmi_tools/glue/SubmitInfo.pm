@@ -89,7 +89,6 @@ my @minimal_build_configure_args =
 	 '-DWITH_GLOBUS:BOOL'		 => 'OFF',
 	 '-DWITH_GSOAP:BOOL'		 => 'OFF',
 	 '-DWITH_HADOOP:BOOL'		 => 'OFF',
-	 '-DWITH_KRB5:BOOL'			 => 'OFF',
 	 '-DWITH_LIBDELTACLOUD:BOOL' => 'OFF',
 	 '-DWITH_LIBVIRT:BOOL'		 => 'OFF',
 	 '-DWITH_LIBXML2:BOOL'		 => 'OFF',
@@ -279,6 +278,10 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
+
+	# '0' instead of '8' since it's still in testing.
+	'x86_64_Debian0'	=> 'x86_64_Debian7',
+	'x86_64_Debian8'	=> 'x86_64_Debian7',
 
 	##########################################################################
 	# Platform RHEL 7 on x86_64
@@ -520,7 +523,6 @@ our %submit_info = (
 			# we can use ssh_to_job on solaris if we use the proper kerberose
 			# this is OK since we build kerberose only for batlab.
 			'configure_args' => { @default_build_configure_args,
-								  '-DWITH_KRB5:BOOL' => 'OFF',
 								  '-DWITH_GSOAP:BOOL' => 'OFF', 
 								  '-DWITH_CURL:BOOL' => 'OFF',
 								  #'-DHAVE_SSH_TO_JOB:BOOL' => 'OFF',
@@ -574,7 +576,7 @@ our %submit_info = (
 		},
 	},
 	'x86_64_ubuntu_10.04.4' => 'x86_64_Ubuntu10',
-	
+
 	'x86_64_Ubuntu12' => {
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
@@ -589,12 +591,25 @@ our %submit_info = (
 		},
 	},
 
-	# This should work.
-	'x86_64_Ubuntu14'						=> 'x86_64_Ubuntu12',
+	# Only Ubuntu 14.04 has standard universe port.
+	'x86_64_Ubuntu14'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+				'-DCLIPPED:BOOL' => 'OFF',
+			 },
+			'prereqs'	=> [ @default_prereqs ],
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
 
 	# Add the SWAMP's (temporary) platform name
-	'swamp:ubuntu-12.04-64'	=> 'x86_64_Ubuntu12',
-	
+	'swamp:ubuntu-12.04-64'					=> 'x86_64_Ubuntu12',
+
 	##########################################################################
 	# Platform openSUSE
 	##########################################################################

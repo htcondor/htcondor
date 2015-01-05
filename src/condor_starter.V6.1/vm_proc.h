@@ -183,6 +183,11 @@ class VMProc : public OsProc
 		// Only used for Xen.
 		float m_vm_cputime;
 		float m_vm_utilization; 
+		
+		// How much memory, in kbytes, the domain is using.
+		unsigned long m_vm_memory;
+		// How much memory, in kbytes, the domain could use.
+		unsigned long m_vm_max_memory;
 };
 
 #endif

@@ -203,7 +203,7 @@ static void doDBconfig() {
 		//figure out the location of the .pgpass file
 	char *spool = param("SPOOL");
 	if(!spool) {
-		EXCEPT("No SPOOL variable found in config file\n");
+		EXCEPT("No SPOOL variable found in config file");
 	}
   
 	tmp = param("QUILL_DB_TYPE");
@@ -348,7 +348,7 @@ static MyString getWritePassword(const char *write_passwd_fname,
 	fp = safe_fopen_wrapper(write_passwd_fname, "r");
 
 	if(fp == NULL) {
-		EXCEPT("Unable to open password file %s\n", write_passwd_fname);
+		EXCEPT("Unable to open password file %s", write_passwd_fname);
 	}
 	
 		//dprintf(D_ALWAYS, "prefix: %s\n", prefix);
@@ -372,7 +372,7 @@ static MyString getWritePassword(const char *write_passwd_fname,
 
     fclose(fp);
 	if (!found) {
-		EXCEPT("Unable to find password from file %s\n", write_passwd_fname);
+		EXCEPT("Unable to find password from file %s", write_passwd_fname);
 	}
 
 	return passwd;

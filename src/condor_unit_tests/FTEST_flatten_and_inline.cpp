@@ -1032,12 +1032,12 @@ static bool test_equivalence_nested_classad() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = [b = 1]]";
+	string classad_string = "[a = [b = c]; c = 1]";
 	string expr_string = "a";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
-	expr = parser.ParseExpression(expr_string);
+	expr = classad->Lookup("a");
 
 	ClassAdUnParser unparser;
 	string value_string, fexpr_string;
@@ -1058,10 +1058,10 @@ static bool test_equivalence_nested_classad() {
 	emit_param("Flattened and Inlined Value", value_string.c_str());
 	emit_param("Flattened and Inlined Expression", fexpr_string.c_str());
 	if(fexpr_string.compare("[ b = 1 ]") != MATCH){
-		delete classad; delete expr; delete fexpr;
+		delete classad; delete fexpr;
 		FAIL;
 	}
-	delete classad;	delete expr; delete fexpr;
+	delete classad; delete fexpr;
 	PASS;
 }
 

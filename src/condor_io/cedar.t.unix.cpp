@@ -58,7 +58,7 @@ int main()
 
 	switch(op) {
 		case 1: // Server
-			result = mySock.bind(false, SERVER_PORT, false); // outbound, port, loopback
+			result = mySock.bind( CP_IPV4, false, SERVER_PORT, false ); // outbound, port, loopback
 			if(result != TRUE) {
 				cout << "Bind failed\n";
 				exit(-1);

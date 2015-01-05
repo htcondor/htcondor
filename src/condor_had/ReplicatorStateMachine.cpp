@@ -231,7 +231,7 @@ ReplicatorStateMachine::initializeClassAd()
     // publish list of replication nodes
     char* buffer = param( "REPLICATION_LIST" );
 	if ( NULL == buffer ) {
-		EXCEPT( "ReplicatorStateMachine: No replication list!!\n" );
+		EXCEPT( "ReplicatorStateMachine: No replication list!!" );
 	}
     char* replAddress = NULL;
     StringList replList;

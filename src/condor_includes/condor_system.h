@@ -205,6 +205,9 @@ typedef fd_set *SELECT_FDSET_PTR;
 #ifndef O_LARGEFILE
 #  define O_LARGEFILE	0x0
 #endif
+#ifndef _O_NOINHERIT
+#  define _O_NOINHERIT	0x0 /* child process doesn't inherit file */
+#endif
 
 #include "condor_sys_formats.h"
 

@@ -1,0 +1,24 @@
+NODE_STATUS_FILE job_dagman_rm.status
+
+# This node initializes things (removes files that need to be removed,
+# etc.).
+Job NodeA job_dagman_rm-nodeA.cmd
+
+# This node will wait in the PRE script.
+Job NodeB /dev/null NOOP
+Script Pre NodeB ./job_dagman_rm-wait.pl job_dagman_rm-NodeB-pre
+Parent NodeA Child NodeB
+
+# This node will wait in the POST script.
+Job NodeC /dev/null NOOP
+Script Post NodeC ./job_dagman_rm-wait.pl job_dagman_rm-NodeC-post
+Parent NodeA Child NodeC
+
+# This node will wait in the job.
+Job NodeD job_dagman_rm-nodeD.cmd
+Parent NodeA Child NodeD
+
+# This node will condor_rm the parent DAGMan job once the other nodes
+# are in the right state.
+Job NodeE job_dagman_rm-nodeE.cmd
+Parent NodeA Child NodeE

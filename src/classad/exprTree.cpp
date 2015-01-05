@@ -317,6 +317,7 @@ EvalState( )
 	depth_remaining = MAX_CLASSAD_RECURSION;
 	flattenAndInline = false;	// NAC
 	debug = false;
+	inAttrRefScope = false;
 }
 
 EvalState::
@@ -354,6 +355,7 @@ SetRootScope( )
         
         while( curScope ) {
             if( curScope == curAd ) {	// NAC - loop detection
+                rootAd = NULL;
                 return;					// NAC
             }							// NAC
             prevScope = curScope;

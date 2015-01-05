@@ -110,6 +110,12 @@ static Regex *queue_super_user_may_impersonate_regex = NULL;
 
 static void AddOwnerHistory(const MyString &user);
 
+typedef _condor_auto_accum_runtime< stats_entry_probe<double> > condor_auto_runtime;
+
+schedd_runtime_probe WalkJobQ_runtime;
+schedd_runtime_probe WalkJobQ_mark_idle_runtime;
+schedd_runtime_probe WalkJobQ_get_job_prio_runtime;
+
 class Service;
 
 bool        PrioRecArrayIsDirty = true;
@@ -611,7 +617,7 @@ InitQmgmt()
 	}
 
 	schedd_forker.Initialize();
-	int max_schedd_forkers = param_integer ("SCHEDD_QUERY_WORKERS",3,0);
+	int max_schedd_forkers = param_integer ("SCHEDD_QUERY_WORKERS",8,0);
 	schedd_forker.setMaxWorkers( max_schedd_forkers );
 
 	cluster_initial_val = param_integer("SCHEDD_CLUSTER_INITIAL_VALUE",1,1);
@@ -807,7 +813,7 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 
 		if( !SpooledJobFiles::createParentSpoolDirectories(job_ad) ) {
 			EXCEPT("Failed to create parent spool directories for "
-				   "%d.%d: %s: %s\n",
+				   "%d.%d: %s: %s",
 				   cluster,proc,new_path.c_str(),strerror(errno));
 		}
 
@@ -824,7 +830,7 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 				saved_priv = set_priv(PRIV_ROOT);
 
 				if( rename(old_tmp_path.c_str(),new_tmp_path.c_str())!= 0 ) {
-					EXCEPT("Failed to move %s to %s: %s\n",
+					EXCEPT("Failed to move %s to %s: %s",
 						   old_tmp_path.c_str(),
 						   new_tmp_path.c_str(),
 						   strerror(errno));
@@ -840,7 +846,7 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 		saved_priv = set_priv(PRIV_ROOT);
 
 		if( rename(old_path.c_str(),new_path.c_str())!= 0 ) {
-			EXCEPT("Failed to move %s to %s: %s\n",
+			EXCEPT("Failed to move %s to %s: %s",
 				   old_path.c_str(),
 				   new_path.c_str(),
 				   strerror(errno));
@@ -861,7 +867,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 	MyString spool;
 	if( !param(spool,"SPOOL") ) {
-		EXCEPT("SPOOL must be defined.\n");
+		EXCEPT("SPOOL must be defined.");
 	}
 
 	int spool_min_version = 0;
@@ -1303,7 +1309,11 @@ isQueueSuperUser( const char* user )
             continue;
         }
 #endif
+#if defined(WIN32) // usernames on Windows are case-insensitive.
+		if( strcasecmp( user, super_users[i] ) == 0 ) {
+#else
 		if( strcmp( user, super_users[i] ) == 0 ) {
+#endif
 			return true;
 		}
 	}
@@ -2389,11 +2399,32 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 	else if ( strcasecmp( attr_name, ATTR_JOB_STATUS ) == 0 ) {
 			// If the status is being set, let's record the previous
-			// status. If there is no status, we default to an unused
-			// value.
-		int status = 0;
-		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
-		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status, flags );
+			// status, but only if it's different.
+			// When changing the status of a HELD job that was previously
+			// REMOVED, enforce that it has to go back to REMOVED.
+		int curr_status = 0;
+		int last_status = 0;
+		int release_status = 0;
+		int new_status = (int)strtol( attr_value, NULL, 10 );
+
+		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &curr_status );
+		GetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, &last_status );
+		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS_ON_RELEASE, &release_status );
+
+		if ( new_status != HELD && new_status != REMOVED &&
+			 ( curr_status == REMOVED || last_status == REMOVED ||
+			   release_status == REMOVED ) ) {
+			dprintf( D_ALWAYS, "SetAttribute violation: Attempt to change %s of removed job %d.%d to %d\n",
+					 ATTR_JOB_STATUS, cluster_id, proc_id, new_status );
+			return -1;
+		}
+		if ( curr_status == REMOVED && new_status == HELD &&
+			 release_status != REMOVED ) {
+			SetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS_ON_RELEASE, REMOVED, flags );
+		}
+		if ( new_status != curr_status && curr_status > 0 ) {
+			SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, curr_status, flags );
+		}
 	}
 #if defined(ADD_TARGET_SCOPING)
 /* Disable AddTargetRefs() for now
@@ -4493,6 +4524,16 @@ PrintQ()
 	dprintf(D_ALWAYS, "****End of Queue*********\n");
 }
 
+// probes for timing the autoclustering code
+schedd_runtime_probe GetAutoCluster_runtime;
+schedd_runtime_probe GetAutoCluster_hit_runtime;
+schedd_runtime_probe GetAutoCluster_signature_runtime;
+schedd_runtime_probe GetAutoCluster_cchit_runtime;
+double last_autocluster_runtime;
+bool   last_autocluster_make_sig;
+int    last_autocluster_type=0;
+int    last_autocluster_classad_cache_hit=0;
+stats_entry_abs<int> SCGetAutoClusterType;
 
 // Returns cur_hosts so that another function in the scheduler can
 // update JobsRunning and keep the scheduler and queue manager
@@ -4519,6 +4560,12 @@ int get_job_prio(ClassAd *job)
 	buf[0] = '\0';
 	owner[0] = '\0';
 
+		// Note, we should use this method instead of just looking up
+		// ATTR_USER directly, since that includes UidDomain, which we
+		// don't want for this purpose...
+	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
+	job->LookupInteger(ATTR_PROC_ID, id.proc);
+
 		// We must call getAutoClusterid() in get_job_prio!!!  We CANNOT
 		// return from this function before we call getAutoClusterid(), so call
 		// it early on (before any returns) right now.  The reason for this is
@@ -4527,7 +4574,18 @@ int get_job_prio(ClassAd *job)
 		// autocluster information for this job will be removed, causing the schedd
 		// to ASSERT later on in the autocluster code. 
 		// Quesitons?  Ask Todd <tannenba@cs.wisc.edu> 01/04
-	int auto_id = scheduler.autocluster.getAutoClusterid(job);
+	last_autocluster_runtime = 0;
+	last_autocluster_classad_cache_hit = 1;
+	last_autocluster_make_sig = false;
+
+	int auto_id = scheduler.autocluster.getAutoClusterid(job, id);
+
+	//job->autocluster_id = auto_id;
+	GetAutoCluster_runtime += last_autocluster_runtime;
+	if (last_autocluster_make_sig) { GetAutoCluster_signature_runtime += last_autocluster_runtime; }
+	else { GetAutoCluster_hit_runtime += last_autocluster_runtime; }
+	SCGetAutoClusterType = last_autocluster_type;
+	GetAutoCluster_cchit_runtime += last_autocluster_classad_cache_hit;
 
 	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 	job->LookupInteger(ATTR_JOB_STATUS, job_status);
@@ -4578,11 +4636,6 @@ int get_job_prio(ClassAd *job)
 		job->LookupString(ATTR_OWNER, buf, sizeof(buf));  
 	}
 	strcat(owner,buf);
-		// Note, we should use this method instead of just looking up
-		// ATTR_USER directly, since that includes UidDomain, which we
-		// don't want for this purpose...
-	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
-	job->LookupInteger(ATTR_PROC_ID, id.proc);
 
 	
     // No longer judge whether or not a job can run by looking at its status.
@@ -4756,8 +4809,9 @@ bool InWalkJobQueue() {
 }
 
 void
-WalkJobQueue(scan_func func)
+WalkJobQueue3(scan_func func, void* pv, schedd_runtime_probe & ftm)
 {
+	double begin = _condor_debug_get_time_double();
 	ClassAd *ad;
 	int rval = 0;
 
@@ -4770,7 +4824,7 @@ WalkJobQueue(scan_func func)
 
 	ad = GetNextJob(1);
 	while (ad != NULL && rval >= 0) {
-		rval = func(ad);
+		rval = func(ad, pv);
 		if (rval >= 0) {
 			FreeJobAd(ad);
 			ad = GetNextJob(0);
@@ -4778,6 +4832,10 @@ WalkJobQueue(scan_func func)
 	}
 	if (ad != NULL)
 		FreeJobAd(ad);
+
+	double runtime = _condor_debug_get_time_double() - begin;
+	ftm += runtime;
+	WalkJobQ_runtime += runtime;
 
 	in_walk_job_queue--;
 }
@@ -4804,11 +4862,23 @@ void DirtyPrioRecArray() {
 	PrioRecArrayIsDirty = true;
 }
 
+// runtime stats for count & time spent building the priorec array
+//
+schedd_runtime_probe BuildPrioRec_runtime;
+schedd_runtime_probe BuildPrioRec_mark_runtime;
+schedd_runtime_probe BuildPrioRec_walk_runtime;
+schedd_runtime_probe BuildPrioRec_sort_runtime;
+schedd_runtime_probe BuildPrioRec_sweep_runtime;
+
 static void DoBuildPrioRecArray() {
+	condor_auto_runtime rt(BuildPrioRec_runtime);
+	double now = rt.begin;
 	scheduler.autocluster.mark();
+	BuildPrioRec_mark_runtime += rt.tick(now);
 
 	N_PrioRecs = 0;
 	WalkJobQueue( get_job_prio );
+	BuildPrioRec_walk_runtime += rt.tick(now);
 
 		// N_PrioRecs might be 0, if we have no jobs to run at the
 		// moment.  If so, we don't want to call qsort(), since that's
@@ -4819,9 +4889,11 @@ static void DoBuildPrioRecArray() {
 	if( N_PrioRecs ) {
 		qsort( (char *)PrioRec, N_PrioRecs, sizeof(PrioRec[0]),
 			   (int(*)(const void*, const void*))prio_compar );
+		BuildPrioRec_sort_runtime += rt.tick(now);
 	}
 
 	scheduler.autocluster.sweep();
+	BuildPrioRec_sweep_runtime += rt.tick(now);
 
 	if( !scheduler.shadow_prio_recs_consistent() ) {
 		scheduler.mail_problem_message();

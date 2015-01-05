@@ -395,7 +395,7 @@ daemon::DoConfig( bool init )
 	MyString env_error_msg;
 
 	if(!env_parser.MergeFromV1RawOrV2Quoted(env_string,&env_error_msg)) {
-		EXCEPT("ERROR: Failed to parse %s_ENVIRONMENT in config file: %s\n",
+		EXCEPT("ERROR: Failed to parse %s_ENVIRONMENT in config file: %s",
 		       name_in_config_file,
 			   env_error_msg.Value());
 	}
@@ -559,6 +559,9 @@ int daemon::RealStart( )
 	ArgList args;
 
 	param(default_id, "SHARED_PORT_DEFAULT_ID");
+	if ( !default_id.size() ) {
+		default_id = "collector";
+	}
 		// Windows has a global pipe namespace, meaning that several instances of
 		// HTCondor share the same default ID; we make it unique below.
 #ifdef WIN32
@@ -639,9 +642,18 @@ int daemon::RealStart( )
 					"Matching '%s:%d'\n", 
 					my_daemon->fullHostname (),
 					my_daemon->port () );
+				
+				MyString cm_sinful = my_daemon->addr();
+				condor_sockaddr cm_sockaddr;
+				cm_sockaddr.from_sinful(cm_sinful);
+				MyString cm_hostname;
+				if(my_daemon->fullHostname()) {
+					cm_hostname = my_daemon->fullHostname();
+				}
 
-				if (same_host (my_hostname, 
-							   my_daemon->fullHostname())) {
+				if( cm_sockaddr.is_loopback() ||
+					same_host (my_hostname, 
+							   cm_hostname.Value())) {
 					Sinful sinful( my_daemon->addr() );
 					if( sinful.getSharedPortID() ) {
 							// collector is using a shared port
@@ -680,7 +692,7 @@ int daemon::RealStart( )
 		}
 
 		if (collector_uses_shared_port && !strcmp(name_in_config_file,"COLLECTOR")) {
-			daemon_sock = default_id.size() ? default_id.c_str() : "collector";
+			daemon_sock = default_id.c_str();
 		}
 
 		if( daemon_sock ) {

@@ -12,15 +12,15 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-3-1}Version 8.3.1}
+\subsection*{\label{sec:New-8-3-3}Version 8.3.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 8.3.1 not yet released.
-%\item HTCondor version 8.3.1 released on Month Date, 2014.
+\item HTCondor version 8.3.3 not yet released.
+%\item HTCondor version 8.3.3 released on Month Date, 2014.
 
 \end{itemize}
 
@@ -29,31 +29,289 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added a configuration parameter, \Macro{COLLECTOR\_PORT}, which specifies
-the default port used by the \Condor{collector} daemon and command line tools.
-The default value is 9618 - the same port used in previous releases.
-\Ticket{4432}
+\item \Condor{dagman} now prints the hold reason to the \File{dagman.out}
+file when node jobs go on hold.
+\Ticket{4766}
 
-\item The \Condor{shared\_port} daemon is now enabled by default on new installs on
-non-Windows platforms.
-With this change, all HTCondor daemons will share port 9618 for all incoming TCP
-connections, greatly simplifying firewall configuration.  Only users of HTCondor-G
-submitting to Globus GRAM endpoints will need additional incoming TCP ports in
-the firewall.
+\item The python bindings can be used to query and set config variables
+of running daemons.
+\Ticket{4778}
 
-\emph{Note} that this causes all HTCondor hosts to use TCP port 9618 by default,
-differing from previous behavior (previously, only the collector host used a 
-fixed port).  To restore the prior behavior, set \Macro{SHARED\_PORT\_PORT} to \Expr{0}.
+\item Python functions can be invoked directly from ClassAd expressions within HTCondor
+daemons.  A system administrator must set the \Macro{CLASSAD\_USER\_PYTHON\_MODULES}
+configuration macro to specify the python modules that are accessible from
+within ClassAds.
+\Ticket{4773}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-3-2}Version 8.3.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.3.2 released on December 23, 2014.
+This version contains all bug fixes from HTCondor version 8.2.6.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item It is now possible run a dual-protocol (IPv4 and IPv6) submit node,
+submitting to single-protocol execute nodes. This is preliminary work.
+\Ticket{4494}
+
+\item The port used by the \Condor{shared\_port} daemon is now
+9618 by default.
 \Ticket{3813}
 
-The \Condor{shared\_port} daemon will now work if \Macro{DAEMON\_SOCKET\_DIR} is
-longer than 100 characters in length.
+\item Improved the handling when vm universe jobs failure to start.
+Failures which do
+not appear to be the fault of the job now cause the job to be rescheduled and
+the machine stops advertising the ability to run vm universe jobs.
+The new \Condor{condor\_update\_machine\_ad} tool facilitates changing
+the machine ClassAd.
+\Ticket{4375}
+
+\item The memory footprint of the \Condor{shadow} has been
+reduced when \Prog{Kerberos} or SSL authentication methods are not used, 
+as these libraries are now loaded on demand at run time.
+\Ticket{374} 
+
+\item The responsiveness of a busy \Condor{schedd} daemon to queries
+has been improved.
+\Ticket{4735} 
+\Ticket{4594} 
+
+\item Added the ability to specify the block device mapping for EC2 jobs.
+\Ticket{4657}
+
+\item The new python binding \Procedure{register} has been added 
+to allow python functions
+be registered with the ClassAds library.  This allows python
+functions to be invoked from within ClassAds.
+\Ticket{4598}
+
+\item The new python bindings \Procedure{externalRefs} and 
+\Procedure{internalRefs} have been added to allow the ClassAd object
+to determine internal and external references from an expression.
+\Ticket{4681}
+
+\item When the \Condor{startd} has a live \Condor{starter}, 
+claim keep alives are sent
+by the existing TCP connection between the \Condor{starter} and \Condor{schedd},
+rather than creating a new connection to the 
+\Condor{schedd} from the \Condor{startd}.
+\Ticket{4491}
+
+\item Added the DAGMan feature of \Arg{ALWAYS-UPDATE} for updates
+of a DAGMan node status file. 
+Specifying this causes the node status file to be overwritten,
+even if no nodes have changed status since the file was last written.
+\Ticket{4607}
+
+\item Configuration variable \Macro{MAX\_JOBS\_RUNNING} has been
+modified such that it only applies to job universes that require a
+\Condor{shadow} process.
+Scheduler and local universe jobs are no longer affected by this
+variable.
+The number of running scheduler and local universe jobs can be controlled
+with configuration variables \MacroNI{START\_SCHEDULER\_UNIVERSE} and
+\MacroNI{START\_LOCAL\_UNIVERSE}, respectively.
+\Ticket{4589}
+
+\item The specific versions of Globus GSI libraries to be loaded at run time
+are determined at compile time. 
+\Ticket{4585} 
+
+\item HTCondor now sets environment variable \Env{\_CONDOR\_JOB\_AD} for
+scheduler universe jobs. 
+Its value will be the path to a file which contains
+the job ClassAd as it was when the job was started.
+This feature already exists for vanilla, parallel, java, and local
+universe jobs.
+\Ticket{4558}
+
+\item The new \Opt{-debug} option to \Condor{userprio} sends
+debug output to \File{stderr}.
+\Ticket{4636}
+
+\item HTCondor daemons now support a whitelist of statistics attributes to
+publish from their ClassAd to the \Condor{collector}.  
+This is intended to ease
+configuration on systems that use \Prog{ganglia} for monitoring.
+\Ticket{4645}
+
+\item New statistics have been added to the \Condor{schedd} to monitor runtime
+spent doing DNS queries, using \Prog{fsync}, 
+and rebuilding the priority list for negotiation.  
+Also additional attributes for average, maximum and minimum
+have been added to runtime statistics for command handlers 
+for all HTCondor daemons.
+These changes are intended to help direct future scalability work.
+\Ticket{4593}
+\Ticket{4595}
+
+\item The new daemon logging level, \Dflag{SUB\_SECOND}, 
+enables millisecond resolution timestamps in daemon logs.
+\Ticket{4660}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug introduced in HTCondor version 8.3.1 that caused daemons to be
+unreachable if they were configured to use the \Condor{shared\_port} daemon,
+but the \Condor{master} was not.
+\Ticket{4603}
+
+\item Updated the CREAM client library used in the \Prog{cream\_gahp}.
+This fixes the delegation of RFC format proxies, in addition to other
+bug fixes.
+\Ticket{4596}
+
+\item Fixed a bug that could cause a segmentation fault of \Condor{dagman}
+for some DAG input file syntax errors,
+rather than printing an appropriate error message.
+\Ticket{4616}
+
+\item Fixed a bug that could cause the \Condor{shared\_port} daemon
+to fail on Mac OS X platforms,
+if configuration variable \MacroNI{LOCK} was not explicitly set 
+in a configuration file.
+\Ticket{4678}
+
+\item Fixed a bug that caused both \Condor{dagman} and the \Condor{schedd}
+daemon to generate commands to remove \Condor{dagman}'s node jobs when
+the \Condor{dagman} job is the target of \Condor{rm}.
+Now, only the \Condor{schedd} generates the command, 
+avoiding the extra load of running two identical commands.
+\Ticket{4618}
+
+\item Fixed a bug that caused the DAGMan node status file,
+as detailed in section~\ref{sec:DAG-node-status},
+to not reflect the final status of a DAG when the DAG is removed
+by issuing a \Condor{rm} command,
+or when the DAG is
+aborted due to an ABORT-DAG-ON specification in the DAG input file.
+\Ticket{4686}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-3-1}Version 8.3.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.3.1 released on September 11, 2014.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item If cgroups are enabled on Linux platforms, 
+the amount of swap space used by a job is now limited to the 
+size specified by the machine ClassAd attribute \Attr{VirtualMemory} 
+for the slot that the job is running on.
+\Ticket{4417}
+
+\item The new configuration variable \Macro{COLLECTOR\_PORT} specifies
+the default port used by the \Condor{collector} daemon and command line tools.
+The default value is 9618.
+This default is the same port as has been used in previous HTCondor versions.
+\Ticket{4432}
+
+\item The \Condor{shared\_port} daemon will now work 
+if the default location given by configuration variable
+\Macro{DAEMON\_SOCKET\_DIR}, which is \Expr{\$(LOCK)/daemon\_sock},
+is longer than 90 characters in length.
+On Linux platforms, abstract sockets are now the primary method for
+\Condor{shared\_port} to forward an incoming connection to the intended
+daemon.
 \Ticket{4465}
 
-\item The user-specific configuration file \Expr{~/.condor/condor\_config} will
-now override the global configuration, instead of the other way around.  This
-makes the user-specific configuration files more useful.
+\item Improvements to CCB increase performance.
+\Ticket{4453}
+
+\item The use of a single log file to write events and enforce the 
+dependencies of a DAG represented by a \Condor{dagman} instance is mandatory.
+To implement this,
+the \Opt{-dont\_use\_default\_node\_log} command-line
+option to \Condor{submit\_dag} is disabled,
+and an attempt to set configuration variable
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to \Expr{False} will generate an
+error.
+\Ticket{3994}
+
+\item The new \Condor{dagman} configuration variable
+\Macro{DAGMAN\_SUPPRESS\_JOB\_LOGS} allows users to prevent DAG node
+jobs from writing to the log file specified in their submit description file.
+See section~\ref{param:DAGManSuppressJobLogs} for details.
+\Ticket{4353}
+
+\item New special variables \Expr{@(OWNER)} and \Expr{@(NODE\_NAME)} are
+available when defining configuration variable
+\Macro{DAGMAN\_DEFAULT\_NODE\_LOG}.
+These values make it easier to avoid log file name collisions.
+\Ticket{4334}
+
+\item \Condor{submit} will no longer insert an \Attr{OpSys} requirement
+for a job
+when one of \Attr{OpSysAndVer}, \Attr{OpSysLongName}, \Attr{OpSysName},
+or \Attr{OpSysShortName} is already specified by the user in
+the \Attr{Requirements} expression of the submit description file.
+\Ticket{4519}
+
+\item The configuration file \Expr{\$(HOME)/.condor/condor\_config}
+is no longer considered for the single, initial, global configuration file.
+Instead, a user-specific configuration file has been added as the
+last file parsed.
+The new configuration variable \Macro{USER\_CONFIG\_FILE} may change the
+default file name or disable this feature.
+Section~\ref{sec:Ordering-Config-File} describes the ordering
+in which configuration files are parsed.
 \Ticket{3158}
+
+\item Daemons now authenticate many client network connections in
+parallel, rather than one at a time.
+This improves the scalability of daemons that receive many client
+connections, like the \Condor{schedd} and \Condor{collector}.
+The improvement is most noticeable when using the FS and GSI
+authentication methods.
+\Ticket{4137}
+
+\item The GSI security libraries are now loaded into memory only when GSI
+authentication is required.
+This reduces memory usage when GSI authentication is not used.
+The memory reduction will be most noticeable when there are many
+\Condor{shadow} processes running.
+\Ticket{4483}
+
+\item Implemented fine-grained locking in the HTCondor python module to
+allow other python threads to run during HTCondor calls.
+\Ticket{4507}
 
 \end{itemize}
 
@@ -73,8 +331,9 @@ makes the user-specific configuration files more useful.
 
 \begin{itemize}
 
-\item HTCondor version 8.3.0 not yet released.
-%\item HTCondor version 8.3.0 released on Month Date, 2014.
+\item HTCondor version 8.3.0 released on August 12, 2014.
+This release contains all improvements and bug fixes from 
+HTCondor version 8.2.2.
 
 \end{itemize}
 
@@ -83,19 +342,19 @@ makes the user-specific configuration files more useful.
 
 \begin{itemize}
 
-\item The job ClassAd attribute \Attr{DAG\_Status} is included in 
-the \File{dagman.out} file.
-\Ticket{4381}
-
 \item When a daemon creates a child daemon process, it also creates a
 security session shared with the child daemon.
 This makes the initial communication between the daemons more efficient.
 \Ticket{4405}
 
-\item Added a \Opt{-DoRecovery} command-line flag to \Condor{dagman}
-and \Condor{submit\_dag} that causes \Condor{dagman} to run in
-recovery mode (see ~\ref{man-condor-submit-dag}).
-\Ticket{2218}
+\item Negotiation cycle performance has been improved, especially
+over a wide-area network, by reducing network traffic and latency
+between a submit machine and a central manager.
+The new configuration variable 
+\Macro{NEGOTIATOR\_RESOURCE\_REQUEST\_LIST\_SIZE}
+does performance tuning, as defined 
+in section~\ref{param:NegotiatorResourceRequestListSize}.
+\Ticket{4460}
 
 \item The synchronization of the job event log was improved by only
 using \Procedure{fsync} where necessary and 
@@ -103,6 +362,12 @@ using \Procedure{fsync} where necessary and
 This should provide a small reduction in disk I/O to 
 the \Condor{schedd} daemon.
 \Ticket{4283}
+
+\item CPU usage by the \Condor{collector} has been reduced when
+handling normal queries from \Condor{status},
+and CPU usage by the \Condor{schedd} has been reduced when
+handling normal queries from \Condor{q}.
+\Ticket{4448}
 
 \item HTCondor can now internally cache the result of Globus authorization
 callouts.  
@@ -112,6 +377,29 @@ This feature will be useful for sites that use the Globus authorization
 callouts based only on DN and VOMS FQAN, and for sites that have 
 performance issues.
 \Ticket{4138}
+
+\item The job ClassAd attribute \Attr{DAG\_Status} is included in 
+the \File{dagman.out} file.
+\Ticket{4381}
+
+\item The new \Opt{-DoRecovery} command line option for \Condor{dagman}
+and \Condor{submit\_dag} causes \Condor{dagman} to run in
+recovery mode.
+\Ticket{2218}
+
+\item The new \Opt{-ads} option to \Condor{status} permits a set of ClassAds
+to be read from a file, processing the ClassAds as if they came from
+the \Condor{collector}.
+\Ticket{4414}
+
+\item Daemon ClassAd hooks implementing Startd Cron functionality  
+can now return multiple ClassAds,
+and the hooks can specify which ClassAds their output should merge into.
+\Ticket{4398}
+
+\item Two new \Condor{schedd} ClassAd statistics attributes are
+available: \Attr{JobsRunning} and \Attr{JobsAccumExceptionalBadputTime}.
+\Ticket{4409}
 
 \end{itemize}
 
@@ -126,6 +414,11 @@ Strictly speaking, the bug is fixed only for the
 default case in which \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set
 to \Expr{True}.
 \Ticket{3843}
+
+\item Fixed a bug in the \Condor{schedd} daemon that caused the values
+of the ClassAd attributes \Attr{JobsRunningSizes} and 
+\Attr{ JobsRunningRuntimes} to be much larger than they should have been.
+\Ticket{4409}
 
 \end{itemize}
 

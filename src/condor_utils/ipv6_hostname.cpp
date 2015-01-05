@@ -10,6 +10,8 @@
 #include "my_hostname.h"
 
 static condor_sockaddr local_ipaddr;
+static condor_sockaddr local_ipv4addr;
+static condor_sockaddr local_ipv6addr;
 static MyString local_hostname;
 static MyString local_fqdn;
 static bool hostname_initialized = false;
@@ -19,143 +21,226 @@ static bool nodns_enabled()
 	return param_boolean("NO_DNS", false);
 }
 
-void init_local_hostname()
+#ifdef TEST_DNS_TODO
+static void replace_higher_scoring_addr(const char * reason, condor_sockaddr & current, int & current_score,
+	const condor_sockaddr & potential, int potential_score) {
+	const char * result = "skipped for low score";
+	if(current_score < potential_score) {
+		current = potential;
+		current_score = potential_score;
+		result = "new winner";
+	}
+
+	dprintf(D_HOSTNAME, "%s: %s (score %d) %s\n",
+		reason,
+		potential.to_ip_string().Value(),
+		potential_score,
+		result);
+}
+#endif
+
+bool init_local_hostname_impl()
 {
-		// [m.]
-		// initializing local hostname, ip address, fqdn was
-		// super complex.
-		//
-		// implementation was scattered over condor_netdb and
-		// my_hostname, get_full_hostname.
-		//
-		// above them has duplicated code in many ways.
-		// so I aggregated all of them into here.
-
-	bool ipaddr_inited = false;
-	char hostname[MAXHOSTNAMELEN];
-	int ret;
-
-		// [TODO:IPV6] condor_gethostname is not IPv6 safe.
-		// reimplement it.
-	ret = condor_gethostname(hostname, sizeof(hostname));
-	if (ret) {
-		dprintf(D_ALWAYS, "condor_gethostname() failed. Cannot initialize "
-				"local hostname, ip address, FQDN.\n");
-		return;
+	bool local_hostname_initialized = false;
+	if (param(local_hostname, "NETWORK_HOSTNAME")) {
+		local_hostname_initialized = true;
+		dprintf(D_HOSTNAME, "NETWORK_HOSTNAME says we are %s\n", local_hostname.Value());
 	}
 
-	dprintf(D_HOSTNAME, "condor_gethostname() claims we are %s\n", hostname);
+	MyString test_hostname;
+	if( ! local_hostname_initialized ) {
+		// [TODO:IPV6] condor_gethostname is not IPv6 safe. Reimplement it.
+		char hostname[MAXHOSTNAMELEN];
+		int ret = condor_gethostname(hostname, sizeof(hostname));
+		if (ret) {
+			dprintf(D_ALWAYS, "condor_gethostname() failed. Cannot initialize "
+					"local hostname, ip address, FQDN.\n");
+			return false;
+		}
+		test_hostname = hostname;
+		local_hostname = test_hostname;
+	}
 
-	// Fallback case.
-	local_hostname = hostname;
+	bool local_ipaddr_initialized = false;
+	bool local_ipv4addr_initialized = false;
+	bool local_ipv6addr_initialized = false;
 
-		// if NETWORK_INTERFACE is defined, we use that as a local ip addr.
 	MyString network_interface;
-	if (param(network_interface, "NETWORK_INTERFACE", "*")) {
-		if (local_ipaddr.from_ip_string(network_interface))
-			ipaddr_inited = true;
-	}
-
-		// Dig around for an IP address in the interfaces
-		// TODO WARNING: Will only return IPv4 addresses!
-	if( ! ipaddr_inited ) {
-		std::string ip;
-		if( ! network_interface_to_ip("NETWORK_INTERFACE", network_interface.Value(), ip, NULL)) {
-			dprintf(D_ALWAYS, "Unable to identify IP address from interfaces.  None matches NETWORK_INTERFACE=%s. Problems are likely.\n", network_interface.Value());
-			return;
-		}
-		if ( ! local_ipaddr.from_ip_string(ip))
-		{
-			// Should not happen; means network_interface_to_ip returned
-			// invalid IP address.
-			ASSERT(FALSE);
-		}
-		ipaddr_inited = true;
-	}
-
-		// now initialize hostname and fqdn
-	if (nodns_enabled()) { // if nodns is enabled, we can cut some slack.
-			// condor_gethostname() returns a hostname with
-			// DEFAULT_DOMAIN_NAME. Thus, it is always fqdn
-		local_fqdn = hostname;
-		if (!ipaddr_inited) {
-			local_ipaddr = convert_hostname_to_ipaddr(local_hostname);
-		}
-		return;
-	}
-
-	int retry_count = 20;
-	addrinfo_iterator ai;
-
-retry:
-	ret = ipv6_getaddrinfo(hostname, NULL, ai);
-	if (ret) {
-		dprintf(D_ALWAYS, "init_local_hostname: ipv6_getaddrinfo() could not look up %s: %s (%d)\n", 
-			hostname, gai_strerror(ret), ret);
-		retry_count--;
-		if ((retry_count > 0) && (ret == EAI_AGAIN)) {
-			sleep(3);
-			goto retry;
-		}
-		return;
-	}
-	
-	int local_hostname_desireability = 0;
-	while (addrinfo* info = ai.next()) {
-		const char* name = info->ai_canonname;
-		if (!name)
-			continue;
-		condor_sockaddr addr(info->ai_addr);
-
-		int desireability = 0;
-		if (addr.is_loopback())            { desireability = 1; }
-		else if(addr.is_private_network()) { desireability = 2; }
-		else                               { desireability = 3; }
-		dprintf(D_HOSTNAME, "Considering %s (Ranked at %d) as possible local hostname versus %s/%s (%d)\n", name, desireability, local_hostname.Value(), local_fqdn.Value(), local_hostname_desireability);
-		if(desireability < local_hostname_desireability) { continue; }
-		local_hostname_desireability = desireability;
-
-		if (!ipaddr_inited)
-			local_ipaddr = addr;
-
-		const char* dotpos = strchr(name, '.');
-		if (dotpos) { // consider it as a FQDN
-			local_fqdn = name;
-			local_hostname = local_fqdn.Substr(0, dotpos-name-1);
-		} else {
-			local_hostname = name;
-			local_fqdn = local_hostname;
-			MyString default_domain;
-			if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
-				if (default_domain[0] != '.')
-					local_fqdn += ".";
-				local_fqdn += default_domain;
+	if (param(network_interface, "NETWORK_INTERFACE")) {
+		if(local_ipaddr_initialized == false &&
+			local_ipaddr.from_ip_string(network_interface)) {
+			local_ipaddr_initialized = true;
+			if(local_ipaddr.is_ipv4()) { 
+				local_ipv4addr = local_ipaddr;
+				local_ipv4addr_initialized = true;
+			}
+			if(local_ipaddr.is_ipv6()) { 
+				local_ipv6addr = local_ipaddr;
+				local_ipv6addr_initialized = true;
 			}
 		}
 	}
 
-	dprintf(D_HOSTNAME, "Identifying myself as: Short:: %s, Long: %s, IP: %s\n", local_hostname.Value(), local_fqdn.Value(), local_ipaddr.to_ip_string().Value());
-	hostname_initialized = true;
+	if( ! local_ipaddr_initialized ) {
+		std::string ipv4, ipv6, ipbest;
+		if( network_interface_to_ip("NETWORK_INTERFACE", network_interface.Value(), ipv4, ipv6, ipbest, NULL)) {
+			ASSERT(local_ipaddr.from_ip_string(ipbest));
+			// If this fails, network_interface_to_ip returns something invalid.
+			local_ipaddr_initialized = true;
+		} else {
+			dprintf(D_ALWAYS, "Unable to identify IP address from interfaces.  None match NETWORK_INTERFACE=%s. Problems are likely.\n", network_interface.Value());
+		}
+		if((!ipv4.empty()) && local_ipv4addr.from_ip_string(ipv4)) {
+			local_ipv4addr_initialized = true;
+			ASSERT(local_ipv4addr.is_ipv4());
+		}
+		if((!ipv6.empty()) && local_ipv6addr.from_ip_string(ipv6)) {
+			local_ipv6addr_initialized = true;
+			ASSERT(local_ipv6addr.is_ipv6());
+		}
+	}
+
+	bool local_fqdn_initialized = false;
+	if (nodns_enabled()) {
+			// condor_gethostname() returns a hostname with
+			// DEFAULT_DOMAIN_NAME. Thus, it is always fqdn
+		local_fqdn = local_hostname;
+		local_fqdn_initialized = true;
+		if (!local_ipaddr_initialized) {
+			local_ipaddr = convert_hostname_to_ipaddr(local_hostname);
+			local_ipaddr_initialized = true;
+		}
+	}
+
+	addrinfo_iterator ai;
+
+	if( ! nodns_enabled() ) {
+		const int MAX_TRIES = 20;
+		const int SLEEP_DUR = 3;
+		bool gai_success = false;
+		for(int try_count = 1; true; try_count++) {
+			addrinfo hint = get_default_hint();
+			hint.ai_family = AF_UNSPEC;
+			int ret = ipv6_getaddrinfo(test_hostname.Value(), NULL, ai, hint);
+			if(ret == 0) { gai_success = true; break; }
+
+			dprintf(D_ALWAYS, "init_local_hostname_impl: ipv6_getaddrinfo() could not look up %s: %s (%d). Try %d of %d. Sleeping for %d seconds\n", test_hostname.Value(), gai_strerror(ret), ret, try_count+1, MAX_TRIES, SLEEP_DUR);
+			if(try_count == MAX_TRIES) {
+				dprintf(D_ALWAYS, "init_local_hostname_impl: ipv6_getaddrinfo() never succeeded. Giving up. Problems are likely\n");
+				break;
+			}
+			sleep(SLEEP_DUR);
+		}
+
+		if(gai_success) {
+			int local_hostname_desireability = 0;
+#ifdef TEST_DNS_TODO
+			int local_ipaddr_desireability = 0;
+			int local_ipv4addr_desireability = 0;
+			int local_ipv6addr_desireability = 0;
+#endif
+			while (addrinfo* info = ai.next()) {
+				// TODO: the only time ai_canonname should be set is the first
+				// record. Why are we testing its desirability?
+				const char* name = info->ai_canonname;
+				if (!name)
+					continue;
+				condor_sockaddr addr(info->ai_addr);
+
+				int desireability = addr.desirability();
+
+				const char * result = "skipped for low score";
+				if(desireability > local_hostname_desireability) {
+					result = "new winner";
+					dprintf(D_HOSTNAME, "   I like it.\n");
+					local_hostname_desireability = desireability;
+
+					const char* dotpos = strchr(name, '.');
+					if (dotpos) { // consider it as a FQDN
+						local_fqdn = name;
+						local_hostname = local_fqdn.Substr(0, dotpos-name-1);
+					} else {
+						local_hostname = name;
+						local_fqdn = local_hostname;
+						MyString default_domain;
+						if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
+							if (default_domain[0] != '.')
+								local_fqdn += ".";
+							local_fqdn += default_domain;
+						}
+					}
+				}
+				dprintf(D_HOSTNAME, "hostname: %s (score %d) %s\n", name, desireability, result);
+
+#ifdef TEST_DNS_TODO
+				// Resist urge to set local_ip*addr_initialized=true,
+				// We want to repeatedly retest this looking for 
+				// better results.
+				if (!local_ipaddr_initialized) {
+					replace_higher_scoring_addr("IP", 
+						local_ipaddr, local_ipaddr_desireability, 
+						addr, desireability);
+				}
+
+				if (addr.is_ipv4() && !local_ipv4addr_initialized) {
+					replace_higher_scoring_addr("IPv4", 
+						local_ipv4addr, local_ipv4addr_desireability, 
+						addr, desireability);
+				}
+
+				if (addr.is_ipv6() && !local_ipv6addr_initialized) {
+					replace_higher_scoring_addr("IPv6", 
+						local_ipv6addr, local_ipv6addr_desireability, 
+						addr, desireability);
+				}
+#else
+	// Make Fedora quit complaining.
+	if( local_ipv4addr_initialized && local_ipv6addr_initialized && local_fqdn_initialized ) {
+		local_ipv4addr_initialized = false;
+		local_ipv6addr_initialized = false;
+		local_fqdn_initialized = false;
+	}
+#endif
+			}
+		}
+
+	}
+
+	return true;
 }
 
-condor_sockaddr get_local_ipaddr()
+void reset_local_hostname() {
+	if( ! init_local_hostname_impl() ) {
+		dprintf( D_ALWAYS, "Something went wrong identifying my hostname and IP address.\n" );
+		hostname_initialized = false;
+	} else {
+		dprintf( D_ALWAYS, "I am: hostname: %s, fully qualified doman name: %s, IP: %s, IPv4: %s, IPv6: %s\n", local_hostname.Value(), local_fqdn.Value(), local_ipaddr.to_ip_string().Value(), local_ipv4addr.to_ip_string().Value(), local_ipv6addr.to_ip_string().Value() );
+		hostname_initialized = true;
+	}
+}
+
+void init_local_hostname() {
+	if( hostname_initialized ) { return; }
+	reset_local_hostname();
+}
+
+condor_sockaddr get_local_ipaddr(condor_protocol proto)
 {
-	if (!hostname_initialized)
-		init_local_hostname();
+	init_local_hostname();
+	if ((proto == CP_IPV4) && local_ipv4addr.is_ipv4()) { return local_ipv4addr; }
+	if ((proto == CP_IPV6) && local_ipv6addr.is_ipv6()) { return local_ipv6addr; }
 	return local_ipaddr;
 }
 
 MyString get_local_hostname()
 {
-	if (!hostname_initialized)
-		init_local_hostname();
+	init_local_hostname();
 	return local_hostname;
 }
 
 MyString get_local_fqdn()
 {
-	if (!hostname_initialized)
-		init_local_hostname();
+	init_local_hostname();
 	return local_fqdn;
 }
 
@@ -284,7 +369,7 @@ MyString get_hostname(const condor_sockaddr& addr) {
 	// just like sin_to_string(), if given address is 0.0.0.0 or equivalent,
 	// it changes to local IP address.
 	if (addr.is_addr_any())
-		targ_addr = get_local_ipaddr();
+		targ_addr = get_local_ipaddr(addr.get_protocol());
 	else
 		targ_addr = addr;
 

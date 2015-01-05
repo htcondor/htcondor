@@ -1155,13 +1155,21 @@ PREEN_ARGS			= -m -r
 ##--------------------------------------------------------------------
 ##  condor_collector
 ##--------------------------------------------------------------------
-## Address to which Condor will send a weekly e-mail with output of
-## condor_status.
+## Address to which Condor will send a weekly e-mail with basic
+## non-specific information about your pool. See
+## http://htcondor.org/privacy.html for more information.
+## To disable this behavior, uncomment the below line to
+## explicitly set CONDOR_DEVELOPERS to NONE.
 #CONDOR_DEVELOPERS = condor-admin@cs.wisc.edu
+#CONDOR_DEVELOPERS = NONE
 
-## Global Collector to periodically advertise basic information about
-## your pool.
+## Global Collector to periodically advertise basic
+## non-specific information about your pool. See
+## http://htcondor.org/privacy.html for more information.
+## To disable this behavior, uncomment the below line to
+## explicitly set CONDOR_DEVELOPERS_COLLECTOR to NONE.
 #CONDOR_DEVELOPERS_COLLECTOR = condor.cs.wisc.edu
+#CONDOR_DEVELOPERS_COLLECTOR = NONE
 
 ##  When the collector starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't

@@ -30,7 +30,7 @@ endif()
 
 if ( WITH_DRMAA )
 
-	condor_pre_external( DRMAA drmaa-1.6.2 "lib;include" "include/drmaa.h")
+	condor_pre_external( DRMAA drmaa-1.6.2-p1 "lib;include" "include/drmaa.h")
 	
 	if (NOT WINDOWS)
 		set (DRMAA_CONFIGURE ./configure --prefix=${DRMAA_INSTALL_LOC})
@@ -60,7 +60,9 @@ if ( WITH_DRMAA )
 	ExternalProject_Add(drmaa
 						#-- Download Step ----------
 						DOWNLOAD_DIR ${DRMAA_STAGE}/dl
-						URL ${EXTERNALS_SOURCE_URL}/${DRMAA_VER}.tar.gz
+						URL ${EXTERNALS_SOURCE_URL}/drmaa-1.6.2.tar.gz
+						#--Patch step ----------
+						PATCH_COMMAND patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/schedd_name.patch
 						#--Configure step ----------
 						CONFIGURE_COMMAND ${DRMAA_CONFIGURE}
 						#--Build Step ----------
@@ -75,7 +77,7 @@ if ( WITH_DRMAA )
 	message (STATUS "external configured (DRMAA_FOUND=${DRMAA_FOUND})")
 	
 	# i've tar bundled drmaa, does anyone actually use this?  if so I can explode.
-	install ( FILES ${DRMAA_STAGE}/dl/${DRMAA_VER}.tar.gz DESTINATION ${C_SRC}/drmaa )
+	install ( FILES ${DRMAA_STAGE}/dl/drmaa-1.6.2.tar.gz DESTINATION ${C_SRC}/drmaa )
 	install ( FILES ${DRMAA_INSTALL_LOC}/include/drmaa.h
 			  ${DRMAA_INSTALL_LOC}/include/README
 			  DESTINATION ${C_INCLUDE} )

@@ -41,6 +41,7 @@
 #include <curl/curl.h>
 #include "thread_control.h"
 #include <expat.h>
+#include "stl_string_utils.h"
 
 #define NULLSTRING "NULL"
 
@@ -236,19 +237,16 @@ bool AmazonRequest::SendRequest() {
     // and are (currently) 20 characters long.
     //
     std::string keyID;
-    if( protocol == "x509" ) {
-        keyID = getenv( "USER" );
-        dprintf( D_FULLDEBUG, "Using '%s' as access key ID for x.509\n", keyID.c_str() );
-    } else {
+    if( protocol != "x509" ) {
         if( ! readShortFile( this->accessKeyFile, keyID ) ) {
             this->errorCode = "E_FILE_IO";
             this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
             dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
             return false;
         }
-        if( keyID[ keyID.length() - 1 ] == '\n' ) { keyID.erase( keyID.length() - 1 ); }
+        trim( keyID );
+        query_parameters.insert( std::make_pair( "AWSAccessKeyId", keyID ) );
     }
-    query_parameters.insert( std::make_pair( "AWSAccessKeyId", keyID ) );
 
     //
     // This implementation computes signature version 2,
@@ -316,11 +314,11 @@ bool AmazonRequest::SendRequest() {
     // or SHA1 as the hash algorithm."
     std::string saKey;
     if( protocol == "x509" ) {
-        // If we we ever support the UploadImage action, we'll need to
+        // If we ever support the UploadImage action, we'll need to
         // extract the DN from the user's certificate here.  Otherwise,
         // since the x.509 implementation ignores the AWSAccessKeyId
         // and Signature, we can do whatever we want.
-        saKey = std::string( "<DN>/CN=UID:" ) + getenv( "USER" );
+        saKey = std::string( "not-the-DN" );
         dprintf( D_FULLDEBUG, "Using '%s' as secret key for x.509\n", saKey.c_str() );
     } else {
         if( ! readShortFile( this->secretKeyFile, saKey ) ) {
@@ -329,7 +327,7 @@ bool AmazonRequest::SendRequest() {
             dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
             return false;
         }
-        if( saKey[ saKey.length() - 1 ] == '\n' ) { saKey.erase( saKey.length() - 1 ); }
+        trim( saKey );
     }
 
     unsigned int mdLength = 0;
@@ -696,9 +694,11 @@ bool AmazonVMStart::SendRequest() {
     return result;
 }
 
-// Expecting: EC2_VM_START <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <ami-id> <keypair> <userdata> <userdatafile> <instancetype> <groupname> <groupname> ..
-// <groupname> are optional ones.
-// we support multiple groupnames
+// Expecting:
+// EC2_VM_START	<req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
+// 				<ami-id> <keypair> <userdata> <userdatafile> <instancetype>
+//				<security-group-name>* <NULLSTRING>
+//				<security-group-id>* <NULLSTRING>
 bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_string) {
     assert( strcasecmp( argv[0], "EC2_VM_START" ) == 0 );
 
@@ -708,23 +708,69 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     int requestID;
     get_int( argv[1], & requestID );
 
-    if( ! verify_min_number_args( argc, 14 ) ) {
+    if( ! verify_min_number_args( argc, 15 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
         dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-                 argc, 14, argv[0] );
+                 argc, 15, argv[0] );
         return false;
     }
 
-    // Fill in required attributes & parameters.
+    // Fill in required attributes.
     AmazonVMStart vmStartRequest;
     vmStartRequest.serviceURL = argv[2];
     vmStartRequest.accessKeyFile = argv[3];
     vmStartRequest.secretKeyFile = argv[4];
+
+	// Fill in user-specified parameters.  (Also handles security groups
+	// and security group IDS.)
+	//
+	// We could have split up the block device mapping like this, but since
+	// we were inventing a syntax anyway, it wasn't too hard to make the
+	// parser simple.  Rather than risk a quoting problem with security
+	// names or group IDs, we just introduce a convention that we terminate
+	// each list with the null string.
+
+	unsigned positionInList = 0;
+	unsigned which = 0;
+	for( int i = 15; i < argc; ++i ) {
+		if( strcasecmp( argv[i], NULLSTRING ) == 0 ) {
+			++which;
+			positionInList = 0;
+			continue;
+		}
+
+		std::ostringstream parameterName;
+		switch( which ) {
+			case 0:
+				parameterName << "SecurityGroup." << positionInList;
+				++positionInList;
+				break;
+			case 1:
+				parameterName << "SecurityGroupId." << positionInList;
+				++positionInList;
+				break;
+			case 2:
+				parameterName << argv[i];
+				if( ! ( i + 1 < argc ) ) {
+					dprintf( D_ALWAYS, "Found parameter '%s' without value, ignoring it.\n", argv[i] );
+					continue;
+				}
+				++i;
+				break;
+			default:
+				dprintf( D_ALWAYS, "Found unexpected null strings at end of variable-count parameter lists.  Ignoring.\n" );
+				continue;
+		}
+
+		vmStartRequest.query_parameters[ parameterName.str() ] = argv[ i ];
+	}
+
+    // Fill in required parameters.
     vmStartRequest.query_parameters[ "Action" ] = "RunInstances";
     vmStartRequest.query_parameters[ "ImageId" ] = argv[5];
     vmStartRequest.query_parameters[ "MinCount" ] = "1";
     vmStartRequest.query_parameters[ "MaxCount" ] = "1";
-	vmStartRequest.query_parameters[ "InstanceInitiatedShutdownBehavior" ] = "terminate";
+    vmStartRequest.query_parameters[ "InstanceInitiatedShutdownBehavior" ] = "terminate";
 
     // Fill in optional parameters.
     if( strcasecmp( argv[6], NULLSTRING ) ) {
@@ -751,11 +797,28 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
         vmStartRequest.query_parameters[ "ClientToken" ] = argv[13];
     }
 
-    for( int i = 14; i < argc; ++i ) {
-        std::ostringstream groupName;
-        groupName << "SecurityGroup." << ( i - 13 + 1 );
-        vmStartRequest.query_parameters[ groupName.str() ] = argv[ i ];
-    }
+	if( strcasecmp( argv[14], NULLSTRING ) ) {
+		// We can't pass an arbitrarily long list of block device mappings
+		// because we're already using that to pass security group names.
+		StringList mappings( argv[14] );
+		mappings.rewind();
+		char * mapping = NULL;
+		for( int i = 1; (mapping = mappings.next()) != NULL; ++i ) {
+			StringList pair( mapping, ":" );
+			pair.rewind();
+			if( pair.number() != 2 ) {
+				dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping );
+			}
+
+			std::ostringstream virtualName;
+			virtualName << "BlockDeviceMapping." << i << ".VirtualName";
+			vmStartRequest.query_parameters[ virtualName.str() ] = pair.next();
+
+			std::ostringstream deviceName;
+			deviceName << "BlockDeviceMapping." << i << ".DeviceName";
+			vmStartRequest.query_parameters[ deviceName.str() ] = pair.next();
+		}
+	}
 
     //
     // Handle user data.

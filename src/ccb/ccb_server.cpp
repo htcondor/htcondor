@@ -172,12 +172,27 @@ CCBServer::InitAndReconfig()
 	else {
 		char *spool = param("SPOOL");
 		ASSERT( spool );
+
+		// IPv6 "hostnames" may be address literals, and Windows really
+		// doesn't like colons in its filenames.
+		char * myHost = NULL;
 		Sinful my_addr( daemonCore->publicNetworkIpAddr() );
+		if( my_addr.getHost() ) {
+			myHost = strdup( my_addr.getHost() );
+			for( unsigned i = 0; i < strlen( myHost ); ++i ) {
+				if( myHost[i] == ':' ) { myHost[i] = '-'; }
+			}
+		} else {
+			myHost = strdup( "localhost" );
+		}
+
 		m_reconnect_fname.formatstr("%s%c%s-%s.ccb_reconnect",
 			spool,
 			DIR_DELIM_CHAR,
 			my_addr.getHost() ? my_addr.getHost() : "localhost",
 			my_addr.getPort() ? my_addr.getPort() : "0");
+
+		free( myHost );
 		free( spool );
 	}
 
@@ -199,41 +214,49 @@ CCBServer::InitAndReconfig()
 	}
 
 #ifdef CONDOR_HAVE_EPOLL
-	if (-1 == (m_epfd = epoll_create1(EPOLL_CLOEXEC)))
-	{
-		dprintf(D_ALWAYS, "epoll file descriptor creation failed; will use periodic polling techniques: %s (errno=%d).\n", strerror(errno), errno);
-	}
-#endif
+	// Keep our existing epoll fd, if we have one.
+	if (m_epfd == -1) {
+		if (-1 == (m_epfd = epoll_create1(EPOLL_CLOEXEC)))
+		{
+			dprintf(D_ALWAYS, "epoll file descriptor creation failed; will use periodic polling techniques: %s (errno=%d).\n", strerror(errno), errno);
+		}
 
-	if (m_epfd >= 0)
-	{
-#ifndef WIN32
-			// Fool DC into talking to the epoll fd; note we only register the read side.
-		int pipes[2]; pipes[0] = -1; pipes[1] = -1;
+		int pipes[2] = { -1, -1 };
 		int fd_to_replace = -1;
-		if (daemonCore->Create_Pipe(pipes, true) == -1 || pipes[0] == -1) {
-			dprintf(D_ALWAYS, "Unable to create a DC pipe for watching the epoll FD\n");
+		if (m_epfd >= 0)
+		{
+			// Fool DC into talking to the epoll fd; note we only register the read side.
+			// Yes, this is fairly gross - the decision was taken to do this instead of having
+			// DC track arbitrary FDs just for this use case.
+			if (daemonCore->Create_Pipe(pipes, true) == FALSE) {
+				dprintf(D_ALWAYS, "Unable to create a DC pipe for watching the epoll FD\n");
+				close(m_epfd);
+				m_epfd = -1;
+			}
+		}
+		if (m_epfd >= 0) {
+			daemonCore->Close_Pipe(pipes[1]);
+			if (daemonCore->Get_Pipe_FD(pipes[0], &fd_to_replace) == FALSE) {
+				dprintf(D_ALWAYS, "Unable to lookup pipe's FD\n");
+				close(m_epfd);
+				m_epfd = -1;
+				daemonCore->Close_Pipe(pipes[0]);
+			}
+		}
+		if (m_epfd >= 0) {
+			dup2(m_epfd, fd_to_replace);
+			fcntl(fd_to_replace, F_SETFL, FD_CLOEXEC);
 			close(m_epfd);
-			m_epfd = -1;
-		}
-		daemonCore->Close_Pipe(pipes[1]);
-		if (daemonCore->Get_Pipe_FD(pipes[0], &fd_to_replace) == -1 || fd_to_replace == -1) {
-			dprintf(D_ALWAYS, "Unable to lookup pipe's FD\n");
-			close(m_epfd); m_epfd = -1;
-			daemonCore->Close_Pipe(pipes[0]);
-			return;
-		}
-		dup2(m_epfd, fd_to_replace);
-		fcntl(fd_to_replace, F_SETFL, FD_CLOEXEC);
-		close(m_epfd);
-		m_epfd = pipes[0];
+			m_epfd = pipes[0];
 
 			// Inform DC we want to recieve notifications from this FD.
-		daemonCore->Register_Pipe(m_epfd,"CCB epoll FD", static_cast<PipeHandlercpp>(&CCBServer::EpollSockets),"CCB Epoll Handler", this, HANDLE_READ);
-#endif
+			daemonCore->Register_Pipe(m_epfd,"CCB epoll FD", static_cast<PipeHandlercpp>(&CCBServer::EpollSockets),"CCB Epoll Handler", this, HANDLE_READ);
+		}
 	}
-		// Either epoll is not available or creation of the epoll FD failed; in this case,
-		// we just periodically poll the FD for responses.
+#endif
+
+		// Whether or not we can use epoll, we want to set up periodic
+		// polling for SweepReconnectInfo()
 	Timeslice poll_slice;
 	poll_slice.setTimeslice( // do not run more than this fraction of the time
 		param_double("CCB_POLLING_TIMESLICE",0.05) );
@@ -435,13 +458,28 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 
 	ClassAd reply_msg;
 	MyString ccb_contact;
-	CCBIDToString( reconnect_info->getReconnectCookie(),reconnect_cookie_str );
+
+
 		// We send our address as part of the CCB contact string, rather
 		// than letting the target daemon fill it in.  This is to give us
 		// potential flexibility on the CCB server side to do things like
 		// assign different targets to different CCB server sub-processes,
 		// each with their own command port.
-	CCBIDToContactString( m_address.Value(), target->getCCBID(), ccb_contact );
+
+	//
+	// We need to reply with a contact string of the proper protocol.  At
+	// some point, we'll just send /all/ of our command sockets, but for
+	// now, just use the rewriter (and lie to make sure it happens).
+	//
+	std::string exprString;
+	formatstr( exprString, "%s = \"<%s>\"", ATTR_MY_ADDRESS, m_address.Value() );
+	ConvertDefaultIPToSocketIP( ATTR_MY_ADDRESS, exprString, * stream );
+	std::string rewrittenAddress = exprString.substr( strlen( ATTR_MY_ADDRESS ) + 5 );
+	rewrittenAddress.resize( rewrittenAddress.size() - 2 );
+	dprintf( D_NETWORK | D_VERBOSE, "Will send %s instead of %s to CCB client %s.\n", rewrittenAddress.c_str(), m_address.Value(), sock->my_ip_str() );
+	CCBIDToContactString( rewrittenAddress.c_str(), target->getCCBID(), ccb_contact );
+
+	CCBIDToString( reconnect_info->getReconnectCookie(),reconnect_cookie_str );
 
 	reply_msg.Assign(ATTR_CCBID,ccb_contact.Value());
 	reply_msg.Assign(ATTR_COMMAND,CCB_REGISTER);
@@ -904,7 +942,7 @@ CCBServer::AddTarget( CCBTarget *target )
 				// That's odd: there is no conflicting ccbid, so why did
 				// the insert fail?!
 			EXCEPT( "CCB: failed to insert registered target ccbid %lu "
-					"for %s\n",
+					"for %s",
 					target->getCCBID(),
 					target->getSock()->peer_description());
 		}
@@ -973,7 +1011,7 @@ CCBServer::AddRequest( CCBServerRequest *request, CCBTarget *target )
 				// That's odd: there is no conflicting id, so why did
 				// the insert fail?!
 			EXCEPT( "CCB: failed to insert request id %lu "
-					"for %s\n",
+					"for %s",
 					request->getRequestID(),
 					request->getSock()->peer_description());
 		}
@@ -1209,7 +1247,7 @@ CCBServer::OpenReconnectFile(bool only_if_exists)
 		if( only_if_exists && errno == ENOENT ) {
 			return false;
 		}
-		EXCEPT("CCB: Failed to open %s: %s\n",
+		EXCEPT("CCB: Failed to open %s: %s",
 			   m_reconnect_fname.Value(),strerror(errno));
 	}
 	return true;

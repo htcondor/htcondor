@@ -43,6 +43,8 @@
 void
 ReliSock::init()
 {
+	m_auth_in_progress = false;
+	m_authob = NULL;
 	m_has_backlog = false;
 	m_read_would_block = false;
 	m_non_blocking = false;
@@ -87,6 +89,10 @@ ReliSock::CloneStream()
 ReliSock::~ReliSock()
 {
 	close();
+	if ( m_authob ) {
+		delete m_authob;
+		m_authob = NULL;
+	}
 	if ( hostAddr ) {
 		free( hostAddr );
 		hostAddr = NULL;
@@ -144,15 +150,6 @@ int ReliSock::listen(condor_protocol proto, int port)
 	return listen();
 }
 
-/// FALSE means this is an incoming connection
-int ReliSock::listen(char *s)
-{
-	if (!bind(false, s))
-		return FALSE;
-	return listen();
-}
-
-
 int 
 ReliSock::accept( ReliSock	&c )
 {
@@ -193,7 +190,7 @@ ReliSock::accept( ReliSock	&c )
 
 	}
 
-	c.assign(c_sock);
+	c.assignSocket(c_sock);
 	c.enter_connected_state("ACCEPT");
 	c.decode();
 
@@ -1150,7 +1147,7 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 
 int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key, 
 								   const char* methods, CondorError* errstack,
-								   int auth_timeout, char **method_used)
+								   int auth_timeout, bool non_blocking, char **method_used)
 {
 	int in_encode_mode;
 	int result;
@@ -1160,16 +1157,20 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 	}
 
     if (!triedAuthentication()) {
-		Authentication authob(this);
+		if (m_authob) {delete m_authob;}
+		m_authob = new Authentication(this);
 		setTriedAuthentication(true);
 			// store if we are in encode or decode mode
 		in_encode_mode = is_encode();
 
 			// actually perform the authentication
 		if ( with_key ) {
-			result = authob.authenticate( hostAddr, key, methods, errstack, auth_timeout );
+			result = m_authob->authenticate( hostAddr, key, methods, errstack, auth_timeout, non_blocking );
 		} else {
-			result = authob.authenticate( hostAddr, methods, errstack, auth_timeout );
+			result = m_authob->authenticate( hostAddr, methods, errstack, auth_timeout, non_blocking );
+		}
+		if ( result == 2 ) {
+			m_auth_in_progress = true;
 		}
 			// restore stream mode (either encode or decode)
 		if ( in_encode_mode && is_decode() ) {
@@ -1180,16 +1181,9 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 			}
 		}
 
-		setFullyQualifiedUser(authob.getFullyQualifiedUser());
-
-		if( authob.getMethodUsed() ) {
-			setAuthenticationMethodUsed(authob.getMethodUsed());
-			if( method_used ) {
-				*method_used = strdup(authob.getMethodUsed());
-			}
-		}
-		if ( authob.getFQAuthenticatedName() ) {
-			setAuthenticatedName( authob.getFQAuthenticatedName() );
+		if (!m_auth_in_progress) {
+			int result2 = authenticate_continue(errstack, non_blocking, method_used);
+			return result ? result2 : 0;
 		}
 		return result;
     }
@@ -1198,61 +1192,98 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
     }
 }
 
-int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* errstack, int auth_timeout, char **method_used)
+int ReliSock::authenticate_continue(CondorError* errstack, bool non_blocking, char **method_used)
 {
-	return perform_authenticate(true,key,methods,errstack,auth_timeout,method_used);
+	int result = 1;
+	if( m_auth_in_progress )
+	{
+		result = m_authob->authenticate_continue(errstack, non_blocking);
+		if (result == 2) {
+			return result;
+		}
+	}
+	m_auth_in_progress = false;
+
+	setFullyQualifiedUser(m_authob->getFullyQualifiedUser());
+
+	if( m_authob->getMethodUsed() ) {
+		setAuthenticationMethodUsed(m_authob->getMethodUsed());
+		if( method_used ) {
+			*method_used = strdup(m_authob->getMethodUsed());
+		}
+	}
+	if ( m_authob->getFQAuthenticatedName() ) {
+		setAuthenticatedName( m_authob->getFQAuthenticatedName() );
+	}
+	delete m_authob;
+	m_authob = NULL;
+	return result;
+}
+
+int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* errstack, int auth_timeout, bool non_blocking, char **method_used)
+{
+	return perform_authenticate(true,key,methods,errstack,auth_timeout,non_blocking,method_used);
 }
 
 int 
-ReliSock::authenticate(const char* methods, CondorError* errstack,int auth_timeout ) 
+ReliSock::authenticate(const char* methods, CondorError* errstack, int auth_timeout, bool non_blocking) 
 {
 	KeyInfo *key = NULL;
-	return perform_authenticate(false,key,methods,errstack,auth_timeout,NULL);
+	return perform_authenticate(false,key,methods,errstack,auth_timeout,non_blocking,NULL);
 }
 
 bool
-ReliSock::connect_socketpair(ReliSock &sock,bool use_standard_interface)
-{
-	ReliSock tmp_srv;
-
-	if( use_standard_interface ) {
-		if( !bind(false) ) {
-			dprintf(D_ALWAYS, "connect_socketpair: failed in bind()\n");
-			return false;
-		}
-	}
-	else if( !bind_to_loopback(false) ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in bind_to_loopback()\n");
+ReliSock::connect_socketpair_impl( ReliSock & sock, condor_protocol proto, bool isLoopback ) {
+	if( ! bind( proto, false, 0, isLoopback ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to bind() this.\n" );
 		return false;
 	}
 
-	if( use_standard_interface ) {
-		if( !tmp_srv.bind(false) ) {
-			dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.bind()\n");
-			return false;
-		}
-	}
-	else if( !tmp_srv.bind_to_loopback(false) ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.bind_to_loopback()\n");
+	ReliSock tmp;
+	if( ! tmp.bind( proto, false, 0, isLoopback ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to bind() that.\n" );
 		return false;
 	}
 
-	if( !tmp_srv.listen() ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.listen()\n");
+	if( !tmp.listen() ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to listen() on that.\n" );
 		return false;
 	}
 
-	if( !connect(tmp_srv.my_ip_str(),tmp_srv.get_port()) ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.get_port()\n");
+	if( !connect( tmp.my_ip_str(), tmp.get_port() ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to connect() to that.\n" );
 		return false;
 	}
 
-	if( !tmp_srv.accept( sock ) ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.accept()\n");
+	if( ! tmp.accept( sock ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to accept() that.\n" );
 		return false;
 	}
 
 	return true;
+}
+
+bool
+ReliSock::connect_socketpair( ReliSock & sock, char const * asIfConnectingTo ) {
+	condor_sockaddr aictAddr;
+	if( ! aictAddr.from_ip_string( asIfConnectingTo ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): '%s' not a valid IP string.\n", asIfConnectingTo );
+		return false;
+	}
+
+	return connect_socketpair_impl( sock, aictAddr.get_protocol(), aictAddr.is_loopback() );
+}
+
+bool
+ReliSock::connect_socketpair( ReliSock & sock ) {
+	condor_protocol proto = CP_IPV4;
+	bool ipV4Enabled = param_boolean( "ENABLE_IPV4", true );
+	bool ipV6Enabled = param_boolean( "ENABLE_IPV6", false );
+	if( ipV6Enabled && (! ipV4Enabled) ) {
+		proto = CP_IPV6;
+	}
+
+	return connect_socketpair_impl( sock, proto, true );
 }
 
 void
@@ -1275,7 +1306,7 @@ ReliSock::exit_reverse_connecting_state(ReliSock *sock)
 	_state = sock_virgin;
 
 	if( sock ) {
-		int assign_rc = assign(sock->get_file_desc());
+		int assign_rc = assignSocket(sock->get_file_desc());
 		ASSERT( assign_rc );
 		isClient(true);
 		if( sock->_state == sock_connect ) {
@@ -1305,6 +1336,7 @@ ReliSock::setTargetSharedPortID( char const *id )
 bool
 ReliSock::msgReady() {
 	if (rcv_msg.ready) { return true; }
+		// NOTE: 'true' here indicates non-blocking.
 	BlockingModeGuard sentry(this, true);
 	int retval = handle_incoming_packet();
 	if (retval == 2) {

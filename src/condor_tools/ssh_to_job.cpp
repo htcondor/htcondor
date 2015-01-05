@@ -318,7 +318,7 @@ int SSHToJob::receiveSshConnection(char const *fdpass_sock_name)
 	// assign fdpass_sock_fd to a socket object, so closure
 	// happens automatically when it goes out of scope
 	ReliSock fdpass_sock;
-	fdpass_sock.assign(fdpass_sock_fd);
+	fdpass_sock.assignSocket(fdpass_sock_fd);
 
 	int connect_rc = connect(fdpass_sock_fd,(struct sockaddr *)&named_sock_addr, SUN_LEN(&named_sock_addr));
 	if( connect_rc != 0 )
@@ -692,7 +692,7 @@ bool SSHToJob::execute_ssh()
 	// assign fdpass_sock_fd to a socket object, so closure
 	// happens automatically when it goes out of scope
 	ReliSock fdpass_sock;
-	fdpass_sock.assign(fdpass_sock_fd);
+	fdpass_sock.assignSocket(fdpass_sock_fd);
 
 	// we don't need/want fdpass_sock to be inherited by ssh,
 	// so set close-on-exec, just to be safe

@@ -31,6 +31,9 @@
 #include <ctime>
 #include <queue>
 #include <map>
+#include "globus_common.h"
+#include "gssapi.h"
+#include "glite/security/glite_gsplugin.h"
 #include "glite/ce/cream-client-api-c/CreamProxyFactory.h"
 #include "glite/ce/cream-client-api-c/JobDescriptionWrapper.h"
 #include "glite/ce/cream-client-api-c/creamApiLogger.h"

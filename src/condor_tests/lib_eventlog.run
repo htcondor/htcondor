@@ -67,9 +67,8 @@ $ENV{CONDOR_CONFIG} = $parallelconfig;
 
 CondorTest::debug("Set config to $parallelconfig\n",1);
 
-
-#print "Looking for schedd for Basic Parallel Test\n";
-runcmd("condor_status -pool $currenthost:$parallelport -schedd -format '%s\\n' Name");
+# No need for -pool if we've set CONDOR_CONFIG.
+runcmd("condor_status -schedd -format '%s\\n' Name");
 
 # Edit submit file to submit to scheduler at remote (side b) schedd.
 my $line;

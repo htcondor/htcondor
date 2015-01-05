@@ -34,6 +34,7 @@ struct ExprTreeHolder
     classad::ExprTree *get() const;
 
     boost::python::object getItem(boost::python::object);
+    ExprTreeHolder subscript(boost::python::object);
 
     bool SameAs(ExprTreeHolder other) const { return m_expr->SameAs(other.m_expr); }
 

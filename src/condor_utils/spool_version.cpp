@@ -37,14 +37,14 @@ CheckSpoolVersion(char const *spool, int spool_min_version_i_support, int spool_
 						"minimum compatible spool version %d\n",
 						&spool_min_version) )
 		{
-			EXCEPT("Failed to find minimum compatible spool version in %s\n",
+			EXCEPT("Failed to find minimum compatible spool version in %s",
 				   vers_fname.c_str());
 		}
 		if( 1 != fscanf(vers_file,
 						"current spool version %d\n",
 						&spool_cur_version) )
 		{
-			EXCEPT("Failed to find current spool version in %s\n",
+			EXCEPT("Failed to find current spool version in %s",
 				   vers_fname.c_str());
 		}
 		fclose(vers_file);
@@ -58,13 +58,13 @@ CheckSpoolVersion(char const *spool, int spool_min_version_i_support, int spool_
 			spool_min_version_i_support);
 
 	if( spool_min_version > spool_cur_version_i_support ) {
-		EXCEPT("According to %s, the SPOOL directory requires that I support spool version %d, but I only support %d.\n",
+		EXCEPT("According to %s, the SPOOL directory requires that I support spool version %d, but I only support %d.",
 			   vers_fname.c_str(),
 			   spool_min_version,
 			   spool_cur_version_i_support);
 	}
 	if( spool_cur_version < spool_min_version_i_support ) {
-		EXCEPT("According to %s, the SPOOL directory is written in spool version %d, but I only support versions back to %d.\n",
+		EXCEPT("According to %s, the SPOOL directory is written in spool version %d, but I only support versions back to %d.",
 			   vers_fname.c_str(),
 			   spool_cur_version,
 			   spool_min_version_i_support);
@@ -90,7 +90,7 @@ WriteSpoolVersion(char const *spool,int spool_min_version_i_write,int spool_cur_
 
 	FILE *vers_file = safe_fcreate_replace_if_exists(vers_fname.c_str(),"w");
 	if( !vers_file ) {
-		EXCEPT("Failed to open %s for writing.\n",vers_fname.c_str());
+		EXCEPT("Failed to open %s for writing.",vers_fname.c_str());
 	}
 	if( fprintf(vers_file,"minimum compatible spool version %d\n",
 				spool_min_version_i_write) < 0 ||
@@ -100,6 +100,6 @@ WriteSpoolVersion(char const *spool,int spool_min_version_i_write,int spool_cur_
 		fsync(fileno(vers_file)) != 0 ||
 		fclose(vers_file) != 0 )
 	{
-		EXCEPT("Error writing spool version to %s\n",vers_fname.c_str());
+		EXCEPT("Error writing spool version to %s",vers_fname.c_str());
 	}
 }

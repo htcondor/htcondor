@@ -1114,7 +1114,7 @@ listCompare(
 						}
 					} else {
 						val.SetErrorValue();
-						return false;
+						return true;
 					}
 					return true;
 				} else if (b) {
@@ -1500,7 +1500,7 @@ formatTime(const char*, const ArgumentList &argList, EvalState &state,
             delete splitClassAd;
         }
     } else {
-        did_eval = false;
+        result.SetErrorValue();
     }
 
     if (!did_eval) {
@@ -2059,12 +2059,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 					    atvalue.offset = arg2num;
 					  else    // the default offset is the current timezone
 					    atvalue.offset = Literal::findOffset(atvalue.secs);
-					  if(atvalue.offset == -1) {
-					    result.SetErrorValue( );
-					    return( false );
-					  }
-					  else	
-					    result.SetAbsoluteTimeValue( atvalue );
+					  result.SetAbsoluteTimeValue( atvalue );
 				}
 				return( true );
 			}
@@ -2100,12 +2095,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 						atvalue.offset = arg2num;
 					else      // the default offset is the current timezone
 						atvalue.offset = Literal::findOffset(atvalue.secs);	
-					if(atvalue.offset == -1) {
-						result.SetErrorValue( );
-						return( false );
-					}
-					else
-					  result.SetAbsoluteTimeValue( atvalue );
+					result.SetAbsoluteTimeValue( atvalue );
 				}
 				return( true );
 			}

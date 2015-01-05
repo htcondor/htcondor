@@ -29,7 +29,7 @@ set(PACKAGE "condor")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "8.3.1")
+set(VERSION "8.3.3")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This shuld be "PRE-RELEASE-UWCS most of the time, and OFF when
@@ -67,6 +67,7 @@ include (CommandTarget)
 include (gSOAPGen)
 include (CloneInstall)
 include (FindMultiple)
+include (FindSoName)
 include (ExternalProject)
 include (CheckIncludeFiles)
 include (CheckFunctionExists)
@@ -112,6 +113,7 @@ endif ( WINDOWS )
 # src - src -> only
 # this way clean @ root cleans externals while clean @src cleans just the src.
 add_subdirectory (src)
+add_subdirectory (build/packaging)
 
 ##########################################################################
 # the following are existing doc targets

@@ -30,7 +30,10 @@ $dagman_args = "-verbose";
 
 @logfiles = ("job_dagman_node_status.dag.dagman.out");
 
-@outfiles = ("job_dagman_node_status.status");
+@outfiles = ("job_dagman_node_status.status",
+	"job_dagman_node_status.status-A",
+	"job_dagman_node_status.status-C");
+
 # Lines must be found in order.
 @outlines = ("DagStatus = 5;.*STATUS_DONE \\(success\\)",
 	"NodesTotal = 12;",
@@ -67,6 +70,76 @@ $dagman_args = "-verbose";
 	"NodeStatus = 5;.*STATUS_DONE",
 	"Node = \"C\";",
 	"NodeStatus = 5;.*STATUS_DONE");
+@outlinesA = ("DagStatus = 3;.*STATUS_SUBMITTED \\(\\)",
+	"NodesTotal = 12;",
+	"NodesDone = 0;",
+	"NodesPre = 0;",
+	"NodesQueued = 1;",
+	"NodesPost = 0;",
+	"NodesReady = 0;",
+	"NodesUnready = 11;",
+	"NodesFailed = 0;",
+	"JobProcsHeld = 0;",
+	"JobProcsIdle = [01];",# Not sure if we can rely on job being idle
+	"Node = \"A\";",
+	"NodeStatus = 3;.*STATUS_SUBMITTED",
+	"Node = \"B1\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY",
+	"Node = \"B2\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY",
+	"Node = \"B3\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY",
+	"Node = \"B4\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY",
+	"Node = \"B5\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY",
+	"Node = \"B6\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY",
+	"Node = \"B7\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY",
+	"Node = \"B8\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY",
+	"Node = \"B9\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY",
+	"Node = \"B10\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY",
+	"Node = \"C\";",
+	"NodeStatus = 0;.*STATUS_NOT_READY");
+@outlinesC = ("DagStatus = 3;.*STATUS_SUBMITTED \\(\\)",
+	"NodesTotal = 12;",
+	"NodesDone = 11;",
+	"NodesPre = 0;",
+	"NodesQueued = 1;",
+	"NodesPost = 0;",
+	"NodesReady = 0;",
+	"NodesUnready = 0;",
+	"NodesFailed = 0;",
+	"JobProcsHeld = 0;",
+	"JobProcsIdle = [01];",# Not sure if we can rely on job being idle
+	"Node = \"A\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B1\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B2\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B3\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B4\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B5\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B6\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B7\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B8\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B9\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"B10\";",
+	"NodeStatus = 5;.*STATUS_DONE",
+	"Node = \"C\";",
+	"NodeStatus = 3;.*STATUS_SUBMITTED");
 
 my $killedchosen = 0;
 
@@ -82,6 +155,7 @@ foreach $name (@logfiles) {
 	}
 }
 
+# Get rid of any existing node status files.
 foreach $name (@outfiles) {
 	if (-e $name) {
 		runcmd("rm -f $name");
@@ -90,7 +164,6 @@ foreach $name (@outfiles) {
 
 $abnormal = sub 
 {
-
 	die "Want to see only submit, execute and successful completion\n";
 };
 
@@ -147,43 +220,51 @@ $success = sub
 		}
 	}
 
-	# Check the node status file.
-	foreach $name (@outfiles) {
-		$line = "";
-		$passed = 0;
-		$canopen = open(OUT,"<$name");
-		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open outfile<$name>:$!\n",1);
-			$diditpass = 0;
-		}
-		while(<OUT>) {
-			chomp();
-			$line = $_;
-			$target = $outlines[0];
-			if( $line =~ /$target/ ) {
-				CondorTest::debug("$name: $line\n",1);
-				# Remove the target we just found from the array.
-				shift @outlines;
-				if ($#outlines < 0) {
-					last;
-				}
-			}
-		}
-		close(OUT);
-
-		if ($#outlines >= 0) {
-			CondorTest::debug("failed missing node status lines:\n");
-			foreach $missing (@outlines) {
-				print "  $missing\n";
-			}
-			$diditpass = 0;
-		}
-	}
+	# Check the node status files.
+	CheckStatusFile("job_dagman_node_status.status", \@outlines);
+	CheckStatusFile("job_dagman_node_status.status-A", \@outlinesA);
+	CheckStatusFile("job_dagman_node_status.status-C", \@outlinesC);
 
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}
 };
+
+sub CheckStatusFile {
+	$sfile = shift(@_);
+	@slines = @{shift(@_)};
+
+	print "\nChecking node status file: $sfile\n";
+	$line = "";
+	$passed = 0;
+	$canopen = open(OUT,"<$sfile");
+	if( ! (defined $canopen)) {
+		CondorTest::debug("Can not open outfile<$sfile>:$!\n",1);
+		$diditpass = 0;
+	}
+	while(<OUT>) {
+		chomp();
+		$line = $_;
+		$target = $slines[0];
+			if( $line =~ /$target/ ) {
+				CondorTest::debug("$name: $line\n",1);
+				# Remove the target we just found from the array.
+				shift @slines;
+				if ($#slines < 0) {
+					last;
+				}
+			}
+	}
+	close(OUT);
+
+	if ($#slines >= 0) {
+		CondorTest::debug("failed missing node status lines:\n");
+		foreach $missing (@slines) {
+		print "  $missing\n";
+		}
+		$diditpass = 0;
+	}
+}
 
 CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExecute($testname, $executed);

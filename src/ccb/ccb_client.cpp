@@ -126,44 +126,6 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 	counted_ptr<SharedPortEndpoint> shared_listener;
 	char const *listener_addr = NULL;
 
-	if( SharedPortEndpoint::UseSharedPort() ) {
-		shared_listener = counted_ptr<SharedPortEndpoint>(new SharedPortEndpoint());
-		shared_listener->InitAndReconfig();
-		MyString errmsg;
-		if( !shared_listener->CreateListener() ) {
-			errmsg.formatstr("Failed to create shared port endpoint for reversed connection from %s.",
-						   m_target_peer_description.Value());
-		}
-		else if( !(listener_addr = shared_listener->GetMyRemoteAddress()) ) {
-			errmsg.formatstr("Failed to get remote address for shared port endpoint for reversed connection from %s.",
-						   m_target_peer_description.Value());
-		}
-		if( !listener_addr ) {
-			if( error ) {
-				error->push("CCBClient", CEDAR_ERR_CONNECT_FAILED,errmsg.Value());
-			}
-			dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.Value());
-			return false;
-		}
-	}
-	else {
-		listen_sock = counted_ptr<ReliSock>(new ReliSock());
-		listen_sock->bind(false,0);
-		if( !listen_sock->listen() ) {
-			MyString errmsg;
-			errmsg.formatstr("Failed to listen for reversed connection from %s.",
-						   m_target_peer_description.Value());
-			if( error ) {
-				error->push("CCBClient", CEDAR_ERR_CONNECT_FAILED,errmsg.Value());
-			}
-			dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.Value());
-
-			return false;
-		}
-		listener_addr = listen_sock->get_sinful_public();
-	}
-	ASSERT( listener_addr );
-
 	m_ccb_contacts.rewind();
 	char const *ccb_contact;
 	while( (ccb_contact = m_ccb_contacts.next()) ) {
@@ -173,11 +135,66 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 			continue;
 		}
 
+		//
+		// Generate a listen port for the appropriate protocol.  It will be
+		// distressing that we're passed CCB contact strings rather than
+		// sinfuls, when it's time to handle multiple addresses...
+		//
+		// FIXME: Assumes that shared port knows what it's doing.
+		//
+		if( SharedPortEndpoint::UseSharedPort() ) {
+			shared_listener = counted_ptr<SharedPortEndpoint>(new SharedPortEndpoint());
+			shared_listener->InitAndReconfig();
+			MyString errmsg;
+			if( !shared_listener->CreateListener() ) {
+				errmsg.formatstr( "Failed to create shared port endpoint for reversed connection from %s.",
+					m_target_peer_description.Value() );
+			}
+			else if( !(listener_addr = shared_listener->GetMyRemoteAddress()) ) {
+				errmsg.formatstr( "Failed to get remote address for shared port endpoint for reversed connection from %s.",
+					m_target_peer_description.Value() );
+			}
+			if( !listener_addr ) {
+				if( error ) {
+					error->push( "CCBClient", CEDAR_ERR_CONNECT_FAILED, errmsg.Value() );
+				}
+				dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.Value());
+				return false;
+			}
+		} else {
+			condor_sockaddr ccbSA;
+			MyString faked_sinful = "<" + ccb_address + ">";
+			if( ! ccbSA.from_sinful( faked_sinful ) ) {
+				dprintf( D_FULLDEBUG, "Failed to generate condor_sockaddr from faked sinful '%s', ignoring this broker.\n", faked_sinful.Value() );
+				continue;
+			}
+
+			listen_sock = counted_ptr<ReliSock>( new ReliSock() );
+			// Should bind() should accept a condor_sockaddr directly?
+			listen_sock->bind( ccbSA.get_protocol(), false, 0, false );
+			if( ! listen_sock->listen() ) {
+				MyString errmsg;
+				errmsg.formatstr( "Failed to listen for reversed connection from %s.",
+					m_target_peer_description.Value() );
+				if( error ) {
+					error->push("CCBClient", CEDAR_ERR_CONNECT_FAILED,errmsg.Value());
+				}
+				dprintf(D_ALWAYS,"CCBClient: %s\n",errmsg.Value());
+
+				return false;
+			}
+
+			listener_addr = listen_sock->get_sinful_public();
+		}
+
 		ClassAd msg;
 		msg.Assign(ATTR_CCBID,ccbid);
 		msg.Assign(ATTR_CLAIM_ID,m_connect_id);
 		// purely for debugging purposes: identify ourselves
 		msg.Assign(ATTR_NAME, myName());
+		// ATTR_MY_ADDRESS is functional and subject to address rewriting,
+		// but it's not OK to be protocol-blind, because we won't recognize
+		// the port number (it's not a command socket).
 		msg.Assign(ATTR_MY_ADDRESS, listener_addr);
 
 		dprintf(D_NETWORK|D_FULLDEBUG,
@@ -546,6 +563,8 @@ CCBClient::try_next_ccb()
 	ad.Assign(ATTR_CLAIM_ID,m_connect_id);
 	// purely for debugging purposes: identify ourselves
 	ad.Assign(ATTR_NAME, myName());
+	// ATTR_MY_ADDRESS is functional and subject to address rewriting, so
+	// it's OK to use the protocol-blind publicNetworkIpAddr() above.
 	ad.Assign(ATTR_MY_ADDRESS, return_address);
 
 	classy_counted_ptr<CCBRequestMsg> msg = new CCBRequestMsg(ad);

@@ -137,11 +137,11 @@ bsd_status( int posix_st, PROC_STATE state, int ckpt_trans, int core_trans )
 	switch( state ) {
 
 	  case EXECUTING:
-		EXCEPT( "Tried to generate BSD status, but state is EXECUTING\n" );
+		EXCEPT( "Tried to generate BSD status, but state is EXECUTING" );
 		break;
 
 	  case _SUSPENDED:
-		EXCEPT( "Tried to generate BSD status, but state is SUSPENDED\n" );
+		EXCEPT( "Tried to generate BSD status, but state is SUSPENDED" );
 		break;
 
 	  case NORMAL_EXIT:

@@ -24,4 +24,5 @@ BOOST_PYTHON_MODULE(htcondor)
     export_dc_tool();
     export_secman();
     export_event_reader();
+    export_log_reader();
 }

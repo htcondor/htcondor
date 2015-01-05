@@ -40,7 +40,7 @@ ManagedDatabase::ManagedDatabase() {
 		//figure out the location of the quillWriter password file
 	char *spool = param("SPOOL");
 	if(!spool) {
-		EXCEPT("No SPOOL variable found in config file\n");
+		EXCEPT("No SPOOL variable found in config file");
 	}	
 
 		/*
@@ -93,7 +93,7 @@ ManagedDatabase::ManagedDatabase() {
 	ret_st = DBObj->connectDB();
 	if (ret_st == QUILL_FAILURE) {
 		dprintf(D_ALWAYS, "config: unable to connect to DB--- ERROR");
-		EXCEPT("config: unable to connect to DB\n");
+		EXCEPT("config: unable to connect to DB");
 	}	
 
 		/* the following will also throw an exception of the schema 

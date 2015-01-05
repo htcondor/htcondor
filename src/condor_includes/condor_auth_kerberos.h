@@ -46,7 +46,11 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // Destructor
     //------------------------------------------
 
-    int authenticate(const char * remoteHost, CondorError* errstack);
+    static bool Initialize();
+    // Perform one-time initialization, primarily dlopen()ing the
+    // kerberos libs on linux. Returns true on success, false on failure.
+
+    int authenticate(const char * remoteHost, CondorError* errstack, bool non_blocking);
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr -- host to authenticate
@@ -92,6 +96,9 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // RETURNS: TRUE -- success, FALSE -- failure
     //------------------------------------------
  private:
+
+	static bool m_initTried;
+	static bool m_initSuccess;
 
     int init_user();
     //------------------------------------------

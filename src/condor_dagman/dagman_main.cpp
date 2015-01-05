@@ -87,10 +87,10 @@ static void Usage() {
 			"\t\t[-Update_submit]\n"
 			"\t\t[-Import_env]\n"
             "\t\t[-Priority <int N>]\n"
-			"\t\t[-dont_use_default_node_log]\n"
+			"\t\t[-dont_use_default_node_log] (no longer allowed)\n"
 			"\t\t[-DoRecov]\n"
             "\twhere NAME is the name of your DAG.\n"
-            "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
+            "\tdefault -Debug is -Debug %d\n", DEBUG_VERBOSE );
 	DC_Exit( EXIT_ERROR );
 }
 
@@ -140,6 +140,7 @@ Dagman::Dagman() :
 	_defaultPriority(0),
 	_claim_hold_time(20),
 	_doRecovery(false),
+	_suppressJobLogs(false),
 	_dagmanClassad(NULL)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
@@ -440,6 +441,12 @@ Dagman::Config()
 		free( debugSetting );
 	}
 
+	_suppressJobLogs = 
+				param_boolean( "DAGMAN_SUPPRESS_JOB_LOGS",
+				_suppressJobLogs );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_SUPPRESS_JOB_LOGS setting: %s\n",
+				_suppressJobLogs ? "True" : "False" );
+
 	// enable up the debug cache if needed
 	if (debug_cache_enabled) {
 		debug_cache_set_size(debug_cache_size);
@@ -482,7 +489,8 @@ void main_shutdown_graceful() {
 	DC_Exit( EXIT_RESTART );
 }
 
-void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
+void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
+			bool removeCondorJobs ) {
 		// Avoid possible infinite recursion if you hit a fatal error
 		// while writing a rescue DAG.
 	static bool inShutdownRescue = false;
@@ -519,7 +527,8 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 					dagman.dag->NumJobsSubmitted() );
 		if( dagman.dag->NumJobsSubmitted() > 0 ) {
 			debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
-			dagman.dag->RemoveRunningJobs(dagman);
+			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId,
+						removeCondorJobs, false );
 		}
 		if ( dagman.dag->NumScriptsRunning() > 0 ) {
 			debug_printf( DEBUG_NORMAL, "Removing running scripts...\n" );
@@ -535,10 +544,11 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 			return;
 		}
 		print_status();
-		dagman.dag->DumpNodeStatus( false, true );
+		bool removed = ( dagStatus == Dag::DAG_STATUS_RM );
+		dagman.dag->DumpNodeStatus( false, removed );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
-	dagman.dag->ReportMetrics( exitVal );
+	if (dagman.dag) dagman.dag->ReportMetrics( exitVal );
 	tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	inShutdownRescue = false;
@@ -550,7 +560,9 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 // the schedd will send if the DAGMan job is removed from the queue
 int main_shutdown_remove(Service *, int) {
     debug_printf( DEBUG_QUIET, "Received SIGUSR1\n" );
-	main_shutdown_rescue( EXIT_ABORT, Dag::DAG_STATUS_RM );
+	// We don't remove Condor node jobs here because the schedd will
+	// automatically remove them itself.
+	main_shutdown_rescue( EXIT_ABORT, Dag::DAG_STATUS_RM, false );
 	return FALSE;
 }
 
@@ -922,8 +934,8 @@ void main_init (int argc, char ** const argv) {
     }
 
 	if ( !dagman._submitDagDeepOpts.always_use_node_log ) {
-        debug_printf( DEBUG_QUIET, "Warning: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer recommended and will probably be disabled in a future version\n" );
-		check_warning_strictness( DAG_STRICT_1 );
+        debug_printf( DEBUG_QUIET, "Error: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer allowed\n" );
+		DC_Exit( EXIT_ERROR );
 	}
 
 	//
@@ -1062,7 +1074,12 @@ void main_init (int argc, char ** const argv) {
 							false, true, false );
 			}
 			
-			dagman.dag->RemoveRunningJobs(dagman, true);
+			// I guess we're setting bForce to true here in case we're
+			// in recovery mode and we have any leftover jobs from
+			// before (e.g., user did condor_hold, modified DAG file
+			// introducing a syntax error, and then did condor_release).
+			// (wenger 2014-10-28)
+			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, true, true );
 			tolerant_unlink( lockFileName );
 			dagman.CleanUp();
 			
@@ -1118,7 +1135,12 @@ void main_init (int argc, char ** const argv) {
 							true, false );
 			}
 			
-			dagman.dag->RemoveRunningJobs(dagman, true);
+			// I guess we're setting bForce to true here in case we're
+			// in recovery mode and we have any leftover jobs from
+			// before (e.g., user did condor_hold, modified DAG (or
+			// rescue DAG) file introducing a syntax error, and then
+			// did condor_release). (wenger 2014-10-28)
+			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, true, true );
 			tolerant_unlink( lockFileName );
 			dagman.CleanUp();
 			
@@ -1313,11 +1335,17 @@ Dagman::ResolveDefaultLog()
 	char *dagDir = condor_dirname( primaryDagFile.Value() );
 	const char *dagFile = condor_basename( primaryDagFile.Value() );
 
+	MyString owner;
+	MyString nodeName;
+	dagman._dagmanClassad->GetInfo( owner, nodeName );
+
 	_defaultNodeLog.replaceString( "@(DAG_DIR)", dagDir );
 	_defaultNodeLog.replaceString( "@(DAG_FILE)", dagFile );
 	MyString cluster( DAGManJobId._cluster );
 	_defaultNodeLog.replaceString( "@(CLUSTER)", cluster.Value() );
 	free( dagDir );
+	_defaultNodeLog.replaceString( "@(OWNER)", owner.Value() );
+	_defaultNodeLog.replaceString( "@(NODE_NAME)", nodeName.Value() );
 
 	if ( _defaultNodeLog.find( "@" ) >= 0 ) {
 		debug_printf( DEBUG_QUIET, "Warning: "

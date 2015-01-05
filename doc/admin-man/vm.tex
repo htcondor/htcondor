@@ -208,3 +208,56 @@ to properly use the \Prog{libvirt} utility that controls
 creation and management of Xen and KVM guest virtual machines.
 This restriction may be lifted in future versions,
 depending on features provided by the underlying tool \Prog{libvirt}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{When a vm Universe Job Fails to Start}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+If a vm universe job should fail to launch, 
+HTCondor will attempt to distinguish
+between a problem with the user's job description,
+and a problem with the virtual machine infrastructure of the 
+matched machine.  
+If the problem is with the job, 
+the job will go on hold with a reason explaining the problem.  
+If the problem is with the virtual machine infrastructure,
+HTCondor will reschedule the job, and it will modify the machine ClassAd
+to prevent any other vm universe job from matching.
+vm universe configuration is not slot-specific, 
+so this change is applied to all slots.
+
+When the problem is with the virtual machine infrastructure,
+these machine ClassAd attributes are changed:
+\begin{itemize}
+\item \Attr{HasVM} will be set to \Expr{False}
+\item \Attr{VMOfflineReason} will be set to a somewhat explanatory string
+\item \Attr{VMOfflineTime} will be set to the time of the failure 
+\item \Attr{OfflineUniverses} will be adjusted to include \AdStr{VM} 
+and \Expr{13}
+\end{itemize}
+
+Since \Condor{submit}
+adds \Expr{HasVM == True} to a vm universe job's requirements,
+no further 
+vm universe jobs will match.
+
+Once any problems with the infrastructure are fixed,
+to change the machine ClassAd attributes such that the machine
+will once again match to vm universe jobs,
+an administrator has three options.  
+All have the same effect
+of setting the machine ClassAd attributes to the correct values
+such that the machine will not reject matches for vm universe jobs.
+\begin{enumerate}
+\item  Restart the \Condor{startd} daemon.
+\item  Submit a vm universe job that explicitly matches the machine.
+When the job runs, the code detects the running job and causes 
+the attributes related to the vm universe to be set indicating 
+that vm universe jobs can match with this machine.
+\item  Run the command line tool \Condor{update\_machine\_ad}
+to set machine ClassAd attribute \Attr{HasVM} to \Expr{True},
+and this will cause the other attributes related to the vm universe 
+to be set indicating that vm universe jobs can match with this machine.
+See the \Condor{update\_machine\_ad} manual page for
+examples and details.
+\end{enumerate}
