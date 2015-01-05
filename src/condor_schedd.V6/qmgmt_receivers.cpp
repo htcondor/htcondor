@@ -504,7 +504,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = CommitTransaction( flags );
+		CondorError errstack;
+		rval = CommitTransaction(flags, &errstack);
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
 
@@ -512,6 +513,12 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
 			assert( syscall_sock->code(terrno) );
+			const CondorVersionInfo *vers = syscall_sock->get_peer_version();
+			if (vers && vers->built_since_version(8, 3, 3))
+			{
+				if (errstack.subsys()) {syscall_sock->put(errstack.message());}
+				else {syscall_sock->put("QMGMT rejected job submission.");}
+			}
 		}
 		assert( syscall_sock->end_of_message() );;
 		return 0;

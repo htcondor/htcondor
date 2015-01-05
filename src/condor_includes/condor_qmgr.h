@@ -75,9 +75,10 @@ Qmgr_connection *ConnectQ(const char *qmgr_location, int timeout=0,
 	@param qmgr pointer to Qmgr_connection object returned by ConnectQ
 	@param commit_transactions set to true to commit the transaction, 
 	and false to abort the transaction.
+	@param errstack any errors that occur.
 	@return true if commit was successful; false if transaction was aborted
 */
-bool DisconnectQ(Qmgr_connection *qmgr, bool commit_transactions=true);
+bool DisconnectQ(Qmgr_connection *qmgr, bool commit_transactions=true, CondorError *errstack=NULL);
 
 /** Start a new job cluster.  This cluster becomes the
 	active cluster, and jobs may only be submitted to this cluster.
@@ -195,7 +196,7 @@ int BeginTransaction();
     the poorly named CloseConnection() call was used.
 	@return -1 on failure: 0 on success
 */
-int RemoteCommitTransaction(SetAttributeFlags_t flags=0);
+int RemoteCommitTransaction(SetAttributeFlags_t flags=0, CondorError *errstack=NULL);
 
 /**
  *  CommitTransaction is the schedd-side implementation of committing a
@@ -205,15 +206,16 @@ int RemoteCommitTransaction(SetAttributeFlags_t flags=0);
  *  of SetCommitRequirements.  This means that, currently, CommitTransaction
  *  can only fail *if* new ads are submitted.
  */
-int CommitTransaction(SetAttributeFlags_t flags=0);
+int CommitTransaction(SetAttributeFlags_t flags=0, CondorError *error=NULL);
 
 /**
  * Set a commit requirement; if any new job ClassAd in a transaction does
  * not pass the commit requirement (evalauted as a match ad with the commit_target_ad
  * as the "MY" ad).
  */
-void SetCommitRequirements(classad_shared_ptr<classad::ExprTree> commit_req, classad_shared_ptr<classad::ClassAd> commit_target_ad);
+void SetCommitRequirements(classad_shared_ptr<classad::ExprTree> commit_req, classad_shared_ptr<classad::ExprTree> commit_fail_reason, classad_shared_ptr<classad::ClassAd> commit_target_ad);
 classad_shared_ptr<classad::ExprTree> GetCommitRequirement();
+classad_shared_ptr<classad::ExprTree> GetCommitFailReason();
 classad_shared_ptr<classad::ClassAd> GetCommitTargetAd();
 
 int AbortTransaction();

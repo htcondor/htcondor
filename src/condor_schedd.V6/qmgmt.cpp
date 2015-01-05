@@ -153,6 +153,7 @@ static void PeriodicDirtyAttributeNotification();
 static void ScheduleJobQueueLogFlush();
 
 classad_shared_ptr<classad::ExprTree> g_commit_req;
+classad_shared_ptr<classad::ExprTree> g_commit_fail_reason;
 classad_shared_ptr<classad::ClassAd> g_commit_target_ad;
 
 bool qmgmt_all_users_trusted = false;
@@ -2948,19 +2949,22 @@ BeginTransaction()
 
 
 int
-CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
+CommitTransaction(SetAttributeFlags_t flags /* = 0 */, CondorError *errstack)
 {
 	std::list<std::string> new_ad_keys;
 		// get a list of all new ads being created in this transaction
 	JobQueue->ListNewAdsInTransaction( new_ad_keys );
 
+	if (g_commit_req.get() && !g_commit_target_ad.get())
+	{
+		g_commit_target_ad.reset(new classad::ClassAd());
+	}
 	if (g_commit_req.get()) for (std::list<std::string>::const_iterator it=new_ad_keys.begin(); it!=new_ad_keys.end(); it++)
 	{
 		char const *key = it->c_str();
 		int cluster_id;
 		int proc_id;
-		ClassAd *procad = NULL;
-		ClassAd *clusterad = NULL;
+		ClassAd procad;
 
 		StrToId(key, cluster_id, proc_id);
 		if (proc_id == -1)
@@ -2968,22 +2972,49 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 			continue; // skip over cluster ads
 		}
 		char cluster_key[PROC_ID_STR_BUFLEN];
-		IdToStr(cluster_id,- 1, cluster_key);
+		IdToStr(cluster_id, -1, cluster_key);
 
-		if (!JobQueue->LookupClassAd(cluster_key, clusterad) || !JobQueue->LookupClassAd(key, procad))
-		{
-			errno = EINVAL;
-			return -1;
-		}
-		procad->ChainToAd(clusterad);
+		JobQueue->AddAttrsFromTransaction(cluster_key, procad);
+		JobQueue->AddAttrsFromTransaction(key, procad);
 
-		classad::MatchClassAdDoesNotOwn matchad(procad, g_commit_target_ad.get());
-		classad::ExprTree *priorReqs = procad->Lookup(ATTR_REQUIREMENTS);
-		procad->InsertAttr(ATTR_REQUIREMENTS, g_commit_req.get());
+		classad::MatchClassAdDoesNotOwn matchad(&procad, g_commit_target_ad.get(), false);
+		classad::ExprTree *priorReqs = g_commit_target_ad->Lookup(ATTR_REQUIREMENTS);
+		if (priorReqs) {priorReqs = priorReqs->Copy();}
+		classad::ExprTree *newReqs = g_commit_req.get()->Copy();
+		g_commit_target_ad->Insert(ATTR_REQUIREMENTS, newReqs);
 		bool matches = matchad.leftMatchesRight();
-		procad->Insert(ATTR_REQUIREMENTS, priorReqs);
+		g_commit_target_ad->InsertAttr(ATTR_REQUIREMENTS, priorReqs);
 		if (!matches)
 		{
+			if  (errstack)
+			{
+				if (g_commit_fail_reason.get())
+				{
+					classad::EvalState state;
+					classad::Value val;
+					state.SetScopes(matchad.GetRightAd());
+					if (!g_commit_fail_reason->Evaluate(state, val))
+					{
+						errstack->pushf("QMGMT", 3, "Job %s did not pass SUBMIT_REQUIREMENTS.  Additionally, an error occurred when evaluating SUBMIT_REQUIREMENTS_REASON", key);
+					}
+					else
+					{
+						std::string reason;
+						if (!val.IsStringValue(reason))
+						{
+							errstack->pushf("QMGMT", 1, "Job %s did not pass SUBMIT_REQUIREMENTS.  Additionally, SUBMIT_REQUIREMENTS_REASON did not evaluate to a string.", key);
+						}
+						else
+						{
+							errstack->push("QMGMT", 4, reason.c_str());
+						}
+					}
+				}
+				else
+				{
+					errstack->pushf("QMGMT", 5, "Job %s did not pass SUBMIT_REQUIREMENTS.", key);
+				}
+			}
 			errno = EINVAL;
 			return -1;
 		}
@@ -3110,10 +3141,17 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 
 
 void
-SetCommitRequirements(classad_shared_ptr<classad::ExprTree> commit_req, classad_shared_ptr<classad::ClassAd> commit_target_ad)
+SetCommitRequirements(classad_shared_ptr<classad::ExprTree> commit_req, classad_shared_ptr<classad::ExprTree> commit_fail_reason, classad_shared_ptr<classad::ClassAd> commit_target_ad)
 {
 	g_commit_req = commit_req;
+	g_commit_fail_reason = commit_fail_reason;
 	g_commit_target_ad = commit_target_ad;
+}
+
+
+classad_shared_ptr<classad::ExprTree> GetCommitFailReason()
+{
+	return g_commit_fail_reason;
 }
 
 
@@ -3837,7 +3875,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		if( started_transaction ) {
 			// To reduce the number of fsyncs, we mark this as a non-durable transaction.
 			// Otherwise we incur two fsync's per matched job (one here, one for the job start).
-			CommitTransaction(NONDURABLE);
+			CommitTransaction(NONDURABLE, NULL);
 		}
 
 		if ( startd_ad ) {
@@ -4857,7 +4895,7 @@ int mark_idle(ClassAd *job)
 		// all jobs are marked idle in mark_jobs_idle() we force the log, and 
 		// b) in the worst case, we would just redo this work in the unfortuante evenent 
 		// we crash again before an fsync.
-		CommitTransaction( NONDURABLE );
+		CommitTransaction(NONDURABLE, NULL);
 	}
 
 	return 1;

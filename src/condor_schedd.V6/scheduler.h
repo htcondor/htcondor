@@ -544,8 +544,9 @@ private:
 	
 	// information about this scheduler
 	classad_shared_ptr<classad::ExprTree> m_submitReq;
+	classad_shared_ptr<classad::ExprTree> m_submitFailReason;
 	classad_shared_ptr<ClassAd>		m_adSchedd;
-    ClassAd*        m_adBase;
+	ClassAd*        m_adBase;
 	Scheduler*		myself;
 
 	// information about the command port which Shadows use

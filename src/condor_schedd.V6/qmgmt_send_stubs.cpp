@@ -385,7 +385,7 @@ AbortTransaction()
 }
 
 int
-RemoteCommitTransaction(SetAttributeFlags_t flags)
+RemoteCommitTransaction(SetAttributeFlags_t flags, CondorError *errstack)
 {
 	int	rval = -1;
 
@@ -408,6 +408,16 @@ RemoteCommitTransaction(SetAttributeFlags_t flags)
 	neg_on_error( qmgmt_sock->code(rval) );
 	if( rval < 0 ) {
 		neg_on_error( qmgmt_sock->code(terrno) );
+		const CondorVersionInfo *vers = qmgmt_sock->get_peer_version();
+		if (vers && vers->built_since_version(8, 3, 3))
+		{
+			std::string errmsg;
+			neg_on_error( qmgmt_sock->code(errmsg) );
+			if (errmsg.size())
+			{
+				errstack->push("SCHEDD", terrno, errmsg.c_str());
+			}
+		}
 		neg_on_error( qmgmt_sock->end_of_message() );
 		errno = terrno;
 		return rval;

@@ -11986,10 +11986,22 @@ Scheduler::Init()
 		classad::ClassAdParser parser;
 		if (!(submitReq = parser.ParseExpression(commit_reqs)))
 		{
-			dprintf(D_ALWAYS, "Unable to parse SUBMIT_REQUIREMENTS: %s.  Ignoring\n", commit_reqs.c_str());
+			dprintf(D_ALWAYS, "Unable to parse SUBMIT_REQUIREMENTS: %s.  Ignoring.\n", commit_reqs.c_str());
 		}
 	}
 	m_submitReq.reset(submitReq);
+
+	std::string commit_fail_reason;
+	classad::ExprTree *submitFailReason = NULL;
+	if (param(commit_fail_reason, "SUBMIT_REQUIREMENTS_REASON"))
+	{
+		classad::ClassAdParser parser;
+		if (!(submitFailReason = parser.ParseExpression(commit_fail_reason)))
+		{
+			dprintf(D_ALWAYS, "Unable to parse SUBMIT_REQUIREMENTS_REASON: %s.  Ignoring.\n", commit_fail_reason.c_str());
+		}
+	}
+	m_submitFailReason.reset(submitFailReason);
 
 	first_time_in_init = false;
 }
@@ -12271,11 +12283,11 @@ Scheduler::RegisterTimers()
 int
 Scheduler::handle_q(int cmd, Stream *stream)
 {
-	SetCommitRequirements(m_submitReq, m_adSchedd);
+	SetCommitRequirements(m_submitReq, m_submitFailReason, m_adSchedd);
 	int retval = ::handle_q(NULL, cmd, stream);
 	classad_shared_ptr<classad::ClassAd> nullAd;
 	classad_shared_ptr<classad::ExprTree> nullReq;
-	SetCommitRequirements(nullReq, nullAd);
+	SetCommitRequirements(nullReq, nullReq, nullAd);
 	return retval;
 }
 
