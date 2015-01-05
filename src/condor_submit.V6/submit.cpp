@@ -1271,8 +1271,13 @@ main( int argc, char *argv[] )
 	// we can't disconnect from something if we haven't connected to it: since
 	// we are dumping to a file, we don't actually open a connection to the schedd
 	if ( !DumpClassAdToFile ) {
-		if ( !DisconnectQ(0) ) {
+		CondorError errstack;
+		if ( !DisconnectQ(0, true, &errstack) ) {
 			fprintf(stderr, "\nERROR: Failed to commit job submission into the queue.\n");
+			if (errstack.subsys())
+			{
+				fprintf(stderr, "ERROR: %s\n", errstack.message());
+			}
 			exit(1);
 		}
 	}

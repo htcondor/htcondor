@@ -1112,12 +1112,13 @@ void
 ConnectionSentry::disconnect()
 {
     bool throw_commit_error = false;
+    CondorError errstack;
     if (m_transaction)
     {
         m_transaction = false;
         {
         condor::ModuleLock ml;
-        throw_commit_error = RemoteCommitTransaction(m_flags);
+        throw_commit_error = RemoteCommitTransaction(m_flags, &errstack);
         }
     }
     if (m_connected)
@@ -1128,14 +1129,21 @@ ConnectionSentry::disconnect()
         bool result;
         {
         condor::ModuleLock ml;
-        result = !DisconnectQ(NULL);
+        result = !DisconnectQ(NULL, true, &errstack);
         }
         if (result)
         {
-            THROW_EX(RuntimeError, "Failed to commmit and disconnect from queue.");
+            std::string errmsg = "Failed to commmit and disconnect from queue.";
+            if (errstack.next()) {errmsg += " " + errstack.getFullText();}
+            THROW_EX(RuntimeError, errmsg.c_str());
         }
     }
-    if (throw_commit_error) { THROW_EX(RuntimeError, "Failed to commit ongoing transaction."); }
+    if (throw_commit_error)
+    {
+        std::string errmsg = "Failed to commit ongoing transaction.";
+        if (errstack.next()) {errmsg += " " + errstack.getFullText();}
+        THROW_EX(RuntimeError, errmsg.c_str());
+    }
 }
 
 
