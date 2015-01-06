@@ -1004,8 +1004,9 @@ If one exists, it is removed.
 \index{DAGMan input file!ABORT-DAG-ON keyword}
 \index{DAGMan!ABORT-DAG-ON}
 
-The \Arg{RETRY} keyword provides a
-way to retry failed nodes.
+DAGMan can retry any failed node in a DAG by
+specifying the node in the DAG input file 
+with the \Arg{RETRY} keyword.
 The use of retry is optional.
 The syntax for retry is
 
@@ -1035,24 +1036,24 @@ retry node C:
 \end{verbatim}
 \normalsize
 
-If node C is marked as failed (for any reason),
+If node C is marked as failed for any reason,
 then it is started over as a first retry.
 The node will be tried a second and third time,
 if it continues to fail.
 If the node is marked as successful, then further retries do not occur.
 
 Retry of a node may be short circuited using the
-optional keyword \Arg{UNLESS-EXIT} (followed by an
-integer exit value).
+optional keyword \Arg{UNLESS-EXIT}, followed by an integer exit value.
 If the node exits with the specified integer exit value,
 then no further processing will be done
 on the node. 
 
-The variable \Env{\$RETRY} evaluates to an 
-integer value set to 0 first time a node is run,
+The macro \Env{\$RETRY} evaluates to an 
+integer value, set to 0 first time a node is run,
 and is incremented each time for each time the node is retried. 
-The variable \Env{\$MAX\_RETRIES} is the value set for
+The macro \Env{\$MAX\_RETRIES} is the value set for
 \Arg{NumberOfRetries}.
+These macros may be used as arguments passed to a PRE or POST script.
 
 
 The \Arg{ABORT-DAG-ON} keyword provides a way
@@ -1068,7 +1069,7 @@ the DAG is immediately aborted.
 A DAG abort differs from a node failure,
 in that a DAG abort causes all nodes within the DAG to be stopped immediately.
 This includes removing the jobs in nodes that are currently running.
-A node failure allows the DAG to continue running,
+A node failure differs, as it would allow the DAG to continue running,
 until no more progress can be made due to dependencies.
 
 The behavior differs based on the existence of PRE and/or POST scripts.
@@ -1114,8 +1115,9 @@ DAG
 \normalsize
 
 causes the DAG to be aborted, if node C exits with a return value of 10.
-Any other currently running nodes (only node B is a possibility for 
-this particular example) are stopped and removed.
+Any other currently running nodes, 
+of which only node B is a possibility for this particular example, 
+are stopped and removed.
 If this abort occurs, the return value for the DAG is 1.
 
 
