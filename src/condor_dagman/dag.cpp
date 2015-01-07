@@ -358,14 +358,7 @@ bool Dag::Bootstrap (bool recovery)
 		if ( !FinishedRunning( true ) && _final_job &&
 					( _final_job->GetStatus() == Job::STATUS_DONE ) ) {
 			--_numNodesDone;
-			//TEMPTEMP -- hmm -- should there be a Job method to reset all of this stuff?
-			_final_job->SetStatus( Job::STATUS_NOT_READY );
-			_final_job->retries = 0;
-			_final_job->countedAsDone = false;
-			_final_job->_queuedNodeJobProcs = 0;
-			_final_job->_timesHeld = 0;
-			_final_job->_jobProcsOnHold = 0;
-			//TEMPTEMP -- reset _onHold, _gotEvents?
+			_final_job->Reset();
         	debug_printf( DEBUG_NORMAL, "Set final node status to STATUS_NOT_READY\n" );
 		}
 		print_status();

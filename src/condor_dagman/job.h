@@ -168,6 +168,12 @@ class Job {
   
     ~Job();
 
+    /** Reset the data for this node as if it hadn't been run (for
+		final node fix for gittrac #4727).  Note that this sets
+		the node status to STATUS_NOT_READY, not STATUS_READY.
+	 */
+	void Reset();
+
 	void PrefixName(const MyString &prefix);
 	inline const char* GetJobName() const { return _jobName; }
 	inline const char* GetDirectory() const { return _directory; }
@@ -594,6 +600,7 @@ private:
 
     /*	The ID of this job.  This serves as a primary key for Jobs, where each
 		Job's ID is unique from all the rest 
+		This is NOT the CondorID of the node job.
 	*/ 
 	JobID_t _jobID;
 

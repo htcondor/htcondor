@@ -105,9 +105,6 @@ Job::Job( const job_type_t jobType, const char* jobName,
 
 	_scriptPre = NULL;
 	_scriptPost = NULL;
-	_Status = STATUS_READY;
-	_isIdle = false;
-	countedAsDone = false;
 
 	_jobName = strnewp (jobName);
 	_directory = strnewp (directory);
@@ -123,9 +120,6 @@ Job::Job( const job_type_t jobType, const char* jobName,
 	_jobID = _jobID_counter++;
 
 	retry_max = 0;
-	retries = 0;
-	_submitTries = 0;
-	retval = -1; // so Coverity is happy
 	have_retry_abort_val = false;
 	retry_abort_val = 0xdeadbeef;
 	have_abort_dag_val = false;
@@ -134,8 +128,6 @@ Job::Job( const job_type_t jobType, const char* jobName,
 	abort_dag_return_val = -1; // so Coverity is happy
 	_visited = false;
 	_dfsOrder = -1; // so Coverity is happy
-
-	_queuedNodeJobProcs = 0;
 
 	_hasNodePriority = false;
 	_nodePriority = 0;
@@ -146,18 +138,36 @@ Job::Job( const job_type_t jobType, const char* jobName,
 	_noop = false;
 
 	_jobTag = NULL;
-	_jobstateSeqNum = 0;
-	_lastEventTime = 0;
 
 	varsFromDag = new List<NodeVar>;
 
-	snprintf( error_text, JOB_ERROR_TEXT_MAXLEN, "unknown" );
+	Reset();
 
-	_timesHeld = 0;
-	_jobProcsOnHold = 0;
+	_Status = STATUS_READY;
 
 	return;
 }
+
+//---------------------------------------------------------------------------
+void
+Job::Reset()
+{
+	_Status = STATUS_NOT_READY;
+	_isIdle = false;
+	countedAsDone = false;
+	retries = 0;
+	_submitTries = 0;
+	retval = -1; // so Coverity is happy
+	_queuedNodeJobProcs = 0;
+	snprintf( error_text, JOB_ERROR_TEXT_MAXLEN, "unknown" );
+	_timesHeld = 0;
+	_jobProcsOnHold = 0;
+	_jobstateSeqNum = 0;
+	_lastEventTime = 0;
+	_onHold.clear();
+	_gotEvents.clear();
+}
+
 //---------------------------------------------------------------------------
 void
 Job::PrefixDirectory(MyString &prefix)
