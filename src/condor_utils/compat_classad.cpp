@@ -1938,7 +1938,7 @@ SetDirtyFlag(const char *name, bool dirty)
 }
 
 void ClassAd::
-GetDirtyFlag(const char *name, bool *exists, bool *dirty)
+GetDirtyFlag(const char *name, bool *exists, bool *dirty) const
 {
 	if ( Lookup( name ) == NULL ) {
 		if ( exists ) {
@@ -2093,7 +2093,7 @@ void ClassAd::ChainCollapse()
 void ClassAd::
 GetReferences(const char* attr,
                 StringList *internal_refs,
-                StringList *external_refs)
+                StringList *external_refs) const
 {
     ExprTree *tree;
 
@@ -2107,7 +2107,7 @@ GetReferences(const char* attr,
 bool ClassAd::
 GetExprReferences(const char* expr,
 				  StringList *internal_refs,
-				  StringList *external_refs)
+				  StringList *external_refs) const
 {
 	classad::ClassAdParser par;
 	classad::ExprTree *tree = NULL;
@@ -2153,7 +2153,7 @@ static void AppendReference( StringList &reflist, char const *name )
 void ClassAd::
 _GetReferences(classad::ExprTree *tree,
 			   StringList *internal_refs,
-			   StringList *external_refs)
+			   StringList *external_refs) const
 {
 	if ( tree == NULL ) {
 		return;
