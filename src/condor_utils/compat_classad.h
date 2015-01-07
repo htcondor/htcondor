@@ -236,7 +236,7 @@ class ClassAd : public classad::ClassAd
 		 *  @param value Where we the copy value
 		 *  @return 1 on success, 0 if the attribute doesn't exist
 		 */
-	int EvalAttr (const char *name, classad::ClassAd *target, classad::Value & value) const;
+	int EvalAttr (const char *name, classad::ClassAd *target, classad::Value & value);
 
 		/** Lookup and evaluate an attribute in the ClassAd that is a string
 		 *  @param name The name of the attribute
