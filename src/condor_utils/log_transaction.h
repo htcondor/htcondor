@@ -41,11 +41,13 @@
 
 typedef List<LogRecord> LogRecordList;
 
+class LoggableClassAdTable;
+
 class Transaction {
 public:
 	Transaction();
 	~Transaction();
-    void Commit(FILE* fp, void *data_structure, bool nondurable=false);
+    void Commit(FILE* fp, LoggableClassAdTable *data_structure, bool nondurable=false);
 	void AppendLog(LogRecord *);
 	LogRecord *FirstEntry(char const *key);
 	LogRecord *NextEntry();

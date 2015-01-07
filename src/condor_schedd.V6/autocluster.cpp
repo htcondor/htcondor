@@ -31,16 +31,16 @@
 // and that consecutive cluster id's are often owned by the same user.
 class JobIdSet {
 public:
-	bool contains(const PROC_ID & jid) const { return jobs.find(jid) != jobs.end(); }
+	bool contains(const JOB_ID_KEY & jid) const { return jobs.find(jid) != jobs.end(); }
 	bool empty() { return jobs.empty(); }
 	void rewind() { it = jobs.begin(); }
 	int  count() { return (int)jobs.size(); }
-	bool next(PROC_ID &jid) { if (it == jobs.end()) return false; jid = *it; ++it; return true; }
-	void insert(PROC_ID &jid) { jobs.insert(jid); }
-	void erase(PROC_ID &jid) { jobs.erase(jid); }
+	bool next(JOB_ID_KEY &jid) { if (it == jobs.end()) return false; jid = *it; ++it; return true; }
+	void insert(JOB_ID_KEY &jid) { jobs.insert(jid); }
+	void erase(JOB_ID_KEY &jid) { jobs.erase(jid); }
 private:
-	std::set<PROC_ID> jobs;
-	std::set<PROC_ID>::const_iterator it;
+	std::set<JOB_ID_KEY> jobs;
+	std::set<JOB_ID_KEY>::const_iterator it;
 };
 
 JobCluster::JobCluster()
@@ -138,7 +138,7 @@ bool JobCluster::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, b
 
 #ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
 
-JobCluster::JobIdSetMap::iterator JobCluster::find(const PROC_ID & jid) // get current cluster id for a given job
+JobCluster::JobIdSetMap::iterator JobCluster::find(const JOB_ID_KEY & jid) // get current cluster id for a given job
 {
 	// scan the cluster id to job map, and return when we find a match on job id.
 	JobIdSetMap::iterator it;
@@ -170,10 +170,10 @@ void JobCluster::collect_garbage(bool brute_force) // free the deleted clusters
 				gone = false;
 				if (brute_force) {
 					gone = true;
-					PROC_ID jid;
+					JOB_ID_KEY jid;
 					jit->second.rewind();
 					while (jit->second.next(jid)) {
-						if (GetJobAd(jid.cluster, jid.proc, false, false)) {
+						if (GetJobAd(jid)) {
 							gone = false;
 							break;
 						}
@@ -193,7 +193,7 @@ void JobCluster::collect_garbage(bool brute_force) // free the deleted clusters
 
 extern int    last_autocluster_classad_cache_hit;
 
-int JobCluster::getClusterid(JobQueueJob & job, PROC_ID & jid, bool expand_refs, std::string * final_list)
+int JobCluster::getClusterid(JobQueueJob & job, bool expand_refs, std::string * final_list)
 {
 	int cur_id = -1;
 
@@ -341,18 +341,18 @@ int JobCluster::getClusterid(JobQueueJob & job, PROC_ID & jid, bool expand_refs,
 #ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
 	if (keep_job_ids) {
 		if (true) {
-			JobIdSetMap::iterator jit = find(jid);
+			JobIdSetMap::iterator jit = find(job.jid);
 			if (jit != cluster_use.end()) {
 				int old_id = jit->first;
 				if (old_id == cur_id) {
-					jit->second.insert(jid);
+					jit->second.insert(job.jid);
 				} else {
-					jit->second.erase(jid);
+					jit->second.erase(job.jid);
 					if (jit->second.empty()) { cluster_gone.insert(old_id); }
-					cluster_use[cur_id].insert(jid);
+					cluster_use[cur_id].insert(job.jid);
 				}
 			} else {
-				cluster_use[cur_id].insert(jid);
+				cluster_use[cur_id].insert(job.jid);
 			}
 		}
 	}
@@ -539,7 +539,7 @@ extern double last_autocluster_runtime;
 extern bool   last_autocluster_make_sig;
 extern int    last_autocluster_type;
 
-int AutoCluster::getAutoClusterid(JobQueueJob *job, PROC_ID & jid)
+int AutoCluster::getAutoClusterid(JobQueueJob *job)
 {
 	std::string final_list;
 	int cur_id = -1;
@@ -566,7 +566,7 @@ int AutoCluster::getAutoClusterid(JobQueueJob *job, PROC_ID & jid)
 
 	last_autocluster_make_sig = true;
 
-	cur_id = this->getClusterid(*job, jid, true, &final_list);
+	cur_id = this->getClusterid(*job, true, &final_list);
 	if( cur_id < 0 ) {
 			// We've wrapped around MAX_INT!
 			// In config() we take steps to avoid this unlikely condition.
@@ -578,9 +578,7 @@ int AutoCluster::getAutoClusterid(JobQueueJob *job, PROC_ID & jid)
 
 		// put the new auto cluster id into the job ad to cache it.
 	job->Assign(ATTR_AUTO_CLUSTER_ID,cur_id);
-#ifdef ALLOW_ON_THE_FLY_AGGREGATION
 	job->autocluster_id = cur_id;
-#endif
 
 		// for some nice feedback, place the final list of attrs used to create this
 		// signature into the job ad.
@@ -592,8 +590,6 @@ int AutoCluster::getAutoClusterid(JobQueueJob *job, PROC_ID & jid)
 
 	return cur_id;
 }
-
-#ifdef ALLOW_ON_THE_FLY_AGGREGATION
 
 void AutoCluster::preSetAttribute(JobQueueJob &job, const char * attr, const char * /*value*/, int /*flags*/)
 {
@@ -616,10 +612,12 @@ void AutoCluster::preSetAttribute(JobQueueJob &job, const char * attr, const cha
 	}
 }
 
-int aggregate_jobs(JobQueueJob *job, const PROC_ID & jid, void * pv)
+#ifdef ALLOW_ON_THE_FLY_AGGREGATION
+
+int aggregate_jobs(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void * pv)
 {
 	JobCluster* pjc = (JobCluster*)pv;
-	pjc->getClusterid(*job, jid, true, NULL);
+	pjc->getClusterid(*job, true, NULL);
 	return 0;
 }
 
@@ -634,6 +632,7 @@ JobAggregationResults * AutoCluster::aggregateOn(
 		return new JobAggregationResults(*this, projection, true);
 	}
 #ifdef ALLOW_ON_THE_FLY_AGGREGATION
+
 	std::map<std::string, JobCluster>::iterator found = current_aggregations.find(projection);
 	if (found != current_aggregations.end()) {
 		return new JobAggregationResults(found->second, projection);

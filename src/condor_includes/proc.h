@@ -25,7 +25,8 @@
 #include "condor_header_features.h"
 
 
-// a handy little structure used in a lot of places
+// a handy little structure used in a lot of places it has to remain a c style struct
+// because some c code (I'm looking at you std-u) depends on it.
 typedef struct PROC_ID {
 	int		cluster;
 	int		proc;
@@ -38,11 +39,11 @@ typedef struct PROC_ID {
 #endif
 } PROC_ID;
 
+
 #if defined(__cplusplus)
 class MyString;
 template <class Item> class ExtArray;
 #endif
-
 
 /*
 **	Possible notification options
@@ -73,7 +74,6 @@ template <class Item> class ExtArray;
 // Put C funtion definitions here
 BEGIN_C_DECLS
 
-PROC_ID getProcByString( const char* str );
 const char* getJobStatusString( int status );
 int getJobStatusNum( const char* name );
 
@@ -83,6 +83,7 @@ END_C_DECLS
 #if defined(__cplusplus)
 bool operator==( const PROC_ID a, const PROC_ID b);
 unsigned int hashFuncPROC_ID( const PROC_ID & );
+unsigned int hashFunction(const PROC_ID &);
 void procids_to_mystring(ExtArray<PROC_ID> *procids, MyString &str);
 ExtArray<PROC_ID>* mystring_to_procids(MyString &str);
 
@@ -91,14 +92,46 @@ void ProcIdToStr(const PROC_ID a, char *result);
 void ProcIdToStr(int cluster, int proc, char *result);
 bool StrToProcId(char const *str, PROC_ID &id);
 bool StrToProcId(char const *str, int &cluster, int &proc);
+PROC_ID getProcByString(const char* str);
+
+// maximum length of a buffer containing a "cluster.proc" string
+// as produced by ProcIdToStr()
+#define PROC_ID_STR_BUFLEN 35
+
+typedef struct JOB_ID_KEY {
+	int		cluster;
+	int		proc;
+	// a LessThan operator suitable for inserting into a sorted map or set
+	bool operator<(const JOB_ID_KEY& cp) const {
+		int diff = cp.cluster - this->cluster;
+		if ( ! diff) diff = cp.proc - this->proc;
+		return diff < 0;
+	}
+	bool operator<(const PROC_ID& cp) const {
+		int diff = cp.cluster - this->cluster;
+		if ( ! diff) diff = cp.proc - this->proc;
+		return diff < 0;
+	}
+	JOB_ID_KEY() : cluster(0), proc(0) {}
+	JOB_ID_KEY(int c, int p) : cluster(c), proc(p) {}
+	JOB_ID_KEY(const PROC_ID & rhs) : cluster(rhs.cluster), proc(rhs.proc) {}
+	// constructing JOB_ID_KEY(NULL) ends up calling this constructor because there is no single int constructor - ClassAdLog depends on that...
+	JOB_ID_KEY(const char * job_id_str) : cluster(0), proc(0) { if (job_id_str) set(job_id_str); }
+	operator const PROC_ID() const { return *((const PROC_ID*)this); }
+	void sprint(MyString &s) const;
+	bool set(const char * job_id_str) { return StrToProcId(job_id_str, this->cluster, this->proc); }
+	static unsigned int hash(const JOB_ID_KEY &);
+} JOB_ID_KEY;
+
+inline bool operator==( const JOB_ID_KEY a, const JOB_ID_KEY b) { return a.cluster == b.cluster && a.proc == b.proc; }
+unsigned int hashFunction(const JOB_ID_KEY &);
+
+
 #endif
 
 #define ICKPT -1
 
 #define NEW_PROC 1
 
-// maximum length of a buffer containing a "cluster.proc" string
-// as produced by ProcIdToStr()
-#define PROC_ID_STR_BUFLEN 35
 
 #endif /* CONDOR_PROC_INCLUDED */

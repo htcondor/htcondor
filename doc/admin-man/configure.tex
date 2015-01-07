@@ -1442,6 +1442,8 @@ File System Configuration File Entries''.
 \item[\Macro{CONDOR\_IDS}]
   The User ID (UID) and Group ID (GID) pair that the HTCondor daemons
   should run as, if the daemons are spawned as root.
+\index{CONDOR\_IDS environment variable}
+\index{environment variables!CONDOR\_IDS}
   This value can also be specified in the \Env{CONDOR\_IDS}
   environment variable.
   If the HTCondor daemons are not started as root, then neither this
@@ -1561,9 +1563,9 @@ File System Configuration File Entries''.
   is whatever user you started up the \Condor{master} as.  If you are
   running as root, and there is a condor account, it is most
   likely condor.
+\index{CONDOR\_IDS environment variable}
+\index{environment variables!CONDOR\_IDS}
   Otherwise, it is whatever you set in the \Env{CONDOR\_IDS}
-  \index{environment variables!CONDOR\_IDS@\texttt{CONDOR\_IDS}}
-  \index{CONDOR\_IDS@\texttt{CONDOR\_IDS}!environment variable}
   environment variable, or whatever you define in the
   \MacroNI{CONDOR\_IDS} setting in the HTCondor config files.
   See section~\ref{sec:uids} on UIDs in HTCondor for details.

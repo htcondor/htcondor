@@ -2181,6 +2181,23 @@ short_header (void)
 	}
 }
 
+#include "HoldReasons.h"
+
+static const char *
+format_hold_reason( const char * holdReason, AttrList *, Formatter & fmt ) {
+	if( fmt.width == 0 || (fmt.options & FormatOptionNoTruncate) ) {
+		return explainHoldReason( holdReason );
+	}
+
+	// Assumes FormatOptionLeftAlign.
+	char * shortExplanation = (char *)malloc( (fmt.width + 1) * sizeof( char ) );
+	for( int i = 0; i < fmt.width; ++i ) { shortExplanation[i] = ' '; }
+	shortExplanation[fmt.width] = '\0';
+	const char * longExplanation = explainHoldReason( holdReason );
+	strncpy( shortExplanation, longExplanation, fmt.width );
+	return shortExplanation;
+}
+
 static const char *
 format_remote_host (const char *, AttrList *ad, Formatter &)
 {
@@ -3149,7 +3166,9 @@ static void init_output_mask()
 		mask.registerFormat (NULL, 11, AltQuestion | AltWide, format_q_date,
 							  ATTR_ENTERED_CURRENT_STATUS /*, "[????????????]"*/);
 		if (widescreen) {
-			mask.registerFormat("%v", -43, FormatOptionAutoWidth | FormatOptionNoTruncate, ATTR_HOLD_REASON );
+			mask.registerFormat( NULL, -43,
+				FormatOptionAutoWidth | FormatOptionNoTruncate | FormatOptionAlwaysCall,
+				format_hold_reason, ATTR_HOLD_REASON );
 		} else {
 			mask.registerFormat("%-43.43s", ATTR_HOLD_REASON);
 		}
@@ -6391,6 +6410,7 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, format_cpu_time, NULL },
+	{ "HOLD_REASON",     ATTR_HOLD_REASON, format_hold_reason, NULL },
 	{ "JOB_DESCRIPTION", ATTR_JOB_CMD, format_job_description, ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
 	{ "JOB_STATUS",      ATTR_JOB_STATUS, format_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_INPUT "\0" },
 	{ "MEMORY_USAGE",    ATTR_IMAGE_SIZE, format_memory_usage, ATTR_MEMORY_USAGE "\0" },

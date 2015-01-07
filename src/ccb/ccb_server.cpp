@@ -189,8 +189,9 @@ CCBServer::InitAndReconfig()
 		m_reconnect_fname.formatstr("%s%c%s-%s.ccb_reconnect",
 			spool,
 			DIR_DELIM_CHAR,
-			my_addr.getHost() ? my_addr.getHost() : "localhost",
+			myHost,
 			my_addr.getPort() ? my_addr.getPort() : "0");
+dprintf( D_ALWAYS, "m_reconnect_fname = %s\n", m_reconnect_fname.Value() );
 
 		free( myHost );
 		free( spool );
