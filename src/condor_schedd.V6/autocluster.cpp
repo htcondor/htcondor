@@ -217,8 +217,7 @@ int JobCluster::getClusterid(JobQueueJob & job, bool expand_refs, std::string * 
 		sigset.push_back(tree);
 		if (expand_refs && tree) {
 			StringList refs;
-			StringList ext_refs;
-			job.GetReferences(attr->c_str(), refs, ext_refs);
+			job.GetReferences(attr->c_str(), &refs, NULL);
 			if ( ! refs.isEmpty()) {
 				refs.rewind();
 				for (char * pattr = refs.next(); pattr; pattr = refs.next()) { exattrs.insert(pattr); }
