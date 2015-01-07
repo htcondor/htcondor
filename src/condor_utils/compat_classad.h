@@ -371,12 +371,12 @@ class ClassAd : public classad::ClassAd
     void ChainCollapse();
 
     void GetReferences(const char* attr,
-                StringList &internal_refs,
-                StringList &external_refs);
+                StringList *internal_refs,
+                StringList *external_refs) const;
 
     bool GetExprReferences(const char* expr,
-                StringList &internal_refs,
-                StringList &external_refs);
+                StringList *internal_refs,
+                StringList *external_refs) const;
 
 	static void Reconfig();
 	static bool m_initConfig;
@@ -401,8 +401,8 @@ class ClassAd : public classad::ClassAd
     bool m_dirtyItrInit;
 
 	void _GetReferences(classad::ExprTree *tree,
-						StringList &internal_refs,
-						StringList &external_refs);
+						StringList *internal_refs,
+						StringList *external_refs) const;
 
 	// poison Assign of ExprTree* type for public users
 	// otherwise the compiler will resolve against the bool overload 

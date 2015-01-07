@@ -1136,7 +1136,7 @@ static bool
 GetAllReferencesFromClassAdExpr(char const *expression,StringList &references)
 {
 	ClassAd ad;
-	return ad.GetExprReferences(expression,references,references);
+	return ad.GetExprReferences(expression,NULL,&references);
 }
 
 static int
@@ -4250,9 +4250,8 @@ public:
 		classad::ClassAdUnParser unparser;
 		unparser.Unparse(unparsed, tree);
 
-		StringList my;
 		StringList target;
-		ad.GetExprReferences(unparsed.c_str(), my, target);
+		ad.GetExprReferences(unparsed.c_str(), NULL, &target);
 		constant = target.isEmpty();
 		if (constant) {
 			hard_value = 0;
@@ -5333,7 +5332,7 @@ static void AddReferencedAttribsToBuffer(
 	StringList refs;
 	trefs.clearAll();
 
-	request->GetExprReferences(ATTR_REQUIREMENTS,refs,trefs);
+	request->GetExprReferences(ATTR_REQUIREMENTS,&refs,&trefs);
 	if (refs.isEmpty() && trefs.isEmpty())
 		return;
 

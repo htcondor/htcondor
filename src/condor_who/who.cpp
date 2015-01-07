@@ -251,7 +251,7 @@ void AddPrintColumn(const char * heading, int width, const char * expr)
 {
 	ClassAd ad;
 	StringList attributes;
-	if(!ad.GetExprReferences(expr, attributes, attributes)) {
+	if(!ad.GetExprReferences(expr, NULL, &attributes)) {
 		fprintf( stderr, "Error:  Parse error of: %s\n", expr);
 		exit(1);
 	}
@@ -1146,7 +1146,7 @@ void parse_args(int /*argc*/, char *argv[])
 					if ( ! cust_fmt) {
 						ClassAd ad;
 						StringList attributes;
-						if(!ad.GetExprReferences(parg, attributes, attributes)) {
+						if(!ad.GetExprReferences(parg, NULL, &attributes)) {
 							fprintf( stderr, "Error:  Parse error of: %s\n", parg);
 							exit(1);
 						}

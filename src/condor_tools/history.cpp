@@ -590,7 +590,7 @@ static int parse_autoformat_arg(
 		if ( ! cust_fmt) {
 			ClassAd ad;
 			StringList attributes;
-			if(!ad.GetExprReferences(parg, attributes, attributes)) {
+			if(!ad.GetExprReferences(parg, NULL, &attributes)) {
 				fprintf( stderr, "Error:  Parse error of: %s\n", parg);
 				exit(1);
 			}

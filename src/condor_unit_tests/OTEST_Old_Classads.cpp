@@ -1405,8 +1405,8 @@ static bool test_get_references_simple_true_internal() {
 	classad.initFromString(classad_string, NULL);
 	StringList* internal_references = new StringList;
 	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", *internal_references, 
-		*external_references);
+	classad.GetReferences("Requirements", internal_references, 
+		external_references);
 	bool expect = true;
 	bool result = internal_references->contains("Memory") &&
 		internal_references->contains("Disk");
@@ -1439,8 +1439,8 @@ static bool test_get_references_simple_true_external() {
 	classad.initFromString(classad_string, NULL);
 	StringList* internal_references = new StringList;
 	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", *internal_references, 
-		*external_references);
+	classad.GetReferences("Requirements", internal_references, 
+		external_references);
 	bool expect = true;
 	bool result = external_references->contains("ImageSize") &&
 		external_references->contains("AvailableDisk") &&
@@ -1475,8 +1475,8 @@ static bool test_get_references_simple_false_internal() {
 	classad.initFromString(classad_string, NULL);
 	StringList* internal_references = new StringList;
 	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", *internal_references, 
-		*external_references);
+	classad.GetReferences("Requirements", internal_references, 
+		external_references);
 	bool expect = false;
 	bool result = internal_references->contains("ImageSize") &&
 		internal_references->contains("AvailableDisk") &&
@@ -1511,8 +1511,8 @@ static bool test_get_references_simple_false_external() {
 	classad.initFromString(classad_string, NULL);
 	StringList* internal_references = new StringList;
 	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", *internal_references, 
-		*external_references);
+	classad.GetReferences("Requirements", internal_references, 
+		external_references);
 	bool expect = false;
 	bool result = external_references->contains("Memory") &&
 		external_references->contains("Disk") &&
@@ -1547,8 +1547,8 @@ static bool test_get_references_complex_true_internal() {
 	classad.initFromString(classad_string, NULL);
 	StringList* internal_references = new StringList;
 	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", *internal_references, 
-		*external_references);
+	classad.GetReferences("Requirements", internal_references, 
+		external_references);
 	bool expect = true;
 	bool result = internal_references->contains("Memory") &&
 		internal_references->contains("Disk") &&
@@ -1585,8 +1585,8 @@ static bool test_get_references_complex_true_external() {
 	classad.initFromString(classad_string, NULL);
 	StringList* internal_references = new StringList;
 	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", *internal_references, 
-		*external_references);
+	classad.GetReferences("Requirements", internal_references, 
+		external_references);
 	bool expect = true;
 	bool result = external_references->contains("ImageSize") &&
 		external_references->contains("AvailableDisk") &&
@@ -1622,8 +1622,8 @@ static bool test_get_references_complex_false_internal() {
 	classad.initFromString(classad_string, NULL);
 	StringList* internal_references = new StringList;
 	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", *internal_references, 
-		*external_references);
+	classad.GetReferences("Requirements", internal_references, 
+		external_references);
 	bool expect = false;
 	bool result = internal_references->contains("ImageSize") &&
 		internal_references->contains("AvailableDisk") &&
@@ -1658,8 +1658,8 @@ static bool test_get_references_complex_false_external() {
 	classad.initFromString(classad_string, NULL);
 	StringList* internal_references = new StringList;
 	StringList* external_references = new StringList;
-	classad.GetReferences("Requirements", *internal_references, 
-		*external_references);
+	classad.GetReferences("Requirements", internal_references, 
+		external_references);
 	bool expect = false;
 	bool result = external_references->contains("Memory") &&
 		external_references->contains("Disk") &&

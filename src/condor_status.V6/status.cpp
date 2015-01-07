@@ -1150,7 +1150,7 @@ secondPass (int argc, char *argv[])
 
 			StringList attributes;
 			ClassAd ad;
-			if(!ad.GetExprReferences(argv[i+2],attributes,attributes)){
+			if(!ad.GetExprReferences(argv[i+2],NULL,&attributes)){
 				fprintf( stderr, "Error:  Parse error of: %s\n", argv[i+2]);
 				exit(1);
 			}
@@ -1205,7 +1205,7 @@ secondPass (int argc, char *argv[])
 				++i;
 				ClassAd ad;
 				StringList attributes;
-				if(!ad.GetExprReferences(argv[i],attributes,attributes)){
+				if(!ad.GetExprReferences(argv[i],NULL,&attributes)){
 					fprintf( stderr, "Error:  Parse error of: %s\n", argv[i]);
 					exit(1);
 				}
