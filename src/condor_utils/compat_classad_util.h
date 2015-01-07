@@ -26,7 +26,7 @@ int Parse(const char*str, MyString &name, classad::ExprTree*& tree, int*pos = NU
 
 int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos = NULL);
 
-const char * ExprTreeToString( classad::ExprTree *expr );
+const char * ExprTreeToString( const classad::ExprTree *expr );
 
 bool EvalBool(compat_classad::ClassAd *ad, const char *constraint);
 

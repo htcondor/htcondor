@@ -236,7 +236,7 @@ class ClassAd : public classad::ClassAd
 		 *  @param value Where we the copy value
 		 *  @return 1 on success, 0 if the attribute doesn't exist
 		 */
-	int EvalAttr (const char *name, classad::ClassAd *target, classad::Value & value);
+	int EvalAttr (const char *name, classad::ClassAd *target, classad::Value & value) const;
 
 		/** Lookup and evaluate an attribute in the ClassAd that is a string
 		 *  @param name The name of the attribute
@@ -245,7 +245,7 @@ class ClassAd : public classad::ClassAd
 		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
 		 *  but is not a string.
 		 */
-	int EvalString (const char *name, classad::ClassAd *target, char *value);
+	int EvalString (const char *name, classad::ClassAd *target, char *value) const;
 
         /** Same as EvalString, but ensures we have enough space for value first.
 		 *  @param name The name of the attribute
@@ -255,7 +255,7 @@ class ClassAd : public classad::ClassAd
 		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
 		 *  but is not a string.
          */
-    int EvalString (const char *name, classad::ClassAd *target, char **value);
+    int EvalString (const char *name, classad::ClassAd *target, char **value) const;
         /** MyString version of EvalString()
 		 *  @param name The name of the attribute
 		 *  @param target A ClassAd to resolve MY or other references
@@ -264,7 +264,7 @@ class ClassAd : public classad::ClassAd
 		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
 		 *  but is not a string.
          */
-    int EvalString (const char *name, classad::ClassAd *target, MyString & value);
+    int EvalString (const char *name, classad::ClassAd *target, MyString & value) const;
 
         /** std::string version of EvalString()
 		 *  @param name The name of the attribute
@@ -274,7 +274,7 @@ class ClassAd : public classad::ClassAd
 		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
 		 *  but is not a string.
          */
-    int EvalString (const char *name, classad::ClassAd *target, std::string & value);
+    int EvalString (const char *name, classad::ClassAd *target, std::string & value) const;
 
 		/** Lookup and evaluate an attribute in the ClassAd that is an integer
 		 *  @param name The name of the attribute
@@ -284,8 +284,8 @@ class ClassAd : public classad::ClassAd
 		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
 		 *  but is not an integer
 		 */
-	int EvalInteger (const char *name, classad::ClassAd *target, long long &value);
-	int EvalInteger (const char *name, classad::ClassAd *target, int& value) {
+	int EvalInteger (const char *name, classad::ClassAd *target, long long &value) const;
+	int EvalInteger (const char *name, classad::ClassAd *target, int& value) const {
 		long long ival = 0;
 		int result = EvalInteger(name, target, ival);
 		if ( result ) {
@@ -293,7 +293,7 @@ class ClassAd : public classad::ClassAd
 		}
 		return result;
 	}
-	int EvalInteger (const char *name, classad::ClassAd *target, long & value) {
+	int EvalInteger (const char *name, classad::ClassAd *target, long & value) const {
 		long long ival = 0;
 		int result = EvalInteger(name, target, ival);
 		if ( result ) {
@@ -311,8 +311,8 @@ class ClassAd : public classad::ClassAd
 		 *  but is not a float.
 		 */
 
-	int EvalFloat (const char *name, classad::ClassAd *target, double &value);
-	int EvalFloat (const char *name, classad::ClassAd *target, float &value) {
+	int EvalFloat (const char *name, classad::ClassAd *target, double &value) const;
+	int EvalFloat (const char *name, classad::ClassAd *target, float &value) const {
 		double dval = 0.0;
 		int result = EvalFloat(name, target, dval);
 		if ( result ) {
@@ -329,7 +329,7 @@ class ClassAd : public classad::ClassAd
 		 *  @return 1 on success, 0 if the attribute doesn't exist, or if it does exist 
 		 *  but is not a number.
 		 */
-	int EvalBool  (const char *name, classad::ClassAd *target, int &value);
+	int EvalBool  (const char *name, classad::ClassAd *target, int &value) const;
 
 	bool initFromString(char const *str,MyString *err_msg=NULL);
 
@@ -349,7 +349,7 @@ class ClassAd : public classad::ClassAd
 
 	// Set or clear the dirty flag for each expression.
 	void SetDirtyFlag(const char *name, bool dirty);
-	void GetDirtyFlag(const char *name, bool *exists, bool *dirty);
+	void GetDirtyFlag(const char *name, bool *exists, bool *dirty) const;
 
 	// Copy value of source_attr in source_ad to target_attr
 	// in this ad.  If source_ad is NULL, it defaults to this ad.
