@@ -38,7 +38,6 @@
 #include "scheduler.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_qmgr.h"
 #include "condor_query.h"
 #include "condor_adtypes.h"
 #include "condor_state.h"
@@ -49,6 +48,7 @@
 #include "exit.h"
 #include "dc_startd.h"
 #include "qmgmt.h"
+#include "condor_qmgr.h"
 #include "schedd_negotiate.h"
 
 #include <vector>

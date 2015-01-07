@@ -215,7 +215,7 @@ void Server::Init()
 	collection_log = param( "CKPT_SERVER_CLASSAD_FILE" );
 	if ( collection_log ) {
 		delete CkptClassAds;
-		CkptClassAds = new ClassAdCollection(collection_log);
+		CkptClassAds = new ClassAdCollection(NULL, collection_log);
 		free(collection_log);
 	} else {
 		delete CkptClassAds;

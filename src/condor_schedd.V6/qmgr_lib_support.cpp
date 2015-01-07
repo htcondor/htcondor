@@ -232,7 +232,7 @@ SendSpoolFileBytes(char const *filename)
 
 
 void
-WalkJobQueue3(scan_func func, void* pv, schedd_runtime_probe & /*ftm*/)
+WalkJobQueue2(scan_func func, void* pv)
 {
 	ClassAd *ad;
 	int rval = 0;
@@ -271,3 +271,4 @@ float_to_rusage(double utime, double stime, struct rusage *ru)
 	ru->ru_stime.tv_usec = 0;
 	return 0;
 }
+

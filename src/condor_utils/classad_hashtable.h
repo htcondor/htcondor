@@ -41,17 +41,18 @@ public:
 	HashKey(const std::string &k) { key = strdup(k.c_str()); }
 	HashKey(const HashKey &hk) { key = strdup(hk.key); }
 	~HashKey() { if (key) free(key); }
-	void sprint(MyString &s);
+	void sprint(MyString &s) const;
 	HashKey& operator= (const HashKey& from);
-	const char* value() { if (key) return key; else return "\0"; };
-	//friend std::ostream& operator<< (std::ostream &out, const HashKey &); 
+	const char* value() const { if (key) return key; else return "\0"; };
     friend bool operator== (const HashKey &, const HashKey &);
 	friend unsigned int hashFunction(const HashKey &key);
-private:
+	static unsigned int hash(const HashKey &);
+protected:
 	char *key;
 };
 
 unsigned int hashFunction(const HashKey &);
+
 
 /* AttrKey makes a HashTable key from a char*, with case-insensitive
  * hashing/comparison. It's suitable for use with ClassAd attribute
