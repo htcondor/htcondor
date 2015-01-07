@@ -1456,7 +1456,6 @@ void condor_event_timer () {
     //
     // If DAG is complete, hurray, and exit.
     //
-debug_printf( DEBUG_NORMAL, "DIAG 2010\n" );//TEMPTEMP
     if( dagman.dag->DoneSuccess( true ) ) {
         ASSERT( dagman.dag->NumJobsSubmitted() == 0 );
 		dagman.dag->CheckAllJobs();
@@ -1483,7 +1482,6 @@ debug_printf( DEBUG_NORMAL, "DIAG 2010\n" );//TEMPTEMP
 	//
 	// DAG has succeeded but we haven't run final node yet, so do that.
 	//
-debug_printf( DEBUG_NORMAL, "DIAG 2110\n" );//TEMPTEMP
     if( dagman.dag->DoneSuccess( false ) ) {
 		dagman.dag->StartFinalNode();
 		return;

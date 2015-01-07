@@ -351,28 +351,23 @@ bool Dag::Bootstrap (bool recovery)
 		_jobstateLog.WriteRecoveryFinished();
         debug_printf( DEBUG_NORMAL, "...done with RECOVERY mode "
 					"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" );
-//TEMPTEMP -- I should also figure out why DAGMan didn't think the DAG was finished, even though all of the nodes were finished... -- ahh -- looks like it's because _finalNodeRun is false, because when we read the terminated event in recovery mode, we don't set that to true, which probably is what we want...
-//TEMPTEMP?>>>
-// I'm not sure if I really want to do this, but I want to see if it
-// fixes gittrac #4727.
-// Hmm -- maybe something pretty simple -- if the whole DAG isn't done, the final node can't be done...
-// What if failed node was submitted and failed, rather than not getting submitted? -- probably need to make a test for that...
 
-#if 0 //TEMPTEMP
 			// Fix for gittrac #4727 -- we don't allow a FINAL node to be
 			// marked as done in recovery mode, unless the whole DAG is
 			// finished.
-		if ( !FinishedRunning( true) && _final_job &&
+		if ( !FinishedRunning( true ) && _final_job &&
 					( _final_job->GetStatus() == Job::STATUS_DONE ) ) {
 			--_numNodesDone;
-			//TEMPTEMP -- why is FinishedRunning true when NodeA is unready?!?
+			//TEMPTEMP -- hmm -- should there be a Job method to reset all of this stuff?
 			_final_job->SetStatus( Job::STATUS_NOT_READY );
+			_final_job->retries = 0;
 			_final_job->countedAsDone = false;
-			//TEMPTEMP -- look for other things that should be reset
+			_final_job->_queuedNodeJobProcs = 0;
+			_final_job->_timesHeld = 0;
+			_final_job->_jobProcsOnHold = 0;
+			//TEMPTEMP -- reset _onHold, _gotEvents?
         	debug_printf( DEBUG_NORMAL, "Set final node status to STATUS_NOT_READY\n" );
 		}
-#endif //TEMPTEMP
-//<<<TEMPTEMP
 		print_status();
 
 		_recovery = false;
@@ -1991,9 +1986,7 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 bool
 Dag::FinishedRunning( bool includeFinalNode ) const
 {
-debug_printf( DEBUG_NORMAL, "DIAG 1110\n" );//TEMPTEMP
 	if ( includeFinalNode && _final_job && !_finalNodeRun ) {
-debug_printf( DEBUG_NORMAL, "DIAG 1120\n" );//TEMPTEMP
 			// Make sure we don't incorrectly return true if we get called
 			// just before a final node is started...  (There is a race
 			// condition here otherwise, because all of the "regular"
@@ -2001,15 +1994,11 @@ debug_printf( DEBUG_NORMAL, "DIAG 1120\n" );//TEMPTEMP
 			// ready yet.)
 		return false;
 	} else if ( IsHalted() ) {
-debug_printf( DEBUG_NORMAL, "DIAG 1130\n" );//TEMPTEMP
 			// Note that we're checking for scripts actually running here,
 			// not the number of nodes in the PRERUN or POSTRUN state --
 			// if we're halted, we don't start any new PRE scripts.
 		return NumJobsSubmitted() == 0 && NumScriptsRunning() == 0;
 	}
-debug_printf( DEBUG_NORMAL, "DIAG 1140 submitted: %d\n", NumJobsSubmitted() );//TEMPTEMP
-debug_printf( DEBUG_NORMAL, "DIAG 1141 ready: %d\n", NumNodesReady() );//TEMPTEMP
-debug_printf( DEBUG_NORMAL, "DIAG 1142 script run: %d\n", ScriptRunNodeCount() );//TEMPTEMP
 
 	return NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
 				ScriptRunNodeCount() == 0;
@@ -2019,27 +2008,21 @@ debug_printf( DEBUG_NORMAL, "DIAG 1142 script run: %d\n", ScriptRunNodeCount() )
 bool
 Dag::DoneSuccess( bool includeFinalNode ) const
 {
-debug_printf( DEBUG_NORMAL, "DIAG 1010 includeFinalNode: %d\n", includeFinalNode );//TEMPTEMP
 	if ( !FinishedRunning( includeFinalNode ) ) {
-debug_printf( DEBUG_NORMAL, "DIAG 1020\n" );//TEMPTEMP
 			// Note: if final node is running we should get to here...
 		return false;
 	} else if ( NumNodesDone( includeFinalNode ) ==
 				NumNodes( includeFinalNode ) ) {
-debug_printf( DEBUG_NORMAL, "DIAG 1030\n" );//TEMPTEMP
 			// This is the normal case.
 		return true;
 	} else if ( includeFinalNode && _final_job &&
 				_final_job->GetStatus() == Job::STATUS_DONE ) {
-debug_printf( DEBUG_NORMAL, "DIAG 1040\n" );//TEMPTEMP
 			// Final node can override the overall DAG status.
 		return true;
 	} else if ( _dagIsAborted && _dagStatus == DAG_STATUS_OK ) {
-debug_printf( DEBUG_NORMAL, "DIAG 1050\n" );//TEMPTEMP
 			// Abort-dag-on can override the overall DAG status.
 		return true;
 	}
-debug_printf( DEBUG_NORMAL, "DIAG 1060\n" );//TEMPTEMP
 
 	return false;
 }
@@ -2069,7 +2052,6 @@ Dag::DoneFailed( bool includeFinalNode ) const
 bool
 Dag::DoneCycle( bool includeFinalNode) const
 {
-debug_printf( DEBUG_NORMAL, "DIAG 1210\n" );//TEMPTEMP
 	return FinishedRunning( includeFinalNode ) &&
 				!DoneSuccess( includeFinalNode ) &&
 				NumNodesFailed() == 0 &&
@@ -2918,7 +2900,6 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		return;
 	}
 	
-	//TEMPTEMP -- add && !FinishedRunning(true) here??
 	//TEMPTEMP? if ( !_statusFileOutdated && !held && !removed ) {
 	if ( !_statusFileOutdated && !held && !removed && //TEMPTEMP?
 				!FinishedRunning( true ) && !_dagIsAborted ) {//TEMPTEMP?
@@ -2934,8 +2915,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 				_minStatusUpdateTime);
 	if ( tooSoon && !held && !removed && !FinishedRunning( true ) &&
 				!_dagIsAborted ) {
-		//TEMPTEMP debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
-		debug_printf( DEBUG_QUIET, "Node status file not updated "//TEMPTEMP
+		debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
 					"because min. status update time has not yet passed\n" );
 		return;
 	}
@@ -2946,8 +2926,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		// and then renaming that to the "real" file, so that the
 		// "real" file is always complete.
 		//
-	//TEMPTEMP debug_printf( DEBUG_DEBUG_1, "Updating node status file\n" );
-	debug_printf( DEBUG_QUIET, "Updating node status file\n" );//TEMPTEMP
+	debug_printf( DEBUG_DEBUG_1, "Updating node status file\n" );
 
 	MyString tmpStatusFile( _statusFileName );
 	tmpStatusFile += ".tmp";
@@ -2995,7 +2974,6 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		//
 	Job::status_t dagJobStatus = Job::STATUS_SUBMITTED;
 	const char *statusNote = "";
-debug_printf( DEBUG_NORMAL, "DIAG 1310\n" );//TEMPTEMP
 	if ( DoneSuccess( true ) ) {
 		dagJobStatus = Job::STATUS_DONE;
 		statusNote = "success";
