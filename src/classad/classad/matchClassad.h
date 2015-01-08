@@ -220,35 +220,6 @@ class MatchClassAd : public ClassAd
 		bool EvalMatchExpr(ExprTree *match_expr);
 };
 
-class MatchClassAdDoesNotOwn : public MatchClassAd
-{
-public:
-	MatchClassAdDoesNotOwn() : MatchClassAd() {}
-	MatchClassAdDoesNotOwn(ClassAd* al, ClassAd* ar, bool strictEvaluation=true) : MatchClassAd(al, ar),
-		m_origLeftAltScope(al->alternateScope),
-		m_origRightAltScope(ar->alternateScope)
-	{
-		if (!strictEvaluation)
-		{
-			GetLeftAd()->alternateScope = ar;
-			GetRightAd()->alternateScope = al;
-		}
-	}
-
-	virtual ~MatchClassAdDoesNotOwn()
-	{
-		classad::ClassAd *ad;
-		ad = RemoveLeftAd();
-		ad->alternateScope = m_origLeftAltScope;
-		ad = RemoveRightAd();
-		ad->alternateScope = m_origRightAltScope;
-	}
-
-private:
-	classad::ClassAd *m_origLeftAltScope;
-	classad::ClassAd *m_origRightAltScope;
-};
-
 } // classad
 
 #endif

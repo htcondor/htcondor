@@ -564,6 +564,7 @@ ContactStartdArgs::~ContactStartdArgs()
 static const int USER_HASH_SIZE = 100;
 
 Scheduler::Scheduler() :
+    m_adSchedd(NULL),
     m_adBase(NULL),
 	OtherPoolStats(stats),
 	GridJobOwners(USER_HASH_SIZE, UserIdentity::HashFcn, updateDuplicateKeys),
@@ -695,6 +696,7 @@ Scheduler::Scheduler() :
 
 Scheduler::~Scheduler()
 {
+	delete m_adSchedd;
     delete m_adBase;
 	if (MyShadowSockName)
 		free(MyShadowSockName);
@@ -1129,7 +1131,7 @@ void Scheduler::userlog_file_cache_erase(const int& cluster, const int& proc) {
 int
 Scheduler::count_jobs()
 {
-	ClassAd * cad = m_adSchedd.get();
+	ClassAd * cad = m_adSchedd;
 	int		i, j;
 
 	 // copy owner data to old-owners table
@@ -11822,13 +11824,20 @@ Scheduler::Init()
        // add the basic daemon core attribs
     daemonCore->publish(m_adBase);
 
-    // make a base add for use with chained submitter ads as a copy of the schedd ad
-    // and fill in some standard attribs that will change only on reconfig. 
-    // the rest are added in count_jobs()
-    m_adSchedd.reset(new ClassAd(*m_adBase));
+	// make a base add for use with chained submitter ads as a copy of the schedd ad
+	// and fill in some standard attribs that will change only on reconfig.
+	// the rest are added in count_jobs()
+	// m_adSchedd->CopyFrom( * m_adBase ) is the obvious thing to do here,
+	// but explodes trying to unchain the base ad?  Use a placement new to
+	// maintain the lifetime of the pointer, instead.
+	if( m_adSchedd ) {
+		m_adSchedd = new (m_adSchedd) ClassAd( * m_adBase );
+	} else {
+		m_adSchedd = new ClassAd( * m_adBase );
+	}
 	SetMyTypeName(*m_adSchedd, SCHEDD_ADTYPE);
 	m_adSchedd->Assign(ATTR_NAME, Name);
-	
+
 	// Record the transfer queue expression so the negotiator can predict
 	// which transfer queue a job will use if it starts in the schedd.
 	std::string transfer_queue_expr_str;
@@ -12000,29 +12009,42 @@ Scheduler::Init()
 	slotWeightMapAd = new ClassAd;
 	slotWeightMapAd->initFromString(sswma.c_str());
 
-	std::string commit_reqs;
-	classad::ExprTree *submitReq = NULL;
-	if (param(commit_reqs, "SUBMIT_REQUIREMENTS"))
-	{
-		classad::ClassAdParser parser;
-		if (!(submitReq = parser.ParseExpression(commit_reqs)))
-		{
-			dprintf(D_ALWAYS, "Unable to parse SUBMIT_REQUIREMENTS: %s.  Ignoring.\n", commit_reqs.c_str());
-		}
-	}
-	m_submitReq.reset(submitReq);
+	//
+	// Handle submit requirements.
+	//
+	m_submitRequirements.clear();
+	std::string submitRequirementNames;
+	if( param( submitRequirementNames, "SUBMIT_REQUIREMENT_NAMES" ) ) {
+		StringList srNameList( submitRequirementNames.c_str() );
 
-	std::string commit_fail_reason;
-	classad::ExprTree *submitFailReason = NULL;
-	if (param(commit_fail_reason, "SUBMIT_REQUIREMENTS_REASON"))
-	{
-		classad::ClassAdParser parser;
-		if (!(submitFailReason = parser.ParseExpression(commit_fail_reason)))
-		{
-			dprintf(D_ALWAYS, "Unable to parse SUBMIT_REQUIREMENTS_REASON: %s.  Ignoring.\n", commit_fail_reason.c_str());
+		srNameList.rewind();
+		const char * srName = NULL;
+		while( (srName = srNameList.next()) != NULL ) {
+			if( strcmp( srName, "NAMES" ) == 0 ) { continue; }
+			std::string srAttributeName;
+			formatstr( srAttributeName, "SUBMIT_REQUIREMENT_%s", srName );
+
+			std::string srAttribute;
+			if( param( srAttribute, srAttributeName.c_str() ) ) {
+				// Can this safely be hoisted out of the loop?
+				classad::ClassAdParser parser;
+
+				classad::ExprTree * submitRequirement = parser.ParseExpression( srAttribute );
+				if( submitRequirement != NULL ) {
+					const char * permanentName = strdup( srName );
+					assert( permanentName != NULL );
+					SubmitRequirementsEntry sre = SubmitRequirementsEntry( permanentName, submitRequirement );
+					m_submitRequirements.push_back( sre );
+				} else {
+					dprintf( D_ALWAYS, "Unable to parse submit requirement %s, ignoring.\n", srName );
+				}
+
+				// We could add SUBMIT_REQUIREMENT_<NAME>_REJECT_REASON, as well.
+			} else {
+				dprintf( D_ALWAYS, "Submit requirement %s not defined, ignoring.\n", srName );
+			}
 		}
 	}
-	m_submitFailReason.reset(submitFailReason);
 
 	first_time_in_init = false;
 }
@@ -12138,7 +12160,7 @@ Scheduler::Register()
 	// This is ok, because authorization to do write operations is verified
 	// internally in the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_READ_CMD, "QMGMT_READ_CMD",
-								  (CommandHandler)&::handle_q,
+								  (CommandHandler)&handle_q,
 								  "handle_q", NULL, READ, D_FULLDEBUG );
 
 	// This command always requires authentication.  Therefore, it is
@@ -12147,8 +12169,8 @@ Scheduler::Register()
 	// security session that has to be authenticated every time in
 	// the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_WRITE_CMD, "QMGMT_WRITE_CMD",
-								  (CommandHandlercpp)&Scheduler::handle_q,
-								  "handle_q", this, WRITE, D_FULLDEBUG,
+								  (CommandHandler)&handle_q,
+								  "handle_q", NULL, WRITE, D_FULLDEBUG,
 								  true /* force authentication */ );
 
 	daemonCore->Register_Command( DUMP_STATE, "DUMP_STATE",
@@ -12301,18 +12323,6 @@ Scheduler::RegisterTimers()
 }
 
 
-int
-Scheduler::handle_q(int cmd, Stream *stream)
-{
-	SetCommitRequirements(m_submitReq, m_submitFailReason, m_adSchedd);
-	int retval = ::handle_q(NULL, cmd, stream);
-	classad_shared_ptr<classad::ClassAd> nullAd;
-	classad_shared_ptr<classad::ExprTree> nullReq;
-	SetCommitRequirements(nullReq, nullReq, nullAd);
-	return retval;
-}
-
-
 extern "C" {
 int
 prio_compar(prio_rec* a, prio_rec* b)
@@ -12428,7 +12438,7 @@ void Scheduler::reconfig() {
 void
 Scheduler::update_local_ad_file() 
 {
-	daemonCore->UpdateLocalAd(m_adSchedd.get());
+	daemonCore->UpdateLocalAd(m_adSchedd);
 	return;
 }
 
@@ -14562,7 +14572,7 @@ Scheduler::claimLocalStartd()
 void
 Scheduler::addCronTabClassAd( ClassAd *jobAd )
 {
-	if ( NULL == m_adSchedd.get() ) return;
+	if ( NULL == m_adSchedd ) return;
 	CronTab *cronTab = NULL;
 	PROC_ID id;
 	jobAd->LookupInteger( ATTR_CLUSTER_ID, id.cluster );
@@ -15359,3 +15369,36 @@ Scheduler::launch_local_startd() {
 	return TRUE;
 }
 
+bool
+Scheduler::shouldCheckSubmitRequirements() {
+	return m_submitRequirements.size() != 0;
+}
+
+int
+Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack ) {
+	int rval = 0;
+	int value = 0;
+	ExprTree * originalSR = procAd->Lookup( "SubmitRequirement" );
+	SubmitRequirements::iterator it = m_submitRequirements.begin();
+	for( ; it != m_submitRequirements.end(); ++it ) {
+		// I guess that ClassAd assumes it owns all the ExprTrees inserted
+		// into it, and frees it when I Insert() over it, because without
+		// this copy, each submit attempt effectively removes one requirement.
+		ExprTree * duplicateR = it->requirement->Copy();
+		procAd->Insert( "SubmitRequirement", duplicateR, false );
+		rval = procAd->EvalBool( "SubmitRequirement", m_adSchedd, value );
+		procAd->Insert( "SubmitRequirement", originalSR );
+
+		if( rval ) {
+			if( ! value ) {
+				errorStack->pushf( "QMGMT", 1, "Submit requirement %s not met.\n", it->name );
+				return -1;
+			}
+		} else {
+				errorStack->pushf( "QMGMT", 1, "Submit requirement %s failed to evaluate.\n", it->name );
+				return -2;
+		}
+	}
+
+	return 0;
+}

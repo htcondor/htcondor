@@ -335,8 +335,6 @@ class Scheduler : public Service
 		// requires a new round of negotiation
 	void            needReschedule();
 
-	int handle_q(int, Stream *);
-
 	// [IPV6] These two functions are never called by others.
 	// It is non-IPv6 compatible, though.
 	void			send_all_jobs(ReliSock*, struct sockaddr_in*);
@@ -527,28 +525,44 @@ class Scheduler : public Service
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
 	bool            FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ=true);
-	
+
 		// object to manage our various shadows and their ClassAds
 	ShadowMgr shadow_mgr;
 
 		// hashtable used to hold matching ClassAds for Globus Universe
 		// jobs which desire matchmaking.
 	HashTable <PROC_ID, ClassAd *> *resourcesByProcID;
-  
+
 	bool usesLocalStartd() const { return m_use_startd_for_local;}
 
 	void swappedClaims( DCMsgCallback *cb );
 	bool CheckForClaimSwap(match_rec *rec);
 
-	
+	//
+	// Verifies that the new clusters created in the current transaction
+	// each pass each submit requirement.
+	//
+	bool	shouldCheckSubmitRequirements();
+	int		checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack );
+
 private:
-	
+
+	// We have to evaluate requirements in the listed order to maintain
+	// user sanity, so the submit requirements data structure must ordered.
+	typedef struct SubmitRequirementsEntry_t {
+		const char *		name;
+		classad::ExprTree *	requirement;
+		// const char *		rejectionReason;
+
+		SubmitRequirementsEntry_t( const char * n, classad::ExprTree * r ) : name(n), requirement(r) {}
+	} SubmitRequirementsEntry;
+
+	typedef std::vector< SubmitRequirementsEntry > SubmitRequirements;
+
 	// information about this scheduler
-	classad_shared_ptr<classad::ExprTree> m_submitReq;
-	classad_shared_ptr<classad::ExprTree> m_submitFailReason;
-	classad_shared_ptr<ClassAd>		m_adSchedd;
-	ClassAd*        m_adBase;
-	Scheduler*		myself;
+	SubmitRequirements	m_submitRequirements;
+	ClassAd*			m_adSchedd;
+	ClassAd*        	m_adBase;
 
 	// information about the command port which Shadows use
 	char*			MyShadowSockName;
