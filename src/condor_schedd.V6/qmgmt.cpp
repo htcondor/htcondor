@@ -2625,21 +2625,22 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 	}
 	else if (attr_category & catJobId) {
-		int id = atoi(attr_value);
-		if (attr_id == idATTR_CLUSTER_ID && id != cluster_id) {
+		char *endptr = NULL;
+		int id = (int)strtol(attr_value, &endptr, 10);
+		if (attr_id == idATTR_CLUSTER_ID && (*endptr != '\0' || id != cluster_id)) {
 		#if !defined(WIN32)
 			errno = EACCES;
 		#endif
-			dprintf(D_ALWAYS, "SetAttribute security violation: setting ClusterId to incorrect value (%d!=%d)\n",
-				id, cluster_id);
+			dprintf(D_ALWAYS, "SetAttribute security violation: setting ClusterId to incorrect value (%s!=%d)\n",
+				attr_value, cluster_id);
 			return -1;
 		}
-		if (attr_id == idATTR_PROC_ID && id != proc_id) {
+		if (attr_id == idATTR_PROC_ID && (*endptr != '\0' || id != proc_id)) {
 		#if !defined(WIN32)
 			errno = EACCES;
 		#endif
-			dprintf(D_ALWAYS, "SetAttribute security violation: setting ProcId to incorrect value (%d!=%d)\n",
-				id, proc_id);
+			dprintf(D_ALWAYS, "SetAttribute security violation: setting ProcId to incorrect value (%s!=%d)\n",
+				attr_value, proc_id);
 			return -1;
 		}
 	}
