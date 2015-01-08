@@ -11831,6 +11831,7 @@ Scheduler::Init()
 	// but explodes trying to unchain the base ad?  Use a placement new to
 	// maintain the lifetime of the pointer, instead.
 	if( m_adSchedd ) {
+		m_adSchedd->~ClassAd();
 		m_adSchedd = new (m_adSchedd) ClassAd( * m_adBase );
 	} else {
 		m_adSchedd = new ClassAd( * m_adBase );
@@ -15377,25 +15378,24 @@ Scheduler::shouldCheckSubmitRequirements() {
 int
 Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack ) {
 	int rval = 0;
-	int value = 0;
-	ExprTree * originalSR = procAd->Lookup( "SubmitRequirement" );
 	SubmitRequirements::iterator it = m_submitRequirements.begin();
 	for( ; it != m_submitRequirements.end(); ++it ) {
-		// I guess that ClassAd assumes it owns all the ExprTrees inserted
-		// into it, and frees it when I Insert() over it, because without
-		// this copy, each submit attempt effectively removes one requirement.
-		ExprTree * duplicateR = it->requirement->Copy();
-		procAd->Insert( "SubmitRequirement", duplicateR, false );
-		rval = procAd->EvalBool( "SubmitRequirement", m_adSchedd, value );
-		procAd->Insert( "SubmitRequirement", originalSR );
+		classad::Value result;
+		rval = EvalExprTree( it->requirement, procAd, m_adSchedd, result );
 
 		if( rval ) {
-			if( ! value ) {
-				errorStack->pushf( "QMGMT", 1, "Submit requirement %s not met.\n", it->name );
+			bool bVal;
+			if( ! result.IsBooleanValueEquiv( bVal ) ) {
+				errorStack->pushf( "QMGMT", 1, "Submit requirement %s evaluated to non-boolean.\n", it->name );
+				return -3;
+			}
+
+			if( ! bVal ) {
+				errorStack->pushf( "QMGMT", 2, "Submit requirement %s not met.\n", it->name );
 				return -1;
 			}
 		} else {
-				errorStack->pushf( "QMGMT", 1, "Submit requirement %s failed to evaluate.\n", it->name );
+				errorStack->pushf( "QMGMT", 3, "Submit requirement %s failed to evaluate.\n", it->name );
 				return -2;
 		}
 	}
