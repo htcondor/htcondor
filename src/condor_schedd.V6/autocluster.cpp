@@ -545,7 +545,7 @@ int AutoCluster::getAutoClusterid(JobQueueJob *job)
 
 		// first check if condor_config file even desires this
 		// functionality...
-	if ( ! significant_attrs && current_aggregations.empty()) {
+	if ( ! significant_attrs /*&& current_aggregations.empty()*/) {
 		return -1;
 	}
 
@@ -613,6 +613,7 @@ void AutoCluster::preSetAttribute(JobQueueJob &job, const char * attr, const cha
 
 #ifdef ALLOW_ON_THE_FLY_AGGREGATION
 
+// callback for WalkJobQueue that builds an on-the-fly autocluster set.
 int aggregate_jobs(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void * pv)
 {
 	JobCluster* pjc = (JobCluster*)pv;
@@ -625,22 +626,27 @@ int aggregate_jobs(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void * pv)
 JobAggregationResults * AutoCluster::aggregateOn(
 	bool use_default,
 	const char * projection,
-	const char * /*constraint*/)
+	classad::ExprTree * constraint)
 {
 	if (use_default) {
-		return new JobAggregationResults(*this, projection, true);
+		return new JobAggregationResults(*this, projection, constraint, true);
 	}
 #ifdef ALLOW_ON_THE_FLY_AGGREGATION
 
+	#if 1
+	 JobCluster * pjc = new JobCluster();
+	#else
 	std::map<std::string, JobCluster>::iterator found = current_aggregations.find(projection);
 	if (found != current_aggregations.end()) {
-		return new JobAggregationResults(found->second, projection);
+		return new JobAggregationResults(found->second, projection, constraint);
 	}
 
 	JobCluster jc;
 	current_aggregations[projection] = jc;
 	found = current_aggregations.find(projection);
 	JobCluster * pjc = &found->second;
+	#endif
+
 	pjc->keepJobIds(true);
 	pjc->setSigAttrs(projection, false, true);
 
@@ -653,7 +659,7 @@ JobAggregationResults * AutoCluster::aggregateOn(
 		runtime);
 
 	dprintf(D_ALWAYS, "Spent %.3f sec aggregating on '%s'\n", runtime.Total(), projection);
-	return new JobAggregationResults(*pjc, projection);
+	return new JobAggregationResults(*pjc, projection, constraint);
 #else
 	return NULL;
 #endif
@@ -662,34 +668,70 @@ JobAggregationResults * AutoCluster::aggregateOn(
 
 bool JobAggregationResults::rewind()
 {
+	pause_position.clear();
 	it = jc.cluster_map.begin();
 	return it != jc.cluster_map.end();
 }
 
+// pause iterator, remember the key of the current item, when we resume
+// we will pick back up at that point.
+void JobAggregationResults::pause()
+{
+	pause_position.clear();
+	if (it != jc.cluster_map.end()) {
+		pause_position = it->first;
+	}
+}
+
 ClassAd * JobAggregationResults::next()
 {
-	if (it == jc.cluster_map.end())
-		return NULL;
+	// if we are resuming from a paused state, we don't have a valid iterator
+	// so we have to find the the element we paused at or the first one after it.
+	if ( ! pause_position.empty()) {
+		it = jc.cluster_map.lower_bound(pause_position);
+		pause_position.clear();
+	}
 
+	// in case we never enter the loop, clear our 'current' ad here.
 	ad.Clear();
-	StringTokenIterator iter(it->first, 100, "\n");
-	const char * line;
-	while ((line = iter.next())) {
-		ad.Insert(line);
-	}
-	if (this->is_def_autocluster) {
-		ad.Assign(ATTR_AUTO_CLUSTER_ID,it->second);
-	} else {
-		ad.Assign("Id",it->second);
-	}
-#ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
-	int cJobs = 0;
-	JobCluster::JobIdSetMap::iterator jit = jc.cluster_use.find(it->second);
-	if (jit != jc.cluster_use.end()) { cJobs = jit->second.count(); }
-	ad.Assign("JobCount", cJobs);
-#endif
 
-	++it;
-	return &ad;
+	// we may have to look at multiple items in order to find one to return
+	while (it != jc.cluster_map.end()) {
+
+		ad.Clear();
+
+		// the autocluster key (or signature), is a string containing key value
+		// pairs separated by \n. So we can easily turn it into a classad.
+		StringTokenIterator iter(it->first, 100, "\n");
+		const char * line;
+		while ((line = iter.next())) {
+			ad.Insert(line);
+		}
+		if (this->is_def_autocluster) {
+			ad.Assign(ATTR_AUTO_CLUSTER_ID,it->second);
+		} else {
+			ad.Assign("Id",it->second);
+		}
+	#ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
+		int cJobs = 0;
+		JobCluster::JobIdSetMap::iterator jit = jc.cluster_use.find(it->second);
+		if (jit != jc.cluster_use.end()) { cJobs = jit->second.count(); }
+		ad.Assign("JobCount", cJobs);
+	#endif
+
+		// advance to the next item
+		++it;
+
+		// if there is a constraint, then only return the ad if it matches the constraint.
+		if (constraint) {
+			if ( ! EvalBool(&ad, constraint))
+				continue;
+		}
+
+		// return a pointer to the ad.
+		return &ad;
+	}
+
+	return NULL;
 }
 

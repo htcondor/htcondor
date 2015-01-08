@@ -5187,14 +5187,14 @@ int dump_job_q_stats(int cat)
 	int cItems = 0;
 
 	std::string vis;
-	bool is_verbose = IsDebugVerbose(cat);
+	//bool is_verbose = IsDebugVerbose(cat);
 
 	while (table->iterate_stats(bucket, item) == 1) {
 		if (0 == item) {
 			int skip = bucket - old_bucket;
 			old_bucket = bucket;
 			cEmptyBuckets += skip-1;
-			if (is_verbose) { for (int ii = 0; ii < skip; ++ii) { vis += "\n"; } }
+			//if (is_verbose) { for (int ii = 0; ii < skip; ++ii) { vis += "\n"; } }
 			++cFilledBuckets;
 		} else if (1 == item) {
 			++cOver1Buckets;
@@ -5205,7 +5205,7 @@ int dump_job_q_stats(int cat)
 		}
 		JobQueueKey key;
 		table->getCurrentKey(key);
-		if (is_verbose) { vis += key.cluster ? (key.proc>=0 ? "j" : "c") : "0"; }
+		//if (is_verbose) { vis += key.cluster ? (key.proc>=0 ? "j" : "c") : "0"; }
 		maxItem = MAX(item, maxItem);
 		++cItems;
 	}
@@ -5214,9 +5214,7 @@ int dump_job_q_stats(int cat)
 	extern int job_hash_algorithm;
 	dprintf(cat, "JobQueue hash(%d) table stats: Items=%d, TotalBuckets=%d, EmptyBuckets=%d, UsedBuckets=%d, OverusedBuckets=%d,%d,%d, LongestList=%d\n",
 		job_hash_algorithm, cItems, cTotalBuckets, cEmptyBuckets, cFilledBuckets, cOver1Buckets, cOver2Buckets, cOver3Buckets, maxItem+1);
-	if (is_verbose) {
-		dprintf(cat | D_VERBOSE, "JobQueue {%s}\n", vis.c_str());
-	}
+	//if (is_verbose) dprintf(cat | D_VERBOSE, "JobQueue {%s}\n", vis.c_str());
 
 	return 0;
 }
