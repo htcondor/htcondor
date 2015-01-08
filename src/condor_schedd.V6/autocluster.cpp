@@ -208,46 +208,6 @@ int JobCluster::getClusterid(JobQueueJob & job, bool expand_refs, std::string * 
 	//
 	classad::References exattrs;   // expanded attribs if requested
 	std::vector<ExprTree*> sigset; // significant values, including expanded attribs if requested
-#if 1
-	PRAGMA_REMIND("tj: change this back to use GetInternalReferences once Jaime is done with his refactor there.")
-	StringTokenIterator list(significant_attrs);
-	const std::string * attr;
-	while ((attr = list.next_string())) {
-		ExprTree * tree = job.Lookup(*attr);
-		sigset.push_back(tree);
-		if (expand_refs && tree) {
-			StringList refs;
-			job.GetReferences(attr->c_str(), &refs, NULL);
-			if ( ! refs.isEmpty()) {
-				refs.rewind();
-				for (char * pattr = refs.next(); pattr; pattr = refs.next()) { exattrs.insert(pattr); }
-			}
-		}
-	}
-
-	// if there are expanded refs, walk the expanded attribs list and fetch values for any
-	// that have not already been fetched.
-	if (expand_refs) {
-		if ( ! exattrs.empty()) {
-			// remove expanded attrs that already appear in the significant_attrs list
-			list.rewind();
-			while ((attr = list.next_string())) {
-				classad::References::iterator it = exattrs.find(*attr);
-				if (it != exattrs.end()) {
-					exattrs.erase(it);
-				}
-			}
-			for (classad::References::iterator it = exattrs.begin(); it != exattrs.end(); ++it) {
-				ExprTree * tree = job.Lookup(*it);
-				sigset.push_back(tree);
-			}
-		}
-	}
-#else
-
-	if (expand_refs) {
-		job.InsertAttr("MY","SELF");
-	}
 
 	// walk significant attributes list and fetch values for each attrib
 	// also fetch internal references if requested.
@@ -264,7 +224,6 @@ int JobCluster::getClusterid(JobQueueJob & job, bool expand_refs, std::string * 
 	// if there are expanded refs, walk the expanded attribs list and fetch values for any
 	// that have not already been fetched.
 	if (expand_refs) {
-		job.Delete("MY");
 		if ( ! exattrs.empty()) {
 			// remove expanded attrs that already appear in the significant_attrs list
 			list.rewind();
@@ -280,7 +239,6 @@ int JobCluster::getClusterid(JobQueueJob & job, bool expand_refs, std::string * 
 			}
 		}
 	}
-#endif
 
 	// sigset now contains the values of all the attributes we need,
 	// significant attibutes are first, followed by expanded attributes
