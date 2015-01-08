@@ -2333,12 +2333,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		AddOwnerHistory(owner);
 	}
 	else if (strcasecmp(attr_name, ATTR_CLUSTER_ID) == 0) {
-		if (atoi(attr_value) != cluster_id) {
+		char *endptr = NULL;
+		if (strtol(attr_value, &endptr, 10) != cluster_id || *endptr != '\0') {
 #if !defined(WIN32)
 			errno = EACCES;
 #endif
-			dprintf(D_ALWAYS, "SetAttribute security violation: setting ClusterId to incorrect value (%d!=%d)\n",
-				atoi(attr_value), cluster_id);
+			dprintf(D_ALWAYS, "SetAttribute security violation: setting ClusterId to incorrect value (%s!=%d)\n",
+				attr_value, cluster_id);
 			return -1;
 		}
 	}
@@ -2361,12 +2362,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 	}
 	else if (strcasecmp(attr_name, ATTR_PROC_ID) == 0) {
-		if (atoi(attr_value) != proc_id) {
+		char *endptr = NULL;
+		if (strtol(attr_value, &endptr, 10) != proc_id || *endptr != '\0') {
 #if !defined(WIN32)
 			errno = EACCES;
 #endif
-			dprintf(D_ALWAYS, "SetAttribute security violation: setting ProcId to incorrect value (%d!=%d)\n",
-				atoi(attr_value), proc_id);
+			dprintf(D_ALWAYS, "SetAttribute security violation: setting ProcId to incorrect value (%s!=%d)\n",
+				attr_value, proc_id);
 			return -1;
 		}
 		
