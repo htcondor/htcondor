@@ -2413,6 +2413,11 @@ eval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 		return true;
 	}
 
+	if( state.depth_remaining <= 0 ) {
+		result.SetErrorValue();
+		return false;
+	}
+
 	ClassAdParser parser;
 	ExprTree *expr = NULL;
 	if( !parser.ParseExpression( s.c_str(), expr, true ) || !expr ) {
@@ -2423,9 +2428,13 @@ eval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 		return true;
 	}
 
+	state.depth_remaining--;
+
 	expr->SetParentScope( state.curAd );
 
-	bool eval_ok = expr->Evaluate( result );
+	bool eval_ok = expr->Evaluate( state, result );
+
+	state.depth_remaining++;
 
 	delete expr;
 
