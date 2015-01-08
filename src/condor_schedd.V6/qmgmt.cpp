@@ -2871,7 +2871,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		// Add the key to list of dirty classads
 		if( ! DirtyJobIDs.contains( key.c_str() ) &&
-			SendDirtyJobAdNotification( (PROC_ID)key ) ) {
+			SendDirtyJobAdNotification( key ) ) {
 
 			DirtyJobIDs.append( key.c_str() );
 
