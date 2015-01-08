@@ -1700,7 +1700,7 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 	if( !is_valid_param_name(config_name + is_meta) ) {
 		fprintf( stderr, 
 				 "%s: Error: Configuration variable name (%s) is not valid, alphanumeric and _ only\n",
-				 MyName, config_name + is_meta );
+				 MyName, ((config_name+is_meta)?(config_name+is_meta):"(null)") );
 		my_exit( 1 );
 	}
 
