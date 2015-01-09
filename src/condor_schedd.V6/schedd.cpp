@@ -15375,7 +15375,7 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 	SubmitRequirements::iterator it = m_submitRequirements.begin();
 	for( ; it != m_submitRequirements.end(); ++it ) {
 		classad::Value result;
-		rval = EvalExprTree( it->requirement, procAd, m_adSchedd, result );
+		rval = EvalExprTree( it->requirement, m_adSchedd, procAd, result );
 
 		if( rval ) {
 			bool bVal;
