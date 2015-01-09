@@ -1332,8 +1332,10 @@ processCommandLineArguments (int argc, char *argv[])
 			scheddQuery.addORConstraint (constraint);
 			Q.addSchedd(daemonname);
 
+#ifdef HAVE_EXT_POSTGRESQL
 			sprintf (constraint, "%s == \"%s\"", ATTR_QUILL_NAME, daemonname);
 			scheddQuery.addORConstraint (constraint);
+#endif
 
 			delete [] daemonname;
 			i++;
