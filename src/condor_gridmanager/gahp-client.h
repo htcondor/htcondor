@@ -595,6 +595,8 @@ class GahpClient : public Service {
 						  std::string vpc_ip,
 						  std::string client_token,
 						  std::string block_device_mapping,
+						  std::string iam_profile_arn,
+						  std::string iam_profile_name,
 						  StringList & groupnames,
 						  StringList & groupids,
 						  StringList & parametersAndValues,

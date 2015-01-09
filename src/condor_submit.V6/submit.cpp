@@ -430,6 +430,8 @@ const char* EC2SpotPrice = "ec2_spot_price";
 const char* EC2BlockDeviceMapping = "ec2_block_device_mapping";
 const char* EC2ParamNames = "ec2_parameter_names";
 const char* EC2ParamPrefix = "ec2_parameter_";
+const char* EC2IamProfileArn = "ec2_iam_profile_arn";
+const char* EC2IamProfileName = "ec2_iam_profile_name";
 
 const char* BoincAuthenticatorFile = "boinc_authenticator_file";
 
@@ -5632,7 +5634,7 @@ SetGridParams()
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_USER_DATA, tmp);
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
-	}	
+	}
 
 	// EC2UserDataFile is not a necessary parameter
 	if( (tmp = condor_param( EC2UserDataFile, ATTR_EC2_USER_DATA_FILE )) ) {
@@ -5649,6 +5651,26 @@ SetGridParams()
 				full_path(tmp) );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
+	}
+
+	// You can only have one IAM [Instance] Profile, so you can only use
+	// one of the ARN or the Name.
+	bool bIamProfilePresent = false;
+	if( (tmp = condor_param( EC2IamProfileArn, ATTR_EC2_IAM_PROFILE_ARN )) ) {
+		bIamProfilePresent = true;
+		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_IAM_PROFILE_ARN, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	}
+
+	if( (tmp = condor_param( EC2IamProfileName, ATTR_EC2_IAM_PROFILE_ARN )) ) {
+		if( bIamProfilePresent ) {
+			fprintf( stderr, "\nWARNING: EC2 job(s) contain both %s and %s; ignoring %s.\n", EC2IamProfileArn, EC2IamProfileName, EC2IamProfileName );
+		} else {
+			buffer.formatstr( "%s = \"%s\"", ATTR_EC2_IAM_PROFILE_NAME, tmp );
+			InsertJobExpr( buffer.Value() );
+		}
+		free( tmp );
 	}
 
 	//
@@ -6981,7 +7003,7 @@ check_requirements( char const *orig, MyString &answer )
 	req_ad.Assign(ATTR_REQUEST_MEMORY,0);
 	req_ad.Assign(ATTR_CKPT_ARCH,"");
 
-	req_ad.GetExprReferences(answer.Value(),job_refs,machine_refs);
+	req_ad.GetExprReferences(answer.Value(),&job_refs,&machine_refs);
 
 	checks_arch = machine_refs.contains_anycase( ATTR_ARCH );
 	checks_opsys = machine_refs.contains_anycase( ATTR_OPSYS ) ||
@@ -8225,7 +8247,7 @@ void SetVMRequirements()
 	req_ad.Assign(ATTR_CKPT_ARCH,"");
 	req_ad.Assign(ATTR_VM_CKPT_MAC,"");
 
-	req_ad.GetExprReferences(vmanswer.Value(),job_refs,machine_refs);
+	req_ad.GetExprReferences(vmanswer.Value(),&job_refs,&machine_refs);
 
 	// check file system domain
 	if( vm_need_fsdomain ) {

@@ -209,6 +209,8 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	jobAd->LookupString( ATTR_EC2_VPC_SUBNET, m_vpc_subnet );
 	jobAd->LookupString( ATTR_EC2_VPC_IP, m_vpc_ip );
 	jobAd->LookupString( ATTR_EC2_BLOCK_DEVICE_MAPPING, m_block_device_mapping );
+	jobAd->LookupString( ATTR_EC2_IAM_PROFILE_ARN, m_iam_profile_arn );
+	jobAd->LookupString( ATTR_EC2_IAM_PROFILE_NAME, m_iam_profile_name );
 
 	// There's no reason not to build the list of group names here, as well.
 	{
@@ -796,6 +798,8 @@ void EC2Job::doEvaluateState()
 											 m_vpc_ip,
 											 m_client_token,
 											 m_block_device_mapping,
+											 m_iam_profile_arn,
+											 m_iam_profile_name,
 											 *m_group_names,
 											 *m_group_ids,
 											 *m_parameters_and_values,

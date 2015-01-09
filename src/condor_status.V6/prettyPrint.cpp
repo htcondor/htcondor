@@ -85,7 +85,6 @@ static void ppInit()
 	//pm.SetAutoSep(NULL, " (", ")", "\n"); // for debugging, delimit the field data explicitly
 }
 
-#ifdef AD_PRINTMASK_V2
 enum ivfield {
 	BlankInvalidField = 0,
 	WideInvalidField = 1,
@@ -99,54 +98,6 @@ public:
 private:
 	const char * m_lbl;
 };
-#else
-const char *StdInvalidField = "[?]"; // fill field with ??? surrounded by [], if 
-#endif
-
-#ifdef AD_PRINTMASK_V2
-#else
-// construct a string if the form "[????]" that is the given width
-// into the supplied buffer, output not to exceed max_buf, and
-// if the buffer or width is < 3, then return "?" instead of "[?]"
-static const char * ppMakeFieldofQuestions(int width, char * buf, int buf_size)
-{
-	if (buf_size < 2)
-		return "";
-
-	int cq = width;
-	if (cq < 0) 
-		cq = 0-width;
-
-	cq = MIN(buf_size-1, cq);
-
-	if (cq < 3) {
-		strcpy(buf, "?");
-	} else {
-		buf[cq] = 0;
-		buf[--cq] = ']';
-		while (--cq) buf[cq] = '?';
-		buf[0] = '[';
-	}
-	return buf;
-}
-
-static const char *MinInvalidField = "[?]"; // fill field with ??? surrounded by [], if 
-
-static const char * ppMakeInvalidField(int width, const char * alt, char * buf, int buf_size)
-{
-	if (alt == MinInvalidField) {
-		if (invalid_fields_empty) 
-			return "";
-		// make a field-width string of "[????]" for the alt string.
-		return ppMakeFieldofQuestions(width, buf, buf_size);
-	} else if ( ! alt) {
-		return "";
-	}
-	return alt;
-}
-#endif
-
-#ifdef AD_PRINTMASK_V2
 
 static int ppWidthOpts(int width, int truncate)
 {
@@ -236,72 +187,6 @@ static void ppSetColumn(const char * attr, const CustomFormatFn & fmt, const cha
 	ppSetColumnFormat(fmt, print, width, truncate, alt, attr);
 }
 */
-#else
-
-static void ppSetColumn(const char * label, const char * attr, int width, bool truncate, const char * alt)
-{
-	pm_head.Append(label ? label : attr);
-
-	int opts = FormatOptionAutoWidth;
-	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-
-	char altq[22];
-	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
-
-	pm.registerFormat("%v", width, opts, attr, alt);
-}
-
-
-static void ppSetColumn(const char * label, const char * attr, const char * fmt, bool truncate = true, const char * alt = NULL)
-{
-	pm_head.Append(label ? label : attr);
-
-	int width = 0;
-	int opts = FormatOptionAutoWidth;
-	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-
-	char altq[22];
-	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
-
-	pm.registerFormat(fmt, width, opts, attr, alt);
-}
-
-static void ppSetColumn(const char * label, const char * attr, const CustomFormatFn & fmt, int width, bool truncate = true, const char * alt = NULL)
-{
-	pm_head.Append(label ? label : attr);
-
-	int opts = FormatOptionAutoWidth;
-	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-
-	if (width == 11 && fmt.IsNumber() && (fmt.Is(formatElapsedTime) || fmt.Is(formatRealTime))) {
-		opts |= FormatOptionNoPrefix;
-		width = 12;
-	}
-
-	char altq[22];
-	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
-
-	pm.registerFormat(NULL, width, opts, fmt, attr, alt);
-}
-
-static void ppSetColumn(const char * label, const char * attr, const CustomFormatFn & fmt, const char * print, int width, bool truncate = true, const char * alt = NULL)
-{
-	pm_head.Append(label ? label : attr);
-
-	int opts = FormatOptionAutoWidth;
-	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-
-	char altq[22];
-	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
-
-	pm.registerFormat(print, width, opts, fmt, attr, alt);
-}
-
-#endif
 
 
 static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)

@@ -1136,7 +1136,7 @@ static bool
 GetAllReferencesFromClassAdExpr(char const *expression,StringList &references)
 {
 	ClassAd ad;
-	return ad.GetExprReferences(expression,references,references);
+	return ad.GetExprReferences(expression,NULL,&references);
 }
 
 static int
@@ -1549,6 +1549,8 @@ processCommandLineArguments (int argc, char *argv[])
 			bool fCapV  = false;
 			bool fheadings = false;
 			bool fJobId = false;
+			bool fRaw = false;
+			const char * prowpre = NULL;
 			const char * pcolpre = " ";
 			const char * pcolsux = NULL;
 			if (pcolon) {
@@ -1558,9 +1560,11 @@ processCommandLineArguments (int argc, char *argv[])
 					{
 						case ',': pcolsux = ","; break;
 						case 'n': pcolsux = "\n"; break;
+						case 'g': pcolpre = NULL; prowpre = "\n"; break;
 						case 't': pcolpre = "\t"; break;
 						case 'l': flabel = true; break;
 						case 'V': fCapV = true; break;
+						case 'r': case 'o': fRaw = true; break;
 						case 'h': fheadings = true; break;
 						case 'j': fJobId = true; break;
 					}
@@ -1568,19 +1572,11 @@ processCommandLineArguments (int argc, char *argv[])
 				}
 			}
 			if (fJobId) {
-#if 1
 				if (fheadings || mask.has_headings()) {
 					mask.set_heading(" ID");
 					mask.registerFormat (flabel ? "ID = %4d." : "%4d.", 5, FormatOptionAutoWidth | FormatOptionNoSuffix, ATTR_CLUSTER_ID);
 					mask.set_heading(" ");
 					mask.registerFormat ("%-3d", 3, FormatOptionAutoWidth | FormatOptionNoPrefix, ATTR_PROC_ID);
-#else
-				if (fheadings || mask_head.Length() > 0) {
-					mask_head.Append(" ID");
-					mask_head.Append(" ");
-					mask.registerFormat (flabel ? "ID = %4d." : "%4d.", 5, FormatOptionAutoWidth | FormatOptionNoSuffix, ATTR_CLUSTER_ID);
-					mask.registerFormat ("%-3d", 3, FormatOptionAutoWidth | FormatOptionNoPrefix, ATTR_PROC_ID);
-#endif
 				} else {
 					mask.registerFormat (flabel ? "ID = %d." : "%d.", 0, FormatOptionNoSuffix, ATTR_CLUSTER_ID);
 					mask.registerFormat ("%d", 0, FormatOptionNoPrefix, ATTR_PROC_ID);
@@ -1594,26 +1590,17 @@ processCommandLineArguments (int argc, char *argv[])
 				MyString lbl = "";
 				int wid = 0;
 				int opts = FormatOptionNoTruncate;
-#if 1
 				if (fheadings || mask.has_headings()) {
 					const char * hd = fheadings ? argv[i] : "(expr)";
 					wid = 0 - (int)strlen(hd);
 					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
 					mask.set_heading(hd);
 				}
-#else
-				if (fheadings || mask_head.Length() > 0) { 
-					const char * hd = fheadings ? argv[i] : "(expr)";
-					wid = 0 - (int)strlen(hd); 
-					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
-					mask_head.Append(hd);
-				}
-#endif
 				else if (flabel) { lbl.formatstr("%s = ", argv[i]); wid = 0; opts = 0; }
-				lbl += fCapV ? "%V" : "%v";
+				lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
 				mask.registerFormat(lbl.Value(), wid, opts, argv[i]);
 			}
-			mask.SetAutoSep(NULL, pcolpre, pcolsux, "\n");
+			mask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
 			customHeadFoot = HF_BARE;
 			if (fheadings) { customHeadFoot = (printmask_headerfooter_t)(customHeadFoot & ~HF_NOHEADER); }
 			usingPrintMask = true;
@@ -4250,9 +4237,8 @@ public:
 		classad::ClassAdUnParser unparser;
 		unparser.Unparse(unparsed, tree);
 
-		StringList my;
 		StringList target;
-		ad.GetExprReferences(unparsed.c_str(), my, target);
+		ad.GetExprReferences(unparsed.c_str(), NULL, &target);
 		constant = target.isEmpty();
 		if (constant) {
 			hard_value = 0;
@@ -5333,7 +5319,7 @@ static void AddReferencedAttribsToBuffer(
 	StringList refs;
 	trefs.clearAll();
 
-	request->GetExprReferences(ATTR_REQUIREMENTS,refs,trefs);
+	request->GetExprReferences(ATTR_REQUIREMENTS,&refs,&trefs);
 	if (refs.isEmpty() && trefs.isEmpty())
 		return;
 

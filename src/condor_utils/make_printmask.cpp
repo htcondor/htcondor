@@ -466,7 +466,7 @@ int SetAttrListPrintMaskFromStream (
 			} else {
 				mask.registerFormat(fmt, wid, opts, attr.c_str());
 			}
-			ad.GetExprReferences(attr.c_str() ,attrs, attrs);
+			ad.GetExprReferences(attr.c_str(), NULL, &attrs);
 		}
 		break;
 
@@ -523,7 +523,7 @@ int SetAttrListPrintMaskFromStream (
 			if (key.expr.empty() || key.expr[0] == '#')
 				continue;
 
-			if ( ! ad.GetExprReferences(key.expr.c_str(), attrs, attrs)) {
+			if ( ! ad.GetExprReferences(key.expr.c_str(), NULL, &attrs)) {
 				formatstr_cat(error_message, "GROUP BY expression is not valid: %s\n", key.expr.c_str());
 			} else {
 				group_by.push_back(key);

@@ -694,11 +694,6 @@ bool AmazonVMStart::SendRequest() {
     return result;
 }
 
-// Expecting:
-// EC2_VM_START	<req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
-// 				<ami-id> <keypair> <userdata> <userdatafile> <instancetype>
-//				<security-group-name>* <NULLSTRING>
-//				<security-group-id>* <NULLSTRING>
 bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_string) {
     assert( strcasecmp( argv[0], "EC2_VM_START" ) == 0 );
 
@@ -732,7 +727,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
 
 	unsigned positionInList = 0;
 	unsigned which = 0;
-	for( int i = 15; i < argc; ++i ) {
+	for( int i = 17; i < argc; ++i ) {
 		if( strcasecmp( argv[i], NULLSTRING ) == 0 ) {
 			++which;
 			positionInList = 0;
@@ -819,6 +814,15 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
 			vmStartRequest.query_parameters[ deviceName.str() ] = pair.next();
 		}
 	}
+
+	if( strcasecmp( argv[15], NULLSTRING ) ) {
+		vmStartRequest.query_parameters[ "IamInstanceProfile.Arn" ] = argv[15];
+	}
+
+	if( strcasecmp( argv[16], NULLSTRING ) ) {
+		vmStartRequest.query_parameters[ "IamInstanceProfile.Name" ] = argv[16];
+	}
+
 
     //
     // Handle user data.

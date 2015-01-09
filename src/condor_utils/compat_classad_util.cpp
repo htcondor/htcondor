@@ -78,7 +78,7 @@ int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 
 /* TODO This function needs to be tested.
  */
-const char *ExprTreeToString( classad::ExprTree *expr )
+const char *ExprTreeToString( const classad::ExprTree *expr )
 {
 	static std::string buffer;
 	classad::ClassAdUnParser unparser;

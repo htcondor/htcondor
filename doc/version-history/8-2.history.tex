@@ -54,6 +54,11 @@ was set to 1 in the memory cgroup controller, jobs would frequently receive
 the SIGKILL signal or be requeued with a shadow exception instead of
 being put on hold for going over memory. \Ticket{4774}
 
+\item Fixed a bug in ClassAds that can cause a crash if an attribute's
+value includes an \Expr{eval()} function that references the attribute's
+name.
+\Ticket{4813}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

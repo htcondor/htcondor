@@ -915,6 +915,8 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_EC2_BLOCK_DEVICE_MAPPING "EC2BlockDeviceMapping"
 #define ATTR_EC2_PARAM_NAMES  "EC2ParamNames"
 #define ATTR_EC2_PARAM_PREFIX  "EC2Param"
+#define ATTR_EC2_IAM_PROFILE_ARN  "EC2IamProfileArn"
+#define ATTR_EC2_IAM_PROFILE_NAME  "EC2IamProfileName"
 
 //************* End of changes for EC2 Jobs *****************//
 

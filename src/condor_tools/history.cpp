@@ -532,7 +532,9 @@ static int parse_autoformat_arg(
 {
 	bool flabel = false;
 	bool fCapV  = false;
+	bool fRaw = false;
 	bool fheadings = false;
+	const char * prowpre = NULL;
 	const char * pcolpre = " ";
 	const char * pcolsux = NULL;
 	if (popts) {
@@ -541,15 +543,17 @@ static int parse_autoformat_arg(
 			{
 				case ',': pcolsux = ","; break;
 				case 'n': pcolsux = "\n"; break;
+				case 'g': pcolpre = NULL; prowpre = "\n"; break;
 				case 't': pcolpre = "\t"; break;
 				case 'l': flabel = true; break;
 				case 'V': fCapV = true; break;
+				case 'r': case 'o': fRaw = true; break;
 				case 'h': fheadings = true; break;
 			}
 			++popts;
 		}
 	}
-	print_mask.SetAutoSep(NULL, pcolpre, pcolsux, "\n");
+	print_mask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
 
 	while (argv[ixArg] && *(argv[ixArg]) != '-') {
 
@@ -590,7 +594,7 @@ static int parse_autoformat_arg(
 		if ( ! cust_fmt) {
 			ClassAd ad;
 			StringList attributes;
-			if(!ad.GetExprReferences(parg, attributes, attributes)) {
+			if(!ad.GetExprReferences(parg, NULL, &attributes)) {
 				fprintf( stderr, "Error:  Parse error of: %s\n", parg);
 				exit(1);
 			}
@@ -613,7 +617,7 @@ static int parse_autoformat_arg(
 		}
 		else if (flabel) { lbl.formatstr("%s = ", parg); wid = 0; opts = 0; }
 
-		lbl += fCapV ? "%V" : "%v";
+		lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
 		if (diagnostic) {
 			printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for %llx[%s]\n",
 				ixArg, lbl.Value(), wid, opts, (long long)(StringCustomFormat)cust_fmt, pattr);

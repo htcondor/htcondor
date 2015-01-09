@@ -65,6 +65,7 @@ template <>
 class ConstructClassAdLogTableEntry<ClassAd*> : public ConstructLogEntry
 {
 public:
+	ConstructClassAdLogTableEntry() {}
 	virtual ClassAd* New() const { return new ClassAd(); }
 	virtual void Delete(ClassAd*& val) const { delete val; }
 };
