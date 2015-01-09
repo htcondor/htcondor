@@ -771,26 +771,6 @@ e		*/
 		ClassAd       *chained_parent_ad;
 };
 
-class ParentScopeGuard
-{
-public:
-	ParentScopeGuard(ExprTree &expr, const ClassAd *scope_ptr)
-		: m_orig(expr.GetParentScope()), m_expr(expr), m_new(scope_ptr)
-	{
-		if (m_new) {m_expr.SetParentScope(scope_ptr);}
-	}
-
-	~ParentScopeGuard()
-	{
-		if (m_new) {m_expr.SetParentScope(m_orig);}
-	}
-
-private:
-	const ClassAd *m_orig;
-	ExprTree &m_expr;
-	const ClassAd *m_new;
-};
-
 } // classad
 
 #include "classad/classadItor.h"

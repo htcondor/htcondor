@@ -67,6 +67,25 @@ bool ExprTreeHolder::ShouldEvaluate() const
            m_expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE;
 }
 
+class ScopeGuard
+{
+public:
+    ScopeGuard(classad::ExprTree &expr, const classad::ClassAd *scope_ptr)
+       : m_orig(expr.GetParentScope()), m_expr(expr), m_new(scope_ptr)
+    {
+        if (m_new) m_expr.SetParentScope(scope_ptr);
+    }
+    ~ScopeGuard()
+    {
+        if (m_new) m_expr.SetParentScope(m_orig);
+    }
+
+private:
+    const classad::ClassAd *m_orig;
+    classad::ExprTree &m_expr;
+    const classad::ClassAd *m_new;
+    
+};
 
 static boost::python::object
 convert_value_to_python(const classad::Value &value)
@@ -178,7 +197,7 @@ boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) cons
     const classad::ClassAd *origParent = m_expr->GetParentScope();
     if (origParent || scope_ptr)
     {
-        classad::ParentScopeGuard guard(*m_expr, scope_ptr);
+        ScopeGuard guard(*m_expr, scope_ptr);
         bool evalresult = m_expr->Evaluate(value);
         if (PyErr_Occurred()) {boost::python::throw_error_already_set();}
         if (!evalresult)
