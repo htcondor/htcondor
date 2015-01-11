@@ -2893,11 +2893,9 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		return;
 	}
 	
-	//TEMPTEMP? if ( !_statusFileOutdated && !held && !removed ) {
-	if ( !_statusFileOutdated && !held && !removed && //TEMPTEMP?
-				!FinishedRunning( true ) && !_dagIsAborted ) {//TEMPTEMP?
-		//TEMPTEMP debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
-		debug_printf( DEBUG_QUIET, "Node status file not updated "//TEMPTEMP
+	if ( !_statusFileOutdated && !held && !removed &&
+				!FinishedRunning( true ) && !_dagIsAborted ) {
+		debug_printf( DEBUG_DEBUG_1, "Node status file not updated "
 					"because it is not yet outdated\n" );
 		return;
 	}
