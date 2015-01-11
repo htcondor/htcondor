@@ -950,9 +950,12 @@ FileTransfer::ComputeFilesToSend()
 		Directory dir( Iwd, desired_priv_state );
 
 		const char *proxy_file = NULL;
+		std::string proxy_file_lmt;
 		MyString proxy_file_buf;		
 		if(jobAd.LookupString(ATTR_X509_USER_PROXY, proxy_file_buf)) {			
 			proxy_file = condor_basename(proxy_file_buf.Value());
+			proxy_file_lmt = proxy_file;
+			proxy_file_lmt += ".lmt";
 		}
 
 		const char *f;
@@ -964,6 +967,14 @@ FileTransfer::ComputeFilesToSend()
 			}			
 			if( proxy_file && file_strcmp(f, proxy_file) == MATCH ) {
 				dprintf( D_FULLDEBUG, "Skipping %s\n", f );
+				continue;
+			}
+				// The blahp, if used, will create a limited proxy in the job's
+				// working directory named $PROXY.lmt, where $PROXY is the original
+				// proxy name.  We don't want to transfer this back out.
+			if (proxy_file_lmt.size() && file_strcmp(f, proxy_file_lmt.c_str()) == MATCH)
+			{
+				dprintf(D_FULLDEBUG, "Skipping delegated proxy %s\n", f);
 				continue;
 			}
 

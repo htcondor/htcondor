@@ -441,6 +441,7 @@ JICShadow::transferOutput( bool &transient_failure )
 		if (m_wrote_chirp_config) {
 			filetrans->addFileToExeptionList(CHIRP_CONFIG_FILENAME);
 		}
+		filetrans->addFileToExeptionList(".condor_pid_ns_status");
 	
 			// true if job exited on its own or if we are set to not spool
 			// on eviction.
