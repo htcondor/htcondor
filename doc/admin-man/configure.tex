@@ -10155,8 +10155,7 @@ in section~\ref{sec:DAG-configuration}.
   the configuration variable.  Unfortunately,
   \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} currently counts each individual
   process within a cluster as a job, which is inconsistent with
-  \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}.  The default is that there is
-  no limit on the maximum number of idle jobs. 
+  \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}.
   Note that nothing special is 
   done to the submit description file.
   If a submit description file contains \Expr{queue 5000}
@@ -10165,6 +10164,8 @@ in section~\ref{sec:DAG-configuration}.
   not 250; in this case, no
   further jobs will then be submitted by \Condor{dagman} until the number of
   idle jobs falls below 250.
+  As of version 8.3.3, the default for \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE}
+  is 1000.
 
 \label{param:DAGManMaxJobsSubmitted}
 \item[\Macro{DAGMAN\_MAX\_JOBS\_SUBMITTED}]

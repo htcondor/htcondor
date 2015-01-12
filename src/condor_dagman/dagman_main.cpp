@@ -99,7 +99,7 @@ static void Usage() {
 
 Dagman::Dagman() :
 	dag (NULL),
-	maxIdle (0),
+	maxIdle (1000),
 	maxJobs (0),
 	maxPreScripts (0),
 	maxPostScripts (0),

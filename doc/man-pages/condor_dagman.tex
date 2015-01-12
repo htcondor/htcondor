@@ -117,7 +117,10 @@ output DAG input file lines as they are parsed
        \Arg{NumberOfJobs} is a positive integer.
        This command-line option to \Condor{submit\_dag} is passed to
        \Condor{dagman}.
-       If not specified, the number of idle jobs is unlimited. 
+       If not specified, the number of idle jobs is defined by the
+       \Macro{DAGMAN\_MAX\_JOBS\_IDLE} configuration macro which, as
+       of version 8.3.3, defaults to 1000.
+       See section~\ref{param:DAGManMaxJobsIdle} for details.
        Note that nothing special is done to the submit description file.
        Setting \Expr{queue 5000} in the submit description file,
        where \Arg{-maxidle} is set to 250 will result in a cluster
