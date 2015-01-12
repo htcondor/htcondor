@@ -130,6 +130,8 @@ A \Arg{JOB} entry maps a \Arg{JobName} to an HTCondor submit description file.
 The \Arg{JobName} uniquely identifies nodes within the
 DAGMan input file and in output messages.
 Each node name, given by \Arg{JobName}, within the DAG must be unique.
+The \Arg{JOB} entry must appear within the DAG input file before
+other items that reference the node.
 
 The keywords \Arg{JOB}, \Arg{DIR}, \Arg{NOOP}, and \Arg{DONE}
 are not case sensitive.
