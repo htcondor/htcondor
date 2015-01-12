@@ -563,9 +563,9 @@ ContactStartdArgs::~ContactStartdArgs()
 static const int USER_HASH_SIZE = 100;
 
 Scheduler::Scheduler() :
+	OtherPoolStats(stats),
     m_adSchedd(NULL),
     m_adBase(NULL),
-	OtherPoolStats(stats),
 	GridJobOwners(USER_HASH_SIZE, UserIdentity::HashFcn, updateDuplicateKeys),
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
@@ -5234,6 +5234,12 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 			dprintf( D_FULLDEBUG, "(%d.%d) Killing shadow %d\n", 
 				(int) job_id.cluster, (int)job_id.proc, (int)(srec->pid));
 			scheduler.sendSignalToShadow(srec->pid, SIGKILL, job_id);
+			// TODO Should we try to upadte the JobsRestartReconnectsBadput
+			//   stat on a forcex?
+			if ( srec->is_reconnect && !srec->reconnect_succeeded ) {
+				scheduler.stats.JobsRestartReconnectsAttempting += -1;
+				scheduler.stats.JobsRestartReconnectsFailed += 1;
+			}
 		}
 
 		break;
@@ -10361,6 +10367,11 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// Based on the job's exit code, we will perform different actions
 		// on the job
 		//
+		// TODO If this was a reconnect shadow and it didn't indicate that
+		//   reconnect succeeded and its exit code isn't
+		//   JOB_RECONNECT_FAILED, then we don't know whether reconnect
+		//   succeeded. We should decrement JobsRestartReconnectsAttempting,
+		//   but which reconnect stat should we increment?
 	if ( exit_code == JOB_RECONNECT_FAILED ) {
 		// Treat JOB_RECONNECT_FAILED exit code just like JOB_SHOULD_REQUEUE,
 		// except also update a few JobRestartReconnect statistics.

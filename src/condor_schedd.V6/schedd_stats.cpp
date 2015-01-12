@@ -181,6 +181,8 @@ void ScheddStatistics::InitMain()
 
    InitJobCounters(Pool, IF_BASICPUB);
 
+   JobsRestartReconnectsBadput.set_levels(default_job_hist_lifes, COUNTOF(default_job_hist_lifes));
+
    SCHEDD_STATS_ADD_RECENT(Pool, JobsSubmitted,        IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, Autoclusters,         IF_BASICPUB);
 
