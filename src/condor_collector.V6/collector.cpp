@@ -998,11 +998,10 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	// If ABSENT_REQUIREMENTS is defined, rewrite filter to filter-out absent ads 
 	// if ATTR_ABSENT is not alrady referenced in the query.
 	if ( filterAbsentAds ) {	// filterAbsentAds is true if ABSENT_REQUIREMENTS defined
-		StringList job_refs;      // job attrs referenced by requirements
 		StringList machine_refs;  // machine attrs referenced by requirements
 		bool checks_absent = false;
 
-		query->GetReferences(ATTR_REQUIREMENTS,job_refs,machine_refs);
+		query->GetReferences(ATTR_REQUIREMENTS,NULL,&machine_refs);
 		checks_absent = machine_refs.contains_anycase( ATTR_ABSENT );
 		if (!checks_absent) {
 			MyString modified_filter;
@@ -1828,10 +1827,9 @@ computeProjection(ClassAd *full_ad, SimpleList<MyString> *projectionList,StringL
 		// For each expression in the list...
 	MyString attr;
 	while (projectionList->Next(attr)) {
-		StringList externals; // shouldn't have any
 
 			// Get the indirect attributes
-		if( !full_ad->GetExprReferences(attr.Value(), expanded_projection, externals) ) {
+		if( !full_ad->GetExprReferences(attr.Value(), &expanded_projection, NULL) ) {
 			dprintf(D_FULLDEBUG,
 				"computeProjection failed to parse "
 				"requested ClassAd expression: %s\n",attr.Value());

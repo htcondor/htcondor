@@ -1150,7 +1150,7 @@ secondPass (int argc, char *argv[])
 
 			StringList attributes;
 			ClassAd ad;
-			if(!ad.GetExprReferences(argv[i+2],attributes,attributes)){
+			if(!ad.GetExprReferences(argv[i+2],NULL,&attributes)){
 				fprintf( stderr, "Error:  Parse error of: %s\n", argv[i+2]);
 				exit(1);
 			}
@@ -1181,7 +1181,9 @@ secondPass (int argc, char *argv[])
 
 			bool flabel = false;
 			bool fCapV  = false;
+			bool fRaw = false;
 			bool fheadings = false;
+			const char * prowpre = NULL;
 			const char * pcolpre = " ";
 			const char * pcolsux = NULL;
 			if (pcolon) {
@@ -1191,21 +1193,23 @@ secondPass (int argc, char *argv[])
 					{
 						case ',': pcolsux = ","; break;
 						case 'n': pcolsux = "\n"; break;
+						case 'g': pcolpre = NULL; prowpre = "\n"; break;
 						case 't': pcolpre = "\t"; break;
 						case 'l': flabel = true; break;
 						case 'V': fCapV = true; break;
+						case 'r': case 'o': fRaw = true; break;
 						case 'h': fheadings = true; break;
 					}
 					++pcolon;
 				}
 			}
-			pm.SetAutoSep(NULL, pcolpre, pcolsux, "\n");
+			pm.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
 
 			while (argv[i+1] && *(argv[i+1]) != '-') {
 				++i;
 				ClassAd ad;
 				StringList attributes;
-				if(!ad.GetExprReferences(argv[i],attributes,attributes)){
+				if(!ad.GetExprReferences(argv[i],NULL,&attributes)){
 					fprintf( stderr, "Error:  Parse error of: %s\n", argv[i]);
 					exit(1);
 				}
@@ -1226,7 +1230,7 @@ secondPass (int argc, char *argv[])
 					pm_head.Append(hd);
 				}
 				else if (flabel) { lbl.formatstr("%s = ", argv[i]); wid = 0; opts = 0; }
-				lbl += fCapV ? "%V" : "%v";
+				lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
 				if (diagnose) {
 					printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for [%s]\n",
 							i, lbl.Value(), wid, opts,  argv[i]);

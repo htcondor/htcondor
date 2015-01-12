@@ -2625,21 +2625,22 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 	}
 	else if (attr_category & catJobId) {
-		int id = atoi(attr_value);
-		if (attr_id == idATTR_CLUSTER_ID && id != cluster_id) {
+		char *endptr = NULL;
+		int id = (int)strtol(attr_value, &endptr, 10);
+		if (attr_id == idATTR_CLUSTER_ID && (*endptr != '\0' || id != cluster_id)) {
 		#if !defined(WIN32)
 			errno = EACCES;
 		#endif
-			dprintf(D_ALWAYS, "SetAttribute security violation: setting ClusterId to incorrect value (%d!=%d)\n",
-				id, cluster_id);
+			dprintf(D_ALWAYS, "SetAttribute security violation: setting ClusterId to incorrect value (%s!=%d)\n",
+				attr_value, cluster_id);
 			return -1;
 		}
-		if (attr_id == idATTR_PROC_ID && id != proc_id) {
+		if (attr_id == idATTR_PROC_ID && (*endptr != '\0' || id != proc_id)) {
 		#if !defined(WIN32)
 			errno = EACCES;
 		#endif
-			dprintf(D_ALWAYS, "SetAttribute security violation: setting ProcId to incorrect value (%d!=%d)\n",
-				id, proc_id);
+			dprintf(D_ALWAYS, "SetAttribute security violation: setting ProcId to incorrect value (%s!=%d)\n",
+				attr_value, proc_id);
 			return -1;
 		}
 	}
@@ -2871,7 +2872,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		// Add the key to list of dirty classads
 		if( ! DirtyJobIDs.contains( key.c_str() ) &&
-			SendDirtyJobAdNotification( (PROC_ID)key ) ) {
+			SendDirtyJobAdNotification( key ) ) {
 
 			DirtyJobIDs.append( key.c_str() );
 
@@ -5187,14 +5188,14 @@ int dump_job_q_stats(int cat)
 	int cItems = 0;
 
 	std::string vis;
-	bool is_verbose = IsDebugVerbose(cat);
+	//bool is_verbose = IsDebugVerbose(cat);
 
 	while (table->iterate_stats(bucket, item) == 1) {
 		if (0 == item) {
 			int skip = bucket - old_bucket;
 			old_bucket = bucket;
 			cEmptyBuckets += skip-1;
-			if (is_verbose) { for (int ii = 0; ii < skip; ++ii) { vis += "\n"; } }
+			//if (is_verbose) { for (int ii = 0; ii < skip; ++ii) { vis += "\n"; } }
 			++cFilledBuckets;
 		} else if (1 == item) {
 			++cOver1Buckets;
@@ -5205,7 +5206,7 @@ int dump_job_q_stats(int cat)
 		}
 		JobQueueKey key;
 		table->getCurrentKey(key);
-		if (is_verbose) { vis += key.cluster ? (key.proc>=0 ? "j" : "c") : "0"; }
+		//if (is_verbose) { vis += key.cluster ? (key.proc>=0 ? "j" : "c") : "0"; }
 		maxItem = MAX(item, maxItem);
 		++cItems;
 	}
@@ -5214,9 +5215,7 @@ int dump_job_q_stats(int cat)
 	extern int job_hash_algorithm;
 	dprintf(cat, "JobQueue hash(%d) table stats: Items=%d, TotalBuckets=%d, EmptyBuckets=%d, UsedBuckets=%d, OverusedBuckets=%d,%d,%d, LongestList=%d\n",
 		job_hash_algorithm, cItems, cTotalBuckets, cEmptyBuckets, cFilledBuckets, cOver1Buckets, cOver2Buckets, cOver3Buckets, maxItem+1);
-	if (is_verbose) {
-		dprintf(cat | D_VERBOSE, "JobQueue {%s}\n", vis.c_str());
-	}
+	//if (is_verbose) dprintf(cat | D_VERBOSE, "JobQueue {%s}\n", vis.c_str());
 
 	return 0;
 }

@@ -1014,7 +1014,6 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 	ClassAd *startd_ad = NULL;
 	ClassAd *sample_startd_ad = NULL;
 	startdAds.Open ();
-	StringList internal_references;	// not used...
 	StringList external_references;	// this is what we want to compute. 
 	while ((startd_ad = startdAds.Next ())) { // iterate through all startd ads
 		if ( !sample_startd_ad ) {
@@ -1033,8 +1032,8 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 			// and rank.  Don't understand why? Ask Todd <tannenba@cs.wisc.edu>
 		AttrsToExpand.rewind();
 		while ( (attr_name = AttrsToExpand.next()) ) {
-			startd_ad->GetReferences(attr_name,internal_references,
-					external_references);
+			startd_ad->GetReferences(attr_name,NULL,
+					&external_references);
 		}	// while attr_name
 	}	// while startd_ad
 
@@ -1061,8 +1060,8 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 	if ( tmp && PreemptionReq ) {	// add references from preemption_requirements
 		const char* preempt_req_name = "preempt_req__";	// any name will do
 		sample_startd_ad->AssignExpr(preempt_req_name,tmp);
-		sample_startd_ad->GetReferences(preempt_req_name,internal_references,
-					external_references);
+		sample_startd_ad->GetReferences(preempt_req_name,NULL,
+					&external_references);
 	}
 	free(tmp);
 	if (sample_startd_ad) {

@@ -6998,7 +6998,7 @@ check_requirements( char const *orig, MyString &answer )
 	req_ad.Assign(ATTR_REQUEST_MEMORY,0);
 	req_ad.Assign(ATTR_CKPT_ARCH,"");
 
-	req_ad.GetExprReferences(answer.Value(),job_refs,machine_refs);
+	req_ad.GetExprReferences(answer.Value(),&job_refs,&machine_refs);
 
 	checks_arch = machine_refs.contains_anycase( ATTR_ARCH );
 	checks_opsys = machine_refs.contains_anycase( ATTR_OPSYS ) ||
@@ -8242,7 +8242,7 @@ void SetVMRequirements()
 	req_ad.Assign(ATTR_CKPT_ARCH,"");
 	req_ad.Assign(ATTR_VM_CKPT_MAC,"");
 
-	req_ad.GetExprReferences(vmanswer.Value(),job_refs,machine_refs);
+	req_ad.GetExprReferences(vmanswer.Value(),&job_refs,&machine_refs);
 
 	// check file system domain
 	if( vm_need_fsdomain ) {

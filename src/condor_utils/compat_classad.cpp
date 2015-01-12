@@ -1938,7 +1938,7 @@ SetDirtyFlag(const char *name, bool dirty)
 }
 
 void ClassAd::
-GetDirtyFlag(const char *name, bool *exists, bool *dirty)
+GetDirtyFlag(const char *name, bool *exists, bool *dirty) const
 {
 	if ( Lookup( name ) == NULL ) {
 		if ( exists ) {
@@ -2092,8 +2092,8 @@ void ClassAd::ChainCollapse()
 
 void ClassAd::
 GetReferences(const char* attr,
-                StringList &internal_refs,
-                StringList &external_refs)
+                StringList *internal_refs,
+                StringList *external_refs) const
 {
     ExprTree *tree;
 
@@ -2106,8 +2106,8 @@ GetReferences(const char* attr,
 
 bool ClassAd::
 GetExprReferences(const char* expr,
-				  StringList &internal_refs,
-				  StringList &external_refs)
+				  StringList *internal_refs,
+				  StringList *external_refs) const
 {
 	classad::ClassAdParser par;
 	classad::ExprTree *tree = NULL;
@@ -2152,8 +2152,8 @@ static void AppendReference( StringList &reflist, char const *name )
 
 void ClassAd::
 _GetReferences(classad::ExprTree *tree,
-			   StringList &internal_refs,
-			   StringList &external_refs)
+			   StringList *internal_refs,
+			   StringList *external_refs) const
 {
 	if ( tree == NULL ) {
 		return;
@@ -2164,10 +2164,10 @@ _GetReferences(classad::ExprTree *tree,
 	classad::References::iterator set_itr;
 
 	bool ok = true;
-	if( !GetExternalReferences(tree, ext_refs_set, true) ) {
+	if( external_refs && !GetExternalReferences(tree, ext_refs_set, true) ) {
 		ok = false;
 	}
-	if( !GetInternalReferences(tree, int_refs_set, true) ) {
+	if( internal_refs && !GetInternalReferences(tree, int_refs_set, true) ) {
 		ok = false;
 	}
 	if( !ok ) {
@@ -2182,30 +2182,34 @@ _GetReferences(classad::ExprTree *tree,
 		// StringLists.  This scales better than trying to remove
 		// duplicates while inserting into the StringList.
 
-	for ( set_itr = ext_refs_set.begin(); set_itr != ext_refs_set.end();
-		  set_itr++ ) {
-		const char *name = set_itr->c_str();
+	if ( external_refs ) {
+		for ( set_itr = ext_refs_set.begin(); set_itr != ext_refs_set.end();
+			  set_itr++ ) {
+			const char *name = set_itr->c_str();
 			// Check for references to things in the MatchClassAd
 			// and do the right thing.  This does not cover all
 			// possible ways of referencing things in the match ad,
 			// but it covers the ones users are expected to use
 			// and the ones expected from OptimizeAdForMatchmaking.
-		if ( strncasecmp( name, "target.", 7 ) == 0 ) {
-			AppendReference( external_refs, &set_itr->c_str()[7] );
-		} else if ( strncasecmp( name, "other.", 6 ) == 0 ) {
-			AppendReference( external_refs, &set_itr->c_str()[6] );
-		} else if ( strncasecmp( name, ".left.", 6 ) == 0 ) {
-			AppendReference( external_refs, &set_itr->c_str()[6] );
-		} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
-			AppendReference( external_refs, &set_itr->c_str()[7] );
-		} else {
-			AppendReference( external_refs, set_itr->c_str() );
+			if ( strncasecmp( name, "target.", 7 ) == 0 ) {
+				AppendReference( *external_refs, &set_itr->c_str()[7] );
+			} else if ( strncasecmp( name, "other.", 6 ) == 0 ) {
+				AppendReference( *external_refs, &set_itr->c_str()[6] );
+			} else if ( strncasecmp( name, ".left.", 6 ) == 0 ) {
+				AppendReference( *external_refs, &set_itr->c_str()[6] );
+			} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
+				AppendReference( *external_refs, &set_itr->c_str()[7] );
+			} else {
+				AppendReference( *external_refs, set_itr->c_str() );
+			}
 		}
 	}
 
-	for ( set_itr = int_refs_set.begin(); set_itr != int_refs_set.end();
-		  set_itr++ ) {
-		AppendReference( internal_refs, set_itr->c_str() );
+	if ( internal_refs ) {
+		for ( set_itr = int_refs_set.begin(); set_itr != int_refs_set.end();
+			  set_itr++ ) {
+			AppendReference( *internal_refs, set_itr->c_str() );
+		}
 	}
 }
 
