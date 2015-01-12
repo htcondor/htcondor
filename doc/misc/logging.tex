@@ -171,6 +171,37 @@ Listed here are details of the logs, to aid in identification.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGMan-logs}DAGMan Logs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+
+\item[default node log]
+  A job event log of all node jobs within a single DAG.
+  It is used to enforce the dependencies of the DAG.
+
+  The file name is set by configuration variable 
+  \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}, 
+  and the full path name of this file must be unique while any and 
+  all submitted DAGs  and other jobs from the submit host run.
+  The syntax used in the definition of this configuration variable is
+  different to enable the setting of a unique file name.
+  See section~\ref{param:DAGManDefaultNodeLog} for the complete definition.
+
+  Configuration variables that affect this log are
+  \begin{description}
+  \item [\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}] 
+  \end{description}
+
+\item[the \File{.dagman.out} file]
+  Configuration variables that affect this log are
+  \begin{description}
+  \item [\Macro{DAGMAN\_VERBOSITY}] 
+  \item [\Macro{DAGMAN\_PENDING\_REPORT\_INTERVAL}] 
+  \end{description}
+
+\item[the \File{jobstate.log} file]
+  
+
+\end{description}
+
 \MoreTodo
 
 \index{logging|)}
