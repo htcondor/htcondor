@@ -12028,7 +12028,20 @@ Scheduler::Init()
 				if( submitRequirement != NULL ) {
 					const char * permanentName = strdup( srName );
 					assert( permanentName != NULL );
-					SubmitRequirementsEntry sre = SubmitRequirementsEntry( permanentName, submitRequirement );
+
+					// Handle the corresponding rejection reason.
+					std::string srrAttribute;
+					std::string srrAttributeName;
+					classad::ExprTree * submitReason = NULL;
+					formatstr( srrAttributeName, "SUBMIT_REQUIREMENT_%s_REASON", srName );
+					if( param( srrAttribute, srrAttributeName.c_str() ) ) {
+						submitReason = parser.ParseExpression( srrAttribute );
+						if( submitReason == NULL ) {
+							dprintf( D_ALWAYS, "Unable to parse submit requirement reason %s, ignoring.\n", srName );
+						}
+					}
+
+					SubmitRequirementsEntry sre = SubmitRequirementsEntry( permanentName, submitRequirement, submitReason );
 					m_submitRequirements.push_back( sre );
 				} else {
 					dprintf( D_ALWAYS, "Unable to parse submit requirement %s, ignoring.\n", srName );
@@ -15385,7 +15398,25 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 			}
 
 			if( ! bVal ) {
-				errorStack->pushf( "QMGMT", 2, "Submit requirement %s not met.\n", it->name );
+				classad::Value reason;
+				std::string reasonString;
+				formatstr( reasonString, "Submit requirement %s not met.\n", it->name );
+
+				if( it->reason != NULL ) {
+					int sval = EvalExprTree( it->reason, m_adSchedd, procAd, reason );
+					if( ! sval ) {
+						dprintf( D_ALWAYS, "Submit requirement reason %s failed to evaluate.\n", it->name );
+					} else {
+						std::string userReasonString;
+						if( reason.IsStringValue( userReasonString ) ) {
+							reasonString = userReasonString;
+						} else {
+							dprintf( D_ALWAYS, "Submit requirement reason %s did not evaluate to a string.\n", it->name );
+						}
+					}
+				}
+
+				errorStack->pushf( "QMGMT", 2, reasonString.c_str() );
 				return -1;
 			}
 		} else {

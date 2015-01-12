@@ -552,9 +552,9 @@ private:
 	typedef struct SubmitRequirementsEntry_t {
 		const char *		name;
 		classad::ExprTree *	requirement;
-		// const char *		rejectionReason;
+		classad::ExprTree * reason;
 
-		SubmitRequirementsEntry_t( const char * n, classad::ExprTree * r ) : name(n), requirement(r) {}
+		SubmitRequirementsEntry_t( const char * n, classad::ExprTree * r, classad::ExprTree * rr ) : name(n), requirement(r), reason(rr) {}
 	} SubmitRequirementsEntry;
 
 	typedef std::vector< SubmitRequirementsEntry > SubmitRequirements;
