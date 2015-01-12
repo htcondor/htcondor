@@ -47,7 +47,8 @@ static const float PriorityDelta = 0.5;
 // request matched against them
 #define CP_MATCH_COST "_cp_match_cost"
 
-class ClassAdLog;
+template <typename K, typename AltK, typename AD> class ClassAdLog;
+class HashKey;
 struct GroupEntry;
 
 class Accountant {
@@ -153,7 +154,7 @@ private:
   // Data members
   //--------------------------------------------------------
 
-  ClassAdLog* AcctLog;
+  ClassAdLog<HashKey, const char*, ClassAd*> * AcctLog;
   int LastUpdateTime;
 
   HashTable<MyString, double> concurrencyLimits;

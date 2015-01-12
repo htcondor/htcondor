@@ -46,7 +46,7 @@ if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND Boost_PYTHON_LIBRARY AND NOT 
   target_link_libraries( classad_python_user condor_utils pyclassad )
   set_target_properties(classad_python_user PROPERTIES SUFFIX ".so" )
   if ( NOT CMAKE_SKIP_RPATH )
-    set_target_properties(classad_python_user PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+    set_target_properties(classad_python_user PROPERTIES INSTALL_RPATH "${CONDOR_RPATH}")
   endif()
   install ( TARGETS classad_python_user DESTINATION "${C_LIBEXEC}" )
 

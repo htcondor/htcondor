@@ -25,11 +25,10 @@
 
 #include "condor_classad.h"
 #include <generic_stats.h>
-//#include "string_list.h"
 
 class JobIdSet;
 class JobAggregationResults;
-typedef ClassAd JobQueueJob;
+class JobQueueJob;
 
 class JobCluster {
 public:
@@ -40,7 +39,7 @@ public:
 #ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
 	void keepJobIds(bool keep) { keep_job_ids = keep; }
 #endif
-	int getClusterid(JobQueueJob &job, PROC_ID & jid, bool expand_refs, std::string * final_list);
+	int getClusterid(JobQueueJob &job, bool expand_refs, std::string * final_list);
 	int size();
 	void clear();
 #ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
@@ -56,7 +55,7 @@ protected:
 	typedef std::map<int, JobIdSet> JobIdSetMap;
 	JobIdSetMap cluster_use; // map clusterId to a set of jobIds
 	std::set<int> cluster_gone; // holds the set of deleted clusters until the next garbage collect pass
-	JobIdSetMap::iterator find(const PROC_ID & jid); // get current cluster id for a given job
+	JobIdSetMap::iterator find(const JOB_ID_KEY & jid); // get current cluster id for a given job
 #endif
 	int next_id;
 	const char *significant_attrs;
@@ -112,7 +111,7 @@ public:
 		@return The autocluster id for this job, or -1 if it cannot
 		be computed.
 	*/
-	int getAutoClusterid(JobQueueJob *job, PROC_ID & jid);
+	int getAutoClusterid(JobQueueJob *job);
 
 		// garbage collection methods...
 
@@ -134,14 +133,12 @@ public:
 
 	/** Create (or find) and aggregation on the given projection
 	  */
-	JobAggregationResults * aggregateOn(bool use_default, const char * projection, const char * constraint);
+	JobAggregationResults * aggregateOn(bool use_default, const char * projection, classad::ExprTree * constraint);
 
 	/** called just before setAttribute sets an attribute value so that we can decide whether
 	  * or not to invalidate the autocluster
 	  */
-#ifdef ALLOW_ON_THE_FLY_AGGREGATION
 	void preSetAttribute(JobQueueJob & job, const char * attr, const char * value, int flags);
-#endif
 
 	/** Return number of active autoclusters
 	  */
@@ -154,23 +151,36 @@ protected:
 	JobClusterIDs cluster_in_use; // used by mark & sweep code. id in list if in use
 
 	// used by the aggregateOn option
-	std::map<std::string, JobCluster> current_aggregations;
+	// std::map<std::string, JobCluster> current_aggregations;
 };
 
 // this class is use to hold job-aggregation results
 class JobAggregationResults {
 public:
-	JobAggregationResults(JobCluster& jc_, const char * proj_, bool is_def_=false)
-		: jc(jc_), projection(proj_?proj_:""), is_def_autocluster(is_def_) {}
+	JobAggregationResults(JobCluster& jc_, const char * proj_, classad::ExprTree * constraint_=NULL, bool is_def_=false)
+		: jc(jc_), projection(proj_?proj_:""), constraint(NULL), is_def_autocluster(is_def_)
+	{
+		if (constraint_) constraint = constraint_->Copy();
+	}
+	~JobAggregationResults()
+	{
+		if (constraint) delete constraint; constraint = NULL;
+	#ifdef ALLOW_ON_THE_FLY_AGGREGATION
+		if (!is_def_autocluster) delete &jc;
+	#endif
+	}
 	ClassAd * next();
 	bool rewind();
+	void pause(); // remember the iterator location, but don't hold an actual iterator because it may go invalid while paused.
 
 protected:
 	JobCluster & jc;
 	std::string projection;
+	classad::ExprTree * constraint;
 	bool is_def_autocluster;
 	ClassAd ad;
 	JobCluster::JobSigidMap::iterator it;
+	std::string pause_position; // holds the key that the iterator was pointing to before we paused.
 };
 
 

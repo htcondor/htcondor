@@ -1954,7 +1954,7 @@ class DaemonCore : public Service
     int                 WatchPid(PidEntry *pidentry);
 #endif
             
-    static              TimerManager t;
+    TimerManager &t;
     void                DumpTimerList(int, const char* = NULL);
 
 	SecMan	    		*sec_man;

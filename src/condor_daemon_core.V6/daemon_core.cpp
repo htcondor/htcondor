@@ -230,8 +230,6 @@ void **curr_regdataptr;
 
 extern void drop_addr_file( void );
 
-TimerManager DaemonCore::t;
-
 // Hash function for pid table.
 static unsigned int compute_pid_hash(const pid_t &key)
 {
@@ -242,7 +240,10 @@ static unsigned int compute_pid_hash(const pid_t &key)
 
 DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 				int SocSize,int ReapSize,int PipeSize)
-	: comTable(32), sigTable(10), reapTable(4)
+	: comTable(32),
+	sigTable(10),
+	reapTable(4),
+	t(TimerManager::GetTimerManager())
 {
 
 	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || PidSize < 0 || ReapSize < 0)

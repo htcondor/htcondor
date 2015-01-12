@@ -27,6 +27,7 @@
 #include "condor_version.h"
 #include "condor_attributes.h"
 #include "scheduler.h"
+#include "qmgmt.h"
 #include "condor_qmgr.h"
 #include "CondorError.h"
 #include "MyString.h"
@@ -634,7 +635,7 @@ ScheddTransaction::commit()
 	int universe;
 	jobs.startIterations();
 	while (jobs.iterate(currentKey, job)) {
-		job_ad = GetJobAd( currentKey.cluster, currentKey.proc );
+		job_ad = GetJobAd_as_ClassAd( currentKey.cluster, currentKey.proc );
 		if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 			 universe == CONDOR_UNIVERSE_GRID ) {
 
@@ -713,10 +714,10 @@ int
 ScheddTransaction::queryJobAds(const char *constraint, List<ClassAd> &ads)
 {
 		// XXX: Do this in a transaction (for ACID reasons)
-	ClassAd *ad = GetNextJobByConstraint(constraint, 1);
+	ClassAd *ad = GetNextJobByConstraint_as_ClassAd(constraint, 1);
 	while (ad) {
 		ads.Append(ad);
-		ad = GetNextJobByConstraint(constraint, 0);
+		ad = GetNextJobByConstraint_as_ClassAd(constraint, 0);
 	}
 
 	return 0;
@@ -725,7 +726,7 @@ ScheddTransaction::queryJobAds(const char *constraint, List<ClassAd> &ads)
 int
 ScheddTransaction::queryJobAd(PROC_ID id, ClassAd *&ad)
 {
-	ad = GetJobAd(id.cluster, id.proc);
+	ad = GetJobAd_as_ClassAd(id.cluster, id.proc);
 
 	return 0;
 }

@@ -99,7 +99,9 @@ private:
 	StringList* build_groupnames();
 
 	std::string m_serviceUrl;
-	
+
+	std::string m_iam_profile_arn;
+	std::string m_iam_profile_name;
 	std::string m_public_key_file;
 	std::string m_private_key_file;
 	std::string m_user_data;

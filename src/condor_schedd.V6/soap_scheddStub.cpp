@@ -25,6 +25,7 @@
 #include "condor_version.h"
 #include "condor_attributes.h"
 #include "scheduler.h"
+#include "qmgmt.h"
 #include "condor_qmgr.h"
 #include "CondorError.h"
 #include "MyString.h"
@@ -47,7 +48,6 @@ using namespace soap_schedd;
 #include "../condor_utils/soap_helpers.cpp"
 #include "../condor_utils/dc_service.cpp"
 
-#include "qmgmt.h"
 
 static int current_trans_id = 0;
 static int trans_timer_id = -1;

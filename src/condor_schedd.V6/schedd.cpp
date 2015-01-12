@@ -112,8 +112,8 @@ extern char *gen_ckpt_name();
 
 extern GridUniverseLogic* _gridlogic;
 
-#include "condor_qmgr.h"
 #include "qmgmt.h"
+#include "condor_qmgr.h"
 #include "condor_vm_universe_types.h"
 #include "enum_utils.h"
 
@@ -159,7 +159,7 @@ void send_vacate(match_rec*, int);
 void mark_job_stopped(PROC_ID*);
 void mark_job_running(PROC_ID*);
 void mark_serial_job_running( PROC_ID *job_id );
-int fixAttrUser( ClassAd *job );
+int fixAttrUser( ClassAd *job, void* );
 shadow_rec * find_shadow_rec(PROC_ID*);
 bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
@@ -168,7 +168,8 @@ bool jobPrepNeedsThread( int cluster, int proc );
 bool jobCleanupNeedsThread( int cluster, int proc );
 bool jobExternallyManaged(ClassAd * ad);
 bool jobManagedDone(ClassAd * ad);
-int  count_a_job( ClassAd *job );
+int  count_a_job( JobQueueJob *job, const JOB_ID_KEY& jid, void* user);
+void mark_jobs_idle();
 static void WriteCompletionVisa(ClassAd* ad);
 
 schedd_runtime_probe WalkJobQ_check_for_spool_zombies_runtime;
@@ -823,7 +824,7 @@ Scheduler::~Scheduler()
 // If a job has been spooling for 12 hours,
 // It may well be that the remote condor_submit died
 // So we kill this job
-int check_for_spool_zombies(ClassAd *ad)
+int check_for_spool_zombies(ClassAd *ad, void*)
 {
 	int cluster;
 	if( !ad->LookupInteger( ATTR_CLUSTER_ID, cluster) ) {
@@ -1887,7 +1888,7 @@ struct QueryJobAdsContinuation : Service {
 
 	classad_shared_ptr<classad::ExprTree> requirements;
 	classad::References projection;
-	ClassAdLog::filter_iterator it;
+	JobQueueLogType::filter_iterator it;
 	int match_limit;
 	int match_count;
 	bool unfinished_eom;
@@ -1899,7 +1900,7 @@ struct QueryJobAdsContinuation : Service {
 
 QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int match, int timeslice_ms)
 	: requirements(requirements_),
-	  it(BeginIterator(*requirements, timeslice_ms)),
+	  it(GetJobQueueIterator(*requirements, timeslice_ms)),
 	  match_limit(match),
 	  match_count(0),
 	  unfinished_eom(false),
@@ -1909,13 +1910,13 @@ QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::Exp
 
 int
 QueryJobAdsContinuation::finish(Stream *stream) {
-        ReliSock *sock = static_cast<ReliSock*>(stream);
-        ClassAdLog::filter_iterator end = EndIterator();
+	ReliSock *sock = static_cast<ReliSock*>(stream);
+	JobQueueLogType::filter_iterator end = GetJobQueueIteratorEnd();
 	if (match_limit >= 0 && (match_count >= match_limit))
 	{
 		it = end;
 	}
-        bool has_backlog = false;
+	bool has_backlog = false;
 
 	if (unfinished_eom) {
 		int retval = sock->finish_end_of_message();
@@ -1928,7 +1929,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 			return sendJobErrorAd(sock, 5, "Failed to write EOM to wire");
 		}
 	}
-        while ((it != end) && !has_backlog) {
+	while ((it != end) && !has_backlog) {
 		ClassAd* tmp_ad = *it++;
 		if (!tmp_ad) {
 			// Return to DC in case if our time ran out.
@@ -1947,23 +1948,23 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		match_count++;
 		if (retval == 2) {
 			//dprintf(D_FULLDEBUG, "Detecting backlog.\n");
-                        has_backlog = true;
-                } else if (!retval) {
-			delete this;
-                        return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
-                }
-                retval = sock->end_of_message_nonblocking();
-                if (sock->clear_backlog_flag()) {
-			//dprintf(D_FULLDEBUG, "Socket EOM will block.\n");
-                        unfinished_eom = true;
 			has_backlog = true;
-                }
+		} else if (!retval) {
+			delete this;
+			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
+		}
+		retval = sock->end_of_message_nonblocking();
+		if (sock->clear_backlog_flag()) {
+			//dprintf(D_FULLDEBUG, "Socket EOM will block.\n");
+			unfinished_eom = true;
+			has_backlog = true;
+		}
 		if (match_limit >= 0 && (match_count >= match_limit))
 		{
 			it = end;
 		}
-        }
-        if (has_backlog && !registered_socket) {
+	}
+	if (has_backlog && !registered_socket) {
 		int retval = daemonCore->Register_Socket(stream, "Client Response",
 			(SocketHandlercpp)&QueryJobAdsContinuation::finish,
 			"Query Job Ads Continuation", this, ALLOW, HANDLE_WRITE);
@@ -1972,7 +1973,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
 		}
 		registered_socket = true;
-        } else if (!has_backlog) {
+	} else if (!has_backlog) {
 		//dprintf(D_FULLDEBUG, "Finishing condor_q.\n");
 		delete this;
 		return sendDone(sock);
@@ -1992,9 +1993,11 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	}
 
 	// if the groupby or useautocluster attributes exist and are true
+	bool group_by = false;
+	queryAd.LookupBool("ProjectionIsGroupBy", group_by);
 	bool query_autocluster = false;
 	queryAd.LookupBool("QueryDefaultAutocluster", query_autocluster);
-	if (query_autocluster) {
+	if (query_autocluster || group_by) {
 		return command_query_job_aggregates(queryAd, stream);
 	}
 
@@ -2042,16 +2045,21 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	}
 }
 
-void * BeginJobAggregation(const char * projection, bool create_if_not, const char * constraint)
+void * BeginJobAggregation(bool use_def_autocluster, const char * projection, classad::ExprTree *constraint)
 {
 	JobAggregationResults *jar = NULL;
-	if (create_if_not) {
-		jar = scheduler.autocluster.aggregateOn(false, projection, constraint);
-	} else {
-		jar = new JobAggregationResults(scheduler.autocluster, projection, true);
-	}
+	jar = scheduler.autocluster.aggregateOn(use_def_autocluster, projection, constraint);
 	return (void*)jar;
 }
+
+void PauseJobAggregation(void * aggregation)
+{
+	if ( ! aggregation)
+		return;
+	JobAggregationResults *jar = (JobAggregationResults*)aggregation;
+	jar->pause();
+}
+
 ClassAd *GetNextJobAggregate(void * aggregation, bool first)
 {
 	if ( ! aggregation)
@@ -2078,23 +2086,19 @@ void ReleaseAggregation(void *aggregation)
 struct QueryAggregatesContinuation : Service {
 
 	void * aggregator;
-	char * projection;
-	char * constraint;
 	int    timeslice;
 	classad::References proj;
 	bool unfinished_eom;
 	bool registered_socket;
 	ClassAd * curr_ad;
 
-	QueryAggregatesContinuation(void * aggregator_, char * _projection, char * _constraint, int timeslice_ms=0);
+	QueryAggregatesContinuation(void * aggregator_, int timeslice_ms=0);
 	~QueryAggregatesContinuation();
 	int finish(Stream *);
 };
 
-QueryAggregatesContinuation::QueryAggregatesContinuation(void * aggregator_, char * projection_, char * constraint_, int timeslice_ms)
+QueryAggregatesContinuation::QueryAggregatesContinuation(void * aggregator_, int timeslice_ms)
 	: aggregator(aggregator_)
-	, projection(projection_)
-	, constraint(constraint_)
 	, timeslice(timeslice_ms)
 	, unfinished_eom(false)
 	, registered_socket(false)
@@ -2105,8 +2109,6 @@ QueryAggregatesContinuation::QueryAggregatesContinuation(void * aggregator_, cha
 
 QueryAggregatesContinuation::~QueryAggregatesContinuation()
 {
-	if (projection) free(projection); projection = NULL;
-	if (constraint) free(constraint); constraint = NULL;
 	if (aggregator) {
 		if (curr_ad) { ReleaseAggregationAd(aggregator, curr_ad); curr_ad = NULL; }
 		ReleaseAggregation(aggregator);
@@ -2136,13 +2138,13 @@ QueryAggregatesContinuation::finish(Stream *stream) {
 			int id=-1, job_count=-1;
 			if ( ! curr_ad->EvaluateAttrInt(ATTR_AUTO_CLUSTER_ID, id)) curr_ad->EvaluateAttrInt("Id", id);
 			curr_ad->EvaluateAttrInt("JobCount", job_count);
-			dprintf(D_FULLDEBUG, "Writing autocluster %d,%d to wire\n", id, job_count);
+			//dprintf(D_FULLDEBUG, "Writing autocluster %d,%d to wire\n", id, job_count);
 		}
 		int retval = putClassAd(sock, *curr_ad,
 					PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
 					proj.empty() ? NULL : &proj);
 		if (retval == 2) {
-			dprintf(D_FULLDEBUG, "Detecting backlog.\n");
+			dprintf(D_FULLDEBUG, "QueryAggregatesContinuation: Detecting backlog.\n");
 			has_backlog = true;
 		} else if (!retval) {
 			delete this;
@@ -2150,12 +2152,17 @@ QueryAggregatesContinuation::finish(Stream *stream) {
 		}
 		retval = sock->end_of_message_nonblocking();
 		if (sock->clear_backlog_flag()) {
-			dprintf(D_FULLDEBUG, "Socket EOM will block.\n");
+			dprintf(D_FULLDEBUG, "QueryAggregatesContinuation: Socket EOM will block.\n");
 			unfinished_eom = true;
 			has_backlog = true;
 		}
 		ReleaseAggregationAd(aggregator, curr_ad);
-		curr_ad = GetNextJobAggregate(aggregator, false);
+		if (has_backlog) {
+			// we are about to give up the cpu, so pause the aggregator instead of fetching the next item.
+			PauseJobAggregation(aggregator);
+		} else {
+			curr_ad = GetNextJobAggregate(aggregator, false);
+		}
 	}
 	if (has_backlog && !registered_socket) {
 		int retval = daemonCore->Register_Socket(stream, "Client Response",
@@ -2167,7 +2174,7 @@ QueryAggregatesContinuation::finish(Stream *stream) {
 		}
 		registered_socket = true;
 	} else if (!has_backlog) {
-		dprintf(D_FULLDEBUG, "Finishing condor_q aggregation.\n");
+		//dprintf(D_FULLDEBUG, "Finishing condor_q aggregation.\n");
 		delete this;
 		return sendDone(sock);
 	}
@@ -2176,34 +2183,24 @@ QueryAggregatesContinuation::finish(Stream *stream) {
 
 int Scheduler::command_query_job_aggregates(ClassAd &queryAd, Stream* stream)
 {
-	char *constraint = NULL;
-	classad::ExprTree *requirements_expr = queryAd.Lookup(ATTR_REQUIREMENTS);
-	if (requirements_expr) {
-		constraint = strdup(ExprTreeToString(requirements_expr));
-	}
+	classad::ExprTree *constraint = queryAd.Lookup(ATTR_REQUIREMENTS);
 
 	char *projection = NULL;
 	queryAd.LookupString(ATTR_PROJECTION, &projection);
 
-	void *aggregation = BeginJobAggregation(projection, false, constraint);
+	//bool group_by = false;
+	//queryAd.LookupBool("ProjectionIsGroupBy", group_by);
+	bool use_def_autocluster = false;
+	queryAd.LookupBool("QueryDefaultAutocluster", use_def_autocluster);
+
+	void *aggregation = BeginJobAggregation(use_def_autocluster, projection, constraint);
 	if ( ! aggregation) {
 		free(projection);
-		free(constraint);
 		projection = NULL;
 		return -1;
 	}
 
-	QueryAggregatesContinuation *continuation = new QueryAggregatesContinuation(aggregation, projection, constraint, 1000);
-	/*
-	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, continuation->projection, true);
-	if (proj_err < 0) {
-		delete continuation;
-		if (proj_err == -1) {
-			return sendJobErrorAd(stream, 2, "Unable to evaluate projection list");
-		}
-		return sendJobErrorAd(stream, 3, "Unable to convert projection list to string list");
-	}
-	*/
+	QueryAggregatesContinuation *continuation = new QueryAggregatesContinuation(aggregation, 1000);
 
 	ForkStatus fork_status = schedd_forker.NewJob();
 	if (fork_status == FORK_PARENT)
@@ -2227,15 +2224,16 @@ int Scheduler::command_query_job_aggregates(ClassAd &queryAd, Stream* stream)
 
 
 int 
-clear_autocluster_id( ClassAd *job )
+clear_autocluster_id(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *)
 {
 	job->Delete(ATTR_AUTO_CLUSTER_ID);
+	job->autocluster_id = -1;
 	return 0;
 }
 
 
 int
-count_a_job( ClassAd *job )
+count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 {
 	int		status;
 	int		niceUser;
@@ -3012,7 +3010,7 @@ and abort, hold, or release the job as necessary.
 */
 
 static int
-PeriodicExprEval( ClassAd *jobad )
+PeriodicExprEval( ClassAd *jobad, void* )
 {
 	int cluster=-1, proc=-1, status=-1, action=-1;
 
@@ -4974,8 +4972,8 @@ Scheduler::actOnJobs(int, Stream* s)
 			// do what we want.  Instead, we'll just iterate through
 			// the Q ourselves so we know exactly what jobs we hit. 
 
-		ClassAd* (*GetNextJobFunc) (const char *, int);
-		ClassAd* job_ad;
+		JobQueueJob* (*GetNextJobFunc) (const char *, int);
+		JobQueueJob* job_ad;
 		if( action == JA_CLEAR_DIRTY_JOB_ATTRS )
 		{
 			GetNextJobFunc = &GetNextDirtyJobByConstraint;
@@ -4988,11 +4986,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		     job_ad;
 		     job_ad = (*GetNextJobFunc)( constraint, 0 ))
 		{
-			if(	job_ad->LookupInteger(ATTR_CLUSTER_ID,tmp_id.cluster) &&
-				job_ad->LookupInteger(ATTR_PROC_ID,tmp_id.proc) ) 
-			{
-				jobs[num_matches++] = tmp_id;
-			} 
+			jobs[num_matches++] = job_ad->jid;
 		}
 		free( constraint );
 		constraint = NULL;
@@ -5138,7 +5132,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				// authorized to vacate this job, and if so,
 				// record that we found this job_id and we're
 				// done.
-			ClassAd *cad = GetJobAd( tmp_id.cluster, tmp_id.proc, false );
+			ClassAd *cad = GetJobAd(tmp_id);
 			if( ! cad ) {
 					// Maybe change EXCEPT to print to the audit log with D_AUDIT
 				EXCEPT( "impossible: GetJobAd(%d.%d) returned false "
@@ -6282,7 +6276,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		jobAd = dedicated_scheduler.GetMatchRequestAd( mrec );
 	}
 	else {
-		jobAd = GetJobAd( mrec->cluster, mrec->proc, true, false );
+		jobAd = GetExpandedJobAd(JOB_ID_KEY(mrec->cluster, mrec->proc), false);
 	}
 	if( ! jobAd ) {
 			// The match rec may have been deleted by now if the job
@@ -6291,7 +6285,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 
 		char const *reason = "find/expand";
 		if( !args->isDedicated() ) {
-			if( GetJobAd( cluster, proc, false ) ) {
+			if( GetJobAd(cluster, proc) ) {
 				reason = "expand";
 			}
 			else {
@@ -6855,7 +6849,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
  * @return true if no error occurred, false otherwise
  **/
 int
-updateSchedDInterval( ClassAd *job )
+updateSchedDInterval( JobQueueJob *job, const JOB_ID_KEY& id, void* /*user*/ )
 {
 		//
 		// Check if the job has the ScheddInterval attribute set
@@ -6867,9 +6861,6 @@ updateSchedDInterval( ClassAd *job )
 			// are unable to update the job ad
 			//
 		if ( ! job->Assign( ATTR_SCHEDD_INTERVAL, (int)scheduler.SchedDInterval.getMaxInterval() ) ) {
-			PROC_ID id;
-			job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
-			job->LookupInteger(ATTR_PROC_ID, id.proc);
 			dprintf( D_ALWAYS, "Failed to update job %d.%d's %s attribute!\n",
 							   id.cluster, id.proc, ATTR_SCHEDD_INTERVAL );
 		}
@@ -6877,8 +6868,32 @@ updateSchedDInterval( ClassAd *job )
 	return ( true );
 }
 
+// stuff in the schedd that must be initialzed after InitJobQueue
+void
+PostInitJobQueue()
+{
+	mark_jobs_idle();
+
+		// The below must happen _after_ InitJobQueue is called.
+	if ( scheduler.autocluster.config() ) {
+		// clear out auto cluster id attributes
+		WalkJobQueue(clear_autocluster_id);
+	}
+
+		//
+		// Update the SchedDInterval attributes in jobs if they
+		// have it defined. This will be for JobDeferral and
+		// CronTab jobs
+		//
+	WalkJobQueue(updateSchedDInterval);
+
+	extern int dump_job_q_stats(int cat);
+	dump_job_q_stats(D_FULLDEBUG);
+}
+
+
 int
-find_idle_local_jobs( ClassAd *job )
+find_idle_local_jobs( ClassAd *job, void* )
 {
 	int	status;
 	int	cur_hosts;
@@ -7485,7 +7500,7 @@ Scheduler::StartJobHandler()
 				// We've just called callAboutToSpawnJobHandler on procid 0,
 				// now call it on the rest of them
 			proc = 1;
-			while( GetJobAd( cluster, proc, false)) {
+			while( GetJobAd(cluster, proc) ) {
 				callAboutToSpawnJobHandler( cluster, proc, srec);
 				proc++;
 			}
@@ -7627,7 +7642,7 @@ Scheduler::startTransferd( int cluster, int proc )
 bool
 Scheduler::isStillRunnable( int cluster, int proc, int &status )
 {
-	ClassAd* job = GetJobAd( cluster, proc, false );
+	ClassAd* job = GetJobAd( cluster, proc );
 	if( ! job ) {
 			// job ad disappeared, definitely not still runnable.
 		dprintf( D_FULLDEBUG,
@@ -8105,13 +8120,13 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 
 		// expand $$ stuff and persist expansions so they can be
 		// retrieved on restart for reconnect
-	job_ad = GetJobAd( job_id->cluster, job_id->proc, true, true );
+	job_ad = GetExpandedJobAd( *job_id, true );
 	if( ! job_ad ) {
 			// this might happen if the job is asking for
 			// something in $$() that doesn't exist in the machine
 			// ad and/or if the machine ad is already gone for some
 			// reason.  so, verify the job is still here...
-		if( ! GetJobAd(job_id->cluster, job_id->proc, false) ) {
+		if( ! GetJobAd(*job_id) ) {
 			EXCEPT( "Impossible: GetJobAd() returned NULL for %d.%d " 
 					"but that job is already known to exist",
 					job_id->cluster, job_id->proc );
@@ -10174,7 +10189,7 @@ Scheduler::expand_mpi_procs(StringList *job_ids, StringList *expanded_ids) {
 		
 		
 		int proc_index = 0;
-		while( (GetJobAd(p.cluster, proc_index, false) )) {
+		while( (GetJobAd(p.cluster, proc_index) )) {
 			snprintf(buf, 40, "%d.%d", p.cluster, proc_index);
 			if (! expanded_ids->contains(buf)) {
 				expanded_ids->append(buf);
@@ -10437,8 +10452,8 @@ Scheduler::child_exit(int pid, int status)
 		// if need be.
 		//
 	if ( srec_was_local_universe == true ) {
-		ClassAd *job_ad = GetJobAd( job_id.cluster, job_id.proc );
-		count_a_job( job_ad );
+		JobQueueJob *job_ad = GetJobAd(job_id);
+		count_a_job( job_ad, job_ad->jid, NULL);
 	}
 
 		// If we're not trying to shutdown, now that either an agent
@@ -11388,7 +11403,7 @@ Scheduler::Init()
 			// This will only update the job's that have the old
 			// ScheddInterval attribute defined
 			//
-			WalkJobQueue3((scan_func)(::updateSchedDInterval), NULL, WalkJobQ_updateSchedDInterval_runtime);
+			WalkJobQueue(updateSchedDInterval);
 		}
 	}
 
@@ -13049,7 +13064,7 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 			// handler method sendAlives().  We do this for scalability; we
 			// may have thousands of startds sending us updates...
 		if ( match->status == M_ACTIVE ) {
-			job_ad = GetJobAd(match->cluster, match->proc, false);
+			job_ad = GetJobAd(match->cluster, match->proc);
 			if (job_ad) {
 				job_ad->Assign(ATTR_LAST_JOB_LEASE_RENEWAL, (int)time(0));
 			}
@@ -13624,7 +13639,7 @@ Scheduler::dumpState(int, Stream* s) {
 }
 
 int
-fixAttrUser( ClassAd *job )
+fixAttrUser( ClassAd *job, void* )
 {
 	int nice_user = 0;
 	MyString owner;
@@ -15067,7 +15082,7 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 
 	ClassAd *new_ad = NULL;
 	if( new_job_id.proc >= 0 ) {
-		new_ad = GetJobAd(new_job_id.cluster, new_job_id.proc ,true, true);
+		new_ad = GetExpandedJobAd(new_job_id, true);
 		if( !new_ad ) {
 			dprintf(D_ALWAYS,
 					"Failed to expand job ad when switching shadow %d "

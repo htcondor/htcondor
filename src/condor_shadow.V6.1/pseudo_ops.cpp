@@ -467,6 +467,8 @@ static int use_local_access( const char *file )
 		attr_list_has_file( ATTR_LOCAL_FILES, file );
 }
 
+#include "HoldReasons.h"
+
 int
 pseudo_ulog( ClassAd *ad )
 {
@@ -526,7 +528,7 @@ pseudo_ulog( ClassAd *ad )
 			//to be logged as ShadowExceptionEvents, rather than
 			//RemoteErrorEvents.  The result is ugly, but guaranteed to
 			//be compatible with other user-log reading tools.
-			BaseShadow::log_except(critical_error);
+			BaseShadow::log_except( explainHoldReason( critical_error ) );
 			event_already_logged = true;
 		}
 	}

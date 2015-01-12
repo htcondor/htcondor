@@ -22,7 +22,7 @@
 
 #include "classad_hashtable.h"
 
-void HashKey::sprint(MyString &s)
+void HashKey::sprint(MyString &s) const
 {
 	s.formatstr("%s", key);
 }
@@ -42,6 +42,19 @@ bool operator==(const HashKey &lhs, const HashKey &rhs)
 
 
 unsigned int hashFunction(const HashKey &key)
+{
+	unsigned int hash = 0;
+
+	const char *p = key.key;
+	while (*p) {
+		hash = (hash<<5)+hash + (unsigned char)*p;
+		p++;
+	}
+
+	return hash;
+}
+
+unsigned int HashKey::hash(const HashKey &key)
 {
 	unsigned int hash = 0;
 

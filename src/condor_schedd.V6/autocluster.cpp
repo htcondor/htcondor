@@ -31,16 +31,16 @@
 // and that consecutive cluster id's are often owned by the same user.
 class JobIdSet {
 public:
-	bool contains(const PROC_ID & jid) const { return jobs.find(jid) != jobs.end(); }
+	bool contains(const JOB_ID_KEY & jid) const { return jobs.find(jid) != jobs.end(); }
 	bool empty() { return jobs.empty(); }
 	void rewind() { it = jobs.begin(); }
 	int  count() { return (int)jobs.size(); }
-	bool next(PROC_ID &jid) { if (it == jobs.end()) return false; jid = *it; ++it; return true; }
-	void insert(PROC_ID &jid) { jobs.insert(jid); }
-	void erase(PROC_ID &jid) { jobs.erase(jid); }
+	bool next(JOB_ID_KEY &jid) { if (it == jobs.end()) return false; jid = *it; ++it; return true; }
+	void insert(JOB_ID_KEY &jid) { jobs.insert(jid); }
+	void erase(JOB_ID_KEY &jid) { jobs.erase(jid); }
 private:
-	std::set<PROC_ID> jobs;
-	std::set<PROC_ID>::const_iterator it;
+	std::set<JOB_ID_KEY> jobs;
+	std::set<JOB_ID_KEY>::const_iterator it;
 };
 
 JobCluster::JobCluster()
@@ -138,7 +138,7 @@ bool JobCluster::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, b
 
 #ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
 
-JobCluster::JobIdSetMap::iterator JobCluster::find(const PROC_ID & jid) // get current cluster id for a given job
+JobCluster::JobIdSetMap::iterator JobCluster::find(const JOB_ID_KEY & jid) // get current cluster id for a given job
 {
 	// scan the cluster id to job map, and return when we find a match on job id.
 	JobIdSetMap::iterator it;
@@ -170,10 +170,10 @@ void JobCluster::collect_garbage(bool brute_force) // free the deleted clusters
 				gone = false;
 				if (brute_force) {
 					gone = true;
-					PROC_ID jid;
+					JOB_ID_KEY jid;
 					jit->second.rewind();
 					while (jit->second.next(jid)) {
-						if (GetJobAd(jid.cluster, jid.proc, false, false)) {
+						if (GetJobAd(jid)) {
 							gone = false;
 							break;
 						}
@@ -193,7 +193,7 @@ void JobCluster::collect_garbage(bool brute_force) // free the deleted clusters
 
 extern int    last_autocluster_classad_cache_hit;
 
-int JobCluster::getClusterid(JobQueueJob & job, PROC_ID & jid, bool expand_refs, std::string * final_list)
+int JobCluster::getClusterid(JobQueueJob & job, bool expand_refs, std::string * final_list)
 {
 	int cur_id = -1;
 
@@ -208,47 +208,6 @@ int JobCluster::getClusterid(JobQueueJob & job, PROC_ID & jid, bool expand_refs,
 	//
 	classad::References exattrs;   // expanded attribs if requested
 	std::vector<ExprTree*> sigset; // significant values, including expanded attribs if requested
-#if 1
-	PRAGMA_REMIND("tj: change this back to use GetInternalReferences once Jaime is done with his refactor there.")
-	StringTokenIterator list(significant_attrs);
-	const std::string * attr;
-	while ((attr = list.next_string())) {
-		ExprTree * tree = job.Lookup(*attr);
-		sigset.push_back(tree);
-		if (expand_refs && tree) {
-			StringList refs;
-			StringList ext_refs;
-			job.GetReferences(attr->c_str(), refs, ext_refs);
-			if ( ! refs.isEmpty()) {
-				refs.rewind();
-				for (char * pattr = refs.next(); pattr; pattr = refs.next()) { exattrs.insert(pattr); }
-			}
-		}
-	}
-
-	// if there are expanded refs, walk the expanded attribs list and fetch values for any
-	// that have not already been fetched.
-	if (expand_refs) {
-		if ( ! exattrs.empty()) {
-			// remove expanded attrs that already appear in the significant_attrs list
-			list.rewind();
-			while ((attr = list.next_string())) {
-				classad::References::iterator it = exattrs.find(*attr);
-				if (it != exattrs.end()) {
-					exattrs.erase(it);
-				}
-			}
-			for (classad::References::iterator it = exattrs.begin(); it != exattrs.end(); ++it) {
-				ExprTree * tree = job.Lookup(*it);
-				sigset.push_back(tree);
-			}
-		}
-	}
-#else
-
-	if (expand_refs) {
-		job.InsertAttr("MY","SELF");
-	}
 
 	// walk significant attributes list and fetch values for each attrib
 	// also fetch internal references if requested.
@@ -265,7 +224,6 @@ int JobCluster::getClusterid(JobQueueJob & job, PROC_ID & jid, bool expand_refs,
 	// if there are expanded refs, walk the expanded attribs list and fetch values for any
 	// that have not already been fetched.
 	if (expand_refs) {
-		job.Delete("MY");
 		if ( ! exattrs.empty()) {
 			// remove expanded attrs that already appear in the significant_attrs list
 			list.rewind();
@@ -281,7 +239,6 @@ int JobCluster::getClusterid(JobQueueJob & job, PROC_ID & jid, bool expand_refs,
 			}
 		}
 	}
-#endif
 
 	// sigset now contains the values of all the attributes we need,
 	// significant attibutes are first, followed by expanded attributes
@@ -341,18 +298,18 @@ int JobCluster::getClusterid(JobQueueJob & job, PROC_ID & jid, bool expand_refs,
 #ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
 	if (keep_job_ids) {
 		if (true) {
-			JobIdSetMap::iterator jit = find(jid);
+			JobIdSetMap::iterator jit = find(job.jid);
 			if (jit != cluster_use.end()) {
 				int old_id = jit->first;
 				if (old_id == cur_id) {
-					jit->second.insert(jid);
+					jit->second.insert(job.jid);
 				} else {
-					jit->second.erase(jid);
+					jit->second.erase(job.jid);
 					if (jit->second.empty()) { cluster_gone.insert(old_id); }
-					cluster_use[cur_id].insert(jid);
+					cluster_use[cur_id].insert(job.jid);
 				}
 			} else {
-				cluster_use[cur_id].insert(jid);
+				cluster_use[cur_id].insert(job.jid);
 			}
 		}
 	}
@@ -539,14 +496,14 @@ extern double last_autocluster_runtime;
 extern bool   last_autocluster_make_sig;
 extern int    last_autocluster_type;
 
-int AutoCluster::getAutoClusterid(JobQueueJob *job, PROC_ID & jid)
+int AutoCluster::getAutoClusterid(JobQueueJob *job)
 {
 	std::string final_list;
 	int cur_id = -1;
 
 		// first check if condor_config file even desires this
 		// functionality...
-	if ( ! significant_attrs && current_aggregations.empty()) {
+	if ( ! significant_attrs /*&& current_aggregations.empty()*/) {
 		return -1;
 	}
 
@@ -566,7 +523,7 @@ int AutoCluster::getAutoClusterid(JobQueueJob *job, PROC_ID & jid)
 
 	last_autocluster_make_sig = true;
 
-	cur_id = this->getClusterid(*job, jid, true, &final_list);
+	cur_id = this->getClusterid(*job, true, &final_list);
 	if( cur_id < 0 ) {
 			// We've wrapped around MAX_INT!
 			// In config() we take steps to avoid this unlikely condition.
@@ -578,9 +535,7 @@ int AutoCluster::getAutoClusterid(JobQueueJob *job, PROC_ID & jid)
 
 		// put the new auto cluster id into the job ad to cache it.
 	job->Assign(ATTR_AUTO_CLUSTER_ID,cur_id);
-#ifdef ALLOW_ON_THE_FLY_AGGREGATION
 	job->autocluster_id = cur_id;
-#endif
 
 		// for some nice feedback, place the final list of attrs used to create this
 		// signature into the job ad.
@@ -592,8 +547,6 @@ int AutoCluster::getAutoClusterid(JobQueueJob *job, PROC_ID & jid)
 
 	return cur_id;
 }
-
-#ifdef ALLOW_ON_THE_FLY_AGGREGATION
 
 void AutoCluster::preSetAttribute(JobQueueJob &job, const char * attr, const char * /*value*/, int /*flags*/)
 {
@@ -616,10 +569,13 @@ void AutoCluster::preSetAttribute(JobQueueJob &job, const char * attr, const cha
 	}
 }
 
-int aggregate_jobs(JobQueueJob *job, const PROC_ID & jid, void * pv)
+#ifdef ALLOW_ON_THE_FLY_AGGREGATION
+
+// callback for WalkJobQueue that builds an on-the-fly autocluster set.
+int aggregate_jobs(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void * pv)
 {
 	JobCluster* pjc = (JobCluster*)pv;
-	pjc->getClusterid(*job, jid, true, NULL);
+	pjc->getClusterid(*job, true, NULL);
 	return 0;
 }
 
@@ -628,21 +584,27 @@ int aggregate_jobs(JobQueueJob *job, const PROC_ID & jid, void * pv)
 JobAggregationResults * AutoCluster::aggregateOn(
 	bool use_default,
 	const char * projection,
-	const char * /*constraint*/)
+	classad::ExprTree * constraint)
 {
 	if (use_default) {
-		return new JobAggregationResults(*this, projection, true);
+		return new JobAggregationResults(*this, projection, constraint, true);
 	}
 #ifdef ALLOW_ON_THE_FLY_AGGREGATION
+
+	#if 1
+	 JobCluster * pjc = new JobCluster();
+	#else
 	std::map<std::string, JobCluster>::iterator found = current_aggregations.find(projection);
 	if (found != current_aggregations.end()) {
-		return new JobAggregationResults(found->second, projection);
+		return new JobAggregationResults(found->second, projection, constraint);
 	}
 
 	JobCluster jc;
 	current_aggregations[projection] = jc;
 	found = current_aggregations.find(projection);
 	JobCluster * pjc = &found->second;
+	#endif
+
 	pjc->keepJobIds(true);
 	pjc->setSigAttrs(projection, false, true);
 
@@ -655,7 +617,7 @@ JobAggregationResults * AutoCluster::aggregateOn(
 		runtime);
 
 	dprintf(D_ALWAYS, "Spent %.3f sec aggregating on '%s'\n", runtime.Total(), projection);
-	return new JobAggregationResults(*pjc, projection);
+	return new JobAggregationResults(*pjc, projection, constraint);
 #else
 	return NULL;
 #endif
@@ -664,34 +626,70 @@ JobAggregationResults * AutoCluster::aggregateOn(
 
 bool JobAggregationResults::rewind()
 {
+	pause_position.clear();
 	it = jc.cluster_map.begin();
 	return it != jc.cluster_map.end();
 }
 
+// pause iterator, remember the key of the current item, when we resume
+// we will pick back up at that point.
+void JobAggregationResults::pause()
+{
+	pause_position.clear();
+	if (it != jc.cluster_map.end()) {
+		pause_position = it->first;
+	}
+}
+
 ClassAd * JobAggregationResults::next()
 {
-	if (it == jc.cluster_map.end())
-		return NULL;
+	// if we are resuming from a paused state, we don't have a valid iterator
+	// so we have to find the the element we paused at or the first one after it.
+	if ( ! pause_position.empty()) {
+		it = jc.cluster_map.lower_bound(pause_position);
+		pause_position.clear();
+	}
 
+	// in case we never enter the loop, clear our 'current' ad here.
 	ad.Clear();
-	StringTokenIterator iter(it->first, 100, "\n");
-	const char * line;
-	while ((line = iter.next())) {
-		ad.Insert(line);
-	}
-	if (this->is_def_autocluster) {
-		ad.Assign(ATTR_AUTO_CLUSTER_ID,it->second);
-	} else {
-		ad.Assign("Id",it->second);
-	}
-#ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
-	int cJobs = 0;
-	JobCluster::JobIdSetMap::iterator jit = jc.cluster_use.find(it->second);
-	if (jit != jc.cluster_use.end()) { cJobs = jit->second.count(); }
-	ad.Assign("JobCount", cJobs);
-#endif
 
-	++it;
-	return &ad;
+	// we may have to look at multiple items in order to find one to return
+	while (it != jc.cluster_map.end()) {
+
+		ad.Clear();
+
+		// the autocluster key (or signature), is a string containing key value
+		// pairs separated by \n. So we can easily turn it into a classad.
+		StringTokenIterator iter(it->first, 100, "\n");
+		const char * line;
+		while ((line = iter.next())) {
+			ad.Insert(line);
+		}
+		if (this->is_def_autocluster) {
+			ad.Assign(ATTR_AUTO_CLUSTER_ID,it->second);
+		} else {
+			ad.Assign("Id",it->second);
+		}
+	#ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
+		int cJobs = 0;
+		JobCluster::JobIdSetMap::iterator jit = jc.cluster_use.find(it->second);
+		if (jit != jc.cluster_use.end()) { cJobs = jit->second.count(); }
+		ad.Assign("JobCount", cJobs);
+	#endif
+
+		// advance to the next item
+		++it;
+
+		// if there is a constraint, then only return the ad if it matches the constraint.
+		if (constraint) {
+			if ( ! EvalBool(&ad, constraint))
+				continue;
+		}
+
+		// return a pointer to the ad.
+		return &ad;
+	}
+
+	return NULL;
 }
 

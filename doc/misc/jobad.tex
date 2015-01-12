@@ -686,6 +686,18 @@ a string taken from the definition of the submit description file command
 Specifies a path and file name of a file containing 
 a set of name/value pairs that can be accessed by the virtual machine.
 
+%%% ClassAd attribute: GlobalJobId
+\index{ClassAd job attribute!GlobalJobId}
+\index{GlobalJobId!job ClassAd attribute}
+\item[\AdAttr{GlobalJobId}:] A string intended to be a unique
+job identifier within a pool.
+It currently contains the \Condor{schedd} daemon \Attr{Name} attribute, 
+a job identifier composed of attributes \Attr{ClusterId} and 
+\Attr{ProcId} separated by a period, 
+and the \Condor{schedd} attribute \Attr{DaemonStartTime},
+separated by \verb@#@ characters.
+The value \verb@submit.example.com#152.3#1358363336@ is an example.
+
 %%% ClassAd attribute: GridJobStatus
 \index{ClassAd job attribute!GridJobStatus}
 \index{GridJobStatus!job ClassAd attribute}
@@ -1505,7 +1517,7 @@ requests the \Condor{starter} use as an argument to \Procedure{chroot}.
 %%% ClassAd attribute: RequestMemory
 \index{ClassAd job attribute!RequestMemory}
 \index{RequestMemory!job ClassAd attribute}
-\item[\AdAttr{RequestMemory}:]  The amount of memory space in Mbytes 
+\item[\AdAttr{RequestMemory}:]  The amount of memory space in MiB 
 requested for this job.
 If dynamic \Condor{startd} provisioning is enabled,
 it is the minimum amount of memory needed in the created dynamic slot.
@@ -1937,4 +1949,63 @@ The overall status of the DAG, with the same values as the macro
 \end{tabular}
 \end{table}
 \end{center}
+\end{description}
+
+The following job ClassAd attributes do \emph{not} appear in the 
+job ClassAd as kept by the \Condor{schedd} daemon.
+They appear in the job ClassAd written to the job's execute directory
+while the job is running.
+
+\begin{description}
+
+%%% ClassAd attribute: CpusProvisioned
+\index{ClassAd job attribute!CpusProvisioned}
+\index{CpusProvisioned!job ClassAd attribute}
+\label{CpusProvisioned}
+\item[\AdAttr{CpusProvisioned}:]   
+The number of Cpus allocated to the job.
+With statically-allocated slots, it is the number of Cpus allocated to
+the slot.
+With dynamically-allocated slots, it is based upon the job attribute
+\Attr{RequestCpus}, but may be larger due to the minimum given to
+a dynamic slot.
+
+%%% ClassAd attribute: DiskProvisioned
+\index{ClassAd job attribute!DiskProvisioned}
+\index{DiskProvisioned!job ClassAd attribute}
+\label{DiskProvisioned}
+\item[\AdAttr{DiskProvisioned}:]   
+The amount of disk space in KiB allocated to the job.
+With statically-allocated slots, it is the amount of disk space allocated to
+the slot.
+With dynamically-allocated slots, it is based upon the job attribute
+\Attr{RequestDisk}, but may be larger due to the minimum given to
+a dynamic slot.
+
+%%% ClassAd attribute: MemoryProvisioned
+\index{ClassAd job attribute!MemoryProvisioned}
+\index{MemoryProvisioned!job ClassAd attribute}
+\label{MemoryProvisioned}
+\item[\AdAttr{MemoryProvisioned}:]   
+The amount of memory in MiB allocated to the job.
+With statically-allocated slots, it is the amount of memory space allocated to
+the slot.
+With dynamically-allocated slots, it is based upon the job attribute
+\Attr{RequestMemory}, but may be larger due to the minimum given to
+a dynamic slot.
+
+%%% ClassAd attribute: <Name>Provisioned
+\index{ClassAd job attribute!<Name>Provisioned}
+\index{<Name>Provisioned!job ClassAd attribute}
+\label{<Name>Provisioned}
+\item[\AdAttr{<Name>Provisioned}:]   
+The amount of the custom resource identified by \Attr{<Name>} allocated to 
+the job.  
+For jobs using GPUs, \Attr{<Name>} will be \Expr{GPUs}.
+With statically-allocated slots, 
+it is the amount of the resource allocated to the slot.
+With dynamically-allocated slots, it is based upon the job attribute
+\Attr{Request<Name>}, but may be larger due to the minimum given to
+a dynamic slot.
+
 \end{description}

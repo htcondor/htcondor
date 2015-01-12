@@ -87,6 +87,11 @@ condor_isidchar(int c)
 
 int is_valid_param_name(const char *name)
 {
+	// NULL or empty param names are not valid
+	if(!name || !name[0]) {
+		return 0;
+	}
+
 		/* Check that "name" is a legal identifier : only
 		   alphanumeric characters and _ allowed*/
 	while( *name ) {
@@ -1235,7 +1240,7 @@ Read_config(const char* config_source,
 			if( !is_valid_param_name(name) ) {
 				fprintf( stderr,
 						 "Configuration Error \"%s\", Line %d: Illegal Identifier: <%s>\n",
-						 config_source, ConfigLineNo, name );
+						 config_source, ConfigLineNo, (name?name:"(null)") );
 				retval = -1;
 				goto cleanup;
 			}
