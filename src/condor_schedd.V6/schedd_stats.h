@@ -118,7 +118,7 @@ typedef struct ScheddStatistics : public ScheddJobCounters {
    stats_entry_abs<int> JobsRestartReconnectsAttempting;
    // How much cumulative job runtime was lost due to failure to
    // reconnect to running jobs.
-   stats_histogram<int64_t> JobsRestartReconnectsBadput;
+   stats_histogram<time_t> JobsRestartReconnectsBadput;
 
    // counts of shadow processes
    stats_entry_abs<int> ShadowsRunning;          // current number of running shadows, also tracks the peak value.
