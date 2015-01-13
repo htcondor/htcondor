@@ -1125,6 +1125,11 @@ default=$(RELEASE_DIR)/include
 type=path
 review=?
 
+[ETC]
+default=$(RELEASE_DIR)/etc
+type=path
+friendly_name=etc
+
 [XAUTHORITY_USERS]
 default=
 type=string
@@ -6898,7 +6903,7 @@ usage=Set the limit on the number of condor_history_helper sub-processes
 review=?
 
 [CONDOR_Q_USE_V3_PROTOCOL]
-default=false
+default=true
 type=bool
 reconfig=false
 customization=devel
