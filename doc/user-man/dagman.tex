@@ -1129,31 +1129,30 @@ If this abort occurs, the return value for the DAG is 1.
 
 \index{DAGMan!VARS (macro for submit description file)}
 \index{VARS}
-The \Arg{VARS} keyword provides a
-method for defining a macro that can be referenced in the
-node's submit description file.
-These macros are defined on a per-node basis, using the
-following syntax:
+Macros defined for DAG nodes can be used within the submit description
+file of the node job. 
+The \Arg{VARS} keyword provides a method for defining a macro.
+Macros are defined on a per-node basis, using the syntax
 
 \Opt{VARS} \Arg{JobName} \Arg{macroname=}\Arg{"string"} [\Arg{macroname=}\Arg{"string"\Dots]}
 
 The macro may be used within the
-submit description file of the relevant node.  A \Arg{macroname}
-consists of alphanumeric characters (a..Z and 0..9),
-as well as the underscore character.
+submit description file of the relevant node.  
+A \Arg{macroname} may contain alphanumeric characters (a-z, A-Z, and 0-9)
+and the underscore character.
 The space character delimits macros,
-when there is more than one macro defined for a node on a single line.
+such that there may be more than one macro defined on a single line.
 Multiple lines defining macros for the same node are permitted.
 
 Correct syntax requires that the \Arg{string} must be
 enclosed in double quotes.
-To use a double quote inside \Arg{string},
-escape it with the backslash character (\verb@\@).
+To use a double quote mark within a \Arg{string},
+escape the double quote mark with the backslash character (\verb@\@).
 To add the backslash character itself, use two backslashes (\verb@\\@).
 
-\Bold{Note that the \Arg{macroname} itself cannot begin with the string
+A restriction is that the \Arg{macroname} itself cannot begin with the string
 \Expr{queue},
-in any combination of upper or lower case.}
+in any combination of upper or lower case letters.
 
 \Bold{Examples}
 
@@ -1162,10 +1161,10 @@ If the DAG input file contains
 \begin{verbatim}
     # File name: diamond.dag
     #
-    JOB  A  A.condor 
-    JOB  B  B.condor 
-    JOB  C  C.condor	
-    JOB  D  D.condor
+    JOB  A  A.submit 
+    JOB  B  B.submit 
+    JOB  C  C.submit	
+    JOB  D  D.submit
     VARS A state="Wisconsin"
     PARENT A CHILD B C
     PARENT B C CHILD D
@@ -1173,42 +1172,38 @@ If the DAG input file contains
 \end{verbatim}
 \normalsize
 
-then file \File{A.condor} may use the macro \verb@state@.
-This example submit description file for the HTCondor
-job in node A passes the value
-of the macro as a command-line argument to the job.
+then the submit description file \File{A.submit} may use 
+the macro \verb@state@.
+Consider this 
+submit description file \File{A.submit}:
 
 \footnotesize
 \begin{verbatim}
-    # file name: A.condor
+    # file name: A.submit
     executable = A.exe
     log        = A.log
-    error      = A.err
     arguments  = "$(state)"
     queue
 \end{verbatim}
 \normalsize
-
-This HTCondor job's command line will be
+The macro value expands to become a command-line argument in 
+the invocation of the job.
+The job is invoked with
 \footnotesize
 \begin{verbatim}
 A.exe Wisconsin
 \end{verbatim}
 \normalsize
-The use of macros may allow a reduction in the necessary number 
-of unique submit description files.
 
-A separate example shows an intended use of a \Arg{VARS} entry
-in the DAG input file.
-This use may dramatically reduce the number of HTCondor submit description
-files needed for a DAG.
+The use of macros may allow a reduction in the number 
+of distinct submit description files.
+A separate example shows this intended use of \Arg{VARS}.
 In the case where the submit description file for each node
-varies only in file naming, the use of a substitution macro
-within the submit description file reduces the need to
-a single submit description file.
+varies only in file naming, 
+macros reduce the number of submit description files to one.
 
 The example uses a single submit description file in the DAG input
-file, and uses the \Arg{VARS} entry to name output files.
+file, and uses the \Arg{VARS} entry to name files used by each job.
 
 The relevant portion of the DAG input file appears as 
 \begin{verbatim}
@@ -1216,9 +1211,9 @@ The relevant portion of the DAG input file appears as
     JOB B theonefile.sub
     JOB C theonefile.sub
 
-    VARS A outfilename="A"
-    VARS B outfilename="B"
-    VARS C outfilename="C"
+    VARS A filename="A"
+    VARS B filename="B"
+    VARS C filename="C"
 \end{verbatim}
 
 The submit description file appears as 
@@ -1226,28 +1221,26 @@ The submit description file appears as
 \begin{verbatim}
     # submit description file called:  theonefile.sub
     executable   = progX
-    universe     = standard
-    output       = $(outfilename)
-    error        = error.$(outfilename)
-    log          = progX.log
+    output       = $(filename)
+    error        = error.$(filename)
+    log          = $(filename).log
     queue
 \end{verbatim}
 \normalsize
 
 For a DAG such as this one, but with thousands of nodes,
-being able to write and maintain a single submit description file 
-and a single, yet more complex, DAG input file is preferable.
+the ability to write and maintain a single submit description file 
+together with a single, yet more complex, DAG input file is worthwhile.
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
 \item[Multiple macroname definitions]
 \end{description}
 
-If a VARS macroname for a specific node in a DAG input file is defined
-more than once,
+If a macro name for a specific node in a DAG is defined more than once,
 as it would be with the partial file contents
 \begin{verbatim}
-  JOB job1 job.condor
+  JOB job1 job1.submit
   VARS job1 a="foo"
   VARS job1 a="bar"
 \end{verbatim}
@@ -1257,11 +1250,10 @@ Warning: VAR <macroname> is already defined in job <JobName>
 Discovered at file "<DAG input file name>", line <line number>
 \end{verbatim}
 
-The behavior of DAGMan is such that all definitions for the macroname
-exist,
+The behavior of DAGMan is such that all definitions for the macro exist,
 but only the last one defined is used as the variable's value.
-For example, if the example is within the DAG input file,
-and the job's submit description file utilized the value with
+Using this example, 
+if the \File{job1.submit} submit description file contains
 \begin{verbatim}
   arguments = "$(a)"
 \end{verbatim}
@@ -1272,24 +1264,23 @@ then the argument will be \Expr{bar}.
 \item[Special characters within VARS string definitions]
 \end{description}
 
-The value of a \Arg{VARS} \Arg{macroname} may contain spaces and tabs.
+The value defined for a macro may contain spaces and tabs.
 It is also possible to have double quote marks and
-backslashes within these values.
-\Bold{Unfortunately, it is not
-possible to have single quote marks within these values.}
+backslashes within a value.
+It is \emph{not} possible to have single quote marks within a value.
 In order to have spaces or tabs within a value,
-use the new syntax format for the \SubmitCmd{arguments} command
-in the node's HTCondor job submit description file,
+use the New Syntax format for the \SubmitCmdNI{arguments} submit command,
 as described in section~\ref{man-condor-submit-arguments}.
-Double quote marks are escaped differently,
-depending on the new syntax or old syntax argument format.
+Escapes for double quote marks
+depend on whether the New Syntax or Old Syntax format is used
+for the \SubmitCmdNI{arguments} submit command.
 Note that in both syntaxes,
 double quote marks require two levels of escaping:
 one level is for the parsing of the DAG input file, and the other level is for
 passing the resulting value through \Condor{submit}.
 
 As an example, here are only the relevant parts of a DAG input file.
-Note that the NodeA value for \Expr{second} contains a tab.
+Note that the NodeA value for macro \Expr{second} contains a tab.
 \footnotesize
 \begin{verbatim}
     VARS NodeA first="Alberto Contador"
@@ -1304,7 +1295,7 @@ Note that the NodeA value for \Expr{second} contains a tab.
 \end{verbatim}
 \normalsize
 
-The new syntax \SubmitCmdNI{arguments} line of the HTCondor submit description file
+The New Syntax \SubmitCmdNI{arguments} line of the submit description file
 for NodeA is
 \footnotesize
 \begin{verbatim}
@@ -1323,7 +1314,7 @@ The resulting values passed to the NodeA executable are
 \end{verbatim}
 \normalsize
 
-The old syntax \SubmitCmdNI{arguments} line of the HTCondor submit description file
+The Old Syntax \SubmitCmdNI{arguments} line of the submit description file
 for NodeB is
 \footnotesize
 \begin{verbatim}
@@ -1347,16 +1338,16 @@ The resulting values passed to the NodeB executable are
 \end{description}
 
 \begin{itemize}
-\item \Env{\$(JOB)} may be used in \Arg{string} and will expand to
+\item \verb@$(JOB)@ may be used within the \Arg{string} and will expand to
 \Arg{JobName}. 
 If the \Arg{VARS} line appears in a DAG file used as a splice file, 
-then \Env{\$(JOB)} will be the fully scoped name of the node.
-\item \Env{\$(RETRY)} may be used in \Arg{string} and will expand to
+then \verb@$(JOB)@ will be the fully scoped name of the node.
+\item \verb@$(RETRY)@ may be used in \Arg{string} and will expand to
 0 the first time a node is run; the value is incremented each time the node
 is retried.  For example:
 \end{itemize}
 \begin{verbatim}
-      Vars NodeC noderetry="$(RETRY)"
+      VARS NodeC noderetry="$(RETRY)"
 \end{verbatim}
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
