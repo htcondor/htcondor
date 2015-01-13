@@ -27,12 +27,6 @@
 extern CStarter *Starter;
 
 //
-// TODO: If the starter is running as root (maybe docker should be suid?)
-// we can't allow the normal ssh-to-job code to run.  We'd also probably
-// like ssh-to-job to connect to the docker/internal stuff anyway...
-//
-
-//
 // TODO: Allow the use of HTCondor file-transfer to provide the image.
 // May require understanding "self-hosting".
 //

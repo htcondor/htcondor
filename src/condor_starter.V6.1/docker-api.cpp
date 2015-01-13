@@ -26,8 +26,9 @@ int DockerAPI::run(
 	CondorError & /* err */ )
 {
 	//
-	// TODO: We currently assume that the system has been configured so that
-	// anyone (user) who can run an HTCondor job can also run docker.
+	// We currently assume that the system has been configured so that
+	// anyone (user) who can run an HTCondor job can also run docker.  It's
+	// also apparently a security worry to run Docker as root, so let's not.
 	//
 	ArgList runArgs;
 	std::string docker;

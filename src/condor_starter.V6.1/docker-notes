@@ -1,7 +1,10 @@
-    // To see currently-installed images, run 'docker images'.
+	// To see currently-installed images, run 'docker images'.
 
 	// To obtain the full container ID, pass 'docker ps' the
 	// --no-trunc[ate] option.
 
 	// To map an external path to an internal path, pass 'docker run'
 	// 'v /path/to/sandbox:/inner-path/to/sandbox'.
+
+	// sudo docker inspect --format 'ContainerId = {{.Id}} ; Pid = {{.State.Pid}} ; ExitCode = {{.State.ExitCode}}' <container-name>
+
