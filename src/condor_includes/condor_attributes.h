@@ -466,6 +466,7 @@
 #define ATTR_NUM_DYNAMIC_SLOTS  "NumDynamicSlots"
 #define ATTR_NUM_GLOBUS_SUBMITS  "NumGlobusSubmits"
 #define ATTR_NUM_MATCHES  "NumJobMatches"
+#define ATTR_LIMIT_RESULTS "LimitResults"
 #define ATTR_NUM_HOPS_TO_SUBMIT_MACHINE  "NumHopsToSubmitMachine"
 #define ATTR_NUM_HOPS_TO_LAST_CKPT_SERVER  "NumHopsToLastCkptServer"
 #define ATTR_NUM_HOPS_TO_CKPT_SERVER  "NumHopsToCkptServer"
