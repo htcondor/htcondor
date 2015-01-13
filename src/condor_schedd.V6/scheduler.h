@@ -341,7 +341,6 @@ class Scheduler : public Service
 
 	friend	int		NewProc(int cluster_id);
 	friend	int		count_a_job(ClassAd *);
-	friend	int		count_a_job_global_stats(ClassAd &job, int max_hosts, int cur_hosts, int status, time_t now);
 	friend	void	job_prio(ClassAd *);
 	friend  int		find_idle_local_jobs(ClassAd *);
 	friend	int		updateSchedDInterval( ClassAd* );
