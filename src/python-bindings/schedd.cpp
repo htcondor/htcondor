@@ -305,7 +305,7 @@ struct QueryIterator
                 THROW_EX(RuntimeError, errorMsg.c_str());
             }
             if (ad->EvaluateAttrInt("MalformedAds", intVal) && intVal) THROW_EX(ValueError, "Remote side had parse errors on history file")
-            //if (!ad->EvaluateAttrInt(ATTR_NUM_MATCHES, intVal) || (intVal != m_count)) THROW_EX(ValueError, "Incorrect number of ads returned");
+            //if (!ad->EvaluateAttrInt(ATTR_LIMIT_RESULTS, intVal) || (intVal != m_count)) THROW_EX(ValueError, "Incorrect number of ads returned");
 
             // Everything checks out!
             m_count = -1;
@@ -941,7 +941,7 @@ struct Schedd {
         return sentry_ptr;
     }
 
-    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int match=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default)
+    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default)
     {
         std::string val_str;
 
@@ -988,11 +988,11 @@ struct Schedd {
 
         classad::ClassAd ad;
         ad.Insert(ATTR_REQUIREMENTS, expr_copy);
-        ad.InsertAttr(ATTR_NUM_MATCHES, match);
-	if (fetch_opts)
-	{
-		ad.InsertAttr("QueryDefaultAutocluster", fetch_opts);
-	}
+        ad.InsertAttr(ATTR_LIMIT_RESULTS, limit);
+        if (fetch_opts)
+        {
+            ad.InsertAttr("QueryDefaultAutocluster", fetch_opts);
+        }
 
         classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
         ad.Insert(ATTR_PROJECTION, projTree);
@@ -1193,13 +1193,13 @@ void export_schedd()
             ":param constraint: An optional constraint for filtering out jobs; defaults to 'true'\n"
             ":param attr_list: A list of attributes for the schedd to project along.  Defaults to having the schedd return all attributes.\n"
             ":param callback: A callback function to be invoked for each ad; the return value (if not None) is added to the list.\n"
-            ":param match: Number of matches to return.\n"
+            ":param limit: A limit on the number of matches to return.\n"
             ":param opts: Any one of the QueryOpts enum.\n"
             ":return: A list of matching jobs, containing the requested attributes.",
 #if BOOST_VERSION < 103400
-            (boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("match")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+            (boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
 #else
-            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("match")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
 #endif
             ))
         .def("act", &Schedd::actOnJobs2)
@@ -1251,13 +1251,13 @@ void export_schedd()
         .def("xquery", &Schedd::xquery, xquery_overloads("Query HTCondor schedd, returning an iterator.\n"
             ":param requirements: Either a ExprTree or a string that can be parsed as an expression; requirements all returned jobs should match.\n"
             ":param projection: The attributes to return; an empty list signifies all attributes.\n"
-            ":param match: Number of matches to return.\n"
+            ":param limit: A limit on the number of matches to return.\n"
             ":param opts: Any one of the QueryOpts enum.\n"
             ":return: An iterator for the matching job ads",
 #if BOOST_VERSION < 103400
-            (boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("match")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+            (boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
 #else
-            (boost::python::arg("self"), boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("match")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+            (boost::python::arg("self"), boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
 #endif
             ))
         ;

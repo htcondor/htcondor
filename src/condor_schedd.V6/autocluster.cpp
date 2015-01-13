@@ -584,10 +584,11 @@ int aggregate_jobs(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void * pv)
 JobAggregationResults * AutoCluster::aggregateOn(
 	bool use_default,
 	const char * projection,
+	int          result_limit,
 	classad::ExprTree * constraint)
 {
 	if (use_default) {
-		return new JobAggregationResults(*this, projection, constraint, true);
+		return new JobAggregationResults(*this, projection, result_limit, constraint, true);
 	}
 #ifdef ALLOW_ON_THE_FLY_AGGREGATION
 
@@ -617,7 +618,7 @@ JobAggregationResults * AutoCluster::aggregateOn(
 		runtime);
 
 	dprintf(D_ALWAYS, "Spent %.3f sec aggregating on '%s'\n", runtime.Total(), projection);
-	return new JobAggregationResults(*pjc, projection, constraint);
+	return new JobAggregationResults(*pjc, projection, result_limit, constraint);
 #else
 	return NULL;
 #endif
@@ -626,6 +627,7 @@ JobAggregationResults * AutoCluster::aggregateOn(
 
 bool JobAggregationResults::rewind()
 {
+	results_returned = 0;
 	pause_position.clear();
 	it = jc.cluster_map.begin();
 	return it != jc.cluster_map.end();
@@ -643,6 +645,11 @@ void JobAggregationResults::pause()
 
 ClassAd * JobAggregationResults::next()
 {
+	// if we have already returned the limit of results, then return NULL to signal end.
+	if (result_limit >= 0 && results_returned >= result_limit) {
+		return NULL;
+	}
+
 	// if we are resuming from a paused state, we don't have a valid iterator
 	// so we have to find the the element we paused at or the first one after it.
 	if ( ! pause_position.empty()) {
@@ -687,6 +694,7 @@ ClassAd * JobAggregationResults::next()
 		}
 
 		// return a pointer to the ad.
+		++results_returned;
 		return &ad;
 	}
 

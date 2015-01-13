@@ -1238,16 +1238,22 @@ processCommandLineArguments (int argc, char *argv[])
 			customHeadFoot = HF_BARE;
 		}
 		else
-		if (is_arg_prefix (arg, "match", 1)) {
+		if (is_arg_prefix (arg, "limit", 3)) {
 			if (++i >= argc) {
-				fprintf(stderr, "Error: Argument -match requires the max number of results as an argument.\n");
+				fprintf(stderr, "Error: Argument -limit requires the max number of results as an argument.\n");
 				exit(1);
 			}
 			char *endptr;
 			g_match_limit = strtol(argv[i], &endptr, 10);
-			if (errno || (*endptr != '\0'))
+			if (*endptr != '\0')
 			{
-				fprintf(stderr, "Error: Unable to convert argument (%s) to a number for -match.\n", argv[i]);
+				fprintf(stderr, "Error: Unable to convert argument (%s) to a number for -limit.\n", argv[i]);
+				exit(1);
+			}
+			if (g_match_limit <= 0)
+			{
+				fprintf(stderr, "Error: %d is not a valid for -limit.\n", g_match_limit);
+				exit(1);
 			}
 		}
 		else
@@ -2762,8 +2768,10 @@ usage (const char *myName, int other)
 		"\t<cluster>\t\tGet information about specific cluster\n"
 		"\t<cluster>.<proc>\tGet information about specific job\n"
 		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
+		"\t-autocluster\tGet information about the SCHEDD's autoclusters\n"
 		"\t-constraint <expr>\tGet information about jobs that match <expr>\n"
 		"    [output-opts] are\n"
+		"\t-limit <num>\t\t\tLimit the number of results to <num>\n"
 		"\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t-currentrun\t\tDisplay times only for current run\n"
 		"\t-debug\t\t\tDisplay debugging info to console\n"

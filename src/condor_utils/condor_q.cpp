@@ -439,7 +439,7 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 
 	if (match_limit >= 0)
 	{
-		ad.InsertAttr(ATTR_NUM_MATCHES, match_limit);
+		ad.InsertAttr(ATTR_LIMIT_RESULTS, match_limit);
 	}
 
 	DCSchedd schedd(host);
