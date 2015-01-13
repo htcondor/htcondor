@@ -1789,7 +1789,7 @@ int Scheduler::command_history(int, Stream* stream)
 		ss << attr;
 	}
 
-	int matchCount;
+	int matchCount = -1;
 	if (!queryAd.EvaluateAttr(ATTR_NUM_MATCHES, value) || !value.IsIntegerValue(matchCount))
 	{
 		matchCount = -1;
@@ -1889,16 +1889,20 @@ struct QueryJobAdsContinuation : Service {
 	classad_shared_ptr<classad::ExprTree> requirements;
 	classad::References projection;
 	JobQueueLogType::filter_iterator it;
+	int match_limit;
+	int match_count;
 	bool unfinished_eom;
 	bool registered_socket;
 
-	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int timeslice_ms=0);
+	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms=0);
 	int finish(Stream *);
 };
 
-QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int timeslice_ms)
+QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms)
 	: requirements(requirements_),
 	  it(GetJobQueueIterator(*requirements, timeslice_ms)),
+	  match_limit(limit),
+	  match_count(0),
 	  unfinished_eom(false),
 	  registered_socket(false)
 {
@@ -1908,6 +1912,9 @@ int
 QueryJobAdsContinuation::finish(Stream *stream) {
 	ReliSock *sock = static_cast<ReliSock*>(stream);
 	JobQueueLogType::filter_iterator end = GetJobQueueIteratorEnd();
+	if (match_limit >= 0 && (match_count >= match_limit)) {
+		it = end;
+	}
 	bool has_backlog = false;
 
 	if (unfinished_eom) {
@@ -1937,6 +1944,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		int retval = putClassAd(sock, *tmp_ad,
 					PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
 					projection.empty() ? NULL : &projection);
+		match_count++;
 		if (retval == 2) {
 			//dprintf(D_FULLDEBUG, "Detecting backlog.\n");
 			has_backlog = true;
@@ -1949,6 +1957,9 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 			//dprintf(D_FULLDEBUG, "Socket EOM will block.\n");
 			unfinished_eom = true;
 			has_backlog = true;
+		}
+		if (match_limit >= 0 && (match_count >= match_limit)) {
+			it = end;
 		}
 	}
 	if (has_backlog && !registered_socket) {
@@ -1996,7 +2007,12 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	}
 	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements->Copy());
 
-	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, 1000);
+	int resultLimit=-1;
+	if (!queryAd.EvaluateAttrInt(ATTR_LIMIT_RESULTS, resultLimit)) {
+		resultLimit = -1;
+	}
+
+	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, resultLimit, 1000);
 	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, continuation->projection, true);
 	if (proj_err < 0) {
 		delete continuation;
@@ -2026,10 +2042,10 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	}
 }
 
-void * BeginJobAggregation(bool use_def_autocluster, const char * projection, classad::ExprTree *constraint)
+void * BeginJobAggregation(bool use_def_autocluster, const char * projection, int result_limit, classad::ExprTree *constraint)
 {
 	JobAggregationResults *jar = NULL;
-	jar = scheduler.autocluster.aggregateOn(use_def_autocluster, projection, constraint);
+	jar = scheduler.autocluster.aggregateOn(use_def_autocluster, projection, result_limit, constraint);
 	return (void*)jar;
 }
 
@@ -2174,7 +2190,12 @@ int Scheduler::command_query_job_aggregates(ClassAd &queryAd, Stream* stream)
 	bool use_def_autocluster = false;
 	queryAd.LookupBool("QueryDefaultAutocluster", use_def_autocluster);
 
-	void *aggregation = BeginJobAggregation(use_def_autocluster, projection, constraint);
+	int resultLimit=-1;
+	if (!queryAd.EvaluateAttrInt(ATTR_LIMIT_RESULTS, resultLimit)) {
+		resultLimit = -1;
+	}
+
+	void *aggregation = BeginJobAggregation(use_def_autocluster, projection, resultLimit, constraint);
 	if ( ! aggregation) {
 		free(projection);
 		projection = NULL;
