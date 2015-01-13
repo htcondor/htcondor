@@ -189,6 +189,7 @@ static  bool widescreen = false;
 //static  int  use_old_code = true;
 static  bool expert = false;
 static  bool verbose = false; // note: this is !!NOT the same as -long !!!
+static  int g_match_limit = -1;
 
 static 	int malformed, running, idle, held, suspended, completed, removed;
 
@@ -1235,6 +1236,25 @@ processCommandLineArguments (int argc, char *argv[])
 			dash_long = 1;
 			summarize = 0;
 			customHeadFoot = HF_BARE;
+		}
+		else
+		if (is_arg_prefix (arg, "limit", 3)) {
+			if (++i >= argc) {
+				fprintf(stderr, "Error: Argument -limit requires the max number of results as an argument.\n");
+				exit(1);
+			}
+			char *endptr;
+			g_match_limit = strtol(argv[i], &endptr, 10);
+			if (*endptr != '\0')
+			{
+				fprintf(stderr, "Error: Unable to convert argument (%s) to a number for -limit.\n", argv[i]);
+				exit(1);
+			}
+			if (g_match_limit <= 0)
+			{
+				fprintf(stderr, "Error: %d is not a valid for -limit.\n", g_match_limit);
+				exit(1);
+			}
 		}
 		else
 		if (is_arg_prefix (arg, "pool", 1)) {
@@ -2748,8 +2768,10 @@ usage (const char *myName, int other)
 		"\t<cluster>\t\tGet information about specific cluster\n"
 		"\t<cluster>.<proc>\tGet information about specific job\n"
 		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
+		"\t-autocluster\tGet information about the SCHEDD's autoclusters\n"
 		"\t-constraint <expr>\tGet information about jobs that match <expr>\n"
 		"    [output-opts] are\n"
+		"\t-limit <num>\t\t\tLimit the number of results to <num>\n"
 		"\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t-currentrun\t\tDisplay times only for current run\n"
 		"\t-debug\t\t\tDisplay debugging info to console\n"
@@ -3724,7 +3746,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	if ((useFastPath == 2) && !use_v3) {
 		useFastPath = 1;
 	}
-	int fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, fetch_opts, pfnProcess, pvProcess, useFastPath, &errstack);
+	int fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack);
 	if (fetchResult != Q_OK) {
 		// The parse + fetch failed, print out why
 		switch(fetchResult) {

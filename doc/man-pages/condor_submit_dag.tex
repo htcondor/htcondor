@@ -78,7 +78,10 @@ section on DAGMan.
      jobs allowed before \Condor{dagman} stops submitting more jobs.  Once
      idle jobs start to run, \Condor{dagman} will resume submitting jobs.
      \Arg{NumberOfJobs} is a positive integer. If the option is
-     omitted, the number of idle jobs is unlimited.   Note that for
+     omitted, the number of idle jobs is defined by 
+     configuration variable \Macro{DAGMAN\_MAX\_JOBS\_IDLE},
+     which defaults to 1000.
+     Note that for
      this argument, each individual process within a cluster counts as a 
      job, which is inconsistent with \OptArg{-maxjobs}. 
      Nothing special is done to the submit description file. 

@@ -43,6 +43,17 @@ configuration macro to specify the python modules that are accessible from
 within ClassAds.
 \Ticket{4773}
 
+\item The default value for configuration variable 
+\Macro{DAGMAN\_MAX\_JOBS\_IDLE} has changed from 0, 
+which imposes no limits, to 1000.
+\Ticket{4748}
+
+\item The \Macro{DAGMAN\_USE\_OLD\_DAG\_READER} configuration macro
+is no longer supported.  Setting it to \Expr{True} will result in
+a warning, and will have no effect on how the DAG file is read.
+See section~\ref{param:DAGmanUseOldDagReader} for details.
+\Ticket{4186}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
