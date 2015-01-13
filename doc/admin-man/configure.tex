@@ -5569,7 +5569,7 @@ search for the corresponding attribute names using \Expr{slot}, instead.
 
 \label{param:ModifyRequestExprRequestmemory}
 \item[\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTMEMORY}]
-  A boolean expression used by the \Condor{startd} daemon to modify the
+  An integer expression used by the \Condor{startd} daemon to modify the
   evaluated value of the \Attr{RequestMemory} job ClassAd attribute,
   before it used to provision a dynamic slot. 
   The default value is given by
@@ -5581,19 +5581,27 @@ search for the corresponding attribute names using \Expr{slot}, instead.
 
 \label{param:ModifyRequestExprRequestdisk}
 \item[\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTDISK}]
-  A boolean expression used by the \Condor{startd} daemon to modify the
+  An integer expression used by the \Condor{startd} daemon to modify the
   evaluated value of the \Attr{RequestDisk} job ClassAd attribute,
   before it used to provision a dynamic slot. 
   The default value is given by
-  \Expr{quantize(RequestDisk,{1024})}.
+  \footnotesize
+  \begin{verbatim}
+  quantize(RequestDisk,{1024})
+  \end{verbatim}
+  \normalsize
 
 \label{param:ModifyRequestExprRequestcpus}
 \item[\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTCPUS}]
-  A boolean expression used by the \Condor{startd} daemon to modify the
+  An integer expression used by the \Condor{startd} daemon to modify the
   evaluated value of the \Attr{RequestCpus} job ClassAd attribute,
   before it used to provision a dynamic slot. 
   The default value is given by
-  \Expr{quantize(RequestCpus,{1})}
+  \footnotesize
+  \begin{verbatim}
+  quantize(RequestCpus,{1})
+  \end{verbatim}
+  \normalsize
 
 \label{param:NumSlotsTypeN}
 \item[\Macro{NUM\_SLOTS\_TYPE\_<N>}]
