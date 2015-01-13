@@ -1584,6 +1584,11 @@ As an example, if the DAG input file contains:
 \end{verbatim}
 then the configuration values in file \File{dagman.config} will be used
 for this DAG.
+If the contents of file \File{dagman.config} is 
+\begin{verbatim}
+  DAGMAN_MAX_JOBS_IDLE = 10
+\end{verbatim}
+then this configuration is defined for this DAG. 
 
 Only a single configuration file can be specified for a given
 \Condor{dagman} run.  For example, if one file is specified within a DAG
