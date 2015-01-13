@@ -666,24 +666,31 @@ ArgsToList( const char * name,
 
 	for (int idx=0; idx<arg_list.Count(); idx++)
 	{
-		std::string tmp = arg_list.GetArg(idx);
 		classad::Value string_val;
-		string_val.SetStringValue(tmp);
+		string_val.SetStringValue(arg_list.GetArg(idx));
 		classad::ExprTree *expr = classad::Literal::MakeLiteral(string_val);
 		if (!expr)
 		{
+			for (std::vector<classad::ExprTree*>::iterator it = list_exprs.begin(); it != list_exprs.end(); it++)
+			{
+				if (*it) {delete *it; *it=NULL;}
+			}
 			classad::CondorErrMsg = "Unable to create string expression.";
 			result.SetErrorValue();
-			return true;
+			return false;
 		}
 		list_exprs.push_back(expr);
 	}
 	classad_shared_ptr<classad::ExprList> result_list(classad::ExprList::MakeExprList(list_exprs));
 	if (!result_list.get())
 	{
+		for (std::vector<classad::ExprTree*>::iterator it = list_exprs.begin(); it != list_exprs.end(); it++)
+		{
+			if (*it) {delete *it; *it=NULL;}
+		}
 		classad::CondorErrMsg = "Unable to create expression list.";
 		result.SetErrorValue();
-		return true;
+		return false;
 	}
 	result.SetListValue(result_list);
 	return true;
@@ -767,8 +774,7 @@ ListToArgs(const char * name,
 		ss << "Error when parsing argument to arg V2: " << error_msg.Value();
 		return problemExpression(ss.str(), arguments[0], result);
 	}
-	std::string result_str = result_mystr;
-	result.SetStringValue(result_str);
+	result.SetStringValue(result_mystr.Value());
 	return true;
 }
 
@@ -807,8 +813,7 @@ EnvironmentV1ToV2(const char * name,
 	}
 	MyString result_mystr;
 	env.getDelimitedStringV2Raw(&result_mystr, NULL);
-	std::string result_str = result_mystr;
-	result.SetStringValue(result_str);
+	result.SetStringValue(result_mystr.Value());
 	return true;
 }
 
@@ -847,8 +852,7 @@ MergeEnvironment(const char * /*name*/,
 	}
 	MyString result_mystr;
 	env.getDelimitedStringV2Raw(&result_mystr, NULL);
-	std::string result_str = result_mystr;
-	result.SetStringValue(result_str);
+	result.SetStringValue(result_mystr.Value());
 	return true;
 }
 
