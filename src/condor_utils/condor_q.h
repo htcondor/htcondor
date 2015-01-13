@@ -127,8 +127,8 @@ class CondorQ
 	
 	// helper functions
 	int fetchQueueFromHostAndProcessV2 ( const char * host, const char * constraint, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int connect_timeout, CondorError* errstack = 0);
-	int getAndFilterAds( const char *, StringList &attrs, ClassAdList &, int useAll );
-	int getFilterAndProcessAds( const char *, StringList &attrs, condor_q_process_func pfn, void * process_func_data, bool useAll );
+	int getAndFilterAds( const char *, StringList &attrs, int match_limit, ClassAdList &, int useAll );
+	int getFilterAndProcessAds( const char *, StringList &attrs, int match_limit, condor_q_process_func pfn, void * process_func_data, bool useAll );
 };
 
 int JobSort(ClassAd *job1, ClassAd *job2, void *data);
