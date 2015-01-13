@@ -2627,7 +2627,7 @@ of the subsystem corresponding to the daemon.
     as opposed to specifying what kinds of messages should be printed.
     If \Dflag{SUB\_SECOND} is set, the time at the beginning of each line in the
     log file will contain a fractional part to the seconds field that is accurate
-    to the millsecond.
+    to the millisecond.
 
   \end{description}
 
@@ -10193,13 +10193,12 @@ in section~\ref{sec:DAG-configuration}.
   Note that nothing special is 
   done to the submit description file.
   If a submit description file contains \Expr{queue 5000}
-  and \Macro{DAGMAN\_MAX\_JOBS\_IDLE} is set to 250, 
+  and \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} is set to 250, 
   this will result in 5000 jobs being submitted to the \Condor{schedd},
   not 250; in this case, no
   further jobs will then be submitted by \Condor{dagman} until the number of
   idle jobs falls below 250.
-  As of version 8.3.3, the default for \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE}
-  is 1000.
+  The default value is 1000.
 
 \label{param:DAGManMaxJobsSubmitted}
 \item[\Macro{DAGMAN\_MAX\_JOBS\_SUBMITTED}]
@@ -13087,7 +13086,7 @@ in ClassAds that the \Condor{collector} daemon has.
   \Condor{gangliad} configuration \emph{and}
   \MacroNI{STATISTICS\_TO\_PUBLISH} in the \Condor{schedd} configuration
   contains \Expr{TRANSFER:2}, or if the \MacroNI{STATISTICS\_TO\_PUBLISH\_LIST}
-  contains the desired attributes explictly.
+  contains the desired attributes explicitly.
 
 \label{param:GangliadRequirements}
 \item[\Macro{GANGLIAD\_REQUIREMENTS}] An optional boolean ClassAd expression
