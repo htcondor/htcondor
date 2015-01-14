@@ -36,6 +36,13 @@ int condor_accept(int sockfd, condor_sockaddr& addr)
 
 int condor_bind(int sockfd, const condor_sockaddr& addr)
 {
+#ifdef LINUX
+	if (addr.is_ipv6())
+	{
+		int yes = 1;
+		setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&yes, sizeof(yes));
+	}
+#endif
 	if (addr.is_ipv6() && addr.is_link_local()) {
 		condor_sockaddr bind_addr = addr;
 		bind_addr.set_scope_id(ipv6_get_scope_id());
