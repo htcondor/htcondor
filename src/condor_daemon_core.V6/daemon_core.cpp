@@ -107,7 +107,6 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "valgrind.h"
 #include "ipv6_hostname.h"
 #include "daemon_command.h"
-#include "condor_ipv6.h"
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
