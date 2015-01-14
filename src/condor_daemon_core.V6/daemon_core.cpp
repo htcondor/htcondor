@@ -9866,11 +9866,10 @@ InitCommandSockets(int port, int udp_port, DaemonCore::SockPairVec & socks, bool
 	// Arbitrary constant, borrowed from bindAnyCommandPort().
 	int retries = 1000;
 	do {
-
-		if(param_boolean("ENABLE_IPV4", true)) {
+		if(param_boolean("ENABLE_IPV6", true)) {
 			DaemonCore::SockPair sock_pair;
-			if( ! InitCommandSocket(CP_IPV4, port, udp_port, sock_pair, want_udp, fatal)) {
-				dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket.\n");
+			if( ! InitCommandSocket(CP_IPV6, port, udp_port, sock_pair, want_udp, fatal)) {
+				dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv6 command socket.\n");
 				return false;
 			}
 			new_socks.push_back(sock_pair);
@@ -9885,17 +9884,17 @@ InitCommandSockets(int port, int udp_port, DaemonCore::SockPairVec & socks, bool
 		if( param_boolean( "ENABLE_IPV4", true ) && param_boolean("ENABLE_IPV6", true ) ) {
 			// If port and udp_port are both static, we don't have to do anything.
 			if( port <= 1 || udp_port <= 1 ) {
-				// Determine which port IPv4 got, and try to get that port for IPv6.
-				DaemonCore::SockPair ipv4_socks = new_socks[0];
-				counted_ptr<ReliSock> rs = ipv4_socks.rsock();
+				// Determine which port IPv6 got, and try to get that port for IPv4.
+				DaemonCore::SockPair ipv6_socks = new_socks[0];
+				counted_ptr<ReliSock> rs = ipv6_socks.rsock();
 				targetTCPPort = targetUDPPort = rs->get_port();
 			}
 		}
 
-		if(param_boolean("ENABLE_IPV6", true)) {
+		if(param_boolean("ENABLE_IPV4", true)) {
 			DaemonCore::SockPair sock_pair;
-			if( ! InitCommandSocket(CP_IPV6, targetTCPPort, targetUDPPort, sock_pair, want_udp, fatal)) {
-				dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv6 command socket.\n");
+			if( ! InitCommandSocket(CP_IPV4, targetTCPPort, targetUDPPort, sock_pair, want_udp, fatal)) {
+				dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket.\n");
 				return false;
 			}
 			new_socks.push_back(sock_pair);
@@ -9903,17 +9902,19 @@ InitCommandSockets(int port, int udp_port, DaemonCore::SockPairVec & socks, bool
 
 		if( param_boolean( "ENABLE_IPV4", true ) && param_boolean("ENABLE_IPV6", true ) ) {
 			if( targetTCPPort != port && targetUDPPort != udp_port ) {
-				DaemonCore::SockPair ipv6_socks = new_socks[1];
-				counted_ptr<ReliSock> rs = ipv6_socks.rsock();
-				int ipv6Port = rs->get_port();
+				DaemonCore::SockPair ipv4_socks = new_socks[1];
+				counted_ptr<ReliSock> rs = ipv4_socks.rsock();
+				int ipv4Port = rs->get_port();
 
-				if( ipv6Port != targetTCPPort ) {
-					dprintf( D_FULLDEBUG, "Bound to IPv4 port %d, but then bound to IPv6 command port %d.\n", targetTCPPort, port );
+				if( ipv4Port != targetTCPPort ) {
+					dprintf( D_FULLDEBUG, "Bound to IPv6 port %d, but then bound to IPv4 command port %d.\n", targetTCPPort, port );
 					new_socks.clear();
 					--retries;
 				} else {
 					retries = -1;
 				}
+			} else {
+				retries = -1;
 			}
 		} else {
 			retries = -1;
