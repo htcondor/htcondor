@@ -448,6 +448,7 @@ our %submit_info = (
 	'x86_64_MacOSX7',	=> 'x86_64_MacOSX',
 	'x86_64_MacOSX8',	=> 'x86_64_MacOSX',
 	'x86_64_MacOSX9',	=> 'x86_64_MacOSX',
+	'x86_64_MacOSX10',	=> 'x86_64_MacOSX',
 
 	#
 	# The SWAMP platforms.
