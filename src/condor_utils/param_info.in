@@ -7900,3 +7900,11 @@ customization=seldom
 friendly_name=Whether to invoke file transfer plugins as user or as root
 review=?
 
+[DOCKER]
+default=/usr/bin/docker
+win32_default=docker
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Docker
+review=?
