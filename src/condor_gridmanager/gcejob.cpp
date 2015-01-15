@@ -511,6 +511,12 @@ void GCEJob::doEvaluateState()
 					break;
 				}
 
+				if ( ( condorState == REMOVED || condorState == HELD ) &&
+					 !gahp->pendingRequestIssued() ) {
+					gmState = GM_CLEAR_REQUEST;
+					break;
+				}
+
 				// After a submit, wait at least submitInterval before trying another one.
 				if ( now >= lastSubmitAttempt + submitInterval ) {
 
