@@ -181,6 +181,12 @@ int DockerAPI::run(
 	// That should eliminate the need to sleep before calling DockerAPI::rm()
 	// in DockerProc::JobExit().
 	//
+	// Note that we'd need to verify that our assigned name is always
+	// sufficient for all other commands, or have the parent poll
+	// 'docker inspect' until we get the ID back.  We may have to do the
+	// latter anyway, to get the cgroups ID to use for gathering usage
+	// information.
+	//
 
 	FamilyInfo fi;
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
