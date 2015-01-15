@@ -79,6 +79,14 @@ class DockerAPI {
 		 * @return				0 on success, negative otherwise.
 		 */
 		static int getStatus( const std::string & containerID, bool isRunning, int & result, CondorError & err );
+
+		/**
+		 * Attempts to detect the presence of a working Docker installation.
+		 *
+		 * @param error			....
+		 * @return				0 on success, negative otherwise.
+		 */
+		static int detect( CondorError & err );
 };
 
 #endif /* _CONDOR_DOCKER_API_H */

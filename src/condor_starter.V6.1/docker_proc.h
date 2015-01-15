@@ -30,6 +30,8 @@ class DockerProc : public VanillaProc {
 		virtual bool PublishUpdateAd( ClassAd * jobAd );
 		virtual void PublishToEnv( Env * env );
 
+		static bool Detect();
+
 	private:
 
 		std::string containerID;

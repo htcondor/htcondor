@@ -4,7 +4,9 @@
 	// --no-trunc[ate] option.
 
 	// To map an external path to an internal path, pass 'docker run'
-	// 'v /path/to/sandbox:/inner-path/to/sandbox'.
+	// '-v /path/to/sandbox:/inner-path/to/sandbox'.
 
 	// sudo docker inspect --format 'ContainerId = {{.Id}} ; Pid = {{.State.Pid}} ; ExitCode = {{.State.ExitCode}}' <container-name>
 
+	// docker run --rm will autoremove the container if it exited sucessfuly,
+	// which might be a nice back-up for us.

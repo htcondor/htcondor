@@ -285,3 +285,17 @@ void DockerProc::PublishToEnv( Env * /* env */ ) {
 	dprintf( D_ALWAYS, "DockerProc::PublishToEnv()\n" );
 	return;
 }
+
+
+bool DockerProc::Detect() {
+	dprintf( D_ALWAYS, "DockerProc::Detect()\n" );
+
+	//
+	// To turn off Docker, unset DOCKER.  DockerAPI::detect() will fail
+	// but not complain to the log (unless D_FULLDEBUG) if so.
+	//
+
+	CondorError err;
+	int rval = DockerAPI::detect( err );
+	return rval == 0;
+}

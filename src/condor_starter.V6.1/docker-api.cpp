@@ -64,9 +64,12 @@ int DockerAPI::run(
 	char buffer[1024];
 	if( NULL == fgets( buffer, 1024, dockerResults ) ) {
 		if( errno ) {
-			dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from Docker: '%s' (%d)\n", strerror( errno ), errno );
-			return -2;
+			dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), strerror( errno ), errno );
+		} else {
+			dprintf( D_ALWAYS | D_FAILURE, "'%s' returned nothing.\n", displayString.c_str() );
 		}
+		my_pclose( dockerResults );
+		return -2;
 	}
 
 	char rawContainerID[65];
@@ -76,13 +79,13 @@ int DockerAPI::run(
 		while( fgets( buffer, 1024, dockerResults ) != NULL ) {
 			dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
 		}
-		fclose( dockerResults );
+		my_pclose( dockerResults );
 		return -3;
 	}
 
 	dprintf( D_FULLDEBUG, "Found raw countainer ID '%s'\n", rawContainerID );
 	containerID = rawContainerID;
-	fclose( dockerResults );
+	my_pclose( dockerResults );
 
 	// Use containerID to find the PID.
 	ArgList inspectArgs;
@@ -118,6 +121,7 @@ int DockerAPI::run(
 			correctOutput[i] = buffer;
 		}
 	}
+	my_pclose( dockerResults );
 
 	int attrCount = 0;
 	ClassAd dockerAd;
@@ -135,7 +139,6 @@ int DockerAPI::run(
 		}
 		return -4;
 	}
-	fclose( dockerResults );
 
 	dprintf( D_FULLDEBUG, "docker inspect printed:\n" );
 	for( int i = 0; i < formatElements.number() && ! correctOutput[i].empty(); ++i ) {
@@ -227,9 +230,12 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 	char buffer[1024];
 	if( NULL == fgets( buffer, 1024, dockerResults ) ) {
 		if( errno ) {
-			dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from Docker: '%s' (%d)\n", strerror( errno ), errno );
-			return -3;
+			dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), strerror( errno ), errno );
+		} else {
+			dprintf( D_ALWAYS | D_FAILURE, "'%s' returned nothing.\n", displayString.c_str() );
 		}
+		my_pclose( dockerResults );
+		return -3;
 	}
 
 	int length = strlen( buffer );
@@ -239,9 +245,53 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 		while( NULL != fgets( buffer, 1024, dockerResults ) ) {
 			dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
 		}
+		my_pclose( dockerResults );
 		return -4;
+	}
+
+	my_pclose( dockerResults );
+	return 0;
+}
+
+int DockerAPI::detect( CondorError & /* err */ ) {
+	std::string docker;
+	if( ! param( docker, "DOCKER" ) ) {
+		dprintf( D_FULLDEBUG, "DOCKER is undefined.\n" );
+		return -1;
+	}
+
+	ArgList infoArgs;
+	infoArgs.AppendArg( docker );
+	infoArgs.AppendArg( "info" );
+
+	MyString displayString;
+	infoArgs.GetArgsStringForLogging( & displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
+
+	FILE * dockerResults = my_popen( infoArgs, "r", 1 );
+	if( dockerResults == NULL ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
+		return -2;
+	}
+
+	// Even if we don't care about the success output, the failure output
+	// can be handy for debugging...
+	char buffer[1024];
+	std::vector< std::string > output;
+	while( fgets( buffer, 1024, dockerResults ) != NULL ) {
+		unsigned end = strlen(buffer) - 1;
+		if( buffer[end] == '\n' ) { buffer[end] = '\0'; }
+		output.push_back( buffer );
+	}
+	for( unsigned i = 0; i < output.size(); ++i ) {
+		dprintf( D_FULLDEBUG, "[docker info] %s\n", output[i].c_str() );
+	}
+
+	int exitCode = my_pclose( dockerResults );
+	if( exitCode != 0 ) {
+		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, output[0].c_str() );
+		return -3;
 	}
 
 	return 0;
 }
-
