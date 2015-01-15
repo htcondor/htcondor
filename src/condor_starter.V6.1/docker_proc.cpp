@@ -330,6 +330,21 @@ bool DockerProc::Detect() {
 	//
 
 	CondorError err;
-	int rval = DockerAPI::detect( err );
-	return rval == 0;
+	bool hasDocker = DockerAPI::detect( err ) == 0;
+
+	return hasDocker;
+}
+
+bool DockerProc::Version( std::string & version ) {
+	dprintf( D_ALWAYS, "DockerProc::Version()\n" );
+
+	//
+	// To turn off Docker, unset DOCKER.  DockerAPI::version() will fail
+	// but not complain to the log (unless D_FULLDEBUG) if so.
+	//
+
+	CondorError err;
+	bool foundVersion = DockerAPI::version( version, err ) == 0;
+
+	return foundVersion;
 }

@@ -89,6 +89,15 @@ class DockerAPI {
 		 * @return				0 on success, negative otherwise.
 		 */
 		static int detect( CondorError & err );
+
+		/**
+		 * Obtains the configured DOCKER's version string.
+		 *
+		 * @param version		On success, will be set to the version string.  Otherwise, unchanged.
+		 * @param error			....
+		 * @return				0 on success, negative otherwise.
+		 */
+		static int version( std::string & version, CondorError & err );
 };
 
 #endif /* _CONDOR_DOCKER_API_H */

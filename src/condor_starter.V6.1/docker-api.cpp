@@ -289,3 +289,51 @@ int DockerAPI::detect( CondorError & /* err */ ) {
 
 	return 0;
 }
+
+//
+// FIXME: We have a lot of boilerplate code in this function and file.
+//
+int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
+	std::string docker;
+	if( ! param( docker, "DOCKER" ) ) {
+		dprintf( D_FULLDEBUG, "DOCKER is undefined.\n" );
+		return -1;
+	}
+
+	ArgList versionArgs;
+	versionArgs.AppendArg( docker );
+	versionArgs.AppendArg( "-v" );
+
+	MyString displayString;
+	versionArgs.GetArgsStringForLogging( & displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
+
+	FILE * dockerResults = my_popen( versionArgs, "r", 1 );
+	if( dockerResults == NULL ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
+		return -2;
+	}
+
+	char buffer[1024];
+	if( NULL == fgets( buffer, 1024, dockerResults ) ) {
+		if( errno ) {
+			dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), strerror( errno ), errno );
+		} else {
+			dprintf( D_ALWAYS | D_FAILURE, "'%s' returned nothing.\n", displayString.c_str() );
+		}
+		my_pclose( dockerResults );
+		return -3;
+	}
+
+	int exitCode = my_pclose( dockerResults );
+	if( exitCode != 0 ) {
+		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, buffer );
+		return -4;
+	}
+
+	unsigned end = strlen(buffer) - 1;
+	if( buffer[end] == '\n' ) { buffer[end] = '\0'; }
+	version = buffer;
+
+	return 0;
+}

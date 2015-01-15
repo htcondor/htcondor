@@ -147,6 +147,11 @@ printClassAd( void )
 	// Docker "universe."
 	if( DockerProc::Detect() ) {
 		printf( "%s = True\n", ATTR_HAS_DOCKER );
+
+		std::string dockerVersion;
+		if( DockerProc::Version( dockerVersion ) ) {
+			printf( "%s = \"%s\"\n", "DockerVersion", dockerVersion.c_str() );
+		}
 	}
 
 	// Advertise which file transfer plugins are supported
