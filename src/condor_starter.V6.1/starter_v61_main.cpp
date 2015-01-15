@@ -36,6 +36,7 @@
 #include "jic_local_file.h"
 #include "jic_local_schedd.h"
 #include "vm_proc.h"
+#include "docker_proc.h"
 #include "condor_getcwd.h"
 
 
@@ -137,10 +138,20 @@ printClassAd( void )
 	if( VMProc::vm_univ_detect() ) {
 		// This doesn't mean that vm universe is really available.
 		// This just means that starter has codes for vm universe.
-		// Actual testing for vm universe will be 
+		// Actual testing for vm universe will be
 		//  done by vmuniverse manager in startd.
 		// ATTR_HAS_VM may be overwritten by vmuniverse manager in startd
-		printf( "%s = True\n",ATTR_HAS_VM);		
+		printf( "%s = True\n",ATTR_HAS_VM );
+	}
+
+	// Docker "universe."
+	if( DockerProc::Detect() ) {
+		printf( "%s = True\n", ATTR_HAS_DOCKER );
+
+		std::string dockerVersion;
+		if( DockerProc::Version( dockerVersion ) ) {
+			printf( "%s = \"%s\"\n", ATTR_DOCKER_VERSION, dockerVersion.c_str() );
+		}
 	}
 
 	// Advertise which file transfer plugins are supported

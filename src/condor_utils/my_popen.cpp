@@ -345,6 +345,12 @@ my_popenv_impl( const char *const args[],
 		return NULL;
 	}
 
+// dprintf( D_FULLDEBUG, "my_popenv_impl() =" );
+// for( int i = 0; args[i] != NULL; ++i ) {
+//	dprintf( D_FULLDEBUG | D_NOHEADER, " |%s|", args[i] );
+// }
+// dprintf( D_FULLDEBUG | D_NOHEADER, "\n" );
+
 		/* Create a new process */
 	if( (pid=fork()) < 0 ) {
 		dprintf(D_ALWAYS, "my_popenv: Failed to fork child, errno=%d (%s)\n",
@@ -439,7 +445,7 @@ my_popenv_impl( const char *const args[],
 		if ( privsep_uid != (uid_t)-1 ) {
 			ArgList al;
 			psforkexec.in_child(cmd, al);
-			args = al.GetStringArray();			
+			args = al.GetStringArray();
 		}
 
 			/* set environment if defined */
