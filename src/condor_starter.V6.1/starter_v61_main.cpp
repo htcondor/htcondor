@@ -150,7 +150,7 @@ printClassAd( void )
 
 		std::string dockerVersion;
 		if( DockerProc::Version( dockerVersion ) ) {
-			printf( "%s = \"%s\"\n", "DockerVersion", dockerVersion.c_str() );
+			printf( "%s = \"%s\"\n", ATTR_DOCKER_VERSION, dockerVersion.c_str() );
 		}
 	}
 

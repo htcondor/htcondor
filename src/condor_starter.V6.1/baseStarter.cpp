@@ -2368,7 +2368,7 @@ CStarter::SpawnJob( void )
 		case CONDOR_UNIVERSE_LOCAL:
 		case CONDOR_UNIVERSE_VANILLA: {
 			int wantDocker = 0;
-			jobAd->LookupBool( "WantDocker", wantDocker );
+			jobAd->LookupBool( ATTR_WANT_DOCKER, wantDocker );
 
 			if( wantDocker ) {
 				job = new DockerProc( jobAd );

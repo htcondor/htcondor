@@ -337,3 +337,21 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 
 	return 0;
 }
+
+
+//
+// Random notes on Docker.
+//
+
+// To see currently-installed images, run 'docker images'.
+
+// To obtain the full container ID, pass 'docker ps' the
+// --no-trunc[ate] option.
+
+// To map an external path to an internal path, pass 'docker run'
+// '-v /path/to/sandbox:/inner-path/to/sandbox'.
+
+// sudo docker inspect --format 'ContainerId = {{.Id}} ; Pid = {{.State.Pid}} ; ExitCode = {{.State.ExitCode}}' <container-name>
+
+// docker run --rm will autoremove the container if it exited sucessfuly,
+// which might be a nice back-up for us.
