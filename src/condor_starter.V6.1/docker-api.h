@@ -30,6 +30,7 @@ class DockerAPI {
 		 * @param directory		...
 		 * @param containerID	On success, will be set to the container's GUID.  Otherwise, unchagned.
 		 * @param pid			On success, will be set to the PID of a process which will terminate when the container does.  Otherwise, unchanged.
+		 * @param childFDs		The redirected std[in|out|err] FDs.
 		 * @param error			On success, unchanged.  Otherwise, [TODO].
 		 * @return 				0 on success, negative otherwise.
 		 */
@@ -41,6 +42,7 @@ class DockerAPI {
 						const std::string & directory,
 						std::string & containerID,
 						int & pid,
+						int * childFDs,
 						CondorError & error );
 
 		/**

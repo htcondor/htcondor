@@ -23,6 +23,7 @@ int DockerAPI::run(
 	const std::string & sandboxPath,
 	std::string & containerID,
 	int & pid,
+	int * childFDs,
 	CondorError & /* err */ )
 {
 	//
@@ -38,13 +39,21 @@ int DockerAPI::run(
 	}
 	runArgs.AppendArg( docker );
 	runArgs.AppendArg( "run" );
-	// TODO: Set up the environment (in the container).
 	runArgs.AppendArg( "--detach" );
 	runArgs.AppendArg( "--name" );
 	runArgs.AppendArg( dockerName );
-	// TODO: Map the external sanbox to the internal sandbox.
+
+	// TODO: Set up the environment (in the container).
+
+	// Map the external sanbox to the internal sandbox.
+	runArgs.AppendArg( "-v" );
+	runArgs.AppendArg( sandboxPath + ":/tmp" );
+
+	// Start in the sandbox.
 	runArgs.AppendArg( "--workdir" );
-	runArgs.AppendArg( sandboxPath );
+	runArgs.AppendArg( "/tmp" );
+
+	// Run the command with its arguments in the image.
 	runArgs.AppendArg( imageID );
 	runArgs.AppendArg( command );
 	runArgs.AppendArgsFromArgList( args );
@@ -153,43 +162,28 @@ int DockerAPI::run(
 	}
 
 	//
-	// It's convenient to have a process which suicides when the container
-	// terminates.  If 'docker logs --follow' does, using it allows us to
-	// trivially stream I/O, and since it /will/ do 'catch-up', we won't
-	// even miss any.  [TODO]
+	// We use 'docker logs --follow' both as a signal/semaphore process (like
+	// 'docker wait', it will terminate iff the container does), and to make
+	// sure we catch all of the output.
 	//
-	// Calling daemonCore->Create_Process() handles much of this magic for us.
-	//
-
 	ArgList waitArgs;
 	waitArgs.AppendArg( docker );
-	waitArgs.AppendArg( "wait" );
+//	waitArgs.AppendArg( "wait" );
+	waitArgs.AppendArg( "logs" );
+	waitArgs.AppendArg( "--follow" );
 	waitArgs.AppendArg( containerID );
+
+	//
+	// It may be wiser to fork and run in attached mode, playing the
+	// appropriate games with the childFDs, and passing the child's PID
+	// as the proxy process ID, especially given the --rm option.
+	//
+	// That should eliminate the need to sleep before calling DockerAPI::rm()
+	// in DockerProc::JobExit().
+	//
 
 	FamilyInfo fi;
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
-
-	// We need backticks.
-	int childFDs[3];
-
-	// Docker doesn't need stdin.
-	childFDs[0] = -1;
-
-	int pipeFDs[2];
-	if( ! daemonCore->Create_Pipe( pipeFDs, false, false, true ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Unable to create pipe to run Docker.\n" );
-		return -2;
-	}
-	// int dockersStdOut = pipeFDs[0];
-	childFDs[1] = pipeFDs[1];
-
-	if( ! daemonCore->Create_Pipe( pipeFDs, false, false, true ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Unable to create pipe to run Docker.\n" );
-		return -2;
-	}
-	// int dockersStdErr = pipeFDs[0];
-	childFDs[2] = pipeFDs[1];
-
 	int childPID = daemonCore->Create_Process( docker.c_str(), waitArgs,
 		PRIV_UNKNOWN, 1, FALSE, FALSE, NULL, sandboxPath.c_str(),
 		& fi, NULL, childFDs );

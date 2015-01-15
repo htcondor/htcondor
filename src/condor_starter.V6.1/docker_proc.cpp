@@ -88,11 +88,36 @@ int DockerProc::StartJob() {
 		Starter->jic->jobProc(),
 		getpid() );
 
+
+	//
+	// Do I/O redirection (includes streaming).
+	//
+
+	// getStdFile() returns -1 on error.
+	int childFDs[3] = { -2, -2, -2 };
+
+	if( -1 == (childFDs[0] = openStdFile( SFT_IN, NULL, true, "Input file" )) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stdin.\n" );
+		return FALSE;
+	}
+	if( -1 == (childFDs[1] = openStdFile( SFT_OUT, NULL, true, "Output file" )) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stdout.\n" );
+		daemonCore->Close_FD( childFDs[0] );
+		return FALSE;
+	}
+	if( -1 == (childFDs[2] = openStdFile( SFT_ERR, NULL, true, "Error file" )) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stderr.\n" );
+		daemonCore->Close_FD( childFDs[0] );
+		daemonCore->Close_FD( childFDs[1] );
+		return FALSE;
+	}
+
+
 	CondorError err;
 	// DockerAPI::run() returns a PID from daemonCore->Create_Process(), which
 	// makes it suitable for passing up into VanillaProc.  This combination
 	// will trigger the reaper(s) when the container terminates.
-	int rv = DockerAPI::run( dockerName, imageID, command, args, e, sandboxPath, containerID, JobPid, err );
+	int rv = DockerAPI::run( dockerName, imageID, command, args, e, sandboxPath, containerID, JobPid, childFDs, err );
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::run( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		return FALSE;
@@ -132,6 +157,15 @@ bool DockerProc::JobReaper( int pid, int status ) {
 //
 bool DockerProc::JobExit() {
 	dprintf( D_ALWAYS, "DockerProc::JobExit()\n" );
+
+	//
+	// If we transfer files fast enough, 'docker rm' will fail because
+	// it believes a container that 'docker logs --follow' believes has
+	// terminated is still running.  This does not happen if we use
+	// 'docker wait', but then we would have to play games when the
+	// container terminates to get its output.
+	//
+	sleep( 1 );
 
 	CondorError error;
 	int rv = DockerAPI::rm( containerID, error );
