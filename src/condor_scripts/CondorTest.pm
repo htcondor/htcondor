@@ -2881,7 +2881,7 @@ sub GetPersonalCondorWithConfig
 	my $condor_config = "";
     if(CondorUtils::is_windows() == 1) {
 		if(is_windows_native_perl()) {
-			print "GetPersonalCondorWithConfig: windows_native_perl\n";
+			#print "GetPersonalCondorWithConfig: windows_native_perl\n";
 			$_ = $tmp_config;
 			s/\//\\/g;
 			$condor_config = $_;

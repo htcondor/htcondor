@@ -130,6 +130,8 @@ sub SetUp
 
 	# start two jobs which run till killed
 
+	my $limit = 120;
+
 	if(is_windows()) {
 		$cmd = "x_cmdrunforever.pl B$unique";
 	} else {
@@ -160,10 +162,17 @@ sub SetUp
 	print "Wait for job 2.0 to be running\n";
 	my $qstat = CondorTest::getJobStatus(2.0);
 	CondorTest::debug("remote cluster 2.0 status is $qstat\n",$debuglevel);
+	my $counter = 0;
 	while($qstat != RUNNING)
 	{
 		CondorTest::debug("remote Job status 2.0 not RUNNING - wait a bit\n",$debuglevel);
+		if($counter >= $limit) {
+			die "local Job status 2.0 failed 2 minutes to running test\n";
+		} else {
+			$counter += 4;
+		}
 		sleep 4;
+
 		$qstat = CondorTest::getJobStatus(2.0);
 	}
 	print "job 2.0 running - ";
@@ -172,11 +181,17 @@ sub SetUp
 	print "Wait for job 1.0 to be running\n";
 	$qstat = CondorTest::getJobStatus(1.0);
 	CondorTest::debug("remote cluster 1.0 status is $qstat\n",$debuglevel);
+	$counter = 0;
 	while($qstat != RUNNING)
 	{
 		CondorTest::debug("remote Job status 1.0 not RUNNING - wait a bit\n",$debuglevel);
 		sleep 4;
 		$qstat = CondorTest::getJobStatus(1.0);
+		if($counter >= $limit) {
+			die "local Job status 1.0 failed 2 minutes to running test\n";
+		} else {
+			$counter += 4;
+		}
 	}
 	print "job 1.0 running - ";
 	print "ok\n\n";
@@ -221,17 +236,16 @@ sub SetUp
 	print "Wait for job 2.0 to be running\n";
 	$qstat = CondorTest::getJobStatus(2.0);
 	CondorTest::debug("local cluster 2.0 status is $qstat\n",$debuglevel);
-	my $limit = 360;
 	my $counter = 0;
 	while($qstat != RUNNING)
 	{
 		CondorTest::debug("local Job status 2.0 not RUNNING - wait a bit\n",$debuglevel);
-		sleep 1;
+		sleep 4;
 		$qstat = CondorTest::getJobStatus(2.0);
 		if($counter >= $limit) {
 			die "local Job status 2.0 failed 6 minutes to running test\n";
 		} else {
-			$counter += 1;
+			$counter += 4;
 		}
 	}
 	print "Job 2 running - ok\n";
@@ -243,12 +257,12 @@ sub SetUp
 	while($qstat != RUNNING)
 	{
 		CondorTest::debug("local Job status 1.0 not RUNNING - wait a bit\n",$debuglevel);
-		sleep 1;
+		sleep 4;
 		$qstat = CondorTest::getJobStatus(1.0);
 		if($counter >= $limit) {
 			die "local Job status 1.0 failed 6 minutes to running test\n";
 		} else {
-			$counter += 1;
+			$counter += 4;
 		}
 	}
 	print "job 1 running - ok\n\n";
