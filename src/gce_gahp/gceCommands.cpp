@@ -447,6 +447,9 @@ bool GceRequest::SendRequest()
 	// TODO Eliminate this copy if we always use the serviceURL unmodified
 	string finalURI = this->serviceURL;
 	dprintf( D_FULLDEBUG, "Request URI is '%s'\n", finalURI.c_str() );
+	if ( requestMethod == "POST" ) {
+		dprintf( D_FULLDEBUG, "Request body is '%s'\n", requestBody.c_str() );
+	}
 
 	// curl_global_init() is not thread-safe.  However, it's safe to call
 	// multiple times.  Therefore, we'll just call it before we drop the
@@ -838,9 +841,13 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += "\"name\": \"";
 	insert_request.requestBody += argv[6];
 	insert_request.requestBody += "\",\n";
-	insert_request.requestBody += "\"image\": \"";
+	insert_request.requestBody += "\"disks\": [ { \n";
+	insert_request.requestBody += "\"boot\": true,\n";
+	insert_request.requestBody += "\"initializeParams\": {\n";
+	insert_request.requestBody += "\"sourceImage\": \"";
 	insert_request.requestBody += argv[8];
-	insert_request.requestBody += "\",\n";
+	insert_request.requestBody += "\"\n";
+	insert_request.requestBody += "} } ],\n";
 	if ( !metadata.empty() ) {
 		insert_request.requestBody += "\"metadata\": {\n";
 		insert_request.requestBody += "\"items\": [\n";
