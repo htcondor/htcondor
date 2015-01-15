@@ -1,4 +1,4 @@
-# testing permission heirarchy
+# testing permission hierarchy
 
 ALLOW_WRITE = 10.0.0.0, 192.168.0.1
 DENY_WRITE = 192.168.0.2, 10.0.0.5
