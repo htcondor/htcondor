@@ -42,6 +42,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed grid-type gce to work with the current version of Google
+Compute Engine (GCE).
+\Ticket{4586}
+
+\item Improve cleanup of Google Compute Engine (GCE) instances that
+are terminated.
+\Ticket{4832}
+
 \item Fixed a usability problem with EC2 grid universe jobs.
 HTCondor now ignores trailing white space characters within the files
 identifies by submit commands \SubmitCmdNI{ec2\_access\_key\_id}
