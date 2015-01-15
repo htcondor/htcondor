@@ -25,7 +25,7 @@
  * whatever.  Methods specify the level of access for a given IP address,
  * or subnet, or domain name.  
  *
- * Most of the access levels form a heirarchy.
+ * Most of the access levels form a hierarchy.
  * DAEMON and ADMINISTRATOR levels imply WRITE level.
  * WRITE, NEGOTIATOR, and CONFIG levels imply READ level.
  * Thus, a client that has DAEMON level access will be authorized if

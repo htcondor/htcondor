@@ -142,6 +142,14 @@ In order:
     using the changed list of directories.
 \end{enumerate}
 
+The parsing and use of configuration files may be bypassed by
+setting environment variable \Env{CONDOR\_CONFIG} with the
+string \Expr{ONLY\_ENV}.
+With this setting, there is no attempt to locate or read
+configuration files.
+This may be useful for testing where the environment contains
+all needed information.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-File-Macros}Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1296,6 +1304,40 @@ File System Configuration File Entries''.
   To customize the execute
   directory independently for each batch slot, use \MacroNI{SLOT<N>\_EXECUTE}.
 
+\label{param:TmpDir}
+\item[\Macro{TMP\_DIR}]
+  A directory path to a directory where temporary files are placed by
+  various portions of the HTCondor system.
+  The daemons and tools that use this directory are
+  the \Condor{gridmanager}, 
+  \Condor{config\_val} when using the \Opt{-rset} option,
+  systems that use lock files when configuration variable
+  \Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is \Expr{True},
+  the Web Service API,
+  and the \Condor{credd} daemon.
+  There is no default value.
+
+  If both \MacroNI{TMP\_DIR} and \MacroNI{TEMP\_DIR} are defined, 
+  the value set for \MacroNI{TMP\_DIR} is used and \MacroNI{TEMP\_DIR} 
+  is ignored.
+
+\label{param:TempDir}
+\item[\Macro{TEMP\_DIR}]
+  A directory path to a directory where temporary files are placed by
+  various portions of the HTCondor system.
+  The daemons and tools that use this directory are
+  the \Condor{gridmanager}, 
+  \Condor{config\_val} when using the \Opt{-rset} option,
+  systems that use lock files when configuration variable
+  \Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is \Expr{True},
+  the Web Service API,
+  and the \Condor{credd} daemon.
+  There is no default value.
+
+  If both \MacroNI{TMP\_DIR} and \MacroNI{TEMP\_DIR} are defined, 
+  the value set for \MacroNI{TMP\_DIR} is used and \MacroNI{TEMP\_DIR} 
+  is ignored.
+
 \label{param:SlotNExecute}
 \item[\Macro{SLOT<N>\_EXECUTE}]
   Specifies an
@@ -1402,6 +1444,8 @@ File System Configuration File Entries''.
 \item[\Macro{CONDOR\_IDS}]
   The User ID (UID) and Group ID (GID) pair that the HTCondor daemons
   should run as, if the daemons are spawned as root.
+\index{CONDOR\_IDS environment variable}
+\index{environment variables!CONDOR\_IDS}
   This value can also be specified in the \Env{CONDOR\_IDS}
   environment variable.
   If the HTCondor daemons are not started as root, then neither this
@@ -1521,9 +1565,9 @@ File System Configuration File Entries''.
   is whatever user you started up the \Condor{master} as.  If you are
   running as root, and there is a condor account, it is most
   likely condor.
+\index{CONDOR\_IDS environment variable}
+\index{environment variables!CONDOR\_IDS}
   Otherwise, it is whatever you set in the \Env{CONDOR\_IDS}
-  \index{environment variables!CONDOR\_IDS@\texttt{CONDOR\_IDS}}
-  \index{CONDOR\_IDS@\texttt{CONDOR\_IDS}!environment variable}
   environment variable, or whatever you define in the
   \MacroNI{CONDOR\_IDS} setting in the HTCondor config files.
   See section~\ref{sec:uids} on UIDs in HTCondor for details.
@@ -5444,7 +5488,7 @@ search for the corresponding attribute names using \Expr{slot}, instead.
 
 \label{param:ModifyRequestExprRequestmemory}
 \item[\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTMEMORY}]
-  A boolean expression used by the \Condor{startd} daemon to modify the
+  An integer expression used by the \Condor{startd} daemon to modify the
   evaluated value of the \Attr{RequestMemory} job ClassAd attribute,
   before it used to provision a dynamic slot. 
   The default value is given by
@@ -5456,19 +5500,27 @@ search for the corresponding attribute names using \Expr{slot}, instead.
 
 \label{param:ModifyRequestExprRequestdisk}
 \item[\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTDISK}]
-  A boolean expression used by the \Condor{startd} daemon to modify the
+  An integer expression used by the \Condor{startd} daemon to modify the
   evaluated value of the \Attr{RequestDisk} job ClassAd attribute,
   before it used to provision a dynamic slot. 
   The default value is given by
-  \Expr{quantize(RequestDisk,{1024})}.
+  \footnotesize
+  \begin{verbatim}
+  quantize(RequestDisk,{1024})
+  \end{verbatim}
+  \normalsize
 
 \label{param:ModifyRequestExprRequestcpus}
 \item[\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTCPUS}]
-  A boolean expression used by the \Condor{startd} daemon to modify the
+  An integer expression used by the \Condor{startd} daemon to modify the
   evaluated value of the \Attr{RequestCpus} job ClassAd attribute,
   before it used to provision a dynamic slot. 
   The default value is given by
-  \Expr{quantize(RequestCpus,{1})}
+  \footnotesize
+  \begin{verbatim}
+  quantize(RequestCpus,{1})
+  \end{verbatim}
+  \normalsize
 
 \label{param:NumSlotsTypeN}
 \item[\Macro{NUM\_SLOTS\_TYPE\_<N>}]
@@ -7938,6 +7990,20 @@ These macros affect the \Condor{collector}.
   This variable is defined in terms of seconds, 
   and it defaults to 900 seconds (15 minutes).
   
+  To ensure that the \Condor{collector} does not miss any ClassAds, the
+  frequency at which all other subsystems that report using an
+  update interval must be tuned.
+  The configuration variables that set these subsystems are
+  \begin{itemize}
+  \item \MacroNI{UPDATE\_INTERVAL} (for the \Condor{startd} daemon)
+  \item \MacroNI{NEGOTIATOR\_UPDATE\_INTERVAL}
+  \item \MacroNI{SCHEDD\_INTERVAL}
+  \item \MacroNI{MASTER\_UPDATE\_INTERVAL}
+  \item \MacroNI{CKPT\_SERVER\_INTERVAL}
+  \item \MacroNI{DEFRAG\_UPDATE\_INTERVAL}
+  \item \MacroNI{HAD\_UPDATE\_INTERVAL}
+  \end{itemize}
+
 \label{param:MasterCheckInterval}
 \item[\Macro{MASTER\_CHECK\_INTERVAL}]
   This macro defines how often the
@@ -8292,6 +8358,13 @@ These macros affect the \Condor{negotiator}.
 \item[\Macro{NEGOTIATOR\_INTERVAL}]
   Sets how often the \Condor{negotiator} starts a negotiation cycle.
   It is defined in seconds and defaults to 60 (1 minute).
+  
+\label{param:NegotiatorUpdateInterval}
+\item[\Macro{NEGOTIATOR\_UPDATE\_INTERVAL}]
+  This macro determines how often
+  the \Condor{negotiator} daemon sends a ClassAd update to the
+  \Condor{collector}.  It is defined in seconds and defaults to 300
+  (every 5 minutes).
   
 \label{param:NegotiatorCycleDelay}
 \item[\Macro{NEGOTIATOR\_CYCLE\_DELAY}]
