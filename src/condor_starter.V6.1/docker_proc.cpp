@@ -82,10 +82,10 @@ int DockerProc::StartJob() {
 	// construction is informative, but could be made even less likely
 	// to collide if it had a timestamp.
 	std::string dockerName;
-	formatstr( dockerName, "%s_cluster%d_proc%d_starterPID%d",
-		Starter->getMySlotName().c_str(),
+	formatstr( dockerName, "HTCJob%d_%d_%s_PID%d",
 		Starter->jic->jobCluster(),
 		Starter->jic->jobProc(),
+		Starter->getMySlotName().c_str(), // note: this can be "" for single slot machines.
 		getpid() );
 
 
