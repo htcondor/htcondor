@@ -77,8 +77,8 @@ if ($ENV{NMI_PLATFORM} =~ /macos/i) {
     # is the best way to pick a consistent set of compilers.
     $ENV{CC} = "gcc";
     $ENV{CXX} = "g++";
-    # Build binaries that will work on Mac OS X 10.6 and later.
-    $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.6";
+    # Build binaries that will work on Mac OS X 10.7 and later.
+    $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.7";
 }
 print "------------------------- ENV DUMP ------------------------\n";
 foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {
