@@ -401,7 +401,7 @@ const char* AcctGroupUser = "accounting_group_user";
 //
 // docker "universe" Parameters
 //
-const char    *DockerImageId="docker_image_id";
+const char    *DockerImage="docker_image";
 
 //
 // VM universe Parameters
@@ -1662,6 +1662,7 @@ char * check_docker_image(char * docker_image)
 {
 	// trim leading & trailing whitespace and remove surrounding "" if any.
 	docker_image = trim_and_strip_quotes_in_place(docker_image);
+
 	// TODO: add code here to validate docker image argument (if possible)
 	return docker_image;
 }
@@ -1786,22 +1787,22 @@ SetExecutable()
 	}
 
 	if (IsDockerJob) {
-		char * docker_image = condor_param(DockerImageId, ATTR_DOCKER_IMAGE_ID);
+		char * docker_image = condor_param(DockerImage, ATTR_DOCKER_IMAGE);
 		if ( ! docker_image) {
-			fprintf(stderr, "\nERROR: docker jobs require a docker_image_id\n");
+			fprintf(stderr, "\nERROR: docker jobs require a docker_image\n");
 			DoCleanup(0,0,NULL);
 			exit(1);
 		}
 		char * image = check_docker_image(docker_image);
 		if ( ! image || ! image[0]) {
-			fprintf(stderr, "\nERROR: '%s' is not a valid docker_image_id\n", docker_image);
+			fprintf(stderr, "\nERROR: '%s' is not a valid docker_image\n", docker_image);
 			DoCleanup(0,0,NULL);
 			exit(1);
 		}
-		buffer.formatstr("%s = \"%s\"", ATTR_DOCKER_IMAGE_ID, image);
+		buffer.formatstr("%s = \"%s\"", ATTR_DOCKER_IMAGE, image);
 		InsertJobExpr(buffer);
 		free(docker_image);
-		ignore_it = true;
+		ignore_it = true; // we don't require an executable if we have a docker image.
 	}
 
 	ename = condor_param( Executable, ATTR_JOB_CMD );

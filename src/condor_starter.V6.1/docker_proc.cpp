@@ -54,8 +54,8 @@ DockerProc::~DockerProc() { }
 
 int DockerProc::StartJob() {
 	std::string imageID;
-	if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE_ID, imageID ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "%s not defined in job ad, unable to start job.\n", ATTR_DOCKER_IMAGE_ID );
+	if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageID ) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "%s not defined in job ad, unable to start job.\n", ATTR_DOCKER_IMAGE );
 		return FALSE;
 	}
 
