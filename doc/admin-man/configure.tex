@@ -7183,6 +7183,20 @@ SYSTEM_PERIODIC_REMOVE = \
   the sets of jobs considered as a unit (an auto cluster) in negotiation,
   when auto clustering is enabled.
 
+\label{param:AddSignificantAttributes}
+\item[\Macro{ADD\_SIGNIFICANT\_ATTRIBUTES}]
+  A comma and/or space separated list of job ClassAd attributes that
+  will always be added to the list of attributes for determining
+  the sets of jobs considered as a unit (an auto cluster) in negotiation,
+  when auto clustering is enabled.
+
+\label{param:RemoveSignificantAttributes}
+\item[\Macro{REMOVE\_SIGNIFICANT\_ATTRIBUTES}]
+  A comma and/or space separated list of job ClassAd attributes that
+  are banned from being added to the list of attributes for determining
+  the sets of jobs considered as a unit (an auto cluster) in negotiation,
+  when auto clustering is enabled.
+
 \label{param:ScheddAuditLog}
 \item[\Macro{SCHEDD\_AUDIT\_LOG}]
   The path and file name of the \Condor{schedd} log that records

@@ -29,6 +29,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The new configuration variable \Macro{ADD\_SIGNIFICANT\_ATTRIBUTES}
+forces the addition of a list of job attributes when 
+considering autoclustering.
+The new configuration variable \Macro{REMOVE\_SIGNIFICANT\_ATTRIBUTES}
+prevents the addition of a list of job attributes when 
+considering autoclustering.
+\Ticket{4797}
+
 \item \Condor{dagman} now prints the hold reason to the \File{dagman.out}
 file when node jobs go on hold.
 \Ticket{4766}
