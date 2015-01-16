@@ -1334,21 +1334,39 @@ The resulting values passed to the NodeB executable are
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
-\item[Special macros]
+\item[Using special macros within a definition]
 \end{description}
 
+The \verb@$(JOB)@ and \verb@$(RETRY)@ macros may be used within a
+definition of the \Arg{string} that defines a variable.
+This usage requires parentheses,
+such that proper macro substitution may take place when
+the macro's value is only a portion of the string.
 \begin{itemize}
-\item \verb@$(JOB)@ may be used within the \Arg{string} and will expand to
-\Arg{JobName}. 
+\item \verb@$(JOB)@ expands to the node \Arg{JobName}. 
 If the \Arg{VARS} line appears in a DAG file used as a splice file, 
 then \verb@$(JOB)@ will be the fully scoped name of the node.
-\item \verb@$(RETRY)@ may be used in \Arg{string} and will expand to
-0 the first time a node is run; the value is incremented each time the node
-is retried.  For example:
-\end{itemize}
+
+For example, the DAG input file lines
 \begin{verbatim}
-      VARS NodeC noderetry="$(RETRY)"
+  JOB  NodeC NodeC.submit
+  VARS NodeC nodename="$(JOB)"
 \end{verbatim}
+set \Expr{nodename} to \Expr{NodeC},
+and the DAG input file lines
+\begin{verbatim}
+  JOB  NodeD NodeD.submit
+  VARS NodeD outfilename="$(JOB)-output"
+\end{verbatim}
+set \Expr{outfilename} to \Expr{NodeD-output}.
+
+\item \verb@$(RETRY)@ expands to 0 the first time a node is run;
+the value is incremented each time the node is retried.
+For example:
+\begin{verbatim}
+  VARS NodeE noderetry="$(RETRY)"
+\end{verbatim}
+\end{itemize}
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
@@ -1358,7 +1376,7 @@ is retried.  For example:
 The \Arg{macroname} may also begin with a \Expr{+} character, in which case it
 names a ClassAd attribute. For example, the VARS specification
 \begin{verbatim}
-  VARS NodeD +A="\"bob\""
+  VARS NodeF +A="\"bob\""
 \end{verbatim}
 results in the job ClassAd attribute
 \begin{verbatim}
@@ -1370,7 +1388,7 @@ the DAG input file, so the escaped inner quotes remain in the definition
 of the attribute value.
 
 Continuing this example,
-it allows the HTCondor submit description file for NodeD to use
+it allows the HTCondor submit description file for NodeF to use
 the following line:
 \begin{verbatim}
   arguments = "$$([A])"
@@ -1379,13 +1397,13 @@ the following line:
 The special macros may also be used.
 For example
 \begin{verbatim}
-  VARS NodeE +B="$(RETRY)"
+  VARS NodeG +B="$(RETRY)"
 \end{verbatim}
 places the numerical attribute
 \begin{verbatim}
   B = 1
 \end{verbatim}
-into the ClassAd when the NodeE job is run for a second time,
+into the ClassAd when the NodeG job is run for a second time,
 which is the first retry and the value 1. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

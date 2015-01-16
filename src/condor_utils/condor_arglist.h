@@ -175,6 +175,9 @@ class ArgList {
 		// Get arguments from this ArgList object for descriptional purposes.
 	void GetArgsStringForDisplay(MyString *result,int start_arg=0) const;
 
+		// ...
+	void GetArgsStringForLogging( MyString * result ) const;
+
 		// Return a NULL-terminated string array of args.
 		// Caller should delete array (e.g. with deleteStringArray())
 	char **GetStringArray() const;

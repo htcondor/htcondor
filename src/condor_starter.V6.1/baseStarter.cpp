@@ -24,6 +24,7 @@
 #include "starter.h"
 #include "script_proc.h"
 #include "vanilla_proc.h"
+#include "docker_proc.h"
 #include "java_proc.h"
 #include "tool_daemon_proc.h"
 #include "mpi_master_proc.h"
@@ -2365,9 +2366,16 @@ CStarter::SpawnJob( void )
 	switch ( jobUniverse )  
 	{
 		case CONDOR_UNIVERSE_LOCAL:
-		case CONDOR_UNIVERSE_VANILLA:
-			job = new VanillaProc( jobAd );
-			break;
+		case CONDOR_UNIVERSE_VANILLA: {
+			int wantDocker = 0;
+			jobAd->LookupBool( ATTR_WANT_DOCKER, wantDocker );
+
+			if( wantDocker ) {
+				job = new DockerProc( jobAd );
+			} else {
+				job = new VanillaProc( jobAd );
+			}
+			} break;
 		case CONDOR_UNIVERSE_JAVA:
 			job = new JavaProc( jobAd, WorkingDir.Value() );
 			break;

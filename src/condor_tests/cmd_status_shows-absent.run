@@ -11,6 +11,8 @@ use CondorTest;
 # from a condor_status command to a hash of ad names.  [from CondorUtils.pm]
 #
 
+my $testname = "cmd_status_shows-absent";
+
 #
 # This is terrible hack.
 #
@@ -25,6 +27,8 @@ my $stable = CondorCmdStatusWorker2::IsSystemStable();
 ## my $stable = 1;
 if( $stable != 1 ) {
     failTestWithReason( "System did not stabilize.\n" );
+} else {
+	RegisterResult(1, "test_name",$testname);
 }
 
 #
@@ -90,6 +94,8 @@ waitpid( $childPID, 0 );
 
 if( ! ( subset( \%presentAds, \%verifiedAdNames ) && subset( \%presentAds, \%verifiedAdNames ) ) ) {
     failTestWithReason( "An advertised ad is missing.\n" );
+} else {
+	RegisterResult(1, "test_name",$testname);
 }
 
 #
@@ -102,7 +108,10 @@ my $absentCommand = 'condor_status -absent -f "%s\n" Name';
 $childPID = open( $absentFH, '-|', $absentCommand );
 if( $childPID == 0 ) {
     failTestWithReason( "Unable to fetch absent ads.\n" );
+} else {
+	RegisterResult(1, "test_name",$testname);
 }
+
 while( my $line = <$absentFH> ) {
     $line =~ s/[\012\015]+$//;
     $absentAdNames{ $line } = undef;
@@ -114,15 +123,20 @@ waitpid( $childPID, 0 );
 # FIXME: ensure that present ads can not appear by using ABSENT_REQUIREMENTS.
 if( ! subset( \%absentAds, \%absentAdNames ) ) {
     failTestWithReason( "False negative: missing an absent ad.\n" );
+} else {
+	RegisterResult(1, "test_name",$testname);
 }
+
 if( grep( /present-machine/, keys( %absentAdNames ) ) ) {
     failTestWithReason( "False positive: a present ad is in the absent list.\n" );
+} else {
+	RegisterResult(1, "test_name",$testname);
 }
 
 #
 # Test(s) completed successfully.
 #
-print( "cmd_status_shows-absent SUCCESS\n" );
+CondorTest::EndTest();
 exit( 0 );
 
 # -----------------------------------------------------------------------------
@@ -131,9 +145,10 @@ sub failTestWithReason {
     my( $reason ) = @_;
     
     warn( $reason );
-    CondorTest::KillPersonal( $personalCondorA );
-    CondorTest::KillPersonal( $personalCondorB );
-    exit( 1 );
+    #CondorTest::KillPersonal( $personalCondorA );
+    #CondorTest::KillPersonal( $personalCondorB );
+	RegisterResult(0, "test_name",$testname);
+	CondorTest::EndTest();
 } # end failTestWithReason()
 
 sub addAd {

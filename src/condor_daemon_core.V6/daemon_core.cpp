@@ -107,7 +107,6 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "valgrind.h"
 #include "ipv6_hostname.h"
 #include "daemon_command.h"
-#include "condor_ipv6.h"
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
@@ -9908,12 +9907,14 @@ InitCommandSockets(int port, int udp_port, DaemonCore::SockPairVec & socks, bool
 				int ipv6Port = rs->get_port();
 
 				if( ipv6Port != targetTCPPort ) {
-					dprintf( D_FULLDEBUG, "Bound to IPv4 port %d, but then bound to IPv6 command port %d.\n", targetTCPPort, port );
+					dprintf( D_FULLDEBUG, "Bound to IPv4 port %d, but then bound to IPv6 command port %d.\n", targetTCPPort, ipv6Port );
 					new_socks.clear();
 					--retries;
 				} else {
 					retries = -1;
 				}
+			} else {
+				retries = -1;
 			}
 		} else {
 			retries = -1;
