@@ -5982,7 +5982,7 @@ friendly_name=
 review=?
 
 [LOCAL_CONFIG_DIR_EXCLUDE_REGEXP]
-default=^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
+default=^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew)|(.*\.dpkg-old)|(.*\.dpkg-dist)|(.*\.cfsaved))$
 type=string
 reconfig=true
 customization=seldom
