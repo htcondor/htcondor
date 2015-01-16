@@ -83,8 +83,8 @@ chomp(my $hostname = `hostname -f`);
 print "Executing task '$taskname' on host '$hostname'\n";
 
 if ($ENV{NMI_PLATFORM} =~ /macos/i) {
-    # Build binaries that will work on Mac OS X 10.6 and later.
-    $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.6";
+    # Build binaries that will work on Mac OS X 10.7 and later.
+    $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.7";
 }
 
 # enable use of VisualStudio 2012 (vs11) on the Windows8 platform
