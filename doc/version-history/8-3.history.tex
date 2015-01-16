@@ -29,12 +29,20 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The new configuration variable \Macro{ADD\_SIGNIFICANT\_ATTRIBUTES}
+lists job attributes to be added to the \Condor{negotiator}-determined list
+when considering auto clustering.
+The new configuration variable \Macro{REMOVE\_SIGNIFICANT\_ATTRIBUTES}
+lists job attributes to be removed from the \Condor{negotiator}-determined 
+list when considering auto clustering.
+\Ticket{4797}
+
 \item \Condor{dagman} now prints the hold reason to the \File{dagman.out}
 file when node jobs go on hold.
 \Ticket{4766}
 
-\item The python bindings can be used to query and set config variables
-of running daemons.
+\item New python bindings can be used to query and set the 
+configuration variables of running daemons.
 \Ticket{4778}
 
 \item Python functions can be invoked directly from ClassAd expressions within HTCondor

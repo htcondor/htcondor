@@ -97,7 +97,6 @@ private:
 	std::string m_metadata;
 	std::string m_metadataFile;
 	std::string m_machineType;
-	bool m_was_job_completion;
 
 	int m_retry_times;
 	

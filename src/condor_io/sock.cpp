@@ -37,7 +37,6 @@
 #include "selector.h"
 #include "authentication.h"
 #include "condor_sockfunc.h"
-#include "condor_ipv6.h"
 #include "condor_config.h"
 #include "condor_sinful.h"
 

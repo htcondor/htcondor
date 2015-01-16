@@ -33,11 +33,13 @@ that address.
 If given a name and DNS is used to resolve an address, 
 the first address returned determines the protocol.
 Resolution occurs differently when \Macro{NO\_DNS} is enabled.  }
-\item{When a daemon sends its address to another daemon, the address
-is sent using the chosen protocol. }
-\item{When a daemon or tool requests an address from the \Condor{collector},
-the \Condor{collector} will return an address of the same protocol
-as the request.  }
+\item{When a daemon sends its address to some other daemon, such as
+the \Condor{collector}, the address sent is of the protocol used to
+contact that other daemon.  Therefore, when a tool or daemon queries
+the \Condor{collector} for the address of a particular daemon, the
+\Condor{collector} replies with an address of the protocol used by
+that particular daemon when that particular daemon previously
+contacted the \Condor{collector}.}
 \end{itemize}
 
 In practice, this means that both an HTCondor pool's central manager

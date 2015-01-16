@@ -15,7 +15,7 @@ if [ `uname` = "Darwin" ] ; then
   # On newer macs, these invoke different compilers (llvm gnu and clang,
   # respectively).
   CC=gcc
-  export gcc
+  export CC
   CXX=g++
   export CXX
 fi

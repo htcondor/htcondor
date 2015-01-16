@@ -151,6 +151,14 @@ In order:
     using the changed list of directories.
 \end{enumerate}
 
+The parsing and use of configuration files may be bypassed by
+setting environment variable \Env{CONDOR\_CONFIG} with the
+string \Expr{ONLY\_ENV}.
+With this setting, there is no attempt to locate or read
+configuration files.
+This may be useful for testing where the environment contains
+all needed information.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-File-Macros}Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -7174,6 +7182,24 @@ SYSTEM_PERIODIC_REMOVE = \
   are to be added to the list of attributes for determining
   the sets of jobs considered as a unit (an auto cluster) in negotiation,
   when auto clustering is enabled.
+  When defined, this list replaces the list that the \Condor{negotiator} 
+  would define based upon machine ClassAds.
+
+\label{param:AddSignificantAttributes}
+\item[\Macro{ADD\_SIGNIFICANT\_ATTRIBUTES}]
+  A comma and/or space separated list of job ClassAd attributes that
+  will always be added to the list of attributes that the \Condor{negotiator}
+  defines based upon machine ClassAds, for determining
+  the sets of jobs considered as a unit (an auto cluster) in negotiation,
+  when auto clustering is enabled.
+
+\label{param:RemoveSignificantAttributes}
+\item[\Macro{REMOVE\_SIGNIFICANT\_ATTRIBUTES}]
+  A comma and/or space separated list of job ClassAd attributes that
+  are removed from the list of attributes that the \Condor{negotiator}
+  defines based upon machine ClassAds, for determining
+  the sets of jobs considered as a unit (an auto cluster) in negotiation,
+  when auto clustering is enabled.
 
 \label{param:ScheddAuditLog}
 \item[\Macro{SCHEDD\_AUDIT\_LOG}]
@@ -8073,6 +8099,20 @@ These macros affect the \Condor{collector}.
   This variable is defined in terms of seconds, 
   and it defaults to 900 seconds (15 minutes).
   
+  To ensure that the \Condor{collector} does not miss any ClassAds, the
+  frequency at which all other subsystems that report using an
+  update interval must be tuned.
+  The configuration variables that set these subsystems are
+  \begin{itemize}
+  \item \MacroNI{UPDATE\_INTERVAL} (for the \Condor{startd} daemon)
+  \item \MacroNI{NEGOTIATOR\_UPDATE\_INTERVAL}
+  \item \MacroNI{SCHEDD\_INTERVAL}
+  \item \MacroNI{MASTER\_UPDATE\_INTERVAL}
+  \item \MacroNI{CKPT\_SERVER\_INTERVAL}
+  \item \MacroNI{DEFRAG\_UPDATE\_INTERVAL}
+  \item \MacroNI{HAD\_UPDATE\_INTERVAL}
+  \end{itemize}
+
 \label{param:MasterCheckInterval}
 \item[\Macro{MASTER\_CHECK\_INTERVAL}]
   This macro defines how often the
@@ -8427,6 +8467,13 @@ These macros affect the \Condor{negotiator}.
 \item[\Macro{NEGOTIATOR\_INTERVAL}]
   Sets how often the \Condor{negotiator} starts a negotiation cycle.
   It is defined in seconds and defaults to 60 (1 minute).
+  
+\label{param:NegotiatorUpdateInterval}
+\item[\Macro{NEGOTIATOR\_UPDATE\_INTERVAL}]
+  This macro determines how often
+  the \Condor{negotiator} daemon sends a ClassAd update to the
+  \Condor{collector}.  It is defined in seconds and defaults to 300
+  (every 5 minutes).
   
 \label{param:NegotiatorCycleDelay}
 \item[\Macro{NEGOTIATOR\_CYCLE\_DELAY}]
