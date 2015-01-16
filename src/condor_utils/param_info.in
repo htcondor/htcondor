@@ -4247,6 +4247,14 @@ friendly_name=Negotiator Update After Cycle
 review=?
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_UPDATE_INTERVAL]
+default=300
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Update Interval
+review=?
+
 [NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD]
 default=0
 type=int
