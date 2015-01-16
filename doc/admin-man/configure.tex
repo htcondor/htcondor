@@ -1949,17 +1949,28 @@ File System Configuration File Entries''.
 
 \label{param:ClassadUserPythonModules}
 \item[\Macro{CLASSAD\_USER\_PYTHON\_MODULES}]
-  A comma separated list of python modules to load to be used during ClassAd
-  evaluation.  If module \Expr{foo} is in this list, then function \Expr{bar}
-  can be invoked in ClassAds via the expression \Expr{python\_invoke("foo", "bar", ...)}.
-  Any further arguments are converted from ClassAd expressions to python; the
-  functions return value is converted back to ClassAds.
-  The python modules are loaded at configuration time, so any module-level statements
-  are executed.  Module writers can invoke \Expr{classad.register} at the module-level
+  A comma separated list of python modules to load, 
+  which are to be used during ClassAd evaluation.  
+  If module \Expr{foo} is in this list, then function \Expr{bar}
+  can be invoked in ClassAds via the expression 
+  \Expr{python\_invoke("foo", "bar", ...)}.
+  Any further arguments are converted from ClassAd expressions to python; 
+  the function return value is converted back to ClassAds.
+  The python modules are loaded at configuration time, 
+  so any module-level statements are executed.  
+  Module writers can invoke \Expr{classad.register} at the module-level
   in order to use python functions directly.
 
-  Functions executed by ClassAds should be non-blocking and have no side-effects;
+  Functions executed by ClassAds should be non-blocking and have 
+  no side-effects;
   otherwise, unpredictable HTCondor behavior may occur.
+
+\label{param:ClassadUserPythonLib}
+\item[\Macro{CLASSAD\_USER\_PYTHON\_LIB}]
+  Specifies the path to the python libraries,
+  which is needed when \Macro{CLASSAD\_USER\_PYTHON\_MODULES} is set.
+  Defaults to \File{\$(LIBEXEC)/libclassad\_python\_user.so},
+  and would rarely be changed from the default value.
 
 \label{param:CondorFsync}
 \item[\Macro{CONDOR\_FSYNC}]

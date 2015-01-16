@@ -45,10 +45,11 @@ file when node jobs go on hold.
 configuration variables of running daemons.
 \Ticket{4778}
 
-\item Python functions can be invoked directly from ClassAd expressions within HTCondor
-daemons.  A system administrator must set the \Macro{CLASSAD\_USER\_PYTHON\_MODULES}
-configuration macro to specify the python modules that are accessible from
-within ClassAds.
+\item Python functions can be invoked directly from ClassAd expressions 
+within HTCondor daemons.  
+A system administrator must set the new configuration variable
+\Macro{CLASSAD\_USER\_PYTHON\_MODULES}
+to specify the python modules that are accessible from within ClassAds.
 \Ticket{4773}
 
 \item The default value for configuration variable 
