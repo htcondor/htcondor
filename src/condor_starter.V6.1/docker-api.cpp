@@ -82,7 +82,7 @@ int DockerAPI::run(
 	}
 
 	char rawContainerID[65];
-	if( 1 != sscanf( buffer, "%64[A-Fa-f0-9]\n", rawContainerID ) ) {
+	if( 1 != sscanf( buffer, "%64[A-Fa-f0-9]\n", rawContainerID ) || strlen(rawContainerID) < 10) {
 		dprintf( D_ALWAYS | D_FAILURE, "Docker printed something that doesn't look like a container ID.\n" );
 		dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
 		while( fgets( buffer, 1024, dockerResults ) != NULL ) {
@@ -124,7 +124,7 @@ int DockerAPI::run(
 	// If the output isn't exactly formatElements.number() lines long,
 	// something has gone wrong and we'll at least be able to print out
 	// the error message(s).
-	std::string correctOutput[ formatElements.number() ];
+	std::vector<std::string> correctOutput(formatElements.number());
 	for( int i = 0; i < formatElements.number(); ++i ) {
 		if( fgets( buffer, 1024, dockerResults ) != NULL ) {
 			correctOutput[i] = buffer;
