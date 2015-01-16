@@ -9,6 +9,8 @@
 
 #include "docker-api.h"
 
+bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env);
+
 //
 // Because this executes docker run in detached mode, we don't actually
 // care if the image is stored locally or not (except to the extent that
@@ -19,7 +21,7 @@ int DockerAPI::run(
 	const std::string & imageID,
 	const std::string & command,
 	const ArgList & args,
-	const Env & /* env */,
+	const Env & env,
 	const std::string & sandboxPath,
 	std::string & containerID,
 	int & pid,
@@ -43,7 +45,10 @@ int DockerAPI::run(
 	runArgs.AppendArg( "--name" );
 	runArgs.AppendArg( dockerName );
 
-	// TODO: Set up the environment (in the container).
+	if ( ! add_env_to_args_for_docker(runArgs, env)) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to pass enviroment to docker.\n" );
+		return -8;
+	}
 
 	// Map the external sanbox to the internal sandbox.
 	runArgs.AppendArg( "-v" );
@@ -344,6 +349,41 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 	return 0;
 }
 
+static bool docker_add_env_walker (void*pv, const MyString &var, const MyString &val) {
+	ArgList* runArgs = (ArgList*)pv;
+	MyString arg;
+	arg.reserve_at_least(var.length() + val.length() + 2);
+	arg = var;
+	arg += "=";
+	arg += val;
+	runArgs->AppendArg("-e");
+	runArgs->AppendArg(arg);
+	return true; // true to keep iterating
+}
+
+// helper function, convert Env into arguments for docker run.
+// essentially this means adding each as an argument of the form -e name=value
+bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env)
+{
+	dprintf(D_ALWAYS | D_VERBOSE, "adding %d environment vars to docker args\n", env.Count());
+	env.Walk(
+#if 1 // sigh
+		docker_add_env_walker,
+#else
+		// use a lamda to walk the environment and add each entry as
+		[](void*pv, const MyString &var, const MyString &val) -> bool {
+			ArgList& runArgs = *(ArgList*)pv;
+			runArgs.AppendArg("-e");
+			MyString arg(var); arg += "="; arg += val;
+			runArgs.AppendArg(arg);
+			return true; // true to keep iterating
+		},
+#endif
+		&runArgs
+	);
+
+	return true;
+}
 
 //
 // Random notes on Docker.
