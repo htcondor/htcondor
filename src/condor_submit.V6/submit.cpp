@@ -172,6 +172,9 @@ char* RunAsOwnerCredD = NULL;
 // For mpi universe testing
 bool use_condor_mpi_universe = false;
 
+// For docker "universe"
+bool IsDockerJob = false;
+
 // For vm universe
 MyString VMType;
 int VMMemoryMb = 0;
@@ -394,6 +397,11 @@ const char    *ConcurrencyLimits = "concurrency_limits";
 // Accounting Group parameters
 const char* AcctGroup = "accounting_group";
 const char* AcctGroupUser = "accounting_group_user";
+
+//
+// docker "universe" Parameters
+//
+const char    *DockerImageId="docker_image_id";
 
 //
 // VM universe Parameters
@@ -1632,6 +1640,31 @@ reschedule()
 }
 
 
+char * trim_and_strip_quotes_in_place(char * str)
+{
+	char * p = str;
+	while (isspace(*p)) ++p;
+	char * pe = p + strlen(p);
+	while (pe > p && isspace(pe[-1])) --pe;
+	*pe = 0;
+
+	if (*p == '"' && pe > p && pe[-1] == '"') {
+		// if we also had both leading and trailing quotes, strip them.
+		if (pe > p && pe[-1] == '"') {
+			*--pe = 0;
+			++p;
+		}
+	}
+	return p;
+}
+
+char * check_docker_image(char * docker_image)
+{
+	// trim leading & trailing whitespace and remove surrounding "" if any.
+	docker_image = trim_and_strip_quotes_in_place(docker_image);
+	// TODO: add code here to validate docker image argument (if possible)
+	return docker_image;
+}
 
 
 /* check_path_length() has been deprecated in favor of 
@@ -1752,11 +1785,35 @@ SetExecutable()
 		ignore_it = true;
 	}
 
+	if (IsDockerJob) {
+		char * docker_image = condor_param(DockerImageId, ATTR_DOCKER_IMAGE_ID);
+		if ( ! docker_image) {
+			fprintf(stderr, "\nERROR: docker jobs require a docker_image_id\n");
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		char * image = check_docker_image(docker_image);
+		if ( ! image || ! image[0]) {
+			fprintf(stderr, "\nERROR: '%s' is not a valid docker_image_id\n", docker_image);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		buffer.formatstr("%s = \"%s\"", ATTR_DOCKER_IMAGE_ID, image);
+		InsertJobExpr(buffer);
+		free(docker_image);
+		ignore_it = true;
+	}
+
 	ename = condor_param( Executable, ATTR_JOB_CMD );
 	if( ename == NULL ) {
-		fprintf( stderr, "No '%s' parameter was provided\n", Executable);
-		DoCleanup(0,0,NULL);
-		exit( 1 );
+		if (IsDockerJob) {
+			// docker jobs don't require an executable.
+			ignore_it = true;
+		} else {
+			fprintf( stderr, "No '%s' parameter was provided\n", Executable);
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
 	}
 
 	macro_value = condor_param( TransferExecutable, ATTR_TRANSFER_EXECUTABLE );
@@ -2105,10 +2162,15 @@ SetUniverse()
 		return;
 	}
 
-	if( univ && strcasecmp(univ,"vanilla") == MATCH ) {
+	if( univ && (MATCH == strcasecmp(univ,"vanilla") || MATCH == strcasecmp(univ,"docker"))) {
 		JobUniverse = CONDOR_UNIVERSE_VANILLA;
 		buffer.formatstr( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA);
 		InsertJobExpr (buffer);
+		if (MATCH == strcasecmp(univ,"docker")) {
+			// TODO: remove this when the docker starter no longer requires it.
+			InsertJobExpr("WantDocker=true");
+			IsDockerJob = true;
+		}
 		free(univ);
 		return;
 	};
