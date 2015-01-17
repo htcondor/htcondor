@@ -375,13 +375,6 @@ _condor_itoa(long quantity, char *out, int base)
 		sum = 1;
 		numchars = 0;
 		
-			/* the simple case */
-		if( quantity == 0 ) {
-			out[0] = '0';
-			out[1] = 0;
-			return 1;
-		}
-		
 			/* create the ASCII representation backwards */
 		if (sizeof(int) == 4) {
 			maxchars = 10;
@@ -431,11 +424,6 @@ _condor_itoa(long quantity, char *out, int base)
 		break;
 	}
 	
-		/* just in case I entered this function with garbage. */
-	out[0] = 'N';
-	out[1] = '/';
-	out[2] = 'A';
-	out[3] = 0;
 	return 3;
 }
 
