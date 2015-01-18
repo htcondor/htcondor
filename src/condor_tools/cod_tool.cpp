@@ -671,6 +671,9 @@ parseArgv( int  /*argc*/, char* argv[] )
 						 my_name, *tmp );
 				exit( 1 );
 			}
+			if (addr) {
+				free(addr);
+			}
 			addr = strdup( *tmp ); 
 			break;
 
