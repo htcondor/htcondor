@@ -725,6 +725,9 @@ parseArgv( int  /*argc*/, char* argv[] )
 			if( ! (tmp && *tmp) ) {
 				another( "-requirements" );
 			}
+			if (requirements) {
+				free(requirements);
+			}
 			requirements = strdup( *tmp );
 			break;
 
@@ -738,6 +741,9 @@ parseArgv( int  /*argc*/, char* argv[] )
 			tmp++;
 			if( ! (tmp && *tmp) ) {
 				another( "-id" );
+			}
+			if (claim_id) {
+				free(claim_id);
 			}
 			claim_id = strdup( *tmp );
 			break;
@@ -753,6 +759,9 @@ parseArgv( int  /*argc*/, char* argv[] )
 			if( ! (tmp && *tmp) ) {
 				another( "-jobad" );
 			}
+			if (jobad_path) {
+				free(jobad_path);
+			}
 			jobad_path = strdup( *tmp );
 			break;
 
@@ -766,6 +775,9 @@ parseArgv( int  /*argc*/, char* argv[] )
 			tmp++;
 			if( ! (tmp && *tmp) ) {
 				another( "-keyword" );
+			}
+			if (job_keyword) {
+				free(job_keyword);
 			}
 			job_keyword = strdup( *tmp );
 			break;
