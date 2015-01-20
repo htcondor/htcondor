@@ -62,8 +62,12 @@ int DockerProc::StartJob() {
 	// We can't just use Starter->GetJobEnv() because we need to change e.g.,
 	// _CONDOR_SCRATCH_DIR to be sensible for the chroot jail.
 	// TODO: pass requested job environment to Docker.
-	Env e;
-
+	Env job_env;
+	MyString env_errors;
+	if( !Starter->GetJobEnv(JobAd,&job_env,&env_errors) ) {
+		dprintf( D_ALWAYS, "Aborting DockerProc::StartJob: %s\n", env_errors.Value());
+		return 0;
+	}
 	std::string sandboxPath = Starter->jic->jobRemoteIWD();
 
 	// The GlobalJobID is unsuitable by virtue its octothorpes.  This
@@ -105,7 +109,7 @@ int DockerProc::StartJob() {
 	// DockerAPI::run() returns a PID from daemonCore->Create_Process(), which
 	// makes it suitable for passing up into VanillaProc.  This combination
 	// will trigger the reaper(s) when the container terminates.
-	int rv = DockerAPI::run( dockerName, imageID, command, args, e, sandboxPath, containerID, JobPid, childFDs, err );
+	int rv = DockerAPI::run( dockerName, imageID, command, args, job_env, sandboxPath, containerID, JobPid, childFDs, err );
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::run( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		return FALSE;

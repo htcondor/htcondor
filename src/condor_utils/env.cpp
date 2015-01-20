@@ -775,6 +775,30 @@ Env::getStringArray() const {
 	return array;
 }
 
+void Env::Walk(bool (*walk_func)(void* pv, const MyString &var, MyString &val), void* pv)
+{
+	const MyString *var;
+	MyString *val;
+
+	_envTable->startIterations();
+	while (_envTable->iterate_nocopy(&var, &val)) {
+		if ( ! walk_func(pv, *var, *val))
+			break;
+	}
+}
+
+void Env::Walk(bool (*walk_func)(void* pv, const MyString &var, const MyString &val), void* pv) const
+{
+	const MyString *var;
+	MyString *val;
+
+	_envTable->startIterations();
+	while (_envTable->iterate_nocopy(&var, &val)) {
+		if ( ! walk_func(pv, *var, *val))
+			break;
+	}
+}
+
 bool
 Env::GetEnv(MyString const &var,MyString &val) const
 {
