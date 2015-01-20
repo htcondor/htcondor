@@ -28,7 +28,7 @@ class DockerAPI {
 		 * @param arguments		...
 		 * @param environment	...
 		 * @param directory		...
-		 * @param containerID	On success, will be set to the container's GUID.  Otherwise, unchagned.
+		 * @param containerID	On success, will be set to the container's GUID.  Otherwise, unchanged.
 		 * @param pid			On success, will be set to the PID of a process which will terminate when the container does.  Otherwise, unchanged.
 		 * @param childFDs		The redirected std[in|out|err] FDs.
 		 * @param error			On success, unchanged.  Otherwise, [TODO].
@@ -98,6 +98,16 @@ class DockerAPI {
 		 * @return				0 on success, negative otherwise.
 		 */
 		static int version( std::string & version, CondorError & err );
+
+		/**
+		 * Returns a ClassAd corresponding to a subset of the output of
+		 * 'docker inspect'.
+		 *
+		 * @param version		On success, will be set to the version string.  Otherwise, unchanged.
+		 * @param error			....
+		 * @return				0 on success, negative otherwise.
+		 */
+		static int inspect( const std::string & containerName, ClassAd * inspectionAd, CondorError & err );
 };
 
 #endif /* _CONDOR_DOCKER_API_H */

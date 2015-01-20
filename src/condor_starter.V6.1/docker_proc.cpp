@@ -36,18 +36,6 @@ extern CStarter *Starter;
 // the full container ID as (part of) the cgroup identifier(s).
 //
 
-//
-// TODO: Can we configure Docker to store its overlay filesystem in
-// the sandbox?  Would that be useful for cleanup, or to help admins
-// allocate disk space?
-//
-
-//
-// TODO: Write the container ID out to disk (<sandbox>../../.dotfile)
-// like the VM universe so that the startd can clean up if the starter
-// crashes and again, if necessary, on start-up.
-//
-
 DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ) { }
 
 DockerProc::~DockerProc() { }
@@ -158,21 +146,12 @@ bool DockerProc::JobReaper( int pid, int status ) {
 bool DockerProc::JobExit() {
 	dprintf( D_ALWAYS, "DockerProc::JobExit()\n" );
 
-	//
-	// If we transfer files fast enough, 'docker rm' will fail because
-	// it believes a container that 'docker logs --follow' believes has
-	// terminated is still running.  This does not happen if we use
-	// 'docker wait', but then we would have to play games when the
-	// container terminates to get its output.
-	//
-	sleep( 1 );
-
 	CondorError error;
 	int rv = DockerAPI::rm( containerID, error );
 	if( rv < 0 ) {
+		// FIXME: If the container succeeded, we'll fail remove it, since
+		// it will already be gone.  Do something more intelligent here.
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to remove container '%s'.\n", containerID.c_str() );
-		// TODO: Arguably, we should suicide and let the startd have a go
-		// at cleaning this mess up.  But I'm not sure..
 	}
 
 	return VanillaProc::JobExit();

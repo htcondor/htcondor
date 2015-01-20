@@ -10,12 +10,12 @@
 #include "docker-api.h"
 
 //
-// Because this executes docker run in detached mode, we don't actually
+// Because we fork before calling docker, we don't actually
 // care if the image is stored locally or not (except to the extent that
 // remote image pull violates the principle of least astonishment).
 //
 int DockerAPI::run(
-	const std::string & dockerName,
+	const std::string & containerName,
 	const std::string & imageID,
 	const std::string & command,
 	const ArgList & args,
@@ -39,19 +39,33 @@ int DockerAPI::run(
 	}
 	runArgs.AppendArg( docker );
 	runArgs.AppendArg( "run" );
-	runArgs.AppendArg( "--detach" );
+	runArgs.AppendArg( "--tty" );
+
+	// Write out a file with the container ID.
+	// FIXME: The startd can check this to clean up after us.
+	std::string cidFileName = sandboxPath + "/.cidfile";
+	runArgs.AppendArg( "--cidfile=" + cidFileName );
+
+	// FIXME: Configure resource limits.
+	// runArgs.AppendArg( "--cpu-shares=<10x request_cpus>" );
+	// runArgs.AppendArg( "--memory=<slot memory attribute>" );
+
+	// FIXME: this is safer, but will cause spurious errors when we
+	// try to remove the already-removed container.
+	// Remove the container on a successful run.
+	// runArgs.AppendArg( "--rm=true" );
 	runArgs.AppendArg( "--name" );
-	runArgs.AppendArg( dockerName );
+	runArgs.AppendArg( containerName );
 
 	// TODO: Set up the environment (in the container).
 
 	// Map the external sanbox to the internal sandbox.
-	runArgs.AppendArg( "-v" );
-	runArgs.AppendArg( sandboxPath + ":/tmp" );
+	runArgs.AppendArg( "--volume" );
+	runArgs.AppendArg( sandboxPath + ":" + sandboxPath );
 
 	// Start in the sandbox.
 	runArgs.AppendArg( "--workdir" );
-	runArgs.AppendArg( "/tmp" );
+	runArgs.AppendArg( sandboxPath );
 
 	// Run the command with its arguments in the image.
 	runArgs.AppendArg( imageID );
@@ -62,135 +76,15 @@ int DockerAPI::run(
 	runArgs.GetArgsStringForLogging( & displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
-	// Read from Docker's combined output and error streams.  On success,
-	// it returns a 64-digit hex number.
-	FILE * dockerResults = my_popen( runArgs, "r", 1 );
-	if( dockerResults == NULL ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
-		return -7;
-	}
-
-	char buffer[1024];
-	if( NULL == fgets( buffer, 1024, dockerResults ) ) {
-		if( errno ) {
-			dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), strerror( errno ), errno );
-		} else {
-			dprintf( D_ALWAYS | D_FAILURE, "'%s' returned nothing.\n", displayString.c_str() );
-		}
-		my_pclose( dockerResults );
-		return -2;
-	}
-
-	char rawContainerID[65];
-	if( 1 != sscanf( buffer, "%64[A-Fa-f0-9]\n", rawContainerID ) || strlen(rawContainerID) < 10) {
-		dprintf( D_ALWAYS | D_FAILURE, "Docker printed something that doesn't look like a container ID.\n" );
-		dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
-		while( fgets( buffer, 1024, dockerResults ) != NULL ) {
-			dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
-		}
-		my_pclose( dockerResults );
-		return -3;
-	}
-
-	dprintf( D_FULLDEBUG, "Found raw countainer ID '%s'\n", rawContainerID );
-	containerID = rawContainerID;
-	my_pclose( dockerResults );
-
-	// Use containerID to find the PID.
-	ArgList inspectArgs;
-	inspectArgs.AppendArg( docker );
-	inspectArgs.AppendArg( "inspect" );
-	inspectArgs.AppendArg( "--format" );
-	StringList formatElements(	"ContainerId=\"{{.Id}}\" "
-								"Pid={{.State.Pid}} "
-								"ExitCode={{.State.ExitCode}} "
-								"StartedAt=\"{{.State.StartedAt}}\" "
-								"FinishedAt=\"{{.State.FinishedAt}}\" " );
-	char * formatArg = formatElements.print_to_delimed_string( "\n" );
-	inspectArgs.AppendArg( formatArg );
-	free( formatArg );
-	inspectArgs.AppendArg( containerID );
-
-	displayString = "";
-	inspectArgs.GetArgsStringForLogging( & displayString );
-	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
-
-	dockerResults = my_popen( inspectArgs, "r", 1 );
-	if( dockerResults == NULL ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Unable to run '%s'.\n", displayString.c_str() );
-		return -6;
-	}
-
-	// If the output isn't exactly formatElements.number() lines long,
-	// something has gone wrong and we'll at least be able to print out
-	// the error message(s).
-	std::vector<std::string> correctOutput(formatElements.number());
-	for( int i = 0; i < formatElements.number(); ++i ) {
-		if( fgets( buffer, 1024, dockerResults ) != NULL ) {
-			correctOutput[i] = buffer;
-		}
-	}
-	my_pclose( dockerResults );
-
-	int attrCount = 0;
-	ClassAd dockerAd;
-	for( int i = 0; i < formatElements.number(); ++i ) {
-		if( correctOutput[i].empty() || dockerAd.Insert( correctOutput[i].c_str() ) == FALSE ) {
-			break;
-		}
-		++attrCount;
-	}
-
-	if( attrCount != formatElements.number() ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to create classad from Docker output (%d).  Printing up to the first %d (nonblank) lines.\n", attrCount, formatElements.number() );
-		for( int i = 0; i < formatElements.number() && ! correctOutput[i].empty(); ++i ) {
-			dprintf( D_ALWAYS | D_FAILURE, "%s", correctOutput[i].c_str() );
-		}
-		return -4;
-	}
-
-	dprintf( D_FULLDEBUG, "docker inspect printed:\n" );
-	for( int i = 0; i < formatElements.number() && ! correctOutput[i].empty(); ++i ) {
-		dprintf( D_FULLDEBUG, "\t%s", correctOutput[i].c_str() );
-	}
-
-	// If the PID is 0, the job either terminated really quickly or
-	// hasn't started yet.
-	if( ! dockerAd.LookupInteger( "Pid", pid ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to find pid in Docker output.\n" );
-		return -5;
-	}
-
 	//
-	// We use 'docker logs --follow' both as a signal/semaphore process (like
-	// 'docker wait', it will terminate iff the container does), and to make
-	// sure we catch all of the output.
+	// If we run Docker attached, we avoid a race condition where
+	// 'docker logs --follow' returns before 'docker rm' knows that the
+	// container is gone (and refuses to remove it).  Of course, we
+	// can't block, so we have a proxy process run attached for us.
 	//
-	ArgList waitArgs;
-	waitArgs.AppendArg( docker );
-//	waitArgs.AppendArg( "wait" );
-	waitArgs.AppendArg( "logs" );
-	waitArgs.AppendArg( "--follow" );
-	waitArgs.AppendArg( containerID );
-
-	//
-	// It may be wiser to fork and run in attached mode, playing the
-	// appropriate games with the childFDs, and passing the child's PID
-	// as the proxy process ID, especially given the --rm option.
-	//
-	// That should eliminate the need to sleep before calling DockerAPI::rm()
-	// in DockerProc::JobExit().
-	//
-	// Note that we'd need to verify that our assigned name is always
-	// sufficient for all other commands, or have the parent poll
-	// 'docker inspect' until we get the ID back.  We may have to do the
-	// latter anyway, to get the cgroups ID to use for gathering usage
-	// information.
-	//
-
 	FamilyInfo fi;
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
-	int childPID = daemonCore->Create_Process( docker.c_str(), waitArgs,
+	int childPID = daemonCore->Create_Process( docker.c_str(), runArgs,
 		PRIV_UNKNOWN, 1, FALSE, FALSE, NULL, sandboxPath.c_str(),
 		& fi, NULL, childFDs );
 
@@ -200,6 +94,31 @@ int DockerAPI::run(
 	}
 	pid = childPID;
 
+	//
+	// We'll need the container ID to slurp usage information.
+	//
+	int cidFD = -1;
+	for( int i = 0; i < 3 && cidFD < 0; ++i ) {
+		sleep( i );
+		cidFD = safe_open_wrapper_follow( cidFileName.c_str(), O_RDONLY, 0600 );
+	}
+
+	if( cidFD < 0 ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to open container ID file '%s'.\n", cidFileName.c_str() );
+		return -7;
+	}
+
+	char buffer[1024];
+	int size = read( cidFD, buffer, 1024 );
+	close( cidFD );
+
+	if( size == -1 ) {
+		dprintf( D_ALWAYS, D_FAILURE, "Failed to read from container ID file '%s'.\n", cidFileName.c_str() );
+		return -8;
+	}
+
+	buffer[ (1024 - 1) < size ? 1024 - 1 : size] = '\0';
+	containerID = buffer;
 	return 0;
 }
 
@@ -344,20 +263,75 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 	return 0;
 }
 
+int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, CondorError & /* err */ ) {
+	std::string docker;
+	if( ! param( docker, "DOCKER" ) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "DOCKER is undefined.\n" );
+		return -1;
+	}
 
-//
-// Random notes on Docker.
-//
+	if( dockerAd == NULL ) {
+		dprintf( D_ALWAYS | D_FAILURE, "dockerAd is NULL.\n" );
+		return -2;
+	}
 
-// To see currently-installed images, run 'docker images'.
+	ArgList inspectArgs;
+	inspectArgs.AppendArg( docker );
+	inspectArgs.AppendArg( "inspect" );
+	inspectArgs.AppendArg( "--format" );
+	StringList formatElements(	"ContainerId=\"{{.Id}}\" "
+								"Pid={{.State.Pid}} "
+								"Name=\"{{.Name}}\" "
+								"ExitCode={{.State.ExitCode}} "
+								"StartedAt=\"{{.State.StartedAt}}\" "
+								"FinishedAt=\"{{.State.FinishedAt}}\" " );
+	char * formatArg = formatElements.print_to_delimed_string( "\n" );
+	inspectArgs.AppendArg( formatArg );
+	free( formatArg );
+	inspectArgs.AppendArg( containerID );
 
-// To obtain the full container ID, pass 'docker ps' the
-// --no-trunc[ate] option.
+	MyString displayString;
+	inspectArgs.GetArgsStringForLogging( & displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
-// To map an external path to an internal path, pass 'docker run'
-// '-v /path/to/sandbox:/inner-path/to/sandbox'.
+	FILE * dockerResults = my_popen( inspectArgs, "r", 1 );
+	if( dockerResults == NULL ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Unable to run '%s'.\n", displayString.c_str() );
+		return -6;
+	}
 
-// sudo docker inspect --format 'ContainerId = {{.Id}} ; Pid = {{.State.Pid}} ; ExitCode = {{.State.ExitCode}}' <container-name>
+	// If the output isn't exactly formatElements.number() lines long,
+	// something has gone wrong and we'll at least be able to print out
+	// the error message(s).
+	char buffer[1024];
+	std::vector<std::string> correctOutput(formatElements.number());
+	for( int i = 0; i < formatElements.number(); ++i ) {
+		if( fgets( buffer, 1024, dockerResults ) != NULL ) {
+			correctOutput[i] = buffer;
+		}
+	}
+	my_pclose( dockerResults );
 
-// docker run --rm will autoremove the container if it exited sucessfuly,
-// which might be a nice back-up for us.
+	int attrCount = 0;
+	for( int i = 0; i < formatElements.number(); ++i ) {
+		if( correctOutput[i].empty() || dockerAd->Insert( correctOutput[i].c_str() ) == FALSE ) {
+			break;
+		}
+		++attrCount;
+	}
+
+	if( attrCount != formatElements.number() ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to create classad from Docker output (%d).  Printing up to the first %d (nonblank) lines.\n", attrCount, formatElements.number() );
+		for( int i = 0; i < formatElements.number() && ! correctOutput[i].empty(); ++i ) {
+			dprintf( D_ALWAYS | D_FAILURE, "%s", correctOutput[i].c_str() );
+		}
+		return -4;
+	}
+
+	dprintf( D_FULLDEBUG, "docker inspect printed:\n" );
+	for( int i = 0; i < formatElements.number() && ! correctOutput[i].empty(); ++i ) {
+		dprintf( D_FULLDEBUG, "\t%s", correctOutput[i].c_str() );
+	}
+
+	return 0;
+}
