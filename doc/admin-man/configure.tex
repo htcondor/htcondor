@@ -10792,10 +10792,12 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanUseOldDagReader}
 \item[\Macro{DAGMAN\_USE\_OLD\_DAG\_READER}]
-  As of HTCondor version 8.3.3, the value is always the default 
-  value of \Expr{False}.  
-  Attempts to set it to \Expr{True} results in a warning, and will
-  have no effect on how the DAG file is read. 
+  As of HTCondor version 8.3.3, this variable is no longer supported.
+  Its value will always be \Expr{False}.  
+  A setting of \Expr{True} will result in a warning, 
+  and the setting will have no effect on how a DAG input file is read. 
+  The variable was previously used to change the reading of DAG input
+  files to that of HTCondor versions prior to 8.0.6. 
 
 \end{description}
 
