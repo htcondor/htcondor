@@ -51,6 +51,23 @@ int DockerProc::StartJob() {
 	JobAd->LookupString( ATTR_JOB_CMD, command );
 	dprintf( D_FULLDEBUG, "%s: '%s'\n", ATTR_JOB_CMD, command.c_str() );
 
+	std::string sandboxPath = Starter->jic->jobRemoteIWD();
+
+	//
+	// This code is deliberately wrong, probably for backwards-compability.
+	// (See the code in JICShadow::beginFileTransfer(), which assumes that
+	// we transferred the executable if ATTR_TRANSFER_EXECUTABLE is unset.)
+	// Rather than risk breaking anything by fixing condor_submit (which
+	// does not set ATTR_TRANSFER_EXECUTABLE unless it's false) -- and
+	// introducing a version dependency -- assume the executable was
+	// transferred unless it was explicitly noted otherwise.
+	//
+	bool transferExecutable = true;
+	JobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transferExecutable );
+	if( transferExecutable ) {
+		command = sandboxPath + "/" + command;
+	}
+
 	ArgList args;
 	args.SetArgV1SyntaxToCurrentPlatform();
 	MyString argsError;
@@ -59,16 +76,12 @@ int DockerProc::StartJob() {
 		return FALSE;
 	}
 
-	// We can't just use Starter->GetJobEnv() because we need to change e.g.,
-	// _CONDOR_SCRATCH_DIR to be sensible for the chroot jail.
-	// TODO: pass requested job environment to Docker.
 	Env job_env;
 	MyString env_errors;
 	if( !Starter->GetJobEnv(JobAd,&job_env,&env_errors) ) {
 		dprintf( D_ALWAYS, "Aborting DockerProc::StartJob: %s\n", env_errors.Value());
 		return 0;
 	}
-	std::string sandboxPath = Starter->jic->jobRemoteIWD();
 
 	// The GlobalJobID is unsuitable by virtue its octothorpes.  This
 	// construction is informative, but could be made even less likely
