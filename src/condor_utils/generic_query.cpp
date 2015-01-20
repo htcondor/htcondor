@@ -424,11 +424,11 @@ copyQueryObject (GenericQuery &from)
 	int i;
 
 	// copy string constraints
-   	for (i = 0; i < stringThreshold; i++)
+   	for (i = 0; i < from.stringThreshold; i++)
 		copyStringCategory (stringConstraints[i], from.stringConstraints[i]);
 	
 	// copy integer constraints
-	for (i = 0; i < integerThreshold; i++)
+	for (i = 0; i < from.integerThreshold; i++)
 		copyIntegerCategory (integerConstraints[i],from.integerConstraints[i]);
 
 	// copy custom constraints
