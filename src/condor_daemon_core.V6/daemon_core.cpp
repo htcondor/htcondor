@@ -6411,7 +6411,7 @@ int DaemonCore::Create_Process(
 {
 	int i, j;
 	char *ptmp;
-	int inheritFds[MAX_INHERIT_FDS];
+	int inheritFds[MAX_INHERIT_FDS + 1];
 	int numInheritFds = 0;
 	MyString executable_buf;
 	priv_state current_priv = PRIV_UNKNOWN;
