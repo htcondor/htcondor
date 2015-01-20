@@ -9,7 +9,8 @@
 
 #include "docker-api.h"
 
-bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env);
+static bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env);
+static bool add_docker_arg(ArgList &runArgs);
 
 //
 // Because we fork before calling docker, we don't actually
@@ -34,12 +35,8 @@ int DockerAPI::run(
 	// also apparently a security worry to run Docker as root, so let's not.
 	//
 	ArgList runArgs;
-	std::string docker;
-	if( ! param( docker, "DOCKER" ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "DOCKER is undefined.\n" );
+	if ( ! add_docker_arg(runArgs))
 		return -1;
-	}
-	runArgs.AppendArg( docker );
 	runArgs.AppendArg( "run" );
 	runArgs.AppendArg( "--tty" );
 
@@ -89,7 +86,7 @@ int DockerAPI::run(
 	//
 	FamilyInfo fi;
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
-	int childPID = daemonCore->Create_Process( docker.c_str(), runArgs,
+	int childPID = daemonCore->Create_Process( runArgs.GetArg(0), runArgs,
 		PRIV_UNKNOWN, 1, FALSE, FALSE, NULL, sandboxPath.c_str(),
 		& fi, NULL, childFDs );
 
@@ -128,14 +125,10 @@ int DockerAPI::run(
 }
 
 int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
-	std::string docker;
-	if( ! param( docker, "DOCKER" ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "DOCKER is undefined.\n" );
-		return -1;
-	}
 
 	ArgList rmArgs;
-	rmArgs.AppendArg( docker );
+	if ( ! add_docker_arg(rmArgs))
+		return -1;
 	rmArgs.AppendArg( "rm" );
 	rmArgs.AppendArg( containerID.c_str() );
 
@@ -178,14 +171,10 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 }
 
 int DockerAPI::detect( CondorError & /* err */ ) {
-	std::string docker;
-	if( ! param( docker, "DOCKER" ) ) {
-		dprintf( D_FULLDEBUG, "DOCKER is undefined.\n" );
-		return -1;
-	}
 
 	ArgList infoArgs;
-	infoArgs.AppendArg( docker );
+	if ( ! add_docker_arg(infoArgs))
+		return -1;
 	infoArgs.AppendArg( "info" );
 
 	MyString displayString;
@@ -224,14 +213,10 @@ int DockerAPI::detect( CondorError & /* err */ ) {
 // FIXME: We have a lot of boilerplate code in this function and file.
 //
 int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
-	std::string docker;
-	if( ! param( docker, "DOCKER" ) ) {
-		dprintf( D_FULLDEBUG, "DOCKER is undefined.\n" );
-		return -1;
-	}
 
 	ArgList versionArgs;
-	versionArgs.AppendArg( docker );
+	if ( ! add_docker_arg(versionArgs))
+		return -1;
 	versionArgs.AppendArg( "-v" );
 
 	MyString displayString;
@@ -339,6 +324,29 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	}
 
 	return 0;
+}
+
+// in most cases we can't invoke docker directly because of it will be priviledged
+// instead, DOCKER will be defined as 'sudo docker' or 'sudo /path/to/docker' so 
+// we need to recognise this as two arguments and do the right thing.
+static bool add_docker_arg(ArgList &runArgs) {
+	std::string docker;
+	if( ! param( docker, "DOCKER" ) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "DOCKER is undefined.\n" );
+		return false;
+	}
+	const char * pdocker = docker.c_str();
+	if (starts_with(docker, "sudo ")) {
+		runArgs.AppendArg("/usr/bin/sudo");
+		pdocker += 4;
+		while (isspace(*pdocker)) ++pdocker;
+		if ( ! *pdocker) {
+			dprintf( D_ALWAYS | D_FAILURE, "DOCKER is defined as '%s' which is not valid.\n", docker.c_str() );
+			return false;
+		}
+	}
+	runArgs.AppendArg(pdocker);
+	return true;
 }
 
 static bool docker_add_env_walker (void*pv, const MyString &var, const MyString &val) {
