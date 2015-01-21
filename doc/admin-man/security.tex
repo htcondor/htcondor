@@ -3004,7 +3004,7 @@ variable of the submitting and executing machines are different or if
 contains \Attr{RunAsOwner}=False.  Under Windows, HTCondor by default
 runs jobs under a dynamically created local account that exists for
 the duration of the job, but it can optionally run the job as the user
-account that owns the job if \Macro{STARTER\_ALLOW\_RUNAS\_OWNER} is
+account that owns the job if \MacroNI{STARTER\_ALLOW\_RUNAS\_OWNER} is
 True and the job contains \Attr{RunAsOwner}=True.
 
 When HTCondor cleans up after executing a vanilla universe job, it does
