@@ -688,6 +688,9 @@ parseArgv( int  /*argc*/, char* argv[] )
 			if( ! (tmp && *tmp) ) {
 				another( "-name" );
 			}
+			if (name) {
+				free(name);
+			}
 			name = get_daemon_name( *tmp );
 			if( ! name ) {
                 fprintf( stderr, "%s: unknown host %s\n", my_name, 
