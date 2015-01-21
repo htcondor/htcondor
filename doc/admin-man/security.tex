@@ -2990,33 +2990,42 @@ such as \Login{condor} that exists
 only to run HTCondor jobs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:RunAsNobody}Running Jobs as the Nobody User}
+\subsubsection{\label{sec:RunAsNobody}Who Jobs Run As}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{user nobody!potential security risk with jobs}
 \index{UID!potential risk running jobs as user nobody}
 \index{security!running jobs as user nobody}
+\index{RunAsOwner}
+\index{job!who the job runs as}
 
-Under Unix, HTCondor runs jobs either as the user that submitted the
-jobs, or as the user called \Login{nobody}.  HTCondor uses user
+Under Unix, HTCondor runs jobs as one of
+\begin{itemize}
+\item the user that submitted the jobs
+\item the user called \Login{nobody}
+\item dedicated accounts called slot users
+ set up for the purpose of running HTCondor jobs
+\end{itemize}
+
+Running jobs as the \Login{nobody} user is the least preferable.
+HTCondor uses user
 \Login{nobody} if the value of the \MacroNI{UID\_DOMAIN} configuration
-variable of the submitting and executing machines are different or if
-\Macro{STARTER\_ALLOW\_RUNAS\_OWNER} is false or if the job ClassAd
-contains \Attr{RunAsOwner}=False.  Under Windows, HTCondor by default
-runs jobs under a dynamically created local account that exists for
-the duration of the job, but it can optionally run the job as the user
-account that owns the job if \MacroNI{STARTER\_ALLOW\_RUNAS\_OWNER} is
-True and the job contains \Attr{RunAsOwner}=True.
+variable of the submitting and executing machines are different,
+or if configuration variable \Macro{STARTER\_ALLOW\_RUNAS\_OWNER} 
+is \Expr{False},
+or if the job ClassAd contains \Expr{RunAsOwner=False}.  
 
-When HTCondor cleans up after executing a vanilla universe job, it does
-the best that it can by deleting all of the processes started by the
-job.  During the life of the job, it also does its best to track the
+When HTCondor cleans up after executing a vanilla universe job, 
+it does the best that it can by deleting all of the processes 
+started by the job.  
+During the life of the job, it also does its best to track the
 CPU usage of all processes created by the job.  There are a variety of
 mechanisms used by HTCondor to detect all such processes, but, in
 general, the only foolproof mechanism is for the job to run under a
 dedicated execution account (as it does under Windows by default).
 With all other mechanisms, it is possible to fool HTCondor, and leave
-processes behind after HTCondor has cleaned up.  In the case of a shared
-account, such as the Unix user \Login{nobody}, it is possible for the
+processes behind after HTCondor has cleaned up.  
+In the case of a shared account, such as the Unix user \Login{nobody}, 
+it is possible for the
 job to leave a lurker process lying in wait for the next job run as
 \Login{nobody}.  The lurker process may prey maliciously on the next
 \Login{nobody} user job, wreaking havoc.
@@ -3073,6 +3082,13 @@ Notes:
 \item{ Currently, none of these configuration settings apply to
 standard universe jobs.  Normally, standard universe jobs do not
 create additional processes. }
+
+\item{
+Under Windows, HTCondor by default
+runs jobs under a dynamically created local account that exists for
+the duration of the job, but it can optionally run the job as the user
+account that owns the job if \MacroNI{STARTER\_ALLOW\_RUNAS\_OWNER} is
+True and the job contains \Attr{RunAsOwner}=True. }
 
 \item{
 On Windows, \MacroNI{SLOT<N>\_USER} will only work if the credential
