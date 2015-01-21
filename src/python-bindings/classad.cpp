@@ -5,10 +5,6 @@
 #include <Python.h>
 #include <datetime.h>
 
-#ifdef WIN32
-#include <time.h>
-#endif
-
 #include <string>
 
 #include <classad/source.h>
@@ -784,15 +780,6 @@ convert_python_to_exprtree(boost::python::object value)
         classad::abstime_t atime;
         boost::python::object timestamp = py_import("calendar").attr("timegm")(value.attr("timetuple")());
         // Determine the UTC offset; timetuple above is in local time, but timegm assumes UTC.
-#ifdef WIN32 //no STL for time in windows
-		time_t current_time;
-        time(&current_time);
-        struct tm *timeinfo = localtime(&current_time);
-        long offset = 0; //timeinfo->tm_gmtoff does not exist in windows
-        atime.secs = boost::python::extract<time_t>(timestamp) - offset;
-        atime.offset = 0;
-        classad::Value val; val.SetAbsoluteTimeValue(atime);
-#else
         std::time_t current_time;
         std::time(&current_time);
         struct std::tm *timeinfo = std::localtime(&current_time);
@@ -800,7 +787,6 @@ convert_python_to_exprtree(boost::python::object value)
         atime.secs = boost::python::extract<time_t>(timestamp) - offset;
         atime.offset = 0;
         classad::Value val; val.SetAbsoluteTimeValue(atime);
-#endif
         return classad::Literal::MakeLiteral(val);
     }
     if (PyDict_Check(value.ptr()))

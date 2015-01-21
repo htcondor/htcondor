@@ -4,11 +4,8 @@
 #include "module_lock.h"
 
 #include "classad/classad.h"
+
 using namespace condor;
-
-#if !defined(WIN32)
-
-
 
 pthread_mutex_t ModuleLock::m_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -44,25 +41,4 @@ ModuleLock::release()
         PyEval_RestoreThread(m_save);
     }
 }
-#else
-ModuleLock::ModuleLock()
-{
-    acquire();
-}
 
-void
-ModuleLock::acquire()
-{
-
-}
-
-ModuleLock::~ModuleLock()
-{
-    release();
-}
-
-void
-ModuleLock::release()
-{
-}
-#endif

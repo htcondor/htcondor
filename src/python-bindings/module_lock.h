@@ -1,7 +1,7 @@
 
 #ifndef __MODULE_LOCK_H_
 #define __MODULE_LOCK_H_
-#if !defined(WIN32)
+
 #include <pthread.h>
 
 namespace condor {
@@ -24,19 +24,5 @@ private:
 };
 
 }
-#else
-namespace condor {
 
-class ModuleLock {
-
-public:
-    ModuleLock();
-    ~ModuleLock();
-
-    void acquire();
-    void release();
-};
-
-}
-#endif
 #endif

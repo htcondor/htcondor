@@ -49,13 +49,8 @@
 // reason defining fileno and fdopen to the right ones does not work 
 // in new versions of Visual Studio)
 //#pragma warning( disable : 4996 )
-#ifndef _CRT_NONSTDC_NO_DEPRECATE
 #define _CRT_NONSTDC_NO_DEPRECATE
-#endif
-
-#ifndef _CRT_NONSTDC_NO_WARNINGS
 #define _CRT_NONSTDC_NO_WARNINGS
-#endif
 
 // #define NOGDI
 #define NOSOUND
@@ -90,11 +85,7 @@
 #include <sys/stat.h>
 typedef unsigned short mode_t;
 typedef int socklen_t;
-
-#ifndef Py_CONFIG_H
 typedef DWORD pid_t;
-#endif 
-
 typedef	unsigned __int16 uint16_t;
 typedef unsigned __int32 uint32_t;
 typedef __int32 int32_t;
@@ -131,11 +122,7 @@ DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #define W_OK 2
 #define X_OK 4
 #define F_OK 0
-
-#ifndef SSIZE_T
 #define ssize_t SSIZE_T
-#endif
-
 #define sleep(x) Sleep(x*1000)
 #define getpid _getpid
 #include <process.h>
