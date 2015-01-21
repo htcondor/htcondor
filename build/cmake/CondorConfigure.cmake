@@ -76,19 +76,37 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 ##################################################
 ##################################################
 
-# disable python on windows until we can get the rest of cmake changes worked out.
+# To find python in Windows we will use alternate technique
 if(NOT WINDOWS)
-#if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
-include (FindPythonLibs)
+	include (FindPythonLibs)
+	# As of cmake 2.8.8, the variable below is defined by FindPythonLibs.
+	# This helps ensure we get the same version of the libraries and python
+	# on systems with both python2 and python3.
+	if (DEFINED PYTHONLIBS_VERSION_STRING)
+  		set(PythonInterp_FIND_VERSION "${PYTHONLIBS_VERSION_STRING}")
+  		set(PythonInterp_FIND_VERSION_EXACT ON)
+	endif()
+	include (FindPythonInterp)
+else()
+	#only for Visual Studio 2012
+	if(NOT (MSVC_VERSION LESS 1700))
+		message(STATUS "Searching for python installation")
+		#set(Python_ADDITIONAL_VERSIONS 2.7 2.6) 
+		find_package(PythonLibs 2.7)
+	  	if(NOT PYTHONLIBS_FOUND)
+	  		message(STATUS "PYTHONLIBS NOT FOUND")
+	  	else()
+		    find_package(PythonInterp)
+		    if(PYTHONINTERP_FOUND)
+		    	execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sys;sys.stdout.write(sys.version[:3])" OUTPUT_VARIABLE PYTHON_VERSION)
+		    	message(STATUS "Found Python interpreter version ${PYTHON_VERSION}")
+		    	execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import sys;sys.stdout.write(sys.prefix)" OUTPUT_VARIABLE PYTHON_PREFIX)
+		    	set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${PYTHON_PREFIX})
+		 	endif()
+ 		endif()
+ 	endif()
 endif(NOT WINDOWS)
-# As of cmake 2.8.8, the variable below is defined by FindPythonLibs.
-# This helps ensure we get the same version of the libraries and python
-# on systems with both python2 and python3.
-if (DEFINED PYTHONLIBS_VERSION_STRING)
-  set(PythonInterp_FIND_VERSION "${PYTHONLIBS_VERSION_STRING}")
-  set(PythonInterp_FIND_VERSION_EXACT ON)
-endif()
-include (FindPythonInterp)
+
 include (FindThreads)
 include (GlibcDetect)
 
@@ -648,9 +666,9 @@ if (WINDOWS)
 
   if (MSVC11)
     if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32.tar.gz)
+      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32_V2.tar.gz)
     else()
-      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32.tar.gz)
+      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32_V2.tar.gz)
     endif()
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.54.0)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1j)

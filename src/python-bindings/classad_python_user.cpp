@@ -1,7 +1,7 @@
 
 // Note - pyconfig.h must be included before condor_common to avoid
 // re-definition warnings.
-# include <pyconfig.h>
+#include <pyconfig.h>
 
 #include "condor_common.h"
 #include "condor_config.h"
@@ -20,7 +20,15 @@
 #include "exprtree_wrapper.h"
 
 #include <sys/types.h>
-#include <pwd.h>
+
+#if !defined(WIN32)
+	#include <pwd.h>
+	#include <sys/stat.h>
+#else
+	// WINDOWS only
+	#include "store_cred.h"
+#endif
+
 
 static bool
 python_invoke (const char *                 name,
