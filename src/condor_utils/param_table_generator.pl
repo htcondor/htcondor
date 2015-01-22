@@ -699,7 +699,7 @@ sub reconstitute {
 		}
 	}
 	continue_output("}; // metaknobsources[]\n");
-	continue_output("const int metaknobsources_count = sizeof(metaknobsources)/sizeof(const char *);\n\n");
+	continue_output("const int metaknobsources_count = sizeof(metaknobsources)/sizeof(key_value_pair);\n\n");
 
 	# end of table declarations, everthing after this should be extern or type declarations.
 	#
