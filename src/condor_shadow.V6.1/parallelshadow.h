@@ -118,7 +118,7 @@ class ParallelShadow : public BaseShadow
 		/** Do all work to cleanup before this shadow can exit.  To
 			cleanup an MPI job, we've got to kill all our starters.
 		*/
-	virtual void cleanUp( void );
+	virtual void cleanUp( bool graceful=false );
 
 		/** Do a graceful shutdown of this computation.
 			Unfortunately, there's no such thing as a graceful

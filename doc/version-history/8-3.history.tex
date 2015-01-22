@@ -57,10 +57,10 @@ to specify the python modules that are accessible from within ClassAds.
 which imposes no limits, to 1000.
 \Ticket{4748}
 
-\item The \Macro{DAGMAN\_USE\_OLD\_DAG\_READER} configuration macro
-is no longer supported.  Setting it to \Expr{True} will result in
-a warning, and will have no effect on how the DAG file is read.
-See section~\ref{param:DAGmanUseOldDagReader} for details.
+\item Configuration variable \Macro{DAGMAN\_USE\_OLD\_DAG\_READER}
+is no longer supported.  
+Setting it to \Expr{True} will result in a warning, 
+and the setting will have no effect on how a DAG input file is read.
 \Ticket{4186}
 
 \end{itemize}
@@ -81,6 +81,13 @@ that could cause the \Condor{schedd} to become unresponsive when a client
 set configuration variable \Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL} 
 to its non default value of \Expr{True}.
 \Ticket{4805}
+
+\item The configuration parameter \Macro{GRACEFULLY\_REMOVE\_JOBS} now
+controls how a running job is killed when a job policy expression
+causes it to be held or removed.
+Previously, it was consulted only when the user ran \Condor{hold} or
+\Condor{rm}.
+\Ticket{4679}
 
 \end{itemize}
 

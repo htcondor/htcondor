@@ -36,18 +36,6 @@ extern CStarter *Starter;
 // the full container ID as (part of) the cgroup identifier(s).
 //
 
-//
-// TODO: Can we configure Docker to store its overlay filesystem in
-// the sandbox?  Would that be useful for cleanup, or to help admins
-// allocate disk space?
-//
-
-//
-// TODO: Write the container ID out to disk (<sandbox>../../.dotfile)
-// like the VM universe so that the startd can clean up if the starter
-// crashes and again, if necessary, on start-up.
-//
-
 DockerProc::DockerProc( ClassAd * jobAd ) : VanillaProc( jobAd ) { }
 
 DockerProc::~DockerProc() { }
@@ -63,6 +51,23 @@ int DockerProc::StartJob() {
 	JobAd->LookupString( ATTR_JOB_CMD, command );
 	dprintf( D_FULLDEBUG, "%s: '%s'\n", ATTR_JOB_CMD, command.c_str() );
 
+	std::string sandboxPath = Starter->jic->jobRemoteIWD();
+
+	//
+	// This code is deliberately wrong, probably for backwards-compability.
+	// (See the code in JICShadow::beginFileTransfer(), which assumes that
+	// we transferred the executable if ATTR_TRANSFER_EXECUTABLE is unset.)
+	// Rather than risk breaking anything by fixing condor_submit (which
+	// does not set ATTR_TRANSFER_EXECUTABLE unless it's false) -- and
+	// introducing a version dependency -- assume the executable was
+	// transferred unless it was explicitly noted otherwise.
+	//
+	bool transferExecutable = true;
+	JobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transferExecutable );
+	if( transferExecutable ) {
+		command = sandboxPath + "/" + command;
+	}
+
 	ArgList args;
 	args.SetArgV1SyntaxToCurrentPlatform();
 	MyString argsError;
@@ -71,22 +76,17 @@ int DockerProc::StartJob() {
 		return FALSE;
 	}
 
-	// We can't just use Starter->GetJobEnv() because we need to change e.g.,
-	// _CONDOR_SCRATCH_DIR to be sensible for the chroot jail.
-	// TODO: pass requested job environment to Docker.
 	Env job_env;
 	MyString env_errors;
 	if( !Starter->GetJobEnv(JobAd,&job_env,&env_errors) ) {
 		dprintf( D_ALWAYS, "Aborting DockerProc::StartJob: %s\n", env_errors.Value());
 		return 0;
 	}
-	std::string sandboxPath = Starter->jic->jobRemoteIWD();
 
 	// The GlobalJobID is unsuitable by virtue its octothorpes.  This
 	// construction is informative, but could be made even less likely
 	// to collide if it had a timestamp.
-	std::string dockerName;
-	formatstr( dockerName, "HTCJob%d_%d_%s_PID%d",
+	formatstr( containerName, "HTCJob%d_%d_%s_PID%d",
 		Starter->jic->jobCluster(),
 		Starter->jic->jobProc(),
 		Starter->getMySlotName().c_str(), // note: this can be "" for single slot machines.
@@ -121,12 +121,12 @@ int DockerProc::StartJob() {
 	// DockerAPI::run() returns a PID from daemonCore->Create_Process(), which
 	// makes it suitable for passing up into VanillaProc.  This combination
 	// will trigger the reaper(s) when the container terminates.
-	int rv = DockerAPI::run( dockerName, imageID, command, args, job_env, sandboxPath, containerID, JobPid, childFDs, err );
+	int rv = DockerAPI::run( containerName, imageID, command, args, job_env, sandboxPath, JobPid, childFDs, err );
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::run( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		return FALSE;
 	}
-	dprintf( D_FULLDEBUG, "DockerAPI::run() returned container ID '%s' and pid %d\n", containerID.c_str(), JobPid );
+	dprintf( D_FULLDEBUG, "DockerAPI::run() returned pid %d\n", JobPid );
 
 	// TODO: Start a timer to poll for job usage updates.
 
@@ -142,9 +142,71 @@ bool DockerProc::JobReaper( int pid, int status ) {
 	// This should mean that the container has terminated.
 	//
 	if( pid == JobPid ) {
-		// TODO: Verify that the container has terminated.
-		// docker inspect -format <isRunning, exitCode> ${containerID}
+		//
+		// Even running Docker in attached mode, we have a race condition
+		// where this inspect (or rm) will report that the container is
+		// still running.  I'm guessing that the attached docker process
+		// is exiting when the container exits, not when the docker daemon
+		// notices that the container has exited.
+		//
+
+		int rv = -1;
+		bool running = false;
+		ClassAd dockerAd;
+		CondorError error;
+		// Years of careful research.
+		for( int i = 0; i < 20; ++i ) {
+			rv = DockerAPI::inspect( containerName, & dockerAd, error );
+			if( rv < 0 ) {
+				dprintf( D_FULLDEBUG, "Failed to inspect (for removal) container '%s'; sleeping a second (%d already slept) to give Docker a chance to catch up.\n", containerName.c_str(), i );
+				sleep( 1 );
+				continue;
+			}
+
+			if( ! dockerAd.LookupBool( "Running", running ) ) {
+				dprintf( D_FULLDEBUG, "Inspection of container '%s' failed to reveal its running state; sleeping a second (%d already slept) to give Docke a chance to catch up.\n", containerName.c_str(), i );
+				sleep( 1 );
+				continue;
+			}
+
+			if( running ) {
+				dprintf( D_FULLDEBUG, "Inspection reveals that container '%s' is still running; sleeping a second (%d already slept) to give Docker a chance to catch up.\n", containerName.c_str(), i );
+				sleep( 1 );
+				continue;
+			}
+
+			break;
+		}
+
+// FIXME: Move all this shared conditional-checking into a function.
+
+		if( rv < 0 ) {
+			dprintf( D_ALWAYS | D_FAILURE, "Failed to inspect (for removal) container '%s'.\n", containerName.c_str() );
+			return VanillaProc::JobReaper( pid, status );
+		}
+
+		if( ! dockerAd.LookupBool( "Running", running ) ) {
+			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal its running state.\n", containerName.c_str() );
+			return VanillaProc::JobReaper( pid, status );
+		}
+
+		if( running ) {
+			dprintf( D_ALWAYS | D_FAILURE, "Inspection reveals that container '%s' is still running.\n", containerName.c_str() );
+			return VanillaProc::JobReaper( pid, status );
+		}
+
+		// FIXME: Rethink returning a classad.  Having to check for missing
+		// attributes blows.
+
 		// TODO: Set status appropriately (as if it were from waitpid()).
+		int dockerStatus;
+		if( ! dockerAd.LookupInteger( "ExitCode", dockerStatus ) ) {
+			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal its exit code.\n", containerName.c_str() );
+			return VanillaProc::JobReaper( pid, status );
+		}
+		dprintf( D_FULLDEBUG, "Setting status of Docker job to %d.\n", dockerStatus );
+		status = dockerStatus;
+
 		// TODO: Record final job usage.
 
 		// We don't have to do any process clean-up, because container.
@@ -162,21 +224,27 @@ bool DockerProc::JobReaper( int pid, int status ) {
 bool DockerProc::JobExit() {
 	dprintf( D_ALWAYS, "DockerProc::JobExit()\n" );
 
-	//
-	// If we transfer files fast enough, 'docker rm' will fail because
-	// it believes a container that 'docker logs --follow' believes has
-	// terminated is still running.  This does not happen if we use
-	// 'docker wait', but then we would have to play games when the
-	// container terminates to get its output.
-	//
-	sleep( 1 );
-
+	ClassAd dockerAd;
 	CondorError error;
-	int rv = DockerAPI::rm( containerID, error );
+	int rv = DockerAPI::inspect( containerName, & dockerAd, error );
 	if( rv < 0 ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to remove container '%s'.\n", containerID.c_str() );
-		// TODO: Arguably, we should suicide and let the startd have a go
-		// at cleaning this mess up.  But I'm not sure..
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to inspect (for removal) container '%s'.\n", containerName.c_str() );
+		return VanillaProc::JobExit();
+	}
+
+	bool running;
+	if( ! dockerAd.LookupBool( "Running", running ) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal its running state.\n", containerName.c_str() );
+		return VanillaProc::JobExit();
+	}
+	if( running ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Inspection reveals that container '%s' is still running.\n", containerName.c_str() );
+		return VanillaProc::JobExit();
+	}
+
+	rv = DockerAPI::rm( containerName, error );
+	if( rv < 0 ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to remove container '%s'.\n", containerName.c_str() );
 	}
 
 	return VanillaProc::JobExit();
@@ -185,7 +253,7 @@ bool DockerProc::JobExit() {
 void DockerProc::Suspend() {
 	dprintf( D_ALWAYS, "DockerProc::Suspend()\n" );
 
-	// TODO: docker pause ${containerID} only exists in Docker 1.1+.
+	// TODO: docker pause ${containerName} only exists in Docker 1.1+.
 
 	is_suspended = true;
 }
@@ -195,7 +263,7 @@ void DockerProc::Continue() {
 	dprintf( D_ALWAYS, "DockerProc::Continue()\n" );
 
 	if( is_suspended ) {
-		// TODO: docker unpause ${containerID} only exists in Docker 1.1+.
+		// TODO: docker unpause ${containerName} only exists in Docker 1.1+.
 
 		is_suspended = false;
 	}
@@ -212,7 +280,7 @@ bool DockerProc::Remove() {
 	if( is_suspended ) { Continue(); }
 	requested_exit = true;
 
-	// TODO: docker kill --signal=${rm_kill_sig} ${containerID}
+	// TODO: docker kill --signal=${rm_kill_sig} ${containerName}
 
 	// Do NOT send any signals to the waiting process.  It should only
 	// react when the container does.
@@ -229,7 +297,7 @@ bool DockerProc::Hold() {
 	if( is_suspended ) { Continue(); }
 	requested_exit = true;
 
-	// TODO: docker kill --signal=${hold_kill_sig} ${containerID}
+	// TODO: docker kill --signal=${hold_kill_sig} ${containerName}
 
 	// Do NOT send any signals to the waiting process.  It should only
 	// react when the container does.
@@ -243,7 +311,7 @@ bool DockerProc::Hold() {
 bool DockerProc::ShutdownGraceful() {
 	dprintf( D_ALWAYS, "DockerProc::ShutdownGraceful()\n" );
 
-	if( containerID.empty() ) {
+	if( containerName.empty() ) {
 		// We haven't started a Docker yet, probably because we're still
 		// doing file transfer.  Since we're all done, just return true;
 		// the FileTransfer object will clean itself up.
@@ -254,7 +322,7 @@ bool DockerProc::ShutdownGraceful() {
 	requested_exit = true;
 
 	// TODO: rm_kill_sig defaults to soft_kill_sig
-	// TODO: docker kill --signal=${rm_kill_sig} ${containerID}
+	// TODO: docker kill --signal=${rm_kill_sig} ${containerName}
 
 	// Do NOT send any signals to the waiting process.  It should only
 	// react when the container does.
@@ -268,7 +336,7 @@ bool DockerProc::ShutdownGraceful() {
 bool DockerProc::ShutdownFast() {
 	dprintf( D_ALWAYS, "DockerProc::ShutdownFast()\n" );
 
-	if( containerID.empty() ) {
+	if( containerName.empty() ) {
 		// We haven't started a Docker yet, probably because we're still
 		// doing file transfer.  Since we're all done, just return true;
 		// the FileTransfer object will clean itself up.
@@ -280,7 +348,7 @@ bool DockerProc::ShutdownFast() {
 	// so don't bother to Continue() the process if it's been suspended.
 	requested_exit = true;
 
-	// TODO: docker kill --signal=SIGKILL ${containerID}
+	// TODO: docker kill --signal=SIGKILL ${containerName}
 
 	// Do NOT send any signals to the waiting process.  It should only
 	// react when the container does.

@@ -15,9 +15,8 @@ class DockerAPI {
 		 * it will be mapped into the container and the command run there
 		 * [TODO].
 		 *
-		 * If run() succeeds, the containerID will be set to the Docker GUID,
-		 * and the pid set to a process which will terminate when the instance
-		 * does.  The error will be unchanged.
+		 * If run() succeeds, the pid will be that of a process which will
+		 * terminate when the instance does.  The error will be unchanged.
 		 *
 		 * If run() fails, it will return a negative number [TODO: and set
 		 * error to ....]
@@ -28,7 +27,6 @@ class DockerAPI {
 		 * @param arguments		...
 		 * @param environment	...
 		 * @param directory		...
-		 * @param containerID	On success, will be set to the container's GUID.  Otherwise, unchagned.
 		 * @param pid			On success, will be set to the PID of a process which will terminate when the container does.  Otherwise, unchanged.
 		 * @param childFDs		The redirected std[in|out|err] FDs.
 		 * @param error			On success, unchanged.  Otherwise, [TODO].
@@ -40,7 +38,6 @@ class DockerAPI {
 						const ArgList & arguments,
 						const Env & environment,
 						const std::string & directory,
-						std::string & containerID,
 						int & pid,
 						int * childFDs,
 						CondorError & error );
@@ -49,38 +46,38 @@ class DockerAPI {
 		 * Releases the disk space (but not the image) associated with
 		 * the given container.
 		 *
-		 * @param containerID	The Docker GUID.
+		 * @param container		The Docker GUID, or the name passed to run().
 		 * @param error			....
 		 * @return				0 on success, negative otherwise.
 		 */
-		static int rm( const std::string & containerID, CondorError & err );
+		static int rm( const std::string & container, CondorError & err );
 
 		/**
 		 * Sends the given signal to the specified container's primary process.
 		 *
-		 * @param containerID	The Docker GUID.
+		 * @param container		The Docker GUID, or the name passed to run().
 		 * @param signal		The signal to send.
 		 * @param error			....
 		 * @return				0 on success, negative otherwise.
 		 */
-		static int kill( const std::string & containerID, int signal, CondorError & err );
+		static int kill( const std::string & container, int signal, CondorError & err );
 
 		// Only available in Docker 1.1 or later.
-		static int pause( const std::string & containerID, CondorError & err );
+		static int pause( const std::string & container, CondorError & err );
 
 		// Only available in Docker 1.1 or later.
-		static int unpause( const std::string & containerID, CondorError & err );
+		static int unpause( const std::string & container, CondorError & err );
 
 		/**
 		 * Obtains the docker-inspect values State.Running and State.ExitCode.
 		 *
-		 * @param containerID	The Docker GUID.
+		 * @param container		The Docker GUID, or the name passed to run().
 		 * @param isRunning		On success, will be set to State.Running.  Otherwise, unchanged.
 		 * @param exitCode		On success, will be set to State.ExitCode.  Otherwise, unchanged.
 		 * @param error			....
 		 * @return				0 on success, negative otherwise.
 		 */
-		static int getStatus( const std::string & containerID, bool isRunning, int & result, CondorError & err );
+		static int getStatus( const std::string & container, bool isRunning, int & result, CondorError & err );
 
 		/**
 		 * Attempts to detect the presence of a working Docker installation.
@@ -98,6 +95,17 @@ class DockerAPI {
 		 * @return				0 on success, negative otherwise.
 		 */
 		static int version( std::string & version, CondorError & err );
+
+		/**
+		 * Returns a ClassAd corresponding to a subset of the output of
+		 * 'docker inspect'.
+		 *
+		 * @param container		The Docker GUID, or the name passed to run().
+		 * @param inspectionAd	Populated on success, unchanged otherwise.
+		 * @param error			....
+		 * @return				0 on success, negative otherwise.
+		 */
+		static int inspect( const std::string & container, ClassAd * inspectionAd, CondorError & err );
 };
 
 #endif /* _CONDOR_DOCKER_API_H */
