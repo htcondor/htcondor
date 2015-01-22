@@ -2329,8 +2329,6 @@ count_a_job( ClassAd *job )
     }
     #define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
 
-    bool local_job = ((universe == CONDOR_UNIVERSE_LOCAL) || (universe == CONDOR_UNIVERSE_SCHEDULER));
-
     if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
         /*
          * Not all universes track CurrentHosts and MaxHosts; if there's no information,
@@ -2367,11 +2365,9 @@ count_a_job( ClassAd *job )
             scheduler.stats.JobsRunningRuntimes += job_running_time;
             OTHER.JobsRunningRuntimes += job_running_time;
         }
-        // We have always excluded local / scheduler universe jobs from the
-        // hold and removed count.
-    } else if ((status == HELD) && !local_job) {
+    } else if (status == HELD) {
         scheduler.JobsHeld++;
-    } else if (status == REMOVED && !local_job) {
+    } else if (status == REMOVED) {
         scheduler.JobsRemoved++;
     }
     #undef OTHER
