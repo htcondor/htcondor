@@ -5344,7 +5344,7 @@ public:
 		const char *the_executable_fullpath,
 		const int *the_std,
 		int the_numInheritFds,
-		const int (&the_inheritFds)[MAX_INHERIT_FDS],
+		const int (&the_inheritFds)[MAX_INHERIT_FDS + 1],
 		int the_nice_inc,
 		const priv_state &the_priv,
 		int the_want_command_port,
@@ -5415,7 +5415,7 @@ private:
 	const char *m_executable_fullpath;
 	const int *m_std;
 	const int m_numInheritFds;
-	const int (&m_inheritFds)[MAX_INHERIT_FDS];
+	const int (&m_inheritFds)[MAX_INHERIT_FDS + 1];
 	int m_nice_inc;
 	const priv_state &m_priv;
 	const int m_want_command_port;
@@ -6411,7 +6411,7 @@ int DaemonCore::Create_Process(
 {
 	int i, j;
 	char *ptmp;
-	int inheritFds[MAX_INHERIT_FDS];
+	int inheritFds[MAX_INHERIT_FDS + 1];
 	int numInheritFds = 0;
 	MyString executable_buf;
 	priv_state current_priv = PRIV_UNKNOWN;

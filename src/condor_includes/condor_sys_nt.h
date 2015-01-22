@@ -85,7 +85,9 @@
 #include <sys/stat.h>
 typedef unsigned short mode_t;
 typedef int socklen_t;
+#ifndef Py_CONFIG_H //conflicts with pyconfig.h 
 typedef DWORD pid_t;
+#endif 
 typedef	unsigned __int16 uint16_t;
 typedef unsigned __int32 uint32_t;
 typedef __int32 int32_t;

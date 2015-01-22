@@ -1227,7 +1227,9 @@ void CollectorDaemon::reportToDevelopers (void)
 	fprintf( mailer , "    %s\n", CondorVersion() );
 	fprintf( mailer , "    %s\n\n", CondorPlatform() );
 
+	delete normalTotals;
 	normalTotals = &totals;
+
 	if (!collector.walkHashTable (STARTD_AD, reportStartdScanFunc)) {
 		dprintf (D_ALWAYS, "Error making monthly report (startd scan) \n");
 	}

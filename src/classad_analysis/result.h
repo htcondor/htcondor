@@ -102,7 +102,7 @@ namespace classad_analysis {
     
     /* Adds the (new) classad for a_machine to the collection of
        machines that fail to run a job because of reason */
-    void add_explanation(matchmaking_failure_kind reason, classad::ClassAd a_machine);
+    void add_explanation(matchmaking_failure_kind reason, const classad::ClassAd &a_machine);
     /* As above; creates a new classad from (old classad) a_machine.
        Does not take ownership of a_machine. */
     void add_explanation(matchmaking_failure_kind reason, ClassAd *a_machine);

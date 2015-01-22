@@ -3,11 +3,19 @@
 // as early as possible and hack around the other brokenness where pyconfig.h
 // redefines _XOPEN_SOURCE and _POSIX_C_SOURCE.  (Since pyconfig's definition
 // won before this change, this has no semantic effect.)
-#include "condor_common.h"
-#include "globus_utils.h"
-#undef _XOPEN_SOURCE
-#undef _POSIX_C_SOURCE
-#include <pyconfig.h>
+#ifdef WIN32
+	#include <pyconfig.h> //must be before condor_common to avoid redefinitions
+	#undef _XOPEN_SOURCE
+	#undef _POSIX_C_SOURCE
+	#include "condor_common.h"
+	#include "globus_utils.h"
+#else
+	#include "condor_common.h"
+	#include "globus_utils.h"
+	#undef _XOPEN_SOURCE
+	#undef _POSIX_C_SOURCE
+	#include <pyconfig.h>
+#endif
 
 #include "condor_attributes.h"
 #include "condor_universe.h"

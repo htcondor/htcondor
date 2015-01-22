@@ -57,7 +57,11 @@ const char* my_full_hostname() {
 
 const char* my_ip_string() {
     static MyString __my_ip_string;
-	// TODO: Picking IPv4 arbitrarily.
+	// TODO: Picking IPv4 arbitrarily. WARNING: This function
+	// gets called while the configuration file is being loaded,
+	// before we know if IPV4 and/or IPv6 is enabled.  It needs to
+	// return a stable answer, because having it change midway
+	// through parsing the file is a recipe for failure.
     __my_ip_string = get_local_ipaddr(CP_IPV4).to_ip_string();
     return __my_ip_string.Value();
 }
