@@ -36,6 +36,7 @@ class DockerProc : public VanillaProc {
 	private:
 
 		std::string containerID;
+		std::string containerName;
 };
 
 #endif /* _CONDOR_DOCKER_PROC_H */

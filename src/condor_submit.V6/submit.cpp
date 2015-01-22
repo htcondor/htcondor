@@ -7063,8 +7063,8 @@ check_requirements( char const *orig, MyString &answer )
 
 	req_ad.GetExprReferences(answer.Value(),&job_refs,&machine_refs);
 
-	checks_arch = machine_refs.contains_anycase( ATTR_ARCH );
-	checks_opsys = machine_refs.contains_anycase( ATTR_OPSYS ) ||
+	checks_arch = IsDockerJob || machine_refs.contains_anycase( ATTR_ARCH );
+	checks_opsys = IsDockerJob || machine_refs.contains_anycase( ATTR_OPSYS ) ||
 		machine_refs.contains_anycase( ATTR_OPSYS_AND_VER ) ||
 		machine_refs.contains_anycase( ATTR_OPSYS_LONG_NAME ) ||
 		machine_refs.contains_anycase( ATTR_OPSYS_SHORT_NAME ) ||
@@ -7108,9 +7108,7 @@ check_requirements( char const *orig, MyString &answer )
 		if( answer[0] ) {
 			answer += " && ";
 		}
-		answer += "(TARGET.";
-		answer += ATTR_HAS_JAVA;
-		answer += ")";
+		answer += "TARGET." ATTR_HAS_JAVA;
 	} else if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
 		// For vm universe, we require the same archicture.
 		if( !checks_arch ) {
@@ -7147,6 +7145,11 @@ check_requirements( char const *orig, MyString &answer )
 			answer += ATTR_VM_AVAIL_NUM;
 			answer += " > 0)";
 		}
+	} else if (IsDockerJob) {
+			if( answer[0] ) {
+				answer += " && ";
+			}
+			answer += "TARGET.HasDocker";
 	} else {
 		if( !checks_arch ) {
 			if( answer[0] ) {
@@ -7375,9 +7378,7 @@ check_requirements( char const *orig, MyString &answer )
 			//
 			//
 		if ( JobUniverse != CONDOR_UNIVERSE_LOCAL ) {
-			answer += " && (TARGET.";
-			answer += ATTR_HAS_JOB_DEFERRAL;
-			answer += ")";
+			answer += " && TARGET." ATTR_HAS_JOB_DEFERRAL;
 		}
 		
 			//
