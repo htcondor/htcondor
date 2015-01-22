@@ -82,6 +82,13 @@ set configuration variable \Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL}
 to its non default value of \Expr{True}.
 \Ticket{4805}
 
+\item The configuration parameter \Macro{GRACEFULLY\_REMOVE\_JOBS} now
+controls how a running job is killed when a job policy expression
+causes it to be held or removed.
+Previously, it was consulted only when the user ran \Condor{hold} or
+\Condor{rm}.
+\Ticket{4679}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
