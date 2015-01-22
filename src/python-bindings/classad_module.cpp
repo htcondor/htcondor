@@ -23,7 +23,7 @@ std::string ClassadLibraryVersion()
 
 
 static
-std::string GetLastError()
+std::string GetLastCondorError()
 {
     return classad::CondorErrMsg;
 }
@@ -124,7 +124,7 @@ BOOST_PYTHON_MODULE(classad)
 
     def("version", ClassadLibraryVersion, "Return the version of the linked ClassAd library.");
 
-    def("lastError", GetLastError, "The last error that occurred in the ClassAd library.");
+    def("lastError", GetLastCondorError, "The last error that occurred in the ClassAd library.");
     def("registerLibrary", RegisterLibrary, "Register a shared library of ClassAd functions.");
 
     def("parse", parseString, return_value_policy<manage_new_object>());
