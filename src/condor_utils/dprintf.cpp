@@ -1860,15 +1860,11 @@ dprintf_wrapup_fork_child( bool cloned ) {
 		close( LockFd );
 		LockFd = -1;
 	}
-	if ( !cloned ) {
-		// We don't need to restore these values in a non-cloned child,
-		// because dprintf() won't be called again and we're not sharing
-		// memory with the parent process.
-		// In a cloned child, the parent restores the original value of
-		// DebugRotateLog when it resumes execution.
-		//DebugRotateLog = true;
-		//log_keep_open = ?
-	}
+	// We don't need to restore the original values of DebugRotateLog or
+	// log_keep_open here. In a forked child, the memory isn't shared
+	// with the parent. For a cloned child, log_keep_open wasn't changed
+	// and the parent will restore DebugRotateLog immediately after the
+	// child exec()s or exits.
 }
 
 #if HAVE_BACKTRACE
