@@ -224,19 +224,14 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 }
 
 int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, CondorError & /* err */ ) {
-	std::string docker;
-	if( ! param( docker, "DOCKER" ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "DOCKER is undefined.\n" );
-		return -1;
-	}
-
 	if( dockerAd == NULL ) {
 		dprintf( D_ALWAYS | D_FAILURE, "dockerAd is NULL.\n" );
 		return -2;
 	}
 
 	ArgList inspectArgs;
-	inspectArgs.AppendArg( docker );
+	if ( ! add_docker_arg(inspectArgs))
+		return -1;
 	inspectArgs.AppendArg( "inspect" );
 	inspectArgs.AppendArg( "--format" );
 	StringList formatElements(	"ContainerId=\"{{.Id}}\" "
