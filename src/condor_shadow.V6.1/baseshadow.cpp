@@ -397,7 +397,7 @@ BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_s
 	}
 
 		// cleanup this shadow (kill starters, etc)
-	cleanUp();
+	cleanUp( jobWantsGracefulRemoval() );
 
 		// Put the reason in our job ad.
 	jobAd->Assign( ATTR_HOLD_REASON, reason );
@@ -479,7 +479,7 @@ void BaseShadow::removeJobPre( const char* reason )
 			 getCluster(), getProc(), reason );
 
 	// cleanup this shadow (kill starters, etc)
-	cleanUp();
+	cleanUp( jobWantsGracefulRemoval() );
 
 	// Put the reason in our job ad.
 	int size = strlen( reason ) + strlen( ATTR_REMOVE_REASON ) + 4;
@@ -720,7 +720,7 @@ BaseShadow::evictJob( int reason )
 	}
 
 		// cleanup this shadow (kill starters, etc)
-	cleanUp();
+	cleanUp( jobWantsGracefulRemoval() );
 
 		// write stuff to user log:
 	logEvictEvent( reason );
