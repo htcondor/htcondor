@@ -3099,6 +3099,7 @@ service_commands(void *arg,globus_io_handle_t* gio_handle,globus_result_t rest)
 		}
 
 		if ( input_line[0] == NULL ) {
+			free( input_line );
 			goto reregister_and_return;
 		}
 
