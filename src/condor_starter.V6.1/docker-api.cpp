@@ -24,7 +24,6 @@ int DockerAPI::run(
 	const ArgList & args,
 	const Env & env,
 	const std::string & sandboxPath,
-	std::string & containerID,
 	int & pid,
 	int * childFDs,
 	CondorError & /* err */ )
@@ -49,10 +48,6 @@ int DockerAPI::run(
 	// runArgs.AppendArg( "--cpu-shares=<10x request_cpus>" );
 	// runArgs.AppendArg( "--memory=<slot memory attribute>" );
 
-	// FIXME: this is safer, but will cause spurious errors when we
-	// try to remove the already-removed container.
-	// Remove the container on a successful run.
-	// runArgs.AppendArg( "--rm=true" );
 	runArgs.AppendArg( "--name" );
 	runArgs.AppendArg( containerName );
 
@@ -96,31 +91,6 @@ int DockerAPI::run(
 	}
 	pid = childPID;
 
-	//
-	// We'll need the container ID to slurp usage information.
-	//
-	int cidFD = -1;
-	for( int i = 0; i < 3 && cidFD < 0; ++i ) {
-		sleep( i );
-		cidFD = safe_open_wrapper_follow( cidFileName.c_str(), O_RDONLY, 0600 );
-	}
-
-	if( cidFD < 0 ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to open container ID file '%s'.\n", cidFileName.c_str() );
-		return -7;
-	}
-
-	char buffer[1024];
-	int size = read( cidFD, buffer, 1024 );
-	close( cidFD );
-
-	if( size == -1 ) {
-		dprintf( D_ALWAYS, D_FAILURE, "Failed to read from container ID file '%s'.\n", cidFileName.c_str() );
-		return -8;
-	}
-
-	buffer[ (1024 - 1) < size ? 1024 - 1 : size] = '\0';
-	containerID = buffer;
 	return 0;
 }
 
@@ -272,6 +242,7 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	StringList formatElements(	"ContainerId=\"{{.Id}}\" "
 								"Pid={{.State.Pid}} "
 								"Name=\"{{.Name}}\" "
+								"Running={{.State.Running}} "
 								"ExitCode={{.State.ExitCode}} "
 								"StartedAt=\"{{.State.StartedAt}}\" "
 								"FinishedAt=\"{{.State.FinishedAt}}\" " );
