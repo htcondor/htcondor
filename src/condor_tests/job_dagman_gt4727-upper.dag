@@ -1,10 +1,16 @@
+NODE_STATUS_FILE job_dagman_gt4727-upper.dag.status
+JOBSTATE_LOG job_dagman_gt4727-upper.dag.jobstate.log
+
+# Run the lower-level DAG the first time -- it will fail because
+# it fails to submit its first node.
 Subdag External NodeA job_dagman_gt4727-lower.dag
 Script Pre NodeA job_dagman_gt4727-nodeA-pre.pl
 
-# We're not doing "subdag external" here because that would do
-# "condor_submit -force ..." (we need to avoid the force).  (Could also
-# do it with retries.)
-Job NodeB job_dagman_gt4727-lower.dag.condor.sub
+# When we hit the bug this DAG will wait forever...
+Subdag External NodeB job_dagman_gt4727-lower.dag
+# This PRE script will cause the lower-level DAG to go into recovery
+# mode when it runs; also, the node that failed to submit the first
+# time around will succeed this time.
 Script Pre NodeB job_dagman_gt4727-nodeB-pre.pl
 
 Parent NodeA Child NodeB
