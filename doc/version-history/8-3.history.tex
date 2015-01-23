@@ -63,9 +63,9 @@ Setting it to \Expr{True} will result in a warning,
 and the setting will have no effect on how a DAG input file is read.
 \Ticket{4186}
 
-\item Attributes in the scheduler ad written by the \Condor{schedd} that
-count the number of jobs in various states now include all jobs, not just
-jobs that need to be matched by the negotiator.
+\item ClassAd attributes written by the \Condor{schedd} that
+count the number of jobs in various states now include all jobs, 
+not only jobs that need to be matched by the \Condor{negotiator} daemon.
 These attributes include \Attr{TotalRunningJobs}, \Attr{TotalIdleJobs},
 \Attr{TotalHeldJobs}, and \Attr{TotalRemovedJobs}.
 \Ticket{4683}
