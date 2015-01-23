@@ -220,6 +220,9 @@ instantiateEvent (ULogEventNumber event)
 	case ULOG_PRESKIP:
 		return new PreSkipEvent;
 
+	case ULOG_SUBMITS_FAILED:
+		return new SubmitsFailedEvent;
+
 	default:
 		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
 		// Return NULL/0 here instead of EXCEPTing to fix Gnats PR 706.
@@ -5859,7 +5862,6 @@ int PreSkipEvent::readEvent( FILE *file )
 	if ( !line.readLine( file ) ) {
 		return 0;
 	}
-dprintf( D_ALWAYS, "DIAG 1010 <%s>\n", line.Value() );//TEMPTEMP
 
 	line.chomp();
 	if ( line != eventString ) {
@@ -5885,13 +5887,10 @@ dprintf( D_ALWAYS, "DIAG 1010 <%s>\n", line.Value() );//TEMPTEMP
 	fpos_t fpos;
 	fgetpos(file,&fpos);
 	if ( !line.readLine( file ) || line == DELIM_NL ) {
-dprintf( D_ALWAYS, "DIAG 1019\n" );//TEMPTEMP
-			//TEMPTEMP -- print a warning here??
 		dprintf( D_ALWAYS, "ERROR: no DAG node specified in PreSkipEvent\n" );
 		fsetpos(file,&fpos);
 		return 0;
 	}
-dprintf( D_ALWAYS, "DIAG 1020 <%s>\n", line.Value() );//TEMPTEMP
 
 	line.chomp();
 
@@ -5954,5 +5953,132 @@ void PreSkipEvent::setSkipNote(const char* s)
 	skipEventLogNotes = strnewp(s);
 	if ( s ) {
 		ASSERT( skipEventLogNotes );
+	}
+}
+
+//--------------------------------------------------------------
+
+const char *SubmitsFailedEvent::eventString =
+			"All submit attempts failed";//TEMPTEMP?
+const char *SubmitsFailedEvent::classAdAttr = "SubFailedEventLogNotes";
+
+//TEMPTEMP -- replace 8192 and 8191 with named constants?
+SubmitsFailedEvent::SubmitsFailedEvent(void) : subFailedEventLogNote(NULL)
+{
+	eventNumber = ULOG_SUBMITS_FAILED;
+}
+
+SubmitsFailedEvent::~SubmitsFailedEvent(void)
+{
+	delete [] subFailedEventLogNote;
+}
+
+int SubmitsFailedEvent::readEvent( FILE *file )
+{
+	setSubFailedNote( NULL );
+
+	MyString line;
+	if ( !line.readLine( file ) ) {
+		return 0;
+	}
+
+	line.chomp();
+	if ( line != eventString ) {
+		dprintf( D_ALWAYS, "ERROR: unexpected event string <%s>\n",
+					line.Value() );
+		return 0;
+	}
+
+//TEMPTEMP -- test this code
+	// check if event ended without specifying the DAG node.
+	// in this case, the submit host would be the event delimiter
+	if ( line.find( DELIM ) == 0 ) {
+			// This should not happen. The event should have a 
+			// DAGMan node associated with it.
+		dprintf( D_ALWAYS, "ERROR: no DAG node specified in SubmitsFailedEvent\n" );
+		setSubFailedNote( "" );
+		// Backup to leave event delimiter unread go past \n too
+		fseek( file, -DELIM_NL_LEN, SEEK_CUR );
+		return 0;
+	}
+	
+	// This event must have a DAG Node attached to it.
+	fpos_t fpos;
+	fgetpos(file,&fpos);
+	if ( !line.readLine( file ) || line == DELIM_NL ) {
+		dprintf( D_ALWAYS, "ERROR: no DAG node specified in SubmitsFailedEvent\n" );
+		fsetpos(file,&fpos);
+		return 0;
+	}
+
+	line.chomp();
+
+		// some users of this library (dagman) depend on whitespace
+		// being stripped from the beginning of the log notes field
+	line.trim();
+
+	setSubFailedNote( line.Value() );
+
+	return ( !subFailedEventLogNote || strlen(subFailedEventLogNote) == 0 ) ? 0 : 1;
+}
+
+int SubmitsFailedEvent::writeEvent( FILE* file )
+{
+	int retval = fprintf ( file, "%s\n", eventString );
+	if ( !subFailedEventLogNote || retval < 0 ) {
+		return 0;
+	}
+
+	retval = fprintf( file, "    %.8191s\n", subFailedEventLogNote );
+	if ( retval < 0 ) {
+		return 0;
+	}
+
+	return 1;
+}
+
+//TEMPTEMP -- where (if at all) does this get used/tested?
+ClassAd* SubmitsFailedEvent::toClassAd(void)
+{
+	EXCEPT( "Not yet implemented" );//TEMPTEMP
+	return NULL;//TEMPTEMP
+#if 0 //TEMPTEMP
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	if( subFailedEventLogNote && subFailedEventLogNote[0] ) {
+		if( !myad->InsertAttr("TEMPTEMP",subFailedEventLogNote) ) return NULL;
+	}
+	return myad;
+#endif //TEMPTEMP
+}
+
+//TEMPTEMP -- where (if at all) does this get used/tested?
+void SubmitsFailedEvent::initFromClassAd(ClassAd* ad)
+{
+	EXCEPT( "Not yet implemented" );//TEMPTEMP
+#if 0 //TEMPTEMP
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+	char* mallocstr = NULL;
+	ad->LookupString("TEMPTEMP", &mallocstr);
+	if( mallocstr ) {
+		setSubFailedNote(mallocstr);
+		free(mallocstr);
+		mallocstr = NULL;
+	}
+#endif //TEMPTEMP
+}
+
+void SubmitsFailedEvent::setSubFailedNote( const char* note )
+{
+	delete[] subFailedEventLogNote;
+	if ( note ) {
+		subFailedEventLogNote = strnewp( note );
+		ASSERT( subFailedEventLogNote );
+	}
+	else {
+		subFailedEventLogNote = NULL;
 	}
 }

@@ -697,6 +697,10 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				// _jobstateLog.WriteJobSuccessOrFailure( job );
 				break;
 
+			case ULOG_SUBMITS_FAILED:
+				ProcessSubFailedEvent(job, event);
+				break;
+
 			case ULOG_CHECKPOINTED:
 			case ULOG_IMAGE_SIZE:
 			case ULOG_NODE_EXECUTE:
@@ -1320,6 +1324,54 @@ Dag::ProcessReleasedEvent(Job *job,const ULogEvent* event) {
 }
 
 //---------------------------------------------------------------------------
+void
+Dag::ProcessSubFailedEvent( Job *node, const ULogEvent* event ) {
+
+	ASSERT( event );
+	if ( !node ) {
+		return;
+	}
+
+	//TEMPTEMP -- hmm -- if we have a post script, will we re-monitor the log file?
+	(void)node->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+
+#if 0 //TEMPTEMP?
+// Should this be in the submit failure method or the event processing method?
+		// To match the existing behavior, we're resetting the times
+		// here.
+	_nextSubmitTime = 0;
+	_nextSubmitDelay = 1;
+
+	debug_printf( DEBUG_QUIET, "Job submit failed after %d tr%s.\n",
+			node->_submitTries, node->_submitTries == 1 ? "y" : "ies" );
+
+	snprintf( node->error_text, JOB_ERROR_TEXT_MAXLEN,
+			"Job submit failed" );
+
+		// NOTE: this failure short-circuits the "retry" feature
+		// because it's already exhausted a number of retries
+		// (maybe we should make sure max_submit_attempts >
+		// node->retries before assuming this is a good idea...)
+	//TEMPTEMP -- do we print this even if the node doesn't have retries?? how does it interact w/ post script?
+	debug_printf( DEBUG_NORMAL, "Shortcutting node %s retries because "
+			"of submit failure(s)\n", node->GetJobName() );
+	node->retries = node->GetRetryMax();
+#endif //TEMPTEMP?
+
+	if ( node->_scriptPost ) {
+		node->_scriptPost->_retValJob = DAG_ERROR_CONDOR_SUBMIT_FAILED;
+		(void)RunPostScript( node, _alwaysRunPost, 0 );
+	} else {
+		node->TerminateFailure();
+		_numNodesFailed++;
+		_metrics->NodeFinished( node->GetDagFile() != NULL, false );
+		if ( _dagStatus == DAG_STATUS_OK ) {
+			_dagStatus = DAG_STATUS_NODE_FAILED;
+		}
+	}
+}
+
+//---------------------------------------------------------------------------
 Job * Dag::FindNodeByName (const char * jobName) const {
 	if( !jobName ) {
 		return NULL;
@@ -1733,6 +1785,7 @@ Dag::PreScriptReaper( Job *job, int status )
 					job->retval, job->GetJobName() );
 
 				// Mark the node as a skipped node.
+				//TEMPTEMP -- does this even need to be an argument to the writePreSkipEvent call???
 			CondorID id;
 				// This might be the first time we watch the file, so we
 				// monitor it.
@@ -2258,6 +2311,7 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
     fprintf(fp, "#\n");
     fprintf(fp, "# Total number of Nodes: %d\n", NumNodes( true ));
     fprintf(fp, "# Nodes premarked DONE: %d\n", _numNodesDone);
+//TEMPTEMP -- should final node be in this list if it failed??  why aren't they now?
     fprintf(fp, "# Nodes that failed: %d\n", _numNodesFailed);
 
     //
@@ -2447,6 +2501,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 	if ( node->GetStatus() == Job::STATUS_DONE && !node->GetFinal() ) {
 		fprintf(fp, "DONE %s\n", node->GetJobName() );
 	}
+	//TEMPTEMP -- maybe add a comment here if final node was run??  if we have a final node but it finished successfully, we shouldn't get a rescue DAG anyhow, right?
 
 		// Print the RETRY line, if any.
 	if( node->retry_max > 0 ) {
@@ -3758,7 +3813,8 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 		// node, and we're done...
 
 	if ( event->eventNumber != ULOG_SUBMIT &&
-				event->eventNumber != ULOG_PRESKIP ) {
+				event->eventNumber != ULOG_PRESKIP &&
+				event->eventNumber != ULOG_SUBMITS_FAILED ) {
 		
 	  node = FindNodeByEventID( logsource, condorID );
 	  if( node ) {
@@ -3795,6 +3851,7 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 								node );
 					node->SetCondorID( condorID );
 
+//TEMPTEMP -- could a bunch of this go into a function?
 						// Insert this node into the CondorID->node hash
 						// table if we don't already have it (e.g., recovery
 						// mode).  (In "normal" mode we should have already
@@ -3837,6 +3894,7 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 		if( !skip_event->skipEventLogNotes ) { 
 			debug_printf( DEBUG_NORMAL, "No DAG Node indicated in a PRE_SKIP event\n" );	
 			node = NULL;
+		//TEMPTEMP -- magic string here!
 		} else if( sscanf( skip_event->skipEventLogNotes, "DAG Node: %1023s",
 				nodeName ) == 1) {
 			node = FindNodeByName( nodeName );
@@ -3865,9 +3923,46 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 		}
 		return node;
 	}
+
+	if ( event->eventNumber == ULOG_SUBMITS_FAILED ) {
+		const SubmitsFailedEvent* subFailEvent =
+					(const SubmitsFailedEvent*)event;
+		char nodeName[1024] = "";
+		if ( !subFailEvent->subFailedEventLogNote ) { 
+			debug_printf( DEBUG_NORMAL, "No DAG Node indicated in a PRE_SKIP event\n" );	
+			node = NULL;
+		//TEMPTEMP -- magic string here!
+		} else if ( sscanf( subFailEvent->subFailedEventLogNote,
+					"DAG Node: %1023s", nodeName ) == 1) {
+			node = FindNodeByName( nodeName );
+			if( node ) {
+				node->SetCondorID( condorID );
+					// Insert this node into the CondorID->node hash
+					// table.
+				bool isNoop = JobIsNoop( condorID );
+				int id = GetIndexID( condorID );
+				HashTable<int, Job *> *ht =
+							GetEventIDHash( isNoop, logsource );
+				Job *tmpNode = NULL;
+				if ( ht->lookup( id, tmpNode ) != 0 ) {
+						// Node not found.
+					int insertResult = ht->insert( id, node );
+					ASSERT( insertResult == 0 );
+				} else {
+						// Node was found.
+					ASSERT( tmpNode == node );
+				}
+			}
+		} else {
+			debug_printf( DEBUG_QUIET, "ERROR: 'DAG Node:' not found "
+						"in SubmitsFailed notes: <%s>\n",
+						subFailEvent->subFailedEventLogNote );
+		}
+		return node;
+	}
+
 	return node;
 }
-
 
 //---------------------------------------------------------------------------
 // Checks whether this is a "good" event ("bad" events include Condor
@@ -4235,6 +4330,8 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 }
 
 //---------------------------------------------------------------------------
+//TEMPTEMP -- hmm -- now that we write an event for this, we should probably move some of the processing out of here and into where we read the event
+//TEMPTEMP -- also, we should probably still write this if we have a post script...
 void
 Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 {
@@ -4249,7 +4346,9 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
 
-	(void)node->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+	//TEMPTEMP -- need to do this somewhere else!!!
+	//TEMPTEMP -- hmm -- will we try to re-monitor it on a subsequent submit re-try?
+	//TEMPTEMP (void)node->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
 
 	if ( node->_submitTries >= max_submit_attempts ) {
 			// We're out of submit attempts, treat this as a submit failure.
@@ -4262,6 +4361,8 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 		debug_printf( DEBUG_QUIET, "Job submit failed after %d tr%s.\n",
 				node->_submitTries, node->_submitTries == 1 ? "y" : "ies" );
 
+		//TEMPTEMP -- hmm -- do we want this?  will it get overwritten if we have a post script and that succeeds?
+		//TEMPTEMP -- and, if we want this, should it go in the event processing?
 		snprintf( node->error_text, JOB_ERROR_TEXT_MAXLEN,
 				"Job submit failed" );
 
@@ -4269,20 +4370,29 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 			// because it's already exhausted a number of retries
 			// (maybe we should make sure max_submit_attempts >
 			// node->retries before assuming this is a good idea...)
+		//TEMPTEMP -- do we print this even if the node doesn't have retries?? how does it interact w/ post script?
 		debug_printf( DEBUG_NORMAL, "Shortcutting node %s retries because "
 				"of submit failure(s)\n", node->GetJobName() );
 		node->retries = node->GetRetryMax();
-		if( node->_scriptPost ) {
-			node->_scriptPost->_retValJob = DAG_ERROR_CONDOR_SUBMIT_FAILED;
-			(void)RunPostScript( node, _alwaysRunPost, 0 );
-		} else {
-			node->TerminateFailure();
-			_numNodesFailed++;
-			_metrics->NodeFinished( node->GetDagFile() != NULL, false );
-			if ( _dagStatus == DAG_STATUS_OK ) {
-				_dagStatus = DAG_STATUS_NODE_FAILED;
-			}
+
+		CondorID id;//TEMPTEMP -- probably eliminate from args
+		if ( !writeSubmitsFailedEvent( id, node, node->GetJobName(),
+				node->GetDirectory(), _use_default_node_log ? DefaultNodeLog():
+				node->GetLogFile() , !_use_default_node_log
+				&& node->GetLogFileIsXml() ) ) {
+			debug_printf( DEBUG_NORMAL, "Failed to write SubmitFailed event for node %s\n",
+				node->GetJobName() );
+			main_shutdown_rescue( EXIT_ERROR, DAG_STATUS_ERROR );
 		}
+
+#if 0 //TEMPTEMP?
+		node->TerminateFailure();
+		_numNodesFailed++;
+		_metrics->NodeFinished( node->GetDagFile() != NULL, false );
+		if ( _dagStatus == DAG_STATUS_OK ) {
+			_dagStatus = DAG_STATUS_NODE_FAILED;
+		}
+#endif //TEMPTEMP?
 	} else {
 		// We have more submit attempts left, put this node back into the
 		// ready queue.

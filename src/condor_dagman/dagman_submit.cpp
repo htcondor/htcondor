@@ -321,6 +321,8 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 	args.AppendArg( "-a" );
 	MyString submitEventNotes = MyString(
+//TEMPTEMP -- "DAG Node: " is magic string!
+//TEMPTEMP -- make NodeName2EventNote and EventNote2NodeName functions!!
 				"submit_event_notes = DAG Node: " ) + DAGNodeName;
 	args.AppendArg( submitEventNotes.Value() );
 
@@ -467,6 +469,7 @@ stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
   args.AppendArg( dm.storkSubmitExe );
   args.AppendArg( "-lognotes" );
 
+//TEMPTEMP -- "DAG Node: " is magic string!
   MyString logNotes = MyString( "DAG Node: " ) + DAGNodeName;
   args.AppendArg( logNotes.Value() );
 
@@ -496,11 +499,13 @@ set_fake_condorID( int subprocID )
 	_subprocID = subprocID;
 }
 
+//-------------------------------------------------------------------------
 int
 get_fake_condorID()
 {
 	return _subprocID;
 }
+
 //-------------------------------------------------------------------------
 bool
 fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName, 
@@ -542,6 +547,7 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 		// correctly.
 	subEvent.setSubmitHost( "<dummy-submit-for-noop-job>" );
 
+//TEMPTEMP -- "DAG Node: " is magic string!
 	MyString subEventNotes("DAG Node: " );
 	subEventNotes += DAGNodeName;
 		// submitEventLogNotes get deleted in SubmitEvent destructor.
@@ -569,6 +575,7 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 	return true;
 }
 
+//-------------------------------------------------------------------------
 bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName, 
 			   const char* directory, const char *logFile, bool logIsXml )
 {
@@ -605,10 +612,10 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 	pEvent.proc = condorID._proc;
 	pEvent.subproc = condorID._subproc;
 
+//TEMPTEMP -- "DAG Node: " is magic string!
 	MyString pEventNotes("DAG Node: " );
 	pEventNotes += DAGNodeName;
-		// skipEventLogNotes gets deleted in PreSkipEvent destructor.
-	pEvent.skipEventLogNotes = strnewp( pEventNotes.Value() );
+	pEvent.setSkipNote( pEventNotes.Value() );
 
 	if ( !ulog.writeEvent( &pEvent ) ) {
 		EXCEPT( "Error: writing PRESKIP event failed!" );
@@ -617,6 +624,59 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 	return true;
 }
 
+//-------------------------------------------------------------------------
+//TEMPTEMP -- look for errors in this!!!
+//TEMPTEMP -- why is condorID a reference?  does the caller rely on it getting changed??
+bool writeSubmitsFailedEvent( CondorID& condorID, Job* job, const char* DAGNodeName, 
+			   const char* directory, const char *logFile, bool logIsXml )
+{
+	TmpDir tmpDir;
+	MyString	errMsg;
+	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
+		debug_printf( DEBUG_QUIET,
+				"Could not change to node directory %s: %s\n",
+				directory, errMsg.Value() );
+		return false;
+	}
+
+		// Special CondorID for NOOP jobs -- actually indexed by
+		// otherwise-unused subprocID.
+	condorID._cluster = 0;
+	condorID._proc = Job::NOOP_NODE_PROCID;
+
+	condorID._subproc = 1+get_fake_condorID();
+		// Increment this value
+	set_fake_condorID(condorID._subproc);
+
+	//TEMPTEMP -- is job ever NULL?
+	if( job ) {
+		job->SetCondorID( condorID );
+	}
+
+	WriteUserLog ulog;
+	ulog.setEnableGlobalLog( false );
+	ulog.setUseXML( logIsXml );
+	ulog.initialize( logFile, condorID._cluster,
+		condorID._proc, condorID._subproc, NULL );
+
+	SubmitsFailedEvent sfEvent;
+	sfEvent.cluster = condorID._cluster;
+	sfEvent.proc = condorID._proc;
+	sfEvent.subproc = condorID._subproc;
+
+//TEMPTEMP -- "DAG Node: " is magic string!
+	MyString sfEventNote("DAG Node: " );
+	sfEventNote += DAGNodeName;
+	sfEvent.setSubFailedNote( sfEventNote.Value() );
+
+	if ( !ulog.writeEvent( &sfEvent ) ) {
+		EXCEPT( "Error: writing SubmitFailed event failed!" );
+		return false;
+	}
+	return true;
+}
+
+//-------------------------------------------------------------------------
 const char *
 getEventMask()
 {

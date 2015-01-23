@@ -286,6 +286,9 @@ class Dag {
 	*/
 	void ProcessReleasedEvent(Job *job, const ULogEvent *event);
 
+	//TEMPTEMP -- document
+	void ProcessSubFailedEvent( Job *node, const ULogEvent *event );
+
     /** Get pointer to job with id jobID
         @param the handle of the job in the DAG
         @return address of Job object, or NULL if not found

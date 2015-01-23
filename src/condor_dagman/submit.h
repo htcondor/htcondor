@@ -63,13 +63,17 @@ bool stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 void set_fake_condorID( int subprocID );
 
+int get_fake_condorID();
+
 bool fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 					const char* directory, const char *logFile,
 					bool logIsXml );
 
-int get_fake_condorID();
-
 bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName, 
 			   const char* directory, const char *logFile, bool logIsXml );
+
+bool writeSubmitsFailedEvent( CondorID& condorID, Job* job,
+			const char* DAGNodeName, const char* directory,
+			const char *logFile, bool logIsXml );
 
 #endif /* #ifndef CONDOR_SUBMIT_H */
