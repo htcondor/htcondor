@@ -590,7 +590,7 @@ bool splitArb_func( const char * /*name*/,
 }
 
 
-static bool
+static void
 problemExpression(const std::string &msg, classad::ExprTree *problem, classad::Value &result)
 {
 	result.SetErrorValue();
@@ -600,7 +600,6 @@ problemExpression(const std::string &msg, classad::ExprTree *problem, classad::V
 	std::stringstream ss;
 	ss << msg << "  Problem expression: " << problem_str;
 	classad::CondorErrMsg = ss.str();
-	return true;
 }
 
 
@@ -624,29 +623,34 @@ ArgsToList( const char * name,
 		classad::Value val;
 		if (!arguments[1]->Evaluate(state, val))
 		{
-			return problemExpression("Unable to evaluate second argument.", arguments[1], result);
+			problemExpression("Unable to evaluate second argument.", arguments[1], result);
+			return false;
 		}
 		int vers_val;
 		if (!val.IsIntegerValue(vers_val))
 		{
-			return problemExpression("Unable to evaluate second argument to integer.", arguments[1], result);
+			problemExpression("Unable to evaluate second argument to integer.", arguments[1], result);
+			return true;
 		}
 		if ((vers_val != 1) && (vers_val != 2))
 		{
 			std::stringstream ss;
 			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers_val << ".";
-			return problemExpression(ss.str(), arguments[1], result);
+			problemExpression(ss.str(), arguments[1], result);
+			return true;
 		}
 	}
 	classad::Value val;
 	if (!arguments[0]->Evaluate(state, val))
 	{
-		return problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		return false;
 	}
 	std::string args;
 	if (!val.IsStringValue(args))
 	{
-		return problemExpression("Unable to evaluate first argument to string.", arguments[0], result);
+		problemExpression("Unable to evaluate first argument to string.", arguments[0], result);
+		return true;
 	}
 	ArgList arg_list;
 	MyString error_msg;
@@ -654,13 +658,15 @@ ArgsToList( const char * name,
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to arg V1: " << error_msg.Value();
-		return problemExpression(ss.str(), arguments[0], result);
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
 	}
 	else if ((vers == 2) && !arg_list.AppendArgsV2Raw(args.c_str(), &error_msg))
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to arg V2: " << error_msg.Value();
-		return problemExpression(ss.str(), arguments[0], result);
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
 	}
 	std::vector<classad::ExprTree*> list_exprs;
 
@@ -717,29 +723,34 @@ ListToArgs(const char * name,
 		classad::Value val;
 		if (!arguments[1]->Evaluate(state, val))
 		{
-			return problemExpression("Unable to evaluate second argument.", arguments[1], result);
+			problemExpression("Unable to evaluate second argument.", arguments[1], result);
+			return false;
 		}
 		int vers_val;
 		if (!val.IsIntegerValue(vers_val))
 		{
-			return problemExpression("Unable to evaluate second argument to integer.", arguments[1], result);
+			problemExpression("Unable to evaluate second argument to integer.", arguments[1], result);
+			return true;
 		}
 		if ((vers_val != 1) && (vers_val != 2))
 		{
 			std::stringstream ss;
 			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers_val << ".";
-			return problemExpression(ss.str(), arguments[1], result);
+			problemExpression(ss.str(), arguments[1], result);
+			return true;
 		}
 	}
 	classad::Value val;
 	if (!arguments[0]->Evaluate(state, val))
 	{
-		return problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		return false;
 	}
 	classad_shared_ptr<classad::ExprList> args;
 	if (!val.IsSListValue(args))
 	{
-		return problemExpression("Unable to evaluate first argument to list.", arguments[0], result);
+		problemExpression("Unable to evaluate first argument to list.", arguments[0], result);
+		return true;
 	}
 	ArgList arg_list;
 	size_t idx=0;
@@ -750,14 +761,16 @@ ListToArgs(const char * name,
 		{
 			std::stringstream ss;
 			ss << "Unable to evaluate list entry " << idx << ".";
-			return problemExpression(ss.str(), *it, result);
+			problemExpression(ss.str(), *it, result);
+			return false;
 		}
 		std::string tmp_str;
 		if (!value.IsStringValue(tmp_str))
 		{
 			std::stringstream ss;
 			ss << "Entry " << idx << " did not evaluate to a string.";
-			return problemExpression(ss.str(), *it, result);
+			problemExpression(ss.str(), *it, result);
+			return true;
 		}
 		arg_list.AppendArg(tmp_str.c_str());
 	}
@@ -766,13 +779,15 @@ ListToArgs(const char * name,
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to arg V1: " << error_msg.Value();
-		return problemExpression(ss.str(), arguments[0], result);
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
 	}
 	else if ((vers == 2) && !arg_list.GetArgsStringV2Raw(&result_mystr, &error_msg))
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to arg V2: " << error_msg.Value();
-		return problemExpression(ss.str(), arguments[0], result);
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
 	}
 	result.SetStringValue(result_mystr.Value());
 	return true;
@@ -796,12 +811,24 @@ EnvironmentV1ToV2(const char * name,
 	classad::Value val;
 	if (!arguments[0]->Evaluate(state, val))
 	{
-		return problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		return false;
+	}
+		// By returning undefined if the input is undefined, the caller doesn't need an
+		// ifThenElse statement to see if the V1 environment is used in the first place.
+		// For example, we can do this:
+		//   mergeEnvironment(envV1toV2(Env), Environment, "FOO=BAR");
+		// without worrying about whether Env or Environment is already defined.
+	if (val.IsUndefinedValue())
+	{
+		result.SetUndefinedValue();
+		return true;
 	}
 	std::string args;
 	if (!val.IsStringValue(args))
 	{
-		return problemExpression("Unable to evaluate first argument to string.", arguments[0], result);
+		problemExpression("Unable to evaluate first argument to string.", arguments[0], result);
+		return true;
 	}
 	Env env;
 	MyString error_msg;
@@ -809,7 +836,8 @@ EnvironmentV1ToV2(const char * name,
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to environment V1: " << error_msg.Value();
-		return problemExpression(ss.str(), arguments[0], result);
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
 	}
 	MyString result_mystr;
 	env.getDelimitedStringV2Raw(&result_mystr, NULL);
@@ -833,21 +861,31 @@ MergeEnvironment(const char * /*name*/,
 		{
 			std::stringstream ss;
 			ss << "Unable to evaluate argument " << idx << ".";
-			return problemExpression(ss.str(), *it, result);
+			problemExpression(ss.str(), *it, result);
+			return false;
+		}
+			// Skip over undefined values; this makes it more natural
+			// to merge environments for a condor classad where the
+			// user may or may not have specified an environment string.
+		if (val.IsUndefinedValue())
+		{
+			continue;
 		}
 		std::string env_str;
 		if (!val.IsStringValue(env_str))
 		{
 			std::stringstream ss;
 			ss << "Unable to evaluate argument " << idx << ".";
-			return problemExpression(ss.str(), *it, result);
+			problemExpression(ss.str(), *it, result);
+			return true;
 		}
 		MyString error_msg;
 		if (!env.MergeFromV2Raw(env_str.c_str(), &error_msg))
 		{
 			std::stringstream ss;
 			ss << "Argument " << idx << " cannot be parsed as environment string.";
-			return problemExpression(ss.str(), *it, result);
+			problemExpression(ss.str(), *it, result);
+			return true;
 		}
 	}
 	MyString result_mystr;
