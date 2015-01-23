@@ -1982,7 +1982,7 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	}
 	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, 1000);
 	StringList &projection = continuation->projection;
-	if (!value.IsListValue(list)) {
+	if (!value.IsUndefinedValue() && !value.IsListValue(list)) {
 		list = NULL;
 		std::string slist;
 		// a string of comma and/or space separated attributes is the usual form for projection
