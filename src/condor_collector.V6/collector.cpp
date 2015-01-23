@@ -351,14 +351,23 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	List<ClassAd> results;
 	ForkStatus	fork_status = FORK_FAILED;
 	int	   		return_status = 0;
+
     if (whichAds != (AdTypes) -1) {
-		fork_status = forkQuery.NewJob( );
-		if ( FORK_PARENT == fork_status ) {
-			return 1;
-		} else {
-			// Child / Fork failed / busy
-			process_query_public (whichAds, &cad, &results);
+
+			// only fork to handle the query for the "big" tables
+		if ((whichAds == QUERY_GENERIC_ADS) || 
+			(whichAds == QUERY_ANY_ADS) || 
+			(whichAds == QUERY_STARTD_PVT_ADS) || 
+			(whichAds == QUERY_STARTD_ADS) || 
+			(whichAds == QUERY_MASTER_ADS)) {
+
+				fork_status = forkQuery.NewJob();
+				if ( FORK_PARENT == fork_status) {
+					return 1;
+				} 
 		}
+		// small table query / Child / Fork failed / busy
+		process_query_public (whichAds, &cad, &results);
 	}
 
 	UtcTime end_write, end_query(true);
