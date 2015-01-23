@@ -59,10 +59,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item The \Condor{collector} now never forks to handle queries of certain type
-of ads.  These types are those that a typical condor pool has very few of, 
-even in a large pool, and include, the collector, negotiator, and scheduler 
-ads.  As a result, query throughput of the collector should be much faster.
+\item The throughput of queries to the \Condor{collector} has been
+improved, as the \Condor{collector} now never forks to handle queries 
+about \Condor{collector}, \Condor{negotiator}, and \Condor{schedd}
+ClassAds.
 \Ticket{4821}
 
 \item The new configuration variable \Macro{ADD\_SIGNIFICANT\_ATTRIBUTES}
