@@ -1851,7 +1851,7 @@ dprintf_init_fork_child( bool cloned ) {
 }
 
 void
-dprintf_wrapup_fork_child( bool cloned ) {
+dprintf_wrapup_fork_child( bool /* cloned */ ) {
 		/* Child pledges not to call dprintf any more, so it is
 		   safe to close the lock file.  If parent closes all
 		   fds anyway, then this is redundant.
