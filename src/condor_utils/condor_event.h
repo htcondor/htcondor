@@ -1953,6 +1953,9 @@ class PreSkipEvent : public ULogEvent
     // dagman-supplied text to include in the log event
 	char* skipEventLogNotes;
 
+  private:
+	static const char *eventString;
+	static const char *classAdAttr;
 };
 
 #endif // __CONDOR_EVENT_H__

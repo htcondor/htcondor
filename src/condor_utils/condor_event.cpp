@@ -1,3 +1,6 @@
+//TEMPTEMP -- what if we have a DAG with a regular node and a final node, and all submit attempts fail on the regular node and then the final node fails -- we get a rescue DAG, but what does the rescue DAG say about the regular node??  what if the node just plain failed?? -- do we never write DONE to the rescue DAG for a final node?
+//TEMPTEMP -- make sure post script success properly overrides submit failure event in recovery mode
+//TEMPTEMP -- a couple of new tests, at least? -- submit failures + final node; submit failures + post script + recovery mode
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -45,6 +48,11 @@
 #include "file_sql.h"
 extern FILESQL *FILEObj;
 
+#define DELIM "..."
+#define DELIM_NL DELIM "\n"
+#define DELIM_LEN sizeof( DELIM )
+#define DELIM_NL_LEN sizeof( DELIM_NL )
+
 
 //extern ClassAd *JobAd;
 
@@ -83,7 +91,8 @@ const char ULogEventNumberNames[][30] = {
 	"ULOG_JOB_STAGE_IN",			// Job staging in input files
 	"ULOG_JOB_STAGE_OUT",			// Job staging out output files
 	"ULOG_ATTRIBUTE_UPDATE",			// Job attribute updated
-	"ULOG_PRESKIP"					// PRE_SKIP event for DAGMan
+	"ULOG_PRESKIP",					// PRE_SKIP event for DAGMan
+	"ULOG_SUBMITS_FAILED"			// Submits failed for DAGMan
 };
 
 const char * const ULogEventOutcomeNames[] = {
@@ -5828,6 +5837,10 @@ AttributeUpdate::setOldValue(const char* attr_value)
 }
 
 
+const char *PreSkipEvent::eventString =
+			"PRE script return value is PRE_SKIP value";
+const char *PreSkipEvent::classAdAttr = "SkipEventLogNotes";
+
 PreSkipEvent::PreSkipEvent(void) : skipEventLogNotes(0)
 {
 	eventNumber = ULOG_PRESKIP;
@@ -5838,90 +5851,96 @@ PreSkipEvent::~PreSkipEvent(void)
 	delete [] skipEventLogNotes;
 }
 
-int PreSkipEvent::readEvent (FILE *file)
+int PreSkipEvent::readEvent( FILE *file )
 {
-	delete[] skipEventLogNotes;
-	skipEventLogNotes = NULL;
+	setSkipNote( NULL );
+
 	MyString line;
-	if( !line.readLine(file) ) {
+	if ( !line.readLine( file ) ) {
 		return 0;
 	}
-	setSkipNote(line.Value()); // allocate memory
+dprintf( D_ALWAYS, "DIAG 1010 <%s>\n", line.Value() );//TEMPTEMP
 
+	line.chomp();
+	if ( line != eventString ) {
+		dprintf( D_ALWAYS, "ERROR: unexpected event string <%s>\n",
+					line.Value() );
+		return 0;
+	}
+
+//TEMPTEMP -- test this code
 	// check if event ended without specifying the DAG node.
 	// in this case, the submit host would be the event delimiter
-	if ( strncmp(skipEventLogNotes,"...",3)==0 ) {
+	if ( line.find( DELIM ) == 0 ) {
 			// This should not happen. The event should have a 
 			// DAGMan node associated with it.
-		skipEventLogNotes[0] = '\0';
+		dprintf( D_ALWAYS, "ERROR: no DAG node specified in PreSkipEvent\n" );
+		setSkipNote( "" );
 		// Backup to leave event delimiter unread go past \n too
-		fseek( file, -4, SEEK_CUR );
+		fseek( file, -DELIM_NL_LEN, SEEK_CUR );
 		return 0;
 	}
-	char s[8192];
 	
 	// This event must have a DAG Node attached to it.
 	fpos_t fpos;
 	fgetpos(file,&fpos);
-	if(!fgets(s,8192,file) || strcmp( s,"...\n" ) == 0 ) {
+	if ( !line.readLine( file ) || line == DELIM_NL ) {
+dprintf( D_ALWAYS, "DIAG 1019\n" );//TEMPTEMP
+			//TEMPTEMP -- print a warning here??
+		dprintf( D_ALWAYS, "ERROR: no DAG node specified in PreSkipEvent\n" );
 		fsetpos(file,&fpos);
 		return 0;
 	}
-	char* newline = strchr(s,'\n');
-	if(newline) {
-		*newline = '\0';
-	}
+dprintf( D_ALWAYS, "DIAG 1020 <%s>\n", line.Value() );//TEMPTEMP
+
+	line.chomp();
+
 		// some users of this library (dagman) depend on whitespace
 		// being stripped from the beginning of the log notes field
-	char const *strip_s = s;
-	while( *strip_s && isspace(*strip_s) ) {
-		strip_s++;
-	}
-	char *p = s;
-		// Don't use strcpy because the strings "may not overlap"
-		// according to strcpy(3) man page
-	if (p != strip_s) {
-		while((*p++ = *strip_s++)) {}
-	}
-	delete [] skipEventLogNotes;
-	skipEventLogNotes = strnewp(s);
-	return ( !skipEventLogNotes || strlen(skipEventLogNotes) == 0 )?0:1;
+	line.trim();
+
+	setSkipNote( line.Value() );
+
+	return ( !skipEventLogNotes || strlen(skipEventLogNotes) == 0 ) ? 0 : 1;
 }
 
-int PreSkipEvent::writeEvent (FILE* file)
+int PreSkipEvent::writeEvent( FILE* file )
 {
-	int retval = fprintf (file, "PRE script return value is PRE_SKIP value\n");
-		// 
-	if (!skipEventLogNotes || retval < 0)
-	{
+	int retval = fprintf ( file, "%s\n", eventString );
+	if ( !skipEventLogNotes || retval < 0 ) {
 		return 0;
 	}
+
 	retval = fprintf( file, "    %.8191s\n", skipEventLogNotes );
-	if( retval < 0 ) {
+	if ( retval < 0 ) {
 		return 0;
 	}
-	return (1);
+
+	return 1;
 }
 
+//TEMPTEMP -- where (if at all) does this get used/tested?
 ClassAd* PreSkipEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
-	if( !myad ) return NULL;
+	if ( !myad ) return NULL;
 
-	if( skipEventLogNotes && skipEventLogNotes[0] ) {
-		if( !myad->InsertAttr("SkipEventLogNotes",skipEventLogNotes) ) return NULL;
+	if ( skipEventLogNotes && skipEventLogNotes[0] ) {
+		if ( !myad->InsertAttr( classAdAttr, skipEventLogNotes ) ) return NULL;
 	}
+
 	return myad;
 }
 
+//TEMPTEMP -- where (if at all) does this get used/tested?
 void PreSkipEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
 
-	if( !ad ) return;
+	if ( !ad ) return;
 	char* mallocstr = NULL;
-	ad->LookupString("SkipEventLogNotes", &mallocstr);
-	if( mallocstr ) {
+	ad->LookupString( classAdAttr, &mallocstr );
+	if ( mallocstr ) {
 		setSkipNote(mallocstr);
 		free(mallocstr);
 		mallocstr = NULL;
@@ -5930,14 +5949,10 @@ void PreSkipEvent::initFromClassAd(ClassAd* ad)
 
 void PreSkipEvent::setSkipNote(const char* s)
 {
-	if( skipEventLogNotes ) {
-		delete[] skipEventLogNotes;
-	}
-	if( s ) {
-		skipEventLogNotes = strnewp(s);
+	delete [] skipEventLogNotes;
+		// strnewp can handle NULL arg
+	skipEventLogNotes = strnewp(s);
+	if ( s ) {
 		ASSERT( skipEventLogNotes );
-	}
-	else {
-		skipEventLogNotes = NULL;
 	}
 }
