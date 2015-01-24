@@ -344,10 +344,34 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 		return false;
 	}
 
-	if( cmd == UPDATE_COLLECTOR_AD || cmd == INVALIDATE_COLLECTOR_ADS ) {
+	if( cmd == UPDATE_COLLECTOR_AD || cmd == INVALIDATE_COLLECTOR_ADS )
+	{
 			// we *never* want to use TCP to send pool updates to the
 			// developer collector.  so, regardless of what the config
 			// files says, always use UDP for these commands...
+		Sinful sinful(_addr);
+		if (sinful.noUDP() && daemonCore)
+		{
+			// Rats, there is no UDP port!  Let's see if we are
+			// talking to ourself; in this case, we must find another UDP port or bail.
+			// The super user socket never uses shared port.
+			if (strcmp(_addr, daemonCore->InfoCommandSinfulString()) == 0)
+			{
+				delete _addr;
+				_addr = strnewp( daemonCore->superUserNetworkIpAddr() );
+				dprintf(D_FULLDEBUG, "Cannot send TCP update to self (%s); switching to UDP socket (%s).\n",
+					tcp_collector_addr ? tcp_collector_addr : "<unknown>",
+					_addr ? _addr : "<unknown>");
+			}
+			else
+			{	// Well, we're not talking to ourself - let's try TCP anyway.
+				return sendTCPUpdate( cmd, ad1, ad2, nonblocking );
+			}
+		}
+		else if (!daemonCore)
+		{	// We're not a daemon; it can't hurt!
+			return sendTCPUpdate( cmd, ad1, ad2, nonblocking );
+		}
 		return sendUDPUpdate( cmd, ad1, ad2, nonblocking );
 	}
 
