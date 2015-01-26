@@ -72,17 +72,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed grid-type gce to work with the current version of Google
-Compute Engine (GCE).
+\item Grid universe jobs with the grid type gce now
+work with the current version of Google Compute Engine (GCE).
 \Ticket{4586}
 
-\item Improve cleanup of Google Compute Engine (GCE) instances that
+\item Improved the cleanup of Google Compute Engine (GCE) instances that
 are terminated.
 \Ticket{4832}
 
 \item Fixed a usability problem with EC2 grid universe jobs.
 HTCondor now ignores trailing white space characters within the files
-identifies by submit commands \SubmitCmdNI{ec2\_access\_key\_id}
+identified by submit commands \SubmitCmdNI{ec2\_access\_key\_id}
 and \SubmitCmdNI{ec2\_secret\_access\_key}.
 \Ticket{4791}
 
@@ -96,6 +96,10 @@ being put on hold for going over memory. \Ticket{4774}
 value includes an \Expr{eval()} function that references the attribute's
 name.
 \Ticket{4813}
+
+\item Fixed a rare bug that could cause the \Condor{schedd} to write to an
+old daemon log file after log rotation.
+\Ticket{4761}
 
 \end{itemize}
 
