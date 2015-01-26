@@ -9864,6 +9864,10 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 	// implemented.  Specifically we reject: 
 	//   - Fixed TCP port, any UDP port,
 	//   - Fixed TCP port, fixed UDP port, but they're different
+	// We're doing this for simplicity of implementation; we're relying
+	// on being able to close a UDP socket and immediately rebind to the
+	// same port number. TCP with possible connections in flight complicates
+	// things.
 	ASSERT(
 			// Any TCP port, any UDP port. A fixed UDP port is allowed as a special
 			// case for shared_port+collector
@@ -9875,8 +9879,6 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 			// Fixed port and they match
 		(tcp_port == udp_port)
 	);
-
-	ASSERT( (tcp_port <= 1) || (udp_port > 1) );
 
 	DaemonCore::SockPairVec new_socks;
 
