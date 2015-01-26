@@ -63,6 +63,9 @@ main_init( int argc, char ** const argv )
 		case 'C':
 			if ( argc <= i + 1 )
 				usage( argv[0] );
+			if (ScheddJobConstraint) {
+				free(ScheddJobConstraint);
+			}
 			ScheddJobConstraint = strdup( argv[i + 1] );
 			i++;
 			break;
@@ -70,12 +73,18 @@ main_init( int argc, char ** const argv )
 			// don't check parent for schedd addr. use this one instead
 			if ( argc <= i + 1 )
 				usage( argv[0] );
+			if (ScheddAddr) {
+				free(ScheddAddr);
+			}
 			ScheddAddr = strdup( argv[i + 1] );
 			i++;
 			break;
 		case 'S':
 			if ( argc <= i + 1 )
 				usage( argv[0] );
+			if (GridmanagerScratchDir) {
+				free(GridmanagerScratchDir);
+			}
 			GridmanagerScratchDir = strdup( argv[i + 1] );
 			i++;
 			break;
