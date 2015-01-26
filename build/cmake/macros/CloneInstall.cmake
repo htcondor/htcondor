@@ -32,7 +32,7 @@ MACRO (CLONE_INSTALL _ORIG_TARGET _ORIG_INSTALL _NEWNAMES _INSTALL_LOC )
         if (WINDOWS)
             install (CODE "FILE(INSTALL \"${${_ORIG_TARGET}_loc}\" DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}\" USE_SOURCE_PERMISSIONS RENAME \"${new_target}${WIN_EXE_EXT}\")")
         else()
-	    install (CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${_ORIG_TARGET} \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}/${new_target})")
+	    install (CODE "execute_process(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink ${_ORIG_TARGET} \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}/${new_target})")
         endif()
 
 	endforeach(new_target)
