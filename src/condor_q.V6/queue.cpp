@@ -1865,6 +1865,9 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			} else {
 				i++;
+				if (userprios_file) {
+					free(userprios_file);
+				}
 				userprios_file = strdup(argv[i]);
 				analyze_with_userprio = true;
 			}
