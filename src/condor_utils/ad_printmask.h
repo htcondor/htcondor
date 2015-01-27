@@ -130,7 +130,7 @@ class AttrListPrintMask
 	// display functions
 	int   display (FILE *, AttrList *, AttrList *target=NULL);		// output to FILE *
 	int   display (FILE *, AttrListList *, AttrList *target=NULL, List<const char> * pheadings=NULL); // output a list -> FILE *
-	char *display ( AttrList *, AttrList *target=NULL );			// return a string
+	int   display (std::string & out, AttrList *, AttrList *target=NULL ); // append to string out. return number of chars added
 	int   calc_widths(AttrList *, AttrList *target=NULL );          // set column widths
 	int   calc_widths(AttrListList *, AttrList *target=NULL);		
 	int   display_Headings(FILE *, List<const char> & headings);

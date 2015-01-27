@@ -240,8 +240,8 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 {
 	if (ad) {
 		// render the first ad to a string so the column widths update
-		char * tmp = pm.display(ad, NULL);
-		delete [] tmp;
+		std::string tmp;
+		pm.display(tmp, ad, NULL);
 	}
 	if (pm.has_headings()) {
 		pm.display_Headings(file);
@@ -350,8 +350,8 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				  // this makes sure that the headings line up correctly over the first
 				  // line of data.
 				if (fPrintHeadings) {
-					char * tmp = pm.display(ad, targetAd);
-					delete [] tmp;
+					std::string tmp;
+					pm.display(tmp, ad, targetAd);
 					if (pm.has_headings()) {
 						if ( ! (pmHeadFoot & HF_NOHEADER))
 							pm.display_Headings(stdout);

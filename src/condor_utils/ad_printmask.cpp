@@ -374,11 +374,11 @@ display_Headings (FILE *file, List<const char> & headings) {
 int AttrListPrintMask::
 display (FILE *file, AttrList *al, AttrList *target /* =NULL */)
 {
-	char * temp = display(al, target);
+	std::string temp;
+	display(temp, al, target);
 
-	if (temp != NULL) {
-		fputs(temp, file);
-		delete [] temp;
+	if ( ! temp.empty()) {
+		fputs(temp.c_str(), file);
 		return 0;
 	}
 	return 1;
@@ -426,8 +426,8 @@ PrintCol(MyString * prow, Formatter & fmt, const char * value)
 }
 
 // returns a new char * that is your responsibility to delete.
-char * AttrListPrintMask::
-display (AttrList *al, AttrList *target /* = NULL */)
+int AttrListPrintMask::
+display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
 {
 	Formatter *fmt;
 	char 	*attr;
@@ -853,8 +853,9 @@ display (AttrList *al, AttrList *target /* = NULL */)
 	if (row_suffix)
 		retval += row_suffix;
 
-	// Convert return MyString to new char *.
-	return strnewp(retval.Value() );
+	// append result into the supplied std::string, and also return it's c_str()
+	out += retval.Value();
+	return retval.length();
 }
 
 
@@ -869,8 +870,8 @@ display (FILE *file, AttrListList *list, AttrList *target /* = NULL */, List<con
 
 	if (al && pheadings) {
 		// render the first line to a string so the column widths update
-		char * tmp = display(al, target);
-		delete [] tmp;
+		std::string tmp;
+		display(tmp, al, target);
 		display_Headings(file, *pheadings);
 	}
 

@@ -1584,8 +1584,10 @@ main( int argc, char *argv[] )
 
 			// render the data once to calcuate column widths.
 			result.Open();
+			std::string tmp;
 			while (ClassAd	*ad = result.Next()) {
-				delete [] App.print_mask.display(ad);
+				App.print_mask.display(tmp, ad);
+				tmp.clear();
 			}
 			result.Close();
 
