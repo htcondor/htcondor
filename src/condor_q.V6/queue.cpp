@@ -1847,6 +1847,9 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			} else {
 				i++;
+				if (userlog_file) {
+					free(userlog_file);
+				}
 				userlog_file = strdup(argv[i]);
 			}
 		}
@@ -1856,6 +1859,9 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			} else {
 				i++;
+				if (machineads_file) {
+					free(machineads_file);
+				}
 				machineads_file = strdup(argv[i]);
 			}
 		}
