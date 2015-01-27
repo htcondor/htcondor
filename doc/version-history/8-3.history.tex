@@ -73,6 +73,11 @@ lists job attributes to be removed from the \Condor{negotiator}-determined
 list when considering auto clustering.
 \Ticket{4797}
 
+\item For all tools that support the \Opt{-format} or \Opt{-autoformat} option,
+the new \%r conversion specifier causes values to be displayed 
+in their unevaluated, or raw form.
+\Ticket{4814}
+
 \item \Condor{dagman} now prints the hold reason to the \File{dagman.out}
 file when node jobs go on hold.
 \Ticket{4766}
