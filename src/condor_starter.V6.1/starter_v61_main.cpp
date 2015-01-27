@@ -393,6 +393,9 @@ parseArgs( int argc, char* argv [] )
 			if( ! arg ) {
 				another( _header );
 			}
+			if (dprintf_header) {
+				free(dprintf_header);
+			}
 			dprintf_header = strdup( arg );
 			DebugId = display_dprintf_header;
 			tmp++;	// consume the arg so we don't get confused 
