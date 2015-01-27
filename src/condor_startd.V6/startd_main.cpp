@@ -150,6 +150,9 @@ main_init( int, char* argv[] )
 			if( !(ptr && *ptr) ) {
                 EXCEPT( "-n requires another arugment" );
             }
+			if (Name) {
+				free(Name);
+			}
             Name = build_valid_daemon_name( *ptr );
             dprintf( D_ALWAYS, "Using name: %s\n", Name );
             break;
