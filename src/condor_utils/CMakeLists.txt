@@ -123,7 +123,6 @@ if ( DARWIN )
 		POST_BUILD
 		COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs lib${UTILS_LIB_NAME}.dylib )
 endif()
-
 add_dependencies(condor_utils utils_genparams syscall_numbers )
 
 ##################################################
