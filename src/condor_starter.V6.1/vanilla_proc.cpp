@@ -493,6 +493,7 @@ VanillaProc::StartJob()
 						delete [] full_dir; full_dir = NULL;
 						if (!mkdir_and_parents_if_needed( full_dir_str.c_str(), S_IRWXU, PRIV_USER )) {
 							dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir_str.c_str());
+							delete fs_remap;
 							return FALSE;
 						}
 						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir_str.c_str(), next_dir_str.c_str());
