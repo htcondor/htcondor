@@ -21,8 +21,15 @@
 
 ##
 ## Simply prints out the current Unix timestamp
+## Yet if a second arg exists, it writes it to a file.
 ##
-print time()."\n";
+if($ARGV[1]) {
+	open(WR,">>$ARGV[1]") or die "Can not open $ARGV[1]:$!\n";
+	print WR time()."\n";
+	close(WR);
+} else {
+	print time()."\n";
+}
 
 ##
 ## We can be told to sleep for a bit as well
