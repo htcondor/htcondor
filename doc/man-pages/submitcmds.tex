@@ -2011,6 +2011,28 @@ If \SubmitCmd{ec2\_keypair} is specified for a job,
 \SubmitCmd{ec2\_keypair\_file} is ignored.
 
 %%%%%%%%%%%%%%%%%%%
+%% ec2_parameter_names
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_parameter\_names}
+\label{condor-submit-ec2-parameter-names}
+\item[ec2\_parameter\_names = ParameterName1, ParameterName2, ...]
+For grid type \SubmitCmdNI{ec2} jobs,
+a space- or comma- separated list of the names of additional parameter(s)
+to pass when instantiating an instance.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_parameter_*
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_parameter\_$<$name$>$}
+\item[ec2\_parameter\_$<$name$>$ = $<$value$>$]
+For grid type \SubmitCmdNI{ec2} jobs,
+specifies the value for the correspondingly named (instance instantiation)
+parameter.  A name in the \SubmitCmd{ec2\_parameter\_names} list may contain
+periods, but these are replaced by underscores when specifying the value.
+
+%%%%%%%%%%%%%%%%%%%
 %% ec2_secret_access_key
 %%%%%%%%%%%%%%%%%%%
 
