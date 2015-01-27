@@ -56,7 +56,7 @@ if ( WITH_VOMS )
 
 		condor_pre_external( VOMS voms-2.0.6 "include;lib" "done")
 
-		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+		if ( DARWIN AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
 			string(REPLACE "-std=c++11" "" VOMS_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 			string(REPLACE "-std=c++11" "" VOMS_C_FLAGS "${CMAKE_C_FLAGS}")
 			string(REPLACE "-std=c++11" "" VOMS_LDFLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
