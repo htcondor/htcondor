@@ -205,6 +205,26 @@ the cloud service will terminate the instance.
 More information about Amazon's spot instances is available at
 \URL{http://aws.amazon.com/ec2/spot-instances/}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Amazon-parameters}Advanced Usage}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+If you require additional control of your EC2 instances, HTCondor allows
+you to directly specify instance creation parameters.  To set an instance
+creation parameter, you must first list its name in the submit command
+\SubmitCmd{ec2\_parameter\_names}, a space- or comma- separated list.  The
+parameter may need to be properly capitalized.  You must also tell HTCondor
+the parameter's value, which is specified as a submit command beginning with
+\SubmitCmd{ec\_parameter\_name\_}; dots in the parameter name must be
+written as underscores in the submit command, although capitalization may
+be ignored.
+
+For example, to set \texttt{IamInstanceProfile.Name} to \texttt{ExampleProfile}:
+
+\begin{verbatim}
+ec2_param_names = IamInstanceProfile.Name
+ec2_param_iaminstanceprofile_name = ExampleProfile
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Amazon-config}EC2 Configuration Variables}

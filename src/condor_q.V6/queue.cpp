@@ -668,7 +668,7 @@ int main (int argc, char **argv)
 			if (schedd.version()) {
 				CondorVersionInfo v(schedd.version());
 				useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
-				if (v.built_since_version(8, 1, 5)) {
+				if (v.built_since_version(8, 3, 3)) {
 					useFastScheddQuery = 2;
 				}
 			}
@@ -3526,7 +3526,7 @@ static const char * render_job_text(ClassAd *job, std::string & result_text)
 		result_text += buffer_io_display(job);
 	} else if (usingPrintMask) {
 		if (mask.IsEmpty()) return NULL;
-		result_text += mask.display(job);
+		mask.display(result_text, job);
 	} else {
 		result_text += bufferJobShort(job);
 	}
@@ -5351,11 +5351,7 @@ static void AddReferencedAttribsToBuffer(
 		pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, attr);
 	}
 	if ( ! pm.IsEmpty()) {
-		char * temp = pm.display(request);
-		if (temp) {
-			return_buf += temp;
-			delete[] temp;
-		}
+		pm.display(return_buf, request);
 	}
 }
 
@@ -5380,8 +5376,8 @@ static void AddTargetReferencedAttribsToBuffer(
 	if (pm.IsEmpty())
 		return;
 
-	char * temp = pm.display(request, target);
-	if (temp) {
+	std::string temp;
+	if (pm.display(temp, request, target) > 0) {
 		//return_buf += "\n";
 		//return_buf += pindent;
 		std::string name;
@@ -5397,7 +5393,6 @@ static void AddTargetReferencedAttribsToBuffer(
 		return_buf += name;
 		return_buf += " has the following attributes:\n\n";
 		return_buf += temp;
-		delete[] temp;
 	}
 }
 
