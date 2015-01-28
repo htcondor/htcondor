@@ -857,6 +857,7 @@ bool
 Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			ReadMultipleUserLogs &storkLogReader )
 {
+#if 0 //TEMPTEMP!!!!
 	debug_printf( DEBUG_DEBUG_2, "Unmonitoring log file <%s> for node %s\n",
 				GetLogFile(), GetJobName() );
 
@@ -889,6 +890,8 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	}
 
 	return result;
+#endif //TEMPTEMP!!
+	return true;//TEMPTEMP
 }
 
 //---------------------------------------------------------------------------

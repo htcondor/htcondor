@@ -1,3 +1,7 @@
+//TEMPTEMP -- really, getting a SubmitsFailedEvent should be just like getting a PostScriptTerminated event where it terminated with an error; in fact, I guess I could have just written a bogus PostScriptTerminated event??  (Hmm -- sort of like the pre script fails but the post script gets run?)
+//TEMPTEMP -- hmm -- when we're reading the terminated event for the final node in recovery mode, we're somehow not updating the DAG status correctly...
+//TEMPTEMP -- if a node has failed, but the final node succeeds, where the hell does the dag status get set back to okay?!?  hmm -- looks like _dagStatus is *not* reset...
+//TEMPTEMP -- what if your DAG is aborted (by abort-dag-on), you have a final node, and you go into recovery mode after the final node is started?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -590,6 +594,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 		//----------------------------------------------------------------
 	case ULOG_OK:
 		{
+debug_printf( DEBUG_QUIET, "DIAG 1010: _dagStatus: %d\n", _dagStatus );//TEMPTEMP
 			ASSERT( event != NULL );
 			bool submitEventIsSane;
 			Job *job = LogEventNodeLookup( logsource, event,
@@ -653,6 +658,8 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 
 			case ULOG_SUBMIT:
+				//TEMPTEMP -- set _finalNodeRun to true if this is a final node and we're in recovery mode
+				if ( job->GetFinal() ) _finalNodeRun = true;//TEMPTEMP??
 				ProcessSubmitEvent(job, recovery, submitEventIsSane);
 				ProcessIsIdleEvent(job);
 				break;
@@ -710,6 +717,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 			default:
 				break;
 			}
+debug_printf( DEBUG_QUIET, "DIAG 1020: _dagStatus: %d\n", _dagStatus );//TEMPTEMP
 		}
 		break;
 
@@ -772,6 +780,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 }
 
 //---------------------------------------------------------------------------
+//TEMPTEMP -- where do we update the dag status when a final node terminates?
 void
 Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
@@ -919,6 +928,7 @@ Dag::RemoveBatchJob(Job *node) {
 //---------------------------------------------------------------------------
 // Note:  if job is the final node of the DAG, should we set _dagStatus
 // in here according to whether job succeeded or failed?  wenger 2014-03-18
+//TEMPTEMP -- hmm -- see above comment...
 void
 Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
@@ -1536,6 +1546,7 @@ Dag::StartFinalNode()
 	if ( _final_job && _final_job->GetStatus() == Job::STATUS_NOT_READY ) {
 		debug_printf( DEBUG_QUIET, "Starting final node...\n" );
 
+//TEMPTEMP -- do we have to do this when we see the final node submitted in recovery mode??  or maybe the submit method should just not let non-final jobs get submitted if _finalNodeRun is true??
 			// Clear out the ready queue so "regular" jobs don't run
 			// when we run the final node (this is really just needed
 			// for the DAG abort and DAG halt cases).
@@ -2053,22 +2064,34 @@ Dag::FinishedRunning( bool includeFinalNode ) const
 bool
 Dag::DoneSuccess( bool includeFinalNode ) const
 {
+debug_printf( DEBUG_NORMAL, "DIAG 1110 %d\n", includeFinalNode );//TEMPTEMP
+if ( _final_job ) {
+	debug_printf( DEBUG_NORMAL, "DIAG 1111 %d\n", _final_job->GetStatus() );//TEMPTEMP
+} else {
+	debug_printf( DEBUG_NORMAL, "DIAG 1112" );//TEMPTEMP
+}
 	if ( !FinishedRunning( includeFinalNode ) ) {
 			// Note: if final node is running we should get to here...
+//TEMPTEMP -- shit -- we get here the first time this is called after recovery mode is finished
+debug_printf( DEBUG_NORMAL, "DIAG 1120\n" );//TEMPTEMP
 		return false;
 	} else if ( NumNodesDone( includeFinalNode ) ==
 				NumNodes( includeFinalNode ) ) {
 			// This is the normal case.
+debug_printf( DEBUG_NORMAL, "DIAG 1130\n" );//TEMPTEMP
 		return true;
 	} else if ( includeFinalNode && _final_job &&
 				_final_job->GetStatus() == Job::STATUS_DONE ) {
 			// Final node can override the overall DAG status.
+debug_printf( DEBUG_NORMAL, "DIAG 1140\n" );//TEMPTEMP
 		return true;
 	} else if ( _dagIsAborted && _dagStatus == DAG_STATUS_OK ) {
 			// Abort-dag-on can override the overall DAG status.
+debug_printf( DEBUG_NORMAL, "DIAG 1150\n" );//TEMPTEMP
 		return true;
 	}
 
+debug_printf( DEBUG_NORMAL, "DIAG 1160\n" );//TEMPTEMP
 	return false;
 }
 

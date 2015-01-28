@@ -481,6 +481,7 @@ main_shutdown_fast()
 // shutdown gracefully; this also gets called if condor_hold is done
 // on the DAGMan job
 void main_shutdown_graceful() {
+debug_printf( DEBUG_QUIET, "DIAG main_shutdown_graceful()\n" );//TEMPTEMP
 	print_status();
 	dagman.dag->DumpNodeStatus( true, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
@@ -491,6 +492,7 @@ void main_shutdown_graceful() {
 
 void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 			bool removeCondorJobs ) {
+debug_printf( DEBUG_QUIET, "DIAG main_shutdown_rescue()\n" );//TEMPTEMP
 		// Avoid possible infinite recursion if you hit a fatal error
 		// while writing a rescue DAG.
 	static bool inShutdownRescue = false;
@@ -567,6 +569,7 @@ int main_shutdown_remove(Service *, int) {
 }
 
 void ExitSuccess() {
+debug_printf( DEBUG_QUIET, "DIAG ExitSuccess()\n" );//TEMPTEMP
 	print_status();
 	dagman.dag->DumpNodeStatus( false, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
@@ -1191,6 +1194,7 @@ void main_init (int argc, char ** const argv) {
 		dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 					dagman.multiDags, dagman.maxRescueDagNum, false,
 					false, false );
+debug_printf( DEBUG_QUIET, "DIAG 2110\n" );//TEMPTEMP
 		ExitSuccess();
 		return;
 	}
@@ -1514,6 +1518,7 @@ void condor_event_timer () {
 						"completed!\n", dagman.dag->NumIdleJobProcs() );
 			check_warning_strictness( DAG_STRICT_1 );
 		}
+debug_printf( DEBUG_QUIET, "DIAG 2010\n" );//TEMPTEMP
 		ExitSuccess();
 		return;
     }
