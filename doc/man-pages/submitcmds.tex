@@ -1974,6 +1974,29 @@ and optional specification of an Elastic IP address
 that should be assigned to this instance.
 
 %%%%%%%%%%%%%%%%%%%
+%% ec2_iam_arn
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_iam\_profile\_arn}
+\label{condor-submit-ec2-iam-profile-arn}
+\item[ec2\_iam\_profile\_arn = $<$IAM profile ARN$>$]
+For grid type \SubmitCmdNI{ec2} jobs,
+an Amazon Resource Name (ARN)
+identifying which Identity and Access Management (IAM) (instance) profile to
+associate with the instance.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_iam_name
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_iam\_profile\_name}
+\label{condor-submit-ec2-iam-profile-name}
+\item[ec2\_iam\_profile\_name= $<$IAM profile name$>$]
+For grid type \SubmitCmdNI{ec2} jobs, a name
+identifying which Identity and Access Management (IAM) (instance) profile to
+associate with the instance.
+
+%%%%%%%%%%%%%%%%%%%
 %% ec2_instance_type
 %%%%%%%%%%%%%%%%%%%
 
@@ -2051,6 +2074,17 @@ specifies the path and file name containing the secret access key.
 \item[ec2\_security\_groups = group1, group2, ...]
 For grid type \SubmitCmdNI{ec2} jobs, 
 defines the list of EC2 security groups which
+should be associated with the job.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_security_ids
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_security\_ids}
+\label{condor-submit-ec2-security-ids}
+\item[ec2\_security\_ids = id1, id2, ...]
+For grid type \SubmitCmdNI{ec2} jobs,
+defines the list of EC2 security group IDs which
 should be associated with the job.
 
 %%%%%%%%%%%%%%%%%%%
