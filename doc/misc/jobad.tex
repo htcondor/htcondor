@@ -444,6 +444,34 @@ a string taken from the definition of the submit description file command
 \SubmitCmd{ec2\_elastic\_ip}.
 Specifies an Elastic IP address to associate with the instance.
 
+%%% ClassAd attribute: EC2IamProfileArn
+\index{ClassAd job attribute!EC2IamProfileArn}
+\index{EC2IamProfileArn!job ClassAd attribute}
+\item[\AdAttr{EC2IamProfileArn}:]
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_iam\_profile\_arn}.
+Specifies the IAM (instance) profile to associate with this instance.
+
+%%% ClassAd attribute: EC2IamProfileName
+\index{ClassAd job attribute!EC2IamProfileName}
+\index{EC2IamProfileName!job ClassAd attribute}
+\item[\AdAttr{EC2IamProfileName}:]
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_iam\_profile\_name}.
+Specifies the IAM (instance) profile to associate with this instance.
+
+%%% ClassAd attribute: EC2InstanceName
+\index{ClassAd job attribute!EC2InstanceName}
+\index{EC2InstanceName!job ClassAd attribute}
+\item[\AdAttr{EC2InstanceName}:] 
+Used for grid type ec2 jobs;
+a string set for the job once the instance starts running, 
+as assigned by the EC2 service, 
+that represents the unique ID assigned to the instance by the EC2 service.
+
+
 %%% ClassAd attribute: EC2InstanceName
 \index{ClassAd job attribute!EC2InstanceName}
 \index{EC2InstanceName!job ClassAd attribute}

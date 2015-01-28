@@ -145,6 +145,10 @@ data are concatenated, with the data from \SubmitCmdNI{ec2\_user\_data}
 occurring first.  HTCondor performs the base64 encoding that EC2 expects on 
 the data.
 
+Amazon also offers an Identity and Access Management (IAM) service.  If you
+wish to specify an IAM (instance) profile for your EC2 job, you may do so
+using \SubmitCmd{ec2\_iam\_profile\_name} or \SubmitCmd{ec2\_iam\_profile\_arn}.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:EC2-termination}Termination of EC2 Jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
