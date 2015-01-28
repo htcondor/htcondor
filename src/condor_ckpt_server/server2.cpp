@@ -1752,6 +1752,7 @@ void Server::ProcessRestoreReq(int             req_id,
 	if (ValidateNoPathComponents(restore_req.owner) == FALSE) {
 		restore_reply.server_name.s_addr = 0;
 		restore_reply.port = 0;
+		restore_reply.file_size = 0;
 		restore_reply.req_status = BAD_REQ_PKT;
 
 		send_restore_reply_pkt(&restore_reply, fdc);
