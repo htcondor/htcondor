@@ -91,15 +91,22 @@ The key can be used to log into the virtual machine.
 Note that modification will also be needed of the firewall
 rules for the job to incoming SSH connections.
 
-An EC2 service uses a firewall to restrict network access to 
+An EC2 service uses a firewall to restrict network access to
 the virtual machine instances it runs.
 Typically, no incoming connections are allowed.
 One can define sets of firewall rules and give them names.
-The EC2 API calls these security groups. 
+The EC2 API calls these security groups.
 If utilized, tell HTCondor what set of security
 groups should be applied to each VM using the
 \SubmitCmd{ec2\_security\_groups} submit description file command.
 If not provided, HTCondor uses the security group \SubmitCmdNI{default}.
+This command specifies security group names; to specify IDs, use
+\SubmitCmd{ec2\_security\_ids}.  This may be necessary when specifying
+a Virtual Private Cloud (VPC) instance.
+
+To run an instance in a VPC, set \SubmitCmd{ec2\_vpc\_subnet} to the
+the desired VPC's specification string.  You may also specify the instance's
+IP address by using \SubmitCmd{ec2\_vpc\_id}.
 
 The EC2 API allows the choice of different hardware configurations 
 for instances to run on.
