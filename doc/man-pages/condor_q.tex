@@ -271,6 +271,7 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     If the attribute is not present in a given ClassAd and cannot
     be parsed as an expression,
     then the format option will be silently skipped.
+    \%r prints the unevaluated, or raw values.
     The conversion specifier must match the type of the
     attribute or expression.
     \%s is suitable for strings such as \Attr{Owner},
@@ -293,7 +294,7 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     but an attribute is still required.
     Include \Bs n to specify a line break. }
 
-  \OptItem{\OptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]}} {
+  \OptItem{\OptArg{-autoformat[:rtn,lVh]}{attr1 [attr2 ...]}} {
     (output option) Display machine ClassAd attribute values 
     formatted in a default way according to their attribute types.  
     This option takes an arbitrary number of attribute names as arguments,
@@ -304,6 +305,8 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     start of the next option.
     The \Opt{autoformat} option may be followed by a colon character
     and formatting qualifiers:
+
+    \textbf{r} print unevaluated, or raw values,
 
     \textbf{t} add a tab character before each field instead of 
     the default space character,
