@@ -596,6 +596,7 @@ problemExpression(const std::string &msg, classad::ExprTree *problem, classad::V
 	result.SetErrorValue();
 	classad::ClassAdUnParser up;
 	std::string problem_str;
+	up.SetOldClassAd( true, true );
 	up.Unparse(problem_str, problem);
 	std::stringstream ss;
 	ss << msg << "  Problem expression: " << problem_str;
