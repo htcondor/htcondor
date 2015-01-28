@@ -223,7 +223,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 			  case PP_STARTD_NORMAL:
 				if (absentMode) {
 					printStartdAbsent (ad, (classad_index == 0));
-				} if( offlineMode ) {
+				} else if( offlineMode ) {
 					printStartdOffline( ad, (classad_index == 0));
 				} else {
 					printStartdNormal (ad, (classad_index == 0));
