@@ -140,7 +140,14 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 	return 0;
 }
 
-int DockerAPI::detect( CondorError & /* err */ ) {
+int DockerAPI::detect( CondorError & err ) {
+	// FIXME: Remove ::version() as a public API and return it from here,
+	// because there's no point in doing this twice.
+	std::string version;
+	if( DockerAPI::version( version, err ) != 0 ) {
+		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::detect() failed to detect the Docker version; assuming absent.\n" );
+		return -4;
+	}
 
 	ArgList infoArgs;
 	if ( ! add_docker_arg(infoArgs))
@@ -208,6 +215,16 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 		}
 		my_pclose( dockerResults );
 		return -3;
+	}
+
+	if( NULL != fgets( buffer, 1024, dockerResults ) ) {
+		if( strstr( buffer, "Jansens" ) != NULL ) {
+			dprintf( D_ALWAYS | D_FAILURE, "The DOCKER configuration setting appears to point to OpenBox's docker.  If you want to use Docker.IO, please set DOCKER appropriately in your configuration.\n" );
+		} else {
+			dprintf( D_ALWAYS | D_FAILURE, "Read more than one line (or a very long line) from '%s', which we think means it's not Docker.  The (first line of the) trailing text was '%s'.\n", displayString.c_str(), buffer );
+		}
+		my_pclose( dockerResults );
+		return -5;
 	}
 
 	int exitCode = my_pclose( dockerResults );

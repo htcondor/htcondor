@@ -668,7 +668,7 @@ int main (int argc, char **argv)
 			if (schedd.version()) {
 				CondorVersionInfo v(schedd.version());
 				useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
-				if (v.built_since_version(8, 1, 5)) {
+				if (v.built_since_version(8, 3, 3)) {
 					useFastScheddQuery = 2;
 				}
 			}
