@@ -398,9 +398,9 @@ printStartdAbsent (ClassAd *ad, bool first)
 		ppInit();
 		ppSetColumn(ATTR_NAME, -34, ! wide_display);
 		ppSetColumn(ATTR_OPSYS, -10, true);
-		ppSetColumn(ATTR_ARCH, -10, true);
-		ppSetColumn(ATTR_LAST_HEARD_FROM, Lbl("Went Absent"), formatRealDate, -10, true);
-		ppSetColumn(ATTR_CLASSAD_LIFETIME, Lbl("Will Forget"), formatDueDate, -10, true);
+		ppSetColumn(ATTR_ARCH, -8, true);
+		ppSetColumn(ATTR_LAST_HEARD_FROM, Lbl("Went Absent"), formatRealDate, -11, true);
+		ppSetColumn(ATTR_CLASSAD_LIFETIME, Lbl("Will Forget"), formatDueDate, -11, true);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
