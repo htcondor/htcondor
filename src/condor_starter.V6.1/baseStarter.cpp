@@ -1556,6 +1556,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 					new_arg += sshd_config_file.Value();
 				}
 				else {
+					deleteStringArray(argarray);
 					return SSHDFailed(s,
 							"Unexpected %%%c in SSH_TO_JOB_SSHD_ARGS: %s\n",
 							*ptr ? *ptr : ' ', sshd_arg_string.Value());
