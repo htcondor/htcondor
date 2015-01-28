@@ -624,7 +624,7 @@ MultiLogFiles::readFile(char const *filename,std::string& buf)
 	}
 
     while(1) {
-        size_t n = read(fd,chunk,sizeof(chunk)-1);
+        ssize_t n = read(fd,chunk,sizeof(chunk)-1);
         if(n>0) {
             chunk[n] = '\0';
             buf += chunk;
