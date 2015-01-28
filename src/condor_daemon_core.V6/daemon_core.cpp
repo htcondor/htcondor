@@ -9855,21 +9855,42 @@ InitCommandSocket(condor_protocol proto, int port, int udp_port, DaemonCore::Soc
 }
 
 bool
-InitCommandSockets(int port, int udp_port, DaemonCore::SockPairVec & socks, bool want_udp, bool fatal)
+InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, bool want_udp, bool fatal)
 {
-	// For historic reasons, port==0 is invalid, while port==-1 or port==1 means "any port." 
-	ASSERT(port != 0);
+	// For historic reasons, tcp_port==0 is invalid, while tcp_port==-1 or tcp_port==1 means "any port." 
+	ASSERT(tcp_port != 0);
+
+	// Cases not enumerated below have no known use cases and are not 
+	// implemented.  Specifically we reject: 
+	//   - Fixed TCP port, any UDP port,
+	//   - Fixed TCP port, fixed UDP port, but they're different
+	// We're doing this for simplicity of implementation; we're relying
+	// on being able to close a UDP socket and immediately rebind to the
+	// same port number. TCP with possible connections in flight complicates
+	// things.
+	ASSERT(
+			// Any TCP port, any UDP port. A fixed UDP port is allowed as a special
+			// case for shared_port+collector
+		(tcp_port <= 1) ||
+
+			// Anything is valid if we don't want UDP.
+		(want_udp == false) ||
+
+			// Fixed port and they match
+		(tcp_port == udp_port)
+	);
 
 	DaemonCore::SockPairVec new_socks;
 
 	// Arbitrary constant, borrowed from bindAnyCommandPort().
-	int retries = 1000;
-	do {
+	const int MAX_RETRIES = 1000;
+	int tries;
+	for(tries = 1; tries <= MAX_RETRIES; tries++) {
 
 		if(param_boolean("ENABLE_IPV4", true)) {
 			DaemonCore::SockPair sock_pair;
-			if( ! InitCommandSocket(CP_IPV4, port, udp_port, sock_pair, want_udp, fatal)) {
-				dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket.\n");
+			if( ! InitCommandSocket(CP_IPV4, tcp_port, udp_port, sock_pair, want_udp, fatal)) {
+				dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket for ports %d/%d%s.\n", tcp_port, udp_port, want_udp?"":"no UDP");
 				return false;
 			}
 			new_socks.push_back(sock_pair);
@@ -9879,50 +9900,66 @@ InitCommandSockets(int port, int udp_port, DaemonCore::SockPairVec & socks, bool
 		// the port numbers match.  Mixed-mode shared port has no chance of
 		// working, otherwise, until we switch an address representation that
 		// can include both protocols' address(es).
-		int targetTCPPort = port;
+		int targetTCPPort = tcp_port;
 		int targetUDPPort = udp_port;
 		if( param_boolean( "ENABLE_IPV4", true ) && param_boolean("ENABLE_IPV6", true ) ) {
-			// If port and udp_port are both static, we don't have to do anything.
-			if( port <= 1 || udp_port <= 1 ) {
+			// If tcp_port and udp_port are both static, we don't have to do anything.
+			if( tcp_port <= 1 || udp_port <= 1 ) {
 				// Determine which port IPv4 got, and try to get that port for IPv6.
 				DaemonCore::SockPair ipv4_socks = new_socks[0];
-				counted_ptr<ReliSock> rs = ipv4_socks.rsock();
-				targetTCPPort = targetUDPPort = rs->get_port();
+				targetTCPPort = ipv4_socks.rsock()->get_port();
+				if(want_udp) {
+					targetUDPPort = ipv4_socks.ssock()->get_port();
+				}
 			}
 		}
 
 		if(param_boolean("ENABLE_IPV6", true)) {
 			DaemonCore::SockPair sock_pair;
 			if( ! InitCommandSocket(CP_IPV6, targetTCPPort, targetUDPPort, sock_pair, want_udp, fatal)) {
-				dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv6 command socket.\n");
-				return false;
+				// TODO: If we're asking for a dynamically chosen TCP port 
+				// (targetTCPPort <= 1) but a staticly chosen UDP port 
+				// (targetUDPPort > 1), and the reason InitCommandSocket
+				// fails is that it couldn't get the UDP port, then we
+				// should immediately give up. At the moment InitCommandSocket
+				// doesn't return enough information to make that decision.
+				// (Dynamic TCP/static UDP happens with shared_port+collector.
+				// Static TCP/dynamic UDP is not allowed.)
+
+					// If we wanted a dynamically chosen port, IPv4 picked it 
+					// first, and we failed, then try again.
+					// (We get to ignore the possibility of wanting a dynamic
+					// UDP port but static TCP; an ASSERT above guarantees it.)
+				if( (tcp_port <= 1) && (targetTCPPort > 1) ) {
+					if(tries == 1) {
+						// Log first spin only, minimize log spam.
+						dprintf(D_FULLDEBUG, "Created IPv4 command socket on dynamically chosen port %d. Unable to acquire matching IPv6 port. Trying again up to %d times.\n", targetTCPPort, MAX_RETRIES);
+					}
+					new_socks.clear();
+					continue;
+
+					// Otherwise it's dynamic and we failed to get it,
+					// or its entirely fixed and we failed to get it.
+					// Either way we're doomed.
+				} else {
+					dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv6 command socket for ports %d/%d%s.\n", tcp_port, udp_port, want_udp?"":"no UDP");
+					return false;
+				}
 			}
 			new_socks.push_back(sock_pair);
 		}
 
-		if( param_boolean( "ENABLE_IPV4", true ) && param_boolean("ENABLE_IPV6", true ) ) {
-			if( targetTCPPort != port && targetUDPPort != udp_port ) {
-				DaemonCore::SockPair ipv6_socks = new_socks[1];
-				counted_ptr<ReliSock> rs = ipv6_socks.rsock();
-				int ipv6Port = rs->get_port();
+		// If we got here, nothing went wrong and we must be done.
+		break;
+	}
 
-				if( ipv6Port != targetTCPPort ) {
-					dprintf( D_FULLDEBUG, "Bound to IPv4 port %d, but then bound to IPv6 command port %d.\n", targetTCPPort, ipv6Port );
-					new_socks.clear();
-					--retries;
-				} else {
-					retries = -1;
-				}
-			} else {
-				retries = -1;
-			}
-		} else {
-			retries = -1;
-		}
-	} while( retries > 0 );
+	if( tries > MAX_RETRIES) {
+		dprintf(D_ALWAYS | D_FAILURE, "Failed to bind to the same port on IPv4 and IPv6 after %d tries.\n", MAX_RETRIES);
+		return false;
+	}
 
-	if( retries == 0 ) {
-		EXCEPT( "Failed to bind to the same port on IPv4 and IPv6.\n" );
+	if( tries > 1 ) {
+		dprintf(D_FULLDEBUG, "Successfully created IPv4 and IPv6 command sockets on the same port after %d tries\n", tries);
 	}
 
 	// Delay inserting new socks until the end so that if we fail and
