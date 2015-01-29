@@ -21,31 +21,49 @@
 use CondorTest;
 use CondorUtils;
 
+my $iswindows = CondorUtils::is_windows();
 my $pid = fork;
 if (defined $pid ) {
-	if($pid > 0) {
-		exit(0);
+	if($iswindows) {
+		if($pid != 0) {
+			exit(0);
+		}
+	} else {
+		if($pid > 0) {
+			exit(0);
+		}
 	}
 } else {
 	exit(1);
 }
 
-my @statl = stat 'cmd_q_shows-dag-B_A.log';
-my $size = $statl[7];
+if(-f "cmd_q_shows-dag-B_A.log") {
+} else {
+	die "cmd_q_shows-dag-B_A.log does not exist\n";
+}
+my $logsize = -s "cmd_q_shows-dag-B_A.log";
+#my @statl = stat 'cmd_q_shows-dag-B_A.log';
+#my $size = $statl[7];
+my $size = $logsize;
 
 while(1) {
 	sleep 10;
-	@statl = stat 'cmd_q_shows-dag-B_A.log';
+	$logsize = -s "cmd_q_shows-dag-B_A.log";
+	$size = $logsize;
+	print ".";
 	my $oldsize = $size;
 	$size = $statl[7];
 	last if($size != $oldsize);
 }
+print "\n";
 
 my @condorq = ();
-runCondorTool("condor_q -dag",\@condorq, 2, {emit_output=>0});
+runCondorTool("condor_q -dag",\@condorq, 2, {emit_output=>1});
 my $endline = $#condorq - 2;
 @condorq = @condorq[4..$endline];
 open OUT,">cmd_q_shows-dag.output";
 foreach (@condorq){
 	print OUT $_;
 }
+
+print "Leaving x_condor_q_dag.pl\n";
