@@ -237,7 +237,7 @@ result_add_explanation(matchmaking_failure_kind mfk, ClassAd *resource) {
 }
 
 void ClassAdAnalyzer::
-result_add_machine(classad::ClassAd resource) {
+result_add_machine(const classad::ClassAd &resource) {
   if (!result_as_struct) return;
   ASSERT(m_result);
   
