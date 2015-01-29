@@ -2,7 +2,7 @@ classad_cache-basic: cygwin
 cmd_drain: cygwin
 cmd_q_shows-better-analyze: personal
 cmd_q_shows-cputime: personal
-cmd_q_shows-dag: cygwin,personal
+cmd_q_shows-dag: personal
 cmd_q_shows-format: cygwin,personal
 cmd_q_shows-global: cygwin
 cmd_q_shows-hold: personal
