@@ -2026,6 +2026,8 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	if (fork_status == FORK_PARENT)
 	{ // Successfully forked a child - as far as the schedd cares, this worked.
 	  // Throw away the socket and move on.
+		// need to delete the parent's copy of the continuation object
+		delete continuation;
 		return true;
 	}
 	else if (fork_status == FORK_CHILD)
@@ -2182,8 +2184,8 @@ int Scheduler::command_query_job_aggregates(ClassAd &queryAd, Stream* stream)
 {
 	classad::ExprTree *constraint = queryAd.Lookup(ATTR_REQUIREMENTS);
 
-	char *projection = NULL;
-	queryAd.LookupString(ATTR_PROJECTION, &projection);
+	std::string projection;
+	if ( ! queryAd.LookupString(ATTR_PROJECTION, projection)) { projection = ""; }
 
 	//bool group_by = false;
 	//queryAd.LookupBool("ProjectionIsGroupBy", group_by);
@@ -2195,10 +2197,8 @@ int Scheduler::command_query_job_aggregates(ClassAd &queryAd, Stream* stream)
 		resultLimit = -1;
 	}
 
-	void *aggregation = BeginJobAggregation(use_def_autocluster, projection, resultLimit, constraint);
+	void *aggregation = BeginJobAggregation(use_def_autocluster, projection.c_str(), resultLimit, constraint);
 	if ( ! aggregation) {
-		free(projection);
-		projection = NULL;
 		return -1;
 	}
 
@@ -2208,6 +2208,8 @@ int Scheduler::command_query_job_aggregates(ClassAd &queryAd, Stream* stream)
 	if (fork_status == FORK_PARENT)
 	{ // Successfully forked a child - as far as the schedd cares, this worked.
 	  // Throw away the socket and move on.
+		// need to free the parent's copy of the continuation object
+		delete continuation;
 		return true;
 	}
 	else if (fork_status == FORK_CHILD)
