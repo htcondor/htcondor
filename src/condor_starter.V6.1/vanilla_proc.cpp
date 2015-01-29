@@ -499,10 +499,12 @@ VanillaProc::StartJob()
 						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir_str.c_str(), next_dir_str.c_str());
 						if (fs_remap->AddMapping(full_dir_str, next_dir_str)) {
 							// FilesystemRemap object prints out an error message for us.
+							delete fs_remap;
 							return FALSE;
 						}
 					} else {
 						dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", working_dir.c_str(), next_dir_str.c_str());
+						delete fs_remap;
 						return FALSE;
 					}
 				} else {
@@ -511,6 +513,7 @@ VanillaProc::StartJob()
 			}
 		} else {
 			dprintf(D_ALWAYS, "Unable to perform mappings because %s doesn't exist.\n", working_dir.c_str());
+			delete fs_remap;
 			return FALSE;
 		}
 	}
