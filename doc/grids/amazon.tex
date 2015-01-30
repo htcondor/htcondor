@@ -104,9 +104,10 @@ This command specifies security group names; to specify IDs, use
 \SubmitCmd{ec2\_security\_ids}.  This may be necessary when specifying
 a Virtual Private Cloud (VPC) instance.
 
-To run an instance in a VPC, set \SubmitCmd{ec2\_vpc\_subnet} to the
-the desired VPC's specification string.  You may also specify the instance's
-IP address by using \SubmitCmd{ec2\_vpc\_id}.
+To run an instance in a VPC, 
+set \SubmitCmd{ec2\_vpc\_subnet} to the the desired VPC's specification string.
+The instance's IP address 
+may also be specified by setting \SubmitCmd{ec2\_vpc\_id}.
 
 The EC2 API allows the choice of different hardware configurations 
 for instances to run on.
