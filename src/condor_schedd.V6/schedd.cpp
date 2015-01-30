@@ -5667,6 +5667,8 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 
 	if( scheduler_skipJob(job_id) ) {
 
+		bool orig_job_id_invalid = job_id.cluster == -1 || job_id.proc == -1;
+
 		if( job_id.cluster != -1 && job_id.proc != -1 ) {
 			if( skipAllSuchJobs(job_id) ) {
 					// No point in trying to find a different job,
@@ -5687,6 +5689,16 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 		FindRunnableJob(job_id,&match_ad,getOwner());
 
 		if( job_id.cluster != -1 && job_id.proc != -1 ) {
+				// If we got an initial job_id of -1.-1, then the
+				// previous check of skipAllSuchJobs() was skipped.
+				// Check it now that we do have a valid job_id.
+			if ( orig_job_id_invalid && skipAllSuchJobs(job_id) ) {
+				dprintf(D_FULLDEBUG,
+					"Rejecting match to %s "
+					"because no job may be started to run on it right now.\n",
+					slot_name);
+				return false;
+			}
 			dprintf(D_FULLDEBUG,"Rematched %s to job %d.%d\n",
 					slot_name, job_id.cluster, job_id.proc );
 		}
