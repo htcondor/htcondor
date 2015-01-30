@@ -4351,6 +4351,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 						         " already finished for this job.\n",
 						         a_job.cluster, a_job.proc);
 						unsetQSock();
+						delete jobs;
 						return FALSE;
 					}
 					int holdcode;
