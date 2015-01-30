@@ -2305,7 +2305,7 @@ SSH_TO_JOB_SSHD_CONFIG_TEMPLATE = $(ETC)/condor_ssh_to_job_sshd_config_template
 ##--------------------------------------------------------------------
 ##  Green computing defaults
 ##--------------------------------------------------------------------
-UNHIBERNATE = CurrentTime - MachineLastMatchTime < 1200
+UNHIBERNATE = time() - MachineLastMatchTime < 1200
 
 ##
 ##--------------------------------------------------------------------

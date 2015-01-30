@@ -3879,7 +3879,7 @@ SetLeaveInQueue()
 				   for up to 10 days, so user can grab the output.
 				 */
 			buffer.formatstr( 
-				"%s = %s == %d && (%s =?= UNDEFINED || %s == 0 || ((CurrentTime - %s) < %d))",
+				"%s = %s == %d && (%s =?= UNDEFINED || %s == 0 || ((time() - %s) < %d))",
 				ATTR_JOB_LEAVE_IN_QUEUE,
 				ATTR_JOB_STATUS,
 				COMPLETED,
