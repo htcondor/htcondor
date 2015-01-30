@@ -300,7 +300,7 @@ cleanup_execute_dirs( StringList &list )
 }
 
 void
-cleanup_execute_dir(int pid, char const *exec_path)
+cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 {
 	ASSERT( pid );
 
@@ -370,11 +370,16 @@ cleanup_execute_dir(int pid, char const *exec_path)
 
 		Directory execute_dir( exec_path_full, PRIV_ROOT );
 
-			// Look for it
-		if ( execute_dir.Find_Named_Entry( pid_dir.Value() ) ) {
-
+		if (remove_exec_subdir) {
+			// Remove entire subdirectory; used to remove
+			// an encrypted execute directory
+			execute_dir.Remove_Full_Path(exec_path_full);
+		} else {
+			// Look for specific pid_dir subdir
+			if ( execute_dir.Find_Named_Entry( pid_dir.Value() ) ) {
 				// Remove the execute directory
-			execute_dir.Remove_Current_File();
+				execute_dir.Remove_Current_File();
+			}
 		}
 		delete [] exec_path_full;
 	}

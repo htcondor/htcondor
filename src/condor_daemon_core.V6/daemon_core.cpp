@@ -6162,7 +6162,7 @@ void CreateProcessForkit::exec() {
         if (rc) 
         {
             rc = errno;
-            if (write(m_errorpipe[1], &errno, sizeof(errno))){
+            if (full_write(m_errorpipe[1], &errno, sizeof(errno))!=sizeof(errno)){
                 dprintf(D_ALWAYS, "Failed in writing to m_errorpipe\n");
             }
             _exit(rc); // b/c errno could have been overridden by write
@@ -6176,7 +6176,7 @@ void CreateProcessForkit::exec() {
     if (m_fs_remap && !bOkToReMap) {
         dprintf(D_ALWAYS, "Can not remount filesystems because this system does can not have/allow unshare(2)\n");
         int rc = errno = ENOSYS;
-        if (write(m_errorpipe[1], &errno, sizeof(errno))) {
+        if (full_write(m_errorpipe[1], &errno, sizeof(errno))!=sizeof(errno)){
             dprintf(D_ALWAYS, "Failed in writing to m_errorpipe\n");
         }
         _exit(rc);
@@ -6186,7 +6186,7 @@ void CreateProcessForkit::exec() {
 	if (m_fs_remap && m_fs_remap->PerformMappings()) 
     {
         int rc = errno;
-        if (write(m_errorpipe[1], &errno, sizeof(errno))) {
+        if (full_write(m_errorpipe[1], &errno, sizeof(errno))!=sizeof(errno)){
             dprintf(D_ALWAYS, "Failed in writing to m_errorpipe\n");
         }
         _exit(rc);
@@ -6196,7 +6196,6 @@ void CreateProcessForkit::exec() {
 	if (bOkToReMap) {
         set_priv_no_memory_changes( m_priv_state );
     }
-
 
 		/* Re-nice ourself */
 	if( m_nice_inc > 0 ) {
@@ -6262,7 +6261,6 @@ void CreateProcessForkit::exec() {
 		limit(RLIMIT_AS, m_as_hard_limit, CONDOR_HARD_LIMIT, "max virtual adddress space");
 	}
 
-
 	dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", m_executable_fullpath );
 
 		// !! !! !! !! !! !! !! !! !! !! !! !!
@@ -6302,6 +6300,7 @@ void CreateProcessForkit::exec() {
 			close( j );
 		}
 	}
+
 
 		// now head into the proper priv state...
 	if ( m_priv != PRIV_UNKNOWN ) {
@@ -7435,12 +7434,16 @@ int DaemonCore::Create_Process(
 	}
 
 	if (remap) {
-		alt_executable_fullpath = remap->RemapFile(executable_fullpath);
-		alt_cwd = remap->RemapDir(cwd);
-		if (alt_executable_fullpath.compare(executable_fullpath))
-			dprintf(D_ALWAYS, "Remapped file: %s\n", alt_executable_fullpath.c_str());
-		if (alt_cwd.compare(cwd))
-			dprintf(D_ALWAYS, "Remapped cwd: %s\n", alt_cwd.c_str());
+		if (executable_fullpath) {
+			alt_executable_fullpath = remap->RemapFile(executable_fullpath);
+			if (alt_executable_fullpath.compare(executable_fullpath))
+				dprintf(D_ALWAYS, "Remapped file: %s\n", alt_executable_fullpath.c_str());
+		}
+		if (cwd) {
+			alt_cwd = remap->RemapDir(cwd);
+			if (alt_cwd.compare(cwd))
+				dprintf(D_ALWAYS, "Remapped cwd: %s\n", alt_cwd.c_str());
+		}
 	}
 
 	{
