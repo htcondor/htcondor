@@ -74,9 +74,6 @@ static child_handle_t remove_child(FILE* fp)
 
 /*
 
-  FILE *my_popenv(char *const args[], const char *mode, int want_stderr);
-  FILE *my_popen(ArgList &args, const char *mode, int want_stderr, Env *env_ptr, bool drop_privs);
-
   This is a popen(3)-like function that intentionally avoids
   calling out to the shell in order to limit what can be done for
   security reasons. Please note that this does not intend to behave
@@ -96,6 +93,14 @@ static child_handle_t remove_child(FILE* fp)
   potential harm of doing this wrong far outweighs the harm of this
   extra dprintf()... Derek Wright <wright@cs.wisc.edu> 2004-05-27
 
+  my_popen() also has some functionality beyond popen() via various
+  function parameters (most of which are optional):
+      want_stderr - in mode "r", merge stdout and stderr
+	  env_ptr - explicitly specify environment for child process
+	  drop_privs - (unix only) set realuid equal to effective uid in child
+	  write_data - (unix only) in mode "r", this null-terminated buffer will be immdiately
+	      sent to the child process' stdin.  limited in size to 2k to prevent deadlock.
+		  this allows my_popen() to both read and write data to a child process.
 */
 
 #ifdef WIN32
@@ -213,13 +218,18 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 }
 
 FILE *
-my_popen(ArgList &args, const char *mode, int want_stderr, Env *zkmENV, bool drop_privs)
+my_popen(ArgList &args, const char *mode, int want_stderr, Env *zkmENV, bool drop_privs, const char *write_data)
 {
 	/* drop_privs HAS NO EFFECT ON WINDOWS */
+	/* write_data IS NOT YET IMPLEMENTED ON WINDOWS - we can do so when we need it */
 
 	MyString cmdline, err;
 	if (!args.GetArgsStringWin32(&cmdline, 0, &err)) {
 		dprintf(D_ALWAYS, "my_popen: error making command line: %s\n", err.Value());
+		return NULL;
+	}
+	if (write_data && write_data[0]) {
+		dprintf(D_ALWAYS, "my_popen: error - write_data option not supported on Windows\n");
 		return NULL;
 	}
 	//  maybe the following function should be extended by an Env* argument? Not sure...
@@ -287,9 +297,12 @@ my_popenv_impl( const char *const args[],
                 int want_stderr,
                 uid_t privsep_uid,
 		Env *env_ptr = 0,
-		bool drop_privs = true )
+		bool drop_privs = true,
+		const char *write_data = NULL )
 {
 	int	pipe_d[2], pipe_d2[2];
+	int pipe_writedata[2];
+	int want_writedata = 0;
 	int	parent_reads;
 	uid_t	euid;
 	gid_t	egid;
@@ -351,6 +364,33 @@ my_popenv_impl( const char *const args[],
 // }
 // dprintf( D_FULLDEBUG | D_NOHEADER, "\n" );
 
+		/* if parent reads and there is write data, create a pipe for that */
+	if (parent_reads && write_data && write_data[0] && privsep_uid==(uid_t)-1) {
+		if (strlen(write_data) > 2048) {
+			/* Make sure data fits in pipe buffer to avoid deadlock */
+			dprintf(D_ALWAYS,"my_popenv: Write data is too large, failing\n");
+			close(pipe_d[0]);
+			close(pipe_d[1]);
+			close( pipe_d2[0] );
+			close( pipe_d2[1] );
+			return NULL;
+		}
+		if ( pipe(pipe_writedata) < 0 ) {
+			dprintf(D_ALWAYS, "my_popenv: Failed to create the writedata pipe, "
+					"errno=%d (%s)\n", errno, strerror(errno));
+			close(pipe_d[0]);
+			close(pipe_d[1]);
+			close( pipe_d2[0] );
+			close( pipe_d2[1] );
+			return NULL;
+		}
+		want_writedata = 1;
+	} else {
+		pipe_writedata[0] = -1;
+		pipe_writedata[1] = -1;
+		want_writedata = 0;
+	}
+
 		/* Create a new process */
 	if( (pid=fork()) < 0 ) {
 		dprintf(D_ALWAYS, "my_popenv: Failed to fork child, errno=%d (%s)\n",
@@ -360,6 +400,8 @@ my_popenv_impl( const char *const args[],
 		close( pipe_d[1] );
 		close( pipe_d2[0] );
 		close( pipe_d2[1] );
+		close( pipe_writedata[0] );
+		close( pipe_writedata[1] );
 		return NULL;
 	}
 
@@ -376,7 +418,9 @@ my_popenv_impl( const char *const args[],
 			if (jj != pipe_d[0] &&
 				jj != pipe_d[1] &&
 				jj != pipe_d2[0] &&
-				jj != pipe_d2[1])
+				jj != pipe_d2[1] &&
+				jj != pipe_writedata[0] &&
+				jj != pipe_writedata[1])
 			{
 				close(jj);
 			}
@@ -402,6 +446,14 @@ my_popenv_impl( const char *const args[],
 			}
 			if (close_pipe_end) {
 				close(pipe_d[WRITE_END]);
+			}
+			if (want_writedata) {
+				/* close write end of data pipe, dup read end to stdin */
+				close( pipe_writedata[WRITE_END] );
+				if( pipe_writedata[READ_END] != 0 ) {
+					dup2( pipe_writedata[READ_END], 0 );
+					close( pipe_writedata[READ_END] );
+				}
 			}
 		} else {
 				/* Close stdout, dup pipe to stdin */
@@ -494,6 +546,8 @@ my_popenv_impl( const char *const args[],
 		close(pipe_d2[0]);
 		close(pipe_d[0]);
 		close(pipe_d[1]);
+		close( pipe_writedata[0] );
+		close( pipe_writedata[1] );
 
 		/* Ensure child process is dead, then wait for it to exit */
 		kill(pid, SIGKILL);
@@ -508,6 +562,8 @@ my_popenv_impl( const char *const args[],
 		fclose(fh);
 		close(pipe_d[0]);
 		close(pipe_d[1]);
+		close( pipe_writedata[0] );
+		close( pipe_writedata[1] );
 
 		/* Ensure child process is dead, then wait for it to exit */
 		kill(pid, SIGKILL);
@@ -523,6 +579,11 @@ my_popenv_impl( const char *const args[],
 	if( parent_reads ) {
 		close( pipe_d[WRITE_END] );
 		retp = fdopen(pipe_d[READ_END],mode);
+		if (want_writedata) {
+			close(pipe_writedata[READ_END]);
+			write(pipe_writedata[WRITE_END],write_data,strlen(write_data));
+			close(pipe_writedata[WRITE_END]);
+		}
 	} else {
 		close( pipe_d[READ_END] );
 		retp = fdopen(pipe_d[WRITE_END],mode);
@@ -578,19 +639,22 @@ my_popen_impl(ArgList &args,
               int want_stderr,
               uid_t privsep_uid,
               Env *env_ptr,
-              bool drop_privs = true)
+              bool drop_privs = true,
+			  const char *write_data = NULL)
 {
 	char **string_array = args.GetStringArray();
-	FILE *fp = my_popenv_impl(string_array, mode, want_stderr, privsep_uid, env_ptr, drop_privs);
+	FILE *fp = my_popenv_impl(string_array, mode, want_stderr, privsep_uid,
+			env_ptr, drop_privs, write_data);
 	deleteStringArray(string_array);
 
 	return fp;
 }
 
 FILE*
-my_popen(ArgList &args, const char *mode, int want_stderr, Env *env_ptr, bool drop_privs)
+my_popen(ArgList &args, const char *mode, int want_stderr, Env *env_ptr, bool drop_privs,
+		 const char *write_data)
 {
-	return my_popen_impl(args, mode, want_stderr, (uid_t)-1, env_ptr, drop_privs);
+	return my_popen_impl(args, mode, want_stderr, (uid_t)-1, env_ptr, drop_privs, write_data);
 }
 
 FILE*
