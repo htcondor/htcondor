@@ -138,7 +138,7 @@ ClassAdLogProber::probe(ClassAdLogEntry *curCALogEntry,
 			  FILE * job_queue_fp)
 {
 	FileOpErrCode   st;
-	int op_type;
+	int op_type = -1;
 	struct stat filestat;
 	int job_queue_fd = fileno(job_queue_fp);
 	//TODO: uncomment and possibly change
