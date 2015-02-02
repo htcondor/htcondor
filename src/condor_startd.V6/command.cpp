@@ -1931,12 +1931,14 @@ activate_claim( Resource* rip, Stream* stream )
 				if( fd_2 == -2 ) {
 					rip->dprintf( D_ALWAYS, "accept timed out\n" );
 					delete tmp_starter;
+					close(fd_1);
 					ABORT;
 				} else {
 					rip->dprintf( D_ALWAYS, 
 								  "tcp_accept_timeout returns %d, errno=%d\n",
 								  fd_2, errno );
 					delete tmp_starter;
+					close(fd_1);
 					ABORT;
 				}
 			}
