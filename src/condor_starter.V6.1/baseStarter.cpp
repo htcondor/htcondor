@@ -1868,10 +1868,13 @@ CStarter::createTempExecuteDir( void )
 		}
 	}
 	
-	// if the user wants the execute directory encrypted, 
+	// if the admin or the user wants the execute directory encrypted,
 	// go ahead and set that up now too
-	
-	if ( param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false) ) {
+	bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
+	if (!encrypt_execdir && jic && jic->jobClassAd()) {
+		jic->jobClassAd()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
+	}
+	if ( encrypt_execdir ) {
 		
 			// dynamically load our encryption functions to preserve 
 			// compatability with NT4 :(

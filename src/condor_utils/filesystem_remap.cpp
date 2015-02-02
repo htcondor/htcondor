@@ -270,6 +270,10 @@ int FilesystemRemap::AddMapping(std::string source, std::string dest) {
 int FilesystemRemap::AddEncryptedMapping(std::string mountpoint, std::string password)
 {
 #if defined(LINUX)
+	if (!EncryptedMappingDetect()) {
+		dprintf(D_ALWAYS, "Unable to add encrypted mappings: not supported on this machine\n");
+		return -1;
+	}
 	if (is_relative_to_cwd(mountpoint)) {
 		dprintf(D_ALWAYS, "Unable to add encrypted mappings for relative directories (%s).\n",
 				mountpoint.c_str());
