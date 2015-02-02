@@ -149,6 +149,9 @@ int sysapi_symbol_main_check( char* executable );
 const char* sysapi_kernel_version_raw( void );
 const char* sysapi_kernel_version( void );
 
+/* determine if a linux version is version X or newer */
+bool sysapi_is_linux_version_atleast(const char *version_to_check);
+
 /* determine a canonical memory model for the kernel */
 const char* sysapi_kernel_memory_model_raw( void );
 const char* sysapi_kernel_memory_model( void );
