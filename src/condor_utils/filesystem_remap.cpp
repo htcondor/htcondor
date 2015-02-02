@@ -328,9 +328,9 @@ int FilesystemRemap::AddEncryptedMapping(std::string mountpoint, std::string pas
 		// output is "blah blah ... [sig1] blah blah [sig2] ...", and
 		// we want to grab the sig1 and sig2 strings contained with the
 		// square brackets.  so just use fscanf with ToddT's mad scanf skilzzz.
-		fscanf(stream,"%*[^[][%79[^]]%*[^[][%79[^]]",sig1,sig2);
+		int sfret = fscanf(stream,"%*[^[][%79[^]]%*[^[][%79[^]]",sig1,sig2);
 		ret = my_pclose(stream); // ret now has exit status from ecryptfs-add-passphrase
-		if (ret != 0 || !sig1[0] || !sig2[0]) {
+		if (ret != 0 || sfret != 2 || !sig1[0] || !sig2[0]) {
 			dprintf(D_ALWAYS,
 					"%s failed to store encyption and file name encryption keys (%d,%s,%s)\n",
 					cmdargs.GetArg(0),ret,sig1,sig2);
