@@ -81,7 +81,7 @@ addrinfo_iterator::addrinfo_iterator() : cxt_(NULL),
 }
 
 addrinfo_iterator::addrinfo_iterator(const addrinfo_iterator& rhs) :
-	cxt_(rhs.cxt_), current_(NULL)
+	cxt_(rhs.cxt_), current_(NULL), ipv6(rhs.ipv6)
 {
 	if (cxt_) cxt_->add_ref();
 }
@@ -105,6 +105,7 @@ addrinfo_iterator& addrinfo_iterator::operator= (const addrinfo_iterator& rhs)
 	if (cxt_) cxt_->release();
 	cxt_ = rhs.cxt_;
 	cxt_->add_ref();
+	ipv6 = rhs.ipv6;
 
 	current_ = NULL;
 	return *this;

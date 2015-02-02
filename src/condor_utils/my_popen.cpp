@@ -581,7 +581,7 @@ my_popenv_impl( const char *const args[],
 		retp = fdopen(pipe_d[READ_END],mode);
 		if (want_writedata) {
 			close(pipe_writedata[READ_END]);
-			write(pipe_writedata[WRITE_END],write_data,strlen(write_data));
+			if (write(pipe_writedata[WRITE_END],write_data,strlen(write_data)) < 0) {} // we don't care about return 
 			close(pipe_writedata[WRITE_END]);
 		}
 	} else {
