@@ -298,6 +298,9 @@ char *findOldest(char *dirName, int *count) {
 	*count = scandirectory(dirName, &files, file_select, doalphasort);
 	// no matching files in the directory
 	if (*count <= 0)
+		if (files) {
+			free(files);
+		}
 		return NULL;
 	char *oldFile = (char*)files[0]->d_name;
 	len = strlen(oldFile);
