@@ -4368,6 +4368,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 								"spooling. Do not allow stagein\n",
 								a_job.cluster, a_job.proc);
 							unsetQSock();
+							delete jobs;
 							return FALSE;
 						}
 					}
