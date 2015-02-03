@@ -35,6 +35,7 @@ namespace classad {
 #define ATTR_SELF "self"
 #define ATTR_PARENT "parent"
 #define ATTR_MY "my"
+#define ATTR_CURRENT_TIME "CurrentTime"
 
 // This flag is only meant for use in Condor, which is transitioning
 // from an older version of ClassAds with slightly different evaluation
@@ -83,6 +84,8 @@ static void init_specialAttrNames() {
 	specialAttrNames->insert( ATTR_PARENT );
 }
 
+static FunctionCall *CurrentTime_expr = NULL;
+
 void SetOldClassAdSemantics(bool enable)
 {
 	_useOldClassAdSemantics = enable;
@@ -91,9 +94,14 @@ void SetOldClassAdSemantics(bool enable)
 	}
 	if ( enable ) {
 		specialAttrNames->insert( ATTR_MY );
+		specialAttrNames->insert( ATTR_CURRENT_TIME );
+		if ( CurrentTime_expr == NULL ) {
+			vector<ExprTree*> args;
+			CurrentTime_expr = FunctionCall::MakeFunctionCall( "time", args );
 		}
 	} else {
 		specialAttrNames->erase( ATTR_MY );
+		specialAttrNames->erase( ATTR_CURRENT_TIME );
 	}
 }
 
@@ -692,6 +700,10 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 			// the lexical parent
 			expr = (ClassAd*)superScope;
 			return( expr ? EVAL_OK : EVAL_UNDEF );
+		} else if( strcasecmp( name.c_str( ), ATTR_CURRENT_TIME ) == 0 ) {
+			// an alias for time() from old ClassAds
+			expr = CurrentTime_expr;
+			return ( expr ? EVAL_OK : EVAL_UNDEF );
 		}
 
 	}	
