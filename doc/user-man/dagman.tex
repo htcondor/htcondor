@@ -2498,33 +2498,39 @@ And, other nodes may \emph{not} reference the FINAL node in specifications of
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DAGMan-rescue}Job Recovery:  The Rescue DAG}
+\subsection{\label{sec:DAGMan-rescue}The Rescue DAG}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!Rescue DAG}
-Any time a DAG exits unsuccessfully (for example, if some nodes fail
-or the running DAG is removed with \Condor{rm}), DAGMan generates
-a Rescue DAG.  The Rescue DAG records the state of the DAG (such as which
-nodes completed successfully), and can be used to re-try the DAG
-without re-running nodes that already completed successfully.  (Note
-that an \Arg{ABORT-DAG-ON} returning 0 constitutes a successful
-DAG completion, and therefore a rescue DAG is not generated.)
+Any time a DAG exits unsuccessfully, DAGMan generates a Rescue DAG.  
+The Rescue DAG records the state of the DAG, 
+with information such as which nodes completed successfully,
+and the Rescue DAG will be used when the DAG is again submitted.
+With the Rescue DAG,
+nodes that have already successfully completed are not re-run.
 
+There are a variety of circumstances under which a Rescue DAG
+is generated.
 If a node in the DAG fails, the DAG does not exit immediately;
 the remainder of the DAG is continued until no more forward
 progress can be made based on the DAG's dependencies.
 At this point, DAGMan produces the Rescue DAG and exits.
-A Rescue DAG is also produced if the
-\Condor{dagman} job itself is removed with \Condor{rm}, or if
-an \Arg{ABORT-DAG-ON} with a non-zero return value is triggered.
-\Bold{Note that, ON WINDOWS, doing a \Condor{rm} of a running
-DAG does not generate a Rescue DAG.  However, re-submitting
-the original DAG will invoke a lower-level recovery functionality,
-and will produce similar behavior to using a Rescue DAG.}
+A Rescue DAG is produced on Unix platforms if the
+\Condor{dagman} job itself is removed with \Condor{rm}.
+On Windows, a Rescue DAG is \emph{not} generated in this situation,
+but re-submitting the original DAG will invoke a lower-level 
+recovery functionality,
+and it will produce similar behavior to using a Rescue DAG.
+A Rescue DAG is produced when a node sets and triggers
+an \Arg{ABORT-DAG-ON} event with a non-zero return value.
+A zero return value constitutes successful DAG completion, 
+and therefore a Rescue DAG is not generated.
 
-By default, if a Rescue DAG exists, it will be used when you
-re-submit the original DAG file.  If more than one Rescue DAG
-exists, the newest one will be used.  By using the Rescue DAG,
+By default, if a Rescue DAG exists, it will be used when the DAG
+is submitted specifying the original DAG input file.  
+If more than one Rescue DAG exists, 
+the newest one will be used.  
+By using the Rescue DAG,
 DAGMan will avoid re-running nodes that completed successfully
 in the previous run.
 \Bold{Note that passing the \Arg{-force} option to \Condor{submit\_dag}
@@ -2539,11 +2545,10 @@ all parts of the node will be re-run,
 even if some parts were successful the first time.
 For example, if a node's PRE script
 succeeds, but then the node's HTCondor job cluster fails,
-the entire node (including the PRE script) will be re-run.
+the entire node, including the PRE script, will be re-run.
 A job cluster may result in the submission of multiple HTCondor jobs.
-If one of the multiple jobs fails, the node fails.
-Therefore, the Rescue DAG will
-re-run the entire node,
+If one of the jobs within the cluster fails, the node fails.
+Therefore, the Rescue DAG will re-run the entire node,
 implying the submission of the entire cluster of jobs,
 not just the one(s) that failed.
 
