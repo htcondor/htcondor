@@ -77,12 +77,6 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 
 	ad.Clear( );
 
-		// Reinsert CurrentTime, emulating the special version in old
-		// ClassAds
-	if ( !compat_classad::ClassAd::m_strictEvaluation ) {
-		ad.Insert( ATTR_CURRENT_TIME " = time()" );
-	}
-
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
  		return false;
@@ -172,12 +166,6 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 
 
 	ad.Clear( );
-
-		// Reinsert CurrentTime, emulating the special version in old
-		// ClassAds
-	if ( !compat_classad::ClassAd::m_strictEvaluation ) {
-		ad.Insert( ATTR_CURRENT_TIME " = time()" );
-	}
 
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {

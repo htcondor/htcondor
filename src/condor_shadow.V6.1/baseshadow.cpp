@@ -899,7 +899,6 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 	StringList reslist(resslist.c_str());
 	if (reslist.number() > 0) {
 		ClassAd * puAd = new ClassAd();
-		puAd->Clear(); // get rid of default "CurrentTime = time()" value.
 
 		reslist.rewind();
 		while (const char * resname = reslist.next()) {
@@ -1056,7 +1055,6 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	if (reslist.number() > 0) {
 		int64_t int64_value = 0;
 		ClassAd * puAd = new ClassAd();
-		puAd->Clear(); // get rid of default "CurrentTime = time()" value.
 
 		reslist.rewind();
 		char * resname = NULL;
