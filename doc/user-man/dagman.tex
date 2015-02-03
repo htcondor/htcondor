@@ -2768,6 +2768,25 @@ having successfully executed the desired workflow, when, in fact,
 it did not.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGMan-recovery}DAG Recovery}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{DAGMan!DAG recovery}
+\index{DAGMan!difference between Rescue DAG and DAG recovery}
+DAG recovery restores the state of a DAG by reading the \File{.nodes.log}
+file that is used to enforce the dependencies of the DAG.
+
+Recovery is different than a Rescue DAG.
+Recovery is appropriate when no Rescue DAG has been created.
+There will be no Rescue DAG 
+if the machine running the \Condor{dagman} job crashes,
+or if the \Condor{schedd} daemon crashes,
+or if the \Condor{dagman} job crashes,
+or if the \Condor{dagman} job is placed on hold.
+
+\MoreTodo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Visualizing DAGs with \Prog{dot}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!dot}
