@@ -21,14 +21,15 @@ package SimpleJob;
 
 use CondorTest;
 my $timeout = 0;
-my $defaulttimeout = 240;
+my $defaulttimeout = 300;
 $timeout = $defaulttimeout;
 
 $timed_callback = sub
 {
+	my $now = CondorTest::timestamp();
 	print "SimpleJob timeout expired!\n";
 	CondorTest::RegisterResult( 0, %args );
-    die "Test failed from timeout expiring\n";
+    die "$now Test failed from timeout expiring\n";
 };
 
 $submitted = sub
@@ -55,6 +56,25 @@ sub RunCheck
 	my $availableslots = 0;
     my $result = 0;
 
+################################################################################
+#
+#
+# NOTE: In general there are callbacks requiring action and variable changes
+# in the main test file. You can only use no_wait to fork for running really
+# simple jobs like start a job that runs forever or start a job on hold.
+#
+# ANYTHING ELSE WILL NOT WORK AS YOU EXPECT	(bt 1/10/15)
+#
+#
+################################################################################
+
+	if($args{no_wait}) {
+		my $pid = fork();
+		if($pid != 0) {
+			return(0);
+		}
+	}
+	
 	my $queuesz = $args{queue_sz} || 1;
 
 	if($args{check_slots}) {
