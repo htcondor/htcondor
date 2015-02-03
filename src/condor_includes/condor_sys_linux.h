@@ -113,6 +113,8 @@
 
 #include <sys/mman.h>
 
+#include <sys/syscall.h>
+
 #if defined( I386 ) || defined( X86_64 )
 /* For the i386 execution domains for standard
 	universe executables. Under redhat 9 and later there is a
@@ -123,8 +125,6 @@
 	itself does exist, however, so we'll just be calling syscall()
 	with the right system call symbol to get the job done on all of the
 	distributions. */
-
-#include <sys/syscall.h>
 
 /* Here is where we find the PER_* constants for the personality system call. */
 #if HAVE_LINUX_PERSONALITY_H
