@@ -251,8 +251,8 @@ int FilesystemRemap::AddMapping(std::string source, std::string dest) {
 		std::list<pair_strings>::const_iterator it;
 		for (it = m_mappings.begin(); it != m_mappings.end(); it++) {
 			if ((it->second.length() == dest.length()) && (it->second.compare(dest) == 0)) {
-				dprintf(D_FULLDEBUG, "Mapping already present for %s.\n", dest.c_str());
-				return -1;
+				// return success (i.e. not a fatal error to repeat a mapping)
+				return 0;
 			}
 		}
 		if (CheckMapping(dest)) {
@@ -284,8 +284,8 @@ int FilesystemRemap::AddEncryptedMapping(std::string mountpoint, std::string pas
 		if ((it->first.length() == mountpoint.length()) &&
 			(it->first.compare(mountpoint) == 0))
 		{
-			dprintf(D_FULLDEBUG, "Mapping already present for %s.\n", mountpoint.c_str());
-			return -1;
+			// return success (i.e. not a fatal error to repeat a mapping)
+			return 0;
 		}
 	}
 
