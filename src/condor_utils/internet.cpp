@@ -775,61 +775,6 @@ int bindWithin(const int fd, const int low_port, const int high_port)
 	return FALSE;
 }
 
-/* Check if the ip is in private ip address space */
-/* ip: in host byte order */
-/* This function has a unit test. */
-int
-is_priv_net(uint32_t ip)
-{
-    return ((ip & 0xFF000000) == 0x0A000000 ||      // 10/8
-            (ip & 0xFFF00000) == 0xAC100000 ||      // 172.16/12
-            (ip & 0xFFFF0000) == 0xC0A80000);       // 192.168/16
-}
-
-int
-is_loopback_net(uint32_t ip)
-{
-    return ((ip & 0xFF000000) == 0x7F000000); // 127/8
-}
-
-int is_loopback_net_str(char const * /*ip*/)
-{
-//	struct in_addr sa;
-//	if( is_ipaddr_no_wildcard(ip,&sa) ) {
-//		return is_loopback_net(ntohl(sa.s_addr));
-//	}
-	return 0;
-}
-
-/* Check if two ip addresses, given in network byte, are in the same network */
-int
-in_same_net(uint32_t ipA, uint32_t ipB)
-{
-    unsigned char *byteA, *fA, *byteB;
-    int i, index_to;
-
-    fA = byteA = (unsigned char *)&ipA;
-    byteB = (unsigned char *)&ipB;
-
-    if (*fA < 128) { // A class
-        index_to = 1;
-    } else if(*fA < 192) { // B class
-        index_to = 2;
-    } else {    // C class
-        index_to = 3;
-    }
-
-    for (i = 0; i < index_to; i++) {
-        if (*byteA != *byteB) {
-            return 0;
-        }
-        byteA++;
-        byteB++;
-    }
-
-    return 1;
-}
-
 // ip: network-byte order
 // port: network-byte order
 char * ipport_to_string(const unsigned int ip, const unsigned short port)
@@ -846,26 +791,6 @@ char * ipport_to_string(const unsigned int ip, const unsigned short port)
         strcat(buf, inet_ntoa(inaddr));
     }
     sprintf(&buf[strlen(buf)], ":%d>", ntohs(port));
-    return buf;
-}
-
-char *
-prt_fds(int maxfd, fd_set *fds)
-{
-    static char buf[50];
-    int i, size;
-
-    sprintf(buf, "<");
-    for(i=0; i<maxfd; i++) {
-        if (fds && FD_ISSET(i, fds)) {
-            if ((size = strlen(buf)) > 40) {
-                strcat(buf, "...>");
-                return buf;
-            }
-        sprintf(&buf[strlen(buf)], "%d ", i);
-        }
-    }
-    strcat(buf, ">");
     return buf;
 }
 
