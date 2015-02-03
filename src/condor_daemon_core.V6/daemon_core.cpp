@@ -2979,7 +2979,6 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_s
 		char ipstr[IP_STRING_BUF_SIZE];
 		strcpy(ipstr, "(unknown)");
 		addr.to_ip_string(ipstr, sizeof(ipstr));
-	//sin_to_ipstring(sin,ipstr,IP_STRING_BUF_SIZE);
 
 			// Note that although this says D_ALWAYS, when the result is
 			// ALLOW, we only get here if D_SECURITY is on.

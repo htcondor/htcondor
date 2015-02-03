@@ -142,28 +142,6 @@ split_sin( const char *addr, char **host, char **port, char **params )
 	return 1;
 }
 
-//int
-//address_to_sin(char const *host, char const *port, struct sockaddr_in *sa_in)
-//{
-//	struct  hostent *hostptr;
-//	if( !host || !port ) {
-//		return 0;
-//	}
-//	if ( !is_ipaddr(host,NULL) &&
-//		((hostptr=condor_gethostbyname(host)) != NULL &&
-//		 hostptr->h_addrtype==AF_INET) )
-//	{
-//			sa_in->sin_addr = *(struct in_addr *)(hostptr->h_addr_list[0]);
-//	}
-//	else if( !condor_inet_aton(host, &sa_in->sin_addr) ) {
-//		return 0;
-//	}
-//
-//	sa_in->sin_port = htons((short)atoi(port));
-//	sa_in->sin_family = AF_INET;
-//
-//	return 1;
-//}
 
 /* Convert a string of the form "<xx.xx.xx.xx:pppp?params>" to a
   sockaddr_in TCP (Also allow strings of the form "<hostname:pppp?params>")
@@ -190,20 +168,6 @@ split_sin( const char *addr, char **host, char **port, char **params )
 //	free( port );
 //
 //	return result;
-//}
-
-//char *
-//sin_to_ipstring(const struct sockaddr_in *sa_in,char *buf,size_t buflen)
-//{
-//	char const *ipstr = inet_ntoa(sa_in->sin_addr);
-//	if( !ipstr || strlen(ipstr)>=buflen ) {
-//		if( buflen > 0 ) {
-//			buf[0] = '\0';
-//		}
-//		return NULL;
-//	}
-//	strcpy(buf,ipstr);
-//	return buf;
 //}
 
 /* This function has a unit test. */
@@ -248,29 +212,6 @@ sock_peer_to_string( SOCKET fd, char *buf, size_t buflen, char const *unknown )
 
 	addr.to_sinful(buf, buflen);
 	return buf;
-
-	/* This value is never used.
-	char const *sinful = sock_to_string( fd );
-	*/
-
-//	struct sockaddr_in who;
-//	SOCKET_LENGTH_TYPE addr_len;
-//
-//	addr_len = sizeof(who);
-//	memset(buf,0,buflen);
-//	if( getpeername(fd, (struct sockaddr *)&who, (socklen_t*)&addr_len) == 0) {
-//		if( who.sin_family == AF_INET ) {
-//			char const *sinful = sin_to_string( &who );
-//			if( sinful ) {
-//				strncpy(buf, sinful, buflen );
-//				if(buflen) {
-//					buf[buflen-1] = '\0'; /* ensure null termination */
-//				}
-//				return buf;
-//			}
-//		}
-//	}
-//	return unknown;
 }
 
 
@@ -1080,15 +1021,6 @@ getSockAddr(int sockfd)
     }
     return &sa_in;
 }
-
-//int
-//condor_inet_aton(const char *ipstr, struct in_addr *result)
-//{
-//	if( !is_ipaddr(ipstr,result) ) {
-//		return 0;
-//	}
-//	return 1;
-//}
 
 int generate_sinful(char* buf, int len, const char* ip, int port) {
 	if (strchr(ip, ':')) {
