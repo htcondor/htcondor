@@ -3,13 +3,10 @@ cmd_drain: cygwin
 cmd_q_shows-better-analyze: personal
 cmd_q_shows-cputime: personal
 cmd_q_shows-dag: personal
-cmd_q_shows-format: cygwin,personal
-cmd_q_shows-global: cygwin
+cmd_q_shows-format: personal
 cmd_q_shows-hold: personal
-cmd_q_shows-name: cygwin
-cmd_q_shows-pool: cygwin
 cmd_q_shows-run: personal
-cmd_q_shows-sub: cygwin,personal
+cmd_q_shows-sub: personal
 cmd_q_shows-xml: personal
 cmd_submit_coverage: cygwin
 cmd_submit_massive: cygwin

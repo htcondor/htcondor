@@ -20,11 +20,13 @@
 
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 use strict;
 use warnings;
 
 my $testname = "cmd_q_shows-name";
 my $debuglevel = 2;
+my $iswindows = CondorUtils::is_windows();
 
 my $localappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
@@ -50,6 +52,15 @@ my $localconfig = $condor_instance_local->GetCondorConfig();
 my $currenthost = CondorTest::getFqdnHost();
 my $primarycollector = $currenthost;
 $primarycollector = $primarycollector . ":" . $collectorport;
+
+#if($iswindows) {
+	#my @nameparts = split /\./, $currenthost;
+	#foreach my $name (@nameparts) {
+		#print "aadr:$name\n";
+	#}
+	#$currenthost = $nameparts[0];
+#}
+
 
 my $sheddoneappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,STARTD
@@ -92,15 +103,23 @@ my $mypid = $$;
 my $bail = 0;
 my $line = "";
 
+my $abort = sub {
+	print "abort from removing jobs ignored\n";
+	return(0);
+};
+
 print "Start a job which runs from remote schedd - ";
-my $forever = CondorTest::verbose_system("./x_cmdrunforever.pl $mypid\n",{emit_output=>0});
+my $forever = SimpleJob::RunCheck(
+	duration => 0,
+	no_wait => 1,
+	#on_abort => $abort,
+);
 if($forever != 0) {
 	print "bad\n";
 	CondorTest::debug("Bailing because running job failed to submit\n",$debuglevel);
 	$bail = 1;
 }
 print "ok\n";
-
 
 # submit into collector node schedd
 $ENV{CONDOR_CONFIG} = $localconfig;
@@ -110,13 +129,18 @@ $ENV{CONDOR_CONFIG} = $localconfig;
 print "Start a job on hold from local schedd - ";
 my $holdone;
 if($bail != 1) {
-	my $holdone = CondorTest::verbose_system("./x_cmdstartonhold.pl $mypid",{emit_output=>0});
+my $holdone = SimpleJob::RunCheck(
+	hold => "True",
+	no_wait => 1,
+	#on_abort => $abort,
+);
 	if($holdone != 0) {
 		print "bad\n";
 		CondorTest::debug("Bailing because running job failed to submit\n",$debuglevel);
 		$bail = 1;
 	}
 }
+print "after Start a job on hold from local schedd - ";
 print "ok\n";
 
 my $cmdstatus;
@@ -134,14 +158,25 @@ my $done = 0;
 my $found1 = 0;
 my $targets = 0;
 
+print "Lets see what the collector knows about schedds\n";
+
+my $scmd = "condor_status -sched";
+$cmdstatus = CondorTest::runCondorTool($scmd,\@adarray,2,{emit_output=>1});
+if(!$cmdstatus) {
+	CondorTest::debug("Test failure due to Condor Tool Failure<$scmd>\n",$debuglevel);
+	exit(1)
+}
+
+
 if($bail != 1) {
 	my @schedds = ( $sched1, $sched2 );
 	foreach my $schedd (@schedds) {
+		@adarray = ();
 		CondorTest::debug("Looking for condor_q -name $schedd\n",$debuglevel);
 		while($count < $nattempts) {
 			$found1 = 0;
 			my $cmd = "condor_q -name $schedd";
-			$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+			$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>1});
 	    	if(!$cmdstatus)
 	    	{
 	        	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
@@ -186,6 +221,27 @@ if($bail != 1) {
 	}
 	print "ok\n";
 }
+
+my $rmcmd = "condor_rm -all";
+my @rmarray1 = ();
+my @rmarray2 = ();
+
+$cmdstatus = CondorTest::runCondorTool($rmcmd,\@rmarray1,2,{emit_output=>0});
+if(!$cmdstatus)
+{
+	CondorTest::debug("Test failure due to Condor Tool Failure<$rmcmd>\n",$debuglevel);
+	exit(1)
+}
+
+$ENV{CONDOR_CONFIG} = $scheddoneconfig;
+
+$cmdstatus = CondorTest::runCondorTool($rmcmd,\@rmarray2,2,{emit_output=>0});
+if(!$cmdstatus)
+{
+	CondorTest::debug("Test failure due to Condor Tool Failure<$rmcmd>\n",$debuglevel);
+	exit(1)
+}
+
 
 if($bail == 1) {
 CondorTest::RegisterResult(0);
