@@ -658,6 +658,17 @@ if (LINUX AND NOT PROPER)
 	set( DLOPEN_SECURITY_LIBS TRUE )
 endif()
 
+################################################################################
+# Various externals rely on make, even if we're not using
+# Make.  Ensure we have a usable, reasonable default for them.
+if(${CMAKE_GENERATOR} STREQUAL "Unix Makefiles")
+	set( MAKE $(MAKE) )
+else ()
+	include (ProcessorCount)
+	ProcessorCount(NUM_PROCESSORS)
+	set( MAKE make -j${NUM_PROCESSORS} )
+endif()
+
 ###########################################
 #if (NOT MSVC11) 
 #endif()
