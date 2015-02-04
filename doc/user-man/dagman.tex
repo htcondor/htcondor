@@ -2773,8 +2773,10 @@ it did not.
 
 \index{DAGMan!DAG recovery}
 \index{DAGMan!difference between Rescue DAG and DAG recovery}
-DAG recovery restores the state of a DAG by reading the \File{.nodes.log}
+DAG recovery restores the state of a DAG upon resubmission.
+Recovery is accomplished by reading the \File{.nodes.log}
 file that is used to enforce the dependencies of the DAG.
+The DAG can then continue towards completion.
 
 Recovery is different than a Rescue DAG.
 Recovery is appropriate when no Rescue DAG has been created.
@@ -2784,7 +2786,40 @@ or if the \Condor{schedd} daemon crashes,
 or if the \Condor{dagman} job crashes,
 or if the \Condor{dagman} job is placed on hold.
 
-\MoreTodo
+Much of the time, when a not-completed DAG is re-submitted,
+it will automatically be placed into recovery mode
+due to the existence and contents of a lock file created as the DAG
+is first run.
+In recovery mode, the \File{.nodes.log} is used to identify
+nodes that have completed and should not be re-submitted.
+
+DAGMan can be told to work in recovery mode by including the
+\Opt{-DoRecovery} option on the command line, as in the example
+\begin{verbatim}
+    condor_submit_dag diamond.dag -DoRecovery
+\end{verbatim}
+where \File{diamond.dag} is the name of the DAG input file.
+
+When debugging a DAG in which something has gone wrong,
+a first determination is whether a resubmission will
+use a Rescue DAG or benefit from recovery.
+The existence of a Rescue DAG means that recovery would be inappropriate.
+A Rescue DAG is has a file name ending in \File{.rescue<XXX>},
+where \Expr{<XXX>} is replaced by a 3-digit number.
+
+Determine if a DAG ever completed 
+(independent of whether it was successful or not) 
+by looking at the last lines of the \File{.dagman.out} file.
+If there is a line similar to
+\begin{verbatim}
+  (condor_DAGMAN) pid 445 EXITING WITH STATUS 0
+\end{verbatim}
+then the DAG completed.
+This line explains that the \Condor{dagman} job finished normally.
+If there is no line similar to this at the end of the \File{.dagman.out} file,
+and output from \Condor{q} shows that the \Condor{dagman} job for
+the DAG being debugged is not in the queue,
+then recovery is indicated.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Visualizing DAGs with \Prog{dot}}

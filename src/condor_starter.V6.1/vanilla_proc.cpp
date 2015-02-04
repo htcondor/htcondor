@@ -478,12 +478,10 @@ VanillaProc::StartJob()
 		mount_under_scratch = buf.StrDup();
 	}
 	if (mount_under_scratch) {
-
 		std::string working_dir = Starter->GetWorkingDir();
 
 		if (IsDirectory(working_dir.c_str())) {
 			StringList mount_list(mount_under_scratch);
-			free(mount_under_scratch);
 
 			mount_list.rewind();
 			if (!fs_remap) {
@@ -528,6 +526,7 @@ VanillaProc::StartJob()
 			delete fs_remap;
 			return FALSE;
 		}
+		free(mount_under_scratch);
 	}
 
 #if defined(LINUX)
