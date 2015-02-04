@@ -134,8 +134,6 @@ BOOST_PYTHON_MODULE(classad)
     def("Function", boost::python::raw_function(function, 1));
     def("Attribute", attribute, "Convert a string to a ClassAd reference.");
 
-    def("register", registerFunction, "Register a python function as a ClassAd function.", (boost::python::arg("function"), boost::python::arg("name")=boost::python::object()));
-
     class_<ClassAdWrapper, boost::noncopyable>("ClassAd", "A classified advertisement.")
         .def(init<std::string>())
         .def(init<boost::python::dict>())
@@ -223,7 +221,5 @@ BOOST_PYTHON_MODULE(classad)
         &classad_from_python_dict::convertible,
         &classad_from_python_dict::construct,
         boost::python::type_id<ClassAdWrapper>());
-
-    boost::python::scope().attr("_registered_functions") = boost::python::dict();
 
 }
