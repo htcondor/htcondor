@@ -3997,7 +3997,6 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	PROC_ID a_job;
 	int tid;
 	char *peer_version = NULL;
-	std::ostringstream job_ids;
 	std::string job_ids_string;
 
 		// make sure this connection is authenticated, and we know who
@@ -4111,7 +4110,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					// is allowed to transfer data to/from a job.
 				if (OwnerCheck(a_job.cluster,a_job.proc)) {
 					(*jobs)[i] = a_job;
-					job_ids << a_job.cluster << "." << a_job.proc << ", ";
+					formatstr_cat(job_ids_string, "%d.%d, ", a_job.cluster, a_job.proc);
 
 						// Must not allow stagein to happen more than
 						// once, because this could screw up
@@ -4163,7 +4162,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 				 	OwnerCheck(a_job.cluster, a_job.proc) )
 				{
 					(*jobs)[JobAdsArrayLen++] = a_job;
-					job_ids << a_job.cluster << "." << a_job.proc << ", ";
+					formatstr_cat(job_ids_string, "%d.%d, ", a_job.cluster, a_job.proc);
 				}
 				tmp_ad = GetNextJobByConstraint(constraint_string,0);
 			}
@@ -4189,8 +4188,9 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 	rsock->end_of_message();
 
-	job_ids_string = job_ids.str();
-	job_ids_string.erase(job_ids_string.length()-2,2); //Get rid of the extraneous ", "
+	if (job_ids_string.length() > 2) {
+		job_ids_string.erase(job_ids_string.length()-2,2); //Get rid of the extraneous ", "
+	}
 	dprintf( D_AUDIT, *rsock, "Transferring files for jobs %s\n", 
 			 job_ids_string.c_str());
 
