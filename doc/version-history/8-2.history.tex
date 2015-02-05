@@ -76,6 +76,19 @@ Windows desktop when configuration variable
 \Macro{USE\_VISIBLE\_DESKTOP} was enabled.
 \Ticket{4815}
 
+\item Fixed a problem with the python bindings where calling \Code{list()}
+on specific forms of \texttt{ExprTree} would cause an infinite loop.
+\Ticket{4737}
+
+\item Fixed a rare bug where session invalidations would be attempted
+to be sent via UDP when no UDP socket was available.
+\Ticket{4556}
+
+\item The regular expression that is used to exclude files from being
+interpreted in the configuration directory has been augmented to also
+exclude backup files left by CFEngine and \Prog{dpkg}.
+\Ticket{4760}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
