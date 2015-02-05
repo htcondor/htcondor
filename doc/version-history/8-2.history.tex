@@ -76,17 +76,19 @@ Windows desktop when configuration variable
 \Macro{USE\_VISIBLE\_DESKTOP} was enabled.
 \Ticket{4815}
 
-\item Fixed a problem with the python bindings where calling \Code{list()}
-on specific forms of \texttt{ExprTree} would cause an infinite loop.
+\item Fixed a problem with the python bindings in which an
+invocation of function \Procedure{list}
+on specific forms of an \texttt{ExprTree} object would cause an infinite loop.
 \Ticket{4737}
 
-\item Fixed a rare bug where session invalidations would be attempted
-to be sent via UDP when no UDP socket was available.
+\item Fixed a rare bug in which an attempt to send session invalidations 
+via UDP occurred when no UDP socket was available.
 \Ticket{4556}
 
-\item The regular expression that is used to exclude files from being
-interpreted in the configuration directory has been augmented to also
-exclude backup files left by CFEngine and \Prog{dpkg}.
+\item A regular expression specifies files within a configuration directory 
+to be ignored when reading the HTCondor configuration.
+This regular expression has been expanded to also
+ignore backup files left by CFEngine and \Prog{dpkg}.
 \Ticket{4760}
 
 \end{itemize}
