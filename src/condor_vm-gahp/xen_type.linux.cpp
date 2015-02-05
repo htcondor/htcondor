@@ -236,7 +236,7 @@ VirshType::Shutdown()
 		    virErrorPtr err = virConnGetLastError(m_libvirt_connection);
 		    if (err && err->code != VIR_ERR_NO_DOMAIN)
 		      {
-			vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), (err ? err->message : "No reason found"));
+			vmprintf(D_ALWAYS, "Error finding domain %s: %s\n", m_vm_name.Value(), err->message);
 			return false;
 		      }
 		  }
