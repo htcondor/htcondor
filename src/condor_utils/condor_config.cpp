@@ -86,7 +86,14 @@
 #include "param_info.h"
 #include "param_info_tables.h"
 #include "Regex.h"
+#include "filename_tools.h"
+#include "which.h"
 #include <algorithm> // for std::sort
+
+#ifdef WIN32
+// Note inversion of argument order...
+#define realpath(path,resolved_path) _fullpath((resolved_path),(path),_MAX_PATH)
+#endif
 
 // define this to keep param who's values match defaults from going into to runtime param table.
 #define DISCARD_CONFIG_MATCHING_DEFAULT
@@ -3601,4 +3608,78 @@ param_functions* get_param_functions()
 	config_p_funcs.set_param_int_func(&param_integer);
 
 	return &config_p_funcs;
+}
+
+/* Take a param which is the name of an executable, and safely expand it
+ * if required to a full pathname by searching the PATH environment.
+ * Useful for seting an entry in the param table like "MAIL=mailx", and
+ * then this function will expand it to "/bin/mailx" or "/usr/bin/mailx".
+ * If the path cannot be expanded safely (to something that could be execed
+ * by root), then NULL is returned.  For instance using the MAIL example,
+ * this function would not expand the path to "/tmp/mailx" even if /tmp
+ * is somehow in the path. Like param(), if the return value is not NULL,
+ * it must be freed() by the caller.
+ */
+char *
+param_with_full_path(const char *name)
+{
+	char * real_path = NULL;
+
+	if (!name || (name && !name[0])) {
+		return NULL;
+	}
+
+	// lookup name in param table first, so admins can configure what they want
+	char * command = param(name);
+	if (command && !command[0]) {
+		// treat empty string as a NULL
+		free(command);
+		command = NULL;
+	}
+
+	// if not found in the param table, just use the value of name as the command.
+	if ( command == NULL ) {
+		command = strdup(name);
+	}
+
+	if (command && !fullpath(command)) {
+		// Fullpath unknown, so we will try and find it ourselves.
+		// Search the PATH for it, and if found, confirm that the path is "safe"
+		// for a privledged user to run.  "safe" means ok to exec as root,
+		// so either path starts with /bin, /usr, etc, ie
+		// the path is not writeable by any user other than root.
+		// Store the result back into the param table so we don't repeat
+		// operation every time we are invoked, and so result can be
+		// inspected with condor_config_val.
+		MyString p = which(command
+#ifndef WIN32
+			// on UNIX, always include system path entries
+			, "/bin:/usr/bin:/sbin:/usr/sbin"
+#endif
+			);
+		free(command);
+		command = NULL;
+		if ((real_path = realpath(p.Value(),NULL))) {
+			p = real_path;
+			free(real_path);
+			if (
+#ifndef WIN32
+				p.find("/usr/")==0 ||
+				p.find("/bin/")==0 ||
+				p.find("/sbin/")==0
+#else
+				p.find("\\Windows\\")==0 ||
+				(p[1]==':' && p.find("\\Windows\\")==2)  // ie C:\Windows
+#endif
+			)
+			{
+				// we have a full path, and it looks safe.
+				// restash command as the full path into config table.
+				command = strdup( p.Value() );
+				config_insert(name,command);
+			}
+		}
+	}
+
+	return command;
 }
