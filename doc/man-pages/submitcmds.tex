@@ -734,7 +734,7 @@ that can be used in the ClassAd expression.
 \label{man-condor-submit-dont-encrypt-input-files}
 \item[dont\_encrypt\_input\_files = $<$ file1,file2,file... $>$] 
 A comma and/or space separated list of input files that are \emph{not} to be
-encrypted when transferred with the file transfer mechanism.
+network encrypted when transferred with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
 use encryption.
 Each input file must also be in the list given by
@@ -752,7 +752,7 @@ A single wild card character (\Expr{*}) may be used in each file name.
 \label{man-condor-submit-dont-encrypt-output-files}
 \item[dont\_encrypt\_output\_files = $<$ file1,file2,file... $>$] 
 A comma and/or space separated list of output files that are \emph{not} to be
-encrypted when transferred back with the file transfer mechanism.
+network encrypted when transferred back with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
 use encryption.
 The output file(s) must also either be in the list given by
@@ -771,7 +771,7 @@ A single wild card character (\Expr{*}) may be used in each file name.
 \label{man-condor-submit-encrypt-input-files}
 \item[encrypt\_input\_files = $<$ file1,file2,file... $>$] 
 A comma and/or space separated list of input files that are to be
-encrypted when transferred with the file transfer mechanism.
+network encrypted when transferred with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
 \emph{not} use encryption.
 Each input file must also be in the list given by
@@ -781,7 +781,7 @@ this specifies the path to the file on the submit side.
 A single wild card character (\Expr{*}) may be used in each file name.
 The method of encryption utilized will be as agreed upon in security
 negotiation; if that negotiation failed, then the file transfer
-mechanism must also fail for files to be encrypted.
+mechanism must also fail for files to be network encrypted.
 
 %%%%%%%%%%%%%%%%%%%
 %% encrypt_output_files
@@ -792,7 +792,7 @@ mechanism must also fail for files to be encrypted.
 \label{man-condor-submit-encrypt-output-files}
 \item[encrypt\_output\_files = $<$ file1,file2,file... $>$] 
 A comma and/or space separated list of output files that are to be
-encrypted when transferred back with the file transfer mechanism.
+network encrypted when transferred back with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
 \emph{not} use encryption.
 The output file(s) must also either be in the list given by
@@ -803,7 +803,31 @@ this specifies the path to the file on the execute side.
 A single wild card character (\Expr{*}) may be used in each file name.
 The method of encryption utilized will be as agreed upon in security
 negotiation; if that negotiation failed, then the file transfer
-mechanism must also fail for files to be encrypted.
+mechanism must also fail for files to be network encrypted.
+
+%%%%%%%%%%%%%%%%%%%
+%% encrypt_execute_directory
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!encrypt\_execute\_directory}
+\label{man-condor-submit-encrypt-execute-directory}
+\item[encrypt\_execute\_directory = $<$True \Bar\ False$>$]
+Defaults to \Expr{False}. If set to \Expr{True}, then HTCondor will encrypt the
+contents of
+the remote scratch directory of the machine where the job is executed.
+This encryption is transparent to the job itself, but ensures that
+if files are left behind on the local disk of the execute machine (perhaps
+due to a system crash), they will remain private.
+In addition, if enabled, \Condor{submit} will append by default
+the expression
+\begin{verbatim}
+  && (TARGET.HasEncryptExecuteDirectory)
+\end{verbatim}
+to the \SubmitCmd{requirements} expression for the job to ensure
+the job is matched to a machine that is capable of encrypting the
+contents of the execute directory.  Currently this is limited
+to either Windows machines using the NTFS file system, or Linux
+machines with the ecryptfs-utils package installed.
 
 %%%%%%%%%%%%%%%%%%%
 %% max_transfer_input_mb
