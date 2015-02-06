@@ -10214,6 +10214,11 @@ Scheduler::child_exit(int pid, int status)
 				// we are preserving the claim for reconnect, then
 				// do not delete the claim.
 			 keep_claim = srec_keep_claim_attributes;
+
+			if ( srec->is_reconnect && !srec->reconnect_succeeded ) {
+				 scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+				 scheduler.stats.JobsRestartReconnectsUnknown += 1;
+			}
 		}
 		
 			// We always want to delete the shadow record regardless 
@@ -10379,6 +10384,9 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
 		scheduler.stats.JobsRestartReconnectsFailed += 1;
 		scheduler.stats.JobsRestartReconnectsBadput += job_running_time;
+	} else if ( srec->is_reconnect && !srec->reconnect_succeeded ) {
+		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+		scheduler.stats.JobsRestartReconnectsUnknown += 1;
 	}
 	switch( exit_code ) {
 		case JOB_NO_MEM:
@@ -12987,7 +12995,7 @@ Scheduler::sendAlives()
 				ASSERT( srec );
 				mrec->needs_release_claim = false;
 				DelMrec( mrec );
-				jobExitCode( srec->job_id, JOB_SHOULD_REQUEUE );
+				jobExitCode( srec->job_id, JOB_RECONNECT_FAILED );
 				srec->exit_already_handled = true;
 				daemonCore->Send_Signal( srec->pid, SIGKILL );
 			}

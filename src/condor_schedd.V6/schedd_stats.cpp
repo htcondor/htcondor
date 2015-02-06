@@ -197,6 +197,7 @@ void ScheddStatistics::InitMain()
    SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsLeaseExpired, IF_BASICPUB);
    SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsSucceeded, IF_BASICPUB);
    SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsAttempting, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsUnknown, IF_BASICPUB);
    SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsBadput, IF_BASICPUB);
 
    // SCHEDD runtime stats for various expensive processes

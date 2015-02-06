@@ -116,6 +116,9 @@ typedef struct ScheddStatistics : public ScheddJobCounters {
    stats_entry_abs<int> JobsRestartReconnectsSucceeded;
    // How many reconnect attempts are currently in progress.
    stats_entry_abs<int> JobsRestartReconnectsAttempting;
+   // How many reconnect attempts ended with the shadow exiting without
+   // telling the schedd whether the reconnect succeeded.
+   stats_entry_abs<int> JobsRestartReconnectsUnknown;
    // How much cumulative job runtime was lost due to failure to
    // reconnect to running jobs.
    stats_histogram<time_t> JobsRestartReconnectsBadput;
