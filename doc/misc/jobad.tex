@@ -618,6 +618,15 @@ data that can be accessed by the virtual machine.
 list of job ClassAd attributes. For each attribute name in the list,
 its value will be included in the e-mail notification upon job completion.
 
+%%% ClassAd attribute: EncryptExecuteDirectory
+\index{ClassAd job attribute!EncryptExecuteDirectory}
+\index{EncryptExecuteDirectory!job ClassAd attribute}
+\item[\AdAttr{EncryptExecuteDirectory}:]
+Boolean taken from the submit description file command
+\SubmitCmd{encrypt\_execute\_directory}. Specifies if HTCondor
+should encrypt the remote scratch directory on the machine where
+the job executes.
+
 %%% ClassAd attribute: EnteredCurrentStatus
 \index{ClassAd job attribute!EnteredCurrentStatus}
 \index{EnteredCurrentStatus!job ClassAd attribute}
