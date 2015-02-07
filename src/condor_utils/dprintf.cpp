@@ -1569,11 +1569,11 @@ _condor_fd_panic( int line, const char* file )
 		(void)close( i );
 	}
 
-	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+	it = DebugLogs->begin();
+	if (it != DebugLogs->end())
 	{
 		filePath = (*it).logPath;
 		fileExists = true;
-		break;
 	}
 	if( fileExists ) {
 		debug_file_ptr = safe_fopen_wrapper_follow(filePath.c_str(), "a", 0644);
