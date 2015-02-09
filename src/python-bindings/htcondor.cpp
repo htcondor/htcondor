@@ -23,6 +23,9 @@ BOOST_PYTHON_MODULE(htcondor)
     export_schedd();
     export_dc_tool();
     export_secman();
+#if !defined(WIN32)
+	// omit for windows
     export_event_reader();
     export_log_reader();
+#endif
 }

@@ -465,13 +465,23 @@ VanillaProc::StartJob()
 	// On Linux kernel 2.4.19 and later, we can give each job its
 	// own FS mounts.
 	char * mount_under_scratch = param("MOUNT_UNDER_SCRATCH");
+	// if execute dir is encrypted, add /tmp and /var/tmp to mount_under_scratch
+	bool encrypt_execdir = false;
+	JobAd->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
+	if (encrypt_execdir || param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY",false)) {
+		// prepend /tmp, /var/tmp to whatever admin wanted. don't worry
+		// if admin already listed /tmp etc - subdirs can appear twice
+		// in this list because AddMapping() ok w/ duplicate entries
+		MyString buf("/tmp,/var/tmp,");
+		buf += mount_under_scratch;
+		free(mount_under_scratch);
+		mount_under_scratch = buf.StrDup();
+	}
 	if (mount_under_scratch) {
-
 		std::string working_dir = Starter->GetWorkingDir();
 
 		if (IsDirectory(working_dir.c_str())) {
 			StringList mount_list(mount_under_scratch);
-			free(mount_under_scratch);
 
 			mount_list.rewind();
 			if (!fs_remap) {
@@ -493,15 +503,18 @@ VanillaProc::StartJob()
 						delete [] full_dir; full_dir = NULL;
 						if (!mkdir_and_parents_if_needed( full_dir_str.c_str(), S_IRWXU, PRIV_USER )) {
 							dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir_str.c_str());
+							delete fs_remap;
 							return FALSE;
 						}
 						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir_str.c_str(), next_dir_str.c_str());
 						if (fs_remap->AddMapping(full_dir_str, next_dir_str)) {
 							// FilesystemRemap object prints out an error message for us.
+							delete fs_remap;
 							return FALSE;
 						}
 					} else {
 						dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", working_dir.c_str(), next_dir_str.c_str());
+						delete fs_remap;
 						return FALSE;
 					}
 				} else {
@@ -510,8 +523,10 @@ VanillaProc::StartJob()
 			}
 		} else {
 			dprintf(D_ALWAYS, "Unable to perform mappings because %s doesn't exist.\n", working_dir.c_str());
+			delete fs_remap;
 			return FALSE;
 		}
+		free(mount_under_scratch);
 	}
 
 #if defined(LINUX)

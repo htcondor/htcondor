@@ -367,13 +367,13 @@ class RemoteErrorEvent : public ULogEvent
 	RemoteErrorEvent(void);
 	~RemoteErrorEvent(void);
 
-    /** Read the body of the next Generic event.
+    /** Read the body of the next RemoteError event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Generic event.
+    /** Write the body of the next RemoteError event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
@@ -555,7 +555,7 @@ class ExecutableErrorEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
-	/** Return a ClassAd representation of this ExecutableErroEvent.
+	/** Return a ClassAd representation of this ExecutableErrorEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
 	virtual ClassAd* toClassAd(void);
@@ -711,13 +711,13 @@ class JobEvictedEvent : public ULogEvent
     ///
     ~JobEvictedEvent(void);
 
-    /** Read the body of the next Evicted event.
+    /** Read the body of the next JobEvicted event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Evicted event.
+    /** Write the body of the next JobEvicted event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
@@ -873,13 +873,13 @@ class JobTerminatedEvent : public TerminatedEvent
     ///
     ~JobTerminatedEvent(void);
 
-    /** Read the body of the next Terminated event.
+    /** Read the body of the next JobTerminated event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Terminated event.
+    /** Write the body of the next JobTerminated event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
@@ -905,13 +905,13 @@ class NodeTerminatedEvent : public TerminatedEvent
     ///
     ~NodeTerminatedEvent(void);
 
-    /** Read the body of the next Terminated event.
+    /** Read the body of the next NodeTerminated event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Terminated event.
+    /** Write the body of the next NodeTerminated event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
@@ -940,13 +940,13 @@ class PostScriptTerminatedEvent : public ULogEvent
     ///
     ~PostScriptTerminatedEvent(void);
 
-    /** Read the body of the next Terminated event.
+    /** Read the body of the next PostScriptTerminated event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     int readEvent( FILE* file );
 
-    /** Write the body of the next Terminated event.
+    /** Write the body of the next PostScriptTerminated event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
@@ -997,13 +997,13 @@ class GlobusSubmitEvent : public ULogEvent
     ///
     ~GlobusSubmitEvent(void);
 
-    /** Read the body of the next Submit event.
+    /** Read the body of the next GlobusSubmit event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Submit event.
+    /** Write the body of the next GlobusSubmit event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
@@ -1030,7 +1030,7 @@ class GlobusSubmitEvent : public ULogEvent
 };
 
 //----------------------------------------------------------------------------
-/** Framework for a GlobusSubmitiAbortedEvent object.  Occurs when a Globus 
+/** Framework for a GlobusSubmitFailedEvent object.  Occurs when a Globus 
 	Universe job is is removed from the queue because it was unable to be
 	sucessfully submitted to a Globus Gatekeeper after a certain number of 
 	attempts.
@@ -1043,13 +1043,13 @@ class GlobusSubmitFailedEvent : public ULogEvent
     ///
     ~GlobusSubmitFailedEvent(void);
 
-    /** Read the body of the next SubmitAborted event.
+    /** Read the body of the next GlobusSubmitFailed event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next SubmitAborted event.
+    /** Write the body of the next GlobusSubmitFailed event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
@@ -1078,13 +1078,13 @@ class GlobusResourceUpEvent : public ULogEvent
     ///
     ~GlobusResourceUpEvent(void);
 
-    /** Read the body of the next ResoruceUp event.
+    /** Read the body of the next GlobusResourceUp event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next SubmitAborted event.
+    /** Write the body of the next GlobusResourceUp event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
@@ -1113,13 +1113,13 @@ class GlobusResourceDownEvent : public ULogEvent
     ///
     ~GlobusResourceDownEvent(void);
 
-    /** Read the body of the next SubmitAborted event.
+    /** Read the body of the next GlobusResourceDown event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next SubmitAborted event.
+    /** Write the body of the next GlobusResourceDown event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
@@ -1152,19 +1152,19 @@ class JobImageSizeEvent : public ULogEvent
     ///
     ~JobImageSizeEvent(void);
 
-    /** Read the body of the next ImageSize event.
+    /** Read the body of the next JobImageSize event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next ImageSize event.
+    /** Write the body of the next JobImageSize event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
 
-	/** Return a ClassAd representation of this JobImageSizeEvent.
+	/** Return a ClassAd representation of this JobImageSize.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
 	virtual ClassAd* toClassAd(void);
@@ -1315,13 +1315,13 @@ class JobHeldEvent : public ULogEvent
     ///
     ~JobHeldEvent (void);
 
-    /** Read the body of the next JobHeldEvent event.
+    /** Read the body of the next JobHeld event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next JobHeldEvent event.
+    /** Write the body of the next JobHeld event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
@@ -1369,13 +1369,13 @@ class JobReleasedEvent : public ULogEvent
     ///
     ~JobReleasedEvent (void);
 
-    /** Read the body of the next JobReleasedEvent event.
+    /** Read the body of the next JobReleased event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next JobReleasedEvent event.
+    /** Write the body of the next JobReleased event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
@@ -1412,13 +1412,13 @@ class NodeExecuteEvent : public ULogEvent
     ///
     ~NodeExecuteEvent(void);
 
-    /** Read the body of the next Execute event.
+    /** Read the body of the next NodeExecute event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Execute event.
+    /** Write the body of the next NodeExecute event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
@@ -1448,7 +1448,7 @@ class NodeExecuteEvent : public ULogEvent
 
 
 //----------------------------------------------------------------------------
-/** JobConnectionEvent object.
+/** JobDisconnectedEvent object.
 	This subclass of ULogEvent is a base class used for the various
 	userlog events related to the connection between the submit and
 	execute hosts being lost (and potentially re-established).
@@ -1648,13 +1648,13 @@ class GridSubmitEvent : public ULogEvent
     ///
     ~GridSubmitEvent(void);
 
-    /** Read the body of the next Submit event.
+    /** Read the body of the next GridSubmit event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Submit event.
+    /** Write the body of the next GridSubmit event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
@@ -1688,13 +1688,13 @@ class JobAdInformationEvent : public ULogEvent
     ///
     ~JobAdInformationEvent(void);
 
-    /** Read the body of the next Generic event.
+    /** Read the body of the next JobAdInformation event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Generic event.
+    /** Write the body of the next JobAdInformation event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
@@ -1702,7 +1702,7 @@ class JobAdInformationEvent : public ULogEvent
 
 	int writeEvent (FILE *, ClassAd *jobad_arg);
 
-	/** Return a ClassAd representation of this GenericEvent.
+	/** Return a ClassAd representation of this JobAdInformationEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
 	virtual ClassAd* toClassAd(void);
@@ -1926,13 +1926,13 @@ class PreSkipEvent : public ULogEvent
     ///
     ~PreSkipEvent(void);
 
-    /** Read the body of the next Submit event.
+    /** Read the body of the next PreSkip event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Submit event.
+    /** Write the body of the next PreSkip event.
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */

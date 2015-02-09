@@ -605,9 +605,9 @@ bool SSHToJob::execute_ssh()
 		remote_host = slot_name;
 	}
 
-	char const *local_username = my_username();
+	char *local_username = my_username();
 	if( !local_username ) {
-		local_username = "unknown";
+		local_username = strdup("unknown");
 	}
 
 	char const *temp_dir = getenv("TMP");
@@ -629,8 +629,12 @@ bool SSHToJob::execute_ssh()
 		}
 		logError("Failed to create ssh session dir %s: %s\n",
 				m_session_dir.Value(),strerror(errno));
+		free(local_username);
 		return false;
 	}
+
+	free(local_username);
+
 	if( m_session_dir.IsEmpty() ) {
 		logError("Failed to create ssh session dir in %u tries.\n",num);
 		return false;
@@ -832,6 +836,7 @@ bool SSHToJob::execute_ssh()
 					new_arg += known_hosts_file;
 				}
 				else {
+					deleteStringArray(argarray);
 					logError("Unexpected %%%c in ssh command: %s\n",
 							 *ptr ? *ptr : ' ', ssh_cmd.Value());
 					return false;

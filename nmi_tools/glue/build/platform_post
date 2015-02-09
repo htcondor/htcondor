@@ -48,9 +48,6 @@ GetOptions('without-tests'   => \$opt_without_tests,
 system("tar xf results.tar.gz public/cov-data");
 
 if (-d "public/cov-data") {
-	$ENV{PATH} = "$ENV{PATH}:/home/condorauto/coverity/cov-sa-linux64-5.5.3/bin";
-	system("cov-manage-emit --dir public/cov-data reset-host-name");
-	system("cov-commit-defects --dir public/cov-data --stream htcondor --host localhost --user admin --password `cat /home/condorauto/coverity/.p`");
 	system("rm -fr public");
 }
 

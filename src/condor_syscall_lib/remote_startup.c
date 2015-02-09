@@ -288,6 +288,8 @@ MAIN( int argc, char *argv[], char **envp )
 		}
 
 
+#if 0
+
 			/* 
 			   '-_condor_cmd_file filename' is used to specify a file
 			   where we're supposed to read our command stream from.
@@ -308,6 +310,7 @@ MAIN( int argc, char *argv[], char **envp )
 			}
 			continue;
 		}
+#endif
 
 			/*
 			  '-_condor_debug_wait' can be set to setup an infinite

@@ -15,6 +15,8 @@ void export_daemon_and_ad_types()
         .value("Startd", DT_STARTD)
         .value("Collector", DT_COLLECTOR)
         .value("Negotiator", DT_NEGOTIATOR)
+        .value("HAD", DT_HAD)
+        .value("Generic", DT_GENERIC)
         ;
 
     enum_<AdTypes>("AdTypes")
@@ -26,5 +28,9 @@ void export_daemon_and_ad_types()
         .value("Master", MASTER_AD)
         .value("Collector", COLLECTOR_AD)
         .value("Negotiator", NEGOTIATOR_AD)
+        .value("Submitter", SUBMITTOR_AD)
+        .value("Grid", GRID_AD)
+        .value("HAD", HAD_AD)
+        .value("License", LICENSE_AD)
         ;
 }

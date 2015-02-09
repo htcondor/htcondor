@@ -91,15 +91,23 @@ The key can be used to log into the virtual machine.
 Note that modification will also be needed of the firewall
 rules for the job to incoming SSH connections.
 
-An EC2 service uses a firewall to restrict network access to 
+An EC2 service uses a firewall to restrict network access to
 the virtual machine instances it runs.
 Typically, no incoming connections are allowed.
 One can define sets of firewall rules and give them names.
-The EC2 API calls these security groups. 
+The EC2 API calls these security groups.
 If utilized, tell HTCondor what set of security
 groups should be applied to each VM using the
 \SubmitCmd{ec2\_security\_groups} submit description file command.
 If not provided, HTCondor uses the security group \SubmitCmdNI{default}.
+This command specifies security group names; to specify IDs, use
+\SubmitCmd{ec2\_security\_ids}.  This may be necessary when specifying
+a Virtual Private Cloud (VPC) instance.
+
+To run an instance in a VPC, 
+set \SubmitCmd{ec2\_vpc\_subnet} to the the desired VPC's specification string.
+The instance's IP address 
+may also be specified by setting \SubmitCmd{ec2\_vpc\_id}.
 
 The EC2 API allows the choice of different hardware configurations 
 for instances to run on.
@@ -137,6 +145,11 @@ If both options are used, the two blocks of
 data are concatenated, with the data from \SubmitCmdNI{ec2\_user\_data} 
 occurring first.  HTCondor performs the base64 encoding that EC2 expects on 
 the data.
+
+Amazon also offers an Identity and Access Management (IAM) service.
+To specify an IAM (instance) profile for an EC2 job, 
+use submit commands
+\SubmitCmd{ec2\_iam\_profile\_name} or \SubmitCmd{ec2\_iam\_profile\_arn}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:EC2-termination}Termination of EC2 Jobs}
@@ -205,6 +218,30 @@ the cloud service will terminate the instance.
 More information about Amazon's spot instances is available at
 \URL{http://aws.amazon.com/ec2/spot-instances/}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Amazon-parameters}Advanced Usage}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Additional control of EC2 instances is available in the form
+of permitting the
+direct specification of instance creation parameters.  
+To set an instance creation parameter, 
+first list its name in the submit command \SubmitCmd{ec2\_parameter\_names},
+a space or comma separated list.  
+The parameter may need to be properly capitalized.  
+Also tell HTCondor the parameter's value, 
+by specifying it as a submit command whose name begins with
+\SubmitCmdNI{ec2\_parameter\_}; dots within the parameter name must be
+written as underscores in the submit command name.
+
+For example, the submit description file commands
+to set parameter \texttt{IamInstanceProfile.Name} 
+to value \texttt{ExampleProfile} are
+
+\begin{verbatim}
+ec2_parameter_names = IamInstanceProfile.Name
+ec2_parameter_IamInstanceProfile_Name = ExampleProfile
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Amazon-config}EC2 Configuration Variables}

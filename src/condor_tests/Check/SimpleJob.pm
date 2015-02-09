@@ -21,14 +21,15 @@ package SimpleJob;
 
 use CondorTest;
 my $timeout = 0;
-my $defaulttimeout = 240;
+my $defaulttimeout = 300;
 $timeout = $defaulttimeout;
 
 $timed_callback = sub
 {
+	my $now = CondorTest::timestamp();
 	print "SimpleJob timeout expired!\n";
 	CondorTest::RegisterResult( 0, %args );
-    die "Test failed from timeout expiring\n";
+    die "$now Test failed from timeout expiring\n";
 };
 
 $submitted = sub
@@ -55,11 +56,30 @@ sub RunCheck
 	my $availableslots = 0;
     my $result = 0;
 
+################################################################################
+#
+#
+# NOTE: In general there are callbacks requiring action and variable changes
+# in the main test file. You can only use no_wait to fork for running really
+# simple jobs like start a job that runs forever or start a job on hold.
+#
+# ANYTHING ELSE WILL NOT WORK AS YOU EXPECT	(bt 1/10/15)
+#
+#
+################################################################################
+
+	if($args{no_wait}) {
+		my $pid = fork();
+		if($pid != 0) {
+			return(0);
+		}
+	}
+	
 	my $queuesz = $args{queue_sz} || 1;
 
 	if($args{check_slots}) {
 		# Make sure we never try to start more jobs then slots we have!!!!!!
-		$availableslots = ExamineSlots(queuesz);
+		$availableslots = ExamineSlots($args{check_slots});
 	
 		if($availableslots < $queuesz) {
     		CondorTest::RegisterResult( $result, %args );
@@ -79,6 +99,7 @@ sub RunCheck
 	if($error eq "*") {
 		$error = "$testname.err";
 	}
+    my $requirements = $args{requirements} || "";
     my $streamoutput = $args{stream_output} || "";
     my $append_submit_commands = $args{append_submit_commands} || "";
     my $grid_resource = $args{grid_resource} || "";
@@ -202,6 +223,9 @@ sub RunCheck
 	if($args{request_memory}) {
 		print SUBMIT "request_memory = $args{request_memory}\n";
 	}
+	if($requirements ne "") {
+		print SUBMIT "Requirements = $requirements\n";
+	}
 	if($streamoutput ne "") {
 		print SUBMIT "stream_output = $streamoutput\n";
 	}
@@ -231,19 +255,40 @@ sub RunCheck
 
 sub ExamineSlots
 {
+	my $expectedslots = shift;
+	my $slots = $expectedslots;
 	my $line = "";
+	my $timelimit = 30;
+	my $currenttime = 0;
+	my $sleeptime = 3;
+	my $slotcount = 0;
+
+	print "checking for $slots\n";
 
 	my $available = 0;
-	my @jobs = `condor_status`;
-	foreach my $job (@jobs) {
-		chomp($job);
-		$line = $job;
-		if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
-			print "<$4> unclaimed slots\n";
-			$available = $4;
+	my @jobs = ();
+	my $cmd = "condor_status";
+	print "In ExamineSlots\n";
+	# allow some time to stabilize
+	while(($slotcount < $slots) & ($currenttime < $timelimit)) {
+		runCondorTool($cmd,\@jobs,2,{emit_output=>0});
+		foreach my $job (@jobs) {
+			chomp($job);
+			$line = $job;
+			#print "ExamineSlots\n";
+			if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
+				print "<$4> unclaimed slots\n";
+				$available = $4;
+			}
+		}
+		if($avaiilable != $slots) {
+			$slotcount = $available;
+			$currenttime += $sleeptime;
+			sleep($sleeptime);
 		}
 	}
-	return($available);
+	print "ExamineSlots returning $slotcount after $currenttime seconds\n";
+	return($slotcount);
 }
 
 1;

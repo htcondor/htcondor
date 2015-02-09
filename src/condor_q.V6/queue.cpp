@@ -189,6 +189,7 @@ static  bool widescreen = false;
 //static  int  use_old_code = true;
 static  bool expert = false;
 static  bool verbose = false; // note: this is !!NOT the same as -long !!!
+static  int g_match_limit = -1;
 
 static 	int malformed, running, idle, held, suspended, completed, removed;
 
@@ -667,7 +668,7 @@ int main (int argc, char **argv)
 			if (schedd.version()) {
 				CondorVersionInfo v(schedd.version());
 				useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
-				if (v.built_since_version(8, 1, 5)) {
+				if (v.built_since_version(8, 3, 3)) {
 					useFastScheddQuery = 2;
 				}
 			}
@@ -1094,7 +1095,7 @@ int main (int argc, char **argv)
 				MyString scheddVersion;
 				ad->LookupString(ATTR_VERSION, scheddVersion);
 				CondorVersionInfo v(scheddVersion.Value());
-				useFastScheddQuery = v.built_since_version(6,9,3) ? (v.built_since_version(8, 1, 5) ? 2 : 1) : 0;
+				useFastScheddQuery = v.built_since_version(6,9,3) ? (v.built_since_version(8, 3, 3) ? 2 : 1) : 0;
 				retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
 				}
 
@@ -1235,6 +1236,25 @@ processCommandLineArguments (int argc, char *argv[])
 			dash_long = 1;
 			summarize = 0;
 			customHeadFoot = HF_BARE;
+		}
+		else
+		if (is_arg_prefix (arg, "limit", 3)) {
+			if (++i >= argc) {
+				fprintf(stderr, "Error: Argument -limit requires the max number of results as an argument.\n");
+				exit(1);
+			}
+			char *endptr;
+			g_match_limit = strtol(argv[i], &endptr, 10);
+			if (*endptr != '\0')
+			{
+				fprintf(stderr, "Error: Unable to convert argument (%s) to a number for -limit.\n", argv[i]);
+				exit(1);
+			}
+			if (g_match_limit <= 0)
+			{
+				fprintf(stderr, "Error: %d is not a valid for -limit.\n", g_match_limit);
+				exit(1);
+			}
 		}
 		else
 		if (is_arg_prefix (arg, "pool", 1)) {
@@ -1827,6 +1847,9 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			} else {
 				i++;
+				if (userlog_file) {
+					free(userlog_file);
+				}
 				userlog_file = strdup(argv[i]);
 			}
 		}
@@ -1836,6 +1859,9 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			} else {
 				i++;
+				if (machineads_file) {
+					free(machineads_file);
+				}
 				machineads_file = strdup(argv[i]);
 			}
 		}
@@ -1845,6 +1871,9 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			} else {
 				i++;
+				if (userprios_file) {
+					free(userprios_file);
+				}
 				userprios_file = strdup(argv[i]);
 				analyze_with_userprio = true;
 			}
@@ -2168,23 +2197,6 @@ short_header (void)
 			"CMD"
 		);
 	}
-}
-
-#include "HoldReasons.h"
-
-static const char *
-format_hold_reason( const char * holdReason, AttrList *, Formatter & fmt ) {
-	if( fmt.width == 0 || (fmt.options & FormatOptionNoTruncate) ) {
-		return explainHoldReason( holdReason );
-	}
-
-	// Assumes FormatOptionLeftAlign.
-	char * shortExplanation = (char *)malloc( (fmt.width + 1) * sizeof( char ) );
-	for( int i = 0; i < fmt.width; ++i ) { shortExplanation[i] = ' '; }
-	shortExplanation[fmt.width] = '\0';
-	const char * longExplanation = explainHoldReason( holdReason );
-	strncpy( shortExplanation, longExplanation, fmt.width );
-	return shortExplanation;
 }
 
 static const char *
@@ -2748,8 +2760,10 @@ usage (const char *myName, int other)
 		"\t<cluster>\t\tGet information about specific cluster\n"
 		"\t<cluster>.<proc>\tGet information about specific job\n"
 		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
+		"\t-autocluster\tGet information about the SCHEDD's autoclusters\n"
 		"\t-constraint <expr>\tGet information about jobs that match <expr>\n"
 		"    [output-opts] are\n"
+		"\t-limit <num>\t\t\tLimit the number of results to <num>\n"
 		"\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t-currentrun\t\tDisplay times only for current run\n"
 		"\t-debug\t\t\tDisplay debugging info to console\n"
@@ -3155,9 +3169,7 @@ static void init_output_mask()
 		mask.registerFormat (NULL, 11, AltQuestion | AltWide, format_q_date,
 							  ATTR_ENTERED_CURRENT_STATUS /*, "[????????????]"*/);
 		if (widescreen) {
-			mask.registerFormat( NULL, -43,
-				FormatOptionAutoWidth | FormatOptionNoTruncate | FormatOptionAlwaysCall,
-				format_hold_reason, ATTR_HOLD_REASON );
+			mask.registerFormat("%v", -43, FormatOptionAutoWidth | FormatOptionNoTruncate, ATTR_HOLD_REASON );
 		} else {
 			mask.registerFormat("%-43.43s", ATTR_HOLD_REASON);
 		}
@@ -3514,7 +3526,7 @@ static const char * render_job_text(ClassAd *job, std::string & result_text)
 		result_text += buffer_io_display(job);
 	} else if (usingPrintMask) {
 		if (mask.IsEmpty()) return NULL;
-		result_text += mask.display(job);
+		mask.display(result_text, job);
 	} else {
 		result_text += bufferJobShort(job);
 	}
@@ -3724,7 +3736,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	if ((useFastPath == 2) && !use_v3) {
 		useFastPath = 1;
 	}
-	int fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, fetch_opts, pfnProcess, pvProcess, useFastPath, &errstack);
+	int fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack);
 	if (fetchResult != Q_OK) {
 		// The parse + fetch failed, print out why
 		switch(fetchResult) {
@@ -5339,11 +5351,7 @@ static void AddReferencedAttribsToBuffer(
 		pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, attr);
 	}
 	if ( ! pm.IsEmpty()) {
-		char * temp = pm.display(request);
-		if (temp) {
-			return_buf += temp;
-			delete[] temp;
-		}
+		pm.display(return_buf, request);
 	}
 }
 
@@ -5368,8 +5376,8 @@ static void AddTargetReferencedAttribsToBuffer(
 	if (pm.IsEmpty())
 		return;
 
-	char * temp = pm.display(request, target);
-	if (temp) {
+	std::string temp;
+	if (pm.display(temp, request, target) > 0) {
 		//return_buf += "\n";
 		//return_buf += pindent;
 		std::string name;
@@ -5385,7 +5393,6 @@ static void AddTargetReferencedAttribsToBuffer(
 		return_buf += name;
 		return_buf += " has the following attributes:\n\n";
 		return_buf += temp;
-		delete[] temp;
 	}
 }
 
@@ -6398,7 +6405,6 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, format_cpu_time, NULL },
-	{ "HOLD_REASON",     ATTR_HOLD_REASON, format_hold_reason, NULL },
 	{ "JOB_DESCRIPTION", ATTR_JOB_CMD, format_job_description, ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
 	{ "JOB_STATUS",      ATTR_JOB_STATUS, format_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_INPUT "\0" },
 	{ "MEMORY_USAGE",    ATTR_IMAGE_SIZE, format_memory_usage, ATTR_MEMORY_USAGE "\0" },

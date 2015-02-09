@@ -3107,7 +3107,7 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	}
 
 	char buff[MYPROXY_MAX_PASSWORD_BUFLEN];
-	int bytes = read (fd, buff, sizeof(buff));
+	int bytes = read (fd, buff, sizeof(buff) - 1);
 	if( bytes < 0 ) {
 		close(fd);
 		return -1;

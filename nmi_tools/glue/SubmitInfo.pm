@@ -202,7 +202,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { 
 			  '-DCMAKE_SUPPRESS_REGENERATION:BOOL' => 'TRUE', # because the windows VM doesn't keep time very well.
-            },
+		},
 			'prereqs'	=> undef,
 			'xtests'	=> undef,
 		},
@@ -215,6 +215,7 @@ our %submit_info = (
 	},
 	
 	'x86_64_Windows8'   => 'x86_64_Windows7',
+	'x86_64_Windows10'  => 'x86_64_Windows7',
 	'x86_WindowsXP'		=> 'x86_64_Windows7',
 	'x86_64_winnt_6.1'	=> 'x86_64_Windows7',
 	'x86_winnt_5.1'		=> 'x86_64_Windows7',
@@ -448,6 +449,7 @@ our %submit_info = (
 	'x86_64_MacOSX7',	=> 'x86_64_MacOSX',
 	'x86_64_MacOSX8',	=> 'x86_64_MacOSX',
 	'x86_64_MacOSX9',	=> 'x86_64_MacOSX',
+	'x86_64_MacOSX10',	=> 'x86_64_MacOSX',
 
 	#
 	# The SWAMP platforms.

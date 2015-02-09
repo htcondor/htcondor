@@ -1523,8 +1523,10 @@ main( int argc, char *argv[] )
 
 			// render the data once to calcuate column widths.
 			result.Open();
+			std::string tmp;
 			while (ClassAd	*ad = result.Next()) {
-				delete [] App.print_mask.display(ad);
+				App.print_mask.display(tmp, ad);
+				tmp.clear();
 			}
 			result.Close();
 
@@ -1596,6 +1598,11 @@ static void read_address_file(const char * filename, std::string & addr)
 	// read the address file into a local buffer
 	char buf[4096];
 	int cbRead = read(fd, buf, sizeof(buf));
+
+	if (cbRead < 0) {
+		close(fd);
+		return;
+	}
 
 	// parse out the address string. it should be the first line of data
 	char * peol = buf;

@@ -995,6 +995,15 @@ friendly_name=Dagman Pending Report Interval
 review=?
 tags=dagman,dagman_main
 
+[DAGMAN_MAX_JOBS_IDLE]
+default=1000
+type=int
+reconfig=true
+customization=normal
+friendly_name=Dagman Max Jobs Idle
+review=?
+tags=dagman,dagman_main
+
 [CKPT_SERVER_DIR]
 default=
 type=string
@@ -1115,6 +1124,11 @@ review=?
 default=$(RELEASE_DIR)/include
 type=path
 review=?
+
+[ETC]
+default=$(RELEASE_DIR)/etc
+type=path
+friendly_name=etc
 
 [XAUTHORITY_USERS]
 default=
@@ -4233,6 +4247,14 @@ friendly_name=Negotiator Update After Cycle
 review=?
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_UPDATE_INTERVAL]
+default=300
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Update Interval
+review=?
+
 [NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD]
 default=0
 type=int
@@ -5960,7 +5982,7 @@ friendly_name=
 review=?
 
 [LOCAL_CONFIG_DIR_EXCLUDE_REGEXP]
-default=^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
+default=^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew)|(.*\.dpkg-old)|(.*\.dpkg-dist)|(.*\.cfsaved))$
 type=string
 reconfig=true
 customization=seldom
@@ -6783,6 +6805,15 @@ friendly_name=Send metrics for all hosts
 review=?
 tags=c++_util,gangliad
 
+[ECRYPTFS_ADD_PASSPHRASE]
+default=ecryptfs-add-passphrase
+type=path
+reconfig=true
+customization=expert
+friendly_name=Name of ecryptfs tool to add a passphrase
+review=toddt
+tags=ecryptfs
+
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
 default=
 type=string
@@ -6889,7 +6920,7 @@ usage=Set the limit on the number of condor_history_helper sub-processes
 review=?
 
 [CONDOR_Q_USE_V3_PROTOCOL]
-default=false
+default=true
 type=bool
 reconfig=false
 customization=devel
@@ -7886,3 +7917,20 @@ customization=seldom
 friendly_name=Whether to invoke file transfer plugins as user or as root
 review=?
 
+[DISCARD_SESSION_KEYRING_ON_STARTUP]
+default=true
+type=bool
+reconfig=false
+customization=expert
+friendly_name=Will master discard session keyring on startup
+review=toddt
+tags=ecryptfs,master
+
+[DOCKER]
+default=/usr/bin/docker
+win32_default=docker
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Docker
+review=?

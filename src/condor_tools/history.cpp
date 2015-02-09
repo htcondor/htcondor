@@ -191,7 +191,7 @@ main(int argc, char* argv[])
         wide_format_width = 80; 
     }
 
-    else if (is_dash_arg_prefix(argv[i],"match",1)) {
+    else if (is_dash_arg_prefix(argv[i],"match",1) || is_dash_arg_prefix(argv[i],"limit",3)) {
         i++;
         if (argc <= i) {
             fprintf(stderr,

@@ -124,7 +124,7 @@ JobRouterHookMgr::reconfig()
 
 
 char*
-JobRouterHookMgr::getHookPath(HookType hook_type, classad::ClassAd ad)
+JobRouterHookMgr::getHookPath(HookType hook_type, const classad::ClassAd &ad)
 {
 	std::string keyword;
 	char** paths;
@@ -174,7 +174,7 @@ JobRouterHookMgr::getHookPath(HookType hook_type, classad::ClassAd ad)
 
 
 std::string
-JobRouterHookMgr::getHookKeyword(classad::ClassAd ad)
+JobRouterHookMgr::getHookKeyword(const classad::ClassAd &ad)
 {
 	std::string hook_keyword;
 

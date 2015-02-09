@@ -77,7 +77,7 @@ namespace classad_analysis {
 
   result::~result() {}
   
-  void result::add_explanation(matchmaking_failure_kind reason, classad::ClassAd a_machine) {
+  void result::add_explanation(matchmaking_failure_kind reason, const classad::ClassAd &a_machine) {
     my_explanation[reason].push_back(a_machine);
   }
 

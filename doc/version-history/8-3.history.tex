@@ -12,6 +12,39 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-3-4}Version 8.3.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.3.4 not yet released.
+%\item HTCondor version 8.3.4 released on Month Date, 2014.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug introduced in HTCondor 8.3.2 that caused the -absent
+option of \Condor{status} to print duplicated information about each
+ad.
+\Ticket{4853}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-3-3}Version 8.3.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -29,25 +62,84 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Configuration setting \Macro{ENCRYPT\_EXECUTE\_DIRECTORY} 
+	is now honored on Linux (assuming ecryptfs-utils package is installed
+	and the Linux kernel is version 2.6.29 or newer), and also
+	\SubmitCmd{encrypt\_execute\_directory} can now be specified
+	by the user with \Condor{submit} on a per-job basis.
+\Ticket{4856}
+
+\item EC2 grid universe jobs may now specify an IAM (instance) profile.
+\Ticket{4810}
+
+\item EC2 jobs may now specify security group IDs instead of names.
+This allows the use of VPC instances with non-default security groups.
+\Ticket{4796}
+
+\item EC2 jobs may now specify additional parameters to use when starting
+the corresponding instance.
+\Ticket{4795}
+
+\item The throughput of queries to the \Condor{collector} has been
+improved, as the \Condor{collector} now never forks to handle queries 
+about \Condor{collector}, \Condor{negotiator}, and \Condor{schedd}
+ClassAds.
+\Ticket{4821}
+
+\item The new configuration variable \Macro{ADD\_SIGNIFICANT\_ATTRIBUTES}
+lists job attributes to be added to the \Condor{negotiator}-determined list
+when considering auto clustering.
+The new configuration variable \Macro{REMOVE\_SIGNIFICANT\_ATTRIBUTES}
+lists job attributes to be removed from the \Condor{negotiator}-determined 
+list when considering auto clustering.
+\Ticket{4797}
+
+\item For all tools that support the \Opt{-format} or \Opt{-autoformat} option,
+the new \%r conversion specifier causes values to be displayed 
+in their unevaluated, or raw form.
+\Ticket{4814}
+
 \item \Condor{dagman} now prints the hold reason to the \File{dagman.out}
 file when node jobs go on hold.
 \Ticket{4766}
 
-\item The python bindings can be used to query and set config variables
-of running daemons.
+\item New python bindings can be used to query and set the 
+configuration variables of running daemons.
 \Ticket{4778}
 
-\item Python functions can be invoked directly from ClassAd expressions within HTCondor
-daemons.  A system administrator must set the \Macro{CLASSAD\_USER\_PYTHON\_MODULES}
-configuration macro to specify the python modules that are accessible from
-within ClassAds.
+\item Python functions can be invoked directly from ClassAd expressions 
+within HTCondor daemons.  
+A system administrator must set the new configuration variable
+\Macro{CLASSAD\_USER\_PYTHON\_MODULES}
+to specify the python modules that are accessible from within ClassAds.
 \Ticket{4773}
+
+\item The default value for configuration variable 
+\Macro{DAGMAN\_MAX\_JOBS\_IDLE} has changed from 0, 
+which imposes no limits, to 1000.
+\Ticket{4748}
+
+\item Configuration variable \Macro{DAGMAN\_USE\_OLD\_DAG\_READER}
+is no longer supported.  
+Setting it to \Expr{True} will result in a warning, 
+and the setting will have no effect on how a DAG input file is read.
+\Ticket{4186}
+
+\item ClassAd attributes written by the \Condor{schedd} that
+count the number of jobs in various states now include all jobs, 
+not only jobs that need to be matched by the \Condor{negotiator} daemon.
+These attributes include \Attr{TotalRunningJobs}, \Attr{TotalIdleJobs},
+\Attr{TotalHeldJobs}, and \Attr{TotalRemovedJobs}.
+\Ticket{4683}
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug that prevented CCB servers from running on Windows platforms.
+\Ticket{4713}
 
 \item Fixed a bug in the \Condor{startd} daemon introduced in HTCondor 
 version 8.3.2.
@@ -61,6 +153,13 @@ that could cause the \Condor{schedd} to become unresponsive when a client
 set configuration variable \Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL} 
 to its non default value of \Expr{True}.
 \Ticket{4805}
+
+\item Configuration variable \Macro{GRACEFULLY\_REMOVE\_JOBS} now
+controls how a running job is killed for all cases,
+including when a job policy expression causes the job to be held or removed.
+Previously, this configuration variable was consulted only 
+when the user ran \Condor{hold} or \Condor{rm}.
+\Ticket{4679}
 
 \end{itemize}
 

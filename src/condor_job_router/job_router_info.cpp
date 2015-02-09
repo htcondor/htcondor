@@ -470,7 +470,7 @@ int JobRouterHookMgr::hookJobExit(RoutedJob* r_job) { return 1; }
 int JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job) { return 1; }
 
 std::string
-JobRouterHookMgr::getHookKeyword(classad::ClassAd ad)
+JobRouterHookMgr::getHookKeyword(const classad::ClassAd &ad)
 {
 	std::string hook_keyword;
 

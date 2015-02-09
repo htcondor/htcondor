@@ -191,6 +191,14 @@ Listed here are details of the logs, to aid in identification.
   \end{description}
 
 \item[the \File{.dagman.out} file]
+  A log created or appended to for each DAG submitted with timestamped
+  events and extra information about the configuration applied to the DAG.
+  The name of this log is formed by appending \Expr{.dagman.out} to
+  the name of the DAG input file.  The file remains after the DAG completes.
+
+  This log may be helpful in debugging what has happened in the execution
+  of a DAG, as well as help to determine the final state of the DAG.
+
   Configuration variables that affect this log are
   \begin{description}
   \item [\Macro{DAGMAN\_VERBOSITY}] 
@@ -198,10 +206,10 @@ Listed here are details of the logs, to aid in identification.
   \end{description}
 
 \item[the \File{jobstate.log} file]
+  This optional, machine-readable log enables automated monitoring of DAG.
+  Section~\ref{sec:DAGJobstateLog} details this log.
   
 
 \end{description}
-
-\MoreTodo
 
 \index{logging|)}

@@ -1569,11 +1569,11 @@ _condor_fd_panic( int line, const char* file )
 		(void)close( i );
 	}
 
-	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+	it = DebugLogs->begin();
+	if (it != DebugLogs->end())
 	{
 		filePath = (*it).logPath;
 		fileExists = true;
-		break;
 	}
 	if( fileExists ) {
 		debug_file_ptr = safe_fopen_wrapper_follow(filePath.c_str(), "a", 0644);
@@ -2296,7 +2296,7 @@ dprintf_init_fork_child( bool cloned ) {
 }
 
 void
-dprintf_wrapup_fork_child( bool cloned ) {
+dprintf_wrapup_fork_child( bool /* cloned */ ) {
 		/* Child pledges not to call dprintf any more, so it is
 		   safe to close the lock file.  If parent closes all
 		   fds anyway, then this is redundant.
@@ -2305,15 +2305,11 @@ dprintf_wrapup_fork_child( bool cloned ) {
 		close( LockFd );
 		LockFd = -1;
 	}
-	if ( !cloned ) {
-		// We don't need to restore these values in a non-cloned child,
-		// because dprintf() won't be called again and we're not sharing
-		// memory with the parent process.
-		// In a cloned child, the parent restores the original value of
-		// DebugRotateLog when it resumes execution.
-		//DebugRotateLog = true;
-		//log_keep_open = ?
-	}
+	// We don't need to restore the original values of DebugRotateLog or
+	// log_keep_open here. In a forked child, the memory isn't shared
+	// with the parent. For a cloned child, log_keep_open wasn't changed
+	// and the parent will restore DebugRotateLog immediately after the
+	// child exec()s or exits.
 }
 
 #if HAVE_BACKTRACE

@@ -179,7 +179,7 @@ ClassAdLogIterator::Load()
 	FileOpErrCode err;
 	m_eof = false;
 	do {
-		int op_type;
+		int op_type = 999;
 
 		err = m_parser->readLogEntry(op_type);
 		if (err == FILE_READ_SUCCESS)
@@ -330,7 +330,7 @@ ClassAdLogReader::IncrementalLoad()
 {
 	FileOpErrCode err;
 	do {
-		int op_type;
+		int op_type = -1;
 
 		err = parser.readLogEntry(op_type);
 		assert(err != FILE_FATAL_ERROR); // XXX

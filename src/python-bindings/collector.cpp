@@ -17,6 +17,26 @@
 
 using namespace boost::python;
 
+
+// It's not clear how bulletproof various condor internals are against improperly quoted input.
+// ClassAds is clumsy at this, but this function will properly quote a string.
+//
+static std::string
+quote_classads_string(const std::string &input)
+{
+    classad::Value val; val.SetStringValue(input);
+    classad_shared_ptr<classad::ExprTree> expr(classad::Literal::MakeLiteral(val));
+    if (!expr.get())
+    {
+        THROW_EX(MemoryError, "Failed to allocate a new ClassAds expression.");
+    }
+    classad::ClassAdUnParser sink;
+    std::string result;
+    sink.Unparse(result, expr.get());
+    return result;
+}
+
+
 AdTypes convert_to_ad_type(daemon_t d_type)
 {
     AdTypes ad_type = NO_AD;
@@ -37,6 +57,12 @@ AdTypes convert_to_ad_type(daemon_t d_type)
     case DT_COLLECTOR:
         ad_type = COLLECTOR_AD;
         break;
+    case DT_GENERIC:
+        ad_type = GENERIC_AD;
+		break;
+    case DT_HAD:
+        ad_type = HAD_AD;
+		break;
     default:
         PyErr_SetString(PyExc_ValueError, "Unknown daemon type.");
         throw_error_already_set();
@@ -114,12 +140,25 @@ struct Collector {
         if (m_collectors) delete m_collectors;
     }
 
-    object query(AdTypes ad_type, const std::string &constraint, list attrs)
+    boost::python::object directquery(daemon_t d_type, const std::string &name="", boost::python::list attrs=boost::python::list(), const std::string &statistics="")
+    {
+        boost::python::object daemon_ad = locate(d_type, name);
+        Collector daemon(daemon_ad[ATTR_MY_ADDRESS]);
+        return daemon.query(convert_to_ad_type(d_type), "", attrs, statistics)[0];
+    }
+
+    object query(AdTypes ad_type=ANY_AD, const std::string &constraint="", list attrs=boost::python::list(), const std::string &statistics="")
     {
         CondorQuery query(ad_type);
         if (constraint.length())
         {
             query.addANDConstraint(constraint.c_str());
+        }
+        if (statistics.size())
+        {
+            std::string result = quote_classads_string(statistics);
+            result = "STATISTICS_TO_PUBLISH = " + result;
+            query.addExtraAttribute(result.c_str());
         }
         std::vector<const char *> attrs_char;
         std::vector<std::string> attrs_str;
@@ -187,13 +226,14 @@ struct Collector {
     object locateAll(daemon_t d_type)
     {
         AdTypes ad_type = convert_to_ad_type(d_type);
-        return query(ad_type, "", list());
+        return query(ad_type, "", list(), "");
     }
 
-    object locate(daemon_t d_type, const std::string &name)
+    object locate(daemon_t d_type, const std::string &name="")
     {
-        std::string constraint = "stricmp(" ATTR_NAME ", \"" + name + "\") == 0";
-        object result = query(convert_to_ad_type(d_type), constraint, list());
+        if (!name.size()) {return locateLocal(d_type);}
+        std::string constraint = "stricmp(" ATTR_NAME ", " + quote_classads_string(name) + ") == 0";
+        object result = query(convert_to_ad_type(d_type), constraint, list(), "");
         if (py_len(result) >= 1) {
             return result[0];
         }
@@ -207,7 +247,7 @@ struct Collector {
         if (!m_default)
         {
             std::string constraint = "true";
-            object result = query(convert_to_ad_type(d_type), constraint, list());
+            object result = query(convert_to_ad_type(d_type), constraint, list(), "");
             if (py_len(result) >= 1) {
                 return result[0];
             }
@@ -279,21 +319,6 @@ struct Collector {
         return boost::python::object(wrapper);
     }
 
-
-    // Overloads for the Collector; can't be done in boost.python and provide
-    // docstrings.
-    object query0()
-    {
-        return query(ANY_AD, "", list());
-    }
-    object query1(AdTypes ad_type)
-    {
-        return query(ad_type, "", list());
-    }
-    object query2(AdTypes ad_type, const std::string &constraint)
-    {
-        return query(ad_type, constraint, list());
-    }
 
     // TODO: this has crappy error handling when there are multiple collectors.
     void advertise(list ads, const std::string &command_str="UPDATE_AD_GENERIC", bool use_tcp=false)
@@ -372,27 +397,49 @@ private:
 };
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(advertise_overloads, advertise, 1, 3);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 4);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(directquery_overloads, directquery, 1, 4);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(locate_overloads, locate, 1, 2);
+
 
 void export_collector()
 {
     class_<Collector>("Collector", "Client-side operations for the HTCondor collector")
         .def(init<boost::python::object>(":param pool: Name of collector to query; if not specified, uses the local one."))
-        .def("query", &Collector::query0)
-        .def("query", &Collector::query1)
-        .def("query", &Collector::query2)
-        .def("query", &Collector::query,
+        .def("query", &Collector::query, query_overloads(
             "Query the contents of a collector.\n"
             ":param ad_type: Type of ad to return from the AdTypes enum; if not specified, uses ANY_AD.\n"
             ":param constraint: A constraint for the ad query; defaults to true.\n"
-            ":param attrs: A list of attributes; if specified, the returned ads will be "
+            ":param projection: A list of attributes; if specified, the returned ads will be "
             "projected along these attributes.\n"
-            ":return: A list of ads in the collector matching the constraint.")
-        .def("locate", &Collector::locateLocal)
-        .def("locate", &Collector::locate,
+            ":param statistics: A list of additional statistics to return, if the remote daemon has any.\n"
+            ":return: A list of ads in the collector matching the constraint.",
+#if BOOST_VERSION < 103400
+            (boost::python::arg("ad_type")=ANY_AD, boost::python::arg("constraint")="", boost::python::arg("projection")=boost::python::list(), boost::python::arg("statistics")="")
+#else
+            (boost::python::arg("self"), boost::python::arg("ad_type")=ANY_AD, boost::python::arg("constraint")="", boost::python::arg("projection")=boost::python::list(), boost::python::arg("statistics")="")
+#endif
+             ))
+        .def("directQuery", &Collector::directquery, directquery_overloads(
+            "Query a given daemon directly instead of returning a collector ad.\n"
+            "This may return more up-to-date or detailed information than what is in the collector.\n"
+            ":param daemon_type: Type of daemon; must be from the DaemonTypes enum.\n"
+            ":param name: Name of daemon to locate.  If not specified, it searches for the local daemon.\n"
+            ":param projection: A list of attributes; if specified, the returned ads will be "
+            "projected along these attributes.\n"
+            ":param statistics: A list of additional statistics to return, if the remote daemon has any.\n"
+            ":return: The ad of the matching daemon, from the daemon itself.\n",
+#if BOOST_VERSION < 103400
+            (boost::python::arg("daemon_type"), boost::python::arg("name")="", boost::python::arg("projection")=boost::python::list(), boost::python::arg("statistics")="")
+#else
+            (boost::python::arg("self"), boost::python::arg("daemon_type"), boost::python::arg("name")="", boost::python::arg("projection")=boost::python::list(), boost::python::arg("statistics")="")
+#endif
+            ))
+        .def("locate", &Collector::locate, locate_overloads(
             "Query the collector for a particular daemon.\n"
             ":param daemon_type: Type of daemon; must be from the DaemonTypes enum.\n"
             ":param name: Name of daemon to locate.  If not specified, it searches for the local daemon.\n"
-            ":return: The ad of the corresponding daemon.")
+            ":return: The ad of the corresponding daemon."))
         .def("locateAll", &Collector::locateAll,
             "Query the collector for all ads of a particular type.\n"
             ":param daemon_type: Type of daemon; must be from the DaemonTypes enum.\n"

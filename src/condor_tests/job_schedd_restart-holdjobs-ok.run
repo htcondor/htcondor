@@ -116,9 +116,9 @@ $submitted = sub
 		my $afterstate;
 		my $beforestate;
 		foreach $before (@adarray) {
-			#print "Before:$before\n";
+			print "Before:$before\n";
 			$after = shift(@fdarray);
-			#print "After:$after\n";
+			print "After:$after\n";
 			#handle submitter line
 			if($after =~ /^(-- Submitter.*<\d+\.\d+\.\d+\.\d+:)(\d+)(> : .*)$/) {
 				$af = $1 . $3;
@@ -128,6 +128,8 @@ $submitted = sub
 					die "Submitter lines from before and after don't line up\n";
 				}
 				if($af ne $bf ) {
+					print "-$af-\n";
+					print "-$bf-\n";
 					die "Submitter lines from before and after don't match\n";
 				}
 			} 

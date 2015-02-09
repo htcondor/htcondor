@@ -72,7 +72,7 @@ sysapi_swap_space_raw()
 	/* in KB */
 	free_swap /= 1024.0;
 
-	if ((int)free_swap > INT_MAX)
+	if (free_swap > INT_MAX)
 	{
 		return INT_MAX;
 	}

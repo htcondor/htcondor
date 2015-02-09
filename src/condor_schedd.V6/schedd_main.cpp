@@ -83,6 +83,9 @@ main_init(int argc, char* argv[])
 		switch(ptr[0][1])
 		{
 		  case 'n':
+			if (Name) {
+				free(Name);
+			}
 			Name = build_valid_daemon_name( *(++ptr) );
 			break;
 		  default:

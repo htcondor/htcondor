@@ -133,7 +133,7 @@ public:
 
 	/** Create (or find) and aggregation on the given projection
 	  */
-	JobAggregationResults * aggregateOn(bool use_default, const char * projection, classad::ExprTree * constraint);
+	JobAggregationResults * aggregateOn(bool use_default, const char * projection, int result_limit, classad::ExprTree * constraint);
 
 	/** called just before setAttribute sets an attribute value so that we can decide whether
 	  * or not to invalidate the autocluster
@@ -157,8 +157,8 @@ protected:
 // this class is use to hold job-aggregation results
 class JobAggregationResults {
 public:
-	JobAggregationResults(JobCluster& jc_, const char * proj_, classad::ExprTree * constraint_=NULL, bool is_def_=false)
-		: jc(jc_), projection(proj_?proj_:""), constraint(NULL), is_def_autocluster(is_def_)
+	JobAggregationResults(JobCluster& jc_, const char * proj_, int limit_, classad::ExprTree * constraint_=NULL, bool is_def_=false)
+		: jc(jc_), projection(proj_?proj_:""), constraint(NULL), is_def_autocluster(is_def_), result_limit(limit_), results_returned(0)
 	{
 		if (constraint_) constraint = constraint_->Copy();
 	}
@@ -178,6 +178,8 @@ protected:
 	std::string projection;
 	classad::ExprTree * constraint;
 	bool is_def_autocluster;
+	int  result_limit;
+	int  results_returned;
 	ClassAd ad;
 	JobCluster::JobSigidMap::iterator it;
 	std::string pause_position; // holds the key that the iterator was pointing to before we paused.

@@ -76,19 +76,101 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 ##################################################
 ##################################################
 
-# disable python on windows until we can get the rest of cmake changes worked out.
-if(NOT WINDOWS)
-#if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
-include (FindPythonLibs)
-endif(NOT WINDOWS)
-# As of cmake 2.8.8, the variable below is defined by FindPythonLibs.
-# This helps ensure we get the same version of the libraries and python
-# on systems with both python2 and python3.
-if (DEFINED PYTHONLIBS_VERSION_STRING)
-  set(PythonInterp_FIND_VERSION "${PYTHONLIBS_VERSION_STRING}")
-  set(PythonInterp_FIND_VERSION_EXACT ON)
+# To find python in Windows we will use alternate technique
+if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
+	include (FindPythonLibs)
+	# As of cmake 2.8.8, the variable below is defined by FindPythonLibs.
+	# This helps ensure we get the same version of the libraries and python
+	# on systems with both python2 and python3.
+	if (DEFINED PYTHONLIBS_VERSION_STRING)
+		set(PythonInterp_FIND_VERSION "${PYTHONLIBS_VERSION_STRING}")
+		set(PythonInterp_FIND_VERSION_EXACT ON)
+	endif()
+	include (FindPythonInterp)
+else()
+	if(WINDOWS)
+		#only for Visual Studio 2012
+		if(NOT (MSVC_VERSION LESS 1700))
+			message(STATUS "=======================================================")
+			message(STATUS "Searching for python installation") 
+			#look at registry for 32-bit view of 64-bit registry first	
+			get_filename_component(PYTHON_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Python\\PythonCore\\2.7\\InstallPath;]" REALPATH)
+			#when registry reading fails cmake returns with c:\registry
+
+			if("${PYTHON_INSTALL_DIR}" MATCHES "registry") #look at native 32bit path if not found
+				get_filename_component(PYTHON_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.7\\InstallPath;]" REALPATH)
+			endif()
+		
+			if("${PYTHON_INSTALL_DIR}" MATCHES "registry")				
+				message(STATUS "Suppored python installation not found on this system")
+				unset(PYTHONINTERP_FOUND)
+			else()
+				set(PYTHON_EXECUTABLE "${PYTHON_INSTALL_DIR}\\python.exe")
+				message(STATUS "PYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}")
+				message(STATUS "testing it for validity")
+				set(PYTHONINTERP_FOUND TRUE)
+			endif()
+
+
+			if(PYTHONINTERP_FOUND)
+				set(PYTHON_QUERY_PART_01 "from distutils import sysconfig as s;")
+				set(PYTHON_QUERY_PART_02 "import sys;")
+				set(PYTHON_QUERY_PART_03 "import struct;")
+				set(PYTHON_QUERY_PART_04 "print('.'.join(str(v) for v in sys.version_info));")
+				set(PYTHON_QUERY_PART_05 "print(sys.prefix);")
+				set(PYTHON_QUERY_PART_06 "print(s.get_python_inc(plat_specific=True));")
+				set(PYTHON_QUERY_PART_07 "print(s.get_python_lib(plat_specific=True));")
+				set(PYTHON_QUERY_PART_08 "print(s.get_config_var('SO'));")
+				set(PYTHON_QUERY_PART_09 "print(hasattr(sys, 'gettotalrefcount')+0);")
+				set(PYTHON_QUERY_PART_10 "print(struct.calcsize('@P'));")
+				set(PYTHON_QUERY_PART_11 "print(s.get_config_var('LDVERSION') or s.get_config_var('VERSION'));")
+				
+				set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}")
+				
+				execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "${PYTHON_QUERY_COMMAND}" 
+								RESULT_VARIABLE _PYTHON_SUCCESS
+								OUTPUT_VARIABLE _PYTHON_VALUES
+								ERROR_VARIABLE _PYTHON_ERROR_VALUE
+								OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+				# Convert the process output into a list
+				string(REGEX REPLACE ";" "\\\\;" _PYTHON_VALUES ${_PYTHON_VALUES})
+				string(REGEX REPLACE "\n" ";" _PYTHON_VALUES ${_PYTHON_VALUES})
+				list(GET _PYTHON_VALUES 0 _PYTHON_VERSION_LIST)
+				list(GET _PYTHON_VALUES 1 PYTHON_PREFIX)
+				list(GET _PYTHON_VALUES 2 PYTHON_INCLUDE_DIR)
+				list(GET _PYTHON_VALUES 3 PYTHON_SITE_PACKAGES)
+				list(GET _PYTHON_VALUES 4 PYTHON_MODULE_EXTENSION)
+				list(GET _PYTHON_VALUES 5 PYTHON_IS_DEBUG)
+				list(GET _PYTHON_VALUES 6 PYTHON_SIZEOF_VOID_P)
+				list(GET _PYTHON_VALUES 7 PYTHON_LIBRARY_SUFFIX)
+
+				#check version (only 2.7 works for now)
+				if(NOT "${PYTHON_LIBRARY_SUFFIX}" STREQUAL "27")
+					message(STATUS "Wrong python library version detected.  Only 2.7.x supported ${PYTHON_LIBRARY_SUFFIX} detected")
+					unset(PYTHONINTERP_FOUND)
+				else()
+					# Test for 32bit python by making sure that Python has the same pointer-size as the chosen compiler
+					if(NOT "${PYTHON_SIZEOF_VOID_P}" STREQUAL "${CMAKE_SIZEOF_VOID_P}")
+						message(STATUS "Python bit version failure: Python is ${PYTHON_SIZEOF_VOID_P}-bit for size of void, chosen compiler is ${CMAKE_SIZEOF_VOID_P}-bit for size of void")
+						message(STATUS "Only 32bit python supported. If multiple versions installed ensure they are in different locations")
+					else()
+						message(STATUS "Valid Python version and bitdepth detected")
+						#we build the path to the library by hand to not be confused in multipython installations
+						set(PYTHON_LIBRARIES "${PYTHON_PREFIX}\\libs\\python${PYTHON_LIBRARY_SUFFIX}.lib")
+						set(PYTHON_LIBRARY ${PYTHON_LIBRARIES})
+						set(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIR}")
+						set(PYTHON_INCLUDE_DIRS "${PYTHON_INCLUDE_DIR}")
+						message(STATUS "PYTHON_LIBRARIES=${PYTHON_LIBRARIES}")
+						set(PYTHONLIBS_FOUND TRUE)
+						set(PYTHONINTERP_FOUND TRUE)
+					endif()
+				endif()
+			endif()
+			message(STATUS "=======================================================")
+		endif()
+	endif()
 endif()
-include (FindPythonInterp)
 include (FindThreads)
 include (GlibcDetect)
 
@@ -648,9 +730,9 @@ if (WINDOWS)
 
   if (MSVC11)
     if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32.tar.gz)
+      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32_V2.tar.gz)
     else()
-      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32.tar.gz)
+      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32_V2.tar.gz)
     endif()
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.54.0)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1j)

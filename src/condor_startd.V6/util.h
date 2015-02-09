@@ -28,7 +28,7 @@ class Resource;
 class StringList;
 
 // Our utilities 
-void	cleanup_execute_dir(int pid, char const *exec_path);
+void	cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir=false);
 void	cleanup_execute_dirs( StringList &list );
 void	check_execute_dir_perms( StringList &list );
 #if defined( DEPRECATED_SOCKET_CALLS )

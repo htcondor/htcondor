@@ -180,6 +180,8 @@ if (BUILD_TESTING)
 	endif()
 
 
+	condor_pl_test(job_test_scheddrotation "Scheduler: basic log rotation test" "core;quick;full;quicknolink")
+	condor_pl_test(job_test_logrotation "basic log rotation test" "core;quick;full;quicknolink")
 	condor_pl_test(fetch_work_static_slot "work fetch static smoke test" "core;quick;quicknolink")
 	condor_pl_test(fetch_work_pslot "work fetch pslot smoke test" "core;quick;quicknolink")
 	if(HAVE_EXT_OPENSSL)

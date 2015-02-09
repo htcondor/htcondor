@@ -1068,7 +1068,10 @@ tcp_connect( const char *host, int port )
 #else
 	fd = socket( result->ai_family, SOCK_STREAM, 0 );
 #endif
-	if(fd == INVALID_SOCKET) return INVALID_SOCKET;
+	if(fd == INVALID_SOCKET) {
+		freeaddrinfo(result);
+		return INVALID_SOCKET;
+	}
 
 	success = connect( fd, (struct sockaddr*)&sa.storage, result->ai_addrlen );
 	freeaddrinfo(result);

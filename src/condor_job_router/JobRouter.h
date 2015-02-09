@@ -90,7 +90,7 @@ class JobRouter: public Service {
 	void FinishSubmitJob(RoutedJob *job);
 
 	// Update the status of the job.
-	void UpdateRoutedJobStatus(RoutedJob *job, classad::ClassAd update);
+	void UpdateRoutedJobStatus(RoutedJob *job, const classad::ClassAd &update);
 
 	// Finish the job status update.
 	void FinishCheckSubmittedJobStatus(RoutedJob *job);

@@ -162,6 +162,7 @@ bool stream_stderr_toggle = false;
 bool    NeedsPerFileEncryption = false;
 bool	NeedsJobDeferral = false;
 bool job_ad_saved = false;	// should we deallocate the job ad after storing it?
+bool HasEncryptExecuteDir = false;
 bool HasTDP = false;
 char* tdp_cmd = NULL;
 char* tdp_input = NULL;
@@ -171,6 +172,9 @@ char* RunAsOwnerCredD = NULL;
 
 // For mpi universe testing
 bool use_condor_mpi_universe = false;
+
+// For docker "universe"
+bool IsDockerJob = false;
 
 // For vm universe
 MyString VMType;
@@ -299,6 +303,8 @@ const char	*CompressFiles = "compress_files";
 const char	*AppendFiles = "append_files";
 const char	*LocalFiles = "local_files";
 
+const char 	*EncryptExecuteDir = "encrypt_execute_directory";
+
 const char	*ToolDaemonCmd = "tool_daemon_cmd";
 const char	*ToolDaemonArgs = "tool_daemon_args"; // for backward compatibility
 const char	*ToolDaemonArguments1 = "tool_daemon_arguments";
@@ -394,6 +400,11 @@ const char    *ConcurrencyLimits = "concurrency_limits";
 // Accounting Group parameters
 const char* AcctGroup = "accounting_group";
 const char* AcctGroupUser = "accounting_group_user";
+
+//
+// docker "universe" Parameters
+//
+const char    *DockerImage="docker_image";
 
 //
 // VM universe Parameters
@@ -507,6 +518,7 @@ void 	SetTransferFiles();
 void    process_input_file_list(StringList * input_list, char *input_files, bool * files_specified);
 void 	SetPerFileEncryption();
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
+void 	SetEncryptExecuteDir();
 void 	SetTDP();
 void	SetRunAsOwner();
 void    SetLoadProfile();
@@ -1637,6 +1649,32 @@ reschedule()
 }
 
 
+char * trim_and_strip_quotes_in_place(char * str)
+{
+	char * p = str;
+	while (isspace(*p)) ++p;
+	char * pe = p + strlen(p);
+	while (pe > p && isspace(pe[-1])) --pe;
+	*pe = 0;
+
+	if (*p == '"' && pe > p && pe[-1] == '"') {
+		// if we also had both leading and trailing quotes, strip them.
+		if (pe > p && pe[-1] == '"') {
+			*--pe = 0;
+			++p;
+		}
+	}
+	return p;
+}
+
+char * check_docker_image(char * docker_image)
+{
+	// trim leading & trailing whitespace and remove surrounding "" if any.
+	docker_image = trim_and_strip_quotes_in_place(docker_image);
+
+	// TODO: add code here to validate docker image argument (if possible)
+	return docker_image;
+}
 
 
 /* check_path_length() has been deprecated in favor of 
@@ -1757,11 +1795,35 @@ SetExecutable()
 		ignore_it = true;
 	}
 
+	if (IsDockerJob) {
+		char * docker_image = condor_param(DockerImage, ATTR_DOCKER_IMAGE);
+		if ( ! docker_image) {
+			fprintf(stderr, "\nERROR: docker jobs require a docker_image\n");
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		char * image = check_docker_image(docker_image);
+		if ( ! image || ! image[0]) {
+			fprintf(stderr, "\nERROR: '%s' is not a valid docker_image\n", docker_image);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		buffer.formatstr("%s = \"%s\"", ATTR_DOCKER_IMAGE, image);
+		InsertJobExpr(buffer);
+		free(docker_image);
+		ignore_it = true; // we don't require an executable if we have a docker image.
+	}
+
 	ename = condor_param( Executable, ATTR_JOB_CMD );
 	if( ename == NULL ) {
-		fprintf( stderr, "No '%s' parameter was provided\n", Executable);
-		DoCleanup(0,0,NULL);
-		exit( 1 );
+		if (IsDockerJob) {
+			// docker jobs don't require an executable.
+			ignore_it = true;
+		} else {
+			fprintf( stderr, "No '%s' parameter was provided\n", Executable);
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
 	}
 
 	macro_value = condor_param( TransferExecutable, ATTR_TRANSFER_EXECUTABLE );
@@ -2110,10 +2172,15 @@ SetUniverse()
 		return;
 	}
 
-	if( univ && strcasecmp(univ,"vanilla") == MATCH ) {
+	if( univ && (MATCH == strcasecmp(univ,"vanilla") || MATCH == strcasecmp(univ,"docker"))) {
 		JobUniverse = CONDOR_UNIVERSE_VANILLA;
 		buffer.formatstr( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA);
 		InsertJobExpr (buffer);
+		if (MATCH == strcasecmp(univ,"docker")) {
+			// TODO: remove this when the docker starter no longer requires it.
+			InsertJobExpr("WantDocker=true");
+			IsDockerJob = true;
+		}
 		free(univ);
 		return;
 	};
@@ -3821,7 +3888,7 @@ SetLeaveInQueue()
 				   for up to 10 days, so user can grab the output.
 				 */
 			buffer.formatstr( 
-				"%s = %s == %d && (%s =?= UNDEFINED || %s == 0 || ((CurrentTime - %s) < %d))",
+				"%s = %s == %d && (%s =?= UNDEFINED || %s == 0 || ((time() - %s) < %d))",
 				ATTR_JOB_LEAVE_IN_QUEUE,
 				ATTR_JOB_STATUS,
 				COMPLETED,
@@ -4707,6 +4774,24 @@ SetRequirements()
 	}
 }
 
+void
+SetEncryptExecuteDir()
+{
+	char *enc =
+		condor_param( EncryptExecuteDir, ATTR_ENCRYPT_EXECUTE_DIRECTORY );
+
+	MyString buf;
+	if (enc && isTrue(enc)) {
+		HasEncryptExecuteDir = true;
+	} else {
+		HasEncryptExecuteDir = false;
+	}
+	buf.formatstr("%s = %s", ATTR_ENCRYPT_EXECUTE_DIRECTORY,
+			HasEncryptExecuteDir ? "True" : "False");
+	InsertJobExpr( buf.Value() );
+
+	if (enc) free(enc);
+}
 
 void
 SetTDP( void )
@@ -6761,6 +6846,7 @@ queue(int num)
 		SetCompressFiles();
 		SetAppendFiles();
 		SetLocalFiles();
+		SetEncryptExecuteDir();
 		SetTDP();			// before SetTransferFile() and SetRequirements()
 		SetTransferFiles();	 // must be called _before_ SetImageSize() 
 		SetRunAsOwner();
@@ -6936,6 +7022,7 @@ check_requirements( char const *orig, MyString &answer )
 	bool	checks_per_file_encryption = false;
 	bool	checks_mpi = false;
 	bool	checks_tdp = false;
+	bool	checks_encrypt_exec_dir = false;
 #if defined(WIN32)
 	bool	checks_credd = false;
 #endif
@@ -7005,8 +7092,8 @@ check_requirements( char const *orig, MyString &answer )
 
 	req_ad.GetExprReferences(answer.Value(),&job_refs,&machine_refs);
 
-	checks_arch = machine_refs.contains_anycase( ATTR_ARCH );
-	checks_opsys = machine_refs.contains_anycase( ATTR_OPSYS ) ||
+	checks_arch = IsDockerJob || machine_refs.contains_anycase( ATTR_ARCH );
+	checks_opsys = IsDockerJob || machine_refs.contains_anycase( ATTR_OPSYS ) ||
 		machine_refs.contains_anycase( ATTR_OPSYS_AND_VER ) ||
 		machine_refs.contains_anycase( ATTR_OPSYS_LONG_NAME ) ||
 		machine_refs.contains_anycase( ATTR_OPSYS_SHORT_NAME ) ||
@@ -7015,6 +7102,7 @@ check_requirements( char const *orig, MyString &answer )
 	checks_disk =  machine_refs.contains_anycase( ATTR_DISK );
 	checks_cpus =   machine_refs.contains_anycase( ATTR_CPUS );
 	checks_tdp =  machine_refs.contains_anycase( ATTR_HAS_TDP );
+	checks_encrypt_exec_dir = machine_refs.contains_anycase( ATTR_ENCRYPT_EXECUTE_DIRECTORY );
 #if defined(WIN32)
 	checks_credd = machine_refs.contains_anycase( ATTR_LOCAL_CREDD );
 #endif
@@ -7050,9 +7138,7 @@ check_requirements( char const *orig, MyString &answer )
 		if( answer[0] ) {
 			answer += " && ";
 		}
-		answer += "(TARGET.";
-		answer += ATTR_HAS_JAVA;
-		answer += ")";
+		answer += "TARGET." ATTR_HAS_JAVA;
 	} else if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
 		// For vm universe, we require the same archicture.
 		if( !checks_arch ) {
@@ -7089,6 +7175,11 @@ check_requirements( char const *orig, MyString &answer )
 			answer += ATTR_VM_AVAIL_NUM;
 			answer += " > 0)";
 		}
+	} else if (IsDockerJob) {
+			if( answer[0] ) {
+				answer += " && ";
+			}
+			answer += "TARGET.HasDocker";
 	} else {
 		if( !checks_arch ) {
 			if( answer[0] ) {
@@ -7197,6 +7288,12 @@ check_requirements( char const *orig, MyString &answer )
 	if( HasTDP && !checks_tdp ) {
 		answer += " && (TARGET.";
 		answer += ATTR_HAS_TDP;
+		answer += ")";
+	}
+
+	if( HasEncryptExecuteDir && !checks_encrypt_exec_dir ) {
+		answer += " && (TARGET.";
+		answer += ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY;
 		answer += ")";
 	}
 
@@ -7317,9 +7414,7 @@ check_requirements( char const *orig, MyString &answer )
 			//
 			//
 		if ( JobUniverse != CONDOR_UNIVERSE_LOCAL ) {
-			answer += " && (TARGET.";
-			answer += ATTR_HAS_JOB_DEFERRAL;
-			answer += ")";
+			answer += " && TARGET." ATTR_HAS_JOB_DEFERRAL;
 		}
 		
 			//

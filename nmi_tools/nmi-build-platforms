@@ -5,6 +5,7 @@ x86_64_Debian6
 x86_64_Debian7
 x86_64_MacOSX7
 x86_64_MacOSX8
+x86_64_MacOSX10
 x86_64_RedHat5
 x86_64_RedHat6
 x86_64_RedHat7
@@ -18,6 +19,7 @@ x86_RedHat6
 # We want to build all branches on Fedora because it is our "warning check" platform
 x86_64_Fedora19
 x86_64_Fedora20
+x86_64_Fedora21
 
 # We might as well build on SL
 x86_64_SL6

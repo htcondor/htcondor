@@ -151,6 +151,14 @@ In order:
     using the changed list of directories.
 \end{enumerate}
 
+The parsing and use of configuration files may be bypassed by
+setting environment variable \Env{CONDOR\_CONFIG} with the
+string \Expr{ONLY\_ENV}.
+With this setting, there is no attempt to locate or read
+configuration files.
+This may be useful for testing where the environment contains
+all needed information.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-File-Macros}Configuration File Macros} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1315,6 +1323,40 @@ File System Configuration File Entries''.
   To customize the execute
   directory independently for each batch slot, use \MacroNI{SLOT<N>\_EXECUTE}.
 
+\label{param:TmpDir}
+\item[\Macro{TMP\_DIR}]
+  A directory path to a directory where temporary files are placed by
+  various portions of the HTCondor system.
+  The daemons and tools that use this directory are
+  the \Condor{gridmanager}, 
+  \Condor{config\_val} when using the \Opt{-rset} option,
+  systems that use lock files when configuration variable
+  \Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is \Expr{True},
+  the Web Service API,
+  and the \Condor{credd} daemon.
+  There is no default value.
+
+  If both \MacroNI{TMP\_DIR} and \MacroNI{TEMP\_DIR} are defined, 
+  the value set for \MacroNI{TMP\_DIR} is used and \MacroNI{TEMP\_DIR} 
+  is ignored.
+
+\label{param:TempDir}
+\item[\Macro{TEMP\_DIR}]
+  A directory path to a directory where temporary files are placed by
+  various portions of the HTCondor system.
+  The daemons and tools that use this directory are
+  the \Condor{gridmanager}, 
+  \Condor{config\_val} when using the \Opt{-rset} option,
+  systems that use lock files when configuration variable
+  \Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is \Expr{True},
+  the Web Service API,
+  and the \Condor{credd} daemon.
+  There is no default value.
+
+  If both \MacroNI{TMP\_DIR} and \MacroNI{TEMP\_DIR} are defined, 
+  the value set for \MacroNI{TMP\_DIR} is used and \MacroNI{TEMP\_DIR} 
+  is ignored.
+
 \label{param:SlotNExecute}
 \item[\Macro{SLOT<N>\_EXECUTE}]
   Specifies an
@@ -1907,17 +1949,28 @@ File System Configuration File Entries''.
 
 \label{param:ClassadUserPythonModules}
 \item[\Macro{CLASSAD\_USER\_PYTHON\_MODULES}]
-  A comma separated list of python modules to load to be used during ClassAd
-  evaluation.  If module \Expr{foo} is in this list, then function \Expr{bar}
-  can be invoked in ClassAds via the expression \Expr{python\_invoke("foo", "bar", ...)}.
-  Any further arguments are converted from ClassAd expressions to python; the
-  functions return value is converted back to ClassAds.
-  The python modules are loaded at configuration time, so any module-level statements
-  are executed.  Module writers can invoke \Expr{classad.register} at the module-level
+  A comma separated list of python modules to load, 
+  which are to be used during ClassAd evaluation.  
+  If module \Expr{foo} is in this list, then function \Expr{bar}
+  can be invoked in ClassAds via the expression 
+  \Expr{python\_invoke("foo", "bar", ...)}.
+  Any further arguments are converted from ClassAd expressions to python; 
+  the function return value is converted back to ClassAds.
+  The python modules are loaded at configuration time, 
+  so any module-level statements are executed.  
+  Module writers can invoke \Expr{classad.register} at the module-level
   in order to use python functions directly.
 
-  Functions executed by ClassAds should be non-blocking and have no side-effects;
+  Functions executed by ClassAds should be non-blocking and have 
+  no side-effects;
   otherwise, unpredictable HTCondor behavior may occur.
+
+\label{param:ClassadUserPythonLib}
+\item[\Macro{CLASSAD\_USER\_PYTHON\_LIB}]
+  Specifies the path to the python libraries,
+  which is needed when \Macro{CLASSAD\_USER\_PYTHON\_MODULES} is set.
+  Defaults to \File{\$(LIBEXEC)/libclassad\_python\_user.so},
+  and would rarely be changed from the default value.
 
 \label{param:CondorFsync}
 \item[\Macro{CONDOR\_FSYNC}]
@@ -2593,7 +2646,7 @@ of the subsystem corresponding to the daemon.
     as opposed to specifying what kinds of messages should be printed.
     If \Dflag{SUB\_SECOND} is set, the time at the beginning of each line in the
     log file will contain a fractional part to the seconds field that is accurate
-    to the millsecond.
+    to the millisecond.
 
   \end{description}
 
@@ -5535,7 +5588,7 @@ search for the corresponding attribute names using \Expr{slot}, instead.
 
 \label{param:ModifyRequestExprRequestmemory}
 \item[\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTMEMORY}]
-  A boolean expression used by the \Condor{startd} daemon to modify the
+  An integer expression used by the \Condor{startd} daemon to modify the
   evaluated value of the \Attr{RequestMemory} job ClassAd attribute,
   before it used to provision a dynamic slot. 
   The default value is given by
@@ -5547,19 +5600,27 @@ search for the corresponding attribute names using \Expr{slot}, instead.
 
 \label{param:ModifyRequestExprRequestdisk}
 \item[\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTDISK}]
-  A boolean expression used by the \Condor{startd} daemon to modify the
+  An integer expression used by the \Condor{startd} daemon to modify the
   evaluated value of the \Attr{RequestDisk} job ClassAd attribute,
   before it used to provision a dynamic slot. 
   The default value is given by
-  \Expr{quantize(RequestDisk,{1024})}.
+  \footnotesize
+  \begin{verbatim}
+  quantize(RequestDisk,{1024})
+  \end{verbatim}
+  \normalsize
 
 \label{param:ModifyRequestExprRequestcpus}
 \item[\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTCPUS}]
-  A boolean expression used by the \Condor{startd} daemon to modify the
+  An integer expression used by the \Condor{startd} daemon to modify the
   evaluated value of the \Attr{RequestCpus} job ClassAd attribute,
   before it used to provision a dynamic slot. 
   The default value is given by
-  \Expr{quantize(RequestCpus,{1})}
+  \footnotesize
+  \begin{verbatim}
+  quantize(RequestCpus,{1})
+  \end{verbatim}
+  \normalsize
 
 \label{param:NumSlotsTypeN}
 \item[\Macro{NUM\_SLOTS\_TYPE\_<N>}]
@@ -7132,6 +7193,24 @@ SYSTEM_PERIODIC_REMOVE = \
   are to be added to the list of attributes for determining
   the sets of jobs considered as a unit (an auto cluster) in negotiation,
   when auto clustering is enabled.
+  When defined, this list replaces the list that the \Condor{negotiator} 
+  would define based upon machine ClassAds.
+
+\label{param:AddSignificantAttributes}
+\item[\Macro{ADD\_SIGNIFICANT\_ATTRIBUTES}]
+  A comma and/or space separated list of job ClassAd attributes that
+  will always be added to the list of attributes that the \Condor{negotiator}
+  defines based upon machine ClassAds, for determining
+  the sets of jobs considered as a unit (an auto cluster) in negotiation,
+  when auto clustering is enabled.
+
+\label{param:RemoveSignificantAttributes}
+\item[\Macro{REMOVE\_SIGNIFICANT\_ATTRIBUTES}]
+  A comma and/or space separated list of job ClassAd attributes that
+  are removed from the list of attributes that the \Condor{negotiator}
+  defines based upon machine ClassAds, for determining
+  the sets of jobs considered as a unit (an auto cluster) in negotiation,
+  when auto clustering is enabled.
 
 \label{param:ScheddAuditLog}
 \item[\Macro{SCHEDD\_AUDIT\_LOG}]
@@ -8031,6 +8110,20 @@ These macros affect the \Condor{collector}.
   This variable is defined in terms of seconds, 
   and it defaults to 900 seconds (15 minutes).
   
+  To ensure that the \Condor{collector} does not miss any ClassAds, the
+  frequency at which all other subsystems that report using an
+  update interval must be tuned.
+  The configuration variables that set these subsystems are
+  \begin{itemize}
+  \item \MacroNI{UPDATE\_INTERVAL} (for the \Condor{startd} daemon)
+  \item \MacroNI{NEGOTIATOR\_UPDATE\_INTERVAL}
+  \item \MacroNI{SCHEDD\_INTERVAL}
+  \item \MacroNI{MASTER\_UPDATE\_INTERVAL}
+  \item \MacroNI{CKPT\_SERVER\_INTERVAL}
+  \item \MacroNI{DEFRAG\_UPDATE\_INTERVAL}
+  \item \MacroNI{HAD\_UPDATE\_INTERVAL}
+  \end{itemize}
+
 \label{param:MasterCheckInterval}
 \item[\Macro{MASTER\_CHECK\_INTERVAL}]
   This macro defines how often the
@@ -8385,6 +8478,13 @@ These macros affect the \Condor{negotiator}.
 \item[\Macro{NEGOTIATOR\_INTERVAL}]
   Sets how often the \Condor{negotiator} starts a negotiation cycle.
   It is defined in seconds and defaults to 60 (1 minute).
+  
+\label{param:NegotiatorUpdateInterval}
+\item[\Macro{NEGOTIATOR\_UPDATE\_INTERVAL}]
+  This macro determines how often
+  the \Condor{negotiator} daemon sends a ClassAd update to the
+  \Condor{collector}.  It is defined in seconds and defaults to 300
+  (every 5 minutes).
   
 \label{param:NegotiatorCycleDelay}
 \item[\Macro{NEGOTIATOR\_CYCLE\_DELAY}]
@@ -10155,16 +10255,16 @@ in section~\ref{sec:DAG-configuration}.
   the configuration variable.  Unfortunately,
   \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} currently counts each individual
   process within a cluster as a job, which is inconsistent with
-  \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}.  The default is that there is
-  no limit on the maximum number of idle jobs. 
+  \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}.
   Note that nothing special is 
   done to the submit description file.
   If a submit description file contains \Expr{queue 5000}
-  and \Macro{DAGMAN\_MAX\_JOBS\_IDLE} is set to 250, 
+  and \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} is set to 250, 
   this will result in 5000 jobs being submitted to the \Condor{schedd},
   not 250; in this case, no
   further jobs will then be submitted by \Condor{dagman} until the number of
   idle jobs falls below 250.
+  The default value is 1000.
 
 \label{param:DAGManMaxJobsSubmitted}
 \item[\Macro{DAGMAN\_MAX\_JOBS\_SUBMITTED}]
@@ -10692,19 +10792,12 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanUseOldDagReader}
 \item[\Macro{DAGMAN\_USE\_OLD\_DAG\_READER}]
-  A boolean value defining whether \Condor{submit\_dag} uses 
-  code to read DAG input files that comes from HTCondor versions previous
-  to version 8.0.6 or after. 
-  This code is used to discover any per-DAG configuration
-  files and SUBDAG files if the \Opt{-do\_recurse} option is used.
-  This variable needs to be set in a machine or pool
-  configuration file, or by setting the environment variable;
-  it cannot work as part of a per-DAG configuration file.
-  The default value if not defined is \Expr{False}.  
-  This configuration variable should not have to be changed
-  from the default setting. 
-  It exists to gracefully handle the unlikely case in which 
-  a bug is found in the new code.
+  As of HTCondor version 8.3.3, this variable is no longer supported.
+  Its value will always be \Expr{False}.  
+  A setting of \Expr{True} will result in a warning, 
+  and the setting will have no effect on how a DAG input file is read. 
+  The variable was previously used to change the reading of DAG input
+  files to that of HTCondor versions prior to 8.0.6. 
 
 \end{description}
 
@@ -10998,11 +11091,17 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
 
 \label{param:EncryptExecuteDirectory}
 \item[\Macro{ENCRYPT\_EXECUTE\_DIRECTORY}]
-  The execute directory for jobs on Windows platforms may be
-  encrypted by setting this configuration variable to \Expr{True}.
-  Defaults to \Expr{False}.
-  The method of encryption uses the EFS (Encrypted File System)
-  feature of Windows NTFS v5.
+	The execute directory for jobs on Linux or Windows platforms will be
+	encrypted by setting this configuration variable to \Expr{True}.  Defaults
+	to \Expr{False}.  Note that even if this setting is \Expr{False}, the
+	user can require encryption of the execute directory on a per-job basis by
+	setting \SubmitCmd{encrypt\_execute\_directory} to \Expr{True} in the
+	job submit description file given to \Condor{submit}.
+	Enabling this functionality requires that the HTCondor service
+	is run as user root (on Linux) or as a system service (on Windows).
+	The method of encryption uses ecryptfs on Linux (and
+	requires installation of the ecryptfs-utils package), or the EFS (Encrypted
+	File System) feature of NTFS on Windows.
 
 \label{param:SecTCPSessionTimeout}
 \item[\Macro{SEC\_TCP\_SESSION\_TIMEOUT}]
@@ -13052,7 +13151,7 @@ in ClassAds that the \Condor{collector} daemon has.
   \Condor{gangliad} configuration \emph{and}
   \MacroNI{STATISTICS\_TO\_PUBLISH} in the \Condor{schedd} configuration
   contains \Expr{TRANSFER:2}, or if the \MacroNI{STATISTICS\_TO\_PUBLISH\_LIST}
-  contains the desired attributes explictly.
+  contains the desired attributes explicitly.
 
 \label{param:GangliadRequirements}
 \item[\Macro{GANGLIAD\_REQUIREMENTS}] An optional boolean ClassAd expression

@@ -1739,7 +1739,7 @@ static bool ClassAdHasDirtyAttributes(classad::ClassAd *ad) {
 }
 
 void
-JobRouter::UpdateRoutedJobStatus(RoutedJob *job, classad::ClassAd update) {
+JobRouter::UpdateRoutedJobStatus(RoutedJob *job, const classad::ClassAd &update) {
 	classad::ClassAd *new_ad = NULL;
 	classad::ClassAdCollection *ad_collection2 = GetSchedd2ClassAds();
 

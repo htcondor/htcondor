@@ -94,7 +94,6 @@
 #include "ClassAdLogPlugin.h"
 #endif
 #include <algorithm>
-#include <sstream>
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -1789,7 +1788,7 @@ int Scheduler::command_history(int, Stream* stream)
 		ss << attr;
 	}
 
-	int matchCount;
+	int matchCount = -1;
 	if (!queryAd.EvaluateAttr(ATTR_NUM_MATCHES, value) || !value.IsIntegerValue(matchCount))
 	{
 		matchCount = -1;
@@ -1889,16 +1888,20 @@ struct QueryJobAdsContinuation : Service {
 	classad_shared_ptr<classad::ExprTree> requirements;
 	classad::References projection;
 	JobQueueLogType::filter_iterator it;
+	int match_limit;
+	int match_count;
 	bool unfinished_eom;
 	bool registered_socket;
 
-	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int timeslice_ms=0);
+	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms=0);
 	int finish(Stream *);
 };
 
-QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int timeslice_ms)
+QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms)
 	: requirements(requirements_),
 	  it(GetJobQueueIterator(*requirements, timeslice_ms)),
+	  match_limit(limit),
+	  match_count(0),
 	  unfinished_eom(false),
 	  registered_socket(false)
 {
@@ -1908,6 +1911,9 @@ int
 QueryJobAdsContinuation::finish(Stream *stream) {
 	ReliSock *sock = static_cast<ReliSock*>(stream);
 	JobQueueLogType::filter_iterator end = GetJobQueueIteratorEnd();
+	if (match_limit >= 0 && (match_count >= match_limit)) {
+		it = end;
+	}
 	bool has_backlog = false;
 
 	if (unfinished_eom) {
@@ -1937,6 +1943,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		int retval = putClassAd(sock, *tmp_ad,
 					PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
 					projection.empty() ? NULL : &projection);
+		match_count++;
 		if (retval == 2) {
 			//dprintf(D_FULLDEBUG, "Detecting backlog.\n");
 			has_backlog = true;
@@ -1949,6 +1956,9 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 			//dprintf(D_FULLDEBUG, "Socket EOM will block.\n");
 			unfinished_eom = true;
 			has_backlog = true;
+		}
+		if (match_limit >= 0 && (match_count >= match_limit)) {
+			it = end;
 		}
 	}
 	if (has_backlog && !registered_socket) {
@@ -1996,7 +2006,12 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	}
 	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements->Copy());
 
-	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, 1000);
+	int resultLimit=-1;
+	if (!queryAd.EvaluateAttrInt(ATTR_LIMIT_RESULTS, resultLimit)) {
+		resultLimit = -1;
+	}
+
+	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, resultLimit, 1000);
 	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, continuation->projection, true);
 	if (proj_err < 0) {
 		delete continuation;
@@ -2010,6 +2025,8 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	if (fork_status == FORK_PARENT)
 	{ // Successfully forked a child - as far as the schedd cares, this worked.
 	  // Throw away the socket and move on.
+		// need to delete the parent's copy of the continuation object
+		delete continuation;
 		return true;
 	}
 	else if (fork_status == FORK_CHILD)
@@ -2026,10 +2043,10 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	}
 }
 
-void * BeginJobAggregation(bool use_def_autocluster, const char * projection, classad::ExprTree *constraint)
+void * BeginJobAggregation(bool use_def_autocluster, const char * projection, int result_limit, classad::ExprTree *constraint)
 {
 	JobAggregationResults *jar = NULL;
-	jar = scheduler.autocluster.aggregateOn(use_def_autocluster, projection, constraint);
+	jar = scheduler.autocluster.aggregateOn(use_def_autocluster, projection, result_limit, constraint);
 	return (void*)jar;
 }
 
@@ -2166,18 +2183,21 @@ int Scheduler::command_query_job_aggregates(ClassAd &queryAd, Stream* stream)
 {
 	classad::ExprTree *constraint = queryAd.Lookup(ATTR_REQUIREMENTS);
 
-	char *projection = NULL;
-	queryAd.LookupString(ATTR_PROJECTION, &projection);
+	std::string projection;
+	if ( ! queryAd.LookupString(ATTR_PROJECTION, projection)) { projection = ""; }
 
 	//bool group_by = false;
 	//queryAd.LookupBool("ProjectionIsGroupBy", group_by);
 	bool use_def_autocluster = false;
 	queryAd.LookupBool("QueryDefaultAutocluster", use_def_autocluster);
 
-	void *aggregation = BeginJobAggregation(use_def_autocluster, projection, constraint);
+	int resultLimit=-1;
+	if (!queryAd.EvaluateAttrInt(ATTR_LIMIT_RESULTS, resultLimit)) {
+		resultLimit = -1;
+	}
+
+	void *aggregation = BeginJobAggregation(use_def_autocluster, projection.c_str(), resultLimit, constraint);
 	if ( ! aggregation) {
-		free(projection);
-		projection = NULL;
 		return -1;
 	}
 
@@ -2187,6 +2207,8 @@ int Scheduler::command_query_job_aggregates(ClassAd &queryAd, Stream* stream)
 	if (fork_status == FORK_PARENT)
 	{ // Successfully forked a child - as far as the schedd cares, this worked.
 	  // Throw away the socket and move on.
+		// need to free the parent's copy of the continuation object
+		delete continuation;
 		return true;
 	}
 	else if (fork_status == FORK_CHILD)
@@ -2320,14 +2342,55 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 	// increment our count of the number of job ads in the queue
 	scheduler.JobsTotalAds++;
 
-	// build a list of other stats pools that match this job
-	//
-	time_t now = time(NULL);
-	ScheddOtherStats * other_stats = NULL;
-	if (scheduler.OtherPoolStats.AnyEnabled()) {
-		other_stats = scheduler.OtherPoolStats.Matches(*job,now);
-	}
-	#define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
+    time_t now = time(NULL);
+    ScheddOtherStats * other_stats = NULL;
+    if (scheduler.OtherPoolStats.AnyEnabled()) {
+        other_stats = scheduler.OtherPoolStats.Matches(*job, now);
+    }
+    #define OTHER for (ScheddOtherStats * po = other_stats; po; po = po->next) (po->stats)
+
+    if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
+        /*
+         * Not all universes track CurrentHosts and MaxHosts; if there's no information,
+         * simply increment Running or Idle by 1.
+         */
+        if ((status == RUNNING || status == TRANSFERRING_OUTPUT) && !cur_hosts)
+        {
+                scheduler.JobsRunning += 1;
+        }
+        else if ((status == IDLE) && !max_hosts)
+        {
+                scheduler.JobsIdle += 1;
+        }
+        else
+        {
+                scheduler.JobsRunning += cur_hosts;
+                scheduler.JobsIdle += (max_hosts - cur_hosts);
+        }
+
+            // if job is not idle, then update statistics for running jobs
+        if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
+            scheduler.stats.JobsRunning += 1;
+            OTHER.JobsRunning += 1;
+
+            int job_image_size = 0;
+            job->LookupInteger("ImageSize_RAW", job_image_size);
+            scheduler.stats.JobsRunningSizes += (int64_t)job_image_size * 1024;
+            OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
+
+            int job_start_date = 0;
+            int job_running_time = 0;
+            if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
+                job_running_time = (now - job_start_date);
+            scheduler.stats.JobsRunningRuntimes += job_running_time;
+            OTHER.JobsRunningRuntimes += job_running_time;
+        }
+    } else if (status == HELD) {
+        scheduler.JobsHeld++;
+    } else if (status == REMOVED) {
+        scheduler.JobsRemoved++;
+    }
+    #undef OTHER
 
 	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
 	// this function makes its own copies of the memory passed in 
@@ -2434,8 +2497,6 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 	}
 
 	if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
-		scheduler.JobsRunning += cur_hosts;
-		scheduler.JobsIdle += (max_hosts - cur_hosts);
 
 			// Update Owner array PrioSet iff knob USE_GLOBAL_JOB_PRIOS is true
 			// and iff job is looking for more matches (max-hosts - cur_hosts)
@@ -2470,31 +2531,10 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			// Don't update scheduler.Owners[OwnerNum].JobsRunning here.
 			// We do it in Scheduler::count_jobs().
 
-			// if job is not idle, then update statistics for running jobs
-		if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
-			scheduler.stats.JobsRunning += 1;
-			OTHER.JobsRunning += 1;
-
-			int job_image_size = 0;
-			job->LookupInteger("ImageSize_RAW", job_image_size);
-			scheduler.stats.JobsRunningSizes += (int64_t)job_image_size * 1024;
-			OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
-
-			int job_start_date = 0;
-			int job_running_time = 0;
-			if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
-				job_running_time = (now - job_start_date);
-			scheduler.stats.JobsRunningRuntimes += job_running_time;
-			OTHER.JobsRunningRuntimes += job_running_time;
-		}
 	} else if (status == HELD) {
-		scheduler.JobsHeld++;
 		scheduler.Owners[OwnerNum].JobsHeld++;
-	} else if (status == REMOVED) {
-		scheduler.JobsRemoved++;
 	}
 
-	#undef OTHER
 	return 0;
 }
 
@@ -4181,7 +4221,6 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	PROC_ID a_job;
 	int tid;
 	char *peer_version = NULL;
-	std::ostringstream job_ids;
 	std::string job_ids_string;
 
 		// make sure this connection is authenticated, and we know who
@@ -4295,7 +4334,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					// is allowed to transfer data to/from a job.
 				if (OwnerCheck(a_job.cluster,a_job.proc)) {
 					(*jobs)[i] = a_job;
-					job_ids << a_job.cluster << "." << a_job.proc << ", ";
+					formatstr_cat(job_ids_string, "%d.%d, ", a_job.cluster, a_job.proc);
 
 						// Must not allow stagein to happen more than
 						// once, because this could screw up
@@ -4310,6 +4349,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 						         " already finished for this job.\n",
 						         a_job.cluster, a_job.proc);
 						unsetQSock();
+						delete jobs;
 						return FALSE;
 					}
 					int holdcode;
@@ -4326,6 +4366,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 								"spooling. Do not allow stagein\n",
 								a_job.cluster, a_job.proc);
 							unsetQSock();
+							delete jobs;
 							return FALSE;
 						}
 					}
@@ -4347,7 +4388,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 				 	OwnerCheck(a_job.cluster, a_job.proc) )
 				{
 					(*jobs)[JobAdsArrayLen++] = a_job;
-					job_ids << a_job.cluster << "." << a_job.proc << ", ";
+					formatstr_cat(job_ids_string, "%d.%d, ", a_job.cluster, a_job.proc);
 				}
 				tmp_ad = GetNextJobByConstraint(constraint_string,0);
 			}
@@ -4373,8 +4414,9 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 	rsock->end_of_message();
 
-	job_ids_string = job_ids.str();
-	job_ids_string.erase(job_ids_string.length()-2,2); //Get rid of the extraneous ", "
+	if (job_ids_string.length() > 2) {
+		job_ids_string.erase(job_ids_string.length()-2,2); //Get rid of the extraneous ", "
+	}
 	dprintf( D_AUDIT, *rsock, "Transferring files for jobs %s\n", 
 			 job_ids_string.c_str());
 
@@ -5625,6 +5667,8 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 
 	if( scheduler_skipJob(job_id) ) {
 
+		bool orig_job_id_invalid = job_id.cluster == -1 || job_id.proc == -1;
+
 		if( job_id.cluster != -1 && job_id.proc != -1 ) {
 			if( skipAllSuchJobs(job_id) ) {
 					// No point in trying to find a different job,
@@ -5645,6 +5689,16 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 		FindRunnableJob(job_id,&match_ad,getOwner());
 
 		if( job_id.cluster != -1 && job_id.proc != -1 ) {
+				// If we got an initial job_id of -1.-1, then the
+				// previous check of skipAllSuchJobs() was skipped.
+				// Check it now that we do have a valid job_id.
+			if ( orig_job_id_invalid && skipAllSuchJobs(job_id) ) {
+				dprintf(D_FULLDEBUG,
+					"Rejecting match to %s "
+					"because no job may be started to run on it right now.\n",
+					slot_name);
+				return false;
+			}
 			dprintf(D_FULLDEBUG,"Rematched %s to job %d.%d\n",
 					slot_name, job_id.cluster, job_id.proc );
 		}

@@ -1006,6 +1006,9 @@ firstPass (int argc, char *argv[])
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
 				exit(1);
 			} else {
+				if (genericType) {
+					free(genericType);
+				}
 				genericType = strdup(argv[i]);
 				setMode (MODE_OTHER, i, argv[i]);
 			}

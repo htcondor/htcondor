@@ -259,6 +259,9 @@ main_init( int argc, char* argv[] )
 			if( !(ptr && *ptr) ) {
 				EXCEPT( "-n requires another argument" );
 			}
+			if (MasterName) {
+				free(MasterName);
+			}
 			MasterName = build_valid_daemon_name( *ptr );
 			dprintf( D_ALWAYS, "Using name: %s\n", MasterName );
 			break;
@@ -266,6 +269,34 @@ main_init( int argc, char* argv[] )
 			usage( argv[0] );
 		}
 	}
+
+#ifdef LINUX
+	if ( can_switch_ids() &&
+		 param_boolean("DISCARD_SESSION_KEYRING_ON_STARTUP",true) )
+	{
+#ifndef KEYCTL_JOIN_SESSION_KEYRING
+  #define KEYCTL_JOIN_SESSION_KEYRING 1
+#endif
+		// Create a new empty session keyring, discarding the old one.
+		// We do this in the master so a session keyring containing
+		// root keys is not inadvertantly leaked to jobs
+		// (esp scheduler universe jobs, since
+		// KEYCTL_JOIN_SESSION_KEYRING will fail in RHEL6 if the calling
+		// process has more than one thread, which is true when spawning
+		// scheduler universe jobs as the schedd clones by default instead
+		// of forking).  We also do this in the master instead
+		// of daemonCore, since we don't want to create a brand new
+		// session keyring for every shadow (each keyring uses up kernel resources).
+		// If the syscall fails due to ENOSYS, don't worry about it,
+		// since that simply says the keyring facility is not installed.
+		if (syscall(__NR_keyctl, KEYCTL_JOIN_SESSION_KEYRING, "htcondor")==-1 &&
+			errno != ENOSYS)
+		{
+			EXCEPT("Failed DISCARD_SESSION_KEYRING_ON_STARTUP=True errno=%d",
+					errno);
+		}
+	}
+#endif
 
     if (runfor != 0) {
         // We will construct an environment variable that 
