@@ -413,7 +413,6 @@ void Server::SetUpPeers()
 			addr.set_port(CKPT_SVR_REPLICATE_REQ_PORT);
 			peer_addr_list[num_peers++] = addr.to_sin();
 			//sprintf(peer_addr, "<%s:%d>", peer, CKPT_SVR_REPLICATE_REQ_PORT);
-			//string_to_sin(peer_addr, peer_addr_list+(num_peers++));
 		}
 	}
 	free( ckpt_host );
@@ -1350,6 +1349,7 @@ void Server::SendStatus(int data_conn_sd)
 				 sizeof(socket_bufsize));
   }
   imds.TransferFileInfo(xfer_sd);
+  close(xfer_sd);
 }
 
 /* check to make sure something being used as a filename that we will

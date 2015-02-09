@@ -19,10 +19,13 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
 
-$cmd = 'job_core_err_van.cmd';
-$testdesc =  'Condor_submit correctly uses error file - vanilla U';
 $testname = "job_core_err_van";
+my $pid = $$;
+
+my $error = "$testname" . "$pid.err";
 
 $success = sub 
 {
@@ -57,13 +60,15 @@ $died = sub
 	}
 };
 
-CondorTest::RegisterExitedFailure( $testname, $died );
-CondorTest::RegisterExitedSuccess( $testname, $success );
 
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
-}
+my $result = SimpleJob::RunCheck(
+	test_name => $testname,
+	runthis => "job_core_err.pl",
+	on_success => $success,
+	on_failure => $died,
+	error => $error,
+);
 
+CondorTest::EndTest();
+
+exit(0)

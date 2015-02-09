@@ -384,6 +384,7 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	}
 
 	if (fetch_opts == fetch_DefaultAutoCluster) {
+		free( constraint );
 		return Q_UNSUPPORTED_OPTION_ERROR;
 	}
 

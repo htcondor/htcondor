@@ -1048,5 +1048,4 @@ main(int argc, char **argv) {
 		printf("\tError: %d (%s)\n", errno, strerror(errno));
 	}
 	return ret_val;
-	exit(-1);
 }

@@ -1181,6 +1181,9 @@ GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames ) 
 {
     EvalState       state;
 
+    // Treat this ad as the root of the tree for reference tracking.
+    // If an attribute is only present in a parent scope of this ad,
+    // then we want to treat it as an external reference.
     state.rootAd = this; 
 	state.curAd = this;
 
@@ -1374,9 +1377,11 @@ GetExternalReferences( const ExprTree *tree, PortReferences &refs ) const
 {
     EvalState       state;
 
+    // Treat this ad as the root of the tree for reference tracking.
+    // If an attribute is only present in a parent scope of this ad,
+    // then we want to treat it as an external reference.
     state.rootAd = this; 
-    state.curAd = tree->GetParentScope( );
-	if( !state.curAd ) state.curAd = this;
+    state.curAd = this;
 	
     return( _GetExternalReferences( tree, this, state, refs ) );
 }
@@ -1526,6 +1531,10 @@ bool ClassAd::
 GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames) const
 {
     EvalState state;
+
+    // Treat this ad as the root of the tree for reference tracking.
+    // If an attribute is only present in a parent scope of this ad,
+    // then we want to treat it as an external reference.
     state.rootAd = this;
     state.curAd = this;
 
@@ -1608,8 +1617,19 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
 
                 case EVAL_OK:   {
                     //whoo, it's internal.
+                    // Check whether the attribute was found in the root
+                    // ad for this evaluation and that the attribute isn't
+                    // one of our special ones (self, parent, my, etc.).
+                    // If the ad actually has an attribute with the same
+                    // name as one of our special attributes, then count
+                    // that as an internal reference.
+                    // TODO LookupInScope() knows whether it's returning
+                    //   the expression of one of the special attributes
+                    //   or that of an attribute that actually appears in
+                    //   the ad. If it told us which one, then we could
+                    //   avoid the Lookup() call below.
                     if ( state.curAd == state.rootAd &&
-                         specialAttrNames->find(attr) == specialAttrNames->end()) {
+                         state.curAd->Lookup( attr ) ) {
                         refs.insert(attr);
                     }
                     if( state.depth_remaining <= 0 ) {

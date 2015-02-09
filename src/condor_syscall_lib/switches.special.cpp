@@ -1897,7 +1897,7 @@ static int remote_system_posix(const char *command, int len)
 		envsize += 1;
 	
 		/* get some memory */
-		str = (char*)malloc(sizeof(char*) * envsize);
+		str = (char*)malloc(envsize);
 		if (str == NULL) {
 			EXCEPT( "remote_system_posix(): Out of memory!");
 		}

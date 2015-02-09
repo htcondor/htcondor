@@ -691,7 +691,7 @@ if [ -n "$deferral_date_time" ]; then
 #	printf "+HoldReasonCode = 15\n" >> $submit_file
 #	# We want to make sure that the reason why the job would be released from being on hold is because we put the job
 #	# on hold on submission and the current time is after the specified eligible execution time.
-#	printf "periodic_release = ( ( CurrentTime >= $deferral_unix_epoch ) && ( HoldReasonCode == 15 ) )\n" >> $submit_file
+#	printf "periodic_release = ( ( time() >= $deferral_unix_epoch ) && ( HoldReasonCode == 15 ) )\n" >> $submit_file
 ############################################################
 # The Deferral Time Route
 ############################################################

@@ -62,10 +62,17 @@ ad.
 
 \begin{itemize}
 
+\item Configuration setting \Macro{ENCRYPT\_EXECUTE\_DIRECTORY} 
+	is now honored on Linux (assuming ecryptfs-utils package is installed
+	and the Linux kernel is version 2.6.29 or newer), and also
+	\SubmitCmd{encrypt\_execute\_directory} can now be specified
+	by the user with \Condor{submit} on a per-job basis.
+\Ticket{4856}
+
 \item EC2 grid universe jobs may now specify an IAM (instance) profile.
 \Ticket{4810}
 
-\item EC2 jobs may now specify security group IDs (instead of names).
+\item EC2 jobs may now specify security group IDs instead of names.
 This allows the use of VPC instances with non-default security groups.
 \Ticket{4796}
 
@@ -130,6 +137,9 @@ These attributes include \Attr{TotalRunningJobs}, \Attr{TotalIdleJobs},
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug that prevented CCB servers from running on Windows platforms.
+\Ticket{4713}
 
 \item Fixed a bug in the \Condor{startd} daemon introduced in HTCondor 
 version 8.3.2.

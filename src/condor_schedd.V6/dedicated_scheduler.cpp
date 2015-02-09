@@ -2354,6 +2354,9 @@ DedicatedScheduler::computeSchedule( void )
 			preemption_rank = tmp_expr;
 #endif
 
+			if (nodes_per_proc) {
+				delete [] nodes_per_proc;
+			}
 			nodes_per_proc = new int[nprocs];
 			for (int ni = 0; ni < nprocs; ni++) {
 				nodes_per_proc[ni] = 0;
@@ -2583,6 +2586,7 @@ DedicatedScheduler::computeSchedule( void )
 			delete jobs;
 			if( nodes_per_proc ) {
 					delete [] nodes_per_proc;
+					nodes_per_proc = NULL;
 			}
 			return true;
 		} else {

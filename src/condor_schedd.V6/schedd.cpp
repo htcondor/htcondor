@@ -94,7 +94,6 @@
 #include "ClassAdLogPlugin.h"
 #endif
 #include <algorithm>
-#include <sstream>
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -2026,6 +2025,8 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	if (fork_status == FORK_PARENT)
 	{ // Successfully forked a child - as far as the schedd cares, this worked.
 	  // Throw away the socket and move on.
+		// need to delete the parent's copy of the continuation object
+		delete continuation;
 		return true;
 	}
 	else if (fork_status == FORK_CHILD)
@@ -2182,8 +2183,8 @@ int Scheduler::command_query_job_aggregates(ClassAd &queryAd, Stream* stream)
 {
 	classad::ExprTree *constraint = queryAd.Lookup(ATTR_REQUIREMENTS);
 
-	char *projection = NULL;
-	queryAd.LookupString(ATTR_PROJECTION, &projection);
+	std::string projection;
+	if ( ! queryAd.LookupString(ATTR_PROJECTION, projection)) { projection = ""; }
 
 	//bool group_by = false;
 	//queryAd.LookupBool("ProjectionIsGroupBy", group_by);
@@ -2195,10 +2196,8 @@ int Scheduler::command_query_job_aggregates(ClassAd &queryAd, Stream* stream)
 		resultLimit = -1;
 	}
 
-	void *aggregation = BeginJobAggregation(use_def_autocluster, projection, resultLimit, constraint);
+	void *aggregation = BeginJobAggregation(use_def_autocluster, projection.c_str(), resultLimit, constraint);
 	if ( ! aggregation) {
-		free(projection);
-		projection = NULL;
 		return -1;
 	}
 
@@ -2208,6 +2207,8 @@ int Scheduler::command_query_job_aggregates(ClassAd &queryAd, Stream* stream)
 	if (fork_status == FORK_PARENT)
 	{ // Successfully forked a child - as far as the schedd cares, this worked.
 	  // Throw away the socket and move on.
+		// need to free the parent's copy of the continuation object
+		delete continuation;
 		return true;
 	}
 	else if (fork_status == FORK_CHILD)
@@ -4220,7 +4221,6 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	PROC_ID a_job;
 	int tid;
 	char *peer_version = NULL;
-	std::ostringstream job_ids;
 	std::string job_ids_string;
 
 		// make sure this connection is authenticated, and we know who
@@ -4334,7 +4334,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					// is allowed to transfer data to/from a job.
 				if (OwnerCheck(a_job.cluster,a_job.proc)) {
 					(*jobs)[i] = a_job;
-					job_ids << a_job.cluster << "." << a_job.proc << ", ";
+					formatstr_cat(job_ids_string, "%d.%d, ", a_job.cluster, a_job.proc);
 
 						// Must not allow stagein to happen more than
 						// once, because this could screw up
@@ -4349,6 +4349,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 						         " already finished for this job.\n",
 						         a_job.cluster, a_job.proc);
 						unsetQSock();
+						delete jobs;
 						return FALSE;
 					}
 					int holdcode;
@@ -4365,6 +4366,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 								"spooling. Do not allow stagein\n",
 								a_job.cluster, a_job.proc);
 							unsetQSock();
+							delete jobs;
 							return FALSE;
 						}
 					}
@@ -4386,7 +4388,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 				 	OwnerCheck(a_job.cluster, a_job.proc) )
 				{
 					(*jobs)[JobAdsArrayLen++] = a_job;
-					job_ids << a_job.cluster << "." << a_job.proc << ", ";
+					formatstr_cat(job_ids_string, "%d.%d, ", a_job.cluster, a_job.proc);
 				}
 				tmp_ad = GetNextJobByConstraint(constraint_string,0);
 			}
@@ -4412,8 +4414,9 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 	rsock->end_of_message();
 
-	job_ids_string = job_ids.str();
-	job_ids_string.erase(job_ids_string.length()-2,2); //Get rid of the extraneous ", "
+	if (job_ids_string.length() > 2) {
+		job_ids_string.erase(job_ids_string.length()-2,2); //Get rid of the extraneous ", "
+	}
 	dprintf( D_AUDIT, *rsock, "Transferring files for jobs %s\n", 
 			 job_ids_string.c_str());
 
@@ -5664,6 +5667,8 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 
 	if( scheduler_skipJob(job_id) ) {
 
+		bool orig_job_id_invalid = job_id.cluster == -1 || job_id.proc == -1;
+
 		if( job_id.cluster != -1 && job_id.proc != -1 ) {
 			if( skipAllSuchJobs(job_id) ) {
 					// No point in trying to find a different job,
@@ -5684,6 +5689,16 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 		FindRunnableJob(job_id,&match_ad,getOwner());
 
 		if( job_id.cluster != -1 && job_id.proc != -1 ) {
+				// If we got an initial job_id of -1.-1, then the
+				// previous check of skipAllSuchJobs() was skipped.
+				// Check it now that we do have a valid job_id.
+			if ( orig_job_id_invalid && skipAllSuchJobs(job_id) ) {
+				dprintf(D_FULLDEBUG,
+					"Rejecting match to %s "
+					"because no job may be started to run on it right now.\n",
+					slot_name);
+				return false;
+			}
 			dprintf(D_FULLDEBUG,"Rematched %s to job %d.%d\n",
 					slot_name, job_id.cluster, job_id.proc );
 		}

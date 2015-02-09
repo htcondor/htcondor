@@ -613,8 +613,10 @@ parseArgumentsLine( const MyString &subLine,
 	for ( int argNum = 0; argNum < arglist.Count(); argNum++ ) {
 		MyString strArg = arglist.GetArg( argNum );
 		strArg.lower_case();
+		char **args = arglist.GetStringArray();
 		(void)parsePreservedArgs( strArg, argNum, arglist.Count(),
-					arglist.GetStringArray(), shallowOpts);
+					args, shallowOpts);
+		deleteStringArray(args);
 	}
 
 	return 0;

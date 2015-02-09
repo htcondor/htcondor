@@ -11091,11 +11091,17 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
 
 \label{param:EncryptExecuteDirectory}
 \item[\Macro{ENCRYPT\_EXECUTE\_DIRECTORY}]
-  The execute directory for jobs on Windows platforms may be
-  encrypted by setting this configuration variable to \Expr{True}.
-  Defaults to \Expr{False}.
-  The method of encryption uses the EFS (Encrypted File System)
-  feature of Windows NTFS v5.
+	The execute directory for jobs on Linux or Windows platforms will be
+	encrypted by setting this configuration variable to \Expr{True}.  Defaults
+	to \Expr{False}.  Note that even if this setting is \Expr{False}, the
+	user can require encryption of the execute directory on a per-job basis by
+	setting \SubmitCmd{encrypt\_execute\_directory} to \Expr{True} in the
+	job submit description file given to \Condor{submit}.
+	Enabling this functionality requires that the HTCondor service
+	is run as user root (on Linux) or as a system service (on Windows).
+	The method of encryption uses ecryptfs on Linux (and
+	requires installation of the ecryptfs-utils package), or the EFS (Encrypted
+	File System) feature of NTFS on Windows.
 
 \label{param:SecTCPSessionTimeout}
 \item[\Macro{SEC\_TCP\_SESSION\_TIMEOUT}]

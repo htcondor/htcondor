@@ -836,6 +836,7 @@ bool SSHToJob::execute_ssh()
 					new_arg += known_hosts_file;
 				}
 				else {
+					deleteStringArray(argarray);
 					logError("Unexpected %%%c in ssh command: %s\n",
 							 *ptr ? *ptr : ' ', ssh_cmd.Value());
 					return false;

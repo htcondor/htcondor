@@ -162,6 +162,7 @@ bool stream_stderr_toggle = false;
 bool    NeedsPerFileEncryption = false;
 bool	NeedsJobDeferral = false;
 bool job_ad_saved = false;	// should we deallocate the job ad after storing it?
+bool HasEncryptExecuteDir = false;
 bool HasTDP = false;
 char* tdp_cmd = NULL;
 char* tdp_input = NULL;
@@ -301,6 +302,8 @@ const char	*FetchFiles = "fetch_files";
 const char	*CompressFiles = "compress_files";
 const char	*AppendFiles = "append_files";
 const char	*LocalFiles = "local_files";
+
+const char 	*EncryptExecuteDir = "encrypt_execute_directory";
 
 const char	*ToolDaemonCmd = "tool_daemon_cmd";
 const char	*ToolDaemonArgs = "tool_daemon_args"; // for backward compatibility
@@ -515,6 +518,7 @@ void 	SetTransferFiles();
 void    process_input_file_list(StringList * input_list, char *input_files, bool * files_specified);
 void 	SetPerFileEncryption();
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
+void 	SetEncryptExecuteDir();
 void 	SetTDP();
 void	SetRunAsOwner();
 void    SetLoadProfile();
@@ -3879,7 +3883,7 @@ SetLeaveInQueue()
 				   for up to 10 days, so user can grab the output.
 				 */
 			buffer.formatstr( 
-				"%s = %s == %d && (%s =?= UNDEFINED || %s == 0 || ((CurrentTime - %s) < %d))",
+				"%s = %s == %d && (%s =?= UNDEFINED || %s == 0 || ((time() - %s) < %d))",
 				ATTR_JOB_LEAVE_IN_QUEUE,
 				ATTR_JOB_STATUS,
 				COMPLETED,
@@ -4765,6 +4769,24 @@ SetRequirements()
 	}
 }
 
+void
+SetEncryptExecuteDir()
+{
+	char *enc =
+		condor_param( EncryptExecuteDir, ATTR_ENCRYPT_EXECUTE_DIRECTORY );
+
+	MyString buf;
+	if (enc && isTrue(enc)) {
+		HasEncryptExecuteDir = true;
+	} else {
+		HasEncryptExecuteDir = false;
+	}
+	buf.formatstr("%s = %s", ATTR_ENCRYPT_EXECUTE_DIRECTORY,
+			HasEncryptExecuteDir ? "True" : "False");
+	InsertJobExpr( buf.Value() );
+
+	if (enc) free(enc);
+}
 
 void
 SetTDP( void )
@@ -6819,6 +6841,7 @@ queue(int num)
 		SetCompressFiles();
 		SetAppendFiles();
 		SetLocalFiles();
+		SetEncryptExecuteDir();
 		SetTDP();			// before SetTransferFile() and SetRequirements()
 		SetTransferFiles();	 // must be called _before_ SetImageSize() 
 		SetRunAsOwner();
@@ -6994,6 +7017,7 @@ check_requirements( char const *orig, MyString &answer )
 	bool	checks_per_file_encryption = false;
 	bool	checks_mpi = false;
 	bool	checks_tdp = false;
+	bool	checks_encrypt_exec_dir = false;
 #if defined(WIN32)
 	bool	checks_credd = false;
 #endif
@@ -7073,6 +7097,7 @@ check_requirements( char const *orig, MyString &answer )
 	checks_disk =  machine_refs.contains_anycase( ATTR_DISK );
 	checks_cpus =   machine_refs.contains_anycase( ATTR_CPUS );
 	checks_tdp =  machine_refs.contains_anycase( ATTR_HAS_TDP );
+	checks_encrypt_exec_dir = machine_refs.contains_anycase( ATTR_ENCRYPT_EXECUTE_DIRECTORY );
 #if defined(WIN32)
 	checks_credd = machine_refs.contains_anycase( ATTR_LOCAL_CREDD );
 #endif
@@ -7258,6 +7283,12 @@ check_requirements( char const *orig, MyString &answer )
 	if( HasTDP && !checks_tdp ) {
 		answer += " && (TARGET.";
 		answer += ATTR_HAS_TDP;
+		answer += ")";
+	}
+
+	if( HasEncryptExecuteDir && !checks_encrypt_exec_dir ) {
+		answer += " && (TARGET.";
+		answer += ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY;
 		answer += ")";
 	}
 

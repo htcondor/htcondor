@@ -59,8 +59,10 @@ AdTypes convert_to_ad_type(daemon_t d_type)
         break;
     case DT_GENERIC:
         ad_type = GENERIC_AD;
+		break;
     case DT_HAD:
         ad_type = HAD_AD;
+		break;
     default:
         PyErr_SetString(PyExc_ValueError, "Unknown daemon type.");
         throw_error_already_set();

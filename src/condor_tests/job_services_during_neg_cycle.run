@@ -275,8 +275,14 @@ sub CheckExpectations
 
 	CondorTest::debug("CheckExpectations: $ad Got,$got Expected,$expected\n",2);
 	if($got != $expected) {
-		CondorTest::RegisterResult(0, "test_name", $testname);
-		die "$ad: Expected <$expected> but only got <$got>\n";
+		if($ad =~ /Condor_userprio handlings/) {
+			if(($got >= 1) && ($got <= $expected)) {
+				CondorTest::RegisterResult(1, "test_name", $testname);
+			}
+		} else {
+			CondorTest::RegisterResult(0, "test_name", $testname);
+			die "$ad: Expected <$expected> but only got <$got>\n";
+		}
 	} else {
 		CondorTest::RegisterResult(1, "test_name", $testname);
 	}

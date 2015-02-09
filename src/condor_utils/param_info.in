@@ -6805,6 +6805,15 @@ friendly_name=Send metrics for all hosts
 review=?
 tags=c++_util,gangliad
 
+[ECRYPTFS_ADD_PASSPHRASE]
+default=ecryptfs-add-passphrase
+type=path
+reconfig=true
+customization=expert
+friendly_name=Name of ecryptfs tool to add a passphrase
+review=toddt
+tags=ecryptfs
+
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
 default=
 type=string
@@ -7907,6 +7916,15 @@ reconfig=true
 customization=seldom
 friendly_name=Whether to invoke file transfer plugins as user or as root
 review=?
+
+[DISCARD_SESSION_KEYRING_ON_STARTUP]
+default=true
+type=bool
+reconfig=false
+customization=expert
+friendly_name=Will master discard session keyring on startup
+review=toddt
+tags=ecryptfs,master
 
 [DOCKER]
 default=/usr/bin/docker
