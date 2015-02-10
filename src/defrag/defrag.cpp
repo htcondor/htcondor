@@ -500,8 +500,6 @@ void Defrag::poll_cancel(MachineSet &cancelled_machines)
 	ClassAd *startd_ad_ptr;
 	while ( (startd_ad_ptr=startdAds.Next()) )
 	{
-		if (!startd_ad_ptr) continue;
-
 		ClassAd &startd_ad = *startd_ad_ptr;
 		std::string machine;
 		std::string name;
