@@ -144,7 +144,7 @@ email_open( const char *email_addr, const char *subject )
 		return NULL;
 	}
 
-	Sendmail = param("SENDMAIL");
+	Sendmail = param_with_full_path("SENDMAIL");
 	Mailer = param("MAIL");
 
 	if ( Mailer == NULL && Sendmail == NULL ) {

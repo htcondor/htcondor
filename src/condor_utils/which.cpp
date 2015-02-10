@@ -44,7 +44,7 @@ which( const char* strFilename, const char* strAdditionalSearchDir )
 
 
 MyString
-which(const MyString &strFilename, const MyString &strAdditionalSearchDir)
+which(const MyString &strFilename, const MyString &strAdditionalSearchDirs)
 {
 	MyString strPath = getenv( EnvGetName( ENV_PATH ) );
 	dprintf( D_FULLDEBUG, "Path: %s\n", strPath.Value());
@@ -109,15 +109,18 @@ which(const MyString &strFilename, const MyString &strAdditionalSearchDir)
 		else
 			dprintf( D_FULLDEBUG, "_getcwd() failed, err=%d\n", errno);
 
-		// #1  had better be covered by the user passing in strAdditionalSearchDir
+		// #1  had better be covered by the user passing in strAdditionalSearchDirs
 	}
 #endif
 
 	listDirectoriesInPath.rewind();
 	listDirectoriesInPath.next();
 
-	if( strAdditionalSearchDir != "" ) {
-		listDirectoriesInPath.insert(strAdditionalSearchDir.Value());
+	// add additional dirs if specified
+	if( strAdditionalSearchDirs != "" ) {
+		// path_delim was set above
+		StringList listAdditionalSearchDirs( strAdditionalSearchDirs.Value(), path_delim );
+		listDirectoriesInPath.create_union(listAdditionalSearchDirs, false);
 	}
 	
 	listDirectoriesInPath.rewind();
