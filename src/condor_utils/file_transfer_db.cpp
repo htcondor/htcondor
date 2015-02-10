@@ -92,7 +92,7 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 		// dst_host, dst_name and dst_path, since file_transfer_db
 		// is called in the destination process, dst_host is my
 		// hostname
-	dst_host = my_full_hostname();
+	dst_host = get_local_fqdn();
 	dst_name = condor_basename(rp->fullname);
 	dir_tmp = condor_dirname(rp->fullname);
 	dst_path = dir_tmp;

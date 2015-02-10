@@ -28,8 +28,7 @@
 
 char *getHostname(char *givenHost) {
   if (givenHost == NULL) {
-  		const char *hostname = my_full_hostname();
-  		char *res = strnewp(hostname);
+  		char *res = strnewp(get_local_fqdn().Value());
   		return res;	
   } else {
   	return givenHost;

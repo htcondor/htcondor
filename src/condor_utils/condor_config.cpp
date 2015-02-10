@@ -1062,7 +1062,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	init_network_interfaces(TRUE);
 
 		// Now that we're done reading files, if DEFAULT_DOMAIN_NAME
-		// is set, we need to re-initialize my_full_hostname().
+		// is set, we need to re-initialize out hostname information.
 	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
 		free( tmp );
 		reset_local_hostname();

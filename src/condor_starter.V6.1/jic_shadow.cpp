@@ -27,7 +27,7 @@
 
 #include "NTsenders.h"
 #include "syscall_numbers.h"
-#include "my_hostname.h"
+#include "ipv6_hostname.h"
 #include "internet.h"
 #include "basename.h"
 #include "condor_string.h"  // for strnewp
@@ -920,7 +920,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	line += slotName;
 	line += '@';
 	
-	line += my_full_hostname();
+	line += get_local_fqdn();
 	line += '"';
 	ad->Insert( line.Value() );
 

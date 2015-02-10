@@ -33,13 +33,6 @@ static std::set< std::string > configured_network_interface_ips;
 static bool network_interface_matches_all;
 
 
-// Return our full hostname (with domain) in a static data buffer.
-const char* my_full_hostname() {
-    static MyString __my_full_hostname;
-    __my_full_hostname = get_local_fqdn();
-    return __my_full_hostname.Value();
-}
-
 const char* my_ip_string() {
     static MyString __my_ip_string;
 	// TODO: Picking IPv4 arbitrarily. WARNING: This function
