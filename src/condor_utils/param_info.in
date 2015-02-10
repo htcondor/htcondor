@@ -2800,6 +2800,17 @@ customization=seldom
 friendly_name=Ignore Nfs Lock Errors
 review=?
 
+[SENDMAIL]
+# default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
+default=sendmail
+win32_default=
+type=path
+reconfig=true
+customization=seldom
+friendly_name=Path to sendmail
+review=?
+tags=MAIL,
+
 [MAIL]
 # default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
 default=/bin/mail
