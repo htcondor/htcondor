@@ -3528,7 +3528,12 @@ param_with_full_path(const char *name)
 		// Store the result back into the param table so we don't repeat
 		// operation every time we are invoked, and so result can be
 		// inspected with condor_config_val.
-		MyString p = which(command);
+		MyString p = which(command
+#ifndef WIN32
+			// on UNIX, always include system path entries
+			, "/bin:/usr/bin:/sbin:/usr/sbin"
+#endif
+			);
 		free(command);
 		command = NULL;
 		if ((real_path = realpath(p.Value(),NULL))) {
