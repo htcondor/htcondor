@@ -26,6 +26,13 @@ The details of each version are described below.
 
 \item HTCondor version 8.2.7 released on Feb. 10, 2015.
 
+\item \Security The default mailer has been switched to \Prog{sendmail},
+because HTCondor's interactions with \Prog{mailx} could lead
+to privilege escalation.
+The CVE is described at
+\URL{https://access.redhat.com/security/cve/CVE-2014-8126}.
+\Ticket{4878}
+
 \end{itemize}
 
 
