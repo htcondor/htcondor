@@ -3,7 +3,7 @@
 # that includes lines that have any non-whitespace after the filename.
 
 # tj sez, these tests should be fixed
-cmd_status_shows-help
+#cmd_status_shows-help
 cmd_wait_shows-all
 cmd_wait_shows-base
 cmd_wait_shows-notimeout
