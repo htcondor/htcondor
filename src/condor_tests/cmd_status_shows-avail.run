@@ -24,37 +24,23 @@ use CondorCmdStatusWorker2;
 use strict;
 use warnings;
 
-
 # truly const variables in perl
 sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-my $testdesc =  'cmd_status_shows-avail';
 my $testname = "cmd_status_shows-avail";
-my $corename = "cmd_status_shows-avail";
 my $debuglevel = 2;
-
-# where am I running
 
 print scalar localtime() . "\n";
 
 my $mypid = $$;
-my $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-my $mysubmitnm = $corename . $mypid . ".cmd";
-my $mysubmitnmlog = $corename . $mypid . ".log";
-my $mysubmitnmout = $corename . $mypid . ".out";
-my $mycorenm = $corename . ".cmd";
-my $mycorenmout = $corename . ".cmd.out";
-my $mycorenmlog = $corename . ".log";
-
 CondorTest::debug("Master PID is $mypid\n",$debuglevel);
-CondorTest::debug("Master PID submit file is $mysubmitnm\n",$debuglevel);
 
 my $outsource = CondorCmdStatusWorker2::SetUp("cmd_status_shows-avail");
 CondorUtils::fullchomp($outsource);
@@ -67,9 +53,15 @@ if($outsource eq "") {
 
 ( my $locconfig, my $scheddoneconfig) = split('&',$outsource);
 CondorTest::debug("Two pools are $locconfig and $scheddoneconfig\n",$debuglevel);
- 
+
+my $done = 1;
 my $stable = CondorCmdStatusWorker2::IsSystemStable();
-my $done = 0;
+my @adarray = (); 
+#my $numstartd = 0;
+
+#my $numany = 0;
+#my %discoveries = ();
+#my @expectations = ("Submitter", "Negotiator", "DaemonMaster", "Scheduler", "Machine");
 
 if($stable == 1) {
 	# allow time for all the nodes to update the collector
@@ -87,9 +79,7 @@ if($stable == 1) {
     	if(!$cmdstatus)
     	{
         	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-			CondorTest::KillPersonal($locconfig);
-			CondorTest::KillPersonal($scheddoneconfig);
-        	exit(1)
+			$done = 0;
     	}
 	
 		# 4 are busy so 2 should be available....
@@ -121,40 +111,37 @@ if($stable == 1) {
 		sleep($count * 2);
 	}
 }
-if($done == 0) {
+
+if($done == 1) {
+	print "ok\n";
+} else {
 	print "bad\n";
 }
 
 
 CondorTest::debug("Saving things and cleaning up....\n",$debuglevel);
 
-#fails due to finding the directory of same name...
-runcmd("cp *cmd_status_shows-avail* $mysaveme", {expect_result=>\&ANY});
+#fails due to directory that matches symbol
 
-if( -e "$mysubmitnm" )
-{
-	runcmd("cp $mysubmitnm $mycorenm");
-}
+my $res = 1;
+my @rm1 = ();
+my @rm2 = ();
+$ENV{CONDOR_CONFIG} = $locconfig;
+$res = runCondorTool("condor_rm -all",\@rm1,2,{emit_output=>0});
+$ENV{CONDOR_CONFIG} = $scheddoneconfig;
+$res = runCondorTool("condor_rm -all",\@rm2,2,{emit_output=>0});
 
-if( -e "$mysubmitnmout" )
-{
-	runcmd("cp $mysubmitnmout $mycorenmout");
-}
-
-if( -e "$mysubmitnmlog" )
-{
-	runcmd("cp $mysubmitnmlog $mycorenmlog");
-}
-
-CondorTest::KillPersonal($locconfig);
-CondorTest::KillPersonal($scheddoneconfig);
 print scalar localtime() . "\n";
 
 if( $done == 0 )
 {
 	# actual test failed but we allowed cleanup
+	RegisterResult(0,"test_name", "$testname");
+	CondorTest::EndTest();
 	exit(1);
+} else {
+	RegisterResult(1,"test_name", "$testname");
+	CondorTest::EndTest();
+	CondorTest::debug("cmd_status_shows-avail SUCCESS\n",$debuglevel);
 }
-
-CondorTest::debug("cmd_q_shows-avail SUCCESS\n",$debuglevel);
 exit(0);
