@@ -763,6 +763,31 @@ this specifies the path to the file on the execute side.
 A single wild card character (\Expr{*}) may be used in each file name.
 
 %%%%%%%%%%%%%%%%%%%
+%% encrypt_execute_directory
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!encrypt\_execute\_directory}
+\label{man-condor-submit-encrypt-execute-directory}
+\item[encrypt\_execute\_directory = $<$True \Bar\ False$>$]
+Defaults to \Expr{False}. If set to \Expr{True}, 
+HTCondor will encrypt the contents of
+the remote scratch directory of the machine where the job is executed.
+This encryption is transparent to the job itself, but ensures that
+files left behind on the local disk of the execute machine,
+perhaps due to a system crash, 
+will remain private.
+In addition, \Condor{submit} will append to
+the job's \SubmitCmd{requirements} expression
+\begin{verbatim}
+  && (TARGET.HasEncryptExecuteDirectory)
+\end{verbatim}
+to ensure the job is matched to a machine that is capable of encrypting the
+contents of the execute directory.  
+This support is limited 
+to Windows platforms that use the NTFS file system and
+Linux platforms with the \Prog{ecryptfs-utils} package installed.
+
+%%%%%%%%%%%%%%%%%%%
 %% encrypt_input_files
 %%%%%%%%%%%%%%%%%%%
 
@@ -804,30 +829,6 @@ A single wild card character (\Expr{*}) may be used in each file name.
 The method of encryption utilized will be as agreed upon in security
 negotiation; if that negotiation failed, then the file transfer
 mechanism must also fail for files to be network encrypted.
-
-%%%%%%%%%%%%%%%%%%%
-%% encrypt_execute_directory
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!encrypt\_execute\_directory}
-\label{man-condor-submit-encrypt-execute-directory}
-\item[encrypt\_execute\_directory = $<$True \Bar\ False$>$]
-Defaults to \Expr{False}. If set to \Expr{True}, then HTCondor will encrypt the
-contents of
-the remote scratch directory of the machine where the job is executed.
-This encryption is transparent to the job itself, but ensures that
-if files are left behind on the local disk of the execute machine (perhaps
-due to a system crash), they will remain private.
-In addition, if enabled, \Condor{submit} will append by default
-the expression
-\begin{verbatim}
-  && (TARGET.HasEncryptExecuteDirectory)
-\end{verbatim}
-to the \SubmitCmd{requirements} expression for the job to ensure
-the job is matched to a machine that is capable of encrypting the
-contents of the execute directory.  Currently this is limited
-to either Windows machines using the NTFS file system, or Linux
-machines with the ecryptfs-utils package installed.
 
 %%%%%%%%%%%%%%%%%%%
 %% max_transfer_input_mb
