@@ -1878,7 +1878,7 @@ activate_claim( Resource* rip, Stream* stream )
 		sock_2 = rsock_2.get_file_desc();
 		stRec.ports.port2 = rsock_2.get_port();
 
-		stRec.server_name = strdup( my_full_hostname() );
+		stRec.server_name = strdup( get_local_fqdn().Value() );
 
 		// Send our local IP address, too.
 		// stRec.ip_addr actually is never used.

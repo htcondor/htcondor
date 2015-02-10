@@ -27,6 +27,7 @@
 #include "file_sql.h"
 #include "condor_holdcodes.h"
 #include "startd_bench_job.h"
+#include "ipv6_hostname.h"
 
 #include "slot_builder.h"
 
@@ -294,10 +295,12 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 
     r_cur = new Claim(this);
 
+	MyString fqdn;
 	if( Name ) {
 		tmpName = Name;
 	} else {
-		tmpName = my_full_hostname();
+		fqdn = get_local_fqdn();
+		tmpName = fqdn.Value();
 	}
 	if( multiple_slots || get_feature() == PARTITIONABLE_SLOT ) {
 		tmp.formatstr( "%s@%s", r_id_str, tmpName );

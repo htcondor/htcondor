@@ -84,7 +84,7 @@ DBMSManager::InitPublicAd() {
 	SetMyTypeName( m_public_ad, DBMSD_ADTYPE );
 	SetTargetTypeName( m_public_ad, "" );
 
-	m_public_ad.Assign(ATTR_MACHINE,my_full_hostname());
+	m_public_ad.Assign(ATTR_MACHINE,get_local_fqdn());
 	m_public_ad.Assign(ATTR_NAME,m_name.Value());
 
 	config_fill_ad( &m_public_ad );

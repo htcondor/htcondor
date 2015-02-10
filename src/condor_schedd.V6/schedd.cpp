@@ -11337,7 +11337,7 @@ Scheduler::Init()
 	}	
 
 		// UidDomain will always be defined, since config() will put
-		// in my_full_hostname() if it's not defined in the file.
+		// in get_local_fqdn() if it's not defined in the file.
 		// See if the value of this changes, since if so, we've got
 		// work to do...
 	char* oldUidDomain = UidDomain;

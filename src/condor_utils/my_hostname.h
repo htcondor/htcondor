@@ -20,12 +20,6 @@
 #ifndef MY_HOSTNAME_H
 #define MY_HOSTNAME_H
 
-// use get_local_hostname() instead
-extern	const char*	my_hostname( void );
-
-// use get_local_fqdn() instead
-extern	const char*	my_full_hostname( void );
-
 // use get_local_ipaddr().to_ip_string() instead
 extern	const char*	my_ip_string( void );
 

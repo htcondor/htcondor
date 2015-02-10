@@ -23,7 +23,7 @@
 
 void
 usage( char* me ) {
-	fprintf( stderr, "Usage: %s -ip | -host | -fullhost | -sin\n", me );
+	fprintf( stderr, "Usage: %s -ip | -fullhost | -sin\n", me );
 	exit( 1 );
 }
 
@@ -38,11 +38,8 @@ main( int argc, char* argv[] )
 	case 'i':
 		printf( "ip: %ul\n", my_ip_addr() );
 		break;
-	case 'h':
-		printf( "host: %s\n", my_hostname() );
-		break;
 	case 'f':
-		printf( "fullhost: %s\n", my_full_hostname() );
+		printf( "fullhost: %s\n", get_local_fqdn().Value() );
 		break;
 	case 's':
 		printf( "sin_addr: %ul\n", (my_sin_addr())->s_addr );
