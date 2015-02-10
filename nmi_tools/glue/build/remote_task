@@ -41,6 +41,7 @@ my $TAR_TASK              = "remote_task.create_tar";
 my $CHECK_TAR_TASK        = "remote_task.check_tar";
 my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
 my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
+my $NATIVE_DEBUG_TASK     = "remote_task.create_native_unstripped";
 my $NATIVE_TASK           = "remote_task.create_native";
 my $CHECK_NATIVE_TASK     = "remote_task.check_native";
 my $RUN_UNIT_TESTS        = "remote_task.run_unit_tests";
@@ -131,24 +132,25 @@ elsif ($taskname eq $CHECK_TAR_TASK) {
     my $tarball = get_tarball_name();
     $execstr = "$tarball_check_script $tarball";
 }
-elsif ($taskname eq $NATIVE_TASK) {
+elsif ($taskname eq $NATIVE_TASK || $taskname eq $NATIVE_DEBUG_TASK) {
+    my $is_debug = ($taskname eq $NATIVE_DEBUG_TASK);
     # Create native packages on Red Hat and Debian
     print "Create native package.  NMI_PLATFORM = $ENV{NMI_PLATFORM}\n";
     if ($ENV{NMI_PLATFORM} =~ /(deb|ubuntu)/i) {
         print "Detected OS is Debian or Ubuntu.  Creating Deb package.\n";
-        $execstr = create_deb();
+        $execstr = create_deb($is_debug);
     }
     elsif ($ENV{NMI_PLATFORM} =~ /ubuntu/i) {
         print "Detected OS is Ubuntu.  Creating Deb package.\n";
-        $execstr = create_deb();
+        $execstr = create_deb($is_debug);
     }
     elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora)/i) {
         print "Detected OS is Red Hat.  Creating RPM package.\n";
-        $execstr = create_rpm();
+        $execstr = create_rpm($is_debug);
     }
     elsif ($ENV{NMI_PLATFORM} =~ /opensuse/i) {
         print "Detected OS is OpenSuSE.  Creating RPM package.\n";
-        $execstr = create_rpm();
+        $execstr = create_rpm($is_debug);
     }
     elsif ($ENV{NMI_PLATFORM} =~ /_win/i) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE $VCVER";
@@ -290,9 +292,11 @@ sub get_tarball_name {
 }
 
 sub create_rpm {
+    my $is_debug = $_[0];
     # Reconfigure cmake variables for native package build   
     my $command = get_cmake_args();
-    return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make package";
+    my $strip = "ON"; if ($is_debug) { $strip = "OFF"; }
+    return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=${strip} && make package";
 }
 
 sub check_rpm {
@@ -301,13 +305,18 @@ sub check_rpm {
 }
 
 sub create_deb {    
+    my $is_debug = $_[0];
     #Reconfigure cmake variables for native package build   
     my $command = get_cmake_args();
-    return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make VERBOSE=1 package";
+    my $strip = "ON"; if ($is_debug) { $strip = "OFF"; }
+    return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=${strip} && make VERBOSE=1 package";
 }
 
 sub check_deb {
     # Print package summary
     # We would like to run lintian, but it is not available on all NMI machine
-    return "dpkg-deb -I *.deb";
+    my $debs;
+    for (glob "*.deb") { if ($_ !~ /[+]sym/) { $debs .= $_ . " "; } }
+    if ( ! defined $debs) { $debs = "*.deb"; }
+    return "dpkg-deb -I $debs";
 }
