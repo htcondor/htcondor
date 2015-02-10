@@ -168,8 +168,8 @@ protected:
 	static CollectorUniverseStats ustatsMonthly;
 
 	static ClassAd *ad;
-	static CollectorList* updateCollectors;
-	static DCCollector* updateRemoteCollector;
+	static CollectorList* collectorsToUpdate;
+	static DCCollector* worldCollector;
 	static int UpdateTimerId;
 
 	static ForkWork forkQuery;
