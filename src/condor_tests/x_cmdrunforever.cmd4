@@ -1,9 +1,0 @@
-universe   = vanilla
-executable = x_sleep.pl
-log = x_cmdrunforever4.log
-output = x_cmdrunforever4.out
-error = x_cmdrunforever4.err
-Notification = NEVER
-arguments  = 0
-queue 4
-

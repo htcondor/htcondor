@@ -1481,9 +1481,15 @@ sub getJobStatus
 {
 	my @status;
 	my $qstatcluster = shift;
+	my $verbose = shift;
 	my $cmd = "condor_q $qstatcluster -format %d JobStatus";
+	my $qstat = 1;
 	# shhhhhhhh third arg 0 makes it hush its output
-	my $qstat = CondorTest::runCondorTool($cmd,\@status,0);
+	if(defined $verbose) {
+		$qstat = CondorTest::runCondorTool($cmd,\@status,0);
+	} else {
+		$qstat = CondorTest::runCondorTool($cmd,\@status,0,{emit_output=>0});
+	}
 	if(!$qstat)
 	{
 		die "Test failure due to Condor Tool Failure: $cmd\n";
@@ -1498,13 +1504,17 @@ sub getJobStatus
 		}
 		else
 		{
-			print "No job status????\n";
-			runcmd("condor_q");
+			if(defined $verbose) {
+				print "No job status????\n";
+				runcmd("condor_q");
+			}
 			return("0");
 		}
 	}
-	print "No job status????\n";
-	runcmd("condor_q");
+	if(defined $verbose) {
+		print "No job status????\n";
+		runcmd("condor_q");
+	}
 	return("0");
 }
 

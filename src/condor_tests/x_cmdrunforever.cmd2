@@ -1,9 +1,0 @@
-universe   = vanilla
-executable = x_sleep.pl
-log = x_cmdrunforever2.log
-output = x_cmdrunforever2.out
-error = x_cmdrunforever2.err
-Notification = NEVER
-arguments  = 0
-queue 2
-

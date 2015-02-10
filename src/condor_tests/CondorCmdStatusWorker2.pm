@@ -24,6 +24,7 @@ use warnings;
 use Cwd;
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 
 my $debuglevel = 2;
 
@@ -65,6 +66,15 @@ sub NOINFO{0};
 sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
+
+my $on_abort = sub {
+	print "removal expected\n";
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+};
+
+
 
 sub SetUp
 {
@@ -132,31 +142,19 @@ sub SetUp
 
 	my $limit = 120;
 
-	if(is_windows()) {
-		$cmd = "x_cmdrunforever.pl B$unique";
-	} else {
-		$cmd = "./x_cmdrunforever.pl B$unique";
-	}
+	SimpleJob::RunCheck(
+		no_wait => 1,
+		duration => 0,
+		on_abort => $on_abort,
+		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	);
 
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		exit(1)
-	}
-
-	if(is_windows()) {
-		$cmd = "x_cmdrunforever.pl B$unique";
-	} else {
-		$cmd = "./x_cmdrunforever.pl B$unique";
-	}
-
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		exit(1)
-	}
+	SimpleJob::RunCheck(
+		no_wait => 1,
+		duration => 0,
+		on_abort => $on_abort,
+		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	);
 
 	print "Wait for jobs running on remote schedd.\n";
 	print "Wait for job 2.0 to be running\n";
@@ -205,38 +203,25 @@ sub SetUp
 	print "Lets look at status from first pool....\n";
 	system("condor_status;condor_q");
 
-	# start two jobs which run till killed
-	#$cmd = "condor_submit ./x_cmdrunforever.cmd2";
-	if(is_windows()) {
-		$cmd = "x_cmdrunforever.pl B$unique";
-	} else {
-		$cmd = "./x_cmdrunforever.pl B$unique";
-	}
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		exit(1)
-	}
+	SimpleJob::RunCheck(
+		no_wait => 1,
+		duration => 0,
+		on_abort => $on_abort,
+		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	);
 
-	if(is_windows()) {
-		$cmd = "x_cmdrunforever.pl B$unique";
-	} else {
-		$cmd = "./x_cmdrunforever.pl B$unique";
-	}
-
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		exit(1)
-	}
+	SimpleJob::RunCheck(
+		no_wait => 1,
+		duration => 0,
+		on_abort => $on_abort,
+		on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	);
 
 	print "Wait for jobs running on local schedd.\n";
 	print "Wait for job 2.0 to be running\n";
 	$qstat = CondorTest::getJobStatus(2.0);
 	CondorTest::debug("local cluster 2.0 status is $qstat\n",$debuglevel);
-	my $counter = 0;
+	$counter = 0;
 	while($qstat != RUNNING)
 	{
 		CondorTest::debug("local Job status 2.0 not RUNNING - wait a bit\n",$debuglevel);
