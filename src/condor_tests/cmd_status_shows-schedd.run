@@ -24,70 +24,53 @@ use CondorCmdStatusWorker2;
 use strict;
 use warnings;
 
-my $testdesc =  'cmd_status_shows-schedd';
-my $testname = "cmd_status_shows-schedd";
-my $corename = "cmd_status_shows-schedd";
-my $bail = 0;
-my $debuglevel = 2;
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
 
-# where am I running
-my $currenthost = CondorTest::getFqdnHost();
-my @adarray;
+my $testname = "cmd_status_shows-mmaster";
+my $debuglevel = 2;
 
 print scalar localtime() . "\n";
 
 my $mypid = $$;
-my $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-my $mysubmitnm = $corename . $mypid . ".cmd";
-my $mysubmitnmlog = $corename . $mypid . ".log";
-my $mysubmitnmout = $corename . $mypid . ".out";
-my $mycorenm = $corename . ".cmd";
-my $mycorenmout = $corename . ".cmd.out";
-my $mycorenmlog = $corename . ".log";
-
 CondorTest::debug("Master PID is $mypid\n",$debuglevel);
-CondorTest::debug("Master PID submit file is $mysubmitnm\n",$debuglevel);
 
-my $outsource = CondorCmdStatusWorker2::SetUp("cmd_status_shows-schedd");
+my $outsource = CondorCmdStatusWorker2::SetUp("cmd_status_shows-mmaster");
 CondorUtils::fullchomp($outsource);
 
 if($outsource eq "") {
-	# assume all cleanup of personals which did start occurred in worker
-	print "OOOOPPPPSSSSSSSSSSSSyyyyy\n";
-	exit(1);
+    # assume all cleanup of personals which did start occurred in worker
+    print "OOOOPPPPSSSSSSSSSSSSyyyyy\n";
+    exit(1);
 }
 
 ( my $locconfig, my $scheddoneconfig) = split('&',$outsource);
 CondorTest::debug("Two pools are $locconfig and $scheddoneconfig\n",$debuglevel);
 
-my $cmdstatus;
-my $sched1 = "master_" . $mypid . "local" . "@" . $currenthost;;
-my $sched2 = "master_" . $mypid . "scheddone" . "@" . $currenthost;;
+my $done = 0;
+my $cmdstatus = 0;
+my $stable = CondorCmdStatusWorker2::IsSystemStable();
+my @adarray = (); 
 
 #Place condor_q back into the original condor config
 #and aim the -global -pool command at this new collector.
-#$ENV{CONDOR_CONFIG} = $saveconfig;
 $ENV{CONDOR_CONFIG} = $scheddoneconfig;
 
-#print "Lets look at status from second pool....\n";
-#system("condor_status");
-
-# allow time for all the nodes to update the collector
-# by allowing N attempts
 my $nattempts = 8;
 my $count = 0;
-my $done = 0;
 my $found1 = 0;
 my $cmd = "";
 
 my $numschedd = 0;
 
-if($bail == 0) {
+if($stable == 1) {
 	print "Looking for both schedds - ";
 	# allow time for all the nodes to update the collector
 	# by allowing N attempts
@@ -103,9 +86,7 @@ if($bail == 0) {
     	{
 			print "bad\n";
         	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-			CondorTest::KillPersonal($locconfig);
-			CondorTest::KillPersonal($scheddoneconfig);
-        	exit(1)
+			last;
     	}
 	
 		#  we are running a local and a remote schedd, should be two
@@ -123,7 +104,6 @@ if($bail == 0) {
 
 		if($numschedd == 2) {
 			CondorTest::debug("Condor_status -schedd found the expected 2 schedds\n",$debuglevel);
-			print "ok\n";
 			$done = 1;
 			last;
 		} else {
@@ -133,45 +113,39 @@ if($bail == 0) {
 		$count = $count + 1;
 		sleep($count * 5);
 	}
+}
+
+
+if($done == 1) {
+	print "ok\n";
 } else {
 	print "bad\n";
 }
 
-if($done != 1) {
-	print "bad\n";
-}
-
-
 
 CondorTest::debug("Saving things and cleaning up....\n",$debuglevel);
 
-# fails due to directory that matches symbol
-runcmd("cp *cmd_status_shows-schedd* $mysaveme", {expect_result=>\&ANY});
+#fails due to directory that matches symbol
 
-if( -e "$mysubmitnm" )
-{
-	runcmd("cp $mysubmitnm $mycorenm");
-}
+my $res = 1;
+my @rm1 = ();
+my @rm2 = ();
+$ENV{CONDOR_CONFIG} = $locconfig;
+$res = runCondorTool("condor_rm -all",\@rm1,2,{emit_output=>0});
+$ENV{CONDOR_CONFIG} = $scheddoneconfig;
+$res = runCondorTool("condor_rm -all",\@rm2,2,{emit_output=>0});
 
-if( -e "$mysubmitnmout" )
-{
-	runcmd("cp $mysubmitnmout $mycorenmout");
-}
-
-if( -e "$mysubmitnmlog" )
-{
-	runcmd("cp $mysubmitnmlog $mycorenmlog");
-}
-
-CondorTest::KillPersonal($locconfig);
-CondorTest::KillPersonal($scheddoneconfig);
 print scalar localtime() . "\n";
 
 if( $done == 0 )
 {
 	# actual test failed but we allowed cleanup
+	RegisterResult(0,"test_name", "$testname");
+	CondorTest::EndTest();
 	exit(1);
+} else {
+	RegisterResult(1,"test_name", "$testname");
+	CondorTest::EndTest();
+	CondorTest::debug("cmd_status_shows-schedd SUCCESS\n",$debuglevel);
 }
-
-CondorTest::debug("cmd_status_shows-schedd SUCCESS\n",$debuglevel);
 exit(0);

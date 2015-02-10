@@ -250,7 +250,12 @@ sub RunCheck
     	$result = CondorTest::RunTest($testname, $submit_fname, 0);
 	}
     CondorTest::RegisterResult( $result, %args );
-    return $result;
+	 if($args{no_wait}) {
+		exit(0);
+	} else {
+		return $result;
+	}
+
 }
 
 sub ExamineSlots
