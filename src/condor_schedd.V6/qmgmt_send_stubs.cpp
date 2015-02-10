@@ -1,4 +1,3 @@
-
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -409,13 +408,16 @@ RemoteCommitTransaction(SetAttributeFlags_t flags, CondorError *errstack)
 	if( rval < 0 ) {
 		neg_on_error( qmgmt_sock->code(terrno) );
 		const CondorVersionInfo *vers = qmgmt_sock->get_peer_version();
-		if (vers && vers->built_since_version(8, 3, 3))
+		if (vers && vers->built_since_version(8, 3, 4))
 		{
+			ClassAd reply;
+			neg_on_error( getClassAd( qmgmt_sock, reply ) );
+
 			std::string errmsg;
-			neg_on_error( qmgmt_sock->code(errmsg) );
-			if (errmsg.size())
-			{
-				errstack->push("SCHEDD", terrno, errmsg.c_str());
+			if( reply.LookupString( "ErrorReason", errmsg ) ) {
+				int errCode = terrno;
+				reply.LookupInteger( "ErrorCode", errCode );
+				errstack->push( "SCHEDD", errCode, errmsg.c_str() );
 			}
 		}
 		neg_on_error( qmgmt_sock->end_of_message() );

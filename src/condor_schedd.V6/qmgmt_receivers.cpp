@@ -526,10 +526,20 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		if( rval < 0 ) {
 			assert( syscall_sock->code(terrno) );
 			const CondorVersionInfo *vers = syscall_sock->get_peer_version();
-			if (vers && vers->built_since_version(8, 3, 3))
+			if (vers && vers->built_since_version(8, 3, 4))
 			{
-				if (errstack.subsys()) {syscall_sock->put(errstack.message());}
-				else {syscall_sock->put("QMGMT rejected job submission.");}
+				// Send a classad, for less backwards-incompatibility.
+				int code = 1;
+				const char * reason = "QMGMT rejected job submission.";
+				if( errstack.subsys() ) {
+					code = 2;
+					reason = errstack.message();
+				}
+
+				ClassAd reply;
+				reply.Assign( "ErrorCode", code );
+				reply.Assign( "ErrorReason", reason );
+				assert( putClassAd( syscall_sock, reply ) );
 			}
 		}
 		assert( syscall_sock->end_of_message() );;
