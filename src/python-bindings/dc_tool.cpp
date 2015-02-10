@@ -16,8 +16,10 @@
 #include "condor_commands.h"
 #include "condor_attributes.h"
 #include "compat_classad.h"
+#include "condor_config.h"
 
 #include "classad_wrapper.h"
+#include "old_boost.h"
 #include "module_lock.h"
 
 using namespace boost::python;
@@ -122,6 +124,58 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     sock.close();
 }
 
+
+void send_alive(boost::python::object ad_obj=boost::python::object(), boost::python::object pid_obj=boost::python::object(), boost::python::object timeout_obj=boost::python::object())
+{
+    std::string addr;
+    if (ad_obj.ptr() == Py_None)
+    {
+        char *inherit_var = getenv("CONDOR_INHERIT");
+        if (!inherit_var) {THROW_EX(RuntimeError, "No location specified and $CONDOR_INHERIT not in Unix environment.");}
+        std::string inherit(inherit_var);
+        boost::python::object inherit_obj(inherit);
+        boost::python::object inherit_split = inherit_obj.attr("split")();
+        if (py_len(inherit_split) < 2) {THROW_EX(RuntimeError, "$CONDOR_INHERIT Unix environment variable malformed.");}
+        addr = boost::python::extract<std::string>(inherit_split[1]);
+    }
+    else
+    {
+        const ClassAdWrapper ad = boost::python::extract<ClassAdWrapper>(ad_obj);
+        if (!ad.EvaluateAttrString(ATTR_MY_ADDRESS, addr))
+        {
+            THROW_EX(ValueError, "Address not available in location ClassAd.");
+        }
+    }
+    int pid = getpid();
+    if (pid_obj.ptr() != Py_None)
+    {
+        pid = boost::python::extract<int>(pid_obj);
+    }
+    int timeout;
+    if (timeout_obj.ptr() == Py_None)
+    {
+        timeout = param_integer("NOT_RESPONDING_TIMEOUT");
+    }
+    else
+    {
+        timeout = boost::python::extract<int>(timeout_obj);
+    }
+    if (timeout < 1) {timeout = 1;}
+
+    classy_counted_ptr<Daemon> daemon = new Daemon(DT_ANY, addr.c_str());
+    classy_counted_ptr<ChildAliveMsg> msg = new ChildAliveMsg(pid, timeout, 0, 0, true);
+
+    {
+        condor::ModuleLock ml;
+        daemon->sendBlockingMsg(msg.get());
+    }
+        if (msg->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED)
+        {
+            THROW_EX(RuntimeError, "Failed to deliver keepalive message.");
+        }
+}
+
+
 void
 enable_debug()
 {
@@ -163,6 +217,14 @@ export_dc_tool()
         ":param target: Some commands require additional arguments; for example, sending DaemonOff to a master requires one to specify which subsystem to turn off."
         "  If this parameter is given, the daemon is sent an additional argument."))
         ;
+
+    def("send_alive", send_alive, "Send a keepalive to a HTCondor daemon\n"
+        ":param ad: An ad specifying the location of the daemon; typically, found by using Collector.locate(...).\n"
+        ":param pid: A process identifier for the keepalive.  Defaults to None, which indicates to utilize the value of os.getpid().\n"
+        ":param timeout: The number of seconds this keepalive is valid.  After that time, if the condor_master has not\nreceived a new .keepalive for this process, it will be terminated.  Defaults is controlled by the parameter NOT_RESPONDING_TIMEOUT.\n",
+        (boost::python::arg("ad") = boost::python::object(), boost::python::arg("pid")=boost::python::object(), boost::python::arg("timeout")=boost::python::object())
+       )
+       ;
 
     def("enable_debug", enable_debug, "Turn on debug logging output from HTCondor.  Logs to stderr.");
     def("enable_log", enable_log, "Turn on logging output from HTCondor.  Logs to the file specified by the parameter TOOL_LOG.");
