@@ -1559,10 +1559,15 @@ void CollectorDaemon::sendCollectorAd()
     daemonCore->monitor_data.ExportData(ad);
 
 	//
-	// Update myself directly.
+	// Update myself directly.  [Note that the ownership of the ad in
+	// the hashtable is different than the ownership of the static
+	// data member.  Particularly worth wondering is what happens if
+	// the hashtable, thinking it owns the static member, deletes it
+	// on an update.]
 	//
 	int error = 0;
-	if( NULL != collector.collect( UPDATE_COLLECTOR_AD, ad, condor_sockaddr::null, error ) ) {
+	ClassAd * selfAd = new ClassAd( * ad );
+	if( ! collector.collect( UPDATE_COLLECTOR_AD, selfAd, condor_sockaddr::null, error ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to add my own ad to myself (%d).\n", error );
 	}
 
