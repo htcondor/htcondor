@@ -37,6 +37,7 @@ use File::Basename;
 my $BaseDir = getcwd();
 
 my $EXTERNALS_TASK        = "remote_task.externals";
+my $BUILD_TASK            = "remote_task.build";
 my $TAR_TASK              = "remote_task.create_tar";
 my $CHECK_TAR_TASK        = "remote_task.check_tar";
 my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
@@ -44,6 +45,7 @@ my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
 my $NATIVE_DEBUG_TASK     = "remote_task.create_native_unstripped";
 my $NATIVE_TASK           = "remote_task.create_native";
 my $CHECK_NATIVE_TASK     = "remote_task.check_native";
+my $BUILD_TESTS_TASK      = "remote_task.build_tests";
 my $RUN_UNIT_TESTS        = "remote_task.run_unit_tests";
 my $COVERITY_ANALYSIS     = "remote_task.coverity_analysis";
 
@@ -88,6 +90,12 @@ if ($ENV{NMI_PLATFORM} =~ /macos/i) {
     $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.7";
 }
 
+# Build with warnings == errors on Fedora
+my $werror="";
+if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[12][0-9]/i) {
+    $werror = "-DCONDOR_CXX_FLAGS:STRING=-Werror";
+}
+
 # enable use of VisualStudio 2012 (vs11) on the Windows8 platform
 my $enable_vs11 = 1;
 if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs11 = 0; }
@@ -101,16 +109,20 @@ if( $taskname eq $EXTERNALS_TASK ) {
     # to handle invoking the Windows build tools in this step.
     $execstr = "make VERBOSE=1 externals";
 }
-elsif ($taskname eq $UNSTRIPPED_TASK) {
+elsif( $taskname eq $BUILD_TASK ) {
+    # Since we do not declare the externals task on Windows, we don't have
+    # to handle invoking the Windows build tools in this step.
     $execstr = get_cmake_args();
-    
-	if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[12][0-9]/i) {
-	 	$execstr .= " -DCONDOR_CXX_FLAGS:STRING=-Werror"
-	}
-
+    $execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 install";
+}
+elsif( $taskname eq $BUILD_TESTS_TASK ) {
+    $execstr = "make VERBOSE=1 tests";
+}
+elsif ($taskname eq $UNSTRIPPED_TASK) {
+    #$execstr = get_cmake_args();
     #Append extra argument
-    # we don't run unit tests here because if they fail, they defeat running all of the other tests!
-    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 install tests targz";
+    #$execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 targz";
+    $execstr = "make VERBOSE=1 targz";
 }
 elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
     my $tarball_check_script = get_tarball_check_script();
@@ -120,12 +132,8 @@ elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
 elsif ($taskname eq $TAR_TASK) { 
     #Normal build -> create tar.gz package (The only reason install is done is for the std:u:tests) 
     #Reconfigure cmake variables for stripped tarball build
-    
     $execstr = get_cmake_args();
-
-    # We can't call "make install" (which just calls "cmake -P cmake_install.cmake") because we need to add the CMAKE_INSTALL_DO_STRIP argument.
-    # we don't run unit tests here because if they fail, they defeat running all of the other tests!
-    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make VERBOSE=1 install/strip tests targz";
+    $execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make VERBOSE=1 install/strip tests && make VERBOSE=1 targz";
 }
 elsif ($taskname eq $CHECK_TAR_TASK) {
     my $tarball_check_script = get_tarball_check_script();
@@ -210,9 +218,9 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     }
     if ($taskname eq $EXTERNALS_TASK) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat EXTERNALS $VCVER";
-    } elsif ($taskname eq $UNSTRIPPED_TASK) {
+    } elsif ($taskname eq $BUILD_TASK) { # formerly $UNSTRIPPED_TASK
         $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD $VCVER";
-    } elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
+    } elsif ($taskname eq $BUILD_TESTS_TASK) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat BLD_TESTS $VCVER";
     } elsif ($taskname eq $NATIVE_TASK) {
         print "Windows NATIVE (MSI) task\n";
