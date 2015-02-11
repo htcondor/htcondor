@@ -101,6 +101,9 @@ extern "C" {
 	int		set_seed( int );
 }
 
+extern void ProcessCachedInpFiles(ClassAd *const Ad,
+  StringList *const InputFiles, StringList &PubInpFiles);
+
 struct upload_info {
 	FileTransfer *myobj;
 };
@@ -329,7 +332,11 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				InputFiles->append(buf);			
 		}
 	}
-
+	StringList PubInpFiles;
+	
+	// For files to be cached, change file names to URLs
+	ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
+	
 	// If we are spooling, we want to ignore URLs
 	// We want the file transfer plugin to be invoked at the starter, not the schedd.
 	// See https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=2162
@@ -434,7 +441,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			xferExec=1;
 		}
 
-		if ( xferExec && !InputFiles->file_contains(ExecFile) ) {
+		if ( xferExec && !InputFiles->file_contains(ExecFile) &&
+		  !PubInpFiles.file_contains(ExecFile)) {
+			// Don't add exec file if it already is in cached list
 			InputFiles->append(ExecFile);	
 		}	
 	} else if ( IsClient() && !simple_init ) {

@@ -564,8 +564,10 @@ int serve_file(struct soap *soap, const char *name, const char *type) {
      web root path appears at the beginning of the 
      canonical path for the requested file.
   */
-  if (strstr(full_name_realpath, web_root_realpath) != full_name_realpath
-      || IsDirectory(full_name_realpath)) {
+  // if (strstr(full_name_realpath, web_root_realpath) != full_name_realpath
+      // || IsDirectory(full_name_realpath)) {
+      // Hack to allow hash links in web root.
+  if (IsDirectory(full_name_realpath)) {
     /* NB:  it might be nice to support an option 
        to redirect to an index file or a dynamically-
        generated index if the requested resource 
