@@ -17,6 +17,7 @@
 #include "condor_attributes.h"
 #include "compat_classad.h"
 #include "condor_config.h"
+#include "subsystem_info.h"
 
 #include "classad_wrapper.h"
 #include "old_boost.h"
@@ -179,14 +180,23 @@ void send_alive(boost::python::object ad_obj=boost::python::object(), boost::pyt
 void
 enable_debug()
 {
-    dprintf_set_tool_debug("TOOL", 0);
+    dprintf_set_tool_debug(get_mySubSystem()->getName(), 0);
 }
+
 
 void
 enable_log()
 {
-    dprintf_config("TOOL");
+    dprintf_config(get_mySubSystem()->getName());
 }
+
+
+void
+set_subsystem(std::string subsystem, SubsystemType type=SUBSYSTEM_TYPE_AUTO)
+{
+    set_mySubSystem(subsystem.c_str(), type);
+}
+
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(send_command_overloads, send_command, 2, 3);
 
@@ -211,6 +221,23 @@ export_dc_tool()
         .value("RestartPeacful", DRESTART_PEACEFUL)
         ;
 
+    enum_<SubsystemType>("SubsystemType")
+        .value("Master", SUBSYSTEM_TYPE_MASTER)
+        .value("Collector", SUBSYSTEM_TYPE_COLLECTOR)
+        .value("Negotiator", SUBSYSTEM_TYPE_NEGOTIATOR)
+        .value("Schedd", SUBSYSTEM_TYPE_SCHEDD)
+        .value("Shadow", SUBSYSTEM_TYPE_SHADOW)
+        .value("Startd", SUBSYSTEM_TYPE_STARTD)
+        .value("Starter", SUBSYSTEM_TYPE_STARTER)
+        .value("GAHP", SUBSYSTEM_TYPE_GAHP)
+        .value("Dagman", SUBSYSTEM_TYPE_DAGMAN)
+        .value("SharedPort", SUBSYSTEM_TYPE_SHARED_PORT)
+        .value("Daemon", SUBSYSTEM_TYPE_DAEMON)
+        .value("Tool", SUBSYSTEM_TYPE_TOOL)
+        .value("Submit", SUBSYSTEM_TYPE_SUBMIT)
+        .value("Job", SUBSYSTEM_TYPE_JOB)
+        ;
+
     def("send_command", send_command, send_command_overloads("Send a command to a HTCondor daemon specified by a location ClassAd\n"
         ":param ad: An ad specifying the location of the daemon; typically, found by using Collector.locate(...).\n"
         ":param dc: A command type; must be a member of the enum DaemonCommands.\n"
@@ -226,6 +253,14 @@ export_dc_tool()
        )
        ;
 
+    def("set_subsystem", set_subsystem, "Set the subsystem name for configuration.\n"
+        ":param name: The used for the config subsystem.\n"
+        ":param type: The daemon type for configuration.  Defaults to Auto, which indicates to determine the type from the parameter name.\n",
+        (boost::python::arg("subsystem"), boost::python::arg("type")=SUBSYSTEM_TYPE_AUTO))
+        ;
+
     def("enable_debug", enable_debug, "Turn on debug logging output from HTCondor.  Logs to stderr.");
     def("enable_log", enable_log, "Turn on logging output from HTCondor.  Logs to the file specified by the parameter TOOL_LOG.");
+
+    set_subsystem("TOOL", SUBSYSTEM_TYPE_TOOL);
 }
