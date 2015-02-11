@@ -1145,14 +1145,16 @@ ConnectionSentry::disconnect()
         if (result)
         {
             std::string errmsg = "Failed to commmit and disconnect from queue.";
-            if (errstack.next()) {errmsg += " " + errstack.getFullText();}
+            std::string esMsg = errstack.getFullText();
+            if( ! esMsg.empty() ) { errmsg += " " + esMsg; }
             THROW_EX(RuntimeError, errmsg.c_str());
         }
     }
     if (throw_commit_error)
     {
         std::string errmsg = "Failed to commit ongoing transaction.";
-        if (errstack.next()) {errmsg += " " + errstack.getFullText();}
+        std::string esMsg = errstack.getFullText();
+        if( ! esMsg.empty() ) { errmsg += " " + esMsg; }
         THROW_EX(RuntimeError, errmsg.c_str());
     }
 }
