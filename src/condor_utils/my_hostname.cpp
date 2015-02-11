@@ -32,28 +32,6 @@ static bool enable_convert_default_IP_to_socket_IP = false;
 static std::set< std::string > configured_network_interface_ips;
 static bool network_interface_matches_all;
 
-//static void init_hostnames();
-
-// Return our hostname in a static data buffer.
-const char *
-my_hostname()
-{
-//	if( ! hostnames_initialized ) {
-//		init_hostnames();
-//	}
-//	return hostname;
-    static MyString __my_hostname;
-    __my_hostname = get_local_hostname();
-    return __my_hostname.Value();
-}
-
-
-// Return our full hostname (with domain) in a static data buffer.
-const char* my_full_hostname() {
-    static MyString __my_full_hostname;
-    __my_full_hostname = get_local_fqdn();
-    return __my_full_hostname.Value();
-}
 
 const char* my_ip_string() {
     static MyString __my_ip_string;

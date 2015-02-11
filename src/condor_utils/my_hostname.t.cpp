@@ -39,10 +39,10 @@ main( int argc, char* argv[] )
 		printf( "ip: %ul\n", my_ip_addr() );
 		break;
 	case 'h':
-		printf( "host: %s\n", my_hostname() );
+		printf( "host: %s\n", get_local_hostname().Value() );
 		break;
 	case 'f':
-		printf( "fullhost: %s\n", my_full_hostname() );
+		printf( "fullhost: %s\n", get_local_fqdn().Value() );
 		break;
 	case 's':
 		printf( "sin_addr: %ul\n", (my_sin_addr())->s_addr );
