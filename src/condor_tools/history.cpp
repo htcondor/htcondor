@@ -71,8 +71,8 @@ void Usage(char* name, int iExitCode)
 		"\t\t-dbname <schedd-name>\tRead history data from Quill database\n"
 		"\t\t-completedsince <time>\tDisplay jobs completed on/after time\n"
 #endif
-                "\t\t-name <schedd-name>\tRemote schedd to read from\n"
-                "\t\t-pool <collector-name>\tPool remote schedd lives in.  If neither pool nor name\n"
+		"\t\t-name <schedd-name>\tRemote schedd to read from\n"
+		"\t\t-pool <collector-name>\tPool remote schedd lives in.  If neither pool nor name\n"
 		"\t\t\t\t\tis specified, then the local history file is used.\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
