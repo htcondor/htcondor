@@ -146,6 +146,10 @@ main_init(int argc, char* argv[])
 	InitJobQueue(job_queue_name.Value(),max_historical_logs);
 	mark_jobs_idle();
 
+	daemonCore->Register_Timer( 0,
+						(TimerHandlercpp)&Scheduler::WriteRestartReport,
+						"Scheduler::WriteRestartReport", &scheduler );
+
 		// The below must happen _after_ InitJobQueue is called.
 	if ( scheduler.autocluster.config() ) {
 		// clear out auto cluster id attributes

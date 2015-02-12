@@ -4745,12 +4745,18 @@ int mark_idle(ClassAd *job)
 		bool lease_valid = jobLeaseIsValid( job, cluster, proc );
 		if( universeCanReconnect(universe) && lease_valid )
 		{
+			bool result;
 			dprintf( D_FULLDEBUG, "Job %d.%d might still be alive, "
 					 "spawning shadow to reconnect\n", cluster, proc );
 			if (universe == CONDOR_UNIVERSE_PARALLEL) {
 				dedicated_scheduler.enqueueReconnectJob( job_id);	
 			} else {
-				scheduler.enqueueReconnectJob( job_id );
+				result = scheduler.enqueueReconnectJob( job_id );
+				if ( result ) {
+					scheduler.stats.JobsRestartReconnectsAttempting += 1;
+				} else {
+					scheduler.stats.JobsRestartReconnectsFailed += 1;
+				}
 			}
 		} else {
 			if ( universeCanReconnect(universe) && !lease_valid &&

@@ -522,6 +522,8 @@ class Scheduler : public Service
 		// negotiation
 	bool canSpawnShadow();
 
+	void WriteRestartReport();
+
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
 	bool            FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ=true);

@@ -6469,6 +6469,8 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 			dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
 					 ATTR_OWNER, cluster, proc );
 			mark_job_stopped( job );
+			scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+			scheduler.stats.JobsRestartReconnectsFailed += 1;
 			return;
 		}
 	}
@@ -6480,6 +6482,8 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 				ATTR_CLAIM_ID, cluster, proc );
 		mark_job_stopped( job );
 		free( owner );
+		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+		scheduler.stats.JobsRestartReconnectsFailed += 1;
 		return;
 	}
 	if( GetAttributeStringNew(cluster, proc, ATTR_REMOTE_HOST, &startd_name) < 0 ) {
@@ -6491,6 +6495,8 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		mark_job_stopped( job );
 		free( claim_id );
 		free( owner );
+		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+		scheduler.stats.JobsRestartReconnectsFailed += 1;
 		return;
 	}
 	if( GetAttributeStringNew(cluster, proc, ATTR_STARTD_IP_ADDR, &startd_addr) < 0 ) {
@@ -6606,8 +6612,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		return;
 	}
 	
-	stats.JobsRestartReconnectsAttempting += 1;
-
 	mrec->setStatus( M_CLAIMED );  // it's claimed now.  we'll set
 								   // this to active as soon as we
 								   // spawn the reconnect shadow.
@@ -15145,3 +15149,90 @@ Scheduler::launch_local_startd() {
 	return TRUE;
 }
 
+
+void
+Scheduler::WriteRestartReport()
+{
+	static time_t restart_time = 0;
+	static int total_reconnects = 0;
+	std::string filename;
+
+	param( filename, "SCHEDD_RESTART_REPORT" );
+	if ( filename.empty() ) {
+		return;
+	}
+
+	if ( restart_time == 0 ) {
+		restart_time = time(NULL);
+	}
+	if ( total_reconnects == 0 ) {
+		total_reconnects = stats.JobsRestartReconnectsAttempting.value +
+			stats.JobsRestartReconnectsFailed.value +
+			stats.JobsRestartReconnectsLeaseExpired.value +
+			stats.JobsRestartReconnectsSucceeded.value +
+			stats.JobsRestartReconnectsUnknown.value;
+	}
+
+	struct tm *restart_tm = localtime( &restart_time );
+	char restart_time_str[80];
+	strftime( restart_time_str, 80, "%m/%d/%y %H:%M:%S", restart_tm );
+
+	std::string report;
+	formatstr( report, "The schedd %s restarted at %s.\n"
+			   "It attempted to reconnect to machines where its jobs may still be running.\n",
+			   Name, restart_time_str );
+	if ( stats.JobsRestartReconnectsAttempting.value == 0 ) {
+		formatstr_cat( report, "All reconnect attempts have finished.\n" );
+	}
+	formatstr_cat( report, "Here is a summary of the reconnect attempts:\n\n" );
+	formatstr_cat( report, "%d total jobs where reconnecting is possible\n",
+				   total_reconnects );
+	formatstr_cat( report, "%d reconnects are still being attempted\n",
+				   stats.JobsRestartReconnectsAttempting.value );
+	formatstr_cat( report, "%d reconnects weren't attempted because the lease expired before the schedd restarted\n",
+				   stats.JobsRestartReconnectsLeaseExpired.value );
+	formatstr_cat( report, "%d reconnects failed\n",
+				   stats.JobsRestartReconnectsFailed.value );
+	formatstr_cat( report, "%d reconnects whose success or failure is unknown\n",
+				   stats.JobsRestartReconnectsUnknown.value );
+	formatstr_cat( report, "%d reconnects succeeded\n",
+				   stats.JobsRestartReconnectsSucceeded.value );
+		// TODO Include stats.JobsRestartReconnectsBadput?
+
+	FILE *report_fp = safe_fcreate_replace_if_exists( filename.c_str(), "w" );
+	if ( report_fp == NULL ) {
+		dprintf( D_ALWAYS, "Failed to open schedd restart report file '%s', errno=%d (%s)\n", filename.c_str(), errno, strerror(errno) );
+		return;
+	}
+	fprintf( report_fp, "%s", report.c_str() );
+	fclose( report_fp );
+
+	if ( stats.JobsRestartReconnectsAttempting.value == 0 ) {
+		FILE *mailer = NULL;
+		std::string email_subject;
+
+		formatstr( email_subject, "Schedd restart report for %s", Name );
+
+		char *address = param( "SCHEDD_ADMIN_EMAIL" );
+		if(address) {
+			mailer = email_open( address, email_subject.c_str() );
+			free( address );
+		} else {
+			mailer = email_admin_open( email_subject.c_str() );
+		}
+
+		if( mailer == NULL ) {
+			return;
+		}
+
+		fprintf( mailer, "%s", report.c_str() );
+
+		email_close( mailer );
+
+		return;
+	}
+
+	daemonCore->Register_Timer( 60,
+						(TimerHandlercpp)&Scheduler::WriteRestartReport,
+						"Scheduler::WriteRestartReport", this );
+}
