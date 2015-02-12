@@ -22,7 +22,8 @@
 
 using namespace boost::python;
 
-enum DaemonCommands {
+enum DaemonCommands
+{
   DDAEMONS_OFF = DAEMONS_OFF,
   DDAEMONS_OFF_FAST = DAEMONS_OFF_FAST,
   DDAEMONS_OFF_PEACEFUL = DAEMONS_OFF_PEACEFUL,
@@ -38,6 +39,32 @@ enum DaemonCommands {
   DDC_RECONFIG_FULL = DC_RECONFIG_FULL,
   DRESTART = RESTART,
   DRESTART_PEACEFUL = RESTART_PEACEFUL
+};
+
+enum LogLevel
+{
+  DALWAYS = D_ALWAYS,
+  DERROR = D_ERROR,
+  DSTATUS = D_STATUS,
+  DJOB = D_JOB,
+  DMACHINE = D_MACHINE,
+  DCONFIG = D_CONFIG,
+  DPROTOCOL = D_PROTOCOL,
+  DPRIV = D_PRIV,
+  DDAEMONCORE = D_DAEMONCORE,
+  DSECURITY = D_SECURITY,
+  DNETWORK = D_NETWORK,
+  DHOSTNAME = D_HOSTNAME,
+  DAUDIT = D_AUDIT,
+  DTERSE = D_TERSE,
+  DVERBOSE = D_VERBOSE,
+  DFULLDEBUG = D_FULLDEBUG,
+  DBACKTRACE = D_BACKTRACE,
+  DIDENT = D_IDENT,
+  DSUBSECOND = D_SUB_SECOND,
+  DTIMESTAMP = D_TIMESTAMP,
+  DPID = D_PID,
+  DNOHEADER = D_NOHEADER
 };
 
 void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::string &target="")
@@ -134,6 +161,21 @@ enable_log()
     dprintf_config("TOOL");
 }
 
+static void
+dprintf_wrapper2(int level, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    _condor_dprintf_va(level, static_cast<DPF_IDENT>(0), fmt, args);
+    va_end(args);
+}
+
+void
+dprintf_wrapper(int level, std::string msg)
+{
+    dprintf_wrapper2(level, "%s\n", msg.c_str());
+}
+
 BOOST_PYTHON_FUNCTION_OVERLOADS(send_command_overloads, send_command, 2, 3);
 
 void
@@ -157,6 +199,29 @@ export_dc_tool()
         .value("RestartPeacful", DRESTART_PEACEFUL)
         ;
 
+    enum_<LogLevel>("LogLevel")
+        .value("Always", DALWAYS)
+        .value("Error", DERROR)
+        .value("Status", DSTATUS)
+        .value("Job", DJOB)
+        .value("Machine", DMACHINE)
+        .value("Config", DCONFIG)
+        .value("Protocol", DPROTOCOL)
+        .value("Priv", DPRIV)
+        .value("DaemonCore", DDAEMONCORE)
+        .value("Security", DSECURITY)
+        .value("Network", DNETWORK)
+        .value("Hostname", DHOSTNAME)
+        .value("Audit", DAUDIT)
+        .value("Terse", DTERSE)
+        .value("Verbose", DVERBOSE)
+        .value("FullDebug", DFULLDEBUG)
+        .value("SubSecond", DSUBSECOND)
+        .value("Timestamp", DTIMESTAMP)
+        .value("PID", DPID)
+        .value("NoHeader", DNOHEADER)
+        ;
+
     def("send_command", send_command, send_command_overloads("Send a command to a HTCondor daemon specified by a location ClassAd\n"
         ":param ad: An ad specifying the location of the daemon; typically, found by using Collector.locate(...).\n"
         ":param dc: A command type; must be a member of the enum DaemonCommands.\n"
@@ -166,4 +231,9 @@ export_dc_tool()
 
     def("enable_debug", enable_debug, "Turn on debug logging output from HTCondor.  Logs to stderr.");
     def("enable_log", enable_log, "Turn on logging output from HTCondor.  Logs to the file specified by the parameter TOOL_LOG.");
+
+    def("log", dprintf_wrapper, "Log a message to the HTCondor logging subsystem.\n"
+        ":param level: Log category and formatting indicator; use the LogLevel enum for a list of these (may be OR'd together).\n"
+        ":param msg: String message to log.\n")
+        ;
 }
