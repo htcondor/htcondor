@@ -71,8 +71,8 @@ void Usage(char* name, int iExitCode)
 		"\t\t-dbname <schedd-name>\tRead history data from Quill database\n"
 		"\t\t-completedsince <time>\tDisplay jobs completed on/after time\n"
 #endif
-                "\t\t-name <schedd-name>\tRemote schedd to read from\n"
-                "\t\t-pool <collector-name>\tPool remote schedd lives in.  If neither pool nor name\n"
+		"\t\t-name <schedd-name>\tRemote schedd to read from\n"
+		"\t\t-pool <collector-name>\tPool remote schedd lives in.  If neither pool nor name\n"
 		"\t\t\t\t\tis specified, then the local history file is used.\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
@@ -241,7 +241,6 @@ main(int argc, char* argv[])
     }
 #endif /* HAVE_EXT_POSTGRESQL */
     else if (is_dash_arg_prefix(argv[i],"file",1)) {
-		PRAGMA_REMIND("tj: change -file to 2 char match after 7.9 series ends.")
 		if (i+1==argc || JobHistoryFileName) break;
 		i++;
 		JobHistoryFileName=argv[i];

@@ -10987,7 +10987,7 @@ Scheduler::Init()
 
     stats.Reconfig();
 
-	PRAGMA_REMIND("TJ: These should be moved into the default config table")
+	//PRAGMA_REMIND("TJ: These should be moved into the default config table")
 		// set defaults for rounding attributes for autoclustering
 		// only set these values if nothing is specified in condor_config.
 	MyString tmpstr;
