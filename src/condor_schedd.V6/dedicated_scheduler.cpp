@@ -3858,7 +3858,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 						"job %d.%d to %s, because claimid is missing: "
 						"(hosts=%s,claims=%s).\n",
 						id.cluster, id.proc,
-						host ? host : "(null host)",
+						host, 
 						remote_hosts ? remote_hosts : "(null)",
 						claims ? claims : "(null)");
 				dPrintAd(D_ALWAYS, *job);

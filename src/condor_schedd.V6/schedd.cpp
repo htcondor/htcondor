@@ -11283,7 +11283,7 @@ Scheduler::Init()
 
     stats.Reconfig();
 
-	PRAGMA_REMIND("TJ: These should be moved into the default config table")
+	//PRAGMA_REMIND("TJ: These should be moved into the default config table")
 		// set defaults for rounding attributes for autoclustering
 		// only set these values if nothing is specified in condor_config.
 	MyString tmpstr;
@@ -11856,7 +11856,6 @@ Scheduler::Init()
 		// Initialize our classad
 		//////////////////////////////////////////////////////////////
 	if( m_adBase ) delete m_adBase;
-	if( m_adSchedd ) delete m_adSchedd;
 	m_adBase = new ClassAd();
 
     // first put attributes into the Base ad that we want to
@@ -11873,13 +11872,21 @@ Scheduler::Init()
        // add the basic daemon core attribs
     daemonCore->publish(m_adBase);
 
-    // make a base add for use with chained submitter ads as a copy of the schedd ad
-    // and fill in some standard attribs that will change only on reconfig. 
-    // the rest are added in count_jobs()
-    m_adSchedd = new ClassAd(*m_adBase);
+	// make a base add for use with chained submitter ads as a copy of the schedd ad
+	// and fill in some standard attribs that will change only on reconfig.
+	// the rest are added in count_jobs()
+	// m_adSchedd->CopyFrom( * m_adBase ) is the obvious thing to do here,
+	// but explodes trying to unchain the base ad?  Use a placement new to
+	// maintain the lifetime of the pointer, instead.
+	if( m_adSchedd ) {
+		m_adSchedd->~ClassAd();
+		m_adSchedd = new (m_adSchedd) ClassAd( * m_adBase );
+	} else {
+		m_adSchedd = new ClassAd( * m_adBase );
+	}
 	SetMyTypeName(*m_adSchedd, SCHEDD_ADTYPE);
 	m_adSchedd->Assign(ATTR_NAME, Name);
-	
+
 	// Record the transfer queue expression so the negotiator can predict
 	// which transfer queue a job will use if it starts in the schedd.
 	std::string transfer_queue_expr_str;
@@ -12050,6 +12057,56 @@ Scheduler::Init()
 	std::string sswma = "Memory = RequestMemory \n Disk = RequestDisk \n Cpus = RequestCpus";
 	slotWeightMapAd = new ClassAd;
 	slotWeightMapAd->initFromString(sswma.c_str());
+
+	//
+	// Handle submit requirements.
+	//
+	m_submitRequirements.clear();
+	std::string submitRequirementNames;
+	if( param( submitRequirementNames, "SUBMIT_REQUIREMENT_NAMES" ) ) {
+		StringList srNameList( submitRequirementNames.c_str() );
+
+		srNameList.rewind();
+		const char * srName = NULL;
+		while( (srName = srNameList.next()) != NULL ) {
+			if( strcmp( srName, "NAMES" ) == 0 ) { continue; }
+			std::string srAttributeName;
+			formatstr( srAttributeName, "SUBMIT_REQUIREMENT_%s", srName );
+
+			std::string srAttribute;
+			if( param( srAttribute, srAttributeName.c_str() ) ) {
+				// Can this safely be hoisted out of the loop?
+				classad::ClassAdParser parser;
+
+				classad::ExprTree * submitRequirement = parser.ParseExpression( srAttribute );
+				if( submitRequirement != NULL ) {
+					const char * permanentName = strdup( srName );
+					assert( permanentName != NULL );
+
+					// Handle the corresponding rejection reason.
+					std::string srrAttribute;
+					std::string srrAttributeName;
+					classad::ExprTree * submitReason = NULL;
+					formatstr( srrAttributeName, "SUBMIT_REQUIREMENT_%s_REASON", srName );
+					if( param( srrAttribute, srrAttributeName.c_str() ) ) {
+						submitReason = parser.ParseExpression( srrAttribute );
+						if( submitReason == NULL ) {
+							dprintf( D_ALWAYS, "Unable to parse submit requirement reason %s, ignoring.\n", srName );
+						}
+					}
+
+					SubmitRequirementsEntry sre = SubmitRequirementsEntry( permanentName, submitRequirement, submitReason );
+					m_submitRequirements.push_back( sre );
+				} else {
+					dprintf( D_ALWAYS, "Unable to parse submit requirement %s, ignoring.\n", srName );
+				}
+
+				// We could add SUBMIT_REQUIREMENT_<NAME>_REJECT_REASON, as well.
+			} else {
+				dprintf( D_ALWAYS, "Submit requirement %s not defined, ignoring.\n", srName );
+			}
+		}
+	}
 
 	first_time_in_init = false;
 }
@@ -15374,3 +15431,53 @@ Scheduler::launch_local_startd() {
 	return TRUE;
 }
 
+bool
+Scheduler::shouldCheckSubmitRequirements() {
+	return m_submitRequirements.size() != 0;
+}
+
+int
+Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack ) {
+	int rval = 0;
+	SubmitRequirements::iterator it = m_submitRequirements.begin();
+	for( ; it != m_submitRequirements.end(); ++it ) {
+		classad::Value result;
+		rval = EvalExprTree( it->requirement, m_adSchedd, procAd, result );
+
+		if( rval ) {
+			bool bVal;
+			if( ! result.IsBooleanValueEquiv( bVal ) ) {
+				errorStack->pushf( "QMGMT", 1, "Submit requirement %s evaluated to non-boolean.\n", it->name );
+				return -3;
+			}
+
+			if( ! bVal ) {
+				classad::Value reason;
+				std::string reasonString;
+				formatstr( reasonString, "Submit requirement %s not met.\n", it->name );
+
+				if( it->reason != NULL ) {
+					int sval = EvalExprTree( it->reason, m_adSchedd, procAd, reason );
+					if( ! sval ) {
+						dprintf( D_ALWAYS, "Submit requirement reason %s failed to evaluate.\n", it->name );
+					} else {
+						std::string userReasonString;
+						if( reason.IsStringValue( userReasonString ) ) {
+							reasonString = userReasonString;
+						} else {
+							dprintf( D_ALWAYS, "Submit requirement reason %s did not evaluate to a string.\n", it->name );
+						}
+					}
+				}
+
+				errorStack->pushf( "QMGMT", 2, reasonString.c_str() );
+				return -1;
+			}
+		} else {
+				errorStack->pushf( "QMGMT", 3, "Submit requirement %s failed to evaluate.\n", it->name );
+				return -2;
+		}
+	}
+
+	return 0;
+}

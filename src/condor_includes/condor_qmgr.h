@@ -82,9 +82,10 @@ Qmgr_connection *ConnectQ(const char *qmgr_location, int timeout=0,
 	@param qmgr pointer to Qmgr_connection object returned by ConnectQ
 	@param commit_transactions set to true to commit the transaction, 
 	and false to abort the transaction.
+	@param errstack any errors that occur.
 	@return true if commit was successful; false if transaction was aborted
 */
-bool DisconnectQ(Qmgr_connection *qmgr, bool commit_transactions=true);
+bool DisconnectQ(Qmgr_connection *qmgr, bool commit_transactions=true, CondorError *errstack=NULL);
 
 /** Start a new job cluster.  This cluster becomes the
 	active cluster, and jobs may only be submitted to this cluster.
@@ -202,7 +203,7 @@ int BeginTransaction();
     the poorly named CloseConnection() call was used.
 	@return -1 on failure: 0 on success
 */
-int RemoteCommitTransaction(SetAttributeFlags_t flags=0);
+int RemoteCommitTransaction(SetAttributeFlags_t flags=0, CondorError *errstack=NULL);
 
 /** The difference between this and RemoteCommitTransaction is that
 	this function never returns if there is a failure.  This function

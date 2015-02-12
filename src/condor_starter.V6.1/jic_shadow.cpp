@@ -2405,8 +2405,8 @@ JICShadow::initIOProxy( void )
 	if( ! job_ad->EvaluateAttrBool( ATTR_WANT_IO_PROXY, want_io_proxy ) ) {
 		want_io_proxy = false;
 		dprintf( D_FULLDEBUG, "JICShadow::initIOProxy(): "
-				 "Job does not define %s; setting to %s\n",
-				 ATTR_WANT_IO_PROXY, want_io_proxy ? "true" : "false" );
+				 "Job does not define %s; setting to false\n",
+				 ATTR_WANT_IO_PROXY);
 	} else {
 		dprintf( D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_IO_PROXY,
 				 want_io_proxy ? "true" : "false" );

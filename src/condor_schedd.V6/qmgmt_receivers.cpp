@@ -45,6 +45,8 @@ extern char *CondorCertDir;
 
 extern int active_cluster_num;
 
+extern int CheckTransaction( SetAttributeFlags_t, CondorError * errorStack );
+
 static bool QmgmtMayAccessAttribute( char const *attr_name ) {
 	return !ClassAdAttributeIsPrivate( attr_name );
 }
@@ -505,16 +507,40 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		CommitTransaction( flags );
-			// CommitTransaction() never returns on failure
-		rval = 0;
+		CondorError errstack;
+		rval = CheckTransaction( flags, & errstack );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
+
+		if( rval >= 0 ) {
+			errno = 0;
+			CommitTransaction( flags );
+				// CommitTransaction() never returns on failure
+			rval = 0;
+			terrno = errno;
+			dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
+		}
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
 			assert( syscall_sock->code(terrno) );
+			const CondorVersionInfo *vers = syscall_sock->get_peer_version();
+			if (vers && vers->built_since_version(8, 3, 4))
+			{
+				// Send a classad, for less backwards-incompatibility.
+				int code = 1;
+				const char * reason = "QMGMT rejected job submission.";
+				if( errstack.subsys() ) {
+					code = 2;
+					reason = errstack.message();
+				}
+
+				ClassAd reply;
+				reply.Assign( "ErrorCode", code );
+				reply.Assign( "ErrorReason", reason );
+				assert( putClassAd( syscall_sock, reply ) );
+			}
 		}
 		assert( syscall_sock->end_of_message() );;
 		return 0;

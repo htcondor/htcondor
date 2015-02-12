@@ -78,9 +78,6 @@ class TestClassad(unittest.TestCase):
         ad = dict(classad.ClassAd("[a = {1,2,3}]"))
         self.assertTrue(isinstance(ad["a"], types.ListType))
         self.assertTrue(isinstance(ad["a"][0], types.LongType))
-        def listAdd(a, b): return a+b
-        classad.register(listAdd)
-        self.assertEqual(classad.ExprTree("listAdd({1,2}, {3,4})")[0], 1)
 
     def test_dict_conversion(self):
         ad = classad.ClassAd({'a': [1,2, {}]})

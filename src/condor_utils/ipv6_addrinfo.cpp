@@ -89,6 +89,7 @@ addrinfo_iterator::addrinfo_iterator(const addrinfo_iterator& rhs) :
 addrinfo_iterator::addrinfo_iterator(addrinfo* res) : cxt_(new shared_context),
 	current_(NULL)
 {
+	ipv6 = param_boolean( "ENABLE_IPV6", false );
 	cxt_->add_ref();
 	cxt_->head = res;
 }

@@ -996,13 +996,18 @@ submit_report_result:
 			}
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 		} else {
-			if ( RemoteCommitTransaction() < 0 ) {
+			CondorError errstack;
+			if ( RemoteCommitTransaction(0, &errstack) < 0 ) {
 				// We assume the preceeding SetAttribute() with NoAck
 				// is what really failed. Mark this command as failed
 				// and jump to the end (since the schedd has closed
 				// the connection). Any subsequent commands will be
 				// tried the next time we come through.
 				error_msg =  "ERROR: Failed to submit job";
+				if (errstack.subsys())
+				{
+					error_msg += ".  " + errstack.getFullText();
+				}
 				const char * result[] = {
 					GAHP_RESULT_FAILURE,
 					job_id_buff,
