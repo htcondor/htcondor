@@ -242,7 +242,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	: comTable(32),
 	sigTable(10),
 	reapTable(4),
-	t(TimerManager::GetTimerManager())
+	t(TimerManager::GetTimerManager()),
+	m_dirty_command_sock_sinfuls(true)
 {
 
 	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || PidSize < 0 || ReapSize < 0)
@@ -1193,6 +1194,8 @@ void
 DaemonCore::daemonContactInfoChanged()
 {
 	m_dirty_sinful = true;
+	m_dirty_command_sock_sinfuls = true;
+	DaemonCore::CommandSocksSinful();
 
 	drop_addr_file();
 }
@@ -2602,6 +2605,7 @@ DaemonCore::refreshDNS() {
 #endif
 
 	getSecMan()->getIpVerify()->refreshDNS();
+	DaemonCore::CommandSocksSinful();
 }
 
 class DCThreadState : public Service {
@@ -2688,6 +2692,8 @@ DaemonCore::reconfig(void) {
     // publication and window size of daemon core stats are controlled by params
     dc_stats.Reconfig();
 
+	m_dirty_command_sock_sinfuls = true;
+	DaemonCore::CommandSocksSinful();
 	m_dirty_sinful = true; // refresh our address in case config changes it
 
 	SecMan *secman = getSecMan();
@@ -4757,6 +4763,29 @@ int DaemonCore::initial_command_sock() const {
 		}
 	}
 	return -1;
+}
+
+const std::vector<Sinful> & DaemonCore::CommandSocksSinful()
+{
+        if (m_dirty_command_sock_sinfuls && m_shared_port_endpoint)
+	{ // See comments when we do the same for m_sinful in InfoCommandSinfulStringMyself.
+                m_command_sock_sinfuls = m_shared_port_endpoint->GetMyRemoteAddresses();
+			// If we got no command sockets at all, consider this still dirty - 
+			// we're probably waiting for the shared port to initialize.
+		m_dirty_command_sock_sinfuls = m_command_sock_sinfuls.empty();
+        }
+	else if (m_dirty_command_sock_sinfuls)
+	{
+		m_command_sock_sinfuls.clear();
+		for (int j=0; j<nSock; j++) {
+			const SockEnt &myEnt = (*sockTable)[j];
+			if ((myEnt.iosock != NULL) && myEnt.is_command_sock) {
+				m_command_sock_sinfuls.push_back(myEnt.iosock->get_sinful_public());
+			}
+		}
+		m_dirty_command_sock_sinfuls = false;
+	}
+	return m_command_sock_sinfuls;
 }
 
 int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )

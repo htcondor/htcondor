@@ -718,6 +718,29 @@ SharedPortEndpoint::InitRemoteAddress()
 		sinful.setPrivateAddr( private_sinful.getSinful() );
 	}
 
+	// Next, look for alternate command strings
+	std::string commandStrings;
+	if (ad->EvaluateAttrString("SharedPortCommandSinfuls", commandStrings))
+	{
+		m_remote_addrs.clear();
+		StringList sl(commandStrings.c_str());
+		sl.rewind();
+		const char *commandSinfulStr;
+		while ((commandSinfulStr = sl.next()))
+		{
+			Sinful altsinful(commandSinfulStr);
+			altsinful.setSharedPortID(m_local_id.Value());
+			char const *private_addr = sinful.getPrivateAddr();
+			if (private_addr)
+			{
+				Sinful private_sinful(private_addr);
+				private_sinful.setSharedPortID(m_local_id.Value());
+				altsinful.setPrivateAddr(private_sinful.getSinful());
+			}
+			m_remote_addrs.push_back(altsinful);
+		}
+	}
+
 	m_remote_addr = sinful.getSinful();
 
 	return true;
@@ -820,6 +843,13 @@ SharedPortEndpoint::GetMyRemoteAddress()
 		return NULL;
 	}
 	return m_remote_addr.Value();
+}
+
+const std::vector<Sinful> &
+SharedPortEndpoint::GetMyRemoteAddresses()
+{
+	GetMyRemoteAddress(); // Initializes the addresses if necessary.
+	return m_remote_addrs;
 }
 
 char const *

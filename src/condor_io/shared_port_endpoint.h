@@ -49,10 +49,14 @@ class SharedPortEndpoint: Service {
 
 	void StopListener();
 
-		// returns a contact string suitable for connecting to the
+		// returns the best contact string suitable for connecting to the
 		// SharedPortServer that will forward the connection to us.
 		// May return NULL if remote address cannot be determined.
 	char const *GetMyRemoteAddress();
+
+		// Returns a vector of contact strings suitable for connecting
+		// to the shared port server.  May be empty!
+	const std::vector<Sinful> &GetMyRemoteAddresses();
 
 		// Force an immediate reload of the shared port server's
 		// address.
@@ -137,6 +141,7 @@ class SharedPortEndpoint: Service {
 	MyString m_full_name; // full path of socket
 	MyString m_local_id;  // basename of socket
 	MyString m_remote_addr;  // SharedPortServer addr with our local_id inserted
+	std::vector<Sinful> m_remote_addrs;
 	MyString m_local_addr;
 	int m_retry_remote_addr_timer;
 #ifdef WIN32
