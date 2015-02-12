@@ -20,11 +20,11 @@
 
 using namespace std;
 
-
-size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t write_data(void *ptr, size_t size, size_t nmemb, void *userp); 
 int write_prevfile(const char *prev);
 bool isEmpty(FILE *file);
 
+std::string readBuffer;
 
 /*********************************************************************
     main()
@@ -37,9 +37,9 @@ int main(int argc, const char *argv[])
         perror("usage: condor_urlfetch  (-daemon)  http://my.site/condor_config  last_config.url");
         return 1;
     }
-//Determines whether the -daemon flag is present, and set argv offets accordingly
-//If the -daemon flag is there and is not master, the program will not download
-//a new page.
+  //Determines whether the -daemon flag is present, and set argv offets accordingly
+  //If the -daemon flag is there and is not master, the program will not download
+  //a new page. If no flag was specified, it always downloads
     int lastLoc = 2;
     bool toPull = true;
 
@@ -67,16 +67,12 @@ int main(int argc, const char *argv[])
     curl = curl_easy_init();
     if ((curl) && (toPull)) 
     {
-        const char* tempName = tmpnam(NULL);
-        FILE *tempFile = fopen(tempName, "wb"); 
-        if(tempFile == NULL)
-        {
-            perror("Error creating a temporary file");  
-            return(5); 
-        }
+        std::string readBuffer;
+
+      //Setting up curl
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, tempFile);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
         res = curl_easy_perform(curl);
 
         if(res != CURLE_OK)
@@ -86,26 +82,16 @@ int main(int argc, const char *argv[])
             return(4);
         }
         curl_easy_cleanup(curl);
-        fclose(tempFile);
 
-        tempFile = fopen(tempName, "rb"); 
-        if(tempFile == NULL)
+
+      //If something has been written to the buffer, copy this to our output file.
+        if(!readBuffer.empty());
         {
-            perror("Error opening a temporary file");  
-            return(5); 
+            std:ofstream out(argv[lastLoc]);
+            out << readBuffer;
+                    
+            out.close();
         }
-
-    //If something has been written to tempfile, copy this to our output file.
-        if(!isEmpty(tempFile))
-        {
-
-            std::ifstream  src(tempName, std::ios::binary);
-            std::ofstream  dst(argv[lastLoc], std::ios::binary);
-
-            dst << src.rdbuf();
-        }
-
-        remove(tempName);
     }
 
     if(write_prevfile(argv[lastLoc]) != 0)
@@ -116,9 +102,19 @@ int main(int argc, const char *argv[])
     return 0;
 }
 
-size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) 
+
+
+size_t write_data(void *ptr, size_t size, size_t nmemb, void *userp) 
 {
-    size_t written = 0;
+
+    ((std::string*)userp)->append((char*)ptr, size * nmemb);
+    return size * nmemb;
+ // Alternate write_data to be used to write to a file rather than buffer
+ /*   size_t realsize = size * nmemb;
+    readBuffer.append(ptr, realsize);
+    return realsize;*/
+
+   /* size_t written = 0;
     if((size != 0) && (nmemb != 0))
     {
         written = fwrite(ptr, size, nmemb, stream);
@@ -129,7 +125,7 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream)
         }
     }
 
-    return written;
+    return written;*/
 }
 
 int write_prevfile(const char *prev)
