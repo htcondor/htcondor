@@ -3191,6 +3191,22 @@ CStarter::PublishToEnv( Env* proc_env )
 	proc_env->SetEnv("TMPDIR", GetWorkingDir());
 	proc_env->SetEnv("TEMP", GetWorkingDir()); // Windows
 	proc_env->SetEnv("TMP", GetWorkingDir()); // Windows
+
+		// Programs built with OpenMP (including matlab, gnu sort
+		// and others) look at OMP_NUM_THREADS
+		// to determine how many threads to spawn.  Force this to
+		// Cpus, to encourage jobs to stay within the number
+		// of requested cpu cores.
+
+	ClassAd * mach = jic->machClassAd();
+	if (mach) {
+		int cpus = 0;
+		if (mach->LookupInteger(ATTR_CPUS, cpus)) {
+			if (cpus > 0) {
+				proc_env->SetEnv("OMP_NUM_THREADS", cpus);
+			}
+		}
+	}
 }
 
 // parse an environment prototype string of the form  key[[=/regex/replace/] key2=/regex2/replace2/]
