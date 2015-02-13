@@ -78,11 +78,6 @@ condor_sockaddr::condor_sockaddr(const sockaddr* sa)
 	}
 }
 
-condor_sockaddr::condor_sockaddr(const sockaddr_storage *sa)
-{
-	condor_sockaddr(reinterpret_cast<const sockaddr*>(sa));
-}
-
 condor_sockaddr::condor_sockaddr(const sockaddr_in* sin) 
 {
 	init(sin->sin_addr.s_addr, sin->sin_port);
