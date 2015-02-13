@@ -34,8 +34,6 @@ do_start_command(int cmd, ReliSock &rsock, const ClassAdWrapper &ad)
     do
     {
         addr = target.addr();
-        name = target.name();
-        if (!name) {name="";}
 
         if (rsock.connect(addr, 0))
         {
