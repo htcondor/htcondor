@@ -51,11 +51,12 @@ sub RunCheck
         return 0;
     }
 
-    my $q_cmd = "condor_q " .
-       "-format \"%d \" 'LastMatchTime=!=undefined' " .
-       "-format \"%d \" 'LastRejMatchTime=!=undefined' " .
-       "-format \"%d\\n\" 'JobStatus' " .
-       "$jobid";
+    #my $q_cmd = "condor_q " .
+       #"-format \"%d \" 'LastMatchTime=!=undefined' " .
+       #"-format \"%d \" 'LastRejMatchTime=!=undefined' " .
+       #"-format \"%d\\n\" 'JobStatus' " .
+       #"$jobid";
+	my $q_cmd = "condor_q -af \"LastMatchTime=!=undefined\" \"LastRejMatchTime=!=undefined\" JobStatus";   
 
     CondorTest::debug("monitoring job with following command: $q_cmd\n",1);
 

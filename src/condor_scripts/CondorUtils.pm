@@ -20,7 +20,7 @@ my $btdebug = 0;
 
 use base 'Exporter';
 
-our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl is_cygwin_perl fullchomp CreateDir CopyIt TarCreate TarExtract MoveIt DirLs List WhereIsInstallDir);
+our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl is_cygwin_perl fullchomp CreateDir CopyIt TarCreate TarExtract MoveIt DirLs List WhereIsInstallDir quoteMyString);
 
 sub TRUE{1};
 sub FALSE{0};
@@ -589,6 +589,24 @@ sub is_windows_native_perl {
          return 1;
     }
     return 0;
+}
+
+sub quoteMyString {
+	my $stringtoquote = shift;
+	my $returnstr = "";
+	print "Quote:$stringtoquote\n";
+	if(is_windows()) {
+		$_ = $stringtoquote;
+		s/%/\%/g;
+		s/"/\"/g;
+		$returnstr = "\"" . $_ . "\"";
+	} else {
+		$_ = $stringtoquote;
+		s/'/\'/g;
+		$returnstr = "'$_'";
+	}
+	print "Returning:$returnstr\n";
+	return($returnstr);
 }
 
 sub CreateDir

@@ -78,7 +78,9 @@ else {
 }
 
 # Note: you must run condor_reconfig after rset'ing a variable
-system("condor_config_val -collector -rset 'CONDOR_VIEW_HOST=\$(IP_ADDRESS):$view_port'; condor_reconfig -collector");
+my $quote = quoteMyString("CONDOR_VIEW_HOST=\$(IP_ADDRESS):$view_port");
+system("condor_config_val -collector -rset $quote");
+CondorTest::runCondorTool("condor_reconfig -collector");
 
 # Validate that we set this properly
 my $cmd = "condor_config_val -collector CONDOR_VIEW_HOST";
@@ -141,7 +143,7 @@ CondorLog::RunCheck(
     match_regexp => "Got INVALIDATE_NEGOTIATOR_ADS"
 );
 
-CondorTest::runCondorTool("condor_config_val -collector -rset CONDOR_VIEW_CLASSAD_TYPES=Negotiator,Machine");
+CondorTest::runCondorTool("condor_config_val -collector -rset \"CONDOR_VIEW_CLASSAD_TYPES=Negotiator,Machine\"");
 CondorTest::runCondorTool("condor_reconfig -collector");
 CondorTest::runCondorTool("condor_reconfig -startd");
 
@@ -150,7 +152,7 @@ $loopcount = 0;
 $done = "no";
 while( $done eq "no") {
     $loopcount += 1;
-    chomp(my @cmd = `condor_status -pool \"<127.0.0.1:$view_port>\" -startd -format \"%s\\n\" Name`);
+    chomp(my @cmd = `condor_status -pool \"<127.0.0.1:$view_port>\" -startd -af Name`);
 
     if (@cmd) {
 	$done = "yes";
