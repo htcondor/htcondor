@@ -1,5 +1,3 @@
-#classad_cache-basic: cygwin
-cmd_drain: cygwin
 cmd_q_shows-better-analyze: personal
 cmd_q_shows-cputime: personal
 cmd_q_shows-dag: personal
@@ -8,15 +6,11 @@ cmd_q_shows-hold: personal
 cmd_q_shows-run: personal
 cmd_q_shows-sub: personal
 cmd_q_shows-xml: personal
-cmd_submit_coverage: cygwin
-cmd_submit_massive: cygwin
 cmd_wait_shows-all: personal
 cmd_wait_shows-base: personal
 cmd_wait_shows-notimeout: personal
 cmd_wait_shows-partial: personal
 cmd_wait_shows-timeout: cygwin, personal
-condor_view_classad_types: cygwin
-defrag: cygwin
 file_transfer_submit: personal
 gangliad: personal
 job_ligo_x86-64-chkpttst: IPv4
@@ -40,12 +34,6 @@ job_ckpt_signals_std: personal, IPv4
 job_ckpt_socket-support_std: personal, IPv4
 job_ckpt_stack_std: personal, IPv4
 job_ckpt_stack_with_ckpt_server_std: IPv4
-job_concurrency_limitsP0: cygwin
-job_concurrency_limitsP1: cygwin
-job_concurrency_limitsP: cygwin
-job_concurrency_limitsS0: cygwin
-job_concurrency_limitsS1: cygwin
-job_concurrency_limitsS: cygwin
 job_condorc_abc_van: cygwin
 job_condorc_ab_van: cygwin
 job_core_args_sched: personal
