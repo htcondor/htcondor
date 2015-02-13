@@ -141,20 +141,15 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
     }
     if (remap.Length() > 0) {
       MyString remapnew;
-      if (Ad->LookupString(ATTR_TRANSFER_OUTPUT_REMAPS, &buf) == 1) {
-	MyString remapnew = buf;
+      if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS, &buf) == 1) {
+	remapnew = buf;
 	free(buf);
-	remapnew[remapnew.Length() - 1] = '\0'; // Trim last quote
-	remapnew += remap;
-      } else {
-	remapnew = ATTR_TRANSFER_OUTPUT_REMAPS;
-	remapnew += " = \"";
-	remapnew += remap;
-      }
-      remapnew += "\"";
-      // What about REPLACE job ad?????
-      if (Ad->Insert(remap.Value()) == false) {
-	dprintf(D_ALWAYS, "Could not insert into jobAd: %s\n", remap.c_str());
+	buf = NULL;
+	remapnew += ";";
+      } 
+      remapnew += remap;
+      if (Ad->Assign(ATTR_TRANSFER_INPUT_REMAPS, remap.Value()) == false) {
+	dprintf(D_ALWAYS, "Could not add to jobAd: %s\n", remap.c_str());
       }
     }
   } else  dprintf(D_FULLDEBUG, "No public input files.\n");

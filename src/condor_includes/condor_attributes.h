@@ -733,6 +733,7 @@
 #define ATTR_TRANSFER_OUTPUT  "TransferOut"
 #define ATTR_TRANSFER_ERROR  "TransferErr"
 #define ATTR_TRANSFER_INPUT_FILES  "TransferInput"
+#define ATTR_TRANSFER_INPUT_REMAPS  "TransferInputRemaps"
 #define ATTR_TRANSFER_INPUT_SIZE_MB  "TransferInputSizeMB"
 #define ATTR_PUBLIC_INPUT_FILES  "PublicInputFiles"
 #define ATTR_MAX_TRANSFER_INPUT_MB "MaxTransferInputMB"

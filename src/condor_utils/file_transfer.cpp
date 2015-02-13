@@ -334,9 +334,6 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	}
 	StringList PubInpFiles;
 	
-	// For files to be cached, change file names to URLs
-	ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
-	
 	// If we are spooling, we want to ignore URLs
 	// We want the file transfer plugin to be invoked at the starter, not the schedd.
 	// See https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=2162
@@ -351,7 +348,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		char *list = InputFiles->print_to_string();
 		dprintf(D_FULLDEBUG, "Input files: %s\n", list ? list : "" );
 		free(list);
-	}
+	} else ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
+		// For files to be cached, change file names to URLs
+
 	
 	if ( Ad->LookupString(ATTR_ULOG_FILE, buf, sizeof(buf)) == 1 ) {
 		UserLogFile = strdup(condor_basename(buf));
@@ -624,6 +623,29 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	}
 	return 1;
 }
+
+int
+FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
+	dprintf(D_FULLDEBUG,"Entering FileTransfer::AddInputFilenameRemaps\n");
+
+	if(!Ad)
+	  return 1;
+	
+	char *remap_fname = NULL;
+
+	// when downloading files from the job, apply input name remaps
+	if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS,&remap_fname)) {
+		AddDownloadFilenameRemaps(remap_fname);
+		free(remap_fname);
+		remap_fname = NULL;
+	}
+	if(!download_filename_remaps.IsEmpty()) {
+		dprintf(D_FULLDEBUG, "FileTransfer: input file remaps: %s\n",download_filename_remaps.Value());
+	}
+	return 1;
+}
+
+
 int
 FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 	bool use_file_catalog) 
@@ -1895,6 +1917,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			fullname = filename;
 		}
 		else if( final_transfer || IsClient() ) {
+		  	if( final_transfer && IsClient() && !simple_init )
+		  	  	// Only add input remaps for starter receiving
+		  	  	AddInputFilenameRemaps(&jobAd);
 			MyString remap_filename;
 			int res = filename_remap_find(download_filename_remaps.Value(),filename.Value(),remap_filename,0);
 			dprintf(D_FULLDEBUG, "REMAP: res is %i -> %s !\n", res, remap_filename.Value());
