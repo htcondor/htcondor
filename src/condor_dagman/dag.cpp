@@ -2897,7 +2897,6 @@ Dag::DumpNodeStatus( bool held, bool removed )
 				// ready to submit if it doesn't have any unfinished
 				// parents.
 			if ( !node->CanSubmit() ) {
-				// See Job::_job_type_names for other strings.
 				status = Job::STATUS_NOT_READY;
 			}
 
