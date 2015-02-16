@@ -190,6 +190,9 @@ WriteUserLog::~WriteUserLog()
 {
 	FreeGlobalResources( true );
 	FreeLocalResources( );
+	if ( m_init_user_ids ) {
+		uninit_user_ids();
+	}
 }
 
 
@@ -218,6 +221,7 @@ WriteUserLog::initialize( const char *owner, const char *domain,
 				"WriteUserLog::initialize: init_user_ids() failed!\n");
 		return false;
 	}
+	m_init_user_ids = true;
 
 		// switch to user priv, saving the current user
 	priv = set_user_priv();
@@ -423,6 +427,7 @@ WriteUserLog::Reset( void )
 {
 	m_initialized = false;
 	m_configured = false;
+	m_init_user_ids = false;
 
 	m_cluster = -1;
 	m_proc = -1;

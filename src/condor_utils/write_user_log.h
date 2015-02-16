@@ -402,6 +402,7 @@ class WriteUserLog
 
 	/** Previously configured?       */  bool       m_configured;
 	/** Initialized?                 */  bool       m_initialized;
+	/** called init_user_ids()?      */  bool       m_init_user_ids;
 	/** Creator Name (schedd name)   */  char     * m_creator_name;
 	/** Mask for events              */  std::vector<ULogEventNumber> mask;
 };
