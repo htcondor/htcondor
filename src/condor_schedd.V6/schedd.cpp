@@ -2893,6 +2893,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 				dprintf( D_ALWAYS,
 						 "Scheduler universe: Ignoring unsupported action (%d %s)\n",
 						 action, getJobActionString(action) );
+				uninit_user_ids();
 				return;
 				break;
 
