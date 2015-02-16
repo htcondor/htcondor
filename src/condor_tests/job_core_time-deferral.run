@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#! /usr/bin/env perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -17,6 +17,47 @@
 ## limitations under the License.
 ##
 ##**************************************************************
+
+# new test now is a single file and does both local and vanilla universe
+# bt 2/13/15
+
+use CondorUtils;
+use CondorTest;
+use Cwd;
+use POSIX;
+use Check::SimpleJob;
+
+$topdir = getcwd();
+print scalar localtime() . "\n";
+
+$testname = "job_core_time-deferral";
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 2
+	NEGOTIATOR_INTERVAL = 5
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"timedeferral");
+print "local config file:$configfile\n";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "timedeferral",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+
+if($mypid == 0) {
+	die "Saveme setup for test failed\n";
+}
+
+##
 
 #########################################################
 ## Job Deferral Tests
@@ -53,29 +94,12 @@
 ## so the job should still run
 ##
 #########################################################
-use CondorTest;
-use POSIX;
 
-##
-## Universe
-## 
-my $universe = $ARGV[0];
-my $longuniverse = "";
-
-if($universe eq "van") {
-	$longuniverse = "vanilla";
-} else {
-	$longuniverse = $universe;
-}
-
-$testdesc =  'Job Deferral Testing - ';
-$testname = "job_core_time-deferral" . "_$universe";
-$baseCmd = "job_core_deferral" . "_" .$universe; 
-
-##
-## Check if we should cleanup afterwards
-##
-my $cleanup = ($ARGV[1] ? $ARGV[1] : 0);
+#
+# bt 2/13/14 double fill test arrays because first we go though in local
+# universe then once again in vanilla
+#
+$testname = "job_core_time-deferral";
 
 ##
 ## If we encounter an abort, and this flag isn't set, then
@@ -150,31 +174,72 @@ push(@fail,    0);
 #	push(@fail,    0);
 #} # UNIVERSE
 
+##
+## Test #1
+## Have the job set to be deferred to run on our time
+## This assumes that our clocks are in synch
+## This will be a better test when offsets are in place
+##
+push(@exact,   1);
+push(@deltas,  180);
+push(@windows, 180);
+push(@preps,   120);
+push(@fail,    0);
+
+##
+## Test #3
+## Set the deferral time to be in the past, but we will
+## also set a window time. This will make sure that
+## jobs that missed their run time but are within the
+## the window can still run.
+##
+push(@exact,   1);
+push(@deltas,  -120);  # 120 sec = 2 min
+push(@windows, 720); # 180 sec = 3 min
+push(@preps,   120);
+push(@fail,    0);
+
 ## -----------------------------------------------------
 ## PREPARE & SUBMIT TESTS
 ## If we fail on one of them, keep going so they can
 ## see all the failures at once
 ## -----------------------------------------------------
+
+# to do both Vanilla and local universes set the count 
+# to 2 times whatever is set up above and swith universes
+# when you have done them all once.
+
+my $testcnt = scalar(@deltas);
+my $universeswitch = (($testcnt/2) - 1);
+my $loopcount =  $testcnt;
 my $success = true;
-for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
+for ( $ctr = 0, $cnt = $loopcount; $ctr < $cnt; $ctr++ ) {
 	my $exact   = $exact[$ctr];
 	my $delta   = $deltas[$ctr];
 	my $window  = $windows[$ctr];
 	my $prep	= $preps[$ctr];
 	my $fail    = $fail[$ctr];
 	my $test    = $testname."Test \#".($ctr + 1);
-	my $cmdFile = $baseCmd.$ctr;
-	my $logFile = $cmdFile.".log";
-	my $outFile = $cmdFile.".out";
-	my $errFile = $cmdFile.".err";
-	$cmdFile = $cmdFile . $$;
-	
-	system("rm -f $logfile");
+	my $universe = "";
 
+	my $outFile = "job_core_time-deferral-$mypid-$ctr";
+
+	print "********************************* TEST $ctr *********************************\n";
+	if($ctr > $universeswitch)  {
+		$universe = "vanilla";
+		print "************** Just switch tests to vanilla universe **************\n";
+	} else {
+		$universe = "local";
+	}
+
+	my $deferraltime = "";
+	my $deferralpreptime = "";
+	my $deferralwindow = "";
+	
 	##
 	## This variable is used by our callback methods 
 	## to know whether the job did what it was suppose to
-	##
+	
 	my $testFailure = 0;
 	
 	##
@@ -183,30 +248,6 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	##
 	my $expectedTime = time() + $delta;
 	
-	#print "TEST \#$ctr\n";
-	#print "\texact:    $exact\n";
-	#print "\tdelta:    $delta\n";
-	#print "\twindow:   $window\n";
-	#print "\texpected: $expectedTime\n";
-	#print "\tfail:     ".($fail ? "TRUE" : "FALSE")."\n";
-	
-	##
-	## Clean up the files before we run
-	##
-	unlink($cmdFile);
-	unlink($logFile);
-	unlink($outFile);
-	unlink($errFile);
-	
-	##
-	## Add the test parameters to a new submit file
-	##
-	open(FILE, "> $cmdFile") || die("Failed to open command file '$cmdFile' for writing");
-	print FILE "Executable = ./x_time.pl\n";
-	print FILE "Notification = NEVER\n";
-	print FILE "Universe = $longuniverse\n";
-	
-
 	##
 	## We can either be given an exact time to run which will
 	## be based on the submitting machines clock
@@ -218,7 +259,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 		## our time and not the executing machine's clock
 		## Otherwise the clocks must be in synch
 		##
-		print FILE "DeferralTime = $expectedTime\n";	
+		$deferraltime = $expectedTime;	
 	##
 	## Or a delta that will tell the executing machine to run at 
 	## a time based on their own clock
@@ -229,7 +270,7 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 		## By using time() we are assuming that our clock is the
 		## same as the machine it is running on
 		##
-		print FILE "DeferralTime = (time() + $delta)\n";	
+		$deferraltime = (time() + $delta);	
 	}
 	
 	##
@@ -237,24 +278,36 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	## the valeus are not empty
 	##
 	if ($window > 0) {
-		print FILE "DeferralWindow = $window\n";
+		$deferralwindow = $window;
 	}
 	if ($prep > 0) {
-		print FILE "DeferralPrepTime = $prep\n";
+		$deferralpreptime = $prep;
 	}
 	
 	##
-	## Add all our files
-	## These are deleted before we execute the test each time
+	## timeout
+	## If the job never matches and run, we'll execute this method
 	##
-	print FILE "Log	= $logFile\n";
-	print FILE "Output = $outFile\n";
-	print FILE "Error = $errFile\n";
-	print FILE "Queue\n";
-	close(FILE);
-	
-	CondorTest::debug("Command file is $cmdFile\n",1);
-	system("cat $cmdFile");
+	my $timeout = sub {
+		$cluster = $info{"cluster"};
+		$job = $info{"job"};
+		
+		CondorTest::debug("Bad - Job $cluster.$job never began execution! Removing...\n",1);
+		
+		##
+		## Remove the job from the queue
+		##
+		my @adarray;
+		my $status = 1;
+		my $cmd = "condor_rm $cluster";
+		$status = CondorTest::runCondorTool($cmd, \@adarray, 2);
+		if ( !$status ) {
+			CondorTest::debug("Test failure due to Condor Tool Failure <$cmd>\n",1);
+			exit(1);
+		}
+		return (0);
+	};
+
 
 	##
 	## success
@@ -444,81 +497,39 @@ for ( $ctr = 0, $cnt = scalar(@deltas); $ctr < $cnt; $ctr++ ) {
 	};
 		
 	##
-	## timeout
-	## If the job never matches and run, we'll execute this method
-	##
-	my $timeout = sub {
-		$cluster = $info{"cluster"};
-		$job = $info{"job"};
-		
-		CondorTest::debug("Bad - Job $cluster.$job never began execution! Removing...\n",1);
-		
-		##
-		## Remove the job from the queue
-		##
-		my @adarray;
-		my $status = 1;
-		my $cmd = "condor_rm $cluster";
-		$status = CondorTest::runCondorTool($cmd, \@adarray, 2);
-		if ( !$status ) {
-			CondorTest::debug("Test failure due to Condor Tool Failure <$cmd>\n",1);
-			exit(1);
-		}
-		return (0);
-	};
-	
-	##
-	## Run ye olde' test
-	##
-	CondorTest::RegisterSubmit( $test, $submitted );
-	CondorTest::RegisterAbort( $test, $aborted );
-	CondorTest::RegisterHold( $test, $held );
-	CondorTest::RegisterExitedSuccess( $test, $success );
-	
-	##
 	## This callback is to make sure our job actually runs
 	## Sometimes the job fails to match and execute.
 	##
 	CondorTest::RegisterTimed( $test, $timeout, abs($delta * 8) );
-	
-	##
-	## Kind of a hack
-	## Our callback methods will set global variables that 
-	## we can check to see if the job executed/aborted the
-	## way we expected it to 
-	##
-	$ABORTING = 0;
-	if( CondorTest::RunTest( $test, $cmdFile, 0)) {
-		if ($testFailure) {
-			CondorTest::debug("$test: CondorTest::RunTest() failed - $testFailure\n",1);
-			$success = 0;
-		} else {
-			CondorTest::debug("$test: SUCCESS\n",1);
-		}
-	} else {
-		die "$testname: CondorTest::RunTest() failed\n";
-	}
+
+	SimpleJob::RunCheck(
+		universe=>$universe,
+		deferralpreptime=>$deferralpreptime,
+		deferraltime=>$deferraltime,
+		deferralwindow=>$deferralwindow,
+		runthis=>"x_time.pl",
+		output=>$outFile,
+		on_submit=>$submitted,
+		on_success=>$success,
+		on_hold=>$held,
+		on_abort=>$aborted
+	);
+
 	CondorTest::RemoveTimed( $test );
 	
-	##
-	## Clean up the files after we run if we were told to
-	##
-	if ($cleanup) { 
-		unlink($cmdFile);
-		unlink($logFile);
-		unlink($outFile);
-		unlink($errFile);
-	}
 } # FOREACH
 
-## 
-## Return an exit status based on what happened with all our tests!
-##
-exit( $success ? 0 : -1 );
 
-## -----------------------------------------------------
-## HELPER FUNCTIONS
-## -----------------------------------------------------
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
+{
+	exit(1);
+}
+
+CondorTest::debug("job_core_time-deferral-hold_local SUCCESS\n",1);
+exit(0);
 
 ##
 ## extractExecuteTime()
@@ -557,4 +568,3 @@ sub extractExecuteTime {
     print "RUN TIME: $timestamp\n";
     return ($timestamp);
 };
-

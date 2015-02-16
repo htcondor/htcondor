@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#! /usr/bin/env perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -18,35 +18,56 @@
 ##
 ##**************************************************************
 
-#########################################################
-## Job Deferral Test - Remove
-##
-## This test will make sure that if a job is being
-## deferred and we issue a Remove command, that the job
-## will be removed from the starter
-#########################################################
+# new test now is a single file and does both local and vanilla universe
+# bt 2/13/15
+
+use CondorUtils;
 use CondorTest;
+use Cwd;
 use POSIX;
+use Check::SimpleJob;
+
+$topdir = getcwd();
+print scalar localtime() . "\n";
+
+$testname = "job_core_time-deferral-remove";
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 2
+	NEGOTIATOR_INTERVAL = 5
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"timedeferralremove");
+print "local config file:$configfile\n";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "timedeferralremove",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+
+if($mypid == 0) {
+	die "Saveme setup for test failed\n";
+}
 
 ##
 ## Universe
 ## 
-my $universe = $ARGV[0];
-my $longuniverse = "";
-
-if($universe eq "van") {
-	$longuniverse = "vanilla";
-} else {
-	$longuniverse = $universe;
-}
-
+my $longuniverse = "local";
 
 ##
 ## The timer callback method doesn't provide us with this
 ## information, so we need to store it from the last event
 ## callback as a global variable
 ##
-my %info;
+my %info = ();
 
 ##
 ## When the job should actually run
@@ -58,15 +79,8 @@ $deferralTime = time() + 600;
 ##
 ## If this is set to true, then we know that we caused the cooresponding command
 ##
-my $REMOVE = "";
-
-##
-## Testing Information
-##
-$testdesc =  "Job Deferral Testing REMOVE - $universe";
-$testname = "job_core_time-deferral-remove" . "_$universe";
-$base_name = 'job_core_time-deferral-remove';
-$base_cmd = $base_name.".cmd";
+my $HOLD = 0;
+my $REMOVE = 0;
 
 ##
 ## submitted
@@ -190,44 +204,57 @@ $timed = sub {
 	}
 };
 
-##
-## We need to create a new test file based on the universe
-## that we were told to test
-##
-$cmd = $base_name."_".$universe.".cmd";
-open( WRITE_FILE, ">$cmd" ) || die( "Can't open '$cmd' for writing!\n" );
+# this first one does local universe
+
+SimpleJob::RunCheck(
+	universe=>"local",
+	deferralpreptime=>20,
+	deferraltime=>$deferralTime,
+	runthis=>"x_time.pl",
+	on_submit=>$submitted,
+	on_execute=>$executed,
+	on_abort=>$aborted
+);
 
 ##
-## Add the universe information closing with the 'Queue' command
+## The timer callback method doesn't provide us with this
+## information, so we need to store it from the last event
+## callback as a global variable
 ##
-print WRITE_FILE "Executable   = ./x_time.pl\n";
-print WRITE_FILE "Notification = NEVER\n";
-print WRITE_FILE "DeferralPrep = 20\n";
-print WRITE_FILE "Universe	   = $longuniverse\n";
-print WRITE_FILE "Log		   = $base_name"."_$universe.log\n";
-print WRITE_FILE "Output	   = $base_name"."_$universe.out\n";
-print WRITE_FILE "Error		   = $base_name"."_$universe.err\n";
-print WRITE_FILE "DeferralTime = $deferralTime\n";
-print WRITE_FILE "Queue\n";
-close( WRITE_FILE );
-
-system("cat $cmd");
-
-$mylogfortest = "$base_name"."_$universe.log";
-system("rm -f $mylogfortest");
+my %info = ();
 
 ##
-## Setup our testing callbacks
+## When the job should actually run
+## We can't use CurrentTime because of how the job's requirements
+## are set up
 ##
-#Condor::DebugOn();
-CondorTest::RegisterSubmit( $testname, $submitted );
-CondorTest::RegisterExecute( $testname, $executed );
-CondorTest::RegisterAbort( $testname, $aborted );
-	
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
+$deferralTime = time() + 600;
+
+##
+## If this is set to true, then we know that we caused the cooresponding command
+##
+$HOLD = 0;
+$REMOVE = 0;
+
+# By default simple jobs runs vanilla universe
+
+SimpleJob::RunCheck(
+	deferralpreptime=>20,
+	deferraltime=>$deferralTime,
+	runthis=>"x_time.pl",
+	on_submit=>$submitted,
+	on_execute=>$executed,
+	on_hold=>$held,
+	on_abort=>$aborted
+);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
+{
+	exit(1);
 }
 
+CondorTest::debug("job_core_time-deferral-hold_local SUCCESS\n",1);
+exit(0);

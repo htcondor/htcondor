@@ -137,6 +137,26 @@ These attributes include \Attr{TotalRunningJobs}, \Attr{TotalIdleJobs},
 \Attr{TotalHeldJobs}, and \Attr{TotalRemovedJobs}.
 \Ticket{4683}
 
+\item \Condor{q} now supports a new option \Arg{autocluster}, which causes it
+to return the contents of the \Condor{schedd}'s autocluster set, along with
+the number of jobs in each autocluster.
+\Ticket{4792}
+
+\item Two new configuration variables have been added to allow better control of the significant
+attributes used for  autoclustering. Set \Macro{ADD\_SIGNIFICANT\_ATTRIBUTES} to force an attribute
+to be significant even if the \Condor{negotiator} does not.  Set \Macro{REMOVE\_SIGNIFICANT\_ATTRIBUTES}
+to force an attribute to be not significant even if the \Condor{negotiator} indicates that it is.
+\Ticket{4797}
+
+\item \Condor{q} and \Condor{history} have a new option \Arg{limit}, which limits
+number of results returned.
+\Ticket{4806}
+
+\item A new more efficient query protocol has been added as the default for \Condor{q} when
+querying a \Condor{schedd} that is version 8.3.3 or later. Set the configuration variable
+\Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL} to \Expr{False} disable this new protocol.
+\Ticket{4828}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
