@@ -238,12 +238,11 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
 				_defaultPriority );
 
-	//TEMPTEMP -- print warning or error if this is false
-#if 0 //TEMPTEMP
-	_submitDagDeepOpts.always_use_node_log = param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true);
-	debug_printf( DEBUG_NORMAL, "DAGMAN_ALWAYS_USE_NODE_LOG setting: %s\n",
-				_submitDagDeepOpts.always_use_node_log ? "True" : "False" );
-#endif //TEMPTEMP
+	if ( !param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true ) ) {
+       	debug_printf( DEBUG_QUIET,
+					"Error: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer allowed\n" );
+		DC_Exit( EXIT_ERROR );
+	}
 
 	_submitDagDeepOpts.suppress_notification = param_boolean(
 		"DAGMAN_SUPPRESS_NOTIFICATION",
@@ -818,11 +817,10 @@ void main_init (int argc, char ** const argv) {
 			}
 			dagman._submitDagDeepOpts.priority = atoi(argv[i]);
 
-//TEMPTEMP -- error or warning here...
-#if 0 //TEMPTEMP
 		} else if( !strcasecmp( "-dont_use_default_node_log", argv[i] ) ) {
-			dagman._submitDagDeepOpts.always_use_node_log = false;
-#endif //TEMPTEMP
+       		debug_printf( DEBUG_QUIET,
+						"Error: -dont_use_default_node_log is no longer allowed\n" );
+			DC_Exit( EXIT_ERROR );
 
 		} else if ( !strcasecmp( "-dorecov", argv[i] ) ) {
 			dagman._doRecovery = true;
@@ -934,13 +932,6 @@ void main_init (int argc, char ** const argv) {
         debug_printf( DEBUG_SILENT, "-DoRescueFrom must be non-negative\n" );
         Usage();
     }
-
-#if 0 //TEMPTEMP
-	if ( !dagman._submitDagDeepOpts.always_use_node_log ) {
-        debug_printf( DEBUG_QUIET, "Error: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer allowed\n" );
-		DC_Exit( EXIT_ERROR );
-	}
-#endif //TEMPTEMP
 
 	//
 	// ...done checking arguments.
@@ -1282,12 +1273,11 @@ Dagman::CheckLogFileMode( const CondorVersionInfo &submitFileVersion )
 				"you probably know what to do to resolve the problem...\n");
 
 		} else {
-				//TEMPTEMP -- need to get rid of this...
 				// Pre-7.9.0 -- default log wasn't implemented yet, so
 				// we need to use individual logs from submit files.
 			debug_printf( DEBUG_QUIET, "Submit file version indicates submit is too old. "
-				"Falling back to 7.8 behavior of not using the default node log\n");
-			DisableDefaultLog();
+				"DAGMan no longer supports individual per-job log files.\n" );
+			DC_Exit( EXIT_ERROR );
 		}
 
 	} else {
@@ -1308,18 +1298,10 @@ Dagman::CheckLogFileMode( const CondorVersionInfo &submitFileVersion )
 				// We are in recovery, but the default log does not exist.
 				// Fall back to 7.8 behavior
 			debug_printf( DEBUG_QUIET, "Default node log does not exist. "
-						"Falling back to 7.8 behavior of not using the default node log\n");
-			DisableDefaultLog();
+				"DAGMan no longer supports individual per-job log files.\n" );
+			DC_Exit( EXIT_ERROR );
 		}
 	}
-}
-
-//---------------------------------------------------------------------------
-void
-Dagman::DisableDefaultLog()
-{
-	ASSERT( false );//TEMPTEMP -- get rid of this method altogether
-	//TEMPTEMP? dagman._submitDagDeepOpts.always_use_node_log = false;
 }
 
 //---------------------------------------------------------------------------
@@ -1367,18 +1349,27 @@ Dagman::ResolveDefaultLog()
 		check_warning_strictness( DAG_STRICT_1 );
 	}
 
-#if 0 //TEMPTEMP -- implement this here!
+	bool nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
+	if ( nfsLogIsError ) {
+		bool userlog_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
+		if ( userlog_locking ) {
+			bool locks_on_local = param_boolean( "CREATE_LOCKS_ON_LOCAL_DISK", true);
+			if ( locks_on_local ) {
+				debug_printf( DEBUG_QUIET, "Ignoring value of DAGMAN_LOG_ON_NFS_IS_ERROR because ENABLE_USERLOG_LOCKING and CREATE_LOCKS_ON_LOCAL_DISK are true.\n");
+				nfsLogIsError = false;
+			}
+		}
+	}
+
 		// This function returns true if the log file is on NFS and
 		// that is an error.  If the log file is on NFS, but nfsIsError
 		// is false, it prints a warning but returns false.
-	if ( MultiLogFiles::logFileNFSError( logFile.Value(),
-				nfsIsError ) ) {
+	if ( MultiLogFiles::logFileNFSError( _defaultNodeLog.Value(),
+				nfsLogIsError ) ) {
 		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
-					logFile.Value() );
-		LogMonitorFailed();
-		return false;
+					_defaultNodeLog.Value() );
+		DC_Exit( EXIT_ERROR );
 	}
-#endif //TEMPTEMP
 
 	debug_printf( DEBUG_NORMAL, "Default node log file is: <%s>\n",
 				_defaultNodeLog.Value() );

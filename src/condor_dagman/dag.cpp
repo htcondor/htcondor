@@ -208,17 +208,6 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_dagFiles.rewind();
 	_haltFile = HaltFileName( _dagFiles.next() );
 	_dagStatus = DAG_STATUS_OK;
-	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
-	if(_nfsLogIsError) {
-		bool userlog_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
-		if(userlog_locking) {
-			bool locks_on_local = param_boolean( "CREATE_LOCKS_ON_LOCAL_DISK", true);
-			if(locks_on_local) {
-				dprintf( D_ALWAYS, "Ignoring value of DAGMAN_LOG_ON_NFS_IS_ERROR.\n");
-				_nfsLogIsError = false;
-			}
-		}
-	}
 
 	return;
 }

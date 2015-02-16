@@ -37,6 +37,12 @@ file when node jobs go on hold.
 \item \Condor{dagman} no longer supports Stork jobs as DAG nodes.
 \Ticket{4550}
 
+%TEMPTEMP -- this needs to get moved into the 8.3.4 section once things are merged
+\item \Condor{dagman} no longer has the capability to read individual per-
+job log files.  This means that recovery mode will no longer work on a
+DAG originally submitted with version 7.9.1 or earlier.
+\Ticket{4528}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

@@ -949,10 +949,14 @@ class Dag {
 	*/
 	const char *EscapeClassadString( const char* strIn );
 
-		//TEMPTEMP -- document
+	/** Monitor the workflow log file for this DAG.
+		@return:  true if successful, false otherwise
+	*/
 	bool MonitorLogFile();
 
-		//TEMPTEMP -- document
+	/** Unmonitor the workflow log file for this DAG.
+		@return:  true if successful, false otherwise
+	*/
 	bool UnmonitorLogFile();
 
 protected:
@@ -1129,10 +1133,6 @@ private:
 		// Default Condor ID to use in reseting a node's Condor ID on
 		// retry.
 	static const CondorID	_defaultCondorId;
-
-		// Whether having node job log files on NFS is an error (vs.
-		// just a warning).
-	bool	_nfsLogIsError;
 
 		// The user log file to be used for nodes whose submit files do
 		// not specify a log file.

@@ -10595,11 +10595,13 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanAlwaysUseNodeLog}
 \item[\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}]
-  As of HTCondor version 8.3.1, the value is always the default 
+  As of HTCondor version 8.3.1, the value must always be the default 
   value of \Expr{True}.  
-  Attempts to set it to \Expr{False} results in an error. 
+  Attempting to set it to \Expr{False} results in an error. 
   This causes incompatibility with using a \Condor{submit} executable 
   that is older than HTCondor version 7.9.0.
+
+  For completeness, here is the definition for historical purposes: 
   A boolean value that when \Expr{True}  causes \Condor{dagman} to read
   events from its default node log file, as defined by
   \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}, instead of from the log file(s)
