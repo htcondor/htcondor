@@ -182,6 +182,8 @@ void ScheddStatistics::InitMain()
 
    InitJobCounters(Pool, IF_BASICPUB);
 
+   JobsRestartReconnectsBadput.set_levels(default_job_hist_lifes, COUNTOF(default_job_hist_lifes));
+
    SCHEDD_STATS_ADD_RECENT(Pool, JobsSubmitted,        IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, Autoclusters,         IF_BASICPUB);
 
@@ -191,6 +193,13 @@ void ScheddStatistics::InitMain()
 
    SCHEDD_STATS_ADD_VAL(Pool, ShadowsRunning,               IF_BASICPUB);
    SCHEDD_STATS_PUB_PEAK(Pool, ShadowsRunning,              IF_BASICPUB);
+
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsFailed, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsLeaseExpired, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsSucceeded, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsAttempting, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsUnknown, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsBadput, IF_BASICPUB);
 
    // SCHEDD runtime stats for various expensive processes
    //

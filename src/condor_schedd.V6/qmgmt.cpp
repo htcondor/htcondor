@@ -2657,6 +2657,19 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		//
 		PRAGMA_REMIND("tj: move this into the cluster job object?")
 		scheduler.addCronTabClusterId( cluster_id );
+	} else if ( strcasecmp( attr_name, ATTR_NUM_JOB_RECONNECTS ) == 0 ) {
+		int curr_cnt = 0;
+		int new_cnt = (int)strtol( attr_value, NULL, 10 );
+		PROC_ID job_id = { cluster_id, proc_id };
+		shadow_rec *srec = scheduler.FindSrecByProcID(job_id);
+		GetAttributeInt( cluster_id, proc_id, ATTR_NUM_JOB_RECONNECTS, &curr_cnt );
+		if ( srec && srec->is_reconnect && !srec->reconnect_succeeded &&
+			 new_cnt > curr_cnt ) {
+
+			srec->reconnect_succeeded = true;
+			scheduler.stats.JobsRestartReconnectsSucceeded += 1;
+			scheduler.stats.JobsRestartReconnectsAttempting += -1;
+		}
 	}
 	else if (attr_id == idATTR_JOB_STATUS) {
 			// If the status is being set, let's record the previous
@@ -5071,17 +5084,27 @@ int mark_idle(ClassAd *job, void*)
 		DestroyProc( cluster, proc );
 	}
 	else if ( status == SUSPENDED || status == RUNNING || status == TRANSFERRING_OUTPUT || hosts > 0 ) {
-		if( universeCanReconnect(universe) &&
-			jobLeaseIsValid(job, cluster, proc) )
+		bool lease_valid = jobLeaseIsValid( job, cluster, proc );
+		if( universeCanReconnect(universe) && lease_valid )
 		{
+			bool result;
 			dprintf( D_FULLDEBUG, "Job %d.%d might still be alive, "
 					 "spawning shadow to reconnect\n", cluster, proc );
 			if (universe == CONDOR_UNIVERSE_PARALLEL) {
 				dedicated_scheduler.enqueueReconnectJob( job_id);	
 			} else {
-				scheduler.enqueueReconnectJob( job_id );
+				result = scheduler.enqueueReconnectJob( job_id );
+				if ( result ) {
+					scheduler.stats.JobsRestartReconnectsAttempting += 1;
+				} else {
+					scheduler.stats.JobsRestartReconnectsFailed += 1;
+				}
 			}
 		} else {
+			if ( universeCanReconnect(universe) && !lease_valid &&
+				 ( universe != CONDOR_UNIVERSE_PARALLEL || proc == 0 ) ) {
+				scheduler.stats.JobsRestartReconnectsLeaseExpired += 1;
+			}
 			mark_job_stopped(&job_id);
 		}
 	}

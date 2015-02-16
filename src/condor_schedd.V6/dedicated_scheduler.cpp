@@ -1843,6 +1843,7 @@ DedicatedScheduler::spawnJobs( void )
 			// need to skip following line if it is a reconnect job already
 		if (! allocation->is_reconnect) {
 			addReconnectAttributes( allocation);
+			scheduler.stats.JobsRestartReconnectsAttempting += 1;
 		}
 
 			/*

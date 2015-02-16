@@ -999,7 +999,11 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 void
 ParallelShadow::resourceReconnected( RemoteResource*  /*rr*/ )
 {
-		//EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
+		// Since our reconnect worked, clear attemptingReconnectAtStartup
+		// flag so if we disconnect again and fail, we will exit
+		// with JOB_SHOULD_REQUEUE instead of JOB_RECONNECT_FAILED.
+		// See gt #4783.
+	attemptingReconnectAtStartup = false;
 }
 
 

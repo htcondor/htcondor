@@ -401,6 +401,12 @@ class BaseShadow : public Service
 
 	char const *getTransferQueueContactInfo() {return m_xfer_queue_contact_info.Value();}
 
+		/** True if attemping a reconnect from startup, i.e. if
+			reconnecting based upon command-line flag -reconnect. 
+			Used to determine if shadow exits with RECONNECT_FAILED
+			or just with JOB_SHOULD_REQUEUE. */
+	bool attemptingReconnectAtStartup;
+
  protected:
 
 		/** Note that this is the base, "unexpanded" ClassAd for the job.

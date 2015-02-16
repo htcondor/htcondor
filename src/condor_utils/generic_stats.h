@@ -558,10 +558,12 @@ public:
    }
 
    T Add(T val) { return Set(this->value + val); }
+   T Sub(T val) { return Set(this->value - val); }
 
    // operator overloads
    stats_entry_abs<T>& operator=(T val)  { Set(val); return *this; }
    stats_entry_abs<T>& operator+=(T val) { Add(val); return *this; }
+   stats_entry_abs<T>& operator-=(T val) { Sub(val); return *this; }
 
    // callback methods/fetchers for use by the StatisticsPool class
    static const int unit = IS_CLS_ABS | stats_entry_type<T>::id;

@@ -563,9 +563,9 @@ ContactStartdArgs::~ContactStartdArgs()
 static const int USER_HASH_SIZE = 100;
 
 Scheduler::Scheduler() :
+	OtherPoolStats(stats),
     m_adSchedd(NULL),
     m_adBase(NULL),
-	OtherPoolStats(stats),
 	GridJobOwners(USER_HASH_SIZE, UserIdentity::HashFcn, updateDuplicateKeys),
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
@@ -5461,6 +5461,12 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 			dprintf( D_FULLDEBUG, "(%d.%d) Killing shadow %d\n", 
 				(int) job_id.cluster, (int)job_id.proc, (int)(srec->pid));
 			scheduler.sendSignalToShadow(srec->pid, SIGKILL, job_id);
+			// TODO Should we try to upadte the JobsRestartReconnectsBadput
+			//   stat on a forcex?
+			if ( srec->is_reconnect && !srec->reconnect_succeeded ) {
+				scheduler.stats.JobsRestartReconnectsAttempting += -1;
+				scheduler.stats.JobsRestartReconnectsFailed += 1;
+			}
 		}
 
 		break;
@@ -6702,6 +6708,8 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 			dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
 					 ATTR_OWNER, cluster, proc );
 			mark_job_stopped( job );
+			scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+			scheduler.stats.JobsRestartReconnectsFailed += 1;
 			return;
 		}
 	}
@@ -6713,6 +6721,8 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 				ATTR_CLAIM_ID, cluster, proc );
 		mark_job_stopped( job );
 		free( owner );
+		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+		scheduler.stats.JobsRestartReconnectsFailed += 1;
 		return;
 	}
 	if( GetAttributeStringNew(cluster, proc, ATTR_REMOTE_HOST, &startd_name) < 0 ) {
@@ -6724,6 +6734,8 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		mark_job_stopped( job );
 		free( claim_id );
 		free( owner );
+		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+		scheduler.stats.JobsRestartReconnectsFailed += 1;
 		return;
 	}
 	if( GetAttributeStringNew(cluster, proc, ATTR_STARTD_IP_ADDR, &startd_addr) < 0 ) {
@@ -6839,7 +6851,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		return;
 	}
 	
-
 	mrec->setStatus( M_CLAIMED );  // it's claimed now.  we'll set
 								   // this to active as soon as we
 								   // spawn the reconnect shadow.
@@ -6866,6 +6877,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	srec->conn_fd = -1;
 	srec->isZombie = FALSE; 
 	srec->is_reconnect = true;
+	srec->reconnect_succeeded = false;
 	srec->keepClaimAttributes = false;
 
 		// the match_rec also needs to point to the srec...
@@ -6908,6 +6920,10 @@ void
 PostInitJobQueue()
 {
 	mark_jobs_idle();
+
+	daemonCore->Register_Timer( 0,
+						(TimerHandlercpp)&Scheduler::WriteRestartReport,
+						"Scheduler::WriteRestartReport", &scheduler );
 
 		// The below must happen _after_ InitJobQueue is called.
 	if ( scheduler.autocluster.config() ) {
@@ -9056,6 +9072,7 @@ shadow_rec::shadow_rec():
 	removed(FALSE),
 	isZombie(FALSE),
 	is_reconnect(false),
+	reconnect_succeeded(false),
 	keepClaimAttributes(false),
 	recycle_shadow_stream(NULL),
 	exit_already_handled(false)
@@ -9090,6 +9107,7 @@ Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, int univ,
 	new_rec->conn_fd = fd;
 	new_rec->isZombie = FALSE; 
 	new_rec->is_reconnect = false;
+	new_rec->reconnect_succeeded = false;
 	new_rec->keepClaimAttributes = false;
 	
 	if (pid) {
@@ -10464,6 +10482,11 @@ Scheduler::child_exit(int pid, int status)
 				// we are preserving the claim for reconnect, then
 				// do not delete the claim.
 			 keep_claim = srec_keep_claim_attributes;
+
+			if ( srec->is_reconnect && !srec->reconnect_succeeded ) {
+				 scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+				 scheduler.stats.JobsRestartReconnectsUnknown += 1;
+			}
 		}
 		
 			// We always want to delete the shadow record regardless 
@@ -10617,6 +10640,22 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// Based on the job's exit code, we will perform different actions
 		// on the job
 		//
+		// TODO If this was a reconnect shadow and it didn't indicate that
+		//   reconnect succeeded and its exit code isn't
+		//   JOB_RECONNECT_FAILED, then we don't know whether reconnect
+		//   succeeded. We should decrement JobsRestartReconnectsAttempting,
+		//   but which reconnect stat should we increment?
+	if ( exit_code == JOB_RECONNECT_FAILED ) {
+		// Treat JOB_RECONNECT_FAILED exit code just like JOB_SHOULD_REQUEUE,
+		// except also update a few JobRestartReconnect statistics.
+		exit_code = JOB_SHOULD_REQUEUE;
+		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+		scheduler.stats.JobsRestartReconnectsFailed += 1;
+		scheduler.stats.JobsRestartReconnectsBadput += job_running_time;
+	} else if ( srec->is_reconnect && !srec->reconnect_succeeded ) {
+		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
+		scheduler.stats.JobsRestartReconnectsUnknown += 1;
+	}
 	switch( exit_code ) {
 		case JOB_NO_MEM:
 			this->swap_space_exhausted();
@@ -13281,7 +13320,7 @@ Scheduler::sendAlives()
 				ASSERT( srec );
 				mrec->needs_release_claim = false;
 				DelMrec( mrec );
-				jobExitCode( srec->job_id, JOB_SHOULD_REQUEUE );
+				jobExitCode( srec->job_id, JOB_RECONNECT_FAILED );
 				srec->exit_already_handled = true;
 				daemonCore->Send_Signal( srec->pid, SIGKILL );
 			}
@@ -15480,4 +15519,91 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 	}
 
 	return 0;
+}
+
+void
+Scheduler::WriteRestartReport()
+{
+	static time_t restart_time = 0;
+	static int total_reconnects = 0;
+	std::string filename;
+
+	param( filename, "SCHEDD_RESTART_REPORT" );
+	if ( filename.empty() ) {
+		return;
+	}
+
+	if ( restart_time == 0 ) {
+		restart_time = time(NULL);
+	}
+	if ( total_reconnects == 0 ) {
+		total_reconnects = stats.JobsRestartReconnectsAttempting.value +
+			stats.JobsRestartReconnectsFailed.value +
+			stats.JobsRestartReconnectsLeaseExpired.value +
+			stats.JobsRestartReconnectsSucceeded.value +
+			stats.JobsRestartReconnectsUnknown.value;
+	}
+
+	struct tm *restart_tm = localtime( &restart_time );
+	char restart_time_str[80];
+	strftime( restart_time_str, 80, "%m/%d/%y %H:%M:%S", restart_tm );
+
+	std::string report;
+	formatstr( report, "The schedd %s restarted at %s.\n"
+			   "It attempted to reconnect to machines where its jobs may still be running.\n",
+			   Name, restart_time_str );
+	if ( stats.JobsRestartReconnectsAttempting.value == 0 ) {
+		formatstr_cat( report, "All reconnect attempts have finished.\n" );
+	}
+	formatstr_cat( report, "Here is a summary of the reconnect attempts:\n\n" );
+	formatstr_cat( report, "%d total jobs where reconnecting is possible\n",
+				   total_reconnects );
+	formatstr_cat( report, "%d reconnects are still being attempted\n",
+				   stats.JobsRestartReconnectsAttempting.value );
+	formatstr_cat( report, "%d reconnects weren't attempted because the lease expired before the schedd restarted\n",
+				   stats.JobsRestartReconnectsLeaseExpired.value );
+	formatstr_cat( report, "%d reconnects failed\n",
+				   stats.JobsRestartReconnectsFailed.value );
+	formatstr_cat( report, "%d reconnects whose success or failure is unknown\n",
+				   stats.JobsRestartReconnectsUnknown.value );
+	formatstr_cat( report, "%d reconnects succeeded\n",
+				   stats.JobsRestartReconnectsSucceeded.value );
+		// TODO Include stats.JobsRestartReconnectsBadput?
+
+	FILE *report_fp = safe_fcreate_replace_if_exists( filename.c_str(), "w" );
+	if ( report_fp == NULL ) {
+		dprintf( D_ALWAYS, "Failed to open schedd restart report file '%s', errno=%d (%s)\n", filename.c_str(), errno, strerror(errno) );
+		return;
+	}
+	fprintf( report_fp, "%s", report.c_str() );
+	fclose( report_fp );
+
+	if ( stats.JobsRestartReconnectsAttempting.value == 0 ) {
+		FILE *mailer = NULL;
+		std::string email_subject;
+
+		formatstr( email_subject, "Schedd restart report for %s", Name );
+
+		char *address = param( "SCHEDD_ADMIN_EMAIL" );
+		if(address) {
+			mailer = email_open( address, email_subject.c_str() );
+			free( address );
+		} else {
+			mailer = email_admin_open( email_subject.c_str() );
+		}
+
+		if( mailer == NULL ) {
+			return;
+		}
+
+		fprintf( mailer, "%s", report.c_str() );
+
+		email_close( mailer );
+
+		return;
+	}
+
+	daemonCore->Register_Timer( 60,
+						(TimerHandlercpp)&Scheduler::WriteRestartReport,
+						"Scheduler::WriteRestartReport", this );
 }

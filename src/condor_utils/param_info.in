@@ -4894,6 +4894,15 @@ friendly_name=Schedd Preemption Rank
 review=?
 tags=schedd,dedicated_scheduler
 
+[SCHEDD_RESTART_REPORT]
+default=$(LOG)/ScheddRestartReport
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Schedd Restart Report
+review=?
+tags=schedd,dedicated_scheduler
+
 [DEDICATED_SCHEDULER_USE_FIFO]
 default=true
 type=bool
