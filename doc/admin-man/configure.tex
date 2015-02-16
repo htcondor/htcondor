@@ -924,16 +924,19 @@ the changed value.
 
 \label{param:DetectedCpus}
 \item[\MacroU{DETECTED\_CPUS}]
-  The integer number of physical (non hyper-threaded) CPUs, as given by
-  \MacroUNI{DETECTED\_PHYSICAL\_CPUS}, when \Macro{COUNT\_HYPERTHREAD\_CPUS}
-  is \Expr{True}.
   The integer number of hyper-threaded CPUs, as given by
   \MacroUNI{DETECTED\_CORES}, when \MacroNI{COUNT\_HYPERTHREAD\_CPUS}
+  is \Expr{True}.
+  The integer number of physical (non hyper-threaded) CPUs, as given by
+  \MacroUNI{DETECTED\_PHYSICAL\_CPUS}, when \Macro{COUNT\_HYPERTHREAD\_CPUS}
   is \Expr{False}.
+  When \MacroNI{COUNT\_HYPERTHREAD\_CPUS}
+  is \Expr{True}.
 
 \label{param:DetectedPhysicalCpus}
 \item[\MacroU{DETECTED\_PHYSICAL\_CPUS}]
   The integer number of physical (non hyper-threaded) CPUs.
+  This will be equal the number of unique CPU IDs.
 
 \end{description}
 
@@ -988,8 +991,9 @@ determined automatically at run time but which can be overwritten.
 
 \label{param:DetectedCores}
 \item[\MacroU{DETECTED\_CORES}]
-  The number of detected CPU cores.  
-  This includes hyper-threaded cores, if there are any.
+  The number of CPU cores that the operating system schedules.
+  On machines that support hyper-threading, this will be 
+  the number of hyper-threads.
 
 \label{param:Pid}
 \item[\MacroU{PID}]
@@ -4960,22 +4964,16 @@ WANT_HOLD_REASON = \
   behavior and know what they are doing.  
   It is disabled by default.
 
-  The default value is set by \MacroU{DETECTED\_CPUS}.
+  The default value is \MacroU{DETECTED\_CPUS}.
 
-  Note that this setting cannot be changed with a simple reconfigure, 
-  either by sending a SIGHUP or by using the \Condor{reconfig} command.
+  The \Condor{startd} only takes note of the value of this configuration
+  variable on start up,
+  therefore it cannot be changed with a simple reconfigure. 
   To change this, restart the \Condor{startd} daemon for the
   change to take effect. The command will be
 \begin{verbatim}
   condor_restart -startd
 \end{verbatim}
-
-  If lying about a given machine, 
-  this fact should probably be advertised in the machine's ClassAd
-  by using the \MacroNI{STARTD\_ATTRS} setting.
-  This way, jobs submitted in the pool could specify that they did or
-  did not want to be matched with machines that were only really
-  offering these fractional CPUs.
 
 \label{param:MaxNumCpus}
 \item[\Macro{MAX\_NUM\_CPUS}]
@@ -4995,9 +4993,10 @@ WANT_HOLD_REASON = \
 
 \label{param:CountHyperthreadCpus}
 \item[\Macro{COUNT\_HYPERTHREAD\_CPUS}]
-  This macro controls how HTCondor sees hyper-threaded
-  processors. When set to \Expr{True} (the default), it includes virtual CPUs in
-  the default value of \MacroNI{NUM\_CPUS}. On dedicated cluster nodes, 
+  This configuration variable controls how HTCondor sees hyper-threaded
+  processors. When set to the default value of \Expr{True}, 
+  it includes virtual CPUs in
+  the default value of \MacroNI{DETECTED\_CPUS}. On dedicated cluster nodes, 
   counting virtual CPUs can sometimes improve total throughput at the expense 
   of individual job speed. However, counting them on desktop workstations can
   interfere with interactive job performance.

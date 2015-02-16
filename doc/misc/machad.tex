@@ -90,6 +90,15 @@ When a machine is claimed,
 the attribute's value is computed by evaluating the machine's
 \AdAttr{Rank} expression with respect to the current job's ClassAd.
 %
+\index{ClassAd machine attribute!DetectedCpus}
+\item[\AdAttr{DetectedCpus}:] 
+Set by the value of configuration variable \Macro{DETECTED\_CORES}.
+
+\index{ClassAd machine attribute!DetectedMemory}
+\item[\AdAttr{DetectedMemory}:] 
+Set by the value of configuration variable \Macro{DETECTED\_MEMORY}.
+Specified in MiB.
+
 \index{ClassAd machine attribute!Disk}
 \item[\AdAttr{Disk}:] The amount of disk space on this machine available for
 the job in KiB (for example, 23000 = 23 MiB).  Specifically, this
