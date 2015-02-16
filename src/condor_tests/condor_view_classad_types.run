@@ -88,7 +88,7 @@ if( $viewCollector =~ m/^[[][\d:]+]:\d+/ ) {
 }
 
 # Note: you must run condor_reconfig after rset'ing a variable
-my $quote = quoteMyString("CONDOR_VIEW_HOST=\$(IP_ADDRESS):$view_port");
+my $quote = quoteMyString("CONDOR_VIEW_HOST=$viewCollector");
 system("condor_config_val -collector -rset $quote");
 CondorTest::runCondorTool("condor_reconfig -collector");
 
@@ -162,7 +162,7 @@ $loopcount = 0;
 $done = "no";
 while( $done eq "no") {
     $loopcount += 1;
-    chomp(my @cmd = `condor_status -pool \"<127.0.0.1:$view_port>\" -startd -af Name`);
+    chomp(my @cmd = `condor_status -pool \"<$viewCollector>\" -startd -af Name`);
 
     if (@cmd) {
 	$done = "yes";
