@@ -56,7 +56,6 @@ job_core_queue_sched
 job_core_remote-initialdir_van
 job_core_sh-loop_van
 job_consumption_policies_basic_van
-# job_core_time-deferral-remove_van
 job_starter_script-A
 
 job_dagman_abnormal_term_recovery_retries
