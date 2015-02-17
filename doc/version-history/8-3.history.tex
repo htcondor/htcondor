@@ -110,9 +110,11 @@ The information is an ID number and the number of jobs in each auto cluster.
 which limits number of results returned.
 \Ticket{4806}
 
-\item A new more efficient query protocol has been added as the default for \Condor{q} when
-querying a \Condor{schedd} that is version 8.3.3 or later. Set the configuration variable
-\Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL} to \Expr{False} disable this new protocol.
+\item A new, more efficient query protocol has been added as the default 
+for \Condor{q},
+when querying a \Condor{schedd} daemon that is version 8.3.3 or later. 
+To disable this new protocol, set configuration variable
+\Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL} to \Expr{False}.
 \Ticket{4828}
 
 \end{itemize}
