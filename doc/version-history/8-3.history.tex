@@ -100,9 +100,9 @@ These attributes include \Attr{TotalRunningJobs}, \Attr{TotalIdleJobs},
 \Attr{TotalHeldJobs}, and \Attr{TotalRemovedJobs}.
 \Ticket{4683}
 
-\item \Condor{q} now supports a new option \Arg{autocluster}, which causes it
-to return the contents of the \Condor{schedd}'s autocluster set, along with
-the number of jobs in each autocluster.
+\item \Condor{q} now offers the new command line option \Arg{-autocluster}, 
+which causes it to output \Condor{schedd} daemon auto cluster information. 
+The information is an ID number and the number of jobs in each auto cluster.
 \Ticket{4792}
 
 \item Two new configuration variables have been added to allow better control of the significant
