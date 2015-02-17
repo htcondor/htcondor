@@ -141,24 +141,21 @@ These attributes include \Attr{TotalRunningJobs}, \Attr{TotalIdleJobs},
 \Attr{TotalHeldJobs}, and \Attr{TotalRemovedJobs}.
 \Ticket{4683}
 
-\item \Condor{q} now supports a new option \Arg{autocluster}, which causes it
-to return the contents of the \Condor{schedd}'s autocluster set, along with
-the number of jobs in each autocluster.
+\item \Condor{q} now offers the new command line option \Arg{-autocluster}, 
+which causes it to output \Condor{schedd} daemon auto cluster information. 
+The information is an ID number and the number of jobs in each auto cluster.
 \Ticket{4792}
 
-\item Two new configuration variables have been added to allow better control of the significant
-attributes used for  autoclustering. Set \Macro{ADD\_SIGNIFICANT\_ATTRIBUTES} to force an attribute
-to be significant even if the \Condor{negotiator} does not.  Set \Macro{REMOVE\_SIGNIFICANT\_ATTRIBUTES}
-to force an attribute to be not significant even if the \Condor{negotiator} indicates that it is.
-\Ticket{4797}
-
-\item \Condor{q} and \Condor{history} have a new option \Arg{limit}, which limits
-number of results returned.
+\item \Condor{q} and \Condor{history} offer the new command line option 
+\Opt{-limit}, 
+which limits number of results returned.
 \Ticket{4806}
 
-\item A new more efficient query protocol has been added as the default for \Condor{q} when
-querying a \Condor{schedd} that is version 8.3.3 or later. Set the configuration variable
-\Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL} to \Expr{False} disable this new protocol.
+\item A new, more efficient query protocol has been added as the default 
+for \Condor{q},
+when querying a \Condor{schedd} daemon that is version 8.3.3 or later. 
+To disable this new protocol, set configuration variable
+\Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL} to \Expr{False}.
 \Ticket{4828}
 
 \end{itemize}
