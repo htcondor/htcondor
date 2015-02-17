@@ -5907,6 +5907,14 @@ friendly_name=Enable Address Rewriting
 review=?
 tags=c++_util
 
+# This was an option "born deprecated"; it allows a single-host HTCondor instance (particularly, the HTCondor-CE) to provide a better dual-stack service by rewriting all ads in the collector.
+[SHARED_PORT_ADDRESS_REWRITING]
+default=false
+version=8.3.4
+type=bool
+reconfig=true
+customization=never
+
 [SHADOW_WORKLIFE]
 default=3600
 version=7.5.3

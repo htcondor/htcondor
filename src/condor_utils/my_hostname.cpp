@@ -550,8 +550,7 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 	}
 	else if (param_boolean("SHARED_PORT_ADDRESS_REWRITING", false))
 	{
-		Sinful commandPortSinful(commandPortSinfulString.c_str());
-		const std::vector<Sinful> &commandSinfuls = daemonCore->CommandSocksSinful();
+		const std::vector<Sinful> &commandSinfuls = daemonCore->InfoCommandSinfulStringsMyself();
 		dprintf(D_NETWORK|D_VERBOSE, "Address rewriting: considering %ld command socket sinfuls.\n", commandSinfuls.size());
 
 		bool acceptableMatch = false;
@@ -559,7 +558,7 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 		for (it = commandSinfuls.begin(); it!=commandSinfuls.end(); it++)
 		{
 			commandPortSinfulString = it->getSinful();
-			commandPortSinful = *it;
+			const Sinful &commandPortSinful = *it;
 			// We assume that any sinful on the same shared port server
 			// can also be rewritten.
 			if ((adSinful.getSharedPortID() != NULL) && (strcmp(commandPortSinful.getHost(), adSinful.getHost()) == 0) && (commandPortSinful.getPortNum() == adSinful.getPortNum()))

@@ -121,7 +121,7 @@ SharedPortServer::PublishAddress()
 	ad.Assign(ATTR_MY_ADDRESS,daemonCore->publicNetworkIpAddr());
 
 	std::set<std::string> commandAddresses;
-	const std::vector<Sinful> &mySinfuls = daemonCore->CommandSocksSinful();
+	const std::vector<Sinful> &mySinfuls = daemonCore->InfoCommandSinfulStringsMyself();
 	for (std::vector<Sinful>::const_iterator it=mySinfuls.begin(); it!=mySinfuls.end(); it++)
 	{
 		commandAddresses.insert(it->getSinful());
@@ -132,7 +132,7 @@ SharedPortServer::PublishAddress()
 		commandAddressesSL.insert(it->c_str());
 	}
 	char *adAddresses = commandAddressesSL.print_to_string();
-	if (adAddresses) {ad.InsertAttr("SharedPortCommandSinfuls", adAddresses);}
+	if (adAddresses) {ad.InsertAttr(ATTR_SHARED_PORT_COMMAND_SINFULS, adAddresses);}
 	delete adAddresses;
 
 	// Place some operational metrics into the daemon ad

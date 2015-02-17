@@ -169,6 +169,8 @@ class SharedPortEndpoint: Service {
 #endif
 	int m_socket_check_timer;
 
+	void EnsureInitRemoteAddress();
+
 	int HandleListenerAccept( Stream * stream );
 #ifndef WIN32
 	void ReceiveSocket( ReliSock *local_sock, ReliSock *return_remote_sock );

@@ -424,8 +424,14 @@ class DaemonCore : public Service
 
 	/**
 	 * Return a vector of the sinful strings of all known command sockets.
+	 *
+	 * ONLY returns the public IP address.
+	 *
+	 * This function was 'born deprecated'; use case is when rewriting all
+	 * addresses in a collector (in the future, we hope to have a more
+	 * expressive sinful string variant).
 	 */
-	const std::vector<Sinful> &CommandSocksSinful(); 
+	const std::vector<Sinful> &InfoCommandSinfulStringsMyself(); 
 
 	void daemonContactInfoChanged();
 

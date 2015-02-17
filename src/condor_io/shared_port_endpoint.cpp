@@ -720,7 +720,7 @@ SharedPortEndpoint::InitRemoteAddress()
 
 	// Next, look for alternate command strings
 	std::string commandStrings;
-	if (ad->EvaluateAttrString("SharedPortCommandSinfuls", commandStrings))
+	if (ad->EvaluateAttrString(ATTR_SHARED_PORT_COMMAND_SINFULS, commandStrings))
 	{
 		m_remote_addrs.clear();
 		StringList sl(commandStrings.c_str());
@@ -828,6 +828,14 @@ SharedPortEndpoint::ReloadSharedPortServerAddr()
 	RetryInitRemoteAddress();
 }
 
+void
+SharedPortEndpoint::EnsureInitRemoteAddress()
+{
+	if( m_remote_addr.IsEmpty() && m_retry_remote_addr_timer==-1 ) {
+		RetryInitRemoteAddress();
+	}
+}
+
 char const *
 SharedPortEndpoint::GetMyRemoteAddress()
 {
@@ -835,9 +843,7 @@ SharedPortEndpoint::GetMyRemoteAddress()
 		return NULL;
 	}
 
-	if( m_remote_addr.IsEmpty() && m_retry_remote_addr_timer==-1 ) {
-		RetryInitRemoteAddress();
-	}
+	EnsureInitRemoteAddress();
 
 	if( m_remote_addr.IsEmpty() ) {
 		return NULL;
@@ -848,7 +854,7 @@ SharedPortEndpoint::GetMyRemoteAddress()
 const std::vector<Sinful> &
 SharedPortEndpoint::GetMyRemoteAddresses()
 {
-	GetMyRemoteAddress(); // Initializes the addresses if necessary.
+	EnsureInitRemoteAddress(); // Initializes the addresses if necessary.
 	return m_remote_addrs;
 }
 

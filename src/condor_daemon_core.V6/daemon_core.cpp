@@ -1195,7 +1195,7 @@ DaemonCore::daemonContactInfoChanged()
 {
 	m_dirty_sinful = true;
 	m_dirty_command_sock_sinfuls = true;
-	DaemonCore::CommandSocksSinful();
+	DaemonCore::InfoCommandSinfulStringsMyself();
 
 	drop_addr_file();
 }
@@ -2605,7 +2605,7 @@ DaemonCore::refreshDNS() {
 #endif
 
 	getSecMan()->getIpVerify()->refreshDNS();
-	DaemonCore::CommandSocksSinful();
+	DaemonCore::InfoCommandSinfulStringsMyself();
 }
 
 class DCThreadState : public Service {
@@ -2693,7 +2693,7 @@ DaemonCore::reconfig(void) {
     dc_stats.Reconfig();
 
 	m_dirty_command_sock_sinfuls = true;
-	DaemonCore::CommandSocksSinful();
+	DaemonCore::InfoCommandSinfulStringsMyself();
 	m_dirty_sinful = true; // refresh our address in case config changes it
 
 	SecMan *secman = getSecMan();
@@ -4765,15 +4765,15 @@ int DaemonCore::initial_command_sock() const {
 	return -1;
 }
 
-const std::vector<Sinful> & DaemonCore::CommandSocksSinful()
+const std::vector<Sinful> & DaemonCore::InfoCommandSinfulStringsMyself()
 {
-        if (m_dirty_command_sock_sinfuls && m_shared_port_endpoint)
+	if (m_dirty_command_sock_sinfuls && m_shared_port_endpoint)
 	{ // See comments when we do the same for m_sinful in InfoCommandSinfulStringMyself.
-                m_command_sock_sinfuls = m_shared_port_endpoint->GetMyRemoteAddresses();
+		m_command_sock_sinfuls = m_shared_port_endpoint->GetMyRemoteAddresses();
 			// If we got no command sockets at all, consider this still dirty - 
 			// we're probably waiting for the shared port to initialize.
 		m_dirty_command_sock_sinfuls = m_command_sock_sinfuls.empty();
-        }
+	}
 	else if (m_dirty_command_sock_sinfuls)
 	{
 		m_command_sock_sinfuls.clear();
