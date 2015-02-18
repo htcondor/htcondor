@@ -29,10 +29,6 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Improved preliminary support for dual-protocol (IPv4 and IPv6)
-submit nodes by allowing them to work with shared port.
-\Ticket{4712}
-
 \item Configuration variable \Macro{ENCRYPT\_EXECUTE\_DIRECTORY} 
 is now honored on Linux platforms.
 The Linux platform must have the  \Prog{ecryptfs-utils} package is installed
@@ -40,6 +36,11 @@ and the Linux kernel must be version 2.6.29 or a more recent version.
 The new submit command \SubmitCmd{encrypt\_execute\_directory} allows the user
 to specify directory encryption on a per-job basis.
 \Ticket{4856}
+
+\item Improved the preliminary support for IPv4 and IPv6 dual-protocol
+submit nodes,
+by allowing them to work with the \Condor{shared\_port} daemon.
+\Ticket{4712}
 
 \item EC2 grid universe jobs may now specify an IAM (instance) profile.
 \Ticket{4810}
