@@ -13,6 +13,8 @@ Requires(post):/sbin/chkconfig
 Requires(post): /usr/sbin/selinuxenabled, /usr/sbin/semanage, /sbin/restorecon, /usr/bin/seinfo
 Requires(preun):/sbin/chkconfig
 Requires(preun):/sbin/service
+# Works for RHEL 5 and 6, gone in RHEL 7
+Requires: ecryptfs-utils
 
 #Do not reorder these prefixes
 Prefix: /etc
