@@ -447,7 +447,7 @@ Sinful::addressPointsToMe( Sinful const &addr ) const
 }
 
 int
-Sinful::getPortNum()
+Sinful::getPortNum() const
 {
 	if( !getPort() ) {
 		return -1;

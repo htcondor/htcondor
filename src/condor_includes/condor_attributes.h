@@ -1055,6 +1055,8 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_PROJECTION  "Projection"
 #define ATTR_LAST_DRAIN_START_TIME  "LastDrainStartTime"
 
+#define ATTR_SHARED_PORT_COMMAND_SINFULS "SharedPortCommandSinfuls"
+
 // temporary attributes for raw utsname info
 #define ATTR_UTSNAME_SYSNAME  "UtsnameSysname"
 #define ATTR_UTSNAME_NODENAME  "UtsnameNodename"
