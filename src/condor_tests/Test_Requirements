@@ -45,8 +45,6 @@ job_core_copytospool_van: personal
 job_core_coredump_std: personal
 job_core-cpp_exception_std: personal
 job_core-cpp_mem-alloc_std: personal
-job_core_crontab_local: cygwin
-job_core_crontab_van: cygwin,personal
 job_core_doublejeopardy_sched: personal
 job_core_doublejeopardy_van: personal
 job_core_env_sched: personal

@@ -245,7 +245,7 @@ sub GetDefaultTestName
 sub GetCheckName
 {
     my $filename = shift; # module file containing the check
-    my %args = @_;        # named arguments to the check function
+	my %args = @_;        # named arguments to the check function
 
     if( exists $args{check_name} ) {
 	return $args{check_name};
@@ -255,11 +255,15 @@ sub GetCheckName
 
     my $arg_str = "";
     for my $name ( keys %args ) {
-        my $value = $args{$name};
-		if( $arg_str ne "" ) {
-	    	$arg_str = $arg_str . ",";
+    	# when we add bulk submit lines in RunCheck we really dont
+		# want to see them
+		if($name ne "append_submit_commands") {
+        	my $value = $args{$name};
+			if( $arg_str ne "" ) {
+	    		$arg_str = $arg_str . ",";
+			}
+			$arg_str = $arg_str . "$name=$value";
 		}
-		$arg_str = $arg_str . "$name=$value";
     }
     if( $arg_str ne "" ) {
 	$check_name = $check_name . "($arg_str)";

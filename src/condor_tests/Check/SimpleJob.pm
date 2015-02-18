@@ -170,13 +170,16 @@ sub RunCheck
     	CondorTest::RegisterEvictedWithoutCheckpoint( $testname, $evicted_ewoc_fn );
 	}
 	if( exists $args{on_evictedwithrequeue} ) {
-    	CondorTest::RegisterEvictedWithRequeue( $testname, $evicted__wreqfn );
+    	CondorTest::RegisterEvictedWithRequeue( $testname, $evicted_wreq_fn );
 	}
 	if( exists $args{on_hold} ) {
     	CondorTest::RegisterHold( $testname, $hold_fn );
 	}
 	if( exists $args{on_released} ) {
     	CondorTest::RegisterRelease( $testname, $released_fn );
+	}
+	if( exists $args{on_exitedabnormal} ) {
+    	CondorTest::RegisterExitedAbnormal( $testname, $args{on_exitedabnormal} );
 	}
 	if( exists $args{on_evicted} ) {
     	CondorTest::RegisterEvicted( $testname, $evicted_fn );
