@@ -600,7 +600,6 @@ private:
     @param job Pointer to job object, if NULL then "(UNKNOWN)" is printed
     @param condorID If true, also print the job's CondorID
 */
-//TEMPTEMP -- this could be static,right? and it seems to not be used
 void job_print (Job * job, bool condorID = false);
 #endif
 
