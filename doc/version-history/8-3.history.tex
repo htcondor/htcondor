@@ -60,8 +60,7 @@ ad.
 
 \begin{itemize}
 
-\item HTCondor version 8.3.3 not yet released.
-%\item HTCondor version 8.3.3 released on Month Date, 2014.
+\item HTCondor version 8.3.3 released on Feb. 19, 2015.
 
 \end{itemize}
 
@@ -70,10 +69,6 @@ ad.
 
 \begin{itemize}
 
-\item Improved preliminary support for dual-protocol (IPv4 and IPv6)
-submit nodes by allowing them to work with shared port.
-\Ticket{4712}
-
 \item Configuration variable \Macro{ENCRYPT\_EXECUTE\_DIRECTORY} 
 is now honored on Linux platforms.
 The Linux platform must have the  \Prog{ecryptfs-utils} package is installed
@@ -81,6 +76,11 @@ and the Linux kernel must be version 2.6.29 or a more recent version.
 The new submit command \SubmitCmd{encrypt\_execute\_directory} allows the user
 to specify directory encryption on a per-job basis.
 \Ticket{4856}
+
+\item \Condor{q} now offers the new command line option \Arg{-autocluster}, 
+which causes it to output \Condor{schedd} daemon auto cluster information. 
+The information is an ID number and the number of jobs in each auto cluster.
+\Ticket{4792}
 
 \item EC2 grid universe jobs may now specify an IAM (instance) profile.
 \Ticket{4810}
@@ -92,6 +92,11 @@ This allows the use of VPC instances with non-default security groups.
 \item EC2 jobs may now specify additional parameters to use when starting
 the corresponding instance.
 \Ticket{4795}
+
+\item Improved the preliminary support for IPv4 and IPv6 dual-protocol
+submit nodes,
+by allowing them to work with the \Condor{shared\_port} daemon.
+\Ticket{4712}
 
 \item The throughput of queries to the \Condor{collector} has been
 improved, as the \Condor{collector} now never forks to handle queries 
@@ -144,11 +149,6 @@ not only jobs that need to be matched by the \Condor{negotiator} daemon.
 These attributes include \Attr{TotalRunningJobs}, \Attr{TotalIdleJobs},
 \Attr{TotalHeldJobs}, and \Attr{TotalRemovedJobs}.
 \Ticket{4683}
-
-\item \Condor{q} now offers the new command line option \Arg{-autocluster}, 
-which causes it to output \Condor{schedd} daemon auto cluster information. 
-The information is an ID number and the number of jobs in each auto cluster.
-\Ticket{4792}
 
 \item \Condor{q} and \Condor{history} offer the new command line option 
 \Opt{-limit}, 
