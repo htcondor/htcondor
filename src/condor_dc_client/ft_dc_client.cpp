@@ -248,6 +248,7 @@ void main_init(int argc, char *argv[])
 	  dprintf(D_ALWAYS, "No socket\n");
 	  return;
 	}
+/*
 	ReliSock sock;
         if (initSocket(tsock.c_str(), tkey.c_str(), sock)) {
 	  dprintf(D_ALWAYS, "Beginning FT:SimpleInit()\n");
@@ -264,7 +265,18 @@ void main_init(int argc, char *argv[])
 		  printf("Can't upload.\n");
 		  return;
 	  } else printf("Upload OK = %d\n", retval);
-	}
+*/
+	  FileTransfer filetrans;
+	  if (filetrans.Init(&jobad, false, PRIV_USER, false) == 0) {
+		  // Don't check perms, don't use file catalog.
+		  dprintf(D_ALWAYS, "Can't init filetrans.\n");
+		  return;
+	  }
+	  int retval;
+	  if ((retval = filetrans.DownloadFiles()) == 0) { // blocking
+		  printf("Can't Download.\n");
+		  return;
+	  } else printf("Download OK = %d\n", retval);
 }
 
 //-------------------------------------------------------------
