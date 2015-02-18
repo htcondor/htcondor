@@ -114,8 +114,7 @@ class Dag {
 			   job procs are prohibited
 		@param submitDepthFirst whether ready nodes should be submitted
 			   in depth-first (as opposed to breadth-first) order
-		@param The user log file to be used for nodes whose submit files do
-				not specify a log file.
+		@param defaultNodeLog The user log file to be used for node jobs.
 		@param isSplice is a boolean which lets the dag object know whether
 				of not it is a splicing dag, or the toplevel dag. We don't
 				wan't to allocate some regulated resources we won't need
@@ -181,8 +180,6 @@ class Dag {
     /** Blocks until the Condor Log file grows.
         @return true: log file grew, false: timeout or shrinkage
     */
-
-    
     bool DetectCondorLogGrowth();
 
     /** Force the Dag to process all new events in the condor log file.
@@ -196,7 +193,6 @@ class Dag {
 	/** Process a single event.  Note that this is called every time
 			we attempt to read the user log, so we may or may not have
 			a valid event here.
-		@param The type of log which is the source of the event.
 		@param The outcome from the attempt to read the user log.
 	    @param The event.
 		@param Whether we're in recovery mode.
@@ -921,7 +917,6 @@ class Dag {
 		*/
 	int TotalLogFileCount() { return CondorLogFileCount(); }
 				
-
 	int CondorLogFileCount() { return _condorLogRdr.totalLogFileCount(); }
 
 		/** Write information for the given node to a rescue DAG.
@@ -1134,8 +1129,7 @@ private:
 		// retry.
 	static const CondorID	_defaultCondorId;
 
-		// The user log file to be used for nodes whose submit files do
-		// not specify a log file.
+		// The user log file to be used for nodes jobs.
 	const char *_defaultNodeLog;
 
 		// Whether to generate the .condor.sub files for sub-DAGs

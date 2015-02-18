@@ -267,10 +267,12 @@ class Job {
 	*/
     void Dump ( const Dag *dag ) const;
   
+#if 0 // not used -- wenger 2015-02-17
     /** Print the identification info for this Job to stdout.
         @param condorID If true, also print the job's CondorID
      */
     void Print (bool condorID = false) const;
+#endif
   
 		// double-check internal data structures for consistency
 	bool SanityCheck() const;
@@ -593,11 +595,14 @@ private:
 	std::vector<unsigned char> _gotEvents;	
 };
 
+#if 0 // not used -- wenger 2015-02-17
 /** A wrapper function for Job::Print which allows a NULL job pointer.
     @param job Pointer to job object, if NULL then "(UNKNOWN)" is printed
     @param condorID If true, also print the job's CondorID
 */
+//TEMPTEMP -- this could be static,right? and it seems to not be used
 void job_print (Job * job, bool condorID = false);
+#endif
 
 
 #endif /* ifndef JOB_H */

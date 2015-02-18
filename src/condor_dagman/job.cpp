@@ -222,6 +222,7 @@ void Job::Dump ( const Dag *dag ) const {
     }
 }
 
+#if 0 // not used -- wenger 2015-02-17
 //---------------------------------------------------------------------------
 void Job::Print (bool condorID) const {
     dprintf( D_ALWAYS, "ID: %4d Name: %s", _jobID, _jobName);
@@ -239,6 +240,7 @@ void job_print (Job * job, bool condorID) {
 		job->Print(condorID);
 	}
 }
+#endif
 
 const char*
 Job::GetPreScriptName() const
@@ -694,9 +696,7 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 void
 Job::PrefixName(const MyString &prefix)
 {
-	MyString tmp = _jobName;
-
-	tmp = prefix + tmp;
+	MyString tmp = prefix + _jobName;
 
 	delete[] _jobName;
 
