@@ -348,7 +348,8 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		char *list = InputFiles->print_to_string();
 		dprintf(D_FULLDEBUG, "Input files: %s\n", list ? list : "" );
 		free(list);
-	} else ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
+	} else if (IsServer() && !is_spool)
+		ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
 		// For files to be cached, change file names to URLs
 
 	
@@ -576,8 +577,13 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		}
 	}
 
-	if(IsServer() && !spooling_output) {
-		if(!InitDownloadFilenameRemaps(Ad)) return 0;
+	if(!spooling_output) {
+		if(IsServer()) {
+			if(!InitDownloadFilenameRemaps(Ad)) return 0;
+		} else if( !simple_init ) {
+			// Only add input remaps for starter receiving
+			AddInputFilenameRemaps(Ad);
+		}
 	}
 
 	CondorError e;
@@ -628,9 +634,12 @@ int
 FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
 	dprintf(D_FULLDEBUG,"Entering FileTransfer::AddInputFilenameRemaps\n");
 
-	if(!Ad)
-	  return 1;
+	if(!Ad) {
+		dprintf(D_FULLDEBUG, "FileTransfer::AddInputFilenameRemaps -- job ad null\n");
+	  	return 1;
+	}
 	
+	download_filename_remaps = "";
 	char *remap_fname = NULL;
 
 	// when downloading files from the job, apply input name remaps
@@ -1917,9 +1926,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			fullname = filename;
 		}
 		else if( final_transfer || IsClient() ) {
-		  	if( final_transfer && IsClient() && !simple_init )
-		  	  	// Only add input remaps for starter receiving
-		  	  	AddInputFilenameRemaps(&jobAd);
 			MyString remap_filename;
 			int res = filename_remap_find(download_filename_remaps.Value(),filename.Value(),remap_filename,0);
 			dprintf(D_FULLDEBUG, "REMAP: res is %i -> %s !\n", res, remap_filename.Value());
