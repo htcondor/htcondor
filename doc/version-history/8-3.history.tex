@@ -37,10 +37,10 @@ The new submit command \SubmitCmd{encrypt\_execute\_directory} allows the user
 to specify directory encryption on a per-job basis.
 \Ticket{4856}
 
-\item Improved the preliminary support for IPv4 and IPv6 dual-protocol
-submit nodes,
-by allowing them to work with the \Condor{shared\_port} daemon.
-\Ticket{4712}
+\item \Condor{q} now offers the new command line option \Arg{-autocluster}, 
+which causes it to output \Condor{schedd} daemon auto cluster information. 
+The information is an ID number and the number of jobs in each auto cluster.
+\Ticket{4792}
 
 \item EC2 grid universe jobs may now specify an IAM (instance) profile.
 \Ticket{4810}
@@ -52,6 +52,11 @@ This allows the use of VPC instances with non-default security groups.
 \item EC2 jobs may now specify additional parameters to use when starting
 the corresponding instance.
 \Ticket{4795}
+
+\item Improved the preliminary support for IPv4 and IPv6 dual-protocol
+submit nodes,
+by allowing them to work with the \Condor{shared\_port} daemon.
+\Ticket{4712}
 
 \item The throughput of queries to the \Condor{collector} has been
 improved, as the \Condor{collector} now never forks to handle queries 
@@ -104,11 +109,6 @@ not only jobs that need to be matched by the \Condor{negotiator} daemon.
 These attributes include \Attr{TotalRunningJobs}, \Attr{TotalIdleJobs},
 \Attr{TotalHeldJobs}, and \Attr{TotalRemovedJobs}.
 \Ticket{4683}
-
-\item \Condor{q} now offers the new command line option \Arg{-autocluster}, 
-which causes it to output \Condor{schedd} daemon auto cluster information. 
-The information is an ID number and the number of jobs in each auto cluster.
-\Ticket{4792}
 
 \item \Condor{q} and \Condor{history} offer the new command line option 
 \Opt{-limit}, 
