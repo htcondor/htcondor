@@ -36,6 +36,16 @@ The new submit command \SubmitCmd{encrypt\_execute\_directory} allows the user
 to specify directory encryption on a per-job basis.
 \Ticket{4856}
 
+
+\item By default, HTCondor will no longer have access to Linux 
+	system credentials, such as OpenAFS tokens or eCryptFS keys.
+	This new behavior ensures these credentials cannot be
+	unintentionally obtained by user jobs.  
+	For more information, see new configuration variable 
+	\Macro{DISCARD\_SESSION\_KEYRING\_ON\_STARTUP}
+	in section~\ref{param:DiscardSessionKeyringOnStartup}.
+\Ticket{4856}
+
 \item \Condor{q} now offers the new command line option \Arg{-autocluster}, 
 which causes it to output \Condor{schedd} daemon auto cluster information. 
 The information is an ID number and the number of jobs in each auto cluster.
