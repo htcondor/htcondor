@@ -71,10 +71,20 @@ ad.
 
 \item Configuration variable \Macro{ENCRYPT\_EXECUTE\_DIRECTORY} 
 is now honored on Linux platforms.
-The Linux platform must have the  \Prog{ecryptfs-utils} package is installed
+The Linux platform must have the  \Prog{ecryptfs-utils} package installed
 and the Linux kernel must be version 2.6.29 or a more recent version.
 The new submit command \SubmitCmd{encrypt\_execute\_directory} allows the user
 to specify directory encryption on a per-job basis.
+\Ticket{4856}
+
+
+\item By default, HTCondor will no longer have access to Linux 
+	system credentials, such as OpenAFS tokens or eCryptFS keys.
+	This new behavior ensures these credentials cannot be
+	unintentionally obtained by user jobs.  
+	For more information, see new configuration variable 
+	\Macro{DISCARD\_SESSION\_KEYRING\_ON\_STARTUP}
+	in section~\ref{param:DiscardSessionKeyringOnStartup}.
 \Ticket{4856}
 
 \item \Condor{q} now offers the new command line option \Arg{-autocluster}, 
@@ -132,6 +142,10 @@ A system administrator must set the new configuration variable
 to specify the python modules that are accessible from within ClassAds.
 \Ticket{4773}
 
+\item The new Python \texttt{LogReader} class permits the reading and access
+of individual daemon log events.
+\Ticket{4588}
+
 \item The default value for configuration variable 
 \Macro{DAGMAN\_MAX\_JOBS\_IDLE} has changed from 0, 
 which imposes no limits, to 1000.
@@ -171,6 +185,12 @@ To disable this new protocol, set configuration variable
 \item Fixed a bug that prevented CCB servers from running on Windows platforms.
 \Ticket{4713}
 
+\item Configuration variables \MacroNI{ENABLE\_IPV4} or 
+\MacroNI{ENABLE\_IPV6} may now be safely set in any configuration file. 
+Previously, setting them in any file other than the first configuration file 
+parsed could have led to unpredictable behavior.
+\Ticket{4829}
+
 \item Fixed a bug in the \Condor{startd} daemon introduced in HTCondor 
 version 8.3.2.
 The \Condor{startd} slots could get stuck
@@ -192,6 +212,22 @@ when the user ran \Condor{hold} or \Condor{rm}.
 \Ticket{4679}
 
 \end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item The ability to transparently encrypt execute directories
+is not supported by execute hosts using RHEL 7 and derivative kernels,
+as these kernels no longer contain the \Prog{eCryptfs} kernel module.
+
+\item  The submit commands 
+\SubmitCmd{on\_exit\_hold} and \SubmitCmd{on\_exit\_remove}  
+do not do what they are supposed to do
+for local universe jobs on Windows machines.
+\Ticket{4902}
+\end{itemize}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-3-2}Version 8.3.2}

@@ -4582,6 +4582,16 @@ will not want to change them for any reason.
   descendants of processes it creates. This can cause problems when
   HTCondor is run under another job execution system.
 
+\label{param:DiscardSessionKeyringOnStartup} 
+\item[\Macro{DISCARD\_SESSION\_KEYRING\_ON\_STARTUP}]
+  A boolean value that defaults to \Expr{True}.  When \Expr{True},
+  the \Condor{master} daemon will replace the kernel session keyring
+  it was invoked with with a new keyring named \Expr{htcondor}.  
+  Various Linux system services, such as OpenAFS and eCryptFS, 
+  use the kernel session keyring to hold passwords and authentication tokens.
+  By replacing the keyring on start up, the \Condor{master} ensures
+  these keys cannot be unintentionally obtained by user jobs. 
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -11096,6 +11106,18 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
 	The method of encryption uses ecryptfs on Linux (and
 	requires installation of the ecryptfs-utils package), or the EFS (Encrypted
 	File System) feature of NTFS on Windows.
+
+\label{param:EcryptfsAddPassphrase}
+\item[\Macro{ECRYPTFS\_ADD\_PASSPHRASE}]
+  The path to the \Prog{ecryptfs-add-passphrase} command-line utility. 
+  If the path is not fully-qualified, 
+  then safe system path subdirectories such as \File{/bin} and
+  \File{/usr/bin} will be searched.  
+  The default value is \File{ecryptfs-add-passphrase},
+  causing the search to be within the safe system path subdirectories.
+  This configuration variable is used on Linux platforms when a job
+  sets \SubmitCmd{encrypt\_execute\_directory} to \Expr{True} in the
+  submit description file.
 
 \label{param:SecTCPSessionTimeout}
 \item[\Macro{SEC\_TCP\_SESSION\_TIMEOUT}]
