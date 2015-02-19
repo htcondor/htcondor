@@ -60,6 +60,7 @@ job_starter_script-A
 
 job_dagman_abnormal_term_recovery_retries
 job_dagman_abort-A
+job_dagman_rm
 job_dagman_always_run_post-D
 job_dagman_always_run_post-E
 job_dagman_classad
