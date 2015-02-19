@@ -11097,6 +11097,14 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
 	requires installation of the ecryptfs-utils package), or the EFS (Encrypted
 	File System) feature of NTFS on Windows.
 
+\label{param:EcryptfsAddPassphrase}
+\item[\Macro{ECRYPTFS\_ADD\_PASSPHRASE}]
+	The path to the ecryptfs-add-passphrase commnand-line utility. If the path
+	is not fully-qualified, then safe system path subdirectories (such as /bin,
+	/usr/bin) will be searched.  Defaults to ``ecryptfs-add-passphrase''.  Used
+	on Linux when setting \SubmitCmd{encrypt\_execute\_directory} is
+	\Expr{True}.
+
 \label{param:SecTCPSessionTimeout}
 \item[\Macro{SEC\_TCP\_SESSION\_TIMEOUT}]
   The length of time in seconds until the timeout
