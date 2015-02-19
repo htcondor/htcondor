@@ -130,6 +130,12 @@ To disable this new protocol, set configuration variable
 \item Fixed a bug that prevented CCB servers from running on Windows platforms.
 \Ticket{4713}
 
+\item Configuration variables \MacroNI{ENABLE\_IPV4} or 
+\MacroNI{ENABLE\_IPV6} may now be safely set in any configuration file. 
+Previously, setting them in any file other than the first configuration file 
+parsed could have led to unpredictable behavior.
+\Ticket{4829}
+
 \item Fixed a bug in the \Condor{startd} daemon introduced in HTCondor 
 version 8.3.2.
 The \Condor{startd} slots could get stuck
