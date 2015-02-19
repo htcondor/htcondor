@@ -331,7 +331,8 @@ my $success = sub {
 		# and not already in the EXISTING history file.
 		while(!(-f $historyfile)) {
 			# wait for history file to exist
-			sleep(1);
+			print "Waiting for history file\n";
+			sleep(2);
 		}
 		my $h_cmd = "condor_history -l $cluster.$job";
 		if ( ! CondorTest::runCondorTool($h_cmd, \@result, 3, {emit_output=>0}) ) {
