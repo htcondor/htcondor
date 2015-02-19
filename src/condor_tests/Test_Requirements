@@ -71,10 +71,10 @@ job_core_macros-dollardollar_van: personal
 job_core_macros_sched: personal
 job_core_max-running_local: cygwin
 job_core_niceuser_van: cygwin
-job_core_onexithold_local: cygwin, personal
-job_core_onexithold_van: cygwin, personal
-job_core_onexitrem_local: cygwin, personal
-job_core_onexitrem_van: cygwin, personal
+job_core_onexithold_local: personal
+job_core_onexithold_van: personal
+job_core_onexitrem_local: cygwin,personal
+job_core_onexitrem_van: cygwin,personal
 job_core_output_java: personal
 job_core_output_sched: personal
 job_core_output_van: personal
