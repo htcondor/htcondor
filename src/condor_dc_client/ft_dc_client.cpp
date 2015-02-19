@@ -95,7 +95,7 @@ CacheDaemon::commandHandler_Test(int command, Stream *stream)
 	}
 	return (TRUE);
 }
-
+ 
 
 typedef map<string, unsigned char *> stringMap;
 
@@ -106,38 +106,39 @@ void getJobAd(ClassAd *const jobad, stringMap *const hashmap)
 	MyString jobadln;
 	char filelist[MAXLNLEN];
 	while (jobadln.readLine(stdin) && jobadln != "***") {
-		if (jobadln.size() > 1) {	// More than just newline
-			// printf("line = %s.\n", jobadln.Value());
-			if (jobadln[0] != '#' && jobad->Insert(jobadln.Value()) == false) {
-				printf("ClassAd Insert failed. Exiting.\n");
-				return;
-			}
-			if (strncmp(jobadln.Value(), "TransferInput =", 15) == 0) {
-				if (sscanf(jobadln.Value(), "TransferInput = \"%s", filelist) == 1) {
-					if (filelist[strlen(filelist) - 1] == '"')
-						filelist[strlen(filelist) - 1] = '\0';
-					// printf("filelist = %s.\n", filelist);
-					char filenam[PATH_MAX + 1], restlist[MAXLNLEN];
-					restlist[0] = '\0';
-					while(sscanf(filelist, "%[^,],%s", filenam, restlist) == 2 ||
-						sscanf(filelist, "%[^,]", filenam) == 1) {
-						// printf("file = %s, rest = %s.\n", filenam, restlist);
-						strcpy(filelist, restlist);
-						restlist[0] = '\0';
-						unsigned char result[100];
-						memcpy(result,
-							Condor_MD_MAC::computeOnce((unsigned char *) filenam, strlen(filenam)),
-							17);
-						// printf("output = ");
-						for (int ind = 0; ind < 16; ++ind)
-							printf("%x", result[ind]);
-						printf("\n");
-						hashmap->insert(pair<string, unsigned char *>(filenam, result));
-					}
-					printf("file = %s.\n", filenam);
-				}
-			}
-		}
+	  int linsiz = jobadln.size();
+	  if (linsiz > 2 && jobadln[linsiz - 2] != '[' && jobadln[linsiz - 2] != ']') {
+		  printf("line = %s.\n", jobadln.Value());
+		  if (jobadln[0] != '#' && jobad->Insert(jobadln.Value()) == false) {
+			  printf("ClassAd Insert failed. Exiting.\n");
+			  return;
+		  }
+		  if (strncmp(jobadln.Value(), "TransferInput =", 15) == 0) {
+			  if (sscanf(jobadln.Value(), "TransferInput = \"%s", filelist) == 1) {
+				  if (filelist[strlen(filelist) - 1] == '"')
+					  filelist[strlen(filelist) - 1] = '\0';
+				  // printf("filelist = %s.\n", filelist);
+				  char filenam[PATH_MAX + 1], restlist[MAXLNLEN];
+				  restlist[0] = '\0';
+				  while(sscanf(filelist, "%[^,],%s", filenam, restlist) == 2 ||
+					  sscanf(filelist, "%[^,]", filenam) == 1) {
+					  // printf("file = %s, rest = %s.\n", filenam, restlist);
+					  strcpy(filelist, restlist);
+					  restlist[0] = '\0';
+					  unsigned char result[100];
+					  memcpy(result,
+						  Condor_MD_MAC::computeOnce((unsigned char *) filenam, strlen(filenam)),
+						  17);
+					  // printf("output = ");
+					  for (int ind = 0; ind < 16; ++ind)
+						  printf("%x", result[ind]);
+					  printf("\n");
+					  hashmap->insert(pair<string, unsigned char *>(filenam, result));
+				  }
+				  printf("file = %s.\n", filenam);
+			  }
+		  }
+	  }
 	}
 	printf("line = %s.\n", jobadln.Value());
 	printf("map size = %ld\n", hashmap->size());
@@ -200,7 +201,7 @@ int CacheDaemon::reaper_handler(int pid, int exit_status)
 	
 void main_init(int argc, char *argv[])
 {
-	if(argc > 3)
+	if(argc > 2)
 	{
 		usage(argv[0]);
 	}
@@ -220,7 +221,8 @@ void main_init(int argc, char *argv[])
 	static ClassAd jobad;
 	stringMap hashmap;
 	getJobAd(&jobad, &hashmap);
-	string tkey;
+	
+	/*
 	MyString tkeyin = "TransferKey = \"";
 	if (argc >= 2) {
 		tkeyin += argv[1];
@@ -234,7 +236,9 @@ void main_init(int argc, char *argv[])
 		printf("tkey Insert failed. Exiting.\n");
 		return;
 	}
+	*/
 	
+	string tkey;
 	if (jobad.LookupString( ATTR_TRANSFER_KEY, tkey ))
 		dprintf(D_ALWAYS, "Transfer key = %s\n", tkey.c_str());
 	else {

@@ -17,13 +17,17 @@
  *
  ***************************************************************/
 
- 
+
+
 #include "condor_common.h"
 #include "daemon.h"
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "subsystem_info.h"
 #include "file_transfer.h"
+
+#include <iostream>
+#include <fstream>
 
 using namespace std;
 
@@ -205,8 +209,13 @@ void main_init(int argc, char *argv[])
 		dprintf(D_ALWAYS, "Socket = %s\n", socket.c_str());
 	else dprintf(D_ALWAYS, "No socket\n");
 	
-
-	// Need full init for shadow/starter
+        classad::PrettyPrint adprint;
+        string fullad;
+        adprint.Unparse(fullad, &jobad);
+        ofstream jobadfile;
+        jobadfile.open("jobad.out");
+        jobadfile << fullad << endl;
+        jobadfile.close();
 }
 
 //-------------------------------------------------------------
