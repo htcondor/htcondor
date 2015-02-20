@@ -5523,6 +5523,25 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 	return KEEP_STREAM;
 }
 
+int
+Scheduler::shadowsSpawnLimit()
+{
+	if (!canSpawnShadow()) {return 0;}
+
+	if (MaxJobsRunning <= 0) {return -1;}
+
+	bool should_curb = false;
+	if (m_adSchedd && m_adSchedd->EvaluateAttrBoolEquiv(ATTR_CURB_MATCHMAKING, should_curb) && should_curb)
+	{
+		dprintf(D_FULLDEBUG, "Matchmaking curb limits evaluated to true; not offering jobs to matchmaker this round.\n");
+		return 0;
+	}
+
+	int shadows = numShadows + RunnableJobQueue.Length() + num_pending_startd_contacts + startdContactQueue.Length();
+
+	return std::max(MaxJobsRunning - shadows, 0);
+}
+
 /* 
    Helper function used by both DedicatedScheduler::negotiate() and
    Scheduler::negotiate().  This checks all the various reasons why we
@@ -5603,7 +5622,24 @@ public:
 
 	virtual void scheduler_handleNegotiationFinished( Sock *sock );
 
+	virtual int scheduler_maxJobsToOffer();
+
 };
+
+int
+MainScheddNegotiate::scheduler_maxJobsToOffer()
+{
+	int maxJobs = scheduler.shadowsSpawnLimit();
+	if (maxJobs > 0)
+	{
+		dprintf(D_FULLDEBUG, "Negotiation cycle will offer at most %d jobs to stay under limits.\n", maxJobs);
+	}
+	else if (!maxJobs)
+	{
+		dprintf(D_FULLDEBUG, "Scheduler already at internal limits; will not offer any jobs to negotiator.\n");
+	}
+	return maxJobs;
+}
 
 bool
 MainScheddNegotiate::scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad )
@@ -11942,6 +11978,19 @@ Scheduler::Init()
 		dprintf(D_ALWAYS, "TransferQueueUserExpr is set to an invalid expression: %s\n", transfer_queue_expr_str.c_str());
 	}
 	m_adSchedd->Insert(ATTR_TRANSFER_QUEUE_USER_EXPR, transfer_queue_expr);
+
+	std::string curb_expr_str;
+	param(curb_expr_str, "CURB_MATCHMAKING");
+	classad::ExprTree *curb_expr = NULL;
+	if (parser.ParseExpression(curb_expr_str, curb_expr) && curb_expr)
+	{
+		dprintf(D_FULLDEBUG, "CurbMatchmaking = %s\n", curb_expr_str.c_str());
+		m_adSchedd->Insert(ATTR_CURB_MATCHMAKING, curb_expr);
+	}
+	else
+	{
+		dprintf(D_ALWAYS, "CURB_MATCHMAKING is set to an invalid expression: %s\n", curb_expr_str.c_str());
+	}
 
 	// This is foul, but a SCHEDD_ADTYPE _MUST_ have a NUM_USERS attribute
 	// (see condor_classad/classad.C
