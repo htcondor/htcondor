@@ -522,6 +522,7 @@ class Scheduler : public Service
 		// Used by both the Scheduler and DedicatedScheduler during
 		// negotiation
 	bool canSpawnShadow();
+	int shadowsSpawnLimit();
 
 	void WriteRestartReport();
 

@@ -65,6 +65,7 @@ ScheddNegotiate::ScheddNegotiate
 	m_jobs(jobs),
 	m_current_resources_requested(1),
 	m_current_resources_delivered(0),
+	m_jobs_can_offer(-1),
 	m_owner(owner ? owner : ""),
 	m_remote_pool(remote_pool ? remote_pool : ""),
 	m_current_auto_cluster_id(-1),
@@ -130,7 +131,7 @@ ScheddNegotiate::nextJob()
 		return true;
 	}
 
-	while( !m_jobs->empty() ) {
+	while( !m_jobs->empty() && m_jobs_can_offer ) {
 		ResourceRequestCluster *cluster = m_jobs->front();
 		ASSERT( cluster );
 
@@ -162,7 +163,17 @@ ScheddNegotiate::nextJob()
 						// For now, do not use request counts with the dedicated scheduler
 						if ( universe != CONDOR_UNIVERSE_PARALLEL ) {
 							// add one to cluster size to cover the current popped job
-							m_current_job_ad.Assign(ATTR_RESOURCE_REQUEST_COUNT,1+cluster->size());
+							int resource_count = 1+cluster->size();
+							if (resource_count > m_jobs_can_offer && (m_jobs_can_offer > 0))
+							{
+								dprintf(D_FULLDEBUG, "Offering %d jobs instead of %d to the negotiator for this cluster; nearing internal limits (MAX_JOBS_RUNNING, etc).\n", m_jobs_can_offer, resource_count);
+								resource_count = m_jobs_can_offer;
+							}
+							m_jobs_can_offer -= resource_count;
+							m_current_job_ad.Assign(ATTR_RESOURCE_REQUEST_COUNT,resource_count);
+						}
+						else {
+							m_jobs_can_offer--;
 						}
 
 						// Copy attributes from chained parent ad into our copy 
@@ -177,6 +188,10 @@ ScheddNegotiate::nextJob()
 
 		m_jobs->pop_front();
 		delete cluster;
+	}
+	if (!m_jobs_can_offer)
+	{
+		dprintf(D_FULLDEBUG, "Not offering any more jobs to the negotiator because I am nearing the internal limits (MAX_JOBS_RUNNING, etc).\n");
 	}
 
 	m_current_auto_cluster_id = -1;
@@ -276,6 +291,8 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 bool
 ScheddNegotiate::sendResourceRequestList(Sock *sock)
 {
+	m_jobs_can_offer = scheduler_maxJobsToOffer();
+
 	while (m_num_resource_reqs_to_send > 0) {
 
 		nextJob();
@@ -307,6 +324,7 @@ ScheddNegotiate::sendResourceRequestList(Sock *sock)
 
 		m_num_resource_reqs_sent++;
 		m_num_resource_reqs_to_send--;
+
 	}
 
 	// Set m_num_resource_reqs_to_send to zero, as we are not sending

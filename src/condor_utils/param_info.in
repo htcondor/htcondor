@@ -5074,6 +5074,14 @@ friendly_name=Max Jobs Running
 review=?
 tags=schedd,schedd
 
+[CURB_MATCHMAKING]
+default=false
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Curb Expression for Matchmaking
+tags=schedd,schedd
+
 [START_LOCAL_UNIVERSE]
 default=TotalLocalJobsRunning < 200
 type=string
