@@ -29,7 +29,6 @@ x86_SL5
 
 # These are NMI requested platforms.
 x86_64_Solaris11
-x86_64_Ubuntu10
 
 #
 # The officially-supported SWAMP platforms.
