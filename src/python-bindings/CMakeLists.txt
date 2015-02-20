@@ -12,6 +12,7 @@ if(WINDOWS)
 
             set(PYTHON_LIBRARY_BOOST_ONE ${BOOST_LD}/boost_python-vc110-mt-1_54.lib)
             set(PYTHON_LIBRARY_BOOST_TWO ${BOOST_LD}/libboost_python-vc110-mt-1_54.lib)
+            set(PYTHON_DEBUG_LIBRARY ${BOOST_LD}/python27_d.lib)
             
             GET_FILENAME_COMPONENT(PYTHON_LIBRARY_FILENAME ${PYTHON_LIBRARIES} NAME)
             STRING(REGEX REPLACE ".*python([0-9]+[.]?[0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON_LIBRARY_FILENAME})
@@ -22,12 +23,12 @@ if(WINDOWS)
             endif()
 
             condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h )
-            target_link_libraries( pyclassad ${CLASSADS_FOUND} ${PYTHON_LIBRARY_BOOST_ONE} ${PYTHON_LIBRARY_BOOST_TWO} ${PYTHON_LIBRARIES})
+            target_link_libraries( pyclassad ${CLASSADS_FOUND} ${PYTHON_LIBRARY_BOOST_ONE} ${PYTHON_LIBRARY_BOOST_TWO} ${PYTHON_DEBUG_LIBRARY} ${PYTHON_LIBRARIES})
             set_target_properties( pyclassad PROPERTIES OUTPUT_NAME "${PYCLASSAD_LIB_NAME}" )
 
             # Note we do not use condor_shared_lib below because we want a separate install target.
             add_library( classad_module SHARED classad_module.cpp classad_parsers.cpp )
-            target_link_libraries( classad_module pyclassad ${PCRE_FOUND} ${PYTHON_LIBRARY_BOOST_ONE} ${PYTHON_LIBRARY_BOOST_TWO} ${PYTHON_LIBRARIES} )
+            target_link_libraries( classad_module pyclassad ${PCRE_FOUND} ${PYTHON_LIBRARY_BOOST_ONE} ${PYTHON_LIBRARY_BOOST_TWO} ${PYTHON_DEBUG_LIBRARY} ${PYTHON_LIBRARIES} )
             set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
             set_target_properties(classad_module PROPERTIES SUFFIX ".pyd" )
 
@@ -39,7 +40,7 @@ if(WINDOWS)
             install ( TARGETS classad_python_user DESTINATION "${C_LIBEXEC}" )
 
             add_library( htcondor SHARED htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp module_lock.cpp)
-            target_link_libraries( htcondor pyclassad condor_utils ${PYTHON_LIBRARY_BOOST_ONE} ${PYTHON_LIBRARY_BOOST_TWO} ${PYTHON_LIBRARIES} ${CONDOR_WIN_LIBS} )
+            target_link_libraries( htcondor pyclassad condor_utils ${PYTHON_LIBRARY_BOOST_ONE} ${PYTHON_LIBRARY_BOOST_TWO} ${PYTHON_DEBUG_LIBRARY} ${PYTHON_LIBRARIES} ${CONDOR_WIN_LIBS} )
             set_target_properties( htcondor PROPERTIES SUFFIX ".pyd" )
 
             install ( TARGETS pyclassad DESTINATION ${C_LIB} )
