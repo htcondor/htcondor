@@ -144,11 +144,25 @@ struct Collector {
     {
         boost::python::object daemon_ad = locate(d_type, name);
         Collector daemon(daemon_ad[ATTR_MY_ADDRESS]);
-        return daemon.query(convert_to_ad_type(d_type), "", attrs, statistics)[0];
+        return daemon.query(convert_to_ad_type(d_type), boost::python::object(""), attrs, statistics)[0];
     }
 
-    object query(AdTypes ad_type=ANY_AD, const std::string &constraint="", list attrs=boost::python::list(), const std::string &statistics="")
+    object query(AdTypes ad_type=ANY_AD, boost::python::object constraint_obj=boost::python::object(""), list attrs=boost::python::list(), const std::string &statistics="")
     {
+        std::string constraint;
+        extract<std::string> constraint_extract(constraint_obj);
+        if (constraint_extract.check())
+        {
+            constraint = constraint_extract();
+        }
+        else
+        {
+            classad::ClassAdUnParser printer;
+            classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(constraint_obj));
+            printer.Unparse(constraint, expr.get());
+        }
+
+
         CondorQuery query(ad_type);
         if (constraint.length())
         {
@@ -226,14 +240,14 @@ struct Collector {
     object locateAll(daemon_t d_type)
     {
         AdTypes ad_type = convert_to_ad_type(d_type);
-        return query(ad_type, "", list(), "");
+        return query(ad_type, boost::python::object(""), list(), "");
     }
 
     object locate(daemon_t d_type, const std::string &name="")
     {
         if (!name.size()) {return locateLocal(d_type);}
         std::string constraint = "stricmp(" ATTR_NAME ", " + quote_classads_string(name) + ") == 0";
-        object result = query(convert_to_ad_type(d_type), constraint, list(), "");
+        object result = query(convert_to_ad_type(d_type), boost::python::object(constraint), list(), "");
         if (py_len(result) >= 1) {
             return result[0];
         }
@@ -247,7 +261,7 @@ struct Collector {
         if (!m_default)
         {
             std::string constraint = "true";
-            object result = query(convert_to_ad_type(d_type), constraint, list(), "");
+            object result = query(convert_to_ad_type(d_type), boost::python::object(constraint), list(), "");
             if (py_len(result) >= 1) {
                 return result[0];
             }
