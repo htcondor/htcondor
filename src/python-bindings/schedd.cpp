@@ -412,8 +412,21 @@ struct Schedd {
         if (m_connection) { m_connection->abort(); }
     }
 
-    object query(const std::string &constraint="", list attrs=list(), object callback=object(), int match_limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default)
+    object query(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), object callback=object(), int match_limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default)
     {
+        std::string constraint;
+        extract<std::string> constraint_extract(constraint_obj);
+        if (constraint_extract.check())
+        {
+            constraint = constraint_extract();
+        }
+        else
+        {
+            classad::ClassAdUnParser printer;
+            classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(constraint_obj));
+            printer.Unparse(constraint, expr.get());
+        }
+
         CondorQ q;
 
         if (constraint.size())
