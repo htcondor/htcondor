@@ -477,9 +477,6 @@ sub parseOptions
 
     if( defined $opt_notify ) {
         $notify = "$opt_notify";
-    } else {
-        my $username = (getpwuid($<))[0];
-        $notify = "$username\@cs.wisc.edu";
     }
 
 	if( defined $opt_notify_fail_only ) {
@@ -1303,7 +1300,9 @@ sub writeCommonInfo
         	print $fh "component_version = $vers_string\n";
     	}
 	}
-    print $fh "notify = $notify\n";
+	if( $notify ) {
+	    print $fh "notify = $notify\n";
+	}
     print $fh "priority = 1\n";
     if ($runtype eq "build") { print $fh "use_remote_post_rval = true\n"; }
 
