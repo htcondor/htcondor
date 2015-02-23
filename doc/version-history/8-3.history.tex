@@ -29,10 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor now sets OMP\_NUM\_THREADS in the job's environment
-to the number of cores of the slot it is running in. This prevents
-OpenMP-linked jobs (including matlab) from attempting to use
-more cores than they have been provisioned.
+\item For an executing job, HTCondor now sets the environment variable 
+\Env{OMP\_NUM\_THREADS} to the number of cores of the slot it is running in.
+This prevents OpenMP-linked jobs (including \Prog{Matlab}) 
+from attempting to use more cores than have been provisioned.
 \Ticket{4884}
 
 \end{itemize}
