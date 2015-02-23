@@ -99,6 +99,9 @@ sub RunCheck
 	if($error eq "*") {
 		$error = "$testname.err";
 	}
+	my $deferralpreptime = $args{deferralpreptime} || "";
+	my $deferraltime = $args{deferraltime} || "";
+	my $deferralwindow = $args{deferralwindow} || "";
     my $requirements = $args{requirements} || "";
     my $streamoutput = $args{stream_output} || "";
     my $append_submit_commands = $args{append_submit_commands} || "";
@@ -109,6 +112,8 @@ sub RunCheck
     my $duration = "1";
 	if(exists $args{duration}) {
 		$duration = $args{duration};
+	} else {
+		print "duration not set, defaulting to 1\n";
 	}
 
 	if(exists $args{timeout}){
@@ -165,13 +170,16 @@ sub RunCheck
     	CondorTest::RegisterEvictedWithoutCheckpoint( $testname, $evicted_ewoc_fn );
 	}
 	if( exists $args{on_evictedwithrequeue} ) {
-    	CondorTest::RegisterEvictedWithRequeue( $testname, $evicted__wreqfn );
+    	CondorTest::RegisterEvictedWithRequeue( $testname, $evicted_wreq_fn );
 	}
 	if( exists $args{on_hold} ) {
     	CondorTest::RegisterHold( $testname, $hold_fn );
 	}
 	if( exists $args{on_released} ) {
     	CondorTest::RegisterRelease( $testname, $released_fn );
+	}
+	if( exists $args{on_exitedabnormal} ) {
+    	CondorTest::RegisterExitedAbnormal( $testname, $args{on_exitedabnormal} );
 	}
 	if( exists $args{on_evicted} ) {
     	CondorTest::RegisterEvicted( $testname, $evicted_fn );
@@ -222,6 +230,15 @@ sub RunCheck
 	}
 	if($args{request_memory}) {
 		print SUBMIT "request_memory = $args{request_memory}\n";
+	}
+	if($deferralpreptime ne "") {
+		print SUBMIT "DeferralPrepTime = $deferralpreptime\n";
+	}
+	if($deferraltime ne "") {
+		print SUBMIT "DeferralTime = $deferraltime\n";
+	}
+	if($deferralwindow ne "") {
+		print SUBMIT "DeferralWindow = $deferralwindow\n";
 	}
 	if($requirements ne "") {
 		print SUBMIT "Requirements = $requirements\n";

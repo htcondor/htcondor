@@ -10653,7 +10653,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
 		scheduler.stats.JobsRestartReconnectsFailed += 1;
 		scheduler.stats.JobsRestartReconnectsBadput += job_running_time;
-	} else if ( srec->is_reconnect && !srec->reconnect_succeeded ) {
+	} else if ( srec && srec->is_reconnect && !srec->reconnect_succeeded ) {
 		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
 		scheduler.stats.JobsRestartReconnectsUnknown += 1;
 	}

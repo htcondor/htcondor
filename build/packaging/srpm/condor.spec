@@ -346,6 +346,11 @@ Requires: mailx
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
+# ecryptfs was pulled from rhel 7
+%if (0%{?rhel} == 5 || 0%{?rhel} == 6)
+Requires: ecryptfs-utils
+%endif
+
 %if %blahp && ! %uw_build
 Requires: blahp >= 1.16.1
 %endif

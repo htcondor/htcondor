@@ -16,8 +16,10 @@ x86_64_Windows8
 x86_RedHat5
 x86_RedHat6
 
+# Not yet officially supported.
+x86_64_Debian8
+
 # We want to build all branches on Fedora because it is our "warning check" platform
-x86_64_Fedora19
 x86_64_Fedora20
 x86_64_Fedora21
 
@@ -27,10 +29,6 @@ x86_SL5
 
 # These are NMI requested platforms.
 x86_64_Solaris11
-x86_64_Ubuntu10
-
-# Build on the Debian 8 pre-release machine.
-x86_64_Debian0
 
 #
 # The officially-supported SWAMP platforms.
@@ -58,4 +56,3 @@ swamp:scientific-5.10-32-01-batlab
 swamp:scientific-5.10-64-01-batlab
 swamp:scientific-6.5-32-01-batlab
 swamp:scientific-6.5-64-01-batlab
-

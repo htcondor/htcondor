@@ -422,6 +422,17 @@ class DaemonCore : public Service
         @return A pointer into a <b>static buffer</b>, or NULL on error */
     char const* InfoCommandSinfulString (int pid = -1);
 
+	/**
+	 * Return a vector of the sinful strings of all known command sockets.
+	 *
+	 * ONLY returns the public IP address.
+	 *
+	 * This function was 'born deprecated'; use case is when rewriting all
+	 * addresses in a collector (in the future, we hope to have a more
+	 * expressive sinful string variant).
+	 */
+	const std::vector<Sinful> &InfoCommandSinfulStringsMyself(); 
+
 	void daemonContactInfoChanged();
 
     /** Returns the Sinful String <host:port> of the DaemonCore
@@ -716,6 +727,7 @@ class DaemonCore : public Service
     */
     int Register_Command_Socket (Stream*      iosock,
                                  const char * descrip = NULL ) {
+	m_dirty_command_sock_sinfuls = true;
         return Register_Socket (iosock,
                                 descrip,
                                 (SocketHandler)NULL,
@@ -2097,6 +2109,8 @@ class DaemonCore : public Service
 	MyString m_daemon_sock_name;
 	Sinful m_sinful;     // full contact info (public, private, ccb, etc.)
 	bool m_dirty_sinful; // true if m_sinful needs to be reinitialized
+	std::vector<Sinful> m_command_sock_sinfuls; // Cached copy of our command sockets' sinful strings.
+	bool m_dirty_command_sock_sinfuls; // true if m_command_sock_sinfuls needs to be reinitialized.
 
 	bool CommandNumToTableIndex(int cmd,int *cmd_index);
 

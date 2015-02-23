@@ -41,10 +41,18 @@ more cores than they have been provisioned.
 
 \begin{itemize}
 
+\item Fixed a bug where a collector would be unable to update its own ad
+in some situatons.
+\Ticket{4850}
+
 \item Fixed a bug introduced in HTCondor 8.3.2 that caused the -absent
 option of \Condor{status} to print duplicated information about each
 ad.
 \Ticket{4853}
+
+\item The python bindings now accept ClassAd expressions for the constraint
+of a Schedd or a Collector query, matching the behavior documented in the manual.
+\Ticket{4907}
 
 \end{itemize}
 
@@ -56,8 +64,7 @@ ad.
 
 \begin{itemize}
 
-\item HTCondor version 8.3.3 not yet released.
-%\item HTCondor version 8.3.3 released on Month Date, 2014.
+\item HTCondor version 8.3.3 released on Feb. 19, 2015.
 
 \end{itemize}
 
@@ -68,11 +75,26 @@ ad.
 
 \item Configuration variable \Macro{ENCRYPT\_EXECUTE\_DIRECTORY} 
 is now honored on Linux platforms.
-The Linux platform must have the  \Prog{ecryptfs-utils} package is installed
+The Linux platform must have the  \Prog{ecryptfs-utils} package installed
 and the Linux kernel must be version 2.6.29 or a more recent version.
 The new submit command \SubmitCmd{encrypt\_execute\_directory} allows the user
 to specify directory encryption on a per-job basis.
 \Ticket{4856}
+
+
+\item By default, HTCondor will no longer have access to Linux 
+	system credentials, such as OpenAFS tokens or eCryptFS keys.
+	This new behavior ensures these credentials cannot be
+	unintentionally obtained by user jobs.  
+	For more information, see new configuration variable 
+	\Macro{DISCARD\_SESSION\_KEYRING\_ON\_STARTUP}
+	in section~\ref{param:DiscardSessionKeyringOnStartup}.
+\Ticket{4856}
+
+\item \Condor{q} now offers the new command line option \Arg{-autocluster}, 
+which causes it to output \Condor{schedd} daemon auto cluster information. 
+The information is an ID number and the number of jobs in each auto cluster.
+\Ticket{4792}
 
 \item EC2 grid universe jobs may now specify an IAM (instance) profile.
 \Ticket{4810}
@@ -84,6 +106,11 @@ This allows the use of VPC instances with non-default security groups.
 \item EC2 jobs may now specify additional parameters to use when starting
 the corresponding instance.
 \Ticket{4795}
+
+\item Improved the preliminary support for IPv4 and IPv6 dual-protocol
+submit nodes,
+by allowing them to work with the \Condor{shared\_port} daemon.
+\Ticket{4712}
 
 \item The throughput of queries to the \Condor{collector} has been
 improved, as the \Condor{collector} now never forks to handle queries 
@@ -119,6 +146,10 @@ A system administrator must set the new configuration variable
 to specify the python modules that are accessible from within ClassAds.
 \Ticket{4773}
 
+\item The new Python \texttt{LogReader} class permits the reading and access
+of individual daemon log events.
+\Ticket{4588}
+
 \item The default value for configuration variable 
 \Macro{DAGMAN\_MAX\_JOBS\_IDLE} has changed from 0, 
 which imposes no limits, to 1000.
@@ -137,6 +168,18 @@ These attributes include \Attr{TotalRunningJobs}, \Attr{TotalIdleJobs},
 \Attr{TotalHeldJobs}, and \Attr{TotalRemovedJobs}.
 \Ticket{4683}
 
+\item \Condor{q} and \Condor{history} offer the new command line option 
+\Opt{-limit}, 
+which limits number of results returned.
+\Ticket{4806}
+
+\item A new, more efficient query protocol has been added as the default 
+for \Condor{q},
+when querying a \Condor{schedd} daemon that is version 8.3.3 or later. 
+To disable this new protocol, set configuration variable
+\Macro{CONDOR\_Q\_USE\_V3\_PROTOCOL} to \Expr{False}.
+\Ticket{4828}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -145,6 +188,12 @@ These attributes include \Attr{TotalRunningJobs}, \Attr{TotalIdleJobs},
 
 \item Fixed a bug that prevented CCB servers from running on Windows platforms.
 \Ticket{4713}
+
+\item Configuration variables \MacroNI{ENABLE\_IPV4} or 
+\MacroNI{ENABLE\_IPV6} may now be safely set in any configuration file. 
+Previously, setting them in any file other than the first configuration file 
+parsed could have led to unpredictable behavior.
+\Ticket{4829}
 
 \item Fixed a bug in the \Condor{startd} daemon introduced in HTCondor 
 version 8.3.2.
@@ -167,6 +216,22 @@ when the user ran \Condor{hold} or \Condor{rm}.
 \Ticket{4679}
 
 \end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item The ability to transparently encrypt execute directories
+is not supported by execute hosts using RHEL 7 and derivative distributions,
+as these distributions no longer contain the \Prog{eCryptfs} kernel module.
+
+\item  The submit commands 
+\SubmitCmd{on\_exit\_hold} and \SubmitCmd{on\_exit\_remove}  
+do not do what they are supposed to do
+for local universe jobs on Windows machines.
+\Ticket{4902}
+\end{itemize}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-3-2}Version 8.3.2}
