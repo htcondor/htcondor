@@ -19,32 +19,180 @@
 ##**************************************************************
 
 use CondorTest;
+use Check::SimpleJob;
 
-$testdesc =  'Condor ON_EXIT_REMOVE policy test - local U';
+my $falsepolicy = '
+on_exit_remove = (time() - QDate) > 5000
+';
+my $truepolicy = '
+on_exit_remove = (time() - QDate) > 5
+';
+
+$testname = "job_core_onexitrem_local_false";
+
+#my $nostatus = CondorTest::verbose_system("./job_core_onexitrem-false_local.pl");
+##
+## ON_EXIT_REMOVE - False
+## The parameter will evaluate to false so this test makes sure
+## that the job gets requeued
+##
+use CondorTest;
+
+$cmd = 'job_core_onexitrem-false_local.cmd';
+$testdesc =  'Condor submit policy test for ON_EXIT_REMOVE - local U';
 $testname = "job_core_onexitrem_local";
+$removed = 0;
 
-my $nostatus = CondorTest::verbose_system("./job_core_onexitrem-false_local.pl");
-my $willstatus = CondorTest::verbose_system("./job_core_onexitrem-true_local.pl");
+## 
+## Status Values
+##
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
 
-my %listoftests; 
-$listoftests{"corename"} = "job_core_onexitrem_local";
-$listoftests{"tests"} = [ "job_core_onexitrem-false_local", "job_core_onexitrem-true_local"];
-$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
-CondorTest::MergeOutputFiles(\%listoftests);
+##
+## abnormal
+## Not sure how we would end up here, and based on the old
+## report message, I'm assuming this is a bad thing
+##
+$abnormal = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+	CondorTest::debug("Bad - Job $cluster.$job reported an abnormal event.\n",1);
+	exit(1);
+};
 
-if($nostatus != 0)
+##
+## aborted
+## We should get an aborted callback for the job when we remove
+## it in from the queue in the evicted method
+##
+$aborted = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+	CondorTest::debug("Good - Job $cluster.$job was removed from the queue\n",1);
+	CondorTest::debug("Policy Test Completed\n",1);
+};
+
+##
+## held
+## Not sure how we would get here
+##
+$held = sub {
+	die "We don't hit Hold state for job restarted for not running long enough!\n";
+	exit(1);
+};
+
+##
+## executed
+## Just announce that the job started running
+##
+$executed = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+	CondorTest::debug("Good - Job $cluster.$job began execution.\n",1);
+};
+
+##
+## success
+## The job finished, so we need to make sure that it gets
+## removed from the queue
+##
+$success = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+	
+	if($testname eq "job_core_onexitrem_local_true") {
+		CondorTest::debug("Good - Job $cluster.$job finished executing and exited.\n",1);
+		CondorTest::debug("Policy Test Completed\n",1);
+	}
+};
+
+##
+## evicted
+## This is the heart of the test. When the job exits, it will
+## come back as being evicted with a requeue attribute set to true
+##
+$evicted = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+	if($removed != 0) {
+		return(0); # been here done this - don't try two job removals
+	} else {
+		$removed = 1;
+	}
+
+	CondorTest::debug("Good - Job $cluster.$job was requeued after being evicted.\n",1);
+
+	##
+	## Make sure that we remove the job
+	##
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	if ( ! CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0}) ) {
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		exit(0)
+	}
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+};
+
+SimpleJob::RunCheck(
+    universe=>"local",
+    runthis=>"x_time.pl",
+    on_execute=>$executed,
+    on_hold=>$held,
+    on_evictedwithoutcheckpoint=>$on_evictedwithoutcheckpoint,
+	on_evictedwithrequeue=>$evicted,
+	on_abort=>$aborted,
+    on_exitedabnormal=>$abnormal,
+    append_submit_commands=>$falsepolicy,
+    duration=>10,
+);
+
+
+
+#my $willstatus = CondorTest::verbose_system("./job_core_onexitrem-true_local.pl");
+##
+## ON_EXIT_REMOVE - True
+## The parameter will evaluate to true so this test makes sure
+## that the job gets removed from the queue after it finishes executing
+## It would be nice if we could incorporate the true/false tests into
+## a single test, that is have ON_EXIT_REMOVE evaluate to false a couple 
+## times, make sure the job gets requeued, then have it evaluate to true
+## and make sure it cleans itself up. But alas, CondorTest is unable
+## to handle a job getting executed twice (from what I can tell)
+##
+
+$testname = "job_core_onexitrem_local_true";
+
+SimpleJob::RunCheck(
+    universe=>"local",
+    runthis=>"x_time.pl",
+    on_execute=>$executed,
+    on_success=>$success,
+    append_submit_commands=>$truepolicy,
+    duration=>10,
+);
+
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
 {
-	CondorTest::debug("ON_EXIT_REMOVE: failed no trigger test\n",1);
+    exit(1);
 }
 
-if($willstatus != 0)
-{
-	CondorTest::debug("ON_EXIT_REMOVE: failed trigger test\n",1);
-}
-
-if(($willstatus != 0) || ($nostatus != 0))
-{
-	die "Failed one ON_EXIT_REMOVE test\n";
-}
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
 
 
