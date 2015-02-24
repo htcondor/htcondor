@@ -27,6 +27,7 @@ use Getopt::Long;
 use Cwd;
 
 print "Called with:" . join(" ", @ARGV) . "\n";
+my $btdebug = 1;
 
 my ($help, $noinput, $noextrainput, $extrainput, $onesetout, $long, $forever, $job, $failok);
 GetOptions (
@@ -150,10 +151,14 @@ my $out6 = $out . $job . "j.txt";
 CreateNonEmptyFile("$out1");
 CreateNonEmptyFile("$out2");
 CreateNonEmptyFile("$out3");
+CopyIt("$out1 ..");
+CopyIt("$out2 ..");
+CopyIt("$out3 ..");
 
 if($onesetout) {
     # create and leave
     print "Case onesetout\n";
+	system("ls -la");
     exit(0);
 }
 
@@ -163,6 +168,9 @@ sleep 20;
 CreateNonEmptyFile("$out4");
 CreateNonEmptyFile("$out5");
 CreateNonEmptyFile("$out6");
+CopyIt("$out4 ..");
+CopyIt("$out5 ..");
+CopyIt("$out6 ..");
 
 if( $long ) { 
     # create and leave
@@ -306,3 +314,81 @@ sub is_windows_native_perl {
     }
     return 0;
 }
+
+sub CopyIt
+{
+    my $cmdline = shift;
+    my $ret = 0;
+    my $fullcmd = "";
+    my $dashr = "no";
+	#print  "CopyIt: $cmdline\n";
+    my $winsrc = "";
+    my $windest = "";
+
+    my $amwindows = is_windows();
+    if($cmdline =~ /\-r/) {
+        $dashr = "yes";
+        $_ = $cmdline;
+        s/\-r//;
+        $cmdline = $_;
+    }
+    # this should leave us source and destination
+    my @argsin = split /\s/, $cmdline;
+    my $cmdcount = @argsin;
+
+	if($btdebug == 1) {
+		print "CopyIt command line passed in:$cmdline\n";
+	}
+    if($amwindows == 1) {
+		if(is_windows_native_perl()) {
+			#print "CopyIt: windows_native_perl\n";
+			$winsrc = $argsin[0];
+			$windest = $argsin[1];
+			#print "native perl:\n";
+			# check target
+			$windest =~ s/\//\\/g;
+        	$fullcmd = "xcopy $winsrc $windest /Y";
+			#print "native perl:$fullcmd\n";
+        	if($dashr eq "yes") {
+            	$fullcmd = $fullcmd . " /s /e";
+				#print "native perl -r:$fullcmd\n";
+        	}
+		} else {
+        	$winsrc = `cygpath -w $argsin[0]`;
+        	$windest = `cygpath -w $argsin[1]`;
+        	CondorUtils::fullchomp($winsrc);
+        	CondorUtils::fullchomp($windest);
+        	$_ = $winsrc;
+        	s/\\/\\\\/g;
+        	$winsrc = $_;
+        	$_ = $windest;
+        	s/\\/\\\\/g;
+        	$windest = $_;
+        	$fullcmd = "xcopy $winsrc $windest /Y";
+        	if($dashr eq "yes") {
+            	$fullcmd = $fullcmd . " /s /e";
+        	}
+
+		}
+        $ret = system("$fullcmd");
+		if($btdebug == 1) {
+			print "Tried to create dir got ret value:$ret cmd:$fullcmd\n";
+		}
+    } else {
+        $fullcmd = "cp ";
+        if($dashr eq "yes") {
+            $fullcmd = $fullcmd . "-r ";
+        }
+        $fullcmd = $fullcmd . "$cmdline";
+		print "About to  execute this<$fullcmd>\n";
+        $ret = system("$fullcmd");
+
+		#print "Tried to create dir got ret value:$ret path:$cmdline\n";
+    }
+	if($btdebug == 1) {
+		print "CopyIt returning:$ret\n";
+	}
+	
+    return($ret);
+}
+
