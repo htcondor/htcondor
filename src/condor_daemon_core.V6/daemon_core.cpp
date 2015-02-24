@@ -877,6 +877,9 @@ int DaemonCore::Register_Timer (const Timeslice &timeslice,TimerHandlercpp handl
 
 int	DaemonCore::Cancel_Timer( int id )
 {
+	if ( this == NULL ) {
+		return 0;
+	}
 	return( t.CancelTimer(id) );
 }
 
@@ -993,6 +996,9 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 
 int DaemonCore::Cancel_Command( int command )
 {
+	if ( this == NULL ) {
+		return TRUE;
+	}
 
 	int i;
 	for(i = 0; i<nCommand; i++) {
@@ -1347,6 +1353,10 @@ int DaemonCore::Cancel_Signal( int sig )
 {
 	int found = -1;
 
+	if ( this == NULL ) {
+		return TRUE;
+	}
+
 	// find this signal in our table
 	for ( int i = 0; i < nSig; i++ ) {
 		if ( sigTable[i].num == sig ) {
@@ -1585,6 +1595,10 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 int DaemonCore::Cancel_Socket( Stream* insock, void *prev_entry)
 {
 	int i,j;
+
+	if ( this == NULL ) {
+		return TRUE;
+	}
 
 	if (!insock) {
 		return FALSE;
@@ -1979,6 +1993,10 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 
 int DaemonCore::Cancel_Pipe( int pipe_end )
 {
+	if ( this == NULL ) {
+		return TRUE;
+	}
+
 	int index = pipe_end - PIPE_INDEX_OFFSET;
 	if (index < 0) {
 		dprintf(D_ALWAYS, "Cancel_Pipe on invalid pipe end: %d\n", pipe_end);
@@ -2092,6 +2110,10 @@ unsigned __stdcall pipe_close_thread(void *arg)
 
 int DaemonCore::Close_Pipe( int pipe_end )
 {
+	if ( this == NULL ) {
+		return TRUE;
+	}
+
 	int index = pipe_end - PIPE_INDEX_OFFSET;
 	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_ALWAYS, "Close_Pipe on invalid pipe end: %d\n", pipe_end);
@@ -2156,6 +2178,10 @@ int DaemonCore::Close_Pipe( int pipe_end )
 int
 DaemonCore::Cancel_And_Close_All_Pipes(void)
 {
+	if ( this == NULL ) {
+		return 0;
+	}
+
 	// This method will cancel *and delete* all registered pipes.
 	// It will return the number of pipes cancelled + closed.
 	int i = 0;
@@ -2231,6 +2257,9 @@ DaemonCore::Get_Pipe_FD(int pipe_end, int* fd)
 int
 DaemonCore::Close_FD(int fd)
 {
+	if ( this == NULL ) {
+		return 0;
+	}
 	int retval = -1;  
 	if ( fd >= PIPE_INDEX_OFFSET ) {  
 		retval = ( daemonCore->Close_Pipe ( fd ) ? 0 : -1 );
@@ -2279,6 +2308,9 @@ DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int /* len */ ) {
 
 bool
 DaemonCore::Close_Stdin_Pipe(int pid) {
+	if ( this == NULL ) {
+		return true;
+	}
 	PidEntry *pidinfo = NULL;
 	int rval;
 
@@ -2393,6 +2425,10 @@ int DaemonCore::Lookup_Socket( Stream *insock )
 
 int DaemonCore::Cancel_Reaper( int rid )
 {
+	if ( this == NULL ) {
+		return TRUE;
+	}
+
 	int idx;
 
 	for ( idx = 0; idx < nReap; idx++ ) {
@@ -10413,6 +10449,9 @@ DaemonCore::RegisterTimeSkipCallback(TimeSkipFunc fnc, void * data)
 void 
 DaemonCore::UnregisterTimeSkipCallback(TimeSkipFunc fnc, void * data)
 {
+	if ( this == NULL ) {
+		return;
+	}
 	m_TimeSkipWatchers.Rewind();
 	TimeSkipWatcher * p;
 	while( (p = m_TimeSkipWatchers.Next()) ) {
