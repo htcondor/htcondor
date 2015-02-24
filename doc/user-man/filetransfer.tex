@@ -172,8 +172,11 @@ for the value \verb@ON_EXIT@ when the job exits on its own.
 However, if, and each time the job is evicted from a machine,
 \emph{files are transferred back at eviction time}.  The files that
 are transferred back at eviction time may include intermediate files
-that are not part of the final output of the job.  Before the job
-starts running again, all of the files that were stored when the job
+that are not part of the final output of the job.
+When \SubmitCmd{transfer\_output\_files} is specified,
+its list governs which are transferred back at eviction time.
+Before the job starts running again, 
+all of the files that were stored when the job
 was last evicted are copied to the job's new remote scratch
 directory.
 
