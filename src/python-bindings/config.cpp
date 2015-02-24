@@ -313,7 +313,7 @@ struct RemoteParam
 
     void refresh()
     {
-        m_attrs = boost::python::import("__main__").attr("__builtins__").attr("set")();
+        m_attrs = py_import("__main__").attr("__builtins__").attr("set")();
         m_lookup = boost::python::dict();
         m_queried_attrs = false;
     }
