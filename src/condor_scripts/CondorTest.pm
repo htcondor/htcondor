@@ -3220,7 +3220,7 @@ sub CoreCheck {
 	if(CondorUtils::is_windows() == 1) {
 		my $windowslogdir = "";
 		if(is_windows_native_perl()) {
-			print "CoreCheck:windows_native_perl\n";
+			#print "CoreCheck:windows_native_perl\n";
 			$logdir =~ s/\//\\/g;
 		} else {
 			#print "CoreCheck for windows\n";
@@ -3236,8 +3236,13 @@ sub CoreCheck {
 	if(defined $test) {
 		TestDebug("Checking: $logdir for test: $test\n",2);
 	}
-	my @files = `ls $logdir`;
+	#my @files = `ls $logdir`;
+	my @files = ();
+	GetDirList(\@files, $logdir);
 	my $totalerrors = 0;
+	#foreach my $perp (@files) {
+		#print "LogDirContent:$perp:\n";
+	#}
 	foreach my $perp (@files) {
 		CondorUtils::fullchomp($perp);
 		$fullpath = $logdir . "/" . $perp;

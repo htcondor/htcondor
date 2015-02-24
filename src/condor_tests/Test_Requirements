@@ -38,7 +38,6 @@ job_condorc_abc_van: cygwin
 job_condorc_ab_van: cygwin
 job_core_args_sched: personal
 job_core_args_van: personal
-job_core_basic_par: cygwin
 job_core_bigenv_sched: personal
 job_core_bigenv_std: personal, IPv4
 job_core_bigenv_van: personal
@@ -73,8 +72,8 @@ job_core_max-running_local: cygwin
 job_core_niceuser_van: cygwin
 job_core_onexithold_local: personal
 job_core_onexithold_van: personal
-job_core_onexitrem_local: cygwin,personal
-job_core_onexitrem_van: cygwin,personal
+job_core_onexitrem_local: personal
+job_core_onexitrem_van: personal
 job_core_output_java: personal
 job_core_output_sched: personal
 job_core_output_van: personal
@@ -196,11 +195,11 @@ job_dagman_rm: cygwin, personal
 job_filexfer_base-input1_van: personal
 job_filexfer_base_van: personal
 job_filexfer_basic_van: personal
-job_filexfer_input-onegone_van: cygwin, personal
+job_filexfer_input-onegone_van: personal
 job_filexfer_limitback_van: personal
-job_filexfer_md5-remote_van: cygwin, personal
+job_filexfer_md5-remote_van: personal
 job_filexfer_minus1_van: personal
-job_filexfer_output_van: cygwin, personal
+job_filexfer_output_van: personal
 job_filexfer_output-withvacate_van: personal
 job_filexfer_sandbox-empty_van: cygwin, personal
 job_filexfer_streamerr_van: personal

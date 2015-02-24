@@ -95,6 +95,7 @@ sub RunCheck
 	if($output eq "*") {
 		$output = "$testname.out";
 	}
+    my $input = $args{input} || "";
     my $error = $args{error} || "";
 	if($error eq "*") {
 		$error = "$testname.err";
@@ -106,6 +107,7 @@ sub RunCheck
     my $streamoutput = $args{stream_output} || "";
     my $append_submit_commands = $args{append_submit_commands} || "";
     my $grid_resource = $args{grid_resource} || "";
+	my $transfer_output_files = $args{transfer_output_files} || "";
 	my $transfer_input_files = $args{transfer_input_files} || "";
     my $should_transfer_files = $args{should_transfer_files} || "";
     my $when_to_transfer_output = $args{when_to_transfer_output} || "";
@@ -136,6 +138,7 @@ sub RunCheck
     my $evicted_ewc_fn = $args{on_evictedwithcheckpoint} || $dummy;
     my $evicted_ewoc_fn = $args{on_evictedwithoutcheckpoint} || $dummy;
     my $evicted_wreq_fn = $args{on_evictedwithrequeue} || $dummy;
+	my $wanterror_fn =$args{on_wanterror} || $dummy;
     my $submit_fn = $args{on_submit} || $submitted;
     my $ulog_fn = $args{on_ulog} || $dummy;
     my $abort_fn = $args{on_abort} || $aborted;
@@ -159,6 +162,9 @@ sub RunCheck
 
 	if( exists $args{on_shadow} ) {
     	CondorTest::RegisterShadow( $testname, $shadow );
+	}
+	if( exists $args{on_wanterror} ) {
+    	CondorTest::RegisterWantError( $testname, $wanterror_fn );
 	}
 	if( exists $args{on_imageupdated} ) {
     	CondorTest::RegisterImageUpdated( $testname, $imageupdated_fn );
@@ -225,6 +231,9 @@ sub RunCheck
 	if($output ne "") {
 		print SUBMIT "output = $output\n";
 	}
+	if($input ne "") {
+		print SUBMIT "input = $input\n";
+	}
 	if($error ne "") {
 		print SUBMIT "error = $error\n";
 	}
@@ -245,6 +254,9 @@ sub RunCheck
 	}
 	if($streamoutput ne "") {
 		print SUBMIT "stream_output = $streamoutput\n";
+	}
+	if( $transfer_output_files ne "" ) {
+		print SUBMIT "transfer_output_files = $transfer_output_files\n";
 	}
 	if( $transfer_input_files ne "" ) {
 		print SUBMIT "transfer_input_files = $transfer_input_files\n";

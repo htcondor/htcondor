@@ -23,11 +23,18 @@ use warnings;
 
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 
-my $cmd_template = "job_core_basic_par.template";
-my $testdesc =  'job_core_basic_par - Simple parallel job';
-my $cmd = "job_core_basic_par.cmd";
-my $corename = "job_core_basic_par";
+my $mypid = $$;
+my $testname = "job_core_basic_par";
+my $wantedout = $testname . $mypid . ".out" . "\$(NODE)";
+
+my $submitadditions = '
+arguments =  machine $(NODE)
++ParallelShutdownPolicy = "WAIT_FOR_ALL"
+machine_count = 4
+';
+
 my $debuglevel = 1;
 
 # where am I running
@@ -35,29 +42,12 @@ my $currenthost = CondorTest::getFqdnHost();
 
 print scalar localtime() . "\n";
 
-my $mypid = $$;
 my $version = "basicpar";
-my $mysaveme = $corename . ".saveme";
+my $mysaveme = $testname . ".saveme";
 
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
-
-my $mysubmitnm = $corename . $mypid . ".cmd";
-my $mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
-my $mysubmitnmlog = $corename . $mypid . ".log" ;
-my $mysubmitnmerr = $corename . $mypid . ".err" . "\$(NODE)";
-my $mysubmitnmout = $corename . $mypid . ".out" . "\$(NODE)";
-my $mycorenm = $corename . ".cmd";
-my $mycorenmcmdout = $corename . ".cmd.out";
-my $mycorenmlog = $corename . ".log";
-my $mycorenmerr = $corename . ".err";
-my $mycorenmout = $corename . ".out";
-
-#print "Master PID is $mypid\n";
-#print "Master PID submit file is $mysubmitnm\n";
-
-my $testname = "job_core_basic_par";
 
 my $firstappend_condor_config = "
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
@@ -84,64 +74,19 @@ my $parallelport = $new_condor_instance->GetCollectorPort();
 
 print "\n\n\n\n\n\n*************** collector port:$parallelport **************\n\n\n\n\n";
 
-runcmd("condor_status -schedd -format '%s\\n' Name");
-
-my $line;
-open(CSUB,">$mysubmitnm") || die "Can't open new submit file $mysubmitnm: $!\n";
-open(TPLATE,"<$cmd_template") || die "Can't open submit file template $cmd_template: $!\n";
-while(<TPLATE>)
-{
-	CondorUtils::fullchomp($_);
-	$line = $_;
-	if( $line =~ /^\s*log\s*= .*$/)
-	{
-		my $lognm = $mysubmitnmlog;
-		#print "New log name: $lognm\n";
-		print CSUB "log = $lognm\n";
-	}
-	elsif( $line =~ /^\s*output\s*= .*$/)
-	{
-		my $outputnm = $mysubmitnmout;
-		#print "New out name: $outputnm\n";
-		print CSUB "output = $outputnm\n";
-	}
-	elsif( $line =~ /^\s*error\s*= .*$/)
-	{
-		my $errornm = $mysubmitnmerr;
-		#print "New error name: $errornm\n";
-		print CSUB "error = $errornm\n";
-	}
-	elsif( $line =~ /^(.*)basic_par_socket(.*)$/)
-	{
-		my $newargs = $1 . " " . $mypid . " " . $2; 
-		#print "New  args are < $newargs >\n";
-		print CSUB "$newargs\n";
-	}
-	else
-	{
-		#print "template: $line\n";
-		print CSUB "$line\n";
-	}
-}
-close(TPLATE);
-close(CSUB);
+runcmd("condor_status -pool $currenthost:$parallelport -schedd -af Name");
 
 # at this point personal should be up and we have the parallel submit
 # file we want.
 
 
-#my $result = system("./job_core_basic_par.pl $mysubmitnm $mypid");
-#CondorTest::debug("Result of basic paarallel  job is  $result\n",$debuglevel);
 
-my $cmdfinal = $mysubmitnm;
+#my $cmdfinal = $mysubmitnm;
 my $pid = $mypid;
 
-#my $testdesc =  'Basic Parallel - Parallel U';
-#my $testname = "job_core_basic_par";
-#my $debuglevel = 1;
 my $outputbase = "job_core_basic_par$pid.out";
 
-CondorTest::debug("Submit file for this test is $cmdfinal\n",$debuglevel);
+#CondorTest::debug("Submit file for this test is $cmdfinal\n",$debuglevel);
 
 my $aborted = sub {
 	my %info = @_;
@@ -175,15 +120,12 @@ my $success = sub
 	while ($count < $max) {
 		$fullfile = $outputbase . $count;
 		my $line = "";
-		#print "$fullfile\n";
-		#system("cat $fullfile");
 		open(OUT,"<$fullfile") or die "Can not open <$fullfile>:$!\n";
 		while(<OUT>) {
-			chomp();
+			fullchomp();
 			$line = $_;
 			if($line =~ /^machine $count/) {
 				$foundcount += 1;
-				#print $line;
 			}
 		}
 		close(OUT);
@@ -200,33 +142,14 @@ my $success = sub
 	CondorTest::RegisterResult(1, "test_name", $testname);
 };
 
-CondorTest::RegisterExitedSuccess( $testname, $success);
-CondorTest::RegisterExecute($testname, $executed);
-
-if( CondorTest::RunTest($testname, $cmdfinal, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
-} else {
-	print "$testname: CondorTest::RunTest() failed\n";
-}
-
-#fails due to directory matching the pattern
-runcmd("cp *job_core_basic_par* $mysaveme", {expect_result=>\&ANY});
-
-if( -e "$mysubmitnm" )
-{
-	runcmd("cp $mysubmitnm $mycorenm");
-}
-
-if( -e "$mysubmitnmout" )
-{
-	runcmd("cp $mysubmitnmcmdout $mycorenmcmdout");
-}
-
-if( -e "$mysubmitnmlog" )
-{
-	runcmd("cp $mysubmitnmlog $mycorenmlog");
-}
-
+SimpleJob::RunCheck(
+	universe=>"parallel",
+    runthis=>"x_echostring.pl",
+	output=>$wantedout,
+    on_execute=>$executed,
+    on_success=>$success,
+    append_submit_commands=>$submitadditions,
+);
 
 CondorTest::EndTest();
 

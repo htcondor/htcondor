@@ -137,7 +137,7 @@ if(!defined($job)) {
 }
 
 print "PID = $job  (will be used as identifier for files)\n";
-system("mkdir -p dir_$job");
+CreateDir("-p dir_$job");
 chdir("dir_$job");
 my $out = "submit_filetrans_output";
 my $out1 = $out . $job . "e.txt";
@@ -147,10 +147,9 @@ my $out4 = $out . $job . "h.txt";
 my $out5 = $out . $job . "i.txt";
 my $out6 = $out . $job . "j.txt";
 
-system("touch $out1 $out2 $out3");
-print "We should see 3 files now:\n";
-system("ls");
-system("cp * ..");
+CreateNonEmptyFile("$out1");
+CreateNonEmptyFile("$out2");
+CreateNonEmptyFile("$out3");
 
 if($onesetout) {
     # create and leave
@@ -161,12 +160,9 @@ if($onesetout) {
 #allow time for vacate
 sleep 20;
 
-system("touch $out4 $out5 $out6");
-print "We should see 3 more files now:\n";
-system("ls");
-system("cp * ..");
-print "Sandbox now contains:\n";
-system("ls ..");
+CreateNonEmptyFile("$out4");
+CreateNonEmptyFile("$out5");
+CreateNonEmptyFile("$out6");
 
 if( $long ) { 
     # create and leave
@@ -192,4 +188,121 @@ Options:
 [--noextrainput]    Only the script is needed and submit_filetrans_input.txt
 [--onesetout]       Create one set of output files and then exit
 \n";
+}
+
+sub CreateEmptyFile {
+    my $name = shift;
+    open(NF,">$name") or die "Failed to create:$name:$!\n";
+    print NF "";
+    close(NF);
+}
+
+sub CreateNonEmptyFile {
+    my $name = shift;
+    open(NF,">$name") or die "Failed to create:$name:$!\n";
+    print NF "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n";
+    close(NF);
+}
+
+sub CreateDir
+{
+	my $cmdline = shift;
+	my @argsin = split /\s/, $cmdline;
+	my $cmdcount = @argsin;
+	my $ret = 0;
+	my $fullcmd = "";
+	my $location = Cwd::getcwd();
+	#print  "\n\n\n\n\n******* CreateDir: $cmdline argcout:$cmdcount while here:$location *******\n\n\n\n\n";
+
+	my $amwindows = is_windows();
+
+	my $winpath = "";
+	if($amwindows == 1) {
+		if(is_windows_native_perl()) {
+			#print "CreateDir:windows_native_perl\n";
+			# what if a linux path first?
+			if($argsin[0] eq "-p") {
+				shift @argsin;
+			}
+			foreach my $dir (@argsin) {
+				#print "Want to make:$dir\n";
+				$_ = $dir;
+				s/\//\\/g;
+				s/\\/\\\\/g;
+				$dir = $_;
+				if(-d "$dir") {
+					next;
+				}
+				#print "$dir does not exist yet\n";
+				$fullcmd = "cmd /C mkdir $dir";
+				$ret = system("$fullcmd");
+				if($ret != 0) {
+					print "THIS:$fullcmd Failed\n";
+				} else {
+						#print "THIS:$fullcmd worked\n";
+						#print "If this worked, it should exist now.\n";
+						#if(-d $dir) {
+							#print "Perl says it does.\n";
+						#} else {
+							#print "Perl says it does NOT.\n";
+						#}
+				}
+			}
+			#print "CreateDir returning now: Return value from CreateDir:$ret\n";
+			return($ret);
+		} else {
+			if($argsin[0] eq "-p") {
+				$winpath = `cygpath -w $argsin[1]`;
+				CondorUtils::fullchomp($winpath);
+				$_ = $winpath;
+				s/\\/\\\\/g;
+				$winpath = $_;
+				if(-d "$argsin[1]") {
+					return($ret);
+				}
+			} else {
+				$winpath = `cygpath -w $argsin[0]`;
+				CondorUtils::fullchomp($winpath);
+				$_ = $winpath;
+				s/\\/\\\\/g;
+				$winpath = $_;
+				if(-d "$argsin[0]") {
+					return($ret);
+				}
+			}
+		}
+
+		$fullcmd = "cmd /C mkdir $winpath";
+		$ret = system("$fullcmd");
+	} else {
+		$fullcmd = "mkdir $cmdline"; 	
+		if(-d $cmdline) {
+			return($ret);
+		}
+		$ret = system("$fullcmd");
+		#print "Tried to create dir got ret value:$ret path:$cmdline/$fullcmd\n";
+	}
+	return($ret);
+}
+
+
+sub is_windows {
+    if (($^O =~ /MSWin32/) || ($^O =~ /cygwin/)) {
+        return 1;
+    }
+    return 0;
+}
+
+sub is_cygwin_perl {
+    if ($^O =~ /cygwin/) {
+        return 1;
+    }
+    return 0;
+}
+
+sub is_windows_native_perl {
+    if ($^O =~ /MSWin32/) {
+         return 1;
+    }
+    return 0;
 }
