@@ -49,7 +49,11 @@ a single cluster, as given by the job ClassAd attribute \Attr{ClusterId}.
 
 \emph{DAGMan enforces the dependencies within a DAG
 using the events recorded in a separate
-file that is specified by the default configuration.}
+file that is specified by the default configuration.
+If the exact same DAG were to be submitted more than once,
+such that these DAGs were running at the same time,
+expected them to fail in unpredictable and unexpected ways.
+They would all be using the same single file to enforce dependencies. }
 
 As DAGMan schedules and submits jobs within nodes to HTCondor,
 these jobs are defined to succeed or fail based on their
@@ -700,6 +704,13 @@ The diamond-shaped DAG example may be submitted with
 condor_submit_dag diamond.dag
 \end{verbatim}
 
+Do not submit the same DAG, with same DAG input file, 
+from within the same directory, 
+such that more than one of this same DAG is running at the same time.
+It will fail in an unpredictable manner,
+as each instance of this same DAG will attempt to use the same
+file to enforce dependencies.
+ 
 To increase robustness and guarantee recoverability, the 
 \Condor{dagman} process is run as an HTCondor job.
 As such, it needs a submit description file.
