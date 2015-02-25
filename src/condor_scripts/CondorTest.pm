@@ -3254,6 +3254,14 @@ sub CoreCheck {
 				# running sequentially or wrapped core should always
 				# belong to the current test. Even if the test has ended
 				# assign blame and move file so we can investigate.
+				if(CondorUtils::is_windows() == 1) {
+					# windows core files are text, going into test output
+					open(CF,"<$fullpath") or die "Failed to open cire file:$fullpath:$!\n";
+					while (<CF>) {
+						print "$_";
+					}
+					close(CF);
+				}
 				my $newname = MoveCoreFile($fullpath,$coredir);
 				FindStackDump($logdir);
 				print "\nFound core: $fullpath\n";

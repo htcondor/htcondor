@@ -21,9 +21,8 @@
 
 use CondorTest;
 use File::Path;
+use Check::SimpleJob;
 
-$cmd = 'job_filexfer_sandbox-empty_van.cmd';
-$testdesc =  'file transfer sandbox empty (vanilla) test';
 $testname = "job_filexfer_sandbox-empty_van";
 
 # How many seconds after the job terminates are we willing to wait to
@@ -64,12 +63,20 @@ $OutputTest = sub
 };
 
 
-CondorTest::RegisterExitedSuccess( $testname, $OutputTest);
+SimpleJob::RunCheck(
+    runthis=>"job_filexfer_sandbox-empty_van.pl",
+    should_transfer_files=>"YES",
+    when_to_transfer_output=>"ON_EXIT",
+    on_success=>$success,
+);
 
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-    CondorTest::debug("$testname: SUCCESS\n",1);
-    exit(0);
-} else {
-    die "$testname: CondorTest::RunTest() failed\n";
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
+{
+    exit(1);
 }
 
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
