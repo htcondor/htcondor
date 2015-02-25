@@ -172,6 +172,10 @@ main(int argc, char *argv[])
 		UseConstraint = true;
 	}
 
+	if (argc <= nextarg) {
+		usage(argv[0]);
+	}
+
 	while (match_prefix(argv[nextarg], "-constraint")) {
 
 		if ( has_proc ){
