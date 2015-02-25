@@ -20,15 +20,16 @@
 
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 
-$cmd = 'job_filexfer_basic_van.cmd';
-$testdesc =  'Do file transfers work - vanilla U';
 $testname = "job_filexfer_basic_van";
+my $pid = $$;
 
+my $return = "submit_transferfile_vanilla$pid.txtdata";
 
 $success = sub {
 	open(SENT,    "<job_filexfer_basic.data")|| die "Can't open job_filexfer_basic.data: $!\n";
-	open(GOTBACK, "<submit_transferfile_vanilla.txtdata") || die "Can't open submit_transferfile_vanilla.txtdata: $!\n";
+	open(GOTBACK, "<$return") || die "Can't open $return: $!\n";
 	local $/;
 	my $sent = <SENT>;
 	my $got  = <GOTBACK>;
@@ -37,14 +38,27 @@ $success = sub {
 	if($sent ne $got) {
 		die "Data was not preserved between file transfers\n";
 	}
-	runcmd("rm submit_transferfile_vanilla.txtdata");
 };
 
-CondorTest::RegisterExitedSuccess($testname, $success);
-if(CondorTest::RunTest($testname, $cmd, 0)) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
+SimpleJob::RunCheck(
+    runthis=>"x_copy_binary_file.pl",
+    duration=>"job_filexfer_basic.data $return",
+    transfer_output_files=>"$return",
+	transfer_input_files=>"job_filexfer_basic.data",
+    should_transfer_files=>"YES",
+    when_to_transfer_output=>"ON_EXIT",
+    on_success=>$success,
+);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
+{
+    exit(1);
 }
+
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
+
 

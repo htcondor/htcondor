@@ -26,6 +26,7 @@ use CondorUtils;
 use Check::SimpleJob;
 
 my $testname = "job_filexfer_limitback_van";
+my $result = 0;
 
 my $pid = $$;
 my $baseoutfile = "submit_filetrans_output" . $pid;
@@ -83,3 +84,13 @@ SimpleJob::RunCheck(
     on_abort=>$abort,
 );
 
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
+{
+    exit(1);
+}
+
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
