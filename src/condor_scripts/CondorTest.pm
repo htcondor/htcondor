@@ -3220,7 +3220,7 @@ sub CoreCheck {
 	if(CondorUtils::is_windows() == 1) {
 		my $windowslogdir = "";
 		if(is_windows_native_perl()) {
-			print "CoreCheck:windows_native_perl\n";
+			#print "CoreCheck:windows_native_perl\n";
 			$logdir =~ s/\//\\/g;
 		} else {
 			#print "CoreCheck for windows\n";
@@ -3236,8 +3236,13 @@ sub CoreCheck {
 	if(defined $test) {
 		TestDebug("Checking: $logdir for test: $test\n",2);
 	}
-	my @files = `ls $logdir`;
+	#my @files = `ls $logdir`;
+	my @files = ();
+	GetDirList(\@files, $logdir);
 	my $totalerrors = 0;
+	#foreach my $perp (@files) {
+		#print "LogDirContent:$perp:\n";
+	#}
 	foreach my $perp (@files) {
 		CondorUtils::fullchomp($perp);
 		$fullpath = $logdir . "/" . $perp;
@@ -3249,6 +3254,14 @@ sub CoreCheck {
 				# running sequentially or wrapped core should always
 				# belong to the current test. Even if the test has ended
 				# assign blame and move file so we can investigate.
+				if(CondorUtils::is_windows() == 1) {
+					# windows core files are text, going into test output
+					open(CF,"<$fullpath") or die "Failed to open cire file:$fullpath:$!\n";
+					while (<CF>) {
+						print "$_";
+					}
+					close(CF);
+				}
 				my $newname = MoveCoreFile($fullpath,$coredir);
 				FindStackDump($logdir);
 				print "\nFound core: $fullpath\n";

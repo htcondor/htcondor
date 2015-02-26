@@ -29,10 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor now sets OMP\_NUM\_THREADS in the job's environment
-to the number of cores of the slot it is running in. This prevents
-OpenMP-linked jobs (including matlab) from attempting to use
-more cores than they have been provisioned.
+\item For an executing job, HTCondor now sets the environment variable 
+\Env{OMP\_NUM\_THREADS} to the number of cores of the slot it is running in.
+This prevents OpenMP-linked jobs (including \Prog{Matlab}) 
+from attempting to use more cores than have been provisioned.
 \Ticket{4884}
 
 \end{itemize}
@@ -41,18 +41,23 @@ more cores than they have been provisioned.
 
 \begin{itemize}
 
-\item Fixed a bug where a collector would be unable to update its own ad
-in some situatons.
+\item Fixed a bug in which a \Condor{collector} daemon would have been unable 
+to update its own ClassAd.
 \Ticket{4850}
 
-\item Fixed a bug introduced in HTCondor 8.3.2 that caused the -absent
-option of \Condor{status} to print duplicated information about each
-ad.
+\item Fixed a bug introduced in HTCondor version 8.3.2 that caused the 
+\Opt{-absent} option of \Condor{status} to print duplicated information 
+about each ClassAd.
 \Ticket{4853}
 
 \item The python bindings now accept ClassAd expressions for the constraint
-of a Schedd or a Collector query, matching the behavior documented in the manual.
+of a \Condor{schedd} daemon or a \Condor{collector} daemon query, 
+matching the behavior documented in this reference manual.
 \Ticket{4907}
+
+\item Fixed a bug introduced in HTCondor 8.3.3 that caused local universe
+jobs to execute repeatedly on Windows.
+\Ticket{4909}
 
 \end{itemize}
 

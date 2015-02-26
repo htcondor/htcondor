@@ -20,7 +20,7 @@ my $btdebug = 0;
 
 use base 'Exporter';
 
-our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl is_cygwin_perl fullchomp CreateDir CopyIt TarCreate TarExtract MoveIt DirLs List WhereIsInstallDir quoteMyString);
+our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl is_cygwin_perl fullchomp CreateEmptyFile CreateDir CopyIt TarCreate TarExtract MoveIt GetDirList DirLs List WhereIsInstallDir quoteMyString);
 
 sub TRUE{1};
 sub FALSE{0};
@@ -609,6 +609,13 @@ sub quoteMyString {
 	return($returnstr);
 }
 
+sub CreateEmptyFile {
+	my $name = shift;
+	open(NF,">$name") or die "Failed to create:$name:$!\n";
+	print NF "";
+	close(NF);
+}
+
 sub CreateDir
 {
 	my $cmdline = shift;
@@ -729,6 +736,21 @@ sub List
 		$ret = system("ls $cmdline");
 	}
 	return($ret);
+}
+
+sub GetDirList {
+	my $arrayref = shift;
+	my $targetdir = shift;
+	my $startdir = Cwd::getcwd();
+	chdir("$targetdir");
+	opendir DS, "." or die "Can not open dataset: $1\n";
+	foreach my $subfile (readdir DS)
+	{
+		next if $subfile =~ /^\.\.?$/;
+		push  @{$arrayref}, $subfile;
+	}
+	close(DS);
+	chdir("$startdir");
 }
 
 sub DirLs

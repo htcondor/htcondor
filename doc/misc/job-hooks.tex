@@ -552,16 +552,15 @@ cat > /dev/null
 echo 'Cmd = "/usr/java/java5/bin/java"'
 \end{verbatim}
 
-If some machines in your pool have this hook, and others don't,
-you'll probably want to advertise that fact.  Add this to the
-execute side configuration file on machines that have the hook.
+If some machines in your pool have this hook and others do not,
+this fact should be advertised.
+Add to the configuration of every execute machine that has the hook:
 
 \begin{verbatim}
-
-HasJava5PrepareHook = true
-STARTD_EXPRS = HasJava5PrepareHook
-
+HasJava5PrepareHook = True
+STARTD_ATTRS = HasJava5PrepareHook $(STARTD_ATTRS)
 \end{verbatim}
+
 The submit description file for this example job may be
 \footnotesize
 \begin{verbatim}

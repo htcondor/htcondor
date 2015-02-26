@@ -152,7 +152,7 @@ EventIterator::poll(int timeout_ms)
 boost::python::object
 EventIterator::next_nostop()
 {
-    boost::python::object stopIteration = boost::python::import("exceptions").attr("StopIteration");
+    boost::python::object stopIteration = py_import("exceptions").attr("StopIteration");
     boost::python::object result = boost::python::object();
     try
     {

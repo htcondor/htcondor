@@ -23,11 +23,10 @@ use warnings;
 
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 
-my $cmd      = 'job_filexfer_limitback_van.cmd';
-my $cmdnew   = $cmd . ".modified";
-my $testdesc = 'Base file transfer requesting a subset of output files - vanilla U';
 my $testname = "job_filexfer_limitback_van";
+my $result = 0;
 
 my $pid = $$;
 my $baseoutfile = "submit_filetrans_output" . $pid;
@@ -74,29 +73,24 @@ my $timed = sub {
 CondorTest::debug("PID = $pid\n", 1);
 my $args = "--job=$pid --onesetout ";
 
-# open submitfile and fix
-print "Submit file contents:\n";
-open(CMD, '<', $cmd) || die "Can not open $cmd for reading: $!\n";
-open(NEWCMD, '>', $cmdnew) || die "Can not open $cmd for writing: $!\n";
-while(<CMD>) {
-    s/^\s*(transfer_output_files)\s*=.*/$1 = $outf,$outg/;
-    s/^\s*(arguments)\s*=.*/$1 = $args/;
-    print NEWCMD $_;
-    print "\t$_";
-}
-close(CMD);
-close(NEWCMD);
+SimpleJob::RunCheck(
+    runthis=>"x_job_filexfer_testjob.pl",
+    duration=>"$args",
+    transfer_output_files=>"$outf,$outg",
+    should_transfer_files=>"YES",
+    when_to_transfer_output=>"ON_EXIT",
+    on_success=>$success,
+    on_execute=>$execute,
+    on_abort=>$abort,
+);
 
-CondorTest::RegisterExecute($testname, $execute);
-CondorTest::RegisterAbort($testname, $abort);
-CondorTest::RegisterExitedSuccess($testname, $success);
-#CondorTest::RegisterTimed($testname, $timed, 3600);
+CondorTest::EndTest();
+print scalar localtime() . "\n";
 
-if( CondorTest::RunTest($testname, $cmdnew, 0) ) {
-    CondorTest::debug("$testname: SUCCESS\n", 1);
-    exit(0);
-}
-else {
-    die "$testname: CondorTest::RunTest() failed\n";
+if( $result != 0 )
+{
+    exit(1);
 }
 
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);

@@ -69,7 +69,7 @@ extern "C"
         {
             try
             {
-                boost::python::import(boost::python::str(tmpMod));
+                py_import(boost::python::str(tmpMod));
             }
             catch (...)
             {
@@ -101,7 +101,7 @@ handle_pyerror()
     boost::python::object formatted_list, formatted;
     PyErr_Fetch(&exc,&val,&tb);
     boost::python::handle<> hexc(exc), hval(boost::python::allow_null(val)), htb(boost::python::allow_null(tb)); 
-    boost::python::object traceback(boost::python::import("traceback"));
+    boost::python::object traceback(py_import("traceback"));
     boost::python::object format_exception(traceback.attr("format_exception"));
     formatted_list = format_exception(hexc,hval,htb);
     formatted = boost::python::str("\n").join(formatted_list);
@@ -144,7 +144,7 @@ python_invoke_internal (boost::python::object                        pyFunc,
         pyKw["state"] = wrapper;
     }
 
-    boost::python::object pyResult = boost::python::import("__main__").attr("__builtins__").attr("apply")(pyFunc, pyArgs, pyKw);
+    boost::python::object pyResult = py_import("__main__").attr("__builtins__").attr("apply")(pyFunc, pyArgs, pyKw);
     classad::ExprTree* exprTreeResult = convert_python_to_exprtree(pyResult);
     if (!exprTreeResult || !exprTreeResult->Evaluate(state, result))
     {
@@ -226,7 +226,7 @@ python_invoke (const char *                 name,
 
     try
     {
-        boost::python::object module = boost::python::import(boost::python::str(moduleName));
+        boost::python::object module = py_import(boost::python::str(moduleName));
         boost::python::object pyFunc = module.attr(functionName.c_str());
         return python_invoke_internal(pyFunc, arguments, state, result);
     }
