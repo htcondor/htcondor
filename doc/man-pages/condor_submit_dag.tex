@@ -57,6 +57,23 @@ of a DAG to HTCondor.
 Extensive documentation is in the HTCondor User Manual
 section on DAGMan.
 
+\index{email notification!in DAGs}
+\index{notification!e-mail in DAGs}
+Some options may be specified on the command line
+or in the configuration
+or in a node job's submit description file.
+Precedence is given to command line options or configuration
+over settings from a submit description file.
+An example is e-mail notifications.
+When configuration variable \Macro{DAGMAN\_SUPPRESS\_NOTIFICATION}
+is its default value of \Expr{True}, 
+and a node job's submit description file contains
+\begin{verbatim}
+  notification = Complete
+\end{verbatim}
+e-mail will \emph{not} be sent upon completion,
+as the value of \MacroNI{DAGMAN\_SUPPRESS\_NOTIFICATION} is enforced.
+
 \begin{Options}
   \OptItem{\Opt{-help}}{Display usage information.}
   \OptItem{\Opt{-version}}{Display version information.}
