@@ -312,6 +312,7 @@ const char	*ToolDaemonOutput = "tool_daemon_output";
 const char	*SuspendJobAtExec = "suspend_job_at_exec";
 
 const char	*TransferInputFiles = "transfer_input_files";
+const char	*PublicInputFiles = "public_input_files";
 const char	*TransferOutputFiles = "transfer_output_files";
 const char    *TransferOutputRemaps = "transfer_output_remaps";
 const char	*TransferExecutable = "transfer_executable";
@@ -3178,6 +3179,25 @@ SetTransferFiles()
 	if( should_transfer != STF_NO ) {
 		if ( input_files.Length() > 0 ) {
 			InsertJobExpr (input_files);
+		}
+		char *public_input_files = 
+			condor_param(PublicInputFiles, ATTR_PUBLIC_INPUT_FILES);
+		if (public_input_files) {
+			StringList pub_inp_file_list(NULL, ",");
+			pub_inp_file_list.initializeFromString(public_input_files);
+			MyString unusedstr;
+			bool unusedbool = false;
+			// Process file list, but output string is for ATTR_TRANSFER_INPUT_FILES,
+			// so it's not used here.
+			process_input_file_list(&pub_inp_file_list, &unusedstr, &unusedbool);
+			if (pub_inp_file_list.isEmpty() == false) {
+			  char *inp_file_str = pub_inp_file_list.print_to_string();
+			  if (inp_file_str) {
+			    	InsertJobExprString(ATTR_PUBLIC_INPUT_FILES, inp_file_str);
+			  	free(inp_file_str);
+			  }
+			}
+			free(public_input_files);
 		}
 		if ( output_files.Length() > 0 ) {
 			InsertJobExpr (output_files);

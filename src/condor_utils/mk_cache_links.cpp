@@ -22,9 +22,12 @@
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_config.h"
+#include "condor_constants.h"
 #include "condor_md.h"
 #include "directory_util.h"
+#include "filename_tools.h"
 #include "stat_wrapper.h"
+
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32
@@ -41,7 +44,7 @@ namespace {	// Anonymous namespace to limit scope of names to this file
 const int HASHNAMELEN = 17;
 
 
-string MakeHashName(const char *fileName) {
+static string MakeHashName(const char *fileName) {
   unsigned char result[HASHNAMELEN * 3]; // Allocate extra space for safety.
   memcpy(result, Condor_MD_MAC::computeOnce((unsigned char *) fileName,
 	  strlen(fileName)), HASHNAMELEN);
@@ -56,7 +59,7 @@ string MakeHashName(const char *fileName) {
 }
 
 
-bool MakeLink(const char *const srcFile, const string &newLink) {
+static bool MakeLink(const char *const srcFile, const string &newLink) {
   const char *const webRootDir = param("WEB_ROOT_DIR");
   if (webRootDir == NULL) {
     dprintf(D_ALWAYS, "WEB_ROOT_DIR not set\n");
@@ -107,6 +110,18 @@ bool MakeLink(const char *const srcFile, const string &newLink) {
 } // end namespace
 
 
+static string MakeAbsolutePath(const char *path, ClassAd *const Ad, 
+  const char *const iwd) {
+  if (is_relative_to_cwd(path)) {
+    string fullpath = iwd;
+    fullpath += DIR_DELIM_CHAR;
+    fullpath += path;
+    return (fullpath);
+  }
+  return (path);
+}
+
+
 void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
   StringList &PubInpFiles) {
   char *buf = NULL;
@@ -123,9 +138,15 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
     PubInpFiles.rewind();
     const char *path;
     MyString remap;
+    char *iwd = NULL;
+    if (Ad->LookupString(ATTR_JOB_IWD, &iwd) != 1) {
+      dprintf(D_FULLDEBUG, "mk_cache_links.cpp: Job ad did not have an iwd!\n");
+      return;
+    }
     while ((path = PubInpFiles.next()) != NULL) {
-      string hashName = MakeHashName(path);
-      if (MakeLink(path, hashName)) {
+      string fullpath = MakeAbsolutePath(path, Ad, iwd);
+      string hashName = MakeHashName(fullpath.c_str());
+      if (MakeLink(fullpath.c_str(), hashName)) {
 	InputFiles->remove(path); // Remove plain file name from InputFiles
 	remap +=hashName;
 	remap += "=";
@@ -139,6 +160,7 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 	} else dprintf(D_FULLDEBUG, "url already in InputFiles: %s\n", namePtr);
       }
     }
+    free(iwd);
     if (remap.Length() > 0) {
       MyString remapnew;
       if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS, &buf) == 1) {
