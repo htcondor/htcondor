@@ -104,7 +104,7 @@ extern "C" {
 	
 // Function prototypes
 bool real_config(const char* host, int wantsQuiet, int config_options);
-int Read_config(const char*, int depth, MACRO_SET& macro_set, int, bool, const char * subsys, std::string & errmsg);
+//int Read_config(const char*, int depth, MACRO_SET& macro_set, int, bool, const char * subsys, std::string & errmsg);
 bool Test_config_if_expression(const char * expr, bool & result, std::string & err_reason, MACRO_SET& macro_set, const char * subsys);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
@@ -124,7 +124,7 @@ void check_params();
 bool find_user_file(MyString & filename, const char * basename, bool check_access);
 
 // External variables
-extern int	ConfigLineNo;
+//extern int	ConfigLineNo;
 }  /* End extern "C" */
 
 
@@ -134,10 +134,10 @@ static MACRO_SET ConfigMacroSet = {
 	0, 0,
 	/* CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULT | */ 0,
 	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &ConfigMacroDefaults };
-const MACRO_SOURCE DetectedMacro = { true,  0, -2, -1, -2 };
-const MACRO_SOURCE DefaultMacro  = { true,  1, -2, -1, -2 };
-const MACRO_SOURCE EnvMacro      = { false, 2, -2, -1, -2 };
-const MACRO_SOURCE WireMacro     = { false, 3, -2, -1, -2 };
+const MACRO_SOURCE DetectedMacro = { true,  false, 0, -2, -1, -2 };
+const MACRO_SOURCE DefaultMacro  = { true,  false, 1, -2, -1, -2 };
+const MACRO_SOURCE EnvMacro      = { false, false, 2, -2, -1, -2 };
+const MACRO_SOURCE WireMacro     = { false, false, 3, -2, -1, -2 };
 
 #ifdef _POOL_ALLOCATOR
 
@@ -1135,12 +1135,17 @@ process_config_source( const char* file, int depth, const char* name,
 		}
 	} else {
 		std::string errmsg;
-		rval = Read_config(file, depth, ConfigMacroSet, EXPAND_LAZY,
-							false, get_mySubSystem()->getName(), errmsg);
+		MACRO_SOURCE source;
+		FILE * fp = Open_macro_source(source, file, false, ConfigMacroSet, errmsg);
+		if ( ! fp) { rval = -1; }
+		else {
+			rval = Parse_macros(fp, source, depth, ConfigMacroSet, 0, get_mySubSystem()->getName(), errmsg, NULL, NULL);
+			rval = Close_macro_source(fp, source, ConfigMacroSet, rval); fp = NULL;
+		}
 		if( rval < 0 ) {
 			fprintf( stderr,
 					 "Configuration Error Line %d while reading %s %s\n",
-					 ConfigLineNo, name, file );
+					 source.line, name, file );
 			if (!errmsg.empty()) { fprintf(stderr, "%s\n", errmsg.c_str()); }
 			exit( 1 );
 		}
@@ -3223,11 +3228,79 @@ set_runtime_config(char *admin, char *config)
 
 extern "C" {
 
+static bool Check_config_source_security(FILE* conf_fp, const char * config_source)
+{
+#ifndef WIN32
+		// unfortunately, none of this works on windoze... (yet)
+	if ( is_piped_command(config_source) ) {
+		fprintf( stderr, "Configuration Error File <%s>: runtime config "
+					"not allowed to come from a pipe command\n",
+					config_source );
+		return false;
+	}
+	int fd = fileno(conf_fp);
+	struct stat statbuf;
+	uid_t f_uid;
+	int rval = fstat( fd, &statbuf );
+	if( rval < 0 ) {
+		fprintf( stderr, "Configuration Error File <%s>, fstat() failed: %s (errno: %d)\n",
+					config_source, strerror(errno), errno );
+		return false;
+	}
+	f_uid = statbuf.st_uid;
+	if( can_switch_ids() ) {
+			// if we can switch, the file *must* be owned by root
+		if( f_uid != 0 ) {
+			fprintf( stderr, "Configuration Error File <%s>, "
+						"running as root yet runtime config file owned "
+						"by uid %d, not 0!\n", config_source, (int)f_uid );
+			return false;
+		}
+	} else {
+			// if we can't switch, at least ensure we own the file
+		if( f_uid != get_my_uid() ) {
+			fprintf( stderr, "Configuration Error File <%s>, "
+						"running as uid %d yet runtime config file owned "
+						"by uid %d!\n", config_source, (int)get_my_uid(),
+						(int)f_uid );
+			return false;
+		}
+	}
+#endif /* ! WIN32 */
+	return true;
+}
+
+static void process_persistent_config_or_die (const char * source_file, bool top_level)
+{
+	int rval = 0;
+
+	std::string errmsg;
+
+	MACRO_SOURCE source;
+	insert_source(source_file, ConfigMacroSet, source);
+	FILE* fp = safe_fopen_wrapper_follow(source_file, "r");
+	if ( ! fp) { rval = -1; errmsg = "can't open file"; }
+	else {
+		if ( ! Check_config_source_security(fp, source_file)) {
+			rval = -1;
+		} else {
+			rval = Parse_macros(fp, source, 0, ConfigMacroSet, 0, get_mySubSystem()->getName(), errmsg, NULL, NULL);
+		}
+		fclose(fp); fp = NULL;
+	}
+
+	if (rval < 0) {
+		dprintf( D_ALWAYS | D_FAILURE, "Configuration Error Line %d %s while reading"
+					"%s persistent config source: %s\n",
+					source.line, errmsg.c_str(), top_level ? " top-level" : " ", source_file );
+		exit(1);
+	}
+}
+
 static int
 process_persistent_configs()
 {
 	char *tmp = NULL;
-	int rval;
 	bool processed = false;
 
 	if( access( toplevel_persistent_config.Value(), R_OK ) == 0 &&
@@ -3235,15 +3308,20 @@ process_persistent_configs()
 	{
 		processed = true;
 
+#if 1
+		process_persistent_config_or_die(toplevel_persistent_config.Value(), true);
+#else
 		std::string errmsg;
-		rval = Read_config(toplevel_persistent_config.Value(), 0, ConfigMacroSet,
-						EXPAND_LAZY, true, get_mySubSystem()->getName(), errmsg);
+		int rval = Read_macros(toplevel_persistent_config.Value(), 0, ConfigMacroSet,
+						READ_MACROS_CHECK_RUNTIME_SECURITY,
+						get_mySubSystem()->getName(), errmsg, NULL, NULL);
 		if (rval < 0) {
 			dprintf( D_ALWAYS | D_FAILURE, "Configuration Error Line %d %s while reading "
 					 "top-level persistent config source: %s\n",
 					 ConfigLineNo, errmsg.c_str(), toplevel_persistent_config.Value() );
 			exit(1);
 		}
+#endif
 
 		tmp = param ("RUNTIME_CONFIG_ADMIN");
 		if (tmp) {
@@ -3258,15 +3336,20 @@ process_persistent_configs()
 		MyString config_source;
 		config_source.formatstr( "%s.%s", toplevel_persistent_config.Value(),
 							   tmp );
+#if 1
+		process_persistent_config_or_die(config_source.Value(), false);
+#else
 		std::string errmsg;
-		rval = Read_config(config_source.Value(), 0, ConfigMacroSet,
-						EXPAND_LAZY, true, get_mySubSystem()->getName(), errmsg);
+		int rval = Read_macros(config_source.Value(), 0, ConfigMacroSet,
+						READ_MACROS_CHECK_RUNTIME_SECURITY,
+						get_mySubSystem()->getName(), errmsg, NULL, NULL);
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d %s"
 					 "while reading persistent config source: %s\n",
 					 ConfigLineNo, errmsg.c_str(), config_source.Value() );
 			exit(1);
 		}
+#endif
 	}
 	return (int)processed;
 }
@@ -3275,12 +3358,23 @@ process_persistent_configs()
 static int
 process_runtime_configs()
 {
-	int i, rval, fd;
+	int i, rval;
 	bool processed = false;
+
+	MACRO_SOURCE source;
+	insert_source("<runtime>", ConfigMacroSet, source);
 
 	for (i=0; i <= rArray.getlast(); i++) {
 		processed = true;
-
+		source.line = i;
+#if 1
+		rval = Parse_config_string(source, 0, rArray[i].config, ConfigMacroSet, get_mySubSystem()->getName());
+		if (rval < 0) {
+			dprintf( D_ALWAYS | D_ERROR, "Configuration Error parsing runtime[%d] name '%s', at line %d in config: %s\n",
+					 i, rArray[i].admin, source.meta_off+1, rArray[i].config);
+			exit(1);
+		}
+#else
 		char* tmp_dir = temp_dir_path();
 		ASSERT(tmp_dir);
 		MyString tmp_file_tmpl = tmp_dir;
@@ -3288,7 +3382,7 @@ process_runtime_configs()
 		tmp_file_tmpl += "/cndrtmpXXXXXX";
 
 		char* tmp_file = strdup(tmp_file_tmpl.Value());
-		fd = condor_mkstemp( tmp_file );
+		int fd = condor_mkstemp( tmp_file );
 		if (fd < 0) {
 			dprintf( D_ALWAYS, "condor_mkstemp(%s) returned %d, '%s' (errno %d) in "
 				 "process_dynamic_configs()\n", tmp_file, fd,
@@ -3308,8 +3402,8 @@ process_runtime_configs()
 			exit(1);
 		}
 		std::string errmsg;
-		rval = Read_config(tmp_file, 0, ConfigMacroSet,
-						EXPAND_LAZY, false, get_mySubSystem()->getName(), errmsg);
+		rval = Read_macros(tmp_file, 0, ConfigMacroSet,
+						0, get_mySubSystem()->getName(), errmsg, NULL, NULL);
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d %s"
 					 "while reading %s, runtime config: %s\n",
@@ -3319,6 +3413,7 @@ process_runtime_configs()
 		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink(tmp_file);
 		free(tmp_file);
+#endif
 	}
 
 	return (int)processed;

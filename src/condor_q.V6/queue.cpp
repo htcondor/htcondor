@@ -4177,7 +4177,8 @@ static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios)
 		fprintf(stderr, "Can't open file of user priorities: %s\n", filename);
 		return -1;
 	} else {
-		while (const char * line = getline(file)) {
+		int lineno = 0;
+		while (const char * line = getline_trim(file, lineno)) {
 			std::string attr, value;
 			int id = parse_userprio_line(line, attr, value);
 			if (id <= 0) {

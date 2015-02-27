@@ -1175,7 +1175,8 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 		return FALSE;
     } else {
     
-    	while ((buffer = getline(fd))) {
+		int lineno = 0;
+		while ((buffer = getline_trim(fd, lineno, GETLINE_TRIM_SIMPLE_CONTINUATION))) {
         	char * token;
         	token = strtok(buffer, "= ");
         	if(token) {

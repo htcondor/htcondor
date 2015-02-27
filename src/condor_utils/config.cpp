@@ -37,10 +37,11 @@ extern "C" {
 
 #define CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE        1
 #define CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT  2
-static char *getline_implementation(FILE * fp, int buffer_size, int options);
+static char *getline_implementation(FILE * fp, int buffer_size, int options, int & line_number);
 extern "C++" void param_default_set_use(const char * name, int use, MACRO_SET & set);
 
-int		ConfigLineNo;
+
+//int		ConfigLineNo;
 
 /* WARNING: When we mean alphanumeric in this snippet of code, we really mean 
 	characters that are legal in a C indentifier plus period and forward slash.
@@ -206,7 +207,6 @@ is_piped_command(const char* filename)
 	return retVal;
 }
 
-int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, MACRO_SET& macro_set, const char * subsys);
 
 int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const char * rhs, MACRO_SET& macro_set, const char * subsys)
 {
@@ -775,6 +775,7 @@ bool ConfigIfStack::line_is_if(const char * line, std::string & errmsg, MACRO_SE
 //
 int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, MACRO_SET& macro_set, const char * subsys)
 {
+	const bool is_submit = macro_set.options & CONFIG_OPT_SUBMIT_SYNTAX;
 	source.meta_off = -1;
 
 	ConfigIfStack ifstack;
@@ -868,6 +869,15 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 			if (retval < 0) {
 				return retval;
 			}
+		} else if (is_submit && (*name == '+' || *name == '-')) {
+
+			// submit files have special +Attr= and -Attr= syntax that is used to store raw 
+			// key/value pairs directly into the job ad. We will put them into the submit
+			// macro set with a "MY." prefix on their names.
+			//
+			std::string plusname = "MY."; plusname += (name+1);
+			insert(plusname.c_str(), (*name=='+') ? rhs : "", macro_set, source);
+
 		} else {
 
 			/* Check that "name" is a legal identifier : only
@@ -894,6 +904,488 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 }
 
 int
+Parse_macros(
+	FILE* conf_fp,
+	MACRO_SOURCE& FileSource,
+	int depth, // a simple recursion detector
+	MACRO_SET& macro_set,
+	int options,
+	const char * subsys,
+	std::string& config_errmsg,
+	int (*fnSubmit)(void* pv, MACRO_SOURCE& source, MACRO_SET& set, const char * line, std::string & errmsg),
+	void * pvSubmitData)
+{
+	char*	name = NULL;
+	char*	value = NULL;
+	char*	rhs = NULL;
+	char*	ptr = NULL;
+	char	op, name_end_ch;
+	int		retval = 0;
+	bool	firstRead = true;
+	const int gl_opt_old = 0;
+	const int gl_opt_new = CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE | CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT;
+	int gl_opt = (macro_set.options & CONFIG_OPT_OLD_COM_IN_CONT) ? gl_opt_old : gl_opt_new;
+	bool gl_opt_smart = (macro_set.options & CONFIG_OPT_SMART_COM_IN_CONT) ? true : false;
+	int opt_meta_colon = (macro_set.options & CONFIG_OPT_COLON_IS_META_ONLY) ? 1 : 0;
+	ConfigIfStack ifstack;
+
+	bool is_submit = (fnSubmit != NULL);
+	const char * source_file = macro_source_filename(FileSource, macro_set);
+	const char * source_type = is_submit ? "Submit file" : "Config source";
+
+	while (true) {
+		name = getline_implementation(conf_fp, 128, gl_opt, FileSource.line);
+		// If the file is empty the first time through, warn the user.
+		if (name == NULL) {
+			if (firstRead) {
+				dprintf(D_FULLDEBUG, "WARNING: %s is empty: %s\n", source_type, source_file);
+			}
+			break;
+		}
+		firstRead = false;
+		
+		/* Skip over comments */
+		if( *name == '#' || blankline(name) ) {
+			if (gl_opt_smart) {
+				if (MATCH == strcasecmp(name, "#opt:oldcomment")) {
+					gl_opt = gl_opt_old;
+				} else if (MATCH == strcasecmp(name, "#opt:newcomment")) {
+					gl_opt = gl_opt_new;
+				} else if (MATCH == strcasecmp(name, "#opt:strict")) {
+					opt_meta_colon = 2;
+				}
+			}
+			continue;
+		}
+
+		// to allow if/else constructs to be used in files that are parsed by pre 8.1.5 HTCondor
+		// we ignore a ':' at the beginning of the line of an if body.
+		// before 8.1.5, a line that began with ':' would be effectively ignored*.
+		// now we ignore the ':' but not the rest of the line, so a ':' can be used to make lines
+		// invisible to the old config parser, but not the current one.  To help avoid regression
+		// we only ignore ':' at the start of lines that constitute an if body
+		if (*name == ':') {
+			if (ifstack.inside_if()
+				|| (name[1] == 'i' && name[2] == 'f' && (isspace(name[3]) || !name[3]))) {
+				++name;
+			}
+		}
+
+		// if the line is an if/elif/else/endif handle it here, updating the ifstack as needed.
+		std::string errmsg;
+		if (ifstack.line_is_if(name, errmsg, macro_set, subsys)) {
+			if ( ! errmsg.empty()) {
+				dprintf(D_CONFIG | D_FAILURE, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), name);
+				config_errmsg = errmsg;
+				retval = -1;
+				goto cleanup;
+			} else {
+				dprintf(D_CONFIG | D_VERBOSE, "config %s:%lld,%lld,%lld line: %s\n", name, ifstack.top, ifstack.state, ifstack.estate, name);
+			}
+			continue;
+		}
+		// if the line is inside the body of an if/elif/else that is false, ignore it.
+		if ( ! ifstack.enabled()) {
+			dprintf(D_CONFIG | D_VERBOSE, "config if(%lld,%lld,%lld) ignoring: %s\n", ifstack.top, ifstack.state, ifstack.estate, name);
+			continue;
+		}
+
+		op = 0;
+		ptr = name;
+
+		// Assumption is that the line starts with a non whitespace
+		// character
+		// Example :
+		// OP_SYS=SunOS
+		while( *ptr ) {
+			if( isspace(*ptr) || ISOP(*ptr) ) {
+			  /* *ptr is now whitespace or '=' or ':' */
+			  break;
+			} else {
+			  ptr++;
+			}
+		}
+
+		if( !*ptr ) {
+				// Here we have determined the line has a name but no operator or whitespace after it.
+			if (is_submit) {
+				// a line with no operator may be a QUEUE statement, so hand it off to the queue callback.
+				retval = fnSubmit(pvSubmitData, FileSource, macro_set, name, errmsg);
+				if (retval != 0)
+					goto cleanup;
+				continue;
+			} else if ( name && name[0] == '[' ) {
+				// Treat a line w/o an operator that begins w/ a square bracket
+				// as a comment so a config file can look like
+				// a Win32 .ini file for MS Installer purposes.		
+				continue;
+			} else {
+				// No operator and no square bracket... bail.
+				retval = -1;
+				goto cleanup;
+			}
+		}
+
+#if 1 // SUBMIT_USING_CONFIG_PARSER
+		char * pop = ptr; // keep track of where we see the operator
+		op = *pop;
+		char * name_end = ptr; // keep track of where we null-terminate the name, so we can reverse it later
+		name_end_ch = *name_end;
+		if (*ptr) { *ptr++ = '\0'; }
+		// scan for an operator character if we don't have one already.
+		if ( ! ISOP(op)) {
+			while ( *ptr && ! ISOP(*ptr) ) {
+				++ptr;
+			}
+			pop = ptr;
+			op = *ptr;
+			if (op) ++ptr;
+		}
+		// if we still haven't got an operator, then this isn't a valid config line,
+		// (it *might* be a valid submit line however.)
+		if ( ! ISOP(op) && ! is_submit) {
+			retval = -1;
+			goto cleanup;
+		}
+#else
+		char * pop = ptr; // keep track of where we see the operator
+		if( ISOP(*ptr) ) {
+			op = *ptr;
+			//op is now '=' in the above eg
+			*ptr++ = '\0';
+			// name is now 'OpSys' in the above eg
+		} else {
+			*ptr++ = '\0';
+			while( *ptr && !ISOP(*ptr) ) {
+				ptr++;
+			}
+			if( !*ptr  && ! is_submit) {
+				// Here we have determined the line has no operator at all
+				retval = -1;
+				goto cleanup;
+			}
+			pop = ptr;
+			op = *ptr++;
+		}
+#endif
+
+		/* Skip to next non-space character */
+		while( *ptr && isspace(*ptr) ) {
+			ptr++;
+		}
+
+		rhs = ptr;
+		// rhs is now 'SunOS' in the above eg
+
+		// in order to prevent "use" and "include" from looking like valid config in 8.0 and earlier
+		// they can optionally be preceeded with an @ that doesn't change the  meaning, but will
+		// generate a syntax error in 8.0 and earlier.
+		bool has_at = (*name == '@');
+		int is_include = (op == ':' && MATCH == strcasecmp(name + has_at, "include"));
+		bool is_meta = (op == ':' && MATCH == strcasecmp(name + has_at, "use"));
+
+		// if the name is 'use' then this is a metaknob, so the actual name
+		// is the word after 'use'. so we want to find that word and
+		// remove trailing spaces from it.
+		if (is_meta) {
+			// set name to point to the word after use (if there is one)
+			if (name+has_at+4 < pop) {
+				name += has_at+4;
+				while (isspace(*name) && name < pop) { ++name; }
+				char * p = pop-1;
+				while (isspace(*p) && p > name) { *p-- = 0; }
+			} else {
+				name += has_at+3; // this will point at the null terminator of 'use'
+			}
+		} else if (is_include) {
+			// check for keywords after "include" and before the :
+			// these keywords will modifity the behavior of include
+			if (name+has_at+8 < pop) {
+				name += has_at+8;
+				while (isspace(*name)) ++name; // skip whitespace
+				*pop = 0; // guarantee null term for include keyword.
+				char * p = pop-1;
+				while (isspace(*p) && p > name) { *p-- = 0; }
+				if (*name) {
+					if (MATCH == strcasecmp(name, "output")) is_include = 2; // a value of 2 indicates a command rather than a filename.
+					else if (MATCH == strcasecmp(name, "command")) is_include = 2; // a value of 2 indicates a command rather than a filename.
+					else {
+						config_errmsg = "unexpected keyword '";
+						config_errmsg += name;
+						config_errmsg += "' after include";
+						return -1;
+					}
+				}
+			}
+			// set name to be the filename or command line.
+			name = pop+1;
+			while (isspace(*name)) ++name; // skip whitespace before the filename
+		} else if (op == ':' && ! is_submit) {
+		#ifdef WARN_COLON_FOR_PARAM_ASSIGN
+			if (opt_meta_colon < 2) { op = '='; } // change the op to = so that we don't "goto cleanup" below
+
+			// backward compat hack. the old config file used : syntax for RunBenchmarks,
+			// so grandfather this in. tread error as warning, tread warning as ignore.
+			if (MATCH == strcasecmp(name, "RunBenchmarks")) { op = '='; if (opt_meta_colon < 2) opt_meta_colon = 0; }
+
+			if (opt_meta_colon) {
+				fprintf( stderr, "%s %s \"%s\", Line %d: obsolete use of ':' for parameter assignment at %s : %s\n",
+						source_type, op == ':' ? "Error" : "Warning",
+						source_file, FileSource.line,
+						name, rhs
+						);
+				if (op == ':') {
+					retval = -1;
+					goto cleanup;
+				}
+			}
+		#endif // def WARN_COLON_FOR_PARAM_ASSIGN
+		}
+
+		// Expand references to other parameters in the macro name.
+		// this returns a strdup'd string even if there are no macros to expand.
+		bool use_default_param_table = (macro_set.options & CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO) != 0;
+		char * line = name; // in case we need to get back to pre-expanded state (for submit)
+		name = expand_macro(name, macro_set, use_default_param_table, subsys);
+		if( name == NULL ) {
+			retval = -1;
+			goto cleanup;
+		}
+		// name is now a copy of the original, so we can put back the character that we
+		// overwrote with the null terminator so that line is the original line we read.
+		*name_end = name_end_ch;
+
+		// if this is a metaknob
+		if (is_meta) {
+			//FileSource.line = ConfigLineNo;
+			retval = read_meta_config(FileSource, depth+1, name, rhs, macro_set, subsys);
+			if (retval < 0) {
+				fprintf( stderr,
+							"%s Error \"%s\", Line %d: at use %s:%s\n",
+							source_type, source_file, FileSource.line, name, rhs );
+				goto cleanup;
+			}
+		} else if (is_include) {
+#if 1
+			MACRO_SOURCE InnerSource;
+			FILE* fp = Open_macro_source(InnerSource, name, (is_include > 1), macro_set, config_errmsg);
+			if ( ! fp) { retval = -1; }
+			else {
+				if (depth+1 >= CONFIG_MAX_NESTING_DEPTH) {
+					config_errmsg = "includes nested too deep";
+					retval = -2; // indicate that nesting depth has been exceeded.
+				} else {
+					if ( ! is_submit) local_config_sources.append(macro_source_filename(InnerSource, macro_set));
+					retval = Parse_macros(fp, InnerSource, depth+1, macro_set, options, subsys, config_errmsg, fnSubmit, pvSubmitData);
+				}
+			}
+			if (retval < 0) {
+				fprintf( stderr,
+							"%s Error \"%s\", Line %d, Include Depth %d: %s\n",
+							source_type, name, InnerSource.line, depth+1, config_errmsg.c_str());
+				config_errmsg.clear();
+				goto cleanup;
+			}
+#else
+			FileSource.line = ConfigLineNo; // save current line number around the recursive call
+			if ((is_include > 1) && !is_piped_command(name)) {
+				std::string cmd(name); cmd += " |";
+				if (use_default_param_table) local_config_sources.append(cmd.c_str());
+				retval = Read_macros(cmd.c_str(), depth+1, macro_set, options, subsys, config_errmsg, fnSubmit, pvSubmitData);
+			} else {
+				if (use_default_param_table) local_config_sources.append(name);
+				retval = Read_macros(name, depth+1, macro_set, options, subsys, config_errmsg, fnSubmit, pvQueueData);
+			}
+			int last_line = ConfigLineNo; // get the exit line from the recursive call
+			ConfigLineNo = FileSource.line; // restore the global line number.
+
+			if (retval < 0) {
+				fprintf( stderr,
+							"%s Error \"%s\", Line %d, Include Depth %d: %s\n",
+							source_type, name, last_line, depth+1, config_errmsg.c_str());
+				config_errmsg.clear();
+				goto cleanup;
+			}
+#endif
+		} else if (is_submit && op == '=' && (*name == '+' || *name == '-')) {
+
+			// submit files have special +Attr= and -Attr= syntax that is used to store raw 
+			// key/value pairs directly into the job ad. We will put them into the submit
+			// macro set with a "MY." prefix on their names.
+			//
+			std::string plusname = "MY."; plusname += name+1;
+			insert(plusname.c_str(), (*name=='+') ? rhs : "", macro_set, FileSource);
+
+		} else if (is_submit && (op != '=' || MATCH == strcasecmp(name, "queue"))) {
+
+			retval = fnSubmit(pvSubmitData, FileSource, macro_set, line, errmsg);
+			if (retval != 0) // this may or may not be a failure, but we should stop reading the file.
+				goto cleanup;
+
+		} else {
+
+			/* Check that "name" is a legal identifier : only
+			   alphanumeric characters and _ allowed*/
+			if( !is_valid_param_name(name) ) {
+				fprintf( stderr,
+						 "%s Error \"%s\", Line %d: Illegal Identifier: <%s>\n",
+						 source_type, source_file, FileSource.line, (name?name:"(null)") );
+				retval = -1;
+				goto cleanup;
+			}
+
+			if (options & READ_MACROS_EXPAND_IMMEDIATE) {
+				value = expand_macro(rhs, macro_set);
+				if( value == NULL ) {
+					retval = -1;
+					goto cleanup;
+				}
+			} else  {
+				/* expand self references only */
+				//PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
+				value = expand_self_macro(rhs, macro_set, name, subsys);
+				if( value == NULL ) {
+					retval = -1;
+					goto cleanup;
+				}
+			}
+
+			if( op == ':' || op == '=' ) {
+					/*
+					  Yee haw!!! We can treat "expressions" and "macros"
+					  the same way: just insert them into the config hash
+					  table.  Everything now behaves like macros used to
+					  Derek Wright <wright@cs.wisc.edu> 4/11/00
+					*/
+				insert(name, value, macro_set, FileSource);
+			} else {
+				fprintf( stderr,
+					"%s Error \"%s\", Line %d: Syntax Error, missing : or =\n",
+					source_type, source_file, FileSource.line );
+				retval = -1;
+				goto cleanup;
+			}
+		}
+
+		FREE( name );
+		name = NULL;
+		FREE( value );
+		value = NULL;
+	}
+
+	if (ifstack.inside_if()) {
+		fprintf(stderr,
+				"%s Error \"%s\", Line %d: \n",
+				source_type, source_file, FileSource.line );
+		config_errmsg = "endif(s) not found before end-of-file";
+		retval = -1;
+		goto cleanup;
+	}
+
+ cleanup:
+	if(name) { FREE( name ); }
+	if(value) { FREE( value ); }
+	return retval;
+}
+
+#if 1
+FILE* Open_macro_source (
+	MACRO_SOURCE& macro_source,
+	const char* source,
+	bool        source_is_command,
+	MACRO_SET& macro_set,
+	std::string & config_errmsg)
+{
+	FILE*	fp = NULL;
+	std::string cmdbuf; // in case we have to produce a modified command
+	const char * cmd = NULL;
+
+	bool is_pipe_cmd = is_piped_command(source);
+	if (source_is_command && ! is_pipe_cmd) {
+		is_pipe_cmd = true;
+		cmd = source; // the input source is actually the command (without trailing |)
+		cmdbuf = source; cmdbuf += " |";
+		source = cmdbuf.c_str();
+	} else if (is_pipe_cmd) {
+		cmdbuf = source; // the input source is the command with trailing |
+		// remove trailing | and spaces
+		for (int ix = (int)cmdbuf.length()-1; ix > 0 && (cmdbuf[ix] == '|' || cmdbuf[ix] == ' '); --ix) {
+			cmdbuf[ix] = 0;
+		}
+		cmd = cmdbuf.c_str();
+	}
+
+	// initialize a MACRO_SOURCE for this file
+	insert_source(source, macro_set, macro_source);
+	macro_source.is_command = is_pipe_cmd;
+
+	// Determine if the config file name specifies a file to open, or a
+	// pipe to suck on. Process each accordingly
+	if (is_pipe_cmd) {
+		if ( is_valid_command(source) ) {
+			ArgList argList;
+			MyString args_errors;
+			if(!argList.AppendArgsV1RawOrV2Quoted(cmd, &args_errors)) {
+				formatstr(config_errmsg, "Can't append args, %s", args_errors.Value());
+				return NULL;
+			}
+			fp = my_popen(argList, "r", FALSE);
+			if ( ! fp) {
+				config_errmsg = "not a valid command";
+				return NULL;
+			}
+		} else {
+			config_errmsg = "not a valid command, | must be at the end\n";
+			return NULL;
+		}
+	} else {
+		fp = safe_fopen_wrapper_follow(source, "r");
+		if ( ! fp) {
+			config_errmsg = "can't open file";
+			return NULL;
+		}
+	}
+
+	return fp;
+}
+
+int Close_macro_source(FILE* conf_fp, MACRO_SOURCE& source, MACRO_SET& macro_set, int parsing_return_val)
+{
+	if (conf_fp) {
+		if (source.is_command) {
+			int exit_code = my_pclose(conf_fp);
+			if (0 == parsing_return_val && exit_code != 0) {
+				fprintf( stderr, "Configuration Error \"%s\": "
+						 "command terminated with exit code %d\n",
+						 macro_source_filename(source, macro_set), exit_code );
+				return -1;
+			}
+		} else {
+			fclose(conf_fp);
+		}
+	}
+	return parsing_return_val;
+}
+
+#else
+
+#if 1
+
+int
+Read_macros (
+	const char* config_source,
+	int depth, // a simple recursion detector
+	MACRO_SET& macro_set,
+	int options,
+	const char * subsys,
+	std::string & config_errmsg,
+	int (*fnQueue)(void* pv, MACRO_SOURCE& source, MACRO_SET& set, const char * line, std::string & errmsg),
+	void * pvQueueData)
+{
+	FILE*	conf_fp = NULL;
+	bool check_runtime_security = (options & READ_MACROS_CHECK_RUNTIME_SECURITY) != 0;
+#else
+int
 Read_config(const char* config_source,
 			int depth, // a simple recursion detector
 			MACRO_SET& macro_set,
@@ -908,8 +1400,6 @@ Read_config(const char* config_source,
 	char*	rhs = NULL;
 	char*	ptr = NULL;
 	char	op;
-	int		retval = 0;
-	bool	is_pipe_cmd = false;
 	bool	firstRead = true;
 	const int gl_opt_old = 0;
 	const int gl_opt_new = CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE | CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT;
@@ -917,6 +1407,9 @@ Read_config(const char* config_source,
 	bool gl_opt_smart = (macro_set.options & CONFIG_OPT_SMART_COM_IN_CONT) ? true : false;
 	int opt_meta_colon = (macro_set.options & CONFIG_OPT_COLON_IS_META_ONLY) ? 1 : 0;
 	ConfigIfStack ifstack;
+#endif
+	int		retval = 0;
+	bool	is_pipe_cmd = false;
 
 	if (subsys && ! *subsys) subsys = NULL;
 
@@ -1015,6 +1508,10 @@ Read_config(const char* config_source,
 #endif /* ! WIN32 */
 	} // if( check_runtime_security )
 
+#if 1
+	retval = Parse_macros(conf_fp, FileMacro, depth, macro_set, options, subsys, config_errmsg, fnQueue, pvQueueData);
+ cleanup:
+#else
 	while(true) {
 		name = getline_implementation(conf_fp, 128, gl_opt);
 		// If the file is empty the first time through, warn the user.
@@ -1295,6 +1792,14 @@ Read_config(const char* config_source,
 	}
 
  cleanup:
+	if(name) {
+		FREE( name );
+	}
+	if(value) {
+		FREE( value );
+	}
+#endif
+
 	if ( conf_fp ) {
 		if ( is_pipe_cmd ) {
 			int exit_code = my_pclose( conf_fp );
@@ -1308,15 +1813,9 @@ Read_config(const char* config_source,
 			fclose( conf_fp );
 		}
 	}
-	if(name) {
-		FREE( name );
-	}
-	if(value) {
-		FREE( value );
-	}
 	return retval;
 }
-
+#endif
 
 /*
 ** Just compute a hash value for the given string such that
@@ -1414,7 +1913,8 @@ void insert_source(const char * filename, MACRO_SET & set, MACRO_SOURCE & source
 		set.sources.push_back("<Over>");
 	}
 	source.line = 0;
-	source.inside = false;
+	source.is_inside = false;
+	source.is_command = false;
 	source.id = (int)set.sources.size();
 	source.meta_id = -1;
 	source.meta_off = -2;
@@ -1477,7 +1977,7 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 			pmeta->source_line = source.line;
 			pmeta->source_meta_id = source.meta_id;
 			pmeta->source_meta_off = source.meta_off;
-			pmeta->inside = (source.inside != false);
+			pmeta->inside = (source.is_inside != false);
 			pmeta->param_table = false;
 			// use the name here in case we have a compound name, i.e "master.value"
 			int param_id = param_default_get_id(name);
@@ -1550,7 +2050,7 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 		MACRO_META * pmeta = &set.metat[ixItem];
 		pmeta->flags = 0; // clear all flags.
 		pmeta->matches_default = matches_default;
-		pmeta->inside = source.inside;
+		pmeta->inside = source.is_inside;
 		pmeta->source_id = source.id;
 		pmeta->source_line = source.line;
 		pmeta->source_meta_id = source.meta_id;
@@ -1605,6 +2105,19 @@ int get_macro_ref_count (const char *name, MACRO_SET & set)
 	return -1;
 }
 
+// These provide external linkage to the getline_implementation function for use by non-config code
+extern "C" char * getline_trim( FILE *fp ) {
+	int lineno=0;
+	const int options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
+	return getline_implementation(fp, _POSIX_ARG_MAX, options, lineno);
+}
+extern "C++" char * getline_trim( FILE *fp, int & lineno, int mode ) {
+	const int default_options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
+	const int simple_options = 0;
+	int options = (mode & GETLINE_TRIM_SIMPLE_CONTINUATION) ? simple_options : default_options;
+	return getline_implementation(fp,_POSIX_ARG_MAX, options, lineno);
+}
+
 /*
 ** Read one line and any continuation lines that go with it.  Lines ending
 ** with <white space><backslash> are continued onto the next line.
@@ -1612,14 +2125,8 @@ int get_macro_ref_count (const char *name, MACRO_SET & set)
 ** free this memory.  It will get freed the next time getline() is called (this
 ** function used to contain a fixed-size static buffer).
 */
-char *
-getline( FILE *fp )
-{
-	return getline_implementation(fp,_POSIX_ARG_MAX, 0);
-}
-
 static char *
-getline_implementation( FILE *fp, int requested_bufsize, int options )
+getline_implementation( FILE *fp, int requested_bufsize, int options, int & line_number )
 {
 	static char	*buf = NULL;
 	static unsigned int buflen = 0;
@@ -1689,7 +2196,7 @@ getline_implementation( FILE *fp, int requested_bufsize, int options )
 			continue;	// since we are not finished reading this line
 		}
 
-		ConfigLineNo++;
+		++line_number;
 		end_ptr += cch;
 
 			// Instead of calling ltrim() below, we do it inline,

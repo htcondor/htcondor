@@ -304,7 +304,8 @@ MultiLogFiles::FileReader::Open( const MyString &filename )
 bool
 MultiLogFiles::FileReader::NextLogicalLine( MyString &line )
 {
-	char *tmpLine = getline( _fp );
+	int lines_read = 0;
+	char *tmpLine = getline_trim( _fp, lines_read );
 	if ( tmpLine != NULL ) {
 		line = tmpLine;
 		return true;

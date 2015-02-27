@@ -380,9 +380,10 @@ DagmanMetrics::ParseBraindumpFile()
 		return;
 	}
 
+	int lineno = 0;
 	const char *line;
 		// Note:  getline() frees memory from the previous call each time.
-	while ( (line = getline( fp ) ) ) {
+	while ( (line = getline_trim( fp, lineno ) ) ) {
 		MyString lineStr( line );
 		lineStr.Tokenize();
 		const char *token1;
