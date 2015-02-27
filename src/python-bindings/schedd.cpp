@@ -89,7 +89,7 @@ using namespace boost::python;
     }
 
 void
-make_spool_remap(compat_classad::ClassAd& ad, const std::string &attr, const std::string &stream_attr, const std::string &working_name)
+make_spool_remap(classad::ClassAd& ad, const std::string &attr, const std::string &stream_attr, const std::string &working_name)
 {
     bool stream_stdout = false;
     ad.EvaluateAttrBool(stream_attr, stream_stdout);
@@ -115,7 +115,7 @@ make_spool_remap(compat_classad::ClassAd& ad, const std::string &attr, const std
 }
 
 void
-make_spool(compat_classad::ClassAd& ad)
+make_spool(classad::ClassAd& ad)
 {
     if (!ad.InsertAttr(ATTR_JOB_STATUS, HELD))
         THROW_EX(RuntimeError, "Unable to set job to hold.");
@@ -620,14 +620,62 @@ struct Schedd {
         return actOnJobs(action, job_spec, object("Python-initiated action."));
     }
 
-    int submit(const ClassAdWrapper &wrapper, int count=1, bool spool=false, object ad_results=object())
+    int submitMany(const ClassAdWrapper &wrapper, boost::python::object proc_ads, bool spool, boost::python::object ad_results=object())
     {
         ConnectionSentry sentry(*this); // Automatically connects / disconnects.
 
+        classad::ClassAd cluster_ad;
+        cluster_ad.CopyFrom(wrapper);
+        int cluster = submit_cluster_internal(cluster_ad, spool);
+
+        PyObject *py_iter = PyObject_GetIter(proc_ads.ptr());
+        if (!py_iter)
+        {
+            THROW_EX(ValueError, "Proc ads must be iterator of 2-tuples.");
+        }
+        boost::python::object iter = boost::python::object(boost::python::handle<>(py_iter));
+        PyObject *obj;
+        while ((obj = PyIter_Next(iter.ptr())))
+        {
+            boost::python::object boost_obj = boost::python::object(boost::python::handle<>(obj));
+            ClassAdWrapper &proc_ad = boost::python::extract<ClassAdWrapper &>(boost_obj[0]);
+            int count = boost::python::extract<int>(boost_obj[1]);
+            try
+            {
+                proc_ad.ChainToAd(const_cast<classad::ClassAd*>(&cluster_ad));
+                submit_proc_internal(cluster, proc_ad, count, spool, ad_results);
+            }
+            catch (...)
+            {
+                proc_ad.ChainToAd(NULL);
+                throw;
+            }
+        }
+
+        if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
+        {
+            reschedule();
+        }
+        return cluster;
+    }
+
+    int submit(const ClassAdWrapper &wrapper, int count=1, bool spool=false, object ad_results=object())
+    {
+        boost::python::list proc_entry;
+        boost::shared_ptr<ClassAdWrapper> proc_ad(new ClassAdWrapper());
+        proc_entry.append(proc_ad);
+        proc_entry.append(count);
+        boost::python::list proc_ads;
+        proc_ads.append(proc_entry);
+        return submitMany(wrapper, proc_ads, spool, ad_results);
+    }
+
+    int submit_cluster_internal(classad::ClassAd &orig_cluster_ad, bool spool)
+    {
         int cluster;
         {
-        condor::ModuleLock ml;
-        cluster = NewCluster();
+            condor::ModuleLock ml;
+            cluster = NewCluster();
         }
         if (cluster < 0)
         {
@@ -635,48 +683,91 @@ struct Schedd {
             throw_error_already_set();
         }
 
-        ClassAd ad;
+        ClassAd cluster_ad;
         // Create a blank ad for job submission.
         ClassAd *tmpad = CreateJobAd(NULL, CONDOR_UNIVERSE_VANILLA, "/bin/echo");
         if (tmpad)
         {
-            ad.CopyFrom(*tmpad);
+            cluster_ad.CopyFrom(*tmpad);
             delete tmpad;
         }
         else
         {
-            PyErr_SetString(PyExc_RuntimeError, "Failed to create a new job ad.");
-            throw_error_already_set();
+            THROW_EX(RuntimeError, "Failed to create a new job ad.");
         }
         char path[4096];
         if (getcwd(path, 4095))
         {
-            ad.InsertAttr(ATTR_JOB_IWD, path);
+            cluster_ad.InsertAttr(ATTR_JOB_IWD, path);
         }
 
         // Copy the attributes specified by the invoker.
-        ad.Update(wrapper);
+        cluster_ad.Update(orig_cluster_ad);
 
         ShouldTransferFiles_t should = STF_IF_NEEDED;
         std::string should_str;
-        if (ad.EvaluateAttrString(ATTR_SHOULD_TRANSFER_FILES, should_str))
+        if (cluster_ad.EvaluateAttrString(ATTR_SHOULD_TRANSFER_FILES, should_str))
         {
-            if (should_str == "YES")
-                should = STF_YES;
-            else if (should_str == "NO")
-                should = STF_NO;
+            if (should_str == "YES") {should = STF_YES;}
+            else if (should_str == "NO") {should = STF_NO;}
         }
 
-        ExprTree *old_reqs = ad.Lookup(ATTR_REQUIREMENTS);
+        ExprTree *old_reqs = cluster_ad.Lookup(ATTR_REQUIREMENTS);
         ExprTree *new_reqs = make_requirements(old_reqs, should).release();
-        ad.Insert(ATTR_REQUIREMENTS, new_reqs);
+        cluster_ad.Insert(ATTR_REQUIREMENTS, new_reqs);
 
         if (spool)
         {
-            make_spool(ad);
+            make_spool(cluster_ad);
         }
 
-	bool keep_results = false;
+        // Set all the cluster attributes
+        classad::ClassAdUnParser unparser;
+        unparser.SetOldClassAd(true);
+
+        for (classad::ClassAd::const_iterator it = cluster_ad.begin(); it != cluster_ad.end(); it++)
+        {
+            std::string rhs;
+            unparser.Unparse(rhs, it->second);
+                // Note I don't release the GIL here - as we are in NoAck mode, assume this is just
+                // buffering up data into the socket.
+            if (-1 == SetAttribute(cluster, -1, it->first.c_str(), rhs.c_str(), SetAttribute_NoAck))
+            {
+                THROW_EX(ValueError, it->first.c_str());
+            }
+        }
+
+        orig_cluster_ad = cluster_ad;
+        return cluster;
+    }
+
+
+    void submit_proc_internal(int cluster, const classad::ClassAd &orig_proc_ad, int count, bool spool, boost::python::object ad_results)
+    {
+        classad::ClassAd proc_ad;
+        proc_ad.CopyFrom(orig_proc_ad);
+
+        ExprTree *old_reqs = proc_ad.Lookup(ATTR_REQUIREMENTS);
+        if (old_reqs)
+        {   // Only update the requirements here; the cluster ad got reasonable ones inserted by default.
+            ShouldTransferFiles_t should = STF_IF_NEEDED;
+            std::string should_str;
+            if (proc_ad.EvaluateAttrString(ATTR_SHOULD_TRANSFER_FILES, should_str))
+            {
+                if (should_str == "YES") {should = STF_YES;}
+                else if (should_str == "NO") {should = STF_NO;}
+            }
+
+            ExprTree *new_reqs = make_requirements(old_reqs, should).release();
+            proc_ad.Insert(ATTR_REQUIREMENTS, new_reqs);
+        }
+
+        if (spool)
+        {
+            make_spool(proc_ad);
+        }
+
+        bool keep_results = false;
         extract<list> try_ad_results(ad_results);
         if (try_ad_results.check())
         {
@@ -695,12 +786,12 @@ struct Schedd {
                 PyErr_SetString(PyExc_RuntimeError, "Failed to create new proc id.");
                 throw_error_already_set();
             }
-            ad.InsertAttr(ATTR_CLUSTER_ID, cluster);
-            ad.InsertAttr(ATTR_PROC_ID, procid);
+            proc_ad.InsertAttr(ATTR_CLUSTER_ID, cluster);
+            proc_ad.InsertAttr(ATTR_CLUSTER_ID, procid);
 
             classad::ClassAdUnParser unparser;
             unparser.SetOldClassAd( true );
-            for (classad::ClassAd::const_iterator it = ad.begin(); it != ad.end(); it++)
+            for (classad::ClassAd::const_iterator it = proc_ad.begin(); it != proc_ad.end(); it++)
             {
                 std::string rhs;
                 unparser.Unparse(rhs, it->second);
@@ -714,17 +805,11 @@ struct Schedd {
             }
             if (keep_results)
             {
-                boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
-                wrapper->CopyFrom(ad);
-                ad_results.attr("append")(wrapper);
+                boost::shared_ptr<ClassAdWrapper> results_ad(new ClassAdWrapper());
+                results_ad->CopyFrom(proc_ad);
+                ad_results.attr("append")(results_ad);
             }
         }
-
-        if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
-        {
-            reschedule();
-        }
-        return cluster;
     }
 
     void spool(object jobs)
