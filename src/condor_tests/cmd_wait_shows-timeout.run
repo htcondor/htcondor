@@ -29,8 +29,8 @@ my $cmd = "cmd_wait_shows.cmd";
 my $debuglevel = 2;
 
 my $pid = $$;
-runcmd("rm -rf $pid");
-runcmd("mkdir $pid");
+#runcmd("rm -rf $pid");
+CreateDir("-p $pid");
 my $curcwd = getcwd();
 CondorTest::debug("current directory is $curcwd\n",$debuglevel);
 
@@ -88,6 +88,7 @@ my $line = "";
 while(<RES>) {
 	$line = $_;
 	if($line =~ /^Exit\s+(\d+).*$/) {
+		print "result of cmd_wait:$1\n";
 		if($1 != 0) {
 			CondorTest::debug("Exit status $1 != 0 expected. Good!\n",$debuglevel);
 			print "ok\n";

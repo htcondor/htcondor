@@ -1954,13 +1954,16 @@ sub spawn_cmd
 		while(($child = waitpid($pid,0)) != -1) { 
 			$retval = $?;
 			TestDebug( "Child status: $retval\n",4);
-			if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 ) {
-				TestDebug( "Monitor done and status good!\n",4);
-				$retval = 0;
-			} else {
-				my $status = WEXITSTATUS( $retval );
-				TestDebug( "Monitor done and status bad: $status!\n",4);
+			if ($retval & 0x7f) {
+				# died with signal and maybe coredump.
+				# Ignore the fact a coredump happened for now.
+				TestDebug( "Monitor done and status bad: \n",4);
 				$retval = 1;
+			} else {
+				# Child returns valid exit code
+				my $rc = $retval >> 8;
+				print "ProcessReturn: Exited normally $rc\n";
+				$retval = $rc;
 			}
 			print RES "Exit $retval \n";
 			print LOG "Pid $child res was $retval\n";

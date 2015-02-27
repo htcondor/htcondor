@@ -63,11 +63,9 @@ job_core_input_java: personal
 job_core_input_sched: personal
 job_core_input_van: personal
 job_core_killsignal_sched: personal
-job_core_leaveinqueue_van: cygwin,personal
+job_core_leaveinqueue_van: personal
 job_core_macros-dollardollar_van: personal
 job_core_macros_sched: personal
-job_core_max-running_local: cygwin
-job_core_niceuser_van: cygwin
 job_core_onexithold_local: personal
 job_core_onexithold_van: personal
 job_core_onexitrem_local: personal
@@ -75,7 +73,7 @@ job_core_onexitrem_van: personal
 job_core_output_java: personal
 job_core_output_sched: personal
 job_core_output_van: personal
-job_core_perhold_local: cygwin,personal
+job_core_perhold_local: personal
 job_core_perhold_sched: personal
 job_core_perhold_van: cygwin,personal
 job_core_perrelease_local: cygwin
@@ -205,8 +203,6 @@ job_filexfer_trans-excut-true_van: personal
 job_filexfer_whento-base_van: personal
 job_filexfer_whento-simpleinput_van: personal
 job_filexfer_whento-withinput_van: personal
-job_hgq_autoregroup_basic_van: cygwin
-job_hgq_negfail_basic_van: cygwin
 job_hyperthread_check: personal
 job_negotiator_restart: personal
 job_partitionable_basic_van: cygwin
