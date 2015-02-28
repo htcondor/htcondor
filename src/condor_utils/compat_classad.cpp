@@ -26,6 +26,8 @@
 #include "condor_config.h"
 #include "Regex.h"
 #include "classad/classadCache.h"
+#include "env.h"
+#include "condor_arglist.h"
 
 #if defined(HAVE_DLOPEN)
 #include <dlfcn.h>
@@ -51,6 +53,9 @@ IsStringEnd(const char *str, unsigned off)
 namespace compat_classad {
 
 static StringList ClassAdUserLibs;
+
+static void registerClassadFunctions();
+static void classad_debug_dprintf(const char *s);
 
 bool ClassAd::m_initConfig = false;
 bool ClassAd::m_strictEvaluation = false;
@@ -110,6 +115,12 @@ Reconfig()
 			}
 		}
 		if (loc_char) {free(loc_char);}
+	}
+	if (!m_initConfig)
+	{
+		registerClassadFunctions();
+		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
+		m_initConfig = true;
 	}
 }
 
@@ -578,10 +589,328 @@ bool splitArb_func( const char * /*name*/,
 	return true;
 }
 
+
+static void
+problemExpression(const std::string &msg, classad::ExprTree *problem, classad::Value &result)
+{
+	result.SetErrorValue();
+	classad::ClassAdUnParser up;
+	std::string problem_str;
+	up.Unparse(problem_str, problem);
+	std::stringstream ss;
+	ss << msg << "  Problem expression: " << problem_str;
+	classad::CondorErrMsg = ss.str();
+}
+
+
+static bool
+ArgsToList( const char * name,
+	const classad::ArgumentList &arguments,
+	classad::EvalState &state,
+	classad::Value &result )
+{
+	if ((arguments.size() != 1) && (arguments.size() != 2))
+	{
+		std::stringstream ss;
+		result.SetErrorValue();
+		ss << "Invalid number of arguments passed to " << name << "; one string argument expected.";
+		classad::CondorErrMsg = ss.str();
+		return true;
+	}
+	int vers = 2;
+	if (arguments.size() == 2)
+	{
+		classad::Value val;
+		if (!arguments[1]->Evaluate(state, val))
+		{
+			problemExpression("Unable to evaluate second argument.", arguments[1], result);
+			return false;
+		}
+		int vers_val;
+		if (!val.IsIntegerValue(vers_val))
+		{
+			problemExpression("Unable to evaluate second argument to integer.", arguments[1], result);
+			return true;
+		}
+		if ((vers_val != 1) && (vers_val != 2))
+		{
+			std::stringstream ss;
+			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers_val << ".";
+			problemExpression(ss.str(), arguments[1], result);
+			return true;
+		}
+	}
+	classad::Value val;
+	if (!arguments[0]->Evaluate(state, val))
+	{
+		problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		return false;
+	}
+	std::string args;
+	if (!val.IsStringValue(args))
+	{
+		problemExpression("Unable to evaluate first argument to string.", arguments[0], result);
+		return true;
+	}
+	ArgList arg_list;
+	MyString error_msg;
+	if ((vers == 1) && !arg_list.AppendArgsV1Raw(args.c_str(), &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to arg V1: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	else if ((vers == 2) && !arg_list.AppendArgsV2Raw(args.c_str(), &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to arg V2: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	std::vector<classad::ExprTree*> list_exprs;
+
+	for (int idx=0; idx<arg_list.Count(); idx++)
+	{
+		classad::Value string_val;
+		string_val.SetStringValue(arg_list.GetArg(idx));
+		classad::ExprTree *expr = classad::Literal::MakeLiteral(string_val);
+		if (!expr)
+		{
+			for (std::vector<classad::ExprTree*>::iterator it = list_exprs.begin(); it != list_exprs.end(); it++)
+			{
+				if (*it) {delete *it; *it=NULL;}
+			}
+			classad::CondorErrMsg = "Unable to create string expression.";
+			result.SetErrorValue();
+			return false;
+		}
+		list_exprs.push_back(expr);
+	}
+	classad_shared_ptr<classad::ExprList> result_list(classad::ExprList::MakeExprList(list_exprs));
+	if (!result_list.get())
+	{
+		for (std::vector<classad::ExprTree*>::iterator it = list_exprs.begin(); it != list_exprs.end(); it++)
+		{
+			if (*it) {delete *it; *it=NULL;}
+		}
+		classad::CondorErrMsg = "Unable to create expression list.";
+		result.SetErrorValue();
+		return false;
+	}
+	result.SetListValue(result_list);
+	return true;
+}
+
+
+static bool
+ListToArgs(const char * name,
+	const classad::ArgumentList &arguments,
+	classad::EvalState &state,
+	classad::Value &result)
+{
+	if ((arguments.size() != 1) && (arguments.size() != 2))
+	{
+		std::stringstream ss;
+		result.SetErrorValue();
+		ss << "Invalid number of arguments passed to " << name << "; one list argument expected.";
+		classad::CondorErrMsg = ss.str();
+		return true;
+	}
+	int vers = 2;
+	if (arguments.size() == 2)
+	{
+		classad::Value val;
+		if (!arguments[1]->Evaluate(state, val))
+		{
+			problemExpression("Unable to evaluate second argument.", arguments[1], result);
+			return false;
+		}
+		int vers_val;
+		if (!val.IsIntegerValue(vers_val))
+		{
+			problemExpression("Unable to evaluate second argument to integer.", arguments[1], result);
+			return true;
+		}
+		if ((vers_val != 1) && (vers_val != 2))
+		{
+			std::stringstream ss;
+			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers_val << ".";
+			problemExpression(ss.str(), arguments[1], result);
+			return true;
+		}
+	}
+	classad::Value val;
+	if (!arguments[0]->Evaluate(state, val))
+	{
+		problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		return false;
+	}
+	classad_shared_ptr<classad::ExprList> args;
+	if (!val.IsSListValue(args))
+	{
+		problemExpression("Unable to evaluate first argument to list.", arguments[0], result);
+		return true;
+	}
+	ArgList arg_list;
+	size_t idx=0;
+	for (classad::ExprList::const_iterator it=args->begin(); it!=args->end(); it++, idx++)
+	{
+		classad::Value value;
+		if (!(*it)->Evaluate(state, value))
+		{
+			std::stringstream ss;
+			ss << "Unable to evaluate list entry " << idx << ".";
+			problemExpression(ss.str(), *it, result);
+			return false;
+		}
+		std::string tmp_str;
+		if (!value.IsStringValue(tmp_str))
+		{
+			std::stringstream ss;
+			ss << "Entry " << idx << " did not evaluate to a string.";
+			problemExpression(ss.str(), *it, result);
+			return true;
+		}
+		arg_list.AppendArg(tmp_str.c_str());
+	}
+	MyString error_msg, result_mystr;
+	if ((vers == 1) && !arg_list.GetArgsStringV1Raw(&result_mystr, &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to arg V1: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	else if ((vers == 2) && !arg_list.GetArgsStringV2Raw(&result_mystr, &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to arg V2: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	result.SetStringValue(result_mystr.Value());
+	return true;
+}
+
+
+static bool
+EnvironmentV1ToV2(const char * name,
+	const classad::ArgumentList &arguments,
+	classad::EvalState &state,
+	classad::Value &result)
+{
+	if (arguments.size() != 1)
+	{
+		std::stringstream ss;
+		result.SetErrorValue();
+		ss << "Invalid number of arguments passed to " << name << "; one string argument expected.";
+		classad::CondorErrMsg = ss.str();
+		return true;
+	}
+	classad::Value val;
+	if (!arguments[0]->Evaluate(state, val))
+	{
+		problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		return false;
+	}
+		// By returning undefined if the input is undefined, the caller doesn't need an
+		// ifThenElse statement to see if the V1 environment is used in the first place.
+		// For example, we can do this:
+		//   mergeEnvironment(envV1toV2(Env), Environment, "FOO=BAR");
+		// without worrying about whether Env or Environment is already defined.
+	if (val.IsUndefinedValue())
+	{
+		result.SetUndefinedValue();
+		return true;
+	}
+	std::string args;
+	if (!val.IsStringValue(args))
+	{
+		problemExpression("Unable to evaluate first argument to string.", arguments[0], result);
+		return true;
+	}
+	Env env;
+	MyString error_msg;
+	if (!env.MergeFromV1Raw(args.c_str(), &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to environment V1: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	MyString result_mystr;
+	env.getDelimitedStringV2Raw(&result_mystr, NULL);
+	result.SetStringValue(result_mystr.Value());
+	return true;
+}
+
+
+static bool
+MergeEnvironment(const char * /*name*/,
+	const classad::ArgumentList &arguments,
+	classad::EvalState &state,
+	classad::Value &result)
+{
+	Env env;
+	size_t idx = 0;
+	for (classad::ArgumentList::const_iterator it=arguments.begin(); it!=arguments.end(); it++, idx++)
+	{
+		classad::Value val;
+		if (!(*it)->Evaluate(state, val))
+		{
+			std::stringstream ss;
+			ss << "Unable to evaluate argument " << idx << ".";
+			problemExpression(ss.str(), *it, result);
+			return false;
+		}
+			// Skip over undefined values; this makes it more natural
+			// to merge environments for a condor classad where the
+			// user may or may not have specified an environment string.
+		if (val.IsUndefinedValue())
+		{
+			continue;
+		}
+		std::string env_str;
+		if (!val.IsStringValue(env_str))
+		{
+			std::stringstream ss;
+			ss << "Unable to evaluate argument " << idx << ".";
+			problemExpression(ss.str(), *it, result);
+			return true;
+		}
+		MyString error_msg;
+		if (!env.MergeFromV2Raw(env_str.c_str(), &error_msg))
+		{
+			std::stringstream ss;
+			ss << "Argument " << idx << " cannot be parsed as environment string.";
+			problemExpression(ss.str(), *it, result);
+			return true;
+		}
+	}
+	MyString result_mystr;
+	env.getDelimitedStringV2Raw(&result_mystr, NULL);
+	result.SetStringValue(result_mystr.Value());
+	return true;
+}
+
+
 static
-void registerStrlistFunctions()
+void registerClassadFunctions()
 {
 	std::string name;
+	name = "envV1ToV2";
+	classad::FunctionCall::RegisterFunction(name, EnvironmentV1ToV2);
+
+	name = "mergeEnvironment";
+	classad::FunctionCall::RegisterFunction(name, MergeEnvironment);
+
+	name = "listToArgs";
+	classad::FunctionCall::RegisterFunction(name, ListToArgs);
+
+	name = "argsToList";
+	classad::FunctionCall::RegisterFunction(name, ArgsToList);
+
 	name = "stringListSize";
 	classad::FunctionCall::RegisterFunction( name,
 											 stringListSize_func );
@@ -627,8 +956,6 @@ ClassAd::ClassAd()
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
-		registerStrlistFunctions();
-		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
 		m_initConfig = true;
 	}
 
@@ -650,7 +977,6 @@ ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
-		registerStrlistFunctions();
 		m_initConfig = true;
 	}
 
@@ -673,7 +999,6 @@ ClassAd::ClassAd( const classad::ClassAd &ad )
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
-		registerStrlistFunctions();
 		m_initConfig = true;
 	}
 
@@ -701,7 +1026,6 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
-		registerStrlistFunctions();
 		m_initConfig = true;
 	}
 

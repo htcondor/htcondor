@@ -8,4 +8,5 @@ void export_config();
 void export_secman();
 void export_event_reader();
 void export_log_reader();
+void enable_classad_extensions();
 
