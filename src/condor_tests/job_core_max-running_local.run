@@ -26,23 +26,14 @@ use Check::SimpleJob;
 
 $topdir = getcwd();
 
-$testdesc =  'job_core_max-running_local - Simple parallel job';
 $testname = "job_core_max-running_local";
-# make sure path exists since we have not called StartPersonal yet
-my $saveme = $topleveldir . "/" . $mysaveme;
-runcmd("mkdir -p $saveme");
-my $lowerlevel = $saveme . "/" . $mypid;
-runcmd("mkdir -p $lowerlevel");
-
 
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
 
 print scalar localtime() . "\n";
 
-
 $mypid = $$;
-$mysaveme = $testname . ".saveme";
 
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
