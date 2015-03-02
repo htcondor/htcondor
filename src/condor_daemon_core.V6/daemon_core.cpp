@@ -9710,7 +9710,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 	ASSERT( tcp_port != 0 );
 
 	// For hysterical raisins, we refuse to dynamically bind a UDP port if
-	// we statically bound the UDP port.  Note that we never required that
+	// we statically bound the TCP port.  Note that we never required that
 	// the port numbers are the same.
 	if( tcp_port > 1 && (want_udp && udp_port <= 1) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "If TCP port is well-known, then UDP port must also be well-known.\n" );
@@ -9718,7 +9718,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 	}
 
 
-	// We can't just do all the UDP work and then all TCP work, because
+	// We can't just do all the UDP work and then all the TCP work, because
 	// we want the TCP and UDP port numbers, if dynamically assigned,
 	// to match.
 	sock_pair.has_relisock( true );
