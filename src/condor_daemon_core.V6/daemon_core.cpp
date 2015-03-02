@@ -9703,157 +9703,168 @@ static bool assign_sock(condor_protocol proto, Sock * sock, bool fatal)
 	return false;
 }
 
-static bool 
-InitCommandSocket(condor_protocol proto, int port, int udp_port, DaemonCore::SockPair & sock_pair, bool want_udp, bool fatal)
+static bool
+InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore::SockPair & sock_pair, bool want_udp, bool fatal )
 {
-	// For historic reasons, port==0 is invalid, while port==-1 or port==1 means "any port." 
-	ASSERT(port != 0);
-	if ((port > 1) && (udp_port<= 1)) {
-		dprintf(D_ALWAYS | D_FAILURE, "If TCP port is well-known, then UDP port must also be well-known\n");
+	// Hysterical raisins.
+	ASSERT( tcp_port != 0 );
+
+	// For hysterical raisins, we refuse to dynamically bind a UDP port if
+	// we statically bound the UDP port.  Note that we never required that
+	// the port numbers are the same.
+	if( tcp_port > 1 && (want_udp && udp_port <= 1) ) {
+		dprintf( D_ALWAYS | D_FAILURE, "If TCP port is well-known, then UDP port must also be well-known.\n" );
 		return false;
 	}
-	sock_pair.has_relisock(true);
-	if(want_udp) {
-		sock_pair.has_safesock(true);
-	}
+
+
+	// We can't just do all the UDP work and then all TCP work, because
+	// we want the TCP and UDP port numbers, if dynamically assigned,
+	// to match.
+	sock_pair.has_relisock( true );
 	ReliSock * rsock = sock_pair.rsock().get();
-	SafeSock * ssock = sock_pair.ssock().get();
 
-	if (port <= 1) {
-		bool well_known_udp = udp_port > 1;
-			// Choose any old port (dynamic port)
-		if( !BindAnyCommandPort(rsock, well_known_udp ? NULL : ssock, proto) ) {
-			MyString msg;
-			msg.formatstr("BindAnyCommandPort() failed. Does this computer have %s support?", condor_protocol_to_str(proto).Value());
-			if (fatal) {
-				EXCEPT("%s", msg.Value());
-			}
-			else {
-				dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());
-				return false;
-			}
 
-		}
-		if (well_known_udp) {
-			if (ssock && !ssock->bind(proto, false, udp_port, false)) {
-				if (fatal) {
-					EXCEPT("Failed to bind(%d) on UDP command socket.", port);
-				}
-				else {
-					dprintf(D_ALWAYS | D_FAILURE,
-							"Failed to bind(%d) on UDP command socket.\n", port);
-					return false;
-				}
-			}
-		}
-		// if (proto == CP_IPV6) { dprintf(D_ALWAYS, "Bound socket is ipv6: %d\n", rsock->my_addr().is_ipv6()); }
-		// if (proto == CP_IPV4) { dprintf(D_ALWAYS, "Bound socket is ipv4: %d\n", rsock->my_addr().is_ipv4()); }
-		if( !rsock->listen() ) {
-			if (fatal) {
-				EXCEPT( "Failed to post listen on command ReliSock" );
-			}
-			else {
-				dprintf(D_ALWAYS | D_FAILURE,
-						"Failed to post listen on command ReliSock\n");
-				return false;
-			}
+	// Protect ourselves against people trying to be clever.
+	SafeSock * ssock = NULL;
+	SafeSock * dynamicUDPSocket = NULL;
+	if( want_udp ) {
+		sock_pair.has_safesock( true );
+		ssock = sock_pair.ssock().get();
+
+		if( udp_port <= 1 ) {
+			dynamicUDPSocket = ssock;
 		}
 	}
-	else {
-			// Use the well-known port specified in the arguments.
-		int on = 1;
-		int so_option = SO_REUSEADDR;
 
-		// Ensure we have a socket, setsockopt doesn't work otherwise.
-		if(rsock) {
-			if(!assign_sock(proto, rsock, fatal)) { return false; }
-		}
-		if(ssock) {
-			if(!assign_sock(proto, ssock, fatal)) { return false; }
-		}
 
-#if defined ( WIN32 )
-		/** To better match the *nix semantics of SO_REUSEADDR we
-			enable MSs SO_EXCLUSIVEADDRUSE option, which prohibits
-			multiple process/identities/etc. from binding to the
-			same address (which is just crazy behaviour!). 
-
-			For further details refer to ticket #288. */
-		so_option = SO_EXCLUSIVEADDRUSE;
+	//
+	// To better match the *nix semantics of SO_REUSEADDR we enable
+	// Microsoft's SO_EXCLUSIVEADDRUSE option, which prohibits multiple
+	// process/identities/etc. from binding to the same address (which
+	// is just crazy behaviour!).
+	//
+	// For further details refer to ticket #288.
+	//
+#if defined( WIN32 )
+	#define CONDOR_REUSEADDR SO_EXCLUSIVEADDRUSE
+#else
+	#define CONDOR_REUSEADDR SO_REUSEADDR
 #endif
 
-			// Set options on this socket, SO_REUSEADDR, so that
-			// if we are binding to a well known port, and we
-			// crash, we can be restarted and still bind ok back
-			// to this same port. -Todd T, 11/97
-		if( !rsock->setsockopt(SOL_SOCKET, so_option,
-							   (char*)&on, sizeof(on)) ) {
-			if (fatal) {
-				EXCEPT("setsockopt() SO_REUSEADDR failed on TCP command port");
-			}
-			else {
-				dprintf(D_ALWAYS | D_FAILURE,
-						"setsockopt() SO_REUSEADDR failed on TCP command port\n");
-				return false;
-			}
-		}
-		if( ssock &&
-			!ssock->setsockopt(SOL_SOCKET, so_option,
-							   (char*)&on, sizeof(on)) ) {
-			if (fatal) {
-				EXCEPT("setsockopt() SO_REUSEADDR failed on UDP command port");
-			}
-			else {
-				dprintf(D_ALWAYS | D_FAILURE,
-						"setsockopt() SO_REUSEADDR failed on UDP command port\n");
-				return false;
-			}
-		}
 
-			/* Set no delay to disable Nagle, since we buffer all our 
-			   relisock output and it degrades performance of our 
-			   various chatty protocols. -Todd T, 9/05
-			*/
-		if( !rsock->setsockopt(IPPROTO_TCP, TCP_NODELAY,
-							   (char*)&on, sizeof(on)) ) {
-			dprintf(D_ALWAYS, "Warning: setsockopt() TCP_NODELAY failed\n");
-		}
-
-		if (!rsock->listen(proto, port)) {
+	//
+	// Bind and listen() on the TCP port.
+	//
+	if( tcp_port == 1 || tcp_port == -1 ) {
+		// Bind (and listen on) a dynamic TCP port.  If we're also binding
+		// a dynamic UDP socket, do that now, so we can make the port
+		// numbers match.
+		if(! BindAnyCommandPort( rsock, dynamicUDPSocket, proto ) ) {
 			MyString msg;
-			msg.formatstr("Failed to listen(%d) on TCP/%s command socket. Does this computer have %s support?", 
-				port,
-				condor_protocol_to_str(proto).Value(),
-				condor_protocol_to_str(proto).Value()
-				);
-			if (fatal) {
-				EXCEPT("%s", msg.Value());
-			}
-			else {
+			msg.formatstr( "BindAnyCommandPort() failed. Does this computer have %s support?", condor_protocol_to_str( proto ).Value() );
+			if( fatal ) {
+				EXCEPT( "%s", msg.Value() );
+			} else {
 				dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());
 				return false;
 			}
 		}
-			/* bind(FALSE,...) means this is an incoming connection */
-		if (ssock && !ssock->bind(proto, false, udp_port, false)) {
-			if (fatal) {
-				EXCEPT("Failed to bind(%d) on UDP command socket.", port);
+
+		if( ! rsock->listen() ) {
+			if( fatal ) {
+				EXCEPT( "Failed to listen() on command ReliSock." );
+			} else {
+				dprintf( D_ALWAYS | D_FAILURE, "Failed to listen() on command ReliSock.\n" );
+				return false;
 			}
-			else {
-				dprintf(D_ALWAYS | D_FAILURE,
-						"Failed to bind(%d) on UDP command socket.\n", port);
+		}
+	} else {
+		// Bind a specific TCP port.
+
+		// setsockopt() won't work without a socket.
+		if(! assign_sock( proto, rsock, fatal ) ) {
+			dprintf( D_ALWAYS | D_FAILURE, "Failed to assign_sock() on command ReliSock.\n" );
+			return false;
+		}
+
+		// Set socket options.  For hysterical raisins, we only set these on
+		// fixed ports.  (SO_REUSEADDR doesn't make much sense for a dynamic
+		// port, but if TCP_NODELAY makes sense, it would for both kinds
+		// ot port.)
+		int on = 1;
+		// SO_REUSEADDR: If we crash, give us our port back right away.
+		int so_option = CONDOR_REUSEADDR;
+		if(! rsock->setsockopt( SOL_SOCKET, so_option, (char *) & on, sizeof(on) )) {
+			if( fatal ) {
+				EXCEPT( "Failed to setsockopt(SO_REUSEADDR) on TCP command port." );
+			} else {
+				dprintf( D_ALWAYS | D_FAILURE, "Failed to setsockopt(SO_REUSEADDR) on TCP command port.\n" );
+				return false;
+			}
+		}
+
+		// TCP_NODELAY: Not sure why this is set for a listen socket.  Maybe
+		// it's inherited into the accept()ed sockets?
+		if(! rsock->setsockopt( IPPROTO_TCP, TCP_NODELAY, (char *) & on, sizeof( on ) )) {
+			dprintf( D_ALWAYS, "Warning: setsockopt(TCP_NODELAY) failed.\n" );
+		}
+
+		// This version of ReliSock::listen() calls bind() for us.
+		if(! rsock->listen( proto, tcp_port ) ) {
+			MyString msg;
+			msg.formatstr( "Failed to listen(%d) on TCP/%s command socket. Does this computer have %s support?",
+				tcp_port,
+				condor_protocol_to_str( proto ).Value(),
+				condor_protocol_to_str( proto ).Value() );
+			if( fatal ) {
+				EXCEPT( "%s", msg.Value() );
+			} else {
+				dprintf( D_ALWAYS | D_FAILURE, "%s\n", msg.Value() );
 				return false;
 			}
 		}
 	}
 
-	dprintf(D_NETWORK, "InitCommandSocket(%s, %d, %s, %s) created %s\n", 
-		condor_protocol_to_str(proto).Value(),
-		port,
+	//
+	// If the UDP port isn't already bound, bind it.
+	//
+	if( ssock != NULL && dynamicUDPSocket == NULL ) {
+		// setsockopt() won't work without a socket.
+		if(! assign_sock( proto, ssock, fatal ) ) {
+			dprintf( D_ALWAYS | D_FAILURE, "Failed to assign_sock() on command SafeSock.\n" );
+			return false;
+		}
+
+		int on = 1;
+		// SO_REUSEADDR: If we crash, give us our port back right away.
+		int so_option = CONDOR_REUSEADDR;
+		if(! ssock->setsockopt( SOL_SOCKET, so_option, (char *) & on, sizeof(on) )) {
+			if( fatal ) {
+				EXCEPT( "Failed to setsockopt(SO_REUSEADDR) on UDP command port." );
+			} else {
+				dprintf( D_ALWAYS | D_FAILURE, "Failed to setsockopt(SO_REUSEADDR) on UDP command port.\n" );
+				return false;
+			}
+		}
+
+		if(! ssock->bind( proto, false, udp_port, false )) {
+			if( fatal ) {
+				EXCEPT( "Failed to bind to UDP command port %d.", udp_port );
+			} else {
+				dprintf( D_ALWAYS | D_FAILURE, "Failed to bind to UDP command port %d.\n", udp_port );
+				return false;
+			}
+		}
+	}
+
+
+	dprintf (D_NETWORK, "InitCommandSocket(%s, %d, %s, %s) created %s.\n",
+		condor_protocol_to_str( proto ).Value(),
+		tcp_port,
 		want_udp ? "want UDP" : "no UDP",
 		fatal ? "fatal errors" : "non-fatal errors",
-		sock_to_string(rsock->get_file_desc()));
-
+		sock_to_string( rsock->get_file_desc() ) );
 	return true;
 }
 
