@@ -354,47 +354,29 @@ WriteUserLog::Configure( bool force )
 	m_rotation_lock_path = param( "EVENT_LOG_ROTATION_LOCK" );
 	if ( NULL == m_rotation_lock_path ) {
 		
-#if !defined(WIN32)	
-		bool new_locking = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
-		if (new_locking){
-			previous = set_priv(PRIV_CONDOR);
-			m_rotation_lock = new FileLock(m_global_path, true, false);
-			if (m_rotation_lock->initSucceeded()) {
-				doLocalLocking = true;		
-			} else {
-				delete m_rotation_lock;
-			}
-			set_priv(previous);
-		}
-#endif	
-		if (!doLocalLocking) {
-			int len = strlen(m_global_path) + 6;
-			char *tmp = (char*) malloc(len);
-			snprintf( tmp, len, "%s.lock", m_global_path );
-			m_rotation_lock_path = tmp;
-		}
+		int len = strlen(m_global_path) + 6;
+		char *tmp = (char*) malloc(len);
+		snprintf( tmp, len, "%s.lock", m_global_path );
+		m_rotation_lock_path = tmp;
 	}
-	if (!doLocalLocking) {
-		// Make sure the global lock exists
-		previous = set_priv(PRIV_CONDOR);
-		m_rotation_lock_fd = open( m_rotation_lock_path, O_WRONLY|O_CREAT, 0666 );
-		if ( m_rotation_lock_fd < 0 ) {
-			dprintf( D_ALWAYS,
+
+	// Make sure the global lock exists
+	previous = set_priv(PRIV_CONDOR);
+	m_rotation_lock_fd = open( m_rotation_lock_path, O_WRONLY|O_CREAT, 0666 );
+	if ( m_rotation_lock_fd < 0 ) {
+		dprintf( D_ALWAYS,
 				 "Warning: WriteUserLog Failed to open event rotation lock file %s:"
 				 " %d (%s)\n",
 				 m_rotation_lock_path, errno, strerror(errno) );
-			m_rotation_lock = new FakeFileLock( );
-		}
-		else {
-			m_rotation_lock = new FileLock( m_rotation_lock_fd,
+		m_rotation_lock = new FakeFileLock( );
+	} else {
+		m_rotation_lock = new FileLock( m_rotation_lock_fd,
 										NULL,
 										m_rotation_lock_path );
-			dprintf( D_FULLDEBUG, "WriteUserLog Created rotation lock %s @ %p\n",
+		dprintf( D_FULLDEBUG, "WriteUserLog Created rotation lock %s @ %p\n",
 				 m_rotation_lock_path, m_rotation_lock );
-		}
-		set_priv(previous);
 	}
-
+	set_priv(previous);
 
 	m_global_use_xml = param_boolean( "EVENT_LOG_USE_XML", false );
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );

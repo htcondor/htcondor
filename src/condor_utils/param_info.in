@@ -3877,6 +3877,15 @@ friendly_name=Event Log Use Xml
 review=?
 tags=c++_util,user_log
 
+[EVENT_LOG_ROTATION_LOCK]
+default=$(LOCK)/EventLogLock
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Event Log Rotation Lock
+review=?
+tags=c++_util,user_log
+
 [EVENT_LOG_MAX_SIZE]
 default=1000000
 type=long
