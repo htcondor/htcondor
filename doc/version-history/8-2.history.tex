@@ -48,9 +48,10 @@ using \Condor{submit} with a \Opt{-spool} or \Opt{-remote}
 command line option.
 \Ticket{4866}
 
-\item Fixed a bug that can cause the \Condor{schedd} to start more jobs
-than specified by \Macro{MAX\_JOBS\_RUNNING} and later kill the excess
-running jobs.
+\item Fixed a bug that could have caused the \Condor{schedd} to start more 
+jobs than specified by the value of configuration variable 
+\Macro{MAX\_JOBS\_RUNNING},
+and then later kill the excess running jobs.
 \Ticket{4554}
 
 \item Fixed a minor bug that would emit a \Expr{grep not found} warning
