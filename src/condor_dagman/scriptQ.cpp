@@ -33,7 +33,7 @@ ScriptQ::ScriptQ( Dag* dag ) :
 	_numScriptsRunning = 0;
 
     _scriptPidTable = new HashTable<int,Script*>( 127, &hashFuncInt );
-    _waitingQueue = new Queue<Script*>();
+    _waitingQueue = new Queue<std::pair<Script*, int> *>();
 
     if( _scriptPidTable == NULL || _waitingQueue == NULL ) {
         EXCEPT( "ERROR: out of memory!");
@@ -52,6 +52,39 @@ ScriptQ::~ScriptQ()
 	delete _scriptPidTable;
 	delete _waitingQueue;
 };
+
+int
+ScriptQ::CheckDeferredScripts()
+{
+	std::pair<Script *, int> *scriptInfo = NULL;
+	std::pair<Script *, int> *firstScriptInfo = NULL;
+	int now = time(NULL);
+	unsigned startedThisRound = 0;
+	while (!_waitingQueue->IsEmpty()) {
+		_waitingQueue->dequeue( scriptInfo );
+		ASSERT( (scriptInfo != NULL) && (scriptInfo->first != NULL) );
+		if ( !firstScriptInfo ) {
+			firstScriptInfo = scriptInfo;
+		} else if ( firstScriptInfo == scriptInfo) {
+			_waitingQueue->enqueue( scriptInfo );
+			break;
+		}
+		if (scriptInfo->second <= now) {
+			Script *script = scriptInfo->first;
+			int maxScripts = script->_post ? _dag->_maxPostScripts : _dag->_maxPreScripts;
+			if ( maxScripts != 0 && (_numScriptsRunning >= maxScripts) ) {
+				_waitingQueue->enqueue( scriptInfo );
+			}
+			delete scriptInfo;
+			startedThisRound += Run(script);
+			firstScriptInfo = NULL;
+		} else {
+			_waitingQueue->enqueue( scriptInfo );
+		}
+	}
+	debug_printf( DEBUG_NORMAL, "Started %d deferred scripts\n", startedThisRound );
+	return startedThisRound;
+}
 
 // run script if possible, otherwise insert it into the waiting queue
 int
@@ -86,7 +119,7 @@ ScriptQ::Run( Script *script )
 
 	if ( deferScript ) {
 		_scriptDeferredCount++;
-		_waitingQueue->enqueue( script );
+		_waitingQueue->enqueue( new std::pair<Script*, int>(script, 0) );
 		return 0;
 	}
 
@@ -125,12 +158,26 @@ ScriptQ::Run( Script *script )
 int
 ScriptQ::RunWaitingScript()
 {
-	Script *script = NULL;
+	std::pair<Script *, int> *firstScriptInfo = NULL;
+	std::pair<Script *, int> *scriptInfo = NULL;
 
-	if( !_waitingQueue->IsEmpty() ) {
-		_waitingQueue->dequeue( script );
-		ASSERT( script != NULL );
-		return Run( script );
+	time_t now = time(NULL);
+	while( !_waitingQueue->IsEmpty() ) {
+		_waitingQueue->dequeue( scriptInfo );
+		if ( !firstScriptInfo ) {
+			firstScriptInfo = scriptInfo;
+		} else if ( scriptInfo == firstScriptInfo ) {
+			_waitingQueue->enqueue( scriptInfo );
+			break;
+		}
+		ASSERT( (scriptInfo != NULL) && (scriptInfo->first != NULL) );
+		if ( now >= scriptInfo->second ) {
+			Script *script = scriptInfo->first;
+			delete scriptInfo;
+			return Run( script );
+		} else {
+			_waitingQueue->enqueue( scriptInfo );
+		}
 	}
 
 	return 0;
@@ -160,7 +207,7 @@ ScriptQ::ScriptReaper( int pid, int status )
 {
 	Script* script = NULL;
 
-	// get the Job* that corresponds to this pid
+	// get the Script* that corresponds to this pid
 	_scriptPidTable->lookup( pid, script );
 	ASSERT( script != NULL );
 
@@ -171,13 +218,25 @@ ScriptQ::ScriptReaper( int pid, int status )
 		EXCEPT( "Reaper pid (%d) does not match expected script pid (%d)!",
 					pid, script->_pid );
 	}
-	script->_done = TRUE;
 
-	// call appropriate DAG reaper
-	if( ! script->_post ) {
-		_dag->PreScriptReaper( script->GetNode(), status );
-	} else {
-		_dag->PostScriptReaper( script->GetNode(), status );
+	// Check to see if we should re-run this later.
+	if ( status == script->_defer_status ) {
+		std::pair<Script *, int> *scriptInfo = new std::pair<Script *, int>(script, time(NULL)+script->_defer_time);
+		_waitingQueue->enqueue( scriptInfo );
+		const char *prefix = script->_post ? "POST" : "PRE";
+		debug_printf( DEBUG_NORMAL, "Deferring %s script of Node %s for %ld seconds (exit status was %d)...\n",
+			prefix, script->GetNodeName(), script->_defer_time, script->_defer_status );
+	}
+	else
+	{
+		script->_done = TRUE;
+
+		// call appropriate DAG reaper
+		if( ! script->_post ) {
+			_dag->PreScriptReaper( script->GetNode(), status );
+		} else {
+			_dag->PostScriptReaper( script->GetNode(), status );
+		}
 	}
 
 	// if there's another script waiting to run, run it now

@@ -496,17 +496,17 @@ Job::Add( const queue_t queue, const JobID_t jobID )
 bool
 Job::AddPreScript( const char *cmd, MyString &whynot )
 {
-	return AddScript( false, cmd, whynot );
+	return AddScript( false, cmd, -1, -1, whynot );
 }
 
 bool
 Job::AddPostScript( const char *cmd, MyString &whynot )
 {
-	return AddScript( true, cmd, whynot );
+	return AddScript( true, cmd, -1, -1, whynot );
 }
 
 bool
-Job::AddScript( bool post, const char *cmd, MyString &whynot )
+Job::AddScript( bool post, const char *cmd, int defer_status, time_t defer_time, MyString &whynot )
 {
 	if( !cmd || strcmp( cmd, "" ) == 0 ) {
 		whynot = "missing script name";
@@ -517,7 +517,7 @@ Job::AddScript( bool post, const char *cmd, MyString &whynot )
 						post ? "POST" : "PRE", GetPreScriptName() );
 		return false;
 	}
-	Script* script = new Script( post, cmd, this );
+	Script* script = new Script( post, cmd, defer_status, defer_time, this );
 	if( !script ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in

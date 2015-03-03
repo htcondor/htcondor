@@ -261,6 +261,14 @@ Dag::~Dag()
 
 //-------------------------------------------------------------------------
 void
+Dag::CheckDeferredScripts()
+{
+	_preScriptQ->CheckDeferredScripts();
+	_postScriptQ->CheckDeferredScripts();
+}
+
+//-------------------------------------------------------------------------
+void
 Dag::CreateMetrics( const char *primaryDagFile, int rescueDagNum )
 {
 	_metrics = new DagmanMetrics( this, primaryDagFile, rescueDagNum );

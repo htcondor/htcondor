@@ -183,7 +183,7 @@ class Job {
 	bool AddPreScript( const char *cmd, MyString &whynot );
 	bool AddPreSkip( int exitCode, MyString &whynot );
 	bool AddPostScript( const char *cmd, MyString &whynot );
-	bool AddScript( bool post, const char *cmd, MyString &whynot );
+	bool AddScript( bool post, const char *cmd, int defer_status, time_t defer_time, MyString &whynot );
 
 	void SetFinal(bool value) { _final = value; }
 	bool GetFinal() const { return _final; }

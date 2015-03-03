@@ -102,7 +102,7 @@ void exampleSyntax (const char * example) {
 bool
 isReservedWord( const char *token )
 {
-    static const char * keywords[] = { "PARENT", "CHILD" };
+    static const char * keywords[] = { "PARENT", "CHILD", "DEFER" };
     static const unsigned int numKeyWords = sizeof(keywords) / 
 		                                    sizeof(const char *);
 
@@ -263,7 +263,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		}
 
 		// Handle a SCRIPT spec
-		// Example Syntax is:  SCRIPT (PRE|POST) JobName ScriptName Args ...
+		// Example Syntax is:  SCRIPT (PRE|POST) [DEFER status seconds] JobName ScriptName Args ...
 		else if ( strcasecmp(token, "SCRIPT") == 0 ) {
 			parsed_line_successfully = parse_script(endline, dag, 
 				filename, lineNumber);
@@ -615,7 +615,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 //
 // Function: parse_script
 // Purpose:  Parse a line of the format:
-//             SCRIPT (PRE|POST) JobName ScriptName Args ...
+//             SCRIPT (PRE|POST) [DEFER status seconds] JobName ScriptName Args ...
 //
 //-----------------------------------------------------------------------------
 static bool 
@@ -625,7 +625,7 @@ parse_script(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "SCRIPT (PRE|POST) JobName Script Args ...";
+	const char * example = "SCRIPT (PRE|POST) [DEFER status seconds] JobName Script Args ...";
 	Job * job = NULL;
 	MyString whynot;
 
@@ -646,11 +646,67 @@ parse_script(
 		exampleSyntax (example);
 		return false;
 	}
-	
+
 	//
-	// Third token is the JobName
+	// Next keyword may be DEFER
 	//
-	const char *jobName = strtok( NULL, DELIMITERS );
+	char * defer_key_or_job = strtok (NULL, DELIMITERS);
+	if ( !defer_key_or_job ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
+			filename, lineNumber );
+		exampleSyntax (example);
+		return false;
+	}
+	const char *jobName = NULL;
+	int defer_status = -1;
+	int defer_time = -1;
+	if ( !strcasecmp(defer_key_or_job, "DEFER") )
+	{
+		// Our script has a defer statement.
+		char *token = strtok( NULL, DELIMITERS );
+		if( token == NULL ) {
+			debug_printf( DEBUG_QUIET,
+					"%s (line %d): Missing DEFER status value\n",
+					filename, lineNumber );
+			exampleSyntax( example );
+			return false;
+		}
+		char *tmp;
+		defer_status = (int)strtol( token, &tmp, 10 );
+		if( tmp == token ) {
+			debug_printf( DEBUG_QUIET,
+				"%s (line %d): Invalid DEFER status value \"%s\"\n",
+				filename, lineNumber, token );
+			exampleSyntax( example );
+			return false;
+		}
+
+		token = strtok( NULL, DELIMITERS );
+		if( token == NULL ) {
+			debug_printf( DEBUG_QUIET,
+				"%s (line %d): Missing DEFER time value\n",
+				filename, lineNumber );
+			exampleSyntax( example );
+			return false;
+		}
+		defer_time = (int)strtol( token, &tmp, 10 );
+		if( tmp == token ) {
+			debug_printf( DEBUG_QUIET,
+				"%s (line %d): Invalid DEFER time value \"%s\"\n",
+				filename, lineNumber, token );
+			exampleSyntax( example );
+			return false;
+		}
+		jobName = strtok( NULL, DELIMITERS );
+	}
+	else
+	{
+		jobName = defer_key_or_job;
+	}
+
+	//
+	// Token is the JobName
+	//
 	if ( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
 					  filename, lineNumber );
@@ -727,7 +783,7 @@ parse_script(
 		return false;
 	}
 	
-	if( !job->AddScript( post, rest, whynot ) ) {
+	if( !job->AddScript( post, rest, defer_status, defer_time, whynot ) ) {
 		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
 					  "failed to add %s script to node %s: %s\n",
 					  filename, lineNumber, post ? "POST" : "PRE",

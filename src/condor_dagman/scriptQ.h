@@ -21,6 +21,8 @@
 #ifndef _SCRIPTQ_H
 #define _SCRIPTQ_H
 
+#include <utility>
+
 #include "HashTable.h"
 #include "Queue.h"
 
@@ -57,6 +59,11 @@ class ScriptQ : public Service {
 	*/
 	int RunAllWaitingScripts();
 
+	/** Check if any deferred scripts are ready to run; if so,
+	    start them now.
+	*/
+	int CheckDeferredScripts();
+
 	/** Return the number of scripts actually running (does not include
 	    scripts that are queued to run but have been deferred).
 	*/
@@ -79,7 +86,7 @@ class ScriptQ : public Service {
 	HashTable<int, Script*> *_scriptPidTable;
 
 	// queue of scripts waiting to be run
-	Queue<Script*> *_waitingQueue;
+	Queue<std::pair<Script*, int> *> *_waitingQueue;
 
 	// daemonCore reaper id for PRE/POST script reaper function
 	int _scriptReaperId;
