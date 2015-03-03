@@ -626,16 +626,15 @@ ArgsToList( const char * name,
 			problemExpression("Unable to evaluate second argument.", arguments[1], result);
 			return false;
 		}
-		int vers_val;
-		if (!val.IsIntegerValue(vers_val))
+		if (!val.IsIntegerValue(vers))
 		{
 			problemExpression("Unable to evaluate second argument to integer.", arguments[1], result);
 			return true;
 		}
-		if ((vers_val != 1) && (vers_val != 2))
+		if ((vers != 1) && (vers != 2))
 		{
 			std::stringstream ss;
-			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers_val << ".";
+			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers << ".";
 			problemExpression(ss.str(), arguments[1], result);
 			return true;
 		}
@@ -726,16 +725,15 @@ ListToArgs(const char * name,
 			problemExpression("Unable to evaluate second argument.", arguments[1], result);
 			return false;
 		}
-		int vers_val;
-		if (!val.IsIntegerValue(vers_val))
+		if (!val.IsIntegerValue(vers))
 		{
 			problemExpression("Unable to evaluate second argument to integer.", arguments[1], result);
 			return true;
 		}
-		if ((vers_val != 1) && (vers_val != 2))
+		if ((vers != 1) && (vers != 2))
 		{
 			std::stringstream ss;
-			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers_val << ".";
+			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers << ".";
 			problemExpression(ss.str(), arguments[1], result);
 			return true;
 		}
