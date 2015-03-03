@@ -77,8 +77,7 @@ job_core_output_sched: personal
 job_core_output_van: personal
 job_core_perhold_local: personal
 job_core_perhold_sched: personal
-job_core_perhold_van: cygwin, personal
-job_core_perrelease_local: cygwin
+job_core_perhold_van: personal
 job_core_perrelease_sched: personal
 job_core_perrelease_van: personal
 job_core_perremove_sched: personal
