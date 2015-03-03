@@ -267,7 +267,7 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 
 			log_file* log = new log_file(*it);
 			if(!openFile(log->path.c_str(), true, m_enable_locking, true,
-					log->lock, log->fp) ) {
+					log->lock, log->fd) ) {
 				dprintf(D_ALWAYS, "WriteUserLog::initialize: failed to open file %s\n",
 					log->path.c_str() );
 				ret = false;
@@ -310,8 +310,8 @@ WriteUserLog::internalInitialize( int c, int p, int s, const char *gjid )
 	m_subproc = s;
 
 		// Important for performance: We do not re-open the global log
-		// if we already have done so (i.e. if m_global_fp is not NULL).
-	if ( !m_global_disable && m_global_path && !m_global_fp ) {
+		// if we already have done so (i.e. if m_global_fd >= 0).
+	if ( !m_global_disable && m_global_path && m_global_fd < 0 ) {
 		priv_state priv = set_condor_priv();
 		openGlobalLog( true );
 		set_priv( priv );
@@ -443,7 +443,7 @@ WriteUserLog::Reset( void )
 	m_enable_locking = true;
 
 	m_global_path = NULL;
-	m_global_fp = NULL;
+	m_global_fd = -1;
 	m_global_lock = NULL;
 	m_global_stat = NULL;
 	m_global_state = NULL;
@@ -534,25 +534,25 @@ WriteUserLog::log_file& WriteUserLog::log_file::operator=(const WriteUserLog::lo
 {
 	if(this != &rhs) {
 		if(!copied) {
-			if(fp != NULL) {
-				if(fclose(fp) != 0) {
+			if(fd >= 0) {
+				if(close(fd) != 0) {
 					dprintf( D_ALWAYS,
 							 "WriteUserLog::FreeLocalResources(): "
-							 "fclose() failed - errno %d (%s)\n",
+							 "close() failed - errno %d (%s)\n",
 							 errno, strerror(errno) );
 				}
 			}
 			delete lock;
 		}
 		path = rhs.path;
-		fp = rhs.fp;
+		fd = rhs.fd;
 		lock = rhs.lock;
 		rhs.copied = true;
 	}
 	return *this;
 }
-WriteUserLog::log_file::log_file(const log_file& orig) : path(orig.path), fp(orig.fp),
-	lock(orig.lock), copied(false) 
+WriteUserLog::log_file::log_file(const log_file& orig) : path(orig.path),
+	lock(orig.lock), fd(orig.fd), copied(false) 
 {
 	orig.copied = true;
 }
@@ -560,14 +560,14 @@ WriteUserLog::log_file::log_file(const log_file& orig) : path(orig.path), fp(ori
 WriteUserLog::log_file::~log_file()
 {
 	if(!copied) {
-		if(fp != NULL) {
-			if(fclose(fp) != 0) {
+		if(fd >= 0) {
+			if(close(fd) != 0) {
 				dprintf( D_ALWAYS,
 						 "WriteUserLog::FreeLocalResources(): "
-						 "fclose() failed - errno %d (%s)\n",
+						 "close() failed - errno %d (%s)\n",
 						 errno, strerror(errno) );
 			}
-			fp = NULL;
+			fd = -1;
 		}
 		delete lock;
 		lock = NULL;
@@ -616,10 +616,9 @@ WriteUserLog::openFile(
 	bool		  use_lock,		// use the lock
 	bool		  append,		// append mode?
 	FileLockBase *&lock,
-	FILE		 *&fp )
+	int			  &fd )
 {
 	(void)  log_as_user;	// Quiet warning
-	int 	fd = 0;
 
 	if ( file == NULL ) {
 		dprintf( D_ALWAYS, "WriteUserLog::openFile: NULL filename!\n" );
@@ -633,17 +632,19 @@ WriteUserLog::openFile(
 		// the condor admin desires a global event log.
 		// Note: we always check UNIX_NULL_FILE, since we canonicalize
 		// to this even on Win32.
-		fp = NULL;
+		fd = -1;
 		lock = NULL;
 		return true;
 	}
 
-# if !defined(WIN32)
 	// Unix
 	int	flags = O_WRONLY | O_CREAT;
 	if ( append ) {
 		flags |= O_APPEND;
 	}
+#if defined(WIN32)
+	flags |= _O_TEXT;
+#endif
 	mode_t mode = 0664;
 	fd = safe_open_wrapper_follow( file, flags, mode );
 	if( fd < 0 ) {
@@ -655,30 +656,6 @@ WriteUserLog::openFile(
 		         strerror(errno) );
 		return false;
 	}
-
-		// attach it to stdio stream
-	const char *fmode = append ? "a" : "w";
-	fp = fdopen( fd, fmode );
-	if( NULL == fp ) {
-		dprintf( D_ALWAYS, "WriteUserLog::initialize: "
-				 "fdopen(%i,%s) failed - errno %d (%s)\n",
-				 fd, fmode, errno, strerror(errno) );
-		close( fd );
-		return false;
-	}
-# else
-	// Windows (Visual C++)
-	const char *fmode = append ? "a+tc" : "w+tc";
-	fp = safe_fopen_wrapper_follow( file, fmode );
-	if( NULL == fp ) {
-		dprintf( D_ALWAYS, "WriteUserLog::initialize: "
-				 "safe_fopen_wrapper_follow(\"%s\",%s) failed - errno %d (%s)\n",
-				 file, fmode, errno, strerror(errno) );
-		return false;
-	}
-
-	fd = _fileno(fp);
-# endif
 
 	// prepare to lock the file.
 	if ( use_lock ) {
@@ -692,7 +669,7 @@ WriteUserLog::openFile(
 			delete lock;
 		}		
 #endif	
-		lock = new FileLock( fd, fp, file );
+		lock = new FileLock( fd, NULL, file );
 	} else {
 		lock = new FakeFileLock( );
 	}
@@ -715,17 +692,17 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 	}
 
 	// Close it if it's already open
-	if( reopen && m_global_fp ) {
+	if( reopen && m_global_fd >= 0 ) {
 		closeGlobalLog();
 	}
-	else if ( m_global_fp ) {
+	else if ( m_global_fd >= 0 ) {
 		return true;
 	}
 
 	bool ret_val = true;
 	priv_state priv = set_condor_priv();
 	ret_val = openFile( m_global_path, false, m_global_lock_enable, true,
-						m_global_lock, m_global_fp);
+						m_global_lock, m_global_fd);
 
 	if ( ! ret_val ) {
 		set_priv( priv );
@@ -800,9 +777,9 @@ WriteUserLog::closeGlobalLog( void )
 		delete m_global_lock;
 		m_global_lock = NULL;
 	}
-	if (m_global_fp != NULL) {
-		fclose(m_global_fp);
-		m_global_fp = NULL;
+	if (m_global_fd >= 0) {
+		close(m_global_fd);
+		m_global_fd = -1;
 	}
 	return true;
 }
@@ -813,7 +790,7 @@ WriteUserLog::closeGlobalLog( void )
 bool
 WriteUserLog::checkGlobalLogRotation( void )
 {
-	if (!m_global_fp) {
+	if (m_global_fd < 0) {
 		return false;
 	}
 	if ( m_global_disable || (NULL==m_global_path) ) {
@@ -887,7 +864,7 @@ WriteUserLog::checkGlobalLogRotation( void )
 	// Let's get down to the business of rotating it
 	filesize_t	current_filesize = 0;
 	StatWrapper	sbuf;
-	if ( sbuf.Stat( fileno(m_global_fp) ) ) {
+	if ( sbuf.Stat( m_global_fd ) ) {
 		dprintf( D_ALWAYS, "WriteUserLog Failed to stat file handle\n" );
 	}
 	else {
@@ -966,9 +943,9 @@ WriteUserLog::checkGlobalLogRotation( void )
 	header_reader.setSize( current_filesize );
 
 	// Craft a header writer object from the header reader
-	FILE			*header_fp = NULL;
+	int				header_fd = -1;
 	FileLockBase	*fake_lock = NULL;
-	if( !openFile(m_global_path, false, false, false, fake_lock, header_fp) ) {
+	if( !openFile(m_global_path, false, false, false, fake_lock, header_fd) ) {
 		dprintf( D_ALWAYS,
 				 "WriteUserLog: "
 				 "failed to open %s for header rewrite: %d (%s)\n",
@@ -987,13 +964,13 @@ WriteUserLog::checkGlobalLogRotation( void )
 	// And write the updated header
 # if ROTATION_TRACE
 	UtcTime	now( true );
-	dprintf( D_FULLDEBUG, "WriteUserLog: Writing header to %s (%p) @ %.6f\n",
-			 m_global_path, header_fp, now.combined() );
+	dprintf( D_FULLDEBUG, "WriteUserLog: Writing header to %s (%d) @ %.6f\n",
+			 m_global_path, header_fd, now.combined() );
 # endif
-	if ( header_fp ) {
-		rewind( header_fp );
-		header_writer.Write( *this, header_fp );
-		fclose( header_fp );
+	if ( header_fd >= 0 ) {
+		lseek( header_fd, 0, SEEK_SET );
+		header_writer.Write( *this, header_fd );
+		close( header_fd );
 
 		MyString	tmps;
 		tmps.formatstr( "WriteUserLog: Wrote header to %s", m_global_path );
@@ -1012,7 +989,7 @@ WriteUserLog::checkGlobalLogRotation( void )
 # endif
 
 	MyString	rotated;
-	int num_rotations = doRotation( m_global_path, m_global_fp,
+	int num_rotations = doRotation( m_global_path, m_global_fd,
 									rotated, m_global_max_rotations );
 	if ( num_rotations ) {
 		dprintf(D_FULLDEBUG,
@@ -1063,17 +1040,17 @@ WriteUserLog::updateGlobalStat( void )
 }
 
 bool
-WriteUserLog::getGlobalLogSize( unsigned long &size, bool use_fp )
+WriteUserLog::getGlobalLogSize( unsigned long &size, bool use_fd )
 {
 	StatWrapper	stat;
-	if ( m_global_close && !m_global_fp ) {
-		use_fp = false;
+	if ( m_global_close && m_global_fd < 0 ) {
+		use_fd = false;
 	}
-	if ( use_fp ) {
-		if ( !m_global_fp ) {
+	if ( use_fd ) {
+		if ( m_global_fd < 0 ) {
 			return false;
 		}
-		if ( stat.Stat(fileno(m_global_fp)) ) {
+		if ( stat.Stat(m_global_fd) ) {
 			return false;
 		}
 	}
@@ -1107,7 +1084,7 @@ WriteUserLog::globalLogRotated( ReadUserLogHeader &reader )
 }
 
 int
-WriteUserLog::doRotation( const char *path, FILE *&fp,
+WriteUserLog::doRotation( const char *path, int &fd,
 						  MyString &rotated, int max_rotations )
 {
 
@@ -1137,12 +1114,12 @@ WriteUserLog::doRotation( const char *path, FILE *&fp,
 
 # ifdef WIN32
 	// on win32, cannot rename an open file
-	if ( fp) {
-		fclose( fp );
-		fp = NULL;
+	if ( fd >= 0 ) {
+		close( fd );
+		fd = -1;
 	}
 # else
-	(void) fp;		// Quiet compiler warnings
+	(void) fd;		// Quiet compiler warnings
 # endif
 
 	// Before time
@@ -1161,18 +1138,18 @@ WriteUserLog::doRotation( const char *path, FILE *&fp,
 
 int
 WriteUserLog::writeGlobalEvent( ULogEvent &event,
-								FILE *fp,
+								int fd,
 								bool is_header_event )
 {
-	if ( NULL == fp ) {
-		fp = m_global_fp;
+	if ( fd < 0 ) {
+		fd = m_global_fd;
 	}
 
 	if ( is_header_event ) {
-		rewind( fp );
+		lseek( fd, 0, SEEK_SET );
 	}
 
-	return doWriteEvent( fp, &event, m_global_use_xml );
+	return doWriteEvent( fd, &event, m_global_use_xml );
 }
 
 bool
@@ -1184,17 +1161,17 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 							ClassAd *)
 {
 	int success;
-	FILE* fp;
+	int fd;
 	FileLockBase* lock;
 	priv_state priv;
 
 	if (is_global_event) {
-		fp = m_global_fp;
+		fd = m_global_fd;
 		lock = m_global_lock;
 		use_xml = m_global_use_xml;
 		priv = set_condor_priv();
 	} else {
-		fp = log.fp;
+		fd = log.fd;
 		lock = log.lock;
 		priv = set_user_priv();
 	}
@@ -1212,25 +1189,21 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 	}
 
 	before = time(NULL);
-	int			status;
+	int			status = 0;
 	const char	*whence;
 	if ( is_header_event ) {
-		status = fseek( fp, 0, SEEK_SET );
+		status = lseek( fd, 0, SEEK_SET );
 		whence = "SEEK_SET";
-	}
-	else {
-		status = fseek (fp, 0, SEEK_END);
-		whence = "SEEK_END";
 	}
 	after = time(NULL);
 	if ( (after - before) > 5 ) {
 		dprintf( D_FULLDEBUG,
-				 "UserLog::doWriteEvent(): fseek() took %ld seconds\n",
+				 "UserLog::doWriteEvent(): lseek() took %ld seconds\n",
 				 (after-before) );
 	}
 	if ( status ) {
 		dprintf( D_ALWAYS,
-				 "WriteUserLog fseek(%s) failed in WriteUserLog::doWriteEvent - "
+				 "WriteUserLog lseek(%s) failed in WriteUserLog::doWriteEvent - "
 				 "errno %d (%s)\n",
 				 whence, errno, strerror(errno) );
 	}
@@ -1238,14 +1211,14 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 		// rotate the global event log if it is too big
 	if ( is_global_event ) {
 		if ( checkGlobalLogRotation() ) {
-				// if we rotated the log, we have a new fp and lock
-			fp = m_global_fp;
+				// if we rotated the log, we have a new fd and lock
+			fd = m_global_fd;
 			lock = m_global_lock;
 		}
 	}
 
 	before = time(NULL);
-	success = doWriteEvent( fp, event, use_xml );
+	success = doWriteEvent( fd, event, use_xml );
 	after = time(NULL);
 	if ( (after - before) > 5 ) {
 		dprintf( D_FULLDEBUG,
@@ -1253,21 +1226,7 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 				 (after-before) );
 	}
 
-	before = time(NULL);
-	if ( fflush(fp) != 0 ) {
-		dprintf( D_ALWAYS, "fflush() failed in WriteUserLog::doWriteEvent - "
-				"errno %d (%s)\n", errno, strerror(errno) );
-		// Note:  should we set success to false here?
-	}
-	after = time(NULL);
-	if ( (after - before) > 5 ) {
-		dprintf( D_FULLDEBUG,
-				 "UserLog::doWriteEvent(): flushing event took %ld seconds\n",
-				 (after-before) );
-	}
-
-	// Now that we have flushed the stdio stream, sync to disk
-	// *before* we release our write lock!
+	// Sync to disk *before* we release our write lock!
 	// For now, for performance, do not sync the global event log.
 	if ( (   is_global_event  && m_global_fsync_enable ) ||
 		 ( (!is_global_event) && m_enable_fsync ) ) {
@@ -1275,7 +1234,7 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 		const char *fname;
 		if ( is_global_event ) fname = m_global_path;
 		else fname = log.path.c_str();
-		if ( condor_fdatasync( fileno( fp ), fname ) != 0 ) {
+		if ( condor_fdatasync( fd, fname ) != 0 ) {
 		  dprintf( D_ALWAYS,
 				   "fsync() failed in WriteUserLog::writeEvent"
 				   " - errno %d (%s)\n",
@@ -1302,7 +1261,7 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 }
 
 bool
-WriteUserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
+WriteUserLog::doWriteEvent( int fd, ULogEvent *event, bool use_xml )
 {
 	ClassAd* eventAd = NULL;
 	bool success = true;
@@ -1327,18 +1286,18 @@ WriteUserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 						 "WriteUserLog Failed to convert event type # %d to XML.\n",
 						 event->eventNumber);
 			}
-			if (fprintf ( fp, "%s", adXML.c_str()) < 0) {
+			if ( write( fd, adXML.c_str(), adXML.length() ) < 0) {
 				success = false;
 			} else {
 				success = true;
 			}
 		}
 	} else {
-		success = event->putEvent ( fp);
-		if (!success) {
-			fputc ('\n', fp);
-		}
-		if (fprintf ( fp, "%s", SynchDelimiter) < 0) {
+		std::string output;
+		success = event->formatEvent( output );
+		output += SynchDelimiter;
+		if ( success && write( fd, output.c_str(), output.length() ) < 0 ) {
+			// TODO Should we print a '\n...\n' like in the older code?
 			success = false;
 		}
 	}
@@ -1424,8 +1383,8 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	bool ret = true;
 	if ( m_userlog_enable ) {
 		for(std::vector<log_file*>::iterator p = logs.begin(); p != logs.end(); ++p) {
-			if( !(*p)->fp || !(*p)->lock) {
-				if((*p)->fp) {
+			if( (*p)->fd < 0 || !(*p)->lock) {
+				if((*p)->fd >= 0) {
 					dprintf( D_ALWAYS, "WriteUserLog: No user log lock!\n" );
 				}
 				continue;
