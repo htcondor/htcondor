@@ -43,8 +43,9 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Fixed a bug that could cause the \Condor{schedd} to crash
-when removing jobs that were in the process of being submitting
-with \Condor{submit} with the spool or remote options.
+when removing jobs that were in the process of being submitted
+using \Condor{submit} with a \Opt{-spool} or \Opt{-remote} 
+command line option.
 \Ticket{4866}
 
 \item Fixed a bug that can cause the \Condor{schedd} to start more jobs
