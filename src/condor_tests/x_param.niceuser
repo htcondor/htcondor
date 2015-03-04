@@ -1,4 +1,0 @@
-ports = dynamic
-condor = nightlies
-daemon_list = master,collector,negotiator,startd,schedd
-slots	= 1

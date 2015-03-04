@@ -190,9 +190,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 	//
 	// This loop will read every line of the input file
 	//
-	while ( ((line=getline(fp)) != NULL) ) {
+	while ( ((line=getline_trim(fp, lineNumber)) != NULL) ) {
 		std::string varline(line);
-		lineNumber++;
 
 		//
 		// Find the terminating '\0'

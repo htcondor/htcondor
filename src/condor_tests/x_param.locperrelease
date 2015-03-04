@@ -1,8 +1,0 @@
-universe = local
-type = jobs
-
-ports = dynamic
-condor = nightlies
-localpostsrc = x_locperrelease_locconfigpostsrc
-daemon_list = master,schedd,collector,negotiator,startd
-slots	= 2

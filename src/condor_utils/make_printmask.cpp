@@ -29,8 +29,7 @@ const char * SimpleFileInputStream::nextline()
 {
 	// getline from condor_string.h automatically collapses line continuations.
 	// and uses a static internal buffer to hold the latest line. 
-	const char * line = getline(file);
-	if (line) ++lines_read;
+	const char * line = getline_trim(file, lines_read);
 	return line;
 }
 

@@ -19,32 +19,224 @@
 ##**************************************************************
 
 use CondorTest;
+use Check::SimpleJob;
 
-$testdesc =  'Condor PERIODIC_HOLD policy test - local U';
 $testname = "job_core_perhold_local";
 
-my $nostatus = CondorTest::verbose_system("./job_core_perhold-false_local.pl");
-my $willstatus = CondorTest::verbose_system("./job_core_perhold-true_local.pl");
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
 
-my %listoftests;
-$listoftests{"corename"} = "job_core_perhold";
-$listoftests{"tests"} = [ "job_core_perhold-false_local", "job_core_perhold-true_local"];
-$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
-CondorTest::MergeOutputFiles(\%listoftests);
+#my $nostatus = CondorTest::verbose_system("./job_core_perhold-false_local.pl");
+##
+## PERIOIDIC_HOLD - False
+## Check to make sure that the job never goes on hold
+##
 
-if($nostatus != 0)
+my %info;
+my $cluster;
+
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	PERIODIC_EXPR_interval = 30
+    NUM_CPUS = 2
+    NEGOTIATOR_INTERVAL = 5
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"perholdvan");
+print "local config file:$configfile\n";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "perholdvan",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+##
+## executed
+## Just announce that the job began execution
+##
+$executed = sub {
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+	CondorTest::debug("Good - Job $cluster.$job began execution.\n",1);
+};
+
+##
+## held
+## If the job went on hold, we need to abort
+##
+$held = sub {
+	my $done;
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+
+	if($variation eq "perholdfalse") {
+		CondorTest::debug("Bad - Job $cluster.$job should not be on hold.\n",1);
+		RegisterResult(0,"test_name", "testname");
+		return(1);
+	} else { # perhold TRUE case hold handling`
+		##
+		## Make sure we weren't here earlier
+		##
+		if ( $gotHold ) {
+			CondorTest::debug("Bad - Job $cluster.$job was put on hold twice.\n",1);
+			RegisterResult(0,"test_name", "$testname");
+		}
+	
+		CondorTest::debug("Good - Job $cluster.$job was put on hold.\n",1);
+
+		##
+		## Remove the job from the queue
+		##
+		my @adarray;
+		my $status = 1;
+		my $cmd = "condor_rm $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if ( !$status ) {
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+			RegisterResult(0,"test_name", "$testname");
+		}
+
+		$gotHold = 1;
+	}
+
+};
+##
+## held
+## The job was put on hold, which is what we wanted
+## After the job is put on hold we will want to remove it from
+## the queue. We will set the gotHold flag to let us know that
+## the hold event was caught. Thus, if we get two hold events
+## that's bad mojo
+##
+
+##
+## success
+##
+$success = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+	
+	##
+	## This probably isn't necessary, but just ot be safe we need to
+	## check the status of the job and if it's on hold, call
+	## the held() method
+	##	
+	if ( CondorTest::getJobStatus($cluster) == HELD ) {
+		&$held( %info ) if defined $held;
+		return;
+	}
+	CondorTest::debug("Good - Job $cluster.$job finished executing and exited.\n",1);
+	CondorTest::debug("Policy Test Completed\n",1);
+	# a job that completes is an implicit "PASSED"
+};
+
+##
+## abnormal
+## Not sure how we would end up here, and based on the old
+## report message, I'm assuming this is a bad thing
+##
+$abnormal = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+	CondorTest::debug("Bad - Job $cluster.$job reported an abnormal event.\n",1);
+	RegisterResult(0,"test_name", "$testname");
+};
+
+##
+## aborted
+## We should see this event when we remove our job after
+## it gets put on hold. The held method below will set a flag
+## to let us know hat the abort was expected. Otherwise, we 
+## failed for some other reason
+##
+$aborted = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+	
+	if ( $gotHold ) {
+		CondorTest::debug("Good - Job $cluster.$job was aborted after being put on hold.\n",1);
+		CondorTest::debug("Policy Test Completed\n",1);
+		RegisterResult(1,"test_name", "$testname");
+	} else {
+		CondorTest::debug("Bad - Job $cluster.$job was aborted before it was put on hold.\n",1);
+		RegisterResult(0,"test_name", "$testname");
+		exit(1);
+	}
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+};
+
+##
+## The PERIODIC_EXPR_INTERVAL is set to 15 for tests so we need
+## to make sure we sleep for just a little bit more than that
+##
+
+my $falsepolicy = '
+periodic_hold = (time() - QDate) < 0
+';
+
+my $variation = "perholdfalse";
+
+SimpleJob::RunCheck(
+	universe=>"local",
+	append_submit_commands=>"$falsepolicy",
+	duration=>20,
+    on_execute=>$executed,
+    on_hold=>$held,
+    on_success=>$success,
+);
+
+##
+## PERIODIC_HOLD - True
+## We submit a job and it should be put on hold
+## When the job comes back and is on hold, we will remove it and
+## make sure that the job is removed properly. I'm not sure if I
+## should even bother doing this, but I was following what was 
+## in the original code for the vanilla universe
+##
+
+##
+## When this is set to true, that means our job was 
+## put on hold first
+##
+
+my $gotHold;
+
+my $truepolicy = '
+periodic_hold = JobStatus == 2
+';
+
+$variation = "perholdtrue";
+
+SimpleJob::RunCheck(
+	universe=>"local",
+	duration=>20,
+	append_submit_commands=>$truepolicy,
+    on_evictedwithoutcheckpoint=>$on_evictedwithoutcheckpoint,
+	on_exitedabnormal=>$abnormal,
+    on_execute=>$executed,
+    on_hold=>$held,
+    on_abort=>$aborted
+);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+my $result = 0;
+
+if( $result != 0 )
 {
-	CondorTest::debug("PERIODIC_HOLD: failed no trigger test\n",1);
+    exit(1);
 }
 
-if($willstatus != 0)
-{
-	CondorTest::debug("PERIODIC_HOLD: failed trigger test\n",1);
-}
-
-if(($willstatus != 0) || ($nostatus != 0))
-{
-	die "Failed one PERIODIC_HOLD test\n";
-}
-
-
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);

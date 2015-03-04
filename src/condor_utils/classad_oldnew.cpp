@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-#define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
 #include "stream.h"
 #include "reli_sock.h"

@@ -6,7 +6,6 @@
 
 using namespace boost::python;
 
-
 BOOST_PYTHON_MODULE(htcondor)
 {
     scope().attr("__doc__") = "Utilities for interacting with the HTCondor system.";
@@ -28,4 +27,6 @@ BOOST_PYTHON_MODULE(htcondor)
     export_event_reader();
     export_log_reader();
 #endif
+
+    def("enable_classad_extensions", enable_classad_extensions, "Register the HTCondor-specific extensions to the ClassAd library.");
 }

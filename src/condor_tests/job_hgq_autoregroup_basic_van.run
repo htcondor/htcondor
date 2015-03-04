@@ -45,17 +45,35 @@ sub timed_callback {
         return;
     }
 	CondorTest::debug("timed_callback\n",1);
+	my @addarray = ();
+	my @sorted = ();
+	my @unsorted = ();
+	my %testhash = ();
 
     # skip this tests if we have already passed it
     if (!$execute_test_passed) {
-        my $stat = `condor_q -format "%s\n" AccountingGroup -constraint "JobStatus == 2" | sort | uniq -c`;
-        my @slines = split /\n/, $stat;
-
+        #my $stat = `condor_q -af AccountingGroup -constraint "JobStatus == 2" | sort | uniq -c`;
+        my $stat = runCondorTool("condor_q -af AccountingGroup -constraint \"JobStatus == 2\"",\@adarray,2,{emit_output=>0});;
+		foreach my $ad (@adarray) {
+			fullchomp($ad);
+			#print "push:$ad\n";
+			push @unsorted, $ad;
+		}
+		@sorted = sort { $a cmp $b } @unsorted; # first we sort, then we count
+		my $sortedsize = @sorted;
+		#print "sorted size:$sortedsize\n";
+		foreach my $group (@sorted) {
+			#print "Group:$group\n";
+			if(exists $testhash{$group}) {
+				$testhash{$group} += 1;
+			} else {
+				$testhash{$group} = 1;
+			}
+		}
         my $tst = "";
-        foreach my $line (@slines) {
-            my $t = trimws($line);
-            $tst = $tst." ".$t;
-        }
+		foreach my $key (sort keys %testhash) {
+			$tst = $tst . " $testhash{$key} $key";
+		}
 		CondorTest::debug("tst: $tst\n",1);
 
         if ($tst == " 2 a.user 2 b.user") {

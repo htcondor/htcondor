@@ -913,7 +913,8 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		}
 
 		char *line;
-		while ((line = getline(aFile)) != NULL) {
+		int lineno = 0;
+		while ((line = getline_trim(aFile, lineno)) != NULL) {
     		fprintf(pSubFile, "%s\n", line);
 		}
 

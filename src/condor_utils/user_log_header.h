@@ -149,7 +149,7 @@ public:
 		{ };
 
 	// Read the header from a file
-	int Write( WriteUserLog &writer, FILE *fp = NULL );
+	int Write( WriteUserLog &writer, int fd = -1 );
 	bool GenerateEvent( GenericEvent &event );
 
 private:
