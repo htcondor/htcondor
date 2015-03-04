@@ -329,9 +329,6 @@ WriteUserLog::internalInitialize( int c, int p, int s, const char *gjid )
 bool
 WriteUserLog::Configure( bool force )
 {
-	// introduce a boolean variable for local locking -- I did never really
-	// care for the goto 
-	bool doLocalLocking = false;
 	priv_state previous;
 	// If we're already configured and not in "force" mode, do nothing
 	if (  m_configured && ( !force )  ) {
