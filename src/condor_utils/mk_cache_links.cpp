@@ -129,11 +129,9 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
     PubInpFiles.initializeFromString(buf);
     free(buf);
     buf = NULL;
-    int webSrvrPort = param_integer("WEB_SERVER_PORT", 80);
-    char portNum[50];
-    sprintf(portNum, "%d", webSrvrPort);
-    string url = "http://localhost:";
-    url += portNum;
+    const char *webSrvrPort = param("WEB_SERVER_PORT");
+     string url = "http://";
+    url += webSrvrPort;
     url += "/";
     PubInpFiles.rewind();
     const char *path;
