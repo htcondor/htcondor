@@ -75,20 +75,12 @@ job_core_onexitrem_van: personal
 job_core_output_java: personal
 job_core_output_sched: personal
 job_core_output_van: personal
-job_core_perhold_local: personal
-job_core_perhold_sched: personal
-job_core_perhold_van: personal
-job_core_perrelease_sched: personal
-job_core_perrelease_van: personal
-job_core_perremove_sched: personal
-job_core_perremove_van: cygwin, personal
 job_core_plus_sched: personal
 job_core_plus_van: personal
 job_core_queue_sched: personal
 job_core_remote-initialdir_van: personal
 job_core_rmkillsig_sched: personal
 job_core_sh-loop_van: personal
-job_cp_cclim_acctgrp_basic_van: cygwin
 job_dagman_abnormal_term_recovery_retries: personal
 job_dagman_abort-A: personal
 job_dagman_abort-B: personal
