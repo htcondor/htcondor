@@ -2749,7 +2749,9 @@ but across all users and user's jobs.
 \item[\Macro{EVENT\_LOG\_ROTATION\_LOCK}]
   Controls the lock file that will be used to ensure that, when
   rotating files, the rotation is done by a single process.  This is a
-  string parameter; it's default value is the file path of the
+  string parameter; its default value is \Expr{\$(LOCK)/EventLogLock}.
+  If an empty value is set, then the file that is used
+  is the file path of the
   event log itself, with a ``.lock'' appended.
   If \MacroNI{EVENT\_LOG} is not defined, or if
   \MacroNI{EVENT\_LOG\_MAX\_SIZE} has a value of 0 (which disables

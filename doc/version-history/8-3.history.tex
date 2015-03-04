@@ -35,6 +35,15 @@ This prevents OpenMP-linked jobs (including \Prog{Matlab})
 from attempting to use more cores than have been provisioned.
 \Ticket{4884}
 
+\item Improved writing to the user job log and the event log.
+Disabling locking when writing to these files
+(controlled by configuration parameters \Macro{ENABLE\_USERLOG\_LOCKING}
+and \Macro{EVENT\_LOG\_LOCKING}) is now safe.
+The default location of the lock file for rotating the event log
+(\Macro{EVENT\_LOG\_ROTATION\_LOCK})has been changed to
+\Expr{\$(LOCK)/EventLogLock}.
+\Ticket{4908}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
