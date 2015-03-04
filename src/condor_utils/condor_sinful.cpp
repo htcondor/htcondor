@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-#define _CONDOR_ALLOW_OPEN /* for sstream */
 #include "condor_common.h"
 #include "condor_sinful.h"
 #include "condor_debug.h"
