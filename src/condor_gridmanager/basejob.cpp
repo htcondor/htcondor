@@ -25,6 +25,7 @@
 #include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "spooled_job_files.h"
+#include "write_user_log.h"
 
 #include "gridmanager.h"
 #include "basejob.h"

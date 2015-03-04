@@ -325,8 +325,8 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 
 	// stream contains
 	// HEADINGS over DATA with optional ==== or --- line under headings.
-	char * line = getline(stream);
-	if (line && (0 == strlen(line))) line = getline(stream);
+	char * line = getline_trim(stream);
+	if (line && (0 == strlen(line))) line = getline_trim(stream);
 	if ( ! line || (0 == strlen(line)))
 		return 0;
 
@@ -334,7 +334,7 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 	std::string subhead;
 	std::string data;
 
-	line = getline(stream);
+	line = getline_trim(stream);
 	if (line) data = line;
 
 	if (data.find("====") == 0 || data.find("----") == 0) {
@@ -342,7 +342,7 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 		data.clear();
 
 		// first line after headings is not data, but underline
-		line = getline(stream);
+		line = getline_trim(stream);
 		if (line) data = line;
 	}
 
@@ -447,7 +447,7 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 		}
 
 		// get next line.
-		line = getline(stream);
+		line = getline_trim(stream);
 		if (line) data = line; else data.clear();
 	}
 
@@ -563,14 +563,14 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 	if (0 == parse_type) {
 		// stream contains
 		// HEADINGS over DATA with optional ==== or --- line under headings.
-		char * line = getline(stream);
-		if (line && ! strlen(line)) line = getline(stream);
+		char * line = getline_trim(stream);
+		if (line && ! strlen(line)) line = getline_trim(stream);
 		if (line) {
 			std::string headings = line;
 			std::string subhead;
 			std::string data;
 
-			line = getline(stream);
+			line = getline_trim(stream);
 			if (line) data = line;
 
 			if (data.find("====") == 0 || data.find("----") == 0) {
@@ -578,7 +578,7 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 				data.clear();
 
 				// first line after headings is not data, but underline
-				line = getline(stream);
+				line = getline_trim(stream);
 				if (line) data = line;
 			}
 
@@ -707,10 +707,10 @@ static void get_address_table(TABULAR_MAP & table)
 		#ifdef WIN32
 		// netstat begins with the line "Active Connections" followed by a blank line
 		// followed by the actual data, but that confuses the table parser, so skip the first 2 lines.
-		char * line = getline(stream);
+		char * line = getline_trim(stream);
 		while (MATCH != strcasecmp(line, "Active Connections")) {
 			if (App.diagnostic > 1) { printf("skipping: %s\n", line); }
-			line = getline(stream);
+			line = getline_trim(stream);
 		}
 		if (App.diagnostic > 1) { printf("skipping: %s\n", line); }
 		fMultiWord = true;

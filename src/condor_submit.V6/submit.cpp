@@ -86,6 +86,8 @@
 #include <string>
 #include <set>
 
+#define SUBMIT_USING_CONFIG_PARSER 1
+
 // TODO: hashFunction() is case-insenstive, but when a MyString is the
 //   hash key, the comparison in HashTable is case-sensitive. Therefore,
 //   the case-insensitivity of hashFunction() doesn't complish anything.
@@ -95,7 +97,10 @@
 static unsigned int hashFunction( const MyString& );
 #include "file_sql.h"
 
+#ifdef SUBMIT_USING_CONFIG_PARSER
+#else
 HashTable<AttrKey,MyString> forcedAttributes( 64, AttrKeyHashFunction );
+#endif
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
 HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
 
@@ -208,12 +213,12 @@ List<const char> extraLines;  // lines passed in via -a argument
 //
 static MACRO_SET SubmitMacroSet = {
 	0, 0,
-	CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS,
+	CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX,
 	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), NULL };
 
 // these are used to keep track of the source of various macros in the table.
-const MACRO_SOURCE DefaultMacro = { true, 1, -2, -1, -2 };
-MACRO_SOURCE FileMacroSource = { false, 0, 0, -1, -2 };
+const MACRO_SOURCE DefaultMacro = { true, false, 1, -2, -1, -2 };
+MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 
 #define MEG	(1<<20)
 
@@ -534,7 +539,11 @@ void	SetKillSig();
 #endif
 void	SetForcedAttributes();
 void 	check_iwd( char const *iwd );
+#ifdef SUBMIT_USING_CONFIG_PARSER
 int	read_condor_file( FILE *fp );
+#else
+int	read_condor_file( FILE *fp );
+#endif
 char * 	condor_param( const char* name, const char* alt_name );
 char * 	condor_param( const char* name ); // call param with NULL as the alt
 void 	set_condor_param( const char* name, const char* value);
@@ -5355,6 +5364,34 @@ SetJobLease( void )
 }
 
 
+#ifdef SUBMIT_USING_CONFIG_PARSER
+void
+SetForcedAttributes()
+{
+	HASHITER it = hash_iter_begin(SubmitMacroSet);
+	for( ; ! hash_iter_done(it); hash_iter_next(it)) {
+		const char *my_name = hash_iter_key(it);
+		if ( ! starts_with_ignore_case(my_name, "MY.")) continue;
+		const char * name = my_name+sizeof("MY.")-1;
+
+		char * value = condor_param(my_name);
+		if (value && value[0]) {
+			MyString buffer;
+			buffer.formatstr( "%s = %s", name, value);
+
+			// Call InserJobExpr with checkcluster set to false.
+			// This will result in forced attributes always going
+			// into the proc ad, not the cluster ad.  This allows
+			// us to easily remove attributes with the "-" command.
+			InsertJobExpr( buffer, false );
+		} else {
+			job->Delete( name );
+		}
+		if (value) free(value);
+	}
+	hash_iter_delete(&it);
+}
+#else
 void
 SetForcedAttributes()
 {
@@ -5383,8 +5420,9 @@ SetForcedAttributes()
 
 		// free memory allocated by macro expansion module
 		free( exValue );
-	}	
+	}
 }
+#endif
 
 void
 SetGridParams()
@@ -6412,6 +6450,105 @@ SetKillSig()
 #endif  // of ifndef WIN32
 
 
+#if SUBMIT_USING_CONFIG_PARSER
+
+MyString last_submit_executable;
+MyString last_submit_cmd;
+
+// this gets called while parsing the submit file to process lines
+// that don't look like valid key=value pairs.  That *should* only be queue lines for now.
+// return 0 to keep scanning the file, ! 0 to stop scanning. non-zero return values will
+// be passed back out of Parse_macros
+//
+int SpecialSubmitParse(void*, MACRO_SOURCE& source, MACRO_SET& macro_set, const char * line, std::string & /*errmsg*/)
+{
+	const char * subsys = get_mySubSystem()->getName();
+	const int cchQueue = sizeof("queue")-1;
+
+	// line will have leading & trailing spaces removed before being handed to us.
+
+	// Check to see if this is a queue statement.
+	// 
+	if (starts_with_ignore_case(line, "queue") && (0 == line[cchQueue] || isspace(line[cchQueue]))) {
+
+		const char * pqargs = line+cchQueue;
+
+		// now parse the extra lines.
+		ExtraLineNo = 0;
+		extraLines.Rewind();
+		const char * exline;
+		while (extraLines.Next(exline)) {
+			++ExtraLineNo;
+			int rval = Parse_config_string(source, 1, exline, macro_set, subsys);
+			if (rval < 0)
+				return rval;
+		}
+		ExtraLineNo = 0;
+
+		// optimize the macro set for lookups
+		optimize_macros(macro_set);
+
+		// HACK! the queue function uses a global flag to know whether or not to ask for a new cluster
+		// In 8.2 this flag is set whenever the "executable" or "cmd" value is set in the submit file.
+		// As of 8.3, we don't believe this is still necessary, but we are afraid to change it. This
+		// code is *mostly* the same, but will differ in cases where the users is setting cmd or executble
+		// to the *same* value between queue statements. - hopefully this is close enough.
+		MyString cur_submit_executable(lookup_macro(Executable, NULL, macro_set, 0));
+		if (last_submit_executable != cur_submit_executable) {
+			NewExecutable = true;
+			last_submit_executable = cur_submit_executable;
+		}
+		MyString cur_submit_cmd(lookup_macro("cmd", NULL, macro_set, 0));
+		if (last_submit_cmd != cur_submit_cmd) {
+			NewExecutable = true;
+			last_submit_cmd = cur_submit_cmd;
+		}
+
+		// skip whitespace before queue arguments (if any)
+		while (isspace(*pqargs)) ++pqargs;
+
+		int queue_modifier = 1;
+		if (*pqargs) {
+			// expand the queue line
+			char * qargs = expand_macro(pqargs, macro_set, false, subsys);
+			if (qargs) {
+				// parse the queue line.
+				int rval = sscanf(qargs, "%d", &queue_modifier); 
+
+				// Default to queue 1 if not specified; always use queue 1 for
+				// interactive jobs, even if something else is specified.
+				if( rval == EOF || rval == 0 || InteractiveJob ) {
+					queue_modifier = 1;
+				}
+
+				free(qargs);
+			}
+		}
+		queue(queue_modifier);
+
+		if (InteractiveJob && !InteractiveSubmitFile) {
+			// for interactive jobs, just one queue statement
+			return 1;
+		}
+		return 0; // keep scanning
+	}
+	return -1;
+}
+
+int read_condor_file(FILE * fp)
+{
+	std::string errmsg;
+	int rval = Parse_macros(fp, FileMacroSource,
+		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
+		get_mySubSystem()->getName(), errmsg,
+		SpecialSubmitParse, NULL);
+
+	if( rval < 0 ) {
+		fprintf (stderr, "Error on Line %d while reading submit file: %s\n", FileMacroSource.line, errmsg.c_str());
+	}
+	return rval;
+}
+#else
 int
 read_condor_file( FILE *fp )
 {
@@ -6450,8 +6587,7 @@ read_condor_file( FILE *fp )
 			}
 		}
 		else {
-			name = getline( fp );
-			LineNo++;
+			name = getline_trim( fp, LineNo );
 		}
 		if( name == NULL ) {
 			break;
@@ -6605,6 +6741,7 @@ read_condor_file( FILE *fp )
 	(void)fclose( fp );
 	return 0;
 }
+#endif
 
 char *
 condor_param( const char* name)
@@ -6619,6 +6756,7 @@ condor_param( const char* name, const char* alt_name )
 	const char *pval = lookup_macro(name, NULL, SubmitMacroSet);
 	char * pval_expanded = NULL;
 
+	// TODO: change this to use the defaults table from SubmitMacroSet
 	static StringList* submit_exprs = NULL;
 	static bool submit_exprs_initialized = false;
 	if( ! submit_exprs_initialized ) {

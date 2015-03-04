@@ -446,7 +446,8 @@ bool AutoCluster::config(const char* significant_target_attrs)
 
 	}
 
-	bool changed = this->setSigAttrs(new_sig_attrs, true, true);
+	bool replace_attrs = sig_attrs_came_from_config_file;
+	bool changed = this->setSigAttrs(new_sig_attrs, true, replace_attrs);
 	if (changed) {
 		sig_attrs_changed = true;
 	} else if (sig_attrs_changed) {

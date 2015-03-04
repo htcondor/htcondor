@@ -106,6 +106,7 @@ sub RunCheck
     my $requirements = $args{requirements} || "";
     my $streamoutput = $args{stream_output} || "";
     my $append_submit_commands = $args{append_submit_commands} || "";
+    my $multi_queue = $args{multi_queue} || "";
     my $grid_resource = $args{grid_resource} || "";
 	my $transfer_output_files = $args{transfer_output_files} || "";
 	my $transfer_input_files = $args{transfer_input_files} || "";
@@ -271,6 +272,9 @@ sub RunCheck
         print SUBMIT "\n" . $append_submit_commands . "\n";
     }
     print SUBMIT "queue $queuesz\n";
+	if($multi_queue ne "") {
+        print SUBMIT "\n" . $multi_queue . "\n";
+	}
     close( SUBMIT );
 
 	if (defined $args{GetClusterId}) {

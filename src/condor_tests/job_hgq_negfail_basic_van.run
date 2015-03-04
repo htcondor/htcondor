@@ -37,6 +37,11 @@ my $pre_execution = 1;
 
 
 sub timed_callback {
+	my @addarray = ();
+	my @sorted = ();
+	my @unsorted = ();
+	my %testhash = ();
+
     if ($test_passed) {
         # if we already detected that the test passed, we are 
 		# no longer wanting a call back
@@ -55,14 +60,30 @@ sub timed_callback {
 
     #my $stat = `condor_q -format "%s\n" AccountingGroup -constraint "JobStatus == 2" | sort | uniq -c`;
 	my @slines = ();
-    my $stat = runCondorTool("condor_q -format \"%s\n\" AccountingGroup -constraint \"JobStatus == 2\" | sort | uniq -c",\@slines,2,{emit_output=>0});
-
-    my $tst = "";
-    foreach my $line (@slines) {
-		CondorUtils::fullchomp($line);
-        my $t = trimws($line);
-        $tst = $tst." ".$t;
-    }
+	my $stat = runCondorTool("condor_q -af AccountingGroup -constraint \"JobStatus == 2\"",\@adarray,2,{emit_output=>0});;
+	foreach my $ad (@adarray) {
+		fullchomp($ad);
+		#print "push:$ad\n";
+		push @unsorted, $ad;
+	}
+	@sorted = sort { $a cmp $b } @unsorted; # first we sort, then we count
+	my $sortedsize = @sorted;
+	#print "sorted size:$sortedsize\n";
+	foreach my $group (@sorted) {
+		#print "Group:$group\n";
+		if(exists $testhash{$group}) {
+			$testhash{$group} += 1;
+			#print "bump group:$group:$testhash{$group}\n";
+		} else {
+			$testhash{$group} = 1;
+			#print "new group:$group:$testhash{$group}\n";
+		}
+	}
+	my $tst = "";
+	foreach my $key (sort keys %testhash) {
+		#print "Looking at $key=$testhash{$key}\n";
+		$tst = $tst . " $testhash{$key} $key";
+	}
 
 	CondorTest::debug("Have: $tst Looking for: - 20 a.a.user 5 b.a.user 5 b.b.user-\n",2);
     if ($tst == " 20 a.a.user 5 b.a.user 5 b.b.user") {
@@ -71,13 +92,13 @@ sub timed_callback {
         # we found what we were looking for: now we want to clear the que
         # so the test can finish, because some of the submitted jobs will
         # never run by design.
-        runcmd("condor_rm -all");
+        runcmd("condor_rm -all",{emit_output=>0});
     } else {
-        print "Haven't seen expected output yet.  What I saw was:\n";
+        print "Haven't seen expected output yet.  What I saw was:$tst\n";
 		# Call backs only fire once now
 		CondorTest::debug("Re fire callback - end of this call back\n",2);
 		CondorTest::RegisterTimed($testname, \&timed_callback, 15);
-        print $stat;
+        #print $stat;
         # if this check failed, wait a little:
         sleep(5);
     }
@@ -100,6 +121,9 @@ sub exit_callback {
     unless ($test_passed) {
         die "Failed to find expected pattern of running jobs";
     }
+}
+
+sub imageupdated {
 }
 
 
@@ -197,6 +221,7 @@ my $on_evictedwithoutcheckpoint = sub {
 CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
 CondorTest::RegisterTimed($testname, \&timed_callback, 15);
 CondorTest::RegisterExecute($testname, \&execute_callback);
+CondorTest::RegisterImageUpdated($testname, \&imageupdated);
 
 CondorTest::RegisterExited($testname, \&exit_callback);
 CondorTest::RegisterExitedSuccess($testname, \&exit_callback);
