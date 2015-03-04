@@ -896,6 +896,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_WEIGHTED_RUNNING_JOBS "WeightedRunningJobs"
 
 //************* Added for EC2 Jobs ***************************//
+#define ATTR_EC2_ACCESS_KEY  "EC2AccessKey"
 #define ATTR_EC2_ACCESS_KEY_ID  "EC2AccessKeyId"
 #define ATTR_EC2_SECRET_ACCESS_KEY  "EC2SecretAccessKey"
 #define ATTR_EC2_AMI_ID  "EC2AmiID"

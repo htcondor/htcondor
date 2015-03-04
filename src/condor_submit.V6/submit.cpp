@@ -5544,13 +5544,29 @@ SetGridParams()
 							 full_path(tmp), strerror(errno));
 				exit(1);
 			}
-			fclose(fp);
 
 			StatInfo si(full_path(tmp));
 			if (si.IsDirectory()) {
 				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
 				exit(1);
 			}
+
+			// Should this depend on file checks not being disabled?
+			unsigned long fileSize = si.GetFileSize();
+			char * rawBuffer = (char *)malloc( fileSize + 1 );
+			assert( rawBuffer != NULL );
+			unsigned long totalRead = full_read( fileno(fp), rawBuffer, fileSize );
+			fclose( fp );
+			if( totalRead != fileSize ) {
+				fprintf( stderr, "Failed to completely read public key file '%s'; need %lu bytes, read only %lu.\n", tmp, fileSize, totalRead );
+				free( rawBuffer );
+				exit(1);
+			}
+			std::string accessKey( rawBuffer );
+			trim( accessKey );
+			buffer.formatstr( "%s = \"%s\"", ATTR_EC2_ACCESS_KEY, accessKey.c_str() );
+			InsertJobExpr( buffer.Value() );
+			free( rawBuffer );
 		}
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_ACCESS_KEY_ID, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
