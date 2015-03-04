@@ -17,22 +17,7 @@
  *
  ***************************************************************/
 
-#define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
-
-#if defined ( WIN32 )
-/*	Unfortunately, the trick used above for *nix does not work on
-	Windows, because we us "condor_common.h" as the pre-compiled
-	header, so it is a static entity by the time it is referenced
-	here.  Thus below we try to mimic the equivalent of the
-	above.  If this happens again, then maybe this hack can be 
-	extracted and generalized to look a little nicer */
-# undef open
-# undef _CONDOR_ALLOW_OPEN
-# define _CONDOR_ALLOW_OPEN 1
-# include "condor_macros.h"
-#endif
-
 #include "condor_open.h"
 #include "condor_debug.h"
 #include "util_lib_proto.h"
@@ -359,7 +344,7 @@ WriteUserLog::Configure( bool force )
 
 	// Make sure the global lock exists
 	previous = set_priv(PRIV_CONDOR);
-	m_rotation_lock_fd = open( m_rotation_lock_path, O_WRONLY|O_CREAT, 0666 );
+	m_rotation_lock_fd = safe_open_wrapper_follow( m_rotation_lock_path, O_WRONLY|O_CREAT, 0666 );
 	if ( m_rotation_lock_fd < 0 ) {
 		dprintf( D_ALWAYS,
 				 "Warning: WriteUserLog Failed to open event rotation lock file %s:"
