@@ -69,6 +69,10 @@ if (BUILD_TESTING)
 	#	set_source_files_properties(x_dumpcore.cpp PROPERTIES COMPILE_FLAGS -Wno-div-by-zero)
 	#endif(UNIX)
 
+	if(WINDOWS)
+		condor_exe_test(sleep.exe "sleep.cpp" "")
+	endif(WINDOWS)
+
 	if (NOT WINDOWS)
 	  condor_exe_test(x_trapsig.exe "x_trapsig.cpp" "" )
 	endif(NOT WINDOWS)

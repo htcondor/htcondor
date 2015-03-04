@@ -50,8 +50,6 @@ job_core_input_sched
 job_core_macros-dollardollar_van
 job_core_macros_sched
 job_core_output_sched
-job_core_perhold_sched
-job_core_perremove_sched
 job_core_queue_sched
 job_core_remote-initialdir_van
 job_core_sh-loop_van

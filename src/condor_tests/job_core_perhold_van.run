@@ -33,6 +33,22 @@ my $variation = "perholdfalse";
 my %info;
 my $cluster;
 
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	PERIODIC_EXPR_interval = 30
+    NUM_CPUS = 2
+    NEGOTIATOR_INTERVAL = 5
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"perholdvan");
+print "local config file:$configfile\n";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "perholdvan",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
 $executed = sub
 {
 	%info = @_;

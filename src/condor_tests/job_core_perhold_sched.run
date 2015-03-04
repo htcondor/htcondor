@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use Check::SimpleJob;
 
 my $testname = "job_core_perhold_sched";
@@ -31,6 +32,22 @@ sub RUNNING{2};
 
 my %info;
 my $cluster;
+
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	PERIODIC_EXPR_interval = 30
+    NUM_CPUS = 2
+    NEGOTIATOR_INTERVAL = 5
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"perholdvan");
+print "local config file:$configfile\n";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "perholdvan",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
 
 $executed = sub
 {
@@ -91,31 +108,55 @@ my $falsepolicy = '
 periodic_hold = (time() - QDate) < 0
 ';
 
-
-SimpleJob::RunCheck(
-	universe=>"scheduler",
-    append_submit_commands=>"$falsepolicy",
-    duration=>20,
-    on_execute=>$executed,
-    on_success=>$success,
-);
-
 my $truepolicy = '
 periodic_hold = JobStatus == 2
 ';
 
-$variation = "perholdtrue";
+if(is_windows()) {
+	SimpleJob::RunCheck(
+		runthis=>"sleep.exe",
+		universe=>"scheduler",
+	    append_submit_commands=>"$falsepolicy",
+	    duration=>"20s",
+	    on_execute=>$executed,
+	    on_success=>$success,
+	);
 
-SimpleJob::RunCheck(
-	universe=>"scheduler",
-    duration=>40,
-    append_submit_commands=>$truepolicy,
-	on_evictedwithoutcheckpoint=>$on_evictedwithoutcheckpoint,
-    on_exitedabnormal=>$abnormal,
-    on_execute=>$executed,
-    on_hold=>$held,
-    on_abort=>$aborted
-);
+	$variation = "perholdtrue";
+
+	SimpleJob::RunCheck(
+		runthis=>"sleep.exe",
+		universe=>"scheduler",
+	    duration=>"40s",
+	    append_submit_commands=>$truepolicy,
+		on_evictedwithoutcheckpoint=>$on_evictedwithoutcheckpoint,
+	    on_exitedabnormal=>$abnormal,
+	    on_execute=>$executed,
+	    on_hold=>$held,
+	    on_abort=>$aborted
+	);
+} else {
+	SimpleJob::RunCheck(
+		universe=>"scheduler",
+	    append_submit_commands=>"$falsepolicy",
+	    duration=>20,
+	    on_execute=>$executed,
+	    on_success=>$success,
+	);
+
+	$variation = "perholdtrue";
+
+	SimpleJob::RunCheck(
+		universe=>"scheduler",
+	    duration=>40,
+	    append_submit_commands=>$truepolicy,
+		on_evictedwithoutcheckpoint=>$on_evictedwithoutcheckpoint,
+	    on_exitedabnormal=>$abnormal,
+	    on_execute=>$executed,
+	    on_hold=>$held,
+	    on_abort=>$aborted
+	);
+}
 
 CondorTest::EndTest();
 print scalar localtime() . "\n";
