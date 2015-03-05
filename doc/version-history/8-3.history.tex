@@ -80,8 +80,7 @@ jobs to execute repeatedly on Windows.
 
 \begin{itemize}
 
-\item HTCondor version 8.3.4 not yet released.
-%\item HTCondor version 8.3.4 released on Month Date, 2015.
+\item HTCondor version 8.3.4 released on March 5, 2015.
 
 \end{itemize}
 
@@ -98,7 +97,11 @@ jobs to execute repeatedly on Windows.
 
 \begin{itemize}
 
-\item Place holder for a description of this bug fix.
+\item Fixed a \Condor{schedd} daemon bug
+that could have prevented jobs from matching resources
+without an apparent reason,
+when the \Condor{schedd} was flocking
+and configuration variable \Macro{SIGNIFICANT\_ATTRIBUTES} was not set.
 \Ticket{4919}
 
 \end{itemize}
