@@ -45,6 +45,14 @@ and configuration variable \Macro{SIGNIFICANT\_ATTRIBUTES} was not set.
 
 \end{itemize}
 
+\noindent Known Issue:
+\begin{itemize}
+\item If the \Condor{schedd} daemon is configured to enable both
+IPv4 and IPv6 communication,
+it will not be able to start any jobs which use a \Condor{shadow}.
+In effect, mixed mode IPv4 and IPv6 does not work.
+\Ticket{4911}
+\end{itemize}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-3-3}Version 8.3.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
