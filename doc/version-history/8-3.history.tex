@@ -37,7 +37,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Place holder for a description of this bug fix.
+\item Fixed a \Condor{schedd} daemon bug
+that could have prevented jobs from matching resources
+without an apparent reason,
+when the \Condor{schedd} was flocking
+and configuration variable \Macro{SIGNIFICANT\_ATTRIBUTES} was not set.
 \Ticket{4919}
 
 \end{itemize}
