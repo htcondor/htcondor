@@ -2105,6 +2105,14 @@ friendly_name=Collector read buffer size for incoming UDP traffic
 review=?
 tags=daemon_core,daemon_core,collector
 
+[PIPE_BUFFER_MAX]
+default=10240
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Maximum buffer size for stdout/err pipes
+tags=daemon_core,daemon_core
+
 [TOUCH_LOG_INTERVAL]
 default=60
 type=int

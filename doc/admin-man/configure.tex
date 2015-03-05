@@ -3027,6 +3027,14 @@ which use DaemonCore).
   Defaults to \Expr{core.\$(SUBSYSTEM)} on Unix platforms,
   and \Expr{core.\$(SUBSYSTEM).WIN32} on Windows platforms.   
 
+\label{param:PipeBufferMax}
+\item[\Macro{PIPE\_BUFFER\_MAX}]
+  The maximum number of bytes read from a \Code{stdout} or \Code{stdout} pipe.
+  The default value is 10240.
+  A rare example in which the value would need to increase from
+  its default value is when a hook must output an entire ClassAd,
+  and the ClassAd may be larger than the default.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
