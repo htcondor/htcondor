@@ -23,6 +23,7 @@
 #include "condor_daemon_core.h"
 #include "daemon.h"
 #include "dc_message.h"
+#include "stopwatch.h"
 
 DCMsg::DCMsg(int cmd):
 	m_cmd( cmd ),
@@ -494,19 +495,35 @@ void DCMessenger::startReceiveMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 int
 DCMessenger::receiveMsgCallback(Stream *sock)
 {
-	classy_counted_ptr<DCMsg> msg = m_callback_msg;
-	ASSERT(msg.get());
+	Stopwatch watch; watch.start();
+	bool one_pass = false;
+	pending_operation_enum cur_state = m_pending_operation;
+	do
+	{
+		// If we've gone through the loop once and there's not another ready message,
+		// wait for DC to call us back.
+		if (one_pass && !static_cast<Sock*>(sock)->msgReady()) {break;}
 
-	m_callback_msg = NULL;
-	m_callback_sock = NULL;
-	m_pending_operation = NOTHING_PENDING;
+		one_pass = true;
+		classy_counted_ptr<DCMsg> msg = m_callback_msg;
+		ASSERT(msg.get());
 
-	daemonCore->Cancel_Socket( sock );
+		m_callback_msg = NULL;
+		m_callback_sock = NULL;
+		m_pending_operation = NOTHING_PENDING;
 
-	ASSERT( sock );
-	readMsg( msg, (Sock *)sock );
+		daemonCore->Cancel_Socket( sock );
 
-	decRefCount();
+		ASSERT( sock );
+		readMsg( msg, (Sock *)sock );
+
+		cur_state = m_pending_operation;
+		decRefCount();
+	}
+		// Note that we do not access m_pending_operation after
+		// decRefCount is called - that may have deleted our object.
+	while (cur_state != NOTHING_PENDING && (watch.get_ms() < 2000));
+
 	return KEEP_STREAM;
 }
 
