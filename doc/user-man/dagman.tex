@@ -1990,9 +1990,12 @@ must be specified accordingly.
 \index{DAGMan!Splicing DAGs}
 \index{DAGMan input file!SPLICE keyword}
 
-A weakness in scalability exists when submitting a DAG within a DAG.
+A weakness in scalability exists when submitting a DAG within a DAG,
+which is called a SUBDAG.
 Each executing independent DAG requires its own invocation of
 \Condor{dagman} to be running.
+The outer DAG has an instance of \Condor{dagman}, 
+and each named SUBDAG has an instance of \Condor{dagman}. 
 The scaling issue presents itself when
 the same semantic DAG is reused hundreds or thousands of times
 in a larger DAG.
@@ -2021,9 +2024,9 @@ inclusion hierarchy of nodes into the top level dag is
 \verb@'+'@.
 This character is chosen due
 to a restriction in the allowable characters which may be in a file name
-across the variety of ports that HTCondor supports.
-In any DAG file, all splices must have unique names,
-but the same splice name may be reused in different DAG files.
+across the variety of platforms that HTCondor supports.
+In any DAG input file, all splices must have unique names,
+but the same splice name may be reused in different DAG input files.
 
 HTCondor does not detect nor support splices that form a cycle
 within the DAG.
@@ -2264,7 +2267,68 @@ will contain DIR specifications, so the Rescue DAG must be run
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
-\item[Splices and the RETRY of a Node]
+\item[Limitation: Splices and PRE or POST Scripts]
+\end{description}
+
+A splice may not specify a PRE or POST script.
+The nodes of a splice are incorporated into a top level DAG;
+these nodes are scoped and named.
+Therefore, after incorporation, the node name given to the splice
+does not exist as a distinct entity.
+
+To achieve the desired effect of having a PRE script associated with a splice,
+introduce a new NOOP node into the DAG with the splice as a dependency.
+Attach the PRE script to the NOOP node.
+\footnotesize
+\begin{verbatim}
+  # BEGIN DAG FILE example1.dag
+
+  # Names a node with no associated node job, a NOOP node
+  # Note that the file noop.submit must exist, but will not be used.
+  JOB OnlyPreNode noop.submit NOOP
+
+  # Attach a PRE script to the NOOP node
+  SCRIPT PRE OnlyPreNode prescript.sh
+
+  # Define the splice
+  SPLICE TheSplice thenode.dag
+ 
+  # Define the dependency
+  PARENT OnlyPreNode CHILD TheSplice
+
+  # END DAG FILE example1.dag
+\end{verbatim}
+\normalsize
+
+The same technique is used to achieve the effect of having a POST script
+associated with a splice.
+Introduce a new NOOP node into the DAG as a child of the splice, 
+and attach the POST script to the NOOP node.
+
+\footnotesize
+\begin{verbatim}
+  # BEGIN DAG FILE example2.dag
+
+  # Names a node with no associated node job, a NOOP node
+  # Note that the file noop.submit must exist, but will not be used.
+  JOB OnlyPostNode noop.submit NOOP
+
+  # Attach a POST script to the NOOP node
+  SCRIPT POST OnlyPostNode postscript.sh
+
+  # Define the splice
+  SPLICE TheSplice thenode.dag
+ 
+  # Define the dependency
+  PARENT TheSplice CHILD OnlyPostNode
+
+  # END DAG FILE example2.dag
+\end{verbatim}
+\normalsize
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Limitation: Splices and the RETRY of a Node]
 \end{description}
 
 The nodes of a splice are incorporated into a top level DAG;
@@ -2320,7 +2384,7 @@ and effecting RETRY on that SUBDAG.
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
-\item[The Interaction of Categories and MAXJOBS with Splices]
+\item[Limitation: The Interaction of Categories and MAXJOBS with Splices]
 \end{description}
 
 Categories normally refer only to nodes within a
@@ -2397,6 +2461,30 @@ and 10 for the \Expr{A+catX} category in splice.
 Note that non-global category names are
 prefixed with their splice name(s), so to refer to a non-global category 
 at a higher level, the splice name must be included.
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Limitation: Splices and NOOP nodes]
+\end{description}
+\Todo
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Limitation: Splices and DONE]
+\end{description}
+\Todo
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Limitation: Splices and VARS]
+\end{description}
+\Todo
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Limitation: Splices and PRIORITY]
+\end{description}
+\Todo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
