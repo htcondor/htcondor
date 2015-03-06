@@ -285,11 +285,12 @@ void startShadow( ClassAd *ad )
 	ad->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
 
 	if( is_reconnect ) {
+		Shadow->attemptingReconnectAtStartup = true;
 		Shadow->reconnect();
 	} else {
+		Shadow->attemptingReconnectAtStartup = false;
 			// if the shadow is going to claim the startd,
-			// we need to asynchrously claim it.
-			
+			// we need to asynchrously claim it.			
 			// Otherwise, in the usual case under the sched,
 			// call spawn here, which will activate the pre-claimed
 			// startd

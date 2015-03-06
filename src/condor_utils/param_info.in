@@ -995,6 +995,15 @@ friendly_name=Dagman Pending Report Interval
 review=?
 tags=dagman,dagman_main
 
+[DAGMAN_MAX_JOBS_IDLE]
+default=1000
+type=int
+reconfig=true
+customization=normal
+friendly_name=Dagman Max Jobs Idle
+review=?
+tags=dagman,dagman_main
+
 [CKPT_SERVER_DIR]
 default=
 type=string
@@ -1115,6 +1124,11 @@ review=?
 default=$(RELEASE_DIR)/include
 type=path
 review=?
+
+[ETC]
+default=$(RELEASE_DIR)/etc
+type=path
+friendly_name=etc
 
 [XAUTHORITY_USERS]
 default=
@@ -2120,6 +2134,14 @@ friendly_name=Collector read buffer size for incoming UDP traffic
 review=?
 tags=daemon_core,daemon_core,collector
 
+[PIPE_BUFFER_MAX]
+default=10240
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Maximum buffer size for stdout/err pipes
+tags=daemon_core,daemon_core
+
 [TOUCH_LOG_INTERVAL]
 default=60
 type=int
@@ -2715,7 +2737,7 @@ friendly_name=Network Hostname
 review=?
 
 [NETWORK_INTERFACE]
-default=
+default=*
 type=string
 reconfig=false
 customization=seldom
@@ -2785,6 +2807,17 @@ reconfig=true
 customization=seldom
 friendly_name=Ignore Nfs Lock Errors
 review=?
+
+[SENDMAIL]
+# default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
+default=sendmail
+win32_default=
+type=path
+reconfig=true
+customization=seldom
+friendly_name=Path to sendmail
+review=?
+tags=MAIL,
 
 [MAIL]
 # default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
@@ -2877,6 +2910,15 @@ customization=seldom
 friendly_name=Startd Sends Alives
 review=?
 tags=startd,command
+
+[STARTER_HANDLES_ALIVES]
+default=true
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Startd should only send alives when slot idle
+review=?
+tags=schedd,claim
 
 [VM_GAHP_CONFIG]
 default=
@@ -3202,6 +3244,24 @@ customization=seldom
 friendly_name=Classad Lib Path
 review=?
 tags=classad,ast
+
+[CLASSAD_USER_PYTHON_LIB]
+default=$(LIBEXEC)/libclassad_python_user.so
+type=string
+reconfig=true
+customization=seldom
+friendly_name=ClassAd python library path
+review=?
+tags=classad
+
+[CLASSAD_USER_PYTHON_MODULES]
+default=
+type=string
+reconfig=true
+customization=seldom
+friendly_name=ClassAd python modules
+review=?
+tags=classad
 
 [ENABLE_CLASSAD_CACHING]
 default=true
@@ -3825,6 +3885,15 @@ friendly_name=Event Log Use Xml
 review=?
 tags=c++_util,user_log
 
+[EVENT_LOG_ROTATION_LOCK]
+default=$(LOCK)/EventLogLock
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Event Log Rotation Lock
+review=?
+tags=c++_util,user_log
+
 [EVENT_LOG_MAX_SIZE]
 default=1000000
 type=long
@@ -4069,7 +4138,7 @@ review=?
 tags=starter,os_proc
 
 [JOB_RENICE_INCREMENT]
-default=
+default=0
 win32_default=10
 type=string
 reconfig=true
@@ -4205,6 +4274,14 @@ customization=seldom
 friendly_name=Negotiator Update After Cycle
 review=?
 tags=negotiator,matchmaker
+
+[NEGOTIATOR_UPDATE_INTERVAL]
+default=300
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Update Interval
+review=?
 
 [NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD]
 default=0
@@ -4834,6 +4911,15 @@ friendly_name=Schedd Preemption Rank
 review=?
 tags=schedd,dedicated_scheduler
 
+[SCHEDD_RESTART_REPORT]
+default=$(LOG)/ScheddRestartReport
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Schedd Restart Report
+review=?
+tags=schedd,dedicated_scheduler
+
 [DEDICATED_SCHEDULER_USE_FIFO]
 default=true
 type=bool
@@ -5123,6 +5209,15 @@ customization=seldom
 friendly_name=Schedd Backup Spool
 review=?
 tags=schedd,schedd_main
+
+[SCHEDD_QUERY_WORKERS]
+default=8
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Schedd forked workers
+review=?
+tags=schedd
 
 [X_RUNS_HERE]
 default=
@@ -5622,8 +5717,8 @@ review=?
 tags=ccb,ccb
 
 [DEBUG_TIME_FORMAT]
-# The default has a trailing space...
-default=%m/%d/%y %H:%M:%S 
+# The default used to have a trailing space, it was removed in 8.3.2
+default=%m/%d/%y %H:%M:%S
 type=string
 reconfig=true
 customization=seldom
@@ -5838,6 +5933,14 @@ friendly_name=Enable Address Rewriting
 review=?
 tags=c++_util
 
+# This was an option "born deprecated"; it allows a single-host HTCondor instance (particularly, the HTCondor-CE) to provide a better dual-stack service by rewriting all ads in the collector.
+[SHARED_PORT_ADDRESS_REWRITING]
+default=false
+version=8.3.4
+type=bool
+reconfig=true
+customization=never
+
 [SHADOW_WORKLIFE]
 default=3600
 version=7.5.3
@@ -5924,7 +6027,7 @@ friendly_name=
 review=?
 
 [LOCAL_CONFIG_DIR_EXCLUDE_REGEXP]
-default=^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
+default=^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew)|(.*\.dpkg-old)|(.*\.dpkg-dist)|(.*\.cfsaved))$
 type=string
 reconfig=true
 customization=seldom
@@ -6677,7 +6780,7 @@ review=?
 tags=c++_util,condor_config
 
 [GANGLIAD_METRICS_CONFIG_DIR]
-default=$(RELEASE_DIR)/etc/condor/ganglia.d
+default=/etc/condor/ganglia.d
 type=path
 reconfig=true
 customization=seldom
@@ -6746,6 +6849,15 @@ customization=seldom
 friendly_name=Send metrics for all hosts
 review=?
 tags=c++_util,gangliad
+
+[ECRYPTFS_ADD_PASSPHRASE]
+default=ecryptfs-add-passphrase
+type=path
+reconfig=true
+customization=expert
+friendly_name=Name of ecryptfs tool to add a passphrase
+review=toddt
+tags=ecryptfs
 
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
 default=
@@ -6834,18 +6946,19 @@ tags=negotiator,matchmaker
 
 [HISTORY_HELPER_MAX_HISTORY]
 default=10000
+range=0,
 type=int
-reconfig=false
+reconfig=true
 customization=seldom
 friendly_name=History Helper max number of history ads
 usage=Set the limit on the number of history ads remote history will consider
 review=?
 
 [HISTORY_HELPER_MAX_CONCURRENCY]
-default=10000
+default=2
 range=0,
 type=int
-reconfig=false
+reconfig=true
 customization=seldom
 friendly_name=History Helper max number of helper sub-processes
 usage=Set the limit on the number of condor_history_helper sub-processes
@@ -7872,3 +7985,29 @@ default=/tmp/pandaStatisticsLog
 type=string
 review=tlmiller
 reconfig=true
+
+[RUN_FILETRANSFER_PLUGINS_WITH_ROOT]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Whether to invoke file transfer plugins as user or as root
+review=?
+
+[DISCARD_SESSION_KEYRING_ON_STARTUP]
+default=true
+type=bool
+reconfig=false
+customization=expert
+friendly_name=Will master discard session keyring on startup
+review=toddt
+tags=ecryptfs,master
+
+[DOCKER]
+default=/usr/bin/docker
+win32_default=docker
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Docker
+review=?

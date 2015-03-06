@@ -8,6 +8,8 @@
 
 void registerFunction(boost::python::object function, boost::python::object name);
 
+classad::ExprTree* convert_python_to_exprtree(boost::python::object value);
+
 struct ExprTreeHolder;
 
 struct AttrPairToFirst :
@@ -38,6 +40,9 @@ struct AttrPair :
 };
 
 typedef boost::transform_iterator<AttrPair, classad::AttrList::iterator> AttrItemIter;
+
+// Look to see if a given function accepts a variable named "state".
+bool checkAcceptsState(boost::python::object pyFunc);
 
 struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassAd>
 {
@@ -77,6 +82,10 @@ struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassA
     boost::python::object setdefault(const std::string attr, boost::python::object result=boost::python::object());
 
     void update(boost::python::object source);
+
+    boost::python::list externalRefs(boost::python::object expr) const;
+
+    boost::python::list internalRefs(boost::python::object expr) const;
 
     ClassAdWrapper();
 

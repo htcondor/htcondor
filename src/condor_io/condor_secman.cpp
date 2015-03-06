@@ -257,7 +257,7 @@ SecMan::sec_req_param( const char* fmt, DCpermission auth_level, sec_req def ) {
 			MyString param_name;
 			char *value = getSecSetting( fmt, auth_level, &param_name );
 			if( res == SEC_REQ_INVALID ) {
-				EXCEPT( "SECMAN: %s=%s is invalid!\n",
+				EXCEPT( "SECMAN: %s=%s is invalid!",
 				        param_name.Value(), value ? value : "(null)" );
 			}
 			if( IsDebugVerbose(D_SECURITY) ) {
@@ -1227,7 +1227,7 @@ SecManStartCommand::startCommand_inner()
 			result = receivePostAuthInfo_inner();
 			break;
 		default:
-			EXCEPT("Unexpected state in SecManStartCommand: %d\n",m_state);
+			EXCEPT("Unexpected state in SecManStartCommand: %d",m_state);
 		}
 	} while( result == StartCommandContinue );
 
@@ -1835,7 +1835,7 @@ SecManStartCommand::authenticate_inner()
 			}
 
 			int auth_timeout = m_sec_man.getSecTimeout( CLIENT_PERM );
-			int auth_result = m_sock->authenticate(m_private_key, auth_methods, m_errstack, auth_timeout, true, NULL);
+			int auth_result = m_sock->authenticate(m_private_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, NULL);
 
 			if (auth_methods) {
 				free(auth_methods);
@@ -2904,7 +2904,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	condor_sockaddr peer_addr;
 	if(peer_sinful && !peer_addr.from_sinful(peer_sinful)) {
 		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
-				"string_to_sin(%s) failed\n",sesid,peer_sinful);
+				"sock_sockaddr::from_sinful(%s) failed\n",sesid,peer_sinful);
 		return false;
 	}
 

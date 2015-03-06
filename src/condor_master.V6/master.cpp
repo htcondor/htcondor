@@ -259,6 +259,9 @@ main_init( int argc, char* argv[] )
 			if( !(ptr && *ptr) ) {
 				EXCEPT( "-n requires another argument" );
 			}
+			if (MasterName) {
+				free(MasterName);
+			}
 			MasterName = build_valid_daemon_name( *ptr );
 			dprintf( D_ALWAYS, "Using name: %s\n", MasterName );
 			break;
@@ -266,6 +269,34 @@ main_init( int argc, char* argv[] )
 			usage( argv[0] );
 		}
 	}
+
+#ifdef LINUX
+	if ( can_switch_ids() &&
+		 param_boolean("DISCARD_SESSION_KEYRING_ON_STARTUP",true) )
+	{
+#ifndef KEYCTL_JOIN_SESSION_KEYRING
+  #define KEYCTL_JOIN_SESSION_KEYRING 1
+#endif
+		// Create a new empty session keyring, discarding the old one.
+		// We do this in the master so a session keyring containing
+		// root keys is not inadvertantly leaked to jobs
+		// (esp scheduler universe jobs, since
+		// KEYCTL_JOIN_SESSION_KEYRING will fail in RHEL6 if the calling
+		// process has more than one thread, which is true when spawning
+		// scheduler universe jobs as the schedd clones by default instead
+		// of forking).  We also do this in the master instead
+		// of daemonCore, since we don't want to create a brand new
+		// session keyring for every shadow (each keyring uses up kernel resources).
+		// If the syscall fails due to ENOSYS, don't worry about it,
+		// since that simply says the keyring facility is not installed.
+		if (syscall(__NR_keyctl, KEYCTL_JOIN_SESSION_KEYRING, "htcondor")==-1 &&
+			errno != ENOSYS)
+		{
+			EXCEPT("Failed DISCARD_SESSION_KEYRING_ON_STARTUP=True errno=%d",
+					errno);
+		}
+	}
+#endif
 
     if (runfor != 0) {
         // We will construct an environment variable that 
@@ -1164,6 +1195,25 @@ StopStateT StringToStopState(const char * psz)
 time_t
 GetTimeStamp(char* file)
 {
+#ifdef WIN32
+	ULARGE_INTEGER nanos;
+	HANDLE hfile = CreateFile(file, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+	if (hfile == INVALID_HANDLE_VALUE) {
+		return (time_t)-1;
+	} else {
+		BOOL fGotTime = GetFileTime(hfile, NULL, NULL, (FILETIME*)&nanos);
+		CloseHandle(hfile);
+		if ( ! fGotTime) {
+			return (time_t)-1;
+		}
+	}
+	// Windows filetimes are in 100 nanosecond intervals since January 1, 1601 (UTC)
+	// NOTE: FAT records times on-disk in localtime, so daylight savings time can end up changing what is reported
+	// the good news is NTFS stores UTC, so it doesn't have that problem.
+	ULONGLONG nt_sec = nanos.QuadPart / (10 * 1000 * 1000); // convert to seconds,
+	time_t epoch_sec = nt_sec - 11644473600; // convert from Windows 1600 epoch, to unix 1970 epoch
+	return epoch_sec;
+#else
 	struct stat sbuf;
 	
 	if( stat(file, &sbuf) < 0 ) {
@@ -1171,6 +1221,7 @@ GetTimeStamp(char* file)
 	}
 	
 	return( sbuf.st_mtime );
+#endif
 }
 
 
@@ -1214,7 +1265,7 @@ run_preen()
 
 	args = param("PREEN_ARGS");
 	if(!arglist.AppendArgsV1RawOrV2Quoted(args,&error_msg)) {
-		EXCEPT("ERROR: failed to parse preen args: %s\n",error_msg.Value());
+		EXCEPT("ERROR: failed to parse preen args: %s",error_msg.Value());
 	}
 	free(args);
 
@@ -1282,6 +1333,10 @@ main_pre_command_sock_init()
 			SharedPortServer::RemoveDeadAddressFile();
 		}
 	}
+
+	if ( param_boolean( "USE_SHARED_PORT", false ) ) {
+		SharedPortEndpoint::InitializeDaemonSocketDir();
+	}
 }
 
 #ifdef WIN32
@@ -1316,7 +1371,6 @@ main( int argc, char **argv )
 #endif
 
 	set_mySubSystem( "MASTER", SUBSYSTEM_TYPE_MASTER );
-	SharedPortEndpoint::InitializeDaemonSocketDir();
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

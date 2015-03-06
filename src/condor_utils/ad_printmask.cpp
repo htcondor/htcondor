@@ -84,11 +84,7 @@ SetOverallWidth(int wid)
 void AttrListPrintMask::
 commonRegisterFormat (int wid, int opts, const char *print,
                       const CustomFormatFn & sf,
-#ifdef AD_PRINTMASK_V2
 					  const char *attr
-#else
-					  const char *attr, const char *alt
-#endif
 					 )
 {
 	Formatter *newFmt = new Formatter;
@@ -98,11 +94,7 @@ commonRegisterFormat (int wid, int opts, const char *print,
 	newFmt->sf = sf;
 	newFmt->width = abs(wid);
 	newFmt->options = opts;
-#ifdef AD_PRINTMASK_V2
 	newFmt->altKind = (char)((opts & (AltQuestion | AltWide | AltFixMe)) / AltQuestion);
-#else
-	newFmt->altText = "";
-#endif
 	if (wid < 0)
 		newFmt->options |= FormatOptionLeftAlign;
 	if (print) {
@@ -126,17 +118,8 @@ commonRegisterFormat (int wid, int opts, const char *print,
 	formats.Append (newFmt);
 
 	attributes.Append(new_strdup (attr));
-#ifdef AD_PRINTMASK_V2
-#else
-	if (alt && alt[0]) {
-		char * tmp = stringpool.consume(strlen(alt)+1, 1);
-		strcpy(tmp, alt);
-		newFmt->altText = collapse_escapes(tmp);
-	}
-#endif
 }
 
-#ifdef AD_PRINTMASK_V2
 void AttrListPrintMask::
 registerFormat (const char *print, int wid, int opts, const CustomFormatFn & fmt, const char *attr)
 {
@@ -148,19 +131,6 @@ registerFormat (const char *fmt, int wid, int opts, const char *attr)
 {
 	commonRegisterFormat(wid, opts, fmt, CustomFormatFn(), attr);
 }
-#else
-void AttrListPrintMask::
-registerFormat (const char *print, int wid, int opts, const CustomFormatFn & fmt, const char *attr, const char *alternate)
-{
-	commonRegisterFormat(wid, opts, print, fmt, attr, alternate);
-}
-
-void AttrListPrintMask::
-registerFormat (const char *fmt, int wid, int opts, const char *attr, const char *alternate)
-{
-	commonRegisterFormat(wid, opts, fmt, CustomFormatFn(), attr, alternate);
-}
-#endif
 
 void AttrListPrintMask::
 clearFormats (void)
@@ -375,11 +345,11 @@ display_Headings (FILE *file, List<const char> & headings) {
 int AttrListPrintMask::
 display (FILE *file, AttrList *al, AttrList *target /* =NULL */)
 {
-	char * temp = display(al, target);
+	std::string temp;
+	display(temp, al, target);
 
-	if (temp != NULL) {
-		fputs(temp, file);
-		delete [] temp;
+	if ( ! temp.empty()) {
+		fputs(temp.c_str(), file);
 		return 0;
 	}
 	return 1;
@@ -456,8 +426,8 @@ static void append_alt(MyString & buf, Formatter & fmt)
 }
 
 // returns a new char * that is your responsibility to delete.
-char * AttrListPrintMask::
-display (AttrList *al, AttrList *target /* = NULL */)
+int AttrListPrintMask::
+display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
 {
 	Formatter *fmt;
 	char 	*attr;
@@ -477,10 +447,6 @@ display (AttrList *al, AttrList *target /* = NULL */)
 
 	formats.Rewind();
 	attributes.Rewind();
-#if 1
-#else
-	alternates.Rewind();
-#endif
 
 	int columns = formats.Length();
 	int icol = 0;
@@ -491,11 +457,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 	// for each item registered in the print mask
 	while ( (fmt = formats.Next()) && (attr = attributes.Next()) )
 	{
-#ifdef AD_PRINTMASK_V2
 		//const char * alt = NULL;
-#else
-		const char * alt = fmt->altText;
-#endif
 		if (icol == 0) {
 			fmt->options |= FormatOptionNoPrefix;
 		}
@@ -581,13 +543,8 @@ display (AttrList *al, AttrList *target /* = NULL */)
 						  there is an alt string defined, we should
 						  print that, instead. -Derek 2004-10-15
 						*/
-#ifdef AD_PRINTMASK_V2
 					if (fmt->altKind) {
 						append_alt(retval, *fmt);
-#else
-					if( alt && alt[0] ) {
-						retval += alt;
-#endif
 					} else { 
 						retval += fmt->printfFmt;
 					}
@@ -603,13 +560,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				if ( ! tree) {
 						// drat, there's no data to print if there's an
 						// alt string, use that, otherwise bail.
-#ifdef AD_PRINTMASK_V2
 					if (fmt->altKind) { append_alt(retval, *fmt); }
-#else
-					if ( alt ) {
-						retval += alt;
-					}
-#endif
 					if (fmt->options & FormatOptionAutoWidth) {
 						int col_width = retval.Length() - col_start;
 						fmt->width = MAX(fmt->width, col_width);
@@ -632,13 +583,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							retval.formatstr_cat(fmt->printfFmt, buff.c_str());
 						} else {
 							// couldn't eval
-#ifdef AD_PRINTMASK_V2
 							if (fmt->altKind) { append_alt(retval, *fmt); }
-#else
-							if( alt ) {
-								retval += alt;
-							}
-#endif
 						}
 					} else if( al->EvalString( attr, target, &value_from_classad ) ) {
 						stringValue.formatstr( fmt->printfFmt,
@@ -652,25 +597,46 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							stringValue.formatstr(fmt->printfFmt, bool_str);
 							retval += stringValue;
 						} else {
-#ifdef AD_PRINTMASK_V2
 							if (fmt->altKind) { append_alt(retval, *fmt); }
-#else
-							if ( alt ) {
-								retval += alt;
-							}
-#endif
 						}
+					}
+					break;
+
+				case PFT_RAW:
+					{
+						std::string buff;
+						classad::ClassAdUnParser unparser;
+						unparser.SetOldClassAd( true, true );
+						unparser.Unparse( buff, tree );
+
+						if ((fmt->options & FormatOptionAutoWidth) && strlen(fmt->printfFmt) == 2) {
+							char tfmt[40];
+							int width = (fmt->options & FormatOptionLeftAlign) ? -fmt->width : fmt->width;
+							if ( ! width) {
+								stringValue = buff;
+							} else {
+								if (fmt->options & FormatOptionNoTruncate) {
+									sprintf(tfmt, "%%%ds", width);
+								} else {
+									sprintf(tfmt, "%%%d.%ds", width, fmt->width);
+								}
+								stringValue.formatstr( tfmt, buff.c_str() );
+							}
+						} else {
+							char * tfmt = strdup(fmt->printfFmt); ASSERT(tfmt);
+							char * ptag = tfmt + ((tmp_fmt-1) - fmt->printfFmt);
+							if (*ptag == 'r' || *ptag == 'R')
+								*ptag = 's'; // convert printf format to %s
+							stringValue.formatstr( tfmt, buff.c_str() );
+							free(tfmt);
+						}
+						retval += stringValue;
 					}
 					break;
 
 				case PFT_VALUE:
 					{
-#if 1
-#ifdef AD_PRINTMASK_V2
 						const char * pszValue = NULL;
-#else
-						const char * pszValue = alt;
-#endif
 						std::string buff;
 						if( EvalExprTree(tree, al, target, result) ) {
 							// Only strings are formatted differently for
@@ -683,12 +649,10 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							}
 							pszValue = buff.c_str();
 						}
-#ifdef AD_PRINTMASK_V2
 						else if (fmt->altKind) {
 							buff = "?";
 							pszValue = buff.c_str();
 						}
-#endif
 
 						if ((fmt->options & FormatOptionAutoWidth) && strlen(fmt->printfFmt) == 2) {
 							char tfmt[40];
@@ -713,35 +677,6 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							free(tfmt);
 						}
 						retval += stringValue;
-#else
-						// copy the printf format so we can change %v to some other format specifier.
-						char * tfmt = strdup(fmt->printfFmt); ASSERT(tfmt);
-						char * ptag = tfmt + ((tmp_fmt-1) - fmt->printfFmt);
-						bool fQuote = (*ptag == 'V');
-						classad::Value val;
-						std::string buff;
-						if (*ptag == 'v' || *ptag == 'V')
-							*ptag = 's'; // convert printf format to %s
-						if( EvalExprTree(tree, al, target, val) ) {
-							// Only strings are formatted differently for
-							// %v vs %V
-							if ( fQuote || !val.IsStringValue( buff ) ) {
-								classad::ClassAdUnParser unparser;
-								unparser.SetOldClassAd( true, true );
-								unparser.Unparse( buff, val );
-								stringValue.sprintf( tfmt, buff.c_str() );
-							}
-							stringValue.sprintf( tfmt, buff.c_str() );
-							retval += stringValue;
-						} else {
-								// couldn't eval
-							if( alt ) {
-								stringValue.sprintf( tfmt, alt );
-								retval += stringValue;
-							}
-						}
-						free(tfmt);
-#endif
 					}
 					break;
 
@@ -791,24 +726,12 @@ display (AttrList *al, AttrList *target /* = NULL */)
 								// the thing they want to print
 								// doesn't evaulate to an int or a
 								// float, so just print the alternate
-#ifdef AD_PRINTMASK_V2
 							if (fmt->altKind) { append_alt(retval, *fmt); }
-#else
-							if ( alt ) {
-								retval += alt;
-							}
-#endif
 							break;
 						}
 					} else {
 							// couldn't eval
-#ifdef AD_PRINTMASK_V2
 						if (fmt->altKind) { append_alt(retval, *fmt); }
-#else
-						if( alt ) {
-							retval += alt;
-						}
-#endif
 					}
 					break;
 
@@ -827,7 +750,6 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				break;
 
 
-#if 1
 			case CustomFormatFn::INT_CUSTOM_FMT:
 				if (result_is_valid) {
 					result_is_valid = result.IsNumber(intValue);
@@ -837,13 +759,9 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				if (result_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
 					pszVal = fmt->df(intValue , al, *fmt);
 				} else {
-#ifdef AD_PRINTMASK_V2
 					stringValue = "";
 					if (fmt->altKind) { append_alt(stringValue, *fmt); }
 					pszVal = stringValue.c_str();
-#else
-					pszVal = alt;
-#endif
 				}
 				PrintCol(&retval, *fmt, pszVal);
 				break;
@@ -857,13 +775,9 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				if (result_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
 					pszVal = fmt->ff(realValue , al, *fmt);
 				} else {
-#ifdef AD_PRINTMASK_V2
 					stringValue = "";
 					if (fmt->altKind) { append_alt(stringValue, *fmt); }
 					pszVal = stringValue.c_str();
-#else
-					pszVal = alt;
-#endif
 				}
 				PrintCol(&retval, *fmt, pszVal);
 				break;
@@ -876,13 +790,9 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				if (result_is_valid || (fmt->options & FormatOptionAlwaysCall)) {
 					pszVal = fmt->sf(pszVal, al, *fmt);
 				} else {
-#ifdef AD_PRINTMASK_V2
 					stringValue = "";
 					if (fmt->altKind) { append_alt(stringValue, *fmt); }
 					pszVal = stringValue.c_str();
-#else
-					pszVal = alt;
-#endif
 				}
 				PrintCol(&retval, *fmt, pszVal);
 				break;
@@ -897,43 +807,11 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				pszVal = fmt->vf(result, al, *fmt);
 				PrintCol(&retval, *fmt, pszVal);
 				break;
-#else
-		  	case INT_CUSTOM_FMT:
-				if( al->EvalInteger( attr, target, intValue ) ) {
-					pszVal = (fmt->df)(intValue , al, *fmt);
-				} else {
-					pszVal = alt;
-				}
-				PrintCol(&retval, *fmt, pszVal);
-				break;
 
-		  	case FLT_CUSTOM_FMT:
-				if( al->EvalFloat( attr, target, realValue ) ) {
-					pszVal = (fmt->ff)(realValue , al, *fmt);
-				} else {
-					pszVal = alt;
-				}
-				PrintCol(&retval, *fmt, pszVal);
-				break;
-
-		  	case STR_CUSTOM_FMT:
-				if( al->EvalString( attr, target, &value_from_classad ) ) {
-					pszVal = (fmt->sf)(value_from_classad, al, *fmt);
-					free(value_from_classad);
-				} else {
-					pszVal = alt;
-				}
-				PrintCol(&retval, *fmt, pszVal);
-				break;
-#endif
 			default:
-#ifdef AD_PRINTMASK_V2
 				stringValue = "";
 				if (fmt->altKind) {  append_alt(stringValue, *fmt); }
 				PrintCol(&retval, *fmt, stringValue.c_str());
-#else
-				PrintCol(&retval, *fmt, alt);
-#endif
 				break;
 		}
 	}
@@ -944,8 +822,9 @@ display (AttrList *al, AttrList *target /* = NULL */)
 	if (row_suffix)
 		retval += row_suffix;
 
-	// Convert return MyString to new char *.
-	return strnewp(retval.Value() );
+	// append result into the supplied std::string, and also return it's c_str()
+	out += retval.Value();
+	return retval.length();
 }
 
 
@@ -960,8 +839,8 @@ display (FILE *file, AttrListList *list, AttrList *target /* = NULL */, List<con
 
 	if (al && pheadings) {
 		// render the first line to a string so the column widths update
-		char * tmp = display(al, target);
-		delete [] tmp;
+		std::string tmp;
+		display(tmp, al, target);
 		display_Headings(file, *pheadings);
 	}
 

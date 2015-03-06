@@ -72,16 +72,13 @@ GetConfigFile(/* const */ StringList &dagFiles, bool useDagDir,
 			// Get the list of config files from the current DAG file.
 			//
 		StringList		configFiles;
-		bool useOldDagReader = param_boolean( "DAGMAN_USE_OLD_DAG_READER",
-					false );
-		MyString msg;
-		if ( useOldDagReader ) {
-			msg = MultiLogFiles::getValuesFromFile( newDagFile, "config",
-					configFiles );
-		} else {
-			msg = MultiLogFiles::getValuesFromFileNew( newDagFile,
-					"config", configFiles );
+		if ( param_boolean( "DAGMAN_USE_OLD_DAG_READER", false ) ) {
+			dprintf( D_ALWAYS, "Warning: DAGMAN_USE_OLD_DAG_READER "
+						"is no longer supported\n" );
 		}
+		MyString msg;
+		msg = MultiLogFiles::getValuesFromFileNew( newDagFile,
+				"config", configFiles );
 		if ( msg != "" ) {
 			AppendError( errMsg,
 					MyString("Error getting DAGMan config file: ") +

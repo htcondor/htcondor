@@ -28,6 +28,221 @@
 
 #include "ClassAdLogReader.h"
 
+
+class FileSentry
+{
+public:
+	FileSentry(FILE *fp) : m_fp(fp) {}
+	~FileSentry() {if (m_fp) fclose(m_fp);}
+private:
+	FILE *m_fp;
+};
+
+
+ClassAdLogIterator::ClassAdLogIterator(const std::string &fname) :
+	m_parser(new ClassAdLogParser()),
+	m_prober(new ClassAdLogProber()),
+	m_fname(fname),
+	m_eof(true)
+{
+	m_parser->setJobQueueName(fname.c_str());
+	Next();
+}
+
+
+ClassAdLogIterator
+ClassAdLogIterator::operator++()
+{
+	Next();
+	return *this;
+}
+
+
+ClassAdLogIterator
+ClassAdLogIterator::operator++(int)
+{
+	ClassAdLogIterator result = *this;
+	Next();
+	return result;
+}
+
+
+bool
+ClassAdLogIterator::operator==(const ClassAdLogIterator &rhs)
+{
+	if (m_current.get() == rhs.m_current.get())
+	{
+		return true;
+	}
+	if (!m_current.get() || !rhs.m_current.get())
+	{
+		return false;
+	}
+	if (m_current->isDone() && rhs.m_current->isDone())
+	{
+		return true;
+	}
+	if (m_fname != rhs.m_fname)
+	{
+		return false;
+	}
+	if (m_prober->getCurProbedSequenceNumber() != rhs.m_prober->getCurProbedSequenceNumber())
+	{
+		return false;
+	}
+	if (m_prober->getCurProbedCreationTime() != rhs.m_prober->getCurProbedCreationTime())
+	{
+		return false;
+	}
+	return true;
+}
+
+
+void
+ClassAdLogIterator::Next()
+{
+	//printf("Calling next\n");
+	ProbeResultType probe_st;
+	FileOpErrCode fst;
+
+	if (!m_eof || (m_current.get() && m_current->getEntryType() == ClassAdLogIterEntry::ET_INIT))
+	{
+		Load();
+		if (m_eof)
+		{
+			//printf("Update probe info.\n");
+			m_prober->incrementProbeInfo();
+		}
+		return;
+	}
+	m_eof = true;
+
+	if (m_parser->getFilePointer() == NULL)
+	{
+		//printf("Re-opening file with parser %p.\n", m_parser.get());
+		fst = m_parser->openFile();
+		if(fst == FILE_OPEN_ERROR) {
+			dprintf(D_ALWAYS, "Failed to open %s: errno=%d\n", m_parser->getJobQueueName(), errno);
+			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_ERR));
+			return;
+		}
+		//m_sentry.reset(new FileSentry(m_parser->getFilePointer()));
+	}
+
+	//printf("Calling probe with file pointer %p.\n", m_parser->getFilePointer());
+	probe_st = m_prober->probe(m_parser->getLastCALogEntry(), m_parser->getFilePointer());
+
+	bool success = true;
+	switch (probe_st)
+	{
+		case INIT_QUILL:
+			//printf("Other.\n");
+			m_parser->setNextOffset(0);
+			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_INIT));
+			return;
+		case COMPRESSED:
+		case PROBE_ERROR:
+			m_parser->setNextOffset(0);
+			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_RESET));
+			//printf("Error.\n");
+			return;
+		case ADDITION:
+			//printf("Addition.\n");
+			success = Load();
+			return;
+		case NO_CHANGE:
+			//printf("No change.\n");
+			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_NOCHANGE));
+			break;
+		case PROBE_FATAL_ERROR:
+			//printf("Fatal error.\n");
+			m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_ERR));
+			return;
+	}
+	m_parser->closeFile();
+
+	if (success)
+	{
+		// update prober to most recent observations about the job log file
+		//printf("Update probe info.\n");
+		m_prober->incrementProbeInfo();
+		//printf("Update probe info done.\n");
+	}
+
+	return;
+}
+
+
+bool
+ClassAdLogIterator::Load()
+{
+	FileOpErrCode err;
+	m_eof = false;
+	do {
+		int op_type = 999;
+
+		err = m_parser->readLogEntry(op_type);
+		if (err == FILE_READ_SUCCESS)
+		{
+			if (Process(*m_parser->getCurCALogEntry())) {return true;}
+		}
+	} while (err == FILE_READ_SUCCESS);
+	if (err != FILE_READ_EOF)
+	{
+		dprintf(D_ALWAYS, "error reading from %s: %d, %d\n", m_fname.c_str(), err, errno);
+		m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_ERR));
+	}
+	else
+	{
+		//printf("Hit EOF.\n");
+		m_parser->closeFile();
+		m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_NOCHANGE));
+		m_eof = true;
+	}
+	return true;
+}
+
+
+bool
+ClassAdLogIterator::Process(const ClassAdLogEntry &log_entry)
+{
+	switch(log_entry.op_type) {
+	case CondorLogOp_NewClassAd:
+		//printf("New classad\n");
+		m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::NEW_CLASSAD));
+		if (log_entry.key) {m_current->setKey(log_entry.key);}
+		if (log_entry.mytype) {m_current->setAdType(log_entry.mytype);}
+		if (log_entry.targettype) {m_current->setAdTarget(log_entry.targettype);}
+		break;
+	case CondorLogOp_DestroyClassAd:
+		//printf("Destroy classad\n");
+		m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::DESTROY_CLASSAD));
+		if (log_entry.key) {m_current->setKey(log_entry.key);}
+                break;
+	case CondorLogOp_SetAttribute:
+		//printf("Set attribute\n");
+		m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::SET_ATTRIBUTE));
+		if (log_entry.key) {m_current->setKey(log_entry.key);}
+		if (log_entry.name) {m_current->setName(log_entry.name);}
+		if (log_entry.value) {m_current->setValue(log_entry.value);}
+		break;
+	case CondorLogOp_DeleteAttribute:
+		//printf("Delete attribute\n");
+		m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::DELETE_ATTRIBUTE));
+		if (log_entry.key) {m_current->setKey(log_entry.key);}
+		if (log_entry.name) {m_current->setName(log_entry.name);}
+		break;
+	case CondorLogOp_BeginTransaction:
+	case CondorLogOp_EndTransaction:
+	case CondorLogOp_LogHistoricalSequenceNumber:
+		return false;
+	default:
+		dprintf(D_ALWAYS, "error reading %s: Unsupported Job Queue Command\n", m_fname.c_str());
+		m_current.reset(new ClassAdLogIterEntry(ClassAdLogIterEntry::ET_ERR));
+	}
+	return true;
+}
+
 ClassAdLogReader::ClassAdLogReader(ClassAdLogConsumer *consumer):
 	m_consumer(consumer)
 {
@@ -54,7 +269,6 @@ ClassAdLogReader::GetClassAdLogFileName()
 {
 	return parser.getJobQueueName();
 }
-
 
 PollResultType
 ClassAdLogReader::Poll() {
@@ -116,7 +330,7 @@ ClassAdLogReader::IncrementalLoad()
 {
 	FileOpErrCode err;
 	do {
-		int op_type;
+		int op_type = -1;
 
 		err = parser.readLogEntry(op_type);
 		assert(err != FILE_FATAL_ERROR); // XXX

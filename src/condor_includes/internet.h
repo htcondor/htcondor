@@ -52,19 +52,8 @@ extern "C" {
 */
 int split_sin( const char *addr, char **host, char **port, char **params );
 
-//int
-//address_to_sin(char const *host, char const *port, struct sockaddr_in *sa_in);
-
-/* Like inet_aton(), but works in Windows too.  (Returns 0 on failure.) */
-//int condor_inet_aton(const char *ipstr, struct in_addr *result);
 
 //char *sin_to_string(const struct sockaddr_in *s_in);
-
-/* Convenience function for calling inet_ntoa().
-   Buffer must be big enough for address (IP_STRING_BUF_SIZE).
-   Returns NULL on failure; otherwise returns buf
-*/
-char *sin_to_ipstring(const struct sockaddr_in *sa_in,char *buf,size_t buflen);
 
 /* Extract the port from a string of the form "<xx.xx.xx.xx:pppp>" */
 int string_to_port( const char* addr );
@@ -129,17 +118,6 @@ char* getAddrFromClaimId( const char* id );
    this machine.   is_outgoing tells it how to param.  Returns 1 if
    successful, 0 on error. */
 int _condor_local_bind( int is_outgoing, int fd );
-
-//int is_priv_net(uint32_t ip);
-//int is_loopback_net(uint32_t ip);
-//int is_loopback_net_str(char const *ip);
-//int in_same_net(uint32_t ipA, uint32_t ipB);
-//char *ipport_to_string(const unsigned int ip, const unsigned short port);
-char *prt_fds(int maxfd, fd_set *fds);
-
-/* Get the address that a socket is bound to */
-// @ret: NULL if failed; non-NULL if succeed
-//struct sockaddr_in *getSockAddr(int sockfd);
 
 // generates sinful string.
 // it detects whether given ip address is IPv4 or IPv6.

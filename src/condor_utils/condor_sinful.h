@@ -49,7 +49,7 @@ class Sinful {
 	char const *getPort() const { if( m_port.empty() ) return NULL; else return m_port.c_str(); }
 
 		// returns -1 if port not set; o.w. port number
-	int getPortNum();
+	int getPortNum() const;
 
 	void setHost(char const *host);
 	void setPort(char const *port);

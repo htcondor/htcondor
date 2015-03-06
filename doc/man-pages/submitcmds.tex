@@ -352,9 +352,13 @@ For example, HTCondor will place a log entry into this file
 when and where the job begins running,
 when the job produces a checkpoint, or moves (migrates) to another machine,
 and when the job completes.
-Most users find specifying a \SubmitCmd{log} file to be handy;
-its use is recommended. If no \SubmitCmd{log} entry is specified, 
+Most users find specifying a \SubmitCmdNI{log} file to be handy;
+its use is recommended. If no \SubmitCmdNI{log} entry is specified, 
 HTCondor does not create a log for this cluster.
+If a relative path is specified, it is relative to the 
+current working directory as the job is submitted or
+the directory specified by submit command \SubmitCmdNI{initialdir}
+on the submit machine.
 
 %%%%%%%%%%%%%%%%%%%
 %% log_xml
@@ -377,6 +381,8 @@ this option in the same way.
 %% notification
 %%%%%%%%%%%%%%%%%%%
 
+\index{email notification!submit command}
+\index{notification!e-mail related to a job}
 \index{submit commands!notification}
 \label{man-condor-submit-notification}
 \item[notification = $<$Always \Bar\ Complete \Bar\ Error \Bar\ Never$>$]
@@ -584,7 +590,7 @@ resulting in a dynamic slot being created with this many cores.
 \index{submit commands!request\_disk}
 \label{man-condor-submit-request-disk}
 \item[request\_disk = $<$quantity$>$] 
-The requested amount of disk space in Kbytes requested for this job.
+The requested amount of disk space in KiB requested for this job.
 If not specified, 
 it will be set to the job ClassAd attribute \Attr{DiskUsage}.
 The expression
@@ -598,10 +604,10 @@ dynamic \Condor{startd} provisioning,
 a dynamic slot will be created with at least this much disk space.
 
 Characters may be appended to a numerical value to indicate units. 
-\Expr{K} or \Expr{KB} indicates Kbytes.
-\Expr{M} or \Expr{MB} indicates Mbytes.
-\Expr{G} or \Expr{GB} indicates Gbytes.
-\Expr{T} or \Expr{TB} indicates Tbytes.
+\Expr{K} or \Expr{KB} indicates KiB, $2^{10}$ numbers of bytes.
+\Expr{M} or \Expr{MB} indicates MiB, $2^{20}$ numbers of bytes.
+\Expr{G} or \Expr{GB} indicates GiB, $2^{30}$ numbers of bytes.
+\Expr{T} or \Expr{TB} indicates TiB, $2^{40}$ numbers of bytes.
 
 %%%%%%%%%%%%%%%%%%%
 %% request_memory
@@ -610,7 +616,7 @@ Characters may be appended to a numerical value to indicate units.
 \index{submit commands!request\_memory}
 \label{man-condor-submit-request-memory}
 \item[request\_memory = $<$quantity$>$] 
-The required amount of memory in Mbytes that this job needs
+The required amount of memory in MiB that this job needs
 to avoid excessive swapping.
 If not specified and the submit command \SubmitCmd{vm\_memory} is specified, 
 then the value specified
@@ -632,10 +638,10 @@ The expression
 is appended to the \SubmitCmd{requirements} expression for the job.
 
 Characters may be appended to a numerical value to indicate units. 
-\Expr{K} or \Expr{KB} indicates Kbytes.
-\Expr{M} or \Expr{MB} indicates Mbytes.
-\Expr{G} or \Expr{GB} indicates Gbytes.
-\Expr{T} or \Expr{TB} indicates Tbytes.
+\Expr{K} or \Expr{KB} indicates KiB, $2^{10}$ numbers of bytes.
+\Expr{M} or \Expr{MB} indicates MiB, $2^{20}$ numbers of bytes.
+\Expr{G} or \Expr{GB} indicates GiB, $2^{30}$ numbers of bytes.
+\Expr{T} or \Expr{TB} indicates TiB, $2^{40}$ numbers of bytes.
 
 %%%%%%%%%%%%%%%%%%%
 %% request_<name>
@@ -730,7 +736,7 @@ that can be used in the ClassAd expression.
 \label{man-condor-submit-dont-encrypt-input-files}
 \item[dont\_encrypt\_input\_files = $<$ file1,file2,file... $>$] 
 A comma and/or space separated list of input files that are \emph{not} to be
-encrypted when transferred with the file transfer mechanism.
+network encrypted when transferred with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
 use encryption.
 Each input file must also be in the list given by
@@ -748,7 +754,7 @@ A single wild card character (\Expr{*}) may be used in each file name.
 \label{man-condor-submit-dont-encrypt-output-files}
 \item[dont\_encrypt\_output\_files = $<$ file1,file2,file... $>$] 
 A comma and/or space separated list of output files that are \emph{not} to be
-encrypted when transferred back with the file transfer mechanism.
+network encrypted when transferred back with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
 use encryption.
 The output file(s) must also either be in the list given by
@@ -759,6 +765,31 @@ this specifies the path to the file on the execute side.
 A single wild card character (\Expr{*}) may be used in each file name.
 
 %%%%%%%%%%%%%%%%%%%
+%% encrypt_execute_directory
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!encrypt\_execute\_directory}
+\label{man-condor-submit-encrypt-execute-directory}
+\item[encrypt\_execute\_directory = $<$True \Bar\ False$>$]
+Defaults to \Expr{False}. If set to \Expr{True}, 
+HTCondor will encrypt the contents of
+the remote scratch directory of the machine where the job is executed.
+This encryption is transparent to the job itself, but ensures that
+files left behind on the local disk of the execute machine,
+perhaps due to a system crash, 
+will remain private.
+In addition, \Condor{submit} will append to
+the job's \SubmitCmd{requirements} expression
+\begin{verbatim}
+  && (TARGET.HasEncryptExecuteDirectory)
+\end{verbatim}
+to ensure the job is matched to a machine that is capable of encrypting the
+contents of the execute directory.  
+This support is limited 
+to Windows platforms that use the NTFS file system and
+Linux platforms with the \Prog{ecryptfs-utils} package installed.
+
+%%%%%%%%%%%%%%%%%%%
 %% encrypt_input_files
 %%%%%%%%%%%%%%%%%%%
 
@@ -767,7 +798,7 @@ A single wild card character (\Expr{*}) may be used in each file name.
 \label{man-condor-submit-encrypt-input-files}
 \item[encrypt\_input\_files = $<$ file1,file2,file... $>$] 
 A comma and/or space separated list of input files that are to be
-encrypted when transferred with the file transfer mechanism.
+network encrypted when transferred with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
 \emph{not} use encryption.
 Each input file must also be in the list given by
@@ -777,7 +808,7 @@ this specifies the path to the file on the submit side.
 A single wild card character (\Expr{*}) may be used in each file name.
 The method of encryption utilized will be as agreed upon in security
 negotiation; if that negotiation failed, then the file transfer
-mechanism must also fail for files to be encrypted.
+mechanism must also fail for files to be network encrypted.
 
 %%%%%%%%%%%%%%%%%%%
 %% encrypt_output_files
@@ -788,7 +819,7 @@ mechanism must also fail for files to be encrypted.
 \label{man-condor-submit-encrypt-output-files}
 \item[encrypt\_output\_files = $<$ file1,file2,file... $>$] 
 A comma and/or space separated list of output files that are to be
-encrypted when transferred back with the file transfer mechanism.
+network encrypted when transferred back with the file transfer mechanism.
 Specification of files in this manner overrides configuration that would
 \emph{not} use encryption.
 The output file(s) must also either be in the list given by
@@ -799,7 +830,7 @@ this specifies the path to the file on the execute side.
 A single wild card character (\Expr{*}) may be used in each file name.
 The method of encryption utilized will be as agreed upon in security
 negotiation; if that negotiation failed, then the file transfer
-mechanism must also fail for files to be encrypted.
+mechanism must also fail for files to be network encrypted.
 
 %%%%%%%%%%%%%%%%%%%
 %% max_transfer_input_mb
@@ -809,7 +840,7 @@ mechanism must also fail for files to be encrypted.
 \label{man-condor-submit-max-transfer-input-mb}
 \item[max\_transfer\_input\_mb = $<$ClassAd Integer Expression$>$] 
 This integer expression specifies the maximum allowed total size in
-Mbytes of the input files that are transferred for a job.  This
+MiB of the input files that are transferred for a job.  This
 expression does \emph{not} apply to grid universe, standard universe, or
 files transferred via file transfer plug-ins.  The expression may refer
 to attributes of the job.  The special value -1 indicates no limit.
@@ -827,7 +858,7 @@ transfer is attempted.
 \label{man-condor-submit-max-transfer-output-mb}
 \item[max\_transfer\_output\_mb = $<$ClassAd Integer Expression$>$] 
 This integer expression specifies the maximum allowed total size in
-Mbytes of the output files that are transferred for a job.  This
+MiB of the output files that are transferred for a job.  This
 expression does \emph{not} apply to grid universe, standard universe, or
 files transferred via file transfer plug-ins.  The expression may refer
 to attributes of the job.  The special value -1 indicates no limit.
@@ -997,11 +1028,12 @@ and it is named using the base name of the original path.  For
 example, \File{/path/to/input\_file} becomes \File{input\_file} in the job's
 scratch directory.
 
-A directory may be specified using a trailing path separator.
-An example of a trailing path separator is the slash character on Unix
-platforms; a directory example using a trailing path separator
+A directory may be specified by appending the forward slash character (/)
+as a trailing path separator.
+This syntax is used for both Windows and Linux submit hosts.
+A directory example using a trailing path separator
 is \File{input\_data/}. 
-When a directory is specified with a trailing path separator,
+When a directory is specified with the trailing path separator,
 the contents of the directory are
 transferred,  but the directory itself is not transferred.
 It is as if each of the items
@@ -1556,8 +1588,8 @@ The default settings should produce reasonable results for most programs.
 These options only apply to standard-universe jobs.
 
 If needed, you may set the buffer controls individually for each file using
-the buffer\_files option. For example, to set the buffer size to 1 Mbyte and
-the block size to 256 Kbytes for the file \File{input.data}, use this command:
+the buffer\_files option. For example, to set the buffer size to 1 MiB and
+the block size to 256 KiB for the file \File{input.data}, use this command:
 
 \begin{verbatim}
 buffer_files = "input.data=(1000000,256000)"
@@ -1580,8 +1612,8 @@ DEFAULT_IO_BUFFER_BLOCK_SIZE = 256000
 \end{verbatim}
 
 Finally, if no other settings are present, HTCondor will use
-a buffer of 512 Kbytes
-and a block size of 32 Kbytes.
+a buffer of 512 KiB
+and a block size of 32 KiB.
 
 %%%%%%%%%%%%%%%%%%%
 %% compress_files
@@ -1935,6 +1967,17 @@ This command is optional, unless \SubmitCmd{ec2\_ebs\_volumes} is set.
 As an example, one current zone is \Expr{us-east-1b}.
 
 %%%%%%%%%%%%%%%%%%%
+%% ec2_block_device_mapping
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_block\_device\_mapping}
+\label{condor-submit-ec2-block-device-mapping}
+\item[ec2\_block\_device\_mapping = $<$block-device$>$:$<$kernel-device$>$,$<$block-device$>$:$<$kernel-device$>$, \Dots]
+For grid type \SubmitCmdNI{ec2} jobs,
+specifies the block device to kernel device mapping.
+This command is optional.
+
+%%%%%%%%%%%%%%%%%%%
 %% ec2_ebs_volumes
 %%%%%%%%%%%%%%%%%%%
 
@@ -1956,6 +1999,29 @@ should have in the instance.
 For grid type \SubmitCmdNI{ec2} jobs,
 and optional specification of an Elastic IP address 
 that should be assigned to this instance.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_iam_arn
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_iam\_profile\_arn}
+\label{condor-submit-ec2-iam-profile-arn}
+\item[ec2\_iam\_profile\_arn = $<$IAM profile ARN$>$]
+For grid type \SubmitCmdNI{ec2} jobs,
+an Amazon Resource Name (ARN)
+identifying which Identity and Access Management (IAM) (instance) profile to
+associate with the instance.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_iam_name
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_iam\_profile\_name}
+\label{condor-submit-ec2-iam-profile-name}
+\item[ec2\_iam\_profile\_name= $<$IAM profile name$>$]
+For grid type \SubmitCmdNI{ec2} jobs, a name
+identifying which Identity and Access Management (IAM) (instance) profile to
+associate with the instance.
 
 %%%%%%%%%%%%%%%%%%%
 %% ec2_instance_type
@@ -1995,6 +2061,30 @@ If \SubmitCmd{ec2\_keypair} is specified for a job,
 \SubmitCmd{ec2\_keypair\_file} is ignored.
 
 %%%%%%%%%%%%%%%%%%%
+%% ec2_parameter_names
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_parameter\_names}
+\label{condor-submit-ec2-parameter-names}
+\item[ec2\_parameter\_names = ParameterName1, ParameterName2, ...]
+For grid type \SubmitCmdNI{ec2} jobs,
+a space or comma separated list of the names of additional parameters
+to pass when instantiating an instance.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_parameter_*
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_parameter\_$<$name$>$}
+\item[ec2\_parameter\_$<$name$>$ = $<$value$>$]
+For grid type \SubmitCmdNI{ec2} jobs,
+specifies the value for the correspondingly named (instance instantiation)
+parameter.  
+\Opt{<name>} is the parameter name specified in the
+submit command \SubmitCmd{ec2\_parameter\_names},
+but with any periods replaced by underscores.
+
+%%%%%%%%%%%%%%%%%%%
 %% ec2_secret_access_key
 %%%%%%%%%%%%%%%%%%%
 
@@ -2013,6 +2103,17 @@ specifies the path and file name containing the secret access key.
 \item[ec2\_security\_groups = group1, group2, ...]
 For grid type \SubmitCmdNI{ec2} jobs, 
 defines the list of EC2 security groups which
+should be associated with the job.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_security_ids
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_security\_ids}
+\label{condor-submit-ec2-security-ids}
+\item[ec2\_security\_ids = id1, id2, ...]
+For grid type \SubmitCmdNI{ec2} jobs,
+defines the list of EC2 security group IDs which
 should be associated with the job.
 
 %%%%%%%%%%%%%%%%%%%
@@ -3066,8 +3167,8 @@ the inability to acquire more address space;
 for example, if \Procedure{malloc} fails. 
 If the image size is overestimated,
 HTCondor may have difficulty finding machines which have the required resources.
-\Arg{size} is specified in Kbytes. 
-For example, for an image size of 8 Megabytes, \Arg{size} should be 8000.
+\Arg{size} is specified in KiB. 
+For example, for an image size of 8 MiB, \Arg{size} should be 8000.
 
 %%%%%%%%%%%%%%%%%%%
 %% initialdir

@@ -120,7 +120,7 @@ type of machine you  wish to use. For instance, perhaps you are
 looking for the fastest floating point performance available.
 You want HTCondor to rank available machines
 based upon floating point performance. Or, perhaps you
-care only that the machine has a minimum of 128 Mbytes of RAM.
+care only that the machine has a minimum of 128 MiB of RAM.
 Or, perhaps you will
 take any machine you can get! These job attributes and requirements
 are bundled up into a job ClassAd.
@@ -771,12 +771,12 @@ The submit description file for Example 4 queues 150
 runs of program \Prog{foo} which has been compiled and linked for
 Linux running on a 32-bit Intel processor.
 This job requires HTCondor to run the program on machines which have
-greater than 32 Mbytes of physical memory, 
+greater than 32 MiB of physical memory, 
 and the \SubmitCmd{rank} command expresses a
 preference to run each instance of the program 
-on machines with more than 64 Mbytes.
+on machines with more than 64 MiB.
 It also advises HTCondor that this standard universe job will
-use up to 28000 Kbytes of memory when running.
+use up to 28000 KiB of memory when running.
 Each of the 150 runs of the program is given its own process number,
 starting with process number 0.
 So, files 
@@ -1107,6 +1107,18 @@ is only set when the administrator has installed a USER\_JOB\_WRAPPER.
 If this file exists, HTCondor assumes that the job wrapper has failed
 and copies the contents of the file to the StarterLog for the administrator
 to debug the problem.
+
+\item \Env{CONDOR\_IDS}
+\index{CONDOR\_IDS environment variable}
+\index{environment variables!CONDOR\_IDS}
+overrides the value of configuration variable \MacroNI{CONDOR\_IDS},
+when set in the environment.
+
+\item \Env{CONDOR\_ID}
+\index{CONDOR\_ID environment variable}
+\index{environment variables!CONDOR\_ID}
+is set for scheduler universe jobs to be the same as the \Attr{ClusterId}
+attribute.
 
 \end{itemize}
 

@@ -26,12 +26,20 @@
 #include "../condor_utils/CondorError.h"
 #include "condor_classad.h"
 
+// this header declares functions for external clients of the schedd, but it is also included by the schedd itself
+// this can cause nasty link errors if the schedd tries to pull in parts of the external api, so
+// if this header file is included before qmgmt.h, then some function prototypes have the external prototype
+// if qmgmt.h is included before this header, then we get the schedd internal prototype instead.
+// for the most part internal declarations understand JobQueueJob, external declarations have ClassAd instead.
+#ifndef SCHEDD_INTERNAL_DECLARATIONS
+ #define SCHEDD_EXTERNAL_DECLARATIONS
+#endif
+
 
 typedef struct {
 	bool dummy;
 } Qmgr_connection;
 
-typedef int (*scan_func)(ClassAd *ad);
 
 typedef unsigned char SetAttributeFlags_t;
 const SetAttributeFlags_t NONDURABLE = (1<<0); // do not fsync
@@ -74,9 +82,10 @@ Qmgr_connection *ConnectQ(const char *qmgr_location, int timeout=0,
 	@param qmgr pointer to Qmgr_connection object returned by ConnectQ
 	@param commit_transactions set to true to commit the transaction, 
 	and false to abort the transaction.
+	@param errstack any errors that occur.
 	@return true if commit was successful; false if transaction was aborted
 */
-bool DisconnectQ(Qmgr_connection *qmgr, bool commit_transactions=true);
+bool DisconnectQ(Qmgr_connection *qmgr, bool commit_transactions=true, CondorError *errstack=NULL);
 
 /** Start a new job cluster.  This cluster becomes the
 	active cluster, and jobs may only be submitted to this cluster.
@@ -194,7 +203,7 @@ int BeginTransaction();
     the poorly named CloseConnection() call was used.
 	@return -1 on failure: 0 on success
 */
-int RemoteCommitTransaction(SetAttributeFlags_t flags=0);
+int RemoteCommitTransaction(SetAttributeFlags_t flags=0, CondorError *errstack=NULL);
 
 /** The difference between this and RemoteCommitTransaction is that
 	this function never returns if there is a failure.  This function
@@ -244,6 +253,9 @@ int GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs);
 */
 int DeleteAttribute(int cluster, int proc, const char *attr);
 
+#ifdef SCHEDD_INTERNAL_DECLARATIONS
+//we DON'T want to see the external qmanager's definitions of GetJob*** because schedds internal implemtation is different
+#else
 /** Efficiently get the entire job ClassAd.
 	The caller MUST call FreeJobAd when the ad is no longer in use. 
 	@param cluster_id Cluster number of ad to fetch
@@ -283,6 +295,9 @@ ClassAd *GetNextDirtyJobByConstraint(const char *constraint, int initScan);
 */
 void FreeJobAd(ClassAd *&ad);
 
+#endif
+
+
 /** Initiate transfer of job's initial checkpoint file (the executable).
 	Follow with a call to SendSpoolFileBytes.
 	@param filename Name of initial checkpoint file destination
@@ -302,24 +317,20 @@ int SendSpoolFileBytes(char const *filename);
 */
 int SendSpoolFileIfNeeded(ClassAd& ad);
 
+#ifdef SCHEDD_INTERNAL_DECLARATIONS
+//we DON'T want to see the external qmanager's definition of WalkJobQueue in the schedd because the internal implementation is very different.
+#else
 /* This function is not reentrant!  Do not call it recursively. */
-void WalkJobQueue(scan_func);
+typedef int (*scan_func)(ClassAd *ad, void* user);
+//typedef int (*obsolete_scan_func)(ClassAd *ad);
+void WalkJobQueue(scan_func fn, void* pv);
+// convert calls to the old walkjobqueue function into the new form automatically
+#endif
 
-bool InWalkJobQueue();
-
-void InitQmgmt();
-void InitJobQueue(const char *job_queue_name,int max_historical_logs);
-void CleanJobQueue();
-bool setQSock( ReliSock* rsock );
-void unsetQSock();
-void MarkJobClean(PROC_ID job_id);
-void MarkJobClean(int cluster_id, int proc_id);
-void MarkJobClean(const char* job_id_str);
 
 int rusage_to_float(const struct rusage &, double *, double *);
 int float_to_rusage(double, double, struct rusage *);
 
-bool Reschedule();
 
 #define SetAttributeExpr(cl, pr, name, val) SetAttribute(cl, pr, name, val);
 #define SetAttributeExprByConstraint(con, name, val) SetAttributeByConstraint(con, name, val);

@@ -540,11 +540,11 @@ GlobusResource::CheckMonitor()
 		int log_mod_time;
 
 		if(monitorJobStatusFile == NULL) {
-			EXCEPT("Consistency problem for GlobusResource %s, null job status file name\n", resourceName);
+			EXCEPT("Consistency problem for GlobusResource %s, null job status file name", resourceName);
 		}
 
 		if(monitorLogFile == NULL) {
-			EXCEPT("Consistency problem for GlobusResource %s, null monitor log file name\n", resourceName);
+			EXCEPT("Consistency problem for GlobusResource %s, null monitor log file name", resourceName);
 		}
 
 		rc = stat( monitorJobStatusFile, &file_status );
@@ -584,7 +584,7 @@ GlobusResource::CheckMonitor()
 
 			} else {
 				EXCEPT("ReadMonitorJobStatusFile returned unexpected %d "
-					"(for %s)\n", (int)status, resourceName);
+					"(for %s)", (int)status, resourceName);
 			}
 
 		}
@@ -869,7 +869,7 @@ GlobusResource::ReadMonitorJobStatusFile()
 	int job_count = 0;
 
 	if(monitorJobStatusFile == NULL) {
-		EXCEPT("Consistency problem for GlobusResource::ReadMonitorJobStatusFile %s, null job status file name\n", resourceName);
+		EXCEPT("Consistency problem for GlobusResource::ReadMonitorJobStatusFile %s, null job status file name", resourceName);
 	}
 
 	fp = safe_fopen_wrapper_follow( monitorJobStatusFile, "r" );
@@ -967,7 +967,7 @@ GlobusResource::ReadMonitorLogFile()
 
 	if( monitorLogFile == NULL)
 	{
-			EXCEPT("Consistency problem for GlobusResource::ReadMonitorLogFile %s, null monitor log file name\n", resourceName);
+			EXCEPT("Consistency problem for GlobusResource::ReadMonitorLogFile %s, null monitor log file name", resourceName);
 	}
 
 	fp = safe_fopen_wrapper_follow( monitorLogFile, "r" );

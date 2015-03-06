@@ -1178,17 +1178,6 @@ BOOL RemoveTheAceDesktop(HDESK hdesk, PSID psid)
 		}
 
 		// 
-		// add ace to the dacl
-		// 
-		if (!AddAccessAllowedAce(
-			pNewAcl,
-			ACL_REVISION,
-			DESKTOP_ALL,
-			psid
-			))
-			__leave;
-
-		// 
 		// set new dacl to the new security descriptor
 		// 
 		if (!SetSecurityDescriptorDacl(

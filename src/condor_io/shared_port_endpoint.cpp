@@ -45,7 +45,7 @@
 static char const *WINDOWS_DAEMON_SOCKET_DIR = "\\\\.\\pipe\\condor";
 #endif
 
-bool SharedPortEndpoint::m_should_initialize_socket_dir = false;
+bool SharedPortEndpoint::m_initialized_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
 
 SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
@@ -270,7 +270,7 @@ SharedPortEndpoint::CreateListener()
 	if(pipe_end == INVALID_HANDLE_VALUE)
 	{
 		DWORD error = GetLastError();
-		EXCEPT("SharedPortEndpoint: Failed to create named pipe: %d\n", error);
+		EXCEPT("SharedPortEndpoint: Failed to create named pipe: %d", error);
 	}
 
 #elif HAVE_SCM_RIGHTS_PASSFD
@@ -287,7 +287,7 @@ SharedPortEndpoint::CreateListener()
 	}
 
 	m_listener_sock.close();
-	m_listener_sock.assign(sock_fd);
+	m_listener_sock.assignDomainSocket( sock_fd );
 
 	std::stringstream ss;
 	ss << m_socket_dir.Value() << DIR_DELIM_CHAR << m_local_id.Value();
@@ -461,7 +461,7 @@ SharedPortEndpoint::StartListenerWin32()
 	thread_killed = CreateEvent(NULL, TRUE, FALSE, NULL);
 
 	if(thread_killed == INVALID_HANDLE_VALUE)
-		EXCEPT("SharedPortEndpoint: Failed to create cleanup event: %d\n", GetLastError());
+		EXCEPT("SharedPortEndpoint: Failed to create cleanup event: %d", GetLastError());
 
 	m_registered_listener = true;
 
@@ -601,7 +601,7 @@ SharedPortEndpoint::PipeListenerThread()
 				int write_success = send(sock_fd, wake, sizeof(char), 0);
 				//TODO: DO SOMETHING THREADSAFE HERE IN PLACE OF EXCEPT!!!!!!!!!!!!!!!!
 				if(write_success == SOCKET_ERROR)
-					EXCEPT("SharedPortEndpoint: Failed to write to select wakeup: %d\n", WSAGetLastError());
+					EXCEPT("SharedPortEndpoint: Failed to write to select wakeup: %d", WSAGetLastError());
 			}
 			
 //			dprintf(D_ALWAYS, "SharedPortEndpoint: Finished reading from pipe.\n");
@@ -718,6 +718,29 @@ SharedPortEndpoint::InitRemoteAddress()
 		sinful.setPrivateAddr( private_sinful.getSinful() );
 	}
 
+	// Next, look for alternate command strings
+	std::string commandStrings;
+	if (ad->EvaluateAttrString(ATTR_SHARED_PORT_COMMAND_SINFULS, commandStrings))
+	{
+		m_remote_addrs.clear();
+		StringList sl(commandStrings.c_str());
+		sl.rewind();
+		const char *commandSinfulStr;
+		while ((commandSinfulStr = sl.next()))
+		{
+			Sinful altsinful(commandSinfulStr);
+			altsinful.setSharedPortID(m_local_id.Value());
+			char const *private_addr = sinful.getPrivateAddr();
+			if (private_addr)
+			{
+				Sinful private_sinful(private_addr);
+				private_sinful.setSharedPortID(m_local_id.Value());
+				altsinful.setPrivateAddr(private_sinful.getSinful());
+			}
+			m_remote_addrs.push_back(altsinful);
+		}
+	}
+
 	m_remote_addr = sinful.getSinful();
 
 	return true;
@@ -805,6 +828,14 @@ SharedPortEndpoint::ReloadSharedPortServerAddr()
 	RetryInitRemoteAddress();
 }
 
+void
+SharedPortEndpoint::EnsureInitRemoteAddress()
+{
+	if( m_remote_addr.IsEmpty() && m_retry_remote_addr_timer==-1 ) {
+		RetryInitRemoteAddress();
+	}
+}
+
 char const *
 SharedPortEndpoint::GetMyRemoteAddress()
 {
@@ -812,14 +843,19 @@ SharedPortEndpoint::GetMyRemoteAddress()
 		return NULL;
 	}
 
-	if( m_remote_addr.IsEmpty() && m_retry_remote_addr_timer==-1 ) {
-		RetryInitRemoteAddress();
-	}
+	EnsureInitRemoteAddress();
 
 	if( m_remote_addr.IsEmpty() ) {
 		return NULL;
 	}
 	return m_remote_addr.Value();
+}
+
+const std::vector<Sinful> &
+SharedPortEndpoint::GetMyRemoteAddresses()
+{
+	EnsureInitRemoteAddress(); // Initializes the addresses if necessary.
+	return m_remote_addrs;
 }
 
 char const *
@@ -1021,7 +1057,7 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 	if( !remote_sock ) {
 		remote_sock = new ReliSock();
 	}
-	remote_sock->assign( passed_fd );
+	remote_sock->assignSocket( passed_fd );
 	remote_sock->enter_connected_state();
 	remote_sock->isClient(false);
 
@@ -1126,7 +1162,7 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 {
 #ifndef HAVE_SHARED_PORT
 	if( why_not ) {
-		why_not->sprintf("shared ports not supported on this platform");
+		*why_not = "shared ports not supported on this platform";
 	}
 	return false;
 #else
@@ -1233,7 +1269,7 @@ SharedPortEndpoint::AddListenerToSelector(Selector &selector)
 #ifdef WIN32
 	
 	if(wake_select_dest)
-		EXCEPT("SharedPortEndpoint: AddListenerToSelector: Already registered.\n");
+		EXCEPT("SharedPortEndpoint: AddListenerToSelector: Already registered.");
 
 	wake_select_source = new ReliSock;
 	wake_select_dest = new ReliSock;
@@ -1251,7 +1287,7 @@ SharedPortEndpoint::RemoveListenerFromSelector(Selector &selector)
 {
 #ifdef WIN32
 	if(!wake_select_dest)
-		EXCEPT("SharedPortEndpoint: RemoveListenerFromSelector: Nothing registered.\n");
+		EXCEPT("SharedPortEndpoint: RemoveListenerFromSelector: Nothing registered.");
 	selector.delete_fd(wake_select_dest->get_file_desc(), Selector::IO_READ);
 #else
 	selector.delete_fd(m_listener_sock.get_file_desc(),Selector::IO_READ);
@@ -1262,7 +1298,7 @@ SharedPortEndpoint::CheckListenerReady(Selector &selector)
 {
 #ifdef WIN32
 	if(!wake_select_dest)
-		EXCEPT("SharedPortEndpoint: CheckListenerReady: Nothing registered.\n");
+		EXCEPT("SharedPortEndpoint: CheckListenerReady: Nothing registered.");
 	return selector.fd_ready(wake_select_dest->get_file_desc(),Selector::IO_READ);
 #else
 	return selector.fd_ready(m_listener_sock.get_file_desc(),Selector::IO_READ);
@@ -1314,7 +1350,7 @@ SharedPortEndpoint::ChownSocket(priv_state priv)
 		}
 	}
 
-	EXCEPT("Unexpected priv state in SharedPortEndpoint(%d)\n",(int)priv);
+	EXCEPT("Unexpected priv state in SharedPortEndpoint(%d)",(int)priv);
 	return false;
 #else
 #error HAVE_SHARED_PORT is defined, but no method for passing fds is enabled.
@@ -1355,12 +1391,11 @@ SharedPortEndpoint::MakeDaemonSocketDir()
 void
 SharedPortEndpoint::InitializeDaemonSocketDir()
 {
-	m_should_initialize_socket_dir = true;
-}
+	if ( m_initialized_socket_dir ) {
+		return;
+	}
+	m_initialized_socket_dir = true;
 
-void
-SharedPortEndpoint::RealInitializeDaemonSocketDir()
-{
 	std::string result;
 #ifdef USE_ABSTRACT_DOMAIN_SOCKET
 		// Linux has some unique behavior.  We use a random cookie as a prefix to our
@@ -1383,7 +1418,7 @@ SharedPortEndpoint::RealInitializeDaemonSocketDir()
 	if (result == "auto") {
 		struct sockaddr_un named_sock_addr;
 		const unsigned max_len = sizeof(named_sock_addr.sun_path)-1;
-		const char * default_name = macro_expand("$(LOCK)/daemon_sock");
+		char * default_name = expand_param("$(LOCK)/daemon_sock");
 		if (strlen(default_name) + 18 > max_len) {
 			TemporaryPrivSentry tps(PRIV_CONDOR);
 				// NOTE we force the use of /tmp here - not using the HTCondor library routines;
@@ -1400,6 +1435,7 @@ SharedPortEndpoint::RealInitializeDaemonSocketDir()
 		} else {
 			result = default_name;
 		}
+		free( default_name );
 	}
 #endif
 #ifndef WIN32
@@ -1419,7 +1455,9 @@ SharedPortEndpoint::GetAltDaemonSocketDir(std::string &result)
 		// If set to "auto", we want to make sure that $(DAEMON_SOCKET_DIR)/collector or $(DAEMON_SOCKET_DIR)/15337_9022_123456 isn't more than 108 characters
 	std::string default_name;
 	if (result == "auto") {
-		default_name = macro_expand("$(LOCK)/daemon_sock");
+		char *tmp = expand_param("$(LOCK)/daemon_sock");
+		default_name = tmp;
+		free(tmp);
 	} else {
 		default_name = result;
 	}
@@ -1442,10 +1480,6 @@ SharedPortEndpoint::GetDaemonSocketDir(std::string &result)
 #ifdef WIN32
 	result = WINDOWS_DAEMON_SOCKET_DIR;
 #else
-	if (m_should_initialize_socket_dir) {
-		RealInitializeDaemonSocketDir();
-		m_should_initialize_socket_dir = false;
-	}
 	const char * known_dir = getenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
 	if (known_dir == NULL) {
 		dprintf(D_FULLDEBUG, "No shared_port cookie available; will fall back to using on-disk $(DAEMON_SOCKET_DIR)\n");

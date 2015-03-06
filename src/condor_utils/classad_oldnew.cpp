@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-#define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
 #include "stream.h"
 #include "reli_sock.h"
@@ -76,12 +75,6 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 	MyString				inputLine;
 
 	ad.Clear( );
-
-		// Reinsert CurrentTime, emulating the special version in old
-		// ClassAds
-	if ( !compat_classad::ClassAd::m_strictEvaluation ) {
-		ad.Insert( ATTR_CURRENT_TIME " = time()" );
-	}
 
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
@@ -172,12 +165,6 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 
 
 	ad.Clear( );
-
-		// Reinsert CurrentTime, emulating the special version in old
-		// ClassAds
-	if ( !compat_classad::ClassAd::m_strictEvaluation ) {
-		ad.Insert( ATTR_CURRENT_TIME " = time()" );
-	}
 
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
@@ -653,7 +640,7 @@ int putClassAd (Stream *sock, classad::ClassAd& ad, int options, const classad::
 	ReliSock* rsock = static_cast<ReliSock*>(sock);
 	if (non_blocking && rsock)
 	{
-		BlockingModeGuard(rsock, true);
+		BlockingModeGuard guard(rsock, true);
 		if (whitelist) {
 			retval = _putClassAd(sock, ad, options, *whitelist);
 		} else {

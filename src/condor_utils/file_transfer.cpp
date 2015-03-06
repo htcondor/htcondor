@@ -674,7 +674,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 							(ReaperHandler)&FileTransfer::Reaper,
 							"FileTransfer::Reaper()",NULL);
 		if (ReaperId == 1) {
-			EXCEPT("FileTransfer::Reaper() can not be the default reaper!\n");
+			EXCEPT("FileTransfer::Reaper() can not be the default reaper!");
 		}
 
 		// we also need to initialize the random number generator.  since
@@ -840,7 +840,7 @@ FileTransfer::DownloadFiles(bool blocking)
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadFiles\n");
 
 	if (ActiveTransferTid >= 0) {
-		EXCEPT("FileTransfer::DownloadFiles called during active transfer!\n");
+		EXCEPT("FileTransfer::DownloadFiles called during active transfer!");
 	}
 
 	// Make certain Init() was called.
@@ -856,6 +856,11 @@ FileTransfer::DownloadFiles(bool blocking)
 		}
 
 		sock.timeout(clientSockTimeout);
+
+		if (IsDebugLevel(D_COMMAND)) {
+			dprintf (D_COMMAND, "FileTransfer::DownloadFiles(%s,...) making connection to %s\n",
+				getCommandStringSafe(FILETRANS_UPLOAD), TransSock ? TransSock : "NULL");
+		}
 
 		Daemon d( DT_ANY, TransSock );
 
@@ -1156,7 +1161,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 		final_transfer ? 1 : 0);
 
 	if (ActiveTransferTid >= 0) {
-		EXCEPT("FileTransfer::UpLoadFiles called during active transfer!\n");
+		EXCEPT("FileTransfer::UpLoadFiles called during active transfer!");
 	}
 
 	// Make certain Init() was called.
@@ -1218,6 +1223,11 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 		}
 
 		sock.timeout(clientSockTimeout);
+
+		if (IsDebugLevel(D_COMMAND)) {
+			dprintf (D_COMMAND, "FileTransfer::UploadFiles(%s,...) making connection to %s\n",
+				getCommandStringSafe(FILETRANS_DOWNLOAD), TransSock ? TransSock : "NULL");
+		}
 
 		Daemon d( DT_ANY, TransSock );
 
@@ -1555,7 +1565,7 @@ FileTransfer::ReadTransferPipeMsg()
 		}
 	}
 	else {
-		EXCEPT("Invalid file transfer pipe command %d\n",cmd);
+		EXCEPT("Invalid file transfer pipe command %d",cmd);
 	}
 
 	return true;
@@ -1618,7 +1628,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 	dprintf(D_FULLDEBUG,"entering FileTransfer::Download\n");
 	
 	if (ActiveTransferTid >= 0) {
-		EXCEPT("FileTransfer::Download called during active transfer!\n");
+		EXCEPT("FileTransfer::Download called during active transfer!");
 	}
 
 	Info.duration = 0;
@@ -2017,7 +2027,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			// examine subcommand
 			//
 			int      subcommand = 0;
-			if(!file_info.LookupInteger("Result",subcommand)) {
+			if(!file_info.LookupInteger("SubCommand",subcommand)) {
 				subcommand = -1;
 			}
 
@@ -2584,7 +2594,7 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	dprintf(D_FULLDEBUG,"entering FileTransfer::Upload\n");
 
 	if (ActiveTransferTid >= 0) {
-		EXCEPT("FileTransfer::Upload called during active transfer!\n");
+		EXCEPT("FileTransfer::Upload called during active transfer!");
 	}
 
 	Info.duration = 0;
@@ -4384,7 +4394,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 #endif
 
 	size_t srclen = file_xfer_item.src_name.length();
-	bool trailing_slash = srclen > 0 && src_path[srclen-1] == DIR_DELIM_CHAR;
+	bool trailing_slash = srclen > 0 && IS_ANY_DIR_DELIM_CHAR(src_path[srclen-1]);
 
 	file_xfer_item.is_symlink = st.IsSymlink();
 	file_xfer_item.is_directory = st.IsDirectory();

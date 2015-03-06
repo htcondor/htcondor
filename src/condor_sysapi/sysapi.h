@@ -207,9 +207,12 @@ private:
 	bool m_up;
 };
 
-bool sysapi_get_network_device_info(std::vector<NetworkDeviceInfo> &devices);
+bool sysapi_get_network_device_info(std::vector<NetworkDeviceInfo> &devices, bool want_ipv4, bool want_ipv6);
 
 void sysapi_clear_network_device_info_cache();
+
+/* determine if a linux version is version X or newer */
+bool sysapi_is_linux_version_atleast(const char *version_to_check);
 
 #endif // __cplusplus
 

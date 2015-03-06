@@ -375,7 +375,7 @@ void TTManager::createQuillAd(void) {
 
 	char *quill_name = param("QUILL_NAME");
 	if(!quill_name) {
-		EXCEPT("Cannot find variable QUILL_NAME in config file\n");
+		EXCEPT("Cannot find variable QUILL_NAME in config file");
 	}
 
 	if (param_boolean("QUILL_IS_REMOTELY_QUERYABLE", true) == true) {
@@ -392,7 +392,7 @@ void TTManager::createQuillAd(void) {
 	char *quill_query_passwd = param("QUILL_DB_QUERY_PASSWORD");
 	if(!quill_query_passwd) {
 		EXCEPT("Cannot find variable QUILL_DB_QUERY_PASSWORD "
-			   "in config file\n");
+			   "in config file");
 	}
   
 	sprintf( expr, "%s = \"%s\"", ATTR_QUILL_DB_QUERY_PASSWORD, 
@@ -410,7 +410,7 @@ void TTManager::createQuillAd(void) {
 		delete[] scheddName;
 	}
 
-	sprintf( expr, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() ); 
+	sprintf( expr, "%s = \"%s\"", ATTR_MACHINE, get_local_fqdn().Value() ); 
 	quillad->Insert(expr);
   
 		// Put in our sinful string.  Note, this is never going to
@@ -720,7 +720,7 @@ void TTManager::checkAndThrowBigFiles() {
 			snprintf(tmp, 512, "filename = \"%s\"", sqlLogCopyList[i]);
 			tmpClP1->Insert(tmp);		
 			
-			snprintf(tmp, 512, "machine_id = \"%s\"", my_full_hostname());
+			snprintf(tmp, 512, "machine_id = \"%s\"", get_local_fqdn().Value());
 			tmpClP1->Insert(tmp);		
 
 			snprintf(tmp, 512, "log_size = %d", (int)file_status.st_size);
@@ -2993,7 +2993,7 @@ void TTManager::handleErrorSqlLog()
 	ts_expr = condor_ttdb_buildts(&f_ts, dt);
 
 		/* get the host name where the sql log sits */
-	hostname_val = my_full_hostname();
+	hostname_val = get_local_fqdn();
 
 		/* escape quotation in error sql */
 	newvalue = condor_ttdb_fillEscapeCharacters(errorSqlStmt.Value(), dt);

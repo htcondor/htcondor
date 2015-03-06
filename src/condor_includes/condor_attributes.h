@@ -170,6 +170,8 @@
 #define ATTR_DESTINATION  "Destination"
 #define ATTR_DISK  "Disk"
 #define ATTR_DISK_USAGE  "DiskUsage"
+#define ATTR_DOCKER_IMAGE "DockerImage"
+#define ATTR_DOCKER_VERSION  "DockerVersion"
 #define ATTR_EMAIL_ATTRIBUTES  "EmailAttributes"
 #define ATTR_ENTERED_CURRENT_ACTIVITY  "EnteredCurrentActivity"
 #define ATTR_ENTERED_CURRENT_STATE  "EnteredCurrentState"
@@ -241,6 +243,8 @@
 // END ckireyev myproxy
 #define ATTR_HARDWARE_ADDRESS  "HardwareAddress"
 #define ATTR_HAS_CHECKPOINTING  "HasCheckpointing"
+#define ATTR_HAS_DOCKER  "HasDocker"
+#define ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY "HasEncryptExecuteDirectory"
 #define ATTR_HAS_FILE_TRANSFER  "HasFileTransfer"
 #define ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS  "HasFileTransferPluginMethods"
 #define ATTR_HAS_PER_FILE_ENCRYPTION  "HasPerFileEncryption"
@@ -304,6 +308,7 @@
 #define ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE  "JobCurrentStartTransferOutputDate"
 #define ATTR_CUMULATIVE_TRANSFER_TIME  "CumulativeTransferTime"
 #define ATTR_JOB_DURATION  "JobDuration"
+#define ATTR_ENCRYPT_EXECUTE_DIRECTORY "EncryptExecuteDirectory"
 #define ATTR_JOB_ENVIRONMENT1  "Env"
 #define ATTR_JOB_ENVIRONMENT1_DELIM  "EnvDelim"
 #define ATTR_JOB_ENVIRONMENT2  "Environment"
@@ -451,7 +456,6 @@
 #define ATTR_NODE  "Node"
 #define ATTR_NORDUGRID_RSL  "NordugridRSL"
 #define ATTR_NOTIFY_USER  "NotifyUser"
-#define ATTR_NOTIFY_JOB_SCHEDULER  "NotifyJobScheduler"
 #define ATTR_NT_DOMAIN  "NTDomain"
 #define ATTR_TRANSFER_QUEUE_USER_EXPR "TransferQueueUserExpr"
 //extern const char ATTR_WINDOWS_VERSION [];
@@ -467,6 +471,7 @@
 #define ATTR_NUM_DYNAMIC_SLOTS  "NumDynamicSlots"
 #define ATTR_NUM_GLOBUS_SUBMITS  "NumGlobusSubmits"
 #define ATTR_NUM_MATCHES  "NumJobMatches"
+#define ATTR_LIMIT_RESULTS "LimitResults"
 #define ATTR_NUM_HOPS_TO_SUBMIT_MACHINE  "NumHopsToSubmitMachine"
 #define ATTR_NUM_HOPS_TO_LAST_CKPT_SERVER  "NumHopsToLastCkptServer"
 #define ATTR_NUM_HOPS_TO_CKPT_SERVER  "NumHopsToCkptServer"
@@ -570,6 +575,7 @@
 #define ATTR_STARTD_IP_ADDR  "StartdIpAddr"
 #define ATTR_STARTD_PRINCIPAL  "StartdPrincipal"
 #define ATTR_STARTD_SENDS_ALIVES  "StartdSendsAlives"
+#define ATTR_STARTER_HANDLES_ALIVES "_condor_StartdHandlesAlives"
 #define ATTR_STATE  "State"
 #define ATTR_STARTER_IP_ADDR  "StarterIpAddr"
 #define ATTR_STARTER_ABILITY_LIST  "StarterAbilityList"
@@ -706,6 +712,7 @@
 #define ATTR_WANT_LAST_CKPT_SERVER_NET_STATS  "WantLastCkptServerNetStats"
 #define ATTR_WANT_CKPT_SERVER_NET_STATS  "WantCkptServerNetStats"
 #define ATTR_WANT_AD_REVAULATE  "WantAdRevaluate"
+#define ATTR_WANT_DOCKER  "WantDocker"
 #define ATTR_COLLECTOR_IP_ADDR  "CollectorIpAddr"
 #define ATTR_NEGOTIATOR_IP_ADDR  "NegotiatorIpAddr"
 #define ATTR_CREDD_IP_ADDR  "CredDIpAddr"
@@ -895,6 +902,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_EC2_KEY_PAIR  "EC2KeyPair"
 #define ATTR_EC2_KEY_PAIR_FILE  "EC2KeyPairFile"
 #define ATTR_EC2_SECURITY_GROUPS  "EC2SecurityGroups"
+#define ATTR_EC2_SECURITY_IDS  "EC2SecurityIDs"
 #define ATTR_EC2_USER_DATA  "EC2UserData"
 #define ATTR_EC2_USER_DATA_FILE  "EC2UserDataFile"
 #define ATTR_EC2_REMOTE_VM_NAME  "EC2RemoteVirtualMachineName"
@@ -911,6 +919,11 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_EC2_SPOT_REQUEST_ID  "EC2SpotRequestID"
 #define ATTR_EC2_STATUS_REASON_CODE  "EC2StatusReasonCode"
 #define ATTR_EC2_SERVER_TYPE  "EC2ServerType"
+#define ATTR_EC2_BLOCK_DEVICE_MAPPING "EC2BlockDeviceMapping"
+#define ATTR_EC2_PARAM_NAMES  "EC2ParamNames"
+#define ATTR_EC2_PARAM_PREFIX  "EC2Param"
+#define ATTR_EC2_IAM_PROFILE_ARN  "EC2IamProfileArn"
+#define ATTR_EC2_IAM_PROFILE_NAME  "EC2IamProfileName"
 
 //************* End of changes for EC2 Jobs *****************//
 
@@ -1041,6 +1054,8 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_CHECK_EXPR  "CheckExpr"
 #define ATTR_PROJECTION  "Projection"
 #define ATTR_LAST_DRAIN_START_TIME  "LastDrainStartTime"
+
+#define ATTR_SHARED_PORT_COMMAND_SINFULS "SharedPortCommandSinfuls"
 
 // temporary attributes for raw utsname info
 #define ATTR_UTSNAME_SYSNAME  "UtsnameSysname"

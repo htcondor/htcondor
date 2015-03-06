@@ -447,6 +447,9 @@ bool GceRequest::SendRequest()
 	// TODO Eliminate this copy if we always use the serviceURL unmodified
 	string finalURI = this->serviceURL;
 	dprintf( D_FULLDEBUG, "Request URI is '%s'\n", finalURI.c_str() );
+	if ( requestMethod == "POST" ) {
+		dprintf( D_FULLDEBUG, "Request body is '%s'\n", requestBody.c_str() );
+	}
 
 	// curl_global_init() is not thread-safe.  However, it's safe to call
 	// multiple times.  Therefore, we'll just call it before we drop the
@@ -832,45 +835,49 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	}
 
 	insert_request.requestBody = "{\n";
-	insert_request.requestBody += "\"machineType\": \"";
+	insert_request.requestBody += " \"machineType\": \"";
 	insert_request.requestBody += argv[7];
 	insert_request.requestBody += "\",\n";
-	insert_request.requestBody += "\"name\": \"";
+	insert_request.requestBody += " \"name\": \"";
 	insert_request.requestBody += argv[6];
 	insert_request.requestBody += "\",\n";
-	insert_request.requestBody += "\"image\": \"";
+	insert_request.requestBody += " \"disks\": [\n  {\n";
+	insert_request.requestBody += "   \"boot\": true,\n";
+	insert_request.requestBody += "   \"initializeParams\": {\n";
+	insert_request.requestBody += "    \"sourceImage\": \"";
 	insert_request.requestBody += argv[8];
-	insert_request.requestBody += "\",\n";
+	insert_request.requestBody += "\"\n";
+	insert_request.requestBody += "   }\n  }\n ],\n";
 	if ( !metadata.empty() ) {
-		insert_request.requestBody += "\"metadata\": {\n";
-		insert_request.requestBody += "\"items\": [\n";
+		insert_request.requestBody += " \"metadata\": {\n";
+		insert_request.requestBody += "  \"items\": [\n";
 
 		for ( map<string, string>::const_iterator itr = metadata.begin(); itr != metadata.end(); itr++ ) {
 			if ( itr != metadata.begin() ) {
-				insert_request.requestBody += ", ";
+				insert_request.requestBody += ",\n";
 			}
-			insert_request.requestBody += "{\n\"key\": \"";
+			insert_request.requestBody += "   {\n    \"key\": \"";
 			insert_request.requestBody += itr->first;
 			insert_request.requestBody += "\",\n";
-			insert_request.requestBody += "\"value\": \"";
+			insert_request.requestBody += "    \"value\": \"";
 			insert_request.requestBody += escapeJSONString( itr->second.c_str() );
-			insert_request.requestBody += "\"\n}\n";
+			insert_request.requestBody += "\"\n   }";
 		}
 
-		insert_request.requestBody += "]\n";
-		insert_request.requestBody += "},\n";
+		insert_request.requestBody += "\n  ]\n";
+		insert_request.requestBody += " },\n";
 	}
-	insert_request.requestBody += "\"networkInterfaces\": [\n{\n";
-	insert_request.requestBody += "\"network\": \"";
+	insert_request.requestBody += " \"networkInterfaces\": [\n  {\n";
+	insert_request.requestBody += "   \"network\": \"";
 	insert_request.requestBody += argv[2];
 	insert_request.requestBody += "/projects/";
 	insert_request.requestBody += argv[4];
 	insert_request.requestBody += "/global/networks/default\",\n";
-	insert_request.requestBody += "\"accessConfigs\": [\n{\n";
-	insert_request.requestBody += "\"name\": \"External NAT\",\n";
-	insert_request.requestBody += "\"type\": \"ONE_TO_ONE_NAT\"\n";
-	insert_request.requestBody += "}\n]\n";
-	insert_request.requestBody += "}\n]\n";
+	insert_request.requestBody += "   \"accessConfigs\": [\n    {\n";
+	insert_request.requestBody += "     \"name\": \"External NAT\",\n";
+	insert_request.requestBody += "     \"type\": \"ONE_TO_ONE_NAT\"\n";
+	insert_request.requestBody += "    }\n   ]\n";
+	insert_request.requestBody += "  }\n ]\n";
 	insert_request.requestBody += "}\n";
 
 	string auth_file = argv[3];

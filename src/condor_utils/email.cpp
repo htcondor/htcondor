@@ -45,12 +45,21 @@ static FILE *email_open_implementation(char *Mailer,
 static FILE *email_open_implementation(const char * final_args[]);
 #endif
 
+static void email_write_headers(FILE *stream,
+				const char *FromAddress,
+				const char *FinalSubject,
+				const char *Addresses,
+				int NumAddresses);
+static void email_write_header_string(FILE *stream, const char *data);
+
+
 extern DLL_IMPORT_MAGIC char **environ;
 
 FILE *
 email_open( const char *email_addr, const char *subject )
 {
-	char *Mailer;
+	char *Sendmail = NULL;
+	char *Mailer = NULL;
 	char *SmtpServer = NULL;
 	char *FromAddress = NULL;
 	char *FinalSubject;
@@ -60,12 +69,6 @@ email_open( const char *email_addr, const char *subject )
 	int num_addresses;
 	int arg_index;
 	FILE *mailerstream;
-
-	if ( (Mailer = param("MAIL")) == NULL ) {
-		dprintf(D_FULLDEBUG,
-			"Trying to email, but MAIL not specified in config file\n");
-		return NULL;
-	}
 
 	/* Take care of the subject. */
 	if ( subject ) {
@@ -92,7 +95,6 @@ email_open( const char *email_addr, const char *subject )
 	if ( (SmtpServer=param("SMTP_SERVER")) == NULL ) {
 		dprintf(D_FULLDEBUG,
 			"Trying to email, but SMTP_SERVER not specified in config file\n");
-		free(Mailer);
 		free(FinalSubject);
 		if (FromAddress) free(FromAddress);
 		return NULL;
@@ -110,7 +112,6 @@ email_open( const char *email_addr, const char *subject )
 		if ( (FinalAddr = param("CONDOR_ADMIN")) == NULL ) {
 			dprintf(D_FULLDEBUG,
 				"Trying to email, but CONDOR_ADMIN not specified in config file\n");
-			free(Mailer);
 			free(FinalSubject);
 			if (FromAddress) free(FromAddress);
 			if (SmtpServer) free(SmtpServer);
@@ -136,10 +137,22 @@ email_open( const char *email_addr, const char *subject )
 	}
 	if (num_addresses == 0) {
 		dprintf(D_FULLDEBUG, "Trying to email, but address list is empty\n");
-		free(Mailer);
 		free(FinalSubject);
 		if (FromAddress) free(FromAddress);
 		if (SmtpServer) free(SmtpServer);
+		free(FinalAddr);
+		return NULL;
+	}
+
+	Sendmail = param_with_full_path("SENDMAIL");
+	Mailer = param("MAIL");
+
+	if ( Mailer == NULL && Sendmail == NULL ) {
+		dprintf(D_FULLDEBUG,
+			"Trying to email, but MAIL and SENDMAIL not specified in config file\n");
+		free(FinalSubject);
+		free(FromAddress);
+		free(SmtpServer);
 		free(FinalAddr);
 		return NULL;
 	}
@@ -152,23 +165,40 @@ email_open( const char *email_addr, const char *subject )
 		EXCEPT("Out of memory");
 	}
 	arg_index = 0;
-	final_args[arg_index++] = Mailer;
-	final_args[arg_index++] = "-s";
-	final_args[arg_index++] = FinalSubject;
-	if (FromAddress) {
-		final_args[arg_index++] = "-f";
-		final_args[arg_index++] = FromAddress;
-	}
-	if (SmtpServer) {
-		final_args[arg_index++] = "-relay";
-		final_args[arg_index++] = SmtpServer;
-	}
-	temp = FinalAddr;
-	for (;;) {
-		while (*temp == '\0') temp++;
-		final_args[arg_index++] = temp;
-		if (--num_addresses == 0) break;
-		while (*temp != '\0') temp++;
+	if (Sendmail != NULL) {
+		final_args[arg_index++] = Sendmail;
+		// Obtain addresses from the header.
+		final_args[arg_index++] = "-t";
+		// No special treatment of dot-starting lines.
+		final_args[arg_index++] = "-i";
+	} else {
+		final_args[arg_index++] = Mailer;
+		final_args[arg_index++] = "-s";
+		final_args[arg_index++] = FinalSubject;
+
+		if (FromAddress) {
+#ifdef WIN32
+			// condor_mail.exe uses this flag
+			final_args[arg_index++] = "-f";
+#else
+			// modern mailx uses this flag
+			final_args[arg_index++] = "-r";
+#endif
+			final_args[arg_index++] = FromAddress;
+		}
+		if (SmtpServer) {
+			// SmtpServer is only set on windows
+			// condor_mail.exe uses this flag
+			final_args[arg_index++] = "-relay";
+			final_args[arg_index++] = SmtpServer;
+		}
+		temp = FinalAddr;
+		for (;;) {
+			while (*temp == '\0') temp++;
+			final_args[arg_index++] = temp;
+			if (--num_addresses == 0) break;
+			while (*temp != '\0') temp++;
+		}
 	}
 	final_args[arg_index] = NULL;
 
@@ -182,11 +212,20 @@ email_open( const char *email_addr, const char *subject )
 #endif
 
 	if ( mailerstream ) {
+		if (Sendmail != NULL) {
+			email_write_headers(mailerstream,
+					    FromAddress,
+					    FinalSubject,
+					    FinalAddr,
+					    num_addresses);
+		}
+
 		fprintf(mailerstream,"This is an automated email from the Condor "
 			"system\non machine \"%s\".  Do not reply.\n\n",get_local_fqdn().Value());
 	}
 
 	/* free up everything we strdup-ed and param-ed, and return result */
+	free(Sendmail);
 	free(Mailer);
 	free(FinalSubject);
 	if (FromAddress) free(FromAddress);
@@ -196,6 +235,50 @@ email_open( const char *email_addr, const char *subject )
 
 	return mailerstream;
 }
+
+static void
+email_write_header_string(FILE *stream, const char *data)
+{
+	for (; *data; ++data) {
+		char ch = *data;
+		if (ch < ' ') {
+			fputc(' ', stream);
+		} else {
+			fputc(ch, stream);
+		}
+	}
+}
+
+static void
+email_write_headers(FILE *stream,
+		    const char *FromAddress,
+		    const char *FinalSubject,
+		    const char *Addresses,
+		    int NumAddresses)
+{
+	if (FromAddress) {
+		fputs("From: ", stream);
+		email_write_header_string(stream, FromAddress);
+		fputc('\n', stream);
+	}
+	fputs("Subject: ", stream);
+	email_write_header_string(stream, FinalSubject);
+	fputc('\n', stream);
+
+	fputs("To: ", stream);
+	for (int i = 0; i < NumAddresses; ++i) {
+		if (i > 0) {
+			fputs(", ", stream);
+		}
+		while (*Addresses == '\0') {
+			Addresses++;
+		}
+		email_write_header_string(stream, Addresses);
+		Addresses += strlen(Addresses) + 1;
+	}
+	fputs("\n\n", stream);
+}
+
 
 #ifdef WIN32
 FILE *
@@ -309,7 +392,7 @@ email_open_implementation( const char * final_args[])
 			user dir somewhere and not readable by the Condor Account. */
 		int ret = chdir("/");
 		if (ret == -1) {
-			EXCEPT("EMAIL PROCESS: Could not cd /\n");
+			EXCEPT("EMAIL PROCESS: Could not cd /");
 		}
 		umask(0);
 
@@ -324,7 +407,7 @@ email_open_implementation( const char * final_args[])
 		if (dup2(pipefds[0], STDIN_FILENO) < 0)
 		{
 			/* I hope this EXCEPT gets recorded somewhere */
-			EXCEPT("EMAIL PROCESS: Could not connect stdin to child!\n");
+			EXCEPT("EMAIL PROCESS: Could not connect stdin to child!");
 		}
 
 		/* close all other unneeded file descriptors including stdout and

@@ -21,6 +21,23 @@ std::string ClassadLibraryVersion()
     return val;
 }
 
+
+static
+std::string GetLastCondorError()
+{
+    return classad::CondorErrMsg;
+}
+
+
+static
+void RegisterLibrary(const std::string &libraryName)
+{
+    if (!classad::FunctionCall::RegisterSharedLibraryFunctions(libraryName.c_str()))
+    {
+        THROW_EX(RuntimeError, "Failed to load shared library.");
+    }
+}
+
 std::string quote(std::string input)
 {
     classad::Value val; val.SetStringValue(input);
@@ -107,6 +124,9 @@ BOOST_PYTHON_MODULE(classad)
 
     def("version", ClassadLibraryVersion, "Return the version of the linked ClassAd library.");
 
+    def("lastError", GetLastCondorError, "The last error that occurred in the ClassAd library.");
+    def("registerLibrary", RegisterLibrary, "Register a shared library of ClassAd functions.");
+
     def("parse", parseString, return_value_policy<manage_new_object>());
     def("parse", parseFile, return_value_policy<manage_new_object>(),
         "Parse input into a ClassAd.\n"
@@ -161,12 +181,15 @@ BOOST_PYTHON_MODULE(classad)
         .def("flatten", &ClassAdWrapper::Flatten, "Partially evaluate a given expression.")
         .def("matches", &ClassAdWrapper::matches, "Returns true if this ad matches the given ClassAd")
         .def("symmetricMatch", &ClassAdWrapper::symmetricMatch, "Returns true if this ad and the given ad match each other")
+        .def("externalRefs", &ClassAdWrapper::externalRefs, "Returns the references of the given expression which are not in this ClassAd")
+        .def("internalRefs", &ClassAdWrapper::internalRefs, "Returns the references of the given expression which are in this ClassAd.")
         ;
 
     class_<ExprTreeHolder>("ExprTree", "An expression in the ClassAd language", init<std::string>())
         .def("__str__", &ExprTreeHolder::toString)
         .def("__repr__", &ExprTreeHolder::toRepr)
         .def("__getitem__", &ExprTreeHolder::getItem, condor::classad_expr_return_policy<>())
+        .def("_get", &ExprTreeHolder::subscript, condor::classad_expr_return_policy<>())
         .def("eval", &ExprTreeHolder::Evaluate, evaluate_overloads("Evalaute the expression, possibly within context of a ClassAd"))
         .def("__nonzero__", &ExprTreeHolder::__nonzero__)
         .def("sameAs", &ExprTreeHolder::SameAs, "Returns true if given ExprTree is same as this one.")

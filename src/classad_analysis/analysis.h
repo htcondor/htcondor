@@ -115,9 +115,9 @@ class ClassAdAnalyzer
 
 	// wrapper functions to add information to the result only if we're generating one
 	void result_add_suggestion(classad_analysis::suggestion s);
-	void result_add_explanation(classad_analysis::matchmaking_failure_kind mfk, classad::ClassAd resource);
+	void result_add_explanation(classad_analysis::matchmaking_failure_kind mfk, const classad::ClassAd &resource);
 	void result_add_explanation(classad_analysis::matchmaking_failure_kind mfk, ClassAd *resource);
-	void result_add_machine(classad::ClassAd resource);
+	void result_add_machine(const classad::ClassAd &resource);
 
 	bool AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, std::string &buffer, std::string &pretty_req );
 	bool AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers, std::string &buffer );

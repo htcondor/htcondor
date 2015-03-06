@@ -38,12 +38,8 @@ void print_usage(void);
 bool FTEST_host_in_domain(void);
 bool FTEST_getHostFromAddr(void);
 bool FTEST_getPortFromAddr(void);
-bool FTEST_is_ipaddr(void);
 bool FTEST_is_valid_sinful(void);
-bool FTEST_is_valid_network(void);
 bool FTEST_sin_to_string(void);
-bool FTEST_string_to_ip(void);
-bool FTEST_string_to_sin(void);
 bool FTEST_string_to_port(void);
 bool FTEST_strupr(void);
 bool FTEST_strlwr(void);
@@ -74,12 +70,8 @@ const static struct {
 	map(FTEST_host_in_domain),
 	map(FTEST_getHostFromAddr),
 	map(FTEST_getPortFromAddr),
-	map(FTEST_is_ipaddr),
 	map(FTEST_is_valid_sinful),
-	map(FTEST_is_valid_network),
 	map(FTEST_sin_to_string),
-	map(FTEST_string_to_ip),
-	map(FTEST_string_to_sin),
 	map(FTEST_string_to_port),
 	map(FTEST_strupr),
 	map(FTEST_strlwr),

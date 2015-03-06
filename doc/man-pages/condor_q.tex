@@ -67,8 +67,10 @@ one line summary of information as follows:
         > = transferring output (or queued to do so). 
 \item[PRI] User specified priority of the job, displayed as an integer, with 
 	higher numbers corresponding to greater priority. 
-\item[SIZE] The value of job ClassAd attribute \Attr{MemoryUsage} (in Mbytes),
-when the attribute is defined, and \Attr{ImageSize} (in Kbytes), otherwise. 
+\item[SIZE] The peak amount of memory in Mbytes consumed by the job; note
+	this value is only refreshed periodically.  The actual value reported is
+	taken from the job ClassAd attribute \Attr{MemoryUsage} if this attribute
+	is defined, and from job attribute \Attr{ImageSize} otherwise.
 \item[CMD] The name of the executable. 
 \end{description}
 
@@ -208,6 +210,17 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     in the given job event log, because it reduces the load on the \Condor{schedd}.
     A job event log does not contain all of the job information, so some fields in
     the normal output of \Condor{q} will be blank.}
+  \OptItem{\Opt{-autocluster}} {(output option) 
+    Output \Condor{schedd} daemon auto cluster information.
+    For each auto cluster,
+    output the unique ID of the auto cluster
+    along with the number of jobs in that auto cluster. 
+    This option is intended to be used together with the \Opt{-long} option
+    to output the ClassAds representing auto clusters.  
+    The ClassAds can then be used to identify or classify the demand for
+    sets of machine resources, 
+    which will be useful in the on-demand creation of execute nodes for
+    glidein services. } 
   \OptItem{\Opt{-cputime}} {(output option) 
     Instead of wall-clock allocation time (RUN\_TIME), 
     display remote CPU time accumulated by the job to date in days,
@@ -233,6 +246,8 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     the hold state.
     Also displays the time the job was placed into the hold state
     and the reason why the job was placed in the hold state.}
+  \OptItem{\OptArg{-limit}{Number}}{(output option) 
+    Limit the number of items output to \Arg{Number}. }
   \OptItem{\Opt{-io}}{(output option) Display job input/output summaries.}
   \OptItem{\Opt{-long}}{(output option) Display entire job ClassAds 
     in long format.}
@@ -269,6 +284,7 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     If the attribute is not present in a given ClassAd and cannot
     be parsed as an expression,
     then the format option will be silently skipped.
+    \%r prints the unevaluated, or raw values.
     The conversion specifier must match the type of the
     attribute or expression.
     \%s is suitable for strings such as \Attr{Owner},
@@ -291,17 +307,27 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     but an attribute is still required.
     Include \Bs n to specify a line break. }
 
-  \OptItem{\OptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]}} {
-    (output option) Display machine ClassAd attribute values 
-    formatted in a default way according to their attribute types.  
+  \OptItem{\OptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]} 
+  or \OptArg{-af[:tn,lVh]}{attr1 [attr2 ...]}} {
+    (output option) Display attribute(s) or expression(s)
+    formatted in a default way according to attribute types.  
     This option takes an arbitrary number of attribute names as arguments,
-    and prints out their values.  It is like the \Opt{-format} option,
-    but no format strings are required.
+    and prints out their values, 
+    with a space between each value and a newline character after 
+    the last value.  
+    It is like the \Opt{-format} option without format strings.
+    This output option does \emph{not} work in conjunction with any of the
+    options \Opt{-run}, \Opt{-currentrun}, \Opt{-hold}, 
+    \Opt{-globus}, \Opt{-goodput}, or \Opt{-io}.
+
     It is assumed that no attribute names begin with a dash character,
     so that the next word that begins with dash is the 
     start of the next option.
     The \Opt{autoformat} option may be followed by a colon character
-    and formatting qualifiers:
+    and formatting qualifiers to deviate the output formatting from
+    the default:
+
+    \textbf{r} print unevaluated, or raw values,
 
     \textbf{t} add a tab character before each field instead of 
     the default space character,

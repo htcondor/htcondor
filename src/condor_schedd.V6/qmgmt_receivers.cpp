@@ -29,6 +29,7 @@
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
+#include "qmgmt.h"
 #include "condor_qmgr.h"
 #include "qmgmt_constants.h"
 
@@ -43,6 +44,8 @@
 extern char *CondorCertDir;
 
 extern int active_cluster_num;
+
+extern int CheckTransaction( SetAttributeFlags_t, CondorError * errorStack );
 
 static bool QmgmtMayAccessAttribute( char const *attr_name ) {
 	return !ClassAdAttributeIsPrivate( attr_name );
@@ -504,16 +507,40 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		CommitTransaction( flags );
-			// CommitTransaction() never returns on failure
-		rval = 0;
+		CondorError errstack;
+		rval = CheckTransaction( flags, & errstack );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
+
+		if( rval >= 0 ) {
+			errno = 0;
+			CommitTransaction( flags );
+				// CommitTransaction() never returns on failure
+			rval = 0;
+			terrno = errno;
+			dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
+		}
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
 			assert( syscall_sock->code(terrno) );
+			const CondorVersionInfo *vers = syscall_sock->get_peer_version();
+			if (vers && vers->built_since_version(8, 3, 4))
+			{
+				// Send a classad, for less backwards-incompatibility.
+				int code = 1;
+				const char * reason = "QMGMT rejected job submission.";
+				if( errstack.subsys() ) {
+					code = 2;
+					reason = errstack.message();
+				}
+
+				ClassAd reply;
+				reply.Assign( "ErrorCode", code );
+				reply.Assign( "ErrorReason", reason );
+				assert( putClassAd( syscall_sock, reply ) );
+			}
 		}
 		assert( syscall_sock->end_of_message() );;
 		return 0;
@@ -764,6 +791,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		int proc_id = -1;
 		ClassAd *ad = NULL;
 		int terrno;
+		bool delete_ad = false;
 
 		assert( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -784,30 +812,17 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 					// The GridManager depends on the fact that the following call
 					// expands $$ and saves the expansions to disk in case of
 					// restart.
-					ad = GetJobAd( cluster_id, proc_id, true, true );
+					ad = GetJobAd_as_ClassAd( cluster_id, proc_id, true, true );
+					delete_ad = true;
 					// note : since we expanded the ad, ad is now a deep
 					// copy of the ad in memory, so we must delete it below.
 				} else {
-					// Since we don't expand macros here, we need to make a
-					// deep copy for the code below (at least according to the
-					// original comment), despite appearances.
-					ClassAd *cluster_ad = GetJobAd( cluster_id, proc_id, false, false );
-					if ( cluster_ad ) {
-						ad = new ClassAd(*cluster_ad);
-					}
+					ad = GetJobAd_as_ClassAd( cluster_id, proc_id, false, false );
 				}
 			} else if( proc_id == -1 ) {
 				// allow cluster ad to be queried as required by preen, but
 				// do NOT ask to expand $$() macros in a cluster ad!
-				ClassAd *cluster_ad = GetJobAd( cluster_id, proc_id, false, false );
-				// since we did not expand, ad is not a deep copy.
-				// thus we deep copy it now, since the below code assumes
-				// "ad" is a deep copy and therefore below we can set
-				// private attrs, delete it, etc, without messing up
-				// the schedd's canonical copy.
-				if ( cluster_ad ) {
-					ad = new ClassAd(*cluster_ad);
-				}
+				ad = GetJobAd_as_ClassAd( cluster_id, proc_id, false, false );
 			}
 		}
 		terrno = errno;
@@ -822,12 +837,11 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		if( rval >= 0 ) {
 			assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
-		// Here we must really, truely delete the ad.  Why? Because
-		// when GetJobAd is called with the third bool argument set
+		// If we called GetJobAd() with the third bool argument set
 		// to True (expandedAd), it does a deep copy of the ad in the
 		// queue in order to expand the $$() attributes.  So we must
-		// always delete it.
-		if (ad) delete ad;	// need to really delete it cuz expanded
+		// delete it.
+		if (delete_ad) delete ad;
 		assert( syscall_sock->end_of_message() );;
 		return 0;
 	}
@@ -842,7 +856,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		ad = GetJobByConstraint( constraint );
+		ad = GetJobByConstraint_as_ClassAd( constraint );
 		terrno = errno;
 		rval = ad ? 0 : -1;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );

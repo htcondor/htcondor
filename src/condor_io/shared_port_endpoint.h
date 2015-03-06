@@ -49,10 +49,14 @@ class SharedPortEndpoint: Service {
 
 	void StopListener();
 
-		// returns a contact string suitable for connecting to the
+		// returns the best contact string suitable for connecting to the
 		// SharedPortServer that will forward the connection to us.
 		// May return NULL if remote address cannot be determined.
 	char const *GetMyRemoteAddress();
+
+		// Returns a vector of contact strings suitable for connecting
+		// to the shared port server.  May be empty!
+	const std::vector<Sinful> &GetMyRemoteAddresses();
 
 		// Force an immediate reload of the shared port server's
 		// address.
@@ -127,9 +131,8 @@ class SharedPortEndpoint: Service {
 	static bool CreatedSharedPortDirectory() {return m_created_shared_port_dir;}
 
  private:
-	static void RealInitializeDaemonSocketDir();
 	static bool m_created_shared_port_dir;
-	static bool m_should_initialize_socket_dir;
+	static bool m_initialized_socket_dir;
 
 	bool m_is_file_socket; // Set to false if we are using a Linux abstract socket.
 	bool m_listening;
@@ -138,6 +141,7 @@ class SharedPortEndpoint: Service {
 	MyString m_full_name; // full path of socket
 	MyString m_local_id;  // basename of socket
 	MyString m_remote_addr;  // SharedPortServer addr with our local_id inserted
+	std::vector<Sinful> m_remote_addrs;
 	MyString m_local_addr;
 	int m_retry_remote_addr_timer;
 #ifdef WIN32
@@ -164,6 +168,8 @@ class SharedPortEndpoint: Service {
 	ReliSock m_listener_sock; // named socket to receive forwarded connections
 #endif
 	int m_socket_check_timer;
+
+	void EnsureInitRemoteAddress();
 
 	int HandleListenerAccept( Stream * stream );
 #ifndef WIN32

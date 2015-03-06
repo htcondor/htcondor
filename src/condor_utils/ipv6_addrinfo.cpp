@@ -18,10 +18,10 @@
 ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_config.h"
 #include "ipv6_addrinfo.h"
 #include "condor_netdb.h"
 #include "MyString.h"
-#include "condor_ipv6.h"
 #include "condor_classad.h" // generic stats needs these definitions.
 #include "generic_stats.h"
 
@@ -30,17 +30,24 @@ addrinfo get_default_hint()
 	addrinfo ret;
 	memset(&ret, 0, sizeof(ret));
 #ifndef WIN32
-	ret.ai_flags = AI_ADDRCONFIG;
+	// Unfortunately, Ubuntu 10 and 12 disagree with everyone else about
+	// what AI_ADDRCONFIG means, so we need to ask for all addresses and
+	// filter on our end.
+	// ret.ai_flags = AI_ADDRCONFIG;
 #endif
 	ret.ai_flags |= AI_CANONNAME;
 
 	ret.ai_socktype = SOCK_STREAM;
 	ret.ai_protocol = IPPROTO_TCP;
-	if(_condor_is_ipv6_mode()) {
+#if defined( WORKING_GETADDRINFO )
+	if(param_boolean("ENABLE_IPV6", false)) {
 		ret.ai_family = AF_UNSPEC;
 	} else {
 		ret.ai_family = AF_INET;
 	}
+#else
+	ret.ai_family = AF_UNSPEC;
+#endif
 	return ret;
 }
 
@@ -70,10 +77,11 @@ struct shared_context
 addrinfo_iterator::addrinfo_iterator() : cxt_(NULL),
 	current_(NULL)
 {
+	ipv6 = param_boolean( "ENABLE_IPV6", false );
 }
 
 addrinfo_iterator::addrinfo_iterator(const addrinfo_iterator& rhs) :
-	cxt_(rhs.cxt_), current_(NULL)
+	cxt_(rhs.cxt_), current_(NULL), ipv6(rhs.ipv6)
 {
 	if (cxt_) cxt_->add_ref();
 }
@@ -81,6 +89,7 @@ addrinfo_iterator::addrinfo_iterator(const addrinfo_iterator& rhs) :
 addrinfo_iterator::addrinfo_iterator(addrinfo* res) : cxt_(new shared_context),
 	current_(NULL)
 {
+	ipv6 = param_boolean( "ENABLE_IPV6", false );
 	cxt_->add_ref();
 	cxt_->head = res;
 }
@@ -97,6 +106,7 @@ addrinfo_iterator& addrinfo_iterator::operator= (const addrinfo_iterator& rhs)
 	if (cxt_) cxt_->release();
 	cxt_ = rhs.cxt_;
 	cxt_->add_ref();
+	ipv6 = rhs.ipv6;
 
 	current_ = NULL;
 	return *this;
@@ -104,13 +114,49 @@ addrinfo_iterator& addrinfo_iterator::operator= (const addrinfo_iterator& rhs)
 
 addrinfo* addrinfo_iterator::next()
 {
-	if (!current_)
+	if( ! current_ ) {
 		current_ = cxt_->head;
-	else if (!current_->ai_next)
+	} else if( ! current_->ai_next ) {
 		return NULL;
-	else
+	} else {
 		current_ = current_->ai_next;
+	}
+
+#if defined( WORKING_GETADDRINFO )
 	return current_;
+#else
+	switch( current_->ai_family ) {
+		// Switch must match condor_sockaddr constructor.
+		case AF_UNIX:
+			// condor_sockaddr knows what to do with the address family,
+			// so we should let it pass.  On the other hand, the idea
+			// of getaddrinfo() returning a domain socket bothers me.
+			return current_;
+		case AF_INET:
+			return current_;
+		case AF_INET6:
+			if( ipv6 ) { return current_; }
+			// This fall-through is deliberate.
+		default:
+			//
+			// ai_canonname is only ever non-NULL in the first struct addrinfo
+			// returned by getaddrinfo.  If we skip that (because it's IPv6),
+			// make sure the rest of the code still sees ai_canonname.  (If
+			// if doesn't, it falls back on gethostbyname(), which is even
+			// more broken for host with IPv6 addresses.)  We can't just
+			// copy the pointer because then it will be double-free()d.
+			//
+			if( current_ == cxt_->head && cxt_->head->ai_canonname ) {
+				addrinfo * hack = next();
+				if( hack ) {
+					hack->ai_canonname = cxt_->head->ai_canonname;
+					cxt_->head->ai_canonname = NULL;
+				}
+				return hack;
+			}
+			return next();
+	}
+#endif
 }
 
 void addrinfo_iterator::reset()
@@ -159,48 +205,3 @@ int ipv6_getaddrinfo(const char *node, const char *service,
 	return 0;
 }
 
-/*
-addrinfo_iterator ipv6_getaddrinfo(const char *node, const char *service)
-{
-	int e;
-	addrinfo_iterator ret;
-	e = ipv6_getaddrinfo(node, service, ret);
-	return ret;
-}
-
-addrinfo_iterator ipv6_getaddrinfo2(const char *node, int port_no)
-{
-	MyString port_str;
-	port_str.sprintf("%d", port_no);
-	return ipv6_getaddrinfo(node, port_str.Value());
-}
-*/
-
-/*
-std::string ipv6_inet_ntop(int family, const void* addr)
-{
-	std::string ret;
-	ret.resize(IP_STRING_BUF_SIZE);
-	// it will work with most STL implementation
-	// however, it would not work with some non-standard STL implementation
-	// that implements copy-on-write string.
-	char* buf = const_cast<char*>(ret.c_str());
-
-	const char* result = inet_ntop(family, addr, buf, IP_STRING_BUF_SIZE);
-	if (!result)
-		return ""; // return empty string
-	ret.resize( strlen(buf) );
-	return ret;
-}
-
-std::string ipv6_inet_ntop(struct sockaddr* sa)
-{
-	if (sa->sa_family != AF_INET) {
-		//dprintf( D_ALWAYS, "ipv6_inet_ntop() called with non-AF_INET sockaddr");
-		return "";
-	}
-	struct sockaddr_in* sin = (struct sockaddr_in*)sa;
-	return ipv6_inet_ntop(sin->sin_family, &sin->sin_addr);
-
-}
-*/

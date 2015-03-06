@@ -50,6 +50,8 @@
 #include "internet_obsolete.h"
 #include "ipv6_hostname.h"
 
+#include "condor_sockfunc.h"
+
 extern "C" {
 	void log_checkpoint (struct rusage *, struct rusage *);
 	void log_image_size (int);
@@ -66,11 +68,14 @@ extern "C" {
 	void reaper();
 }
 
+#include "std_univ_io.h"
+
 extern int JobStatus;
 extern int MyPid;
 extern int ImageSize;
 extern struct rusage JobRusage;
-extern ReliSock *syscall_sock;
+// extern ReliSock *syscall_sock;
+extern StdUnivSock *syscall_sock;
 extern PROC *Proc;
 extern char CkptName[];
 extern char ICkptName[];
@@ -678,6 +683,26 @@ pseudo_rename(char *from, char *to)
 	return -1;					// should never get here
 }
 
+// create_tcp_port() EXCEPT()d on all errors.
+void createListenPort( int & fd, condor_sockaddr & saFileServer ) {
+	condor_sockaddr saSysCall = syscall_sock->my_addr();
+
+	fd = socket( saSysCall.get_aftype(), SOCK_STREAM, 0 );
+	assert( fd != -1 );
+
+	// _condor_local_bind() binds to the "any" address, which must
+	// include the address in saSysCall.  We could limit to that address,
+	// but that seems unnecessary.
+	int rv = _condor_local_bind( FALSE, fd );
+	assert( rv == TRUE );
+
+	rv = listen( fd, 1 );
+	assert( rv == 0 );
+
+	rv = condor_getsockname( fd, saFileServer );
+	assert( rv == 0 );
+}
+
 /*
   Provide a process which will serve up the requested file as a
   stream.  The ip_addr and port number passed back are in host
@@ -758,12 +783,28 @@ pseudo_get_file_stream(
 	dprintf( D_FULLDEBUG, "\tlen = %lu\n", (unsigned long)*len );
 	BytesSent += *len;
 
-    //get_host_addr( ip_addr );
-	//display_ip_addr( *ip_addr );
+	//
+	// Obviously, our client just communicated with us over the syscall
+	// socket, so we know that's a workable protocol and address.  All
+	// that createListenPort() needs to do is find an allowed port.
+	//
+	condor_sockaddr saFileServer;
+	createListenPort( connect_sock, saFileServer );
+	dprintf( D_ALWAYS, "Created TCP listen socket %s\n", saFileServer.to_sinful().c_str() );
+	* port = saFileServer.get_port();
+	if( saFileServer.is_ipv4() ) {
+		// saFileServer is always bound to INADDR_ANY, which is useless.
+		saFileServer = get_local_ipaddr( CP_IPV4 );
+		* ip_addr = ntohl( saFileServer.to_sin().sin_addr.s_addr );
+	} else {
+		// All 8.3.3 and earlier clients should have failed in partSendJob(),
+		// where do_connect() called _condor_local_bind() and bound to IPv4
+		// when trying to make an IPv6 connection.  Nonetheless, the all-0
+		// address is a better flag than the all-1 address, because somebody
+		// may have forgotten to disallow omnicast.
+		* ip_addr = 0;
+	}
 
-    create_tcp_port( ip_addr, port, &connect_sock );
-    dprintf( D_NETWORK, "\taddr = %s\n", ipport_to_string(htonl(*ip_addr), htons(*port)));
-		
 	switch( child_pid = fork() ) {
 	case -1:	/* error */
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
@@ -838,12 +879,6 @@ pseudo_put_file_stream(
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
 	dprintf( D_ALWAYS, "\tlen = %lu\n", len );
 	dprintf( D_ALWAYS, "\towner = %s\n", p->owner );
-
-    // ip_addr will be updated down below because I changed create_tcp_port so that
-    // ip address the socket is bound to is determined by that function. Therefore,
-    // we don't need to initialize ip_addr here
-    //get_host_addr( ip_addr );
-	//display_ip_addr( *ip_addr );
 
 		/* open the file */
 	if (CkptFile && UseCkptServer) {
@@ -927,12 +962,28 @@ pseudo_put_file_stream(
 
 	(void)umask(omask);
 
-	//get_host_addr( ip_addr );
-	//display_ip_addr( *ip_addr );
+	//
+	// Obviously, our client just communicated with us over the syscall
+	// socket, so we know that's a workable protocol and address.  All
+	// that createListenPort() needs to do is find an allowed port.
+	//
+	condor_sockaddr saFileServer;
+	createListenPort( connect_sock, saFileServer );
+	dprintf( D_ALWAYS, "Created TCP listen socket %s\n", saFileServer.to_sinful().c_str() );
+	* port = saFileServer.get_port();
+	if( saFileServer.is_ipv4() ) {
+		// saFileServer is always bound to INADDR_ANY, which is useless.
+		saFileServer = get_local_ipaddr( CP_IPV4 );
+		* ip_addr = ntohl( saFileServer.to_sin().sin_addr.s_addr );
+	} else {
+		// All 8.3.3 and earlier clients should have failed in partSendJob(),
+		// where do_connect() called _condor_local_bind() and bound to IPv4
+		// when trying to make an IPv6 connection.  Nonetheless, the all-0
+		// address is a better flag than the all-1 address, because somebody
+		// may have forgotten to disallow omnicast.
+		* ip_addr = 0;
+	}
 
-	create_tcp_port(ip_addr, port, &connect_sock);
-    dprintf(D_NETWORK, "\taddr = %s\n", ipport_to_string(htonl(*ip_addr), htons(*port)));
-	
 	switch( child_pid = fork() ) {
 	  case -1:	/* error */
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
@@ -1030,60 +1081,13 @@ file_size( int fd )
 }
 
 /*
-  Create a tcp socket and begin listening for a connection by some
-  other process.  Using "ip", "port", and "fd" as output parameters, give back
-  the address to which the other process should connect, and the
-  file descriptor with which this process can refer to the socket.  Return
-  0 if everything works OK, and -1 otherwise.  N.B. The port number is
-  returned in host byte order.
-*/
-int
-create_tcp_port( unsigned int *ip, u_short *port, int *fd )
-{
-    struct sockaddr_in  sin;
-
-        /* create a tcp socket */
-    if( (*fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
-        EXCEPT( "create_tcp_port(): socket() failed: %d(%s)", 
-			errno, strerror(errno) );
-    }
-    dprintf( D_FULLDEBUG, "\tconnect_sock = %d\n", *fd );
-
-        /* bind it to an address */
-
-        /* FALSE means this is an incoming connection */
-    if( ! _condor_local_bind(FALSE, *fd) ) {
-        EXCEPT( "create_tcp_port(): bind() failed: %d(%s)",
-			errno, strerror(errno) );
-    }
-
-        /* determine which local port number we were assigned to */
-    struct sockaddr_in *tmp = getSockAddr(*fd);
-    if (tmp == NULL) {
-        EXCEPT("create_tcp_port(): getSockAddr() failed");
-    }
-    *ip = ntohl(tmp->sin_addr.s_addr);
-    *port = ntohs(tmp->sin_port);
-
-        /* Get ready to accept a connection */
-    if( listen(*fd,1) < 0 ) {
-        EXCEPT( "create_tcp_port(): listen() failed: %d(%s)", 
-			errno, strerror(errno) );
-    }
-    dprintf( D_FULLDEBUG, "\tListening...\n" );
-
-    return 0;
-}
-
-
-/*
   Get the IP address of this host.  The address is in host byte order.
 */
 void
 get_host_addr( unsigned int *ip_addr )
 {
-	// [TODO:IPV6]
-	condor_sockaddr myaddr = get_local_ipaddr();
+	// TODO: This is arbitrarily chosing IPv4. Frankly, no one should use this function, it's awful.
+	condor_sockaddr myaddr = get_local_ipaddr(CP_IPV4);
 	sockaddr_in saddr = myaddr.to_sin();
 	*ip_addr = ntohl(saddr.sin_addr.s_addr);
 	display_ip_addr( *ip_addr );

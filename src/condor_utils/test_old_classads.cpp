@@ -440,8 +440,8 @@ main(
 		internal_references = new StringList;
 		external_references = new StringList;
 
-		classads[9]->GetReferences("Requirements", *internal_references,
-								   *external_references);
+		classads[9]->GetReferences("Requirements", internal_references,
+								   external_references);
 		test_in_references("Memory", *internal_references, __LINE__, &test_results);
 		test_in_references("Disk", *internal_references, __LINE__, &test_results);
 		test_in_references("ImageSize", *external_references, __LINE__, &test_results);
@@ -461,8 +461,8 @@ main(
 		internal_references = new StringList;
 		external_references = new StringList;
 
-		classads[10]->GetReferences("Requirements", *internal_references,
-								   *external_references);
+		classads[10]->GetReferences("Requirements", internal_references,
+								   external_references);
 		test_in_references("Memory", *internal_references, __LINE__, &test_results);
 		test_in_references("Disk", *internal_references, __LINE__, &test_results);
 		test_in_references("ImageSize", *external_references, __LINE__, &test_results);

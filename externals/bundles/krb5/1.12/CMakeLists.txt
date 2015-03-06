@@ -17,110 +17,109 @@
  ############################################################### 
 
 
-if (NOT HPUX)
-  option(WITH_KRB5 "Compiling with support for KRB5" ON)
-endif()
+option(WITH_KRB5 "Compiling with support for KRB5" ON)
   
 if (WITH_KRB5)
 
-	find_multiple( "krb5;com_err;k5crypto;krb5support;gssapi_krb5" KRB5_FOUND )
-
-  if ( NOT KRB5_FOUND AND NOT PROPER AND NOT LINUX AND NOT DARWIN )
+	if ( WINDOWS )
   
-    condor_pre_external( KRB5 krb5-1.12 "lib;include" "include/krb5.h")
+		condor_pre_external( KRB5 krb5-1.12 "lib;include" "include/krb5.h")
     
-    set (KRB5_DOWNLOAD ${KRB5_VER}.tar.gz)
+		set (KRB5_DOWNLOAD ${KRB5_VER}.tar.gz)
 
-		if (WINDOWS)
 
-      if (MSVC11)
-        if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-          set (KRB5_DOWNLOAD ${KRB5_VER}-VC11-Win64.tar.gz)
-        else ()
-          set (KRB5_DOWNLOAD ${KRB5_VER}-VC11-Win32.tar.gz)
-        endif ()
-      endif ()
-      
-			set (KRB5_CONFIGURE echo "No configuration necessary")
-      set (KRB5_MAKE echo "No make necessary")
+		if (MSVC11)
+			if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
+				set (KRB5_DOWNLOAD ${KRB5_VER}-VC11-Win64.tar.gz)
+			else ()
+				set (KRB5_DOWNLOAD ${KRB5_VER}-VC11-Win32.tar.gz)
+			endif ()
+		endif ()
 
-			# Something is wrong with the default install (make install suck-o)
-			set (KRB5_INSTALL cp -r *.lib ${KRB5_INSTALL_LOC}/lib \r\n
-                cp -r *.dll ${KRB5_INSTALL_LOC}/lib \r\n
-							  cp -r include/* ${KRB5_INSTALL_LOC}/include \r\n)
+		set (KRB5_CONFIGURE echo "No configuration necessary")
+		set (KRB5_MAKE echo "No make necessary")
 
-		else()
-			set (KRB5_PATCH  
-				cp ${CMAKE_CURRENT_SOURCE_DIR}/src.appl.telnet.configure src/appl/telnet/configure ${CMD_TERM} 
-				patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/eai_nodata.patch ${CMD_TERM}
-				patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/getline.patch )
+		# Something is wrong with the default install (make install suck-o)
+		set (KRB5_INSTALL cp -r *.lib ${KRB5_INSTALL_LOC}/lib \r\n
+			cp -r *.dll ${KRB5_INSTALL_LOC}/lib \r\n
+			cp -r include/* ${KRB5_INSTALL_LOC}/include \r\n)
 
-			set (KRB5_CONFIGURE src/configure --prefix=${KRB5_INSTALL_LOC} --without-tcl --enable-static --sysconfdir=/etc --disable-thread-support )
-			set (KRB5_MAKE make )
-			set (KRB5_INSTALL make install )
-		endif()
 
-    ExternalProject_Add(krb5
-      #-- Download Step ----------
-      DOWNLOAD_DIR ${KRB5_STAGE}/dl
-      URL ${EXTERNALS_SOURCE_URL}/${KRB5_DOWNLOAD}
-      #--Patch step ----------
-      PATCH_COMMAND ${KRB5_PATCH}
-      #--Configure step ----------
-      CONFIGURE_COMMAND ${KRB5_CONFIGURE}
-      #--Build Step ----------
-      BUILD_COMMAND ${KRB5_MAKE}
-      BUILD_IN_SOURCE 1
-      #--install Step ----------
-      INSTALL_DIR ${KRB5_INSTALL_LOC}
-      INSTALL_COMMAND ${KRB5_INSTALL} )
+			ExternalProject_Add(krb5
+				#-- Download Step ----------
+				DOWNLOAD_DIR ${KRB5_STAGE}/dl
+				URL ${EXTERNALS_SOURCE_URL}/${KRB5_DOWNLOAD}
+				#--Patch step ----------
+				PATCH_COMMAND ${KRB5_PATCH}
+				#--Configure step ----------
+				CONFIGURE_COMMAND ${KRB5_CONFIGURE}
+				#--Build Step ----------
+				BUILD_COMMAND ${KRB5_MAKE}
+				BUILD_IN_SOURCE 1
+				#--install Step ----------
+				INSTALL_DIR ${KRB5_INSTALL_LOC}
+				INSTALL_COMMAND ${KRB5_INSTALL} )
 
-		# Set the target dependencies which the rest of condor depends on.
-		if (WINDOWS)
-      if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-        set(KRB5_FOUND "${KRB5_INSTALL_LOC}/lib/comerr64.lib;${KRB5_INSTALL_LOC}/lib/gssapi64.lib;${KRB5_INSTALL_LOC}/lib/krb5_64.lib;${KRB5_INSTALL_LOC}/lib/xpprof64.lib")
-      else ()
-        set(KRB5_FOUND "${KRB5_INSTALL_LOC}/lib/comerr32.lib;${KRB5_INSTALL_LOC}/lib/gssapi32.lib;${KRB5_INSTALL_LOC}/lib/krb5_32.lib;${KRB5_INSTALL_LOC}/lib/xpprof32.lib")
-      endif ()
+			# Set the target dependencies which the rest of condor depends on.
+			if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
+				set(KRB5_FOUND "${KRB5_INSTALL_LOC}/lib/comerr64.lib;${KRB5_INSTALL_LOC}/lib/gssapi64.lib;${KRB5_INSTALL_LOC}/lib/krb5_64.lib;${KRB5_INSTALL_LOC}/lib/xpprof64.lib")
+			else ()
+				set(KRB5_FOUND "${KRB5_INSTALL_LOC}/lib/comerr32.lib;${KRB5_INSTALL_LOC}/lib/gssapi32.lib;${KRB5_INSTALL_LOC}/lib/krb5_32.lib;${KRB5_INSTALL_LOC}/lib/xpprof32.lib")
+			endif ()
 
 			#this may become the common case.
-      if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-        install ( FILES ${KRB5_INSTALL_LOC}/lib/comerr64.dll
-							${KRB5_INSTALL_LOC}/lib/gssapi64.dll
-							${KRB5_INSTALL_LOC}/lib/k5sprt64.dll
-							${KRB5_INSTALL_LOC}/lib/krb5_64.dll
-              ${KRB5_INSTALL_LOC}/lib/krbcc64.dll
-              ${KRB5_INSTALL_LOC}/lib/leashw64.dll
-							${KRB5_INSTALL_LOC}/lib/wshelp64.dll
-							${KRB5_INSTALL_LOC}/lib/xpprof64.dll
-              DESTINATION ${C_LIB} )
-      else ()
-        install ( FILES ${KRB5_INSTALL_LOC}/lib/comerr32.dll
-							${KRB5_INSTALL_LOC}/lib/gssapi32.dll
-							${KRB5_INSTALL_LOC}/lib/k5sprt32.dll
-							${KRB5_INSTALL_LOC}/lib/krb5_32.dll
-              ${KRB5_INSTALL_LOC}/lib/krbcc32.dll
-              ${KRB5_INSTALL_LOC}/lib/leashw32.dll
-							${KRB5_INSTALL_LOC}/lib/wshelp32.dll
-              ${KRB5_INSTALL_LOC}/lib/xpprof32.dll
-              DESTINATION ${C_LIB} )
-      endif ()
-		else()
-			set(KRB5_FOUND "${KRB5_INSTALL_LOC}/lib/libkrb5.a;${KRB5_INSTALL_LOC}/lib/libk5crypto.a;${KRB5_INSTALL_LOC}/lib/libcom_err.a;${KRB5_INSTALL_LOC}/lib/libkrb5support.a")
-			if ( AIX )
-				set (KRB5_FOUND "-Wl,-bstatic;${KRB5_FOUND};-Wl,-bdynamic")
-			endif()
-		endif()
+			if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
+				install ( FILES ${KRB5_INSTALL_LOC}/lib/comerr64.dll
+					${KRB5_INSTALL_LOC}/lib/gssapi64.dll
+					${KRB5_INSTALL_LOC}/lib/k5sprt64.dll
+					${KRB5_INSTALL_LOC}/lib/krb5_64.dll
+					${KRB5_INSTALL_LOC}/lib/krbcc64.dll
+					${KRB5_INSTALL_LOC}/lib/leashw64.dll
+					${KRB5_INSTALL_LOC}/lib/wshelp64.dll
+					${KRB5_INSTALL_LOC}/lib/xpprof64.dll
+					DESTINATION ${C_LIB} )
+			else ()
+				install ( FILES ${KRB5_INSTALL_LOC}/lib/comerr32.dll
+					${KRB5_INSTALL_LOC}/lib/gssapi32.dll
+					${KRB5_INSTALL_LOC}/lib/k5sprt32.dll
+					${KRB5_INSTALL_LOC}/lib/krb5_32.dll
+					${KRB5_INSTALL_LOC}/lib/krbcc32.dll
+					${KRB5_INSTALL_LOC}/lib/leashw32.dll
+					${KRB5_INSTALL_LOC}/lib/wshelp32.dll
+					${KRB5_INSTALL_LOC}/lib/xpprof32.dll
+					DESTINATION ${C_LIB} )
+			endif ()
 
 		condor_post_external( krb5 include OFF )
 
+	else()
+
+		find_multiple( "krb5;com_err;k5crypto;krb5support;gssapi_krb5" KRB5_FOUND )
+
 	endif( )
 
-	if (KRB5_FOUND)
-		message (STATUS "external configured (KRB5_FOUND=${KRB5_FOUND})")
-		set( KRB5_FOUND ${KRB5_FOUND} PARENT_SCOPE )
-		set( HAVE_EXT_KRB5 ON PARENT_SCOPE )
+	if( DLOPEN_SECURITY_LIBS )
+		find_library( LIBCOM_ERR_PATH "com_err" )
+		find_so_name( LIBCOM_ERR_SO ${LIBCOM_ERR_PATH} )
+		find_library( LIBKRB5SUPPORT_PATH "krb5support" )
+		find_so_name( LIBKRB5SUPPORT_SO ${LIBKRB5SUPPORT_PATH} )
+		find_library( LIBK5CRYPTO_PATH "k5crypto" )
+		find_so_name( LIBK5CRYPTO_SO ${LIBK5CRYPTO_PATH} )
+		find_library( LIBKRB5_PATH "krb5" )
+		find_so_name( LIBKRB5_SO ${LIBKRB5_PATH} )
+		find_library( LIBGSSAPI_KRB5_PATH "gssapi_krb5" )
+		find_so_name( LIBGSSAPI_KRB5_SO ${LIBGSSAPI_KRB5_PATH} )
+		set( KRB5_FOUND "" )
 	endif()
+
+	message (STATUS "external configured (KRB5_FOUND=${KRB5_FOUND})")
+	set( KRB5_FOUND ${KRB5_FOUND} PARENT_SCOPE )
+	set( HAVE_EXT_KRB5 ON PARENT_SCOPE )
+	set( LIBCOM_ERR_SO ${LIBCOM_ERR_SO} PARENT_SCOPE )
+	set( LIBKRB5SUPPORT_SO ${LIBKRB5SUPPORT_SO} PARENT_SCOPE )
+	set( LIBK5CRYPTO_SO ${LIBK5CRYPTO_SO} PARENT_SCOPE )
+	set( LIBKRB5_SO ${LIBKRB5_SO} PARENT_SCOPE )
+	set( LIBGSSAPI_KRB5_SO ${LIBGSSAPI_KRB5_SO} PARENT_SCOPE )
 
 else(WITH_KRB5)
 

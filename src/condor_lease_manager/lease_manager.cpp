@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-#define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_debug.h"
@@ -108,7 +107,7 @@ LeaseManagerIntervalTimer::Config( void )
 			m_TimerId = daemonCore->Register_Timer(
 				m_Initial, m_Interval, m_Handler, handler_name, m_LeaseManager );
 			if ( m_TimerId < 0 ) {
-				EXCEPT( "LeaseManager: Failed to %s create timer\n", m_Name );
+				EXCEPT( "LeaseManager: Failed to %s create timer", m_Name );
 			}
 		} else {
 			daemonCore->Reset_Timer( m_TimerId, m_Interval, m_Interval );
@@ -523,7 +522,7 @@ LeaseManager::initPublicAd( void )
 	SetMyTypeName( m_publicAd, LEASE_MANAGER_ADTYPE );
 	SetTargetTypeName( m_publicAd, "" );
 
-	m_publicAd.Assign( ATTR_MACHINE, my_full_hostname() );
+	m_publicAd.Assign( ATTR_MACHINE, get_local_fqdn() );
 
 	const char *local = get_mySubSystem()->getLocalName();
 	if ( local ) {

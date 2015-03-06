@@ -95,6 +95,7 @@ endif()
 option(CONDOR_STRIP_PACKAGES "Enables stripping of packaged binaries" ON)
 set(CPACK_STRIP_FILES ${CONDOR_STRIP_PACKAGES})
 if (NOT CONDOR_STRIP_PACKAGES)
+  set (PACKAGE_REVISION "${PACKAGE_REVISION}+symbols" )
   set (CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-unstripped" )
 else()
   set (CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-stripped" )
@@ -217,7 +218,7 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 		set (VC_CRT_MSM Microsoft_VC90_CRT_x86.msm)
 		find_file( CPACK_VC_POLICY_MODULE 
 			policy_9_0_Microsoft_VC90_CRT_x86.msm
-               		"C:/Program Files/Common Files/Merge Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
+               		"C:/Program Files/Common Files/Merge Modules" "C:/Program Files (x86)/Common Files/Merge Modules" )
 		set (WIX_MERGE_MODLES "<Merge Id=\"VCPolicy\" Language=\"1033\" DiskId=\"1\" SourceFile=\"${CPACK_VC_POLICY_MODULE}\"/>")
 		set (WIX_MERGE_REFS "<MergeRef Id=\"VCPolicy\"/>")
 		set (MSVCVER vc90)
@@ -237,7 +238,7 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	# look for the all important C-runtime
 	find_file( CPACK_VC_MERGE_MODULE 
 		${VC_CRT_MSM}
-		"C:/Program Files/Common Files/Merge Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
+		"C:/Program Files/Common Files/Merge Modules" "C:/Program Files (x86)/Common Files/Merge Modules" )
 
 	set (WIX_MERGE_MODLES "<Merge Id=\"VCCRT\" Language=\"1033\" DiskId=\"1\" SourceFile=\"${CPACK_VC_MERGE_MODULE}\"/>\n${WIX_MERGE_MODLES}")
 	set (WIX_MERGE_REFS "<MergeRef Id=\"VCCRT\"/>\n${WIX_MERGE_REFS}")
@@ -294,7 +295,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set ( CPACK_DEBIAN_PACKAGE_MAINTAINER "Condor Team <${CPACK_PACKAGE_CONTACT}>" )
 		set ( CPACK_DEBIAN_PACKAGE_VERSION "${PACKAGE_VERSION}-${PACKAGE_REVISION}")
 		set ( CPACK_DEBIAN_PACKAGE_HOMEPAGE "${URL}")
-		set ( CPACK_DEBIAN_PACKAGE_DEPENDS "python, adduser, libdate-manip-perl")
+		set ( CPACK_DEBIAN_PACKAGE_DEPENDS "python, adduser, libdate-manip-perl, ecryptfs-utils")
 
 		#Control files
 		set( CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA

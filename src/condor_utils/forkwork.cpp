@@ -62,6 +62,9 @@ ForkWorker::Fork( void )
 			// exit via exec(), not using exit(), so that destructors
 			// don't get called...
 		daemonCore->Forked_Child_Wants_Fast_Exit( true );
+			// Release the debug lock if we have it, and don't fight
+			// with our parent to rotate the debug log file.
+		dprintf_init_fork_child();
 		parent = getppid( );
 		pid = -1;
 		return FORK_CHILD;

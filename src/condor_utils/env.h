@@ -239,6 +239,10 @@ class Env {
 		// Caller should delete it (e.g. with deleteStringArray()).
 	char **getStringArray() const;
 
+		// Walk the environment, calling walk_func for each entry until walk_func returns false
+	void Walk(bool (*walk_func)(void* pv, const MyString &var, MyString &val), void* pv);
+	void Walk(bool (*walk_func)(void* pv, const MyString &var, const MyString &val), void* pv) const;
+
 	bool GetEnv(MyString const &var,MyString &val) const;
 
 		// Returns true if string is safe to insert in old-style

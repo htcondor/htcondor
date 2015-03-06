@@ -188,7 +188,7 @@ void Accountant::Initialize(GroupEntry* root_group)
 		   MaxAcctLogSize );
 
   if (!AcctLog) {
-    AcctLog=new ClassAdLog(LogFileName.Value());
+    AcctLog=new ClassAdLog<HashKey,const char*,ClassAd*>(LogFileName.Value());
     dprintf(D_ACCOUNTANT,"Accountant::Initialize - LogFileName=%s\n",
 					LogFileName.Value());
   }
@@ -1351,7 +1351,7 @@ MyString Accountant::GetResourceName(ClassAd* ResourceAd)
   
   if (!ResourceAd->LookupString (ATTR_NAME, startdName)) {
     //This should never happen, because unnamed startd ads are rejected.
-    EXCEPT ("ERROR in Accountant::GetResourceName - Name not specified\n");
+    EXCEPT ("ERROR in Accountant::GetResourceName - Name not specified");
   }
   MyString Name=startdName;
   Name+="@";

@@ -74,6 +74,7 @@ class JobRouter: public Service {
 	void config();
 	void set_schedds(Scheduler* schedd, Scheduler* schedd2); // let the tool mode push simulated schedulers
 	void dump_routes(FILE* hf); // dump the routing information to the given file.
+	bool isEnabled() { return m_enable_job_routing; }
 	void init();
 
 	//The JobRouter name is used to distinguish this daemon from
@@ -89,7 +90,7 @@ class JobRouter: public Service {
 	void FinishSubmitJob(RoutedJob *job);
 
 	// Update the status of the job.
-	void UpdateRoutedJobStatus(RoutedJob *job, classad::ClassAd update);
+	void UpdateRoutedJobStatus(RoutedJob *job, const classad::ClassAd &update);
 
 	// Finish the job status update.
 	void FinishCheckSubmittedJobStatus(RoutedJob *job);

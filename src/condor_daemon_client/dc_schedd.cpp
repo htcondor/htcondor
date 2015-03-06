@@ -51,8 +51,7 @@ ClassAd*
 DCSchedd::holdJobs( const char* constraint, const char* reason,
 					const char *reason_code,
 					CondorError * errstack,
-					action_result_type_t result_type,
-					bool notify_scheduler )
+					action_result_type_t result_type )
 {
 	if( ! constraint ) {
 		dprintf( D_ALWAYS, "DCSchedd::holdJobs: "
@@ -61,15 +60,14 @@ DCSchedd::holdJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_HOLD_JOBS, constraint, NULL, 
 					  reason, ATTR_HOLD_REASON, reason_code, ATTR_HOLD_REASON_SUBCODE, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::removeJobs( const char* constraint, const char* reason,
 					  CondorError * errstack,
-					  action_result_type_t result_type,
-					  bool notify_scheduler )
+					  action_result_type_t result_type )
 {
 	if( ! constraint ) {
 		dprintf( D_ALWAYS, "DCSchedd::removeJobs: "
@@ -78,15 +76,14 @@ DCSchedd::removeJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_REMOVE_JOBS, constraint, NULL,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::removeXJobs( const char* constraint, const char* reason,
 					   CondorError * errstack,
-					   action_result_type_t result_type,
-					   bool notify_scheduler )
+					   action_result_type_t result_type )
 {
 	if( ! constraint ) {
 		dprintf( D_ALWAYS, "DCSchedd::removeXJobs: "
@@ -95,15 +92,14 @@ DCSchedd::removeXJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_REMOVE_X_JOBS, constraint, NULL,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::releaseJobs( const char* constraint, const char* reason,
 					   CondorError * errstack,
-					   action_result_type_t result_type,
-					   bool notify_scheduler )
+					   action_result_type_t result_type )
 {
 	if( ! constraint ) {
 		dprintf( D_ALWAYS, "DCSchedd::releaseJobs: "
@@ -112,7 +108,7 @@ DCSchedd::releaseJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_RELEASE_JOBS, constraint, NULL,
 					  reason, ATTR_RELEASE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
@@ -120,8 +116,7 @@ ClassAd*
 DCSchedd::holdJobs( StringList* ids, const char* reason,
 					const char* reason_code,
 					CondorError * errstack,
-					action_result_type_t result_type,
-					bool notify_scheduler )
+					action_result_type_t result_type )
 {
 	if( ! ids ) {
 		dprintf( D_ALWAYS, "DCSchedd::holdJobs: "
@@ -132,15 +127,14 @@ DCSchedd::holdJobs( StringList* ids, const char* reason,
 					  ATTR_HOLD_REASON,
 					  reason_code, ATTR_HOLD_REASON_SUBCODE,
 					  result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::removeJobs( StringList* ids, const char* reason,
 					CondorError * errstack,
-					action_result_type_t result_type,
-					bool notify_scheduler )
+					action_result_type_t result_type )
 {
 	if( ! ids ) {
 		dprintf( D_ALWAYS, "DCSchedd::removeJobs: "
@@ -149,15 +143,14 @@ DCSchedd::removeJobs( StringList* ids, const char* reason,
 	}
 	return actOnJobs( JA_REMOVE_JOBS, NULL, ids,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::removeXJobs( StringList* ids, const char* reason,
 					   CondorError * errstack,
-					   action_result_type_t result_type,
-					   bool notify_scheduler )
+					   action_result_type_t result_type )
 {
 	if( ! ids ) {
 		dprintf( D_ALWAYS, "DCSchedd::removeXJobs: "
@@ -166,15 +159,14 @@ DCSchedd::removeXJobs( StringList* ids, const char* reason,
 	}
 	return actOnJobs( JA_REMOVE_X_JOBS, NULL, ids,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::releaseJobs( StringList* ids, const char* reason,
 					   CondorError * errstack,
-					   action_result_type_t result_type,
-					   bool notify_scheduler )
+					   action_result_type_t result_type )
 {
 	if( ! ids ) {
 		dprintf( D_ALWAYS, "DCSchedd::releaseJobs: "
@@ -183,15 +175,14 @@ DCSchedd::releaseJobs( StringList* ids, const char* reason,
 	}
 	return actOnJobs( JA_RELEASE_JOBS, NULL, ids,
 					  reason, ATTR_RELEASE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::vacateJobs( const char* constraint, VacateType vacate_type,
 					  CondorError * errstack,
-					  action_result_type_t result_type,
-					  bool notify_scheduler )
+					  action_result_type_t result_type )
 {
 	if( ! constraint ) {
 		dprintf( D_ALWAYS, "DCSchedd::vacateJobs: "
@@ -205,15 +196,14 @@ DCSchedd::vacateJobs( const char* constraint, VacateType vacate_type,
 		cmd = JA_VACATE_JOBS;
 	}
 	return actOnJobs( cmd, constraint, NULL, NULL, NULL, NULL, NULL,
-					  result_type, notify_scheduler, errstack );
+					  result_type, errstack );
 }
 
 
 ClassAd*
 DCSchedd::vacateJobs( StringList* ids, VacateType vacate_type,
 					  CondorError * errstack,
-					  action_result_type_t result_type,
-					  bool notify_scheduler )
+					  action_result_type_t result_type )
 {
 	if( ! ids ) {
 		dprintf( D_ALWAYS, "DCSchedd::vacateJobs: "
@@ -227,15 +217,14 @@ DCSchedd::vacateJobs( StringList* ids, VacateType vacate_type,
 		cmd = JA_VACATE_JOBS;
 	}
 	return actOnJobs( cmd, NULL, ids, NULL, NULL, NULL, NULL,
-					  result_type, notify_scheduler, errstack );
+					  result_type, errstack );
 }
 
 
 ClassAd*
 DCSchedd::suspendJobs( StringList* ids, const char* reason,
 					CondorError * errstack,
-					action_result_type_t result_type,
-					bool notify_scheduler )
+					action_result_type_t result_type )
 {
 	if( ! ids ) {
 		dprintf( D_ALWAYS, "DCSchedd::suspendJobs: "
@@ -244,15 +233,14 @@ DCSchedd::suspendJobs( StringList* ids, const char* reason,
 	}
 	return actOnJobs( JA_SUSPEND_JOBS, NULL, ids,
 					  reason, ATTR_SUSPEND_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::suspendJobs( const char* constraint, const char* reason,
 					  CondorError * errstack,
-					  action_result_type_t result_type,
-					  bool notify_scheduler )
+					  action_result_type_t result_type )
 {
 	if( ! constraint ) {
 		dprintf( D_ALWAYS, "DCSchedd::suspendJobs: "
@@ -261,14 +249,13 @@ DCSchedd::suspendJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_SUSPEND_JOBS, constraint, NULL,
 					  reason, ATTR_SUSPEND_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 ClassAd*
 DCSchedd::continueJobs( StringList* ids, const char* reason,
 					CondorError * errstack,
-					action_result_type_t result_type,
-					bool notify_scheduler )
+					action_result_type_t result_type )
 {
 	if( ! ids ) {
 		dprintf( D_ALWAYS, "DCSchedd::continueJobs: "
@@ -277,15 +264,14 @@ DCSchedd::continueJobs( StringList* ids, const char* reason,
 	}
 	return actOnJobs( JA_CONTINUE_JOBS, NULL, ids,
 					  reason, ATTR_CONTINUE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
 ClassAd*
 DCSchedd::continueJobs( const char* constraint, const char* reason,
 					  CondorError * errstack,
-					  action_result_type_t result_type,
-					  bool notify_scheduler )
+					  action_result_type_t result_type )
 {
 	if( ! constraint ) {
 		dprintf( D_ALWAYS, "DCSchedd::continueJobs: "
@@ -294,7 +280,7 @@ DCSchedd::continueJobs( const char* constraint, const char* reason,
 	}
 	return actOnJobs( JA_CONTINUE_JOBS, constraint, NULL,
 					  reason, ATTR_CONTINUE_REASON, NULL, NULL, result_type,
-					  notify_scheduler, errstack );
+					  errstack );
 }
 
 
@@ -308,7 +294,7 @@ DCSchedd::clearDirtyAttrs( StringList* ids, CondorError * errstack,
 		return NULL;
 	}
 	return actOnJobs( JA_CLEAR_DIRTY_JOB_ATTRS, NULL, ids, NULL, NULL,
-					  NULL, NULL, result_type, false, errstack );
+					  NULL, NULL, result_type, errstack );
 }
 
 
@@ -347,6 +333,11 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 	if( ! rsock.connect(_addr) ) {
 		dprintf( D_ALWAYS, "DCSchedd::receiveJobSandbox: "
 				 "Failed to connect to schedd (%s)\n", _addr );
+		if ( errstack ) {
+			errstack->push( "DCSchedd::receiveJobSandbox",
+							CEDAR_ERR_CONNECT_FAILED,
+							"Failed to connect to schedd" );
+		}
 		return false;
 	}
 	if ( use_new_command ) {
@@ -374,6 +365,17 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		return false;
 	}
 
+	// If we don't already know the version of the schedd, try to pull
+	// it out of CEDAR. It's important to know for the FileTransfer
+	// protocol.
+	const CondorVersionInfo *peer_version = rsock.get_peer_version();
+	if ( _version == NULL && peer_version != NULL ) {
+		_version = peer_version->get_version_string();
+	}
+	if ( _version == NULL ) {
+		dprintf( D_ALWAYS, "Unable to determine schedd version for file transfer\n" );
+	}
+
 	rsock.encode();
 
 		// Send our version if using the new command
@@ -384,6 +386,11 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		if ( !rsock.code(my_version) ) {
 			dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
 					"Can't send version string to the schedd\n");
+			if ( errstack ) {
+				errstack->push( "DCSchedd::receiveJobSandbox",
+								CEDAR_ERR_PUT_FAILED,
+								"Can't send version string to the schedd" );
+			}
 			free( my_version );
 			return false;
 		}
@@ -396,6 +403,11 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 		free( nc_constraint );
 		dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
 				"Can't send JobAdsArrayLen to the schedd\n");
+		if ( errstack ) {
+			errstack->push( "DCSchedd::receiveJobSandbox",
+							CEDAR_ERR_PUT_FAILED,
+							"Can't send JobAdsArrayLen to the schedd" );
+		}
 		return false;
 	}
 	free( nc_constraint );
@@ -403,7 +415,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 	if ( !rsock.end_of_message() ) {
 		std::string errmsg;
 		formatstr(errmsg,
-				"Can't send initial message (version + constraint) to schedd (%s)",
+				"Can't send initial message (version + constraint) to schedd (%s), probably an authorization failure",
 				_addr);
 
 		dprintf(D_ALWAYS,"DCSchedd::receiveJobSandbox: %s\n", errmsg.c_str());
@@ -664,11 +676,19 @@ DCSchedd::requestSandboxLocation(int direction,
 		if (!JobAdsArray[i]->LookupInteger(ATTR_CLUSTER_ID,cluster)) {
 			dprintf(D_ALWAYS,"DCSchedd:requestSandboxLocation: "
 					"Job ad %d did not have a cluster id\n",i);
+			if ( errstack ) {
+				errstack->pushf( "DCSchedd::requestSandboxLocation", 1,
+								 "Job ad %d did not have a cluster id", i );
+			}
 			return false;
 		}
 		if (!JobAdsArray[i]->LookupInteger(ATTR_PROC_ID,proc)) {
 			dprintf(D_ALWAYS,"DCSchedd:requestSandboxLocation(): "
 					"Job ad %d did not have a proc id\n",i);
+			if ( errstack ) {
+				errstack->pushf( "DCSchedd::requestSandboxLocation", 1,
+								 "Job ad %d did not have a proc id", i );
+			}
 			return false;
 		}
 		
@@ -696,6 +716,10 @@ DCSchedd::requestSandboxLocation(int direction,
 			dprintf(D_ALWAYS, "DCSchedd::requestSandboxLocation(): "
 				"Can't make a request for a sandbox with an unknown file "
 				"transfer protocol!");
+			if ( errstack ) {
+				errstack->push( "DCSchedd::requestSandboxLocation", 1,
+								"Unknown file transfer protocol" );
+			}
 			return false;
 			break;
 	}
@@ -734,6 +758,10 @@ DCSchedd::requestSandboxLocation(int direction, MyString &constraint,
 			dprintf(D_ALWAYS, "DCSchedd::requestSandboxLocation(): "
 				"Can't make a request for a sandbox with an unknown file "
 				"transfer protocol!");
+			if ( errstack ) {
+				errstack->push( "DCSchedd::requestSandboxLocation", 1,
+								"Unknown file transfer protocol" );
+			}
 			return false;
 			break;
 	}
@@ -759,6 +787,11 @@ DCSchedd::requestSandboxLocation(ClassAd *reqad, ClassAd *respad,
 	if( ! rsock.connect(_addr) ) {
 		dprintf( D_ALWAYS, "DCSchedd::requestSandboxLocation(): "
 				 "Failed to connect to schedd (%s)\n", _addr );
+		if ( errstack ) {
+			errstack->push( "DCSchedd::requestSandboxLocation",
+							CEDAR_ERR_CONNECT_FAILED,
+							"Failed to connect to schedd" );
+		}
 		return false;
 	}
 	if( ! startCommand(REQUEST_SANDBOX_LOCATION, (Sock*)&rsock, 0,
@@ -799,6 +832,11 @@ DCSchedd::requestSandboxLocation(ClassAd *reqad, ClassAd *respad,
 	if (putClassAd(&rsock, *reqad) != 1) {
 		dprintf(D_ALWAYS,"DCSchedd:requestSandboxLocation(): "
 				"Can't send reqad to the schedd\n");
+		if ( errstack ) {
+			errstack->push( "DCSchedd::requestSandboxLocation",
+							CEDAR_ERR_PUT_FAILED,
+							"Can't send reqad to the schedd" );
+		}
 		return false;
 	}
 	rsock.end_of_message();
@@ -825,6 +863,11 @@ DCSchedd::requestSandboxLocation(ClassAd *reqad, ClassAd *respad,
 	if (getClassAd(&rsock, status_ad) == false) {
 		dprintf(D_ALWAYS, "Schedd closed connection to me. Aborting sandbox "
 			"submission.\n");
+		if ( errstack ) {
+			errstack->push( "DCSchedd::requestSandboxLocation",
+							CEDAR_ERR_GET_FAILED,
+							"Schedd closed connection" );
+		}
 		return false;
 	}
 	rsock.end_of_message();
@@ -862,7 +905,12 @@ DCSchedd::requestSandboxLocation(ClassAd *reqad, ClassAd *respad,
 	dprintf(D_ALWAYS, "Receiving response ad.\n");
 	if (getClassAd(&rsock, *respad) != true) {
 		dprintf(D_ALWAYS,"DCSchedd:requestSandboxLocation(): "
-				"Can't receive respond ad from the schedd\n");
+				"Can't receive response ad from the schedd\n");
+		if ( errstack ) {
+			errstack->push( "DCSchedd::requestSandboxLocation",
+							CEDAR_ERR_GET_FAILED,
+							"Can't receive response ad from the schedd" );
+		}
 		return false;
 	}
 	rsock.end_of_message();
@@ -933,6 +981,17 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		return false;
 	}
 
+	// If we don't already know the version of the schedd, try to pull
+	// it out of CEDAR. It's important to know for the FileTransfer
+	// protocol.
+	const CondorVersionInfo *peer_version = rsock.get_peer_version();
+	if ( _version == NULL && peer_version != NULL ) {
+		_version = peer_version->get_version_string();
+	}
+	if ( _version == NULL ) {
+		dprintf( D_ALWAYS, "Unable to determine schedd version for file transfer\n" );
+	}
+
 	rsock.encode();
 
 		// Send our version if using the new command
@@ -943,6 +1002,11 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		if ( !rsock.code(my_version) ) {
 			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
 					"Can't send version string to the schedd\n");
+			if ( errstack ) {
+				errstack->push( "DCSchedd::spoolJobFiles",
+								CEDAR_ERR_PUT_FAILED,
+								"Can't send version string to the schedd" );
+			}
 			free( my_version );
 			return false;
 		}
@@ -953,13 +1017,18 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 	if ( !rsock.code(JobAdsArrayLen) ) {
 		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
 				"Can't send JobAdsArrayLen to the schedd\n");
+		if ( errstack ) {
+			errstack->push( "DCSchedd::spoolJobFiles",
+							CEDAR_ERR_PUT_FAILED,
+							"Can't send JobAdsArrayLen to the schedd" );
+		}
 		return false;
 	}
 
 	if( !rsock.end_of_message() ) {
 		std::string errmsg;
 		formatstr(errmsg,
-				"Can't send initial message (version + count) to schedd (%s)",
+				"Can't send initial message (version + count) to schedd (%s), probably an authorization failure",
 				_addr);
 
 		dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: %s\n", errmsg.c_str());
@@ -979,11 +1048,19 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		if (!JobAdsArray[i]->LookupInteger(ATTR_CLUSTER_ID,jobid.cluster)) {
 			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
 					"Job ad %d did not have a cluster id\n",i);
+			if ( errstack ) {
+				errstack->pushf( "DCSchedd::spoolJobFiles", 1,
+								 "Job ad %d did not have a cluster id", i );
+			}
 			return false;
 		}
 		if (!JobAdsArray[i]->LookupInteger(ATTR_PROC_ID,jobid.proc)) {
 			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
 					"Job ad %d did not have a proc id\n",i);
+			if ( errstack ) {
+				errstack->pushf( "DCSchedd::spoolJobFiles", 1,
+								 "Job ad %d did not have a proc id", i );
+			}
 			return false;
 		}
 		rsock.code(jobid);
@@ -1070,6 +1147,10 @@ DCSchedd::updateGSIcredential(const int cluster, const int proc,
 		// check the parameters
 	if ( cluster < 1 || proc < 0 || !path_to_proxy_file || !errstack ) {
 		dprintf(D_FULLDEBUG,"DCSchedd::updateGSIcredential: bad parameters\n");
+		if ( errstack ) {
+			errstack->push( "DCSchedd::updateGSIcredential", 1,
+							"bad parameters" );
+		}
 		return false;
 	}
 
@@ -1078,6 +1159,11 @@ DCSchedd::updateGSIcredential(const int cluster, const int proc,
 	if( ! rsock.connect(_addr) ) {
 		dprintf( D_ALWAYS, "DCSchedd::updateGSIcredential: "
 				 "Failed to connect to schedd (%s)\n", _addr );
+		if ( errstack ) {
+			errstack->push( "DCSchedd::updateGSIcredential",
+							CEDAR_ERR_CONNECT_FAILED,
+							"Failed to connect to schedd" );
+		}
 		return false;
 	}
 	if( ! startCommand(UPDATE_GSI_CRED, (Sock*)&rsock, 0, errstack) ) {
@@ -1103,7 +1189,12 @@ DCSchedd::updateGSIcredential(const int cluster, const int proc,
 	jobid.proc = proc;	
 	if ( !rsock.code(jobid) || !rsock.end_of_message() ) {
 		dprintf(D_ALWAYS,"DCSchedd:updateGSIcredential: "
-				"Can't send jobid to the schedd\n");
+				"Can't send jobid to the schedd, probably an authorization failure\n");
+		if ( errstack ) {
+			errstack->push( "DCSchedd::updateGSIcredential",
+							CEDAR_ERR_PUT_FAILED,
+							"Can't send jobid to the schedd, probably an authorization failure" );
+		}
 		return false;
 	}
 
@@ -1114,6 +1205,11 @@ DCSchedd::updateGSIcredential(const int cluster, const int proc,
 			"DCSchedd:updateGSIcredential "
 			"failed to send proxy file %s (size=%ld)\n",
 			path_to_proxy_file, (long) file_size);
+		if ( errstack ) {
+			errstack->push( "DCSchedd::updateGSIcredential",
+							CEDAR_ERR_PUT_FAILED,
+							"Failed to send proxy file" );
+		}
 		return false;
 	}
 		
@@ -1142,6 +1238,10 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 		// check the parameters
 	if ( cluster < 1 || proc < 0 || !path_to_proxy_file || !errstack ) {
 		dprintf(D_FULLDEBUG,"DCSchedd::delegateGSIcredential: bad parameters\n");
+		if ( errstack ) {
+			errstack->push( "DCSchedd::delegateGSIcredential", 1,
+							"bad parameters" );
+		}
 		return false;
 	}
 
@@ -1150,6 +1250,11 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 	if( ! rsock.connect(_addr) ) {
 		dprintf( D_ALWAYS, "DCSchedd::delegateGSIcredential: "
 				 "Failed to connect to schedd (%s)\n", _addr );
+		if ( errstack ) {
+			errstack->push( "DCSchedd::delegateGSIcredential",
+							CEDAR_ERR_CONNECT_FAILED,
+							"Failed to connect to schedd" );
+		}
 		return false;
 	}
 	if( ! startCommand(DELEGATE_GSI_CRED_SCHEDD, (Sock*)&rsock, 0, errstack) ) {
@@ -1175,7 +1280,12 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 	jobid.proc = proc;	
 	if ( !rsock.code(jobid) || !rsock.end_of_message() ) {
 		dprintf(D_ALWAYS,"DCSchedd::delegateGSIcredential: "
-				"Can't send jobid to the schedd\n");
+				"Can't send jobid to the schedd, probably an authorization failure\n");
+		if ( errstack ) {
+			errstack->push( "DCSchedd::delegateGSIcredential",
+							CEDAR_ERR_PUT_FAILED,
+							"Can't send jobid to the schedd, probably an authorization failure" );
+		}
 		return false;
 	}
 
@@ -1186,6 +1296,11 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 			"DCSchedd::delegateGSIcredential "
 			"failed to send proxy file %s\n",
 			path_to_proxy_file);
+		if ( errstack ) {
+			errstack->push( "DCSchedd::delegateGSIcredential",
+							CEDAR_ERR_PUT_FAILED,
+							"Failed to send proxy file" );
+		}
 		return false;
 	}
 		
@@ -1207,7 +1322,6 @@ DCSchedd::actOnJobs( JobAction action,
 					 const char* reason, const char* reason_attr,
 					 const char* reason_code, const char* reason_code_attr,
 					 action_result_type_t result_type,
-					 bool notify_scheduler,
 					 CondorError * errstack )
 {
 	char* tmp = NULL;
@@ -1228,10 +1342,6 @@ DCSchedd::actOnJobs( JobAction action,
 			 (int)result_type );
 	cmd_ad.Insert( buf );
 
-	sprintf( buf, "%s = %s", ATTR_NOTIFY_JOB_SCHEDULER, 
-			 notify_scheduler ? "True" : "False" );
-	cmd_ad.Insert( buf );
-
 	if( constraint ) {
 		if( ids ) {
 				// This is a programming error, not a run-time one
@@ -1248,6 +1358,10 @@ DCSchedd::actOnJobs( JobAction action,
 					 "Can't insert constraint (%s) into ClassAd!\n",
 					 constraint );
 			free( tmp );
+			if ( errstack ) {
+				errstack->push( "DCSchedd::actOnJobs", 1,
+								"Can't insert constraint into ClassAd" );
+			}
 			return NULL;
 		}			
 		free( tmp );
@@ -1295,6 +1409,10 @@ DCSchedd::actOnJobs( JobAction action,
 	if( ! rsock.connect(_addr) ) {
 		dprintf( D_ALWAYS, "DCSchedd::actOnJobs: "
 				 "Failed to connect to schedd (%s)\n", _addr );
+		if ( errstack ) {
+			errstack->push( "DCSchedd::actOnJobs", CEDAR_ERR_CONNECT_FAILED,
+							"Failed to connect to schedd" );
+		}
 		return NULL;
 	}
 	if( ! startCommand(ACT_ON_JOBS, (Sock*)&rsock, 0, errstack) ) {
@@ -1311,7 +1429,11 @@ DCSchedd::actOnJobs( JobAction action,
 
 		// Now, put the command classad on the wire
 	if( ! (putClassAd(&rsock, cmd_ad) && rsock.end_of_message()) ) {
-		dprintf( D_ALWAYS, "DCSchedd:actOnJobs: Can't send classad\n" );
+		dprintf( D_ALWAYS, "DCSchedd:actOnJobs: Can't send classad, probably an authorization failure\n" );
+		if ( errstack ) {
+			errstack->push( "DCSchedd::actOnJobs", CEDAR_ERR_PUT_FAILED,
+							"Can't send classad, probably an authorization failure" );
+		}
 		return NULL;
 	}
 
@@ -1324,6 +1446,10 @@ DCSchedd::actOnJobs( JobAction action,
 	if( ! (getClassAd(&rsock, *result_ad) && rsock.end_of_message()) ) {
 		dprintf( D_ALWAYS, "DCSchedd:actOnJobs: "
 				 "Can't read response ad from %s\n", _addr );
+		if ( errstack ) {
+			errstack->push( "DCSchedd::actOnJobs", CEDAR_ERR_GET_FAILED,
+							"Can't read response ad" );
+		}
 		delete( result_ad );
 		return NULL;
 	}
@@ -1345,6 +1471,10 @@ DCSchedd::actOnJobs( JobAction action,
 	int answer = OK;
 	if( ! (rsock.code(answer) && rsock.end_of_message()) ) {
 		dprintf( D_ALWAYS, "DCSchedd:actOnJobs: Can't send reply\n" );
+		if ( errstack ) {
+			errstack->push( "DCSchedd::actOnJobs", CEDAR_ERR_PUT_FAILED,
+							"Can't send reply" );
+		}
 		delete( result_ad );
 		return NULL;
 	}
@@ -1355,6 +1485,10 @@ DCSchedd::actOnJobs( JobAction action,
 	if( ! (rsock.code(reply) && rsock.end_of_message()) ) {
 		dprintf( D_ALWAYS, "DCSchedd:actOnJobs: "
 				 "Can't read confirmation from %s\n", _addr );
+		if ( errstack ) {
+			errstack->push( "DCSchedd::actOnJobs", CEDAR_ERR_GET_FAILED,
+							"Can't read confirmation" );
+		}
 		delete( result_ad );
 		return NULL;
 	}
@@ -1700,6 +1834,11 @@ bool DCSchedd::getJobConnectInfo(
 	}
 	input.Assign(ATTR_SESSION_INFO,session_info);
 
+	if (IsDebugLevel(D_COMMAND)) {
+		dprintf (D_COMMAND, "DCSchedd::getJobConnectInfo(%s,...) making connection to %s\n",
+			getCommandStringSafe(GET_JOB_CONNECT_INFO), _addr ? _addr : "NULL");
+	}
+
 	ReliSock sock;
 	if( !connectSock(&sock,timeout,errstack) ) {
 		error_msg = "Failed to connect to schedd";
@@ -1764,6 +1903,11 @@ bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad
 {
 	int timeout = 300;
 	CondorError errstack;
+
+	if (IsDebugLevel(D_COMMAND)) {
+		dprintf (D_COMMAND, "DCSchedd::recycleShadow(%s,...) making connection to %s\n",
+			getCommandStringSafe(RECYCLE_SHADOW), _addr ? _addr : "NULL");
+	}
 
 	ReliSock sock;
 	if( !connectSock(&sock,timeout,&errstack) ) {

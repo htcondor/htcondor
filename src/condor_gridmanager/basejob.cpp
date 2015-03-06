@@ -25,6 +25,7 @@
 #include "condor_string.h"	// for strnewp and friends
 #include "condor_daemon_core.h"
 #include "spooled_job_files.h"
+#include "write_user_log.h"
 
 #include "gridmanager.h"
 #include "basejob.h"
@@ -310,7 +311,7 @@ void BaseJob::DoneWithJob()
 
 		default:
 		{
-			EXCEPT("BaseJob::DoneWithJob called with unexpected state %s (%d)\n", getJobStatusString(condorState), condorState);
+			EXCEPT("BaseJob::DoneWithJob called with unexpected state %s (%d)", getJobStatusString(condorState), condorState);
 		}
 		break;
 	}

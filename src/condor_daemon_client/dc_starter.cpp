@@ -254,6 +254,11 @@ DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char co
 {
 	ReliSock sock;
 
+	if (IsDebugLevel(D_COMMAND)) {
+		dprintf (D_COMMAND, "DCStarter::createJobOwnerSecSession(%s,...) making connection to %s\n",
+			getCommandStringSafe(CREATE_JOB_OWNER_SEC_SESSION), _addr ? _addr : "NULL");
+	}
+
 	if( !connectSock(&sock, timeout, NULL) ) {
 		error_msg = "Failed to connect to starter";
 		return false;
@@ -306,6 +311,11 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 	error_msg = "This version of Condor does not support ssh key exchange.";
 	return false;
 #else
+	if (IsDebugLevel(D_COMMAND)) {
+		dprintf (D_COMMAND, "DCStarter::startSSHD(%s,...) making connection to %s\n",
+			getCommandStringSafe(START_SSHD), _addr ? _addr : "NULL");
+	}
+
 	if( !connectSock(&sock, timeout, NULL) ) {
 		error_msg = "Failed to connect to starter";
 		return false;
@@ -484,6 +494,11 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 	ad.InsertAttr(ATTR_MAX_TRANSFER_BYTES, static_cast<long long>(max_bytes));
 
 	ReliSock sock;
+
+	if (IsDebugLevel(D_COMMAND)) {
+		dprintf (D_COMMAND, "DCStarter::peek(%s,...) making connection to %s\n",
+			getCommandStringSafe(STARTER_PEEK), _addr ? _addr : "NULL");
+	}
 
 	if( !connectSock(&sock, timeout, NULL) ) {
 		error_msg = "Failed to connect to starter";

@@ -42,7 +42,8 @@ enum
 	Q_SCHEDD_COMMUNICATION_ERROR,
 	Q_INVALID_REQUIREMENTS,
 	Q_INTERNAL_ERROR,
-	Q_REMOTE_ERROR
+	Q_REMOTE_ERROR,
+	Q_UNSUPPORTED_OPTION_ERROR
 };
 
 enum CondorQIntCategories
@@ -94,7 +95,10 @@ class CondorQ
 	// from the local schedd
 	int fetchQueue (ClassAdList &, StringList &attrs, ClassAd * = 0, CondorError* errstack = 0);
 	int fetchQueueFromHost (ClassAdList &, StringList &attrs, const char * = 0, char const *schedd_version = 0,CondorError* errstack = 0);
-	int fetchQueueFromHostAndProcess ( const char *, StringList &attrs, condor_q_process_func process_func, void * process_func_data, int useFastPath, CondorError* errstack = 0);
+	int fetchQueueFromHostAndProcess ( const char *, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int useFastPath, CondorError* errstack = 0);
+
+	// option flags for fetchQueueFromHost* functions, these can modify the meaning of attrs
+	typedef enum { fetch_Default=0, fetch_DefaultAutoCluster=1 } QueryFetchOpts;
 	
 		// fetch the job ads from database 	
 	int fetchQueueFromDB (ClassAdList &, char *&lastUpdate, const char * = 0, CondorError* errstack = 0);
@@ -122,9 +126,9 @@ class CondorQ
 	time_t scheddBirthdate;
 	
 	// helper functions
-	int fetchQueueFromHostAndProcessV2 ( const char * host, const char * constraint, StringList &attrs, condor_q_process_func process_func, void * process_func_data, int connect_timeout, CondorError* errstack = 0);
-	int getAndFilterAds( const char *, StringList &attrs, ClassAdList &, int useAll );
-	int getFilterAndProcessAds( const char *, StringList &attrs, condor_q_process_func pfn, void * process_func_data, bool useAll );
+	int fetchQueueFromHostAndProcessV2 ( const char * host, const char * constraint, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int connect_timeout, CondorError* errstack = 0);
+	int getAndFilterAds( const char *, StringList &attrs, int match_limit, ClassAdList &, int useAll );
+	int getFilterAndProcessAds( const char *, StringList &attrs, int match_limit, condor_q_process_func pfn, void * process_func_data, bool useAll );
 };
 
 int JobSort(ClassAd *job1, ClassAd *job2, void *data);

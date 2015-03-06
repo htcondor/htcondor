@@ -985,6 +985,14 @@ int Authentication::handshake(MyString my_methods, bool non_blocking) {
         dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the client\n");
         mySock->encode();
 		int method_bitmask = SecMan::getAuthBitmask(my_methods.Value());
+		if ( (method_bitmask & CAUTH_KERBEROS) && Condor_Auth_Kerberos::Initialize() == false ) {
+			dprintf (D_SECURITY, "HANDSHAKE: excluding KERBEROS: %s\n", "Initialization failed");
+			method_bitmask &= ~CAUTH_KERBEROS;
+		}
+		if ( (method_bitmask & CAUTH_SSL) && Condor_Auth_SSL::Initialize() == false ) {
+			dprintf (D_SECURITY, "HANDSHAKE: excluding SSL: %s\n", "Initialization failed");
+			method_bitmask &= ~CAUTH_SSL;
+		}
 		if ( (method_bitmask & CAUTH_GSI) && activate_globus_gsi() != 0 ) {
 			dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
 			method_bitmask &= ~CAUTH_GSI;
@@ -1027,6 +1035,14 @@ Authentication::handshake_continue(MyString my_methods, bool non_blocking)
 	dprintf ( D_SECURITY, "HANDSHAKE: client sent (methods == %i)\n", client_methods);
 
 	shouldUseMethod = selectAuthenticationType( my_methods, client_methods );
+	if ( (shouldUseMethod & CAUTH_KERBEROS) && Condor_Auth_Kerberos::Initialize() == false ) {
+		dprintf (D_SECURITY, "HANDSHAKE: excluding KERBEROS: %s\n", "Initialization failed");
+		shouldUseMethod &= ~CAUTH_KERBEROS;
+	}
+	if ( (shouldUseMethod & CAUTH_SSL) && Condor_Auth_SSL::Initialize() == false ) {
+		dprintf (D_SECURITY, "HANDSHAKE: excluding SSL: %s\n", "Initialization failed");
+		shouldUseMethod &= ~CAUTH_SSL;
+	}
 	if ( shouldUseMethod == CAUTH_GSI && activate_globus_gsi() != 0 ) {
 		dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
 		client_methods &= ~CAUTH_GSI;

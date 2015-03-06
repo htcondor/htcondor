@@ -36,6 +36,7 @@
 #include "jic_local_file.h"
 #include "jic_local_schedd.h"
 #include "vm_proc.h"
+#include "docker_proc.h"
 #include "condor_getcwd.h"
 
 
@@ -137,11 +138,35 @@ printClassAd( void )
 	if( VMProc::vm_univ_detect() ) {
 		// This doesn't mean that vm universe is really available.
 		// This just means that starter has codes for vm universe.
-		// Actual testing for vm universe will be 
+		// Actual testing for vm universe will be
 		//  done by vmuniverse manager in startd.
 		// ATTR_HAS_VM may be overwritten by vmuniverse manager in startd
-		printf( "%s = True\n",ATTR_HAS_VM);		
+		printf( "%s = True\n",ATTR_HAS_VM );
 	}
+
+	// Docker "universe."
+	if( DockerProc::Detect() ) {
+		printf( "%s = True\n", ATTR_HAS_DOCKER );
+
+		std::string dockerVersion;
+		if( DockerProc::Version( dockerVersion ) ) {
+			printf( "%s = \"%s\"\n", ATTR_DOCKER_VERSION, dockerVersion.c_str() );
+			// CondorVersion seems like a good idea to ignore;
+			// ignoring IsDaemonCore to get the same ad as before,
+			// except with ATTR_DOCKER_VERSION in it.  *sigh*
+			printf( "%s = \"CondorVersion, IsDaemonCore\"\n", ATTR_STARTER_IGNORED_ATTRS );
+		}
+	}
+
+	// Detect ability to encrypt execute directory
+#ifdef LINUX
+	if ( FilesystemRemap::EncryptedMappingDetect() ) {
+		printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
+	}
+#endif
+#ifdef WIN32
+	printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
+#endif
 
 	// Advertise which file transfer plugins are supported
 	FileTransfer ft;
@@ -377,6 +402,9 @@ parseArgs( int argc, char* argv [] )
 		if( ! strncmp(opt, _header, opt_len) ) { 
 			if( ! arg ) {
 				another( _header );
+			}
+			if (dprintf_header) {
+				free(dprintf_header);
 			}
 			dprintf_header = strdup( arg );
 			DebugId = display_dprintf_header;
@@ -720,7 +748,7 @@ main_shutdown_fast()
 	if ( Starter->RemoteShutdownFast(0) ) {
 		// ShutdownFast says it is already finished, because there are
 		// no jobs to shutdown.  No need to stick around.
-		Starter->StarterExit(0);
+		Starter->StarterExit(STARTER_EXIT_NORMAL);
 	}
 }
 
@@ -731,7 +759,7 @@ main_shutdown_graceful()
 	if ( Starter->RemoteShutdownGraceful(0) ) {
 		// ShutdownGraceful says it is already finished, because
 		// there are no jobs to shutdown.  No need to stick around.
-		Starter->StarterExit(0);
+		Starter->StarterExit(STARTER_EXIT_NORMAL);
 	}
 }
 

@@ -86,6 +86,8 @@
 #include <string>
 #include <set>
 
+#define SUBMIT_USING_CONFIG_PARSER 1
+
 // TODO: hashFunction() is case-insenstive, but when a MyString is the
 //   hash key, the comparison in HashTable is case-sensitive. Therefore,
 //   the case-insensitivity of hashFunction() doesn't complish anything.
@@ -95,7 +97,10 @@
 static unsigned int hashFunction( const MyString& );
 #include "file_sql.h"
 
+#ifdef SUBMIT_USING_CONFIG_PARSER
+#else
 HashTable<AttrKey,MyString> forcedAttributes( 64, AttrKeyHashFunction );
+#endif
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
 HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
 
@@ -162,6 +167,7 @@ bool stream_stderr_toggle = false;
 bool    NeedsPerFileEncryption = false;
 bool	NeedsJobDeferral = false;
 bool job_ad_saved = false;	// should we deallocate the job ad after storing it?
+bool HasEncryptExecuteDir = false;
 bool HasTDP = false;
 char* tdp_cmd = NULL;
 char* tdp_input = NULL;
@@ -171,6 +177,9 @@ char* RunAsOwnerCredD = NULL;
 
 // For mpi universe testing
 bool use_condor_mpi_universe = false;
+
+// For docker "universe"
+bool IsDockerJob = false;
 
 // For vm universe
 MyString VMType;
@@ -204,12 +213,12 @@ List<const char> extraLines;  // lines passed in via -a argument
 //
 static MACRO_SET SubmitMacroSet = {
 	0, 0,
-	CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS,
+	CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX,
 	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), NULL };
 
 // these are used to keep track of the source of various macros in the table.
-const MACRO_SOURCE DefaultMacro = { true, 1, -2, -1, -2 };
-MACRO_SOURCE FileMacroSource = { false, 0, 0, -1, -2 };
+const MACRO_SOURCE DefaultMacro = { true, false, 1, -2, -1, -2 };
+MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 
 #define MEG	(1<<20)
 
@@ -298,6 +307,8 @@ const char	*FetchFiles = "fetch_files";
 const char	*CompressFiles = "compress_files";
 const char	*AppendFiles = "append_files";
 const char	*LocalFiles = "local_files";
+
+const char 	*EncryptExecuteDir = "encrypt_execute_directory";
 
 const char	*ToolDaemonCmd = "tool_daemon_cmd";
 const char	*ToolDaemonArgs = "tool_daemon_args"; // for backward compatibility
@@ -396,6 +407,11 @@ const char* AcctGroup = "accounting_group";
 const char* AcctGroupUser = "accounting_group_user";
 
 //
+// docker "universe" Parameters
+//
+const char    *DockerImage="docker_image";
+
+//
 // VM universe Parameters
 //
 const char    *VM_VNC = "vm_vnc";
@@ -416,6 +432,7 @@ const char* EC2AmiID = "ec2_ami_id";
 const char* EC2UserData = "ec2_user_data";
 const char* EC2UserDataFile = "ec2_user_data_file";
 const char* EC2SecurityGroups = "ec2_security_groups";
+const char* EC2SecurityIDs = "ec2_security_ids";
 const char* EC2KeyPair = "ec2_keypair";
 const char* EC2KeyPairFile = "ec2_keypair_file";
 const char* EC2InstanceType = "ec2_instance_type";
@@ -426,6 +443,11 @@ const char* EC2VpcSubnet = "ec2_vpc_subnet";
 const char* EC2VpcIP = "ec2_vpc_ip";
 const char* EC2TagNames = "ec2_tag_names";
 const char* EC2SpotPrice = "ec2_spot_price";
+const char* EC2BlockDeviceMapping = "ec2_block_device_mapping";
+const char* EC2ParamNames = "ec2_parameter_names";
+const char* EC2ParamPrefix = "ec2_parameter_";
+const char* EC2IamProfileArn = "ec2_iam_profile_arn";
+const char* EC2IamProfileName = "ec2_iam_profile_name";
 
 const char* BoincAuthenticatorFile = "boinc_authenticator_file";
 
@@ -501,6 +523,7 @@ void 	SetTransferFiles();
 void    process_input_file_list(StringList * input_list, char *input_files, bool * files_specified);
 void 	SetPerFileEncryption();
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
+void 	SetEncryptExecuteDir();
 void 	SetTDP();
 void	SetRunAsOwner();
 void    SetLoadProfile();
@@ -516,7 +539,11 @@ void	SetKillSig();
 #endif
 void	SetForcedAttributes();
 void 	check_iwd( char const *iwd );
+#ifdef SUBMIT_USING_CONFIG_PARSER
 int	read_condor_file( FILE *fp );
+#else
+int	read_condor_file( FILE *fp );
+#endif
 char * 	condor_param( const char* name, const char* alt_name );
 char * 	condor_param( const char* name ); // call param with NULL as the alt
 void 	set_condor_param( const char* name, const char* value);
@@ -1267,8 +1294,13 @@ main( int argc, char *argv[] )
 	// we can't disconnect from something if we haven't connected to it: since
 	// we are dumping to a file, we don't actually open a connection to the schedd
 	if ( !DumpClassAdToFile ) {
-		if ( !DisconnectQ(0) ) {
+		CondorError errstack;
+		if ( !DisconnectQ(0, true, &errstack) ) {
 			fprintf(stderr, "\nERROR: Failed to commit job submission into the queue.\n");
+			if (errstack.subsys())
+			{
+				fprintf(stderr, "ERROR: %s\n", errstack.message());
+			}
 			exit(1);
 		}
 	}
@@ -1402,7 +1434,7 @@ main( int argc, char *argv[] )
 					break;
 
 				default:
-					EXCEPT("PROGRAMMER ERROR: Unknown sandbox transfer method\n");
+					EXCEPT("PROGRAMMER ERROR: Unknown sandbox transfer method");
 					break;
 			}
 		}
@@ -1467,7 +1499,7 @@ main( int argc, char *argv[] )
 			sshargs[i++] = PoolName;
 		}
 		if (ScheddName) {
-			sshargs[i++] = "-pool";
+			sshargs[i++] = "-name";
 			sshargs[i++] = ScheddName;
 		}
 		sprintf(jobid,"%d.0",ClusterId);
@@ -1626,6 +1658,32 @@ reschedule()
 }
 
 
+char * trim_and_strip_quotes_in_place(char * str)
+{
+	char * p = str;
+	while (isspace(*p)) ++p;
+	char * pe = p + strlen(p);
+	while (pe > p && isspace(pe[-1])) --pe;
+	*pe = 0;
+
+	if (*p == '"' && pe > p && pe[-1] == '"') {
+		// if we also had both leading and trailing quotes, strip them.
+		if (pe > p && pe[-1] == '"') {
+			*--pe = 0;
+			++p;
+		}
+	}
+	return p;
+}
+
+char * check_docker_image(char * docker_image)
+{
+	// trim leading & trailing whitespace and remove surrounding "" if any.
+	docker_image = trim_and_strip_quotes_in_place(docker_image);
+
+	// TODO: add code here to validate docker image argument (if possible)
+	return docker_image;
+}
 
 
 /* check_path_length() has been deprecated in favor of 
@@ -1746,11 +1804,35 @@ SetExecutable()
 		ignore_it = true;
 	}
 
+	if (IsDockerJob) {
+		char * docker_image = condor_param(DockerImage, ATTR_DOCKER_IMAGE);
+		if ( ! docker_image) {
+			fprintf(stderr, "\nERROR: docker jobs require a docker_image\n");
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		char * image = check_docker_image(docker_image);
+		if ( ! image || ! image[0]) {
+			fprintf(stderr, "\nERROR: '%s' is not a valid docker_image\n", docker_image);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		buffer.formatstr("%s = \"%s\"", ATTR_DOCKER_IMAGE, image);
+		InsertJobExpr(buffer);
+		free(docker_image);
+		ignore_it = true; // we don't require an executable if we have a docker image.
+	}
+
 	ename = condor_param( Executable, ATTR_JOB_CMD );
 	if( ename == NULL ) {
-		fprintf( stderr, "No '%s' parameter was provided\n", Executable);
-		DoCleanup(0,0,NULL);
-		exit( 1 );
+		if (IsDockerJob) {
+			// docker jobs don't require an executable.
+			ignore_it = true;
+		} else {
+			fprintf( stderr, "No '%s' parameter was provided\n", Executable);
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
 	}
 
 	macro_value = condor_param( TransferExecutable, ATTR_TRANSFER_EXECUTABLE );
@@ -2099,10 +2181,15 @@ SetUniverse()
 		return;
 	}
 
-	if( univ && strcasecmp(univ,"vanilla") == MATCH ) {
+	if( univ && (MATCH == strcasecmp(univ,"vanilla") || MATCH == strcasecmp(univ,"docker"))) {
 		JobUniverse = CONDOR_UNIVERSE_VANILLA;
 		buffer.formatstr( "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA);
 		InsertJobExpr (buffer);
+		if (MATCH == strcasecmp(univ,"docker")) {
+			// TODO: remove this when the docker starter no longer requires it.
+			InsertJobExpr("WantDocker=true");
+			IsDockerJob = true;
+		}
 		free(univ);
 		return;
 	};
@@ -3810,7 +3897,7 @@ SetLeaveInQueue()
 				   for up to 10 days, so user can grab the output.
 				 */
 			buffer.formatstr( 
-				"%s = %s == %d && (%s =?= UNDEFINED || %s == 0 || ((CurrentTime - %s) < %d))",
+				"%s = %s == %d && (%s =?= UNDEFINED || %s == 0 || ((time() - %s) < %d))",
 				ATTR_JOB_LEAVE_IN_QUEUE,
 				ATTR_JOB_STATUS,
 				COMPLETED,
@@ -4696,6 +4783,24 @@ SetRequirements()
 	}
 }
 
+void
+SetEncryptExecuteDir()
+{
+	char *enc =
+		condor_param( EncryptExecuteDir, ATTR_ENCRYPT_EXECUTE_DIRECTORY );
+
+	MyString buf;
+	if (enc && isTrue(enc)) {
+		HasEncryptExecuteDir = true;
+	} else {
+		HasEncryptExecuteDir = false;
+	}
+	buf.formatstr("%s = %s", ATTR_ENCRYPT_EXECUTE_DIRECTORY,
+			HasEncryptExecuteDir ? "True" : "False");
+	InsertJobExpr( buf.Value() );
+
+	if (enc) free(enc);
+}
 
 void
 SetTDP( void )
@@ -5259,6 +5364,34 @@ SetJobLease( void )
 }
 
 
+#ifdef SUBMIT_USING_CONFIG_PARSER
+void
+SetForcedAttributes()
+{
+	HASHITER it = hash_iter_begin(SubmitMacroSet);
+	for( ; ! hash_iter_done(it); hash_iter_next(it)) {
+		const char *my_name = hash_iter_key(it);
+		if ( ! starts_with_ignore_case(my_name, "MY.")) continue;
+		const char * name = my_name+sizeof("MY.")-1;
+
+		char * value = condor_param(my_name);
+		if (value && value[0]) {
+			MyString buffer;
+			buffer.formatstr( "%s = %s", name, value);
+
+			// Call InserJobExpr with checkcluster set to false.
+			// This will result in forced attributes always going
+			// into the proc ad, not the cluster ad.  This allows
+			// us to easily remove attributes with the "-" command.
+			InsertJobExpr( buffer, false );
+		} else {
+			job->Delete( name );
+		}
+		if (value) free(value);
+	}
+	hash_iter_delete(&it);
+}
+#else
 void
 SetForcedAttributes()
 {
@@ -5287,8 +5420,9 @@ SetForcedAttributes()
 
 		// free memory allocated by macro expansion module
 		free( exValue );
-	}	
+	}
 }
+#endif
 
 void
 SetGridParams()
@@ -5514,14 +5648,21 @@ SetGridParams()
 	      InsertJobExpr( buffer.Value() );
 	    }
 	}
-	
-	// EC2GroupName is not a necessary parameter
+
+	// Optional.
 	if( (tmp = condor_param( EC2SecurityGroups, ATTR_EC2_SECURITY_GROUPS )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_SECURITY_GROUPS, tmp );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
 	}
-	
+
+	// Optional.
+	if( (tmp = condor_param( EC2SecurityIDs, ATTR_EC2_SECURITY_IDS )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_SECURITY_IDS, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
 	if ( (tmp = condor_param( EC2AmiID, ATTR_EC2_AMI_ID )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_AMI_ID, tmp );
 		InsertJobExpr( buffer.Value() );
@@ -5595,20 +5736,28 @@ SetGridParams()
         free( tmp );
         InsertJobExpr( buffer.Value() );
     }
-	
+
 	// EC2SpotPrice is not a necessary parameter
 	if( (tmp = condor_param( EC2SpotPrice, ATTR_EC2_SPOT_PRICE )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_SPOT_PRICE, tmp);
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
-	}	
-	
+	}
+
+	// EC2BlockDeviceMapping is not a necessary parameter
+	if( (tmp = condor_param( EC2BlockDeviceMapping, ATTR_EC2_BLOCK_DEVICE_MAPPING )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_BLOCK_DEVICE_MAPPING, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+		bKeyPairPresent=true;
+	}
+
 	// EC2UserData is not a necessary parameter
 	if( (tmp = condor_param( EC2UserData, ATTR_EC2_USER_DATA )) ) {
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_USER_DATA, tmp);
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
-	}	
+	}
 
 	// EC2UserDataFile is not a necessary parameter
 	if( (tmp = condor_param( EC2UserDataFile, ATTR_EC2_USER_DATA_FILE )) ) {
@@ -5626,6 +5775,79 @@ SetGridParams()
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
 	}
+
+	// You can only have one IAM [Instance] Profile, so you can only use
+	// one of the ARN or the Name.
+	bool bIamProfilePresent = false;
+	if( (tmp = condor_param( EC2IamProfileArn, ATTR_EC2_IAM_PROFILE_ARN )) ) {
+		bIamProfilePresent = true;
+		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_IAM_PROFILE_ARN, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	}
+
+	if( (tmp = condor_param( EC2IamProfileName, ATTR_EC2_IAM_PROFILE_ARN )) ) {
+		if( bIamProfilePresent ) {
+			fprintf( stderr, "\nWARNING: EC2 job(s) contain both %s and %s; ignoring %s.\n", EC2IamProfileArn, EC2IamProfileName, EC2IamProfileName );
+		} else {
+			buffer.formatstr( "%s = \"%s\"", ATTR_EC2_IAM_PROFILE_NAME, tmp );
+			InsertJobExpr( buffer.Value() );
+		}
+		free( tmp );
+	}
+
+	//
+	// Handle arbitrary EC2 RunInstances parameters.
+	//
+	StringList paramNames;
+	if( (tmp = condor_param( EC2ParamNames, ATTR_EC2_PARAM_NAMES )) ) {
+		paramNames.initializeFromString( tmp );
+		free( tmp );
+	}
+
+	unsigned prefixLength = strlen( EC2ParamPrefix );
+	HASHITER smsIter = hash_iter_begin( SubmitMacroSet );
+	for( ; ! hash_iter_done( smsIter ); hash_iter_next( smsIter ) ) {
+		const char * key = hash_iter_key( smsIter );
+
+		if( strcasecmp( key, EC2ParamNames ) == 0 ) {
+			continue;
+		}
+
+		if( strncasecmp( key, EC2ParamPrefix, prefixLength ) != 0 ) {
+			continue;
+		}
+
+		const char * paramName = &key[prefixLength];
+		const char * paramValue = hash_iter_value( smsIter );
+		buffer.formatstr( "%s_%s = \"%s\"", ATTR_EC2_PARAM_PREFIX, paramName, paramValue );
+		InsertJobExpr( buffer.Value() );
+		set_condor_param_used( key );
+
+		bool found = false;
+		paramNames.rewind();
+		char * existingPN = NULL;
+		while( (existingPN = paramNames.next()) != NULL ) {
+			std::string converted = existingPN;
+			std::replace( converted.begin(), converted.end(), '.', '_' );
+			if( strcasecmp( converted.c_str(), paramName ) == 0 ) {
+				found = true;
+				break;
+			}
+		}
+		if( ! found ) {
+			paramNames.append( paramName );
+		}
+	}
+	hash_iter_delete( & smsIter );
+
+	if( ! paramNames.isEmpty() ) {
+		char * paramNamesStr = paramNames.print_to_delimed_string( ", " );
+		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_PARAM_NAMES, paramNamesStr );
+		free( paramNamesStr );
+		InsertJobExpr( buffer.Value() );
+	}
+
 
 		//
 		// Handle EC2 tags - don't require user to specify the list of tag names
@@ -6212,6 +6434,105 @@ SetKillSig()
 #endif  // of ifndef WIN32
 
 
+#if SUBMIT_USING_CONFIG_PARSER
+
+MyString last_submit_executable;
+MyString last_submit_cmd;
+
+// this gets called while parsing the submit file to process lines
+// that don't look like valid key=value pairs.  That *should* only be queue lines for now.
+// return 0 to keep scanning the file, ! 0 to stop scanning. non-zero return values will
+// be passed back out of Parse_macros
+//
+int SpecialSubmitParse(void*, MACRO_SOURCE& source, MACRO_SET& macro_set, const char * line, std::string & /*errmsg*/)
+{
+	const char * subsys = get_mySubSystem()->getName();
+	const int cchQueue = sizeof("queue")-1;
+
+	// line will have leading & trailing spaces removed before being handed to us.
+
+	// Check to see if this is a queue statement.
+	// 
+	if (starts_with_ignore_case(line, "queue") && (0 == line[cchQueue] || isspace(line[cchQueue]))) {
+
+		const char * pqargs = line+cchQueue;
+
+		// now parse the extra lines.
+		ExtraLineNo = 0;
+		extraLines.Rewind();
+		const char * exline;
+		while (extraLines.Next(exline)) {
+			++ExtraLineNo;
+			int rval = Parse_config_string(source, 1, exline, macro_set, subsys);
+			if (rval < 0)
+				return rval;
+		}
+		ExtraLineNo = 0;
+
+		// optimize the macro set for lookups
+		optimize_macros(macro_set);
+
+		// HACK! the queue function uses a global flag to know whether or not to ask for a new cluster
+		// In 8.2 this flag is set whenever the "executable" or "cmd" value is set in the submit file.
+		// As of 8.3, we don't believe this is still necessary, but we are afraid to change it. This
+		// code is *mostly* the same, but will differ in cases where the users is setting cmd or executble
+		// to the *same* value between queue statements. - hopefully this is close enough.
+		MyString cur_submit_executable(lookup_macro(Executable, NULL, macro_set, 0));
+		if (last_submit_executable != cur_submit_executable) {
+			NewExecutable = true;
+			last_submit_executable = cur_submit_executable;
+		}
+		MyString cur_submit_cmd(lookup_macro("cmd", NULL, macro_set, 0));
+		if (last_submit_cmd != cur_submit_cmd) {
+			NewExecutable = true;
+			last_submit_cmd = cur_submit_cmd;
+		}
+
+		// skip whitespace before queue arguments (if any)
+		while (isspace(*pqargs)) ++pqargs;
+
+		int queue_modifier = 1;
+		if (*pqargs) {
+			// expand the queue line
+			char * qargs = expand_macro(pqargs, macro_set, false, subsys);
+			if (qargs) {
+				// parse the queue line.
+				int rval = sscanf(qargs, "%d", &queue_modifier); 
+
+				// Default to queue 1 if not specified; always use queue 1 for
+				// interactive jobs, even if something else is specified.
+				if( rval == EOF || rval == 0 || InteractiveJob ) {
+					queue_modifier = 1;
+				}
+
+				free(qargs);
+			}
+		}
+		queue(queue_modifier);
+
+		if (InteractiveJob && !InteractiveSubmitFile) {
+			// for interactive jobs, just one queue statement
+			return 1;
+		}
+		return 0; // keep scanning
+	}
+	return -1;
+}
+
+int read_condor_file(FILE * fp)
+{
+	std::string errmsg;
+	int rval = Parse_macros(fp, FileMacroSource,
+		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
+		get_mySubSystem()->getName(), errmsg,
+		SpecialSubmitParse, NULL);
+
+	if( rval < 0 ) {
+		fprintf (stderr, "Error on Line %d while reading submit file: %s\n", FileMacroSource.line, errmsg.c_str());
+	}
+	return rval;
+}
+#else
 int
 read_condor_file( FILE *fp )
 {
@@ -6250,8 +6571,7 @@ read_condor_file( FILE *fp )
 			}
 		}
 		else {
-			name = getline( fp );
-			LineNo++;
+			name = getline_trim( fp, LineNo );
 		}
 		if( name == NULL ) {
 			break;
@@ -6405,6 +6725,7 @@ read_condor_file( FILE *fp )
 	(void)fclose( fp );
 	return 0;
 }
+#endif
 
 char *
 condor_param( const char* name)
@@ -6419,6 +6740,7 @@ condor_param( const char* name, const char* alt_name )
 	const char *pval = lookup_macro(name, NULL, SubmitMacroSet);
 	char * pval_expanded = NULL;
 
+	// TODO: change this to use the defaults table from SubmitMacroSet
 	static StringList* submit_exprs = NULL;
 	static bool submit_exprs_initialized = false;
 	if( ! submit_exprs_initialized ) {
@@ -6662,6 +6984,7 @@ queue(int num)
 		SetCompressFiles();
 		SetAppendFiles();
 		SetLocalFiles();
+		SetEncryptExecuteDir();
 		SetTDP();			// before SetTransferFile() and SetRequirements()
 		SetTransferFiles();	 // must be called _before_ SetImageSize() 
 		SetRunAsOwner();
@@ -6837,6 +7160,7 @@ check_requirements( char const *orig, MyString &answer )
 	bool	checks_per_file_encryption = false;
 	bool	checks_mpi = false;
 	bool	checks_tdp = false;
+	bool	checks_encrypt_exec_dir = false;
 #if defined(WIN32)
 	bool	checks_credd = false;
 #endif
@@ -6904,10 +7228,10 @@ check_requirements( char const *orig, MyString &answer )
 	req_ad.Assign(ATTR_REQUEST_MEMORY,0);
 	req_ad.Assign(ATTR_CKPT_ARCH,"");
 
-	req_ad.GetExprReferences(answer.Value(),job_refs,machine_refs);
+	req_ad.GetExprReferences(answer.Value(),&job_refs,&machine_refs);
 
-	checks_arch = machine_refs.contains_anycase( ATTR_ARCH );
-	checks_opsys = machine_refs.contains_anycase( ATTR_OPSYS ) ||
+	checks_arch = IsDockerJob || machine_refs.contains_anycase( ATTR_ARCH );
+	checks_opsys = IsDockerJob || machine_refs.contains_anycase( ATTR_OPSYS ) ||
 		machine_refs.contains_anycase( ATTR_OPSYS_AND_VER ) ||
 		machine_refs.contains_anycase( ATTR_OPSYS_LONG_NAME ) ||
 		machine_refs.contains_anycase( ATTR_OPSYS_SHORT_NAME ) ||
@@ -6916,6 +7240,7 @@ check_requirements( char const *orig, MyString &answer )
 	checks_disk =  machine_refs.contains_anycase( ATTR_DISK );
 	checks_cpus =   machine_refs.contains_anycase( ATTR_CPUS );
 	checks_tdp =  machine_refs.contains_anycase( ATTR_HAS_TDP );
+	checks_encrypt_exec_dir = machine_refs.contains_anycase( ATTR_ENCRYPT_EXECUTE_DIRECTORY );
 #if defined(WIN32)
 	checks_credd = machine_refs.contains_anycase( ATTR_LOCAL_CREDD );
 #endif
@@ -6951,9 +7276,7 @@ check_requirements( char const *orig, MyString &answer )
 		if( answer[0] ) {
 			answer += " && ";
 		}
-		answer += "(TARGET.";
-		answer += ATTR_HAS_JAVA;
-		answer += ")";
+		answer += "TARGET." ATTR_HAS_JAVA;
 	} else if ( JobUniverse == CONDOR_UNIVERSE_VM ) {
 		// For vm universe, we require the same archicture.
 		if( !checks_arch ) {
@@ -6970,7 +7293,7 @@ check_requirements( char const *orig, MyString &answer )
 		if( !checks_vm ) {
 			answer += "&& (TARGET.";
 			answer += ATTR_HAS_VM;
-			answer += ")";
+			answer += " =?= true)";
 		}
 		// add vm_type to requirements
 		bool checks_vmtype = false;
@@ -6990,6 +7313,11 @@ check_requirements( char const *orig, MyString &answer )
 			answer += ATTR_VM_AVAIL_NUM;
 			answer += " > 0)";
 		}
+	} else if (IsDockerJob) {
+			if( answer[0] ) {
+				answer += " && ";
+			}
+			answer += "TARGET.HasDocker";
 	} else {
 		if( !checks_arch ) {
 			if( answer[0] ) {
@@ -7098,6 +7426,12 @@ check_requirements( char const *orig, MyString &answer )
 	if( HasTDP && !checks_tdp ) {
 		answer += " && (TARGET.";
 		answer += ATTR_HAS_TDP;
+		answer += ")";
+	}
+
+	if( HasEncryptExecuteDir && !checks_encrypt_exec_dir ) {
+		answer += " && (TARGET.";
+		answer += ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY;
 		answer += ")";
 	}
 
@@ -7218,9 +7552,7 @@ check_requirements( char const *orig, MyString &answer )
 			//
 			//
 		if ( JobUniverse != CONDOR_UNIVERSE_LOCAL ) {
-			answer += " && (TARGET.";
-			answer += ATTR_HAS_JOB_DEFERRAL;
-			answer += ")";
+			answer += " && TARGET." ATTR_HAS_JOB_DEFERRAL;
 		}
 		
 			//
@@ -7362,6 +7694,10 @@ check_open( const char *name, int flags )
 
 	strPathname = full_path(name);
 
+	// is the last character a path separator?
+	int namelen = strlen(name);
+	bool trailing_slash = namelen > 0 && IS_ANY_DIR_DELIM_CHAR(name[namelen-1]);
+
 		/* This is only for MPI.  We test for our string that
 		   we replaced "$(NODE)" with, and replace it with "0".  Thus, 
 		   we will really only try and access the 0th file only */
@@ -7385,8 +7721,8 @@ check_open( const char *name, int flags )
 
 	if ( !DisableFileChecks ) {
 		if( (fd=safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
-			// note: Windows does not set errno to EISDIR for directories, instead you get back EACCESS
-			if( ( errno == EISDIR || errno == EACCES ) &&
+			// note: Windows does not set errno to EISDIR for directories, instead you get back EACCESS (or ENOENT?)
+			if( (trailing_slash || errno == EISDIR || errno == EACCES) &&
 	                   check_directory( strPathname.Value(), flags, errno ) ) {
 					// Entries in the transfer output list may be
 					// files or directories; no way to tell in
@@ -8144,7 +8480,7 @@ void SetVMRequirements()
 	req_ad.Assign(ATTR_CKPT_ARCH,"");
 	req_ad.Assign(ATTR_VM_CKPT_MAC,"");
 
-	req_ad.GetExprReferences(vmanswer.Value(),job_refs,machine_refs);
+	req_ad.GetExprReferences(vmanswer.Value(),&job_refs,&machine_refs);
 
 	// check file system domain
 	if( vm_need_fsdomain ) {

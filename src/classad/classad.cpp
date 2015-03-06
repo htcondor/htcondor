@@ -30,6 +30,13 @@ extern "C" void to_lower (char *);	// from util_lib (config.c)
 
 namespace classad {
 
+#define ATTR_TOPLEVEL "toplevel"
+#define ATTR_ROOT "root"
+#define ATTR_SELF "self"
+#define ATTR_PARENT "parent"
+#define ATTR_MY "my"
+#define ATTR_CURRENT_TIME "CurrentTime"
+
 // This flag is only meant for use in Condor, which is transitioning
 // from an older version of ClassAds with slightly different evaluation
 // semantics. It will be removed without warning in a future release.
@@ -68,9 +75,42 @@ void ClassAdLibraryVersion(string &version_string)
     return;
 }
 
+static References *specialAttrNames = NULL;
+static void init_specialAttrNames() {
+	specialAttrNames = new References;
+	specialAttrNames->insert( ATTR_TOPLEVEL );
+	specialAttrNames->insert( ATTR_ROOT );
+	specialAttrNames->insert( ATTR_SELF );
+	specialAttrNames->insert( ATTR_PARENT );
+}
+
+static FunctionCall *CurrentTime_expr = NULL;
+
+void SetOldClassAdSemantics(bool enable)
+{
+	_useOldClassAdSemantics = enable;
+	if ( specialAttrNames == NULL ) {
+		init_specialAttrNames();
+	}
+	if ( enable ) {
+		specialAttrNames->insert( ATTR_MY );
+		specialAttrNames->insert( ATTR_CURRENT_TIME );
+		if ( CurrentTime_expr == NULL ) {
+			vector<ExprTree*> args;
+			CurrentTime_expr = FunctionCall::MakeFunctionCall( "time", args );
+		}
+	} else {
+		specialAttrNames->erase( ATTR_MY );
+		specialAttrNames->erase( ATTR_CURRENT_TIME );
+	}
+}
+
 ClassAd::
 ClassAd ()
 {
+	if ( specialAttrNames == NULL ) {
+		init_specialAttrNames();
+	}
 	EnableDirtyTracking();
 	chained_parent_ad = NULL;
 	alternateScope = NULL;
@@ -407,7 +447,7 @@ bool ClassAd::Insert( const std::string& serialized_nvp)
   size_t bpos = 0;
   
   // comes in as "name = value" "name= value" or "name =value"
-  npos=pos=serialized_nvp.find("=");
+  npos=pos=serialized_nvp.find('=');
   
   // only try to process if the string is valid 
   if ( pos != string::npos  )
@@ -632,30 +672,40 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 			return( EVAL_OK );
 		}
 
-		superScope = current->parentScope;
-		if(strcasecmp(name.c_str( ),"toplevel")==0 || 
-				strcasecmp(name.c_str( ),"root")==0){
+		if ( state.rootAd == current ) {
+			superScope = NULL;
+		} else {
+			superScope = current->parentScope;
+		}
+		if ( specialAttrNames->find(name) == specialAttrNames->end() ) {
+			// continue searching from the superScope ...
+			current = superScope;
+			if( current == this ) {		// NAC - simple loop checker
+				return( EVAL_UNDEF );
+			}
+		} else if(strcasecmp(name.c_str( ),ATTR_TOPLEVEL)==0 ||
+				strcasecmp(name.c_str( ),ATTR_ROOT)==0){
 			// if the "toplevel" attribute was requested ...
 			expr = (ClassAd*)state.rootAd;
 			if( expr == NULL ) {	// NAC - circularity so no root
 				return EVAL_FAIL;  	// NAC
 			}						// NAC
 			return( expr ? EVAL_OK : EVAL_UNDEF );
-		} else if( strcasecmp( name.c_str( ), "self" ) == 0 ) {
+		} else if( strcasecmp( name.c_str( ), ATTR_SELF ) == 0 ||
+				   strcasecmp( name.c_str( ), ATTR_MY ) == 0 ) {
 			// if the "self" ad was requested
 			expr = (ClassAd*)state.curAd;
 			return( expr ? EVAL_OK : EVAL_UNDEF );
-		} else if( strcasecmp( name.c_str( ), "parent" ) == 0 ) {
+		} else if( strcasecmp( name.c_str( ), ATTR_PARENT ) == 0 ) {
 			// the lexical parent
-			expr = (ClassAd*)state.curAd->parentScope;
+			expr = (ClassAd*)superScope;
 			return( expr ? EVAL_OK : EVAL_UNDEF );
-		} else {
-			// continue searching from the superScope ...
-			current = superScope;
-			if( current == this ) {		// NAC - simple loop checker
-				return( EVAL_UNDEF );
-			}
+		} else if( strcasecmp( name.c_str( ), ATTR_CURRENT_TIME ) == 0 ) {
+			// an alias for time() from old ClassAds
+			expr = CurrentTime_expr;
+			return ( expr ? EVAL_OK : EVAL_UNDEF );
 		}
+
 	}	
 
 	return( EVAL_UNDEF );
@@ -1108,6 +1158,13 @@ EvaluateAttrBool( const string &attr, bool &b ) const
 	return( EvaluateAttr( attr, val ) && val.IsBooleanValue( b ) );
 }
 
+bool ClassAd::
+EvaluateAttrBoolEquiv( const string &attr, bool &b ) const
+{
+	Value val;
+	return( EvaluateAttr( attr, val ) && val.IsBooleanValueEquiv( b ) );
+}
+
 #if 0
 // disabled (see header)
 bool ClassAd::
@@ -1140,10 +1197,13 @@ EvaluateAttrList( const string &attr, ExprList *&l ) const
 #endif
 
 bool ClassAd::
-GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames )
+GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames ) const
 {
     EvalState       state;
 
+    // Treat this ad as the root of the tree for reference tracking.
+    // If an attribute is only present in a parent scope of this ad,
+    // then we want to treat it as an external reference.
     state.rootAd = this; 
 	state.curAd = this;
 
@@ -1152,8 +1212,8 @@ GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames )
 
 
 bool ClassAd::
-_GetExternalReferences( const ExprTree *expr, ClassAd *ad, 
-	EvalState &state, References& refs, bool fullNames )
+_GetExternalReferences( const ExprTree *expr, const ClassAd *ad, 
+	EvalState &state, References& refs, bool fullNames ) const
 {
     switch( expr->GetKind( ) ) {
         case LITERAL_NODE:
@@ -1238,6 +1298,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 					return( rval );
 				}
 
+                case EVAL_FAIL:
                 default:    
                         // enh??
                     return( false );
@@ -1332,20 +1393,22 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 }
 
 bool ClassAd::
-GetExternalReferences( const ExprTree *tree, PortReferences &refs )
+GetExternalReferences( const ExprTree *tree, PortReferences &refs ) const
 {
     EvalState       state;
 
+    // Treat this ad as the root of the tree for reference tracking.
+    // If an attribute is only present in a parent scope of this ad,
+    // then we want to treat it as an external reference.
     state.rootAd = this; 
-    state.curAd = tree->GetParentScope( );
-	if( !state.curAd ) state.curAd = this;
+    state.curAd = this;
 	
     return( _GetExternalReferences( tree, this, state, refs ) );
 }
 
 bool ClassAd::
-_GetExternalReferences( const ExprTree *expr, ClassAd *ad, 
-	EvalState &state, PortReferences& refs )
+_GetExternalReferences( const ExprTree *expr, const ClassAd *ad, 
+	EvalState &state, PortReferences& refs ) const
 {
     switch( expr->GetKind( ) ) {
         case LITERAL_NODE:
@@ -1405,6 +1468,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 					return( rval );
 				}
 
+                case EVAL_FAIL:
                 default:    
                         // enh??
                     return( false );
@@ -1484,9 +1548,13 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 
 
 bool ClassAd::
-GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames)
+GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames) const
 {
     EvalState state;
+
+    // Treat this ad as the root of the tree for reference tracking.
+    // If an attribute is only present in a parent scope of this ad,
+    // then we want to treat it as an external reference.
     state.rootAd = this;
     state.curAd = this;
 
@@ -1495,8 +1563,8 @@ GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames)
 
 //this is closely modelled off of _GetExternalReferences in the new_classads.
 bool ClassAd::
-_GetInternalReferences( const ExprTree *expr, ClassAd *ad,
-        EvalState &state, References& refs, bool fullNames)
+_GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
+        EvalState &state, References& refs, bool fullNames) const
 {
 
     switch( expr->GetKind() ){
@@ -1523,58 +1591,23 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                     return false;
                 }
             } else {
+                bool orig_inAttrRefScope = state.inAttrRefScope;
+                state.inAttrRefScope = true;
+                bool rv = _GetInternalReferences( tree, ad, state, refs, fullNames );
+                state.inAttrRefScope = orig_inAttrRefScope;
+                if ( !rv ) {
+                    return false;
+                }
+
                 if (!tree->Evaluate(state, val) ) {
                     return false;
                 }
 
-                /*
-                 *
-                 * [
-                 * A = 3;
-                 * B = { 1, 3, 5};
-                 * C = D.A + 1;
-                 * D = [ A = E; B = 4; ];
-                 * E = 4;
-                 * ];
-                 */
-
+                // TODO Do we need extra handling for list values?
+                //   Should types other than undefined, error, or list
+                //   cause a failure?
                 if( val.IsUndefinedValue() ) {
                     return true;
-                }
-
-                string nameToAddToRefs = "";
-
-                string prefixStr;
-
-                if(tree != NULL)
-                {
-                    ClassAdUnParser unparser;
-                    //TODO: figure out how this would handle "B.D.G"
-                    unparser.Unparse(prefixStr, tree);
-                    //fullNameCpy = prefixStr;
-                    nameToAddToRefs = prefixStr;
-
-                    if(fullNames)
-                    {
-                        nameToAddToRefs += ".";
-                        nameToAddToRefs += attr;
-                    }
-                }
-
-                //WOULD INSERT "" IF tree == NULL! BAD! FIXME
-                refs.insert(nameToAddToRefs);
-
-                ExprTree *followRef;
-                //TODO: If we get to this point, must there be a prefix?
-                //  FIGURE OUT WHAT A SIMPLE / ABSOLUTE ATTR IS
-                followRef = ad->Lookup(prefixStr);
-                //this is checking to see if the prefix is in
-                //  this classad or not.
-                // if not, then we just let the loop continue
-                if(followRef != NULL)
-                {
-                    return _GetInternalReferences(followRef, ad,
-                                        state, refs, fullNames);
                 }
 
                 //otherwise, if the tree didn't evaluate to a classad,
@@ -1604,7 +1637,21 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
 
                 case EVAL_OK:   {
                     //whoo, it's internal.
-                    refs.insert(attr);
+                    // Check whether the attribute was found in the root
+                    // ad for this evaluation and that the attribute isn't
+                    // one of our special ones (self, parent, my, etc.).
+                    // If the ad actually has an attribute with the same
+                    // name as one of our special attributes, then count
+                    // that as an internal reference.
+                    // TODO LookupInScope() knows whether it's returning
+                    //   the expression of one of the special attributes
+                    //   or that of an attribute that actually appears in
+                    //   the ad. If it told us which one, then we could
+                    //   avoid the Lookup() call below.
+                    if ( state.curAd == state.rootAd &&
+                         state.curAd->Lookup( attr ) ) {
+                        refs.insert(attr);
+                    }
                     if( state.depth_remaining <= 0 ) {
                         state.curAd = curAd;
                         return false;
@@ -1620,6 +1667,7 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                 break;
                                 }
 
+                case EVAL_FAIL:
                 default:
                     // "enh??"
                     return false;
@@ -1673,6 +1721,13 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
             //also recurse on subtrees...
             vector< pair<string, ExprTree*> >               attrs;
             vector< pair<string, ExprTree*> >:: iterator    itr;
+
+            // If this ClassAd is only being used here as the scoping
+            // for an attribute reference, don't recurse into all of
+            // its attributes.
+            if ( state.inAttrRefScope ) {
+                return true;
+            }
 
             ((const ClassAd*)expr)->GetComponents(attrs);
             for(itr = attrs.begin(); itr != attrs.end(); itr++){

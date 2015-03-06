@@ -38,7 +38,6 @@
 #include "scheduler.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_qmgr.h"
 #include "condor_query.h"
 #include "condor_adtypes.h"
 #include "condor_state.h"
@@ -49,6 +48,7 @@
 #include "exit.h"
 #include "dc_startd.h"
 #include "qmgmt.h"
+#include "condor_qmgr.h"
 #include "schedd_negotiate.h"
 
 #include <vector>
@@ -927,6 +927,8 @@ DedicatedScheduler::sendAlives( void )
 {
 	match_rec	*mrec;
 	int		  	numsent=0;
+	int now = (int)time(0);
+	bool starter_handles_alives = param_boolean("STARTER_HANDLES_ALIVES",true);
 
 	BeginTransaction();
 
@@ -940,11 +942,19 @@ DedicatedScheduler::sendAlives( void )
 		}
 
 		if (mrec->m_startd_sends_alives && (mrec->status == M_ACTIVE)) {
-
 				// in receive_startd_update, we've updated the lease time only in the job ad
 				// actually write it to the job log here in one big transaction.
 			int renew_time = 0;
-			GetAttributeInt(mrec->cluster,mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
+			if ( starter_handles_alives && 
+				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
+			{
+				// If we're trusting the existance of the shadow to 
+				// keep the claim alive (because of kernel sockopt keepalives),
+				// set ATTR_LAST_JOB_LEASE_RENEWAL to the current time.
+				renew_time = now;
+			} else {
+				GetAttributeInt(mrec->cluster,mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
+			}
 			SetAttributeInt( mrec->cluster, mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL, renew_time ); 
 		}
 	}
@@ -1012,7 +1022,7 @@ DedicatedScheduler::reaper( int pid, int status )
 			}
 			break;
 		case JOB_SHADOW_USAGE:
-			EXCEPT("shadow exited with incorrect usage!\n");
+			EXCEPT("shadow exited with incorrect usage!");
 			break;
 		case JOB_BAD_STATUS:
 			EXCEPT("shadow exited because job status != RUNNING");
@@ -1040,10 +1050,12 @@ DedicatedScheduler::reaper( int pid, int status )
 			shutdownMpiJob( srec );
 			break;
 		case JOB_SHOULD_HOLD:
-			dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
-					 srec->job_id.cluster, srec->job_id.proc );
-			set_job_status( srec->job_id.cluster, srec->job_id.proc, 
-							HELD );
+			if ( q_status != HELD && q_status != REMOVED ) {
+				dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
+						 srec->job_id.cluster, srec->job_id.proc );
+				set_job_status( srec->job_id.cluster, srec->job_id.proc,
+								HELD );
+			}
 			shutdownMpiJob( srec );
 			break;
 		case DPRINTF_ERROR:
@@ -1689,7 +1701,7 @@ DedicatedScheduler::sortResources( void )
 			unclaimed_resources->Append( res );
 			continue;
 		}
-		EXCEPT("DedicatedScheduler got unknown status for match %d\n", mrec->status);
+		EXCEPT("DedicatedScheduler got unknown status for match %d", mrec->status);
 	}
 
     duplicate_partitionable_res(unclaimed_resources);
@@ -1831,6 +1843,7 @@ DedicatedScheduler::spawnJobs( void )
 			// need to skip following line if it is a reconnect job already
 		if (! allocation->is_reconnect) {
 			addReconnectAttributes( allocation);
+			scheduler.stats.JobsRestartReconnectsAttempting += 1;
 		}
 
 			/*
@@ -2342,6 +2355,9 @@ DedicatedScheduler::computeSchedule( void )
 			preemption_rank = tmp_expr;
 #endif
 
+			if (nodes_per_proc) {
+				delete [] nodes_per_proc;
+			}
 			nodes_per_proc = new int[nprocs];
 			for (int ni = 0; ni < nprocs; ni++) {
 				nodes_per_proc[ni] = 0;
@@ -2571,6 +2587,7 @@ DedicatedScheduler::computeSchedule( void )
 			delete jobs;
 			if( nodes_per_proc ) {
 					delete [] nodes_per_proc;
+					nodes_per_proc = NULL;
 			}
 			return true;
 		} else {
@@ -3842,7 +3859,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 						"job %d.%d to %s, because claimid is missing: "
 						"(hosts=%s,claims=%s).\n",
 						id.cluster, id.proc,
-						host ? host : "(null host)",
+						host, 
 						remote_hosts ? remote_hosts : "(null)",
 						claims ? claims : "(null)");
 				dPrintAd(D_ALWAYS, *job);

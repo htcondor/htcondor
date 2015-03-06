@@ -718,7 +718,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
     }
 
 	if ( perm >= LAST_PERM || !PermTypeArray[perm] ) {
-		EXCEPT("IpVerify::Verify: called with unknown permission %d\n",perm);
+		EXCEPT("IpVerify::Verify: called with unknown permission %d",perm);
 	}
 
 
@@ -871,7 +871,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			// (perhaps because this host doesn't appear in any list), create one
 			// and then add to the table.
 			// But first, check our parent permission levels in the
-			// authorization heirarchy.
+			// authorization hierarchy.
 			// DAEMON and ADMINISTRATOR imply WRITE.
 			// WRITE, NEGOTIATOR, and CONFIG_PERM imply READ.
 		bool determined_by_parent = false;

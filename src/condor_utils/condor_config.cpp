@@ -87,7 +87,13 @@
 #include "param_info_tables.h"
 #include "Regex.h"
 #include "filename_tools.h"
+#include "which.h"
 #include <algorithm> // for std::sort
+
+#ifdef WIN32
+// Note inversion of argument order...
+#define realpath(path,resolved_path) _fullpath((resolved_path),(path),_MAX_PATH)
+#endif
 
 // define this to keep param who's values match defaults from going into to runtime param table.
 #define DISCARD_CONFIG_MATCHING_DEFAULT
@@ -98,7 +104,7 @@ extern "C" {
 	
 // Function prototypes
 bool real_config(const char* host, int wantsQuiet, int config_options);
-int Read_config(const char*, int depth, MACRO_SET& macro_set, int, bool, const char * subsys, std::string & errmsg);
+//int Read_config(const char*, int depth, MACRO_SET& macro_set, int, bool, const char * subsys, std::string & errmsg);
 bool Test_config_if_expression(const char * expr, bool & result, std::string & err_reason, MACRO_SET& macro_set, const char * subsys);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
@@ -118,7 +124,7 @@ void check_params();
 bool find_user_file(MyString & filename, const char * basename, bool check_access);
 
 // External variables
-extern int	ConfigLineNo;
+//extern int	ConfigLineNo;
 }  /* End extern "C" */
 
 
@@ -128,10 +134,10 @@ static MACRO_SET ConfigMacroSet = {
 	0, 0,
 	/* CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULT | */ 0,
 	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &ConfigMacroDefaults };
-const MACRO_SOURCE DetectedMacro = { true,  0, -2, -1, -2 };
-const MACRO_SOURCE DefaultMacro  = { true,  1, -2, -1, -2 };
-const MACRO_SOURCE EnvMacro      = { false, 2, -2, -1, -2 };
-const MACRO_SOURCE WireMacro     = { false, 3, -2, -1, -2 };
+const MACRO_SOURCE DetectedMacro = { true,  false, 0, -2, -1, -2 };
+const MACRO_SOURCE DefaultMacro  = { true,  false, 1, -2, -1, -2 };
+const MACRO_SOURCE EnvMacro      = { false, false, 2, -2, -1, -2 };
+const MACRO_SOURCE WireMacro     = { false, false, 3, -2, -1, -2 };
 
 #ifdef _POOL_ALLOCATOR
 
@@ -1010,7 +1016,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 
 		char *varname = strdup( my_environ[i] );
 		if( !varname ) {
-			EXCEPT( "Out of memory in %s:%d\n", __FILE__, __LINE__ );
+			EXCEPT( "Out of memory in %s:%d", __FILE__, __LINE__ );
 		}
 
 		// isolate variable name by finding & nulling the '=', and trimming spaces before and after 
@@ -1056,11 +1062,10 @@ real_config(const char* host, int wantsQuiet, int config_options)
 	init_network_interfaces(TRUE);
 
 		// Now that we're done reading files, if DEFAULT_DOMAIN_NAME
-		// is set, we need to re-initialize my_full_hostname().
+		// is set, we need to re-initialize out hostname information.
 	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
 		free( tmp );
-		//init_full_hostname();
-		init_local_hostname();
+		reset_local_hostname();
 	}
 
 		// Also, we should be safe to process the NETWORK_INTERFACE
@@ -1072,7 +1077,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		// on configuration settings such as NETWORK_INTERFACE.
 		// Therefore, force the cache to be reset, now that the
 		// configuration has been loaded.
-	init_local_hostname();
+	reset_local_hostname();
 
 		// Re-insert the special macros.  We don't want the user to
 		// override them, since it's not going to work.
@@ -1107,6 +1112,10 @@ real_config(const char* host, int wantsQuiet, int config_options)
 		dprintf(D_FULLDEBUG, "FSYNC while writing user logs turned off.\n");
 
 	(void)SetSyscalls( scm );
+
+		// Re-initialize the ClassAd compat data (in case if CLASSAD_USER_LIBS is set).
+	ClassAd::Reconfig();
+
 	return true;
 }
 
@@ -1126,12 +1135,17 @@ process_config_source( const char* file, int depth, const char* name,
 		}
 	} else {
 		std::string errmsg;
-		rval = Read_config(file, depth, ConfigMacroSet, EXPAND_LAZY,
-							false, get_mySubSystem()->getName(), errmsg);
+		MACRO_SOURCE source;
+		FILE * fp = Open_macro_source(source, file, false, ConfigMacroSet, errmsg);
+		if ( ! fp) { rval = -1; }
+		else {
+			rval = Parse_macros(fp, source, depth, ConfigMacroSet, 0, get_mySubSystem()->getName(), errmsg, NULL, NULL);
+			rval = Close_macro_source(fp, source, ConfigMacroSet, rval); fp = NULL;
+		}
 		if( rval < 0 ) {
 			fprintf( stderr,
 					 "Configuration Error Line %d while reading %s %s\n",
-					 ConfigLineNo, name, file );
+					 source.line, name, file );
 			if (!errmsg.empty()) { fprintf(stderr, "%s\n", errmsg.c_str()); }
 			exit( 1 );
 		}
@@ -1217,7 +1231,7 @@ get_exclude_regex(Regex &excludeFilesRegex)
 		}
 		if(!excludeFilesRegex.isInitialized() ) {
 			EXCEPT("Could not init regex "
-				   "to exclude files in %s\n", __FILE__);
+				   "to exclude files in %s", __FILE__);
 		}
 	}
 	free(excludeRegex);
@@ -2056,7 +2070,7 @@ param_with_default_abort(const char *name, int abort)
 		if (abort) {
 			EXCEPT("Param name '%s' did not have a definition in any of the "
 				   "usual namespaces or default table. Aborting since it MUST "
-				   "be defined.\n", name);
+				   "be defined.", name);
 		}
 		return NULL;
 	}
@@ -2191,7 +2205,6 @@ param_integer( const char *name, int &value,
 		return false;
 	}
 
-#if 1
 	int err_reason = 0;
 	bool valid = string_is_long_param(string, long_result, me, target, name, &err_reason);
 	if ( ! valid) {
@@ -2213,45 +2226,6 @@ param_integer( const char *name, int &value,
 		long_result = default_value;
 	}
 	result = long_result;
-#else
-	char *endptr = NULL;
-	long_result = strtol(string,&endptr,10);
-	result = long_result;
-
-	ASSERT(endptr);
-	if( endptr != string ) {
-		while( isspace(*endptr) ) {
-			endptr++;
-		}
-	}
-	bool valid = (endptr != string && *endptr == '\0');
-
-	if( !valid ) {
-		// For efficiency, we first tried to read the value as a
-		// simple literal.  Since that didn't work, now try parsing it
-		// as an expression.
-		ClassAd rhs;
-		if( me ) {
-			rhs = *me;
-		}
-		if( !rhs.AssignExpr( name, string ) ) {
-			EXCEPT("Invalid expression for %s (%s) "
-				   "in condor configuration.  Please set it to "
-				   "an integer expression in the range %d to %d "
-				   "(default %d).",
-				   name,string,min_value,max_value,default_value);
-		}
-
-		if( !rhs.EvalInteger(name,target,result) ) {
-			EXCEPT("Invalid result (not an integer) for %s (%s) "
-				   "in condor configuration.  Please set it to "
-				   "an integer expression in the range %d to %d "
-				   "(default %d).",
-				   name,string,min_value,max_value,default_value);
-		}
-		long_result = result;
-	}
-#endif
 
 	if( (int)result != long_result ) {
 		EXCEPT( "%s in the condor configuration is out of bounds for"
@@ -2405,7 +2379,6 @@ param_double( const char *name, double default_value,
 		return default_value;
 	}
 
-#if 1
 	int err_reason = 0;
 	bool valid = string_is_double_param(string, result, me, target, name, &err_reason);
 	if( !valid ) {
@@ -2426,44 +2399,6 @@ param_double( const char *name, double default_value,
 		}
 		result = default_value;
 	}
-#else
-	char *endptr = NULL;
-	result = strtod(string,&endptr);
-
-	ASSERT(endptr);
-	if( endptr != string ) {
-		while( isspace(*endptr) ) {
-			endptr++;
-		}
-	}
-	bool valid = (endptr != string && *endptr == '\0');
-	if( !valid ) {
-		// For efficiency, we first tried to read the value as a
-		// simple literal.  Since that didn't work, now try parsing it
-		// as an expression.
-		ClassAd rhs;
-		float float_result = 0.0;
-		if( me ) {
-			rhs = *me;
-		}
-		if( !rhs.AssignExpr( name, string ) ) {
-			EXCEPT("Invalid expression for %s (%s) "
-				   "in condor configuration.  Please set it to "
-				   "a numeric expression in the range %lg to %lg "
-				   "(default %lg).",
-				   name,string,min_value,max_value,default_value);
-		}
-
-		if( !rhs.EvalFloat(name,target,float_result) ) {
-			EXCEPT("Invalid result (not a number) for %s (%s) "
-				   "in condor configuration.  Please set it to "
-				   "a numeric expression in the range %lg to %lg "
-				   "(default %lg).",
-				   name,string,min_value,max_value,default_value);
-		}
-		result = float_result;
-	}
-#endif
 
 	if( result < min_value ) {
 		EXCEPT( "%s in the condor configuration is too low (%s)."
@@ -2605,57 +2540,7 @@ param_boolean( const char *name, bool default_value, bool do_log,
 		return default_value;
 	}
 
-#if 1
 	valid = string_is_boolean_param(string, result, me, target, name);
-#else
-	char *endptr;
-
-	endptr = string;
-	if( strncasecmp(endptr,"true",4) == 0 ) {
-		endptr+=4;
-		result = true;
-	}
-	else if( strncasecmp(endptr,"1",1) == 0 ) {
-		endptr+=1;
-		result = true;
-	}
-	else if( strncasecmp(endptr,"false",5) == 0 ) {
-		endptr+=5;
-		result = false;
-	}
-	else if( strncasecmp(endptr,"0",1) == 0 ) {
-		endptr+=1;
-		result = false;
-	}
-	else {
-		valid = false;
-	}
-
-	while( isspace(*endptr) ) {
-		endptr++;
-	}
-	if( *endptr != '\0' ) {
-		valid = false;
-	}
-
-	if( !valid ) {
-		// For efficiency, we first tried to read the value as a
-		// simple literal.  Since that didn't work, now try parsing it
-		// as an expression.
-		int int_value = default_value;
-		ClassAd rhs;
-		if( me ) {
-			rhs = *me;
-		}
-
-		if( rhs.AssignExpr( name, string ) &&
-			rhs.EvalBool(name,target,int_value) )
-		{
-			result = (int_value != 0);
-			valid = true;
-		}
-	}
-#endif
 
 	if( !valid ) {
 		EXCEPT( "%s in the condor configuration  is not a valid boolean (\"%s\")."
@@ -2669,9 +2554,9 @@ param_boolean( const char *name, bool default_value, bool do_log,
 }
 
 char *
-macro_expand( const char *str )
+expand_param( const char *str )
 {
-	return expand_macro(str, ConfigMacroSet);
+	return expand_macro(str, ConfigMacroSet, true, get_mySubSystem()->getName());
 }
 
 char *
@@ -2694,8 +2579,6 @@ param_boolean_int( const char *name, int default_value ) {
     return param_boolean(name, default_bool) ? 1 : 0;
 }
 
-#if 1
-
 const char * param_get_location(const MACRO_META * pmet, MyString & value)
 {
 	value = config_source_by_id(pmet->source_id);
@@ -2709,31 +2592,6 @@ const char * param_get_location(const MACRO_META * pmet, MyString & value)
 	return value.c_str();
 }
 
-#else
-
-// Note that the line_number can be -1 if the filename isn't a real
-// filename, but something like <Internal> or <Environment>
-bool param_get_location(
-	const char *parameter,
-	MyString  &filename,
-	int       &line_number)
-{
-	bool found_it = false;
-
-	MACRO_ITEM * pi = find_macro_item(parameter, ConfigMacroSet);
-	if (pi) {
-		found_it = true;
-		if (ConfigMacroSet.metat) {
-			MACRO_META * pmi = &ConfigMacroSet.metat[pi - ConfigMacroSet.table];
-			if (pmi->source_id >= 0 && pmi->source_id < (int)ConfigMacroSet.sources.size()) {
-				filename = ConfigMacroSet.sources[pmi->source_id];
-				line_number = pmi->source_line;
-			}
-		}
-	}
-	return found_it;
-}
-#endif
 
 // find an item and return a hash iterator that points to it.
 bool param_find_item (
@@ -2859,8 +2717,6 @@ const char * hash_iter_def_value(HASHITER& it)
 	return param_exact_default_string(name);
 }
 
-#if 1
-
 const char * param_get_info(
 	const char * name,
 	const char * subsys,
@@ -2883,32 +2739,6 @@ const char * param_get_info(
 	return val;
 }
 
-#else
-
-const char * param_get_info(
-	const char * name,
-	const char * subsys,
-	const char * local,
-	const char ** pdef_val,
-	MyString &name_used,
-	int & use_count,
-	int & ref_count,
-	MyString &filename,
-	int &line_number)
-{
-	const char * val = NULL;
-	if (pdef_val) { *pdef_val = NULL; }
-
-	HASHITER it(ConfigMacroSet, 0);
-	if (param_find_item(name, subsys, local, name_used, it)) {
-		val = hash_iter_info(it, use_count, ref_count, filename, line_number);
-		if (pdef_val) {
-			*pdef_val = hash_iter_def_value(it);
-		}
-	}
-	return val;
-}
-#endif
 
 void
 reinsert_specials( const char* host )
@@ -3398,11 +3228,79 @@ set_runtime_config(char *admin, char *config)
 
 extern "C" {
 
+static bool Check_config_source_security(FILE* conf_fp, const char * config_source)
+{
+#ifndef WIN32
+		// unfortunately, none of this works on windoze... (yet)
+	if ( is_piped_command(config_source) ) {
+		fprintf( stderr, "Configuration Error File <%s>: runtime config "
+					"not allowed to come from a pipe command\n",
+					config_source );
+		return false;
+	}
+	int fd = fileno(conf_fp);
+	struct stat statbuf;
+	uid_t f_uid;
+	int rval = fstat( fd, &statbuf );
+	if( rval < 0 ) {
+		fprintf( stderr, "Configuration Error File <%s>, fstat() failed: %s (errno: %d)\n",
+					config_source, strerror(errno), errno );
+		return false;
+	}
+	f_uid = statbuf.st_uid;
+	if( can_switch_ids() ) {
+			// if we can switch, the file *must* be owned by root
+		if( f_uid != 0 ) {
+			fprintf( stderr, "Configuration Error File <%s>, "
+						"running as root yet runtime config file owned "
+						"by uid %d, not 0!\n", config_source, (int)f_uid );
+			return false;
+		}
+	} else {
+			// if we can't switch, at least ensure we own the file
+		if( f_uid != get_my_uid() ) {
+			fprintf( stderr, "Configuration Error File <%s>, "
+						"running as uid %d yet runtime config file owned "
+						"by uid %d!\n", config_source, (int)get_my_uid(),
+						(int)f_uid );
+			return false;
+		}
+	}
+#endif /* ! WIN32 */
+	return true;
+}
+
+static void process_persistent_config_or_die (const char * source_file, bool top_level)
+{
+	int rval = 0;
+
+	std::string errmsg;
+
+	MACRO_SOURCE source;
+	insert_source(source_file, ConfigMacroSet, source);
+	FILE* fp = safe_fopen_wrapper_follow(source_file, "r");
+	if ( ! fp) { rval = -1; errmsg = "can't open file"; }
+	else {
+		if ( ! Check_config_source_security(fp, source_file)) {
+			rval = -1;
+		} else {
+			rval = Parse_macros(fp, source, 0, ConfigMacroSet, 0, get_mySubSystem()->getName(), errmsg, NULL, NULL);
+		}
+		fclose(fp); fp = NULL;
+	}
+
+	if (rval < 0) {
+		dprintf( D_ALWAYS | D_FAILURE, "Configuration Error Line %d %s while reading"
+					"%s persistent config source: %s\n",
+					source.line, errmsg.c_str(), top_level ? " top-level" : " ", source_file );
+		exit(1);
+	}
+}
+
 static int
 process_persistent_configs()
 {
 	char *tmp = NULL;
-	int rval;
 	bool processed = false;
 
 	if( access( toplevel_persistent_config.Value(), R_OK ) == 0 &&
@@ -3410,15 +3308,20 @@ process_persistent_configs()
 	{
 		processed = true;
 
+#if 1
+		process_persistent_config_or_die(toplevel_persistent_config.Value(), true);
+#else
 		std::string errmsg;
-		rval = Read_config(toplevel_persistent_config.Value(), 0, ConfigMacroSet,
-						EXPAND_LAZY, true, get_mySubSystem()->getName(), errmsg);
+		int rval = Read_macros(toplevel_persistent_config.Value(), 0, ConfigMacroSet,
+						READ_MACROS_CHECK_RUNTIME_SECURITY,
+						get_mySubSystem()->getName(), errmsg, NULL, NULL);
 		if (rval < 0) {
 			dprintf( D_ALWAYS | D_FAILURE, "Configuration Error Line %d %s while reading "
 					 "top-level persistent config source: %s\n",
 					 ConfigLineNo, errmsg.c_str(), toplevel_persistent_config.Value() );
 			exit(1);
 		}
+#endif
 
 		tmp = param ("RUNTIME_CONFIG_ADMIN");
 		if (tmp) {
@@ -3433,15 +3336,20 @@ process_persistent_configs()
 		MyString config_source;
 		config_source.formatstr( "%s.%s", toplevel_persistent_config.Value(),
 							   tmp );
+#if 1
+		process_persistent_config_or_die(config_source.Value(), false);
+#else
 		std::string errmsg;
-		rval = Read_config(config_source.Value(), 0, ConfigMacroSet,
-						EXPAND_LAZY, true, get_mySubSystem()->getName(), errmsg);
+		int rval = Read_macros(config_source.Value(), 0, ConfigMacroSet,
+						READ_MACROS_CHECK_RUNTIME_SECURITY,
+						get_mySubSystem()->getName(), errmsg, NULL, NULL);
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d %s"
 					 "while reading persistent config source: %s\n",
 					 ConfigLineNo, errmsg.c_str(), config_source.Value() );
 			exit(1);
 		}
+#endif
 	}
 	return (int)processed;
 }
@@ -3450,12 +3358,23 @@ process_persistent_configs()
 static int
 process_runtime_configs()
 {
-	int i, rval, fd;
+	int i, rval;
 	bool processed = false;
+
+	MACRO_SOURCE source;
+	insert_source("<runtime>", ConfigMacroSet, source);
 
 	for (i=0; i <= rArray.getlast(); i++) {
 		processed = true;
-
+		source.line = i;
+#if 1
+		rval = Parse_config_string(source, 0, rArray[i].config, ConfigMacroSet, get_mySubSystem()->getName());
+		if (rval < 0) {
+			dprintf( D_ALWAYS | D_ERROR, "Configuration Error parsing runtime[%d] name '%s', at line %d in config: %s\n",
+					 i, rArray[i].admin, source.meta_off+1, rArray[i].config);
+			exit(1);
+		}
+#else
 		char* tmp_dir = temp_dir_path();
 		ASSERT(tmp_dir);
 		MyString tmp_file_tmpl = tmp_dir;
@@ -3463,7 +3382,7 @@ process_runtime_configs()
 		tmp_file_tmpl += "/cndrtmpXXXXXX";
 
 		char* tmp_file = strdup(tmp_file_tmpl.Value());
-		fd = condor_mkstemp( tmp_file );
+		int fd = condor_mkstemp( tmp_file );
 		if (fd < 0) {
 			dprintf( D_ALWAYS, "condor_mkstemp(%s) returned %d, '%s' (errno %d) in "
 				 "process_dynamic_configs()\n", tmp_file, fd,
@@ -3483,8 +3402,8 @@ process_runtime_configs()
 			exit(1);
 		}
 		std::string errmsg;
-		rval = Read_config(tmp_file, 0, ConfigMacroSet,
-						EXPAND_LAZY, false, get_mySubSystem()->getName(), errmsg);
+		rval = Read_macros(tmp_file, 0, ConfigMacroSet,
+						0, get_mySubSystem()->getName(), errmsg, NULL, NULL);
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d %s"
 					 "while reading %s, runtime config: %s\n",
@@ -3494,6 +3413,7 @@ process_runtime_configs()
 		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink(tmp_file);
 		free(tmp_file);
+#endif
 	}
 
 	return (int)processed;
@@ -3660,4 +3580,78 @@ param_functions* get_param_functions()
 	config_p_funcs.set_param_int_func(&param_integer);
 
 	return &config_p_funcs;
+}
+
+/* Take a param which is the name of an executable, and safely expand it
+ * if required to a full pathname by searching the PATH environment.
+ * Useful for seting an entry in the param table like "MAIL=mailx", and
+ * then this function will expand it to "/bin/mailx" or "/usr/bin/mailx".
+ * If the path cannot be expanded safely (to something that could be execed
+ * by root), then NULL is returned.  For instance using the MAIL example,
+ * this function would not expand the path to "/tmp/mailx" even if /tmp
+ * is somehow in the path. Like param(), if the return value is not NULL,
+ * it must be freed() by the caller.
+ */
+char *
+param_with_full_path(const char *name)
+{
+	char * real_path = NULL;
+
+	if (!name || (name && !name[0])) {
+		return NULL;
+	}
+
+	// lookup name in param table first, so admins can configure what they want
+	char * command = param(name);
+	if (command && !command[0]) {
+		// treat empty string as a NULL
+		free(command);
+		command = NULL;
+	}
+
+	// if not found in the param table, just use the value of name as the command.
+	if ( command == NULL ) {
+		command = strdup(name);
+	}
+
+	if (command && !fullpath(command)) {
+		// Fullpath unknown, so we will try and find it ourselves.
+		// Search the PATH for it, and if found, confirm that the path is "safe"
+		// for a privledged user to run.  "safe" means ok to exec as root,
+		// so either path starts with /bin, /usr, etc, ie
+		// the path is not writeable by any user other than root.
+		// Store the result back into the param table so we don't repeat
+		// operation every time we are invoked, and so result can be
+		// inspected with condor_config_val.
+		MyString p = which(command
+#ifndef WIN32
+			// on UNIX, always include system path entries
+			, "/bin:/usr/bin:/sbin:/usr/sbin"
+#endif
+			);
+		free(command);
+		command = NULL;
+		if ((real_path = realpath(p.Value(),NULL))) {
+			p = real_path;
+			free(real_path);
+			if (
+#ifndef WIN32
+				p.find("/usr/")==0 ||
+				p.find("/bin/")==0 ||
+				p.find("/sbin/")==0
+#else
+				p.find("\\Windows\\")==0 ||
+				(p[1]==':' && p.find("\\Windows\\")==2)  // ie C:\Windows
+#endif
+			)
+			{
+				// we have a full path, and it looks safe.
+				// restash command as the full path into config table.
+				command = strdup( p.Value() );
+				config_insert(name,command);
+			}
+		}
+	}
+
+	return command;
 }

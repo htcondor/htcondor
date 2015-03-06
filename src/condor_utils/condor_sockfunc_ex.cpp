@@ -17,6 +17,7 @@ int condor_getsockname(int sockfd, condor_sockaddr& addr)
 {
 	sockaddr_storage ss;
 	socklen_t socklen = sizeof(ss);
+	memset( & ss, 0, socklen );
 	int ret = getsockname(sockfd, (sockaddr*)&ss, &socklen);
 	if (ret == 0) {
 		addr = condor_sockaddr((sockaddr*)&ss);
@@ -28,6 +29,7 @@ int condor_getpeername(int sockfd, condor_sockaddr& addr)
 {
 	sockaddr_storage ss;
 	socklen_t socklen = sizeof(ss);
+	memset( & ss, 0, socklen );
 	int ret = getpeername(sockfd, (sockaddr*)&ss, &socklen);
 	if (ret == 0) {
 		addr = condor_sockaddr((sockaddr*)&ss);

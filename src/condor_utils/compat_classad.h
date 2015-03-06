@@ -349,7 +349,7 @@ class ClassAd : public classad::ClassAd
 
 	// Set or clear the dirty flag for each expression.
 	void SetDirtyFlag(const char *name, bool dirty);
-	void GetDirtyFlag(const char *name, bool *exists, bool *dirty);
+	void GetDirtyFlag(const char *name, bool *exists, bool *dirty) const;
 
 	// Copy value of source_attr in source_ad to target_attr
 	// in this ad.  If source_ad is NULL, it defaults to this ad.
@@ -371,12 +371,12 @@ class ClassAd : public classad::ClassAd
     void ChainCollapse();
 
     void GetReferences(const char* attr,
-                StringList &internal_refs,
-                StringList &external_refs);
+                StringList *internal_refs,
+                StringList *external_refs) const;
 
     bool GetExprReferences(const char* expr,
-                StringList &internal_refs,
-                StringList &external_refs);
+                StringList *internal_refs,
+                StringList *external_refs) const;
 
 	static void Reconfig();
 	static bool m_initConfig;
@@ -401,8 +401,8 @@ class ClassAd : public classad::ClassAd
     bool m_dirtyItrInit;
 
 	void _GetReferences(classad::ExprTree *tree,
-						StringList &internal_refs,
-						StringList &external_refs);
+						StringList *internal_refs,
+						StringList *external_refs) const;
 
 	// poison Assign of ExprTree* type for public users
 	// otherwise the compiler will resolve against the bool overload 
@@ -508,9 +508,6 @@ void SetTargetTypeName(classad::ClassAd &ad, const char *);
 	/** Get the value of the TargetType attribtute */
 const char*	GetTargetTypeName(const classad::ClassAd& ad);
 
-
-void getTheMyRef( classad::ClassAd *ad );
-void releaseTheMyRef( classad::ClassAd *ad );
 
 classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
 									  classad::ClassAd *target );

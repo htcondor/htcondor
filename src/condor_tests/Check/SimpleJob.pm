@@ -21,14 +21,15 @@ package SimpleJob;
 
 use CondorTest;
 my $timeout = 0;
-my $defaulttimeout = 240;
+my $defaulttimeout = 300;
 $timeout = $defaulttimeout;
 
 $timed_callback = sub
 {
+	my $now = CondorTest::timestamp();
 	print "SimpleJob timeout expired!\n";
 	CondorTest::RegisterResult( 0, %args );
-    die "Test failed from timeout expiring\n";
+    die "$now Test failed from timeout expiring\n";
 };
 
 $submitted = sub
@@ -55,11 +56,30 @@ sub RunCheck
 	my $availableslots = 0;
     my $result = 0;
 
+################################################################################
+#
+#
+# NOTE: In general there are callbacks requiring action and variable changes
+# in the main test file. You can only use no_wait to fork for running really
+# simple jobs like start a job that runs forever or start a job on hold.
+#
+# ANYTHING ELSE WILL NOT WORK AS YOU EXPECT	(bt 1/10/15)
+#
+#
+################################################################################
+
+	if($args{no_wait}) {
+		my $pid = fork();
+		if($pid != 0) {
+			return(0);
+		}
+	}
+	
 	my $queuesz = $args{queue_sz} || 1;
 
 	if($args{check_slots}) {
 		# Make sure we never try to start more jobs then slots we have!!!!!!
-		$availableslots = ExamineSlots(queuesz);
+		$availableslots = ExamineSlots($args{check_slots});
 	
 		if($availableslots < $queuesz) {
     		CondorTest::RegisterResult( $result, %args );
@@ -75,19 +95,28 @@ sub RunCheck
 	if($output eq "*") {
 		$output = "$testname.out";
 	}
+    my $input = $args{input} || "";
     my $error = $args{error} || "";
 	if($error eq "*") {
 		$error = "$testname.err";
 	}
+	my $deferralpreptime = $args{deferralpreptime} || "";
+	my $deferraltime = $args{deferraltime} || "";
+	my $deferralwindow = $args{deferralwindow} || "";
+    my $requirements = $args{requirements} || "";
     my $streamoutput = $args{stream_output} || "";
     my $append_submit_commands = $args{append_submit_commands} || "";
+    my $multi_queue = $args{multi_queue} || "";
     my $grid_resource = $args{grid_resource} || "";
+	my $transfer_output_files = $args{transfer_output_files} || "";
 	my $transfer_input_files = $args{transfer_input_files} || "";
     my $should_transfer_files = $args{should_transfer_files} || "";
     my $when_to_transfer_output = $args{when_to_transfer_output} || "";
     my $duration = "1";
 	if(exists $args{duration}) {
 		$duration = $args{duration};
+	} else {
+		print "duration not set, defaulting to 1\n";
 	}
 
 	if(exists $args{timeout}){
@@ -110,6 +139,7 @@ sub RunCheck
     my $evicted_ewc_fn = $args{on_evictedwithcheckpoint} || $dummy;
     my $evicted_ewoc_fn = $args{on_evictedwithoutcheckpoint} || $dummy;
     my $evicted_wreq_fn = $args{on_evictedwithrequeue} || $dummy;
+	my $wanterror_fn =$args{on_wanterror} || $dummy;
     my $submit_fn = $args{on_submit} || $submitted;
     my $ulog_fn = $args{on_ulog} || $dummy;
     my $abort_fn = $args{on_abort} || $aborted;
@@ -134,6 +164,9 @@ sub RunCheck
 	if( exists $args{on_shadow} ) {
     	CondorTest::RegisterShadow( $testname, $shadow );
 	}
+	if( exists $args{on_wanterror} ) {
+    	CondorTest::RegisterWantError( $testname, $wanterror_fn );
+	}
 	if( exists $args{on_imageupdated} ) {
     	CondorTest::RegisterImageUpdated( $testname, $imageupdated_fn );
 	}
@@ -144,13 +177,16 @@ sub RunCheck
     	CondorTest::RegisterEvictedWithoutCheckpoint( $testname, $evicted_ewoc_fn );
 	}
 	if( exists $args{on_evictedwithrequeue} ) {
-    	CondorTest::RegisterEvictedWithRequeue( $testname, $evicted__wreqfn );
+    	CondorTest::RegisterEvictedWithRequeue( $testname, $evicted_wreq_fn );
 	}
 	if( exists $args{on_hold} ) {
     	CondorTest::RegisterHold( $testname, $hold_fn );
 	}
 	if( exists $args{on_released} ) {
     	CondorTest::RegisterRelease( $testname, $released_fn );
+	}
+	if( exists $args{on_exitedabnormal} ) {
+    	CondorTest::RegisterExitedAbnormal( $testname, $args{on_exitedabnormal} );
 	}
 	if( exists $args{on_evicted} ) {
     	CondorTest::RegisterEvicted( $testname, $evicted_fn );
@@ -196,14 +232,32 @@ sub RunCheck
 	if($output ne "") {
 		print SUBMIT "output = $output\n";
 	}
+	if($input ne "") {
+		print SUBMIT "input = $input\n";
+	}
 	if($error ne "") {
 		print SUBMIT "error = $error\n";
 	}
 	if($args{request_memory}) {
 		print SUBMIT "request_memory = $args{request_memory}\n";
 	}
+	if($deferralpreptime ne "") {
+		print SUBMIT "DeferralPrepTime = $deferralpreptime\n";
+	}
+	if($deferraltime ne "") {
+		print SUBMIT "DeferralTime = $deferraltime\n";
+	}
+	if($deferralwindow ne "") {
+		print SUBMIT "DeferralWindow = $deferralwindow\n";
+	}
+	if($requirements ne "") {
+		print SUBMIT "Requirements = $requirements\n";
+	}
 	if($streamoutput ne "") {
 		print SUBMIT "stream_output = $streamoutput\n";
+	}
+	if( $transfer_output_files ne "" ) {
+		print SUBMIT "transfer_output_files = $transfer_output_files\n";
 	}
 	if( $transfer_input_files ne "" ) {
 		print SUBMIT "transfer_input_files = $transfer_input_files\n";
@@ -218,6 +272,9 @@ sub RunCheck
         print SUBMIT "\n" . $append_submit_commands . "\n";
     }
     print SUBMIT "queue $queuesz\n";
+	if($multi_queue ne "") {
+        print SUBMIT "\n" . $multi_queue . "\n";
+	}
     close( SUBMIT );
 
 	if (defined $args{GetClusterId}) {
@@ -226,24 +283,50 @@ sub RunCheck
     	$result = CondorTest::RunTest($testname, $submit_fname, 0);
 	}
     CondorTest::RegisterResult( $result, %args );
-    return $result;
+	 if($args{no_wait}) {
+		exit(0);
+	} else {
+		return $result;
+	}
+
 }
 
 sub ExamineSlots
 {
+	my $expectedslots = shift;
+	my $slots = $expectedslots;
 	my $line = "";
+	my $timelimit = 30;
+	my $currenttime = 0;
+	my $sleeptime = 3;
+	my $slotcount = 0;
+
+	print "checking for $slots\n";
 
 	my $available = 0;
-	my @jobs = `condor_status`;
-	foreach my $job (@jobs) {
-		chomp($job);
-		$line = $job;
-		if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
-			print "<$4> unclaimed slots\n";
-			$available = $4;
+	my @jobs = ();
+	my $cmd = "condor_status";
+	print "In ExamineSlots\n";
+	# allow some time to stabilize
+	while(($slotcount < $slots) & ($currenttime < $timelimit)) {
+		runCondorTool($cmd,\@jobs,2,{emit_output=>0});
+		foreach my $job (@jobs) {
+			chomp($job);
+			$line = $job;
+			#print "ExamineSlots\n";
+			if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
+				print "<$4> unclaimed slots\n";
+				$available = $4;
+			}
+		}
+		if($avaiilable != $slots) {
+			$slotcount = $available;
+			$currenttime += $sleeptime;
+			sleep($sleeptime);
 		}
 	}
-	return($available);
+	print "ExamineSlots returning $slotcount after $currenttime seconds\n";
+	return($slotcount);
 }
 
 1;

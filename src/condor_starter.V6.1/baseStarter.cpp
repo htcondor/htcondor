@@ -24,6 +24,7 @@
 #include "starter.h"
 #include "script_proc.h"
 #include "vanilla_proc.h"
+#include "docker_proc.h"
 #include "java_proc.h"
 #include "tool_daemon_proc.h"
 #include "mpi_master_proc.h"
@@ -1555,6 +1556,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 					new_arg += sshd_config_file.Value();
 				}
 				else {
+					deleteStringArray(argarray);
 					return SSHDFailed(s,
 							"Unexpected %%%c in SSH_TO_JOB_SSHD_ARGS: %s\n",
 							*ptr ? *ptr : ' ', sshd_arg_string.Value());
@@ -1867,10 +1869,13 @@ CStarter::createTempExecuteDir( void )
 		}
 	}
 	
-	// if the user wants the execute directory encrypted, 
+	// if the admin or the user wants the execute directory encrypted,
 	// go ahead and set that up now too
-	
-	if ( param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false) ) {
+	bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
+	if (!encrypt_execdir && jic && jic->jobClassAd()) {
+		jic->jobClassAd()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
+	}
+	if ( encrypt_execdir ) {
 		
 			// dynamically load our encryption functions to preserve 
 			// compatability with NT4 :(
@@ -2365,9 +2370,16 @@ CStarter::SpawnJob( void )
 	switch ( jobUniverse )  
 	{
 		case CONDOR_UNIVERSE_LOCAL:
-		case CONDOR_UNIVERSE_VANILLA:
-			job = new VanillaProc( jobAd );
-			break;
+		case CONDOR_UNIVERSE_VANILLA: {
+			int wantDocker = 0;
+			jobAd->LookupBool( ATTR_WANT_DOCKER, wantDocker );
+
+			if( wantDocker ) {
+				job = new DockerProc( jobAd );
+			} else {
+				job = new VanillaProc( jobAd );
+			}
+			} break;
 		case CONDOR_UNIVERSE_JAVA:
 			job = new JavaProc( jobAd, WorkingDir.Value() );
 			break;
@@ -2799,7 +2811,7 @@ CStarter::Reaper(int pid, int exit_status)
 
 	if ( ShuttingDown && (all_jobs - handled_jobs == 0) ) {
 		dprintf(D_ALWAYS,"Last process exited, now Starter is exiting\n");
-		StarterExit(0);
+		StarterExit(STARTER_EXIT_NORMAL);
 	}
 
 	return 0;
@@ -3179,6 +3191,22 @@ CStarter::PublishToEnv( Env* proc_env )
 	proc_env->SetEnv("TMPDIR", GetWorkingDir());
 	proc_env->SetEnv("TEMP", GetWorkingDir()); // Windows
 	proc_env->SetEnv("TMP", GetWorkingDir()); // Windows
+
+		// Programs built with OpenMP (including matlab, gnu sort
+		// and others) look at OMP_NUM_THREADS
+		// to determine how many threads to spawn.  Force this to
+		// Cpus, to encourage jobs to stay within the number
+		// of requested cpu cores.
+
+	ClassAd * mach = jic->machClassAd();
+	if (mach) {
+		int cpus = 0;
+		if (mach->LookupInteger(ATTR_CPUS, cpus)) {
+			if (cpus > 0) {
+				proc_env->SetEnv("OMP_NUM_THREADS", cpus);
+			}
+		}
+	}
 }
 
 // parse an environment prototype string of the form  key[[=/regex/replace/] key2=/regex2/replace2/]

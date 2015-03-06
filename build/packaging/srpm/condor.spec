@@ -346,6 +346,11 @@ Requires: mailx
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
+# ecryptfs was pulled from rhel 7
+%if (0%{?rhel} == 5 || 0%{?rhel} == 6)
+Requires: ecryptfs-utils
+%endif
+
 %if %blahp && ! %uw_build
 Requires: blahp >= 1.16.1
 %endif
@@ -873,20 +878,10 @@ mkdir -p -m1777 %{buildroot}/%{_var}/lock/condor/local
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
 mkdir -p -m1777 %{buildroot}/%{_var}/lib/condor/execute
 
-cat >> %{buildroot}/%_sysconfdir/condor/condor_config.local << EOF
-CONDOR_DEVELOPERS = NONE
+cat >> %{buildroot}/%_sysconfdir/condor/condor_config << EOF
 CONDOR_HOST = \$(FULL_HOSTNAME)
-COLLECTOR_NAME = Personal Condor
-START = TRUE
-SUSPEND = FALSE
-PREEMPT = FALSE
-KILL = FALSE
 DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD
-NEGOTIATOR_INTERVAL = 20
 EOF
-
-# this gets around a bug whose fix is not yet merged
-echo "TRUST_UID_DOMAIN = TRUE" >> %{buildroot}/%_sysconfdir/condor/condor_config.local
 
 # no master shutdown program for now
 rm -f %{buildroot}/%{_sbindir}/condor_set_shutdown
@@ -1180,6 +1175,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_gpu_discovery.1.gz
 %_mandir/man1/condor_history.1.gz
 %_mandir/man1/condor_hold.1.gz
+%_mandir/man1/condor_job_router_info.1.gz
 %_mandir/man1/condor_master.1.gz
 %_mandir/man1/condor_off.1.gz
 %_mandir/man1/condor_on.1.gz
@@ -1202,6 +1198,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_submit.1.gz
 %_mandir/man1/condor_submit_dag.1.gz
 %_mandir/man1/condor_transfer_data.1.gz
+%_mandir/man1/condor_update_machine_ad.1.gz
 %_mandir/man1/condor_updates_stats.1.gz
 %_mandir/man1/condor_urlfetch.1.gz
 %_mandir/man1/condor_userlog.1.gz
@@ -1267,7 +1264,8 @@ rm -rf %{buildroot}
 %_bindir/condor_tail
 %_bindir/condor_qsub
 %_bindir/condor_pool_job_report
-%_bindir/condor_job_router_tool
+%_bindir/condor_job_router_info
+%_bindir/condor_update_machine_ad
 # reconfig_schedd, restart
 # sbin/condor is a link for master_off, off, on, reconfig,
 %_sbindir/condor_advertise
@@ -1309,7 +1307,6 @@ rm -rf %{buildroot}
 %endif
 %_libexecdir/condor/condor_gpu_discovery
 %_sbindir/condor_vm_vmware
-%config(noreplace) %_sysconfdir/condor/condor_config.local
 %config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics
 %defattr(-,condor,condor,-)
 %dir %_var/lib/condor/
@@ -1544,6 +1541,7 @@ rm -rf %{buildroot}
 %files python
 %defattr(-,root,root,-)
 %_libdir/libpyclassad*.so
+%_libexecdir/condor/libclassad_python_user.so
 %{python_sitearch}/classad.so
 %{python_sitearch}/htcondor.so
 
@@ -1723,6 +1721,46 @@ fi
 %post -n condor
 /sbin/chkconfig --add condor
 /sbin/ldconfig
+
+%posttrans -n condor
+# If there is a saved condor_config.local, recover it
+if [ -f /etc/condor/condor_config.local.rpmsave ]; then
+    if [ ! -f /etc/condor/condor_config.local ]; then
+        mv /etc/condor/condor_config.local.rpmsave \
+           /etc/condor/condor_config.local
+
+        # Drop a README file to tell what we have done
+        # Make sure that we don't overwrite a previous README
+        if [ ! -f /etc/condor/README.condor_config.local ]; then
+            file="/etc/condor/README.condor_config.local"
+        else
+            i="1"
+            while [ -f /etc/condor/README.condor_config.local.$i ]; do
+                i=$((i+1))
+            done
+            file="/etc/condor/README.condor_config.local.$i"
+        fi
+
+cat <<EOF > $file
+On `date`, while installing or upgrading to
+HTCondor %version, the /etc/condor directory contained a file named
+"condor_config.local.rpmsave" but did not contain one named
+"condor_config.local".  This situation may be the result of prior
+modifications to "condor_config.local" that were preserved after the
+HTCondor RPM stopped including that file.  In any case, the contents
+of the old "condor_config.local.rpmsave" file may still be useful.
+So after the install it was moved back into place and this README
+file was created.  Here is a directory listing for the restored file
+at that time:
+
+`ls -l /etc/condor/condor_config.local`
+
+See the "Configuration" section (3.3) of the HTCondor manual for more
+information on configuration files.
+EOF
+
+    fi
+fi
 
 %preun -n condor
 if [ $1 = 0 ]; then

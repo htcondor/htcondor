@@ -249,7 +249,7 @@ fetchQueue (ClassAdList &list, StringList &attrs, ClassAd *ad, CondorError* errs
 	}
 
 	// get the ads and filter them
-	getAndFilterAds (constraint, attrs, list, useFastPath);
+	getAndFilterAds (constraint, attrs, -1, list, useFastPath);
 
 	DisconnectQ (qmgr);
 	return Q_OK;
@@ -290,7 +290,7 @@ fetchQueueFromHost (ClassAdList &list, StringList &attrs, const char *host, char
 	}
 
 	// get the ads and filter them
-	result = getAndFilterAds (constraint, attrs, list, useFastPath);
+	result = getAndFilterAds (constraint, attrs, -1, list, useFastPath);
 
 	DisconnectQ (qmgr);
 	return result;
@@ -359,6 +359,8 @@ CondorQ::fetchQueueFromDB (ClassAdList &list,
 int
 CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 										StringList &attrs,
+										int fetch_opts,
+										int match_limit,
 										condor_q_process_func process_func,
 										void * process_func_data,
 										int useFastPath,
@@ -376,9 +378,14 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	delete tree;
 
 	if (useFastPath == 2) {
-		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, process_func, process_func_data, connect_timeout, errstack);
+		int result = fetchQueueFromHostAndProcessV2(host, constraint, attrs, fetch_opts, match_limit, process_func, process_func_data, connect_timeout, errstack);
 		free( constraint);
 		return result;
+	}
+
+	if (fetch_opts == fetch_DefaultAutoCluster) {
+		free( constraint );
+		return Q_UNSUPPORTED_OPTION_ERROR;
 	}
 
 	/*
@@ -395,7 +402,7 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	}
 
 	// get the ads and filter them
-	result = getFilterAndProcessAds (constraint, attrs, process_func, process_func_data, useFastPath);
+	result = getFilterAndProcessAds (constraint, attrs, match_limit, process_func, process_func_data, useFastPath);
 
 	DisconnectQ (qmgr);
 	free( constraint );
@@ -406,6 +413,8 @@ int
 CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 					const char *constraint,
 					StringList &attrs,
+					int fetch_opts,
+					int match_limit,
 					condor_q_process_func process_func,
 					void * process_func_data,
 					int connect_timeout,
@@ -416,20 +425,23 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 	parser.ParseExpression(constraint, expr);
 	if (!expr) return Q_INVALID_REQUIREMENTS;
 
-	classad::ExprList *projList = new classad::ExprList();
-	if (!projList) return Q_INTERNAL_ERROR;
-	attrs.rewind();
-	const char *attr;
-	while ((attr = attrs.next())) {
-		classad::Value value; value.SetStringValue(attr);
-		classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
-		if (!entry) return Q_INTERNAL_ERROR;
-		projList->push_back(entry);
-	}
 	classad::ClassAd ad;
 	ad.Insert(ATTR_REQUIREMENTS, expr);
-	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
-	ad.Insert(ATTR_PROJECTION, projTree);
+
+	char *projection = attrs.print_to_delimed_string(",");
+	if (projection) {
+		ad.InsertAttr(ATTR_PROJECTION, projection);
+		free(projection);
+	}
+
+	if (fetch_opts == fetch_DefaultAutoCluster) {
+		ad.InsertAttr("QueryDefaultAutocluster", true);
+	}
+
+	if (match_limit >= 0)
+	{
+		ad.InsertAttr(ATTR_LIMIT_RESULTS, match_limit);
+	}
 
 	DCSchedd schedd(host);
 	Sock* sock;
@@ -614,11 +626,13 @@ CondorQ::rawDBQuery(const char *dbconn, CondorQQueryType qType)
 int
 CondorQ::getFilterAndProcessAds( const char *constraint,
 								 StringList &attrs,
+								 int match_limit,
 								 condor_q_process_func process_func,
 								 void * process_func_data,
 								 bool useAll )
 {
 	classad_shared_ptr<ClassAd> ad;
+	int match_count = 0;
 
 	if (useAll) {
 			// The fast case with the new protocol
@@ -628,9 +642,12 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 
 		while( true ) {
 			ad.reset(new ClassAd());
+			if (match_limit >= 0 && match_count >= match_limit)
+				break;
 			if( GetAllJobsByConstraint_Next( *ad.get() ) != 0 ) {
 				break;
 			}
+			++match_count;
 			( *process_func )( process_func_data, ad );
 		}
 	} else {
@@ -640,9 +657,12 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 		if (ad.get() != NULL) {
 			// Process the data and insert it into the list
 			( *process_func )( process_func_data, ad );
+			++match_count;
 
 			ad.reset(GetNextJobByConstraint(constraint, 0));
 			while(ad.get() != NULL) {
+				if (match_limit >= 0 && match_count >= match_limit)
+					break;
 				// Process the data and insert it into the list
 				( *process_func )( process_func_data, ad );
 			}
@@ -663,6 +683,7 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 int
 CondorQ::getAndFilterAds (const char *constraint,
 						  StringList &attrs,
+						  int match_limit,
 						  ClassAdList &list,
 						  int useAllJobs)
 {
@@ -673,10 +694,15 @@ CondorQ::getAndFilterAds (const char *constraint,
 
 	} else {
 		ClassAd		*ad;
+		int match_count = 0;
 		if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
 			list.Insert(ad);
+			++match_count;
 			while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
+				if (match_limit > 0 && match_count >= match_limit)
+					break;
 				list.Insert(ad);
+				++match_count;
 			}
 		}
 	}

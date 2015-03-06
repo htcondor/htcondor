@@ -22,13 +22,11 @@ use CondorTest;
 use CondorUtils;
 use Cwd;
 
+use Check::SimpleJob;
 
 $topdir = getcwd();
 
-$testdesc =  'job_core_max-running_local - Simple parallel job';
 $testname = "job_core_max-running_local";
-$cmd = "job_core_max-running_local.cmd";
-$corename = "job_core_max-running_local";
 
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
@@ -36,68 +34,121 @@ $currenthost = CondorTest::getFqdnHost();
 print scalar localtime() . "\n";
 
 $mypid = $$;
-$mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-$mysubmitnmlog = $corename . $mypid . ".log" ;
-$mysubmitnmerr = $corename . $mypid . ".err" ;
-$mysubmitnmout = $corename . $mypid . ".out" ;
-
-$mycorenmlog = $corename . ".log";
-$mycorenmerr = $corename . ".err";
-$mycorenmout = $corename . ".out";
+my $testoutput = "max-running$mypid";
+my $testjobs = 4;
+my $jobscompleted = 0;
 
 print "Master PID is $mypid\n";
-#print "Master PID submit file is $mysubmitnm\n";
 
-# Edit template config info for signal and location
-
-# get a remote scheduler running (side b)
-my $configrem = CondorTest::StartPersonal( "job_core_max-running_local", "x_param.maxrunninglocal" ,"maxrunlocal");
-my @maxrunlocal = split /\+/, $configrem;
-my $maxrunlocalconfig = shift @maxrunlocal;
-my $maxrunlocalport = shift @maxrunlocal;
-my $logdir = "";
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD
+    WANT_SUSPEND = FALSE
+    NEGOTIATION_INTERVAL = 5
+    START_LOCAL_UNIVERSE = TotalLocalJobsRunning < 1
+';
 
 
-CondorTest::debug("---local max-running config is $maxrunlocalconfig and remote port is $maxrunlocalport---\n",1);
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobcoremaxrunninglocal");
 
-$ENV{CONDOR_CONFIG} = $maxrunlocalconfig;
+# First order up the config but do not start it. If the condor_config_val fails
+# there is no reason to go on
 
-CondorTest::debug("Set config to $maxrunlocalconfig\n",1);
+CondorTest::StartCondorWithParams(
+    condor_name => "jobcoremaxrunninglocal",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
 
-my $result = system("./job_core_max-running_local.pl");
-CondorTest::debug("Result of max-run_local test  job is  $result\n",1);
+##
+## Sleep time 
+## This needs to match the arguements value that is in the .cmd file
+##
+my $SLEEP_TIME = 10; # seconds
+	
+##
+##
+## If the runs succeed, but when we analyze the jobs' runtimes
+## and see that they are running when they shouldn't, we will store
+## the error message in here
+##
+my $testFailure = "";
 
+##
+## Each job will write to its own file, so we need to just check
+## to the time that they said they completed is greater than or equal
+## to the time of the last job
+##
+$successCallback = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+	
+	$jobscompleted += 1;
+	if($jobscompleted < $testjobs) {
+		return(0);
+	}
+	##
+	## This is the time that they said they ran on the execute machine
+	##
+	my $outfile = $testoutput;
+	open(FILE, "<$outfile") || die("Failed to open output file '$outfile'");
+	my @output = <FILE>;
+	close(FILE);
 
-#fails due to directory matching pattern
-runcmd("cp *job_core_max-running_local* $mysaveme", {expect_result=>\&ANY});
+	my $lasttime = 0;
+	my $status = 0;
+	my $diff = 0;
 
-if( -e "$mysubmitnm" )
-{
-	runcmd("cp $mysubmitnm $mycorenm");
-}
+	foreach my $time (@output) {
+		if($lasttime == 0) {
+			$lasttime = $time; # initiaize time start bracket
+		} else {
+			$diff = $time - $lasttime;
+			print "time between jobs starting: $diff\n";
+			## SLEEP_TIME - 1 to avoid rounding errors
+			if( $diff < ($SLEEP_TIME - 1)) {
+				print "More then one job ran\n";
+				RegisterResult(0,"test_name","$testname");
+				return(1);
+			}
+			$lasttime = $time; # initiaize time start bracket
+		}
+	}
+	#$LAST_RUN_TIME = $reportTime;
+	print "No overlapping local universe jobs\n";
+	RegisterResult(1,"test_name","$testname");
+	return ( 0 );
+};
+	
+$executed = sub {
+	my $cmd = "condor_q";
+	my @cmdarray = ();
+	my $status = CondorTest::runCondorTool($cmd,\@cmdarray,2,{emit_output=>1});
+};
 
-if( -e "$mysubmitnmout" )
-{
-	runcmd("cp $mysubmitnmcmdout $mycorenmcmdout");
-}
+$submitted = sub {
+};
+	
+my $success = 1;
 
-if( -e "$mysubmitnmlog" )
-{
-	runcmd("cp $mysubmitnmlog $mycorenmlog");
-}
+print "$ENV{CONDOR_CONFIG}\n\n";
 
-CondorTest::KillPersonal($maxrunlocalconfig);
-print scalar localtime() . "\n";
+my $result = SimpleJob::RunCheck(
+	test_name => $testname,
+	runthis => 'x_time.pl',
+	duration => "$SLEEP_TIME $testoutput",
+	queue_sz => $testjobs,
+	universe => "local",
+	on_execute => $executed,
+	on_submit => $submitted,
+	on_success => $successCallback,
+	);
 
-if( $result != 0 )
-{
-	exit(1);
-}
+CondorTest::EndTest();
 
-CondorTest::debug("job_core_max-running_local SUCCESS\n",1);
 exit(0);

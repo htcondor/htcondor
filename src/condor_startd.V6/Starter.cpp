@@ -470,7 +470,7 @@ Starter::reallykill( int signo, int type )
 				 s_pid, signo, signame );
 		break;
 	default:
-		EXCEPT( "Unknown type (%d) in Starter::reallykill\n", type );
+		EXCEPT( "Unknown type (%d) in Starter::reallykill", type );
 	}
 
 	priv = set_root_priv();
@@ -571,6 +571,12 @@ Starter::executeDir()
 	return s_execute_dir.Length() ? s_execute_dir.Value() : NULL;
 }
 
+char const *
+Starter::encryptedExecuteDir()
+{
+	return s_encrypted_execute_dir.Length() ? s_encrypted_execute_dir.Value() : NULL;
+}
+
 int 
 Starter::spawn( time_t now, Stream* s )
 {
@@ -666,7 +672,14 @@ Starter::exited(int status)
 
 		// Now, delete any files lying around.
 	ASSERT( executeDir() );
-	cleanup_execute_dir( s_pid, executeDir() );
+	if ( encryptedExecuteDir() ) {
+		// Remove $EXECUTE/encryptedX/dir_pid/*
+		cleanup_execute_dir( s_pid, encryptedExecuteDir(), true );
+		s_encrypted_execute_dir = "";
+	} else {
+		// Remove $EXECUTE/dir_pid/*
+		cleanup_execute_dir( s_pid, executeDir() );
+	}
 
 #if defined(LINUX)
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {
@@ -903,6 +916,44 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 	ASSERT( executeDir() );
 	new_env.SetEnv( "_CONDOR_EXECUTE", executeDir() );
 
+		// Handle encrypted execute directory
+	FilesystemRemap  fs_remap_obj;	// put on stack so destroyed when leave this method
+	FilesystemRemap* fs_remap = NULL;
+	// If admin desires encrypted exec dir in config, do it
+	bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY",false);
+	// Or if user wants encrypted exec in job ad, do it
+	if (!encrypt_execdir && s_claim->ad()) {
+		s_claim->ad()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
+	}
+	if ( encrypt_execdir ) {
+#ifdef LINUX
+		// On linux, setup a directory $EXECUTE/encryptedX subdirectory
+		// to serve as an ecryptfs mount point; pass this directory
+		// down to the condor_starter as if it were $EXECUTE so
+		// that the starter creates its dir_<pid> directory on the
+		// ecryptfs filesystem setup by doing an AddEncryptedMapping.
+		static int unsigned long privdirnum = 0;
+		TemporaryPrivSentry sentry(PRIV_CONDOR);
+		s_encrypted_execute_dir.formatstr("%s%cencrypted%lu",executeDir(),
+				DIR_DELIM_CHAR,privdirnum++);
+		if( mkdir(encryptedExecuteDir(), 0755) < 0 ) {
+			dprintf( D_FAILURE|D_ALWAYS,
+			         "Failed to create encrypted dir %s: %s\n",
+			         encryptedExecuteDir(),
+			         strerror(errno) );
+			return 0;
+		}
+		dprintf( D_ALWAYS,
+		         "Created encrypted dir %s\n", encryptedExecuteDir() );
+		fs_remap = &fs_remap_obj;
+		if ( fs_remap->AddEncryptedMapping(encryptedExecuteDir()) ) {
+			// FilesystemRemap object dprintfs out an error message for us
+			return 0;
+		}
+		new_env.SetEnv( "_CONDOR_EXECUTE", encryptedExecuteDir() );
+#endif
+	}
+
 	env = &new_env;
 
 
@@ -1005,7 +1056,8 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
-		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds );
+		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds,
+						NULL, 0, NULL, 0, NULL, NULL, NULL, NULL, fs_remap);
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;

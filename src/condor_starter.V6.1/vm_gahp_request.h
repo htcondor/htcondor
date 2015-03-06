@@ -38,6 +38,8 @@ static const int VMGAHP_REQ_COMMAND_NOT_SUPPORTED = 3;
 static const int VMGAHP_REQ_VMTYPE_NOT_SUPPORTED = 4;
 static const int VMGAHP_REQ_COMMAND_ERROR = 5;
 
+extern const char * VMGAHP_REQ_RETURN_TABLE[];
+
 enum reqstatus {
 	REQ_INITIALIZED,	//set during initializing
 	REQ_SUBMITTED,		//req is with vmgahp
@@ -75,6 +77,7 @@ class VMGahpRequest : public Service {
 
 		int getReqId();
 		Gahp_Args* getResult();
+		bool hasValidResult();
 		bool checkResult(MyString& errmsg);
 
 		reqstatus getPendingStatus();

@@ -33,6 +33,8 @@
 #include <stdint.h> 
 #endif
 
+#include <string>
+
 /* 
 	Since the ULogEvent class definition only deals with the ClassAd via a
 	black box pointer and never needs to know the size of the actual
@@ -171,12 +173,12 @@ class ULogEvent {
     */
     int getEvent (FILE *file);
     
-    /** Write the currently stored event values to the log file.
-        Writes the log header and body.
-        @param file the non-NULL writable log file.
-        @return 0 for failure, 1 for success
-    */
-    int putEvent (FILE *file);
+	/** Format the event into a string suitable for writing to the log file.
+	 *  Includes the event header and body, but not the synch delimiter.
+	 *  @param out string to which the formatted text should be appended
+	 *  @return false for failure, true for success
+	 */
+	bool formatEvent( std::string &out );
 
 		// returns a pointer to the current event name char[], or NULL
 	const char* eventName(void) const;
@@ -235,12 +237,12 @@ log readers.
     */
     int readRusage (FILE * file, rusage & usage);
 
-    /** Write the resource usage to the log file.
-        @param file the non-NULL writable log file.
-        @param usage the rusage buffer to write with (not modified)
+    /** Format the resource usage for writing to the log file.
+        @param out string to which the usage should be appended
+        @param usage the rusage buffer to read from (not modified)
         @return 0 for failure, 1 for success
     */
-    int writeRusage (FILE *, rusage &);
+    bool formatRusage (std::string &out, const rusage &usage);
 
     /** Make a formatted string with the resource usage information.
         @param usage the usage to consider
@@ -262,24 +264,25 @@ log readers.
     */
     virtual int readEvent (FILE *file) = 0;
 
-    /** Write the body of the next event.  This virtual function will
-        be implemented differently for each specific type of event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
-    */
-    virtual int writeEvent (FILE *file) = 0;
-    
+    /** Format the body of this event for writing to the log file.
+     *  This virtual function will be implemented differently for each
+     *  specific type of event.
+     *  @param out string to which the body should be appended
+     *  @return false for failure, true for success
+     */
+    virtual bool formatBody( std::string &out ) = 0;
+
     /** Read the header from the log file
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     int readHeader (FILE *file);
 
-    /** Write the header to the log file
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
-    */
-    int writeHeader (FILE *file);
+    /** Format the header for the log file
+     *  @param out string to which the header should be appended
+     *  @return false for failure, true for success
+     */
+    bool formatHeader( std::string &out );
 
 	/// the global job id for the job associated with this event
 	void insertCommonIdentifiers(ClassAd &adToFill);
@@ -323,11 +326,11 @@ class SubmitEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Submit event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this SubmitEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -367,17 +370,17 @@ class RemoteErrorEvent : public ULogEvent
 	RemoteErrorEvent(void);
 	~RemoteErrorEvent(void);
 
-    /** Read the body of the next Generic event.
+    /** Read the body of the next RemoteError event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Generic event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this RemoteErrorEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -443,11 +446,11 @@ class GenericEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Generic event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this GenericEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -490,11 +493,11 @@ class ExecuteEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Execute event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this ExecuteEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -549,13 +552,13 @@ class ExecutableErrorEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next ExecutableError event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
-	/** Return a ClassAd representation of this ExecutableErroEvent.
+	/** Return a ClassAd representation of this ExecutableErrorEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
 	virtual ClassAd* toClassAd(void);
@@ -587,11 +590,11 @@ class CheckpointedEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Checkpointed event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this CheckpointedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -629,11 +632,11 @@ class JobAbortedEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next JobAborted event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this JobAbortedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -711,17 +714,17 @@ class JobEvictedEvent : public ULogEvent
     ///
     ~JobEvictedEvent(void);
 
-    /** Read the body of the next Evicted event.
+    /** Read the body of the next JobEvicted event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Evicted event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this JobEvictedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -801,20 +804,20 @@ class TerminatedEvent : public ULogEvent
     int readEvent( FILE *, const char* header );
 
 
-    /** Write the body of the next Terminated event.
+    /** Format the body of the next Terminated event.
 		This is pure virtual to make sure this is an abstract base class
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE * file) = 0;
+    virtual bool formatBody( std::string &out ) = 0;
 
-    /** Write the body of the next Terminated event.
-        @param file the non-NULL writable log file
+    /** Format the body of the next Terminated event.
+        @param out string to which the formatted text should be appended
 		@param header the header to use for this event (either "Job"
 		or "Node")
-        @return 0 for failure, 1 for success
+        @return false for failure, true for success
     */
-    int writeEvent( FILE * file, const char* header );
+    virtual bool formatBody( std::string &out, const char *head );
 
     /// Did it terminate normally?
     bool    normal;
@@ -873,17 +876,17 @@ class JobTerminatedEvent : public TerminatedEvent
     ///
     ~JobTerminatedEvent(void);
 
-    /** Read the body of the next Terminated event.
+    /** Read the body of the next JobTerminated event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Terminated event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this JobTerminatedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -905,17 +908,17 @@ class NodeTerminatedEvent : public TerminatedEvent
     ///
     ~NodeTerminatedEvent(void);
 
-    /** Read the body of the next Terminated event.
+    /** Read the body of the next NodeTerminated event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Terminated event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this NodeTerminatedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -940,17 +943,17 @@ class PostScriptTerminatedEvent : public ULogEvent
     ///
     ~PostScriptTerminatedEvent(void);
 
-    /** Read the body of the next Terminated event.
+    /** Read the body of the next PostScriptTerminated event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     int readEvent( FILE* file );
 
-    /** Write the body of the next Terminated event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    int writeEvent( FILE* file );
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this PostScriptTerminatedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -997,17 +1000,17 @@ class GlobusSubmitEvent : public ULogEvent
     ///
     ~GlobusSubmitEvent(void);
 
-    /** Read the body of the next Submit event.
+    /** Read the body of the next GlobusSubmit event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Submit event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this GlobusSubmitEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1030,7 +1033,7 @@ class GlobusSubmitEvent : public ULogEvent
 };
 
 //----------------------------------------------------------------------------
-/** Framework for a GlobusSubmitiAbortedEvent object.  Occurs when a Globus 
+/** Framework for a GlobusSubmitFailedEvent object.  Occurs when a Globus 
 	Universe job is is removed from the queue because it was unable to be
 	sucessfully submitted to a Globus Gatekeeper after a certain number of 
 	attempts.
@@ -1043,17 +1046,17 @@ class GlobusSubmitFailedEvent : public ULogEvent
     ///
     ~GlobusSubmitFailedEvent(void);
 
-    /** Read the body of the next SubmitAborted event.
+    /** Read the body of the next GlobusSubmitFailed event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next SubmitAborted event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this GlobusSubmitFailedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1078,17 +1081,17 @@ class GlobusResourceUpEvent : public ULogEvent
     ///
     ~GlobusResourceUpEvent(void);
 
-    /** Read the body of the next ResoruceUp event.
+    /** Read the body of the next GlobusResourceUp event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next SubmitAborted event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this GlobusResourceUpEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1113,17 +1116,17 @@ class GlobusResourceDownEvent : public ULogEvent
     ///
     ~GlobusResourceDownEvent(void);
 
-    /** Read the body of the next SubmitAborted event.
+    /** Read the body of the next GlobusResourceDown event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next SubmitAborted event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this GlobusResourceDownEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1152,19 +1155,19 @@ class JobImageSizeEvent : public ULogEvent
     ///
     ~JobImageSizeEvent(void);
 
-    /** Read the body of the next ImageSize event.
+    /** Read the body of the next JobImageSize event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next ImageSize event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
-	/** Return a ClassAd representation of this JobImageSizeEvent.
+	/** Return a ClassAd representation of this JobImageSize.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
 	virtual ClassAd* toClassAd(void);
@@ -1199,11 +1202,11 @@ class ShadowExceptionEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next ShadowException event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this ShadowExceptionEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1242,11 +1245,11 @@ class JobSuspendedEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next JobSuspendedEvent event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this JobSuspendedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1280,11 +1283,11 @@ class JobUnsuspendedEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next JobUnsuspendedEvent event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this JobUnsuspendedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1315,17 +1318,17 @@ class JobHeldEvent : public ULogEvent
     ///
     ~JobHeldEvent (void);
 
-    /** Read the body of the next JobHeldEvent event.
+    /** Read the body of the next JobHeld event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next JobHeldEvent event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this JobHeldEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1369,17 +1372,17 @@ class JobReleasedEvent : public ULogEvent
     ///
     ~JobReleasedEvent (void);
 
-    /** Read the body of the next JobReleasedEvent event.
+    /** Read the body of the next JobReleased event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next JobReleasedEvent event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this JobReleasedEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1412,17 +1415,17 @@ class NodeExecuteEvent : public ULogEvent
     ///
     ~NodeExecuteEvent(void);
 
-    /** Read the body of the next Execute event.
+    /** Read the body of the next NodeExecute event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Execute event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this NodeExecuteEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1448,7 +1451,7 @@ class NodeExecuteEvent : public ULogEvent
 
 
 //----------------------------------------------------------------------------
-/** JobConnectionEvent object.
+/** JobDisconnectedEvent object.
 	This subclass of ULogEvent is a base class used for the various
 	userlog events related to the connection between the submit and
 	execute hosts being lost (and potentially re-established).
@@ -1466,7 +1469,11 @@ public:
 
 	virtual int readEvent( FILE * );
 
-	virtual int writeEvent( FILE * );
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
+    */
+    virtual bool formatBody( std::string &out );
 
 	virtual ClassAd* toClassAd( void );
 
@@ -1511,7 +1518,11 @@ public:
 
 	virtual int readEvent( FILE * );
 
-	virtual int writeEvent( FILE * );
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
+    */
+    virtual bool formatBody( std::string &out );
 
 	virtual ClassAd* toClassAd( void );
 
@@ -1544,7 +1555,11 @@ public:
 
 	virtual int readEvent( FILE * );
 
-	virtual int writeEvent( FILE * );
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
+    */
+    virtual bool formatBody( std::string &out );
 
 	virtual ClassAd* toClassAd( void );
 
@@ -1579,11 +1594,11 @@ class GridResourceUpEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next GridResourceUp event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this GridResourceUpEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1614,11 +1629,11 @@ class GridResourceDownEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next GridResourceDown event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this GridResourceDownEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1648,17 +1663,17 @@ class GridSubmitEvent : public ULogEvent
     ///
     ~GridSubmitEvent(void);
 
-    /** Read the body of the next Submit event.
+    /** Read the body of the next GridSubmit event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Submit event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this GridSubmitEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1688,21 +1703,21 @@ class JobAdInformationEvent : public ULogEvent
     ///
     ~JobAdInformationEvent(void);
 
-    /** Read the body of the next Generic event.
+    /** Read the body of the next JobAdInformation event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Generic event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
-	int writeEvent (FILE *, ClassAd *jobad_arg);
+	bool formatBody( std::string &out, ClassAd *jobad_arg);
 
-	/** Return a ClassAd representation of this GenericEvent.
+	/** Return a ClassAd representation of this JobAdInformationEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
 	*/
 	virtual ClassAd* toClassAd(void);
@@ -1740,11 +1755,11 @@ class JobStatusUnknownEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next JobStatusUnknown event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this JobStatusUnknownEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1776,11 +1791,11 @@ class JobStatusKnownEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next JobStatusKnown event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this JobStatusKnownEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1811,11 +1826,11 @@ class JobStageInEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next JobStageInEvent event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this JobStageInEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1846,11 +1861,11 @@ class JobStageOutEvent : public ULogEvent
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next JobStageOutEvent event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this JobStageOutEvent.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1881,11 +1896,11 @@ class AttributeUpdate : public ULogEvent
 	*/
 	virtual int readEvent (FILE *);
 
-	/** Write the body of the next AttributeUpdate event.
-		@param file the non-NULL writable log file
-		@return 0 for failure, 1 for success
+	/** Format the body of this event.
+		@param out string to which the formatted text should be appended
+		@return false for failure, true for success
 	*/
-	virtual int writeEvent (FILE *);
+	virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this AttributeUpdate event.
 		@return NULL for failure, the ClassAd pointer otherwise
@@ -1926,17 +1941,17 @@ class PreSkipEvent : public ULogEvent
     ///
     ~PreSkipEvent(void);
 
-    /** Read the body of the next Submit event.
+    /** Read the body of the next PreSkip event.
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
     virtual int readEvent (FILE *);
 
-    /** Write the body of the next Submit event.
-        @param file the non-NULL writable log file
-        @return 0 for failure, 1 for success
+    /** Format the body of this event.
+        @param out string to which the formatted text should be appended
+        @return false for failure, true for success
     */
-    virtual int writeEvent (FILE *);
+    virtual bool formatBody( std::string &out );
 
 	/** Return a ClassAd representation of this PreSkipEvent.
 		@return NULL for failure, the ClassAd pointer otherwise

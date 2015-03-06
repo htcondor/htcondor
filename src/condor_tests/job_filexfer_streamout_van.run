@@ -20,9 +20,11 @@
 
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 
-$cmd = 'job_filexfer_streamout_van.cmd';
-$out = 'job_filexfer_streamout_van.out';
+my $pid = $$;
+$out = "job_filexfer_streamout_van$pid.out";
+$name = $out;
 $testdesc =  'Stream output works - vanilla U';
 $testname = "job_filexfer_streamout_van";
 
@@ -30,7 +32,7 @@ $submitted = sub
 {
 	my %info = @_;
 	my $name = $info{"output"};
-	runcmd("rm $name");
+	#runcmd("rm $name");
 };
 
 $aborted = sub 
@@ -68,7 +70,7 @@ $execute = sub
 	my @adarray;
 	my $status = 1;
 	my $cmd = "condor_rm $cluster";
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
 
 	if($job eq "bad")
 	{
@@ -93,19 +95,36 @@ my $on_evictedwithoutcheckpoint = sub {
 	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
 };
 
-CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
-CondorTest::RegisterAbort( $testname, $aborted );
-CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
-CondorTest::RegisterExecute($testname, $execute);
-CondorTest::RegisterSubmit( $testname, $submitted );
-
 #empty local environment and add only a few things that way......
 my $path = $ENV{"PATH"};
 
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
+my $streamcommand = '
+	stream_output = true
+';
+
+
+SimpleJob::RunCheck(
+    runthis=>"x_job_filexfer_stream.pl",
+    duration=>"stdout 100 0",
+    should_transfer_files=>"YES",
+    when_to_transfer_output=>"ON_EXIT_OR_EVICT",
+	append_submit_commands=>$streamcommand,
+	output=>$name,
+    on_success=>$ExitSuccess,
+    on_execute=>$execute,
+    on_abort=>$aborted,
+	on_submit=>$submitted,
+	on_evictedwithoutcheckpoint=>$on_evictedwithoutcheckpoint,
+);
+
+my $result = 0;
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
+{
+    exit(1);
 }
 
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);

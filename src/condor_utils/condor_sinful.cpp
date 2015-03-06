@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-#define _CONDOR_ALLOW_OPEN /* for sstream */
 #include "condor_common.h"
 #include "condor_sinful.h"
 #include "condor_debug.h"
@@ -374,7 +373,8 @@ Sinful::regenerateSinful()
 	// generate "<host:port?params>"
 
 	m_sinful = "<";
-	if (m_host.find(':') != std::string::npos) {
+	if (m_host.find(':') != std::string::npos &&
+		m_host.find('[') == std::string::npos) {
 		m_sinful += "[";
 		m_sinful += m_host;
 		m_sinful += "]";
@@ -446,7 +446,7 @@ Sinful::addressPointsToMe( Sinful const &addr ) const
 }
 
 int
-Sinful::getPortNum()
+Sinful::getPortNum() const
 {
 	if( !getPort() ) {
 		return -1;

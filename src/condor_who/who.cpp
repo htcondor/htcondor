@@ -251,7 +251,7 @@ void AddPrintColumn(const char * heading, int width, const char * expr)
 {
 	ClassAd ad;
 	StringList attributes;
-	if(!ad.GetExprReferences(expr, attributes, attributes)) {
+	if(!ad.GetExprReferences(expr, NULL, &attributes)) {
 		fprintf( stderr, "Error:  Parse error of: %s\n", expr);
 		exit(1);
 	}
@@ -325,8 +325,8 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 
 	// stream contains
 	// HEADINGS over DATA with optional ==== or --- line under headings.
-	char * line = getline(stream);
-	if (line && (0 == strlen(line))) line = getline(stream);
+	char * line = getline_trim(stream);
+	if (line && (0 == strlen(line))) line = getline_trim(stream);
 	if ( ! line || (0 == strlen(line)))
 		return 0;
 
@@ -334,7 +334,7 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 	std::string subhead;
 	std::string data;
 
-	line = getline(stream);
+	line = getline_trim(stream);
 	if (line) data = line;
 
 	if (data.find("====") == 0 || data.find("----") == 0) {
@@ -342,7 +342,7 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 		data.clear();
 
 		// first line after headings is not data, but underline
-		line = getline(stream);
+		line = getline_trim(stream);
 		if (line) data = line;
 	}
 
@@ -447,7 +447,7 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 		}
 
 		// get next line.
-		line = getline(stream);
+		line = getline_trim(stream);
 		if (line) data = line; else data.clear();
 	}
 
@@ -563,14 +563,14 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 	if (0 == parse_type) {
 		// stream contains
 		// HEADINGS over DATA with optional ==== or --- line under headings.
-		char * line = getline(stream);
-		if (line && ! strlen(line)) line = getline(stream);
+		char * line = getline_trim(stream);
+		if (line && ! strlen(line)) line = getline_trim(stream);
 		if (line) {
 			std::string headings = line;
 			std::string subhead;
 			std::string data;
 
-			line = getline(stream);
+			line = getline_trim(stream);
 			if (line) data = line;
 
 			if (data.find("====") == 0 || data.find("----") == 0) {
@@ -578,7 +578,7 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 				data.clear();
 
 				// first line after headings is not data, but underline
-				line = getline(stream);
+				line = getline_trim(stream);
 				if (line) data = line;
 			}
 
@@ -707,10 +707,10 @@ static void get_address_table(TABULAR_MAP & table)
 		#ifdef WIN32
 		// netstat begins with the line "Active Connections" followed by a blank line
 		// followed by the actual data, but that confuses the table parser, so skip the first 2 lines.
-		char * line = getline(stream);
+		char * line = getline_trim(stream);
 		while (MATCH != strcasecmp(line, "Active Connections")) {
 			if (App.diagnostic > 1) { printf("skipping: %s\n", line); }
-			line = getline(stream);
+			line = getline_trim(stream);
 		}
 		if (App.diagnostic > 1) { printf("skipping: %s\n", line); }
 		fMultiWord = true;
@@ -944,7 +944,6 @@ format_jobid_program (const char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
 	return outstr;
 }
 
-#if 1
 void AddPrintColumn(const char * heading, int width, const char * attr, const CustomFormatFn & fmt)
 {
 	App.projection.AppendArg(attr);
@@ -955,28 +954,6 @@ void AddPrintColumn(const char * heading, int width, const char * attr, const Cu
 	if ( ! width && ! fmt.IsNumber()) opts |= FormatOptionLeftAlign; // strings default to left align.
 	App.print_mask.registerFormat(NULL, wid, opts, fmt, attr);
 }
-#else
-void AddPrintColumn(const char * heading, int width, const char * attr, StringCustomFmt fmt)
-{
-	App.projection.AppendArg(attr);
-	App.print_head.Append(heading);
-
-	int wid = width ? width : strlen(heading);
-	int opts = FormatOptionNoTruncate | FormatOptionAutoWidth;
-	if ( ! width) opts |= FormatOptionLeftAlign; // strings default to left align.
-	App.print_mask.registerFormat(NULL, wid, opts, fmt, attr);
-}
-
-void AddPrintColumn(const char * heading, int width, const char * attr, IntCustomFmt fmt)
-{
-	App.projection.AppendArg(attr);
-	App.print_head.Append(heading);
-
-	int wid = width ? width : strlen(heading);
-	int opts = FormatOptionNoTruncate | FormatOptionAutoWidth;
-	App.print_mask.registerFormat(NULL, wid, opts, fmt, attr);
-}
-#endif
 
 #define IsArg is_arg_prefix
 #define IsArgColon is_arg_colon_prefix
@@ -1064,7 +1041,9 @@ void parse_args(int /*argc*/, char *argv[])
 
 				bool flabel = false;
 				bool fCapV  = false;
+				bool fRaw = false;
 				bool fheadings = false;
+				const char * prowpre = NULL;
 				const char * pcolpre = " ";
 				const char * pcolsux = NULL;
 				if (pcolon) {
@@ -1074,68 +1053,45 @@ void parse_args(int /*argc*/, char *argv[])
 						{
 							case ',': pcolsux = ","; break;
 							case 'n': pcolsux = "\n"; break;
+							case 'g': pcolpre = NULL; prowpre = "\n"; break;
 							case 't': pcolpre = "\t"; break;
 							case 'l': flabel = true; break;
 							case 'V': fCapV = true; break;
+							case 'r': case 'o': fRaw = true; break;
 							case 'h': fheadings = true; break;
 						}
 						++pcolon;
 					}
 				}
-				App.print_mask.SetAutoSep(NULL, pcolpre, pcolsux, "\n");
+				App.print_mask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
 
 				while (argv[ixArg+1] && *(argv[ixArg+1]) != '-') {
 					++ixArg;
 
 					parg = argv[ixArg];
 					const char * pattr = parg;
-#if 1
 					CustomFormatFn cust_fmt;
-#else
-					void * cust_fmt = NULL;
-					FormatKind cust_kind = PRINTF_FMT;
-#endif
 
 					// If the attribute/expression begins with # treat it as a magic
 					// identifier for one of the derived fields that we normally display.
 					if (*parg == '#') {
 						++parg;
 						if (MATCH == strcasecmp(parg, "SLOT") || MATCH == strcasecmp(parg, "SlotID")) {
-#if 1
 							cust_fmt = format_slot_id;
-#else
-							cust_fmt = (void*)format_slot_id;
-							cust_kind = INT_CUSTOM_FMT;
-#endif
 							pattr = ATTR_SLOT_ID;
 							App.projection.AppendArg(pattr);
 							App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
 							App.projection.AppendArg(ATTR_NAME);
 						} else if (MATCH == strcasecmp(parg, "PID")) {
-#if 1
 							cust_fmt = format_jobid_pid;
-#else
-							cust_fmt = (void*)format_jobid_pid;
-							cust_kind = STR_CUSTOM_FMT;
-#endif
 							pattr = ATTR_JOB_ID;
 							App.projection.AppendArg(pattr);
 						} else if (MATCH == strcasecmp(parg, "PROGRAM")) {
-#if 1
 							cust_fmt = format_jobid_program;
-#else
-							cust_fmt = (void*)format_jobid_program;
-							cust_kind = STR_CUSTOM_FMT;
-#endif
 							pattr = ATTR_JOB_ID;
 							App.projection.AppendArg(pattr);
 						} else if (MATCH == strcasecmp(parg, "RUNTIME")) {
-#if 1
 							cust_fmt = format_int_runtime;
-#else
-							cust_fmt = (void*)format_int_runtime;
-							cust_kind = INT_CUSTOM_FMT;
-#endif
 							pattr = ATTR_TOTAL_JOB_RUN_TIME;
 							App.projection.AppendArg(pattr);
 						} else {
@@ -1146,7 +1102,7 @@ void parse_args(int /*argc*/, char *argv[])
 					if ( ! cust_fmt) {
 						ClassAd ad;
 						StringList attributes;
-						if(!ad.GetExprReferences(parg, attributes, attributes)) {
+						if(!ad.GetExprReferences(parg, NULL, &attributes)) {
 							fprintf( stderr, "Error:  Parse error of: %s\n", parg);
 							exit(1);
 						}
@@ -1168,30 +1124,13 @@ void parse_args(int /*argc*/, char *argv[])
 					}
 					else if (flabel) { lbl.formatstr("%s = ", parg); wid = 0; opts = 0; }
 
-					lbl += fCapV ? "%V" : "%v";
+					lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
 					if (App.diagnostic) {
 						printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for %llx[%s]\n",
 							ixArg, lbl.Value(), wid, opts, (long long)(StringCustomFormat)cust_fmt, pattr);
 					}
 					if (cust_fmt) {
-#if 1
 						App.print_mask.registerFormat(NULL, wid, opts, cust_fmt, pattr);
-#else
-						switch (cust_kind) {
-							case INT_CUSTOM_FMT:
-								App.print_mask.registerFormat(NULL, wid, opts, (IntCustomFmt)cust_fmt, pattr);
-								break;
-							case FLT_CUSTOM_FMT:
-								App.print_mask.registerFormat(NULL, wid, opts, (FloatCustomFmt)cust_fmt, pattr);
-								break;
-							case STR_CUSTOM_FMT:
-								App.print_mask.registerFormat(NULL, wid, opts, (StringCustomFmt)cust_fmt, pattr);
-								break;
-							default:
-								App.print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
-								break;
-						}
-#endif
 					} else {
 						App.print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
 					}
@@ -1584,8 +1523,10 @@ main( int argc, char *argv[] )
 
 			// render the data once to calcuate column widths.
 			result.Open();
+			std::string tmp;
 			while (ClassAd	*ad = result.Next()) {
-				delete [] App.print_mask.display(ad);
+				App.print_mask.display(tmp, ad);
+				tmp.clear();
 			}
 			result.Close();
 
@@ -1657,6 +1598,11 @@ static void read_address_file(const char * filename, std::string & addr)
 	// read the address file into a local buffer
 	char buf[4096];
 	int cbRead = read(fd, buf, sizeof(buf));
+
+	if (cbRead < 0) {
+		close(fd);
+		return;
+	}
 
 	// parse out the address string. it should be the first line of data
 	char * peol = buf;

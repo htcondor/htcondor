@@ -168,7 +168,7 @@ JobRouter::GetInstanceLock() {
 
 	lock->setBlocking(FALSE);
 	if(!lock->obtain(WRITE_LOCK)) {
-		EXCEPT("Failed to get lock on %s.\n",lock_fullname.c_str());
+		EXCEPT("Failed to get lock on %s.",lock_fullname.c_str());
 	}
 }
 
@@ -242,6 +242,8 @@ JobRouter::config() {
 
 	RoutingTable *new_routes = new RoutingTable(200,hashFuncStdString,rejectDuplicateKeys);
 
+	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
+
 	classad::ClassAd router_defaults_ad;
 	std::string router_defaults;
 	if (param(router_defaults, PARAM_JOB_ROUTER_DEFAULTS) && ! router_defaults.empty()) {
@@ -249,12 +251,47 @@ JobRouter::config() {
 		if (router_defaults[0] != '[') {
 			router_defaults.insert(0, "[ ");
 			router_defaults.append(" ]");
+			merge_defaults = false;
 		}
+		int length = (int)router_defaults.size();
 		classad::ClassAdParser parser;
-		if ( ! parser.ParseClassAd(router_defaults, router_defaults_ad)) {
-			dprintf(D_ALWAYS|D_ERROR,"JobRouter CONFIGURATION ERROR: Disabling job routing, because failed to parse %s classad:\n%s\n",
-				PARAM_JOB_ROUTER_DEFAULTS, router_defaults.c_str());
+		int offset = 0;
+		if ( ! parser.ParseClassAd(router_defaults, router_defaults_ad, offset)) {
+			dprintf(D_ALWAYS|D_ERROR,"JobRouter CONFIGURATION ERROR: Disabling job routing, failed to parse at offset %d in %s classad:\n%s\n",
+				offset, PARAM_JOB_ROUTER_DEFAULTS, router_defaults.c_str());
 			m_enable_job_routing = false;
+		} else if (merge_defaults && (offset < length)) {
+			// whoh! we appear to have received multiple classads as a hacky way to append to the defaults ad
+			// so go ahead and parse the remaining ads and merge them into the defaults ad.
+			do {
+				// skip trailing whitespace and ] and look for an open [
+				bool parse_err = false;
+				for ( ; offset < length; ++offset) {
+					int ch = router_defaults[offset];
+					if (ch == '[') break;
+					if ( ! isspace(router_defaults[offset]) && ch != ']') {
+						parse_err = true;
+						break;
+					}
+					// TODO: skip comments?
+				}
+
+				if (offset < length && ! parse_err) {
+					classad::ClassAd other_ad;
+					if ( ! parser.ParseClassAd(router_defaults, other_ad, offset)) {
+						parse_err = true;
+					} else {
+						router_defaults_ad.Update(other_ad);
+					}
+				}
+
+				if (parse_err) {
+					m_enable_job_routing = false;
+					dprintf(D_ALWAYS|D_ERROR,"JobRouter CONFIGURATION ERROR: Disabling job routing, failed to parse at offset %d in %s ad : \n%s\n",
+							offset, PARAM_JOB_ROUTER_DEFAULTS, router_defaults.substr(offset).c_str());
+					break;
+				}
+			} while (offset < length);
 		}
 	}
 	if(!m_enable_job_routing) {
@@ -1001,7 +1038,7 @@ JobRouter::AdoptOrphans() {
 
 	constraint_tree = parser.ParseExpression(dest_jobs.c_str());
 	if(!constraint_tree) {
-		EXCEPT("JobRouter: Failed to parse orphan dest job constraint: '%s'\n",dest_jobs.c_str());
+		EXCEPT("JobRouter: Failed to parse orphan dest job constraint: '%s'",dest_jobs.c_str());
 	}
 
     query.Bind(ad_collection2);
@@ -1109,7 +1146,7 @@ JobRouter::AdoptOrphans() {
 
 	constraint_tree = parser.ParseExpression(src_jobs.c_str());
 	if(!constraint_tree) {
-		EXCEPT("JobRouter: Failed to parse orphan constraint: '%s'\n",src_jobs.c_str());
+		EXCEPT("JobRouter: Failed to parse orphan constraint: '%s'",src_jobs.c_str());
 	}
 
     query.Bind(ad_collection);
@@ -1239,7 +1276,7 @@ JobRouter::GetCandidateJobs() {
 	umbrella_constraint += m_job_router_name;
 	umbrella_constraint += "\")";
 
-	if (m_operate_as_tool || !can_switch_ids()) {
+	if (!can_switch_ids()) {
 			// We are not running as root.  Ensure that we only try to
 			// manage jobs submitted by the same user we are running as.
 
@@ -1270,7 +1307,7 @@ JobRouter::GetCandidateJobs() {
 
 	constraint_tree = parser.ParseExpression(umbrella_constraint);
 	if(!constraint_tree) {
-		EXCEPT("JobRouter: Failed to parse umbrella constraint: %s\n",umbrella_constraint.c_str());
+		EXCEPT("JobRouter: Failed to parse umbrella constraint: %s",umbrella_constraint.c_str());
 	}
 
     query.Bind(ad_collection);
@@ -1702,7 +1739,7 @@ static bool ClassAdHasDirtyAttributes(classad::ClassAd *ad) {
 }
 
 void
-JobRouter::UpdateRoutedJobStatus(RoutedJob *job, classad::ClassAd update) {
+JobRouter::UpdateRoutedJobStatus(RoutedJob *job, const classad::ClassAd &update) {
 	classad::ClassAd *new_ad = NULL;
 	classad::ClassAdCollection *ad_collection2 = GetSchedd2ClassAds();
 

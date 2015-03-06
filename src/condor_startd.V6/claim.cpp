@@ -37,6 +37,9 @@
 // for startdClaimIdFile
 #include "misc_utils.h"
 
+// for starter exit codes
+#include "exit.h"
+
 ///////////////////////////////////////////////////////////////////////////
 // Claim
 ///////////////////////////////////////////////////////////////////////////
@@ -642,7 +645,7 @@ Claim::match_timed_out()
 			c = res_ip->r_pre_pre;
 		}
 		else {
-			EXCEPT("Unexpected timeout of claim id: %s\n",id());
+			EXCEPT("Unexpected timeout of claim id: %s",id());
 		}
 			// We need to generate a new preempting claim object,
 			// restore our reqexp, and update the CM. 
@@ -897,6 +900,15 @@ Claim::startLeaseTimer()
 		// No direction from the schedd or config file. 
 		startd_sends_alives = false;
 	}
+
+	// If startd is sending the alives, look to see if the schedd is requesting 
+	// that we let only send alives when there is no starter present (i.e. when
+	// the claim is idle).  
+	c_starter_handles_alives = false;  // default to false unless schedd tells us
+	if (c_ad) {
+		c_ad->LookupBool( ATTR_STARTER_HANDLES_ALIVES, c_starter_handles_alives );
+	}
+
 	if ( startd_sends_alives &&
 		 c_type != CLAIM_COD &&
 		 c_lease_duration > 0 )	// prevent divide by zero
@@ -946,6 +958,16 @@ void
 Claim::sendAlive()
 {
 	const char* c_addr = NULL;
+
+	if ( c_starter_handles_alives && isActive() ) {
+			// If the starter is dealing with the alive protocol,
+			// then we only need to send alives when claimed/idle.
+			// In this instance, the claim is active and thus 
+			// there is a starter... so just push forward the lease
+			// without making any connections.
+		alive();	// this will push forward the lease & alive expiration timer
+		return;
+	}
 
 	if ( c_client ) {
 		c_addr = c_client->addr();
@@ -1132,7 +1154,7 @@ Claim::sendAliveResponseHandler( Stream *sock )
 void
 Claim::leaseExpired()
 {
-	c_lease_tid = -1;
+	cancelLeaseTimer();  // cancel timer(s) in case we are being called directly
 
 	if( c_type == CLAIM_COD ) {
 		dprintf( D_FAILURE|D_ALWAYS, "COD claim %s lease expired "
@@ -1148,7 +1170,7 @@ Claim::leaseExpired()
 	}
 
 	dprintf( D_FAILURE|D_ALWAYS, "State change: claim lease expired "
-			 "(condor_schedd gone?)\n" );
+			 "(condor_schedd gone?), evicting claim\n" );
 
 		// Kill the claim.
 	finishKillClaim();
@@ -1180,7 +1202,9 @@ Claim::alive( bool alive_from_schedd )
 {
 	dprintf( D_PROTOCOL, "Keep alive for ClaimId %s job %d.%d%s\n", 
 			 publicClaimId(), c_cluster, c_proc,
-			 alive_from_schedd ? ", received from schedd" : "" );
+			 c_starter_handles_alives && isActive() ? 
+				" auto refreshed because starter running" : 
+				alive_from_schedd ? ", received from schedd" : " sent to schedd" );
 
 		// Process an alive command.  This is called whenever we
 		// "heard" from the schedd since a claim was created, 
@@ -1189,6 +1213,7 @@ Claim::alive( bool alive_from_schedd )
 		//  2 - an acknowledgement from the schedd to an alive
 		//      sent by the startd.
 		//  3 - a claim activation.
+		//  4 - a starter is still running and c_starter_handles_alives==True
 
 		// First push forward our lease timer.
 	if( c_lease_tid == -1 ) {
@@ -1433,9 +1458,37 @@ Claim::starterExited( int status )
 		// info, including the starter object itself.
 	resetClaim();
 
-		// finally, let our resource know that our starter exited, so
+		// If exit code of starter is 0, it is a normal exit.
+		// If exit code of starter is 1, starter failed to startup 
+		// If exit code of starter is 2, it lost connection to the shadow
+	if ( WIFEXITED(status) && 
+		 WEXITSTATUS(status) == STARTER_EXIT_LOST_SHADOW_CONNECTION ) 
+	{
+			// Starter lost connection to shadow, treat it as if the
+			// lease on the slot expired.
+			// We do not just directly call leaseExpired() here, since
+			// that will remove some state in the Resource object that
+			// the call to starterExited() below will want to inspect.
+			// So instead, just set a zero second timer to call leaseExpired().
+			// This way, starterExited() below gets to do the right thing, including
+			// perhaps giving the resource away to a preempting claim... and
+			// yet if this claim object still exists after starterExited() does its thing, 
+			// when the timer goes off we will be sure to destroy this claim and
+			// put the resource back to Unclaimed. See gt#4807.  Todd Tannenbaum 1/15
+		if( c_lease_tid == -1 ) {
+			startLeaseTimer();
+		}
+		daemonCore->Reset_Timer( c_lease_tid, 0 );
+	}
+
+		// Finally, let our resource know that our starter exited, so
 		// it can do the right thing.
+		// This should be done as the last thing in this method; it
+		// is possible that starterExited may destroy this object.
 	c_rip->starterExited( this );
+
+	// Think twice about doing anything after returning from starterExited(),
+	// as perhaps this claim object has now been destroyed.
 }
 
 

@@ -37,6 +37,7 @@ extern bool invalid_fields_empty; // when true, print "" for invalid data instea
 extern bool javaMode;
 extern bool vmMode;
 extern bool absentMode;
+extern bool offlineMode;
 extern ClassAd *targetAd;
 
 extern char *format_time( int );
@@ -45,6 +46,7 @@ static int stashed_now = 0;
 
 void printStartdNormal 	(ClassAd *, bool first);
 void printStartdAbsent 	(ClassAd *, bool first);
+void printStartdOffline	(ClassAd *, bool first);
 void printScheddNormal 	(ClassAd *, bool first);
 
 #ifdef HAVE_EXT_POSTGRESQL
@@ -75,6 +77,7 @@ static const char *formatRealTime( int , AttrList * , Formatter &);
 static const char *formatRealDate( int , AttrList * , Formatter &);
 //static const char *formatFloat (double, AttrList *, Formatter &);
 static const char *formatLoadAvg (double, AttrList *, Formatter &);
+static const char *formatOfflineUniverses( const classad::Value &, AttrList *, struct Formatter & );
 
 static void ppInit()
 {
@@ -82,7 +85,6 @@ static void ppInit()
 	//pm.SetAutoSep(NULL, " (", ")", "\n"); // for debugging, delimit the field data explicitly
 }
 
-#ifdef AD_PRINTMASK_V2
 enum ivfield {
 	BlankInvalidField = 0,
 	WideInvalidField = 1,
@@ -96,54 +98,6 @@ public:
 private:
 	const char * m_lbl;
 };
-#else
-const char *StdInvalidField = "[?]"; // fill field with ??? surrounded by [], if 
-#endif
-
-#ifdef AD_PRINTMASK_V2
-#else
-// construct a string if the form "[????]" that is the given width
-// into the supplied buffer, output not to exceed max_buf, and
-// if the buffer or width is < 3, then return "?" instead of "[?]"
-static const char * ppMakeFieldofQuestions(int width, char * buf, int buf_size)
-{
-	if (buf_size < 2)
-		return "";
-
-	int cq = width;
-	if (cq < 0) 
-		cq = 0-width;
-
-	cq = MIN(buf_size-1, cq);
-
-	if (cq < 3) {
-		strcpy(buf, "?");
-	} else {
-		buf[cq] = 0;
-		buf[--cq] = ']';
-		while (--cq) buf[cq] = '?';
-		buf[0] = '[';
-	}
-	return buf;
-}
-
-static const char *MinInvalidField = "[?]"; // fill field with ??? surrounded by [], if 
-
-static const char * ppMakeInvalidField(int width, const char * alt, char * buf, int buf_size)
-{
-	if (alt == MinInvalidField) {
-		if (invalid_fields_empty) 
-			return "";
-		// make a field-width string of "[????]" for the alt string.
-		return ppMakeFieldofQuestions(width, buf, buf_size);
-	} else if ( ! alt) {
-		return "";
-	}
-	return alt;
-}
-#endif
-
-#ifdef AD_PRINTMASK_V2
 
 static int ppWidthOpts(int width, int truncate)
 {
@@ -233,80 +187,14 @@ static void ppSetColumn(const char * attr, const CustomFormatFn & fmt, const cha
 	ppSetColumnFormat(fmt, print, width, truncate, alt, attr);
 }
 */
-#else
-
-static void ppSetColumn(const char * label, const char * attr, int width, bool truncate, const char * alt)
-{
-	pm_head.Append(label ? label : attr);
-
-	int opts = FormatOptionAutoWidth;
-	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-
-	char altq[22];
-	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
-
-	pm.registerFormat("%v", width, opts, attr, alt);
-}
-
-
-static void ppSetColumn(const char * label, const char * attr, const char * fmt, bool truncate = true, const char * alt = NULL)
-{
-	pm_head.Append(label ? label : attr);
-
-	int width = 0;
-	int opts = FormatOptionAutoWidth;
-	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-
-	char altq[22];
-	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
-
-	pm.registerFormat(fmt, width, opts, attr, alt);
-}
-
-static void ppSetColumn(const char * label, const char * attr, const CustomFormatFn & fmt, int width, bool truncate = true, const char * alt = NULL)
-{
-	pm_head.Append(label ? label : attr);
-
-	int opts = FormatOptionAutoWidth;
-	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-
-	if (width == 11 && fmt.IsNumber() && (fmt.Is(formatElapsedTime) || fmt.Is(formatRealTime))) {
-		opts |= FormatOptionNoPrefix;
-		width = 12;
-	}
-
-	char altq[22];
-	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
-
-	pm.registerFormat(NULL, width, opts, fmt, attr, alt);
-}
-
-static void ppSetColumn(const char * label, const char * attr, const CustomFormatFn & fmt, const char * print, int width, bool truncate = true, const char * alt = NULL)
-{
-	pm_head.Append(label ? label : attr);
-
-	int opts = FormatOptionAutoWidth;
-	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-
-	char altq[22];
-	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
-
-	pm.registerFormat(print, width, opts, fmt, attr, alt);
-}
-
-#endif
 
 
 static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 {
 	if (ad) {
 		// render the first ad to a string so the column widths update
-		char * tmp = pm.display(ad, NULL);
-		delete [] tmp;
+		std::string tmp;
+		pm.display(tmp, ad, NULL);
 	}
 	if (pm.has_headings()) {
 		pm.display_Headings(file);
@@ -335,6 +223,8 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 			  case PP_STARTD_NORMAL:
 				if (absentMode) {
 					printStartdAbsent (ad, (classad_index == 0));
+				} else if( offlineMode ) {
+					printStartdOffline( ad, (classad_index == 0));
 				} else {
 					printStartdNormal (ad, (classad_index == 0));
 				}
@@ -415,8 +305,8 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				  // this makes sure that the headings line up correctly over the first
 				  // line of data.
 				if (fPrintHeadings) {
-					char * tmp = pm.display(ad, targetAd);
-					delete [] tmp;
+					std::string tmp;
+					pm.display(tmp, ad, targetAd);
 					if (pm.has_headings()) {
 						if ( ! (pmHeadFoot & HF_NOHEADER))
 							pm.display_Headings(stdout);
@@ -454,6 +344,53 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 }
 
 
+// The strdup() make leak memory, but IsListValue() may as well?
+const char *
+formatOfflineUniverses( const classad::Value & value, AttrList *, struct Formatter & ) {
+	const classad::ExprList * list = NULL;
+	if( ! value.IsListValue( list ) ) {
+		return "[Attribute not a list.]";
+	}
+
+	std::string prettyList;
+	classad::ExprList::const_iterator i = list->begin();
+	for( ; i != list->end(); ++i ) {
+		classad::Value value;
+		if( ! (*i)->Evaluate( value ) ) { continue; }
+
+		std::string universeName;
+		if( value.IsStringValue( universeName ) ) {
+			prettyList += universeName + ", ";
+		}
+	}
+	if( prettyList.length() > 0 ) {
+		prettyList.erase( prettyList.length() - 2 );
+	}
+
+	return strdup( prettyList.c_str() );
+}
+
+void
+printStartdOffline( ClassAd *ad, bool first ) {
+	if( first ) {
+		ppInit();
+		ppSetColumn( ATTR_NAME, -34, ! wide_display );
+		// A custom printer for filtering out the ints would be handy.
+		ppSetColumn( "OfflineUniverses", Lbl( "Offline Universes" ),
+					 formatOfflineUniverses, -42, ! wide_display );
+
+		// How should I print out the offline reasons and timestamps?
+
+		ppDisplayHeadings(stdout, ad, "\n");
+	}
+
+	if( ad ) {
+		pm.display( stdout, ad );
+	}
+
+	return;
+}
+
 void
 printStartdAbsent (ClassAd *ad, bool first)
 {
@@ -461,9 +398,9 @@ printStartdAbsent (ClassAd *ad, bool first)
 		ppInit();
 		ppSetColumn(ATTR_NAME, -34, ! wide_display);
 		ppSetColumn(ATTR_OPSYS, -10, true);
-		ppSetColumn(ATTR_ARCH, -10, true);
-		ppSetColumn(ATTR_LAST_HEARD_FROM, Lbl("Went Absent"), formatRealDate, -10, true);
-		ppSetColumn(ATTR_CLASSAD_LIFETIME, Lbl("Will Forget"), formatDueDate, -10, true);
+		ppSetColumn(ATTR_ARCH, -8, true);
+		ppSetColumn(ATTR_LAST_HEARD_FROM, Lbl("Went Absent"), formatRealDate, -11, true);
+		ppSetColumn(ATTR_CLASSAD_LIFETIME, Lbl("Will Forget"), formatDueDate, -11, true);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}

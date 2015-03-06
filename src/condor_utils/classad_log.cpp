@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2014, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -35,8 +35,6 @@
 #include "ClassAdLogPlugin.h"
 #endif
 
-// explicitly instantiate the HashTable template
-
 /***** Prevent calling free multiple times in this code *****/
 /* This fixes bugs where we would segfault when reading in
  * a corrupted log file, because memory would be deallocated
@@ -52,160 +50,68 @@ if (ptr) free(ptr); \
 ptr = NULL;
 /************************************************************/
 
-#define CLASSAD_LOG_HASHTABLE_SIZE 20000
 
 const char *EMPTY_CLASSAD_TYPE_NAME = "(empty)";
 
-ClassAdLogFilterIterator::ClassAdLogFilterIterator(ClassAdHashTable *table, const classad::ExprTree *requirements, int timeslice_ms, bool invalid)
-	: m_table(table),
-	  m_cur(table->begin()),
-	  m_found_ad(false),
-	  m_requirements(requirements),
-	  m_timeslice_ms(timeslice_ms),
-	  m_done(invalid)
-	{}
 
-ClassAdLogFilterIterator::ClassAdLogFilterIterator(const ClassAdLogFilterIterator &other)
-	: m_table(other.m_table),
-	  m_cur(other.m_cur),
-	  m_found_ad(other.m_found_ad),
-	  m_requirements(other.m_requirements),
-	  m_timeslice_ms(other.m_timeslice_ms),
-	  m_done(other.m_done)
+// non-templatized worker function that implements the log loading functionality of ClassAdLog
+//
+FILE* LoadClassAdLog(
+	const char *filename,
+	LoggableClassAdTable & la,
+	const ConstructLogEntry& maker,
+	unsigned long & historical_sequence_number,
+	time_t & m_original_log_birthdate,
+	bool & is_clean,
+	bool & requires_successful_cleaning,
+	MyString & errmsg)
 {
-}
+	FILE* log_fp = NULL;
+	Transaction * active_transaction = NULL;
 
-ClassAd* ClassAdLogFilterIterator::operator *() const {
-	if (m_done || (m_cur == m_table->end()) || !m_found_ad)
-	{
-		return NULL;
-	}
-	return (*m_cur).second;
-}
-
-ClassAdLogFilterIterator
-ClassAdLogFilterIterator::operator++(int)
-{
-	m_found_ad = false;
-	ClassAdLogFilterIterator cur = *this;
-	if (m_done) {
-		return cur;
-	}
-
-	HashIterator<HashKey, ClassAd*> end = m_table->end();
-	bool boolVal;
-	int intVal;
-	int miss_count = 0;
-	while (!(m_cur == end))
-	{
-		miss_count++;
-		if (miss_count == m_timeslice_ms)
-		{
-			break;
-		}
-		cur = *this;
-		ClassAd *tmp_ad = (*m_cur++).second;
-		if (!tmp_ad) continue;
-		if (m_requirements) {
-			classad::ExprTree &requirements = *const_cast<classad::ExprTree*>(m_requirements);
-			const classad::ClassAd *old_scope = requirements.GetParentScope();
-			requirements.SetParentScope( tmp_ad );
-				classad::Value result;
-			int retval = requirements.Evaluate(result);
-			requirements.SetParentScope(old_scope);
-			if (!retval) {
-				dprintf(D_FULLDEBUG, "Unable to evaluate ad.\n");
-				continue;
-			}
-
-			if (!(result.IsBooleanValue(boolVal) && boolVal) &&
-					!(result.IsIntegerValue(intVal) && intVal)) {
-				continue;
-			}
-		}
-		int tmp_int;
-		if (!tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, tmp_int) || !tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, tmp_int)) {
-			continue;
-		}
-                int proc, cluster;
-                tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
-                tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
-		cur.m_found_ad = true;
-		m_found_ad = true;
-		break;
-	}
-	if ((m_cur == end) && (!m_found_ad)) {
-		m_done = true;
-	}
-	return cur;
-}
-
-bool
-ClassAdLogFilterIterator::operator==(const ClassAdLogFilterIterator &other)
-{
-	if (m_table != other.m_table) return false;
-	if (m_done && other.m_done) return true;
-	if (m_done != other.m_done) return false;
-	if (!(m_cur == other.m_cur) ) return false;
-	return true;
-}
-
-ClassAdLog::ClassAdLog() : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
-{
-	active_transaction = NULL;
-	log_fp = NULL;
-	m_nondurable_level = 0;
-	max_historical_logs = 0;
-	historical_sequence_number = 0;
-}
-
-ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
-{
-	log_filename_buf = filename;
-	active_transaction = NULL;
-	m_nondurable_level = 0;
-
-	bool open_read_only = max_historical_logs_arg < 0;
-	if (open_read_only) { max_historical_logs_arg = -max_historical_logs_arg; }
-	this->max_historical_logs = max_historical_logs_arg;
 	historical_sequence_number = 1;
 	m_original_log_birthdate = time(NULL);
 
 	// TODO: this should open O_BINARY because on windows, text files have \r\n with the c-runtime magically adding/removing \r as needed.
-	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
+	int log_fd = safe_open_wrapper_follow(filename, O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (log_fd < 0) {
-		EXCEPT("failed to open log %s, errno = %d", logFilename(), errno);
+		errmsg.formatstr("failed to open log %s, errno = %d\n", filename, errno);
+		return NULL;
 	}
 
 	log_fp = fdopen(log_fd, "r+");
 	if (log_fp == NULL) {
-		EXCEPT("failed to fdopen log %s, errno = %d", logFilename(), errno);
+		errmsg.formatstr("failed to fdopen log %s, errno = %d\n", filename, errno);
+		return NULL;
 	}
 
+	is_clean = true; // was cleanly closed (until we find out otherwise)
+	requires_successful_cleaning = false;
 
 	// Read all of the log records
 	LogRecord		*log_rec;
 	unsigned long count = 0;
-	bool is_clean = true; // was cleanly closed (until we find out otherwise)
-	bool requires_successful_cleaning = false;
 	long long next_log_entry_pos = 0;
     long long curr_log_entry_pos = 0;
-	while ((log_rec = ReadLogEntry(log_fp, 1+count, InstantiateLogEntry)) != 0) {
+	while ((log_rec = ReadLogEntry(log_fp, 1+count, InstantiateLogEntry, maker)) != 0) {
         curr_log_entry_pos = next_log_entry_pos;
 		next_log_entry_pos = ftell(log_fp);
 		count++;
 		switch (log_rec->get_op_type()) {
-        case CondorLogOp_Error:
-            // this is defensive, ought to be caught in InstantiateLogEntry()
-            EXCEPT("ERROR: transaction record %lu was bad (byte offset %lld)\n", count, curr_log_entry_pos);
-            break;
+		case CondorLogOp_Error:
+			// this is defensive, ought to be caught in InstantiateLogEntry()
+			errmsg.formatstr("ERROR: in log %s transaction record %lu was bad (byte offset %lld)\n", filename, count, curr_log_entry_pos);
+			fclose(log_fp);
+
+			delete active_transaction;
+			return NULL;
+			break;
 		case CondorLogOp_BeginTransaction:
 			// this file contains transactions, so it must not
 			// have been cleanly shut down
 			is_clean = false;
 			if (active_transaction) {
-				dprintf(D_ALWAYS, "Warning: Encountered nested transactions in %s, "
-						"log may be bogus...", filename);
+				errmsg.formatstr_cat("Warning: Encountered nested transactions, log may be bogus...\n");
 			} else {
 				active_transaction = new Transaction();
 			}
@@ -213,10 +119,9 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 			break;
 		case CondorLogOp_EndTransaction:
 			if (!active_transaction) {
-				dprintf(D_ALWAYS, "Warning: Encountered unmatched end transaction in %s, "
-						"log may be bogus...", filename);
+				errmsg.formatstr_cat("Warning: Encountered unmatched end transaction, log may be bogus...\n");
 			} else {
-				active_transaction->Commit(NULL, (void *)&table); // commit in memory only
+				active_transaction->Commit(NULL, &la); // commit in memory only
 				delete active_transaction;
 				active_transaction = NULL;
 			}
@@ -224,7 +129,7 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 			break;
 		case CondorLogOp_LogHistoricalSequenceNumber:
 			if(count != 1) {
-				dprintf(D_ALWAYS, "Warning: Encountered historical sequence number after first log entry (entry number = %ld)\n",count);
+				errmsg.formatstr_cat("Warning: Encountered historical sequence number after first log entry (entry number = %ld)\n",count);
 			}
 			historical_sequence_number = ((LogHistoricalSequenceNumber *)log_rec)->get_historical_sequence_number();
 			m_original_log_birthdate = ((LogHistoricalSequenceNumber *)log_rec)->get_timestamp();
@@ -234,7 +139,7 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 			if (active_transaction) {
 				active_transaction->AppendLog(log_rec);
 			} else {
-				log_rec->Play((void *)&table);
+				log_rec->Play((void *)&la);
 				delete log_rec;
 			}
 		}
@@ -248,8 +153,7 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 		// rotate the log anyway, we may as well just require the rotation
 		// to be successful.  In the case where rotation fails, we will
 		// probably soon fail to write to the log file anyway somewhere else.)
-		dprintf(D_ALWAYS,"Detected unterminated log entry in ClassAd Log %s.%s\n",
-				logFilename(), open_read_only ? "" : " Forcing rotation.");
+		errmsg.formatstr_cat("Detected unterminated log entry\n");
 		requires_successful_cleaning = true;
 	}
 	if (active_transaction) {	// abort incomplete transaction
@@ -259,100 +163,49 @@ ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table
 		if( !requires_successful_cleaning ) {
 			// For similar reasons as with broken log entries above,
 			// we need to force rotation.
-			dprintf(D_ALWAYS,"Detected unterminated transaction in ClassAd Log %s.%s\n",
-					logFilename(), open_read_only ? "" : " Forcing rotation.");
+			errmsg.formatstr_cat("Detected unterminated transaction\n");
 			requires_successful_cleaning = true;
 		}
 	}
 	if(!count) {
 		log_rec = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
 		if (log_rec->Write(log_fp) < 0) {
-			EXCEPT("write to %s failed, errno = %d", logFilename(), errno);
+			errmsg.formatstr("write to %s failed, errno = %d\n", filename, errno);
+			fclose(log_fp);
+			return NULL;
 		}
 	}
-	if( !is_clean || requires_successful_cleaning ) {
-		if (open_read_only && requires_successful_cleaning) {
-			EXCEPT("Log %s is corrupt and needs to be cleaned before restarting HTCondor", logFilename());
-		}
-		else if( !TruncLog() && requires_successful_cleaning ) {
-			EXCEPT("Failed to rotate ClassAd log %s.", logFilename());
-		}
-	}
+
+	return log_fp;
 }
 
-ClassAdLog::~ClassAdLog()
-{
-	if (active_transaction) delete active_transaction;
 
-	// HashTable class will not delete the ClassAd pointers we have
-	// inserted, so we delete them here...
-	table.startIterations();
-	ClassAd *ad;
-	HashKey key;
-	while (table.iterate(key, ad) == 1) {
-		delete ad;
+int FlushClassAdLog(FILE* fp, bool force)
+{
+	if ( ! fp)
+		return 0;
+	if (fflush(fp) !=0) {
+		return errno ? errno : -1;
 	}
-}
-void
-ClassAdLog::AppendLog(LogRecord *log)
-{
-	if (active_transaction) {
-		if (active_transaction->EmptyTransaction()) {
-			LogBeginTransaction *l = new LogBeginTransaction;
-			active_transaction->AppendLog(l);
-		}
-		active_transaction->AppendLog(log);
-	} else {
-			//MD: using file pointer
-		if (log_fp!=NULL) {
-			if (log->Write(log_fp) < 0) {
-				EXCEPT("write to %s failed, errno = %d", logFilename(), errno);
-			}
-			if( m_nondurable_level == 0 ) {
-				ForceLog();  // flush and fsync
-			}
-		}
-		log->Play((void *)&table);
-		delete log;
-	}
-}
-
-void
-ClassAdLog::FlushLog()
-{
-	if (log_fp!=NULL) {
-		if (fflush(log_fp) !=0){
-			EXCEPT("flush to %s failed, errno = %d", logFilename(), errno);
-		}
-	}
-}
-
-void
-ClassAdLog::ForceLog()
-{
-	// Force log changes to disk.  This involves first flushing
-	// the log from memory buffers, then fsyncing to disk.
-	if (log_fp!=NULL) {
-
-		// First flush
-		FlushLog();
-
+	if (force) {
 		// Then sync
-		if (condor_fdatasync(fileno(log_fp)) < 0) {
-			EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
+		if (condor_fdatasync(fileno(fp)) < 0) {
+			return errno ? errno : -1;
 		}
-
 	}
+	return 0;
 }
 
 
-bool
-ClassAdLog::SaveHistoricalLogs()
+bool SaveHistoricalClassAdLogs(
+	const char * filename,
+	const unsigned long max_historical_logs,
+	const unsigned long historical_sequence_number)
 {
 	if(!max_historical_logs) return true;
 
 	MyString new_histfile;
-	if(!new_histfile.formatstr("%s.%lu",logFilename(),historical_sequence_number))
+	if(!new_histfile.formatstr("%s.%lu",filename,historical_sequence_number))
 	{
 		dprintf(D_ALWAYS,"Aborting save of historical log: out of memory.\n");
 		return false;
@@ -360,13 +213,13 @@ ClassAdLog::SaveHistoricalLogs()
 
 	dprintf(D_FULLDEBUG,"About to save historical log %s\n",new_histfile.Value());
 
-	if( hardlink_or_copy_file(logFilename(), new_histfile.Value()) < 0) {
-		dprintf(D_ALWAYS,"Failed to copy %s to %s.\n",logFilename(),new_histfile.Value());
+	if( hardlink_or_copy_file(filename, new_histfile.Value()) < 0) {
+		dprintf(D_ALWAYS,"Failed to copy %s to %s.\n", filename, new_histfile.Value());
 		return false;
 	}
 
 	MyString old_histfile;
-	if(!old_histfile.formatstr("%s.%lu",logFilename(),historical_sequence_number - max_historical_logs))
+	if(!old_histfile.formatstr("%s.%lu", filename, historical_sequence_number - max_historical_logs))
 	{
 		dprintf(D_ALWAYS,"Aborting cleanup of historical logs: out of memory.\n");
 		return true; // this is not a fatal error
@@ -387,76 +240,81 @@ ClassAdLog::SaveHistoricalLogs()
 	return true;
 }
 
-void
-ClassAdLog::SetMaxHistoricalLogs(int max) {
-	this->max_historical_logs = max;
-}
 
-int
-ClassAdLog::GetMaxHistoricalLogs() {
-	return max_historical_logs;
-}
-
-bool
-ClassAdLog::TruncLog()
+bool TruncateClassAdLog(
+	const char * filename,	        // in
+	LoggableClassAdTable & la,      // in
+	const ConstructLogEntry& maker, // in
+	FILE* &log_fp,                  // in,out
+	unsigned long & historical_sequence_number, // in,out
+	time_t & m_original_log_birthdate, // in,out
+	MyString & errmsg) // out
 {
 	MyString	tmp_log_filename;
 	int new_log_fd;
 	FILE *new_log_fp;
 
-	dprintf(D_ALWAYS,"About to rotate ClassAd log %s\n",logFilename());
-
-	if(!SaveHistoricalLogs()) {
-		dprintf(D_ALWAYS,"Skipping log rotation, because saving of historical log failed for %s.\n",logFilename());
-		return false;
-	}
-
-	tmp_log_filename.formatstr( "%s.tmp", logFilename());
+	tmp_log_filename.formatstr( "%s.tmp", filename);
 	new_log_fd = safe_open_wrapper_follow(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (new_log_fd < 0) {
-		dprintf(D_ALWAYS, "failed to rotate log: safe_open_wrapper(%s) returns %d\n",
+		errmsg.formatstr("failed to rotate log: safe_open_wrapper(%s) returns %d\n",
 				tmp_log_filename.Value(), new_log_fd);
 		return false;
 	}
 
 	new_log_fp = fdopen(new_log_fd, "r+");
 	if (new_log_fp == NULL) {
-		dprintf(D_ALWAYS, "failed to rotate log: fdopen(%s) returns NULL\n",
+		errmsg.formatstr("failed to rotate log: fdopen(%s) returns NULL\n",
 				tmp_log_filename.Value());
 		return false;
 	}
 
 
 	// Now it is time to move courageously into the future.
-	historical_sequence_number++;
+	unsigned long future_sequence_number = historical_sequence_number + 1;
 
-	LogState(new_log_fp);
+	// flush our current state into the temp file,
+	// with a future value for sequence number
+	bool success = WriteClassAdLogState(new_log_fp, tmp_log_filename.Value(),
+		future_sequence_number, m_original_log_birthdate,
+		la, maker, errmsg);
+
 	fclose(log_fp);
 	log_fp = NULL;
+
+	// we check for success in writing the new log AFTER we close the old one
+	// so that any failure to write results in no log open. The looks a bit wrong
+	// but it preserves the original behavior of ClassAdLog from when the worker
+	// functions just EXCEPT'ed rather than returning errors.
+	if ( ! success) {
+		fclose(new_log_fp);
+		return false;
+	}
+
 	fclose(new_log_fp);	// avoid sharing violation on move
-	if (rotate_file(tmp_log_filename.Value(), logFilename()) < 0) {
-		dprintf(D_ALWAYS, "failed to rotate job queue log!\n");
+	if (rotate_file(tmp_log_filename.Value(), filename) < 0) {
+		errmsg.formatstr("failed to rotate job queue log!\n");
 
-		// Beat a hasty retreat into the past.
-		historical_sequence_number--;
-
-		int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
+		int log_fd = safe_open_wrapper_follow(filename, O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 		if (log_fd < 0) {
-			EXCEPT("failed to reopen log %s, errno = %d after failing to rotate log.",logFilename(),errno);
-		}
-
-		log_fp = fdopen(log_fd, "a+");
-		if (log_fp == NULL) {
-			EXCEPT("failed to refdopen log %s, errno = %d after failing to rotate log.",logFilename(),errno);
+			errmsg.formatstr("failed to reopen log %s, errno = %d after failing to rotate log.",filename,errno);
+		} else {
+			log_fp = fdopen(log_fd, "a+");
+			if (log_fp == NULL) {
+				errmsg.formatstr("failed to refdopen log %s, errno = %d after failing to rotate log.",filename,errno);
+			}
 		}
 
 		return false;
 	}
 
+	// we successfully wrote and rotated, so we can update our sequence number
+	historical_sequence_number = future_sequence_number;
+
 #ifndef WIN32
 	// POSIX does not provide any durability guarantees for rename().  Instead, we must
 	// open the parent directory and invoke fsync there.
-	char * parent_dir = condor_dirname( logFilename() );
+	char * parent_dir = condor_dirname(filename);
 	if (parent_dir)
 	{
 		int parent_fd = safe_open_wrapper_follow(parent_dir, O_RDONLY);
@@ -464,178 +322,50 @@ ClassAdLog::TruncLog()
 		{
 			if (condor_fsync(parent_fd) == -1)
 			{
-				EXCEPT("Failed to fsync directory %s after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
+				errmsg.formatstr("Failed to fsync directory %s after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
 			}
 			close(parent_fd);
 		}
 		else
 		{
-			EXCEPT("Failed to open parent directory %s for fsync after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
+			errmsg.formatstr("Failed to open parent directory %s for fsync after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
 		}
 	}
 	else
 	{
-		dprintf(D_ALWAYS, "Failed to determine log's directory name\n");
+		errmsg.formatstr("Failed to determine log's directory name\n");
 	}
 #endif
 
-	int log_fd = safe_open_wrapper_follow(logFilename(), O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
+	int log_fd = safe_open_wrapper_follow(filename, O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (log_fd < 0) {
-		EXCEPT( "failed to open log in append mode: "
-			"safe_open_wrapper(%s) returns %d\n", logFilename(), log_fd);
-	}
-	log_fp = fdopen(log_fd, "a+");
-	if (log_fp == NULL) {
-		close(log_fd);
-		EXCEPT("failed to fdopen log in append mode: "
-			"fdopen(%s) returns %d\n", logFilename(), log_fd);
+		errmsg.formatstr( "failed to open log in append mode: "
+			"safe_open_wrapper(%s) returns %d", filename, log_fd);
+	} else {
+		log_fp = fdopen(log_fd, "a+");
+		if (log_fp == NULL) {
+			close(log_fd);
+			errmsg.formatstr("failed to fdopen log in append mode: "
+				"fdopen(%s) returns %d", filename, log_fd);
+		}
 	}
 
 	return true;
 }
 
-int
-ClassAdLog::IncNondurableCommitLevel()
-{
-	return m_nondurable_level++;
-}
-
-void
-ClassAdLog::DecNondurableCommitLevel(int old_level)
-{
-	if( --m_nondurable_level != old_level ) {
-		EXCEPT("ClassAdLog::DecNondurableCommitLevel(%d) with existing level %d\n",
-			   old_level, m_nondurable_level+1);
-	}
-}
-
-void
-ClassAdLog::BeginTransaction()
-{
-	ASSERT(!active_transaction);
-	active_transaction = new Transaction();
-}
-
-bool
-ClassAdLog::AbortTransaction()
-{
-	// Sometimes we do an AbortTransaction() when we don't know if there was
-	// an active transaction.  This is allowed.
-	if (active_transaction) {
-		delete active_transaction;
-		active_transaction = NULL;
-		return true;
-	}
-	return false;
-}
-
-void
-ClassAdLog::CommitTransaction()
-{
-	// Sometimes we do a CommitTransaction() when we don't know if there was
-	// an active transaction.  This is allowed.
-	if (!active_transaction) return;
-	if (!active_transaction->EmptyTransaction()) {
-		LogEndTransaction *log = new LogEndTransaction;
-		active_transaction->AppendLog(log);
-		bool nondurable = m_nondurable_level > 0;
-		active_transaction->Commit(log_fp, (void *)&table, nondurable );
-	}
-	delete active_transaction;
-	active_transaction = NULL;
-}
-
-void
-ClassAdLog::CommitNondurableTransaction()
-{
-	int old_level = IncNondurableCommitLevel();
-	CommitTransaction();
-	DecNondurableCommitLevel( old_level );
-}
-
-bool
-ClassAdLog::AdExistsInTableOrTransaction(const char *key)
-{
-	bool adexists = false;
-
-		// first see if it exists in the "commited" hashtable
-	HashKey hkey(key);
-	ClassAd *ad = NULL;
-	table.lookup(hkey, ad);
-	if ( ad ) {
-		adexists = true;
-	}
-
-		// if there is no pending transaction, we're done
-	if (!active_transaction) {
-		return adexists;
-	}
-
-		// see what is going on in any current transaction
-	for (LogRecord *log = active_transaction->FirstEntry(key); log; 
-		 log = active_transaction->NextEntry()) 
-	{
-		switch (log->get_op_type()) {
-		case CondorLogOp_NewClassAd: {
-			adexists = true;
-			break;
-		}
-		case CondorLogOp_DestroyClassAd: {
-			adexists = false;
-			break;
-		}
-		default:
-			break;
-		}
-	}
-
-	return adexists;
-}
 
 
-int 
-ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
-{
-	ClassAd *ad = NULL;
-
-	if (!name) return 0;
-
-	return ExamineTransaction(key, name, val, ad);
-}
-
-bool
-ClassAdLog::AddAttrsFromTransaction(const char *key, ClassAd &ad)
-{
-	char *val = NULL;
-	ClassAd *attrsFromTransaction;
-
-	if ( !key ) {
-		return false;
-	}
-
-		// if there is no pending transaction, we're done
-	if (!active_transaction) {
-		return false;
-	}
-
-		// see what is going on in any current transaction
-	attrsFromTransaction = NULL;
-	ExamineTransaction(key,NULL,val,attrsFromTransaction);
-	if ( attrsFromTransaction ) {
-		MergeClassAds(&ad,attrsFromTransaction,true);
-		delete attrsFromTransaction;
-		return true;
-	}
-	return false;
-}
-
-int
-ClassAdLog::ExamineTransaction(const char *key, const char *name, char *&val, ClassAd* &ad)
+int ExamineLogTransaction(
+	Transaction* active_transaction,
+	const ConstructLogEntry& maker, // in
+	const char * key,
+	const char *name,
+	char *&val,
+	ClassAd* &ad)
 {
 	bool AdDeleted=false, ValDeleted=false, ValFound=false;
 	int attrsAdded = 0;
 
-	if (!active_transaction) return 0;
 
 	for (LogRecord *log = active_transaction->FirstEntry(key); log; 
 		 log = active_transaction->NextEntry()) {
@@ -668,7 +398,8 @@ ClassAdLog::ExamineTransaction(const char *key, const char *name, char *&val, Cl
 			}
 			if (!name) {
 				if ( !ad ) {
-					ad = new ClassAd;
+					ad = maker.New();
+					PRAGMA_REMIND("tj: don't turn on dirty tracking here!")
 					ad->EnableDirtyTracking();
 					ASSERT(ad);
 				}
@@ -722,55 +453,67 @@ ClassAdLog::ExamineTransaction(const char *key, const char *name, char *&val, Cl
 	}
 }
 
-Transaction *
-ClassAdLog::getActiveTransaction()
+bool AddAttrsFromLogTransaction(
+	Transaction* active_transaction,
+	const ConstructLogEntry& maker, // in
+	const char * key,
+	ClassAd &ad)
 {
-	Transaction *ret_value = active_transaction;
-	active_transaction = NULL;	// it is IMPORTANT that we reset active_tranasction to NULL here!
-	return ret_value;
-}
-
-bool
-ClassAdLog::setActiveTransaction(Transaction* & transaction)
-{
-	if ( active_transaction ) {
+	if ( !key ) {
 		return false;
 	}
 
-	active_transaction = transaction;
+		// if there is no pending transaction, we're done
+	if (!active_transaction) {
+		return false;
+	}
 
-	transaction = NULL;		// make certain caller doesn't mess w/ the handle 
-
-	return true;
+		// see what is going on in any current transaction
+	char *val = NULL;
+	ClassAd *attrsFromTransaction = NULL;
+	ExamineLogTransaction(active_transaction, maker, key, NULL, val, attrsFromTransaction);
+	if (attrsFromTransaction) {
+		MergeClassAds(&ad,attrsFromTransaction,true);
+		delete attrsFromTransaction;
+		return true;
+	}
+	return false;
 }
 
 
-void
-ClassAdLog::LogState(FILE *fp)
+bool WriteClassAdLogState(
+	FILE *fp, // in
+	const char * filename,
+	unsigned long historical_sequence_number, // in
+	time_t m_original_log_birthdate, // in
+	LoggableClassAdTable & la,
+	const ConstructLogEntry& maker,
+	MyString & errmsg)
 {
 	LogRecord	*log=NULL;
-	ClassAd		*ad=NULL;
 	ExprTree	*expr=NULL;
-	HashKey		hashval;
-	MyString	key;
 	const char	*attr_name = NULL;
 
 	// This must always be the first entry in the log.
 	log = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
 	if (log->Write(fp) < 0) {
-		EXCEPT("write to %s failed, errno = %d", logFilename(), errno);
+		errmsg.formatstr("write to %s failed, errno = %d", filename, errno);
+		return false;
 	}
 	delete log;
 
-	table.startIterations();
-	while(table.iterate(ad) == 1) {
-		table.getCurrentKey(hashval);
-		hashval.sprint(key);
-		log = new LogNewClassAd(key.Value(), GetMyTypeName(*ad), GetTargetTypeName(*ad));
+	const char * key;
+	ClassAd * ad;
+
+	la.startIterations();
+	while(la.nextIteration(key, ad)) {
+		log = new LogNewClassAd(key, GetMyTypeName(*ad), GetTargetTypeName(*ad), maker);
 		if (log->Write(fp) < 0) {
-			EXCEPT("write to %s failed, errno = %d", logFilename(), errno);
+			errmsg.formatstr("write to %s failed, errno = %d", filename, errno);
+			return false;
 		}
 		delete log;
+
 			// Unchain the ad -- we just want to write out this ads exprs,
 			// not all the exprs in the chained ad as well.
 		AttrList *chain = dynamic_cast<AttrList*>(ad->GetChainedParentAd());
@@ -783,11 +526,11 @@ ClassAdLog::LogState(FILE *fp)
 				// invisible, but no codepath sets any attributes
 				// invisible for this call.
 			if (expr) {
-				log = new LogSetAttribute(key.Value(), attr_name,
+				log = new LogSetAttribute(key, attr_name,
 										  ExprTreeToString(expr));
 				if (log->Write(fp) < 0) {
-					EXCEPT("write to %s failed, errno = %d", logFilename(),
-						   errno);
+					errmsg.formatstr("write to %s failed, errno = %d", filename, errno);
+					return false;
 				}
 				delete log;
 			}
@@ -797,11 +540,12 @@ ClassAdLog::LogState(FILE *fp)
 		ad->ChainToAd(chain);
 	}
 	if (fflush(fp) !=0){
-	  EXCEPT("fflush of %s failed, errno = %d", logFilename(), errno);
+		errmsg.formatstr("fflush of %s failed, errno = %d", filename, errno);
 	}
 	if (condor_fdatasync(fileno(fp)) < 0) {
-		EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
-	} 
+		errmsg.formatstr("fsync of %s failed, errno = %d", filename, errno);
+	}
+	return true;
 }
 
 LogHistoricalSequenceNumber::LogHistoricalSequenceNumber(unsigned long historical_sequence_number_arg,time_t timestamp_arg)
@@ -855,7 +599,7 @@ LogHistoricalSequenceNumber::WriteBody(FILE *fp)
 	return (fwrite(buf, 1, len, fp) < (unsigned)len) ? -1: len;
 }
 
-LogNewClassAd::LogNewClassAd(const char *k, const char *m, const char *t)
+LogNewClassAd::LogNewClassAd(const char *k, const char *m, const char *t, const ConstructLogEntry & c) : ctor(c)
 {
 	op_type = CondorLogOp_NewClassAd;
 	key = strdup(k);
@@ -874,12 +618,12 @@ int
 LogNewClassAd::Play(void *data_structure)
 {
 	int result;
-	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
-	ClassAd	*ad = new ClassAd();
+	LoggableClassAdTable *table = (LoggableClassAdTable *)data_structure;
+	ClassAd *ad = ctor.New();
 	SetMyTypeName(*ad, mytype);
 	SetTargetTypeName(*ad, targettype);
 	ad->EnableDirtyTracking();
-	result = table->insert(HashKey(key), ad);
+	result = table->insert(key, ad) ? 0 : -1;
 
 #if defined(HAVE_DLOPEN)
 	ClassAdLogPluginManager::NewClassAd(key);
@@ -949,7 +693,7 @@ LogNewClassAd::WriteBody(FILE* fp)
 	return rval + rval1;
 }
 
-LogDestroyClassAd::LogDestroyClassAd(const char *k)
+LogDestroyClassAd::LogDestroyClassAd(const char *k, const ConstructLogEntry & c) : ctor(c)
 {
 	op_type = CondorLogOp_DestroyClassAd;
 	key = strdup(k);
@@ -965,11 +709,10 @@ LogDestroyClassAd::~LogDestroyClassAd()
 int
 LogDestroyClassAd::Play(void *data_structure)
 {
-	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
-	HashKey hkey(key);
+	LoggableClassAdTable *table = (LoggableClassAdTable *)data_structure;
 	ClassAd *ad;
 
-	if (table->lookup(hkey, ad) < 0) {
+	if ( ! table->lookup(key, ad)) {
 		return -1;
 	}
 
@@ -977,8 +720,8 @@ LogDestroyClassAd::Play(void *data_structure)
 	ClassAdLogPluginManager::DestroyClassAd(key);
 #endif
 
-	delete ad;
-	return table->remove(hkey);
+	ctor.Delete(ad);
+	return table->remove(key) ? 0 : -1;
 }
 
 int
@@ -1019,10 +762,10 @@ LogSetAttribute::~LogSetAttribute()
 int
 LogSetAttribute::Play(void *data_structure)
 {
-	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
+	LoggableClassAdTable *table = (LoggableClassAdTable *)data_structure;
 	int rval;
 	ClassAd *ad = 0;
-	if (table->lookup(HashKey(key), ad) < 0)
+	if ( ! table->lookup(key, ad))
 		return -1;
     if (value_expr) {
 		// Such a shame, do we really need to make a
@@ -1142,9 +885,9 @@ LogDeleteAttribute::~LogDeleteAttribute()
 int
 LogDeleteAttribute::Play(void *data_structure)
 {
-	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
+	LoggableClassAdTable *table = (LoggableClassAdTable *)data_structure;
 	ClassAd *ad = 0;
-	if (table->lookup(HashKey(key), ad) < 0)
+	if ( ! table->lookup(key, ad))
 		return -1;
 
 #if defined(HAVE_DLOPEN)
@@ -1237,7 +980,7 @@ LogDeleteAttribute::ReadBody(FILE* fp)
 }
 
 LogRecord	*
-InstantiateLogEntry(FILE *fp, unsigned long recnum, int type)
+InstantiateLogEntry(FILE *fp, unsigned long recnum, int type, const ConstructLogEntry & ctor)
 {
 	LogRecord	*log_rec;
 
@@ -1246,10 +989,10 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type)
             log_rec = new LogRecordError();
             break;
 	    case CondorLogOp_NewClassAd:
-		    log_rec = new LogNewClassAd("", "", "");
+		    log_rec = new LogNewClassAd("", "", "", ctor);
 			break;
 	    case CondorLogOp_DestroyClassAd:
-		    log_rec = new LogDestroyClassAd("");
+		    log_rec = new LogDestroyClassAd("", ctor);
 			break;
 	    case CondorLogOp_SetAttribute:
 		    log_rec = new LogSetAttribute("", "", "");
@@ -1338,11 +1081,6 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type)
 	return log_rec;
 }
 
-void ClassAdLog::ListNewAdsInTransaction( std::list<std::string> &new_keys )
-{
-	if( !active_transaction ) {
-		return;
-	}
-
-	active_transaction->InTransactionListKeysWithOpType( CondorLogOp_NewClassAd, new_keys );
-}
+// Force instantiation of the simple form of ClassAdLog, used the the Accountant
+//
+template class ClassAdLog<HashKey,const char*,ClassAd*>;

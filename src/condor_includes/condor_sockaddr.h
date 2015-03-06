@@ -58,7 +58,6 @@ public:
 	condor_sockaddr(const sockaddr* saddr);
 	condor_sockaddr(const sockaddr_in* sin) ;
 	condor_sockaddr(const sockaddr_in6* sin6);
-	condor_sockaddr(const sockaddr_storage* sin);
 
 private:
 	void init(uint32_t ip, unsigned port);
@@ -77,6 +76,7 @@ public:
 
 	// set ip version when you want to bind the address to a socket
 	void set_protocol(condor_protocol proto);
+	condor_protocol get_protocol() const;
 	void set_ipv4();
 	void set_ipv6();
 
@@ -106,24 +106,47 @@ public:
 	bool from_sinful(const char* sinful);
 	MyString to_sinful() const;
 	const char* to_sinful(char* buf, int len) const;
+	MyString to_sinful_wildcard_okay() const;
 
 		// returns IP address string as it is. (i.e. not returning local ip
 		// address when inaddr_any)
 		
 		// if it fails on inet_ntop(), returns blank string.
-	MyString to_ip_string() const;
+		// decorate==true - Add additional decorations appropriate
+		//                  for the protocol. As of 2014 only puts
+		//                  square brackets around IPv6 addresses,
+		//                  eg "[::1]"
+	MyString to_ip_string(bool decorate=false) const;
 		// it it fails on inet_ntop(), returns NULL and given buf
 		// will not be modified.
-	const char* to_ip_string(char* buf, int len) const;
+		// decorate==true - Add additional decorations appropriate
+		//                  for the protocol. As of 2014 only puts
+		//                  square brackets around IPv6 addresses,
+		//                  eg "[::1]"
+	const char* to_ip_string(char* buf, int len, bool decorate=false) const;
 
 		// if it contains loopback address, it will return
 		// local ip address.
-	MyString to_ip_string_ex() const; 
-	const char* to_ip_string_ex(char* buf, int len) const;
+		// decorate==true - Add additional decorations appropriate
+		//                  for the protocol. As of 2014 only puts
+		//                  square brackets around IPv6 addresses,
+		//                  eg "[::1]"
+	MyString to_ip_string_ex(bool decorate=false) const; 
+	const char* to_ip_string_ex(char* buf, int len, bool decorate=false) const;
 
+#if 0
 	// if the address contained is ipv4, it converts to 
 	// IPv6-V4MAPPED address. caller must check is_ipv4() first.
 	void convert_to_ipv6();
+#endif
+
+	// How desirable is this address for public use?  Prefers public addresses
+	// over private addresses.  Higher numbers are more desirable.  The number
+	// will be less than 10000.  0 will only be used for errors, otherwise it
+	// will be positive.  No other promises are made; do NOT make decisions
+	// based on specific numbers, only compare relative numbers to identify
+	// more desireable addresses.
+	int desirability() const;
 
 	void clear();
 

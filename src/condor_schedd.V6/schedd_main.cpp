@@ -30,6 +30,7 @@
 
 #include "condor_daemon_core.h"
 #include "util_lib_proto.h"
+#include "qmgmt.h"
 #include "condor_qmgr.h"
 #include "scheduler.h"
 #include "dedicated_scheduler.h"
@@ -49,8 +50,7 @@ extern "C"
 {
 	int		ReadLog(char*);
 }
-extern	void	mark_jobs_idle();
-extern  int     clear_autocluster_id( ClassAd *job );
+
 
 char*          Spool = NULL;
 char*          Name = NULL;
@@ -83,6 +83,9 @@ main_init(int argc, char* argv[])
 		switch(ptr[0][1])
 		{
 		  case 'n':
+			if (Name) {
+				free(Name);
+			}
 			Name = build_valid_daemon_name( *(++ptr) );
 			break;
 		  default:
@@ -142,20 +145,7 @@ main_init(int argc, char* argv[])
 	int max_historical_logs = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
 
 	InitJobQueue(job_queue_name.Value(),max_historical_logs);
-	mark_jobs_idle();
-
-		// The below must happen _after_ InitJobQueue is called.
-	if ( scheduler.autocluster.config() ) {
-		// clear out auto cluster id attributes
-		WalkJobQueue( (int(*)(ClassAd *))clear_autocluster_id );
-	}
-	
-		//
-		// Update the SchedDInterval attributes in jobs if they
-		// have it defined. This will be for JobDeferral and
-		// CronTab jobs
-		//
-	WalkJobQueue( (int(*)(ClassAd *))::updateSchedDInterval );
+	PostInitJobQueue();
 
 		// Initialize the dedicated scheduler stuff
 	dedicated_scheduler.initialize();

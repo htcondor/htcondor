@@ -50,13 +50,10 @@ Unix systems that do not support POSIX threads
 are not guaranteed thread safety when calling the library's functions.
 
 The object library file is called \File{libcondordrmaa.a},
-and it is located within
-the \File{<release>/lib} directory in the HTCondor download.
-Its header file  is called \File{lib\_condor\_drmaa.h}, and it is located within
-the \File{<release>/include} directory in the HTCondor download.
-Also within \File{<release>/include} is the file
-\File{lib\_condor\_drmaa.README},
-which gives further details on the implementation.
+and it is located within the \File{\$(LIB)} directory.
+Its header file  is \File{\$(INCLUDE)/drmaa.h}, 
+and file \File{\$(INCLUDE)/README} 
+gives further details on the implementation.
 
 Use of the library requires that a
 local \Condor{schedd} daemon  must be running,

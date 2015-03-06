@@ -26,6 +26,12 @@
 #include "condor_config.h"
 #include "Regex.h"
 #include "classad/classadCache.h"
+#include "env.h"
+#include "condor_arglist.h"
+
+#if defined(HAVE_DLOPEN)
+#include <dlfcn.h>
+#endif
 
 using namespace std;
 
@@ -48,6 +54,9 @@ namespace compat_classad {
 
 static StringList ClassAdUserLibs;
 
+static void registerClassadFunctions();
+static void classad_debug_dprintf(const char *s);
+
 bool ClassAd::m_initConfig = false;
 bool ClassAd::m_strictEvaluation = false;
 
@@ -55,7 +64,7 @@ void ClassAd::
 Reconfig()
 {
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
-	classad::_useOldClassAdSemantics = !m_strictEvaluation;
+	classad::SetOldClassAdSemantics( !m_strictEvaluation );
 
 	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
 
@@ -76,21 +85,42 @@ Reconfig()
 			}
 		}
 	}
-}
 
-void getTheMyRef( classad::ClassAd *ad )
-{
-	if ( !ClassAd::m_strictEvaluation ) {
-		ExprTree * pExpr=classad::AttributeReference::MakeAttributeReference( NULL, "self" );
-		ad->Insert( "my", pExpr );
+	char *user_python_char = param("CLASSAD_USER_PYTHON_MODULES");
+	if (user_python_char)
+	{
+		std::string user_python(user_python_char);
+		free(user_python_char); user_python_char = NULL;
+		char *loc_char = param("CLASSAD_USER_PYTHON_LIB");
+		if (loc_char && !ClassAdUserLibs.contains(loc_char))
+		{
+			std::string loc(loc_char);
+			if (classad::FunctionCall::RegisterSharedLibraryFunctions(loc.c_str()))
+			{
+				ClassAdUserLibs.append(loc.c_str());
+#if defined(HAVE_DLOPEN)
+				void *dl_hdl = dlopen(loc.c_str(), RTLD_LAZY);
+				if (dl_hdl) // Not warning on failure as the RegisterSharedLibraryFunctions should have done that.
+				{
+					void (*registerfn)(void) = (void (*)(void))dlsym(dl_hdl, "Register");
+					if (registerfn) {registerfn();}
+					dlclose(dl_hdl);
+				}
+#endif
+			}
+			else
+			{
+				dprintf(D_ALWAYS, "Failed to load ClassAd user python library %s: %s\n",
+					loc.c_str(), classad::CondorErrMsg.c_str());
+			}
+		}
+		if (loc_char) {free(loc_char);}
 	}
-}
-
-void releaseTheMyRef( classad::ClassAd *ad )
-{
-	if ( !ClassAd::m_strictEvaluation ) {
-		ad->Delete("my");
-		ad->MarkAttributeClean( "my" );
+	if (!m_initConfig)
+	{
+		registerClassadFunctions();
+		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
+		m_initConfig = true;
 	}
 }
 
@@ -559,10 +589,326 @@ bool splitArb_func( const char * /*name*/,
 	return true;
 }
 
+
+static void
+problemExpression(const std::string &msg, classad::ExprTree *problem, classad::Value &result)
+{
+	result.SetErrorValue();
+	classad::ClassAdUnParser up;
+	std::string problem_str;
+	up.Unparse(problem_str, problem);
+	std::stringstream ss;
+	ss << msg << "  Problem expression: " << problem_str;
+	classad::CondorErrMsg = ss.str();
+}
+
+
+static bool
+ArgsToList( const char * name,
+	const classad::ArgumentList &arguments,
+	classad::EvalState &state,
+	classad::Value &result )
+{
+	if ((arguments.size() != 1) && (arguments.size() != 2))
+	{
+		std::stringstream ss;
+		result.SetErrorValue();
+		ss << "Invalid number of arguments passed to " << name << "; one string argument expected.";
+		classad::CondorErrMsg = ss.str();
+		return true;
+	}
+	int vers = 2;
+	if (arguments.size() == 2)
+	{
+		classad::Value val;
+		if (!arguments[1]->Evaluate(state, val))
+		{
+			problemExpression("Unable to evaluate second argument.", arguments[1], result);
+			return false;
+		}
+		if (!val.IsIntegerValue(vers))
+		{
+			problemExpression("Unable to evaluate second argument to integer.", arguments[1], result);
+			return true;
+		}
+		if ((vers != 1) && (vers != 2))
+		{
+			std::stringstream ss;
+			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers << ".";
+			problemExpression(ss.str(), arguments[1], result);
+			return true;
+		}
+	}
+	classad::Value val;
+	if (!arguments[0]->Evaluate(state, val))
+	{
+		problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		return false;
+	}
+	std::string args;
+	if (!val.IsStringValue(args))
+	{
+		problemExpression("Unable to evaluate first argument to string.", arguments[0], result);
+		return true;
+	}
+	ArgList arg_list;
+	MyString error_msg;
+	if ((vers == 1) && !arg_list.AppendArgsV1Raw(args.c_str(), &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to arg V1: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	else if ((vers == 2) && !arg_list.AppendArgsV2Raw(args.c_str(), &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to arg V2: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	std::vector<classad::ExprTree*> list_exprs;
+
+	for (int idx=0; idx<arg_list.Count(); idx++)
+	{
+		classad::Value string_val;
+		string_val.SetStringValue(arg_list.GetArg(idx));
+		classad::ExprTree *expr = classad::Literal::MakeLiteral(string_val);
+		if (!expr)
+		{
+			for (std::vector<classad::ExprTree*>::iterator it = list_exprs.begin(); it != list_exprs.end(); it++)
+			{
+				if (*it) {delete *it; *it=NULL;}
+			}
+			classad::CondorErrMsg = "Unable to create string expression.";
+			result.SetErrorValue();
+			return false;
+		}
+		list_exprs.push_back(expr);
+	}
+	classad_shared_ptr<classad::ExprList> result_list(classad::ExprList::MakeExprList(list_exprs));
+	if (!result_list.get())
+	{
+		for (std::vector<classad::ExprTree*>::iterator it = list_exprs.begin(); it != list_exprs.end(); it++)
+		{
+			if (*it) {delete *it; *it=NULL;}
+		}
+		classad::CondorErrMsg = "Unable to create expression list.";
+		result.SetErrorValue();
+		return false;
+	}
+	result.SetListValue(result_list);
+	return true;
+}
+
+
+static bool
+ListToArgs(const char * name,
+	const classad::ArgumentList &arguments,
+	classad::EvalState &state,
+	classad::Value &result)
+{
+	if ((arguments.size() != 1) && (arguments.size() != 2))
+	{
+		std::stringstream ss;
+		result.SetErrorValue();
+		ss << "Invalid number of arguments passed to " << name << "; one list argument expected.";
+		classad::CondorErrMsg = ss.str();
+		return true;
+	}
+	int vers = 2;
+	if (arguments.size() == 2)
+	{
+		classad::Value val;
+		if (!arguments[1]->Evaluate(state, val))
+		{
+			problemExpression("Unable to evaluate second argument.", arguments[1], result);
+			return false;
+		}
+		if (!val.IsIntegerValue(vers))
+		{
+			problemExpression("Unable to evaluate second argument to integer.", arguments[1], result);
+			return true;
+		}
+		if ((vers != 1) && (vers != 2))
+		{
+			std::stringstream ss;
+			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers << ".";
+			problemExpression(ss.str(), arguments[1], result);
+			return true;
+		}
+	}
+	classad::Value val;
+	if (!arguments[0]->Evaluate(state, val))
+	{
+		problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		return false;
+	}
+	classad_shared_ptr<classad::ExprList> args;
+	if (!val.IsSListValue(args))
+	{
+		problemExpression("Unable to evaluate first argument to list.", arguments[0], result);
+		return true;
+	}
+	ArgList arg_list;
+	size_t idx=0;
+	for (classad::ExprList::const_iterator it=args->begin(); it!=args->end(); it++, idx++)
+	{
+		classad::Value value;
+		if (!(*it)->Evaluate(state, value))
+		{
+			std::stringstream ss;
+			ss << "Unable to evaluate list entry " << idx << ".";
+			problemExpression(ss.str(), *it, result);
+			return false;
+		}
+		std::string tmp_str;
+		if (!value.IsStringValue(tmp_str))
+		{
+			std::stringstream ss;
+			ss << "Entry " << idx << " did not evaluate to a string.";
+			problemExpression(ss.str(), *it, result);
+			return true;
+		}
+		arg_list.AppendArg(tmp_str.c_str());
+	}
+	MyString error_msg, result_mystr;
+	if ((vers == 1) && !arg_list.GetArgsStringV1Raw(&result_mystr, &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to arg V1: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	else if ((vers == 2) && !arg_list.GetArgsStringV2Raw(&result_mystr, &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to arg V2: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	result.SetStringValue(result_mystr.Value());
+	return true;
+}
+
+
+static bool
+EnvironmentV1ToV2(const char * name,
+	const classad::ArgumentList &arguments,
+	classad::EvalState &state,
+	classad::Value &result)
+{
+	if (arguments.size() != 1)
+	{
+		std::stringstream ss;
+		result.SetErrorValue();
+		ss << "Invalid number of arguments passed to " << name << "; one string argument expected.";
+		classad::CondorErrMsg = ss.str();
+		return true;
+	}
+	classad::Value val;
+	if (!arguments[0]->Evaluate(state, val))
+	{
+		problemExpression("Unable to evaluate first argument.", arguments[0], result);
+		return false;
+	}
+		// By returning undefined if the input is undefined, the caller doesn't need an
+		// ifThenElse statement to see if the V1 environment is used in the first place.
+		// For example, we can do this:
+		//   mergeEnvironment(envV1toV2(Env), Environment, "FOO=BAR");
+		// without worrying about whether Env or Environment is already defined.
+	if (val.IsUndefinedValue())
+	{
+		result.SetUndefinedValue();
+		return true;
+	}
+	std::string args;
+	if (!val.IsStringValue(args))
+	{
+		problemExpression("Unable to evaluate first argument to string.", arguments[0], result);
+		return true;
+	}
+	Env env;
+	MyString error_msg;
+	if (!env.MergeFromV1Raw(args.c_str(), &error_msg))
+	{
+		std::stringstream ss;
+		ss << "Error when parsing argument to environment V1: " << error_msg.Value();
+		problemExpression(ss.str(), arguments[0], result);
+		return true;
+	}
+	MyString result_mystr;
+	env.getDelimitedStringV2Raw(&result_mystr, NULL);
+	result.SetStringValue(result_mystr.Value());
+	return true;
+}
+
+
+static bool
+MergeEnvironment(const char * /*name*/,
+	const classad::ArgumentList &arguments,
+	classad::EvalState &state,
+	classad::Value &result)
+{
+	Env env;
+	size_t idx = 0;
+	for (classad::ArgumentList::const_iterator it=arguments.begin(); it!=arguments.end(); it++, idx++)
+	{
+		classad::Value val;
+		if (!(*it)->Evaluate(state, val))
+		{
+			std::stringstream ss;
+			ss << "Unable to evaluate argument " << idx << ".";
+			problemExpression(ss.str(), *it, result);
+			return false;
+		}
+			// Skip over undefined values; this makes it more natural
+			// to merge environments for a condor classad where the
+			// user may or may not have specified an environment string.
+		if (val.IsUndefinedValue())
+		{
+			continue;
+		}
+		std::string env_str;
+		if (!val.IsStringValue(env_str))
+		{
+			std::stringstream ss;
+			ss << "Unable to evaluate argument " << idx << ".";
+			problemExpression(ss.str(), *it, result);
+			return true;
+		}
+		MyString error_msg;
+		if (!env.MergeFromV2Raw(env_str.c_str(), &error_msg))
+		{
+			std::stringstream ss;
+			ss << "Argument " << idx << " cannot be parsed as environment string.";
+			problemExpression(ss.str(), *it, result);
+			return true;
+		}
+	}
+	MyString result_mystr;
+	env.getDelimitedStringV2Raw(&result_mystr, NULL);
+	result.SetStringValue(result_mystr.Value());
+	return true;
+}
+
+
 static
-void registerStrlistFunctions()
+void registerClassadFunctions()
 {
 	std::string name;
+	name = "envV1ToV2";
+	classad::FunctionCall::RegisterFunction(name, EnvironmentV1ToV2);
+
+	name = "mergeEnvironment";
+	classad::FunctionCall::RegisterFunction(name, MergeEnvironment);
+
+	name = "listToArgs";
+	classad::FunctionCall::RegisterFunction(name, ListToArgs);
+
+	name = "argsToList";
+	classad::FunctionCall::RegisterFunction(name, ArgsToList);
+
 	name = "stringListSize";
 	classad::FunctionCall::RegisterFunction( name,
 											 stringListSize_func );
@@ -608,17 +954,7 @@ ClassAd::ClassAd()
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
-		registerStrlistFunctions();
-		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
 		m_initConfig = true;
-	}
-
-		// Compatibility ads are born with this to emulate the special
-		// CurrentTime in old ClassAds. We don't protect it afterwards,
-		// but that shouldn't be problem unless someone is deliberately
-		// trying to shoot themselves in the foot.
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
 	}
 
 	ResetName();
@@ -631,19 +967,10 @@ ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
-		registerStrlistFunctions();
 		m_initConfig = true;
 	}
 
 	CopyFrom( ad );
-
-		// Compatibility ads are born with this to emulate the special
-		// CurrentTime in old ClassAds. We don't protect it afterwards,
-		// but that shouldn't be problem unless someone is deliberately
-		// trying to shoot themselves in the foot.
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
 
 	ResetName();
     ResetExpr();
@@ -654,19 +981,10 @@ ClassAd::ClassAd( const classad::ClassAd &ad )
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
-		registerStrlistFunctions();
 		m_initConfig = true;
 	}
 
 	CopyFrom( ad );
-
-		// Compatibility ads are born with this to emulate the special
-		// CurrentTime in old ClassAds. We don't protect it afterwards,
-		// but that shouldn't be problem unless someone is deliberately
-		// trying to shoot themselves in the foot.
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
 
 	ResetName();
     ResetExpr();
@@ -682,17 +1000,10 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
-		registerStrlistFunctions();
 		m_initConfig = true;
 	}
 
-		// Compatibility ads are born with this to emulate the special
-		// CurrentTime in old ClassAds. We don't protect it afterwards,
-		// but that shouldn't be problem unless someone is deliberately
-		// trying to shoot themselves in the foot.
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
+	DisableDirtyTracking();
 
 	ResetName();
     ResetExpr();
@@ -1185,11 +1496,9 @@ EvalAttr( const char *name, classad::ClassAd *target, classad::Value & value)
 	int rc = 0;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, value ) ) {
 			rc = 1;
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1214,12 +1523,10 @@ EvalString( const char *name, classad::ClassAd *target, char *value )
 	string strVal;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttrString( name, strVal ) ) {
 			strcpy( value, strVal.c_str( ) );
 			rc = 1;
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1251,7 +1558,6 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
 	int rc = 0;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttrString( name, strVal ) ) {
 
             *value = (char *)malloc(strlen(strVal.c_str()) + 1);
@@ -1262,7 +1568,6 @@ EvalString (const char *name, classad::ClassAd *target, char **value)
                 rc = 0;
             }
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1323,11 +1628,9 @@ EvalInteger (const char *name, classad::ClassAd *target, long long &value)
 	classad::Value val;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) { 
 			rc = 1;
 		}
-		releaseTheMyRef( this );
 	}
 	else 
 	{
@@ -1382,7 +1685,6 @@ EvalFloat (const char *name, classad::ClassAd *target, double &value)
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) {
 			if( val.IsRealValue( doubleVal ) ) {
 				value = doubleVal;
@@ -1397,7 +1699,6 @@ EvalFloat (const char *name, classad::ClassAd *target, double &value)
 				rc = 1;
 			}
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1449,7 +1750,6 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
-		getTheMyRef( this );
 		if( EvaluateAttr( name, val ) ) {
 			if( val.IsBooleanValue( boolVal ) ) {
 				value = boolVal ? 1 : 0;
@@ -1462,7 +1762,6 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				rc = 1;
 			}
 		}
-		releaseTheMyRef( this );
 		return rc;
 	}
 
@@ -1510,12 +1809,6 @@ initFromString( char const *str,MyString *err_msg )
 
 	// First, clear our ad so we start with a fresh ClassAd
 	Clear();
-
-		// Reinsert CurrentTime, emulating the special version in old
-		// ClassAds
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
 
 	char *exprbuf = new char[strlen(str)+1];
 	ASSERT( exprbuf );
@@ -1567,11 +1860,13 @@ fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringLi
 void
 dPrintAd( int level, const classad::ClassAd &ad )
 {
-	MyString buffer;
+	if ( IsDebugCatAndVerbosity( level ) ) {
+		MyString buffer;
 
-	sPrintAd( buffer, ad, true );
+		sPrintAd( buffer, ad, true );
 
-	dprintf( level|D_NOHEADER, "%s", buffer.Value() );
+		dprintf( level|D_NOHEADER, "%s", buffer.Value() );
+	}
 }
 
 int
@@ -1927,7 +2222,7 @@ SetDirtyFlag(const char *name, bool dirty)
 }
 
 void ClassAd::
-GetDirtyFlag(const char *name, bool *exists, bool *dirty)
+GetDirtyFlag(const char *name, bool *exists, bool *dirty) const
 {
 	if ( Lookup( name ) == NULL ) {
 		if ( exists ) {
@@ -2081,8 +2376,8 @@ void ClassAd::ChainCollapse()
 
 void ClassAd::
 GetReferences(const char* attr,
-                StringList &internal_refs,
-                StringList &external_refs)
+                StringList *internal_refs,
+                StringList *external_refs) const
 {
     ExprTree *tree;
 
@@ -2095,8 +2390,8 @@ GetReferences(const char* attr,
 
 bool ClassAd::
 GetExprReferences(const char* expr,
-				  StringList &internal_refs,
-				  StringList &external_refs)
+				  StringList *internal_refs,
+				  StringList *external_refs) const
 {
 	classad::ClassAdParser par;
 	classad::ExprTree *tree = NULL;
@@ -2141,8 +2436,8 @@ static void AppendReference( StringList &reflist, char const *name )
 
 void ClassAd::
 _GetReferences(classad::ExprTree *tree,
-			   StringList &internal_refs,
-			   StringList &external_refs)
+			   StringList *internal_refs,
+			   StringList *external_refs) const
 {
 	if ( tree == NULL ) {
 		return;
@@ -2153,10 +2448,10 @@ _GetReferences(classad::ExprTree *tree,
 	classad::References::iterator set_itr;
 
 	bool ok = true;
-	if( !GetExternalReferences(tree, ext_refs_set, true) ) {
+	if( external_refs && !GetExternalReferences(tree, ext_refs_set, true) ) {
 		ok = false;
 	}
-	if( !GetInternalReferences(tree, int_refs_set, true) ) {
+	if( internal_refs && !GetInternalReferences(tree, int_refs_set, true) ) {
 		ok = false;
 	}
 	if( !ok ) {
@@ -2171,33 +2466,34 @@ _GetReferences(classad::ExprTree *tree,
 		// StringLists.  This scales better than trying to remove
 		// duplicates while inserting into the StringList.
 
-	for ( set_itr = ext_refs_set.begin(); set_itr != ext_refs_set.end();
-		  set_itr++ ) {
-		const char *name = set_itr->c_str();
+	if ( external_refs ) {
+		for ( set_itr = ext_refs_set.begin(); set_itr != ext_refs_set.end();
+			  set_itr++ ) {
+			const char *name = set_itr->c_str();
 			// Check for references to things in the MatchClassAd
 			// and do the right thing.  This does not cover all
 			// possible ways of referencing things in the match ad,
 			// but it covers the ones users are expected to use
 			// and the ones expected from OptimizeAdForMatchmaking.
-		if ( strncasecmp( name, "target.", 7 ) == 0 ) {
-			AppendReference( external_refs, &set_itr->c_str()[7] );
-		} else if ( strncasecmp( name, "other.", 6 ) == 0 ) {
-			AppendReference( external_refs, &set_itr->c_str()[6] );
-		} else if ( strncasecmp( name, ".left.", 6 ) == 0 ) {
-			AppendReference( external_refs, &set_itr->c_str()[6] );
-		} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
-			AppendReference( external_refs, &set_itr->c_str()[7] );
-		} else if ( strncasecmp( name, "my.", 3 ) == 0 ) {
-				// this one is actually in internal reference!
-			AppendReference( internal_refs, &set_itr->c_str()[3] );
-		} else {
-			AppendReference( external_refs, set_itr->c_str() );
+			if ( strncasecmp( name, "target.", 7 ) == 0 ) {
+				AppendReference( *external_refs, &set_itr->c_str()[7] );
+			} else if ( strncasecmp( name, "other.", 6 ) == 0 ) {
+				AppendReference( *external_refs, &set_itr->c_str()[6] );
+			} else if ( strncasecmp( name, ".left.", 6 ) == 0 ) {
+				AppendReference( *external_refs, &set_itr->c_str()[6] );
+			} else if ( strncasecmp( name, ".right.", 7 ) == 0 ) {
+				AppendReference( *external_refs, &set_itr->c_str()[7] );
+			} else {
+				AppendReference( *external_refs, set_itr->c_str() );
+			}
 		}
 	}
 
-	for ( set_itr = int_refs_set.begin(); set_itr != int_refs_set.end();
-		  set_itr++ ) {
-		AppendReference( internal_refs, set_itr->c_str() );
+	if ( internal_refs ) {
+		for ( set_itr = int_refs_set.begin(); set_itr != int_refs_set.end();
+			  set_itr++ ) {
+			AppendReference( *internal_refs, set_itr->c_str() );
+		}
 	}
 }
 
@@ -2706,8 +3002,6 @@ static void InitTargetAttrLists()
 		machine_attrs_ad.AssignExpr( *attr, "True" );
 	}
 
-	machine_attrs_ad.Delete( ATTR_CURRENT_TIME );
-
 	tmp = param( "STARTD_EXPRS" );
 	if ( tmp ) {
 		tmp_strlist.initializeFromString( tmp );
@@ -2752,8 +3046,6 @@ static void InitTargetAttrLists()
 		job_attrs_ad.AssignExpr( *attr, "True" );
 	}
 
-	job_attrs_ad.Delete( ATTR_CURRENT_TIME );
-
 	tmp = param( "SUBMIT_EXPRS" );
 	if ( tmp ) {
 		tmp_strlist.initializeFromString( tmp );
@@ -2783,8 +3075,6 @@ static void InitTargetAttrLists()
 	for ( attr = schedd_attrs_list; *attr; attr++ ) {
 		schedd_attrs_ad.AssignExpr( *attr, "True" );
 	}
-
-	schedd_attrs_ad.Delete( ATTR_CURRENT_TIME );
 
 	target_attrs_init = true;
 }

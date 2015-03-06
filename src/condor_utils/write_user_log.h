@@ -79,16 +79,16 @@ class WriteUserLog
 
     struct log_file {
     /** Copy of path to the log file */  std::string path;
-    /** The log file                 */  FILE     * fp;
     /** The log file lock            */  FileLockBase *lock;
+    /** The log file                 */  int fd;
     /** Implementation detail        */  mutable bool copied;
 
       // set of jobs that are using this log file
       log_file_cache_refset_t refset;
 
-      log_file(const char* p) : path(p), fp(NULL), lock(NULL),
+      log_file(const char* p) : path(p), lock(NULL), fd(-1),
         copied(false) {}
-      log_file() : fp(NULL), lock(NULL), copied(false) {}
+      log_file() : lock(NULL), fd(-1), copied(false) {}
       log_file(const log_file& orig);
       ~log_file(); 
       log_file& operator=(const log_file& rhs);
@@ -210,7 +210,7 @@ class WriteUserLog
 		@return true on success
 	 */
 	bool isInitialized( void ) const {
-		return ( !logs.empty() || (m_global_fp != NULL) );
+		return ( !logs.empty() || (m_global_fd >= 0) );
 	};
 
     /** Write an event to the log file.  Caution: if the log file is
@@ -282,12 +282,12 @@ class WriteUserLog
         the event log header.
 
         @param event the event to be written
-        @param file pointer to write event to (or NULL for default global FP)
+        @param file pointer to write event to (or NULL for default global FD)
         @param Seek to the start of the file before writing event?
         @return 0 for failure, 1 for success
     */
     int writeGlobalEvent ( ULogEvent &event,
-						   FILE *fp,
+						   int fd,
 						   bool is_header_event = true );
 
 
@@ -303,7 +303,7 @@ class WriteUserLog
 
 	// Get the global log file and it's size
 	const char *getGlobalPath( void ) const { return m_global_path; };
-	bool getGlobalLogSize( unsigned long &, bool use_fp );
+	bool getGlobalLogSize( unsigned long &, bool use_fd );
 
 	bool isGlobalEnabled( void ) const {
 		return ( ( m_global_disable == false ) && ( NULL != m_global_path ) );
@@ -331,10 +331,10 @@ class WriteUserLog
 				   bool use_lock,
 				   bool append,
 				   FileLockBase *& lock, 
-				   FILE *& fp );
+				   int & fd );
 
 
-	bool doWriteEvent( FILE *fp, ULogEvent *event, bool do_use_xml );
+	bool doWriteEvent( int fd, ULogEvent *event, bool do_use_xml );
 	void GenerateGlobalId( MyString &id );
 
 	bool checkGlobalLogRotation(void);
@@ -342,7 +342,7 @@ class WriteUserLog
 	bool openGlobalLog( bool reopen );
 	bool openGlobalLog( bool reopen, const UserLogHeader &header );
 	bool closeGlobalLog( void);
-	int doRotation( const char *path, FILE *&fp,
+	int doRotation( const char *path, int &fd,
 					MyString &rotated, int max_rotations );
 
 
@@ -375,7 +375,7 @@ class WriteUserLog
 	/** Enable close after writes    */  bool       m_global_close;
 	/** Write to the global log? */		 bool		m_global_disable;
     /** Copy of path to global log   */  char     * m_global_path;
-    /** The global log file          */  FILE     * m_global_fp;
+    /** The global log file          */  int        m_global_fd;
     /** The global log file lock     */  FileLockBase *m_global_lock;
 	/** Whether we use XML or not    */  bool       m_global_use_xml;
 	/** The log file uniq ID base    */  char     * m_global_id_base;
@@ -402,6 +402,7 @@ class WriteUserLog
 
 	/** Previously configured?       */  bool       m_configured;
 	/** Initialized?                 */  bool       m_initialized;
+	/** called init_user_ids()?      */  bool       m_init_user_ids;
 	/** Creator Name (schedd name)   */  char     * m_creator_name;
 	/** Mask for events              */  std::vector<ULogEventNumber> mask;
 };

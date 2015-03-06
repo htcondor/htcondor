@@ -1,0 +1,86 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+# new test now is a single file and does both local and vanilla universe
+# bt 2/13/15
+
+use CondorUtils;
+use CondorTest;
+use Cwd;
+use POSIX;
+use Check::SimpleJob;
+
+$topdir = getcwd();
+print scalar localtime() . "\n";
+
+$testname = "testname";
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 2
+	NEGOTIATOR_INTERVAL = 5
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"compressedtestname");
+print "local config file:$configfile\n";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "compressedtestname",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+
+if($mypid == 0) {
+	die "Saveme setup for test failed\n";
+}
+
+##
+## Universe
+## 
+my $longuniverse = "local";
+
+SimpleJob::RunCheck(
+	deferralpreptime=>20,
+	deferraltime=>$deferralTime,
+	runthis=>"x_time.pl",
+	on_submit=>$submitted,
+	on_execute=>$executed,
+	on_hold=>$held,
+	on_abort=>$aborted
+);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+my $result = 0;
+
+if( $result != 0 )
+{
+	exit(1);
+}
+
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
+

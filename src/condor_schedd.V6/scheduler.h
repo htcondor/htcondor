@@ -82,7 +82,8 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure );
 // This needs to be here because it causes problems in schedd_main.C 
 // with new compilers (gcc 4.1+)
 //
-extern int updateSchedDInterval( ClassAd* );
+class JobQueueJob;
+extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 
 class match_rec;
 
@@ -97,6 +98,7 @@ struct shadow_rec
 	int				removed;
 	bool			isZombie;	// added for Maui by stolley
 	bool			is_reconnect;
+	bool			reconnect_succeeded;
 		//
 		// This flag will cause the schedd to keep certain claim
 		// attributes for jobs with leases during a graceful shutdown
@@ -340,14 +342,14 @@ class Scheduler : public Service
 	void			send_all_jobs_prioritized(ReliSock*, struct sockaddr_in*);
 
 	friend	int		NewProc(int cluster_id);
-	friend	int		count_a_job(ClassAd *);
-	friend	void	job_prio(ClassAd *);
-	friend  int		find_idle_local_jobs(ClassAd *);
-	friend	int		updateSchedDInterval( ClassAd* );
+	friend	int		count_a_job(JobQueueJob*, const JOB_ID_KEY&, void* );
+//	friend	void	job_prio(ClassAd *);
+	friend  int		find_idle_local_jobs(ClassAd *, void*);
+	friend	int		updateSchedDInterval(JobQueueJob*, const JOB_ID_KEY&, void* );
     friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
-	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify, bool log );
+	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool log );
 	int             actOnJobMyselfHandler( ServiceData* data );
 	int				updateGSICred(int, Stream* s);
 	void            setNextJobDelay( ClassAd *job_ad, ClassAd *machine_ad );
@@ -521,29 +523,54 @@ class Scheduler : public Service
 		// negotiation
 	bool canSpawnShadow();
 
+	void WriteRestartReport();
+
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
 	bool            FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ=true);
-	
+
 		// object to manage our various shadows and their ClassAds
 	ShadowMgr shadow_mgr;
 
 		// hashtable used to hold matching ClassAds for Globus Universe
 		// jobs which desire matchmaking.
 	HashTable <PROC_ID, ClassAd *> *resourcesByProcID;
-  
+
 	bool usesLocalStartd() const { return m_use_startd_for_local;}
 
 	void swappedClaims( DCMsgCallback *cb );
 	bool CheckForClaimSwap(match_rec *rec);
 
-	
+	//
+	// Verifies that the new clusters created in the current transaction
+	// each pass each submit requirement.
+	//
+	bool	shouldCheckSubmitRequirements();
+	int		checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack );
+
+	// generic statistics pool for scheduler, in schedd_stats.h
+	ScheddStatistics stats;
+	ScheddOtherStatsMgr OtherPoolStats;
+
+
 private:
-	
+
+	// We have to evaluate requirements in the listed order to maintain
+	// user sanity, so the submit requirements data structure must ordered.
+	typedef struct SubmitRequirementsEntry_t {
+		const char *		name;
+		classad::ExprTree *	requirement;
+		classad::ExprTree * reason;
+
+		SubmitRequirementsEntry_t( const char * n, classad::ExprTree * r, classad::ExprTree * rr ) : name(n), requirement(r), reason(rr) {}
+	} SubmitRequirementsEntry;
+
+	typedef std::vector< SubmitRequirementsEntry > SubmitRequirements;
+
 	// information about this scheduler
-	ClassAd*		m_adSchedd;
-    ClassAd*        m_adBase;
-	Scheduler*		myself;
+	SubmitRequirements	m_submitRequirements;
+	ClassAd*			m_adSchedd;
+	ClassAd*        	m_adBase;
 
 	// information about the command port which Shadows use
 	char*			MyShadowSockName;
@@ -588,10 +615,6 @@ private:
 	int				SchedUniverseJobsRunning;
 	int				LocalUniverseJobsIdle;
 	int				LocalUniverseJobsRunning;
-
-    // generic statistics pool for scheduler, in schedd_stats.h
-    ScheddStatistics stats;
-	ScheddOtherStatsMgr OtherPoolStats;
 
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
@@ -677,6 +700,7 @@ private:
 	int			history_helper_launcher(const HistoryHelperState &state);
 	int			history_helper_reaper(int, int);
 	int			command_query_job_ads(int, Stream* stream);
+	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	void   			check_claim_request_timeouts( void );
 	int				insert_owner(char const*);
 	void			child_exit(int, int);
@@ -833,7 +857,9 @@ private:
 
 
 // Other prototypes
-int		get_job_prio(ClassAd *ad);
+class JobQueueJob;
+struct JOB_ID_KEY;
+int get_job_prio(JobQueueJob *ad, const JOB_ID_KEY& key, void* user);
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec );
 extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);
@@ -848,7 +874,6 @@ extern bool abortJobsByConstraint( const char *constraint, const char *reason, b
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
 					 int reason_code=0, int reason_subcode=0,
 					 bool use_transaction = false, 
-					 bool notify_shadow = true,  
 					 bool email_user = false, bool email_admin = false,
 					 bool system_hold = true,
 					 bool write_to_user_log = true);

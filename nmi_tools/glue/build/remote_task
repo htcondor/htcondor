@@ -37,12 +37,15 @@ use File::Basename;
 my $BaseDir = getcwd();
 
 my $EXTERNALS_TASK        = "remote_task.externals";
+my $BUILD_TASK            = "remote_task.build";
 my $TAR_TASK              = "remote_task.create_tar";
 my $CHECK_TAR_TASK        = "remote_task.check_tar";
 my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
 my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
+my $NATIVE_DEBUG_TASK     = "remote_task.create_native_unstripped";
 my $NATIVE_TASK           = "remote_task.create_native";
 my $CHECK_NATIVE_TASK     = "remote_task.check_native";
+my $BUILD_TESTS_TASK      = "remote_task.build_tests";
 my $RUN_UNIT_TESTS        = "remote_task.run_unit_tests";
 my $COVERITY_ANALYSIS     = "remote_task.coverity_analysis";
 
@@ -83,8 +86,14 @@ chomp(my $hostname = `hostname -f`);
 print "Executing task '$taskname' on host '$hostname'\n";
 
 if ($ENV{NMI_PLATFORM} =~ /macos/i) {
-    # Build binaries that will work on Mac OS X 10.6 and later.
-    $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.6";
+    # Build binaries that will work on Mac OS X 10.7 and later.
+    $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.7";
+}
+
+# Build with warnings == errors on Fedora
+my $werror="";
+if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[12][0-9]/i) {
+    $werror = "-DCONDOR_CXX_FLAGS:STRING=-Werror";
 }
 
 # enable use of VisualStudio 2012 (vs11) on the Windows8 platform
@@ -100,16 +109,20 @@ if( $taskname eq $EXTERNALS_TASK ) {
     # to handle invoking the Windows build tools in this step.
     $execstr = "make VERBOSE=1 externals";
 }
-elsif ($taskname eq $UNSTRIPPED_TASK) {
+elsif( $taskname eq $BUILD_TASK ) {
+    # Since we do not declare the externals task on Windows, we don't have
+    # to handle invoking the Windows build tools in this step.
     $execstr = get_cmake_args();
-    
-	if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[12][0-9]/i) {
-	 	$execstr .= " -DCONDOR_CXX_FLAGS:STRING=-Werror"
-	}
-
+    $execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 install";
+}
+elsif( $taskname eq $BUILD_TESTS_TASK ) {
+    $execstr = "make VERBOSE=1 tests";
+}
+elsif ($taskname eq $UNSTRIPPED_TASK) {
+    #$execstr = get_cmake_args();
     #Append extra argument
-    # we don't run unit tests here because if they fail, they defeat running all of the other tests!
-    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 install tests targz";
+    #$execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 targz";
+    $execstr = "make VERBOSE=1 targz";
 }
 elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
     my $tarball_check_script = get_tarball_check_script();
@@ -119,36 +132,33 @@ elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
 elsif ($taskname eq $TAR_TASK) { 
     #Normal build -> create tar.gz package (The only reason install is done is for the std:u:tests) 
     #Reconfigure cmake variables for stripped tarball build
-    
     $execstr = get_cmake_args();
-
-    # We can't call "make install" (which just calls "cmake -P cmake_install.cmake") because we need to add the CMAKE_INSTALL_DO_STRIP argument.
-    # we don't run unit tests here because if they fail, they defeat running all of the other tests!
-    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make VERBOSE=1 install/strip tests targz";
+    $execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make VERBOSE=1 install/strip tests && make VERBOSE=1 targz";
 }
 elsif ($taskname eq $CHECK_TAR_TASK) {
     my $tarball_check_script = get_tarball_check_script();
     my $tarball = get_tarball_name();
     $execstr = "$tarball_check_script $tarball";
 }
-elsif ($taskname eq $NATIVE_TASK) {
+elsif ($taskname eq $NATIVE_TASK || $taskname eq $NATIVE_DEBUG_TASK) {
+    my $is_debug = ($taskname eq $NATIVE_DEBUG_TASK);
     # Create native packages on Red Hat and Debian
     print "Create native package.  NMI_PLATFORM = $ENV{NMI_PLATFORM}\n";
     if ($ENV{NMI_PLATFORM} =~ /(deb|ubuntu)/i) {
         print "Detected OS is Debian or Ubuntu.  Creating Deb package.\n";
-        $execstr = create_deb();
+        $execstr = create_deb($is_debug);
     }
     elsif ($ENV{NMI_PLATFORM} =~ /ubuntu/i) {
         print "Detected OS is Ubuntu.  Creating Deb package.\n";
-        $execstr = create_deb();
+        $execstr = create_deb($is_debug);
     }
     elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora)/i) {
         print "Detected OS is Red Hat.  Creating RPM package.\n";
-        $execstr = create_rpm();
+        $execstr = create_rpm($is_debug);
     }
     elsif ($ENV{NMI_PLATFORM} =~ /opensuse/i) {
         print "Detected OS is OpenSuSE.  Creating RPM package.\n";
-        $execstr = create_rpm();
+        $execstr = create_rpm($is_debug);
     }
     elsif ($ENV{NMI_PLATFORM} =~ /_win/i) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE $VCVER";
@@ -184,8 +194,8 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
     }
 } elsif ($taskname eq $COVERITY_ANALYSIS) {
 	print "Running Coverity analysis\n";
-	$ENV{PATH} = "$ENV{PATH}:/home/condorauto/cov-sa-linux64-5.5.3/bin";
-	$execstr = "cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --enable-constraint-fpp --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-2.batlab.org --user admin --password `cat /home/condorauto/coverity/.p`";
+	$ENV{PATH} = "$ENV{PATH}:/home/condorauto/cov-analysis-linux64-7.6.0/bin";
+	$execstr = "cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --enable-constraint-fpp --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-3.batlab.org --user admin --password `cat /home/condorauto/coverity/.p`";
 }
 
 
@@ -208,9 +218,9 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     }
     if ($taskname eq $EXTERNALS_TASK) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat EXTERNALS $VCVER";
-    } elsif ($taskname eq $UNSTRIPPED_TASK) {
+    } elsif ($taskname eq $BUILD_TASK) { # formerly $UNSTRIPPED_TASK
         $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD $VCVER";
-    } elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
+    } elsif ($taskname eq $BUILD_TESTS_TASK) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat BLD_TESTS $VCVER";
     } elsif ($taskname eq $NATIVE_TASK) {
         print "Windows NATIVE (MSI) task\n";
@@ -290,9 +300,11 @@ sub get_tarball_name {
 }
 
 sub create_rpm {
+    my $is_debug = $_[0];
     # Reconfigure cmake variables for native package build   
     my $command = get_cmake_args();
-    return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make package";
+    my $strip = "ON"; if ($is_debug) { $strip = "OFF"; }
+    return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=${strip} && make package";
 }
 
 sub check_rpm {
@@ -301,13 +313,18 @@ sub check_rpm {
 }
 
 sub create_deb {    
+    my $is_debug = $_[0];
     #Reconfigure cmake variables for native package build   
     my $command = get_cmake_args();
-    return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make VERBOSE=1 package";
+    my $strip = "ON"; if ($is_debug) { $strip = "OFF"; }
+    return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=${strip} && make VERBOSE=1 package";
 }
 
 sub check_deb {
     # Print package summary
     # We would like to run lintian, but it is not available on all NMI machine
-    return "dpkg-deb -I *.deb";
+    my $debs;
+    for (glob "*.deb") { if ($_ !~ /[+]sym/) { $debs .= $_ . " "; } }
+    if ( ! defined $debs) { $debs = "*.deb"; }
+    return "dpkg-deb -I $debs";
 }

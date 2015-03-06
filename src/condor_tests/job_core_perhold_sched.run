@@ -19,32 +19,153 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
 
-$testdesc =  'Condor PERIODIC_HOLD policy test - scheduler U';
-$testname = "job_core_perhold_sched";
+my $testname = "job_core_perhold_sched";
+my $variation = "perholdfalse";
 
-my $nostatus = CondorTest::verbose_system("./job_core_perhold-false_sched.pl");
-my $willstatus = CondorTest::verbose_system("./job_core_perhold-true_sched.pl");
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
 
-my %listoftests;
-$listoftests{"corename"} = "job_core_perhold_sched";
-$listoftests{"tests"} = [ "job_core_perhold-false_sched", "job_core_perhold-true_sched"];
-$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
-CondorTest::MergeOutputFiles(\%listoftests);
+my %info;
+my $cluster;
 
-if($nostatus != 0)
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	PERIODIC_EXPR_interval = 30
+    NUM_CPUS = 2
+    NEGOTIATOR_INTERVAL = 5
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"perholdvan");
+print "local config file:$configfile\n";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "perholdvan",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+$executed = sub
 {
-	CondorTest::debug("PERIODIC_HOLD: failed no trigger test\n",1);
+	%info = @_;
+	$cluster = $info{"cluster"};
+
+	if($variation eq "perholdfalse") {
+		CondorTest::debug("Good. for periodic_hold cluster $cluster must run first\n",1);
+	} else {
+		CondorTest::debug("Periodic Hold should see an execute, followed by a hold and then we remove the job\n",1);
+	}
+};
+
+$success = sub
+{
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+
+	CondorTest::debug("Good, job should complete trivially\n",1);
+};
+
+my $killedchosen = 0;
+
+$abnormal = sub {
+	my %info = @_;
+
+	die "Want to see only execute, hold and abort events for periodic hold test\n";
+};
+
+$aborted = sub {
+	my %info = @_;
+	my $done;
+	CondorTest::debug("Abort event expected from periodic remove after hold event seen\n",1);
+};
+
+$held = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+
+	CondorTest::debug("Held event expected, removing job.....\n",1);
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+	if(!$status)
+	{
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		exit(1)
+	}
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+};
+
+
+my $falsepolicy = '
+periodic_hold = (time() - QDate) < 0
+';
+
+my $truepolicy = '
+periodic_hold = JobStatus == 2
+';
+
+if(is_windows()) {
+	SimpleJob::RunCheck(
+		runthis=>"sleep.exe",
+		universe=>"scheduler",
+	    append_submit_commands=>"$falsepolicy",
+	    duration=>"20s",
+	    on_execute=>$executed,
+	    on_success=>$success,
+	);
+
+	$variation = "perholdtrue";
+
+	SimpleJob::RunCheck(
+		runthis=>"sleep.exe",
+		universe=>"scheduler",
+	    duration=>"40s",
+	    append_submit_commands=>$truepolicy,
+		on_evictedwithoutcheckpoint=>$on_evictedwithoutcheckpoint,
+	    on_exitedabnormal=>$abnormal,
+	    on_execute=>$executed,
+	    on_hold=>$held,
+	    on_abort=>$aborted
+	);
+} else {
+	SimpleJob::RunCheck(
+		universe=>"scheduler",
+	    append_submit_commands=>"$falsepolicy",
+	    duration=>20,
+	    on_execute=>$executed,
+	    on_success=>$success,
+	);
+
+	$variation = "perholdtrue";
+
+	SimpleJob::RunCheck(
+		universe=>"scheduler",
+	    duration=>40,
+	    append_submit_commands=>$truepolicy,
+		on_evictedwithoutcheckpoint=>$on_evictedwithoutcheckpoint,
+	    on_exitedabnormal=>$abnormal,
+	    on_execute=>$executed,
+	    on_hold=>$held,
+	    on_abort=>$aborted
+	);
 }
 
-if($willstatus != 0)
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+my $result = 0;
+
+if( $result != 0 )
 {
-	CondorTest::debug("PERIODIC_HOLD: failed trigger test\n",1);
+    exit(1);
 }
 
-if(($willstatus != 0) || ($nostatus != 0))
-{
-	die "Failed one PERIODIC_HOLD test\n";
-}
-
-
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);

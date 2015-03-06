@@ -83,11 +83,7 @@ struct Formatter
 	char       fmt_letter;   // actual letter in the % escape
 	char       fmt_type;     // one of the the printf_fmt_t enum values.
 	char       fmtKind;      // identifies type type of the union
-#ifdef AD_PRINTMASK_V2
 	char       altKind;      // identifies type of alt text to print when attribute cannot be fetched
-#else
-	const char * altText;      // print this when attribute data is unavailable
-#endif
 	const char * printfFmt;    // may be NULL if fmtKind != PRINTF_FMT
 	union {
 		StringCustomFormat	sf;
@@ -110,22 +106,10 @@ class AttrListPrintMask
 	void SetOverallWidth(int wid);
 
 	// register a format and an attribute
-#ifdef AD_PRINTMASK_V2
 	void registerFormat (const char *print, int wid, int opts, const char *attr);
 	void registerFormat (const char *print, int wid, int opts, const CustomFormatFn & fmt, const char *attr);
 	void registerFormat (const char *print, const char *attr)          { registerFormat(print, 0, 0, attr); }
 	void registerformat (const CustomFormatFn & fmt, const char *attr) { registerFormat(NULL, 0, 0, fmt, attr); }
-#else
-	void registerFormat (const char *fmt, int wid, int opts, const char *attr, const char*alt="");
-	void registerFormat (const char *print, int wid, int opts, const CustomFormatFn & fmt, const char *attr, const char *alt="");
-
-	void registerFormat (const char *fmt, const char *attr, const char*alt="") {
-		registerFormat(fmt, 0, 0, attr, alt);
-		}
-	void registerformat (const CustomFormatFn & fmt, const char *attr, const char*alt="") {
-		registerFormat(NULL, 0, 0, fmt, attr, alt);
-	}
-#endif
 
 	// clear all formats
 	void clearFormats (void);
@@ -134,7 +118,7 @@ class AttrListPrintMask
 	// display functions
 	int   display (FILE *, AttrList *, AttrList *target=NULL);		// output to FILE *
 	int   display (FILE *, AttrListList *, AttrList *target=NULL, List<const char> * pheadings=NULL); // output a list -> FILE *
-	char *display ( AttrList *, AttrList *target=NULL );			// return a string
+	int   display (std::string & out, AttrList *, AttrList *target=NULL ); // append to string out. return number of chars added
 	int   calc_widths(AttrList *, AttrList *target=NULL );          // set column widths
 	int   calc_widths(AttrListList *, AttrList *target=NULL);		
 	int   display_Headings(FILE *, List<const char> & headings);
@@ -167,11 +151,7 @@ class AttrListPrintMask
 
 	void PrintCol(MyString * pretval, Formatter & fmt, const char * value);
 	void commonRegisterFormat (int wid, int opts, const char *print, const CustomFormatFn & sf,
-#ifdef AD_PRINTMASK_V2
 							const char *attr
-#else
-							const char *attr, const char *alt
-#endif
 							);
 };
 

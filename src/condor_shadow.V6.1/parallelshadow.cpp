@@ -217,10 +217,10 @@ ParallelShadow::getResources( void )
 		
 	sock->encode();
 	if( ! sock->code(job_cluster) ) {
-		EXCEPT( "Can't send cluster (%d) to schedd\n", job_cluster );
+		EXCEPT( "Can't send cluster (%d) to schedd", job_cluster );
 	}
 	if( ! sock->code(claim_id) ) {
-		EXCEPT( "Can't send ClaimId to schedd\n" );
+		EXCEPT( "Can't send ClaimId to schedd" );
 	}
 
 		// Now that we sent this, free the memory that was allocated
@@ -229,7 +229,7 @@ ParallelShadow::getResources( void )
 	claim_id = NULL;
 
 	if( ! sock->end_of_message() ) {
-		EXCEPT( "Can't send EOM to schedd\n" );
+		EXCEPT( "Can't send EOM to schedd" );
 	}
 	
 		// Ok, that's all we need to send, now we can read the data
@@ -407,14 +407,14 @@ ParallelShadow::spawnNode( MpiResource* rr )
 
 
 void 
-ParallelShadow::cleanUp( void )
+ParallelShadow::cleanUp( bool graceful )
 {
 	// kill all the starters
 	MpiResource *r;
 	int i;
     for( i=0 ; i<=ResourceList.getlast() ; i++ ) {
 		r = ResourceList[i];
-		r->killStarter();
+		r->killStarter(graceful);
 	}		
 }
 
@@ -999,7 +999,11 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 void
 ParallelShadow::resourceReconnected( RemoteResource*  /*rr*/ )
 {
-		//EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
+		// Since our reconnect worked, clear attemptingReconnectAtStartup
+		// flag so if we disconnect again and fail, we will exit
+		// with JOB_SHOULD_REQUEUE instead of JOB_RECONNECT_FAILED.
+		// See gt #4783.
+	attemptingReconnectAtStartup = false;
 }
 
 

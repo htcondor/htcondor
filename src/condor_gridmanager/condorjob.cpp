@@ -185,6 +185,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	newRemoteStatusAd = NULL;
 	newRemoteStatusServerTime = 0;
 	doActivePoll = false;
+	m_remoteJobFinished = false;
 	int int_value;
 
 	lastRemoteStatusServerTime = 0;
@@ -541,9 +542,7 @@ void CondorJob::doEvaluateState()
 				break;
 			}
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				errorString = "Repeated submit attempts (GAHP reports:";
-				errorString += gahp->getErrorString();
-				errorString += ")";
+				errorString = gahp->getErrorString();
 				gmState = GM_HOLD;
 				break;
 			}
@@ -578,8 +577,6 @@ void CondorJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				lastSubmitAttempt = time(NULL);
-				numSubmitAttempts++;
 				if ( rc == GLOBUS_SUCCESS ) {
 					SetRemoteJobId( job_id_string );
 					WriteGridSubmitEventToUserLog( jobAd );
@@ -626,7 +623,6 @@ void CondorJob::doEvaluateState()
 					} else {
 						// unhandled error
 						if ( !resourcePingComplete /* && connect failure */ ) {
-							numSubmitAttempts--;
 							connect_failure = true;
 							break;
 						}
@@ -634,6 +630,8 @@ void CondorJob::doEvaluateState()
 						reevaluate_state = true;
 					}
 				}
+				lastSubmitAttempt = time(NULL);
+				numSubmitAttempts++;
 				if ( job_id_string != NULL ) {
 					free( job_id_string );
 				}
@@ -730,7 +728,7 @@ void CondorJob::doEvaluateState()
 			} else if ( doActivePoll ) {
 				doActivePoll = false;
 				gmState = GM_POLL_ACTIVE;
-			} else if ( remoteState == COMPLETED ) {
+			} else if ( remoteState == COMPLETED && m_remoteJobFinished ) {
 				gmState = GM_STAGE_OUT;
 			} else if ( condorState == HELD ) {
 				if ( remoteState == HELD ) {
@@ -1358,6 +1356,12 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 			free( reason );
 		} else {
 			JobHeld( "held remotely with no hold reason" );
+		}
+	}
+	if ( new_remote_state == COMPLETED ) {
+		int tmp_val;
+		if ( remote_ad->LookupInteger( ATTR_JOB_FINISHED_HOOK_DONE, tmp_val ) ) {
+			m_remoteJobFinished = true;
 		}
 	}
 	remoteState = new_remote_state;

@@ -367,7 +367,7 @@ void stats_entry_probe<T>::Publish(ClassAd & ad, const char * pattr, int flags) 
       attr = base; attr += "Sum";
       ad.Assign(attr.c_str(), this->Sum);
    }
-   if (this->Count() > 0) {
+   if (this->Count() > 0 || ((flags & IF_PUBLEVEL) == IF_HYPERPUB)) {
       attr = base; attr += "Avg";
       ad.Assign(attr.c_str(), this->Avg());
 
@@ -597,10 +597,10 @@ void TestProbe()
 
    stats.Runtime.SetRecentMax(5);
 
-   double runtime = UtcTime::getTimeDouble();
+   double runtime = _condor_debug_get_time_double();
 
    sleep(2);
-   double now = UtcTime::getTimeDouble();
+   double now = _condor_debug_get_time_double();
    stats.Runtime += (now - runtime);
    now = runtime;
 
@@ -641,7 +641,7 @@ stats_histogram<T>& stats_histogram<T>::Accumulate(const stats_histogram<T>& sh)
 	// limits array as well, should we check that?)
 	if (this->cLevels != sh.cLevels) {
        #ifdef EXCEPT
-		EXCEPT("attempt to add histogram of %d items to histogram of %d items\n", 
+		EXCEPT("attempt to add histogram of %d items to histogram of %d items", 
 				sh.cLevels, this->cLevels);
        #else
         return *this;
@@ -650,7 +650,7 @@ stats_histogram<T>& stats_histogram<T>::Accumulate(const stats_histogram<T>& sh)
 
 	if (this->levels != sh.levels) {
        #ifdef EXCEPT
-		EXCEPT("Histogram level pointers are not the same.\n");
+		EXCEPT("Histogram level pointers are not the same.");
        #else
         return *this;
        #endif
@@ -671,7 +671,7 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
 		Clear();
 	} else if(this != &sh) {
 		if(this->cLevels > 0 && this->cLevels != sh.cLevels){
-			EXCEPT("Tried to assign different sized histograms\n");
+			EXCEPT("Tried to assign different sized histograms");
 			return *this;
 		} else if(this->cLevels == 0) {
 			this->cLevels = sh.cLevels;
@@ -684,7 +684,7 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
 			for(int i=0;i<=cLevels;++i){
 				this->data[i] = sh.data[i];
 				if(this->levels[i] < sh.levels[i] || this->levels[i] > sh.levels[i]){
-					EXCEPT("Tried to assign different levels of histograms\n");
+					EXCEPT("Tried to assign different levels of histograms");
 					return *this;	
 				}
 			}
@@ -750,7 +750,7 @@ int stats_histogram_ParseSizes(
          ++p;
 
       if ( ! is_digit(*p)) {
-         EXCEPT("Invalid input to ParseSizes at offset %d in '%s'\n", (int)(p-psz), psz);
+         EXCEPT("Invalid input to ParseSizes at offset %d in '%s'", (int)(p-psz), psz);
          break;
       }
 
@@ -795,7 +795,7 @@ int stats_histogram_ParseSizes(
 
 void stats_histogram_PrintSizes(MyString &  /*str*/, const  int64_t *  /*pSizes*/, int  /*cSizes*/)
 {
-   EXCEPT("stats_histogram::PrintSizes not implemented\n");
+   EXCEPT("stats_histogram::PrintSizes not implemented");
    // tj: WRITE THIS
 }
 
@@ -818,7 +818,7 @@ int stats_histogram_ParseTimes(
          ++p;
 
       if ( ! is_digit(*p)) {
-         EXCEPT("Invalid input to ParseTimes at offset %d in '%s'\n", (int)(p-psz), psz);
+         EXCEPT("Invalid input to ParseTimes at offset %d in '%s'", (int)(p-psz), psz);
          break;
       }
 
@@ -880,7 +880,7 @@ int stats_histogram_ParseTimes(
 
 void stats_histogram_times_PrintTimes(MyString &  /*str*/, const time_t *  /*pTimes*/, int /*cTimes*/)
 {
-   EXCEPT("stats_histogram::PrintTimes not implemented\n");
+   EXCEPT("stats_histogram::PrintTimes not implemented");
    // tj: WRITE THIS
 }
 
@@ -978,6 +978,38 @@ int StatisticsPool::RemoveProbe (const char * name)
    return ret;
 }
 
+int StatisticsPool::RemoveProbesByAddress(void* first, void *last)
+{
+   int cRemoved = 0;
+
+   // first remove from the pub list
+   MyString key;
+   pubitem item;
+   pub.startIterations();
+   while (pub.iterate(key,item)) {
+      if (item.pitem < first || item.pitem > last)
+         continue;
+      pub.remove(key);
+   }
+
+   // then remove from the pool
+   void* probe;
+   poolitem item2;
+   pool.startIterations();
+   while (pool.iterate(probe,item2)) {
+      if (probe < first || probe > last)
+         continue;
+
+      ASSERT (!item2.fOwnedByPool);
+      if (item2.Delete) { item2.Delete(probe); }
+
+      pool.remove(probe);
+      ++cRemoved;
+   }
+
+   return cRemoved;
+}
+
 void StatisticsPool::InsertProbe (
    const char * name,       // unique name for the probe
    int          unit,       // identifies the probe class/type
@@ -992,7 +1024,7 @@ void StatisticsPool::InsertProbe (
    FN_STATS_ENTRY_SETRECENTMAX fnsrm,
    FN_STATS_ENTRY_DELETE  fndel) // Destructor
 {
-   pubitem item = { unit, flags, fOwned, probe, pattr, fnpub, fnunp };
+   pubitem item = { unit, flags, fOwned, false, 0, probe, pattr, fnpub, fnunp };
    pub.insert(name, item);
 
    poolitem pi = { unit, fOwned, fnadv, fnclr, fnsrm, fndel };
@@ -1009,7 +1041,7 @@ void StatisticsPool::InsertPublish (
    FN_STATS_ENTRY_PUBLISH fnpub, // publish method
    FN_STATS_ENTRY_UNPUBLISH fnunp) // unpublish method
 {
-   pubitem item = { unit, flags, fOwned, probe, pattr, fnpub, fnunp };
+   pubitem item = { unit, flags, fOwned, false, 0, probe, pattr, fnpub, fnunp };
    pub.insert(name, item);
 }
 
@@ -1082,6 +1114,73 @@ void StatisticsPool::SetRecentMax(int window, int quantum)
          }
       }
 }
+
+/* set probe verbosites using a whitelist as a comma, and/or space separated list of attributes.
+ * probes that publish attributes that match the list are set to pub_flags,
+ * if set_nonmatching is true, then probes that don't match the are set to nonmatch_pub_flags
+ */
+int StatisticsPool::SetVerbosities(const char * attrs_list, int pub_flags, bool restore_nonmatching /*= false*/)
+{
+   if ( ! attrs_list || ! attrs_list[0]) return 0;
+
+   classad::References attrs;
+   StringTokenIterator list(attrs_list);
+   const std::string * attr;
+   while ((attr = list.next_string())) { attrs.insert(*attr); }
+   return SetVerbosities(attrs, pub_flags, restore_nonmatching);
+}
+
+/* call this to set verbosites using a whitelist.
+ * probes that publish attributes that match the list are set to pub_flags,
+ * if set_nonmatching is true, then probes that don't match the are set to nonmatch_pub_flags
+ */
+int StatisticsPool::SetVerbosities(classad::References & attrs, int pub_flags, bool restore_nonmatching /*= false*/)
+{
+   pubitem * pitem;
+   const MyString * name;
+   ClassAd tmp;
+
+   pub.startIterations();
+   while (pub.iterate_nocopy(&name, &pitem)) {
+      pubitem & item = *pitem;
+      if ( ! item.Publish) continue;
+
+      // if the base attribute name matches, the it's a match
+      const char * pattr = item.pattr ? item.pattr : name->Value();
+      bool attr_match = attrs.find(pattr) != attrs.end();
+
+      // if this is a multi-attribute probe we have to check against actual
+      // publication attributes to be sure that it's not a match.
+      int probe_class = item.units & IS_CLASS_MASK;
+      bool multi_attrib = (probe_class == IS_CLS_PROBE) || (probe_class > IS_RECENTTQ);
+      if ( ! attr_match && multi_attrib) {
+         // publish attribute so we can match them against the whitelist
+         tmp.Clear();
+         stats_entry_base * probe = (stats_entry_base *)item.pitem;
+         (probe->*(item.Publish))(tmp, pattr, (item.flags & ~IF_NONZERO) | IF_HYPERPUB);
+
+         // look to see if any of the published attributes match the whitelist.
+         for (classad::AttrList::const_iterator it = tmp.begin(); it != tmp.end(); ++it) {
+            if (attrs.find(it->first) != attrs.end()) { attr_match = true; break; }
+         }
+      }
+
+      // if we have a match, adjust the pub flags
+      if (attr_match) {
+         int new_flags = (item.flags & ~IF_PUBLEVEL) | (pub_flags & IF_PUBLEVEL);
+         if ( ! item.fWhitelisted && (new_flags != item.flags)) {
+            item.fWhitelisted = true;
+            item.def_verbosity = (unsigned short)(item.flags >> 16);
+         }
+         item.flags = new_flags;
+      } else if (restore_nonmatching && item.fWhitelisted) {
+         item.flags = (item.flags & ~IF_PUBLEVEL) | (((unsigned int)item.def_verbosity << 16) & IF_PUBLEVEL);
+         item.fWhitelisted = false;
+      }
+   }
+   return 0;
+}
+
 
 void StatisticsPool::Publish(ClassAd & ad, int flags) const
 {
@@ -1278,7 +1377,8 @@ void stats_entry_sum_ema_rate<T>::Publish(ClassAd & ad, const char * pattr, int 
 	if (flags & this->PubEMA) {
 		for(size_t i = this->ema.size(); i--; ) {
 			stats_ema_config::horizon_config &config = this->ema_config->horizons[i];
-			if( (flags & stats_entry_ema_base<T>::PubSuppressInsufficientDataEMA) && this->ema[i].insufficientData(config) ) {
+			if( (flags & stats_entry_ema_base<T>::PubSuppressInsufficientDataEMA) && this->ema[i].insufficientData(config)
+				&& ((flags & IF_PUBLEVEL) < IF_HYPERPUB)) {
 				continue;
 			}
 			if( !(flags & this->PubDecorateAttr) ) {
@@ -1326,7 +1426,8 @@ void stats_entry_ema<T>::Publish(ClassAd & ad, const char * pattr, int flags) co
 	if (flags & this->PubEMA) {
 		for(size_t i = this->ema.size(); i--; ) {
 			stats_ema_config::horizon_config &config = this->ema_config->horizons[i];
-			if( (flags & stats_entry_ema_base<T>::PubSuppressInsufficientDataEMA) && this->ema[i].insufficientData(config) ) {
+			if( (flags & stats_entry_ema_base<T>::PubSuppressInsufficientDataEMA) && this->ema[i].insufficientData(config) 
+				&& ((flags & IF_PUBLEVEL) < IF_HYPERPUB)) {
 				continue;
 			}
 			if( !(flags & this->PubDecorateAttr) ) {

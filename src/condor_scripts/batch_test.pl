@@ -82,8 +82,8 @@ use CondorUtils;
 #
 #################################################################
 
-Condor::DebugLevel(1);
-CondorPersonal::DebugLevel(1);
+Condor::DebugLevel(5);
+CondorPersonal::DebugLevel(5);
 my @debugcollection = ();
 my $UseNewRunning = 1;
 
@@ -569,6 +569,7 @@ sub StartTestOutput
 	my $test_program = shift;
 
 	debug("StartTestOutput passed compiler: $compiler\n",2);
+	print "StartTestOutput passed compiler: $compiler\n";
 
 	if ($isXML){
 		print XML "<test_result>\n<name>$compiler.$test_program</name>\n<description></description>\n";
@@ -588,6 +589,7 @@ sub CompleteTestOutput
 	my @statret = ();
 
 	debug(" *********** Completing test: $test_name *********** \n",2);
+	print " *********** Completing test: $test_name *********** \n";
 	@statret = CondorUtils::ProcessReturn($status);
 	if($statret[0] == 0)
 	#if( WIFEXITED( $status ) && WEXITSTATUS( $status ) == 0 )
@@ -674,8 +676,8 @@ sub DoChild
 
 
 	# before starting test clean trace of earlier run
-	my $rmcmd = "rm -f $log $out $err $runout $cmdout";
-	CondorTest::verbose_system("$rmcmd",{emit_output=>0});
+	#my $rmcmd = "rm -f $log $out $err $runout $cmdout";
+	#CondorTest::verbose_system("$rmcmd",{emit_output=>0});
 
 	my $corecount = 0;
 	my $res;
@@ -691,7 +693,7 @@ sub DoChild
 		if( $hush == 0 ) {
 			debug( "Child Starting:perl $test_program > $test_program.$test_id.out\n",2);
 		}
-		$res = system("perl $test_program > $test_program.$test_id.out 2>&1");
+		$res = verbose_system("perl $test_program > $test_program.$test_id.out 2>&1");
 	} else {
 		$log = $testname . ".log";
 		$cmd = $testname . ".cmd";
@@ -703,7 +705,7 @@ sub DoChild
 		if( $hush == 0 ) {
 			debug( "Child Starting:perl $test_program > $test_program.out\n",2);
 		}
-		$res = system("perl $test_program > $test_program.out 2>&1");
+		$res = verbose_system("perl $test_program > $test_program.out 2>&1");
 	}
 
 	my $newlog =  $piddir . "/" . $log;
@@ -772,9 +774,9 @@ sub yates_shuffle
 	}
 }
 
-sub timestamp {
-	return scalar localtime();
-}
+#sub timestamp {
+	#return scalar localtime();
+#}
 
 sub safe_copy {
 	my( $src, $dest ) = @_;

@@ -422,6 +422,17 @@ class DaemonCore : public Service
         @return A pointer into a <b>static buffer</b>, or NULL on error */
     char const* InfoCommandSinfulString (int pid = -1);
 
+	/**
+	 * Return a vector of the sinful strings of all known command sockets.
+	 *
+	 * ONLY returns the public IP address.
+	 *
+	 * This function was 'born deprecated'; use case is when rewriting all
+	 * addresses in a collector (in the future, we hope to have a more
+	 * expressive sinful string variant).
+	 */
+	const std::vector<Sinful> &InfoCommandSinfulStringsMyself(); 
+
 	void daemonContactInfoChanged();
 
     /** Returns the Sinful String <host:port> of the DaemonCore
@@ -716,6 +727,7 @@ class DaemonCore : public Service
     */
     int Register_Command_Socket (Stream*      iosock,
                                  const char * descrip = NULL ) {
+	m_dirty_command_sock_sinfuls = true;
         return Register_Socket (iosock,
                                 descrip,
                                 (SocketHandler)NULL,
@@ -1560,11 +1572,12 @@ class DaemonCore : public Service
 	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
        int    RecentWindowQuantum;
        int    PublishFlags;        // verbositiy of publishing
+	   bool   enabled;            // set to true to enable statistics, otherwise the pool will be empty and AddProbe calls will quietly fail.
 
 	   // helper methods
 	   //Stats();
 	   //~Stats();
-	   void Init();
+	   void Init(bool enable);
        void Reconfig();
 	   void Clear();
 	   time_t Tick(time_t now=0); // call this when time may have changed to update StatsLastUpdateTime, etc.
@@ -1573,7 +1586,7 @@ class DaemonCore : public Service
 	   void Publish(ClassAd & ad, int flags) const;
        void Publish(ClassAd & ad, const char * config) const;
 	   void Unpublish(ClassAd & ad) const;
-       void* New(const char * category, const char * name, int as);
+       void* NewProbe(const char * category, const char * name, int as);
        void AddToProbe(const char * name, int val);
        void AddToProbe(const char * name, int64_t val);
        void AddToSumEmaRate(const char * name, int val);
@@ -1583,6 +1596,24 @@ class DaemonCore : public Service
        double AddRuntimeSample(const char * name, int as, double before);
 
 	} dc_stats;
+
+	// Do not use this function for anything. It's a temporary hack to get
+	// ConvertDefaultIPToSocketIP working in mixed-mode IPv4/IPv6.  The
+	// real goal is to eliminate ConvertDefaultIPToSocketIP, and eliminate
+	// the need for this.
+	//
+	// All that said: given a condor_sockaddr, this will look for the interface
+	// that best matches and will return its port.
+	int find_interface_command_port_do_not_use(const condor_sockaddr & addr);
+
+	// Do not use this function for anything. It's a temporary hack to get
+	// ConvertDefaultIPToSocketIP working in mixed-mode IPv4/IPv6.  The
+	// real goal is to eliminate ConvertDefaultIPToSocketIP, and eliminate
+	// the need for this.
+	//
+	// All that said: given a condor_sockaddr, determine if it describes
+	// one of our command ports.
+	bool is_command_port_do_not_use(const condor_sockaddr & addr);
 
   private:      
 
@@ -1726,6 +1757,8 @@ class DaemonCore : public Service
 #ifdef HAVE_CLONE
 	bool m_use_clone_to_create_processes;
 	bool UseCloneToCreateProcesses() { return m_use_clone_to_create_processes; }
+#else
+	bool UseCloneToCreateProcesses() { return false; }
 #endif
 
 	void Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking);
@@ -1933,7 +1966,7 @@ class DaemonCore : public Service
     int                 WatchPid(PidEntry *pidentry);
 #endif
             
-    static              TimerManager t;
+    TimerManager &t;
     void                DumpTimerList(int, const char* = NULL);
 
 	SecMan	    		*sec_man;
@@ -2076,6 +2109,8 @@ class DaemonCore : public Service
 	MyString m_daemon_sock_name;
 	Sinful m_sinful;     // full contact info (public, private, ccb, etc.)
 	bool m_dirty_sinful; // true if m_sinful needs to be reinitialized
+	std::vector<Sinful> m_command_sock_sinfuls; // Cached copy of our command sockets' sinful strings.
+	bool m_dirty_command_sock_sinfuls; // true if m_command_sock_sinfuls needs to be reinitialized.
 
 	bool CommandNumToTableIndex(int cmd,int *cmd_index);
 
