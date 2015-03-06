@@ -766,7 +766,7 @@ tags=eventd,scheduled_event
 [DAGMAN_LOG_ON_NFS_IS_ERROR]
 default=true
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Log On Nfs Is Error
 review=?
@@ -775,7 +775,7 @@ tags=dagman,dagman_multi_dag
 [DAGMAN_RESET_RETRIES_UPON_RESCUE]
 default=true
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Reset Retries Upon Rescue
 review=?
@@ -783,8 +783,8 @@ tags=dagman,dag
 
 [DAGMAN_INSERT_SUB_FILE]
 default=
-type=string
-reconfig=true
+type=path
+reconfig=false
 customization=seldom
 friendly_name=Dagman Insert Sub File
 review=?
@@ -793,7 +793,7 @@ tags=dagman,condor_submit_dag
 [DAGMAN_OLD_RESCUE]
 default=false
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Old Rescue
 review=?
@@ -802,16 +802,16 @@ tags=dagman,condor_submit_dag
 [DAGMAN_AUTO_RESCUE]
 default=true
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Auto Rescue
 review=?
 tags=dagman,condor_submit_dag
 
 [DAGMAN_ON_EXIT_REMOVE]
-default=
+default=(ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
 type=string
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman On Exit Remove
 review=?
@@ -819,17 +819,17 @@ tags=dagman,condor_submit_dag
 
 [DAGMAN_CONFIG_FILE]
 default=
-type=string
-reconfig=true
+type=path
+reconfig=false
 customization=seldom
 friendly_name=Dagman Config File
 review=?
-tags=dagman,dagman_main
+tags=dagman,dagman_main,condor_submit_dag
 
 [DAGMAN_DEBUG_CACHE_ENABLE]
 default=false
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Debug Cache Enable
 review=?
@@ -838,7 +838,7 @@ tags=dagman,dagman_main
 [DAGMAN_STARTUP_CYCLE_DETECT]
 default=false
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Startup Cycle Detect
 review=?
@@ -847,7 +847,7 @@ tags=dagman,dagman_main
 [DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION]
 default=false
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Ignore Duplicate Job Execution
 review=?
@@ -857,8 +857,8 @@ tags=dagman,dagman_main
 # XXX 114 is really CheckEvents::ALLOW_TERM_ABORT | CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT | CheckEvents::ALLOW_DOUBLE_TERMINATE | CheckEvents::ALLOW_DUPLICATE_EVENTS
 default=114
 type=int
-reconfig=true
-customization=seldom
+reconfig=false
+customization=expert
 friendly_name=Dagman Allow Events
 review=?
 tags=dagman,dagman_main
@@ -866,7 +866,7 @@ tags=dagman,dagman_main
 [DAGMAN_RETRY_SUBMIT_FIRST]
 default=true
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Retry Submit First
 review=?
@@ -875,7 +875,7 @@ tags=dagman,dagman_main
 [DAGMAN_RETRY_NODE_FIRST]
 default=false
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Retry Node First
 review=?
@@ -884,25 +884,16 @@ tags=dagman,dagman_main
 [DAGMAN_MUNGE_NODE_NAMES]
 default=true
 type=bool
-reconfig=true
-customization=seldom
+reconfig=false
+customization=expert
 friendly_name=Dagman Munge Node Names
-review=?
-tags=dagman,dagman_main
-
-[DAGMAN_DELETE_OLD_LOGS]
-default=true
-type=bool
-reconfig=true
-customization=seldom
-friendly_name=Dagman Delete Old Logs
 review=?
 tags=dagman,dagman_main
 
 [DAGMAN_PROHIBIT_MULTI_JOBS]
 default=false
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Prohibit Multi Jobs
 review=?
@@ -911,44 +902,44 @@ tags=dagman,dagman_main
 [DAGMAN_SUBMIT_DEPTH_FIRST]
 default=false
 type=bool
-reconfig=true
-customization=seldom
+reconfig=false
+customization=normal
 friendly_name=Dagman Submit Depth First
 review=?
 tags=dagman,dagman_main
 
 [DAGMAN_CONDOR_SUBMIT_EXE]
-default=
-type=string
-reconfig=true
-customization=seldom
+default=$(BIN)/condor_submit
+type=path
+reconfig=false
+customization=expert
 friendly_name=Dagman Condor Submit Exe
 review=?
 tags=dagman,dagman_main
 
 [DAGMAN_CONDOR_RM_EXE]
-default=
-type=string
-reconfig=true
-customization=seldom
+default=$(BIN)/condor_rm
+type=path
+reconfig=false
+customization=expert
 friendly_name=Dagman Condor Rm Exe
 review=?
 tags=dagman,dagman_main
 
 [DAGMAN_STORK_SUBMIT_EXE]
-default=
+default=stork_submit
 type=string
-reconfig=true
-customization=seldom
+reconfig=false
+customization=expert
 friendly_name=Dagman Stork Submit Exe
 review=?
 tags=dagman,dagman_main
 
 [DAGMAN_STORK_RM_EXE]
-default=
+default=stork_rm
 type=string
-reconfig=true
-customization=seldom
+reconfig=false
+customization=expert
 friendly_name=Dagman Stork Rm Exe
 review=?
 tags=dagman,dagman_main
@@ -956,8 +947,8 @@ tags=dagman,dagman_main
 [DAGMAN_ABORT_DUPLICATES]
 default=true
 type=bool
-reconfig=true
-customization=seldom
+reconfig=false
+customization=expert
 friendly_name=Dagman Abort Duplicates
 review=?
 tags=dagman,dagman_main
@@ -965,8 +956,8 @@ tags=dagman,dagman_main
 [DAGMAN_ABORT_ON_SCARY_SUBMIT]
 default=true
 type=bool
-reconfig=true
-customization=seldom
+reconfig=false
+customization=expert
 friendly_name=Dagman Abort On Scary Submit
 review=?
 tags=dagman,dagman_main
@@ -974,9 +965,252 @@ tags=dagman,dagman_main
 [DAGMAN_PENDING_REPORT_INTERVAL]
 default=600
 type=int
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Pending Report Interval
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_ALLOW_LOG_ERROR]
+default=false
+type=bool
+reconfig=false
+customization=seldom
+friendly_name=Dagman Allow Log Error
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_ALWAYS_RUN_POST]
+default=true
+type=bool
+reconfig=false
+customization=seldom
+friendly_name=Dagman Always Run Post
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_ALWAYS_USE_NODE_LOG]
+default=true
+type=bool
+reconfig=false
+customization=seldom
+friendly_name=Dagman Always Use Node Log
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_COPY_TO_SPOOL]
+default=false
+type=bool
+reconfig=false
+customization=expert
+friendly_name=Dagman Copy To Spool
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_DEBUG]
+default=
+type=string
+reconfig=false
+customization=normal
+friendly_name=Dagman Debug
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_DEBUG_CACHE_SIZE]
+default=5*1024*1024
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Debug Cache Size
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_DEFAULT_NODE_LOG]
+default=@(DAG_DIR)/@(DAG_FILE).nodes.log
+type=path
+reconfig=false
+customization=expert
+friendly_name=Dagman Default Node Log
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_DEFAULT_PRIORITY]
+default=0
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Default Priority
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_GENERATE_SUBDAG_SUBMITS]
+default=true
+type=bool
+reconfig=false
+customization=seldom
+friendly_name=Dagman Generate SubDAG Submits
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_HOLD_CLAIM_TIME]
+default=20
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Claim Hold Time
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_JOB_HOLDS]
+default=100
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Max Job Holds
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_JOBS_IDLE]
+default=0
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Max Jobs Idle
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_JOBS_SUBMITTED]
+default=0
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Max Jobs Submitted
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_POST_SCRIPTS]
+default=0
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Max Post Scripts
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_PRE_SCRIPTS]
+default=0
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Max Pre Scripts
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_RESCUE_NUM]
+default=100
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Max Rescue Num
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_SUBMIT_ATTEMPTS]
+default=6
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Max Submit Attempts
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_SUBMITS_PER_INTERVAL]
+default=5
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Max Submits Per Interval
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_PEGASUS_REPORT_METRICS]
+default=$(LIBEXEC)/condor_dagman_metrics_reporter
+type=path
+reconfig=false
+customization=expert
+friendly_name=Dagman Pegasus Report Metrics
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_PEGASUS_REPORT_TIMEOUT]
+default=100
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Pegasus Report Timeout
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_SUBMIT_DELAY]
+default=0
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Submit Delay
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_SUPPRESS_NOTIFICATION]
+default=true
+type=bool
+reconfig=false
+customization=normal
+friendly_name=Dagman Suppress Notification
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_USE_OLD_DAG_READER]
+default=false
+type=bool
+reconfig=false
+customization=expert
+friendly_name=Dagman Use Old Dag Reader
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_USER_LOG_SCAN_INTERVAL]
+default=5
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman User Log Scan Interval
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_USE_STRICT]
+default=1
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Use Strict
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_VERBOSITY]
+default=3
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Verbosity
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_WRITE_PARTIAL_RESCUE]
+default=true
+type=bool
+reconfig=false
+customization=expert
+friendly_name=Dagman Write Partial Rescue
 review=?
 tags=dagman,dagman_main
 
