@@ -2747,13 +2747,15 @@ but across all users and user's jobs.
 
 \label{param:EventLogRotationLock}
 \item[\Macro{EVENT\_LOG\_ROTATION\_LOCK}]
-  Controls the lock file that will be used to ensure that, when
-  rotating files, the rotation is done by a single process.  This is a
-  string parameter; it's default value is the file path of the
-  event log itself, with a ``.lock'' appended.
+  Specifies the lock file that will be used to ensure that, 
+  when rotating files, the rotation is done by a single process.  This is a
+  string parameter; its default value is \Expr{\$(LOCK)/EventLogLock}.
+  If an empty value is set, then the file that is used
+  is the file path of the event log itself, 
+  with the string \Expr{.lock} appended.
   If \MacroNI{EVENT\_LOG} is not defined, or if
   \MacroNI{EVENT\_LOG\_MAX\_SIZE} has a value of 0 (which disables
-  event log rotation), this parameter has no effect.
+  event log rotation), this configuration variable has no effect.
 
 \label{param:EventLogFsync}
 \item[\Macro{EVENT\_LOG\_FSYNC}]
@@ -3123,6 +3125,14 @@ which use DaemonCore).
   Defines the name of the core file created.
   Defaults to \Expr{core.\$(SUBSYSTEM)} on Unix platforms,
   and \Expr{core.\$(SUBSYSTEM).WIN32} on Windows platforms.   
+
+\label{param:PipeBufferMax}
+\item[\Macro{PIPE\_BUFFER\_MAX}]
+  The maximum number of bytes read from a \Code{stdout} or \Code{stdout} pipe.
+  The default value is 10240.
+  A rare example in which the value would need to increase from
+  its default value is when a hook must output an entire ClassAd,
+  and the ClassAd may be larger than the default.
 
 \end{description}
 

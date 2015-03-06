@@ -1505,6 +1505,8 @@ int GetRemoteParamStats(Daemon* target, ClassAd & ad)
 			fprintf(stderr, "Can't read stats ad from %s\n", name);
 		}
 	}
+	// CRUFT: Remove this Remove() once no recent versions of Condor
+	//   automatically add CurrentTime to all ads.
 	ad.Remove("CurrentTime");
 	return 0;
 }
