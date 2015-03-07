@@ -339,38 +339,104 @@ int Sock::assign(
 #endif
 
 #ifdef WIN32
+
+#ifndef SIO_BASE_HANDLE
+  #define SIO_BASE_HANDLE _WSAIOR(IOC_WS2,34)
+#endif
+
 int Sock::set_inheritable( int flag )
 {
 	// on unix, all sockets are always inheritable by a child process.
 	// but on Win32, each individual socket has a flag that says if it can
 	// or cannot be inherited by a child.  this method effectively sets
-	// that flag (by duplicating the socket).  
+	// that flag.
 	// pass flag as "TRUE" to make this socket inheritable, "FALSE" to make
 	// it private to this process.
 	// Returns TRUE on sucess, FALSE on failure.
 
+	SOCKET RealKernelSock;
 	SOCKET DuplicateSock;
 
 	if ( (flag != TRUE) && (flag != FALSE) )
 		return FALSE;	// flag must be either TRUE or FALSE...
 
-	if (!DuplicateHandle(GetCurrentProcess(),
-        (HANDLE)_sock,
-        GetCurrentProcess(),
-        (HANDLE*)&DuplicateSock,
-        0,
-        flag, // inheritable flag
-        DUPLICATE_SAME_ACCESS)) {
-			// failed to duplicate
-			dprintf(D_ALWAYS,"ERROR: DuplicateHandle() failed "
-			                 "in Sock:set_inheritable(%d), error=%d\n"
-				  ,flag,GetLastError());
-			closesocket(DuplicateSock);
-			return FALSE;
+	DWORD BytesReturned = 0;  // useless pointer needed for winsock call
+
+	// If the Winsock stack on this machine is configured with a
+	// Layered Service Provider (LSP) extention, it is possible that
+	// _sock is not a "real" kernel socket handle but is instead an LSP
+	// handle.  LSPs implementations may be sloppy and fail to implement
+	// socket inheritance features. So our algorithm is as follows -
+	// First, we get the real kernel handle, which can be obtained on
+	// recent Windows versions (Vista and newer) via an ioctl call.
+	// If it turns out that _sock is a real kernel handle, we
+	// can likely just call SetHandleInformation() which is Microsoft's
+	// current recommendation for changing the inheritance of a socket.
+	// But if _sock is from an LSP, of SetHandleInformation() fails for
+	// some reason, then we duplicate the kernel handle into a new
+	// socket that has the inheritance we want, and close the original _sock.
+	// See gitrac ticklet #304.
+
+	int rc = ::WSAIoctl(_sock, SIO_BASE_HANDLE, NULL, 0, (void *) &RealKernelSock,
+		sizeof (RealKernelSock), &BytesReturned, NULL, NULL);
+	if (rc == SOCKET_ERROR)
+	{
+		int err = WSAGetLastError();
+		dprintf(D_NETWORK,
+			"Failed SIO_BASE_HANDLE in set_inheritable on sock %d to %d (err=%d, %s)",
+			_sock, flag, err, GetLastErrorString(err) );
+		// Well, we failed to get the "real" handle for whatever reason.
+		// We may as well try to move forward with the original _sock handle.
+		RealKernelSock = _sock;
 	}
-	// if made it here, successful duplication; replace original
-	closesocket(_sock);
-	_sock = DuplicateSock;
+
+	// If _sock is a real kernel sock (not an LSB), we can likely do the deed with
+	// a quick call to SetHandleInformation().
+	bool sethandle_worked = false;
+	if (RealKernelSock == _sock) {   // if true, we are LSB free
+		if (!SetHandleInformation(
+				(HANDLE) _sock,
+				HANDLE_FLAG_INHERIT,
+				flag ? HANDLE_FLAG_INHERIT : 0) )
+		{
+			int err = WSAGetLastError();
+			dprintf(D_NETWORK,
+				"Failed to set_inheritable on sock %d to %d (err=%d, %s)",
+				_sock, flag, err, GetLastErrorString(err) );
+		} else {
+			sethandle_worked = true;
+		}
+	}
+
+	// Well, we failed to set the inheritable flag by using
+	// Microsoft's recommendaded API of SetHandleInformation().
+	// In this case we will fall back to using our old method
+	// of duplicating the handle.  This old method is no longer
+	// recommended by Microsoft, but hey, we tried and failed to do
+	// it the "right way" (maybe it failed cuz an old/customized Winsock,
+	// or it failed because we never attempted it because _sock is an LSP
+	// sock, not a kernel sock).
+	if (sethandle_worked == false) {
+		if (!DuplicateHandle(GetCurrentProcess(),
+			(HANDLE)RealKernelSock,  // dup kernel sock here, not LSB sock
+			GetCurrentProcess(),
+			(HANDLE*)&DuplicateSock,
+			0,
+			flag, // inheritable flag
+			DUPLICATE_SAME_ACCESS)) {
+				// failed to duplicate
+				dprintf(D_ALWAYS,"ERROR: DuplicateHandle() failed "
+								 "in Sock:set_inheritable(%d), error=%d\n"
+					  ,flag,GetLastError());
+				return FALSE;
+		}
+		// if made it here, successful duplication; replace original.
+		// note we close _sock, not RealKernelSock, since _sock is
+		// the handle we obtained via socket() - if it is from an LSP, then the
+		// LSP is responsible for closing RealKernelSock.
+		closesocket(_sock);
+		_sock = DuplicateSock;
+	}
 
 	return TRUE;
 }
