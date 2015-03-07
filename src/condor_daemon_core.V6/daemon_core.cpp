@@ -6447,6 +6447,18 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	}
 
+	// if this is the first time Create_Process is being called with a
+	// non-NULL family_info argument, create the ProcFamilyInterface object
+	// that we'll use to interact with the procd for controlling process
+	// families.
+	// Note we must do this BEFORE we go further and start setting up sockets
+	// to inherit, else we risk the condor_procd inheriting sockets that we
+	// never intended (and thus keeping these sockets open forever).
+	if ((family_info != NULL) && (m_proc_family == NULL)) {
+		m_proc_family = ProcFamilyInterface::create(get_mySubSystem()->getName());
+		ASSERT(m_proc_family);
+	}
+
 	inheritbuf.formatstr("%lu ",(unsigned long)mypid);
 
 		// true = Give me a real local address, circumventing
@@ -6653,16 +6665,6 @@ int DaemonCore::Create_Process(
 	/* this stuff ends up in the child's environment to help processes
 		identify children/grandchildren/great-grandchildren/etc. */
 	create_id(&time_of_fork, &mii);
-
-	// if this is the first time Create_Process is being called with a
-	// non-NULL family_info argument, create the ProcFamilyInterface object
-	// that we'll use to interact with the procd for controlling process
-	// families
-	//
-	if ((family_info != NULL) && (m_proc_family == NULL)) {
-		m_proc_family = ProcFamilyInterface::create(get_mySubSystem()->getName());
-		ASSERT(m_proc_family);
-	}
 
 		// Before we get into the platform-specific stuff, see if any
 		// of the std fds are requesting a DC-managed pipe.  If so, we
