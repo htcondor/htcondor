@@ -57,6 +57,11 @@ and then later kill the excess running jobs.
 \item Fixed a minor bug that would emit a \Expr{grep not found} warning
 when using \Condor{ssh\_to\_job} to log in to a MacOS execute node.
 \Ticket{4789}
+ 
+\item Fixed problems running a central manager on a Windows operating
+system that could prevent the \Condor{collector} from being restarted,
+and/or could cause delays when shutting down the HTCondor service.
+\Ticket{4923}
 
 \end{itemize}
 
