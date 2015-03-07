@@ -145,7 +145,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 	SOCKET DuplicateSock = INVALID_SOCKET;
 	WSAPROTOCOL_INFO sockstate;
 
-	dprintf(D_FULLDEBUG,"About to sock duplicate, old sock=%X new sock=%X state=%d\n",
+	dprintf(D_NETWORK,"About to sock duplicate, old sock=%X new sock=%X state=%d\n",
 		orig._sock,_sock,_state);
 
 	if (WSADuplicateSocket(orig._sock,GetCurrentProcessId(),&sockstate) == 0)
@@ -160,7 +160,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 	}
 	// if made it here, successful duplication
 	_sock = DuplicateSock;
-	dprintf(D_FULLDEBUG,"Socket duplicated, old sock=%X new sock=%X state=%d\n",
+	dprintf(D_NETWORK,"Socket duplicated, old sock=%X new sock=%X state=%d\n",
 		orig._sock,_sock,_state);
 #else
 	// Unix
@@ -1594,13 +1594,19 @@ int Sock::close()
 
 	if (_state == sock_virgin) return FALSE;
 
-	if (type() == Stream::reli_sock && IsDebugLevel(D_NETWORK)) {
-		dprintf( D_NETWORK, "CLOSE %s fd=%d\n", 
+	if (IsDebugLevel(D_NETWORK) && _sock != INVALID_SOCKET) {
+		dprintf( D_NETWORK, "CLOSE %s %s fd=%d\n",
+						type() == Stream::reli_sock ? "TCP" : "UDP",
 						sock_to_string(_sock), _sock );
 	}
 
 	if ( _sock != INVALID_SOCKET ) {
-		if (::closesocket(_sock) < 0) return FALSE;
+		if (::closesocket(_sock) < 0) {
+			dprintf( D_NETWORK, "CLOSE FAILED %s %s fd=%d\n",
+						type() == Stream::reli_sock ? "TCP" : "UDP",
+						sock_to_string(_sock), _sock );
+			return FALSE;
+		}
 	}
 
 	_sock = INVALID_SOCKET;
