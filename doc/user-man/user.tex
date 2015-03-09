@@ -336,14 +336,15 @@ defines an execution environment.
 HTCondor \VersionNotice\ supports several different
 universes for user jobs:
 \begin{itemize}
-	\item Standard
-	\item Vanilla
-	\item Grid
-	\item Java
-	\item Scheduler
-	\item Local
- 	\item Parallel
- 	\item VM
+	\item standard
+	\item vanilla
+	\item grid
+	\item java
+	\item scheduler
+	\item local
+ 	\item parallel
+ 	\item vm
+ 	\item docker
 \end{itemize}
 
 The \SubmitCmd{universe} under which a job runs
@@ -383,6 +384,8 @@ See section~\ref{sec:Parallel} for more about the Parallel universe.
 The vm universe allows users to run jobs where the job is
 no longer a simple executable, but a disk image, facilitating
 the execution of a virtual machine.
+The docker universe instantiates a Docker container within which
+the HTCondor job runs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:standard-universe}Standard Universe}
@@ -586,6 +589,12 @@ virtual machines with the vm universe.
 
 Please see section~\ref{sec:vmuniverse} for details.
 
+%%%%%%%%%%%%
+\subsubsection{Docker Universe}
+%%%%%%%%%%%%
+\index{universe!docker}
+\index{docker universe}
+\Todo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:submitting}Submitting a Job}
