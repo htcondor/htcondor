@@ -54,6 +54,11 @@ ptr = NULL;
 const char *EMPTY_CLASSAD_TYPE_NAME = "(empty)";
 
 
+// declare a default ClassAdLog table entry maker for the normal case
+// when the log holds ClassAd's and not some derived type.
+const ConstructClassAdLogTableEntry<ClassAd*> DefaultMakeClassAdLogTableEntry;
+
+
 // non-templatized worker function that implements the log loading functionality of ClassAdLog
 //
 FILE* LoadClassAdLog(

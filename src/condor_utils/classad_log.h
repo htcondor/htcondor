@@ -72,7 +72,7 @@ public:
 
 // declare a default ClassAdLog table entry maker for the normal case
 // when the log holds ClassAd's and not some derived type.
-const ConstructClassAdLogTableEntry<ClassAd*> DefaultMakeClassAdLogTableEntry;
+extern const ConstructClassAdLogTableEntry<ClassAd*> DefaultMakeClassAdLogTableEntry;
 
 template <typename K, typename AltK, typename AD>
 class ClassAdLog {
