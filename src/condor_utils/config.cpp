@@ -912,7 +912,7 @@ Parse_macros(
 	int options,
 	const char * subsys,
 	std::string& config_errmsg,
-	int (*fnSubmit)(void* pv, MACRO_SOURCE& source, MACRO_SET& set, const char * line, std::string & errmsg),
+	int (*fnSubmit)(void* pv, MACRO_SOURCE& source, MACRO_SET& set, char * line, std::string & errmsg),
 	void * pvSubmitData)
 {
 	char*	name = NULL;
@@ -1010,7 +1010,7 @@ Parse_macros(
 				// Here we have determined the line has a name but no operator or whitespace after it.
 			if (is_submit) {
 				// a line with no operator may be a QUEUE statement, so hand it off to the queue callback.
-				retval = fnSubmit(pvSubmitData, FileSource, macro_set, name, errmsg);
+				retval = fnSubmit(pvSubmitData, FileSource, macro_set, name, config_errmsg);
 				if (retval != 0)
 					goto cleanup;
 				continue;
@@ -1218,7 +1218,7 @@ Parse_macros(
 
 		} else if (is_submit && (op != '=' || MATCH == strcasecmp(name, "queue"))) {
 
-			retval = fnSubmit(pvSubmitData, FileSource, macro_set, line, errmsg);
+			retval = fnSubmit(pvSubmitData, FileSource, macro_set, line, config_errmsg);
 			if (retval != 0) // this may or may not be a failure, but we should stop reading the file.
 				goto cleanup;
 

@@ -400,7 +400,7 @@ BEGIN_C_DECLS
 		int options,
 		const char * subsys,
 		std::string& config_errmsg,
-		int (*fnSubmit)(void* pv, MACRO_SOURCE& source, MACRO_SET& set, const char * line, std::string & errmsg),
+		int (*fnSubmit)(void* pv, MACRO_SOURCE& source, MACRO_SET& set, char * line, std::string & errmsg),
 		void * pvSubmitData);
 
 	FILE* Open_macro_source (

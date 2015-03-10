@@ -46,7 +46,7 @@
 #include "my_hostname.h"
 #include "domain_tools.h"
 #include "get_daemon_name.h"
-#include "condor_qmgr.h"
+//#include "condor_qmgr.h"  // only submit_protocol.cpp is allowed to access the schedd's Qmgt functions
 #include "sig_install.h"
 #include "access.h"
 #include "daemon.h"
@@ -76,6 +76,7 @@
 #include "condor_holdcodes.h"
 #include "condor_url.h"
 #include "condor_version.h"
+#include "submit_internal.h"
 
 #include "list.h"
 #include "condor_vm_universe_types.h"
@@ -86,7 +87,6 @@
 #include <string>
 #include <set>
 
-#define SUBMIT_USING_CONFIG_PARSER 1
 
 // TODO: hashFunction() is case-insenstive, but when a MyString is the
 //   hash key, the comparison in HashTable is case-sensitive. Therefore,
@@ -97,10 +97,6 @@
 static unsigned int hashFunction( const MyString& );
 #include "file_sql.h"
 
-#ifdef SUBMIT_USING_CONFIG_PARSER
-#else
-HashTable<AttrKey,MyString> forcedAttributes( 64, AttrKeyHashFunction );
-#endif
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
 HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
 
@@ -116,6 +112,7 @@ char	*Architecture;
 char	*Spool;
 char	*ScheddName = NULL;
 std::string ScheddAddr;
+AbstractScheddQ * MyQ = NULL;
 char	*PoolName = NULL;
 DCSchedd* MySchedd = NULL;
 char	*My_fs_domain;
@@ -142,6 +139,7 @@ SetAttributeFlags_t setattrflags = 0; // flags to SetAttribute()
 bool	SubmitFromStdin = false;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
+int		DashDryRun = 0;
 int		JobDisableFileChecks = 0;
 bool	RequestMemoryIsZero = false;
 bool	RequestDiskIsZero = false;
@@ -151,6 +149,7 @@ bool	already_warned_requirements_disk = false;
 int		MaxProcsPerCluster;
 int	  ClusterId = -1;
 int	  ProcId = -1;
+int   FirstStep = 1; // offset to convert ProcId to step
 int	  JobUniverse;
 char *JobGridType = NULL;
 int		Remote=0;
@@ -174,6 +173,7 @@ char* tdp_input = NULL;
 #if defined(WIN32)
 char* RunAsOwnerCredD = NULL;
 #endif
+
 
 // For mpi universe testing
 bool use_condor_mpi_universe = false;
@@ -209,12 +209,60 @@ char* UserNotesVal = NULL;
 char* StackSizeVal = NULL;
 List<const char> extraLines;  // lines passed in via -a argument
 
+// declare enough of the condor_params structure definitions so that we can define submit hashtable defaults
+namespace condor_params {
+	typedef struct string_value { char * psz; int flags; } string_value;
+	struct key_value_pair { const char * key; const string_value * def; };
+}
+
+// buffers used while processing the queue statement to inject $(Cluster), $(Process) and $(Step)
+// into the submit hash table.  Note that these buffers are also used BEFORE the queue
+// statement to set defaults for $(Cluster), $(Process) and $(Step).
+static char ClusterString[20]="1", ProcessString[20]="0", StepString[20]="1", EmptyItemString[] = "";
+// values for submit hashtable defaults, these are declared as char rather than as const char to make g++ on fedora shut up.
+static char OneString[] = "1", ZeroString[] = "0";
+static char ParallelNodeString[] = "#pArAlLeLnOdE#";
+
+
+static condor_params::string_value ArchMacroDef = { Architecture, 0 };
+static condor_params::string_value OpsysMacroDef = { OperatingSystem, 0 };
+static condor_params::string_value ClusterMacroDef = { ClusterString, 0 };
+static condor_params::string_value ProcessMacroDef = { ProcessString, 0 };
+static condor_params::string_value NodeMacroDef = { ParallelNodeString, 0 };
+static condor_params::string_value StepMacroDef = { StepString, 0 };
+static condor_params::string_value StepBaseMacroDef = { OneString, 0 };
+#ifdef WIN32
+static condor_params::string_value IsWinMacroDef = { OneString, 0 };
+#else
+static condor_params::string_value IsWinMacroDef = { ZeroString, 0 };
+#endif
+
+// Table of submit macro 'defaults'. This provides a convenient way to inject things into the submit
+// hashtable without actually running a bunch of code to stuff the table.
+// Because they are defaults they will be ignored when scanning for unreferenced macros.
+// NOTE: TABLE MUST BE SORTED BY THE FIRST FIELD!!
+static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
+	{ "ARCH",      &ArchMacroDef },
+	{ "Cluster",   &ClusterMacroDef },
+	{ "IsWindows", &IsWinMacroDef },
+	{ "Node",      &NodeMacroDef },
+	{ "OPSYS",     &OpsysMacroDef },
+	{ "Process",   &ProcessMacroDef },
+	{ "Step",      &StepMacroDef },
+	{ "StepBase",  &StepBaseMacroDef },
+};
+
+static MACRO_DEFAULTS SubmitMacroDefaultSet = {
+	COUNTOF(SubmitMacroDefaults), SubmitMacroDefaults, NULL
+};
+
 // the submit file is read into this macro table
 //
 static MACRO_SET SubmitMacroSet = {
 	0, 0,
 	CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX,
-	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), NULL };
+	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(),
+	&SubmitMacroDefaultSet };
 
 // these are used to keep track of the source of various macros in the table.
 const MACRO_SOURCE DefaultMacro = { true, false, 1, -2, -1, -2 };
@@ -538,32 +586,36 @@ void	SetFileOptions();
 void	SetKillSig();
 #endif
 void	SetForcedAttributes();
+int		DoUnitTests(int options);
 void 	check_iwd( char const *iwd );
-#ifdef SUBMIT_USING_CONFIG_PARSER
-int	read_condor_file( FILE *fp );
-#else
-int	read_condor_file( FILE *fp );
-#endif
+int 	read_submit_file( FILE *fp );
 char * 	condor_param( const char* name, const char* alt_name );
 char * 	condor_param( const char* name ); // call param with NULL as the alt
 void 	set_condor_param( const char* name, const char* value);
 void 	set_condor_param_used( const char* name);
-void 	queue(int num);
+// stuff value into the submit's hashtable and mark 'name' as a used param
+// this function is intended for use during queue iteration to stuff changing values like $(Cluster) and $(Process)
+// Because of this the function does NOT make a copy of value, it's up to the caller to
+// make sure that value is not changed for the lifetime of possible macro substitution.
+void 	set_live_submit_variable(const char* name, const char* live_value);
+int queue_connect();
+int queue_begin(StringList & vars, bool new_cluster); // called before iterating items
+int queue_item(int num, StringList & vars, char * item, const char * delims, const char * ws);
+int queue_end(bool fEof); // called when done iterating items for a single queue statement, and at end of file
 bool 	check_requirements( char const *orig, MyString &answer );
 void 	check_open( const char *name, int flags );
 void 	usage();
 void 	init_params();
 int 	whitespace( const char *str);
-void 	delete_commas( char *ptr );
 void 	compress( MyString &path );
 char const*full_path(const char *name, bool use_iwd=true);
-void 	log_submit();
 void 	get_time_conv( int &hours, int &minutes );
 int	  SaveClassAd ();
-void	InsertJobExpr (const char *expr, bool clustercheck = true);
-void	InsertJobExpr (const MyString &expr, bool clustercheck = true);
-void	InsertJobExprInt(const char * name, int val, bool clustercheck = true);
-void	InsertJobExprString(const char * name, const char * val, bool clustercheck = true);
+void InsertJobExpr (const char *expr);
+void InsertJobExpr (const MyString &expr);
+void InsertJobExprInt(const char * name, int val);
+void InsertJobExprString(const char * name, const char * val);
+void SetNoClusterAttr(const char * name);
 void	check_umask();
 void setupAuthentication();
 void	SetPeriodicHoldCheck(void);
@@ -609,9 +661,6 @@ struct SubmitRec {
 	int cluster;
 	int firstjob;
 	int lastjob;
-	char *logfile;
-	char *lognotes;
-	char *usernotes;
 };
 
 ExtArray <SubmitRec> SubmitInfo(10);
@@ -926,11 +975,12 @@ init_job_ad()
 }
 
 int
-main( int argc, char *argv[] )
+main( int argc, const char *argv[] )
 {
 	FILE	*fp;
-	char	**ptr;
-	char	*cmd_file = NULL;
+	const char **ptr;
+	const char *pcolon = NULL;
+	const char *cmd_file = NULL;
 	int i;
 	MyString method;
 
@@ -983,12 +1033,18 @@ main( int argc, char *argv[] )
 				verbose = true; terse = false;
 			} else if (is_dash_arg_prefix(ptr[0], "terse", 3)) {
 				terse = true; verbose = false;
-			} else if ( match_prefix( ptr[0], "-disable" ) ) {
+			} else if (is_dash_arg_prefix(ptr[0], "disable", 1)) {
 				DisableFileChecks = 1;
-			} else if ( match_prefix( ptr[0], "-debug" ) ) {
+			} else if (is_dash_arg_prefix(ptr[0], "debug", 2)) {
 				// dprintf to console
 				dprintf_set_tool_debug("TOOL", 0);
-			} else if ( match_prefix( ptr[0], "-spool" ) ) {
+			} else if (is_dash_arg_colon_prefix(ptr[0], "dry-run", &pcolon, 3)) {
+				DashDryRun = 1;
+				if (pcolon) { 
+					int opt = atoi(pcolon+1);
+					if (opt > 1) DashDryRun =  opt;
+				}
+			} else if (is_dash_arg_prefix(ptr[0], "spool", 1)) {
 				Remote++;
 				DisableFileChecks = 1;
 			} else if (is_dash_arg_prefix(ptr[0], "address", 2)) {
@@ -1003,7 +1059,7 @@ main( int argc, char *argv[] )
                     exit(1);
                 }
                 ScheddAddr = *ptr;
-			} else if ( match_prefix( ptr[0], "-remote" ) ) {
+			} else if (is_dash_arg_prefix(ptr[0], "remote", 1)) {
 				Remote++;
 				DisableFileChecks = 1;
 				if( !(--argc) || !(*(++ptr)) ) {
@@ -1022,7 +1078,7 @@ main( int argc, char *argv[] )
 #if defined(WIN32)
 				query_credential = false;
 #endif
-			} else if ( match_prefix( ptr[0], "-name" ) ) {
+			} else if (is_dash_arg_prefix(ptr[0], "name", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -name requires another argument\n",
 							 MyName );
@@ -1039,20 +1095,20 @@ main( int argc, char *argv[] )
 #if defined(WIN32)
 				query_credential = false;
 #endif
-			} else if ( match_prefix( ptr[0], "-append" ) ) {
+			} else if (is_dash_arg_prefix(ptr[0], "append", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -append requires another argument\n",
 							 MyName );
 					exit( 1 );
 				}
 				extraLines.Append( *ptr );
-			} else if ( match_prefix( ptr[0], "-password" ) ) {
+			} else if (is_dash_arg_prefix( ptr[0], "password", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -password requires another argument\n",
 							 MyName );
 				}
 				myproxy_password = strdup (*ptr);
-			} else if ( match_prefix( ptr[0], "-pool" ) ) {
+			} else if (is_dash_arg_prefix(ptr[0], "pool", 2)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -pool requires another argument\n",
 							 MyName );
@@ -1066,7 +1122,7 @@ main( int argc, char *argv[] )
 					//   seeing ":<port>" at the end, which is valid for a
 					//   collector name.
 				PoolName = strnewp( *ptr );
-			} else if ( match_prefix( ptr[0], "-stm" ) ) {
+			} else if (is_dash_arg_prefix(ptr[0], "stm", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -stm requires another argument\n",
 							 MyName );
@@ -1074,12 +1130,12 @@ main( int argc, char *argv[] )
 				}
 				method = *ptr;
 				string_to_stm(method, STMethod);
-			} else if ( match_prefix( ptr[0], "-unused" ) ) {
+			} else if (is_dash_arg_prefix(ptr[0], "unused", 1)) {
 				WarnOnUnusedMacros = WarnOnUnusedMacros == 1 ? 0 : 1;
 				// TOGGLE? 
 				// -- why not? if you set it to warn on unused macros in the 
 				// config file, there should be a way to turn it off
-			} else if ( match_prefix( ptr[0], "-dump" ) ) {
+			} else if (is_dash_arg_prefix(ptr[0], "dump", 2)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -dump requires another argument\n",
 						MyName );
@@ -1089,6 +1145,9 @@ main( int argc, char *argv[] )
 				DumpClassAdToFile = true;
 				if (DumpFileName == "-") 
 					DumpFileIsStdout = true;
+				// if we are dumping to a file, we never want to check file permissions
+				// as this would initiate some schedd communication
+				DisableFileChecks = 1;
 #if defined ( WIN32 )
 				// we don't really want to do this because there is no real 
 				// schedd to query the credentials from...
@@ -1142,13 +1201,10 @@ main( int argc, char *argv[] )
 		DisableFileChecks = param_boolean_crufty("SUBMIT_SKIP_FILECHECKS", false) ? 1 : 0;
 	}
 
-	// if we are dumping to a file, we never want to check file permissions
-	// as this would initiate some schedd communication
-	if ( DumpClassAdToFile ) {
-		DisableFileChecks = 1;
-	}
-
 	MaxProcsPerCluster = param_integer("SUBMIT_MAX_PROCS_IN_CLUSTER", 0, 0);
+
+	// the -dry argument takes a qualifier that I'm hijacking to do queue parsing unit tests for now the 8.3 series.
+	if (DashDryRun > 1) { exit(DoUnitTests(DashDryRun)); }
 
 	// we don't want a schedd instance if we are dumping to a file
 	if ( !DumpClassAdToFile ) {
@@ -1262,7 +1318,7 @@ main( int argc, char *argv[] )
 	} else if ( ! DumpFileIsStdout ) {
 		// get the file we are to dump the ClassAds to...
 		if ( ! terse) { fprintf(stdout, "Storing job ClassAd(s)"); }
-		if( (DumpFile=safe_fopen_wrapper_follow(DumpFileName.Value(),"w")) == NULL ) {
+		if( (DumpFile = safe_fopen_wrapper_follow(DumpFileName.Value(),"w")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open file to dump ClassAds into (%s)\n",
 				strerror(errno));
 			exit(1);
@@ -1270,7 +1326,7 @@ main( int argc, char *argv[] )
 	}
 
 	//  Parse the file and queue the jobs
-	if( read_condor_file(fp) < 0 ) {
+	if( read_submit_file(fp) < 0 ) {
 		if( ExtraLineNo == 0 ) {
 			fprintf( stderr,
 					 "\nERROR: Failed to parse command file (line %d).\n",
@@ -1293,9 +1349,9 @@ main( int argc, char *argv[] )
 
 	// we can't disconnect from something if we haven't connected to it: since
 	// we are dumping to a file, we don't actually open a connection to the schedd
-	if ( !DumpClassAdToFile ) {
+	if (MyQ) {
 		CondorError errstack;
-		if ( !DisconnectQ(0, true, &errstack) ) {
+		if ( !MyQ->disconnect(true, errstack) ) {
 			fprintf(stderr, "\nERROR: Failed to commit job submission into the queue.\n");
 			if (errstack.subsys())
 			{
@@ -1309,18 +1365,9 @@ main( int argc, char *argv[] )
 		fprintf(stdout, "\n");
 	}
 
-	// CRUFT Before 7.5.4, condor_submit wrote the submit event to the
-	// user log. If the schedd is older than that, we need to write
-	// the submit event here.
-	if (!DumpClassAdToFile && UserLogSpecified && MySchedd->version()) {
-		CondorVersionInfo vers( MySchedd->version() );
-		if ( !vers.built_since_version( 7, 5, 4 ) ) {
-			log_submit();
-		}
-	}
 
 	// in verbose mode we will have already printed out cluster and proc
-	if ( ! verbose) {
+	if ( ! verbose && ! DumpFileIsStdout) {
 		if (terse) {
 			int ixFirst = 0;
 			for (int ix = 0; ix <= CurrentSubmitInfo; ++ix) {
@@ -2006,10 +2053,10 @@ SetExecutable()
 				ClassAd tmp_ad;
 				tmp_ad.Assign(ATTR_OWNER, owner);
 				tmp_ad.Assign(ATTR_JOB_CMD_MD5, md5.Value());
-				ret = SendSpoolFileIfNeeded(tmp_ad);
+				ret = MyQ->send_SpoolFileIfNeeded(tmp_ad);
 			}
 			else {
-				ret = SendSpoolFile(IckptName);
+				ret = MyQ->send_SpoolFile(IckptName);
 			}
 
 			if (ret < 0) {
@@ -2026,7 +2073,7 @@ SetExecutable()
 			// the file. if it's not, the SchedD is using ickpt sharing
 			// and already has a copy, so no need
 			//
-			if ((ret == 0) && SendSpoolFileBytes(full_path(ename,false)) < 0) {
+			if ((ret == 0) && MyQ->send_SpoolFileBytes(full_path(ename,false)) < 0) {
 				fprintf( stderr,
 						 "\nERROR: failed to transfer executable file %s\n", 
 						 ename );
@@ -3675,6 +3722,10 @@ SetJobStatus()
 	char *hold = condor_param( Hold, NULL );
 	MyString buffer;
 
+	// we will be inserting "JobStatus = <something>" into the jobad, but we DON'T
+	// want that to be written into the cluster ad, it must always go into the proc ad.
+	SetNoClusterAttr(ATTR_JOB_STATUS);
+
 	if( hold && (hold[0] == 'T' || hold[0] == 't') ) {
 		if ( Remote ) {
 			fprintf( stderr,"\nERROR: Cannot set '%s' to 'true' when using -remote or -spool\n", 
@@ -3683,7 +3734,7 @@ SetJobStatus()
 			exit( 1 );
 		}
 		buffer.formatstr( "%s = %d", ATTR_JOB_STATUS, HELD);
-		InsertJobExpr (buffer, false);
+		InsertJobExpr (buffer);
 
 		buffer.formatstr( "%s=\"submitted on hold at user's request\"", 
 					   ATTR_HOLD_REASON );
@@ -3695,7 +3746,7 @@ SetJobStatus()
 	} else 
 	if ( Remote ) {
 		buffer.formatstr( "%s = %d", ATTR_JOB_STATUS, HELD);
-		InsertJobExpr (buffer, false);
+		InsertJobExpr (buffer);
 
 		buffer.formatstr( "%s=\"Spooling input data files\"", 
 					   ATTR_HOLD_REASON );
@@ -3706,7 +3757,7 @@ SetJobStatus()
 		InsertJobExpr( buffer );
 	} else {
 		buffer.formatstr( "%s = %d", ATTR_JOB_STATUS, IDLE);
-		InsertJobExpr (buffer, false);
+		InsertJobExpr (buffer);
 	}
 
 	buffer.formatstr( "%s = %d", ATTR_ENTERED_CURRENT_STATUS,
@@ -5364,65 +5415,39 @@ SetJobLease( void )
 }
 
 
-#ifdef SUBMIT_USING_CONFIG_PARSER
 void
 SetForcedAttributes()
 {
+	MyString buffer;
+
 	HASHITER it = hash_iter_begin(SubmitMacroSet);
 	for( ; ! hash_iter_done(it); hash_iter_next(it)) {
 		const char *my_name = hash_iter_key(it);
 		if ( ! starts_with_ignore_case(my_name, "MY.")) continue;
 		const char * name = my_name+sizeof("MY.")-1;
 
-		char * value = condor_param(my_name);
+		char * value = condor_param(my_name); // lookup and expand macros.
+	#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+		buffer.formatstr( "%s = %s", name, (value && value[0]) ? value : "undefined" );
+		InsertJobExpr(buffer);
+	#else
 		if (value && value[0]) {
-			MyString buffer;
 			buffer.formatstr( "%s = %s", name, value);
 
 			// Call InserJobExpr with checkcluster set to false.
 			// This will result in forced attributes always going
 			// into the proc ad, not the cluster ad.  This allows
 			// us to easily remove attributes with the "-" command.
-			InsertJobExpr( buffer, false );
+			InsertJobExpr(buffer);
+			SetNoClusterAttr(name);
 		} else {
 			job->Delete( name );
 		}
+	#endif
 		if (value) free(value);
 	}
 	hash_iter_delete(&it);
 }
-#else
-void
-SetForcedAttributes()
-{
-	AttrKey		name;
-	MyString	value;
-	char		*exValue;
-	MyString buffer;
-
-	forcedAttributes.startIterations();
-	while( ( forcedAttributes.iterate( name, value ) ) )
-	{
-		// expand the value; and insert it into the job ad
-		exValue = expand_macro(value.Value(), SubmitMacroSet);
-		if( !exValue )
-		{
-			fprintf( stderr, "\nWarning: Unable to expand macros in \"%s\"."
-					 "  Ignoring.\n", value.Value() );
-			continue;
-		}
-		buffer.formatstr( "%s = %s", name.value(), exValue );
-			// Call InserJobExpr with checkcluster set to false.
-			// This will result in forced attributes always going
-			// into the proc ad, not the cluster ad.  This allows
-			// us to easily remove attributes with the "-" command.
-		InsertJobExpr( buffer, false );
-
-		// free memory allocated by macro expansion module
-		free( exValue );
-	}
-}
-#endif
 
 void
 SetGridParams()
@@ -6434,7 +6459,180 @@ SetKillSig()
 #endif  // of ifndef WIN32
 
 
-#if SUBMIT_USING_CONFIG_PARSER
+enum {
+	foreach_not=0,
+	foreach_in,
+	foreach_from,
+	foreach_matching,
+};
+
+enum {
+	PARSE_ERROR_INVALID_QNUM_EXPR = -2,
+	PARSE_ERROR_QNUM_OUT_OF_RANGE = -3,
+	PARSE_ERROR_
+};
+
+// parse a the arguments for a Queue statement. this will be of the form
+//
+//    [<num-expr>] [[<var>[,<var2>]] in|from|matching [<slice>][<tokening>] (<items>)]
+// 
+//  {} indicates optional, <> indicates argument type rather than literal text, | is either or
+//
+//  <num-expr> is any classad expression that parses to an int it defines the number of
+//             procs to queue per item in <items>.  If not present 1 is used.
+//  <var>      is a variable name, case insensitive, case preserving, must begin with alpha and contain only alpha, numbers and _
+//  in|from|matching  only one of these case-insensitive keywords may occur, these control interpretation of <items>
+//  <slice>    is a python style slice controlling the start,end & step through the <items>
+//  <tokening> arguments that control tokenizing <items>.
+//  <items>    is a list of items to iterate and queue. the () surrounding items are optional, if they exist then
+//             items may span multiple lines, in which case the final ) must be on a line by itself.
+//
+// The basic parsing strategy is:
+//    1) find the in|from|matching keyword by scanning for whitespace or ( delimited words
+//       if NOT FOUND, set end_num to end of input string and goto step 5 (because the whole input is <num-expr>)
+//       else set end_num to start of keyword.
+//    2) parse forwards from end of keyword looking for (
+//       if no ( is found, parse remainder of line as single-line itemlist
+//       if ( is found look to see if last char on line is )
+//          if found both ( and ) parse content as a single-line itemlist
+//          else set items_filename appropriately based on keyword.
+//    3) FUTURE WORK: parse characters between keyword and ( as <slice> and <tokening>
+//    4) parse backwards from start of keyword while you see valid VAR,VAR2,etc (basically look for bare numbers or non-alphanum chars)
+//       set end_num to first char that cannot be VAR,VAR2
+//       if VARS found, parse into vars stringlist.
+///   4) eval from start of line to end_num and set queue_num.
+//
+int parse_queue_args (
+	char * pqargs,      // in:  queue line, THIS MAY BE MODIFIED!! \0 will be inserted to delimit things
+	int & foreach_mode, // out: the mode of operation for foreach
+	int & queue_num,    // out: the count of processes to queue for each item
+	StringList& vars,   // out: user defined variable names
+	StringList& items,  // out: list of items to iterate over
+	MyString & items_filename) // out: file to read list of items from, returns "<" to indicate list should be read from submit file.
+{
+	foreach_mode = foreach_not;
+	vars.clearAll();
+	items.clearAll();
+	items_filename.clear();
+
+	// empty queue args means queue 1
+	if ( ! *pqargs) {
+		queue_num = 1;
+		return 0;
+	}
+
+	char *p = pqargs;    // pointer to current char while scanning
+	char *ptok = NULL;   // pointer to start of current token in pqargs when scanning for keyword
+	char tokenbuf[sizeof("matching")+1] = ""; // temporary buffer to hold a potential keyword while scanning
+	int  maxtok = (int)sizeof(tokenbuf)-1;
+	int  cchtok = 0;
+
+	// scan for a keyword from, in, or matching. the keywords must be surrounded by whitespace
+	while (*p) {
+		int ch = *p;
+		if (isspace(ch) || ch == '(') {
+			if (cchtok >= 2 && cchtok <= maxtok) {
+				tokenbuf[cchtok] = 0;
+				if (MATCH == strcasecmp(tokenbuf, "in")) { foreach_mode = foreach_in; break; }
+				else if (MATCH == strcasecmp(tokenbuf, "from")) { foreach_mode = foreach_from; break; }
+				else if (MATCH == strcasecmp(tokenbuf, "matching")) { foreach_mode = foreach_matching; break; }
+			}
+			cchtok = 0;
+		} else {
+			if ( ! cchtok) { ptok = p; }
+			if (cchtok < maxtok) { tokenbuf[cchtok] = ch; }
+			++cchtok;
+		}
+		++p;
+	}
+
+	// for now assume that p points to the end of the queue count expression.
+	char * pnum_end = p;
+
+	// if we found a in,from, or matching keyword. we use that to anchor the rest of the parse
+	// before the keyword is the optional vars list, and before that is the optional queue count.
+	// after the keyword is the start of the items list.
+	if (foreach_mode != foreach_not) {
+		// if we found a keyword, then p points to the start of the itemlist
+		// and we have to scan backwords to find the end of the queue count.
+		while (*p && isspace(*p)) ++p;
+		char * plist = p;
+		bool one_line_list = false;
+		if (*plist == '(') {
+			int cch = strlen(plist);
+			if (plist[cch-1] == ')') { plist[cch-1] = 0; ++plist; one_line_list = true; }
+		}
+		if (*plist == '(') {
+			// this is a multiline list, if it is to be read from fp_submit, we can't do that here 
+			// because reading from fp_submit will invalidate pqargs. instead we append whatever we
+			// find on the current line, and then set the filename to "<" to tell the caller to read
+			// the remainder from the submit file.
+			++plist;
+			if (*plist) { items.append(plist); }
+			items_filename = "<";
+		} else if (foreach_mode == foreach_from) {
+			if (one_line_list) {
+				items.append(plist);
+			} else {
+				items_filename = plist;
+			}
+		} else {
+			items.initializeFromString(plist);
+		}
+
+		// trim trailing whitespace before the in,from, or matching keyword.
+		char * pvars = ptok;
+		while (pvars > pqargs && isspace(pvars[-1])) { --pvars; }
+
+		// walk backwards until we get to something that can't be loop variable.
+		// so we scan backwards over alpha, command and space, but only scan over
+		// numbers if they are preceeded by alpha. this allows variables to be VAR1 but not 1VAR
+		if (pvars > pqargs) {
+			*pvars = 0; // null terminate the vars
+			char * pt = pvars;
+			while (pt > pqargs) {
+				char ch = pt[-1];
+				if (isdigit(ch)) {
+					--pt;
+					while (pt > pqargs) {
+						ch = pt[-1];
+						if (isalpha(ch)) { break; }
+						if ( ! isdigit(ch)) { ch = '!'; break; } // force break out of outer loop
+						--pt;
+					}
+				}
+				if (isspace(ch) || isalpha(ch) || ch == ',' || ch == '_') {
+					pvars = pt-1;
+				} else {
+					break;
+				}
+				--pt;
+			}
+			// pvars should now point to a null-terminated string that is the var set.
+			vars.initializeFromString(pvars);
+		}
+		// whatever remains from pvars to the start of the args is the queue count.
+		pnum_end = pvars;
+	}
+
+	// parse the queue count.
+	while (pnum_end > pqargs && isspace(pnum_end[-1])) { --pnum_end; }
+	if (pnum_end > pqargs) {
+		*pnum_end = 0;
+		long long value = -1;
+		if ( ! string_is_long_param(pqargs, value)) {
+			return PARSE_ERROR_INVALID_QNUM_EXPR;
+		} else if (value < 0 || value >= INT_MAX) {
+			return PARSE_ERROR_QNUM_OUT_OF_RANGE;
+		}
+		queue_num = (int)value;
+	} else {
+		queue_num = 1;
+	}
+
+	return 0;
+}
+
 
 MyString last_submit_executable;
 MyString last_submit_cmd;
@@ -6444,18 +6642,18 @@ MyString last_submit_cmd;
 // return 0 to keep scanning the file, ! 0 to stop scanning. non-zero return values will
 // be passed back out of Parse_macros
 //
-int SpecialSubmitParse(void*, MACRO_SOURCE& source, MACRO_SET& macro_set, const char * line, std::string & /*errmsg*/)
+int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, char * line, std::string & errmsg)
 {
+	FILE* fp_submit = (FILE*)pv;
+	int rval = 0;
 	const char * subsys = get_mySubSystem()->getName();
 	const int cchQueue = sizeof("queue")-1;
-
-	// line will have leading & trailing spaces removed before being handed to us.
 
 	// Check to see if this is a queue statement.
 	// 
 	if (starts_with_ignore_case(line, "queue") && (0 == line[cchQueue] || isspace(line[cchQueue]))) {
 
-		const char * pqargs = line+cchQueue;
+		char * pqargs = line+cchQueue;
 
 		// now parse the extra lines.
 		ExtraLineNo = 0;
@@ -6463,14 +6661,12 @@ int SpecialSubmitParse(void*, MACRO_SOURCE& source, MACRO_SET& macro_set, const 
 		const char * exline;
 		while (extraLines.Next(exline)) {
 			++ExtraLineNo;
-			int rval = Parse_config_string(source, 1, exline, macro_set, subsys);
+			rval = Parse_config_string(source, 1, exline, macro_set, subsys);
 			if (rval < 0)
 				return rval;
+			rval = 0;
 		}
 		ExtraLineNo = 0;
-
-		// optimize the macro set for lookups
-		optimize_macros(macro_set);
 
 		// HACK! the queue function uses a global flag to know whether or not to ask for a new cluster
 		// In 8.2 this flag is set whenever the "executable" or "cmd" value is set in the submit file.
@@ -6491,27 +6687,111 @@ int SpecialSubmitParse(void*, MACRO_SOURCE& source, MACRO_SET& macro_set, const 
 		// skip whitespace before queue arguments (if any)
 		while (isspace(*pqargs)) ++pqargs;
 
+		StringList vars;
+		StringList items;
+		MyString   items_filename;
+		const char* token_seps = ", \t";
+		const char* token_ws = " \t";
 		int queue_modifier = 1;
-		if (*pqargs) {
-			// expand the queue line
-			char * qargs = expand_macro(pqargs, macro_set, false, subsys);
-			if (qargs) {
-				// parse the queue line.
-				int rval = sscanf(qargs, "%d", &queue_modifier); 
+		int foreach_mode = foreach_not;
+		int citems = -1;
 
-				// Default to queue 1 if not specified; always use queue 1 for
-				// interactive jobs, even if something else is specified.
-				if( rval == EOF || rval == 0 || InteractiveJob ) {
-					queue_modifier = 1;
+		// parse the queue arguments, handling the count and finding the in,from & matching keywords
+		// on success pqargs will point to to \0 or to just after the keyword.
+		rval = parse_queue_args(pqargs, foreach_mode, queue_modifier, vars, items, items_filename);
+		if (rval < 0) {
+			errmsg = "invalid Queue statement";
+			return rval;
+		}
+
+		// if no loop variable specified, but a foreach mode is used. use "Item" for the loop variable.
+		if (vars.isEmpty() && (foreach_mode != foreach_not)) { vars.append("Item"); }
+
+		if ( ! items_filename.empty()) {
+			if (items_filename == "<") {
+				if ( ! fp_submit) {
+					errmsg = "unexpected error while attempting to read queue items from submit file.";
+					return -1;
 				}
-
-				free(qargs);
+				// read items from submit file until we see the closing brace on a line by itself.
+				bool saw_close_brace = false;
+				int item_list_begin_line = source.line;
+				for(char * line=NULL; ; ) {
+					line = getline_trim(fp_submit, source.line);
+					if ( ! line) break;
+					if (line[0] == ')') { saw_close_brace = true; break; }
+					items.append(line);
+				}
+				if ( ! saw_close_brace) {
+					formatstr(errmsg, "Reached end of file without finding closing brace ')'"
+						" for Queue command on line %d", item_list_begin_line);
+					return -1;
+				}
+			} else {
+				MACRO_SOURCE ItemsSource;
+				FILE * fp = Open_macro_source(ItemsSource, items_filename.Value(), false, SubmitMacroSet, errmsg);
+				if ( ! fp) {
+					return -1;
+				}
+				for (char* line=NULL;;) {
+					line = getline_trim(fp, ItemsSource.line);
+					if ( ! line) break;
+					items.append(line);
+				}
+				rval = Close_macro_source(fp, ItemsSource, SubmitMacroSet, 0);
 			}
 		}
-		queue(queue_modifier);
+
+		switch (foreach_mode) {
+		case foreach_in:
+		case foreach_from:
+			// itemlist is already correct
+			PRAGMA_REMIND("do argument validation here.")
+			citems = items.number();
+			break;
+
+		case foreach_matching:
+			PRAGMA_REMIND("turn the itemlist globs into an itemlist of files")
+			break;
+
+		default:
+		case foreach_not:
+			// to simplify the loop below, set a single empty item into the itemlist.
+			citems = 1;
+			break;
+		}
+
+		if (queue_modifier > 0 && citems > 0) {
+			if ( ! MyQ) {
+				int rval = queue_connect();
+				if (rval < 0)
+					return rval;
+			}
+
+			rval = queue_begin(vars, NewExecutable); // called before iterating items
+			if (rval < 0)
+				return rval;
+
+			char * item = NULL;
+			if (items.isEmpty()) {
+				rval = queue_item(queue_modifier, vars, item, token_seps, token_ws);
+			} else {
+				items.rewind();
+				while ((item = items.next())) {
+					rval = queue_item(queue_modifier, vars, item, token_seps, token_ws);
+					if (rval < 0)
+						return rval;
+				}
+			}
+
+			rval = queue_end(false);
+			if (rval < 0)
+				return rval;
+		}
 
 		if (InteractiveJob && !InteractiveSubmitFile) {
 			// for interactive jobs, just one queue statement
+			// a return of 1 tells it to stop scanning, but is not an error.
 			return 1;
 		}
 		return 0; // keep scanning
@@ -6519,213 +6799,19 @@ int SpecialSubmitParse(void*, MACRO_SOURCE& source, MACRO_SET& macro_set, const 
 	return -1;
 }
 
-int read_condor_file(FILE * fp)
+int read_submit_file(FILE * fp)
 {
 	std::string errmsg;
 	int rval = Parse_macros(fp, FileMacroSource,
 		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
 		get_mySubSystem()->getName(), errmsg,
-		SpecialSubmitParse, NULL);
+		SpecialSubmitParse, fp);
 
 	if( rval < 0 ) {
 		fprintf (stderr, "Error on Line %d while reading submit file: %s\n", FileMacroSource.line, errmsg.c_str());
 	}
 	return rval;
 }
-#else
-int
-read_condor_file( FILE *fp )
-{
-	const char * cname;
-	char	*name, *value;
-	char	*ptr;
-	int		force = 0, queue_modifier = 0;
-
-	char* justSeenQueue = NULL;
-
-	JobIwd = "";
-
-	LineNo = 0;
-	ExtraLineNo = 0;
-
-	extraLines.Rewind();
-
-	for(;;) {
-		force = 0;
-
-		// check if we've just seen a "queue" command and need to
-		// parse any extra lines passed in via -a first
-		if( justSeenQueue ) {
-			if( extraLines.Next( cname ) ) {
-				name = strdup( cname );
-				ExtraLineNo++;
-			}
-			else {
-				// there are no more -a lines to parse, so rewind
-				// extraLines in case we encounter another queue
-				// command later, and restore the "queue" line itself
-				// (stashed in justSeenQueue) so we can now parse it
-				extraLines.Rewind();
-				ExtraLineNo = 0;
-				name = justSeenQueue;
-			}
-		}
-		else {
-			name = getline_trim( fp, LineNo );
-		}
-		if( name == NULL ) {
-			break;
-		}
-
-			/* Skip over comments */
-		if( *name == '#' || blankline(name) ) {
-			continue;
-		}
-		/* check if the user wants to force a parameter into/outof the job ad */
-		if (*name == '+') {
-			force = 1;
-			name++;
-		} 
-		else if (*name == '-') {
-			name++;
-			strlwr( name );
-			forcedAttributes.remove( AttrKey( name ) );
-			job->Delete( name );
-			continue;
-		}
-
-		if( strncasecmp(name, "queue", strlen("queue")) == 0 ) {
-			// if this is the first time we've seen this "queue"
-			// command, then set justSeenQueue to TRUE and go back to
-			// the top of the loop to process extraLines before
-			// proceeding; if justSeenQueue is already TRUE, however,
-			// then we've just finished processing extraLines, and
-			// we're ready to go ahead parsing the "queue" command
-			// itself
-			if( !justSeenQueue ) {
-				justSeenQueue = name;
-				continue;
-			}
-			else {
-				justSeenQueue = NULL;
-				// we don't have to worry about freeing justSeenQueue
-				// since the string is still pointed to by name and
-				// will be freed below like any other line...
-			}
-			name = expand_macro(name, SubmitMacroSet);
-			if( name == NULL ) {
-				(void)fclose( fp );
-				fprintf( stderr, "\nERROR: Failed to expand macros "
-						 "in: %s\n", name );
-				return( -1 );
-			}
-			int rval = sscanf(name+strlen("queue"), "%d", &queue_modifier); 
-			// Default to queue 1 if not specified; always use queue 1 for
-			// interactive jobs, even if something else is specified.
-			if( rval == EOF || rval == 0 || InteractiveJob ) {
-				queue_modifier = 1;
-			}
-			queue(queue_modifier);
-			if (InteractiveJob && !InteractiveSubmitFile) {
-				// for interactive jobs, just one queue statement
-				break;
-			}
-			continue;
-		}	
-
-#define isop(c)		((c) == '=')
-		
-		/* Separate out the parameter name */
-/*
-		for( ptr=name ; *ptr && !isspace(*ptr) && !isop(*ptr); ptr++ );
-*/
-
-		ptr = name;
-		while( *ptr ) {
-			if( isspace(*ptr) || isop(*ptr) ) {
-				break;
-			} else {
-				ptr++;
-			}
-		}
-
-		if( !*ptr ) {
-			(void)fclose( fp );
-			return( -1 );
-		}
-
-		if( isop(*ptr) ) {
-			*ptr++ = '\0';
-		} else {
-			*ptr++ = '\0';
-			while( *ptr && !isop(*ptr) ) {
-				if( !isspace(*ptr) ) {
-					fclose( fp );
-					return -1;
-				}
-				ptr++;
-			}
-
-			if( !*ptr ) {
-				(void)fclose( fp );
-				return( -1 );
-			}
-			ptr += 1;
-
-		}
-
-			/* Skip to next non-space character */
-		while( *ptr && isspace(*ptr) ) {
-			ptr++;
-		}
-
-		value = ptr;
-
-		if (name != NULL) {
-
-			/* Expand references to other parameters */
-			name = expand_macro(name, SubmitMacroSet);
-			if( name == NULL ) {
-				(void)fclose( fp );
-				fprintf( stderr, "\nERROR: Failed to expand macros in: %s\n",
-						 name );
-				return( -1 );
-			}
-		}
-
-		/* if the user wanted to force the parameter into the classad, do it 
-		   We want to remove it first, so we get the new value if it's
-		   already in there. -Derek Wright 7/13/98 */
-		if (force == 1) {
-			forcedAttributes.remove( AttrKey( name ) );
-			forcedAttributes.insert( AttrKey( name ), MyString( value ) );
-		} 
-
-		strlwr( name );
-
-		if( strcmp(name, Executable) == 0 ) {
-			NewExecutable = true;
-		}
-			// Also, see if we're hitting "cmd", instead (we've
-			// already lower-cased the name we're looking at)
-		if( strcmp(name, "cmd") == 0 ) {
-			NewExecutable = true;
-		}
-
-		/* Put the value in the Configuration Table, but only if it
-		 *  wasn't forced into the ad with a '+'
-		 */
-		if ( force == 0 ) {
-			insert(name, value, SubmitMacroSet, FileMacroSource);
-		}
-
-		free( name );
-	}
-
-	(void)fclose( fp );
-	return 0;
-}
-#endif
 
 char *
 condor_param( const char* name)
@@ -6786,10 +6872,28 @@ condor_param( const char* name, const char* alt_name )
 void
 set_condor_param( const char *name, const char *value )
 {
-	char *tval = strdup( value );
+	insert(name, value, SubmitMacroSet, DefaultMacro);
+}
 
-	insert(name, tval, SubmitMacroSet, DefaultMacro);
-	free(tval);
+// stuff a live value into submit's hashtable.
+// IT IS UP TO THE CALLER TO INSURE THAT live_value IS VALID FOR THE LIFE OF THE HASHTABLE
+// this function is intended for use during queue iteration to stuff
+// changing values like $(Cluster) and $(Process) into the hashtable.
+// The pointer passed in as live_value may be changed at any time to
+// affect subsequent macro expansion of name.
+// live values are automatically marked as 'used'.
+//
+void
+set_live_submit_variable( const char *name, const char *live_value )
+{
+	MACRO_ITEM* pitem = find_macro_item(name, SubmitMacroSet);
+	if ( ! pitem) { insert(name, "", SubmitMacroSet, DefaultMacro); }
+	pitem = find_macro_item(name, SubmitMacroSet);
+	pitem->raw_value = live_value;
+	if (SubmitMacroSet.metat) {
+		MACRO_META* pmeta = &SubmitMacroSet.metat[pitem - SubmitMacroSet.table];
+		pmeta->use_count += 1;
+	}
 }
 
 void
@@ -6810,7 +6914,7 @@ strcmpnull(const char *str1, const char *str2)
 void
 connect_to_the_schedd()
 {
-	if ( ActiveQueueConnection == TRUE ) {
+	if ( ActiveQueueConnection ) {
 		// we are already connected; do not connect again
 		return;
 	}
@@ -6818,7 +6922,9 @@ connect_to_the_schedd()
 	setupAuthentication();
 
 	CondorError errstack;
-	if( ConnectQ(MySchedd->addr(), 0 /* default */, false /* default */, &errstack, NULL, MySchedd->version() ) == 0 ) {
+	ActualScheddQ *ScheddQ = new ActualScheddQ();
+	if( ScheddQ->Connect(*MySchedd, errstack) == 0 ) {
+		delete ScheddQ;
 		if( ScheddName ) {
 			fprintf( stderr, 
 					"\nERROR: Failed to connect to queue manager %s\n%s\n",
@@ -6831,94 +6937,147 @@ connect_to_the_schedd()
 		exit(1);
 	}
 
+	MyQ = ScheddQ;
 	ActiveQueueConnection = TRUE;
 }
 
-void
-queue(int num)
+
+int queue_connect()
 {
-	char tmp[ BUFSIZ ];
-	char const *logfile;
-	int		rval;
-
-	// First, connect to the schedd if we have not already done so
-
-	if (!DumpClassAdToFile && ActiveQueueConnection != TRUE) 
+	if ( ! ActiveQueueConnection)
 	{
-		connect_to_the_schedd();
+		if (DumpClassAdToFile || DashDryRun) {
+			SimScheddQ* SimQ = new SimScheddQ();
+			if (DumpFileIsStdout) {
+				SimQ->Connect(stdout, false);
+			} else if (DashDryRun) {
+				SimQ->Connect(stderr, false);
+			} else {
+				SimQ->Connect(DumpFile, true);
+				DumpFile = NULL;
+			}
+			MyQ = SimQ;
+		} else {
+			connect_to_the_schedd();
+		}
+		ASSERT(MyQ);
+	}
+	ActiveQueueConnection = MyQ != NULL;
+	return MyQ ? 0 : -1;
+}
+
+int queue_begin(StringList & vars, bool new_cluster)
+{
+	if ( ! MyQ)
+		return -1;
+
+	// establish live buffers for $(Cluster) and $(Process), and other loop variables
+	// Because the user might already be using these variables, we can only set the explicit
+	// unconditionally, the others we must set only when not already set.
+	set_live_submit_variable(Cluster, ClusterString);
+	set_live_submit_variable(Process, ProcessString);
+	if ( ! find_macro_item("Node", SubmitMacroSet)) { set_live_submit_variable("Node", EmptyItemString); }
+	if ( ! find_macro_item("Step", SubmitMacroSet)) { set_live_submit_variable("Step", StepString); }
+
+	vars.rewind();
+	char * var;
+	while ((var = vars.next())) { set_live_submit_variable(var, EmptyItemString); }
+
+
+	if (SubmitMacroSet.sorted < SubmitMacroSet.size) {
+		optimize_macros(SubmitMacroSet);
+	}
+
+	if (new_cluster) {
+		if ((ClusterId = MyQ->get_NewCluster()) < 0) {
+			fprintf(stderr, "\nERROR: Failed to create cluster\n");
+			if ( ClusterId == -2 ) {
+				fprintf(stderr,
+					"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
+			}
+			exit(1);
+		}
+
+		// We only need to call init_job_ad the second time we see
+		// a new Executable, because we call init_job_ad() in main()
+		if ( !IsFirstExecutable ) {
+			init_job_ad();
+		}
+		IsFirstExecutable = false;
+	}
+	return 0;
+}
+
+// queue N for a single item from the foreach itemlist.
+// if there is no item list (i.e the old Queue N syntax) then item will be NULL.
+//
+int queue_item(int num, StringList & vars, char * item, const char * delims, const char * ws)
+{
+	if ( ! MyQ)
+		return -1;
+
+	int rval = 0; // default to success (if num == 0 we will return this)
+
+	// If there are loop variables, destructively tokenize item and stuff the tokens into the submit hashtable.
+	if ( ! vars.isEmpty())  {
+
+		if ( ! item) {
+			item = EmptyItemString;
+			EmptyItemString[0] = '\0';
+		}
+
+		vars.rewind();
+		char * var = vars.next();
+		char * data = item;
+		set_live_submit_variable(var, data);
+
+		// if there is more than a single loop variable, then assign them as well
+		// we do this by destructively null terminating the item for each var
+		// the last var gets all of the remaining item text (if any)
+		while ((var = vars.next())) {
+			// scan for next token separator
+			while (*data && ! strchr(delims, *data)) ++data;
+			// null terminate the previous token and advance to the start of the next token.
+			if (*data) {
+				*data++ = 0;
+				// skip leading separators and whitespace
+				while (*data && strchr(ws, *data)) ++data;
+				set_live_submit_variable(var, data);
+			}
+		}
 	}
 
 	/* queue num jobs */
-	for (int i=0; i < num; i++) {
-
-	
-		if (NewExecutable) {
- 			if ( !DumpClassAdToFile ) {
-				if ((ClusterId = NewCluster()) < 0) {
-					fprintf(stderr, "\nERROR: Failed to create cluster\n");
-					if ( ClusterId == -2 ) {
-						fprintf(stderr,
-						"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
-					}
-					exit(1);
-				}
-			}
-				// We only need to call init_job_ad the second time we see
-				// a new Executable, because we call init_job_ad() in main()
-			if ( !IsFirstExecutable ) {
-				init_job_ad();
-			}
-			IsFirstExecutable = false;
-			if ( !IsFirstExecutable && DumpClassAdToFile ) {
-					ProcId = 1;
-			} else {
-				ProcId = -1;
-			}
-		}
-
+	for (int ii = 0; ii < num; ++ii) {
 		NoClusterCheckAttrs.clearAll();
 
-		if ( !DumpClassAdToFile ) {
-			if ( ClusterId == -1 ) {
-				fprintf( stderr, "\nERROR: Used queue command without "
-						 "specifying an executable\n" );
-				exit(1);
-			}
-		
-			ProcId = NewProc (ClusterId);
-
-			if ( ProcId < 0 ) {
-				fprintf(stderr, "\nERROR: Failed to create proc\n");
-				if ( ProcId == -2 ) {
-					fprintf(stderr,
-					"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
-				}
-				DoCleanup(0,0,NULL);
-				exit(1);
-			}
-
+		if ( ClusterId == -1 ) {
+			fprintf( stderr, "\nERROR: Used queue command without "
+						"specifying an executable\n" );
+			exit(1);
 		}
-		
+		ProcId = MyQ->get_NewProc (ClusterId);
+
+		if ( ProcId < 0 ) {
+			fprintf(stderr, "\nERROR: Failed to create proc\n");
+			if ( ProcId == -2 ) {
+				fprintf(stderr,
+				"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
+			}
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+
 		if (MaxProcsPerCluster && ProcId >= MaxProcsPerCluster) {
 			fprintf(stderr, "\nERROR: number of procs exceeds SUBMIT_MAX_PROCS_IN_CLUSTER\n");
 			DoCleanup(0,0,NULL);
 			exit(-1);
-		} 
-
-		if ( !DumpClassAdToFile ) {
-			/*
-			**	Insert the current idea of the cluster and
-			**	process number into the hash table.
-			*/	
-			// GotQueueCommand = 1; // (see bellow)
-			(void)sprintf(tmp, "%d", ClusterId);
-			set_condor_param(Cluster, tmp);
-			set_condor_param_used(Cluster); // we don't show system macros as "unused"
-			(void)sprintf(tmp, "%d", ProcId);
-			set_condor_param(Process, tmp);
-			set_condor_param_used(Process);
-
 		}
+
+		// update the live $(Cluster), $(Process) and $(Step) string buffers
+		(void)sprintf(ClusterString, "%d", ClusterId);
+		(void)sprintf(ProcessString, "%d", ProcId);
+		(void)sprintf(StepString, "%d", FirstStep + ii);
 
 		// we move this outside the above, otherwise it appears that we have 
 		// received no queue command (or several, if there were multiple ones)
@@ -6937,16 +7096,11 @@ queue(int num)
 		SetDescription();
 		SetMachineCount();
 
-		/* For MPI only... we have to define $(NODE) to some string
-		here so that we don't break the param parser.  In the
-		MPI shadow, we'll convert the string into an integer
-		corresponding to the mpi node's number. */
-		if ( JobUniverse == CONDOR_UNIVERSE_MPI ) {
-			set_condor_param ( "NODE", "#MpInOdE#" );
-			set_condor_param_used ( "NODE" );
-		} else if ( JobUniverse == CONDOR_UNIVERSE_PARALLEL ) {
-			set_condor_param ( "NODE", "#pArAlLeLnOdE#" );
-			set_condor_param_used ( "NODE" );
+		// We couldn't set NODE until we knew this was a parallel universe job because dagman also uses NODE
+		// ParallelNodeString defaults to #pArAlLeLnOdE# for universe MPI, we need it to expand as "#MpInOdE#" instead.
+		if (JobUniverse == CONDOR_UNIVERSE_MPI || JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
+			if (JobUniverse == CONDOR_UNIVERSE_MPI) { strcpy(ParallelNodeString, "#MpInOdE#"); }
+			set_live_submit_variable("Node", ParallelNodeString);
 		}
 
 		// Note: Due to the unchecked use of global variables everywhere in
@@ -7031,7 +7185,7 @@ queue(int num)
 		SetJavaVMArgs();
 		SetParallelStartupScripts(); //JDB
 		SetConcurrencyLimits();
-        SetAccountingGroup();
+		SetAccountingGroup();
 		SetVMParams();
 		SetLogNotes();
 		SetUserNotes();
@@ -7043,11 +7197,9 @@ queue(int num)
 			// SetForcedAttributes should be last so that it trumps values
 			// set by normal submit attributes
 		SetForcedAttributes();
-		rval = 0; // assume success
-		if ( !DumpClassAdToFile ) {
-			rval = SaveClassAd();
-		}
 
+		// write job ad to schedd or dump to file, depending on what type MyQ is
+		rval = SaveClassAd();
 		switch( rval ) {
 		case 0:			/* Success */
 		case 1:
@@ -7059,43 +7211,17 @@ queue(int num)
 
 		ClusterCreated = TRUE;
 	
-		if (verbose) {
+		if (verbose && ! DumpFileIsStdout) {
 			fprintf(stdout, "\n** Proc %d.%d:\n", ClusterId, ProcId);
 			fPrintAd (stdout, *job);
+		} else if ( ! terse && ! DumpFileIsStdout) {
+			fprintf(stdout, ".");
 		}
 
-		logfile = condor_param( UserLogFile, ATTR_ULOG_FILE );
-		// Convert to a pathname using IWD if needed
-		if ( logfile ) {
-			logfile = full_path(logfile);
-		}
-
-		if (CurrentSubmitInfo == -1 ||
-			SubmitInfo[CurrentSubmitInfo].cluster != ClusterId ||
-			strcmpnull( SubmitInfo[CurrentSubmitInfo].logfile,
-						logfile ) != 0 ||
-			strcmpnull( SubmitInfo[CurrentSubmitInfo].lognotes,
-						LogNotesVal ) != 0 ||
-			strcmpnull( SubmitInfo[CurrentSubmitInfo].usernotes,
-						UserNotesVal ) != 0 ) {
+		if (CurrentSubmitInfo == -1 || SubmitInfo[CurrentSubmitInfo].cluster != ClusterId) {
 			CurrentSubmitInfo++;
 			SubmitInfo[CurrentSubmitInfo].cluster = ClusterId;
 			SubmitInfo[CurrentSubmitInfo].firstjob = ProcId;
-			SubmitInfo[CurrentSubmitInfo].lognotes = NULL;
-			SubmitInfo[CurrentSubmitInfo].usernotes = NULL;
-
-			if (logfile) {
-				// Store the full pathname to the log file
-				SubmitInfo[CurrentSubmitInfo].logfile = strdup(logfile);
-			} else {
-				SubmitInfo[CurrentSubmitInfo].logfile = NULL;
-			}
-			if( LogNotesVal ) {
-				SubmitInfo[CurrentSubmitInfo].lognotes = strdup( LogNotesVal );
-			}
-			if( UserNotesVal ) {
-				SubmitInfo[CurrentSubmitInfo].usernotes = strdup( UserNotesVal );
-			}
 		}
 		SubmitInfo[CurrentSubmitInfo].lastjob = ProcId;
 
@@ -7105,16 +7231,7 @@ queue(int num)
 		// Procs are in that it.  Setting lastjob to zero makes this so.
 
 		if (JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
-				SubmitInfo[CurrentSubmitInfo].lastjob = 0;
-		}
-
-		// now that we've loaded all the information into the job object
-		// we can just dump it to a file.  (In my opinion this is needlessly 
-		// ugly, here we should be using a derivation of Stream called File 
-		// which we would in turn serialize the job object to...)
-		if ( DumpClassAdToFile ) {
-			fPrintAd ( DumpFileIsStdout ? stdout : DumpFile, *job );
-			fprintf ( DumpFileIsStdout ? stdout : DumpFile, "\n" );
+			SubmitInfo[CurrentSubmitInfo].lastjob = 0;
 		}
 
 		if ( ProcId == 0 ) {
@@ -7135,14 +7252,16 @@ queue(int num)
 		}
 		job = new ClassAd();
 		job_ad_saved = false;
-
-		if ( ! terse && ! DumpFileIsStdout) {
-			fprintf(stdout, ".");
-		}
-
-
 	}
+
+	return rval;
 }
+
+int queue_end(bool /*fEof*/)   // called when done processing each Queue statement and at end of submit file
+{
+	return 0;
+}
+
 
 bool
 check_requirements( char const *orig, MyString &answer )
@@ -7803,14 +7922,20 @@ DoCleanup(int,int,const char*)
 		// TerminateCluster() may call EXCEPT() which in turn calls 
 		// DoCleanup().  This lead to infinite recursion which is bad.
 		ClusterCreated = 0;
-		if (!ActiveQueueConnection) {
-			ActiveQueueConnection = (ConnectQ(MySchedd->addr()) != 0);
+		if ( ! ActiveQueueConnection) {
+			if (DumpClassAdToFile) {
+			} else {
+				CondorError errstack;
+				ActualScheddQ *ScheddQ = (ActualScheddQ *)MyQ;
+				if ( ! ScheddQ) { MyQ = ScheddQ = new ActualScheddQ(); }
+				ActiveQueueConnection = ScheddQ->Connect(*MySchedd, errstack) != 0;
+			}
 		}
-		if (ActiveQueueConnection) {
+		if (ActiveQueueConnection && MyQ) {
 			// Call DestroyCluster() now in an attempt to get the schedd
 			// to unlink the initial checkpoint file (i.e. remove the 
 			// executable we sent earlier from the SPOOL directory).
-			DestroyCluster( ClusterId );
+			MyQ->destroy_Cluster( ClusterId );
 
 			// We purposefully do _not_ call DisconnectQ() here, since 
 			// we do not want the current transaction to be committed.
@@ -7930,106 +8055,10 @@ compress( MyString &path )
 }
 
 
-void
-delete_commas( char *ptr )
-{
-	for( ; *ptr; ptr++ ) {
-		if( *ptr == ',' ) {
-			*ptr = ' ';
-		}
-	}
-}
-
-
 extern "C" {
 int SetSyscalls( int foo ) { return foo; }
 }
 
-void
-log_submit()
-{
-	 char	 *simple_name;
-
-		// don't write to the EVENT_LOG in condor_submit; that is done by 
-		// the condor_schedd (since submit likely does not have permission).
-	 WriteUserLog usr_log(true);
-	 SubmitEvent jobSubmit;
-
-	 usr_log.setUseXML(UseXMLInLog);
-
-	if (verbose) {
-		fprintf(stdout, "Logging submit event(s)");
-	}
-
-	if ( DumpClassAdToFile ) {
-		// we just put some arbitrary string here: it doesn't actually mean 
-		// anything since we will never communicate the resulting ad to 
-		// to anyone (we make the name obviously unresolvable so we know
-		// this was a generated file).
-		jobSubmit.setSubmitHost( "localhost-used-to-dump");
-	} else {
-		jobSubmit.setSubmitHost( MySchedd->addr());
-	}
-
-	if( LogNotesVal ) {
-		jobSubmit.submitEventLogNotes = strnewp( LogNotesVal );
-		free( LogNotesVal );
-		LogNotesVal = NULL;
-	}
-
-	if( UserNotesVal ) {
-		jobSubmit.submitEventUserNotes = strnewp( UserNotesVal );
-		free( UserNotesVal );
-		UserNotesVal = NULL;
-	}
-
-	for (int i=0; i <= CurrentSubmitInfo; i++) {
-
-		if ((simple_name = SubmitInfo[i].logfile) != NULL) {
-			if( jobSubmit.submitEventLogNotes ) {
-				delete[] jobSubmit.submitEventLogNotes;
-			}
-			jobSubmit.submitEventLogNotes = strnewp( SubmitInfo[i].lognotes );
-
-			if( jobSubmit.submitEventUserNotes ) {
-				delete[] jobSubmit.submitEventUserNotes;
-			}
-			jobSubmit.submitEventUserNotes = strnewp( SubmitInfo[i].usernotes );
-			
-			// we don't know the gjid here, so pass in NULL as the last 
-			// parameter - epaulson 2/09/2007
-			if ( ! usr_log.initialize(owner, ntdomain,
-					std::vector<const char*>(1,simple_name),
-					0, 0, 0, NULL ) ) {
-				fprintf(stderr, "\nERROR: Failed to log submit event.\n");
-			} else {
-				// Output the information
-				for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob;
-							j++) {
-					if ( ! usr_log.initialize(SubmitInfo[i].cluster,
-								j, 0, NULL) ) {
-						fprintf(stderr, "\nERROR: Failed to log submit event.\n");
-					} else {
-							// for efficiency, only fsync on the final event
-							// being written to this log
-						bool enable_fsync = j == SubmitInfo[i].lastjob;
-						usr_log.setEnableFsync( enable_fsync );
-
-						if( ! usr_log.writeEvent(&jobSubmit,job) ) {
-							fprintf(stderr, "\nERROR: Failed to log submit event.\n");
-						}
-						if ( ! terse) {
-							fprintf(stdout, ".");
-						}
-					}
-				}
-			}
-		}
-	}
-	if ( ! terse) {
-		fprintf( stdout, "\n" );
-	}
-}
 
 int
 SaveClassAd ()
@@ -8041,10 +8070,10 @@ SaveClassAd ()
 	static ClassAd* current_cluster_ad = NULL;
 
 	if ( ProcId > 0 ) {
-		SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId, setattrflags);
+		MyQ->set_AttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId, setattrflags);
 	} else {
 		myprocid = -1;		// means this is a cluster ad
-		if( SetAttributeInt (ClusterId, myprocid, ATTR_CLUSTER_ID, ClusterId, setattrflags) == -1 ) {
+		if( MyQ->set_AttributeInt (ClusterId, myprocid, ATTR_CLUSTER_ID, ClusterId, setattrflags) == -1 ) {
 			if( setattrflags & SetAttribute_NoAck ) {
 				fprintf( stderr, "\nERROR: Failed submission for job %d.%d - aborting entire submit\n",
 					ClusterId, ProcId);
@@ -8093,7 +8122,7 @@ SaveClassAd ()
 				}
 			}
 
-			if( SetAttribute(ClusterId, myprocid, lhstr, rhstr, setattrflags) == -1 ) {
+			if( MyQ->set_Attribute(ClusterId, myprocid, lhstr, rhstr, setattrflags) == -1 ) {
 				if( setattrflags & SetAttribute_NoAck ) {
 					fprintf( stderr, "\nERROR: Failed submission for job %d.%d - aborting entire submit\n",
 						ClusterId, ProcId);
@@ -8111,7 +8140,7 @@ SaveClassAd ()
 	}
 
 	if ( ProcId == 0 ) {
-		if( SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId, setattrflags) == -1 ) {
+		if( MyQ->set_AttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId, setattrflags) == -1 ) {
 			if( setattrflags & SetAttribute_NoAck ) {
 				fprintf( stderr, "\nERROR: Failed submission for job %d.%d - aborting entire submit\n",
 					ClusterId, ProcId);
@@ -8147,13 +8176,13 @@ SaveClassAd ()
 }
 
 void
-InsertJobExpr (MyString const &expr, bool clustercheck)
+InsertJobExpr (MyString const &expr)
 {
-	InsertJobExpr(expr.Value(),clustercheck);
+	InsertJobExpr(expr.Value());
 }
 
 void 
-InsertJobExpr (const char *expr, bool clustercheck)
+InsertJobExpr (const char *expr)
 {
 	MyString attr_name;
 	ExprTree *tree = NULL;
@@ -8173,10 +8202,6 @@ InsertJobExpr (const char *expr, bool clustercheck)
 		exit( 1 );
 	}
 
-	if ( clustercheck == false ) {
-		NoClusterCheckAttrs.append( attr_name.Value() );
-	}
-
 	if (!job->Insert (attr_name.Value(), tree))
 	{	
 		fprintf(stderr,"\nERROR: Unable to insert expression: %s\n", expr);
@@ -8185,24 +8210,29 @@ InsertJobExpr (const char *expr, bool clustercheck)
 	}
 }
 
+void SetNoClusterAttr(const char * name)
+{
+	NoClusterCheckAttrs.append( name );
+}
+
 void 
-InsertJobExprInt(const char * name, int val, bool clustercheck /*= true*/)
+InsertJobExprInt(const char * name, int val)
 {
 	ASSERT(name);
 	MyString buf;
 	buf.formatstr("%s = %d", name, val);
-	InsertJobExpr(buf.Value(), clustercheck);
+	InsertJobExpr(buf.Value());
 }
 
 void 
-InsertJobExprString(const char * name, const char * val, bool clustercheck /*= true*/)
+InsertJobExprString(const char * name, const char * val)
 {
 	ASSERT(name);
 	ASSERT(val);
 	MyString buf;
 	std::string esc;
 	buf.formatstr("%s = \"%s\"", name, EscapeAdStringValue(val, esc));
-	InsertJobExpr(buf.Value(), clustercheck);
+	InsertJobExpr(buf.Value());
 }
 
 static unsigned int 
@@ -9108,4 +9138,80 @@ SetVMParams()
 	// Now all VM parameters are set
 	// So we need to add necessary VM attributes to Requirements
 	SetVMRequirements();
+}
+
+int DoUnitTests(int options)
+{
+	static const struct {
+		int          rval;
+		const char * args;
+		int          num;
+		int          mode;
+		int          cvars;
+		int          citems;
+	} trials[] = {
+	// rval  args          num    mode      vars items
+		{0,  "in (a b)",     1, foreach_in,   0,  2},
+		{0,  "ARG in (a,b)", 1, foreach_in,   1,  2},
+		{0,  "ARG in(a)",    1, foreach_in,   1,  1},
+		{0,  "ARG\tin\t(a)", 1, foreach_in,   1,  1},
+		{0,  "arg IN ()",    1, foreach_in,   1,  0},
+		{0,  "2 ARG in ( a, b, cd )",  2, foreach_in,   1,  3},
+		{0,  "100 ARG In a, b, cd",  100, foreach_in,   1,  3},
+		{0,  "  ARG In a b cd e",  1, foreach_in,   1,  4},
+
+		{0,  "matching *.dat",               1, foreach_matching,   0,  1},
+		{0,  "FILE matching *.dat",          1, foreach_matching,   1,  1},
+		{0,  "glob MATCHING (*.dat *.foo)",  1, foreach_matching,   1,  2},
+		{0,  " dir matching */",             1, foreach_matching,   1,  1},
+
+		{0,  "Executable,Arguments From args.lst",  1, foreach_from,   2,  0},
+		{0,  "Executable,Arguments From (sleep.exe 10)",  1, foreach_from,   2,  1},
+		{0,  "9 Executable Arguments From (sleep.exe 10)",  9, foreach_from,   2,  1},
+
+
+		{0,  "",             1, 0, 0, 0},
+		{0,  "2",            2, 0, 0, 0},
+		{0,  "9 - 2",        7, 0, 0, 0},
+		{0,  "1 -1",         0, 0, 0, 0},
+		{0,  "2*2",          4, 0, 0, 0},
+		{0,  "(2+3)",        5, 0, 0, 0},
+		{0,  "2 * 2 + 5",    9, 0, 0, 0},
+		{0,  "2 * (2 + 5)", 14, 0, 0, 0},
+		{-2, "max(2,3)",    -1, 0, 0, 0},
+		{0,  "max({2,3})",   3, 0, 0, 0},
+
+	};
+
+	for (int ii = 0; ii < (int)COUNTOF(trials); ++ii) {
+		int foreach_mode=-1;
+		int queue_num=-1;
+		StringList vars;
+		StringList items;
+		MyString   items_filename;
+		char * pqargs = strdup(trials[ii].args);
+		int rval = parse_queue_args(pqargs, foreach_mode, queue_num, vars, items, items_filename);
+
+		int cvars = vars.number();
+		int citems = items.number();
+		bool ok = (rval == trials[ii].rval && foreach_mode == trials[ii].mode && queue_num == trials[ii].num && cvars == trials[ii].cvars && citems == trials[ii].citems);
+
+		char * vars_list = vars.print_to_string();
+		if ( ! vars_list) vars_list = strdup("");
+
+		char * items_list = items.print_to_delimed_string("|");
+		if ( ! items_list) items_list = strdup("");
+		else if (strlen(items_list) > 50) { items_list[50] = 0; items_list[49] = '.'; items_list[48] = '.'; items_list[46] = '.'; }
+
+		fprintf(stderr, "%s num:   %d/%d  mode:  %d/%d  vars:  %d/%d {%s} ", ok ? " " : "!",
+				queue_num, trials[ii].num, foreach_mode, trials[ii].mode, cvars, trials[ii].cvars, vars_list);
+		fprintf(stderr, "  items: %d/%d {%s}", citems, trials[ii].citems, items_list);
+		if ( ! items_filename.empty()) { fprintf(stderr, " file:'%s'\n", items_filename.Value()); }
+		fprintf(stderr, "\tqargs: '%s' -> '%s'\trval: %d/%d\n", trials[ii].args, pqargs, rval, trials[ii].rval);
+
+		free(pqargs);
+		free(vars_list);
+		free(items_list);
+	}
+	return (options > 1) ? 1 : 0;
 }
