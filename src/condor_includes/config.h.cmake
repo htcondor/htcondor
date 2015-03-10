@@ -345,8 +345,8 @@
 #cmakedefine HAVE_CLOCK_MONOTONIC_RAW 1
 #cmakedefine HAVE_CLOCK_REALTIME_COARSE 1
 
-///* are we using the GNU linker (USED)- I want to remove this comments are untrue*/
-//#cmakedefine HAVE_GNU_LD 1
+/* are we using the GNU linker (USED) */
+#cmakedefine HAVE_GNU_LD 1
 
 /* Define to 1 if the system has the type 'id_t'. (USED)*/
 #cmakedefine HAVE_ID_T 1

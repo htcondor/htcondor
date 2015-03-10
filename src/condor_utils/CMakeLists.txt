@@ -83,6 +83,9 @@ else()
 	message(FATAL_ERROR "Can't determine Condor version!")
 endif()
 set_target_properties( condor_utils PROPERTIES OUTPUT_NAME "${UTILS_LIB_NAME}" )
+if (HAVE_GNU_LD)
+	target_link_libraries( condor_utils -Wl,--wrap,exit )
+endif()
 
 # for linux also make a static version of condor_utils
 #
@@ -90,6 +93,9 @@ if (LINUX OR DARWIN)
    condor_static_lib( condor_utils_s "${HeaderFiles};${SourceFiles};${EXTRA_SRCS}" )
    add_dependencies( condor_utils_s utils_genparams syscall_numbers )
    set_target_properties( condor_utils_s PROPERTIES OUTPUT_NAME "${UTILS_LIB_NAME}" )
+   if (HAVE_GNU_LD)
+	target_link_libraries( condor_utils_s -Wl,--wrap,exit )
+   endif()
 endif(LINUX OR DARWIN)
 
 
