@@ -963,7 +963,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 
 	// this will actually clean up the job
 	if ( Starter->Hold( ) ) {
-		dprintf( D_FULLDEBUG, "All jobs were removed due to OOM event.\n" );
+		dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.str().c_str());
 		Starter->allJobsDone();
 	}
 
