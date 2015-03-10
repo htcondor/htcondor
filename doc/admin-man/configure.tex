@@ -6038,7 +6038,18 @@ availability statistics in the \Condor{startd}.
 
 \label{param:Docker}
 \item[\Macro{DOCKER}]
-  This definition has not yet been written.
+  The path and executable name of the Docker CLI for execute machines
+  that are set up to run the Docker CLI as a user other than root.
+  The default value is \File{/usr/bin/docker}.
+  Parsing of this configuration variable's value looks for \Expr{sudo}
+  to the left of the path and executable name.
+  If present, then the Docker CLI is run as root,
+  and it is presumed that the user that the \Condor{starter} daemon is
+  run as has been given password-less sudo permission to run the Docker CLI.
+  An example of the configuration for running the Docker CLI as root:
+\begin{verbatim}
+  DOCKER = sudo /usr/bin/docker
+\end{verbatim}
 
 \end{description}
 

@@ -264,4 +264,22 @@ examples and details.
 \index{docker universe!set up}
 \index{installation!for the docker universe}
 \index{universe!set up for the docker universe}
-\Todo
+The execution of a job within the docker universe causes the
+instantiation of a Docker container on an execute host,
+and runs that single HTCondor job within that container. 
+
+The docker universe job is mapped to a vanilla universe job,
+and the submit description file must specify 
+the submit command \SubmitCmd{docker\_image} to identify the Docker image.
+The job's \Attr{requirement} ClassAd attribute is automatically appended,
+ such that the job will only match with an execute machine 
+that has Docker installed.
+
+The Docker service must be installed on each execute machine
+that can execute a docker universe job.
+Upon start up of the \Condor{startd} daemon,
+the capability of the execute machine to run Docker universe jobs is probed, 
+and the machine ClassAd attribute \Attr{HasDocker} is advertised
+for each machine that is capable of running Docker universe jobs.
+
+\MoreTodo
