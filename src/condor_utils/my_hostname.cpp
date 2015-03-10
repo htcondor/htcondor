@@ -28,6 +28,8 @@
 #include "ipv6_hostname.h"
 #include "condor_sinful.h"
 
+#include "subsystem_info.h"
+
 static bool enable_convert_default_IP_to_socket_IP = false;
 static std::set< std::string > configured_network_interface_ips;
 static bool network_interface_matches_all;
@@ -533,8 +535,8 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 		return;
 	}
 
-	std::string adSinfulString = expr_string.substr( string_start_pos, string_len) ;
-	std::string commandPortSinfulString = daemonCore->InfoCommandSinfulString();;
+	std::string adSinfulString = expr_string.substr( string_start_pos, string_len);
+	std::string commandPortSinfulString = daemonCore->InfoCommandSinfulString();
 
 	Sinful adSinful( adSinfulString.c_str() );
 	condor_sockaddr adSA;
@@ -543,6 +545,29 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 	// Check the new logic against the old logic.  We can remove this later.
 	runOldLogic( commandPortSinfulString, adSinfulString, connectionSA, attr_name, expr_string, s, adSinful, adSA );
 
+	if( get_mySubSystem()->isType( SUBSYSTEM_TYPE_COLLECTOR ) ) {
+		if( adSA.get_protocol() == CP_IPV6 && connectionSA.get_protocol() == CP_IPV4 ) {
+			const char * rewrite = adSinful.getParam( "rewrite" );
+			if( rewrite != NULL ) {
+				// Otherwise, the original host pointer becomes rewrite.
+				std::string originalHost = adSinful.getHost();
+				adSinful.setHost( rewrite );
+				adSinful.setParam( "rewrite", originalHost.c_str() );
+
+				// Icky code duplication.
+				std::string new_expr = expr_string.substr( 0, string_start_pos );
+				new_expr.append( adSinful.getSinful() );
+				new_expr.append( expr_string.substr( string_end_pos ) );
+				expr_string = new_expr;
+
+				dprintf( D_NETWORK, "Address rewriting: Replaced the IP in %s with "
+					"rewrite IP %s in outgoing ClassAd attribute %s.\n",
+					adSinfulString.c_str(), rewrite, attr_name );
+				return;
+			}
+		}
+	}
+
 	bool rewrite_port = true;
 	if (commandPortSinfulString == adSinfulString)
 	{
@@ -550,6 +575,9 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 	}
 	else if (param_boolean("SHARED_PORT_ADDRESS_REWRITING", false))
 	{
+		//
+		// Wait a minute -- isn't this only supposed to happen in the collector?
+		//
 		const std::vector<Sinful> &commandSinfuls = daemonCore->InfoCommandSinfulStringsMyself();
 		dprintf(D_NETWORK|D_VERBOSE, "Address rewriting: considering %ld command socket sinfuls.\n", commandSinfuls.size());
 
@@ -608,6 +636,8 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 		rewrite_port = false;
 	}
 
+	// The original host pointer will be invalid after we call setHost().
+	std::string originalHost = adSinful.getHost();
 	MyString my_sock_ip = connectionSA.to_ip_string( true );
 	adSinful.setHost( my_sock_ip.Value() );
 	if( rewrite_port ) {
@@ -630,6 +660,17 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 	if( adSinful.getSinful() == adSinfulString ) {
 		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute '%s' (%s): socket is using same address as the default one; rewrite would do nothing.\n", attr_name, expr_string.c_str() );
 		return;
+	}
+
+	//
+	// If we rewrote the address, append the "other" address to the sinful.
+	// Because comamndPortSinful will be IPv4 until further notice, we only
+	// need to check for IPv4 -> IPv6 rewrites.
+	//
+	if( connectionSA.get_protocol() == CP_IPV6 ) {
+		// Sinful commandPortSinful( commandPortSinfulString.c_str() );
+		// adSinful.setParam( "rewrite", commandPortSinful.getHost() );
+		adSinful.setParam( "rewrite", originalHost.c_str() );
 	}
 
 	std::string new_expr = expr_string.substr( 0, string_start_pos );
