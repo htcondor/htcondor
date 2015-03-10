@@ -1,16 +1,20 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:vm-install}Virtual Machines}
+\section{\label{sec:vm-install}Setting Up the VM and Docker Universes}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:vm-install}The VM Universe}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{virtual machines}
 \index{installation!for the vm universe}
+\index{universe!set up for the vm universe}
 
-Virtual machines can be executed on any execution site with VMware, Xen
+\SubmitCmdNI{vm} universe jobs may
+be executed on any execution site with VMware, Xen
 (via \Prog{libvirt}), or KVM.
 To do this, HTCondor must be informed of some details of the 
 virtual machine installation, and the execution machines must
 be configured correctly.
-This permits the execution of \SubmitCmdNI{vm} universe jobs.
 
 What follows is not a comprehensive list of the options that
 help set up to use the \SubmitCmdNI{vm} universe; rather,
@@ -63,17 +67,10 @@ The \Prog{libvirtd} daemon must be installed and running.
 
 \end{enumerate}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Configuration Variables}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-There are configuration variables related to the virtual machines
-for \SubmitCmdNI{vm} universe jobs.
-Some options are required, while others are optional.
-Here we only discuss those that are required.
-
-First, the type of virtual machine that is installed on the
-execute machine must be specified. 
+Configuration is required to enable the execution of
+\SubmitCmdNI{vm} universe jobs.
+The type of virtual machine that is installed on the
+execute machine must be specified with the \Macro{VM\_TYPE} variable. 
 For now, only one type can be utilized per machine.
 For instance, the following tells HTCondor to use VMware:
 
@@ -101,7 +98,6 @@ VM_GAHP_LOG = $(LOG)/VMGahpLog
 %Instead, it is added to the ClassAd for the machine, so it 
 %can be matched against.  This way, if future releases of VMware/Xen support
 %new features that are desirable for your job, you can match on this string.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{VMware-Specific Configuration}
@@ -210,7 +206,7 @@ This restriction may be lifted in future versions,
 depending on features provided by the underlying tool \Prog{libvirt}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{When a vm Universe Job Fails to Start}
+\subsubsection{When a vm Universe Job Fails to Start}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 If a vm universe job should fail to launch, 
@@ -261,3 +257,11 @@ to be set indicating that vm universe jobs can match with this machine.
 See the \Condor{update\_machine\_ad} manual page for
 examples and details.
 \end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:docker-install}The Docker Universe}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{docker universe!set up}
+\index{installation!for the docker universe}
+\index{universe!set up for the docker universe}
+\Todo
