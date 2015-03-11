@@ -1322,14 +1322,16 @@ ReliSock::setTargetSharedPortID( char const *id )
 
 bool
 ReliSock::msgReady() {
-	if (rcv_msg.ready) { return true; }
+	while (!rcv_msg.ready)
+	{
 		// NOTE: 'true' here indicates non-blocking.
-	BlockingModeGuard sentry(this, true);
-	int retval = handle_incoming_packet();
-	if (retval == 2) {
-		dprintf(D_NETWORK, "msgReady would have blocked.\n");
-		m_read_would_block = true;
-		return false;
+		BlockingModeGuard sentry(this, true);
+		int retval = handle_incoming_packet();
+		if (retval == 2) {
+			dprintf(D_NETWORK, "msgReady would have blocked.\n");
+			m_read_would_block = true;
+			return false;
+		}
 	}
 	return rcv_msg.ready;
 }
