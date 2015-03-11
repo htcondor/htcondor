@@ -496,15 +496,23 @@ int
 DCMessenger::receiveMsgCallback(Stream *sock)
 {
 	Stopwatch watch; watch.start();
-	bool one_pass = false;
+	int passes = 0;
 	pending_operation_enum cur_state = m_pending_operation;
 	do
 	{
 		// If we've gone through the loop once and there's not another ready message,
 		// wait for DC to call us back.
-		if (one_pass && !static_cast<Sock*>(sock)->msgReady()) {break;}
+		if (passes)
+		{
+			if (!static_cast<Sock*>(sock)->msgReady())
+			{
+				dprintf(D_NETWORK, "No messages left to process (done %d).\n", passes);
+				break;
+			}
+			dprintf(D_NETWORK, "DC Messenger is processing message %d.\n", passes+1);
+		}
+		passes++;
 
-		one_pass = true;
 		classy_counted_ptr<DCMsg> msg = m_callback_msg;
 		ASSERT(msg.get());
 
@@ -522,7 +530,7 @@ DCMessenger::receiveMsgCallback(Stream *sock)
 	}
 		// Note that we do not access m_pending_operation after
 		// decRefCount is called - that may have deleted our object.
-	while (cur_state != NOTHING_PENDING && (watch.get_ms() < 2000));
+	while (cur_state != NOTHING_PENDING && (watch.get_ms() < 1000));
 
 	return KEEP_STREAM;
 }
