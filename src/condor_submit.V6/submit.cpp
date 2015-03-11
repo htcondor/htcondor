@@ -122,9 +122,9 @@ MyString    JobRootdir;
 #endif
 MyString    JobIwd;
 
-int		LineNo;
 int		ExtraLineNo;
-int		GotQueueCommand;
+int		GotQueueCommand = 0;
+int		GotNonEmptyQueueCommand = 0;
 SandboxTransferMethod	STMethod = STM_USE_SCHEDD_ONLY;
 
 char *	IckptName;	/* Pathname of spooled initial ckpt file */
@@ -150,6 +150,7 @@ int		MaxProcsPerCluster;
 int	  ClusterId = -1;
 int	  ProcId = -1;
 int   FirstStep = 1; // offset to convert ProcId to step
+bool  UseStrict = false; // generate warnings for unmatched globs, empty items, etc.
 int	  JobUniverse;
 char *JobGridType = NULL;
 int		Remote=0;
@@ -208,6 +209,7 @@ char* LogNotesVal = NULL;
 char* UserNotesVal = NULL;
 char* StackSizeVal = NULL;
 List<const char> extraLines;  // lines passed in via -a argument
+std::string queueCommandLine; // queue statement passed in via -q argument
 
 // declare enough of the condor_params structure definitions so that we can define submit hashtable defaults
 namespace condor_params {
@@ -265,7 +267,8 @@ static MACRO_SET SubmitMacroSet = {
 	&SubmitMacroDefaultSet };
 
 // these are used to keep track of the source of various macros in the table.
-const MACRO_SOURCE DefaultMacro = { true, false, 1, -2, -1, -2 };
+const MACRO_SOURCE DefaultMacro = { true, false, 1, -2, -1, -2 }; // for macros set by default
+const MACRO_SOURCE LiveMacro = { true, false, 3, -2, -1, -2 };    // for macros use as queue loop variables
 MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 
 #define MEG	(1<<20)
@@ -589,6 +592,7 @@ void	SetForcedAttributes();
 int		DoUnitTests(int options);
 void 	check_iwd( char const *iwd );
 int 	read_submit_file( FILE *fp );
+const char * is_queue_statement(const char * line); // return ptr to queue args of this is a queue statement
 char * 	condor_param( const char* name, const char* alt_name );
 char * 	condor_param( const char* name ); // call param with NULL as the alt
 void 	set_condor_param( const char* name, const char* value);
@@ -597,11 +601,11 @@ void 	set_condor_param_used( const char* name);
 // this function is intended for use during queue iteration to stuff changing values like $(Cluster) and $(Process)
 // Because of this the function does NOT make a copy of value, it's up to the caller to
 // make sure that value is not changed for the lifetime of possible macro substitution.
-void 	set_live_submit_variable(const char* name, const char* live_value);
+void 	set_live_submit_variable(const char* name, const char* live_value, bool force_used=true);
 int queue_connect();
 int queue_begin(StringList & vars, bool new_cluster); // called before iterating items
 int queue_item(int num, StringList & vars, char * item, const char * delims, const char * ws);
-int queue_end(bool fEof); // called when done iterating items for a single queue statement, and at end of file
+int queue_end(StringList & vars, bool fEof); // called when done iterating items for a single queue statement, and at end of file
 bool 	check_requirements( char const *orig, MyString &answer );
 void 	check_open( const char *name, int flags );
 void 	usage();
@@ -680,6 +684,24 @@ condor_param_mystring( const char * name, const char * alt_name )
 	return ret;
 }
 
+int condor_param_int(const char* name, const char * alt_name, int def_value)
+{
+	char * result = condor_param(name, alt_name);
+	if ( ! result)
+		return def_value;
+
+	long long value = def_value;
+	if (*result) {
+		if ( ! string_is_long_param(result, value) || value < INT_MIN || value >= INT_MAX) {
+			fprintf(stderr, "\nERROR: %s=%s is invalid, must eval to an integer.\n", name, result);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+	}
+	free(result);
+	return (int)value;
+}
+
 void non_negative_int_fail(const char * Name, char * Value)
 {
 
@@ -693,6 +715,24 @@ void non_negative_int_fail(const char * Name, char * Value)
 	}
 	
 	// sigh lexical_cast<>
+}
+
+int condor_param_bool(const char* name, const char * alt_name, bool def_value)
+{
+	char * result = condor_param(name, alt_name);
+	if ( ! result)
+		return def_value;
+
+	bool value = def_value;
+	if (*result) {
+		if ( ! string_is_boolean_param(result, value)) {
+			fprintf(stderr, "\nERROR: %s=%s is invalid, must eval to a boolean.\n", name, result);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+	}
+	free(result);
+	return value;
 }
 
 // parse a input string for an int64 value optionally followed by K,M,G,or T
@@ -1101,7 +1141,42 @@ main( int argc, const char *argv[] )
 							 MyName );
 					exit( 1 );
 				}
-				extraLines.Append( *ptr );
+				// if appended submit line looks like a queue statement, save it off for queue processing.
+				if (is_queue_statement(ptr[0])) {
+					if ( ! queueCommandLine.empty()) {
+						fprintf(stderr, "%s: only one -queue command allowed\n", MyName);
+						exit(1);
+					}
+					queueCommandLine = ptr[0];
+				} else {
+					extraLines.Append( *ptr );
+				}
+			} else if (is_dash_arg_prefix(ptr[0], "queue", 1)) {
+				if( !(--argc) || (!(*ptr[1]) || *ptr[1] == '-')) {
+					fprintf( stderr, "%s: -queue requires at least one argument\n",
+							 MyName );
+					exit( 1 );
+				}
+				if ( ! queueCommandLine.empty()) {
+					fprintf(stderr, "%s: only one -queue command allowed\n", MyName);
+					exit(1);
+				}
+
+				// The queue command uses arguments until it sees one starting with -
+				// we do this so that shell glob expansion behaves like you would expect.
+				++ptr;
+				queueCommandLine = "queue "; queueCommandLine += ptr[0];
+				while (argc > 1) {
+					bool is_dash = (MATCH == strcmp(ptr[1], "-"));
+					if (is_dash || ptr[1][0] != '-') {
+						queueCommandLine += " ";
+						queueCommandLine += ptr[1];
+						++ptr;
+						--argc;
+						if ( ! is_dash) continue;
+					}
+					break;
+				}
 			} else if (is_dash_arg_prefix( ptr[0], "password", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -password requires another argument\n",
@@ -1330,7 +1405,7 @@ main( int argc, const char *argv[] )
 		if( ExtraLineNo == 0 ) {
 			fprintf( stderr,
 					 "\nERROR: Failed to parse command file (line %d).\n",
-					 LineNo);
+					 FileMacroSource.line);
 		}
 		else {
 			fprintf( stderr,
@@ -1341,10 +1416,12 @@ main( int argc, const char *argv[] )
 	}
 
 	if( !GotQueueCommand ) {
-		fprintf(stderr, "\nERROR: \"%s\" doesn't contain any \"queue\"",
+		fprintf(stderr, "\nERROR: \"%s\" doesn't contain any \"queue\" commands -- no jobs queued\n",
 				SubmitFromStdin ? "(stdin)" : cmd_file);
-		fprintf( stderr, " commands -- no jobs queued\n" );
 		exit( 1 );
+	} else if ( ! GotNonEmptyQueueCommand && ! terse) {
+		fprintf(stderr, "\nWARNING: \"%s\" has only empty \"queue\" commands -- no jobs queued\n",
+				SubmitFromStdin ? "(stdin)" : cmd_file);
 	}
 
 	// we can't disconnect from something if we haven't connected to it: since
@@ -1501,20 +1578,28 @@ main( int argc, const char *argv[] )
 	}
 
 	/*	print all of the parameters that were not actually expanded/used 
-		in the submit file */
-	if (WarnOnUnusedMacros) {
+		in the submit file. but not if we never queued any jobs. since
+		there would be a ton of false positives in that case.
+	*/
+	if (WarnOnUnusedMacros && GotNonEmptyQueueCommand) {
 		if (verbose) { fprintf(stdout, "\n"); }
+
+		// Force non-zero ref count for DAG_STATUS and FAILED_COUNT
+		// these are specified for all DAG node jobs (see dagman_submit.cpp).
+		// wenger 2012-03-26 (refactored by TJ 2015-March)
+		lookup_macro("DAG_STATUS", NULL, SubmitMacroSet);
+		lookup_macro("FAILED_COUNT", NULL, SubmitMacroSet);
+
 		HASHITER it = hash_iter_begin(SubmitMacroSet);
 		for ( ; !hash_iter_done(it); hash_iter_next(it) ) {
-			if(0 == hash_iter_used_value(it)) {
+			MACRO_META * pmeta = hash_iter_meta(it);
+			if (pmeta && !pmeta->use_count && !pmeta->ref_count) {
 				const char *key = hash_iter_key(it);
-				const char *val = hash_iter_value(it);
-					// Don't warn if DAG_STATUS or FAILED_COUNT is specified
-					// but unused -- these are specified for all DAG node
-					// jobs (see dagman_submit.cpp).  wenger 2012-03-26
-				if ( strcasecmp( key, "DAG_STATUS" ) != MATCH &&
-							strcasecmp( key, "FAILED_COUNT" ) != MATCH ) {
-					fprintf(stderr, "WARNING: the line `%s = %s' was unused by condor_submit. Is it a typo?\n", key, val);
+				if (pmeta->source_id == LiveMacro.id) {
+					fprintf(stderr, "WARNING: the Queue variable '%s' was unused by condor_submit. Is it a typo?\n", key);
+				} else {
+					const char *val = hash_iter_value(it);
+					fprintf(stderr, "WARNING: the line '%s = %s' was unused by condor_submit. Is it a typo?\n", key, val);
 				}
 			}
 		}
@@ -6601,7 +6686,7 @@ int parse_queue_args (
 						--pt;
 					}
 				}
-				if (isspace(ch) || isalpha(ch) || ch == ',' || ch == '_') {
+				if (isspace(ch) || isalpha(ch) || ch == ',' || ch == '_' || ch == '.') {
 					pvars = pt-1;
 				} else {
 					break;
@@ -6633,6 +6718,18 @@ int parse_queue_args (
 	return 0;
 }
 
+// Check to see if this is a queue statement, if it is, return a pointer to the queue arguments.
+// 
+const char * is_queue_statement(const char * line)
+{
+	const int cchQueue = sizeof("queue")-1;
+	if (starts_with_ignore_case(line, "queue") && (0 == line[cchQueue] || isspace(line[cchQueue]))) {
+		const char * pqargs = line+cchQueue;
+		while (*pqargs && isspace(*pqargs)) ++pqargs;
+		return pqargs;
+	}
+	return NULL;
+}
 
 MyString last_submit_executable;
 MyString last_submit_cmd;
@@ -6647,13 +6744,18 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 	FILE* fp_submit = (FILE*)pv;
 	int rval = 0;
 	const char * subsys = get_mySubSystem()->getName();
-	const int cchQueue = sizeof("queue")-1;
 
 	// Check to see if this is a queue statement.
-	// 
-	if (starts_with_ignore_case(line, "queue") && (0 == line[cchQueue] || isspace(line[cchQueue]))) {
+	//
+	char * pqargs = const_cast<char*>(is_queue_statement(line));
+	if (pqargs) {
 
-		char * pqargs = line+cchQueue;
+		GotQueueCommand = true;
+
+		if ( ! queueCommandLine.empty() && fp_submit != NULL) {
+			errmsg = "-queue argument conflicts with queue statement in submit file";
+			return -1;
+		}
 
 		// now parse the extra lines.
 		ExtraLineNo = 0;
@@ -6727,6 +6829,13 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 						" for Queue command on line %d", item_list_begin_line);
 					return -1;
 				}
+			} else if (items_filename == "-") {
+				int lineno = 0;
+				for (char* line=NULL;;) {
+					line = getline_trim(stdin, lineno);
+					if ( ! line) break;
+					items.append(line);
+				}
 			} else {
 				MACRO_SOURCE ItemsSource;
 				FILE * fp = Open_macro_source(ItemsSource, items_filename.Value(), false, SubmitMacroSet, errmsg);
@@ -6752,6 +6861,8 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 
 		case foreach_matching:
 			PRAGMA_REMIND("turn the itemlist globs into an itemlist of files")
+			errmsg = "matching not yet implemented";
+			return -1;
 			break;
 
 		default:
@@ -6784,7 +6895,7 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 				}
 			}
 
-			rval = queue_end(false);
+			rval = queue_end(vars, false);
 			if (rval < 0)
 				return rval;
 		}
@@ -6808,8 +6919,21 @@ int read_submit_file(FILE * fp)
 		SpecialSubmitParse, fp);
 
 	if( rval < 0 ) {
-		fprintf (stderr, "Error on Line %d while reading submit file: %s\n", FileMacroSource.line, errmsg.c_str());
+		fprintf (stderr, "\nERROR: on Line %d of submit file: %s\n", FileMacroSource.line, errmsg.c_str());
+	} else {
+		// if a -queue command line option was specified, and the submit file did not have a queue statement
+		// then parse the command line argument now (as if it was appended to the submit file)
+		if ( rval == 0 && ! GotQueueCommand && ! queueCommandLine.empty()) {
+			char * line = strdup(queueCommandLine.c_str()); // copy cmdline so we can destructively parse it.
+			ASSERT(line);
+			rval = SpecialSubmitParse(NULL, FileMacroSource, SubmitMacroSet, line, errmsg);
+			free(line);
+		}
+		if (rval < 0) {
+			fprintf (stderr, "\nERROR: while processing -queue command line option: %s\n", errmsg.c_str());
+		}
 	}
+
 	return rval;
 }
 
@@ -6884,13 +7008,13 @@ set_condor_param( const char *name, const char *value )
 // live values are automatically marked as 'used'.
 //
 void
-set_live_submit_variable( const char *name, const char *live_value )
+set_live_submit_variable( const char *name, const char *live_value, bool force_used /*=true*/ )
 {
 	MACRO_ITEM* pitem = find_macro_item(name, SubmitMacroSet);
-	if ( ! pitem) { insert(name, "", SubmitMacroSet, DefaultMacro); }
+	if ( ! pitem) { insert(name, "", SubmitMacroSet, LiveMacro); }
 	pitem = find_macro_item(name, SubmitMacroSet);
 	pitem->raw_value = live_value;
-	if (SubmitMacroSet.metat) {
+	if (SubmitMacroSet.metat && force_used) {
 		MACRO_META* pmeta = &SubmitMacroSet.metat[pitem - SubmitMacroSet.table];
 		pmeta->use_count += 1;
 	}
@@ -6972,8 +7096,8 @@ int queue_begin(StringList & vars, bool new_cluster)
 		return -1;
 
 	// establish live buffers for $(Cluster) and $(Process), and other loop variables
-	// Because the user might already be using these variables, we can only set the explicit
-	// unconditionally, the others we must set only when not already set.
+	// Because the user might already be using these variables, we can only set the explicit ones
+	// unconditionally, the others we must set only when not already set by the user.
 	set_live_submit_variable(Cluster, ClusterString);
 	set_live_submit_variable(Process, ProcessString);
 	if ( ! find_macro_item("Node", SubmitMacroSet)) { set_live_submit_variable("Node", EmptyItemString); }
@@ -6981,9 +7105,9 @@ int queue_begin(StringList & vars, bool new_cluster)
 
 	vars.rewind();
 	char * var;
-	while ((var = vars.next())) { set_live_submit_variable(var, EmptyItemString); }
+	while ((var = vars.next())) { set_live_submit_variable(var, EmptyItemString, false); }
 
-
+	// optimize the macro set for lookups if we inserted anything.  we expect this to happen only once.
 	if (SubmitMacroSet.sorted < SubmitMacroSet.size) {
 		optimize_macros(SubmitMacroSet);
 	}
@@ -7018,6 +7142,10 @@ int queue_item(int num, StringList & vars, char * item, const char * delims, con
 
 	int rval = 0; // default to success (if num == 0 we will return this)
 
+	// Initalize the base for Step
+	FirstStep = condor_param_int("Submit.FirstStep", "Submit_FirstStep", FirstStep);
+	// UseStrict = condor_param_bool("Submit.IsStrict", "Submit_IsStrict", UseStrict);
+
 	// If there are loop variables, destructively tokenize item and stuff the tokens into the submit hashtable.
 	if ( ! vars.isEmpty())  {
 
@@ -7029,7 +7157,7 @@ int queue_item(int num, StringList & vars, char * item, const char * delims, con
 		vars.rewind();
 		char * var = vars.next();
 		char * data = item;
-		set_live_submit_variable(var, data);
+		set_live_submit_variable(var, data, false);
 
 		// if there is more than a single loop variable, then assign them as well
 		// we do this by destructively null terminating the item for each var
@@ -7042,7 +7170,7 @@ int queue_item(int num, StringList & vars, char * item, const char * delims, con
 				*data++ = 0;
 				// skip leading separators and whitespace
 				while (*data && strchr(ws, *data)) ++data;
-				set_live_submit_variable(var, data);
+				set_live_submit_variable(var, data, false);
 			}
 		}
 	}
@@ -7081,7 +7209,7 @@ int queue_item(int num, StringList & vars, char * item, const char * delims, con
 
 		// we move this outside the above, otherwise it appears that we have 
 		// received no queue command (or several, if there were multiple ones)
-		GotQueueCommand = 1;
+		GotNonEmptyQueueCommand = 1;
 
 #if !defined(WIN32)
 		SetRootDir();	// must be called very early
@@ -7257,8 +7385,18 @@ int queue_item(int num, StringList & vars, char * item, const char * delims, con
 	return rval;
 }
 
-int queue_end(bool /*fEof*/)   // called when done processing each Queue statement and at end of submit file
+int queue_end(StringList & vars, bool /*fEof*/)   // called when done processing each Queue statement and at end of submit file
 {
+	// set live submit variables to generate reasonable unused-item messages.
+	if ( ! vars.isEmpty())  {
+		vars.rewind();
+		char * var = vars.next();
+		while (var) {
+			set_live_submit_variable(var, "<Queue_item>", false);
+			var = vars.next();
+		}
+	}
+
 	return 0;
 }
 
