@@ -1331,6 +1331,9 @@ ReliSock::msgReady() {
 			dprintf(D_NETWORK, "msgReady would have blocked.\n");
 			m_read_would_block = true;
 			return false;
+		} else if (retval == 0) {
+			// No data is available
+			return false;
 		}
 	}
 	return rcv_msg.ready;
