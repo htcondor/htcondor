@@ -1,5 +1,3 @@
-#include <errno.h>
-
 #include "condor_common.h"
 #include "condor_debug.h"
 
