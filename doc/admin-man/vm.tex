@@ -263,23 +263,37 @@ examples and details.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{docker universe!set up}
 \index{installation!for the docker universe}
+\index{universe!docker}
 \index{universe!set up for the docker universe}
 The execution of a job within the docker universe causes the
-instantiation of a Docker container on an execute host,
-and runs that single HTCondor job within that container. 
+instantiation of a Docker container on an execute host.
+The job is run within that container. 
 
 The docker universe job is mapped to a vanilla universe job,
 and the submit description file must specify 
 the submit command \SubmitCmd{docker\_image} to identify the Docker image.
 The job's \Attr{requirement} ClassAd attribute is automatically appended,
- such that the job will only match with an execute machine 
+such that the job will only match with an execute machine 
 that has Docker installed.
 
-The Docker service must be installed on each execute machine
+\index{ClassAd machine attribute!HasDocker}
+The Docker service must be pre-installed on each execute machine
 that can execute a docker universe job.
 Upon start up of the \Condor{startd} daemon,
-the capability of the execute machine to run Docker universe jobs is probed, 
+the capability of the execute machine to run docker universe jobs is probed, 
 and the machine ClassAd attribute \Attr{HasDocker} is advertised
-for each machine that is capable of running Docker universe jobs.
+for a machine that is capable of running Docker universe jobs.
 
-\MoreTodo
+When a docker universe job is matched with a Docker-capable
+execute machine,
+HTCondor invokes the Docker CLI to instantiate the image-specific container.
+The job's scratch directory tree is mounted as a Docker volume.
+When the job completes or is evicted, the container is removed.
+
+In addition to installing the Docker service, 
+the single configuration variable \Macro{DOCKER} must be set.
+It defines the location of the Docker CLI and can also specify that
+the \Condor{starter} daemon has been given a password-less sudo
+permission to start the container as root.
+Details of the \MacroNI{DOCKER} configuration variable are in
+section~\ref{param:Docker}.
