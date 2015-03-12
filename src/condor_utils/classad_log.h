@@ -72,7 +72,13 @@ public:
 
 // declare a default ClassAdLog table entry maker for the normal case
 // when the log holds ClassAd's and not some derived type.
+#ifdef WIN32
+// windows (or probably not-using-shared-libaries?) requires this to be declared here and not externed.
+const ConstructClassAdLogTableEntry<ClassAd*> DefaultMakeClassAdLogTableEntry;
+#else
+// g++ (or using-shared-libaries?) requires this to be declared in a .cpp file and extern'ed here.
 extern const ConstructClassAdLogTableEntry<ClassAd*> DefaultMakeClassAdLogTableEntry;
+#endif
 
 template <typename K, typename AltK, typename AD>
 class ClassAdLog {

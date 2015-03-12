@@ -56,7 +56,12 @@ const char *EMPTY_CLASSAD_TYPE_NAME = "(empty)";
 
 // declare a default ClassAdLog table entry maker for the normal case
 // when the log holds ClassAd's and not some derived type.
+#ifdef WIN32
+// windows (or probably not-using-shared-libaries?) requires this to be declared in a header file, not here
+#else
+// g++ (or using-shared-libaries?) requires this to be extern'ed in the header file and declared here.
 const ConstructClassAdLogTableEntry<ClassAd*> DefaultMakeClassAdLogTableEntry;
+#endif
 
 
 // non-templatized worker function that implements the log loading functionality of ClassAdLog
