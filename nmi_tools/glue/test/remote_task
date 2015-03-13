@@ -234,7 +234,7 @@ if( $batchteststatus != 0 ) {
 	CondorTest::RegisterResult(0,"test_name",$testname);
 }
 
-if(exists $requirements{personal}) {
+if(exists $requirements->{personal}) {
 	my $exit_status = 0;
 	out("Stopping personal HTCondor for '$testname'");
 	$exit_status = StopTestPersonal($testname);
