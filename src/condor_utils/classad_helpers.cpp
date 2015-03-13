@@ -123,6 +123,11 @@ findHoldKillSig( ClassAd* ad )
 	return findSignal( ad, ATTR_HOLD_KILL_SIG );
 }
 
+int
+findCheckpointSig( ClassAd* ad )
+{
+	return findSignal( ad, ATTR_CHECKPOINT_SIG );
+}
 
 bool
 printExitString( ClassAd* ad, int exit_reason, MyString &str )

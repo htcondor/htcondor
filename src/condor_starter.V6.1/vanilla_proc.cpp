@@ -139,7 +139,9 @@ VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd),
 	m_memory_limit(-1),
 	m_oom_fd(-1),
 	m_oom_efd(-1),
-	m_oom_efd2(-1)
+	m_oom_efd2(-1),
+	isCheckpointing(false),
+	isSoftKilling(false)
 {
     m_statistics.Init();
 #if !defined(WIN32)
@@ -727,86 +729,126 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 }
 
 
+int VanillaProc::pidNameSpaceReaper( int status ) {
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	FILE *f = safe_fopen_wrapper_follow(m_pid_ns_init_filename.c_str(), "r");
+	if (f == NULL) {
+		// Probably couldn't exec the wrapper.  Badness
+		dprintf(D_ALWAYS, "JobReaper: condor_pid_ns_init didn't drop filename %s (%d)\n", m_pid_ns_init_filename.c_str(), errno);
+		EXCEPT("Starter configured to use PID NAMESPACES, but libexec/condor_pid_ns_init did not run properly");
+	}
+	if (fscanf(f, "ExecFailed") > 0) {
+		EXCEPT("Starter configured to use PID NAMESPACES, but execing the job failed");
+	}
+	fseek(f, 0, SEEK_SET);
+	if (fscanf(f, "Exited: %d", &status) > 0) {
+		dprintf(D_FULLDEBUG, "Real job exit code of %d read from wrapper output file\n", status);
+	}
+	fclose(f);
+
+	return status;
+}
+
 bool
 VanillaProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
 
-	if (pid == JobPid) {
+	//
+	// Run all the reapers first, since some of them change the exit status.
+	//
+	if( m_pid_ns_init_filename.length() > 0 ) {
+		status = pidNameSpaceReaper( status );
+	}
+	bool jobExited = OsProc::JobReaper( pid, status );
+	if( pid != JobPid ) { return jobExited; }
 
-			// On newer kernels if memory.use_hierarchy==1, then we cannot disable
-			// the OOM killer.  Hence, we have to be ready for a SIGKILL to be delivered
-			// by the kernel at the same time we get the notification.  Hence, if we
-			// see an exit signal, we must also check the event file descriptor.
 #if defined(LINUX)
-		int efd = -1;
-		if ((m_oom_efd >= 0) && daemonCore->Get_Pipe_FD(m_oom_efd, &efd) && (efd != -1))
-		{
-			Selector selector;
-			selector.add_fd(efd, Selector::IO_READ);
-			selector.set_timeout(0);
-			selector.execute();
-			if (!selector.failed() && !selector.timed_out() && selector.has_ready() && selector.fd_ready(efd, Selector::IO_READ))
-			{
-				outOfMemoryEvent(m_oom_efd);
-			}
+	// On newer kernels if memory.use_hierarchy==1, then we cannot disable
+	// the OOM killer.  Hence, we have to be ready for a SIGKILL to be delivered
+	// by the kernel at the same time we get the notification.  Hence, if we
+	// see an exit signal, we must also check the event file descriptor.
+	//
+	// outOfMemoryEvent() is aware of checkpointing and will mention that
+	// the OOM event happened during a checkpoint.
+	int efd = -1;
+	if( (m_oom_efd >= 0) && daemonCore->Get_Pipe_FD(m_oom_efd, &efd) && (efd != -1) ) {
+		Selector selector;
+		selector.add_fd(efd, Selector::IO_READ);
+		selector.set_timeout(0);
+		selector.execute();
+		if( !selector.failed() && !selector.timed_out() && selector.has_ready() && selector.fd_ready(efd, Selector::IO_READ) ) {
+			outOfMemoryEvent( m_oom_efd );
 		}
+	}
 #endif
 
-			// To make sure that no job processes are still lingering
-			// on the machine, call Kill_Family().
-			//
-			// HOWEVER, iff we are tracking process families via a
-			// dedicated execute account, we want to delay killing until
-			// there is only one job under the starter.  We do this to
-		
-			// prevent the starter from killing the SSH daemon early, and
-			// therefore effectively killing any ssh_to_job session as soon
-			// as the job exits on machine configured with a dedicated
-			// execute account.
-		if ( !m_dedicated_account || Starter->numberOfJobs() == 1 )
-		{
-			dprintf(D_PROCFAMILY,"About to call Kill_Family()\n");
-			daemonCore->Kill_Family(JobPid);
+	if( isCheckpointing ) {
+		dprintf( D_FULLDEBUG, "Inside VanillaProc::JobReaper() during a checkpoint\n" );
+		isCheckpointing = false;
+
+		// The job signals that it's successfully written a checkpoint by
+		// exiting normally with status 0.
+		if( exit_status == 0 ) {
+			if( Starter->jic->uploadWorkingFiles() ) {
+				// FIXME: Update the job ad to reflect the succesful checkpoint.
+			} else {
+				// The logic in the base starter for failing to transfer
+				// output back is to wait for the shadow to reconnect, or,
+				// failing that, the job lease to expire.  So do nothing.
+				dprintf( D_ALWAYS, "Failed to transfer checkpoint.\n" );
+			}
+
+			if( ! isSoftKilling ) {
+				StartJob();
+
+				jobExited = false;
+			}
 		} else {
-			dprintf(D_PROCFAMILY,
-				"Postponing call to Kill_Family() (perhaps due to ssh_to_job)\n");
+			// The job exited without taking a checkpoint.  If we don't do
+			// anything, it will be reported as if the error code or signal
+			// had happened naturally (that job will usually exit the
+			// queue).  This could confuse the users.
+			//
+			// For now, we'll just force the job to requeue.
+
+			// The easiest way to do that is to pretend that this was an
+			// exit requested by HTCondor.  That's not untrue, but this
+			// variable is normally only used to flag external requests
+			// which have leases.
+
+			// This makes it show up as 'evicted', which is true but
+			// deceptive.  Fixing that may require adding a new starter
+			// exit code (JOB_FAILED_CHECKPOINT) and a new user log
+			// event ID (ULOG_JOB_FAILED_CHECKPOINT).
+			requested_exit = true;
+		}
+	} else {
+		// If the parent job process died, clean up all of the job's processes
+		// and record its final usage stats.
+
+		// Kill_Family() will (incorrectly?) kill the SSH-to-job daemon
+		// if we're using dedicated accounts, so don't unless we know
+		// we're the only job.
+		if ( ! m_dedicated_account || Starter->numberOfJobs() == 1 ) {
+			dprintf( D_PROCFAMILY, "About to call Kill_Family()\n" );
+			daemonCore->Kill_Family( JobPid );
+		} else {
+			dprintf( D_PROCFAMILY, "Postponing call to Kill_Family() "
+				"(perhaps due to ssh_to_job)\n" );
 		}
 
-			// Record final usage stats for this process family, since
-			// once the reaper returns, the family is no longer
-			// registered with DaemonCore and we'll never be able to
-			// get this information again.
-		if (daemonCore->Get_Family_Usage(JobPid, m_final_usage) == FALSE) {
-			dprintf(D_ALWAYS, "error getting family usage for pid %d in "
-					"VanillaProc::JobReaper()\n", JobPid);
+		// Record final usage stats for this process family, since
+		// once the reaper returns, the family is no longer
+		// registered with DaemonCore and we'll never be able to
+		// get this information again.
+		if( daemonCore->Get_Family_Usage(JobPid, m_final_usage) == FALSE ) {
+			dprintf( D_ALWAYS, "error getting family usage for pid %d in "
+				"VanillaProc::JobReaper()\n", JobPid );
 		}
 	}
 
-	// If we didn't kill it ourselves, and we've using pid namespaces
-	if (!requested_exit && (m_pid_ns_init_filename.length() > 0)) {
-		// We ran a job with a pid_ns_init wrapper.  This file contains
-		// true status
-		TemporaryPrivSentry sentry(PRIV_ROOT);
-		FILE *f = safe_fopen_wrapper_follow(m_pid_ns_init_filename.c_str(), "r");
-		if (f == NULL) {
-			// Probably couldn't exec the wrapper.  Badness
-			dprintf(D_ALWAYS, "JobReaper: condor_pid_ns_init didn't drop filename %s (%d)\n", m_pid_ns_init_filename.c_str(), errno);
-			EXCEPT("Starter configured to use PID NAMESPACES, but libexec/condor_pid_ns_init did not run properly");
-		}
-		if (fscanf(f, "ExecFailed") > 0) {
-			EXCEPT("Starter configured to use PID NAMESPACES, but execing the job failed");
-		}
-		
-		fseek(f, 0, SEEK_SET);
-		if (fscanf(f, "Exited: %d", &status) > 0) {
-			dprintf(D_FULLDEBUG, "Real job exit code of %d read from wrapper output file\n", status);
-		}
-		fclose(f);
-	}
-
-		// This will reset num_pids for us, too.
-	return OsProc::JobReaper( pid, status );
+	return jobExited;
 }
 
 
@@ -848,7 +890,7 @@ bool
 VanillaProc::ShutdownGraceful()
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::ShutdownGraceful()\n");
-	
+
 	if ( JobPid == -1 ) {
 		// there is no process family yet, probably because we are still
 		// transferring files.  just return true to say we're all done,
@@ -857,20 +899,12 @@ VanillaProc::ShutdownGraceful()
 		return true;
 	}
 
-	// WE USED TO.....
-	//
-	// take a snapshot before we softkill the parent job process.
-	// this helps ensure that if the parent exits without killing
-	// the kids, our JobExit() handler will get em all.
-	//
-	// TODO: should we make an explicit call to the procd here to tell
-	// it to take a snapshot???
-
-	// now softkill the parent job process.  this is exactly what
-	// OsProc::ShutdownGraceful does, so call it.
-	//
-	OsProc::ShutdownGraceful();
-	return false; // shutdown is pending (same as OsProc::ShutdownGraceful()
+	isSoftKilling = true;
+	// Because we allow the user to specify different signals for periodic
+	// checkpoint and for soft kills, don't suppress the soft kill signal
+	// if we're checkpointing when we're vacated.  (This also simplifies
+	// keeping signal semantics consistent with removing or holding jobs.)
+	return OsProc::ShutdownGraceful();
 }
 
 bool
@@ -958,6 +992,9 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes.";
 	} else {
 		ss << "Job has encountered an out-of-memory event.";
+	}
+	if( isCheckpointing ) {
+		ss << "  This occurred while the job was checkpointing.";
 	}
 	Starter->jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
 
@@ -1188,3 +1225,35 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 #endif
 }
 
+bool VanillaProc::Ckpt() {
+	dprintf( D_FULLDEBUG, "Entering VanillaProc::Ckpt()\n" );
+
+	if( isSoftKilling ) { return false; }
+
+	int wantCheckpointSignal = 0;
+	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpointSignal );
+	if( wantCheckpointSignal && ! isCheckpointing ) {
+		int periodicCheckpointSignal = findCheckpointSig( JobAd );
+		if( periodicCheckpointSignal == -1 ) {
+			periodicCheckpointSignal = soft_kill_sig;
+		}
+		daemonCore->Send_Signal( JobPid, periodicCheckpointSignal );
+		isCheckpointing = true;
+
+		// Do not do intermediate file transfer, since we're not blocking.
+		// Instead, do intermediate file transfer in the reaper.
+		return false;
+	}
+
+	return OsProc::Ckpt();
+}
+
+int VanillaProc::outputOpenFlags() {
+	int wantCheckpoint = 0;
+	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
+	if( wantCheckpoint ) {
+		return O_WRONLY | O_CREAT | O_APPEND | O_LARGEFILE;
+	} else {
+		return this->OsProc::outputOpenFlags();
+	}
+}
