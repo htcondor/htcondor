@@ -5710,6 +5710,7 @@ SetGridParams()
 				free( rawBuffer );
 				exit(1);
 			}
+			rawBuffer[ fileSize ] = '\0';
 			std::string accessKey( rawBuffer );
 			trim( accessKey );
 			buffer.formatstr( "%s = \"%s\"", ATTR_EC2_ACCESS_KEY, accessKey.c_str() );
