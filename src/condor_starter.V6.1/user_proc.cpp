@@ -429,7 +429,7 @@ UserProc::openStdFile( std_file_type type,
 		// we got back
 	bool is_output = (type != SFT_IN);
 	if( is_output ) {
-		int flags = O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | O_LARGEFILE;
+		int flags = outputOpenFlags();
 		fd = safe_open_wrapper_follow( filename.Value(), flags, 0666 );
 		if( fd < 0 ) {
 				// if failed, try again without O_TRUNC

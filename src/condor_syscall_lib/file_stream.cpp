@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,9 +17,6 @@
  *
  ***************************************************************/
 
-
- 
-
 #include "condor_common.h"
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
@@ -27,15 +24,56 @@
 #include "condor_file_info.h"
 #include "internet.h"
 #include "internet_obsolete.h"
+#include "condor_sockfunc.h"
+#include "std_univ_sock.h"
+
+extern StdUnivSock * syscall_sock;
 
 /* remote system call prototypes */
-extern int REMOTE_CONDOR_file_info(char *logical_name, int *fd, char **physical_name);
-extern int REMOTE_CONDOR_put_file_stream(char *file, size_t len, unsigned int *ip_addr, u_short *port_num);
-extern int REMOTE_CONDOR_get_file_stream(char *file, size_t *len, unsigned int *ip_addr, u_short *port_num);
+extern "C" {
+	extern int REMOTE_CONDOR_file_info(char *logical_name, int *fd, char **physical_name);
+	extern int REMOTE_CONDOR_put_file_stream(char *file, size_t len, unsigned int *ip_addr, u_short *port_num);
+	extern int REMOTE_CONDOR_get_file_stream(char *file, size_t *len, unsigned int *ip_addr, u_short *port_num);
+}
 
+extern "C" {
+	// Used by image.cpp.
+	int _condor_in_file_stream;
 
-int open_tcp_stream( unsigned int ip_addr, unsigned short port );
-int _condor_in_file_stream;
+	// Used by remote_startup.c and xfer_file.c.
+	int open_file_stream( const char *file, int flags, size_t *len );
+}
+
+// Cribbed from directConnectToSockAddr().  Could probably just call it
+// between SetSyscalls(), but I don't know that SO_KEEPALIVE doesn't matter.
+int open_tcp_stream( const condor_sockaddr & sa ) {
+	int scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+
+	int fd = socket( sa.get_aftype(), SOCK_STREAM, 0 );
+	assert( fd != -1 );
+
+	int rv = _condor_local_bind( TRUE, fd );
+	if( rv != TRUE ) {
+		close( fd );
+		SetSyscalls( scm );
+		return -1;
+	}
+
+	// condor_connect ends up pulling in param() via ip6_get_scope_id(),
+	// which we can't allow, since this function is linked into standard
+	// universe jobs.
+	// rv = condor_connect( fd, sa );
+	rv = connect( fd, sa.to_sockaddr(), sa.get_socklen() );
+	if( rv != 0 ) {
+		dprintf( D_ALWAYS, "condor_connect() failed - errno = %d (rv %d)\n", errno, rv );
+		close( fd );
+		SetSyscalls( scm );
+		return -1;
+	}
+
+	SetSyscalls( scm );
+	return fd;
+}
 
 /*
   Open a file using the stream access protocol.  If we are to access
@@ -112,11 +150,24 @@ int open_file_stream( const char *file, int flags, size_t *len )
 			free( local_path );
 			return -1;
 		}
-        dprintf(D_NETWORK, "Opening TCP stream to %s\n",
-                ipport_to_string(htonl(addr), htons(port)));
+
+		//
+		// The shadows sends an address of 0 if we should instead assume that
+		// the socket we're making the system call over shares an address
+		// with the file server.  This makes it possible to support IPv6.
+		//
+		condor_sockaddr saFileServer;
+		if( addr == 0 ) {
+			 saFileServer = syscall_sock->peer_addr();
+		} else {
+			struct in_addr ip = { htonl( addr ) };
+			saFileServer = condor_sockaddr( ip );
+		}
+		saFileServer.set_port( port );
 
 			/* Connect to the specified party */
-		fd = open_tcp_stream( addr, port );
+        dprintf( D_ALWAYS, "Opening TCP stream to %s\n", saFileServer.to_sinful().c_str() );
+		fd = open_tcp_stream( saFileServer );
 		if( fd < 0 ) {
 			dprintf( D_ALWAYS, "open_tcp_stream() failed\n" );
 			free( local_path );
@@ -128,56 +179,6 @@ int open_file_stream( const char *file, int flags, size_t *len )
 	}
 
 	free( local_path );
-	return fd;
-}
-
-/*
-  Open a TCP connection at the given hostname and port number.  This
-  will result in a file descriptor where we can read or write the
-  file.  N.B. both the IP address and the port number are given in host
-  byte order.
-*/
-int
-open_tcp_stream( unsigned int ip_addr, unsigned short port )
-{
-	struct sockaddr_in	sa_in;
-	int		fd;
-	int		status;
-	int		scm;
-
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-
-		/* generate a socket */
-	fd = socket( AF_INET, SOCK_STREAM, 0 );
-	assert( fd >= 0 );
-	dprintf( D_FULLDEBUG, "Generated a data socket - fd = %d\n", fd );
-		
-		/* Now we need to bind to the right interface. */
-	if( ! _condor_local_bind(TRUE, fd) ) {
-			/* error in bind() */
-		close(fd);
-		SetSyscalls( scm );
-		return -1;
-	}
-
-		/* Now, set the remote address. */
-	ip_addr = htonl( ip_addr );
-	memset( &sa_in, '\0', sizeof sa_in );
-	memcpy( &sa_in.sin_addr, &ip_addr, sizeof(ip_addr) );
-	sa_in.sin_family = AF_INET;
-	sa_in.sin_port = htons( port );
-	dprintf( D_FULLDEBUG, "Internet address structure set up\n" );
-	status = connect( fd, (struct sockaddr *)&sa_in, sizeof(sa_in) );
-	if( status < 0 ) {
-		dprintf( D_ALWAYS, "connect() failed - errno = %d\n", errno );
-		close(fd);
-		SetSyscalls( scm );
-		return -1;
-	}
-	dprintf( D_FULLDEBUG, "Connection completed - returning fd %d\n", fd );
-
-	SetSyscalls( scm );
-
 	return fd;
 }
 

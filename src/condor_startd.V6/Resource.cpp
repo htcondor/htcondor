@@ -1639,13 +1639,23 @@ Resource::wants_suspend( void )
 int
 Resource::wants_pckpt( void )
 {
-	int want_pckpt; 
+	switch( r_cur->universe() ) {
+		case CONDOR_UNIVERSE_VANILLA: {
+			ClassAd * jobAd = r_cur->ad();
+			int wantCheckpoint = 0;
+			jobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
+			if( ! wantCheckpoint ) { return FALSE; }
+			} break;
 
-	if( (r_cur->universe() != CONDOR_UNIVERSE_STANDARD) &&
-			(r_cur->universe() != CONDOR_UNIVERSE_VM)) {
-		return FALSE;
+		case CONDOR_UNIVERSE_STANDARD:
+		case CONDOR_UNIVERSE_VM:
+			break;
+
+		default:
+			return FALSE;
 	}
 
+	int want_pckpt;
 	if( r_classad->EvalBool( "PERIODIC_CHECKPOINT",
 				r_cur->ad(),
 				want_pckpt ) == 0) { 

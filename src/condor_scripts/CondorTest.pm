@@ -188,10 +188,18 @@ sub EndTest
     if( Cleanup() == 0 ) {
 	$exit_status = 1;
     }
+	# Cleanup stops all personals in test which triggers a CoreCheck per personal
+	# not all tests call RegisterResult yet and I changed the ordering in remote_task
+	# so to insure the presence of at least one call to RegisterResult passing the
+	# CoreCheck result
     if($failed_coreERROR ne "") {
-	$exit_status = 1;
-	$extra_notes = "$extra_notes\n  Log Directory Check results: $failed_coreERROR\n";
-    }
+		$exit_status = 1;
+		$extra_notes = "$extra_notes\n  Log Directory Check results: $failed_coreERROR\n";
+		RegisterResult(0,"test_name","$handle");
+    } else {
+		print "Passed Core Check\n";
+		RegisterResult(1,"test_name","$handle");
+	}
 
     if( $test_failure_count > 0 ) {
 	$exit_status = 1;
@@ -934,6 +942,7 @@ sub StartTest
 	##############################################################
 	if(ShouldCheck_coreERROR() == 1){
 		TestDebug("Want to Check core and ERROR!!!!!!!!!!!!!!!!!!\n\n",2);
+		print "Calling CoreCheck in endof StartTest\n";
 		# running in Config
 		my $logdir = `condor_config_val log`;
 		CondorUtils::fullchomp($logdir);
@@ -946,6 +955,7 @@ sub StartTest
 	##############################################################
 
 	if(defined  $wrap_test) {
+		print "Calling CoreCheck in endof StartTest if wrapped\n";
 		my $logdir = `condor_config_val log`;
 		CondorUtils::fullchomp($logdir);
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
@@ -3166,6 +3176,7 @@ sub KillPersonal
 {
 	my $personal_config = shift;
 	my $logdir = "";
+	my $corecheckret = "";
 	if($personal_config =~ /^(.*[\\\/])(.*)$/) {
 		#TestDebug("LOG dir is $1/log\n",$debuglevel);
 		$logdir = $1 . "/log";
@@ -3173,12 +3184,14 @@ sub KillPersonal
 		TestDebug("KillPersonal passed this config: $personal_config\n",2);
 		e ie "Can not extract log directory\n";
 	}
-	TestDebug("Doing core ERROR check in  KillPersonal\n",2);
-	$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 	# mark the direction we are going is down/off
 	my $condor = GetPersonalCondorWithConfig($personal_config);
 	$condor->SetCondorDirection("down");
 	CondorPersonal::KillDaemons($personal_config);
+	TestDebug("Doing core ERROR check in  KillPersonal\n",2);
+	print "Doing core ERROR check in  KillPersonal\n";
+	$corecheckret = CoreCheck($handle, $logdir, $teststrt, $teststop);
+	$failed_coreERROR = "$failed_coreERROR" . "$corecheckret";
 
 	if ( $condor ) {
 	    $condor->{is_running} = 0;
@@ -3200,7 +3213,14 @@ sub ShouldCheck_coreERROR
 		# no because we are doing concurrent testing
 		return(0);
 	}
+	# wrapped tests by glue paths to logs will contain "remote_task.saveme"
+	# but glue shuts them off such that the same core checking code is called
+	#if($logdir =~ /remote_task.saveme/) {
+		#print "This test wrapped by glue, check this one ourselves\n";
+		#return(1);
+	#}
 	my $saveme = $handle . ".saveme";
+	print "savename:$saveme\n";
 	TestDebug("Not /Config/ based, saveme is $saveme\n",2);
 	TestDebug("Logdir is $logdir\n",2);
 	if($logdir =~ /$saveme/) {
@@ -3208,6 +3228,7 @@ sub ShouldCheck_coreERROR
 		return(0);
 	}
 	TestDebug("Does not look like its in a personal condor\n",2);
+	print "Does not look like its in a personal condor\n";
 	return(1);
 }
 
@@ -3220,6 +3241,7 @@ sub CoreCheck {
 	my $scancount = 0;
 	my $fullpath = "";
 	
+	print "Checking for cores and ERRORS\n";
 	if(CondorUtils::is_windows() == 1) {
 		my $windowslogdir = "";
 		if(is_windows_native_perl()) {
@@ -3248,18 +3270,23 @@ sub CoreCheck {
 	#}
 	foreach my $perp (@files) {
 		CondorUtils::fullchomp($perp);
+		# don't bother with address files
+		if($perp =~ /^\./) {
+			next;
+		}
 		$fullpath = $logdir . "/" . $perp;
 		if(-f $fullpath) {
-			if($fullpath =~ /^.*\/(core.*)$/) {
+			if($perp =~ /core/) {
 				# returns printable string
 				TestDebug("Checking: $logdir for test: $test Found Core: $fullpath\n",2);
+				print "Checking: $logdir for test: $test Found Core: $fullpath\n";
 				my $filechange = GetFileTime($fullpath);
 				# running sequentially or wrapped core should always
 				# belong to the current test. Even if the test has ended
 				# assign blame and move file so we can investigate.
 				if(CondorUtils::is_windows() == 1) {
 					# windows core files are text, going into test output
-					open(CF,"<$fullpath") or die "Failed to open cire file:$fullpath:$!\n";
+					open(CF,"<$fullpath") or die "Failed to open core file:$fullpath:$!\n";
 					while (<CF>) {
 						print "$_";
 					}
@@ -3279,6 +3306,9 @@ sub CoreCheck {
 				$scancount = ScanForERROR($fullpath,$test,$tstart,$tend);
 				$totalerrors += $scancount;
 				TestDebug("After ScanForERROR error count: $scancount\n",2);
+				if($scancount > 0) {
+					print "After ScanForERROR error count: $scancount\n";
+				}
 			}
 		} else {
 			TestDebug( "Not File: $fullpath\n",2);
@@ -3366,7 +3396,7 @@ sub CPlusPlusfilt
 	close(TF);
 	# am I windows? don't look to see if you have c++filt. Otherwise try before
 	# you do system call
-	if(ChtcUtils::is_windows()) {
+	if(CondorUtils::is_windows()) {
 		# will not use c++cfilt to demangle
 	} else {
 		my $filtprog = Which("c++filt");

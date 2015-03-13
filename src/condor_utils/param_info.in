@@ -2134,6 +2134,14 @@ friendly_name=Collector read buffer size for incoming UDP traffic
 review=?
 tags=daemon_core,daemon_core,collector
 
+[PIPE_BUFFER_MAX]
+default=10240
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Maximum buffer size for stdout/err pipes
+tags=daemon_core,daemon_core
+
 [TOUCH_LOG_INTERVAL]
 default=60
 type=int
@@ -7945,6 +7953,38 @@ default: @end
 	# cross-advertise these slot attributes in all other slots
 	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
 @end
+
+[PANDAD]
+default=$(LIBEXEC)/condor_pandad
+win32_default=
+type=path
+customization=seldom
+review=tlmiller
+reconfig=false
+
+[PANDA_UPDATE_TIMEOUT]
+default=0
+type=int
+review=tlmiller
+reconfig=true
+
+[PANDA_QUEUE_SIZE]
+default=131072
+type=int
+review=tlmiller
+reconfig=true
+
+[PANDA_QUEUE_GRACE]
+default=3
+type=int
+reivew=tlmiller
+reconfig=false
+
+[PANDA_STATISTICS_LOG]
+default=/tmp/pandaStatisticsLog
+type=string
+review=tlmiller
+reconfig=true
 
 [RUN_FILETRANSFER_PLUGINS_WITH_ROOT]
 default=false

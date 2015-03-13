@@ -19,6 +19,10 @@
 ##**************************************************************
 
 use CondorTest;
+use File::Copy;
+use File::Path;
+use Digest::MD5;
+use Check::SimpleJob;
 
 $cmd = 'lib_chirpio_van.cmd';
 $testdesc =  'chirp io tests - vanilla U';
@@ -33,16 +37,96 @@ $ExitSuccess = sub {
 };
 
 
+my $rows = 4;
+my $rowsz = 1024;
+my $start_char = "a";
+my $row = "";
+
+open(DATA,">job_chirp_io.txtdata") || die "Can't open output file $!\n";
 # make test data
-system("./x_chirpio_mkdata.pl --message='Testing message'");
-# before the test let's throw some weird crap into the environment
+MakeChirpIoData("Testing message");
 
-CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+my $proxy = '
+	+WantIOProxy = true
+';
 
-if( CondorTest::RunTest($testname, $cmd, 0) ) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
+SimpleJob::RunCheck(
+    runthis=>"lib_chirpio.exe",
+    on_success=>$ExitSuccess,
+	output=>"chirpio.out",
+	error=>"chirpio.err",
+	append_submit_commands=>$proxy,
+	should_transfer_files=>" YES",
+	when_to_transfer_output=>"ON_EXIT_OR_EVICT",
+);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+my $result = 0;
+
+if( $result != 0 )
+{
+    exit(1);
 }
+
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
+
+
+sub MakeChirpIoData {
+	my $message = shift;
+
+	die "Need message defined\n" unless defined $message;
+
+	my $rowchar = $seed_char++;
+
+
+	fill_row("a");
+	add_row();
+	$row = "";
+
+	fill_row("b");
+	add_row();
+	$row = "";
+
+	fill_row("c");
+	add_row();
+	$row = "";
+
+	fill_row("d");
+	add_row();
+	$row = "";
+
+	print DATA "$message";
+
+	close(DATA);
+
+	open(DATA,"<job_chirp_io.txtdata") || die "Can't open input file $!\n";
+	open(MD5,">job_chirp_io.txtdatamd5") || die "Can't open MD5 output file $!\n";
+	my $datamd5 = Digest::MD5->new;
+
+	$datamd5->addfile(DATA);
+	close(DATA);
+
+
+	my $hexmd5 = $datamd5->hexdigest;
+
+	print MD5 "$hexmd5\n";
+	close(MD5);
+}
+
+sub fill_row 
+{
+	my $char = shift @_;
+	foreach (1..$rowsz)
+	{
+		$row .=  $char;
+	}
+}
+
+sub add_row
+{
+	print DATA "$row";
+}
+
 

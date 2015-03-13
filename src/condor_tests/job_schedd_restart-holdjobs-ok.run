@@ -154,9 +154,15 @@ $submitted = sub
 				# don't care
 			}
 		}
-		exit(0);
+		print " Happy and exiting\n";
+		my @rmarray = ();
+		runCondorTool("condor_rm -all",\@rmarray,2,{emit_output=>0});
 	}
 };
+
+$on_abort = sub {
+	print "abort from removing held job\n";
+} ;
 
 my $append_submit_commands = '
 hold  = true
@@ -172,7 +178,7 @@ $result = SimpleJob::RunCheck(
     #on_reconnected => $on_reconnected,
     #on_success => $on_success,
     on_submit => $submitted,
-	#on_abort => $on_abort,
+	on_abort => $on_abort,
 );
 
 CondorTest::EndTest();

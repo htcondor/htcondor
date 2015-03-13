@@ -651,10 +651,6 @@ typedef union {
 
 /* Bind the given fd to the correct local interface. */
 
-// _condor_local_bind(), get_port_range() and bindWithin()
-// should be ported to IPv6. However, it will be delayed until
-// internet.c becomes internet.cpp.
-
 // [IPV6] Ported
 int
 _condor_local_bind( int is_outgoing, int fd )
@@ -722,56 +718,51 @@ _condor_local_bind( int is_outgoing, int fd )
 	return TRUE;
 }
 
+int bindWithin( const int fd, const int lowPort, const int highPort ) {
+	int pid = (int)getpid();
+	int range = highPort - lowPort + 1;
+	int initialPort = lowPort + (pid * 173 % range);
 
-int bindWithin(const int fd, const int low_port, const int high_port)
-{
-	int start_trial, this_trial;
-	int pid, range;
+	condor_sockaddr initializedSA;
+	int rv = condor_getsockname( fd, initializedSA );
+	if( rv != 0 ) {
+		dprintf( D_ALWAYS, "_condor_local_bind::bindWithin() - getsockname() failed.\n" );
+		return FALSE;
+	}
+	initializedSA.set_addr_any();
 
-	// Use hash function with pid to get the starting point
-    pid = (int) getpid();
-    range = high_port - low_port + 1;
-    // this line must be changed to use the hash function of condor
-    start_trial = low_port + (pid * 173/*some prime number*/ % range);
-
-    this_trial = start_trial;
+	int trialPort = initialPort;
 	do {
-		struct sockaddr_in sa_in;
-		priv_state old_priv;
-		int bind_return_value;
+		condor_sockaddr trialSA = initializedSA;
+		trialSA.set_port( trialPort++ );
 
-		memset(&sa_in, 0, sizeof(sa_in));
-		sa_in.sin_family = AF_INET;
-		sa_in.sin_addr.s_addr = htonl(INADDR_ANY);
-		sa_in.sin_port = htons((u_short)this_trial++);
-
-// windows doesn't have privileged ports.
 #ifndef WIN32
-		if (this_trial <= 1024) {
+		priv_state oldPriv = PRIV_UNKNOWN;
+		if( trialPort <= 1024 ) {
 			// use root priv for the call to bind to allow privileged ports
-			old_priv = PRIV_UNKNOWN;
-			old_priv = set_root_priv();
+			oldPriv = set_root_priv();
 		}
 #endif
-		bind_return_value = bind(fd, (struct sockaddr *)&sa_in, sizeof(sa_in));
+
+		rv = bind( fd, trialSA.to_sockaddr(), trialSA.get_socklen() );
+
 #ifndef WIN32
-		if (this_trial <= 1024) {
-			set_priv (old_priv);
+		if( trialPort <= 1024 ) {
+			set_priv( oldPriv );
 		}
 #endif
-		if (bind_return_value == 0) { // success
-			dprintf(D_NETWORK, "_condor_local_bind - bound to %d...\n", this_trial-1);
+
+		if( rv == 0 ) {
+			dprintf( D_NETWORK, "_condor_local_bind::bindWithin(): bound to %d\n", trialPort - 1 );
 			return TRUE;
 		} else {
-            dprintf(D_NETWORK, "_condor_local_bind - failed to bind: %s\n", strerror(errno));
-        }
-		if ( this_trial > high_port )
-			this_trial = low_port;
-    } while(this_trial != start_trial);
+			dprintf( D_NETWORK, "_condor_local_bind::bindWithin(): failed to bind to %d (%s)\n", trialPort - 1, strerror(errno) );
+		}
 
-	dprintf(D_ALWAYS, "_condor_local_bind::bindWithin - failed to bind any port within (%d ~ %d)\n",
-	        low_port, high_port);
+		if( trialPort > highPort ) { trialPort = lowPort; }
+	} while( trialPort != initialPort );
 
+	dprintf( D_ALWAYS, "_condor_local_bind::bindWithin() - failed to bind any port within (%d ~ %d)\n", lowPort, highPort );
 	return FALSE;
 }
 

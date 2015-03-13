@@ -1850,30 +1850,27 @@ activate_claim( Resource* rip, Stream* stream )
 		//
 		// This should be exclusively for the standard universe.
 		//
-		// FIXME: If there's a non-standard universe starter, we probably
-		// shouldn't blow an assert if the stream isn't IP-based.
-		//
-		// FIXME: It's a bit late to reject the job, but it's probably not
-		// worth trying to run IPv6 jobs in the standard universe.
-		//
 		condor_sockaddr streamSA;
-		assert( streamSA.from_ip_string( stream->my_ip_str() ) );
-
-		if( streamSA.is_ipv6() ) {
-			dprintf( D_ALWAYS, "WARNING -- request to run standard-universe job via IPv6.  Expect problems.\n" );
+		if(! streamSA.from_ip_string( stream->my_ip_str() )) {
+			EXCEPT( "Unable to extract socket address from stream.\n" );
 		}
 
-		//
-		// Be sure to create only IPv4 sockets.
-		//
+		// We don't officially support IPv6 in standard universe...
+		if( streamSA.is_ipv6() ) {
+			dprintf( D_ALWAYS, "WARNING -- request to run standard-universe job via IPv6.  There may be problems.\n" );
+		}
+
 		stRec.version_num = VERSION_FOR_FLOCK;
 
-		rsock_1.bind( CP_IPV4, false, 0, false );
+		// The shadow expects to be able to connect to the given port
+		// numbers at the address (and protocol) is used to contact the
+		// startd in the first place.
+		rsock_1.bind( streamSA.get_protocol(), false, 0, false );
 		rsock_1.listen();
 		sock_1 = rsock_1.get_file_desc();
 		stRec.ports.port1 = rsock_1.get_port();
 
-		rsock_2.bind( CP_IPV4, false, 0, false );
+		rsock_2.bind( streamSA.get_protocol(), false, 0, false );
 		rsock_2.listen();
 		sock_2 = rsock_2.get_file_desc();
 		stRec.ports.port2 = rsock_2.get_port();

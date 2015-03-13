@@ -498,7 +498,7 @@ one submit description file.
 \index{submit commands!universe}
 \label{man-condor-submit-universe}
 \item[universe = $<$vanilla \Bar\ standard \Bar\ scheduler
-\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm$>$]
+\Bar\ local \Bar\ grid \Bar\ java \Bar\ vm \Bar\ docker$>$]
 Specifies which HTCondor universe to use when running this job.  The HTCondor
 universe specifies an HTCondor execution environment.
 
@@ -531,6 +531,8 @@ The \SubmitCmdNI{java} universe is for programs written to the Java Virtual Mach
 
 The \SubmitCmdNI{vm} universe facilitates the execution of a virtual
 machine.
+
+The \SubmitCmdNI{docker} universe \Dots.
 
 \end{description} 
 
@@ -2901,6 +2903,23 @@ to specify the root device. This string is required when
 \SubmitCmd{xen\_kernel} gives a path to a kernel.  Omission 
 for this required case results in an error message during 
 submission.
+
+\end{description} 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\emph{COMMANDS FOR THE DOCKER UNIVERSE}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description} 
+
+%%%%%%%%%%%%%%%%%%%
+%% docker_image
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!docker\_image}
+\label{condor-submit-docker-image}
+\item[docker\_image = $<$ image-name $>$] Defines the name of the Docker
+image that is the basis for the container within which the HTCondor job
+will run.
 
 \end{description} 
 

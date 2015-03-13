@@ -30,6 +30,13 @@ extern "C" void to_lower (char *);	// from util_lib (config.c)
 
 namespace classad {
 
+#define ATTR_TOPLEVEL "toplevel"
+#define ATTR_ROOT "root"
+#define ATTR_SELF "self"
+#define ATTR_PARENT "parent"
+#define ATTR_MY "my"
+#define ATTR_CURRENT_TIME "CurrentTime"
+
 // This flag is only meant for use in Condor, which is transitioning
 // from an older version of ClassAds with slightly different evaluation
 // semantics. It will be removed without warning in a future release.
@@ -71,11 +78,13 @@ void ClassAdLibraryVersion(string &version_string)
 static References *specialAttrNames = NULL;
 static void init_specialAttrNames() {
 	specialAttrNames = new References;
-	specialAttrNames->insert( "toplevel" );
-	specialAttrNames->insert( "root" );
-	specialAttrNames->insert( "self" );
-	specialAttrNames->insert( "parent" );
+	specialAttrNames->insert( ATTR_TOPLEVEL );
+	specialAttrNames->insert( ATTR_ROOT );
+	specialAttrNames->insert( ATTR_SELF );
+	specialAttrNames->insert( ATTR_PARENT );
 }
+
+static FunctionCall *CurrentTime_expr = NULL;
 
 void SetOldClassAdSemantics(bool enable)
 {
@@ -84,9 +93,15 @@ void SetOldClassAdSemantics(bool enable)
 		init_specialAttrNames();
 	}
 	if ( enable ) {
-		specialAttrNames->insert( "my" );
+		specialAttrNames->insert( ATTR_MY );
+		specialAttrNames->insert( ATTR_CURRENT_TIME );
+		if ( CurrentTime_expr == NULL ) {
+			vector<ExprTree*> args;
+			CurrentTime_expr = FunctionCall::MakeFunctionCall( "time", args );
+		}
 	} else {
-		specialAttrNames->erase( "my" );
+		specialAttrNames->erase( ATTR_MY );
+		specialAttrNames->erase( ATTR_CURRENT_TIME );
 	}
 }
 
@@ -668,24 +683,29 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 			if( current == this ) {		// NAC - simple loop checker
 				return( EVAL_UNDEF );
 			}
-		} else if(strcasecmp(name.c_str( ),"toplevel")==0 ||
-				strcasecmp(name.c_str( ),"root")==0){
+		} else if(strcasecmp(name.c_str( ),ATTR_TOPLEVEL)==0 ||
+				strcasecmp(name.c_str( ),ATTR_ROOT)==0){
 			// if the "toplevel" attribute was requested ...
 			expr = (ClassAd*)state.rootAd;
 			if( expr == NULL ) {	// NAC - circularity so no root
 				return EVAL_FAIL;  	// NAC
 			}						// NAC
 			return( expr ? EVAL_OK : EVAL_UNDEF );
-		} else if( strcasecmp( name.c_str( ), "self" ) == 0 ||
-				   strcasecmp( name.c_str( ), "my" ) == 0 ) {
+		} else if( strcasecmp( name.c_str( ), ATTR_SELF ) == 0 ||
+				   strcasecmp( name.c_str( ), ATTR_MY ) == 0 ) {
 			// if the "self" ad was requested
 			expr = (ClassAd*)state.curAd;
 			return( expr ? EVAL_OK : EVAL_UNDEF );
-		} else if( strcasecmp( name.c_str( ), "parent" ) == 0 ) {
+		} else if( strcasecmp( name.c_str( ), ATTR_PARENT ) == 0 ) {
 			// the lexical parent
 			expr = (ClassAd*)superScope;
 			return( expr ? EVAL_OK : EVAL_UNDEF );
+		} else if( strcasecmp( name.c_str( ), ATTR_CURRENT_TIME ) == 0 ) {
+			// an alias for time() from old ClassAds
+			expr = CurrentTime_expr;
+			return ( expr ? EVAL_OK : EVAL_UNDEF );
 		}
+
 	}	
 
 	return( EVAL_UNDEF );

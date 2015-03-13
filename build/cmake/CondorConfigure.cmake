@@ -530,6 +530,8 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	#The following checks are for std:u only.
 	glibc_detect( GLIBC_VERSION )
 
+	set(HAVE_GNU_LD ON)
+
 elseif(${OS_NAME} STREQUAL "AIX")
 	set(AIX ON)
 	set(DOES_SAVE_SIGSTATE ON)

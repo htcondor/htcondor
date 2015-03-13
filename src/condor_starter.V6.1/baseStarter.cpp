@@ -2667,9 +2667,14 @@ CStarter::PeriodicCkpt( void )
 {
 	dprintf(D_ALWAYS, "Periodic Checkpointing all jobs.\n");
 
-	if( jobUniverse != CONDOR_UNIVERSE_VM ) {
-		return false;
+	int wantCheckpoint = 0;
+	if( jobUniverse == CONDOR_UNIVERSE_VM ) {
+		wantCheckpoint = 1;
+	} else if( jobUniverse == CONDOR_UNIVERSE_VANILLA ) {
+		ClassAd * jobAd = jic->jobClassAd();
+		jobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 	}
+	if( ! wantCheckpoint ) { return false; }
 
 	UserProc *job;
 	m_job_list.Rewind();

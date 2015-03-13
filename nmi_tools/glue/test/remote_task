@@ -235,9 +235,19 @@ if( $batchteststatus != 0 ) {
 }
 
 if(exists $requirements->{personal}) {
-	CondorTest::RegisterResult(1,"test_name",$testname);
+	my $exit_status = 0;
 	out("Stopping personal HTCondor for '$testname'");
-	StopTestPersonal($testname);
+	$exit_status = StopTestPersonal($testname);
+	if($exit_status == 1) {
+		print "Failing test due to either a core file or ERRORs in Log(s)\n";
+		print "a couple other possibilities. look at CondorTest::EndTest\n";
+		# done in EndTest
+        #CondorTest::RegisterResult(0,"test_name",$testname);
+		$batchteststatus = $exit_status;
+    } else {
+		# will go with currrent value in $batchteststatus
+        #CondorTest::RegisterResult(1,"test_name",$testname);
+    }
 }
 
 ######################################################################
@@ -348,5 +358,7 @@ sub showEnv {
 }
 
 sub StopTestPersonal {
-	CondorTest::EndTest("no_exit");
+	my $exit_status = 0;
+	$exit_status = CondorTest::EndTest("no_exit");
+	return($exit_status);
 }

@@ -957,14 +957,6 @@ ClassAd::ClassAd()
 		m_initConfig = true;
 	}
 
-		// Compatibility ads are born with this to emulate the special
-		// CurrentTime in old ClassAds. We don't protect it afterwards,
-		// but that shouldn't be problem unless someone is deliberately
-		// trying to shoot themselves in the foot.
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
-
 	ResetName();
     ResetExpr();
 
@@ -980,14 +972,6 @@ ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
 
 	CopyFrom( ad );
 
-		// Compatibility ads are born with this to emulate the special
-		// CurrentTime in old ClassAds. We don't protect it afterwards,
-		// but that shouldn't be problem unless someone is deliberately
-		// trying to shoot themselves in the foot.
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
-
 	ResetName();
     ResetExpr();
 
@@ -1001,14 +985,6 @@ ClassAd::ClassAd( const classad::ClassAd &ad )
 	}
 
 	CopyFrom( ad );
-
-		// Compatibility ads are born with this to emulate the special
-		// CurrentTime in old ClassAds. We don't protect it afterwards,
-		// but that shouldn't be problem unless someone is deliberately
-		// trying to shoot themselves in the foot.
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
 
 	ResetName();
     ResetExpr();
@@ -1028,14 +1004,6 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 	}
 
 	DisableDirtyTracking();
-
-		// Compatibility ads are born with this to emulate the special
-		// CurrentTime in old ClassAds. We don't protect it afterwards,
-		// but that shouldn't be problem unless someone is deliberately
-		// trying to shoot themselves in the foot.
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
 
 	ResetName();
     ResetExpr();
@@ -1841,12 +1809,6 @@ initFromString( char const *str,MyString *err_msg )
 
 	// First, clear our ad so we start with a fresh ClassAd
 	Clear();
-
-		// Reinsert CurrentTime, emulating the special version in old
-		// ClassAds
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
 
 	char *exprbuf = new char[strlen(str)+1];
 	ASSERT( exprbuf );
@@ -3040,8 +3002,6 @@ static void InitTargetAttrLists()
 		machine_attrs_ad.AssignExpr( *attr, "True" );
 	}
 
-	machine_attrs_ad.Delete( ATTR_CURRENT_TIME );
-
 	tmp = param( "STARTD_EXPRS" );
 	if ( tmp ) {
 		tmp_strlist.initializeFromString( tmp );
@@ -3086,8 +3046,6 @@ static void InitTargetAttrLists()
 		job_attrs_ad.AssignExpr( *attr, "True" );
 	}
 
-	job_attrs_ad.Delete( ATTR_CURRENT_TIME );
-
 	tmp = param( "SUBMIT_EXPRS" );
 	if ( tmp ) {
 		tmp_strlist.initializeFromString( tmp );
@@ -3117,8 +3075,6 @@ static void InitTargetAttrLists()
 	for ( attr = schedd_attrs_list; *attr; attr++ ) {
 		schedd_attrs_ad.AssignExpr( *attr, "True" );
 	}
-
-	schedd_attrs_ad.Delete( ATTR_CURRENT_TIME );
 
 	target_attrs_init = true;
 }
