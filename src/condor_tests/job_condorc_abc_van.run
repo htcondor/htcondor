@@ -38,7 +38,7 @@ my $poolC = CondorTest::StartCondorWithParams(
 
 my $poolC_collector = $poolC->GetCollectorAddress();
 my $poolC_schedd_name =
-    `condor_status -pool $poolC_collector -schedd -format "%s\n" Name`
+    `condor_status -pool $poolC_collector -schedd -af Name`
     || die "Failed to query schedd name.";
 CondorUtils::fullchomp $poolC_schedd_name;
 
@@ -58,7 +58,7 @@ my $poolB = CondorTest::StartCondorWithParams(
 
 my $poolB_collector = $poolB->GetCollectorAddress();
 my $poolB_schedd_name =
-    `condor_status -pool $poolB_collector -schedd -format "%s\n" Name`
+    `condor_status -pool $poolB_collector -schedd -af Name`
     || die "Failed to query schedd name.";
 CondorUtils::fullchomp $poolB_schedd_name;
 

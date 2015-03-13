@@ -53,10 +53,11 @@ my $condor_chirp = "$libexecdir/condor_chirp";
 # Chirp is installed in bin on Windows
 if (($^O =~ /MSWin32/) || ($^O =~ /cygwin/)) {
     print "Running on Windows...\n";
-    $/ = "\r\n"; # What chomp removes
+    #$/ = "\r\n"; # What chomp removes
     $libexecdir = `condor_config_val BIN`;
-    chomp($libexecdir);
+    fullchomp($libexecdir);
     $condor_chirp = "$libexecdir/condor_chirp.exe";
+	print "Just set condor_chirp to:$condor_chirp\n";
 }
 
 # verify that condor_chirp is executable, and where we expect it
