@@ -155,6 +155,7 @@ protected:
 	UtcTime job_exit_time;
 
 	virtual int outputOpenFlags() { return O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | O_LARGEFILE; }
+	virtual int streamingOpenFlags( bool isOutput ) { return isOutput ? O_CREAT | O_TRUNC | O_WRONLY : O_RDONLY; }
 
 	enum std_file_type {
 		SFT_IN, SFT_OUT, SFT_ERR

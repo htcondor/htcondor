@@ -1257,3 +1257,13 @@ int VanillaProc::outputOpenFlags() {
 		return this->OsProc::outputOpenFlags();
 	}
 }
+
+int VanillaProc::streamingOpenFlags( bool isOutput ) {
+	int wantCheckpoint = 0;
+	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
+	if( wantCheckpoint ) {
+		return isOutput ? O_CREAT | O_APPEND | O_WRONLY : O_RDONLY;
+	} else {
+		return this->OsProc::streamingOpenFlags( isOutput );
+	}
+}

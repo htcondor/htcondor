@@ -109,6 +109,7 @@ public:
 protected:
 
 	virtual int outputOpenFlags();
+	virtual int streamingOpenFlags( bool isOutput );
 
 private:
 		/// Final usage stats for this proc and all its children.
