@@ -671,11 +671,9 @@ convert_python_to_exprtree(boost::python::object value)
         classad::abstime_t atime;
         boost::python::object timestamp = py_import("calendar").attr("timegm")(value.attr("timetuple")());
         // Determine the UTC offset; timetuple above is in local time, but timegm assumes UTC.
-        std::time_t current_time;
-        std::time(&current_time);
-        struct std::tm *timeinfo = std::localtime(&current_time);
-        long offset = timeinfo->tm_gmtoff;
-        atime.secs = boost::python::extract<time_t>(timestamp) - offset;
+        atime.secs = boost::python::extract<time_t>(timestamp);
+        int offset = classad::Literal::findOffset(atime.secs);
+        atime.secs -= offset;
         atime.offset = 0;
         classad::Value val; val.SetAbsoluteTimeValue(atime);
         return classad::Literal::MakeLiteral(val);
