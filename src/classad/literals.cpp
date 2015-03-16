@@ -205,12 +205,6 @@ MakeAbsTime(string timeStr )
 		return(MakeLiteral( val ));
 	}      
 
-    // mktime() creates the time assuming we specified something in
-    // local time.  We want the time as if we were in Greenwich (we'll
-    // call gmTime later to extract it, not localtime()), so we adjust
-    // by our timezone.
-    abst.secs += timezone_offset( abst.secs, true );
-	
 	if(offset) {
 		abst.offset = (tzhr*3600) + (tzmin*60);
 	}
@@ -218,6 +212,13 @@ MakeAbsTime(string timeStr )
 		abst.offset = findOffset(abst.secs);
 		//abst.secs -= abst.offset;
 	}
+
+	// mktime() creates the time assuming we specified something in
+	// local time.  We want the time as if we were in Greenwich (we'll
+	// call gmTime later to extract it, not localtime()), so we adjust
+	// by our timezone.
+	abst.secs += timezone_offset( abst.secs, true );
+
 	// If the time string we converted had a timezone offset (either
 	// explicit or implicit), we need to adjust the resulting time_t
 	// so that our final value is UTC.

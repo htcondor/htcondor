@@ -214,7 +214,11 @@ StreamHandler::ReconnectAll() {
 	for (int i = 0; i < num_handlers; i++) {
 		if (!handlers[i]->done) {
 			if (handlers[i]->connected) {
-				handlers[i]->Disconnect();
+				// Do NOT call Disconnect().  This reconnect only happens
+				// AFTER the syscall sock has been reestablished, so we
+				// very much do not want to close the syscall sock again.
+				handlers[i]->connected = false;
+				daemonCore->Cancel_Pipe( handlers[i]->handler_pipe );
 			}
 			handlers[i]->Reconnect();
 		}
