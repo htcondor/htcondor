@@ -63,6 +63,11 @@ system that could prevent the \Condor{collector} from being restarted,
 and/or could cause delays when shutting down the HTCondor service.
 \Ticket{4923}
 
+\item Fixed a bug that could cause \Macro{CONDOR\_VIEW\_HOST} 
+updates to fail once the view collector is restarted if the 
+updates are being sent via TCP.
+\Ticket{4915}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -117,6 +117,12 @@ public:
 	*/
 	virtual int connect(char const *host, int port=0, bool do_not_block = false) = 0;
 
+	/** Close the socket.  Note that reusing the socket after closing it is not
+		recommended; instead simply delete the Socket (it will be closed in the
+		destructor), and reallocate a new one.
+	*/
+	virtual int close();
+
 	/** Connect the socket to a remote peer.
 		@param host Hostname of the peer, either a DNS name or IP address.
 		@param service The name of a service that represents a port address,
@@ -181,7 +187,6 @@ public:
 	*/
 	bool set_keepalive();
 
-	int close();
 	/** if any operation takes more than sec seconds, timeout
         call timeout(0) to set blocking mode (default)
         @param sec the number of seconds to wait before timing out
