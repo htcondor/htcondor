@@ -96,6 +96,7 @@ public:
 	virtual int connect(char const *s, int port=0, 
 							bool do_not_block = false);
 
+	virtual int close();
 
 	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking);
 
@@ -301,7 +302,8 @@ protected:
 		Buf		*m_tmp;
 	public:
 		RcvMsg();
-                ~RcvMsg();
+		~RcvMsg();
+		void reset();
 		int rcv_packet(char const *peer_description, SOCKET, int);
 		void init_parent(ReliSock *tmp){ p_sock = tmp; } 
 
@@ -319,7 +321,8 @@ protected:
 
 	public:
 		SndMsg();
-                ~SndMsg();
+		~SndMsg();
+		void reset();
 		Buf			buf;
 		int snd_packet(char const *peer_description, int, int, int);
 
