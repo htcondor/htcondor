@@ -9,7 +9,12 @@ class PipeBuffer {
 		// Assumes that _fd is already open() and _mutex already held.
 		PipeBuffer( int _fd, pthread_mutex_t * _mutex ) :
 			fd( _fd ), eof( false ), error( false ), mutex( _mutex ),
-			index( 0 ), bytesReadAhead( 0 ) { }
+			index( 0 ), bytesReadAhead( 0 ) {
+			// Coverity complains if I don't initialize readAheadBuffer,
+			// even though index will aways equal bytesReadAhead and
+			// cause a read() call to initialize (parts of) the buffer.
+			memset( (void *)readAheadBuffer, 0, readAheadSize );
+		}
 
 		bool isEOF() { return eof; }
 		bool isError() { return error; }
