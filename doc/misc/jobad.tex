@@ -1411,6 +1411,64 @@ behavior changes:
   the parallel job has completed to consider the job finished.
   \end{description}
 
+%%% ClassAd attribute: PreJobPrio1
+\index{ClassAd job attribute!PreJobPrio1}
+\index{PreJobPrio1!job ClassAd attribute}
+\item[\AdAttr{PreJobPrio1}:]  An integer value representing a user's
+priority to affect of choice of jobs to run.
+A larger value gives higher priority. 
+The range of valid values is  \Expr{INT\_MIN + 1} to \Expr{INT\_MAX}.
+When not explicitly set for a job,
+\Expr{INT\_MIN}, the lowest possible priority, is used for comparison purposes.
+This attribute, when set, is considered first:
+before \AdAttr{PreJobPrio2}, before \AdAttr{JobPrio},
+before \AdAttr{PostJobPrio1}, before \AdAttr{PostJobPrio2},
+and before \AdAttr{QDate}.
+
+%%% ClassAd attribute: PreJobPrio2
+\index{ClassAd job attribute!PreJobPrio2}
+\index{PreJobPrio2!job ClassAd attribute}
+\item[\AdAttr{PreJobPrio2}:]  An integer value representing a user's
+priority to affect of choice of jobs to run.
+A larger value gives higher priority. 
+The range of valid values is  \Expr{INT\_MIN + 1} to \Expr{INT\_MAX}.
+When not explicitly set for a job,
+\Expr{INT\_MIN}, the lowest possible priority, is used for comparison purposes.
+This attribute, when set, is considered after \AdAttr{PreJobPrio1}, 
+but before \AdAttr{JobPrio},
+before \AdAttr{PostJobPrio1}, before \AdAttr{PostJobPrio2},
+and before \AdAttr{QDate}.
+
+%%% ClassAd attribute: PostJobPrio1
+\index{ClassAd job attribute!PostJobPrio1}
+\index{PostJobPrio1!job ClassAd attribute}
+\item[\AdAttr{PostJobPrio1}:]  An integer value representing a user's
+priority to affect of choice of jobs to run.
+A larger value gives higher priority. 
+The range of valid values is  \Expr{INT\_MIN + 1} to \Expr{INT\_MAX}.
+When not explicitly set for a job,
+\Expr{INT\_MIN}, the lowest possible priority, is used for comparison purposes.
+This attribute, when set, is considered after \AdAttr{PreJobPrio1}, 
+after \AdAttr{PreJobPrio1},
+and after \AdAttr{JobPrio},
+but before \AdAttr{PostJobPrio2},
+and before \AdAttr{QDate}.
+
+%%% ClassAd attribute: PostJobPrio2
+\index{ClassAd job attribute!PostJobPrio2}
+\index{PostJobPrio2!job ClassAd attribute}
+\item[\AdAttr{PostJobPrio2}:]  An integer value representing a user's
+priority to affect of choice of jobs to run.
+A larger value gives higher priority. 
+The range of valid values is  \Expr{INT\_MIN + 1} to \Expr{INT\_MAX}.
+When not explicitly set for a job,
+\Expr{INT\_MIN}, the lowest possible priority, is used for comparison purposes.
+This attribute, when set, is considered after \AdAttr{PreJobPrio1}, 
+after \AdAttr{PreJobPrio1},
+after \AdAttr{JobPrio},
+and after \AdAttr{PostJobPrio1},
+but before \AdAttr{QDate}.
+
 %%% ClassAd attribute: PreserveRelativeExecutable
 \index{ClassAd job attribute!PreserveRelativeExecutable}
 \index{PreserveRelativeExecutable!job ClassAd attribute}

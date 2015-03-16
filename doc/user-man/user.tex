@@ -1480,15 +1480,91 @@ priorities and \Term{user} priorities.
 
 \index{job!priority}
 \index{priority!of a job}
-Job priorities allow the assignment of a priority level to
-each submitted HTCondor job in order to
-control the order of their execution.
+Job priorities allow a user to assign a priority level to
+each of their own submitted HTCondor jobs,
+in order to control the order of job execution.
+This handles the situation in which a user has more jobs
+queued, waiting to be executed, than there are machines available.
+Setting a job priority identifies the ordering in which 
+that user's jobs are executed; a higher job priority job is matched and
+executed before a lower priority job.
+A job priority can be any integer, and larger values are of higher priority.
+So, 0 is a higher job priority than -3,
+and 6 is a higher job priority than 5.
+
 \index{HTCondor commands!condor\_prio}
-To set a job priority, use the \Condor{prio} command;
+Jobs may be categorized under six different levels
+of prioritization.
+For the simple case where each job can be given a distinct priority,
+and no categories are required,
+an already queued job priority may be set with the \Condor{prio} command;
 see the example in section~\ref{sec:job-prio}, or the
-command reference page on page~\pageref{man-condor-prio}.
-Job priorities do not impact user priorities in any fashion.
-A job priority can be any integer, and higher values are \emph{better}.
+\Condor{prio} manual page~\pageref{man-condor-prio} for details.
+This single category changes the value of job ClassAd attribute \Attr{JobPrio}. 
+
+The six category levels are defined by the job ClassAd attributes:
+\begin{enumerate}
+\item{\Attr{PreJobPrio1}}
+\item{\Attr{PreJobPrio2}}
+\item{\Attr{JobPrio}}
+\item{\Attr{PostJobPrio1}}
+\item{\Attr{PostJobPrio2}}
+\item{\Attr{QDate}}
+\end{enumerate}
+The set of highest priority jobs from the user are those
+that define \Attr{PreJobPrio1}.
+This set of jobs are compared only with other
+jobs that define this attribute.
+These jobs are run first, and in the ordering given by the value of
+\Attr{PreJobPrio1}.
+For those jobs that have the same value of \Attr{PreJobPrio1},
+the value for \Attr{PreJobPrio2} is used.
+And, the comparison continues through the other four levels
+where there are matching values.
+
+After any and all jobs that define \Attr{PreJobPrio1} are prioritized,
+\Attr{PreJobPrio2} is considered on any remaining jobs queued for this user.
+Those jobs defining \Attr{PreJobPrio2} are ordered,
+with the comparison continuing through the remaining levels
+where there are matching values of attributes.
+
+This comparison algorithm continues at each category level,
+until \Attr{QDate} does ordering by the time at which the job entered 
+the queue.
+The job in the queue the longest has highest priority.
+
+One or more of these attributes,
+other than \Attr{QDate} may be set in the a job's submit description
+file by adding a line that defines the ClassAd attribute.
+For example, 
+consider the set of A jobs submitted by user chris.
+These A jobs are to be given the highest priority of all 
+of chris' jobs.
+Assume the submit description file for job A1 includes
+\begin{verbatim}
+  +PreJobPrio1 = 5
+  +JobPrio = 20
+\end{verbatim}
+The  submit description file for job A2 includes
+\begin{verbatim}
+  +PreJobPrio1 = 5
+  +JobPrio = 30
+\end{verbatim}
+Also consider the set of B jobs, also submitted by user chris.
+These B jobs are prioritized lower than the A jobs.
+The  submit description file for job B1 includes
+\begin{verbatim}
+  +PreJobPrio1 = 2
+\end{verbatim}
+The  submit description file for job B2 includes
+\begin{verbatim}
+  +PreJobPrio1 = 2
+\end{verbatim}
+The B jobs will be ordered by \Attr{QDate},
+so assume that B1 was submitted before B2.
+
+The ordering given to these four jobs will be
+A2 (highest priority), A1, B1, B2 (lowest priority).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-priority-explained}User priority}
