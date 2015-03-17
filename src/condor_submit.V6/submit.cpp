@@ -6803,6 +6803,36 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 			last_submit_cmd = cur_submit_cmd;
 		}
 
+		// set glob expansion options from submit statements.
+		int expand_options = 0;
+		if (condor_param_bool("SubmitWarnEmptyMatches", "submit_warn_empty_matches", true)) {
+			expand_options |= EXPAND_GLOBS_WARN_EMPTY;
+		}
+		if (condor_param_bool("SubmitFailEmptyMatches", "submit_fail_empty_matches", false)) {
+			expand_options |= EXPAND_GLOBS_FAIL_EMPTY;
+		}
+		if (condor_param_bool("SubmitWarnDuplicateMatches", "submit_warn_duplicate_matches", true)) {
+			expand_options |= EXPAND_GLOBS_WARN_DUPS;
+		}
+		if (condor_param_bool("SubmitAllowDuplicateMatches", "submit_allow_duplicate_matches", false)) {
+			expand_options |= EXPAND_GLOBS_ALLOW_DUPS;
+		}
+		char* parm = condor_param("SubmitMatchDirectories", "submit_match_directories");
+		if (parm) {
+			if (MATCH == strcasecmp(parm, "never") || MATCH == strcasecmp(parm, "no") || MATCH == strcasecmp(parm, "false")) {
+				expand_options |= EXPAND_GLOBS_TO_FILES;
+			} else if (MATCH == strcasecmp(parm, "only")) {
+				expand_options |= EXPAND_GLOBS_TO_DIRS;
+			} else if (MATCH == strcasecmp(parm, "yes") || MATCH == strcasecmp(parm, "true")) {
+				// nothing to do.
+			} else {
+				errmsg = parm;
+				errmsg += " is not a valid value for SubmitMatchDirectories";
+				return -1;
+			}
+			free(parm); parm = NULL;
+		}
+
 		// skip whitespace before queue arguments (if any)
 		while (isspace(*pqargs)) ++pqargs;
 
@@ -6872,14 +6902,17 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 		case foreach_in:
 		case foreach_from:
 			// itemlist is already correct
-			PRAGMA_REMIND("do argument validation here.")
+			// PRAGMA_REMIND("do argument validation here?")
 			citems = items.number();
 			break;
 
 		case foreach_matching:
-			PRAGMA_REMIND("turn the itemlist globs into an itemlist of files")
-			errmsg = "matching not yet implemented";
-			return -1;
+			citems = submit_expand_globs(items, expand_options, errmsg);
+			if ( ! errmsg.empty()) {
+				fprintf(stderr, "\n%s: %s", citems >= 0 ? "WARNING" : "ERROR", errmsg.c_str());
+				errmsg.clear();
+			}
+			if (citems < 0) return citems;
 			break;
 
 		default:
@@ -7028,8 +7061,11 @@ void
 set_live_submit_variable( const char *name, const char *live_value, bool force_used /*=true*/ )
 {
 	MACRO_ITEM* pitem = find_macro_item(name, SubmitMacroSet);
-	if ( ! pitem) { insert(name, "", SubmitMacroSet, LiveMacro); }
-	pitem = find_macro_item(name, SubmitMacroSet);
+	if ( ! pitem) {
+		insert(name, "", SubmitMacroSet, LiveMacro);
+		pitem = find_macro_item(name, SubmitMacroSet);
+	}
+	ASSERT(pitem);
 	pitem->raw_value = live_value;
 	if (SubmitMacroSet.metat && force_used) {
 		MACRO_META* pmeta = &SubmitMacroSet.metat[pitem - SubmitMacroSet.table];

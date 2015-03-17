@@ -20,7 +20,19 @@
 #if !defined(_SUBMIT_INTERNAL_H)
 #define _SUBMIT_INTERNAL_H
 
+#include "dc_schedd.h"
+
 #define PLUS_ATTRIBS_IN_CLUSTER_AD 1
+
+// functions in submit_glob.cpp
+#define EXPAND_GLOBS_WARN_EMPTY (1<<0)
+#define EXPAND_GLOBS_FAIL_EMPTY (1<<1)
+#define EXPAND_GLOBS_ALLOW_DUPS (1<<2)
+#define EXPAND_GLOBS_WARN_DUPS  (1<<3)
+#define EXPAND_GLOBS_TO_DIRS    (1<<4) // when you want dirs only
+#define EXPAND_GLOBS_TO_FILES   (1<<5) // when you want files only
+
+int submit_expand_globs(StringList &items, int options, std::string & errmsg);
 
 // this copied from condor_qmgr.h. TODO fix to refer rather than re-declare
 #ifndef _LIBQMGR_H
