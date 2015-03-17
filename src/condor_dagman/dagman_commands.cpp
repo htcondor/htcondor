@@ -63,7 +63,7 @@ bool
 AddNode( Dag *dag, Job::job_type_t type, const char *name,
 		 const char* directory,
 		 const char* submitFile,
-		 const char *precmd, const char *postcmd, bool noop,
+		 bool noop,
 		 bool done, bool isFinal,
 		 MyString &failReason )
 {
@@ -90,20 +90,6 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 			// FailReason will likely fail, but give it a shot...
 		failReason = "out of memory!";
 		return false;
-	}
-	if( precmd ) {
-		if( !node->AddPreScript( precmd, why ) ) {
-			failReason = "failed to add PRE script: " + why;
-			delete node;
-			return false;
-		}
-	}
-	if( postcmd ) {
-		if( !node->AddPostScript( postcmd, why ) ) {
-			failReason = "failed to add POST script: " + why;
-			delete node;
-			return false;
-		}
 	}
 	node->SetNoop( noop );
 	if( done ) {

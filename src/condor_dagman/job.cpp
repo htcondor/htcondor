@@ -494,18 +494,6 @@ Job::Add( const queue_t queue, const JobID_t jobID )
 }
 
 bool
-Job::AddPreScript( const char *cmd, MyString &whynot )
-{
-	return AddScript( false, cmd, -1, -1, whynot );
-}
-
-bool
-Job::AddPostScript( const char *cmd, MyString &whynot )
-{
-	return AddScript( true, cmd, -1, -1, whynot );
-}
-
-bool
 Job::AddScript( bool post, const char *cmd, int defer_status, time_t defer_time, MyString &whynot )
 {
 	if( !cmd || strcmp( cmd, "" ) == 0 ) {
