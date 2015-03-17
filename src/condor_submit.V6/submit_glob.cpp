@@ -192,7 +192,12 @@ int submit_expand_globs(StringList &items, int options, std::string & errmsg)
 	int glob_append = 0;
 
 	if ((options & EXPAND_GLOBS_TO_DIRS) && ! (options & EXPAND_GLOBS_TO_FILES)) {
+		#ifdef GLOB_ONLYDIR
 		glob_options |= GLOB_ONLYDIR;
+		#else
+		errmsg = "directory only matching not supported";
+		return -1;
+		#endif
 	}
 	bool no_dirs = false;
 	if ((options & EXPAND_GLOBS_TO_FILES) && !(options & EXPAND_GLOBS_TO_DIRS)) {
