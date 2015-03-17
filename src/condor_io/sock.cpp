@@ -1553,7 +1553,15 @@ int Sock::close()
 	connect_state.host = NULL;
 	_who.clear();
     addr_changed();
-	
+
+	// we need to reset the crypto keys
+	set_MD_mode(MD_OFF);
+	set_crypto_key(false, NULL);
+
+	// we also need to reset the FQU
+	setFullyQualifiedUser(NULL);
+	setTriedAuthentication(false);
+
 	return TRUE;
 }
 

@@ -176,6 +176,11 @@ SafeSock::~SafeSock()
     delete mdChecker_;
 }
 
+int SafeSock::close()
+{
+	return Sock::close();
+}
+
 
 /* End of the current message
  * This method will be called when the application program reaches
