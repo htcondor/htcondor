@@ -73,6 +73,13 @@ Daylight Saving Time when using timestamp values.
 \Ticket{4936}
 \Ticket{4937}
 
+\item Upon reboot of a submit machine, fixed a bug that would 
+	prevent successful reconnection with
+	a previously running job 
+	using streaming I/O via submit file
+	options \SubmitCmdNI{stream\_output} or \SubmitCmdNI{stream\_error}.
+\Ticket{4939}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
