@@ -20,7 +20,7 @@ my $btdebug = 0;
 
 use base 'Exporter';
 
-our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl is_cygwin_perl fullchomp CreateEmptyFile CreateDir CopyIt TarCreate TarExtract MoveIt GetDirList DirLs List WhereIsInstallDir quoteMyString);
+our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl is_cygwin_perl fullchomp CreateEmptyFile CreateDir CopyIt TarCreate TarExtract MoveIt GetDirList DirLs List WhereIsInstallDir quoteMyString MyHead);
 
 sub TRUE{1};
 sub FALSE{0};
@@ -599,7 +599,11 @@ sub quoteMyString {
 		$_ = $stringtoquote;
 		s/%/\%/g;
 		s/"/\"/g;
-		$returnstr = "\"" . $_ . "\"";
+		if($stringtoquote =~ /\s+/) {
+			$returnstr = "\"" . $_ . "\"";
+		} else {
+			$returnstr = $_;
+		}
 	} else {
 		$_ = $stringtoquote;
 		s/'/\'/g;
@@ -1036,4 +1040,29 @@ sub WhereIsInstallDir {
 	my $paths = "$installdir" . ",$wininstalldir";
 	return($paths);
 }
+
+sub MyHead {
+	my $size = shift;
+	my $file = shift;
+
+	print "Request:head $size $file\n";
+
+	if($size =~ /\-/) {
+		$_ = $size;
+		s/\-//;
+		print "$_\n";
+		$size = $_;
+	}
+	my $counter = 0;
+	open(MH,"<$file") or die "Open of $file failed:$!\n";
+	while(<MH>) {
+		print "$_";
+		$counter += 1;
+		if($counter == $size) {
+			last;
+		}
+	}
+	close(MH);
+}
+
 1;

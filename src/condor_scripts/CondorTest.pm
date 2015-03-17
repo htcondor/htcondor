@@ -166,7 +166,7 @@ sub Cleanup()
 	print "Results indicate: $failed_coreERROR\n";
 	print "Time, Log, message are stored in condor_tests/Cores/core_error_trace\n\n";
 	print "************************************\n";
-	system("head -15 Cores/core_error_trace");
+	MyHead("-15", "Cores/core_error_trace");
 	print "************************************\n";
 	print "\n\n";
 	return 0;
@@ -993,7 +993,7 @@ sub StartTest
 			print "Results indicate: $failed_coreERROR\n";
 			print "Time, Log, message are stored in condor_tests/Cores/core_error_trace Sample follows:\n\n";
 			print "************************************\n";
-			system("head -15 Cores/core_error_trace");
+			MyHead("-15", "Cores/core_error_trace");
 			print "************************************\n";
 			print "\n\n";
     		return 0;
