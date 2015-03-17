@@ -3224,7 +3224,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 		CpuAttributes *cpu_attrs;
 		MyString type;
 		StringList type_list;
-		int cpus, memory, disk;
+		int cpus, memory, disk, swap;
 		bool must_modify_request = param_boolean("MUST_MODIFY_REQUEST_EXPRS",false,false,req_classad,mach_classad);
 		ClassAd *unmodified_req_classad = NULL;
 
@@ -3363,6 +3363,32 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
             type.formatstr_cat( "disk=%d%%",
                                 max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
 
+
+                // Look to see how much swap is being requested.
+            schedd_requested_attr = "_condor_";
+            schedd_requested_attr += ATTR_REQUEST_VIRTUAL_MEMORY;
+			double total_virt_mem = rip->r_attr->get_mach_attr()->virt_mem();
+			bool set_swap = true;
+
+            if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, swap ) ) {
+                if( !req_classad->EvalInteger( ATTR_REQUEST_VIRTUAL_MEMORY, mach_classad, swap ) ) {
+						// Schedd didn't set it, user didn't request it
+					if (param_boolean("PROPORTIONAL_SWAP_ASSIGNMENT", false)) {
+						// set swap to same percentage of swap as we have of physical memory
+						double mpcent = 100.0 * double(memory) / double(rip->r_attr->get_mach_attr()->phys_mem());
+						type.formatstr_cat(" swap=%d%%", int(mpcent));
+						set_swap = false;
+					} else {
+						// Fall back to you get everything and don't pay anything
+						set_swap = false;
+					}
+                }
+            }
+
+			if (set_swap) {
+				type.formatstr_cat( " swap=%d%%", 
+					max((int) ceil((swap / total_virt_mem) * 100), 1));
+			}
 
             for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
                 string reqname;
