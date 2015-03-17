@@ -29,6 +29,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item An EC2 grid universe job now advertises its access key ID in its job ad.
+\Ticket{4903}
+
 \item For an executing job, HTCondor now sets the environment variable 
 \Env{OMP\_NUM\_THREADS} to the number of cores of the slot it is running in.
 This prevents OpenMP-linked jobs (including \Prog{Matlab}) 
