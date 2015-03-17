@@ -28,17 +28,9 @@ extern CStarter *Starter;
 
 /* static */ std::list< StreamHandler * > StreamHandler::handlers;
 
-StreamHandler::StreamHandler()
+StreamHandler::StreamHandler() : is_output(false), job_pipe(-1), handler_pipe(-1), remote_fd(-1), offset(0), flags(0), done(false), connected(0), pending(0)
 {
-	remote_fd = -1;
 	pipe_fds[0] = -1; pipe_fds[1] = -1;
-	pending = 0;
-	offset = 0;
-	job_pipe = -1;
-	is_output = false;
-	handler_pipe = -1;
-	done = false;
-	connected = false;
 	buffer[0] = '\0';
 }
 
