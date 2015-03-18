@@ -1,3 +1,15 @@
+//TEMPTEMP -- things to still do:
+// * maybe change the syntax for backwards compatibility
+// * add DEFER to rescue DAG
+// * maybe retry limit
+// * version history
+// * actual documentation
+// * finish the automated test
+//TEMPTEMP -- enhancements (probably make a second ticket)
+// * separate struct for defer members
+// * retry limit (if not done the first time)
+// * move _post from Script to ScriptQ
+// * order nodes by _nextRunTime in _waitingQueue?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -52,43 +64,6 @@ ScriptQ::~ScriptQ()
 	delete _scriptPidTable;
 	delete _waitingQueue;
 };
-
-#if 0 //TEMPTEMP
-//TEMPTEMP -- merge this into RunAllWaitingScripts/RunWaitingScript
-int
-ScriptQ::CheckDeferredScripts()
-{
-	std::pair<Script *, int> *scriptInfo = NULL;
-	std::pair<Script *, int> *firstScriptInfo = NULL;
-	int now = time(NULL);
-	unsigned startedThisRound = 0;
-	while (!_waitingQueue->IsEmpty()) {
-		_waitingQueue->dequeue( scriptInfo );
-		ASSERT( (scriptInfo != NULL) && (scriptInfo->first != NULL) );//TEMPTEMP -- valgrind says invalid read here! (reading freed memory)
-		if ( !firstScriptInfo ) {
-			firstScriptInfo = scriptInfo;
-		//TEMPTEMP -- is this a dummy node or something?
-		} else if ( firstScriptInfo == scriptInfo) {
-			_waitingQueue->enqueue( scriptInfo );
-			break;
-		}
-		if (scriptInfo->second <= now) {//TEMPTEMP -- valgrind says invalid read here! (reading freed memory)
-			Script *script = scriptInfo->first;
-			int maxScripts = script->_post ? _dag->_maxPostScripts : _dag->_maxPreScripts;
-			if ( maxScripts != 0 && (_numScriptsRunning >= maxScripts) ) {
-				_waitingQueue->enqueue( scriptInfo );
-			}
-			delete scriptInfo; //TEMPTEMP -- valgrind says invalid free here (already freed)
-			startedThisRound += Run(script);
-			firstScriptInfo = NULL;
-		} else {
-			_waitingQueue->enqueue( scriptInfo );
-		}
-	}
-	debug_printf( DEBUG_NORMAL, "Started %d deferred scripts\n", startedThisRound );
-	return startedThisRound;
-}
-#endif //TEMPTEMP
 
 // run script if possible, otherwise insert it into the waiting queue
 int
@@ -162,56 +137,9 @@ ScriptQ::Run( Script *script )
 	return 0;
 }
 
-#if 0 //TEMPTEMP
-//TEMPTEMP -- this needs to be changed!!!
-int
-ScriptQ::RunWaitingScript()
-{
-	std::pair<Script *, int> *firstScriptInfo = NULL;
-	std::pair<Script *, int> *scriptInfo = NULL;
-
-	time_t now = time(NULL);
-	while( !_waitingQueue->IsEmpty() ) {
-		_waitingQueue->dequeue( scriptInfo );
-		if ( !firstScriptInfo ) {
-			firstScriptInfo = scriptInfo;
-		} else if ( scriptInfo == firstScriptInfo ) {
-			_waitingQueue->enqueue( scriptInfo );
-			break;
-		}
-		ASSERT( (scriptInfo != NULL) && (scriptInfo->first != NULL) );
-		if ( now >= scriptInfo->second ) {
-			Script *script = scriptInfo->first;
-			delete scriptInfo;
-			return Run( script );
-		} else {
-			_waitingQueue->enqueue( scriptInfo );
-		}
-	}
-
-	return 0;
-}
-
-int
-ScriptQ::RunAllWaitingScripts()
-{
-	int scriptsRun = 0;
-
-	while ( RunWaitingScript() > 0 ) {
-		scriptsRun++;
-	}
-
-	debug_printf( DEBUG_DEBUG_1, "Ran %d scripts\n", scriptsRun );
-	return scriptsRun;
-}
-#endif //TEMPTEMP
-
 int
 ScriptQ::RunWaitingScripts( bool justOne )
 {
-//TEMPTEMP -- shit -- we only want to make one pass through the queue, even though we're not removing everything! -- use queue.Length
-//TEMPTEMP -- should we check for halted state here?  It would avoid a bunch of work...
-
 	int scriptsRun = 0;
 	time_t now = time( NULL );
 
@@ -238,12 +166,12 @@ ScriptQ::RunWaitingScripts( bool justOne )
 					// We're halted or we hit maxpre/maxpost, so don't
 					// try to run any more scripts.
 				//TEMPTEMP -- make sure this works right!
+debug_printf( DEBUG_DEBUG_1, "DIAG 1010\n" );//TEMPTEMP
 				break;
 			}
 		}
 	}
 
-	//TEMPTEMP -- maybe change this message?
 	debug_printf( DEBUG_DEBUG_1, "Started %d deferred scripts\n", scriptsRun );
 	return scriptsRun;
 }
@@ -273,12 +201,14 @@ ScriptQ::ScriptReaper( int pid, int status )
 
 	// Check to see if we should re-run this later.
 	if ( script->_deferStatus != SCRIPT_DEFER_STATUS_NONE &&
-				status == script->_deferStatus ) {
+				WEXITSTATUS( status ) == script->_deferStatus ) {
+		++_scriptDeferredCount;
 		script->_nextRunTime = time( NULL ) + script->_deferTime;
 		_waitingQueue->enqueue( script );
 		const char *prefix = script->_post ? "POST" : "PRE";
-		debug_printf( DEBUG_NORMAL, "Deferring %s script of Node %s for %ld seconds (exit status was %d)...\n",
-			prefix, script->GetNodeName(), script->_deferTime, script->_deferStatus );
+		debug_printf( DEBUG_NORMAL, "Deferring %s script of node %s for %ld seconds (exit status was %d)...\n",
+					prefix, script->GetNodeName(), script->_deferTime,
+					script->_deferStatus );
 	} else {
 		script->_done = TRUE;
 
@@ -291,8 +221,6 @@ ScriptQ::ScriptReaper( int pid, int status )
 	}
 
 	// if there's another script waiting to run, run it now
-	//TEMPTEMP -- maybe get rid of this??
-	//TEMPTEMP RunWaitingScript();
 	RunWaitingScripts( true );
 
 	return 1;
