@@ -53,6 +53,7 @@ ScriptQ::~ScriptQ()
 	delete _waitingQueue;
 };
 
+//TEMPTEMP -- merge this into RunAllWaitingScripts/RunWaitingScript
 int
 ScriptQ::CheckDeferredScripts()
 {
@@ -62,20 +63,21 @@ ScriptQ::CheckDeferredScripts()
 	unsigned startedThisRound = 0;
 	while (!_waitingQueue->IsEmpty()) {
 		_waitingQueue->dequeue( scriptInfo );
-		ASSERT( (scriptInfo != NULL) && (scriptInfo->first != NULL) );
+		ASSERT( (scriptInfo != NULL) && (scriptInfo->first != NULL) );//TEMPTEMP -- valgrind says invalid read here! (reading freed memory)
 		if ( !firstScriptInfo ) {
 			firstScriptInfo = scriptInfo;
+		//TEMPTEMP -- is this a dummy node or something?
 		} else if ( firstScriptInfo == scriptInfo) {
 			_waitingQueue->enqueue( scriptInfo );
 			break;
 		}
-		if (scriptInfo->second <= now) {
+		if (scriptInfo->second <= now) {//TEMPTEMP -- valgrind says invalid read here! (reading freed memory)
 			Script *script = scriptInfo->first;
 			int maxScripts = script->_post ? _dag->_maxPostScripts : _dag->_maxPreScripts;
 			if ( maxScripts != 0 && (_numScriptsRunning >= maxScripts) ) {
 				_waitingQueue->enqueue( scriptInfo );
 			}
-			delete scriptInfo;
+			delete scriptInfo; //TEMPTEMP -- valgrind says invalid free here (already freed)
 			startedThisRound += Run(script);
 			firstScriptInfo = NULL;
 		} else {
@@ -90,6 +92,7 @@ ScriptQ::CheckDeferredScripts()
 int
 ScriptQ::Run( Script *script )
 {
+	//TEMP -- should ScriptQ object know whether it's pre or post?
 	const char *prefix = script->_post ? "POST" : "PRE";
 
 	bool deferScript = false;
@@ -107,6 +110,8 @@ ScriptQ::Run( Script *script )
 
 		// Defer the script if we've hit the max PRE/POST scripts
 		// running limit.
+		//TEMP -- the scriptQ object should really know the max scripts
+		// limit, instead of getting it from the Dag object.  wenger 2015-03-18
 	int maxScripts =
 		script->_post ? _dag->_maxPostScripts : _dag->_maxPreScripts;
 	if ( maxScripts != 0 && _numScriptsRunning >= maxScripts ) {
