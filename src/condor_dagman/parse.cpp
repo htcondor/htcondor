@@ -658,8 +658,8 @@ parse_script(
 		return false;
 	}
 	const char *jobName = NULL;
-	int defer_status = -1;
-	int defer_time = -1;
+	int defer_status = SCRIPT_DEFER_STATUS_NONE;
+	int defer_time = 0;
 	if ( !strcasecmp(defer_key_or_job, "DEFER") )
 	{
 		// Our script has a defer statement.

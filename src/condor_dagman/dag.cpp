@@ -261,10 +261,10 @@ Dag::~Dag()
 
 //-------------------------------------------------------------------------
 void
-Dag::CheckDeferredScripts()
+Dag::RunWaitingScripts()
 {
-	_preScriptQ->CheckDeferredScripts();
-	_postScriptQ->CheckDeferredScripts();
+	_preScriptQ->RunWaitingScripts();
+	_postScriptQ->RunWaitingScripts();
 }
 
 //-------------------------------------------------------------------------
@@ -1564,7 +1564,8 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			// If going from the halted to the not halted state, we need
 			// to fire up any PRE scripts that were deferred while we were
 			// halted.
-		_preScriptQ->RunAllWaitingScripts();
+		//TEMPTEMP? _preScriptQ->RunAllWaitingScripts();
+		_preScriptQ->RunWaitingScripts();
 	}
 
 	bool didLogSleep = false;

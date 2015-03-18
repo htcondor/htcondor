@@ -186,8 +186,9 @@ class Dag {
     bool AddDependency (Job * parent, Job * child);
 
 	/** Go through the script queue and check if any are ready to run.
+	 * TEMPTEMP -- change wording?
 	 */
-	void CheckDeferredScripts();
+	void RunWaitingScripts();
   
     /** Blocks until the Condor Log file grows.
         @return true: log file grew, false: timeout or shrinkage

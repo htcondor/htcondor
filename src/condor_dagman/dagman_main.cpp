@@ -1441,7 +1441,7 @@ void condor_event_timer () {
     static int prevScriptRunNodes = 0;
     static int prevJobsHeld = 0;
 
-	dagman.dag->CheckDeferredScripts();
+	dagman.dag->RunWaitingScripts();
 
 	int justSubmitted;
 	justSubmitted = dagman.dag->SubmitReadyJobs(dagman);

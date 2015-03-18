@@ -33,7 +33,7 @@ ScriptQ::ScriptQ( Dag* dag ) :
 	_numScriptsRunning = 0;
 
     _scriptPidTable = new HashTable<int,Script*>( 127, &hashFuncInt );
-    _waitingQueue = new Queue<std::pair<Script*, int> *>();
+    _waitingQueue = new Queue<Script*>();
 
     if( _scriptPidTable == NULL || _waitingQueue == NULL ) {
         EXCEPT( "ERROR: out of memory!");
@@ -53,6 +53,7 @@ ScriptQ::~ScriptQ()
 	delete _waitingQueue;
 };
 
+#if 0 //TEMPTEMP
 //TEMPTEMP -- merge this into RunAllWaitingScripts/RunWaitingScript
 int
 ScriptQ::CheckDeferredScripts()
@@ -87,6 +88,7 @@ ScriptQ::CheckDeferredScripts()
 	debug_printf( DEBUG_NORMAL, "Started %d deferred scripts\n", startedThisRound );
 	return startedThisRound;
 }
+#endif //TEMPTEMP
 
 // run script if possible, otherwise insert it into the waiting queue
 int
@@ -124,7 +126,7 @@ ScriptQ::Run( Script *script )
 
 	if ( deferScript ) {
 		_scriptDeferredCount++;
-		_waitingQueue->enqueue( new std::pair<Script*, int>(script, 0) );
+		_waitingQueue->enqueue( script );
 		return 0;
 	}
 
@@ -160,6 +162,8 @@ ScriptQ::Run( Script *script )
 	return 0;
 }
 
+#if 0 //TEMPTEMP
+//TEMPTEMP -- this needs to be changed!!!
 int
 ScriptQ::RunWaitingScript()
 {
@@ -200,6 +204,49 @@ ScriptQ::RunAllWaitingScripts()
 	debug_printf( DEBUG_DEBUG_1, "Ran %d scripts\n", scriptsRun );
 	return scriptsRun;
 }
+#endif //TEMPTEMP
+
+int
+ScriptQ::RunWaitingScripts( bool justOne )
+{
+//TEMPTEMP -- shit -- we only want to make one pass through the queue, even though we're not removing everything! -- use queue.Length
+//TEMPTEMP -- should we check for halted state here?  It would avoid a bunch of work...
+
+	int scriptsRun = 0;
+	time_t now = time( NULL );
+
+	//TEMPTEMP -- better names for maxNum, curNum??
+		// Note:  We do NOT want to re-evaluate maxNum each time through
+		// the loop!
+	int maxNum = _waitingQueue->Length();
+	for ( int curNum = 0; curNum < maxNum; ++curNum ) {
+		Script *script;
+		_waitingQueue->dequeue( script );
+		ASSERT( script != NULL );
+		if ( script->_nextRunTime != 0 && script->_nextRunTime > now ) {
+				// Deferral time is not yet up -- put it back into the queue.
+			_waitingQueue->enqueue( script );
+		} else {
+				// Try to run the script.  Note:  Run() takes care of
+				// checking for halted state and maxpre/maxpost.  TEMPTEMP -- make sure that's right!
+			if ( Run( script ) ) {
+				++scriptsRun;
+				if ( justOne ) {
+					break;
+				}
+			} else {
+					// We're halted or we hit maxpre/maxpost, so don't
+					// try to run any more scripts.
+				//TEMPTEMP -- make sure this works right!
+				break;
+			}
+		}
+	}
+
+	//TEMPTEMP -- maybe change this message?
+	debug_printf( DEBUG_DEBUG_1, "Started %d deferred scripts\n", scriptsRun );
+	return scriptsRun;
+}
 
 int
 ScriptQ::NumScriptsRunning()
@@ -225,15 +272,14 @@ ScriptQ::ScriptReaper( int pid, int status )
 	}
 
 	// Check to see if we should re-run this later.
-	if ( status == script->_defer_status ) {
-		std::pair<Script *, int> *scriptInfo = new std::pair<Script *, int>(script, time(NULL)+script->_defer_time);
-		_waitingQueue->enqueue( scriptInfo );
+	if ( script->_deferStatus != SCRIPT_DEFER_STATUS_NONE &&
+				status == script->_deferStatus ) {
+		script->_nextRunTime = time( NULL ) + script->_deferTime;
+		_waitingQueue->enqueue( script );
 		const char *prefix = script->_post ? "POST" : "PRE";
 		debug_printf( DEBUG_NORMAL, "Deferring %s script of Node %s for %ld seconds (exit status was %d)...\n",
-			prefix, script->GetNodeName(), script->_defer_time, script->_defer_status );
-	}
-	else
-	{
+			prefix, script->GetNodeName(), script->_deferTime, script->_deferStatus );
+	} else {
 		script->_done = TRUE;
 
 		// call appropriate DAG reaper
@@ -245,7 +291,9 @@ ScriptQ::ScriptReaper( int pid, int status )
 	}
 
 	// if there's another script waiting to run, run it now
-	RunWaitingScript();
+	//TEMPTEMP -- maybe get rid of this??
+	//TEMPTEMP RunWaitingScript();
+	RunWaitingScripts( true );
 
 	return 1;
 }

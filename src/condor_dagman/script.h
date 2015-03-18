@@ -21,6 +21,8 @@
 #ifndef _SCRIPT_H_
 #define _SCRIPT_H_
 
+#define SCRIPT_DEFER_STATUS_NONE (-1)
+
 class Job;
 
 class Script {
@@ -41,17 +43,21 @@ class Script {
 	bool _done;
 
 	// Return value which indicates this should be deferred until later.
-	int _defer_status;
+	int _deferStatus;
 
-	// Time to sleep when deferred.
-	time_t _defer_time;
+	// How long to sleep when deferred.
+	time_t _deferTime;
+
+	// The next time at which we're eligible to run (0 means any time).
+	time_t _nextRunTime;
 
 	int BackgroundRun( int reaperId, int dagStatus, int failedCount );
 	const char* GetNodeName();
 	Job *GetNode() { return _node; }
 
     inline const char* GetCmd() const { return _cmd; }
-    Script( bool post, const char* cmd, int defer_status, time_t defer_time, Job* node );
+    Script( bool post, const char* cmd, int deferStatus, time_t deferTime,
+    			Job* node );
     ~Script();
 
     char * _cmd;

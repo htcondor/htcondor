@@ -48,6 +48,7 @@ class ScriptQ : public Service {
 	// or deferred).
 	int Run( Script *script );
 
+#if 0 //TEMPTEMP
 	/** Run one waiting script, if possible.
 		@return 1 if a script was spawned, 0 if not (error or deferred).
 	*/
@@ -63,6 +64,10 @@ class ScriptQ : public Service {
 	    start them now.
 	*/
 	int CheckDeferredScripts();
+#endif //TEMPTEMP
+
+	//TEMPTEMP -- document
+	int RunWaitingScripts( bool justOne = false );
 
 	/** Return the number of scripts actually running (does not include
 	    scripts that are queued to run but have been deferred).
@@ -86,7 +91,7 @@ class ScriptQ : public Service {
 	HashTable<int, Script*> *_scriptPidTable;
 
 	// queue of scripts waiting to be run
-	Queue<std::pair<Script*, int> *> *_waitingQueue;
+	Queue<Script*> *_waitingQueue;
 
 	// daemonCore reaper id for PRE/POST script reaper function
 	int _scriptReaperId;
