@@ -111,6 +111,24 @@ MACRO_DEF_ITEM * param_subsys_default_lookup(const char * subsys, const char * p
 	return NULL;
 }
 
+// returns the subsystem table for the given defaults table and subsystem.
+int param_get_subsys_table(const void* pvdefaults, const char* subsys, MACRO_DEF_ITEM** ppTable)
+{
+	*ppTable = NULL;
+	if ( ! pvdefaults || (pvdefaults == condor_params::defaults)) {
+		MACRO_TABLE_PAIR* subtab = NULL;
+		subtab = BinaryLookup<MACRO_TABLE_PAIR>(
+			condor_params::subsystems,
+			condor_params::subsystems_count,
+			subsys, ComparePrefixBeforeDot);
+		if (subtab) {
+			*ppTable = subtab->aTable;
+			return subtab->cElms;
+		}
+	}
+	return 0;
+}
+
 MACRO_DEF_ITEM * param_default_lookup2(const char * param, const char * subsys)
 {
 	if (subsys) {

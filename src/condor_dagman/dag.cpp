@@ -261,6 +261,14 @@ Dag::~Dag()
 
 //-------------------------------------------------------------------------
 void
+Dag::RunWaitingScripts()
+{
+	_preScriptQ->RunWaitingScripts();
+	_postScriptQ->RunWaitingScripts();
+}
+
+//-------------------------------------------------------------------------
+void
 Dag::CreateMetrics( const char *primaryDagFile, int rescueDagNum )
 {
 	_metrics = new DagmanMetrics( this, primaryDagFile, rescueDagNum );
@@ -1556,7 +1564,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			// If going from the halted to the not halted state, we need
 			// to fire up any PRE scripts that were deferred while we were
 			// halted.
-		_preScriptQ->RunAllWaitingScripts();
+		_preScriptQ->RunWaitingScripts();
 	}
 
 	bool didLogSleep = false;
@@ -2375,8 +2383,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 
 			// Print the SCRIPT PRE line, if any.
 		if ( node->_scriptPre != NULL ) {
-			fprintf( fp, "SCRIPT PRE  %s %s\n", 
-			node->GetJobName(), node->_scriptPre->GetCmd() );
+			WriteScriptToRescue( fp, node->_scriptPre );
 		}
 
 			// Print the PRE_SKIP line, if any.
@@ -2386,8 +2393,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 
 			// Print the SCRIPT POST line, if any.
 		if ( node->_scriptPost != NULL ) {
-			fprintf( fp, "SCRIPT POST %s %s\n", 
-						node->GetJobName(), node->_scriptPost->GetCmd() );
+			WriteScriptToRescue( fp, node->_scriptPost );
 		}
 
 			// Print the VARS line, if any.
@@ -2478,6 +2484,20 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 		}
 		fprintf( fp, "\n" );
 	}
+}
+
+//-----------------------------------------------------------------------------
+void
+Dag::WriteScriptToRescue( FILE *fp, Script *script )
+{
+	const char *prepost = script->_post ? "POST" : "PRE";
+	fprintf( fp, "SCRIPT " );
+	if ( script->_deferStatus != SCRIPT_DEFER_STATUS_NONE ) {
+		fprintf( fp, "DEFER %d %d ", script->_deferStatus,
+					(int)script->_deferTime );
+	}
+	fprintf( fp, "%s %s %s\n", prepost, script->GetNode()->GetJobName(),
+				script->GetCmd() );
 }
 
 //===========================================================================
@@ -3314,14 +3334,14 @@ Dag::PrintDeferrals( debug_level_t level, bool force ) const
 
 	if( _preScriptQ->GetScriptDeferredCount() > 0 || force ) {
 		debug_printf( level, "Note: %d total PRE script deferrals because "
-					"of -MaxPre limit (%d)\n",
+					"of -MaxPre limit (%d) or DEFER\n",
 					_preScriptQ->GetScriptDeferredCount(),
 					_maxPreScripts );
 	}
 
 	if( _postScriptQ->GetScriptDeferredCount() > 0 || force ) {
 		debug_printf( level, "Note: %d total POST script deferrals because "
-					"of -MaxPost limit (%d)\n",
+					"of -MaxPost limit (%d) or DEFER\n",
 					_postScriptQ->GetScriptDeferredCount(),
 					_maxPostScripts );
 	}

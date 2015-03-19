@@ -20,4 +20,7 @@
 
 
 system("./x_general_client.pl maxpresock open");
+# Make scripts not finish immediately to better test throttling;
+# specific sleep duration is not critical.
+sleep(15);
 system("./x_general_client.pl maxpresock close");

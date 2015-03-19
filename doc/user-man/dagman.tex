@@ -313,9 +313,11 @@ executed.
 
 The syntax used for each \Arg{PRE} or \Arg{POST} entry is
 
-\Opt{SCRIPT} \Opt{PRE} \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
+\Opt{SCRIPT} \oOptArg{DEFER}{status time}
+\Opt{PRE} \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
-\Opt{SCRIPT} \Opt{POST}  \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
+\Opt{SCRIPT} \oOptArg{DEFER}{status time}
+\Opt{POST}  \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
 The \Arg{SCRIPT} keyword is followed by either
 the \Arg{PRE} or \Arg{POST} keyword,
@@ -334,6 +336,13 @@ the submit machine is not necessarily
 the same machine upon which the node's job is run.
 Further, a single cluster of HTCondor jobs may be
 spread across several machines.
+
+% TEMP -- probably need to clarify this...
+If the \Arg{DEFER} option is specified, and the script exits with the
+exit code \Arg{status}, the script will be retried after \Arg{time}
+seconds (or longer), rather than being considered failed.  While
+deferred, a script does not count against the \Arg{maxpre} or
+\Arg{maxpost} limit.
 
 A PRE script is commonly used
 to place files in a staging area for the jobs to use.
