@@ -2,9 +2,12 @@
 % while that makes it look neat, it also adds an extra space in 
 % the PDF output, so don't do it. 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Configuring-Policy}Policy Configuration for the \Condor{startd}}
+\section{\label{sec:Configuring-Policy}Policy Configuration for Execute Hosts and for Submit Hosts}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Startd-Policy}\Condor{startd} Policy Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!condor\_startd policy}
 \index{configuration!of machines, to implement a given policy}
 \index{startd!configuration}
@@ -23,7 +26,7 @@ described here, as a wrong setting can have a severe impact on
 either the owners of machines in the pool or the users of the pool.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Startd-Terminology}Terminology}
+\subsubsection{\label{sec:Startd-Terminology}\Condor{startd} Terminology}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Understanding the configuration requires an understanding of
@@ -67,8 +70,8 @@ The values of these attributes may be listed by using the command:
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Start-Expr}
-The \MacroNI{START} expression}
+\subsubsection{\label{sec:Start-Expr}
+The \MacroNI{START} Expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The most important expression to the \Condor{startd}
@@ -149,7 +152,7 @@ was little swapping.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{IS\_VALID\_CHECKPOINT\_PLATFORM macro@\texttt{IS\_VALID\_CHECKPOINT\_PLATFORM} macro}
 \index{configuration macro!\texttt{IS\_VALID\_CHECKPOINT\_PLATFORM}}
-\subsection{\label{sec:Is-Valid-Checkpoint-Platform}The \MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM} expression}
+\subsubsection{\label{sec:Is-Valid-Checkpoint-Platform}The \MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM} Expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A checkpoint is the platform-dependent information necessary
@@ -221,8 +224,8 @@ to allow the job to run.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{RANK expression@\texttt{RANK} expression}
 \index{configuration macro!\texttt{RANK}}
-\subsection{\label{sec:Rank-Expression}
-The \MacroNI{RANK} expression}
+\subsubsection{\label{sec:Rank-Expression}
+The \MacroNI{RANK} Expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A machine may be configured to prefer certain jobs over others
@@ -328,7 +331,7 @@ preferring that job would not be HTCondor's
 only problem! 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:States} Machine States}
+\subsubsection{\label{sec:States} Machine States}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{state!of a machine}
@@ -614,7 +617,7 @@ If the \Condor{schedd} reduces the current alive interval,
 it does not update the \Condor{startd}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Activities}
+\subsubsection{\label{sec:Activities}
 Machine Activities}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -758,7 +761,7 @@ matches a machine with a schedd).  The following section describes the
 conditions that lead to the various state and activity transitions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:State-and-Activity-Transitions}
+\subsubsection{\label{sec:State-and-Activity-Transitions}
 State and Activity Transitions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -775,11 +778,12 @@ These times are often used to write expressions that determine
 when further transitions occurred.
 For example, enter the Killing activity if a machine has been in
 the Vacating activity longer than a specified amount of time. 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Owner-State}
-Owner State}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\label{sec:Owner-State}
+\begin{description}
+\item[Owner State]
+\end{description}
 
 \index{machine state!Owner}
 \index{owner state}
@@ -883,8 +887,13 @@ Owner state from Claimed Busy.
 If draining of the machine is initiated while in the Owner state, the
 slot transitions to Drained/Retiring (transition \Bold{36}).
 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\label{sec:Unclaimed-State}
+\begin{description}
+\item[Unclaimed State]
+\end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Unclaimed-State}Unclaimed State}
+%\subsubsection{\label{sec:Unclaimed-State}Unclaimed State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{machine state!Unclaimed}
 \index{unclaimed state}
@@ -966,8 +975,13 @@ running backfill jobs.
 If draining of the machine is initiated while in the Unclaimed state,
 the slot transitions to Drained/Retiring (transition \Bold{37}).
 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\label{sec:Matched-State}
+\begin{description}
+\item[Matched State]
+\end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Matched-State}Matched State}
+%\subsubsection{\label{sec:Matched-State}Matched State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{machine state!Matched}
 \index{matched state}
@@ -996,8 +1010,13 @@ If the schedd that was matched with the machine claims it before the
 \MacroNI{MATCH\_TIMEOUT} expires, the machine goes into the Claimed/Idle
 state (transition \Bold{9}).
 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\label{sec:Claimed-State}
+\begin{description}
+\item[Claimed State]
+\end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Claimed-State}Claimed State}
+%\subsubsection{\label{sec:Claimed-State}Claimed State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{machine state!Claimed}
 \index{claimed state}
@@ -1203,8 +1222,13 @@ into Claimed/Retiring (transition \Bold{16}) instead of Claimed/Busy
 \end{description}
 
 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\label{sec:Preempting-State}
+\begin{description}
+\item[Preempting State]
+\end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Preempting-State}Preempting State}
+%\subsubsection{\label{sec:Preempting-State}Preempting State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{machine state!Preempting}
 \index{preempting state}
@@ -1278,8 +1302,13 @@ expression evaluated to TRUE, \Condor{vacate} was used, etc), the
 machine will enter the Owner state (transition \Bold{25}).
 
 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\label{sec:Backfill-State}
+\begin{description}
+\item[Backfill State]
+\end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Backfill-State}Backfill State}
+%\subsubsection{\label{sec:Backfill-State}Backfill State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{machine state!Backfill}
 \index{backfill state}
@@ -1362,8 +1391,13 @@ Normally, the notification from the \Condor{negotiator} will reach the
 In this case, once the BOINC client exits, the machine will enter
 Matched/Idle (transition \Bold{32}).
 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\label{sec:Drained-State}
+\begin{description}
+\item[Drained State]
+\end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Drained-State}Drained State}
+%\subsubsection{\label{sec:Drained-State}Drained State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{machine state!Drained}
 \index{drained state}
@@ -1381,7 +1415,7 @@ If draining is finalized or canceled, the slot transitions to
 Owner/Idle (transitions \Bold{34} and \Bold{35}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:State-Expression-Summary}
+\subsubsection{\label{sec:State-Expression-Summary}
 State/Activity Transition Expression Summary}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{machine state!transitions summary}
@@ -1527,19 +1561,24 @@ retirement time remaining.  This behavior is controlled by
 \index{activity!transitions|)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Policy-Settings}Policy Settings}
+\subsubsection{\label{sec:Policy-Settings}Example Policy Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section describes the default configuration
 policy and then provides examples of extensions to these
 policies.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Default-Policy}Default Policy Settings}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+% Note: this is an alternative to subsubsubsection, which we don't have.
 \index{policy!default with HTCondor}
 \index{HTCondor!default policy}
+\label{sec:Default-Policy}
+\begin{description}
+\item[Default Policy]
+\end{description}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsubsection{\label{sec:Default-Policy}Default Policy Settings}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 These settings are the default as shipped with HTCondor.  They have been
 used for many years with no problems.  The vanilla expressions are
 identical to the regular ones. (They are not listed here.  If
@@ -1658,9 +1697,15 @@ We simplify our expression considerably to
 PERIODIC_CHECKPOINT     = $(LastCkpt) > (3 * $(HOUR))
 \end{verbatim}
 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\index{policy!test job}
+\label{sec:Test-job Policy Example}
+\begin{description}
+\item[Test-job Policy Example]
+\end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Test-job Policy Example}
-Test-job Policy Example}
+%\subsubsection{\label{sec:Test-job Policy Example}
+%Test-job Policy Example}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This example shows how the default macros can be used to
@@ -1689,13 +1734,17 @@ Notice that there is nothing special in either the
 If Coltrane's jobs never suspend, they never look at \MacroNI{CONTINUE}.  
 Similarly, if they never preempt, they never look at \MacroNI{KILL}. 
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Time of Day Policy}
-Time of Day Policy}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+% Note: this is an alternative to subsubsubsection, which we don't have.
 \index{policy!time of day}
+\label{sec:Time of Day Policy}
+\begin{description}
+\item[Time of Day Policy]
+\end{description}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsubsection{\label{sec:Time of Day Policy}
+%Time of Day Policy}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 HTCondor can be
 configured to only run jobs at
 certain times of the day.
@@ -1752,11 +1801,16 @@ MachineBusy = ( $(WorkHours) || $(CPUBusy) || $(KeyboardBusy) )
 This \MacroNI{MachineBusy} macro is convenient if other than 
 the default \MacroNI{SUSPEND} and \MacroNI{PREEMPT} expressions are used.  
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Note: this is an alternative to subsubsubsection, which we don't have.
 \index{policy!desktop/non-desktop}
 \index{preemption!desktop/non-desktop}
-\subsubsection{\label{sec:Desktop/Non-Desktop Policy}
-Desktop/Non-Desktop Policy}
+\label{sec:Desktop/Non-Desktop Policy}
+\begin{description}
+\item[Desktop/Non-Desktop Policy]
+\end{description}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsubsection{\label{sec:Desktop/Non-Desktop Policy}
+%Desktop/Non-Desktop Policy}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Suppose you have two classes of machines in your pool: desktop
@@ -1842,14 +1896,19 @@ IsDesktop = True
 In all other cases, the default policy described above will ignore
 keyboard activity.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:DisablingPreemption}
-Disabling and Enabling Preemption}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+% Note: this is an alternative to subsubsubsection, which we don't have.
 \index{policy!disabling preemption}
 \index{policy!enabling preemption}
 \index{preemption!disabling and enabling}
+\label{sec:DisablingPreemption}
+\begin{description}
+\item[Disabling and Enabling Preemption]
+\end{description}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsubsection{\label{sec:DisablingPreemption}
+%Disabling and Enabling Preemption}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 Preemption causes a running job to be suspended or killed, such that
 another job can run.
 As of HTCondor version 8.1.5, preemption is disabled by the default
@@ -1860,10 +1919,15 @@ if the previous configuration files are used.
 New configuration file examples disable preemption, but contain directions
 for enabling preemption.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Job-Suspension}Job Suspension}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Note: this is an alternative to subsubsubsection, which we don't have.
 \index{policy!suspending jobs instead of evicting them}
+\label{sec:Job-Suspension}
+\begin{description}
+\item[Job Suspension]
+\end{description}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsubsection{\label{sec:Job-Suspension}Job Suspension}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 As new jobs are submitted that receive a higher priority than
 currently executing jobs,
 the executing jobs may be preempted.
@@ -1980,13 +2044,15 @@ The following line should be placed in the job's submit description file:
 +IsSuspendableJob = True
 \end{verbatim}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{admin-man/multi-core.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\subsubsection{\label{sec:Interactive-Job-Policy}With Interactive Jobs}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Note: this is an alternative to subsubsubsection, which we don't have.
 \index{policy!utilizing interactive jobs}
+\label{sec:Interactive-Job-Policy}
+\begin{description}
+\item[Configuration for Interactive Jobs]
+\end{description}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsubsection{\label{sec:Interactive-Job-Policy}With Interactive Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Policy may be set based on whether a job is an interactive one or not.
 Each interactive job has the job ClassAd attribute
@@ -2010,3 +2076,15 @@ Or, if slot 1 should be reserved for interactive jobs:
 START = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
 \end{verbatim}
 \normalsize
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{admin-man/multi-core.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Schedd-Config}\Condor{schedd} Policy Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\Todo
+
+\index{configuration!condor\_schedd policy}
+\index{submit host!policy configuration}
