@@ -180,7 +180,8 @@ class Job {
 	const char* JobTypeString() const;
 	job_type_t JobType() const;
 
-	bool AddScript( bool post, const char *cmd, MyString &whynot );
+	bool AddScript( bool post, const char *cmd, int defer_status,
+				time_t defer_time, MyString &whynot );
 	bool AddPreSkip( int exitCode, MyString &whynot );
 
 	void SetFinal(bool value) { _final = value; }
