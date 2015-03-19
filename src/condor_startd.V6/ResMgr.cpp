@@ -245,10 +245,13 @@ ResMgr::init_config_classad( void )
 		config_classad->AssignExpr( ATTR_SLOT_WEIGHT, ATTR_CPUS );
 	}
 
-		// Next, try the IS_OWNER expression.  If it's not there, give
-		// them a resonable default, instead of leaving it undefined.
+		// First, try the IsOwner expression.  If it's not there, try
+		// what's defined in IS_OWNER (for backwards compatibility).
+		// If that's not there, give them a reasonable default.
 	if( ! configInsert(config_classad, ATTR_IS_OWNER, false) ) {
-		config_classad->AssignExpr( ATTR_IS_OWNER, "(START =?= False)" );
+		if( ! configInsert(config_classad, "IS_OWNER", ATTR_IS_OWNER, false) ) {
+			config_classad->Assign( ATTR_IS_OWNER, "(START =?= False)" );
+		}
 	}
 		// Next, try the CpuBusy expression.  If it's not there, try
 		// what's defined in cpu_busy (for backwards compatibility).
