@@ -1,15 +1,3 @@
-//TEMPTEMP -- things to still do:
-// * maybe change the syntax for backwards compatibility
-// * add DEFER to rescue DAG
-// * maybe retry limit
-// * version history
-// * actual documentation
-// * finish the automated test
-//TEMPTEMP -- enhancements (probably make a second ticket)
-// * separate struct for defer members
-// * retry limit (if not done the first time)
-// * move _post from Script to ScriptQ
-// * order nodes by _nextRunTime in _waitingQueue?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -143,11 +131,11 @@ ScriptQ::RunWaitingScripts( bool justOne )
 	int scriptsRun = 0;
 	time_t now = time( NULL );
 
-	//TEMPTEMP -- better names for maxNum, curNum??
 		// Note:  We do NOT want to re-evaluate maxNum each time through
 		// the loop!
-	int maxNum = _waitingQueue->Length();
-	for ( int curNum = 0; curNum < maxNum; ++curNum ) {
+	int lastScriptNum = _waitingQueue->Length();
+	for ( int curScriptNum = 0; curScriptNum < lastScriptNum;
+				++curScriptNum ) {
 		Script *script;
 		_waitingQueue->dequeue( script );
 		ASSERT( script != NULL );
@@ -156,7 +144,7 @@ ScriptQ::RunWaitingScripts( bool justOne )
 			_waitingQueue->enqueue( script );
 		} else {
 				// Try to run the script.  Note:  Run() takes care of
-				// checking for halted state and maxpre/maxpost.  TEMPTEMP -- make sure that's right!
+				// checking for halted state and maxpre/maxpost.
 			if ( Run( script ) ) {
 				++scriptsRun;
 				if ( justOne ) {
@@ -165,8 +153,6 @@ ScriptQ::RunWaitingScripts( bool justOne )
 			} else {
 					// We're halted or we hit maxpre/maxpost, so don't
 					// try to run any more scripts.
-				//TEMPTEMP -- make sure this works right!
-debug_printf( DEBUG_DEBUG_1, "DIAG 1010\n" );//TEMPTEMP
 				break;
 			}
 		}

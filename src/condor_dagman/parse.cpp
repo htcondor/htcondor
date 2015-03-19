@@ -102,7 +102,7 @@ void exampleSyntax (const char * example) {
 bool
 isReservedWord( const char *token )
 {
-    static const char * keywords[] = { "PARENT", "CHILD", "DEFER" };
+    static const char * keywords[] = { "PARENT", "CHILD" };
     static const unsigned int numKeyWords = sizeof(keywords) / 
 		                                    sizeof(const char *);
 
@@ -263,7 +263,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		}
 
 		// Handle a SCRIPT spec
-		// Example Syntax is:  SCRIPT (PRE|POST) [DEFER status seconds] JobName ScriptName Args ...
+		// Example Syntax is:  SCRIPT (PRE|POST) [DEFER status time] JobName ScriptName Args ...
 		else if ( strcasecmp(token, "SCRIPT") == 0 ) {
 			parsed_line_successfully = parse_script(endline, dag, 
 				filename, lineNumber);
@@ -615,7 +615,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 //
 // Function: parse_script
 // Purpose:  Parse a line of the format:
-//             SCRIPT (PRE|POST) [DEFER status seconds] JobName ScriptName Args ...
+//             SCRIPT [DEFER status time] (PRE|POST) JobName ScriptName Args ...
 //
 //-----------------------------------------------------------------------------
 static bool 
@@ -625,46 +625,28 @@ parse_script(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "SCRIPT (PRE|POST) [DEFER status seconds] JobName Script Args ...";
+	const char * example = "SCRIPT [DEFER status time] (PRE|POST) JobName Script Args ...";
 	Job * job = NULL;
 	MyString whynot;
 
 	//
-	// Second keyword is either PRE or POST
+	// Second keyword is either PRE, POST or DEFER
 	//
-	bool   post;
-	char * prepost = strtok (NULL, DELIMITERS);
-	if ( prepost && !strcasecmp (prepost, "PRE" ) ) {
-		post = false;
-	} else if ( prepost && !strcasecmp (prepost, "POST") ) {
-		post = true;
-	} else {
-		debug_printf( DEBUG_QUIET, "%s (line %d): "
-					  "After specifying \"SCRIPT\", you must "
-					  "indicate if you want \"PRE\" or \"POST\"\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
+	char * prepost = strtok( NULL, DELIMITERS );
+	if ( !prepost ) {
+		debug_printf( DEBUG_QUIET,
+					"%s (line %d): Missing PRE, POST, or DEFER\n",
+					filename, lineNumber );
+		exampleSyntax( example );
 		return false;
 	}
 
-	//
-	// Next keyword may be DEFER
-	//
-	char * defer_key_or_job = strtok (NULL, DELIMITERS);
-	if ( !defer_key_or_job ) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
-			filename, lineNumber );
-		exampleSyntax (example);
-		return false;
-	}
-	const char *jobName = NULL;
 	int defer_status = SCRIPT_DEFER_STATUS_NONE;
 	int defer_time = 0;
-	if ( !strcasecmp(defer_key_or_job, "DEFER") )
-	{
-		// Our script has a defer statement.
+	if ( !strcasecmp( prepost, "DEFER" ) ) {
+			// Our script has a defer statement.
 		char *token = strtok( NULL, DELIMITERS );
-		if( token == NULL ) {
+		if ( token == NULL ) {
 			debug_printf( DEBUG_QUIET,
 					"%s (line %d): Missing DEFER status value\n",
 					filename, lineNumber );
@@ -673,7 +655,7 @@ parse_script(
 		}
 		char *tmp;
 		defer_status = (int)strtol( token, &tmp, 10 );
-		if( tmp == token ) {
+		if ( tmp == token || defer_status <= 0 ) {
 			debug_printf( DEBUG_QUIET,
 				"%s (line %d): Invalid DEFER status value \"%s\"\n",
 				filename, lineNumber, token );
@@ -682,7 +664,7 @@ parse_script(
 		}
 
 		token = strtok( NULL, DELIMITERS );
-		if( token == NULL ) {
+		if ( token == NULL ) {
 			debug_printf( DEBUG_QUIET,
 				"%s (line %d): Missing DEFER time value\n",
 				filename, lineNumber );
@@ -690,23 +672,44 @@ parse_script(
 			return false;
 		}
 		defer_time = (int)strtol( token, &tmp, 10 );
-		if( tmp == token ) {
+		if ( tmp == token || defer_time < 0 ) {
 			debug_printf( DEBUG_QUIET,
 				"%s (line %d): Invalid DEFER time value \"%s\"\n",
 				filename, lineNumber, token );
 			exampleSyntax( example );
 			return false;
 		}
-		jobName = strtok( NULL, DELIMITERS );
+
+			// The next token must be PRE or POST.
+		prepost = strtok( NULL, DELIMITERS );
+		if ( !prepost ) {
+			debug_printf( DEBUG_QUIET,
+						"%s (line %d): Missing PRE or POST\n",
+						filename, lineNumber );
+			exampleSyntax( example );
+			return false;
+		}
 	}
-	else
-	{
-		jobName = defer_key_or_job;
+
+	bool   post;
+	if ( !strcasecmp (prepost, "PRE" ) ) {
+		post = false;
+	} else if ( !strcasecmp (prepost, "POST") ) {
+		post = true;
+	} else {
+		debug_printf( DEBUG_QUIET, "%s (line %d): "
+					  "After specifying \"SCRIPT\", you must "
+					  "indicate if you want \"PRE\" or \"POST\" "
+					  "(or DEFER)\n",
+					  filename, lineNumber );
+		exampleSyntax (example);
+		return false;
 	}
 
 	//
-	// Token is the JobName
+	// Next token is the JobName
 	//
+	const char *jobName = strtok( NULL, DELIMITERS );
 	if ( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
 					  filename, lineNumber );
