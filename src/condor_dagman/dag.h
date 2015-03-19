@@ -184,6 +184,11 @@ class Dag {
         @return true: successful, false: failure
     */
     bool AddDependency (Job * parent, Job * child);
+
+	/** Run waiting/deferred scripts that are ready to run.  Note: scripts
+	    are also limited by halt status and maxpre/maxpost.
+	*/
+	void RunWaitingScripts();
   
     /** Blocks until the Condor Log file grows.
         @return true: log file grew, false: timeout or shrinkage
@@ -963,6 +968,12 @@ class Dag {
 		*/
 	void WriteNodeToRescue( FILE *fp, Job *node,
 				bool reset_retries_upon_rescue, bool isPartial );
+
+		/** Write a script specification to a rescue DAG.
+			@param fp: file pointer to the rescue DAG file
+		    @param script: the script to write
+		*/
+	static void WriteScriptToRescue( FILE *fp, Script *script );
 
 		// True iff the final node is ready to be run, is running,
 		// or has been run (including PRE and POST scripts, if any).
