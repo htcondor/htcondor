@@ -88,6 +88,11 @@ partitionable slot to multiple job requests. Enabling both for the same
 slot causes problems.
 \Ticket{4950}
 
+\item Fixed a bug that could cause a partitionable slot to remain in
+Matched state forever when \MacroNI{CONSUMPTION\_POLICY} and
+\MacroNI{NEGOTIATOR\_INFORM\_STARTD} are set to \Expr{True}.
+\Ticket{4945}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
