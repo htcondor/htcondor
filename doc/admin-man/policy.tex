@@ -2084,7 +2084,105 @@ START = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Schedd-Config}\Condor{schedd} Policy Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\Todo
-
 \index{configuration!condor\_schedd policy}
 \index{submit host!policy configuration}
+\index{submit requirements}
+
+The \Condor{schedd} may reject job submissions,
+such that rejected jobs never enter the queue.
+Rejection may be best for the case in which
+there are jobs that will never be able to run;
+an example of this might be all jobs that specify the standard universe
+jobs in a queue with restricted networking.
+Another appropriate example might be to reject 
+all jobs that do not request a minimum amount of memory.
+Or, it may be appropriate to
+prevent certain users from using a specific submit host.
+
+Rejection criteria are configured.
+Configuration variable \Macro{SUBMIT\_REQUIREMENT\_NAMES}
+lists criteria, where each criterion is given a name.
+The chosen name is a major component of the default error message 
+output if a user attempts to submit a job which fails to meet the requirements.
+Therefore, choose a descriptive name.
+For the three example submit requirements described:
+
+\footnotesize
+\begin{verbatim}
+SUBMIT_REQUIREMENT_NAMES = NotStandardUniverse, MinimalRequestMemory, NotChris
+\end{verbatim}
+\normalsize
+
+The criterion for each submit requirement is then
+specified in configuration variable \Macro{SUBMIT\_REQUIREMENT\_<Name>},
+where \Expr{<Name>} matches the chosen name listed in 
+\MacroNI{SUBMIT\_REQUIREMENT\_NAMES}.
+The value is a boolean ClassAd expression.
+The three example criterion result in these configuration variable
+definitions:
+
+\footnotesize
+\begin{verbatim}
+SUBMIT_REQUIREMENT_NotStandardUniverse = JobUniverse != 1
+SUBMIT_REQUIREMENT_MinimalRequestMemory = RequestMemory > 512
+SUBMIT_REQUIREMENT_NotChris = Owner != "chris"
+\end{verbatim}
+\normalsize
+
+Submit requirements are evaluated in the listed order;
+the first requirement that evaluates to \Expr{False}
+causes rejection of the job,
+terminates further evaluation of other submit requirements,
+and is the only requirement reported.
+Each submit requirement is evaluated in the context of
+the \Condor{schedd} ClassAd, which is the \Expr{MY.} name space
+and the job ClassAd, which is the \Expr{TARGET.} name space.
+Note that \Attr{JobUniverse} and \Attr{RequestMemory} are both 
+job ClassAd attributes. 
+
+Further configuration may associate a 
+rejection reason with a submit requirement with the
+\Macro{SUBMIT\_REQUIREMENT\_<Name>\_REASON}.
+
+\footnotesize
+\begin{verbatim}
+SUBMIT_REQUIREMENT_NotStandardUniverse_REASON = "This pool does not accept standard universe jobs."
+SUBMIT_REQUIREMENT_MinimalRequestMemory_REASON = strcat( "The job only requested ", \
+  RequestMemory, " Megabytes.  If that small amount is really enough, please contact ..." )
+SUBMIT_REQUIREMENT_NotChris_REASON = "Chris, you may only submit jobs to the instructional pool."
+\end{verbatim}
+\normalsize
+
+The value must be a ClassAd expression which evaluates to a string.
+Thus, double quotes were required to make strings for both
+\MacroNI{SUBMIT\_REQUIREMENT\_NotStandardUniverse\_REASON}
+and \MacroNI{SUBMIT\_REQUIREMENT\_NotChris\_REASON}.
+The ClassAd function \Procedure{strcat} produces a string in the definition
+of \MacroNI{SUBMIT\_REQUIREMENT\_MinimalRequestMemory\_REASON}. 
+
+Rejection reasons are sent back to the submitting program and will
+typically be immediately presented to the user.  
+If an optional \MacroNI{SUBMIT\_REQUIREMENT\_<Name>\_REASON} is not defined,
+a default reason will include the \Expr{<Name>} chosen for the 
+submit requirement.
+Completing the presentation of the example submit requirements,
+upon an attempt to submit a standard universe job,
+\Condor{submit} would print
+
+\footnotesize
+\begin{verbatim}
+Submitting job(s).
+ERROR: Failed to commit job submission into the queue.
+ERROR: This pool does not accept standard universe jobs.
+\end{verbatim}
+\normalsize
+
+Where there are 
+multiple jobs in a cluster, 
+if any job within the cluster is rejected due to a submit requirement,
+the entire cluster of jobs will be rejected.
+%please note that while we
+%evaluate the submit requirements against individual jobs, any individual
+%job failing the submit requirements will cause the entire submit to
+%fail; the other jobs in the cluster will not enter the queue.
+
