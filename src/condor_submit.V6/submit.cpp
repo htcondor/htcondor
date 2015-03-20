@@ -6868,7 +6868,13 @@ int parse_queue_args (
 			// find on the current line, and then set the filename to "<" to tell the caller to read
 			// the remainder from the submit file.
 			++plist;
-			if (*plist) { items.append(plist); }
+			if (*plist) {
+				if (foreach_mode == foreach_from) {
+					items.append(plist);
+				} else {
+					items.initializeFromString(plist);
+				}
+			}
 			items_filename = "<";
 		} else if (foreach_mode == foreach_from) {
 			if (one_line_list) {
@@ -7074,9 +7080,14 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 				int item_list_begin_line = source.line;
 				for(char * line=NULL; ; ) {
 					line = getline_trim(fp_submit, source.line);
-					if ( ! line) break;
+					if ( ! line) break; // null indicates end of file
+					if (line[0] == '#') continue; // skip comments.
 					if (line[0] == ')') { saw_close_brace = true; break; }
-					items.append(line);
+					if (foreach_mode == foreach_from) {
+						items.append(line);
+					} else {
+						items.initializeFromString(line);
+					}
 				}
 				if ( ! saw_close_brace) {
 					formatstr(errmsg, "Reached end of file without finding closing brace ')'"
@@ -7088,7 +7099,11 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 				for (char* line=NULL;;) {
 					line = getline_trim(stdin, lineno);
 					if ( ! line) break;
-					items.append(line);
+					if (foreach_mode == foreach_from) {
+						items.append(line);
+					} else {
+						items.initializeFromString(line);
+					}
 				}
 			} else {
 				MACRO_SOURCE ItemsSource;
@@ -7376,9 +7391,7 @@ int queue_begin(StringList & vars, bool new_cluster)
 	// unconditionally, the others we must set only when not already set by the user.
 	set_live_submit_variable(Cluster, ClusterString);
 	set_live_submit_variable(Process, ProcessString);
-	//if ( ! find_macro_item("Node", SubmitMacroSet)) { set_live_submit_variable("Node", EmptyItemString); }
 	//if ( ! find_macro_item("Step", SubmitMacroSet)) { set_live_submit_variable("Step", StepString); }
-	//if ( ! find_macro_item("Row", SubmitMacroSet)) { set_live_submit_variable("Row", RowString); }
 
 	vars.rewind();
 	char * var;
