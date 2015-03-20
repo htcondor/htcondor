@@ -7815,3 +7815,10 @@ customization=seldom
 friendly_name=Whether to invoke file transfer plugins as user or as root
 review=?
 
+[IS_OWNER]
+default=(START =?= False)
+version=8.2.8
+type=string
+friendly_name=When a slot should be in Owner state
+review=?
+
