@@ -135,6 +135,12 @@ class ScheddNegotiate: public DCMsg {
 
 	virtual void scheduler_handleNegotiationFinished( Sock *sock ) = 0;
 
+		// Return the number of resource requests we should offer in this negotiation round.
+		// -1 indicates there is no limit.
+		// This is useful in helping to enforce MAX_JOBS_RUNNING as a single resource request
+		// can bring back thousands of matches from the negotiator.
+	virtual int scheduler_maxJobsToOffer() {return -1;};
+
 		///////// end of virtual functions for scheduler to define  //////////
 
  protected:
@@ -143,6 +149,9 @@ class ScheddNegotiate: public DCMsg {
 	int m_current_resources_requested;
 		// how many resources have been delivered so far with this request?
 	int m_current_resources_delivered;
+		// how many more resources can we offer to the matchmaker?
+		// If -1, then we don't limit the offered resources.
+	int m_jobs_can_offer;
 
  private:
 	std::set<int> m_rejected_auto_clusters;

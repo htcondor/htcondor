@@ -55,10 +55,6 @@ class Dagman {
 		// whether we should fall back to non-default log mode.
 	void CheckLogFileMode( const CondorVersionInfo &submitFileVersion );
 
-		// Disable use of the default node log (use the log files from
-		// the submit files instead).
-	void DisableDefaultLog();
-
 		// Resolve macro substitutions in _defaultNodeLog.  Also check
 		// for some errors/warnings.
 	void ResolveDefaultLog();
@@ -72,8 +68,6 @@ class Dagman {
 
 	char* condorSubmitExe;
 	char* condorRmExe;
-	char* storkSubmitExe;
-	char* storkRmExe;
 
 	// number of seconds to wait before consecutive calls to
 	// condor_submit (or dap_submit, etc.)

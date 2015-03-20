@@ -285,6 +285,7 @@ int putClassAd ( Stream *sock, classad::ClassAd& ad )
 	return _putClassAd(sock, ad, options);
 }
 
+#if 0
 /*
  * Put the ClassAd onto the wire in a non-blocking manner.
  * Return codes:
@@ -336,6 +337,7 @@ putClassAdNoTypes ( Stream *sock, classad::ClassAd& ad )
 #endif
     return _putClassAd(sock, ad, PUT_CLASSAD_NO_TYPES);
 }
+#endif
 
 #ifdef ENABLE_V0_PUT_CLASSAD
 // these are here for timing comparison

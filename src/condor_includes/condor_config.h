@@ -411,6 +411,7 @@ BEGIN_C_DECLS
 
 	int Close_macro_source(FILE* conf_fp, MACRO_SOURCE& source, MACRO_SET& macro_set, int parsing_return_val);
 
+
 #endif // __cplusplus
 
 

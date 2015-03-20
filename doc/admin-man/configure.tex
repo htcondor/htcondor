@@ -10448,6 +10448,13 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManStorkSubmitExe}
 \item[\Macro{DAGMAN\_STORK\_SUBMIT\_EXE}]
+  This configuration variable is no longer used, because as of
+  version 8.3.4 \Condor{dagman} no longer supports Stork jobs.
+  Setting this configuration variable will result in a warning
+  from \Condor{dagman} (which will be turned into a fatal error
+  if \MacroNI{DAGMAN\_USE\_STRICT} is set to 1 or above).
+
+  For completeness, here is the definition for historical purposes: 
   The executable that \Condor{dagman} will use to submit Stork jobs.
   If not defined, \Condor{dagman} looks for \Prog{stork\_submit} in the path.
 
@@ -10458,6 +10465,13 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManStorkRmExe}
 \item[\Macro{DAGMAN\_STORK\_RM\_EXE}]
+  This configuration variable is no longer used, because as of
+  version 8.3.4 \Condor{dagman} no longer supports Stork jobs.
+  Setting this configuration variable will result in a warning
+  from \Condor{dagman} (which will be turned into a fatal error
+  if \MacroNI{DAGMAN\_USE\_STRICT} is set to 1 or above).
+
+  For completeness, here is the definition for historical purposes: 
   The executable that \Condor{dagman} will use to remove Stork jobs.
   If not defined, \Condor{dagman} looks for \Prog{stork\_rm} in the path.
 
@@ -10801,11 +10815,13 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanAlwaysUseNodeLog}
 \item[\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}]
-  As of HTCondor version 8.3.1, the value is always the default 
+  As of HTCondor version 8.3.1, the value must always be the default 
   value of \Expr{True}.  
-  Attempts to set it to \Expr{False} results in an error. 
+  Attempting to set it to \Expr{False} results in an error. 
   This causes incompatibility with using a \Condor{submit} executable 
   that is older than HTCondor version 7.9.0.
+
+  For completeness, here is the definition for historical purposes: 
   A boolean value that when \Expr{True}  causes \Condor{dagman} to read
   events from its default node log file, as defined by
   \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}, instead of from the log file(s)

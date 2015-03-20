@@ -63,11 +63,24 @@ of jobs that do not meet specified criteria.
 \item Added the PRE/POST script DEFER feature to \Condor{dagman}.
 \Ticket{4488}
 
+\item \Condor{dagman} no longer supports Stork jobs as DAG nodes.
+\Ticket{4550}
+
+\item \Condor{dagman} no longer has the capability to read individual per-
+job log files.  This means that recovery mode will no longer work on a
+DAG originally submitted with version 7.9.1 or earlier.
+\Ticket{4528}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug with \Condor{chirp} where generic events logged
+to the user log with the ulog command where written in the timezone
+of the execute machine, not the submit machine.
+\Ticket{4951}
 
 \item Fixed a bug in which a \Condor{collector} daemon would have been unable 
 to update its own ClassAd.
@@ -210,6 +223,7 @@ in their unevaluated, or raw form.
 file when node jobs go on hold.
 \Ticket{4766}
 
+<<<<<<< HEAD
 \item New python bindings can be used to query and set the 
 configuration variables of running daemons.
 \Ticket{4778}
