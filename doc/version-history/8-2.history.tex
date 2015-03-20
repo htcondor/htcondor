@@ -42,6 +42,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where we were looking for \Macro{IsOwner} instead of
+\Macro{IS\_OWNER} in the configuration.  Now, you can specify either,
+and \Macro{IsOwner} takes precedence.
+\Ticket{4949}
+
 \item Fixed a bug that could cause the \Condor{schedd} to crash
 when removing jobs that were in the process of being submitted
 using \Condor{submit} with a \Opt{-spool} or \Opt{-remote} 
