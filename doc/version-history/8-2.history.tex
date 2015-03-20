@@ -80,6 +80,14 @@ Daylight Saving Time when using timestamp values.
 	options \SubmitCmdNI{stream\_output} or \SubmitCmdNI{stream\_error}.
 \Ticket{4939}
 
+\item If \MacroNI{CONSUMPTION\_POLICY} is enabled for a partitionable slot,
+then \MacroNI{CLAIM\_PARTITIONABLE\_LEFTOVERS} will be treated as
+\Expr{False} for that slot.
+These features are conflicting ways to efficiently allocate a
+partitionable slot to multiple job requests. Enabling both for the same
+slot causes problems.
+\Ticket{4950}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
