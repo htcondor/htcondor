@@ -250,7 +250,7 @@ ResMgr::init_config_classad( void )
 		// If that's not there, give them a reasonable default.
 	if( ! configInsert(config_classad, ATTR_IS_OWNER, false) ) {
 		if( ! configInsert(config_classad, "IS_OWNER", ATTR_IS_OWNER, false) ) {
-			config_classad->Assign( ATTR_IS_OWNER, "(START =?= False)" );
+			config_classad->AssignExpr( ATTR_IS_OWNER, "(START =?= False)" );
 		}
 	}
 		// Next, try the CpuBusy expression.  If it's not there, try
