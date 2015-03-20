@@ -3414,13 +3414,17 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			// we will send back directly to the schedd iff it supports
 			// receiving partitionable slot leftover info as part of the
 			// new-style extended claiming protocol. 
+			// But don't send a leftovers claim if consumption policies
+			// are enabled, as that means the negotiator is carving up
+			// the pslot.
 		bool scheddWantsLeftovers = false;
 			// presence of this attr in request ad tells us in a 
 			// backwards/forwards compatible way if the schedd understands
 			// the claim protocol enhancement to accept leftovers
 		req_classad->LookupBool("_condor_SEND_LEFTOVERS",scheddWantsLeftovers);
 		if ( scheddWantsLeftovers && 
-			 param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) ) 
+			 param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) &&
+			 rip->r_has_cp == false )
 		{
 			leftover_claim = rip->r_cur;
 			ASSERT(leftover_claim);

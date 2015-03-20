@@ -198,8 +198,8 @@ public:
 											const char *job_id);
 
 	Resource*	findRipForNewCOD( ClassAd* ad );
-	Resource*	get_by_cur_id(const char*);	// Find rip by ClaimId of r_cur
-	Resource*	get_by_any_id(const char*);	// Find rip by r_cur or r_pre
+	Resource*	get_by_cur_id(const char* id);	// Find rip by ClaimId of r_cur
+	Resource*	get_by_any_id(const char* id, bool move_cp_claim = false);	// Find rip by any claim id
 	Resource*	get_by_name(const char*);		// Find rip by r_name
 	Resource*	get_by_slot_id(int);	// Find rip by r_id
 	State		state( void );			// Return the machine state
