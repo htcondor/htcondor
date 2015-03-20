@@ -106,8 +106,6 @@ Dagman::Dagman() :
 	paused (false),
 	condorSubmitExe (NULL),
 	condorRmExe (NULL),
-	storkSubmitExe (NULL),
-	storkRmExe (NULL),
 	submit_delay (0),
 	max_submit_attempts (6),
 	max_submits_per_interval (5), // so Coverity is happy
@@ -240,9 +238,11 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
 				_defaultPriority );
 
-	_submitDagDeepOpts.always_use_node_log = param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true);
-	debug_printf( DEBUG_NORMAL, "DAGMAN_ALWAYS_USE_NODE_LOG setting: %s\n",
-				_submitDagDeepOpts.always_use_node_log ? "True" : "False" );
+	if ( !param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true ) ) {
+       	debug_printf( DEBUG_QUIET,
+					"Error: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer allowed\n" );
+		DC_Exit( EXIT_ERROR );
+	}
 
 	_submitDagDeepOpts.suppress_notification = param_boolean(
 		"DAGMAN_SUPPRESS_NOTIFICATION",
@@ -358,18 +358,16 @@ Dagman::Config()
 		ASSERT( condorRmExe );
 	}
 
-	free( storkSubmitExe );
-	storkSubmitExe = param( "DAGMAN_STORK_SUBMIT_EXE" );
-	if( !storkSubmitExe ) {
-		storkSubmitExe = strdup( "stork_submit" );
-		ASSERT( storkSubmitExe );
+	if ( param_boolean( "DAGMAN_STORK_SUBMIT_EXE", false ) ) {
+		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_STORK_SUBMIT_EXE is "
+					"no longer supported\n" );
+		check_warning_strictness( DAG_STRICT_1 );
 	}
 
-	free( storkRmExe );
-	storkRmExe = param( "DAGMAN_STORK_RM_EXE" );
-	if( !storkRmExe ) {
-		storkRmExe = strdup( "stork_rm" );
-		ASSERT( storkRmExe );
+	if ( param_boolean( "DAGMAN_STORK_RM_EXE", false ) ) {
+		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_STORK_RM_EXE is "
+					"no longer supported\n" );
+		check_warning_strictness( DAG_STRICT_1 );
 	}
 
 	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES",
@@ -820,7 +818,9 @@ void main_init (int argc, char ** const argv) {
 			dagman._submitDagDeepOpts.priority = atoi(argv[i]);
 
 		} else if( !strcasecmp( "-dont_use_default_node_log", argv[i] ) ) {
-			dagman._submitDagDeepOpts.always_use_node_log = false;
+       		debug_printf( DEBUG_QUIET,
+						"Error: -dont_use_default_node_log is no longer allowed\n" );
+			DC_Exit( EXIT_ERROR );
 
 		} else if ( !strcasecmp( "-dorecov", argv[i] ) ) {
 			dagman._doRecovery = true;
@@ -933,11 +933,6 @@ void main_init (int argc, char ** const argv) {
         Usage();
     }
 
-	if ( !dagman._submitDagDeepOpts.always_use_node_log ) {
-        debug_printf( DEBUG_QUIET, "Error: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer allowed\n" );
-		DC_Exit( EXIT_ERROR );
-	}
-
 	//
 	// ...done checking arguments.
 	//
@@ -1021,7 +1016,7 @@ void main_init (int argc, char ** const argv) {
 						  dagman.allowLogError, dagman.useDagDir,
 						  dagman.maxIdle, dagman.retrySubmitFirst,
 						  dagman.retryNodeFirst, dagman.condorRmExe,
-						  dagman.storkRmExe, &dagman.DAGManJobId,
+						  &dagman.DAGManJobId,
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
 						  dagman._defaultNodeLog.Value(),
 						  dagman._generateSubdagSubmits,
@@ -1233,13 +1228,7 @@ void main_init (int argc, char ** const argv) {
 		}
 
         if ( recovery ) {
-				// Not using the default node log is the backward
-				// compatible thing to do, so if using the default
-				// log file is already disabled, we don't have to
-				// do any checking.
-			if ( dagman._submitDagDeepOpts.always_use_node_log ) { 
-				dagman.CheckLogFileMode( submitFileVersion );
-			}
+			dagman.CheckLogFileMode( submitFileVersion );
 		}
 
 			//
@@ -1287,8 +1276,8 @@ Dagman::CheckLogFileMode( const CondorVersionInfo &submitFileVersion )
 				// Pre-7.9.0 -- default log wasn't implemented yet, so
 				// we need to use individual logs from submit files.
 			debug_printf( DEBUG_QUIET, "Submit file version indicates submit is too old. "
-				"Falling back to 7.8 behavior of not using the default node log\n");
-			DisableDefaultLog();
+				"DAGMan no longer supports individual per-job log files.\n" );
+			DC_Exit( EXIT_ERROR );
 		}
 
 	} else {
@@ -1309,23 +1298,10 @@ Dagman::CheckLogFileMode( const CondorVersionInfo &submitFileVersion )
 				// We are in recovery, but the default log does not exist.
 				// Fall back to 7.8 behavior
 			debug_printf( DEBUG_QUIET, "Default node log does not exist. "
-						"Falling back to 7.8 behavior of not using the default node log\n");
-			DisableDefaultLog();
+				"DAGMan no longer supports individual per-job log files.\n" );
+			DC_Exit( EXIT_ERROR );
 		}
 	}
-}
-
-//---------------------------------------------------------------------------
-void
-Dagman::DisableDefaultLog()
-{
-	dagman._submitDagDeepOpts.always_use_node_log = false;
-		// Note:  we have to explicitly turn off the default
-		// log file here because
-		// _submitDagDeepOpts.always_use_node_log is
-		// referenced in the Dag constructor, so just
-		// changing that here won't do us any good.
-	dagman.dag->UseDefaultNodeLog(false);
 }
 
 //---------------------------------------------------------------------------
@@ -1352,8 +1328,7 @@ Dagman::ResolveDefaultLog()
 					"default node log file %s contains an '@' character -- "
 					"unresolved macro substituion?\n",
 					_defaultNodeLog.Value() );
-		check_warning_strictness( _submitDagDeepOpts.always_use_node_log ?
-					DAG_STRICT_1 : DAG_STRICT_2 );
+		check_warning_strictness( DAG_STRICT_1 );
 	}
 
 		// Force default log file path to be absolute so it works
@@ -1371,8 +1346,29 @@ Dagman::ResolveDefaultLog()
 		debug_printf( DEBUG_QUIET, "Warning: "
 					"default node log file %s is in /tmp\n",
 					_defaultNodeLog.Value() );
-		check_warning_strictness( _submitDagDeepOpts.always_use_node_log ?
-					DAG_STRICT_1 : DAG_STRICT_2 );
+		check_warning_strictness( DAG_STRICT_1 );
+	}
+
+	bool nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
+	if ( nfsLogIsError ) {
+		bool userlog_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
+		if ( userlog_locking ) {
+			bool locks_on_local = param_boolean( "CREATE_LOCKS_ON_LOCAL_DISK", true);
+			if ( locks_on_local ) {
+				debug_printf( DEBUG_QUIET, "Ignoring value of DAGMAN_LOG_ON_NFS_IS_ERROR because ENABLE_USERLOG_LOCKING and CREATE_LOCKS_ON_LOCAL_DISK are true.\n");
+				nfsLogIsError = false;
+			}
+		}
+	}
+
+		// This function returns true if the log file is on NFS and
+		// that is an error.  If the log file is on NFS, but nfsIsError
+		// is false, it prints a warning but returns false.
+	if ( MultiLogFiles::logFileNFSError( _defaultNodeLog.Value(),
+				nfsLogIsError ) ) {
+		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
+					_defaultNodeLog.Value() );
+		DC_Exit( EXIT_ERROR );
 	}
 
 	debug_printf( DEBUG_NORMAL, "Default node log file is: <%s>\n",
@@ -1454,19 +1450,9 @@ void condor_event_timer () {
 
 	// If the log has grown
 	if( dagman.dag->DetectCondorLogGrowth() ) {
-		if( dagman.dag->ProcessLogEvents( CONDORLOG ) == false ) {
+		if( dagman.dag->ProcessLogEvents() == false ) {
 			debug_printf( DEBUG_NORMAL,
-						"ProcessLogEvents(CONDORLOG) returned false\n" );
-			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
-			return;
-		}
-	}
-
-	if( dagman.dag->DetectDaPLogGrowth() ) {
-		if( dagman.dag->ProcessLogEvents( DAPLOG ) == false ) {
-			debug_printf( DEBUG_NORMAL,
-						"ProcessLogEvents(DAPLOG) returned false\n" );
+						"ProcessLogEvents() returned false\n" );
 			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
 			main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_ERROR );
 			return;

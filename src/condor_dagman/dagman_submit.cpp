@@ -65,34 +65,8 @@ parse_condor_submit( const char *buffer, int &jobProcCount, int &cluster )
   return true;
 }
 
-//-------------------------------------------------------------------------
-/** Parse output from stork_submit, determine the number of job procs
-    and the cluster.
-	@param buffer containing the line to be parsed
-	@param integer to be filled in with the number of job procs generated
-	       by the stork_submit
-	@param integer to be filled in with the cluster ID
-	@return true iff the line was correctly parsed
-*/
 static bool
-parse_stork_submit( const char *buffer, int &jobProcCount, int &cluster )
-{
-  // The initial space is to make the sscanf match zero or more leading
-  // whitespace that may exist in the buffer.
-  if ( 1 != sscanf( buffer, " Request assigned id: %d", &cluster) ) {
-	debug_printf( DEBUG_QUIET, "ERROR: parse_stork_submit failed:\n\t%s\n",
-				buffer );
-    return false;
-  }
-
-  jobProcCount = 1;
-  return true;
-}
-
-//-------------------------------------------------------------------------
-static bool
-submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
-			bool prohibitMultiJobs )
+submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 {
   MyString cmd; // for debug output
   args.GetArgsStringForDisplay( &cmd );
@@ -106,8 +80,8 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
   }
   
   //----------------------------------------------------------------------
-  // Parse submit command output for a Condor/Stork job ID.  This
-  // desperately needs to be replaced by Condor/Stork submit APIs.
+  // Parse submit command output for a Condor job ID.  This
+  // desperately needs to be replaced by Condor submit APIs.
   //
   // Typical condor_submit output for Condor v6 looks like:
   //
@@ -124,30 +98,22 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
   const char *marker = NULL;
   parse_submit_fnc parseFnc = NULL;
 
-  if ( type == Job::TYPE_CONDOR ) {
-    marker = " submitted to cluster ";
+  marker = " submitted to cluster ";
 
-	  // Note: we *could* check how many jobs got submitted here, and
-	  // correlate that with how many submit events we see later on.
-	  // I'm not worrying about that for now...  wenger 2006-02-07.
-	  // We also have to check the number of jobs to get an accurate
-	  // count of submitted jobs to report in the dagman.out file.
+  // Note: we *could* check how many jobs got submitted here, and
+  // correlate that with how many submit events we see later on.
+  // I'm not worrying about that for now...  wenger 2006-02-07.
+  // We also have to check the number of jobs to get an accurate
+  // count of submitted jobs to report in the dagman.out file.
 
-	  // We should also check whether we got more than one cluster, and
-	  // either deal with it correctly or generate an error message.
-	parseFnc = parse_condor_submit;
-  } else if ( type == Job::TYPE_STORK ) {
-    marker = "assigned id";
-	parseFnc = parse_stork_submit;
-  } else {
-	debug_printf( DEBUG_QUIET, "Illegal job type: %d\n", type );
-	ASSERT(false);
-  }
+  // We should also check whether we got more than one cluster, and
+  // either deal with it correctly or generate an error message.
+  parseFnc = parse_condor_submit;
   
-  // Take all of the output (both stdout and stderr) from condor_submit
-  // or stork_submit, and echo it to the dagman.out file.  Look for
-  // the line (if any) containing the word "cluster" (Condor) or
-  // "assigned id" (Stork).  If we don't find such a line, something
+  // Take all of the output (both stdout and stderr) from condor_submit,
+  // and echo it to the dagman.out file.  Look for
+  // the line (if any) containing the word "cluster" (Condor).
+  // If we don't find such a line, something
   // went wrong with the submit, so we return false.  The caller of this
   // function can retry the submit by repeatedly calling this function.
 
@@ -201,13 +167,6 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
   	  return true;
   }
 
-  // Stork job specs have only 1 dimension.  The Stork user log forces the proc
-  // and sub-proc ids to "-1", so do the same here for the returned submit id.
-  if ( type == Job::TYPE_STORK ) {
-	  condorID._proc = -1;
-	  condorID._subproc = -1;
-  }
-
   	// Check for multiple job procs if configured to disallow that.
   if ( prohibitMultiJobs && (jobProcCount > 1) ) {
 	debug_printf( DEBUG_NORMAL, "Submit generated %d job procs; "
@@ -223,8 +182,7 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
 // NOTE: this and submit_try should probably be merged into a single
 // method -- submit_batch_job or something like that.  wenger/pfc 2006-04-05.
 static bool
-do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType,
-			bool prohibitMultiJobs )
+do_submit( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 {
 	MyString cmd; // for debug output
 	args.GetArgsStringForDisplay( &cmd );
@@ -232,7 +190,7 @@ do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType,
   
 	bool success = false;
 
-	success = submit_try( args, condorID, jobType, prohibitMultiJobs );
+	success = submit_try( args, condorID, prohibitMultiJobs );
 
 	if( !success ) {
 	    debug_printf( DEBUG_QUIET, "ERROR: submit attempt failed\n" );
@@ -324,31 +282,29 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				"submit_event_notes = DAG Node: " ) + DAGNodeName;
 	args.AppendArg( submitEventNotes.Value() );
 
-		// workflowLogFile is non-null here if we need to tell the schedd to
-		// use that file as the default/workflow log for this node.
-	if ( workflowLogFile ) {
-			// We need to append the DAGman default log file to
-			// the log file list
-		args.AppendArg( "-a" );
-		std::string dlog( "dagman_log = " );
-		dlog += workflowLogFile;
-		args.AppendArg( dlog.c_str() );
-		debug_printf( DEBUG_VERBOSE, "Adding a DAGMan workflow log %s\n",
-					workflowLogFile );
+	ASSERT( workflowLogFile );
 
-			// Now append the mask
-		debug_printf( DEBUG_VERBOSE, "Masking the events recorded in the DAGMAN workflow log\n" );
-		args.AppendArg( "-a" );
-		std::string dmask("+");
-		dmask += ATTR_DAGMAN_WORKFLOW_MASK;
-		dmask += " = \"";
-		const char *eventMask = getEventMask();
-		debug_printf( DEBUG_VERBOSE, "Mask for workflow log is %s\n",
-					eventMask );
-		dmask += eventMask;
-		dmask += "\"";
-		args.AppendArg( dmask.c_str() );
-	}
+		// We need to append the DAGman default log file to
+		// the log file list
+	args.AppendArg( "-a" );
+	std::string dlog( "dagman_log = " );
+	dlog += workflowLogFile;
+	args.AppendArg( dlog.c_str() );
+	debug_printf( DEBUG_VERBOSE, "Adding a DAGMan workflow log %s\n",
+				workflowLogFile );
+
+		// Now append the mask
+	debug_printf( DEBUG_VERBOSE, "Masking the events recorded in the DAGMAN workflow log\n" );
+	args.AppendArg( "-a" );
+	std::string dmask("+");
+	dmask += ATTR_DAGMAN_WORKFLOW_MASK;
+	dmask += " = \"";
+	const char *eventMask = getEventMask();
+	debug_printf( DEBUG_VERBOSE, "Mask for workflow log is %s\n",
+				eventMask );
+	dmask += eventMask;
+	dmask += "\"";
+	args.AppendArg( dmask.c_str() );
 
 		// Suppress the job's log file if that option is enabled.
 	if ( workflowLogFile && dm._suppressJobLogs ) {
@@ -435,8 +391,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 	args.AppendArg( cmdFile );
 
-	bool success = do_submit( args, condorID, Job::TYPE_CONDOR,
-				dm.prohibitMultiJobs );
+	bool success = do_submit( args, condorID, dm.prohibitMultiJobs );
 
 	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
@@ -448,44 +403,6 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	return success;
 }
 
-//-------------------------------------------------------------------------
-bool
-stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
-			   const char* DAGNodeName, const char* directory )
-{
-	TmpDir		tmpDir;
-	MyString	errMsg;
-	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
-		debug_printf( DEBUG_QUIET,
-				"Could not change to DAG directory %s: %s\n",
-				directory, errMsg.Value() );
-		return false;
-	}
-
-  ArgList args;
-
-  args.AppendArg( dm.storkSubmitExe );
-  args.AppendArg( "-lognotes" );
-
-  MyString logNotes = MyString( "DAG Node: " ) + DAGNodeName;
-  args.AppendArg( logNotes.Value() );
-
-  args.AppendArg( cmdFile );
-
-  bool success = do_submit( args, condorID, Job::TYPE_STORK,
-  			dm.prohibitMultiJobs );
-
-	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
-		debug_printf( DEBUG_QUIET,
-				"Could not change to original directory: %s\n",
-				errMsg.Value() );
-		success = false;
-	}
-
-  return success;
-}
-
-//-------------------------------------------------------------------------
 // Subproc ID for "fake" events (for NOOP jobs).
 static int _subprocID = 0;
 
@@ -504,7 +421,7 @@ get_fake_condorID()
 //-------------------------------------------------------------------------
 bool
 fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName, 
-			   const char* directory, const char *logFile, bool logIsXml )
+			   const char* directory, const char *logFile )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -529,8 +446,8 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 
 	WriteUserLog ulog;
 	ulog.setEnableGlobalLog( false );
-	ulog.setUseXML( logIsXml );
-	ulog.initialize( std::vector<const char*>(1,logFile), condorID._cluster,
+	ulog.setUseXML( false );
+	ulog.initialize( logFile, condorID._cluster,
 		condorID._proc, condorID._subproc, NULL );
 
 	SubmitEvent subEvent;
@@ -570,7 +487,7 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 }
 
 bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName, 
-			   const char* directory, const char *logFile, bool logIsXml )
+			   const char* directory, const char *logFile )
 {
 	TmpDir tmpDir;
 	MyString	errMsg;
@@ -596,7 +513,7 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 
 	WriteUserLog ulog;
 	ulog.setEnableGlobalLog( false );
-	ulog.setUseXML( logIsXml );
+	ulog.setUseXML( false );
 	ulog.initialize( std::vector<const char*>(1,logFile), condorID._cluster,
 		condorID._proc, condorID._subproc, NULL );
 

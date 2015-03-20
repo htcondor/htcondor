@@ -56,6 +56,14 @@ that have a Winsock Layered Service Provider (LSP) installed.
 \item Added the PRE/POST script DEFER feature to \Condor{dagman}.
 \Ticket{4488}
 
+\item \Condor{dagman} no longer supports Stork jobs as DAG nodes.
+\Ticket{4550}
+
+\item \Condor{dagman} no longer has the capability to read individual per-
+job log files.  This means that recovery mode will no longer work on a
+DAG originally submitted with version 7.9.1 or earlier.
+\Ticket{4528}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -203,6 +211,7 @@ in their unevaluated, or raw form.
 file when node jobs go on hold.
 \Ticket{4766}
 
+<<<<<<< HEAD
 \item New python bindings can be used to query and set the 
 configuration variables of running daemons.
 \Ticket{4778}

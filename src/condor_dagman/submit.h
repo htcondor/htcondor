@@ -58,18 +58,14 @@ bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					const char* directory, const char *worflowLogFile,
 					bool prohibitMultiJobs, bool hold_claim );
 
-bool stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
-				   const char* DAGNodeName, const char* directory );
-
 void set_fake_condorID( int subprocID );
 
 bool fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
-					const char* directory, const char *logFile,
-					bool logIsXml );
+					const char* directory, const char *logFile );
 
 int get_fake_condorID();
 
 bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName, 
-			   const char* directory, const char *logFile, bool logIsXml );
+			   const char* directory, const char *logFile );
 
 #endif /* #ifndef CONDOR_SUBMIT_H */
