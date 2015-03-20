@@ -23,6 +23,7 @@
 #include "condor_attributes.h"
 #include "schedd_negotiate.h"
 
+
 ResourceRequestCluster::ResourceRequestCluster(int auto_cluster_id):
 	m_auto_cluster_id(auto_cluster_id)
 {
@@ -325,6 +326,8 @@ ScheddNegotiate::sendResourceRequestList(Sock *sock)
 		m_num_resource_reqs_sent++;
 		m_num_resource_reqs_to_send--;
 
+		extern void IncrementResourceRequestsSent();
+		IncrementResourceRequestsSent();
 	}
 
 	// Set m_num_resource_reqs_to_send to zero, as we are not sending

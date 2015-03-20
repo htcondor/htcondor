@@ -1586,6 +1586,8 @@ Scheduler::count_jobs()
 	return 0;
 }
 
+// schedd_negotiate.cpp doesn't have access to the stats, so it calls this function.
+void IncrementResourceRequestsSent() { scheduler.stats.ResourceRequestsSent += 1; }
 
 // create a list of ads similar to what we publish to the collector
 // however, if the input pQueryAd contains a STATISTICS_TO_PUBLISH attribute
