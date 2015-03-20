@@ -360,7 +360,7 @@ command_request_claim( Service*, int cmd, Stream* stream )
 		return FALSE;
 	}
 
-	rip = resmgr->get_by_any_id( id );
+	rip = resmgr->get_by_any_id( id, true );
 	if( !rip ) {
 		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, 
@@ -482,8 +482,10 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		}
 	}
 
-	// This should never happen unless get_by_any_id() changes.
-	EXCEPT("Neither pre nor cur claim matches claim id: %s",id);
+	// This must be a consumption policy claim id, for which a release
+	// action isn't valid.
+	rip->log_ignore( cmd, s );
+	free( id );
 	return FALSE;
 }
 
@@ -502,7 +504,7 @@ int command_suspend_claim( Service*, int cmd, Stream* stream )
 		return FALSE;
 	}
 
-	rip = resmgr->get_by_any_id( id );
+	rip = resmgr->get_by_cur_id( id );
 	if( !rip ) {
 		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
@@ -540,7 +542,7 @@ int command_continue_claim( Service*, int cmd, Stream* stream )
 		return FALSE;
 	}
 
-	rip = resmgr->get_by_any_id( id );
+	rip = resmgr->get_by_cur_id( id );
 	if( !rip ) 
 	{
 		ClaimIdParser idp( id );
@@ -681,7 +683,7 @@ command_match_info( Service*, int cmd, Stream* stream )
 		// Check resource state.  Ignore if we're preempting or
 		// matched, otherwise process the command. 
 	State s = rip->state();
-	if( s == matched_state || s == preempting_state ) {
+	if( s == matched_state || s == preempting_state || rip->r_has_cp ) {
 		rip->log_ignore( MATCH_INFO, s );
 		rval = FALSE;
 	} else {
