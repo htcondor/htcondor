@@ -186,6 +186,7 @@ void ScheddStatistics::InitMain()
 
    SCHEDD_STATS_ADD_RECENT(Pool, JobsSubmitted,        IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, Autoclusters,         IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, ResourceRequestsSent,      IF_BASICPUB);
 
    SCHEDD_STATS_ADD_RECENT(Pool, ShadowsStarted,            IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, ShadowsRecycled,           IF_VERBOSEPUB);

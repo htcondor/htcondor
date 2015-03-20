@@ -234,6 +234,31 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 		return -1;
 	}
 
+	// the SUBMIT macro set stores metaknobs directly in it's defaults table.
+	if (macro_set.options & CONFIG_OPT_SUBMIT_SYNTAX) {
+
+		StringList items(rhs);
+		items.rewind();
+		char * item;
+		while ((item = items.next()) != NULL) {
+			std::string metaname;
+			formatstr(metaname, "$%s.%s", name, item);
+			const char * value = lookup_macro_def(metaname.c_str(), subsys, macro_set);
+			if ( ! value) {
+				fprintf(stderr, "\nERROR: use %s: does not recognise %s\n", name, item);
+				return -1;
+			}
+			int ret = Parse_config_string(source, depth, value, macro_set, subsys);
+			if (ret < 0) {
+				const char * msg = "Internal Submit Error: use %s: %s is invalid\n";
+				if (ret == -2) msg = "\nERROR: use %s: %s nesting too deep\n"; 
+				fprintf(stderr, msg, name, item);
+				return ret;
+			}
+		}
+		return 0;
+	}
+
 	MACRO_TABLE_PAIR* ptable = param_meta_table(name);
 	if ( ! ptable)
 		return -1;
@@ -1165,7 +1190,6 @@ Parse_macros(
 				goto cleanup;
 			}
 		} else if (is_include) {
-#if 1
 			MACRO_SOURCE InnerSource;
 			FILE* fp = Open_macro_source(InnerSource, name, (is_include > 1), macro_set, config_errmsg);
 			if ( ! fp) { retval = -1; }
@@ -1185,27 +1209,6 @@ Parse_macros(
 				config_errmsg.clear();
 				goto cleanup;
 			}
-#else
-			FileSource.line = ConfigLineNo; // save current line number around the recursive call
-			if ((is_include > 1) && !is_piped_command(name)) {
-				std::string cmd(name); cmd += " |";
-				if (use_default_param_table) local_config_sources.append(cmd.c_str());
-				retval = Read_macros(cmd.c_str(), depth+1, macro_set, options, subsys, config_errmsg, fnSubmit, pvSubmitData);
-			} else {
-				if (use_default_param_table) local_config_sources.append(name);
-				retval = Read_macros(name, depth+1, macro_set, options, subsys, config_errmsg, fnSubmit, pvQueueData);
-			}
-			int last_line = ConfigLineNo; // get the exit line from the recursive call
-			ConfigLineNo = FileSource.line; // restore the global line number.
-
-			if (retval < 0) {
-				fprintf( stderr,
-							"%s Error \"%s\", Line %d, Include Depth %d: %s\n",
-							source_type, name, last_line, depth+1, config_errmsg.c_str());
-				config_errmsg.clear();
-				goto cleanup;
-			}
-#endif
 		} else if (is_submit && op == '=' && (*name == '+' || *name == '-')) {
 
 			// submit files have special +Attr= and -Attr= syntax that is used to store raw 
@@ -2531,7 +2534,7 @@ expand_macro(const char *value,
 
 					char * tmp2 = NULL;
 					if (strchr(mval, '$')) {
-						char * tmp2 = expand_macro(mval, macro_set, use_default_param_table, subsys, use);
+						tmp2 = expand_macro(mval, macro_set, use_default_param_table, subsys, use);
 						mval = tmp2;
 					}
 
@@ -2609,7 +2612,7 @@ expand_macro(const char *value,
 
 						char * tmp3 = NULL;
 						if (strchr(arg, '$')) {
-							char * tmp3 = expand_macro(arg, macro_set, use_default_param_table, subsys, use);
+							tmp3 = expand_macro(arg, macro_set, use_default_param_table, subsys, use);
 							arg = tmp3;
 						}
 
@@ -2630,7 +2633,7 @@ expand_macro(const char *value,
 
 						char * tmp3 = NULL;
 						if (strchr(arg, '$')) {
-							char * tmp3 = expand_macro(arg, macro_set, use_default_param_table, subsys, use);
+							tmp3 = expand_macro(arg, macro_set, use_default_param_table, subsys, use);
 							arg = tmp3;
 						}
 
@@ -2692,7 +2695,7 @@ expand_macro(const char *value,
 
 					char * tmp2 = NULL;
 					if (strchr(mval, '$')) {
-						char * tmp2 = expand_macro(mval, macro_set, use_default_param_table, subsys, use);
+						tmp2 = expand_macro(mval, macro_set, use_default_param_table, subsys, use);
 						mval = tmp2;
 					}
 

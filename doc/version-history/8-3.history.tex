@@ -53,6 +53,13 @@ that is defined by configuration variable
 that have a Winsock Layered Service Provider (LSP) installed.
 \Ticket{304}
 
+\item The new configuration variables \Macro{SUBMIT\_REQUIREMENT\_NAMES},
+\Macro{SUBMIT\_REQUIREMENT\_<Name>}, 
+and \Macro{SUBMIT\_REQUIREMENT\_<Name>\_REASON}
+support the ability to configure HTCondor to reject the submission
+of jobs that do not meet specified criteria.
+\Ticket{2640}
+
 \item Added the PRE/POST script DEFER feature to \Condor{dagman}.
 \Ticket{4488}
 
@@ -69,6 +76,11 @@ DAG originally submitted with version 7.9.1 or earlier.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug with \Condor{chirp} where generic events logged
+to the user log with the ulog command where written in the timezone
+of the execute machine, not the submit machine.
+\Ticket{4951}
 
 \item Fixed a bug in which a \Condor{collector} daemon would have been unable 
 to update its own ClassAd.

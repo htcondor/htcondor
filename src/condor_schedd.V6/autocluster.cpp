@@ -96,7 +96,7 @@ bool JobCluster::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, b
 		return false;
 	}
 
-	PRAGMA_REMIND("tj: is it worth checking to see if the significant attrs only changed order?")
+	//PRAGMA_REMIND("tj: is it worth checking to see if the significant attrs only changed order?")
 
 	const char * free_attrs = NULL;
 
@@ -451,7 +451,7 @@ bool AutoCluster::config(const char* significant_target_attrs)
 	if (changed) {
 		sig_attrs_changed = true;
 	} else if (sig_attrs_changed) {
-		PRAGMA_REMIND("tj: do we need to clear state here anyway?")
+		//PRAGMA_REMIND("tj: do we need to clear state here anyway?")
 		sig_attrs_changed = false;
 	}
 

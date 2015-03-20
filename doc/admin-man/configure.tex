@@ -7289,6 +7289,33 @@ SYSTEM_PERIODIC_REMOVE = \
   the \Condor{schedd} does use configuration variable \MacroNI{SLOT\_WEIGHT} 
   to weight running and idle job counts in the submitter ClassAd.
 
+\label{param:SubmitRequirementNames}
+\item[\Macro{SUBMIT\_REQUIREMENT\_NAMES}]
+  A comma and/or space separated list of unique names, 
+  where each is used in the formation
+  of a configuration variable name that will represent an expression
+  evaluated to decide whether or not to reject a job submission.
+  Each name in the list will be used in the name of
+  configuration variable \MacroNI{SUBMIT\_REQUIREMENT\_<Name>}.
+  There is no default value.
+
+\label{param:SubmitRequirementName}
+\item[\Macro{SUBMIT\_REQUIREMENT\_<Name>}]
+  A boolean expression evaluated by the \Condor{schedd} daemon
+  against a job ClassAd,
+  that when \Expr{False} causes the \Condor{schedd} to reject 
+  the submission of the job or cluster of jobs. 
+  \MacroNI{<Name>} corresponds to a name listed in 
+  \MacroNI{SUBMIT\_REQUIREMENT\_NAMES}.
+  There is no default value.
+
+\label{param:SubmitRequirementNameReason}
+\item[\Macro{SUBMIT\_REQUIREMENT\_<Name>\_REASON}]
+  An expression that evaluates to a string,
+  to be printed for the job submitter when \MacroNI{SUBMIT\_REQUIREMENT\_<Name>}
+  evaluates to \Expr{False} and the \Condor{schedd} rejects the job.
+  There is no default value.
+
 \end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Shadow-Config-File-Entries}\condor{shadow}

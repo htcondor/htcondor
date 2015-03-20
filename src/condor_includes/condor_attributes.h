@@ -436,6 +436,7 @@
 #define ATTR_PARENT_SLOT_ID "ParentSlotId"
 #define ATTR_RETIREMENT_TIME_REMAINING "RetirementTimeRemaining"
 #define ATTR_MAX_JOBS_RUNNING  "MaxJobsRunning"
+#define ATTR_CURB_MATCHMAKING "CurbMatchmaking"
 #define ATTR_MEMORY  "Memory"
 #define ATTR_MEMORY_USAGE  "MemoryUsage"
 #define ATTR_DETECTED_MEMORY  "DetectedMemory"

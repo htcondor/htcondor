@@ -329,7 +329,7 @@ ConstructClassAdLogTableEntry<JobQueueJob*>::Delete(ClassAd* &ad) const
 			// this is a cluster
 		} else {
 			// this is a job
-			PRAGMA_REMIND("tj: decrement autocluster use count here??")
+			//PRAGMA_REMIND("tj: decrement autocluster use count here??")
 		}
 	}
 	delete ad;
@@ -2655,7 +2655,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		// take this cluster_id and look at all of its procs to see if 
 		// need to be added to the main CronTab list of jobs.
 		//
-		PRAGMA_REMIND("tj: move this into the cluster job object?")
+		//PRAGMA_REMIND("tj: move this into the cluster job object?")
 		scheduler.addCronTabClusterId( cluster_id );
 	} else if ( strcasecmp( attr_name, ATTR_NUM_JOB_RECONNECTS ) == 0 ) {
 		int curr_cnt = 0;
@@ -3290,7 +3290,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 					// make sure the job objd and cluster object are populated
 				clusterad->jid = cluster_key;
 				procad->jid = job_id;
-				PRAGMA_REMIND("tj: make sure cluster pointer in JobObject cleaned up correctly.")
+				//PRAGMA_REMIND("tj: make sure cluster pointer in JobObject cleaned up correctly.")
 				procad->SetCluster(clusterad);
 				clusterad->IncrementNumProcs();
 				clusterad->PopulateFromAd();
