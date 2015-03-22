@@ -24,6 +24,7 @@
 #include "daemon.h"
 #include "dc_message.h"
 #include "stopwatch.h"
+#include "condor_config.h"
 
 DCMsg::DCMsg(int cmd):
 	m_cmd( cmd ),
@@ -254,6 +255,7 @@ DCMessenger::DCMessenger( classy_counted_ptr<Daemon> daemon )
 	m_callback_msg = NULL;
 	m_callback_sock = NULL;
 	m_pending_operation = NOTHING_PENDING;
+	m_receive_messages_duration_ms = param_integer("RECEIVE_MSGS_DURATION",0,0);
 }
 
 DCMessenger::DCMessenger( classy_counted_ptr<Sock> sock ):
@@ -262,6 +264,7 @@ DCMessenger::DCMessenger( classy_counted_ptr<Sock> sock ):
 	m_callback_msg = NULL;
 	m_callback_sock = NULL;
 	m_pending_operation = NOTHING_PENDING;
+	m_receive_messages_duration_ms = param_integer("RECEIVE_MSGS_DURATION",0,0);
 }
 
 DCMessenger::~DCMessenger()
@@ -523,6 +526,17 @@ DCMessenger::receiveMsgCallback(Stream *sock)
 		daemonCore->Cancel_Socket( sock );
 
 		ASSERT( sock );
+
+			// Invoke readMsg() to read and process the message.
+			// Note that in some cases, the callback to process the
+			// message will invoke startReceiveMsg() if it wants to
+			// receive another message; this is the case
+			// in class ScheddNegotiate for instance.  When this
+			// happens, m_pending_operation will get reset to
+			// RECEIVE_MSG_PENDING, and we may end up looping
+			// again via the do/while block below to read the
+			// next message if it is ready without going back to DC.
+			// See gt #4928.
 		readMsg( msg, (Sock *)sock );
 
 		cur_state = m_pending_operation;
@@ -530,7 +544,9 @@ DCMessenger::receiveMsgCallback(Stream *sock)
 	}
 		// Note that we do not access m_pending_operation after
 		// decRefCount is called - that may have deleted our object.
-	while (cur_state != NOTHING_PENDING && (watch.get_ms() < 1000));
+	while ((cur_state == RECEIVE_MSG_PENDING) &&
+		   (m_receive_messages_duration_ms > 0) &&
+		   (watch.get_ms() < m_receive_messages_duration_ms));
 
 	return KEEP_STREAM;
 }
