@@ -7487,7 +7487,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			std::string empties;
 			while ((var = vars.next())) {
 				MACRO_ITEM* pitem = find_macro_item(var, SubmitMacroSet);
-				if (pitem->raw_value != EmptyItemString && 0 == strlen(pitem->raw_value)) {
+				if ( ! pitem || (pitem->raw_value != EmptyItemString && 0 == strlen(pitem->raw_value))) {
 					if ( ! empties.empty()) empties += ",";
 					empties += var;
 				}
