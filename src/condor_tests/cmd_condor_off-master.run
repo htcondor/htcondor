@@ -1,0 +1,62 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+my $append_condor_configSP = '
+  USE_SHARED_PORT = True
+  DAEMON_LIST = MASTER,SHARED_PORT,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+
+  SHARED_PORT_DEBUG = D_COMMAND | D_FULLDEBUG
+
+  # named sockets cannot have very long paths (~100 chars), so put them
+  # in /tmp to avoid problems
+  DAEMON_SOCKET_DIR = /tmp/$(USERNAME)-condor-test-sock
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_configSP
+);
+
+# verify that a job runs
+SimpleJob::RunCheck();
+
+# verify that at least one connection request was made via shared port server
+CondorLog::RunCheck(
+    daemon => "SHARED_PORT",
+    match_regexp => "SharedPortServer: request from SCHEDD"
+);
+
+my $append_condor_configREG = '
+  USE_SHARED_PORT = false
+  DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_configREG
+);
+
+# verify that a job runs
+SimpleJob::RunCheck();
+
+CondorTest::EndTest();
+system("condor_config_val log");
