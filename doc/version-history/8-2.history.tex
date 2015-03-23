@@ -89,9 +89,9 @@ Daylight Saving Time when using timestamp values.
 \item If \MacroNI{CONSUMPTION\_POLICY} is enabled for a partitionable slot,
 then \MacroNI{CLAIM\_PARTITIONABLE\_LEFTOVERS} will be treated as
 \Expr{False} for that slot.
-These features are conflicting ways to efficiently allocate a
-partitionable slot to multiple job requests. Enabling both for the same
-slot causes problems.
+This avoids a problem, because claims using a consumption policy
+and the use of \MacroNI{CLAIM\_PARTITIONABLE\_LEFTOVERS} conflict
+with each other.
 \Ticket{4950}
 
 \item Fixed a bug that could have caused a partitionable slot to remain in
