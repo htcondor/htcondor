@@ -42,6 +42,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where we were looking for \Macro{IsOwner} instead of
+\Macro{IS\_OWNER} in the configuration.  Now, you can specify either,
+and \Macro{IsOwner} takes precedence.
+\Ticket{4949}
+
 \item Fixed a bug that could cause the \Condor{schedd} to crash
 when removing jobs that were in the process of being submitted
 using \Condor{submit} with a \Opt{-spool} or \Opt{-remote} 
@@ -67,6 +72,31 @@ and/or could cause delays when shutting down the HTCondor service.
 updates to fail once the view collector is restarted if the 
 updates are being sent via TCP.
 \Ticket{4915}
+
+\item Fixed bugs in ClassAds and the Python bindings with handling
+Daylight Saving Time when using timestamp values.
+\Ticket{4936}
+\Ticket{4937}
+
+\item Upon reboot of a submit machine, fixed a bug that would 
+	prevent successful reconnection with
+	a previously running job 
+	using streaming I/O via submit file
+	options \SubmitCmdNI{stream\_output} or \SubmitCmdNI{stream\_error}.
+\Ticket{4939}
+
+\item If \MacroNI{CONSUMPTION\_POLICY} is enabled for a partitionable slot,
+then \MacroNI{CLAIM\_PARTITIONABLE\_LEFTOVERS} will be treated as
+\Expr{False} for that slot.
+These features are conflicting ways to efficiently allocate a
+partitionable slot to multiple job requests. Enabling both for the same
+slot causes problems.
+\Ticket{4950}
+
+\item Fixed a bug that could cause a partitionable slot to remain in
+Matched state forever when \MacroNI{CONSUMPTION\_POLICY} and
+\MacroNI{NEGOTIATOR\_INFORM\_STARTD} are set to \Expr{True}.
+\Ticket{4945}
 
 \end{itemize}
 

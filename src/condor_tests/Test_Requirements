@@ -82,7 +82,7 @@ job_core_sh-loop_van: personal
 job_dagman_abnormal_term_recovery_retries: personal
 job_dagman_abort-A: personal
 job_dagman_abort-B: personal
-job_dagman_abort-final-A: cygwin, personal
+job_dagman_abort-final-A: personal
 job_dagman_abort-final-B: personal
 job_dagman_always_run_post-A: personal
 job_dagman_always_run_post-B: personal
