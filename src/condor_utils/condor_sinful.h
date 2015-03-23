@@ -33,6 +33,9 @@
 
 #include <string>
 #include <map>
+#include <vector>
+
+#include "condor_sockaddr.h"
 
 class Sinful {
  public:
@@ -48,7 +51,7 @@ class Sinful {
 	// returns the port portion of the sinful string
 	char const *getPort() const { if( m_port.empty() ) return NULL; else return m_port.c_str(); }
 
-		// returns -1 if port not set; o.w. port number
+	// returns -1 if port not set; o.w. port number
 	int getPortNum() const;
 
 	void setHost(char const *host);
@@ -76,6 +79,13 @@ class Sinful {
 	bool noUDP() const;
 	void setNoUDP(bool flag);
 
+
+	// You must delete the return if it's not NULL.
+	std::vector< condor_sockaddr > * getAddrs() const;
+	void addAddrToAddrs( const condor_sockaddr & sa );
+	void clearAddrs();
+
+
 	// generic param interface
 
 	// returns the value of the named parameter (may be NULL)
@@ -97,6 +107,8 @@ class Sinful {
 	std::string m_alias;
 	std::map<std::string,std::string> m_params; // key value pairs from params
 	bool m_valid;
+
+	std::vector< condor_sockaddr > addrs;
 
 	void regenerateSinful();
 };

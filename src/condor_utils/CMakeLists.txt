@@ -185,6 +185,8 @@ condor_exe_test(test_log_reader_state "test_log_reader_state.cpp" "${CONDOR_TOOL
 condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_libcondorapi "test_libcondorapi.cpp" "condorapi")
 
+condor_exe_test(test_sinful "test_sinful.cpp" "${CONDOR_TOOL_LIBS}" )
+
 ##################################################
 # std universe stubgen stuff
 if (STD_UNIVERSE)

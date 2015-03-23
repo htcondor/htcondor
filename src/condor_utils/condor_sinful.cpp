@@ -224,6 +224,21 @@ Sinful::Sinful(char const *sinful)
 				if( !parseUrlEncodedParams(params,m_params) ) {
 					m_valid = false;
 				}
+
+				char const * addrsString = getParam( "addrs" );
+				if( addrsString != NULL ) {
+					StringList sl( addrsString, " " );
+					sl.rewind();
+					char * addrString = NULL;
+					while( (addrString = sl.next()) != NULL ) {
+						condor_sockaddr sa;
+						if( sa.from_ip_string( addrString ) ) {
+							addrs.push_back( sa );
+						} else {
+							m_valid = false;
+						}
+					}
+				}
 			}
 		}
 		free( host );
@@ -395,7 +410,7 @@ Sinful::regenerateSinful()
 bool
 Sinful::addressPointsToMe( Sinful const &addr ) const
 {
-	bool addrs_match = false;
+	bool addr_matches = false;
 
 	// Confirm that ports match. Don't even bother checking the addresses if ports don't match.
 	if ( getHost() && getPort() && addr.getPort() && !strcmp(getPort(),addr.getPort()) )
@@ -403,8 +418,11 @@ Sinful::addressPointsToMe( Sinful const &addr ) const
 		// Check if host addresses match
 		if( addr.getHost() && !strcmp(getHost(),addr.getHost()) )
 		{
-			addrs_match = true;
-		} 
+			addr_matches = true;
+		}
+
+		// FIXME: Is it sufficient, when advertising addrs, that only the
+		// "primary" address matches?
 
 		// We may have failed to match host addresses above, but we now need
 		// to cover the case of the loopback interface (aka 127.0.0.1).  A common
@@ -414,27 +432,27 @@ Sinful::addressPointsToMe( Sinful const &addr ) const
 		// so we can use method is_loopback(), which correctly handles both IPv4 and IPv6.
 		Sinful oursinful( global_dc_sinful() );
 		condor_sockaddr addrsock;
-		if( !addrs_match && oursinful.getHost() && !strcmp(getHost(),oursinful.getHost()) &&
+		if( !addr_matches && oursinful.getHost() && !strcmp(getHost(),oursinful.getHost()) &&
 			addr.getSinful() && addrsock.from_sinful(addr.getSinful()) && addrsock.is_loopback() )
 		{
-			addrs_match = true;
+			addr_matches = true;
 		}
 	}
 
 	// The addrs and ports match, but if shared_port is in use, we need to confirm the
 	// shared port id also matches.
-	if (addrs_match)
+	if (addr_matches)
 	{
 		char const *spid = getSharedPortID();
 		char const *addr_spid = addr.getSharedPortID();
 		if( (spid == NULL && addr_spid == NULL) ||			// case without shared port
 			(spid && addr_spid && !strcmp(spid,addr_spid)) 	// case with shared port
-		  ) 
+		  )
 		{
 			return true;
 		}
 	}
-	
+
 	// Public address failed to match, but now need to do it all over again checking
 	// the private address.
 	if( getPrivateAddr() ) {
@@ -452,4 +470,27 @@ Sinful::getPortNum() const
 		return -1;
 	}
 	return atoi( getPort() );
+}
+
+std::vector< condor_sockaddr > *
+Sinful::getAddrs() const {
+	return new std::vector< condor_sockaddr >( addrs );
+}
+
+void
+Sinful::addAddrToAddrs( const condor_sockaddr & sa ) {
+	addrs.push_back( sa );
+	StringList sl;
+	for( unsigned i = 0; i < addrs.size(); ++i ) {
+		sl.append( addrs[i].to_ip_string().c_str() );
+	}
+	char * slString = sl.print_to_delimed_string( " " );
+	setParam( "addrs", slString );
+	free( slString );
+}
+
+void
+Sinful::clearAddrs() {
+	addrs.clear();
+	setParam( "addrs", NULL );
 }
