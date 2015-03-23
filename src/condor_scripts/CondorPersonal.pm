@@ -1529,7 +1529,7 @@ sub NewIsDownYet {
 	} else {
 		#print "This config does not have a condor instance condor_name:$config\n";
 	}
-	my $res = StateChange("down", $config, 40, 40);
+	my $res = StateChange("down", $config, 120, 160);
 	return $res;
 }
 

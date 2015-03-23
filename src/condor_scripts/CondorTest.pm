@@ -188,6 +188,23 @@ sub EndTest
     if( Cleanup() == 0 ) {
 	$exit_status = 1;
     }
+
+	# at this point all the personals started should be stopped
+	# so we will validate this and if we can not, this adds a negative result.
+	
+	my $amidown = "";
+	foreach my $name (sort keys %personal_condors) {
+		$amidown = "";
+		print "EndTest:checking this named instance:$name for being down\n";
+        my $condor = $personal_condors{$name};
+		$amidown = CondorPersonal::ProcessStateWanted($condor->{condor_config});
+		if($amidown ne "down") {
+			# this one not down add negative result, BROADCAST and check rest
+			RegisterResult(0,"test_name","$handle");
+			print "********* This condor:$name failed to come all the way down *********\n";
+		}
+	}
+	
 	# Cleanup stops all personals in test which triggers a CoreCheck per personal
 	# not all tests call RegisterResult yet and I changed the ordering in remote_task
 	# so to insure the presence of at least one call to RegisterResult passing the
@@ -296,9 +313,11 @@ sub TempFileName
 
 sub Reset
 {
+	print "In CondorTest::Reset\n";
     %machine_ads = ();
 	Condor::Reset();
 	$hoststring = "notset:000";
+	$failed_coreERROR = "";
 }
 
 sub SetExpected
@@ -773,8 +792,6 @@ sub StartTest
 		return($retval);
 	}
 	
-	$failed_coreERROR = "";
-
 	TestDebug("RunTest says test: $handle\n",2);;
 	# moved the reset to preserve callback registrations which includes
 	# an error callback at submit time..... Had to change timing
@@ -2437,7 +2454,7 @@ sub slurp {
 # turning on, Unknown
 # turning on, Not Run Yet
 # turning on, Coming up
-# turning on, mater alive
+# turning on, master alive
 # turning on, collector alive
 # turning on, collector knows xxxxx
 # turning on, all daemons
@@ -2458,7 +2475,7 @@ sub slurp {
 # As noted above, the state of a personal condor is directional. It matters
 # if it is coming alive or shuting down.
 #
-# Note the vaiance of the fields from condor who.
+# Note the variance of the fields from condor who.
 #
 # Daemon       Alive  PID    PPID   Exit   Addr                     Executable
 # ------       -----  ---    ----   ----   ----                     ----------
@@ -2479,7 +2496,7 @@ sub slurp {
 #
 # We are switching from parsing this data with regular expressions to
 # collecting a daemons information into a hash with up to 7 entries.
-# These must be collected dynamically per daemon. We need a stoage 
+# These must be collected dynamically per daemon. We need a storage 
 # method for the collection of daemons which make up a personal condor
 # and a way to store the current state.
 #
@@ -3020,9 +3037,11 @@ sub StartPersonal {
 	}
 
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    #print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
+    print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
+	print "version:$version config:$condor_config\n";
     my $new_condor = new PersonalCondorInstance( $version, $condor_config, $collector_addr, 1 );
-    $personal_condors{$version} = $new_condor;
+	StoreCondorInstance("StartPersonal",$version,$new_condor);
+    #$personal_condors{$version} = $new_condor;
 	# assume we are creating so we may bring it up, thus direction up or down now up.
 	$new_condor->SetCondorDirection("up");
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
@@ -3031,12 +3050,20 @@ sub StartPersonal {
     return($condor_info);
 }
 
+sub StoreCondorInstance {
+	my $caller = shift;
+	my $instancename = shift;
+	my $instance = shift;
+	print "StoreCondorInstance: caller:$caller name:$instancename assign instance:$instance\n";
+    $personal_condors{$instancename} = $instance;
+}
+
 sub CreateAndStoreCondorInstance
 {
 	my $version = shift;
 	my $condorconfig = shift;
 	my $collectoraddr = shift;
-#print "CreateAndStoreCondorInstance: version: $version config: $condorconfig\n";
+print "CreateAndStoreCondorInstance: version:<$version> config: $condorconfig\n";
 	my $amalive = shift;
 
 	if(CondorUtils::is_windows() == 1) {
@@ -3056,8 +3083,9 @@ sub CreateAndStoreCondorInstance
 
 	#print "\n\n\n\n***** NewPersonalInstance identified by:$condorconfig *****\n\n\n\n\n";
 	my $new_condor = new PersonalCondorInstance( $version, $condorconfig, $collectoraddr, $amalive );
-	$personal_condors{$version} = $new_condor;
-#print "Condor instance returned:  $new_condor\n";
+	StoreCondorInstance("CreateAndStoreCondorInstance",$version,$new_condor);
+	#$personal_condors{$version} = $new_condor;
+print "Condor instance returned:  $new_condor\n";
 	# assume we are creating so we may bring it up, thus direction up or down now up.
 	$new_condor->SetCondorDirection("up");
 	return($personal_condors{$version});
@@ -3097,7 +3125,9 @@ sub StartCondorWithParams
 
     if( exists $personal_condors{$condor_name} ) {
 		die "condor_name=$condor_name already exists!";
-    }
+    } else {
+		print "StartCondorWithParams:<$condor_name> not in condor_personal hash yet\n";
+	}
 
     if( ! exists $condor_params{test_name} ) {
 		$condor_params{test_name} = GetDefaultTestName();
@@ -3132,7 +3162,8 @@ sub StartCondorWithParams
 	$new_condor->SetCollectorAddress($collector_addr);
 	$new_condor->SetCondorAlive(1);
 
-    $personal_condors{$condor_name} = $new_condor;
+	#print "EndofStartCondorWithparams : index into personal_condors with name:<$condor_name> and assignong:$new_condor\n";
+    #$personal_condors{$condor_name} = $new_condor;
 
     return $new_condor;
 }
@@ -3167,7 +3198,9 @@ sub StartCondorWithParamsStart
 	#$new_condor->DisplayWhoDataInstances();
 	#$new_condor->{is_running} = 1;
 
-    $personal_condors{$condor_name} = $new_condor;
+	print "StartCondorWithParamsStart : index into personal_condors with name:<$condor_name> and assignong:$new_condor\n";
+	StoreCondorInstance("StartCondorWithParamsStart",$condor_name,$new_condor);
+    #$personal_condors{$condor_name} = $new_condor;
 
     return $new_condor;
 }
