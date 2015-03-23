@@ -19,9 +19,9 @@ BEGIN {
 
 package CondorUtils;
 
-if(CondorUtils::is_windows()) {
-	use Win32::Pipe;
-}
+#if(CondorUtils::is_windows()) {
+	#use Win32::Pipe;
+#}
 
 our $VERSION = '1.00';
 my $btdebug = 0;
