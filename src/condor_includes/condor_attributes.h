@@ -81,6 +81,7 @@
 #define ATTR_CKPT_LAST_READ  "CkptLastRead"
 #define ATTR_CKPT_OPSYS  "CkptOpSys"
 #define ATTR_PAIRED_CLAIM_ID  "PairedClaimId"
+#define ATTR_CHECKPOINT_SIG  "CheckpointSig"
 #define ATTR_CHILD_CLAIM_IDS "ChildClaimIds"
 #define ATTR_CLAIM_ID  "ClaimId"
 #define ATTR_CLAIM_IDS  "ClaimIds"
@@ -435,6 +436,7 @@
 #define ATTR_PARENT_SLOT_ID "ParentSlotId"
 #define ATTR_RETIREMENT_TIME_REMAINING "RetirementTimeRemaining"
 #define ATTR_MAX_JOBS_RUNNING  "MaxJobsRunning"
+#define ATTR_CURB_MATCHMAKING "CurbMatchmaking"
 #define ATTR_MEMORY  "Memory"
 #define ATTR_MEMORY_USAGE  "MemoryUsage"
 #define ATTR_DETECTED_MEMORY  "DetectedMemory"
@@ -703,6 +705,7 @@
 #define ATTR_WANT_DELAYED_UPDATES "WantDelayedUpdates"
 #define ATTR_WANT_MATCH_DIAGNOSTICS  "WantMatchDiagnostics"
 #define ATTR_WANT_PARALLEL_SCHEDULING_GROUPS  "WantParallelSchedulingGroups"
+#define ATTR_WANT_CHECKPOINT_SIGNAL  "WantCheckpointSignal"
 #define ATTR_WANT_PSLOT_PREEMPTION  "WantPslotPreemption"
 #define ATTR_WANT_REMOTE_SYSCALLS  "WantRemoteSyscalls"
 #define ATTR_WANT_REMOTE_IO  "WantRemoteIO"
@@ -896,6 +899,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_WEIGHTED_RUNNING_JOBS "WeightedRunningJobs"
 
 //************* Added for EC2 Jobs ***************************//
+#define ATTR_EC2_ACCESS_KEY  "EC2AccessKey"
 #define ATTR_EC2_ACCESS_KEY_ID  "EC2AccessKeyId"
 #define ATTR_EC2_SECRET_ACCESS_KEY  "EC2SecretAccessKey"
 #define ATTR_EC2_AMI_ID  "EC2AmiID"
@@ -930,6 +934,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_REQUEST_CPUS  "RequestCpus"
 #define ATTR_REQUEST_MEMORY  "RequestMemory"
 #define ATTR_REQUEST_DISK  "RequestDisk"
+#define ATTR_REQUEST_VIRTUAL_MEMORY  "RequestVirtualMemory"
 
 // machine resource prefixes
 #define ATTR_REQUEST_PREFIX  "Request"

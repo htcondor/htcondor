@@ -17,4 +17,4 @@
  ############################################################### 
 
 
-condor_exe( condor_submit "submit.cpp;submit_protocol.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF )
+condor_exe( condor_submit "submit.cpp;submit_protocol.cpp;submit_glob.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF )

@@ -104,6 +104,7 @@ typedef struct ScheddStatistics : public ScheddJobCounters {
    time_t RecentStatsTickTime;   // last time Recent values Advanced
 
    stats_entry_recent<int> Autoclusters;   // number of active autoclusters
+   stats_entry_recent<int> ResourceRequestsSent;   // number of resource requests
 
    // These track how successful the schedd was at reconnecting to
    // running jobs after the last restart.

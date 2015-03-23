@@ -127,6 +127,9 @@ bool find_user_file(MyString & filename, const char * basename, bool check_acces
 //extern int	ConfigLineNo;
 }  /* End extern "C" */
 
+// pull from config.cpp
+extern "C++" void param_default_set_use(const char * name, int use, MACRO_SET & set);
+
 
 // Global variables
 static MACRO_DEFAULTS ConfigMacroDefaults = { 0, NULL, NULL };
@@ -1820,49 +1823,6 @@ clear_config()
 	return;
 }
 
-template <typename T>
-int BinaryLookupIndex (const T aTable[], int cElms, const char * key, int (*fncmp)(const char *, const char *))
-{
-	if (cElms <= 0)
-		return -1;
-
-	int ixLower = 0;
-	int ixUpper = cElms-1;
-	for (;;) {
-		if (ixLower > ixUpper)
-			return -1; // -1 for not found
-
-		int ix = (ixLower + ixUpper) / 2;
-		int iMatch = fncmp(aTable[ix].key, key);
-		if (iMatch < 0)
-			ixLower = ix+1;
-		else if (iMatch > 0)
-			ixUpper = ix-1;
-		else
-			return ix;
-	}
-}
-
-static int param_default_get_index(const char * name, MACRO_SET & set)
-{
-	MACRO_DEFAULTS * defs = set.defaults;
-	if ( ! defs || ! defs->table)
-		return -1;
-
-	return BinaryLookupIndex<const MACRO_DEF_ITEM>(defs->table, defs->size, name, strcasecmp);
-}
-
-void param_default_set_use(const char * name, int use, MACRO_SET & set)
-{
-	MACRO_DEFAULTS * defs = set.defaults;
-	if ( ! defs || ! defs->metat)
-		return;
-	int ix = param_default_get_index(name, set);
-	if (ix >= 0) {
-		defs->metat[ix].use_count += (use&1);
-		defs->metat[ix].ref_count += (use>>1)&1;
-	}
-}
 
 /*
 ** Return the value associated with the named parameter.  Return NULL

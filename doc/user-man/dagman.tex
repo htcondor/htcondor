@@ -1,3 +1,4 @@
+%TEMPTEMP -- remove all references to Stork once this gets merged w/ Karen's update
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:DAGMan}DAGMan Applications}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -82,7 +83,7 @@ The input file used by DAGMan is called a DAG input file.
 It specifies the nodes of the DAG as well as the dependencies
 that order the DAG.
 All items are optional, except that there must be at least one \Arg{JOB}
-or \Arg{DATA} item.
+item.
 
 Comments may be placed in the DAG input file.
 The pound character (\verb@#@) as the first character on a
@@ -204,43 +205,7 @@ and the HTCondor job will not be submitted.
 \index{DAGMan input file!DATA keyword}
 \item \Bold{DATA}
 
-The \Arg{DATA} keyword specifies a job to be managed by the Stork data
-placement server.  
-Stork software is provided by the Stork project.
-Please refer to their website: 
-\URL{http://www.cct.lsu.edu/~kosar/stork/index.php}.
-
-The syntax used for each \Arg{DATA} entry is
-
-\Opt{DATA} \Arg{JobName} \Arg{SubmitDescriptionFileName}
-\oOptArg{DIR}{directory} \oOpt{NOOP} \oOpt{DONE}
-
-A \Arg{DATA} entry maps a \Arg{JobName} to a Stork submit description file.
-In all other respects, the \Arg{DATA} keyword is identical to the
-\Arg{JOB} keyword.
-
-The keywords \Arg{DIR}, \Arg{NOOP} and \Arg{DONE} 
-follow the same rules and restrictions, and they have the same effect
-for \Opt{DATA} nodes as they do for \Opt{JOB} nodes.
-
-Here is an example of a simple DAG that stages in data using Stork,
-processes the data using HTCondor, 
-and stages the processed data out using Stork.
-Depending upon the implementation, multiple data jobs to stage in data
-or to stage out data
-may be run in parallel.
-
-\footnotesize
-\begin{verbatim}
-    DATA    STAGE_IN1  stage_in1.stork
-    DATA    STAGE_IN2  stage_in2.stork
-    JOB     PROCESS    process.condor 
-    DATA    STAGE_OUT1 stage_out1.stork
-    DATA    STAGE_OUT2 stage_out2.stork
-    PARENT  STAGE_IN1 STAGE_IN2 CHILD PROCESS
-    PARENT  PROCESS CHILD STAGE_OUT1 STAGE_OUT2
-\end{verbatim}
-\normalsize
+As of version 8.3.5, \Condor{dagman} no longer supports DATA nodes.
 
 %----------------------------
 \label{dagman:ParentChild}
@@ -313,9 +278,11 @@ executed.
 
 The syntax used for each \Arg{PRE} or \Arg{POST} entry is
 
-\Opt{SCRIPT} \Opt{PRE} \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
+\Opt{SCRIPT} \oOptArg{DEFER}{status time}
+\Opt{PRE} \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
-\Opt{SCRIPT} \Opt{POST}  \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
+\Opt{SCRIPT} \oOptArg{DEFER}{status time}
+\Opt{POST}  \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
 The \Arg{SCRIPT} keyword is followed by either
 the \Arg{PRE} or \Arg{POST} keyword,
@@ -334,6 +301,13 @@ the submit machine is not necessarily
 the same machine upon which the node's job is run.
 Further, a single cluster of HTCondor jobs may be
 spread across several machines.
+
+% TEMP -- probably need to clarify this...
+If the \Arg{DEFER} option is specified, and the script exits with the
+exit code \Arg{status}, the script will be retried after \Arg{time}
+seconds (or longer), rather than being considered failed.  While
+deferred, a script does not count against the \Arg{maxpre} or
+\Arg{maxpost} limit.
 
 A PRE script is commonly used
 to place files in a staging area for the jobs to use.

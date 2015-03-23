@@ -354,7 +354,7 @@ UserProc::getStdFile( std_file_type type,
 		//////////////////////
 	if( wants_stream && ! is_null_file ) {
 		StreamHandler *handler = new StreamHandler;
-		if( !handler->Init(filename, stream_name, is_output) ) {
+		if( !handler->Init(filename, stream_name, is_output, streamingOpenFlags( is_output ) ) ) {
 			MyString err_msg;
 			err_msg.formatstr( "unable to establish %s stream", phrase );
 			Starter->jic->notifyStarterError( err_msg.Value(), true,
@@ -363,8 +363,8 @@ UserProc::getStdFile( std_file_type type,
 			return false;
 		}
 		*out_fd = handler->GetJobPipe();
-		dprintf( D_ALWAYS, "%s: streaming from remote file %s\n",
-				 log_header, filename );
+		dprintf( D_ALWAYS, "%s: streaming %s remote file %s\n",
+				 log_header, is_output ? "to" : "from", filename );
 		return true;
 	}
 
@@ -429,7 +429,7 @@ UserProc::openStdFile( std_file_type type,
 		// we got back
 	bool is_output = (type != SFT_IN);
 	if( is_output ) {
-		int flags = O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | O_LARGEFILE;
+		int flags = outputOpenFlags();
 		fd = safe_open_wrapper_follow( filename.Value(), flags, 0666 );
 		if( fd < 0 ) {
 				// if failed, try again without O_TRUNC

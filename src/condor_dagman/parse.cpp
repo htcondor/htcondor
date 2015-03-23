@@ -52,12 +52,12 @@ static bool _useDagDir = false;
 static int _thisDagNum = -1;
 static bool _mungeNames = true;
 
-static bool parse_subdag( Dag *dag, Job::job_type_t nodeType,
+static bool parse_subdag( Dag *dag,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory);
 
-static bool parse_node( Dag *dag, Job::job_type_t nodeType,
+static bool parse_node( Dag *dag,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
 						const char *directory, const char *inlineOrExt,
@@ -220,7 +220,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		//
 		if(strcasecmp(token, "JOB") == 0) {
 			parsed_line_successfully = parse_node( dag, 
-					   Job::TYPE_CONDOR, token,
+					   token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
 		}
@@ -229,41 +229,35 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Example Syntax is:  DATA j1 j1.dapsubmit [DONE]
 		//
 		else if	(strcasecmp(token, "DAP") == 0) {	// DEPRECATED!
-			parsed_line_successfully = parse_node( dag,
-					   Job::TYPE_STORK, token,
-					   filename, lineNumber, tmpDirectory.Value(), "",
-					   "submitfile" );
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"Warning: the DAP token is deprecated and may be unsupported "
-				"in a future release.  Use the DATA token\n",
+				"ERROR: the DAP token is no longer supported\n",
 				filename, lineNumber );
-			check_warning_strictness( DAG_STRICT_2 );
+			parsed_line_successfully = false;
 		}
 
 		else if	(strcasecmp(token, "DATA") == 0) {
-			parsed_line_successfully = parse_node( dag,
-					   Job::TYPE_STORK, token,
-					   filename, lineNumber, tmpDirectory.Value(), "",
-					   "submitfile");
+			debug_printf( DEBUG_QUIET, "%s (line %d): "
+				"ERROR: the DATA token is no longer supported\n",
+				filename, lineNumber );
+			parsed_line_successfully = false;
 		}
 
 		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
 			parsed_line_successfully = parse_subdag( dag, 
-						Job::TYPE_CONDOR,
 						token, filename, lineNumber, tmpDirectory.Value() );
 		}
 
 		// Handle a FINAL spec
 		else if(strcasecmp(token, "FINAL") == 0) {
 			parsed_line_successfully = parse_node( dag, 
-					   Job::TYPE_CONDOR, token,
+					   token,
 					   filename, lineNumber, tmpDirectory.Value(), "",
 					   "submitfile" );
 		}
 
 		// Handle a SCRIPT spec
-		// Example Syntax is:  SCRIPT (PRE|POST) JobName ScriptName Args ...
+		// Example Syntax is:  SCRIPT (PRE|POST) [DEFER status time] JobName ScriptName Args ...
 		else if ( strcasecmp(token, "SCRIPT") == 0 ) {
 			parsed_line_successfully = parse_script(endline, dag, 
 				filename, lineNumber);
@@ -422,7 +416,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 }
 
 static bool 
-parse_subdag( Dag *dag, Job::job_type_t nodeType,
+parse_subdag( Dag *dag, 
 			const char* nodeTypeKeyword,
 			const char* dagFile, int lineNum, const char *directory )
 {
@@ -433,7 +427,7 @@ parse_subdag( Dag *dag, Job::job_type_t nodeType,
 		return false;
 	}
 	if ( !strcasecmp( inlineOrExt, "EXTERNAL" ) ) {
-		return parse_node( dag, nodeType, nodeTypeKeyword, dagFile,
+		return parse_node( dag, nodeTypeKeyword, dagFile,
 					lineNum, directory, " EXTERNAL", "dagfile" );
 	}
 
@@ -443,7 +437,7 @@ parse_subdag( Dag *dag, Job::job_type_t nodeType,
 }
 
 static bool 
-parse_node( Dag *dag, Job::job_type_t nodeType,
+parse_node( Dag *dag, 
 			const char* nodeTypeKeyword,
 			const char* dagFile, int lineNum, const char *directory,
 			const char *inlineOrExt, const char *submitOrDagFile)
@@ -582,8 +576,8 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 
 	// looks ok, so add it
 	bool isFinal = strcasecmp( nodeTypeKeyword, "FINAL" ) == MATCH;
-	if( !AddNode( dag, nodeType, nodeName, directory,
-				submitFile, NULL, NULL, noop, done, isFinal, whynot ) )
+	if( !AddNode( dag, nodeName, directory,
+				submitFile, noop, done, isFinal, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );
@@ -615,7 +609,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 //
 // Function: parse_script
 // Purpose:  Parse a line of the format:
-//             SCRIPT (PRE|POST) JobName ScriptName Args ...
+//             SCRIPT [DEFER status time] (PRE|POST) JobName ScriptName Args ...
 //
 //-----------------------------------------------------------------------------
 static bool 
@@ -625,30 +619,89 @@ parse_script(
 	const char *filename, 
 	int  lineNumber)
 {
-	const char * example = "SCRIPT (PRE|POST) JobName Script Args ...";
+	const char * example = "SCRIPT [DEFER status time] (PRE|POST) JobName Script Args ...";
 	Job * job = NULL;
 	MyString whynot;
 
 	//
-	// Second keyword is either PRE or POST
+	// Second keyword is either PRE, POST or DEFER
 	//
+	char * prepost = strtok( NULL, DELIMITERS );
+	if ( !prepost ) {
+		debug_printf( DEBUG_QUIET,
+					"%s (line %d): Missing PRE, POST, or DEFER\n",
+					filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	int defer_status = SCRIPT_DEFER_STATUS_NONE;
+	int defer_time = 0;
+	if ( !strcasecmp( prepost, "DEFER" ) ) {
+			// Our script has a defer statement.
+		char *token = strtok( NULL, DELIMITERS );
+		if ( token == NULL ) {
+			debug_printf( DEBUG_QUIET,
+					"%s (line %d): Missing DEFER status value\n",
+					filename, lineNumber );
+			exampleSyntax( example );
+			return false;
+		}
+		char *tmp;
+		defer_status = (int)strtol( token, &tmp, 10 );
+		if ( tmp == token || defer_status <= 0 ) {
+			debug_printf( DEBUG_QUIET,
+				"%s (line %d): Invalid DEFER status value \"%s\"\n",
+				filename, lineNumber, token );
+			exampleSyntax( example );
+			return false;
+		}
+
+		token = strtok( NULL, DELIMITERS );
+		if ( token == NULL ) {
+			debug_printf( DEBUG_QUIET,
+				"%s (line %d): Missing DEFER time value\n",
+				filename, lineNumber );
+			exampleSyntax( example );
+			return false;
+		}
+		defer_time = (int)strtol( token, &tmp, 10 );
+		if ( tmp == token || defer_time < 0 ) {
+			debug_printf( DEBUG_QUIET,
+				"%s (line %d): Invalid DEFER time value \"%s\"\n",
+				filename, lineNumber, token );
+			exampleSyntax( example );
+			return false;
+		}
+
+			// The next token must be PRE or POST.
+		prepost = strtok( NULL, DELIMITERS );
+		if ( !prepost ) {
+			debug_printf( DEBUG_QUIET,
+						"%s (line %d): Missing PRE or POST\n",
+						filename, lineNumber );
+			exampleSyntax( example );
+			return false;
+		}
+	}
+
 	bool   post;
-	char * prepost = strtok (NULL, DELIMITERS);
-	if ( prepost && !strcasecmp (prepost, "PRE" ) ) {
+	if ( !strcasecmp (prepost, "PRE" ) ) {
 		post = false;
-	} else if ( prepost && !strcasecmp (prepost, "POST") ) {
+	} else if ( !strcasecmp (prepost, "POST") ) {
 		post = true;
 	} else {
 		debug_printf( DEBUG_QUIET, "%s (line %d): "
 					  "After specifying \"SCRIPT\", you must "
-					  "indicate if you want \"PRE\" or \"POST\"\n",
+					  "indicate if you want \"PRE\" or \"POST\" "
+					  "(or DEFER)\n",
 					  filename, lineNumber );
 		exampleSyntax (example);
 		return false;
 	}
-	
+
 	//
-	// Third token is the JobName
+	// Next token is the JobName
 	//
 	const char *jobName = strtok( NULL, DELIMITERS );
 	if ( jobName == NULL ) {
@@ -727,7 +780,7 @@ parse_script(
 		return false;
 	}
 	
-	if( !job->AddScript( post, rest, whynot ) ) {
+	if( !job->AddScript( post, rest, defer_status, defer_time, whynot ) ) {
 		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
 					  "failed to add %s script to node %s: %s\n",
 					  filename, lineNumber, post ? "POST" : "PRE",
@@ -1661,7 +1714,6 @@ parse_splice(
 							dag->RetrySubmitFirst(),
 							dag->RetryNodeFirst(),
 							dag->CondorRmExe(),
-							dag->StorkRmExe(),
 							dag->DAGManJobId(),
 							dag->ProhibitMultiJobs(),
 							dag->SubmitDepthFirst(),

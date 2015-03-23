@@ -1639,13 +1639,23 @@ Resource::wants_suspend( void )
 int
 Resource::wants_pckpt( void )
 {
-	int want_pckpt; 
+	switch( r_cur->universe() ) {
+		case CONDOR_UNIVERSE_VANILLA: {
+			ClassAd * jobAd = r_cur->ad();
+			int wantCheckpoint = 0;
+			jobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
+			if( ! wantCheckpoint ) { return FALSE; }
+			} break;
 
-	if( (r_cur->universe() != CONDOR_UNIVERSE_STANDARD) &&
-			(r_cur->universe() != CONDOR_UNIVERSE_VM)) {
-		return FALSE;
+		case CONDOR_UNIVERSE_STANDARD:
+		case CONDOR_UNIVERSE_VM:
+			break;
+
+		default:
+			return FALSE;
 	}
 
+	int want_pckpt;
 	if( r_classad->EvalBool( "PERIODIC_CHECKPOINT",
 				r_cur->ad(),
 				want_pckpt ) == 0) { 
@@ -3214,7 +3224,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 		CpuAttributes *cpu_attrs;
 		MyString type;
 		StringList type_list;
-		int cpus, memory, disk;
+		int cpus, memory, disk, swap;
 		bool must_modify_request = param_boolean("MUST_MODIFY_REQUEST_EXPRS",false,false,req_classad,mach_classad);
 		ClassAd *unmodified_req_classad = NULL;
 
@@ -3354,6 +3364,32 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                                 max((int) ceil((disk / (double) rip->r_attr->get_total_disk()) * 100), 1) );
 
 
+                // Look to see how much swap is being requested.
+            schedd_requested_attr = "_condor_";
+            schedd_requested_attr += ATTR_REQUEST_VIRTUAL_MEMORY;
+			double total_virt_mem = rip->r_attr->get_mach_attr()->virt_mem();
+			bool set_swap = true;
+
+            if( !req_classad->EvalInteger( schedd_requested_attr.Value(), mach_classad, swap ) ) {
+                if( !req_classad->EvalInteger( ATTR_REQUEST_VIRTUAL_MEMORY, mach_classad, swap ) ) {
+						// Schedd didn't set it, user didn't request it
+					if (param_boolean("PROPORTIONAL_SWAP_ASSIGNMENT", false)) {
+						// set swap to same percentage of swap as we have of physical memory
+						double mpcent = 100.0 * double(memory) / double(rip->r_attr->get_mach_attr()->phys_mem());
+						type.formatstr_cat(" swap=%d%%", int(mpcent));
+						set_swap = false;
+					} else {
+						// Fall back to you get everything and don't pay anything
+						set_swap = false;
+					}
+                }
+            }
+
+			if (set_swap) {
+				type.formatstr_cat( " swap=%d%%", 
+					max((int) ceil((swap / total_virt_mem) * 100), 1));
+			}
+
             for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
                 string reqname;
                 formatstr(reqname, "%s%s", ATTR_REQUEST_PREFIX, j->first.c_str());
@@ -3417,13 +3453,17 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			// we will send back directly to the schedd iff it supports
 			// receiving partitionable slot leftover info as part of the
 			// new-style extended claiming protocol. 
+			// But don't send a leftovers claim if consumption policies
+			// are enabled, as that means the negotiator is carving up
+			// the pslot.
 		bool scheddWantsLeftovers = false;
 			// presence of this attr in request ad tells us in a 
 			// backwards/forwards compatible way if the schedd understands
 			// the claim protocol enhancement to accept leftovers
 		req_classad->LookupBool("_condor_SEND_LEFTOVERS",scheddWantsLeftovers);
 		if ( scheddWantsLeftovers && 
-			 param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) ) 
+			 param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) &&
+			 rip->r_has_cp == false )
 		{
 			leftover_claim = rip->r_cur;
 			ASSERT(leftover_claim);

@@ -58,6 +58,7 @@ extern void main_shutdown_fast();
 
 const char* JOB_AD_FILENAME = ".job.ad";
 const char* MACHINE_AD_FILENAME = ".machine.ad";
+extern const char* JOB_WRAPPER_FAILURE_FILE;
 
 #ifdef WIN32
 // Note inversion of argument order...
@@ -2667,9 +2668,14 @@ CStarter::PeriodicCkpt( void )
 {
 	dprintf(D_ALWAYS, "Periodic Checkpointing all jobs.\n");
 
-	if( jobUniverse != CONDOR_UNIVERSE_VM ) {
-		return false;
+	int wantCheckpoint = 0;
+	if( jobUniverse == CONDOR_UNIVERSE_VM ) {
+		wantCheckpoint = 1;
+	} else if( jobUniverse == CONDOR_UNIVERSE_VANILLA ) {
+		ClassAd * jobAd = jic->jobClassAd();
+		jobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 	}
+	if( ! wantCheckpoint ) { return false; }
 
 	UserProc *job;
 	m_job_list.Rewind();
@@ -3077,9 +3083,10 @@ CStarter::PublishToEnv( Env* proc_env )
 		// put the pid of the job in the environment, used by sshd and hooks
 	proc_env->SetEnv("_CONDOR_JOB_PIDS",job_pids);
 
+		// put in environment variables specific to the type (universe) of job
 	m_reaped_job_list.Rewind();
 	while ((uproc = m_reaped_job_list.Next()) != NULL) {
-		uproc->PublishToEnv( proc_env );
+		uproc->PublishToEnv( proc_env );	// a virtual method per universe
 	}
 
 	ASSERT(jic);
@@ -3206,6 +3213,54 @@ CStarter::PublishToEnv( Env* proc_env )
 				proc_env->SetEnv("OMP_NUM_THREADS", cpus);
 			}
 		}
+	}
+
+		// If using a job wrapper, set environment to location of
+		// wrapper failure file.
+
+	char *wrapper = param("USER_JOB_WRAPPER");
+	if (wrapper) {
+			// setenv only if wrapper actually exists
+		if ( access(wrapper,X_OK) >= 0 ) {
+			MyString wrapper_err;
+			wrapper_err.formatstr("%s%c%s", GetWorkingDir(),
+						DIR_DELIM_CHAR,
+						JOB_WRAPPER_FAILURE_FILE);
+			proc_env->SetEnv("_CONDOR_WRAPPER_ERROR_FILE", wrapper_err);
+		}
+		free(wrapper);
+	}
+
+		// Set a bunch of other env vars that used to be set
+		// in OsProc::StartJob(), but we want to set them here
+		// so they will also appear in ssh_to_job environments.
+
+	MyString path;
+	path.formatstr("%s%c%s", GetWorkingDir(),
+			 	DIR_DELIM_CHAR,
+				MACHINE_AD_FILENAME);
+	if( ! proc_env->SetEnv("_CONDOR_MACHINE_AD", path) ) {
+		dprintf( D_ALWAYS, "Failed to set _CONDOR_MACHINE_AD environment variable\n");
+	}
+
+	if( jic->wroteChirpConfig() && 
+		(! proc_env->SetEnv("_CONDOR_CHIRP_CONFIG", jic->chirpConfigFilename())) ) 
+	{
+		dprintf( D_ALWAYS, "Failed to set _CONDOR_CHIRP_CONFIG environment variable.\n");
+	}
+
+	path.formatstr("%s%c%s", GetWorkingDir(),
+			 	DIR_DELIM_CHAR,
+				JOB_AD_FILENAME);
+	if( ! proc_env->SetEnv("_CONDOR_JOB_AD", path) ) {
+		dprintf( D_ALWAYS, "Failed to set _CONDOR_JOB_AD environment variable\n");
+	}
+
+	std::string remoteUpdate;
+	param(remoteUpdate, "CHIRP_DELAYED_UPDATE_PREFIX", "CHIRP");
+	if( ! proc_env->SetEnv("_CHIRP_DELAYED_UPDATE_PREFIX", remoteUpdate) ) {
+		dprintf( D_ALWAYS, 
+				"Failed to set _CHIRP_DELAYED_UPDATE_PREFIX environment variable\n");
 	}
 }
 

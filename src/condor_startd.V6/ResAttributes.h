@@ -223,14 +223,14 @@ public:
 	void final_idle_dprintf();
 
 		// Functions to return the value of shared attributes
-	double			num_cpus()	{ return m_num_cpus; };
-	double			num_real_cpus()	{ return m_num_real_cpus; };
-	int				phys_mem()	{ return m_phys_mem; };
-	long long		virt_mem()	{ return m_virt_mem; };
-	float		load()			{ return m_load; };
-	float		condor_load()	{ return m_condor_load; };
-	time_t		keyboard_idle() { return m_idle; };
-	time_t		console_idle()	{ return m_console_idle; };
+	double			num_cpus()	const { return m_num_cpus; };
+	double			num_real_cpus()	const { return m_num_real_cpus; };
+	int				phys_mem()	const { return m_phys_mem; };
+	long long		virt_mem()	const { return m_virt_mem; };
+	float		load()			const { return m_load; };
+	float		condor_load()	const { return m_condor_load; };
+	time_t		keyboard_idle() const { return m_idle; };
+	time_t		console_idle()	const { return m_console_idle; };
 	const slotres_map_t& machres() const { return m_machres_map; }
 	const slotres_devIds_map_t& machres_devIds() const { return m_machres_devIds_map; }
 	const ClassAd& machres_attrs() const { return m_machres_attr; }

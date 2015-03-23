@@ -38,7 +38,6 @@ extern "C" {
 #define CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE        1
 #define CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT  2
 static char *getline_implementation(FILE * fp, int buffer_size, int options, int & line_number);
-extern "C++" void param_default_set_use(const char * name, int use, MACRO_SET & set);
 
 
 //int		ConfigLineNo;
@@ -233,6 +232,31 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 		fprintf(stderr,
 				"Configuration Error: use needs a keyword before : %s\n", rhs);
 		return -1;
+	}
+
+	// the SUBMIT macro set stores metaknobs directly in it's defaults table.
+	if (macro_set.options & CONFIG_OPT_SUBMIT_SYNTAX) {
+
+		StringList items(rhs);
+		items.rewind();
+		char * item;
+		while ((item = items.next()) != NULL) {
+			std::string metaname;
+			formatstr(metaname, "$%s.%s", name, item);
+			const char * value = lookup_macro_def(metaname.c_str(), subsys, macro_set);
+			if ( ! value) {
+				fprintf(stderr, "\nERROR: use %s: does not recognise %s\n", name, item);
+				return -1;
+			}
+			int ret = Parse_config_string(source, depth, value, macro_set, subsys);
+			if (ret < 0) {
+				const char * msg = "Internal Submit Error: use %s: %s is invalid\n";
+				if (ret == -2) msg = "\nERROR: use %s: %s nesting too deep\n"; 
+				fprintf(stderr, msg, name, item);
+				return ret;
+			}
+		}
+		return 0;
 	}
 
 	MACRO_TABLE_PAIR* ptable = param_meta_table(name);
@@ -1166,7 +1190,6 @@ Parse_macros(
 				goto cleanup;
 			}
 		} else if (is_include) {
-#if 1
 			MACRO_SOURCE InnerSource;
 			FILE* fp = Open_macro_source(InnerSource, name, (is_include > 1), macro_set, config_errmsg);
 			if ( ! fp) { retval = -1; }
@@ -1186,27 +1209,6 @@ Parse_macros(
 				config_errmsg.clear();
 				goto cleanup;
 			}
-#else
-			FileSource.line = ConfigLineNo; // save current line number around the recursive call
-			if ((is_include > 1) && !is_piped_command(name)) {
-				std::string cmd(name); cmd += " |";
-				if (use_default_param_table) local_config_sources.append(cmd.c_str());
-				retval = Read_macros(cmd.c_str(), depth+1, macro_set, options, subsys, config_errmsg, fnSubmit, pvSubmitData);
-			} else {
-				if (use_default_param_table) local_config_sources.append(name);
-				retval = Read_macros(name, depth+1, macro_set, options, subsys, config_errmsg, fnSubmit, pvQueueData);
-			}
-			int last_line = ConfigLineNo; // get the exit line from the recursive call
-			ConfigLineNo = FileSource.line; // restore the global line number.
-
-			if (retval < 0) {
-				fprintf( stderr,
-							"%s Error \"%s\", Line %d, Include Depth %d: %s\n",
-							source_type, name, last_line, depth+1, config_errmsg.c_str());
-				config_errmsg.clear();
-				goto cleanup;
-			}
-#endif
 		} else if (is_submit && op == '=' && (*name == '+' || *name == '-')) {
 
 			// submit files have special +Attr= and -Attr= syntax that is used to store raw 
@@ -2275,6 +2277,103 @@ string_to_long( const char *s, long *valuep )
 	return 0;
 }
 
+#define USE_GENERIC_SPECIAL_CONFIG_MACROS 1
+#ifdef USE_GENERIC_SPECIAL_CONFIG_MACROS
+int next_special_config_macro (
+	int (*check_prefix)(const char *dollar, int length, bool & idchar_only),
+	char *value,
+	char **leftp, char **namep, char **rightp, char** dollar );
+
+enum {
+	SPECIAL_MACRO_ID_NONE=0,
+	SPECIAL_MACRO_ID_ENV,
+	SPECIAL_MACRO_ID_RANDOM_CHOICE,
+	SPECIAL_MACRO_ID_RANDOM_INTEGER,
+	SPECIAL_MACRO_ID_CHOICE,
+	SPECIAL_MACRO_ID_SUBSTR,
+	SPECIAL_MACRO_ID_INT,
+	SPECIAL_MACRO_ID_REAL,
+	SPECIAL_MACRO_ID_STRING,
+	SPECIAL_MACRO_ID_BASENAME,
+	SPECIAL_MACRO_ID_DIRNAME,
+	SPECIAL_MACRO_ID_FILENAME,
+};
+
+static int is_special_config_macro(const char* prefix, int length, bool & idchar_only)
+{
+	#define PRE(n) { "$" #n, sizeof(#n), SPECIAL_MACRO_ID_ ## n }
+	static const struct {
+		const char * name;
+		int length;
+		int id;
+	} pre[] = {
+		PRE(ENV),
+		PRE(RANDOM_CHOICE),
+		PRE(RANDOM_INTEGER),
+		PRE(CHOICE),
+		PRE(SUBSTR),
+		PRE(INT),
+		PRE(REAL),
+		PRE(STRING),
+		PRE(BASENAME), PRE(DIRNAME),
+	};
+	#undef PRE
+
+	// tell the caller that we allow any char in the body of this config macro
+	// we will set this to true only if $ENV ends up being the matched special macro.
+	idchar_only = false;
+
+	// the special filename macro function has a bunch of names, so check it first.
+	if (length >= 1 && prefix[1] == 'F') {
+		bool is_fname = true;
+		for (int ii = 2; ii < length; ++ii) {
+			int ch = prefix[ii] | 0x20; // convert to lowercase for comparision.
+			if (ch != 'p' && ch != 'n' && ch != 'x' && ch != 'd' && ch != 'q') {
+				is_fname = false;
+				break;
+			}
+		}
+		if (is_fname)
+			return SPECIAL_MACRO_ID_FILENAME;
+	}
+
+	for (int ii = 0; ii < (int)COUNTOF(pre); ++ii) {
+		if (length == pre[ii].length && MATCH == strncmp(prefix, pre[ii].name, pre[ii].length)) {
+			idchar_only = (pre[ii].id == SPECIAL_MACRO_ID_ENV);
+			return pre[ii].id;
+		}
+	}
+
+	return 0;
+}
+
+#else
+extern "C" int find_special_config_macro( const char *prefix, bool only_id_chars,
+		register char *value, register char **leftp,
+		register char **namep, register char **rightp);
+#endif
+
+
+char * strdup_quoted(const char* str, int cch, bool quoted) {
+	if (cch < 0) cch = (int)strlen(str);
+
+	// ignore leading and/or trailing quotes when we dup
+	if (*str=='"') { ++str; --cch; }
+	if (cch > 0 && str[cch-1] == '"') --cch;
+
+	// malloc with room for quotes and a terminating 0
+	char * out = (char*)malloc(cch+3);
+	char * p = out;
+
+	// copy, adding quotes or not as requested.
+	if (quoted) { *p++ = '"'; }
+	memcpy(p, str, cch*sizeof(str[0]));
+	if (quoted) { p[cch++] = '"'; }
+	p[cch] = 0;
+
+	return out;
+}
+
 /*
 ** Expand parameter references of the form "left$(middle)right".  This
 ** is deceptively simple, but does handle multiple and or nested references.
@@ -2298,13 +2397,447 @@ expand_macro(const char *value,
 	while( !all_done ) {		// loop until all done expanding
 		all_done = true;
 
+	#ifdef USE_GENERIC_SPECIAL_CONFIG_MACROS
+		char * func;
+		int special_id = next_special_config_macro(is_special_config_macro, tmp, &left, &name, &right, &func);
+		if (special_id) {
+			all_done = false;
+			char * buf = NULL; // malloc or strdup'd buffer (if needed)
+			switch (special_id) {
+				case SPECIAL_MACRO_ID_ENV:
+				{
+					tvalue = getenv(name);
+					if( tvalue == NULL ) {
+						//EXCEPT("Can't find %s in environment!",name);
+						tvalue = "UNDEFINED";
+					}
+				}
+				break;
+
+				case SPECIAL_MACRO_ID_RANDOM_CHOICE:
+				{
+					StringList entries(name,",");
+					int num_entries = entries.number();
+					tvalue = NULL;
+					// the the list we are choosing from has only one entry
+					// try and use that entry as a macro name.
+					if (num_entries == 1) {
+						entries.rewind();
+						const char * list_name = entries.next();
+						if ( ! list_name) {
+						   EXCEPT( "$RANDOM_CHOICE() config macro: no list!" );
+						}
+
+						const char * lval = lookup_macro(list_name, subsys, macro_set, use);
+						if (subsys && ! lval) lval = lookup_macro(list_name, NULL, macro_set, use);
+						if (macro_set.defaults && ! lval) lval = lookup_macro_def(list_name, subsys, macro_set, use);
+
+						// if the first entry resolved to a macro, clear the entries list and
+						// repopulate it from the value of the macro.
+						if (lval) {
+							entries.clearAll(); list_name = NULL;
+							// now re-populate the entries list from lval.
+							if (strchr(lval, '$')) {
+								char * tmp3 = expand_macro(lval, macro_set, use_default_param_table, subsys, use);
+								if (tmp3) {
+									entries.initializeFromString(tmp3);
+									free(tmp3);
+								}
+							} else {
+								entries.initializeFromString(lval);
+							}
+							num_entries = entries.number();
+						} else {
+							// if the lookup failed, fall through to use the the list name as the list item,
+							// we do this for backward compatibility with the original behavior of RANDOM_CHOICE
+						}
+					}
+					if ( num_entries > 0 ) {
+						int rand_entry = (get_random_int() % num_entries) + 1;
+						int i = 0;
+						entries.rewind();
+						while ( (i < rand_entry) && (tvalue=entries.next()) ) {
+							i++;
+						}
+					}
+					if( tvalue == NULL ) {
+						EXCEPT("$RANDOM_CHOICE() macro in config file empty!" );
+					}
+					tvalue = buf = strdup(tvalue);
+				}
+				break;
+
+				case SPECIAL_MACRO_ID_RANDOM_INTEGER:
+				{
+					StringList entries(name, ",");
+
+					entries.rewind();
+					const char *tmp2;
+
+					tmp2 = entries.next();
+					long	min_value=0;
+					if ( string_to_long( tmp2, &min_value ) < 0 ) {
+						EXCEPT( "$RANDOM_INTEGER() config macro: invalid min!" );
+					}
+
+					tmp2 = entries.next();
+					long	max_value=0;
+					if ( string_to_long( tmp2, &max_value ) < 0 ) {
+						EXCEPT( "$RANDOM_INTEGER() config macro: invalid max!" );
+					}
+
+					tmp2 = entries.next();
+					long	step = 1;
+					if ( string_to_long( tmp2, &step ) < -1 ) {
+						EXCEPT( "$RANDOM_INTEGER() config macro: invalid step!" );
+					}
+
+					if ( step < 1 ) {
+						EXCEPT( "$RANDOM_INTEGER() config macro: invalid step!" );
+					}
+					if ( min_value > max_value ) {
+						EXCEPT( "$RANDOM_INTEGER() config macro: min > max!" );
+					}
+
+					// Generate the random value
+					long	range = step + max_value - min_value;
+					long 	num = range / step;
+					long	random_value =
+						min_value + (get_random_int() % num) * step;
+
+					// And, convert it to a string
+					const int cbuf = 20;
+					buf = (char*)malloc(cbuf+1);
+					snprintf( buf, cbuf, "%ld", random_value );
+					buf[cbuf] = '\0';
+					tvalue = buf;
+				}
+				break;
+
+					// the $CHOICE() macro comes in 2 forms
+					// $CHOICE(index,list_name) or $CHOICE(index,item1,item2,...)
+					//   index can either be an integer, or the macro name of an integer.
+					//   list_name must be the macro name of a comma separated list of items.
+				case SPECIAL_MACRO_ID_CHOICE:
+				{
+					StringList entries(name, ",");
+					entries.rewind();
+
+					const char * index_name = entries.next();
+					if ( ! index_name) {
+					   EXCEPT( "$CHOICE() config macro: no index!" );
+					}
+					const char * mval = lookup_macro(index_name, subsys, macro_set, use);
+					if (subsys && ! mval) mval = lookup_macro(index_name, NULL, macro_set, use);
+					if (macro_set.defaults && ! mval) mval = lookup_macro_def(index_name, subsys, macro_set, use);
+					if ( ! mval) mval = index_name;
+
+					char * tmp2 = NULL;
+					if (strchr(mval, '$')) {
+						tmp2 = expand_macro(mval, macro_set, use_default_param_table, subsys, use);
+						mval = tmp2;
+					}
+
+					long long index = -1;
+					if ( ! string_is_long_param(mval, index) || index < 0 || index >= INT_MAX) {
+					   EXCEPT( "$CHOICE() macro: %s is invalid index!", mval );
+					}
+
+					tvalue = NULL;
+					if (entries.number() == 2) {
+						const char * list_name = entries.next();
+						if ( ! list_name) {
+						   EXCEPT( "$CHOICE() config macro: no list!" );
+						}
+
+						const char * lval = lookup_macro(list_name, subsys, macro_set, use);
+						if (subsys && ! lval) lval = lookup_macro(list_name, NULL, macro_set, use);
+						if (macro_set.defaults && ! lval) lval = lookup_macro_def(list_name, subsys, macro_set, use);
+						if ( ! lval) {
+							EXCEPT( "$CHOICE() macro: no list named %s!", list_name);
+						}
+
+						// now populate the entries list from lval.
+						entries.clearAll(); list_name = index_name = NULL;
+						if (strchr(lval, '$')) {
+							char * tmp3 = expand_macro(lval, macro_set, use_default_param_table, subsys, use);
+							if (tmp3) {
+								entries.initializeFromString(tmp3);
+								free(tmp3);
+							}
+						} else {
+							entries.initializeFromString(lval);
+						}
+						entries.rewind();
+					}
+
+					// scan the list looking for an item with the given index
+					for (int ii = 0; ii <= (int)index; ++ii) {
+						const char * val = entries.next();
+						if (val != NULL && ii == index) {
+							tvalue = buf = strdup(val);
+							break;
+						}
+					}
+
+					if ( ! tvalue) {
+					   EXCEPT( "$CHOICE() config macro: index %d is out of range!", (int)index );
+					}
+
+					if (tmp2) free(tmp2); tmp2 = NULL;
+				}
+				break;
+
+					// $SUBSTR(name,length) or $SUBSTR(name,start,length)
+					// lookup and macro expand name, then extract a substring.
+					// negative length values of length mean 'from the end'
+				case SPECIAL_MACRO_ID_SUBSTR:
+				{
+					char * len_arg = NULL;
+					char * start_arg = strchr(name, ',');
+					if ( ! start_arg) {
+					   EXCEPT( "$SUBSTR() macro: no length specified!" );
+					}
+
+					*start_arg++ = 0;
+					len_arg = strchr(start_arg, ',');
+					if (len_arg) *len_arg++ = 0;
+
+					int start_pos = 0;
+					if (start_arg) {
+						const char * arg = lookup_macro(start_arg, subsys, macro_set, use);
+						if (subsys && ! arg) arg = lookup_macro(start_arg, NULL, macro_set, use);
+						if (macro_set.defaults && ! arg) arg = lookup_macro_def(start_arg, subsys, macro_set, use);
+						if ( ! arg) arg = start_arg;
+
+						char * tmp3 = NULL;
+						if (strchr(arg, '$')) {
+							tmp3 = expand_macro(arg, macro_set, use_default_param_table, subsys, use);
+							arg = tmp3;
+						}
+
+						long long index = -1;
+						if ( ! string_is_long_param(arg, index) || index < INT_MIN || index >= INT_MAX) {
+						   EXCEPT( "$SUBSTR() macro: %s is invalid start index!", arg );
+						}
+						start_pos = (int)index;
+						if (tmp3) free(tmp3); tmp3 = NULL;
+					}
+
+					int sub_len = INT_MAX/2;
+					if (len_arg) {
+						const char * arg = lookup_macro(len_arg, subsys, macro_set, use);
+						if (subsys && ! arg) arg = lookup_macro(len_arg, NULL, macro_set, use);
+						if (macro_set.defaults && ! arg) arg = lookup_macro_def(len_arg, subsys, macro_set, use);
+						if ( ! arg) arg = len_arg;
+
+						char * tmp3 = NULL;
+						if (strchr(arg, '$')) {
+							tmp3 = expand_macro(arg, macro_set, use_default_param_table, subsys, use);
+							arg = tmp3;
+						}
+
+						long long index = -1;
+						if ( ! string_is_long_param(arg, index) || index < INT_MIN || index > INT_MAX) {
+						   EXCEPT( "$SUBSTR() macro: %s is invalid length !", arg );
+						}
+						sub_len = (int)index;
+						if (tmp3) free(tmp3); tmp3 = NULL;
+					}
+
+					const char * mval = lookup_macro(name, subsys, macro_set, use);
+					if (subsys && ! mval) mval = lookup_macro(name, NULL, macro_set, use);
+					if (macro_set.defaults && ! mval) mval = lookup_macro_def(name, subsys, macro_set, use);
+					if ( ! mval) {
+						tvalue = "";
+					} else {
+						tvalue = NULL;
+
+						if (strchr(mval, '$')) {
+							buf = expand_macro(mval, macro_set, use_default_param_table, subsys, use);
+						} else {
+							buf = strdup(mval);
+						}
+
+						int cch = strlen(buf);
+						// a negative starting pos means measure from the end
+						if (start_pos < 0) { start_pos = cch + start_pos; }
+						if (start_pos < 0) { start_pos = 0; }
+						else if (start_pos > cch) { start_pos = cch; }
+
+						tvalue = buf + start_pos;
+						cch -= start_pos;
+
+						// a negative length means measure from the end
+						if (sub_len < 0) { sub_len = cch + sub_len; }
+						if (sub_len < 0) { sub_len = 0; }
+						else if (sub_len > cch) { sub_len = cch; }
+
+						buf[start_pos + sub_len] = 0;
+					}
+				}
+				break;
+
+					// $INT(name) or $INT(name,fmt) or $REAL(name) $REAL(name,fmt)
+					// lookup name, macro expand it if necessary, then evaluate it as a int or double
+					//
+				case SPECIAL_MACRO_ID_INT:
+				case SPECIAL_MACRO_ID_REAL:
+				{
+					char * fmt = strchr(name, ',');
+					if (fmt) *fmt++ = 0;
+
+					const char * mval = lookup_macro(name, subsys, macro_set, use);
+					if (subsys && ! mval) mval = lookup_macro(name, NULL, macro_set, use);
+					if (macro_set.defaults && ! mval) mval = lookup_macro_def(name, subsys, macro_set, use);
+					if ( ! mval) mval = name;
+					tvalue = NULL;
+
+					char * tmp2 = NULL;
+					if (strchr(mval, '$')) {
+						tmp2 = expand_macro(mval, macro_set, use_default_param_table, subsys, use);
+						mval = tmp2;
+					}
+
+					if (special_id == SPECIAL_MACRO_ID_INT) {
+						long long int_val = -1;
+						if ( ! string_is_long_param(mval, int_val)) {
+						   EXCEPT( "$INT() macro: %s does not evaluate to an integer!", mval );
+						}
+
+						classad::Value val;
+						val.SetIntegerValue(int_val);
+						const int cbuf = 32;
+						tvalue = buf = (char*)malloc(cbuf+1);
+						snprintf( buf, cbuf, fmt ? fmt : "%lld", int_val );
+					} else {
+						double dbl_val = -1;
+						if ( ! string_is_double_param(mval, dbl_val)) {
+						   EXCEPT( "$REAL() macro: %s does not evaluate to an real!", mval );
+						}
+
+						const int cbuf = 32;
+						tvalue = buf = (char*)malloc(cbuf+1);
+						snprintf( buf, cbuf, fmt ? fmt : "%.16G", dbl_val );
+						if ( ! strchr(buf, '.')) { strcat(buf, ".0"); } // force it to look like a real
+					}
+
+					if (tmp2) free(tmp2); tmp2 = NULL;
+				}
+				break;
+
+				case SPECIAL_MACRO_ID_DIRNAME:
+				case SPECIAL_MACRO_ID_BASENAME:
+				case SPECIAL_MACRO_ID_FILENAME:
+				{
+					const char * mval = lookup_macro(name, subsys, macro_set, use);
+					if (subsys && ! mval) mval = lookup_macro(name, NULL, macro_set, use);
+					if (macro_set.defaults && ! mval) mval = lookup_macro_def(name, subsys, macro_set, use);
+					tvalue = NULL;
+
+					// filename extraction macros, for expanding only parts of a filename in $(FILE).
+					// Any macro function of the form $Fqdpnx(FILE), where q,d,p,n,x are all optional
+					// and indicate which parts of the filename to keep.
+					// q - quote the result (incoming quotes are stripped if this is not specified)
+					// d - parent directory
+					// p - full directory path
+					// n - file basename without extension
+					// x - file extension, including the .
+
+					int parts = 0;
+					bool quoted = false;
+					if (special_id == SPECIAL_MACRO_ID_BASENAME) {
+						parts = 1|2;
+					} else if (special_id == SPECIAL_MACRO_ID_DIRNAME) {
+						parts = 4;
+					} else {
+						for (const char*p = func; *p != '('; ++p) {
+							switch (*p | 0x20) {
+							case 'x': parts |= 0x1; break;
+							case 'n': parts |= 0x2; break;
+							case 'p': parts |= 0x4; break;
+							case 'd': parts |= 0x8; break;
+							case 'q': quoted = true; break;
+							}
+						}
+					}
+
+					if (mval) {
+
+						buf = strdup_quoted(mval, -1, quoted);  // copy the macro value with quotes add/removed as requested.
+						int ixend = strlen(buf); // this will be the end of what we wish to return
+						int ixn = (int)(condor_basename(buf) - buf); // index of start of filename, ==0 if no path sep
+						int ixx = (int)(condor_basename_extension_ptr(buf+ixn) - buf); // index of . in extension, ==ixend if no ext
+						// if this is a bare filename, we can ignore the p & d flags if n or x is set
+						if ( ! ixn) { if (parts & (2|1)) parts &= ~(4|8); }
+
+						// set tvalue to start, and ixend to end of text we want to return.
+						switch (parts & 0xF)
+						{
+						case 1:     tvalue = buf+ixx;  break;
+						case 2|1:   tvalue = buf+ixn;  break;
+						case 2:     tvalue = buf+ixn;  ixend = ixx; break;
+						case 0:
+						case 4|2|1: tvalue = buf;      break;
+						case 4|1:   tvalue = buf;      break; // TODO: fix to strip out filename part?
+						case 4:     tvalue = buf; ixend = ixn; break;
+						case 4|2:   tvalue = buf; ixend = ixx; break;
+						default:
+							// ixn is 0 if no dir.
+							if (ixn > 0) {
+								char ch = buf[ixn-1]; buf[ixn-1] = 0; // truncate filename saving the old character
+								tvalue = condor_basename(buf); // tvalue now points to the start of the first directory
+								buf[ixn-1] = ch; // put back the dir/filename separator
+								if (2 == (parts&3)) { ixend = ixx; }
+								else if (0 == (parts&3)) { ixend = ixn; }
+								else if (1 == (parts&3)) { /* TODO: strip out filename part? */ }
+							} else {
+								// we get here when there is no dir, but only dir should be output
+								// so we pick a spot inside the buffer with room to quote
+								// and set start==end
+								ixend = 1;
+								tvalue = buf+ixend;
+							}
+						break;
+						}
+
+						// we may have truncated quotes in the switch statement above
+						// but if we did we know that buf has room to put them back.
+						if (quoted) {
+							int ixv = (int)(tvalue-buf);
+							if (buf[ixv] != '"') { ASSERT(ixv > 0); buf[--ixv] = '"'; tvalue = buf+ixv; }
+							if (ixend > 1 && buf[ixend-1] == '"') --ixend;
+							buf[ixend++] = '"';
+						}
+						// make sure that the end of tvalue is null terminated.
+						buf[ixend] = 0;
+					}
+					if ( ! tvalue) tvalue = "";
+				}
+				break;
+
+				default:
+					EXCEPT("Unknown special config macro %d!", special_id);
+				break;
+
+			}
+
+			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+			ASSERT(rval);
+
+			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			FREE( tmp );
+			tmp = rval;
+			if (buf) free(buf); buf = NULL;
+		}
+	#else // ! USE_GENERIC_SPECIAL_CONFIG_MACROS
 		if (find_special_config_macro("$ENV",true,tmp, &left, &name, &right)) 
 		{
 			all_done = false;
 			tvalue = getenv(name);
 			if( tvalue == NULL ) {
 				//EXCEPT("Can't find %s in environment!",name);
-				tvalue = "UNDEFINED";		
+				tvalue = "UNDEFINED";
 			}
 
 			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
@@ -2390,6 +2923,7 @@ expand_macro(const char *value,
 			FREE( tmp );
 			tmp = rval;
 		}
+	#endif // USE_GENERIC_SPECIAL_CONFIG_MACROS
 
 		if (find_config_macro(tmp, &left, &name, &right, NULL)) {
 			all_done = false;
@@ -2403,11 +2937,19 @@ expand_macro(const char *value,
 
 				// Note that if 'name' has been explicitly set to nothing,
 				// tvalue will _not_ be NULL so we will not call
-				// param_default_string().  See gittrack #1302
+				// lookup_macro_def().  See gittrack #1302
+			#ifdef USE_GENERIC_SPECIAL_CONFIG_MACROS
+			if (use_default_param_table && tvalue == NULL) {
+				tvalue = param_default_string(name, subsys);
+			} else if ( ! tvalue) {
+				tvalue = lookup_macro_def(name, subsys, macro_set, use);
+			}
+			#else
 			if (use_default_param_table && tvalue == NULL) {
 				tvalue = param_default_string(name, subsys);
 				if (use) { param_default_set_use(name, use, macro_set); }
 			}
+			#endif
 		   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
 			if (pcolon && ( ! tvalue || ! tvalue[0])) {
 				tvalue = pcolon;
@@ -2542,6 +3084,109 @@ int hash_iter_used_value(HASHITER& it) {
 	return -1;
 };
 
+
+#ifdef USE_GENERIC_SPECIAL_CONFIG_MACROS
+
+/*
+** Same as find_config_macro() below, but finds special references like $ENV().
+*/
+int next_special_config_macro (
+	int (*check_prefix)(const char *dollar, int length, bool & idchar_only),
+	char *value,
+	char **leftp, char **namep, char **rightp,  char**dollar )
+{
+	char *left, *left_end, *name, *right;
+	char *tvalue;
+	int prefix_len;
+	int prefix_id = 0;
+
+	if ( ! check_prefix ) return 0;
+
+	tvalue = value;
+	left = value;
+
+	bool only_id_chars = false;
+
+		// Loop until we're done, helped with the magic of goto's
+	for (;;) {
+tryagain:
+		// find the next valid $prefix, set value to point to the $
+		// prefix_id to the identifier, and prefix_len to it's length.
+		prefix_len = 0;
+		if (tvalue) {
+			// scan for $anyalphanumtext( and then check to see 
+			// if it's a valid prefix. keep scanning til we find a prefix
+			// or get to the end of the input.
+			for (;;) {
+				value = strchr(tvalue, '$');
+				if ( ! value) return 0;
+
+				// skip over $$
+				if (value[1] == '$') {
+					tvalue = value+2;
+					continue;
+				}
+
+				// for a valid prefix, first char after $ must be alpha
+				char * p = value+1;
+				if ( ! isalpha(*p)) {
+					tvalue = p;
+					continue;
+				}
+				++p;
+
+				// scan over alphanumeric characters, then if the next character is (
+				// we have a potential prefix - call check_prefix to find out.
+				while (*p && (isalnum(*p) || *p == '_')) ++p;
+				if (*p == '(') {
+					prefix_len = (int)(p - value);
+					prefix_id = check_prefix(value, prefix_len, only_id_chars);
+					if (prefix_id > 0)
+						break;
+				}
+				tvalue = p;
+			}
+		}
+
+		if ( ! value) return 0;
+
+
+		value += prefix_len;
+		if( *value == '(' ) {
+			left_end = value - prefix_len;
+			name = ++value;
+			while( *value && *value != ')' ) {
+				char c = *value++;
+				if( !ISIDCHAR(c) && only_id_chars ) {
+					tvalue = name;
+					goto tryagain;
+				}
+			}
+
+			if( *value == ')' ) {
+				right = value;
+				break;
+			} else {
+				tvalue = name;
+				goto tryagain;
+			}
+		} else {
+			tvalue = value;
+			goto tryagain;
+		}
+	}
+
+	*left_end = '\0';
+	*right++ = '\0';
+
+	*dollar = left_end+1;
+	*leftp = left;
+	*namep = name;
+	*rightp = right;
+
+	return prefix_id;
+}
+#else
 /*
 ** Same as find_config_macro() below, but finds special references like $ENV().
 */
@@ -2606,6 +3251,7 @@ tryagain:
 
 	return( 1 );
 }
+#endif
 
 /* Docs are in /src/condor_includes/condor_config.h */
 extern "C" int
@@ -2808,4 +3454,86 @@ const char * lookup_macro(const char *name, const char *prefix, MACRO_SET & set,
 	}
 	return lookup_macro_exact(name, set, use);
 }
+
+template <typename T>
+int BinaryLookupIndex (const T aTable[], int cElms, const char * key, int (*fncmp)(const char *, const char *))
+{
+	if (cElms <= 0)
+		return -1;
+
+	int ixLower = 0;
+	int ixUpper = cElms-1;
+	for (;;) {
+		if (ixLower > ixUpper)
+			return -1; // -1 for not found
+
+		int ix = (ixLower + ixUpper) / 2;
+		int iMatch = fncmp(aTable[ix].key, key);
+		if (iMatch < 0)
+			ixLower = ix+1;
+		else if (iMatch > 0)
+			ixUpper = ix-1;
+		else
+			return ix;
+	}
+}
+
+static int param_default_get_index(const char * name, MACRO_SET & set)
+{
+	MACRO_DEFAULTS * defs = set.defaults;
+	if ( ! defs || ! defs->table)
+		return -1;
+
+	return BinaryLookupIndex<const MACRO_DEF_ITEM>(defs->table, defs->size, name, strcasecmp);
+}
+
+void param_default_set_use(const char * name, int use, MACRO_SET & set)
+{
+	MACRO_DEFAULTS * defs = set.defaults;
+	if ( ! defs || ! defs->metat)
+		return;
+	int ix = param_default_get_index(name, set);
+	if (ix >= 0) {
+		defs->metat[ix].use_count += (use&1);
+		defs->metat[ix].ref_count += (use>>1)&1;
+	}
+}
+
+const char * lookup_macro_def(const char * name, const char * subsys, MACRO_SET & set, int use)
+{
+	MACRO_DEF_ITEM * p = NULL;
+
+	// if subsys was passed, first try to lookup in param subsystem overrides table.
+	if (subsys && set.defaults && set.defaults->table) {
+		MACRO_DEF_ITEM * pSubTab = NULL;
+		int cSubTab = param_get_subsys_table(set.defaults->table, subsys, &pSubTab);
+		if (cSubTab && pSubTab) {
+			int ix = BinaryLookupIndex<const MACRO_DEF_ITEM>(pSubTab, cSubTab, name, strcasecmp);
+			if (ix >= 0) {
+				p = pSubTab + ix;
+			}
+		}
+	}
+
+	// if not found in the subsystem's table, or if we need to set useage counts
+	// lookup in the defaults table.
+	if ( ! p || use) {
+		int ix = param_default_get_index(name, set);
+		if (ix >= 0) {
+			if (use && set.defaults->metat) {
+				set.defaults->metat[ix].use_count += (use&1);
+				set.defaults->metat[ix].ref_count += (use>>1)&1;
+			}
+			if ( ! p) {
+				p = &set.defaults->table[ix];
+			}
+		}
+	}
+
+	if (p && p->def) {
+		return p->def->psz;
+	}
+	return NULL;
+}
+
 

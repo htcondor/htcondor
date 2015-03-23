@@ -6038,7 +6038,24 @@ availability statistics in the \Condor{startd}.
 
 \label{param:Docker}
 \item[\Macro{DOCKER}]
-  This definition has not yet been written.
+  Defines
+  the path and executable name of the Docker CLI in one of two ways.
+  The first way is for execute machines
+  that are set up to run the Docker CLI as a user other than root,
+  or when HTCondor daemons are run as root;
+  the value is only the path and executable name of the Docker CLI.
+  This would be the case when the default value of \File{/usr/bin/docker}
+  is used.
+  The second way places the string \Expr{sudo} to the left of the 
+  path and executable name.
+  When the parser finds this form of the value,
+  the Docker CLI is invoked and run as root by the \Condor{starter},
+  and it is presumed that the user that the \Condor{starter} daemon is
+  run as has been given password-less sudo permission to run the Docker CLI.
+  An example of the configuration for running the Docker CLI as root:
+\begin{verbatim}
+  DOCKER = sudo /usr/bin/docker
+\end{verbatim}
 
 \end{description}
 
@@ -7271,6 +7288,33 @@ SYSTEM_PERIODIC_REMOVE = \
   A boolean that defaults to \Expr{False}. When \Expr{True}, 
   the \Condor{schedd} does use configuration variable \MacroNI{SLOT\_WEIGHT} 
   to weight running and idle job counts in the submitter ClassAd.
+
+\label{param:SubmitRequirementNames}
+\item[\Macro{SUBMIT\_REQUIREMENT\_NAMES}]
+  A comma and/or space separated list of unique names, 
+  where each is used in the formation
+  of a configuration variable name that will represent an expression
+  evaluated to decide whether or not to reject a job submission.
+  Each name in the list will be used in the name of
+  configuration variable \MacroNI{SUBMIT\_REQUIREMENT\_<Name>}.
+  There is no default value.
+
+\label{param:SubmitRequirementName}
+\item[\Macro{SUBMIT\_REQUIREMENT\_<Name>}]
+  A boolean expression evaluated by the \Condor{schedd} daemon
+  against a job ClassAd,
+  that when \Expr{False} causes the \Condor{schedd} to reject 
+  the submission of the job or cluster of jobs. 
+  \MacroNI{<Name>} corresponds to a name listed in 
+  \MacroNI{SUBMIT\_REQUIREMENT\_NAMES}.
+  There is no default value.
+
+\label{param:SubmitRequirementNameReason}
+\item[\Macro{SUBMIT\_REQUIREMENT\_<Name>\_REASON}]
+  An expression that evaluates to a string,
+  to be printed for the job submitter when \MacroNI{SUBMIT\_REQUIREMENT\_<Name>}
+  evaluates to \Expr{False} and the \Condor{schedd} rejects the job.
+  There is no default value.
 
 \end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -10404,6 +10448,13 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManStorkSubmitExe}
 \item[\Macro{DAGMAN\_STORK\_SUBMIT\_EXE}]
+  This configuration variable is no longer used, because as of
+  version 8.3.4 \Condor{dagman} no longer supports Stork jobs.
+  Setting this configuration variable will result in a warning
+  from \Condor{dagman} (which will be turned into a fatal error
+  if \MacroNI{DAGMAN\_USE\_STRICT} is set to 1 or above).
+
+  For completeness, here is the definition for historical purposes: 
   The executable that \Condor{dagman} will use to submit Stork jobs.
   If not defined, \Condor{dagman} looks for \Prog{stork\_submit} in the path.
 
@@ -10414,6 +10465,13 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManStorkRmExe}
 \item[\Macro{DAGMAN\_STORK\_RM\_EXE}]
+  This configuration variable is no longer used, because as of
+  version 8.3.4 \Condor{dagman} no longer supports Stork jobs.
+  Setting this configuration variable will result in a warning
+  from \Condor{dagman} (which will be turned into a fatal error
+  if \MacroNI{DAGMAN\_USE\_STRICT} is set to 1 or above).
+
+  For completeness, here is the definition for historical purposes: 
   The executable that \Condor{dagman} will use to remove Stork jobs.
   If not defined, \Condor{dagman} looks for \Prog{stork\_rm} in the path.
 
@@ -10757,11 +10815,13 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanAlwaysUseNodeLog}
 \item[\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}]
-  As of HTCondor version 8.3.1, the value is always the default 
+  As of HTCondor version 8.3.1, the value must always be the default 
   value of \Expr{True}.  
-  Attempts to set it to \Expr{False} results in an error. 
+  Attempting to set it to \Expr{False} results in an error. 
   This causes incompatibility with using a \Condor{submit} executable 
   that is older than HTCondor version 7.9.0.
+
+  For completeness, here is the definition for historical purposes: 
   A boolean value that when \Expr{True}  causes \Condor{dagman} to read
   events from its default node log file, as defined by
   \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}, instead of from the log file(s)

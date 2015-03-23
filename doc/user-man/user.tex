@@ -594,7 +594,11 @@ Please see section~\ref{sec:vmuniverse} for details.
 %%%%%%%%%%%%
 \index{universe!docker}
 \index{docker universe}
-\Todo
+The docker universe causes an instantiation of a container
+on an execute host,
+and the job is run within that container.  
+
+Please see section~\ref{sec:dockeruniverse} for details.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:submitting}Submitting a Job}
@@ -1476,15 +1480,33 @@ priorities and \Term{user} priorities.
 
 \index{job!priority}
 \index{priority!of a job}
-Job priorities allow the assignment of a priority level to
-each submitted HTCondor job in order to
-control the order of their execution.
+Job priorities allow a user to assign a priority level to
+each of their own submitted HTCondor jobs,
+in order to control the order of job execution.
+This handles the situation in which a user has more jobs
+queued, waiting to be executed, than there are machines available.
+Setting a job priority identifies the ordering in which 
+that user's jobs are executed; a higher job priority job is matched and
+executed before a lower priority job.
+A job priority can be any integer, and larger values are of higher priority.
+So, 0 is a higher job priority than -3,
+and 6 is a higher job priority than 5.
+
 \index{HTCondor commands!condor\_prio}
-To set a job priority, use the \Condor{prio} command;
+For the simple case, each job can be given a distinct priority.
+For an already queued job, 
+its priority may be set with the \Condor{prio} command;
 see the example in section~\ref{sec:job-prio}, or the
-command reference page on page~\pageref{man-condor-prio}.
-Job priorities do not impact user priorities in any fashion.
-A job priority can be any integer, and higher values are \emph{better}.
+\Condor{prio} manual page~\pageref{man-condor-prio} for details.
+This sets the value of job ClassAd attribute \Attr{JobPrio}. 
+
+A fine-grained categorization of jobs and their ordering
+is available for experts by using the job ClassAd attributes:
+\Attr{PreJobPrio1},
+\Attr{PreJobPrio2},
+\Attr{JobPrio},
+\Attr{PostJobPrio1}, or
+\Attr{PostJobPrio2}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-priority-explained}User priority}
@@ -1626,6 +1648,10 @@ the usual method to nicely terminate a Unix program.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/vm.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/docker.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

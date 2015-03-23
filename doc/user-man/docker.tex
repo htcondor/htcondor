@@ -1,0 +1,37 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:dockeruniverse}Docker Universe Applications}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{docker universe|(}
+\index{universe!docker}
+A docker universe job causes an instantiation of a container,
+and the job is run within that container,
+providing all of the benefits of Docker containers to the job.  
+
+The docker universe job will only be matched with an execute host
+that advertises its capability to run docker universe jobs.
+The details of which container is instantiated are defined by
+specifying a Docker image with the submit command
+\SubmitCmd{docker\_image}.
+
+After submission, the job is treated as a vanilla universe job.
+Details of file transfer are the same as applied to the vanilla universe.
+One of the benefits of Docker containers is the isolation they provide.
+This extends to the file system within a container.
+The container will not share a file system with either the execute
+host or the submit host.
+Therefore,
+the submit description file should contain the submit command
+\begin{verbatim}
+  should_transfer_files = YES
+\end{verbatim}
+With this command,  all input and output files will be transferred
+as required to and from the scratch directory mounted as a
+Docker volume.
+
+If no \SubmitCmd{executable} is specified in the submit description file,
+it is presumed that the Docker container has a default command to run.
+
+When the job completes, or is otherwise evicted,
+the container will be removed.
+
+\index{docker universe|)}

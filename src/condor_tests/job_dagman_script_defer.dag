@@ -1,0 +1,10 @@
+job NodeA null noop
+#delete counters
+script defer 3 30 pre NodeA ./job_dagman_script_defer_Apre.pl
+job NodeB null noop
+# fail at least once
+script defer 4 20 pre NodeB ./job_dagman_script_defer_Bpre.pl
+job NodeC null noop
+# fail at least once
+script defer 5 25 post NodeC ./job_dagman_script_defer_Cpost.pl
+parent NodeA child NodeB NodeC

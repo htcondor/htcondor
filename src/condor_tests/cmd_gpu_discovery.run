@@ -80,6 +80,8 @@ CondorTest::StartCondorWithParams(
 print "First test basic job\n";
 my $result = SimpleJob::RunCheck(); # jobid 1
 
+runCondorTool("condor_config_val -dump gpu");
+
 my $on_success = sub {
 };
 
@@ -209,7 +211,11 @@ my $slotsupdated = 0;
 my @updates = ();
 my $trys = 0;
 while($slotsupdated < $totalcpus) {
-	runCondorTool("condor_status -constraint \'OfflineGPUs==\"CUDA2\"\' -af name",\@updates,2,{emit_output=>1});
+	if(is_windows()) {
+		runCondorTool('condor_status -constraint OfflineGPUs==\"CUDA2\" -af name',\@updates,2,{emit_output=>1});
+	} else {
+		runCondorTool("condor_status -constraint \'OfflineGPUs==\"CUDA2\"\' -af name",\@updates,2,{emit_output=>1});
+	}
 	$slotsupdated =  @updates;
 	$trys += 1;
 	if($trys == 10) {

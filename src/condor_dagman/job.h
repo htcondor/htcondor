@@ -75,14 +75,6 @@ typedef int JobID_t;
      queue) are put on the DAG's ready list.  */
 class Job {
   public:
-
-        // possible kinds of job (e.g., Condor, Stork, etc.)
-        // NOTE: must be kept in sync with _job_type_strings[]
-        // NOTE: must be kept in sync with enum Log_source
-	typedef enum {
-		TYPE_CONDOR,
-		TYPE_STORK,
-	 } job_type_t;
   
     /** Enumeration for specifying which queue for Add() and Remove().
         If you change this enum, you *must* also update queue_t_names
@@ -157,13 +149,12 @@ class Job {
 	static int NOOP_NODE_PROCID;
   
     /** Constructor
-        @param jobType Type of job in dag file.
         @param jobName Name of job in dag file.  String is deep copied.
 		@param directory Directory to run the node in, "" if current
 		       directory.  String is deep copied.
         @param cmdFile Path to condor cmd file.  String is deep copied.
     */
-    Job( const job_type_t jobType, const char* jobName,
+    Job( const char* jobName,
 				const char* directory, const char* cmdFile ); 
   
     ~Job();
@@ -177,13 +168,11 @@ class Job {
 	inline int GetRetries() const { return retries; }
 	const char* GetPreScriptName() const;
 	const char* GetPostScriptName() const;
-	const char* JobTypeString() const;
-	job_type_t JobType() const;
+	static const char* JobTypeString() { return "Condor"; }
 
-	bool AddPreScript( const char *cmd, MyString &whynot );
+	bool AddScript( bool post, const char *cmd, int defer_status,
+				time_t defer_time, MyString &whynot );
 	bool AddPreSkip( int exitCode, MyString &whynot );
-	bool AddPostScript( const char *cmd, MyString &whynot );
-	bool AddScript( bool post, const char *cmd, MyString &whynot );
 
 	void SetFinal(bool value) { _final = value; }
 	bool GetFinal() const { return _final; }
@@ -220,14 +209,6 @@ class Job {
         @return true: success, false: failure (jobID not found in queue)
     */
     bool Remove (const queue_t queue, const JobID_t jobID);
-
-	/** Check whether the submit file for this job has a log file
-	    defined.
-		@param usingDefault is true if DAGman is watching the
-			default node log
-		@return true iff the submit file defines a log file
-	*/
-	bool CheckForLogFile( bool usingDefault ) const;
 
     /** Returns true if a queue is empty (has no jobs)
         @param queue Selects which queue to look at
@@ -267,6 +248,7 @@ class Job {
 			@return true: specified node is our child, false: otherwise
 		*/
 	bool HasChild( Job* child );
+
 		/** Is the specified node a parent of this node?
 			@param child Pointer to the node to check for parenthood.
 			@return true: specified node is our parent, false: otherwise
@@ -284,10 +266,12 @@ class Job {
 	*/
     void Dump ( const Dag *dag ) const;
   
+#if 0 // not used -- wenger 2015-02-17
     /** Print the identification info for this Job to stdout.
         @param condorID If true, also print the job's CondorID
      */
     void Print (bool condorID = false) const;
+#endif
   
 		// double-check internal data structures for consistency
 	bool SanityCheck() const;
@@ -333,7 +317,7 @@ class Job {
 		@param prefix: the prefix to be joined to the directory using "/"
 		@return void
 	*/
-	void PrefixDirectory(MyString &prefix);
+	void PrefixDirectory( MyString &prefix );
 
 	/** Set the DAG file (if any) for this node.  (This is set for nested
 			DAGs defined with the "SUBDAG" keyword.)
@@ -348,44 +332,6 @@ class Job {
 	const char *GetDagFile() const {
 		return _dagFile;
 	}
-
-	/** Monitor this node's Condor or Stork log file with the
-		multiple log reader.  (Must be called before this node's
-		job is submitted.)
-		@param logReader: the multiple log reader
-		@param recovery: whether we're in recovery mode
-		@param defaultNodeLog: the default log file to be used if the
-			node's submit file doesn't define a log file
-		@param usingDefault: whether we're using the default/workflow
-			log at the DAG level
-		@return true if successful, false if failed
-	*/
-	bool MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
-				ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
-				bool recovery, const char *defaultNodeLog, bool usingDefault );
-
-	/** Unmonitor this node's Condor or Stork log file with the
-		multiple log reader.  (Must be called after everything is done
-		for this node.)
-		@param logReader: the multiple log reader
-		@return true if successful, false if failed
-	*/
-	bool UnmonitorLogFile( ReadMultipleUserLogs &logReader,
-				ReadMultipleUserLogs &storkLogReader );
-
-		// Whether this node is using the default node log file.
-	bool UsingDefaultLog() const { return _useDefaultLog; }
-
-	/** Get the log file for this node.
-		@return the name of this node's log file.
-	*/
-	const char *GetLogFile() const { return _logFile; }
-
-	/** Get whether this node's log file is XML (versus "standard"
-		format).
-		@return true iff the log file is XML.
-	*/
-	bool GetLogFileIsXml() const { return _logFileIsXml; }
 
 	/** Get the jobstate.log job tag for this node.
 		@return The job tag (can be "local"; if no tag is specified,
@@ -541,32 +487,11 @@ private:
 		*/
 	void Cleanup();
 
-		/** Get the log file specified in the given submit file, if
-			any.  Note that if the job is an HTCondor job and
-			usingWorkflowLog is true, this method will return "" for
-			the log file name.
-			@param usingWorkflowLog: true iff we're using the workflow
-				log file to monitor jobs
-			@param logFile: a MyString to hold the log file name
-			@return true on success, false otherwise
-		*/
-	bool FindLogFile( bool usingWorkflowLog, MyString &logFile );
-
 		/** _onHold[proc] is nonzero if the condor job 
  			with ProcId == proc is on hold, and zero
 			otherwise
 		*/
 	std::vector<unsigned char> _onHold;	
-
-		// Mark this node as failed because of an error in monitoring
-		// the log file.
-  	void LogMonitorFailed();
-
-        // strings for job_type_t (e.g., "Condor, "Stork", etc.)
-    static const char* _job_type_names[];
-
-		// type of job (e.g., Condor, Stork, etc.)
-	job_type_t _jobType;
 
 		// Directory to cd to before running the job or the PRE and POST
 		// scripts.
@@ -621,20 +546,6 @@ private:
 		// ThrottleByCategory object.
 	ThrottleByCategory::ThrottleInfo *_throttleInfo;
 
-		// Whether this node's log file is currently being monitored.
-	bool _logIsMonitored;
-
-		// Whether this node uses the default user log file.
-	bool _useDefaultLog;
-
-		// The log file for this job -- it will be assigned the default
-		// log file name if no log file is specified in the submit file.
-	char *_logFile;
-
-		// Whether the log file is XML.
-	bool _logFileIsXml;
-
-
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to Condor).
 	bool _noop;
@@ -683,11 +594,13 @@ private:
 	std::vector<unsigned char> _gotEvents;	
 };
 
+#if 0 // not used -- wenger 2015-02-17
 /** A wrapper function for Job::Print which allows a NULL job pointer.
     @param job Pointer to job object, if NULL then "(UNKNOWN)" is printed
     @param condorID If true, also print the job's CondorID
 */
 void job_print (Job * job, bool condorID = false);
+#endif
 
 
 #endif /* ifndef JOB_H */

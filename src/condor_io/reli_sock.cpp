@@ -55,8 +55,8 @@ ReliSock::init()
 	_special_state = relisock_none;
 	is_client = 0;
 	hostAddr = NULL;
-	snd_msg.buf.reset();                                                    
-	rcv_msg.buf.reset();   
+	snd_msg.reset();
+	rcv_msg.reset();
 	rcv_msg.init_parent(this);
 	snd_msg.init_parent(this);
 	m_target_shared_port_id = NULL;
@@ -103,6 +103,16 @@ ReliSock::~ReliSock()
 	}
 }
 
+int
+ReliSock::close()
+{
+	// Purge send and receive buffers at the relisock level
+	snd_msg.reset();
+	rcv_msg.reset();
+
+	// then invoke close() in parent class to close fd etc
+	return Sock::close();
+}
 
 int 
 ReliSock::listen()
@@ -736,6 +746,11 @@ ReliSock::RcvMsg::~RcvMsg()
     delete mdChecker_;
 }
 
+void ReliSock::RcvMsg::reset()
+{
+	buf.reset();
+}
+
 int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, int _timeout)
 {
 	char	        hdr[MAX_HEADER_SIZE];
@@ -864,6 +879,14 @@ ReliSock::SndMsg::SndMsg() :
 ReliSock::SndMsg::~SndMsg() 
 {
     delete mdChecker_;
+	delete m_out_buf;
+}
+
+void ReliSock::SndMsg::reset()
+{
+	buf.reset();
+	delete m_out_buf;
+	m_out_buf = NULL;
 }
 
 int ReliSock::SndMsg::finish_packet(const char *peer_description, int sock, int timeout)
@@ -1322,14 +1345,19 @@ ReliSock::setTargetSharedPortID( char const *id )
 
 bool
 ReliSock::msgReady() {
-	if (rcv_msg.ready) { return true; }
+	while (!rcv_msg.ready)
+	{
 		// NOTE: 'true' here indicates non-blocking.
-	BlockingModeGuard sentry(this, true);
-	int retval = handle_incoming_packet();
-	if (retval == 2) {
-		dprintf(D_NETWORK, "msgReady would have blocked.\n");
-		m_read_would_block = true;
-		return false;
+		BlockingModeGuard sentry(this, true);
+		int retval = handle_incoming_packet();
+		if (retval == 2) {
+			dprintf(D_NETWORK, "msgReady would have blocked.\n");
+			m_read_would_block = true;
+			return false;
+		} else if (retval == 0) {
+			// No data is available
+			return false;
+		}
 	}
 	return rcv_msg.ready;
 }

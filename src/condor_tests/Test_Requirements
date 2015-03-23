@@ -10,7 +10,7 @@ cmd_wait_shows-all: personal
 cmd_wait_shows-base: personal
 cmd_wait_shows-notimeout: personal
 cmd_wait_shows-partial: personal
-cmd_wait_shows-timeout: cygwin, personal
+cmd_wait_shows-timeout: personal
 file_transfer_submit: personal
 gangliad: personal
 job_ligo_x86-64-chkpttst: IPv4
@@ -34,8 +34,6 @@ job_ckpt_signals_std: personal, IPv4
 job_ckpt_socket-support_std: personal, IPv4
 job_ckpt_stack_std: personal, IPv4
 job_ckpt_stack_with_ckpt_server_std: IPv4
-job_condorc_abc_van: cygwin
-job_condorc_ab_van: cygwin
 job_core_args_sched: personal
 job_core_args_van: personal
 job_core_bigenv_sched: personal
@@ -84,7 +82,7 @@ job_core_sh-loop_van: personal
 job_dagman_abnormal_term_recovery_retries: personal
 job_dagman_abort-A: personal
 job_dagman_abort-B: personal
-job_dagman_abort-final-A: cygwin, personal
+job_dagman_abort-final-A: personal
 job_dagman_abort-final-B: personal
 job_dagman_always_run_post-A: personal
 job_dagman_always_run_post-B: personal
@@ -108,7 +106,7 @@ job_dagman_final-F: personal
 job_dagman_final-G: personal
 job_dagman_final-H: personal
 job_dagman_final-I: personal
-job_dagman_fullremove: cygwin, personal
+job_dagman_fullremove: personal
 job_dagman_global_event_log-A: personal
 job_dagman_global_event_log-B: personal
 job_dagman_gt1957: personal
@@ -199,7 +197,6 @@ job_filexfer_whento-simpleinput_van: personal
 job_filexfer_whento-withinput_van: personal
 job_hyperthread_check: personal
 job_negotiator_restart: personal
-job_partitionable_basic_van: cygwin
 job_rsc_all-syscalls_std: personal, IPv4
 job_rsc_atexit_std: personal, IPv4
 job_rsc_binary-io_std: personal, IPv4
@@ -215,21 +212,11 @@ job_rsc_stat_std: personal, IPv4
 job_rsc_truncate_std: personal, IPv4
 job_rsc_zero-calloc_std: personal, IPv4
 job_schedd_restart-endurance: personal
-job_schedd_restart-holdjobs-ok: cygwin
-job_schedd_restart-basic: cygwin
-cmd_gpu_discovery: cygwin
-job_services_during_neg_cycle: cygwin
 job_slash_transfer: personal
-job_startd_rank_preempt: cygwin
 job_starter_script-A: personal
 job_vmu_basic: personal
 job_vmu_ckpt: personal
-lib_auth_config: cygwin, personal
-lib_bt_shared_port-check-ports_van: cygwin
-lib_ccb_schedd: cygwin
-lib_ccb_schedd_privnet: cygwin
-lib_ccb_startd: cygwin
-lib_chirp: cygwin, personal
+lib_auth_config: personal
 lib_chirpio_van: personal
 lib_eventlog: personal
 lib_eventlog_base: personal
@@ -253,15 +240,10 @@ lib_eventlog_rotation-w_2_rotations_2_loops: personal
 lib_eventlog_rotation-w_5_rotations: personal
 lib_eventlog_rotation-w_old_rotations: personal
 lib_eventlog_rotation-w_old_rotations_2_loops: personal
-lib_eventlog-xml: cygwin, personal
-lib_job_router_local: cygwin
+lib_eventlog-xml: personal
 lib_param_completeness: personal
 lib_param_conditionals: personal
 lib_procapi_pidtracking-byenv: personal
 lib_procapi_pidtracking-snapshot: personal
-lib_shared_port-check-ports_van: cygwin
-lib_shared_port-collector_van: cygwin
-lib_shared_port_van: cygwin
 lib_unit_tests: personal
 lib_userlog: personal
-negotiator_match_log_exists: cygwin

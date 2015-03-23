@@ -5,6 +5,10 @@ use Cwd;
 use IPC::Open3;
 use Time::HiRes qw(tv_interval gettimeofday);
 use Archive::Tar;
+use IO::Socket;
+use IO::Socket::INET;
+use IO::Handle;
+use Socket;
 
 BEGIN {
 	if ($^O =~ /MSWin32/) {
@@ -15,12 +19,16 @@ BEGIN {
 
 package CondorUtils;
 
+#if(CondorUtils::is_windows()) {
+	#use Win32::Pipe;
+#}
+
 our $VERSION = '1.00';
 my $btdebug = 0;
 
 use base 'Exporter';
 
-our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl is_cygwin_perl fullchomp CreateEmptyFile CreateDir CopyIt TarCreate TarExtract MoveIt GetDirList DirLs List WhereIsInstallDir quoteMyString);
+our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl is_cygwin_perl fullchomp CreateEmptyFile CreateDir CopyIt TarCreate TarExtract MoveIt GetDirList DirLs List WhereIsInstallDir quoteMyString MyHead GeneralServer GeneralClient DagmanReadFlowLog);
 
 sub TRUE{1};
 sub FALSE{0};
@@ -599,7 +607,11 @@ sub quoteMyString {
 		$_ = $stringtoquote;
 		s/%/\%/g;
 		s/"/\"/g;
-		$returnstr = "\"" . $_ . "\"";
+		if($stringtoquote =~ /\s+/) {
+			$returnstr = "\"" . $_ . "\"";
+		} else {
+			$returnstr = $_;
+		}
 	} else {
 		$_ = $stringtoquote;
 		s/'/\'/g;
@@ -1036,4 +1048,212 @@ sub WhereIsInstallDir {
 	my $paths = "$installdir" . ",$wininstalldir";
 	return($paths);
 }
+
+sub MyHead {
+	my $size = shift;
+	my $file = shift;
+
+	print "Request:head $size $file\n";
+
+	if($size =~ /\-/) {
+		$_ = $size;
+		s/\-//;
+		print "$_\n";
+		$size = $_;
+	}
+	my $counter = 0;
+	open(MH,"<$file") or die "Open of $file failed:$!\n";
+	while(<MH>) {
+		print "$_";
+		$counter += 1;
+		if($counter == $size) {
+			last;
+		}
+	}
+	close(MH);
+}
+
+sub GeneralServer {
+	my $SockAddr = shift;
+	my $LogFile = shift;
+	my $raw = shift;
+
+	print "general server log file is $LogFile\n";
+
+	#open(OLDOUT, ">&STDOUT");
+	#open(OLDERR, ">&STDERR");
+	open(STDOUT, ">$LogFile") or die "Could not open $LogFile: $!";
+	open(STDERR, ">&STDOUT");
+	select(STDERR); $| = 1;
+	select(STDOUT); $| = 1;
+
+#	if(is_windows()) {
+#		my $server = IO::Socket::INET->new(
+#			LocalPort => '0',
+#			Proto  => 'udp',
+#			) or die "ERROR in Socket Creation:$!\n";
+#		print "Server has a socket\n";
+
+#		#my $eport = $server->sockport();
+#		#print "I am listening on port:$eport\n";
+#		my $mysockaddr = getsockname($server);
+#		if(defined $mysockaddr) {
+#			print "getsockname return $mysockaddr\n";
+#		} else {
+#			print "getsockname return undefined\n";
+#		}
+#		my ($port, $myaddr) = Socket::sockaddr_in($mysockaddr);
+#		print "I am listening on port:$port\n";
+#		printf "Connect to %s [%s]\n",
+#			scalar gethostbyaddr($myaddr, Socket::AF_INET),
+#			inet_ntoa($myaddr);
+#		# set no options for now
+#		#$server->setsockopt(Socket::SOL_SOCKET, Socket::SO_RCVBUF, 65440);
+
+#		while ( 1 )
+#		{
+#			my $newmsg;
+#			$server->recv($newmsg,1024) || die "Recv: $!";
+#			#$server->recv($newmsg,$MAXLEN);
+#			if($newmsg eq "quit")
+#			{
+#				exit(0);
+#			}
+#			if(defined($raw)) {
+#				print "$newmsg";
+#			} else {
+#				print "$newmsg\n";
+#			}
+#		}
+
+#		my $server = new Win32::Pipe($SockAddr);
+#		if(!(defined $server)) {
+#			die "Pipe not created:$SockAddr:$!\n";
+#		}
+
+#		while(1) {
+#			my $result = $server->Connect();
+#			if($result == 1) {
+#				my $newmsg = $server->Read();
+#				if($newmsg eq "quit")
+#				{
+#					exit(0);
+#				}
+#				if(defined($raw)) {
+#					print "$newmsg";
+#				} else {
+#					print "$newmsg\n";
+#				}
+#				my $disconnectres = $server->Disconnect();
+#				print "Disconnect res:$disconnectres:$!\n";
+#				# start with a single message
+#				 last;
+#			} else {
+#				print "Connect result:$result:$!\n";
+#			}
+#		}
+	#} else {
+		if(is_windows()) {
+		} else {
+			unlink($SockAddr);
+		}
+		print "About to NEW on $SockAddr\n";
+		my $server = IO::Socket::UNIX->new(Local => $SockAddr,
+									Type  => Socket::SOCK_DGRAM)
+		or die "Can't bind socket: $!\n";
+
+		$server->setsockopt(Socket::SOL_SOCKET, Socket::SO_RCVBUF, 65440);
+
+		while ( 1 )
+		{
+			my $newmsg;
+			my $MAXLEN = 1024;
+			#$server->recv($newmsg,$MAXLEN) || die "Recv: $!";
+			$server->recv($newmsg,$MAXLEN);
+			if($newmsg eq "quit")
+			{
+				exit(0);
+			}
+			if(defined($raw)) {
+				print "$newmsg";
+			} else {
+				print "$newmsg\n";
+			}
+		}
+
+		my $stat = 0;
+		my $returnval = shift;
+	#}
+	print "Server exiting\n";
+}
+
+sub GeneralClient {
+	my $MAXLEN = 1024;
+	my $comchan = shift;
+	my $newmsg = shift;
+
+	print "$comchan for mesg $newmsg\n";
+	
+	#if(is_windows()) {
+#		my $ClientSockAddr = "\\\\.\\pipe\\$comchan";
+#		my $pipe = new Win32::Pipe("$ClientSockAddr");
+#		if(!(defined $pipe)) {
+#			die "Client pipe creation and connection failed:$ClientSockAddr:$!\n";
+#		}
+#		my $result = $pipe->Write($newmsg);
+#		print "Pipe write result:$result:$!\n";
+#		$pipe->Close();
+	#} else {
+		my $client = IO::Socket::UNIX->new(Peer => "$comchan",
+								Type  => Socket::SOCK_DGRAM,
+								Timeout => 10)
+		or die $@;
+
+		$client->send($newmsg);
+
+		my $stat = 0;
+		my $returnval = shift;
+	#}
+	print "client exiting\n";
+}
+
+sub DagmanReadFlowLog {
+	my $log = shift;
+	my $option = shift; # $option not currently used
+	#my $limit = 2;
+	my $limit = shift;
+	my $count = 0;
+	my $line;
+
+	#print "Log is $log, Option is $option and limit is $limit\n";
+
+	open(OLDOUT, "<$log") or die "Failed to open:$log:$!\n";
+	while(<OLDOUT>)
+	{
+		CondorUtils::fullchomp($_);
+		$line = $_;
+		#print "--$line--\n";
+		if( $line =~ /^\s*(open)\s*$/ )
+		{
+			$count++;
+			#print "Count now $count\n";
+			if($count > $limit)
+			{
+				#print "$count exceeds $limit\n";
+				print "$count";
+				return($count);
+			}
+		}
+		if( $line =~ /^\s*(close)\s*$/ )
+		{
+			$count--;
+			#print "Count now $count\n";
+		}
+	}
+
+	close(OLDOUT);
+	print "$count";
+	return(0);
+}
+
 1;

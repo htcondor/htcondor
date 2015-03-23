@@ -5074,6 +5074,14 @@ friendly_name=Max Jobs Running
 review=?
 tags=schedd,schedd
 
+[CURB_MATCHMAKING]
+default=false
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Curb Expression for Matchmaking
+tags=schedd,schedd
+
 [START_LOCAL_UNIVERSE]
 default=TotalLocalJobsRunning < 200
 type=string
@@ -7001,6 +7009,78 @@ friendly_name=Permissions on the job's execute directory
 review=?
 tags=starter
 
+[PANDAD]
+default=$(LIBEXEC)/condor_pandad
+win32_default=
+type=path
+customization=seldom
+review=tlmiller
+reconfig=false
+
+[PANDA_UPDATE_TIMEOUT]
+default=0
+type=int
+review=tlmiller
+reconfig=true
+
+[PANDA_QUEUE_SIZE]
+default=131072
+type=int
+review=tlmiller
+reconfig=true
+
+[PANDA_QUEUE_GRACE]
+default=3
+type=int
+reivew=tlmiller
+reconfig=false
+
+[PANDA_STATISTICS_LOG]
+default=/tmp/pandaStatisticsLog
+type=string
+review=tlmiller
+reconfig=true
+
+[RUN_FILETRANSFER_PLUGINS_WITH_ROOT]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Whether to invoke file transfer plugins as user or as root
+review=?
+
+[DISCARD_SESSION_KEYRING_ON_STARTUP]
+default=true
+type=bool
+reconfig=false
+customization=expert
+friendly_name=Will master discard session keyring on startup
+review=toddt
+tags=ecryptfs,master
+
+[DOCKER]
+default=/usr/bin/docker
+win32_default=docker
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Docker
+review=?
+
+[SUBMIT_REQUIREMENT_NAMES]
+default=
+type=string
+reconfig=true
+friendly_name=Names of the submit requirements.
+review=tlmiller
+
+[IS_OWNER]
+default=(START =?= False)
+version=8.2.8
+type=string
+friendly_name=When a slot should be in Owner state
+review=?
+
 [FILETRANSFER_PLUGINS]
 default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
 win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe
@@ -7954,28 +8034,3 @@ default: @end
 	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
 @end
 
-[RUN_FILETRANSFER_PLUGINS_WITH_ROOT]
-default=false
-type=bool
-reconfig=true
-customization=seldom
-friendly_name=Whether to invoke file transfer plugins as user or as root
-review=?
-
-[DISCARD_SESSION_KEYRING_ON_STARTUP]
-default=true
-type=bool
-reconfig=false
-customization=expert
-friendly_name=Will master discard session keyring on startup
-review=toddt
-tags=ecryptfs,master
-
-[DOCKER]
-default=/usr/bin/docker
-win32_default=docker
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Docker
-review=?

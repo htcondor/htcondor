@@ -166,7 +166,9 @@ typedef struct macro_set {
 	*/
 	MACRO_ITEM* find_macro_item (const char *name, MACRO_SET& set);
 	const char * lookup_macro (const char *name, const char *prefix, MACRO_SET& set, int use=3);
-	//const char * lookup_and_use_macro (const char *name, const char *prefix, MACRO_SET& set, int use);
+	// lookup macro in the MACRO_SET defaults table.
+	// if the defaults table is the param table, and prefix is not NULL, then this first looks up in param subsys tables.
+	const char * lookup_macro_def(const char * name, const char* prefix, MACRO_SET& set, int use=3);
 
 	/*This is a faster version of lookup_macro that assumes the param name
 	  has already been prefixed with "prefix." if needed.*/
@@ -327,9 +329,6 @@ extern "C" {
 	int find_config_macro( register char *value, register char **leftp,
 		register char **namep, register char **rightp,
 		const char *self=NULL, bool getdollardollar=false, int search_pos=0);
-	int find_special_config_macro( const char *prefix, bool only_id_chars,
-		register char *value, register char **leftp,
-		register char **namep, register char **rightp);
 
 	void init_config (int options);
 }
@@ -411,6 +410,7 @@ BEGIN_C_DECLS
 		std::string & errmsg);
 
 	int Close_macro_source(FILE* conf_fp, MACRO_SOURCE& source, MACRO_SET& macro_set, int parsing_return_val);
+
 
 #endif // __cplusplus
 

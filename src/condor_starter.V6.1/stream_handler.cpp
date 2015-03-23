@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,28 +26,17 @@
 
 extern CStarter *Starter;
 
-/*static*/ int StreamHandler::num_handlers = 0;
+/* static */ std::list< StreamHandler * > StreamHandler::handlers;
 
-/*static*/ StreamHandler *StreamHandler::handlers[3];
-
-StreamHandler::StreamHandler()
+StreamHandler::StreamHandler() : is_output(false), job_pipe(-1), handler_pipe(-1), remote_fd(-1), offset(0), flags(0), done(false), connected(0), pending(0)
 {
-	remote_fd = -1;
 	pipe_fds[0] = -1; pipe_fds[1] = -1;
-	pending = 0;
-	offset = 0;
-	job_pipe = -1;
-	is_output = false;
-	handler_pipe = -1;
-	done = false;
-	connected = false;
 	buffer[0] = '\0';
 }
 
 
-bool StreamHandler::Init( const char *fn, const char *sn, bool io )
+bool StreamHandler::Init( const char *fn, const char *sn, bool io, int f )
 {
-	int flags;
 	int result;
 	HandlerType handler_mode;
 
@@ -55,16 +44,42 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io )
 	streamname = sn;
 	is_output = io;
 
-	if(is_output) {
-		flags = O_CREAT|O_TRUNC|O_WRONLY;
-	} else {
-		flags = O_RDONLY;
+	flags = f;
+	if( flags == -1 ) {
+		if( is_output ) {
+			flags = O_CREAT | O_TRUNC | O_WRONLY;
+		} else {
+			flags = O_RDONLY;
+		}
+	}
+
+	bool shouldAppend = false;
+	if( flags & O_APPEND ) {
+		// If we actually pass O_APPEND, then when we reconnect, flushing the
+		// buffer will result in duplicate data if the far side suffered a
+		// partial write.  (If it failed to write the buffer at all, that's
+		// OK, because we /wanted/ to append it to the file.)
+		//
+		// Instead, unset O_APPEND and simulate the effect: seek to the end of
+		// the file on open and set offset to that.
+		shouldAppend = true;
+		flags = flags & (~O_APPEND);
 	}
 
 	remote_fd = REMOTE_CONDOR_open(filename.Value(),(open_flags_t)flags,0777);
 	if(remote_fd<0) {
 		dprintf(D_ALWAYS,"Couldn't open %s to stream %s: %s\n",filename.Value(),streamname.Value(),strerror(errno));
 		return false;
+	}
+
+	offset = 0;
+	if( shouldAppend ) {
+		offset = REMOTE_CONDOR_lseek( remote_fd, 0, SEEK_END );
+		if( offset < 0 ) {
+			dprintf( D_ALWAYS, "Couldn't seek to end of %s for stream %s when append mode was requested: %s\n", filename.Value(), streamname.Value(), strerror( errno ) );
+			return false;
+		}
+	dprintf( D_SYSCALLS, "StreamHandler: Sought to %lu as a result of append request.\n", offset );
 	}
 
 	// create a DaemonCore pipe
@@ -90,20 +105,47 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io )
 		handler_mode = HANDLE_WRITE;
 	}
 
-	offset = 0;
 	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",static_cast<PipeHandlercpp>(&StreamHandler::Handler),"Stream I/O Handler",this,handler_mode);
 
 	done = false;
 	connected = true;
-	handlers[num_handlers++] = this;
+	handlers.push_back( this );
 
 	return true;
 }
 
+extern ReliSock * syscall_sock;
 int StreamHandler::Handler( int  /* fd */)
 {
 	int result;
 	int actual;
+
+	//
+	// If we're disconnected from the shadow, the REMOTE_CONDOR_* calls in
+	// this function will ASSERT() because of the bogus syscall_sock.  This
+	// is a problem if we're waiting for the shadow to reconnect.
+	//
+	if( syscall_sock && syscall_sock->get_file_desc() == INVALID_SOCKET ) {
+		Disconnect();
+
+		// If we're writing, empty the pipe and check the write on reconnect.
+		// The Disconnect() above unregisters this handler, so the application
+		// should block until then, and we don't have to worry about losing
+		// any more data.
+		result = daemonCore->Read_Pipe( handler_pipe, buffer, STREAM_BUFFER_SIZE );
+		if( result > 0 ) {
+			pending = result;
+		} else if( result == 0 ) {
+			// We know the remote fsync will fail, but it might make sense
+			// to try it again after the reconnect, so we do nothing.
+			// (The handler has already been unregistered; when we reregister,
+			// it should show up as ready to read again, and return EOF again.)
+		} else {
+			// See question below.
+		}
+
+		return KEEP_STREAM;
+	}
 
 	if(is_output) {
 		// Output from the job to the shadow
@@ -114,7 +156,7 @@ int StreamHandler::Handler( int  /* fd */)
 		result = daemonCore->Read_Pipe(handler_pipe,buffer,STREAM_BUFFER_SIZE);
 
 		if(result>0) {
-			dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes available\n",streamname.Value(),result);
+			dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes available, seeking to offset %lu\n",streamname.Value(),result,offset);
 			errno = 0;
 			pending = result;
 			REMOTE_CONDOR_lseek(remote_fd,offset,SEEK_SET);
@@ -122,7 +164,7 @@ int StreamHandler::Handler( int  /* fd */)
 				Disconnect();
 				return KEEP_STREAM;
 			}
-	
+
 			// This means something's really wrong with the file -- FS full
 			// i/o error, so punt.
 
@@ -147,8 +189,8 @@ int StreamHandler::Handler( int  /* fd */)
 			daemonCore->Cancel_Pipe(handler_pipe);
 			daemonCore->Close_Pipe(handler_pipe);
 			done=true;
-			
-			result = REMOTE_CONDOR_fsync(remote_fd);	
+
+			result = REMOTE_CONDOR_fsync(remote_fd);
 
 			if (result != 0) {
 				// This is bad. All of our writes have succeeded, but
@@ -162,6 +204,7 @@ int StreamHandler::Handler( int  /* fd */)
 				// If close fails, that's OK, we know the bytes are on disk
 			REMOTE_CONDOR_close(remote_fd);
 
+			handlers.remove( this );
 		} else if(result<0) {
 			dprintf(D_SYSCALLS,"StreamHandler: %s: unable to read: %s\n",streamname.Value(),strerror(errno));
 			// Why don't we EXCEPT here?
@@ -198,6 +241,7 @@ int StreamHandler::Handler( int  /* fd */)
 			daemonCore->Cancel_Pipe(handler_pipe);
 			daemonCore->Close_Pipe(handler_pipe);
 			REMOTE_CONDOR_close(remote_fd);
+			handlers.remove( this );
 		} else if(result<0) {
 			EXCEPT("StreamHandler: %s: unable to read from %s: %s",streamname.Value(),filename.Value(),strerror(errno));
 		}
@@ -211,31 +255,36 @@ int StreamHandler::GetJobPipe()
 	return job_pipe;
 }
 
-/*static*/ int
+/* static */ int
 StreamHandler::ReconnectAll() {
-	for (int i = 0; i < num_handlers; i++) {
-		if (!handlers[i]->done) {
-			if (handlers[i]->connected) {
-				handlers[i]->Disconnect();
+	std::list< StreamHandler * >::iterator i = handlers.begin();
+	for( ; i != handlers.end(); ++i ) {
+		StreamHandler * handler = * i;
+		if( ! handler->done ) {
+			if( handler->connected ) {
+				// Do NOT call Disconnect().  This reconnect only happens
+				// AFTER the syscall sock has been reestablished, so we
+				// very much do not want to close the syscall sock again.
+				handler->connected = false;
+				daemonCore->Cancel_Pipe( handler->handler_pipe );
 			}
-			handlers[i]->Reconnect();
+
+			handler->Reconnect();
 		}
 	}
+
 	return 0;
 }
 
 bool
 StreamHandler::Reconnect() {
-	int flags;
 	HandlerType handler_mode;
 
 	dprintf(D_ALWAYS, "Streaming i/o handler reconnecting %s to shadow\n", filename.Value());
 
 	if(is_output) {
-		flags = O_WRONLY;
 		handler_mode = HANDLE_READ;
 	} else {
-		flags = O_RDONLY;
 		handler_mode = HANDLE_WRITE;
 	}
 
@@ -245,18 +294,18 @@ StreamHandler::Reconnect() {
 	}
 
 	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",static_cast<PipeHandlercpp>(&StreamHandler::Handler),"Stream I/O Handler",this,handler_mode);
-	
+
 	connected = true;
 
 	if(is_output) {
-		
+
 		VerifyOutputFile();
 
 		// We don't always need to do this write, but it is cheap to do
 		// and always doing it makes it easier to test
 
 		errno = 0;
-		dprintf(D_ALWAYS, "Retrying streaming write to %s of %d bytes after reconnect\n", filename.Value(), pending);
+		dprintf(D_ALWAYS, "Retrying streaming write to %s of %d bytes at %lu after reconnect\n", filename.Value(), pending, offset);
 		REMOTE_CONDOR_lseek(remote_fd,offset,SEEK_SET);
 		if (errno == ETIMEDOUT) {
 			Disconnect();
@@ -300,7 +349,7 @@ bool
 StreamHandler::VerifyOutputFile() {
 	errno = 0;
 	off_t size = REMOTE_CONDOR_lseek(remote_fd,0,SEEK_END);
-	
+
 	if (size == (off_t)-1) {
 		EXCEPT("StreamHandler: cannot lseek to output file %s on reconnect: %d", filename.Value(), errno);
 		return false;

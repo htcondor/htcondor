@@ -107,9 +107,9 @@ ClassAd *ClusterAd = NULL;
 
 ClassAd  *job = NULL;
 
-char	*OperatingSystem;
-char	*Architecture;
-char	*Spool;
+//char	*OperatingSystem;
+//char	*Architecture;
+//char	*Spool;
 char	*ScheddName = NULL;
 std::string ScheddAddr;
 AbstractScheddQ * MyQ = NULL;
@@ -122,9 +122,9 @@ MyString    JobRootdir;
 #endif
 MyString    JobIwd;
 
-int		LineNo;
 int		ExtraLineNo;
-int		GotQueueCommand;
+int		GotQueueCommand = 0;
+int		GotNonEmptyQueueCommand = 0;
 SandboxTransferMethod	STMethod = STM_USE_SCHEDD_ONLY;
 
 char *	IckptName;	/* Pathname of spooled initial ckpt file */
@@ -140,6 +140,7 @@ bool	SubmitFromStdin = false;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
 int		DashDryRun = 0;
+int		DumpSubmitHash = 0;
 int		JobDisableFileChecks = 0;
 bool	RequestMemoryIsZero = false;
 bool	RequestDiskIsZero = false;
@@ -149,7 +150,6 @@ bool	already_warned_requirements_disk = false;
 int		MaxProcsPerCluster;
 int	  ClusterId = -1;
 int	  ProcId = -1;
-int   FirstStep = 1; // offset to convert ProcId to step
 int	  JobUniverse;
 char *JobGridType = NULL;
 int		Remote=0;
@@ -208,6 +208,7 @@ char* LogNotesVal = NULL;
 char* UserNotesVal = NULL;
 char* StackSizeVal = NULL;
 List<const char> extraLines;  // lines passed in via -a argument
+std::string queueCommandLine; // queue statement passed in via -q argument
 
 // declare enough of the condor_params structure definitions so that we can define submit hashtable defaults
 namespace condor_params {
@@ -218,38 +219,79 @@ namespace condor_params {
 // buffers used while processing the queue statement to inject $(Cluster), $(Process) and $(Step)
 // into the submit hash table.  Note that these buffers are also used BEFORE the queue
 // statement to set defaults for $(Cluster), $(Process) and $(Step).
-static char ClusterString[20]="1", ProcessString[20]="0", StepString[20]="1", EmptyItemString[] = "";
+static char ClusterString[20]="1", ProcessString[20]="0", StepString[20]="0", RowString[20]="0", EmptyItemString[] = "";
 // values for submit hashtable defaults, these are declared as char rather than as const char to make g++ on fedora shut up.
 static char OneString[] = "1", ZeroString[] = "0";
 static char ParallelNodeString[] = "#pArAlLeLnOdE#";
+static char UnsetString[] = "";
 
 
-static condor_params::string_value ArchMacroDef = { Architecture, 0 };
-static condor_params::string_value OpsysMacroDef = { OperatingSystem, 0 };
+static condor_params::string_value ArchMacroDef = { UnsetString, 0 };
+static condor_params::string_value OpsysMacroDef = { UnsetString, 0 };
+static condor_params::string_value OpsysVerMacroDef = { UnsetString, 0 };
+static condor_params::string_value OpsysMajorVerMacroDef = { UnsetString, 0 };
+static condor_params::string_value OpsysAndVerMacroDef = { UnsetString, 0 };
+static condor_params::string_value SpoolMacroDef = { UnsetString, 0 };
 static condor_params::string_value ClusterMacroDef = { ClusterString, 0 };
 static condor_params::string_value ProcessMacroDef = { ProcessString, 0 };
-static condor_params::string_value NodeMacroDef = { ParallelNodeString, 0 };
+static condor_params::string_value NodeMacroDef = { UnsetString, 0 };
 static condor_params::string_value StepMacroDef = { StepString, 0 };
-static condor_params::string_value StepBaseMacroDef = { OneString, 0 };
+static condor_params::string_value RowMacroDef = { RowString, 0 };
 #ifdef WIN32
+static condor_params::string_value IsLinuxMacroDef = { ZeroString, 0 };
 static condor_params::string_value IsWinMacroDef = { OneString, 0 };
+#elif defined LINUX
+static condor_params::string_value IsLinuxMacroDef = { OneString, 0 };
+static condor_params::string_value IsWinMacroDef = { ZeroString, 0 };
 #else
+static condor_params::string_value IsLinuxMacroDef = { ZeroString, 0 };
 static condor_params::string_value IsWinMacroDef = { ZeroString, 0 };
 #endif
+
+static char StrictFalseMetaKnob[] = 
+	"SubmitWarnEmptyMatches=false\n"
+	"SubmitFailEmptyMatches=false\n"
+	"SubmitWarnDuplicateMatches=false\n"
+	"SubmitFailEmptyFields=false\n"
+	"SubmitWarnEmptyFields=false\n";
+static char StrictTrueMetaKnob[] = 
+	"SubmitWarnEmptyMatches=true\n"
+	"SubmitFailEmptyMatches=true\n"
+	"SubmitWarnDuplicateMatches=true\n"
+	"SubmitFailEmptyFields=false\n"
+	"SubmitWarnEmptyFields=true\n";
+static char StrictHarshMetaKnob[] = 
+	"SubmitWarnEmptyMatches=true\n"
+	"SubmitFailEmptyMatches=true\n"
+	"SubmitWarnDuplicateMatches=true\n"
+	"SubmitFailEmptyFields=true\n"
+	"SubmitWarnEmptyFields=true\n";
+static condor_params::string_value StrictFalseMetaDef = { StrictFalseMetaKnob, 0 };
+static condor_params::string_value StrictTrueMetaDef = { StrictTrueMetaKnob, 0 };
+static condor_params::string_value StrictHarshMetaDef = { StrictHarshMetaKnob, 0 };
 
 // Table of submit macro 'defaults'. This provides a convenient way to inject things into the submit
 // hashtable without actually running a bunch of code to stuff the table.
 // Because they are defaults they will be ignored when scanning for unreferenced macros.
 // NOTE: TABLE MUST BE SORTED BY THE FIRST FIELD!!
 static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
+	{ "$STRICT.FALSE", &StrictFalseMetaDef },
+	{ "$STRICT.HARSH", &StrictHarshMetaDef },
+	{ "$STRICT.TRUE", &StrictTrueMetaDef },
 	{ "ARCH",      &ArchMacroDef },
 	{ "Cluster",   &ClusterMacroDef },
+	{ "IsLinux",   &IsLinuxMacroDef },
 	{ "IsWindows", &IsWinMacroDef },
+	{ "ItemIndex", &RowMacroDef },
 	{ "Node",      &NodeMacroDef },
-	{ "OPSYS",     &OpsysMacroDef },
+	{ "OPSYS",           &OpsysMacroDef },
+	{ "OPSYSANDVER",     &OpsysAndVerMacroDef },
+	{ "OPSYSMAJORVER",   &OpsysMajorVerMacroDef },
+	{ "OPSYSVER",        &OpsysVerMacroDef },
 	{ "Process",   &ProcessMacroDef },
+	{ "Row",       &RowMacroDef },
+	{ "SPOOL",     &SpoolMacroDef },
 	{ "Step",      &StepMacroDef },
-	{ "StepBase",  &StepBaseMacroDef },
 };
 
 static MACRO_DEFAULTS SubmitMacroDefaultSet = {
@@ -265,7 +307,8 @@ static MACRO_SET SubmitMacroSet = {
 	&SubmitMacroDefaultSet };
 
 // these are used to keep track of the source of various macros in the table.
-const MACRO_SOURCE DefaultMacro = { true, false, 1, -2, -1, -2 };
+const MACRO_SOURCE DefaultMacro = { true, false, 1, -2, -1, -2 }; // for macros set by default
+const MACRO_SOURCE LiveMacro = { true, false, 3, -2, -1, -2 };    // for macros use as queue loop variables
 MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 
 #define MEG	(1<<20)
@@ -281,8 +324,8 @@ bool		DumpFileIsStdout = 0;
 /*
 **	Names of possible CONDOR variables.
 */
-const char	*Cluster 		= "cluster";
-const char	*Process			= "process";
+const char	*Cluster 		= "Cluster";
+const char	*Process			= "Process";
 const char	*Hold			= "hold";
 const char	*Priority		= "priority";
 const char	*Notification	= "notification";
@@ -589,6 +632,7 @@ void	SetForcedAttributes();
 int		DoUnitTests(int options);
 void 	check_iwd( char const *iwd );
 int 	read_submit_file( FILE *fp );
+const char * is_queue_statement(const char * line); // return ptr to queue args of this is a queue statement
 char * 	condor_param( const char* name, const char* alt_name );
 char * 	condor_param( const char* name ); // call param with NULL as the alt
 void 	set_condor_param( const char* name, const char* value);
@@ -597,11 +641,7 @@ void 	set_condor_param_used( const char* name);
 // this function is intended for use during queue iteration to stuff changing values like $(Cluster) and $(Process)
 // Because of this the function does NOT make a copy of value, it's up to the caller to
 // make sure that value is not changed for the lifetime of possible macro substitution.
-void 	set_live_submit_variable(const char* name, const char* live_value);
-int queue_connect();
-int queue_begin(StringList & vars, bool new_cluster); // called before iterating items
-int queue_item(int num, StringList & vars, char * item, const char * delims, const char * ws);
-int queue_end(bool fEof); // called when done iterating items for a single queue statement, and at end of file
+void 	set_live_submit_variable(const char* name, const char* live_value, bool force_used=true);
 bool 	check_requirements( char const *orig, MyString &answer );
 void 	check_open( const char *name, int flags );
 void 	usage();
@@ -680,6 +720,24 @@ condor_param_mystring( const char * name, const char * alt_name )
 	return ret;
 }
 
+int condor_param_int(const char* name, const char * alt_name, int def_value)
+{
+	char * result = condor_param(name, alt_name);
+	if ( ! result)
+		return def_value;
+
+	long long value = def_value;
+	if (*result) {
+		if ( ! string_is_long_param(result, value) || value < INT_MIN || value >= INT_MAX) {
+			fprintf(stderr, "\nERROR: %s=%s is invalid, must eval to an integer.\n", name, result);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+	}
+	free(result);
+	return (int)value;
+}
+
 void non_negative_int_fail(const char * Name, char * Value)
 {
 
@@ -693,6 +751,24 @@ void non_negative_int_fail(const char * Name, char * Value)
 	}
 	
 	// sigh lexical_cast<>
+}
+
+int condor_param_bool(const char* name, const char * alt_name, bool def_value)
+{
+	char * result = condor_param(name, alt_name);
+	if ( ! result)
+		return def_value;
+
+	bool value = def_value;
+	if (*result) {
+		if ( ! string_is_boolean_param(result, value)) {
+			fprintf(stderr, "\nERROR: %s=%s is invalid, must eval to a boolean.\n", name, result);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+	}
+	free(result);
+	return value;
 }
 
 // parse a input string for an int64 value optionally followed by K,M,G,or T
@@ -1043,6 +1119,7 @@ main( int argc, const char *argv[] )
 				if (pcolon) { 
 					int opt = atoi(pcolon+1);
 					if (opt > 1) DashDryRun =  opt;
+					else if (MATCH == strcmp(pcolon+1, "hash")) DumpSubmitHash = 1;
 				}
 			} else if (is_dash_arg_prefix(ptr[0], "spool", 1)) {
 				Remote++;
@@ -1101,7 +1178,42 @@ main( int argc, const char *argv[] )
 							 MyName );
 					exit( 1 );
 				}
-				extraLines.Append( *ptr );
+				// if appended submit line looks like a queue statement, save it off for queue processing.
+				if (is_queue_statement(ptr[0])) {
+					if ( ! queueCommandLine.empty()) {
+						fprintf(stderr, "%s: only one -queue command allowed\n", MyName);
+						exit(1);
+					}
+					queueCommandLine = ptr[0];
+				} else {
+					extraLines.Append( *ptr );
+				}
+			} else if (is_dash_arg_prefix(ptr[0], "queue", 1)) {
+				if( !(--argc) || (!(*ptr[1]) || *ptr[1] == '-')) {
+					fprintf( stderr, "%s: -queue requires at least one argument\n",
+							 MyName );
+					exit( 1 );
+				}
+				if ( ! queueCommandLine.empty()) {
+					fprintf(stderr, "%s: only one -queue command allowed\n", MyName);
+					exit(1);
+				}
+
+				// The queue command uses arguments until it sees one starting with -
+				// we do this so that shell glob expansion behaves like you would expect.
+				++ptr;
+				queueCommandLine = "queue "; queueCommandLine += ptr[0];
+				while (argc > 1) {
+					bool is_dash = (MATCH == strcmp(ptr[1], "-"));
+					if (is_dash || ptr[1][0] != '-') {
+						queueCommandLine += " ";
+						queueCommandLine += ptr[1];
+						++ptr;
+						--argc;
+						if ( ! is_dash) continue;
+					}
+					break;
+				}
 			} else if (is_dash_arg_prefix( ptr[0], "password", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -password requires another argument\n",
@@ -1330,7 +1442,7 @@ main( int argc, const char *argv[] )
 		if( ExtraLineNo == 0 ) {
 			fprintf( stderr,
 					 "\nERROR: Failed to parse command file (line %d).\n",
-					 LineNo);
+					 FileMacroSource.line);
 		}
 		else {
 			fprintf( stderr,
@@ -1341,10 +1453,12 @@ main( int argc, const char *argv[] )
 	}
 
 	if( !GotQueueCommand ) {
-		fprintf(stderr, "\nERROR: \"%s\" doesn't contain any \"queue\"",
+		fprintf(stderr, "\nERROR: \"%s\" doesn't contain any \"queue\" commands -- no jobs queued\n",
 				SubmitFromStdin ? "(stdin)" : cmd_file);
-		fprintf( stderr, " commands -- no jobs queued\n" );
 		exit( 1 );
+	} else if ( ! GotNonEmptyQueueCommand && ! terse) {
+		fprintf(stderr, "\nWARNING: \"%s\" has only empty \"queue\" commands -- no jobs queued\n",
+				SubmitFromStdin ? "(stdin)" : cmd_file);
 	}
 
 	// we can't disconnect from something if we haven't connected to it: since
@@ -1501,24 +1615,32 @@ main( int argc, const char *argv[] )
 	}
 
 	/*	print all of the parameters that were not actually expanded/used 
-		in the submit file */
-	if (WarnOnUnusedMacros) {
+		in the submit file. but not if we never queued any jobs. since
+		there would be a ton of false positives in that case.
+	*/
+	if (WarnOnUnusedMacros && GotNonEmptyQueueCommand) {
 		if (verbose) { fprintf(stdout, "\n"); }
+
+		// Force non-zero ref count for DAG_STATUS and FAILED_COUNT
+		// these are specified for all DAG node jobs (see dagman_submit.cpp).
+		// wenger 2012-03-26 (refactored by TJ 2015-March)
+		lookup_macro("DAG_STATUS", NULL, SubmitMacroSet);
+		lookup_macro("FAILED_COUNT", NULL, SubmitMacroSet);
+
 		HASHITER it = hash_iter_begin(SubmitMacroSet);
 		for ( ; !hash_iter_done(it); hash_iter_next(it) ) {
-			if(0 == hash_iter_used_value(it)) {
+			MACRO_META * pmeta = hash_iter_meta(it);
+			if (pmeta && !pmeta->use_count && !pmeta->ref_count) {
 				const char *key = hash_iter_key(it);
-				const char *val = hash_iter_value(it);
-					// Don't warn if DAG_STATUS or FAILED_COUNT is specified
-					// but unused -- these are specified for all DAG node
-					// jobs (see dagman_submit.cpp).  wenger 2012-03-26
-				if ( strcasecmp( key, "DAG_STATUS" ) != MATCH &&
-							strcasecmp( key, "FAILED_COUNT" ) != MATCH ) {
-					fprintf(stderr, "WARNING: the line `%s = %s' was unused by condor_submit. Is it a typo?\n", key, val);
+				if (pmeta->source_id == LiveMacro.id) {
+					fprintf(stderr, "WARNING: the Queue variable '%s' was unused by condor_submit. Is it a typo?\n", key);
+				} else {
+					const char *val = hash_iter_value(it);
+					fprintf(stderr, "WARNING: the line '%s = %s' was unused by condor_submit. Is it a typo?\n", key, val);
 				}
 			}
 		}
-        hash_iter_delete(&it);
+		hash_iter_delete(&it);
 		
 	}
 
@@ -5607,13 +5729,30 @@ SetGridParams()
 							 full_path(tmp), strerror(errno));
 				exit(1);
 			}
-			fclose(fp);
 
 			StatInfo si(full_path(tmp));
 			if (si.IsDirectory()) {
 				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
 				exit(1);
 			}
+
+			// Should this depend on file checks not being disabled?
+			unsigned long fileSize = si.GetFileSize();
+			char * rawBuffer = (char *)malloc( fileSize + 1 );
+			assert( rawBuffer != NULL );
+			unsigned long totalRead = full_read( fileno(fp), rawBuffer, fileSize );
+			fclose( fp );
+			if( totalRead != fileSize ) {
+				fprintf( stderr, "Failed to completely read public key file '%s'; need %lu bytes, read only %lu.\n", tmp, fileSize, totalRead );
+				free( rawBuffer );
+				exit(1);
+			}
+			rawBuffer[ fileSize ] = '\0';
+			std::string accessKey( rawBuffer );
+			trim( accessKey );
+			buffer.formatstr( "%s = \"%s\"", ATTR_EC2_ACCESS_KEY, accessKey.c_str() );
+			InsertJobExpr( buffer.Value() );
+			free( rawBuffer );
 		}
 		buffer.formatstr( "%s = \"%s\"", ATTR_EC2_ACCESS_KEY_ID, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
@@ -6458,18 +6597,125 @@ SetKillSig()
 }
 #endif  // of ifndef WIN32
 
+class qslice {
+public:
+	qslice() : flags(0), start(0), end(0), step(0) {}
+	qslice(int _start) : flags(1|2), start(_start), end(0), step(0) {}
+	qslice(int _start, int _end) : flags(1|2|4), start(_start), end(_end), step(0) {}
+	~qslice() {}
+	// set the slice by parsing a string [x:y:z], where
+	// the enclosing [] are required
+	// x,y & z are integers, y and z are optional
+	char *set(char* str) {
+		flags = 0;
+		if (*str == '[') {
+			char * p = str;
+			char * pend=NULL;
+			flags |= 1;
+			int val = (int)strtol(p+1, &pend, 10);
+			if ( ! pend || (*pend != ':' && *pend != ']')) { flags = 0; return str; }
+			start = val; if (pend > p+1) flags |= 2;
+			p = pend;
+			if (*p == ']') return p;
+			val = (int)strtol(p+1, &pend, 10);
+			if ( ! pend || (*pend != ':' && *pend != ']')) { flags = 0; return str; }
+			end = val; if (pend > p+1) flags |= 4;
+			p = pend;
+			if (*p == ']') return p;
+			val = (int)strtol(p+1, &pend, 10);
+			if ( ! pend || *pend != ']') { flags = 0; return str; }
+			step = val; if (pend > p+1) flags |= 8;
+			return pend+1;
+		}
+		return str;
+	}
+	bool  initialized() { return flags & 1; }
+
+	// convert ix based on slice start & step, returns true if translated ix is within slice start and length.
+	// input ix is assumed to be 0 based and increasing.
+	bool translate(int & ix, int len) {
+		if (!(flags & 1)) return ix >= 0 && ix < len;
+		int im = (flags&8) ? step : 1;
+		if (im <= 0) {
+			ASSERT(0); // TODO: implement negative iteration.
+		} else {
+			int is = 0;   if (flags&2) { is = (start < 0) ? start+len : start; }
+			int ie = len; if (flags&4) { ie = is + ((end < 0) ? end+len : end); }
+			int iy = is + (ix*im);
+			ix = iy;
+			return ix >= is && ix < ie;
+		}
+	}
+
+	// check to see if ix is selected for by the slice. negative iteration is ignored 
+	bool selected(int ix, int len) {
+		if (!(flags&1)) return ix >= 0 && ix < len;
+		int is = 0; if (flags&2) { is = (start < 0) ? start+len : start; }
+		int ie = len; if (flags&4) { ie = (end < 0) ? end+len : end; }
+		return ix >= is && ix < ie && ( !(flags&8) || (0 == ((ix-is) % step)) );
+	}
+
+private:
+	int flags; // 1==initialized, 2==start set, 4==length set, 8==step set
+	int start;
+	int end;
+	int step;
+};
+
+struct _qtoken { const char * name; int id; };
+
+// scan for a keyword from set of tokens, the keywords must be surrounded by whitespace
+// or terminated by (.  if a token is found token_id is set, otherwise it is left untouched.
+// the return value is a pointer to where scanning left off.
+char * queue_token_scan(char * ptr, const struct _qtoken tokens[], int ctokens, char** pptoken, int & token_id, bool scan_until_match)
+{
+	char *ptok = NULL;   // pointer to start of current token in pqargs when scanning for keyword
+	char tokenbuf[sizeof("matching")+1] = ""; // temporary buffer to hold a potential keyword while scanning
+	int  maxtok = (int)sizeof(tokenbuf)-1;
+	int  cchtok = 0;
+
+	char * p = ptr;
+
+	while (*p) {
+		int ch = *p;
+		if (isspace(ch) || ch == '(') {
+			if (cchtok >= 1 && cchtok <= maxtok) {
+				tokenbuf[cchtok] = 0;
+				int ix = 0;
+				for (ix = 0; ix < ctokens; ++ix) {
+					if (MATCH == strcasecmp(tokenbuf, tokens[ix].name))
+						break;
+				}
+				if (ix < ctokens) { token_id = tokens[ix].id; *pptoken = ptok; break; }
+				if ( ! scan_until_match) { *pptoken = ptok; break; }
+			}
+			cchtok = 0;
+		} else {
+			if ( ! cchtok) { ptok = p; }
+			if (cchtok < maxtok) { tokenbuf[cchtok] = ch; }
+			++cchtok;
+		}
+		++p;
+	}
+
+	return p;
+}
 
 enum {
 	foreach_not=0,
 	foreach_in,
 	foreach_from,
 	foreach_matching,
+	foreach_matching_files,
+	foreach_matching_dirs,
+	foreach_matching_any,
 };
 
 enum {
 	PARSE_ERROR_INVALID_QNUM_EXPR = -2,
 	PARSE_ERROR_QNUM_OUT_OF_RANGE = -3,
-	PARSE_ERROR_
+	PARSE_ERROR_UNEXPECTED_KEYWORD = -4,
+	PARSE_ERROR_BAD_SLICE = -5,
 };
 
 // parse a the arguments for a Queue statement. this will be of the form
@@ -6508,6 +6754,7 @@ int parse_queue_args (
 	int & queue_num,    // out: the count of processes to queue for each item
 	StringList& vars,   // out: user defined variable names
 	StringList& items,  // out: list of items to iterate over
+	qslice & slice,     // out: may be initialized to slice if "[]" is parsed.
 	MyString & items_filename) // out: file to read list of items from, returns "<" to indicate list should be read from submit file.
 {
 	foreach_mode = foreach_not;
@@ -6523,6 +6770,10 @@ int parse_queue_args (
 
 	char *p = pqargs;    // pointer to current char while scanning
 	char *ptok = NULL;   // pointer to start of current token in pqargs when scanning for keyword
+#if 1
+	static const struct _qtoken foreach_tokens[] = { {"in", foreach_in }, {"from", foreach_from}, {"matching", foreach_matching} };
+	p = queue_token_scan(p, foreach_tokens, COUNTOF(foreach_tokens), &ptok, foreach_mode, true);
+#else
 	char tokenbuf[sizeof("matching")+1] = ""; // temporary buffer to hold a potential keyword while scanning
 	int  maxtok = (int)sizeof(tokenbuf)-1;
 	int  cchtok = 0;
@@ -6545,6 +6796,7 @@ int parse_queue_args (
 		}
 		++p;
 	}
+#endif
 
 	// for now assume that p points to the end of the queue count expression.
 	char * pnum_end = p;
@@ -6556,6 +6808,54 @@ int parse_queue_args (
 		// if we found a keyword, then p points to the start of the itemlist
 		// and we have to scan backwords to find the end of the queue count.
 		while (*p && isspace(*p)) ++p;
+
+		// check for qualifiers after the foreach keyword
+		if (*p != '(') {
+			static const struct _qtoken quals[] = { {"files", 1 }, {"dirs", 2}, {"any", 3} };
+			for (;;) {
+				char * p2 = p;
+				int qual = -1;
+				char * ptmp = NULL;
+				p2 = queue_token_scan(p2, quals, COUNTOF(quals), &ptmp, qual, false);
+				if (ptmp && *ptmp == '[') { qual = 4; }
+				if (qual <= 0)
+					break;
+
+				switch (qual)
+				{
+				case 1:
+					if (foreach_mode == foreach_matching) foreach_mode = foreach_matching_files;
+					else return PARSE_ERROR_UNEXPECTED_KEYWORD;
+					break;
+
+				case 2:
+					if (foreach_mode == foreach_matching) foreach_mode = foreach_matching_dirs;
+					else return PARSE_ERROR_UNEXPECTED_KEYWORD;
+					break;
+
+				case 3:
+					if (foreach_mode == foreach_matching) foreach_mode = foreach_matching_any;
+					else return PARSE_ERROR_UNEXPECTED_KEYWORD;
+					break;
+
+				case 4:
+					p2 = slice.set(ptmp);
+					if ( ! slice.initialized()) return PARSE_ERROR_BAD_SLICE;
+					if (*p2 == ']') ++p2;
+					break;
+
+				default:
+					break;
+				}
+
+				if (p == p2) break; // just in case we don't advance.
+				p = p2;
+				while (*p && isspace(*p)) ++p;
+			}
+		}
+
+		// parse the itemlist. this can be all on a single line, or spanning multiple lines.
+		// we only parse the first line here, and set items_filename to indicate how to proceed
 		char * plist = p;
 		bool one_line_list = false;
 		if (*plist == '(') {
@@ -6568,7 +6868,13 @@ int parse_queue_args (
 			// find on the current line, and then set the filename to "<" to tell the caller to read
 			// the remainder from the submit file.
 			++plist;
-			if (*plist) { items.append(plist); }
+			if (*plist) {
+				if (foreach_mode == foreach_from) {
+					items.append(plist);
+				} else {
+					items.initializeFromString(plist);
+				}
+			}
 			items_filename = "<";
 		} else if (foreach_mode == foreach_from) {
 			if (one_line_list) {
@@ -6601,7 +6907,7 @@ int parse_queue_args (
 						--pt;
 					}
 				}
-				if (isspace(ch) || isalpha(ch) || ch == ',' || ch == '_') {
+				if (isspace(ch) || isalpha(ch) || ch == ',' || ch == '_' || ch == '.') {
 					pvars = pt-1;
 				} else {
 					break;
@@ -6633,6 +6939,18 @@ int parse_queue_args (
 	return 0;
 }
 
+// Check to see if this is a queue statement, if it is, return a pointer to the queue arguments.
+// 
+const char * is_queue_statement(const char * line)
+{
+	const int cchQueue = sizeof("queue")-1;
+	if (starts_with_ignore_case(line, "queue") && (0 == line[cchQueue] || isspace(line[cchQueue]))) {
+		const char * pqargs = line+cchQueue;
+		while (*pqargs && isspace(*pqargs)) ++pqargs;
+		return pqargs;
+	}
+	return NULL;
+}
 
 MyString last_submit_executable;
 MyString last_submit_cmd;
@@ -6647,13 +6965,18 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 	FILE* fp_submit = (FILE*)pv;
 	int rval = 0;
 	const char * subsys = get_mySubSystem()->getName();
-	const int cchQueue = sizeof("queue")-1;
 
 	// Check to see if this is a queue statement.
-	// 
-	if (starts_with_ignore_case(line, "queue") && (0 == line[cchQueue] || isspace(line[cchQueue]))) {
+	//
+	char * pqargs = const_cast<char*>(is_queue_statement(line));
+	if (pqargs) {
 
-		char * pqargs = line+cchQueue;
+		GotQueueCommand = true;
+
+		if ( ! queueCommandLine.empty() && fp_submit != NULL) {
+			errmsg = "-queue argument conflicts with queue statement in submit file";
+			return -1;
+		}
 
 		// now parse the extra lines.
 		ExtraLineNo = 0;
@@ -6684,11 +7007,50 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 			last_submit_cmd = cur_submit_cmd;
 		}
 
+		// set glob expansion options from submit statements.
+		int expand_options = 0;
+		if (condor_param_bool("SubmitWarnEmptyMatches", "submit_warn_empty_matches", true)) {
+			expand_options |= EXPAND_GLOBS_WARN_EMPTY;
+		}
+		if (condor_param_bool("SubmitFailEmptyMatches", "submit_fail_empty_matches", false)) {
+			expand_options |= EXPAND_GLOBS_FAIL_EMPTY;
+		}
+		if (condor_param_bool("SubmitWarnDuplicateMatches", "submit_warn_duplicate_matches", true)) {
+			expand_options |= EXPAND_GLOBS_WARN_DUPS;
+		}
+		if (condor_param_bool("SubmitAllowDuplicateMatches", "submit_allow_duplicate_matches", false)) {
+			expand_options |= EXPAND_GLOBS_ALLOW_DUPS;
+		}
+		char* parm = condor_param("SubmitMatchDirectories", "submit_match_directories");
+		if (parm) {
+			if (MATCH == strcasecmp(parm, "never") || MATCH == strcasecmp(parm, "no") || MATCH == strcasecmp(parm, "false")) {
+				expand_options |= EXPAND_GLOBS_TO_FILES;
+			} else if (MATCH == strcasecmp(parm, "only")) {
+				expand_options |= EXPAND_GLOBS_TO_DIRS;
+			} else if (MATCH == strcasecmp(parm, "yes") || MATCH == strcasecmp(parm, "true")) {
+				// nothing to do.
+			} else {
+				errmsg = parm;
+				errmsg += " is not a valid value for SubmitMatchDirectories";
+				return -1;
+			}
+			free(parm); parm = NULL;
+		}
+
+		int queue_item_opts = 0;
+		if (condor_param_bool("SubmitWarnEmptyFields", "submit_warn_empty_fields", true)) {
+			queue_item_opts |= QUEUE_OPT_WARN_EMPTY_FIELDS;
+		}
+		if (condor_param_bool("SubmitFailEmptyFields", "submit_fail_empty_fields", false)) {
+			queue_item_opts |= QUEUE_OPT_FAIL_EMPTY_FIELDS;
+		}
+
 		// skip whitespace before queue arguments (if any)
 		while (isspace(*pqargs)) ++pqargs;
 
 		StringList vars;
 		StringList items;
+		qslice     slice;
 		MyString   items_filename;
 		const char* token_seps = ", \t";
 		const char* token_ws = " \t";
@@ -6698,7 +7060,7 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 
 		// parse the queue arguments, handling the count and finding the in,from & matching keywords
 		// on success pqargs will point to to \0 or to just after the keyword.
-		rval = parse_queue_args(pqargs, foreach_mode, queue_modifier, vars, items, items_filename);
+		rval = parse_queue_args(pqargs, foreach_mode, queue_modifier, vars, items, slice, items_filename);
 		if (rval < 0) {
 			errmsg = "invalid Queue statement";
 			return rval;
@@ -6718,14 +7080,30 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 				int item_list_begin_line = source.line;
 				for(char * line=NULL; ; ) {
 					line = getline_trim(fp_submit, source.line);
-					if ( ! line) break;
+					if ( ! line) break; // null indicates end of file
+					if (line[0] == '#') continue; // skip comments.
 					if (line[0] == ')') { saw_close_brace = true; break; }
-					items.append(line);
+					if (foreach_mode == foreach_from) {
+						items.append(line);
+					} else {
+						items.initializeFromString(line);
+					}
 				}
 				if ( ! saw_close_brace) {
 					formatstr(errmsg, "Reached end of file without finding closing brace ')'"
 						" for Queue command on line %d", item_list_begin_line);
 					return -1;
+				}
+			} else if (items_filename == "-") {
+				int lineno = 0;
+				for (char* line=NULL;;) {
+					line = getline_trim(stdin, lineno);
+					if ( ! line) break;
+					if (foreach_mode == foreach_from) {
+						items.append(line);
+					} else {
+						items.initializeFromString(line);
+					}
 				}
 			} else {
 				MACRO_SOURCE ItemsSource;
@@ -6746,12 +7124,29 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 		case foreach_in:
 		case foreach_from:
 			// itemlist is already correct
-			PRAGMA_REMIND("do argument validation here.")
+			// PRAGMA_REMIND("do argument validation here?")
 			citems = items.number();
 			break;
 
 		case foreach_matching:
-			PRAGMA_REMIND("turn the itemlist globs into an itemlist of files")
+		case foreach_matching_files:
+		case foreach_matching_dirs:
+		case foreach_matching_any:
+			if (foreach_mode == foreach_matching_files) {
+				expand_options &= ~EXPAND_GLOBS_TO_DIRS;
+				expand_options |= EXPAND_GLOBS_TO_FILES;
+			} else if (foreach_mode == foreach_matching_dirs) {
+				expand_options &= ~EXPAND_GLOBS_TO_FILES;
+				expand_options |= EXPAND_GLOBS_TO_DIRS;
+			} else if (foreach_mode == foreach_matching_any) {
+				expand_options &= ~(EXPAND_GLOBS_TO_FILES|EXPAND_GLOBS_TO_DIRS);
+			}
+			citems = submit_expand_globs(items, expand_options, errmsg);
+			if ( ! errmsg.empty()) {
+				fprintf(stderr, "\n%s: %s", citems >= 0 ? "WARNING" : "ERROR", errmsg.c_str());
+				errmsg.clear();
+			}
+			if (citems < 0) return citems;
 			break;
 
 		default:
@@ -6774,17 +7169,21 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 
 			char * item = NULL;
 			if (items.isEmpty()) {
-				rval = queue_item(queue_modifier, vars, item, token_seps, token_ws);
+				rval = queue_item(queue_modifier, vars, item, 0, queue_item_opts, token_seps, token_ws);
 			} else {
 				items.rewind();
+				int item_index = 0;
 				while ((item = items.next())) {
-					rval = queue_item(queue_modifier, vars, item, token_seps, token_ws);
-					if (rval < 0)
-						return rval;
+					if (slice.selected(item_index, citems)) {
+						rval = queue_item(queue_modifier, vars, item, item_index, queue_item_opts, token_seps, token_ws);
+						if (rval < 0)
+							break;
+					}
+					++item_index;
 				}
 			}
 
-			rval = queue_end(false);
+			queue_end(vars, false);
 			if (rval < 0)
 				return rval;
 		}
@@ -6808,8 +7207,21 @@ int read_submit_file(FILE * fp)
 		SpecialSubmitParse, fp);
 
 	if( rval < 0 ) {
-		fprintf (stderr, "Error on Line %d while reading submit file: %s\n", FileMacroSource.line, errmsg.c_str());
+		fprintf (stderr, "\nERROR: on Line %d of submit file: %s\n", FileMacroSource.line, errmsg.c_str());
+	} else {
+		// if a -queue command line option was specified, and the submit file did not have a queue statement
+		// then parse the command line argument now (as if it was appended to the submit file)
+		if ( rval == 0 && ! GotQueueCommand && ! queueCommandLine.empty()) {
+			char * line = strdup(queueCommandLine.c_str()); // copy cmdline so we can destructively parse it.
+			ASSERT(line);
+			rval = SpecialSubmitParse(NULL, FileMacroSource, SubmitMacroSet, line, errmsg);
+			free(line);
+		}
+		if (rval < 0) {
+			fprintf (stderr, "\nERROR: while processing -queue command line option: %s\n", errmsg.c_str());
+		}
 	}
+
 	return rval;
 }
 
@@ -6884,13 +7296,16 @@ set_condor_param( const char *name, const char *value )
 // live values are automatically marked as 'used'.
 //
 void
-set_live_submit_variable( const char *name, const char *live_value )
+set_live_submit_variable( const char *name, const char *live_value, bool force_used /*=true*/ )
 {
 	MACRO_ITEM* pitem = find_macro_item(name, SubmitMacroSet);
-	if ( ! pitem) { insert(name, "", SubmitMacroSet, DefaultMacro); }
-	pitem = find_macro_item(name, SubmitMacroSet);
+	if ( ! pitem) {
+		insert(name, "", SubmitMacroSet, LiveMacro);
+		pitem = find_macro_item(name, SubmitMacroSet);
+	}
+	ASSERT(pitem);
 	pitem->raw_value = live_value;
-	if (SubmitMacroSet.metat) {
+	if (SubmitMacroSet.metat && force_used) {
 		MACRO_META* pmeta = &SubmitMacroSet.metat[pitem - SubmitMacroSet.table];
 		pmeta->use_count += 1;
 	}
@@ -6972,18 +7387,17 @@ int queue_begin(StringList & vars, bool new_cluster)
 		return -1;
 
 	// establish live buffers for $(Cluster) and $(Process), and other loop variables
-	// Because the user might already be using these variables, we can only set the explicit
-	// unconditionally, the others we must set only when not already set.
+	// Because the user might already be using these variables, we can only set the explicit ones
+	// unconditionally, the others we must set only when not already set by the user.
 	set_live_submit_variable(Cluster, ClusterString);
 	set_live_submit_variable(Process, ProcessString);
-	if ( ! find_macro_item("Node", SubmitMacroSet)) { set_live_submit_variable("Node", EmptyItemString); }
-	if ( ! find_macro_item("Step", SubmitMacroSet)) { set_live_submit_variable("Step", StepString); }
+	//if ( ! find_macro_item("Step", SubmitMacroSet)) { set_live_submit_variable("Step", StepString); }
 
 	vars.rewind();
 	char * var;
-	while ((var = vars.next())) { set_live_submit_variable(var, EmptyItemString); }
+	while ((var = vars.next())) { set_live_submit_variable(var, EmptyItemString, false); }
 
-
+	// optimize the macro set for lookups if we inserted anything.  we expect this to happen only once.
 	if (SubmitMacroSet.sorted < SubmitMacroSet.size) {
 		optimize_macros(SubmitMacroSet);
 	}
@@ -7005,18 +7419,38 @@ int queue_begin(StringList & vars, bool new_cluster)
 		}
 		IsFirstExecutable = false;
 	}
+
+	if (DashDryRun && DumpSubmitHash) {
+		fprintf(stdout, "\n-------------- submit hash at queue_begin -----------\n");
+		int flags = (DumpSubmitHash & 8) ? HASHITER_SHOW_DUPS : 0;
+		HASHITER it = hash_iter_begin(SubmitMacroSet, flags);
+		for ( ; ! hash_iter_done(it); hash_iter_next(it)) {
+			const char * key = hash_iter_key(it);
+			if (key && key[0] == '$') continue; // dont dump meta params.
+			const char * val = hash_iter_value(it);
+			//fprintf(stdout, "%s%s = %s\n", it.is_def ? "d " : "  ", key, val ? val : "NULL");
+			fprintf(stdout, "%s = %s\n", key, val ? val : "NULL");
+		}
+		hash_iter_delete(&it);
+		fprintf(stdout, "\n");
+	}
+
 	return 0;
 }
 
 // queue N for a single item from the foreach itemlist.
 // if there is no item list (i.e the old Queue N syntax) then item will be NULL.
 //
-int queue_item(int num, StringList & vars, char * item, const char * delims, const char * ws)
+int queue_item(int num, StringList & vars, char * item, int item_index, int options, const char * delims, const char * ws)
 {
 	if ( ! MyQ)
 		return -1;
 
 	int rval = 0; // default to success (if num == 0 we will return this)
+	bool check_empty = options && (QUEUE_OPT_WARN_EMPTY_FIELDS|QUEUE_OPT_FAIL_EMPTY_FIELDS);
+	bool fail_empty = options & QUEUE_OPT_FAIL_EMPTY_FIELDS;
+
+	// UseStrict = condor_param_bool("Submit.IsStrict", "Submit_IsStrict", UseStrict);
 
 	// If there are loop variables, destructively tokenize item and stuff the tokens into the submit hashtable.
 	if ( ! vars.isEmpty())  {
@@ -7026,10 +7460,12 @@ int queue_item(int num, StringList & vars, char * item, const char * delims, con
 			EmptyItemString[0] = '\0';
 		}
 
+		// set the first loop variable unconditionally, we set it initially to the whole item
+		// we may later truncate that item when we assign fields to other loop variables.
 		vars.rewind();
 		char * var = vars.next();
 		char * data = item;
-		set_live_submit_variable(var, data);
+		set_live_submit_variable(var, data, false);
 
 		// if there is more than a single loop variable, then assign them as well
 		// we do this by destructively null terminating the item for each var
@@ -7042,7 +7478,25 @@ int queue_item(int num, StringList & vars, char * item, const char * delims, con
 				*data++ = 0;
 				// skip leading separators and whitespace
 				while (*data && strchr(ws, *data)) ++data;
-				set_live_submit_variable(var, data);
+				set_live_submit_variable(var, data, false);
+			}
+		}
+
+		if (check_empty) {
+			vars.rewind();
+			std::string empties;
+			while ((var = vars.next())) {
+				MACRO_ITEM* pitem = find_macro_item(var, SubmitMacroSet);
+				if ( ! pitem || (pitem->raw_value != EmptyItemString && 0 == strlen(pitem->raw_value))) {
+					if ( ! empties.empty()) empties += ",";
+					empties += var;
+				}
+			}
+			if ( ! empties.empty()) {
+				fprintf (stderr, "\n%s: Empty value(s) for %s at ItemIndex=%d!", fail_empty ? "ERROR" : "WARNING", empties.c_str(), item_index);
+				if (fail_empty) {
+					return -4;
+				}
 			}
 		}
 	}
@@ -7077,11 +7531,12 @@ int queue_item(int num, StringList & vars, char * item, const char * delims, con
 		// update the live $(Cluster), $(Process) and $(Step) string buffers
 		(void)sprintf(ClusterString, "%d", ClusterId);
 		(void)sprintf(ProcessString, "%d", ProcId);
-		(void)sprintf(StepString, "%d", FirstStep + ii);
+		(void)sprintf(RowString, "%d", item_index);
+		(void)sprintf(StepString, "%d", ii);
 
 		// we move this outside the above, otherwise it appears that we have 
 		// received no queue command (or several, if there were multiple ones)
-		GotQueueCommand = 1;
+		GotNonEmptyQueueCommand = 1;
 
 #if !defined(WIN32)
 		SetRootDir();	// must be called very early
@@ -7100,7 +7555,8 @@ int queue_item(int num, StringList & vars, char * item, const char * delims, con
 		// ParallelNodeString defaults to #pArAlLeLnOdE# for universe MPI, we need it to expand as "#MpInOdE#" instead.
 		if (JobUniverse == CONDOR_UNIVERSE_MPI || JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
 			if (JobUniverse == CONDOR_UNIVERSE_MPI) { strcpy(ParallelNodeString, "#MpInOdE#"); }
-			set_live_submit_variable("Node", ParallelNodeString);
+			NodeMacroDef.psz = ParallelNodeString;
+			//set_live_submit_variable("Node", ParallelNodeString);
 		}
 
 		// Note: Due to the unchecked use of global variables everywhere in
@@ -7257,9 +7713,17 @@ int queue_item(int num, StringList & vars, char * item, const char * delims, con
 	return rval;
 }
 
-int queue_end(bool /*fEof*/)   // called when done processing each Queue statement and at end of submit file
+void queue_end(StringList & vars, bool /*fEof*/)   // called when done processing each Queue statement and at end of submit file
 {
-	return 0;
+	// set live submit variables to generate reasonable unused-item messages.
+	if ( ! vars.isEmpty())  {
+		vars.rewind();
+		char * var = vars.next();
+		while (var) {
+			set_live_submit_variable(var, "<Queue_item>", false);
+			var = vars.next();
+		}
+	}
 }
 
 
@@ -7403,7 +7867,7 @@ check_requirements( char const *orig, MyString &answer )
 				answer += " && ";
 			}
 			answer += "(TARGET.Arch == \"";
-			answer += Architecture;
+			answer += ArchMacroDef.psz;
 			answer += "\")";
 		}
 		// add HasVM to requirements
@@ -7443,13 +7907,13 @@ check_requirements( char const *orig, MyString &answer )
 				answer += " && ";
 			}
 			answer += "(TARGET.Arch == \"";
-			answer += Architecture;
+			answer += ArchMacroDef.psz;
 			answer += "\")";
 		}
 
 		if( !checks_opsys ) {
 			answer += " && (TARGET.OpSys == \"";
-			answer += OperatingSystem;
+			answer += OpsysMacroDef.psz;
 			answer += "\")";
 		}
 	}
@@ -7963,23 +8427,30 @@ init_params()
 	char *tmp = NULL;
 	MyString method;
 
-	Architecture = param( "ARCH" );
+	ArchMacroDef.psz = param( "ARCH" );
 
-	if( Architecture == NULL ) {
+	if( ArchMacroDef.psz == NULL ) {
 		fprintf(stderr, "ARCH not specified in config file\n" );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
 
-	OperatingSystem = param( "OPSYS" );
-	if( OperatingSystem == NULL ) {
+	OpsysMacroDef.psz = param( "OPSYS" );
+	if( OpsysMacroDef.psz == NULL ) {
 		fprintf(stderr,"OPSYS not specified in config file\n" );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
+	// also pick up the variations on opsys if they are defined.
+	OpsysAndVerMacroDef.psz = param( "OPSYSANDVER" );
+	if ( ! OpsysAndVerMacroDef.psz) OpsysAndVerMacroDef.psz = UnsetString;
+	OpsysMajorVerMacroDef.psz = param( "OPSYSMAJORVER" );
+	if ( ! OpsysMajorVerMacroDef.psz) OpsysMajorVerMacroDef.psz = UnsetString;
+	OpsysVerMacroDef.psz = param( "OPSYSVER" );
+	if ( ! OpsysVerMacroDef.psz) OpsysVerMacroDef.psz = UnsetString;
 
-	Spool = param( "SPOOL" );
-	if( Spool == NULL ) {
+	SpoolMacroDef.psz = param( "SPOOL" );
+	if( SpoolMacroDef.psz == NULL ) {
 		fprintf(stderr,"SPOOL not specified in config file\n" );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
@@ -9163,12 +9634,17 @@ int DoUnitTests(int options)
 		{0,  "matching *.dat",               1, foreach_matching,   0,  1},
 		{0,  "FILE matching *.dat",          1, foreach_matching,   1,  1},
 		{0,  "glob MATCHING (*.dat *.foo)",  1, foreach_matching,   1,  2},
+		{0,  "glob MATCHING files (*.foo)",  1, foreach_matching_files,   1,  1},
 		{0,  " dir matching */",             1, foreach_matching,   1,  1},
+		{0,  " dir matching dirs */",        1, foreach_matching_dirs,   1,  1},
 
 		{0,  "Executable,Arguments From args.lst",  1, foreach_from,   2,  0},
 		{0,  "Executable,Arguments From (sleep.exe 10)",  1, foreach_from,   2,  1},
 		{0,  "9 Executable Arguments From (sleep.exe 10)",  9, foreach_from,   2,  1},
 
+		{0,  "arg from [1]  args.lst",     1, foreach_from,   1,  0},
+		{0,  "arg from [:1] args.lst",     1, foreach_from,   1,  0},
+		{0,  "arg from [::] args.lst",     1, foreach_from,   1,  0},
 
 		{0,  "",             1, 0, 0, 0},
 		{0,  "2",            2, 0, 0, 0},
@@ -9188,9 +9664,10 @@ int DoUnitTests(int options)
 		int queue_num=-1;
 		StringList vars;
 		StringList items;
+		qslice     slice;
 		MyString   items_filename;
 		char * pqargs = strdup(trials[ii].args);
-		int rval = parse_queue_args(pqargs, foreach_mode, queue_num, vars, items, items_filename);
+		int rval = parse_queue_args(pqargs, foreach_mode, queue_num, vars, items, slice, items_filename);
 
 		int cvars = vars.number();
 		int citems = items.number();
@@ -9213,5 +9690,33 @@ int DoUnitTests(int options)
 		free(vars_list);
 		free(items_list);
 	}
+
+	/// slice tests
+	static const struct {
+		const char * val;
+		int start; int end;
+	} slices[] = {
+		{ "[:]",  0, 10 },
+		{ "[0]",  0, 10 },
+		{ "[0:3]",  0, 10 },
+		{ "[:1]",  0, 10 },
+		{ "[-1]", 0, 10 },
+		{ "[:-1]", 0, 10 },
+		{ "[::2]", 0, 10 },
+		{ "[1::2]", 0, 10 },
+	};
+
+	for (int ii = 0; ii < (int)COUNTOF(slices); ++ii) {
+		qslice slice;
+		slice.set(const_cast<char*>(slices[ii].val));
+		fprintf(stderr, "%s : %s\t", slices[ii].val, slice.initialized() ? "init" : " no ");
+		for (int ix = slices[ii].start; ix < slices[ii].end; ++ix) {
+			if (slice.selected(ix, slices[ii].end)) {
+				fprintf(stderr, " %d", ix);
+			}
+		}
+		fprintf(stderr, "\n");
+	}
+
 	return (options > 1) ? 1 : 0;
 }

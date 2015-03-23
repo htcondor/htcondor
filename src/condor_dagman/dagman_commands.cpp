@@ -60,10 +60,10 @@ ResumeDag(Dagman &dm)
 }
 
 bool
-AddNode( Dag *dag, Job::job_type_t type, const char *name,
+AddNode( Dag *dag, const char *name,
 		 const char* directory,
 		 const char* submitFile,
-		 const char *precmd, const char *postcmd, bool noop,
+		 bool noop,
 		 bool done, bool isFinal,
 		 MyString &failReason )
 {
@@ -83,27 +83,13 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 		(void)check_warning_strictness( DAG_STRICT_1, false );
 		done = false;
 	}
-	Job* node = new Job( type, name, directory, submitFile );
+	Job* node = new Job( name, directory, submitFile );
 	if( !node ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in
 			// FailReason will likely fail, but give it a shot...
 		failReason = "out of memory!";
 		return false;
-	}
-	if( precmd ) {
-		if( !node->AddPreScript( precmd, why ) ) {
-			failReason = "failed to add PRE script: " + why;
-			delete node;
-			return false;
-		}
-	}
-	if( postcmd ) {
-		if( !node->AddPostScript( postcmd, why ) ) {
-			failReason = "failed to add POST script: " + why;
-			delete node;
-			return false;
-		}
 	}
 	node->SetNoop( noop );
 	if( done ) {
