@@ -8352,7 +8352,11 @@ usage()
 	fprintf( stderr, "\t-debug  \t\tDisplay debugging output\n" );
 	fprintf( stderr, "\t-append <line>\t\tadd line to submit file before processing\n"
 					 "\t              \t\t(overrides submit file; multiple -a lines ok)\n" );
+	fprintf( stderr, "\t-queue <queue-opts>\tappend Queue statement to submit file before processing\n"
+					 "\t                   \t(submit file must not already have a Queue statement)\n" );
 	fprintf( stderr, "\t-disable\t\tdisable file permission checks\n" );
+	fprintf( stderr, "\t-dry-run\t\tprocess submit file and write ClassAd attributes to stderr\n"
+					 "\t        \t\tbut do not actually submit the job(s) to the SCHEDD\n" );
 	fprintf( stderr, "\t-unused\t\t\ttoggles unused or unexpanded macro warnings\n"
 					 "\t       \t\t\t(overrides config file; multiple -u flags ok)\n" );
 	//fprintf( stderr, "\t-force-mpi-universe\tAllow submission of obsolete MPI universe\n );
