@@ -184,6 +184,7 @@ if (BUILD_TESTING)
 	endif()
 
 
+	condor_pl_test(cmd_condor_off-master "vanilla: condor_on condor_off test" "core;quick;full;quicknolink")
 	condor_pl_test(job_test_scheddrotation "Scheduler: basic log rotation test" "core;quick;full;quicknolink")
 	condor_pl_test(job_test_logrotation "basic log rotation test" "core;quick;full;quicknolink")
 	condor_pl_test(fetch_work_static_slot "work fetch static smoke test" "core;quick;quicknolink")
