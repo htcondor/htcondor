@@ -628,6 +628,9 @@ Note also that when installing manually, you will need to create the
 directories that HTCondor will expect to be present given your
 configuration. This normally is simply a matter of creating the
 \File{log}, \File{spool}, and \File{execute} directories.
+Do not stage other files in any of these directories;
+any files not created by HTCondor in these directories are subject to removal.
+
 
 \end{description}
 

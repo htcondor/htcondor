@@ -235,8 +235,10 @@ your pool.  These are
 three are subdirectories of a single machine specific directory called
 the local directory (specified by the \Macro{LOCAL\_DIR} macro
 in the configuration file).
-Each should be owned by the user that HTCondor is to be run as.
 \index{owner!of directories}
+Each should be owned by the user that HTCondor is to be run as.
+Do not stage other files in any of these directories;
+any files not created by HTCondor in these directories are subject to removal.
 
 If you have a Unix user named \Login{condor} with a local home directory on each
 machine, the \MacroNI{LOCAL\_DIR} could just be user \Login{condor}'s home
