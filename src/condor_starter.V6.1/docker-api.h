@@ -32,7 +32,8 @@ class DockerAPI {
 		 * @param error			On success, unchanged.  Otherwise, [TODO].
 		 * @return 				0 on success, negative otherwise.
 		 */
-		static int run(	const std::string & name,
+		static int run(			const ClassAd &machineAd,
+						const std::string & name,
 						const std::string & imageID,
 						const std::string & command,
 						const ArgList & arguments,
