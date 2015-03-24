@@ -95,7 +95,10 @@ support the ability to configure HTCondor to reject the submission
 of jobs that do not meet specified criteria.
 \Ticket{2640}
 
-\item Added the PRE/POST script DEFER feature to \Condor{dagman}.
+\item A new DAGMan feature allows a single retry of a PRE or POST script 
+after a specified delay, 
+where the retry attempt is
+based on the exit code from the initial execution of the script.
 \Ticket{4488}
 
 \item \Condor{dagman} no longer supports Stork jobs as DAG nodes.
