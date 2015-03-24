@@ -107,6 +107,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "valgrind.h"
 #include "ipv6_hostname.h"
 #include "daemon_command.h"
+#include "condor_sockfunc.h"
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
@@ -1073,6 +1074,14 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			// port.  Instead, we advertise SharedPortServer's port along
 			// with our local id so connections can be forwarded to us.
 		char const *addr = m_shared_port_endpoint->GetMyRemoteAddress();
+
+		if( addr ) {
+			// We don't verify that a shared port client has addrs for
+			// an address they can't be contacted on anyway.
+			Sinful s( addr );
+			ASSERT( s.hasAddrs() );
+		}
+
 		if( !addr && usePrivateAddress ) {
 				// If SharedPortServer is not running yet, and an address
 				// that is local to this machine is good enough, then just
@@ -1082,6 +1091,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 				// our named socket.
 			addr = m_shared_port_endpoint->GetMyLocalAddress();
 		}
+
 		if( addr ) {
 			return addr;
 		}
@@ -1159,13 +1169,13 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			}
 		}
 
-			// if we don't hae a UDP port, advertise that fact
+			// if we don't have a UDP port, advertise that fact
 		char *forwarding = param("TCP_FORWARDING_HOST");
 		if( forwarding ) {
 			free( forwarding );
 			m_sinful.setNoUDP(true);
 		}
-		if( dc_socks.begin() == dc_socks.end() 
+		if( dc_socks.begin() == dc_socks.end()
 			|| !dc_socks.begin()->has_safesock() ) {
 			m_sinful.setNoUDP(true);
 		}
@@ -1182,17 +1192,74 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		if( private_name && publish_private_name ) {
 			m_sinful.setPrivateNetworkName(private_name);
 		}
+
+		// Handle multi-protocol addressing.
+		// FIXME: do I need to handle NETWORK_INTERFACE explicitly?
+		m_sinful.clearAddrs();
+		condor_sockaddr sa4, sa6;
+		for( SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); ++it ) {
+			ASSERT( it->has_relisock() );
+			int fd = it->rsock()->get_file_desc();
+
+			// condor_getsockname_ex() returns the 'best' protocol-appropriate
+			// address for the local host if the socket is bound in[6]_any.
+			condor_sockaddr sa;
+			ASSERT( condor_getsockname_ex( fd, sa ) == 0 );
+
+			if( sa.is_ipv4() ) {
+				if( sa4.is_valid() ) {
+					if( sa.desirability() > sa4.desirability() ) {
+						sa4 = sa;
+					}
+				} else {
+					sa4 = sa;
+				}
+			} else if( sa.is_ipv6() ) {
+				if( sa6.is_valid() ) {
+					if( sa.desirability() > sa6.desirability() ) {
+						sa6 = sa;
+					}
+				} else {
+					sa6 = sa;
+				}
+			}
+		}
+
+		ASSERT( sa6.is_valid() || sa4.is_valid() );
+		Sinful sPublic( sinful_public );
+		Sinful sPrivate( sinful_private != NULL ? sinful_private : "" );
+		if( sa6.is_valid() ) {
+			m_sinful.addAddrToAddrs( sa6 );
+			sPublic.addAddrToAddrs( sa6 );
+			sPrivate.addAddrToAddrs( sa6 );
+		}
+		if( sa4.is_valid() ) {
+			m_sinful.addAddrToAddrs( sa4 );
+			sPublic.addAddrToAddrs( sa4 );
+			sPrivate.addAddrToAddrs( sa4 );
+		}
+
+		free( sinful_public );
+		sinful_public = strdup( sPublic.getSinful() );
+
+		if( sinful_private != NULL ) {
+			free( sinful_private );
+			sinful_private = strdup( sPrivate.getSinful() );
+		}
 	}
 
 	if( usePrivateAddress ) {
 		if( sinful_private ) {
+			Sinful s( sinful_private );
 			return sinful_private;
 		}
 		else {
+			Sinful s( sinful_public );
 			return sinful_public;
 		}
 	}
 
+	ASSERT( m_sinful.hasAddrs() );
 	return m_sinful.getSinful();
 }
 

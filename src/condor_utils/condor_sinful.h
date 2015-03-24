@@ -84,7 +84,7 @@ class Sinful {
 	std::vector< condor_sockaddr > * getAddrs() const;
 	void addAddrToAddrs( const condor_sockaddr & sa );
 	void clearAddrs();
-
+	bool hasAddrs();
 
 	// generic param interface
 

@@ -72,7 +72,7 @@ needsUrlEncodeEscape(char ch)
 {
 	// The following is more conservative than it needs to be.
 	// At the very least, we need to escape "&;> ,"
-	if( isalnum((unsigned char)ch) || ch == '.' || ch == '_' || ch == '-' || ch == ':' || ch == '#' ) {
+	if( isalnum((unsigned char)ch) || ch == '.' || ch == '_' || ch == '-' || ch == ':' || ch == '#' || ch == ',' ) {
 		return false;
 	}
 	return true;
@@ -227,7 +227,7 @@ Sinful::Sinful(char const *sinful)
 
 				char const * addrsString = getParam( "addrs" );
 				if( addrsString != NULL ) {
-					StringList sl( addrsString, " " );
+					StringList sl( addrsString, "," );
 					sl.rewind();
 					char * addrString = NULL;
 					while( (addrString = sl.next()) != NULL ) {
@@ -484,7 +484,7 @@ Sinful::addAddrToAddrs( const condor_sockaddr & sa ) {
 	for( unsigned i = 0; i < addrs.size(); ++i ) {
 		sl.append( addrs[i].to_ip_string().c_str() );
 	}
-	char * slString = sl.print_to_delimed_string( " " );
+	char * slString = sl.print_to_delimed_string( "," );
 	setParam( "addrs", slString );
 	free( slString );
 }
@@ -493,4 +493,9 @@ void
 Sinful::clearAddrs() {
 	addrs.clear();
 	setParam( "addrs", NULL );
+}
+
+bool
+Sinful::hasAddrs() {
+	return (! addrs.empty());
 }
