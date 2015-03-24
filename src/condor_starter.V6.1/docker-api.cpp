@@ -82,7 +82,7 @@ int DockerAPI::run(
 	FamilyInfo fi;
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
 	int childPID = daemonCore->Create_Process( runArgs.GetArg(0), runArgs,
-		PRIV_UNKNOWN, 1, FALSE, FALSE, NULL, sandboxPath.c_str(),
+		PRIV_USER_FINAL, 1, FALSE, FALSE, NULL, sandboxPath.c_str(),
 		& fi, NULL, childFDs );
 
 	if( childPID == FALSE ) {
