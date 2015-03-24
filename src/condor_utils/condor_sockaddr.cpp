@@ -372,6 +372,27 @@ bool condor_sockaddr::from_ip_string(const MyString& ip_string)
 	return from_ip_string(ip_string.Value());
 }
 
+bool condor_sockaddr::from_ip_and_port_string( const char * ip_and_port_string ) {
+	ASSERT( ip_and_port_string );
+
+	char copy[IP_STRING_BUF_SIZE];
+	strncpy( copy, ip_and_port_string, IP_STRING_BUF_SIZE );
+
+	char * lastColon = strrchr( copy, ':' );
+	if( lastColon == NULL ) { return false; }
+	* lastColon = '\0';
+
+	if( ! from_ip_string( copy ) ) { return false; }
+
+	++lastColon;
+	char * end = NULL;
+	unsigned long port = strtoul( lastColon, & end, 10 );
+	if( * end != '\0' ) { return false; }
+	set_port( port );
+
+	return true;
+}
+
 bool condor_sockaddr::from_ip_string(const char* ip_string)
 {
 	// We're blowing an assertion on NULL input instead of 
@@ -410,24 +431,6 @@ bool condor_sockaddr::from_ip_string(const char* ip_string)
 	}
 	return false;
 }
-
-/*
-const char* condor_sockaddr::to_ip_string(char* buf, int len) const
-{
-	if (is_addr_any())
-		return get_local_condor_sockaddr().to_raw_ip_string(buf, len);
-	else
-		return to_raw_ip_string(buf, len);
-}
-
-MyString condor_sockaddr::to_ip_string() const
-{
-	if (is_addr_any())
-		return get_local_condor_sockaddr().to_raw_ip_string();
-	else
-		return to_raw_ip_string();
-}
-*/
 
 const char* condor_sockaddr::to_ip_string(char* buf, int len, bool decorate) const
 {
@@ -478,6 +481,12 @@ MyString condor_sockaddr::to_ip_string(bool decorate) const
 		return ret;
 	ret = tmp;
 	return ret;
+}
+
+MyString condor_sockaddr::to_ip_and_port_string() {
+	MyString ip_string;
+	formatstr( ip_string, "%s:%u", to_ip_string( true ).c_str(), get_port() );
+	return ip_string;
 }
 
 MyString condor_sockaddr::to_ip_string_ex(bool decorate) const

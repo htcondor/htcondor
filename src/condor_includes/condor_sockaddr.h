@@ -100,6 +100,8 @@ public:
 	bool from_ip_string(const MyString& ip_string);
 	bool from_ip_string(const char* ip_string);
 
+	bool from_ip_and_port_string( const char * ip_and_port_string );
+
 		// sinful string could contain either IP address or hostname.
 		// from_sinful() calls gethostbyname to resolve DNS name to IP addr.
 	bool from_sinful(const MyString& ip_string);
@@ -117,6 +119,8 @@ public:
 		//                  square brackets around IPv6 addresses,
 		//                  eg "[::1]"
 	MyString to_ip_string(bool decorate=false) const;
+		// We must "decorate".
+	MyString to_ip_and_port_string();
 		// it it fails on inet_ntop(), returns NULL and given buf
 		// will not be modified.
 		// decorate==true - Add additional decorations appropriate
