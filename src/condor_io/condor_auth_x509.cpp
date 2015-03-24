@@ -1055,7 +1055,7 @@ Condor_Auth_X509::authenticate_server_pre(CondorError* errstack, bool non_blocki
 		return WouldBlock;
 	}
 	m_status = 1;
-	int reply;
+	int reply = 0;
 
 	mySock_->decode();
 	mySock_->code(reply);
