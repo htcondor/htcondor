@@ -18,6 +18,7 @@ static bool add_docker_arg(ArgList &runArgs);
 // remote image pull violates the principle of least astonishment).
 //
 int DockerAPI::run(
+	const ClassAd &machineAd,
 	const std::string & containerName,
 	const std::string & imageID,
 	const std::string & command,
@@ -44,10 +45,32 @@ int DockerAPI::run(
 	std::string cidFileName = sandboxPath + "/.cidfile";
 	runArgs.AppendArg( "--cidfile=" + cidFileName );
 
-	// FIXME: Configure resource limits.
-	// runArgs.AppendArg( "--cpu-shares=<10x request_cpus>" );
-	// runArgs.AppendArg( "--memory=<slot memory attribute>" );
+	
+	// Configure resource limits.
+	
+	// First cpus
+	int  cpus;
+	int cpuShare;
 
+	if (machineAd.LookupInteger(ATTR_CPUS, cpus)) {
+		cpuShare = 10 * cpus;
+	} else {
+		cpuShare = 10;
+	}
+	std::string cpuShareStr;
+	formatstr(cpuShareStr, "--cpu-shares=%d", cpuShare);
+	runArgs.AppendArg(cpuShareStr);
+
+	// Now memory
+	int memory; // in Megabytes
+	if (machineAd.LookupInteger(ATTR_MEMORY, memory)) {
+		std::string mem;
+		formatstr(mem, "--memory=%dm", memory);
+		runArgs.AppendArg(mem);
+	} 
+
+
+		// Now the container name
 	runArgs.AppendArg( "--name" );
 	runArgs.AppendArg( containerName );
 
@@ -63,6 +86,18 @@ int DockerAPI::run(
 	// Start in the sandbox.
 	runArgs.AppendArg( "--workdir" );
 	runArgs.AppendArg( sandboxPath );
+
+	// Run with the uid that condor selects for the user
+	// either a slot user or submitting user or nobody
+	uid_t uid = 0;
+	uid = get_user_uid();
+	
+	if (uid == 0) {
+		dprintf(D_ALWAYS|D_FAILURE, "Failed to get userid to run docker job\n");
+		return -9;
+	}
+	runArgs.AppendArg("--user");
+	runArgs.AppendArg(uid);
 
 	// Run the command with its arguments in the image.
 	runArgs.AppendArg( imageID );

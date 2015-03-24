@@ -125,7 +125,10 @@ int DockerProc::StartJob() {
 	// DockerAPI::run() returns a PID from daemonCore->Create_Process(), which
 	// makes it suitable for passing up into VanillaProc.  This combination
 	// will trigger the reaper(s) when the container terminates.
-	int rv = DockerAPI::run( containerName, imageID, command, args, job_env, sandboxPath, JobPid, childFDs, err );
+	
+	ClassAd *machineAd = Starter->jic->machClassAd();
+
+	int rv = DockerAPI::run( *machineAd, containerName, imageID, command, args, job_env, sandboxPath, JobPid, childFDs, err );
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::run( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		return FALSE;
