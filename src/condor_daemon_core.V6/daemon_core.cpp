@@ -9857,7 +9857,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 		// Set socket options.  For hysterical raisins, we only set these on
 		// fixed ports.  (SO_REUSEADDR doesn't make much sense for a dynamic
 		// port, but if TCP_NODELAY makes sense, it would for both kinds
-		// ot port.)
+		// of port.)
 		int on = 1;
 		// SO_REUSEADDR: If we crash, give us our port back right away.
 		int so_option = CONDOR_REUSEADDR;
