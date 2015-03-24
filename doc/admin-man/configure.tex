@@ -1287,6 +1287,9 @@ File System Configuration File Entries''.
   be placed in the directory defined by this macro.
   The default value is \File{\MacroUNI{LOCAL\_DIR}/log}.
 
+  Do not stage other files in this directory;
+  any files not created by HTCondor in this directory are subject to removal.
+
 \label{param:Run}
 \item[\Macro{RUN}]
   A path and directory name to be used by the HTCondor init script to 
@@ -1309,6 +1312,9 @@ File System Configuration File Entries''.
   The default value is \File{\MacroUNI{LOCAL\_DIR}/spool}.
   The \Condor{schedd}
   will not function if \Macro{SPOOL} is not defined.
+
+  Do not stage other files in this directory;
+  any files not created by HTCondor in this directory are subject to removal.
   
 \label{param:Execute}
 \item[\Macro{EXECUTE}]
@@ -1327,6 +1333,10 @@ File System Configuration File Entries''.
   \MacroNI{EXECUTE} is undefined.
   To customize the execute
   directory independently for each batch slot, use \MacroNI{SLOT<N>\_EXECUTE}.
+
+  Do not stage other files in this directory;
+  any files not created by HTCondor in this directory are subject to removal.
+
 
 \label{param:TmpDir}
 \item[\Macro{TMP\_DIR}]
