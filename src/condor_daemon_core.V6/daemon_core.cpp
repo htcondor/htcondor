@@ -9869,7 +9869,9 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 			}
 		}
 
-		// TCP_NODELAY: Not sure why this is set for a listen socket.  Maybe
+		// TCP_NODELAY: Disable Nagle; ReliSocks do their own buffering, and
+		// having both layers do it worse.
+		// Not sure why this is set for a listen socket.  Maybe
 		// it's inherited into the accept()ed sockets?
 		if(! rsock->setsockopt( IPPROTO_TCP, TCP_NODELAY, (char *) & on, sizeof( on ) )) {
 			dprintf( D_ALWAYS, "Warning: setsockopt(TCP_NODELAY) failed.\n" );
