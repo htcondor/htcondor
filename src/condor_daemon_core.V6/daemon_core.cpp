@@ -1232,11 +1232,17 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			m_sinful.addAddrToAddrs( sa6 );
 			sPublic.addAddrToAddrs( sa6 );
 			sPrivate.addAddrToAddrs( sa6 );
+			m_sinful.setParam( "v", "1" );
+			sPublic.setParam( "v", "1" );
+			sPrivate.setParam( "v", "1" );
 		}
 		if( sa4.is_valid() ) {
 			m_sinful.addAddrToAddrs( sa4 );
 			sPublic.addAddrToAddrs( sa4 );
 			sPrivate.addAddrToAddrs( sa4 );
+			m_sinful.setParam( "v", "1" );
+			sPublic.setParam( "v", "1" );
+			sPrivate.setParam( "v", "1" );
 		}
 
 		free( sinful_public );

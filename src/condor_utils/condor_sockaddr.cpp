@@ -378,6 +378,21 @@ bool condor_sockaddr::from_ip_string(const char* ip_string)
 	// just returning false because this is catching bugs, where
 	// returning NULL would mask them.
 	ASSERT(ip_string);
+
+	// If we've gotten a bracketed IPv6 address, strip the brackets.
+	char unbracketedString[(8 * 4) + 7 + 1];
+	if( ip_string[0] == '[' ) {
+		const char * closeBracket = strchr( ip_string, ']' );
+		if( closeBracket != NULL ) {
+			int addrLength = closeBracket - ip_string - 1;
+			if( addrLength < (8 * 4) + 7 ) {
+				memcpy( unbracketedString, & ip_string[1], addrLength );
+				unbracketedString[ addrLength ] = '\0';
+				ip_string = unbracketedString;
+			}
+		}
+	}
+
 	if (inet_pton(AF_INET, ip_string, &v4.sin_addr) == 1) {
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
 		v4.sin_len = sizeof(sockaddr_in);
