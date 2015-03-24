@@ -828,6 +828,122 @@ will be written into the single file \File{foo.log}.
 \index{submit description file!examples|)}
 
 %%%%%%%%%%%%%%%%%
+\subsection{\label{sec:user-man-queue}Using the Power and Flexibility of the Queue Command}
+%%%%%%%%%%%%%%%%%
+\MoreTodo
+
+A wide variety of job submissions can be specified
+with extra information to the \SubmitCmd{queue} submit command.
+This flexibility eliminates the need for a job wrapper or Perl script 
+for many submissions.
+
+The form of the \SubmitCmdNI{queue} command defines
+variables and expands values, 
+identifying a set of jobs.
+Square brackets identify an optional item.
+
+\Opt{queue} \oOpt{<int expr>} 
+
+\Opt{queue} \oOpt{<int expr>} \oOpt{<list of vars>} \Opt{in} \oOpt{slice} \Opt{<list of items>}
+
+\Opt{queue} \oOpt{<int expr>} \oOpt{<list of vars>} \Opt{matching} \oOpt{files | dirs} \oOpt{slice} \Opt{<list of items with file globbing>}
+
+\Opt{queue} \oOpt{<int expr>} \oOpt{<list of vars>} \Opt{from} \oOpt{slice} \Opt{<file name> | <list of items>}
+
+All optional items have defaults.
+\begin{itemize}
+\item If \Expr{<int expr>} is not specified, it defaults to the value 1.
+\item If \Expr{<list of vars>} is not specified, it defaults to the single
+variable called \Expr{ITEM}.
+\item If \Expr{slice} is not specified, it defaults to all elements
+within the list.  This is the Python slice \Expr{[::]}, with a step
+value of 1.
+\end{itemize}
+
+The optional \Expr{slice} specifies a subset of the list of items
+using the Python syntax for a slice.
+Negative step values are not permitted.
+
+Here are a set of examples.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+\item[Example 1]
+\end{description}
+\begin{verbatim}
+  transfer_input_files = $(filename)
+  arguments            = -infile $(filename)
+  queue filename matching files *.dat
+    
+\end{verbatim}
+The use of file globbing expands the list of items to be all files
+in the current directory that end in \Expr{.dat}.
+Only files, and not directories are considered due to the
+specification of \Expr{files}.
+One job is queued for each file in the list of items.
+For this example,
+assume that the three files \Expr{initial.dat},
+\Expr{middle.dat}, and \Expr{ending.dat} form the list of items 
+after expansion;
+macro \Expr{filename} is assigned the value of one of these file names
+for each job queued.
+That macro is then substituted into the \SubmitCmdNI{arguments} command.
+The \SubmitCmdNI{queue} command expands to
+
+\begin{verbatim}
+  transfer_input_files = initial.dat
+  arguments            = -infile initial.dat
+  queue 
+  transfer_input_files = middle.dat
+  arguments            = -infile middle.dat
+  queue 
+  transfer_input_files = ending.dat
+  arguments            = -infile ending.dat
+  queue 
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+\item[Example 2]
+\end{description}
+\begin{verbatim}
+  queue 1 input in A, B, C
+\end{verbatim}
+Variable \Expr{input} is set to each of the 3 items in the list,
+and one job is queued for each.
+For this example the \SubmitCmdNI{queue} command expands to
+\begin{verbatim}
+  input = A
+  queue 
+  input = B
+  queue 
+  input = C
+  queue 
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+\item[Example 3]
+\end{description}
+\begin{verbatim}
+  queue input,arguments from (
+    file1, -a -b 26
+    file2, -c -d 92
+  )
+\end{verbatim}
+Using the \Expr{from} form of the options,
+each of the two variables specified is given a value from the list of items.
+For this example the \SubmitCmdNI{queue} command expands to
+\begin{verbatim}
+  input = file1
+  arguments = -a -b 26
+  queue 
+  input = file2
+  arguments = -c -d 92
+  queue 
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-man-req-and-rank}About Requirements and Rank}
 %%%%%%%%%%%%%%%%%
 
