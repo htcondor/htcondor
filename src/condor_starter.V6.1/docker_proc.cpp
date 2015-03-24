@@ -42,6 +42,7 @@ DockerProc::~DockerProc() { }
 
 int DockerProc::StartJob() {
 	std::string imageID;
+
 	if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageID ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "%s not defined in job ad, unable to start job.\n", ATTR_DOCKER_IMAGE );
 		return FALSE;
@@ -97,8 +98,10 @@ int DockerProc::StartJob() {
 	// Do I/O redirection (includes streaming).
 	//
 
-	// getStdFile() returns -1 on error.
 	int childFDs[3] = { -2, -2, -2 };
+	{
+	TemporaryPrivSentry sentry(PRIV_USER);
+	// getStdFile() returns -1 on error.
 
 	if( -1 == (childFDs[0] = openStdFile( SFT_IN, NULL, true, "Input file" )) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stdin.\n" );
@@ -114,6 +117,7 @@ int DockerProc::StartJob() {
 		daemonCore->Close_FD( childFDs[0] );
 		daemonCore->Close_FD( childFDs[1] );
 		return FALSE;
+	}
 	}
 
 
