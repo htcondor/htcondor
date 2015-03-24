@@ -9860,8 +9860,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 		// of port.)
 		int on = 1;
 		// SO_REUSEADDR: If we crash, give us our port back right away.
-		int so_option = CONDOR_REUSEADDR;
-		if(! rsock->setsockopt( SOL_SOCKET, so_option, (char *) & on, sizeof(on) )) {
+		if(! rsock->setsockopt( SOL_SOCKET, CONDOR_REUSEADDR, (char *) & on, sizeof(on) )) {
 			if( fatal ) {
 				EXCEPT( "Failed to setsockopt(SO_REUSEADDR) on TCP command port." );
 			} else {
@@ -9904,8 +9903,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 
 		int on = 1;
 		// SO_REUSEADDR: If we crash, give us our port back right away.
-		int so_option = CONDOR_REUSEADDR;
-		if(! ssock->setsockopt( SOL_SOCKET, so_option, (char *) & on, sizeof(on) )) {
+		if(! ssock->setsockopt( SOL_SOCKET, CONDOR_REUSEADDR, (char *) & on, sizeof(on) )) {
 			if( fatal ) {
 				EXCEPT( "Failed to setsockopt(SO_REUSEADDR) on UDP command port." );
 			} else {
