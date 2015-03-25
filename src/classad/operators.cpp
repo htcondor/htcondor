@@ -1063,12 +1063,18 @@ int Operation::
 doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 {
 	Value::ValueType 	vt1, vt2, coerceResult;
-	bool		exact = false;	
 
-	// do numerical type promotions --- other types/values are unchanged
-	coerceResult = coerceToNumber(v1, v2);
-	vt1 = v1.GetType();
-	vt2 = v2.GetType();
+	if ( op == META_EQUAL_OP || op == META_NOT_EQUAL_OP ) {
+		// do not do type promotions for the meta operators
+		vt1 = v1.GetType();
+		vt2 = v2.GetType();
+		coerceResult = vt1;
+	} else {
+		// do numerical type promotions --- other types/values are unchanged
+		coerceResult = coerceToNumber( v1, v2 );
+		vt1 = v1.GetType();
+		vt2 = v2.GetType();
+	}
 
 	// perform comparison for =?= ; true iff same types and same values
 	if (op == META_EQUAL_OP) {
@@ -1082,10 +1088,6 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			result.SetBooleanValue( true );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
-
-		// if not the above cases, =?= is like == ; but remember =?=
-		exact = true;
-		op = EQUAL_OP;
 	}
 	// perform comparison for =!= ; negation of =?=
 	if (op == META_NOT_EQUAL_OP) {
@@ -1095,15 +1097,10 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 		}
 
 		// undefined or error
-		if (vt1 == Value::UNDEFINED_VALUE || vt1 == Value::ERROR_VALUE ||
-			vt2 == Value::UNDEFINED_VALUE || vt2 == Value::ERROR_VALUE) {
+		if (vt1 == Value::UNDEFINED_VALUE || vt1 == Value::ERROR_VALUE) {
 			result.SetBooleanValue( false );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
-
-		// if not the above cases, =!= is just like !=; but remember =?=
-		exact = true;
-		op = NOT_EQUAL_OP;
 	}
 
 	switch (coerceResult) {
@@ -1116,7 +1113,7 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 				result.SetErrorValue();
 				return( SIG_CHLD1 | SIG_CHLD2 );
 			}
-			compareStrings (op, v1, v2, result, exact);
+			compareStrings (op, v1, v2, result);
 			return( SIG_CHLD1 | SIG_CHLD2 );
 
 		case Value::INTEGER_VALUE:
@@ -1601,7 +1598,7 @@ asecs2.secs = 0;
 
 
 void Operation::
-compareStrings (OpKind op, Value &v1, Value &v2, Value &result, bool exact)
+compareStrings (OpKind op, Value &v1, Value &v2, Value &result)
 {
 	const char *s1 = NULL, *s2 = NULL;
 	int  cmp;
@@ -1610,7 +1607,7 @@ compareStrings (OpKind op, Value &v1, Value &v2, Value &result, bool exact)
 	v2.IsStringValue (s2);
 
 	result.SetBooleanValue( false );
-	if( exact ) {
+	if( op == META_EQUAL_OP || op == META_NOT_EQUAL_OP ) {
 		cmp = strcmp( s1, s2 );
 	} else {
 		cmp = strcasecmp( s1, s2 );
@@ -1619,12 +1616,14 @@ compareStrings (OpKind op, Value &v1, Value &v2, Value &result, bool exact)
 		// s1 < s2
 		if (op == LESS_THAN_OP 		|| 
 			op == LESS_OR_EQUAL_OP 	|| 
+			op == META_NOT_EQUAL_OP 	|| 
 			op == NOT_EQUAL_OP) {
 			result.SetBooleanValue( true );
 		}
 	} else if (cmp == 0) {
 		// s1 == s2
 		if (op == LESS_OR_EQUAL_OP 	|| 
+			op == META_EQUAL_OP		||
 			op == EQUAL_OP			||
 			op == GREATER_OR_EQUAL_OP) {
 			result.SetBooleanValue( true );
@@ -1633,6 +1632,7 @@ compareStrings (OpKind op, Value &v1, Value &v2, Value &result, bool exact)
 		// s1 > s2
 		if (op == GREATER_THAN_OP	||
 			op == GREATER_OR_EQUAL_OP	||
+			op == META_NOT_EQUAL_OP	||
 			op == NOT_EQUAL_OP) {
 			result.SetBooleanValue( true );
 		}
@@ -1653,7 +1653,9 @@ compareAbsoluteTimes( OpKind op, Value &v1, Value &v2, Value &result )
 		case LESS_THAN_OP: 			compResult = (asecs1.secs < asecs2.secs); 	break;
 		case LESS_OR_EQUAL_OP: 		compResult = (asecs1.secs <= asecs2.secs); 	break;
 		case EQUAL_OP: 				compResult = (asecs1.secs == asecs2.secs); 	break;
+		case META_EQUAL_OP: 			compResult = (asecs1.secs == asecs2.secs) && (asecs1.offset == asecs2.offset); 	break;
 		case NOT_EQUAL_OP: 			compResult = (asecs1.secs != asecs2.secs); 	break;
+		case META_NOT_EQUAL_OP: 		compResult = (asecs1.secs != asecs2.secs) || (asecs1.offset != asecs2.offset); 	break;
 		case GREATER_THAN_OP: 		compResult = (asecs1.secs > asecs2.secs); 	break;
 		case GREATER_OR_EQUAL_OP: 	compResult = (asecs1.secs >= asecs2.secs); 	break;
 		default:
@@ -1684,10 +1686,12 @@ compareRelativeTimes( OpKind op, Value &v1, Value &v2, Value &result )
 			break;
 
 		case EQUAL_OP:
+		case META_EQUAL_OP:
 			compResult = ( rsecs1 == rsecs2 );
 			break;
 
 		case NOT_EQUAL_OP:
+		case META_NOT_EQUAL_OP:
 			compResult = ( rsecs1 != rsecs2 );
 			break;
 
@@ -1721,7 +1725,9 @@ compareBools( OpKind op, Value &v1, Value &v2, Value &result )
 		case LESS_THAN_OP: 			compResult = (b1 < b2); 	break;
 		case LESS_OR_EQUAL_OP: 		compResult = (b1 <= b2); 	break;
 		case EQUAL_OP: 				compResult = (b1 == b2); 	break;
+		case META_EQUAL_OP: 			compResult = (b1 == b2); 	break;
 		case NOT_EQUAL_OP: 			compResult = (b1 != b2); 	break;
+		case META_NOT_EQUAL_OP: 		compResult = (b1 != b2); 	break;
 		case GREATER_THAN_OP: 		compResult = (b1 > b2); 	break;
 		case GREATER_OR_EQUAL_OP: 	compResult = (b1 >= b2); 	break;
 		default:
@@ -1747,7 +1753,9 @@ compareIntegers (OpKind op, Value &v1, Value &v2, Value &result)
 		case LESS_THAN_OP: 			compResult = (i1 < i2); 	break;
 		case LESS_OR_EQUAL_OP: 		compResult = (i1 <= i2); 	break;
 		case EQUAL_OP: 				compResult = (i1 == i2); 	break;
+		case META_EQUAL_OP: 			compResult = (i1 == i2); 	break;
 		case NOT_EQUAL_OP: 			compResult = (i1 != i2); 	break;
+		case META_NOT_EQUAL_OP: 		compResult = (i1 != i2); 	break;
 		case GREATER_THAN_OP: 		compResult = (i1 > i2); 	break;
 		case GREATER_OR_EQUAL_OP: 	compResult = (i1 >= i2); 	break;
 		default:
@@ -1773,7 +1781,9 @@ compareReals (OpKind op, Value &v1, Value &v2, Value &result)
 		case LESS_THAN_OP:          compResult = (r1 < r2);     break;
 		case LESS_OR_EQUAL_OP:      compResult = (r1 <= r2);    break;
 		case EQUAL_OP:              compResult = (r1 == r2);    break;
+		case META_EQUAL_OP:         compResult = (r1 == r2);    break;
 		case NOT_EQUAL_OP:          compResult = (r1 != r2);    break;
+		case META_NOT_EQUAL_OP:     compResult = (r1 != r2);    break;
 		case GREATER_THAN_OP:       compResult = (r1 > r2);     break;
 		case GREATER_OR_EQUAL_OP:   compResult = (r1 >= r2);    break;
 		default:
