@@ -22,30 +22,6 @@ use CondorTest;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-my $append_condor_configSP = '
-  USE_SHARED_PORT = True
-  DAEMON_LIST = MASTER,SHARED_PORT,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-
-  SHARED_PORT_DEBUG = D_COMMAND | D_FULLDEBUG
-
-  # named sockets cannot have very long paths (~100 chars), so put them
-  # in /tmp to avoid problems
-  DAEMON_SOCKET_DIR = /tmp/$(USERNAME)-condor-test-sock
-';
-
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_configSP
-);
-
-# verify that a job runs
-SimpleJob::RunCheck();
-
-# verify that at least one connection request was made via shared port server
-CondorLog::RunCheck(
-    daemon => "SHARED_PORT",
-    match_regexp => "SharedPortServer: request from SCHEDD"
-);
-
 my $append_condor_configREG = '
   USE_SHARED_PORT = false
   DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD

@@ -25,6 +25,7 @@ use Check::SimpleJob;
 $cmd      = 'job_filexfer_minus1_van.cmd';
 $testdesc =  'Base file transfer short one output file - vanilla U';
 $testname = "job_filexfer_minus1_van";
+my $sawshadow = "";
 
 # truly const variables in perl
 sub IDLE{1};
@@ -61,14 +62,14 @@ $shadow = sub
 		my @adarray;
 		my $status = 1;
 		my $cmd = "condor_rm $cluster";
+		$sawshadow = "yes";
+		print "great, we saw a shadow exception from a mising output file\n";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{
 			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
 			exit(1);
 		}
-       CondorTest::debug("$testname: SUCCESS\n",1);
-       exit(0);
 };
 
 $success = sub
@@ -77,7 +78,17 @@ $success = sub
 };
 
 $abort = sub {
-	die "Job is gone now, cool.\n";
+	print "In abort handler: we removed the job which failed\n";
+	if($sawshadow eq "yes") {
+    	CondorTest::debug("$testname: SUCCESS\n",1);
+    	exit(0);
+	} else {
+		die "BAD: got an abort but never saw shadow exception\n";
+	}
+};
+
+$held = sub {
+	print "Its is OK to seea hold now\n";
 };
 
 $timed = sub
@@ -116,6 +127,7 @@ SimpleJob::RunCheck(
     on_success=>$success,
     on_execute=>$execute,
     on_abort=>$abort,
+	on_hold=>$held,
     on_shadow=>$shadow,
 );
 
