@@ -141,7 +141,7 @@ void InitAppGlobals(const char * argv0)
 	App.log_to_daemon["Cred"]  = "Credd";
 	App.log_to_daemon["Kbd"] = "Kbdd";
 
-	// map executable name to daemon name for those that don't match the rule : 'remove condor_ and lowercase'
+	// map executable name to daemon name for those that don't match the rule : 'remove condor_ and capitalize'
 	App.file_to_daemon["shared_port"] = "SharedPort";
 	App.file_to_daemon["job_router"]  = "JobRouter";
 	App.file_to_daemon["ckpt_server"] = "CkptServer";
@@ -1893,7 +1893,12 @@ static void scan_a_log_for_info(
 					if (ix3 != string::npos) {
 						std::string daemon = line.substr(ix3+cch3, ix2-ix3-cch3);
 						lower_case(daemon);
-						daemon[0] = toupper(daemon[0]);
+						MAP_STRING_TO_STRING::const_iterator alt = App.file_to_daemon.find(daemon);
+						if (alt != App.file_to_daemon.end()) {
+							daemon = alt->second;
+						} else {
+							daemon[0] = toupper(daemon[0]);
+						}
 
 						std::string exited_pid = line.substr(ix2+cch2, ix-ix2-cch2);
 						std::string exit_code = line.substr(ix+cch1);
