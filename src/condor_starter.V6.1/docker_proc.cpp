@@ -120,6 +120,8 @@ int DockerProc::StartJob() {
 	}
 	}
 
+	  // Ulog the execute event
+	Starter->jic->notifyJobPreSpawn();
 
 	CondorError err;
 	// DockerAPI::run() returns a PID from daemonCore->Create_Process(), which
@@ -134,6 +136,7 @@ int DockerProc::StartJob() {
 		return FALSE;
 	}
 	dprintf( D_FULLDEBUG, "DockerAPI::run() returned pid %d\n", JobPid );
+
 
 	// TODO: Start a timer to poll for job usage updates.
 
