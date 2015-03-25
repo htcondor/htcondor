@@ -402,15 +402,6 @@ void ConfigConvertDefaultIPToSocketIP()
 	}
 }
 
-static bool IPMatchesNetworkInterfaceSetting(char const *ip)
-{
-		// Just in case our mechanism for iterating through the interfaces
-		// is not perfect, treat NETWORK_INTERFACE=* specially here so we
-		// are guaranteed to return true.
-	return network_interface_matches_all ||
-		configured_network_interface_ips.count(ip) != 0;
-}
-
 // Only needed for these next two functions;
 // #include should be deleted when ConvertDefaultIPToSocketIP is.
 #include "condor_daemon_core.h"
