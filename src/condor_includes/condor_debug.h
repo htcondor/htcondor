@@ -280,6 +280,7 @@ extern int	_EXCEPT_Line;			/* Line number of the exception    */
 extern const char	*_EXCEPT_File;		/* File name of the exception      */
 extern int	_EXCEPT_Errno;			/* errno from most recent system call */
 extern int (*_EXCEPT_Cleanup)(int,int,const char*);	/* Function to call to clean up (or NULL) */
+extern void (*_EXCEPT_Reporter)(const char * msg, int line, const char * file); /* called instead of dprintf if non-NULL */
 extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
 
 #if defined(__cplusplus)
