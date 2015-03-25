@@ -1,4 +1,3 @@
-%TEMPTEMP -- remove all references to Stork once this gets merged w/ Karen's update
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:DAGMan}DAGMan Applications}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -451,7 +450,7 @@ the \Attr{ProcId} value is the one of the last job within the cluster.
 \item \index{DAGMan!Return@\verb^$RETURN^ value}
 \Expr{\$RETURN} (for POST scripts only) variable evaluates to
 the return value of the 
-HTCondor or Stork job, if there is a single job within a cluster.
+HTCondor job, if there is a single job within a cluster.
 With multiple jobs within the same cluster,
 there are two cases to consider.
 In the first case, all jobs within the cluster are successful;
@@ -904,7 +903,7 @@ If a problem is detected,
 \Condor{submit\_dag} prints out an error message and aborts.
 
 To remove an entire DAG, consisting of the \Condor{dagman} job, 
-plus any jobs submitted to HTCondor or Stork,
+plus any jobs submitted to HTCondor,
 remove the \Condor{dagman} job by running \Condor{rm}.
 For example,
 \footnotesize
@@ -3043,7 +3042,6 @@ or more.
 This node status file is overwritten each time it is updated.
 Therefore, it only holds information about the \emph{current} status 
 of each node; it does not provide a history of the node status.
-The file contents do not distinguish between HTCondor jobs and Stork jobs.
 
 \Note HTCondor version 8.1.6 changes the format of the node status
 file.
@@ -3108,7 +3106,7 @@ or the node is a FINAL node.
 \item 1 (\verb@STATUS_READY@): All parents have finished, but the node is not
 yet running.
 \item 2 (\verb@STATUS_PRERUN@): The node's PRE script is running.
-\item 3 (\verb@STATUS_SUBMITTED@): The node's HTCondor or Stork job(s) are in 
+\item 3 (\verb@STATUS_SUBMITTED@): The node's HTCondor job(s) are in 
   the queue.
 \item 4 (\verb@STATUS_POSTRUN@): The node's POST script is running.
 \item 5 (\verb@STATUS_DONE@): The node has completed successfully.
