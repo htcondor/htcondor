@@ -29,6 +29,7 @@ $dagman_args = "-verbose";
 @logfiles = ("job_dagman_job_held.dag.dagman.out");
 
 my $killedchosen = 0;
+my $diditpass = 1;
 
 # truly const variables in perl
 sub IDLE{1};
@@ -49,7 +50,14 @@ $abnormal = sub
 
 $aborted = sub 
 {
-	die "Abort event NOT expected\n";
+	print "seeing abort from removing dag with held parts\n";
+	if($diditpass == 1) {
+		print "Job a success\n";
+		exit(0);
+	} else {
+		print "Job failed some tests\n";
+		exit(1);
+	}
 };
 
 $held = sub 
@@ -117,10 +125,9 @@ $failure = sub
 			;
 		}
 	}
-
-	if($diditpass == 0) {
-		die "All expected files and correct output failed\n";
-	}
+	my $status = 0;
+	my @array = ();
+	$status = runCondorTool("condor_rm -all",\@array,2,{emit_output=>0});
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);

@@ -192,16 +192,28 @@ sub EndTest
 	# at this point all the personals started should be stopped
 	# so we will validate this and if we can not, this adds a negative result.
 	
+	print "EndTest: Testing Presonal HTCondor(s) created for this test\n"; 
+	print "Their names are\n";
+	foreach my $name (sort keys %personal_condors) {
+		print "	$name";
+	}
+	print "\n\n";
 	my $amidown = "";
 	foreach my $name (sort keys %personal_condors) {
 		$amidown = "";
-		print "EndTest:checking this named instance:$name for being down\n";
+		print "EndTest:checking this named instance:$name for being down: ";
         my $condor = $personal_condors{$name};
 		$amidown = CondorPersonal::ProcessStateWanted($condor->{condor_config});
 		if($amidown ne "down") {
+			print "BAD\n";
+			print "This condor:$name failed to come all the way down\n";
+			print "Adding a FAILED instance to make test fail\n\n";
 			# this one not down add negative result, BROADCAST and check rest
 			RegisterResult(0,"test_name","$handle");
-			print "********* This condor:$name failed to come all the way down *********\n";
+		} else {
+			print "OK\n";
+			print "Adding a PASSED event for this HTCondor personal stopping\n";
+			RegisterResult(1,"test_name","$handle");
 		}
 	}
 	
@@ -2565,9 +2577,15 @@ sub slurp {
   }
   sub DisplayWhoDataInstance
   {
-      my $self = shift;
-	  print "$self->{daemon},$self->{alive},$self->{pid},$self->{ppid},$self->{pidexit},$self->{address},$self->{binary}\n";
+	my $self = shift;
+	if(($self->{daemon} eq "Negotiator") ||($self->{daemon} eq "Collector")) {
+		print "$self->{daemon}\t$self->{alive}\t$self->{pid}\t$self->{ppid}\t$self->{pidexit}\t$self->{address}\n";
+	} else {
+		print "$self->{daemon}\t\t$self->{alive}\t$self->{pid}\t$self->{ppid}\t$self->{pidexit}\t$self->{address}\n";
+	}
   }
+
+
   sub GetDaemonName
   {
       my $self = shift;
@@ -2676,10 +2694,13 @@ sub LoadWhoData
   sub DisplayWhoDataInstances
   {
       my $self = shift;
+	  print "Daemon\t\tAlive\tPID\tPPID\tExit\tAddr\n";
+	  print "______\t\t_____\t___\t____\t____\t____\n";
 	  foreach my $daemonkey (keys %{$self->{personal_who_data}}) {
 	  	#print "$daemonkey: $self->{personal_who_data}->{$daemonkey}\n";
 		$self->{personal_who_data}->{$daemonkey}->DisplayWhoDataInstance();
 	  }
+	  print "\n";
   }
   sub WritePidsFile
   {
