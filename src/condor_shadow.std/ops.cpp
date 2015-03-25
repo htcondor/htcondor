@@ -74,7 +74,7 @@ char MsgBuf[ BUFSIZ ];
 HandleChildLog( log_fp )
 FILE	*log_fp;
 {
-	register char *nlp;
+	char *nlp;
 	char *strchr();
 	char buf[ BUFSIZ ];
 
