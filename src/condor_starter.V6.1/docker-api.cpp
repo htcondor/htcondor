@@ -90,7 +90,10 @@ int DockerAPI::run(
 	// Run with the uid that condor selects for the user
 	// either a slot user or submitting user or nobody
 	uid_t uid = 0;
+
+#ifndef WIN32
 	uid = get_user_uid();
+#endif
 	
 	if (uid == 0) {
 		dprintf(D_ALWAYS|D_FAILURE, "Failed to get userid to run docker job\n");
