@@ -65,7 +65,8 @@ flexible and powerful new ways to specify job submissions.
 See section~\ref{sec:user-man-queue} for details.
 \Ticket{4819}
 
-\item An EC2 grid universe job now advertises its access key ID in its job ad.
+\item An EC2 grid universe job now advertises its access key ID in 
+its job ClassAd.
 \Ticket{4903}
 
 \item For an executing job, HTCondor now sets the environment variable 
@@ -110,14 +111,19 @@ job log files.  This means that recovery mode will no longer work on a
 DAG originally submitted with version 7.9.1 or earlier.
 \Ticket{4528}
 
+\item An experimental new feature allows PanDa monitoring of jobs,
+as documented with a link from the HTCondor wiki page,
+\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=ExperimentalFeatures}.
+\Ticket{4270}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item Fixed a bug with \Condor{chirp} where generic events logged
-to the user log with the ulog command where written in the timezone
+\item Fixed a bug in \Condor{chirp} in which generic events logged
+to the job event log with the ulog command where written in the time zone
 of the execute machine, not the submit machine.
 \Ticket{4951}
 
@@ -135,8 +141,8 @@ of a \Condor{schedd} daemon or a \Condor{collector} daemon query,
 matching the behavior documented in this reference manual.
 \Ticket{4907}
 
-\item Fixed a bug introduced in HTCondor 8.3.3 that caused local universe
-jobs to execute repeatedly on Windows.
+\item Fixed a bug introduced in HTCondor version 8.3.3 that caused 
+local universe jobs to execute repeatedly on Windows platforms.
 \Ticket{4909}
 
 \end{itemize}
