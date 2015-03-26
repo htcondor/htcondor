@@ -1387,7 +1387,7 @@ main( int argc, char *argv[] )
 		if (App.timed_scan) { printf("%d seconds\n", (int)(time(NULL) - begin_time)); }
 		exit(0);
 	}
-	if ( ! App.scan_pids && App.query_pids.empty() || App.query_log_dirs.empty()) {
+	if ( ! App.scan_pids && (App.query_pids.empty() || App.query_log_dirs.empty())) {
 		if (App.timed_scan) { printf("%d seconds\n", (int)(time(NULL) - begin_time)); }
 		exit(0);
 	}
