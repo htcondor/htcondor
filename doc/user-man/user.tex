@@ -844,21 +844,38 @@ Square brackets identify an optional item.
 
 \Opt{queue} \oOpt{<int expr>} 
 
-\Opt{queue} \oOpt{<int expr>} \oOpt{<list of vars>} \Opt{in} \oOpt{slice} \Opt{<list of items>}
+\Opt{queue} \oOpt{<int expr>} \oOpt{<varname>} \Opt{in} \oOpt{slice} \Opt{<list of items>}
 
-\Opt{queue} \oOpt{<int expr>} \oOpt{<list of vars>} \Opt{matching} \oOpt{files | dirs} \oOpt{slice} \Opt{<list of items with file globbing>}
+\Opt{queue} \oOpt{<int expr>} \oOpt{<varname>} \Opt{matching} \oOpt{files | dirs} \oOpt{slice} \Opt{<list of items with file globbing>}
 
-\Opt{queue} \oOpt{<int expr>} \oOpt{<list of vars>} \Opt{from} \oOpt{slice} \Opt{<file name> | <list of items>}
+\Opt{queue} \oOpt{<int expr>} \oOpt{<list of varnames>} \Opt{from} \oOpt{slice} \Opt{<file name> | <list of items>}
 
-All optional items have defaults.
+All optional items have defaults:
 \begin{itemize}
 \item If \Expr{<int expr>} is not specified, it defaults to the value 1.
-\item If \Expr{<list of vars>} is not specified, it defaults to the single
+\item If \Expr{<varname>} or \Expr{<list of varnames>} is not specified, it defaults to the single
 variable called \Expr{ITEM}.
 \item If \Expr{slice} is not specified, it defaults to all elements
 within the list.  This is the Python slice \Expr{[::]}, with a step
 value of 1.
+\item If neither \Expr{files} nor \Expr{dirs} is specified in a
+specification using the \Opt{from} key word, then both files and directories
+are considered when globbing.
 \end{itemize}
+
+The list of items uses syntax in one of two forms.
+One form is a comma and/or space separated list;
+the items are placed on the same line as the \SubmitCmdNI{queue} command. 
+The second form separates items by placing each list item on its own line,
+and delimits the list with parentheses.
+The opening parenthesis goes on the same line as 
+the \SubmitCmdNI{queue} command.
+The closing parenthesis goes on its own line.
+The \SubmitCmdNI{queue} command specified with the key word \SubmitCmdNI{from}
+will always use the second form of this syntax.
+Example 3 below uses this second form of syntax.
+
+%The list of variables
 
 The optional \Expr{slice} specifies a subset of the list of items
 using the Python syntax for a slice.
@@ -887,7 +904,8 @@ assume that the three files \Expr{initial.dat},
 after expansion;
 macro \Expr{filename} is assigned the value of one of these file names
 for each job queued.
-That macro is then substituted into the \SubmitCmdNI{arguments} command.
+That macro value is then substituted into the \SubmitCmdNI{arguments} and
+\SubmitCmdNI{transfer\_input\_files} commands.
 The \SubmitCmdNI{queue} command expands to
 
 \begin{verbatim}
