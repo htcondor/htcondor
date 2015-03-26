@@ -192,7 +192,7 @@ sub EndTest
 	# at this point all the personals started should be stopped
 	# so we will validate this and if we can not, this adds a negative result.
 	
-	print "EndTest: Testing Presonal HTCondor(s) created for this test\n"; 
+	print "EndTest: Testing Personal HTCondor(s) created for this test\n"; 
 	print "Their names are\n";
 	foreach my $name (sort keys %personal_condors) {
 		print "	$name";
