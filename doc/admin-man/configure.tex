@@ -1287,6 +1287,9 @@ File System Configuration File Entries''.
   be placed in the directory defined by this macro.
   The default value is \File{\MacroUNI{LOCAL\_DIR}/log}.
 
+  Do not stage other files in this directory;
+  any files not created by HTCondor in this directory are subject to removal.
+
 \label{param:Run}
 \item[\Macro{RUN}]
   A path and directory name to be used by the HTCondor init script to 
@@ -1309,6 +1312,9 @@ File System Configuration File Entries''.
   The default value is \File{\MacroUNI{LOCAL\_DIR}/spool}.
   The \Condor{schedd}
   will not function if \Macro{SPOOL} is not defined.
+
+  Do not stage other files in this directory;
+  any files not created by HTCondor in this directory are subject to removal.
   
 \label{param:Execute}
 \item[\Macro{EXECUTE}]
@@ -1327,6 +1333,10 @@ File System Configuration File Entries''.
   \MacroNI{EXECUTE} is undefined.
   To customize the execute
   directory independently for each batch slot, use \MacroNI{SLOT<N>\_EXECUTE}.
+
+  Do not stage other files in this directory;
+  any files not created by HTCondor in this directory are subject to removal.
+
 
 \label{param:TmpDir}
 \item[\Macro{TMP\_DIR}]
@@ -10448,8 +10458,8 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManStorkSubmitExe}
 \item[\Macro{DAGMAN\_STORK\_SUBMIT\_EXE}]
-  This configuration variable is no longer used, because as of
-  version 8.3.4 \Condor{dagman} no longer supports Stork jobs.
+  This configuration variable is no longer used; 
+  as of HTCondor version 8.3.4, \Condor{dagman} no longer supports Stork jobs.
   Setting this configuration variable will result in a warning
   from \Condor{dagman} (which will be turned into a fatal error
   if \MacroNI{DAGMAN\_USE\_STRICT} is set to 1 or above).
@@ -10465,8 +10475,8 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManStorkRmExe}
 \item[\Macro{DAGMAN\_STORK\_RM\_EXE}]
-  This configuration variable is no longer used, because as of
-  version 8.3.4 \Condor{dagman} no longer supports Stork jobs.
+  This configuration variable is no longer used; 
+  as of HTCondor version 8.3.4, \Condor{dagman} no longer supports Stork jobs.
   Setting this configuration variable will result in a warning
   from \Condor{dagman} (which will be turned into a fatal error
   if \MacroNI{DAGMAN\_USE\_STRICT} is set to 1 or above).
@@ -10776,6 +10786,10 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManAllowLogError}
 \item[\Macro{DAGMAN\_ALLOW\_LOG\_ERROR}]
+  This configuration variable is no longer used; 
+  as of HTCondor version 8.3.4, \Condor{dagman} no longer supports Stork jobs.
+
+  For completeness, here is the definition for historical purposes: 
   A boolean value defining whether \Condor{dagman} will still attempt
   to run a node job, even if errors are detected in the job event log
   specification.  This setting has an effect only on nodes that are

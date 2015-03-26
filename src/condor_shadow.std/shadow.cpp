@@ -586,7 +586,7 @@ handle_terminate_pending()
 void
 HandleSyscalls()
 {
-	register int	cnt;
+	int	cnt;
 	fd_set 			readfds;
 	int 			nfds = -1;
 

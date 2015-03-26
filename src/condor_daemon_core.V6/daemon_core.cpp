@@ -9937,11 +9937,10 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 		// Set socket options.  For hysterical raisins, we only set these on
 		// fixed ports.  (SO_REUSEADDR doesn't make much sense for a dynamic
 		// port, but if TCP_NODELAY makes sense, it would for both kinds
-		// ot port.)
+		// of port.)
 		int on = 1;
 		// SO_REUSEADDR: If we crash, give us our port back right away.
-		int so_option = CONDOR_REUSEADDR;
-		if(! rsock->setsockopt( SOL_SOCKET, so_option, (char *) & on, sizeof(on) )) {
+		if(! rsock->setsockopt( SOL_SOCKET, CONDOR_REUSEADDR, (char *) & on, sizeof(on) )) {
 			if( fatal ) {
 				EXCEPT( "Failed to setsockopt(SO_REUSEADDR) on TCP command port." );
 			} else {
@@ -9950,7 +9949,9 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 			}
 		}
 
-		// TCP_NODELAY: Not sure why this is set for a listen socket.  Maybe
+		// TCP_NODELAY: Disable Nagle; ReliSocks do their own buffering, and
+		// having both layers do it worse.
+		// Not sure why this is set for a listen socket.  Maybe
 		// it's inherited into the accept()ed sockets?
 		if(! rsock->setsockopt( IPPROTO_TCP, TCP_NODELAY, (char *) & on, sizeof( on ) )) {
 			dprintf( D_ALWAYS, "Warning: setsockopt(TCP_NODELAY) failed.\n" );
@@ -9984,8 +9985,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 
 		int on = 1;
 		// SO_REUSEADDR: If we crash, give us our port back right away.
-		int so_option = CONDOR_REUSEADDR;
-		if(! ssock->setsockopt( SOL_SOCKET, so_option, (char *) & on, sizeof(on) )) {
+		if(! ssock->setsockopt( SOL_SOCKET, CONDOR_REUSEADDR, (char *) & on, sizeof(on) )) {
 			if( fatal ) {
 				EXCEPT( "Failed to setsockopt(SO_REUSEADDR) on UDP command port." );
 			} else {

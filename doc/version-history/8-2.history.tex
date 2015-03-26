@@ -42,9 +42,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug where we were looking for \Macro{IsOwner} instead of
-\Macro{IS\_OWNER} in the configuration.  Now, you can specify either,
-and \Macro{IsOwner} takes precedence.
+\item Fixed a bug in which HTCondor was looking for configuration variable
+\Macro{IsOwner}, instead of \Macro{IS\_OWNER}.
+Now, the system permits specification of either spelling,
+and \MacroNI{IsOwner} takes precedence.
 \Ticket{4949}
 
 \item Fixed a bug that could cause the \Condor{schedd} to crash
@@ -88,14 +89,15 @@ Daylight Saving Time when using timestamp values.
 \item If \MacroNI{CONSUMPTION\_POLICY} is enabled for a partitionable slot,
 then \MacroNI{CLAIM\_PARTITIONABLE\_LEFTOVERS} will be treated as
 \Expr{False} for that slot.
-These features are conflicting ways to efficiently allocate a
-partitionable slot to multiple job requests. Enabling both for the same
-slot causes problems.
+This avoids a problem, because claims using a consumption policy
+and the use of \MacroNI{CLAIM\_PARTITIONABLE\_LEFTOVERS} conflict
+with each other.
 \Ticket{4950}
 
-\item Fixed a bug that could cause a partitionable slot to remain in
-Matched state forever when \MacroNI{CONSUMPTION\_POLICY} and
-\MacroNI{NEGOTIATOR\_INFORM\_STARTD} are set to \Expr{True}.
+\item Fixed a bug that could have caused a partitionable slot to remain in
+the Matched state forever when configuration variables
+\MacroNI{CONSUMPTION\_POLICY} and \MacroNI{NEGOTIATOR\_INFORM\_STARTD}
+were both set to \Expr{True}.
 \Ticket{4945}
 
 \end{itemize}

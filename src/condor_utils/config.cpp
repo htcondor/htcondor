@@ -30,6 +30,7 @@
 #include "condor_random_num.h"
 #include "condor_uid.h"
 #include "my_popen.h"
+#include "printf_format.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -2685,7 +2686,19 @@ expand_macro(const char *value,
 				case SPECIAL_MACRO_ID_REAL:
 				{
 					char * fmt = strchr(name, ',');
-					if (fmt) *fmt++ = 0;
+					if (fmt) {
+						*fmt++ = 0;
+						const char * tmp_fmt = fmt;
+						printf_fmt_info fmt_info;
+						if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info)
+							|| (fmt_info.type == PFT_STRING || fmt_info.type == PFT_RAW || fmt_info.type == PFT_VALUE)
+							|| (fmt_info.type == PFT_FLOAT && (special_id == SPECIAL_MACRO_ID_INT))
+							|| (fmt_info.type == PFT_INT && (special_id == SPECIAL_MACRO_ID_REAL))
+							) {
+							EXCEPT( "%s macro: '%s' is not a valid format specifier!",
+								(special_id == SPECIAL_MACRO_ID_INT) ? "$INT()" : "$REAL()", fmt);
+						}
+					}
 
 					const char * mval = lookup_macro(name, subsys, macro_set, use);
 					if (subsys && ! mval) mval = lookup_macro(name, NULL, macro_set, use);
@@ -2705,9 +2718,7 @@ expand_macro(const char *value,
 						   EXCEPT( "$INT() macro: %s does not evaluate to an integer!", mval );
 						}
 
-						classad::Value val;
-						val.SetIntegerValue(int_val);
-						const int cbuf = 32;
+						const int cbuf = 56;
 						tvalue = buf = (char*)malloc(cbuf+1);
 						snprintf( buf, cbuf, fmt ? fmt : "%lld", int_val );
 					} else {
@@ -2716,10 +2727,10 @@ expand_macro(const char *value,
 						   EXCEPT( "$REAL() macro: %s does not evaluate to an real!", mval );
 						}
 
-						const int cbuf = 32;
+						const int cbuf = 56;
 						tvalue = buf = (char*)malloc(cbuf+1);
 						snprintf( buf, cbuf, fmt ? fmt : "%.16G", dbl_val );
-						if ( ! strchr(buf, '.')) { strcat(buf, ".0"); } // force it to look like a real
+						if (fmt && ! strchr(buf, '.')) { strcat(buf, ".0"); } // force it to look like a real
 					}
 
 					if (tmp2) free(tmp2); tmp2 = NULL;

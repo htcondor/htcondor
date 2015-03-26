@@ -404,67 +404,9 @@ void ConfigConvertDefaultIPToSocketIP()
 	}
 }
 
-static bool IPMatchesNetworkInterfaceSetting(char const *ip)
-{
-		// Just in case our mechanism for iterating through the interfaces
-		// is not perfect, treat NETWORK_INTERFACE=* specially here so we
-		// are guaranteed to return true.
-	return network_interface_matches_all ||
-		configured_network_interface_ips.count(ip) != 0;
-}
-
 // Only needed for these next two functions;
 // #include should be deleted when ConvertDefaultIPToSocketIP is.
 #include "condor_daemon_core.h"
-
-void runOldLogic( const std::string & commandPortSinfulString, const std::string & adSinfulString, const condor_sockaddr & connectionSA, const char * attr_name, const std::string & expr_string, Stream & s, const Sinful & adSinful, const condor_sockaddr & adSA ) {
-	bool newLogicWouldRewrite = commandPortSinfulString == adSinfulString;
-
-	if( ! IPMatchesNetworkInterfaceSetting( connectionSA.to_ip_string( false ).Value() ) ) {
-		if( newLogicWouldRewrite ) {
-			dprintf( D_ALWAYS, "Address rewriting: Warning: attribute '%s' %s == %s, but old logic found that address is in the disabled interface %s.\n",
-				attr_name, adSinfulString.c_str(), commandPortSinfulString.c_str(), connectionSA.to_ip_string(false).Value());
-		}
-
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting (old logic): rejected for attribute '%s' (%s): outbound interface '%s' is disabled.\n", attr_name, expr_string.c_str(), connectionSA.to_ip_string( false ).Value() );
-		return;
-	}
-
-	int port = daemonCore->find_interface_command_port_do_not_use( connectionSA );
-	if( port == 0 ){
-		if( newLogicWouldRewrite ) {
-			dprintf( D_ALWAYS, "Address rewriting: Warning: attribute '%s' %s == %s, but old logic couldn't find the command port for outbound interface %s.\n",
-				attr_name, adSinfulString.c_str(), commandPortSinfulString.c_str(), connectionSA.to_ip_string( false ).Value() );
-		}
-
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting (old logic): failed for attribute '%s' (%s): unable to find command port for outbound interface '%s'.\n", attr_name, expr_string.c_str(), s.my_ip_str() );
-	}
-
-	if( ! adSinful.valid() ) {
-		if( newLogicWouldRewrite ) {
-			dprintf( D_ALWAYS, "Address rewriting: Warning: attribute '%s' address in ad (%s) == command socket (%s), but old logic couldn't parse that address.\n",
-				attr_name, adSinfulString.c_str(), commandPortSinfulString.c_str());
-		}
-
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting (old logic): failed for attribute '%s' (%s): parsed value does not appear to be a sinful.\n", attr_name, expr_string.c_str() );
-		return;
-	}
-
-	if( ! daemonCore->is_command_port_do_not_use( adSA ) ) {
-		if( newLogicWouldRewrite ) {
-			dprintf( D_ALWAYS, "Address rewriting: Warning: attribute '%s' address in ad (%s) == command socket (%s), but old logic couldn't find that command socket in its list.\n",
-				attr_name, adSinfulString.c_str(), commandPortSinfulString.c_str());
-		}
-
-		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting (old logic): refused for attribute '%s' (%s): not one of my command sockets.\n", attr_name, expr_string.c_str() );
-		return;
-	}
-
-	if( ! newLogicWouldRewrite ) {
-		dprintf( D_ALWAYS, "Address rewriting: Warning: attribute '%s' %s != %s, but the old tests think they should match.\n",
-			attr_name, adSinfulString.c_str(), commandPortSinfulString.c_str());
-	}
-}
 
 void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_string, Stream & s )
 {
@@ -541,9 +483,6 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 	Sinful adSinful( adSinfulString.c_str() );
 	condor_sockaddr adSA;
 	adSA.from_sinful( adSinful.getSinful() );
-
-	// Check the new logic against the old logic.  We can remove this later.
-	runOldLogic( commandPortSinfulString, adSinfulString, connectionSA, attr_name, expr_string, s, adSinful, adSA );
 
 	if( get_mySubSystem()->isType( SUBSYSTEM_TYPE_COLLECTOR ) ) {
 		if( adSA.get_protocol() == CP_IPV6 && connectionSA.get_protocol() == CP_IPV4 ) {
@@ -664,7 +603,7 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 
 	//
 	// If we rewrote the address, append the "other" address to the sinful.
-	// Because comamndPortSinful will be IPv4 until further notice, we only
+	// Because commandPortSinful will be IPv4 until further notice, we only
 	// need to check for IPv4 -> IPv6 rewrites.
 	//
 	if( connectionSA.get_protocol() == CP_IPV6 ) {

@@ -697,6 +697,50 @@ int SetSyscalls( int foo );
 int DoCleanup(int,int,const char*);
 }
 
+// global struct that we use to keep track of where we are so we
+// can give useful error messages.
+enum {
+	PHASE_INIT=0,       // before we begin reading from the submit file
+	PHASE_READ_SUBMIT,  // while reading the submit file, and not on a Queue line
+	PHASE_DASH_APPEND,  // while processing -a arguments (happens when we see the Queue line)
+	PHASE_QUEUE,        // while processing the Queue line from a submit file
+	PHASE_QUEUE_ARG,    // while processing the -queue argument
+	PHASE_COMMIT,       // after processing the submit file/arguments
+};
+struct SubmitErrContext {
+	int phase;          // one of PHASE_xxx enum
+	int step;           // set to Step loop variable during queue iteration
+	int item_index;     // set to itemIndex/Row loop variable during queue iteration
+	const char * macro_name; // set to macro name during submit hashtable lookup/expansion
+	const char * raw_macro_val; // set to raw macro value during submit hashtable expansion
+} ErrContext = { PHASE_INIT, -1, -1, NULL, NULL };
+
+// this will get called when the condor EXCEPT() macro is invoked.
+// for the most part, we want to report the message, but to use submit file and
+// line numbers rather and the source file and line numbers that are passed in.
+void ReportSubmitException(const char * msg, int /*src_line*/, const char * /*src_file*/)
+{
+	char loc[100];
+	switch (ErrContext.phase) {
+	case PHASE_READ_SUBMIT: sprintf(loc, " on Line %d of submit file", FileMacroSource.line); break;
+	case PHASE_DASH_APPEND: sprintf(loc, " with -a argument #%d", ExtraLineNo); break;
+	case PHASE_QUEUE:       sprintf(loc, " at Queue statement on Line %d", FileMacroSource.line); break;
+	case PHASE_QUEUE_ARG:   sprintf(loc, " with -queue argument"); break;
+	default: loc[0] = 0; break;
+	}
+
+	fprintf( stderr, "ERROR%s: %s\n", loc, msg );
+	if ((ErrContext.phase == PHASE_QUEUE || ErrContext.phase == PHASE_QUEUE_ARG) && ErrContext.step >= 0) {
+		if (ErrContext.raw_macro_val && ErrContext.raw_macro_val[0]) {
+			fprintf(stderr, "\t at Step %d, ItemIndex %d while expanding %s=%s\n",
+				ErrContext.step, ErrContext.item_index, ErrContext.macro_name, ErrContext.raw_macro_val);
+		} else {
+			fprintf(stderr, "\t at Step %d, ItemIndex %d\n", ErrContext.step, ErrContext.item_index);
+		}
+	}
+}
+
+
 struct SubmitRec {
 	int cluster;
 	int firstjob;
@@ -1049,6 +1093,7 @@ init_job_ad()
 
 	config_fill_ad( job );
 }
+
 
 int
 main( int argc, const char *argv[] )
@@ -1418,6 +1463,7 @@ main( int argc, const char *argv[] )
 	}
 
 	// in case things go awry ...
+	_EXCEPT_Reporter = ReportSubmitException;
 	_EXCEPT_Cleanup = DoCleanup;
 
 	IsFirstExecutable = true;
@@ -1479,6 +1525,7 @@ main( int argc, const char *argv[] )
 		fprintf(stdout, "\n");
 	}
 
+	ErrContext.phase = PHASE_COMMIT;
 
 	// in verbose mode we will have already printed out cluster and proc
 	if ( ! verbose && ! DumpFileIsStdout) {
@@ -6979,6 +7026,7 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 		}
 
 		// now parse the extra lines.
+		ErrContext.phase = PHASE_DASH_APPEND;
 		ExtraLineNo = 0;
 		extraLines.Rewind();
 		const char * exline;
@@ -6990,6 +7038,8 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 			rval = 0;
 		}
 		ExtraLineNo = 0;
+		ErrContext.phase = PHASE_QUEUE;
+		ErrContext.step = -1;
 
 		// HACK! the queue function uses a global flag to know whether or not to ask for a new cluster
 		// In 8.2 this flag is set whenever the "executable" or "cmd" value is set in the submit file.
@@ -7193,6 +7243,7 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 			// a return of 1 tells it to stop scanning, but is not an error.
 			return 1;
 		}
+		ErrContext.phase = PHASE_READ_SUBMIT;
 		return 0; // keep scanning
 	}
 	return -1;
@@ -7200,6 +7251,8 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 
 int read_submit_file(FILE * fp)
 {
+	ErrContext.phase = PHASE_READ_SUBMIT;
+
 	std::string errmsg;
 	int rval = Parse_macros(fp, FileMacroSource,
 		0, SubmitMacroSet, READ_MACROS_SUBMIT_SYNTAX,
@@ -7209,6 +7262,8 @@ int read_submit_file(FILE * fp)
 	if( rval < 0 ) {
 		fprintf (stderr, "\nERROR: on Line %d of submit file: %s\n", FileMacroSource.line, errmsg.c_str());
 	} else {
+		ErrContext.phase = PHASE_QUEUE_ARG;
+
 		// if a -queue command line option was specified, and the submit file did not have a queue statement
 		// then parse the command line argument now (as if it was appended to the submit file)
 		if ( rval == 0 && ! GotQueueCommand && ! queueCommandLine.empty()) {
@@ -7269,6 +7324,8 @@ condor_param( const char* name, const char* alt_name )
 		return( NULL );
 	}
 
+	ErrContext.macro_name = used_alt ? alt_name : name;
+	ErrContext.raw_macro_val = pval;
 	pval_expanded = expand_macro(pval, SubmitMacroSet);
 
 	if( pval == NULL ) {
@@ -7276,6 +7333,9 @@ condor_param( const char* name, const char* alt_name )
 				 used_alt ? alt_name : name );
 		exit(1);
 	}
+
+	ErrContext.macro_name = NULL;
+	ErrContext.raw_macro_val = NULL;
 
 	return  pval_expanded;
 }
@@ -7443,6 +7503,8 @@ int queue_begin(StringList & vars, bool new_cluster)
 //
 int queue_item(int num, StringList & vars, char * item, int item_index, int options, const char * delims, const char * ws)
 {
+	ErrContext.item_index = item_index;
+
 	if ( ! MyQ)
 		return -1;
 
@@ -7504,6 +7566,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 	/* queue num jobs */
 	for (int ii = 0; ii < num; ++ii) {
 		NoClusterCheckAttrs.clearAll();
+		ErrContext.step = ii;
 
 		if ( ClusterId == -1 ) {
 			fprintf( stderr, "\nERROR: Used queue command without "
@@ -7709,6 +7772,8 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		job = new ClassAd();
 		job_ad_saved = false;
 	}
+
+	ErrContext.step = -1;
 
 	return rval;
 }
@@ -8352,7 +8417,11 @@ usage()
 	fprintf( stderr, "\t-debug  \t\tDisplay debugging output\n" );
 	fprintf( stderr, "\t-append <line>\t\tadd line to submit file before processing\n"
 					 "\t              \t\t(overrides submit file; multiple -a lines ok)\n" );
+	fprintf( stderr, "\t-queue <queue-opts>\tappend Queue statement to submit file before processing\n"
+					 "\t                   \t(submit file must not already have a Queue statement)\n" );
 	fprintf( stderr, "\t-disable\t\tdisable file permission checks\n" );
+	fprintf( stderr, "\t-dry-run\t\tprocess submit file and write ClassAd attributes to stderr\n"
+					 "\t        \t\tbut do not actually submit the job(s) to the SCHEDD\n" );
 	fprintf( stderr, "\t-unused\t\t\ttoggles unused or unexpanded macro warnings\n"
 					 "\t       \t\t\t(overrides config file; multiple -u flags ok)\n" );
 	//fprintf( stderr, "\t-force-mpi-universe\tAllow submission of obsolete MPI universe\n );

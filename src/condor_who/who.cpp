@@ -118,6 +118,36 @@ static struct {
 	MAP_STRING_FROM_PID pid_to_addr; // pid to sinful address
 	std::string configured_logdir; // $(LOG) from condor_config (if any)
 
+	// convert daemon subsys name e.g. "MASTER" to cannonical daemon name "Master"
+	// the input need not be uppercase, but should contain _ for shared_port, etc.
+	bool SubsysToDaemon(std::string & daemon) {
+		lower_case(daemon);
+		MAP_STRING_TO_STRING::const_iterator alt = this->file_to_daemon.find(daemon);
+		if (alt != this->file_to_daemon.end()) { 
+			daemon = alt->second; 
+			return true;
+		} else {
+			daemon[0] = toupper(daemon[0]);
+		}
+		return false;
+	}
+
+	// convert cannonical daemon name e.g. "Master" to daemon subsys name "MASTER"
+	// the output will be uppercase, and will contain _ for SHARED_PORT, etc.
+	bool DaemonToSubsys(std::string & daemon) {
+		bool found = false;
+		MAP_STRING_TO_STRING::const_iterator it;
+		for (it = this->file_to_daemon.begin(); it != this->file_to_daemon.end(); it++) {
+			if (it->second == daemon) {
+				daemon = it->first;
+				found = true;
+				break;
+			}
+		}
+		upper_case(daemon);
+		return found;
+	}
+
 } App;
 
 // init fields in the App structure that have no default initializers
@@ -141,7 +171,7 @@ void InitAppGlobals(const char * argv0)
 	App.log_to_daemon["Cred"]  = "Credd";
 	App.log_to_daemon["Kbd"] = "Kbdd";
 
-	// map executable name to daemon name for those that don't match the rule : 'remove condor_ and lowercase'
+	// map executable name to daemon name for those that don't match the rule : 'remove condor_ and capitalize'
 	App.file_to_daemon["shared_port"] = "SharedPort";
 	App.file_to_daemon["job_router"]  = "JobRouter";
 	App.file_to_daemon["ckpt_server"] = "CkptServer";
@@ -1666,7 +1696,7 @@ static void scan_a_log_for_info(
 			startup_banner_text = " (CONDOR_STARTER) STARTING UP";
 		} else {
 			daemon_name_all_caps = it->first;
-			upper_case(daemon_name_all_caps);
+			App.DaemonToSubsys(daemon_name_all_caps);
 			startup_banner_text = " (CONDOR_";
 			startup_banner_text += daemon_name_all_caps;
 			startup_banner_text += ") STARTING UP";
@@ -1772,6 +1802,9 @@ static void scan_a_log_for_info(
 						size_t ix4 = line.find(")", ix3);
 						std::string daemon = line.substr(ix2, ix3-ix2);
 						std::string pid = line.substr(ix3+cch3, ix4-ix3-cch3);
+#if 1
+						App.SubsysToDaemon(daemon);
+#else
 						lower_case(daemon);
 						MAP_STRING_TO_STRING::const_iterator alt = App.file_to_daemon.find(daemon);
 						if (alt != App.file_to_daemon.end()) { 
@@ -1779,6 +1812,7 @@ static void scan_a_log_for_info(
 						} else {
 							daemon[0] = toupper(daemon[0]);
 						}
+#endif
 						if (info.find(daemon) != info.end()) {
 							LOG_INFO * pliTemp = info[daemon];
 							if (pliTemp->pid.empty()) {
@@ -1805,6 +1839,9 @@ static void scan_a_log_for_info(
 						size_t ix4 = line.find_first_of("\".", ix3);
 						if (ix4 > ix3 && ix4 < ix2) {
 							std::string daemon = line.substr(ix3+cch3,ix4-ix3-cch3);
+#if 1
+							App.SubsysToDaemon(daemon);
+#else
 							lower_case(daemon);
 							MAP_STRING_TO_STRING::const_iterator alt = App.file_to_daemon.find(daemon);
 							if (alt != App.file_to_daemon.end()) { 
@@ -1812,6 +1849,7 @@ static void scan_a_log_for_info(
 							} else {
 								daemon[0] = toupper(daemon[0]);
 							}
+#endif
 							if (info.find(daemon) != info.end()) {
 								LOG_INFO * pliD = info[daemon];
 								if (pliD->pid.empty()) {
@@ -1836,8 +1874,17 @@ static void scan_a_log_for_info(
 					size_t ix3 = line.rfind("The ", ix2);
 					if (ix3 != string::npos) {
 						std::string daemon = line.substr(ix3+cch3, ix2-ix3-cch3);
+#if 1
+						App.SubsysToDaemon(daemon);
+#else
 						lower_case(daemon);
-						daemon[0] = toupper(daemon[0]);
+						MAP_STRING_TO_STRING::const_iterator alt = App.file_to_daemon.find(daemon);
+						if (alt != App.file_to_daemon.end()) {
+							daemon = alt->second;
+						} else {
+							daemon[0] = toupper(daemon[0]);
+						}
+#endif
 
 						std::string exited_pid = line.substr(ix2+cch2, ix-ix2-cch2);
 						std::string exit_code = line.substr(ix+cch1);

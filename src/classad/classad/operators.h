@@ -236,7 +236,7 @@ class Operation : public ExprTree
 		static int 	doBitwise 			(OpKind, Value&, Value&, Value&); 
 		static int 	doRealArithmetic	(OpKind, Value&, Value&, Value&);
 		static int 	doTimeArithmetic	(OpKind, Value&, Value&, Value&);
-		static void compareStrings		(OpKind, Value&, Value&, Value&,bool);
+		static void compareStrings		(OpKind, Value&, Value&, Value&);
 		static void compareReals		(OpKind, Value&, Value&, Value&);
 		static void compareBools		(OpKind, Value&, Value&, Value&);
 		static void compareIntegers		(OpKind, Value&, Value&, Value&);

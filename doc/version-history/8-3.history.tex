@@ -37,7 +37,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Eliminated spurious warnings logged when shared port was enabled.
+\Ticket{4958}
 
 \end{itemize}
 
@@ -59,7 +60,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item An EC2 grid universe job now advertises its access key ID in its job ad.
+\item The \SubmitCmd{queue} submit command may be used in
+flexible and powerful new ways to specify job submissions.
+See section~\ref{sec:user-man-queue} for details.
+\Ticket{4819}
+
+\item An EC2 grid universe job now advertises its access key ID in 
+its job ClassAd.
 \Ticket{4903}
 
 \item For an executing job, HTCondor now sets the environment variable 
@@ -90,10 +97,13 @@ support the ability to configure HTCondor to reject the submission
 of jobs that do not meet specified criteria.
 \Ticket{2640}
 
-\item Added the PRE/POST script DEFER feature to \Condor{dagman}.
+\item A new DAGMan feature allows a single retry of a PRE or POST script 
+after a specified delay, 
+where the retry attempt is
+based on the exit code from the initial execution of the script.
 \Ticket{4488}
 
-\item \Condor{dagman} no longer supports Stork jobs as DAG nodes.
+\item \Condor{dagman} no longer supports Stork jobs.
 \Ticket{4550}
 
 \item \Condor{dagman} no longer has the capability to read individual per-
@@ -101,14 +111,19 @@ job log files.  This means that recovery mode will no longer work on a
 DAG originally submitted with version 7.9.1 or earlier.
 \Ticket{4528}
 
+\item An experimental new feature allows PanDa monitoring of jobs,
+as documented with a link from the HTCondor wiki page,
+\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=ExperimentalFeatures}.
+\Ticket{4270}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item Fixed a bug with \Condor{chirp} where generic events logged
-to the user log with the ulog command where written in the timezone
+\item Fixed a bug in \Condor{chirp} in which generic events logged
+to the job event log with the ulog command where written in the time zone
 of the execute machine, not the submit machine.
 \Ticket{4951}
 
@@ -126,8 +141,8 @@ of a \Condor{schedd} daemon or a \Condor{collector} daemon query,
 matching the behavior documented in this reference manual.
 \Ticket{4907}
 
-\item Fixed a bug introduced in HTCondor 8.3.3 that caused local universe
-jobs to execute repeatedly on Windows.
+\item Fixed a bug introduced in HTCondor version 8.3.3 that caused 
+local universe jobs to execute repeatedly on Windows platforms.
 \Ticket{4909}
 
 \end{itemize}

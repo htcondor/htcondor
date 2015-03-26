@@ -42,6 +42,7 @@ DockerProc::~DockerProc() { }
 
 int DockerProc::StartJob() {
 	std::string imageID;
+
 	if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageID ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "%s not defined in job ad, unable to start job.\n", ATTR_DOCKER_IMAGE );
 		return FALSE;
@@ -97,8 +98,10 @@ int DockerProc::StartJob() {
 	// Do I/O redirection (includes streaming).
 	//
 
-	// getStdFile() returns -1 on error.
 	int childFDs[3] = { -2, -2, -2 };
+	{
+	TemporaryPrivSentry sentry(PRIV_USER);
+	// getStdFile() returns -1 on error.
 
 	if( -1 == (childFDs[0] = openStdFile( SFT_IN, NULL, true, "Input file" )) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerProc::StartJob(): failed to open stdin.\n" );
@@ -115,18 +118,25 @@ int DockerProc::StartJob() {
 		daemonCore->Close_FD( childFDs[1] );
 		return FALSE;
 	}
+	}
 
+	  // Ulog the execute event
+	Starter->jic->notifyJobPreSpawn();
 
 	CondorError err;
 	// DockerAPI::run() returns a PID from daemonCore->Create_Process(), which
 	// makes it suitable for passing up into VanillaProc.  This combination
 	// will trigger the reaper(s) when the container terminates.
-	int rv = DockerAPI::run( containerName, imageID, command, args, job_env, sandboxPath, JobPid, childFDs, err );
+	
+	ClassAd *machineAd = Starter->jic->machClassAd();
+
+	int rv = DockerAPI::run( *machineAd, containerName, imageID, command, args, job_env, sandboxPath, JobPid, childFDs, err );
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "DockerAPI::run( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
 		return FALSE;
 	}
 	dprintf( D_FULLDEBUG, "DockerAPI::run() returned pid %d\n", JobPid );
+
 
 	// TODO: Start a timer to poll for job usage updates.
 
