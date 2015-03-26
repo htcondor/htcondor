@@ -2868,12 +2868,6 @@ sub LoadWhoData
       my $self = shift;
       return $self->{collector_addr};
   }
-  sub GetCollectorPort
-  {
-      my $self = shift;
-      my @addrparts = split /:/, $self->{collector_addr};
-      return $addrparts[ -1 ];
-  }
 }
 
 sub PersonalBackUp 

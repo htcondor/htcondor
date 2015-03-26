@@ -70,11 +70,11 @@ my $new_condor_instance = CondorTest::StartCondorWithParams(
 	condorlocalsrc => "$configfile",
 );
 
-my $parallelport = $new_condor_instance->GetCollectorPort();
+my $collectorAddress = $new_condor_instance->GetCollectorAddress();
 
-print "\n\n\n\n\n\n*************** collector port:$parallelport **************\n\n\n\n\n";
+print "\n\n\n\n\n\n*************** collector address = $collectorAddress **************\n\n\n\n\n";
 
-runcmd("condor_status -pool $currenthost:$parallelport -schedd -af Name");
+runcmd("condor_status -pool '$collectorAddress' -schedd -af Name");
 
 # at this point personal should be up and we have the parallel submit
 # file we want.

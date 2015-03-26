@@ -1076,8 +1076,8 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		char const *addr = m_shared_port_endpoint->GetMyRemoteAddress();
 
 		if( addr ) {
-			// We don't verify that a shared port client has addrs for
-			// an address they can't be contacted on anyway.
+			// Remove addresses can be accessed from other machines, so
+			// they must have addrs.
 			Sinful s( addr );
 			ASSERT( s.hasAddrs() );
 		}
@@ -1093,6 +1093,11 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		}
 
 		if( addr ) {
+			// We don't verify here the addr has addrs because it could
+			// be a local address that could only work on the same machine.
+			// Since these addresses are constructed out of thin air, it's
+			// not worth fixing them for the benefit of an assertion that
+			// can't matter.
 			return addr;
 		}
 	}
@@ -1257,10 +1262,12 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 	if( usePrivateAddress ) {
 		if( sinful_private ) {
 			Sinful s( sinful_private );
+			ASSERT( s.hasAddrs() );
 			return sinful_private;
 		}
 		else {
 			Sinful s( sinful_public );
+			ASSERT( s.hasAddrs() );
 			return sinful_public;
 		}
 	}

@@ -5,6 +5,7 @@
 #include "ipv6_hostname.h"
 #include "condor_debug.h"
 
+#include <sstream>
 
 MyString condor_protocol_to_str(condor_protocol p) {
 	switch(p) {
@@ -484,9 +485,11 @@ MyString condor_sockaddr::to_ip_string(bool decorate) const
 }
 
 MyString condor_sockaddr::to_ip_and_port_string() {
-	MyString ip_string;
-	formatstr( ip_string, "%s:%u", to_ip_string( true ).c_str(), get_port() );
-	return ip_string;
+	// Using formatstr() would be better in every possible way, but it
+	// doesn't exist in libcondorsyscall.
+	std::ostringstream oss;
+	oss << to_ip_string( true ).c_str() << ":" << get_port();
+	return oss.str().c_str();
 }
 
 MyString condor_sockaddr::to_ip_string_ex(bool decorate) const

@@ -1779,7 +1779,7 @@ sub FindCollectorAddress
 	while(<COLLECTORADDR>) {
 		CondorUtils::fullchomp($_);
 		$line = $_;
-		if( $line =~ /^\s*<([^>]+)>\s*$/ ) {
+		if( $line =~ /^\s*(<[^>]+>)\s*$/ ) {
 			debug( "Collector address is $1\n",$debuglevel);
 			return($1);
 		} else {

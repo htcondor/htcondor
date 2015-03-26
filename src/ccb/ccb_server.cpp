@@ -64,7 +64,10 @@ CCBIDFromContactString(CCBID &ccbid,char const *ccb_contact)
 static void
 CCBIDToContactString(char const *my_address,CCBID ccbid,MyString &ccb_contact)
 {
+	// If we change this, we have to change the CCB client, as well.
 	ccb_contact.formatstr("%s#%lu",my_address,ccbid);
+	// ccb_contact.formatstr("<%s#%lu>",my_address,ccbid);
+	// ccb_contact.formatstr("<%s>#%lu",my_address,ccbid);
 }
 
 CCBServer::CCBServer():
@@ -144,6 +147,10 @@ CCBServer::InitAndReconfig()
 		// strip out <>'s, private address, and CCB listener info
 	sinful.setPrivateAddr(NULL);
 	sinful.setCCBContact(NULL);
+		// We rely on the Sinful constructor recognizing sinfuls
+		// without brackets.  Not sure why we bother stripping them off
+		// in the first place, but we can't change that without
+		// breaking backwards compabitility.
 	ASSERT( sinful.getSinful() && sinful.getSinful()[0] == '<' );
 	m_address.formatstr("%s",sinful.getSinful()+1);
 	if( m_address[m_address.Length()-1] == '>' ) {

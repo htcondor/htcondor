@@ -187,25 +187,36 @@ Sinful::Sinful(char const *sinful)
 
 		if( *sinful != '<' ) {
 			m_sinful = "<";
-			// should be careful here
-			// if sinful is IPv6 address, it should be embraced by [ ]
 
-			if(*sinful == '[') { // IPv6
-				m_sinful += sinful;
+			// Before we try anything else, surround the string with <>
+			// and try parsing it again.  CCB requires the ability to
+			// pass bracketless Sinfuls; we've gotten away with it so far
+			// because we haven't needed colons in the parameter list,
+			// only in the base address.
+			std::string trialSinful = m_sinful + sinful + ">";
+			if( split_sin( trialSinful.c_str(), &host, &port, &params ) ) {
+				m_sinful = trialSinful;
 			} else {
-				// Double check it's not IPv6 lacking [brackets]
-				const char * first_colon = strchr(sinful, ':');
-				if(first_colon && strchr(first_colon+1, ':')) {
-					// Why not treat it as an IPv6 address? Because
-					// We can't tell if 12AB::CDEF:1000 means
-					// 12AB:0000:0000:0000:0000:0000:0000:CDEF port 1000 or
-					// 12AB:0000:0000:0000:0000:0000:CDEF:1000 unknown port
-					m_valid = false;
-					return;
+				// should be careful here
+				// if sinful is IPv6 address, it should be embraced by [ ]
+
+				if(*sinful == '[') { // IPv6
+					m_sinful += sinful;
+				} else {
+					// Double check it's not IPv6 lacking [brackets]
+					const char * first_colon = strchr(sinful, ':');
+					if(first_colon && strchr(first_colon+1, ':')) {
+						// Why not treat it as an IPv6 address? Because
+						// We can't tell if 12AB::CDEF:1000 means
+						// 12AB:0000:0000:0000:0000:0000:0000:CDEF port 1000 or
+						// 12AB:0000:0000:0000:0000:0000:CDEF:1000 unknown port
+						m_valid = false;
+						return;
+					}
+					m_sinful += sinful;
 				}
-				m_sinful += sinful;
+				m_sinful += ">";
 			}
-			m_sinful += ">";
 		}
 		else {
 			m_sinful = sinful;
