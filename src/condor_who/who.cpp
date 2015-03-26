@@ -1373,7 +1373,7 @@ main( int argc, char *argv[] )
 				query_daemons_for_pids(info);
 			}
 
-			if (App.diagnostic || App.verbose) {
+			if (App.verbose || (App.diagnostic && ! App.show_daemons)) {
 				printf("\nLOG directory \"%s\"\n", App.query_log_dirs[ii]);
 				print_log_info(info);
 			} else if (App.show_daemons) {
@@ -1384,6 +1384,10 @@ main( int argc, char *argv[] )
 	}
 
 	if (App.show_daemons && App.quick_scan) {
+		if (App.timed_scan) { printf("%d seconds\n", (int)(time(NULL) - begin_time)); }
+		exit(0);
+	}
+	if ( ! App.scan_pids && App.query_pids.empty() || App.query_log_dirs.empty()) {
 		if (App.timed_scan) { printf("%d seconds\n", (int)(time(NULL) - begin_time)); }
 		exit(0);
 	}
@@ -1432,7 +1436,7 @@ main( int argc, char *argv[] )
 							query_log_dir(logdir, info);
 							scan_logs_for_info(info, App.job_to_pid, fAddressesOnly);
 
-							if (App.diagnostic || App.verbose) {
+							if (App.verbose || (App.diagnostic && ! App.show_daemons)) {
 								print_log_info(info);
 							} else if (App.show_daemons) {
 								print_daemon_info(info, false);
@@ -1749,17 +1753,22 @@ static void scan_a_log_for_info(
 
 		if (line.find(startup_banner_text) != string::npos) {
 			if (App.diagnostic) {
-				printf("found %s startup banner with pid %s\n", pszDaemon, possible_daemon_pid.c_str());
-				printf("quitting scan of %s log file\n\n", pszDaemon);
+				printf("found %s startup banner with pid %s\n",
+					pszDaemon, possible_daemon_pid.c_str());
 			}
-			if (pliDaemon->pid.empty())
+			if (pliDaemon->pid.empty()) {
+				if (App.diagnostic) { printf("storing %s pid : %s\n", pszDaemon, possible_daemon_pid.c_str()); }
 				pliDaemon->pid = possible_daemon_pid;
-			if (pliDaemon->addr.empty())
+			}
+			if (pliDaemon->addr.empty()) {
+				if (App.diagnostic) { printf("storing %s addr : %s\n", pszDaemon, possible_daemon_addr.c_str()); }
 				pliDaemon->addr = possible_daemon_addr;
+			}
 
 			bInsideBanner = false;
 			// found daemon startup header, everything before this is from a different invocation
 			// of the daemon, so stop searching.
+			if (App.diagnostic) { printf("quitting scan of %s log file\n\n", pszDaemon); }
 			break;
 		}
 		// are we inside the banner?
@@ -1782,7 +1791,9 @@ static void scan_a_log_for_info(
 		// DaemonCore: command socket at <sin>
 		// DaemonCore: private command socket at <sin>
 		size_t ix = line.find(" DaemonCore: command socket at <");
+		if (ix == string::npos) ix = line.find(" DaemonCore: private command socket at <");
 		if (ix != string::npos) {
+			if (App.diagnostic) { printf("potential addr from: %s\n", line.c_str()); }
 			possible_daemon_addr = line.substr(line.find("<",ix));
 			continue;
 		}
@@ -1802,17 +1813,7 @@ static void scan_a_log_for_info(
 						size_t ix4 = line.find(")", ix3);
 						std::string daemon = line.substr(ix2, ix3-ix2);
 						std::string pid = line.substr(ix3+cch3, ix4-ix3-cch3);
-#if 1
 						App.SubsysToDaemon(daemon);
-#else
-						lower_case(daemon);
-						MAP_STRING_TO_STRING::const_iterator alt = App.file_to_daemon.find(daemon);
-						if (alt != App.file_to_daemon.end()) { 
-							daemon = alt->second; 
-						} else {
-							daemon[0] = toupper(daemon[0]);
-						}
-#endif
 						if (info.find(daemon) != info.end()) {
 							LOG_INFO * pliTemp = info[daemon];
 							if (pliTemp->pid.empty()) {
@@ -1839,17 +1840,7 @@ static void scan_a_log_for_info(
 						size_t ix4 = line.find_first_of("\".", ix3);
 						if (ix4 > ix3 && ix4 < ix2) {
 							std::string daemon = line.substr(ix3+cch3,ix4-ix3-cch3);
-#if 1
 							App.SubsysToDaemon(daemon);
-#else
-							lower_case(daemon);
-							MAP_STRING_TO_STRING::const_iterator alt = App.file_to_daemon.find(daemon);
-							if (alt != App.file_to_daemon.end()) { 
-								daemon = alt->second; 
-							} else {
-								daemon[0] = toupper(daemon[0]);
-							}
-#endif
 							if (info.find(daemon) != info.end()) {
 								LOG_INFO * pliD = info[daemon];
 								if (pliD->pid.empty()) {
@@ -1874,17 +1865,7 @@ static void scan_a_log_for_info(
 					size_t ix3 = line.rfind("The ", ix2);
 					if (ix3 != string::npos) {
 						std::string daemon = line.substr(ix3+cch3, ix2-ix3-cch3);
-#if 1
 						App.SubsysToDaemon(daemon);
-#else
-						lower_case(daemon);
-						MAP_STRING_TO_STRING::const_iterator alt = App.file_to_daemon.find(daemon);
-						if (alt != App.file_to_daemon.end()) {
-							daemon = alt->second;
-						} else {
-							daemon[0] = toupper(daemon[0]);
-						}
-#endif
 
 						std::string exited_pid = line.substr(ix2+cch2, ix-ix2-cch2);
 						std::string exit_code = line.substr(ix+cch1);
@@ -2168,7 +2149,9 @@ void print_daemon_info(LOG_INFO_MAP & info, bool fQuick)
 			ppid = get_daemon_param(pli->addr.c_str(), "PPID");
 			if (ppid) {
 				active = true;
-				pexe = get_daemon_param(pli->addr.c_str(), it->first.c_str());
+				std::string subsys = it->first;
+				App.DaemonToSubsys(subsys);
+				pexe = get_daemon_param(pli->addr.c_str(), subsys.c_str());
 			}
 		}
 
