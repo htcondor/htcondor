@@ -40,6 +40,7 @@
 #include "filename_tools.h"
 #include "condor_holdcodes.h"
 #include "file_transfer_db.h"
+#include "mk_cache_links.h"
 #include "subsystem_info.h"
 #include "condor_url.h"
 #include "my_popen.h"
@@ -101,8 +102,6 @@ extern "C" {
 	int		set_seed( int );
 }
 
-extern void ProcessCachedInpFiles(ClassAd *const Ad,
-  StringList *const InputFiles, StringList &PubInpFiles);
 
 struct upload_info {
 	FileTransfer *myobj;
@@ -325,6 +324,21 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	} else {
 		InputFiles = new StringList(NULL,",");
 	}
+	StringList PubInpFiles;
+	if (Ad->LookupString(ATTR_PUBLIC_INPUT_FILES, &dynamic_buf) == 1) {
+	      // Add PublicInputFiles to InputFiles list.
+	      // If these files will be transferred via web server cache,
+	      // they will be removed from InputFiles.
+	      PubInpFiles.initializeFromString(dynamic_buf);
+	      free(dynamic_buf);
+	      dynamic_buf = NULL;
+	      const char *path;
+	      PubInpFiles.rewind();
+	      while ((path = PubInpFiles.next()) != NULL) {
+		  if (!InputFiles->file_contains(path))
+		      InputFiles->append(path);			
+	      }
+	}
 	if (Ad->LookupString(ATTR_JOB_INPUT, buf, sizeof(buf)) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf) ) {			
@@ -332,7 +346,6 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				InputFiles->append(buf);			
 		}
 	}
-	StringList PubInpFiles;
 	
 	// If we are spooling, we want to ignore URLs
 	// We want the file transfer plugin to be invoked at the starter, not the schedd.
@@ -348,7 +361,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		char *list = InputFiles->print_to_string();
 		dprintf(D_FULLDEBUG, "Input files: %s\n", list ? list : "" );
 		free(list);
-	} else if (IsServer() && !is_spool)
+	} else if (IsServer() && !is_spool && param_boolean("ENABLE_CACHE_TRANSFERS", false))
 		ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
 		// For files to be cached, change file names to URLs
 

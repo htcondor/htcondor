@@ -110,8 +110,7 @@ static bool MakeLink(const char *const srcFile, const string &newLink) {
 } // end namespace
 
 
-static string MakeAbsolutePath(const char *path, ClassAd *const Ad, 
-  const char *const iwd) {
+static string MakeAbsolutePath(const char *path, const char *const iwd) {
   if (is_relative_to_cwd(path)) {
     string fullpath = iwd;
     fullpath += DIR_DELIM_CHAR;
@@ -124,13 +123,9 @@ static string MakeAbsolutePath(const char *path, ClassAd *const Ad,
 
 void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
   StringList &PubInpFiles) {
-  char *buf = NULL;
-  if (Ad->LookupString(ATTR_PUBLIC_INPUT_FILES, &buf) == 1) {
-    PubInpFiles.initializeFromString(buf);
-    free(buf);
-    buf = NULL;
+  if (PubInpFiles.isEmpty() == false) {
     const char *webSrvrPort = param("WEB_SERVER_PORT");
-     string url = "http://";
+    string url = "http://";
     url += webSrvrPort;
     url += "/";
     PubInpFiles.rewind();
@@ -142,7 +137,7 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
       return;
     }
     while ((path = PubInpFiles.next()) != NULL) {
-      string fullpath = MakeAbsolutePath(path, Ad, iwd);
+      string fullpath = MakeAbsolutePath(path, iwd);
       string hashName = MakeHashName(fullpath.c_str());
       if (MakeLink(fullpath.c_str(), hashName)) {
 	InputFiles->remove(path); // Remove plain file name from InputFiles
@@ -161,6 +156,7 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
     free(iwd);
     if (remap.Length() > 0) {
       MyString remapnew;
+      char *buf = NULL;
       if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS, &buf) == 1) {
 	remapnew = buf;
 	free(buf);
