@@ -1,0 +1,14 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+my $rv = system( 'test_sinful' );
+
+if( $rv == 0 ) {
+	print( "SUCCESS\n" );
+} else {
+	print( "FAILURE\n" );
+}
+
+exit( $rv );
