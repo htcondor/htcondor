@@ -1,16 +1,19 @@
 NODE_STATUS_FILE job_dagman_script_defer.status
 JOBSTATE_LOG job_dagman_script_defer.jobstate.log
 
-job NodeA null noop
+# Note:  temporarily(?) changed jobs to "real" jobs, because the
+# test framework doesn't like NOOP nodes in this test.
+
+job NodeA job_dagman_script_defer-node.cmd
 #delete counters
 script defer 3 30 pre NodeA ./job_dagman_script_defer_Apre.pl
 
-job NodeB null noop
+job NodeB job_dagman_script_defer-node.cmd
 # fail at least once
 script defer 4 20 pre NodeB ./job_dagman_script_defer_Bpre.pl
 parent NodeA child NodeB
 
-job NodeC null noop
+job NodeC job_dagman_script_defer-node.cmd
 # fail at least once
 script defer 5 25 post NodeC ./job_dagman_script_defer_Cpost.pl
 parent NodeB child NodeC
