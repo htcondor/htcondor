@@ -1595,6 +1595,8 @@ sub CollectWhoData
 		#print "Using -quick\n";
 		CondorTest::runCondorTool("condor_who -quick -daemon -log \"$logdir\"",\@whoarray,2,{emit_output=>0});
 		foreach my $wholine (@whoarray) {
+			CondorUtils::fullchomp($wholine);
+			#print "$wholine\n";
 			if($wholine =~ /(\w*)\s+(.*?)\s+(.*?)\s+(.*?)/) {
 				#print "Who data with 4 fields:$1,$2,$3,$4\n";
 				#condor_who -quick fields. $1 daemon name $2 pid
@@ -1635,14 +1637,16 @@ sub CollectWhoData
 							}
 						}
 					}
-				}
-			} 
+				} 
+			}
 		}
 	} else {
 		CondorTest::runCondorTool("condor_who -daemon -log \"$logdir\"",\@whoarray,2,{emit_output=>0});
 
 		foreach my $wholine (@whoarray) {
 			CondorUtils::fullchomp($wholine);
+			next if $wholine =~ /^Daemon.*$/; # skip column headings
+			next if $wholine =~ /^\-\-\-\-\-\-.*$/; # skip dashes
 			#print "$wholine\n";
 			if($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+<(.*)>\s+(.*)/) {
 				#print "Who data with 7 fields:$1,$2,$3,$4,$5,$6,$7\n";

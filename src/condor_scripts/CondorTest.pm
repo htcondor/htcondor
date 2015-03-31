@@ -199,23 +199,23 @@ sub EndTest
 	}
 	print "\n\n";
 	my $amidown = "";
-	foreach my $name (sort keys %personal_condors) {
-		$amidown = "";
-		print "EndTest:checking this named instance:$name for being down: ";
-        my $condor = $personal_condors{$name};
-		$amidown = CondorPersonal::ProcessStateWanted($condor->{condor_config});
-		if($amidown ne "down") {
-			print "BAD\n";
-			print "This condor:$name failed to come all the way down\n";
-			print "Adding a FAILED instance to make test fail\n\n";
-			# this one not down add negative result, BROADCAST and check rest
-			RegisterResult(0,"test_name","$handle");
-		} else {
-			print "OK\n";
-			print "Adding a PASSED event for this HTCondor personal stopping\n";
-			RegisterResult(1,"test_name","$handle");
-		}
-	}
+#	foreach my $name (sort keys %personal_condors) {
+#		$amidown = "";
+#		print "EndTest:checking this named instance:$name for being down: ";
+#        my $condor = $personal_condors{$name};
+#		$amidown = CondorPersonal::ProcessStateWanted($condor->{condor_config});
+#		if($amidown ne "down") {
+#			print "BAD\n";
+#			print "This condor:$name failed to come all the way down\n";
+#			print "Adding a FAILED instance to make test fail\n\n";
+#			# this one not down add negative result, BROADCAST and check rest
+#			RegisterResult(0,"test_name","$handle");
+#		} else {
+#			print "OK\n";
+#			print "Adding a PASSED event for this HTCondor personal stopping\n";
+#			RegisterResult(1,"test_name","$handle");
+#		}
+#	}
 	
 	# Cleanup stops all personals in test which triggers a CoreCheck per personal
 	# not all tests call RegisterResult yet and I changed the ordering in remote_task

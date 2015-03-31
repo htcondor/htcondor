@@ -109,7 +109,6 @@ job_dagman_global_event_log-A: personal
 job_dagman_global_event_log-B: personal
 job_dagman_gt1957: personal
 job_dagman_halt-A: personal
-job_dagman_job_held: personal
 job_dagman_jobstate_log: personal
 job_dagman_large_dag: personal
 job_dagman_lazy_submit_file: personal
@@ -182,7 +181,6 @@ job_filexfer_basic_van: personal
 job_filexfer_input-onegone_van: personal
 job_filexfer_limitback_van: personal
 job_filexfer_md5-remote_van: personal
-job_filexfer_minus1_van: personal
 job_filexfer_output_van: personal
 job_filexfer_output-withvacate_van: personal
 job_filexfer_sandbox-empty_van: personal

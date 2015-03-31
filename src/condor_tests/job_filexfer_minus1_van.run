@@ -32,6 +32,21 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 2
+	NEGOTIATOR_INTERVAL = 5
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobfilexferminus1");
+print "local config file:$configfile\n";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "jobfilexferminus1",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
 my $job = $$;
 my $baseoutfile = "submit_filetrans_output" . "$job";
 my $outd = "$baseoutfile"."d.txt";
@@ -81,19 +96,15 @@ $abort = sub {
 	print "In abort handler: we removed the job which failed\n";
 	if($sawshadow eq "yes") {
     	CondorTest::debug("$testname: SUCCESS\n",1);
-    	exit(0);
+    	RegisterResult(1,"test_name","$testname");
 	} else {
-		die "BAD: got an abort but never saw shadow exception\n";
+		print "ABORT without having seen a shadow exception\n";
+    	RegisterResult(0,"test_name","$testname");
 	}
 };
 
 $held = sub {
 	print "Its is OK to seea hold now\n";
-};
-
-$timed = sub
-{
-	die "Job should have ended by now. file transfer broken!\n";
 };
 
 # make some needed files. All 0 sized and xxxxxx.txt for
