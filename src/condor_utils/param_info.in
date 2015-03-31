@@ -790,15 +790,6 @@ friendly_name=Dagman Insert Sub File
 review=?
 tags=dagman,condor_submit_dag
 
-[DAGMAN_OLD_RESCUE]
-default=false
-type=bool
-reconfig=false
-customization=seldom
-friendly_name=Dagman Old Rescue
-review=?
-tags=dagman,condor_submit_dag
-
 [DAGMAN_AUTO_RESCUE]
 default=true
 type=bool
@@ -841,15 +832,6 @@ type=bool
 reconfig=false
 customization=seldom
 friendly_name=Dagman Startup Cycle Detect
-review=?
-tags=dagman,dagman_main
-
-[DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION]
-default=false
-type=bool
-reconfig=false
-customization=seldom
-friendly_name=Dagman Ignore Duplicate Job Execution
 review=?
 tags=dagman,dagman_main
 
