@@ -136,6 +136,16 @@ chkconfig --add cgconfig
 service cgconfig start
 \end{verbatim}
 
+On some older Linux kernels, including those in the RHEL 6 series,
+there is a bug in the way that memory usage is charged to cgroups.
+If a process writes a lot of data to the file system quickly, 
+the kernel may decide that it is using too much memory, 
+and kill it with the Out of Memory killer.
+To work around this problem, the administrator
+can set the configurable parameter \Expr{/proc/sys/vm/dirty\_bytes}
+to a fixed value.
+100 MB for this value seems to provide good trade offs.
+
 When the \Prog{cgconfig} service is correctly running, 
 the virtual file system
 mounted on \File{/cgroup} should have several subdirectories under it, 

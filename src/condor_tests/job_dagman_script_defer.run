@@ -1,0 +1,209 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+## This makes sure that the DAGMan script deferral feature (see
+## gittrac #4488) works correctly.
+
+use CondorTest;
+use CondorUtils;
+
+$cmd = 'job_dagman_script_defer.dag';
+$testdesc =  'Condor submit dag - script deferral test - scheduler U';
+$testname = "job_dagman_script_defer";
+$dagman_args = "-verbose";
+
+@logfiles = ("job_dagman_script_defer.dag.dagman.out");
+
+# Maybe also check the node status file?
+@outfiles = ("job_dagman_script_defer.jobstate.log");
+
+# Note: we must find these lines *in the specified order*.
+# Pre script events, and POST_SCRIPT_STARTED events, are not currently
+# generated in recovery mode.
+@outlines = ('^\d+ INTERNAL \*\*\* DAGMAN_STARTED \d+\.0 \*\*\*$',
+	'^\d+ NodeA PRE_SCRIPT_STARTED - - - 1$',
+	'^\d+ NodeA PRE_SCRIPT_SUCCESS - - - 1$',
+	'^\d+ NodeA SUBMIT \d+.\d+ - - 1$',
+	'^\d+ NodeA EXECUTE \d+.\d+ - - 1$', # not if NOOP node
+	'^\d+ NodeA IMAGE_SIZE \d+.\d+ - - 1$', # not if NOOP node
+	'^\d+ NodeA JOB_TERMINATED \d+.\d+ - - 1$',
+	'^\d+ NodeA JOB_SUCCESS 0 - - 1$',
+	'^\d+ NodeB PRE_SCRIPT_STARTED - - - 2$',
+	'^\d+ NodeB PRE_SCRIPT_STARTED - - - 2$',
+	'^\d+ NodeB PRE_SCRIPT_STARTED - - - 2$',
+	'^\d+ NodeB PRE_SCRIPT_SUCCESS - - - 2$',
+	'^\d+ NodeB SUBMIT \d+.\d+ - - 2$',
+	'^\d+ NodeB EXECUTE \d+.\d+ - - 2$', # not if NOOP node
+	'^\d+ NodeB IMAGE_SIZE \d+.\d+ - - 2$', # not if NOOP node
+	'^\d+ NodeB JOB_TERMINATED \d+.\d+ - - 2$',
+	'^\d+ NodeB JOB_SUCCESS 0 - - 2$',
+	'^\d+ NodeC SUBMIT \d+.\d+ - - 3$',
+	'^\d+ NodeC EXECUTE \d+.\d+ - - 3$', # not if NOOP node
+	'^\d+ NodeC IMAGE_SIZE \d+.\d+ - - 3$', # not if NOOP node
+	'^\d+ NodeC JOB_TERMINATED \d+.\d+ - - 3$',
+	'^\d+ NodeC JOB_SUCCESS 0 - - 3$',
+	'^\d+ NodeC POST_SCRIPT_STARTED \d+.\d+ - - 3$',
+	'^\d+ NodeC POST_SCRIPT_STARTED \d+.\d+ - - 3$',
+	'^\d+ NodeC POST_SCRIPT_STARTED \d+.\d+ - - 3$',
+	'^\d+ NodeC POST_SCRIPT_TERMINATED \d+.\d+ - - 3$',
+	'^\d+ NodeC POST_SCRIPT_SUCCESS \d+.\d+ - - 3$',
+	'^\d+ INTERNAL \*\*\* DAGMAN_FINISHED 0 \*\*\*$');
+
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+# Get rid of any existing log files.
+foreach $name (@logfiles) {
+	if (-e $name) {
+		runcmd("rm -f $name");
+	}
+}
+
+# Get rid of any existing output files.
+foreach $name (@outfiles) {
+	if (-e $name) {
+		runcmd("rm -f $name");
+	}
+}
+
+# Remove any existing rescue DAGs.
+runcmd("rm -f job_dagman_script_defer.dag.rescue*");
+
+$abnormal = sub 
+{
+	die "Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+};
+
+$success = sub
+{
+	CondorTest::debug("executed successfully\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+
+	foreach $name (@logfiles) {
+		$line = "";
+		$passed = 0;
+		$canopen = open(OUT,"<$name");
+		if( ! (defined $canopen)) {
+			CondorTest::debug("Can not open logfile<$name>:$!\n",1);
+			$diditpass = 0;
+		}
+		while(<OUT>) {
+			chomp();
+			$line = $_;
+			if( $line =~ /^.*EXITING WITH STATUS 0.*$/ ) {
+				$passed = 1;
+				CondorTest::debug("$name: $line\n",1);
+			}
+		}
+		close(OUT);
+		if($passed == 1 ) {
+			;
+		} else {
+			CondorTest::debug("failed $name: $line\n",1);
+			$diditpass = 0;
+		}
+	}
+
+	foreach $name (@outfiles) {
+		$outindex = 0;
+		$line = "";
+		$passed = 0;
+		$canopen = open(OUT,"<$name");
+		if( ! (defined $canopen)) {
+			CondorTest::debug("Can not open outfile<$name>:$!\n",1);
+			$diditpass = 0;
+		}
+		while(<OUT>) {
+			chomp();
+			$line = $_;
+			$target = $outlines[$outindex];
+			if( $line =~ /$target/ ) {
+				CondorTest::debug("$name: $line\n",1);
+				$outindex++;
+				if ($outindex > $#outlines) {
+					$passed = 1;
+					last;
+				}
+			} else {
+				CondorTest::debug("failed: \"extra\" output line $line\n");
+				$diditpass = 0;
+			}
+		}
+		close(OUT);
+		if($passed == 1 ) {
+			;
+		} else {
+			CondorTest::debug("failed: missing output line $target\n",1);
+			$diditpass = 0;
+		}
+	}
+
+	if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
+};
+
+$failure = sub
+{
+	die "Error: DAG is not expected to fail!\n";
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExitedFailure( $testname, $failure );
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunDagTest() failed\n";
+}
+
