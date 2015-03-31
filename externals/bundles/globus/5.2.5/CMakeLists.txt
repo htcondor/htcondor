@@ -46,7 +46,7 @@ if (WITH_GLOBUS)
 			set( GLOBUS_FLAVOR gcc32dbg )
 		endif()
 
-		condor_pre_external( GLOBUS globus-5.2.5 "lib;include" "done")
+		condor_pre_external( GLOBUS globus-5.2.5-p1 "lib;include" "done")
 
 		# GNU libtool isn't included in Mac OS 10.8, but Globus
 		# needs libltdl. Build it and install it in the Globus
@@ -80,6 +80,7 @@ if (WITH_GLOBUS)
 
 
 		set (GLOBUS_PATCH patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p1 &&
+						patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/gram_tls.patch -p1 &&
 						patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_openssl.patch -p1 &&
 						cd source-trees/xio/src/builtins &&
 						mkdir -p gsi popen &&
