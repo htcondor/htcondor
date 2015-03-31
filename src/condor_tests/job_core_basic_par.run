@@ -74,7 +74,7 @@ my $collectorAddress = $new_condor_instance->GetCollectorAddress();
 
 print "\n\n\n\n\n\n*************** collector address = $collectorAddress **************\n\n\n\n\n";
 
-runcmd("condor_status -pool '$collectorAddress' -schedd -af Name");
+runCommandCarefully( undef, 'condor_status', '-pool', $collectorAddress, '-schedd', '-af', 'Name' );
 
 # at this point personal should be up and we have the parallel submit
 # file we want.

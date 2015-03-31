@@ -38,7 +38,7 @@ use CondorPersonal;
 
 use base 'Exporter';
 
-our @EXPORT = qw(PrintTimeStamp timestamp runCondorTool runToolNTimes RegisterResult EndTest);
+our @EXPORT = qw(PrintTimeStamp timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest);
 
 my %securityoptions =
 (
@@ -1577,6 +1577,23 @@ sub PipeCheck {
 		print "*                                                     *\n";
 		print "*******************************************************\n";
 	}
+}
+
+
+sub runCondorToolCarefully {
+	my $array = shift( @_ );
+	my $quiet = shift( @_ );
+	my $options = shift( @_ );
+	my $retval = shift( @_ );
+	my @argv = @_;
+
+	my %altOptions;
+	if( ! defined( $options ) ) {
+		$options = \%altOptions;
+	}
+	${$options}{arguments} = \@argv;
+
+	return runCondorTool( $argv[0], $array, $quiet, $options, $retval );
 }
 
 

@@ -175,8 +175,11 @@ if($bail != 1) {
 		CondorTest::debug("Looking for condor_q -global -pool $collectorAddress\n",$debuglevel);
 		while($count < $nattempts) {
 			$found1 = 0;
-			my $cmd = "condor_q -global -pool '${collectorAddress}'";
-			$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+			# my $cmd = "condor_q -global -pool '${collectorAddress}'";
+			# $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+			my @cmd = ( 'condor_q', '-global', '-pool', $collectorAddress );
+			my $cmd = join( ' ', @cmd );
+			$cmdstatus = CondorTest::runCondorToolCarefully( \@adarray, 2, { emit_output => 0 }, undef, @cmd );
 	    	if(!$cmdstatus)
 	    	{
 				print "bad\n";

@@ -28,7 +28,7 @@ my $btdebug = 0;
 
 use base 'Exporter';
 
-our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl is_cygwin_perl fullchomp CreateEmptyFile CreateDir CopyIt TarCreate TarExtract MoveIt GetDirList DirLs List WhereIsInstallDir quoteMyString MyHead GeneralServer GeneralClient DagmanReadFlowLog);
+our @EXPORT = qw(runcmd runCommandCarefully FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl is_cygwin_perl fullchomp CreateEmptyFile CreateDir CopyIt TarCreate TarExtract MoveIt GetDirList DirLs List WhereIsInstallDir quoteMyString MyHead GeneralServer GeneralClient DagmanReadFlowLog);
 
 sub TRUE{1};
 sub FALSE{0};
@@ -173,6 +173,7 @@ sub runcmd {
 		emit_string
 		use_system
 		sh_wrap
+		arguments
 		);
 
 	foreach my $key (keys %{$options}) {
@@ -219,7 +220,11 @@ sub runcmd {
 		$rc = system("$args");
 		$t1 = [Time::HiRes::gettimeofday];
 	} else {
-		$childpid = IPC::Open3::open3(\*IN, \*OUT, \*ERR, $args);
+		if( defined( ${$options}{arguments} ) ) {
+			$childpid = IPC::Open3::open3(\*IN, \*OUT, \*ERR, @{${$options}{arguments}} );
+		} else {
+			$childpid = IPC::Open3::open3(\*IN, \*OUT, \*ERR, $args);
+		}
 
 		my $bulkout = "";
 		my $bulkerror = "";
@@ -378,6 +383,19 @@ sub runcmd {
 	return \%returnthings;
 }
 
+sub runCommandCarefully {
+	my $options = shift( @_ );
+	my @argv = @_;
+
+	my %altOptions;
+	if( ! defined( $options ) ) {
+		$options = \%altOptions;
+	}
+	${$options}{arguments} = \@argv;
+
+	return runcmd( $argv[0], $options );
+}
+
 sub ProcessReturn {
 	my ($status) = @_;
 	my $rc = -1;
@@ -438,6 +456,10 @@ sub SetDefaults {
 	# sh_wrap: wrap the arguments to runcmd with "/bin/sh -c ..."
 	if(!(exists ${$options}{sh_wrap})) {
 		${$options}{sh_wrap} = TRUE;
+	}
+
+	if(!(exists ${$options}{arguments})) {
+		${$options}{arguments} = undef;
 	}
 
 }
