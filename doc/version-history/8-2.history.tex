@@ -105,9 +105,9 @@ were both set to \Expr{True}.
 to be used, instead of always using the old SSLv3 standard.
 \Ticket{4964}
 
-\item Fixed the \condor{schedd}'s default value for configuration parameter
-\MacroNI{MAX\_JOBS\_RUNNING} when the parameter is cleared in the
-configuration file.
+\item Fixed the \Condor{schedd} daemon's default value for configuration 
+variable \MacroNI{MAX\_JOBS\_RUNNING}, 
+when the variable is cleared in the configuration file.
 The default value was ten times too large.
 The default value could also become negative on a machine with a large
 amount of memory (over 500 GiB).
