@@ -5065,7 +5065,7 @@ review=?
 tags=schedd,schedd
 
 [MAX_JOBS_RUNNING]
-default=ceiling(ifThenElse( $(DETECTED_MEMORY)*0.8*1024/800 < 10000, $(DETECTED_MEMORY)*0.8*1024/800, 10000 ))
+default=ifThenElse( $(DETECTED_MEMORY) < 10000, $(DETECTED_MEMORY), 10000 )
 win32_default=200
 type=int
 reconfig=true

@@ -11551,9 +11551,10 @@ Scheduler::Init()
 
 		// Estimate that we can afford to use 80% of memory for shadows
 		// and each running shadow requires 800k of private memory.
+		// This works out to about 1 shadow per MB of total memory.
 		// We don't use SHADOW_SIZE_ESTIMATE here, because until 7.4,
 		// that was explicitly set to 1800k in the default config file.
-	int default_max_jobs_running = sysapi_phys_memory_raw_no_param()*4096/400;
+	int default_max_jobs_running = sysapi_phys_memory_raw_no_param();
 
 		// Under Linux (not sure about other OSes), the default TCP
 		// ephemeral port range is 32768-61000.  Each shadow needs 2
@@ -11562,7 +11563,7 @@ Scheduler::Init()
 		// following is a conservative upper bound on how many shadows
 		// we can run.  Would be nice to check the ephemeral port
 		// range directly.
-	if( default_max_jobs_running > 10000) {
+	if( default_max_jobs_running > 10000 || default_max_jobs_running <= 0 ) {
 		default_max_jobs_running = 10000;
 	}
 #ifdef WIN32
