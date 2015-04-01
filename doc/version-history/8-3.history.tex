@@ -65,6 +65,12 @@ flexible and powerful new ways to specify job submissions.
 See section~\ref{sec:user-man-queue} for details.
 \Ticket{4819}
 
+\item \Condor{submit} has new command line options \Opt{-queue} 
+and \Opt{-dry-run},
+to provide flexible and powerful new ways to specify job submissions,
+as well as to test what job would be submitted without submitting.
+\Ticket{4933}
+
 \item An EC2 grid universe job now advertises its access key ID in 
 its job ClassAd.
 \Ticket{4903}
@@ -97,9 +103,9 @@ support the ability to configure HTCondor to reject the submission
 of jobs that do not meet specified criteria.
 \Ticket{2640}
 
-\item A new DAGMan feature allows a single retry of a PRE or POST script 
+\item A new DAGMan feature implements the retry of a PRE or POST script 
 after a specified delay, 
-where the retry attempt is
+where a retry attempt is
 based on the exit code from the initial execution of the script.
 \Ticket{4488}
 
@@ -111,7 +117,7 @@ job log files.  This means that recovery mode will no longer work on a
 DAG originally submitted with version 7.9.1 or earlier.
 \Ticket{4528}
 
-\item An experimental new feature allows PanDa monitoring of jobs,
+\item An experimental new feature allows PanDA monitoring of jobs,
 as documented with a link from the HTCondor wiki page,
 \URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=ExperimentalFeatures}.
 \Ticket{4270}

@@ -301,8 +301,8 @@ the same machine upon which the node's job is run.
 Further, a single cluster of HTCondor jobs may be
 spread across several machines.
 
-The optional \Arg{DEFER} feature causes a single retry of just the script
-if an initial execution of the script exits with the
+The optional \Arg{DEFER} feature causes a retry of only the script,
+if the execution of the script exits with the
 exit code given by \Arg{status}.
 The retry occurs after at least \Arg{time} seconds, 
 rather than being considered failed.  
