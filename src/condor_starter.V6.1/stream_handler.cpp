@@ -288,6 +288,9 @@ StreamHandler::Reconnect() {
 		handler_mode = HANDLE_WRITE;
 	}
 
+	// Never permit truncation on a reconnect; what sense does that make?
+	flags = flags & (~O_TRUNC);
+
 	remote_fd = REMOTE_CONDOR_open(filename.Value(),(open_flags_t)flags,0777);
 	if(remote_fd<0) {
 		EXCEPT("Couldn't reopen %s to stream %s: %s",filename.Value(),streamname.Value(),strerror(errno));
