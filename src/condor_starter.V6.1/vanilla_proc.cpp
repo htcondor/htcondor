@@ -749,6 +749,52 @@ int VanillaProc::pidNameSpaceReaper( int status ) {
 	return status;
 }
 
+void VanillaProc::notifySuccessfulEvictionCheckpoint() { /* FIXME */ }
+void VanillaProc::notifySuccessfulPeriodicCheckpoint() { /* FIXME */ }
+
+void VanillaProc::recordFinalUsage() {
+	if( daemonCore->Get_Family_Usage(JobPid, m_final_usage) == FALSE ) {
+		dprintf( D_ALWAYS, "error getting family usage for pid %d in "
+			"VanillaProc::JobReaper()\n", JobPid );
+	}
+}
+
+void VanillaProc::killFamilyIfWarranted() {
+	// Kill_Family() will (incorrectly?) kill the SSH-to-job daemon
+	// if we're using dedicated accounts, so don't unless we know
+	// we're the only job.
+	if ( ! m_dedicated_account || Starter->numberOfJobs() == 1 ) {
+		dprintf( D_PROCFAMILY, "About to call Kill_Family()\n" );
+		daemonCore->Kill_Family( JobPid );
+	} else {
+		dprintf( D_PROCFAMILY, "Postponing call to Kill_Family() "
+			"(perhaps due to ssh_to_job)\n" );
+	}
+}
+
+void VanillaProc::restartCheckpointedJob() {
+	// For the same reason that we call recordFinalUsage() from the reaper
+	// in normal exit cases, we should get the final usage of the checkpointed
+	// process now, add it to the running total of checkpointed processes,
+	// and then add the running total to the current when we publish the
+	// update ad.  [FIXME]
+
+	if( Starter->jic->uploadWorkingFiles() ) {
+			notifySuccessfulPeriodicCheckpoint();
+	} else {
+			// We assume this is a transient failure and will try
+			// to transfer again after the next periodic checkpoint.
+			dprintf( D_ALWAYS, "Failed to transfer checkpoint.\n" );
+	}
+
+	// While it's arguably sensible to kill the process family
+	// before we restart the job, that would mean that checkpointing
+	// would behave differently during ssh-to-job, which seems bad.
+	// killFamilyIfWarranted();
+
+	StartJob();
+}
+
 bool
 VanillaProc::JobReaper(int pid, int status)
 {
@@ -783,33 +829,51 @@ VanillaProc::JobReaper(int pid, int status)
 	}
 #endif
 
+	//
+	// We have three cases to consider:
+	//   * if we're checkpointing; or
+	//   * if we see a special checkpoint exit code; or
+	//   * there's no special case to consider.
+	//
+
+	bool wantsFileTransferOnCheckpointExit = false;
+	JobAd->LookupBool( ATTR_WANT_FT_ON_CHECKPOINT, wantsFileTransferOnCheckpointExit );
+
+	int checkpointExitCode = 0;
+	JobAd->LookupInteger( ATTR_CHECKPOINT_EXIT_CODE, checkpointExitCode );
+	int checkpointExitSignal = 0;
+	JobAd->LookupInteger( ATTR_CHECKPOINT_EXIT_SIGNAL, checkpointExitSignal );
+	bool checkpointExitBySignal = 0;
+	JobAd->LookupBool( ATTR_CHECKPOINT_EXIT_BY_SIGNAL, checkpointExitBySignal );
+
+	int successfulCheckpointStatus = 0;
+	if( checkpointExitBySignal ) {
+		successfulCheckpointStatus = checkpointExitSignal;
+	} else if( checkpointExitCode != 0 ) {
+		successfulCheckpointStatus = checkpointExitCode << 8;
+#if defined( WINDOWS )
+		successfulCheckpointStatus = checkpointExitCode;
+#endif
+	}
+
 	if( isCheckpointing ) {
 		dprintf( D_FULLDEBUG, "Inside VanillaProc::JobReaper() during a checkpoint\n" );
-		isCheckpointing = false;
 
-		// The job signals that it's successfully written a checkpoint by
-		// exiting normally with status 0.
-		if( exit_status == 0 ) {
-			if( Starter->jic->uploadWorkingFiles() ) {
-				// FIXME: Update the job ad to reflect the succesful checkpoint.
-			} else {
-				// The logic in the base starter for failing to transfer
-				// output back is to wait for the shadow to reconnect, or,
-				// failing that, the job lease to expire.  So do nothing.
-				dprintf( D_ALWAYS, "Failed to transfer checkpoint.\n" );
+		if( exit_status == successfulCheckpointStatus ) {
+			if( isSoftKilling ) {
+				notifySuccessfulEvictionCheckpoint();
+				return true;
 			}
 
-			if( ! isSoftKilling ) {
-				StartJob();
-
-				jobExited = false;
-			}
+			restartCheckpointedJob();
+			isCheckpointing = false;
+			return false;
 		} else {
 			// The job exited without taking a checkpoint.  If we don't do
 			// anything, it will be reported as if the error code or signal
-			// had happened naturally (that job will usually exit the
+			// had happened naturally (and the job will usually exit the
 			// queue).  This could confuse the users.
-			//
+
 			// For now, we'll just force the job to requeue.
 
 			// The easiest way to do that is to pretend that this was an
@@ -822,33 +886,33 @@ VanillaProc::JobReaper(int pid, int status)
 			// exit code (JOB_FAILED_CHECKPOINT) and a new user log
 			// event ID (ULOG_JOB_FAILED_CHECKPOINT).
 			requested_exit = true;
+
+			killFamilyIfWarranted();
+			recordFinalUsage();
+			return true;
+		}
+	} else if( wantsFileTransferOnCheckpointExit && exit_status == successfulCheckpointStatus ) {
+		dprintf( D_FULLDEBUG, "Inside VanillaProc::JobReaper() and the job self-checkpointed.\n" );
+
+		if( isSoftKilling ) {
+			notifySuccessfulEvictionCheckpoint();
+			return true;
+		} else {
+			restartCheckpointedJob();
+			return false;
 		}
 	} else {
-		// If the parent job process died, clean up all of the job's processes
-		// and record its final usage stats.
-
-		// Kill_Family() will (incorrectly?) kill the SSH-to-job daemon
-		// if we're using dedicated accounts, so don't unless we know
-		// we're the only job.
-		if ( ! m_dedicated_account || Starter->numberOfJobs() == 1 ) {
-			dprintf( D_PROCFAMILY, "About to call Kill_Family()\n" );
-			daemonCore->Kill_Family( JobPid );
-		} else {
-			dprintf( D_PROCFAMILY, "Postponing call to Kill_Family() "
-				"(perhaps due to ssh_to_job)\n" );
-		}
+		// If the parent job process died, clean up all of the job's processes.
+		killFamilyIfWarranted();
 
 		// Record final usage stats for this process family, since
 		// once the reaper returns, the family is no longer
 		// registered with DaemonCore and we'll never be able to
 		// get this information again.
-		if( daemonCore->Get_Family_Usage(JobPid, m_final_usage) == FALSE ) {
-			dprintf( D_ALWAYS, "error getting family usage for pid %d in "
-				"VanillaProc::JobReaper()\n", JobPid );
-		}
-	}
+		recordFinalUsage();
 
-	return jobExited;
+		return jobExited;
+	}
 }
 
 
@@ -1251,7 +1315,9 @@ bool VanillaProc::Ckpt() {
 int VanillaProc::outputOpenFlags() {
 	int wantCheckpoint = 0;
 	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
-	if( wantCheckpoint ) {
+	bool wantsFileTransferOnCheckpointExit = false;
+	JobAd->LookupBool( ATTR_WANT_FT_ON_CHECKPOINT, wantsFileTransferOnCheckpointExit );
+	if( wantCheckpoint || wantsFileTransferOnCheckpointExit ) {
 		return O_WRONLY | O_CREAT | O_APPEND | O_LARGEFILE;
 	} else {
 		return this->OsProc::outputOpenFlags();
@@ -1261,7 +1327,9 @@ int VanillaProc::outputOpenFlags() {
 int VanillaProc::streamingOpenFlags( bool isOutput ) {
 	int wantCheckpoint = 0;
 	JobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
-	if( wantCheckpoint ) {
+	bool wantsFileTransferOnCheckpointExit = false;
+	JobAd->LookupBool( ATTR_WANT_FT_ON_CHECKPOINT, wantsFileTransferOnCheckpointExit );
+	if( wantCheckpoint || wantsFileTransferOnCheckpointExit ) {
 		return isOutput ? O_CREAT | O_APPEND | O_WRONLY : O_RDONLY;
 	} else {
 		return this->OsProc::streamingOpenFlags( isOutput );

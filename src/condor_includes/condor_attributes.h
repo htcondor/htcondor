@@ -699,6 +699,7 @@
 #define ATTR_VISA_IP  "VisaIpAddr"
 #define ATTR_WOL_PORT  "WakePort"
 #define ATTR_WANT_CHECKPOINT  "WantCheckpoint"
+#define ATTR_WANT_FT_ON_CHECKPOINT "WantFTOnCheckpoint"
 #define ATTR_WANT_CLAIMING  "WantClaiming"
 #define ATTR_WANT_IO_PROXY  "WantIOProxy"
 #define ATTR_WANT_REMOTE_UPDATES "WantRemoteUpdates"
@@ -846,6 +847,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_CHECKPOINT_PLATFORM  "CheckpointPlatform"
 #define ATTR_LAST_CHECKPOINT_PLATFORM  "LastCheckpointPlatform"
 #define ATTR_IS_VALID_CHECKPOINT_PLATFORM  "IsValidCheckpointPlatform"
+
+#define ATTR_CHECKPOINT_EXIT_CODE  "CheckpointExitCode"
+#define ATTR_CHECKPOINT_EXIT_SIGNAL  "CheckpointExitSignal"
+#define ATTR_CHECKPOINT_EXIT_BY_SIGNAL  "CheckpointExitBySignal"
 
 #define ATTR_WITHIN_RESOURCE_LIMITS  "WithinResourceLimits"
 

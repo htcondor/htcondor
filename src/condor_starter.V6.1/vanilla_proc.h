@@ -133,7 +133,14 @@ private:
 	int setupOOMEvent(const std::string & cgroup_string);
 
 	std::string m_pid_ns_init_filename;
+
+	// Internal helper functions.
 	int pidNameSpaceReaper( int status );
+	void recordFinalUsageStats();
+	void killFamilyIfWarranted();
+	void notifySuccessfulEvictionCheckpoint();
+	void notifySuccessfulPeriodicCheckpoint();
+	void restartCheckpointedJob();
 
 	bool isCheckpointing;
 	bool isSoftKilling;
