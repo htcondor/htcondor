@@ -337,6 +337,28 @@ may require reduced authorization levels.
 Optional parameter \texttt{use\_tcp} causes updates to be sent via TCP.
 Defaults to \texttt{True}.
 \\ \hline
+\texttt{directQuery( (Collector)arg1, (DaemonTypes)daemon\_type, (str)name = '', (list)projection = [], (str)statistics = ' ' )}
+
+Query the specified daemon directly, instead of using the ClassAd from
+the \Condor{collector} daemon.
+Returns the ClassAd of the specified daemon, after obtaining it from the
+daemon.
+
+Parameter \texttt{arg1} is the \Condor{collector} that will identify where
+to find the specified daemon.
+
+Parameter \texttt{daemon\_type} specified a daemon with an enum from 
+\texttt{DaemonTypes}.
+
+Optional parameter \texttt{name} specifies the daemon's name.
+If not specified, the local daemon is used.
+
+Optional parameter \texttt{projection} is a list of attributes requested,
+to obtain only a subset of the attributes from the ClassAd.
+
+Optional parameter \texttt{statistics} is a list of statistics attributes
+to include, if they exist for the specified daemon.
+\\ \hline
 
 \end{tabular}
 \end{flushleft}
