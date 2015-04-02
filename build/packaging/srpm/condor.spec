@@ -342,7 +342,7 @@ BuildRequires: systemd-units
 BuildRequires: transfig
 BuildRequires: latex2html
 
-Requires: mailx
+Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
@@ -640,6 +640,46 @@ Requires: %name = %version-%release
 Includes the external packages built when UW_BUILD is enabled
 
 %endif
+
+%package all
+Summary: All condor packages in a typical installation
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: %name-procd = %version-%release
+%if %qmf
+Requires: %name-qmf = %version-%release
+%endif
+%if %aviary
+Requires: %name-aviary-common = %version-%release
+Requires: %name-aviary = %version-%release
+Requires: %name-aviary-hadoop-common = %version-%release
+Requires: %name-aviary-hadoop = %version-%release
+%endif
+%if %plumage
+Requires: %name-plumage = %version-%release
+%endif
+Requires: %name-kbdd = %version-%release
+Requires: %name-vm-gahp = %version-%release
+%if %deltacloud
+Requires: %name-deltacloud-gahp = %version-%release
+%endif
+Requires: %name-classads = %version-%release
+#Requires: %name-classads-devel = %version-%release
+%if %cream
+Requires: %name-cream-gahp = %version-%release
+%endif
+Requires: %name-python = %version-%release
+Requires: %name-bosco = %version-%release
+%if %std_univ
+Requires: %name-std-universe = %version-%release
+%endif
+%if %uw_build
+Requires: %name-static-shadow = %version-%release
+Requires: %name-externals = %version-%release
+%endif
+
+%description all
+Include dependencies for all condor packages in a typical installation
 
 %pre
 getent group condor >/dev/null || groupadd -r condor
