@@ -83,5 +83,5 @@ update_spec_define tarball_version "$condor_version"
 
 rpmbuild $buildmethod "$@" --define="_topdir $tmpd" SOURCES/condor.spec
 
-mv *RPMS/*.rpm "$dest_dir"
-
+mv $(find *RPMS -name \*.rpm) "$dest_dir"
+ls -lh "$dest_dir"
