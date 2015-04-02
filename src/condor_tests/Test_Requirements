@@ -12,6 +12,9 @@ cmd_wait_shows-notimeout: personal
 cmd_wait_shows-partial: personal
 cmd_wait_shows-timeout: personal
 file_transfer_submit: personal
+job_basic_submit-foreach: personal
+job_basic_submit-filepartmacros: personal
+job_basic_submit-foreach-initialdir: personal
 gangliad: personal
 job_ligo_x86-64-chkpttst: IPv4
 job_ckpt_combo-sanity_std: personal, IPv4
