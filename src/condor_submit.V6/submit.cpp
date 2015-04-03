@@ -100,8 +100,13 @@ static unsigned int hashFunction( const MyString& );
 HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
 HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
 
+#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+#else
 StringList NoClusterCheckAttrs;
+#endif
 ClassAd *ClusterAd = NULL;
+
+time_t submit_time = 0;
 
 // Explicit template instantiation
 
@@ -194,6 +199,15 @@ bool VMHardwareVT = false;
 bool vm_need_fsdomain = false;
 bool xen_has_file_to_be_transferred = false;
 
+time_t get_submit_time()
+{
+	if ( ! submit_time) {
+		submit_time = time(0);
+	}
+	return submit_time;
+}
+
+#define time(a) poison_time(a)
 
 //
 // The default polling interval for the schedd
@@ -655,7 +669,11 @@ void InsertJobExpr (const char *expr);
 void InsertJobExpr (const MyString &expr);
 void InsertJobExprInt(const char * name, int val);
 void InsertJobExprString(const char * name, const char * val);
+#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+bool IsNoClusterAttr(const char * name);
+#else
 void SetNoClusterAttr(const char * name);
+#endif
 void	check_umask();
 void setupAuthentication();
 void	SetPeriodicHoldCheck(void);
@@ -696,6 +714,20 @@ extern "C" {
 int SetSyscalls( int foo );
 int DoCleanup(int,int,const char*);
 }
+
+// class that can be used to hold a malloc'd pointer such as the one returned by condor_param
+// it will free the pointer when this object is destroyed.
+class auto_free_ptr {
+public:
+	auto_free_ptr(char* str=NULL) : p(str) {}
+	~auto_free_ptr() { if (p) free(p); p = NULL; }
+	void set(char*str) { if (p) free(p); p = str; }
+	char * detach() { char * t = p; p = NULL; return t; }
+	char * ptr() { return p; }
+private:
+	char * p;
+};
+
 
 // global struct that we use to keep track of where we are so we
 // can give useful error messages.
@@ -974,7 +1006,8 @@ init_job_ad()
 		SetTargetTypeName (*job, STARTD_ADTYPE);
 	}
 
-	buffer.formatstr( "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));
+	// all jobs should end up with the same qdate, so we only query time once.
+	buffer.formatstr( "%s = %d", ATTR_Q_DATE, (int)get_submit_time());
 	InsertJobExpr (buffer);
 
 	buffer.formatstr( "%s = 0", ATTR_COMPLETION_DATE);
@@ -1467,11 +1500,11 @@ main( int argc, const char *argv[] )
 	_EXCEPT_Cleanup = DoCleanup;
 
 	IsFirstExecutable = true;
-	init_job_ad();	
+	init_job_ad();
 
 	if ( !DumpClassAdToFile ) {
 		if ( ! SubmitFromStdin && ! terse) {
-			fprintf(stdout, "Submitting job(s)");
+			fprintf(stdout, DashDryRun ? "Dry-Run job(s)" : "Submitting job(s)");
 		}
 	} else if ( ! DumpFileIsStdout ) {
 		// get the file we are to dump the ClassAds to...
@@ -1547,7 +1580,7 @@ main( int argc, const char *argv[] )
 			for (i=0; i <= CurrentSubmitInfo; i++) {
 				if (SubmitInfo[i].cluster != this_cluster) {
 					if (this_cluster != -1) {
-						fprintf(stdout, "%d job(s) submitted to cluster %d.\n", job_count, this_cluster);
+						fprintf(stdout, "%d job(s) %s to cluster %d.\n", job_count, DashDryRun ? "dry-run" : "submitted", this_cluster);
 						job_count = 0;
 					}
 					this_cluster = SubmitInfo[i].cluster;
@@ -1555,7 +1588,7 @@ main( int argc, const char *argv[] )
 				job_count += SubmitInfo[i].lastjob - SubmitInfo[i].firstjob + 1;
 			}
 			if (this_cluster != -1) {
-				fprintf(stdout, "%d job(s) submitted to cluster %d.\n", job_count, this_cluster);
+				fprintf(stdout, "%d job(s) %s to cluster %d.\n", job_count, DashDryRun ? "dry-run" : "submitted", this_cluster);
 			}
 		}
 	}
@@ -3891,9 +3924,12 @@ SetJobStatus()
 	char *hold = condor_param( Hold, NULL );
 	MyString buffer;
 
+#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+#else
 	// we will be inserting "JobStatus = <something>" into the jobad, but we DON'T
 	// want that to be written into the cluster ad, it must always go into the proc ad.
 	SetNoClusterAttr(ATTR_JOB_STATUS);
+#endif
 
 	if( hold && (hold[0] == 'T' || hold[0] == 't') ) {
 		if ( Remote ) {
@@ -3930,7 +3966,7 @@ SetJobStatus()
 	}
 
 	buffer.formatstr( "%s = %d", ATTR_ENTERED_CURRENT_STATUS,
-					(int)time(0) );
+					(int)get_submit_time() );
 	InsertJobExpr( buffer );
 
 	if( hold ) {
@@ -5420,7 +5456,7 @@ SetUserLog()
 			const char* ulog_pcc = full_path(current_userlog.c_str());
 			if(ulog_pcc) {
 				std::string ulog(ulog_pcc);
-				if ( !DumpClassAdToFile ) {
+				if ( !DumpClassAdToFile && !DashDryRun ) {
 					// check that the log is a valid path
 					if ( !DisableFileChecks ) {
 						FILE* test = safe_fopen_wrapper_follow(ulog.c_str(), "a+", 0664);
@@ -6986,6 +7022,7 @@ int parse_queue_args (
 	return 0;
 }
 
+
 // Check to see if this is a queue statement, if it is, return a pointer to the queue arguments.
 // 
 const char * is_queue_statement(const char * line)
@@ -7015,10 +7052,18 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 
 	// Check to see if this is a queue statement.
 	//
-	char * pqargs = const_cast<char*>(is_queue_statement(line));
-	if (pqargs) {
+	char * queue_args = const_cast<char*>(is_queue_statement(line));
+	if (queue_args) {
 
 		GotQueueCommand = true;
+
+		auto_free_ptr expanded_queue_args(expand_macro(queue_args, SubmitMacroSet));
+		char * pqargs = expanded_queue_args.ptr();
+		ASSERT(pqargs);
+
+		if (DashDryRun && DumpSubmitHash) {
+			fprintf(stdout, "\n----- Queue arguments -----\nSpecified: %s\nExpanded : %s", queue_args, pqargs);
+		}
 
 		if ( ! queueCommandLine.empty() && fp_submit != NULL) {
 			errmsg = "-queue argument conflicts with queue statement in submit file";
@@ -7347,6 +7392,33 @@ set_condor_param( const char *name, const char *value )
 	insert(name, value, SubmitMacroSet, DefaultMacro);
 }
 
+#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+  // To facilitate processing of job status from the
+  // job_queue.log, the ATTR_JOB_STATUS attribute should not
+  // be stored within the cluster ad. Instead, it should be
+  // directly part of each job ad. This change represents an
+  // increase in size for the job_queue.log initially, but
+  // the ATTR_JOB_STATUS is guaranteed to be specialized for
+  // each job so the two approaches converge. -mattf 1 June 09
+  // tj 2015 - it also wastes space in the schedd, so we should probably stop doign this. 
+static const char * no_cluster_attrs[] = {
+	ATTR_JOB_STATUS,
+};
+bool IsNoClusterAttr(const char * name) {
+	for (size_t ii = 0; ii < COUNTOF(no_cluster_attrs); ++ii) {
+		if (MATCH == strcasecmp(name, no_cluster_attrs[ii]))
+			return true;
+	}
+	return false;
+}
+#else
+void SetNoClusterAttr(const char * name)
+{
+	NoClusterCheckAttrs.append( name );
+}
+#endif
+
+
 // stuff a live value into submit's hashtable.
 // IT IS UP TO THE CALLER TO INSURE THAT live_value IS VALID FOR THE LIFE OF THE HASHTABLE
 // this function is intended for use during queue iteration to stuff
@@ -7481,7 +7553,7 @@ int queue_begin(StringList & vars, bool new_cluster)
 	}
 
 	if (DashDryRun && DumpSubmitHash) {
-		fprintf(stdout, "\n-------------- submit hash at queue_begin -----------\n");
+		fprintf(stdout, "\n----- submit hash at queue begin -----\n");
 		int flags = (DumpSubmitHash & 8) ? HASHITER_SHOW_DUPS : 0;
 		HASHITER it = hash_iter_begin(SubmitMacroSet, flags);
 		for ( ; ! hash_iter_done(it); hash_iter_next(it)) {
@@ -7489,10 +7561,10 @@ int queue_begin(StringList & vars, bool new_cluster)
 			if (key && key[0] == '$') continue; // dont dump meta params.
 			const char * val = hash_iter_value(it);
 			//fprintf(stdout, "%s%s = %s\n", it.is_def ? "d " : "  ", key, val ? val : "NULL");
-			fprintf(stdout, "%s = %s\n", key, val ? val : "NULL");
+			fprintf(stdout, "  %s = %s\n", key, val ? val : "NULL");
 		}
 		hash_iter_delete(&it);
-		fprintf(stdout, "\n");
+		fprintf(stdout, "-----\n");
 	}
 
 	return 0;
@@ -7563,9 +7635,23 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		}
 	}
 
+	if (DashDryRun && DumpSubmitHash) {
+		fprintf(stdout, "----- submit hash changes for ItemIndex = %d -----\n", item_index);
+		char * var;
+		vars.rewind();
+		while ((var = vars.next())) {
+			MACRO_ITEM* pitem = find_macro_item(var, SubmitMacroSet);
+			fprintf (stdout, "  %s = %s\n", var, pitem ? pitem->raw_value : "");
+		}
+		fprintf(stdout, "-----\n");
+	}
+
 	/* queue num jobs */
 	for (int ii = 0; ii < num; ++ii) {
+	#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+	#else
 		NoClusterCheckAttrs.clearAll();
+	#endif
 		ErrContext.step = ii;
 
 		if ( ClusterId == -1 ) {
@@ -7733,7 +7819,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		if (verbose && ! DumpFileIsStdout) {
 			fprintf(stdout, "\n** Proc %d.%d:\n", ClusterId, ProcId);
 			fPrintAd (stdout, *job);
-		} else if ( ! terse && ! DumpFileIsStdout) {
+		} else if ( ! terse && ! DumpFileIsStdout && ! DumpSubmitHash) {
 			fprintf(stdout, ".");
 		}
 
@@ -7759,11 +7845,17 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 
 			// Remove attributes that were forced into the proc 0 ad
 			// from our copy of the cluster ad.
+		#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+			for (size_t ii = 0; ii < COUNTOF(no_cluster_attrs); ++ii) {
+				ClusterAd->Delete(no_cluster_attrs[ii]);
+			}
+		#else
 			const char *attr;
 			NoClusterCheckAttrs.rewind();
 			while ( (attr = NoClusterCheckAttrs.next()) ) {
 				ClusterAd->Delete( attr );
 			}
+		#endif
 		}
 
 		if ( job_ad_saved == false ) {
@@ -8321,9 +8413,7 @@ check_directory( const char* pathname, int /*flags*/, int err )
 void
 check_open( const char *name, int flags )
 {
-	int		fd;
 	MyString strPathname;
-	char *temp;
 	StringList *list;
 
 		/* The user can disable file checks on a per job basis, in such a
@@ -8358,17 +8448,27 @@ check_open( const char *name, int flags )
 
 	/* If this file as marked as append-only, do not truncate it here */
 
-	temp = condor_param( AppendFiles, ATTR_APPEND_FILES );
-	if(temp) {
-		list = new StringList(temp, ",");
+	auto_free_ptr append_files(condor_param( AppendFiles, ATTR_APPEND_FILES ));
+	if (append_files.ptr()) {
+		list = new StringList(append_files.ptr(), ",");
 		if(list->contains_withwildcard(name)) {
 			flags = flags & ~O_TRUNC;
 		}
 		delete list;
 	}
 
+	bool dryrun_create = DashDryRun && ((flags & (O_CREAT|O_TRUNC)) != 0);
+	if (DashDryRun) {
+		flags = flags & ~(O_CREAT|O_TRUNC);
+	}
+
 	if ( !DisableFileChecks ) {
-		if( (fd=safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
+		int fd = safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664);
+		if ((errno == ENOENT) && dryrun_create) {
+			// we are doing dry-run, and the input flags were to create/truncate a file
+			// we stripped the create/truncate flags, now we treate a 'file does not exist' error
+			// as success since O_CREAT would have made it (probably).
+		} else if ( fd < 0 ) {
 			// note: Windows does not set errno to EISDIR for directories, instead you get back EACCESS (or ENOENT?)
 			if( (trailing_slash || errno == EISDIR || errno == EACCES) &&
 	                   check_directory( strPathname.Value(), flags, errno ) ) {
@@ -8384,8 +8484,9 @@ check_open( const char *name, int flags )
 					 strPathname.Value(), flags, strerror( errno ) );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
+		} else {
+			(void)close( fd );
 		}
-		(void)close( fd );
 	}
 
 	// Queue files for testing access if not already queued
@@ -8643,8 +8744,24 @@ SaveClassAd ()
 			retval = -1;
 		} else {
 			int tmpProcId = myprocid;
-			// Check each attribute against the version in the cluster ad.
-			// If the values match, don't add the attribute to the proc ad.
+			// IsNoClusterAttr tells us that an attribute should always be in the proc ad
+		#ifdef PLUS_ATTRIBS_IN_CLUSTER_AD
+			bool force_proc = IsNoClusterAttr(lhstr);
+			if ( ProcId > 0 ) {
+				// For all but the first proc, check each attribute against the value in the cluster ad.
+				// If the values match, don't add the attribute to this proc ad
+				if ( ! force_proc) {
+					ExprTree *cluster_tree = ClusterAd->LookupExpr( lhstr );
+					if ( cluster_tree && *tree == *cluster_tree ) {
+						continue;
+					}
+				}
+			} else {
+				if (force_proc) {
+					myprocid = ProcId;
+				}
+			}
+		#else
 			// NoClusterCheckAttrs is a list of attributes that should
 			// always go into the proc ad. For proc 0, this means
 			// inserting the attribute into the proc ad instead of the
@@ -8661,6 +8778,7 @@ SaveClassAd ()
 					myprocid = ProcId;
 				}
 			}
+		#endif
 
 			if( MyQ->set_Attribute(ClusterId, myprocid, lhstr, rhstr, setattrflags) == -1 ) {
 				if( setattrflags & SetAttribute_NoAck ) {
@@ -8750,10 +8868,6 @@ InsertJobExpr (const char *expr)
 	}
 }
 
-void SetNoClusterAttr(const char * name)
-{
-	NoClusterCheckAttrs.append( name );
-}
 
 void 
 InsertJobExprInt(const char * name, int val)
