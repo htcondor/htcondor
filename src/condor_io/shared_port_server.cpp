@@ -140,77 +140,118 @@ SharedPortServer::PublishAddress()
 	daemonCore->UpdateLocalAd(&ad,m_shared_port_server_ad_file.Value());
 }
 
+
+static int PeekForHTTP(Stream *sock)
+{
+
+  Sock *socket = static_cast<Sock*>(sock);
+  if (socket == NULL) {
+      dprintf(D_ALWAYS, "Failed to convert Stream to Sock\n");
+      return -1; // ABORT
+  }
+  int sockFD = socket->get_file_desc();
+  int len;
+    char buf[4096];
+    len = recv(sockFD, buf, 4095, MSG_PEEK);
+  
+    // len holds length of data actually read
+    if (len <= -1) {
+      // PERMANENT ERROR
+      dprintf(D_ALWAYS, "Failed to peek at connection request\n");
+      return -1; // ABORT
+    } else {
+      // null terminate (we know this is ascii)
+      buf[len] = 0;
+    }
+    dprintf(D_FULLDEBUG, "Connection request: %s\n", buf);
+    const char *request = strcasestr(buf, "http://");
+    if (request == NULL)
+      return (0);
+    dprintf(D_FULLDEBUG, "Found an HTTP request\n");
+    return (1);
+}
+
+
 int
 SharedPortServer::HandleConnectRequest(int,Stream *sock)
 {
-	sock->decode();
-
-		// to avoid possible D-O-S attacks, we read into fixed-length buffers
+  	int retVal = PeekForHTTP(sock);
 	char shared_port_id[512];
-	char client_name[512];
-	int deadline = 0;
-	int more_args = 0;
-
-	if( !sock->get(shared_port_id,sizeof(shared_port_id)) ||
-		!sock->get(client_name,sizeof(client_name)) ||
-		!sock->get(deadline) ||
-		!sock->get(more_args) )
-	{
-		dprintf(D_ALWAYS,
-				"SharedPortServer: failed to receive request from %s.\n",
-				sock->peer_description() );
-		return FALSE;
-	}
-
-	if( more_args > 100 || more_args < 0 ) {
-		dprintf(D_ALWAYS,
-				"SharedPortServer: got invalid more_args=%d.\n", more_args);
-		return FALSE;
-	}
-
-		// for possible future use
-	while( more_args-- > 0 ) {
-		char junk[512];
-		if( !sock->get(junk,sizeof(junk)) ) {
-			dprintf(D_ALWAYS,
-					"SharedPortServer: failed to receive extra args in request from %s.\n",
-					sock->peer_description() );
-			return FALSE;
-		}
-		dprintf(D_FULLDEBUG,
-			"SharedPortServer: ignoring trailing argument in request from "
-			"%s.\n", sock->peer_description());
-	}
-
-	if( !sock->end_of_message() ) {
-		dprintf(D_ALWAYS,
-				"SharedPortServer: failed to receive end of request from %s.\n",
-				sock->peer_description() );
-		return FALSE;
-	}
-
-	if( client_name[0] ) {
-		MyString client_buf(client_name);
-			// client name is purely for debugging purposes
-		client_buf.formatstr_cat(" on %s",sock->peer_description());
-		sock->set_peer_description(client_buf.Value());
-	}
-
-	MyString deadline_desc;
-	if( deadline >= 0 ) {
-		sock->set_deadline_timeout( deadline );
-
-		if( IsDebugLevel( D_NETWORK ) ) {
-			deadline_desc.formatstr(" (deadline %ds)", deadline);
-		}
-	}
-
-	dprintf( D_FULLDEBUG,
+	shared_port_id[0] = '\0';
+  	if (retVal == -1)
+  	  return (FALSE);
+  	else if (retVal == 1) { // HTTP request
+  	  const char *websvrpipe = param("WEB_SERVER_PIPE");
+  	  if (websvrpipe != NULL)
+	    strcpy(shared_port_id, websvrpipe);
+  	}
+  	if (retVal == 0 || strlen(shared_port_id) <= 0) { // Standard connection request
+	    sock->decode();
+    
+		    // to avoid possible D-O-S attacks, we read into fixed-length buffers
+	    char client_name[512];
+	    int deadline = 0;
+	    int more_args = 0;
+    
+	    if( !sock->get(shared_port_id,sizeof(shared_port_id)) ||
+		    !sock->get(client_name,sizeof(client_name)) ||
+		    !sock->get(deadline) ||
+		    !sock->get(more_args) )
+	    {
+		    dprintf(D_ALWAYS,
+				    "SharedPortServer: failed to receive request from %s.\n",
+				    sock->peer_description() );
+		    return FALSE;
+	    }
+    
+	    if( more_args > 100 || more_args < 0 ) {
+		    dprintf(D_ALWAYS,
+				    "SharedPortServer: got invalid more_args=%d.\n", more_args);
+		    return FALSE;
+	    }
+    
+		    // for possible future use
+	    while( more_args-- > 0 ) {
+		    char junk[512];
+		    if( !sock->get(junk,sizeof(junk)) ) {
+			    dprintf(D_ALWAYS,
+					    "SharedPortServer: failed to receive extra args in request from %s.\n",
+					    sock->peer_description() );
+			    return FALSE;
+		    }
+		    dprintf(D_FULLDEBUG,
+			    "SharedPortServer: ignoring trailing argument in request from "
+			    "%s.\n", sock->peer_description());
+	    }
+    
+	    if( !sock->end_of_message() ) {
+		    dprintf(D_ALWAYS,
+				    "SharedPortServer: failed to receive end of request from %s.\n",
+				    sock->peer_description() );
+		    return FALSE;
+	    }
+    
+	    if( client_name[0] ) {
+		    MyString client_buf(client_name);
+			    // client name is purely for debugging purposes
+		    client_buf.formatstr_cat(" on %s",sock->peer_description());
+		    sock->set_peer_description(client_buf.Value());
+	    }
+    
+	    MyString deadline_desc;
+	    if( deadline >= 0 ) {
+		    sock->set_deadline_timeout( deadline );
+    
+		    if( IsDebugLevel( D_NETWORK ) ) {
+			    deadline_desc.formatstr(" (deadline %ds)", deadline);
+		    }
+	    }
+	    dprintf( D_FULLDEBUG,
 			"SharedPortServer: request from %s to connect to %s%s. (CurPending=%u PeakPending=%u)\n",
 			sock->peer_description(), shared_port_id, deadline_desc.Value(),
 			m_shared_port_client.get_currentPendingPassSocketCalls(),
 			m_shared_port_client.get_maxPendingPassSocketCalls() );
-
+	}
 	return PassRequest(static_cast<Sock*>(sock), shared_port_id);
 }
 
