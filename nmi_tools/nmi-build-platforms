@@ -24,6 +24,7 @@ x86_64_Fedora20
 x86_64_Fedora21
 
 # We might as well build on SL
+x86_64_SL7
 x86_64_SL6
 x86_SL5
 
