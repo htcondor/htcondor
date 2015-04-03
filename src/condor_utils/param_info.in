@@ -892,6 +892,7 @@ tags=dagman,dagman_main
 
 [DAGMAN_CONDOR_SUBMIT_EXE]
 default=$(BIN)/condor_submit
+win32_default=$(BIN)\condor_submit.exe
 type=path
 reconfig=false
 customization=expert
@@ -901,6 +902,7 @@ tags=dagman,dagman_main
 
 [DAGMAN_CONDOR_RM_EXE]
 default=$(BIN)/condor_rm
+win32_default=$(BIN)\condor_submit.exe
 type=path
 reconfig=false
 customization=expert
@@ -910,6 +912,7 @@ tags=dagman,dagman_main
 
 [DAGMAN_STORK_SUBMIT_EXE]
 default=stork_submit
+win32_default=stork_submit.exe
 type=string
 reconfig=false
 customization=expert
@@ -919,6 +922,7 @@ tags=dagman,dagman_main
 
 [DAGMAN_STORK_RM_EXE]
 default=stork_rm
+win32_default=stork_submit.exe
 type=string
 reconfig=false
 customization=expert
@@ -1117,6 +1121,7 @@ tags=dagman,dagman_main
 
 [DAGMAN_PEGASUS_REPORT_METRICS]
 default=$(LIBEXEC)/condor_dagman_metrics_reporter
+win32_default=$(BIN)\condor_dagman_metrics_reporter.exe
 type=path
 reconfig=false
 customization=expert
