@@ -229,12 +229,13 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_USER_LOG_SCAN_INTERVAL setting: %d\n",
 				m_user_log_scan_interval );
 
-	_defaultPriority = param_integer("DAGMAN_DEFAULT_PRIORITY", 0, INT_MIN,
-		INT_MAX, false);
+	_defaultPriority = param_integer( "DAGMAN_DEFAULT_PRIORITY",
+				_defaultPriority, INT_MIN, INT_MAX, false );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
 				_defaultPriority );
 
-	_submitDagDeepOpts.always_use_node_log = param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true);
+	_submitDagDeepOpts.always_use_node_log = param_boolean(
+				"DAGMAN_ALWAYS_USE_NODE_LOG", true);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ALWAYS_USE_NODE_LOG setting: %s\n",
 				_submitDagDeepOpts.always_use_node_log ? "True" : "False" );
 
@@ -280,7 +281,7 @@ Dagman::Config()
 		// all of the previous stuff.
 	allow_events = param_integer("DAGMAN_ALLOW_EVENTS", allow_events);
 	debug_printf( DEBUG_NORMAL, "allow_events ("
-				"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION, DAGMAN_ALLOW_EVENTS"
+				"DAGMAN_ALLOW_EVENTS"
 				") setting: %d\n", allow_events );
 
 		// ...end of event checking setup.
@@ -416,10 +417,13 @@ Dagman::Config()
 
 	_maxJobHolds = param_integer( "DAGMAN_MAX_JOB_HOLDS", _maxJobHolds,
 				0, 1000000 );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOB_HOLDS setting: %d\n", _maxJobHolds );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOB_HOLDS setting: %d\n",
+				_maxJobHolds );
 
-	_claim_hold_time = param_integer( "DAGMAN_HOLD_CLAIM_TIME", _claim_hold_time, 0, 3600);
-	debug_printf( DEBUG_NORMAL, "DAGMAN_HOLD_CLAIM_TIME setting: %d\n", _claim_hold_time );
+	_claim_hold_time = param_integer( "DAGMAN_HOLD_CLAIM_TIME",
+				_claim_hold_time, 0, 3600);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_HOLD_CLAIM_TIME setting: %d\n",
+				_claim_hold_time );
 
 	char *debugSetting = param( "ALL_DEBUG" );
 	debug_printf( DEBUG_NORMAL, "ALL_DEBUG setting: %s\n",

@@ -10669,6 +10669,23 @@ in section~\ref{sec:DAG-configuration}.
   It exists to gracefully handle the unlikely case in which 
   a bug is found in the new code.
 
+\label{param:DAGmanDefaultPriority}
+\item[\Macro{DAGMAN\_DEFAULT\_PRIORITY}]
+  An integer value defining the minimum priority of node jobs running
+  under this \Condor{dagman} job.
+  Defaults to 0.
+
+\label{param:DAGmanConfigFile}
+\item[\Macro{DAGMAN\_CONFIG\_FILE}]
+  The path and name of the configuration file to be used by \Condor{dagman}.
+  This configuration variable is set automatically by
+  \Condor{submit\_dag}, and it should not be explicitly set by the user.
+  Defaults to the empty string.
+
+\label{param:DAGmanOldRescue}
+\item[\Macro{DAGMAN\_OLD\_RESCUE}]
+  This configuration variable is no longer used.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -795,7 +795,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	const char *defaultRemoveExpr = "( ExitSignal =?= 11 || "
 				"(ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))";
 	MyString removeExpr(defaultRemoveExpr);
-	char *tmpRemoveExpr = param("DAGMAN_ON_EXIT_REMOVE");
+	char *tmpRemoveExpr = param( "DAGMAN_ON_EXIT_REMOVE" );
 	if ( tmpRemoveExpr ) {
 		removeExpr = tmpRemoveExpr;
 		free(tmpRemoveExpr);
