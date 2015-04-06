@@ -10677,10 +10677,10 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanConfigFile}
 \item[\Macro{DAGMAN\_CONFIG\_FILE}]
-  The name of the configuration file (if any) to be used by \Condor{dagman}.
-  (Note that this configuration macro is set automatically by
-  \Condor{submit\_dag}, and should not be explicitly set by the user.)
-  Defaults to "".
+  The path and name of the configuration file to be used by \Condor{dagman}.
+  This configuration variable is set automatically by
+  \Condor{submit\_dag}, and it should not be explicitly set by the user.
+  Defaults to the empty string.
 
 \label{param:DAGmanOldRescue}
 \item[\Macro{DAGMAN\_OLD\_RESCUE}]
