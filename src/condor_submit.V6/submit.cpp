@@ -322,6 +322,7 @@ static MACRO_SET SubmitMacroSet = {
 
 // these are used to keep track of the source of various macros in the table.
 const MACRO_SOURCE DefaultMacro = { true, false, 1, -2, -1, -2 }; // for macros set by default
+const MACRO_SOURCE ArgumentMacro = { true, false, 2, -2, -1, -2 }; // for macros set by command line
 const MACRO_SOURCE LiveMacro = { true, false, 3, -2, -1, -2 };    // for macros use as queue loop variables
 MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 
@@ -1356,6 +1357,23 @@ main( int argc, const char *argv[] )
 				usage();
 				exit( 1 );
 			}
+		} else if (strchr(ptr[0],'=')) {
+			// loose arguments that contain '=' are attrib=value pairs.
+			// so we split on the = into name and value and insert into the submit hashtable
+			// we do this BEFORE parsing the submit file so that they can be referred to by submit.
+			std::string name(ptr[0]);
+			size_t ix = name.find('=');
+			std::string value(name.substr(ix+1));
+			name = name.substr(0,ix);
+			trim(name); trim(value);
+			if ( ! name.empty() && name[1] == '+') {
+				name = "MY." + name.substr(1);
+			}
+			if (name.empty() || ! is_valid_param_name(name.c_str())) {
+				fprintf( stderr, "%s: invalid attribute name '%s' for attrib=value assigment\n", MyName, name.c_str() );
+				exit(1);
+			}
+			insert(name.c_str(), value.c_str(), SubmitMacroSet, ArgumentMacro);
 		} else {
 			cmd_file = *ptr;
 		}
@@ -8511,7 +8529,7 @@ check_open( const char *name, int flags )
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [options] [- | <submit-file>]\n", MyName );
+	fprintf( stderr, "Usage: %s [options] [<attrib>=<value>] [- | <submit-file>]\n", MyName );
 	fprintf( stderr, "    [options] are\n" );
 	fprintf( stderr, "\t-terse  \t\tDisplay terse output, jobid ranges only\n" );
 	fprintf( stderr, "\t-verbose\t\tDisplay verbose output, jobid and full job ClassAd\n" );
@@ -8541,6 +8559,8 @@ usage()
 	fprintf( stderr, "\t-stm <method>\t\tHow to move a sandbox into HTCondor\n" );
 	fprintf( stderr, "\t             \t\t<methods> is one of: stm_use_schedd_only\n" );
 	fprintf( stderr, "\t             \t\t                     stm_use_transferd\n" );
+
+	fprintf( stderr, "\t<attrib>=<value>\tSet <attrib>=<value> before reading the submit file.\n" );
 
 	fprintf( stderr, "    If <submit-file> is omitted or is -, input is read from stdin.\n"
 					 "    Use of - implies verbose output unless -terse is specified\n");
