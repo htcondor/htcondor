@@ -1,0 +1,71 @@
+%% IMPORTANT:
+%% This file contains prose to describe the semantics and syntax
+%% of function macros that can be used both in configuration and
+%% in a submit description file.
+%%
+%% Please be careful when changing this prose, as it is included
+%% in 2 different parts of the manual.  Do not include examples
+%% specific to either a submit description file usage or a
+%% configuration usage in this prose.
+
+\MoreTodo
+
+A set of predefined functions increase flexibility.
+Both submit description files and configuration files are read using
+the same parser,
+so these functions may be used in both submit description files and
+configuration files.
+
+Case is significant in the function's name, so use the
+same letter case as given in these definitions.
+
+\begin{description}
+
+\item [\Expr{\$CHOICE()}]
+
+\item [\Expr{\$ENV()}]
+References to the HTCondor process's environment are allowed in the
+configuration files.
+Environment references use the \Macro{ENV} macro and are of the form:
+\begin{verbatim}
+  $ENV(environment_variable_name)
+\end{verbatim}
+For example, 
+\begin{verbatim}
+  A = $ENV(HOME)
+\end{verbatim}
+binds \MacroNI{A} to the value of the \Env{HOME} environment variable.
+Environment references are not currently used in standard HTCondor
+configurations.
+However, they can sometimes be useful in custom configurations.
+
+\item [\Expr{\$F[pdnxq]()}]
+
+\item [\Expr{\$INT()}]
+
+\item [\Expr{\$RANDOM\_CHOICE(choice1, choice2, choice3, \Dots)}]
+\index{\$RANDOM\_CHOICE() function macro}
+A random choice of one of the parameters in the list of parameters is made.
+For example,
+if one of the integers 0-8 (inclusive) should be randomly
+chosen:
+\begin{verbatim}
+  $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
+\end{verbatim}
+
+\item [\Expr{\$RANDOM\_INTEGER(min, max [, step])}]
+\index{\$RANDOM\_INTEGER()!in configuration}
+A random integer within the range \verb@min@ and \verb@max@, inclusive,
+is selected.
+The optional \verb@step@ parameter
+controls the stride within the range, and it defaults to the value 1.
+For example, to randomly chose an even integer in the range 0-8 (inclusive):
+\begin{verbatim}
+  $RANDOM_INTEGER(0, 8, 2)
+\end{verbatim}
+
+\item [\Expr{\$REAL()}]
+
+\item [\Expr{\$SUBSTR()}]
+
+\end{description}

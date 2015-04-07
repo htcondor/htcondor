@@ -828,6 +828,12 @@ is the same as syntax
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:admin-man-macros}Function Macros in Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configration!function macros}
+\input{admin-man/function-macros.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Macros-Requiring-Restart}Macros That Will Require a Restart When Changed}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration change requiring a restart of HTCondor}
@@ -1039,65 +1045,6 @@ determined automatically at run time but which can be overwritten.
 Since \MacroUNI{ARCH} and \MacroUNI{OPSYS} will automatically be set to the
 correct values, we recommend that you do not overwrite them.
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Config-File-Special}Special Macros}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\index{configuration file!\$ENV definition}
-\index{\$ENV!in configuration file}
-References to the HTCondor process's environment are allowed in the
-configuration files.
-Environment references use the \Macro{ENV} macro and are of the form:
-\begin{verbatim}
-  $ENV(environment_variable_name)
-\end{verbatim}
-For example, 
-\begin{verbatim}
-  A = $ENV(HOME)
-\end{verbatim}
-binds \MacroNI{A} to the value of the \Env{HOME} environment variable.
-Environment references are not currently used in standard HTCondor
-configurations.
-However, they can sometimes be useful in custom configurations.
-
-\index{\$RANDOM\_CHOICE()!in configuration}
-This same syntax is used in the \Macro{RANDOM\_CHOICE()} macro to
-allow a random choice of a parameter
-within a configuration file.
-These references are of the form:
-\begin{verbatim}
-  $RANDOM_CHOICE(list of parameters)
-\end{verbatim}
-This allows a random choice within the parameter list to be made
-at configuration time.  Of the list of parameters, one is
-chosen when encountered during configuration.  For example,
-if one of the integers 0-8 (inclusive) should be randomly
-chosen, the macro usage is
-\begin{verbatim}
-  $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
-\end{verbatim}
-
-\index{\$RANDOM\_INTEGER()!in configuration}
-The \Macro{RANDOM\_INTEGER()} macro is similar to the \MacroNI{RANDOM\_CHOICE()}
-macro, and is used to select a random integer within a configuration file.
-References are of the form:
-\begin{verbatim}
-  $RANDOM_INTEGER(min, max [, step])
-\end{verbatim}
-A random integer within the range \verb@min@ and \verb@max@, inclusive,
-is selected at configuration time.
-The optional \verb@step@ parameter
-controls the stride within the range, and it defaults to the value 1.
-For example, to randomly chose an even integer in the range 0-8 (inclusive),
-the macro usage is
-\begin{verbatim}
-  $RANDOM_INTEGER(0, 8, 2)
-\end{verbatim}
-
-See section~\ref{sec:randomintegerusage} on
-page~\pageref{sec:randomintegerusage}
-for an actual use of this specialized macro.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:HTCondor-wide-Config-File-Entries}HTCondor-wide Configuration File Entries} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
