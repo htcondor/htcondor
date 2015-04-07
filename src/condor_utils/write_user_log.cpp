@@ -339,6 +339,9 @@ WriteUserLog::Configure( bool force )
 	m_enable_fsync = param_boolean( "ENABLE_USERLOG_FSYNC", true );
 	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
 
+	if ( m_global_disable ) {
+		return true;
+	}
 	m_global_path = param( "EVENT_LOG" );
 	if ( NULL == m_global_path ) {
 		return true;
