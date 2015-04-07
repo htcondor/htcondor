@@ -196,6 +196,13 @@ enum printmask_headerfooter_t {
 	HF_BARE=15
 };
 
+// used to return what kind of printmask aggregation has been requested.
+enum printmask_aggregation_t {
+	PR_NO_AGGREGATION=0,
+	PR_COUNT_UNIQUE,
+	PR_FROM_AUTOCLUSTER, // For condor_q, select from autocluster set.
+};
+
 // interface for reading text one line at a time, used to abstract reading lines
 // for input in SetAttrListPrintMaskFromStream
 class SimpleInputStream {
@@ -263,6 +270,7 @@ int SetAttrListPrintMaskFromStream (
 	const CustomFormatFnTable & FnTable, // in: table of custom output functions for SELECT
 	AttrListPrintMask & mask, // out: columns and headers set in SELECT
 	printmask_headerfooter_t & headfoot, // out, header and footer flags set in SELECT or SUMMARY
+	printmask_aggregation_t & aggregate, // out: aggregation mode in SELECT
 	std::vector<GroupByKeyInfo> & group_by, // out: ordered set of attributes/expressions in GROUP BY
 	std::string & where_expression, // out: classad expression from WHERE
 	StringList & attrs, // out ClassAd attributes referenced in mask or group_by outputs

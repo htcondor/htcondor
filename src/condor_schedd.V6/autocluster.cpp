@@ -27,7 +27,7 @@
 #include "schedd_stats.h" // for schedd_runtime_probe
 
 // this is a placeholder for a future class that will compactly hold a set of jobs
-// by taking into account the fact that it is common for only the cluster to significant
+// by taking into account the fact that it is common for only the cluster to be significant
 // and that consecutive cluster id's are often owned by the same user.
 class JobIdSet {
 public:
@@ -36,6 +36,8 @@ public:
 	void rewind() { it = jobs.begin(); }
 	int  count() { return (int)jobs.size(); }
 	bool next(JOB_ID_KEY &jid) { if (it == jobs.end()) return false; jid = *it; ++it; return true; }
+	bool first(JOB_ID_KEY &jid) { if (jobs.empty()) return false; jid = *(jobs.begin()); return true; }
+	bool last(JOB_ID_KEY &jid)  { if (jobs.empty()) return false; jid = *(jobs.rbegin()); return true; }
 	void insert(JOB_ID_KEY &jid) { jobs.insert(jid); }
 	void erase(JOB_ID_KEY &jid) { jobs.erase(jid); }
 private:
@@ -572,10 +574,22 @@ void AutoCluster::preSetAttribute(JobQueueJob &job, const char * attr, const cha
 
 #ifdef ALLOW_ON_THE_FLY_AGGREGATION
 
+class aggregate_jobs_args {
+public:
+	aggregate_jobs_args(JobCluster* _jc=NULL, classad::ExprTree * _constr=NULL) : pjc(_jc), constraint(_constr) {}
+	JobCluster* pjc;
+	classad::ExprTree * constraint;
+};
+
 // callback for WalkJobQueue that builds an on-the-fly autocluster set.
 int aggregate_jobs(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void * pv)
 {
-	JobCluster* pjc = (JobCluster*)pv;
+	aggregate_jobs_args * pargs = (aggregate_jobs_args*)pv;
+	JobCluster* pjc = pargs->pjc;
+	if (pargs->constraint && ! EvalBool(job, pargs->constraint)) {
+		// if there is a constraint, and it doesn't evaluate to true, skip this job.
+		return 0;
+	}
 	pjc->getClusterid(*job, true, NULL);
 	return 0;
 }
@@ -593,38 +607,52 @@ JobAggregationResults * AutoCluster::aggregateOn(
 	}
 #ifdef ALLOW_ON_THE_FLY_AGGREGATION
 
-	#if 1
-	 JobCluster * pjc = new JobCluster();
-	#else
-	std::map<std::string, JobCluster>::iterator found = current_aggregations.find(projection);
-	if (found != current_aggregations.end()) {
-		return new JobAggregationResults(found->second, projection, constraint);
-	}
-
-	JobCluster jc;
-	current_aggregations[projection] = jc;
-	found = current_aggregations.find(projection);
-	JobCluster * pjc = &found->second;
-	#endif
-
+	JobCluster * pjc = new JobCluster();
+#if 1
+#else
 	pjc->keepJobIds(true);
 	pjc->setSigAttrs(projection, false, true);
+	aggregate_jobs_args agg_args(pjc, constraint);
 
 	schedd_runtime_probe runtime;
 	WalkJobQueue3(
-		// aggregate_jobs as lambda
+		// aggregate_jobs as lambda (ignores constraint, assumes pv is pjc
 		// [](JobQueueJob *job, const JOB_ID_KEY &, void * pv) -> int { ((JobCluster*)pv)->getClusterid(*job, true, NULL); return 0; },
 		aggregate_jobs,
-		pjc,
+		&agg_args,
 		runtime);
 
 	dprintf(D_ALWAYS, "Spent %.3f sec aggregating on '%s'\n", runtime.Total(), projection);
+#endif
 	return new JobAggregationResults(*pjc, projection, result_limit, constraint);
 #else
 	return NULL;
 #endif
 }
 
+bool JobAggregationResults::compute()
+{
+#ifdef ALLOW_ON_THE_FLY_AGGREGATION
+	if (is_def_autocluster)
+		return true;
+
+	jc.keepJobIds(true);
+	jc.setSigAttrs(projection.c_str(), false, true);
+
+	aggregate_jobs_args agg_args(&jc, constraint);
+
+	schedd_runtime_probe runtime;
+	WalkJobQueue3(
+		// aggregate_jobs as lambda (ignores constraint, assumes pv is pjc
+		// [](JobQueueJob *job, const JOB_ID_KEY &, void * pv) -> int { ((JobCluster*)pv)->getClusterid(*job, true, NULL); return 0; },
+		aggregate_jobs,
+		&agg_args,
+		runtime);
+
+	dprintf(D_ALWAYS, "Spent %.3f sec aggregating on '%s'\n", runtime.Total(), projection.c_str());
+#endif
+	return true;
+}
 
 bool JobAggregationResults::rewind()
 {
@@ -681,7 +709,82 @@ ClassAd * JobAggregationResults::next()
 	#ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
 		int cJobs = 0;
 		JobCluster::JobIdSetMap::iterator jit = jc.cluster_use.find(it->second);
-		if (jit != jc.cluster_use.end()) { cJobs = jit->second.count(); }
+		if (jit != jc.cluster_use.end()) {
+			JobIdSet & jids = jit->second;
+			cJobs = jids.count();
+
+			int cret = this->return_jobid_limit;
+			if (cret > 0 && cJobs > 0) {
+				char buf[PROC_ID_STR_BUFLEN];
+			#if 1
+				JOB_ID_KEY jidFirst, jidLast, jid;
+				jids.last(jidLast);
+				jids.rewind();
+				jids.next(jidFirst);
+				cret -= 2;
+				std::string ids;
+				ProcIdToStr(jidFirst.cluster, jidFirst.proc, buf);
+				ids = buf;
+				while (jids.next(jid)) {
+					if (jid == jidLast) break;
+					if (--cret < 0) { ids += " ..."; break; }
+					ProcIdToStr(jid.cluster, jid.proc, buf);
+					ids += " ";
+					ids += buf;
+				}
+				if (!(jidLast == jidFirst)) {
+					ids += " ";
+					ProcIdToStr(jidLast.cluster, jidLast.proc, buf);
+					ids += buf;
+				}
+				ad.Assign("JobIds", ids);
+			#else
+				JOB_ID_KEY jidFirst, jidLast, jidMin, jidMax;
+				bool got_first = false;
+
+				jids.rewind();
+				JOB_ID_KEY jid;
+				std::string ids;
+				while (jids.next(jid)) {
+					if ( ! got_first) { jidMin = jidMax = jidFirst = jid; got_first = true; }
+					jidLast = jid;
+					if (jid < jidMin) jidMin = jid;
+					if (jidMax < jid) jidMax = jid;
+					if (--cret < 0) {
+						if (!ids.empty()) ids += ",...";
+						break;
+					}
+					ProcIdToStr(jid.cluster, jid.proc, buf);
+					if ( ! ids.empty()) ids += ",";
+					ids += buf;
+				}
+				if ( ! ids.empty()) { ad.Assign("JobIds", ids); }
+
+				// HACK!! also return range of associated jobid's
+				while (jids.next(jid)) {
+					jidLast = jid;
+					if (jid < jidMin) jidMin = jid;
+					if (jidMax < jid) jidMax = jid;
+				}
+
+				ProcIdToStr(jidMin.cluster, jidMin.proc, buf);
+				ids = buf;
+				if (jidMin < jidMax) {
+					ProcIdToStr(jidMax.cluster, jidMax.proc, buf);
+					ids += ","; ids += buf;
+				}
+				if (jidFirst < jidMin || jidMin < jidFirst) {
+					ProcIdToStr(jidFirst.cluster, jidFirst.proc, buf);
+					ids += " ,"; ids += buf;
+				}
+				if (jidLast < jidMax || jidMax < jidLast) {
+					ProcIdToStr(jidLast.cluster, jidLast.proc, buf);
+					ids += " ,"; ids += buf;
+				}
+				ad.Assign("JidRange", ids);
+			#endif
+			}
+		}
 		ad.Assign("JobCount", cJobs);
 	#endif
 

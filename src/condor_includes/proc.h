@@ -31,11 +31,13 @@ typedef struct PROC_ID {
 	int		cluster;
 	int		proc;
 #if defined(__cplusplus)
+	/* possible future use.
 	bool operator<(const PROC_ID& cp) const {
-		int diff = cp.cluster - this->cluster;
-		if ( ! diff) diff = cp.proc - this->proc;
+		int diff = this->cluster - cp.cluster;
+		if ( ! diff) diff = this->proc - cp.proc;
 		return diff < 0;
 	}
+	*/
 #endif
 } PROC_ID;
 
@@ -103,13 +105,13 @@ typedef struct JOB_ID_KEY {
 	int		proc;
 	// a LessThan operator suitable for inserting into a sorted map or set
 	bool operator<(const JOB_ID_KEY& cp) const {
-		int diff = cp.cluster - this->cluster;
-		if ( ! diff) diff = cp.proc - this->proc;
+		int diff = this->cluster - cp.cluster;
+		if ( ! diff) diff = this->proc - cp.proc;
 		return diff < 0;
 	}
 	bool operator<(const PROC_ID& cp) const {
-		int diff = cp.cluster - this->cluster;
-		if ( ! diff) diff = cp.proc - this->proc;
+		int diff = this->cluster - cp.cluster;
+		if ( ! diff) diff = this->proc - cp.proc;
 		return diff < 0;
 	}
 	JOB_ID_KEY() : cluster(0), proc(0) {}
