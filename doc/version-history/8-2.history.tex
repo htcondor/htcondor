@@ -24,8 +24,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.2.8 not yet released.
-%\item HTCondor version 8.2.8 released on Month Date, 2015.
+\item HTCondor version 8.2.8 released on April 7, 2015.
 
 \end{itemize}
 
@@ -42,6 +41,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that could cause updates sent to
+the host defined by \MacroNI{CONDOR\_VIEW\_HOST} 
+to fail once the HTCondorView collector is restarted,
+if the updates are being sent via TCP.
+\Ticket{4915}
+
+\item Fixed a bug that could have caused the \Condor{schedd} to start more 
+jobs than specified by the value of configuration variable 
+\Macro{MAX\_JOBS\_RUNNING},
+and then later kill the excess running jobs.
+\Ticket{4554}
+
 \item Fixed a bug in which HTCondor was looking for configuration variable
 \Macro{IsOwner}, instead of \Macro{IS\_OWNER}.
 Now, the system permits specification of either spelling,
@@ -54,12 +65,6 @@ using \Condor{submit} with a \Opt{-spool} or \Opt{-remote}
 command line option.
 \Ticket{4866}
 
-\item Fixed a bug that could have caused the \Condor{schedd} to start more 
-jobs than specified by the value of configuration variable 
-\Macro{MAX\_JOBS\_RUNNING},
-and then later kill the excess running jobs.
-\Ticket{4554}
-
 \item Fixed a minor bug that would emit a \Expr{grep not found} warning
 when using \Condor{ssh\_to\_job} to log in to a MacOS execute node.
 \Ticket{4789}
@@ -68,12 +73,6 @@ when using \Condor{ssh\_to\_job} to log in to a MacOS execute node.
 system that could prevent the \Condor{collector} from being restarted,
 and/or could cause delays when shutting down the HTCondor service.
 \Ticket{4923}
-
-\item Fixed a bug that could cause updates sent to
-the host defined by \MacroNI{CONDOR\_VIEW\_HOST} 
-to fail once the HTCondorView collector is restarted,
-if the updates are being sent via TCP.
-\Ticket{4915}
 
 \item Fixed bugs in ClassAds and the Python bindings with handling
 Daylight Saving Time when using timestamp values.
