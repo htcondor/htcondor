@@ -6871,33 +6871,8 @@ int parse_queue_args (
 
 	char *p = pqargs;    // pointer to current char while scanning
 	char *ptok = NULL;   // pointer to start of current token in pqargs when scanning for keyword
-#if 1
 	static const struct _qtoken foreach_tokens[] = { {"in", foreach_in }, {"from", foreach_from}, {"matching", foreach_matching} };
 	p = queue_token_scan(p, foreach_tokens, COUNTOF(foreach_tokens), &ptok, foreach_mode, true);
-#else
-	char tokenbuf[sizeof("matching")+1] = ""; // temporary buffer to hold a potential keyword while scanning
-	int  maxtok = (int)sizeof(tokenbuf)-1;
-	int  cchtok = 0;
-
-	// scan for a keyword from, in, or matching. the keywords must be surrounded by whitespace
-	while (*p) {
-		int ch = *p;
-		if (isspace(ch) || ch == '(') {
-			if (cchtok >= 2 && cchtok <= maxtok) {
-				tokenbuf[cchtok] = 0;
-				if (MATCH == strcasecmp(tokenbuf, "in")) { foreach_mode = foreach_in; break; }
-				else if (MATCH == strcasecmp(tokenbuf, "from")) { foreach_mode = foreach_from; break; }
-				else if (MATCH == strcasecmp(tokenbuf, "matching")) { foreach_mode = foreach_matching; break; }
-			}
-			cchtok = 0;
-		} else {
-			if ( ! cchtok) { ptok = p; }
-			if (cchtok < maxtok) { tokenbuf[cchtok] = ch; }
-			++cchtok;
-		}
-		++p;
-	}
-#endif
 
 	// for now assume that p points to the end of the queue count expression.
 	char * pnum_end = p;
@@ -6969,6 +6944,7 @@ int parse_queue_args (
 			// find on the current line, and then set the filename to "<" to tell the caller to read
 			// the remainder from the submit file.
 			++plist;
+			while (isspace(*plist)) ++plist;
 			if (*plist) {
 				if (foreach_mode == foreach_from) {
 					items.append(plist);
@@ -6978,12 +6954,15 @@ int parse_queue_args (
 			}
 			items_filename = "<";
 		} else if (foreach_mode == foreach_from) {
+			while (isspace(*plist)) ++plist;
 			if (one_line_list) {
 				items.append(plist);
 			} else {
 				items_filename = plist;
+				items_filename.trim();
 			}
 		} else {
+			while (isspace(*plist)) ++plist;
 			items.initializeFromString(plist);
 		}
 
@@ -7713,8 +7692,8 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		if (NewExecutable) {
 			NewExecutable = false;
 			SetUniverse();
-			SetExecutable();
 		}
+		SetExecutable();
 		SetDescription();
 		SetMachineCount();
 
