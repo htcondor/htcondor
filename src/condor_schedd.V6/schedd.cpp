@@ -507,7 +507,7 @@ match_rec::~match_rec()
 		claim_requester = NULL;
 	}
 
-	if( secSessionId() ) {
+	if( secSessionId() && daemonCore ) {
 			// Expire the session after enough time to let the final
 			// RELEASE_CLAIM command finish, in case it is still in
 			// progress.  This also allows us to more gracefully
