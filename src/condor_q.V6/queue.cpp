@@ -2274,7 +2274,7 @@ format_memory_usage(int image_size, AttrList *ad, Formatter &)
 }
 
 static const char *
-format_readable_mb(const classad::Value &val, AttrList *ad, Formatter &fmt)
+format_readable_mb(const classad::Value &val, AttrList *, Formatter &)
 {
 	long long kbi;
 	double kb;
@@ -2283,13 +2283,13 @@ format_readable_mb(const classad::Value &val, AttrList *ad, Formatter &fmt)
 	} else if (val.IsRealValue(kb)) {
 		kb *= 1024.0 * 1024.0;
 	} else {
-		return "   ";
+		return "        ";
 	}
 	return metric_units(kb);
 }
 
 static const char *
-format_readable_kb(const classad::Value &val, AttrList *ad, Formatter &)
+format_readable_kb(const classad::Value &val, AttrList *, Formatter &)
 {
 	long long kbi;
 	double kb;
@@ -2298,7 +2298,7 @@ format_readable_kb(const classad::Value &val, AttrList *ad, Formatter &)
 	} else if (val.IsRealValue(kb)) {
 		kb *= 1024.0;
 	} else {
-		return "   ";
+		return "        ";
 	}
 	return metric_units(kb);
 }
