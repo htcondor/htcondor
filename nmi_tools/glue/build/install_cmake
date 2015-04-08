@@ -42,11 +42,11 @@ sub find_cmake
 			$cmake_ver =~ s/cmake version //g;
 			@ver = split /\./, $cmake_ver;
 
-			# If the version is better than 2.8.3 (the minimal version of
-			# cmake) for which Condor is known to build, return it.
+			# If the version is 2.8.3 (the only version of cpack)
+			# for which Condor is known to build right, return it.
 			if (($ver[0] > 2) ||
 				($ver[0] == 2 && $ver[1] > 8) ||
-				($ver[0] == 2 && $ver[1] == 8 && $ver[2] >= 3))
+				($ver[0] == 2 && $ver[1] == 8 && $ver[2] == 3))
 			{
 				return $cmake;
 			}
@@ -80,12 +80,7 @@ sub install_cmake
 	my ($ename, $iloc) = (@_);
 	my ($cmake, $wget);
 
-	# First look for cmake28 from EPEL
-#	$cmake = find_cmake('cmake28');
-#	if (defined($cmake)) {
-#		return $cmake;
-#	}
-	# Then look for cmake from the OS
+	# Look for cmake from the OS
 	$cmake = find_cmake('cmake');
 	if (defined($cmake)) {
 		return $cmake;
