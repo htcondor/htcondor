@@ -7661,20 +7661,36 @@ REM Run the actual job now
 \label{param:EnforceCpuAffinity} 
 \item[\Macro{ENFORCE\_CPU\_AFFINITY}]
   Deprecated by \MacroNI{ASSIGN\_CPU\_AFFINITY}.
+  NOTE:  You most likely do not what to enabled this setting and the
+  related setting below, unless you are using glidein, or other
+  unusual setup!
+
   A boolean value that defaults to \Expr{False}.  When \Expr{False},
-  the affinity of jobs and their descendants to a CPU is not enforced.
-  When \Expr{True}, HTCondor jobs and their descendants maintain their
-  affinity to a CPU.
+  the CPU affinity of processes in a job is not enforced.
+  When \Expr{True}, the processes in a HTCondor job maintain their
+  affinity to a CPU.  This means that this job will only run on
+  that particular CPU, even if other CPU cores are idle.
+
+  If this knob is \Expr{True}, and 
+  \MacroNI{SLOT<N>\_CPU\_AFFINITY} is not set, the CPU the job
+  is locked to is the same as slot id, minus one (SlotIds are
+  one-based, cores are zero-based).
+
   When \Expr{True}, more fine grained affinities may be specified with
   \MacroNI{SLOT<N>\_CPU\_AFFINITY}.
 
 \label{param:SlotNCpuAffinity} 
 \item[\Macro{SLOT<N>\_CPU\_AFFINITY}]
+  Deprecated by \MacroNI{ASSIGN\_CPU\_AFFINITY}.
+  NOTE:  You most likely do not what to enabled this setting and the
+  related setting above, unless you are using glidein, or other
+  unusual setup!
+
   A comma separated list of cores to which an HTCondor job running on
   a specific slot given by the value of \MacroNI{<N>} show affinity.
   Note that slots are numbered beginning with the value 1,
   while CPU cores are numbered beginning with the value 0.
-  This affinity list only takes effect if
+  This affinity list only takes effect when
   \Expr{ENFORCE\_CPU\_AFFINITY = True}.
 
 \label{param:EnableURLTransfers} 
