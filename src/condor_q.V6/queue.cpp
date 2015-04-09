@@ -1185,14 +1185,12 @@ processCommandLineArguments (int argc, char *argv[])
 				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
 				Q.addDBConstraint(CQ_PROC_ID, proc);
 				constrID.push_back(CondorID(cluster,proc,-1));
-				summarize = 0;
 			} 
 			else if( sscanf ( argv[i], "%d", &cluster ) == 1 ) {
 				sprintf( constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster );
 				Q.addOR( constraint );
 				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
 				constrID.push_back(CondorID(cluster,-1,-1));
-				summarize = 0;
 			} 
 			else {
 				++cOwnersOnCmdline;
@@ -1459,7 +1457,6 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			}
 			user_job_constraint = argv[++i];
-			summarize = 0;
 
 			if (Q.addAND (user_job_constraint) != Q_OK) {
 				fprintf (stderr, "Error: Argument %d (%s)\n", i, user_job_constraint);
