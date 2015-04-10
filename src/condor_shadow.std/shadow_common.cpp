@@ -760,7 +760,7 @@ InitJobAd(int cluster, int proc)
 int
 directConnectToSockAddr( const condor_sockaddr & sa ) {
 	int fd = socket( sa.get_aftype(), SOCK_STREAM, 0 );
-	assert( fd != -1 );
+	CONDOR_ASSERT( fd != -1 );
 
 	int on = 1;
 	int rv = setsockopt( fd, SOL_SOCKET, SO_KEEPALIVE, (const char *) &on, sizeof( on ) );

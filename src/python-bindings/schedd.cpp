@@ -335,21 +335,21 @@ struct query_process_helper
     condor::ModuleLock *ml;
 };
 
-void
-query_process_callback(void * data, classad_shared_ptr<ClassAd> ad)
+bool
+query_process_callback(void * data, ClassAd* ad)
 {
     query_process_helper *helper = static_cast<query_process_helper *>(data);
     helper->ml->release();
     if (PyErr_Occurred())
     {
         helper->ml->acquire();
-        return;
+        return true;
     }
 
     try
     {
         boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
-        wrapper->CopyFrom(*ad.get());
+        wrapper->CopyFrom(*ad);
         object wrapper_obj = object(wrapper);
         object result = (helper->callable == object()) ? wrapper_obj : helper->callable(wrapper);
         if (result != object())
@@ -363,6 +363,7 @@ query_process_callback(void * data, classad_shared_ptr<ClassAd> ad)
         // However, PyErr_Occurred will be set and we will no longer invoke the callback.
     }
     helper->ml->acquire();
+    return true;
 }
 
 struct Schedd {

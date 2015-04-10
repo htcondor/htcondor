@@ -1300,7 +1300,7 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 		std::string reasonName = universeName + "OfflineReason";
 
 		int universeOnline = 0;
-		assert( cap->LookupBool( attr, universeOnline ) );
+		ASSERT( cap->LookupBool( attr, universeOnline ) );
 		if( ! universeOnline ) {
 			offlineUniverses.insert( universeName ).second;
 			extras_classad->Assign( reasonTime.c_str(), time( NULL ) );
