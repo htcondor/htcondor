@@ -97,6 +97,11 @@ class FunctionCall : public ExprTree
 
 	static bool RegisterSharedLibraryFunctions(const char *shared_library_path);
 
+	/** Returns true if the function expression points to a valid
+	 *  function in the ClassAd library.
+	 */
+	bool FunctionIsDefined() const {return function != NULL;}
+
  protected:
 	/// Constructor
 	FunctionCall ();
