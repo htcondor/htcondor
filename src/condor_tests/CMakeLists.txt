@@ -330,6 +330,21 @@ if (BUILD_TESTING)
 	condor_pl_test(job_dagman_final-H "Simple Dagman Final Node H" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_final-I "Simple Dagman Final Node I" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_nonexistent_subdag "Test for nonexistent subdag" "core;dagman;quick;full;quicknolink")
+	##### submit foreach variant tests
+	condor_pl_test(job_foreach_submit-simple-glob "submit file usage match" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-simple-glob-run "submit file usage match - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-initialdir "submit file usage InitialDir" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-initialdir-run "submit file usage InitialDir - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-filepartmacros "submit file usage file part macros" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-filepartmacros-run "submit file usage file part macros- run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemin "submit file usage queue ITEM in " "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemin-run "submit file usage queue ITEM in - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemMLineIn "submit file usage queue ITEM in " "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemMLineIn-run "submit file usage queue ITEM in - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemin-commalist "submit file usage queue ITEM in " "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemin-commalist-run "submit file usage queue ITEM in - run submit file" "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemfrom-1Line "submit file usage queue ITEM in " "core;quick;full;quicknolink")
+	condor_pl_test(job_foreach_submit-queueitemfrom-1Line-run "submit file usage queue ITEM in - run submit file" "core;quick;full;quicknolink")
 	##### generic lib tests
 	# TSTCLAIR: I can not move the "condor_unit_tests" into the actual unit_test b/c it depends 
 	# on condor_config ++ deps. 
@@ -648,5 +663,6 @@ if (BUILD_TESTING)
 	if ( NOT WITHOUT_SOAP_TEST AND HAVE_EXT_GSOAP )
 		#condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
 	endif()
+
 
 endif(BUILD_TESTING)
