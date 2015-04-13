@@ -334,7 +334,23 @@ bool FunctionCall::RegisterSharedLibraryFunctions(
 		
 	success = false;
 	if (shared_library_path) {
-		dynamic_library_handle = dlopen(shared_library_path, RTLD_LAZY|RTLD_GLOBAL);
+		// We use "deep bind" here to make sure the library uses its own version of the
+		// symbol in case of duplicates.
+		//
+		// In particular, we were observing crashes in condor_shadow (which statically
+		// links libcondor_utils) and libclassad_python_user.so (which dynamically links
+		// libcondor_utils).  This causes the finalizers for global objects to be called
+		// twice - once for the dynamic version (which bound against the global one) and
+		// again at exit().
+		//
+		// With DEEPBIND, the finalizer for the dynamic library points at its own copy
+		// of the global and doesn't touch the shadow's.  See #4998
+		//
+		int flags = RTLD_LAZY;
+#ifdef LINUX
+		flags |= RTLD_DEEPBIND;
+#endif
+		dynamic_library_handle = dlopen(shared_library_path, flags);
 		if (dynamic_library_handle) {
 			ClassAdSharedLibraryInit init_function;
 
