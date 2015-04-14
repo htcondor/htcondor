@@ -663,7 +663,7 @@ Requires: %name-bosco = %version-%release
 Requires: %name-std-universe = %version-%release
 %endif
 %if %uw_build
-Requires: %name-static-shadow = %version-%release
+#Requires: %name-static-shadow = %version-%release
 Requires: %name-externals = %version-%release
 %endif
 
@@ -1112,6 +1112,8 @@ rm -rf %{buildroot}
 #make check-seralized
 
 #################
+%files all
+#################
 %files
 %defattr(-,root,root,-)
 %doc LICENSE-2.0.txt examples
@@ -1330,6 +1332,7 @@ rm -rf %{buildroot}
 %_sbindir/nordugrid_gahp
 %_sbindir/gce_gahp
 %if %uw_build
+%_sbindir/condor_master_s
 %_sbindir/boinc_gahp
 %endif
 %_libexecdir/condor/condor_gpu_discovery
@@ -1632,7 +1635,6 @@ rm -rf %{buildroot}
 
 %if %uw_build
 %files static-shadow
-%{_sbindir}/condor_master_s
 %{_sbindir}/condor_shadow_s
 
 %files externals
