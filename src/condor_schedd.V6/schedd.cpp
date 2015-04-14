@@ -15617,7 +15617,7 @@ Scheduler::WriteRestartReport()
 				   stats.JobsRestartReconnectsLeaseExpired.value );
 	formatstr_cat( report, "%d reconnects failed\n",
 				   stats.JobsRestartReconnectsFailed.value );
-	formatstr_cat( report, "%d reconnects whose success or failure is unknown\n",
+	formatstr_cat( report, "%d reconnects were interrupted by job removal or other event\n",
 				   stats.JobsRestartReconnectsUnknown.value );
 	formatstr_cat( report, "%d reconnects succeeded\n",
 				   stats.JobsRestartReconnectsSucceeded.value );
