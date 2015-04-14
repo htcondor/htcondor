@@ -730,9 +730,9 @@ Optional parameters are given within square brackets.
     HTCondor syntax to the new syntax.
     The single argument should evaluate to a string that represents a
     set of environment variables using the old HTCondor syntax
-    (usually stored in the job ad attribute \Attr{Env}).
+    (usually stored in the job ClassAd attribute \Attr{Env}).
     The result is the same set of environment variables using the new
-    HTCondor syntax (usually stored in the job ad attribute
+    HTCondor syntax (usually stored in the job ClassAd attribute
     \Attr{Environment}).
     If the argument evaluates to \Expr{UNDEFINED}, then the result is
     also \Expr{UNDEFINED}.
@@ -748,7 +748,7 @@ Optional parameters are given within square brackets.
     which is treated like an empty string.
     The result is a string that represents the merged set of environment
     variables using the new HTCondor syntax (suitable for use as the value
-    of the job ad attribute \Attr{Environment}).
+    of the job ClassAd attribute \Attr{Environment}).
 
 \end{description}
 
