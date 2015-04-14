@@ -97,9 +97,9 @@ as documented with a link from the HTCondor wiki page,
 \Ticket{4270}
 
 \item The \Condor{schedd} now generates a report about its attempts to
-reconnect to the \Condor{startd}s of previously running jobs on startup.
+reconnect to the \Condor{startd} daemons of previously running jobs on start up.
 The report is written to the location specified by the new configuration
-parameter \Macro{SCHEDD\_RESTART\_REPORT}.
+variable \Macro{SCHEDD\_RESTART\_REPORT}.
 Once all reconnect attempts are complete, a copy of the report is also
 emailed to HTCondor administrator account.
 \Ticket{4783}

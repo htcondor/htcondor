@@ -830,7 +830,7 @@ is the same as syntax
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:admin-man-macros}Function Macros in Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{configration!function macros}
+\index{configuration!function macros}
 \input{admin-man/function-macros.tex}
 
 Environment references are not currently used in standard HTCondor
@@ -7279,9 +7279,10 @@ SYSTEM_PERIODIC_REMOVE = \
 
 \label{param:ScheddRestartReport}
 \item[\Macro{SCHEDD\_RESTART\_REPORT}]
-  The complete path to a file
-  When the \Condor{schedd} starts, it will write a report to this file
-  about its attempts to reconnect to the \Condor{startd}s for all jobs
+  The complete path to a file that will be written with report information.
+  The report is written when the \Condor{schedd} starts.
+  It contains statistics
+  about its attempts to reconnect to the \Condor{startd} daemons for all jobs
   that were previously running.
   The file is updated periodically as reconnect attempts succeed or fail.
   Once all attempts have completed, a copy of the report is emailed to
