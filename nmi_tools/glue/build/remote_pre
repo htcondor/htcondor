@@ -88,6 +88,13 @@ print "------------------------- ENV DUMP ------------------------\n";
 print "Configure args: " . join(' ', @ARGV) . "\n";
 
 ######################################################################
+# Save source tree for native redhat RPM builds
+######################################################################
+if ($ENV{NMI_PLATFORM} =~ /(x86_RedHat6|x86_64_RedHat6|x86_64_RedHat7)/) {
+    system("tar cfz $ENV{TMP}/condor.tar.gz *");
+}
+
+######################################################################
 # Determine the right cmake to use. Either the one on the machine is
 # sufficient, or we download and build one. Either way, we know the
 # absolute path to cmake.

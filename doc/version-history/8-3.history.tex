@@ -96,6 +96,11 @@ that is defined by configuration variable
 that have a Winsock Layered Service Provider (LSP) installed.
 \Ticket{304}
 
+\item The new \Procedure{directQuery} python binding queries a daemon
+directly for its ClassAd, 
+instead of querying the \Condor{collector}.
+\Ticket{4843}
+
 \item The new configuration variables \Macro{SUBMIT\_REQUIREMENT\_NAMES},
 \Macro{SUBMIT\_REQUIREMENT\_<Name>}, 
 and \Macro{SUBMIT\_REQUIREMENT\_<Name>\_REASON}
@@ -121,6 +126,14 @@ DAG originally submitted with version 7.9.1 or earlier.
 as documented with a link from the HTCondor wiki page,
 \URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=ExperimentalFeatures}.
 \Ticket{4270}
+
+\item The \Condor{schedd} now generates a report about its attempts to
+reconnect to the \Condor{startd}s of previously running jobs on startup.
+The report is written to the location specified by the new configuration
+parameter \Macro{SCHEDD\_RESTART\_REPORT}.
+Once all reconnect attempts are complete, a copy of the report is also
+emailed to HTCondor administrator account.
+\Ticket{4783}
 
 \end{itemize}
 
@@ -150,6 +163,13 @@ matching the behavior documented in this reference manual.
 \item Fixed a bug introduced in HTCondor version 8.3.3 that caused 
 local universe jobs to execute repeatedly on Windows platforms.
 \Ticket{4909}
+
+\item Fixed a bug that caused messages like the following to be printed
+in the daemon log of the \Condor{schedd}:
+\begin{verbatim}
+warning: setting UserUid to 11021, was 6004 previously
+\end{verbatim}
+\Ticket{4889}
 
 \end{itemize}
 
@@ -274,7 +294,6 @@ in their unevaluated, or raw form.
 file when node jobs go on hold.
 \Ticket{4766}
 
-<<<<<<< HEAD
 \item New python bindings can be used to query and set the 
 configuration variables of running daemons.
 \Ticket{4778}

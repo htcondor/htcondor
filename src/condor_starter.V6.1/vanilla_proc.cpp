@@ -566,8 +566,8 @@ VanillaProc::StartJob()
 			env.SetEnv("_CONDOR_PID_NS_INIT_STATUS_FILENAME", filename);
 			env.InsertEnvIntoClassAd(JobAd, &env_errors);
 
-			Starter->jic->removeFromOutputFiles(filename.c_str());
-			this->m_pid_ns_init_filename = filename;
+			Starter->jic->removeFromOutputFiles(condor_basename(filename.c_str()));
+			this->m_pid_ns_status_filename = filename;
 			
 			// Now, set the job's CMD to the wrapper, and shift
 			// over the arguments by one
@@ -731,10 +731,10 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 
 int VanillaProc::pidNameSpaceReaper( int status ) {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
-	FILE *f = safe_fopen_wrapper_follow(m_pid_ns_init_filename.c_str(), "r");
+	FILE *f = safe_fopen_wrapper_follow(m_pid_ns_status_filename.c_str(), "r");
 	if (f == NULL) {
 		// Probably couldn't exec the wrapper.  Badness
-		dprintf(D_ALWAYS, "JobReaper: condor_pid_ns_init didn't drop filename %s (%d)\n", m_pid_ns_init_filename.c_str(), errno);
+		dprintf(D_ALWAYS, "JobReaper: condor_pid_ns_init didn't drop filename %s (%d)\n", m_pid_ns_status_filename.c_str(), errno);
 		EXCEPT("Starter configured to use PID NAMESPACES, but libexec/condor_pid_ns_init did not run properly");
 	}
 	if (fscanf(f, "ExecFailed") > 0) {
@@ -757,7 +757,7 @@ VanillaProc::JobReaper(int pid, int status)
 	//
 	// Run all the reapers first, since some of them change the exit status.
 	//
-	if( m_pid_ns_init_filename.length() > 0 ) {
+	if( m_pid_ns_status_filename.length() > 0 ) {
 		status = pidNameSpaceReaper( status );
 	}
 	bool jobExited = OsProc::JobReaper( pid, status );

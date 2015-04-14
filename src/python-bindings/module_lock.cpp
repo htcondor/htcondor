@@ -40,6 +40,7 @@ ModuleLock::release()
     {
         pthread_mutex_unlock(&m_mutex);
         PyEval_RestoreThread(m_save);
+        m_owned = false;
     }
 }
 #else

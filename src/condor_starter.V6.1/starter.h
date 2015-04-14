@@ -191,10 +191,12 @@ public:
 		*/
 	virtual bool cleanupJobs( void );
 
-		/** Return the Execute dir */
+		/** Return the base Execute directory for this slot */
 	const char *GetExecuteDir() const { return Execute; }
 
-		/** Return the Working dir */
+		/** Return the temporary directory under Execute for this job.
+		 *  If file transfer is used, this will also be the job's IWD.
+		 */
 	const char *GetWorkingDir() const { return WorkingDir.Value(); }
 
 		/** Publish all attributes we care about for our job
@@ -349,8 +351,11 @@ private:
 
 	int jobUniverse;
 
+		// The base EXECUTE directory for this slot
 	char *Execute;
-	MyString WorkingDir; // The iwd given to the job
+		// The temporary directory created under Execute for this job.
+		// If file transfer is used, this will also be the IWD of the job.
+	MyString WorkingDir;
 	char *orig_cwd;
 	MyString m_recoveryFile;
 	bool is_gridshell;

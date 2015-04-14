@@ -507,7 +507,7 @@ match_rec::~match_rec()
 		claim_requester = NULL;
 	}
 
-	if( secSessionId() ) {
+	if( secSessionId() && daemonCore ) {
 			// Expire the session after enough time to let the final
 			// RELEASE_CLAIM command finish, in case it is still in
 			// progress.  This also allows us to more gracefully
@@ -2045,11 +2045,20 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	}
 }
 
-void * BeginJobAggregation(bool use_def_autocluster, const char * projection, int result_limit, classad::ExprTree *constraint)
+void * BeginJobAggregation(bool use_def_autocluster, const char * projection, int result_limit, int return_jobid_limit, classad::ExprTree *constraint)
 {
 	JobAggregationResults *jar = NULL;
 	jar = scheduler.autocluster.aggregateOn(use_def_autocluster, projection, result_limit, constraint);
+	if (jar && return_jobid_limit > 0) { jar->set_return_jobid_limit(return_jobid_limit); }
 	return (void*)jar;
+}
+
+void ComputeJobAggregation(void * aggregation)
+{
+	if ( ! aggregation)
+		return;
+	JobAggregationResults *jar = (JobAggregationResults*)aggregation;
+	jar->compute();
 }
 
 void PauseJobAggregation(void * aggregation)
@@ -2198,32 +2207,41 @@ int Scheduler::command_query_job_aggregates(ClassAd &queryAd, Stream* stream)
 		resultLimit = -1;
 	}
 
-	void *aggregation = BeginJobAggregation(use_def_autocluster, projection.c_str(), resultLimit, constraint);
+	int returnJobidLimit = -1;
+	if (!queryAd.EvaluateAttrInt("MaxReturnedJobIds", returnJobidLimit)) {
+		returnJobidLimit = -1;
+	}
+
+	void *aggregation = BeginJobAggregation(use_def_autocluster, projection.c_str(), resultLimit, returnJobidLimit, constraint);
 	if ( ! aggregation) {
 		return -1;
 	}
-
-	QueryAggregatesContinuation *continuation = new QueryAggregatesContinuation(aggregation, 1000);
 
 	ForkStatus fork_status = schedd_forker.NewJob();
 	if (fork_status == FORK_PARENT)
 	{ // Successfully forked a child - as far as the schedd cares, this worked.
 	  // Throw away the socket and move on.
-		// need to free the parent's copy of the continuation object
-		delete continuation;
+		// need to free the parent's copy of the aggregation object
+		ReleaseAggregation(aggregation);
 		return true;
 	}
-	else if (fork_status == FORK_CHILD)
-	{ // Respond to the query from the child.
-		int retval;
-		while ((retval = continuation->finish(stream)) == KEEP_STREAM) {}
-		_exit(!retval);
-		ASSERT( false );
-		while (true) {}
-	}
-	else // BUSY or FAILED
-	{ // Write the response; let DC handle the callbacks.
-		return continuation->finish(stream);
+	else // either didn't fork. or I'm in the forked child. 
+	{
+		ComputeJobAggregation(aggregation);
+		QueryAggregatesContinuation *continuation = new QueryAggregatesContinuation(aggregation, 1000);
+		if (fork_status == FORK_CHILD) // Respond to the query from the child.
+		{
+			int retval;
+			while ((retval = continuation->finish(stream)) == KEEP_STREAM) {}
+			_exit(!retval);
+			ASSERT( false );
+			while (true) {}
+		}
+		else // BUSY or FAILED (or doesn't support fork. i.e Windows)
+		{
+			// Write the response; let DC handle the callbacks.
+			return continuation->finish(stream);
+		}
 	}
 }
 
@@ -15617,7 +15635,7 @@ Scheduler::WriteRestartReport()
 				   stats.JobsRestartReconnectsLeaseExpired.value );
 	formatstr_cat( report, "%d reconnects failed\n",
 				   stats.JobsRestartReconnectsFailed.value );
-	formatstr_cat( report, "%d reconnects whose success or failure is unknown\n",
+	formatstr_cat( report, "%d reconnects were interrupted by job removal or other event\n",
 				   stats.JobsRestartReconnectsUnknown.value );
 	formatstr_cat( report, "%d reconnects succeeded\n",
 				   stats.JobsRestartReconnectsSucceeded.value );

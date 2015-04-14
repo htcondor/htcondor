@@ -78,7 +78,7 @@ struct SubmitDagShallowOptions
 		iMaxPre = 0;
 		iMaxPost = 0;
 		bNoEventChecks = false;
-		appendFile = param("DAGMAN_INSERT_SUB_FILE");
+		appendFile = param( "DAGMAN_INSERT_SUB_FILE" );
 		strConfigFile = "";
 		dumpRescueDag = false;
 		runValgrind = false;

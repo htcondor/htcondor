@@ -585,6 +585,7 @@ int set_status_print_mask_from_stream (
 	std::string where_expr;
 	std::string messages;
 	StringList attrs;
+	printmask_aggregation_t aggregation;
 
 	SimpleInputStream * pstream = NULL;
 	*pconstraint = NULL;
@@ -609,12 +610,18 @@ int set_status_print_mask_from_stream (
 					*getCondorStatusPrintFormats(),
 					pm,
 					pmHeadFoot,
+					aggregation,
 					group_by_keys,
 					where_expr,
 					attrs,
 					messages);
 	delete pstream; pstream = NULL;
 	if ( ! err) {
+		if (aggregation != PR_NO_AGGREGATION) {
+			fprintf(stderr, "print-format aggregation not supported\n");
+			return -1;
+		}
+
 		if ( ! where_expr.empty()) {
 			*pconstraint = pm.store(where_expr.c_str());
 			//if ( ! validate_constraint(*pconstraint)) {

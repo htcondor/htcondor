@@ -383,7 +383,7 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 		return result;
 	}
 
-	if (fetch_opts == fetch_DefaultAutoCluster) {
+	if (fetch_opts != fetch_Default) {
 		free( constraint );
 		return Q_UNSUPPORTED_OPTION_ERROR;
 	}
@@ -436,6 +436,10 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 
 	if (fetch_opts == fetch_DefaultAutoCluster) {
 		ad.InsertAttr("QueryDefaultAutocluster", true);
+		ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
+	} else if (fetch_opts == fetch_GroupBy) {
+		ad.InsertAttr("ProjectionIsGroupBy", true);
+		ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
 	}
 
 	if (match_limit >= 0)
@@ -452,10 +456,14 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 	if (!putClassAd(sock, ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
 	dprintf(D_FULLDEBUG, "Sent classad to schedd\n");
 
+	int rval = 0;
 	do {
-		classad_shared_ptr<compat_classad::ClassAd> ad(new ClassAd());
-		if (!getClassAd(sock, *ad.get())) return Q_SCHEDD_COMMUNICATION_ERROR;
-		if (!sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
+		ClassAd * ad = new ClassAd();
+		if ( ! getClassAd(sock, *ad) || ! sock->end_of_message()) {
+			delete(ad);
+			rval = Q_SCHEDD_COMMUNICATION_ERROR;
+			break;
+		}
 		dprintf(D_FULLDEBUG, "Got classad from schedd.\n");
 		long long intVal;
 		if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
@@ -465,15 +473,19 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 			std::string errorMsg;
 			if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
 			{
+				delete(ad);
 				if (errstack) errstack->push("TOOL", intVal, errorMsg.c_str());
 				return Q_REMOTE_ERROR;
 			}
 			break;
 		}
-		(*process_func) (process_func_data, ad);
+		if (process_func(process_func_data, ad)) {
+			delete(ad);
+		}
+		ad = NULL;
 	} while (true);
 
-	return 0;
+	return rval;
 }
 
 int
@@ -631,7 +643,6 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 								 void * process_func_data,
 								 bool useAll )
 {
-	classad_shared_ptr<ClassAd> ad;
 	int match_count = 0;
 
 	if (useAll) {
@@ -641,30 +652,37 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 		free(attrs_str);
 
 		while( true ) {
-			ad.reset(new ClassAd());
+			ClassAd * ad = new ClassAd();
 			if (match_limit >= 0 && match_count >= match_limit)
 				break;
-			if( GetAllJobsByConstraint_Next( *ad.get() ) != 0 ) {
+			if( GetAllJobsByConstraint_Next( *ad ) != 0 ) {
 				break;
 			}
 			++match_count;
-			( *process_func )( process_func_data, ad );
+			if (process_func(process_func_data, ad)) {
+				delete(ad);
+			}
+			ad = NULL;
 		}
 	} else {
 
 		// slow case, using old protocol
-		ad.reset(GetNextJobByConstraint(constraint, 1));
-		if (ad.get() != NULL) {
+		ClassAd * ad = GetNextJobByConstraint(constraint, 1);
+		if (ad) {
 			// Process the data and insert it into the list
-			( *process_func )( process_func_data, ad );
+			if (process_func(process_func_data, ad)) {
+				delete ad;
+			}
+			ad = NULL;
 			++match_count;
 
-			ad.reset(GetNextJobByConstraint(constraint, 0));
-			while(ad.get() != NULL) {
+			while ((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
 				if (match_limit >= 0 && match_count >= match_limit)
 					break;
 				// Process the data and insert it into the list
-				( *process_func )( process_func_data, ad );
+				if (process_func(process_func_data, ad)) {
+					delete ad;
+				}
 			}
 		}
 	}
