@@ -1,0 +1,184 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+# new test now is a single file and does both local and vanilla universe
+# bt 2/13/15
+
+use CondorUtils;
+use CondorTest;
+use Cwd;
+use POSIX;
+use Check::SimpleJob;
+use Check::ParseDryRunData;
+
+$topdir = getcwd();
+print scalar localtime() . "\n";
+
+$testname = "job_basic_submit-filepartmacros";
+
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
+
+$mypid = $$;
+
+my $filedata = '
+	this is data for an
+	input file.
+';
+
+my $counter = 0;
+my $datafileswanted = 3;
+my $datafilename = "filepart-macros";
+my $extension = ".Fnxmacro";
+my $targetname = "";
+my @results = ();
+my @extraction = ();
+my $extractionsize = 0;
+
+while($counter < $datafileswanted) {
+	$targetname = "$datafilename" . "$counter" . "$extension";
+	open(FD,">$targetname") or die "Failed to open:$targetname:$!\n";
+	print FD "$filedata";
+	close(FD);
+	$counter += 1;
+}
+
+my $submitfile = "
+	executable = x_sleep.pl
+	arguments = 3
+	log = $testname$mypid.log
+	transfer_input_files = \$Fpnx(FILE)
+	queue FILE MATCHING (*$extension)
+";
+
+my $submitfilename = "$testname$mypid.cmd";
+open(SF,">$submitfilename") or die "failed submit file write:$submitfilename:$!\n";
+print SF "$submitfile";
+close(SF);
+
+
+runCondorTool("condor_submit -dry-run $submitfilename",\@results,2,{emit_output=>1});
+
+ParseDryRunData::DryExtract(\@results, \@extraction, "TransferInput");
+
+$extractionsize = @extraction;
+if($extractionsize ==  $datafileswanted) {
+	print "Got $extractionsize as expected\n";
+	RegisterResult(1,"test_name",$testname);
+} else {
+	print "Expected $datafileswanted items GOT $extractionsize\n";
+	RegisterResult(0,"test_name",$testname);
+}
+
+my $parseerror = 0;
+foreach my $line (@extraction) {
+	chomp($line);
+	#print "got:$line\n";
+	if($line =~ /$datafilename\d+$extension/) {
+	} else {
+		$parseerror += 1;
+		print "parse error:$line\n";
+	}
+}
+print "Seeing if we got what we expected:";
+
+if($parseerror == 0) {
+	print "Great\n";
+	RegisterResult(1,"test_name",$testname);
+} else {
+	print "Bad\n";
+	RegisterResult(0,"test_name",$testname);
+}
+
+
+my $submit2 = '
+executable=x_echostring.pl
+arguments=$(foo) Fn=$Fn(foo) Fx=$Fx(foo) Fp=$Fp(foo) Fd=$Fd(foo) Fnx=$Fnx(foo) Fdn=$Fdn(foo) Fdnx=$FDNX(foo)
+queue foo from (
+file1.ext
+file2
+dir/file3
+dir1/dir2/file4.ext
+/root/dir1/dir2/file5.ext
+./file6.ext
+.hidden.ext
+.hiddenfile
+dir/.hidden.ext
+) 
+';
+
+my $arrayentries = 9;
+my $thisone = 0;
+
+
+my @expected = (
+	"file1.ext Fn=file1 Fx=.ext Fp= Fd= Fnx=file1.ext Fdn=file1 Fdnx=file1.ext",
+	"file2 Fn=file2 Fx= Fp= Fd= Fnx=file2 Fdn=file2 Fdnx=file2",
+	"dir/file3 Fn=file3 Fx= Fp=dir/ Fd=dir/ Fnx=file3 Fdn=dir/file3 Fdnx=dir/file3",
+	"dir1/dir2/file4.ext Fn=file4 Fx=.ext Fp=dir1/dir2/ Fd=dir2/ Fnx=file4.ext Fdn=dir2/file4 Fdnx=dir2/file4.ext",
+	"/root/dir1/dir2/file5.ext Fn=file5 Fx=.ext Fp=/root/dir1/dir2/ Fd=dir2/ Fnx=file5.ext Fdn=dir2/file5 Fdnx=dir2/file5.ext",
+	"./file6.ext Fn=file6 Fx=.ext Fp=./ Fd=./ Fnx=file6.ext Fdn=./file6 Fdnx=./file6.ext",
+	".hidden.ext Fn=.hidden Fx=.ext Fp= Fd= Fnx=.hidden.ext Fdn=.hidden Fdnx=.hidden.ext",
+	".hiddenfile Fn=.hiddenfile Fx= Fp= Fd= Fnx=.hiddenfile Fdn=.hiddenfile Fdnx=.hiddenfile",
+	"dir/.hidden.ext Fn=.hidden Fx=.ext Fp=dir/ Fd=dir/ Fnx=.hidden.ext Fdn=dir/.hidden Fdnx=dir/.hidden.ext",
+);
+
+
+
+@results = ();
+@extraction = ();
+
+my $submitfilename = "$testname$mypid-2.cmd";
+open(SF,">$submitfilename") or die "failed submit file write:$submitfilename:$!\n";
+print SF "$submit2";
+close(SF);
+
+
+runCondorTool("condor_submit -dry-run $submitfilename",\@results,2,{emit_output=>1});
+
+ParseDryRunData::DryExtract(\@results, \@extraction, "Args");
+
+while($thisone < $arrayentries) {
+	if($extraction[$thisone] =~ /$expected[$thisone]/) {
+		RegisterResult(1,"test_name",$testname);
+	} else {
+		print "EXPECTED:$expected[$thisone] GOT:$extraction[$thisone]\n";
+		RegisterResult(0,"test_name",$testname);
+	}
+	$thisone += 1;
+}
+
+foreach my $argline (@extraction) {
+	chomp($argline);
+	print "$argline\n";
+}
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+my $result = 0;
+
+if( $result != 0 )
+{
+	exit(1);
+}
+
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
+

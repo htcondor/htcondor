@@ -333,6 +333,8 @@ our %submit_info = (
 	# Add the SWAMP's (temporary) platform name
 	'swamp:rhel-6.4-64'	=> 'x86_64_RedHat6',
 
+	'x86_64_SL7'	=> 'x86_64_SL6',
+
 	# for now SL6 is the same as RedHat6
 	'x86_64_SL6'	=> 'x86_64_RedHat6',
 	'x86_64_sl_6.0' => 'x86_64_SL6',

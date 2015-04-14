@@ -335,21 +335,21 @@ struct query_process_helper
     condor::ModuleLock *ml;
 };
 
-void
-query_process_callback(void * data, classad_shared_ptr<ClassAd> ad)
+bool
+query_process_callback(void * data, ClassAd* ad)
 {
     query_process_helper *helper = static_cast<query_process_helper *>(data);
     helper->ml->release();
     if (PyErr_Occurred())
     {
         helper->ml->acquire();
-        return;
+        return true;
     }
 
     try
     {
         boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
-        wrapper->CopyFrom(*ad.get());
+        wrapper->CopyFrom(*ad);
         object wrapper_obj = object(wrapper);
         object result = (helper->callable == object()) ? wrapper_obj : helper->callable(wrapper);
         if (result != object())
@@ -362,7 +362,12 @@ query_process_callback(void * data, classad_shared_ptr<ClassAd> ad)
         // Suppress the C++ exception.  HTCondor sure can't deal with it.
         // However, PyErr_Occurred will be set and we will no longer invoke the callback.
     }
+    catch (...)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Uncaught C++ exception encountered.");
+    }
     helper->ml->acquire();
+    return true;
 }
 
 struct Schedd {
@@ -976,7 +981,7 @@ struct Schedd {
             parser.ParseExpression("true", expr);
             expr_ref.reset(expr);
         }
-        if (string_extract.check())
+        else if (string_extract.check())
         {
             classad::ClassAdParser parser;
             std::string val_str = string_extract();
@@ -994,8 +999,8 @@ struct Schedd {
         {
             THROW_EX(ValueError, "Unable to parse requirements expression");
         }
-        classad::ExprTree *expr_copy = expr->Copy();
-        if (!expr_copy) THROW_EX(ValueError, "Unable to create copy of requirements expression");
+        classad::ExprTree *expr_copy = expr ? expr->Copy() : NULL;
+        if (!expr_copy) {THROW_EX(ValueError, "Unable to create copy of requirements expression");}
 
         classad::ExprList *projList(new classad::ExprList());
         unsigned len_attrs = py_len(projection);
@@ -1003,7 +1008,7 @@ struct Schedd {
         {
                 classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
                 classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
-                if (!entry) THROW_EX(ValueError, "Unable to create copy of list entry.")
+                if (!entry) {THROW_EX(ValueError, "Unable to create copy of list entry.")}
                 projList->push_back(entry);
         }
 

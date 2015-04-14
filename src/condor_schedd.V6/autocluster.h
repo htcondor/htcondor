@@ -21,7 +21,7 @@
 #define _autocluster_H_
 
 #define USE_AUTOCLUSTER_TO_JOBID_MAP 1
-//#define ALLOW_ON_THE_FLY_AGGREGATION
+#define ALLOW_ON_THE_FLY_AGGREGATION
 
 #include "condor_classad.h"
 #include <generic_stats.h>
@@ -158,7 +158,7 @@ protected:
 class JobAggregationResults {
 public:
 	JobAggregationResults(JobCluster& jc_, const char * proj_, int limit_, classad::ExprTree * constraint_=NULL, bool is_def_=false)
-		: jc(jc_), projection(proj_?proj_:""), constraint(NULL), is_def_autocluster(is_def_), result_limit(limit_), results_returned(0)
+		: jc(jc_), projection(proj_?proj_:""), constraint(NULL), is_def_autocluster(is_def_), return_jobid_limit(0), result_limit(limit_), results_returned(0)
 	{
 		if (constraint_) constraint = constraint_->Copy();
 	}
@@ -169,8 +169,10 @@ public:
 		if (!is_def_autocluster) delete &jc;
 	#endif
 	}
+	bool compute(); // populate the job cluster set.
 	ClassAd * next();
 	bool rewind();
+	int  set_return_jobid_limit(int lim) { int old = return_jobid_limit; return_jobid_limit=lim; return old; }
 	void pause(); // remember the iterator location, but don't hold an actual iterator because it may go invalid while paused.
 
 protected:
@@ -178,6 +180,7 @@ protected:
 	std::string projection;
 	classad::ExprTree * constraint;
 	bool is_def_autocluster;
+	int  return_jobid_limit;
 	int  result_limit;
 	int  results_returned;
 	ClassAd ad;

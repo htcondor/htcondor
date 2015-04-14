@@ -342,7 +342,7 @@ BuildRequires: systemd-units
 BuildRequires: transfig
 BuildRequires: latex2html
 
-Requires: mailx
+Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
@@ -640,6 +640,46 @@ Requires: %name = %version-%release
 Includes the external packages built when UW_BUILD is enabled
 
 %endif
+
+%package all
+Summary: All condor packages in a typical installation
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: %name-procd = %version-%release
+%if %qmf
+Requires: %name-qmf = %version-%release
+%endif
+%if %aviary
+Requires: %name-aviary-common = %version-%release
+Requires: %name-aviary = %version-%release
+Requires: %name-aviary-hadoop-common = %version-%release
+Requires: %name-aviary-hadoop = %version-%release
+%endif
+%if %plumage
+Requires: %name-plumage = %version-%release
+%endif
+Requires: %name-kbdd = %version-%release
+Requires: %name-vm-gahp = %version-%release
+%if %deltacloud
+Requires: %name-deltacloud-gahp = %version-%release
+%endif
+Requires: %name-classads = %version-%release
+#Requires: %name-classads-devel = %version-%release
+%if %cream
+Requires: %name-cream-gahp = %version-%release
+%endif
+Requires: %name-python = %version-%release
+Requires: %name-bosco = %version-%release
+%if %std_univ
+Requires: %name-std-universe = %version-%release
+%endif
+%if %uw_build
+#Requires: %name-static-shadow = %version-%release
+Requires: %name-externals = %version-%release
+%endif
+
+%description all
+Include dependencies for all condor packages in a typical installation
 
 %pre
 getent group condor >/dev/null || groupadd -r condor
@@ -1082,6 +1122,8 @@ rm -rf %{buildroot}
 #make check-seralized
 
 #################
+%files all
+#################
 %files
 %defattr(-,root,root,-)
 %doc LICENSE-2.0.txt examples
@@ -1163,6 +1205,8 @@ rm -rf %{buildroot}
 %_libexecdir/condor/interactive.sub
 %_libexecdir/condor/condor_dagman_metrics_reporter
 %_libexecdir/condor/condor_gangliad
+%_libexecdir/condor/panda-plugin.so
+%_libexecdir/condor/pandad
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
@@ -1303,6 +1347,7 @@ rm -rf %{buildroot}
 %_sbindir/nordugrid_gahp
 %_sbindir/gce_gahp
 %if %uw_build
+%_sbindir/condor_master_s
 %_sbindir/boinc_gahp
 %endif
 %_libexecdir/condor/condor_gpu_discovery
@@ -1606,7 +1651,6 @@ rm -rf %{buildroot}
 
 %if %uw_build
 %files static-shadow
-%{_sbindir}/condor_master_s
 %{_sbindir}/condor_shadow_s
 
 %files externals

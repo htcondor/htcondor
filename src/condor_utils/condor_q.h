@@ -28,7 +28,10 @@
 #define MAXSCHEDDLEN 255
 
 // This is for the getFilterAndProcess function
-typedef void (*condor_q_process_func)(void*, classad_shared_ptr<ClassAd>);
+// the caller will return false to take ownership of ad, true otherwise.
+// we do this to avoid a makeing a copy of the ad in a common use case,
+// because the caller will normally delete the ad, but in fact has no more use for it.
+typedef bool (*condor_q_process_func)(void*, ClassAd *ad);
 
 /* a list of all types of direct DB query defined here */
 enum CondorQQueryType
@@ -98,7 +101,7 @@ class CondorQ
 	int fetchQueueFromHostAndProcess ( const char *, StringList &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int useFastPath, CondorError* errstack = 0);
 
 	// option flags for fetchQueueFromHost* functions, these can modify the meaning of attrs
-	typedef enum { fetch_Default=0, fetch_DefaultAutoCluster=1 } QueryFetchOpts;
+	typedef enum { fetch_Default=0, fetch_DefaultAutoCluster=1, fetch_GroupBy=2 } QueryFetchOpts;
 	
 		// fetch the job ads from database 	
 	int fetchQueueFromDB (ClassAdList &, char *&lastUpdate, const char * = 0, CondorError* errstack = 0);
