@@ -10542,7 +10542,7 @@ Scheduler::child_exit(int pid, int status)
 
 			if ( srec->is_reconnect && !srec->reconnect_succeeded ) {
 				 scheduler.stats.JobsRestartReconnectsAttempting -= 1;
-				 scheduler.stats.JobsRestartReconnectsUnknown += 1;
+				 scheduler.stats.JobsRestartReconnectsInterrupted += 1;
 			}
 		}
 		
@@ -10711,7 +10711,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		scheduler.stats.JobsRestartReconnectsBadput += job_running_time;
 	} else if ( srec && srec->is_reconnect && !srec->reconnect_succeeded ) {
 		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
-		scheduler.stats.JobsRestartReconnectsUnknown += 1;
+		scheduler.stats.JobsRestartReconnectsInterrupted += 1;
 	}
 	switch( exit_code ) {
 		case JOB_NO_MEM:
@@ -15612,7 +15612,7 @@ Scheduler::WriteRestartReport()
 			stats.JobsRestartReconnectsFailed.value +
 			stats.JobsRestartReconnectsLeaseExpired.value +
 			stats.JobsRestartReconnectsSucceeded.value +
-			stats.JobsRestartReconnectsUnknown.value;
+			stats.JobsRestartReconnectsInterrupted.value;
 	}
 
 	struct tm *restart_tm = localtime( &restart_time );
@@ -15636,7 +15636,7 @@ Scheduler::WriteRestartReport()
 	formatstr_cat( report, "%d reconnects failed\n",
 				   stats.JobsRestartReconnectsFailed.value );
 	formatstr_cat( report, "%d reconnects were interrupted by job removal or other event\n",
-				   stats.JobsRestartReconnectsUnknown.value );
+				   stats.JobsRestartReconnectsInterrupted.value );
 	formatstr_cat( report, "%d reconnects succeeded\n",
 				   stats.JobsRestartReconnectsSucceeded.value );
 		// TODO Include stats.JobsRestartReconnectsBadput?
