@@ -76,18 +76,38 @@ int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 	}
 }
 
-/* TODO This function needs to be tested.
+/*
  */
+const char *ExprTreeToString( const classad::ExprTree *expr, std::string & buffer )
+{
+	classad::ClassAdUnParser unparser;
+	unparser.SetOldClassAd( true, true );
+	unparser.Unparse( buffer, expr );
+	return buffer.c_str();
+}
+
 const char *ExprTreeToString( const classad::ExprTree *expr )
 {
 	static std::string buffer;
+	buffer = "";
+	return ExprTreeToString(expr, buffer);
+}
+
+const char * ClassAdValueToString ( const classad::Value & value, std::string & buffer )
+{
 	classad::ClassAdUnParser unparser;
 
-	buffer = "";
 	unparser.SetOldClassAd( true, true );
-	unparser.Unparse( buffer, expr );
+	unparser.Unparse( buffer, value );
 
 	return buffer.c_str();
+}
+
+const char * ClassAdValueToString ( const classad::Value & value )
+{
+	static std::string buffer;
+	buffer = "";
+	return ClassAdValueToString(value, buffer);
 }
 
 #define IS_DOUBLE_TRUE(val) (bool)(int)((val)*100000)

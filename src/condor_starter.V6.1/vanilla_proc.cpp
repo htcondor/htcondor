@@ -466,7 +466,26 @@ VanillaProc::StartJob()
 
 	// On Linux kernel 2.4.19 and later, we can give each job its
 	// own FS mounts.
-	char * mount_under_scratch = param("MOUNT_UNDER_SCRATCH");
+	auto_free_ptr mount_under_scratch(param("MOUNT_UNDER_SCRATCH"));
+	if (mount_under_scratch) {
+		// try evaluating mount_under_scratch as a classad expression, if it is
+		// an expression it must return a string. if it's not an expression, just
+		// use it as a string (as we did before 8.3.6)
+		classad::Value value;
+		if (JobAd->EvaluateExpr(mount_under_scratch.ptr(), value)) {
+			const char * pval = NULL;
+			if (value.IsStringValue(pval)) {
+				mount_under_scratch.set(strdup(pval));
+			} else {
+				// was an expression, but not a string, so report and error and fail.
+				dprintf(D_ALWAYS | D_ERROR,
+					"ERROR: MOUNT_UNDER_SCRATCH does not evaluate to a string, it is : %s\n",
+					ClassAdValueToString(value));
+				return FALSE;
+			}
+		}
+	}
+
 	// if execute dir is encrypted, add /tmp and /var/tmp to mount_under_scratch
 	bool encrypt_execdir = false;
 	JobAd->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
@@ -475,9 +494,8 @@ VanillaProc::StartJob()
 		// if admin already listed /tmp etc - subdirs can appear twice
 		// in this list because AddMapping() ok w/ duplicate entries
 		MyString buf("/tmp,/var/tmp,");
-		buf += mount_under_scratch;
-		free(mount_under_scratch);
-		mount_under_scratch = buf.StrDup();
+		buf += mount_under_scratch.ptr();
+		mount_under_scratch.set(buf.StrDup());
 	}
 	if (mount_under_scratch) {
 		std::string working_dir = Starter->GetWorkingDir();
@@ -528,7 +546,7 @@ VanillaProc::StartJob()
 			delete fs_remap;
 			return FALSE;
 		}
-		free(mount_under_scratch);
+		mount_under_scratch.clear();
 	}
 
 #if defined(LINUX)
