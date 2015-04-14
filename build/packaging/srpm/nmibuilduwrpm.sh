@@ -69,6 +69,7 @@ mkdir "condor-$condor_version"
 cd "condor-$condor_version"
 tar xfpz "$TMP"/condor.tar.gz
 rm -f "$TMP"/condor.tar.gz
+condor_build_id=$(<BUILD-ID)
 cd ..
 tar cfz SOURCES/condor-$condor_version.tar.gz "condor-$condor_version"
 rm -rf "condor-$condor_version"
@@ -80,6 +81,7 @@ update_spec_define () {
 
 update_spec_define git_build 0
 update_spec_define tarball_version "$condor_version"
+update_spec_define condor_base_release "$condor_build_id"
 
 rpmbuild $buildmethod "$@" --define="_topdir $tmpd" SOURCES/condor.spec
 

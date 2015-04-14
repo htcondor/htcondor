@@ -7277,6 +7277,18 @@ SYSTEM_PERIODIC_REMOVE = \
   evaluates to \Expr{False} and the \Condor{schedd} rejects the job.
   There is no default value.
 
+\label{param:ScheddRestartReport}
+\item[\Macro{SCHEDD\_RESTART\_REPORT}]
+  The complete path to a file
+  When the \Condor{schedd} starts, it will write a report to this file
+  about its attempts to reconnect to the \Condor{startd}s for all jobs
+  that were previously running.
+  The file is updated periodically as reconnect attempts succeed or fail.
+  Once all attempts have completed, a copy of the report is emailed to
+  address specified by \MacroNI{CONDOR\_ADMIN}.
+  The default value is \File{\$(LOG)/ScheddRestartReport}.
+  If a blank value is set, then no report is written or emailed.
+
 \end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Shadow-Config-File-Entries}\condor{shadow}
