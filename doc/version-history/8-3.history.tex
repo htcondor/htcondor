@@ -125,6 +125,13 @@ matching the behavior documented in this reference manual.
 local universe jobs to execute repeatedly on Windows platforms.
 \Ticket{4909}
 
+\item Fixed a bug that caused messages like the following to be printed
+in the daemon log of the \Condor{schedd}:
+\begin{verbatim}
+warning: setting UserUid to 11021, was 6004 previously
+\end{verbatim}
+\Ticket{4889}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
