@@ -96,6 +96,14 @@ as documented with a link from the HTCondor wiki page,
 \URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=ExperimentalFeatures}.
 \Ticket{4270}
 
+\item The \Condor{schedd} now generates a report about its attempts to
+reconnect to the \Condor{startd}s of previously running jobs on startup.
+The report is written to the location specified by the new configuration
+parameter \Macro{SCHEDD\_RESTART\_REPORT}.
+Once all reconnect attempts are complete, a copy of the report is also
+emailed to HTCondor administrator account.
+\Ticket{4783}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
