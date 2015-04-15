@@ -542,9 +542,9 @@ Sinful::hasV0HostSockAddr() const {
 condor_sockaddr
 Sinful::getV0HostSockAddr() const {
 	condor_sockaddr sa;
-	assert( getHost() );
+	ASSERT( getHost() );
 	bool ok = sa.from_ip_string( getHost() );
-	assert( ok );
+	ASSERT( ok );
 	return sa;
 }
 
