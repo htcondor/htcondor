@@ -1530,7 +1530,7 @@ main( int argc, const char *argv[] )
 			"  To to avoid confusing the output file with the submit file when using these\n"
 			"  commands, an explicit submit filename argument must be given. You can use -\n"
 			"  as the submit filename argument to read from stdin.\n",
-			MyName, dump_name);
+			dump_name);
 		exit(1);
 	}
 
