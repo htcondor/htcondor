@@ -64,10 +64,7 @@ CCBIDFromContactString(CCBID &ccbid,char const *ccb_contact)
 static void
 CCBIDToContactString(char const *my_address,CCBID ccbid,MyString &ccb_contact)
 {
-	// If we change this, we have to change the CCB client, as well.
 	ccb_contact.formatstr("%s#%lu",my_address,ccbid);
-	// ccb_contact.formatstr("<%s#%lu>",my_address,ccbid);
-	// ccb_contact.formatstr("<%s>#%lu",my_address,ccbid);
 }
 
 CCBServer::CCBServer():

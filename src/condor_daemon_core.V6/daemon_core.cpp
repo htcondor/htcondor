@@ -1076,7 +1076,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		char const *addr = m_shared_port_endpoint->GetMyRemoteAddress();
 
 		if( addr ) {
-			// Remove addresses can be accessed from other machines, so
+			// Remote addresses can be accessed from other machines, so
 			// they must have addrs.
 			Sinful s( addr );
 			ASSERT( s.hasAddrs() );
@@ -1199,7 +1199,6 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		}
 
 		// Handle multi-protocol addressing.
-		// FIXME: do I need to handle NETWORK_INTERFACE explicitly?
 		m_sinful.clearAddrs();
 		condor_sockaddr sa4, sa6;
 		for( SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); ++it ) {
@@ -1237,17 +1236,11 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			m_sinful.addAddrToAddrs( sa6 );
 			sPublic.addAddrToAddrs( sa6 );
 			sPrivate.addAddrToAddrs( sa6 );
-			m_sinful.setParam( "v", "1" );
-			sPublic.setParam( "v", "1" );
-			sPrivate.setParam( "v", "1" );
 		}
 		if( sa4.is_valid() ) {
 			m_sinful.addAddrToAddrs( sa4 );
 			sPublic.addAddrToAddrs( sa4 );
 			sPrivate.addAddrToAddrs( sa4 );
-			m_sinful.setParam( "v", "1" );
-			sPublic.setParam( "v", "1" );
-			sPrivate.setParam( "v", "1" );
 		}
 
 		free( sinful_public );
