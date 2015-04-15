@@ -29,20 +29,30 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item The \SubmitCmd{queue} submit command may be used in
+\item New features increase the power of job specification
+in the submit description file. 
+Submit description files are now parsed the same as configuration files.
+
+  \begin{itemize}
+  \item The \SubmitCmd{queue} submit command may be used in
 flexible and powerful new ways to specify job submissions.
 See section~\ref{sec:user-man-queue} for details.
 \Ticket{4819}
 
-\item The machine ClassAd attribute \Attr{VirtualMemory} is now set correctly
-for dynamic slots running under a partitionable slot.
-\Ticket{4608}
+  \item New macro functions are supported, 
+and may be used in submit description files as well as in configuration.
+\Ticket{4944}
 
-\item \Condor{submit} has new command line options \Opt{-queue} 
+  \item \Condor{submit} has new command line options \Opt{-queue} 
 and \Opt{-dry-run},
 to provide flexible and powerful new ways to specify job submissions,
 as well as to test what job would be submitted without submitting.
 \Ticket{4933}
+  \end{itemize}
+
+\item The machine ClassAd attribute \Attr{VirtualMemory} is now set correctly
+for dynamic slots running under a partitionable slot.
+\Ticket{4608}
 
 \item An EC2 grid universe job now advertises its access key ID in 
 its job ClassAd.
