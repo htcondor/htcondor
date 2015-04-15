@@ -145,6 +145,7 @@ bool	SubmitFromStdin = false;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
 int		DashDryRun = 0;
+const char * DashDryRunOutName = NULL;
 int		DumpSubmitHash = 0;
 int		JobDisableFileChecks = 0;
 bool	RequestMemoryIsZero = false;
@@ -331,7 +332,7 @@ MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 //
 // Dump ClassAd to file junk
 //
-MyString	DumpFileName;
+const char * DumpFileName = NULL;
 bool		DumpClassAdToFile = false;
 FILE		*DumpFile = NULL;
 bool		DumpFileIsStdout = 0;
@@ -1182,11 +1183,30 @@ main( int argc, const char *argv[] )
 				dprintf_set_tool_debug("TOOL", 0);
 			} else if (is_dash_arg_colon_prefix(ptr[0], "dry-run", &pcolon, 3)) {
 				DashDryRun = 1;
+				bool needs_file_arg = true;
 				if (pcolon) { 
+					needs_file_arg = false;
 					int opt = atoi(pcolon+1);
 					if (opt > 1) DashDryRun =  opt;
-					else if (MATCH == strcmp(pcolon+1, "hash")) DumpSubmitHash = 1;
+					else if (MATCH == strcmp(pcolon+1, "hash")) {
+						DumpSubmitHash = 1;
+						needs_file_arg = true;
+					}
 				}
+				if (needs_file_arg) {
+					if (DumpClassAdToFile) {
+						fprintf(stderr, "%s: -dry-run <file> and -dump <file> cannot be used together\n", MyName);
+						exit(1);
+					}
+					const char * pfilearg = ptr[1];
+					if ( ! pfilearg || (*pfilearg == '-' && (MATCH != strcmp(pfilearg,"-"))) ) {
+						fprintf( stderr, "%s: -dry-run requires another argument\n", MyName );
+						exit(1);
+					}
+					DashDryRunOutName = pfilearg;
+					--argc; ++ptr;
+				}
+
 			} else if (is_dash_arg_prefix(ptr[0], "spool", 1)) {
 				Remote++;
 				DisableFileChecks = 1;
@@ -1314,6 +1334,10 @@ main( int argc, const char *argv[] )
 				// -- why not? if you set it to warn on unused macros in the 
 				// config file, there should be a way to turn it off
 			} else if (is_dash_arg_prefix(ptr[0], "dump", 2)) {
+				if (DashDryRunOutName) {
+					fprintf(stderr, "%s: -dump <file> and -dry-run <file> cannot be used together\n", MyName);
+					exit(1);
+				}
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -dump requires another argument\n",
 						MyName );
@@ -1321,8 +1345,7 @@ main( int argc, const char *argv[] )
 				}
 				DumpFileName = *ptr;
 				DumpClassAdToFile = true;
-				if (DumpFileName == "-") 
-					DumpFileIsStdout = true;
+				DumpFileIsStdout = (MATCH == strcmp(DumpFileName,"-"));
 				// if we are dumping to a file, we never want to check file permissions
 				// as this would initiate some schedd communication
 				DisableFileChecks = 1;
@@ -1486,6 +1509,18 @@ main( int argc, const char *argv[] )
 		}
 	}
 
+	if ( ! cmd_file && (DashDryRunOutName || DumpFileName)) {
+		const char * dump_name = DumpFileName ? DumpFileName : DashDryRunOutName;
+		fprintf( stderr,
+			"\nERROR: No submit filename was provided, and '%s'\n"
+			"  was given as the output filename for -dump or -dry-run. Was this intended?\n"
+			"  To to avoid confusing the output file with the submit file when using these\n"
+			"  commands, an explicit submit filename argument must be given. You can use -\n"
+			"  as the submit filename argument to read from stdin.\n",
+			MyName, dump_name);
+		exit(1);
+	}
+
 	// open submit file
 	if ( ! cmd_file || SubmitFromStdin) {
 		// no file specified, read from stdin
@@ -1514,7 +1549,7 @@ main( int argc, const char *argv[] )
 	} else if ( ! DumpFileIsStdout ) {
 		// get the file we are to dump the ClassAds to...
 		if ( ! terse) { fprintf(stdout, "Storing job ClassAd(s)"); }
-		if( (DumpFile = safe_fopen_wrapper_follow(DumpFileName.Value(),"w")) == NULL ) {
+		if( (DumpFile = safe_fopen_wrapper_follow(DumpFileName,"w")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open file to dump ClassAds into (%s)\n",
 				strerror(errno));
 			exit(1);
@@ -7482,7 +7517,19 @@ int queue_connect()
 			if (DumpFileIsStdout) {
 				SimQ->Connect(stdout, false);
 			} else if (DashDryRun) {
-				SimQ->Connect(stderr, false);
+				FILE* dryfile = NULL;
+				bool  free_it = false;
+				if (MATCH == strcmp(DashDryRunOutName, "-")) {
+					dryfile = stdout; free_it = false;
+				} else {
+					dryfile = safe_fopen_wrapper_follow(DashDryRunOutName,"w");
+					if ( ! dryfile) {
+						fprintf( stderr, "\nERROR: Failed to open file -dry-run output file (%s)\n", strerror(errno));
+						exit(1);
+					}
+					free_it = true;
+				}
+				SimQ->Connect(dryfile, free_it);
 			} else {
 				SimQ->Connect(DumpFile, true);
 				DumpFile = NULL;
@@ -8505,7 +8552,7 @@ usage()
 	fprintf( stderr, "\t-queue <queue-opts>\tappend Queue statement to submit file before processing\n"
 					 "\t                   \t(submit file must not already have a Queue statement)\n" );
 	fprintf( stderr, "\t-disable\t\tdisable file permission checks\n" );
-	fprintf( stderr, "\t-dry-run\t\tprocess submit file and write ClassAd attributes to stderr\n"
+	fprintf( stderr, "\t-dry-run <filename>\t\tprocess submit file and write ClassAd attributes to <filename>\n"
 					 "\t        \t\tbut do not actually submit the job(s) to the SCHEDD\n" );
 	fprintf( stderr, "\t-unused\t\t\ttoggles unused or unexpanded macro warnings\n"
 					 "\t       \t\t\t(overrides config file; multiple -u flags ok)\n" );
