@@ -519,7 +519,8 @@ display (std::string & out, AttrList *al, AttrList *target /* = NULL */)
 		}
 
 		// now do the actual formatting.
-		//
+		//									   			classad::Value value;
+
 		int  col_start;
 		switch( fmt->fmtKind )
 		{

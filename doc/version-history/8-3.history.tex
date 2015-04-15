@@ -65,6 +65,10 @@ flexible and powerful new ways to specify job submissions.
 See section~\ref{sec:user-man-queue} for details.
 \Ticket{4819}
 
+\item The machine attribute \Macro{VirtualMemory} is now set correctly
+for dynamic slots running under a partitionable slot
+\Ticket{4806}
+
 \item \Condor{submit} has new command line options \Opt{-queue} 
 and \Opt{-dry-run},
 to provide flexible and powerful new ways to specify job submissions,
@@ -128,12 +132,17 @@ as documented with a link from the HTCondor wiki page,
 \Ticket{4270}
 
 \item The \Condor{schedd} now generates a report about its attempts to
-reconnect to the \Condor{startd}s of previously running jobs on startup.
+reconnect to the \Condor{startd} daemons of previously running jobs on start up.
 The report is written to the location specified by the new configuration
-parameter \Macro{SCHEDD\_RESTART\_REPORT}.
+variable \Macro{SCHEDD\_RESTART\_REPORT}.
 Once all reconnect attempts are complete, a copy of the report is also
 emailed to HTCondor administrator account.
 \Ticket{4783}
+
+\item The new ClassAd functions \Procedure{envV1ToV2} and 
+\Procedure{mergeEnvironment} are
+useful for manipulating the environment variable lists in job ClassAds.
+\Ticket{4574}
 
 \end{itemize}
 
@@ -164,11 +173,11 @@ matching the behavior documented in this reference manual.
 local universe jobs to execute repeatedly on Windows platforms.
 \Ticket{4909}
 
-\item Fixed a bug that caused messages like the following to be printed
-in the daemon log of the \Condor{schedd}:
+\item Fixed a bug that caused messages similar to
 \begin{verbatim}
 warning: setting UserUid to 11021, was 6004 previously
 \end{verbatim}
+to be logged in the \Condor{schedd} daemon log. 
 \Ticket{4889}
 
 \end{itemize}

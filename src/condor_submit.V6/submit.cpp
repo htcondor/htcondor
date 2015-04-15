@@ -716,19 +716,6 @@ int SetSyscalls( int foo );
 int DoCleanup(int,int,const char*);
 }
 
-// class that can be used to hold a malloc'd pointer such as the one returned by condor_param
-// it will free the pointer when this object is destroyed.
-class auto_free_ptr {
-public:
-	auto_free_ptr(char* str=NULL) : p(str) {}
-	~auto_free_ptr() { if (p) free(p); p = NULL; }
-	void set(char*str) { if (p) free(p); p = str; }
-	char * detach() { char * t = p; p = NULL; return t; }
-	char * ptr() { return p; }
-private:
-	char * p;
-};
-
 
 // global struct that we use to keep track of where we are so we
 // can give useful error messages.
