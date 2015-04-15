@@ -665,7 +665,7 @@ int daemon::RealStart( )
 						command_port = sinful.getPortNum();
 					}
 					dprintf ( D_FULLDEBUG, "Host name matches collector %s.\n",
-							  sinful.getSinful() ? sinful.getSinful() : "NULL" );
+							  sinful.logging( "NULL" ).c_str() );
 					break;
 				}
 			}

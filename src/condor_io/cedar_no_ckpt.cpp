@@ -1062,15 +1062,14 @@ Sock::get_sinful_public()
 			addr = addrs.front();
 		}
 		addr.set_port(get_port());
-		_sinful_public_buf = addr.to_sinful().Value();
+		Sinful s = Sinful( addr.to_sinful().c_str() );
 
 		std::string alias;
 		if( param(alias,"HOST_ALIAS") ) {
-			Sinful s(_sinful_public_buf.c_str());
-			s.setAlias(alias.c_str());
-			_sinful_public_buf = s.getSinful();
+			s.setAlias( alias.c_str() );
 		}
 
+		_sinful_public_buf = s.serialize();
 		return _sinful_public_buf.c_str();
 	}
 

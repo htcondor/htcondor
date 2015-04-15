@@ -1079,7 +1079,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			// Remove addresses can be accessed from other machines, so
 			// they must have addrs.
 			Sinful s( addr );
-			ASSERT( s.hasAddrs() );
+			ASSERT( s.hasV1Addrs() );
 		}
 
 		if( !addr && usePrivateAddress ) {
@@ -1121,7 +1121,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 	}
 
 	if (!initialized_sinful_private || m_dirty_sinful) {
-		free( sinful_private);
+		free( sinful_private );
 		sinful_private = NULL;
 
 		MyString private_sinful_string;
@@ -1159,11 +1159,10 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 
 		// The full sinful string is the public address plus params
 		// which specify private network address and CCB contact info.
-
 		m_sinful = Sinful(sinful_public);
 
-			// Only publish the private name if there is a private or CCB
-			// address, because otherwise, the private name doesn't matter.
+		// Only publish the private name if there is a private or CCB
+		// address, because otherwise, the private name doesn't matter.
 		bool publish_private_name = false;
 
 		char const *private_name = privateNetworkName();
@@ -1174,7 +1173,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			}
 		}
 
-			// if we don't have a UDP port, advertise that fact
+		// if we don't have a UDP port, advertise that fact
 		char *forwarding = param("TCP_FORWARDING_HOST");
 		if( forwarding ) {
 			free( forwarding );
@@ -1199,8 +1198,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		}
 
 		// Handle multi-protocol addressing.
-		// FIXME: do I need to handle NETWORK_INTERFACE explicitly?
-		m_sinful.clearAddrs();
+		m_sinful.clearV1Addrs();
 		condor_sockaddr sa4, sa6;
 		for( SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); ++it ) {
 			ASSERT( it->has_relisock() );
@@ -1234,46 +1232,40 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		Sinful sPublic( sinful_public );
 		Sinful sPrivate( sinful_private != NULL ? sinful_private : "" );
 		if( sa6.is_valid() ) {
-			m_sinful.addAddrToAddrs( sa6 );
-			sPublic.addAddrToAddrs( sa6 );
-			sPrivate.addAddrToAddrs( sa6 );
-			m_sinful.setParam( "v", "1" );
-			sPublic.setParam( "v", "1" );
-			sPrivate.setParam( "v", "1" );
+			m_sinful.addAddrToV1Addrs( sa6 );
+			sPublic.addAddrToV1Addrs( sa6 );
+			sPrivate.addAddrToV1Addrs( sa6 );
 		}
 		if( sa4.is_valid() ) {
-			m_sinful.addAddrToAddrs( sa4 );
-			sPublic.addAddrToAddrs( sa4 );
-			sPrivate.addAddrToAddrs( sa4 );
-			m_sinful.setParam( "v", "1" );
-			sPublic.setParam( "v", "1" );
-			sPrivate.setParam( "v", "1" );
+			m_sinful.addAddrToV1Addrs( sa4 );
+			sPublic.addAddrToV1Addrs( sa4 );
+			sPrivate.addAddrToV1Addrs( sa4 );
 		}
 
 		free( sinful_public );
-		sinful_public = strdup( sPublic.getSinful() );
+		sinful_public = strdup( sPublic.serialize().c_str() );
 
 		if( sinful_private != NULL ) {
 			free( sinful_private );
-			sinful_private = strdup( sPrivate.getSinful() );
+			sinful_private = strdup( sPrivate.serialize().c_str() );
 		}
 	}
 
 	if( usePrivateAddress ) {
 		if( sinful_private ) {
 			Sinful s( sinful_private );
-			ASSERT( s.hasAddrs() );
+			ASSERT( s.hasV1Addrs() );
 			return sinful_private;
 		}
 		else {
 			Sinful s( sinful_public );
-			ASSERT( s.hasAddrs() );
+			ASSERT( s.hasV1Addrs() );
 			return sinful_public;
 		}
 	}
 
-	ASSERT( m_sinful.hasAddrs() );
-	return m_sinful.getSinful();
+	ASSERT( m_sinful.hasV1Addrs() );
+	return m_sinful.serialize().c_str();
 }
 
 void
@@ -7898,7 +7890,7 @@ int DaemonCore::Create_Process(
 				if( !want_udp ) {
 					sinful.setNoUDP(true);
 				}
-				pidtmp->sinful_string = sinful.getSinful();
+				pidtmp->sinful_string = sinful.serialize();
 			}
 		}
 	}

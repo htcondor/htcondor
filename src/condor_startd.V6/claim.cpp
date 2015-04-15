@@ -2308,7 +2308,7 @@ newIdString( char** id_str_ptr )
 
 	Sinful my_sin( daemonCore->publicNetworkIpAddr() );
 	my_sin.clearParams();
-	char const *my_addr = my_sin.getSinful();
+	char const *my_addr = my_sin.serialize().c_str();
 
 	ASSERT( my_addr && !strchr(my_addr,'#') );
 

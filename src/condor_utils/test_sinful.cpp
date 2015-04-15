@@ -35,84 +35,84 @@ int main( int, char ** ) {
 	//
 
 
-	std::vector< condor_sockaddr > * v = s.getAddrs();
+	std::vector< condor_sockaddr > * v = s.getV1Addrs();
 	REQUIRE( v != NULL );
 	REQUIRE( v->size() == 0 );
 	delete v; v = NULL;
 
 	char const * sinfulString = NULL;
-	sinfulString = s.getSinful();
+	sinfulString = s.serialize().c_str();
 	REQUIRE( sinfulString == NULL );
 
-	REQUIRE( ! s.hasAddrs() );
+	REQUIRE( ! s.hasV1Addrs() );
 
 
 	condor_sockaddr sa;
 	bool ok = sa.from_ip_and_port_string( "1.2.3.4:5" );
 	REQUIRE( ok );
-	s.addAddrToAddrs( sa );
+	s.addAddrToV1Addrs( sa );
 
-	v = s.getAddrs();
+	v = s.getV1Addrs();
 	REQUIRE( v != NULL );
 	REQUIRE( v->size() == 1 );
 	REQUIRE( (*v)[0] == sa );
 	delete v; v = NULL;
 
-	sinfulString = s.getSinful();
+	sinfulString = s.serialize().c_str();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5>" ) == 0 );
 
 	t = Sinful( sinfulString );
-	v = t.getAddrs();
+	v = t.getV1Addrs();
 	REQUIRE( v != NULL );
 	REQUIRE( v->size() == 1 );
 	REQUIRE( (*v)[0] == sa );
 	delete v; v = NULL;
 
-	sinfulString = t.getSinful();
+	sinfulString = t.serialize().c_str();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5>" ) == 0 );
 
-	REQUIRE( s.hasAddrs() );
+	REQUIRE( s.hasV1Addrs() );
 
 
 	condor_sockaddr sa2;
 	ok = sa2.from_ip_and_port_string( "5.6.7.8:9" );
 	REQUIRE( ok );
-	s.addAddrToAddrs( sa2 );
+	s.addAddrToV1Addrs( sa2 );
 
-	v = s.getAddrs();
+	v = s.getV1Addrs();
 	REQUIRE( v != NULL );
 	REQUIRE( v->size() == 2 );
 	REQUIRE( (*v)[0] == sa );
 	REQUIRE( (*v)[1] == sa2 );
 	delete v; v = NULL;
 
-	sinfulString = s.getSinful();
+	sinfulString = s.serialize().c_str();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5+5.6.7.8:9>" ) == 0 );
 
 	t = Sinful( sinfulString );
-	v = t.getAddrs();
+	v = t.getV1Addrs();
 	REQUIRE( v != NULL );
 	REQUIRE( v->size() == 2 );
 	REQUIRE( (*v)[0] == sa );
 	REQUIRE( (*v)[1] == sa2 );
 	delete v; v = NULL;
 
-	sinfulString = t.getSinful();
+	sinfulString = t.serialize().c_str();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5+5.6.7.8:9>" ) == 0 );
 
-	REQUIRE( s.hasAddrs() );
+	REQUIRE( s.hasV1Addrs() );
 
 
 	condor_sockaddr sa3;
 	ok = sa3.from_ip_and_port_string( "[1:3:5:7::a]:13" );
 	REQUIRE( ok );
-	s.addAddrToAddrs( sa3 );
+	s.addAddrToV1Addrs( sa3 );
 
-	v = s.getAddrs();
+	v = s.getV1Addrs();
 	REQUIRE( v != NULL );
 	REQUIRE( v->size() == 3 );
 	REQUIRE( (*v)[0] == sa );
@@ -120,12 +120,12 @@ int main( int, char ** ) {
 	REQUIRE( (*v)[2] == sa3 );
 	delete v; v = NULL;
 
-	sinfulString = s.getSinful();
+	sinfulString = s.serialize().c_str();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5+5.6.7.8:9+[1:3:5:7::a]:13>" ) == 0 );
 
 	t = Sinful( sinfulString );
-	v = t.getAddrs();
+	v = t.getV1Addrs();
 	REQUIRE( v != NULL );
 	REQUIRE( v->size() == 3 );
 	REQUIRE( (*v)[0] == sa );
@@ -133,39 +133,39 @@ int main( int, char ** ) {
 	REQUIRE( (*v)[2] == sa3 );
 	delete v; v = NULL;
 
-	sinfulString = t.getSinful();
+	sinfulString = t.serialize().c_str();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5+5.6.7.8:9+[1:3:5:7::a]:13>" ) == 0 );
 
-	REQUIRE( s.hasAddrs() );
+	REQUIRE( s.hasV1Addrs() );
 
 
-	s.clearAddrs();
-	v = s.getAddrs();
+	s.clearV1Addrs();
+	v = s.getV1Addrs();
 	REQUIRE( v != NULL );
 	REQUIRE( v->size() == 0 );
 
-	sinfulString = s.getSinful();
+	sinfulString = s.serialize().c_str();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<>" ) == 0 );
 
 	t = Sinful( sinfulString );
-	v = t.getAddrs();
+	v = t.getV1Addrs();
 	REQUIRE( v != NULL );
 	REQUIRE( v->size() == 0 );
 
-	sinfulString = t.getSinful();
+	sinfulString = t.serialize().c_str();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<>" ) == 0 );
 
-	REQUIRE( ! s.hasAddrs() );
+	REQUIRE( ! s.hasV1Addrs() );
 
 
-	s.addAddrToAddrs( sa );
-	s.addAddrToAddrs( sa2 );
-	s.addAddrToAddrs( sa3 );
+	s.addAddrToV1Addrs( sa );
+	s.addAddrToV1Addrs( sa2 );
+	s.addAddrToV1Addrs( sa3 );
 
-	v = s.getAddrs();
+	v = s.getV1Addrs();
 	REQUIRE( v != NULL );
 	REQUIRE( v->size() == 3 );
 	REQUIRE( (*v)[0] == sa );
@@ -173,12 +173,12 @@ int main( int, char ** ) {
 	REQUIRE( (*v)[2] == sa3 );
 	delete v; v = NULL;
 
-	sinfulString = s.getSinful();
+	sinfulString = s.serialize().c_str();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5+5.6.7.8:9+[1:3:5:7::a]:13>" ) == 0 );
 
 	t = Sinful( sinfulString );
-	v = t.getAddrs();
+	v = t.getV1Addrs();
 	REQUIRE( v != NULL );
 	REQUIRE( v->size() == 3 );
 	REQUIRE( (*v)[0] == sa );
@@ -186,11 +186,11 @@ int main( int, char ** ) {
 	REQUIRE( (*v)[2] == sa3 );
 	delete v; v = NULL;
 
-	sinfulString = t.getSinful();
+	sinfulString = t.serialize().c_str();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5+5.6.7.8:9+[1:3:5:7::a]:13>" ) == 0 );
 
-	REQUIRE( s.hasAddrs() );
+	REQUIRE( s.hasV1Addrs() );
 
 
 	return 0;

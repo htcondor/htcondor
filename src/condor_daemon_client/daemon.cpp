@@ -381,9 +381,7 @@ Daemon::idStr( void )
 	} else if( _addr ) {
 		ASSERT( dt_str );
 		Sinful sinful(_addr);
-		sinful.clearParams(); // too much info is ugly
-		formatstr( buf, "%s at %s", dt_str,
-					 sinful.getSinful() ? sinful.getSinful() : _addr );
+		formatstr( buf, "%s at %s", dt_str, sinful.logging( _addr ).c_str() );
 		if( _full_hostname ) {
 			formatstr_cat( buf, " (%s)", _full_hostname );
 		}
@@ -1516,7 +1514,7 @@ Daemon::findCmDaemon( const char* cm_name )
 
 
 	if( saddr.from_ip_string(host) ) {
-		New_addr( strnewp( sinful.getSinful() ) );
+		New_addr( strnewp( sinful.serialize().c_str() ) );
 		dprintf( D_HOSTNAME, "Host info \"%s\" is an IP address\n", host );
 	} else {
 			// We were given a hostname, not an address.
@@ -1539,13 +1537,12 @@ Daemon::findCmDaemon( const char* cm_name )
 			return false;
 		}
 		sinful.setHost(saddr.to_ip_string().Value());
-		dprintf( D_HOSTNAME, "Found IP address and port %s\n",
-				 sinful.getSinful() ? sinful.getSinful() : "NULL" );
+		dprintf( D_HOSTNAME, "Found IP address and port %s\n", sinful.logging( "NULL" ).c_str() );
 		New_full_hostname(strnewp(fqdn.Value()));
 		if( host ) {
 			New_alias( strnewp(host) );
 		}
-		New_addr( strnewp( sinful.getSinful() ) );
+		New_addr( strnewp( sinful.serialize().c_str() ) );
 	}
 
 		// If the pool was set, we want to use _name for that, too. 
@@ -2055,7 +2052,7 @@ Daemon::New_addr( char* str )
 						// address with CCB disabled
 						sinful.setCCBContact(NULL);
 						delete [] _addr;
-						_addr = strnewp( sinful.getSinful() );
+						_addr = strnewp( sinful.serialize().c_str() );
 					}
 				}
 				free( our_network_name );
@@ -2066,7 +2063,7 @@ Daemon::New_addr( char* str )
 				sinful.setPrivateAddr(NULL);
 				sinful.setPrivateNetworkName(NULL);
 				delete [] _addr;
-				_addr = strnewp( sinful.getSinful() );
+				_addr = strnewp( sinful.serialize().c_str() );
 				dprintf( D_HOSTNAME, "Private network name not matched.\n");
 			}
 		}
@@ -2095,7 +2092,7 @@ Daemon::New_addr( char* str )
 			{
 				sinful.setAlias(_alias);
 				delete [] _addr;
-				_addr = strnewp( sinful.getSinful() );
+				_addr = strnewp( sinful.serialize().c_str() );
 			}
 		}
 	}

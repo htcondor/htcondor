@@ -2371,21 +2371,19 @@ Sock::my_ip_str()
 char const *
 Sock::get_sinful()
 {
-    if( _sinful_self_buf.empty() ) {
-		condor_sockaddr addr;
-		int ret = condor_getsockname_ex(_sock, addr);
-		if (ret == 0) {
-			_sinful_self_buf = addr.to_sinful();
+	condor_sockaddr addr;
+	int ret = condor_getsockname_ex( _sock, addr );
+	if( ret == 0 ) {
+		Sinful s = Sinful( addr.to_sinful().c_str() );
 
-			std::string alias;
-			if( param(alias,"HOST_ALIAS") ) {
-				Sinful s(_sinful_self_buf.c_str());
-				s.setAlias(alias.c_str());
-				_sinful_self_buf = s.getSinful();
-			}
-
+		std::string alias;
+		if( param( alias, "HOST_ALIAS" ) ) {
+			s.setAlias( alias.c_str() );
 		}
+
+		_sinful_self_buf = s.serialize();
 	}
+
 	return _sinful_self_buf.c_str();
 }
 

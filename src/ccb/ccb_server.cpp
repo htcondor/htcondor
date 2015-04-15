@@ -151,11 +151,9 @@ CCBServer::InitAndReconfig()
 		// without brackets.  Not sure why we bother stripping them off
 		// in the first place, but we can't change that without
 		// breaking backwards compabitility.
-	ASSERT( sinful.getSinful() && sinful.getSinful()[0] == '<' );
-	m_address.formatstr("%s",sinful.getSinful()+1);
-	if( m_address[m_address.Length()-1] == '>' ) {
-		m_address.setChar(m_address.Length()-1,'\0');
-	}
+	// FIXME: We'll have to think carefully about how CCB advertises
+	// its V6 addresses.
+	m_address = sinful.getV0CCBEmbedding();
 
 	m_read_buffer_size = param_integer("CCB_SERVER_READ_BUFFER",2*1024);
 	m_write_buffer_size = param_integer("CCB_SERVER_WRITE_BUFFER",2*1024);
@@ -481,7 +479,8 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 	//
 	std::string exprString;
 	formatstr( exprString, "%s = \"<%s>\"", ATTR_MY_ADDRESS, m_address.Value() );
-	ConvertDefaultIPToSocketIP( ATTR_MY_ADDRESS, exprString, * stream );
+	// FIXME: send V1.
+	// ConvertDefaultIPToSocketIP( ATTR_MY_ADDRESS, exprString, * stream );
 	std::string rewrittenAddress = exprString.substr( strlen( ATTR_MY_ADDRESS ) + 5 );
 	rewrittenAddress.resize( rewrittenAddress.size() - 2 );
 	dprintf( D_NETWORK | D_VERBOSE, "Will send %s instead of %s to CCB client %s.\n", rewrittenAddress.c_str(), m_address.Value(), sock->my_ip_str() );

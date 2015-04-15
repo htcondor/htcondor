@@ -51,7 +51,7 @@ int main( int argc, char * argv[] ) {
 		fprintf( stdout, "%d\n", s.numParams() );
 		return 0;
 	} else if( strcmp( argv[1], "addrs" ) == 0 ) {
-		std::vector< condor_sockaddr > * addrs = s.getAddrs();
+		std::vector< condor_sockaddr > * addrs = s.getV1Addrs();
 		if( addrs == NULL ) {
 			return 1;
 		}

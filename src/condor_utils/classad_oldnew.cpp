@@ -454,7 +454,7 @@ int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool 
             buf += " = ";
             unp.Unparse( buf, expr );
 
-            ConvertDefaultIPToSocketIP(attr.c_str(),buf,*sock);
+            // ConvertDefaultIPToSocketIP(attr.c_str(),buf,*sock);
 
             if( ! sock->prepare_crypto_for_secret_is_noop() &&
 				compat_classad::ClassAdAttributeIsPrivate(attr.c_str()))
@@ -554,7 +554,7 @@ int _putClassAd_v0( Stream *sock, classad::ClassAd& ad, bool excludeTypes, bool 
 			else {
 				unp.Unparse( buf, expr );
 			}
-            ConvertDefaultIPToSocketIP(attr,buf,*sock);
+            // ConvertDefaultIPToSocketIP(attr,buf,*sock);
 
             if( ! sock->prepare_crypto_for_secret_is_noop() &&
 				compat_classad::ClassAdAttributeIsPrivate(attr) )
@@ -820,7 +820,7 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options)
 			buf += " = ";
 			unp.Unparse( buf, expr );
 
-			ConvertDefaultIPToSocketIP(attr.c_str(),buf,*sock);
+			// ConvertDefaultIPToSocketIP(attr.c_str(),buf,*sock);
 
 			if( ! sock->prepare_crypto_for_secret_is_noop() &&
 				compat_classad::ClassAdAttributeIsPrivate(attr.c_str()))
@@ -885,7 +885,7 @@ int _putClassAd( Stream *sock, classad::ClassAd& ad, int options, const classad:
 		buf = *attr;
 		buf += " = ";
 		unp.Unparse( buf, expr );
-		ConvertDefaultIPToSocketIP(attr->c_str(),buf,*sock);
+		// ConvertDefaultIPToSocketIP(attr->c_str(),buf,*sock);
 
 		if ( ! sock->prepare_crypto_for_secret_is_noop() &&
 			compat_classad::ClassAdAttributeIsPrivate(attr->c_str()) )

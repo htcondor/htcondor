@@ -175,64 +175,73 @@ static std::string urlEncodeParams(map_type const &params)
 	return result;
 }
 
-Sinful::Sinful(char const *sinful)
+Sinful::Sinful(char const *sinful) : m_version( -1 )
 {
 	if( !sinful ) { // default constructor
+		m_version = 0;
 		m_valid = true;
+		return;
 	}
-	else {
-		char *host=NULL;
-		char *port=NULL;
-		char *params=NULL;
 
-		if( *sinful != '<' ) {
-			m_sinful = "<";
+	if( sinful[0] == '{' ) {
+		m_version = 1;
+		m_sinful = sinful;
+	} else if( sinful[0] == '<' ) {
+		m_version = 0;
+		m_sinful = sinful;
+	} else if( sinful[0] == '[' ) {
+		m_version = 0;
+		formatstr( m_sinful, "<%s>", sinful );
+	} else if( sinful[0] == '\0' ) {
+		m_version = 0;
+		m_valid = true;
+		return;
+	}
 
-			// Before we try anything else, surround the string with <>
-			// and try parsing it again.  CCB requires the ability to
-			// pass bracketless Sinfuls; we've gotten away with it so far
-			// because we haven't needed colons in the parameter list,
-			// only in the base address.
-			std::string trialSinful = m_sinful + sinful + ">";
-			if( split_sin( trialSinful.c_str(), &host, &port, &params ) ) {
-				m_sinful = trialSinful;
-			} else {
-				// should be careful here
-				// if sinful is IPv6 address, it should be embraced by [ ]
+	// If we can't tell what version the sinful string is, then for backwards
+	// compatibility (with CCB), we need to try wrapping it in angle brackets.
+	if( m_version == -1 ) {
+		char * host = NULL;
+		char * port = NULL;
+		char * params = NULL;
 
-				if(*sinful == '[') { // IPv6
-					m_sinful += sinful;
-				} else {
-					// Double check it's not IPv6 lacking [brackets]
-					const char * first_colon = strchr(sinful, ':');
-					if(first_colon && strchr(first_colon+1, ':')) {
-						// Why not treat it as an IPv6 address? Because
-						// We can't tell if 12AB::CDEF:1000 means
-						// 12AB:0000:0000:0000:0000:0000:0000:CDEF port 1000 or
-						// 12AB:0000:0000:0000:0000:0000:CDEF:1000 unknown port
-						m_valid = false;
-						return;
-					}
-					m_sinful += sinful;
-				}
-				m_sinful += ">";
-			}
-		}
-		else {
-			m_sinful = sinful;
+		std::string trialSinful;
+		formatstr( trialSinful, "<%s>", sinful );
+		if( split_sin( trialSinful.c_str(), &host, &port, &params ) ) {
+			m_version = 0;
+			m_sinful = trialSinful;
 		}
 
-		m_valid = split_sin(m_sinful.c_str(),&host,&port,&params);
+		free( host ); free( port ); free( params );
+	}
+
+	// If we still don't know what it is, check to see if it's an IPv6
+	// address lacking [brackets]; if so, reject it, since we can't tell if
+	// the last colon is a port separator or not without them.
+	if( m_version == -1 ) {
+		const char * first_colon = strchr(sinful, ':');
+		if( first_colon && strchr( first_colon+1, ':' ) ) {
+			m_valid = false;
+			return;
+		}
+	}
+
+	//
+	// Parse the canonicalized string.
+	//
+
+	if( m_version == 0 ) {
+		char * host = NULL;
+		char * port = NULL;
+		char * params = NULL;
+
+		m_valid = split_sin( m_sinful.c_str(), &host, &port, &params );
 
 		if( m_valid ) {
-			if( host ) {
-				m_host = host;
-			}
-			if( port ) {
-				m_port = port;
-			}
+			if( host ) { m_host = host; }
+			if( port ) { m_port = port; }
 			if( params ) {
-				if( !parseUrlEncodedParams(params,m_params) ) {
+				if( !parseUrlEncodedParams( params,m_params ) ) {
 					m_valid = false;
 				}
 
@@ -252,9 +261,13 @@ Sinful::Sinful(char const *sinful)
 				}
 			}
 		}
-		free( host );
-		free( port );
-		free( params );
+
+		free( host ); free( port ); free( params );
+		m_serialized = m_sinful;
+	} else if( m_version == 1 ) {
+		// FIXME
+	} else {
+		m_valid = false;
 	}
 }
 
@@ -404,8 +417,9 @@ Sinful::regenerateSinful()
 		m_sinful += "[";
 		m_sinful += m_host;
 		m_sinful += "]";
-	} else
+	} else {
 		m_sinful += m_host;
+	}
 
 	if( !m_port.empty() ) {
 		m_sinful += ":";
@@ -416,6 +430,13 @@ Sinful::regenerateSinful()
 		m_sinful += urlEncodeParams(m_params);
 	}
 	m_sinful += ">";
+
+	if( m_version == 0 ) {
+		m_serialized = m_sinful;
+	} else if( m_version == 1 ) {
+		// FIXME
+		m_serialized = m_sinful;
+	}
 }
 
 bool
@@ -432,9 +453,6 @@ Sinful::addressPointsToMe( Sinful const &addr ) const
 			addr_matches = true;
 		}
 
-		// FIXME: Is it sufficient, when advertising addrs, that only the
-		// "primary" address matches?
-
 		// We may have failed to match host addresses above, but we now need
 		// to cover the case of the loopback interface (aka 127.0.0.1).  A common
 		// usage pattern for this method is for "this" object to represent our daemonCore 
@@ -444,7 +462,7 @@ Sinful::addressPointsToMe( Sinful const &addr ) const
 		Sinful oursinful( global_dc_sinful() );
 		condor_sockaddr addrsock;
 		if( !addr_matches && oursinful.getHost() && !strcmp(getHost(),oursinful.getHost()) &&
-			addr.getSinful() && addrsock.from_sinful(addr.getSinful()) && addrsock.is_loopback() )
+			addr.hasV0HostSockAddr() && addr.getV0HostSockAddr().is_loopback() )
 		{
 			addr_matches = true;
 		}
@@ -484,12 +502,12 @@ Sinful::getPortNum() const
 }
 
 std::vector< condor_sockaddr > *
-Sinful::getAddrs() const {
+Sinful::getV1Addrs() const {
 	return new std::vector< condor_sockaddr >( addrs );
 }
 
 void
-Sinful::addAddrToAddrs( const condor_sockaddr & sa ) {
+Sinful::addAddrToV1Addrs( const condor_sockaddr & sa ) {
 	addrs.push_back( sa );
 	StringList sl;
 	for( unsigned i = 0; i < addrs.size(); ++i ) {
@@ -498,15 +516,57 @@ Sinful::addAddrToAddrs( const condor_sockaddr & sa ) {
 	char * slString = sl.print_to_delimed_string( "+" );
 	setParam( "addrs", slString );
 	free( slString );
+
+	setParam( "v", "1" );
 }
 
 void
-Sinful::clearAddrs() {
+Sinful::clearV1Addrs() {
 	addrs.clear();
 	setParam( "addrs", NULL );
+	setParam( "v", NULL );
 }
 
 bool
-Sinful::hasAddrs() {
+Sinful::hasV1Addrs() {
 	return (! addrs.empty());
+}
+
+bool
+Sinful::hasV0HostSockAddr() const {
+	condor_sockaddr sa;
+	if( ! getHost() ) { return false; }
+	return sa.from_ip_string( getHost() );
+}
+
+condor_sockaddr
+Sinful::getV0HostSockAddr() const {
+	condor_sockaddr sa;
+	assert( getHost() );
+	bool ok = sa.from_ip_string( getHost() );
+	assert( ok );
+	return sa;
+}
+
+std::string
+Sinful::getV0CCBEmbedding() const {
+	std::string v0 = getV0();
+	ASSERT( v0[0] == '<' && v0[v0.size() - 1] == '>' );
+	return v0.substr( 1, v0.size() - 2 );
+}
+
+const std::string &
+Sinful::serialize() const {
+	return m_serialized;
+}
+
+std::string
+Sinful::logging() const {
+	return logging( "[invalid]" );
+}
+
+std::string
+Sinful::logging( const std::string & ifInvalid ) const {
+	if( ! valid() ) { return ifInvalid; }
+	return "FIXME";
 }

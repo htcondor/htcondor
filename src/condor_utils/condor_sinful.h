@@ -39,11 +39,43 @@
 
 class Sinful {
  public:
-	Sinful(char const *sinful=NULL);
+ 	//
+ 	// Version-independent methods.
+ 	//
+	Sinful( char const * sinful = NULL );
 	bool valid() const { return m_valid; }
+	const std::string & serialize() const;
+	std::string logging() const;
+	std::string logging( const std::string & ifInvalid ) const;
 
-	// returns the full sinful string
-	char const *getSinful() const { if( m_sinful.empty() ) return NULL; else return m_sinful.c_str(); }
+	//
+	// The only capability added by v1 is multiple "primary" addresses.
+	// Code for v1 will therefore make use of the v0 functions.
+	//
+
+	std::vector< condor_sockaddr > * getV1Addrs() const;
+	void addAddrToV1Addrs( const condor_sockaddr & sa );
+	void clearV1Addrs();
+	bool hasV1Addrs();
+
+	//
+	// Methods for v0 (and v1; see above).
+	//
+
+	bool hasV0HostSockAddr() const;
+	condor_sockaddr getV0HostSockAddr() const;
+	std::string getV0CCBEmbedding() const;
+
+	// returns an IPv4-only, v0-formatted string.  Should only be called
+	// if you're constructing an ad.  Otherwise, use serialize().
+	char const * getV0() const { if( m_sinful.empty() ) return NULL; else return m_sinful.c_str(); }
+
+public:
+ 	//
+ 	// All methods below this line are deprecated and should be renamed
+ 	// (e.g., getV0Host()), so that we can find and replace the old and
+ 	// broken code that assumes that each daemon has One True Address.
+ 	//
 
 	// returns the host portion of the sinful string
 	char const *getHost() const { if( m_host.empty() ) return NULL; else return m_host.c_str(); }
@@ -79,13 +111,6 @@ class Sinful {
 	bool noUDP() const;
 	void setNoUDP(bool flag);
 
-
-	// You must delete the return if it's not NULL.
-	std::vector< condor_sockaddr > * getAddrs() const;
-	void addAddrToAddrs( const condor_sockaddr & sa );
-	void clearAddrs();
-	bool hasAddrs();
-
 	// generic param interface
 
 	// returns the value of the named parameter (may be NULL)
@@ -111,6 +136,11 @@ class Sinful {
 	std::vector< condor_sockaddr > addrs;
 
 	void regenerateSinful();
+
+	// Necessary to duplicate the behavior of the old getSinful().
+	std::string m_serialized;
+
+	int m_version;
 };
 
 #endif

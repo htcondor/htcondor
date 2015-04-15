@@ -524,13 +524,13 @@ CCBClient::try_next_ccb()
 		return try_next_ccb();
 	}
 
-	char const *return_address = daemonCore->publicNetworkIpAddr();
-
+	char const * ra = daemonCore->publicNetworkIpAddr();
 	// For now, we require that this daemon has a command port.
 	// If needed, we could add support for opening a listen socket here.
-	ASSERT( return_address && *return_address );
+	ASSERT( ra && *ra );
+	std::string return_address( ra );
 
-	Sinful sinful_return(return_address);
+	Sinful sinful_return(return_address.c_str());
 	if( sinful_return.getCCBContact() ) {
 		// uh oh!  Our return address is via CCB.
 		dprintf(D_ALWAYS,
@@ -544,7 +544,7 @@ CCBClient::try_next_ccb()
 
 		// strip off CCB contact info in the return address
 		sinful_return.setCCBContact(NULL);
-		return_address = sinful_return.getSinful();
+		return_address = sinful_return.serialize();
 	}
 
 	dprintf(D_NETWORK|D_FULLDEBUG,
@@ -554,7 +554,7 @@ CCBClient::try_next_ccb()
 			m_target_peer_description.Value(),
 			m_cur_ccb_address.Value(),
 			ccbid.Value(),
-			return_address);
+			return_address.c_str());
 
 	classy_counted_ptr<Daemon> ccb_server = new Daemon(DT_COLLECTOR,m_cur_ccb_address.Value(),NULL);
 
@@ -577,7 +577,7 @@ CCBClient::try_next_ccb()
 
 	msg->setDeadlineTime( m_target_sock->get_deadline() );
 
-	if( ccb_server->addr() && !strcmp(ccb_server->addr(),return_address) ) {
+	if( ccb_server->addr() && !strcmp(ccb_server->addr(),return_address.c_str()) ) {
 			// Special case: the CCB server is in the same process as
 			// the CCB client.  Example where this happens: collector
 			// sending DC_INVALIDATE messages to daemons that use this

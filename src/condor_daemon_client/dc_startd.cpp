@@ -119,7 +119,8 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 	m_startd_ip_addr = sock->peer_ip_str();
 
 	std::string scheduler_addr_to_send = m_scheduler_addr;
-	ConvertDefaultIPToSocketIP(ATTR_SCHEDD_IP_ADDR,scheduler_addr_to_send,*sock);
+	// FIXME: send V1 info.
+	// ConvertDefaultIPToSocketIP(ATTR_SCHEDD_IP_ADDR,scheduler_addr_to_send,*sock);
 
 		// Insert an attribute in the request ad to inform the
 		// startd that this schedd is capable of understanding 

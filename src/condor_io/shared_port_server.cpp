@@ -124,7 +124,9 @@ SharedPortServer::PublishAddress()
 	const std::vector<Sinful> &mySinfuls = daemonCore->InfoCommandSinfulStringsMyself();
 	for (std::vector<Sinful>::const_iterator it=mySinfuls.begin(); it!=mySinfuls.end(); it++)
 	{
-		commandAddresses.insert(it->getSinful());
+		// FIXME: We'll need to think hard about how shared port advertises
+		// its V6 addresses.
+		commandAddresses.insert(it->getV0());
 	}
 	StringList commandAddressesSL;
 	for (std::set<std::string>::const_iterator it=commandAddresses.begin(); it!=commandAddresses.end(); it++)
