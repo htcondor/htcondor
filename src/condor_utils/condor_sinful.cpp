@@ -175,23 +175,27 @@ static std::string urlEncodeParams(map_type const &params)
 	return result;
 }
 
-Sinful::Sinful(char const *sinful) : m_version( -1 )
-{
-	if( !sinful ) { // default constructor
+Sinful::Sinful( char const * sinful, int version ) : m_version( version ) {
+	if( sinful == NULL ) {
 		m_version = 0;
 		m_valid = true;
 		return;
 	}
 
 	if( sinful[0] == '{' ) {
-		m_version = 1;
-		m_sinful = sinful;
+		m_version = 2;
+		v2_serialized = sinful;
 	} else if( sinful[0] == '<' ) {
 		m_version = 0;
-		m_sinful = sinful;
+		v0_serialized = sinful;
 	} else if( sinful[0] == '[' ) {
-		m_version = 0;
-		formatstr( m_sinful, "<%s>", sinful );
+		// We do NOT deserialize v1 addresses unless explicitly commanded.
+		if( m_version != 1 ) {
+			m_valid = false;
+			return;
+		} else {
+			formatstr( v1_serialized, "<%s>", sinful );
+		}
 	} else if( sinful[0] == '\0' ) {
 		m_version = 0;
 		m_valid = true;
@@ -209,7 +213,7 @@ Sinful::Sinful(char const *sinful) : m_version( -1 )
 		formatstr( trialSinful, "<%s>", sinful );
 		if( split_sin( trialSinful.c_str(), &host, &port, &params ) ) {
 			m_version = 0;
-			m_sinful = trialSinful;
+			v0_serialized = trialSinful;
 		}
 
 		free( host ); free( port ); free( params );
@@ -235,7 +239,7 @@ Sinful::Sinful(char const *sinful) : m_version( -1 )
 		char * port = NULL;
 		char * params = NULL;
 
-		m_valid = split_sin( m_sinful.c_str(), &host, &port, &params );
+		m_valid = split_sin( v0_serialized.c_str(), &host, &port, &params );
 
 		if( m_valid ) {
 			if( host ) { m_host = host; }
@@ -244,31 +248,40 @@ Sinful::Sinful(char const *sinful) : m_version( -1 )
 				if( !parseUrlEncodedParams( params,m_params ) ) {
 					m_valid = false;
 				}
+			}
+		}
 
-				char const * addrsString = getParam( "addrs" );
-				if( addrsString != NULL ) {
-					StringList sl( addrsString, "+" );
-					sl.rewind();
-					char * addrString = NULL;
-					while( (addrString = sl.next()) != NULL ) {
-						condor_sockaddr sa;
-						if( sa.from_ip_and_port_string( addrString ) ) {
-							addrs.push_back( sa );
-						} else {
-							m_valid = false;
-						}
-					}
+		free( host ); free( port ); free( params );
+	} else if( m_version == 1 ) {
+		char * host = NULL;
+		char * port = NULL;
+		char * params = NULL;
+
+		m_valid = split_sin( v1_serialized.c_str(), &host, &port, &params );
+
+		if( m_valid ) {
+			if( host ) {
+				v1_host = host;
+				if( v1_host.find( ":" ) == std::string::npos ) {
+					m_host = host;
+				}
+			}
+			if( port ) { m_port = port; }
+			if( params ) {
+				if( !parseUrlEncodedParams( params,m_params ) ) {
+					m_valid = false;
 				}
 			}
 		}
 
 		free( host ); free( port ); free( params );
-		m_serialized = m_sinful;
-	} else if( m_version == 1 ) {
-		// FIXME
+	} else if( m_version == 2 ) {
+		// FIXME... (need to set both serialized members)
 	} else {
 		m_valid = false;
 	}
+
+	reserialize();
 }
 
 char const *
@@ -290,14 +303,14 @@ Sinful::setParam(char const *key,char const *value)
 	else {
 		m_params[key] = value;
 	}
-	regenerateSinful();
+	reserialize();
 }
 
 void
 Sinful::clearParams()
 {
 	m_params.clear();
-	regenerateSinful();
+	reserialize();
 }
 
 int
@@ -388,14 +401,14 @@ Sinful::setHost(char const *host)
 {
 	ASSERT(host);
 	m_host = host;
-	regenerateSinful();
+	reserialize();
 }
 void
 Sinful::setPort(char const *port)
 {
 	ASSERT(port);
 	m_port = port;
-	regenerateSinful();
+	reserialize();
 }
 void
 Sinful::setPort(int port)
@@ -403,40 +416,41 @@ Sinful::setPort(int port)
 	std::ostringstream tmp;
 	tmp << port;
 	m_port = tmp.str();
-	regenerateSinful();
+	reserialize();
 }
 
 void
-Sinful::regenerateSinful()
+Sinful::reserialize()
 {
-	// generate "<host:port?params>"
+	//
+	// v0 serialization
+	//
 
-	m_sinful = "<";
+	v0_serialized = "<";
 	if (m_host.find(':') != std::string::npos &&
 		m_host.find('[') == std::string::npos) {
-		m_sinful += "[";
-		m_sinful += m_host;
-		m_sinful += "]";
+		v0_serialized += "[";
+		v0_serialized += m_host;
+		v0_serialized += "]";
 	} else {
-		m_sinful += m_host;
+		v0_serialized += m_host;
 	}
 
 	if( !m_port.empty() ) {
-		m_sinful += ":";
-		m_sinful += m_port;
+		v0_serialized += ":";
+		v0_serialized += m_port;
 	}
 	if( !m_params.empty() ) {
-		m_sinful += "?";
-		m_sinful += urlEncodeParams(m_params);
+		v0_serialized += "?";
+		v0_serialized += urlEncodeParams(m_params);
 	}
-	m_sinful += ">";
+	v0_serialized += ">";
 
-	if( m_version == 0 ) {
-		m_serialized = m_sinful;
-	} else if( m_version == 1 ) {
-		// FIXME
-		m_serialized = m_sinful;
-	}
+	//
+	// v1 serialization (FIXME)
+	//
+
+	v1_serialized = v0_serialized;
 }
 
 bool
@@ -501,37 +515,6 @@ Sinful::getPortNum() const
 	return atoi( getPort() );
 }
 
-std::vector< condor_sockaddr > *
-Sinful::getV1Addrs() const {
-	return new std::vector< condor_sockaddr >( addrs );
-}
-
-void
-Sinful::addAddrToV1Addrs( const condor_sockaddr & sa ) {
-	addrs.push_back( sa );
-	StringList sl;
-	for( unsigned i = 0; i < addrs.size(); ++i ) {
-		sl.append( addrs[i].to_ip_and_port_string().c_str() );
-	}
-	char * slString = sl.print_to_delimed_string( "+" );
-	setParam( "addrs", slString );
-	free( slString );
-
-	setParam( "v", "1" );
-}
-
-void
-Sinful::clearV1Addrs() {
-	addrs.clear();
-	setParam( "addrs", NULL );
-	setParam( "v", NULL );
-}
-
-bool
-Sinful::hasV1Addrs() {
-	return (! addrs.empty());
-}
-
 bool
 Sinful::hasV0HostSockAddr() const {
 	condor_sockaddr sa;
@@ -557,7 +540,9 @@ Sinful::getV0CCBEmbedding() const {
 
 const std::string &
 Sinful::serialize() const {
-	return m_serialized;
+	if( m_version == 0 ) { return v0_serialized; }
+	else if( m_version == 1 ) { return v1_serialized; }
+	EXCEPT( "Asked to serialize unknown Sinful version." );
 }
 
 std::string
@@ -569,4 +554,13 @@ std::string
 Sinful::logging( const std::string & ifInvalid ) const {
 	if( ! valid() ) { return ifInvalid; }
 	return "FIXME";
+}
+
+char const *
+Sinful::getV0() const {
+	if( v0_serialized.empty() ) {
+		return NULL;
+	} else {
+		return v0_serialized.c_str();
+	}
 }

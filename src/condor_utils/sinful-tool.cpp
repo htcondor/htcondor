@@ -50,19 +50,6 @@ int main( int argc, char * argv[] ) {
 	} else if( strcmp( argv[1], "param-count" ) == 0 ) {
 		fprintf( stdout, "%d\n", s.numParams() );
 		return 0;
-	} else if( strcmp( argv[1], "addrs" ) == 0 ) {
-		std::vector< condor_sockaddr > * addrs = s.getV1Addrs();
-		if( addrs == NULL ) {
-			return 1;
-		}
-		if( addrs->size() == 0 ) {
-			delete addrs;
-			return 1;
-		}
-		for( unsigned i = 0; i < addrs->size(); ++i ) {
-			fprintf( stdout, "%s\n", (*addrs)[i].to_ip_and_port_string().c_str() );
-		}
-		delete addrs;
 	} else {
 		fprintf( stderr, "Unrecognized command '%s'.\n", argv[1] );
 		return 2;

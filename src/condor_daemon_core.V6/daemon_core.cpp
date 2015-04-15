@@ -1075,13 +1075,6 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			// with our local id so connections can be forwarded to us.
 		char const *addr = m_shared_port_endpoint->GetMyRemoteAddress();
 
-		if( addr ) {
-			// Remove addresses can be accessed from other machines, so
-			// they must have addrs.
-			Sinful s( addr );
-			ASSERT( s.hasV1Addrs() );
-		}
-
 		if( !addr && usePrivateAddress ) {
 				// If SharedPortServer is not running yet, and an address
 				// that is local to this machine is good enough, then just
@@ -1198,7 +1191,6 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		}
 
 		// Handle multi-protocol addressing.
-		m_sinful.clearV1Addrs();
 		condor_sockaddr sa4, sa6;
 		for( SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); ++it ) {
 			ASSERT( it->has_relisock() );
@@ -1232,14 +1224,8 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		Sinful sPublic( sinful_public );
 		Sinful sPrivate( sinful_private != NULL ? sinful_private : "" );
 		if( sa6.is_valid() ) {
-			m_sinful.addAddrToV1Addrs( sa6 );
-			sPublic.addAddrToV1Addrs( sa6 );
-			sPrivate.addAddrToV1Addrs( sa6 );
 		}
 		if( sa4.is_valid() ) {
-			m_sinful.addAddrToV1Addrs( sa4 );
-			sPublic.addAddrToV1Addrs( sa4 );
-			sPrivate.addAddrToV1Addrs( sa4 );
 		}
 
 		free( sinful_public );
@@ -1253,18 +1239,13 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 
 	if( usePrivateAddress ) {
 		if( sinful_private ) {
-			Sinful s( sinful_private );
-			ASSERT( s.hasV1Addrs() );
 			return sinful_private;
 		}
 		else {
-			Sinful s( sinful_public );
-			ASSERT( s.hasV1Addrs() );
 			return sinful_public;
 		}
 	}
 
-	ASSERT( m_sinful.hasV1Addrs() );
 	return m_sinful.serialize().c_str();
 }
 

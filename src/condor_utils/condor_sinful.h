@@ -22,12 +22,38 @@
 #define _CONDOR_SINFUL_H
 
 /*
- Sinful is a class for manipulating sinful strings (i.e. addresses in condor).
- The format of a sinful string is:
-   <host:port?params>
- where params is a url-encoded list of parameters.
 
- Example:  <192.168.0.10:1492?param1=value1&param2=value2>
+ Sinful is HTCondor's source-routed address class.
+
+ As a result of upgrades to support simultaneous IPv4 and IPv6 operation
+ ("mixed mode"), this class supports three serializations:
+ 	* v0, a "sinful" string;
+ 	* v1, a "sinful" string which supports IPv6 literals and multiple addresses;
+ 	* v2, a (nested) ClassAd.
+
+ The format of a v0 serialization (a "sinful" string) is:
+ 	<host:port?params>
+ where params is a url-encoded list of parameters.  Host must be an IPv4
+ literal.  The parameters ATTR_SOCK, ATTR_ALIAS, ATTR_CCBID,
+ 'PrivAddr', 'PrivNet', and 'noUDP' have routing significance.
+
+ The format of a v1 serialization (a "sinful" string) is the same, except
+ that host may be [host], a bracketed IPv6 literal.  This version is
+ presently intended for use internal to the HTCondor networking code.
+ Consequently, Sinful does NOT deserialize v1 strings unless specifically
+ requested.
+
+ The format of a v2 serialization is a ClassAd list of ClassAds, each
+ specifying the following attributes:
+	* "a", the address literal (a string)
+	* "p", the protocol (a string)
+	* "port", the port number (an integer)
+	* "n", the network name (a string)
+ and optionally
+	* "CCB", the CCB ID (a string)
+	* "SP", the shared port ID (a string)
+	* "CCBSharedPort", the shared port ID of the broker (a string)
+
  */
 
 
@@ -42,35 +68,35 @@ class Sinful {
  	//
  	// Version-independent methods.
  	//
-	Sinful( char const * sinful = NULL );
+	Sinful( char const * sinful = NULL, int version = -1 );
 	bool valid() const { return m_valid; }
 	const std::string & serialize() const;
 	std::string logging() const;
 	std::string logging( const std::string & ifInvalid ) const;
 
 	//
-	// The only capability added by v1 is multiple "primary" addresses.
-	// Code for v1 will therefore make use of the v0 functions.
+	// Methods for v1.
 	//
 
-	std::vector< condor_sockaddr > * getV1Addrs() const;
-	void addAddrToV1Addrs( const condor_sockaddr & sa );
-	void clearV1Addrs();
-	bool hasV1Addrs();
+	// You should not call this function; use serialize() instead.
+	// (Intended only for use internal to the networking code.)
+	std::string getV1() const;
+
+	const std::string & getV1Host() const { return v1_host; }
+	void setV1Host( const std::string & host ) { v1_host = host; }
 
 	//
-	// Methods for v0 (and v1; see above).
+	// Methods for v0.
 	//
+
+	// You should not call this function; use serialize() instead.
+	// (Intended only for constructing ClassAds.)
+	char const * getV0() const;
 
 	bool hasV0HostSockAddr() const;
 	condor_sockaddr getV0HostSockAddr() const;
 	std::string getV0CCBEmbedding() const;
 
-	// returns an IPv4-only, v0-formatted string.  Should only be called
-	// if you're constructing an ad.  Otherwise, use serialize().
-	char const * getV0() const { if( m_sinful.empty() ) return NULL; else return m_sinful.c_str(); }
-
-public:
  	//
  	// All methods below this line are deprecated and should be renamed
  	// (e.g., getV0Host()), so that we can find and replace the old and
@@ -123,24 +149,31 @@ public:
 	int numParams() const;
 
 	// returns true if addr points to this address
+	// FIXME: needs rewrite to handle versions...
 	bool addressPointsToMe( Sinful const &addr ) const;
 
  private:
-	std::string m_sinful; // the sinful string "<host:port?params>"
+	int m_version;
+
+	// Update the cached serializations.
+	void reserialize();
+
+ 	// v0 data members.
 	std::string m_host;
 	std::string m_port;
 	std::string m_alias;
-	std::map<std::string,std::string> m_params; // key value pairs from params
+	std::map<std::string,std::string> m_params;
 	bool m_valid;
 
-	std::vector< condor_sockaddr > addrs;
+	// v1 data members.
+	std::string v1_host;
 
-	void regenerateSinful();
+	// v2 data members.
 
-	// Necessary to duplicate the behavior of the old getSinful().
-	std::string m_serialized;
-
-	int m_version;
+	// Cached serializations.
+	std::string v0_serialized;
+	std::string v1_serialized;
+	std::string v2_serialized;
 };
 
 #endif
