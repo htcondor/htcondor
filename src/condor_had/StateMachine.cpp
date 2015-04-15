@@ -833,7 +833,7 @@ HADStateMachine::getHadList( const char *str,
 		dprintf(D_ALWAYS,
 				"HADStateMachine::initializeHADList my address %s "
 				"vs. next address in the list%s\n",
-				my_addr.logging(), sinful_addr );
+				my_addr.logging().c_str(), sinful_addr );
         if( sinful_addr == NULL ) {
             dprintf( D_ALWAYS,
 					 "HAD CONFIGURATION ERROR: pid %d", daemonCore->getpid() );
