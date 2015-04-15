@@ -724,6 +724,32 @@ Optional parameters are given within square brackets.
      log information about each component of the expression to the log file,
      making it easier to understand the expression.
 
+  \index{ClassAd functions!envV1ToV2()}
+  \item[\Code{String envV1ToV2(String old\_env)}]
+    This function converts a set of environment variables from the old
+    HTCondor syntax to the new syntax.
+    The single argument should evaluate to a string that represents a
+    set of environment variables using the old HTCondor syntax
+    (usually stored in the job ClassAd attribute \Attr{Env}).
+    The result is the same set of environment variables using the new
+    HTCondor syntax (usually stored in the job ClassAd attribute
+    \Attr{Environment}).
+    If the argument evaluates to \Expr{UNDEFINED}, then the result is
+    also \Expr{UNDEFINED}.
+
+  \index{ClassAd functions!mergeEnvironment()}
+  \item[\Code{String mergeEnvironment(String env1 [ , String env2, ... ])}]
+    This function merges multiple sets of environment variables into
+    a single set.
+    If multiple arguments include the same variable, the one that appears
+    last in the argument list is used.
+    Each argument should evaluate to a string which represents a set of
+    environment variables using the new HTCondor syntax or \Expr{UNDEFINED},
+    which is treated like an empty string.
+    The result is a string that represents the merged set of environment
+    variables using the new HTCondor syntax (suitable for use as the value
+    of the job ClassAd attribute \Attr{Environment}).
+
 \end{description}
 
 For the following functions, a delimiter is represented by a string.

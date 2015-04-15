@@ -344,7 +344,7 @@ universes for user jobs:
 	\item local
  	\item parallel
  	\item vm
- 	\item docker
+% 	\item docker
 \end{itemize}
 
 The \SubmitCmd{universe} under which a job runs
@@ -384,8 +384,8 @@ See section~\ref{sec:Parallel} for more about the Parallel universe.
 The vm universe allows users to run jobs where the job is
 no longer a simple executable, but a disk image, facilitating
 the execution of a virtual machine.
-The docker universe instantiates a Docker container within which
-the HTCondor job runs.
+%%The docker universe instantiates a Docker container within which
+%%the HTCondor job runs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:standard-universe}Standard Universe}
@@ -589,16 +589,16 @@ virtual machines with the vm universe.
 
 Please see section~\ref{sec:vmuniverse} for details.
 
-%%%%%%%%%%%%
-\subsubsection{Docker Universe}
-%%%%%%%%%%%%
-\index{universe!docker}
-\index{docker universe}
-The docker universe causes an instantiation of a container
-on an execute host,
-and the job is run within that container.  
+% %%%%%%%%%%%%
+% \subsubsection{Docker Universe}
+% %%%%%%%%%%%%
+% \index{universe!docker}
+% \index{docker universe}
+% The docker universe causes an instantiation of a container
+% on an execute host,
+% and the job is run within that container.  
 
-Please see section~\ref{sec:dockeruniverse} for details.
+% Please see section~\ref{sec:dockeruniverse} for details.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:submitting}Submitting a Job}
@@ -960,6 +960,70 @@ For this example the \SubmitCmdNI{queue} command expands to
   arguments = -c -d 92
   queue 
 \end{verbatim}
+
+%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:user-man-include}Including Submit Commands Defined Elsewhere}
+%%%%%%%%%%%%%%%%%
+\index{submit description file!including commands from elsewhere}
+
+Externally defined submit commands can be incorporated into 
+the submit description file using the syntax
+\begin{verbatim}
+  include : <what-to-include>
+\end{verbatim}
+
+The \verb@<what-to-include>@ specification may specify a single file,
+where the contents of the file will be incorporated
+into the submit description file at the point within the file
+where the \SubmitCmdNI{include} is.
+Or, \verb@<what-to-include>@  may cause a program to be executed,
+where the output of the program is incorporated
+into the submit description file.
+
+The \SubmitCmdNI{include} key word is case insensitive.
+There are \emph{no} requirements for white space characters surrounding
+the colon character.
+
+Included submit commands may contain further nested \SubmitCmdNI{include} 
+specifications, 
+which are also parsed, evaluated, and incorporated.
+Levels of nesting on included files are limited,
+such that infinite nesting is discovered and thwarted,
+while still permitting nesting.
+
+Consider the example
+\begin{verbatim}
+  include : partition.sh |
+\end{verbatim}
+In this example, the bar character at the end of the line 
+causes the script \File{partition.sh} to be invoked,
+and the output of the script is incorporated into the submit description file.
+Assume that this script partitions the problem space of a computation.
+Perhaps this defines command line arguments that specify each partition's
+boundaries.
+The script outputs the following,
+which is incorporated to direct the queuing of three jobs:
+\begin{verbatim}
+  arguments = -start 0 -stop 1200 -algorithm 1
+  queue
+  arguments = -start 1201 -stop 1800 -algorithm 2
+  queue
+  arguments = -start 1801 -stop 15000 -algorithm 1
+  queue
+\end{verbatim}
+
+
+%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:user-man-ifelse}Using Conditionals in the Submit Description File}
+%%%%%%%%%%%%%%%%%
+\Todo
+
+%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:user-man-macros}Function Macros in the Submit Description File}
+%%%%%%%%%%%%%%%%%
+\index{submit description file!function macros}
+\input{admin-man/function-macros.tex}
+
 
 %%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-man-req-and-rank}About Requirements and Rank}

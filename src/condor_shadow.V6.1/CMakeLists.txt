@@ -21,8 +21,8 @@
 file( GLOB shadowRmvElements Example* *.t.* )
 # We cannot make a proper static shadow as we don't have the static globus
 # libraries available
-if (NOT PROPER AND (LINUX OR DARWIN))
+if (NOT PROPER AND LINUX)
   condor_daemon( shadow_s "${shadowRmvElements}" "${CONDOR_LIBS_STATIC}" "${C_SBIN}" OFF )
-endif(NOT PROPER AND (LINUX OR DARWIN))
+endif(NOT PROPER AND LINUX)
 condor_daemon( shadow "${shadowRmvElements}" "${CONDOR_LIBS_FOR_SHADOW}" "${C_SBIN}" OFF )
 

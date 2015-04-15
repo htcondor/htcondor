@@ -301,10 +301,15 @@ sub get_tarball_name {
 
 sub create_rpm {
     my $is_debug = $_[0];
-    # Reconfigure cmake variables for native package build   
-    my $command = get_cmake_args();
-    my $strip = "ON"; if ($is_debug) { $strip = "OFF"; }
-    return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=${strip} && make package";
+    if ($ENV{NMI_PLATFORM} =~ /(x86_RedHat6|x86_64_RedHat6|x86_64_RedHat7)/) {
+        # Use native packaging tool
+        return "build/packaging/srpm/nmibuilduwrpm.sh";
+    } else {
+        # Reconfigure cmake variables for native package build   
+        my $command = get_cmake_args();
+        my $strip = "ON"; if ($is_debug) { $strip = "OFF"; }
+        return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=${strip} && make package";
+    }
 }
 
 sub check_rpm {

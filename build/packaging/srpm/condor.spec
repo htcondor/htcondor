@@ -342,7 +342,7 @@ BuildRequires: systemd-units
 BuildRequires: transfig
 BuildRequires: latex2html
 
-Requires: mailx
+Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
@@ -641,6 +641,29 @@ Includes the external packages built when UW_BUILD is enabled
 
 %endif
 
+%package all
+Summary: All condor packages in a typical installation
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: %name-procd = %version-%release
+Requires: %name-kbdd = %version-%release
+Requires: %name-vm-gahp = %version-%release
+Requires: %name-classads = %version-%release
+%if %cream
+Requires: %name-cream-gahp = %version-%release
+%endif
+Requires: %name-python = %version-%release
+Requires: %name-bosco = %version-%release
+%if %std_univ
+Requires: %name-std-universe = %version-%release
+%endif
+%if %uw_build
+Requires: %name-externals = %version-%release
+%endif
+
+%description all
+Include dependencies for all condor packages in a typical installation
+
 %pre
 getent group condor >/dev/null || groupadd -r condor
 getent passwd condor >/dev/null || \
@@ -838,7 +861,6 @@ sed -e "s:^LIB\s*=.*:LIB = \$(RELEASE_DIR)/$LIB/condor:" \
 # Install the basic configuration, a Personal HTCondor config. Allows for
 # yum install condor + service condor start and go.
 mkdir -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
-# cp %{buildroot}/etc/examples/condor_config.local %{buildroot}/%{_sysconfdir}/condor/config.d/00personal_condor.config
 %if %parallel_setup
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
@@ -877,11 +899,6 @@ mkdir -p -m1777 %{buildroot}/%{_var}/lock/condor/local
 # Note we use %{_var}/lib instead of %{_sharedstatedir} for RHEL5 compatibility
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
 mkdir -p -m1777 %{buildroot}/%{_var}/lib/condor/execute
-
-cat >> %{buildroot}/%_sysconfdir/condor/condor_config << EOF
-CONDOR_HOST = \$(FULL_HOSTNAME)
-DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD
-EOF
 
 # no master shutdown program for now
 rm -f %{buildroot}/%{_sbindir}/condor_set_shutdown
@@ -1030,8 +1047,10 @@ rm -rf %{buildroot}%{_datadir}/condor/{libpyclassad*,htcondor,classad}.so
 mkdir -p %{buildroot}%{python_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/GlideinWMS %{buildroot}%{python_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/campus_factory %{buildroot}%{python_sitelib}
+%if 0%{?osg} || 0%{?hcc}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share/condor/condor_config.factory %{buildroot}%{_sysconfdir}/condor/config.d/60-campus_factory.config
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/etc/campus_factory.conf %{buildroot}%{_sysconfdir}/condor/
+%endif
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir}/condor/campus_factory
 
 %if %blahp && ! %uw_build
@@ -1082,6 +1101,8 @@ rm -rf %{buildroot}
 #make check-seralized
 
 #################
+%files all
+#################
 %files
 %defattr(-,root,root,-)
 %doc LICENSE-2.0.txt examples
@@ -1105,7 +1126,6 @@ rm -rf %{buildroot}
 %_datadir/condor/CondorTest.pm
 %_datadir/condor/CondorUtils.pm
 %dir %_sysconfdir/condor/config.d/
-#%_sysconfdir/condor/config.d/00personal_condor.config
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 %if %gsoap || %uw_build
 %dir %_datadir/condor/webservice/
@@ -1163,6 +1183,8 @@ rm -rf %{buildroot}
 %_libexecdir/condor/interactive.sub
 %_libexecdir/condor/condor_dagman_metrics_reporter
 %_libexecdir/condor/condor_gangliad
+%_libexecdir/condor/panda-plugin.so
+%_libexecdir/condor/pandad
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
@@ -1303,6 +1325,7 @@ rm -rf %{buildroot}
 %_sbindir/nordugrid_gahp
 %_sbindir/gce_gahp
 %if %uw_build
+%_sbindir/condor_master_s
 %_sbindir/boinc_gahp
 %endif
 %_libexecdir/condor/condor_gpu_discovery
@@ -1547,8 +1570,10 @@ rm -rf %{buildroot}
 
 %files bosco
 %defattr(-,root,root,-)
+%if 0%{?osg} || 0%{?hcc}
 %config(noreplace) %_sysconfdir/condor/campus_factory.conf
 %config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
+%endif
 %_libexecdir/condor/shellselector
 %_libexecdir/condor/campus_factory
 %_sbindir/bosco_install
@@ -1606,7 +1631,6 @@ rm -rf %{buildroot}
 
 %if %uw_build
 %files static-shadow
-%{_sbindir}/condor_master_s
 %{_sbindir}/condor_shadow_s
 
 %files externals

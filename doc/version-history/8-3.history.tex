@@ -60,16 +60,30 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item The \SubmitCmd{queue} submit command may be used in
+\item New features increase the power of job specification
+in the submit description file. 
+Submit description files are now parsed the same as configuration files.
+
+  \begin{itemize}
+  \item The \SubmitCmd{queue} submit command may be used in
 flexible and powerful new ways to specify job submissions.
 See section~\ref{sec:user-man-queue} for details.
 \Ticket{4819}
 
-\item \Condor{submit} has new command line options \Opt{-queue} 
+  \item New macro functions are supported, 
+and may be used in submit description files as well as in configuration.
+\Ticket{4944}
+
+  \item \Condor{submit} has new command line options \Opt{-queue} 
 and \Opt{-dry-run},
 to provide flexible and powerful new ways to specify job submissions,
 as well as to test what job would be submitted without submitting.
 \Ticket{4933}
+  \end{itemize}
+
+\item The machine ClassAd attribute \Attr{VirtualMemory} is now set correctly
+for dynamic slots running under a partitionable slot.
+\Ticket{4608}
 
 \item An EC2 grid universe job now advertises its access key ID in 
 its job ClassAd.
@@ -96,6 +110,11 @@ that is defined by configuration variable
 that have a Winsock Layered Service Provider (LSP) installed.
 \Ticket{304}
 
+\item The new \Procedure{directQuery} python binding queries a daemon
+directly for its ClassAd, 
+instead of querying the \Condor{collector}.
+\Ticket{4843}
+
 \item The new configuration variables \Macro{SUBMIT\_REQUIREMENT\_NAMES},
 \Macro{SUBMIT\_REQUIREMENT\_<Name>}, 
 and \Macro{SUBMIT\_REQUIREMENT\_<Name>\_REASON}
@@ -121,6 +140,19 @@ DAG originally submitted with version 7.9.1 or earlier.
 as documented with a link from the HTCondor wiki page,
 \URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=ExperimentalFeatures}.
 \Ticket{4270}
+
+\item The \Condor{schedd} now generates a report about its attempts to
+reconnect to the \Condor{startd} daemons of previously running jobs on start up.
+The report is written to the location specified by the new configuration
+variable \Macro{SCHEDD\_RESTART\_REPORT}.
+Once all reconnect attempts are complete, a copy of the report is also
+emailed to HTCondor administrator account.
+\Ticket{4783}
+
+\item The new ClassAd functions \Procedure{envV1ToV2} and 
+\Procedure{mergeEnvironment} are
+useful for manipulating the environment variable lists in job ClassAds.
+\Ticket{4574}
 
 \end{itemize}
 
@@ -150,6 +182,13 @@ matching the behavior documented in this reference manual.
 \item Fixed a bug introduced in HTCondor version 8.3.3 that caused 
 local universe jobs to execute repeatedly on Windows platforms.
 \Ticket{4909}
+
+\item Fixed a bug that caused messages similar to
+\begin{verbatim}
+warning: setting UserUid to 11021, was 6004 previously
+\end{verbatim}
+to be logged in the \Condor{schedd} daemon log. 
+\Ticket{4889}
 
 \end{itemize}
 
@@ -274,7 +313,6 @@ in their unevaluated, or raw form.
 file when node jobs go on hold.
 \Ticket{4766}
 
-<<<<<<< HEAD
 \item New python bindings can be used to query and set the 
 configuration variables of running daemons.
 \Ticket{4778}
