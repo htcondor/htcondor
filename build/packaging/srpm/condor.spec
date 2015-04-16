@@ -234,6 +234,7 @@ BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
 BuildRequires: python-devel
 BuildRequires: boost-devel
+BuildRequires: redhat-rpm-config
 
 %if %uw_build || %std_univ
 BuildRequires: cmake >= 2.8
@@ -549,6 +550,16 @@ Provides: classads-devel = %version-%release
 %description classads-devel
 Header files for HTCondor's ClassAd Library, a powerful and flexible,
 semi-structured representation of data.
+
+#######################
+%package test
+Summary: HTCondor Self Tests
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: %name-classads = %{version}-%{release}
+
+%description test
+A collection of tests to verify that HTCondor is operating properly.
 
 #######################
 %if %cream
