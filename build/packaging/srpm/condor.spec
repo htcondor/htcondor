@@ -701,8 +701,10 @@ export CMAKE_PREFIX_PATH=/usr
 # causes build issues with EL5, don't even bother building the tests.
 
 %if %uw_build
+%define condor_build_id UW_development
+
 %cmake \
-       -DBUILDID:STRING=UW_development \
+       -DBUILDID:STRING=%condor_build_id \
        -DUW_BUILD:BOOL=TRUE \
 %if ! %std_univ
        -DCLIPPED:BOOL=TRUE \
