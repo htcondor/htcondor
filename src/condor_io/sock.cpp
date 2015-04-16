@@ -1118,6 +1118,16 @@ int Sock::do_connect(
 	// choose one of the listed addresses and rewrite host to match.
 	// Otherwise, execute the old code.
 	//
+	// Note that private networks are handled in Daemon::New_addr(),
+	// which, if it finds a match, will completely rewrite the sinful,
+	// discarding everything except the match as the primary.  If the
+	// network names match, but there's no private address, it instead
+	// removes the CCB information.  In that case, the sinful string
+	// will still have an addrs attribute.  Arguably, it should also
+	// remove addrs, since there's by definition only one private
+	// (and networks are protocol-separated); in practice, that probably
+	// won't matter much.
+	//
 	Sinful s( host );
 	if( s.valid() && s.hasAddrs() ) {
 		Sinful victor = s;
