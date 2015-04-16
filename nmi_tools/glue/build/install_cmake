@@ -80,14 +80,10 @@ sub install_cmake
 	my ($ename, $iloc) = (@_);
 	my ($cmake, $wget);
 
-	# Hack in stable to build cmake 2.8.3 on RedHat6
-	# The cpack in RedHat6 produces broken RPMs
-	if (!($ENV{NMI_PLATFORM} =~ /(x86_RedHat6|x86_64_RedHat6)/)) {
 	# Look for cmake from the OS
 	$cmake = find_cmake('cmake');
 	if (defined($cmake)) {
 		return $cmake;
-	}
 	}
 
 	$wget = find_wget();
