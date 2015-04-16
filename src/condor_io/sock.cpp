@@ -1113,20 +1113,62 @@ int Sock::do_connect(
 {
 	if (!host || port < 0) return FALSE;
 
-	_who.clear();
-	if (!guess_address_string(host, port, _who)) {
-		return FALSE;
-	}
+	//
+	// If host is a Sinful string and contains an addrs parameter,
+	// choose one of the listed addresses and rewrite host to match.
+	// Otherwise, execute the old code.
+	//
+	Sinful s( host );
+	if( s.valid() && s.hasAddrs() ) {
+		Sinful victor = s;
+		condor_sockaddr candidate;
+		std::vector< condor_sockaddr > * v = s.getAddrs();
+
+		bool foundAddress = false;
+		for( unsigned i = 0; i < v->size(); ++i ) {
+			candidate = (*v)[i];
+
+dprintf( D_ALWAYS, "Considering address candidate %s.\n", candidate.to_ip_and_port_string().c_str() );
+
+			// For the moment, assume that we "have" any protocol that's enabled.
+			if(( candidate.is_ipv4() && param_boolean( "ENABLE_IPV4", true ) ) ||
+				( candidate.is_ipv6() && param_boolean( "ENABLE_IPV6", false ) )) {
+dprintf( D_ALWAYS, "Found compatible candidate %s.\n", candidate.to_ip_and_port_string().c_str() );
+				foundAddress = true;
+				break;
+			}
+		}
+		delete v;
+
+		if(! foundAddress) {
+			dprintf( D_ALWAYS, "Sock::do_connect() unable to locate address of a compatible protocol in Sinful string '%s'.\n", host );
+			return FALSE;
+		}
+
+		// Change the "primary" address.
+		victor.setHost( candidate.to_ip_string().c_str() );
+		victor.setPort( candidate.get_port() );
+		host = victor.getSinful();
+		set_connect_addr( host );
+
+		_who = candidate;
+		addr_changed();
+	} else {
+		_who.clear();
+		if (!guess_address_string(host, port, _who)) {
+			return FALSE;
+		}
 
 		// current code handles sinful string and just hostname differently.
 		// however, why don't we just use sinful string at all?
-	if (host[0] == '<') {
-		set_connect_addr(host);
-	}
-	else { // otherwise, just use ip string.
-		set_connect_addr(_who.to_ip_string().Value());
-	}
-    addr_changed();
+		if (host[0] == '<') {
+			set_connect_addr(host);
+		}
+		else { // otherwise, just use ip string.
+			set_connect_addr(_who.to_ip_string().Value());
+		}
+    	addr_changed();
+    }
 
 	// now that we have set _who (useful for getting informative
 	// peer_description), see if we should do a reverse connect
