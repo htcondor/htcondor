@@ -156,7 +156,7 @@ bool	already_warned_requirements_disk = false;
 int		MaxProcsPerCluster;
 int	  ClusterId = -1;
 int	  ProcId = -1;
-int	  JobUniverse;
+int	  JobUniverse = CONDOR_UNIVERSE_MIN;
 char *JobGridType = NULL;
 int		Remote=0;
 int		ClusterCreated = FALSE;
@@ -2239,7 +2239,7 @@ SetExecutable()
 	// $$(arch).$$(opsys) are specified  (note that if we are simply
 	// dumping the class-ad to a file, we won't actually transfer
 	// or do anything [nothing that follows will affect the ad])
-	if ( !strstr(ename,"$$") && transfer_it && !DumpClassAdToFile ) {
+	if ( transfer_it && !DumpClassAdToFile && !strstr(ename,"$$") ) {
 
 		StatInfo si(ename);
 		if ( SINoFile == si.Error () ) {
@@ -2326,7 +2326,7 @@ SetExecutable()
 
 	}
 
-	free(ename);
+	if (ename) free(ename);
 	free(copySpool);
 }
 
@@ -7277,7 +7277,7 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 					return rval;
 			}
 
-			rval = queue_begin(vars, NewExecutable); // called before iterating items
+			rval = queue_begin(vars, NewExecutable || (ClusterId < 0)); // called before iterating items
 			if (rval < 0)
 				return rval;
 
@@ -7723,11 +7723,12 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 #endif
 		SetIWD();		// must be called very early
 
-		if (NewExecutable) {
-			NewExecutable = false;
+		if (NewExecutable || (JobUniverse == CONDOR_UNIVERSE_MIN)) {
 			SetUniverse();
 		}
 		SetExecutable();
+		NewExecutable = false;
+
 		SetDescription();
 		SetMachineCount();
 

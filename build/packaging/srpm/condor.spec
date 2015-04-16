@@ -1548,6 +1548,10 @@ rm -rf %{buildroot}
 %_includedir/classad/xmlSink.h
 %_includedir/classad/xmlSource.h
 
+#################
+%files test
+%defattr(-,root,root,-)
+
 %if %cream
 %files cream-gahp
 %defattr(-,root,root,-)
