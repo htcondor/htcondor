@@ -109,12 +109,13 @@ typedef struct macro_set {
 	public:
 		auto_free_ptr(char* str=NULL) : p(str) {}
 		~auto_free_ptr() { clear(); }
-		void set(char*str) { clear(); p = str; }
-		void clear() { if (p) free(p); p = NULL; }
-		char * detach() { char * t = p; p = NULL; return t; }
-		char * ptr() { return p; }
-		operator const char *() const { return const_cast<const char*>(p); }
-		operator bool() const { return p!=NULL; }
+		void set(char*str) { clear(); p = str; }   // set a new pointer, freeing the old pointer (if any)
+		void clear() { if (p) free(p); p = NULL; } // free the pointer if any
+		bool empty() { return ! (p && p[0]); }     // return true if there is some data, NULL and "" are both empty
+		char * detach() { char * t = p; p = NULL; return t; } // get the pointer, and remove it from this class without freeing it
+		char * ptr() { return p; }                 // get the pointer, may return NULL if no pointer
+		operator const char *() const { return const_cast<const char*>(p); } // get this pointer as type const char*
+		operator bool() const { return p!=NULL; }  // eval to true if there is a pointer, false if not.
 	private:
 		char * p;
 	};
