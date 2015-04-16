@@ -234,6 +234,7 @@ BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
 BuildRequires: python-devel
 BuildRequires: boost-devel
+BuildRequires: redhat-rpm-config
 
 %if %uw_build || %std_univ
 BuildRequires: cmake >= 2.8
