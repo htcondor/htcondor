@@ -296,7 +296,8 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 								"Running={{.State.Running}} "
 								"ExitCode={{.State.ExitCode}} "
 								"StartedAt=\"{{.State.StartedAt}}\" "
-								"FinishedAt=\"{{.State.FinishedAt}}\" " );
+								"FinishedAt=\"{{.State.FinishedAt}}\" "
+								"OOMKilled=\"{{.State.OOMKilled}}\" " );
 	char * formatArg = formatElements.print_to_delimed_string( "\n" );
 	inspectArgs.AppendArg( formatArg );
 	free( formatArg );

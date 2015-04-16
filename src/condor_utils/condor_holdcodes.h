@@ -134,4 +134,6 @@ const int CONDOR_HOLD_CODE_MaxTransferOutputSizeExceeded = 33;
 
 const int CONDOR_HOLD_CODE_JobOutOfResources = 34;
 
+const int CONDOR_HOLD_CODE_InvalidDockerImage = 35;
+
 #endif
