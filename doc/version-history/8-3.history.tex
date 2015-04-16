@@ -132,11 +132,26 @@ emailed to HTCondor administrator account.
 useful for manipulating the environment variable lists in job ClassAds.
 \Ticket{4574}
 
+\item Added a new configuration variable \Macro{CURB\_MATCHMAKING} which
+can be used to configure the schedd to cease requesting more machine resources
+from the central manager during overload situations.
+\Ticket{4905}
+
+\item Some HTCondor-specific environment variables that are set in the
+environment of a batch job, such as \_CONDOR\_JOB\_AD, are now also set for
+ssh\_to\_job and interactive job sessions.
+\Ticket{4943}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item The \Condor{schedd} will no longer request more resources from
+a central manager when the number of jobs running has exceeded
+\Macro{MAX\_JOBS\_RUNNING}.
+\Ticket{4905}
 
 \item Fixed a bug in \Condor{chirp} in which generic events logged
 to the job event log with the ulog command where written in the time zone
@@ -167,6 +182,13 @@ warning: setting UserUid to 11021, was 6004 previously
 \end{verbatim}
 to be logged in the \Condor{schedd} daemon log. 
 \Ticket{4889}
+
+\item Fixed a bug in the python bindings where multi-threaded python
+programs would deadlock when a Schedd.query() would return more than
+one result.
+Also fixed a bug in Schedd.xquery() where the constraint argument did not
+default to "true" as documented, but had to be explicitly defined.
+\Ticket{5000}
 
 \end{itemize}
 
