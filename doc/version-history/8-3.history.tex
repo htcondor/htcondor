@@ -168,6 +168,13 @@ warning: setting UserUid to 11021, was 6004 previously
 to be logged in the \Condor{schedd} daemon log. 
 \Ticket{4889}
 
+\item Fixed a bug in the python bindings where multi-threaded python
+programs would deadlock when a Schedd.query() would return more than
+one result.
+Also fixed a bug in Schedd.xquery() where the constraint argument did not
+default to "true" as documented, but had to be explicitly defined.
+\Ticket{5000}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
