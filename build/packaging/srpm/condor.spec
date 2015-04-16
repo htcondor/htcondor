@@ -551,6 +551,16 @@ Header files for HTCondor's ClassAd Library, a powerful and flexible,
 semi-structured representation of data.
 
 #######################
+%package test
+Summary: HTCondor Self Tests
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: %name-classads = %{version}-%{release}
+
+%description test
+A collection of tests to verify that HTCondor is operating properly.
+
+#######################
 %if %cream
 %package cream-gahp
 Summary: HTCondor's CREAM Gahp
