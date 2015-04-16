@@ -137,6 +137,11 @@ can be used to configure the schedd to cease requesting more machine resources
 from the central manager during overload situations.
 \Ticket{4905}
 
+\item Some HTCondor-specific environment variables that are set in the
+environment of a batch job, such as \_CONDOR\_JOB\_AD, are now also set for
+ssh\_to\_job and interactive job sessions.
+\Ticket{4943}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
