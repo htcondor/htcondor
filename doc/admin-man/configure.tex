@@ -6206,8 +6206,9 @@ MAX_JOBS_RUNNING	= \
 \label{param:CurbMatchmaking}
 \item[\Macro{CURB\_MATCHMAKING}]
   A ClassAd expression evaluated by the \Condor{schedd} in the context of the
-  schedd's own ClassAd.  While this expression evaluates to \Expr{True}, the
-  schedd will refrain from requesting more resources from a
+  \Condor{schedd} daemon's own ClassAd.  
+  While this expression evaluates to \Expr{True}, the
+  \Condor{schedd} will refrain from requesting more resources from a
   \Condor{negotiator}.  Defaults to \Expr{False}.
 
 \label{param:MaxConcurrentDownloads}
