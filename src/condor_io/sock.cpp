@@ -1128,9 +1128,11 @@ int Sock::do_connect(
 	// (and networks are protocol-separated); in practice, that probably
 	// won't matter much.
 	//
+	// The Sinful s must not go out of scope until /after/ the call to
+	// special_connect(), since the new value of host may point into it.
+	//
 	Sinful s( host );
 	if( s.valid() && s.hasAddrs() ) {
-		Sinful victor = s;
 		condor_sockaddr candidate;
 		std::vector< condor_sockaddr > * v = s.getAddrs();
 
@@ -1138,12 +1140,11 @@ int Sock::do_connect(
 		for( unsigned i = 0; i < v->size(); ++i ) {
 			candidate = (*v)[i];
 
-dprintf( D_ALWAYS, "Considering address candidate %s.\n", candidate.to_ip_and_port_string().c_str() );
-
 			// For the moment, assume that we "have" any protocol that's enabled.
+			dprintf( D_HOSTNAME, "Considering address candidate %s.\n", candidate.to_ip_and_port_string().c_str() );
 			if(( candidate.is_ipv4() && param_boolean( "ENABLE_IPV4", true ) ) ||
 				( candidate.is_ipv6() && param_boolean( "ENABLE_IPV6", false ) )) {
-dprintf( D_ALWAYS, "Found compatible candidate %s.\n", candidate.to_ip_and_port_string().c_str() );
+				dprintf( D_HOSTNAME, "Found compatible candidate %s.\n", candidate.to_ip_and_port_string().c_str() );
 				foundAddress = true;
 				break;
 			}
@@ -1156,9 +1157,9 @@ dprintf( D_ALWAYS, "Found compatible candidate %s.\n", candidate.to_ip_and_port_
 		}
 
 		// Change the "primary" address.
-		victor.setHost( candidate.to_ip_string().c_str() );
-		victor.setPort( candidate.get_port() );
-		host = victor.getSinful();
+		s.setHost( candidate.to_ip_string().c_str() );
+		s.setPort( candidate.get_port() );
+		host = s.getSinful();
 		set_connect_addr( host );
 
 		_who = candidate;

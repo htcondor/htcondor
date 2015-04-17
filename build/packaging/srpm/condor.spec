@@ -1564,6 +1564,8 @@ rm -rf %{buildroot}
 #################
 %files test
 %defattr(-,root,root,-)
+%_libexecdir/condor/condor_sinful
+%_libexecdir/condor/condor_testingd
 
 %if %cream
 %files cream-gahp

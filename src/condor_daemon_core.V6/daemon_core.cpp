@@ -10105,9 +10105,11 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 
 		if(param_boolean("ENABLE_IPV6", true)) {
 			DaemonCore::SockPair sock_pair;
-			if( ! InitCommandSocket(CP_IPV6, targetTCPPort, targetUDPPort, sock_pair, want_udp, fatal)) {
+			// We emulate fatal, below, because it's only a fatal error
+			// to fail to match an IPv4 port number if it was static.
+			if( ! InitCommandSocket(CP_IPV6, targetTCPPort, targetUDPPort, sock_pair, want_udp, false)) {
 				// TODO: If we're asking for a dynamically chosen TCP port 
-				// (targetTCPPort <= 1) but a staticly chosen UDP port 
+				// (targetTCPPort <= 1) but a statically chosen UDP port
 				// (targetUDPPort > 1), and the reason InitCommandSocket
 				// fails is that it couldn't get the UDP port, then we
 				// should immediately give up. At the moment InitCommandSocket
@@ -10115,23 +10117,26 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 				// (Dynamic TCP/static UDP happens with shared_port+collector.
 				// Static TCP/dynamic UDP is not allowed.)
 
-					// If we wanted a dynamically chosen port, IPv4 picked it 
+				if( (tcp_port <= 1) && (targetTCPPort > 1) ) {
+					// If we wanted a dynamically chosen port, IPv4 picked it
 					// first, and we failed, then try again.
 					// (We get to ignore the possibility of wanting a dynamic
 					// UDP port but static TCP; an ASSERT above guarantees it.)
-				if( (tcp_port <= 1) && (targetTCPPort > 1) ) {
 					if(tries == 1) {
 						// Log first spin only, minimize log spam.
 						dprintf(D_FULLDEBUG, "Created IPv4 command socket on dynamically chosen port %d. Unable to acquire matching IPv6 port. Trying again up to %d times.\n", targetTCPPort, MAX_RETRIES);
 					}
 					new_socks.clear();
 					continue;
-
+				} else {
 					// Otherwise it's dynamic and we failed to get it,
 					// or its entirely fixed and we failed to get it.
 					// Either way we're doomed.
-				} else {
-					dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv6 command socket for ports %d/%d%s.\n", tcp_port, udp_port, want_udp?"":"no UDP");
+
+					std::string message;
+					formatstr( message, "Warning: Failed to create IPv6 command socket for ports %d/%d%s", tcp_port, udp_port, want_udp ? "" : "no UDP" );
+					if( fatal ) { EXCEPT( message.c_str() ); }
+					dprintf(D_ALWAYS | D_FAILURE, "%s\n", message.c_str() );
 					return false;
 				}
 			}
