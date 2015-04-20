@@ -82,6 +82,20 @@ The default value is controlled by \MacroNI{NOT\_RESPONDING\_TIMEOUT}.
 
 \\ \hline
 
+\texttt{set\_subsystem( name, type )}
+
+Set the subsystem name.
+
+Parameter \texttt{name} is the subsystem name used when initializing the
+configuration system.
+
+Parameter \texttt{type} is the HTCondor daemon type used when initializing the
+configuration system.
+The default value of \texttt{Auto} infers the type from the
+\texttt{name} parameter.
+
+\\ \hline
+
 \texttt{lock( file\_obj, lock\_type )}
 
 Take a lock on a file object using the HTCondor locking protocol,
