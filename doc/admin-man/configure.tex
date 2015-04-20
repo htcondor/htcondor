@@ -6203,6 +6203,14 @@ MAX_JOBS_RUNNING	= \
   by authentication operations.  The default value is 0.
   The special value 0 indicates no limit.
 
+\label{param:CurbMatchmaking}
+\item[\Macro{CURB\_MATCHMAKING}]
+  A ClassAd expression evaluated by the \Condor{schedd} in the context of the
+  \Condor{schedd} daemon's own ClassAd.  
+  While this expression evaluates to \Expr{True}, the
+  \Condor{schedd} will refrain from requesting more resources from a
+  \Condor{negotiator}.  Defaults to \Expr{False}.
+
 \label{param:MaxConcurrentDownloads}
 \item[\Macro{MAX\_CONCURRENT\_DOWNLOADS}]
   This specifies the maximum
@@ -7262,9 +7270,11 @@ SYSTEM_PERIODIC_REMOVE = \
 
 \label{param:SubmitRequirementName}
 \item[\Macro{SUBMIT\_REQUIREMENT\_<Name>}]
-  A boolean expression evaluated by the \Condor{schedd} daemon
-  against a job ClassAd,
-  that when \Expr{False} causes the \Condor{schedd} to reject 
+  A boolean expression 
+  evaluated in the context of the \Condor{schedd} daemon ClassAd,
+  which is the \Expr{MY.} name space and the job ClassAd, 
+  which is the \Expr{TARGET.} name space.
+  When \Expr{False}, it causes the \Condor{schedd} to reject 
   the submission of the job or cluster of jobs. 
   \MacroNI{<Name>} corresponds to a name listed in 
   \MacroNI{SUBMIT\_REQUIREMENT\_NAMES}.
