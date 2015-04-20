@@ -29,6 +29,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The RPM packages have been restructured to allow running a 32-bit
+static shadow on Red Hat Enterprise Linux 6. The new \texttt{condor-all}
+RPM is used to install all of the RPMs for a typical HTCondor installation.
+Since the binary distribution of HTCondor for Red Hat Enterprise Linux 6 and 7
+consists of more that a handful of RPMs, the RPMs are only available from our
+YUM repository.
+\Ticket{4621}
+
 \item New features increase the power of job specification
 in the submit description file. 
 Submit description files are now parsed the same as configuration files.
