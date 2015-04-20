@@ -1136,11 +1136,29 @@ int Sock::do_connect(
 		condor_sockaddr candidate;
 		std::vector< condor_sockaddr > * v = s.getAddrs();
 
-		bool foundAddress = false;
-		for( unsigned i = 0; i < v->size(); ++i ) {
-			candidate = (*v)[i];
+		// In practice, all C++03 implementations are stable with respect
+		// to insertion order; the  C++11 standard requires that they are.
+		// FIXME: Since this is kind of important, we really should have
+		// a unit test to verify this behavior.
+		std::multimap< int, condor_sockaddr > sortedByDesire;
 
-			// For the moment, assume that we "have" any protocol that's enabled.
+		for( unsigned i = 0; i < v->size(); ++i ) {
+			condor_sockaddr c = (*v)[i];
+			int d = c.desirability();
+			sortedByDesire.insert(std::make_pair( d, c ));
+		}
+
+		bool foundAddress = false;
+		std::multimap< int, condor_sockaddr >::const_reverse_iterator iter;
+		for( iter = sortedByDesire.rbegin(); iter != sortedByDesire.rend(); ++iter ) {
+			candidate = (* iter).second;
+
+			// Assume that we "have" any protocol that's enabled.  It turns
+			// out that anything else (including considering the desirability
+			// of our interfaces) gets really complicated.  Instead (FIXME:)
+			// document that ENABLE_IPV6 should be false unless you have a
+			// public IPv6 address (or one which everyone in your pool can
+			// otherwise reach).
 			dprintf( D_HOSTNAME, "Considering address candidate %s.\n", candidate.to_ip_and_port_string().c_str() );
 			if(( candidate.is_ipv4() && param_boolean( "ENABLE_IPV4", true ) ) ||
 				( candidate.is_ipv6() && param_boolean( "ENABLE_IPV6", false ) )) {
