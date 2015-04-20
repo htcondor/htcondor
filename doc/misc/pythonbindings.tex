@@ -82,15 +82,14 @@ The default value is controlled by \MacroNI{NOT\_RESPONDING\_TIMEOUT}.
 
 \\ \hline
 
-\texttt{set\_subsystem( name, type )}
+\texttt{set\_subsystem( name, type = Auto )}
 
-Set the subsystem name.
+Set the subsystem name for the object.
 
-Parameter \texttt{name} is the subsystem name used when initializing the
-configuration system.
+Parameter \texttt{name} is the subsystem name.
 
-Parameter \texttt{type} is the HTCondor daemon type used when initializing the
-configuration system.
+Parameter \texttt{type} is the HTCondor daemon type,
+taken from the \texttt{SubsystemType} enum.
 The default value of \texttt{Auto} infers the type from the
 \texttt{name} parameter.
 
@@ -711,6 +710,26 @@ A list of types of known HTCondor daemons.
 \texttt{JobAction}
 
 A list of actions that can be performed on a job in a \Condor{schedd}.
+\\ \hline
+\texttt{SubsystemType}
+
+Distinguishes subsystems within HTCondor.
+String values may be
+\texttt{Master},
+\texttt{Collector},
+\texttt{Negotiator},
+\texttt{Schedd},
+\texttt{Shadow},
+\texttt{Startd},
+\texttt{Starter},
+\texttt{GAHP},
+\texttt{Dagman},
+\texttt{SharedPort},
+\texttt{Daemon},
+\texttt{Tool},
+\texttt{Submit},
+or \texttt{Job}.
+
 \\ \hline
 
 \end{tabular}
