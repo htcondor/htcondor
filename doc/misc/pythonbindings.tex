@@ -66,6 +66,22 @@ XML-formatted.
 
 \\ \hline
 
+\texttt{send\_alive( ad, pid, timeout )}
+
+Send a keep alive message to an HTCondor daemon.
+
+Parameter \texttt{ad} is a ClassAd specifying the location of the daemon.
+This ClassAd is typically found by using \texttt{Collector.locate(...)}.
+
+Parameter \texttt{pid} is the process identifier for the keep alive.
+The default value of \texttt{None}, uses the value from \texttt{os.getpid()}.
+
+Parameter \texttt{timeout} is the number of seconds that this keep alive is valid.
+If a new keep alive is not received by the \Condor{master} in time, then the process will be terminated.
+The default value is controlled by \MacroNI{NOT\_RESPONDING\_TIMEOUT}.
+
+\\ \hline
+
 \texttt{lock( file\_obj, lock\_type )}
 
 Take a lock on a file object using the HTCondor locking protocol,

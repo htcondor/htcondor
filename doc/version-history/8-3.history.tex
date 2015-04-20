@@ -148,6 +148,11 @@ environment of a batch job, such as \Env{\_CONDOR\_JOB\_AD},
 a summary line.
 \Ticket{4992}
 
+\item Introduced a new Python function that can be used to send keep alive
+messages to the \Condor{master} daemon. This allows the Python bindings to be
+used in a daemon managed by the \Condor{master}.
+\Ticket{4875}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
