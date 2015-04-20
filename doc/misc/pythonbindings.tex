@@ -123,6 +123,17 @@ The logging level is controlled by \MacroNI{TOOL\_DEBUG}.
 Enable debugging output from HTCondor, where output is sent to a file.
 The log level is controlled by \MacroNI{TOOL\_DEBUG},
 and the file used is controlled by \MacroNI{TOOL\_LOG}.
+
+\\ \hline
+\texttt{log( level, msg )}
+Log a message to the HTCondor logging subsystem.
+
+Parameter \texttt{level} is the Log category and formatting indicator.
+Use the \texttt{LogLevel} enum to get list of attributes that may be
+OR'd together.
+
+Parameter \texttt{msg} is a String message to log.
+
 \\ \hline
 
 \end{tabular}
