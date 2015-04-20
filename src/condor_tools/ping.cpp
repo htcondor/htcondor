@@ -232,7 +232,7 @@ void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *a
 }
 
 
-void print_info(bool rv, char * addr, Sock* s, MyString name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
+void print_info(bool rv, const char * addr, Sock* s, MyString name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
 	MyString cmd_map_ent;
 	cmd_map_ent.formatstr ("{%s,<%i>}", addr, cmd); 
 
