@@ -714,7 +714,7 @@ A list of actions that can be performed on a job in a \Condor{schedd}.
 \texttt{SubsystemType}
 
 Distinguishes subsystems within HTCondor.
-String values may be
+Values may be
 \texttt{Master},
 \texttt{Collector},
 \texttt{Negotiator},
@@ -730,6 +730,31 @@ String values may be
 \texttt{Submit},
 or \texttt{Job}.
 
+\\ \hline
+\texttt{LogLevel}
+
+The level at which events are logged.
+Values may be
+\texttt{Always},
+\texttt{Error},
+\texttt{Status},
+\texttt{Job},
+\texttt{Machine},
+\texttt{Config},
+\texttt{Protocol},
+\texttt{Priv},
+\texttt{DaemonCore},
+\texttt{Security},
+\texttt{Network},
+\texttt{Hostname},
+\texttt{Audit},
+\texttt{Terse},
+\texttt{Verbose},
+\texttt{FullDebug},
+\texttt{SubSecond},
+\texttt{Timestamp},
+\texttt{PID}, or
+\texttt{NoHeader}.
 \\ \hline
 
 \end{tabular}
