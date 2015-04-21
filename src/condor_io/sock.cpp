@@ -1142,15 +1142,18 @@ int Sock::do_connect(
 		// a unit test to verify this behavior.
 		std::multimap< int, condor_sockaddr > sortedByDesire;
 
+		// If we don't multiply by -1 and instead use rbegin()/rend(),
+		// then addresses of the same desirability will be checked in
+		// the reverse order.
 		for( unsigned i = 0; i < v->size(); ++i ) {
 			condor_sockaddr c = (*v)[i];
-			int d = c.desirability();
+			int d = -1 * c.desirability();
 			sortedByDesire.insert(std::make_pair( d, c ));
 		}
 
 		bool foundAddress = false;
-		std::multimap< int, condor_sockaddr >::const_reverse_iterator iter;
-		for( iter = sortedByDesire.rbegin(); iter != sortedByDesire.rend(); ++iter ) {
+		std::multimap< int, condor_sockaddr >::const_iterator iter;
+		for( iter = sortedByDesire.begin(); iter != sortedByDesire.end(); ++iter ) {
 			candidate = (* iter).second;
 
 			// Assume that we "have" any protocol that's enabled.  It turns

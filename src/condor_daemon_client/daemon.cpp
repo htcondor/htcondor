@@ -2040,9 +2040,6 @@ Daemon::New_addr( char* str )
 						// replace address with private address
 						std::string buf;
 						if( *priv_addr != '<' ) {
-								// [TODO]
-								// if priv address is an IPv6 address,
-								// it should be <[%s]> form
 							formatstr(buf,"<%s>",priv_addr);
 							priv_addr = buf.c_str();
 						}
