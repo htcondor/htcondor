@@ -147,6 +147,7 @@ int DockerProc::StartJob() {
 
 
 bool DockerProc::JobReaper( int pid, int status ) {
+	TemporaryPrivSentry sentry(PRIV_ROOT);
 	dprintf( D_ALWAYS, "DockerProc::JobReaper()\n" );
 
 	//
@@ -270,6 +271,8 @@ bool DockerProc::JobReaper( int pid, int status ) {
 bool DockerProc::JobExit() {
 	dprintf( D_ALWAYS, "DockerProc::JobExit()\n" );
 
+	{
+	TemporaryPrivSentry sentry(PRIV_ROOT);
 	ClassAd dockerAd;
 	CondorError error;
 	int rv = DockerAPI::inspect( containerName, & dockerAd, error );
@@ -291,6 +294,7 @@ bool DockerProc::JobExit() {
 	rv = DockerAPI::rm( containerName, error );
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to remove container '%s'.\n", containerName.c_str() );
+	}
 	}
 
 	return VanillaProc::JobExit();
