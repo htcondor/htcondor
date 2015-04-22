@@ -1,0 +1,9 @@
+# All nodes in this DAG should fail because the config disables
+# multi-job procs.
+config job_dagman_submit_glob-B.config
+
+subdag external NodeA job_dagman_submit_glob-B-subA.dag
+
+subdag external NodeB job_dagman_submit_glob-B-subB.dag
+
+subdag external NodeC job_dagman_submit_glob-B-subC.dag
