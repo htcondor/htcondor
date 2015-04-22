@@ -37,7 +37,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Eliminated spurious warnings logged when shared port was enabled.
+\item Eliminated spurious warnings logged when the \Condor{shared\_port}
+daemon was enabled.
 \Ticket{4958}
 
 \end{itemize}
@@ -50,8 +51,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.3.5 not yet released.
-%\item HTCondor version 8.3.5 released on Month Date, 2014.
+\item HTCondor version 8.3.5 released on April 20, 2015.
 
 \end{itemize}
 
@@ -59,6 +59,14 @@ The details of each version are described below.
 \noindent New Features:
 
 \begin{itemize}
+
+\item The RPM packages have been restructured to allow running a 32-bit
+static shadow on Red Hat Enterprise Linux 6. The new \texttt{condor-all}
+RPM is used to install all of the RPMs for a typical HTCondor installation.
+Since the binary distribution of HTCondor for Red Hat Enterprise Linux 6 and 7
+consists of more that a handful of RPMs, the RPMs are only available from our
+YUM repository.
+\Ticket{4621}
 
 \item New features increase the power of job specification
 in the submit description file. 
@@ -119,11 +127,6 @@ that is defined by configuration variable
 that have a Winsock Layered Service Provider (LSP) installed.
 \Ticket{304}
 
-\item The new \Procedure{directQuery} python binding queries a daemon
-directly for its ClassAd, 
-instead of querying the \Condor{collector}.
-\Ticket{4843}
-
 \item The new configuration variables \Macro{SUBMIT\_REQUIREMENT\_NAMES},
 \Macro{SUBMIT\_REQUIREMENT\_<Name>}, 
 and \Macro{SUBMIT\_REQUIREMENT\_<Name>\_REASON}
@@ -178,6 +181,25 @@ environment of a batch job, such as \Env{\_CONDOR\_JOB\_AD},
 \item \Condor{q} with the \Opt{-constraint} option will now display
 a summary line.
 \Ticket{4992}
+
+\item The new \Procedure{directQuery} Python binding queries a daemon
+directly for its ClassAd, 
+instead of querying the \Condor{collector}.
+\Ticket{4843}
+
+\item The new \Procedure{send\_alive} Python binding sends keep alive
+messages to the \Condor{master} daemon. This allows the Python bindings to be
+used in a daemon managed by the \Condor{master}.
+\Ticket{4875}
+
+\item A new Python binding sets the HTCondor subsystem name and type.
+This allows the bindings to initialize logging or configuration as if they
+are a particular HTCondor daemon.
+\Ticket{4876}
+
+\item The new \Procedure{log} Python binding provides the ability
+ to log messages via the HTCondor logging subsystem.
+\Ticket{4883}
 
 \end{itemize}
 

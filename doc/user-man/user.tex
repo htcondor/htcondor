@@ -1024,6 +1024,70 @@ which is incorporated to direct the queuing of three jobs:
 \index{submit description file!function macros}
 \input{admin-man/function-macros.tex}
 
+Here are example uses of the function macros in a submit description file.
+Note that these are not complete submit description files,
+but only the portions that promote understanding of
+use cases of the function macros.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+\item[Example 1]
+\end{description}
+Generate a range of numerical values for a set of jobs,
+where values other than those given by \verb@$(Process)@ are desired.
+\begin{verbatim}
+  MyIndex     = $(Process) + 1
+  initial_dir = run-$INT(MyIndex, %04d)
+\end{verbatim}
+Assuming that there are three jobs queued,
+such that \verb@$(Process)@ becomes 0, 1, and 2,
+\Expr{initial\_dir} will evaluate to the directories
+\Expr{run-0001}, \Expr{run-0002}, and \Expr{run-0003}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+\item[Example 2]
+\end{description}
+This variation on Example 1 generates a file name extension 
+which is a 3-digit integer value.
+\begin{verbatim}
+  Values     = $(Process) * 10
+  Extension  = $INT(Values, %03d)
+  input      = X.$(Extension)
+\end{verbatim}
+Assuming that there are four jobs queued,
+such that \verb@$(Process)@ becomes 0, 1, 2, and 3,
+\Expr{Extension} will evaluate to 000, 010, 020, and 030,
+leading to files defined for \SubmitCmdNI{input} of
+\Expr{X.000}, \Expr{X.010}, \Expr{X.020}, and \Expr{X.030}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+\item[Example 3]
+\end{description}
+This example uses both the file globbing of the \SubmitCmd{queue}
+command and a macro function to specify a job input file that is
+within a subdirectory on the submit host,
+but will be placed into a single, flat directory on the execute host.
+\begin{verbatim}
+  arguments            = $Fnx(FILE)
+  transfer_input_files = $(FILE)
+  queue  FILE  MATCHING (
+       samplerun/*.dat
+       )
+\end{verbatim}
+Assume that two files that end in \Expr{.dat}, \File{A.dat} and \File{B.dat},
+are within the directory \File{samplerun}.
+Macro \Expr{FILE} expands to \File{samplerun/A.dat} and \File{samplerun/B.dat}
+for the two jobs queued.
+The input files transferred are 
+\File{samplerun/A.dat} and \File{samplerun/B.dat}
+on the submit host.
+The \Expr{\$Fnx()} function macro expands to the complete file name
+with any leading directory specification stripped,
+such that the command line argument for one of the
+jobs will be \File{A.dat} and the command line argument for the
+other job will be \File{B.dat}.
 
 %%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-man-req-and-rank}About Requirements and Rank}

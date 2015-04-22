@@ -504,7 +504,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			username = get_user_loginname();
 		}
 		if( !username ) {
-			username = "(null)";
+			username = "same uid as parent: personal condor";
 		}
 		dprintf(D_ALWAYS,"Running job %sas user %s\n",how,username);
 	}

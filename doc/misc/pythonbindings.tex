@@ -66,6 +66,38 @@ XML-formatted.
 
 \\ \hline
 
+\texttt{send\_alive( ad, pid, timeout )}
+
+Send a keep alive message to an HTCondor daemon.
+
+Parameter \texttt{ad} is a ClassAd specifying the location of the daemon.
+This ClassAd is typically found by using \texttt{Collector.locate(...)}.
+
+Parameter \texttt{pid} is the process identifier for the keep alive.
+The default value of \texttt{None} uses the value from \texttt{os.getpid()}.
+
+Parameter \texttt{timeout} is the number of seconds that this 
+keep alive is valid.
+If a new keep alive is not received by the \Condor{master} in time,
+then the process will be terminated.
+The default value is controlled by configuration variable
+\MacroNI{NOT\_RESPONDING\_TIMEOUT}.
+
+\\ \hline
+
+\texttt{set\_subsystem( name, type = Auto )}
+
+Set the subsystem name for the object.
+
+Parameter \texttt{name} is the subsystem name.
+
+Parameter \texttt{type} is the HTCondor daemon type,
+taken from the \texttt{SubsystemType} enum.
+The default value of \texttt{Auto} infers the type from the
+\texttt{name} parameter.
+
+\\ \hline
+
 \texttt{lock( file\_obj, lock\_type )}
 
 Take a lock on a file object using the HTCondor locking protocol,
@@ -93,6 +125,17 @@ The logging level is controlled by \MacroNI{TOOL\_DEBUG}.
 Enable debugging output from HTCondor, where output is sent to a file.
 The log level is controlled by \MacroNI{TOOL\_DEBUG},
 and the file used is controlled by \MacroNI{TOOL\_LOG}.
+
+\\ \hline
+\texttt{log( level, msg )}
+Log a message to the HTCondor logging subsystem.
+
+Parameter \texttt{level} is the Log category and formatting indicator.
+Use the \texttt{LogLevel} enum to get list of attributes that may be
+OR'd together.
+
+Parameter \texttt{msg} is a String message to log.
+
 \\ \hline
 
 \end{tabular}
@@ -670,6 +713,51 @@ A list of types of known HTCondor daemons.
 \texttt{JobAction}
 
 A list of actions that can be performed on a job in a \Condor{schedd}.
+\\ \hline
+\texttt{SubsystemType}
+
+Distinguishes subsystems within HTCondor.
+Values may be
+\texttt{Master},
+\texttt{Collector},
+\texttt{Negotiator},
+\texttt{Schedd},
+\texttt{Shadow},
+\texttt{Startd},
+\texttt{Starter},
+\texttt{GAHP},
+\texttt{Dagman},
+\texttt{SharedPort},
+\texttt{Daemon},
+\texttt{Tool},
+\texttt{Submit},
+or \texttt{Job}.
+
+\\ \hline
+\texttt{LogLevel}
+
+The level at which events are logged.
+Values may be
+\texttt{Always},
+\texttt{Error},
+\texttt{Status},
+\texttt{Job},
+\texttt{Machine},
+\texttt{Config},
+\texttt{Protocol},
+\texttt{Priv},
+\texttt{DaemonCore},
+\texttt{Security},
+\texttt{Network},
+\texttt{Hostname},
+\texttt{Audit},
+\texttt{Terse},
+\texttt{Verbose},
+\texttt{FullDebug},
+\texttt{SubSecond},
+\texttt{Timestamp},
+\texttt{PID}, or
+\texttt{NoHeader}.
 \\ \hline
 
 \end{tabular}

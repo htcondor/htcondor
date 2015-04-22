@@ -755,7 +755,7 @@ installation and configuration in one easy step.
 This RPM installation is currently available for Red Hat-compatible
 systems only.
 As of HTCondor version 7.5.1, 
-the HTCondor RPM installs into FHS locations.
+the HTCondor RPM installs into File Hierachy Standard locations.
 
 Yum repositories and instructions are at
  \URL{http://research.cs.wisc.edu/htcondor/yum/} .
@@ -768,6 +768,7 @@ The 6 repositories are:
   \item \File{condor-stable-rhel7.repo}
   \item \File{condor-development-rhel5.repo}
   \item \File{condor-development-rhel6.repo}
+  \item \File{condor-development-rhel7.repo}
 \end{itemize}
 
 For HTCondor to work properly under RHEL5, 
@@ -781,7 +782,6 @@ if it does not exist already.
 Sites wishing to control the attributes of this user/group 
 should add the \Login{condor} user/group manually before installation.
 
-\item
 \item Download and install the meta-data that describes 
 the appropriate YUM repository. 
 This example is for the stable series, on RHEL 5. 
@@ -794,14 +794,21 @@ This example is for the stable series, on RHEL 5.
 Note that this step need be done only once;
 do not get the same repository more than once.
 
+\item Import signing key
+The RPMs are signed in the Redhat 6 and RedHat 7 repositories. 
+\begin{verbatim}
+  wget http://research.cs.wisc.edu/htcondor/yum/RPM-GPG-KEY-HTCondor
+  rpm --import RPM-GPG-KEY-HTCondor
+\end{verbatim}
+
 \item Install HTCondor.
 For 32-bit machines:
 \begin{verbatim}
-  yum install condor
+  yum install condor-all
 \end{verbatim}
 For 64-bit machines:
 \begin{verbatim}
-  yum install condor.x86_64
+  yum install condor-all.x86_64
 \end{verbatim}
 
 \item As needed, edit the HTCondor configuration files to customize.
@@ -835,7 +842,7 @@ installation and configuration in one easy step.
 These Debian packages of HTCondor are currently available for 
 Debian 6 (squeeze) and Debian 7 (wheezy).
 As of HTCondor version 7.5.1, 
-the HTCondor Debian package installs into FHS locations.
+the HTCondor Debian package installs into File Hierachy Standard locations.
 
 The HTCondor APT repositories are specified at
  \URL{http://research.cs.wisc.edu/htcondor/debian/} .
