@@ -1524,11 +1524,13 @@ File System Configuration File Entries''.
   and \File{/usr/bin/mail} on all other platforms.
   The \Condor{schedd} will not
   function unless \MacroNI{MAIL} is defined.
+  For security reasons, non-Windows platforms should not use this setting
+  and should use \MacroNI{SENDMAIL} instead.
 
 \label{param:Sendmail}
 \item[\Macro{SENDMAIL}]
   The full path to the \Prog{sendmail} executable.  
-  If defined, 
+  If defined, which it is by default on non-Windows platforms,
   \Prog{sendmail} is used instead of the mail program defined by \MacroNI{MAIL}.
 
 \label{param:MailFrom}
