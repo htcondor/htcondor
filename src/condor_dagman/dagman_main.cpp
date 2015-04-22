@@ -523,11 +523,14 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus,
 
 		debug_printf( DEBUG_DEBUG_1, "We have %d running jobs to remove\n",
 					dagman.dag->NumJobsSubmitted() );
-		if( dagman.dag->NumJobsSubmitted() > 0 ) {
-			debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
-			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId,
-						removeCondorJobs, false );
-		}
+			// We just go ahead and do a condor_rm here even if we don't
+			// think we have any jobs running, because if we're aborting
+			// because of DAGMAN_PROHIBIT_MULTI_JOBS getting triggered,
+			// we may have jobs in the queue even if we think we don't.
+			// (See gittrac #4960.) wenger 2015-04-22
+		debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
+		dagman.dag->RemoveRunningJobs( dagman.DAGManJobId,
+					removeCondorJobs, false );
 		if ( dagman.dag->NumScriptsRunning() > 0 ) {
 			debug_printf( DEBUG_NORMAL, "Removing running scripts...\n" );
 			dagman.dag->RemoveRunningScripts();
@@ -936,7 +939,6 @@ void main_init (int argc, char ** const argv) {
 	//
 	// ...done checking arguments.
 	//
-
     debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
                    lockFileName );
 	if ( dagman.dagFiles.number() == 1 ) {
