@@ -830,7 +830,6 @@ will be written into the single file \File{foo.log}.
 %%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-man-queue}Using the Power and Flexibility of the Queue Command}
 %%%%%%%%%%%%%%%%%
-\MoreTodo
 
 A wide variety of job submissions can be specified
 with extra information to the \SubmitCmd{queue} submit command.
@@ -1016,7 +1015,42 @@ which is incorporated to direct the queuing of three jobs:
 %%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-man-ifelse}Using Conditionals in the Submit Description File}
 %%%%%%%%%%%%%%%%%
-\Todo
+\index{submit commands!IF/ELSE syntax}
+\index{IF/ELSE submit commands syntax}
+\input{admin-man/if-else.tex}
+
+Here is an example use of a conditional in the submit description file.
+A portion of the \File{sample.sub} submit description file uses
+the if/else syntax to define command line arguments in one of two ways:
+\begin{verbatim}
+  if defined X
+    arguments = -n $(X)
+  else
+    arguments = -n 1 -debug
+  endif
+\end{verbatim}
+
+Submit variable \Expr{X} is defined on the \Condor{submit} command line with
+\begin{verbatim}
+  condor_submit  X=3  sample.sub
+\end{verbatim}
+This command line incorporates the submit command \Expr{X = 3}
+into the submission before parsing the submit description file.
+For this submission, the command line arguments of the submitted
+job become
+\begin{verbatim}
+    -n 3
+\end{verbatim}
+
+If the job were instead submitted with the command line
+\begin{verbatim}
+  condor_submit  sample.sub
+\end{verbatim}
+then the command line arguments of the submitted job become
+\begin{verbatim}
+    -n 1 -debug
+\end{verbatim}
+
 
 %%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-man-macros}Function Macros in the Submit Description File}
