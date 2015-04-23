@@ -99,7 +99,7 @@ Metric::evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &
 		classad::ClassAdUnParser unparser;
 		std::string expr_str;
 		unparser.Unparse(expr_str,expr);
-		dprintf(D_ALWAYS,"Failed to evaluate the following%s%s: %s=%s\n",
+		dprintf(D_FULLDEBUG,"Failed to evaluate the following%s%s: %s=%s\n",
 				name.empty() ? "" : " attribute of metric ",
 				name.c_str(),
 				attr_name,
@@ -469,7 +469,7 @@ Metric::addToAggregateValue(Metric const &datapoint) {
 		}
 		case MIN: {
 			double n=0;
-			if( datapoint.value.IsNumber(sum) ) {
+			if( datapoint.value.IsNumber(n) ) {
 				if( count == 0 || n < sum ) {
 					sum = n;
 				}
@@ -479,7 +479,7 @@ Metric::addToAggregateValue(Metric const &datapoint) {
 		}
 		case MAX: {
 			double n=0;
-			if( datapoint.value.IsNumber(sum) ) {
+			if( datapoint.value.IsNumber(n) ) {
 				if( count == 0 || n > sum ) {
 					sum = n;
 				}
@@ -570,6 +570,7 @@ StatsD::initAndReconfig(char const *service_name)
 		}
 	}
 	else {
+		m_stats_heartbeat_interval = MIN(m_stats_pub_interval,m_stats_heartbeat_interval);
 		m_stats_pub_timer = daemonCore->Register_Timer(
 			m_stats_heartbeat_interval,
 			m_stats_heartbeat_interval,
