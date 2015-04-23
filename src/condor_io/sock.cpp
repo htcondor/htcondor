@@ -1145,10 +1145,12 @@ int Sock::do_connect(
 		// If we don't multiply by -1 and instead use rbegin()/rend(),
 		// then addresses of the same desirability will be checked in
 		// the reverse order.
+		dprintf( D_HOSTNAME, "Found address %lu candidates:\n", v->size() );
 		for( unsigned i = 0; i < v->size(); ++i ) {
 			condor_sockaddr c = (*v)[i];
 			int d = -1 * c.desirability();
 			sortedByDesire.insert(std::make_pair( d, c ));
+			dprintf( D_HOSTNAME, "\t%d\t%s\n", d, c.to_ip_and_port_string().c_str() );
 		}
 
 		bool foundAddress = false;
