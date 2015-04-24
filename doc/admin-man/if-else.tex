@@ -47,27 +47,32 @@ followed by
     results in \Expr{X = -1}, when \Expr{MY\_UNDEFINED\_VARIABLE} is
     \emph{not} yet defined.
   \item the \verb@version@ keyword, representing the version number of
-    of the daemon or currently reading this conditional, 
-    followed by a limited comparison to an HTCondor version number.
+    of the daemon or tool currently reading this conditional. 
+    This keyword is followed by an HTCondor version number.
     That version number can be of the form \verb@x.y.z@ or \verb@x.y@.
+    The version of the daemon or tool is compared to the specified
+    version number.
     The comparison operators are
-    \verb@==@ for equality, where current version 8.2.3 is equal to 8.2,
-    \verb@>=@ to see if the current version number is greater than or
-    equal to, where current version 8.2.3 is greater than 8.2.2, 
+    \begin{itemize}
+    \item \verb@==@ for equality. Current version 8.2.3 is equal to 8.2.
+    \item \verb@>=@ to see if the current version number is greater than or
+    equal to. Current version 8.2.3 is greater than 8.2.2,
     and current version 8.2.3 is greater than or equal to 8.2.
-    \verb@<=@ to see if the current version number is less than or
-    equal to, where current version 8.2.0 is less than 8.2.2, 
+    \item \verb@<=@ to see if the current version number is less than or
+    equal to. Current version 8.2.0 is less than 8.2.2, 
     and current version 8.2.3 is less than or equal to 8.2.
+    \end{itemize}
     As an example,
 \begin{verbatim}
-  if version == 8.1.6
+  if version >= 8.1.6
      DO_X = True
   else
      DO_Y = True
   endif
 \end{verbatim}
     results in defining \Expr{DO\_X} as \Expr{True} if the current
-    version of the daemon or tool reading this if statement is 8.1.6.
+    version of the daemon or tool reading this if statement is 8.1.6
+    or a more recent version.
   \item \verb@True@ or \verb@yes@ or the value 1.
     The statement(s) are incorporated.
   \item \verb@False@ or \verb@no@ or the value 0
