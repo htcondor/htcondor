@@ -80,9 +80,11 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 	if (addr.from_ip_string(interface_pattern)) {
 		if(addr.is_ipv4()) {
 			ipv4 = interface_pattern;
+			ipbest = ipv4;
 		} else {
 			ASSERT(addr.is_ipv6());
 			ipv6 = interface_pattern;
+			ipbest = ipv6;
 		}
 		if( network_interface_ips ) {
 			network_interface_ips->insert( interface_pattern );
@@ -91,7 +93,8 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		dprintf(D_HOSTNAME,"%s=%s, so choosing IP %s\n",
 				interface_param_name,
 				interface_pattern,
-				addr.to_ip_string().Value());
+				ipbest.c_str());
+				// addr.to_ip_string().Value());
 
 		return true;
 	}

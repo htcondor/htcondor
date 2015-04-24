@@ -234,6 +234,7 @@ BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
 BuildRequires: python-devel
 BuildRequires: boost-devel
+BuildRequires: redhat-rpm-config
 
 %if %uw_build || %std_univ
 BuildRequires: cmake >= 2.8
@@ -551,6 +552,16 @@ Header files for HTCondor's ClassAd Library, a powerful and flexible,
 semi-structured representation of data.
 
 #######################
+%package test
+Summary: HTCondor Self Tests
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: %name-classads = %{version}-%{release}
+
+%description test
+A collection of tests to verify that HTCondor is operating properly.
+
+#######################
 %if %cream
 %package cream-gahp
 Summary: HTCondor's CREAM Gahp
@@ -701,8 +712,10 @@ export CMAKE_PREFIX_PATH=/usr
 # causes build issues with EL5, don't even bother building the tests.
 
 %if %uw_build
+%define condor_build_id UW_development
+
 %cmake \
-       -DBUILDID:STRING=UW_development \
+       -DBUILDID:STRING=%condor_build_id \
        -DUW_BUILD:BOOL=TRUE \
 %if ! %std_univ
        -DCLIPPED:BOOL=TRUE \
@@ -1547,6 +1560,10 @@ rm -rf %{buildroot}
 %_includedir/classad/xmlLexer.h
 %_includedir/classad/xmlSink.h
 %_includedir/classad/xmlSource.h
+
+#################
+%files test
+%defattr(-,root,root,-)
 
 %if %cream
 %files cream-gahp

@@ -19,6 +19,7 @@
 \oOptArg{-dump}{filename}
 \oOpt{-interactive}
 \oOpt{-dry-run}
+\oOpt{<submit-variable>=<value>}
 \oArg{submit description file}
 \oOptArg{-queue}{queue\_arguments}
 
@@ -172,6 +173,15 @@ files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
   sending the job ClassAd to \File{stderr}, but do not submit the job(s).
   This permits an observation of job specification, 
   and it facilitates debugging the submit description file contents.  }
+
+\OptItem{\Opt{<submit-variable>=<value>}}{Defines a submit command or
+  submit variable with a value, and parses it as if it was placed at
+  the beginning of the submit description file.
+  The submit description file is not changed.
+  To correctly parse the \Condor{submit} command line,
+  this option must be specified without white space characters before and
+  after the equals sign (\Expr{=}),
+  or the entire option must be surrounded by double quote marks.  }
 
 \OptItem{\OptArg{-queue}{queue\_arguments}}{A command line specification
   of how many jobs to queue, which is only permitted if the submit description

@@ -42,8 +42,13 @@ int DockerAPI::run(
 
 	// Write out a file with the container ID.
 	// FIXME: The startd can check this to clean up after us.
+	// This needs to go into a directory that condor user
+	// can write to.
+
+/*
 	std::string cidFileName = sandboxPath + "/.cidfile";
 	runArgs.AppendArg( "--cidfile=" + cidFileName );
+*/
 
 	
 	// Configure resource limits.
@@ -120,7 +125,7 @@ int DockerAPI::run(
 	FamilyInfo fi;
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
 	int childPID = daemonCore->Create_Process( runArgs.GetArg(0), runArgs,
-		PRIV_USER_FINAL, 1, FALSE, FALSE, NULL, sandboxPath.c_str(),
+		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, NULL, "/",
 		& fi, NULL, childFDs );
 
 	if( childPID == FALSE ) {
@@ -146,7 +151,7 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
 	// Read from Docker's combined output and error streams.
-	FILE * dockerResults = my_popen( rmArgs, "r", 1 );
+	FILE * dockerResults = my_popen( rmArgs, "r", 1 , 0, false);
 	if( dockerResults == NULL ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
 		return -2;
@@ -197,7 +202,7 @@ int DockerAPI::detect( CondorError & err ) {
 	infoArgs.GetArgsStringForLogging( & displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
 
-	FILE * dockerResults = my_popen( infoArgs, "r", 1 );
+	FILE * dockerResults = my_popen( infoArgs, "r", 1 , 0, false);
 	if( dockerResults == NULL ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
 		return -2;
@@ -239,7 +244,7 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 	versionArgs.GetArgsStringForLogging( & displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
 
-	FILE * dockerResults = my_popen( versionArgs, "r", 1 );
+	FILE * dockerResults = my_popen( versionArgs, "r", 1 , 0, false);
 	if( dockerResults == NULL ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
 		return -2;
@@ -296,7 +301,9 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 								"Running={{.State.Running}} "
 								"ExitCode={{.State.ExitCode}} "
 								"StartedAt=\"{{.State.StartedAt}}\" "
-								"FinishedAt=\"{{.State.FinishedAt}}\" " );
+								"FinishedAt=\"{{.State.FinishedAt}}\" "
+								"DockerError=\"{{.State.Error}}\" "
+								"OOMKilled=\"{{.State.OOMKilled}}\" " );
 	char * formatArg = formatElements.print_to_delimed_string( "\n" );
 	inspectArgs.AppendArg( formatArg );
 	free( formatArg );
@@ -306,7 +313,7 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	inspectArgs.GetArgsStringForLogging( & displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
-	FILE * dockerResults = my_popen( inspectArgs, "r", 1 );
+	FILE * dockerResults = my_popen( inspectArgs, "r", 1 , 0, false);
 	if( dockerResults == NULL ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Unable to run '%s'.\n", displayString.c_str() );
 		return -6;

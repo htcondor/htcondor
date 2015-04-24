@@ -193,6 +193,8 @@ job_dagman_use_hold_claim: personal
 job_dagman_vars: personal
 job_dagman_rm: cygwin, personal
 job_dagman_script_defer: personal
+job_dagman_submit_glob-A: personal
+job_dagman_submit_glob-B: personal
 job_filexfer_base-input1_van: personal
 job_filexfer_base_van: personal
 job_filexfer_basic_van: personal

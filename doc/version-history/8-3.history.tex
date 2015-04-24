@@ -29,7 +29,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Improved how \Condor{dagman} deals with node job submit files that
+use the new file globbing features.
+\Ticket{4960}
 
 \end{itemize}
 
@@ -37,7 +39,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Eliminated spurious warnings logged when shared port was enabled.
+\item Fixed bug that prevented collector from ever forking to
+handle queries to startd ads.
+\Ticket{5020}
+
+\item Eliminated spurious warnings logged when the \Condor{shared\_port}
+daemon was enabled.
 \Ticket{4958}
 
 \end{itemize}
@@ -50,8 +57,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.3.5 not yet released.
-%\item HTCondor version 8.3.5 released on Month Date, 2014.
+\item HTCondor version 8.3.5 released on April 20, 2015.
 
 \end{itemize}
 
@@ -60,20 +66,47 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item The \SubmitCmd{queue} submit command may be used in
+\item The RPM packages have been restructured to allow running a 32-bit
+static shadow on Red Hat Enterprise Linux 6. The new \texttt{condor-all}
+RPM is used to install all of the RPMs for a typical HTCondor installation.
+Since the binary distribution of HTCondor for Red Hat Enterprise Linux 6 and 7
+consists of more that a handful of RPMs, the RPMs are only available from our
+YUM repository.
+\Ticket{4621}
+
+\item New features increase the power of job specification
+in the submit description file. 
+Submit description files are now parsed the same as configuration files.
+
+  \begin{itemize}
+  \item The \SubmitCmd{queue} submit command may be used in
 flexible and powerful new ways to specify job submissions.
 See section~\ref{sec:user-man-queue} for details.
 \Ticket{4819}
 
-\item The machine ClassAd attribute \Attr{VirtualMemory} is now set correctly
-for dynamic slots running under a partitionable slot.
-\Ticket{4608}
+  \item New macro functions are supported, 
+and may be used in submit description files as well as in configuration.
+\Ticket{4944}
 
-\item \Condor{submit} has new command line options \Opt{-queue} 
+  \item \Condor{submit} has new command line options \Opt{-queue} 
 and \Opt{-dry-run},
 to provide flexible and powerful new ways to specify job submissions,
 as well as to test what job would be submitted without submitting.
 \Ticket{4933}
+
+  \item \Condor{submit} now supports assignment of ClassAd attributes
+on the command line.
+\Ticket{4983}
+
+  \item \Condor{submit} accepts \SubmitCmdNI{if} and \SubmitCmdNI{include}
+statements in the same way that configuration files do.
+\Ticket{4913}
+
+  \end{itemize}
+
+\item The machine ClassAd attribute \Attr{VirtualMemory} is now set correctly
+for dynamic slots running under a partitionable slot.
+\Ticket{4608}
 
 \item An EC2 grid universe job now advertises its access key ID in 
 its job ClassAd.
@@ -99,11 +132,6 @@ that is defined by configuration variable
 \item HTCondor is now more likely to be compatible with Windows systems
 that have a Winsock Layered Service Provider (LSP) installed.
 \Ticket{304}
-
-\item The new \Procedure{directQuery} python binding queries a daemon
-directly for its ClassAd, 
-instead of querying the \Condor{collector}.
-\Ticket{4843}
 
 \item The new configuration variables \Macro{SUBMIT\_REQUIREMENT\_NAMES},
 \Macro{SUBMIT\_REQUIREMENT\_<Name>}, 
@@ -144,11 +172,51 @@ emailed to HTCondor administrator account.
 useful for manipulating the environment variable lists in job ClassAds.
 \Ticket{4574}
 
+\item The new configuration variable \Macro{CURB\_MATCHMAKING}
+can be used to configure the \Condor{schedd} daemon
+ to cease requesting more machine resources
+from the central manager during overload situations.
+\Ticket{4905}
+
+\item Some HTCondor-specific environment variables that are set in the
+environment of a batch job, such as \Env{\_CONDOR\_JOB\_AD},
+ are now also set for
+\Condor{ssh\_to\_job} and interactive job sessions.
+\Ticket{4943}
+
+\item \Condor{q} with the \Opt{-constraint} option will now display
+a summary line.
+\Ticket{4992}
+
+\item The new \Procedure{directQuery} Python binding queries a daemon
+directly for its ClassAd, 
+instead of querying the \Condor{collector}.
+\Ticket{4843}
+
+\item The new \Procedure{send\_alive} Python binding sends keep alive
+messages to the \Condor{master} daemon. This allows the Python bindings to be
+used in a daemon managed by the \Condor{master}.
+\Ticket{4875}
+
+\item A new Python binding sets the HTCondor subsystem name and type.
+This allows the bindings to initialize logging or configuration as if they
+are a particular HTCondor daemon.
+\Ticket{4876}
+
+\item The new \Procedure{log} Python binding provides the ability
+ to log messages via the HTCondor logging subsystem.
+\Ticket{4883}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item The \Condor{schedd} will no longer request more resources from
+a central manager when the number of jobs running has exceeded
+\Macro{MAX\_JOBS\_RUNNING}.
+\Ticket{4905}
 
 \item Fixed a bug in \Condor{chirp} in which generic events logged
 to the job event log with the ulog command where written in the time zone
@@ -179,6 +247,14 @@ warning: setting UserUid to 11021, was 6004 previously
 \end{verbatim}
 to be logged in the \Condor{schedd} daemon log. 
 \Ticket{4889}
+
+\item Fixed a bug in the Python bindings in which multi-threaded Python
+programs would deadlock when a \Procedure{Schedd.query} returned more than
+one result.
+Also fixed a bug in \Procedure{Schedd.xquery} in which
+the \texttt{constraint} parameter did not default to \Expr{True} as documented,
+but had to be explicitly defined.
+\Ticket{5000}
 
 \end{itemize}
 
