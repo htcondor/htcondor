@@ -893,6 +893,87 @@ MergeEnvironment(const char * /*name*/,
 }
 
 
+static bool
+ReturnResult(const std::string &default_home,
+              const std::string &error_msg,
+              classad::Value    &result)
+{
+	if (default_home.size())
+	{
+		result.SetStringValue(default_home);
+		return true;
+	}
+	else
+	{
+		result.SetErrorValue();
+		classad::CondorErrMsg = error_msg;
+		return false;
+	}
+}
+
+
+static bool
+UserHome (const char *                 name,
+          const classad::ArgumentList &arguments,
+          classad::EvalState          &state,
+          classad::Value              &result)
+{
+
+	if ((arguments.size() != 1) && (arguments.size() != 2))
+	{
+		std::stringstream ss;
+		result.SetErrorValue();
+		ss << "Invalid number of arguments passed to " << name << "; " << arguments.size() << "given, 1 required and 1 optional.";
+		classad::CondorErrMsg = ss.str();
+		return false;
+	}
+
+
+	std::string default_home;
+	classad::Value default_home_value;
+	if (arguments.size() != 2 || !arguments[1]->Evaluate(state, default_home_value) || !default_home_value.IsStringValue(default_home))
+	{
+		default_home = "";
+	}
+
+	std::string owner_string;
+	classad::Value owner_value;
+	if (!arguments[0]->Evaluate(state, owner_value) || (!owner_value.IsStringValue(owner_string)))
+	{
+		std::string unp_string;
+		std::stringstream ss;
+		classad::ClassAdUnParser unp; unp.Unparse(unp_string, arguments[0]);
+		ss << "Could not evaluate the first argument of " << name << " to string.  Expression: " << unp_string << ".";
+		return ReturnResult(default_home, ss.str(), result);
+	}
+
+	errno = 0;
+	struct passwd *info = getpwnam(owner_string.c_str());
+	if (!info)
+	{
+		std::stringstream ss;
+		ss << "Unable to find home directory for user " << owner_string;
+		if (errno) {
+			ss << ": " << strerror(errno) << "(errno=" << errno << ")";
+		} else {
+			ss << ": No such user.";
+		}
+		return ReturnResult(default_home, ss.str(), result);
+	}
+
+	if (!info->pw_dir)
+	{
+		std::stringstream ss;
+		ss << "User " << owner_string << " has no home directory.";
+		return ReturnResult(default_home, ss.str(), result);
+	}
+	std::string home_string = info->pw_dir;
+	result.SetStringValue(home_string);
+
+	return true;
+}
+
+
 static
 void registerClassadFunctions()
 {
@@ -908,6 +989,9 @@ void registerClassadFunctions()
 
 	name = "argsToList";
 	classad::FunctionCall::RegisterFunction(name, ArgsToList);
+
+	name = "userHome";
+	classad::FunctionCall::RegisterFunction(name, UserHome);
 
 	name = "stringListSize";
 	classad::FunctionCall::RegisterFunction( name,

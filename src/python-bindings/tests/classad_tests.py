@@ -1,8 +1,10 @@
 #!/usr/bin/python
 
 import re
+import pwd
 import types
 import classad
+import htcondor
 import datetime
 import unittest
 
@@ -298,6 +300,15 @@ class TestClassad(unittest.TestCase):
         expr = classad.ExprTree("foo =?= bar")
         self.assertEquals(ad.externalRefs(expr), ["foo"])
         self.assertEquals(ad.internalRefs(expr), ["bar"])
+
+    def test_user_home(self):
+        htcondor.enable_classad_extensions()
+        homedir = classad.ExprTree('userHome("root")').eval()
+        self.assertEquals(homedir, pwd.getpwnam("root").pw_dir)
+        self.assertRaises(TypeError, classad.ExprTree('userHome(".")').eval)
+        self.assertEquals(classad.lastError(), 'Unable to find home directory for user .: No such user.')
+        self.assertEquals("foo", classad.ExprTree('userHome(".", "foo")').eval())
+
 
 if __name__ == '__main__':
     unittest.main()
