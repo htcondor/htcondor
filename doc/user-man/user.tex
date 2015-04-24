@@ -978,6 +978,8 @@ where the \SubmitCmdNI{include} is.
 Or, \verb@<what-to-include>@  may cause a program to be executed,
 where the output of the program is incorporated
 into the submit description file.
+The specification of \verb@<what-to-include>@ has the bar character
+(\Expr{|}) following the name of the program to be executed.
 
 The \SubmitCmdNI{include} key word is case insensitive.
 There are \emph{no} requirements for white space characters surrounding
@@ -992,25 +994,32 @@ while still permitting nesting.
 
 Consider the example
 \begin{verbatim}
-  include : partition.sh |
+  include : list-infiles.sh |
 \end{verbatim}
 In this example, the bar character at the end of the line 
-causes the script \File{partition.sh} to be invoked,
-and the output of the script is incorporated into the submit description file.
-Assume that this script partitions the problem space of a computation.
-Perhaps this defines command line arguments that specify each partition's
-boundaries.
-The script outputs the following,
-which is incorporated to direct the queuing of three jobs:
+causes the script \File{list-infiles.sh} to be invoked,
+and the output of the script is parsed and incorporated into
+the submit description file.
+If this bash script contains
+\footnotesize
 \begin{verbatim}
-  arguments = -start 0 -stop 1200 -algorithm 1
-  queue
-  arguments = -start 1201 -stop 1800 -algorithm 2
-  queue
-  arguments = -start 1801 -stop 15000 -algorithm 1
-  queue
+  echo "transfer_input_files = `ls -m infiles/*.dat`"
 \end{verbatim}
-
+\normalsize
+then the output of this script has specified the set of
+input files to transfer to the execute host. 
+For example,
+if directory \File{infiles} contains the three files
+\File{A.dat},
+\File{B.dat}, and
+\File{C.dat},
+then the submit command
+\footnotesize
+\begin{verbatim}
+  transfer_input_files = infiles/A.dat, infiles/B.dat, infiles/C.dat
+\end{verbatim}
+\normalsize
+is incorporated into the submit description file.
 
 %%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-man-ifelse}Using Conditionals in the Submit Description File}
