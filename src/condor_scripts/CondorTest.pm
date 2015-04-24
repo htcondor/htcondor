@@ -897,7 +897,7 @@ sub StartTest
 # July 26, 2013
 #
 # Major architecture change as we used more callbacks for testing
-# I stumbled on value in the test which were to be changed by the callbacks were not being
+# I stumbled on values in the tests which were to be changed by the callbacks were not being
 # changed. What was happening in DoTest was that we would fork and the child was
 # running monitor and that callbacks were changing the variables in the child's copy.
 # The process that is the test calling DoTest was simply waiting for the child to die
@@ -905,11 +905,28 @@ sub StartTest
 # callbacks switch it back up to the test code for a bit. The monitor and the 
 # test had always been lock-steped anyways so getting rid of the child
 # has had little change except that call backs can be fully functional now.
+
+# bt 4/9/15 bt
+# Now we come to the need to handle multiple logs at the same time steming
+# from some of the variants of condor_submit foreach. In particular
+# queue [n] InitialDir (jobdir*/)
+#
+# The same callback issues exist so very limit callbacks make sense. We mostly
+# want to know that the test passed so we will probably set a ExitSuccess callback
+# our selves in the new MultiMonitor. The other place this can happen is in SimpleJob::RunCheck
+# when it is called with no_wait.
+
+		my @userlogs = ();
+		my $joblogcount = Condor::AccessUserLogs(\@userlogs);
 		
 		if(exists $args{no_monitor}) {
 			print "Skipping monitor\n";
 		} else {
-    		$monitorret = Condor::Monitor();
+			if($joblogcount > 1) {
+    			$monitorret = Condor::MultiMonitor();
+			} else {
+    			$monitorret = Condor::Monitor();
+			}
 		}
 		if(  $monitorret == 1 ) {
 			TestDebug( "Monitor happy to exit 0\n",4);
