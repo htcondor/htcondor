@@ -2122,6 +2122,7 @@ sub ParseSubmitFile
     my $line = 0;
 	my $variable;
 	my $value;
+	my $drydatafile = CondorTest::TempFileName("fetchdrydata");
 
     if( ! open( SUBMIT_FILE, $submit_file ) )
     {
@@ -2135,7 +2136,7 @@ sub ParseSubmitFile
 	#print "Seeing how many user logs there are\n";
 
 	# this could be a condor_submit foreach syntax expansion test
-	GatherUserLogs($submit_file);
+	GatherUserLogs($submit_file,$drydatafile);
 
     while( <SUBMIT_FILE> )
     {
@@ -2260,9 +2261,15 @@ sub safe_WEXITSTATUS {
 #
 sub GatherUserLogs {
 	my $submitfile = shift;
+	my $drydatafile = shift;
+	my $arrayref;
 	my $logcount = 0;
 	my @tmplogs = ();
-	@submitdrydata = GatherDryData($submitfile);
+	$arrayref = GatherDryData($submitfile,$drydatafile);
+	# store dry data in expected locaton
+	foreach my $line (@{$arrayref}) {
+		push @submitdrydata, $line;
+	}
 	DryExtract(\@submitdrydata,\@tmplogs,"UserLog");
 	foreach my $line (@tmplogs) {
 		if($line =~ /UserLog=\"(.*?)\"/) {

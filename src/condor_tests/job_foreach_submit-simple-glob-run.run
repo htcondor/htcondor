@@ -45,7 +45,7 @@ my $filedata = '
 my $counter = 0;
 my $datafileswanted = 3;
 my $datafilename = "submit-foreach-run";
-my $extension = ".testdata";
+my $extension = ".tdata2";
 my $targetname = "";
 my @results = ();
 my @extraction = ();
@@ -66,14 +66,14 @@ while($counter < $datafileswanted) {
 		print "Created:$targetname\n";
 	}
 	push @testinputfile, $targetname;
-	push @testoutputfile,"$targetname.out";
+	push @testoutputfile,"$targetname$mypid.out";
 	$counter += 1;
 }
 
 my $submitfile = "
 	executable = x_getsandbox.pl
 	arguments = 3
-	output = \$(FILE).out
+	output = \$(FILE)$mypid.out
 	should_transfer_files = yes
 	when_to_transfer_output = ON_EXIT
 	log = $testname$mypid.log

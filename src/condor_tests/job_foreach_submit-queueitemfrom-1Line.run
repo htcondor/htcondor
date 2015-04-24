@@ -63,12 +63,20 @@ open(SF,">$submitfilename") or die "failed submit file write:$submitfilename:$!\
 print SF "$submitfile";
 close(SF);
 
+my $datafilename = CondorTest::TempFileName("$testname");
+my $cmdtorun = "condor_submit -dry-run $datafilename $submitfilename";
+my $res = system("$cmdtorun");
+LoadResults(\@results,$datafilename);
 
-runCondorTool("condor_submit -dry-run $submitfilename",\@results,2,{emit_output=>1});
+#runCondorTool("condor_submit -dry-run $submitfilename",\@results,2,{emit_output=>1});
 
 DryExtract(\@results, \@extraction, "Args");
 
 $extractionsize = @extraction;
+
+#foreach my $item (@extraction) {
+	#print "found:$item:\n";
+#}
 
 print "Size of argument list:$extractionsize\n";
 
@@ -101,7 +109,7 @@ my $submitfile2 = "
 	should_transfer_files = yes
 	when_to_transfer_output = ON_EXIT
 	log = $testname$mypid.log
-	Arguments = \$(process) \$(ACTION) \$(ITEM)
+	Arguments = \$(PROCESS) \$(ACTION) \$(ITEM)
 	queue 4 ACTION,ITEM from (Cook Beans)
 ";
 my $submitfilename2 = "$testname2$mypid.cmd";
@@ -114,17 +122,31 @@ close(SF);
 $extractionsize = 0;
 @results = ();
 
-runCondorTool("condor_submit -dry-run $submitfilename2",\@results,2,{emit_output=>1});
+$datafilename = CondorTest::TempFileName("$testname");
+$cmdtorun = "condor_submit -dry-run $datafilename $submitfilename2";
+$res = system("$cmdtorun");
+LoadResults(\@results,$datafilename);
+
+#runCondorTool("condor_submit -dry-run $submitfilename2",\@results,2,{emit_output=>1});
 
 DryExtract(\@results, \@extraction, "Args");
 
 $extractionsize = @extraction;
+
+
+#foreach my $item (@extraction) {
+	#print "found:$item:\n";
+#}
 
 print "Size of argument list:$extractionsize\n";
 
 if($extractionsize != 4) {
 	print "A one line queue from can only spawn one job - $extractionsize is Bad!\n";
 	RegisterResult(0,"test_name","$testname");
+	print "Dumping results\n";
+	foreach my $item (@results) {
+		print "result:$item\n";
+	}
 } else {
 	print "Good! We got 4 job from a one line queue 4 from.\n";
 	RegisterResult(1,"test_name","$testname");

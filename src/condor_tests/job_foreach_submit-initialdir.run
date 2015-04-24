@@ -30,7 +30,7 @@ use Check::SimpleJob;
 $topdir = getcwd();
 print scalar localtime() . "\n";
 
-$testname = "job_basic_submit-initialdir";
+$testname = "job_foreach_submit-initialdir";
 
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
@@ -44,12 +44,18 @@ my $filedata = '
 
 my $pid = $$;
 
-my $datafolders = "$topdir/jobfolders$pid"; 
+my $datafolders = "";
+if(is_windows()) {
+	$datafolders = "$topdir\\jobfolders$pid"; 
+} else {
+	$datafolders = "$topdir/jobfolders$pid"; 
+}
+
 
 CreateDir("$datafolders");
 
 my @foldername = (
-	"1",
+	"why",
 	"two",
 	"three3",
 	"forme",
@@ -57,7 +63,7 @@ my @foldername = (
 
 my $counter = 0;
 my $datafileswanted = 3;
-my $datafilename = "basic_submit-foreach";
+my $datafilename = "job_foreach_submit-initialrun";
 my $extension = ".testdata";
 my $targetname = "";
 my @results = ();
@@ -68,7 +74,11 @@ foreach my $dirname (@foldername) {
 	$counter = 0;
 	CreateDir("$datafolders/$dirname");
 	while($counter < $datafileswanted) {
-		$targetname = "$datafolders/$dirname" . "/$datafilename" . "$counter" . "$extension";
+		if(is_windows()) {
+			$targetname = "$datafolders\\$dirname" . "\\$datafilename" . "$counter" . "$extension";
+		} else {
+			$targetname = "$datafolders/$dirname" . "/$datafilename" . "$counter" . "$extension";
+		}
 		open(FD,">$targetname") or die "Failed to open:$targetname:$!\n";
 		print FD "$filedata";
 		close(FD);
@@ -76,7 +86,9 @@ foreach my $dirname (@foldername) {
 	}
 }
 
-my $submitfile = "
+my $submitfile = "";
+if(is_windows()) {
+$submitfile = "
 	executable = x_getsandbox.pl
 	arguments = 3
 	should_transfer_files = yes
@@ -85,16 +97,33 @@ my $submitfile = "
 	output = $testname$mypid.out
 	error = $testname$mypid.err
 	transfer_input_files = ./
-	queue InitialDir matching ($datafolders/*/)
+	queue InitialDir matching DIRS( $datafolders\\* )
 ";
+} else {
+$submitfile = "
+	executable = x_getsandbox.pl
+	arguments = 3
+	should_transfer_files = yes
+	when_to_transfer_output = ON_EXIT
+	log = $testname$mypid.log
+	output = $testname$mypid.out
+	error = $testname$mypid.err
+	transfer_input_files = ./
+	queue InitialDir matching DIRS ($datafolders/*/)
+";
+}
 
 my $submitfilename = "$testname$mypid.cmd";
 open(SF,">$submitfilename") or die "failed submit file write:$submitfilename:$!\n";
 print SF "$submitfile";
 close(SF);
 
+my $datafilename = CondorTest::TempFileName("$testname");
+my $cmdtorun = "condor_submit -dry-run $datafilename $submitfilename";
+my $res = system("$cmdtorun");
+LoadResults(\@results,$datafilename);
 
-runCondorTool("condor_submit -dry-run $submitfilename",\@results,2,{emit_output=>1});
+#runCondorTool("condor_submit -dry-run $submitfilename",\@results,2,{emit_output=>1});
 
 # We are looking different paths for each user log and for the Iwd
 
@@ -102,19 +131,32 @@ DryExtract(\@results, \@extraction, "UserLog");
 
 print "checking for unique userlogs\n";
 my $foundit = 0;
-foreach my $requesteddir (@foldername) {
+foreach my $path (@extraction) {
 	$foundit = 0;
 	print "looking for:$requesteddir - ";
-	foreach my $path (@extraction) {
-		my $fullpath = "$datafolder/$requesteddir";
+	foreach my $requesteddir (@foldername) {
+		print "Candidate is :$path:\n";
+		my $fullpath = "";
+		if(is_windows()) {
+			$fullpath = "$datafolders\\$requesteddir";
+			$_ = $fullpath;
+			s/\\/\\\\/g;
+			$fullpath = $_;
+		} else {
+			$fullpath = "$datafolders/$requesteddir";
+		}
+		print "regx using $fullpath\n";
 		if($path =~ /$fullpath/) {
 			$foundit = 1;
+			last;
 		}
 	}
 	if($foundit == 1) {
 		print "Good\n";
+		RegisterResult(1,"test_name","$testname");
 	} else {
 		print "Bad\n";
+		RegisterResult(0,"test_name","$testname");
 	}
 }
 
@@ -123,36 +165,33 @@ DryExtract(\@results, \@extraction, "Iwd");
 
 print "checking for unique working directories\n";
 
-foreach my $requesteddir (@foldername) {
+foreach my $path (@extraction) {
 	$foundit = 0;
 	print "looking for:$requesteddir - ";
-	foreach my $path (@extraction) {
-		my $fullpath = "$datafolder/$requesteddir";
+	foreach my $requesteddir (@foldername) {
+		print "Candidate is :$path:\n";
+		if(is_windows()) {
+			$fullpath = "$datafolders\\$requesteddir";
+			$_ = $fullpath;
+			s/\\/\\\\/g;
+			$fullpath = $_;
+		} else {
+			$fullpath = "$datafolders/$requesteddir";
+		}
+		print "regx using $fullpath\n";
 		if($path =~ /$fullpath/) {
 			$foundit = 1;
+			last;
 		}
 	}
 	if($foundit == 1) {
 		print "Good\n";
+		RegisterResult(1,"test_name","$testname");
 	} else {
 		print "Bad\n";
+		RegisterResult(0,"test_name","$testname");
 	}
 }
-
-#print "At this point things seem like they should. Lets run it - ";
-
-#if( CondorTest::RunTest($testname, $submitfilename, 0) ) {
-    #print "Good\n";
-    #CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
-	#RegisterResult(1,"test_name","$testname");
-#} else {
-    #print "Bad\n";
-	#RegisterResult(0,"test_name","$testname");
-#}
-
-
-
-
 
 CondorTest::EndTest();
 print scalar localtime() . "\n";

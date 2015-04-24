@@ -72,8 +72,12 @@ open(SF,">$submitfilename") or die "failed submit file write:$submitfilename:$!\
 print SF "$submitfile";
 close(SF);
 
+my $harvestdatafilename = CondorTest::TempFileName("$testname");
+my $cmdtorun = "condor_submit -dry-run $harvestdatafilename $submitfilename";
+my $res = system("$cmdtorun");
+LoadResults(\@results,$harvestdatafilename);
 
-runCondorTool("condor_submit -dry-run $submitfilename",\@results,2,{emit_output=>0});
+#runCondorTool("condor_submit -dry-run $submitfilename",\@results,2,{emit_output=>0});
 
 DryExtract(\@results, \@extraction, "TransferInput");
 
@@ -89,7 +93,7 @@ if($extractionsize ==  $datafileswanted) {
 my $parseerror = 0;
 foreach my $line (@extraction) {
 	chomp($line);
-	#print "got:$line\n";
+	print "got:$line\n";
 	if($line =~ /$datafilename\d+$extension/) {
 	} else {
 		$parseerror += 1;
@@ -149,8 +153,12 @@ open(SF,">$submitfilename") or die "failed submit file write:$submitfilename:$!\
 print SF "$submit2";
 close(SF);
 
+$datafilename = CondorTest::TempFileName("$testname");
+$cmdtorun = "condor_submit -dry-run $datafilename $submitfilename";
+$res = system("$cmdtorun");
+LoadResults(\@results,$datafilename);
 
-runCondorTool("condor_submit -dry-run $submitfilename",\@results,2,{emit_output=>0});
+#runCondorTool("condor_submit -dry-run $submitfilename",\@results,2,{emit_output=>0});
 
 DryExtract(\@results, \@extraction, "Args");
 

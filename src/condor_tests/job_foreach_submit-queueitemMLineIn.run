@@ -73,8 +73,12 @@ open(SF,">$submitfilename") or die "failed submit file write:$submitfilename:$!\
 print SF "$submitfile";
 close(SF);
 
+my $datafilename = CondorTest::TempFileName("$testname");
+my $cmdtorun = "condor_submit -dry-run $datafilename $submitfilename";
+my $res = system("$cmdtorun");
+LoadResults(\@results,$datafilename);
 
-runCondorTool("condor_submit -dry-run $submitfilename",\@results,2,{emit_output=>0});
+#runCondorTool("condor_submit -dry-run $submitfilename",\@results,2,{emit_output=>0});
 
 DryExtract(\@results, \@extraction, "Args");
 

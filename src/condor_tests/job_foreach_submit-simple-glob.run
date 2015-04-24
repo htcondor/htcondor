@@ -30,7 +30,7 @@ use Check::SimpleJob;
 $topdir = getcwd();
 print scalar localtime() . "\n";
 
-$testname = "job_basic_submit-foreach";
+$testname = "job_foreach_submit-simple-glob";
 
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
@@ -44,8 +44,8 @@ my $filedata = '
 
 my $counter = 0;
 my $datafileswanted = 3;
-my $datafilename = "basic_submit-foreach";
-my $extension = ".testdata";
+my $datafilename = "job_foreach_submit-simple-glob";
+my $extension = ".tdata1";
 my $targetname = "";
 my @results = ();
 my @extraction = ();
@@ -72,8 +72,12 @@ open(SF,">$submitfilename") or die "failed submit file write:$submitfilename:$!\
 print SF "$submitfile";
 close(SF);
 
+my $harvestdatafilename = CondorTest::TempFileName("$testname");
+my $cmdtorun = "condor_submit -dry-run $harvestdatafilename $submitfilename";
+my $res = system("$cmdtorun");
+LoadResults(\@results,$harvestdatafilename);
 
-runCondorTool("condor_submit -dry-run $submitfilename",\@results,2,{emit_output=>0});
+#runCondorTool("condor_submit -dry-run $submitfilename",\@results,2,{emit_output=>0});
 
 DryExtract(\@results, \@extraction, "TransferInput");
 
@@ -90,7 +94,7 @@ my $parseerror = 0;
 foreach my $line (@extraction) {
 	chomp($line);
 	#print "got:$line\n";
-	if($line =~ /$datafilename\d+$extension/) {
+	if($line =~ /"$datafilename\d+$extension"/) {
 	} else {
 		$parseerror += 1;
 		print "parse error:$line\n";
