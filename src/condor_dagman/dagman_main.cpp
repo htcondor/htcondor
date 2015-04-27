@@ -1356,7 +1356,7 @@ Dagman::ResolveDefaultLog()
 
 	bool nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
 	if ( nfsLogIsError ) {
-		bool userlog_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
+		bool userlog_locking = param_boolean( "ENABLE_USERLOG_LOCKING", false );
 		if ( userlog_locking ) {
 			bool locks_on_local = param_boolean( "CREATE_LOCKS_ON_LOCAL_DISK", true);
 			if ( locks_on_local ) {
