@@ -1083,7 +1083,7 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const OwnerData & Owner, int flock_l
 			pAd.Delete(ATTR_JOB_PRIO_ARRAY_OVERFLOW);
 		}
 		// reverse iterator to go high to low prio
-		std::set<int>::reverse_iterator rit;
+		std::set<int>::const_reverse_iterator rit;
 		int num_entries = 0;
 		for (rit = Owner.PrioSet.rbegin();
 			 rit != Owner.PrioSet.rend() && num_entries < max_entries;
