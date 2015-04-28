@@ -60,7 +60,7 @@ void Usage(char* name, int iExitCode)
 		"\t-file <file>\t\tRead history data from specified file\n"
 		"\t-userlog <file>\t\tRead job data specified userlog file\n"
 		"\t-name <schedd-name>\tRemote schedd to read from\n"
-		"\t-pool <collector-name>\tPool remote schedd lives in.
+		"\t-pool <collector-name>\tPool remote schedd lives in.\n"
 		"   If neither -pool, -name, -userlog or -file is specified, then the local history file is used.\n"
 #ifdef HAVE_EXT_POSTGRESQL
 		"\t-dbname <schedd-name>\tRead history data from Quill database\n"
