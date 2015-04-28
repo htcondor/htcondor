@@ -1068,7 +1068,7 @@ Sock::get_sinful_public()
 		if( param(alias,"HOST_ALIAS") ) {
 			Sinful s(_sinful_public_buf.c_str());
 			s.setAlias(alias.c_str());
-			_sinful_public_buf = s.getSinful();
+			_sinful_public_buf = s.getV1String();
 		}
 
 		return _sinful_public_buf.c_str();

@@ -483,7 +483,7 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 
 	Sinful adSinful( adSinfulString.c_str() );
 	condor_sockaddr adSA;
-	adSA.from_sinful( adSinful.getSinful() );
+	adSA.from_sinful( adSinful.getV1String() );
 
 	bool rewrite_port = true;
 	if (commandPortSinfulString == adSinfulString)
@@ -502,7 +502,7 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 		std::vector<Sinful>::const_iterator it;
 		for (it = commandSinfuls.begin(); it!=commandSinfuls.end(); it++)
 		{
-			commandPortSinfulString = it->getSinful();
+			commandPortSinfulString = it->getV1String();
 			const Sinful &commandPortSinful = *it;
 			// We assume that any sinful on the same shared port server
 			// can also be rewritten.
@@ -572,18 +572,18 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 		adSinful.setPort( port );
 	}
 
-	if( adSinful.getSinful() == adSinfulString ) {
+	if( adSinful.getV1String() == adSinfulString ) {
 		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute '%s' (%s): socket is using same address as the default one; rewrite would do nothing.\n", attr_name, expr_string.c_str() );
 		return;
 	}
 
 	std::string new_expr = expr_string.substr( 0, string_start_pos );
-	new_expr.append( adSinful.getSinful() );
+	new_expr.append( adSinful.getV1String() );
 	new_expr.append( expr_string.substr( string_end_pos ) );
 
 	expr_string = new_expr;
 
 	dprintf( D_NETWORK, "Address rewriting: Replaced default IP %s with "
 			"connection IP %s in outgoing ClassAd attribute %s.\n",
-			adSinfulString.c_str(), adSinful.getSinful(), attr_name );
+			adSinfulString.c_str(), adSinful.getV1String(), attr_name );
 }

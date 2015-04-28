@@ -1,0 +1,8 @@
+SafeSock::connect() does NOT call do_connect(), so everything is terrible.
+
+ALSO, condor_utils/network_adapter.cpp:75 depends on sinful failing when
+given a hostname.  I doubt that anyone will name a machine 'eth0', but if they
+do, just passing that into the SInful constructor will fail.  Also, why the
+fuck is the adapter initializing from a sinful in the first place?  This
+function can't possibly actually work right...
+

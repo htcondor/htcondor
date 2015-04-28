@@ -2901,9 +2901,10 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 	ASSERT(sesid);
 
+	// FIXME: ZKM: Do something intelligent if my peer has multiple addresses.
 	condor_sockaddr peer_addr;
 	if(peer_sinful && !peer_addr.from_sinful(peer_sinful)) {
-		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
+		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because "
 				"sock_sockaddr::from_sinful(%s) failed\n",sesid,peer_sinful);
 		return false;
 	}

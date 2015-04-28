@@ -131,7 +131,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 	while( (ccb_contact = m_ccb_contacts.next()) ) {
 		bool success = false;
 		MyString ccb_address, ccbid;
-		if( !SplitCCBContact( ccb_contact, ccb_address, ccbid, error ) ) {
+		if( !SplitCCBContact( ccb_contact, ccb_address, ccbid, m_target_peer_description, error ) ) {
 			continue;
 		}
 
@@ -335,14 +335,14 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 	return false;
 }
 
-bool CCBClient::SplitCCBContact( char const *ccb_contact, MyString &ccb_address, MyString &ccbid, CondorError *error )
+bool CCBClient::SplitCCBContact( char const *ccb_contact, MyString &ccb_address, MyString &ccbid, const MyString & peer, CondorError *error )
 {
 	// expected format: "<address>#ccbid"
 	char const *ptr = strchr(ccb_contact,'#');
 	if( !ptr ) {
 		MyString errmsg;
 		errmsg.formatstr("Bad CCB contact '%s' when connecting to %s.",
-					   ccb_contact, m_target_peer_description.Value());
+					   ccb_contact, peer.Value());
 
 		if( error ) {
 			error->push("CCBClient",CEDAR_ERR_CONNECT_FAILED,errmsg.Value());
@@ -520,7 +520,7 @@ CCBClient::try_next_ccb()
 	}
 
 	MyString ccbid;
-	if( !SplitCCBContact( ccb_contact, m_cur_ccb_address, ccbid, NULL ) ) {
+	if( !SplitCCBContact( ccb_contact, m_cur_ccb_address, ccbid, m_target_peer_description, NULL ) ) {
 		return try_next_ccb();
 	}
 
@@ -544,7 +544,7 @@ CCBClient::try_next_ccb()
 
 		// strip off CCB contact info in the return address
 		sinful_return.setCCBContact(NULL);
-		return_address = sinful_return.getSinful();
+		return_address = sinful_return.getV1String();
 	}
 
 	dprintf(D_NETWORK|D_FULLDEBUG,

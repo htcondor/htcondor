@@ -248,7 +248,7 @@ public:
 		  example: "the local master", "the startd on
 		  raven.cs.wisc.edu", etc.
 		  */
-	const char* idStr( void );
+	const char* idStr( char const * socketDescription = NULL );
 
 		/** Dump all info about this daemon to the given debug
 		  level.

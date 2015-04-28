@@ -715,7 +715,7 @@ SharedPortEndpoint::InitRemoteAddress()
 	if( private_addr ) {
 		Sinful private_sinful( private_addr );
 		private_sinful.setSharedPortID( m_local_id.Value() );
-		sinful.setPrivateAddr( private_sinful.getSinful() );
+		sinful.setPrivateAddr( private_sinful.getV1String() );
 	}
 
 	// Next, look for alternate command strings
@@ -735,13 +735,13 @@ SharedPortEndpoint::InitRemoteAddress()
 			{
 				Sinful private_sinful(private_addr);
 				private_sinful.setSharedPortID(m_local_id.Value());
-				altsinful.setPrivateAddr(private_sinful.getSinful());
+				altsinful.setPrivateAddr(private_sinful.getV1String());
 			}
 			m_remote_addrs.push_back(altsinful);
 		}
 	}
 
-	m_remote_addr = sinful.getSinful();
+	m_remote_addr = sinful.getV1String();
 
 	return true;
 }
@@ -878,7 +878,7 @@ SharedPortEndpoint::GetMyLocalAddress()
 		if( param(alias,"HOST_ALIAS") ) {
 			sinful.setAlias(alias.c_str());
 		}
-		m_local_addr = sinful.getSinful();
+		m_local_addr = sinful.getV1String();
 	}
 	return m_local_addr.Value();
 }

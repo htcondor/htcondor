@@ -270,7 +270,18 @@ bool condor_sockaddr::from_sinful(const char* sinful) {
 
 	char const * host = s.getHost();
 	if( host == NULL ) { return false; }
-	if(! from_ip_string( host ) ) { return false; }
+	if( host[0] == '[' ) {
+		if(! from_ip_string( host ) ) { return false; }
+	} else {
+		if( inet_pton( AF_INET, host, &v4.sin_addr ) <= 0 ) {
+			// Attempt to resolve the hostname.
+			std::vector< condor_sockaddr > addrs = resolve_hostname( host );
+			if( addrs.empty() ) { return false; }
+			* this = addrs[0];
+		}
+		from_ip_string( host );
+	}
+
 	set_port( (unsigned short)s.getPortNum() );
 	return true;
 }

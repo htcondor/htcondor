@@ -141,18 +141,10 @@ CCBServer::InitAndReconfig()
 {
 		// construct the CCB address to be advertised by CCB listeners
 	Sinful sinful(daemonCore->publicNetworkIpAddr());
-		// strip out <>'s, private address, and CCB listener info
+		// strip out private address and CCB listener info
 	sinful.setPrivateAddr(NULL);
 	sinful.setCCBContact(NULL);
-		// We rely on the Sinful constructor recognizing sinfuls
-		// without brackets.  Not sure why we bother stripping them off
-		// in the first place, but we can't change that without
-		// breaking backwards compabitility.
-	ASSERT( sinful.getSinful() && sinful.getSinful()[0] == '<' );
-	m_address.formatstr("%s",sinful.getSinful()+1);
-	if( m_address[m_address.Length()-1] == '>' ) {
-		m_address.setChar(m_address.Length()-1,'\0');
-	}
+	m_address = sinful.getV1String();
 
 	m_read_buffer_size = param_integer("CCB_SERVER_READ_BUFFER",2*1024);
 	m_write_buffer_size = param_integer("CCB_SERVER_WRITE_BUFFER",2*1024);
@@ -477,7 +469,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 	// now, just use the rewriter (and lie to make sure it happens).
 	//
 	std::string exprString;
-	formatstr( exprString, "%s = \"<%s>\"", ATTR_MY_ADDRESS, m_address.Value() );
+	formatstr( exprString, "%s = \"%s\"", ATTR_MY_ADDRESS, m_address.Value() );
 	ConvertDefaultIPToSocketIP( ATTR_MY_ADDRESS, exprString, * stream );
 	std::string rewrittenAddress = exprString.substr( strlen( ATTR_MY_ADDRESS ) + 5 );
 	rewrittenAddress.resize( rewrittenAddress.size() - 2 );

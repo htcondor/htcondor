@@ -1244,11 +1244,11 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		}
 
 		free( sinful_public );
-		sinful_public = strdup( sPublic.getSinful() );
+		sinful_public = strdup( sPublic.getV1String() );
 
 		if( sinful_private != NULL ) {
 			free( sinful_private );
-			sinful_private = strdup( sPrivate.getSinful() );
+			sinful_private = strdup( sPrivate.getV1String() );
 		}
 	}
 
@@ -1266,7 +1266,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 	}
 
 	ASSERT( m_sinful.hasAddrs() );
-	return m_sinful.getSinful();
+	return m_sinful.getV1String();
 }
 
 void
@@ -6666,6 +6666,7 @@ int DaemonCore::Create_Process(
 	if ( m_inherit_parent_sinful.empty() ) {
 		MyString mysin = InfoCommandSinfulStringMyself(true);
 		ASSERT(mysin.Length() > 0); // Empty entry means unparsable string.
+		mysin = Sinful::spacelessEncode( mysin.c_str() );
 		inheritbuf += mysin;
 	} else {
 		inheritbuf += m_inherit_parent_sinful;
@@ -7891,7 +7892,7 @@ int DaemonCore::Create_Process(
 				if( !want_udp ) {
 					sinful.setNoUDP(true);
 				}
-				pidtmp->sinful_string = sinful.getSinful();
+				pidtmp->sinful_string = sinful.getV1String();
 			}
 		}
 	}
@@ -8458,9 +8459,11 @@ DaemonCore::Inherit( void )
 		PidEntry *pidtmp = new PidEntry;
 		pidtmp->pid = ppid;
 		ptmp=inherit_list.next();
-		dprintf(D_DAEMONCORE,"Parent Command Sock = %s\n",ptmp);
-		saved_sinful_string = ptmp;
-		pidtmp->sinful_string = ptmp;
+
+		saved_sinful_string = Sinful::spacelessDecode( ptmp );
+		dprintf( D_DAEMONCORE, "Parent Command Sock = %s\n", saved_sinful_string.c_str() );
+		pidtmp->sinful_string = saved_sinful_string.c_str();
+
 		pidtmp->is_local = TRUE;
 		pidtmp->parent_is_local = TRUE;
 		pidtmp->reaper_id = 0;

@@ -41,20 +41,6 @@
 extern "C" {
 #endif
 
-/* Convert "<xx.xx.xx.xx:pppp?params>" to a sockaddr_in  TCP */
-//int string_to_sin(const char *addr, struct sockaddr_in *s_in);
-
-/* Split "<host:port?params>" into parts: host, port, and params. If
-   the port or params are not in the string, the result is set to
-   NULL.  Any of the result char** values may be NULL, in which case
-   they are parsed but not set.  The caller is responsible for freeing
-   all result strings.
-*/
-int split_sin( const char *addr, char **host, char **port, char **params );
-
-
-//char *sin_to_string(const struct sockaddr_in *s_in);
-
 /* Extract the port from a string of the form "<xx.xx.xx.xx:pppp>" */
 int string_to_port( const char* addr );
 

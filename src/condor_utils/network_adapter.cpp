@@ -50,6 +50,8 @@ NetworkAdapterBase::~NetworkAdapterBase (void) throw ()
 }
 
 
+#include "condor_sinful.h"
+
 /***************************************************************
  * NetworkAdapterBase static members
  ***************************************************************/
@@ -71,16 +73,13 @@ NetworkAdapterBase::createNetworkAdapter ( const char *sinful_or_name,
 # if defined ( NETWORK_ADAPTER_TYPE_DEFINED )
 
 	NetworkAdapterBase *adapter = NULL;
-
-	condor_sockaddr addr;
-
-	// if from_sinful() returns true, it surely is valid sinful and
-	// has a numeric IP address.
-	if ( addr.from_sinful(sinful_or_name) ) {
-		adapter = new NetworkAdapter ( addr );
-	}
-	else {
-		adapter = new NetworkAdapter ( sinful_or_name );
+	Sinful s( sinful_or_name );
+	if( s.valid() ) {
+		std::vector< condor_sockaddr > * addrs = s.getAddrs();
+		adapter = new NetworkAdapter( (*addrs)[0] );
+		delete addrs;
+	} else {
+		adapter = new NetworkAdapter( sinful_or_name );
 	}
 
 	// Try to initialize it; delete it if it fails

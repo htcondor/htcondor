@@ -2307,8 +2307,7 @@ newIdString( char** id_str_ptr )
 	// '#' characters in the address.
 
 	Sinful my_sin( daemonCore->publicNetworkIpAddr() );
-	my_sin.clearParams();
-	char const *my_addr = my_sin.getSinful();
+	char const *my_addr = my_sin.getPrettyString();
 
 	ASSERT( my_addr && !strchr(my_addr,'#') );
 

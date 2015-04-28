@@ -1080,28 +1080,15 @@ int Sock::setsockopt(int level, int optname, const void* optval, int optlen)
 }
 
 bool Sock::guess_address_string(char const* host, int port, condor_sockaddr& addr) {
-	dprintf(D_HOSTNAME, "Guess address string for host = %s, port = %d\n",
-			host, port);
-	/* might be in <x.x.x.x:x> notation				*/
-	if (host[0] == '<') {
-		addr.from_sinful(host);
-		dprintf(D_HOSTNAME, "it was sinful string. ip = %s, port = %d\n",
-				addr.to_ip_string().Value(), addr.get_port());
+	condor_sockaddr sa;
+	if(! sa.from_sinful( host )) {
+		dprintf( D_HOSTNAME, "Failed to convert '%s' to sockaddr.\n", host );
+		return false;
 	}
-	/* try to get a decimal notation 	 			*/
-	else if ( addr.from_ip_string(host) ) {
-			// nothing to do here
-		addr.set_port(port);
+	if( port != 0 ) {
+		sa.set_port( port );
 	}
-	/* if dotted notation fails, try host database	*/
-	else{
-		std::vector<condor_sockaddr> addrs;
-		addrs = resolve_hostname(host);
-		if (addrs.empty())
-			return false;
-		addr = addrs.front();
-		addr.set_port(port);
-	}
+	addr = sa;
 	return true;
 }
 
@@ -1182,7 +1169,7 @@ int Sock::do_connect(
 		// Change the "primary" address.
 		s.setHost( candidate.to_ip_string().c_str() );
 		s.setPort( candidate.get_port() );
-		host = s.getSinful();
+		host = s.getV1String();
 		set_connect_addr( host );
 
 		_who = candidate;
@@ -2457,7 +2444,7 @@ Sock::get_sinful()
 			if( param(alias,"HOST_ALIAS") ) {
 				Sinful s(_sinful_self_buf.c_str());
 				s.setAlias(alias.c_str());
-				_sinful_self_buf = s.getSinful();
+				_sinful_self_buf = s.getV1String();
 			}
 
 		}

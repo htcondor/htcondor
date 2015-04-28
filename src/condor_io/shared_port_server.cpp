@@ -124,7 +124,7 @@ SharedPortServer::PublishAddress()
 	const std::vector<Sinful> &mySinfuls = daemonCore->InfoCommandSinfulStringsMyself();
 	for (std::vector<Sinful>::const_iterator it=mySinfuls.begin(); it!=mySinfuls.end(); it++)
 	{
-		commandAddresses.insert(it->getSinful());
+		commandAddresses.insert(it->getV1String());
 	}
 	StringList commandAddressesSL;
 	for (std::set<std::string>::const_iterator it=commandAddresses.begin(); it!=commandAddresses.end(); it++)

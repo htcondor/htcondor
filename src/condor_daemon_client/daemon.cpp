@@ -356,7 +356,7 @@ Daemon::port( void )
 
 
 const char*
-Daemon::idStr( void )
+Daemon::idStr( char const * socketDescription )
 {
 	if( _id_str ) {
 		return _id_str;
@@ -378,12 +378,16 @@ Daemon::idStr( void )
 	} else if( _name ) {
 		ASSERT( dt_str );
 		formatstr( buf, "%s %s", dt_str, _name );
+	} else if( socketDescription != NULL ) {
+		formatstr( buf, "%s at %s", dt_str, socketDescription );
+		if( _full_hostname ) {
+			formatstr_cat( buf, " (%s)", _full_hostname );
+		}
 	} else if( _addr ) {
 		ASSERT( dt_str );
 		Sinful sinful(_addr);
-		sinful.clearParams(); // too much info is ugly
 		formatstr( buf, "%s at %s", dt_str,
-					 sinful.getSinful() ? sinful.getSinful() : _addr );
+					 sinful.getPrettyString() ? sinful.getPrettyString() : _addr );
 		if( _full_hostname ) {
 			formatstr_cat( buf, " (%s)", _full_hostname );
 		}
@@ -512,7 +516,7 @@ bool
 Daemon::connectSock(Sock *sock, int sec, CondorError* errstack, bool non_blocking, bool ignore_timeout_multiplier )
 {
 
-	sock->set_peer_description(idStr());
+	sock->set_peer_description( idStr() );
 	if( sec ) {
 		sock->timeout( sec );
 		if( ignore_timeout_multiplier ) {
@@ -1516,7 +1520,7 @@ Daemon::findCmDaemon( const char* cm_name )
 
 
 	if( saddr.from_ip_string(host) ) {
-		New_addr( strnewp( sinful.getSinful() ) );
+		New_addr( strnewp( sinful.getV1String() ) );
 		dprintf( D_HOSTNAME, "Host info \"%s\" is an IP address\n", host );
 	} else {
 			// We were given a hostname, not an address.
@@ -1540,12 +1544,12 @@ Daemon::findCmDaemon( const char* cm_name )
 		}
 		sinful.setHost(saddr.to_ip_string().Value());
 		dprintf( D_HOSTNAME, "Found IP address and port %s\n",
-				 sinful.getSinful() ? sinful.getSinful() : "NULL" );
+				 sinful.getV1String() ? sinful.getV1String() : "NULL" );
 		New_full_hostname(strnewp(fqdn.Value()));
 		if( host ) {
 			New_alias( strnewp(host) );
 		}
-		New_addr( strnewp( sinful.getSinful() ) );
+		New_addr( strnewp( sinful.getV1String() ) );
 	}
 
 		// If the pool was set, we want to use _name for that, too. 
@@ -2052,7 +2056,7 @@ Daemon::New_addr( char* str )
 						// address with CCB disabled
 						sinful.setCCBContact(NULL);
 						delete [] _addr;
-						_addr = strnewp( sinful.getSinful() );
+						_addr = strnewp( sinful.getV1String() );
 					}
 				}
 				free( our_network_name );
@@ -2063,7 +2067,7 @@ Daemon::New_addr( char* str )
 				sinful.setPrivateAddr(NULL);
 				sinful.setPrivateNetworkName(NULL);
 				delete [] _addr;
-				_addr = strnewp( sinful.getSinful() );
+				_addr = strnewp( sinful.getV1String() );
 				dprintf( D_HOSTNAME, "Private network name not matched.\n");
 			}
 		}
@@ -2092,7 +2096,7 @@ Daemon::New_addr( char* str )
 			{
 				sinful.setAlias(_alias);
 				delete [] _addr;
-				_addr = strnewp( sinful.getSinful() );
+				_addr = strnewp( sinful.getV1String() );
 			}
 		}
 	}
