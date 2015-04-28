@@ -33,11 +33,22 @@ The details of each version are described below.
 use the new file globbing features.
 \Ticket{4960}
 
+\item Changed the default value for configuration parameters
+\MacroNI{ENABLE\_USERLOG\_LOCKING} and \MacroNI{EVENT\_LOG\_LOCKING}
+to \Expr{False}.
+The Event Log is still locked by default to perform file rotation.
+\Ticket{4922}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed bug where \Condor{q} would return exit code 1
+when given the global option, and no jobs exist in any 
+queues.
+\Ticket{5024}
 
 \item Fixed bug that prevented collector from ever forking to
 handle queries to startd ads.

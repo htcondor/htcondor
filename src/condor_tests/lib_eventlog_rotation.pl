@@ -54,7 +54,7 @@ my @tests =
 			 #"EVENT_LOG_COUNT_EVENTS"	=> "FALSE",
 			 #"EVENT_LOG_MAX_ROTATIONS"	=> 1,
 			 #"EVENT_LOG_MAX_SIZE"		=> -1,
-			 #"ENABLE_USERLOG_LOCKING"	=> "TRUE",
+			 #"ENABLE_USERLOG_LOCKING"	=> "FALSE",
 			 "ENABLE_USERLOG_FSYNC"		=> "FALSE",
 		 },
 		 writer => {

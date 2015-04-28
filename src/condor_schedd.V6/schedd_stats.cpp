@@ -619,11 +619,13 @@ bool ScheddOtherStatsMgr::RemoveDisabled()
 		} else if ( ! po->sets.empty()) {
 			for (std::map<std::string, ScheddOtherStats*>::iterator it = po->sets.begin();
 				 it != po->sets.end();
-				 ++it) {
+				 ) {
 				if ( ! po->enabled) {
 					delete it->second;
 					it->second = NULL;
 					po->sets.erase(it++);
+				} else {
+					it++;
 				}
 			}
 		}
