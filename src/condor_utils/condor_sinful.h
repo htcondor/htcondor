@@ -36,20 +36,32 @@
 #include <vector>
 
 #include "condor_sockaddr.h"
+#include "classad/classad.h"
 
 class Sinful {
+	public:
+		// We would like getV1String() to be a drop-in replacement for
+		// getSinful() at some point, so it has to have the same API.
+		char const * getV1String() const;
+
+	private:
+		void parseV1String();
+		std::string m_v1String;
+		void regenerateV1String();
+
+		void parseSinfulString();
+		std::string m_sinfulString;
+		void regenerateSinfulString();
+
+		void regenerateStrings();
+
  public:
 	Sinful(char const *sinful=NULL);
 	bool valid() const { return m_valid; }
 
-	// returns the full sinful string
-	char const *getSinful() const { if( m_sinful.empty() ) return NULL; else return m_sinful.c_str(); }
-
-	// returns the host portion of the sinful string
-	char const *getHost() const { if( m_host.empty() ) return NULL; else return m_host.c_str(); }
-
-	// returns the port portion of the sinful string
-	char const *getPort() const { if( m_port.empty() ) return NULL; else return m_port.c_str(); }
+	char const *getSinful() const;
+	char const *getHost() const;
+	char const *getPort() const;
 
 	// returns -1 if port not set; o.w. port number
 	int getPortNum() const;
@@ -101,16 +113,14 @@ class Sinful {
 	bool addressPointsToMe( Sinful const &addr ) const;
 
  private:
-	std::string m_sinful; // the sinful string "<host:port?params>"
+	bool m_valid;
+
 	std::string m_host;
 	std::string m_port;
 	std::string m_alias;
-	std::map<std::string,std::string> m_params; // key value pairs from params
-	bool m_valid;
+	std::map<std::string,std::string> m_params;
 
 	std::vector< condor_sockaddr > addrs;
-
-	void regenerateSinful();
 };
 
 #endif

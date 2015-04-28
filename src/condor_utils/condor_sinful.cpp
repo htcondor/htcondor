@@ -175,89 +175,6 @@ static std::string urlEncodeParams(map_type const &params)
 	return result;
 }
 
-Sinful::Sinful(char const *sinful)
-{
-	if( !sinful ) { // default constructor
-		m_valid = true;
-	}
-	else {
-		char *host=NULL;
-		char *port=NULL;
-		char *params=NULL;
-
-		if( *sinful != '<' ) {
-			m_sinful = "<";
-
-			// Before we try anything else, surround the string with <>
-			// and try parsing it again.  CCB requires the ability to
-			// pass bracketless Sinfuls; we've gotten away with it so far
-			// because we haven't needed colons in the parameter list,
-			// only in the base address.
-			std::string trialSinful = m_sinful + sinful + ">";
-			if( split_sin( trialSinful.c_str(), &host, &port, &params ) ) {
-				m_sinful = trialSinful;
-			} else {
-				// should be careful here
-				// if sinful is IPv6 address, it should be embraced by [ ]
-
-				if(*sinful == '[') { // IPv6
-					m_sinful += sinful;
-				} else {
-					// Double check it's not IPv6 lacking [brackets]
-					const char * first_colon = strchr(sinful, ':');
-					if(first_colon && strchr(first_colon+1, ':')) {
-						// Why not treat it as an IPv6 address? Because
-						// We can't tell if 12AB::CDEF:1000 means
-						// 12AB:0000:0000:0000:0000:0000:0000:CDEF port 1000 or
-						// 12AB:0000:0000:0000:0000:0000:CDEF:1000 unknown port
-						m_valid = false;
-						return;
-					}
-					m_sinful += sinful;
-				}
-				m_sinful += ">";
-			}
-		}
-		else {
-			m_sinful = sinful;
-		}
-
-		m_valid = split_sin(m_sinful.c_str(),&host,&port,&params);
-
-		if( m_valid ) {
-			if( host ) {
-				m_host = host;
-			}
-			if( port ) {
-				m_port = port;
-			}
-			if( params ) {
-				if( !parseUrlEncodedParams(params,m_params) ) {
-					m_valid = false;
-				}
-
-				char const * addrsString = getParam( "addrs" );
-				if( addrsString != NULL ) {
-					StringList sl( addrsString, "+" );
-					sl.rewind();
-					char * addrString = NULL;
-					while( (addrString = sl.next()) != NULL ) {
-						condor_sockaddr sa;
-						if( sa.from_ip_and_port_string( addrString ) ) {
-							addrs.push_back( sa );
-						} else {
-							m_valid = false;
-						}
-					}
-				}
-			}
-		}
-		free( host );
-		free( port );
-		free( params );
-	}
-}
-
 char const *
 Sinful::getParam(char const *key) const
 {
@@ -277,14 +194,14 @@ Sinful::setParam(char const *key,char const *value)
 	else {
 		m_params[key] = value;
 	}
-	regenerateSinful();
+	regenerateStrings();
 }
 
 void
 Sinful::clearParams()
 {
 	m_params.clear();
-	regenerateSinful();
+	regenerateStrings();
 }
 
 int
@@ -375,14 +292,14 @@ Sinful::setHost(char const *host)
 {
 	ASSERT(host);
 	m_host = host;
-	regenerateSinful();
+	regenerateStrings();
 }
 void
 Sinful::setPort(char const *port)
 {
 	ASSERT(port);
 	m_port = port;
-	regenerateSinful();
+	regenerateStrings();
 }
 void
 Sinful::setPort(int port)
@@ -390,32 +307,7 @@ Sinful::setPort(int port)
 	std::ostringstream tmp;
 	tmp << port;
 	m_port = tmp.str();
-	regenerateSinful();
-}
-
-void
-Sinful::regenerateSinful()
-{
-	// generate "<host:port?params>"
-
-	m_sinful = "<";
-	if (m_host.find(':') != std::string::npos &&
-		m_host.find('[') == std::string::npos) {
-		m_sinful += "[";
-		m_sinful += m_host;
-		m_sinful += "]";
-	} else
-		m_sinful += m_host;
-
-	if( !m_port.empty() ) {
-		m_sinful += ":";
-		m_sinful += m_port;
-	}
-	if( !m_params.empty() ) {
-		m_sinful += "?";
-		m_sinful += urlEncodeParams(m_params);
-	}
-	m_sinful += ">";
+	regenerateStrings();
 }
 
 bool
@@ -431,9 +323,6 @@ Sinful::addressPointsToMe( Sinful const &addr ) const
 		{
 			addr_matches = true;
 		}
-
-		// FIXME: Is it sufficient, when advertising addrs, that only the
-		// "primary" address matches?
 
 		// We may have failed to match host addresses above, but we now need
 		// to cover the case of the loopback interface (aka 127.0.0.1).  A common
@@ -509,4 +398,629 @@ Sinful::clearAddrs() {
 bool
 Sinful::hasAddrs() {
 	return (! addrs.empty());
+}
+
+void
+Sinful::regenerateStrings() {
+	regenerateSinfulString();
+	regenerateV1String();
+}
+
+char const *
+Sinful::getSinful() const {
+	if( m_sinfulString.empty() ) { return NULL; }
+	return m_sinfulString.c_str();
+}
+
+char const *
+Sinful::getHost() const {
+	if( m_host.empty() ) { return NULL; }
+	return m_host.c_str();
+}
+
+char const *
+Sinful::getPort() const {
+	if( m_port.empty() ) { return NULL; }
+	return m_port.c_str();
+}
+
+
+bool hasTwoColons( char const * sinful ) {
+	const char * firstColon = strchr( sinful, ':' );
+	if( firstColon && strchr( firstColon + 1, ':' ) ) {
+		return true;
+	}
+	return false;
+}
+
+Sinful::Sinful( char const * sinful ) {
+	if( sinful == NULL ) {
+		// default constructor
+		m_valid = true;
+		return;
+	}
+
+	// Which kind of serialization is it
+	switch( sinful[0] ) {
+		case '<': {
+			m_sinfulString = sinful;
+			parseSinfulString();
+		} break;
+
+		case '[': {
+			// For now, this means an unbracketed Sinful with an IPv6 address.
+			// In the future, it will mean a full nested ClassAd.  We can
+			// readily the distinguish the two by scanning forward for = and :;
+			// if we find = first, it's a full nested ClassAd.
+			formatstr( m_sinfulString, "<%s>", sinful );
+			parseSinfulString();
+		} break;
+
+		case '{': {
+			m_v1String = sinful;
+			parseV1String();
+		} break;
+
+		default: {
+			// If this is a naked IPv6 address, reject, since we can't
+			// reliably tell where the address ends and the port begins.
+			if( hasTwoColons( sinful ) ) {
+				m_valid = false;
+				return;
+			}
+
+			// Otherwise, it may be an unbracketed original Sinful from
+			// an old implementation of CCB.
+			formatstr( m_sinfulString, "<%s>", sinful );
+			parseSinfulString();
+		} break;
+	}
+
+	if( m_valid ) {
+		regenerateStrings();
+	}
+}
+
+void
+Sinful::regenerateSinfulString()
+{
+	m_sinfulString = "<";
+	if (m_host.find(':') != std::string::npos &&
+		m_host.find('[') == std::string::npos) {
+		m_sinfulString += "[";
+		m_sinfulString += m_host;
+		m_sinfulString += "]";
+	} else
+		m_sinfulString += m_host;
+
+	if( !m_port.empty() ) {
+		m_sinfulString += ":";
+		m_sinfulString += m_port;
+	}
+	if( !m_params.empty() ) {
+		m_sinfulString += "?";
+		m_sinfulString += urlEncodeParams(m_params);
+	}
+	m_sinfulString += ">";
+}
+
+void
+Sinful::parseSinfulString() {
+	char * host = NULL;
+	char * port = NULL;
+	char * params = NULL;
+
+	m_valid = split_sin( m_sinfulString.c_str(), & host, & port, & params );
+	if(! m_valid) { return; }
+
+	if( host ) {
+		m_host = host;
+		free( host );
+	}
+
+	if( port ) {
+		m_port = port;
+		free( port );
+	}
+
+	if( params ) {
+		if( !parseUrlEncodedParams(params,m_params) ) {
+			m_valid = false;
+		} else {
+			char const * addrsString = getParam( "addrs" );
+			if( addrsString != NULL ) {
+				StringList sl( addrsString, "+" );
+				sl.rewind();
+				char * addrString = NULL;
+				while( (addrString = sl.next()) != NULL ) {
+					condor_sockaddr sa;
+					if( sa.from_ip_and_port_string( addrString ) ) {
+						addrs.push_back( sa );
+					} else {
+						m_valid = false;
+					}
+				}
+			}
+	}
+
+	free( params );
+	}
+}
+
+
+#define PUBLIC_NETWORK_NAME "Internet"
+
+class SourceRoute {
+	public:
+		SourceRoute(	condor_sockaddr sa, const std::string & networkName ) :
+			p( sa.get_protocol() ), a( sa.to_ip_string() ), port( sa.get_port() ), n( networkName ) { }
+		SourceRoute(	condor_protocol protocol,
+						const std::string & address,
+						int portNumber,
+						const std::string & networkName ) :
+						p( protocol ), a( address ), port( portNumber ), n( networkName ) {}
+		SourceRoute( 	const SourceRoute & ma, const std::string & networkName ) :
+			p( ma.p ), a( ma.a ), port( ma.port ), n( networkName ) {}
+
+		condor_protocol getProtocol() const { return p; }
+		const std::string & getAddress() const { return a; }
+		int getPort() const { return port; }
+		const std::string & getNetworkName() const { return n; }
+		condor_sockaddr getSockAddr() const;
+
+		// Optional attributes.
+		void setSharedPortID( const std::string & spid ) { this->spid = spid; }
+		void setCCBID( const std::string & ccbid ) { this->ccbid = ccbid; }
+		void setCCBSharedPortID( const std::string & ccbspid ) { this->ccbspid = ccbspid; }
+		void setAlias( const std::string & alias ) { this->alias = alias; }
+
+		// Optional attributes are empty if unset.
+		const std::string & getSharedPortID() const { return spid; }
+		const std::string & getCCBID() const { return ccbid; }
+		const std::string & setCCBSharedPortID() const { return ccbspid; }
+		const std::string & getAlias() const { return alias; }
+
+		std::string serialize();
+
+	private:
+		// Required.
+		condor_protocol p;
+		std::string a;
+		int port;
+		std::string n;
+
+		// Optional.
+		std::string spid;
+		std::string ccbid;
+		std::string ccbspid;
+		std::string alias;
+};
+
+condor_sockaddr SourceRoute::getSockAddr() const {
+	condor_sockaddr sa;
+	sa.from_ip_string( a.c_str() );
+	sa.set_port( port );
+	if( sa.get_protocol() != p ) {
+		dprintf( D_NETWORK, "Warning -- protocol of source route doesn't match its address in getSockAddr().\n" );
+	}
+	return sa;
+}
+
+std::string SourceRoute::serialize() {
+	std::string rv;
+	formatstr( rv, "n=\"%s\"; a=\"%s\"; port=%d; p=\"%s\"", n.c_str(), a.c_str(), port, condor_protocol_to_str( p ).c_str() );
+	if(! alias.empty()) { rv += " alias=\"" + alias + "\";"; }
+	if(! spid.empty()) { rv += " spid=\"" + spid + "\";"; }
+	if(! ccbid.empty()) { rv += " ccbid=\"" + ccbid + "\";"; }
+	if(! ccbspid.empty()) { rv += " ccbspid=\"" + ccbspid + "\";"; }
+	formatstr( rv, "[ %s ]", rv.c_str() );
+	return rv;
+}
+
+// You must delete the returned pointer (if it's not NULL).
+// A simple route has only a condor_sockaddr and a network name.
+SourceRoute * simpleRouteFromSinful( const Sinful & s ) {
+	if(! s.valid()) { return NULL; }
+	if( s.getHost() == NULL ) { return NULL; }
+
+	condor_sockaddr primary;
+	bool primaryOK = primary.from_ip_string( s.getHost() );
+	if(! primaryOK) { return NULL; }
+
+	int portNo = s.getPortNum();
+	if( portNo == -1 ) { return NULL; }
+
+	return new SourceRoute( primary.get_protocol(), primary.to_ip_string(), portNo, PUBLIC_NETWORK_NAME );
+}
+
+bool stripQuotesAndSemicolon( char * str ) {
+	unsigned length = strlen( str );
+	if( str[length - 1] != ';' ) { return false; }
+	if( str[length - 2] != '"' ) { return false; }
+	if( str[0] != '"' ) { return false; }
+	memmove( str, str + 1, length - 3 );
+	str[ length - 3 ] = '\0';
+	return true;
+}
+
+bool stripQuotes( char * str ) {
+	unsigned length = strlen( str );
+	if( str[length - 1] != '"' ) { return false; }
+	if( str[0] != '"' ) { return false; }
+	memmove( str, str + 1, length - 2 );
+	str[ length - 2 ] = '\0';
+	return true;
+}
+
+void Sinful::parseV1String() {
+	// The correct way to do this is to faff about with ClassAds, but
+	// they make it uneccessarily hard; for now, sscanf() do.
+
+	if( m_v1String[0] != '{' ) {
+		m_valid = false;
+		return;
+	}
+
+	// It is readily possible to represent addresses in what looks like
+	// the V1 format that we can't actually store (using the original
+	// Sinful data structures).  That contradiction will be resolved in
+	// a later revision, which will probably also have a more-general
+	// serialization.  For now, if we can't store the addresses, we
+	// mark the Sinful to be invalid.
+
+	// This a whole wad of code, but since regenerateV0String() needs to
+	// be able to (almost) all of this anyway, we might as well do it
+	// here and save the space by not having parallel data structures.
+	// (regenerateV0String() doesn't need to handle generating addrs.)
+
+	// Scan forward, looking for [bracketed] source routes.  Since the
+	// default constructor produces an empty list, we accept one.
+	const char * next = NULL;
+	const char * remainder = m_v1String.c_str();
+
+	std::vector< SourceRoute > v;
+	while( (next = strchr( remainder, '[' )) != NULL ) {
+		remainder = next;
+		const char * open = remainder;
+		remainder = strchr( remainder, ']' );
+		if( remainder == NULL ) { m_valid = false; return; }
+
+		// Yes, yes, yes, I know.
+		char nameBuffer[64];
+		char addressBuffer[64];
+		int port = -1;
+		char protocolBuffer[16];
+		int matches = sscanf( open, "[ n=%64s a=%64s port=%d; p=%16s ",
+			nameBuffer, addressBuffer, & port, protocolBuffer );
+		if( matches != 4 ) { m_valid = false; return; }
+
+		if( (! stripQuotesAndSemicolon( nameBuffer )) ||
+			(! stripQuotesAndSemicolon( addressBuffer )) ||
+			(! stripQuotes( protocolBuffer )) ) {
+			m_valid = false;
+			return;
+		}
+
+		condor_protocol protocol = str_to_condor_protocol( protocolBuffer );
+		if( protocol <= CP_INVALID_MIN || protocol >= CP_INVALID_MAX ) {
+			m_valid = false;
+			return;
+		}
+		SourceRoute sr( protocol, addressBuffer, port, nameBuffer );
+
+		// Look for alias, spid, ccbid, ccbspid.  Start by scanning
+		// past the spaces we know sscanf() matched above.
+		const char * parsed = open;
+		for( unsigned i = 0; i < 5; ++i ) {
+			parsed = strchr( parsed, ' ' );
+			assert( parsed != NULL );
+			++parsed;
+		}
+
+		// ... this may not work yet ...
+		const char * next = NULL;
+		while( (next = strchr( parsed, ' ' )) != NULL && next < remainder ) {
+			const char * equals = strchr( parsed, '=' );
+			if( equals == NULL ) { m_valid = false; return; }
+
+			char attr[16];
+			unsigned length = equals - (parsed + 1);
+			if( length >= 16 ) { m_valid = false; return; }
+			memcpy( attr, parsed + 1, length );
+			attr[length] = '\0';
+
+			dprintf( D_ALWAYS, "Found attribute '%s'.\n", attr );
+
+			parsed = next;
+			++parsed;
+		}
+
+		// Make sure the route is properly terminated.
+		if( parsed[0] != ']' ) {
+			m_valid = false;
+			return;
+		}
+
+		v.push_back( sr );
+	}
+
+	// Make sure the list is properly terminated.
+	const char * closingBrace = strchr( remainder, '}' );
+	if( closingBrace == NULL ) {
+		m_valid = false;
+		return;
+	}
+
+	//
+	// To convert a list of source routes back into an original Sinful's
+	// data structures, do the following:
+	//
+	//	(1) Extract the spid from each route; they must all be the same.
+	//		Set the spid.
+	//  (2) Extract the alias from each route; they must all be the same.
+	//		Set the alias.  (TODO)
+	//	(3) Extract the private network name from each route; they must
+	//		all be the same.  Set the private network name.
+	//	(4) Check all routes for ccbid.  Each route with a ccbid goes
+	//		into the ccb contact list.  (TODO)
+	//	(5) All routes without a ccbid must be "Internet" addresses or
+	//		private network addresses.  The former go into addrs (and
+	//		host is set to addrs[0]).  Ignore all of the latter that
+	//		have an address in addrs (because those came from CCB).  The
+	//		remaining address must be the private network address.
+	//
+
+	// Determine the shared port ID, if any.  If any route has a
+	//shared port ID, all must have one, and it must be the same.
+	const std::string & sharedPortID = v[0].getSharedPortID();
+	if(! sharedPortID.empty() ) {
+		setSharedPortID( v[0].getSharedPortID().c_str() );
+		for( unsigned i = 0; i < v.size(); ++i ) {
+			if( v[i].getSharedPortID() != sharedPortID ) {
+				m_valid = false;
+				return;
+			}
+		}
+	}
+
+	// Determine the alias, if any.  (TODO)
+
+	// Determine the private network name, if any.
+	std::string privateNetworkName;
+	for( unsigned i = 0; i < v.size(); ++i ) {
+		if( v[i].getNetworkName() != PUBLIC_NETWORK_NAME ) {
+			if(! privateNetworkName.empty()) {
+				if( v[i].getNetworkName() != privateNetworkName ) {
+					m_valid = false;
+					return;
+				}
+			} else {
+				privateNetworkName = v[i].getNetworkName();
+			}
+		}
+	}
+	if(! privateNetworkName.empty() ) {
+		setPrivateNetworkName( privateNetworkName.c_str() );
+	}
+
+	// Determine the CCB contact string, if any.  (TODO)
+
+	// Determine the set of public addresses.
+	for( unsigned i = 0; i < v.size(); ++i ) {
+		if(! v[i].getCCBID().empty()) { continue; }
+
+		if( v[i].getNetworkName() == PUBLIC_NETWORK_NAME ) {
+			addAddrToAddrs( v[i].getSockAddr() );
+		}
+	}
+
+	// Set up the "primary" address (for a backwards-compatible API).
+	condor_sockaddr sa = v[0].getSockAddr();
+	setHost( sa.to_ip_string().c_str() );
+	setPort( sa.get_port() );
+
+	// We could alter generateVString() to preserve the "primary" host and
+	// port, but only old code, using the results of regenerateV0String(),
+	// will ever actually use them; so don't bother.  (New code given an
+	// original Sinful string will properly ignore the "primary" host, so
+	// as long as we always generate an addrs parameter -- and we do --
+	// we're not actually losing information.)
+
+	// Determine the private network address, if any.
+	for( unsigned i = 0; i < v.size(); ++i ) {
+		if(! v[i].getCCBID().empty()) { continue; }
+		if( v[i].getNetworkName() == PUBLIC_NETWORK_NAME ) { continue; }
+
+		if( getPrivateAddr() == NULL ) {
+			// setPrivateAddr( Sinful::privateAddressString( v[i].getSockAddr(), getSharedPortID() ).c_str() );
+			Sinful p( v[i].getSockAddr().to_ip_and_port_string().c_str() );
+			p.setSharedPortID( getSharedPortID() );
+			setPrivateAddr( p.getSinful() );
+		} else {
+			m_valid = false;
+			return;
+		}
+	}
+
+	// Determine noUDP.  (TODO)
+
+
+	m_valid = true;
+}
+
+#include "ccb_client.h"
+#include "ipv6_hostname.h"
+
+void
+Sinful::regenerateV1String() {
+	if(! m_valid) {
+		// The empty list.
+		m_v1String = "{}";
+		return;
+	}
+
+	//
+	// Presently,
+	// each element of the list must be of one of the following forms:
+	//
+	// a = primary, port = port, p = IPv6, n = "internet"
+	// a = addrs[], port = port, p = IPv6, n = "internet"
+	// a = primary, port = port, p = IPv4, n = "internet"
+	// a = addrs[], port = port, p = IPv4, n = "internet"
+	//
+	// a = private, port = privport, p = IPv4, n = "private"
+	// a = private, port = privport, p = IPv6, n = "private"
+	// a = primary, port = port, p = IPv4, n = "private"
+	// a = primary, port = port, p = IPv6, n = "private"
+	//
+	// a = CCB[], port = ccbport, p = IPv4, n = "internet"
+	// a = CCB[], port = ccbport, p = IPv6, n = "internet"
+	// a = CCB[], port = ccbport, p = IPv4, n = "internet", ccbsharedport
+	// a = CCB[], port = ccbport, p = IPv6, n = "internet", ccbsharedport
+	//
+	// Additionally, each of the above may also include sp; if any
+	// address includes sp, all must include (the same) sp.
+	//
+
+	std::vector< SourceRoute > v;
+	std::vector< SourceRoute > publics;
+
+	// Start by generating our list of public addresses.
+	if( (numParams() == 0) && (getHost() != NULL) ) {
+		// Is the host string an address literal?
+		condor_sockaddr sa;
+		if( sa.from_ip_string( getHost() ) ) {
+			SourceRoute * sr = simpleRouteFromSinful( * this );
+			if( sr == NULL ) {
+				m_valid = false;
+				return;
+			}
+			publics.push_back( * sr );
+			delete sr;
+		} else {
+			// If the primary address is a name, generate addrs for it.
+			std::vector< condor_sockaddr > v = resolve_hostname( getHost() );
+
+			// For backwards compability, even if a name does not resolve,
+			// it's still a valid Sinful.  We should change this (the
+			// callers) and the convention that a newly-created (empty)
+			// Sinful is valid (by removing that constructor), so that valid
+			// actually means something.
+			if( v.size() == 0 ) {
+				m_v1String = "{}";
+				m_valid = true;
+				return;
+			}
+			for( unsigned i = 0; i < v.size(); ++i ) {
+				condor_sockaddr sa = v[i];
+				sa.set_port( getPortNum() );
+				SourceRoute sr( sa, PUBLIC_NETWORK_NAME );
+				publics.push_back( sr );
+			}
+		}
+	} else if( hasAddrs() ) {
+		for( unsigned i = 0; i < addrs.size(); ++i ) {
+			condor_sockaddr sa = addrs[i];
+			SourceRoute sr( sa, PUBLIC_NETWORK_NAME );
+			publics.push_back( sr );
+		}
+	}
+
+	if( publics.size() == 0 ) {
+		m_valid = false;
+		return;
+	}
+
+	// If we have a private network, either:
+	//		* add its private network address, if it exists
+	//	or
+	//		* add each of its public addresses.
+	// In both cases, the network name for the routes being added is the
+	// private network name.
+	if( getPrivateNetworkName() != NULL ) {
+		if( getPrivateAddr() == NULL ) {
+			for( unsigned i = 0; i < publics.size(); ++i ) {
+				SourceRoute sr( publics[i], getPrivateNetworkName() );
+				v.push_back( sr );
+			}
+		} else {
+			condor_sockaddr sa;
+			bool saOK = sa.from_ip_and_port_string( getPrivateAddr() );
+			if( ! saOK ) {
+				m_valid = false;
+				return;
+			}
+			SourceRoute sr( sa, getPrivateNetworkName() );
+			v.push_back( sr );
+		}
+	}
+
+	// If we have a CCB address, advertise all CCB addresses.  Otherwise,
+	// advertise all of our public addresses.
+	if( getCCBContact() != NULL ) {
+		StringList brokers( getCCBContact(), " " );
+		brokers.rewind();
+		char * contact = NULL;
+		while( (contact = brokers.next()) != NULL ) {
+			MyString ccbAddr, ccbId;
+			MyString peer( "er, constructing v1 Sinful string" );
+			bool contactOK = CCBClient::SplitCCBContact( contact, ccbAddr, ccbId, peer, NULL );
+			if(! contactOK ) {
+				m_valid = false;
+				return;
+			}
+
+			Sinful s( ccbAddr.c_str() );
+			SourceRoute * sr = simpleRouteFromSinful( s );
+			if(sr == NULL) {
+				m_valid = false;
+				return;
+			}
+
+			sr->setCCBID( ccbId.c_str() );
+			if( s.getSharedPortID() != NULL ) {
+				sr->setCCBSharedPortID( s.getSharedPortID() );
+			}
+			v.push_back( * sr );
+			delete sr;
+		}
+	} else {
+		for( unsigned i = 0; i < publics.size(); ++i ) {
+			v.push_back( publics[i] );
+		}
+	}
+
+	// Set the host alias, if present, on all addresses.
+	if( getAlias() != NULL ) {
+		std::string alias( getAlias() );
+		for( unsigned i = 0; i < v.size(); ++i ) {
+			v[i].setAlias( alias );
+		}
+	}
+
+	// Finally, set the shared port ID, if present, on all addresses.
+	if( getSharedPortID() != NULL ) {
+		std::string spid( getSharedPortID() );
+		for( unsigned i = 0; i < v.size(); ++i ) {
+			v[i].setSharedPortID( spid );
+		}
+	}
+
+	//
+	// Now that we've generated a list of source routes, convert it into
+	// a nested ClassAd list.  The correct way to do this is to faff
+	// about with ClassAds, but they make it uneccessarily hard; for now,
+	// I'll just generated the appropriate string directly.
+	//
+	m_v1String.erase();
+
+	m_v1String += "{";
+	m_v1String += v[0].serialize();
+	for( unsigned i = 1; i < v.size(); ++i ) {
+		m_v1String += ", ";
+		m_v1String += v[i].serialize();
+	}
+	m_v1String += "}";
+
+	// A unit test will verify that we did this correctly... right?
 }

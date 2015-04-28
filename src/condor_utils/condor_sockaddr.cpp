@@ -18,6 +18,13 @@ MyString condor_protocol_to_str(condor_protocol p) {
 	return ret;
 }
 
+condor_protocol str_to_condor_protocol( const std::string & str ) {
+	if( str == "IPv4" ) { return CP_IPV4; }
+	else if( str == "IPv6" ) { return CP_IPV6; }
+	else { return CP_INVALID_MAX; }
+}
+
+
 typedef union sockaddr_storage_ptr_u {
         const struct sockaddr     *raw;
         struct sockaddr_in  *in;
