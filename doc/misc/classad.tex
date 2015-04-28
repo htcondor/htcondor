@@ -617,6 +617,13 @@ Optional parameters are given within square brackets.
     This function returns \Expr{ERROR} if other than exactly 1
     argument is given.
 
+  \index{ClassAd functions!split()}
+  \item[\Code{String list split(String s \Lbr\ , String tokens \Rbr\ )}]
+    Returns a list of the substrings of \Expr{s} that have been split up
+    by using any of the characters within string \Expr{tokens}.
+    If \Expr{tokens} is not specified, then all white space characters are
+    used to delimit the string.
+
   \index{ClassAd functions!splitUserName()}
   \item[\Code{String list splitUserName(String Name)}]
     Returns a list of two strings.
