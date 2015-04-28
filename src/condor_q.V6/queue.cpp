@@ -1123,6 +1123,7 @@ int main (int argc, char **argv)
 	if( first ) {
 		if( global ) {
 			printf( "All queues are empty\n" );
+			retval = 1;
 		} else {
 			fprintf(stderr,"Error: Collector has no record of "
 							"schedd/submitter\n");

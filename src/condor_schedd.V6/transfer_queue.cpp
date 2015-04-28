@@ -609,6 +609,7 @@ TransferQueueManager::GetUserRec(const std::string &user)
 	if( itr == m_queue_users.end() ) {
 		itr = m_queue_users.insert(QueueUserMap::value_type(user,TransferQueueUser())).first;
 		itr->second.iostats.ConfigureEMAHorizons(ema_config);
+		itr->second.iostats.Clear();
 		RegisterStats(user.c_str(),itr->second.iostats);
 	}
 	return itr->second;
@@ -1072,6 +1073,16 @@ IOStats::Add(IOStats &s) {
 }
 
 void
+IOStats::Clear() {
+	bytes_sent.Clear();
+	bytes_received.Clear();
+	file_read.Clear();
+	file_write.Clear();
+	net_read.Clear();
+	net_write.Clear();
+}
+
+void
 IOStats::ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> config) {
 	bytes_sent.ConfigureEMAHorizons(config);
 	bytes_received.ConfigureEMAHorizons(config);
@@ -1082,7 +1093,7 @@ IOStats::ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> config) {
 }
 
 void
-TransferQueueManager::AddRecentIOStats(IOStats &s,const std::string up_down_queue_user)
+TransferQueueManager::AddRecentIOStats(IOStats &s,const std::string &up_down_queue_user)
 {
 	m_iostats.Add(s);
 	GetUserRec(up_down_queue_user).iostats.Add(s);
@@ -1174,4 +1185,50 @@ TransferQueueManager::publish(ClassAd *ad,int pubflags)
 	m_stat_pool.Publish(*ad,pubflags);
 
 	CollectUserRecGarbage(ad);
+}
+
+void
+TransferQueueManager::publish_user_stats(ClassAd * ad, const char *user, int flags)
+{
+	// FIXME! shouldn't need
+	std::string up_down_user;
+	up_down_user = "DOwner_"; // D + Owner_ prefix.
+	up_down_user += user;
+
+	const int ema_flags = flags | stats_entry_sum_ema_rate<double>::PubDefault;
+
+	QueueUserMap::iterator itr = m_queue_users.find(up_down_user);
+	if (itr != m_queue_users.end()) {
+		TransferQueueUser &dn = itr->second;
+
+		dn.iostats.bytes_received.Publish(*ad, "FileTransferDownloadBytes", ema_flags);
+		dn.iostats.file_write.Publish(*ad, "FileTransferFileWriteSeconds", ema_flags);
+		dn.iostats.net_read.Publish(*ad, "FileTransferNetReadSeconds", ema_flags);
+		dn.iostats.download_MB_waiting.Publish(*ad, "FileTransferMBWaitingToDownload", flags|dn.iostats.download_MB_waiting.PubValue);
+	} else {
+		// if there are now counters for this user, then remove the attributes
+		// we can use the overall stats to unpublish, since that have the same EMA config as the per-user stats.
+		m_iostats.bytes_received.Unpublish(*ad, "FileTransferDownloadBytes");
+		m_iostats.file_write.Unpublish(*ad, "FileTransferFileWriteSeconds");
+		m_iostats.net_read.Unpublish(*ad, "FileTransferNetReadSeconds");
+		m_iostats.download_MB_waiting.Unpublish(*ad, "FileTransferMBWaitingToDownload");
+	}
+
+	up_down_user[0] = 'U';
+	itr = m_queue_users.find(up_down_user);
+	if (itr != m_queue_users.end()) {
+		TransferQueueUser &up = itr->second;
+
+		up.iostats.bytes_sent.Publish(*ad,"FileTransferUploadBytes",ema_flags);
+		up.iostats.file_read.Publish(*ad,"FileTransferFileReadSeconds",ema_flags);
+		up.iostats.net_write.Publish(*ad,"FileTransferNetWriteSeconds",ema_flags);
+		up.iostats.upload_MB_waiting.Publish(*ad,"FileTransferMBWaitingToUpload", flags|up.iostats.upload_MB_waiting.PubValue);
+	} else {
+		// if there are now counters for this user, then remove the attributes
+		// we can use the overall stats to unpublish, since that have the same EMA config as the per-user stats.
+		m_iostats.bytes_sent.Unpublish(*ad,"FileTransferUploadBytes");
+		m_iostats.file_read.Unpublish(*ad,"FileTransferFileReadSeconds");
+		m_iostats.net_write.Unpublish(*ad,"FileTransferNetWriteSeconds");
+		m_iostats.upload_MB_waiting.Unpublish(*ad,"FileTransferMBWaitingToUpload");
+	}
 }

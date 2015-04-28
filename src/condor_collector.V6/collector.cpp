@@ -355,11 +355,11 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
     if (whichAds != (AdTypes) -1) {
 
 			// only fork to handle the query for the "big" tables
-		if ((whichAds == QUERY_GENERIC_ADS) || 
-			(whichAds == QUERY_ANY_ADS) || 
-			(whichAds == QUERY_STARTD_PVT_ADS) || 
-			(whichAds == QUERY_STARTD_ADS) || 
-			(whichAds == QUERY_MASTER_ADS)) {
+		if ((whichAds == GENERIC_AD) || 
+			(whichAds == ANY_AD) || 
+			(whichAds == STARTD_PVT_AD) || 
+			(whichAds == STARTD_AD) || 
+			(whichAds == MASTER_AD)) {
 
 				fork_status = forkQuery.NewJob();
 				if ( FORK_PARENT == fork_status) {

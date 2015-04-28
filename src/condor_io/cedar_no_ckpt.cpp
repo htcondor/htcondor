@@ -781,6 +781,9 @@ int relisock_gsi_get(void *arg, void **bufp, size_t *sizep)
     
     //read size of data to read
     stat = sock->code( *((int *)sizep) );
+	if ( stat == FALSE ) {
+		*sizep = 0;
+	}
 
 	if( *((int *)sizep) == 0 ) {
 			// We avoid calling malloc(0) here, because the zero-length
