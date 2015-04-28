@@ -29,6 +29,7 @@
 #include "internet.h"
 #include "print_wrapped_text.h"
 #include "MyString.h"
+#include "metric_units.h"
 #include "ad_printmask.h"
 #include "directory.h"
 #include "iso_dates.h"
@@ -46,40 +47,54 @@
 #ifdef HAVE_EXT_POSTGRESQL
 #include "sqlquery.h"
 #include "historysnapshot.h"
-#endif /* HAVE_EXT_POSTGRESQL */
-
 #define NUM_PARAMETERS 3
+#endif /* HAVE_EXT_POSTGRESQL */
 
 static int getConsoleWindowSize(int * pHeight = NULL);
 void Usage(char* name, int iExitCode=1);
 
 void Usage(char* name, int iExitCode) 
 {
-	printf ("Usage: %s [options]\n\twhere [options] are\n"
-		"\t\t-help\t\t\tThis screen\n"
-		"\t\t-file <file>\t\tRead history data from specified file\n"
-		"\t\t-userlog <file>\tRead job data specified userlog file\n"
-		"\t\t-backwards\t\tList jobs in reverse chronological order\n"
-		"\t\t-forwards\t\tList jobs in chronological order\n"
-		"\t\t-match <number>\t\tLimit the number of jobs displayed\n"
-		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
-		"\t\t-autoformat <attr1> [<attr2 ...]\tPrint attr using automating formatting\n"
-		"\t\t-long\t\t\tVerbose output (entire classads)\n"
-		"\t\t-wide\t\t\tDon't truncate fields to fit into screen width\n"
-		"\t\t-constraint <expr>\tAdd constraint on classads\n"
+	printf ("Usage: %s [source] [restriction-list] [options]\n"
+		"\n   where [source] is one of\n"
+		"\t-file <file>\t\tRead history data from specified file\n"
+		"\t-userlog <file>\t\tRead job data specified userlog file\n"
+		"\t-name <schedd-name>\tRemote schedd to read from\n"
+		"\t-pool <collector-name>\tPool remote schedd lives in.
+		"   If neither -pool, -name, -userlog or -file is specified, then the local history file is used.\n"
 #ifdef HAVE_EXT_POSTGRESQL
-		"\t\t-dbname <schedd-name>\tRead history data from Quill database\n"
-		"\t\t-completedsince <time>\tDisplay jobs completed on/after time\n"
+		"\t-dbname <schedd-name>\tRead history data from Quill database\n"
+		"\t-completedsince <time>\tDisplay jobs completed on/after time\n"
 #endif
-		"\t\t-name <schedd-name>\tRemote schedd to read from\n"
-		"\t\t-pool <collector-name>\tPool remote schedd lives in.  If neither pool nor name\n"
-		"\t\t\t\t\tis specified, then the local history file is used.\n"
-		"\t\trestriction list\n"
-		"\twhere each restriction may be one of\n"
-		"\t\t<cluster>\t\tGet information about specific cluster\n"
-		"\t\t<cluster>.<proc>\tGet information about specific job\n"
-		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n",
-			name);
+		"\n   and [restriction-list] is one or more of\n"
+		"\t<cluster>\t\tGet information about specific cluster\n"
+		"\t<cluster>.<proc>\tGet information about specific job\n"
+		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
+		"\t-constraint <expr>\tInformation about jobs matching <expr>\n"
+		"\n   and [options] are one or more of\n"
+		"\t-help\t\t\tDisplay this screen\n"
+		"\t-backwards\t\tList jobs in reverse chronological order\n"
+		"\t-forwards\t\tList jobs in chronological order\n"
+		"\t-limit <number>\t\tLimit the number of jobs displayed\n"
+		"\t-match <number>\t\tOld name for -limit\n"
+		"\t-long\t\t\tDisplay entire classads\n"
+		"\t-wide[:<width>]\tcon\tDon't truncate fields to fit into 80 columns\n"
+		"\t-format <fmt> <attr>\tDisplay attr using printf formatting\n"
+		"\t-autoformat[:lhVr,tng] <attr> [<attr2 ...]   Display attr(s) with automatic formatting\n"
+		"\t-af[:lhVr,tng] <attr> [<attr2 ...]\t    Same as -autoformat above\n"
+		"\t    where the [lhVr,tng] options influence the automatic formatting:\n"
+		"\t    l\tattribute labels\n"
+		"\t    h\tattribute column headings\n"
+		"\t    V\t%%V formatting (string values are quoted)\n"
+		"\t    r\t%%r formatting (raw/unparsed values)\n"
+		"\t    t\ttab before each value (default is space)\n"
+		"\t    g\tnewline between ClassAds, no space before values\n"
+		"\t    ,\tcomma after each value\n"
+		"\t    n\tnewline after each value\n"
+		"\t    use -af:h to get tabular values with headings\n"
+		"\t-print-format <file>\tUse <file> to specify the attributes and formatting\n"
+		"\t\t\t\t(experimental, see htcondor-wiki for more information)\n"
+		, name);
   exit(iExitCode);
 }
 
@@ -96,22 +111,29 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 static void printJobAds(ClassAdList & jobs);
 static void printJob(ClassAd & ad);
 
-static int parse_autoformat_arg(int argc, char* argv[], int ixArg, const char *popts, AttrListPrintMask & print_mask, List<const char> & print_head);
+static int parse_autoformat_arg(int argc, char* argv[], int ixArg, const char *popts, AttrListPrintMask & print_mask);
+static int set_print_mask_from_stream(AttrListPrintMask & print_mask, std::string & constraint, const char * streamid, bool is_filename);
+static int getDisplayWidth();
 
 
 //------------------------------------------------------------------------
 
 static CollectorList * Collectors = NULL;
+#ifdef HAVE_EXT_POSTGRESQL
 static	CondorQuery	quillQuery(QUILL_AD);
 static	ClassAdList	quillList;
+#endif
 static  bool longformat=false;
+static  bool diagnostic = false;
 static  bool use_xml=false;
 static  bool wide_format=false;
 static  int  wide_format_width = 0;
 static  bool customFormat=false;
+static  bool disable_user_print_files=false;
 static  bool backwards=true;
 static  AttrListPrintMask mask;
-static  List<const char> headings; // The list of headings for the mask entries
+//tj: headings moved into the mask object.
+//static  List<const char> headings; // The list of headings for the mask entries
 static int cluster=-1, proc=-1;
 static int specifiedMatch = 0, matchCount = 0;
 static std::string g_name, g_pool;
@@ -130,33 +152,33 @@ main(int argc, char* argv[])
   char *quillName=NULL;
   AttrList *ad=0;
   int flag = 1;
-#endif /* HAVE_EXT_POSTGRESQL */
-
   void **parameters;
   char *dbconn=NULL;
   char *completedsince = NULL;
-  char *owner=NULL;
+  char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL;
+  bool remoteread = false;
+#endif /* HAVE_EXT_POSTGRESQL */
+
+  const char *owner=NULL;
   bool readfromfile = true;
   bool fileisuserlog = false;
-  bool remoteread = false;
 
   char* JobHistoryFileName=NULL;
-  char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL;
   const char * pcolon=NULL;
 
 
-  std::string constraint;
+  GenericQuery constraint; // used to build a complex constraint.
   ExprTree *constraintExpr=NULL;
 
   std::string tmp;
 
   int i;
-  parameters = (void **) malloc(NUM_PARAMETERS * sizeof(void *));
   myDistro->Init( argc, argv );
 
   config();
 
 #ifdef HAVE_EXT_POSTGRESQL
+  parameters = (void **) malloc(NUM_PARAMETERS * sizeof(void *));
   queryhor.setQuery(HISTORY_ALL_HOR, NULL);
   queryver.setQuery(HISTORY_ALL_VER, NULL);
 #endif /* HAVE_EXT_POSTGRESQL */
@@ -181,14 +203,13 @@ main(int argc, char* argv[])
         backwards=FALSE;
     }
 
-    else if (is_dash_arg_prefix(argv[i],"wide",1)) {
+    else if (is_dash_arg_colon_prefix(argv[i],"wide", &pcolon, 1)) {
         wide_format=TRUE;
-        //wide_format_width = 100;
-    }
-	// backward compat hack to get to old, not AttrPrintMask formatting code
-	else if (is_dash_arg_prefix(argv[i],"wid:80",1)) {
-        wide_format=FALSE;
-        wide_format_width = 80; 
+        if (pcolon) {
+            wide_format_width = atoi(++pcolon);
+            if ( ! mask.IsEmpty()) mask.SetOverallWidth(getDisplayWidth()-1);
+            if (wide_format_width <= 80) wide_format = FALSE;
+        }
     }
 
     else if (is_dash_arg_prefix(argv[i],"match",1) || is_dash_arg_prefix(argv[i],"limit",3)) {
@@ -279,16 +300,42 @@ main(int argc, char* argv[])
 			exit(1);
 		}
 		if (pcolon) ++pcolon; // if there are options, skip over the colon to the options.
-		int ixNext = parse_autoformat_arg(argc, argv, i+1, pcolon, mask, headings);
+		int ixNext = parse_autoformat_arg(argc, argv, i+1, pcolon, mask);
 		if (ixNext > i)
 			i = ixNext-1;
 		customFormat = true;
 	}
+	else if (is_dash_arg_colon_prefix(argv[i], "print-format", &pcolon, 2)) {
+		if ( (argc <= i+1)  || (*(argv[i+1]) == '-' && (argv[i+1])[1] != 0)) {
+			fprintf( stderr, "Error: Argument -print-format requires a filename argument\n");
+			exit( 1 );
+		}
+		// hack allow -pr ! to disable use of user-default print format files.
+		if (MATCH == strcmp(argv[i+1], "!")) {
+			++i;
+			disable_user_print_files = true;
+			continue;
+		}
+		if ( ! wide_format) mask.SetOverallWidth(getDisplayWidth()-1);
+		customFormat = true;
+		++i;
+		std::string where_expr;
+		if (set_print_mask_from_stream(mask, where_expr, argv[i], true) < 0) {
+			fprintf(stderr, "Error: cannot execute print-format file %s\n", argv[i]);
+			exit (1);
+		}
+		if ( ! where_expr.empty()) {
+			constraint.addCustomAND(where_expr.c_str());
+		}
+	}
     else if (is_dash_arg_prefix(argv[i],"constraint",1)) {
-		if (i+1==argc || constraint!="") break;
-		formatstr(constraint,"(%s)",argv[i+1]);
+		// make sure we have at least one more argument
+		if (argc <= i+1) {
+			fprintf( stderr, "Error: Argument %s requires another parameter\n", argv[i]);
+			exit(1);
+		}
 		i++;
-		//readfromfile = true;
+		constraint.addCustomAND(argv[i]);
     }
 #ifdef HAVE_EXT_POSTGRESQL
     else if (is_dash_arg_prefix(argv[i],"completedsince",3)) {
@@ -311,34 +358,34 @@ main(int argc, char* argv[])
 #endif /* HAVE_EXT_POSTGRESQL */
 
     else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
-		if (constraint!="") {
-			fprintf(stderr, "Error: Cannot provide both -constraint and <cluster>.<proc>\n");
-			break;
-		}
-		formatstr (constraint, "((%s == %d) && (%s == %d))", 
+		std::string jobconst;
+		formatstr (jobconst, "%s == %d && %s == %d", 
 				 ATTR_CLUSTER_ID, cluster,ATTR_PROC_ID, proc);
+		constraint.addCustomOR(jobconst.c_str());
+		#ifdef HAVE_EXT_POSTGRESQL
 		parameters[0] = &cluster;
 		parameters[1] = &proc;
-#ifdef HAVE_EXT_POSTGRESQL
 		queryhor.setQuery(HISTORY_CLUSTER_PROC_HOR, parameters);
 		queryver.setQuery(HISTORY_CLUSTER_PROC_VER, parameters);
-#endif /* HAVE_EXT_POSTGRESQL */
+		#endif /* HAVE_EXT_POSTGRESQL */
     }
     else if (sscanf (argv[i], "%d", &cluster) == 1) {
-		if (constraint!="") {
-			fprintf(stderr, "Error: Cannot provide both -constraint and <cluster>\n");
-			break;
-		}
-		formatstr (constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
+		std::string jobconst;
+		formatstr (jobconst, "%s == %d", ATTR_CLUSTER_ID, cluster);
+		constraint.addCustomOR(jobconst.c_str());
+		#ifdef HAVE_EXT_POSTGRESQL
 		parameters[0] = &cluster;
-#ifdef HAVE_EXT_POSTGRESQL
 		queryhor.setQuery(HISTORY_CLUSTER_HOR, parameters);
 		queryver.setQuery(HISTORY_CLUSTER_VER, parameters);
-#endif /* HAVE_EXT_POSTGRESQL */
+		#endif /* HAVE_EXT_POSTGRESQL */
     }
     else if (is_dash_arg_prefix(argv[i],"debug",1)) {
           // dprintf to console
           dprintf_set_tool_debug("TOOL", 0);
+    }
+    else if (is_dash_arg_prefix(argv[i],"diagnostic",4)) {
+          // dprintf to console
+          diagnostic = true;
     }
     else if (is_dash_arg_prefix(argv[i], "name", 1)) {
         i++;
@@ -352,7 +399,9 @@ main(int argc, char* argv[])
         }
         g_name = argv[i];
         readfromfile = false;
+       #ifdef HAVE_EXT_POSTGRESQL
         remoteread = true;
+       #endif
     }
     else if (is_dash_arg_prefix(argv[i], "pool", 1)) {
         i++;    
@@ -366,17 +415,17 @@ main(int argc, char* argv[])
         }       
         g_pool = argv[i];
         readfromfile = false;
+       #ifdef HAVE_EXT_POSTGRESQL
         remoteread = true;
+       #endif
     }
     else {
-		if (constraint!="") {
-			fprintf(stderr, "Error: Cannot provide both -constraint and <owner>\n");
-			break;
-		}
-		owner = strdup(argv[i]);
-		formatstr(constraint, "(%s == \"%s\")", ATTR_OWNER, owner);
-		parameters[0] = owner;
+		std::string ownerconst;
+		owner = argv[i];
+		formatstr(ownerconst, "%s == \"%s\"", ATTR_OWNER, owner);
+		constraint.addCustomOR(ownerconst.c_str());
 #ifdef HAVE_EXT_POSTGRESQL
+		parameters[0] = owner;
 		queryhor.setQuery(HISTORY_OWNER_HOR, parameters);
 		queryver.setQuery(HISTORY_OWNER_VER, parameters);
 #endif /* HAVE_EXT_POSTGRESQL */
@@ -385,8 +434,13 @@ main(int argc, char* argv[])
   if (i<argc) Usage(argv[0]);
   
   
-  if( constraint!="" && ParseClassAdRvalExpr( constraint.c_str(), constraintExpr ) ) {
-	  fprintf( stderr, "Error:  could not parse constraint %s\n", constraint.c_str() );
+  MyString my_constraint;
+  constraint.makeQuery(my_constraint);
+  if (diagnostic) {
+	  fprintf(stderr, "Using effective constraint: %s\n", my_constraint.c_str());
+  }
+  if ( ! my_constraint.empty() && ParseClassAdRvalExpr( my_constraint.c_str(), constraintExpr ) ) {
+	  fprintf( stderr, "Error:  could not parse constraint %s\n", my_constraint.c_str() );
 	  exit( 1 );
   }
 
@@ -399,8 +453,8 @@ main(int argc, char* argv[])
   }
 #endif /* HAVE_EXT_POSTGRESQL */
 
-  if(!readfromfile && !remoteread) {
 #ifdef HAVE_EXT_POSTGRESQL
+  if(!readfromfile && !remoteread) {
 	  if(remotequill) {
 		  if (Collectors == NULL) {
 			  Collectors = CollectorList::create();
@@ -499,36 +553,35 @@ main(int argc, char* argv[])
 	  }
 	  historySnapshot->release();
 	  delete(historySnapshot);
-#endif /* HAVE_EXT_POSTGRESQL */
   }
+#endif /* HAVE_EXT_POSTGRESQL */
   
   if(readfromfile == true) {
-      readHistoryFromFiles(fileisuserlog, JobHistoryFileName, constraint.c_str(), constraintExpr);
+      readHistoryFromFiles(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
   }
   else {
       readHistoryRemote(constraintExpr);
   }
   
   
-  if(owner) free(owner);
+#ifdef HAVE_EXT_POSTGRESQL
   if(completedsince) free(completedsince);
   if(parameters) free(parameters);
   if(dbIpAddr) free(dbIpAddr);
   if(dbName) free(dbName);
   if(queryPassword) free(queryPassword);
   if(dbconn) free(dbconn);
+#endif
   return 0;
 }
 
-static bool diagnostic = false;
 
 static int parse_autoformat_arg(
 	int /*argc*/, 
 	char* argv[], 
 	int ixArg, 
 	const char *popts, 
-	AttrListPrintMask & print_mask,
-	List<const char> & print_head)
+	AttrListPrintMask & print_mask)
 {
 	bool flabel = false;
 	bool fCapV  = false;
@@ -609,11 +662,11 @@ static int parse_autoformat_arg(
 		MyString lbl = "";
 		int wid = 0;
 		int opts = FormatOptionNoTruncate;
-		if (fheadings || print_head.Length() > 0) {
+		if (fheadings || mask.has_headings()) {
 			const char * hd = fheadings ? parg : "(expr)";
 			wid = 0 - (int)strlen(hd);
 			opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
-			print_head.Append(hd);
+			mask.set_heading(hd);
 		}
 		else if (flabel) { lbl.formatstr("%s = ", parg); wid = 0; opts = 0; }
 
@@ -657,6 +710,15 @@ static int getConsoleWindowSize(int * pHeight /*= NULL*/) {
 }
 #endif
 
+static int getDisplayWidth() {
+	if (wide_format_width <= 0) {
+		wide_format_width = getConsoleWindowSize();
+		if (wide_format_width <= 0)
+			wide_format_width = 80;
+	}
+	return wide_format_width;
+}
+
 static const char *
 format_hist_runtime (int /*unused_utime*/, AttrList * ad, Formatter & /*fmt*/)
 {
@@ -670,9 +732,45 @@ format_hist_runtime (int /*unused_utime*/, AttrList * ad, Formatter & /*fmt*/)
 }
 
 static const char *
+format_utime_double (double utime, AttrList * /*ad*/, Formatter & /*fmt*/)
+{
+	return format_time((time_t)utime);
+}
+
+static const char *
 format_int_date(int date, AttrList * /*ad*/, Formatter & /*fmt*/)
 {
 	return format_date(date);
+}
+
+static const char *
+format_readable_mb(const classad::Value &val, AttrList *, Formatter &)
+{
+	long long kbi;
+	double kb;
+	if (val.IsIntegerValue(kbi)) {
+		kb = kbi * 1024.0 * 1024.0;
+	} else if (val.IsRealValue(kb)) {
+		kb *= 1024.0 * 1024.0;
+	} else {
+		return "        ";
+	}
+	return metric_units(kb);
+}
+
+static const char *
+format_readable_kb(const classad::Value &val, AttrList *, Formatter &)
+{
+	long long kbi;
+	double kb;
+	if (val.IsIntegerValue(kbi)) {
+		kb = kbi*1024.0;
+	} else if (val.IsRealValue(kb)) {
+		kb *= 1024.0;
+	} else {
+		return "        ";
+	}
+	return metric_units(kb);
 }
 
 static const char *
@@ -688,6 +786,27 @@ format_int_job_status(int status, AttrList * /*ad*/, Formatter & /*fmt*/)
 	case TRANSFERRING_OUTPUT: ret = ">"; break;
 	}
 	return ret;
+}
+
+static const char *
+format_job_status_raw(int job_status, AttrList* /*ad*/, Formatter &)
+{
+	switch(job_status) {
+	case IDLE:      return "Idle   ";
+	case HELD:      return "Held   ";
+	case RUNNING:   return "Running";
+	case COMPLETED: return "Complet";
+	case REMOVED:   return "Removed";
+	case SUSPENDED: return "Suspend";
+	case TRANSFERRING_OUTPUT: return "XFerOut";
+	default:        return "Unk    ";
+	}
+}
+
+static const char *
+format_job_universe(int job_universe, AttrList* /*ad*/, Formatter &)
+{
+	return CondorUniverseNameUcFirst(job_universe);
 }
 
 static const char *
@@ -719,36 +838,18 @@ format_job_cmd_and_args(const char * cmd, AttrList * ad, Formatter & /*fmt*/)
 
 static void AddPrintColumn(const char * heading, int width, int opts, const char * expr)
 {
-	headings.Append(heading);
+	mask.set_heading(heading);
 
 	int wid = width ? width : strlen(heading);
 	mask.registerFormat("%v", wid, opts, expr);
 }
 
-#if 1
 static void AddPrintColumn(const char * heading, int width, int opts, const char * attr, const CustomFormatFn & fmt)
 {
-	headings.Append(heading);
+	mask.set_heading(heading);
 	int wid = width ? width : strlen(heading);
 	mask.registerFormat(NULL, wid, opts, fmt, attr);
 }
-#else
-static void AddPrintColumn(const char * heading, int width, int opts, const char * attr, StringCustomFmt fmt)
-{
-	headings.Append(heading);
-
-	int wid = width ? width : strlen(heading);
-	mask.registerFormat(NULL, wid, opts, fmt, attr);
-}
-
-static void AddPrintColumn(const char * heading, int width, int opts, const char * attr, IntCustomFmt fmt)
-{
-	headings.Append(heading);
-
-	int wid = width ? width : strlen(heading);
-	mask.registerFormat(NULL, wid, opts, fmt, attr);
-}
-#endif
 
 // setup display mask for default output
 static void init_default_custom_format()
@@ -909,8 +1010,8 @@ static void printHeader()
 				}
 			}
 		}
-		if (customFormat && headings.Length() > 0) {
-			mask.display_Headings(stdout, headings);
+		if (customFormat && mask.has_headings()) {
+			mask.display_Headings(stdout);
 		}
 	}
 }
@@ -1489,5 +1590,79 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 	}
 	reader.Close();
 }
+
+// !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
+static const CustomFormatFnTableItem LocalPrintFormats[] = {
+	{ "DATE",            ATTR_Q_DATE, format_int_date, NULL },
+	{ "JOB_COMMAND",     ATTR_JOB_CMD, format_job_cmd_and_args, ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
+	{ "JOB_ID",          ATTR_CLUSTER_ID, format_job_id, ATTR_PROC_ID "\0" },
+	{ "JOB_STATUS",      ATTR_JOB_STATUS, format_int_job_status, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" },
+	{ "JOB_STATUS_RAW",  ATTR_JOB_STATUS, format_job_status_raw, NULL },
+	{ "JOB_UNIVERSE",    ATTR_JOB_UNIVERSE, format_job_universe, NULL },
+	{ "READABLE_KB",     ATTR_REQUEST_DISK, format_readable_kb, NULL },
+	{ "READABLE_MB",     ATTR_REQUEST_MEMORY, format_readable_mb, NULL },
+	{ "RUNTIME",         ATTR_JOB_REMOTE_WALL_CLOCK, format_utime_double, NULL },
+};
+static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
+
+static int set_print_mask_from_stream(
+	AttrListPrintMask & print_mask,
+	std::string & constraint,
+	const char * streamid,
+	bool is_filename)
+{
+	StringList attrs;  // used for projection, which we don't currently do. 
+	std::string messages;
+	printmask_aggregation_t aggregation;
+	printmask_headerfooter_t headFoot = STD_HEADFOOT;
+	std::vector<GroupByKeyInfo> group_by_keys;
+	SimpleInputStream * pstream = NULL;
+
+	FILE *file = NULL;
+	if (MATCH == strcmp("-", streamid)) {
+		pstream = new SimpleFileInputStream(stdin, false);
+	} else if (is_filename) {
+		file = safe_fopen_wrapper_follow(streamid, "r");
+		if (file == NULL) {
+			fprintf(stderr, "Can't open select file: %s\n", streamid);
+			return -1;
+		}
+		pstream = new SimpleFileInputStream(file, true);
+	} else {
+		pstream = new StringLiteralInputStream(streamid);
+	}
+	ASSERT(pstream);
+
+	int err = SetAttrListPrintMaskFromStream(
+					*pstream,
+					LocalPrintFormatsTable,
+					print_mask,
+					headFoot,
+					aggregation,
+					group_by_keys,
+					constraint,
+					attrs,
+					messages);
+	delete pstream; pstream = NULL;
+	if ( ! err) {
+		customFormat = true;
+		if ( ! constraint.empty()) {
+			ExprTree *constraintExpr=NULL;
+			if ( ! ParseClassAdRvalExpr(constraint.c_str(), constraintExpr)) {
+				formatstr_cat(messages, "WHERE expression is not valid: %s\n", constraint.c_str());
+				err = -1;
+			} else {
+				delete constraintExpr;
+			}
+		}
+		if (aggregation) {
+			formatstr_cat(messages, "AUTOCLUSTER or UNIQUE aggregation is not supported.\n");
+			err = -1;
+		}
+	}
+	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
+	return err;
+}
+
 
 
