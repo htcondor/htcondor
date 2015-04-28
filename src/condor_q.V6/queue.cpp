@@ -2802,7 +2802,7 @@ static void
 usage (const char *myName, int other)
 {
 	printf ("Usage: %s [general-opts] [restriction-list] [output-opts | analyze-opts]\n", myName);
-	printf ("    [general-opts] are\n"
+	printf ("\n    [general-opts] are\n"
 		"\t-global\t\t\tQuery all Schedulers in this pool\n"
 		"\t-submitter <submitter>\tGet queue of specific submitter\n"
 		"\t-name <name>\t\tName of Scheduler\n"
@@ -2816,14 +2816,18 @@ usage (const char *myName, int other)
 #endif
 		"\t-jobads <file>\t\tRead queue from a file of job ClassAds\n"
 		"\t-userlog <file>\t\tRead queue from a user log file\n"
-		"    [restriction-list] each restriction may be one of\n"
+		);
+
+	printf ("\n    [restriction-list] each restriction may be one of\n"
 		"\t<cluster>\t\tGet information about specific cluster\n"
 		"\t<cluster>.<proc>\tGet information about specific job\n"
 		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
-		"\t-autocluster\tGet information about the SCHEDD's autoclusters\n"
+		"\t-autocluster\t\tGet information about the SCHEDD's autoclusters\n"
 		"\t-constraint <expr>\tGet information about jobs that match <expr>\n"
-		"    [output-opts] are\n"
-		"\t-limit <num>\t\t\tLimit the number of results to <num>\n"
+		);
+
+	printf ("\n    [output-opts] are\n"
+		"\t-limit <num>\t\tLimit the number of results to <num>\n"
 		"\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t-currentrun\t\tDisplay times only for current run\n"
 		"\t-debug\t\t\tDisplay debugging info to console\n"
@@ -2837,14 +2841,32 @@ usage (const char *myName, int other)
 		"\t-run\t\t\tGet information about running jobs\n"
 		"\t-stream-results \tProduce output as jobs are fetched\n"
 		"\t-version\t\tPrint the HTCondor version and exit\n"
-		"\t-wide\t\t\tWidescreen output\n"
-		"\t-autoformat[:V,ntlh] <attr> [attr2 [attr3 ...]]\n"
-		"\t\t\t\tPrint attr(s) with automatic formatting\n"
+		"\t-wide[:<width>]\t\tDon't truncate data to fit in 80 columns.\n"
+		"\t\t\t\tTruncates to console width or <width> argument.\n"
+		"\t-autoformat[:jlhVr,tng] <attr> [<attr2> [...]]\n"
+		"\t-af[:jlhVr,tng] <attr> [attr2 [...]]\n"
+		"\t    Print attr(s) with automatic formatting\n"
+		"\t    the [jlhVr,tng] options modify the formatting\n"
+		"\t        j   Display Job id\n"
+		"\t        l   attribute labels\n"
+		"\t        h   attribute column headings\n"
+		"\t        V   %%V formatting (string values are quoted)\n"
+		"\t        r   %%r formatting (raw/unparsed values)\n"
+		"\t        t   tab before each value (default is space)\n"
+		"\t        g   newline between ClassAds, no space before values\n"
+		"\t        ,   comma after each value\n"
+		"\t        n   newline after each value\n"
+		"\t    use -af:h to get tabular values with headings\n"
+		"\t    use -af:lrng to get -long equivalant format\n"
 		"\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
+		"\t-print-format <file>\tUse <file> to set display attributes and formatting\n"
+		"\t\t\t\t(experimental, see htcondor-wiki for more information)\n"
 		"\t-long\t\t\tDisplay entire ClassAds\n"
 		"\t-xml\t\t\tDisplay entire ClassAds, but in XML\n"
 		"\t-attributes X,Y,...\tAttributes to show in -xml and -long\n"
-		"    [analyze-opts] are\n"
+		);
+
+	printf ("\n    [analyze-opts] are\n"
 		"\t-analyze[:<qual>]\tPerform matchmaking analysis on jobs\n"
 		"\t-better-analyze[:<qual>]\tPerform more detailed match analysis\n"
 		"\t    <qual> is a comma separated list of one or more of\n"
@@ -2862,6 +2884,7 @@ usage (const char *myName, int other)
 		"\t-verbose\t\tShow progress and machine names in results\n"
 		"\n"
 		);
+
 	if (other & usage_Universe) {
 		printf("    %s codes:\n", ATTR_JOB_UNIVERSE);
 		for (int uni = CONDOR_UNIVERSE_MIN+1; uni < CONDOR_UNIVERSE_MAX; ++uni) {
