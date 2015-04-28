@@ -959,6 +959,80 @@ For this example the \SubmitCmdNI{queue} command expands to
   arguments = -c -d 92
   queue 
 \end{verbatim}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:user-man-submit-variables}Variables in the Submit Description File}
+%%%%%%%%%%%%%%%%%
+\index{submit description file!automatic variables}
+\index{automatic variables!in submit description file}
+There are automatic variables for use within the submit description file.
+
+\begin{description}
+
+\item [\Expr{\$(Cluster)}]
+  Each set of queued jobs from a specific user, 
+  submitted from a single submit host, sharing an executable
+  have the same value of \Expr{\$(Cluster)}.
+  The first cluster of jobs are assigned to cluster 0, 
+  and the value is incremented by one for each new cluster of jobs.
+  \Expr{\$(Cluster)} will have the same value as the job ClassAd attribute
+  \Attr{ClusterId}.
+\item [\Expr{\$(Process)}]
+  Within a cluster of jobs, each takes on its own unique \Expr{\$(Process)} 
+  value.
+  The first job has value 0.
+  \Expr{\$(Process)} will have the same value as the job ClassAd attribute
+  \Attr{ProcId}.
+\item [\Expr{\$(Item)}]
+  The default name of the variable when no \Expr{<varname>} is provided
+  in a \SubmitCmdNI{queue} command.
+\item [\Expr{\$(ItemIndex)}]
+  Represents an index within a list of items.  
+  When no slice is specified, the first \Expr{\$(ItemIndex)} is 0.
+  When a slice is specified, \Expr{\$(ItemIndex)} is the index of the
+  item within the original list.
+\item [\Expr{\$(Step)}]
+  For the \Expr{<int expr>} specified,
+  \Expr{\$(Step)} counts, starting at 0.
+\item [\Expr{\$(Row)}]
+  When a list of items is specified by placing each item on its own line
+  in the submit description file,
+  \Expr{\$(Row)} identifies which line the item is on.
+  The first item (first line of the list) is \Expr{\$(Row)} 0.
+  The second item (second line of the list) is \Expr{\$(Row)} 1.
+  When a list of items are specified with all items on the same line,
+  \Expr{\$(Row)} is the same as \Expr{\$(ItemIndex)}.
+
+\end{description}
+
+Here is an example of a \SubmitCmdNI{queue} command
+for which the values of these automatic variables are identified.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+\item[Example 1]
+\end{description}
+This example queues six jobs.
+\begin{verbatim}
+  queue 3 in (A, B)
+\end{verbatim}
+\begin{itemize}
+  \item \Expr{\$(Process)} takes on the six values 0, 1, 2, 3, 4, and 5.
+  \item Because there is no specification for the \Expr{<varname>}
+within this \SubmitCmdNI{queue} command, 
+variable \Expr{\$(Item)} is defined.
+It has the value \Expr{A} for the first three jobs queued,
+and it has the value \Expr{B} for the second three jobs queued.
+  \item \Expr{\$(Step)} takes on the three values 0, 1, and 2
+for the three jobs with \Expr{\$(Item)=A},
+and it takes on the same three values 0, 1, and 2
+for the three jobs with \Expr{\$(Item)=B}.
+  \item \Expr{\$(ItemIndex)} is 0 for all three jobs with \Expr{\$(Item)=A},
+and it is 1 for all three jobs with \Expr{\$(Item)=B}.
+  \item \Expr{\$(Row)} has the same value as \Expr{\$(ItemIndex)}
+for this example.
+
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-man-include}Including Submit Commands Defined Elsewhere}
