@@ -58,8 +58,6 @@
 #include "classad/classadCache.h" // for CachedExprEnvelope
 #include "pool_allocator.h"
 
-//#define AUTOCLUSTER_2_Q_HACK
-
 // pass the exit code through dprintf_SetExitCode so that it knows
 // whether to print out the on-error buffer or not.
 #define exit(n) (exit)(dprintf_SetExitCode(n))
@@ -169,13 +167,13 @@ static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr
 
 /* avgqueuetime is used to indicate a request to query average wait time for uncompleted jobs in queue */
 static  bool avgqueuetime = false;
+
+/* directDBquery means we will just run a database query and return results directly to user */
+static  bool directDBquery = false;
 #endif
 
 /* Warn about schedd-wide limits that may confuse analysis code */
 void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf);
-
-/* directDBquery means we will just run a database query and return results directly to user */
-static  bool directDBquery = false;
 
 /* who is it that I should directly ask for the queue, defaults to the normal
 	failover semantics */
@@ -677,9 +675,9 @@ int main (int argc, char **argv)
 				}
 			}
 			
+#ifdef HAVE_EXT_POSTGRESQL
 			if ( directDBquery ) {
 				/* perform direct DB query if indicated and exit */
-#ifdef HAVE_EXT_POSTGRESQL
 
 					/* check if database is available */
 				if (!useDB) {
@@ -690,8 +688,8 @@ int main (int argc, char **argv)
 				exec_db_query(NULL, NULL, NULL, NULL);
 				freeConnectionStrings();
 				exit(EXIT_SUCCESS);
-#endif /* HAVE_EXT_POSTGRESQL */
 			} 
+#endif /* HAVE_EXT_POSTGRESQL */
 
 			/* .. not a direct db query, so just happily continue ... */
 
@@ -960,9 +958,9 @@ int main (int argc, char **argv)
 
 		first = false;
 
+#ifdef HAVE_EXT_POSTGRESQL
 			/* check if direct DB query is indicated */
 		if ( directDBquery ) {				
-#ifdef HAVE_EXT_POSTGRESQL
 			if (!useDB) {
 				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
 				fprintf(stderr, "Database query not supported on schedd: %s\n",
@@ -975,8 +973,8 @@ int main (int argc, char **argv)
 			/* done processing the ad, so get the next one */
 			continue;
 
-#endif /* HAVE_EXT_POSTGRESQL */
 		}
+#endif /* HAVE_EXT_POSTGRESQL */
 
 		init_output_mask();
 
@@ -1169,7 +1167,7 @@ parse_analyze_detail(const char * pch, int current_details)
 static void 
 processCommandLineArguments (int argc, char *argv[])
 {
-	int i, cluster, proc;
+	int i;
 	char *arg, *at, *daemonname;
 	const char * pcolon;
 
@@ -1182,19 +1180,12 @@ processCommandLineArguments (int argc, char *argv[])
 	for (i = 1; i < argc; i++)
 	{
 		if( *argv[i] != '-' ) {
+			int cluster, proc;
 			// no dash means this arg is a cluster/proc, proc, or owner
 			if( sscanf( argv[i], "%d.%d", &cluster, &proc ) == 2 ) {
-				sprintf( constraint, "((%s == %d) && (%s == %d))",
-					ATTR_CLUSTER_ID, cluster, ATTR_PROC_ID, proc );
-				Q.addOR( constraint );
-				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
-				Q.addDBConstraint(CQ_PROC_ID, proc);
 				constrID.push_back(CondorID(cluster,proc,-1));
 			} 
 			else if( sscanf ( argv[i], "%d", &cluster ) == 1 ) {
-				sprintf( constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster );
-				Q.addOR( constraint );
-				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
 				constrID.push_back(CondorID(cluster,-1,-1));
 			} 
 			else {
@@ -1221,14 +1212,6 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 			continue;
 		}
-		/*
-		if (is_arg_colon_prefix (arg, "new", &pcolon, 3)) {
-			use_old_code = false;
-			if (pcolon) { use_old_code = (pcolon[1] == '0'); }
-			fprintf(stderr, "Using %s code\n", use_old_code ? "Old" : "New");
-			continue;
-		}
-		*/
 		if (is_arg_prefix (arg, "long", 1)) {
 			dash_long = 1;
 			summarize = 0;
@@ -1369,8 +1352,11 @@ processCommandLineArguments (int argc, char *argv[])
 			/* check for one more argument */
 			if (argc <= i+1) {
 				fprintf( stderr, 
-					"Error: Argument -direct requires "
-						"[rdbms | quilld | schedd]\n" );
+					"Error: Argument -direct requires ["
+					#ifdef HAVE_EXT_POSTGRESQL
+						"rdbms | quilld | "
+					#endif
+						"schedd]\n" );
 				exit(EXIT_FAILURE);
 			}
 			direct = process_direct_argument(argv[i+1]);
@@ -1934,6 +1920,33 @@ processCommandLineArguments (int argc, char *argv[])
 		//Added so -long or -xml can be listed before other options
 	if(dash_long && !custom_attributes) {
 		attrs.clearAll();
+	}
+
+	// convert cluster and cluster.proc into constraints
+	// if there is a -dag argument, then we look up all children of the dag
+	// as well as the dag itself.
+	if ( ! constrID.empty()) {
+		for (std::vector<CondorID>::const_iterator it = constrID.begin(); it != constrID.end(); ++it) {
+
+			// if we aren't doing db queries, do we need to do this?
+			Q.addDBConstraint(CQ_CLUSTER_ID, it->_cluster);
+			if (it->_proc >= 0) { Q.addDBConstraint(CQ_PROC_ID, it->_proc); }
+
+			// add a constraint to match the jobid.
+			if (it->_proc >= 0) {
+				sprintf(constraint, ATTR_CLUSTER_ID " == %d && " ATTR_PROC_ID " == %d", it->_cluster, it->_proc);
+			} else {
+				sprintf(constraint, ATTR_CLUSTER_ID " == %d", it->_cluster);
+			}
+			Q.addOR(constraint);
+
+			// if we are doing -dag output, then also request any jobs that are inside this dag.
+			// we know that a jobid for a dagman job will always never have a proc > 0
+			if (dash_dag && it->_proc < 1) {
+				sprintf(constraint, ATTR_DAGMAN_JOB_ID " == %d", it->_cluster);
+				Q.addOR(constraint);
+			}
+		}
 	}
 }
 
