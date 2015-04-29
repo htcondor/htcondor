@@ -93,7 +93,8 @@ nobase_include_HEADERS =						\
 	classad/exprTree.h classad/query.h classad/xmlSink.h		\
 	classad/classadItor.h classad/fnCall.h classad/sink.h		\
 	classad/xmlSource.h classad/classad_stl.h classad/indexfile.h	\
-	classad/source.h
+	classad/source.h \
+	classad/classadCache.h
 
 bin_PROGRAMS = 								\
 	classad_functional_tester					\
@@ -115,13 +116,13 @@ check_PROGRAMS =							\
 	$(TESTS)
 
 libclassad_la_SOURCES = \
-	attrrefs.cpp classad.cpp common.cpp collection.cpp collectionBase.cpp debug.cpp	\
+	attrrefs.cpp classad.cpp classadCache.cpp common.cpp collection.cpp collectionBase.cpp debug.cpp	\
 	exprList.cpp exprTree.cpp fnCall.cpp indexfile.cpp lexer.cpp		\
 	lexerSource.cpp literals.cpp matchClassad.cpp operators.cpp query.cpp	\
 	sink.cpp source.cpp transaction.cpp util.cpp value.cpp view.cpp xmlLexer.cpp	\
 	xmlSink.cpp xmlSource.cpp cclassad.cpp $(_libclassad_la_SOURCES)
 
-libclassad_la_LDFLAGS = -version-info 2:0:0
+libclassad_la_LDFLAGS = -version-info @VERSION_INFO@
 
 MF_DEFINE_PROGRAM([cxi])
 
