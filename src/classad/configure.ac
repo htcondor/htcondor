@@ -58,7 +58,7 @@ AC_SUBST(VERSION_INFO)
 # Checks for programs.
 AC_PROG_CXX
 AC_PROG_CC
-AC_PROG_LIBTOOL
+LT_INIT
 AC_LANG([C++])
 
 # Check for compiler flags.
