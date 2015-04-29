@@ -1105,14 +1105,7 @@ bool Sock::guess_address_string(char const* host, int port, condor_sockaddr& add
 	return true;
 }
 
-int Sock::do_connect(
-	char const	*host,
-	int		port,
-	bool	non_blocking_flag
-	)
-{
-	if (!host || port < 0) return FALSE;
-
+bool Sock::chooseAddrFromAddrs( char const * & host ) {
 	//
 	// If host is a Sinful string and contains an addrs parameter,
 	// choose one of the listed addresses and rewrite host to match.
@@ -1132,62 +1125,74 @@ int Sock::do_connect(
 	// special_connect(), since the new value of host may point into it.
 	//
 	Sinful s( host );
-	if( s.valid() && s.hasAddrs() ) {
-		condor_sockaddr candidate;
-		std::vector< condor_sockaddr > * v = s.getAddrs();
+	if(! (s.valid() && s.hasAddrs()) ) { return false; }
 
-		// In practice, all C++03 implementations are stable with respect
-		// to insertion order; the  C++11 standard requires that they are.
-		// FIXME: Since this is kind of important, we really should have
-		// a unit test to verify this behavior.
-		std::multimap< int, condor_sockaddr > sortedByDesire;
+	condor_sockaddr candidate;
+	std::vector< condor_sockaddr > * v = s.getAddrs();
 
-		// If we don't multiply by -1 and instead use rbegin()/rend(),
-		// then addresses of the same desirability will be checked in
-		// the reverse order.
-		dprintf( D_HOSTNAME, "Found address %lu candidates:\n", v->size() );
-		for( unsigned i = 0; i < v->size(); ++i ) {
-			condor_sockaddr c = (*v)[i];
-			int d = -1 * c.desirability();
-			sortedByDesire.insert(std::make_pair( d, c ));
-			dprintf( D_HOSTNAME, "\t%d\t%s\n", d, c.to_ip_and_port_string().c_str() );
+	// In practice, all C++03 implementations are stable with respect
+	// to insertion order; the  C++11 standard requires that they are.
+	// FIXME: Since this is kind of important, we really should have
+	// a unit test to verify this behavior.
+	std::multimap< int, condor_sockaddr > sortedByDesire;
+
+	// If we don't multiply by -1 and instead use rbegin()/rend(),
+	// then addresses of the same desirability will be checked in
+	// the reverse order.
+	dprintf( D_HOSTNAME, "Found address %lu candidates:\n", v->size() );
+	for( unsigned i = 0; i < v->size(); ++i ) {
+		condor_sockaddr c = (*v)[i];
+		int d = -1 * c.desirability();
+		sortedByDesire.insert(std::make_pair( d, c ));
+		dprintf( D_HOSTNAME, "\t%d\t%s\n", d, c.to_ip_and_port_string().c_str() );
+	}
+
+	bool foundAddress = false;
+	std::multimap< int, condor_sockaddr >::const_iterator iter;
+	for( iter = sortedByDesire.begin(); iter != sortedByDesire.end(); ++iter ) {
+		candidate = (* iter).second;
+
+		// Assume that we "have" any protocol that's enabled.  It turns
+		// out that anything else (including considering the desirability
+		// of our interfaces) gets really complicated.  Instead (FIXME:)
+		// document that ENABLE_IPV6 should be false unless you have a
+		// public IPv6 address (or one which everyone in your pool can
+		// otherwise reach).
+		dprintf( D_HOSTNAME, "Considering address candidate %s.\n", candidate.to_ip_and_port_string().c_str() );
+		if(( candidate.is_ipv4() && param_boolean( "ENABLE_IPV4", true ) ) ||
+			( candidate.is_ipv6() && param_boolean( "ENABLE_IPV6", false ) )) {
+			dprintf( D_HOSTNAME, "Found compatible candidate %s.\n", candidate.to_ip_and_port_string().c_str() );
+			foundAddress = true;
+			break;
 		}
+	}
+	delete v;
 
-		bool foundAddress = false;
-		std::multimap< int, condor_sockaddr >::const_iterator iter;
-		for( iter = sortedByDesire.begin(); iter != sortedByDesire.end(); ++iter ) {
-			candidate = (* iter).second;
+	if(! foundAddress) {
+		dprintf( D_ALWAYS, "Sock::do_connect() unable to locate address of a compatible protocol in Sinful string '%s'.\n", host );
+		return FALSE;
+	}
 
-			// Assume that we "have" any protocol that's enabled.  It turns
-			// out that anything else (including considering the desirability
-			// of our interfaces) gets really complicated.  Instead (FIXME:)
-			// document that ENABLE_IPV6 should be false unless you have a
-			// public IPv6 address (or one which everyone in your pool can
-			// otherwise reach).
-			dprintf( D_HOSTNAME, "Considering address candidate %s.\n", candidate.to_ip_and_port_string().c_str() );
-			if(( candidate.is_ipv4() && param_boolean( "ENABLE_IPV4", true ) ) ||
-				( candidate.is_ipv6() && param_boolean( "ENABLE_IPV6", false ) )) {
-				dprintf( D_HOSTNAME, "Found compatible candidate %s.\n", candidate.to_ip_and_port_string().c_str() );
-				foundAddress = true;
-				break;
-			}
-		}
-		delete v;
+	// Change the "primary" address.
+	s.setHost( candidate.to_ip_string().c_str() );
+	s.setPort( candidate.get_port() );
+	host = s.getSinful();
+	set_connect_addr( host );
 
-		if(! foundAddress) {
-			dprintf( D_ALWAYS, "Sock::do_connect() unable to locate address of a compatible protocol in Sinful string '%s'.\n", host );
-			return FALSE;
-		}
+	_who = candidate;
+	addr_changed();
+	return true;
+}
 
-		// Change the "primary" address.
-		s.setHost( candidate.to_ip_string().c_str() );
-		s.setPort( candidate.get_port() );
-		host = s.getSinful();
-		set_connect_addr( host );
+int Sock::do_connect(
+	char const	*host,
+	int		port,
+	bool	non_blocking_flag
+	)
+{
+	if (!host || port < 0) return FALSE;
 
-		_who = candidate;
-		addr_changed();
-	} else {
+	if(! chooseAddrFromAddrs( host ) ) {
 		_who.clear();
 		if (!guess_address_string(host, port, _who)) {
 			return FALSE;

@@ -723,6 +723,9 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg(deepOpts.strDagmanPath.Value());
 	}
 
+		// -p 0 causes DAGMan to run w/o a command socket (see gittrac #4987).
+	args.AppendArg("-p");
+	args.AppendArg("0");
 	args.AppendArg("-f");
 	args.AppendArg("-l");
 	args.AppendArg(".");

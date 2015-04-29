@@ -341,16 +341,18 @@ int SafeSock::connect(
 {
 	if (!host || port < 0) return FALSE;
 
-	_who.clear();
-	if (!Sock::guess_address_string(host, port, _who))
-		return FALSE;
+	if(! chooseAddrFromAddrs( host ) ) {
+		_who.clear();
+		if (!Sock::guess_address_string(host, port, _who))
+			return FALSE;
 
-	if (host[0] == '<') {
-		set_connect_addr(host);
-		} else {
-		set_connect_addr(_who.to_sinful().Value());
+		if (host[0] == '<') {
+			set_connect_addr(host);
+			} else {
+			set_connect_addr(_who.to_sinful().Value());
+		}
+    	addr_changed();
 	}
-    addr_changed();
 
 	// now that we have set _who (useful for getting informative
 	// peer_description), see if we should do a reverse connect
