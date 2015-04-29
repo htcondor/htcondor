@@ -29,11 +29,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Improved how \Condor{dagman} deals with node job submit files that
-use the new file globbing features.
+\item Improved how DAGMan deals with node job submit description files that
+use the new features of the \SubmitCmdNI{queue} command
+to do file globbing.
 \Ticket{4960}
 
-\item Changed the default value for configuration parameters
+\item Changed the default value of configuration variables
 \MacroNI{ENABLE\_USERLOG\_LOCKING} and \MacroNI{EVENT\_LOG\_LOCKING}
 to \Expr{False}.
 The Event Log is still locked by default to perform file rotation.
