@@ -40,7 +40,10 @@ AC_INIT([classad], [8.3.5], [condor-admin@cs.wisc.edu])
 AM_INIT_AUTOMAKE([1.6.3 foreign])
 AC_CONFIG_SRCDIR([classad.cpp])
 AC_CONFIG_HEADER([config.h])
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([
+	Makefile
+	tests/Makefile
+])
 
 CLASSAD_VERSION=$PACKAGE_VERSION
 CLASSAD_VERSION_MAJOR=$(echo $PACKAGE_VERSION | cut -d. -f1)

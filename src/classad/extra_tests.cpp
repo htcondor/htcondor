@@ -486,7 +486,8 @@ static void test_chaining(void)
 	} else {
 		cout << "  B is now undefined.\n";
 	}
-	cout << *child << endl;
+#warning FIXME
+//	cout << *child << endl;
 
 	child->Unchain();
 

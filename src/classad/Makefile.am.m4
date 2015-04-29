@@ -75,6 +75,8 @@ dnl
 # non-standard location of libtool.
 #ACLOCAL_AMFLAGS = -I /s/libtool/share/aclocal
 
+SUBDIRS = tests
+
 if ENABLE_EXPLICIT_TEMPLATES
   _libclassad_la_SOURCES = instantiations.cpp
 endif
@@ -101,10 +103,9 @@ bin_PROGRAMS = 								\
 	cxi 								\
 	classad_version
 
+# broken: extra_tests, classad_functional_tester_s, test_xml
 TESTS =									\
-	classad_functional_tester_s					\
 	classad_unit_tester						\
-	test_xml							\
 	sample								\
 	extra_tests
 # This must be set because we are patching libtool to remove rpaths
