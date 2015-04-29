@@ -7612,7 +7612,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		return -1;
 
 	int rval = 0; // default to success (if num == 0 we will return this)
-	bool check_empty = options && (QUEUE_OPT_WARN_EMPTY_FIELDS|QUEUE_OPT_FAIL_EMPTY_FIELDS);
+	bool check_empty = options & (QUEUE_OPT_WARN_EMPTY_FIELDS|QUEUE_OPT_FAIL_EMPTY_FIELDS);
 	bool fail_empty = options & QUEUE_OPT_FAIL_EMPTY_FIELDS;
 
 	// UseStrict = condor_param_bool("Submit.IsStrict", "Submit_IsStrict", UseStrict);

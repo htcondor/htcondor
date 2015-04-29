@@ -6665,7 +6665,10 @@ int DaemonCore::Create_Process(
 		//   this child to use an alternate sinful to contact it.
 	if ( m_inherit_parent_sinful.empty() ) {
 		MyString mysin = InfoCommandSinfulStringMyself(true);
-		ASSERT(mysin.Length() > 0); // Empty entry means unparsable string.
+		// ASSERT(mysin.Length() > 0); // Empty entry means unparsable string.
+		if ( mysin.Length() < 1 ) {
+			dprintf( D_ALWAYS, "Warning: mysin has length 0 (ignore if produced by DAGMan; see gittrac #4987, #5031)\n" );
+		}
 		inheritbuf += mysin;
 	} else {
 		inheritbuf += m_inherit_parent_sinful;

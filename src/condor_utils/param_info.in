@@ -4024,7 +4024,7 @@ review=?
 tags=c++_util,sshd_wrapper
 
 [ENABLE_USERLOG_LOCKING]
-default=true
+default=false
 type=bool
 reconfig=true
 customization=seldom

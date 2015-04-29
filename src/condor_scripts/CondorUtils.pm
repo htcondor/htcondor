@@ -28,7 +28,7 @@ my $btdebug = 0;
 
 use base 'Exporter';
 
-our @EXPORT = qw(runcmd runCommandCarefully FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl is_cygwin_perl fullchomp CreateEmptyFile CreateDir CopyIt TarCreate TarExtract MoveIt GetDirList DirLs List WhereIsInstallDir quoteMyString MyHead GeneralServer GeneralClient DagmanReadFlowLog);
+our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows is_windows_native_perl is_cygwin_perl fullchomp CreateEmptyFile CreateDir CopyIt TarCreate TarExtract MoveIt GetDirList DirLs List WhereIsInstallDir quoteMyString MyHead GeneralServer GeneralClient DagmanReadFlowLog DryExtract GatherDryData LoadResults runCommandCarefully);
 
 sub TRUE{1};
 sub FALSE{0};
@@ -729,6 +729,7 @@ sub CreateDir
 			return($ret);
 		}
 		$ret = system("$fullcmd");
+		system("chmod 777 $cmdline");
 		#print "Tried to create dir got ret value:$ret path:$cmdline/$fullcmd\n";
 	}
 	return($ret);
@@ -1276,6 +1277,54 @@ sub DagmanReadFlowLog {
 	close(OLDOUT);
 	print "$count";
 	return(0);
+}
+
+sub DryExtract {
+    my $dryinarrayref = shift;
+    my $dryoutarrayref = shift;
+    my $extractstring = shift;
+    foreach my $dryline (@{$dryinarrayref}) {
+        chomp($dryline);
+        if($dryline =~ /\s*$extractstring=/) {
+#print "DryExtract:$dryline\n";
+            push @{$dryoutarrayref}, $dryline;
+		}
+	}
+}
+
+sub GatherDryData {
+    my $submitfile = shift;
+	my $targetfile = shift;
+	my @storage = ();
+    my $cmdtorun = "condor_submit -dry-run $targetfile $submitfile";
+	my $res = system("$cmdtorun");
+	if($res != 0) {
+		die "Return from system call non-zero\n";
+	} else {
+		open(TF,"<$targetfile") or die "Failed to open dry data file:$targetfile:$!\n";
+		while (<TF>) {
+			fullchomp($_);
+			push @storage, $_;
+		}
+		close(TF);
+	}
+	return(\@storage);
+}
+
+sub LoadResults {
+	my $arraytoload = shift;
+	my $filetoloadfrom = shift;
+
+	if(-f $filetoloadfrom) {
+		open(TF,"<$filetoloadfrom");
+		while (<TF>) {
+			fullchomp($_);
+			push @{$arraytoload}, $_;
+		}
+		close(TF);
+	} else {
+		die "LoadResults called with a file which does not exist:$filetoloadfrom:$!\n";
+	}
 }
 
 1;

@@ -323,7 +323,7 @@ WriteUserLog::Configure( bool force )
 	m_configured = true;
 
 	m_enable_fsync = param_boolean( "ENABLE_USERLOG_FSYNC", true );
-	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", true );
+	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", false );
 
 	if ( m_global_disable ) {
 		return true;
@@ -367,7 +367,7 @@ WriteUserLog::Configure( bool force )
 	m_global_count_events = param_boolean( "EVENT_LOG_COUNT_EVENTS", false );
 	m_global_max_rotations = param_integer( "EVENT_LOG_MAX_ROTATIONS", 1, 0 );
 	m_global_fsync_enable = param_boolean( "EVENT_LOG_FSYNC", false );
-	m_global_lock_enable = param_boolean( "EVENT_LOG_LOCKING", true );
+	m_global_lock_enable = param_boolean( "EVENT_LOG_LOCKING", false );
 	m_global_max_filesize = param_integer( "EVENT_LOG_MAX_SIZE", -1 );
 	if ( m_global_max_filesize < 0 ) {
 		m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000, 0 );
