@@ -540,6 +540,10 @@ protected:
 	unsigned int m_uniqueId;
 	static unsigned int m_nextUniqueId;
 
+	// Helper function that chooses the best address from the string,
+	// if the string is a Sinful string with an addrs attribute.
+	bool chooseAddrFromAddrs( const char * & host );
+
 private:
 	bool initialize_crypto(KeyInfo * key);
         //------------------------------------------
