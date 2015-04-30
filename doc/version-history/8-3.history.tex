@@ -49,9 +49,10 @@ The Event Log is still locked by default to perform file rotation.
 
 \begin{itemize}
 
-\item Fixed bug where \Condor{q} would return exit code 1
-when given the global option, and no jobs exist in any 
-queues.
+\item Fixed a bug in which \Condor{q} incorrectly returned an exit code of 1,
+instead of an exit code of 0.
+This occurred when given the \Opt{-global} option 
+and there were no jobs in any queues.
 \Ticket{5024}
 
 \item Fixed a bug that prevented the \Condor{collector} daemon from forking 
