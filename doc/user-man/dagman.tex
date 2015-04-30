@@ -2307,7 +2307,7 @@ and attach the POST script to the NOOP node.
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
-\item[Limitation: Splices and the RETRY of a Node]
+\item[Limitation: Splices and the RETRY of a Node, use of VARS, or use of PRIORITY]
 \end{description}
 
 The nodes of a splice are incorporated into a top level DAG;
@@ -2315,6 +2315,11 @@ these nodes are scoped and named.
 Once incorporated in this way, the splice name cannot be used
 to cause RETRY of what would be the entire splice.
 RETRY is applied on a node basis, not on a splice basis.
+
+The scoping and renaming of nodes within a splice also prevent
+the specification of VARS or PRIORITY either for nodes within a splice
+or for the splice as a whole.
+The node names will have changed.
 
 Here is an example showing a RETRY that cannot work.
 \begin{verbatim}
@@ -2440,31 +2445,6 @@ and 10 for the \Expr{A+catX} category in splice.
 Note that non-global category names are
 prefixed with their splice name(s), so to refer to a non-global category 
 at a higher level, the splice name must be included.
-
-% Note: this is an alternative to subsubsubsection, which we don't have.
-\begin{description}
-\item[Limitation: Splices and NOOP nodes]
-\end{description}
-\Todo
-
-% Note: this is an alternative to subsubsubsection, which we don't have.
-\begin{description}
-\item[Limitation: Splices and DONE]
-\end{description}
-\Todo
-
-% Note: this is an alternative to subsubsubsection, which we don't have.
-\begin{description}
-\item[Limitation: Splices and VARS]
-\end{description}
-\Todo
-
-% Note: this is an alternative to subsubsubsection, which we don't have.
-\begin{description}
-\item[Limitation: Splices and PRIORITY]
-\end{description}
-\Todo
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAGFinalNode}FINAL node}
