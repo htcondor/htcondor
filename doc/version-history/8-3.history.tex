@@ -29,17 +29,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Improved how \Condor{dagman} deals with node job submit files that
-use the new file globbing features.
+\item Improved how DAGMan deals with node job submit description files that
+use the new features of the \SubmitCmdNI{queue} command
+to do file globbing.
 \Ticket{4960}
 
-\item Changed the default value for configuration parameters
+\item Changed the default value of configuration variables
 \MacroNI{ENABLE\_USERLOG\_LOCKING} and \MacroNI{EVENT\_LOG\_LOCKING}
 to \Expr{False}.
 The Event Log is still locked by default to perform file rotation.
 \Ticket{4922}
 
-\item \Condor{dagman} no longer creates an (unused) command socket.
+\item \Condor{dagman} no longer creates an unused command socket.
 \Ticket{4987}
 
 \end{itemize}
@@ -48,13 +49,14 @@ The Event Log is still locked by default to perform file rotation.
 
 \begin{itemize}
 
-\item Fixed bug where \Condor{q} would return exit code 1
-when given the global option, and no jobs exist in any 
-queues.
+\item Fixed a bug in which \Condor{q} incorrectly returned an exit code of 1,
+instead of an exit code of 0.
+This occurred when given the \Opt{-global} option 
+and there were no jobs in any queues.
 \Ticket{5024}
 
-\item Fixed bug that prevented collector from ever forking to
-handle queries to startd ads.
+\item Fixed a bug that prevented the \Condor{collector} daemon from forking 
+to handle queries about \Condor{startd} ClassAds.
 \Ticket{5020}
 
 \item Eliminated spurious warnings logged when the \Condor{shared\_port}
