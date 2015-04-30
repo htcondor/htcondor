@@ -8751,8 +8751,8 @@ DaemonCore::InitDCCommandSocket( int command_port )
 
 		if( it->has_relisock() ) {
 			if ( it->rsock()->my_addr().is_loopback() ) {
-				dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
-				dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
+				dprintf( D_ALWAYS, "WARNING: Condor is running on a loopback address\n" );
+				dprintf( D_ALWAYS, "         of this machine, and may not visible to other hosts!\n" );
 			}
 		}
 
@@ -10722,6 +10722,13 @@ DaemonCore::publish(ClassAd *ad) {
 	tmp = publicNetworkIpAddr();
 	if( tmp ) {
 		ad->Assign(ATTR_MY_ADDRESS, tmp);
+
+		// This is kind of horrible.  At some point, we should rewrite
+		// InfoCommandSinfulStringMyself() so that it calls
+		// InfoCommandSinfulMyself().serialize(), but until then...
+		Sinful s( tmp );
+		assert( s.valid() );
+		ad->Assign( "AddressV1", s.getV1String() );
 	}
 }
 

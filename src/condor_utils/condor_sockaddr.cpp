@@ -7,21 +7,43 @@
 
 #include <sstream>
 
+//
+// We could use the parse table defaults look-up code instead, if
+// we ever add enough protocols for the linear search time to matter.
+//
+// CP_PRIMARY is used to denote an unresolved "primary" address.  It
+// exists to support round-trip conversions among Sinful serializations.
+//
+#define CP_PRIMARY_STRING		"primary"
+#define CP_INVALID_MIN_STRING	"invalid-min"
+#define CP_IPV4_STRING			"IPv4"
+#define CP_IPV6_STRING			"IPv6"
+#define CP_INVALID_MAX_STRING	"invalid-max"
+#define CP_PARSE_INVALID_STRING	"parse-invalid"
+
 MyString condor_protocol_to_str(condor_protocol p) {
 	switch(p) {
-		case CP_IPV4: return "IPv4";
-		case CP_IPV6: return "IPv6";
-		default: break; // Silence warnings
+		case CP_PRIMARY: return CP_PRIMARY_STRING;
+		case CP_INVALID_MIN: return CP_INVALID_MIN_STRING;
+		case CP_IPV4: return CP_IPV4_STRING;
+		case CP_IPV6: return CP_IPV6_STRING;
+		case CP_INVALID_MAX: return CP_INVALID_MAX_STRING;
+		case CP_PARSE_INVALID: return CP_PARSE_INVALID_STRING;
+		default: break;
 	}
 	MyString ret;
-	ret.formatstr("Invalid protocol %d\n", int(p));
+	ret.formatstr( "Unknown protocol %d\n", int(p));
 	return ret;
 }
 
 condor_protocol str_to_condor_protocol( const std::string & str ) {
-	if( str == "IPv4" ) { return CP_IPV4; }
-	else if( str == "IPv6" ) { return CP_IPV6; }
-	else { return CP_INVALID_MAX; }
+	if( str == CP_PRIMARY_STRING ) { return CP_PRIMARY; }
+	else if( str == CP_INVALID_MIN_STRING ) { return CP_INVALID_MIN; }
+	else if( str == CP_IPV4_STRING ) { return CP_IPV4; }
+	else if( str == CP_IPV6_STRING ) { return CP_IPV6; }
+	else if( str == CP_INVALID_MAX_STRING ) { return CP_INVALID_MAX; }
+	else if( str == CP_PARSE_INVALID_STRING ) { return CP_PARSE_INVALID; }
+	else { return CP_PARSE_INVALID; }
 }
 
 

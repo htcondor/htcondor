@@ -424,6 +424,11 @@ Sinful::getPort() const {
 	return m_port.c_str();
 }
 
+char const *
+Sinful::getV1String() const {
+	if( m_v1String.empty() ) { return NULL; }
+	return m_v1String.c_str();
+}
 
 bool hasTwoColons( char const * sinful ) {
 	const char * firstColon = strchr( sinful, ':' );
@@ -608,7 +613,7 @@ condor_sockaddr SourceRoute::getSockAddr() const {
 
 std::string SourceRoute::serialize() {
 	std::string rv;
-	formatstr( rv, "n=\"%s\"; a=\"%s\"; port=%d; p=\"%s\"", n.c_str(), a.c_str(), port, condor_protocol_to_str( p ).c_str() );
+	formatstr( rv, "p=\"%s\"; a=\"%s\"; port=%d; n=\"%s\";", condor_protocol_to_str( p ).c_str(), a.c_str(), port, n.c_str() );
 	if(! alias.empty()) { rv += " alias=\"" + alias + "\";"; }
 	if(! spid.empty()) { rv += " spid=\"" + spid + "\";"; }
 	if(! ccbid.empty()) { rv += " ccbid=\"" + ccbid + "\";"; }
@@ -640,15 +645,6 @@ bool stripQuotesAndSemicolon( char * str ) {
 	if( str[0] != '"' ) { return false; }
 	memmove( str, str + 1, length - 3 );
 	str[ length - 3 ] = '\0';
-	return true;
-}
-
-bool stripQuotes( char * str ) {
-	unsigned length = strlen( str );
-	if( str[length - 1] != '"' ) { return false; }
-	if( str[0] != '"' ) { return false; }
-	memmove( str, str + 1, length - 2 );
-	str[ length - 2 ] = '\0';
 	return true;
 }
 
@@ -690,21 +686,26 @@ void Sinful::parseV1String() {
 		char addressBuffer[64];
 		int port = -1;
 		char protocolBuffer[16];
-		int matches = sscanf( open, "[ n=%64s a=%64s port=%d; p=%16s ",
-			nameBuffer, addressBuffer, & port, protocolBuffer );
+		int matches = sscanf( open, "[ p=%16s a=%64s port=%d; n=%64s ",
+			protocolBuffer, addressBuffer, & port, nameBuffer );
 		if( matches != 4 ) { m_valid = false; return; }
 
 		if( (! stripQuotesAndSemicolon( nameBuffer )) ||
 			(! stripQuotesAndSemicolon( addressBuffer )) ||
-			(! stripQuotes( protocolBuffer )) ) {
+			(! stripQuotesAndSemicolon( protocolBuffer )) ) {
 			m_valid = false;
 			return;
 		}
 
 		condor_protocol protocol = str_to_condor_protocol( protocolBuffer );
 		if( protocol <= CP_INVALID_MIN || protocol >= CP_INVALID_MAX ) {
-			m_valid = false;
-			return;
+			if( protocol == CP_PRIMARY ) {
+				m_host = addressBuffer;
+				formatstr( m_port, "%d", port );
+			} else {
+				m_valid = false;
+				return;
+			}
 		}
 		SourceRoute sr( protocol, addressBuffer, port, nameBuffer );
 
@@ -741,7 +742,9 @@ void Sinful::parseV1String() {
 			return;
 		}
 
-		v.push_back( sr );
+		if( protocol != CP_PRIMARY ) {
+			v.push_back( sr );
+		}
 	}
 
 	// Make sure the list is properly terminated.
@@ -758,11 +761,11 @@ void Sinful::parseV1String() {
 	//	(1) Extract the spid from each route; they must all be the same.
 	//		Set the spid.
 	//  (2) Extract the alias from each route; they must all be the same.
-	//		Set the alias.  (TODO)
+	//		Set the alias.
 	//	(3) Extract the private network name from each route; they must
 	//		all be the same.  Set the private network name.
 	//	(4) Check all routes for ccbid.  Each route with a ccbid goes
-	//		into the ccb contact list.  (TODO)
+	//		into the ccb contact list.
 	//	(5) All routes without a ccbid must be "Internet" addresses or
 	//		private network addresses.  The former go into addrs (and
 	//		host is set to addrs[0]).  Ignore all of the latter that
@@ -814,18 +817,6 @@ void Sinful::parseV1String() {
 		}
 	}
 
-	// Set up the "primary" address (for a backwards-compatible API).
-	condor_sockaddr sa = v[0].getSockAddr();
-	setHost( sa.to_ip_string().c_str() );
-	setPort( sa.get_port() );
-
-	// We could alter generateVString() to preserve the "primary" host and
-	// port, but only old code, using the results of regenerateV0String(),
-	// will ever actually use them; so don't bother.  (New code given an
-	// original Sinful string will properly ignore the "primary" host, so
-	// as long as we always generate an addrs parameter -- and we do --
-	// we're not actually losing information.)
-
 	// Determine the private network address, if any.
 	for( unsigned i = 0; i < v.size(); ++i ) {
 		if(! v[i].getCCBID().empty()) { continue; }
@@ -859,19 +850,34 @@ Sinful::regenerateV1String() {
 		return;
 	}
 
+	std::vector< SourceRoute > v;
+	std::vector< SourceRoute > publics;
+
+	//
+	// We need to preserve the primary address to permit round-trips from
+	// original serialization to v1 serialization and back again.  If we're
+	// clever, we can also use the special primary-address entry to handle
+	// some troublesome backwards-compability concerns: original Sinful
+	// did no input validation, and an empty original Sinful is considered
+	// valid.  We should also be able to maintain the invariant that all
+	// addresses are protocol literals (and therefore require no lookup).
+	//
+	SourceRoute sr( CP_PRIMARY, m_host, getPortNum(), PUBLIC_NETWORK_NAME );
+	v.push_back( sr );
+
 	//
 	// Presently,
 	// each element of the list must be of one of the following forms:
 	//
-	// a = primary, port = port, p = IPv6, n = "internet"
-	// a = addrs[], port = port, p = IPv6, n = "internet"
 	// a = primary, port = port, p = IPv4, n = "internet"
+	// a = primary, port = port, p = IPv6, n = "internet"
 	// a = addrs[], port = port, p = IPv4, n = "internet"
+	// a = addrs[], port = port, p = IPv6, n = "internet"
 	//
-	// a = private, port = privport, p = IPv4, n = "private"
-	// a = private, port = privport, p = IPv6, n = "private"
 	// a = primary, port = port, p = IPv4, n = "private"
 	// a = primary, port = port, p = IPv6, n = "private"
+	// a = private, port = privport, p = IPv4, n = "private"
+	// a = private, port = privport, p = IPv6, n = "private"
 	//
 	// a = CCB[], port = ccbport, p = IPv4, n = "internet"
 	// a = CCB[], port = ccbport, p = IPv6, n = "internet"
@@ -882,40 +888,14 @@ Sinful::regenerateV1String() {
 	// address includes sp, all must include (the same) sp.
 	//
 
-	std::vector< SourceRoute > v;
-	std::vector< SourceRoute > publics;
-
 	// Start by generating our list of public addresses.
-	if( (numParams() == 0) && (getHost() != NULL) ) {
-		// Is the host string an address literal?
+	if( numParams() == 0 ) {
 		condor_sockaddr sa;
-		if( sa.from_ip_string( getHost() ) ) {
+		if( sa.from_ip_string( m_host ) ) {
 			SourceRoute * sr = simpleRouteFromSinful( * this );
-			if( sr == NULL ) {
-				m_valid = false;
-				return;
-			}
-			publics.push_back( * sr );
-			delete sr;
-		} else {
-			// If the primary address is a name, generate addrs for it.
-			std::vector< condor_sockaddr > v = resolve_hostname( getHost() );
-
-			// For backwards compability, even if a name does not resolve,
-			// it's still a valid Sinful.  We should change this (the
-			// callers) and the convention that a newly-created (empty)
-			// Sinful is valid (by removing that constructor), so that valid
-			// actually means something.
-			if( v.size() == 0 ) {
-				m_v1String = "{}";
-				m_valid = true;
-				return;
-			}
-			for( unsigned i = 0; i < v.size(); ++i ) {
-				condor_sockaddr sa = v[i];
-				sa.set_port( getPortNum() );
-				SourceRoute sr( sa, PUBLIC_NETWORK_NAME );
-				publics.push_back( sr );
+			if( sr != NULL ) {
+				publics.push_back( * sr );
+				delete sr;
 			}
 		}
 	} else if( hasAddrs() ) {
@@ -924,11 +904,6 @@ Sinful::regenerateV1String() {
 			SourceRoute sr( sa, PUBLIC_NETWORK_NAME );
 			publics.push_back( sr );
 		}
-	}
-
-	if( publics.size() == 0 ) {
-		m_valid = false;
-		return;
 	}
 
 	// If we have a private network, either:
@@ -1006,6 +981,8 @@ Sinful::regenerateV1String() {
 		}
 	}
 
+	// Deal with the noUDP flag.  (TODO)
+
 	//
 	// Now that we've generated a list of source routes, convert it into
 	// a nested ClassAd list.  The correct way to do this is to faff
@@ -1022,5 +999,5 @@ Sinful::regenerateV1String() {
 	}
 	m_v1String += "}";
 
-	// A unit test will verify that we did this correctly... right?
+	// A unit test will verify that we did this correctly. (TODO)
 }

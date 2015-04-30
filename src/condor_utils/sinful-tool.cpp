@@ -63,6 +63,10 @@ int main( int argc, char * argv[] ) {
 			fprintf( stdout, "%s\n", (*addrs)[i].to_ip_and_port_string().c_str() );
 		}
 		delete addrs;
+	} else if( strcmp( argv[1], "sinful" ) == 0 ) {
+		fprintf( stdout, "%s\n", s.getSinful() );
+	} else if( strcmp( argv[1], "v1" ) == 0 ) {
+		fprintf( stdout, "%s\n", s.getV1String() );
 	} else {
 		fprintf( stderr, "Unrecognized command '%s'.\n", argv[1] );
 		return 2;
