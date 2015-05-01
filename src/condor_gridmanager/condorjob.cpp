@@ -162,6 +162,10 @@ CondorJob::CondorJob( ClassAd *classad )
 	char *gahp_path;
 	bool job_already_submitted = false;
 
+	// We'll mirror the runtime stats from the remote schedd.
+	// Tell BaseJob not to touch them.
+	calcRuntimeStats = false;
+
 	remoteJobId.cluster = 0;
 	gahpAd = NULL;
 	gmState = GM_INIT;
@@ -1281,6 +1285,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_ON_EXIT_CODE,
 		ATTR_EXIT_REASON,
 		ATTR_JOB_CURRENT_START_DATE,
+		ATTR_SHADOW_BIRTHDATE,
 		ATTR_JOB_LOCAL_SYS_CPU,
 		ATTR_JOB_LOCAL_USER_CPU,
 		ATTR_JOB_REMOTE_SYS_CPU,

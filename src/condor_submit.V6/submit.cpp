@@ -145,6 +145,8 @@ bool	SubmitFromStdin = false;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
 int		DashDryRun = 0;
+int		DashMaxJobs = 0;	 // maximum number of jobs to create before generating an error
+int		DashMaxClusters = 0; // maximum number of clusters to create before generating an error.
 const char * DashDryRunOutName = NULL;
 int		DumpSubmitHash = 0;
 int		JobDisableFileChecks = 0;
@@ -159,7 +161,8 @@ int	  ProcId = -1;
 int	  JobUniverse = CONDOR_UNIVERSE_MIN;
 char *JobGridType = NULL;
 int		Remote=0;
-int		ClusterCreated = FALSE;
+int		ClustersCreated = 0;
+int		JobsCreated = 0;
 int		ActiveQueueConnection = FALSE;
 bool    nice_user_setting = false;
 bool	NewExecutable = false;
@@ -1300,6 +1303,26 @@ main( int argc, const char *argv[] )
 					}
 					break;
 				}
+			} else if (is_dash_arg_prefix (ptr[0], "maxjobs", 3)) {
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -maxjobs requires another argument\n",
+							 MyName );
+					exit(1);
+				}
+				// read the next argument to set DashMaxJobs as an integer and
+				// set it to the job limit.
+				char *endptr;
+				DashMaxJobs = strtol(*ptr, &endptr, 10);
+				if (*endptr != '\0') {
+					fprintf(stderr, "Error: Unable to convert argument (%s) to a number for -maxjobs.\n", *ptr);
+					exit(1);
+				}
+				if (DashMaxJobs < -1) {
+					fprintf(stderr, "Error: %d is not a valid for -maxjobs.\n", DashMaxJobs);
+					exit(1);
+				}
+			} else if (is_dash_arg_prefix (ptr[0], "single-cluster", 3)) {
+				DashMaxClusters = 1;
 			} else if (is_dash_arg_prefix( ptr[0], "password", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -password requires another argument\n",
@@ -7554,8 +7577,7 @@ int queue_begin(StringList & vars, bool new_cluster)
 	// unconditionally, the others we must set only when not already set by the user.
 	set_live_submit_variable(Cluster, ClusterString);
 	set_live_submit_variable(Process, ProcessString);
-	//if ( ! find_macro_item("Step", SubmitMacroSet)) { set_live_submit_variable("Step", StepString); }
-
+	
 	vars.rewind();
 	char * var;
 	while ((var = vars.next())) { set_live_submit_variable(var, EmptyItemString, false); }
@@ -7566,6 +7588,12 @@ int queue_begin(StringList & vars, bool new_cluster)
 	}
 
 	if (new_cluster) {
+		// if we have already created the maximum number of clusters, error out now.
+		if (DashMaxClusters > 0 && ClustersCreated >= DashMaxClusters) {
+			fprintf(stderr, "\nERROR: Number of submitted clusters would exceed %d and -single-cluster was specified\n", DashMaxClusters);
+			exit(1);
+		}
+
 		if ((ClusterId = MyQ->get_NewCluster()) < 0) {
 			fprintf(stderr, "\nERROR: Failed to create cluster\n");
 			if ( ClusterId == -2 ) {
@@ -7574,6 +7602,8 @@ int queue_begin(StringList & vars, bool new_cluster)
 			}
 			exit(1);
 		}
+
+		++ClustersCreated;
 
 		// We only need to call init_job_ad the second time we see
 		// a new Executable, because we call init_job_ad() in main()
@@ -7690,6 +7720,14 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 						"specifying an executable\n" );
 			exit(1);
 		}
+
+		// if we have already created the maximum number of jobs, error out now.
+		if (DashMaxJobs > 0 && JobsCreated >= DashMaxJobs) {
+			fprintf(stderr, "\nERROR: Number of submitted jobs would exceed -maxjobs (%d)\n", DashMaxJobs);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+
 		ProcId = MyQ->get_NewProc (ClusterId);
 
 		if ( ProcId < 0 ) {
@@ -7846,7 +7884,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			exit(1);
 		}
 
-		ClusterCreated = TRUE;
+		++JobsCreated;
 	
 		if (verbose && ! DumpFileIsStdout) {
 			fprintf(stdout, "\n** Proc %d.%d:\n", ClusterId, ProcId);
@@ -8553,8 +8591,10 @@ usage()
 	fprintf( stderr, "\t-queue <queue-opts>\tappend Queue statement to submit file before processing\n"
 					 "\t                   \t(submit file must not already have a Queue statement)\n" );
 	fprintf( stderr, "\t-disable\t\tdisable file permission checks\n" );
-	fprintf( stderr, "\t-dry-run <filename>\t\tprocess submit file and write ClassAd attributes to <filename>\n"
+	fprintf( stderr, "\t-dry-run <filename>\tprocess submit file and write ClassAd attributes to <filename>\n"
 					 "\t        \t\tbut do not actually submit the job(s) to the SCHEDD\n" );
+	fprintf( stderr, "\t-maxjobs <maxjobs>\tDo not submit if number of jobs would exceed <maxjobs>.\n" );
+	fprintf( stderr, "\t-single-cluster\t\tDo not submit if more than one ClusterId is needed.\n" );
 	fprintf( stderr, "\t-unused\t\t\ttoggles unused or unexpanded macro warnings\n"
 					 "\t       \t\t\t(overrides config file; multiple -u flags ok)\n" );
 	//fprintf( stderr, "\t-force-mpi-universe\tAllow submission of obsolete MPI universe\n );
@@ -8576,7 +8616,7 @@ usage()
 
 	fprintf( stderr, "\t<attrib>=<value>\tSet <attrib>=<value> before reading the submit file.\n" );
 
-	fprintf( stderr, "    If <submit-file> is omitted or is -, input is read from stdin.\n"
+	fprintf( stderr, "\n    If <submit-file> is omitted or is -, input is read from stdin.\n"
 					 "    Use of - implies verbose output unless -terse is specified\n");
 }
 
@@ -8585,11 +8625,11 @@ extern "C" {
 int
 DoCleanup(int,int,const char*)
 {
-	if( ClusterCreated ) 
+	if( JobsCreated ) 
 	{
 		// TerminateCluster() may call EXCEPT() which in turn calls 
 		// DoCleanup().  This lead to infinite recursion which is bad.
-		ClusterCreated = 0;
+		JobsCreated = 0;
 		if ( ! ActiveQueueConnection) {
 			if (DumpClassAdToFile) {
 			} else {

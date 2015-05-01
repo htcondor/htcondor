@@ -618,14 +618,14 @@ Optional parameters are given within square brackets.
     argument is given.
 
   \index{ClassAd functions!split()}
-  \item[\Code{String list split(String s \Lbr\ , String tokens \Rbr\ )}]
+  \item[\Code{List split(String s \Lbr\ , String tokens \Rbr\ )}]
     Returns a list of the substrings of \Expr{s} that have been split up
     by using any of the characters within string \Expr{tokens}.
     If \Expr{tokens} is not specified, then all white space characters are
     used to delimit the string.
 
   \index{ClassAd functions!splitUserName()}
-  \item[\Code{String list splitUserName(String Name)}]
+  \item[\Code{List splitUserName(String Name)}]
     Returns a list of two strings.
     Where \Code{Name} includes an \Expr{@} character,
     the first string in the list will be the substring that comes before
@@ -640,7 +640,7 @@ Optional parameters are given within square brackets.
     will be \verb|{"username", ""}|.
 
   \index{ClassAd functions!splitSlotName()}
-  \item[\Code{String list splitSlotName(String Name)}]
+  \item[\Code{List splitSlotName(String Name)}]
     Returns a list of two strings.
     Where \Code{Name} includes an \Expr{@} character,
     the first string in the list will be the substring that comes before
