@@ -1664,8 +1664,7 @@ parse_splice(
 	//
 	TmpDir spliceDir;
 	MyString dirTok = strtok( NULL, DELIMITERS );
-	debug_printf( DEBUG_QUIET, "DIAG dirTok: <%s>\n", dirTok.Value() );//TEMPTEMP
-	MyString directory = ".";//TEMPTEMP -- why is this .?
+	MyString directory = ".";
 
 	MyString dirTokOrig = dirTok;
 	dirTok.upper_case();
