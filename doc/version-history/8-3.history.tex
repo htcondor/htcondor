@@ -42,6 +42,11 @@ The Event Log is still locked by default to perform file rotation.
 \item \Condor{dagman} no longer creates an (unused) command socket.
 \Ticket{4987}
 
+\item Various synax errors on SPLICE lines in a DAG (e.g., appending
+NOOP or DONE) are now reported as fatal errors, rather than being
+silently ignored.
+\Ticket{2722} \Ticket{4825}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
