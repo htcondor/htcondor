@@ -556,7 +556,7 @@ Sinful::parseSinfulString() {
 
 // You must delete the returned pointer (if it's not NULL).
 // A simple route has only a condor_sockaddr and a network name.
-SourceRoute * simpleRouteFromSinful( const Sinful & s ) {
+SourceRoute * simpleRouteFromSinful( const Sinful & s, char const * n = PUBLIC_NETWORK_NAME ) {
 	if(! s.valid()) { return NULL; }
 	if( s.getHost() == NULL ) { return NULL; }
 
@@ -567,7 +567,7 @@ SourceRoute * simpleRouteFromSinful( const Sinful & s ) {
 	int portNo = s.getPortNum();
 	if( portNo == -1 ) { return NULL; }
 
-	return new SourceRoute( primary.get_protocol(), primary.to_ip_string(), portNo, PUBLIC_NETWORK_NAME );
+	return new SourceRoute( primary.get_protocol(), primary.to_ip_string(), portNo, n );
 }
 
 bool stripQuotesAndSemicolon( char * str ) {
@@ -968,14 +968,22 @@ Sinful::regenerateV1String() {
 				v.push_back( sr );
 			}
 		} else {
-			condor_sockaddr sa;
-			bool saOK = sa.from_ip_and_port_string( getPrivateAddr() );
-			if( ! saOK ) {
+			// The private address is defined to be a simple original Sinful,
+			// just and ip-and-port string surrounded by brackets.  This is
+			// overkill, but it's less ugly than stripping the brackets.
+			Sinful s( getPrivateAddr() );
+			if(! s.valid()) {
 				m_valid = false;
 				return;
 			}
-			SourceRoute sr( sa, getPrivateNetworkName() );
-			v.push_back( sr );
+
+			SourceRoute * sr = simpleRouteFromSinful( s, getPrivateNetworkName() );
+			if( sr == NULL ) {
+				m_valid = false;
+				return;
+			}
+			v.push_back( * sr );
+			free( sr );
 		}
 	}
 
