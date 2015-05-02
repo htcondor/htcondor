@@ -42,7 +42,7 @@
 
 	(When we change from chooseAddrFromAddrs() to chooseRouteFromAddress(), we
 	should return a SourceRoute, but will most likely return a degenerate v1
-	Sinful which lists only the single SourceRoute.  This will allow us 
+	Sinful which lists only the single SourceRoute.  This will allow us
 	to continue to use Sinful de/serialization exclusively until we switch
 	over to passing objects, instead.)
 
@@ -96,13 +96,21 @@
 #include <vector>
 
 #include "condor_sockaddr.h"
-#include "classad/classad.h"
+#include "SourceRoute.h"
 
 class Sinful {
 	public:
 		// We would like getV1String() to be a drop-in replacement for
 		// getSinful() at some point, so it has to have the same API.
 		char const * getV1String() const;
+
+		// Will return false if the Sinful is invalid.  The two pointer
+		// arguments are used to return the "primary" address.
+		bool getSourceRoutes( std::vector< SourceRoute > & v,
+			std::string * hostOut = NULL, std::string * portOut = NULL ) const;
+
+		// Deprecated.  You should use this, unless you're the CCB server.
+		std::string getCCBAddressString() const;
 
 	private:
 		void parseV1String();

@@ -34,8 +34,8 @@ ccbid_hash(const CCBID &ccbid) {
 	return ccbid;
 }
 
-static bool
-CCBIDFromString(CCBID &ccbid,char const *ccbid_str)
+bool
+CCBServer::CCBIDFromString(CCBID &ccbid,char const *ccbid_str)
 {
 	if( sscanf(ccbid_str,"%lu",&ccbid)!=1 ) {
 		return false;
@@ -58,11 +58,11 @@ CCBIDFromContactString(CCBID &ccbid,char const *ccb_contact)
 	if( !ccb_contact ) {
 		return false;
 	}
-	return CCBIDFromString(ccbid,ccb_contact+1);
+	return CCBServer::CCBIDFromString(ccbid,ccb_contact+1);
 }
 
-static void
-CCBIDToContactString(char const *my_address,CCBID ccbid,MyString &ccb_contact)
+void
+CCBServer::CCBIDToContactString(char const *my_address,CCBID ccbid,MyString &ccb_contact)
 {
 	ccb_contact.formatstr("%s#%lu",my_address,ccbid);
 }
@@ -148,11 +148,7 @@ CCBServer::InitAndReconfig()
 		// without brackets.  Not sure why we bother stripping them off
 		// in the first place, but we can't change that without
 		// breaking backwards compabitility.
-	ASSERT( sinful.getSinful() && sinful.getSinful()[0] == '<' );
-	m_address.formatstr("%s",sinful.getSinful()+1);
-	if( m_address[m_address.Length()-1] == '>' ) {
-		m_address.setChar(m_address.Length()-1,'\0');
-	}
+	m_address = sinful.getCCBAddressString();
 
 	m_read_buffer_size = param_integer("CCB_SERVER_READ_BUFFER",2*1024);
 	m_write_buffer_size = param_integer("CCB_SERVER_WRITE_BUFFER",2*1024);
