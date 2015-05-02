@@ -709,6 +709,8 @@ bool Sinful::getSourceRoutes( std::vector< SourceRoute > & v, std::string * host
 	return true;
 }
 
+#include <algorithm>
+
 void Sinful::parseV1String() {
 	std::vector< SourceRoute > v;
 	if(! getSourceRoutes( v, & m_host, & m_port ) ) {
@@ -855,15 +857,24 @@ void Sinful::parseV1String() {
 		if(! v[i].getCCBID().empty()) { continue; }
 		if( v[i].getNetworkName() == PUBLIC_NETWORK_NAME ) { continue; }
 
-		if( getPrivateAddr() == NULL ) {
-			// setPrivateAddr( Sinful::privateAddressString( v[i].getSockAddr(), getSharedPortID() ).c_str() );
-			Sinful p( v[i].getSockAddr().to_ip_and_port_string().c_str() );
-			p.setSharedPortID( getSharedPortID() );
-			setPrivateAddr( p.getSinful() );
-		} else {
+		// A route with a public address may have a private network name
+		// as a result of bypassing CCB.  Those addresses are not private
+		// addresses, so ignore them.
+		condor_sockaddr sa = v[i].getSockAddr();
+		if( std::find( addrs.begin(), addrs.end(), sa ) != addrs.end() ) {
+			continue;
+		}
+
+		// There can be only one private address.
+		if( getPrivateAddr() != NULL ) {
 			m_valid = false;
 			return;
 		}
+
+		// setPrivateAddr( Sinful::privateAddressString( v[i].getSockAddr(), getSharedPortID() ).c_str() );
+		Sinful p( v[i].getSockAddr().to_ip_and_port_string().c_str() );
+		p.setSharedPortID( getSharedPortID() );
+		setPrivateAddr( p.getSinful() );
 	}
 
 	// Set noUDP if any route sets it.
