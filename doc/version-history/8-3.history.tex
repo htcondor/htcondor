@@ -43,9 +43,11 @@ The Event Log is still locked by default to perform file rotation.
 \item \Condor{dagman} no longer creates an unused command socket.
 \Ticket{4987}
 
-\item Various synax errors on SPLICE lines in a DAG (e.g., appending
-NOOP or DONE) are now reported as fatal errors, rather than being
-silently ignored.
+\item Various syntax errors within a DAG input file related to the 
+specification of a splice are now reported as fatal errors, 
+rather than being silently ignored.
+Examples of syntax errors caught include a specification
+of NOOP or DONE for a splice.
 \Ticket{2722} \Ticket{4825}
 
 \item Changed the default value of configuration variables
