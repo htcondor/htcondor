@@ -29,6 +29,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Two new command line options are implemented for \Condor{submit}.
+The \Opt{-maxjobs} option causes an error message to be printed and
+no jobs to be submitted,
+if the submission would have caused more
+than a specified number of jobs to be submitted.
+The \Opt{-single-cluster} option causes an error message to be printed and
+no jobs to be submitted,
+if the submission would have assigned more than a single cluster value.
+\Ticket{4981}
+
 \item Improved how DAGMan deals with node job submit description files that
 use the new features of the \SubmitCmdNI{queue} command
 to do file globbing.

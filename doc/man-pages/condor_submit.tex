@@ -19,6 +19,8 @@
 \oOptArg{-dump}{filename}
 \oOpt{-interactive}
 \oOpt{-dry-run}
+\oOptArg{-maxjobs}{<number-of-jobs>}
+\oOpt{-single-cluster}
 \oOpt{<submit-variable>=<value>}
 \oArg{submit description file}
 \oOptArg{-queue}{queue\_arguments}
@@ -173,6 +175,17 @@ files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
   sending the job ClassAd to \File{stderr}, but do not submit the job(s).
   This permits an observation of job specification, 
   and it facilitates debugging the submit description file contents.  }
+
+\OptItem{\OptArg{-maxjobs}{<number-of-jobs>}}{If the total number
+  of jobs specified by the submit description file is more than
+  the integer value given by \Opt{<number-of-jobs>}, 
+  then no jobs are submitted for execution and an error message is generated. 
+  A 0 or negative value for the \Opt{<number-of-jobs>}
+  causes no limit to be imposed. }
+
+\OptItem{\Opt{-single-cluster}}{If the jobs specified by the submit description
+  file causes more than a single cluster value to be assigned,
+  then no jobs are submitted for execution and an error message is generated. }
 
 \OptItem{\Opt{<submit-variable>=<value>}}{Defines a submit command or
   submit variable with a value, and parses it as if it was placed at
