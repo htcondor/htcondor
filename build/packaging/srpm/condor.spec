@@ -514,8 +514,8 @@ resources exposed by the deltacloud API.
 %package classads
 Summary: HTCondor's classified advertisement language
 Group: Development/Libraries
-Obsoletes: classads <= 1.0.8
-Obsoletes: classads-static <= 1.0.8
+Obsoletes: classads <= 1.0.10
+Obsoletes: classads-static <= 1.0.10
 Provides: classads = %version-%release
 
 %description classads
@@ -544,7 +544,7 @@ Summary: Headers for HTCondor's classified advertisement language
 Group: Development/System
 Requires: %name-classads = %version-%release
 Requires: pcre-devel
-Obsoletes: classads-devel <= 1.0.8
+Obsoletes: classads-devel <= 1.0.10
 Provides: classads-devel = %version-%release
 
 %description classads-devel
@@ -733,8 +733,7 @@ export CMAKE_PREFIX_PATH=/usr
 
 %else
 
-%cmake -DNO_PHONE_HOME:BOOL=TRUE \
-       -DBUILD_TESTING:BOOL=FALSE \
+%cmake -DBUILD_TESTING:BOOL=FALSE \
 %if %std_univ
        -DCLIPPED:BOOL=FALSE \
 %endif

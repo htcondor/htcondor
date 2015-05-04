@@ -29,6 +29,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Two new command line options are implemented for \Condor{submit}.
+The \Opt{-maxjobs} option causes an error message to be printed and
+no jobs to be submitted,
+if the submission would have caused more
+than a specified number of jobs to be submitted.
+The \Opt{-single-cluster} option causes an error message to be printed and
+no jobs to be submitted,
+if the submission would have assigned more than a single cluster value.
+\Ticket{4981}
+
 \item Improved how DAGMan deals with node job submit description files that
 use the new features of the \SubmitCmdNI{queue} command
 to do file globbing.
@@ -42,6 +52,19 @@ The Event Log is still locked by default to perform file rotation.
 
 \item \Condor{dagman} no longer creates an unused command socket.
 \Ticket{4987}
+
+\item Various syntax errors within a DAG input file related to the 
+specification of a splice are now reported as fatal errors, 
+rather than being silently ignored.
+Examples of syntax errors caught include a specification
+of NOOP or DONE for a splice.
+\Ticket{2722} \Ticket{4825}
+
+\item Changed the default value of configuration variables
+\MacroNI{DAGMAN\_MAX\_PRE\_SCRIPTS} and \MacroNI{DAGMAN\_MAX\_POST\_SCRIPTS}
+from 0 to 20.
+A value of 0 does not limit the number of scripts.
+\Ticket{4999}
 
 \end{itemize}
 
