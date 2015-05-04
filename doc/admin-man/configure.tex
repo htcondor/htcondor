@@ -10670,14 +10670,16 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManMaxPreScripts}
 \item[\Macro{DAGMAN\_MAX\_PRE\_SCRIPTS}]
   An integer defining the maximum number of PRE scripts that any given
-  \Condor{dagman} will run at the same time.  The default value if not
-  defined is 0, which means to allow any number of PRE scripts to run.
+  \Condor{dagman} will run at the same time.  
+  The value 0 allows any number of PRE scripts to run.
+  The default value if not defined is 20.
 
 \label{param:DAGManMaxPostScripts}
 \item[\Macro{DAGMAN\_MAX\_POST\_SCRIPTS}]
   An integer defining the maximum number of POST scripts that any given
-  \Condor{dagman} will run at the same time.  The default value if not
-  defined is 0, which means to allow any number of POST scripts to run.
+  \Condor{dagman} will run at the same time.
+  The value 0 allows any number of POST scripts to run.
+  The default value if not defined is 20.
 
 \label{param:DAGManAllowLogError}
 \item[\Macro{DAGMAN\_ALLOW\_LOG\_ERROR}]
