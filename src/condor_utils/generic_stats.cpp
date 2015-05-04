@@ -505,6 +505,70 @@ int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe)
    return ret;
 }
 
+int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe, int DetailMode, bool if_nonzero)
+{
+   if ( ! DetailMode) {	 // ProbeDetailMode_Normal
+      return ClassAdAssign(ad, pattr, probe);
+   }
+
+   int ret = -1;
+
+   MyString attr;
+   if (DetailMode == ProbeDetailMode_Brief) {
+      // for Brief, publish the Avg without a suffix, and the Min & Max using their normal names
+      double avg = probe.Avg();
+      ret = ad.Assign(pattr, avg);
+      double val = MIN(avg, probe.Min);
+      if ( ! if_nonzero || val > 0.0 || val < 0.0) {
+         attr.formatstr("%sMin", pattr);
+         ad.Assign(attr.Value(), val);
+      }
+      val = MAX(avg, probe.Max);
+      if ( ! if_nonzero || val > 0.0 || val < 0.0) {
+         attr.formatstr("%sMax", pattr);
+         ad.Assign(attr.Value(), val);
+      }
+   } else if (DetailMode == ProbeDetailMode_RT_SUM) {
+      // for RT_SUM, publish the count without a suffix and the Sum as "Runtime"
+      // this gives sort of probe is useful for function/process timings.
+      ret = ad.Assign(pattr, probe.Count);
+      attr.formatstr("%sRuntime", pattr);
+      ad.Assign(attr.Value(), probe.Sum);
+
+#if 1
+   } else if (DetailMode == ProbeDetailMode_Loss) {
+      // for Loss, publish the Sum without a suffix, the Avg is called Ratio
+      // and Max is called max.
+      // this sort of probe is useful for counting lost updates
+      ret = ad.Assign(pattr, probe.Sum);
+      double avg = probe.Avg();
+      if ( ! if_nonzero || avg > 0.0 || avg < 0.0) {
+         attr.formatstr("%sRatio", pattr);
+         ad.Assign(attr.Value(), avg);
+      }
+      double val = MAX(avg, probe.Max);
+      if ( ! if_nonzero || val > 0.0 || val < 0.0) {
+         attr.formatstr("%sMax", pattr);
+         ad.Assign(attr.Value(), val);
+      }
+   } else if (DetailMode == ProbeDetailMode_Tot) {
+      // for Totals, publish the Sum without a suffix
+      ret = ad.Assign(pattr, probe.Sum);
+#else
+   } else if (DetailMode == ProbeDetailMode_Tot_Avg_Max) {
+      // for Totals, publish the Sum without a suffix, and the Avg & Max using their normal names
+      // this sort of probe is useful for counting lost things
+      ret = ad.Assign(pattr, probe.Sum);
+      attr.formatstr("%sAvg", pattr);
+      double avg = probe.Avg();
+      ad.Assign(attr.Value(), avg);
+      attr.formatstr("%sMax", pattr);
+      ad.Assign(attr.Value(), MAX(avg, probe.Max));
+#endif
+   }
+   return ret;
+}
+
 template <> void stats_entry_recent<Probe>::Unpublish(ClassAd& ad, const char * pattr) const
 {
    MyString attr;
@@ -537,7 +601,7 @@ template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pa
    if ( ! flags) flags = PubDefault;
    if ((flags & IF_NONZERO) && this->value.Count == 0) return;
 
-   if ((flags & IF_PUBLEVEL) <= IF_BASICPUB) {
+   if ( !(flags & this->PubDetailMask) && (flags & IF_PUBLEVEL) <= IF_BASICPUB) {
       if (flags & this->PubValue)
          ClassAdAssign(ad, pattr, this->value.Avg());
       if (flags & this->PubRecent) {
@@ -549,15 +613,14 @@ template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pa
       return;
    }
 
-   if (flags & this->PubValue)
-      ClassAdAssign(ad, pattr, this->value); 
+   ClassAdAssign(ad, pattr, this->value, flags & this->PubDetailMask, flags & IF_NONZERO);
 
    if (flags & this->PubRecent) {
       MyString attr(pattr);
       if (flags & this->PubDecorateAttr) {
          attr.formatstr("Recent%s", pattr);
       }
-      ClassAdAssign(ad, attr.Value(), recent); 
+      ClassAdAssign(ad, attr.Value(), recent, flags & this->PubDetailMask, flags & IF_NONZERO);
    }
 }
 
