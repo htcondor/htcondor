@@ -2746,6 +2746,7 @@ sub LoadWhoData
 		"Negotiator" => "condor_negotiator",
 		"Collector" => "condor_collector",
 		"Startd" => "condor_startd",
+		"SharedPort" => "condor_shared_port",
 		"Master" => "MASTER",
 	  );
 	  open(PF,">$file") or print "PIDS file create failed:$!\n";
