@@ -1105,7 +1105,7 @@ bool Sock::guess_address_string(char const* host, int port, condor_sockaddr& add
 	return true;
 }
 
-bool Sock::chooseAddrFromAddrs( char const * & host ) {
+bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr ) {
 	//
 	// If host is a Sinful string and contains an addrs parameter,
 	// choose one of the listed addresses and rewrite host to match.
@@ -1176,11 +1176,12 @@ bool Sock::chooseAddrFromAddrs( char const * & host ) {
 	// Change the "primary" address.
 	s.setHost( candidate.to_ip_string().c_str() );
 	s.setPort( candidate.get_port() );
-	host = s.getSinful();
-	set_connect_addr( host );
+	addr = s.getSinful();
 
+	set_connect_addr( addr.c_str() );
 	_who = candidate;
 	addr_changed();
+
 	return true;
 }
 
@@ -1192,7 +1193,10 @@ int Sock::do_connect(
 {
 	if (!host || port < 0) return FALSE;
 
-	if(! chooseAddrFromAddrs( host ) ) {
+	std::string addr;
+	if( chooseAddrFromAddrs( host, addr ) ) {
+		host = addr.c_str();
+	} else {
 		_who.clear();
 		if (!guess_address_string(host, port, _who)) {
 			return FALSE;

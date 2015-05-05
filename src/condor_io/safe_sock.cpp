@@ -341,7 +341,10 @@ int SafeSock::connect(
 {
 	if (!host || port < 0) return FALSE;
 
-	if(! chooseAddrFromAddrs( host ) ) {
+	std::string addr;
+	if( chooseAddrFromAddrs( host, addr ) ) {
+		host = addr.c_str();
+	} else {
 		_who.clear();
 		if (!Sock::guess_address_string(host, port, _who))
 			return FALSE;
