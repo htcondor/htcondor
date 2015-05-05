@@ -136,11 +136,20 @@ class CollectorDaemonStatsList
 };
 
 
+class stats_entry_lost_updates : public stats_entry_recent<Probe> {
+public:
+	static const int PubRatio = 4;  // publish loss ratio. value between 0 and 1 where 1 is all loss.
+	static const int PubMax = 8;    // publish largest loss gap
+	void Publish(ClassAd & ad, const char * pattr, int flags) const;
+};
+
+
 // update counters that are tracked globally, and per Ad type.
 struct UpdatesCounters {
 	stats_entry_recent<int>   UpdatesTotal;
 	stats_entry_recent<int>   UpdatesInitial;
-	stats_entry_recent<Probe> UpdatesLost;
+	//stats_entry_recent<Probe> UpdatesLost;
+	stats_entry_lost_updates  UpdatesLost;
 
 	void RegisterCounters(StatisticsPool &Pool, const char * className, int recent_max);
 	void UnregisterCounters(StatisticsPool &Pool);

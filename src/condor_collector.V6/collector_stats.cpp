@@ -286,6 +286,39 @@ CollectorBaseStats::getHistoryString ( char *buf )
 	return buf;
 }
 
+void stats_entry_lost_updates::Publish(ClassAd & ad, const char * pattr, int flags) const
+{
+	if ( ! flags) flags = PubDefault;
+	if ((flags & IF_NONZERO) && stats_entry_is_zero(this->value)) return;
+
+	MyString rattr("Recent"); rattr += pattr;
+
+	// for Loss, publish the Sum without a suffix, the Avg is called Ratio
+	// and Max is called max.
+	// this sort of probe is useful for counting lost updates
+	if (flags & PubValue) {
+		ad.Assign(rattr.c_str()+6, (long long)value.Sum);
+		ad.Assign(rattr.c_str(), (long long)recent.Sum);
+	}
+	if (flags & PubRatio) {
+		double avg = value.Avg();
+		if ( ! (flags & IF_NONZERO) || avg > 0.0 || avg < 0.0) {
+			rattr.formatstr("Recent%sRatio", pattr);
+			ad.Assign(rattr.c_str()+6, avg);
+			ad.Assign(rattr.c_str(), recent.Avg());
+		}
+	}
+	if (flags & PubMax) {
+		int val = MAX(0.0, (int)value.Max);
+		if ( ! (flags & IF_NONZERO) || val != 0) {
+			rattr.formatstr("Recent%sMax", pattr);
+			ad.Assign(rattr.c_str()+6, val);
+			val = MAX(0, (int)recent.Max);
+			ad.Assign(rattr.c_str(), val);
+		}
+	}
+}
+
 #define ADD_RECENT_PROBE(pool, probe, verb, suffix, recent_max) \
 	probe.Clear(); \
 	probe.SetRecentMax(recent_max); \
@@ -302,10 +335,11 @@ void UpdatesCounters::RegisterCounters(StatisticsPool &Pool, const char * classN
 	ADD_RECENT_PROBE(Pool, UpdatesTotal, IF_BASICPUB, className, recent_max);
 	ADD_RECENT_PROBE(Pool, UpdatesInitial, IF_BASICPUB, className, recent_max);
 	if (className) {
-		ADD_RECENT_PROBE(Pool, UpdatesLost, IF_BASICPUB | ProbeDetailMode_Tot, className, recent_max);
+		ADD_RECENT_PROBE(Pool, UpdatesLost, IF_BASICPUB, className, recent_max);
 	} else {
 		// for overall UpdatesLost counter, publish loss ratio & max also
-		ADD_RECENT_PROBE(Pool, UpdatesLost, IF_BASICPUB | ProbeDetailMode_Loss, className, recent_max);
+		int pub_fields = stats_entry_lost_updates::PubRatio | stats_entry_lost_updates::PubMax;
+		ADD_RECENT_PROBE(Pool, UpdatesLost, IF_BASICPUB | pub_fields, className, recent_max);
 	}
 
 };

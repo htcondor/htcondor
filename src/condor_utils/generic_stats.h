@@ -1167,10 +1167,9 @@ template <> void stats_entry_recent<Probe>::Unpublish(ClassAd& ad, const char * 
 int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe);
 // detail mode must fit inside the stats_entry_recent<Probe>::PubDetailMask which is 0x7C, so we shift up by 2 bits
 const int ProbeDetailMode_Normal  = (0<<2); // show all 6 fields Count, Sum, Avg, Min, Max, Std
-const int ProbeDetailMode_Tot     = (1<<2); // show Sum without tag
+const int ProbeDetailMode_Tot     = (1<<2); // show Sum as integer value without tag
 const int ProbeDetailMode_Brief   = (2<<2); // show Avg without tag, Min, Max
 const int ProbeDetailMode_RT_SUM  = (3<<2); // show runtime fields, Sum=Runtime, Count published without tag
-const int ProbeDetailMode_Loss    = (4<<2); // publish Sum without tag, Avg=Ratio, Max
 
 // --------------------------------------------------------------------
 //  statistcs probe for histogram data.

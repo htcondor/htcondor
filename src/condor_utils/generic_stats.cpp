@@ -534,37 +534,9 @@ int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe, int Deta
       ret = ad.Assign(pattr, probe.Count);
       attr.formatstr("%sRuntime", pattr);
       ad.Assign(attr.Value(), probe.Sum);
-
-#if 1
-   } else if (DetailMode == ProbeDetailMode_Loss) {
-      // for Loss, publish the Sum without a suffix, the Avg is called Ratio
-      // and Max is called max.
-      // this sort of probe is useful for counting lost updates
-      ret = ad.Assign(pattr, probe.Sum);
-      double avg = probe.Avg();
-      if ( ! if_nonzero || avg > 0.0 || avg < 0.0) {
-         attr.formatstr("%sRatio", pattr);
-         ad.Assign(attr.Value(), avg);
-      }
-      double val = MAX(avg, probe.Max);
-      if ( ! if_nonzero || val > 0.0 || val < 0.0) {
-         attr.formatstr("%sMax", pattr);
-         ad.Assign(attr.Value(), val);
-      }
    } else if (DetailMode == ProbeDetailMode_Tot) {
       // for Totals, publish the Sum without a suffix
-      ret = ad.Assign(pattr, probe.Sum);
-#else
-   } else if (DetailMode == ProbeDetailMode_Tot_Avg_Max) {
-      // for Totals, publish the Sum without a suffix, and the Avg & Max using their normal names
-      // this sort of probe is useful for counting lost things
-      ret = ad.Assign(pattr, probe.Sum);
-      attr.formatstr("%sAvg", pattr);
-      double avg = probe.Avg();
-      ad.Assign(attr.Value(), avg);
-      attr.formatstr("%sMax", pattr);
-      ad.Assign(attr.Value(), MAX(avg, probe.Max));
-#endif
+      ret = ad.Assign(pattr, (long long)probe.Sum);
    }
    return ret;
 }
