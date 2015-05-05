@@ -145,6 +145,9 @@ bool	SubmitFromStdin = false;
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
 int		DashDryRun = 0;
+int		DashMaxJobs = 0;	 // maximum number of jobs to create before generating an error
+int		DashMaxClusters = 0; // maximum number of clusters to create before generating an error.
+const char * DashDryRunOutName = NULL;
 int		DumpSubmitHash = 0;
 int		JobDisableFileChecks = 0;
 bool	RequestMemoryIsZero = false;
@@ -155,10 +158,11 @@ bool	already_warned_requirements_disk = false;
 int		MaxProcsPerCluster;
 int	  ClusterId = -1;
 int	  ProcId = -1;
-int	  JobUniverse;
+int	  JobUniverse = CONDOR_UNIVERSE_MIN;
 char *JobGridType = NULL;
 int		Remote=0;
-int		ClusterCreated = FALSE;
+int		ClustersCreated = 0;
+int		JobsCreated = 0;
 int		ActiveQueueConnection = FALSE;
 bool    nice_user_setting = false;
 bool	NewExecutable = false;
@@ -331,7 +335,7 @@ MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 //
 // Dump ClassAd to file junk
 //
-MyString	DumpFileName;
+const char * DumpFileName = NULL;
 bool		DumpClassAdToFile = false;
 FILE		*DumpFile = NULL;
 bool		DumpFileIsStdout = 0;
@@ -715,19 +719,6 @@ extern "C" {
 int SetSyscalls( int foo );
 int DoCleanup(int,int,const char*);
 }
-
-// class that can be used to hold a malloc'd pointer such as the one returned by condor_param
-// it will free the pointer when this object is destroyed.
-class auto_free_ptr {
-public:
-	auto_free_ptr(char* str=NULL) : p(str) {}
-	~auto_free_ptr() { if (p) free(p); p = NULL; }
-	void set(char*str) { if (p) free(p); p = str; }
-	char * detach() { char * t = p; p = NULL; return t; }
-	char * ptr() { return p; }
-private:
-	char * p;
-};
 
 
 // global struct that we use to keep track of where we are so we
@@ -1195,11 +1186,30 @@ main( int argc, const char *argv[] )
 				dprintf_set_tool_debug("TOOL", 0);
 			} else if (is_dash_arg_colon_prefix(ptr[0], "dry-run", &pcolon, 3)) {
 				DashDryRun = 1;
+				bool needs_file_arg = true;
 				if (pcolon) { 
+					needs_file_arg = false;
 					int opt = atoi(pcolon+1);
 					if (opt > 1) DashDryRun =  opt;
-					else if (MATCH == strcmp(pcolon+1, "hash")) DumpSubmitHash = 1;
+					else if (MATCH == strcmp(pcolon+1, "hash")) {
+						DumpSubmitHash = 1;
+						needs_file_arg = true;
+					}
 				}
+				if (needs_file_arg) {
+					if (DumpClassAdToFile) {
+						fprintf(stderr, "%s: -dry-run <file> and -dump <file> cannot be used together\n", MyName);
+						exit(1);
+					}
+					const char * pfilearg = ptr[1];
+					if ( ! pfilearg || (*pfilearg == '-' && (MATCH != strcmp(pfilearg,"-"))) ) {
+						fprintf( stderr, "%s: -dry-run requires another argument\n", MyName );
+						exit(1);
+					}
+					DashDryRunOutName = pfilearg;
+					--argc; ++ptr;
+				}
+
 			} else if (is_dash_arg_prefix(ptr[0], "spool", 1)) {
 				Remote++;
 				DisableFileChecks = 1;
@@ -1293,6 +1303,26 @@ main( int argc, const char *argv[] )
 					}
 					break;
 				}
+			} else if (is_dash_arg_prefix (ptr[0], "maxjobs", 3)) {
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -maxjobs requires another argument\n",
+							 MyName );
+					exit(1);
+				}
+				// read the next argument to set DashMaxJobs as an integer and
+				// set it to the job limit.
+				char *endptr;
+				DashMaxJobs = strtol(*ptr, &endptr, 10);
+				if (*endptr != '\0') {
+					fprintf(stderr, "Error: Unable to convert argument (%s) to a number for -maxjobs.\n", *ptr);
+					exit(1);
+				}
+				if (DashMaxJobs < -1) {
+					fprintf(stderr, "Error: %d is not a valid for -maxjobs.\n", DashMaxJobs);
+					exit(1);
+				}
+			} else if (is_dash_arg_prefix (ptr[0], "single-cluster", 3)) {
+				DashMaxClusters = 1;
 			} else if (is_dash_arg_prefix( ptr[0], "password", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -password requires another argument\n",
@@ -1327,6 +1357,10 @@ main( int argc, const char *argv[] )
 				// -- why not? if you set it to warn on unused macros in the 
 				// config file, there should be a way to turn it off
 			} else if (is_dash_arg_prefix(ptr[0], "dump", 2)) {
+				if (DashDryRunOutName) {
+					fprintf(stderr, "%s: -dump <file> and -dry-run <file> cannot be used together\n", MyName);
+					exit(1);
+				}
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -dump requires another argument\n",
 						MyName );
@@ -1334,8 +1368,7 @@ main( int argc, const char *argv[] )
 				}
 				DumpFileName = *ptr;
 				DumpClassAdToFile = true;
-				if (DumpFileName == "-") 
-					DumpFileIsStdout = true;
+				DumpFileIsStdout = (MATCH == strcmp(DumpFileName,"-"));
 				// if we are dumping to a file, we never want to check file permissions
 				// as this would initiate some schedd communication
 				DisableFileChecks = 1;
@@ -1499,6 +1532,18 @@ main( int argc, const char *argv[] )
 		}
 	}
 
+	if ( ! cmd_file && (DashDryRunOutName || DumpFileName)) {
+		const char * dump_name = DumpFileName ? DumpFileName : DashDryRunOutName;
+		fprintf( stderr,
+			"\nERROR: No submit filename was provided, and '%s'\n"
+			"  was given as the output filename for -dump or -dry-run. Was this intended?\n"
+			"  To to avoid confusing the output file with the submit file when using these\n"
+			"  commands, an explicit submit filename argument must be given. You can use -\n"
+			"  as the submit filename argument to read from stdin.\n",
+			dump_name);
+		exit(1);
+	}
+
 	// open submit file
 	if ( ! cmd_file || SubmitFromStdin) {
 		// no file specified, read from stdin
@@ -1527,7 +1572,7 @@ main( int argc, const char *argv[] )
 	} else if ( ! DumpFileIsStdout ) {
 		// get the file we are to dump the ClassAds to...
 		if ( ! terse) { fprintf(stdout, "Storing job ClassAd(s)"); }
-		if( (DumpFile = safe_fopen_wrapper_follow(DumpFileName.Value(),"w")) == NULL ) {
+		if( (DumpFile = safe_fopen_wrapper_follow(DumpFileName,"w")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open file to dump ClassAds into (%s)\n",
 				strerror(errno));
 			exit(1);
@@ -2217,7 +2262,7 @@ SetExecutable()
 	// $$(arch).$$(opsys) are specified  (note that if we are simply
 	// dumping the class-ad to a file, we won't actually transfer
 	// or do anything [nothing that follows will affect the ad])
-	if ( !strstr(ename,"$$") && transfer_it && !DumpClassAdToFile ) {
+	if ( transfer_it && !DumpClassAdToFile && !strstr(ename,"$$") ) {
 
 		StatInfo si(ename);
 		if ( SINoFile == si.Error () ) {
@@ -2304,7 +2349,7 @@ SetExecutable()
 
 	}
 
-	free(ename);
+	if (ename) free(ename);
 	free(copySpool);
 }
 
@@ -7255,7 +7300,7 @@ int SpecialSubmitParse(void* pv, MACRO_SOURCE& source, MACRO_SET& macro_set, cha
 					return rval;
 			}
 
-			rval = queue_begin(vars, NewExecutable); // called before iterating items
+			rval = queue_begin(vars, NewExecutable || (ClusterId < 0)); // called before iterating items
 			if (rval < 0)
 				return rval;
 
@@ -7495,7 +7540,19 @@ int queue_connect()
 			if (DumpFileIsStdout) {
 				SimQ->Connect(stdout, false);
 			} else if (DashDryRun) {
-				SimQ->Connect(stderr, false);
+				FILE* dryfile = NULL;
+				bool  free_it = false;
+				if (MATCH == strcmp(DashDryRunOutName, "-")) {
+					dryfile = stdout; free_it = false;
+				} else {
+					dryfile = safe_fopen_wrapper_follow(DashDryRunOutName,"w");
+					if ( ! dryfile) {
+						fprintf( stderr, "\nERROR: Failed to open file -dry-run output file (%s)\n", strerror(errno));
+						exit(1);
+					}
+					free_it = true;
+				}
+				SimQ->Connect(dryfile, free_it);
 			} else {
 				SimQ->Connect(DumpFile, true);
 				DumpFile = NULL;
@@ -7520,8 +7577,7 @@ int queue_begin(StringList & vars, bool new_cluster)
 	// unconditionally, the others we must set only when not already set by the user.
 	set_live_submit_variable(Cluster, ClusterString);
 	set_live_submit_variable(Process, ProcessString);
-	//if ( ! find_macro_item("Step", SubmitMacroSet)) { set_live_submit_variable("Step", StepString); }
-
+	
 	vars.rewind();
 	char * var;
 	while ((var = vars.next())) { set_live_submit_variable(var, EmptyItemString, false); }
@@ -7532,6 +7588,12 @@ int queue_begin(StringList & vars, bool new_cluster)
 	}
 
 	if (new_cluster) {
+		// if we have already created the maximum number of clusters, error out now.
+		if (DashMaxClusters > 0 && ClustersCreated >= DashMaxClusters) {
+			fprintf(stderr, "\nERROR: Number of submitted clusters would exceed %d and -single-cluster was specified\n", DashMaxClusters);
+			exit(1);
+		}
+
 		if ((ClusterId = MyQ->get_NewCluster()) < 0) {
 			fprintf(stderr, "\nERROR: Failed to create cluster\n");
 			if ( ClusterId == -2 ) {
@@ -7540,6 +7602,8 @@ int queue_begin(StringList & vars, bool new_cluster)
 			}
 			exit(1);
 		}
+
+		++ClustersCreated;
 
 		// We only need to call init_job_ad the second time we see
 		// a new Executable, because we call init_job_ad() in main()
@@ -7578,7 +7642,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		return -1;
 
 	int rval = 0; // default to success (if num == 0 we will return this)
-	bool check_empty = options && (QUEUE_OPT_WARN_EMPTY_FIELDS|QUEUE_OPT_FAIL_EMPTY_FIELDS);
+	bool check_empty = options & (QUEUE_OPT_WARN_EMPTY_FIELDS|QUEUE_OPT_FAIL_EMPTY_FIELDS);
 	bool fail_empty = options & QUEUE_OPT_FAIL_EMPTY_FIELDS;
 
 	// UseStrict = condor_param_bool("Submit.IsStrict", "Submit_IsStrict", UseStrict);
@@ -7656,6 +7720,14 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 						"specifying an executable\n" );
 			exit(1);
 		}
+
+		// if we have already created the maximum number of jobs, error out now.
+		if (DashMaxJobs > 0 && JobsCreated >= DashMaxJobs) {
+			fprintf(stderr, "\nERROR: Number of submitted jobs would exceed -maxjobs (%d)\n", DashMaxJobs);
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+
 		ProcId = MyQ->get_NewProc (ClusterId);
 
 		if ( ProcId < 0 ) {
@@ -7689,11 +7761,12 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 #endif
 		SetIWD();		// must be called very early
 
-		if (NewExecutable) {
-			NewExecutable = false;
+		if (NewExecutable || (JobUniverse == CONDOR_UNIVERSE_MIN)) {
 			SetUniverse();
 		}
 		SetExecutable();
+		NewExecutable = false;
+
 		SetDescription();
 		SetMachineCount();
 
@@ -7811,7 +7884,7 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			exit(1);
 		}
 
-		ClusterCreated = TRUE;
+		++JobsCreated;
 	
 		if (verbose && ! DumpFileIsStdout) {
 			fprintf(stdout, "\n** Proc %d.%d:\n", ClusterId, ProcId);
@@ -8518,8 +8591,10 @@ usage()
 	fprintf( stderr, "\t-queue <queue-opts>\tappend Queue statement to submit file before processing\n"
 					 "\t                   \t(submit file must not already have a Queue statement)\n" );
 	fprintf( stderr, "\t-disable\t\tdisable file permission checks\n" );
-	fprintf( stderr, "\t-dry-run\t\tprocess submit file and write ClassAd attributes to stderr\n"
+	fprintf( stderr, "\t-dry-run <filename>\tprocess submit file and write ClassAd attributes to <filename>\n"
 					 "\t        \t\tbut do not actually submit the job(s) to the SCHEDD\n" );
+	fprintf( stderr, "\t-maxjobs <maxjobs>\tDo not submit if number of jobs would exceed <maxjobs>.\n" );
+	fprintf( stderr, "\t-single-cluster\t\tDo not submit if more than one ClusterId is needed.\n" );
 	fprintf( stderr, "\t-unused\t\t\ttoggles unused or unexpanded macro warnings\n"
 					 "\t       \t\t\t(overrides config file; multiple -u flags ok)\n" );
 	//fprintf( stderr, "\t-force-mpi-universe\tAllow submission of obsolete MPI universe\n );
@@ -8541,7 +8616,7 @@ usage()
 
 	fprintf( stderr, "\t<attrib>=<value>\tSet <attrib>=<value> before reading the submit file.\n" );
 
-	fprintf( stderr, "    If <submit-file> is omitted or is -, input is read from stdin.\n"
+	fprintf( stderr, "\n    If <submit-file> is omitted or is -, input is read from stdin.\n"
 					 "    Use of - implies verbose output unless -terse is specified\n");
 }
 
@@ -8550,11 +8625,11 @@ extern "C" {
 int
 DoCleanup(int,int,const char*)
 {
-	if( ClusterCreated ) 
+	if( JobsCreated ) 
 	{
 		// TerminateCluster() may call EXCEPT() which in turn calls 
 		// DoCleanup().  This lead to infinite recursion which is bad.
-		ClusterCreated = 0;
+		JobsCreated = 0;
 		if ( ! ActiveQueueConnection) {
 			if (DumpClassAdToFile) {
 			} else {

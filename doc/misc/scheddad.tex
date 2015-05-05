@@ -176,6 +176,48 @@ number, the release date, and the build identification number.
   \Expr{JOB\_NOT\_STARTED}
   in the time interval defined by attribute \AdAttr{StatsLifetime}.
 
+\index{ClassAd Scheduler attribute!JobsRestartReconnectsAttempting}
+\item[\AdAttr{JobsRestartReconnectsAttempting}:]
+  A Statistics attribute defining the number of \Condor{startd}s the
+  \Condor{schedd} is currently attmepting to reconnect to in order to
+  recover a job that was running when the \Condor{schedd} was restarted.
+
+\index{ClassAd Scheduler attribute!JobsRestartReconnectsBadput}
+\item[\AdAttr{JobsRestartReconnectsBadput}:]
+  A Statistics attribute defining a histogram count of \Condor{startd}s
+  that the \Condor{schedd} could not reconnect to in order to recover
+  a job that was running when the \Condor{schedd} was restarted,
+  as classified by the time the job spent running.
+  Counts within the histogram are separated by a comma and a space,
+  where the time interval classification is defined in the ClassAd attribute
+  \Attr{JobsRuntimesHistogramBuckets}.
+
+\index{ClassAd Scheduler attribute!JobsRestartReconnectsFailed}
+\item[\AdAttr{JobsRestartReconnectsFailed}:]
+  A Statistics attribute defining the number of \Condor{startd}s the
+  \Condor{schedd} tried and failed to reconnect to in order to
+  recover a job that was running when the \Condor{schedd} was restarted.
+
+\index{ClassAd Scheduler attribute!JobsRestartReconnectsInterrupted}
+\item[\AdAttr{JobsRestartReconnectsInterrupted}:]
+  A Statistics attribute defining the number of \Condor{startd}s the
+  \Condor{schedd} attmepted to reconnect to in order to
+  recover a job that was running when the \Condor{schedd} was restarted,
+  but the attempt was interrupted (e.g. because the job was removed).
+
+\index{ClassAd Scheduler attribute!JobsRestartReconnectsLeaseExpired}
+\item[\AdAttr{JobsRestartReconnectsLeaseExpired}:]
+  A Statistics attribute defining the number of \Condor{startd}s the
+  \Condor{schedd} could not attempt to reconnect to in order to
+  recover a job that was running when the \Condor{schedd} was restarted,
+  because the job lease had already expired.
+
+\index{ClassAd Scheduler attribute!JobsRestartReconnectsSucceeded}
+\item[\AdAttr{JobsRestartReconnectsSucceeded}:]
+  A Statistics attribute defining the number of \Condor{startd}s the
+  \Condor{schedd} has successfully reconnected to in order to
+  recover a job that was running when the \Condor{schedd} was restarted.
+
 \index{ClassAd Scheduler attribute!JobsRunning}
 \item[\AdAttr{JobsRunning}:]  A Statistics attribute representing the number
   of jobs currently running.
@@ -300,7 +342,8 @@ number, the release date, and the build identification number.
   begin with the string \Attr{MonitorSelf}.
   
 \index{ClassAd Scheduler attribute!MyAddress}
-\item[\AdAttr{MyAddress}:] Description is not yet written.
+\item[\AdAttr{MyAddress}:] String with the IP and port address of the
+\Condor{schedd} daemon which is publishing this ClassAd.
 
 \index{ClassAd Scheduler attribute!MyCurrentTime}
 \item[\AdAttr{MyCurrentTime}:]  The time, represented as the number of 

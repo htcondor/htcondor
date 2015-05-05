@@ -97,19 +97,28 @@ typedef struct macro_set {
 	MACRO_DEFAULTS * defaults; // optional reference to const defaults table
 } MACRO_SET;
 
-#if 0
-/*
-**  Types of macro expansion
-*/
-#define EXPAND_LAZY         1
-#define EXPAND_IMMEDIATE    2
-#endif
-
 #if defined(__cplusplus)
 	extern MyString global_config_source;
 	extern MyString global_root_config_source;
 	extern StringList local_config_sources;
 	class Regex;
+
+	// class that can be used to hold a malloc'd pointer such as the one returned by param
+	// it will free the pointer when this object is destroyed.
+	class auto_free_ptr {
+	public:
+		auto_free_ptr(char* str=NULL) : p(str) {}
+		~auto_free_ptr() { clear(); }
+		void set(char*str) { clear(); p = str; }   // set a new pointer, freeing the old pointer (if any)
+		void clear() { if (p) free(p); p = NULL; } // free the pointer if any
+		bool empty() { return ! (p && p[0]); }     // return true if there is some data, NULL and "" are both empty
+		char * detach() { char * t = p; p = NULL; return t; } // get the pointer, and remove it from this class without freeing it
+		char * ptr() { return p; }                 // get the pointer, may return NULL if no pointer
+		operator const char *() const { return const_cast<const char*>(p); } // get this pointer as type const char*
+		operator bool() const { return p!=NULL; }  // eval to true if there is a pointer, false if not.
+	private:
+		char * p;
+	};
 
 	int param_names_matching(Regex & re, ExtArray<const char *>& names);
 	int param_names_matching(Regex& re, std::vector<std::string>& names);
@@ -410,7 +419,6 @@ BEGIN_C_DECLS
 		std::string & errmsg);
 
 	int Close_macro_source(FILE* conf_fp, MACRO_SOURCE& source, MACRO_SET& macro_set, int parsing_return_val);
-
 
 #endif // __cplusplus
 

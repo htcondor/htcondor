@@ -1061,7 +1061,7 @@ review=?
 tags=dagman,dagman_main
 
 [DAGMAN_MAX_POST_SCRIPTS]
-default=0
+default=20
 type=int
 reconfig=false
 customization=normal
@@ -1070,7 +1070,7 @@ review=?
 tags=dagman,dagman_main
 
 [DAGMAN_MAX_PRE_SCRIPTS]
-default=0
+default=20
 type=int
 reconfig=false
 customization=normal
@@ -4024,7 +4024,7 @@ review=?
 tags=c++_util,sshd_wrapper
 
 [ENABLE_USERLOG_LOCKING]
-default=true
+default=false
 type=bool
 reconfig=true
 customization=seldom

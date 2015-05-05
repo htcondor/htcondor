@@ -574,6 +574,8 @@ unless ( $opt_disable_env_scripts ) {
 	print SH "export CONDOR_CONFIG\n";
 	print SH "PATH=\"$release_dir/bin:$release_dir/sbin:\$PATH\"\n";
 	print SH "export PATH\n";
+	print SH "PYTHONPATH=\"$release_dir/lib/python:\$PYTHONPATH\"\n";
+	print SH "export PYTHONPATH\n";
 	close( SH );
 
 	my $env_csh = $opt_env_scripts_dir ."/condor.csh";
@@ -581,6 +583,7 @@ unless ( $opt_disable_env_scripts ) {
 	print CSH "# The script should be sourced by /bin/csh or similar\n";
 	print CSH "setenv CONDOR_CONFIG \"$config_file\"\n";
 	print CSH "setenv PATH \"$release_dir/bin:$release_dir/sbin:\$PATH\"\n";
+	print CSH "setenv PYTHONPATH \"$release_dir/lib/python:\$PYTHONPATH\"\n";
 	close( CSH );
 
 	if ( $opt_bosco ) {

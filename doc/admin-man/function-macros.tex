@@ -8,8 +8,6 @@
 %% specific to either a submit description file usage or a
 %% configuration usage in this prose.
 
-\MoreTodo
-
 A set of predefined functions increase flexibility.
 Both submit description files and configuration files are read using
 the same parser,
@@ -32,7 +30,9 @@ If the index is out of bounds for the list contents,
 an error occurs.
 
 
-\item [\Expr{\$ENV(environment\_variable\_name)}]
+\item [\Expr{\$ENV(environment-variable-name)}]
+Evaluates to the value of environment variable 
+\Expr{environment-variable-name}.
 For example, 
 \begin{verbatim}
   A = $ENV(HOME)
@@ -62,22 +62,26 @@ and the parser will use the same character specified.
 but without any file name extension.
 As an  example, the return value from \Expr{\$Fn(/tmp/simulate.exe)}
 will be \Expr{simulate} (without the \File{.exe} extension).
-  \item \Expr{x} refers to a file name extension, but without the associated
+  \item \Expr{x} refers to a file name extension, with the associated
 period (\Expr{.}).
 As an  example, the return value from \Expr{\$Fn(/tmp/simulate.exe)}
-will be \Expr{exe}.
+will be \Expr{.exe}.
   \item \Expr{q} causes the return value to be enclosed within double
 quote marks.
 \end{itemize}
 
+\item [\Expr{\$DIRNAME(filename)} is the same as \Expr{\$Fp(filename)}]
+
+\item [\Expr{\$BASENAME(filename)} is the same as \Expr{\$Fnx(filename)}]
 
 \item [\Expr{\$INT(item-to-convert)}
-       or \Expr{\$INT(item-to-convert, conversion-character)}]
+       or \Expr{\$INT(item-to-convert, format-specifier)}]
 Expands, evaluates, and returns a string version of 
 \Expr{item-to-convert}.
-The \Expr{conversion-character} is a C language conversion character.
-If no \Expr{conversion-character} is specified, \verb@"%d"@ is used
-as a conversion character.
+The \Expr{format-specifier} has the same syntax as
+a C language or Perl format specifier.
+If no \Expr{format-specifier} is specified, \verb@"%d"@ is used
+as the format specifier.
 
 \item [\Expr{\$RANDOM\_CHOICE(choice1, choice2, choice3, \Dots)}]
 \index{\$RANDOM\_CHOICE() function macro}
@@ -101,13 +105,35 @@ For example, to randomly chose an even integer in the range 0-8 (inclusive):
 \end{verbatim}
 
 \item [\Expr{\$REAL(item-to-convert)}
-       or \Expr{\$REAL(item-to-convert, conversion-character)}]
+       or \Expr{\$REAL(item-to-convert, format-specifier)}]
 Expands, evaluates, and returns a string version of 
 \Expr{item-to-convert} for a floating point type.
-The \Expr{conversion-character} is a C language conversion character.
-If no \Expr{conversion-character} is specified, \verb@"%16G"@ is used
-as a conversion character.
+The \Expr{format-specifier} is a C language or Perl format specifier.
+If no \Expr{format-specifier} is specified, \verb@"%16G"@ is used
+as a format specifier.
 
-\item [\Expr{\$SUBSTR()}]
+\item [\Expr{\$SUBSTR(name, start-index)}
+       or \Expr{\$SUBSTR(name, start-index, length)}]
+Expands \verb@name@ and returns a substring of it.
+The first character of the string is at index 0.
+The first character of the substring is at index \verb@start-index@.
+If the optional \verb@length@ is not specified, 
+then the substring includes characters up to the end of the string.
+A negative value of  \verb@start-index@ works back from the end of the
+string.
+A negative value of \verb@length@ eliminates use of characters
+from the end of the string.
+Here are some examples that all assume
+\begin{verbatim}
+  Name = abcdef
+\end{verbatim}
+\begin{itemize}
+  \item \Expr{\$SUBSTR(Name, 2)} is \Expr{cdef}.
+  \item \Expr{\$SUBSTR(Name, 0, -2)} is \Expr{abcd}.
+  \item \Expr{\$SUBSTR(Name, 1, 3)} is \Expr{bcd}.
+  \item \Expr{\$SUBSTR(Name, -1)} is \Expr{f}.
+  \item \Expr{\$SUBSTR(Name, 4, -3)} is the empty string, as there are
+no characters in the substring for this request.
+\end{itemize}
 
 \end{description}

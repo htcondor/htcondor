@@ -114,24 +114,60 @@ struct shadow_rec
 	~shadow_rec();
 }; 
 
-struct OwnerData {
-  char* Name;
+// counters within the OwnerData struct that are cleared and re-computed by count_jobs.
+struct OwnerCounters {
   int JobsRunning;
   int JobsIdle;
   int WeightedJobsRunning;
   int WeightedJobsIdle;
   int JobsHeld;
   int JobsFlocked;
+  int JobsFlockedHere; // volatile field use to hold the JobsRunning calculation when sending submitter adds to flock collectors
+  int Hits;  // used in the mark/sweep algorithm of count_jobs to detect Owners that no longer have any jobs in the queue.
+  void clear_job_counters() { memset(this, 0, sizeof(*this)); }
+  OwnerCounters()
+	: JobsRunning(0)
+	, JobsIdle(0)
+	, WeightedJobsRunning(0)
+	, WeightedJobsIdle(0)
+	, JobsHeld(0)
+	, JobsFlocked(0)
+	, JobsFlockedHere(0)
+	, Hits(0)
+  {}
+};
+
+#define USE_OWNERDATA_MAP 1
+
+struct OwnerData {
+#ifdef USE_OWNERDATA_MAP
+  std::string name;
+  const char * Name() const { return name.empty() ? "" : name.c_str(); }
+  bool empty() const { return name.empty(); }
+#else
+  char* Name;
+  const char * Name() const { return const_cast<const char*>(Name); }
+  bool empty() const { return Name==NULL; }
+#endif
+  OwnerCounters num;
+  time_t LastHitTime; // records the last time we incremented num.Hit, use to expire Owners
+  // Time of most recent change in flocking level or
+  // successful negotiation at highest current flocking
+  // level.
   int FlockLevel;
   int OldFlockLevel;
-		// Time of most recent change in flocking level or
-		// successful negotiation at highest current flocking
-		// level.
   time_t NegotiationTimestamp;
   std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
-  OwnerData() { Name=NULL;
-  NegotiationTimestamp=WeightedJobsRunning=WeightedJobsIdle=JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }
+#ifdef USE_OWNERDATA_MAP
+  OwnerData() : LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0) { }
+#else
+  OwnerData() : Name(NULL), LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0) { }
+#endif
 };
+
+#ifdef USE_OWNERDATA_MAP
+typedef std::map<std::string, OwnerData> OwnerDataMap;
+#endif
 
 class match_rec: public ClaimIdParser
 {
@@ -620,9 +656,13 @@ private:
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
 	int				BadProc;
+#ifdef USE_OWNERDATA_MAP
+	OwnerDataMap    Owners;
+#else
 	ExtArray<OwnerData> Owners; // May be tracking AccountingGroup instead of owner username/domain
+#endif
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
-	int				N_Owners;
+	int				NumOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	Queue<shadow_rec*> RunnableJobQueue;
@@ -693,17 +733,24 @@ private:
 	bool			m_use_slot_weights;
 
 	// utility functions
-	int				count_jobs();
-	bool			fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level=-1); 
-    int             make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
-    int             command_query_ads(int, Stream* stream);
+	int			count_jobs();
+	bool		fill_submitter_ad(ClassAd & pAd, const OwnerData & Owner, int flock_level, int debug_level);
+    int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
+    int			command_query_ads(int, Stream* stream);
 	int			command_history(int, Stream* stream);
 	int			history_helper_launcher(const HistoryHelperState &state);
 	int			history_helper_reaper(int, int);
 	int			command_query_job_ads(int, Stream* stream);
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	void   			check_claim_request_timeouts( void );
-	int				insert_owner(char const*);
+#ifdef USE_OWNERDATA_MAP
+	OwnerData * insert_owner(const char*);
+	OwnerData * find_owner(const char*);
+#else
+	OwnerData * insert_owner(const char*, int * pnum=NULL);
+	OwnerData * find_owner(const char*, int * pnum=NULL);
+#endif
+	void		remove_unused_owners();
 	void			child_exit(int, int);
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
 	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad);

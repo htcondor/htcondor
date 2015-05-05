@@ -80,12 +80,7 @@ sub install_cmake
 	my ($ename, $iloc) = (@_);
 	my ($cmake, $wget);
 
-	# First look for cmake28 from EPEL
-	$cmake = find_cmake('cmake28');
-	if (defined($cmake)) {
-		return $cmake;
-	}
-	# Then look for cmake from the OS
+	# Look for cmake from the OS
 	$cmake = find_cmake('cmake');
 	if (defined($cmake)) {
 		return $cmake;

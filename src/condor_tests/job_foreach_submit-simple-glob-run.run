@@ -1,0 +1,151 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+# new test now is a single file and does both local and vanilla universe
+# bt 2/13/15
+
+use CondorUtils;
+use CondorTest;
+use Cwd;
+use POSIX;
+use Check::SimpleJob;
+
+$topdir = getcwd();
+print scalar localtime() . "\n";
+
+$testname = "job_basic_submit-foreach-run";
+
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
+
+$mypid = $$;
+
+my $filedata = '
+	this is data for an
+	input file.
+';
+
+my $counter = 0;
+my $datafileswanted = 3;
+my $datafilename = "submit-foreach-run";
+my $extension = ".tdata2";
+my $targetname = "";
+my @results = ();
+my @extraction = ();
+my $extractionsize = 0;
+my @testinputfile = ();
+my @testoutputfile = ();
+
+my $ExitedSuccess = sub {
+	print "Job ran fine\n";
+};
+
+while($counter < $datafileswanted) {
+	$targetname = "$datafilename" . "$counter" . "$extension";
+	if(!(-f $targetname)) {
+		open(FD,">$targetname") or die "Failed to open:$targetname:$!\n";
+		print FD "$filedata";
+		close(FD);
+		print "Created:$targetname\n";
+	}
+	push @testinputfile, $targetname;
+	push @testoutputfile,"$targetname$mypid.out";
+	$counter += 1;
+}
+
+my $submitfile = "
+	executable = x_getsandbox.pl
+	arguments = 3
+	output = \$(FILE)$mypid.out
+	should_transfer_files = yes
+	when_to_transfer_output = ON_EXIT
+	log = $testname$mypid.log
+	transfer_input_files = \$(FILE)
+	queue FILE MATCHING ($datafilename*$extension)
+";
+
+print "Writing submit file for $testname to $testname$mypid.cmd\n";
+my $submitfilename = "$testname$mypid.cmd";
+open(SF,">$submitfilename") or die "failed submit file write:$submitfilename:$!\n";
+print SF "$submitfile";
+close(SF);
+
+print "At this point things seem like they should. Lets run it - ";
+
+CondorTest::RegisterExitedSuccess( $testname, $ExitedSuccess );
+
+print "Call RunTest on $submitfilename\n";
+
+if( CondorTest::RunTest($testname, $submitfilename, 0) ) {
+    print "Good\n";
+    CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
+    RegisterResult(1,"test_name","$testname");
+} else {
+    print "Bad\n";
+    RegisterResult(0,"test_name","$testname");
+}
+
+my $testcount = 0;
+$testcount = @testinputfile;
+my $counter = 0;
+
+my $check = 0;
+while($counter < $testcount) {
+	$check = CheckExpectedOutput(@testinputfile[$counter], @testoutputfile[$counter]);
+	if($check == 0) {
+		print "Found @testinputfile[$counter] in @testoutputfile[$counter]- Good\n";
+		RegisterResult(1,"test_name","$testname");
+	} else {
+		RegisterResult(0,"test_name","$testname");
+	}
+	$counter += 1;
+}
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+my $result = 0;
+
+if( $result != 0 )
+{
+	exit(1);
+}
+
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
+
+
+sub CheckExpectedOutput {
+	my $inputfile = shift;
+	my $outputfile = shift;
+	my $line = "";
+	open(OUT,"<$outputfile") or die "Failed to open $outputfile:$!\n";
+	while(<OUT>) {
+		chomp($_);
+		$line = $_;
+		if($line =~ /$inputfile/) {
+			print "Expected to see this:$inputfile\n";
+			close(OUT);
+			return(0);
+		}
+	}
+	close(OUT);
+	print "Failed to find $inputfile in $outputfile - Bad\n";
+	return(1);
+}

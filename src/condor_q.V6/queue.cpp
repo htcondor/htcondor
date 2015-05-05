@@ -58,8 +58,6 @@
 #include "classad/classadCache.h" // for CachedExprEnvelope
 #include "pool_allocator.h"
 
-//#define AUTOCLUSTER_2_Q_HACK
-
 // pass the exit code through dprintf_SetExitCode so that it knows
 // whether to print out the on-error buffer or not.
 #define exit(n) (exit)(dprintf_SetExitCode(n))
@@ -169,13 +167,13 @@ static QueryResult getQuillAddrFromCollector(char *quill_name, char *&quill_addr
 
 /* avgqueuetime is used to indicate a request to query average wait time for uncompleted jobs in queue */
 static  bool avgqueuetime = false;
+
+/* directDBquery means we will just run a database query and return results directly to user */
+static  bool directDBquery = false;
 #endif
 
 /* Warn about schedd-wide limits that may confuse analysis code */
 void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf);
-
-/* directDBquery means we will just run a database query and return results directly to user */
-static  bool directDBquery = false;
 
 /* who is it that I should directly ask for the queue, defaults to the normal
 	failover semantics */
@@ -677,9 +675,9 @@ int main (int argc, char **argv)
 				}
 			}
 			
+#ifdef HAVE_EXT_POSTGRESQL
 			if ( directDBquery ) {
 				/* perform direct DB query if indicated and exit */
-#ifdef HAVE_EXT_POSTGRESQL
 
 					/* check if database is available */
 				if (!useDB) {
@@ -690,8 +688,8 @@ int main (int argc, char **argv)
 				exec_db_query(NULL, NULL, NULL, NULL);
 				freeConnectionStrings();
 				exit(EXIT_SUCCESS);
-#endif /* HAVE_EXT_POSTGRESQL */
 			} 
+#endif /* HAVE_EXT_POSTGRESQL */
 
 			/* .. not a direct db query, so just happily continue ... */
 
@@ -960,9 +958,9 @@ int main (int argc, char **argv)
 
 		first = false;
 
+#ifdef HAVE_EXT_POSTGRESQL
 			/* check if direct DB query is indicated */
 		if ( directDBquery ) {				
-#ifdef HAVE_EXT_POSTGRESQL
 			if (!useDB) {
 				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
 				fprintf(stderr, "Database query not supported on schedd: %s\n",
@@ -975,8 +973,8 @@ int main (int argc, char **argv)
 			/* done processing the ad, so get the next one */
 			continue;
 
-#endif /* HAVE_EXT_POSTGRESQL */
 		}
+#endif /* HAVE_EXT_POSTGRESQL */
 
 		init_output_mask();
 
@@ -1123,6 +1121,7 @@ int main (int argc, char **argv)
 	if( first ) {
 		if( global ) {
 			printf( "All queues are empty\n" );
+			retval = 1;
 		} else {
 			fprintf(stderr,"Error: Collector has no record of "
 							"schedd/submitter\n");
@@ -1168,7 +1167,7 @@ parse_analyze_detail(const char * pch, int current_details)
 static void 
 processCommandLineArguments (int argc, char *argv[])
 {
-	int i, cluster, proc;
+	int i;
 	char *arg, *at, *daemonname;
 	const char * pcolon;
 
@@ -1181,19 +1180,12 @@ processCommandLineArguments (int argc, char *argv[])
 	for (i = 1; i < argc; i++)
 	{
 		if( *argv[i] != '-' ) {
+			int cluster, proc;
 			// no dash means this arg is a cluster/proc, proc, or owner
 			if( sscanf( argv[i], "%d.%d", &cluster, &proc ) == 2 ) {
-				sprintf( constraint, "((%s == %d) && (%s == %d))",
-					ATTR_CLUSTER_ID, cluster, ATTR_PROC_ID, proc );
-				Q.addOR( constraint );
-				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
-				Q.addDBConstraint(CQ_PROC_ID, proc);
 				constrID.push_back(CondorID(cluster,proc,-1));
 			} 
 			else if( sscanf ( argv[i], "%d", &cluster ) == 1 ) {
-				sprintf( constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster );
-				Q.addOR( constraint );
-				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
 				constrID.push_back(CondorID(cluster,-1,-1));
 			} 
 			else {
@@ -1220,14 +1212,6 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 			continue;
 		}
-		/*
-		if (is_arg_colon_prefix (arg, "new", &pcolon, 3)) {
-			use_old_code = false;
-			if (pcolon) { use_old_code = (pcolon[1] == '0'); }
-			fprintf(stderr, "Using %s code\n", use_old_code ? "Old" : "New");
-			continue;
-		}
-		*/
 		if (is_arg_prefix (arg, "long", 1)) {
 			dash_long = 1;
 			summarize = 0;
@@ -1368,8 +1352,11 @@ processCommandLineArguments (int argc, char *argv[])
 			/* check for one more argument */
 			if (argc <= i+1) {
 				fprintf( stderr, 
-					"Error: Argument -direct requires "
-						"[rdbms | quilld | schedd]\n" );
+					"Error: Argument -direct requires ["
+					#ifdef HAVE_EXT_POSTGRESQL
+						"rdbms | quilld | "
+					#endif
+						"schedd]\n" );
 				exit(EXIT_FAILURE);
 			}
 			direct = process_direct_argument(argv[i+1]);
@@ -1933,6 +1920,33 @@ processCommandLineArguments (int argc, char *argv[])
 		//Added so -long or -xml can be listed before other options
 	if(dash_long && !custom_attributes) {
 		attrs.clearAll();
+	}
+
+	// convert cluster and cluster.proc into constraints
+	// if there is a -dag argument, then we look up all children of the dag
+	// as well as the dag itself.
+	if ( ! constrID.empty()) {
+		for (std::vector<CondorID>::const_iterator it = constrID.begin(); it != constrID.end(); ++it) {
+
+			// if we aren't doing db queries, do we need to do this?
+			Q.addDBConstraint(CQ_CLUSTER_ID, it->_cluster);
+			if (it->_proc >= 0) { Q.addDBConstraint(CQ_PROC_ID, it->_proc); }
+
+			// add a constraint to match the jobid.
+			if (it->_proc >= 0) {
+				sprintf(constraint, ATTR_CLUSTER_ID " == %d && " ATTR_PROC_ID " == %d", it->_cluster, it->_proc);
+			} else {
+				sprintf(constraint, ATTR_CLUSTER_ID " == %d", it->_cluster);
+			}
+			Q.addOR(constraint);
+
+			// if we are doing -dag output, then also request any jobs that are inside this dag.
+			// we know that a jobid for a dagman job will always never have a proc > 0
+			if (dash_dag && it->_proc < 1) {
+				sprintf(constraint, ATTR_DAGMAN_JOB_ID " == %d", it->_cluster);
+				Q.addOR(constraint);
+			}
+		}
 	}
 }
 
@@ -2801,7 +2815,7 @@ static void
 usage (const char *myName, int other)
 {
 	printf ("Usage: %s [general-opts] [restriction-list] [output-opts | analyze-opts]\n", myName);
-	printf ("    [general-opts] are\n"
+	printf ("\n    [general-opts] are\n"
 		"\t-global\t\t\tQuery all Schedulers in this pool\n"
 		"\t-submitter <submitter>\tGet queue of specific submitter\n"
 		"\t-name <name>\t\tName of Scheduler\n"
@@ -2815,14 +2829,18 @@ usage (const char *myName, int other)
 #endif
 		"\t-jobads <file>\t\tRead queue from a file of job ClassAds\n"
 		"\t-userlog <file>\t\tRead queue from a user log file\n"
-		"    [restriction-list] each restriction may be one of\n"
+		);
+
+	printf ("\n    [restriction-list] each restriction may be one of\n"
 		"\t<cluster>\t\tGet information about specific cluster\n"
 		"\t<cluster>.<proc>\tGet information about specific job\n"
 		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
-		"\t-autocluster\tGet information about the SCHEDD's autoclusters\n"
+		"\t-autocluster\t\tGet information about the SCHEDD's autoclusters\n"
 		"\t-constraint <expr>\tGet information about jobs that match <expr>\n"
-		"    [output-opts] are\n"
-		"\t-limit <num>\t\t\tLimit the number of results to <num>\n"
+		);
+
+	printf ("\n    [output-opts] are\n"
+		"\t-limit <num>\t\tLimit the number of results to <num>\n"
 		"\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t-currentrun\t\tDisplay times only for current run\n"
 		"\t-debug\t\t\tDisplay debugging info to console\n"
@@ -2836,14 +2854,32 @@ usage (const char *myName, int other)
 		"\t-run\t\t\tGet information about running jobs\n"
 		"\t-stream-results \tProduce output as jobs are fetched\n"
 		"\t-version\t\tPrint the HTCondor version and exit\n"
-		"\t-wide\t\t\tWidescreen output\n"
-		"\t-autoformat[:V,ntlh] <attr> [attr2 [attr3 ...]]\n"
-		"\t\t\t\tPrint attr(s) with automatic formatting\n"
+		"\t-wide[:<width>]\t\tDon't truncate data to fit in 80 columns.\n"
+		"\t\t\t\tTruncates to console width or <width> argument.\n"
+		"\t-autoformat[:jlhVr,tng] <attr> [<attr2> [...]]\n"
+		"\t-af[:jlhVr,tng] <attr> [attr2 [...]]\n"
+		"\t    Print attr(s) with automatic formatting\n"
+		"\t    the [jlhVr,tng] options modify the formatting\n"
+		"\t        j   Display Job id\n"
+		"\t        l   attribute labels\n"
+		"\t        h   attribute column headings\n"
+		"\t        V   %%V formatting (string values are quoted)\n"
+		"\t        r   %%r formatting (raw/unparsed values)\n"
+		"\t        t   tab before each value (default is space)\n"
+		"\t        g   newline between ClassAds, no space before values\n"
+		"\t        ,   comma after each value\n"
+		"\t        n   newline after each value\n"
+		"\t    use -af:h to get tabular values with headings\n"
+		"\t    use -af:lrng to get -long equivalant format\n"
 		"\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
+		"\t-print-format <file>\tUse <file> to set display attributes and formatting\n"
+		"\t\t\t\t(experimental, see htcondor-wiki for more information)\n"
 		"\t-long\t\t\tDisplay entire ClassAds\n"
 		"\t-xml\t\t\tDisplay entire ClassAds, but in XML\n"
 		"\t-attributes X,Y,...\tAttributes to show in -xml and -long\n"
-		"    [analyze-opts] are\n"
+		);
+
+	printf ("\n    [analyze-opts] are\n"
 		"\t-analyze[:<qual>]\tPerform matchmaking analysis on jobs\n"
 		"\t-better-analyze[:<qual>]\tPerform more detailed match analysis\n"
 		"\t    <qual> is a comma separated list of one or more of\n"
@@ -2861,6 +2897,7 @@ usage (const char *myName, int other)
 		"\t-verbose\t\tShow progress and machine names in results\n"
 		"\n"
 		);
+
 	if (other & usage_Universe) {
 		printf("    %s codes:\n", ATTR_JOB_UNIVERSE);
 		for (int uni = CONDOR_UNIVERSE_MIN+1; uni < CONDOR_UNIVERSE_MAX; ++uni) {

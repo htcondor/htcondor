@@ -40,6 +40,7 @@ class IOStats {
 	stats_entry_abs<double> download_MB_waiting;
 
 	void Add(IOStats &s);
+	void Clear();
 	void ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> config);
 };
 
@@ -111,8 +112,9 @@ class TransferQueueManager: public Service {
 	void publish(ClassAd *ad);
 	void publish(ClassAd *ad, char const *publish_config);
 	void publish(ClassAd *ad,int pubflags);
+	void publish_user_stats(ClassAd * ad, const char *user, int pubflags);
 
-	void AddRecentIOStats(IOStats &s,const std::string up_down_queue_user);
+	void AddRecentIOStats(IOStats &s,const std::string &up_down_queue_user);
  private:
 	SimpleList<TransferQueueRequest *> m_xfer_queue;
 	int m_max_uploads;   // 0 if unlimited

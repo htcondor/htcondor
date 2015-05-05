@@ -12,9 +12,26 @@ cmd_wait_shows-notimeout: personal
 cmd_wait_shows-partial: personal
 cmd_wait_shows-timeout: personal
 file_transfer_submit: personal
-job_basic_submit-foreach: personal
-job_basic_submit-filepartmacros: personal
-job_basic_submit-foreach-initialdir: personal
+job_foreach_submit-filepartmacros: personal
+job_foreach_submit-filepartmacros-run: personal
+job_foreach_submit-initialdir: personal
+job_foreach_submit-initialdir-run: personal
+job_foreach_submit-queueitemfrom-1Line: personal
+job_foreach_submit-queueitemfrom-1Line-run: personal
+job_foreach_submit-queueitemfrom-File: personal
+job_foreach_submit-queueitemfrom-File-run: personal
+job_foreach_submit-queueitemfrom-MLine: personal
+job_foreach_submit-queueitemfrom-MLine-run: personal
+job_foreach_submit-queueitemfrom-Stdin: personal
+job_foreach_submit-queueitemfrom-Stdin-run: personal
+job_foreach_submit-queueitemin-commalist: personal
+job_foreach_submit-queueitemin-commalist-run: personal
+job_foreach_submit-queueitemin: personal
+job_foreach_submit-queueitemin-run: personal
+job_foreach_submit-queueitemMLineIn: personal
+job_foreach_submit-queueitemMLineIn-run: personal
+job_foreach_submit-simple-glob: personal
+job_foreach_submit-simple-glob-run: personal
 gangliad: personal
 job_ligo_x86-64-chkpttst: IPv4
 job_ckpt_combo-sanity_std: personal, IPv4
@@ -182,6 +199,8 @@ job_dagman_use_hold_claim: personal
 job_dagman_vars: personal
 job_dagman_rm: cygwin, personal
 job_dagman_script_defer: personal
+job_dagman_submit_glob-A: personal
+job_dagman_submit_glob-B: personal
 job_filexfer_base-input1_van: personal
 job_filexfer_base_van: personal
 job_filexfer_basic_van: personal

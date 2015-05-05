@@ -62,7 +62,7 @@ using std::string;
 extern "C" char* CondorVersion( void );
 extern "C" char* CondorPlatform( void );
 
-CollectorStats CollectorDaemon::collectorStats( false, 0, 0 );
+CollectorStats CollectorDaemon::collectorStats( false, 0 );
 CollectorEngine CollectorDaemon::collector( &collectorStats );
 int CollectorDaemon::ClientTimeout;
 int CollectorDaemon::QueryTimeout;
@@ -76,10 +76,12 @@ int CollectorDaemon::__failed__;
 List<ClassAd>* CollectorDaemon::__ClassAdResultList__;
 std::string CollectorDaemon::__adType__;
 ExprTree *CollectorDaemon::__filter__;
+void* CollectorDaemon::__self_ad__ = NULL;
 
 TrackTotals* CollectorDaemon::normalTotals;
 int CollectorDaemon::submittorRunningJobs;
 int CollectorDaemon::submittorIdleJobs;
+int CollectorDaemon::submittorNumAds;
 
 CollectorUniverseStats CollectorDaemon::ustatsAccum;
 CollectorUniverseStats CollectorDaemon::ustatsMonthly;
@@ -88,6 +90,8 @@ int CollectorDaemon::machinesTotal;
 int CollectorDaemon::machinesUnclaimed;
 int CollectorDaemon::machinesClaimed;
 int CollectorDaemon::machinesOwner;
+int CollectorDaemon::startdNumAds;
+
 
 ForkWork CollectorDaemon::forkQuery;
 
@@ -355,11 +359,11 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
     if (whichAds != (AdTypes) -1) {
 
 			// only fork to handle the query for the "big" tables
-		if ((whichAds == QUERY_GENERIC_ADS) || 
-			(whichAds == QUERY_ANY_ADS) || 
-			(whichAds == QUERY_STARTD_PVT_ADS) || 
-			(whichAds == QUERY_STARTD_ADS) || 
-			(whichAds == QUERY_MASTER_ADS)) {
+		if ((whichAds == GENERIC_AD) || 
+			(whichAds == ANY_AD) || 
+			(whichAds == STARTD_PVT_AD) || 
+			(whichAds == STARTD_AD) || 
+			(whichAds == MASTER_AD)) {
 
 				fork_status = forkQuery.NewJob();
 				if ( FORK_PARENT == fork_status) {
@@ -395,7 +399,28 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	}
 
 	while ( (curr_ad=results.Next()) )
-    {
+	{
+		// if querying collector ads, and the collectors own ad appears in this list.
+		// then we want to shove in current statistics. we do this by chaining a
+		// temporary stats ad into the ad to be returned, and publishing updated
+		// statistics into the stats ad.  we do this because if the verbosity level
+		// is increased we do NOT want to put the high-verbosity attributes into
+		// our persistent collector ad.
+		ClassAd * stats_ad = NULL;
+		if ((whichAds == COLLECTOR_AD) && ((void*)curr_ad == __self_ad__)) {
+			// update stats in the collector ad before we return it.
+			MyString stats_config;
+			cad.LookupString("STATISTICS_TO_PUBLISH",stats_config);
+			if (stats_config != "stored") {
+				stats_ad = new ClassAd();
+				daemonCore->dc_stats.Publish(*stats_ad, stats_config.Value());
+				daemonCore->monitor_data.ExportData(stats_ad);
+				collectorStats.publishGlobal(stats_ad, stats_config.Value());
+				stats_ad->ChainToAd(curr_ad);
+				curr_ad = stats_ad; // send the stats ad instead of the self ad.
+			}
+		}
+
 		if (evaluate_projection) {
 			proj.clear();
 			projection.clear();
@@ -413,6 +438,11 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
             return_status = 0;
 			goto END;
         }
+
+		if (stats_ad) {
+			stats_ad->Unchain();
+			delete stats_ad;
+		}
     }
 
 	// end of query response ...
@@ -1153,6 +1183,8 @@ int CollectorDaemon::reportStartdScanFunc( ClassAd *cad )
 
 int CollectorDaemon::reportSubmittorScanFunc( ClassAd *cad )
 {
+	++submittorNumAds;
+
 	int tmp1, tmp2;
 	if( !cad->LookupInteger( ATTR_RUNNING_JOBS , tmp1 ) ||
 		!cad->LookupInteger( ATTR_IDLE_JOBS, tmp2 ) )
@@ -1167,6 +1199,8 @@ int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *cad )
 {
     char buf[80];
 	int iRet = 0;
+
+	++startdNumAds;
 
 	if ( cad && cad->LookupString( ATTR_STATE, buf, sizeof(buf) ) )
 	{
@@ -1207,6 +1241,7 @@ void CollectorDaemon::reportToDevelopers (void)
     machinesUnclaimed = 0;
     machinesClaimed = 0;
     machinesOwner = 0;
+    startdNumAds = 0;
 	ustatsAccum.Reset( );
 
     if (!collector.walkHashTable (STARTD_AD, reportMiniStartdScanFunc)) {
@@ -1249,6 +1284,7 @@ void CollectorDaemon::reportToDevelopers (void)
 	// now output information about submitted jobs
 	submittorRunningJobs = 0;
 	submittorIdleJobs = 0;
+	submittorNumAds = 0;
 	if( !collector.walkHashTable( SUBMITTOR_AD, reportSubmittorScanFunc ) ) {
 		dprintf( D_ALWAYS, "Error making monthly report (submittor scan)\n" );
 	}
@@ -1436,19 +1472,18 @@ void CollectorDaemon::Config()
 		}
 	}
 
-	int size = param_integer ("COLLECTOR_CLASS_HISTORY_SIZE",1024);
-	collectorStats.setClassHistorySize( size );
+	int history_size = 1024;
 
 	bool collector_daemon_stats = param_boolean ("COLLECTOR_DAEMON_STATS",true);
 	collectorStats.setDaemonStats( collector_daemon_stats );
 
-    size = param_integer ("COLLECTOR_DAEMON_HISTORY_SIZE",128);
-    collectorStats.setDaemonHistorySize( size );
+	history_size = param_integer ("COLLECTOR_DAEMON_HISTORY_SIZE",128);
+	collectorStats.setDaemonHistorySize( history_size );
 
 	time_t garbage_interval = param_integer( "COLLECTOR_STATS_SWEEP", DEFAULT_COLLECTOR_STATS_GARBAGE_INTERVAL );
 	collectorStats.setGarbageCollectionInterval( garbage_interval );
 
-    size = param_integer ("COLLECTOR_QUERY_WORKERS", 2);
+    int size = param_integer ("COLLECTOR_QUERY_WORKERS", 2);
     forkQuery.setMaxWorkers( size );
 
 	bool ccb_server_enabled = param_boolean("ENABLE_CCB_SERVER",true);
@@ -1516,34 +1551,31 @@ void CollectorDaemon::sendCollectorAd()
     // compute submitted jobs information
     submittorRunningJobs = 0;
     submittorIdleJobs = 0;
+    submittorNumAds = 0;
     if( !collector.walkHashTable( SUBMITTOR_AD, reportSubmittorScanFunc ) ) {
          dprintf( D_ALWAYS, "Error making collector ad (submittor scan)\n" );
     }
+    collectorStats.global.MachineAds = startdNumAds;
 
     // compute machine information
     machinesTotal = 0;
     machinesUnclaimed = 0;
     machinesClaimed = 0;
     machinesOwner = 0;
+    startdNumAds = 0;
 	ustatsAccum.Reset( );
     if (!collector.walkHashTable (STARTD_AD, reportMiniStartdScanFunc)) {
             dprintf (D_ALWAYS, "Error making collector ad (startd scan) \n");
     }
+    collectorStats.global.SubmitterAds = submittorNumAds;
 
     // insert values into the ad
-    char line[100];
-    sprintf(line,"%s = %d",ATTR_RUNNING_JOBS,submittorRunningJobs);
-    ad->Insert(line);
-    sprintf(line,"%s = %d",ATTR_IDLE_JOBS,submittorIdleJobs);
-    ad->Insert(line);
-    sprintf(line,"%s = %d",ATTR_NUM_HOSTS_TOTAL,machinesTotal);
-    ad->Insert(line);
-    sprintf(line,"%s = %d",ATTR_NUM_HOSTS_CLAIMED,machinesClaimed);
-    ad->Insert(line);
-    sprintf(line,"%s = %d",ATTR_NUM_HOSTS_UNCLAIMED,machinesUnclaimed);
-    ad->Insert(line);
-    sprintf(line,"%s = %d",ATTR_NUM_HOSTS_OWNER,machinesOwner);
-    ad->Insert(line);
+    ad->InsertAttr(ATTR_RUNNING_JOBS,submittorRunningJobs);
+    ad->InsertAttr(ATTR_IDLE_JOBS,submittorIdleJobs);
+    ad->InsertAttr(ATTR_NUM_HOSTS_TOTAL,machinesTotal);
+    ad->InsertAttr(ATTR_NUM_HOSTS_CLAIMED,machinesClaimed);
+    ad->InsertAttr(ATTR_NUM_HOSTS_UNCLAIMED,machinesUnclaimed);
+    ad->InsertAttr(ATTR_NUM_HOSTS_OWNER,machinesOwner);
 
 	// Accumulate for the monthly
 	ustatsMonthly.setMax( ustatsAccum );
@@ -1553,7 +1585,7 @@ void CollectorDaemon::sendCollectorAd()
 	ustatsMonthly.publish( ATTR_MAX_JOBS_RUNNING, ad );
 
 	// Collector engine stats, too
-	collectorStats.publishGlobal( ad );
+	collectorStats.publishGlobal( ad, NULL );
 
     daemonCore->dc_stats.Publish(*ad);
     daemonCore->monitor_data.ExportData(ad);
@@ -1567,9 +1599,19 @@ void CollectorDaemon::sendCollectorAd()
 	//
 	int error = 0;
 	ClassAd * selfAd = new ClassAd( * ad );
+	__self_ad__ = selfAd; // so we can recognise this ad during a condor_status query
 	if( ! collector.collect( UPDATE_COLLECTOR_AD, selfAd, condor_sockaddr::null, error ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to add my own ad to myself (%d).\n", error );
+		__self_ad__ = NULL;
 	}
+
+	// inserting the selfAd into the collector hashtable will stomp the update counters
+	// so clear out the per-daemon Updates* stats to avoid confusion with the global stats
+	// and re-publish the global collector stats.
+	//PRAGMA_REMIND("tj: remove this code once the collector generates it's ad when queried.")
+	selfAd->Delete(ATTR_UPDATESTATS_HISTORY);
+	selfAd->Delete(ATTR_UPDATESTATS_SEQUENCED);
+	collectorStats.publishGlobal( selfAd, NULL );
 
 	// Send the ad
 	int num_updated = collectorsToUpdate->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);

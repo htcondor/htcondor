@@ -22,6 +22,7 @@
 #include "condor_config.h"
 #include "docker_proc.h"
 #include "starter.h"
+#include "condor_holdcodes.h"
 #include "docker-api.h"
 
 extern CStarter *Starter;
@@ -146,6 +147,7 @@ int DockerProc::StartJob() {
 
 
 bool DockerProc::JobReaper( int pid, int status ) {
+	TemporaryPrivSentry sentry(PRIV_ROOT);
 	dprintf( D_ALWAYS, "DockerProc::JobReaper()\n" );
 
 	//
@@ -192,6 +194,16 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 		if( rv < 0 ) {
 			dprintf( D_ALWAYS | D_FAILURE, "Failed to inspect (for removal) container '%s'.\n", containerName.c_str() );
+			std::string imageName;
+			if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageName ) ) {
+				dprintf( D_ALWAYS | D_FAILURE, "%s not defined in job ad.\n", ATTR_DOCKER_IMAGE );
+				imageName = "Unknown"; // shouldn't ever happen
+			}
+
+			std::string message;
+			formatstr(message, "Cannot start container: invalid image name: %s", imageName.c_str());
+
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_InvalidDockerImage, 0);
 			return VanillaProc::JobReaper( pid, status );
 		}
 
@@ -209,6 +221,31 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		// attributes blows.
 
 		// TODO: Set status appropriately (as if it were from waitpid()).
+		std::string oomkilled;
+		if (! dockerAd.LookupString( "OOMKilled", oomkilled)) {
+			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal whether it was OOM killed. Assuming it was not.\n", containerName.c_str() );
+		}
+		
+		if (oomkilled.find("true") == 0) {
+			ClassAd *machineAd = Starter->jic->machClassAd();
+			int memory;
+			machineAd->LookupInteger(ATTR_MEMORY, memory);
+			std::string message;
+			formatstr(message, "Docker job exhaused %d Mb memory", memory);
+			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
+
+			
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
+
+			if ( Starter->Hold( ) ) {
+				Starter->allJobsDone();
+				this->JobExit();
+			}
+
+			Starter->ShutdownFast();
+			return 0;
+		}
+
 		int dockerStatus;
 		if( ! dockerAd.LookupInteger( "ExitCode", dockerStatus ) ) {
 			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal its exit code.\n", containerName.c_str() );
@@ -234,6 +271,8 @@ bool DockerProc::JobReaper( int pid, int status ) {
 bool DockerProc::JobExit() {
 	dprintf( D_ALWAYS, "DockerProc::JobExit()\n" );
 
+	{
+	TemporaryPrivSentry sentry(PRIV_ROOT);
 	ClassAd dockerAd;
 	CondorError error;
 	int rv = DockerAPI::inspect( containerName, & dockerAd, error );
@@ -255,6 +294,7 @@ bool DockerProc::JobExit() {
 	rv = DockerAPI::rm( containerName, error );
 	if( rv < 0 ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to remove container '%s'.\n", containerName.c_str() );
+	}
 	}
 
 	return VanillaProc::JobExit();

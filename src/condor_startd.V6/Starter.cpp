@@ -973,7 +973,23 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		}
 	}
 
-	if (param_boolean("ASSIGN_CPU_AFFINITY", false)) {
+	bool affinityBool = false;
+	if ( ! s_claim || ! s_claim->ad()) {
+		affinityBool = param_boolean("ASSIGN_CPU_AFFINITY", false);
+	} else {
+		auto_free_ptr assign_cpu_affinity(param("ASSIGN_CPU_AFFINITY"));
+		if ( ! assign_cpu_affinity.empty()) {
+			classad::Value value;
+			if (s_claim->ad()->EvaluateExpr(assign_cpu_affinity.ptr(), value)) {
+				if ( ! value.IsBooleanValueEquiv(affinityBool)) {
+					// was an expression, but not a bool, so report it and continue
+					EXCEPT("ASSIGN_CPU_AFFINITY does not evaluate to a boolean, it is : %s", ClassAdValueToString(value));
+				}
+			}
+		}
+	}
+
+	if (affinityBool) {
 		new_env.SetEnv("_CONDOR_STARTD_ASSIGNED_AFFINITY", affinityString.c_str());
 		new_env.SetEnv("_CONDOR_ENFORCE_CPU_AFFINITY", "true");
 		dprintf(D_ALWAYS, "Setting affinity env to %s\n", affinityString.c_str());

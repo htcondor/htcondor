@@ -176,10 +176,19 @@ bool find_any_ipv4(addrinfo_iterator& ai, sockaddr_in& sin)
 
 // these stats keep track of the cost of DNS lookups
 //
+#if 1
+//PRAGMA_REMIND("temporarily!! publish recent windowed values for DNS lookup runtime...")
+stats_entry_recent<Probe> getaddrinfo_runtime; // count & runtime of all lookups, success and fail
+stats_entry_recent<Probe> getaddrinfo_fast_runtime; // count & runtime of successful lookups that were faster than getaddrinfo_slow_limit
+stats_entry_recent<Probe> getaddrinfo_slow_runtime; // count & runtime of successful lookups that were slower than getaddrinfo_slow_limit
+stats_entry_recent<Probe> getaddrinfo_fail_runtime; // count & runtime of failed lookups
+#else
 stats_entry_probe<double> getaddrinfo_runtime; // count & runtime of all lookups, success and fail
 stats_entry_probe<double> getaddrinfo_fast_runtime; // count & runtime of successful lookups that were faster than getaddrinfo_slow_limit
 stats_entry_probe<double> getaddrinfo_slow_runtime; // count & runtime of successful lookups that were slower than getaddrinfo_slow_limit
 stats_entry_probe<double> getaddrinfo_fail_runtime; // count & runtime of failed lookups
+#endif
+
 double getaddrinfo_slow_limit = 2.0;
 void (*getaddrinfo_slow_callback)(const char *node, const char *service, double timediff) = NULL;
 

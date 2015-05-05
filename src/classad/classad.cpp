@@ -942,7 +942,7 @@ bool ClassAd::
 _Evaluate( EvalState&, Value& val ) const
 {
 	val.SetClassAdValue( (ClassAd*)this );
-	return( this );
+	return( true );
 }
 
 
