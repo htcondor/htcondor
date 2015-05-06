@@ -108,7 +108,7 @@ $submitted = sub
 {
 	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
 	runcmd("touch cmd_q_shows-dag-B_A.log"); 
-	runcmd("x_condor_q_dag.pl");
+	runcmd("x_condor_q_dag.pl",{emit_output=>1});
 };
 
 my @expected_output = ( 'condor_dagman', '|-A', '|-B', '|-B_A', '|-B_A_A', '|-B_B', '|-B_C',
@@ -117,7 +117,7 @@ my @expected_output = ( 'condor_dagman', '|-A', '|-B', '|-B_A', '|-B_A_A', '|-B_
 my @rlengths = ( 0, 1, 1, 2, 3, 2, 2, 1 );
 
 $success = sub {
-	CondorTest::debug("DAG Succeeded as expected\n",1);
+	print "DAG Succeeded as expected. Processing results\n";
 	open CONDORQ,"<cmd_q_shows-dag.output" || die "Could not open cmd_q_shows-dag.output\n";
 	my @received = <CONDORQ>;	
 	close CONDORQ;

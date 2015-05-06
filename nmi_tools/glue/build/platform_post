@@ -48,9 +48,6 @@ GetOptions('without-tests'   => \$opt_without_tests,
 system("tar xf results.tar.gz public/cov-data");
 
 if (-d "public/cov-data") {
-	$ENV{PATH} = "$ENV{PATH}:/home/condorauto/coverity/cov-sa-linux64-5.5.3/bin";
-	system("cov-manage-emit --dir public/cov-data reset-host-name");
-	system("cov-commit-defects --dir public/cov-data --stream htcondor --host localhost --user admin --password `cat /home/condorauto/coverity/.p`");
 	system("rm -fr public");
 }
 
@@ -192,10 +189,36 @@ if($mode ne "workspace") {
 }
 else {
     # set up tests for a workspace build
-    $cmd1 = "$cns --test --buildid=$runid $git_cmd_arg "; 
+    $cmd1 = "$cns --test --buildid=$runid $git_cmd_arg ";
 }
 my $cmd = $cmd1 . $cmd2 . $cmd3 . $desc;
 submit_test($cmd, $platform);
+
+#
+# Submit additional tests with different configurations.
+#
+my $atwdcBaseCommand = $cmd1 . $cmd2 . $cmd3;
+my $baseConfigDir = "nmi_tools/glue/test/configs";
+my @configurationDirectories = ( 'mixed-multi' );
+my %atwdcPlatforms = ( 'x86_64_RedHat6' => 1 );
+
+my $atwdcPlatform = $atwdcPlatforms{ $platform };
+if( defined( $atwdcPlatform ) && $atwdcPlatform ) {
+	foreach my $configDir (@configurationDirectories) {
+		if( ! -d "${baseConfigDir}/${configDir}" ) {
+			print( "Ignoring missing config dir $configDir.\n" );
+			next;
+		}
+
+		# See comment below.
+		sleep(180);
+
+		my $atwdcCommand = $atwdcBaseCommand .
+							"--append-config-dir=${baseConfigDir}/${configDir} " .
+							"--desc='Auto-Test Suite [$configDir] for ($platform, $runid)' ";
+		submit_test( $atwdcCommand, $platform );
+	}
+}
 
 # Submit applicable cross tests
 foreach my $xplatform (@crossplatforms) {
@@ -219,19 +242,19 @@ foreach my $xplatform (@crossplatforms) {
     else {
         $cmd = $cmd1 . $cmd2 . $cmd3;
     }
-    
+
     # Set up the desc so we can get better info about where this came from.
     $cmd .= " --desc=\'Auto-Cross test for ($platform, $runid) onto $xplatform\'";
 
-    submit_test($cmd, $xplatform);
-        
     # condor_nmi_submit is a heavy-weight activity, and thrashes the
     # disks of the submit machine.  Running many in a row is
     # impolite.  sleep for three minutes between submits to
-    # allow some breathing room.
-    
-    print "\n";
+    # allow some breathing room.  (Since we /just/ did the base submit,
+    # wait first.)
     sleep(180);
+
+    submit_test($cmd, $xplatform);
+    print "\n";
 }
 
 ##################################################################

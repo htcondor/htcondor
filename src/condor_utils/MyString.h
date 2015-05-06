@@ -124,6 +124,10 @@ class MyString
 	 *	randomly generated [0-9a-f] values up to len size */
 	void randomlyGenerateHex(int len);
 
+	/** Clears the current string in the MyString, and fills it with
+	 *	randomly generated alphanumerics and punctuation up to len size */
+	void randomlyGeneratePassword(int len);
+
 	//@}
 
 	// ----------------------------------------

@@ -50,7 +50,6 @@ using namespace std;
 #define GM_PROBE_JOB					9
 #define GM_SAVE_INSTANCE_NAME			10
 #define GM_SEEK_INSTANCE_ID				11
-#define GM_CANCEL_CHECK					12
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -65,7 +64,6 @@ static const char *GMStateNames[] = {
 	"GM_PROBE_JOB",
 	"GM_SAVE_INSTANCE_NAME",
 	"GM_SEEK_INSTANCE_ID",
-	"GM_CANCEL_CHECK",
 };
 
 #define GCE_INSTANCE_PROVISIONING		"PROVISIONING"
@@ -128,7 +126,6 @@ int GCEJob::maxRetryTimes = 3;
 
 GCEJob::GCEJob( ClassAd *classad ) :
 	BaseJob( classad ),
-	m_was_job_completion( false ),
 	m_retry_times( 0 ),
 	probeNow( false )
 {
@@ -514,6 +511,12 @@ void GCEJob::doEvaluateState()
 					break;
 				}
 
+				if ( ( condorState == REMOVED || condorState == HELD ) &&
+					 !gahp->pendingRequestIssued() ) {
+					gmState = GM_CLEAR_REQUEST;
+					break;
+				}
+
 				// After a submit, wait at least submitInterval before trying another one.
 				if ( now >= lastSubmitAttempt + submitInterval ) {
 
@@ -679,18 +682,7 @@ void GCEJob::doEvaluateState()
 					}
 				}
 
-				// TODO Need to delete instance!
-
-				myResource->CancelSubmit( this );
-				if ( condorState == COMPLETED || condorState == REMOVED ) {
-					gmState = GM_DELETE;
-				} else {
-					// Clear the contact string here because it may not get
-					// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-					SetInstanceId( NULL );
-					SetInstanceName( NULL );
-					gmState = GM_CLEAR_REQUEST;
-				}
+				gmState = GM_CANCEL;
 
 				break;
 
@@ -824,188 +816,48 @@ void GCEJob::doEvaluateState()
 						JobRunning();
 					}
 
-					// dprintf( D_ALWAYS, "DEBUG: m_state_reason_code = %s (assuming 'NULL')\n", m_state_reason_code.c_str() );
-					if( ! m_state_reason_code.empty() ) {
-						// Send the user a copy of the reason code.
-						jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
-						requestScheddUpdate( this, false );
-
-							//
-							// http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-ItemType-StateReasonType.html
-							// defines the state [transition] reason codes.
-							//
-							// We consider the following reasons to be normal
-							// termination conditions:
-							//
-							// - Client.InstanceInitiatedShutdown
-							// - Client.UserInitiatedShutdown
-							// - Server.SpotInstanceTermination
-							//
-							// the last because the user will be able to ask
-							// Condor, via on_exit_remove (and the attribute
-							// updated above), to resubmit the job.
-							//
-							// We consider the following reasons to be abnormal
-							// termination conditions, and thus put the job
-							// on hold:
-							//
-							// - Server.InternalError
-							// - Server.InsufficientInstanceCapacity
-							// - Client.VolumeLimitExceeded
-							// - Client.InternalError
-							// - Client.InvalidSnapshot.NotFound
-							//
-							// The first three are likely to be transient; if
-							// the distinction becomes important, we can add
-							// it later.
-							//
-
-						if(
-							m_state_reason_code == "Client.InstanceInitiatedShutdown"
-						 || m_state_reason_code == "Client.UserInitiatedShutdown"
-						 || m_state_reason_code == "Server.SpotInstanceTermination" ) {
-							// Normal instance terminations are normal.
-						} else if(
-							m_state_reason_code == "purged" ) {
-							// This isn't normal, but if the job was purged,
-							// there's no reason to hold onto it.  Added this
-							// so that we wouldn't complain but still write
-							// purged as the EC2StatusReasonCode to the
-							// history file.
-						} else if(
-							m_state_reason_code == "Server.InternalError"
-						 || m_state_reason_code == "Server.InsufficientInstanceCapacity"
-						 || m_state_reason_code == "Client.VolumeLimitExceeded"
-						 || m_state_reason_code == "Client.InternalError"
-						 || m_state_reason_code == "Client.InvalidSnapshot.NotFound" ) {
-							// Put abnormal instance terminations on hold.
-							formatstr( errorString, "Abnormal instance termination: %s.", m_state_reason_code.c_str() );
-							dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
-							gmState = GM_HOLD;
-							break;
-						} else {
-							// Treat all unrecognized reasons as abnormal.
-							formatstr( errorString, "Unrecognized reason for instance termination: %s.  Treating as abnormal.", m_state_reason_code.c_str() );
-							dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
-							gmState = GM_HOLD;
-							break;
-						}
-					}
-
 					lastProbeTime = now;
 					gmState = GM_SUBMITTED;
 				}
 				break;
 
 			case GM_CANCEL:
+				// Delete the instance on the server. This can be due
+				// to the user running condor_rm/condor_hold or the
+				// the instance shutting down (job completion).
 
-				// Rather than duplicate code in the spot instance subgraph,
-				// just handle jobs with no corresponding instance here.
-				if( m_instanceId.empty() ) {
-					// Bypasses the polling delay in GM_CANCEL_CHECK.
-					probeNow = true;
-				} else {
-					rc = gahp->gce_instance_delete( m_serviceUrl,
-													m_authFile,
-													m_project,
-													m_zone,
-													m_instanceName );
+				rc = gahp->gce_instance_delete( m_serviceUrl,
+												m_authFile,
+												m_project,
+												m_zone,
+												m_instanceName );
 
-					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-						 rc == GAHPCLIENT_COMMAND_PENDING ) {
-						break;
-					}
-
-					if( rc != 0 ) {
-						if ( strstr( gahp->getErrorString(), "was not found" ) ) {
-							// The instance is gone. Don't wait in
-							// GM_CANCEL_CHECK for a bulk status update.
-							SetRemoteJobStatus( GCE_INSTANCE_TERMINATED );
-							remoteJobState = GCE_INSTANCE_TERMINATED;
-							probeNow = true;
-							gmState = GM_CANCEL_CHECK;
-							break;
-						}
-						errorString = gahp->getErrorString();
-						dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
-								 procID.cluster, procID.proc,
-								 gahp_error_code.c_str(),
-								errorString.c_str() );
-						gmState = GM_HOLD;
-						break;
-					}
-
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
 				}
 
-				gmState = GM_CANCEL_CHECK;
-				break;
+				if( rc != 0 && !strstr( gahp->getErrorString(), "was not found" ) ) {
+					errorString = gahp->getErrorString();
+					dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
+							 procID.cluster, procID.proc,
+							 gahp_error_code.c_str(),
+							 errorString.c_str() );
+					gmState = GM_HOLD;
+					break;
+				}
 
-			case GM_CANCEL_CHECK:
-				// Wait for the job's state to change.  This should happen
-				// on the next poll, because the job is in an invalid state.
-				if( ! probeNow ) { break; }
-				probeNow = false;
-
-				// We cancel (terminate) a job for one of two reasons: it
-				// either entered one of the two semi-terminated states
-				// (STOPPED or SHUTOFF) of its own accord, or the job went
-				// on hold or was removed.
-				//
-				// In either case, we need to confirm that the cancel
-				// command succeeded.  However, since Amazon permits
-				// STOPPED instances to enter the TERMINATED state, we
-				// can, presuming the same for SHUTOFF instances, just
-				// retry until the instance becomes TERMINATED.  An
-				// instance that has been purged must have successfully
-				// terminated first, so we will treat it the same.
-				//
-				// All other states, therefore, will cause us to try
-				// terminating the instance again.
-				//
-				// Once we've successfully terminated the instance,
-				// we need to go to GM_DONE_SAVE for instances that were
-				// STOPPED or SHUTOFF, and either GM_DELETE or
-				// GM_CLEAR_REQUEST, depending on the condor state of the
-				// job, otherwise.
-				//
-
-				// TODO When do we see STOPPED? Do we have to do something
-				//   when we see this state?
-				if( remoteJobState == GCE_INSTANCE_TERMINATED ) {
-					if( m_was_job_completion ) {
-						gmState = GM_DONE_SAVE;
-					} else {
-						if( condorState == COMPLETED || condorState == REMOVED ) {
-							gmState = GM_DELETE;
-						} else {
-							// The job may run again, so clear the job state.
-							//
-							// (If a job is held and then released, the job
-							// could find its previous (terminated) instance
-							// and consider itself complete.)
-							//
-							// Clear the contact string here first because
-							// we may enter GM_HOLD before GM_CLEAR_REQUEST
-							// actually clears the request. (*sigh*)
-							myResource->CancelSubmit( this );
-							SetInstanceId( NULL );
-							SetInstanceName( NULL );
-							gmState = GM_CLEAR_REQUEST;
-						}
-					}
+				myResource->CancelSubmit( this );
+				if ( condorState == COMPLETED || condorState == REMOVED ) {
+					gmState = GM_DELETE;
 				} else {
-					if( m_retry_times++ < maxRetryTimes ) {
-						gmState = GM_CANCEL;
-					} else {
-						errorString = gahp->getErrorString();
-						dprintf( D_ALWAYS, "(%d.%d) job cancel did not succeed after %d tries, giving up.\n",
-								 procID.cluster, procID.proc, maxRetryTimes );
-						gmState = GM_HOLD;
-						break;
-					}
+					// Clear the contact string here because it may not get
+					// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
+					SetInstanceId( NULL );
+					SetInstanceName( NULL );
+					gmState = GM_CLEAR_REQUEST;
 				}
 				break;
-
 
 			case GM_HOLD:
 				// Put the job on hold in the schedd.

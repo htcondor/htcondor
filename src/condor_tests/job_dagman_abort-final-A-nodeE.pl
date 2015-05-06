@@ -1,8 +1,8 @@
 #!/usr/bin/env perl
 
-system("echo '  DAG_STATUS=$ARGV[2]'");
-system("echo '  FAILED_COUNT=$ARGV[3]'");
+print "  DAG_STATUS=$ARGV[2]\n";
+print "  FAILED_COUNT=$ARGV[3]\n";
 
-system("echo '$ARGV[0]'");
+print "$ARGV[0]\n";
 
 exit($ARGV[1]);

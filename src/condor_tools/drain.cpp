@@ -171,6 +171,9 @@ parseArgv( int argc, char* argv[] )
 		}
 		else if( match_prefix( argv[i], "-pool" ) ) {
 			if( i+1 >= argc ) another(argv[i]);
+			if (pool) {
+				free(pool);
+			}
 			pool = strdup(argv[++i]);
 		}
 		else if( match_prefix( argv[i], "-cancel" ) ) {
@@ -190,10 +193,16 @@ parseArgv( int argc, char* argv[] )
 		}
 		else if( match_prefix( argv[i], "-request-id" ) ) {
 			if( i+1 >= argc ) another(argv[i]);
+			if (cancel_request_id) {
+				free(cancel_request_id);
+			}
 			cancel_request_id = strdup(argv[++i]);
 		}
 		else if( match_prefix( argv[i], "-check" ) ) {
 			if( i+1 >= argc ) another(argv[i]);
+			if (draining_check_expr) {
+				free(draining_check_expr);
+			}
 			draining_check_expr = strdup(argv[++i]);
 		}
         else if( argv[i][0] != '-' ) {

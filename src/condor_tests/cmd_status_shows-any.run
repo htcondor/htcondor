@@ -24,38 +24,23 @@ use CondorCmdStatusWorker2;
 use strict;
 use warnings;
 
-
 # truly const variables in perl
 sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-my $testdesc =  'cmd_status_shows-any';
 my $testname = "cmd_status_shows-any";
-my $corename = "cmd_status_shows-any";
 my $debuglevel = 2;
-
-my @adarray;
 
 print scalar localtime() . "\n";
 
 my $mypid = $$;
-my $mysaveme = $corename . ".saveme";
 
 if($mypid == 0) {
 	die "Saveme setup for test failed\n";
 }
 
-my $mysubmitnm = $corename . $mypid . ".cmd";
-my $mysubmitnmlog = $corename . $mypid . ".log";
-my $mysubmitnmout = $corename . $mypid . ".out";
-my $mycorenm = $corename . ".cmd";
-my $mycorenmout = $corename . ".cmd.out";
-my $mycorenmlog = $corename . ".log";
-my $done = 1;
-
 CondorTest::debug("Master PID is $mypid\n",$debuglevel);
-CondorTest::debug("Master PID submit file is $mysubmitnm\n",$debuglevel);
 
 my $outsource = CondorCmdStatusWorker2::SetUp("cmd_status_shows-any");
 CondorUtils::fullchomp($outsource);
@@ -69,7 +54,10 @@ if($outsource eq "") {
 ( my $locconfig, my $scheddoneconfig) = split('&',$outsource);
 CondorTest::debug("Two pools are $locconfig and $scheddoneconfig\n",$debuglevel);
 
+my $done = 1;
 my $stable = CondorCmdStatusWorker2::IsSystemStable();
+my @adarray = (); 
+my $numstartd = 0;
 
 my $numany = 0;
 my %discoveries = ();
@@ -84,69 +72,67 @@ if($stable == 1) {
     if(!$cmdstatus)
     {
         CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		CondorTest::KillPersonal($locconfig);
-		CondorTest::KillPersonal($scheddoneconfig);
-        exit(1)
-    }
+		$done = 1;
+    } else {
 	
-	foreach my $line (@adarray) {
-		CondorTest::debug("-any: $line\n",$debuglevel);
-		if( $line =~ /^(\w+):(.*)$/ ) {
-			if( !(exists $discoveries{$1})) {
-				print "Adding ($1/$2) to hash\n";
-				$discoveries{$1} = $2;
+		foreach my $line (@adarray) {
+			CondorTest::debug("-any: $line\n",$debuglevel);
+			if( $line =~ /^(\w+):(.*)$/ ) {
+				if( !(exists $discoveries{$1})) {
+					print "Adding ($1/$2) to hash\n";
+					$discoveries{$1} = $2;
+				} else {
+					#print "($1) already found....\n";
+				}
+			}
+		}
+
+		foreach my $search (@expectations) {
+			# it had best be in the hash!
+			if(! (exists $discoveries{$search})) {
+				print "bad\n";
+				$done = 0;
+				print "Expected ad type \"$search\" not discovered(Failure of Test)\n";
+				last;
 			} else {
-				print "($1) already found....\n";
+				print "Expected Ad Type ($search) found!\n";
 			}
 		}
 	}
 
-	foreach my $search (@expectations) {
-		# it had best be in the hash!
-		if(! (exists $discoveries{$search})) {
-			print "bad\n";
-			$done = 0;
-			print "Expected ad type \"$search\" not discovered(Failure of Test)\n";
-			last;
-		} else {
-			print "Expected Ad Type ($search) found!\n";
-		}
-	}
 	if($done == 1) {
 		print "ok\n";
 	}
 }
 
+if($done == 0) {
+	print "bad\n";
+}
+
 
 CondorTest::debug("Saving things and cleaning up....\n",$debuglevel);
 
-#fails due to finding the directory of same name...
-runcmd("cp *cmd_status_shows-any* $mysaveme", {expect_result=>\&ANY});
+#fails due to directory that matches symbol
 
-if( -e "$mysubmitnm" )
-{
-	runcmd("cp $mysubmitnm $mycorenm");
-}
+my $res = 1;
+my @rm1 = ();
+my @rm2 = ();
+$ENV{CONDOR_CONFIG} = $locconfig;
+$res = runCondorTool("condor_rm -all",\@rm1,2,{emit_output=>0});
+$ENV{CONDOR_CONFIG} = $scheddoneconfig;
+$res = runCondorTool("condor_rm -all",\@rm2,2,{emit_output=>0});
 
-if( -e "$mysubmitnmout" )
-{
-	runcmd("cp $mysubmitnmout $mycorenmout");
-}
-
-if( -e "$mysubmitnmlog" )
-{
-	runcmd("cp $mysubmitnmlog $mycorenmlog");
-}
-
-CondorTest::KillPersonal($locconfig);
-CondorTest::KillPersonal($scheddoneconfig);
 print scalar localtime() . "\n";
 
 if( $done == 0 )
 {
 	# actual test failed but we allowed cleanup
+	RegisterResult(0,"test_name", "$testname");
+	CondorTest::EndTest();
 	exit(1);
+} else {
+	RegisterResult(1,"test_name", "$testname");
+	CondorTest::EndTest();
+	CondorTest::debug("cmd_status_shows-any SUCCESS\n",$debuglevel);
 }
-
-CondorTest::debug("cmd_q_shows-any SUCCESS\n",$debuglevel);
 exit(0);

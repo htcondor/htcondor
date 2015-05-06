@@ -45,7 +45,7 @@
 static char const *WINDOWS_DAEMON_SOCKET_DIR = "\\\\.\\pipe\\condor";
 #endif
 
-bool SharedPortEndpoint::m_should_initialize_socket_dir = false;
+bool SharedPortEndpoint::m_initialized_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
 
 SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
@@ -287,7 +287,7 @@ SharedPortEndpoint::CreateListener()
 	}
 
 	m_listener_sock.close();
-	m_listener_sock.assign(sock_fd);
+	m_listener_sock.assignDomainSocket( sock_fd );
 
 	std::stringstream ss;
 	ss << m_socket_dir.Value() << DIR_DELIM_CHAR << m_local_id.Value();
@@ -718,6 +718,29 @@ SharedPortEndpoint::InitRemoteAddress()
 		sinful.setPrivateAddr( private_sinful.getSinful() );
 	}
 
+	// Next, look for alternate command strings
+	std::string commandStrings;
+	if (ad->EvaluateAttrString(ATTR_SHARED_PORT_COMMAND_SINFULS, commandStrings))
+	{
+		m_remote_addrs.clear();
+		StringList sl(commandStrings.c_str());
+		sl.rewind();
+		const char *commandSinfulStr;
+		while ((commandSinfulStr = sl.next()))
+		{
+			Sinful altsinful(commandSinfulStr);
+			altsinful.setSharedPortID(m_local_id.Value());
+			char const *private_addr = sinful.getPrivateAddr();
+			if (private_addr)
+			{
+				Sinful private_sinful(private_addr);
+				private_sinful.setSharedPortID(m_local_id.Value());
+				altsinful.setPrivateAddr(private_sinful.getSinful());
+			}
+			m_remote_addrs.push_back(altsinful);
+		}
+	}
+
 	m_remote_addr = sinful.getSinful();
 
 	return true;
@@ -805,6 +828,14 @@ SharedPortEndpoint::ReloadSharedPortServerAddr()
 	RetryInitRemoteAddress();
 }
 
+void
+SharedPortEndpoint::EnsureInitRemoteAddress()
+{
+	if( m_remote_addr.IsEmpty() && m_retry_remote_addr_timer==-1 ) {
+		RetryInitRemoteAddress();
+	}
+}
+
 char const *
 SharedPortEndpoint::GetMyRemoteAddress()
 {
@@ -812,14 +843,19 @@ SharedPortEndpoint::GetMyRemoteAddress()
 		return NULL;
 	}
 
-	if( m_remote_addr.IsEmpty() && m_retry_remote_addr_timer==-1 ) {
-		RetryInitRemoteAddress();
-	}
+	EnsureInitRemoteAddress();
 
 	if( m_remote_addr.IsEmpty() ) {
 		return NULL;
 	}
 	return m_remote_addr.Value();
+}
+
+const std::vector<Sinful> &
+SharedPortEndpoint::GetMyRemoteAddresses()
+{
+	EnsureInitRemoteAddress(); // Initializes the addresses if necessary.
+	return m_remote_addrs;
 }
 
 char const *
@@ -1021,7 +1057,7 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 	if( !remote_sock ) {
 		remote_sock = new ReliSock();
 	}
-	remote_sock->assign( passed_fd );
+	remote_sock->assignSocket( passed_fd );
 	remote_sock->enter_connected_state();
 	remote_sock->isClient(false);
 
@@ -1355,12 +1391,11 @@ SharedPortEndpoint::MakeDaemonSocketDir()
 void
 SharedPortEndpoint::InitializeDaemonSocketDir()
 {
-	m_should_initialize_socket_dir = true;
-}
+	if ( m_initialized_socket_dir ) {
+		return;
+	}
+	m_initialized_socket_dir = true;
 
-void
-SharedPortEndpoint::RealInitializeDaemonSocketDir()
-{
 	std::string result;
 #ifdef USE_ABSTRACT_DOMAIN_SOCKET
 		// Linux has some unique behavior.  We use a random cookie as a prefix to our
@@ -1445,10 +1480,6 @@ SharedPortEndpoint::GetDaemonSocketDir(std::string &result)
 #ifdef WIN32
 	result = WINDOWS_DAEMON_SOCKET_DIR;
 #else
-	if (m_should_initialize_socket_dir) {
-		RealInitializeDaemonSocketDir();
-		m_should_initialize_socket_dir = false;
-	}
 	const char * known_dir = getenv("CONDOR_PRIVATE_SHARED_PORT_COOKIE");
 	if (known_dir == NULL) {
 		dprintf(D_FULLDEBUG, "No shared_port cookie available; will fall back to using on-disk $(DAEMON_SOCKET_DIR)\n");

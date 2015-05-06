@@ -363,7 +363,7 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 	if ( read_only ) {
 		m_lock_enable = false;
 	} else {
-		m_lock_enable = param_boolean( "ENABLE_USERLOG_LOCKING", true );
+		m_lock_enable = param_boolean( "ENABLE_USERLOG_LOCKING", false );
 	}
 
 	// Should we close the file between operations?

@@ -29,12 +29,14 @@
 
 static bool net_devices_cached = false;
 static std::vector<NetworkDeviceInfo> net_devices_cache;
+static bool net_devices_cache_want_ipv4;
+static bool net_devices_cache_want_ipv6;
 
 #if WIN32
 
 #include <Ws2ipdef.h>
 
-bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
+bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices, bool want_ipv4, bool want_ipv6)
 {
 	int i,num_interfaces=0,max_interfaces=20;
 	LPINTERFACE_INFO interfaces=NULL;
@@ -81,7 +83,10 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 
 	for(i=0;i<num_interfaces;i++) {
 		char const *ip = NULL;
-		if( interfaces[i].iiAddress.Address.sa_family == AF_INET ) {
+		if( interfaces[i].iiAddress.Address.sa_family == AF_INET && !want_ipv4) { continue; }
+		if( interfaces[i].iiAddress.Address.sa_family == AF_INET6 && !want_ipv6) { continue; }
+		if( interfaces[i].iiAddress.Address.sa_family == AF_INET ||
+			interfaces[i].iiAddress.Address.sa_family == AF_INET6) {
 			ip = inet_ntoa(((struct sockaddr_in *)&interfaces[i].iiAddress)->sin_addr);
 		}
 		if( ip ) {
@@ -102,7 +107,7 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 #include <ifaddrs.h>
 #include <net/if.h>
 
-bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
+bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices, bool want_ipv4, bool want_ipv6)
 {
 	struct ifaddrs *ifap_list=NULL;
 	if( getifaddrs(&ifap_list) == -1 ) {
@@ -117,16 +122,34 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 	{
 		const char* ip = NULL;
 		char const *name = ifap->ifa_name;
-		if( ifap->ifa_addr && ifap->ifa_addr->sa_family == AF_INET ) {
-			condor_sockaddr addr(ifap->ifa_addr);
-			ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
+
+		if( ! ifap->ifa_addr ) { continue; }
+		// if(ifap->ifa_addr->sa_family == AF_INET && !want_ipv4) { continue; }
+		// if(ifap->ifa_addr->sa_family == AF_INET6 && !want_ipv6) { continue; }
+		//
+		// Is there really any reason to check interfaces which aren't
+		// AF_INET or AF_INET6?
+		//
+		switch( ifap->ifa_addr->sa_family ) {
+			case AF_INET:
+				if( ! want_ipv4 ) { continue; }
+				break;
+			case AF_INET6:
+				if( ! want_ipv6 ) { continue; }
+				break;
+			default:
+				continue;
 		}
-		if( ip ) {
-			bool is_up = ifap->ifa_flags & IFF_UP;
-			dprintf(D_FULLDEBUG, "Enumerating interfaces: %s %s %s\n", name, ip, is_up?"up":"down");
-			NetworkDeviceInfo inf(name,ip,is_up);
-			devices.push_back(inf);
-		}
+
+		condor_sockaddr addr(ifap->ifa_addr);
+
+		ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
+		if(!ip) { continue; }
+
+		bool is_up = ifap->ifa_flags & IFF_UP;
+		dprintf(D_FULLDEBUG, "Enumerating interfaces: %s %s %s\n", name, ip, is_up?"up":"down");
+		NetworkDeviceInfo inf(name,ip,is_up);
+		devices.push_back(inf);
 	}
 	freeifaddrs(ifap_list);
 
@@ -140,7 +163,7 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 #include <sys/ioctl.h>
 #include <net/if.h>
 
-bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
+bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices, bool want_ipv4, bool want_ipv6)
 {
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if( sock == -1 ) {
@@ -200,15 +223,16 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 		char const *name = ifr->ifr_name;
 		const char* ip = NULL;
 
-		if( ifr->ifr_addr.sa_family == AF_INET ||ifr->ifr_addr.sa_family == AF_INET6 ) {
-			condor_sockaddr addr(&ifr->ifr_addr);
-			ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
-		}
-		if( ip ) {
-			bool is_up = true;
-			NetworkDeviceInfo inf(name,ip,is_up);
-			devices.push_back(inf);
-		}
+		if(ifr->ifr_addr.sa_family == AF_INET && !want_ipv4) { continue; }
+		if(ifr->ifr_addr.sa_family == AF_INET6 && !want_ipv6) { continue; }
+
+		condor_sockaddr addr(&ifr->ifr_addr);
+		ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
+		if(!ip) { continue; }
+
+		bool is_up = true;
+		NetworkDeviceInfo inf(name,ip,is_up);
+		devices.push_back(inf);
 	}
 	free( ifc.ifc_req );
 
@@ -217,22 +241,24 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 
 #else
 
-#error sysapi_get_network_device_info() must be implemented for this platform
+#error sysapi_get_network_device_info_raw() must be implemented for this platform
 
 #endif
 
-bool sysapi_get_network_device_info(std::vector<NetworkDeviceInfo> &devices)
+bool sysapi_get_network_device_info(std::vector<NetworkDeviceInfo> &devices, bool want_ipv4, bool want_ipv6)
 {
-	if( net_devices_cached ) {
+	if( net_devices_cached && want_ipv4 == net_devices_cache_want_ipv4 && want_ipv6 == net_devices_cache_want_ipv6) {
 		devices = net_devices_cache;
 		return true;
 	}
 
-	bool rc = sysapi_get_network_device_info_raw(devices);
+	bool rc = sysapi_get_network_device_info_raw(devices, want_ipv4, want_ipv6);
 
 	if( rc ) {
 		net_devices_cached = true;
 		net_devices_cache = devices;
+		net_devices_cache_want_ipv4 = want_ipv4;
+		net_devices_cache_want_ipv6 = want_ipv6;
 	}
 	return rc;
 }

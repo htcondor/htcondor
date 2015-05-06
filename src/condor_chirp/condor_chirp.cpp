@@ -371,6 +371,7 @@ int chirp_get_job_attr(int argc, char **argv) {
 	char *p = 0;
 	int len = chirp_client_get_job_attr(client, argv[2], &p);
 	printf("%.*s\n", len, p);
+	free(p);
 	DISCONNECT_AND_RETURN(client, 0);
 }
 
@@ -390,6 +391,7 @@ int chirp_get_job_attr_delayed(int argc, char **argv) {
 	char *p = 0;
 	int len = chirp_client_get_job_attr_delayed(client, argv[2], &p);
 	printf("%.*s\n", len, p);
+	free(p);
 	DISCONNECT_AND_RETURN(client, 0);
 }
 
@@ -1046,5 +1048,4 @@ main(int argc, char **argv) {
 		printf("\tError: %d (%s)\n", errno, strerror(errno));
 	}
 	return ret_val;
-	exit(-1);
 }

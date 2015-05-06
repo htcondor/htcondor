@@ -1505,6 +1505,8 @@ int GetRemoteParamStats(Daemon* target, ClassAd & ad)
 			fprintf(stderr, "Can't read stats ad from %s\n", name);
 		}
 	}
+	// CRUFT: Remove this Remove() once no recent versions of Condor
+	//   automatically add CurrentTime to all ads.
 	ad.Remove("CurrentTime");
 	return 0;
 }
@@ -1700,7 +1702,7 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 	if( !is_valid_param_name(config_name + is_meta) ) {
 		fprintf( stderr, 
 				 "%s: Error: Configuration variable name (%s) is not valid, alphanumeric and _ only\n",
-				 MyName, config_name + is_meta );
+				 MyName, ((config_name+is_meta)?(config_name+is_meta):"(null)") );
 		my_exit( 1 );
 	}
 

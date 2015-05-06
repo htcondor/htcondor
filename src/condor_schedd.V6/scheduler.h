@@ -82,7 +82,8 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure );
 // This needs to be here because it causes problems in schedd_main.C 
 // with new compilers (gcc 4.1+)
 //
-extern int updateSchedDInterval( ClassAd* );
+class JobQueueJob;
+extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 
 class match_rec;
 
@@ -97,6 +98,7 @@ struct shadow_rec
 	int				removed;
 	bool			isZombie;	// added for Maui by stolley
 	bool			is_reconnect;
+	bool			reconnect_succeeded;
 		//
 		// This flag will cause the schedd to keep certain claim
 		// attributes for jobs with leases during a graceful shutdown
@@ -112,24 +114,60 @@ struct shadow_rec
 	~shadow_rec();
 }; 
 
-struct OwnerData {
-  char* Name;
+// counters within the OwnerData struct that are cleared and re-computed by count_jobs.
+struct OwnerCounters {
   int JobsRunning;
   int JobsIdle;
   int WeightedJobsRunning;
   int WeightedJobsIdle;
   int JobsHeld;
   int JobsFlocked;
+  int JobsFlockedHere; // volatile field use to hold the JobsRunning calculation when sending submitter adds to flock collectors
+  int Hits;  // used in the mark/sweep algorithm of count_jobs to detect Owners that no longer have any jobs in the queue.
+  void clear_job_counters() { memset(this, 0, sizeof(*this)); }
+  OwnerCounters()
+	: JobsRunning(0)
+	, JobsIdle(0)
+	, WeightedJobsRunning(0)
+	, WeightedJobsIdle(0)
+	, JobsHeld(0)
+	, JobsFlocked(0)
+	, JobsFlockedHere(0)
+	, Hits(0)
+  {}
+};
+
+#define USE_OWNERDATA_MAP 1
+
+struct OwnerData {
+#ifdef USE_OWNERDATA_MAP
+  std::string name;
+  const char * Name() const { return name.empty() ? "" : name.c_str(); }
+  bool empty() const { return name.empty(); }
+#else
+  char* Name;
+  const char * Name() const { return const_cast<const char*>(Name); }
+  bool empty() const { return Name==NULL; }
+#endif
+  OwnerCounters num;
+  time_t LastHitTime; // records the last time we incremented num.Hit, use to expire Owners
+  // Time of most recent change in flocking level or
+  // successful negotiation at highest current flocking
+  // level.
   int FlockLevel;
   int OldFlockLevel;
-		// Time of most recent change in flocking level or
-		// successful negotiation at highest current flocking
-		// level.
   time_t NegotiationTimestamp;
   std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
-  OwnerData() { Name=NULL;
-  NegotiationTimestamp=WeightedJobsRunning=WeightedJobsIdle=JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }
+#ifdef USE_OWNERDATA_MAP
+  OwnerData() : LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0) { }
+#else
+  OwnerData() : Name(NULL), LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0) { }
+#endif
 };
+
+#ifdef USE_OWNERDATA_MAP
+typedef std::map<std::string, OwnerData> OwnerDataMap;
+#endif
 
 class match_rec: public ClaimIdParser
 {
@@ -340,14 +378,14 @@ class Scheduler : public Service
 	void			send_all_jobs_prioritized(ReliSock*, struct sockaddr_in*);
 
 	friend	int		NewProc(int cluster_id);
-	friend	int		count_a_job(ClassAd *);
-	friend	void	job_prio(ClassAd *);
-	friend  int		find_idle_local_jobs(ClassAd *);
-	friend	int		updateSchedDInterval( ClassAd* );
+	friend	int		count_a_job(JobQueueJob*, const JOB_ID_KEY&, void* );
+//	friend	void	job_prio(ClassAd *);
+	friend  int		find_idle_local_jobs(ClassAd *, void*);
+	friend	int		updateSchedDInterval(JobQueueJob*, const JOB_ID_KEY&, void* );
     friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
-	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify, bool log );
+	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool log );
 	int             actOnJobMyselfHandler( ServiceData* data );
 	int				updateGSICred(int, Stream* s);
 	void            setNextJobDelay( ClassAd *job_ad, ClassAd *machine_ad );
@@ -520,30 +558,56 @@ class Scheduler : public Service
 		// Used by both the Scheduler and DedicatedScheduler during
 		// negotiation
 	bool canSpawnShadow();
+	int shadowsSpawnLimit();
+
+	void WriteRestartReport();
 
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
 	bool            FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ=true);
-	
+
 		// object to manage our various shadows and their ClassAds
 	ShadowMgr shadow_mgr;
 
 		// hashtable used to hold matching ClassAds for Globus Universe
 		// jobs which desire matchmaking.
 	HashTable <PROC_ID, ClassAd *> *resourcesByProcID;
-  
+
 	bool usesLocalStartd() const { return m_use_startd_for_local;}
 
 	void swappedClaims( DCMsgCallback *cb );
 	bool CheckForClaimSwap(match_rec *rec);
 
-	
+	//
+	// Verifies that the new clusters created in the current transaction
+	// each pass each submit requirement.
+	//
+	bool	shouldCheckSubmitRequirements();
+	int		checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack );
+
+	// generic statistics pool for scheduler, in schedd_stats.h
+	ScheddStatistics stats;
+	ScheddOtherStatsMgr OtherPoolStats;
+
+
 private:
-	
+
+	// We have to evaluate requirements in the listed order to maintain
+	// user sanity, so the submit requirements data structure must ordered.
+	typedef struct SubmitRequirementsEntry_t {
+		const char *		name;
+		classad::ExprTree *	requirement;
+		classad::ExprTree * reason;
+
+		SubmitRequirementsEntry_t( const char * n, classad::ExprTree * r, classad::ExprTree * rr ) : name(n), requirement(r), reason(rr) {}
+	} SubmitRequirementsEntry;
+
+	typedef std::vector< SubmitRequirementsEntry > SubmitRequirements;
+
 	// information about this scheduler
-	ClassAd*		m_adSchedd;
-    ClassAd*        m_adBase;
-	Scheduler*		myself;
+	SubmitRequirements	m_submitRequirements;
+	ClassAd*			m_adSchedd;
+	ClassAd*        	m_adBase;
 
 	// information about the command port which Shadows use
 	char*			MyShadowSockName;
@@ -589,16 +653,16 @@ private:
 	int				LocalUniverseJobsIdle;
 	int				LocalUniverseJobsRunning;
 
-    // generic statistics pool for scheduler, in schedd_stats.h
-    ScheddStatistics stats;
-	ScheddOtherStatsMgr OtherPoolStats;
-
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
 	int				BadProc;
+#ifdef USE_OWNERDATA_MAP
+	OwnerDataMap    Owners;
+#else
 	ExtArray<OwnerData> Owners; // May be tracking AccountingGroup instead of owner username/domain
+#endif
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
-	int				N_Owners;
+	int				NumOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	Queue<shadow_rec*> RunnableJobQueue;
@@ -669,16 +733,24 @@ private:
 	bool			m_use_slot_weights;
 
 	// utility functions
-	int				count_jobs();
-	bool			fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level=-1); 
-    int             make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
-    int             command_query_ads(int, Stream* stream);
+	int			count_jobs();
+	bool		fill_submitter_ad(ClassAd & pAd, const OwnerData & Owner, int flock_level, int debug_level);
+    int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
+    int			command_query_ads(int, Stream* stream);
 	int			command_history(int, Stream* stream);
 	int			history_helper_launcher(const HistoryHelperState &state);
 	int			history_helper_reaper(int, int);
 	int			command_query_job_ads(int, Stream* stream);
+	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	void   			check_claim_request_timeouts( void );
-	int				insert_owner(char const*);
+#ifdef USE_OWNERDATA_MAP
+	OwnerData * insert_owner(const char*);
+	OwnerData * find_owner(const char*);
+#else
+	OwnerData * insert_owner(const char*, int * pnum=NULL);
+	OwnerData * find_owner(const char*, int * pnum=NULL);
+#endif
+	void		remove_unused_owners();
 	void			child_exit(int, int);
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
 	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad);
@@ -833,7 +905,9 @@ private:
 
 
 // Other prototypes
-int		get_job_prio(ClassAd *ad);
+class JobQueueJob;
+struct JOB_ID_KEY;
+int get_job_prio(JobQueueJob *ad, const JOB_ID_KEY& key, void* user);
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec );
 extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);
@@ -848,7 +922,6 @@ extern bool abortJobsByConstraint( const char *constraint, const char *reason, b
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
 					 int reason_code=0, int reason_subcode=0,
 					 bool use_transaction = false, 
-					 bool notify_shadow = true,  
 					 bool email_user = false, bool email_admin = false,
 					 bool system_hold = true,
 					 bool write_to_user_log = true);

@@ -115,19 +115,19 @@ void ResMgr::Stats::Init()
 
 double ResMgr::Stats::BeginRuntime(stats_recent_counter_timer &  /*probe*/)
 {
-   return UtcTime::getTimeDouble();
+   return _condor_debug_get_time_double();
 }
 
 double ResMgr::Stats::EndRuntime(stats_recent_counter_timer & probe, double before)
 {
-   double now = UtcTime::getTimeDouble();
+   double now = _condor_debug_get_time_double();
    probe.Add(now - before);
    return now;
 }
 
 double ResMgr::Stats::BeginWalk(VoidResourceMember  /*memberfunc*/)
 {
-   return UtcTime::getTimeDouble();
+   return _condor_debug_get_time_double();
 }
 
 double ResMgr::Stats::EndWalk(VoidResourceMember memberfunc, double before)
@@ -248,10 +248,13 @@ ResMgr::init_config_classad( void )
 		config_classad->AssignExpr( ATTR_SLOT_WEIGHT, ATTR_CPUS );
 	}
 
-		// Next, try the IS_OWNER expression.  If it's not there, give
-		// them a resonable default, instead of leaving it undefined.
+		// First, try the IsOwner expression.  If it's not there, try
+		// what's defined in IS_OWNER (for backwards compatibility).
+		// If that's not there, give them a reasonable default.
 	if( ! configInsert(config_classad, ATTR_IS_OWNER, false) ) {
-		config_classad->AssignExpr( ATTR_IS_OWNER, "(START =?= False)" );
+		if( ! configInsert(config_classad, "IS_OWNER", ATTR_IS_OWNER, false) ) {
+			config_classad->AssignExpr( ATTR_IS_OWNER, "(START =?= False)" );
+		}
 	}
 		// Next, try the CpuBusy expression.  If it's not there, try
 		// what's defined in cpu_busy (for backwards compatibility).
@@ -928,24 +931,13 @@ ResMgr::get_by_cur_id(const char* id )
 		if( resources[i]->r_cur->idMatches(id) ) {
 			return resources[i];
 		}
-        if (resources[i]->r_has_cp) {
-            for (Resource::claims_t::iterator j(resources[i]->r_claims.begin());  j != resources[i]->r_claims.end();  ++j) {
-                if ((*j)->idMatches(id)) {
-                    delete resources[i]->r_cur;
-                    resources[i]->r_cur = *j;
-                    resources[i]->r_claims.erase(*j);
-                    resources[i]->r_claims.insert(new Claim(resources[i]));
-                    return resources[i];
-                }
-            }
-        }
 	}
 	return NULL;
 }
 
 
 Resource*
-ResMgr::get_by_any_id(const char* id )
+ResMgr::get_by_any_id(const char* id, bool move_cp_claim )
 {
 	if( ! resources ) {
 		return NULL;
@@ -963,17 +955,19 @@ ResMgr::get_by_any_id(const char* id )
 			resources[i]->r_pre_pre->idMatches(id) ) {
 			return resources[i];
 		}
-        if (resources[i]->r_has_cp) {
-            for (Resource::claims_t::iterator j(resources[i]->r_claims.begin());  j != resources[i]->r_claims.end();  ++j) {
-                if ((*j)->idMatches(id)) {
-                    delete resources[i]->r_cur;
-                    resources[i]->r_cur = *j;
-                    resources[i]->r_claims.erase(*j);
-                    resources[i]->r_claims.insert(new Claim(resources[i]));
-                    return resources[i];
-                }
-            }
-        }
+		if (resources[i]->r_has_cp) {
+			for (Resource::claims_t::iterator j(resources[i]->r_claims.begin());  j != resources[i]->r_claims.end();  ++j) {
+				if ((*j)->idMatches(id)) {
+					if ( move_cp_claim ) {
+						delete resources[i]->r_cur;
+						resources[i]->r_cur = *j;
+						resources[i]->r_claims.erase(*j);
+						resources[i]->r_claims.insert(new Claim(resources[i]));
+					}
+					return resources[i];
+				}
+			}
+		}
 	}
 	return NULL;
 }
@@ -1306,7 +1300,7 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 		std::string reasonName = universeName + "OfflineReason";
 
 		int universeOnline = 0;
-		assert( cap->LookupBool( attr, universeOnline ) );
+		ASSERT( cap->LookupBool( attr, universeOnline ) );
 		if( ! universeOnline ) {
 			offlineUniverses.insert( universeName ).second;
 			extras_classad->Assign( reasonTime.c_str(), time( NULL ) );

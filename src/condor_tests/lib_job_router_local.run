@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use Check::SimpleJob;
 
 my $append_condor_config = '
@@ -51,8 +52,17 @@ my $append_submit_commands = '
   requirements = false
 ';
 
-SimpleJob::RunCheck(
-    append_submit_commands => $append_submit_commands
+if(is_windows()) {
+	SimpleJob::RunCheck(
+		runthis=>"sleep.exe",
+		universe=>"local",
+    	append_submit_commands=>$append_submit_commands,
 );
+} else {
+	SimpleJob::RunCheck(
+		universe=>"local",
+    	append_submit_commands=>$append_submit_commands,
+);
+}
 
 CondorTest::EndTest();

@@ -120,6 +120,21 @@ SharedPortServer::PublishAddress()
 	ClassAd ad;
 	ad.Assign(ATTR_MY_ADDRESS,daemonCore->publicNetworkIpAddr());
 
+	std::set<std::string> commandAddresses;
+	const std::vector<Sinful> &mySinfuls = daemonCore->InfoCommandSinfulStringsMyself();
+	for (std::vector<Sinful>::const_iterator it=mySinfuls.begin(); it!=mySinfuls.end(); it++)
+	{
+		commandAddresses.insert(it->getSinful());
+	}
+	StringList commandAddressesSL;
+	for (std::set<std::string>::const_iterator it=commandAddresses.begin(); it!=commandAddresses.end(); it++)
+	{
+		commandAddressesSL.insert(it->c_str());
+	}
+	char *adAddresses = commandAddressesSL.print_to_string();
+	if (adAddresses) {ad.InsertAttr(ATTR_SHARED_PORT_COMMAND_SINFULS, adAddresses);}
+	delete adAddresses;
+
 	// Place some operational metrics into the daemon ad
 	ad.Assign("RequestsPendingCurrent",m_shared_port_client.get_currentPendingPassSocketCalls());
 	ad.Assign("RequestsPendingPeak",m_shared_port_client.get_maxPendingPassSocketCalls());

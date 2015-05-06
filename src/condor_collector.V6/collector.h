@@ -157,19 +157,24 @@ protected:
 	static int __failed__;
 	static std::string __adType__;
 	static ExprTree *__filter__;
+	static void* __self_ad__; // contains address of last Ad for this collector added to the hashtable, do NOT free from here
+							  // this pointer is only used to recognise this collector's ad during a condor_status query
+							  // so it's harmless if this pointer is out of date.
 
 	static TrackTotals* normalTotals;
 	static int submittorRunningJobs;
 	static int submittorIdleJobs;
+	static int submittorNumAds;
 
 	static int machinesTotal,machinesUnclaimed,machinesClaimed,machinesOwner;
+	static int startdNumAds;
 
 	static CollectorUniverseStats ustatsAccum;
 	static CollectorUniverseStats ustatsMonthly;
 
 	static ClassAd *ad;
-	static CollectorList* updateCollectors;
-	static DCCollector* updateRemoteCollector;
+	static CollectorList* collectorsToUpdate;
+	static DCCollector* worldCollector;
 	static int UpdateTimerId;
 
 	static ForkWork forkQuery;

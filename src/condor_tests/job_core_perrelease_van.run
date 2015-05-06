@@ -19,32 +19,212 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
 
-$testdesc =  'Condor PERIODIC_RELEASE policy test - vanilla U';
+##
+## Status Values
+##
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
 $testname = "job_core_perrelease_van";
 
-my $nostatus = CondorTest::verbose_system("./job_core_perrelease-false_van.pl");
-my $willstatus = CondorTest::verbose_system("./job_core_perrelease-true_van.pl");
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
 
-my %listoftests;
-$listoftests{"corename"} = "job_core_perrelease";
-$listoftests{"tests"} = [ "job_core_perrelease-false_van", "job_core_perrelease-true_van"];
-$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
-CondorTest::MergeOutputFiles(\%listoftests);
+print scalar localtime() . "\n";
 
-if($nostatus != 0)
+my $variation = "perreleasefalse";
+
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	PERIODIC_EXPR_interval = 30
+    NUM_CPUS = 2
+    NEGOTIATOR_INTERVAL = 5
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"perreleasevan");
+print "local config file:$configfile\n";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "perreleasevan",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+
+my %info;
+my $cluster;
+
+#my $nostatus = CondorTest::verbose_system("./job_core_perrelease-false_van.pl");
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+$executed = sub
 {
-	CondorTest::debug("PERIODIC_RELEASE: failed no trigger test\n",1);
+	%info = @_;
+	$cluster = $info{"cluster"};
+
+	if($variation eq "perreleasefalse") {
+		CondorTest::debug("Bad. Job submitted on hold and NEVER released by periodic release policy... Should not RUN!\n",1);
+		RegisterResult(0,"test_name", "$testame");
+	}  else {
+		CondorTest::debug("Periodic release should see an execute, followed by a release and then we reschedule the job\n",1);
+	}
+};
+
+$success = sub
+{
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+
+	if($variation eq "perreleasefalse") {
+		CondorTest::debug("Bad. Job submitted on hold and NEVER released by periodic release policy... Should not Complete!\n",1);
+		RegisterResult(0,"test_name", "$testame");
+	}  else {
+		CondorTest::debug("Success: ok\n",1);
+	}
+};
+
+$timed = sub
+{
+    my %info = @_;
+    my $cluster = $info{"cluster"};
+
+    CondorTest::debug("Cluster $cluster alarm wakeup\n",1);
+    CondorTest::debug("wakey wakey!!!!\n",1);
+    CondorTest::debug("good\n",1);
+
+    print "Cluster:$cluster should still be on hold\n";
+
+    my $qstat = CondorTest::getJobStatus($cluster);
+    while($qstat == -1)
+    {
+        CondorTest::debug("Job status unknown - wait a bit\n",1);
+        sleep 2;
+        $qstat = CondorTest::getJobStatus($cluster);
+    }
+
+    CondorTest::debug("It better be on hold... status is $qstat(5 is correct)",1);
+    if($qstat != HELD)
+    {
+        CondorTest::debug("Cluster $cluster failed to stay on hold\n",1);
+        RegisterResult(0, "test_name", "$testname");
+        return(1);
+    }
+    my @adarray;
+    my $status = 1;
+    my $cmd = "condor_rm $cluster";
+    $status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+    if(!$status)
+    {
+        CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+        RegisterResult(0, "test_name", "$testname");
+    }
+    sleep 5;
+};
+
+$submit = sub
+{
+	my %info = @_;
+	$cluster = $info{"cluster"};
+
+	my $qstat = CondorTest::getJobStatus($cluster);
+	while($qstat == -1)
+	{
+		CondorTest::debug("Job status unknown - wait a bit\n",1);
+		sleep 2;
+		$qstat = CondorTest::getJobStatus($cluster);
+	}
+
+	CondorTest::debug("It better be on hold... status is $qstat(5 is correct)",1);
+	if($qstat != HELD)
+	{
+		CondorTest::debug("Cluster $cluster failed to go on hold\n",1);
+		exit(1);
+	}
+
+
+	CondorTest::debug("Cluster $cluster submitted\n",1);
+};
+
+$abort = sub
+{
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+
+	CondorTest::debug("Cluster $cluster aborted after hold state verified\n",1);
+};
+
+$held = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+
+	CondorTest::debug("Held event not expected.....\n",1);
+	RegisterResult(0,"test_name", "$testname");
+};
+
+$release = sub
+{
+	CondorTest::debug("Release expected.........\n",1);
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_reschedule";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+	if(!$status)
+	{
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		RegisterResult(0,"test_name", "$testname");
+	}
+};
+
+my $falsepolicy = '
+	periodic_release = (time() - QDate) < 0
+';
+
+my $truepolicy = '
+	periodic_release = (time() - QDate) > 3
+';
+
+	# FALSE
+	SimpleJob::RunCheck(
+		hold=>"True",
+		append_submit_commands=>$falsepolicy,
+		duration=>10,
+	    on_submit=>$submit,
+	    on_execute=>$executed,
+	    on_success=>$success,
+	    on_abort=>$abort,
+		alt_timed=>$timed,
+		timeout=>60,
+	);
+
+
+	$variation = "perreleasetrue";
+
+	# TRUE
+	SimpleJob::RunCheck(
+		hold=>"True",
+		append_submit_commands=>$truepolicy,
+		duration=>6,
+	    on_release=>$release,
+	    on_execute=>$executed,
+	    on_hold=>$held,
+	    on_success=>$success,
+	);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+my $result = 0;
+
+if( $result != 0 )
+{
+    exit(1);
 }
 
-if($willstatus != 0)
-{
-	CondorTest::debug("PERIODIC_RELEASE: failed trigger test\n",1);
-}
-
-if(($willstatus != 0) || ($nostatus != 0))
-{
-	die "Failed one PERIODIC_RELEASE test\n";
-}
-
-
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);

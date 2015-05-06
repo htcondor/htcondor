@@ -176,6 +176,11 @@ SafeSock::~SafeSock()
     delete mdChecker_;
 }
 
+int SafeSock::close()
+{
+	return Sock::close();
+}
+
 
 /* End of the current message
  * This method will be called when the application program reaches
@@ -281,14 +286,12 @@ MSC_DISABLE_WARNING(6262) // function uses 64k of stack
 const char *
 SafeSock::my_ip_str()
 {
-	//In order to call getSockAddr(_sock), we would need to call
-	//::connect() on _sock, which changes semantics on what other
-	//calls are valid on _sock (e.g. must use send() on some platforms
-	//instead of sendto()).  Therefore, we create a new sock and
-	//connect that one, so as to leave the main one undisturbed.
+	//
+	// FIXME: Do we still need to create and destroy a socket every time?
+	//
 
 	if(_state != sock_connect) {
-		dprintf(D_ALWAYS,"ERROR: SafeSock::sender_ip_str() called on socket tht is not in connected state\n");
+		dprintf(D_ALWAYS,"ERROR: SafeSock::my_ip_str() called on socket that is not in connected state\n");
 		return NULL;
 	}
 
@@ -298,12 +301,16 @@ SafeSock::my_ip_str()
 	}
 
 	SafeSock s;
-	s.bind(true);
+	if( ! s.bind(_who.get_protocol(), true, 0, false) )
+	{
+		dprintf(D_ALWAYS,"ERROR: SafeSock::my_ip_str()'s attempt to bind a new SafeSock failed.\n");
+		return NULL;
+	}
 
 	if (s._state != sock_bound) {
 		dprintf(D_ALWAYS,
 		        "SafeSock::my_ip_str() failed to bind: _state = %d\n",
-			  s._state); 
+			  s._state);
 		return NULL;
 	}
 
@@ -334,16 +341,21 @@ int SafeSock::connect(
 {
 	if (!host || port < 0) return FALSE;
 
-	_who.clear();
-	if (!Sock::guess_address_string(host, port, _who))
-		return FALSE;
+	std::string addr;
+	if( chooseAddrFromAddrs( host, addr ) ) {
+		host = addr.c_str();
+	} else {
+		_who.clear();
+		if (!Sock::guess_address_string(host, port, _who))
+			return FALSE;
 
-	if (host[0] == '<') {
-		set_connect_addr(host);
-		} else {
-		set_connect_addr(_who.to_sinful().Value());
+		if (host[0] == '<') {
+			set_connect_addr(host);
+			} else {
+			set_connect_addr(_who.to_sinful().Value());
+		}
+    	addr_changed();
 	}
-    addr_changed();
 
 	// now that we have set _who (useful for getting informative
 	// peer_description), see if we should do a reverse connect
@@ -357,7 +369,7 @@ int SafeSock::connect(
 	/* assigned to the stream if needed		*/
 	/* TRUE means this is an outgoing connection */
 	if (_state == sock_virgin || _state == sock_assigned) {
-		bind(true);
+		bind( _who.get_protocol(), true, 0, false );
 	}
 
 	if (_state != sock_bound) {

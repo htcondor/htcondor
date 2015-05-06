@@ -7,6 +7,7 @@
 
 using namespace condor;
 
+#if !defined(WIN32)
 pthread_mutex_t ModuleLock::m_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 ModuleLock::ModuleLock()
@@ -39,6 +40,28 @@ ModuleLock::release()
     {
         pthread_mutex_unlock(&m_mutex);
         PyEval_RestoreThread(m_save);
+        m_owned = false;
     }
 }
+#else
+ModuleLock::ModuleLock()
+{
+    acquire();
+}
 
+void
+ModuleLock::acquire()
+{
+
+}
+
+ModuleLock::~ModuleLock()
+{
+    release();
+}
+
+void
+ModuleLock::release()
+{
+}
+#endif

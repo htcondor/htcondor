@@ -23,10 +23,6 @@ install(FILES		condor.sysconfig
 		PERMISSIONS ${CONDOR_SCRIPT_PERMS}
 		RENAME		condor)
 
-install(FILES		condor_config.local.generic
-		DESTINATION	"${C_ETC}"
-		RENAME		condor_config.local)
-
 install (FILES
 		condor.boot.generic
 		condor_config.local.central.manager

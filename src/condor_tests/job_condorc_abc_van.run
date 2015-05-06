@@ -36,11 +36,17 @@ my $poolC = CondorTest::StartCondorWithParams(
     append_condor_config => $append_condor_config_C
 );
 
+
 my $poolC_collector = $poolC->GetCollectorAddress();
-my $poolC_schedd_name =
-    `condor_status -pool $poolC_collector -schedd -format "%s\n" Name`
-    || die "Failed to query schedd name.";
+# my $poolC_schedd_name =
+#    `condor_status -pool '$poolC_collector' -schedd -af Name`
+#    || die "Failed to query schedd name.";
+my $rv = runCommandCarefully( undef, qw( condor_status -pool ),
+	$poolC_collector, qw( -schedd -af Name ) );
+if( $rv->{ "exitcode" } ) { die( "Failed to query schedd name." ); }
+my $poolC_schedd_name = $rv->{ "stdout" }->[0];
 CondorUtils::fullchomp $poolC_schedd_name;
+
 
 my $append_condor_config_B = '
   # reduce latency in test
@@ -55,10 +61,15 @@ my $poolB = CondorTest::StartCondorWithParams(
     append_condor_config => $append_condor_config_B
 );
 
+
 my $poolB_collector = $poolB->GetCollectorAddress();
-my $poolB_schedd_name =
-    `condor_status -pool $poolB_collector -schedd -format "%s\n" Name`
-    || die "Failed to query schedd name.";
+# my $poolB_schedd_name =
+#    `condor_status -pool '$poolB_collector' -schedd -af Name`
+#    || die "Failed to query schedd name.";
+my $rv = runCommandCarefully( undef, qw( condor_status -pool ),
+	$poolB_collector, qw( -schedd -af Name ) );
+if( $rv->{ "exitcode" } ) { die( "Failed to query schedd name." ); }
+my $poolB_schedd_name = $rv->{ "stdout" }->[0];
 CondorUtils::fullchomp $poolB_schedd_name;
 
 

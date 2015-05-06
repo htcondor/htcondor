@@ -118,6 +118,36 @@ static struct {
 	MAP_STRING_FROM_PID pid_to_addr; // pid to sinful address
 	std::string configured_logdir; // $(LOG) from condor_config (if any)
 
+	// convert daemon subsys name e.g. "MASTER" to cannonical daemon name "Master"
+	// the input need not be uppercase, but should contain _ for shared_port, etc.
+	bool SubsysToDaemon(std::string & daemon) {
+		lower_case(daemon);
+		MAP_STRING_TO_STRING::const_iterator alt = this->file_to_daemon.find(daemon);
+		if (alt != this->file_to_daemon.end()) { 
+			daemon = alt->second; 
+			return true;
+		} else {
+			daemon[0] = toupper(daemon[0]);
+		}
+		return false;
+	}
+
+	// convert cannonical daemon name e.g. "Master" to daemon subsys name "MASTER"
+	// the output will be uppercase, and will contain _ for SHARED_PORT, etc.
+	bool DaemonToSubsys(std::string & daemon) {
+		bool found = false;
+		MAP_STRING_TO_STRING::const_iterator it;
+		for (it = this->file_to_daemon.begin(); it != this->file_to_daemon.end(); it++) {
+			if (it->second == daemon) {
+				daemon = it->first;
+				found = true;
+				break;
+			}
+		}
+		upper_case(daemon);
+		return found;
+	}
+
 } App;
 
 // init fields in the App structure that have no default initializers
@@ -141,7 +171,7 @@ void InitAppGlobals(const char * argv0)
 	App.log_to_daemon["Cred"]  = "Credd";
 	App.log_to_daemon["Kbd"] = "Kbdd";
 
-	// map executable name to daemon name for those that don't match the rule : 'remove condor_ and lowercase'
+	// map executable name to daemon name for those that don't match the rule : 'remove condor_ and capitalize'
 	App.file_to_daemon["shared_port"] = "SharedPort";
 	App.file_to_daemon["job_router"]  = "JobRouter";
 	App.file_to_daemon["ckpt_server"] = "CkptServer";
@@ -251,7 +281,7 @@ void AddPrintColumn(const char * heading, int width, const char * expr)
 {
 	ClassAd ad;
 	StringList attributes;
-	if(!ad.GetExprReferences(expr, attributes, attributes)) {
+	if(!ad.GetExprReferences(expr, NULL, &attributes)) {
 		fprintf( stderr, "Error:  Parse error of: %s\n", expr);
 		exit(1);
 	}
@@ -325,8 +355,8 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 
 	// stream contains
 	// HEADINGS over DATA with optional ==== or --- line under headings.
-	char * line = getline(stream);
-	if (line && (0 == strlen(line))) line = getline(stream);
+	char * line = getline_trim(stream);
+	if (line && (0 == strlen(line))) line = getline_trim(stream);
 	if ( ! line || (0 == strlen(line)))
 		return 0;
 
@@ -334,7 +364,7 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 	std::string subhead;
 	std::string data;
 
-	line = getline(stream);
+	line = getline_trim(stream);
 	if (line) data = line;
 
 	if (data.find("====") == 0 || data.find("----") == 0) {
@@ -342,7 +372,7 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 		data.clear();
 
 		// first line after headings is not data, but underline
-		line = getline(stream);
+		line = getline_trim(stream);
 		if (line) data = line;
 	}
 
@@ -447,7 +477,7 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 		}
 
 		// get next line.
-		line = getline(stream);
+		line = getline_trim(stream);
 		if (line) data = line; else data.clear();
 	}
 
@@ -563,14 +593,14 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 	if (0 == parse_type) {
 		// stream contains
 		// HEADINGS over DATA with optional ==== or --- line under headings.
-		char * line = getline(stream);
-		if (line && ! strlen(line)) line = getline(stream);
+		char * line = getline_trim(stream);
+		if (line && ! strlen(line)) line = getline_trim(stream);
 		if (line) {
 			std::string headings = line;
 			std::string subhead;
 			std::string data;
 
-			line = getline(stream);
+			line = getline_trim(stream);
 			if (line) data = line;
 
 			if (data.find("====") == 0 || data.find("----") == 0) {
@@ -578,7 +608,7 @@ int get_field_from_stream(FILE * stream, int parse_type, const char * fld_name, 
 				data.clear();
 
 				// first line after headings is not data, but underline
-				line = getline(stream);
+				line = getline_trim(stream);
 				if (line) data = line;
 			}
 
@@ -707,10 +737,10 @@ static void get_address_table(TABULAR_MAP & table)
 		#ifdef WIN32
 		// netstat begins with the line "Active Connections" followed by a blank line
 		// followed by the actual data, but that confuses the table parser, so skip the first 2 lines.
-		char * line = getline(stream);
+		char * line = getline_trim(stream);
 		while (MATCH != strcasecmp(line, "Active Connections")) {
 			if (App.diagnostic > 1) { printf("skipping: %s\n", line); }
-			line = getline(stream);
+			line = getline_trim(stream);
 		}
 		if (App.diagnostic > 1) { printf("skipping: %s\n", line); }
 		fMultiWord = true;
@@ -944,7 +974,6 @@ format_jobid_program (const char *jobid, AttrList * /*ad*/, Formatter & /*fmt*/)
 	return outstr;
 }
 
-#if 1
 void AddPrintColumn(const char * heading, int width, const char * attr, const CustomFormatFn & fmt)
 {
 	App.projection.AppendArg(attr);
@@ -955,28 +984,6 @@ void AddPrintColumn(const char * heading, int width, const char * attr, const Cu
 	if ( ! width && ! fmt.IsNumber()) opts |= FormatOptionLeftAlign; // strings default to left align.
 	App.print_mask.registerFormat(NULL, wid, opts, fmt, attr);
 }
-#else
-void AddPrintColumn(const char * heading, int width, const char * attr, StringCustomFmt fmt)
-{
-	App.projection.AppendArg(attr);
-	App.print_head.Append(heading);
-
-	int wid = width ? width : strlen(heading);
-	int opts = FormatOptionNoTruncate | FormatOptionAutoWidth;
-	if ( ! width) opts |= FormatOptionLeftAlign; // strings default to left align.
-	App.print_mask.registerFormat(NULL, wid, opts, fmt, attr);
-}
-
-void AddPrintColumn(const char * heading, int width, const char * attr, IntCustomFmt fmt)
-{
-	App.projection.AppendArg(attr);
-	App.print_head.Append(heading);
-
-	int wid = width ? width : strlen(heading);
-	int opts = FormatOptionNoTruncate | FormatOptionAutoWidth;
-	App.print_mask.registerFormat(NULL, wid, opts, fmt, attr);
-}
-#endif
 
 #define IsArg is_arg_prefix
 #define IsArgColon is_arg_colon_prefix
@@ -1064,7 +1071,9 @@ void parse_args(int /*argc*/, char *argv[])
 
 				bool flabel = false;
 				bool fCapV  = false;
+				bool fRaw = false;
 				bool fheadings = false;
+				const char * prowpre = NULL;
 				const char * pcolpre = " ";
 				const char * pcolsux = NULL;
 				if (pcolon) {
@@ -1074,68 +1083,45 @@ void parse_args(int /*argc*/, char *argv[])
 						{
 							case ',': pcolsux = ","; break;
 							case 'n': pcolsux = "\n"; break;
+							case 'g': pcolpre = NULL; prowpre = "\n"; break;
 							case 't': pcolpre = "\t"; break;
 							case 'l': flabel = true; break;
 							case 'V': fCapV = true; break;
+							case 'r': case 'o': fRaw = true; break;
 							case 'h': fheadings = true; break;
 						}
 						++pcolon;
 					}
 				}
-				App.print_mask.SetAutoSep(NULL, pcolpre, pcolsux, "\n");
+				App.print_mask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
 
 				while (argv[ixArg+1] && *(argv[ixArg+1]) != '-') {
 					++ixArg;
 
 					parg = argv[ixArg];
 					const char * pattr = parg;
-#if 1
 					CustomFormatFn cust_fmt;
-#else
-					void * cust_fmt = NULL;
-					FormatKind cust_kind = PRINTF_FMT;
-#endif
 
 					// If the attribute/expression begins with # treat it as a magic
 					// identifier for one of the derived fields that we normally display.
 					if (*parg == '#') {
 						++parg;
 						if (MATCH == strcasecmp(parg, "SLOT") || MATCH == strcasecmp(parg, "SlotID")) {
-#if 1
 							cust_fmt = format_slot_id;
-#else
-							cust_fmt = (void*)format_slot_id;
-							cust_kind = INT_CUSTOM_FMT;
-#endif
 							pattr = ATTR_SLOT_ID;
 							App.projection.AppendArg(pattr);
 							App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
 							App.projection.AppendArg(ATTR_NAME);
 						} else if (MATCH == strcasecmp(parg, "PID")) {
-#if 1
 							cust_fmt = format_jobid_pid;
-#else
-							cust_fmt = (void*)format_jobid_pid;
-							cust_kind = STR_CUSTOM_FMT;
-#endif
 							pattr = ATTR_JOB_ID;
 							App.projection.AppendArg(pattr);
 						} else if (MATCH == strcasecmp(parg, "PROGRAM")) {
-#if 1
 							cust_fmt = format_jobid_program;
-#else
-							cust_fmt = (void*)format_jobid_program;
-							cust_kind = STR_CUSTOM_FMT;
-#endif
 							pattr = ATTR_JOB_ID;
 							App.projection.AppendArg(pattr);
 						} else if (MATCH == strcasecmp(parg, "RUNTIME")) {
-#if 1
 							cust_fmt = format_int_runtime;
-#else
-							cust_fmt = (void*)format_int_runtime;
-							cust_kind = INT_CUSTOM_FMT;
-#endif
 							pattr = ATTR_TOTAL_JOB_RUN_TIME;
 							App.projection.AppendArg(pattr);
 						} else {
@@ -1146,7 +1132,7 @@ void parse_args(int /*argc*/, char *argv[])
 					if ( ! cust_fmt) {
 						ClassAd ad;
 						StringList attributes;
-						if(!ad.GetExprReferences(parg, attributes, attributes)) {
+						if(!ad.GetExprReferences(parg, NULL, &attributes)) {
 							fprintf( stderr, "Error:  Parse error of: %s\n", parg);
 							exit(1);
 						}
@@ -1168,30 +1154,13 @@ void parse_args(int /*argc*/, char *argv[])
 					}
 					else if (flabel) { lbl.formatstr("%s = ", parg); wid = 0; opts = 0; }
 
-					lbl += fCapV ? "%V" : "%v";
+					lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
 					if (App.diagnostic) {
 						printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for %llx[%s]\n",
 							ixArg, lbl.Value(), wid, opts, (long long)(StringCustomFormat)cust_fmt, pattr);
 					}
 					if (cust_fmt) {
-#if 1
 						App.print_mask.registerFormat(NULL, wid, opts, cust_fmt, pattr);
-#else
-						switch (cust_kind) {
-							case INT_CUSTOM_FMT:
-								App.print_mask.registerFormat(NULL, wid, opts, (IntCustomFmt)cust_fmt, pattr);
-								break;
-							case FLT_CUSTOM_FMT:
-								App.print_mask.registerFormat(NULL, wid, opts, (FloatCustomFmt)cust_fmt, pattr);
-								break;
-							case STR_CUSTOM_FMT:
-								App.print_mask.registerFormat(NULL, wid, opts, (StringCustomFmt)cust_fmt, pattr);
-								break;
-							default:
-								App.print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
-								break;
-						}
-#endif
 					} else {
 						App.print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
 					}
@@ -1404,7 +1373,7 @@ main( int argc, char *argv[] )
 				query_daemons_for_pids(info);
 			}
 
-			if (App.diagnostic || App.verbose) {
+			if (App.verbose || (App.diagnostic && ! App.show_daemons)) {
 				printf("\nLOG directory \"%s\"\n", App.query_log_dirs[ii]);
 				print_log_info(info);
 			} else if (App.show_daemons) {
@@ -1415,6 +1384,10 @@ main( int argc, char *argv[] )
 	}
 
 	if (App.show_daemons && App.quick_scan) {
+		if (App.timed_scan) { printf("%d seconds\n", (int)(time(NULL) - begin_time)); }
+		exit(0);
+	}
+	if ( ! App.scan_pids && (App.query_pids.empty() || App.query_log_dirs.empty())) {
 		if (App.timed_scan) { printf("%d seconds\n", (int)(time(NULL) - begin_time)); }
 		exit(0);
 	}
@@ -1463,7 +1436,7 @@ main( int argc, char *argv[] )
 							query_log_dir(logdir, info);
 							scan_logs_for_info(info, App.job_to_pid, fAddressesOnly);
 
-							if (App.diagnostic || App.verbose) {
+							if (App.verbose || (App.diagnostic && ! App.show_daemons)) {
 								print_log_info(info);
 							} else if (App.show_daemons) {
 								print_daemon_info(info, false);
@@ -1584,8 +1557,10 @@ main( int argc, char *argv[] )
 
 			// render the data once to calcuate column widths.
 			result.Open();
+			std::string tmp;
 			while (ClassAd	*ad = result.Next()) {
-				delete [] App.print_mask.display(ad);
+				App.print_mask.display(tmp, ad);
+				tmp.clear();
 			}
 			result.Close();
 
@@ -1658,6 +1633,11 @@ static void read_address_file(const char * filename, std::string & addr)
 	char buf[4096];
 	int cbRead = read(fd, buf, sizeof(buf));
 
+	if (cbRead < 0) {
+		close(fd);
+		return;
+	}
+
 	// parse out the address string. it should be the first line of data
 	char * peol = buf;
 	while (peol < buf+cbRead) {
@@ -1720,7 +1700,7 @@ static void scan_a_log_for_info(
 			startup_banner_text = " (CONDOR_STARTER) STARTING UP";
 		} else {
 			daemon_name_all_caps = it->first;
-			upper_case(daemon_name_all_caps);
+			App.DaemonToSubsys(daemon_name_all_caps);
 			startup_banner_text = " (CONDOR_";
 			startup_banner_text += daemon_name_all_caps;
 			startup_banner_text += ") STARTING UP";
@@ -1773,17 +1753,22 @@ static void scan_a_log_for_info(
 
 		if (line.find(startup_banner_text) != string::npos) {
 			if (App.diagnostic) {
-				printf("found %s startup banner with pid %s\n", pszDaemon, possible_daemon_pid.c_str());
-				printf("quitting scan of %s log file\n\n", pszDaemon);
+				printf("found %s startup banner with pid %s\n",
+					pszDaemon, possible_daemon_pid.c_str());
 			}
-			if (pliDaemon->pid.empty())
+			if (pliDaemon->pid.empty()) {
+				if (App.diagnostic) { printf("storing %s pid : %s\n", pszDaemon, possible_daemon_pid.c_str()); }
 				pliDaemon->pid = possible_daemon_pid;
-			if (pliDaemon->addr.empty())
+			}
+			if (pliDaemon->addr.empty()) {
+				if (App.diagnostic) { printf("storing %s addr : %s\n", pszDaemon, possible_daemon_addr.c_str()); }
 				pliDaemon->addr = possible_daemon_addr;
+			}
 
 			bInsideBanner = false;
 			// found daemon startup header, everything before this is from a different invocation
 			// of the daemon, so stop searching.
+			if (App.diagnostic) { printf("quitting scan of %s log file\n\n", pszDaemon); }
 			break;
 		}
 		// are we inside the banner?
@@ -1806,7 +1791,9 @@ static void scan_a_log_for_info(
 		// DaemonCore: command socket at <sin>
 		// DaemonCore: private command socket at <sin>
 		size_t ix = line.find(" DaemonCore: command socket at <");
+		if (ix == string::npos) ix = line.find(" DaemonCore: private command socket at <");
 		if (ix != string::npos) {
+			if (App.diagnostic) { printf("potential addr from: %s\n", line.c_str()); }
 			possible_daemon_addr = line.substr(line.find("<",ix));
 			continue;
 		}
@@ -1826,13 +1813,7 @@ static void scan_a_log_for_info(
 						size_t ix4 = line.find(")", ix3);
 						std::string daemon = line.substr(ix2, ix3-ix2);
 						std::string pid = line.substr(ix3+cch3, ix4-ix3-cch3);
-						lower_case(daemon);
-						MAP_STRING_TO_STRING::const_iterator alt = App.file_to_daemon.find(daemon);
-						if (alt != App.file_to_daemon.end()) { 
-							daemon = alt->second; 
-						} else {
-							daemon[0] = toupper(daemon[0]);
-						}
+						App.SubsysToDaemon(daemon);
 						if (info.find(daemon) != info.end()) {
 							LOG_INFO * pliTemp = info[daemon];
 							if (pliTemp->pid.empty()) {
@@ -1859,13 +1840,7 @@ static void scan_a_log_for_info(
 						size_t ix4 = line.find_first_of("\".", ix3);
 						if (ix4 > ix3 && ix4 < ix2) {
 							std::string daemon = line.substr(ix3+cch3,ix4-ix3-cch3);
-							lower_case(daemon);
-							MAP_STRING_TO_STRING::const_iterator alt = App.file_to_daemon.find(daemon);
-							if (alt != App.file_to_daemon.end()) { 
-								daemon = alt->second; 
-							} else {
-								daemon[0] = toupper(daemon[0]);
-							}
+							App.SubsysToDaemon(daemon);
 							if (info.find(daemon) != info.end()) {
 								LOG_INFO * pliD = info[daemon];
 								if (pliD->pid.empty()) {
@@ -1890,8 +1865,7 @@ static void scan_a_log_for_info(
 					size_t ix3 = line.rfind("The ", ix2);
 					if (ix3 != string::npos) {
 						std::string daemon = line.substr(ix3+cch3, ix2-ix3-cch3);
-						lower_case(daemon);
-						daemon[0] = toupper(daemon[0]);
+						App.SubsysToDaemon(daemon);
 
 						std::string exited_pid = line.substr(ix2+cch2, ix-ix2-cch2);
 						std::string exit_code = line.substr(ix+cch1);
@@ -2175,7 +2149,9 @@ void print_daemon_info(LOG_INFO_MAP & info, bool fQuick)
 			ppid = get_daemon_param(pli->addr.c_str(), "PPID");
 			if (ppid) {
 				active = true;
-				pexe = get_daemon_param(pli->addr.c_str(), it->first.c_str());
+				std::string subsys = it->first;
+				App.DaemonToSubsys(subsys);
+				pexe = get_daemon_param(pli->addr.c_str(), subsys.c_str());
 			}
 		}
 

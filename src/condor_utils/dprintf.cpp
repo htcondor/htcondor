@@ -686,11 +686,12 @@ static time_t _condor_dprintf_gettime(DebugHeaderInfo &info, unsigned int hdr_fl
 	#if defined WIN32
 		// Windows8 has GetSystemTimePreciseAsFileTime which returns sub-microsecond system times.
 		static bool check_for_precise = false;
-		void (WINAPI*get_precise_time)(unsigned long long * ft) = NULL;
-		BOOLEAN (WINAPI* time_to_1970)(unsigned long long * ft, unsigned long * epoch_time);
+		static void (WINAPI*get_precise_time)(unsigned long long * ft) = NULL;
+		static BOOLEAN (WINAPI* time_to_1970)(unsigned long long * ft, unsigned long * epoch_time);
 		if ( ! check_for_precise) {
 			*(FARPROC*)&get_precise_time = GetProcAddress(GetModuleHandle("Kernel32.dll"), "GetSystemTimePreciseAsFileTime");
 			*(FARPROC*)&time_to_1970 = GetProcAddress(GetModuleHandle("ntdll.dll"), "RtlTimeToSecondsSince1970");
+			check_for_precise = true;
 		}
 		unsigned long long nanos = 0;
 		if (get_precise_time) {
@@ -1568,11 +1569,11 @@ _condor_fd_panic( int line, const char* file )
 		(void)close( i );
 	}
 
-	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+	it = DebugLogs->begin();
+	if (it != DebugLogs->end())
 	{
 		filePath = (*it).logPath;
 		fileExists = true;
-		break;
 	}
 	if( fileExists ) {
 		debug_file_ptr = safe_fopen_wrapper_follow(filePath.c_str(), "a", 0644);
@@ -2250,36 +2251,52 @@ dprintf_dump_stack(void) {
 #endif // HAVE_BACKTRACE
 
 #else // !WIN32
+// LockFd and DebugRotateLog are values that a clone child will modify,
+// but we must ensure the values in the parent process are preserved
+// after the child exec()s or exits.
 static int ParentLockFd = -1;
+static bool ParentDebugRotateLog = true;
 
 void
 dprintf_before_shared_mem_clone() {
 	ParentLockFd = LockFd;
+	ParentDebugRotateLog = DebugRotateLog;
 }
 
 void
 dprintf_after_shared_mem_clone() {
 	LockFd = ParentLockFd;
+	DebugRotateLog = ParentDebugRotateLog;
 }
 
 void
-dprintf_init_fork_child( ) {
+dprintf_init_fork_child( bool cloned ) {
 	if( LockFd >= 0 ) {
 		close( LockFd );
 		LockFd = -1;
 	}
+	// Avoid opening or closing files while in a cloned child process,
+	// since we're sharing the parent's memory but have our own copy of
+	// of the file descriptors. The LockFd is an exception, for which
+	// we have extra handling code.
+	// For forked child processes, don't do log rotation and reopen the
+	// log file on every dprintf(). That avoids a race between parent
+	// and child that can result in the parent writing to a rotated log
+	// file.
 	DebugRotateLog = false;
-	log_keep_open = 0;
-	std::vector<DebugFileInfo>::iterator it;
-	for ( it = DebugLogs->begin(); it < DebugLogs->end(); it++ ) {
-		if ( it->outputTarget == FILE_OUT ) {
-			debug_unlock_it(&(*it));
+	if ( !cloned ) {
+		log_keep_open = 0;
+		std::vector<DebugFileInfo>::iterator it;
+		for ( it = DebugLogs->begin(); it < DebugLogs->end(); it++ ) {
+			if ( it->outputTarget == FILE_OUT ) {
+				debug_unlock_it(&(*it));
+			}
 		}
 	}
 }
 
 void
-dprintf_wrapup_fork_child( ) {
+dprintf_wrapup_fork_child( bool /* cloned */ ) {
 		/* Child pledges not to call dprintf any more, so it is
 		   safe to close the lock file.  If parent closes all
 		   fds anyway, then this is redundant.
@@ -2288,6 +2305,11 @@ dprintf_wrapup_fork_child( ) {
 		close( LockFd );
 		LockFd = -1;
 	}
+	// We don't need to restore the original values of DebugRotateLog or
+	// log_keep_open here. In a forked child, the memory isn't shared
+	// with the parent. For a cloned child, log_keep_open wasn't changed
+	// and the parent will restore DebugRotateLog immediately after the
+	// child exec()s or exits.
 }
 
 #if HAVE_BACKTRACE

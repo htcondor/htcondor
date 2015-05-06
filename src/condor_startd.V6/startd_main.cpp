@@ -150,6 +150,9 @@ main_init( int, char* argv[] )
 			if( !(ptr && *ptr) ) {
                 EXCEPT( "-n requires another arugment" );
             }
+			if (Name) {
+				free(Name);
+			}
             Name = build_valid_daemon_name( *ptr );
             dprintf( D_ALWAYS, "Using name: %s\n", Name );
             break;
@@ -278,7 +281,7 @@ main_init( int, char* argv[] )
 								  (CommandHandler)command_query_ads,
 								  "command_query_ads", 0, READ );
 
-		// WRITE permission commands
+		// DAEMON permission commands
 	daemonCore->Register_Command( ACTIVATE_CLAIM, "ACTIVATE_CLAIM",
 								  (CommandHandler)command_activate_claim,
 								  "command_activate_claim", 0, DAEMON );

@@ -33,7 +33,7 @@ use Check::CondorLog;
 use Time::Local;
 use Cwd;
 
-my $test_name = "job_test_log_rotaion";
+my $test_name = "job_test_log_rotation";
 CondorTest::RunTest($test_name);
 
 my $killconfig = $ARGV[0];
@@ -42,24 +42,39 @@ my $localconfigsave = "condor_config.local.save";
 my $configlocation = "";
 my $top = getcwd();
 
+my $debuglevel = 1;
 if(defined $killconfig) {
 	print "Test running in found configuration.........\n";
 	system("condor_config_val -config");
 	SaveLocalConfig();
 }
 
+CondorTest::DebugLevel(2);
+
 my $ClusterId = 0;
 my $expect_return = 0;
 
 if(!(defined $killconfig)) {
-	my $firstappend_condor_config = '
-		DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-		WANT_SUSPEND = FALSE
-		NEGOTIATION_INTERVAL = 10
-		MAX_WRITELOG_LOG = 50 Kb
-		WRITELOG_LOG = $(log)/WriteLogLog
-		WRITELOG_DEBUG = D_ALWAYS
-	';
+	if(CondorUtils::is_windows()) {
+		my $firstappend_condor_config = '
+			DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+			WANT_SUSPEND = FALSE
+			NEGOTIATION_INTERVAL = 5
+			MAX_WRITELOG_LOG = 20 Kb
+			WRITELOG_LOG = $(log)/WriteLogLog
+			WRITELOG_DEBUG = D_ALWAYS
+			LOG_OPEN_DEFAULT = FALSE
+		';
+	} else {
+		my $firstappend_condor_config = '
+			DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+			WANT_SUSPEND = FALSE
+			NEGOTIATION_INTERVAL = 5
+			MAX_WRITELOG_LOG = 20 Kb
+			WRITELOG_LOG = $(log)/WriteLogLog
+			WRITELOG_DEBUG = D_ALWAYS
+		';
+	}
 
 	$configfile1 = CondorTest::CreateLocalConfig($firstappend_condor_config,"testlogrotation1");
 
@@ -72,13 +87,13 @@ if(!(defined $killconfig)) {
 	$result = SimpleJob::RunCheck(); # jobid 1
 } else {
 	my $test1 = '
-		MAX_WRITELOG_LOG = 50 Kb
+		MAX_WRITELOG_LOG = 20 Kb
 		WRITELOG_LOG = $(log)/WriteLogLog
 		WRITELOG_DEBUG = D_ALWAYS
 	';
 	AppendLocalConfig($test1);
 
-	print "************ Size based test 50 kb, default log count: WriteLogLog\n";
+	print "************ Size based test 20 kb, default log count: WriteLogLog\n";
 }
 
 my $return = "";
@@ -98,15 +113,18 @@ chomp($LogLocation);
 chdir("$LogLocation");
 
 @adarray = ();
-# 75 long
-runCondorTool("condor_testwritelog -c 2000 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
+# 75 long * 410 = 30 kb
+runCondorTool("condor_testwritelog -c 410 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
 my $logsstring = GetLogsString($LogLocation,"WriteLogLog");
 # pass logs oldest to newest
-my $result = ValidateLogs($logsstring,51200, 0, 2000, $LogLocation);
+
+CondorTest::debug("About to call ValidateLogs:\n",$debuglevel);
+
+my $result = ValidateLogs($logsstring,20480, 0, 2000, $LogLocation);
 RegisterResult($result, "test_name", $test_name);
 chdir("$top");
 
-print "Test default log rotation with 50 Kb size constraint: ";
+print "Test default log rotation with 20 Kb size constraint: ";
 if($result == 1) {
 	print "OK\n";
 	if(defined $killconfig) {
@@ -120,15 +138,26 @@ if($result == 1) {
 }
 
 if(!(defined $killconfig)) {
-	my $secondappend_condor_config = '
-		DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-		WANT_SUSPEND = FALSE
-		NEGOTIATION_INTERVAL = 10
-		MAX_WRITELOG_LOG = 2 Mb
-		WRITELOG_LOG = $(log)/WriteLogLog
-		WRITELOG_DEBUG = D_ALWAYS
-		MAX_NUM_WRITELOG_LOG = 4
-	';
+	if(CondorUtils::is_windows()) {
+		my $secondappend_condor_config = '
+			DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+			WANT_SUSPEND = FALSE
+			NEGOTIATION_INTERVAL = 5
+			MAX_WRITELOG_LOG = 20 Kb
+			WRITELOG_LOG = $(log)/WriteLogLog
+			WRITELOG_DEBUG = D_ALWAYS
+			LOG_OPEN_DEFAULT = FALSE
+		';
+	} else {
+		my $secondappend_condor_config = '
+			DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+			WANT_SUSPEND = FALSE
+			NEGOTIATION_INTERVAL = 5
+			MAX_WRITELOG_LOG = 20 Kb
+			WRITELOG_LOG = $(log)/WriteLogLog
+			WRITELOG_DEBUG = D_ALWAYS
+		';
+	}
 
 	$configfile2 = CondorTest::CreateLocalConfig($secondappend_condor_config,"testlogrotation2");
 
@@ -157,14 +186,16 @@ chomp($LogLocation);
 chdir("$LogLocation");
 
 @adarray = ();
-runCondorTool("condor_testwritelog -c 112000 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
+# 75 long * 955 = 70 kb
+runCondorTool("condor_testwritelog -c 955 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
 $logsstring = GetLogsString($LogLocation,"WriteLogLog");
 # pass logs oldest to newest
-$result = ValidateLogs($logsstring, 2097152, 0, 112000, $LogLocation);
+CondorTest::debug("About to call ValidateLogs:\n",$debuglevel);
+$result = ValidateLogs($logsstring, 20480, 0, 112000, $LogLocation);
 RegisterResult($result, "test_name", $test_name);
 chdir("$top");
 
-print "Test multifile log rotation with 50 Kb size constraint: ";
+print "Test multifile log rotation with 20 Kb size constraint: ";
 if($result == 1) {
 	print "OK\n";
 	if(defined $killconfig) {
@@ -178,14 +209,26 @@ if($result == 1) {
 }
 
 if(!(defined $killconfig)) {
-	my $thirdappend_condor_config = '
-		DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-		WANT_SUSPEND = FALSE
-		NEGOTIATION_INTERVAL = 10
-		MAX_WRITELOG_LOG = 60 Sec
-		WRITELOG_LOG = $(log)/WriteLogLog
-		WRITELOG_DEBUG = D_ALWAYS
-	';
+	if(CondorUtils::is_windows()) {
+		my $thirdappend_condor_config = '
+			DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+			WANT_SUSPEND = FALSE
+			NEGOTIATION_INTERVAL = 5
+			MAX_WRITELOG_LOG = 20 Kb
+			WRITELOG_LOG = $(log)/WriteLogLog
+			WRITELOG_DEBUG = D_ALWAYS
+			LOG_OPEN_DEFAULT = FALSE
+		';
+	} else {
+		my $thirdappend_condor_config = '
+			DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+			WANT_SUSPEND = FALSE
+			NEGOTIATION_INTERVAL = 5
+			MAX_WRITELOG_LOG = 20 Kb
+			WRITELOG_LOG = $(log)/WriteLogLog
+			WRITELOG_DEBUG = D_ALWAYS
+		';
+	}
 
 	$configfile3 = CondorTest::CreateLocalConfig($thirdappend_condor_config,"testlogrotation3");
 
@@ -199,7 +242,7 @@ if(!(defined $killconfig)) {
 	$result = SimpleJob::RunCheck(); # jobid 1
 } else {
 	my $test3 = '
-		MAX_WRITELOG_LOG = 60 Sec
+		MAX_WRITELOG_LOG = 20 Sec
 		MAX_NUM_WRITELOG_LOG = 1
 	';
 
@@ -215,14 +258,15 @@ chomp($LogLocation);
 chdir("$LogLocation");
 
 @adarray = ();
-runCondorTool("condor_testwritelog -s 1 -c 300  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
+runCondorTool("condor_testwritelog -s 1 -c 80  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
 $logsstring = GetLogsString($LogLocation,"WriteLogLog");
 # pass logs oldest to newest
-$result = ValidateLogs($logsstring, 0, 60, 300, $LogLocation);
+CondorTest::debug("About to call ValidateLogs:\n",$debuglevel);
+$result = ValidateLogs($logsstring, 0, 20, 300, $LogLocation);
 RegisterResult($result, "test_name", $test_name);
 chdir("$top");
 
-print "Test time based log rotation with 60 Sec time constraint: ";
+print "Test time based log rotation with 20 Sec time constraint: ";
 if($result == 1) {
 	print "OK\n";
 	if(defined $killconfig) {
@@ -236,15 +280,26 @@ if($result == 1) {
 }
 
 if(!(defined $killconfig)) {
-	my $forthappend_condor_config = '
-		DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-		WANT_SUSPEND = FALSE
-		NEGOTIATION_INTERVAL = 10
-		MAX_WRITELOG_LOG = 60 Sec
-		WRITELOG_LOG = $(log)/WriteLogLog
-		WRITELOG_DEBUG = D_ALWAYS
-		MAX_NUM_WRITELOG_LOG = 2
-	';
+	if(CondorUtils::is_windows()) {
+		my $forthappend_condor_config = '
+			DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+			WANT_SUSPEND = FALSE
+			NEGOTIATION_INTERVAL = 5
+			MAX_WRITELOG_LOG = 20 Kb
+			WRITELOG_LOG = $(log)/WriteLogLog
+			WRITELOG_DEBUG = D_ALWAYS
+			LOG_OPEN_DEFAULT = FALSE
+		';
+	} else {
+		my $forthappend_condor_config = '
+			DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+			WANT_SUSPEND = FALSE
+			NEGOTIATION_INTERVAL = 5
+			MAX_WRITELOG_LOG = 20 Kb
+			WRITELOG_LOG = $(log)/WriteLogLog
+			WRITELOG_DEBUG = D_ALWAYS
+		';
+	}
 
 	$configfile4 = CondorTest::CreateLocalConfig($forthappend_condor_config,"testlogrotation4");
 
@@ -273,14 +328,17 @@ chomp($LogLocation);
 chdir("$LogLocation");
 
 @adarray = ();
-runCondorTool("condor_testwritelog -s 1 -c 300  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
+CondorTest::debug("calling condor_testwritelog -s 1 -c 80 xxxxx\n",$debuglevel);
+runCondorTool("condor_testwritelog -s 1 -c 80  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
+CondorTest::debug("Back Froom condor_testwritelog -s 1 -c 80 xxxxx\n",$debuglevel);
 # pass logs oldest to newest
 my $logsstring = GetLogsString($LogLocation,"WriteLogLog");
-$result = ValidateLogs($logsstring, 0, 60, 300, $LogLocation);
+CondorTest::debug("About to call ValidateLogs:\n",$debuglevel);
+$result = ValidateLogs($logsstring, 0, 20, 300, $LogLocation);
 RegisterResult($result, "test_name", $test_name);
 chdir("$top");
 
-print "Test time based log rotation with 60 Sec time constraint and multiple files: ";
+print "Test time based log rotation with 20 Sec time constraint and multiple files: ";
 if($result == 1) {
 	print "OK\n";
 	if(defined $killconfig) {
@@ -318,7 +376,7 @@ sub SaveLocalConfig
 	}
 	chdir("$configlocation");
 	runcmd("cp $localconfig $localconfigsave",{emit_output=>0});
-	runcmd("ls",{emit_output=>0});
+	#runcmd("ls",{emit_output=>0});
 
 	#print "Leaving SaveLocalConfig configlocation: $configlocation, top:$top\n";
 	#print "Configfile location is: $configlocation\n";
@@ -351,7 +409,7 @@ sub RestoreLocalConfig
 	chdir("$configlocation");
 	runcmd("cp $localconfig condor_config.test",{emit_output=>0});
 	runcmd("cp $localconfigsave $localconfig",{emit_output=>0});
-	runcmd("ls",{emit_output=>1});
+	#runcmd("ls",{emit_output=>1});
 
 	print "Config restore complete\n";
 	chdir("$top");
@@ -364,6 +422,35 @@ sub leave
 	die $diemessage;
 }
 
+sub GetFilesByPattern
+{
+	my $pattern = shift;
+	my $resarrayref = shift;
+	my $location = shift;
+	my $cwd = getcwd();
+	my $count = 0;
+	if(defined $location) {
+		chdir("$location");
+	}
+
+	print "GetFilesByPattern:$pattern\n";
+	opendir(GD,".") or die "failed to open .:$!\n";
+	foreach my $subfile (readdir GD) {
+		next if $subfile =~ /^\.\.?$/;
+		if($subfile =~/$pattern\..*/) {
+			push @{$resarrayref}, $subfile;
+			print "GetFilesByPattern:$subfile match pattern:$pattern\n";
+			$count += 1;
+		}
+	}
+	close(GD);
+	if(defined $location) {
+		chdir("cwd");
+	}
+	print "Files found:$count\n";
+	return($count);
+}
+
 sub GetLogsString
 {
 	my $loglocation = shift;
@@ -372,10 +459,30 @@ sub GetLogsString
 	my @sortedpatterns = ();
 	my @reversepatterns =  ();
 	my $sorteddstring = "";
+	my $size = 0;
+	my $count = 0;
+	my $string = "";
+	my $matches = 0;
 
-	#print "Check pattern: $pattern from here: ";
-	system("pwd;ls");
-	@patterns = `ls $pattern.*`;
+	print "Check pattern: $pattern from here: ";
+	#DirLs();
+	#@patterns = `ls $pattern.*`;
+	$matches = GetFilesByPattern($pattern,\@patterns);
+	$size = @patterns;
+	print "There are $size matching patterns\n";
+	while($count < $size)
+	{
+		# remove possible white space
+		$string = $patterns[$count];
+		print "Consider:$string\n";
+
+		#if($string =~ /\s*(.*?)\s*/) {
+			#$patterns[$count] = $1;
+			#print "Changed to :$1:\n";
+		#}
+		$count += 1;
+	}
+
 	@sortedpatterns = sort @patterns;
 	print "Sorted logs:\n";
 	foreach my $target (@sortedpatterns) {
@@ -424,7 +531,8 @@ sub ValidateLogs
 	my $timecheck = 0;
 	my $logcount = 0;
 
-	#print "ValidateLogs: Log Location: $loglocation\n";
+	CondorTest::debug("ValidateLogs:$logs  Log Location: $loglocation\n",$debuglevel);
+	CondorTest::debug("ValidateLogs:size:$size times:$times iters:$iters",$debuglevel);
 
 	chdir("$loglocation");
 	#print "here now:\n";
@@ -442,11 +550,14 @@ sub ValidateLogs
 		}
 	}
 	# next check even flow of numbers as we travel through ordered list of log files
+	
+	CondorTest::debug("Calling:LogSequenceCheck\n",$debuglevel);
 	$seqresult = LogSequenceCheck($logs);
+	CondorTest::debug("BACK From Calling:LogSequenceCheck\n",$debuglevel);
 
 	CondorTest::RegisterResult($seqresult, "test_name", $test_name);
 
-	print "Sequene validation of:$logs: ";
+	CondorTest::debug("Sequence validation of:$logs: ",$debuglevel);
 	if($seqresult == 1) {
 		print "OK\n";
 	} else {
@@ -456,15 +567,19 @@ sub ValidateLogs
 	# check approximate size or age of file
 	if($size != 0) {
 		$sizechk = 1;
+		CondorTest::debug("LogSizeCheck\n",$debuglevel);
 		$result = LogSizeCheck($logs, $size, $logcount);
 	}
 	if($times != 0) {
 		$timecheck = 1;
+		CondorTest::debug("LogTimeCheck\n",$debuglevel);
 		$result = LogTimeCheck($logs, $times, $logcount);
 	}
+
+	CondorTest::debug( "Back to validate\n",$debuglevel);
 	if($sizechk or $timecheck) {
 	} else {
-		print "Either a size or time test needs to be requested\n";
+		CondorTest::debug("Either a size or time test needs to be requested\n",$debuglevel);
 		chdir($top);
 		return($result);
 	}
@@ -484,11 +599,17 @@ sub LogSequenceCheck
 	my $res = 1;
 	my $lastseq = 0;
 	my $line = "";
+	CondorTest::debug("LogSequenceCheck: Start logs:$logs\n",$debuglevel);
 	foreach my $logfile (@logs) {
+
+		CondorTest::debug("LogSequenceCheck: open to check:$logfile\n",$debuglevel);
 		open(SC,"<$logfile") or leave( "Sequence check on validated log: $logfile failed:$!\n");
 		while (<SC>) {
 			chomp($_);
 			$line = $_;
+			if($line =~ /hostname/) {
+				next;
+			}
 			if(defined $wpattern) {
 				if($line =~ /^.*?$wpattern,(\d+),.*$/) {
 					#print "$1\n";
@@ -520,6 +641,7 @@ sub LogSequenceCheck
 			}
 		}
 	}
+	CondorTest::debug("LogSequenceCheck: retun result:$res\n",$debuglevel);
 	return($res);
 }
 
@@ -532,21 +654,29 @@ sub LogSizeCheck
 	my $res = 1;
 	my $count = 0;
 	my $filesize = 0;
+	my $upper = ($size + 1024);
+	my $lower = ($size + 1024);
+	CondorTest::debug("LogSizeCheck: logs:$logs size:$size logcount:$logcount\n",$debuglevel);
 	while($count < ($logcount - 1)) {
 		$filesize = -s $logs[$count];
+		CondorTest::debug("Looping in Size Check:$count of $logcount\n",$debuglevel);
 		# lets bracket the size
 		if($filesize < ($size + 1024)) {
+			CondorTest::debug("<",$debuglevel);
+			
 		} else {
 			print "Log: $logs[$count] size: $filesize > ($size + 1024)\n";
 			return(0);
 		}
 		if($filesize > ($size - 1024)) {
+			CondorTest::debug(">",$debuglevel);
 		} else {
 			print "Log: $logs[$count] size: $filesize < ($size - 1024)\n";
 			return(0);
 		}
 		$count += 1;
 	}
+	CondorTest::debug("LogSizeCheck: leaving:$res\n",$debuglevel);
 	return($res);
 }
 
@@ -562,7 +692,9 @@ sub LogTimeCheck
 	my $EndTime = 0;
 	my $TimeDiff = 0;
 	my $line = "";
+	CondorTest::debug("LogSizeCheck: leaving:$res\n",$debuglevel);
 	while($count < ($logcount - 1)) {
+		CondorTest::debug("Looping in Size Check:$count of $logcount\n",$debuglevel);
 		$StartTime = 0;
 		$EndTime = 0;
 		open(LL,"<@logs[$count]") or leave( "Failed to open @logs[$count]:$!\n");
@@ -574,9 +706,9 @@ sub LogTimeCheck
 				#print "$1\n";
 				#$StartTime = parsedate("$1");
 				if($StartTime == 0) {
-					$StartTime = timelocal($6,$5,$4,$2,$1,$3);
+					$StartTime = timelocal($6,$5,$4,$2,($1 - 1),$3);
 				} else {
-					$EndTime = timelocal($6,$5,$4,$2,$1,$3);
+					$EndTime = timelocal($6,$5,$4,$2,($1 - 1),$3);
 				}
 			}
 		}
@@ -586,11 +718,13 @@ sub LogTimeCheck
 		#print "---$EndTime---\n";
 		#print "Diff = $TimeDiff\n";
 		if($TimeDiff < ($time + 4)) {
+			CondorTest::debug("<",$debuglevel);
 		} else {
 			print "Log: $logs[$count] time: $TimeDiff > ($time + 4)\n";
 			return(0);
 		}
 		if($TimeDiff > ($time - 4)) {
+			CondorTest::debug(">",$debuglevel);
 		} else {
 			print "Log: $logs[$count] time: $TimeDiff < ($time - 4)\n";
 			return(0);

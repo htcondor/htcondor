@@ -51,7 +51,7 @@ my $GetClusterId = sub {
 
 my $submit = sub {
 	my %info = @_;
-	my $cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\n\" ClusterId";
+	my $cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\\n\" ClusterId";
 
 	print "Running cmd $cmd - ";
 	my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
@@ -70,7 +70,7 @@ my $submit = sub {
 
 	print "Looking for owner of cluster - ";
 	foreach my $line (@adarray) {
-		chomp($line);
+		fullchomp($line);
 		CondorTest::debug("$line\n",$debuglevel);
 		if($line =~ /^\s*([\w\-]+)\s+ClusterId\s+=\s+$ClusterId.*$/) {
 				CondorTest::debug("Bingo: found <$line> shows I am $1\n",$debuglevel);

@@ -64,6 +64,8 @@ class VanillaProc : public OsProc
 public:
 	VanillaProc(ClassAd* jobAd);
 
+	virtual ~VanillaProc();
+
 		/** call OsProc::StartJob(), make a new ProcFamily with new
 			process as head. */
 	virtual int StartJob();
@@ -78,6 +80,8 @@ public:
 
 		/** Cass family->resume() */
 	virtual void Continue();
+
+	virtual bool Ckpt();
 
 		/** Take a family snapshot, call OsProc::ShutDownGraceful() */
 	virtual bool ShutdownGraceful();
@@ -102,6 +106,11 @@ public:
 
 	bool finishShutdownFast();
 
+protected:
+
+	virtual int outputOpenFlags();
+	virtual int streamingOpenFlags( bool isOutput );
+
 private:
 		/// Final usage stats for this proc and all its children.
 	ProcFamilyUsage m_final_usage;
@@ -116,13 +125,18 @@ private:
 	// Configure OOM killer for this job
 	int m_memory_limit; // Memory limit, in MB.
 	int m_oom_fd; // The file descriptor which recieves events
-	int m_oom_efd; // The event FD to watch
+	int m_oom_efd; // The event FD "pipe" to watch
+	int m_oom_efd2; // The other end of m_oom_efd.
 	int setupOOMScore(int new_score);
+	void cleanupOOM();
 	int outOfMemoryEvent(int fd);
 	int setupOOMEvent(const std::string & cgroup_string);
 
-	std::string m_pid_ns_init_filename;
+	std::string m_pid_ns_status_filename;
+	int pidNameSpaceReaper( int status );
 
+	bool isCheckpointing;
+	bool isSoftKilling;
 };
 
 #endif

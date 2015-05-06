@@ -337,5 +337,116 @@ requires the successful shut down of the virtual machine,
 it is good advice to try the shut down procedure outside of
 HTCondor, before a \SubmitCmdNI{vm} universe job is submitted.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:vm-ftl}Failures to Launch}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{vm universe!ftl}
+
+It is not uncommon for a \SubmitCmdNI{vm} universe job to fail to launch
+because of a problem with the execute machine.  In these cases, HTCondor
+will reschedule the job and note, in its user event log (if requested),
+the reason for the failure and that the job will be rescheduled.  The
+reason is unlikely to be directly useful to you as an HTCondor user, but
+may help your HTCondor administrator understand the problem.
+
+If the VM fails to launch for other reasons, the job will be placed on hold
+and the reason placed in the job ClassAd's \Attr{HoldReason} attribute.
+The following table may help in understanding such reasons.
+
+\begin{verbatim}
+VMGAHP_ERR_JOBCLASSAD_NO_VM_MEMORY_PARAM
+
+    The attribute JobVMMemory was not set in the job ad sent to the
+VM GAHP.  HTCondor will usually prevent you from submitting a VM universe job
+without JobVMMemory set.  Examine your job and verify that JobVMMemory is set.
+If it is, please contact your administrator.
+
+VMGAHP_ERR_JOBCLASSAD_NO_VMWARE_VMX_PARAM
+
+    The attribute VMPARAM_VMware_Dir was not set in the job ad sent to the
+VM GAHP.  HTCondor will usually set this attribute when you submit a valid
+VMWare job (it is derived from vmware_dir).  If you used condor_submit to
+submit this job, contact your administrator.  Otherwise, examine your job
+and verify that VMPARAM_VMware_Dir is set.  If it is, contact your
+administrator.
+
+VMGAHP_ERR_JOBCLASSAD_KVM_NO_DISK_PARAM
+
+    The attribute VMPARAM_vm_Disk was not set in the job ad sent to the
+VM GAHP.  HTCondor will usually set this attribute when you submit a valid
+KVM job (it is derived from vm_disk).  Examine your job and verify that
+VMPARAM_vm_Disk is set.  If it is, please contact your administrator.
+
+VMGAHP_ERR_JOBCLASSAD_KVM_INVALID_DISK_PARAM
+
+    The attribute vm_disk was invalid.  Please consult the manual,
+or the condor_submit man page, for information about the syntax of
+vm_disk.  A syntactically correct value may be invalid if the
+on-disk permissions of a file specified in it do not match the requested
+permissions.  Presently, files not transferred to the root of the working
+directory must be specified with full paths.
+
+VMGAHP_ERR_JOBCLASSAD_KVM_MISMATCHED_CHECKPOINT
+
+    KVM jobs can not presently checkpoint if any of their disk files are not
+on a shared filesystem.  Files on a shared filesystem must be specified in
+vm_disk with full paths.
+
+VMGAHP_ERR_JOBCLASSAD_XEN_NO_KERNEL_PARAM
+
+    The attribute VMPARAM_Xen_Kernel was not set in the job ad sent to the
+VM GAHP.  HTCondor will usually set this attribute when you submit a valid
+Xen job (it is derived from xen_kernel).  Examine your job and verify that
+VMPARAM_Xen_Kernel is set.  If it is, please contact your administrator.
+
+VMGAHP_ERR_JOBCLASSAD_MISMATCHED_HARDWARE_VT
+
+    Don't use 'vmx' as the name of your kernel image.  Pick something else and
+change xen_kernel to match.
+
+VMGAHP_ERR_JOBCLASSAD_XEN_KERNEL_NOT_FOUND
+
+    HTCondor could not read from the file specified by xen_kernel.
+Check the path and the file's permissions.  If it's on a shared filesystem,
+you may need to alter your job's requirements expression to ensure the
+filesystem's availability.
+
+VMGAHP_ERR_JOBCLASSAD_XEN_INITRD_NOT_FOUND
+
+    HTCondor could not read from the file specified by xen_initrd.
+Check the path and the file's permissions.  If it's on a shared filesystem,
+you may need to alter your job's requirements expression to ensure the
+filesystem's availability.
+
+VMGAHP_ERR_JOBCLASSAD_XEN_NO_ROOT_DEVICE_PARAM
+
+    The attribute VMPARAM_Xen_Root was not set in the job ad sent to the
+VM GAHP.  HTCondor will usually set this attribute when you submit a valid
+Xen job (it is derived from xen_root).  Examine your job and verify that
+VMPARAM_Xen_Root is set.  If it is, please contact your administrator.
+
+VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM
+
+    The attribute VMPARAM_vm_Disk was not set in the job ad sent to the
+VM GAHP.  HTCondor will usually set this attribute when you submit a valid
+Xen job (it is derived from vm_disk).  Examine your job and verify that
+VMPARAM_vm_Disk is set.  If it is, please contact your administrator.
+
+VMGAHP_ERR_JOBCLASSAD_XEN_INVALID_DISK_PARAM
+
+    The attribute vm_disk was invalid.  Please consult the manual,
+or the condor_submit man page, for information about the syntax of
+vm_disk.  A syntactically correct value may be invalid if the
+on-disk permissions of a file specified in it do not match the requested
+permissions.  Presently, files not transferred to the root of the working
+directory must be specified with full paths.
+
+VMGAHP_ERR_JOBCLASSAD_XEN_MISMATCHED_CHECKPOINT
+
+    Xen jobs can not presently checkpoint if any of their disk files are not
+on a shared filesystem.  Files on a shared filesystem must be specified in
+vm_disk with full paths.
+
+\end{verbatim}
 
 \index{virtual machine universe|)}

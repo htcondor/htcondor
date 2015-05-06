@@ -678,7 +678,7 @@ protected:
 		  the <subsys>_NAME parameter is set in the config file, we
 		  use that, and pass it to build_valid_daemon_name() to make
 		  sure we have a fully-qualified hostname.  If not, we just
-		  use my_full_hostname().  The string we return is newly
+		  use get_local_fqdn().  The string we return is newly
 		  allocated and should be deallocated with delete []. 
 		  */
 	char* localName( void );

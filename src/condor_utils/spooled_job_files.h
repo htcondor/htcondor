@@ -37,7 +37,7 @@ public:
 		   need per-job directories (it has checkpoint files of the same
 		   name and path as the per-job directories).
 		 */
-	static bool createJobSpoolDirectory(ClassAd const *job_ad,priv_state desired_priv_state );
+	static bool createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_state );
 
 		/* Like createJobSpoolDirectory, but just create the directories
 		 * as condor and do not chown them.
@@ -47,23 +47,23 @@ public:
 		/* Like createJobSpoolDirectory, but just create the .swap directory.
 		 * Assumes the other (parent) directories have already been created.
 		 */
-	static bool createJobSwapSpoolDirectory(ClassAd const *job_ad,priv_state desired_priv_state );
+	static bool createJobSwapSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_state );
 
 		/* Create the shared spool directories but not the actual
 		 * per-job directories.
 		 */
-	static bool createParentSpoolDirectories(ClassAd const *job_ad);
+	static bool createParentSpoolDirectories(classad::ClassAd const *job_ad);
 
 		/* Remove the spool directory belonging to a job.
 		 * Also removes the .tmp and .swap directories.
 		 * This also removes the shared proc directory from the
 		 * hierarchy if possible.
 		 */
-	static void removeJobSpoolDirectory( ClassAd * ad);
+	static void removeJobSpoolDirectory( classad::ClassAd * ad);
 
 		/* Remove the .swap spool directory belonging to a job.
 		 */
-	static void removeJobSwapSpoolDirectory( ClassAd * ad);
+	static void removeJobSwapSpoolDirectory( classad::ClassAd * ad);
 
 		/* Remove files spooled for a job cluster.
 		 * This also removes the shared cluster directory from the
@@ -74,11 +74,11 @@ public:
 		/* Restore ownership of spool directory to condor after job ran.
 		   Returns true on success.
 		 */
-	static bool chownSpoolDirectoryToCondor(ClassAd const *job_ad);
+	static bool chownSpoolDirectoryToCondor(classad::ClassAd const *job_ad);
 
 		/* Returns true if this job requires a spool directory.
 		 */
-	static bool jobRequiresSpoolDirectory(ClassAd const *job_ad);
+	static bool jobRequiresSpoolDirectory(classad::ClassAd const *job_ad);
 };
 
 /* Given the location of the SPOOL directory and a job id, return the
@@ -97,6 +97,6 @@ char *gen_ckpt_name ( char const *dir, int cluster, int proc, int subproc );
  * Otherwise, the filename is constructed from the Cmd and Iwd attributes
  * in the job ad. Existence of this file isn't checked.
  */
-void GetJobExecutable( const ClassAd *job_ad, std::string &executable );
+void GetJobExecutable( const classad::ClassAd *job_ad, std::string &executable );
 
 #endif

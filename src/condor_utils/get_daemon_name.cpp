@@ -98,8 +98,8 @@ get_daemon_name( const char* name )
 // Given some name, create a valid name for ourself with our full
 // hostname.  If the name contains an '@', leave it alone.  If there's
 // no '@', try to resolve what we have and see if it's
-// my_full_hostname.  If so, use it, otherwise, use
-// name@my_full_hostname().  We return the answer in a string which
+// get_local_fqdn().Value.  If so, use it, otherwise, use
+// name@get_local_fqdn().Value().  We return the answer in a string which
 // should be deallocated w/ delete [].
 char*
 build_valid_daemon_name( const char* name ) 
@@ -108,8 +108,8 @@ build_valid_daemon_name( const char* name )
 	int size;
 
 		// This flag determines if we want to just return a copy of
-		// my_full_hostname(), or if we want to append
-		// "@my_full_hostname" to the name we were given.  The name we
+		// get_local_fqdn().Value(), or if we want to append
+		// "@get_local_fqdn().Value" to the name we were given.  The name we
 		// were given might include an '@', in which case, we leave it
 		// alone.
 	bool just_host = false;
@@ -139,14 +139,14 @@ build_valid_daemon_name( const char* name )
 	}
 
 	if( just_host ) {
-		daemon_name = strnewp( my_full_hostname() );
+		daemon_name = strnewp( get_local_fqdn().Value() );
 	} else {
 		if( just_name ) {
 			daemon_name = strnewp( name );
 		} else {
-			size = strlen(tmpname) + strlen(my_full_hostname()) + 2; 
+			size = strlen(tmpname) + get_local_fqdn().length() + 2; 
 			daemon_name = new char[size];
-			sprintf( daemon_name, "%s@%s", tmpname, my_full_hostname() ); 
+			sprintf( daemon_name, "%s@%s", tmpname, get_local_fqdn().Value() ); 
 		}
 	}
 	delete [] tmpname;
@@ -164,29 +164,28 @@ char*
 default_daemon_name( void )
 {
 	if( is_root() ) {
-		return strnewp( my_full_hostname() );
+		return strnewp( get_local_fqdn().Value() );
 	}
 #ifndef WIN32
 	if( getuid() == get_real_condor_uid() ) {
-		return strnewp( my_full_hostname() );
+		return strnewp( get_local_fqdn().Value() );
 	}
 #endif /* ! LOSE32 */
 	char* name = my_username();
 	if( ! name ) {
 		return NULL;
 	}
-	const char* host = my_full_hostname();
-	if( ! host ) {
+	if( get_local_fqdn().length() == 0) {
 		free( name );
 		return NULL;
 	}
-	int size = strlen(name) + strlen(host) + 2;
+	int size = strlen(name) + get_local_fqdn().length() + 2;
 	char* ans = new char[size];
 	if( ! ans ) {
 		free( name );
 		return NULL;
 	}
-	sprintf( ans, "%s@%s", name, host );
+	sprintf( ans, "%s@%s", name, get_local_fqdn().Value() );
 	free(name);
 	return ans;
 }

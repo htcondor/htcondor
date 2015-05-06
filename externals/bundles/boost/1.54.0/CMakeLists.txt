@@ -23,15 +23,8 @@ condor_pre_external( BOOST boost-1.54.0 "lib;boost" "done")
 if(BOOST_DOWNLOAD_WIN)
   set (BOOST_CONFIGURE echo "Nothing to configure")
 	set (BOOST_MAKE echo "No make necessary")
-  set (BOOST_INSTALL tar -pczf boost.tar.gz boost/ && tar -zxvf boost.tar.gz -C "${BOOST_INSTALL_LOC}/boost/" && cp *.lib ${BOOST_INSTALL_LOC}/lib && touch ${BOOST_INSTALL_LOC}/done)
-#  if(MSVC11)
-#    if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-#      set(BOOST_DOWNLOAD ${BOOST_VER}-VC11-Win64.tar.gz)
-#    else()
-#      set(BOOST_FILENAME ${BOOST_VER}-VC11-Win32.tar.gz)
-#    endif()
-#  endif()
-  
+  set (BOOST_INSTALL tar -pczf boost.tar.gz boost/ && tar -zxvf boost.tar.gz -C "${BOOST_INSTALL_LOC}/boost/" && cp *.lib ${BOOST_INSTALL_LOC}/lib && cp *.dll ${BOOST_INSTALL_LOC}/lib && touch ${BOOST_INSTALL_LOC}/done)
+ 
   ExternalProject_Add(boost
     #-- Download Step ----------
     DOWNLOAD_DIR ${BOOST_STAGE}/dl
@@ -57,9 +50,14 @@ if (BOOST_VER)
 	set( BOOST_LD ${BOOST_LD} PARENT_SCOPE )
 	
 	if (Boost_PYTHON_LIBRARY)
-        set( Boost_PYTHON_LIBRARY ${Boost_PYTHON_LIBRARY} PARENT_SCOPE )
-        dprint("Found Python Library: ${Boost_PYTHON_LIBRARY} ")
-    endif()
+    set( Boost_PYTHON_LIBRARY ${Boost_PYTHON_LIBRARY} PARENT_SCOPE )
+    dprint("Found Python Library: ${Boost_PYTHON_LIBRARY} ")
+  endif()
+
+  # Set the target dependencies which the rest of condor depends on.
+  if (WINDOWS)
+    install ( FILES ${BOOST_INSTALL_LOC}/lib/boost_python-vc110-mt-1_54.dll DESTINATION ${C_LIB} )
+  endif()
 	
 else(BOOST_VER)
 	message (WARNING "**boost not found **, unit tests will NOT be built.")

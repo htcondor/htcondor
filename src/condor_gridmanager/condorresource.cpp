@@ -252,6 +252,22 @@ void CondorResource::UnregisterJob( BaseJob *base_job )
 	BaseResource::UnregisterJob( job );
 }
 
+// Return true if the given error message from the gahp indicates that
+// the remote schedd isn't working. Authentication or authorization
+// failures don't count.
+bool CondorResource::GahpErrorResourceDown( const char *errmsg )
+{
+	if ( errmsg == NULL ) {
+		return false;
+	}
+	if ( strstr( errmsg, "Failed to connect to" ) ||
+		 strstr( errmsg, "Error locating schedd" ) ) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 void CondorResource::DoScheddPoll()
 {
 	int rc;
@@ -453,10 +469,13 @@ dprintf(D_FULLDEBUG,"*** DoPing called\n");
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		ping_complete = false;
-	} else if ( rc != 0 ) 
-	{
+	} else if ( rc != 0 ) {
 		ping_complete = true;
-		ping_succeeded = false;
+		if ( GahpErrorResourceDown( ping_gahp->getErrorString() ) ) {
+			ping_succeeded = false;
+		} else {
+			ping_succeeded = true;
+		}
 	} else {
 		ping_complete = true;
 		ping_succeeded = true;

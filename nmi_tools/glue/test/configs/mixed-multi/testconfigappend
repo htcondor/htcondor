@@ -1,0 +1,7 @@
+#
+# Test HTCondor in mixed multiple-address mode.
+#
+ENABLE_IPV4 = TRUE
+ENABLE_IPV6 = TRUE
+NETWORK_INTERFACE = *
+BIND_ALL_INTERFACES = TRUE

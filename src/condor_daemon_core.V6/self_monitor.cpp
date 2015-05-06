@@ -226,6 +226,22 @@ void DaemonCore::Stats::Init(bool enable)
    extern stats_entry_probe<double> condor_fsync_runtime;
    Pool.AddProbe("DCfsync", &condor_fsync_runtime, "DCfsync", IF_VERBOSEPUB | IF_RT_SUM);
 
+#if 1
+   //PRAGMA_REMIND("temporarily!! publish recent windowed values for DNS lookup runtime...")
+   extern stats_entry_recent<Probe> getaddrinfo_runtime; // count & runtime of all lookups, success and fail
+   extern stats_entry_recent<Probe> getaddrinfo_fast_runtime; // count & runtime of successful lookups that were faster than getaddrinfo_slow_limit
+   extern stats_entry_recent<Probe> getaddrinfo_slow_runtime; // count & runtime of successful lookups that were slower than getaddrinfo_slow_limit
+   extern stats_entry_recent<Probe> getaddrinfo_fail_runtime; // count & runtime of failed lookups
+   //extern double getaddrinfo_slow_limit;
+   //#define GAI_TAG "DNSLookup"
+   #define GAI_TAG "NameResolve"
+   const int pub_flags = ProbeDetailMode_RT_SUM | stats_entry_recent<Probe>::PubValueAndRecent;
+   Pool.AddProbe("DC" GAI_TAG,        &getaddrinfo_runtime,      NULL, IF_VERBOSEPUB | pub_flags);
+   Pool.AddProbe("DC" GAI_TAG "Fast", &getaddrinfo_fast_runtime, NULL, IF_VERBOSEPUB | pub_flags);
+   Pool.AddProbe("DC" GAI_TAG "Slow", &getaddrinfo_slow_runtime, NULL, IF_VERBOSEPUB | pub_flags);
+   Pool.AddProbe("DC" GAI_TAG "Fail", &getaddrinfo_fail_runtime, NULL, IF_VERBOSEPUB | pub_flags);
+   #undef GAI_TAG
+#else
    extern stats_entry_probe<double> getaddrinfo_runtime; // count & runtime of all lookups, success and fail
    extern stats_entry_probe<double> getaddrinfo_fast_runtime; // count & runtime of successful lookups that were faster than getaddrinfo_slow_limit
    extern stats_entry_probe<double> getaddrinfo_slow_runtime; // count & runtime of successful lookups that were slower than getaddrinfo_slow_limit
@@ -238,7 +254,7 @@ void DaemonCore::Stats::Init(bool enable)
    Pool.AddProbe("DC" GAI_TAG "Slow", &getaddrinfo_slow_runtime, "DC" GAI_TAG "Slow", IF_VERBOSEPUB | IF_RT_SUM);
    Pool.AddProbe("DC" GAI_TAG "Fail", &getaddrinfo_fail_runtime, "DC" GAI_TAG "Fail", IF_VERBOSEPUB | IF_RT_SUM);
    #undef GAI_TAG
-
+#endif
 
    // Insert additional publish entries for the XXXDebug values
    //
@@ -420,7 +436,7 @@ void DaemonCore::Stats::AddToSumEmaRate(const char * name, int val) {
 
 double DaemonCore::Stats::AddRuntime(const char * name, double before)
 {
-   double now = UtcTime::getTimeDouble();
+   double now = _condor_debug_get_time_double();
    if ( ! this->enabled) return now;
    stats_entry_probe<double> * probe = Pool.GetProbe< stats_entry_probe<double> >(name);
    if (probe)
@@ -459,7 +475,7 @@ double DaemonCore::Stats::AddRuntime(const char * name, double before)
 {
    if ( ! this->enabled) return;
 
-   double now = UtcTime::getTimeDouble();
+   double now = _condor_debug_get_time_double();
    stats_recent_counter_timer * probe = Pool.GetProbe<stats_recent_counter_timer>(name);
    if (probe)
       probe->Add(now - before);
@@ -622,13 +638,13 @@ dc_stats_auto_runtime_probe::dc_stats_auto_runtime_probe(const char * name, int 
        }
    }
    if (this->probe)
-       this->begin = UtcTime::getTimeDouble();
+       this->begin = _condor_debug_get_time_double();
 }
 
 dc_stats_auto_runtime_probe::~dc_stats_auto_runtime_probe()
 {
    if (this->probe) {
-      double now = UtcTime::getTimeDouble();
+      double now = _condor_debug_get_time_double();
       this->probe->Add(now - this->begin);
    }
 }

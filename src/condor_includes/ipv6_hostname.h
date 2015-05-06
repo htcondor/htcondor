@@ -24,9 +24,9 @@
 #include <vector>
 #include "condor_sockaddr.h"
 
-void init_local_hostname();
+void reset_local_hostname();
 
-condor_sockaddr get_local_ipaddr();
+condor_sockaddr get_local_ipaddr(condor_protocol proto);
 MyString get_local_hostname();
 MyString get_local_fqdn();
 

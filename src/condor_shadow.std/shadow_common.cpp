@@ -50,6 +50,8 @@
 #include "job_report.h"
 #include "condor_claimid_parser.h"
 
+#include "condor_sockfunc.h"
+
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
 #endif
@@ -756,6 +758,37 @@ InitJobAd(int cluster, int proc)
 }
 
 int
+directConnectToSockAddr( const condor_sockaddr & sa ) {
+	int fd = socket( sa.get_aftype(), SOCK_STREAM, 0 );
+	CONDOR_ASSERT( fd != -1 );
+
+	int on = 1;
+	int rv = setsockopt( fd, SOL_SOCKET, SO_KEEPALIVE, (const char *) &on, sizeof( on ) );
+	assert( rv == 0 );
+
+	rv = _condor_local_bind( TRUE, fd );
+	if( rv != TRUE ) {
+		dprintf( D_ALWAYS, "_condor_local_bind() failed with %d, errno = %d\n", rv, errno );
+		close( fd );
+		return -1;
+	}
+
+	rv = condor_connect( fd, sa );
+	if( rv != 0 ) {
+		dprintf( D_ALWAYS, "condor_connect() failed with %d, errno = %d\n", rv, errno );
+		close( fd );
+		return -1;
+	}
+
+	return fd;
+}
+
+#define PSJ_RETURN_FAILURE \
+  reason = JOB_NOT_STARTED; \
+  delete sock; \
+  return -1;
+
+int
 part_send_job(
 	      int test_starter,
 	      char *host,
@@ -783,7 +816,7 @@ part_send_job(
 	  Daemon startd(DT_STARTD, host, NULL);
 	  if (!(sock = (ReliSock*)startd.startCommand ( ACTIVATE_CLAIM, Stream::reli_sock, 90))) {
 		  dprintf( D_ALWAYS, "startCommand(ACTIVATE_CLAIM) to startd failed\n");
-		  goto returnfailure;
+		  PSJ_RETURN_FAILURE;
 	  }
 
 		  // Send the capability
@@ -791,7 +824,7 @@ part_send_job(
 	  dprintf(D_FULLDEBUG, "send capability %s\n", idp.publicClaimId() );
 	  if( !sock->put_secret(capability) ) {
 		  dprintf( D_ALWAYS, "sock->put(\"%s\") failed\n",idp.publicClaimId());
-		  goto returnfailure;
+		  PSJ_RETURN_FAILURE;
 	  }
 
 	  // Send the starter number
@@ -802,25 +835,25 @@ part_send_job(
 	  }
 	  if( !sock->code(test_starter) ) {
 		  dprintf( D_ALWAYS, "sock->code(%d) failed\n", test_starter );
-		  goto returnfailure;
+		  PSJ_RETURN_FAILURE;
 	  }
 
 		  // Send the job info 
 	  if( !putClassAd(sock, *JobAd) ) {
 		  dprintf( D_ALWAYS, "failed to send job ad\n" );
-		  goto returnfailure;
+		  PSJ_RETURN_FAILURE;
 	  }	
 
 	  if( !sock->end_of_message() ) {
 		  dprintf( D_ALWAYS, "failed to send message to startd\n" );
-		  goto returnfailure;
+		  PSJ_RETURN_FAILURE;
 	  }
 
 		  // We're done sending.  Now, get the reply.
 	  sock->decode();
 	  if( !sock->code(reply) || !sock->end_of_message() ) {
 		  dprintf( D_ALWAYS, "failed to receive reply from startd\n" );
-		  goto returnfailure;
+		  PSJ_RETURN_FAILURE;
 	  }
 	  
 	  switch( reply ) {
@@ -831,7 +864,7 @@ part_send_job(
 
 	  case NOT_OK:
 		  dprintf( D_ALWAYS, "Shadow: Request to run a job was REFUSED\n");
-		  goto returnfailure;
+		  PSJ_RETURN_FAILURE;
 		  break;
 
 	  case CONDOR_TRY_AGAIN:
@@ -840,7 +873,7 @@ part_send_job(
 				   "Shadow: Request to run a job was TEMPORARILY REFUSED\n" );
 		  if( num_retries > 20 ) {
 			  dprintf( D_ALWAYS, "Shadow: Too many retries, giving up.\n" );
-			  goto returnfailure;
+			  PSJ_RETURN_FAILURE;
 		  }			  
 		  delete sock;
 		  dprintf( D_ALWAYS,
@@ -851,7 +884,7 @@ part_send_job(
 	  default:
 		  dprintf(D_ALWAYS,"Unknown reply from startd for command ACTIVATE_CLAIM\n");
 		  dprintf(D_ALWAYS,"Shadow: Request to run a job was REFUSED\n");
-		  goto returnfailure;
+		  PSJ_RETURN_FAILURE;
 		  break;
 	  }
   }
@@ -861,7 +894,7 @@ part_send_job(
   memset( &stRec, '\0', sizeof(stRec) );
   if( !sock->code(stRec) || !sock->end_of_message() ) {
 	  dprintf(D_ALWAYS, "Can't read reply from startd.\n");
-	  goto returnfailure;
+	  PSJ_RETURN_FAILURE;
   }
   ports = stRec.ports;
   if( stRec.ip_addr ) {
@@ -883,7 +916,7 @@ part_send_job(
   if( ports.port1 == 0 ) {
     dprintf( D_ALWAYS, "Shadow: Request to run a job on %s was REFUSED\n",
 	     host );
-	goto returnfailure;
+	PSJ_RETURN_FAILURE;
   }
   /* end  flock ; dhruba */
 
@@ -896,19 +929,20 @@ part_send_job(
 	  // grab the IP address from the ReliSock, since we konw the
 	  // startd always uses the same IP address for all of its
 	  // communication.
-  char sinfulstring[SINFUL_STRING_BUF_SIZE];
 
-  generate_sinful(sinfulstring, SINFUL_STRING_BUF_SIZE, sock->peer_ip_str(), ports.port1);
-  if( (sd1 = do_connect(sinfulstring, (char *)0, (u_short)ports.port1)) < 0 ) {
-    dprintf( D_ALWAYS, "failed to connect to scheduler on %s\n", sinfulstring );
-	goto returnfailure;
+  condor_sockaddr peerSA = sock->peer_addr();
+
+  condor_sockaddr port1SA = peerSA; port1SA.set_port( (unsigned short)ports.port1 );
+  if( (sd1 = directConnectToSockAddr( port1SA )) < 0 ) {
+    dprintf( D_ALWAYS, "failed to connect to startd on %s\n", port1SA.to_sinful().c_str() );
+    PSJ_RETURN_FAILURE;
   }
 
-  generate_sinful(sinfulstring, SINFUL_STRING_BUF_SIZE, sock->peer_ip_str(), ports.port2);
-  if( (sd2 = do_connect(sinfulstring, (char *)0, (u_short)ports.port2)) < 0 ) {
-    dprintf( D_ALWAYS, "failed to connect to scheduler on %s\n", sinfulstring );
-	close(sd1);
-	goto returnfailure;
+  condor_sockaddr port2SA = peerSA; port2SA.set_port( (unsigned short)ports.port2 );
+  if( (sd2 = directConnectToSockAddr( port2SA )) < 0 ) {
+    dprintf( D_ALWAYS, "failed to connect to startd on %s\n", port2SA.to_sinful().c_str() );
+    close( sd1 );
+    PSJ_RETURN_FAILURE;
   }
 
   delete sock;
@@ -919,11 +953,6 @@ part_send_job(
   }
 
   return 0;
-
-returnfailure:
-  reason = JOB_NOT_STARTED;
-  delete sock;
-  return -1;
 }
 
 

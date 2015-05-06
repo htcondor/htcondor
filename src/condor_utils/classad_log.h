@@ -46,54 +46,93 @@
 #include "log.h"
 #include "classad_hashtable.h"
 #include "log_transaction.h"
-
-
-typedef HashTable <HashKey, ClassAd *> ClassAdHashTable;
+#include "stopwatch.h"
 
 extern const char *EMPTY_CLASSAD_TYPE_NAME;
 
-class ClassAdLogFilterIterator;
-ClassAdLogFilterIterator BeginIterator(const classad::ExprTree &requirements, int timeslice_ms);
-ClassAdLogFilterIterator EndIterator();
-
-class ClassAdLogFilterIterator : std::iterator<std::input_iterator_tag, ClassAd* >
+// This class is used to abstract creation and destruction of 
+// members of he ClassAdLog hashtable so that types derived from ClassAd
+// but that that are not known to this header file can be used. 
+template <typename AD>
+class ConstructClassAdLogTableEntry : public ConstructLogEntry
 {
 public:
-	ClassAdLogFilterIterator(const ClassAdLogFilterIterator &other);
-
-	~ClassAdLogFilterIterator() {}
-
-	ClassAd* operator *() const;
-
-	ClassAd* operator ->() const;
-
-	ClassAdLogFilterIterator operator++();
-	ClassAdLogFilterIterator operator++(int);
-
-	bool operator==(const ClassAdLogFilterIterator &rhs);
-	bool operator!=(const ClassAdLogFilterIterator &rhs) {return !(*this == rhs);}
-
-private:
-	friend ClassAdLogFilterIterator BeginIterator(const classad::ExprTree &requirements, int timeslice_ms);
-	friend ClassAdLogFilterIterator EndIterator();
-
-	ClassAdLogFilterIterator(ClassAdHashTable *table, const classad::ExprTree *requirements, int timeslice_ms, bool invalid=false);
-
-	ClassAdHashTable *m_table;
-	HashIterator<HashKey, ClassAd *> m_cur;
-	bool m_found_ad;
-	const classad::ExprTree *m_requirements;
-	int m_timeslice_ms;
-	int m_done;
+	virtual ClassAd* New() const { return new AD(); }
+	virtual void Delete(ClassAd*& val) const { delete val; }
 };
 
+template <>
+class ConstructClassAdLogTableEntry<ClassAd*> : public ConstructLogEntry
+{
+public:
+	ConstructClassAdLogTableEntry() {}
+	virtual ClassAd* New() const { return new ClassAd(); }
+	virtual void Delete(ClassAd*& val) const { delete val; }
+};
+
+// declare a default ClassAdLog table entry maker for the normal case
+// when the log holds ClassAd's and not some derived type.
+#ifdef WIN32
+// windows (or probably not-using-shared-libaries?) requires this to be declared here and not externed.
+const ConstructClassAdLogTableEntry<ClassAd*> DefaultMakeClassAdLogTableEntry;
+#else
+// g++ (or using-shared-libaries?) requires this to be declared in a .cpp file and extern'ed here.
+extern const ConstructClassAdLogTableEntry<ClassAd*> DefaultMakeClassAdLogTableEntry;
+#endif
+
+template <typename K, typename AltK, typename AD>
 class ClassAdLog {
 public:
-	typedef ClassAdLogFilterIterator filter_iterator;
 
-	ClassAdLog();
-	ClassAdLog(const char *filename,int max_historical_logs=0);
+	ClassAdLog(const ConstructLogEntry* pc=NULL);
+	ClassAdLog(const char *filename,int max_historical_logs=0,const ConstructLogEntry* pc=NULL);
 	~ClassAdLog();
+
+	// define an stl type iterator, but one that can filter based on a requirements expression
+	class filter_iterator : std::iterator<std::input_iterator_tag, AD> {
+		private:
+			HashTable<K,AD> *m_table;
+			HashIterator<K,AD> m_cur;
+			bool m_found_ad;
+			const classad::ExprTree *m_requirements;
+			int m_timeslice_ms;
+			int m_done;
+
+		public:
+			filter_iterator(ClassAdLog<K,AltK,AD> &log, const classad::ExprTree *requirements, int timeslice_ms, bool invalid=false)
+				: m_table(&log.table)
+				, m_cur(log.table.begin())
+				, m_found_ad(false)
+				, m_requirements(requirements)
+				, m_timeslice_ms(timeslice_ms)
+				, m_done(invalid) {}
+			filter_iterator(const filter_iterator &other)
+				: m_table(other.m_table)
+				, m_cur(other.m_cur)
+				, m_found_ad(other.m_found_ad)
+				, m_requirements(other.m_requirements)
+				, m_timeslice_ms(other.m_timeslice_ms)
+				, m_done(other.m_done) {}
+
+			~filter_iterator() {}
+			AD operator *() const {
+				if (m_done || (m_cur == m_table->end()) || !m_found_ad)
+					return NULL;
+				return (*m_cur).second;
+			}
+			AD operator ->() const;
+			filter_iterator operator++();
+			filter_iterator operator++(int);
+			bool operator==(const filter_iterator &rhs) {
+				if (m_table != rhs.m_table) return false;
+				if (m_done && rhs.m_done) return true;
+				if (m_done != rhs.m_done) return false;
+				if (!(m_cur == rhs.m_cur) ) return false;
+				return true;
+			}
+			bool operator!=(const filter_iterator &rhs) {return !(*this == rhs);}
+	};
+
 
 	void AppendLog(LogRecord *log);	// perform a log operation
 	bool TruncLog();				// clean log file on disk
@@ -129,25 +168,31 @@ public:
 		// This means doing both a flush and fsync.
 	void ForceLog();
 
-	bool AdExistsInTableOrTransaction(const char *key);
+	bool AdExistsInTableOrTransaction(const K& key);
 
 	// returns 1 and sets val if corresponding SetAttribute found
 	// returns 0 if no SetAttribute found
 	// return -1 if DeleteAttribute or DestroyClassAd found
-	int LookupInTransaction(const char *key, const char *name, char *&val);
+	int LookupInTransaction(AltK key, const char *name, char *&val);
 
 	// insert into the given ad any attributes found in the uncommitted transaction
 	// cache that match the key.  return true if any attributes were
 	// added into the ad, false if not.
-	bool AddAttrsFromTransaction(const char *key, ClassAd &ad);
+	bool AddAttrsFromTransaction(AltK key, ClassAd &ad);
 
-	ClassAdHashTable table;
+	HashTable<K,AD> table;
+
+	// user-replacable helper class for creating and destroying values for the hashtable
+	// this allows a user of the classad log to put a class derived from ClassAd in the hashtable
+	// without the ClassAdLog code needing to know all about it.
+	const ConstructLogEntry * make_table_entry;
+	const ConstructLogEntry& GetTableEntryMaker() { if (make_table_entry) return *make_table_entry; return DefaultMakeClassAdLogTableEntry; }
 
 	// When the log is truncated (i.e. compacted), old logs
 	// may be saved, up to some limit.  The default is not
 	// to save any history (max = 0).
-	void SetMaxHistoricalLogs(int max);
-	int GetMaxHistoricalLogs();
+	void SetMaxHistoricalLogs(int max) { this->max_historical_logs = max; }
+	int GetMaxHistoricalLogs() { return max_historical_logs; }
 
 	time_t GetOrigLogBirthdate() {return m_original_log_birthdate;}
 
@@ -172,7 +217,7 @@ protected:
 	*/
 	bool setActiveTransaction(Transaction* & transaction);
 
-	int ExamineTransaction(const char *key, const char *name, char *&val, ClassAd* &ad);
+	int ExamineTransaction(AltK key, const char *name, char *&val, ClassAd* &ad);
 
 
 private:
@@ -189,6 +234,7 @@ private:
 
 	bool SaveHistoricalLogs();
 };
+
 
 class LogHistoricalSequenceNumber : public LogRecord {
 public:
@@ -209,11 +255,56 @@ private:
 					  // regardless of how many times the log has rotated
 };
 
+// this class is the interface that is consumed by classes in this file that are derived from LogRecord
+class LoggableClassAdTable {
+public:
+	virtual ~LoggableClassAdTable() {};
+	virtual bool lookup(const char * key, ClassAd*& ad) = 0;
+	virtual bool remove(const char * key) = 0;
+	virtual bool insert(const char * key, ClassAd* ad) = 0;
+	virtual void startIterations() = 0; // begin iterations
+	virtual bool nextIteration(const char*& key, ClassAd*&ad) = 0;
+protected:
+	LoggableClassAdTable() {};
+};
+
+// This is the implementation of the LoggableClassAdTable interface that makes the ClassAdLog's hashtable
+// accessiable to the LogRecord classes without requiring them to know about the ClassAdLog.
+// Instances of this class are constructed and passed to the Transaction methods and to the Play() method
+// of the LogRecord classes.
+template <typename K, typename AD>
+class ClassAdLogTable : public LoggableClassAdTable {
+public:
+	ClassAdLogTable(HashTable<K,AD> & _table) : table(_table) {}
+	virtual ~ClassAdLogTable() {};
+	virtual bool lookup(const char * key, ClassAd*& ad) { AD Ad; int iret = table.lookup(K(key), Ad); ad=Ad; return iret >= 0; }
+	virtual bool remove(const char * key) { return table.remove(K(key)) >= 0; }
+	virtual bool insert(const char * key, ClassAd * ad) { int iret = table.insert(K(key), AD(ad)); return iret >= 0; }
+	virtual void startIterations() { table.startIterations(); } // begin iterations
+	virtual bool nextIteration(const char*& key, ClassAd*&ad) {
+		K k; AD Ad;
+		int iret = table.iterate(k, Ad);
+		if (iret != 1) {
+			key = NULL;
+			ad = NULL;
+			return false;
+		}
+		k.sprint(current_key);
+		key = current_key.Value();
+		ad = Ad;
+		return true;
+	}
+protected:
+	HashTable<K,AD> & table;
+	MyString current_key; // used during iteration
+};
+
+
 class LogNewClassAd : public LogRecord {
 public:
-	LogNewClassAd(const char *key, const char *mytype, const char *targettype);
+	LogNewClassAd(const char *key, const char *mytype, const char *targettype, const ConstructLogEntry & ctor_in = DefaultMakeClassAdLogTableEntry);
 	virtual ~LogNewClassAd();
-	int Play(void *data_structure);
+	int Play(void * data_structure); // data_structure should be of type LoggableClassAdTable *
 	virtual char const *get_key() { return key; }
 	char const *get_mytype() { return mytype; }
 	char const *get_targettype() { return targettype; }
@@ -222,6 +313,7 @@ private:
 	virtual int WriteBody(FILE *fp);
 	virtual int ReadBody(FILE* fp);
 
+	const ConstructLogEntry & ctor;
 	char *key;
 	char *mytype;
 	char *targettype;
@@ -230,15 +322,16 @@ private:
 
 class LogDestroyClassAd : public LogRecord {
 public:
-	LogDestroyClassAd(const char *key);
+	LogDestroyClassAd(const char *key, const ConstructLogEntry & ctor_in = DefaultMakeClassAdLogTableEntry);
 	virtual ~LogDestroyClassAd();
-	int Play(void *data_structure);
+	int Play(void *data_structure); // data_structure should be of type LoggableClassAdTable *
 	virtual char const *get_key() { return key; }
 
 private:
 	virtual int WriteBody(FILE* fp) { int r=fwrite(key, sizeof(char), strlen(key), fp); return r < ((int)strlen(key)) ? -1 : r;}
 	virtual int ReadBody(FILE* fp);
 
+	const ConstructLogEntry & ctor;
 	char *key;
 };
 
@@ -247,7 +340,7 @@ class LogSetAttribute : public LogRecord {
 public:
 	LogSetAttribute(const char *key, const char *name, const char *value, const bool dirty=false);
 	virtual ~LogSetAttribute();
-	int Play(void *data_structure);
+	int Play(void *data_structure); // data_structure should be of type LoggableClassAdTable *
 	virtual char const *get_key() { return key; }
 	char const *get_name() { return name; }
 	char const *get_value() { return value; }
@@ -268,7 +361,7 @@ class LogDeleteAttribute : public LogRecord {
 public:
 	LogDeleteAttribute(const char *key, const char *name);
 	virtual ~LogDeleteAttribute();
-	int Play(void *data_structure);
+	int Play(void *data_structure); // data_structure should be of type LoggableClassAdTable *
 	virtual char const *get_key() { return key; }
 	char const *get_name() { return name; }
 
@@ -285,7 +378,7 @@ public:
 	LogBeginTransaction() { op_type = CondorLogOp_BeginTransaction; }
 	virtual ~LogBeginTransaction(){};
 
-	int Play(void *data_structure);
+	int Play(void *data_structure); // data_structure should be of type LoggableClassAdTable *
 private:
 
 	virtual int WriteBody(FILE* /*fp*/) {return 0;}
@@ -299,7 +392,7 @@ public:
 	LogEndTransaction() { op_type = CondorLogOp_EndTransaction; }
 	virtual ~LogEndTransaction(){};
 
-	int Play(void *data_structure);
+	int Play(void *data_structure); // data_structure should be of type LoggableClassAdTable *
 private:
 	virtual int WriteBody(FILE* /*fp*/) {return 0;}
 	virtual int ReadBody(FILE* fp);
@@ -307,6 +400,417 @@ private:
 	virtual char const *get_key() {return NULL;}
 };
 
-LogRecord* InstantiateLogEntry(FILE* fp, unsigned long recnum, int type);
+// These are non-templated helper functions that do most of the work of the classad log
+// they make it possible for the ClassAdLog to work with types that are not known
+// to this header file. (this works via the LoggableClassAdTable & ConstructLogEntry helper classes)
+//
+bool TruncateClassAdLog(
+	const char * filename,          // in
+	LoggableClassAdTable & la,      // in
+	const ConstructLogEntry& maker, // in
+	FILE* &log_fp,                  // in,out
+	unsigned long & historical_sequence_number, // in,out
+	time_t & m_original_log_birthdate, // in,out
+	MyString & errmsg);             // out
+
+bool WriteClassAdLogState(
+	FILE *fp,                       // in
+	const char * filename,          // in: used for error messages
+	unsigned long sequence_number,  // in
+	time_t original_log_birthdate,  // in
+	LoggableClassAdTable & la,      // in
+	const ConstructLogEntry& maker, // in
+	MyString & errmsg);             // out
+
+FILE* LoadClassAdLog(
+	const char *filename,           // in
+	LoggableClassAdTable & table,   // in
+	const ConstructLogEntry& maker, // in
+	unsigned long & historical_sequence_number, // in,out
+	time_t & m_original_log_birthdate, // in,out
+	bool & is_clean,  // out: true if log was shutdown cleanly
+	bool & requires_successful_cleaning, // out: true if log must be cleaned (i.e rotated) before it can be written to again.
+	MyString & errmsg);             // out, contains error or warning messages
+
+int FlushClassAdLog(FILE* fp, bool force);
+
+bool SaveHistoricalClassAdLogs(
+	const char * filename,
+	const unsigned long max_historical_logs,
+	const unsigned long historical_sequence_number);
+
+int ExamineLogTransaction(
+	Transaction* active_transaction,
+	const ConstructLogEntry& maker, // in
+	const char * key,
+	const char *name,
+	char *&val,
+	ClassAd* &ad);
+
+bool AddAttrsFromLogTransaction(
+	Transaction* active_transaction,
+	const ConstructLogEntry& maker, // in
+	const char * key,
+	ClassAd &ad);
+
+LogRecord* InstantiateLogEntry(
+	FILE* fp,
+	unsigned long recnum,
+	int type,
+	const ConstructLogEntry & ctor);
+
+// Templated member functions that call the helper functions with the correct arguments.
+//
+#define CLASSAD_LOG_HASHTABLE_SIZE 20000
+
+template <typename K, typename AltK, typename AD>
+ClassAdLog<K,AltK,AD>::ClassAdLog(const char *filename,int max_historical_logs_arg,const ConstructLogEntry* maker)
+	: table(CLASSAD_LOG_HASHTABLE_SIZE, K::hash)
+	, make_table_entry(maker)
+{
+	log_filename_buf = filename;
+	active_transaction = NULL;
+	m_nondurable_level = 0;
+
+	bool open_read_only = max_historical_logs_arg < 0;
+	if (open_read_only) { max_historical_logs_arg = -max_historical_logs_arg; }
+	this->max_historical_logs = max_historical_logs_arg;
+
+	bool is_clean = true;
+	bool requires_successful_cleaning = false;
+	MyString errmsg;
+
+	ClassAdLogTable<K,AD> la(table); // this gives the ability to add & remove table items.
+
+	log_fp = LoadClassAdLog(filename,
+		la, this->GetTableEntryMaker(),
+		historical_sequence_number, m_original_log_birthdate,
+		is_clean, requires_successful_cleaning, errmsg);
+
+	if ( ! log_fp) {
+		EXCEPT("%s", errmsg.Value());
+	} else if ( ! errmsg.empty()) {
+		dprintf(D_ALWAYS, "ClassAdLog %s has the following issues: %s\n", filename, errmsg.Value());
+	}
+	if( !is_clean || requires_successful_cleaning ) {
+		if (open_read_only && requires_successful_cleaning) {
+			EXCEPT("Log %s is corrupt and needs to be cleaned before restarting HTCondor", filename);
+		}
+		else if( !TruncLog() && requires_successful_cleaning ) {
+			EXCEPT("Failed to rotate ClassAd log %s.", filename);
+		}
+	}
+}
+
+template <typename K, typename AltK, typename AD>
+ClassAdLog<K,AltK,AD>::ClassAdLog(const ConstructLogEntry* maker)
+	: table(CLASSAD_LOG_HASHTABLE_SIZE, K::hash)
+	, make_table_entry(maker)
+{
+	active_transaction = NULL;
+	log_fp = NULL;
+	m_nondurable_level = 0;
+	max_historical_logs = 0;
+	historical_sequence_number = 0;
+}
+
+template <typename K, typename AltK, typename AD>
+ClassAdLog<K,AltK,AD>::~ClassAdLog()
+{
+	if (active_transaction) delete active_transaction;
+
+	// cache the effective table entry maker for use in the loop.
+	const ConstructLogEntry & dtor = this->GetTableEntryMaker();
+
+	// HashTable class will not delete the ClassAd pointers we have
+	// inserted, so we delete them here...
+	table.startIterations();
+	AD ad;
+	K key;
+	while (table.iterate(key, ad) == 1) {
+		ClassAd * cad = ad;
+		dtor.Delete(cad);
+	}
+	// if we have an allocated table entry maker, delete it now.
+	if (make_table_entry && make_table_entry != &DefaultMakeClassAdLogTableEntry) {
+		delete make_table_entry;
+		make_table_entry = NULL;
+	}
+}
+
+template <typename K, typename AltK, typename AD>
+void
+ClassAdLog<K,AltK,AD>::AppendLog(LogRecord *log)
+{
+	if (active_transaction) {
+		if (active_transaction->EmptyTransaction()) {
+			LogBeginTransaction *l = new LogBeginTransaction;
+			active_transaction->AppendLog(l);
+		}
+		active_transaction->AppendLog(log);
+	} else {
+			//MD: using file pointer
+		if (log_fp!=NULL) {
+			if (log->Write(log_fp) < 0) {
+				EXCEPT("write to %s failed, errno = %d", logFilename(), errno);
+			}
+			if( m_nondurable_level == 0 ) {
+				ForceLog();  // flush and fsync
+			}
+		}
+		ClassAdLogTable<K,AD> la(table);
+		log->Play((void *)&la);
+		delete log;
+	}
+}
+
+template <typename K, typename AltK, typename AD>
+void
+ClassAdLog<K,AltK,AD>::FlushLog()
+{
+	int err = FlushClassAdLog(log_fp, false);
+	if (err) {
+		EXCEPT("flush to %s failed, errno = %d", logFilename(), err);
+	}
+}
+
+template <typename K, typename AltK, typename AD>
+void
+ClassAdLog<K,AltK,AD>::ForceLog()
+{
+	// Force log changes to disk.  This involves first flushing
+	// the log from memory buffers, then fsyncing to disk.
+	int err = FlushClassAdLog(log_fp, true);
+	if (err) {
+		EXCEPT("fsync of %s failed, errno = %d", logFilename(), err);
+	}
+}
+
+template <typename K, typename AltK, typename AD>
+bool
+ClassAdLog<K,AltK,AD>::SaveHistoricalLogs()
+{
+	return SaveHistoricalClassAdLogs(logFilename(), max_historical_logs, historical_sequence_number);
+}
+
+template <typename K, typename AltK, typename AD>
+bool
+ClassAdLog<K,AltK,AD>::TruncLog()
+{
+	dprintf(D_ALWAYS,"About to rotate ClassAd log %s\n",logFilename());
+
+	if(!SaveHistoricalLogs()) {
+		dprintf(D_ALWAYS,"Skipping log rotation, because saving of historical log failed for %s.\n",logFilename());
+		return false;
+	}
+
+	MyString errmsg;
+	ClassAdLogTable<K,AD> la(table); // this gives the ability to add & remove table items.
+	bool rotated = TruncateClassAdLog(logFilename(),
+		la, this->GetTableEntryMaker(),
+		log_fp, historical_sequence_number, m_original_log_birthdate,
+		errmsg);
+	if ( ! log_fp) {
+		// if after rotation, the log is no longer open, the the failure is fatal, and we must except
+		EXCEPT("%s", errmsg.Value());
+	}
+	if ( ! errmsg.empty()) {
+		dprintf(D_ALWAYS, "%s", errmsg.Value());
+	}
+
+	return rotated;
+}
+
+template <typename K, typename AltK, typename AD>
+void
+ClassAdLog<K,AltK,AD>::LogState(FILE *fp)
+{
+	MyString errmsg;
+	ClassAdLogTable<K,AD> la(table); // this gives the ability to add & remove table items.
+	bool success = WriteClassAdLogState(fp, logFilename(),
+		historical_sequence_number, m_original_log_birthdate,
+		la, this->GetTableEntryMaker(),
+		errmsg);
+	if (! success) {
+		EXCEPT("%s", errmsg.Value());
+	}
+}
+
+// Transaction methods
+template <typename K, typename AltK, typename AD>
+int
+ClassAdLog<K,AltK,AD>::IncNondurableCommitLevel()
+{
+	return m_nondurable_level++;
+}
+
+template <typename K, typename AltK, typename AD>
+void
+ClassAdLog<K,AltK,AD>::DecNondurableCommitLevel(int old_level)
+{
+	if( --m_nondurable_level != old_level ) {
+		EXCEPT("ClassAdLog::DecNondurableCommitLevel(%d) with existing level %d",
+			   old_level, m_nondurable_level+1);
+	}
+}
+
+template <typename K, typename AltK, typename AD>
+void
+ClassAdLog<K,AltK,AD>::BeginTransaction()
+{
+	ASSERT(!active_transaction);
+	active_transaction = new Transaction();
+}
+
+template <typename K, typename AltK, typename AD>
+bool
+ClassAdLog<K,AltK,AD>::AbortTransaction()
+{
+	// Sometimes we do an AbortTransaction() when we don't know if there was
+	// an active transaction.  This is allowed.
+	if (active_transaction) {
+		delete active_transaction;
+		active_transaction = NULL;
+		return true;
+	}
+	return false;
+}
+
+template <typename K, typename AltK, typename AD>
+void
+ClassAdLog<K,AltK,AD>::CommitTransaction()
+{
+	// Sometimes we do a CommitTransaction() when we don't know if there was
+	// an active transaction.  This is allowed.
+	if (!active_transaction) return;
+	if (!active_transaction->EmptyTransaction()) {
+		LogEndTransaction *log = new LogEndTransaction;
+		active_transaction->AppendLog(log);
+		bool nondurable = m_nondurable_level > 0;
+		ClassAdLogTable<K,AD> la(table);
+		active_transaction->Commit(log_fp, &la, nondurable );
+	}
+	delete active_transaction;
+	active_transaction = NULL;
+}
+
+template <typename K, typename AltK, typename AD>
+void
+ClassAdLog<K,AltK,AD>::CommitNondurableTransaction()
+{
+	int old_level = IncNondurableCommitLevel();
+	CommitTransaction();
+	DecNondurableCommitLevel( old_level );
+}
+
+template <typename K, typename AltK, typename AD>
+bool
+ClassAdLog<K,AltK,AD>::AdExistsInTableOrTransaction(const K& key)
+{
+	bool adexists = false;
+
+		// first see if it exists in the "commited" hashtable
+	AD ad = NULL;
+	table.lookup(key, ad);
+	if ( ad ) {
+		adexists = true;
+	}
+
+		// if there is no pending transaction, we're done
+	if (!active_transaction) {
+		return adexists;
+	}
+
+	MyString keystr;
+	key.sprint(keystr);
+
+		// see what is going on in any current transaction
+	for (LogRecord *log = active_transaction->FirstEntry(keystr.c_str()); log;
+		 log = active_transaction->NextEntry()) 
+	{
+		switch (log->get_op_type()) {
+		case CondorLogOp_NewClassAd: {
+			adexists = true;
+			break;
+		}
+		case CondorLogOp_DestroyClassAd: {
+			adexists = false;
+			break;
+		}
+		default:
+			break;
+		}
+	}
+
+	return adexists;
+}
+
+
+template <typename K, typename AltK, typename AD>
+int 
+ClassAdLog<K,AltK,AD>::LookupInTransaction(AltK key, const char *name, char *&val)
+{
+	ClassAd *ad = NULL;
+
+	if (!name) return 0;
+
+	// note: this should not return ad != NULL if name is not null.
+	return ExamineTransaction(key, name, val, ad);
+}
+
+
+template <typename K, typename AltK, typename AD>
+int
+ClassAdLog<K,AltK,AD>::ExamineTransaction(AltK key, const char *name, char *&val, ClassAd* &ad)
+{
+	if (!active_transaction) return 0;
+	return ExamineLogTransaction(active_transaction, this->GetTableEntryMaker(), key, name, val, ad);
+}
+
+template <typename K, typename AltK, typename AD>
+Transaction *
+ClassAdLog<K,AltK,AD>::getActiveTransaction()
+{
+	Transaction *ret_value = active_transaction;
+	active_transaction = NULL;	// it is IMPORTANT that we reset active_tranasction to NULL here!
+	return ret_value;
+}
+
+template <typename K, typename AltK, typename AD>
+bool
+ClassAdLog<K,AltK,AD>::setActiveTransaction(Transaction* & transaction)
+{
+	if ( active_transaction ) {
+		return false;
+	}
+
+	active_transaction = transaction;
+
+	transaction = NULL;		// make certain caller doesn't mess w/ the handle 
+
+	return true;
+}
+
+template <typename K, typename AltK, typename AD>
+bool
+ClassAdLog<K,AltK,AD>::AddAttrsFromTransaction(AltK key, ClassAd &ad)
+{
+		// if there is no pending transaction, we're done
+	if (!active_transaction) {
+		return false;
+	}
+	return AddAttrsFromLogTransaction(active_transaction, this->GetTableEntryMaker(), key, ad);
+}
+
+template <typename K, typename AltK, typename AD>
+void ClassAdLog<K,AltK,AD>::ListNewAdsInTransaction( std::list<std::string> &new_keys )
+{
+	if( !active_transaction ) {
+		return;
+	}
+
+	active_transaction->InTransactionListKeysWithOpType( CondorLogOp_NewClassAd, new_keys );
+}
+
 
 #endif

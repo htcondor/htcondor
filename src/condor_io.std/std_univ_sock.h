@@ -75,6 +75,9 @@ public:
 	/// local socket address
 	condor_sockaddr my_addr();
 
+	// remote socket address
+	condor_sockaddr peer_addr();
+
  private:
 
 	void init();				/* shared initialization method */

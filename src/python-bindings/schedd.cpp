@@ -3,11 +3,19 @@
 // as early as possible and hack around the other brokenness where pyconfig.h
 // redefines _XOPEN_SOURCE and _POSIX_C_SOURCE.  (Since pyconfig's definition
 // won before this change, this has no semantic effect.)
-#include "condor_common.h"
-#include "globus_utils.h"
-#undef _XOPEN_SOURCE
-#undef _POSIX_C_SOURCE
-#include <pyconfig.h>
+#ifdef WIN32
+	#include <pyconfig.h> //must be before condor_common to avoid redefinitions
+	#undef _XOPEN_SOURCE
+	#undef _POSIX_C_SOURCE
+	#include "condor_common.h"
+	#include "globus_utils.h"
+#else
+	#include "condor_common.h"
+	#include "globus_utils.h"
+	#undef _XOPEN_SOURCE
+	#undef _POSIX_C_SOURCE
+	#include <pyconfig.h>
+#endif
 
 #include "condor_attributes.h"
 #include "condor_universe.h"
@@ -305,7 +313,7 @@ struct QueryIterator
                 THROW_EX(RuntimeError, errorMsg.c_str());
             }
             if (ad->EvaluateAttrInt("MalformedAds", intVal) && intVal) THROW_EX(ValueError, "Remote side had parse errors on history file")
-            //if (!ad->EvaluateAttrInt(ATTR_NUM_MATCHES, intVal) || (intVal != m_count)) THROW_EX(ValueError, "Incorrect number of ads returned");
+            //if (!ad->EvaluateAttrInt(ATTR_LIMIT_RESULTS, intVal) || (intVal != m_count)) THROW_EX(ValueError, "Incorrect number of ads returned");
 
             // Everything checks out!
             m_count = -1;
@@ -327,21 +335,21 @@ struct query_process_helper
     condor::ModuleLock *ml;
 };
 
-void
-query_process_callback(void * data, classad_shared_ptr<ClassAd> ad)
+bool
+query_process_callback(void * data, ClassAd* ad)
 {
     query_process_helper *helper = static_cast<query_process_helper *>(data);
     helper->ml->release();
     if (PyErr_Occurred())
     {
         helper->ml->acquire();
-        return;
+        return true;
     }
 
     try
     {
         boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
-        wrapper->CopyFrom(*ad.get());
+        wrapper->CopyFrom(*ad);
         object wrapper_obj = object(wrapper);
         object result = (helper->callable == object()) ? wrapper_obj : helper->callable(wrapper);
         if (result != object())
@@ -354,7 +362,12 @@ query_process_callback(void * data, classad_shared_ptr<ClassAd> ad)
         // Suppress the C++ exception.  HTCondor sure can't deal with it.
         // However, PyErr_Occurred will be set and we will no longer invoke the callback.
     }
+    catch (...)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Uncaught C++ exception encountered.");
+    }
     helper->ml->acquire();
+    return true;
 }
 
 struct Schedd {
@@ -404,8 +417,21 @@ struct Schedd {
         if (m_connection) { m_connection->abort(); }
     }
 
-    object query(const std::string &constraint="", list attrs=list(), object callback=object())
+    object query(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), object callback=object(), int match_limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default)
     {
+        std::string constraint;
+        extract<std::string> constraint_extract(constraint_obj);
+        if (constraint_extract.check())
+        {
+            constraint = constraint_extract();
+        }
+        else
+        {
+            classad::ClassAdUnParser printer;
+            classad_shared_ptr<classad::ExprTree> expr(convert_python_to_exprtree(constraint_obj));
+            printer.Unparse(constraint, expr.get());
+        }
+
         CondorQ q;
 
         if (constraint.size())
@@ -434,7 +460,7 @@ struct Schedd {
         helper.output_list = retval;
         void *helper_ptr = static_cast<void *>(&helper);
 
-        fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, query_process_callback, helper_ptr, true, NULL);
+        fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, fetch_opts, match_limit, query_process_callback, helper_ptr, true, NULL);
         }
 
         if (PyErr_Occurred())
@@ -941,7 +967,7 @@ struct Schedd {
         return sentry_ptr;
     }
 
-    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int match=-1)
+    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Default)
     {
         std::string val_str;
 
@@ -955,7 +981,7 @@ struct Schedd {
             parser.ParseExpression("true", expr);
             expr_ref.reset(expr);
         }
-        if (string_extract.check())
+        else if (string_extract.check())
         {
             classad::ClassAdParser parser;
             std::string val_str = string_extract();
@@ -973,8 +999,8 @@ struct Schedd {
         {
             THROW_EX(ValueError, "Unable to parse requirements expression");
         }
-        classad::ExprTree *expr_copy = expr->Copy();
-        if (!expr_copy) THROW_EX(ValueError, "Unable to create copy of requirements expression");
+        classad::ExprTree *expr_copy = expr ? expr->Copy() : NULL;
+        if (!expr_copy) {THROW_EX(ValueError, "Unable to create copy of requirements expression");}
 
         classad::ExprList *projList(new classad::ExprList());
         unsigned len_attrs = py_len(projection);
@@ -982,13 +1008,17 @@ struct Schedd {
         {
                 classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
                 classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
-                if (!entry) THROW_EX(ValueError, "Unable to create copy of list entry.")
+                if (!entry) {THROW_EX(ValueError, "Unable to create copy of list entry.")}
                 projList->push_back(entry);
         }
 
         classad::ClassAd ad;
         ad.Insert(ATTR_REQUIREMENTS, expr_copy);
-        ad.InsertAttr(ATTR_NUM_MATCHES, match);
+        ad.InsertAttr(ATTR_LIMIT_RESULTS, limit);
+        if (fetch_opts)
+        {
+            ad.InsertAttr("QueryDefaultAutocluster", fetch_opts);
+        }
 
         classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
         ad.Insert(ATTR_PROJECTION, projTree);
@@ -1111,12 +1141,13 @@ void
 ConnectionSentry::disconnect()
 {
     bool throw_commit_error = false;
+    CondorError errstack;
     if (m_transaction)
     {
         m_transaction = false;
         {
         condor::ModuleLock ml;
-        throw_commit_error = RemoteCommitTransaction(m_flags);
+        throw_commit_error = RemoteCommitTransaction(m_flags, &errstack);
         }
     }
     if (m_connected)
@@ -1127,14 +1158,23 @@ ConnectionSentry::disconnect()
         bool result;
         {
         condor::ModuleLock ml;
-        result = !DisconnectQ(NULL);
+        result = !DisconnectQ(NULL, true, &errstack);
         }
         if (result)
         {
-            THROW_EX(RuntimeError, "Failed to commmit and disconnect from queue.");
+            std::string errmsg = "Failed to commmit and disconnect from queue.";
+            std::string esMsg = errstack.getFullText();
+            if( ! esMsg.empty() ) { errmsg += " " + esMsg; }
+            THROW_EX(RuntimeError, errmsg.c_str());
         }
     }
-    if (throw_commit_error) { THROW_EX(RuntimeError, "Failed to commit ongoing transaction."); }
+    if (throw_commit_error)
+    {
+        std::string errmsg = "Failed to commit ongoing transaction.";
+        std::string esMsg = errstack.getFullText();
+        if( ! esMsg.empty() ) { errmsg += " " + esMsg; }
+        THROW_EX(RuntimeError, errmsg.c_str());
+    }
 }
 
 
@@ -1143,8 +1183,8 @@ ConnectionSentry::~ConnectionSentry()
     disconnect();
 }
 
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 3);
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(xquery_overloads, xquery, 0, 3);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 5);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(xquery_overloads, xquery, 0, 4);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(submit_overloads, submit, 1, 4);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(transaction_overloads, transaction, 0, 2);
 
@@ -1168,6 +1208,11 @@ void export_schedd()
         .value("ShouldLog", SHOULDLOG)
         ;
 
+    enum_<CondorQ::QueryFetchOpts>("QueryOpts")
+        .value("Default", CondorQ::fetch_Default)
+        .value("AutoCluster", CondorQ::fetch_DefaultAutoCluster)
+        ;
+
     class_<ConnectionSentry>("Transaction", "An ongoing transaction in the HTCondor schedd", no_init)
         .def("__enter__", &ConnectionSentry::enter)
         .def("__exit__", &ConnectionSentry::exit)
@@ -1184,7 +1229,15 @@ void export_schedd()
             ":param constraint: An optional constraint for filtering out jobs; defaults to 'true'\n"
             ":param attr_list: A list of attributes for the schedd to project along.  Defaults to having the schedd return all attributes.\n"
             ":param callback: A callback function to be invoked for each ad; the return value (if not None) is added to the list.\n"
-            ":return: A list of matching jobs, containing the requested attributes."))
+            ":param limit: A limit on the number of matches to return.\n"
+            ":param opts: Any one of the QueryOpts enum.\n"
+            ":return: A list of matching jobs, containing the requested attributes.",
+#if BOOST_VERSION < 103400
+            (boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+#else
+            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("attr_list")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+#endif
+            ))
         .def("act", &Schedd::actOnJobs2)
         .def("act", &Schedd::actOnJobs, "Change status of job(s) in the schedd.\n"
             ":param action: Action to perform; must be from enum JobAction.\n"
@@ -1234,8 +1287,15 @@ void export_schedd()
         .def("xquery", &Schedd::xquery, xquery_overloads("Query HTCondor schedd, returning an iterator.\n"
             ":param requirements: Either a ExprTree or a string that can be parsed as an expression; requirements all returned jobs should match.\n"
             ":param projection: The attributes to return; an empty list signifies all attributes.\n"
-            ":param match: Number of matches to return.\n"
-            ":return: An iterator for the matching job ads"))
+            ":param limit: A limit on the number of matches to return.\n"
+            ":param opts: Any one of the QueryOpts enum.\n"
+            ":return: An iterator for the matching job ads",
+#if BOOST_VERSION < 103400
+            (boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+#else
+            (boost::python::arg("self"), boost::python::arg("requirements") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Default)
+#endif
+            ))
         ;
 
     class_<HistoryIterator>("HistoryIterator", no_init)

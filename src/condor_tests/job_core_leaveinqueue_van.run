@@ -19,32 +19,197 @@
 ##**************************************************************
 
 use CondorTest;
+use Check::SimpleJob;
 
-$testdesc =  'Condor LEAVE_IN_QUEUE policy test - vanilla U';
 $testname = "job_core_leaveinqueue_van";
 
-my $nostatus = CondorTest::verbose_system("./job_core_leaveinqueue-false_van.pl");
-my $willstatus = CondorTest::verbose_system("./job_core_leaveinqueue-true_van.pl");
+my $falseleaveinqueueu = '
+leave_in_queue = (time() - QDate) < (2 )
+';
 
-my %listoftests; 
-$listoftests{"corename"} = "job_core_leaveinqueue_van";
-$listoftests{"tests"} = [ "job_core_leaveinqueue-true_van", "job_core_leaveinqueue-false_van"];
-$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
-CondorTest::MergeOutputFiles(\%listoftests);
+my $trueleaveinqueueu = '
+leave_in_queue = (time() - QDate) > (2 )
+';
 
-if($nostatus != 0)
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub COMPLETED{4};
+sub RUNNING{2};
+
+my $killedchosen = 0;
+my $debuglevel = 1;
+
+my %testerrors;
+my %info;
+my $cluster;
+my $variation = "False"; 
+
+$executed = sub
 {
-	CondorTest::debug("LEAVE_IN_QUEUE: failed no trigger test\n",1);
+	%info = @_;
+	$cluster = $info{"cluster"};
+
+	CondorTest::debug("Good. for leave_in_queue cluster $cluster must run first\n",$debuglevel);
+};
+
+$success = sub
+{
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+
+	if($variation eq "False") {
+		CondorTest::debug("Good, job should be done but NOT left in the queue!!!\n",$debuglevel);
+		my $status = 1;
+		my $delay = 1;
+		my $backoffmax = 17; #(1 + 2 + 4 + 8 + 16 = 31 seconds max)
+		my $foundit = 0;
+		my $cmd = "condor_q $cluster";
+		while( $delay < $backoffmax) {
+			my @adarray;
+			$foundit = 0;
+			$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+			if(!$status)
+			{
+				CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+				return(1)
+			}
+			foreach my $line (@adarray)
+			{
+				CondorTest::debug("$line",$debuglevel);
+				if($line =~ /^\s*$cluster\..*$/) {
+					CondorTest::debug("$line",$debuglevel);
+					CondorTest::debug("job should be done but NOT left in the queue!!\n",$debuglevel);
+					$foundit = 1;
+				}
+			}
+			if($foundit == 1) {
+				sleep $delay;
+				$delay = 2 * $delay;
+				next;
+			} else {
+				CondorTest::debug("Job not in queue as expected\n",$debuglevel);
+				last;
+			}
+		}
+		if($foundit == 1) {
+			print "bad\n";
+			print "Job still in the queue after multiple looks\n";
+			RegisterResult(0, "test_name", $testname);
+		}
+		print "ok\n";
+	} else { # this is where we expect to find it still in the queue
+		my %info = @_;
+		my $cluster = $info{"cluster"};
+		my $return = 1;
+
+		my $done = 0;
+		my $retrycount = 0;
+		my $cmd = "condor_q -af Owner -af ClusterId -af JobStatus";
+		while($done == 0) {
+			my @adarray;
+			my $status = 1;
+			$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+			if(!$status) {
+				CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+				return(1)
+			}
+			foreach my $line (@adarray) {
+				CondorTest::debug("$line\n",$debuglevel);
+				if($line =~ /^\s*([\w\-\.]+)\s+$cluster\s+(\d+)\s*.*$/) {
+					CondorTest::debug("Following Line shows it is still in the queue...\n",$debuglevel);
+					CondorTest::debug("$line\n",$debuglevel);
+					if($2 != COMPLETED) {
+						$retrycount = $retrycount +1;
+						if($retrycount == 4) {
+							CondorTest::debug("Can not find the cluster completed in the queue\n",$debuglevel);
+							last;
+						} else {
+							sleep((10 * $retrycount));
+							next;
+						}
+					}
+					CondorTest::debug("Found the cluster completed in the queue\n",$debuglevel);
+					print "ok\n";
+					$done = 1;
+					$return = 0;
+					last;
+				}
+			}
+		}
+		if($done == 0) {
+			# we never found completed
+			$return = 1;
+		}
+
+		CondorTest::debug("job should be done AND left in the queue!!\n",$debuglevel);
+		my @bdarray;
+		my @cdarray;
+		my $status = 1;
+		my $cmd = "condor_rm $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@bdarray,2,{emit_output=>0});
+		if(!$status)
+		{
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+			return(1)
+		}
+		$cmd = "condor_rm -forcex $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@cdarray,2,{emit_output=>0});
+		if(!$status)
+		{
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+			return(1)
+		}
+		if($return == 1) {
+			print "bad\n";
+			return($return);
+		}
+	}
+};
+
+$submitted = sub
+{
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+
+	CondorTest::debug("submitted: \n",$debuglevel);
+	{
+		CondorTest::debug("good job $job expected submitted.\n",$debuglevel);
+	}
+};
+
+SimpleJob::RunCheck(
+    runthis=>"x_time.pl",
+	append_submit_commands=>$falseleaveinqueueu,
+	duration=>3,
+    on_submit=>$submitted,
+    on_execute=>$executed,
+    on_success=>$success,
+);
+
+my $killedchosen = 0;
+my $debuglevel = 1;
+
+$variation = "True"; 
+
+SimpleJob::RunCheck(
+    runthis=>"x_time.pl",
+    append_submit_commands=>$trueleaveinqueueu,
+    duration=>3,
+    on_submit=>$submitted,
+    on_execute=>$executed,
+    on_success=>$success,
+);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+$result = 0;
+
+if( $result != 0 )
+{
+    exit(1);
 }
 
-if($willstatus != 0)
-{
-	CondorTest::debug("LEAVE_IN_QUEUE: failed trigger test\n",1);
-}
-
-if(($willstatus != 0) || ($nostatus != 0))
-{
-	die "Failed one LEAVE_IN_QUEUE test\n";
-}
-
-
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0)

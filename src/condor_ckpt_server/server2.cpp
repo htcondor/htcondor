@@ -215,7 +215,7 @@ void Server::Init()
 	collection_log = param( "CKPT_SERVER_CLASSAD_FILE" );
 	if ( collection_log ) {
 		delete CkptClassAds;
-		CkptClassAds = new ClassAdCollection(collection_log);
+		CkptClassAds = new ClassAdCollection(NULL, collection_log);
 		free(collection_log);
 	} else {
 		delete CkptClassAds;
@@ -413,7 +413,6 @@ void Server::SetUpPeers()
 			addr.set_port(CKPT_SVR_REPLICATE_REQ_PORT);
 			peer_addr_list[num_peers++] = addr.to_sin();
 			//sprintf(peer_addr, "<%s:%d>", peer, CKPT_SVR_REPLICATE_REQ_PORT);
-			//string_to_sin(peer_addr, peer_addr_list+(num_peers++));
 		}
 	}
 	free( ckpt_host );
@@ -1350,6 +1349,7 @@ void Server::SendStatus(int data_conn_sd)
 				 sizeof(socket_bufsize));
   }
   imds.TransferFileInfo(xfer_sd);
+  close(xfer_sd);
 }
 
 /* check to make sure something being used as a filename that we will
@@ -1752,6 +1752,7 @@ void Server::ProcessRestoreReq(int             req_id,
 	if (ValidateNoPathComponents(restore_req.owner) == FALSE) {
 		restore_reply.server_name.s_addr = 0;
 		restore_reply.port = 0;
+		restore_reply.file_size = 0;
 		restore_reply.req_status = BAD_REQ_PKT;
 
 		send_restore_reply_pkt(&restore_reply, fdc);

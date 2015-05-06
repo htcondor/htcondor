@@ -586,9 +586,9 @@ void NordugridJob::doEvaluateState()
 						 procID.cluster, procID.proc, errorString.c_str() );
 				gmState = GM_CANCEL;
 			} else {
-				int exit_code = -1;
-				int wallclock = -1;
-				int cpu = -1;
+				int exit_code = 0;
+				int wallclock = 0;
+				int cpu = 0;
 				const char *entry;
 				reply.rewind();
 				while ( (entry = reply.next()) ) {
@@ -603,7 +603,8 @@ void NordugridJob::doEvaluateState()
 						exit_code = atoi( entry );
 					}
 				}
-				if ( exit_code < 0 || wallclock < 0 || cpu < 0 ) {
+				if ( reply.isEmpty() ) {
+					errorString = "Job exit information missing";
 					dprintf( D_ALWAYS, "(%d.%d) exit info missing\n",
 							 procID.cluster, procID.proc );
 					gmState = GM_CANCEL;

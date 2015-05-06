@@ -48,14 +48,41 @@ sub timed_callback {
         return;
     }
 
-    my $stat = `condor_q -format "%s\n" AcctGroup -constraint "JobStatus == 2" | sort | uniq -c`;
-    my @slines = split /\n/, $stat;
+	my @addarray = ();
+	my @sorted = ();
+	my @unsorted = ();
+	my %testhash = ();
 
-    my $tst = "";
-    foreach my $line (@slines) {
-        my $t = trimws($line);
-        $tst = $tst." ".$t;
-    }
+    #$my $stat = `condor_q -format "%s\n" AcctGroup -constraint "JobStatus == 2" | sort | uniq -c`;
+    #$my @slines = split /\n/, $stat;
+
+    #$my $tst = "";
+    #$foreach my $line (@slines) {
+        #$my $t = trimws($line);
+        #$$tst = $tst." ".$t;
+    #$}
+	my $stat = runCondorTool("condor_q -af AccountingGroup -constraint \"JobStatus == 2\"",\@adarray,2,{emit_output=>0});;
+	foreach my $ad (@adarray) {
+		fullchomp($ad);
+		#print "push:$ad\n";
+		push @unsorted, $ad;
+	}
+	@sorted = sort { $a cmp $b } @unsorted; # first we sort, then we count
+	my $sortedsize = @sorted;
+	#print "sorted size:$sortedsize\n";
+	foreach my $group (@sorted) {
+		#print "Group:$group\n";
+		if(exists $testhash{$group}) {
+			$testhash{$group} += 1;
+		} else {
+			$testhash{$group} = 1;
+		}
+	}
+	my $tst = "";
+	foreach my $key (sort keys %testhash) {
+		$tst = $tst . " $testhash{$key} $key";
+	}
+	CondorTest::debug("tst: $tst\n",1);
 
     if ($tst == " 1 a 2 b 2 c") {
         # we detected the expected pattern of running jobs
@@ -195,6 +222,8 @@ CondorTest::RegisterExecute($testname, \&execute_callback);
 CondorTest::RegisterExited($testname, \&exit_callback);
 CondorTest::RegisterExitedSuccess($testname, \&exit_callback);
 CondorTest::RegisterAbort($testname, \&exit_callback);
+
+CondorTest::EndTest();
 
 if (CondorTest::RunTest($testname, $submit_filename, 0)) {
     CondorTest::debug("$testname: SUCCESS\n",1);

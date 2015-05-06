@@ -55,8 +55,8 @@ ReliSock::init()
 	_special_state = relisock_none;
 	is_client = 0;
 	hostAddr = NULL;
-	snd_msg.buf.reset();                                                    
-	rcv_msg.buf.reset();   
+	snd_msg.reset();
+	rcv_msg.reset();
 	rcv_msg.init_parent(this);
 	snd_msg.init_parent(this);
 	m_target_shared_port_id = NULL;
@@ -103,6 +103,16 @@ ReliSock::~ReliSock()
 	}
 }
 
+int
+ReliSock::close()
+{
+	// Purge send and receive buffers at the relisock level
+	snd_msg.reset();
+	rcv_msg.reset();
+
+	// then invoke close() in parent class to close fd etc
+	return Sock::close();
+}
 
 int 
 ReliSock::listen()
@@ -150,15 +160,6 @@ int ReliSock::listen(condor_protocol proto, int port)
 	return listen();
 }
 
-/// FALSE means this is an incoming connection
-int ReliSock::listen(char *s)
-{
-	if (!bind(false, s))
-		return FALSE;
-	return listen();
-}
-
-
 int 
 ReliSock::accept( ReliSock	&c )
 {
@@ -199,7 +200,7 @@ ReliSock::accept( ReliSock	&c )
 
 	}
 
-	c.assign(c_sock);
+	c.assignSocket(c_sock);
 	c.enter_connected_state("ACCEPT");
 	c.decode();
 
@@ -745,6 +746,11 @@ ReliSock::RcvMsg::~RcvMsg()
     delete mdChecker_;
 }
 
+void ReliSock::RcvMsg::reset()
+{
+	buf.reset();
+}
+
 int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, int _timeout)
 {
 	char	        hdr[MAX_HEADER_SIZE];
@@ -873,6 +879,14 @@ ReliSock::SndMsg::SndMsg() :
 ReliSock::SndMsg::~SndMsg() 
 {
     delete mdChecker_;
+	delete m_out_buf;
+}
+
+void ReliSock::SndMsg::reset()
+{
+	buf.reset();
+	delete m_out_buf;
+	m_out_buf = NULL;
 }
 
 int ReliSock::SndMsg::finish_packet(const char *peer_description, int sock, int timeout)
@@ -1229,48 +1243,57 @@ ReliSock::authenticate(const char* methods, CondorError* errstack, int auth_time
 }
 
 bool
-ReliSock::connect_socketpair(ReliSock &sock,bool use_standard_interface)
-{
-	ReliSock tmp_srv;
-
-	if( use_standard_interface ) {
-		if( !bind(false) ) {
-			dprintf(D_ALWAYS, "connect_socketpair: failed in bind()\n");
-			return false;
-		}
-	}
-	else if( !bind_to_loopback(false) ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in bind_to_loopback()\n");
+ReliSock::connect_socketpair_impl( ReliSock & sock, condor_protocol proto, bool isLoopback ) {
+	if( ! bind( proto, false, 0, isLoopback ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to bind() this.\n" );
 		return false;
 	}
 
-	if( use_standard_interface ) {
-		if( !tmp_srv.bind(false) ) {
-			dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.bind()\n");
-			return false;
-		}
-	}
-	else if( !tmp_srv.bind_to_loopback(false) ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.bind_to_loopback()\n");
+	ReliSock tmp;
+	if( ! tmp.bind( proto, false, 0, isLoopback ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to bind() that.\n" );
 		return false;
 	}
 
-	if( !tmp_srv.listen() ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.listen()\n");
+	if( !tmp.listen() ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to listen() on that.\n" );
 		return false;
 	}
 
-	if( !connect(tmp_srv.my_ip_str(),tmp_srv.get_port()) ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.get_port()\n");
+	if( !connect( tmp.my_ip_str(), tmp.get_port() ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to connect() to that.\n" );
 		return false;
 	}
 
-	if( !tmp_srv.accept( sock ) ) {
-		dprintf(D_ALWAYS, "connect_socketpair: failed in tmp_srv.accept()\n");
+	if( ! tmp.accept( sock ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): failed to accept() that.\n" );
 		return false;
 	}
 
 	return true;
+}
+
+bool
+ReliSock::connect_socketpair( ReliSock & sock, char const * asIfConnectingTo ) {
+	condor_sockaddr aictAddr;
+	if( ! aictAddr.from_ip_string( asIfConnectingTo ) ) {
+		dprintf( D_ALWAYS, "connect_socketpair(): '%s' not a valid IP string.\n", asIfConnectingTo );
+		return false;
+	}
+
+	return connect_socketpair_impl( sock, aictAddr.get_protocol(), aictAddr.is_loopback() );
+}
+
+bool
+ReliSock::connect_socketpair( ReliSock & sock ) {
+	condor_protocol proto = CP_IPV4;
+	bool ipV4Enabled = param_boolean( "ENABLE_IPV4", true );
+	bool ipV6Enabled = param_boolean( "ENABLE_IPV6", false );
+	if( ipV6Enabled && (! ipV4Enabled) ) {
+		proto = CP_IPV6;
+	}
+
+	return connect_socketpair_impl( sock, proto, true );
 }
 
 void
@@ -1293,7 +1316,7 @@ ReliSock::exit_reverse_connecting_state(ReliSock *sock)
 	_state = sock_virgin;
 
 	if( sock ) {
-		int assign_rc = assign(sock->get_file_desc());
+		int assign_rc = assignSocket(sock->get_file_desc());
 		ASSERT( assign_rc );
 		isClient(true);
 		if( sock->_state == sock_connect ) {
@@ -1322,14 +1345,19 @@ ReliSock::setTargetSharedPortID( char const *id )
 
 bool
 ReliSock::msgReady() {
-	if (rcv_msg.ready) { return true; }
+	while (!rcv_msg.ready)
+	{
 		// NOTE: 'true' here indicates non-blocking.
-	BlockingModeGuard sentry(this, true);
-	int retval = handle_incoming_packet();
-	if (retval == 2) {
-		dprintf(D_NETWORK, "msgReady would have blocked.\n");
-		m_read_would_block = true;
-		return false;
+		BlockingModeGuard sentry(this, true);
+		int retval = handle_incoming_packet();
+		if (retval == 2) {
+			dprintf(D_NETWORK, "msgReady would have blocked.\n");
+			m_read_would_block = true;
+			return false;
+		} else if (retval == 0) {
+			// No data is available
+			return false;
+		}
 	}
 	return rcv_msg.ready;
 }

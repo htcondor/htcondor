@@ -22,7 +22,7 @@ using namespace std;
 
 
 size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
-int write_prevfile(char *prev);
+int write_prevfile(const char *prev);
 bool isEmpty(FILE *file);
 
 
@@ -30,7 +30,7 @@ bool isEmpty(FILE *file);
     main()
 *********************************************************************/
 
-int main(int argc, char *argv[]) 
+int main(int argc, const char *argv[]) 
 {
     if((argc < 3) || (argc > 4))
     {
@@ -49,29 +49,26 @@ int main(int argc, char *argv[])
         lastLoc++;
         if(strncmp(argv[1], "-MASTER", 10) != 0)
         {
-            toPull = false;
+            // if -MASTER was not passed, we only want to pull
+            // if the cached file is missing or cannot be read.
+            FILE *fp = fopen(argv[lastLoc], "r");
+            if(fp)
+            {
+                toPull = false;
+                fclose(fp);
+            }
         }
     }
 
     CURL *curl;
-    FILE *tempFile;
     CURLcode res;
-    char *url = argv[lastLoc - 1];
-    char *tempName;
-    tempName = tmpnam(NULL);
-
-    tempFile = fopen(tempName, "wb"); 
-    if(tempFile == NULL)
-    {
-        perror("Error creating a temporary file");  
-        return(5); 
-    }
+    const char *url = argv[lastLoc - 1];
 
     curl = curl_easy_init();
     if ((curl) && (toPull)) 
     {
-
-        tempFile = fopen(tempName, "wb"); 
+        const char* tempName = tmpnam(NULL);
+        FILE *tempFile = fopen(tempName, "wb"); 
         if(tempFile == NULL)
         {
             perror("Error creating a temporary file");  
@@ -90,29 +87,32 @@ int main(int argc, char *argv[])
         }
         curl_easy_cleanup(curl);
         fclose(tempFile);
-    }
-    tempFile = fopen(tempName, "rb"); 
-    if(tempFile == NULL)
-    {
-        perror("Error opening a temporary file");  
-        return(5); 
+
+        tempFile = fopen(tempName, "rb"); 
+        if(tempFile == NULL)
+        {
+            perror("Error opening a temporary file");  
+            return(5); 
+        }
+
+    //If something has been written to tempfile, copy this to our output file.
+        if(!isEmpty(tempFile))
+        {
+
+            std::ifstream  src(tempName, std::ios::binary);
+            std::ofstream  dst(argv[lastLoc], std::ios::binary);
+
+            dst << src.rdbuf();
+        }
+
+        remove(tempName);
     }
 
-//If something has been written to tempfile, copy this to our output file.
-    if(!isEmpty(tempFile))
-    {
-
-        std::ifstream  src(tempName, std::ios::binary);
-        std::ofstream  dst(argv[lastLoc], std::ios::binary);
-
-        dst << src.rdbuf();
-    }
     if(write_prevfile(argv[lastLoc]) != 0)
     {
         perror("Error opening file as read only");
         exit(3); 
     }
-    remove(tempName);
     return 0;
 }
 
@@ -132,7 +132,7 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream)
     return written;
 }
 
-int write_prevfile(char *prev)
+int write_prevfile(const char *prev)
 {
     FILE *ptrFile;
 

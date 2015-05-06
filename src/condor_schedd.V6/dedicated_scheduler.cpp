@@ -38,7 +38,6 @@
 #include "scheduler.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_qmgr.h"
 #include "condor_query.h"
 #include "condor_adtypes.h"
 #include "condor_state.h"
@@ -49,6 +48,7 @@
 #include "exit.h"
 #include "dc_startd.h"
 #include "qmgmt.h"
+#include "condor_qmgr.h"
 #include "schedd_negotiate.h"
 
 #include <vector>
@@ -1843,6 +1843,7 @@ DedicatedScheduler::spawnJobs( void )
 			// need to skip following line if it is a reconnect job already
 		if (! allocation->is_reconnect) {
 			addReconnectAttributes( allocation);
+			scheduler.stats.JobsRestartReconnectsAttempting += 1;
 		}
 
 			/*
@@ -2354,6 +2355,9 @@ DedicatedScheduler::computeSchedule( void )
 			preemption_rank = tmp_expr;
 #endif
 
+			if (nodes_per_proc) {
+				delete [] nodes_per_proc;
+			}
 			nodes_per_proc = new int[nprocs];
 			for (int ni = 0; ni < nprocs; ni++) {
 				nodes_per_proc[ni] = 0;
@@ -2583,6 +2587,7 @@ DedicatedScheduler::computeSchedule( void )
 			delete jobs;
 			if( nodes_per_proc ) {
 					delete [] nodes_per_proc;
+					nodes_per_proc = NULL;
 			}
 			return true;
 		} else {
@@ -3854,7 +3859,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 						"job %d.%d to %s, because claimid is missing: "
 						"(hosts=%s,claims=%s).\n",
 						id.cluster, id.proc,
-						host ? host : "(null host)",
+						host, 
 						remote_hosts ? remote_hosts : "(null)",
 						claims ? claims : "(null)");
 				dPrintAd(D_ALWAYS, *job);

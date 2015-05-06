@@ -5,26 +5,30 @@
 
 \Term{Concurrency limits} allow an administrator to limit the number
 of concurrently running jobs that declare that they use some
-pool-wide resource.  This limit is applied globally to all jobs
-submitted from all schedulers across one HTCondor pool.  This is
-useful in the case of a shared resource, like an NFS or database
-server that some jobs use, and the administrator needs to limit the
+pool-wide resource.  
+This limit is applied globally to all jobs
+submitted from all schedulers across one HTCondor pool;
+the limits are \emph{not} applied to scheduler, local, or grid universe jobs.
+This is useful in the case of a shared resource, 
+such as an NFS or database server that some jobs use, 
+where the administrator needs to limit the
 number of jobs accessing the server.
 
 The administrator must predefine the names and capacities of the
 resources to be limited in the negotiator's configuration file.
-The job submitter must declare in the job submit file which 
+The job submitter must declare in the submit description file which 
 resources the job consumes.
 
 For example, assume that there are 3 licenses for the X software,
 so HTCondor should constrain the number of running jobs which need the
-X software to 3.  Pick the name XSW as the name of the resource:
-
+X software to 3.  
+The administrator picks XSW as the name of the resource
+and sets the configuration
 \begin{verbatim}
 XSW_LIMIT = 3
 \end{verbatim}
-where \AdStr{XSW} is the invented name of this resource,
-is appended with the string \MacroNI{\_LIMIT}.
+where \Expr{XSW} is the invented name of this resource,
+and this name is appended with the string \MacroNI{\_LIMIT}.
 With this limit, a maximum of 3 jobs declaring that they need this
 resource may be executed concurrently.
 
@@ -37,11 +41,11 @@ this value.  For example,
 CONCURRENCY_LIMIT_DEFAULT = 1
 \end{verbatim}
 will enforce a limit of at most 1 running job that declares a
-usage of an unnamed resource.  If
-\MacroNI{CONCURRENCY\_LIMIT\_DEFAULT} is omitted from the
-configuration, then no limits are placed on the number of concurrently
-executing jobs of resources for which there is no specifically named
-concurrency limits.
+usage of an unnamed resource.
+If \MacroNI{CONCURRENCY\_LIMIT\_DEFAULT} is omitted from the configuration,
+then no limits are placed on the number of concurrently
+executing jobs for which there is no specifically-named
+concurrency limit.
 
 The job must declare its need for a resource by placing a command
 in its submit description file or adding an attribute to the
@@ -63,22 +67,24 @@ In this case, specify a comma-separated list of resources:
 concurrency_limits = XSW, DATABASE, FILESERVER
 \end{verbatim}
 
-The units of these limits are arbitrary, by default each job consumes
-one unit of resource.  Jobs can declare that they use more than one
-unit, by following the resource name by a colon character and the
-integer number of resources.  For example, if the above job
-uses three times as many fileserver resources as a baseline job,
-this could be declared as follows:
+The units of these limits are arbitrary. 
+This job consumes one unit of each resource.
+Jobs can declare that they use more than one unit with syntax
+that follows the resource name by a colon character and the
+integer number of resources.  
+For example, if the above job uses three units of the file server resource,
+it is declared with
 
 \begin{verbatim}
 concurrency_limits = XSW, DATABASE, FILESERVER:3
 \end{verbatim}
 
-If there are many different types of resources which all have the same
-default capacity, it may be tedious to define them all individually.
-A shortcut to defining sets of consumable resources exists, by using a
-common prefix.  After the common prefix, a period follows, then the
-rest of the resource name.
+If there are sets of resources which have the same
+capacity for each member of the set,
+the configuration may become tedious,
+as it defines each member of the set individually.
+A shortcut defines a name for a set.
+For example, define the sets called \Expr{LARGE} and \Expr{SMALL}:
 
 \begin{verbatim}
 CONCURRENCY_LIMIT_DEFAULT = 5
@@ -86,16 +92,18 @@ CONCURRENCY_LIMIT_DEFAULT_LARGE = 100
 CONCURRENCY_LIMIT_DEFAULT_SMALL = 25
 \end{verbatim}
 
-The above configuration defines the prefixes named large and small,
-along with the default limit of 5.  With this configuration a
-concurrency limit named \Expr{"large.swlicense"} will have a default
-limit of 100.  A concurrency limit named \Expr{"large.dbsession"} will
-also have a limit of 100, as will any resource that begins with
-\Expr{"large."}  A limit named \Expr{"small.dbsession"} will receive
-the default limit of 25.  A concurrency limit named
-\Expr{"other.license"} will receive the global default limit of 5, as
-there is no value set for for
-\MacroNI{CONCURRENCY\_LIMIT\_DEFAULT\_OTHER}.
+To use the set name in a concurrency limit,
+the syntax follows the set name with a period and then the set member's
+name.
+Continuing this example, 
+there may be a concurrency limit named \Expr{LARGE.SWLICENSE},
+which gets the capacity of the default defined for the
+\Expr{LARGE} set, which is 100. 
+A concurrency limit named \Expr{LARGE.DBSESSION} will
+also have a limit of 100.
+A concurrency limit named
+\Expr{OTHER.LICENSE} will receive the default limit of 5, as
+there is no set named \Expr{OTHER}.
 
 Note that it is possible, in unusual circumstances, for more jobs to
 be started than should be allowed by the concurrency limits feature.

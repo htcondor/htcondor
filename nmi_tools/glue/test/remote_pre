@@ -161,6 +161,21 @@ if( TestGlue::is_windows() ) {
 		}
 	}
 
+	#
+	# The changes we make to construct a personal Condor can only be
+	# superseded on a test-by-test basis.  We therefore moved some of
+	# them here so that the testconfigappend file can supersede them
+	# globally.  This is particularly important for changes, like
+	# COLLECTOR_HOST (included in 'use role : personal'), which presently
+	# depend on which protocol is enabled (if the CONDOR_HOST is an IPv6
+	# literal, we can't simply append ":<port-number>" to it).
+	#
+	print CF "use role : personal\n";
+	print CF "use security : host_based\n";
+	# Compensate for an HTCondor configuration bug where the above two
+	# lines don't actually produce a working personal Condor.
+	print CF 'CONDOR_HOST = $(FULL_HOSTNAME)' . "\n";
+
 	if($localdirset == 0) {
 		print CF "LOCAL_DIR = $localdir\n";
 	}
@@ -236,28 +251,29 @@ if( not TestGlue::is_windows() ) {
 #Look for condor_tests/testconfigappend which we want at the end
 #of the main config file
 print "CONGIGURING PERSONAL CONDOR\n";
-print "TESTS set to:$ENV{TESTS}\n";
-print "CONDOR_CONFIG set to:$ENV{CONDOR_CONFIG}\n";
+print "TESTS set to: $ENV{TESTS}\n";
+print "CONDOR_CONFIG set to: $ENV{CONDOR_CONFIG}\n";
 
-my $testconfigappend = "$ENV{TESTS}";
-my $newconfigfile = "$ENV{CONDOR_CONFIG}";
-my $oldconfigfile = "$ENV{CONDOR_CONFIG}";
-my $mainconfigfile = "$ENV{CONDOR_CONFIG}";
-if( not TestGlue::is_windows() ) {
-	$testconfigappend = $testconfigappend . "/testconfigappend";
-	$newconfigfile = $newconfigfile . "new";
-	$oldconfigfile = $oldconfigfile . "old";
-} else {
-	$testconfigappend = $testconfigappend . "\\testconfigappend";
-	$newconfigfile = $newconfigfile . "new";
-	$oldconfigfile = $oldconfigfile . "old";
+my $testConfigAppendFile = "testconfigappend";
+my @dirs = ( $ENV{BASE_DIR}, $ENV{TESTS} );
+foreach my $dir (@dirs) {
+	my $fullPath = File::Spec->catfile( $dir, $testConfigAppendFile );
+	if( -f $fullPath ) {
+		$testConfigAppendFile = $fullPath;
+		last;
+	}
 }
 
-if(-f $testconfigappend) {
-	print "Triggere to modify master config with testconfigappend file!\n";
-	open(MAIN,"<$mainconfigfile") or die "Failed to open original config files:$mainconfigfile :$!\n";
-	open(NEW,">$newconfigfile") or die "Failed to open/create new config:$newconfigfile :$!\n";
-	open(APP,"<$testconfigappend") or die "failed to open additions:$testconfigappend :$!\n";
+if( -f $testConfigAppendFile ) {
+	print "Triggered to modify master config with testconfigappend file!\n";
+
+	my $mainConfigFile = $ENV{ CONDOR_CONFIG };
+	my $newConfigFile = $mainConfigFile . "new";
+	my $oldConfigFile = $mainConfigFile . "old";
+
+	open( MAIN, "< $mainConfigFile" ) or die "Failed to open original config files: $mainConfigFile :$!\n";
+	open( NEW,  "> $newConfigFile" ) or die "Failed to open/create new config: $newConfigFile :$!\n";
+	open( APP,  "< $testConfigAppendFile" ) or die "failed to open additions: $testConfigAppendFile :$!\n";
 
 	while (<MAIN>) {
 		print NEW "$_";
@@ -267,18 +283,19 @@ if(-f $testconfigappend) {
 		print NEW "$_";
 	}
 
-	close(MAIN);
-	close(NEW);
-	close(APP);
-	system("mv $mainconfigfile $oldconfigfile");
-	system("mv $newconfigfile $mainconfigfile");
+	close( MAIN );
+	close( NEW );
+	close( APP );
+
+	rename( $mainConfigFile, $oldConfigFile );
+	rename( $newConfigFile, $mainConfigFile );
 
 	print "Displaying new main config file:\n";
-	open(MAIN,"<$mainconfigfile") or die "Failed to open original config files:$mainconfigfile :$!\n";
-	while (<MAIN>) {
-		print "$_";
+	open (MAIN, "< $mainConfigFile" ) or die "Failed to open original config files: $mainConfigFile :$!\n";
+	while( <MAIN> ) {
+		print $_;
 	}
-	close(MAIN);
+	close( MAIN );
 } else {
 	print "No config append requested\n";
 }

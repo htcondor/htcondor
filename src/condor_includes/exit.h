@@ -99,6 +99,12 @@
    not accept any more jobs. */
 #define JOB_EXITED_AND_CLAIM_CLOSING (15 + EXIT_CODE_OFFSET)
 
+/* Shadow was started in reconnect mode, and yet failed to 
+   reconnect to the starter. The schedd looks for this
+   exit code to update some statistics (see gt #4783), and
+   then treats this just like JOB_SHOULD_REQUEUE. */
+#define JOB_RECONNECT_FAILED (16 + EXIT_CODE_OFFSET)
+
 /*
   WARNING: don't go above 27 with these, or we run out of bits in the
   exit status code

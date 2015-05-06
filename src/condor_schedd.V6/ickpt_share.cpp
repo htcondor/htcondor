@@ -17,11 +17,6 @@
  *
  ***************************************************************/
 
-// oh, the hacks! this is needed since otherwise our macro-izing of
-// open interferes with the <sstream> include below
-//
-#define _CONDOR_ALLOW_OPEN
-
 #include "condor_common.h"
 
 #include "ickpt_share.h"

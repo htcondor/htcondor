@@ -23,12 +23,14 @@
 
 #include "MyString.h"
 
-enum condor_protocol { CP_INVALID_MIN, CP_IPV4, CP_IPV6, CP_INVALID_MAX };
+enum condor_protocol { CP_PRIMARY, CP_INVALID_MIN, CP_IPV4, CP_IPV6, CP_INVALID_MAX, CP_PARSE_INVALID };
+
 // Return a human friendly(ish) name for a protocol. Suitable for
 // use in log messages.
 MyString condor_protocol_to_str(condor_protocol p);
+condor_protocol str_to_condor_protocol( const std::string & str );
 
-class condor_sockaddr 
+class condor_sockaddr
 {
 	union {
 		// sockaddr_in6 and sockaddr_in structure differs from OS to OS.
@@ -58,7 +60,6 @@ public:
 	condor_sockaddr(const sockaddr* saddr);
 	condor_sockaddr(const sockaddr_in* sin) ;
 	condor_sockaddr(const sockaddr_in6* sin6);
-	condor_sockaddr(const sockaddr_storage* sin);
 
 private:
 	void init(uint32_t ip, unsigned port);
@@ -77,6 +78,7 @@ public:
 
 	// set ip version when you want to bind the address to a socket
 	void set_protocol(condor_protocol proto);
+	condor_protocol get_protocol() const;
 	void set_ipv4();
 	void set_ipv6();
 
@@ -100,30 +102,57 @@ public:
 	bool from_ip_string(const MyString& ip_string);
 	bool from_ip_string(const char* ip_string);
 
+	bool from_ip_and_port_string( const char * ip_and_port_string );
+
 		// sinful string could contain either IP address or hostname.
 		// from_sinful() calls gethostbyname to resolve DNS name to IP addr.
 	bool from_sinful(const MyString& ip_string);
 	bool from_sinful(const char* sinful);
 	MyString to_sinful() const;
 	const char* to_sinful(char* buf, int len) const;
+	MyString to_sinful_wildcard_okay() const;
 
 		// returns IP address string as it is. (i.e. not returning local ip
 		// address when inaddr_any)
 		
 		// if it fails on inet_ntop(), returns blank string.
-	MyString to_ip_string() const;
+		// decorate==true - Add additional decorations appropriate
+		//                  for the protocol. As of 2014 only puts
+		//                  square brackets around IPv6 addresses,
+		//                  eg "[::1]"
+	MyString to_ip_string(bool decorate=false) const;
+		// We must "decorate".
+	MyString to_ip_and_port_string();
 		// it it fails on inet_ntop(), returns NULL and given buf
 		// will not be modified.
-	const char* to_ip_string(char* buf, int len) const;
+		// decorate==true - Add additional decorations appropriate
+		//                  for the protocol. As of 2014 only puts
+		//                  square brackets around IPv6 addresses,
+		//                  eg "[::1]"
+	const char* to_ip_string(char* buf, int len, bool decorate=false) const;
 
 		// if it contains loopback address, it will return
 		// local ip address.
-	MyString to_ip_string_ex() const; 
-	const char* to_ip_string_ex(char* buf, int len) const;
+		// decorate==true - Add additional decorations appropriate
+		//                  for the protocol. As of 2014 only puts
+		//                  square brackets around IPv6 addresses,
+		//                  eg "[::1]"
+	MyString to_ip_string_ex(bool decorate=false) const; 
+	const char* to_ip_string_ex(char* buf, int len, bool decorate=false) const;
 
+#if 0
 	// if the address contained is ipv4, it converts to 
 	// IPv6-V4MAPPED address. caller must check is_ipv4() first.
 	void convert_to_ipv6();
+#endif
+
+	// How desirable is this address for public use?  Prefers public addresses
+	// over private addresses.  Higher numbers are more desirable.  The number
+	// will be less than 10000.  0 will only be used for errors, otherwise it
+	// will be positive.  No other promises are made; do NOT make decisions
+	// based on specific numbers, only compare relative numbers to identify
+	// more desireable addresses.
+	int desirability() const;
 
 	void clear();
 

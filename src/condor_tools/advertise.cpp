@@ -60,6 +60,7 @@ int main( int argc, char *argv[] )
 	bool use_tcp = false;
 	bool with_ack = false;
 	bool allow_multiple = false;
+	bool many_connections = false;
 
 	myDistro->Init( argc, argv );
 	config();
@@ -104,6 +105,8 @@ int main( int argc, char *argv[] )
 				usage(argv[0]);
 				exit(1);
 			}
+		} else if(!strncmp(argv[i],"-many-connections", strlen(argv[i]))) { 
+			many_connections = true;
 		} else {
 			fprintf(stderr,"Unknown argument: %s\n\n",argv[i]);
 			usage(argv[0]);
@@ -254,6 +257,9 @@ int main( int argc, char *argv[] )
 			}
 
 			success_count++;
+			if (many_connections) {
+				sock = NULL;
+			}
 		}
 		if( sock ) {
 			CondorVersionInfo const *ver = sock->get_peer_version();
@@ -276,6 +282,9 @@ int main( int argc, char *argv[] )
 			   collector->name());
 	}
 
+	if (many_connections) {
+		sleep(3600);
+	}
 	delete collectors;
 
 	return (had_error)?1:0;

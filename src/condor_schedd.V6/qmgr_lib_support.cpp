@@ -195,13 +195,13 @@ ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* er
 
 // we can ignore the parameter because there is only one connection
 bool
-DisconnectQ(Qmgr_connection *,bool commit_transactions)
+DisconnectQ(Qmgr_connection *,bool commit_transactions, CondorError *errstack)
 {
 	int rval = -1;
 
 	if( !qmgmt_sock ) return( false );
 	if ( commit_transactions ) {
-		rval = RemoteCommitTransaction();
+		rval = RemoteCommitTransaction(0, errstack);
 	}
 	CloseSocket();
 	delete qmgmt_sock;
@@ -232,7 +232,7 @@ SendSpoolFileBytes(char const *filename)
 
 
 void
-WalkJobQueue3(scan_func func, void* pv, schedd_runtime_probe & /*ftm*/)
+WalkJobQueue2(scan_func func, void* pv)
 {
 	ClassAd *ad;
 	int rval = 0;
@@ -271,3 +271,4 @@ float_to_rusage(double utime, double stime, struct rusage *ru)
 	ru->ru_stime.tv_usec = 0;
 	return 0;
 }
+

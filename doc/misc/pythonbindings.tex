@@ -66,6 +66,38 @@ XML-formatted.
 
 \\ \hline
 
+\texttt{send\_alive( ad, pid, timeout )}
+
+Send a keep alive message to an HTCondor daemon.
+
+Parameter \texttt{ad} is a ClassAd specifying the location of the daemon.
+This ClassAd is typically found by using \texttt{Collector.locate(...)}.
+
+Parameter \texttt{pid} is the process identifier for the keep alive.
+The default value of \texttt{None} uses the value from \texttt{os.getpid()}.
+
+Parameter \texttt{timeout} is the number of seconds that this 
+keep alive is valid.
+If a new keep alive is not received by the \Condor{master} in time,
+then the process will be terminated.
+The default value is controlled by configuration variable
+\MacroNI{NOT\_RESPONDING\_TIMEOUT}.
+
+\\ \hline
+
+\texttt{set\_subsystem( name, type = Auto )}
+
+Set the subsystem name for the object.
+
+Parameter \texttt{name} is the subsystem name.
+
+Parameter \texttt{type} is the HTCondor daemon type,
+taken from the \texttt{SubsystemType} enum.
+The default value of \texttt{Auto} infers the type from the
+\texttt{name} parameter.
+
+\\ \hline
+
 \texttt{lock( file\_obj, lock\_type )}
 
 Take a lock on a file object using the HTCondor locking protocol,
@@ -93,6 +125,17 @@ The logging level is controlled by \MacroNI{TOOL\_DEBUG}.
 Enable debugging output from HTCondor, where output is sent to a file.
 The log level is controlled by \MacroNI{TOOL\_DEBUG},
 and the file used is controlled by \MacroNI{TOOL\_LOG}.
+
+\\ \hline
+\texttt{log( level, msg )}
+Log a message to the HTCondor logging subsystem.
+
+Parameter \texttt{level} is the Log category and formatting indicator.
+Use the \texttt{LogLevel} enum to get list of attributes that may be
+OR'd together.
+
+Parameter \texttt{msg} is a String message to log.
+
 \\ \hline
 
 \end{tabular}
@@ -308,7 +351,7 @@ Parameter \texttt{daemon\_type} is the type of daemon;
 must be of the enum \texttt{DaemonTypes}. 
 
 \\ \hline
-\texttt{query( (AdTypes)ad\_type, constraint=True, attrs=[] )}
+\texttt{query( (AdTypes)ad\_type, constraint=True, attrs=[], (str)statistics = '' )}
 
 Query the contents of a \Condor{collector} daemon.
 Returns a list of ClassAds that match the \texttt{constraint} parameter.
@@ -322,6 +365,9 @@ It defaults to \texttt{True}.
 
 Optional parameter \texttt{attrs} is a list of attributes.
 If specified, the returned ClassAds will be projected along these attributes.
+
+Optional parameter \texttt{statistics} is a list of statistics attributes
+to include, if they exist for the specified daemon.
 \\ \hline
 \texttt{advertise( ad\_list, command=UPDATE\_AD\_GENERIC, use\_tcp = True )}
 
@@ -336,6 +382,28 @@ may require reduced authorization levels.
 
 Optional parameter \texttt{use\_tcp} causes updates to be sent via TCP.
 Defaults to \texttt{True}.
+\\ \hline
+\texttt{directQuery( (Collector)arg1, (DaemonTypes)daemon\_type, (str)name = '', (list)projection = [], (str)statistics = '' )}
+
+Query the specified daemon directly, instead of using the ClassAd from
+the \Condor{collector} daemon.
+Returns the ClassAd of the specified daemon, after obtaining it from the
+daemon.
+
+Parameter \texttt{arg1} is the \Condor{collector} that will identify where
+to find the specified daemon.
+
+Parameter \texttt{daemon\_type} specified a daemon with an enum from 
+\texttt{DaemonTypes}.
+
+Optional parameter \texttt{name} specifies the daemon's name.
+If not specified, the local daemon is used.
+
+Optional parameter \texttt{projection} is a list of attributes requested,
+to obtain only a subset of the attributes from the ClassAd.
+
+Optional parameter \texttt{statistics} is a list of statistics attributes
+to include, if they exist for the specified daemon.
 \\ \hline
 
 \end{tabular}
@@ -477,6 +545,153 @@ try; if not given, \texttt{DC\_NOP} will be used.
 \end{tabular}
 \end{flushleft}
 
+The \texttt{Param} class provides a dictionary-like interface
+to the current configuration.
+
+\textbf{The \texttt{Param} class:}
+\begin{flushleft}
+\begin{tabular}{|p{16cm}|} \hline
+\texttt{\_\_getitem\_\_( (str)attr )}
+
+Returns the configuration for variable \texttt{attr}
+as an object.
+\\ \hline
+\texttt{\_\_setitem\_\_( (str)attr, (str)value )}
+
+Sets the configuration variable \texttt{attr} to the \texttt{value}.
+\\ \hline
+\texttt{\_\_contains\_\_( (str)attr )}
+
+Determines whether the configuration contains a setting for 
+configuration variable \texttt{attr}.
+
+Returns \texttt{true} if the configuration does contain a
+setting for \texttt{attr}, and it returns false otherwise.
+
+Parameter \texttt{attr} is the name of the configuration variable.
+\\ \hline
+\texttt{\_\_iter\_\_( )}
+
+Description not yet written.
+\\ \hline
+\texttt{\_\_len\_\_( )}
+
+Returns the number of items in the configuration.
+\\ \hline
+\texttt{setdefault( (str)attr, (str)value )}
+
+Behaves like the corresponding Python dictionary method.
+If \texttt{attr} is not set in the configuration,
+it sets \texttt{attr} to \texttt{value} in the configuration.
+Returns the \texttt{value} as an object.
+\\ \hline
+\texttt{get( )}
+
+\texttt{get} description
+not yet written.
+\\ \hline
+\texttt{keys( )}
+
+Return a list of configuration variable names that
+are defined in the configuration files.
+\\ \hline
+\texttt{items( )}
+
+Returns an iterator of tuples. 
+Each item returned by the iterator is a tuple representing a pair 
+(attribute,value) in the configuration.
+\\ \hline
+\texttt{update( source )}
+
+Behaves like the corresponding Python dictionary method.
+Updates the current configuration to match the one in object 
+\texttt{source}.
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+
+The \texttt{RemoteParam} class provides a dictionary-like interface
+to the configuration of daemons.
+
+\textbf{The \texttt{RemoteParam} class:}
+\begin{flushleft}
+\begin{tabular}{|p{16cm}|} \hline
+\texttt{\_\_getitem\_\_( (str)attr )}
+
+Returns the configuration for variable \texttt{attr}
+as an object.
+\\ \hline
+\texttt{\_\_setitem\_\_( (str)attr, (str)value )}
+
+Sets the configuration variable \texttt{attr} to the \texttt{value}.
+\\ \hline
+\texttt{\_\_contains\_\_( (str)attr )}
+
+Determines whether the configuration contains a setting for 
+configuration variable \texttt{attr}.
+
+Returns \texttt{true} if the configuration does contain a
+setting for \texttt{attr}, and it returns false otherwise.
+
+Parameter \texttt{attr} is the name of the configuration variable.
+\\ \hline
+\texttt{\_\_iter\_\_( )}
+
+Description not yet written.
+\\ \hline
+\texttt{\_\_len\_\_( )}
+
+Returns the number of items in the configuration.
+\\ \hline
+\texttt{\_\_delitem\_\_( (str)attr )}
+
+If the configuration variable specified by \texttt{attr}
+is in the configuration,
+set its value to the null string.
+
+Parameter \texttt{attr} is the name of the configuration variable to change.
+\\ \hline
+\texttt{setdefault( (str)attr, (str)value )}
+
+Behaves like the corresponding Python dictionary method.
+If \texttt{attr} is not set in the configuration,
+it sets \texttt{attr} to \texttt{value} in the configuration.
+Returns the \texttt{value} as an object.
+\\ \hline
+\texttt{get( )}
+
+\texttt{get} description
+not yet written.
+\\ \hline
+\texttt{keys( )}
+
+Return a list of configuration variable names that are
+defined for the daemon.
+\\ \hline
+\texttt{items( )}
+
+Returns an iterator of tuples. 
+Each item returned by the iterator is a tuple representing a pair 
+(attribute,value) in the configuration.
+\\ \hline
+\texttt{update( source )}
+
+Behaves like the corresponding Python dictionary method.
+Updates the current configuration to match the one in object 
+\texttt{source}.
+\\ \hline
+\texttt{refresh( )}
+
+% initializes the dictionary-like object of configuration?
+Rebuilds the dictionary corresponding to the current
+configuration of the daemon.
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+
+
 \textbf{Module enums:}
 \begin{flushleft}
 \begin{tabular}{|p{16cm}|} \hline
@@ -498,6 +713,51 @@ A list of types of known HTCondor daemons.
 \texttt{JobAction}
 
 A list of actions that can be performed on a job in a \Condor{schedd}.
+\\ \hline
+\texttt{SubsystemType}
+
+Distinguishes subsystems within HTCondor.
+Values may be
+\texttt{Master},
+\texttt{Collector},
+\texttt{Negotiator},
+\texttt{Schedd},
+\texttt{Shadow},
+\texttt{Startd},
+\texttt{Starter},
+\texttt{GAHP},
+\texttt{Dagman},
+\texttt{SharedPort},
+\texttt{Daemon},
+\texttt{Tool},
+\texttt{Submit},
+or \texttt{Job}.
+
+\\ \hline
+\texttt{LogLevel}
+
+The level at which events are logged.
+Values may be
+\texttt{Always},
+\texttt{Error},
+\texttt{Status},
+\texttt{Job},
+\texttt{Machine},
+\texttt{Config},
+\texttt{Protocol},
+\texttt{Priv},
+\texttt{DaemonCore},
+\texttt{Security},
+\texttt{Network},
+\texttt{Hostname},
+\texttt{Audit},
+\texttt{Terse},
+\texttt{Verbose},
+\texttt{FullDebug},
+\texttt{SubSecond},
+\texttt{Timestamp},
+\texttt{PID}, or
+\texttt{NoHeader}.
 \\ \hline
 
 \end{tabular}
@@ -621,6 +881,13 @@ Parse old ClassAd format input into a ClassAd.
 \texttt{version( )}
 
 Return the version of the linked ClassAd library.
+
+\\ \hline
+\texttt{lastError( )}
+
+Return the string representation of the last error to occur in the
+ClassAd library.
+
 \\ \hline
 \texttt{Attribute( name )}
 
@@ -649,10 +916,19 @@ Python strings, floats, integers, and booleans have equivalent literals.
 \\ \hline
 \texttt{register( function, name=None )}
 
-Given a python function \texttt{function}, register it as a ClassAd function.
-This allows you to invoke the python function from within a ClassAd evaluation
-context.  The optional argument, \texttt{name}, allows you to give the function
-an alternate name within the ClassAd library.
+Given the python function \texttt{function}, register it as a ClassAd function.
+This allows the invocation of the python function from 
+within a ClassAd evaluation context.  
+The optional parameter, \texttt{name}, provides an alternate name for
+the function within the ClassAd library.
+
+\\ \hline
+\texttt{registerLibrary( path )}
+
+Given a file system \texttt{path}, attempt to load it as a shared library
+of ClassAd functions.  See the documentation for configuration variable
+\Macro{CLASSAD\_USER\_LIBS}
+for more information about loadable libraries for ClassAd functions.
 
 \\ \hline
 
@@ -828,15 +1104,17 @@ Returns \texttt{true} if the given \texttt{ad} matches this and this matches
 \\ \hline
 \texttt{externalRefs( expr )}
 
-Returns a python list of external references found in \texttt{expr}.  An
-``external reference" is any attribute in the expression which is not
+Returns a python list of external references found in \texttt{expr}.  
+In this context, 
+an external reference is any attribute in the expression which is \emph{not}
 found in the \texttt{ClassAd}.
 
 \\ \hline
 \texttt{internalRefs( expr )}
 
-Returns a python list of internal references found in \texttt{expr}.  An
-``internal reference" is any attribute in the expression which is
+Returns a python list of internal references found in \texttt{expr}.  
+In this context, 
+an internal reference is any attribute in the expression which is
 found in the \texttt{ClassAd}.
 \\ \hline
 

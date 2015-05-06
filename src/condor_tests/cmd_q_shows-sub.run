@@ -27,6 +27,8 @@ use CondorUtils;
 
 my $testname = "cmd_q_shows-sub";
 
+my $iswindows = CondorUtils::is_windows();
+
 my $debuglevel = 2;
 my $ClusterId = 0;
 
@@ -55,7 +57,12 @@ my $submit = sub {
     CondorTest::debug("Determining submitter and cluster\n", $debuglevel);
 
 
-    my $cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\n\" ClusterId";
+    my $cmd = "";
+	if($iswindows) {
+    	$cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\\n\" ClusterId";
+	} else {
+    	$cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\n\" ClusterId";
+	}
     if(!CondorTest::runCondorTool($cmd, \@adarray, 2,{emit_output=>0})) {
         CondorTest::debug("ERROR - cannot determine submitted and cluster.", $debuglevel);
         CondorTest::debug("Command failed: $cmd\n", $debuglevel);
@@ -88,7 +95,12 @@ my $execute = sub {
     # Once the job is running we know that the collector will have received submitter ads
 
     my @adarray;
-    my $cmd = "condor_q -sub $whoami -format \"%d.\" ClusterId -format \"%d \" ProcId -format \" %s\" Owner -format \" %s\n\" Cmd";
+    my $cmd = "";
+	if($iswindows) {
+    	$cmd = "condor_q -sub $whoami -format \"%d.\" ClusterId -format \"%d \" ProcId -format \" %s\" Owner -format \" %s\\n\" Cmd";
+	} else {
+    	$cmd = "condor_q -sub $whoami -format \"%d.\" ClusterId -format \"%d \" ProcId -format \" %s\" Owner -format \" %s\n\" Cmd";
+	}
 
     if(!CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0})) {
         CondorTest::debug("ERROR - failed to run command: $cmd\n", $debuglevel);

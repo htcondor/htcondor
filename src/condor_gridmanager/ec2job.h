@@ -99,7 +99,9 @@ private:
 	StringList* build_groupnames();
 
 	std::string m_serviceUrl;
-	
+
+	std::string m_iam_profile_arn;
+	std::string m_iam_profile_name;
 	std::string m_public_key_file;
 	std::string m_private_key_file;
 	std::string m_user_data;
@@ -122,6 +124,8 @@ private:
 	std::string m_client_token;
 	std::string m_block_device_mapping;
 	StringList* m_group_names;
+	StringList* m_group_ids;
+	StringList* m_parameters_and_values;
 	
 	std::string m_spot_price;
 	std::string m_spot_request_id;

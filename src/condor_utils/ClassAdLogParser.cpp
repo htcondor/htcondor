@@ -136,8 +136,8 @@ ClassAdLogParser::openFile() {
 FileOpErrCode 
 ClassAdLogParser::closeFile() {
 	if (log_fp != NULL) {
-	  fclose(log_fp);
-	  log_fp = NULL;
+		fclose(log_fp);
+		log_fp = NULL;
 	}
 	return FILE_OP_SUCCESS;
 }
@@ -168,16 +168,14 @@ ClassAdLogParser::readLogEntry(int &op_type)
 
     // move to the current offset
     if (log_fp && fseek(log_fp, nextOffset, SEEK_SET) != 0) {
-        fclose(log_fp);
-        log_fp = NULL;
+        closeFile();
         return FILE_READ_EOF;
     }
 
     if(log_fp) {
 	    rval = readHeader(log_fp, op_type);
 	    if (rval < 0) {
-		    fclose(log_fp);
-		    log_fp = NULL;
+		    closeFile();
 		    return FILE_READ_EOF;
 	    }
     }
@@ -214,8 +212,7 @@ ClassAdLogParser::readLogEntry(int &op_type)
 		    rval = readEndTransactionBody(log_fp);
 				break;
 		    default:
-		    fclose(log_fp);
-		    log_fp = NULL;
+		    closeFile();
 			    return FILE_READ_ERROR;
 				break;
 		}
@@ -262,8 +259,7 @@ ClassAdLogParser::readLogEntry(int &op_type)
 		}
 		
 		if( !feof( log_fp ) ) {
-			fclose(log_fp);
-            log_fp = NULL;
+			closeFile();
 #ifdef _NO_CONDOR_
 			syslog(LOG_ERR,
 				   "Failed recovering from corrupt file, errno=%d (%m)",
@@ -281,8 +277,7 @@ ClassAdLogParser::readLogEntry(int &op_type)
 			// records starting from the bad record to the end-of-file, and
 		
 			// pretend that we hit the end-of-file.
-		fclose( log_fp );
-        log_fp = NULL;
+		closeFile();
 
 		curCALogEntry = lastCALogEntry;
 		curCALogEntry.offset = nextOffset;

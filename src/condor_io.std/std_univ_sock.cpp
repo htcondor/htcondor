@@ -141,6 +141,17 @@ StdUnivSock::my_addr()
 	return condor_sockaddr((const sockaddr*)&addr);
 }
 
+condor_sockaddr
+StdUnivSock::peer_addr()
+{
+	sockaddr_storage addr;
+	SOCKET_LENGTH_TYPE addr_len;
+	addr_len = sizeof(addr);
+	if (getpeername(_sock, (sockaddr*)&addr, &addr_len) < 0)
+		return condor_sockaddr::null;
+	return condor_sockaddr((const sockaddr*)&addr);
+}
+
 char *
 StdUnivSock::get_sinful_peer()
 {       

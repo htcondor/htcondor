@@ -4,12 +4,13 @@ echo "-------------------------------------------------------------------"
 echo "* NOTE: Attempting to configure a Red Hat-esk build"
 echo "* which builds against system libs and selectively "
 echo "* enables and disables portions of condor"
-echo "* If you are unsurei, you should run \"cmake .\""
+echo "* If you are unsure, you should run \"cmake .\""
 echo "*"
+echo "* add -D_DEBUG:BOOL=FALSE to get non-optimized code for debugging"
 echo "* Another option would be to run ccmake or cmake-gui"
 echo "* and select the options you care to build with"
 echo "-------------------------------------------------------------------"
-cmake -D_DEBUG:BOOL=TRUE \
+cmake \
   -DNO_PHONE_HOME:BOOL=TRUE \
   -DHAVE_BACKFILL:BOOL=FALSE \
   -DHAVE_BOINC:BOOL=FALSE \

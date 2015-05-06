@@ -19,30 +19,117 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
 
-my $testdesc =  'Jobs casues submit error from a missing specified input file- vanilla U';
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
 my $testname = "job_filexfer_input-onegone_van";
 my $pid = $$;
 
-print "Test: job_filexfer_input-onegone_van has PID $pid\n";
+print "Test: job_filexfer_input-onegone_van  doing simple testjob first\n";
 
-my $sanestatus = CondorTest::verbose_system("./x_sanitysubmit.pl $pid");
-my $teststatus = CondorTest::verbose_system("./job_filexfer_input-onegone_van.pl");
+#my $sanestatus = CondorTest::verbose_system("./x_sanitysubmit.pl $pid");
 
-if($sanestatus != 0)
+SimpleJob::RunCheck(
+	duration=>5,
+);
+
+$testname = "job_filexfer_input-onegone_van";
+
+my $alreadydone=0;
+
+$execute = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	CondorTest::debug("Running $cluster\n",1);
+	die "Submit was supposed to fail for a missing input file\n";
+
+};
+
+$wanterror = sub {
+	my %args = @_;
+
+	my $errmsg = $args{"ErrorMessage"};
+
+    if($errmsg =~ /^.*died abnormally.*$/) {
+        CondorTest::debug("BAD. Submit died was to fail but with error 1\n",1);
+        CondorTest::debug("$testname: Failure\n",1);
+        return(1);
+    } elsif($errmsg =~ /^.*\(\s*returned\s*(\d+)\s*\).*$/) {
+        if($1 == 1) {
+            CondorTest::debug("Good. Job was not to submit with File Transfer off and input files requested\n",1);
+            CondorTest::debug("$testname: SUCCESS\n",1);
+            return(0);
+        } else {
+            CondorTest::debug("BAD. Submit was to fail but with error 1 not <<$1>>\n",1);
+            CondorTest::debug("$testname: Failure\n",1);
+            return(1);
+        }
+    } else {
+            CondorTest::debug("BAD. Submit failure mode unexpected....\n",1);
+            CondorTest::debug("$testname: Failure\n",1);
+            return(1);
+    }
+};
+
+$success = sub
 {
-        CondorTest::debug("job_filexfer_input-onegone_van failed sanity submittest\n",1);
+	die "Submit was supposed to fail for a missing input file\n";
+};
+
+$timed = sub
+{
+	die "Job should have ended by now. file transfer broken!\n";
+};
+
+
+# make some needed files. All 0 sized and xxxxxx.txt for
+# easy cleanup
+
+my $job = $$;
+CondorTest::debug("Process Id for this script is  $job\n",1);
+my $basefile = "submit_filetrans_input" . "$job";
+my $in = "$basefile".".txt";
+my $ina = "$basefile"."a.txt";
+my $inb = "$basefile"."b.txt";
+my $inc = "$basefile"."c.txt";
+my $inputdir = "job_"."$job"."_dir";
+
+CreateDir("-p $inputdir");
+CreateEmptyFile("$inputdir/$in");
+CreateEmptyFile("$inputdir/$ina");
+CreateEmptyFile("$inputdir/$inb");
+
+my $line = "";
+my $args = "--job=$job --extrainput ";
+
+SimpleJob::RunCheck(
+	runthis=>"x_job_filexfer_testjob.pl",
+	duration=>"$args",
+	transfer_input_files=>"$inputdir/$ina,$inputdir/$inb,$inputdir/$inc",
+	should_transfer_files=>"YES",
+	when_to_transfer_output=>"ON_EXIT",
+	input=>"filetrans_input1.txt",
+	on_success=>$success,
+	on_execute=>$execute,
+	on_wanterror=>$wanterror,
+);
+
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
+{
+    exit(1);
 }
 
-if($teststatus != 0)
-{
-        CondorTest::debug("job_filexfer_input-onegone_van failed actual test\n",1);
-}
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
 
-if(($teststatus == 0) && ($sanestatus == 0))
-{
-        CondorTest::debug("Passed job_filexfer_input-onegone_van\n",1);
-} else {
-		die "Failed job_filexfer_input-onegone_van\n";
-}
 

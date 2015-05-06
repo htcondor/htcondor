@@ -360,7 +360,7 @@ command_request_claim( Service*, int cmd, Stream* stream )
 		return FALSE;
 	}
 
-	rip = resmgr->get_by_any_id( id );
+	rip = resmgr->get_by_any_id( id, true );
 	if( !rip ) {
 		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, 
@@ -482,8 +482,10 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		}
 	}
 
-	// This should never happen unless get_by_any_id() changes.
-	EXCEPT("Neither pre nor cur claim matches claim id: %s",id);
+	// This must be a consumption policy claim id, for which a release
+	// action isn't valid.
+	rip->log_ignore( cmd, s );
+	free( id );
 	return FALSE;
 }
 
@@ -502,7 +504,7 @@ int command_suspend_claim( Service*, int cmd, Stream* stream )
 		return FALSE;
 	}
 
-	rip = resmgr->get_by_any_id( id );
+	rip = resmgr->get_by_cur_id( id );
 	if( !rip ) {
 		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
@@ -540,7 +542,7 @@ int command_continue_claim( Service*, int cmd, Stream* stream )
 		return FALSE;
 	}
 
-	rip = resmgr->get_by_any_id( id );
+	rip = resmgr->get_by_cur_id( id );
 	if( !rip ) 
 	{
 		ClaimIdParser idp( id );
@@ -681,7 +683,7 @@ command_match_info( Service*, int cmd, Stream* stream )
 		// Check resource state.  Ignore if we're preempting or
 		// matched, otherwise process the command. 
 	State s = rip->state();
-	if( s == matched_state || s == preempting_state ) {
+	if( s == matched_state || s == preempting_state || rip->r_has_cp ) {
 		rip->log_ignore( MATCH_INFO, s );
 		rval = FALSE;
 	} else {
@@ -1847,21 +1849,41 @@ activate_claim( Resource* rip, Stream* stream )
 	} 
 #ifndef WIN32
 	else {
+		//
+		// This should be exclusively for the standard universe.
+		//
+		condor_sockaddr streamSA;
+		if(! streamSA.from_ip_string( stream->my_ip_str() )) {
+			EXCEPT( "Unable to extract socket address from stream.\n" );
+		}
 
-			// Set up the two starter ports and send them to the shadow
+		// We don't officially support IPv6 in standard universe...
+		if( streamSA.is_ipv6() ) {
+			dprintf( D_ALWAYS, "WARNING -- request to run standard-universe job via IPv6.  There may be problems.\n" );
+		}
+
 		stRec.version_num = VERSION_FOR_FLOCK;
-		sock_1 = create_port(&rsock_1);
-		sock_2 = create_port(&rsock_2);
+
+		// The shadow expects to be able to connect to the given port
+		// numbers at the address (and protocol) is used to contact the
+		// startd in the first place.
+		rsock_1.bind( streamSA.get_protocol(), false, 0, false );
+		rsock_1.listen();
+		sock_1 = rsock_1.get_file_desc();
 		stRec.ports.port1 = rsock_1.get_port();
+
+		rsock_2.bind( streamSA.get_protocol(), false, 0, false );
+		rsock_2.listen();
+		sock_2 = rsock_2.get_file_desc();
 		stRec.ports.port2 = rsock_2.get_port();
 
-		stRec.server_name = strdup( my_full_hostname() );
-	
-			// Send our local IP address, too.
-		
+		stRec.server_name = strdup( get_local_fqdn().Value() );
+
+		// Send our local IP address, too.
 		// stRec.ip_addr actually is never used.
 		// Just make sure that it does not have 0 value.
-		condor_sockaddr local_addr = get_local_ipaddr();
+		// // TODO: Arbitrarily picking IPv4 
+		condor_sockaddr local_addr = get_local_ipaddr(CP_IPV4);
 		struct in_addr local_in_addr = local_addr.to_sin().sin_addr;
 		memcpy( &stRec.ip_addr, &local_in_addr, sizeof(struct in_addr) );
 
@@ -1908,12 +1930,14 @@ activate_claim( Resource* rip, Stream* stream )
 				if( fd_2 == -2 ) {
 					rip->dprintf( D_ALWAYS, "accept timed out\n" );
 					delete tmp_starter;
+					close(fd_1);
 					ABORT;
 				} else {
 					rip->dprintf( D_ALWAYS, 
 								  "tcp_accept_timeout returns %d, errno=%d\n",
 								  fd_2, errno );
 					delete tmp_starter;
+					close(fd_1);
 					ABORT;
 				}
 			}

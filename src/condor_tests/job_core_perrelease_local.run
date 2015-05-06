@@ -20,62 +20,330 @@
 
 use CondorTest;
 use CondorUtils;
+use Check::SimpleJob;
 
+##
+## Status Values
+##
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
 
-$testdesc =  'Condor PERIODIC_RELEASE policy test - local U';
 $testname = "job_core_perrelease_local";
-$corename = "job_core_perrelease_local";
 
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
 
 print scalar localtime() . "\n";
 
-$mypid = $$;
-$mysaveme = $corename . ".saveme";
+my $variation = "perreleasefalse";
 
-if($mypid == 0) {
-    die "Saveme setup for test failed\n";
-}
+my $firstappend_condor_config = '
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	PERIODIC_EXPR_interval = 30
+    NUM_CPUS = 2
+    NEGOTIATOR_INTERVAL = 5
+';
 
-# get a remote scheduler running (side b)
-my $configrem = CondorTest::StartPersonal( "job_core_perrelease_local", "x_param.locperrelease" ,"perrelease_loc");
-my @personal = split /\+/, $configrem;
-my $personalconfig = shift @personal;
-my $personalport = shift @personal;
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"perreleaselocal");
+print "local config file:$configfile\n";
 
-CondorTest::debug("---personal config is $personalconfig and personal port is $personalport---\n",1);
+CondorTest::StartCondorWithParams(
+    condor_name => "perreleaselocal",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
 
-#Run in this newly created pool
-$ENV{CONDOR_CONFIG} = $personalconfig;
+##
+## After our job is held of awhile, we will want to 
+## remove it from the queue. When this flag is set to true
+## we know that it was our own script that called for the abort,
+## and should not be handled as an error
+##
+my $aborting;
 
-my $nostatus = CondorTest::verbose_system("./job_core_perrelease-false_local.pl $mypid");
-my $willstatus = CondorTest::verbose_system("./job_core_perrelease-true_local.pl $mypid");
+##
+## We need to make sure that our job went on hold first 
+## before it was allowed to begin executing
+##
+my $gotHold;
 
-my %listoftests;
-$listoftests{"corename"} = "job_core_perrelease_local";
-$listoftests{"tests"} = [ "job_core_perrelease-false_local", "job_core_perrelease-true_local"];
-$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
-CondorTest::MergeOutputFiles(\%listoftests);
+##
+## executed
+## Our job should never be allowed to begin execution
+##
+$executed = sub {
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+	if($variation eq "perreleasefalse") {
+		CondorTest::debug("Bad - Job $cluster.$job began execution when it should ".
+		  "have been on hold.\n",1);
+	exit(1);
+	} else { # TRUE CASE
+		if ( $gotHold ) {
+			CondorTest::debug("Good - Job $cluster.$job and began execution ".
+				  "after being held.\n",1);
+		##
+		## We never were on hold!
+		##
+		} else {
+			CondorTest::debug("Bad - Job $cluster.$job began execution without ever ".
+				  "being put on hold.\n",1);
+			exit(1);
+		}
+	}
+};
 
-if($nostatus != 0)
-{
-	CondorTest::debug("PERIODIC_RELEASE: failed no trigger test\n",1);
-}
+##
+## submit
+## After the job is submitted we need to make sure it went on hold
+##
+$submit = sub {
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
 
-if($willstatus != 0)
-{
-	CondorTest::debug("PERIODIC_RELEASE: failed trigger test\n",1);
-}
-#fails due to directory matching pattern
-runcmd("cp job_core_perrelease-false_local* job_core_perrelease-true_local* job_core_perrelease_local.* $mysaveme",{expect_result=>\&ANY});
+	print "In submit callback. variation:$variation\n";
+	if($variation eq "perreleasefalse") {
+		print "periodic release false case\n";
+		##
+		## Get the job status
+		##
+		my $qstat = CondorTest::getJobStatus($cluster);
+		my $sleepTime = 2;
+		while ( $qstat == -1 ) {
+			CondorTest::debug("Job status unknown - checking in $sleepTime seconds...\n",1);
+			sleep($sleepTime);
+			$qstat = CondorTest::getJobStatus($cluster);
+		} # WHILE
 
-CondorTest::KillPersonal($personalconfig);
+		##
+		## Check to make sure that it's on hold
+		## 
+		if ( $qstat == HELD) {
+			CondorTest::debug("Good - Job $cluster.$job went on hold as soon as it ".
+				  "was submitted.\n",1);
+			$gotHold = 1;
+		##
+		## The job didn't go on hold, so we need to abort
+		##
+		} else {
+			CondorTest::debug("Bad - Job $cluster.$job failed to go on hold.\n",1);
+			exit(1);
+		}
+		# wait till we check our state , then set timer
+		print "Setting a 45 second callback\n";
+		CondorTest::RegisterTimed($testname, $timed, 45);
+	} else { # TRUE CASE
+		print "periodic release true case\n";
+		##
+		## Get the job status
+		##
+		my $qstat = CondorTest::getJobStatus($cluster);
+		my $sleepTime = 2;
+		while ( $qstat == -1 ) {
+			CondorTest::debug("Job status unknown - checking in $sleepTime seconds...\n",1);
+			sleep($sleepTime);
+			$qstat = CondorTest::getJobStatus($cluster);
+		} # WHILE
+
+		##
+		## Check to make sure that it's on hold
+		## 
+		if ( $qstat == HELD) {
+			CondorTest::debug("Good - Job $cluster.$job went on hold as soon as it ".
+				  "was submitted.\n",1);
+			$gotHold = 1;
+		##
+		## The job didn't go on hold, so we need to abort
+		##
+		} else {
+			CondorTest::debug("Bad - Job $cluster.$job failed to go on hold.\n",1);
+			exit(1);
+		}
+
+		CondorTest::setJobAd($cluster, foo, true, bool);
+		#CondorTest::RegisterTimed($testname, $timed, 90);
+	}
+};
+
+##
+## success
+## Our job should never run!
+##
+$success = sub {
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+
+
+	if($variation eq "perreleasefalse") {
+		CondorTest::debug("Bad - Job $cluster.$job completed its execution when it should ".
+		  "have been on hold.\n",1);
+		RegisterResult(0, "test_name", "$testname");
+	} else { # TRUE CASE
+		CondorTest::debug("Good - Job $cluster.$job finished execution.\n",1);
+		CondorTest::debug("Policy Test Completed\n",1);
+		RegisterResult(1, "test_name", "$testname");
+	}
+};
+
+##
+## timed
+## This is a callback we register to make sure that 
+## the job never ran and we can clean ourselves up
+## We set the aborting flag to true so that when we catch
+## the abort event, we know it was us and not a mistake from
+## something else
+##
+
+my $timeddone = 0;
+
+$timed = sub {
+	##
+	## We have to use info hash from the last event callback, because
+	## the timer callback doesn't provide us with it
+	## 
+
+	print "Callback called\n";
+	if($timeddone != 0) {
+		return(0);
+	}
+	$timeddone = 1;
+
+
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+	
+	CondorTest::debug("Good - Job $cluster.$job was never released from being held.\n",1);
+	$aborting = 1;
+
+	##
+	## Go ahead and remove the job from the queue now
+	##
+	my @adarray;
+	my $status = 1;
+	my $cmd = "condor_rm $cluster";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+	if (!$status) {
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		return(1)
+	}
+};
+
+##
+## abort
+## The job is being aborted, so we need to make sure that
+## we are the one doing the abort
+##
+$abort = sub {
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+
+	##
+	## Make sure this was meant to happen
+	## 
+	if ( $aborting ) {
+		CondorTest::debug("Good - Job $cluster.$job is being removed after being held.\n",1);
+		CondorTest::debug("Policy Test Completed\n",1);
+	##
+	## Bad mojo!
+	##
+	} else {
+		CondorTest::debug("Bad - Job $cluster.$job received an unexpected abort event.\n",1);
+		exit(1);
+	}
+};
+
+##
+## release
+## Our job got released, which is what we wanted. So we'll 
+## let it run and make sure it doesn't go on hold or anything
+## incorrect
+##
+$release = sub {
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+	
+	##
+	## This is probably not necessary, but just make sure that our 
+	## job was put on hold before it was released
+	##
+	if ( $gotHold ){
+		CondorTest::debug("Good - Job $cluster.$job was released after being put on hold.\n",1);
+	} else {
+		CondorTest::debug("Bad - Job $cluster.$job received a release event without ever ".
+			  "being put on hold.\n",1);
+		exit(1);
+	}
+	
+	##
+	## Now set the job to run
+	##
+	my @adarray;
+	my $status = 1;
+	#$ENV{_CONDOR_TOOL_DEBUG}="D_ALL";
+	my $cmd = "_CONDOR_TOOL_DEBUG=D_ALL condor_reschedule -d";
+	$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+	if (!$status) {
+		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+		exit(1);
+	}
+};
+
+
+##
+## The timer callback method doesn't provide us with this
+## information, so we need to store it from the last event
+## callback as a global variable
+##
+my %info;
+
+
+my $falsepolicy = '
+	periodic_release = (time() - QDate) < 0
+';
+
+my $truepolicy = '
+	periodic_release = (time() - QDate) > 3
+';
+
+# FALSE
+SimpleJob::RunCheck(
+	hold=>"True",
+	append_submit_commands=>$falsepolicy,
+	duration=>20,
+    on_submit=>$submit,
+    on_execute=>$executed,
+    on_success=>$success,
+    on_abort=>$abort,
+);
+
+
+$variation = "perreleasetrue";
+
+# TRUE
+SimpleJob::RunCheck(
+	hold=>"True",
+	append_submit_commands=>$truepolicy,
+	duration=>20,
+    on_submit=>$submit,
+    on_execute=>$executed,
+    on_hold=>$release,
+    on_success=>$success,
+);
+
+CondorTest::EndTest();
 print scalar localtime() . "\n";
+my $result = 0;
 
-if(($willstatus != 0) || ($nostatus != 0))
+if( $result != 0 )
 {
-	die "Failed one PERIODIC_RELEASE test\n";
+    exit(1);
 }
-CondorTest::debug("job_core_perrelease_local SUCCESS\n",1);
+
+CondorTest::debug("$testname SUCCESS\n",1);
 exit(0);

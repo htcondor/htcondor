@@ -73,6 +73,9 @@ main_init( int argc, char ** const argv )
 			// don't check parent for schedd addr. use this one instead
 			if ( argc <= i + 1 )
 				usage();
+			if (ScheddAddr) {
+				free(ScheddAddr);
+			}
 			ScheddAddr = strdup( argv[i + 1] );
 			i++;
 			break;
@@ -80,6 +83,9 @@ main_init( int argc, char ** const argv )
 			// specify what pool (i.e. collector) to lookup the schedd name
 			if ( argc <= i + 1 )
 				usage();
+			if (ScheddPool) {
+				free(ScheddPool);
+			}
 			ScheddPool = strdup( argv[i + 1] );
 			i++;
 			break;

@@ -43,6 +43,11 @@ get_local_ipaddr() {
 	return syscall_sock->my_addr();	
 }
 
+condor_sockaddr
+get_local_ipaddr( condor_protocol ) {
+	return syscall_sock->my_addr();	
+}
+
 extern "C" {
 
 extern	int		DebugFlags;

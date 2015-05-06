@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2014, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -20,26 +20,64 @@
 #ifndef _autocluster_H_
 #define _autocluster_H_
 
-#include "MyString.h"
-#include "extArray.h"
+#define USE_AUTOCLUSTER_TO_JOBID_MAP 1
+#define ALLOW_ON_THE_FLY_AGGREGATION
+
 #include "condor_classad.h"
-#include "string_list.h"
-#include "HashTable.h"
+#include <generic_stats.h>
+
+class JobIdSet;
+class JobAggregationResults;
+class JobQueueJob;
+
+class JobCluster {
+public:
+	JobCluster();
+	~JobCluster();
+
+	bool setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, bool replace_attrs);
+#ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
+	void keepJobIds(bool keep) { keep_job_ids = keep; }
+#endif
+	int getClusterid(JobQueueJob &job, bool expand_refs, std::string * final_list);
+	int size();
+	void clear();
+#ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
+	bool hasJobIds() { return keep_job_ids; }
+	void collect_garbage(bool brute_force); // free the deleted clusters
+#endif
+
+protected:
+	friend class JobAggregationResults;
+	typedef std::map<std::string,int> JobSigidMap;
+	JobSigidMap cluster_map;  // map of signature to a cluster id
+#ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
+	typedef std::map<int, JobIdSet> JobIdSetMap;
+	JobIdSetMap cluster_use; // map clusterId to a set of jobIds
+	std::set<int> cluster_gone; // holds the set of deleted clusters until the next garbage collect pass
+	JobIdSetMap::iterator find(const JOB_ID_KEY & jid); // get current cluster id for a given job
+#endif
+	int next_id;
+	const char *significant_attrs;
+#ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
+	bool keep_job_ids;
+#endif
+};
 
 /** This class manages the computation auto cluster ids for jobs based
-	upon a list of significant attributes.  Any jobs with an identical 
+	upon a list of significant attributes.  Any jobs with an identical
 	auto cluster id can be considered identical for purposes of matchmaking.
 	The significant attributes list is a list of all job classad attributes
 	that will be examined during negotiation/matchmaking -- this in effect
 	means it is a union of all job attributes referenced by any startd
 	requirements or rank expression, plus any job attributes referenced by
-	the negotiation such as the PREEMPTION_REQUIREMENTS expression, plus 
-	any attributes referenced by the job ad's own Requirements / Rank 
+	the negotiation such as the PREEMPTION_REQUIREMENTS expression, plus
+	any attributes referenced by the job ad's own Requirements / Rank
 	expressions.  In the schedd, the assumption is this class will be
 	configured with the significant attributes passed to the schedd by
-	the negotiator.  
+	the negotiator.
 */
-class AutoCluster {
+class AutoCluster : public JobCluster {
 
 public:
 
@@ -51,10 +89,10 @@ public:
 
 	/** Configure the class; must be called before any other methods
 		are invoked.  May be called as often as desired.
-		@param significant_target_attrs A string of attributes delimited 
+		@param significant_target_attrs A string of attributes delimited
 		by commas.  These attributes will be added to a list of attributes
-		considered to be significant by the class.  This parameter is 
-		ignored if the config file explicitly specifies a list of 
+		considered to be significant by the class.  This parameter is
+		ignored if the config file explicitly specifies a list of
 		significant attributes.
 		@return True if the list significant attributes has changed, and
 		thus all previously returned auto cluster ids are invalid and need
@@ -63,21 +101,21 @@ public:
 		valid.   In practice in the schedd, if config() returns True, the
 		ATTR_AUTO_CLUSTER_ID attribute should be cleared from all job ads.
 	*/
-	bool config(const char* significant_target_attrs = NULL);	
+	bool config(const char* significant_target_attrs = NULL);
 	
-	/** Given a job classad, return the value of the attribute 
-		ATTR_AUTO_CLUSTER_ID, or if this attribute is not present, 
+	/** Given a job classad, return the value of the attribute
+		ATTR_AUTO_CLUSTER_ID, or if this attribute is not present,
 		compute the autocluster id and store it in the ad.  Also,
 		the deletion flag for this autocluster entry will be cleared.
 		@param job A job classad
 		@return The autocluster id for this job, or -1 if it cannot
 		be computed.
 	*/
-	int getAutoClusterid( ClassAd *job );
+	int getAutoClusterid(JobQueueJob *job);
 
 		// garbage collection methods...
 
-	/** Set the deletion flag for all autocluster id entries in the class.  
+	/** Set the deletion flag for all autocluster id entries in the class.
 		After calling mark(), calls to getAutoClusterid() will clear the deletion
 		flag for the autocluster returned.  The idea here is to call mark(),
 		then call getAutoClusterid() on all job classads still active, then
@@ -93,24 +131,64 @@ public:
 	*/
 	void sweep();
 
+	/** Create (or find) and aggregation on the given projection
+	  */
+	JobAggregationResults * aggregateOn(bool use_default, const char * projection, int result_limit, classad::ExprTree * constraint);
+
+	/** called just before setAttribute sets an attribute value so that we can decide whether
+	  * or not to invalidate the autocluster
+	  */
+	void preSetAttribute(JobQueueJob & job, const char * attr, const char * value, int flags);
+
 	/** Return number of active autoclusters
 	  */
-	int getNumAutoclusters() const;
+	int getNumAutoclusters() const { return cluster_in_use.size(); }
+
+
 protected:
-
-	void clearArray();
-
-	typedef std::map<std::string,int> AutoClusterMap;
-	AutoClusterMap cluster_map;           // map of signature to ids
-	typedef std::set<int> AutoClusterIDs;
-	AutoClusterIDs cluster_in_use; // id in list if in use
-	int next_id;
-
-	StringList* significant_attrs;
-	char *old_sig_attrs;
 	bool sig_attrs_came_from_config_file;
+	typedef std::set<int> JobClusterIDs;
+	JobClusterIDs cluster_in_use; // used by mark & sweep code. id in list if in use
 
+	// used by the aggregateOn option
+	// std::map<std::string, JobCluster> current_aggregations;
 };
+
+// this class is use to hold job-aggregation results
+class JobAggregationResults {
+public:
+	JobAggregationResults(JobCluster& jc_, const char * proj_, int limit_, classad::ExprTree * constraint_=NULL, bool is_def_=false)
+		: jc(jc_), projection(proj_?proj_:""), constraint(NULL), is_def_autocluster(is_def_), return_jobid_limit(0), result_limit(limit_), results_returned(0)
+	{
+		if (constraint_) constraint = constraint_->Copy();
+	}
+	~JobAggregationResults()
+	{
+		if (constraint) delete constraint; constraint = NULL;
+	#ifdef ALLOW_ON_THE_FLY_AGGREGATION
+		if (!is_def_autocluster) delete &jc;
+	#endif
+	}
+	bool compute(); // populate the job cluster set.
+	ClassAd * next();
+	bool rewind();
+	int  set_return_jobid_limit(int lim) { int old = return_jobid_limit; return_jobid_limit=lim; return old; }
+	void pause(); // remember the iterator location, but don't hold an actual iterator because it may go invalid while paused.
+
+protected:
+	JobCluster & jc;
+	std::string projection;
+	classad::ExprTree * constraint;
+	bool is_def_autocluster;
+	int  return_jobid_limit;
+	int  result_limit;
+	int  results_returned;
+	ClassAd ad;
+	JobCluster::JobSigidMap::iterator it;
+	std::string pause_position; // holds the key that the iterator was pointing to before we paused.
+};
+
+
 
 #endif
 

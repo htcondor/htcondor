@@ -1,0 +1,260 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+# new test now is a single file and does both local and vanilla universe
+# bt 2/13/15
+
+use CondorUtils;
+use CondorTest;
+use Cwd;
+use POSIX;
+use Check::SimpleJob;
+
+$topdir = getcwd();
+print scalar localtime() . "\n";
+
+$testname = "job_core_time-deferral-remove";
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 2
+	NEGOTIATOR_INTERVAL = 5
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"timedeferralremove");
+print "local config file:$configfile\n";
+
+CondorTest::StartCondorWithParams(
+    condor_name => "timedeferralremove",
+    fresh_local => "TRUE",
+    condorlocalsrc => "$configfile",
+);
+
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+
+if($mypid == 0) {
+	die "Saveme setup for test failed\n";
+}
+
+##
+## Universe
+## 
+my $longuniverse = "local";
+
+##
+## The timer callback method doesn't provide us with this
+## information, so we need to store it from the last event
+## callback as a global variable
+##
+my %info = ();
+
+##
+## When the job should actually run
+## We can't use CurrentTime because of how the job's requirements
+## are set up
+##
+$deferralTime = time() + 600;
+
+##
+## If this is set to true, then we know that we caused the cooresponding command
+##
+my $HOLD = 0;
+my $REMOVE = 0;
+
+##
+## submitted
+## We need to get the info for the job when it is submitted
+##
+$submitted = sub {
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+	
+	CondorTest::debug("Good - Job $cluster.$job was submitted!\n",1);
+	##
+	## This callback is to put our job on hold
+	##
+	CondorTest::RegisterTimed($testname, $timed, 10);
+};	
+
+##
+## executed
+## The job has begun to execute over on the starter
+## This should never happen because the job should always be
+## deferred!
+##
+$executed = sub {
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+	
+	CondorTest::debug("Bad - Job $cluster.$job started executing! This should never happen!\n",1);
+	exit(1);
+};
+
+##
+## held
+## After the job is deferred, the callback will put the job on
+## hold. We keep a flag to make sure that this hold was expected
+##
+$held = sub {
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+	
+	##
+	## Make sure the hold command was ours
+	##
+	if ( ! $HOLD ) {
+		CondorTest::debug("Bad - Job $cluster.$job was put on hold but not by us!\n",1);
+		exit(1);
+	}
+	
+	##
+	## Is there a way to check to see if the starter actually 
+	## exited??
+	##
+	CondorTest::debug("Good - Job $cluster.$job was put on hold!\n",1);
+	
+	##
+	## Now we need to remove it
+	##
+
+};
+
+##
+## aborted
+##
+$aborted = sub {
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+	
+	##
+	## Make sure the remove command was ours
+	##
+	if ( ! $REMOVE ) {
+		CondorTest::debug("Bad - Job $cluster.$job was removed but not by us!\n",1);
+		exit(1);
+	}
+	
+	CondorTest::debug("Good - Job $cluster.$job was aborted and removed from the queue.\n",1);
+	CondorTest::debug("Policy Test Completed\n",1);
+};
+
+##
+## timed
+## Call out to remove the job
+##
+$timed = sub {
+	##
+	## We have to use info hash from the last event callback, because
+	## the timer callback doesn't provide us with it
+	## 
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+
+	if ( !defined( $info{"cluster"} ) || !defined( $info{"job"} ) ) {
+		my $ulog = $info{"log"};
+		CondorTest::debug("Haven't seen submit event yet at timeout!\n",1);
+		CondorTest::debug("stat and contents of user log $ulog:\n",1);
+		CondorTest::debug(`stat $ulog`,1);
+		CondorTest::debug(`cat $ulog`,1);
+	}
+
+	##
+	## Ignore multiple call backs
+	##
+	if ( ! $REMOVE ) {
+		CondorTest::debug("Removing Job $cluster.$job...\n",1);
+		
+		##
+		## Do the deed!
+		##
+		$REMOVE = 1;
+		my @adarray;
+		my $status = 1;
+		my $cmd = "condor_rm $cluster.$job";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if ( !$status ) {
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+			exit(1);
+		}
+	}
+};
+
+# this first one does local universe
+
+SimpleJob::RunCheck(
+	universe=>"local",
+	deferralpreptime=>20,
+	deferraltime=>$deferralTime,
+	runthis=>"x_time.pl",
+	on_submit=>$submitted,
+	on_execute=>$executed,
+	on_abort=>$aborted
+);
+
+##
+## The timer callback method doesn't provide us with this
+## information, so we need to store it from the last event
+## callback as a global variable
+##
+my %info = ();
+
+##
+## When the job should actually run
+## We can't use CurrentTime because of how the job's requirements
+## are set up
+##
+$deferralTime = time() + 600;
+
+##
+## If this is set to true, then we know that we caused the cooresponding command
+##
+$HOLD = 0;
+$REMOVE = 0;
+
+# By default simple jobs runs vanilla universe
+
+SimpleJob::RunCheck(
+	deferralpreptime=>20,
+	deferraltime=>$deferralTime,
+	runthis=>"x_time.pl",
+	on_submit=>$submitted,
+	on_execute=>$executed,
+	on_hold=>$held,
+	on_abort=>$aborted
+);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
+{
+	exit(1);
+}
+
+CondorTest::debug("job_core_time-deferral-hold_local SUCCESS\n",1);
+exit(0);

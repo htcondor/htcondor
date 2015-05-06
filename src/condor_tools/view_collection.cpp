@@ -44,7 +44,7 @@ main(int argc, char *argv[])
 	cmd.formatstr( "cp %s %s", argv[1], tmpfile);
 	system(cmd.Value());
 	
-	ClassAdCollection c(tmpfile);
+	ClassAdCollection c(NULL, tmpfile);
 
 	c.StartIterateAllCollections();
 

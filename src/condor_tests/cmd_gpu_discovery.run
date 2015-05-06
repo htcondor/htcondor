@@ -48,7 +48,7 @@ my $firstappend_condor_config = '
 	PERSISTENT_CONFIG_DIR = $(spool)
 	#OFFLINE_MACHINE_RESOURCE_GPUS = 0
 	SETTABLE_ATTRS_CONFIG = OFFLINE_MACHINE_RESOURCE_GPUS
-	ALLOW_CONFIG = $(FULL_HOSTNAME)
+	ALLOW_CONFIG = $(ALLOW_CONFIG), $(FULL_HOSTNAME)
 	NUM_CPUS = 6
 	MASTER_DEBUG = D_SECURITY:2 D_COMMAND:2
 	MACHINE_RESOURCE_INVENTORY_GPUs = $(LIBEXEC)/condor_gpu_discovery -simulate:0,4 -properties
@@ -79,6 +79,8 @@ CondorTest::StartCondorWithParams(
 #Do a job before setting tesing exit codes
 print "First test basic job\n";
 my $result = SimpleJob::RunCheck(); # jobid 1
+
+runCondorTool("condor_config_val -dump gpu");
 
 my $on_success = sub {
 };
@@ -209,7 +211,11 @@ my $slotsupdated = 0;
 my @updates = ();
 my $trys = 0;
 while($slotsupdated < $totalcpus) {
-	runCondorTool("condor_status -constraint \'OfflineGPUs==\"CUDA2\"\' -af name",\@updates,2,{emit_output=>1});
+	if(is_windows()) {
+		runCondorTool('condor_status -constraint OfflineGPUs==\"CUDA2\" -af name',\@updates,2,{emit_output=>1});
+	} else {
+		runCondorTool("condor_status -constraint \'OfflineGPUs==\"CUDA2\"\' -af name",\@updates,2,{emit_output=>1});
+	}
 	$slotsupdated =  @updates;
 	$trys += 1;
 	if($trys == 10) {

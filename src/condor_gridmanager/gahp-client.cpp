@@ -6062,11 +6062,30 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
+void addStringListToRequestLine( StringList & sl, std::string & reqLine ) {
+	const char * text;
+	char * escapedText;
+
+	sl.rewind();
+	int count = 0;
+	if( sl.number() > 0 ) {
+		while( (text = sl.next()) ) {
+			escapedText = strdup( escapeGahpString( text ) );
+			formatstr_cat( reqLine, " %s", escapedText );
+			free( escapedText );
+			++count;
+		}
+	}
+	ASSERT( count == sl.number() );
+
+	formatstr_cat( reqLine, " %s", NULLSTRING );
+}
+
 //  Start VM
 int GahpClient::ec2_vm_start( std::string service_url,
 							  std::string publickeyfile,
 							  std::string privatekeyfile,
-							  std::string ami_id, 
+							  std::string ami_id,
 							  std::string keypair,
 							  std::string user_data,
 							  std::string user_data_file,
@@ -6076,7 +6095,11 @@ int GahpClient::ec2_vm_start( std::string service_url,
 							  std::string vpc_ip,
 							  std::string client_token,
 							  std::string block_device_mapping,
+							  std::string iam_profile_arn,
+							  std::string iam_profile_name,
 							  StringList & groupnames,
+							  StringList & groupids,
+							  StringList & parametersAndValues,
 							  std::string &instance_id,
 							  std::string &error_code)
 {
@@ -6108,6 +6131,8 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	if ( vpc_ip.empty() ) vpc_ip = NULLSTRING;
 	if ( client_token.empty() ) client_token = NULLSTRING;
 	if ( block_device_mapping.empty() ) block_device_mapping = NULLSTRING;
+	if ( iam_profile_arn.empty() ) iam_profile_arn = NULLSTRING;
+	if ( iam_profile_name.empty() ) iam_profile_name = NULLSTRING;
 
 	std::string reqline;
 
@@ -6124,8 +6149,10 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	char* esc11 = strdup( escapeGahpString(vpc_ip) );
 	char* esc12 = strdup( escapeGahpString(client_token) );
 	char* esc13 = strdup( escapeGahpString(block_device_mapping) );
+	char* esc14 = strdup( escapeGahpString(iam_profile_arn) );
+	char* esc15 = strdup( escapeGahpString(iam_profile_name) );
 
-	int x = formatstr(reqline, "%s %s %s %s %s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9, esc10, esc11, esc12, esc13 );
+	int x = formatstr(reqline, "%s %s %s %s %s %s %s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9, esc10, esc11, esc12, esc13, esc14, esc15 );
 
 	free( esc1 );
 	free( esc2 );
@@ -6140,23 +6167,14 @@ int GahpClient::ec2_vm_start( std::string service_url,
 	free( esc11 );
 	free( esc12 );
 	free( esc13 );
+	free( esc14 );
+	free( esc15 );
 	ASSERT( x > 0 );
 
-	const char * group_name;
-	int cnt = 0;
-	char * esc_groupname;
+	addStringListToRequestLine( groupnames, reqline );
+	addStringListToRequestLine( groupids, reqline );
+	addStringListToRequestLine( parametersAndValues, reqline );
 
-	// get multiple group names from string list
-	groupnames.rewind();
-	if ( groupnames.number() > 0 ) {
-		while ( (group_name = groupnames.next()) ) {
-			esc_groupname = strdup( escapeGahpString(group_name) );
-			formatstr_cat(reqline, " %s", esc_groupname);
-			cnt++;
-			free( esc_groupname );
-		}
-	}
-	ASSERT( cnt == groupnames.number() );
 	const char *buf = reqline.c_str();
 	// Check if this request is currently pending. If not, make it the pending request.
 	if ( !is_pending(command,buf) ) {

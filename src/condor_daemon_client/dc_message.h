@@ -352,6 +352,14 @@ private:
 		START_COMMAND_PENDING,
 		RECEIVE_MSG_PENDING
 	} m_pending_operation;
+
+		// receiveMsgCallback will keep processing messages without
+		// returning to the main daemonCore event loop until
+		// it would either block reading from the network, or until
+		// this time duration has transpired.  Time is in milliseconds.
+		// If equal to zero, that means process one message and return
+		// to daemonCore.
+	int m_receive_messages_duration_ms;
 };
 
 

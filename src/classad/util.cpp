@@ -272,7 +272,7 @@ void absTimeToString(const abstime_t &atime, string &buffer)
     getGMTime(&epoch_time, &tms);
     strftime(timebuf, sizeof(timebuf), "%Y-%m-%dT%H:%M:%S", &tms);
     buffer += timebuf;
-    sprintf(timebuf, "%c%02d%02d", sign, tzsecs / 3600, (tzsecs / 60) % 60);
+    sprintf(timebuf, "%c%02d:%02d", sign, tzsecs / 3600, (tzsecs / 60) % 60);
     buffer += timebuf;
     return;
 }

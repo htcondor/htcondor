@@ -23,8 +23,13 @@ condor_selective_glob("qmgmt_send_stubs*;qmgr_lib_support*;qmgr_job_updater*;his
 file( GLOB scheddRmvElements Example* *.t.* ${qmgmtElements} )
 
 if (NOT WIN_EXEC_NODE_ONLY)
-	condor_daemon( schedd "${scheddRmvElements}"
-	"${CONDOR_LIBS};${GSOAP_FOUND};${CONDOR_QMF};${ZLIB_FOUND}" "${C_SBIN}" ON)
+	if ( DLOPEN_SECURITY_LIBS )
+		condor_daemon( schedd "${scheddRmvElements}"
+			"${CONDOR_LIBS};${GSOAP_FOUND};${CONDOR_QMF};${LIBSSL_FOUND};${ZLIB_FOUND}" "${C_SBIN}" ON)
+	else()
+		condor_daemon( schedd "${scheddRmvElements}"
+			"${CONDOR_LIBS};${GSOAP_FOUND};${CONDOR_QMF};${ZLIB_FOUND}" "${C_SBIN}" ON)
+	endif()
 
 	if (HAVE_EXT_GSOAP)
 		install (FILES ${CMAKE_CURRENT_BINARY_DIR}/condorSchedd.wsdl DESTINATION ${C_LIB}/webservice)

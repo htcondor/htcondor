@@ -23,6 +23,7 @@
 #include "schedd_stats.h"
 #include "condor_config.h"
 #include "classad_helpers.h"
+#include "qmgmt.h"
 
 void ScheddStatistics::Reconfig()
 {
@@ -181,8 +182,11 @@ void ScheddStatistics::InitMain()
 
    InitJobCounters(Pool, IF_BASICPUB);
 
+   JobsRestartReconnectsBadput.set_levels(default_job_hist_lifes, COUNTOF(default_job_hist_lifes));
+
    SCHEDD_STATS_ADD_RECENT(Pool, JobsSubmitted,        IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, Autoclusters,         IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, ResourceRequestsSent,      IF_BASICPUB);
 
    SCHEDD_STATS_ADD_RECENT(Pool, ShadowsStarted,            IF_BASICPUB);
    SCHEDD_STATS_ADD_RECENT(Pool, ShadowsRecycled,           IF_VERBOSEPUB);
@@ -190,6 +194,13 @@ void ScheddStatistics::InitMain()
 
    SCHEDD_STATS_ADD_VAL(Pool, ShadowsRunning,               IF_BASICPUB);
    SCHEDD_STATS_PUB_PEAK(Pool, ShadowsRunning,              IF_BASICPUB);
+
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsFailed, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsLeaseExpired, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsSucceeded, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsAttempting, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsInterrupted, IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRestartReconnectsBadput, IF_BASICPUB);
 
    // SCHEDD runtime stats for various expensive processes
    //
@@ -210,6 +221,13 @@ void ScheddStatistics::InitMain()
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_mark_idle,               IF_VERBOSEPUB);
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_get_job_prio,            IF_VERBOSEPUB);
 
+   // timings for the autocluster code
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, GetAutoCluster,           IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, GetAutoCluster_hit,       IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, GetAutoCluster_signature, IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, GetAutoCluster_cchit,     IF_VERBOSEPUB);
+   extern stats_entry_abs<int> SCGetAutoClusterType;
+   SCHEDD_STATS_ADD_VAL(Pool, SCGetAutoClusterType, IF_VERBOSEPUB);
 
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsSubmitted,  IF_BASICPUB);
 }
@@ -465,10 +483,6 @@ void ScheddOtherStatsMgr::DeferJobsSubmitted(int cluster, int proc)
 	}
 }
 
-// from condor_qmgr.h...
-extern ClassAd *GetJobAd(int cluster_id, int proc_id, bool expStardAttrs = false, bool persist_expansions = true );
-extern void FreeJobAd(ClassAd *&ad);
-
 // finish deferred counting of submitted jobs.
 void ScheddOtherStatsMgr::CountJobsSubmitted()
 {
@@ -482,7 +496,7 @@ void ScheddOtherStatsMgr::CountJobsSubmitted()
 			int cluster = it->first;
 			int last_proc = it->second;
 			for (int proc = 0; proc <= last_proc; ++proc) {
-				ClassAd * job_ad = GetJobAd(cluster, proc);
+				ClassAd * job_ad = GetJobAd_as_ClassAd(cluster, proc);
 				if (job_ad) {
 					ScheddOtherStats *po = Matches(*job_ad, now);
 					while (po) {
@@ -605,11 +619,13 @@ bool ScheddOtherStatsMgr::RemoveDisabled()
 		} else if ( ! po->sets.empty()) {
 			for (std::map<std::string, ScheddOtherStats*>::iterator it = po->sets.begin();
 				 it != po->sets.end();
-				 ++it) {
+				 ) {
 				if ( ! po->enabled) {
 					delete it->second;
 					it->second = NULL;
 					po->sets.erase(it++);
+				} else {
+					it++;
 				}
 			}
 		}

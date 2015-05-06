@@ -1154,7 +1154,6 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 	}
 	close(TEMPLATE);
 	print NEW "LOCAL_DIR = $mytoppath\n";
-	print NEW "CONDOR_HOST = \$(FULL_HOSTNAME)\n";
 	close(NEW);
 
 	open(NEW,">$topleveldir/$personal_local")  || die "Can not open template: $!\n";
@@ -1201,7 +1200,6 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 				print NEW "PERIODIC_EXPR_TIMESLICE = .99\n";
 				print NEW "JOB_START_DELAY = 0\n";
 				print NEW "LOCK = \$(LOG)\n";
-				print NEW "COLLECTOR_HOST = \$(CONDOR_HOST):0\n";
 				if($iswindows == 1) {
 				#print NEW "PROCD_LOG = \$(LOG)/ProcLog\n";
 					print NEW "# Adding procd pipe for windows\n";
@@ -1498,7 +1496,7 @@ sub StateChange
 	my $masterlimit = shift;
 	my $RunningTimeStamp = time;
 	my $finaltime = 0;
-	#print "StateChange: $desiredstate/$config\n";
+	print "StateChange: $desiredstate/$config time:$timelimit MasterTime:$masterlimit\n";
 	my $state = "";
 	my $now = 0;
 	#print "-$RunningTimeStamp-\n";
@@ -1531,7 +1529,7 @@ sub StateChange
 				return(0);
 			}
 		}
-		if(($now - $RunningTimeStamp) >= $timelimit) {
+		if((($now - $RunningTimeStamp) >= $timelimit) && ($timelimit >= $masterlimit)) {
 			print "Expended alloted time in StateChange: $timelimit\n";
 			$condor_instance->DisplayWhoDataInstances();
 			return(0);
@@ -1579,7 +1577,7 @@ sub NewIsDownYet {
 	} else {
 		#print "This config does not have a condor instance condor_name:$config\n";
 	}
-	my $res = StateChange("down", $config, 40, 40);
+	my $res = StateChange("down", $config, 120, 160);
 	return $res;
 }
 
@@ -1644,67 +1642,74 @@ sub CollectWhoData
 	if($usequick == 1) {
 		#print "Using -quick\n";
 		CondorTest::runCondorTool("condor_who -quick -daemon -log \"$logdir\"",\@whoarray,2,{emit_output=>0});
-	} else {
-		CondorTest::runCondorTool("condor_who -daemon -log \"$logdir\"",\@whoarray,2,{emit_output=>0});
-	}
-
-	foreach my $wholine (@whoarray) {
-		CondorUtils::fullchomp($wholine);
-		#print "$wholine\n";
-		if($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+<(.*)>\s+(.*)/) {
-			#print "Who data with 7 fields:$1,$2,$3,$4,$5,$6,$7\n";
-			#print "Parse:$wholine\n";
-			#print "Before LoadWhoData: $1,$2,$3,$4,$5,$6,$7\n";
-			# this next call assumes we are interested in currently configed personal condor
-			# which means a lookup for condor instance for each daemon
-			CondorTest::LoadWhoData($1,$2,$3,$4,$5,$6,$7);
-		} elsif($wholine =~ /(\w*)\s+(.*?)\s+(.*?)\s+(.*?)/) {
-			#print "Who data with 4 fields:$1,$2,$3,$4\n";
-			#condor_who -quick fields. $1 daemon name $2 pid
-			#id this is the master is pid real?
-			my $savepid = $2;
-			my $processstring = "";
-			if($1 eq "Master") {
-				#print "Master found\n";
-				if(CondorUtils::is_windows() == 1) {
-			    	my @grift = `tasklist | grep $savepid`;
-					foreach my $process (@grift) {
-						#print "consider:$process saved pid: $savepid\n";
-						if($process =~ /(.*?)\s+(\d+)\s+(\w+).*/) {
-							$processstring = $1;
-							if($2 eq $savepid) {
-								#print "Pids equal:$processstring\n";
-								# does this process have master in binary
-								if($processstring =~ /condor_master/) {
-									#print "Is master, thus master alive\n";
+		foreach my $wholine (@whoarray) {
+			CondorUtils::fullchomp($wholine);
+			#print "$wholine\n";
+			if($wholine =~ /(\w*)\s+(.*?)\s+(.*?)\s+(.*?)/) {
+				#print "Who data with 4 fields:$1,$2,$3,$4\n";
+				#condor_who -quick fields. $1 daemon name $2 pid
+				#id this is the master is pid real?
+				my $savepid = $2;
+				my $processstring = "";
+				if($1 eq "Master") {
+					#print "Master found\n";
+					if(CondorUtils::is_windows() == 1) {
+				    	my @grift = `tasklist | grep $savepid`;
+						foreach my $process (@grift) {
+							#print "consider:$process saved pid: $savepid\n";
+							if($process =~ /(.*?)\s+(\d+)\s+(\w+).*/) {
+								$processstring = $1;
+								if($2 eq $savepid) {
+									#print "Pids equal:$processstring\n";
+									# does this process have master in binary
+									if($processstring =~ /condor_master/) {
+										#print "Is master, thus master alive\n";
+										CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
+									}
+								}
+							}
+						}
+					} else {
+						#print "Master record\n";
+						if($savepid ne "no") {
+							my @psdata = `ps $savepid`;
+							my $pssize = @psdata;
+							#print "ps data on $savepid: $psdata[1]\n";
+							if($pssize >= 2) {
+								if($psdata[1] =~ /condor_master/) {
+									#Mark master alive
+									#print "Marking Master Alive*************************************************************\n";
+									#print "Before LoadWhoData:\n";
 									CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
 								}
 							}
 						}
 					}
-				} else {
-					#print "Master record\n";
-					if($savepid ne "no") {
-						my @psdata = `ps $savepid`;
-						my $pssize = @psdata;
-						#print "ps data on $savepid: $psdata[1]\n";
-						if($pssize >= 2) {
-							if($psdata[1] =~ /condor_master/) {
-								#Mark master alive
-								#print "Marking Master Alive*************************************************************\n";
-								#print "Before LoadWhoData:\n";
-								CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
-							}
-						}
-					}
-				}
+				} 
 			}
-		} elsif($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?).*/) {
-			#print "Who data with 5 fields:$1,$2,$3,$4,$5\n";
-			#print "Before LoadWhoData: $1,$2,$3,$4,$5\n";
-			CondorTest::LoadWhoData($1,$2,$3,$4,$5,"","");
-		} else {
-			#print "CollectWhoData: Parse Error: $wholine\n";
+		}
+	} else {
+		CondorTest::runCondorTool("condor_who -daemon -log \"$logdir\"",\@whoarray,2,{emit_output=>0});
+
+		foreach my $wholine (@whoarray) {
+			CondorUtils::fullchomp($wholine);
+			next if $wholine =~ /^Daemon.*$/; # skip column headings
+			next if $wholine =~ /^\-\-\-\-\-\-.*$/; # skip dashes
+			#print "$wholine\n";
+			if($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+<(.*)>\s+(.*)/) {
+				#print "Who data with 7 fields:$1,$2,$3,$4,$5,$6,$7\n";
+				#print "Parse:$wholine\n";
+				#print "Before LoadWhoData: $1,$2,$3,$4,$5,$6,$7\n";
+				# this next call assumes we are interested in currently configed personal condor
+				# which means a lookup for condor instance for each daemon
+				CondorTest::LoadWhoData($1,$2,$3,$4,$5,$6,$7);
+			} elsif($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?).*/) {
+				#print "Who data with 5 fields:$1,$2,$3,$4,$5\n";
+				#print "Before LoadWhoData: $1,$2,$3,$4,$5\n";
+				CondorTest::LoadWhoData($1,$2,$3,$4,$5,"","");
+			} else {
+				#print "CollectWhoData: Parse Error: $wholine\n";
+			}
 		}
 	}
 	#print CondorUtils::TimeStr() . " CollectWhoData done\n";
@@ -1781,7 +1786,7 @@ sub FindCollectorAddress
 	while(<COLLECTORADDR>) {
 		CondorUtils::fullchomp($_);
 		$line = $_;
-		if( $line =~ /^\s*<([^>]+)>\s*$/ ) {
+		if( $line =~ /^\s*(<[^>]+>)\s*$/ ) {
 			debug( "Collector address is $1\n",$debuglevel);
 			return($1);
 		} else {

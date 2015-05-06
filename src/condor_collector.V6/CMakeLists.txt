@@ -27,11 +27,19 @@ if (NOT WIN_EXEC_NODE_ONLY)
 	condor_selective_glob( "collector_stats.*;collector_engine.*;view_server.*;collector.*" CollectorLibSrcs)
 	condor_static_lib ( collectorlib "${CollectorLibSrcs}")
 
-	condor_daemon ( collector
+	if ( DLOPEN_SECURITY_LIBS )
+		condor_daemon ( collector
+			"${collectorRmvElements};${CollectorLibSrcs}"
+			"${CONDOR_LIBS};${GSOAP_FOUND};${LIBSSL_FOUND};${ZLIB_FOUND};${CONDOR_QMF};collectorlib"
+			${C_SBIN}
+			ON )
+	else()
+		condor_daemon ( collector
 					"${collectorRmvElements};${CollectorLibSrcs}"
 					"${CONDOR_LIBS};${GSOAP_FOUND};${ZLIB_FOUND};${CONDOR_QMF};collectorlib"
 					${C_SBIN}
 					ON )
+	endif()
 	if (HAVE_EXT_GSOAP)
 		install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condorCollector.wsdl DESTINATION ${C_LIB}/webservice )
 	endif(HAVE_EXT_GSOAP)

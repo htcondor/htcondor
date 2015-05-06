@@ -79,13 +79,54 @@ static const char *formatRealDate( int , AttrList * , Formatter &);
 static const char *formatLoadAvg (double, AttrList *, Formatter &);
 static const char *formatOfflineUniverses( const classad::Value &, AttrList *, struct Formatter & );
 
+#ifdef WIN32
+int getConsoleWindowSize(int * pHeight = NULL) {
+	CONSOLE_SCREEN_BUFFER_INFO ws;
+	if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ws)) {
+		if (pHeight)
+			*pHeight = (int)(ws.srWindow.Bottom - ws.srWindow.Top)+1;
+		return (int)ws.dwSize.X;
+	}
+	return 80;
+}
+#else
+#include <sys/ioctl.h> 
+int getConsoleWindowSize(int * pHeight = NULL) {
+    struct winsize ws; 
+	if (0 == ioctl(0, TIOCGWINSZ, &ws)) {
+		//printf ("lines %d\n", ws.ws_row); 
+		//printf ("columns %d\n", ws.ws_col); 
+		if (pHeight)
+			*pHeight = (int)ws.ws_row;
+		return (int) ws.ws_col;
+	}
+	return 80;
+}
+#endif
+
+int  forced_display_width = 0;
+int getDisplayWidth() {
+	if (forced_display_width <= 0) {
+		int width = getConsoleWindowSize();
+		if (width <= 0)
+			return wide_display ? 1024 : 80;
+	}
+	return forced_display_width;
+}
+
+void setPPwidth () { 
+	if (wide_display || forced_display_width) {
+		pm.SetOverallWidth(getDisplayWidth()-1);
+	}
+}
+
 static void ppInit()
 {
 	pm.SetAutoSep(NULL, " ", NULL, "\n");
 	//pm.SetAutoSep(NULL, " (", ")", "\n"); // for debugging, delimit the field data explicitly
+	setPPwidth();
 }
 
-#ifdef AD_PRINTMASK_V2
 enum ivfield {
 	BlankInvalidField = 0,
 	WideInvalidField = 1,
@@ -99,54 +140,6 @@ public:
 private:
 	const char * m_lbl;
 };
-#else
-const char *StdInvalidField = "[?]"; // fill field with ??? surrounded by [], if 
-#endif
-
-#ifdef AD_PRINTMASK_V2
-#else
-// construct a string if the form "[????]" that is the given width
-// into the supplied buffer, output not to exceed max_buf, and
-// if the buffer or width is < 3, then return "?" instead of "[?]"
-static const char * ppMakeFieldofQuestions(int width, char * buf, int buf_size)
-{
-	if (buf_size < 2)
-		return "";
-
-	int cq = width;
-	if (cq < 0) 
-		cq = 0-width;
-
-	cq = MIN(buf_size-1, cq);
-
-	if (cq < 3) {
-		strcpy(buf, "?");
-	} else {
-		buf[cq] = 0;
-		buf[--cq] = ']';
-		while (--cq) buf[cq] = '?';
-		buf[0] = '[';
-	}
-	return buf;
-}
-
-static const char *MinInvalidField = "[?]"; // fill field with ??? surrounded by [], if 
-
-static const char * ppMakeInvalidField(int width, const char * alt, char * buf, int buf_size)
-{
-	if (alt == MinInvalidField) {
-		if (invalid_fields_empty) 
-			return "";
-		// make a field-width string of "[????]" for the alt string.
-		return ppMakeFieldofQuestions(width, buf, buf_size);
-	} else if ( ! alt) {
-		return "";
-	}
-	return alt;
-}
-#endif
-
-#ifdef AD_PRINTMASK_V2
 
 static int ppWidthOpts(int width, int truncate)
 {
@@ -236,80 +229,14 @@ static void ppSetColumn(const char * attr, const CustomFormatFn & fmt, const cha
 	ppSetColumnFormat(fmt, print, width, truncate, alt, attr);
 }
 */
-#else
-
-static void ppSetColumn(const char * label, const char * attr, int width, bool truncate, const char * alt)
-{
-	pm_head.Append(label ? label : attr);
-
-	int opts = FormatOptionAutoWidth;
-	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-
-	char altq[22];
-	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
-
-	pm.registerFormat("%v", width, opts, attr, alt);
-}
-
-
-static void ppSetColumn(const char * label, const char * attr, const char * fmt, bool truncate = true, const char * alt = NULL)
-{
-	pm_head.Append(label ? label : attr);
-
-	int width = 0;
-	int opts = FormatOptionAutoWidth;
-	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-
-	char altq[22];
-	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
-
-	pm.registerFormat(fmt, width, opts, attr, alt);
-}
-
-static void ppSetColumn(const char * label, const char * attr, const CustomFormatFn & fmt, int width, bool truncate = true, const char * alt = NULL)
-{
-	pm_head.Append(label ? label : attr);
-
-	int opts = FormatOptionAutoWidth;
-	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-
-	if (width == 11 && fmt.IsNumber() && (fmt.Is(formatElapsedTime) || fmt.Is(formatRealTime))) {
-		opts |= FormatOptionNoPrefix;
-		width = 12;
-	}
-
-	char altq[22];
-	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
-
-	pm.registerFormat(NULL, width, opts, fmt, attr, alt);
-}
-
-static void ppSetColumn(const char * label, const char * attr, const CustomFormatFn & fmt, const char * print, int width, bool truncate = true, const char * alt = NULL)
-{
-	pm_head.Append(label ? label : attr);
-
-	int opts = FormatOptionAutoWidth;
-	if (0 == width) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-	else if ( ! truncate) opts |= FormatOptionAutoWidth | FormatOptionNoTruncate;
-
-	char altq[22];
-	alt = ppMakeInvalidField(width, alt, altq, sizeof(altq));
-
-	pm.registerFormat(print, width, opts, fmt, attr, alt);
-}
-
-#endif
 
 
 static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 {
 	if (ad) {
 		// render the first ad to a string so the column widths update
-		char * tmp = pm.display(ad, NULL);
-		delete [] tmp;
+		std::string tmp;
+		pm.display(tmp, ad, NULL);
 	}
 	if (pm.has_headings()) {
 		pm.display_Headings(file);
@@ -338,7 +265,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 			  case PP_STARTD_NORMAL:
 				if (absentMode) {
 					printStartdAbsent (ad, (classad_index == 0));
-				} if( offlineMode ) {
+				} else if( offlineMode ) {
 					printStartdOffline( ad, (classad_index == 0));
 				} else {
 					printStartdNormal (ad, (classad_index == 0));
@@ -420,8 +347,8 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				  // this makes sure that the headings line up correctly over the first
 				  // line of data.
 				if (fPrintHeadings) {
-					char * tmp = pm.display(ad, targetAd);
-					delete [] tmp;
+					std::string tmp;
+					pm.display(tmp, ad, targetAd);
 					if (pm.has_headings()) {
 						if ( ! (pmHeadFoot & HF_NOHEADER))
 							pm.display_Headings(stdout);
@@ -513,9 +440,9 @@ printStartdAbsent (ClassAd *ad, bool first)
 		ppInit();
 		ppSetColumn(ATTR_NAME, -34, ! wide_display);
 		ppSetColumn(ATTR_OPSYS, -10, true);
-		ppSetColumn(ATTR_ARCH, -10, true);
-		ppSetColumn(ATTR_LAST_HEARD_FROM, Lbl("Went Absent"), formatRealDate, -10, true);
-		ppSetColumn(ATTR_CLASSAD_LIFETIME, Lbl("Will Forget"), formatDueDate, -10, true);
+		ppSetColumn(ATTR_ARCH, -8, true);
+		ppSetColumn(ATTR_LAST_HEARD_FROM, Lbl("Went Absent"), formatRealDate, -11, true);
+		ppSetColumn(ATTR_CLASSAD_LIFETIME, Lbl("Will Forget"), formatDueDate, -11, true);
 
 		ppDisplayHeadings(stdout, ad, "\n");
 	}
@@ -936,6 +863,7 @@ printCustom (ClassAd *ad)
 {
 	(void) pm.display (stdout, ad, targetAd);
 }
+
 
 static const char *
 formatLoadAvg (double fl, AttrList *, Formatter &)

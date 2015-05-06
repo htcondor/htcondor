@@ -11,6 +11,7 @@ use CondorTest;
 # from a condor_status command to a hash of ad names.  [from CondorUtils.pm]
 #
 
+my $testname = "cmd_status_shows-absent";
 #
 # This is terrible hack.
 #
@@ -73,7 +74,7 @@ addAd( \%presentAds, %adTemplate,
 #
 my $verifyFH;
 my %verifiedAdNames;
-my $verifyCommand = qq/condor_status -f '%s\n' Name -const '(TRUE || Absent)' /;
+my $verifyCommand = qq/condor_status -af Name -const "(TRUE || Absent)" /;
 my $childPID = open( $verifyFH, '-|', $verifyCommand );
 if( $childPID == 0 ) {
     failTestWithReason( "Unable to fetch advertised ads.\n" );
@@ -95,7 +96,7 @@ if( ! ( subset( \%presentAds, \%verifiedAdNames ) && subset( \%presentAds, \%ver
 #
 my $absentFH;
 my %absentAdNames;
-my $absentCommand = qq/condor_status -absent -f "%s\n" Name/;
+my $absentCommand = qq/condor_status -absent -af Name/;
 $childPID = open( $absentFH, '-|', $absentCommand );
 if( $childPID == 0 ) {
     failTestWithReason( "Unable to fetch absent ads.\n" );
@@ -116,6 +117,9 @@ if( grep( /present-machine/, keys( %absentAdNames ) ) ) {
     failTestWithReason( "False positive: a present ad is in the absent list.\n" );
 }
 
+RegisterResult(1,"test_name", "$testname");
+RemoveAllJobs();
+CondorTest::EndTest();
 #
 # Test(s) completed successfully.
 #
@@ -124,12 +128,32 @@ exit( 0 );
 
 # -----------------------------------------------------------------------------
 
+sub RemoveAllJobs {
+	my $res = 1;
+	my @rm1 = ();
+	my @rm2 = ();
+	$ENV{CONDOR_CONFIG} = $personalCondorA;
+	$res = runCondorTool("condor_rm -all",\@rm1,2,{emit_output=>0});
+	if(!$res) {
+		print "removal from local $personalCondorA failed\n";
+	}
+	sleep(2);
+	$ENV{CONDOR_CONFIG} = $personalCondorB;
+	$res = runCondorTool("condor_rm -all",\@rm2,2,{emit_output=>0});
+	if(!$res) {
+		print "removal from local $personalCondorB failed\n";
+	}
+	sleep(2);
+
+}
+
 sub failTestWithReason {
     my( $reason ) = @_;
     
     warn( $reason );
-    CondorTest::KillPersonal( $personalCondorA );
-    CondorTest::KillPersonal( $personalCondorB );
+	RegisterResult(0,"test_name", "$testname");
+	RemoveAllJobs();
+	CondorTest::EndTest();
     exit( 1 );
 } # end failTestWithReason()
 

@@ -334,7 +334,23 @@ bool FunctionCall::RegisterSharedLibraryFunctions(
 		
 	success = false;
 	if (shared_library_path) {
-		dynamic_library_handle = dlopen(shared_library_path, RTLD_LAZY|RTLD_GLOBAL);
+		// We use "deep bind" here to make sure the library uses its own version of the
+		// symbol in case of duplicates.
+		//
+		// In particular, we were observing crashes in condor_shadow (which statically
+		// links libcondor_utils) and libclassad_python_user.so (which dynamically links
+		// libcondor_utils).  This causes the finalizers for global objects to be called
+		// twice - once for the dynamic version (which bound against the global one) and
+		// again at exit().
+		//
+		// With DEEPBIND, the finalizer for the dynamic library points at its own copy
+		// of the global and doesn't touch the shadow's.  See #4998
+		//
+		int flags = RTLD_LAZY;
+#ifdef LINUX
+		flags |= RTLD_DEEPBIND;
+#endif
+		dynamic_library_handle = dlopen(shared_library_path, flags);
 		if (dynamic_library_handle) {
 			ClassAdSharedLibraryInit init_function;
 
@@ -1114,7 +1130,7 @@ listCompare(
 						}
 					} else {
 						val.SetErrorValue();
-						return false;
+						return true;
 					}
 					return true;
 				} else if (b) {
@@ -1500,7 +1516,7 @@ formatTime(const char*, const ArgumentList &argList, EvalState &state,
             delete splitClassAd;
         }
     } else {
-        did_eval = false;
+        result.SetErrorValue();
     }
 
     if (!did_eval) {
@@ -2059,12 +2075,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 					    atvalue.offset = arg2num;
 					  else    // the default offset is the current timezone
 					    atvalue.offset = Literal::findOffset(atvalue.secs);
-					  if(atvalue.offset == -1) {
-					    result.SetErrorValue( );
-					    return( false );
-					  }
-					  else	
-					    result.SetAbsoluteTimeValue( atvalue );
+					  result.SetAbsoluteTimeValue( atvalue );
 				}
 				return( true );
 			}
@@ -2100,12 +2111,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 						atvalue.offset = arg2num;
 					else      // the default offset is the current timezone
 						atvalue.offset = Literal::findOffset(atvalue.secs);	
-					if(atvalue.offset == -1) {
-						result.SetErrorValue( );
-						return( false );
-					}
-					else
-					  result.SetAbsoluteTimeValue( atvalue );
+					result.SetAbsoluteTimeValue( atvalue );
 				}
 				return( true );
 			}
@@ -2413,6 +2419,11 @@ eval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 		return true;
 	}
 
+	if( state.depth_remaining <= 0 ) {
+		result.SetErrorValue();
+		return false;
+	}
+
 	ClassAdParser parser;
 	ExprTree *expr = NULL;
 	if( !parser.ParseExpression( s.c_str(), expr, true ) || !expr ) {
@@ -2423,9 +2434,13 @@ eval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 		return true;
 	}
 
+	state.depth_remaining--;
+
 	expr->SetParentScope( state.curAd );
 
-	bool eval_ok = expr->Evaluate( result );
+	bool eval_ok = expr->Evaluate( state, result );
+
+	state.depth_remaining++;
 
 	delete expr;
 

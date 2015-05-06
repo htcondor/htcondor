@@ -612,7 +612,16 @@ static condor_sockaddr getserveraddr()
 				(server_host) ? server_host : "(NULL)", strerror(errno));
 		return condor_sockaddr::null;
 	}
-	return addrs.front();
+
+	//
+	// IPv6 is worse than useless to the standard universe, so return the
+	// first IPv4 address.  (I could add a protocol flag to resolve_hostname(),
+	// but since we're not supposed to care, moving forward...)
+	//
+	for( unsigned i = 0; i < addrs.size(); ++i ) {
+		if( addrs[i].is_ipv4() ) { return addrs[i]; }
+	}
+	return condor_sockaddr::null;
 }
 
 static int ckpt_server_number;

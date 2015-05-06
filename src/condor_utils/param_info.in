@@ -781,7 +781,7 @@ tags=eventd,scheduled_event
 [DAGMAN_LOG_ON_NFS_IS_ERROR]
 default=true
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Log On Nfs Is Error
 review=?
@@ -790,7 +790,7 @@ tags=dagman,dagman_multi_dag
 [DAGMAN_RESET_RETRIES_UPON_RESCUE]
 default=true
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Reset Retries Upon Rescue
 review=?
@@ -798,35 +798,26 @@ tags=dagman,dag
 
 [DAGMAN_INSERT_SUB_FILE]
 default=
-type=string
-reconfig=true
+type=path
+reconfig=false
 customization=seldom
 friendly_name=Dagman Insert Sub File
-review=?
-tags=dagman,condor_submit_dag
-
-[DAGMAN_OLD_RESCUE]
-default=false
-type=bool
-reconfig=true
-customization=seldom
-friendly_name=Dagman Old Rescue
 review=?
 tags=dagman,condor_submit_dag
 
 [DAGMAN_AUTO_RESCUE]
 default=true
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Auto Rescue
 review=?
 tags=dagman,condor_submit_dag
 
 [DAGMAN_ON_EXIT_REMOVE]
-default=
+default=(ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
 type=string
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman On Exit Remove
 review=?
@@ -834,17 +825,17 @@ tags=dagman,condor_submit_dag
 
 [DAGMAN_CONFIG_FILE]
 default=
-type=string
-reconfig=true
+type=path
+reconfig=false
 customization=seldom
 friendly_name=Dagman Config File
 review=?
-tags=dagman,dagman_main
+tags=dagman,dagman_main,condor_submit_dag
 
 [DAGMAN_DEBUG_CACHE_ENABLE]
 default=false
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Debug Cache Enable
 review=?
@@ -853,18 +844,9 @@ tags=dagman,dagman_main
 [DAGMAN_STARTUP_CYCLE_DETECT]
 default=false
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Startup Cycle Detect
-review=?
-tags=dagman,dagman_main
-
-[DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION]
-default=false
-type=bool
-reconfig=true
-customization=seldom
-friendly_name=Dagman Ignore Duplicate Job Execution
 review=?
 tags=dagman,dagman_main
 
@@ -872,8 +854,8 @@ tags=dagman,dagman_main
 # XXX 114 is really CheckEvents::ALLOW_TERM_ABORT | CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT | CheckEvents::ALLOW_DOUBLE_TERMINATE | CheckEvents::ALLOW_DUPLICATE_EVENTS
 default=114
 type=int
-reconfig=true
-customization=seldom
+reconfig=false
+customization=expert
 friendly_name=Dagman Allow Events
 review=?
 tags=dagman,dagman_main
@@ -881,7 +863,7 @@ tags=dagman,dagman_main
 [DAGMAN_RETRY_SUBMIT_FIRST]
 default=true
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Retry Submit First
 review=?
@@ -890,7 +872,7 @@ tags=dagman,dagman_main
 [DAGMAN_RETRY_NODE_FIRST]
 default=false
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Retry Node First
 review=?
@@ -899,25 +881,16 @@ tags=dagman,dagman_main
 [DAGMAN_MUNGE_NODE_NAMES]
 default=true
 type=bool
-reconfig=true
-customization=seldom
+reconfig=false
+customization=expert
 friendly_name=Dagman Munge Node Names
-review=?
-tags=dagman,dagman_main
-
-[DAGMAN_DELETE_OLD_LOGS]
-default=true
-type=bool
-reconfig=true
-customization=seldom
-friendly_name=Dagman Delete Old Logs
 review=?
 tags=dagman,dagman_main
 
 [DAGMAN_PROHIBIT_MULTI_JOBS]
 default=false
 type=bool
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Prohibit Multi Jobs
 review=?
@@ -926,53 +899,37 @@ tags=dagman,dagman_main
 [DAGMAN_SUBMIT_DEPTH_FIRST]
 default=false
 type=bool
-reconfig=true
-customization=seldom
+reconfig=false
+customization=normal
 friendly_name=Dagman Submit Depth First
 review=?
 tags=dagman,dagman_main
 
 [DAGMAN_CONDOR_SUBMIT_EXE]
-default=
-type=string
-reconfig=true
-customization=seldom
+default=$(BIN)/condor_submit
+win32_default=$(BIN)\condor_submit.exe
+type=path
+reconfig=false
+customization=expert
 friendly_name=Dagman Condor Submit Exe
 review=?
 tags=dagman,dagman_main
 
 [DAGMAN_CONDOR_RM_EXE]
-default=
-type=string
-reconfig=true
-customization=seldom
+default=$(BIN)/condor_rm
+win32_default=$(BIN)\condor_submit.exe
+type=path
+reconfig=false
+customization=expert
 friendly_name=Dagman Condor Rm Exe
-review=?
-tags=dagman,dagman_main
-
-[DAGMAN_STORK_SUBMIT_EXE]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Dagman Stork Submit Exe
-review=?
-tags=dagman,dagman_main
-
-[DAGMAN_STORK_RM_EXE]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Dagman Stork Rm Exe
 review=?
 tags=dagman,dagman_main
 
 [DAGMAN_ABORT_DUPLICATES]
 default=true
 type=bool
-reconfig=true
-customization=seldom
+reconfig=false
+customization=expert
 friendly_name=Dagman Abort Duplicates
 review=?
 tags=dagman,dagman_main
@@ -980,8 +937,8 @@ tags=dagman,dagman_main
 [DAGMAN_ABORT_ON_SCARY_SUBMIT]
 default=true
 type=bool
-reconfig=true
-customization=seldom
+reconfig=false
+customization=expert
 friendly_name=Dagman Abort On Scary Submit
 review=?
 tags=dagman,dagman_main
@@ -989,9 +946,235 @@ tags=dagman,dagman_main
 [DAGMAN_PENDING_REPORT_INTERVAL]
 default=600
 type=int
-reconfig=true
+reconfig=false
 customization=seldom
 friendly_name=Dagman Pending Report Interval
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_ALLOW_LOG_ERROR]
+default=false
+type=bool
+reconfig=false
+customization=seldom
+friendly_name=Dagman Allow Log Error
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_ALWAYS_RUN_POST]
+default=true
+type=bool
+reconfig=false
+customization=seldom
+friendly_name=Dagman Always Run Post
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_COPY_TO_SPOOL]
+default=false
+type=bool
+reconfig=false
+customization=expert
+friendly_name=Dagman Copy To Spool
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_DEBUG]
+default=
+type=string
+reconfig=false
+customization=normal
+friendly_name=Dagman Debug
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_DEBUG_CACHE_SIZE]
+default=5*1024*1024
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Debug Cache Size
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_DEFAULT_NODE_LOG]
+default=@(DAG_DIR)/@(DAG_FILE).nodes.log
+type=path
+reconfig=false
+customization=expert
+friendly_name=Dagman Default Node Log
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_DEFAULT_PRIORITY]
+default=0
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Default Priority
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_GENERATE_SUBDAG_SUBMITS]
+default=true
+type=bool
+reconfig=false
+customization=seldom
+friendly_name=Dagman Generate SubDAG Submits
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_HOLD_CLAIM_TIME]
+default=20
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Claim Hold Time
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_JOB_HOLDS]
+default=100
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Max Job Holds
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_JOBS_IDLE]
+default=1000
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Max Jobs Idle
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_JOBS_SUBMITTED]
+default=0
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Max Jobs Submitted
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_POST_SCRIPTS]
+default=20
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Max Post Scripts
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_PRE_SCRIPTS]
+default=20
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Max Pre Scripts
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_RESCUE_NUM]
+default=100
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Max Rescue Num
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_SUBMIT_ATTEMPTS]
+default=6
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Max Submit Attempts
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_MAX_SUBMITS_PER_INTERVAL]
+default=5
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Max Submits Per Interval
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_PEGASUS_REPORT_METRICS]
+default=$(LIBEXEC)/condor_dagman_metrics_reporter
+win32_default=$(BIN)\condor_dagman_metrics_reporter.exe
+type=path
+reconfig=false
+customization=expert
+friendly_name=Dagman Pegasus Report Metrics
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_PEGASUS_REPORT_TIMEOUT]
+default=100
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Pegasus Report Timeout
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_SUBMIT_DELAY]
+default=0
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman Submit Delay
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_SUPPRESS_NOTIFICATION]
+default=true
+type=bool
+reconfig=false
+customization=normal
+friendly_name=Dagman Suppress Notification
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_USER_LOG_SCAN_INTERVAL]
+default=5
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Dagman User Log Scan Interval
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_USE_STRICT]
+default=1
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Use Strict
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_VERBOSITY]
+default=3
+type=int
+reconfig=false
+customization=normal
+friendly_name=Dagman Verbosity
+review=?
+tags=dagman,dagman_main
+
+[DAGMAN_WRITE_PARTIAL_RESCUE]
+default=true
+type=bool
+reconfig=false
+customization=expert
+friendly_name=Dagman Write Partial Rescue
 review=?
 tags=dagman,dagman_main
 
@@ -1115,6 +1298,11 @@ review=?
 default=$(RELEASE_DIR)/include
 type=path
 review=?
+
+[ETC]
+default=$(RELEASE_DIR)/etc
+type=path
+friendly_name=etc
 
 [XAUTHORITY_USERS]
 default=
@@ -2120,6 +2308,14 @@ friendly_name=Collector read buffer size for incoming UDP traffic
 review=?
 tags=daemon_core,daemon_core,collector
 
+[PIPE_BUFFER_MAX]
+default=10240
+type=int
+reconfig=false
+customization=seldom
+friendly_name=Maximum buffer size for stdout/err pipes
+tags=daemon_core,daemon_core
+
 [TOUCH_LOG_INTERVAL]
 default=60
 type=int
@@ -2715,7 +2911,7 @@ friendly_name=Network Hostname
 review=?
 
 [NETWORK_INTERFACE]
-default=
+default=*
 type=string
 reconfig=false
 customization=seldom
@@ -2785,6 +2981,17 @@ reconfig=true
 customization=seldom
 friendly_name=Ignore Nfs Lock Errors
 review=?
+
+[SENDMAIL]
+# default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
+default=sendmail
+win32_default=
+type=path
+reconfig=true
+customization=seldom
+friendly_name=Path to sendmail
+review=?
+tags=MAIL,
 
 [MAIL]
 # default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
@@ -3212,6 +3419,24 @@ friendly_name=Classad Lib Path
 review=?
 tags=classad,ast
 
+[CLASSAD_USER_PYTHON_LIB]
+default=$(LIBEXEC)/libclassad_python_user.so
+type=string
+reconfig=true
+customization=seldom
+friendly_name=ClassAd python library path
+review=?
+tags=classad
+
+[CLASSAD_USER_PYTHON_MODULES]
+default=
+type=string
+reconfig=true
+customization=seldom
+friendly_name=ClassAd python modules
+review=?
+tags=classad
+
 [ENABLE_CLASSAD_CACHING]
 default=true
 win32_default=false
@@ -3478,7 +3703,7 @@ review=?
 tags=c++_util,jobqueuesnapshot
 
 [WINDOWS_FIREWALL_FAILURE_RETRY]
-default=60
+default=2
 type=int
 reconfig=true
 customization=seldom
@@ -3799,7 +4024,7 @@ review=?
 tags=c++_util,sshd_wrapper
 
 [ENABLE_USERLOG_LOCKING]
-default=true
+default=false
 type=bool
 reconfig=true
 customization=seldom
@@ -3831,6 +4056,15 @@ type=bool
 reconfig=true
 customization=seldom
 friendly_name=Event Log Use Xml
+review=?
+tags=c++_util,user_log
+
+[EVENT_LOG_ROTATION_LOCK]
+default=$(LOCK)/EventLogLock
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Event Log Rotation Lock
 review=?
 tags=c++_util,user_log
 
@@ -4078,7 +4312,7 @@ review=?
 tags=starter,os_proc
 
 [JOB_RENICE_INCREMENT]
-default=
+default=0
 win32_default=10
 type=string
 reconfig=true
@@ -4214,6 +4448,14 @@ customization=seldom
 friendly_name=Negotiator Update After Cycle
 review=?
 tags=negotiator,matchmaker
+
+[NEGOTIATOR_UPDATE_INTERVAL]
+default=300
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Update Interval
+review=?
 
 [NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD]
 default=0
@@ -4843,6 +5085,15 @@ friendly_name=Schedd Preemption Rank
 review=?
 tags=schedd,dedicated_scheduler
 
+[SCHEDD_RESTART_REPORT]
+default=$(LOG)/ScheddRestartReport
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Schedd Restart Report
+review=?
+tags=schedd,dedicated_scheduler
+
 [DEDICATED_SCHEDULER_USE_FIFO]
 default=true
 type=bool
@@ -4988,13 +5239,21 @@ review=?
 tags=schedd,schedd
 
 [MAX_JOBS_RUNNING]
-default=ceiling(ifThenElse( $(DETECTED_MEMORY)*0.8*1024/800 < 10000, $(DETECTED_MEMORY)*0.8*1024/800, 10000 ))
+default=ifThenElse( $(DETECTED_MEMORY) < 10000, $(DETECTED_MEMORY), 10000 )
 win32_default=200
 type=int
 reconfig=true
 customization=seldom
 friendly_name=Max Jobs Running
 review=?
+tags=schedd,schedd
+
+[CURB_MATCHMAKING]
+default=false
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Curb Expression for Matchmaking
 tags=schedd,schedd
 
 [START_LOCAL_UNIVERSE]
@@ -5132,6 +5391,15 @@ customization=seldom
 friendly_name=Schedd Backup Spool
 review=?
 tags=schedd,schedd_main
+
+[SCHEDD_QUERY_WORKERS]
+default=8
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Schedd forked workers
+review=?
+tags=schedd
 
 [X_RUNS_HERE]
 default=
@@ -5847,6 +6115,14 @@ friendly_name=Enable Address Rewriting
 review=?
 tags=c++_util
 
+# This was an option "born deprecated"; it allows a single-host HTCondor instance (particularly, the HTCondor-CE) to provide a better dual-stack service by rewriting all ads in the collector.
+[SHARED_PORT_ADDRESS_REWRITING]
+default=false
+version=8.3.4
+type=bool
+reconfig=true
+customization=never
+
 [SHADOW_WORKLIFE]
 default=3600
 version=7.5.3
@@ -5933,7 +6209,7 @@ friendly_name=
 review=?
 
 [LOCAL_CONFIG_DIR_EXCLUDE_REGEXP]
-default=^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
+default=^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew)|(.*\.dpkg-old)|(.*\.dpkg-dist)|(.*\.cfsaved))$
 type=string
 reconfig=true
 customization=seldom
@@ -6686,7 +6962,7 @@ review=?
 tags=c++_util,condor_config
 
 [GANGLIAD_METRICS_CONFIG_DIR]
-default=$(RELEASE_DIR)/etc/condor/ganglia.d
+default=/etc/condor/ganglia.d
 type=path
 reconfig=true
 customization=seldom
@@ -6755,6 +7031,15 @@ customization=seldom
 friendly_name=Send metrics for all hosts
 review=?
 tags=c++_util,gangliad
+
+[ECRYPTFS_ADD_PASSPHRASE]
+default=ecryptfs-add-passphrase
+type=path
+reconfig=true
+customization=expert
+friendly_name=Name of ecryptfs tool to add a passphrase
+review=toddt
+tags=ecryptfs
 
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
 default=
@@ -6897,6 +7182,78 @@ customization=seldom
 friendly_name=Permissions on the job's execute directory
 review=?
 tags=starter
+
+[PANDAD]
+default=$(LIBEXEC)/condor_pandad
+win32_default=
+type=path
+customization=seldom
+review=tlmiller
+reconfig=false
+
+[PANDA_UPDATE_TIMEOUT]
+default=0
+type=int
+review=tlmiller
+reconfig=true
+
+[PANDA_QUEUE_SIZE]
+default=131072
+type=int
+review=tlmiller
+reconfig=true
+
+[PANDA_QUEUE_GRACE]
+default=3
+type=int
+reivew=tlmiller
+reconfig=false
+
+[PANDA_STATISTICS_LOG]
+default=/tmp/pandaStatisticsLog
+type=string
+review=tlmiller
+reconfig=true
+
+[RUN_FILETRANSFER_PLUGINS_WITH_ROOT]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Whether to invoke file transfer plugins as user or as root
+review=?
+
+[DISCARD_SESSION_KEYRING_ON_STARTUP]
+default=true
+type=bool
+reconfig=false
+customization=expert
+friendly_name=Will master discard session keyring on startup
+review=toddt
+tags=ecryptfs,master
+
+[DOCKER]
+default=/usr/bin/docker
+win32_default=docker
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Docker
+review=?
+
+[SUBMIT_REQUIREMENT_NAMES]
+default=
+type=string
+reconfig=true
+friendly_name=Names of the submit requirements.
+review=tlmiller
+
+[IS_OWNER]
+default=(START =?= False)
+version=8.2.8
+type=string
+friendly_name=When a slot should be in Owner state
+review=?
 
 [FILETRANSFER_PLUGINS]
 default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
@@ -7850,12 +8207,4 @@ default: @end
 	# cross-advertise these slot attributes in all other slots
 	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
 @end
-
-[RUN_FILETRANSFER_PLUGINS_WITH_ROOT]
-default=false
-type=bool
-reconfig=true
-customization=seldom
-friendly_name=Whether to invoke file transfer plugins as user or as root
-review=?
 

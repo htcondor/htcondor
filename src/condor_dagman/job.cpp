@@ -58,14 +58,6 @@ const char * Job::status_t_names[] = {
 };
 
 //---------------------------------------------------------------------------
-// NOTE: must be kept in sync with the job_type_t enum
-const char* Job::_job_type_names[] = {
-    "Condor",
-    "Stork",
-    "No-Op",
-};
-
-//---------------------------------------------------------------------------
 Job::~Job() {
 	delete [] _directory;
 	delete [] _cmdFile;
@@ -76,7 +68,6 @@ Job::~Job() {
     // as of 6/2004 we don't yet use that.  For details, see:
     // http://support.microsoft.com/support/kb/articles/Q131/3/22.asp
 	delete [] _jobName;
-	delete [] _logFile;
 
 	varsFromDag->Rewind();
 	NodeVar *var;
@@ -92,9 +83,9 @@ Job::~Job() {
 }
 
 //---------------------------------------------------------------------------
-Job::Job( const job_type_t jobType, const char* jobName,
+Job::Job( const char* jobName,
 			const char *directory, const char* cmdFile ) :
-	_jobType( jobType ), _preskip( PRE_SKIP_INVALID ), _final( false )
+	_preskip( PRE_SKIP_INVALID ), _final( false )
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -113,8 +104,6 @@ Job::Job( const job_type_t jobType, const char* jobName,
 	_cmdFile = strnewp (cmdFile);
 	_dagFile = NULL;
 	_throttleInfo = NULL;
-	_logIsMonitored = false;
-	_useDefaultLog = false;
 
     // _condorID struct initializes itself
 
@@ -138,9 +127,6 @@ Job::Job( const job_type_t jobType, const char* jobName,
 
 	_hasNodePriority = false;
 	_nodePriority = 0;
-
-	_logFile = NULL;
-	_logFileIsXml = false;
 
 	_noop = false;
 
@@ -195,16 +181,6 @@ bool Job::Remove (const queue_t queue, const JobID_t jobID)
 }  
 
 //---------------------------------------------------------------------------
-bool
-Job::CheckForLogFile( bool usingDefault ) const
-{
-	bool tmpLogFileIsXml;
-	MyString logFile = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
-				_directory, tmpLogFileIsXml, usingDefault );
-	return (logFile != "");
-}
-
-//---------------------------------------------------------------------------
 void Job::Dump ( const Dag *dag ) const {
     dprintf( D_ALWAYS, "---------------------- Job ----------------------\n");
     dprintf( D_ALWAYS, "      Node Name: %s\n", _jobName );
@@ -246,6 +222,7 @@ void Job::Dump ( const Dag *dag ) const {
     }
 }
 
+#if 0 // not used -- wenger 2015-02-17
 //---------------------------------------------------------------------------
 void Job::Print (bool condorID) const {
     dprintf( D_ALWAYS, "ID: %4d Name: %s", _jobID, _jobName);
@@ -263,6 +240,7 @@ void job_print (Job * job, bool condorID) {
 		job->Print(condorID);
 	}
 }
+#endif
 
 const char*
 Job::GetPreScriptName() const
@@ -494,19 +472,7 @@ Job::Add( const queue_t queue, const JobID_t jobID )
 }
 
 bool
-Job::AddPreScript( const char *cmd, MyString &whynot )
-{
-	return AddScript( false, cmd, whynot );
-}
-
-bool
-Job::AddPostScript( const char *cmd, MyString &whynot )
-{
-	return AddScript( true, cmd, whynot );
-}
-
-bool
-Job::AddScript( bool post, const char *cmd, MyString &whynot )
+Job::AddScript( bool post, const char *cmd, int defer_status, time_t defer_time, MyString &whynot )
 {
 	if( !cmd || strcmp( cmd, "" ) == 0 ) {
 		whynot = "missing script name";
@@ -517,7 +483,7 @@ Job::AddScript( bool post, const char *cmd, MyString &whynot )
 						post ? "POST" : "PRE", GetPreScriptName() );
 		return false;
 	}
-	Script* script = new Script( post, cmd, this );
+	Script* script = new Script( post, cmd, defer_status, defer_time, this );
 	if( !script ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in
@@ -670,29 +636,6 @@ Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
 	return true;
 }
 
-
-Job::job_type_t
-Job::JobType() const
-{
-    return _jobType;
-}
-
-
-const char*
-Job::JobTypeString() const
-{
-    return _job_type_names[_jobType];
-}
-
-
-/*
-const char* Job::JobIdString() const
-{
-
-}
-*/
-
-
 int
 Job::NumParents() const
 {
@@ -741,9 +684,7 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 void
 Job::PrefixName(const MyString &prefix)
 {
-	MyString tmp = _jobName;
-
-	tmp = prefix + tmp;
+	MyString tmp = prefix + _jobName;
 
 	delete[] _jobName;
 
@@ -773,138 +714,6 @@ Job::SetDagFile(const char *dagFile)
 {
 	delete _dagFile;
 	_dagFile = strnewp( dagFile );
-}
-
-//---------------------------------------------------------------------------
-bool
-Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
-			ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
-			bool recovery, const char *defaultNodeLog, bool usingDefault )
-{
-	debug_printf( DEBUG_DEBUG_2,
-				"Attempting to monitor log file for node %s; using default?: %d\n",
-				GetJobName(), usingDefault );
-
-	if ( _logIsMonitored ) {
-		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
-					"%s is already monitored\n", GetJobName() );
-		return true;
-	}
-
-	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
-				condorLogReader : storkLogReader;
-
-	MyString logFile;
-	if ( !FindLogFile( usingDefault, logFile ) ) {
-		LogMonitorFailed();
-		return false;
-	}
-	// Note:  logFile is "" here if usingDefault is true and this node
-	// is an HTCondor node (not Stork).
-
-		// Warn the user if the node's log file is in /tmp.
-	if ( logFile.find( "/tmp" ) == 0 ) {
-		debug_printf( DEBUG_QUIET, "Warning: "
-					"Log file %s for node %s is in /tmp\n",
-					logFile.Value(), GetJobName() );
-			// If we're using the workflow log, we'll only ever get here
-			// for Stork nodes, because they can't use the workflow log.
-        check_warning_strictness( DAG_STRICT_1 );
-	}
-
-	if ( logFile == "" ) {
-			// Using the workflow/default log file for this node.
-		logFile = defaultNodeLog;
-		_useDefaultLog = true;
-			// Default User log is never XML
-		_logFileIsXml = false;
-	}
-
-		// This function returns true if the log file is on NFS and
-		// that is an error.  If the log file is on NFS, but nfsIsError
-		// is false, it prints a warning but returns false.
-	if ( MultiLogFiles::logFileNFSError( logFile.Value(),
-				nfsIsError ) ) {
-		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
-					logFile.Value() );
-		LogMonitorFailed();
-		return false;
-	}
-
-	delete [] _logFile;
-		// Saving log file here in case submit file gets changed.
-	_logFile = strnewp( logFile.Value() );
-	debug_printf( DEBUG_DEBUG_2, "Monitoring log file <%s> for node %s\n",
-				GetLogFile(), GetJobName() );
-	CondorError errstack;
-	if ( !logReader.monitorLogFile( GetLogFile(), !recovery, errstack ) ) {
-		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
-					"ERROR: Unable to monitor log file for node %s",
-					GetJobName() );
-		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText().c_str() );
-		LogMonitorFailed();
-		EXCEPT( "Fatal log file monitoring error!" );
-		return false;
-	}
-
-	_logIsMonitored = true;
-
-	return true;
-}
-
-//---------------------------------------------------------------------------
-bool
-Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
-			ReadMultipleUserLogs &storkLogReader )
-{
-	debug_printf( DEBUG_DEBUG_2, "Unmonitoring log file <%s> for node %s\n",
-				GetLogFile(), GetJobName() );
-
-	if ( !_logIsMonitored ) {
-		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "
-					"%s is already unmonitored\n", GetJobName() );
-		return true;
-	}
-
-	ReadMultipleUserLogs &logReader = (_jobType == TYPE_CONDOR) ?
-				condorLogReader : storkLogReader;
-
-	debug_printf( DEBUG_DEBUG_1, "Unmonitoring log file <%s> for node %s\n",
-				GetLogFile(), GetJobName() );
-
-	CondorError errstack;
-	bool result = logReader.unmonitorLogFile( GetLogFile(), errstack );
-	if ( !result ) {
-		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
-					"ERROR: Unable to unmonitor log " "file for node %s",
-					GetJobName() );
-		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText().c_str() );
-		EXCEPT( "Fatal log file monitoring error!" );
-	}
-
-	if ( result ) {
-		delete [] _logFile;
-		_logFile = NULL;
-		_logIsMonitored = false;
-	}
-
-	return result;
-}
-
-//---------------------------------------------------------------------------
-void
-Job::LogMonitorFailed()
-{
-	if ( _Status != Job::STATUS_ERROR ) {
-		SetStatus( Job::STATUS_ERROR );
-		snprintf( error_text, JOB_ERROR_TEXT_MAXLEN,
-					"Unable to monitor node job log file" );
-		retval = Dag::DAG_ERROR_LOG_MONITOR_ERROR;
-		if ( _scriptPost != NULL) {
-				// let the script know the job's exit status
-			_scriptPost->_retValJob = retval;
-		}
-	}
 }
 
 //---------------------------------------------------------------------------
@@ -1112,56 +921,4 @@ Job::Cleanup()
 
 	std::vector<unsigned char> s2;
 	_gotEvents.swap(s2); // Free memory in _gotEvents
-}
-
-//---------------------------------------------------------------------------
-bool
-Job::FindLogFile( bool usingWorkflowLog, MyString &logFile )
-{
-	if ( _jobType == TYPE_CONDOR ) {
-		if ( usingWorkflowLog ) {
-				// Now, if we're using the workflow log file, we don't
-				// even look at the node's submit file.  (See gittrac
-				// #3843.)
-			logFile = "";
-
-		} else {
-				// We're not in workflow/default log mode, so get the
-				// log file (if any) from the submit file.
-    		logFile = MultiLogFiles::loadLogFileNameFromSubFile(
-						_cmdFile, _directory, _logFileIsXml, false );
-			if ( logFile == "" ) {
-				debug_printf( DEBUG_NORMAL, "Unable to get log file from "
-							"submit file %s (node %s); using default/workflow log\n",
-							_cmdFile, GetJobName() );
-				// Don't return false here, because not specifying the
-				// log file is not an error.
-			}
-		}
-
-	} else {
-			// Workflow/default log file mode is not supported for Stork
-			// nodes, so we always have to get the log file for a Stork
-			// node.
-		StringList logFiles;
-		MyString tmpResult = MultiLogFiles::loadLogFileNamesFromStorkSubFile(
-					_cmdFile, _directory, logFiles );
-		if ( tmpResult != "" ) {
-			debug_printf( DEBUG_QUIET, "Error getting Stork log file: %s\n",
-						tmpResult.Value() );
-			return false;
-
-		} else if ( logFiles.number() != 1 ) {
-			debug_printf( DEBUG_QUIET, "Error: %d Stork log files found "
-						"in submit file %s; we want 1\n",
-						logFiles.number(), _cmdFile );
-			return false;
-
-		} else {
-			logFiles.rewind();
-			logFile = logFiles.next();
-		}
-	}
-
-	return true;
 }

@@ -304,7 +304,8 @@ MultiLogFiles::FileReader::Open( const MyString &filename )
 bool
 MultiLogFiles::FileReader::NextLogicalLine( MyString &line )
 {
-	char *tmpLine = getline( _fp );
+	int lines_read = 0;
+	char *tmpLine = getline_trim( _fp, lines_read );
 	if ( tmpLine != NULL ) {
 		line = tmpLine;
 		return true;
@@ -624,7 +625,7 @@ MultiLogFiles::readFile(char const *filename,std::string& buf)
 	}
 
     while(1) {
-        size_t n = read(fd,chunk,sizeof(chunk)-1);
+        ssize_t n = read(fd,chunk,sizeof(chunk)-1);
         if(n>0) {
             chunk[n] = '\0';
             buf += chunk;
@@ -800,73 +801,6 @@ MultiLogFiles::getQueueCountFromSubmitFile(const MyString &strSubFilename,
 	}
 
 	return queueCount;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-MyString
-MultiLogFiles::getValuesFromFile(const MyString &fileName, 
-			const MyString &keyword, StringList &values, int skipTokens)
-{
-
-	MyString	errorMsg;
-	StringList	logicalLines;
-	if ( (errorMsg = fileNameToLogicalLines( fileName,
-				logicalLines )) != "" ) {
-		return errorMsg;
-	}
-
-	const char *	logicalLine;
-	while ( (logicalLine = logicalLines.next()) ) {
-
-		if ( strcmp(logicalLine, "") ) {
-
-				// Note: StringList constructor removes leading
-				// whitespace from lines.
-			StringList	tokens(logicalLine, " \t");
-			tokens.rewind();
-
-			if ( !strcasecmp(tokens.next(), keyword.Value()) ) {
-					// Skip over unwanted tokens.
-				for ( int skipped = 0; skipped < skipTokens; skipped++ ) {
-					if ( !tokens.next() ) {
-						MyString result = MyString( "Improperly-formatted DAG "
-									"file: value missing after keyword <" ) +
-									keyword + ">";
-			    		return result;
-					}
-				}
-
-					// Get the value.
-				const char *newValue = tokens.next();
-				if ( !newValue || !strcmp( newValue, "") ) {
-					MyString result = MyString( "Improperly-formatted DAG "
-								"file: value missing after keyword <" ) +
-								keyword + ">";
-			    	return result;
-				}
-
-					// Add the value we just found to the values list
-					// (if it's not already in the list -- we don't want
-					// duplicates).
-				values.rewind();
-				char *existingValue;
-				bool alreadyInList = false;
-				while ( (existingValue = values.next()) ) {
-					if (!strcmp( existingValue, newValue ) ) {
-						alreadyInList = true;
-					}
-				}
-
-				if (!alreadyInList) {
-						// Note: append copies the string here.
-					values.append(newValue);
-				}
-			}
-		}
-	}	
-
-	return "";
 }
 
 ///////////////////////////////////////////////////////////////////////////////

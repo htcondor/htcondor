@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-#define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_debug.h"
@@ -523,7 +522,7 @@ LeaseManager::initPublicAd( void )
 	SetMyTypeName( m_publicAd, LEASE_MANAGER_ADTYPE );
 	SetTargetTypeName( m_publicAd, "" );
 
-	m_publicAd.Assign( ATTR_MACHINE, my_full_hostname() );
+	m_publicAd.Assign( ATTR_MACHINE, get_local_fqdn() );
 
 	const char *local = get_mySubSystem()->getLocalName();
 	if ( local ) {

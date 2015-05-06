@@ -20,12 +20,6 @@
 #ifndef MY_HOSTNAME_H
 #define MY_HOSTNAME_H
 
-// use get_local_hostname() instead
-extern	const char*	my_hostname( void );
-
-// use get_local_fqdn() instead
-extern	const char*	my_full_hostname( void );
-
 // use get_local_ipaddr().to_ip_string() instead
 extern	const char*	my_ip_string( void );
 
@@ -38,33 +32,44 @@ void init_network_interfaces(int config_done);
 // If the specified attribute name is recognized as an attribute used
 // to publish a daemon IP address, this function replaces any
 // reference to the default host IP with the actual connection IP in
-// the attribute's expression string.  If no replacement happens,
-// new_expr_string will be NULL.  Otherwise, it will be a new buffer
-// allocated with malloc().  The caller should free it.
+// the attribute's expression string.
 
 // You might consider this a dirty hack (and it is), but of the
 // methods that were considered, this was the one with the lowest
 // maintainance, least overhead, and least likelihood to have
 // unintended side-effects.
 
-void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_string,char **new_expr_string,Stream& s);
+void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,Stream& s);
+
 
 void ConfigConvertDefaultIPToSocketIP();
 
-// This is a convenient interface to ConvertDefaultIPToSocketIP().
-// If a replacement occurs, expr_string will be freed and replaced
-// with a new buffer allocated with malloc().  The caller should free it.
-
-void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream& s);
-
 // This interface to ConvertDefaultIPToSocketIP() takes a std::string
 // and modifies its contents.
-void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,Stream& s);
 
+/* Find local addresses that match a given NETWORK_INTERFACE
+ *
+ * Prefers public addresses.  Strongly prefers "up" addresses.
+ *
+ * interface_param_name - Optional, but recommended, exclusively used 
+ *        in log messages. Probably "NETWORK_INTERFACE" or "PRIVATE_NETWORK_INTERFACE"
+ * interface_pattern - Required. The value of the param.  Something like
+ *        "*" or "192.168.0.23"
+ * ipv4 - best ipv4 address found. May be empty if no ipv4 addresses are found
+ *        that match the interface pattern.
+ * ipv6 - best ipv6 address found. May be empty if no ipv6 addresses are found
+ *        that match the interface pattern.
+ * ipbest - If you absolutely need a single result, this is our best bet.
+ *        But really, just don't do that. Should be one of ipv4 or ipv6.
+ * network_interface_ips - Optional. A list of every IP address, v4 or v6,
+ *        that matches the interface pattern.
+ */
 bool network_interface_to_ip(
 	char const *interface_param_name,
 	char const *interface_pattern,
-	std::string &ip,
+	std::string & ipv4,
+	std::string & ipv6,
+	std::string & ipbest,
 	std::set< std::string > *network_interface_ips = NULL);
 
 #endif /* MY_HOSTNAME_H */

@@ -1,0 +1,139 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+# new test now is a single file and does both local and vanilla universe
+# bt 2/13/15
+
+use CondorUtils;
+use CondorTest;
+use Cwd;
+use POSIX;
+use Check::SimpleJob;
+
+$topdir = getcwd();
+print scalar localtime() . "\n";
+
+$testname = "job_basic_submit-queueitemfrom-File-run";
+
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
+
+$mypid = $$;
+
+my $counter = 0;
+my $datafileswanted = 3;
+my $datafilename = "from_file$mypid";
+my $extension = ".Fnxmacro";
+my $targetname = "";
+my @results = ();
+my @extraction = ();
+my $extractionsize = 0;
+
+my @expect2see = (
+	"Eat Food",
+	"wash car",
+	"Cook Beans",
+);
+
+my $ExitedSuccess = sub {
+	print "Good job completion\n";
+};
+
+my $filecontents = 
+	'Eat Food
+	wash car
+	Cook Beans 
+';
+
+my $submitfile = "
+	executable = x_print-args.pl
+	output = \$(ACTION)$mypid.out
+	should_transfer_files = yes
+	when_to_transfer_output = ON_EXIT
+	log = $testname$mypid.log
+	Arguments = \$(ACTION) \$(ITEM)
+	queue ACTION,ITEM from $datafilename 
+";
+
+my $submitfilename = "$testname$mypid.cmd";
+open(SF,">$submitfilename") or die "failed submit file write:$submitfilename:$!\n";
+print SF "$submitfile";
+close(SF);
+
+open(FL,">$datafilename") or die "Failed to create $datafilename:$!\n";
+print FL "$filecontents";
+close(FL);
+
+CondorTest::RegisterExitedSuccess( $testname, $ExitedSuccess );
+
+if( CondorTest::RunTest($testname, $submitfilename, 0) ) {
+	print "Good\n";
+	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
+	RegisterResult(1,"test_name","$testname");
+} else {
+	print "Bad\n";
+	RegisterResult(0,"test_name","$testname");
+}
+
+print "Lets do some validation\n";
+
+print "Jobs should be all fone\n";
+system("condor_q");
+
+my @argsprocessing = ();
+foreach my $line ( @expect2see ) {
+	@argsprocessing = ();
+	@argsprocessing = split /\s/, $line;
+	open(FT,"<$argsprocessing[0]$mypid.out") or die "Could not open output file:$argsprocessing[0]$mypid.out:$!\n";
+	print "Opened $argsprocessing[0]$mypid.out expecting $line\n";
+	my $oneread = <FT>;
+	chomp($oneread);
+	if($oneread ne "$argsprocessing[0]") {
+		print "Read $oneread but expected $argsprocessing[0]\n";
+		RegisterResult(0,"test_name", "$testname");
+	} else {
+		print "Good just read $oneread as expected\n";
+		RegisterResult(1,"test_name", "$testname");
+	}
+	$oneread = <FT>;
+	chomp($oneread);
+	if($oneread ne "$argsprocessing[1]") {
+		print "Read $oneread but expected $argsprocessing[1]\n";
+		RegisterResult(0,"test_name", "$testname");
+	} else {
+		print "Good just read $oneread as expected\n";
+		RegisterResult(1,"test_name", "$testname");
+		system("rm $argsprocessing[0]$mypid.out");
+	}
+}
+
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+my $result = 0;
+
+if( $result != 0 )
+{
+	exit(1);
+}
+
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
+

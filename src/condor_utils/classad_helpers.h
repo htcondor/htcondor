@@ -36,6 +36,9 @@ int findRmKillSig( ClassAd* ad );
 // same as findSoftKillSig(), but for ATTR_HOLD_KILL_SIG
 int findHoldKillSig( ClassAd* ad );
 
+// same as findSoftKillSig(), but for ATTR_CHECKPOINT_SIG
+int findCheckpointSig( ClassAd* ad );
+
 // Based on info in the ClassAd and the given exit reason, construct
 // the appropriate string describing the fate of the job...
 bool printExitString( ClassAd* ad, int exit_reason, MyString &str );

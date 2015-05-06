@@ -397,7 +397,7 @@ Return
 
 Returns the Resource the job will actually be running on.  It does not need to
 be deleted.  The returned Resource might be different than the Resource passed
-in!  In particular, if the passed in Resource is a partitionable slow, we will
+in!  In particular, if the passed in Resource is a partitionable slot, we will
 carve out a new dynamic slot for his job.
 
 The job may be rejected, in which case the returned Resource will be null.

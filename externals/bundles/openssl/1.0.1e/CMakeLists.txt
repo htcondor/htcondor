@@ -20,83 +20,62 @@ option(WITH_OPENSSL "Compiling with support for OPENSSL" ON)
 
 if (WITH_OPENSSL)
 
-  find_multiple( "ssl;crypto" OPENSSL_FOUND )
-
-  if ( NOT OPENSSL_FOUND AND NOT PROPER AND NOT LINUX AND NOT DARWIN )
+	if ( WINDOWS )
   
-    set (OPENSSL_DOWNLOAD ${OPENSSL_VER}.tar.gz)
+		condor_pre_external( OPENSSL openssl-1.0.1e "lib;include" "include/openssl/ssl.h")
 
-    condor_pre_external( OPENSSL openssl-1.0.1e "lib;include" "include/openssl/ssl.h")
-
-    if (WINDOWS)
-      set (OPENSSL_INSTALL cp *.lib ${OPENSSL_INSTALL_LOC}/lib \r\n
-        cp *.dll ${OPENSSL_INSTALL_LOC}/lib \r\n
-        cp -r openssl/ ${OPENSSL_INSTALL_LOC}/include \r\n )
-        #cp ${CMAKE_CURRENT_SOURCE_DIR}/ossl_typ-post.h ${OPENSSL_INSTALL_LOC}/include/openssl/ossl_typ.h )
+		set (OPENSSL_INSTALL cp *.lib ${OPENSSL_INSTALL_LOC}/lib \r\n
+			cp *.dll ${OPENSSL_INSTALL_LOC}/lib \r\n
+			cp -r openssl/ ${OPENSSL_INSTALL_LOC}/include \r\n )
+			#cp ${CMAKE_CURRENT_SOURCE_DIR}/ossl_typ-post.h ${OPENSSL_INSTALL_LOC}/include/openssl/ossl_typ.h )
       
-      if (MSVC11)
-        if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-          set (OPENSSL_DOWNLOAD ${OPENSSL_VER}-VC11-Win64.tar.gz)
-        else ()
-          set (OPENSSL_DOWNLOAD ${OPENSSL_VER}-VC11-Win32.tar.gz)
-        endif ()
-      endif ()
+		if (MSVC11)
+			if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
+				set (OPENSSL_DOWNLOAD ${OPENSSL_VER}-VC11-Win64.tar.gz)
+			else ()
+				set (OPENSSL_DOWNLOAD ${OPENSSL_VER}-VC11-Win32.tar.gz)
+			endif ()
+		endif ()
       
-      set (OPENSSL_CONFIGURE echo "No configuration necessary")
-      set (OPENSSL_MAKE echo "No make necessary")
+		set (OPENSSL_CONFIGURE echo "No configuration necessary")
+		set (OPENSSL_MAKE echo "No make necessary")
       
-		else(WINDOWS)
-			set (OPENSSL_PATCH patch -N --binary -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/renegotiate.patch &&
-							   sed 's/-fomit-frame-pointer//' Configure > Configure.new &&
-							   mv Configure.new Configure &&
-							   chmod a+rx Configure )
-
-			set (OPENSSL_CONFIGURE ./config --prefix=${OPENSSL_INSTALL_LOC} no-asm )
-			
-			if (DARWIN)
-			  string(SUBSTRING ${OS_VER} 0 2 DARWIN_MAJOR)
-			  if(${DARWIN_MAJOR} STREQUAL "10")
-				dprint("OPENSSL_CONVERT")
-				set (OPENSSL_CONFIGURE ./Configure darwin64-x86_64-cc --prefix=${OPENSSL_INSTALL_LOC} no-asm -fPIC )
-			  endif()
-			endif()
-			 
-			if ( NOT AIX )
-				set (OPENSSL_CONFIGURE ${OPENSSL_CONFIGURE} -fPIC)
-			endif()
-			set (OPENSSL_MAKE make )
-			set (OPENSSL_INSTALL make install )
-		endif(WINDOWS)
+		ExternalProject_Add( openssl
+			#-- Download Step ----------
+			DOWNLOAD_DIR ${OPENSSL_STAGE}/dl
+			URL ${EXTERNALS_SOURCE_URL}/${OPENSSL_DOWNLOAD}
+			#--Patch step ----------
+			PATCH_COMMAND ${OPENSSL_PATCH}
+			#--Configure step ----------
+			CONFIGURE_COMMAND ${OPENSSL_CONFIGURE}
+			#--Build Step ----------
+			BUILD_COMMAND ${OPENSSL_MAKE}
+			BUILD_IN_SOURCE 1
+			#--install Step ----------
+			INSTALL_DIR ${OPENSSL_INSTALL_LOC}
+			INSTALL_COMMAND ${OPENSSL_INSTALL} )
     
-    ExternalProject_Add( openssl
-      #-- Download Step ----------
-      DOWNLOAD_DIR ${OPENSSL_STAGE}/dl
-      URL ${EXTERNALS_SOURCE_URL}/${OPENSSL_DOWNLOAD}
-      #--Patch step ----------
-      PATCH_COMMAND ${OPENSSL_PATCH}
-      #--Configure step ----------
-      CONFIGURE_COMMAND ${OPENSSL_CONFIGURE}
-      #--Build Step ----------
-      BUILD_COMMAND ${OPENSSL_MAKE}
-      BUILD_IN_SOURCE 1
-      #--install Step ----------
-      INSTALL_DIR ${OPENSSL_INSTALL_LOC}
-      INSTALL_COMMAND ${OPENSSL_INSTALL} )
-    
-    if (WINDOWS)
-      set(OPENSSL_FOUND "${OPENSSL_INSTALL_LOC}/lib/libeay32.lib;${OPENSSL_INSTALL_LOC}/lib/ssleay32.lib")
+		set(OPENSSL_FOUND "${OPENSSL_INSTALL_LOC}/lib/libeay32.lib;${OPENSSL_INSTALL_LOC}/lib/ssleay32.lib")
 
-      #this may become the common case.
-      install ( FILES ${OPENSSL_INSTALL_LOC}/lib/libeay32.dll
-        ${OPENSSL_INSTALL_LOC}/lib/ssleay32.dll
-        DESTINATION ${C_LIB} )
-    else ()
-      set(OPENSSL_FOUND "${OPENSSL_INSTALL_LOC}/lib/libssl.a;${OPENSSL_INSTALL_LOC}/lib/libcrypto.a")
-    endif ()
-		
-    condor_post_external( openssl include OFF )
+		#this may become the common case.
+		install ( FILES ${OPENSSL_INSTALL_LOC}/lib/libeay32.dll
+			${OPENSSL_INSTALL_LOC}/lib/ssleay32.dll
+			DESTINATION ${C_LIB} )
+
+		condor_post_external( openssl include OFF )
 
 		set(BUILDING_OPENSSL ON PARENT_SCOPE)
+
+	else()
+
+		find_library( LIBSSL_FOUND "ssl" )
+		find_library( LIBCRYPTO_FOUND "crypto" )
+		set( OPENSSL_FOUND "${LIBSSL_FOUND};${LIBCRYPTO_FOUND}" )
+
+		if( DLOPEN_SECURITY_LIBS )
+			find_so_name( LIBSSL_SO ${LIBSSL_FOUND} )
+			set( OPENSSL_FOUND "${LIBCRYPTO_FOUND}" )
+		endif()
 
 	endif( )
 
@@ -106,6 +85,9 @@ if (WITH_OPENSSL)
 		set( OPENSSL_INSTALL_LOC ${OPENSSL_INSTALL_LOC} PARENT_SCOPE )
 		set( HAVE_EXT_OPENSSL ON PARENT_SCOPE )
 		set( HAVE_OPENSSL_SSL_H ON PARENT_SCOPE )
+		set( LIBSSL_SO ${LIBSSL_SO} PARENT_SCOPE )
+		set( LIBSSL_FOUND "${LIBSSL_FOUND}" PARENT_SCOPE )
+		set( LIBCRYPTO_FOUND "${LIBCRYPTO_FOUND}" PARENT_SCOPE )
 	endif(OPENSSL_FOUND)
 
 else(WITH_OPENSSL)

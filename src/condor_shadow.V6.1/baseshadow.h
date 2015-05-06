@@ -360,7 +360,7 @@ class BaseShadow : public Service
 		/** Do whatever cleanup (like killing starter(s)) that's
 			required before the shadow can exit.
 		*/
-	virtual void cleanUp( void ) = 0;
+	virtual void cleanUp( bool graceful=false ) = 0;
 
 		/** Did this shadow's job exit by a signal or not?  This is
 			virtual since each kind of shadow will need to implement a
@@ -400,6 +400,12 @@ class BaseShadow : public Service
 	virtual void logDisconnectedEvent( const char* reason ) = 0;
 
 	char const *getTransferQueueContactInfo() {return m_xfer_queue_contact_info.Value();}
+
+		/** True if attemping a reconnect from startup, i.e. if
+			reconnecting based upon command-line flag -reconnect. 
+			Used to determine if shadow exits with RECONNECT_FAILED
+			or just with JOB_SHOULD_REQUEUE. */
+	bool attemptingReconnectAtStartup;
 
  protected:
 

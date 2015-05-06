@@ -18,7 +18,12 @@
 \oOpt{-spool}
 \oOptArg{-dump}{filename}
 \oOpt{-interactive}
+\oOpt{-dry-run}
+\oOptArg{-maxjobs}{<number-of-jobs>}
+\oOpt{-single-cluster}
+\oOpt{<submit-variable>=<value>}
 \oArg{submit description file}
+\oOptArg{-queue}{queue\_arguments}
 
 \Description
 
@@ -48,6 +53,11 @@ submit description file.
 Each cluster must specify a single executable.
 
 The job ClassAd attribute \Attr{ClusterId} identifies a cluster.
+
+The \Arg{submit description file} argument is the path and file name of 
+the submit description file. 
+If this optional argument is missing or is the dash character (\Expr{-}),
+then the commands are taken from standard input.
 
 Note that submission of jobs from a Windows machine requires
 a stashed password to allow HTCondor to impersonate the user submitting
@@ -110,15 +120,26 @@ This option is used with \Opt{-name} or \Opt{-remote}.}
 based on the value of the configuration variable \MacroNI{TOOL\_DEBUG}.}
 
 \OptItem{\OptArg{-append}{command}}{Augment the commands in the submit 
-description file with the given command.
-This command will be considered to immediately precede the Queue
-command within the submit description file, and come after all other
-previous commands.
-The submit description file is not modified.
-Multiple commands are specified by using the \Opt{-append} option multiple times.
-Each new command is given in a separate \Opt{-append} option.
-Commands with spaces in them will need to be enclosed in double quote
-marks.}
+  description file with the given \Arg{command}.
+  This command will be considered to immediately precede the \SubmitCmdNI{queue}
+  command within the submit description file, and come after all other
+  previous commands.
+  If the \Arg{command} specifies a \SubmitCmdNI{queue} command,
+  as in the example
+
+  \Expr{condor\_submit mysubmitfile -append "queue input in A, B, C"} 
+
+  then the entire \Opt{-append} command line option and its arguments
+  are converted to
+
+  \Expr{condor\_submit mysubmitfile -queue input in A, B, C} 
+
+  The submit description file is not modified.
+  Multiple commands are specified by using the \Opt{-append} option 
+  multiple times.
+  Each new command is given in a separate \Opt{-append} option.
+  Commands with spaces in them will need to be enclosed in double quote
+  marks. }
 
 \OptItem{\Opt{-spool}}{Spool all required input files, job event log, and
 proxy over the connection to the \Condor{schedd}.
@@ -150,10 +171,43 @@ files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
   The job ClassAd attribute \Attr{InteractiveJob} is set to \Expr{True}
   to identify interactive jobs for \Condor{startd} policy usage.  }
 
-\OptItem{\Arg{submit description file}}{The path and file name of 
-the submit description file. 
-If this optional argument is missing or is the dash character (\Expr{-}),
-then the commands are taken from standard input.}
+\OptItem{\Opt{-dry-run}}{Parse the submit description file,
+  sending the job ClassAd to \File{stderr}, but do not submit the job(s).
+  This permits an observation of job specification, 
+  and it facilitates debugging the submit description file contents.  }
+
+\OptItem{\OptArg{-maxjobs}{<number-of-jobs>}}{If the total number
+  of jobs specified by the submit description file is more than
+  the integer value given by \Opt{<number-of-jobs>}, 
+  then no jobs are submitted for execution and an error message is generated. 
+  A 0 or negative value for the \Opt{<number-of-jobs>}
+  causes no limit to be imposed. }
+
+\OptItem{\Opt{-single-cluster}}{If the jobs specified by the submit description
+  file causes more than a single cluster value to be assigned,
+  then no jobs are submitted for execution and an error message is generated. }
+
+\OptItem{\Opt{<submit-variable>=<value>}}{Defines a submit command or
+  submit variable with a value, and parses it as if it was placed at
+  the beginning of the submit description file.
+  The submit description file is not changed.
+  To correctly parse the \Condor{submit} command line,
+  this option must be specified without white space characters before and
+  after the equals sign (\Expr{=}),
+  or the entire option must be surrounded by double quote marks.  }
+
+\OptItem{\OptArg{-queue}{queue\_arguments}}{A command line specification
+  of how many jobs to queue, which is only permitted if the submit description
+  file does not have a \SubmitCmdNI{queue} command.
+  The \Arg{queue\_arguments} are the same as may be within a submit
+  description file.
+  The parsing of the \Arg{queue\_arguments} finishes at the end of the
+  line or when a dash character (\Expr{-}) is encountered. 
+  Therefore, its best placement within the command line will be at the end
+  of the command line. 
+
+  On a Unix command line, the shell expands file globs before parsing
+  occurs. }
 
 \end{Options}
 

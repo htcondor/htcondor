@@ -41,20 +41,6 @@
 class MultiLogFiles
 {
 public:
-		/** Gets values from a file, where the file contains lines of
-			the form
-				<keyword> <value>
-			with arbitrary whitespace between the two tokens.
-			@param fileName: the name of the file to parse
-			@param keyword: the keyword string
-			@param values: the list of values found
-			@param skipTokens: number of tokens to skip between keyword
-				and value
-			@return "" if okay, an error message otherwise
-		*/
-	static MyString getValuesFromFile(const MyString &fileName,
-			const MyString &keyword, StringList &values, int skipTokens = 0);
-
 		/** getValuesFromFileNew() performs exactly the same function as
 			getValuesFromFile(); the difference is that
 			getValuesFromFileNew() reads the given file line-by-line

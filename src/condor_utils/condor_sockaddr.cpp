@@ -5,17 +5,47 @@
 #include "ipv6_hostname.h"
 #include "condor_debug.h"
 
+#include <sstream>
+
+//
+// We could use the parse table defaults look-up code instead, if
+// we ever add enough protocols for the linear search time to matter.
+//
+// CP_PRIMARY is used to denote an unresolved "primary" address.  It
+// exists to support round-trip conversions among Sinful serializations.
+//
+#define CP_PRIMARY_STRING		"primary"
+#define CP_INVALID_MIN_STRING	"invalid-min"
+#define CP_IPV4_STRING			"IPv4"
+#define CP_IPV6_STRING			"IPv6"
+#define CP_INVALID_MAX_STRING	"invalid-max"
+#define CP_PARSE_INVALID_STRING	"parse-invalid"
 
 MyString condor_protocol_to_str(condor_protocol p) {
 	switch(p) {
-		case CP_IPV4: return "IPv4";
-		case CP_IPV6: return "IPv6";
-		default: break; // Silence warnings
+		case CP_PRIMARY: return CP_PRIMARY_STRING;
+		case CP_INVALID_MIN: return CP_INVALID_MIN_STRING;
+		case CP_IPV4: return CP_IPV4_STRING;
+		case CP_IPV6: return CP_IPV6_STRING;
+		case CP_INVALID_MAX: return CP_INVALID_MAX_STRING;
+		case CP_PARSE_INVALID: return CP_PARSE_INVALID_STRING;
+		default: break;
 	}
 	MyString ret;
-	ret.formatstr("Invalid protocol %d\n", int(p));
+	ret.formatstr( "Unknown protocol %d\n", int(p));
 	return ret;
 }
+
+condor_protocol str_to_condor_protocol( const std::string & str ) {
+	if( str == CP_PRIMARY_STRING ) { return CP_PRIMARY; }
+	else if( str == CP_INVALID_MIN_STRING ) { return CP_INVALID_MIN; }
+	else if( str == CP_IPV4_STRING ) { return CP_IPV4; }
+	else if( str == CP_IPV6_STRING ) { return CP_IPV6; }
+	else if( str == CP_INVALID_MAX_STRING ) { return CP_INVALID_MAX; }
+	else if( str == CP_PARSE_INVALID_STRING ) { return CP_PARSE_INVALID; }
+	else { return CP_PARSE_INVALID; }
+}
+
 
 typedef union sockaddr_storage_ptr_u {
         const struct sockaddr     *raw;
@@ -24,6 +54,20 @@ typedef union sockaddr_storage_ptr_u {
 } sockaddr_storage_ptr;
 
 condor_sockaddr condor_sockaddr::null;
+
+
+int condor_sockaddr::desirability() const {
+	// IPv6 link local addresses are useless.  You can't use them without a
+	// scope-id, and we can't determine the scope-id that someone else will
+	// need.
+	if(is_ipv6() && is_link_local()) { return 1; }
+
+	if(is_loopback()) { return 2; }
+	if(is_link_local()) { return 3; }
+	if(is_private_network()) { return 4; }
+	return 5;
+}
+
 
 void condor_sockaddr::clear()
 {
@@ -65,20 +109,25 @@ condor_sockaddr::condor_sockaddr(const in6_addr& in6, unsigned short port)
 
 condor_sockaddr::condor_sockaddr(const sockaddr* sa)
 {
-	sockaddr_storage_ptr sock_address;
-	sock_address.raw = sa;
-	if (sa->sa_family == AF_INET) {
-		sockaddr_in* sin = sock_address.in;
-		init(sin->sin_addr.s_addr, sin->sin_port);
-	} else if (sa->sa_family == AF_INET6) {
-		sockaddr_in6* sin6 = sock_address.in6;
-		v6 = *sin6;
+	// Now that we actually assign a value on every path that exits the
+	// constructor, this call to clear() is probably unnecessary; on the
+	// other hand, it's nice to have the addresses end with a long
+	// string of zeroes when looking at them in the debugger.
+	clear();
+	switch( sa->sa_family ) {
+		case AF_INET:
+			v4 = * (const sockaddr_in *)sa;
+			break;
+		case AF_INET6:
+			v6 = * (const sockaddr_in6 *)sa;
+			break;
+		case AF_UNIX:
+			storage = * (const sockaddr_storage *)sa;
+			break;
+		default:
+			EXCEPT( "Attempted to construct condor_sockaddr with unrecognized address family (%d), aborting.", sa->sa_family );
+			break;
 	}
-}
-
-condor_sockaddr::condor_sockaddr(const sockaddr_storage *sa)
-{
-	condor_sockaddr(reinterpret_cast<const sockaddr*>(sa));
 }
 
 condor_sockaddr::condor_sockaddr(const sockaddr_in* sin) 
@@ -191,37 +240,43 @@ void condor_sockaddr::set_port(unsigned short port)
 
 MyString condor_sockaddr::to_sinful() const
 {
+	// TODO: Implement in terms of Sinful object.
 	MyString ret;
 	char tmp[IP_STRING_BUF_SIZE];
 		// if it is not ipv4 or ipv6, to_ip_string_ex will fail.
-	if ( !to_ip_string_ex(tmp, IP_STRING_BUF_SIZE) )
+	if ( !to_ip_string_ex(tmp, IP_STRING_BUF_SIZE, true) )
 		return ret;
 
-	if (is_ipv4()) {
-		ret.formatstr("<%s:%d>", tmp, ntohs(v4.sin_port));
-	}
-	else if (is_ipv6()) {
-		ret.formatstr("<[%s]:%d>", tmp, ntohs(v6.sin6_port));
-	}
+	ret.formatstr("<%s:%d>", tmp, ntohs(v4.sin_port));
 
 	return ret;
 }
 
 const char* condor_sockaddr::to_sinful(char* buf, int len) const
 {
+	// TODO: Implement in terms of Sinful object.
 	char tmp[IP_STRING_BUF_SIZE];
 		// if it is not ipv4 or ipv6, to_ip_string_ex will fail.
-	if ( !to_ip_string_ex(tmp, IP_STRING_BUF_SIZE) )
+	if ( !to_ip_string_ex(tmp, IP_STRING_BUF_SIZE, true) )
 		return NULL;
 
-	if (is_ipv4()) {
-		snprintf(buf, len, "<%s:%d>", tmp, ntohs(v4.sin_port));
-	}
-	else if (is_ipv6()) {
-		snprintf(buf, len, "<[%s]:%d>", tmp, ntohs(v6.sin6_port));
-	}
+	snprintf(buf, len, "<%s:%d>", tmp, ntohs(v4.sin_port));
 
 	return buf;
+}
+
+MyString condor_sockaddr::to_sinful_wildcard_okay() const
+{
+	// TODO: Implement in terms of Sinful object.
+	MyString ret;
+	char tmp[IP_STRING_BUF_SIZE];
+		// if it is not ipv4 or ipv6, to_ip_string will fail.
+	if ( !to_ip_string(tmp, IP_STRING_BUF_SIZE, true) )
+		return ret;
+
+	ret.formatstr("<%s:%d>", tmp, ntohs(v4.sin_port));
+
+	return ret;
 }
 
 bool condor_sockaddr::from_sinful(const MyString& sinful) {
@@ -231,6 +286,7 @@ bool condor_sockaddr::from_sinful(const MyString& sinful) {
 // faithful reimplementation of 'string_to_sin' of internet.c
 bool condor_sockaddr::from_sinful(const char* sinful)
 {
+	// TODO: Implement in terms of Sinful object.
 	if ( !sinful ) return false;
 
 	const char* addr = sinful;
@@ -346,8 +402,48 @@ bool condor_sockaddr::from_ip_string(const MyString& ip_string)
 	return from_ip_string(ip_string.Value());
 }
 
+bool condor_sockaddr::from_ip_and_port_string( const char * ip_and_port_string ) {
+	ASSERT( ip_and_port_string );
+
+	char copy[IP_STRING_BUF_SIZE];
+	strncpy( copy, ip_and_port_string, IP_STRING_BUF_SIZE );
+
+	char * lastColon = strrchr( copy, ':' );
+	if( lastColon == NULL ) { return false; }
+	* lastColon = '\0';
+
+	if( ! from_ip_string( copy ) ) { return false; }
+
+	++lastColon;
+	char * end = NULL;
+	unsigned long port = strtoul( lastColon, & end, 10 );
+	if( * end != '\0' ) { return false; }
+	set_port( port );
+
+	return true;
+}
+
 bool condor_sockaddr::from_ip_string(const char* ip_string)
 {
+	// We're blowing an assertion on NULL input instead of 
+	// just returning false because this is catching bugs, where
+	// returning NULL would mask them.
+	ASSERT(ip_string);
+
+	// If we've gotten a bracketed IPv6 address, strip the brackets.
+	char unbracketedString[(8 * 4) + 7 + 1];
+	if( ip_string[0] == '[' ) {
+		const char * closeBracket = strchr( ip_string, ']' );
+		if( closeBracket != NULL ) {
+			int addrLength = closeBracket - ip_string - 1;
+			if( addrLength < (8 * 4) + 7 ) {
+				memcpy( unbracketedString, & ip_string[1], addrLength );
+				unbracketedString[ addrLength ] = '\0';
+				ip_string = unbracketedString;
+			}
+		}
+	}
+
 	if (inet_pton(AF_INET, ip_string, &v4.sin_addr) == 1) {
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
 		v4.sin_len = sizeof(sockaddr_in);
@@ -366,25 +462,7 @@ bool condor_sockaddr::from_ip_string(const char* ip_string)
 	return false;
 }
 
-/*
-const char* condor_sockaddr::to_ip_string(char* buf, int len) const
-{
-	if (is_addr_any())
-		return get_local_condor_sockaddr().to_raw_ip_string(buf, len);
-	else
-		return to_raw_ip_string(buf, len);
-}
-
-MyString condor_sockaddr::to_ip_string() const
-{
-	if (is_addr_any())
-		return get_local_condor_sockaddr().to_raw_ip_string();
-	else
-		return to_raw_ip_string();
-}
-*/
-
-const char* condor_sockaddr::to_ip_string(char* buf, int len) const
+const char* condor_sockaddr::to_ip_string(char* buf, int len, bool decorate) const
 {
 	if ( is_ipv4() ) 
 		return inet_ntop(AF_INET, &v4.sin_addr, buf, len);	
@@ -401,43 +479,64 @@ const char* condor_sockaddr::to_ip_string(char* buf, int len) const
 			// These reliance should be corrected at some point.
 			// hopefully, at IPv6-Phase3
 		const uint32_t* addr = (const uint32_t*)&v6.sin6_addr;
-		if (addr[0] == 0 && addr[1] == 0 && addr[2] == ntohl(0xffff)) {
-			return inet_ntop(AF_INET, (const void*)&addr[3], buf, len);
+		char * orig_buf = buf;
+		if(decorate && len > 0) {
+			buf[0] = '[';
+			len--;
+			buf++;
 		}
-
-		return inet_ntop(AF_INET6, &v6.sin6_addr, buf, len);
+		const char * ret = NULL;
+		if (addr[0] == 0 && addr[1] == 0 && addr[2] == ntohl(0xffff)) {
+			ret = inet_ntop(AF_INET, (const void*)&addr[3], buf, len);
+		} else {
+			ret = inet_ntop(AF_INET6, &v6.sin6_addr, buf, len);
+		}
+		if(decorate && int(strlen(buf)) < (len-2)) {
+			buf[strlen(buf)+1] = 0;
+			buf[strlen(buf)] = ']';
+		}
+		if(ret) { return orig_buf; }
+		return NULL;
 	} else {
 		snprintf(buf, len, "%x INVALID ADDRESS FAMILY", (unsigned int)v4.sin_family);
 		return NULL;
 	}
 }
 
-MyString condor_sockaddr::to_ip_string() const
+MyString condor_sockaddr::to_ip_string(bool decorate) const
 {
 	char tmp[IP_STRING_BUF_SIZE];
 	MyString ret;
-	if ( !to_ip_string(tmp, IP_STRING_BUF_SIZE) )
+	if ( !to_ip_string(tmp, IP_STRING_BUF_SIZE, decorate) )
 		return ret;
 	ret = tmp;
 	return ret;
 }
 
-MyString condor_sockaddr::to_ip_string_ex() const
+MyString condor_sockaddr::to_ip_and_port_string() {
+	// Using formatstr() would be better in every possible way, but it
+	// doesn't exist in libcondorsyscall.
+	std::ostringstream oss;
+	oss << to_ip_string( true ).c_str() << ":" << get_port();
+	return oss.str().c_str();
+}
+
+MyString condor_sockaddr::to_ip_string_ex(bool decorate) const
 {
 		// no need to check is_valid()
 	if ( is_addr_any() )
-		return get_local_ipaddr().to_ip_string();
+		return get_local_ipaddr(get_protocol()).to_ip_string(decorate);
 	else
-		return to_ip_string();
+		return to_ip_string(decorate);
 }
 
-const char* condor_sockaddr::to_ip_string_ex(char* buf, int len) const
+const char* condor_sockaddr::to_ip_string_ex(char* buf, int len, bool decorate) const
 {
 		// no need to check is_valid()
 	if (is_addr_any())
-		return get_local_ipaddr().to_ip_string(buf, len);
+		return get_local_ipaddr(get_protocol()).to_ip_string(buf, len, decorate);
 	else
-		return to_ip_string(buf, len);
+		return to_ip_string(buf, len, decorate);
 }
 
 bool condor_sockaddr::is_valid() const
@@ -481,6 +580,12 @@ void condor_sockaddr::set_protocol(condor_protocol proto) {
 		case CP_IPV6: set_ipv6(); break;
 		default: ASSERT(0); break;
 	}
+}
+
+condor_protocol condor_sockaddr::get_protocol() const {
+	if(is_ipv4()) { return CP_IPV4; }
+	if(is_ipv6()) { return CP_IPV6; }
+	return CP_INVALID_MIN;
 }
 
 void condor_sockaddr::set_ipv4() {
@@ -534,6 +639,7 @@ in6_addr condor_sockaddr::to_ipv6_address() const
 	return ret;
 }
 
+#if 0
 void condor_sockaddr::convert_to_ipv6() {
 	// only ipv4 addressn can be converted
 	if (!is_ipv4())
@@ -545,6 +651,7 @@ void condor_sockaddr::convert_to_ipv6() {
 	set_port(port);
 	v6.sin6_addr = addr;
 }
+#endif
 
 bool condor_sockaddr::compare_address(const condor_sockaddr& addr) const
 {

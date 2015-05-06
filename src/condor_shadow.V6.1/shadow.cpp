@@ -175,11 +175,11 @@ UniShadow::logExecuteEvent( void )
 
 
 void
-UniShadow::cleanUp( void )
+UniShadow::cleanUp( bool graceful )
 {
 		// Deactivate (fast) the claim
 	if ( remRes ) {
-		remRes->killStarter();
+		remRes->killStarter(graceful);
 	}
 }
 
@@ -405,6 +405,12 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 		// We've only got one remote resource, so if it successfully
 		// reconnected, we can safely log our reconnect event
 	logReconnectedEvent();
+
+		// Since our reconnect worked, clear attemptingReconnectAtStartup
+		// flag so if we disconnect again and fail, we will exit
+		// with JOB_SHOULD_REQUEUE instead of JOB_RECONNECT_FAILED.
+		// See gt #4783.
+	attemptingReconnectAtStartup = false;
 
 		// Update NumJobReconnects in the schedd
 		// TODO Should we do the update through the job_updater?

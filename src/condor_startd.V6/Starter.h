@@ -62,6 +62,7 @@ public:
 		// returns NULL if no execute directory set, o.w. returns the value
 		// of EXECUTE that is passed to the starter
 	char const *executeDir();
+	char const *encryptedExecuteDir();
 
 	bool	killHard( void );
 	bool	killSoft( bool state_change = false );
@@ -160,6 +161,7 @@ private:
 	int             s_reaper_id;
 	ReliSock*       s_job_update_sock;
 	MyString        s_execute_dir;
+	MyString        s_encrypted_execute_dir;
 	DCMsgCallback*  m_hold_job_cb;
 	MyString        m_starter_addr;
 };

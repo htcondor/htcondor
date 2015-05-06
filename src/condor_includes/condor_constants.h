@@ -112,9 +112,11 @@ static const char NiceUserName[] = "nice-user";
 #endif
 
 /* Max space needed to hold an IP string, as
- * returned by inet_ntoa().
+ * returned by inet_ntoa().  Includes space for
+ * optional decoration like the square brackets
+ * around an IPv6 address.
  */
-static const size_t IP_STRING_BUF_SIZE = 46;
+static const size_t IP_STRING_BUF_SIZE = 48;
 
 /* Max space needed to hold a sinful string, as
  * returned by sin_to_string()

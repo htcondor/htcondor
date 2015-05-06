@@ -1241,8 +1241,6 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 {
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
 
-		cp->Assign( ATTR_VIRTUAL_MEMORY, c_virt_mem );
-
 		cp->Assign( ATTR_TOTAL_DISK, c_total_disk );
 
 		cp->Assign( ATTR_DISK, c_disk );
@@ -1278,6 +1276,8 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 			cp->Assign( ATTR_TOTAL_SLOT_CPUS, (int)(c_num_slot_cpus + 0.1) );
 		}
 		
+		cp->Assign( ATTR_VIRTUAL_MEMORY, c_virt_mem );
+
 		// publish local resource quantities for this slot
 		for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
 			cp->Assign(j->first.c_str(), int(j->second));
@@ -1309,7 +1309,7 @@ CpuAttributes::compute( amask_t how_much )
 			val *= c_virt_mem_fraction;
 		}
 		c_virt_mem = (unsigned long)floor( val );
-	}
+	} 
 
 	if( IS_TIMEOUT(how_much) && !IS_SHARED(how_much) ) {
 
@@ -1461,7 +1461,9 @@ CpuAttributes::operator+=( CpuAttributes& rhs )
 	if (!IS_AUTO_SHARE(rhs.c_virt_mem_fraction) &&
 		!IS_AUTO_SHARE(c_virt_mem_fraction)) {
 		c_virt_mem_fraction += rhs.c_virt_mem_fraction;
+		c_virt_mem = map->virt_mem() * c_virt_mem_fraction;
 	}
+
 	if (!IS_AUTO_SHARE(rhs.c_disk_fraction) &&
 		!IS_AUTO_SHARE(c_disk_fraction)) {
 		c_disk_fraction += rhs.c_disk_fraction;
@@ -1485,6 +1487,7 @@ CpuAttributes::operator-=( CpuAttributes& rhs )
 		!IS_AUTO_SHARE(c_virt_mem_fraction)) {
 		c_virt_mem_fraction -= rhs.c_virt_mem_fraction;
 	}
+
 	if (!IS_AUTO_SHARE(rhs.c_disk_fraction) &&
 		!IS_AUTO_SHARE(c_disk_fraction)) {
 		c_disk_fraction -= rhs.c_disk_fraction;

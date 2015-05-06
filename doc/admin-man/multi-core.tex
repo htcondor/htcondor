@@ -1,12 +1,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Configuring-SMP}
-Configuring the \Condor{startd} for Multi-Core Machines}
+\subsubsection{\label{sec:Configuring-SMP}
+Multi-Core Machine Terminology}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{SMP machines!configuration|(}
 \index{multi-core machines!configuration|(}
-This section describes how to configure the \Condor{startd} for multi-core
-machines.
 Machines with more than one CPU or core may
 be configured to run more than one job at a time.
 As always, owners of the resources have great flexibility in defining
@@ -663,7 +661,8 @@ until the entire set of
 Slot1's available resources have been consumed by jobs.
 
 To enable dynamic provisioning, 
-define a slot type with machine resources.
+define a slot type. 
+and declare at least one slot of that type.
 Then,
 identify that slot type as partitionable by setting
 configuration variable 
@@ -677,10 +676,10 @@ be configured for one slot, managing all the resources on the machine.
 To do so, set the following configuration variables:
 
 \begin{verbatim}
-NUM_SLOTS=1
-NUM_SLOTS_TYPE_1=1
-SLOT_TYPE_1=100%
-SLOT_TYPE_1_PARTITIONABLE=true
+NUM_SLOTS = 1
+NUM_SLOTS_TYPE_1 = 1
+SLOT_TYPE_1 = 100%
+SLOT_TYPE_1_PARTITIONABLE = TRUE
 \end{verbatim}
 
 In a pool using dynamic provisioning, 

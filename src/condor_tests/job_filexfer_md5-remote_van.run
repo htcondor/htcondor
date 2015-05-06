@@ -19,16 +19,18 @@
 ##**************************************************************
 
 use CondorTest;
+use Check::SimpleJob;
+use File::Copy;
+use File::Path;
+use Digest::MD5;
 
 my $stats = 0;
 
-$cmd = 'job_filexfer_md5-remote_van.cmd';
-$testdesc =  'Do file transfers with md5 - vanilla U';
 $testname = "job_filexfer_md5-remote_van";
 
 $success = sub {
 	CondorTest::debug("Transfer job worked..... need to chack data file.\n",1);
-	$stats = CondorTest::verbose_system("./x_test_md5data.pl --oldfile=data --newfile=backdata");
+	TestMd5Data("data", "backdata");
 	if($stats != 0)
 	{
 		die "Test of MD5 data failed\n";
@@ -38,7 +40,7 @@ $success = sub {
 if( ! -e "data")
 {
 	CondorTest::debug("Making data file\n",1);
-	$stats = CondorTest::verbose_system("./x_create_md5data.pl -m=200 -filenm=data");
+	CreateMd5Data(200,"data");
 }
 else
 {
@@ -47,11 +49,120 @@ else
 
 CondorTest::debug("Data file created, submitting job\n",1);
 
-CondorTest::RegisterExitedSuccess($testname, $success);
-if(CondorTest::RunTest($testname, $cmd, 0)) {
-	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
-} else {
-	die "$testname: CondorTest::RunTest() failed\n";
+SimpleJob::RunCheck(
+    runthis=>"job_filexfer_md5-remote.pl",
+    duration=>"backdata",
+    transfer_input_files=>"data,datamd5",
+    should_transfer_files=>"YES",
+    when_to_transfer_output=>"ON_EXIT",
+    on_success=>$success,
+);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
+{
+    exit(1);
+}
+
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
+
+sub CreateMd5Data {
+
+	my $megs = shift;
+	my $filenm = shift;
+	open(DATA,">$filenm") || die "Can't open output file $!\n";
+
+	my $rows = $megs;
+	my $rowsz = 1048576;
+	my $seed_char = int(rand ((ord("~") - ord(" ")) + 1)) + ord(" ");
+	my $start_char = chr($seed_char);
+
+	print "Start char -$start_char-\n";
+
+	my $rowchar = $seed_char;
+	my $row = "";
+
+
+	foreach (1..$rowsz)
+	{
+		$row .= chr($rowchar);
+		if($rowchar == ord("~"))
+		{	
+			$rowchar = ord(" ");
+		} else {
+			$rowchar++;
+		}
+	}
+
+	foreach (1..$rows)
+	{
+		print DATA "$row";
+	}
+
+	close(DATA);
+
+	my $outnamemd5 = $filenm . "md5";
+
+	open(DATA,"<$filenm") || die "Can't open input file $!\n";
+	open(MD5,">$outnamemd5") || die "Can't open MD5 output file $!\n";
+	my $datamd5 = Digest::MD5->new;
+
+	$datamd5->addfile(DATA);
+	close(DATA);
+
+
+	my $hexmd5 = $datamd5->hexdigest;
+
+	print MD5 "$hexmd5\n";
+	close(MD5);
+
+}
+
+sub TestMd5Data {
+	my $oldfile = shift;
+	my $newfile = shift;
+
+	my $oldmd5file = $oldfile . "md5";
+	my $oldmd5;
+	open(ORIGMD5,"<$oldmd5file") || die "Can't open md5 checksum file $!\n";
+	while(<ORIGMD5>)
+	{
+	    CondorUtils::fullchomp($_);
+	    $oldmd5 = $_;
+	}
+	close(ORIGMD5);
+	CondorTest::debug("Old MD5 = $oldmd5\n",1);
+
+	my $newmd5file = $newfile . "md5";
+	my $datamd5 = Digest::MD5->new;
+
+	open(MD5,">$newmd5file") || die "Can't open MD5 output file $!\n";
+	open(DATA,"<$newfile") || die "Trying to open data file\n" ;
+	$datamd5->addfile(DATA);
+	close(DATA);
+
+
+	my $hexmd5 = $datamd5->hexdigest;
+
+	print MD5 "$hexmd5\n";
+	close(MD5);
+
+	if($oldmd5 eq $hexmd5)
+	{
+		CondorTest::debug("Check some of $oldfile and $newfile match!\n",1);
+		#verbose_system("touch WORKED");
+		unlink($oldfile);
+		unlink($newfile);
+		return(0);
+	}
+	else
+	{
+		CondorTest::debug("failed\n",1);
+		#verbose_system("touch FAILED");
+		return(1);
+	}
 }
 

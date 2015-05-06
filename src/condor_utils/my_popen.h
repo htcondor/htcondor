@@ -50,7 +50,8 @@ FILE *my_popen( ArgList &args,
                 const char * mode,
                 int want_stderr,
                 Env *env_ptr = NULL,
-                bool drop_privs = true);
+                bool drop_privs = true,
+				const char *write_data = NULL);
 int my_system( ArgList &args, Env *env_ptr = NULL );
 
 // PrivSep version

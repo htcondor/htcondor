@@ -24,6 +24,7 @@
 #include "starter.h"
 #include "script_proc.h"
 #include "vanilla_proc.h"
+#include "docker_proc.h"
 #include "java_proc.h"
 #include "tool_daemon_proc.h"
 #include "mpi_master_proc.h"
@@ -57,6 +58,7 @@ extern void main_shutdown_fast();
 
 const char* JOB_AD_FILENAME = ".job.ad";
 const char* MACHINE_AD_FILENAME = ".machine.ad";
+extern const char* JOB_WRAPPER_FAILURE_FILE;
 
 #ifdef WIN32
 // Note inversion of argument order...
@@ -1555,6 +1557,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 					new_arg += sshd_config_file.Value();
 				}
 				else {
+					deleteStringArray(argarray);
 					return SSHDFailed(s,
 							"Unexpected %%%c in SSH_TO_JOB_SSHD_ARGS: %s\n",
 							*ptr ? *ptr : ' ', sshd_arg_string.Value());
@@ -1867,10 +1870,13 @@ CStarter::createTempExecuteDir( void )
 		}
 	}
 	
-	// if the user wants the execute directory encrypted, 
+	// if the admin or the user wants the execute directory encrypted,
 	// go ahead and set that up now too
-	
-	if ( param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false) ) {
+	bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
+	if (!encrypt_execdir && jic && jic->jobClassAd()) {
+		jic->jobClassAd()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
+	}
+	if ( encrypt_execdir ) {
 		
 			// dynamically load our encryption functions to preserve 
 			// compatability with NT4 :(
@@ -2365,9 +2371,16 @@ CStarter::SpawnJob( void )
 	switch ( jobUniverse )  
 	{
 		case CONDOR_UNIVERSE_LOCAL:
-		case CONDOR_UNIVERSE_VANILLA:
-			job = new VanillaProc( jobAd );
-			break;
+		case CONDOR_UNIVERSE_VANILLA: {
+			int wantDocker = 0;
+			jobAd->LookupBool( ATTR_WANT_DOCKER, wantDocker );
+
+			if( wantDocker ) {
+				job = new DockerProc( jobAd );
+			} else {
+				job = new VanillaProc( jobAd );
+			}
+			} break;
 		case CONDOR_UNIVERSE_JAVA:
 			job = new JavaProc( jobAd, WorkingDir.Value() );
 			break;
@@ -2655,9 +2668,14 @@ CStarter::PeriodicCkpt( void )
 {
 	dprintf(D_ALWAYS, "Periodic Checkpointing all jobs.\n");
 
-	if( jobUniverse != CONDOR_UNIVERSE_VM ) {
-		return false;
+	int wantCheckpoint = 0;
+	if( jobUniverse == CONDOR_UNIVERSE_VM ) {
+		wantCheckpoint = 1;
+	} else if( jobUniverse == CONDOR_UNIVERSE_VANILLA ) {
+		ClassAd * jobAd = jic->jobClassAd();
+		jobAd->LookupBool( ATTR_WANT_CHECKPOINT_SIGNAL, wantCheckpoint );
 	}
+	if( ! wantCheckpoint ) { return false; }
 
 	UserProc *job;
 	m_job_list.Rewind();
@@ -3065,9 +3083,10 @@ CStarter::PublishToEnv( Env* proc_env )
 		// put the pid of the job in the environment, used by sshd and hooks
 	proc_env->SetEnv("_CONDOR_JOB_PIDS",job_pids);
 
+		// put in environment variables specific to the type (universe) of job
 	m_reaped_job_list.Rewind();
 	while ((uproc = m_reaped_job_list.Next()) != NULL) {
-		uproc->PublishToEnv( proc_env );
+		uproc->PublishToEnv( proc_env );	// a virtual method per universe
 	}
 
 	ASSERT(jic);
@@ -3179,6 +3198,70 @@ CStarter::PublishToEnv( Env* proc_env )
 	proc_env->SetEnv("TMPDIR", GetWorkingDir());
 	proc_env->SetEnv("TEMP", GetWorkingDir()); // Windows
 	proc_env->SetEnv("TMP", GetWorkingDir()); // Windows
+
+		// Programs built with OpenMP (including matlab, gnu sort
+		// and others) look at OMP_NUM_THREADS
+		// to determine how many threads to spawn.  Force this to
+		// Cpus, to encourage jobs to stay within the number
+		// of requested cpu cores.
+
+	ClassAd * mach = jic->machClassAd();
+	if (mach) {
+		int cpus = 0;
+		if (mach->LookupInteger(ATTR_CPUS, cpus)) {
+			if (cpus > 0) {
+				proc_env->SetEnv("OMP_NUM_THREADS", cpus);
+			}
+		}
+	}
+
+		// If using a job wrapper, set environment to location of
+		// wrapper failure file.
+
+	char *wrapper = param("USER_JOB_WRAPPER");
+	if (wrapper) {
+			// setenv only if wrapper actually exists
+		if ( access(wrapper,X_OK) >= 0 ) {
+			MyString wrapper_err;
+			wrapper_err.formatstr("%s%c%s", GetWorkingDir(),
+						DIR_DELIM_CHAR,
+						JOB_WRAPPER_FAILURE_FILE);
+			proc_env->SetEnv("_CONDOR_WRAPPER_ERROR_FILE", wrapper_err);
+		}
+		free(wrapper);
+	}
+
+		// Set a bunch of other env vars that used to be set
+		// in OsProc::StartJob(), but we want to set them here
+		// so they will also appear in ssh_to_job environments.
+
+	MyString path;
+	path.formatstr("%s%c%s", GetWorkingDir(),
+			 	DIR_DELIM_CHAR,
+				MACHINE_AD_FILENAME);
+	if( ! proc_env->SetEnv("_CONDOR_MACHINE_AD", path) ) {
+		dprintf( D_ALWAYS, "Failed to set _CONDOR_MACHINE_AD environment variable\n");
+	}
+
+	if( jic->wroteChirpConfig() && 
+		(! proc_env->SetEnv("_CONDOR_CHIRP_CONFIG", jic->chirpConfigFilename())) ) 
+	{
+		dprintf( D_ALWAYS, "Failed to set _CONDOR_CHIRP_CONFIG environment variable.\n");
+	}
+
+	path.formatstr("%s%c%s", GetWorkingDir(),
+			 	DIR_DELIM_CHAR,
+				JOB_AD_FILENAME);
+	if( ! proc_env->SetEnv("_CONDOR_JOB_AD", path) ) {
+		dprintf( D_ALWAYS, "Failed to set _CONDOR_JOB_AD environment variable\n");
+	}
+
+	std::string remoteUpdate;
+	param(remoteUpdate, "CHIRP_DELAYED_UPDATE_PREFIX", "CHIRP");
+	if( ! proc_env->SetEnv("_CHIRP_DELAYED_UPDATE_PREFIX", remoteUpdate) ) {
+		dprintf( D_ALWAYS, 
+				"Failed to set _CHIRP_DELAYED_UPDATE_PREFIX environment variable\n");
+	}
 }
 
 // parse an environment prototype string of the form  key[[=/regex/replace/] key2=/regex2/replace2/]

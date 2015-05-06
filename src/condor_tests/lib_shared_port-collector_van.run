@@ -46,28 +46,34 @@ SimpleJob::RunCheck();
 # verify connection requests made via shared port server for each daemon
 CondorLog::RunCheck(
     daemon => "SHARED_PORT",
+	num_retries => 4,
     match_regexp => "SharedPortServer: request from COLLECTOR"
 );
 CondorLog::RunCheck(
     daemon => "SHARED_PORT",
+	num_retries => 4,
     match_regexp => "SharedPortServer: request from MASTER"
 );
 CondorLog::RunCheck(
     daemon => "SHARED_PORT",
+	num_retries => 4,
     match_regexp => "SharedPortServer: request from SCHEDD"
 );
 CondorLog::RunCheck(
     daemon => "SHARED_PORT",
+	num_retries => 4,
     match_regexp => "SharedPortServer: request from NEGOTIATOR"
 );
 CondorLog::RunCheck(
     daemon => "SHARED_PORT",
+	num_retries => 4,
     match_regexp => "SharedPortServer: request from STARTD"
 );
 
 # verify that connection requests for collector go through shared_port
 CondorLog::RunCheck(
     daemon => "SHARED_PORT",
+	num_retries => 4,
     match_regexp => "to connect to collector"
 );
 

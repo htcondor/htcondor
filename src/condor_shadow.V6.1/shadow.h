@@ -143,7 +143,7 @@ class UniShadow : public BaseShadow
 		/** Do all work to cleanup before this shadow can exit.  We've
 			only got 1 RemoteResource to kill the starter on.
 		*/
-	virtual void cleanUp( void );
+	virtual void cleanUp( bool graceful=false );
 
 		/** Do a graceful shutdown of the remote starter */
 	virtual void gracefulShutDown( void );

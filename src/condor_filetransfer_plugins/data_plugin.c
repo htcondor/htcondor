@@ -10,7 +10,7 @@
 int decode_block(unsigned char *in, unsigned char *out) {
 	unsigned char *c = in;
 	int i = 0, j = 0;
-	char temp[4];
+	char temp[4] = { 0, 0, 0, 0};
 	
 		// convert char to corresponding base64 value(0-63)
 	while(i < 4 && c && *c) {

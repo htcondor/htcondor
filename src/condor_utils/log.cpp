@@ -227,7 +227,7 @@ LogRecord::ReadTail(FILE *  /*fp*/)
 }
 
 LogRecord *
-ReadLogEntry(FILE *fp, unsigned long recnum, LogRecord* (*InstantiateLogEntry)(FILE *fp, unsigned long recnum, int type))
+ReadLogEntry(FILE *fp, unsigned long recnum, LogRecord* (*InstantiateLogEntry)(FILE *fp, unsigned long recnum, int type, const ConstructLogEntry & ctor), const ConstructLogEntry & ctor)
 {
     char* opword = NULL;
     int opcode = CondorLogOp_Error;
@@ -238,5 +238,5 @@ ReadLogEntry(FILE *fp, unsigned long recnum, LogRecord* (*InstantiateLogEntry)(F
     }
     free(opword);
 
-	return InstantiateLogEntry(fp, recnum, opcode);
+	return InstantiateLogEntry(fp, recnum, opcode, ctor);
 }

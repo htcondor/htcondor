@@ -19,26 +19,194 @@
 ##**************************************************************
 
 use CondorTest;
+use Check::SimpleJob;
 
-$testdesc =  'Condor ON_EXIT_HOLD policy test - local U';
-$testname = "job_core_onexithold_local";
+my $truepolicy = '
+on_exit_hold = (time() - QDate) > 1
+';
+my $falsepolicy = '
+on_exit_hold = (time() - QDate) < (2)
+';
 
-my $nostatus = CondorTest::verbose_system("./job_core_onexithold-false_local.pl");
-my $willstatus = CondorTest::verbose_system("./job_core_onexithold-true_local.pl");
+##
+## ON_EXIT_HOLD - False
+## We submit a job where ON_EXIT_HOLD evaluates to false and just
+## make sure that the job doesn't get put on hold after it finishes
+## its execution run
+##
 
-if($nostatus != 0)
+$testname = "job_core_onexithold_local_false";
+
+## 
+## Status Values
+##
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my $aborting = 0;
+##
+## executed
+## Just announce that the job began execution
+##
+$executed = sub {
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+	CondorTest::debug("Good - Job $cluster.$job began execution.\n",1);
+};
+
+##
+## abnormal
+## Not sure how we would end up here, and based on the old
+## report message, I'm assuming this is a bad thing
+##
+$abnormal = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+	CondorTest::debug("Bad - Job $cluster.$job reported an abnormal event.\n",1);
+	return(1);
+};
+
+##
+## held
+## If the job went on hold, we need to abort
+$held = sub {
+	my $done;
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+
+	if($testnname eq "job_core_onexithold_local_false") {
+		CondorTest::debug("Bad - Job $cluster.$job should not be on hold.\n",1);
+		return(1);
+	} else {
+		CondorTest::debug("Good - Job $cluster.$job went on hold after executing.\n",1);
+
+		##
+		## Remove the job
+		## We set the aborting flag so that we know the abort message 
+		## isn't a mistake
+		##
+		$aborting = 1;
+		my @adarray;
+		my $status = 1;
+		my $cmd = "condor_rm $cluster";
+		$status = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+		if ( !$status ) {
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",1);
+			return(1)
+		}
+	}
+};
+
+##
+## success
+##
+$success = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job = $info{"job"};
+	
+	if($testnname eq "job_core_onexithold_local_false") {
+		##
+		## This probably isn't necessary, but just ot be safe we need to
+		## check the status of the job and if it's on hold, call
+		## the held() method
+		##
+		if ( CondorTest::getJobStatus($cluster) == HELD ) {
+			&$held( %info ) if defined $held;
+			return;
+		}
+		CondorTest::debug("Good - Job $cluster.$job finished executing and exited.\n",1);
+		CondorTest::debug("Policy Test Completed\n",1);
+	} else {
+		CondorTest::debug("Bad - Job $job.$cluster finished execution but didn't go on hold.\n",1);
+		return(1);
+	}
+};
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+};
+
+##
+## aborted
+## The job is being aborted, so we need to make sure that
+## we are the one doing the abort
+##
+$aborted = sub {
+	%info = @_;
+	$cluster = $info{"cluster"};
+	$job = $info{"job"};
+
+	##
+	## Make sure this was meant to happen
+	## 
+	if ( $aborting ) {
+		CondorTest::debug("Good - Job $cluster.$job is being removed after being held.\n",1);
+		CondorTest::debug("Policy Test Completed\n",1);
+	##
+	## Bad mojo!
+	##
+	} else {
+		CondorTest::debug("Bad - Job $cluster.$job received an unexpected abort event.\n",1);
+		exit(1);
+	}
+};
+
+
+print "\n\nTesting ON_EXIT_HOLD being false\n\n";
+
+SimpleJob::RunCheck(
+	universe=>"local",
+	runthis=>"x_time.pl",
+	on_execute=>$executed,
+	on_hold=>$held,
+	on_success=>$success,
+	on_exitedabnormal=>$abnormal,
+	append_submit_commands=>$falsepolicy,
+	duration=>5,
+);
+
+##
+## ON_EXIT_HOLD - True
+## The job runs, finishes, and should be put on hold
+##
+
+$testname = "job_core_onexithold_local_true";
+
+##
+## After our job is held of awhile, we will want to 
+## remove it from the queue. When this flag is set to true
+## we know that it was our own script that called for the abort,
+## and should not be handled as an error
+##
+$aborting = 0;
+
+print "\n\nTesting ON_EXIT_HOLD being true\n\n";
+
+SimpleJob::RunCheck(
+	universe=>"local",
+	runthis=>"x_time.pl",
+	on_evictedwithoutcheckpoint=>$on_evictedwithoutcheckpoint,
+	on_execute=>$executed,
+	on_hold=>$held,
+	on_abort=>$aborted,
+	on_success=>$success,
+	append_submit_commands=>$truepolicy,
+	duration=>5,
+);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
 {
-	CondorTest::debug("ON_EXIT_HOLD: failed no trigger test\n",1);
+	exit(1);
 }
 
-if($willstatus != 0)
-{
-	CondorTest::debug("ON_EXIT_HOLD: failed trigger test\n",1);
-}
-
-if(($willstatus != 0) || ($nostatus != 0))
-{
-	die "Failed one ON_EXIT_HOLD test\n";
-}
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);
 
 

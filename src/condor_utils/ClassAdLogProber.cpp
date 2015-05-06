@@ -138,7 +138,7 @@ ClassAdLogProber::probe(ClassAdLogEntry *curCALogEntry,
 			  FILE * job_queue_fp)
 {
 	FileOpErrCode   st;
-	int op_type;
+	int op_type = -1;
 	struct stat filestat;
 	int job_queue_fd = fileno(job_queue_fp);
 	//TODO: uncomment and possibly change
@@ -158,7 +158,7 @@ ClassAdLogProber::probe(ClassAdLogEntry *curCALogEntry,
 		   "fsize: %ld\t\tmtime: %ld", 
 		   (long)filestat.st_size, (long)filestat.st_mtime);
 #else
-		dprintf(D_ALWAYS,"ERROR: calling stat()\n");
+		dprintf(D_ALWAYS,"ERROR: calling stat() on %p - %s (errno=%d)\n", job_queue_fp, strerror(errno), errno);
 	
 	dprintf(D_FULLDEBUG, "=== Current Probing Information ===\n");
 	dprintf(D_FULLDEBUG, "fsize: %ld\t\tmtime: %ld\n", 

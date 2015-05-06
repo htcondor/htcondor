@@ -344,11 +344,22 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 		return false;
 	}
 
+	//
+	// We don't want the collector to send TCP updates to itself, since
+	// this could cause it to deadlock.  Since the only ad a collector
+	// will ever advertise is its own, only check for *_COLLECTOR_ADS.
+	//
 	if( cmd == UPDATE_COLLECTOR_AD || cmd == INVALIDATE_COLLECTOR_ADS ) {
-			// we *never* want to use TCP to send pool updates to the
-			// developer collector.  so, regardless of what the config
-			// files says, always use UDP for these commands...
-		return sendUDPUpdate( cmd, ad1, ad2, nonblocking );
+		if( daemonCore ) {
+			const char * myOwnSinful = daemonCore->InfoCommandSinfulString();
+			if( myOwnSinful == NULL ) {
+				dprintf( D_ALWAYS | D_FAILURE, "Unable to determine my own address, will not update or invalidate collector ad to avoid potential deadlock.\n" );
+				return false;
+			}
+			if( strcmp( myOwnSinful, _addr ) == 0 ) {
+				EXCEPT( "Collector attempted to send itself an update.\n" );
+			}
+		}
 	}
 
 	if( use_tcp ) {

@@ -80,6 +80,7 @@ class CondorJob : public BaseJob
 	PROC_ID remoteJobId;
 	char *submitterId;
 	int connectFailureCount;
+	bool m_remoteJobFinished;
 
 	Proxy *jobProxy;
 	time_t delegatedProxyExpireTime; // 0 if not using short-lived delegation
