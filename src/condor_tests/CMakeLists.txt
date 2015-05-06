@@ -63,7 +63,7 @@ if (BUILD_TESTING)
 	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
 	condor_exe_test(x_conditional_params.exe "x_conditional_params.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}" )
 	condor_exe_test(validate_job_queue.exe "validate_job_queue.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}" )
-	
+
 	# Not all of our gccs support -Wno-div-by-zero.
 	#if (UNIX)
 	#	set_source_files_properties(x_dumpcore.cpp PROPERTIES COMPILE_FLAGS -Wno-div-by-zero)
@@ -76,9 +76,9 @@ if (BUILD_TESTING)
 	if (NOT WINDOWS)
 	  condor_exe_test(x_trapsig.exe "x_trapsig.cpp" "" )
 	endif(NOT WINDOWS)
-	
+
 	if (STD_UNIVERSE)
-		
+
 		# disable any optimizations + compile with specific fla
 		set( CMAKE_BUILD_TYPE Debug )
 		add_library( stdulib STATIC EXCLUDE_FROM_ALL "x_waste_second.c" )
@@ -102,7 +102,7 @@ if (BUILD_TESTING)
 		condor_std_exe_test(job_ckpt_constructor_std "${CMAKE_CXX_COMPILER}" "job_ckpt_constructor_std.cpp" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_ckpt_env_std "${CMAKE_CXX_COMPILER}" "job_ckpt_env_std.cpp" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_ckpt_memory-file_std "${CMAKE_CXX_COMPILER}" "job_ckpt_memory-file_std.cpp" "${STDU_LDD_FLAGS}")
-		
+
 		condor_std_exe_test(job_core-cpp_exception_std "${CMAKE_CXX_COMPILER}" "job_core-cpp_exception_std.cpp" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_core-cpp_mem-alloc_std "${CMAKE_CXX_COMPILER}" "job_core-cpp_mem-alloc_std.cpp" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_rsc_fstream_std "${CMAKE_CXX_COMPILER}" "job_rsc_fstream_std.cpp" "${STDU_LDD_FLAGS}")
@@ -183,6 +183,7 @@ if (BUILD_TESTING)
 		condor_pl_test(job_core_rmkillsig_sched "Scheduler: Verify the  remove_kill_sig" "core;quick;full;quicknolink")
 	endif()
 
+	condor_pl_test(unit_test_sinful "unit: Sinful" "core;quick;full;quicknolink")
 
 	condor_pl_test(cmd_condor_off-master "vanilla: condor_on condor_off test" "core;quick;full;quicknolink")
 	condor_pl_test(job_test_scheddrotation "Scheduler: basic log rotation test" "core;quick;full;quicknolink")

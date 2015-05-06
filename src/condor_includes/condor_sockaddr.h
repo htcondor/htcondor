@@ -23,12 +23,14 @@
 
 #include "MyString.h"
 
-enum condor_protocol { CP_INVALID_MIN, CP_IPV4, CP_IPV6, CP_INVALID_MAX };
+enum condor_protocol { CP_PRIMARY, CP_INVALID_MIN, CP_IPV4, CP_IPV6, CP_INVALID_MAX, CP_PARSE_INVALID };
+
 // Return a human friendly(ish) name for a protocol. Suitable for
 // use in log messages.
 MyString condor_protocol_to_str(condor_protocol p);
+condor_protocol str_to_condor_protocol( const std::string & str );
 
-class condor_sockaddr 
+class condor_sockaddr
 {
 	union {
 		// sockaddr_in6 and sockaddr_in structure differs from OS to OS.
@@ -100,6 +102,8 @@ public:
 	bool from_ip_string(const MyString& ip_string);
 	bool from_ip_string(const char* ip_string);
 
+	bool from_ip_and_port_string( const char * ip_and_port_string );
+
 		// sinful string could contain either IP address or hostname.
 		// from_sinful() calls gethostbyname to resolve DNS name to IP addr.
 	bool from_sinful(const MyString& ip_string);
@@ -117,6 +121,8 @@ public:
 		//                  square brackets around IPv6 addresses,
 		//                  eg "[::1]"
 	MyString to_ip_string(bool decorate=false) const;
+		// We must "decorate".
+	MyString to_ip_and_port_string();
 		// it it fails on inet_ntop(), returns NULL and given buf
 		// will not be modified.
 		// decorate==true - Add additional decorations appropriate

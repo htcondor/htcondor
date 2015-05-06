@@ -918,6 +918,9 @@ main( int argc, const char** argv)
 		detected_gpus += prefix;
 	}
 	fprintf(stdout, opt_config ? "Detected%s=%s\n" : "Detected%s=\"%s\"\n", opt_tag, detected_gpus.c_str());
+	if (opt_config) {
+		fprintf(stdout, "NUM_DETECTED_%s=%d\n", opt_tag, deviceCount);
+	}
 
 	// print out static and/or dynamic info about detected GPU resources
 	for (dev = 0; dev < deviceCount; dev++) {

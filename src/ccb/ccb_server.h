@@ -44,6 +44,9 @@ class CCBServer: Service {
 
 	void InitAndReconfig();
 
+	static void CCBIDToContactString( char const * my_address, CCBID ccbid, MyString & ccb_contact );
+	static bool CCBIDFromString( CCBID & ccbid, char const * ccbid_str );
+
 	friend class CCBTarget;
  private:
 	bool m_registered_handlers;

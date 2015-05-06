@@ -3703,7 +3703,7 @@ review=?
 tags=c++_util,jobqueuesnapshot
 
 [WINDOWS_FIREWALL_FAILURE_RETRY]
-default=60
+default=2
 type=int
 reconfig=true
 customization=seldom

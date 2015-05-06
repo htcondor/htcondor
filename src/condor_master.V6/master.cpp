@@ -1417,7 +1417,7 @@ void init_firewall_exceptions() {
 
 	WindowsFirewallHelper wfh;
 	
-	add_exception = param_boolean("ADD_WINDOWS_FIREWALL_EXCEPTION", true);
+	add_exception = param_boolean("ADD_WINDOWS_FIREWALL_EXCEPTION", NT_ServiceFlag);
 
 	if ( add_exception == false ) {
 		dprintf(D_FULLDEBUG, "ADD_WINDOWS_FIREWALL_EXCEPTION is false, skipping\n");

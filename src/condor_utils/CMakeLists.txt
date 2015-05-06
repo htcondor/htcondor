@@ -16,14 +16,18 @@
  # 
  ############################################################### 
 
+condor_exe( condor_testingd "testingd.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
+condor_exe( condor_sinful "sinful-tool.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 
 ##################################################
 # utils library
 if(WINDOWS)
   file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs* dprintf_syslog*
+  testingd.cpp sinful-tool.cpp
   soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_hash.cpp param_info_init.c )
 else()
   file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs* 
+  testingd.cpp sinful-tool.cpp
   soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_hash.cpp param_info_init.c )
 endif()
 
@@ -184,6 +188,8 @@ condor_exe_test(test_log_reader "test_log_reader.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_reader_state "test_log_reader_state.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_libcondorapi "test_libcondorapi.cpp" "condorapi")
+
+condor_exe_test(test_sinful "test_sinful.cpp" "${CONDOR_TOOL_LIBS}" )
 
 ##################################################
 # std universe stubgen stuff

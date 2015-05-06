@@ -478,8 +478,8 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 		return;
 	}
 
-	std::string adSinfulString = expr_string.substr( string_start_pos, string_len) ;
-	std::string commandPortSinfulString = daemonCore->InfoCommandSinfulString();;
+	std::string adSinfulString = expr_string.substr( string_start_pos, string_len);
+	std::string commandPortSinfulString = daemonCore->InfoCommandSinfulString();
 
 	Sinful adSinful( adSinfulString.c_str() );
 	condor_sockaddr adSA;
@@ -492,6 +492,9 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 	}
 	else if (param_boolean("SHARED_PORT_ADDRESS_REWRITING", false))
 	{
+		//
+		// Wait a minute -- isn't this only supposed to happen in the collector?
+		//
 		const std::vector<Sinful> &commandSinfuls = daemonCore->InfoCommandSinfulStringsMyself();
 		dprintf(D_NETWORK|D_VERBOSE, "Address rewriting: considering %ld command socket sinfuls.\n", commandSinfuls.size());
 
