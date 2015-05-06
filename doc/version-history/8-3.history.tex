@@ -53,6 +53,16 @@ The Event Log is still locked by default to perform file rotation.
 \item \Condor{dagman} no longer creates an unused command socket.
 \Ticket{4987}
 
+\item Changed the timeout interval at which the \Condor{master} daemon
+must retry to configure the Windows firewall from 10 seconds to 5 seconds.
+Also changed the default value of configuration variable
+\MacroNI{WINDOWS\_FIREWALL\_FAILURE\_RETRY} from 60 to 2,
+such that there are many fewer retries by default.
+This prevents the the \Condor{master} daemon from hanging for 10 minutes 
+on start up,
+when it is unable to configure the Windows firewall.
+\Ticket{4988}
+
 \item Various syntax errors within a DAG input file related to the 
 specification of a splice are now reported as fatal errors, 
 rather than being silently ignored.
