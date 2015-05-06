@@ -1522,6 +1522,9 @@ void condor_event_timer () {
 	// DAG has failed -- dump rescue DAG.
 	//
     if( dagman.dag->DoneFailed( true ) ) {
+		debug_printf( DEBUG_QUIET,
+				  "ERROR: the following job(s) failed:\n" );
+		dagman.dag->PrintJobList( Job::STATUS_ERROR );
 		main_shutdown_rescue( EXIT_ERROR, dagman.dag->_dagStatus );
 		return;
 	}
@@ -1547,6 +1550,9 @@ void condor_event_timer () {
 			// if there is one.
 		debug_printf ( DEBUG_QUIET, "Exiting because DAG is halted "
 					"and no jobs or scripts are running\n" );
+		debug_printf( DEBUG_QUIET,
+				  "ERROR: the following job(s) failed:\n" );
+		dagman.dag->PrintJobList( Job::STATUS_ERROR );
 		main_shutdown_rescue( EXIT_ERROR, Dag::DAG_STATUS_HALTED );
 		return;
 	}
