@@ -45,9 +45,9 @@ my $condor_instance_local = CondorTest::StartCondorWithParams(
 	condorlocalsrc => "$localconfigfile",
 );
 
-my $collectorport = $condor_instance_local->GetCollectorAddress();
+my $collectorAddress = $condor_instance_local->GetCollectorAddress();
 
-print "Fetched collector address with l->GetCollectorAddress(): yields  $collectorport\n";
+print "Fetched collector address with l->GetCollectorAddress(): yields  $collectorAddress\n";
 
 my $localconfig = $condor_instance_local->GetCondorConfig();
 
@@ -61,10 +61,6 @@ if($iswindows) {
 	}
 	$currenthost = $nameparts[0];
 }
-
-my $primarycollector = $currenthost;
-$primarycollector = $primarycollector . ":" . $collectorport;
-
 
 my $sheddoneappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,STARTD
@@ -85,9 +81,9 @@ my @addedconfig =
 
 foreach my $line (@addedconfig) {
 	if($line =~ /COLLECTOR_HOST/) {
-		$line = "COLLECTOR_HOST = $collectorport";
+		$line = "COLLECTOR_HOST = $collectorAddress";
 		push @readyconfigplus, $line;
-		print "Storing collector addr:$collectorport\n";
+		print "Storing collector addr:$collectorAddress\n";
 	}
 }
 
@@ -173,14 +169,17 @@ my $found1 = 0;
 my $targets = 0;
 
 if($bail != 1) {
-	print "From collector see if condor_q -global -pool $collectorport shows both schedds - ";
+	print "From collector see if condor_q -global -pool $collectorAddress shows both schedds - ";
 	my @schedds = ( $sched1, $sched2 );
 	foreach my $schedd (@schedds) {
-		CondorTest::debug("Looking for condor_q -global -pool $collectorport\n",$debuglevel);
+		CondorTest::debug("Looking for condor_q -global -pool $collectorAddress\n",$debuglevel);
 		while($count < $nattempts) {
 			$found1 = 0;
-			my $cmd = "condor_q -global -pool $collectorport";
-			$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+			# my $cmd = "condor_q -global -pool '${collectorAddress}'";
+			# $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2,{emit_output=>0});
+			my @cmd = ( 'condor_q', '-global', '-pool', $collectorAddress );
+			my $cmd = join( ' ', @cmd );
+			$cmdstatus = CondorTest::runCondorToolCarefully( \@adarray, 2, { emit_output => 0 }, undef, @cmd );
 	    	if(!$cmdstatus)
 	    	{
 				print "bad\n";

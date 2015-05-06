@@ -107,6 +107,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "valgrind.h"
 #include "ipv6_hostname.h"
 #include "daemon_command.h"
+#include "condor_sockfunc.h"
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
@@ -1073,6 +1074,14 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			// port.  Instead, we advertise SharedPortServer's port along
 			// with our local id so connections can be forwarded to us.
 		char const *addr = m_shared_port_endpoint->GetMyRemoteAddress();
+
+		if( addr ) {
+			// Remote addresses can be accessed from other machines, so
+			// they must have addrs.
+			Sinful s( addr );
+			ASSERT( s.hasAddrs() );
+		}
+
 		if( !addr && usePrivateAddress ) {
 				// If SharedPortServer is not running yet, and an address
 				// that is local to this machine is good enough, then just
@@ -1082,7 +1091,13 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 				// our named socket.
 			addr = m_shared_port_endpoint->GetMyLocalAddress();
 		}
+
 		if( addr ) {
+			// We don't verify here the addr has addrs because it could
+			// be a local address that could only work on the same machine.
+			// Since these addresses are constructed out of thin air, it's
+			// not worth fixing them for the benefit of an assertion that
+			// can't matter.
 			return addr;
 		}
 	}
@@ -1159,13 +1174,13 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			}
 		}
 
-			// if we don't hae a UDP port, advertise that fact
+			// if we don't have a UDP port, advertise that fact
 		char *forwarding = param("TCP_FORWARDING_HOST");
 		if( forwarding ) {
 			free( forwarding );
 			m_sinful.setNoUDP(true);
 		}
-		if( dc_socks.begin() == dc_socks.end() 
+		if( dc_socks.begin() == dc_socks.end()
 			|| !dc_socks.begin()->has_safesock() ) {
 			m_sinful.setNoUDP(true);
 		}
@@ -1182,17 +1197,75 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		if( private_name && publish_private_name ) {
 			m_sinful.setPrivateNetworkName(private_name);
 		}
+
+		// Handle multi-protocol addressing.
+		m_sinful.clearAddrs();
+		condor_sockaddr sa4, sa6;
+		for( SockPairVec::iterator it = dc_socks.begin(); it != dc_socks.end(); ++it ) {
+			ASSERT( it->has_relisock() );
+			int fd = it->rsock()->get_file_desc();
+
+			// condor_getsockname_ex() returns the 'best' protocol-appropriate
+			// address for the local host if the socket is bound in[6]_any.
+			condor_sockaddr sa;
+			ASSERT( condor_getsockname_ex( fd, sa ) == 0 );
+
+			if( sa.is_ipv4() ) {
+				if( sa4.is_valid() ) {
+					if( sa.desirability() > sa4.desirability() ) {
+						sa4 = sa;
+					}
+				} else {
+					sa4 = sa;
+				}
+			} else if( sa.is_ipv6() ) {
+				if( sa6.is_valid() ) {
+					if( sa.desirability() > sa6.desirability() ) {
+						sa6 = sa;
+					}
+				} else {
+					sa6 = sa;
+				}
+			}
+		}
+
+		ASSERT( sa6.is_valid() || sa4.is_valid() );
+		Sinful sPublic( sinful_public );
+		Sinful sPrivate( sinful_private != NULL ? sinful_private : "" );
+		if( sa6.is_valid() ) {
+			m_sinful.addAddrToAddrs( sa6 );
+			sPublic.addAddrToAddrs( sa6 );
+			sPrivate.addAddrToAddrs( sa6 );
+		}
+		if( sa4.is_valid() ) {
+			m_sinful.addAddrToAddrs( sa4 );
+			sPublic.addAddrToAddrs( sa4 );
+			sPrivate.addAddrToAddrs( sa4 );
+		}
+
+		free( sinful_public );
+		sinful_public = strdup( sPublic.getSinful() );
+
+		if( sinful_private != NULL ) {
+			free( sinful_private );
+			sinful_private = strdup( sPrivate.getSinful() );
+		}
 	}
 
 	if( usePrivateAddress ) {
 		if( sinful_private ) {
+			Sinful s( sinful_private );
+			ASSERT( s.hasAddrs() );
 			return sinful_private;
 		}
 		else {
+			Sinful s( sinful_public );
+			ASSERT( s.hasAddrs() );
 			return sinful_public;
 		}
 	}
 
+	ASSERT( m_sinful.hasAddrs() );
 	return m_sinful.getSinful();
 }
 
@@ -8678,8 +8751,8 @@ DaemonCore::InitDCCommandSocket( int command_port )
 
 		if( it->has_relisock() ) {
 			if ( it->rsock()->my_addr().is_loopback() ) {
-				dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
-				dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
+				dprintf( D_ALWAYS, "WARNING: Condor is running on a loopback address\n" );
+				dprintf( D_ALWAYS, "         of this machine, and may not visible to other hosts!\n" );
 			}
 		}
 
@@ -10035,9 +10108,11 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 
 		if(param_boolean("ENABLE_IPV6", true)) {
 			DaemonCore::SockPair sock_pair;
-			if( ! InitCommandSocket(CP_IPV6, targetTCPPort, targetUDPPort, sock_pair, want_udp, fatal)) {
+			// We emulate fatal, below, because it's only a fatal error
+			// to fail to match an IPv4 port number if it was static.
+			if( ! InitCommandSocket(CP_IPV6, targetTCPPort, targetUDPPort, sock_pair, want_udp, false)) {
 				// TODO: If we're asking for a dynamically chosen TCP port 
-				// (targetTCPPort <= 1) but a staticly chosen UDP port 
+				// (targetTCPPort <= 1) but a statically chosen UDP port
 				// (targetUDPPort > 1), and the reason InitCommandSocket
 				// fails is that it couldn't get the UDP port, then we
 				// should immediately give up. At the moment InitCommandSocket
@@ -10045,23 +10120,26 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 				// (Dynamic TCP/static UDP happens with shared_port+collector.
 				// Static TCP/dynamic UDP is not allowed.)
 
-					// If we wanted a dynamically chosen port, IPv4 picked it 
+				if( (tcp_port <= 1) && (targetTCPPort > 1) ) {
+					// If we wanted a dynamically chosen port, IPv4 picked it
 					// first, and we failed, then try again.
 					// (We get to ignore the possibility of wanting a dynamic
 					// UDP port but static TCP; an ASSERT above guarantees it.)
-				if( (tcp_port <= 1) && (targetTCPPort > 1) ) {
 					if(tries == 1) {
 						// Log first spin only, minimize log spam.
 						dprintf(D_FULLDEBUG, "Created IPv4 command socket on dynamically chosen port %d. Unable to acquire matching IPv6 port. Trying again up to %d times.\n", targetTCPPort, MAX_RETRIES);
 					}
 					new_socks.clear();
 					continue;
-
+				} else {
 					// Otherwise it's dynamic and we failed to get it,
 					// or its entirely fixed and we failed to get it.
 					// Either way we're doomed.
-				} else {
-					dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv6 command socket for ports %d/%d%s.\n", tcp_port, udp_port, want_udp?"":"no UDP");
+
+					std::string message;
+					formatstr( message, "Warning: Failed to create IPv6 command socket for ports %d/%d%s", tcp_port, udp_port, want_udp ? "" : "no UDP" );
+					if( fatal ) { EXCEPT( message.c_str() ); }
+					dprintf(D_ALWAYS | D_FAILURE, "%s\n", message.c_str() );
 					return false;
 				}
 			}
@@ -10644,6 +10722,13 @@ DaemonCore::publish(ClassAd *ad) {
 	tmp = publicNetworkIpAddr();
 	if( tmp ) {
 		ad->Assign(ATTR_MY_ADDRESS, tmp);
+
+		// This is kind of horrible.  At some point, we should rewrite
+		// InfoCommandSinfulStringMyself() so that it calls
+		// InfoCommandSinfulMyself().serialize(), but until then...
+		Sinful s( tmp );
+		assert( s.valid() );
+		ad->Assign( "AddressV1", s.getV1String() );
 	}
 }
 

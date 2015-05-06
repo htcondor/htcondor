@@ -57,7 +57,7 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	int m_deadline_timer;
 
 	bool ReverseConnect_blocking( CondorError *error );
-	bool SplitCCBContact( char const *ccb_contact, MyString &ccb_address, MyString &ccbid, CondorError *error );
+	static bool SplitCCBContact( char const *ccb_contact, MyString &ccb_address, MyString &ccbid, const MyString & peer, CondorError *error );
 
 	bool AcceptReversedConnection(counted_ptr<ReliSock> listen_sock,counted_ptr<SharedPortEndpoint> shared_listener);
 	bool HandleReversedConnectionRequestReply(CondorError *error);
@@ -71,7 +71,9 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	MyString myName();
 	void DeadlineExpired();
 
-
+	// CCB contact information should be an opaque token to everyone, but
+	// Sinful needs to be able parse CCB IDs to generate v1 addresses.
+	friend class Sinful;
 };
 
 #endif

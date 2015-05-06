@@ -38,7 +38,7 @@ use CondorPersonal;
 
 use base 'Exporter';
 
-our @EXPORT = qw(PrintTimeStamp timestamp runCondorTool runToolNTimes RegisterResult EndTest);
+our @EXPORT = qw(PrintTimeStamp timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest);
 
 my %securityoptions =
 (
@@ -1597,6 +1597,23 @@ sub PipeCheck {
 }
 
 
+sub runCondorToolCarefully {
+	my $array = shift( @_ );
+	my $quiet = shift( @_ );
+	my $options = shift( @_ );
+	my $retval = shift( @_ );
+	my @argv = @_;
+
+	my %altOptions;
+	if( ! defined( $options ) ) {
+		$options = \%altOptions;
+	}
+	${$options}{arguments} = \@argv;
+
+	return runCondorTool( $argv[0], $array, $quiet, $options, $retval );
+}
+
+
 sub runCondorTool
 {
 	my $trymultiplier = 1;
@@ -2729,6 +2746,7 @@ sub LoadWhoData
 		"Negotiator" => "condor_negotiator",
 		"Collector" => "condor_collector",
 		"Startd" => "condor_startd",
+		"SharedPort" => "condor_shared_port",
 		"Master" => "MASTER",
 	  );
 	  open(PF,">$file") or print "PIDS file create failed:$!\n";
@@ -2905,12 +2923,6 @@ sub LoadWhoData
   {
       my $self = shift;
       return $self->{collector_addr};
-  }
-  sub GetCollectorPort
-  {
-      my $self = shift;
-      my @addrparts = split /:/, $self->{collector_addr};
-      return $addrparts[ -1 ];
   }
 }
 
