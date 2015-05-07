@@ -82,7 +82,7 @@ sub RunCheckMultiple
 	my $testname = "RunCheckMultiple Tool";
 	print scalar(localtime()) . "\n";
 
-	CondorTest::RegisterTimed( $testname, $timed_callback, $match_timeout);
+	CondorTest::RegisterCLTimed( $testname, $timed_callback, $match_timeout);
 	if(defined $args{match_callback}) {
 		# we don't just want to look for it, we want to get it back
 		#print "Match Callback set\n";
@@ -95,6 +95,7 @@ sub RunCheckMultiple
     	CondorTest::RegisterResult( $result, %args );
 	}
 	#print "Result returned from RunCheckMultiple is <$result>\n";
+	CondorTest::RemoveCLTimed($testname);
     return $result;
 }
 

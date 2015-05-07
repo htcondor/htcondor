@@ -729,7 +729,7 @@ sub CreateDir
 			return($ret);
 		}
 		$ret = system("$fullcmd");
-		system("chmod 777 $cmdline");
+		#system("chmod 777 $cmdline");
 		#print "Tried to create dir got ret value:$ret path:$cmdline/$fullcmd\n";
 	}
 	return($ret);

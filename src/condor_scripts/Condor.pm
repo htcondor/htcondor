@@ -48,6 +48,7 @@ my $CONDOR_VACATE_JOB = 'condor_vacate_job';
 my $CONDOR_RESCHD = 'condor_reschedule';
 my $CONDOR_RM = 'condor_rm';
 
+my %AllowedEvents = ();
 my $DEBUGLEVEL = 1; # turn on lowest level output
 my $cluster = 0;
 my $num_active_jobs = 0;
@@ -60,6 +61,10 @@ my %info; # assigned value of %submit_info frequently
 
 my $submit_time = 0;
 my $timer_time = 0;
+my $timer_SJtime = 0;
+my $timer_CLtime = 0;
+my $CLTimedCallbackWait = 0;
+my $SJTimedCallbackWait = 0;
 my $TimedCallbackWait = 0;
 my $SubmitCallback;
 my $ExecuteCallback;
@@ -82,6 +87,8 @@ my $DisconnectedCallback;
 my $ReconnectedCallback;
 my $ReconnectFailedCallback;
 my $JobErrCallback;
+my $CLTimedCallback;
+my $SJTimedCallback;
 my $TimedCallback;
 my $WantErrorCallback;
 my $ULogCallback;
@@ -99,6 +106,10 @@ sub Reset
 
 	$submit_time = 0;
 	$timer_time = 0;
+	$timer_SJtime = 0;
+	$timer_CLtime = 0;
+	$CLTimedCallbackWait = 0;
+	$SJTimedCallbackWait = 0;
 	$TimedCallbackWait = 0;
 
     undef $SubmitCallback;
@@ -120,10 +131,62 @@ sub Reset
     undef $ReconnectedCallback;
     undef $ReconnectFailedCallback;
     undef $JobErrCallback;
+    undef $CLTimedCallback;
+    undef $SJTimedCallback;
     undef $TimedCallback;
     undef $WantErrorCallback;
     undef $ULogCallback;
 }
+
+sub EventReset {
+	ClearAllowedEvents();
+    undef $SubmitCallback;
+    undef $ExecuteCallback;
+    #undef $EvictedCallback;
+    undef $EvictedWithCheckpointCallback;
+    undef $EvictedWithRequeueCallback;
+    undef $EvictedWithoutCheckpointCallback;
+    undef $ExitedCallback;
+    undef $ExitedSuccessCallback;
+    undef $ExitedFailureCallback;
+    undef $ExitedAbnormalCallback;
+    undef $AbortCallback;
+    undef $ShadowCallback;
+	undef $ImageUpdatedCallback;
+    undef $HoldCallback;
+    undef $ReleaseCallback;
+    undef $DisconnectedCallback;
+    undef $ReconnectedCallback;
+    undef $ReconnectFailedCallback;
+    undef $JobErrCallback;
+    undef $WantErrorCallback;
+    undef $ULogCallback;
+
+	# components of the single timed timer
+    undef $CLTimedCallback;
+    $timer_CLtime = 0;
+    $CLTimedCallbackWait = 0;
+
+    undef $SJTimedCallback;
+    $timer_SJtime = 0;
+    $SJTimedCallbackWait = 0;
+
+    undef $TimedCallback;
+    $timer_time = 0;
+    $TimedCallbackWait = 0;
+}
+
+sub NonEventReset {
+	@submitdrydata = ();
+    @userlogs = ();
+    $cluster = 0;
+    $num_active_jobs = 0;
+    $dryrun_jobcount = 0;
+    $saw_submit = 0;
+    %submit_info = ();
+
+    $submit_time = 0;
+} 
 
 sub SetHandle
 {
@@ -581,11 +644,60 @@ sub RegisterUnsuspended
 	debug("Registering Unsuspended callback\n",2);
 }
 
+sub RegisterCLTimed
+{
+    my $sub = shift || croak "missing callback argument";
+    my $delta = shift || croak "missing time argument";
+
+	if(((defined $timer_CLtime) && ($timer_CLtime != 0)) && (defined $CLTimedCallback)) {
+		print "CL Timer already in use!!!!!!!\n";
+		CondorTest::IdentifyTimer($CLTimedCallback);
+		die "This test has conflicting timers\n";
+	}
+	$timer_CLtime = time;
+    $CLTimedCallback = $sub;
+	$CLTimedCallbackWait = $delta;
+}
+
+sub RemoveCLTimed
+{
+    $timer_CLtime = undef;
+    $CLTimedCallback = undef;
+    $CLTimedCallbackWait = undef;
+}
+
+sub RegisterSJTimed
+{
+    my $sub = shift || croak "missing callback argument";
+    my $delta = shift || croak "missing time argument";
+
+	if(((defined $timer_SJtime) && ($timer_SJtime != 0)) && (defined $SJTimedCallback)) {
+		print "SJ Timer already in use!!!!!!!\n";
+		CondorTest::IdentifyTimer($SJTimedCallback);
+		die "This test has conflicting timers\n";
+	}
+	$timer_SJtime = time;
+    $SJTimedCallback = $sub;
+	$SJTimedCallbackWait = $delta;
+}
+
+sub RemoveSJTimed
+{
+    $timer_SJtime = undef;
+    $SJTimedCallback = undef;
+    $SJTimedCallbackWait = undef;
+}
+
 sub RegisterTimed
 {
     my $sub = shift || croak "missing callback argument";
     my $delta = shift || croak "missing time argument";
 
+	if(((defined $timer_time) && ($timer_time != 0)) && (defined $TimedCallback)) {
+		print "Timer already in use!!!!!!!\n";
+		CondorTest::IdentifyTimer($TimedCallback);
+		die "This test has conflicting timers\n";
+	}
 	$timer_time = time;
     $TimedCallback = $sub;
 	$TimedCallbackWait = $delta;
@@ -652,7 +764,7 @@ sub Monitor
 
 
 # 4/3/2015 bt
-# as we start to test codnor_submit foreach, our clusters are more disperse
+# as we start to test condor_submit foreach, our clusters are more disperse
 # and likely that we could have a bogus file in $submit_info{'log'} because we have a variant
 # InitiaDir from the queue line parsing like "queue InitialDir matching (*/)"
 #
@@ -667,7 +779,7 @@ sub Monitor
 	my $skipcheck = "true";
 
 
-		print "thislog:$thislog userlogcnt:$userlogcnt in while loop\n";
+		#print "thislog:$thislog userlogcnt:$userlogcnt in while loop\n";
 	    # open submit log
 		if( exists $submit_info{'initialdir'} )
 		{
@@ -715,6 +827,16 @@ sub Monitor
 		# once every event or second see if we should do a timedCallback
 		%info = %submit_info; # get initial value of submit stuff in case no events come and we time out
 
+		if(defined $CLTimedCallback)
+		{
+			CheckCLTimedCallback();
+		}
+
+		if(defined $SJTimedCallback)
+		{
+			CheckSJTimedCallback();
+		}
+
 		if(defined $TimedCallback)
 		{
 			CheckTimedCallback();
@@ -725,6 +847,16 @@ sub Monitor
 		while( ! defined $line )
 		{
 			sleep 2;
+
+		if(defined $CLTimedCallback)
+		{
+			CheckCLTimedCallback();
+		}
+
+			if(defined $SJTimedCallback)
+			{
+				CheckSJTimedCallback();
+			}
 
 			if(defined $TimedCallback)
 			{
@@ -763,6 +895,16 @@ sub Monitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -832,6 +974,16 @@ sub Monitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -871,6 +1023,16 @@ sub Monitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -924,6 +1086,16 @@ sub Monitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -944,6 +1116,16 @@ sub Monitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -992,6 +1174,16 @@ sub Monitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1023,6 +1215,16 @@ sub Monitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1039,6 +1241,16 @@ sub Monitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1070,6 +1282,16 @@ sub Monitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1086,6 +1308,16 @@ sub Monitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1118,6 +1350,16 @@ sub Monitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1134,6 +1376,16 @@ sub Monitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1165,6 +1417,16 @@ sub Monitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1272,6 +1534,16 @@ sub Monitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1404,6 +1676,16 @@ sub MultiMonitor
 		# once every event or second see if we should do a timedCallback
 		%info = %submit_info; # get initial value of submit stuff in case no events come and we time out
 
+		if(defined $CLTimedCallback)
+		{
+			CheckCLTimedCallback();
+		}
+
+		if(defined $SJTimedCallback)
+		{
+			CheckSJTimedCallback();
+		}
+
 		if(defined $TimedCallback)
 		{
 			CheckTimedCallback();
@@ -1414,6 +1696,16 @@ sub MultiMonitor
 		while( ! defined $line )
 		{
 			sleep 2;
+
+			if(defined $CLTimedCallback)
+			{
+				CheckCLTimedCallback();
+			}
+
+			if(defined $SJTimedCallback)
+			{
+				CheckSJTimedCallback();
+			}
 
 			if(defined $TimedCallback)
 			{
@@ -1452,6 +1744,16 @@ sub MultiMonitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1521,6 +1823,16 @@ sub MultiMonitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1560,6 +1872,16 @@ sub MultiMonitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1613,6 +1935,16 @@ sub MultiMonitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1633,6 +1965,16 @@ sub MultiMonitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1681,6 +2023,16 @@ sub MultiMonitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1712,6 +2064,16 @@ sub MultiMonitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1728,6 +2090,16 @@ sub MultiMonitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1759,6 +2131,16 @@ sub MultiMonitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1775,6 +2157,16 @@ sub MultiMonitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1807,6 +2199,16 @@ sub MultiMonitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1823,6 +2225,16 @@ sub MultiMonitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -1854,6 +2266,16 @@ sub MultiMonitor
 			while( ! defined $line )
 			{
 				sleep 2;
+				if(defined $CLTimedCallback)
+				{
+					CheckCLTimedCallback();
+				}
+
+				if(defined $SJTimedCallback)
+				{
+					CheckSJTimedCallback();
+				}
+
 				if(defined $TimedCallback)
 				{
 					CheckTimedCallback();
@@ -2061,6 +2483,48 @@ sub MultiMonitor
 	}
 }
 
+sub CheckCLTimedCallback
+{
+	my $diff = 0;
+	my $cluster = $submit_info{"cluster"};
+	my $timestamp = 0;
+
+	$timestamp = time; #get current time
+	$diff = $timestamp - $timer_CLtime;
+	debug("Delta for timer is $diff\n",6);
+	if( $diff >= $CLTimedCallbackWait)
+	{
+		#call timed callback
+		debug("Called timed callback!!!!!!-- $cluster --\n",5);
+		if(defined $CLTimedCallback) {
+			my $tempcallback = $CLTimedCallback; # save and removed callback request
+			RemoveCLTimed();
+			&$tempcallback(%info);
+		}
+	}
+}
+
+sub CheckSJTimedCallback
+{
+	my $diff = 0;
+	my $cluster = $submit_info{"cluster"};
+	my $timestamp = 0;
+
+	$timestamp = time; #get current time
+	$diff = $timestamp - $timer_SJtime;
+	debug("Delta for timer is $diff\n",6);
+	if( $diff >= $SJTimedCallbackWait)
+	{
+		#call timed callback
+		debug("Called timed callback!!!!!!-- $cluster --\n",5);
+		if(defined $SJTimedCallback) {
+			my $tempcallback = $SJTimedCallback; # save and removed callback request
+			RemoveSJTimed();
+			&$tempcallback(%info);
+		}
+	}
+}
+
 sub CheckTimedCallback
 {
 	my $diff = 0;
@@ -2196,10 +2660,11 @@ sub ParseSubmitFile
     return 1;
 }
 
+
 sub AccessUserLogs {
 	my $arrayref = shift;
 	my $count = @userlogs;
-	print "transferring $count UserLogs to CondorTest module\n";
+	#print "transferring $count UserLogs to CondorTest module\n";
 	foreach my $log (@userlogs) {
 		push @{$arrayref}, $log;
 	}
@@ -2277,7 +2742,7 @@ sub GatherUserLogs {
 		}
 	}
 	$logcount = @userlogs;
-	print "Found $logcount userlogs\n";
+	#print "Found $logcount userlogs\n";
 	foreach my $log (@userlogs) {
 		#print "userlog:$log\n";
 	}
@@ -2286,6 +2751,31 @@ sub GatherUserLogs {
 	DryExtract(\@submitdrydata,\@tmplogs,"ProcId");
 	$dryrun_jobcount = @tmplogs;
 	print "There are  $logcount logs and $dryrun_jobcount jobs\n";
+}
+
+sub CheckAllowed {
+	my $event = shift;
+	my $test = shift;
+	my $mesg = shift;
+	if(exists $AllowedEvents{$event}) {
+		#print "$event allowed for $test: $mesg\n";
+	} else {
+		die "$test: FAILURE $mesg\n";
+	}
+}
+
+sub SetAllowedEvents {
+	my $allowed = shift;
+	my @block = split /,/, $allowed;
+	#print "Allowing events\n";
+	foreach my $item (@block) {
+		#print "$item\n";
+		$AllowedEvents{$item} = 1;
+	}
+}
+
+sub ClearAllowedEvents {
+	%AllowedEvents = ();
 }
 
 1;

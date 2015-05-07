@@ -30,6 +30,11 @@ sub trimws($) {
     return $string;
 }
 
+my $on_evictedwithoutcheckpoint = sub {
+};
+
+my $aborted = sub {
+};
 
 my $testname = "job_hgq_autoregroup_basic_van";
 my $execute_test_passed = 0;
@@ -232,6 +237,8 @@ close(SUBMIT);
 CondorTest::RegisterTimed($testname, \&timed_callback, 15);
 CondorTest::RegisterExecute($testname, \&execute_callback);
 CondorTest::RegisterExitedSuccess($testname, \&exit_callback);
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
+CondorTest::RegisterAbort($testname, $aborted);
 
 # Ensure earlier output doesn't confuse us.
 unlink $job_log;

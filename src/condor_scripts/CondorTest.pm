@@ -36,6 +36,8 @@ use Condor;
 use CondorUtils;
 use CondorPersonal;
 
+my %AllowedEvents = ();
+
 use base 'Exporter';
 
 our @EXPORT = qw(PrintTimeStamp timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest);
@@ -192,12 +194,12 @@ sub EndTest
 	# at this point all the personals started should be stopped
 	# so we will validate this and if we can not, this adds a negative result.
 	
-	print "EndTest: Testing Personal HTCondor(s) created for this test\n"; 
-	print "Their names are\n";
-	foreach my $name (sort keys %personal_condors) {
-		print "	$name";
-	}
-	print "\n\n";
+	#print "EndTest: Testing Personal HTCondor(s) created for this test\n"; 
+	#print "Their names are\n";
+	#foreach my $name (sort keys %personal_condors) {
+		#print "	$name";
+	#}
+	#print "\n\n";
 	my $amidown = "";
 	foreach my $name (sort keys %personal_condors) {
 		$amidown = "";
@@ -245,11 +247,12 @@ sub EndTest
 
     TestDebug( "\n\nFinal status for $testname: $result_str\n  $test_success_count check(s) passed\n  $test_failure_count check(s) failed$extra_notes\n", 1 );
 
-	if(defined $no_exit) {
-		return($exit_status);
-	} else {
-    	exit($exit_status);
-	}
+	#if(defined $no_exit) {
+		#return($exit_status);
+	#} else {
+    	#exit($exit_status);
+	#}
+	return($exit_status);
 }
 
 # This should be called in each check function to register the pass/fail result
@@ -325,9 +328,8 @@ sub TempFileName
 
 sub Reset
 {
-	print "In CondorTest::Reset\n";
     %machine_ads = ();
-	Condor::Reset();
+	Condor::NonEventReset();
 	$hoststring = "notset:000";
 	$failed_coreERROR = "";
 }
@@ -526,6 +528,78 @@ sub RegisterULog
     my $function_ref = shift || croak "missing function reference argument";
 
     $test{$handle}{"RegisterULog"} = $function_ref;
+}
+
+sub IdentifyTimer {
+	my $timercalback = shift;
+	foreach my $key (keys %test) {
+		print "test:$key\n";
+		if($test{$key}{"RegisterTimed"} == $timercalback) {
+			print "timer identified as $key\n";
+			return($key);
+		}
+	}
+	return("");
+}
+
+# remove CondorLog::RunCheck timer
+#
+sub RegisterCLTimed
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+	my $alarm = shift || croak "missing wait time argument";
+
+    $test{$handle}{"RegisterCLTimed"} = $function_ref;
+    $test{$handle}{"RegisterCLTimedWait"} = $alarm;
+
+	# relook at registration and re-register to allow a timer
+	# to be set after we are running. 
+	# Prior to this change timed callbacks were only regsitered
+	# when we call "runTest" and similar calls at the start.
+
+	CheckCLTimedRegistrations($handle);
+}
+
+# remove SimpleJob::RunCheck timer
+#
+sub RemoveCLTimed
+{
+    my $handle = shift || croak "missing handle argument";
+
+    $test{$handle}{"RegisterCLTimed"} = undef;
+    $test{$handle}{"RegisterCLTimedWait"} = undef;
+    TestDebug( "Remove timer.......\n",4);
+    Condor::RemoveCLTimed( );
+}
+
+sub RegisterSJTimed
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+	my $alarm = shift || croak "missing wait time argument";
+
+    $test{$handle}{"RegisterSJTimed"} = $function_ref;
+    $test{$handle}{"RegisterSJTimedWait"} = $alarm;
+
+	# relook at registration and re-register to allow a timer
+	# to be set after we are running. 
+	# Prior to this change timed callbacks were only regsitered
+	# when we call "runTest" and similar calls at the start.
+
+	CheckSJTimedRegistrations($handle);
+}
+
+# remove SimpleJob::RunCheck timer
+#
+sub RemoveSJTimed
+{
+    my $handle = shift || croak "missing handle argument";
+
+    $test{$handle}{"RegisterSJTimed"} = undef;
+    $test{$handle}{"RegisterSJTimedWait"} = undef;
+    TestDebug( "Remove timer.......\n",4);
+    Condor::RemoveSJTimed( );
 }
 
 sub RegisterTimed
@@ -798,6 +872,9 @@ sub StartTest
 	#my $testname = $args{testname}; 
 	#print "DoTest:$testname\n";
 
+	#ensure test name does not have a newline
+	fullchomp($handle);
+
 	if($args{submit_file} eq "none") {
     	Condor::SetHandle($handle);
 		print "No submit file passed in. Only registering test\n";
@@ -992,6 +1069,7 @@ sub StartTest
 		# running in Config
 		my $logdir = `condor_config_val log`;
 		CondorUtils::fullchomp($logdir);
+		CondorUtils::fullchomp($handle);
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 	}
 	##############################################################
@@ -1047,6 +1125,53 @@ sub StartTest
 	}
 }
 
+#############################################
+#
+# bt 5/4/15
+#
+#
+# We have had timer clashes where we loose callbacks
+# because someone else used it wiping out the first timer.
+# We feel this will get rid some of the periodic failures.
+# SimpleJob.pm will get ir's own timer. This will explain
+# almost identicle code but with SJ within it.
+#
+#
+
+sub CheckCLTimedRegistrations
+{
+	my $handle = shift;
+	# this one event should be possible from ANY state
+	# that the monitor reports to us. In this case which
+	# initiated the change I wished to start a timer from
+	# when the actual runtime was reached and not from
+	# when we started the test and submited it. This is the time 
+	# at all other regsitrations have to be registered by....
+
+    if( exists $test{$handle} and defined $test{$handle}{"RegisterCLTimed"} )
+    {
+		TestDebug( "Found a timer to register.......\n",4);
+		Condor::RegisterCLTimed( $test{$handle}{"RegisterCLTimed"} , $test{$handle}{"RegisterCLTimedWait"});
+    }
+}
+
+sub CheckSJTimedRegistrations
+{
+	my $handle = shift;
+	# this one event should be possible from ANY state
+	# that the monitor reports to us. In this case which
+	# initiated the change I wished to start a timer from
+	# when the actual runtime was reached and not from
+	# when we started the test and submited it. This is the time 
+	# at all other regsitrations have to be registered by....
+
+    if( exists $test{$handle} and defined $test{$handle}{"RegisterSJTimed"} )
+    {
+		TestDebug( "Found a timer to register.......\n",4);
+		Condor::RegisterSJTimed( $test{$handle}{"RegisterSJTimed"} , $test{$handle}{"RegisterSJTimedWait"});
+    }
+}
+
 sub CheckTimedRegistrations
 {
 	my $handle = shift;
@@ -1075,7 +1200,7 @@ sub CheckRegistrations
     else
     {
 	Condor::RegisterExitSuccess( sub {
-	    die "$handle: FAILURE (got unexpected successful termination)\n";
+		Condor::CheckAllowed("RegisterExitSuccess", $handle, "(got unexpected successful termination)");
 	} );
     }
 
@@ -1087,7 +1212,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterExitFailure( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (returned $info{'retval'})\n";
+		Condor::CheckAllowed("RegisterExitFailure", "$handle", "(returned $info{'retval'})");
 	} );
     }
 
@@ -1099,7 +1224,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterExitAbnormal( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (got signal $info{'signal'})\n";
+		Condor::CheckAllowed("RegisterExitAbnormal", "$handle", "(got signal $info{'signal'})");
 	} );
     }
 
@@ -1111,7 +1236,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterShadow( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (got unexpected shadow exceptions)\n";
+		Condor::CheckAllowed("RegisterShadow", "$handle", "(got unexpected shadow exceptions)");
 	} );
     }
 
@@ -1133,7 +1258,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterAbort( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (job aborted by user)\n";
+		Condor::CheckAllowed("RegisterAbort", "$handle", "(job aborted by user)");
 	} );
     }
 
@@ -1145,7 +1270,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterHold( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (job held by user)\n";
+		Condor::CheckAllowed("RegisterHold", "$handle", "(job held by user)");
 	} );
     }
 
@@ -1174,7 +1299,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterJobErr( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (job error -- see $info{'log'})\n";
+		Condor::CheckAllowed("RegisterJobErr", "$handle", "(job error -- see $info{'log'})");
 	} );
     }
 
@@ -1186,7 +1311,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterULog( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (job ulog)\n";
+		Condor::CheckAllowed("RegisterULog", "$handle", "(job ulog)");
 	} );
     }
 
@@ -1198,7 +1323,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterSuspended( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (Suspension not expected)\n";
+		Condor::CheckAllowed("RegisterSuspended", "$handle", "(Suspension not expected)");
 	} );
     }
 
@@ -1210,7 +1335,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterUnsuspended( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (Unsuspension not expected)\n";
+		Condor::CheckAllowed("RegisterUnsuspended", "$handle", "(Unsuspension not expected)");
 	} );
     }
 
@@ -1222,7 +1347,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterDisconnected( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (Disconnect not expected)\n";
+		Condor::CheckAllowed("RegisterDisconnected", "$handle", "(Disconnect not expected)");
 	} );
     }
 
@@ -1234,7 +1359,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterReconnected( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (reconnect not expected)\n";
+		Condor::CheckAllowed("RegisterReconnected", "$handle", "(reconnect not expected)");
 	} );
     }
 
@@ -1246,7 +1371,7 @@ sub CheckRegistrations
     {
 	Condor::RegisterReconnectFailed( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (reconnect failed)\n";
+		Condor::CheckAllowed("RegisterReconnectFailed", "$handle", "(reconnect failed)");
 	} );
     }
 
@@ -1257,7 +1382,7 @@ sub CheckRegistrations
     } else { 
 		Condor::RegisterEvictedWithRequeue( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (Unexpected Eviction with requeue)\n";
+		Condor::CheckAllowed("RegisterEvictedWithRequeue", "$handle", "(Unexpected Eviction with requeue)");
 	} );
 	}
 
@@ -1268,7 +1393,7 @@ sub CheckRegistrations
     } else { 
 		Condor::RegisterEvictedWithCheckpoint( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (Unexpected Eviction with checkpoint)\n";
+		Condor::CheckAllowed("RegisterEvictedWithCheckpoint", "$handle", "(Unexpected Eviction with checkpoint)");
 	} );
 	}
 
@@ -1281,7 +1406,7 @@ sub CheckRegistrations
 		#print "******** NOT Registering EvictedWithoutCheckpoint handle:$handle ****************\n";
 		Condor::RegisterEvictedWithoutCheckpoint( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (Unexpected Eviction without checkpoint)\n";
+		Condor::CheckAllowed("RegisterEvictedWithoutCheckpoint", "$handle", "(Unexpected Eviction without checkpoint)");
 	} );
 	}
 
@@ -1302,12 +1427,7 @@ sub CheckRegistrations
 	#Condor::RegisterEvicted( $test{$handle}{"RegisterEvicted"} );
     #}
 
-    if( defined $test{$handle}{"RegisterTimed"} )
-    {
-		Condor::RegisterTimed( $test{$handle}{"RegisterTimed"} , $test{$handle}{"RegisterTimedWait"});
-    }
 }
-
 
 sub CompareText
 {
@@ -2035,7 +2155,6 @@ sub spawn_cmd
 			} else {
 				# Child returns valid exit code
 				my $rc = $retval >> 8;
-				print "ProcessReturn: Exited normally $rc\n";
 				$retval = $rc;
 			}
 			print RES "Exit $retval \n";
@@ -2143,7 +2262,8 @@ sub SearchCondorLogMultiple
 	my $goal = 0;
 	my $retryregexp = "";
 
-    my $logloc = `condor_config_val ${daemon}_log`;
+    my @choices = `condor_config_val ${daemon}_log`;
+	my $logloc = $choices[0];
     CondorUtils::fullchomp($logloc);
     CondorTest::TestDebug("Search this log: $logloc for: $regexp instances = $instances\n",2);
     CondorTest::TestDebug("Timeout = $timeout\n",2);
@@ -3272,7 +3392,7 @@ sub KillPersonal
 	$condor->SetCondorDirection("down");
 	CondorPersonal::KillDaemons($personal_config);
 	TestDebug("Doing core ERROR check in  KillPersonal\n",2);
-	print "Doing core ERROR check in  KillPersonal\n";
+	#print "Doing core ERROR check in  KillPersonal\n";
 	$corecheckret = CoreCheck($handle, $logdir, $teststrt, $teststop);
 	$failed_coreERROR = "$failed_coreERROR" . "$corecheckret";
 
@@ -3324,7 +3444,7 @@ sub CoreCheck {
 	my $scancount = 0;
 	my $fullpath = "";
 	
-	print "Checking for cores and ERRORS\n";
+	print "Checking for cores and ERRORS for test:$test:\n";
 	if(CondorUtils::is_windows() == 1) {
 		my $windowslogdir = "";
 		if(is_windows_native_perl()) {
