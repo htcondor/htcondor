@@ -7584,39 +7584,38 @@ REM Run the actual job now
 \item[\Macro{ASSIGN\_CPU\_AFFINITY}]
   A boolean expression that defaults to \Expr{False}.
   When \Expr{True},
-  each job under this startd is confined to using only as many
-  cores as the slots has been configured for.  When using partitionable
-  slots, each job will be bound to as many cores as it requests with
-  request\_cpus.  When \Expr{True}, overrides any settings specified by
-  \MacroNI{ENFORCE\_CPU\_AFFINITY}.
+  each job under this \Condor{startd} is confined to using only as many
+  cores as the configured number of slots.  When using partitionable
+  slots, each job will be bound to as many cores as requested by
+  specifying \SubmitCmdNI{request\_cpus}.
+  When \Expr{True}, this configuration variable overrides any specification
+  of \MacroNI{ENFORCE\_CPU\_AFFINITY}.
 
 \label{param:EnforceCpuAffinity} 
 \item[\Macro{ENFORCE\_CPU\_AFFINITY}]
-  Deprecated by \MacroNI{ASSIGN\_CPU\_AFFINITY}.
-  NOTE:  You most likely do not what to enabled this setting and the
-  related setting below, unless you are using glidein, or other
-  unusual setup!
+  This configuration variable is replaced by \MacroNI{ASSIGN\_CPU\_AFFINITY}.
+  Do not enable this configuration variable unless
+  using glidein or another unusual setup.
 
   A boolean value that defaults to \Expr{False}.  When \Expr{False},
   the CPU affinity of processes in a job is not enforced.
-  When \Expr{True}, the processes in a HTCondor job maintain their
+  When \Expr{True}, the processes in an HTCondor job maintain their
   affinity to a CPU.  This means that this job will only run on
   that particular CPU, even if other CPU cores are idle.
 
-  If this knob is \Expr{True}, and 
-  \MacroNI{SLOT<N>\_CPU\_AFFINITY} is not set, the CPU the job
-  is locked to is the same as slot id, minus one (SlotIds are
-  one-based, cores are zero-based).
+  If \Expr{True} and \MacroNI{SLOT<N>\_CPU\_AFFINITY} is not set,
+  the CPU that the job is locked to is the same as \Expr{SlotID - 1}.
+  Note that slots are numbered beginning with the value 1,
+  while CPU cores are numbered beginning with the value 0.
 
   When \Expr{True}, more fine grained affinities may be specified with
   \MacroNI{SLOT<N>\_CPU\_AFFINITY}.
 
 \label{param:SlotNCpuAffinity} 
 \item[\Macro{SLOT<N>\_CPU\_AFFINITY}]
-  Deprecated by \MacroNI{ASSIGN\_CPU\_AFFINITY}.
-  NOTE:  You most likely do not what to enabled this setting and the
-  related setting above, unless you are using glidein, or other
-  unusual setup!
+  This configuration variable is replaced by \MacroNI{ASSIGN\_CPU\_AFFINITY}.
+  Do not enable this configuration variable unless
+  using glidein or another unusual setup.
 
   A comma separated list of cores to which an HTCondor job running on
   a specific slot given by the value of \MacroNI{<N>} show affinity.
