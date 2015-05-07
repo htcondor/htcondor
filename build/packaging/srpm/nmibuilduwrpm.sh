@@ -82,7 +82,7 @@ update_spec_define () {
 update_spec_define git_build 0
 update_spec_define tarball_version "$condor_version"
 update_spec_define condor_build_id "$condor_build_id"
-update_spec_define condor_base_release "$condor_build_id"
+update_spec_define condor_base_release "0.$condor_build_id"
 
 rpmbuild $buildmethod "$@" --define="_topdir $tmpd" SOURCES/condor.spec
 
