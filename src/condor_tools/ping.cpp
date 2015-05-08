@@ -326,7 +326,7 @@ bool do_item(Daemon* d, MyString name, int num, int output_mode) {
 		}
 	}
 
-	print_info(fn_success, sock->get_connect_addr(), sock, name, num, &authz_ad, &errstack, output_mode);
+	print_info(fn_success, sock ? sock->get_connect_addr() : "(null)", sock, name, num, &authz_ad, &errstack, output_mode);
 
 	return fn_success;
 
