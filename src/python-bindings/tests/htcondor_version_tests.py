@@ -3,6 +3,7 @@
 import os
 import sys
 import errno
+import platform
 import unittest
 
 class TestConfig(unittest.TestCase):
@@ -22,6 +23,34 @@ class TestConfig(unittest.TestCase):
         self.assertEquals(htcondor.param["FOO"], "1")
 
 
+class TestClassadExtensions(unittest.TestCase):
+
+    def test_user_home(self):
+        if platform.system() == 'Windows':
+            self.assertEquals(classad.ExprTree('userHome("foo","bar")').eval(), classad.Value.Error)
+            return
+        import pwd
+        pw = pwd.getpwuid(os.geteuid())
+        user = pw.pw_name
+        home = pw.pw_dir
+
+	htcondor.param['CLASSAD_ENABLE_USER_HOME'] = 'true'
+        self.assertRaises(TypeError, classad.ExprTree('userHome()').eval)
+        self.assertRaises(TypeError, classad.ExprTree('userHome("a", "b", "c")').eval)
+        self.assertEquals(classad.ExprTree('userHome("", "")').eval(), classad.Value.Undefined)
+        self.assertEquals(classad.ExprTree('userHome("", 1)').eval(), classad.Value.Undefined)
+        self.assertEquals(classad.ExprTree('userHome("")').eval(), classad.Value.Undefined)
+        self.assertEquals(classad.ExprTree('userHome(%s)' % classad.quote(user)).eval(), home)
+        self.assertEquals(classad.ExprTree('userHome(%s, "foo")' % classad.quote(user)).eval(), home)
+        self.assertEquals(classad.ExprTree('userHome("", "foo")').eval(), "foo")
+        self.assertEquals(classad.ExprTree('userHome(undefined)').eval(), classad.Value.Undefined)
+        self.assertEquals(classad.ExprTree('userHome(undefined, "foo")').eval(), "foo")
+        self.assertEquals(classad.ExprTree('userHome(1, "foo")').eval(), "foo")
+        self.assertEquals(classad.ExprTree('userHome(1)').eval(), classad.Value.Error)
+	htcondor.param['CLASSAD_ENABLE_USER_HOME'] = 'false'
+	self.assertEquals(classad.ExprTree('userHome(%s)' % classad.quote(user)).eval(), classad.Value.Undefined)
+
+
 class TestVersion(unittest.TestCase):
 
     def setUp(self):
@@ -38,6 +67,7 @@ class TestVersion(unittest.TestCase):
     def test_platform(self):
         self.assertEquals(htcondor.platform(), self.lines[1])
 
+
 def makedirs_ignore_exist(directory):
     try:
         os.makedirs(directory)
@@ -46,6 +76,7 @@ def makedirs_ignore_exist(directory):
         if not issubclass(exctype, OSError): raise
         if oe.errno != errno.EEXIST:
             raise
+
 
 # Bootstrap condor
 testdir = os.path.join(os.getcwd(), "tests_tmp")
@@ -57,6 +88,8 @@ open(config_file, "w").close()
 os.environ["CONDOR_CONFIG"] = config_file
 os.environ["_condor_TOOL_LOG"] = os.path.join(logdir, "ToolLog")
 import htcondor
+import classad
+htcondor.enable_classad_extensions()
 
 if __name__ == '__main__':
     unittest.main()
