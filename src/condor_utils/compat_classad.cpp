@@ -893,6 +893,133 @@ MergeEnvironment(const char * /*name*/,
 }
 
 
+static bool
+return_home_result(const std::string &default_home,
+	const std::string &error_msg,
+	classad::Value    &result,
+	bool isError)
+{
+	if (default_home.size())
+	{
+		result.SetStringValue(default_home);
+	}
+	else
+	{
+		if (isError) {result.SetErrorValue();} else {result.SetUndefinedValue();}
+		classad::CondorErrMsg = error_msg;
+	}
+	return true;
+}
+
+/**
+ * Implementation of the userHome function.
+ *
+ * This returns the home directory of a given username as configured on the system.
+ * The home directory is determined using the getpwdnam call.
+ *
+ * Arguments:
+ *   - name.  The username to lookup.
+ *   - default (optional).  The default value to return if no user home exists.
+ *
+ * Returns:
+ *   - ERROR on Windows platforms.
+ *   - ERROR if invoked with the incorrect number of arguments.
+ *   - otherwise, `default` if default is given AND the value of `default` evaluates to a non-empty string AND:
+ *     - the name cannot be evaluated to a string/UNDEFINED, OR
+ *     - the user does not exist on the system, OR
+ *     - the user does not have a home directory.
+ *   - otherwise, ERROR if the first argument cannot be evaluated or does not evaluate to a string or
+ *     UNDEFINED value (and default does not evaluate to a non-empty string).
+ *   - otherwise, UNDEFINED if the first argument evaluates to UNDEFINED
+ *   - otherwise, a string specifying the user's home directory.
+ */
+
+static bool
+userHome_func(const char *                 name,
+	const classad::ArgumentList &arguments,
+	classad::EvalState          &state,
+	classad::Value              &result)
+{
+	if ((arguments.size() != 1) && (arguments.size() != 2))
+	{
+		std::stringstream ss;
+		result.SetErrorValue();
+		ss << "Invalid number of arguments passed to " << name << "; " << arguments.size() << "given, 1 required and 1 optional.";
+		classad::CondorErrMsg = ss.str();
+		return false;
+	}
+
+#ifdef WIN32
+	result.SetErrorValue();
+	ss << "UserHome is not available on Windows.";
+	classad::CondorErrMsg == ss.str();
+	return true;
+#endif
+
+	std::string default_home;
+	classad::Value default_home_value;
+	if (arguments.size() != 2 || !arguments[1]->Evaluate(state, default_home_value) || !default_home_value.IsStringValue(default_home))
+	{
+		default_home = "";
+	}
+
+	std::string owner_string;
+	classad::Value owner_value;
+	if (!arguments[0]->Evaluate(state, owner_value))
+	{
+		
+	}
+	if (owner_value.IsUndefinedValue() && !default_home.size())
+	{
+		result.SetUndefinedValue();
+		return true;
+	}
+	if (!owner_value.IsStringValue(owner_string))
+	{
+		std::string unp_string;
+		std::stringstream ss;
+		classad::ClassAdUnParser unp; unp.Unparse(unp_string, arguments[0]);
+		ss << "Could not evaluate the first argument of " << name << " to string.  Expression: " << unp_string << ".";
+		return return_home_result(default_home, ss.str(), result, true);
+	}
+
+	errno = 0;
+#ifndef WIN32
+		// The UserHome function has potential side-effects (such as hitting a LDAP server)
+		// that might have a noticable impact on the system.  Disable unless explicitly requested.
+		// (really, this only is useful in the very limited HTCondor-CE context.)
+	if (!param_boolean("CLASSAD_ENABLE_USER_HOME", false ))
+	{
+		return return_home_result(default_home, "UserHome is currently disabled; to enable set CLASSAD_ENABLE_USER_HOME=true in the HTCondor config.",
+			result, false);
+	}
+	struct passwd *info = getpwnam(owner_string.c_str());
+	if (!info)
+	{
+		std::stringstream ss;
+		ss << "Unable to find home directory for user " << owner_string;
+		if (errno) {
+			ss << ": " << strerror(errno) << "(errno=" << errno << ")";
+		} else {
+			ss << ": No such user.";
+		}
+		return return_home_result(default_home, ss.str(), result, false);
+	}
+
+	if (!info->pw_dir)
+	{
+		std::stringstream ss;
+		ss << "User " << owner_string << " has no home directory.";
+		return return_home_result(default_home, ss.str(), result, false);
+	}
+	std::string home_string = info->pw_dir;
+	result.SetStringValue(home_string);
+#endif
+
+	return true;
+}
+
+
 static
 void registerClassadFunctions()
 {
@@ -933,6 +1060,9 @@ void registerClassadFunctions()
 	name = "stringList_regexpMember";
 	classad::FunctionCall::RegisterFunction( name,
 											 stringListRegexpMember_func );
+
+	name = "userHome";
+	classad::FunctionCall::RegisterFunction(name, userHome_func);
 
 	// user@domain, slot@machine & sinful string crackers.
 	name = "splitusername";
