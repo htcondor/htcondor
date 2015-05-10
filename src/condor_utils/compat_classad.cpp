@@ -951,8 +951,7 @@ userHome_func(const char *                 name,
 
 #ifdef WIN32
 	result.SetErrorValue();
-	ss << "UserHome is not available on Windows.";
-	classad::CondorErrMsg == ss.str();
+	classad::CondorErrMsg = "UserHome is not available on Windows.";
 	return true;
 #endif
 
