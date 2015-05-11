@@ -76,6 +76,12 @@ from 0 to 20.
 A value of 0 does not limit the number of scripts.
 \Ticket{4999}
 
+\item When an updated X.509 proxy for a job is provided to the
+\Condor{schedd} over the network, the \Attr{x509UserProxyExpiration}
+attribute is now updated in the job's ClassAd to reflect the new
+expiration time.
+\Ticket{5001}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
