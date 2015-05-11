@@ -4869,6 +4869,18 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		}
 	}
 
+	// Update the proxy expiration time in the job ad
+	time_t proxy_expiration;
+	proxy_expiration = x509_proxy_expiration_time( final_proxy_path.Value() );
+	if (proxy_expiration == -1) {
+		dprintf( D_ALWAYS, "updateGSICred(%d): failed to read expiration "
+				 "time of updated proxy for job %d.%d: %s\n", cmd,
+				 jobid.cluster, jobid.proc, x509_error_string() );
+	} else {
+		SetAttributeInt( jobid.cluster, jobid.proc,
+						 ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration );
+	}
+
 #ifndef WIN32
 		// Now switch back to our old priv state
 	set_priv( priv );
