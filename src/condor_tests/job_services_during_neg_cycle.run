@@ -231,6 +231,7 @@ my $on_submit = sub {
 		runToolNTimes("condor_rm -all",1,0);
 		runToolNTimes("condor_rm -forcex -all",1,0);
 		CondorTest::EndTest();
+		exit(0);
 	}
 };
 
@@ -241,6 +242,7 @@ my $on_submit = sub {
 
 # submit a bunch of jobs and when the submitted count reaches target count
 # we will use RunCheckMultiple to find and return by a callback with the found line.
+
 # Then we have to figure out what happened with a series of events done within
 # that last on_submit event.
 

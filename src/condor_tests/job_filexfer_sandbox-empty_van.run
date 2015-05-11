@@ -32,6 +32,9 @@ $dir_timeout = 20;
 
 umask 0;
 
+my $success = sub {
+};
+
 $OutputTest = sub
 {
     my %info = @_;

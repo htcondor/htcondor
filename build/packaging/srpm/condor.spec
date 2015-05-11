@@ -650,6 +650,14 @@ Requires: %name = %version-%release
 %description externals
 Includes the external packages built when UW_BUILD is enabled
 
+%package external-libs
+Summary: Libraries for external packages built into HTCondor
+Group: Applications/System
+Requires: %name = %version-%release
+
+%description external-libs
+Includes the libraries for external packages built when UW_BUILD is enabled
+
 %endif
 
 %package all
@@ -1651,13 +1659,15 @@ rm -rf %{buildroot}
 %files static-shadow
 %{_sbindir}/condor_shadow_s
 
-%files externals
+%files external-libs
 %dir %_libdir/condor
 %_libdir/condor/libcondordrmaa.a
 %_libdir/condor/libdrmaa.so
 %_libdir/condor/libglobus*.so*
 %_libdir/condor/libvomsapi*.so*
 %_libdir/condor/ugahp.jar
+
+%files externals
 %_sbindir/deltacloud_gahp
 %_sbindir/unicore_gahp
 %if %blahp

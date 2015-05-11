@@ -38,6 +38,9 @@ sub trimws($) {
     return $string;
 }
 
+my $aborted = sub {
+};
+
 
 sub timed_callback {
     if (!$executing) {
@@ -181,7 +184,7 @@ sub exit_callback {
 }
 
 sub on_evictednocheckpoint {
-	print "Eviction from remove?\n";
+	#print "Eviction from remove?\n";
 }
 
 sub on_imageupdated {
@@ -314,6 +317,7 @@ print SUBMIT $submit_body;
 close(SUBMIT);
 
 
+CondorTest::RegisterAbort($testname, $aborted);
 CondorTest::RegisterEvictedWithoutCheckpoint($testname, \&on_evictednocheckpoint);
 CondorTest::RegisterImageUpdated($testname, \&on_imageupdated);
 CondorTest::RegisterTimed($testname, \&timed_callback, 15);

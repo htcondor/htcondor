@@ -600,7 +600,7 @@ endif()
 
 #####################################
 # RPATH option
-if (LINUX)
+if (LINUX AND NOT PROPER)
 	option(CMAKE_SKIP_RPATH "Skip RPATH on executables" OFF)
 else()
 	option(CMAKE_SKIP_RPATH "Skip RPATH on executables" ON)

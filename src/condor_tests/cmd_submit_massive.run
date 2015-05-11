@@ -39,13 +39,13 @@ my $ClusterId = 0;
 # this will get it submitted later after we build it
 push @submitfiles, $submitfile;
 
-my @basesubmit = ' universe = vanilla
+my @basesubmit = " universe = vanilla
 executable = x_sleep.pl
 log = $submitfile.log
 hold = False
 arguments = 1
 notification = never
-';
+";
 
 print "Building submit file:$submitfile\n";
 
@@ -59,7 +59,6 @@ my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	WANT_SUSPEND = FALSE
 	NEGOTIATION_INTERVAL = 5
-	XSW_LIMIT = 2
 	ALL_DEBUG = D_ALWAYS
 	MACHINE_RESOURCE_Boats = 30
 ';
@@ -116,7 +115,7 @@ sub GenerateMassive {
 	my $iterations = shift;
 	my $counter = 0;
 	my $pattern = "x";
-	my $unique = "unique";
+	my $unique = "+unique";
 	my $genunique = "";
 	while($counter < $iterations) {
 		$genunique = "$unique$counter = $pattern";
@@ -129,12 +128,14 @@ sub GenerateMassive {
 #Do a job before setting tesing exit codes
 print "First test basic job\n";
 $result = SimpleJob::RunCheck(); # jobid 1
+Condor::EventReset();
 
 CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 my $res = 0;
 foreach my $file (@submitfiles) {
+	print "Running test on file:$file:\n";
 	$res = CondorTest::RunTest($testname, $file, 0, $GetClusterId);
 	CondorTest::RegisterResult($res, "test_name", $testname);
 	if($res == 1) {
