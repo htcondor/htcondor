@@ -4207,6 +4207,14 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			dPrintAd(D_MACHINE, *candidate);
 		}
 
+		if ( param_boolean( "ALLOW_PSLOT_PREEMPTION", false ) ) {
+			bool is_dslot = false;
+			candidate->LookupBool( ATTR_SLOT_DYNAMIC, is_dslot );
+			if ( is_dslot ) {
+				continue;
+			}
+		}
+
         consumption_map_t consumption;
         bool has_cp = cp_supports_policy(*candidate);
         bool cp_sufficient = true;
@@ -5863,6 +5871,58 @@ bool rankPairCompare(std::pair<int,double> lhs, std::pair<int,double> rhs) {
 	return lhs.second < rhs.second;
 }
 
+bool dslotLookup( const classad::ClassAd *ad, const char *name, int idx, classad::Value &value )
+{
+	if ( ad == NULL || name == NULL || idx < 0 ) {
+		return false;
+	}
+	string attr_name = "child";
+	attr_name += name;
+	// lookup or evaluate child<name>
+	// set value to idx-th entry of resulting ExprList
+	const classad::ExprTree *expr_tree = ad->Lookup( attr_name );
+	if ( expr_tree == NULL || expr_tree->GetKind() != classad::ExprTree::EXPR_LIST_NODE ) {
+		return false;
+	}
+	vector<classad::ExprTree*> expr_list;
+	((classad::ExprList*)expr_tree)->GetComponents( expr_list );
+	if ( idx >= expr_list.size() ) {
+		return false;
+	}
+	if ( expr_list[idx]->GetKind() != classad::ExprTree::LITERAL_NODE ) {
+		return false;
+	}
+	((classad::Literal*)expr_list[idx])->GetValue( value );
+	return true;
+}
+
+bool dslotLookupString( const classad::ClassAd *ad, const char *name, int idx, string &value )
+{
+	classad::Value val;
+	if ( !dslotLookup( ad, name, idx, val ) ) {
+		return false;
+	}
+	return val.IsStringValue( value );
+}
+
+bool dslotLookupInteger( const classad::ClassAd *ad, const char *name, int idx, int &value )
+{
+	classad::Value val;
+	if ( !dslotLookup( ad, name, idx, val ) ) {
+		return false;
+	}
+	return val.IsNumber( value );
+}
+
+bool dslotLookupFloat( const classad::ClassAd *ad, const char *name, int idx, double &value )
+{
+	classad::Value val;
+	if ( !dslotLookup( ad, name, idx, val ) ) {
+		return false;
+	}
+	return val.IsNumber( value );
+}
+
 	// Return true is this partitionable slot would match the
 	// job with preempted resources from a dynamic slot.
 	// Only consider startd RANK for now.
@@ -5892,27 +5952,24 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 	}
 
 		// Copy the childCurrentRanks list attributes into vector
-	std::vector<std::pair<int,double> > ranks(numDslots);
-	for (int i = 0; i < numDslots; i++)  {
-
+		// Skip dslots that aren't eligible for matching
+	std::vector<std::pair<int,double> > ranks;
+	for ( int i = 0; i < numDslots; i++ ) {
 		double currentRank = 0.0; // global default startd rank
-		std::string rankExprStr;
-		ExprTree *rankEt = NULL;
-		classad::Value result;
-
-			// list dereferences must be evaled, not lookup'ed
-		formatstr(rankExprStr, "MY.childCurrentRank[%d]", i);
-		ParseClassAdRvalExpr(rankExprStr.c_str(), rankEt);
-
-			// Lookup the CurrentRank of the dslot from the pslot attr
-		if (rankEt) {
-			EvalExprTree(rankEt, machine, job, result);
-			result.IsRealValue(currentRank);
-			delete rankEt;
-		} 
-
-		std::pair<int, double> slotRank(i, currentRank);
-		ranks[i] = slotRank;
+		int retire_time = 0;
+		string state = "";
+		dslotLookupFloat( machine, ATTR_CURRENT_RANK, i, currentRank );
+		dslotLookupInteger( machine, ATTR_RETIREMENT_TIME_REMAINING, i,
+							retire_time );
+		dslotLookupString( machine, ATTR_STATE, i, state );
+		// TODO In the future, condition this on ConsiderEarlyPreemption
+		if ( retire_time > 0 ) {
+			continue;
+		}
+		if ( !strcmp( state.c_str(), state_to_string( preempting_state ) ) ) {
+			continue;
+		}
+		ranks.push_back( std::pair<int, double>(i, currentRank) );
 	}
 
 		// Sort all dslots by their current rank
@@ -5928,7 +5985,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 		// need to add custom resources here
 
 		// In rank order, see if by preempting one more dslot would cause pslot to match
-	for (int slot = 0; slot < numDslots && ranks[slot].second < newRank; slot++) {
+	for (int slot = 0; slot < ranks.size() && ranks[slot].second < newRank; slot++) {
 		int dSlot = ranks[slot].first; // dslot index in childXXX list
 
 			// if ranks are the same, consider preemption just based on user prio iff
@@ -5942,18 +5999,9 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 			}
 
 			// Find the RemoteOwner for this dslot, via pslot's childremoteOwner list
-			std::string ownerAttr;
 			std::string remoteOwner;
-
-			formatstr(ownerAttr, "My.childRemoteOwner[%d]", dSlot);
-			ExprTree *et;
 			classad::Value result;
-
-			ParseClassAdRvalExpr(ownerAttr.c_str(), et);
-			EvalExprTree(et, machine, NULL, result);
-			delete et;
-
-			if (!result.IsStringValue(remoteOwner)) {
+			if ( !dslotLookupString( machine, ATTR_REMOTE_OWNER, dSlot, remoteOwner ) ) {
 				// couldn't parse or evaluate, give up on this dslot
 				continue;
 			}
@@ -5998,15 +6046,10 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 			if (mutatedMachine.LookupFloat((*it).c_str(), b4)) {
 					// The value exists in the parent
 				b4 = floor(b4);
-				std::string childAttr;
-				formatstr(childAttr, "MY.child%s[%d]", (*it).c_str(), dSlot);
-					// and in the child
-				ExprTree *et;
 				classad::Value result;
-
-				ParseClassAdRvalExpr(childAttr.c_str(), et);
-				EvalExprTree(et, machine, NULL, result);
-				delete et;
+				if ( !dslotLookup( machine, it->c_str(), dSlot, result ) ) {
+					result.SetUndefinedValue();
+				}
 
 				int intValue;
 				if (result.IsIntegerValue(intValue)) {
@@ -6036,7 +6079,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 			std::string key = name + ipaddr;
 			std::vector<std::string> v = childClaimHash[key];
 			for (int child = 0; child < slot + 1; child++) {
-				claimsToPreempt += v[child];
+				claimsToPreempt += v[ranks[child].first];
 				claimsToPreempt += " ";
 			}
 
