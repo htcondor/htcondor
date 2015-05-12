@@ -1778,7 +1778,8 @@ Resource::evalRetirementRemaining()
 		MaxJobRetirementTime = 0;
 	}
 
-	return MaxJobRetirementTime - JobAge;
+	int remaining = MaxJobRetirementTime - JobAge;
+	return (remaining < 0) ? 0 : remaining;
 }
 
 bool
@@ -3461,6 +3462,7 @@ Resource::publishDynamicChildSummaries(ClassAd *cap) {
 	attrs.push_back(ATTR_STATE);
 	attrs.push_back(ATTR_ACTIVITY);
 	attrs.push_back(ATTR_ENTERED_CURRENT_STATE);
+	attrs.push_back(ATTR_RETIREMENT_TIME_REMAINING);
 
 	attrs.push_back(ATTR_CPUS);
 	attrs.push_back(ATTR_MEMORY);

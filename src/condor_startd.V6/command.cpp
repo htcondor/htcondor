@@ -1221,30 +1221,40 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			// The schedd is asking us to preempt these claims to make
 			// the pslot it is really claiming bigger.  New in 8.1.6
 		int num_preempting = 0;
-		if (stream->code(num_preempting)) {
+		if (stream->code(num_preempting) && num_preempting > 0) {
 			rip->dprintf(D_FULLDEBUG, "Schedd sending %d preempting claims.\n", num_preempting);
-			char **claims = (char **)malloc(sizeof(char *) * (num_preempting));
+			Resource **dslots = (Resource **)malloc(sizeof(Resource *) * num_preempting);
 			for (int i = 0; i < num_preempting; i++) {
-				claims[i] = NULL;
-				if (! stream->get_secret(claims[i])) {
+				char *claim_id = NULL;
+				if (! stream->get_secret(claim_id)) {
 					rip->dprintf( D_ALWAYS, "Can't receive preempting claim\n" );
-					for (int n = 0; n < i - 1; n++) {
-						free(claims[n]);
-					}
-					free(claims);
+					free(claim_id);
 					ABORT;
 				}
-				Resource *dslot = resmgr->get_by_any_id( claims[i] );
-				if( !dslot ) {
-					ClaimIdParser idp( claims[i] );
+				dslots[i] = resmgr->get_by_any_id( claim_id );
+				if( !dslots[i] ) {
+					ClaimIdParser idp( claim_id );
 					dprintf( D_ALWAYS, 
 							 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
-				} else {
-					dslot->kill_claim();
+					free( claim_id );
+					ABORT;
 				}
-				free(claims[i]);
+				free( claim_id );
+				if ( !dslots[i]->retirementExpired() ) {
+					dprintf( D_ALWAYS, "Error: slot %s still has retirement time, can't preempt immediately\n", dslots[i]->r_name );
+					ABORT;
+				}
 			}
-			free(claims);
+			for ( int i = 0; i < num_preempting; i++ ) {
+				// TODO Should we call retire_claim() to go through
+				//   vacating_act instead of straight to killing_act?
+				dslots[i]->kill_claim();
+				*(dslots[i]->get_parent()->r_attr) += *(dslots[i]->r_attr);
+				*(dslots[i]->r_attr) -= *(dslots[i]->r_attr);
+				// TODO Do we need to call refresh_classad() on either slot?
+			}
+			dslots[0]->get_parent()->refresh_classad( A_PUBLIC );
+			free( dslots );
 		}
 	} else {
 		rip->dprintf(D_FULLDEBUG, "Schedd using pre-v6.1.11 claim protocol\n");
