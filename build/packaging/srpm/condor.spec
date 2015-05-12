@@ -676,6 +676,7 @@ Requires: %name-std-universe = %version-%release
 %endif
 %if %uw_build
 Requires: %name-externals = %version-%release
+Requires: %name-external-libs = %version-%release
 %endif
 
 %description all
