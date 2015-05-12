@@ -39,29 +39,19 @@ no jobs to be submitted,
 if the submission would have assigned more than a single cluster value.
 \Ticket{4981}
 
-\item Improved how DAGMan deals with node job submit description files that
-use the new features of the \SubmitCmdNI{queue} command
-to do file globbing.
-\Ticket{4960}
-
 \item Changed the default value of configuration variables
 \MacroNI{ENABLE\_USERLOG\_LOCKING} and \MacroNI{EVENT\_LOG\_LOCKING}
 to \Expr{False}.
 The Event Log is still locked by default to perform file rotation.
 \Ticket{4922}
 
+\item Improved how DAGMan deals with node job submit description files that
+use the new features of the \SubmitCmdNI{queue} command
+to do file globbing.
+\Ticket{4960}
+
 \item \Condor{dagman} no longer creates an unused command socket.
 \Ticket{4987}
-
-\item Changed the timeout interval at which the \Condor{master} daemon
-must retry to configure the Windows firewall from 10 seconds to 5 seconds.
-Also changed the default value of configuration variable
-\MacroNI{WINDOWS\_FIREWALL\_FAILURE\_RETRY} from 60 to 2,
-such that there are many fewer retries by default.
-This prevents the the \Condor{master} daemon from hanging for 10 minutes 
-on start up,
-when it is unable to configure the Windows firewall.
-\Ticket{4988}
 
 \item Various syntax errors within a DAG input file related to the 
 specification of a splice are now reported as fatal errors, 
@@ -75,6 +65,16 @@ of NOOP or DONE for a splice.
 from 0 to 20.
 A value of 0 does not limit the number of scripts.
 \Ticket{4999}
+
+\item Changed the timeout interval at which the \Condor{master} daemon
+must retry to configure the Windows firewall from 10 seconds to 5 seconds.
+Also changed the default value of configuration variable
+\MacroNI{WINDOWS\_FIREWALL\_FAILURE\_RETRY} from 60 to 2,
+such that there are many fewer retries by default.
+This prevents the the \Condor{master} daemon from hanging for 10 minutes 
+on start up,
+when it is unable to configure the Windows firewall.
+\Ticket{4988}
 
 \item When an updated X.509 proxy for a job is provided to the
 \Condor{schedd} over the network, 
@@ -103,8 +103,8 @@ daemon was enabled.
 \Ticket{4958}
 
 \item Fixed a bug that sometimes caused \Condor{dagman} to not print
-the list of failed nodes (at the end of the \File{dagman.out} file)
-when a DAG fails.
+the list of failed nodes at the end of the \File{dagman.out} file upon
+DAG failure.
 \Ticket{5044}
 
 \end{itemize}
