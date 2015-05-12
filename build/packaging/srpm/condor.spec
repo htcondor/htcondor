@@ -634,7 +634,6 @@ Includes all the files necessary to support running standard universe jobs.
 %package static-shadow
 Summary: Statically linked condow_shadow and condor_master binaries
 Group: Applications/System
-Requires: %name = %version-%release
 
 %description static-shadow
 Provides condor_shadow_s and condor_master_s, which have all the globus
@@ -653,7 +652,6 @@ Includes the external packages built when UW_BUILD is enabled
 %package external-libs
 Summary: Libraries for external packages built into HTCondor
 Group: Applications/System
-Requires: %name = %version-%release
 
 %description external-libs
 Includes the libraries for external packages built when UW_BUILD is enabled
