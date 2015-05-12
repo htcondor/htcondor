@@ -5885,8 +5885,8 @@ bool dslotLookup( const classad::ClassAd *ad, const char *name, int idx, classad
 		return false;
 	}
 	vector<classad::ExprTree*> expr_list;
-	((classad::ExprList*)expr_tree)->GetComponents( expr_list );
-	if ( idx >= expr_list.size() ) {
+	((const classad::ExprList*)expr_tree)->GetComponents( expr_list );
+	if ( (unsigned)idx >= expr_list.size() ) {
 		return false;
 	}
 	if ( expr_list[idx]->GetKind() != classad::ExprTree::LITERAL_NODE ) {
@@ -5985,7 +5985,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 		// need to add custom resources here
 
 		// In rank order, see if by preempting one more dslot would cause pslot to match
-	for (int slot = 0; slot < ranks.size() && ranks[slot].second < newRank; slot++) {
+	for (unsigned int slot = 0; slot < ranks.size() && ranks[slot].second < newRank; slot++) {
 		int dSlot = ranks[slot].first; // dslot index in childXXX list
 
 			// if ranks are the same, consider preemption just based on user prio iff
@@ -6078,7 +6078,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 				// Lookup the vector of claim ids for this startd
 			std::string key = name + ipaddr;
 			std::vector<std::string> v = childClaimHash[key];
-			for (int child = 0; child < slot + 1; child++) {
+			for (unsigned int child = 0; child < slot + 1; child++) {
 				claimsToPreempt += v[ranks[child].first];
 				claimsToPreempt += " ";
 			}
