@@ -23,11 +23,10 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-my $testname = "job_concurrency_limitsS.run";
+my $testname = "job_concurrency_limitsP1.run";
 my %children = ();
 my $submitfile = "";
 my $taskname = "";
-my $burst = 0;
 my $idletolerance = 6;
 my %taskmorejobs = (
 	"undefinedcolon" => 1,
@@ -67,16 +66,6 @@ CondorTest::StartCondorWithParams(
 	local_fresh => "TRUE",
 );
 
-my $on_submitnameknown = sub {
-	my $name = shift;
-	print "SUBMIT FILE NAME CALLBACK:$name\n";
-	$submitfile = $name;
-};
-
-my $on_abort = sub {
-		#print scalar(localtime()) . " Abort seen\n";
-};
-
 sub multi_timeout_callback
 {
 	print "LogCheck timeout expired!\n";
@@ -85,28 +74,17 @@ sub multi_timeout_callback
 	die "Log check timed out at $time - ?\n";
 };
 
-sub evictedwithoutcheckpoint 
-{
-	print scalar(localtime()) . " evicted wothout checkpoint\n";
-};
-
-my $Calledcheck_expectations = 0;
-
-my $expectation_timeout = 10;
+Condor::SetAllowedEvents("RegisterEvictedWithoutCheckpoint,RegisterSubmit,RegisterExecute,RegisterAbort");
 
 sub on_submit {
-	if($Calledcheck_expectations == 0) {
-  		CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);
-		#print "Setting first checkexpectations callback in:$expectation_timeout\n";
-		$Calledcheck_expectations = 1;
-	}
+};
+
+sub on_imageupdated {
 };
 
 my $result = 0;
 my $running_now = 0;
 my $done = 0;
-$Calledcheck_expectations = 0;
-my $checkexpectationfailed = 0;
 my $expect_idle = 0;
 my $expect_run = 0;
 my $expect_checks = 0;
@@ -120,55 +98,7 @@ my $on_match = sub {
 	}
 };
 
-sub check_expectations {
-	print scalar(localtime()) . " In check_expectations callback: $Calledcheck_expectations\n";
-	runToolNTimes("condor_q",1,1,{emit_output=>0});
-
-	# what if we want to release a few jobs over time?
-	if($burst == 0) {
-		print "Have a special task:$taskname\n";
-		if($taskmorejobs{$taskname} > 0) {
-			print "It wants more jobs:$taskmorejobs{$taskname}\n";
-			print "submitfile to use is:$submitfile\n";
-			QueueMoreJobs($submitfile,$taskname);
-		}
-	}
-
-	CheckStatus();
-
-	CondorTest::RemoveTimed( "checkexpectations");
-	# things have gone on since we looked for clear wins
-	# so check now
-	if($done == 1) {
-		print "Saw done\n";
-		$expect_run = 1000; # remove will let a job start, bump count way up now.
-		return(1);
-	}
-	$expect_checks += 1;
-	print "Expect Checks This Test:$expect_checks\n";
-
-	print "In expectation_timeout: expect_checks:$expect_checks \n";
-	if($expect_checks >= $total_checks) {
-		if($running_now < $expect_run) {
-			runToolNTimes("condor_q",1,0);
-			runToolNTimes("condor_rm -all",1,0);
-			print "Failure: Not getting enough jobs to run!\n";
-			CondorTest::RegisterResult(0, "test_name", $testname);
-			$checkexpectationfailed = 1;
-			$done = 1;
-			return(0);
-		}
-		if(($running_now == $expect_run)&&($expect_run == 0)) {
-			runToolNTimes("condor_q",1,0);
-			runToolNTimes("condor_rm -all",1,0);
-			#print "Success - Zero jobs was expected!\n";
-			CondorTest::RegisterResult(1, "test_name", $testname);
-			$checkexpectationfailed = 0;
-			$done = 1;
-			return(1);
-		}
-	}
-
+sub DelayOnNegotiator {
 	print "Watching for another job to start up\n";
 	# Started Negotiation Cycle A wait of about 10 seconds is caused here
 	# leading the next one to occur in about 20 seconds
@@ -184,66 +114,105 @@ sub check_expectations {
 		no_result => "true",
 	);
 	#print scalar(localtime()) . " After multicheck\n";
-
-	if($expect_checks < $total_checks) {
-
-  		CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);
-	} else {
-		print "Too many checkexpectation callbacks.\n";
-	}
-
-
+	# CondorTest::RemoveTimed(); done before returning from CondorLog::RunCheckMultiple
 };
 
+my $waitforitres = 0;
+
+sub WaitForIt {
+	my $count = 0;
+	my $looplimit = 7;
+	my $variance = 10;
+	my $sleeptime = 0;
+	my $res = 0;
+	my $final = 0;
+	while ($count < $looplimit) {
+		$count += 1;
+		#print "Loop $count in WaitForIt\n";
+		system("condor_q");
+		#print "Calling CheckStatus with final:$final\n";
+		$res = CheckStatus($final);
+		#print "Result from CheckStatus:$res\n";
+		if($res == 1) {
+			#print "WaitForIt got 1, we are really done\n";
+			return(1);
+		} elsif ($res == 2) {
+			# wait on the next negotiator cycle to ensure
+			# no more jobs start. Check one last time
+			$final = 1;
+			#print "Looking for the start of next negotiation cycle\n";
+			DelayOnNegotiator();
+			#print "BACK FROM Looking for the start of next negotiation cycle\n";
+		} elsif ($res == -1) {
+			print "WaitForIt got -1, something went wrong\n";
+			return (-1);
+		} elsif ($res == 0) {
+			#print "We need more time in WaitForIt\n";
+		}
+		if( $count != $looplimit ) {
+			$sleeptime = ($count * $variance);
+			sleep($sleeptime);
+			#print "sleep time set to $sleeptime\n";
+		} else { 
+			print "Timeout in WaitForIt\n";
+			return(-1);
+		}
+	}
+};
+
+# return 0 needs more time
+# return -1 for failure
+# return 1 for happpy
+
 sub CheckStatus {
+	my $amidone = shift;
 	$running_now = CountRunning();
-	#print "Running Now:$running_now ($expect_run) Idle:$idles ($expect_idle)\n";
+	print "Running Now:$running_now ($expect_run) Idle:$idles ($expect_idle)\n";
 	if($running_now > $expect_run) {
 		# clearly unhappy
-		$checkexpectationfailed = 1; #we'll print bad and not ok
 		print "Running jobs <$running_now> exceeded concurrency limits <$expect_run>\n";
 		$expect_run = 1000; # remove will let a job start, bump count way up now.
-		runToolNTimes("condor_rm -all",1,0);
+		system("condor_rm -all");
 		$done = 1;
 		CondorTest::RegisterResult(0, "test_name", $testname);
+		return(-1);
 	}
 	# compare current running to expected total
 	if($running_now == $expect_run) {
-		print "Hit target for running jobs!\n";
+		#print "Hit target for running jobs!\n";
 		# if we expect no idle jobs, don't check.
 		# remove jobs and return
 		if($expect_idle == 0) {
 			$done = 1;
-			#print "Expected idle 0 and run number met, remove jobs\n";
-			runcmd("condor_rm -all");
+			print "Expected idle 0 and run number met, remove jobs\n";
+			system("condor_rm -all");
 			#clearly done and happy
+			return(1);
 		} else {
 			$idles = CountIdle($expect_idle);
-	#print "Running Now:$running_now ($expect_run) Idle:$idles ($expect_idle)\n";
+			print "Running Now:$running_now ($expect_run) Idle:$idles ($expect_idle)\n";
 			if($idles == $expect_idle) {
 				$done = 1;
-				#print "Runs met andexpected idle, About to remove these jobs\n";
-				$expect_run = 1000; # remove will let a job start, bump count way up now.
-				runToolNTimes("condor_q",1,0);
-				runToolNTimes("condor_rm -all",1,0);
+				print "Runs met and expected idle, About to remove these jobs\n";
+				if($amidone == 1) {
+					$expect_run = 1000; # remove will let a job start, bump count way up now.
+					runToolNTimes("condor_q",1,0);
+					system("condor_rm -all");
+					return(1)
+				} else {
+					return(2);
+				}
 			} else {
-				print "Not expected idle yet: Staging checkexpectations callback\n";
-  				#CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);
+				print "Run and Idle counts off running:$running_now idle:idles\n";
+				return(0);
 			}
 		}
 	} else {
-		print "running $running_now expecting $expect_run: not removing jobs\n";
-		#print "Staging checkexpectations callback\n";
-  		#CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);
+		#print "running $running_now expecting $expect_run: not removing jobs\n";
+		return(0);
 	}
 };
 
-my $on_execute = sub {
-my $idles = 0;
-	CondorTest::debug("Job started running.\n",1);
-	runToolNTimes("condor_q",1,1,{emit_output=>0});
-
-};
 
 sub SetIdleTolerance {
 	my $tolerance = shift;
@@ -264,29 +233,29 @@ concurrency_limits = XSW
 my $count = 0;
 $running_now = 0;
 $done = 0;
-$Calledcheck_expectations = 0;
-$checkexpectationfailed = 0;
 $expect_checks = 0;
 $expect_run = 3;
 $expect_idle = 0;
 $result = SimpleJob::RunCheck(
-	on_abort => $on_abort,
-	test_name => $testname,
-	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
 	on_submit => \&on_submit,
-	on_execute => $on_execute,
+	on_imageupdated => \&on_imageupdated,
+	no_wait => 1,
+	test_name => $testname,
 	queue_sz => 3,
-	return_submit_file_name => $on_submitnameknown,
 	duration => 0,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
+$waitforitres = WaitForIt();
 print "First test basic job. 3 jobs no concurrency settings\n";
-if(($result == 1)&&($checkexpectationfailed == 0)) {
+if($waitforitres == 1) {
 	print "ok\n\n";
+	RegisterResult(1,"test_name",$testname);
 } else {
 	print "bad\n\n";
+	RegisterResult(0,"test_name",$testname);
 }
+
 
 # clean queue bwtween all checks
 my @RES = ();
@@ -306,37 +275,31 @@ print "Test specified concurrency-XSW\n";
 $running_now = 0;
 my $queuesize = 0;
 $done = 0;
-$Calledcheck_expectations = 0;
-$checkexpectationfailed = 0;
 $allow_too_few_idle_once = 6;
 $expect_checks = 0;
 $expect_run = 1;
 $expect_idle = 2;
 $taskname = "checkxsw";
-if($burst == 1) {
-	$queuesize = 3;
-} else {
-	$queuesize = 1;
-}
+$queuesize = 3;
 $result = SimpleJob::RunCheck(
-	on_abort => $on_abort,
 	test_name => $testname,
-	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
-	return_submit_file_name => $on_submitnameknown,
-	on_submit => \&on_submit,
-	on_execute => $on_execute,
+	no_wait => 1,
 	queue_sz => $queuesize,
 	duration => 0,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
 
+$waitforitres = WaitForIt();
 print "Test specified concurrency-XSW\n";
-if(($result == 1)&&($checkexpectationfailed == 0)) {
+if($waitforitres == 1) {
 	print "ok\n\n";
+	RegisterResult(1,"test_name",$testname);
 } else {
 	print "bad\n\n";
+	RegisterResult(0,"test_name",$testname);
 }
+
 $taskname = "";
 
 # clean queue bwtween all checks
@@ -349,36 +312,29 @@ concurrency_limits = UNDEFINED:2
 print "Test default concurrency and colon usage spec\n";
 $running_now = 0;
 $done = 0;
-$Calledcheck_expectations = 0;
-$checkexpectationfailed = 0;
 $allow_too_few_idle_once = 6;
 $expect_checks = 0;
 $expect_run = 0;
 $expect_idle = 2;
 $taskname = "undefinedcolon";
-if($burst == 1) {
-	$queuesize = 2;
-} else {
-	$queuesize = 1;
-}
+$queuesize = 2;
 $result = SimpleJob::RunCheck(
-	on_abort => $on_abort,
 	test_name => $testname,
-	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
-	on_submit => \&on_submit,
-	on_execute => $on_execute,
+	no_wait => 1,
 	queue_sz => $queuesize,
-	return_submit_file_name => $on_submitnameknown,
 	duration => 0,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
 $taskname = "";;
+$waitforitres = WaitForIt();
 print "Test default concurrency and colon usage spec\n";
-if(($result == 1)&&($checkexpectationfailed == 0)) {
+if($waitforitres == 1) {
 	print "ok\n\n";
+	RegisterResult(1,"test_name",$testname);
 } else {
 	print "bad\n\n";
+	RegisterResult(0,"test_name",$testname);
 }
 
 # clean queue bwtween all checks
@@ -390,36 +346,29 @@ concurrency_limits = large.license
 
 $running_now = 0;
 $done = 0;
-$Calledcheck_expectations = 0;
-$checkexpectationfailed = 0;
 $allow_too_few_idle_once = 6;
 $expect_checks = 0;
 $expect_run = 1;
 $expect_idle = 2;
 print "Test class default: large.license\n";
 $taskname = "checklarge";
-if($burst == 1) {
-	$queuesize = 3;
-} else {
-	$queuesize = 1;
-}
+$queuesize = 3;
 $result = SimpleJob::RunCheck(
-	on_abort => $on_abort,
 	test_name => $testname,
-	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
-	on_submit => \&on_submit,
-	return_submit_file_name => $on_submitnameknown,
-	on_execute => $on_execute,
+	no_wait => 1,
 	queue_sz => $queuesize,
 	duration => 0,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
+$waitforitres = WaitForIt();
 print "Test class default: large.license\n";
-if($result == 1) {
+if($waitforitres == 1) {
 	print "ok\n\n";
+	RegisterResult(1,"test_name",$testname);
 } else {
 	print "bad\n\n";
+	RegisterResult(0,"test_name",$testname);
 }
 
 # clean queue bwtween all checks
@@ -431,39 +380,35 @@ concurrency_limits = small.license
 
 $running_now = 0;
 $done = 0;
-$Calledcheck_expectations = 0;
-$checkexpectationfailed = 0;
 $allow_too_few_idle_once = 6;
 $expect_checks = 0;
 $expect_run = 1;
 $expect_idle = 3;
 print "Test class default: small.license\n";
 $taskname = "checksmall";
-if($burst == 1) {
-	$queuesize = 4;
-} else {
-	$queuesize = 1;
-}
+$queuesize = 4;
 $result = SimpleJob::RunCheck(
-	on_abort => $on_abort,
 	test_name => $testname,
-	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
-	on_submit => \&on_submit,
-	on_execute => $on_execute,
+	no_wait => 1,
 	queue_sz => $queuesize,
 	return_submit_file_name => $on_submitnameknown,
 	duration => 0,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
+
+$waitforitres = WaitForIt();
 print "Test class default: small.license\n";
-if(($result == 1)&&($checkexpectationfailed == 0)) {
+if($waitforitres == 1) {
 	print "ok\n\n";
+	RegisterResult(1,"test_name",$testname);
 } else {
 	print "bad\n\n";
+	RegisterResult(0,"test_name",$testname);
 }
 
-CondorTest::EndTest();
+EndTest();
+exit(0);
 
 sub CountRunning
 {
