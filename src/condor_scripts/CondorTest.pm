@@ -3444,6 +3444,7 @@ sub CoreCheck {
 	my $scancount = 0;
 	my $fullpath = "";
 	
+	CondorUtils::fullchomp($logdir);
 	print "Checking for cores and ERRORS for test:$test:\n";
 	if(CondorUtils::is_windows() == 1) {
 		my $windowslogdir = "";
