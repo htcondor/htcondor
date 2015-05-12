@@ -1856,12 +1856,12 @@ JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree
 			m_delayed_update_attrs.end(), name);
 		if (it == m_delayed_update_attrs.end())
 		{
+			if (m_delayed_update_attrs.size() >= 50)
+			{
+				dprintf(D_ALWAYS, "Ignoring update for %s because 50 attributes have already been set.\n", name.c_str());
+				return false;
+			}
 			m_delayed_update_attrs.push_back(name);
-		}
-		if (m_delayed_update_attrs.size() > 50)
-		{
-			dprintf(D_ALWAYS, "Ignoring update for %s because 50 attributes have already been set.\n", name.c_str());
-			return false;
 		}
 		// Note that the ClassAd takes ownership of the copy.
 		dprintf(D_FULLDEBUG, "Got a delayed update for attribute %s.\n", name.c_str());
@@ -2001,8 +2001,10 @@ bool
 JICShadow::periodicJobUpdate( ClassAd* update_ad, bool insure_update )
 {
 	bool r1, r2;
-	r1 = JobInfoCommunicator::periodicJobUpdate(update_ad, insure_update);
-	r2 = updateShadow(update_ad, insure_update);
+	// call updateShadow first, because this may have the side effect of clearing
+	// the m_delayed_update_attrs and we want to make sure that the shadow gets to see them.
+	r1 = updateShadow(update_ad, insure_update);
+	r2 = JobInfoCommunicator::periodicJobUpdate(update_ad, insure_update);
 	return (r1 && r2);
 }
 
