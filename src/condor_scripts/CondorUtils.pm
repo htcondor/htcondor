@@ -107,6 +107,7 @@ sub async_reader {
 			sub {
 				$Q->enqueue($_) while <$fh>;
 				$Q->enqueue(undef);
+				$Q->end();
 			}	
 		)->detach;
 
