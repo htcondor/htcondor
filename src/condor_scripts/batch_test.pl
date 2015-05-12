@@ -693,7 +693,7 @@ sub DoChild
 		if( $hush == 0 ) {
 			debug( "Child Starting:perl $test_program > $test_program.$test_id.out\n",2);
 		}
-		$res = verbose_system("perl $test_program > $test_program.$test_id.out 2>&1");
+		$res = system("perl $test_program > $test_program.$test_id.out 2>&1");
 	} else {
 		$log = $testname . ".log";
 		$cmd = $testname . ".cmd";
@@ -705,7 +705,7 @@ sub DoChild
 		if( $hush == 0 ) {
 			debug( "Child Starting:perl $test_program > $test_program.out\n",2);
 		}
-		$res = verbose_system("perl $test_program > $test_program.out 2>&1");
+		$res = system("perl $test_program > $test_program.out 2>&1");
 	}
 
 	my $newlog =  $piddir . "/" . $log;
