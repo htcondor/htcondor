@@ -825,6 +825,7 @@
 extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SEC_TRIED_AUTHENTICATION  "TriedAuthentication"
 #define ATTR_SEC_AUTHORIZATION_SUCCEEDED  "AuthorizationSucceeded"
+#define ATTR_SEC_RETURN_CODE  "ReturnCode"
 
 #define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 

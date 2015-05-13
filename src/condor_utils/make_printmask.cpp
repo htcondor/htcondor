@@ -337,7 +337,7 @@ int SetAttrListPrintMaskFromStream (
 			usingHeadFoot = (printmask_headerfooter_t)(usingHeadFoot & ~HF_NOSUMMARY);
 			while (toke.next()) {
 				if (toke.matches("STANDARD")) {
-					attrs.insert(ATTR_JOB_STATUS);
+					// attrs.insert(ATTR_JOB_STATUS);
 				} else if (toke.matches("NONE")) {
 					usingHeadFoot = (printmask_headerfooter_t)(usingHeadFoot | HF_NOSUMMARY);
 				} else {
