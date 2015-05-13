@@ -3865,13 +3865,9 @@ void print_results(RESULT_MAP_TYPE & result_map)
 	}
 }
 
-void clear_results(RESULT_MAP_TYPE & /*result_map*/)
+void clear_results(RESULT_MAP_TYPE & result_map)
 {
-	/*
-	for(RESULT_MAP_TYPE::iterator it = result_map.begin(); it != result_map.end(); ++it) {
-		printf("%s", it->second.c_str());
-	}
-	*/
+	result_map.clear();
 }
 
 
