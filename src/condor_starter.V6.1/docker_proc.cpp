@@ -253,11 +253,11 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 		if (dockerError.length() > 0) {
 			std::string message;
-			formatstr(message, "Error running docker job: %s\n", dockerError.c_str());
+			formatstr(message, "Error running docker job: %s", dockerError.c_str());
 			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
 
 			
-			Starter->jic->holdJob("Error Running Docker Job", CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
 
 			if ( Starter->Hold( ) ) {
 				Starter->allJobsDone();
