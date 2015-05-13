@@ -97,6 +97,8 @@ int DockerAPI::run(
 	// either a slot user or submitting user or nobody
 	uid_t uid = 0;
 
+	// Docker doesn't actually run on Windows, but we compile
+	// on Windows because...
 #ifndef WIN32
 	uid = get_user_uid();
 #endif
@@ -110,7 +112,13 @@ int DockerAPI::run(
 
 	// Run the command with its arguments in the image.
 	runArgs.AppendArg( imageID );
-	runArgs.AppendArg( command );
+
+	
+	// If no command given, the default command in the image will run
+	if (command.length() > 0) {
+		runArgs.AppendArg( command );
+	}
+
 	runArgs.AppendArgsFromArgList( args );
 
 	MyString displayString;
