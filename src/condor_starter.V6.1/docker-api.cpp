@@ -8,6 +8,7 @@
 #include "condor_daemon_core.h"
 
 #include "docker-api.h"
+#include <algorithm>
 
 static bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env);
 static bool add_docker_arg(ArgList &runArgs);
@@ -327,6 +328,14 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	for( int i = 0; i < formatElements.number(); ++i ) {
 		if( fgets( buffer, 1024, dockerResults ) != NULL ) {
 			correctOutput[i] = buffer;
+			std::string::iterator first = 
+				std::find(correctOutput[i].begin(),
+					correctOutput[i].end(),
+					'\"');
+			if (first != correctOutput[i].end()) {
+				std::replace(++first,
+					-- --correctOutput[i].end(), '\"','\'');
+			}
 		}
 	}
 	my_pclose( dockerResults );
