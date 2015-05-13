@@ -1983,13 +1983,14 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				return WaitForSocketCallback();
 			}
 
-			// receive a classAd containing info about new session
+			// receive a classAd containing info about new session.
 			ClassAd post_auth_info;
 			m_sock->decode();
 			if (!getClassAd(m_sock, post_auth_info) || !m_sock->end_of_message()) {
-				dprintf (D_ALWAYS, "SECMAN: could not receive session info, failing!\n");
-				m_errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
-							"could not receive post_auth_info." );
+				MyString errmsg;
+				errmsg.formatstr("Failed to received post-auth ClassAd");
+				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.Value());
+				m_errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR, errmsg.Value());
 				return StartCommandFailed;
 			} else {
 				if (IsDebugVerbose(D_SECURITY)) {
@@ -1997,6 +1998,37 @@ SecManStartCommand::receivePostAuthInfo_inner()
 					dPrintAd (D_SECURITY, post_auth_info);
 				}
 			}
+
+			// Starting in 8.3.6, there is a ReturnCode attribute which tells us if the
+			// other side authorized, denied, or was unaware of the command we sent.
+			//
+			// Inspect the return code in the reponse ad to see what we should do.
+			// If it is blank, we must assume success, since that was what 8.3.5 and
+			// earlier would send.
+			MyString response_rc;
+			post_auth_info.LookupString(ATTR_SEC_RETURN_CODE,response_rc);
+			if((response_rc != "") && (response_rc != "AUTHORIZED")) {
+				// gather some additional data for useful error reporting
+				MyString response_user;
+				MyString response_method = m_sock->getAuthenticationMethodUsed();
+				if (response_method == "") {
+					response_method = "(no authentication)";
+				}
+				post_auth_info.LookupString(ATTR_SEC_USER,response_user);
+
+				// push error message on the stack and print to the log
+				MyString errmsg;
+				errmsg.formatstr("Received \"%s\" from server for user %s using method %s.",
+					response_rc.Value(), response_user.Value(), response_method.Value());
+				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.Value());
+				m_errstack->push ("SECMAN", SECMAN_ERR_AUTHORIZATION_FAILED, errmsg.Value());
+				return StartCommandFailed;
+			}
+
+			// if we made it here, we're going to proceed as if the server authorized
+			// our command and we will cache this session for future use.  we know this
+			// for sure in 8.3.6 and beyond, but for 8.3.5 and earlier we must assume
+			// success because this information was not transmitted explicitly.
 
 			// bring in the session ID
 			m_sec_man.sec_copy_attribute( m_auth_info, post_auth_info, ATTR_SEC_SID );
@@ -2024,13 +2056,12 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			if( m_sock->getAuthenticationMethodUsed() ) {
 				m_auth_info.Assign( ATTR_SEC_AUTHENTICATION_METHODS, m_sock->getAuthenticationMethodUsed() );
 			}
-			
+
 			// update the ad with the crypto method actually used
 			if( m_sock->getCryptoMethodUsed() ) {
 				m_auth_info.Assign( ATTR_SEC_CRYPTO_METHODS, m_sock->getCryptoMethodUsed() );
 			}
-			
-			
+
 			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf (D_SECURITY, "SECMAN: policy to be cached:\n");
 				dPrintAd(D_SECURITY, m_auth_info);
