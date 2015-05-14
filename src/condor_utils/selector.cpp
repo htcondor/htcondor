@@ -28,7 +28,8 @@
 #ifndef SELECTOR_USE_POLL
 #define POLLIN 1
 #define POLLOUT 2
-#define POLLERR 3
+#define POLLERR 4
+#define POLLHUP 8
 int poll(struct fake_pollfd *, int, int)
 {
 	errno = ENOSYS;
