@@ -234,6 +234,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 			
 			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
+			DockerAPI::rm( containerName, error );
 
 			if ( Starter->Hold( ) ) {
 				Starter->allJobsDone();
@@ -258,6 +259,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 			
 			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
+			DockerAPI::rm( containerName, error );
 
 			if ( Starter->Hold( ) ) {
 				Starter->allJobsDone();
