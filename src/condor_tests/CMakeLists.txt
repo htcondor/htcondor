@@ -476,7 +476,7 @@ if (BUILD_TESTING)
 	#condor_pl_test(lib_python_bindings "check python bindings" "core;quick;full")
 	condor_pl_test(lib_param_completeness "minimal knobs" "core;quick;full")
 	condor_pl_test(lib_param_conditionals "config conditionals" "core;quick;full")
-	condor_pl_test(cmd_condor_ping_basic "Basic default test of condor_ping" "core;quick;full")
+	#condor_pl_test(cmd_condor_ping_basic "Basic default test of condor_ping" "core;quick;full")
 	condor_pl_test(job_aggressive_flocking "Test aggressive flocking" "core;quick;full")
 	##### job tests
 	#condor_pl_test(job_had_basic "Basic High Availability Daemon Test" "core;quick;full;quicknolink")
