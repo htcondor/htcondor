@@ -121,14 +121,14 @@ static const char * const aBoolFalse[] = {
 	"0", "0.0", ".0", "0.", "0e1", "0.0e10", " false ", " 0 ",
 };
 
-#define CONDOR_SERIES_VERSION "8.3"
-#define CONDOR_NEXT_VERSION "8.4"
+#define CONDOR_SERIES_VERSION "8.2"
+#define CONDOR_NEXT_VERSION "8.3"
 static const char * const aVerTrue[] = {
 	"version > 6.0", "!version >" CONDOR_SERIES_VERSION, "version > 8.1.1",
 	"version > 8.1.4", "version > 7.24.29",
 	"version >= " CONDOR_VERSION, "version == " CONDOR_SERIES_VERSION, "version != 8.0",
-	"version == " CONDOR_VERSION, "version <= " CONDOR_SERIES_VERSION ".10",
-	"version <= " CONDOR_SERIES_VERSION, "version < " CONDOR_SERIES_VERSION ".10", "version < " CONDOR_SERIES_VERSION ".16",
+	"version == " CONDOR_VERSION, "version <= " CONDOR_SERIES_VERSION ".12",
+	"version <= " CONDOR_SERIES_VERSION, "version < " CONDOR_SERIES_VERSION ".12", "version < " CONDOR_SERIES_VERSION ".16",
 	"version < " CONDOR_SERIES_VERSION ".99", "version < " CONDOR_NEXT_VERSION, "version < 9.0",
 	"version < 10.0", " VERSION < 10.0 ", " Version < 10.0"
 };
