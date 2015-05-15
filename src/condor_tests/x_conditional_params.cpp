@@ -77,7 +77,10 @@ int main(int argc, const char ** argv)
 			char copy_smaps[300];
 			pid_t pid = getpid();
 			sprintf(copy_smaps, "cat /proc/%d/smaps > %s", pid, filename);
-			system(copy_smaps);
+			int r = system(copy_smaps);
+			if (r != 0) {
+				fprintf(stdout, "%d return copy smaps", r);
+			}
 			//fprintf(stdout, "%s returned %d\n", copy_smaps, r);
 		#endif
 		} else {
