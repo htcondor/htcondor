@@ -51,27 +51,42 @@ MSC_DISABLE_WARNING(6262) // warning: Function uses 60K of stack
 bool
 update_startd()
 {
-    SafeSock ssock;
-	Daemon startd( DT_STARTD );
+	static Daemon startd( DT_STARTD );
+	static ReliSock * rsock = NULL;
 
-	if( ! startd.locate() ) {
-		dprintf( D_ALWAYS, "Can't locate startd, aborting (%s)\n",
-			startd.error() );
-		return false;
-	}
-	if( !ssock.connect(startd.addr(), 0) ) {
-		dprintf( D_ALWAYS, "Can't connect to startd at: %s, "
-			"aborting\n", startd.addr() );
-		return false;
+	if( rsock == NULL ) {
+		// We can't continue to use the original Daemon object, if the
+		// reason we lost our connection is because the startd's address
+		// changed (e.g., was restarted).  We need to reconstruct on every
+		// reconnection attempt, because the address may not have been
+		// updated since the connection was lost (e.g., the startd just died).
+		startd = Daemon( DT_STARTD );
+		rsock = new ReliSock();
+
+		if( ! startd.locate() ) {
+			dprintf( D_ALWAYS, "Can't locate startd, aborting (%s)\n",
+				startd.error() );
+			return false;
+		}
+
+		if(! rsock->connect( startd.addr(), 0  )) {
+			dprintf( D_ALWAYS, "Can't connect to startd at: %s, "
+				"aborting\n", startd.addr() );
+			return false;
+		}
 	}
 
-	if( !startd.sendCommand(X_EVENT_NOTIFICATION, &ssock, 3) ) {
+	if( !startd.sendCommand(X_EVENT_NOTIFICATION, rsock, 3) ) {
 		dprintf( D_ALWAYS, "Can't send X_EVENT_NOTIFICATION command "
 				 "to startd at: %s, aborting\n", startd.addr() );
+		rsock->close();
+		delete rsock;
+		rsock = NULL;
 		return false;
 	}
 	dprintf( D_FULLDEBUG, "Sent update to startd at: %s\n", startd.addr() );
-	return true;		
+
+	return true;
 }
 MSC_RESTORE_WARNING(6262) // warning: Function uses 60K of stack
 
