@@ -60,6 +60,7 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 	m_reqFound(FALSE),
 	m_result(FALSE),
 	m_perm(USER_AUTH_FAILURE),
+	m_allow_empty(false),
 	m_policy(NULL),
 	m_key(NULL),
 	m_sid(NULL),
@@ -71,7 +72,6 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 	m_cmd_index(0),
 	m_errstack(NULL),
 	m_new_session(false),
-	m_allow_empty(false),
 	m_will_enable_encryption(SecMan::SEC_FEAT_ACT_UNDEFINED),
 	m_will_enable_integrity(SecMan::SEC_FEAT_ACT_UNDEFINED)
 {
