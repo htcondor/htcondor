@@ -4025,6 +4025,7 @@ tags=c++_util,sshd_wrapper
 
 [ENABLE_USERLOG_LOCKING]
 default=false
+win32_default=true
 type=bool
 reconfig=true
 customization=seldom
@@ -4059,6 +4060,16 @@ friendly_name=Event Log Use Xml
 review=?
 tags=c++_util,user_log
 
+[EVENT_LOG_LOCKING]
+default=false
+win32_default=true
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Event Log Locking
+review=?
+tags=c++_util,user_log
+
 [EVENT_LOG_ROTATION_LOCK]
 default=$(LOCK)/EventLogLock
 type=string
@@ -4074,6 +4085,33 @@ type=long
 reconfig=true
 customization=seldom
 friendly_name=Maximum size of the event log in bytes
+review=?
+tags=c++_util,user_log
+
+[EVENT_LOG_MAX_ROTATIONS]
+default=1
+type=long
+reconfig=true
+customization=seldom
+friendly_name=Number of rotated event log files to keep
+review=?
+tags=c++_util,user_log
+
+[EVENT_LOG_FSYNC]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Event Log Fsync
+review=?
+tags=c++_util,user_log
+
+[EVENT_LOG_COUNT_EVENTS]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Event Log Count Events
 review=?
 tags=c++_util,user_log
 
