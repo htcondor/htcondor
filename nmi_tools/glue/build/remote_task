@@ -93,7 +93,7 @@ if ($ENV{NMI_PLATFORM} =~ /macos/i) {
 # Build with warnings == errors on Fedora
 my $werror="";
 if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[12][0-9]/i) {
-    $werror = "-DCONDOR_CXX_FLAGS:STRING=-Werror";
+    $werror = "-DCONDOR_C_FLAGS:STRING=-Werror";
 }
 
 # enable use of VisualStudio 2012 (vs11) on the Windows8 platform

@@ -12,6 +12,36 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-3-7}Version 8.3.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.3.7 not yet released.
+%\item HTCondor version 8.3.7 released on Month Date, 2015.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-3-6}Version 8.3.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -39,29 +69,19 @@ no jobs to be submitted,
 if the submission would have assigned more than a single cluster value.
 \Ticket{4981}
 
+\item Changed the default value of configuration variables
+\MacroNI{ENABLE\_USERLOG\_LOCKING} and \MacroNI{EVENT\_LOG\_LOCKING}
+to \Expr{False} on Unix platforms and \Expr{True} on Windows platforms.
+The Event Log is still locked by default to perform file rotation.
+\Ticket{4922}
+
 \item Improved how DAGMan deals with node job submit description files that
 use the new features of the \SubmitCmdNI{queue} command
 to do file globbing.
 \Ticket{4960}
 
-\item Changed the default value of configuration variables
-\MacroNI{ENABLE\_USERLOG\_LOCKING} and \MacroNI{EVENT\_LOG\_LOCKING}
-to \Expr{False}.
-The Event Log is still locked by default to perform file rotation.
-\Ticket{4922}
-
 \item \Condor{dagman} no longer creates an unused command socket.
 \Ticket{4987}
-
-\item Changed the timeout interval at which the \Condor{master} daemon
-must retry to configure the Windows firewall from 10 seconds to 5 seconds.
-Also changed the default value of configuration variable
-\MacroNI{WINDOWS\_FIREWALL\_FAILURE\_RETRY} from 60 to 2,
-such that there are many fewer retries by default.
-This prevents the the \Condor{master} daemon from hanging for 10 minutes 
-on start up,
-when it is unable to configure the Windows firewall.
-\Ticket{4988}
 
 \item Various syntax errors within a DAG input file related to the 
 specification of a splice are now reported as fatal errors, 
@@ -75,6 +95,22 @@ of NOOP or DONE for a splice.
 from 0 to 20.
 A value of 0 does not limit the number of scripts.
 \Ticket{4999}
+
+\item Changed the timeout interval at which the \Condor{master} daemon
+must retry to configure the Windows firewall from 10 seconds to 5 seconds.
+Also changed the default value of configuration variable
+\MacroNI{WINDOWS\_FIREWALL\_FAILURE\_RETRY} from 60 to 2,
+such that there are many fewer retries by default.
+This prevents the the \Condor{master} daemon from hanging for 10 minutes 
+on start up,
+when it is unable to configure the Windows firewall.
+\Ticket{4988}
+
+\item When an updated X.509 proxy for a job is provided to the
+\Condor{schedd} over the network, 
+job ClassAd attribute \Attr{x509UserProxyExpiration}
+is now updated in the job's ClassAd to reflect the new expiration time.
+\Ticket{5001}
 
 \end{itemize}
 
@@ -95,6 +131,24 @@ to handle queries about \Condor{startd} ClassAds.
 \item Eliminated spurious warnings logged when the \Condor{shared\_port}
 daemon was enabled.
 \Ticket{4958}
+
+\item Fixed a bug that sometimes caused \Condor{dagman} to not print
+the list of failed nodes at the end of the \File{dagman.out} file upon
+DAG failure.
+\Ticket{5044}
+
+\item Report an error if the \Condor{qsub} program fails to print a job ID
+when submitting a job to PBS. 
+\Ticket{5041}
+
+\item Fixed a bug that could cause \Condor{ssh\_to\_job} to hang
+indefinitely.
+\Ticket{4997}
+
+\item Fixed a bug that could cause a copy of a job's X.509 proxy
+or file \File{.condor\_pid\_ns\_status} to be transferred with
+the job's output files.
+\Ticket{4730}
 
 \end{itemize}
 
@@ -171,7 +225,7 @@ from attempting to use more cores than have been provisioned.
 and the event log.
 Disabling locking when writing to these files,
 as controlled by configuration variables \Macro{ENABLE\_USERLOG\_LOCKING}
-and \Macro{EVENT\_LOG\_LOCKING}, is now safe.
+and \Macro{EVENT\_LOG\_LOCKING}, is now safe on Unix platforms.
 The default location of the lock file for rotating the event log
 that is defined by configuration variable
 \Macro{EVENT\_LOG\_ROTATION\_LOCK} has been changed to

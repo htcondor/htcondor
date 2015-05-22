@@ -156,8 +156,6 @@ bool DockerProc::JobReaper( int pid, int status ) {
 	if( pid == JobPid ) {
 		//
 		// Even running Docker in attached mode, we have a race condition
-		// where this inspect (or rm) will report that the container is
-		// still running.  I'm guessing that the attached docker process
 		// is exiting when the container exits, not when the docker daemon
 		// notices that the container has exited.
 		//
@@ -236,6 +234,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 			
 			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
+			DockerAPI::rm( containerName, error );
 
 			if ( Starter->Hold( ) ) {
 				Starter->allJobsDone();
@@ -246,6 +245,31 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			return 0;
 		}
 
+			// See if docker could not run the job
+			// most likely invalid executable
+		std::string dockerError;
+		if (! dockerAd.LookupString( "DockerError", dockerError)) {
+			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal whether there was an internal docker error.\n", containerName.c_str() );
+		}
+
+		if (dockerError.length() > 0) {
+			std::string message;
+			formatstr(message, "Error running docker job: %s", dockerError.c_str());
+			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
+
+			
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
+			DockerAPI::rm( containerName, error );
+
+			if ( Starter->Hold( ) ) {
+				Starter->allJobsDone();
+				this->JobExit();
+			}
+
+			Starter->ShutdownFast();
+			return 0;
+		} 
+		
 		int dockerStatus;
 		if( ! dockerAd.LookupInteger( "ExitCode", dockerStatus ) ) {
 			dprintf( D_ALWAYS | D_FAILURE, "Inspection of container '%s' failed to reveal its exit code.\n", containerName.c_str() );

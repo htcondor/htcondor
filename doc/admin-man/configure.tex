@@ -2178,7 +2178,8 @@ of the subsystem corresponding to the daemon.
 
 \label{param:EnableUserlogLocking}
 \item[\Macro{ENABLE\_USERLOG\_LOCKING}]
-  A boolean value that is \Expr{False} by default.
+  A boolean value that defaults to \Expr{False} on Unix platforms and
+  \Expr{True} on Windows platforms.
   When \Expr{True}, a user's job event log
   will be locked before being written to.
   If \Expr{False}, HTCondor will not lock the file before writing.
@@ -2636,7 +2637,8 @@ but across all users and user's jobs.
 
 \label{param:EventLogLocking}
 \item[\Macro{EVENT\_LOG\_LOCKING}]
-  A boolean value that defaults to \Expr{False}.
+  A boolean value that defaults to \Expr{False} on Unix platforms and
+  \Expr{True} on Windows platforms.
   When \Expr{True},
   the event log (as specified by \MacroNI{EVENT\_LOG})
   will be locked before being written to.

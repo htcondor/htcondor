@@ -290,23 +290,35 @@ command_pckpt_all( Service*, int, Stream* )
 int
 command_x_event( Service*, int, Stream* s ) 
 {
-	dprintf( D_FULLDEBUG, "command_x_event() called.\n" );
+	// Simple attempt to avoid D_ALWAYS warnings from registering twice.
+	static Stream * lastStashed = NULL;
 
 		// Only trust events over the network if the network message
 		// originated from our local machine.
 	if ( !s ||							// trust calls from within the startd
 		 (s && s->peer_is_local())		// trust only sockets from local machine
-	   ) 
+	   )
 	{
 		sysapi_last_xevent();
 	} else {
-		dprintf( D_ALWAYS, 
+		dprintf( D_ALWAYS,
 			"ERROR command_x_event received from %s is not local - discarded\n",
 			s->peer_ip_str() );
 	}
 
 	if( s ) {
 		s->end_of_message();
+
+		if( lastStashed != s ) {
+			int rc = daemonCore->Register_Command_Socket( s, "kbdd socket" );
+			if( rc < 0 ) {
+				dprintf( D_ALWAYS, "Failed to register kbdd socket for updates: error %d.\n", rc );
+				return FALSE;
+			}
+			lastStashed = s;
+		}
+
+		return KEEP_STREAM;
 	}
 	return TRUE;
 }
@@ -1221,30 +1233,40 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			// The schedd is asking us to preempt these claims to make
 			// the pslot it is really claiming bigger.  New in 8.1.6
 		int num_preempting = 0;
-		if (stream->code(num_preempting)) {
+		if (stream->code(num_preempting) && num_preempting > 0) {
 			rip->dprintf(D_FULLDEBUG, "Schedd sending %d preempting claims.\n", num_preempting);
-			char **claims = (char **)malloc(sizeof(char *) * (num_preempting));
+			Resource **dslots = (Resource **)malloc(sizeof(Resource *) * num_preempting);
 			for (int i = 0; i < num_preempting; i++) {
-				claims[i] = NULL;
-				if (! stream->get_secret(claims[i])) {
+				char *claim_id = NULL;
+				if (! stream->get_secret(claim_id)) {
 					rip->dprintf( D_ALWAYS, "Can't receive preempting claim\n" );
-					for (int n = 0; n < i - 1; n++) {
-						free(claims[n]);
-					}
-					free(claims);
+					free(claim_id);
 					ABORT;
 				}
-				Resource *dslot = resmgr->get_by_any_id( claims[i] );
-				if( !dslot ) {
-					ClaimIdParser idp( claims[i] );
+				dslots[i] = resmgr->get_by_any_id( claim_id );
+				if( !dslots[i] ) {
+					ClaimIdParser idp( claim_id );
 					dprintf( D_ALWAYS, 
 							 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
-				} else {
-					dslot->kill_claim();
+					free( claim_id );
+					ABORT;
 				}
-				free(claims[i]);
+				free( claim_id );
+				if ( !dslots[i]->retirementExpired() ) {
+					dprintf( D_ALWAYS, "Error: slot %s still has retirement time, can't preempt immediately\n", dslots[i]->r_name );
+					ABORT;
+				}
 			}
-			free(claims);
+			for ( int i = 0; i < num_preempting; i++ ) {
+				// TODO Should we call retire_claim() to go through
+				//   vacating_act instead of straight to killing_act?
+				dslots[i]->kill_claim();
+				*(dslots[i]->get_parent()->r_attr) += *(dslots[i]->r_attr);
+				*(dslots[i]->r_attr) -= *(dslots[i]->r_attr);
+				// TODO Do we need to call refresh_classad() on either slot?
+			}
+			dslots[0]->get_parent()->refresh_classad( A_PUBLIC );
+			free( dslots );
 		}
 	} else {
 		rip->dprintf(D_FULLDEBUG, "Schedd using pre-v6.1.11 claim protocol\n");

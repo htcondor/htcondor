@@ -1175,7 +1175,7 @@ processCommandLineArguments (int argc, char *argv[])
 	attrs.initializeFromString(
 		"ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\n"
 		"RemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\nArguments\n"
-		"JobDescription\nMATCH_EXP_JobDescription\nTransferringInput\nTransferringOutput");
+		"JobDescription\nMATCH_EXP_JobDescription\nTransferringInput\nTransferringOutput\nTransferQueued");
 
 	for (i = 1; i < argc; i++)
 	{
@@ -1823,6 +1823,16 @@ processCommandLineArguments (int argc, char *argv[])
 				exit( 1 );
 			}
 		}
+		else if (is_arg_prefix(arg, "totals", 3)) {
+			if( !custom_attributes ) {
+				custom_attributes = true;
+				attrs.clearAll();
+			}
+			if (set_print_mask_from_stream("SELECT NOHEADER\nSUMMARY STANDARD", false, attrs) < 0) {
+				fprintf(stderr, "Error: unexpected error!\n");
+				exit (1);
+			}
+		}
 		else if (is_arg_prefix(arg, "expert", 1)) {
 			expert = true;
 			attrs.clearAll();
@@ -2315,6 +2325,21 @@ format_readable_kb(const classad::Value &val, AttrList *, Formatter &)
 }
 
 static const char *
+format_readable_bytes(const classad::Value &val, AttrList *, Formatter &)
+{
+	long long kbi;
+	double kb;
+	if (val.IsIntegerValue(kbi)) {
+		kb = kbi;
+	} else if (val.IsRealValue(kb)) {
+		// nothing to do.
+	} else {
+		return "        ";
+	}
+	return metric_units(kb);
+}
+
+static const char *
 format_job_description(const char* cmd, AttrList *ad, Formatter &)
 {
 	static MyString put_result;
@@ -2361,8 +2386,9 @@ format_job_status_raw(int job_status, AttrList* /*ad*/, Formatter &)
 static const char *
 format_job_status_char(int job_status, AttrList*ad, Formatter &)
 {
-	static char put_result[2];
+	static char put_result[3];
 	put_result[1] = 0;
+	put_result[2] = 0;
 
 	put_result[0] = encode_status(job_status);
 
@@ -2389,13 +2415,17 @@ format_job_status_char(int job_status, AttrList*ad, Formatter &)
 		// adjust status field to indicate file transfer status
 	int transferring_input = false;
 	int transferring_output = false;
+	int transfer_queued = false;
 	ad->EvalBool(ATTR_TRANSFERRING_INPUT,NULL,transferring_input);
 	ad->EvalBool(ATTR_TRANSFERRING_OUTPUT,NULL,transferring_output);
+	ad->EvalBool(ATTR_TRANSFER_QUEUED,NULL,transfer_queued);
 	if( transferring_input ) {
-		put_result[0] = '<';
+		put_result[0] = transfer_queued ? 'q' : '+';
+		put_result[1] = '<';
 	}
-	if( transferring_output ) {
-		put_result[0] = '>';
+	if( transferring_output || job_status == TRANSFERRING_OUTPUT) {
+		put_result[0] = transfer_queued ? 'q' : '+';
+		put_result[1] = '>';
 	}
 	return put_result;
 }
@@ -3639,7 +3669,7 @@ process_and_print_job(void *, ClassAd *job)
 
 	std::string result_text;
 	render_job_text(job, result_text);
-	printf("%s", result_text.c_str());
+	if ( ! result_text.empty()) { printf("%s", result_text.c_str()); }
 	return true;
 }
 
@@ -3835,13 +3865,9 @@ void print_results(RESULT_MAP_TYPE & result_map)
 	}
 }
 
-void clear_results(RESULT_MAP_TYPE & /*result_map*/)
+void clear_results(RESULT_MAP_TYPE & result_map)
 {
-	/*
-	for(RESULT_MAP_TYPE::iterator it = result_map.begin(); it != result_map.end(); ++it) {
-		printf("%s", it->second.c_str());
-	}
-	*/
+	result_map.clear();
 }
 
 
@@ -6596,12 +6622,13 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, format_cpu_time, NULL },
 	{ "JOB_DESCRIPTION", ATTR_JOB_CMD, format_job_description, ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
-	{ "JOB_STATUS",      ATTR_JOB_STATUS, format_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" },
+	{ "JOB_STATUS",      ATTR_JOB_STATUS, format_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
 	{ "JOB_STATUS_RAW",  ATTR_JOB_STATUS, format_job_status_raw, NULL },
 	{ "JOB_UNIVERSE",    ATTR_JOB_UNIVERSE, format_job_universe, NULL },
 	{ "MEMORY_USAGE",    ATTR_IMAGE_SIZE, format_memory_usage, ATTR_MEMORY_USAGE "\0" },
 	{ "OWNER",           ATTR_OWNER, format_owner_wide, ATTR_NICE_USER "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0" },
 	{ "QDATE",           ATTR_Q_DATE, format_q_date, NULL },
+	{ "READABLE_BYTES",  ATTR_BYTES_RECVD, format_readable_bytes, NULL },
 	{ "READABLE_KB",     ATTR_REQUEST_DISK, format_readable_kb, NULL },
 	{ "READABLE_MB",     ATTR_REQUEST_MEMORY, format_readable_mb, NULL },
 	// PRAGMA_REMIND("format_remote_host is using ATTR_OWNER because it is StringCustomFormat, it should be AlwaysCustomFormat and ATTR_REMOTE_HOST
@@ -6664,6 +6691,8 @@ static int set_print_mask_from_stream(
 			// make sure that the projection has ClusterId and ProcId.
 			if ( ! attrs.contains_anycase(ATTR_CLUSTER_ID)) attrs.append(ATTR_CLUSTER_ID);
 			if ( ! attrs.contains_anycase(ATTR_PROC_ID)) attrs.append(ATTR_PROC_ID);
+			// if we are generating a summary line, make sure that we have JobStatus
+			if ( ! (customHeadFoot & HF_NOSUMMARY) && ! attrs.contains_anycase(ATTR_JOB_STATUS)) attrs.append(ATTR_JOB_STATUS);
 		}
 	}
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }

@@ -8,6 +8,7 @@
 #include "condor_daemon_core.h"
 
 #include "docker-api.h"
+#include <algorithm>
 
 static bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env);
 static bool add_docker_arg(ArgList &runArgs);
@@ -96,6 +97,8 @@ int DockerAPI::run(
 	// either a slot user or submitting user or nobody
 	uid_t uid = 0;
 
+	// Docker doesn't actually run on Windows, but we compile
+	// on Windows because...
 #ifndef WIN32
 	uid = get_user_uid();
 #endif
@@ -109,7 +112,13 @@ int DockerAPI::run(
 
 	// Run the command with its arguments in the image.
 	runArgs.AppendArg( imageID );
-	runArgs.AppendArg( command );
+
+	
+	// If no command given, the default command in the image will run
+	if (command.length() > 0) {
+		runArgs.AppendArg( command );
+	}
+
 	runArgs.AppendArgsFromArgList( args );
 
 	MyString displayString;
@@ -327,6 +336,14 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	for( int i = 0; i < formatElements.number(); ++i ) {
 		if( fgets( buffer, 1024, dockerResults ) != NULL ) {
 			correctOutput[i] = buffer;
+			std::string::iterator first = 
+				std::find(correctOutput[i].begin(),
+					correctOutput[i].end(),
+					'\"');
+			if (first != correctOutput[i].end()) {
+				std::replace(++first,
+					-- --correctOutput[i].end(), '\"','\'');
+			}
 		}
 	}
 	my_pclose( dockerResults );

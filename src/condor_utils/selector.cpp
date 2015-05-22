@@ -28,7 +28,8 @@
 #ifndef SELECTOR_USE_POLL
 #define POLLIN 1
 #define POLLOUT 2
-#define POLLERR 3
+#define POLLERR 4
+#define POLLHUP 8
 int poll(struct fake_pollfd *, int, int)
 {
 	errno = ENOSYS;
@@ -377,11 +378,11 @@ Selector::fd_ready( int fd, IO_FUNC interest )
 	switch( interest ) {
 
 	  case IO_READ:
-		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & POLLIN) : FD_ISSET( fd, read_fds );
+		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & (POLLIN|POLLHUP)) : FD_ISSET( fd, read_fds );
 		break;
 
 	  case IO_WRITE:
-		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & POLLOUT) : FD_ISSET( fd, write_fds );
+		return (SINGLE_SHOT_OK == m_single_shot) ? (m_poll.revents & (POLLOUT|POLLHUP)) : FD_ISSET( fd, write_fds );
 		break;
 
 	  case IO_EXCEPT:
