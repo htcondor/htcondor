@@ -199,6 +199,7 @@ static  bool dash_profile = false;
 static  bool disable_user_print_files = false;
 
 static  char *userlog_file = NULL;
+static std::string schedd_constraint;
 
 // Constraint on JobIDs for faster filtering
 // a list and not set since we expect a very shallow depth
@@ -624,6 +625,15 @@ int main (int argc, char **argv)
 	// process arguments
 	processCommandLineArguments (argc, argv);
 
+	if (global && schedd_constraint.size()) {
+		fprintf(stderr, "Both -global and -schedd-constraint are specified; these are mutually exclusive.\n");
+		freeConnectionStrings();
+		exit(1);
+	}
+	if (schedd_constraint.size()) {
+		global = 1;
+	}
+
 	// Since we are assuming that we want to talk to a DB in the normal
 	// case, this will ensure that we don't try to when loading the job queue
 	// classads from file.
@@ -876,6 +886,11 @@ int main (int argc, char **argv)
 			fprintf( stderr, "Error: Couldn't add constraint %s\n", constraint);
 			freeConnectionStrings();
 			exit( 1 );
+		}
+		if (schedd_constraint.size() && (scheddQuery.addANDConstraint( schedd_constraint.c_str() ) != Q_OK)) {
+			fprintf(stderr, "Error: Couldn't add schedd constraint %s\n", schedd_constraint.c_str());
+			freeConnectionStrings();
+			exit(1);
 		}
 	}
 
@@ -1653,7 +1668,17 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (is_arg_prefix (arg, "global", 1)) {
 			global = 1;
-		} 
+		}
+		else
+		if (is_arg_prefix (arg, "schedd-constraint" , 5)) {
+			if (argc <= i+1) {
+				fprintf( stderr, "Error: Argument -schedd-constraint requires a filename\n");
+				exit(1);
+			} else {
+				i++;
+				schedd_constraint = argv[i];
+			}
+		}
 		else
 		if (is_dash_arg_prefix (argv[i], "help", 1)) {
 			int other = 0;
@@ -2847,6 +2872,7 @@ usage (const char *myName, int other)
 	printf ("Usage: %s [general-opts] [restriction-list] [output-opts | analyze-opts]\n", myName);
 	printf ("\n    [general-opts] are\n"
 		"\t-global\t\t\tQuery all Schedulers in this pool\n"
+		"\t-schedd-constraint\t\tQuery all Schedulers matching this constraint\n"
 		"\t-submitter <submitter>\tGet queue of specific submitter\n"
 		"\t-name <name>\t\tName of Scheduler\n"
 		"\t-pool <host>\t\tUse host as the central manager to query\n"
