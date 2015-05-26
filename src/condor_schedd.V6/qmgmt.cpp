@@ -3224,12 +3224,48 @@ CheckTransaction( SetAttributeFlags_t, CondorError * errorStack ) {
 	return 0;
 }
 
+static void
+AddSessionAttributes(const std::list<std::string> new_ad_keys)
+{
+	if (!Q_SOCK || !Q_SOCK->getReliSock()) {return;}
+	const std::string &sess_id = Q_SOCK->getReliSock()->getSessionID();
+	ClassAd policy_ad;
+	if (!daemonCore || !daemonCore->getSecMan()) {return;}
+	daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
+
+	if (!policy_ad.size()) {return;}
+	if (new_ad_keys.begin() == new_ad_keys.end()) {return;}
+
+	classad::ClassAdUnParser unparse;
+	unparse.SetOldClassAd(true, true);
+
+	for (std::list<std::string>::const_iterator it = new_ad_keys.begin(); it != new_ad_keys.end(); ++it)
+	{
+		JobQueueKey job( it->c_str() );
+			// Set attribute for process ads: prevents jobs from overriding these.
+		if (job.proc == -1) {continue;}
+		JobQueueKeyBuf cluster( job.cluster, -1 );
+		ClassAd proc_ad;
+		JobQueue->AddAttrsFromTransaction(cluster.c_str(), proc_ad);
+		JobQueue->AddAttrsFromTransaction(it->c_str(), proc_ad);
+
+		for (AttrList::const_iterator attr_it = policy_ad.begin(); attr_it != policy_ad.end(); ++attr_it)
+		{
+			std::string attr_value_buf;
+			unparse.Unparse(attr_value_buf, attr_it->second);
+			SetAttribute(job.cluster, job.proc, attr_it->first.c_str(), attr_value_buf.c_str());
+		}
+	}
+}
+
 void
 CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 {
 	std::list<std::string> new_ad_keys;
 		// get a list of all new ads being created in this transaction
 	JobQueue->ListNewAdsInTransaction( new_ad_keys );
+
+	AddSessionAttributes(new_ad_keys);
 
 	if( flags & NONDURABLE ) {
 		JobQueue->CommitNondurableTransaction();

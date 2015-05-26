@@ -39,6 +39,7 @@
 #include "condor_sockfunc.h"
 #include "condor_config.h"
 #include "condor_sinful.h"
+#include <classad/classad.h>
 
 #if defined(WIN32)
 // <winsock2.h> already included...
@@ -67,7 +68,7 @@ void dprintf ( int flags, Sock & sock, const char *fmt, ... )
 
 unsigned int Sock::m_nextUniqueId = 1;
 
-Sock::Sock() : Stream() {
+Sock::Sock() : Stream(), _policy_ad(NULL) {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
 	_timeout = 0;
@@ -78,6 +79,7 @@ Sock::Sock() : Stream() {
 	_auth_methods = NULL;
 	_auth_name = NULL;
 	_crypto_method = NULL;
+	_policy_ad = NULL;
 	_tried_authentication = false;
 	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
 	connect_state.connect_failed = false;
@@ -102,7 +104,7 @@ Sock::Sock() : Stream() {
     addr_changed();
 }
 
-Sock::Sock(const Sock & orig) : Stream() {
+Sock::Sock(const Sock & orig) : Stream(), _policy_ad(NULL) {
 
 	// initialize everything in the new sock
 	_sock = INVALID_SOCKET;
@@ -193,6 +195,7 @@ Sock::~Sock()
 		_auth_methods = NULL;
 	}
 	free(_auth_name);
+	free(_policy_ad);
 	if (_crypto_method) {
 		free(_crypto_method);
 		_crypto_method = NULL;
@@ -284,6 +287,24 @@ static SockInitializer _SockInitializer;
 /*
 **	Methods shared by all Socks
 */
+
+
+void
+Sock::setPolicyAd(const classad::ClassAd &ad)
+{
+	if (!_policy_ad) {_policy_ad = new classad::ClassAd();}
+	if (_policy_ad) {_policy_ad->CopyFrom(ad);}
+}
+
+
+void
+Sock::getPolicyAd(classad::ClassAd &ad) const
+{
+	if (_policy_ad)
+	{
+		ad.Update(*_policy_ad);
+	}
+}
 
 
 int Sock::getportbyserv(

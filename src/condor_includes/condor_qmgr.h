@@ -172,6 +172,13 @@ int SetAttributeFloat(int cluster, int proc, const char *attr, float value, SetA
 int SetAttributeString(int cluster, int proc, const char *attr,
 					   const char *value, SetAttributeFlags_t flags = 0);
 
+/** Set attr = value for a job with the specified cluster and proc.  The value
+ *  will be converted to a valid, quoted classad string
+ *  @return -1 on failure; 0 on success
+ */
+int SetAttributeRawString(int cluster, int proc, const char *attr,
+                          const char *value, SetAttributeFlags_t flags = 0);
+
 /** Set LastJobLeaseRenewalReceived = <xact start time> and
     JobLeaseDurationReceived = dur for the specified cluster/proc.
 	@return -1 on failure; 0 on success
