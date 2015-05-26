@@ -25,6 +25,8 @@
 #include "condor_config.h"
 #include "condor_daemon_core.h"
 
+#include <algorithm>
+
 #include "basename.h"
 #include "qmgmt.h"
 #include "condor_qmgr.h"
@@ -180,6 +182,9 @@ static int cluster_increment_val = 1;	// increment for cluster numbers of succes
 static int cluster_maximum_val = 0;     // maximum cluster id (default is 0, or 'no max')
 static int job_queued_count = 0;
 static Regex *queue_super_user_may_impersonate_regex = NULL;
+
+bool immutable_compare_func(std::string i, std::string j) {return strcasecmp(i.c_str(), j.c_str()) < 0;}
+static std::vector<std::string> immutable_attributes;
 
 static void AddOwnerHistory(const MyString &user);
 
@@ -756,6 +761,18 @@ InitQmgmt()
 		if( !queue_super_user_may_impersonate_regex->compile(queue_super_user_may_impersonate.c_str(),&errptr,&erroffset) ) {
 			EXCEPT("QUEUE_SUPER_USER_MAY_IMPERSONATE is an invalid regular expression: %s",queue_super_user_may_impersonate.c_str());
 		}
+	}
+
+	std::string immutable_attributes_str;
+	immutable_attributes.clear();
+	if (param(immutable_attributes_str, "IMMUTABLE_ATTRS")) {
+		StringList immutable_attributes_list(immutable_attributes_str.c_str());
+		immutable_attributes_list.rewind();
+		char *iter;
+		while ((iter = immutable_attributes_list.next())) {
+			immutable_attributes.push_back(iter);
+		}
+		std::sort(immutable_attributes.begin(), immutable_attributes.end());
 	}
 
 	schedd_forker.Initialize();
@@ -2700,6 +2717,24 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, curr_status, flags );
 		}
 	}
+
+	if (std::binary_search(immutable_attributes.begin(), immutable_attributes.end(), attr_name, immutable_compare_func) &&
+		AttributeIsSet(cluster_id, proc_id, attr_name) )
+	{
+		const char* sock_owner = Q_SOCK ? Q_SOCK->getOwner() : "";
+		if (!sock_owner) {
+			sock_owner = "";
+		}
+		if (!isQueueSuperUser(sock_owner))
+		{
+		#if !defined(WIN32)
+			errno = EACCES;
+		#endif
+			dprintf(D_ALWAYS, "SetAttribute security violation: setting %s for %d.%d attempted by non-super-user.\n", attr_name, cluster_id, proc_id);
+			return -1;
+		}
+	}
+
 #if defined(ADD_TARGET_SCOPING)
 /* Disable AddTargetRefs() for now
 	else if (attr_category & catTargetScope) {
@@ -3440,6 +3475,28 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val
 
 	if (ad->LookupFloat(attr_name, *val) == 1) return 0;
 	return -1;
+}
+
+
+bool
+AttributeIsSet(int cluster_id, int proc_id, const char *attr_name)
+{
+	JobQueueKeyBuf key;
+	char *attr_val = NULL;
+
+	IdToKey(cluster_id, proc_id, key);
+
+	if (JobQueue->LookupInTransaction(key.c_str(), attr_name, attr_val))
+	{
+		free(attr_val);
+		return true;
+	}
+	ClassAd *ad;
+	if (!JobQueue->LookupClassAd(key, ad))
+	{
+		return false;
+	}
+	return ad->Lookup(attr_name);
 }
 
 

@@ -243,6 +243,10 @@ int GetAttributeString( int cluster_id, int proc_id, char const *attr_name,
 */
 int GetAttributeExprNew(int cluster, int proc, const char *attr, char **value);
 
+/** Return true if a particular attribute is already set within an ad.
+ */
+bool AttributeIsSet(int cluster, int proc, const char *attr);
+
 /** Retrieves a classad of attributes that are marked as dirty, then clears
 	the dirty list
 */
