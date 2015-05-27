@@ -12,6 +12,9 @@
 
 static bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env);
 static bool add_docker_arg(ArgList &runArgs);
+static int run_simple_docker_command(	const std::string &command,
+					const std::string &container,
+					CondorError &e);
 
 //
 // Because we fork before calling docker, we don't actually
@@ -191,6 +194,16 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 
 	my_pclose( dockerResults );
 	return 0;
+}
+
+int 
+DockerAPI::pause( const std::string & container, CondorError & err ) {
+	return run_simple_docker_command("pause", container, err);
+}
+
+int 
+DockerAPI::unpause( const std::string & container, CondorError & err ) {
+	return run_simple_docker_command("unpause", container, err);
 }
 
 int DockerAPI::detect( CondorError & err ) {
@@ -431,3 +444,50 @@ bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env)
 	return true;
 }
 
+int
+run_simple_docker_command(const std::string &command, const std::string &container,
+			CondorError &)
+{
+	ArgList args;
+	if ( ! add_docker_arg(args))
+		return -1;
+	args.AppendArg( command );
+	args.AppendArg( container.c_str() );
+
+	MyString displayString;
+	args.GetArgsStringForLogging( & displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+
+	// Read from Docker's combined output and error streams.
+	FILE * dockerResults = my_popen( args, "r", 1 , 0, false);
+	if( dockerResults == NULL ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to run '%s'.\n", displayString.c_str() );
+		return -2;
+	}
+
+	// On a success, Docker writes the containerID back out.
+	char buffer[1024];
+	if( NULL == fgets( buffer, 1024, dockerResults ) ) {
+		if( errno ) {
+			dprintf( D_ALWAYS | D_FAILURE, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), strerror( errno ), errno );
+		} else {
+			dprintf( D_ALWAYS | D_FAILURE, "'%s' returned nothing.\n", displayString.c_str() );
+		}
+		my_pclose( dockerResults );
+		return -3;
+	}
+
+	int length = strlen( buffer );
+	if( length < 1 || strncmp( buffer, container.c_str(), length - 1 ) != 0 ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Docker %s failed, printing first few lines of output.\n", command.c_str() );
+		dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
+		while( NULL != fgets( buffer, 1024, dockerResults ) ) {
+			dprintf( D_ALWAYS | D_FAILURE, "%s", buffer );
+		}
+		my_pclose( dockerResults );
+		return -4;
+	}
+
+	my_pclose( dockerResults );
+	return 0;
+}
