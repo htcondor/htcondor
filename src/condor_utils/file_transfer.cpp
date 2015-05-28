@@ -1829,16 +1829,20 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		}
 		if (reply == 2) {
 			bool cryp_ret = s->set_crypto_mode(true);
-			dprintf(D_ALWAYS,"DoDownload: failed to enable crypto on incoming file, exiting at %d\n",__LINE__);
-			return_and_resetpriv( -1 );
+			if(!cryp_ret) {
+				dprintf(D_ALWAYS,"DoDownload: failed to enable crypto on incoming file, exiting at %d\n",__LINE__);
+				return_and_resetpriv( -1 );
+			}
 		} else if (reply == 3) {
 			s->set_crypto_mode(false);
 		}
 		else {
 			bool cryp_ret = s->set_crypto_mode(socket_default_crypto);
-			dprintf(D_ALWAYS,"DoDownload: failed to change crypto to %i on incoming file, "
-				"exiting at %d\n", socket_default_crypto, __LINE__);
-			return_and_resetpriv( -1 );
+			if(!cryp_ret) {
+				dprintf(D_ALWAYS,"DoDownload: failed to change crypto to %i on incoming file, "
+					"exiting at %d\n", socket_default_crypto, __LINE__);
+				return_and_resetpriv( -1 );
+			}
 		}
 
 		// code() allocates memory for the string if the pointer is NULL.
