@@ -13939,6 +13939,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		if( !startd.locateStarter(global_job_id.Value(),mrec->claimId(),daemonCore->publicNetworkIpAddr(),&starter_ad,ltimeout) )
 		{
 			error_msg = "Failed to get address of starter for this job";
+			retry_is_sensible = true; // maybe shadow hasn't activated starter yet?
 			goto error_wrapup;
 		}
 		job_claimid = mrec->claimId();
