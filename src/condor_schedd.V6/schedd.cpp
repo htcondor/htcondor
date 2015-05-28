@@ -13764,7 +13764,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	bool retry_is_sensible = false;
 	bool job_is_suitable = false;
 	ClassAd starter_ad;
-	int ltimeout = 20;
+	int ltimeout = 300;
 
 		// This command is called for example by condor_ssh_to_job
 		// in order to establish a security session for communication
@@ -13939,6 +13939,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		if( !startd.locateStarter(global_job_id.Value(),mrec->claimId(),daemonCore->publicNetworkIpAddr(),&starter_ad,ltimeout) )
 		{
 			error_msg = "Failed to get address of starter for this job";
+			retry_is_sensible = true; // maybe shadow hasn't activated starter yet?
 			goto error_wrapup;
 		}
 		job_claimid = mrec->claimId();

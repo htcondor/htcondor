@@ -1478,7 +1478,7 @@ review=?
 tags=shadow,remoteresource
 
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
-default=false
+default=true
 type=bool
 reconfig=true
 customization=seldom
