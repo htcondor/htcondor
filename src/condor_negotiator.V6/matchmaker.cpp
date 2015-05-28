@@ -4818,6 +4818,18 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
         // At this point the match is fully vetted so we can also deduct
         // the resource assets.
         offer->Assign(CP_MATCH_COST, cp_deduct_assets(request, *offer));
+
+		if (MatchList)
+		{
+			consumption_map_t consumption;
+			cp_override_requested(request, *offer, consumption);
+			bool is_a_match = cp_sufficient_assets(*offer, consumption) && IsAMatch(&request, offer);
+			cp_restore_requested(request, consumption);
+			if (is_a_match && !MatchList->return_candidate(offer))
+			{
+				dprintf(D_FULLDEBUG, "Unable to return still-valid offer to the match list.");
+			}
+		}
     }
 
     // 4. notifiy the accountant
@@ -5183,6 +5195,15 @@ pop_candidate()
 	}
 
 	return candidate;
+}
+
+bool Matchmaker::MatchListType::
+return_candidate(ClassAd *candidate)
+{
+	if (adListHead == 0) {return false;}
+	adListHead--;
+	AdListArray[adListHead].ad = candidate;
+	return true;
 }
 
 bool Matchmaker::MatchListType::

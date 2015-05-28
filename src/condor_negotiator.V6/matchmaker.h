@@ -419,6 +419,8 @@ class Matchmaker : public Service
 		public:
 
 			ClassAd* pop_candidate();
+				// Return the previously-pop'd candidate back into the list.
+			bool return_candidate(ClassAd *);
 			bool cache_still_valid(ClassAd &request,ExprTree *preemption_req,
 				ExprTree *preemption_rank,bool preemption_req_unstable, bool preemption_rank_unstable);
 			void get_diagnostics(int & rejForNetwork,
