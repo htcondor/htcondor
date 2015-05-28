@@ -597,11 +597,11 @@ public:
         // RETURNS: true -- on, false -- off
         //------------------------------------------
 
-	void set_crypto_mode(bool enable);
+	bool set_crypto_mode(bool enable);
         //------------------------------------------
         // PURPOSE: enable or disable encryption
         // REQUIRE: bool, true -- on; false -- off
-        // RETURNS:
+        // RETURNS: bool, true if value was succesfully changed, false on error
         //------------------------------------------
 
 	/** Returns true if this stream can turn on encryption. */
