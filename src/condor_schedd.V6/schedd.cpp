@@ -13764,7 +13764,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	bool retry_is_sensible = false;
 	bool job_is_suitable = false;
 	ClassAd starter_ad;
-	int ltimeout = 20;
+	int ltimeout = 300;
 
 		// This command is called for example by condor_ssh_to_job
 		// in order to establish a security session for communication
