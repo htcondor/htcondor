@@ -305,7 +305,13 @@ class Matchmaker : public Service
 		/* ODBC insert functions */
 		void insert_into_rejects(char const *userName, ClassAd& job);
 		void insert_into_matches(char const *userName, ClassAd& request, ClassAd& offer);
-		
+
+			// Returns a pslot to the match list (after consumption policies have been applied).
+			// Recalculates ranks and re-sorts match list.
+			// ASSUMES NO_PREEMPTION for pslots.
+		bool returnPslotToMatchList(ClassAd &request, ClassAd *offer);
+		void calculateRanks(ClassAd &request, ClassAd *offer, PreemptState candidatePreemptState, double &candidateRankValue, double &candidatePreJobRankValue, double &candidatePostJobRankValue, double &candidatePreemptRankValue);
+
 
 		void RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad );
 
@@ -420,7 +426,15 @@ class Matchmaker : public Service
 
 			ClassAd* pop_candidate();
 				// Return the previously-pop'd candidate back into the list.
-			bool return_candidate(ClassAd *);
+				// Note that this assumes there is empty space in the front of the list
+				// Also assume list was already sorted.
+				// Returns false if there was no space (i.e., this wasn't previously pop'd).
+			bool insert_candidate(ClassAd * candidate,
+					double candidateRankValue,
+					double candidatePreJobRankValue,
+					double candidatePostJobRankValue,
+					double candidatePreemptRankValue,
+					PreemptState candidatePreemptState);
 			bool cache_still_valid(ClassAd &request,ExprTree *preemption_req,
 				ExprTree *preemption_rank,bool preemption_req_unstable, bool preemption_rank_unstable);
 			void get_diagnostics(int & rejForNetwork,
