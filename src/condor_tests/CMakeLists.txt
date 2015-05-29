@@ -630,7 +630,8 @@ if (BUILD_TESTING)
 	condor_pl_test(job_dagman_lazy_submit_file "Test lazy submit file creation in DAGMan" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_retry-B "Test node retries in DAGMan" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_propogate_priorities "Test propogation of priorities" "dagman;quick;full;quicknolink")
-	condor_pl_test(job_dagman_use_hold_claim "Test holding of claims for DAGman" "dagman;quick;full;quicknolink")
+	# turned off for now ticket #5076
+	#condor_pl_test(job_dagman_use_hold_claim "Test holding of claims for DAGman" "dagman;quick;full;quicknolink")
 	# turned off for now ticket #4386
 	#condor_pl_test(job_dagman_halt-A "Test DAG halting" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_loglink "Test node job user logs as symlinks" "dagman;quick;full;quicknolink")
