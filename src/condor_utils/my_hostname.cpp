@@ -488,7 +488,8 @@ void ConvertDefaultIPToSocketIP(char const * attr_name, std::string & expr_strin
 	bool rewrite_port = true;
 	if (commandPortSinfulString == adSinfulString)
 	{
-		// Fall through.
+		dprintf( D_NETWORK | D_VERBOSE, "Address rewriting: refused for attribute %s (%s): clients now choose addresses.\n", attr_name, expr_string.c_str() );
+		return;
 	}
 	else if (param_boolean("SHARED_PORT_ADDRESS_REWRITING", false))
 	{
