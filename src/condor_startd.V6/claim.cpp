@@ -714,7 +714,7 @@ Claim::loadRequestInfo()
 		// Stash the ATTR_CONCURRENCY_LIMITS, necessary to advertise
 		// them if they exist
 	char* limits = NULL;
-	c_ad->LookupString(ATTR_CONCURRENCY_LIMITS, &limits);
+	c_ad->EvalString(ATTR_CONCURRENCY_LIMITS, c_rip->r_classad, &limits);
 	if (limits) {
 		c_client->setConcurrencyLimits(limits);
 		free(limits); limits = NULL;

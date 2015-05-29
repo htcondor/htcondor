@@ -2702,7 +2702,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			rejPreemptForPolicy = 0;
 			rejPreemptForRank = 0;
 			rejForSubmitterLimit = 0;
-            rejectedConcurrencyLimit = "";
+			rejectedConcurrencyLimits.clear();
 
 			// Optimizations: 
 			// If number of idle jobs = 0, don't waste time with negotiate.
@@ -3809,7 +3809,15 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 					if (rejForNetworkShare) {
 						diagnostic_message = "network share exceeded";
 					} else if (rejForConcurrencyLimit) {
-						diagnostic_message = "concurrency limit " + rejectedConcurrencyLimit + " reached";
+						std::stringstream ss;
+						std::set<std::string>::const_iterator it = rejectedConcurrencyLimits.begin();
+						while (true) {
+							ss << *it;
+							it++;
+							if (it == rejectedConcurrencyLimits.end()) {break;}
+							else {ss << ", ";}
+						}
+						diagnostic_message = "concurrency limit " + ss.str() + " reached";
 					} else if (rejPreemptForPolicy) {
 						diagnostic_message =
 							"PREEMPTION_REQUIREMENTS == False";
@@ -4031,6 +4039,50 @@ SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double 
 	return false;
 }
 
+bool
+Matchmaker::
+rejectForConcurrencyLimits(std::string &limits)
+{
+	std::transform(limits.begin(), limits.end(), limits.begin(), ::tolower);
+	if (lastRejectedConcurrencyString == limits) {return false;}
+
+	StringList list(limits.c_str());
+	char *limit;
+	MyString str;
+	list.rewind();
+	while ((limit = list.next())) {
+		double increment;
+		ParseConcurrencyLimit(limit, increment);
+
+		str = limit;
+		double count = accountant.GetLimit(str);
+
+		double max = accountant.GetLimitMax(str);
+
+		dprintf(D_FULLDEBUG,
+			"Concurrency Limit: %s is %f of max %f\n",
+			limit, count, max);
+
+		if (count < 0) {
+			EXCEPT("ERROR: Concurrency Limit %s is %f (below 0)",
+				limit, count);
+		}
+
+		if (count + increment > max) {
+			dprintf(D_FULLDEBUG,
+				"Concurrency Limit %s is %f, requesting %f, "
+				"but cannot exceed %f\n",
+				limit, count, increment, max);
+
+			rejForConcurrencyLimit++;
+			rejectedConcurrencyLimits.insert(limit);
+			lastRejectedConcurrencyString = limits;
+			return true;
+		}
+	}
+	return false;
+}
+
 
 /*
 Warning: scheddAddr may not be the actual address we'll use to contact the
@@ -4074,45 +4126,18 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 
 		// Check resource constraints requested by request
 	rejForConcurrencyLimit = 0;
-    rejectedConcurrencyLimit = "";
-	MyString limits;
+	lastRejectedConcurrencyString = "";
+	std::string limits;
+	bool evaluate_limits_with_match = true;
 	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
-		limits.lower_case();
-		StringList list(limits.Value());
-		char *limit;
-		MyString str;
-		list.rewind();
-		while ((limit = list.next())) {
-			double increment;
-
-			ParseConcurrencyLimit(limit, increment);
-
-			str = limit;
-			double count = accountant.GetLimit(str);
-
-			double max = accountant.GetLimitMax(str);
-
-			dprintf(D_FULLDEBUG,
-					"Concurrency Limit: %s is %f\n",
-					limit, count);
-
-			if (count < 0) {
- 				EXCEPT("ERROR: Concurrency Limit %s is %f (below 0)",
-					   limit, count);
-			}
-
-			if (count + increment > max) {
-				dprintf(D_FULLDEBUG,
-						"Concurrency Limit %s is %f, requesting %f, "
-						"but cannot exceed %f\n",
-						limit, count, increment, max);
-
-				rejForConcurrencyLimit++;
-                rejectedConcurrencyLimit = limit;
-				return NULL;
-			}
+		evaluate_limits_with_match = false;
+		if (rejectForConcurrencyLimits(limits)) {
+			return NULL;
 		}
+	} else if (!request.Lookup(ATTR_CONCURRENCY_LIMITS)) {
+		evaluate_limits_with_match = false;
 	}
+	rejectedConcurrencyLimits.clear();
 
 	request.LookupInteger(ATTR_AUTO_CLUSTER_ID, requestAutoCluster);
 
@@ -4144,6 +4169,16 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 				break;
             }
 			MatchList->increment_rejForSubmitterLimit();
+		}
+		if (cached_bestSoFar && evaluate_limits_with_match) {
+			std::string limits;
+			if (request.EvalString(ATTR_CONCURRENCY_LIMITS, cached_bestSoFar, limits)) {
+				if (rejectForConcurrencyLimits(limits)) {
+					cached_bestSoFar = NULL;
+				}
+			} else {
+				dprintf(D_FULLDEBUG, "Failed to evaluate concurrency limit attribute to string.");
+			}
 		}
 		dprintf(D_FULLDEBUG,"Attempting to use cached MatchList: %s (MatchList length: %d, Autocluster: %d, Schedd Name: %s, Schedd Address: %s)\n",
 			cached_bestSoFar?"Succeeded.":"Failed",
@@ -4377,6 +4412,13 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
             rejForSubmitterLimit++;
             continue;
         }
+
+		if (evaluate_limits_with_match) {
+			std::string limits;
+			if (request.EvalString(ATTR_CONCURRENCY_LIMITS, candidate, limits) && rejectForConcurrencyLimits(limits)) {
+				continue;
+			}
+		}
 
 		candidatePreJobRankValue = EvalNegotiatorMatchRank(
 		  "NEGOTIATOR_PRE_JOB_RANK",NegotiatorPreJobRank,
@@ -4727,7 +4769,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		// the Schedd, they must be stashed before PERMISSION_AND_AD
 		// is sent.
 	MyString limits;
-	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
+	if (request.EvalString(ATTR_CONCURRENCY_LIMITS, offer, limits)) {
 		limits.lower_case();
 		offer->Assign(ATTR_MATCHED_CONCURRENCY_LIMITS, limits);
 	} else {
