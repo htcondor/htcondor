@@ -2733,8 +2733,9 @@ which use DaemonCore).
   usually the best location for this directory.
 
 \label{param:SettableAttrs}
-\item[\Macro{SETTABLE\_ATTRS\Dots}]
-  All macros that begin with \Macro{SETTABLE\_ATTRS} or
+\MacroIndex{SETTABLE\_ATTRS\_CONFIG}
+\item[\Macro{SETTABLE\_ATTRS\_<PERMISSION-LEVEL>}]
+  All macros that begin with \MacroNI{SETTABLE\_ATTRS} or
   \MacroNI{<SUBSYS>.SETTABLE\_ATTRS} are settings used to restrict the 
   configuration values that can be changed using the \Condor{config\_val} 
   command.
@@ -5108,7 +5109,8 @@ WANT_HOLD_REASON = \
 
 \label{param:MountUnderScratch}
 \item[\Macro{MOUNT\_UNDER\_SCRATCH}]
-  A comma separated list of directories. 
+  A ClassAd expression, which when evaluated in the context of the job ClassAd evaluates
+  to a comma separated list of directories. 
   For each directory in the list, 
   HTCondor creates a directory in the job's temporary scratch directory 
   with that name,
@@ -7585,13 +7587,14 @@ REM Run the actual job now
 \label{param:AssignCpuAffinity} 
 \item[\Macro{ASSIGN\_CPU\_AFFINITY}]
   A boolean expression that defaults to \Expr{False}.
-  When \Expr{True},
+  When it evaluates to \Expr{True},
   each job under this \Condor{startd} is confined to using only as many
   cores as the configured number of slots.  When using partitionable
   slots, each job will be bound to as many cores as requested by
   specifying \SubmitCmdNI{request\_cpus}.
   When \Expr{True}, this configuration variable overrides any specification
-  of \MacroNI{ENFORCE\_CPU\_AFFINITY}.
+  of \MacroNI{ENFORCE\_CPU\_AFFINITY}. The expression is evaluated in the
+  context of the Job ClassAd.
 
 \label{param:EnforceCpuAffinity} 
 \item[\Macro{ENFORCE\_CPU\_AFFINITY}]

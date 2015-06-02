@@ -106,6 +106,19 @@ on start up,
 when it is unable to configure the Windows firewall.
 \Ticket{4988}
 
+\item \MacroNI{MOUNT\_UNDER\_SCRATCH} and \MacroNI{ASSIGN\_CPU\_AFFINITY}
+are now evaluated against the Job ClassAd rather than being treated as constants.
+\Ticket{5002}
+\Ticket{5004}
+
+\item \Condor{history} now properly handles multiple job ids and constraints on the command line.
+\Ticket{5025}
+
+\item When \Condor{gpu\_discovery} is passed the \Opt{config} option it now returns the number
+of GPUs detected as well as the other attributes in configuration syntax.
+This makes it more convenient to use as part of a configuration script.
+\Ticket{5040}
+
 \item When an updated X.509 proxy for a job is provided to the
 \Condor{schedd} over the network, 
 job ClassAd attribute \Attr{x509UserProxyExpiration}
