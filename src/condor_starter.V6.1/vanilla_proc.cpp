@@ -749,8 +749,8 @@ int VanillaProc::pidNameSpaceReaper( int status ) {
 	return status;
 }
 
-void VanillaProc::notifySuccessfulEvictionCheckpoint() { /* FIXME */ }
-void VanillaProc::notifySuccessfulPeriodicCheckpoint() { /* FIXME */ }
+void VanillaProc::notifySuccessfulEvictionCheckpoint() { /* FIXME (#4969) */ }
+void VanillaProc::notifySuccessfulPeriodicCheckpoint() { /* FIXME (#4969) */ }
 
 void VanillaProc::recordFinalUsage() {
 	if( daemonCore->Get_Family_Usage(JobPid, m_final_usage) == FALSE ) {
@@ -777,7 +777,7 @@ void VanillaProc::restartCheckpointedJob() {
 	// in normal exit cases, we should get the final usage of the checkpointed
 	// process now, add it to the running total of checkpointed processes,
 	// and then add the running total to the current when we publish the
-	// update ad.  [FIXME]
+	// update ad.  FIXME (#4971)
 
 	if( Starter->jic->uploadWorkingFiles() ) {
 			notifySuccessfulPeriodicCheckpoint();
