@@ -109,9 +109,10 @@ attribute names.
     CUDA run time.
   }
   \OptItem{\Opt{-config}} {
-    This option is not yet implemented.
-    Future versions of HTCondor will output in the syntax of 
+    Output in the syntax of 
     HTCondor configuration, instead of ClassAd language.
+    An additional attribute is produced \Attr{NUM\_DETECTED\_GPUs} which
+    is set to the number of GPUs detected.
   }
   \OptItem{\Opt{-verbose}} {
     For interactive use of the tool, output extra information to show 

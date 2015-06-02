@@ -84,6 +84,11 @@ are now evaluated against the Job ClassAd rather than being treated as constants
 \item \Condor{history} now properly handles multiple job ids and constraints on the command line.
 \Ticket{5025}
 
+\item When \Condor{gpu\_discovery} is passed the \Opt{config} option it now returns the number
+of GPUs detected as well as the other attributes in configuration syntax.
+This makes it more convenient to use as part of a configuration script.
+\Ticket{5040}
+
 \item When an updated X.509 proxy for a job is provided to the
 \Condor{schedd} over the network, 
 job ClassAd attribute \Attr{x509UserProxyExpiration}
