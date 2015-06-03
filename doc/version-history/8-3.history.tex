@@ -102,6 +102,9 @@ is now updated in the job's ClassAd to reflect the new expiration time.
 
 \begin{itemize}
 
+%% Should we mention the 4911 fix that we retroactively inserted into the
+%% 8.3.5 version history?
+
 \item Fixed a bug where setting \Macro{SHARED\_PORT\_PORT} to \Expr{0}
 would prevent HTCondor from successfully starting up.  It now correctly
 selects a random port within the permitted range on which to listen.
@@ -313,6 +316,10 @@ are a particular HTCondor daemon.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed the bug where a \Condor{schedd} daemon would be unable to start
+any job which used a \Condor{shadow} if both IPv6 and IPv4 were enabled.
+\Ticket{4911}
 
 \item The \Condor{schedd} will no longer request more resources from
 a central manager when the number of jobs running has exceeded
