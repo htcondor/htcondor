@@ -102,6 +102,11 @@ is now updated in the job's ClassAd to reflect the new expiration time.
 
 \begin{itemize}
 
+\item Fixed a bug where setting \Macro{SHARED\_PORT\_PORT} to \Expr{0}
+would prevent HTCondor from successfully starting up.  It now correctly
+selects a random port within the permitted range on which to listen.
+\Ticket{5013}
+
 \item Fixed a bug introduced in 8.3.2 where setting
 \Macro{PRIVATE\_NETWORK\_INTERFACE} would cause daemons to advertise a private
 addresses which consisted of only the port number.
