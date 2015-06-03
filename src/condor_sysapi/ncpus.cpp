@@ -44,10 +44,20 @@ static void ncpus_linux( int *num_cpus,int *num_hyperthread_cpus );
 typedef BOOL (WINAPI *LPFN_GLPI)(
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION, 
     PDWORD);
+// The version if winnt.h that ships with Vs9 doesn't define SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
+// so this code won't build.  We use the define for PROCESSOR_ARCHITECTURE_NEUTRAL which is nearby
+// in the modern winnt.h as a way of detecting the missing structure definition and commenting out
+// the relevant code.
+#ifdef PROCESSOR_ARCHITECTURE_NEUTRAL
+#define HAS_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
 typedef BOOL (WINAPI *LPFN_GLPIX)(
 	DWORD, // RelationshipType
 	PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, // Buffer
 	PDWORD); // ReturnedLength
+#else
+#pragma message("WARNING: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX not defined in winnt.h - using WinXP compatible code to detect CPU cores.")
+#pragma message("WARNING: This version of HTCondor may not correct detect > 16 CPUS.")
+#endif
 #endif
 
 #ifdef WIN32
@@ -110,13 +120,19 @@ sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 		int coreCount = 0;
 		int logicalCoreCount = 0;
 
+		#ifdef HAS_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
 		LPFN_GLPIX glpix = NULL;
+		#endif
 		LPFN_GLPI glpi = NULL;
 		HMODULE hmod = GetModuleHandle(TEXT("kernel32"));
 		if (hmod) {
+		#ifdef HAS_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
 			glpix = (LPFN_GLPIX) GetProcAddress(hmod, "GetLogicalProcessorInformationEx");
-			if ( ! glpix) glpi = (LPFN_GLPI) GetProcAddress(hmod, "GetLogicalProcessorInformation");
+			if ( ! glpix)
+		#endif
+				glpi = (LPFN_GLPI) GetProcAddress(hmod, "GetLogicalProcessorInformation");
 		}
+		#ifdef HAS_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
 		if (glpix)
 		{
 			// this code for Win7 or later.
@@ -151,7 +167,9 @@ sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 			}
 			free(infoBuf);
 		}
-		else if (glpi)
+		else
+		#endif
+		if (glpi)
 		{
 			// this code for pre-win7
 			DWORD returnLength = 0;
