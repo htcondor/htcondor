@@ -1298,7 +1298,7 @@ Scheduler::count_jobs()
 						"Increasing flock level for %s to %d from %d. (Due to lack of activity from negotiator)\n",
 						Owner.Name(), new_flock_level, old_flocklevel);
 			}
-			FlockLevel = MIN(Owner.FlockLevel, FlockLevel);
+			FlockLevel = MAX(Owner.FlockLevel, FlockLevel);
 		}
 	}
 

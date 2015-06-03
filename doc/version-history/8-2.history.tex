@@ -61,6 +61,9 @@ from being sent back to the \Condor{shadow} or \Condor{schedd}. Also fixed a bug
 cause all use of this \Condor{chirp} command to fail once 50 unique ClassAd attribute names had been set.
 \Ticket{5050}
 
+\item Fixed a bug that resulted in HTCondor possibly not detecting all of the CPU Cores on Windows
+when the number of cores was large. The bug was first seen on a server with 24 real cores (48 hypercores).
+\Ticket{5075}
 
 \end{itemize}
 

@@ -107,16 +107,17 @@ when it is unable to configure the Windows firewall.
 \Ticket{4988}
 
 \item \MacroNI{MOUNT\_UNDER\_SCRATCH} and \MacroNI{ASSIGN\_CPU\_AFFINITY}
-are now evaluated against the Job ClassAd rather than being treated as constants.
+are now evaluated against the Job ClassAd,
+rather than being treated as constants.
 \Ticket{5002}
 \Ticket{5004}
 
 \item \Condor{history} now properly handles multiple job ids and constraints on the command line.
 \Ticket{5025}
 
-\item When \Condor{gpu\_discovery} is passed the \Opt{config} option it now returns the number
-of GPUs detected as well as the other attributes in configuration syntax.
-This makes it more convenient to use as part of a configuration script.
+\item When \Condor{gpu\_discovery} is passed the \Opt{config} option,
+it now returns the number of GPUs detected and other attributes in configuration syntax.
+This makes it more convenient to use the output with a configuration script.
 \Ticket{5040}
 
 \item When an updated X.509 proxy for a job is provided to the
@@ -125,11 +126,36 @@ job ClassAd attribute \Attr{x509UserProxyExpiration}
 is now updated in the job's ClassAd to reflect the new expiration time.
 \Ticket{5001}
 
+\item The automatic variable \MacroUNI{Cluster} now has an alias of \MacroUNI{ClusterId},
+and the automatic variable \MacroUNI{Process} now has an alias 
+of \MacroUNI{ProcId},
+such that when used within a submit description file,
+these variables may have the same variable name as the corresponding
+job ClassAd attribute name.
+\Ticket{4899}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug that would prevent attributes set by 
+\Condor{chirp} \Opt{set\_job\_attr\_delayed}
+from being sent back to the \Condor{shadow} or \Condor{schedd}. 
+Also fixed a bug that would cause all uses of this \Condor{chirp} command 
+to fail once 50 unique ClassAd attribute names had been set.
+\Ticket{5050}
+
+\item Fixed a bug where setting \Macro{SHARED\_PORT\_PORT} to \Expr{0}
+would prevent HTCondor from successfully starting up.  It now correctly
+selects a random port within the permitted range on which to listen.
+\Ticket{5013}
+
+\item Fixed a bug introduced in 8.3.2 where setting
+\Macro{PRIVATE\_NETWORK\_INTERFACE} would cause daemons to advertise a private
+addresses which consisted of only the port number.
+\Ticket{5009}
 
 \item Fixed an intermittent bug in \Condor{submit} \Opt{-i} in which it would
 return the error message \AdStr{Failed to find starter for job}.
