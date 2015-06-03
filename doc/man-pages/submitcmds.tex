@@ -3719,13 +3719,13 @@ Macros can be defined by lines in the form of
 \end{verbatim} 
 Two pre-defined macros are supplied by the submit description file parser.
 The
-\MacroU{Cluster} macro supplies the value of the
+\MacroUNI{Cluster}  or \MacroUNI{ClusterId} macro supplies the value of the
 \index{ClassAd job attribute!ClusterId}
 \index{ClusterId!job ClassAd attribute}
 \index{job ID!cluster identifier}
 \Attr{ClusterId} job
 ClassAd attribute, and the
-\MacroU{Process} macro supplies the value of the
+\MacroUNI{Process}  or \MacroUNI{ProcId} macro supplies the value of the
 \Attr{ProcId} job
 ClassAd attribute.
 These macros are
@@ -3734,7 +3734,7 @@ etc., for clusters with lots of jobs, and/or could be used to supply an
 HTCondor process with its own cluster and process numbers on the command
 line.
 
-The \MacroU{Node} macro is defined for parallel universe jobs,
+The \MacroUNI{Node} macro is defined for parallel universe jobs,
 and is especially relevant for MPI applications.
 It is a unique value assigned for the duration of the job
 that essentially identifies the machine (slot) on which a program is
