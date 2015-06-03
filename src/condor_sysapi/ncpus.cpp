@@ -44,6 +44,10 @@ static void ncpus_linux( int *num_cpus,int *num_hyperthread_cpus );
 typedef BOOL (WINAPI *LPFN_GLPI)(
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION, 
     PDWORD);
+typedef BOOL (WINAPI *LPFN_GLPIX)(
+	DWORD, // RelationshipType
+	PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, // Buffer
+	PDWORD); // ReturnedLength
 #endif
 
 #ifdef WIN32
@@ -106,13 +110,50 @@ sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 		int coreCount = 0;
 		int logicalCoreCount = 0;
 
+		LPFN_GLPIX glpix = NULL;
 		LPFN_GLPI glpi = NULL;
 		HMODULE hmod = GetModuleHandle(TEXT("kernel32"));
 		if (hmod) {
-			glpi = (LPFN_GLPI) GetProcAddress(hmod, "GetLogicalProcessorInformation");
+			glpix = (LPFN_GLPIX) GetProcAddress(hmod, "GetLogicalProcessorInformationEx");
+			if ( ! glpix) glpi = (LPFN_GLPI) GetProcAddress(hmod, "GetLogicalProcessorInformation");
 		}
-		if (glpi)
+		if (glpix)
 		{
+			// this code for Win7 or later.
+
+			// call once to determine buffer size.
+			DWORD cbInfo = 0;
+			glpix(RelationProcessorCore, NULL, &cbInfo);
+			if (!cbInfo || cbInfo > 10*1024*1024) { // 10Mb is way more than we ever expect to need...
+				EXCEPT("Error: Failed to determine space for SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX : %d needed", cbInfo);
+			}
+			PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX infoBuf = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)malloc(cbInfo);
+			if ( ! glpix(RelationProcessorCore, infoBuf, &cbInfo)) {
+				EXCEPT("Error: Failed to call GetLogicalProcessorInformationEx: %d", GetLastError());
+			}
+
+			// got the processor info, now we decode it.
+			// the return value is a set of structures that have a Size field telling us how
+			// far to the next structure.
+			PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX ph = infoBuf;
+			for (char * pi = (char*)infoBuf; pi < (char*)infoBuf + cbInfo; pi += ph->Size) {
+				ph = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)pi;
+				ASSERT(ph->Relationship == RelationProcessorCore);
+				coreCount++;
+				if (ph->Processor.Flags & LTP_PC_SMT) {
+					for (unsigned ix = 0; ix < ph->Processor.GroupCount; ++ix) {
+						logicalCoreCount += CountSetBits(ph->Processor.GroupMask[ix].Mask);
+					}
+				} else {
+					// TJ: is this right? or should we be counting set bits to determine number of cores here?
+					logicalCoreCount += 1;
+				}
+			}
+			free(infoBuf);
+		}
+		else if (glpi)
+		{
+			// this code for pre-win7
 			DWORD returnLength = 0;
 			int byteOffset = 0;
 			PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = NULL;
