@@ -32,7 +32,8 @@ The details of each version are described below.
 \item Improved support for mixed mode operation.  HTCondor daemons will now
 advertise both an IPv4 and an IPv6 address if both are enabled.  HTCondor
 tools and daemons will pick an address based on which protocol(s) it has
-enabled.  Older clients and daemons will use IPv4 exclusively.
+enabled.  This allows IPv4-only clients to function with mixed mode
+pools.  Older clients and daemons will use IPv4 exclusively.
 \Ticket{4934}
 
 \item HTCondor daemons now advertise an additional attribute,
