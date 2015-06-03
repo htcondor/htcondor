@@ -102,6 +102,14 @@ is now updated in the job's ClassAd to reflect the new expiration time.
 
 \begin{itemize}
 
+
+\item Fixed a bug that would prevent attributes set by 
+\Condor{chirp} \Opt{set\_job\_attr\_delayed}
+from being sent back to the \Condor{shadow} or \Condor{schedd}. 
+Also fixed a bug that would cause all uses of this \Condor{chirp} command 
+to fail once 50 unique ClassAd attribute names had been set.
+\Ticket{5050}
+
 \item Fixed an intermittent bug in \Condor{submit} \Opt{-i} in which it would
 return the error message \AdStr{Failed to find starter for job}.
 \Ticket{5070}
