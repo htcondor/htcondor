@@ -157,9 +157,10 @@ would prevent HTCondor from successfully starting up.  It now correctly
 selects a random port within the permitted range on which to listen.
 \Ticket{5013}
 
-\item Fixed a bug introduced in 8.3.2 where setting
+\item Fixed a bug introduced in HTCondor version 8.3.2,
+in which setting configuration variable
 \Macro{PRIVATE\_NETWORK\_INTERFACE} would cause daemons to advertise a private
-addresses which consisted of only the port number.
+address which consisted of only the port number.
 \Ticket{5009}
 
 \item Fixed an intermittent bug in \Condor{submit} \Opt{-i} in which it would
