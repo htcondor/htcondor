@@ -135,6 +135,10 @@ the CPU cores on Windows, when the number of cores was large.
 The bug was first seen on a server with 24 real cores (48 Hyper-threaded cores).
 \Ticket{5075}
 
+\item Fixed a bug in which Linux kernel version 4 would incorrectly report
+a load average of -1.
+\Ticket{5080}
+
 \item Fixed a bug that would prevent attributes set by 
 \Condor{chirp} \Opt{set\_job\_attr\_delayed}
 from being sent back to the \Condor{shadow} or \Condor{schedd}. 
