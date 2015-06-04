@@ -100,8 +100,6 @@ float
 sysapi_load_avg_raw(void)
 {
     FILE	*proc;
-	struct utsname buf;
-	int		major, minor, patch;
 	float	short_avg, medium_avg, long_avg;
 
 	sysapi_internal_reconfig();
