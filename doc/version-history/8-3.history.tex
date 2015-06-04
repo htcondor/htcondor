@@ -29,11 +29,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Improved support for mixed mode operation.  HTCondor daemons will now
-advertise both an IPv4 and an IPv6 address if both are enabled.  HTCondor
-tools and daemons will pick an address based on which protocol(s) it has
-enabled.  This allows IPv4-only clients to function with mixed mode
-pools.  Older clients and daemons will use IPv4 exclusively.
+\item Support has improved for IPv4/IPv6 mixed mode operation.  
+HTCondor daemons now advertise both an IPv4 and an IPv6 address,
+if both modes are enabled.  
+An HTCondor tool or daemon will pick an address based on which 
+protocol(s) it has enabled.  
+This allows IPv4-only clients to function within mixed mode pools.
+Older clients and daemons will use IPv4 exclusively.
 \Ticket{4934}
 
 \item HTCondor daemons now advertise an additional attribute,
