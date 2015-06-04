@@ -192,6 +192,14 @@ or file \File{.condor\_pid\_ns\_status} to be transferred with
 the job's output files.
 \Ticket{4730}
 
+\item Fixed the ClassAd operators \verb+=?=+ and \verb+=!=+ to match
+their documented behavior.
+The values \Expr{3} and \Expr{3.0} are not identical (different types).
+The values \Expr{abstime("2015-03-03 12:13:15+0000")} and
+\Expr{abstime("2015-03-03 13:13:15+0100")} are not identical (different
+time zones).
+\Ticket{4959}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
