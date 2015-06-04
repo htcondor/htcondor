@@ -231,10 +231,11 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     accumulated during the current run plus all previous runs.  If this
     option is specified, RUN\_TIME only displays the time accumulated so
     far on this current run.}
-  \OptItem{\Opt{-dag}}{(output option) Display DAG node jobs 
-    under their \Condor{dagman} instance. 
+  \OptItem{\OptArg{-dag}{<DAG-ID>}} {(output option) Display DAG node jobs 
+    under their DAGMan instance.
     Child nodes are listed using indentation to show the structure
-    of the DAG. }
+    of the DAG. 
+    When the optional \Arg{DAG-ID} is specified, display all jobs in the DAG. }
   \OptItem{\Opt{-expert}}{(output option) Display shorter error messages. }
   \OptItem{\Opt{-globus}}{(output option) Get information only about 
     jobs submitted to grid resources described as \SubmitCmdNI{gt2}
@@ -259,6 +260,7 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     large numbers of jobs, but if \Condor{q} is paused while displaying
     results, this could result in a timeout in communication with
     \Condor{schedd}.}
+  \OptItem{\Opt{-totals}}{(output option) Display only the totals.}
   \OptItem{\Opt{-version}}{(output option) Print the HTCondor version and exit.}
   \OptItem{\Opt{-wide}}{(output option) If this option is specified, 
     and the command portion
@@ -519,7 +521,7 @@ slot1_2@a-001.chtc.wisc.edu     Dyn          2623  2601              85.10
 slot1_3@a-001.chtc.wisc.edu     Dyn          2644  2632              85.82
 slot1_4@a-001.chtc.wisc.edu     Dyn          2644  2792              91.37
 slot1@a-002.chtc.wisc.edu       Part            0  2633               0.00
-slot1_10@a-002.chtc.wisc.edu    Dyn          2623  2601              85.10 
+slot1_10@a-002.chtc.wisc.edu    Den          2623  2601              85.10 
 \end{verbatim}
 \normalsize
 
