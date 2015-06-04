@@ -585,6 +585,7 @@ Scheduler::Scheduler() :
 	RequestClaimTimeout = 0;
 	MaxJobsRunning = 0;
 	MaxJobsSubmitted = INT_MAX;
+	MaxJobsPerOwner = INT_MAX;
 	NegotiateAllJobsInCluster = false;
 	JobsStarted = 0;
 	JobsIdle = 0;
@@ -2517,7 +2518,11 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 
 	Counters->Hits += 1;
 	Owner->LastHitTime = now;
-
+	// Hits also counts matchrecs, which aren't jobs.
+	Counters->JobsCounted += 1;
+	// This way we know we aren't resetting unless we've actually counted
+	// something during a sweep.
+	Counters->JobsRecentlyAdded = 0;
 
 	if ( (universe != CONDOR_UNIVERSE_GRID) &&	// handle Globus below...
 		 (!service_this_universe(universe,job))  ) 
@@ -2741,6 +2746,19 @@ service_this_universe(int universe, ClassAd* job)
 }
 
 #ifdef USE_OWNERDATA_MAP
+void
+Scheduler::incrementRecentlyAdded(const char * owner)
+{
+	OwnerData * ownerData = insert_owner( owner );
+	++(ownerData->num.JobsRecentlyAdded);
+}
+
+const OwnerData *
+Scheduler::insert_owner_const(const char * owner)
+{
+	return insert_owner(owner);
+}
+
 OwnerData *
 Scheduler::find_owner(const char * owner)
 {
@@ -2772,6 +2790,12 @@ Scheduler::remove_unused_owners()
 }
 
 #else
+
+const OwnerData *
+Scheduler::find_owner_const(const char * owner)
+{
+	return find_owner(owner);
+}
 
 OwnerData *
 Scheduler::find_owner(const char * owner, int * pnum)
@@ -11832,6 +11856,7 @@ Scheduler::Init()
 	free( tmp );
 
 	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);
+	MaxJobsPerOwner = param_integer( "MAX_JOBS_PER_OWNER", INT_MAX );
 	
 	NegotiateAllJobsInCluster = param_boolean_crufty("NEGOTIATE_ALL_JOBS_IN_CLUSTER", false);
 
@@ -13632,6 +13657,7 @@ Scheduler::publish( ClassAd *cad ) {
 	cad->Assign( "JobsThisBurst", JobsThisBurst );
 	cad->Assign( "MaxJobsRunning", MaxJobsRunning );
 	cad->Assign( "MaxJobsSubmitted", MaxJobsSubmitted );
+	cad->Assign( "MaxJobsPerOwner", MaxJobsPerOwner );
 	cad->Assign( "JobsStarted", JobsStarted );
 	cad->Assign( "SwapSpace", SwapSpace );
 	cad->Assign( "ShadowSizeEstimate", ShadowSizeEstimate );
