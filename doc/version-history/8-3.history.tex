@@ -152,8 +152,10 @@ Also fixed a bug that would cause all uses of this \Condor{chirp} command
 to fail once 50 unique ClassAd attribute names had been set.
 \Ticket{5050}
 
-\item Fixed a bug where setting \Macro{SHARED\_PORT\_PORT} to \Expr{0}
-would prevent HTCondor from successfully starting up.  It now correctly
+\item Fixed a bug in which setting configuration variable
+\Macro{SHARED\_PORT\_PORT} to \Expr{0}
+would prevent HTCondor from successfully starting up.  
+It now correctly
 selects a random port within the permitted range on which to listen.
 \Ticket{5013}
 
