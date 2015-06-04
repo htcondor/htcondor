@@ -112,8 +112,11 @@ sysapi_load_avg_raw(void)
 
 	// /proc/loadavg looks like:
 
+	
 	// Kernel Version 2.0.0:
 	// 0.03 0.03 0.09 2/42 15582
+	// 
+	// Update 6/1/2015:  Looks exactly the same in kernel 4.x
 
     proc=safe_fopen_wrapper_follow("/proc/loadavg","r",0644);
     if(!proc)
@@ -123,6 +126,7 @@ sysapi_load_avg_raw(void)
 		case 1:
 		case 2:
 		case 3:
+		case 4:
     		if (fscanf(proc, "%f %f %f", &short_avg, &medium_avg, &long_avg) != 3) {
 				dprintf(D_ALWAYS, "Failed to fscanf 3 floats from /proc/loadavg\n");
 				fclose(proc);
