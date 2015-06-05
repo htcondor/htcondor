@@ -397,11 +397,9 @@ activate_globus_gsi( void )
 #endif /* defined(HAVE_EXT_VOMS) */
 #endif
 
-	if ( (*globus_thread_set_model_ptr)( GLOBUS_THREAD_MODEL_NONE ) != GLOBUS_SUCCESS ) {
-		set_error_string( "couldn't set globus thread model" );
-		activation_failed = true;
-		return -1;
-	}
+	// If this fails, it means something already configured a threaded
+	// model. That won't harm us, so ignore it.
+	(*globus_thread_set_model_ptr)( GLOBUS_THREAD_MODEL_NONE );
 
 	if ( (*globus_module_activate_ptr)(globus_i_gsi_gss_assist_module_ptr) ) {
 		set_error_string( "couldn't activate globus gsi gss assist module" );
