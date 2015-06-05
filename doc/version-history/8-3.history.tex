@@ -203,10 +203,11 @@ the job's output files.
 
 \item Fixed the ClassAd operators \verb+=?=+ and \verb+=!=+ to match
 their documented behavior.
-The values \Expr{3} and \Expr{3.0} are not identical (different types).
+The values \Expr{3} and \Expr{3.0} are not identical; 
+they are of different types.
 The values \Expr{abstime("2015-03-03 12:13:15+0000")} and
-\Expr{abstime("2015-03-03 13:13:15+0100")} are not identical (different
-time zones).
+\Expr{abstime("2015-03-03 13:13:15+0100")} are not identical;
+they are of different time zones.
 \Ticket{4959}
 
 \end{itemize}
