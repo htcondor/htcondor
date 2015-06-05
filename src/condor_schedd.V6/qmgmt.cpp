@@ -2067,6 +2067,15 @@ NewProc(int cluster_id)
 		return -3;
 	}
 
+	int maxJobsPerSubmission = scheduler.getMaxJobsPerSubmission();
+	if( jobs_added_this_transaction >= maxJobsPerSubmission ) {
+		dprintf( D_ALWAYS,
+			"NewProc(): MAX_JOBS_PER_SUBMISSION exceeded, submit failed.  "
+			"Current total is %d.  Limit is %d.\n",
+			jobs_added_this_transaction, maxJobsPerSubmission );
+		return -4;
+	}
+
 	// We can't increase ownerData->num.JobsRecentlyAdded here because we
 	// don't know, at this point, that the overall transaction will succeed.
 	// Instead, track how many jobs we're adding this transaction.

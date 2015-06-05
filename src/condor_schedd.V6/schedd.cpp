@@ -586,6 +586,7 @@ Scheduler::Scheduler() :
 	MaxJobsRunning = 0;
 	MaxJobsSubmitted = INT_MAX;
 	MaxJobsPerOwner = INT_MAX;
+	MaxJobsPerSubmission = INT_MAX;
 	NegotiateAllJobsInCluster = false;
 	JobsStarted = 0;
 	JobsIdle = 0;
@@ -11857,7 +11858,8 @@ Scheduler::Init()
 
 	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);
 	MaxJobsPerOwner = param_integer( "MAX_JOBS_PER_OWNER", INT_MAX );
-	
+	MaxJobsPerSubmission = param_integer( "MAX_JOBS_PER_SUBMISSION", INT_MAX );
+
 	NegotiateAllJobsInCluster = param_boolean_crufty("NEGOTIATE_ALL_JOBS_IN_CLUSTER", false);
 
 	STARTD_CONTACT_TIMEOUT = param_integer("STARTD_CONTACT_TIMEOUT",45);
@@ -13658,6 +13660,7 @@ Scheduler::publish( ClassAd *cad ) {
 	cad->Assign( "MaxJobsRunning", MaxJobsRunning );
 	cad->Assign( "MaxJobsSubmitted", MaxJobsSubmitted );
 	cad->Assign( "MaxJobsPerOwner", MaxJobsPerOwner );
+	cad->Assign( "MaxJobsPerSubmission", MaxJobsPerSubmission );
 	cad->Assign( "JobsStarted", JobsStarted );
 	cad->Assign( "SwapSpace", SwapSpace );
 	cad->Assign( "ShadowSizeEstimate", ShadowSizeEstimate );
@@ -15791,7 +15794,7 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 					}
 				}
 
-				errorStack->pushf( "QMGMT", 2, reasonString.c_str() );
+				errorStack->pushf( "QMGMT", 2, "%s", reasonString.c_str() );
 				return -1;
 			}
 		} else {

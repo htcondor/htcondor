@@ -508,6 +508,7 @@ class Scheduler : public Service
 	int				getJobsTotalAds() { return JobsTotalAds; };
 	int				getMaxJobsSubmitted() { return MaxJobsSubmitted; };
 	int				getMaxJobsPerOwner() { return MaxJobsPerOwner; }
+	int				getMaxJobsPerSubmission() { return MaxJobsPerSubmission; }
 
 		// Used by the UserIdentity class and some others
 	const ExprTree*	getGridParsedSelectionExpr() const 
@@ -644,6 +645,7 @@ private:
 	char*			StartSchedulerUniverse; // expression for scheduler jobs
 	int				MaxJobsSubmitted;
 	int				MaxJobsPerOwner;
+	int				MaxJobsPerSubmission;
 	bool			NegotiateAllJobsInCluster;
 	int				JobsStarted; // # of jobs started last negotiating session
 	int				SwapSpace;	 // available at beginning of last session

@@ -7740,6 +7740,9 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			} else if( ProcId == -3 ) {
 				fprintf(stderr,
 				"Number of submitted jobs would exceed MAX_JOBS_PER_OWNER\n");
+			} else if( ProcId == -4 ) {
+				fprintf(stderr,
+				"Number of submitted jobs would exceed MAX_JOBS_PER_SUBMISSION\n");
 			}
 			DoCleanup(0,0,NULL);
 			exit(1);
