@@ -235,9 +235,9 @@ libraries could be installed when running the 32-bit static \Condor{shadow}
 on a 64-bit system.
 \Ticket{5021}
 
-\item Added an obsolete clause to the HTCondor RPM to prevent the ClassAd
-library packaged in EPEL begin selected over the ClassAd library that we
-provide.
+\item Added an \texttt{obsolete} clause to the HTCondor RPM,
+to prevent the ClassAd library packaged in EPEL from being selected 
+over the ClassAd library that we provide.
 \Ticket{5035}
 
 \item When a job that invoked a script was submitted to HTCondor and
