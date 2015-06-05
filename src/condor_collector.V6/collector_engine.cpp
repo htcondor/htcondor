@@ -965,8 +965,13 @@ remove (AdTypes adType, AdNameHashKey &hk)
 	}
 	return !table->remove(hk);
 }
-	
-				
+
+void CollectorEngine::
+identifySelfAd(ClassAd * ad)
+{
+	__self_ad__ = (void*)ad;
+}
+
 ClassAd * CollectorEngine::
 updateClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
@@ -1031,6 +1036,8 @@ updateClassAd (CollectorHashTable &hashTable,
 		if (hashTable.insert(hk, new_ad) == -1) {
 			EXCEPT( "Error inserting ad" );
 		}
+
+		if (isSelfAd(old_ad)) { __self_ad__ = new_ad; }
 
 		delete old_ad;
 
