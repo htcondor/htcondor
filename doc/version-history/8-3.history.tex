@@ -59,11 +59,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Improved support for mixed mode operation.  HTCondor daemons will now
-advertise both an IPv4 and an IPv6 address if both are enabled.  HTCondor
-tools and daemons will pick an address based on which protocol(s) it has
-enabled.  This allows IPv4-only clients to function with mixed mode
-pools.  Older clients and daemons will use IPv4 exclusively.
+\item Support has improved for IPv4/IPv6 mixed mode operation.  
+HTCondor daemons now advertise both an IPv4 and an IPv6 address,
+if both modes are enabled.  
+An HTCondor tool or daemon will pick an address based on which 
+protocol(s) it has enabled.  
+This allows IPv4-only clients to function within mixed mode pools.
+Older clients and daemons will use IPv4 exclusively.
 \Ticket{4934}
 
 \item HTCondor daemons now advertise an additional attribute,
@@ -145,10 +147,15 @@ these variables may have the same variable name as the corresponding
 job ClassAd attribute name.
 \Ticket{4899}
 
-\item \Condor{q} now has a \Opt{totals} option, and the \Opt{dag} option has been
-changed to show all of the jobs in the DAG when a DAG ID argument is provided.
+\item The new \Opt{-totals} option to \Condor{q} displays only the totals.
+The modified \Opt{-dag} option 
+shows all of the jobs in the DAG when a \Arg{DAG-ID} argument is provided.
 \Ticket{5032}
 \Ticket{5052}
+
+\item Many of the Scheduler and Transfer statistics controlled by \MacroNI{STATISTICS\_TO\_PUBLISH}
+are now tracked by user and published in the Submitter ClassAd by default.
+\Ticket{5017}
 
 \end{itemize}
 
@@ -159,6 +166,15 @@ changed to show all of the jobs in the DAG when a DAG ID argument is provided.
 %% Should we mention the 4911 fix that we retroactively inserted into the
 %% 8.3.5 version history?
 
+\item Fixed a bug that resulted in HTCondor possibly not detecting all of 
+the CPU cores on Windows, when the number of cores was large. 
+The bug was first seen on a server with 24 real cores (48 Hyper-threaded cores).
+\Ticket{5075}
+
+\item Fixed a bug in which Linux kernel version 4 would incorrectly report
+a load average of -1.
+\Ticket{5080}
+
 \item Fixed a bug that would prevent attributes set by 
 \Condor{chirp} \Opt{set\_job\_attr\_delayed}
 from being sent back to the \Condor{shadow} or \Condor{schedd}. 
@@ -166,14 +182,17 @@ Also fixed a bug that would cause all uses of this \Condor{chirp} command
 to fail once 50 unique ClassAd attribute names had been set.
 \Ticket{5050}
 
-\item Fixed a bug where setting \Macro{SHARED\_PORT\_PORT} to \Expr{0}
-would prevent HTCondor from successfully starting up.  It now correctly
+\item Fixed a bug in which setting configuration variable
+\Macro{SHARED\_PORT\_PORT} to \Expr{0}
+would prevent HTCondor from successfully starting up.  
+It now correctly
 selects a random port within the permitted range on which to listen.
 \Ticket{5013}
 
-\item Fixed a bug introduced in 8.3.2 where setting
+\item Fixed a bug introduced in HTCondor version 8.3.2,
+in which setting configuration variable
 \Macro{PRIVATE\_NETWORK\_INTERFACE} would cause daemons to advertise a private
-addresses which consisted of only the port number.
+address which consisted of only the port number.
 \Ticket{5009}
 
 \item Fixed an intermittent bug in \Condor{submit} \Opt{-i} in which it would
@@ -211,6 +230,14 @@ indefinitely.
 or file \File{.condor\_pid\_ns\_status} to be transferred with
 the job's output files.
 \Ticket{4730}
+
+\item Fixed the ClassAd operators \verb+=?=+ and \verb+=!=+ to match
+their documented behavior.
+The values \Expr{3} and \Expr{3.0} are not identical (different types).
+The values \Expr{abstime("2015-03-03 12:13:15+0000")} and
+\Expr{abstime("2015-03-03 13:13:15+0100")} are not identical (different
+time zones).
+\Ticket{4959}
 
 \end{itemize}
 
