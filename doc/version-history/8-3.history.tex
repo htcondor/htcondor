@@ -156,6 +156,18 @@ shows all of the jobs in the DAG when a \Arg{DAG-ID} argument is provided.
 are now tracked by user and published in the Submitter ClassAd by default.
 \Ticket{5017}
 
+\item When the \Condor{collector} queries for its own ClassAd, 
+it now returns the most current values for Collector statistics in that ClassAd.
+New attributes have been added to the Collector's ClassAd
+to represent the overall number of lost updates and the loss ratio,
+ as well as the largest number of unique Machine
+and Submitter ClassAds the Collector has seen.
+\Ticket{4888}
+
+\item Augmented the ClassAd function \Procedure{debug} 
+to print an appropriate error message for undefined ClassAd functions.
+\Ticket{4885}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -245,6 +257,24 @@ The values \Expr{abstime("2015-03-03 12:13:15+0000")} and
 \Expr{abstime("2015-03-03 13:13:15+0100")} are not identical;
 they are of different time zones.
 \Ticket{4959}
+
+\item The \Prog{condor-externals} RPM has been split into
+\Prog{condor-externals} and \Prog{condor-external-libs},
+so that both the 32-bit and 64-bit external
+libraries could be installed when running the 32-bit static \Condor{shadow}
+on a 64-bit system.
+\Ticket{5021}
+
+\item Added an \texttt{obsolete} clause to the HTCondor RPM,
+to prevent the ClassAd library packaged in EPEL from being selected 
+over the ClassAd library that we provide.
+\Ticket{5035}
+
+\item When a job that invoked a script was submitted to HTCondor and
+the script interpreter did not exist, HTCondor would claim that the
+script file did not exist.
+Now the error message properly indicates that the interpreter is invalid.
+\Ticket{3718}
 
 \end{itemize}
 

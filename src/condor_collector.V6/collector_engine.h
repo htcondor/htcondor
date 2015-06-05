@@ -72,8 +72,14 @@ class CollectorEngine : public Service
 	// walk specified hash table with the given visit procedure
 	int walkHashTable (AdTypes, int (*)(ClassAd *));
 
+	// register the collector's own ad pointer, and check to see if a given ad is that ad.
+	// this is used to allow us to recognise the collector ad during iteration and automatically
+	// insert fresh stats into it when it is fetched.
+	void identifySelfAd(ClassAd * ad);
+	bool isSelfAd(void * ad) { return __self_ad__ != NULL && __self_ad__ == ad; }
+
 	// Publish stats into the collector's ClassAd
-	int publishStats( ClassAd *ad );
+	//int publishStats( ClassAd *ad );
 
 		// returns true on success; false on failure (and sets error_desc)
 	bool setCollectorRequirements( char const *str, MyString &error_desc );
@@ -147,6 +153,10 @@ class CollectorEngine : public Service
 	CollectorHashTable *findOrCreateTable(MyString &str);
 
 	bool ValidateClassAd(int command,ClassAd *clientAd,Sock *sock);
+
+	void* __self_ad__; // contains address of last Ad for this collector added to the hashtable, do NOT free from here
+					   // this pointer is only used to recognise this collector's ad during a condor_status query
+					   // so it's harmless if this pointer is out of date.
 
 	// Statistics
 	CollectorStats	*collectorStats;

@@ -76,7 +76,6 @@ int CollectorDaemon::__failed__;
 List<ClassAd>* CollectorDaemon::__ClassAdResultList__;
 std::string CollectorDaemon::__adType__;
 ExprTree *CollectorDaemon::__filter__;
-void* CollectorDaemon::__self_ad__ = NULL;
 
 TrackTotals* CollectorDaemon::normalTotals;
 int CollectorDaemon::submittorRunningJobs;
@@ -407,7 +406,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 		// is increased we do NOT want to put the high-verbosity attributes into
 		// our persistent collector ad.
 		ClassAd * stats_ad = NULL;
-		if ((whichAds == COLLECTOR_AD) && ((void*)curr_ad == __self_ad__)) {
+		if ((whichAds == COLLECTOR_AD) && collector.isSelfAd(curr_ad)) {
 			// update stats in the collector ad before we return it.
 			MyString stats_config;
 			cad.LookupString("STATISTICS_TO_PUBLISH",stats_config);
@@ -1555,7 +1554,7 @@ void CollectorDaemon::sendCollectorAd()
     if( !collector.walkHashTable( SUBMITTOR_AD, reportSubmittorScanFunc ) ) {
          dprintf( D_ALWAYS, "Error making collector ad (submittor scan)\n" );
     }
-    collectorStats.global.MachineAds = startdNumAds;
+    collectorStats.global.SubmitterAds = submittorNumAds;
 
     // compute machine information
     machinesTotal = 0;
@@ -1567,7 +1566,7 @@ void CollectorDaemon::sendCollectorAd()
     if (!collector.walkHashTable (STARTD_AD, reportMiniStartdScanFunc)) {
             dprintf (D_ALWAYS, "Error making collector ad (startd scan) \n");
     }
-    collectorStats.global.SubmitterAds = submittorNumAds;
+    collectorStats.global.MachineAds = startdNumAds;
 
     // insert values into the ad
     ad->InsertAttr(ATTR_RUNNING_JOBS,submittorRunningJobs);
@@ -1591,19 +1590,17 @@ void CollectorDaemon::sendCollectorAd()
     daemonCore->monitor_data.ExportData(ad);
 
 	//
-	// Update myself directly.  [Note that the ownership of the ad in
-	// the hashtable is different than the ownership of the static
-	// data member.  Particularly worth wondering is what happens if
-	// the hashtable, thinking it owns the static member, deletes it
-	// on an update.]
+	// Make sure that our own ad is in the collector hashtable table, even if send-updates won't put it there
+	// note that sendUpdates might soon _overwrite_ this ad with a differnt copy, but that's ok once we have
+	// identified the selfAd with the collector engine, it's supposed to keep the self ad pointer updated
+	// as it replaces the collector ad in that hashtable slot.
 	//
 	int error = 0;
-	ClassAd * selfAd = new ClassAd( * ad );
-	__self_ad__ = selfAd; // so we can recognise this ad during a condor_status query
+	ClassAd * selfAd = new ClassAd(*ad);
 	if( ! collector.collect( UPDATE_COLLECTOR_AD, selfAd, condor_sockaddr::null, error ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to add my own ad to myself (%d).\n", error );
-		__self_ad__ = NULL;
 	}
+	collector.identifySelfAd(selfAd);
 
 	// inserting the selfAd into the collector hashtable will stomp the update counters
 	// so clear out the per-daemon Updates* stats to avoid confusion with the global stats
@@ -1611,7 +1608,7 @@ void CollectorDaemon::sendCollectorAd()
 	//PRAGMA_REMIND("tj: remove this code once the collector generates it's ad when queried.")
 	selfAd->Delete(ATTR_UPDATESTATS_HISTORY);
 	selfAd->Delete(ATTR_UPDATESTATS_SEQUENCED);
-	collectorStats.publishGlobal( selfAd, NULL );
+	collectorStats.publishGlobal(selfAd, NULL);
 
 	// Send the ad
 	int num_updated = collectorsToUpdate->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);
@@ -1619,13 +1616,9 @@ void CollectorDaemon::sendCollectorAd()
 		dprintf( D_ALWAYS, "Unable to send UPDATE_COLLECTOR_AD to all configured collectors\n");
 	}
 
-
-       // If we don't have any machines, then bail out. You oftentimes
-       // see people run a collector on each macnine in their pool. Duh.
-	if(machinesTotal == 0) {
-		return ;
-	}
-	if ( worldCollector ) {
+	// update the world ad, but only if there are some machines. You oftentimes
+	// see people run a collector on each macnine in their pool. Duh.
+	if ( worldCollector && machinesTotal > 0) {
 		char update_addr_default [] = "(null)";
 		char *update_addr = worldCollector->addr();
 		if (!update_addr) update_addr = update_addr_default;
@@ -1633,9 +1626,10 @@ void CollectorDaemon::sendCollectorAd()
 			dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
 					 "(%s): %s\n", update_addr,
 					 worldCollector->error() );
-			return;
 		}
 	}
+
+
 }
 
 void CollectorDaemon::init_classad(int interval)
