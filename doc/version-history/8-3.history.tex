@@ -133,8 +133,11 @@ are now tracked by user and published in the Submitter ClassAd by default.
 
 \begin{itemize}
 
-%% Should we mention the 4911 fix that we retroactively inserted into the
-%% 8.3.5 version history?
+\item HTCondor version 8.3.5 fixed a bug in which 
+a \Condor{schedd} daemon would be unable to start
+any job which used a \Condor{shadow}, if both IPv6 and IPv4 were enabled.
+\Ticket{4911}
+
 
 \item Fixed a bug that resulted in HTCondor possibly not detecting all of 
 the CPU cores on Windows, when the number of cores was large. 
