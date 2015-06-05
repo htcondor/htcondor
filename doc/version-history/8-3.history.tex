@@ -222,6 +222,23 @@ The values \Expr{abstime("2015-03-03 12:13:15+0000")} and
 they are of different time zones.
 \Ticket{4959}
 
+\item Split the condor-externals RPM into condor-externals and
+condor-external-libs so that the both the 32-bit and 64-bit external
+libraries could be installed when running the 32-bit static shadow
+on a 64-bit system.
+\Ticket{5021}
+
+\item Added an obsolete clause to the HTCondor RPM to prevent the ClassAd
+library packaged in EPEL begin selected over the ClassAd library that we
+provide.
+\Ticket{5035}
+
+\item When a job that invoked a script was submitted to HTCondor and
+the script interpreter did not exist, HTCondor would claim that the
+script file did not exist.
+Now the error message properly indicates that the interpreter is invalid.
+\Ticket{3718}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
