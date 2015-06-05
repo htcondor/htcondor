@@ -228,9 +228,10 @@ The values \Expr{abstime("2015-03-03 12:13:15+0000")} and
 they are of different time zones.
 \Ticket{4959}
 
-\item Split the condor-externals RPM into condor-externals and
-condor-external-libs so that the both the 32-bit and 64-bit external
-libraries could be installed when running the 32-bit static shadow
+\item The \Prog{condor-externals} RPM has been split into
+\Prog{condor-externals} and \Prog{condor-external-libs},
+so that both the 32-bit and 64-bit external
+libraries could be installed when running the 32-bit static \Condor{shadow}
 on a 64-bit system.
 \Ticket{5021}
 
