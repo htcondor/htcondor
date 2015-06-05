@@ -69,6 +69,11 @@ cause all use of this \Condor{chirp} command to fail once 50 unique ClassAd attr
 when the number of cores was large. The bug was first seen on a server with 24 real cores (48 hypercores).
 \Ticket{5075}
 
+\item Fixed a bug that could cause GSI authentication or X.509 proxy
+delegation to fail with an error message of
+``couldn't set globus thread model''.
+\Ticket{5061}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
