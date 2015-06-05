@@ -126,9 +126,11 @@ shows all of the jobs in the DAG when a \Arg{DAG-ID} argument is provided.
 are now tracked by user and published in the Submitter ClassAd by default.
 \Ticket{5017}
 
-\item When the \Condor{collector} queried for its own ClassAd, it will now return the most current values
-for Collector statistics in that ClassAd.  Also new attributes have been added to the Collector's ClassAd
-to show overall number of lost updates and the loss ratio as well as the largest number of unique Startd
+\item When the \Condor{collector} queries for its own ClassAd, 
+it now returns the most current values for Collector statistics in that ClassAd.
+New attributes have been added to the Collector's ClassAd
+to represent the overall number of lost updates and the loss ratio,
+ as well as the largest number of unique Machine
 and Submitter ClassAds the Collector has seen.
 \Ticket{4888}
 
