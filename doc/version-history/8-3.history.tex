@@ -49,8 +49,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.3.6 not yet released.
-%\item HTCondor version 8.3.6 released on Month Date, 2015.
+\item HTCondor version 8.3.6 released on June 9, 2015.
 
 \end{itemize}
 
@@ -163,8 +162,15 @@ are now tracked by user and published in the Submitter ClassAd by default.
 
 \begin{itemize}
 
-%% Should we mention the 4911 fix that we retroactively inserted into the
-%% 8.3.5 version history?
+\item HTCondor version 8.3.5 fixed a bug in which 
+a \Condor{schedd} daemon would be unable to start
+any job which used a \Condor{shadow}, if both IPv6 and IPv4 were enabled.
+\Ticket{4911}
+
+\item Fixed a bug that could cause GSI authentication or X.509 proxy
+delegation to fail with an error message of
+\AdStr{couldn't set globus thread model}.
+\Ticket{5061}
 
 \item Fixed a bug that resulted in HTCondor possibly not detecting all of 
 the CPU cores on Windows, when the number of cores was large. 
@@ -233,10 +239,11 @@ the job's output files.
 
 \item Fixed the ClassAd operators \verb+=?=+ and \verb+=!=+ to match
 their documented behavior.
-The values \Expr{3} and \Expr{3.0} are not identical (different types).
+The values \Expr{3} and \Expr{3.0} are not identical; 
+they are of different types.
 The values \Expr{abstime("2015-03-03 12:13:15+0000")} and
-\Expr{abstime("2015-03-03 13:13:15+0100")} are not identical (different
-time zones).
+\Expr{abstime("2015-03-03 13:13:15+0100")} are not identical;
+they are of different time zones.
 \Ticket{4959}
 
 \end{itemize}
