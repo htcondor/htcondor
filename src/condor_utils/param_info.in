@@ -645,7 +645,7 @@ review=?
 tags=starter,starter_common
 
 [STARTER_DEBUG]
-default=D_NODATE D_PID
+default=D_PID
 type=string
 reconfig=true
 customization=seldom
