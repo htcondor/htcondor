@@ -29,6 +29,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Add configuration setting \MacroNI{MAX\_JOBS\_PER\_SUBMISSION}.
+This limits how many jobs may be submitted simultaneously (in a single
+use of \Condor{submit}.  Doing so may be useful for catching user errors
+and for protecting a busy schedd from overly-lengthy interruptions to
+accept a very large number of jobs at once.
+\Ticket{5081}
+
 \item Add configuration setting, \MacroNI{MAX\_JOBS\_PER\_OWNER},
 to limit the number of jobs submitted (total in the queue) for each owner
 (submitting user).
