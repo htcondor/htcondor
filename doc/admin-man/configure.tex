@@ -6096,6 +6096,30 @@ MAX_JOBS_RUNNING	= \
   The default value for this variable is the largest positive
   integer value.
 
+\label{param:MaxJobsPerOwner}
+\item[\Macro{MAX\_JOBS\_PER\_OWNER}]
+  This integer value limits the number of jobs any given owner (user) is
+  permitted to have in a \Condor{schedd} daemon's queue.  The whole
+  submission fails if the total number of jobs with the same owner
+  would exceed this limit.
+  The default value for this variable is the largest positive
+  integer value.
+
+  This configuration variable may be useful if \MacroNI{MAX\_JOBS\_SUBMITTED}
+  is set, to ensure that no user can dominate the queue.
+
+\label{param:MaxJobsPerSubmission}
+\item[\Macro{MAX\_JOBS\_PER\_Submission}]
+  This integer value limits the number of jobs any single submission
+  is permitted to add to a \Condor{schedd} daemon's queue.  The
+  whole submission fails if the number of jobs in it would exceed this limit.
+  The default value for this variable is the largest positive
+  integer value.
+
+  This configuration setting may be useful for catching user error,
+  and for protecting a busy schedd from the overly-long interruption
+  required to accept a very large number of jobs at once.
+
 \label{param:MaxShadowExceptions}
 \item[\Macro{MAX\_SHADOW\_EXCEPTIONS}]
   This macro controls the maximum
