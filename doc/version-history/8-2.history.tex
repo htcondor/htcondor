@@ -74,6 +74,18 @@ delegation to fail with an error message of
 ``couldn't set globus thread model''.
 \Ticket{5061}
 
+\item 
+The release tag in the RPM packaging is now set to 1 upon release.
+Previously, it was set to the build ID, which violated the RPM Packaging
+Guidelines.
+\Ticket{5042}
+
+\item Fixed a problem in the RPM packages that prevented the
+Java universe from operating.
+The global configuration file is now updated in the RPM packages
+to properly refer to the support files for the Java universe.
+\Ticket{5059}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
