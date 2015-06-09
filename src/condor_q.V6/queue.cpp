@@ -468,10 +468,13 @@ int SlotSort(ClassAd *ad1, ClassAd *ad2, void *  /*data*/)
 class CondorQClassAdFileParseHelper : public compat_classad::ClassAdFileParseHelper
 {
  public:
+	CondorQClassAdFileParseHelper() : is_schedd(false), is_submitter(false) {}
 	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file);
 	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* file);
 	std::string schedd_name;
 	std::string schedd_addr;
+	bool is_schedd;
+	bool is_submitter;
 };
 
 // this method is called before each line is parsed. 
@@ -491,9 +494,12 @@ int CondorQClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/
 	// the normal output of condor_q -long is "-- schedd-name <addr>"
 	// we want to treat that as a delimiter, and also capture the schedd name and addr
 	if (starts_with(line, "-- ")) {
-		if (starts_with(line.substr(3), "Schedd:")) {
-			schedd_name = line.substr(3+8);
-			size_t ix1 = schedd_name.find_first_of(": \t\n");
+		is_schedd = starts_with(line.substr(3), "Schedd:");
+		is_submitter = starts_with(line.substr(3), "Submitter:");
+		if (is_schedd || is_submitter) {
+			size_t ix1 = schedd_name.find(':');
+			schedd_name = line.substr(ix1+1);
+			ix1 = schedd_name.find_first_of(": \t\n");
 			if (ix1 != string::npos) {
 				size_t ix2 = schedd_name.find_first_not_of(": \t\n", ix1);
 				if (ix2 != string::npos) {
@@ -3872,6 +3878,24 @@ void clear_results(RESULT_MAP_TYPE & result_map)
 }
 
 
+PRAGMA_REMIND("Write this properly as a method on the sinful object.")
+
+const char * summarize_sinful_for_display(std::string & addrsumy, const char * addr)
+{
+	addrsumy = addr;
+	const char * quest = strchr(addr, '?');
+	if ( ! quest) {
+	   addrsumy = addr;
+	   return addr;
+	}
+	
+	addrsumy.clear();
+	addrsumy.insert(0, addr, 0, quest - addr);
+	addrsumy += "?...";
+	return addrsumy.c_str();
+}
+
+
 // query SCHEDD or QUILLD daemon for jobs. and then print out the desired job info.
 // this function handles -analyze, -streaming, -dag and all normal condor_q output
 // when the source is a SCHEDD or QUILLD.
@@ -3884,11 +3908,13 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	// initialize counters
 	malformed = idle = running = held = completed = suspended = 0;
 
+	std::string addr_summary;
+	summarize_sinful_for_display(addr_summary, scheddAddress);
 	std::string source_label;
-	if (querySchedds) {
-		formatstr(source_label, "Schedd: %s : %s", scheddName, scheddAddress);
+	if (querySubmittors) {
+		formatstr(source_label, "Submitter: %s : %s : %s", scheddName, addr_summary.c_str(), scheddMachine);
 	} else {
-		formatstr(source_label, "Submitter: %s : %s : %s", scheddName, scheddAddress, scheddMachine);
+		formatstr(source_label, "Schedd: %s : %s", scheddName, addr_summary.c_str());
 	}
 
 	if (verbose || dash_profile) {
@@ -4079,7 +4105,8 @@ show_file_queue(const char* jobads, const char* userlog)
 		if (better_analyze && ! jobads_file_parse_helper.schedd_name.empty()) {
 			const char *scheddName    = jobads_file_parse_helper.schedd_name.c_str();
 			const char *scheddAddress = jobads_file_parse_helper.schedd_addr.c_str();
-			formatstr(source_label, "Schedd: %s : %s", scheddName, scheddAddress);
+			const char *queryType     = jobads_file_parse_helper.is_submitter ? "Submitter" : "Schedd";
+			formatstr(source_label, "%s: %s : %s", queryType, scheddName, scheddAddress);
 			}
 		
 		/* The variable UseDB should be false in this branch since it was set 
