@@ -240,6 +240,18 @@ to prevent the ClassAd library packaged in EPEL from being selected
 over the ClassAd library that we provide.
 \Ticket{5035}
 
+\item 
+The release tag in the RPM packaging is now set to 1 upon release.
+Previously, it was set to the build ID, which violated the RPM Packaging
+Guidelines.
+\Ticket{5042}
+
+\item Fixed a problem in the RPM packages that prevented the
+Java universe from operating.
+The global configuration file is now updated in the RPM packages
+to properly refer to the support files for the Java universe.
+\Ticket{5059}
+
 \item When a job that invoked a script was submitted to HTCondor and
 the script interpreter did not exist, HTCondor would claim that the
 script file did not exist.
