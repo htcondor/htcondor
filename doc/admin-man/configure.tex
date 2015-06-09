@@ -6109,16 +6109,17 @@ MAX_JOBS_RUNNING	= \
   is set, to ensure that no user can dominate the queue.
 
 \label{param:MaxJobsPerSubmission}
-\item[\Macro{MAX\_JOBS\_PER\_Submission}]
+\item[\Macro{MAX\_JOBS\_PER\_SUBMISSION}]
   This integer value limits the number of jobs any single submission
   is permitted to add to a \Condor{schedd} daemon's queue.  The
-  whole submission fails if the number of jobs in it would exceed this limit.
+  whole submission fails if the number of jobs would exceed this limit.
   The default value for this variable is the largest positive
   integer value.
 
-  This configuration setting may be useful for catching user error,
-  and for protecting a busy schedd from the overly-long interruption
-  required to accept a very large number of jobs at once.
+  This configuration variable may be useful for catching user error,
+  and for protecting a busy \Condor{schedd} daemon
+  from the excessively lengthy interruption
+  required to accept a very large number of jobs at one time.
 
 \label{param:MaxShadowExceptions}
 \item[\Macro{MAX\_SHADOW\_EXCEPTIONS}]
