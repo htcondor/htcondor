@@ -344,7 +344,7 @@ universes for user jobs:
 	\item local
  	\item parallel
  	\item vm
-% 	\item docker
+  	\item docker
 \end{itemize}
 
 The \SubmitCmd{universe} under which a job runs
@@ -384,8 +384,7 @@ See section~\ref{sec:Parallel} for more about the Parallel universe.
 The vm universe allows users to run jobs where the job is
 no longer a simple executable, but a disk image, facilitating
 the execution of a virtual machine.
-%%The docker universe instantiates a Docker container within which
-%%the HTCondor job runs.
+The docker universe runs a Docker container as an HTCondor job.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:standard-universe}Standard Universe}
@@ -589,16 +588,14 @@ virtual machines with the vm universe.
 
 Please see section~\ref{sec:vmuniverse} for details.
 
-% %%%%%%%%%%%%
-% \subsubsection{Docker Universe}
-% %%%%%%%%%%%%
-% \index{universe!docker}
-% \index{docker universe}
-% The docker universe causes an instantiation of a container
-% on an execute host,
-% and the job is run within that container.  
-
-% Please see section~\ref{sec:dockeruniverse} for details.
+%%%%%%%%%%%%
+\subsubsection{Docker Universe}
+%%%%%%%%%%%%
+\index{universe!docker}
+\index{docker universe}
+The docker universe runs a docker container on an execute host
+as a job.  
+Please see section~\ref{sec:dockeruniverse} for details.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:submitting}Submitting a Job}

@@ -3,22 +3,41 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{docker universe|(}
 \index{universe!docker}
-A docker universe job causes an instantiation of a container,
-and the job is run within that container,
-providing all of the benefits of Docker containers to the job.  
+A docker universe job instantiates a Docker container
+from a Docker image, and HTCondor manages the running
+of that container as an HTCondor job, on an execute machine.
+This running container can then be managed as any HTCondor job.
+For example, it can be scheduled, removed, put on hold, 
+or be part of a workflow managed by DAGMan.
 
 The docker universe job will only be matched with an execute host
 that advertises its capability to run docker universe jobs.
-The details of which container is instantiated are defined by
-specifying a Docker image with the submit command
-\SubmitCmd{docker\_image}.
+When an execute machine with docker support starts, 
+the machine checks to
+see if the \Prog{docker} command is available and has the correct
+settings for HTCondor.  
+Docker support is advertised if available and if it has the correct settings.
 
-After submission, the job is treated as a vanilla universe job.
-Details of file transfer are the same as applied to the vanilla universe.
-One of the benefits of Docker containers is the isolation they provide.
-This extends to the file system within a container.
-The container will not share a file system with either the execute
-host or the submit host.
+The image from which the container is instantiated is
+defined by specifying a Docker image with the submit command
+\SubmitCmd{docker\_image}.  
+This image must be pre-staged on a docker
+hub that the execute machine can access.
+
+After submission, the job is treated much the same way as a vanilla 
+universe job.  
+Details of file transfer are the same as applied to 
+the vanilla universe.  
+One of the benefits of Docker containers is 
+the file system isolation they provide.  
+Each container has a distinct file system, 
+from the root on down, and this file
+system is completely independent of the file system on the host machine.
+The container does not share a file system with either the execute
+host or the submit host, with the exception of the scratch directory,
+which is volume mounted to the host, and is the initial working
+directory of the job.
+
 Therefore,
 the submit description file should contain the submit command
 \begin{verbatim}
@@ -31,7 +50,7 @@ Docker volume.
 If no \SubmitCmd{executable} is specified in the submit description file,
 it is presumed that the Docker container has a default command to run.
 
-When the job completes, or is otherwise evicted,
-the container will be removed.
+When the job completes, is held, evicted, 
+or is otherwise removed from the machine, the container will be removed.
 
 \index{docker universe|)}
