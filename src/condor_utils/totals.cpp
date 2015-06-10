@@ -89,6 +89,7 @@ displayTotals (FILE *file, int keyLength)
 	ClassTotal *ct=0;
 	MyString	key;
 	int k;
+	bool auto_key_length = keyLength < 0;
 
 	// display totals only for meaningful modes
 	switch (ppo)
@@ -113,11 +114,6 @@ displayTotals (FILE *file, int keyLength)
 	}
 
 		
-	// display the lead of the header
-	fprintf (file, "%*.*s", keyLength, keyLength, "");
-	topLevelTotal->displayHeader(file);
-	fprintf (file, "\n");
-
 	// sort the keys (insertion sort) so we display totals in sorted order
 	const char **keys = new const char* [allTotals.getNumElements()];
 	allTotals.startIterations();
@@ -136,7 +132,16 @@ displayTotals (FILE *file, int keyLength)
 		}
 		// insert the key in the right position in the list
 		keys[pos] = strdup(key.Value());
+		if (auto_key_length) {
+			keyLength = MAX(keyLength, key.Length());
+		}
 	}
+
+	// display the lead of the header
+	fprintf (file, "%*.*s", keyLength, keyLength, "");
+	topLevelTotal->displayHeader(file);
+	fprintf (file, "\n");
+
 	// now that our keys are sorted, display the totals in sort order
 	for (k = 0; k < allTotals.getNumElements(); k++)
 	{
