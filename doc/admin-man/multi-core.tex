@@ -213,23 +213,23 @@ In addition to the standard resources of CPUs, memory, disk, and swap,
 the administrator may also define custom resources on 
 a localized per-machine basis.
 
-The resource names and quantities of available resources are defined using configuration
-variables of the form \Macro{MACHINE\_RESOURCE\_<name>}, as shown in this example:
+The resource names and quantities of available resources are defined using 
+configuration variables of the form \Macro{MACHINE\_RESOURCE\_<name>}, 
+as shown in this example:
 \begin{verbatim}
 MACHINE_RESOURCE_gpu = 16
 MACHINE_RESOURCE_actuator = 8
 \end{verbatim}
 
-If your configuration is using the optional configuration variable 
-\Macro{MACHINE\_RESOURCE\_NAMES} to to enable and disable local machine
-resources, you must also add the resource names to this variable
-for example:
+If the configuration uses the optional configuration variable 
+\Macro{MACHINE\_RESOURCE\_NAMES} to enable and disable local machine resources,
+also add the resource names to this variable.
+For example:
 \begin{verbatim}
 if defined MACHINE_RESOURCE_NAMES
   MACHINE_RESOURCE_NAMES = $(MACHINE_RESOURCE_NAMES) gpu actuator
 endif
 \end{verbatim}
-
 
 Local machine resource names defined in this way may now be used in conjunction 
 with \Macro{SLOT\_TYPE\_<N>}, using all the same syntax described
