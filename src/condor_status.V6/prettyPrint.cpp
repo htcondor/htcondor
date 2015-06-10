@@ -385,7 +385,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	}
 
 	// if totals are required, display totals
-	if (adList.MyLength() > 0 && totals) totals->displayTotals(stdout, 20);
+	if (adList.MyLength() > 0 && totals) totals->displayTotals(stdout, wide_display ? -1 : 20);
 }
 
 
