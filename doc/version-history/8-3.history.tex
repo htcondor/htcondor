@@ -55,6 +55,11 @@ node job if the DAG has been \Condor{rm}'ed.
 \item \Condor{dagman} VARS values can now contain single quotes.
 \Ticket{1082}
 
+\item Fixed a bug in \Condor{dagman} in which a combination of node
+retries plus a FINAL node could cause a DAG getting aborted or
+\Condor{rm}'ed to re-submit nodes other than the FINAL node.
+\Ticket{5090}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

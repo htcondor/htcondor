@@ -1366,7 +1366,9 @@ Dag::PrintDagFiles( /* const */ StringList &dagFiles )
 bool
 Dag::StartNode( Job *node, bool isRetry )
 {
+	ASSERT( !_finalNodeRun );
     ASSERT( node != NULL );
+
 	if ( !node->CanSubmit() ) {
 		EXCEPT( "Node %s not ready to submit!", node->GetJobName() );
 	}
@@ -2389,13 +2391,18 @@ void
 Dag::RestartNode( Job *node, bool recovery )
 {
     ASSERT( node != NULL );
+
 	if ( node->GetStatus() != Job::STATUS_ERROR ) {
 		EXCEPT( "Node %s is not in ERROR state", node->GetJobName() );
 	}
-    if( node->have_retry_abort_val && node->retval == node->retry_abort_val ) {
+
+    if ( _finalNodeRun || ( node->have_retry_abort_val &&
+				node->retval == node->retry_abort_val ) ) {
+		const char *finalRun = _finalNodeRun ?
+					"because final node is running " : "";
         debug_printf( DEBUG_NORMAL, "Aborting further retries of node %s "
-                      "(last attempt returned %d)\n",
-                      node->GetJobName(), node->retval);
+                      "%s(last attempt returned %d)\n",
+                      node->GetJobName(), finalRun, node->retval);
         _numNodesFailed++;
 		_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 		if ( _dagStatus == DAG_STATUS_OK ) {
