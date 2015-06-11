@@ -4011,6 +4011,10 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
 
+	if ( _dagStatus == Dag::DAG_STATUS_RM && node->GetFinal() ) {
+		max_submit_attempts = min( max_submit_attempts, 2 );
+	}
+
 	if ( node->_submitTries >= max_submit_attempts ) {
 			// We're out of submit attempts, treat this as a submit failure.
 

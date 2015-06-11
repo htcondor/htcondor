@@ -42,6 +42,10 @@ limits the total number number of jobs that may be in the queue for each
 owner (submitting user).
 \Ticket{4641}
 
+\item \Condor{dagman} now allows at most two submit attempts for a FINAL
+node job if the DAG has been \Condor{rm}'ed.
+\Ticket{5089}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
