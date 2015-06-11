@@ -56,6 +56,16 @@ no jobs to be submitted,
 if the submission would have assigned more than a single cluster value.
 \Ticket{4981}
 
+\item DaemonCore has been enhanced to detect the difference between
+network failures and authorization failures;
+it previously identified authorization failures as network failures.
+With the enhancement,
+a detected authorization failure is placed on the error stack before
+sending the response ClassAd.
+When the error message is printed,
+it identifies who the user was mapped to and the authentication method.
+\Ticket{4751}
+
 \item Changed the default value of configuration variables
 \MacroNI{ENABLE\_USERLOG\_LOCKING} and \MacroNI{EVENT\_LOG\_LOCKING}
 to \Expr{False} on Unix platforms and \Expr{True} on Windows platforms.
