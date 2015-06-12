@@ -11268,11 +11268,12 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
   and thousands of \Condor{startd} daemons on a network with a 0.1 second 
   round trip time).
 
-  The default value for this configuration option is \Expr{False}.  To
-  have any effect, it must be \Expr{True} in the configuration of both
+  The default value is \Expr{True}.  
+  To have any effect, it must be \Expr{True} in the configuration of both
   the execute side (\Condor{startd}) as well as the submit side 
-  (\Condor{schedd}).  When
-  this authentication method is used, all other security negotiation
+  (\Condor{schedd}).
+  When \Expr{True},
+  all other security negotiation
   between the submit and execute daemons is bypassed.  All inter-daemon
   communication between the submit and execute side will use the
   \Condor{startd} daemon's settings for \MacroNI{SEC\_DAEMON\_ENCRYPTION} and
