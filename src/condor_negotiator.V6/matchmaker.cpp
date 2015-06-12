@@ -235,6 +235,58 @@ bool ResourcesInUseByUsersGroup_classad_func( const char * /*name*/,
 	return true;
 }
 
+bool dslotLookup( const classad::ClassAd *ad, const char *name, int idx, classad::Value &value )
+{
+	if ( ad == NULL || name == NULL || idx < 0 ) {
+		return false;
+	}
+	string attr_name = "child";
+	attr_name += name;
+	// lookup or evaluate child<name>
+	// set value to idx-th entry of resulting ExprList
+	const classad::ExprTree *expr_tree = ad->Lookup( attr_name );
+	if ( expr_tree == NULL || expr_tree->GetKind() != classad::ExprTree::EXPR_LIST_NODE ) {
+		return false;
+	}
+	vector<classad::ExprTree*> expr_list;
+	((const classad::ExprList*)expr_tree)->GetComponents( expr_list );
+	if ( (unsigned)idx >= expr_list.size() ) {
+		return false;
+	}
+	if ( expr_list[idx]->GetKind() != classad::ExprTree::LITERAL_NODE ) {
+		return false;
+	}
+	((classad::Literal*)expr_list[idx])->GetValue( value );
+	return true;
+}
+
+bool dslotLookupString( const classad::ClassAd *ad, const char *name, int idx, string &value )
+{
+	classad::Value val;
+	if ( !dslotLookup( ad, name, idx, val ) ) {
+		return false;
+	}
+	return val.IsStringValue( value );
+}
+
+bool dslotLookupInteger( const classad::ClassAd *ad, const char *name, int idx, int &value )
+{
+	classad::Value val;
+	if ( !dslotLookup( ad, name, idx, val ) ) {
+		return false;
+	}
+	return val.IsNumber( value );
+}
+
+bool dslotLookupFloat( const classad::ClassAd *ad, const char *name, int idx, double &value )
+{
+	classad::Value val;
+	if ( !dslotLookup( ad, name, idx, val ) ) {
+		return false;
+	}
+	return val.IsNumber( value );
+}
+
 Matchmaker::
 Matchmaker ()
    : strSlotConstraint(NULL)
@@ -3460,29 +3512,26 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 			std::string childClaims;
 					// Grab the classad vector of ids
 			int numKids = 0;
-			ad->LookupInteger(ATTR_NUM_DYNAMIC_SLOTS,numKids);
+			int kids_set = ad->LookupInteger(ATTR_NUM_DYNAMIC_SLOTS,numKids);
 			std::vector<std::string> claims;
 
 				// foreach entry in that vector
 			for (int kid = 0; kid < numKids; kid++) {
-				std::string childAttr;
-				formatstr(childAttr, "%s[%d]", ATTR_CHILD_CLAIM_IDS, kid);
-				ExprTree *et;
-				classad::Value result;
-	
-				ParseClassAdRvalExpr(childAttr.c_str(), et);
-				EvalExprTree(et, ad, NULL, result);
-				delete et;
-
-				std::string strValue;
-				if (result.IsStringValue(strValue)) {
-						// Finally, append this claimid to our list
-					claims.push_back(strValue);
+				std::string child_claim = "";
+				if ( dslotLookupString( ad, ATTR_CLAIM_IDS, kid, child_claim ) ) {
+					claims.push_back( child_claim );
+				} else {
+					dprintf( D_FULLDEBUG, "Ignoring pslot with missing child claim ids\n" );
+					kids_set = FALSE;
+					break;
 				}
 			}
 
 				// Put the newly-made vector of claims in the hash
-           	childClaimHash[key] = claims;
+				// if we got claim ids for all of the child dslots
+			if ( kids_set ) {
+				childClaimHash[key] = claims;
+			}
 		}
 	}
 	startdPvtAdList.Close();
@@ -4238,7 +4287,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
         }
 
 		bool pslotRankMatch = false;
-		if (!is_a_match) {
+		if (!is_a_match && ConsiderPreemption) {
 			bool jobWantsMultiMatch = false;
 			request.LookupBool(ATTR_WANT_PSLOT_PREEMPTION, jobWantsMultiMatch);
 			if (param_boolean("ALLOW_PSLOT_PREEMPTION", false) && jobWantsMultiMatch) {
@@ -4670,8 +4719,11 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	}
 
 	// find the startd's claim id from the private ad
-	char const *claim_id = NULL;
-    string claim_id_buf;
+	// claim_id and all_claim_ids will have the primary claim id.
+	// For pslot preemption, all_claim_ids will also have the claim ids
+	// of the dslots being preempted.
+	string claim_id;
+	string all_claim_ids;
     ClaimIdHash::iterator claimset = claimIds.end();
 	if (want_claiming) {
         string key = startdName.Value();
@@ -4681,20 +4733,21 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
             dprintf(D_ALWAYS,"      %s has no claim id\n", startdName.Value());
             return MM_BAD_MATCH;
         }
-        claim_id_buf = *(claimset->second.begin());
+		claim_id = *(claimset->second.begin());
+		all_claim_ids = claim_id;
 
 		// If there are extra preempting dslot claims, hand them out too
 		string extraClaims;
 		if (offer->LookupString("PreemptDslotClaims", extraClaims)) {
-			claim_id_buf += " ";
-			claim_id_buf += extraClaims;
+			all_claim_ids += " ";
+			all_claim_ids += extraClaims;
 			offer->Delete("PreemptDslotClaims");
 		}
 
-        claim_id = claim_id_buf.c_str();
 	} else {
 		// Claiming is *not* desired
 		claim_id = "null";
+		all_claim_ids = claim_id;
 	}
 
 	classad::MatchClassAd::UnoptimizeAdForMatchmaking( offer );
@@ -4756,21 +4809,22 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 		NotifyStartdOfMatchHandler *h =
 			new NotifyStartdOfMatchHandler(
-				startdName.Value(),startdAddr.Value(),NegotiatorTimeout,claim_id,want_nonblocking_startd_contact);
+				startdName.Value(),startdAddr.Value(),NegotiatorTimeout,
+				claim_id.c_str(),want_nonblocking_startd_contact);
 
 		if(!h->startCommand()) {
 			return MM_BAD_MATCH;
 		}
 	}	// end of if want_claiming
 
-	// 3.  send the match and claim_id to the schedd
+	// 3.  send the match and all_claim_ids to the schedd
 	sock->encode();
 	send_failed = false;	
 
 	dprintf(D_FULLDEBUG,
 		"      Sending PERMISSION, claim id, startdAd to schedd\n");
 	if (!sock->put(PERMISSION_AND_AD) ||
-		!sock->put_secret(claim_id) ||
+		!sock->put_secret(all_claim_ids.c_str()) ||
 		!putClassAd(sock, *offer)	||	// send startd ad to schedd
 		!sock->end_of_message())
 	{
@@ -4779,7 +4833,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 	if ( send_failed )
 	{
-		ClaimIdParser cidp(claim_id);
+		ClaimIdParser cidp(claim_id.c_str());
 		dprintf (D_ALWAYS, "      Could not send PERMISSION\n" );
 		dprintf( D_FULLDEBUG, "      (Claim ID is \"%s\")\n", cidp.publicClaimId());
 		sockCache->invalidateSock( scheddAddr );
@@ -4807,7 +4861,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
     // We don't offer a claim more than once per cycle, so remove it
     // from the set of available claims.
     if (claimset != claimIds.end()) {
-        claimset->second.erase(claim_id_buf);
+        claimset->second.erase(claim_id);
     }
 
 	/* CONDORDB Insert into matches table */
@@ -5871,58 +5925,6 @@ bool rankPairCompare(std::pair<int,double> lhs, std::pair<int,double> rhs) {
 	return lhs.second < rhs.second;
 }
 
-bool dslotLookup( const classad::ClassAd *ad, const char *name, int idx, classad::Value &value )
-{
-	if ( ad == NULL || name == NULL || idx < 0 ) {
-		return false;
-	}
-	string attr_name = "child";
-	attr_name += name;
-	// lookup or evaluate child<name>
-	// set value to idx-th entry of resulting ExprList
-	const classad::ExprTree *expr_tree = ad->Lookup( attr_name );
-	if ( expr_tree == NULL || expr_tree->GetKind() != classad::ExprTree::EXPR_LIST_NODE ) {
-		return false;
-	}
-	vector<classad::ExprTree*> expr_list;
-	((const classad::ExprList*)expr_tree)->GetComponents( expr_list );
-	if ( (unsigned)idx >= expr_list.size() ) {
-		return false;
-	}
-	if ( expr_list[idx]->GetKind() != classad::ExprTree::LITERAL_NODE ) {
-		return false;
-	}
-	((classad::Literal*)expr_list[idx])->GetValue( value );
-	return true;
-}
-
-bool dslotLookupString( const classad::ClassAd *ad, const char *name, int idx, string &value )
-{
-	classad::Value val;
-	if ( !dslotLookup( ad, name, idx, val ) ) {
-		return false;
-	}
-	return val.IsStringValue( value );
-}
-
-bool dslotLookupInteger( const classad::ClassAd *ad, const char *name, int idx, int &value )
-{
-	classad::Value val;
-	if ( !dslotLookup( ad, name, idx, val ) ) {
-		return false;
-	}
-	return val.IsNumber( value );
-}
-
-bool dslotLookupFloat( const classad::ClassAd *ad, const char *name, int idx, double &value )
-{
-	classad::Value val;
-	if ( !dslotLookup( ad, name, idx, val ) ) {
-		return false;
-	}
-	return val.IsNumber( value );
-}
-
 	// Return true is this partitionable slot would match the
 	// job with preempted resources from a dynamic slot.
 	// Only consider startd RANK for now.
@@ -5951,6 +5953,18 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 		return false;
 	}
 
+	std::string name, ipaddr;
+	machine->LookupString(ATTR_NAME, name);
+	machine->LookupString(ATTR_MY_ADDRESS, ipaddr);
+
+		// Lookup the vector of claim ids for this startd
+	std::string hash_key = name + ipaddr;
+	std::vector<std::string> &child_claims = childClaimHash[hash_key];
+	if ( numDslots != child_claims.size() ) {
+		dprintf( D_FULLDEBUG, "Wrong number of dslot claim ids for %s, ignoring for pslot preemption\n", name.c_str() );
+		return false;
+	}
+
 		// Copy the childCurrentRanks list attributes into vector
 		// Skip dslots that aren't eligible for matching
 	std::vector<std::pair<int,double> > ranks;
@@ -5967,6 +5981,9 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 			continue;
 		}
 		if ( !strcmp( state.c_str(), state_to_string( preempting_state ) ) ) {
+			continue;
+		}
+		if ( child_claims[i] == "" ) {
 			continue;
 		}
 		ranks.push_back( std::pair<int, double>(i, currentRank) );
@@ -6071,16 +6088,14 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 			dprintf(D_FULLDEBUG, "Matched pslot by rank preempting %d dynamic slots\n", slot + 1);
 			std::string claimsToPreempt;
 
-			std::string name, ipaddr;
-			machine->LookupString(ATTR_NAME, name);
-			machine->LookupString(ATTR_MY_ADDRESS, ipaddr);
-
-				// Lookup the vector of claim ids for this startd
-			std::string key = name + ipaddr;
-			std::vector<std::string> v = childClaimHash[key];
 			for (unsigned int child = 0; child < slot + 1; child++) {
-				claimsToPreempt += v[ranks[child].first];
+				claimsToPreempt += child_claims[ranks[child].first];
 				claimsToPreempt += " ";
+				// TODO Move this clearing of claim ids to
+				//   matchmakingProcotol(), after the match is successfully
+				//   sent to the schedd. That is where the claim id of the
+				//   pslot is cleared.
+				child_claims[ranks[child].first] = "";
 			}
 
 			machine->Assign("PreemptDslotClaims", claimsToPreempt.c_str());

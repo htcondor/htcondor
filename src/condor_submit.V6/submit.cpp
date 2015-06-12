@@ -6098,7 +6098,7 @@ SetGridParams()
 		free( tmp );
 	}
 
-	if( (tmp = condor_param( EC2IamProfileName, ATTR_EC2_IAM_PROFILE_ARN )) ) {
+	if( (tmp = condor_param( EC2IamProfileName, ATTR_EC2_IAM_PROFILE_NAME )) ) {
 		if( bIamProfilePresent ) {
 			fprintf( stderr, "\nWARNING: EC2 job(s) contain both %s and %s; ignoring %s.\n", EC2IamProfileArn, EC2IamProfileName, EC2IamProfileName );
 		} else {

@@ -2428,6 +2428,7 @@ Resource::makeChildClaimIds() {
 		bool firstTime = true;
 
 		for (std::set<Resource *,ResourceLess>::iterator i(m_children.begin());  i != m_children.end();  i++) {
+			std::string buf = "";
 			if (firstTime) {
 				firstTime = false;
 			} else {
@@ -2436,15 +2437,15 @@ Resource::makeChildClaimIds() {
 			Resource *child = (*i);
 			if (child->r_pre_pre) {
 				attrValue += '"';
-				attrValue += child->r_pre_pre->id();
+				attrValue += EscapeAdStringValue( child->r_pre_pre->id(), buf );
 				attrValue += '"';
 			} else if (child->r_pre) {
 				attrValue += '"';
-				attrValue += child->r_pre->id();
+				attrValue += EscapeAdStringValue( child->r_pre->id(), buf );
 				attrValue += '"';
 			} else if (child->r_cur) {
 				attrValue += '"';
-				attrValue += child->r_cur->id();
+				attrValue += EscapeAdStringValue( child->r_cur->id(), buf );
 				attrValue += '"';
 			}
 		}

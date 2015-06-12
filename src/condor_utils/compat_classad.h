@@ -61,7 +61,7 @@ int	fPrintAd(FILE *file, const classad::ClassAd &ad, bool exclude_private = fals
 	/** Print the ClassAd as an old ClasAd with dprintf
 		@param level The dprintf level.
 	*/
-void dPrintAd( int level, const classad::ClassAd &ad );
+void dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private = true );
 
 	/** Format the ClassAd as an old ClassAd into the MyString.
 		@param output The MyString to write into
