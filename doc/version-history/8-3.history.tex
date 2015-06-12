@@ -56,14 +56,13 @@ no jobs to be submitted,
 if the submission would have assigned more than a single cluster value.
 \Ticket{4981}
 
-\item DaemonCore has been enhanced to detect the difference between
-network failures and authorization failures;
-it previously identified authorization failures as network failures.
-With the enhancement,
-a detected authorization failure is placed on the error stack before
-sending the response ClassAd.
-When the error message is printed,
-it identifies who the user was mapped to and the authentication method.
+\item Tools now detect and report authorization failures;
+previously, authorization failures were reported as network failures
+or not reported at all.
+With this enhancement,
+an authorization denial results in an error message 
+that identifies who the user was mapped to and the authentication method,
+and the tool's exit code indicates the failure.
 \Ticket{4751}
 
 \item Changed the default value of configuration variables
