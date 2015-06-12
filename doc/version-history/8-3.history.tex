@@ -60,6 +60,10 @@ retries plus a FINAL node could cause a DAG getting aborted or
 \Condor{rm}'ed to re-submit nodes other than the FINAL node.
 \Ticket{5090}
 
+\item Fixed a bug in \Condor{submit} where using submit attibute
+\Attr{EC2IamProfileArn} would lead to requests to EC2 failing.
+\Ticket{5095}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
