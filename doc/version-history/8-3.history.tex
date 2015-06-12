@@ -60,6 +60,11 @@ retries plus a FINAL node could cause a DAG getting aborted or
 \Condor{rm}'ed to re-submit nodes other than the FINAL node.
 \Ticket{5090}
 
+\item Fixed a bug in \Condor{dagman} in which having node retries
+and ABORT-DAG-ON specified for the name node could cause the node
+status to be reported incorrectly.
+\Ticket{5092}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

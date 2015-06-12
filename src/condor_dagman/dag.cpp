@@ -869,7 +869,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	//
 
 	if ( failed && job->_scriptPost == NULL ) {
-		if( job->GetRetries() < job->GetRetryMax() ) {
+		if ( job->DoRetry() ) {
 			RestartNode( job, recovery );
 		} else {
 				// no more retries -- job failed
@@ -983,7 +983,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				//
 				// Deal with retries.
 				//
-			if( job->GetRetries() < job->GetRetryMax() ) {
+			if ( job->DoRetry() ) {
 				RestartNode( job, recovery );
 			} else {
 					// no more retries -- node failed
@@ -1655,7 +1655,7 @@ Dag::PreScriptReaper( Job *job, int status )
 		}
 
 			// Check for retries.
-		else if( job->GetRetries() < job->GetRetryMax() ) {
+		else if ( job->DoRetry() ) {
 			job->TerminateFailure();
 			// Note: don't update count in metrics here because we're
 			// retrying!
@@ -2526,11 +2526,11 @@ Dag::isCycle ()
 bool
 Dag::CheckForDagAbort(Job *job, const char *type)
 {
-	if ( job->have_abort_dag_val &&
-				job->retval == job->abort_dag_val ) {
+	if ( job->DoAbort() ) {
 		debug_printf( DEBUG_QUIET, "Aborting DAG because we got "
 				"the ABORT exit value from a %s\n", type);
 		_dagIsAborted = true;
+
 		if ( job->have_abort_dag_return_val ) {
 			main_shutdown_rescue( job->abort_dag_return_val,
 						job->abort_dag_return_val != 0 ? DAG_STATUS_ABORT :

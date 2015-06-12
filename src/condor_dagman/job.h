@@ -288,6 +288,19 @@ class Job {
 	bool TerminateSuccess();
 	bool TerminateFailure();
 
+		/** Should this node abort the DAG?
+        	@return true: node should abort the DAG; false node should
+				not abort the DAG
+		*/
+	bool DoAbort() { return have_abort_dag_val &&
+				( retval == abort_dag_val ); }
+
+		/** Should we retry this node (if it failed)?
+			@return true: retry the node; false: don't retry
+		*/
+	bool DoRetry() { return !DoAbort() &&
+				( GetRetries() < GetRetryMax() ); }
+
     /** Returns true if the node's pre script, batch job, or post
         script are currently submitted or running.
         @return true: node is active, false: otherwise
