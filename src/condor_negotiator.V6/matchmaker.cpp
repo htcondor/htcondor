@@ -4287,7 +4287,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
         }
 
 		bool pslotRankMatch = false;
-		if (!is_a_match) {
+		if (!is_a_match && ConsiderPreemption) {
 			bool jobWantsMultiMatch = false;
 			request.LookupBool(ATTR_WANT_PSLOT_PREEMPTION, jobWantsMultiMatch);
 			if (param_boolean("ALLOW_PSLOT_PREEMPTION", false) && jobWantsMultiMatch) {
