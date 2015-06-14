@@ -5990,7 +5990,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 		// Lookup the vector of claim ids for this startd
 	std::string hash_key = name + ipaddr;
 	std::vector<std::string> &child_claims = childClaimHash[hash_key];
-	if ( numDslots != child_claims.size() ) {
+	if ( numDslots != (int)child_claims.size() ) {
 		dprintf( D_FULLDEBUG, "Wrong number of dslot claim ids for %s, ignoring for pslot preemption\n", name.c_str() );
 		return false;
 	}
