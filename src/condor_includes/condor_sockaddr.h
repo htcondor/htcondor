@@ -103,6 +103,8 @@ public:
 	bool from_ip_string(const char* ip_string);
 
 	bool from_ip_and_port_string( const char * ip_and_port_string );
+		// Have I mentioned recently how much I hate life?
+	bool from_ccb_safe_string( const char * ccb_safe_string );
 
 		// sinful string could contain either IP address or hostname.
 		// from_sinful() calls gethostbyname to resolve DNS name to IP addr.
@@ -123,6 +125,8 @@ public:
 	MyString to_ip_string(bool decorate=false) const;
 		// We must "decorate".
 	MyString to_ip_and_port_string();
+		// Have I mentioned recently how much I hate life?
+	MyString to_ccb_safe_string();
 		// it it fails on inet_ntop(), returns NULL and given buf
 		// will not be modified.
 		// decorate==true - Add additional decorations appropriate
