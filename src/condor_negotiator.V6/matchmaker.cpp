@@ -4860,7 +4860,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 				// NOTE: returnPslotToMatchList only works for p-slots; assumes they are not preempted.
 			if (is_a_match && !returnPslotToMatchList(request, offer))
 			{
-				dprintf(D_FULLDEBUG, "Unable to return still-valid offer to the match list.");
+				dprintf(D_FULLDEBUG, "Unable to return still-valid offer to the match list.\n");
 			}
 		}
     }
@@ -5230,6 +5230,10 @@ pop_candidate()
 	return candidate;
 }
 
+// This method assumes the ad being inserted was just popped from the
+// top of the list. Specicifically, we assume there is room at the top
+// of the list for insertion, the list is sorted, and the ad being
+// inserted is likely to sort toward the top of the list.
 bool Matchmaker::MatchListType::
 insert_candidate(ClassAd * candidate,
 	double candidateRankValue,
@@ -5240,27 +5244,27 @@ insert_candidate(ClassAd * candidate,
 {
 	if (adListHead == 0) {return false;}
 	adListHead--;
-	AdListArray[adListHead].ad = candidate;
-	AdListArray[adListHead].RankValue = candidateRankValue;
-	AdListArray[adListHead].PreJobRankValue = candidatePreJobRankValue;
-	AdListArray[adListHead].PostJobRankValue = candidatePostJobRankValue;
-	AdListArray[adListHead].PreemptRankValue = candidatePreemptRankValue;
-	AdListArray[adListHead].PreemptStateValue = candidatePreemptState;
+	AdListEntry new_entry;
+	new_entry.ad = candidate;
+	new_entry.RankValue = candidateRankValue;
+	new_entry.PreJobRankValue = candidatePreJobRankValue;
+	new_entry.PostJobRankValue = candidatePostJobRankValue;
+	new_entry.PreemptRankValue = candidatePreemptRankValue;
+	new_entry.PreemptStateValue = candidatePreemptState;
 
 		// Hand-rolled insertion sort; as the list was previously sorted,
 		// we know this will be O(n).
-	AdListEntry x;
-	for (size_t idx=adListHead+1; idx<static_cast<size_t>(adListLen); idx++)
+	int insert_idx = adListHead;
+	while ( insert_idx < adListLen - 1 )
 	{
-		size_t j = idx;
-		x = AdListArray[idx];
-		while ((j > static_cast<size_t>(adListHead)) && sort_compare(&AdListArray[j-1], &x) > 0)
-		{
-			AdListArray[j] = AdListArray[j-1];
-			j--;
+		if ( sort_compare( &new_entry, &AdListArray[insert_idx + 1] ) > 0 ) {
+			AdListArray[insert_idx] = AdListArray[insert_idx + 1];
+			insert_idx++;
+		} else {
+			break;
 		}
-		AdListArray[j] = x;
 	}
+	AdListArray[insert_idx] = new_entry;
 	return true;
 }
 
