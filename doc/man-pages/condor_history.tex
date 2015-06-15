@@ -15,6 +15,7 @@
 \oOptArg{-file}{filename}
 \oOptArg{-userlog}{filename}
 \oOptArg{-format}{formatString AttributeName}
+\oOptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]}
 \oOpt{-l \Bar -long \Bar -xml} 
 \oOptArg{-match}{number}
 \oOpt{cluster \Bar cluster.process \Bar owner}
@@ -76,6 +77,12 @@ file.
     the normal output of \Condor{history} will be blank.}
   \OptItem{\OptArg{-format}{formatString}{AttributeName}}{Display jobs
     with a custom format. See the \Condor{q} man page \Opt{-format} option
+    for details.}
+  \OptItem{\OptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]} 
+  or \OptArg{-af[:tn,lVh]}{attr1 [attr2 ...]}} {
+    Display attribute(s) or expression(s)
+    formatted in a default way according to attribute types.  
+    See the \Condor{q} man page \Opt{-autoformat} option
     for details.}
   \OptItem{\Opt{-l} or \Opt{-long}}{Display job ClassAds in long format.}
   \OptItem{\OptArg{-match}{number}}{Limit the number of jobs displayed
