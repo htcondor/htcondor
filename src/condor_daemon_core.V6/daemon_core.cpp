@@ -1112,7 +1112,32 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		free( sinful_public );
 		sinful_public = NULL;
 
-		char const *addr = ((Sock*)(*sockTable)[initial_command_sock()].iosock)->get_sinful_public();
+		// In mixed mode, this will probably be an IPv6 address, which is
+		// suboptimal for backwards-compatibility.
+		// char const *addr = ((Sock*)(*sockTable)[initial_command_sock()].iosock)->get_sinful_public();
+		int initialCommandSock = initial_command_sock();
+		if( initialCommandSock == -1 ) {
+			EXCEPT( "Unable to find initial command socket!" );
+		}
+
+		Sock * sock = (Sock *)(*sockTable)[initialCommandSock].iosock;
+		condor_sockaddr sa = sock->my_addr();
+
+		char const * addr = sock->get_sinful_public();
+		if(! sa.is_ipv4()) {
+			for( int i = initialCommandSock; i < nSock; ++i ) {
+				if( (*sockTable)[i].iosock == NULL ) { continue; }
+				if(! (*sockTable)[i].is_command_sock) { continue; }
+
+				sock = (Sock *)(*sockTable)[i].iosock;
+				sa = sock->my_addr();
+				if(! sa.is_ipv4()) { continue; }
+
+				addr = sock->get_sinful_public();
+				break;
+			}
+		}
+
 		if( !addr ) {
 			EXCEPT("Failed to get public address of command socket!");
 		}
