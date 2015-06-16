@@ -4164,21 +4164,21 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		// we can use cached information.  pop off the best
 		// candidate from our sorted list.
 		while( (cached_bestSoFar = MatchList->pop_candidate()) ) {
-            int t = 0;
-            cached_bestSoFar->LookupInteger(ATTR_PREEMPT_STATE_, t);
-            PreemptState pstate = PreemptState(t);
-			if ( ((pstate != NO_PREEMPTION) && SubmitterLimitPermits(&request, cached_bestSoFar, limitUsed, submitterLimit, pieLeft)) ||
-			     (SubmitterLimitPermits(&request, cached_bestSoFar, limitUsedUnclaimed, submitterLimitUnclaimed, pieLeft)) ) {
-				if (evaluate_limits_with_match) {
-					std::string limits;
-					if (request.EvalString(ATTR_CONCURRENCY_LIMITS, cached_bestSoFar, limits)) {
-						if (!rejectForConcurrencyLimits(limits)) {
-							break;
-						}
-					} else {
-						dprintf(D_FULLDEBUG, "Failed to evaluate concurrency limit attribute to string.");
+			if (evaluate_limits_with_match) {
+				std::string limits;
+				if (request.EvalString(ATTR_CONCURRENCY_LIMITS, cached_bestSoFar, limits)) {
+					if (rejectForConcurrencyLimits(limits)) {
+						continue;
 					}
 				}
+			}
+			int t = 0;
+			cached_bestSoFar->LookupInteger(ATTR_PREEMPT_STATE_, t);
+			PreemptState pstate = PreemptState(t);
+			if ((pstate != NO_PREEMPTION) && SubmitterLimitPermits(&request, cached_bestSoFar, limitUsed, submitterLimit, pieLeft)) {
+				break;
+			} else if (SubmitterLimitPermits(&request, cached_bestSoFar, limitUsedUnclaimed, submitterLimitUnclaimed, pieLeft)) {
+				break;
 			}
 			MatchList->increment_rejForSubmitterLimit();
 		}
