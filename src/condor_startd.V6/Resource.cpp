@@ -1778,7 +1778,8 @@ Resource::evalRetirementRemaining()
 		MaxJobRetirementTime = 0;
 	}
 
-	return MaxJobRetirementTime - JobAge;
+	int remaining = MaxJobRetirementTime - JobAge;
+	return (remaining < 0) ? 0 : remaining;
 }
 
 bool
@@ -2414,6 +2415,7 @@ Resource::makeChildClaimIds() {
 		bool firstTime = true;
 
 		for (std::set<Resource *,ResourceLess>::iterator i(m_children.begin());  i != m_children.end();  i++) {
+			std::string buf = "";
 			if (firstTime) {
 				firstTime = false;
 			} else {
@@ -2422,15 +2424,15 @@ Resource::makeChildClaimIds() {
 			Resource *child = (*i);
 			if (child->r_pre_pre) {
 				attrValue += '"';
-				attrValue += child->r_pre_pre->id();
+				attrValue += EscapeAdStringValue( child->r_pre_pre->id(), buf );
 				attrValue += '"';
 			} else if (child->r_pre) {
 				attrValue += '"';
-				attrValue += child->r_pre->id();
+				attrValue += EscapeAdStringValue( child->r_pre->id(), buf );
 				attrValue += '"';
 			} else if (child->r_cur) {
 				attrValue += '"';
-				attrValue += child->r_cur->id();
+				attrValue += EscapeAdStringValue( child->r_cur->id(), buf );
 				attrValue += '"';
 			}
 		}
@@ -3461,6 +3463,7 @@ Resource::publishDynamicChildSummaries(ClassAd *cap) {
 	attrs.push_back(ATTR_STATE);
 	attrs.push_back(ATTR_ACTIVITY);
 	attrs.push_back(ATTR_ENTERED_CURRENT_STATE);
+	attrs.push_back(ATTR_RETIREMENT_TIME_REMAINING);
 
 	attrs.push_back(ATTR_CPUS);
 	attrs.push_back(ATTR_MEMORY);

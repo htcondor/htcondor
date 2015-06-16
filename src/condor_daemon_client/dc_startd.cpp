@@ -156,12 +156,19 @@ ClaimStartdMsg::putExtraClaims(Sock *sock) {
 
 	const CondorVersionInfo *cvi = sock->get_peer_version();
 
-	if (!cvi) {
+		// Older versions of Condor don't know about extra claim ids.
+		// But with SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION=True,
+		// the schedd can't get the startd's version from the ReliSock.
+		// In that case, use the old protocol if there are no extra
+		// claim ids. Otherwise, assume the startd is new enough.
+		// If it isn't, the claim request will probably fail anyway,
+		// because the single claim won't have enough resources for
+		// the request.
+	if (!cvi && m_extra_claims.length() == 0) {
 		return true;
 	}
 
-		// Older versions of condor don't know about this
-	if (!cvi->built_since_version(8,2,2)) {
+	if (cvi && !cvi->built_since_version(8,2,3)) {
 		return true;
 	}
 
