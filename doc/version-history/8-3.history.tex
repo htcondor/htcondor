@@ -46,6 +46,14 @@ owner (submitting user).
 node job if the DAG has been \Condor{rm}'ed.
 \Ticket{5089}
 
+\item The matchmaking optimizations enabled by \MacroNI{CONSUMPTION\_POLICY}
+and \MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING} now work together properly.
+Previously, machines that were configured with a consumption policy
+could not benefit from the matchlist caching option of the
+\Condor{negotiator}, which could result in it taking more time to match
+multiple jobs to a single partitionable slot.
+\Ticket{4973}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
