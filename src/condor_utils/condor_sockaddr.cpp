@@ -423,6 +423,30 @@ bool condor_sockaddr::from_ip_and_port_string( const char * ip_and_port_string )
 	return true;
 }
 
+bool condor_sockaddr::from_ccb_safe_string( const char * ip_and_port_string ) {
+	ASSERT( ip_and_port_string );
+
+	char copy[IP_STRING_BUF_SIZE];
+	strncpy( copy, ip_and_port_string, IP_STRING_BUF_SIZE );
+
+	char * lastColon = strrchr( copy, '-' );
+	if( lastColon == NULL ) { return false; }
+	* lastColon = '\0';
+
+	for( unsigned i = 0; i < IP_STRING_BUF_SIZE; ++i ) {
+		if( copy[i] == '-' ) { copy[i] = ':'; }
+	}
+	if( ! from_ip_string( copy ) ) { return false; }
+
+	++lastColon;
+	char * end = NULL;
+	unsigned long port = strtoul( lastColon, & end, 10 );
+	if( * end != '\0' ) { return false; }
+	set_port( port );
+
+	return true;
+}
+
 bool condor_sockaddr::from_ip_string(const char* ip_string)
 {
 	// We're blowing an assertion on NULL input instead of 
@@ -518,6 +542,28 @@ MyString condor_sockaddr::to_ip_and_port_string() {
 	// doesn't exist in libcondorsyscall.
 	std::ostringstream oss;
 	oss << to_ip_string( true ).c_str() << ":" << get_port();
+	return oss.str().c_str();
+}
+
+MyString condor_sockaddr::to_ccb_safe_string() {
+	//
+	// For backwards-compatibility with broken 8.2 Sinful code, we can't
+	// allow a colon to appear in a CCB ID string.  That includes both
+	// the ip:port separator, and the colons in the IPv6 literal.
+	//
+	char colonated[IP_STRING_BUF_SIZE];
+	if(! to_ip_string( colonated, IP_STRING_BUF_SIZE, true )) {
+		return MyString();
+	}
+
+	for( unsigned i = 0; i < IP_STRING_BUF_SIZE; ++i ) {
+		if( colonated[i] == ':' ) { colonated[i] = '-'; }
+	}
+
+	// Using formatstr() would be better in every possible way, but it
+	// doesn't exist in libcondorsyscall.
+	std::ostringstream oss;
+	oss << colonated << "-" << get_port();
 	return oss.str().c_str();
 }
 

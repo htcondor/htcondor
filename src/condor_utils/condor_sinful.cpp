@@ -382,7 +382,7 @@ Sinful::addAddrToAddrs( const condor_sockaddr & sa ) {
 	addrs.push_back( sa );
 	StringList sl;
 	for( unsigned i = 0; i < addrs.size(); ++i ) {
-		sl.append( addrs[i].to_ip_and_port_string().c_str() );
+		sl.append( addrs[i].to_ccb_safe_string().c_str() );
 	}
 	char * slString = sl.print_to_delimed_string( "+" );
 	setParam( "addrs", slString );
@@ -541,7 +541,7 @@ Sinful::parseSinfulString() {
 				char * addrString = NULL;
 				while( (addrString = sl.next()) != NULL ) {
 					condor_sockaddr sa;
-					if( sa.from_ip_and_port_string( addrString ) ) {
+					if( sa.from_ccb_safe_string( addrString ) ) {
 						addrs.push_back( sa );
 					} else {
 						m_valid = false;
