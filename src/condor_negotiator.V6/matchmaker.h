@@ -207,6 +207,11 @@ class Matchmaker : public Service
 		void calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &, double &, double &,
 										   double &, double &);
 
+		// Check to see if any concurrency limit is violated with the given set of limits.
+		// *Note* limits will be changed to lower-case.
+		bool rejectForConcurrencyLimits(std::string &limits);
+
+
 		/** Calculate a submitter's share of the pie.
 			@param quiet Do not emitt debug information about the calculation
 			@param scheddName Name attribute from the submitter ad.
@@ -383,7 +388,8 @@ class Matchmaker : public Service
 		int rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
 		int rejPreemptForRank;	//   - startd RANKs new job lower?
 		int rejForSubmitterLimit;   //   - not enough group quota?
-        string rejectedConcurrencyLimit; // the name of concurrency limit rejected
+	std::set<std::string> rejectedConcurrencyLimits;
+	std::string lastRejectedConcurrencyString;
 
 
 		// Class used to store each individual entry in the
