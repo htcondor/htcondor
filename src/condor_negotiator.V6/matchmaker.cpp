@@ -4115,7 +4115,6 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	string remoteUser;
 	classad::Value	result;
 	bool			val;
-	float			tmp;
 		// request attributes
 	int				requestAutoCluster = -1;
 
@@ -4427,26 +4426,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
             continue;
         }
 
-		candidatePreJobRankValue = EvalNegotiatorMatchRank(
-		  "NEGOTIATOR_PRE_JOB_RANK",NegotiatorPreJobRank,
-		  request,candidate);
-
-		// calculate the request's rank of the offer
-		if(!request.EvalFloat(ATTR_RANK,candidate,tmp)) {
-			tmp = 0.0;
-		}
-		candidateRankValue = tmp;
-
-		candidatePostJobRankValue = EvalNegotiatorMatchRank(
-		  "NEGOTIATOR_POST_JOB_RANK",NegotiatorPostJobRank,
-		  request,candidate);
-
-		candidatePreemptRankValue = -(FLT_MAX);
-		if(candidatePreemptState != NO_PREEMPTION) {
-			candidatePreemptRankValue = EvalNegotiatorMatchRank(
-			  "PREEMPTION_RANK",PreemptionRank,
-			  request,candidate);
-		}
+		calculateRanks(request, candidate, candidatePreemptState, candidateRankValue, candidatePreJobRankValue, candidatePostJobRankValue, candidatePreemptRankValue);
 
 		if ( MatchList ) {
 			MatchList->add_candidate(
@@ -4643,6 +4623,58 @@ insertNegotiatorMatchExprs( ClassAdListDoesNotDeleteAds &cal )
 		insertNegotiatorMatchExprs( ad );
 	}
 	cal.Close();
+}
+
+void Matchmaker::
+calculateRanks(ClassAd &request,
+               ClassAd *candidate,
+               PreemptState candidatePreemptState,
+               double &candidateRankValue,
+               double &candidatePreJobRankValue,
+               double &candidatePostJobRankValue,
+               double &candidatePreemptRankValue
+              )
+{
+	candidatePreJobRankValue = EvalNegotiatorMatchRank(
+		"NEGOTIATOR_PRE_JOB_RANK",NegotiatorPreJobRank,
+		request, candidate);
+
+	// calculate the request's rank of the candidate
+	double tmp;
+	if(!request.EvalFloat(ATTR_RANK, candidate, tmp)) {
+		tmp = 0.0;
+	}
+	candidateRankValue = tmp;
+
+	candidatePostJobRankValue = EvalNegotiatorMatchRank(
+		"NEGOTIATOR_POST_JOB_RANK",NegotiatorPostJobRank,
+		request, candidate);
+
+	candidatePreemptRankValue = -(FLT_MAX);
+	if(candidatePreemptState != NO_PREEMPTION) {
+		candidatePreemptRankValue = EvalNegotiatorMatchRank(
+			"PREEMPTION_RANK",PreemptionRank,
+			request, candidate);
+	}
+}
+
+	// NOTE NOTE: this assumes that p-slots are not being preempted.
+bool Matchmaker::
+returnPslotToMatchList(ClassAd &request, ClassAd *offer)
+{
+	if (!MatchList) {return false;}
+
+	double candidateRankValue, candidatePreJobRankValue, candidatePostJobRankValue, candidatePreemptRankValue;
+	calculateRanks(request, offer, NO_PREEMPTION, candidateRankValue, candidatePreJobRankValue, candidatePostJobRankValue, candidatePreemptRankValue);
+
+	return MatchList->insert_candidate(
+		offer,
+		candidateRankValue,
+		candidatePreJobRankValue,
+		candidatePostJobRankValue,
+		candidatePreemptRankValue,
+		NO_PREEMPTION
+	);
 }
 
 void Matchmaker::
@@ -4872,6 +4904,19 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
         // At this point the match is fully vetted so we can also deduct
         // the resource assets.
         offer->Assign(CP_MATCH_COST, cp_deduct_assets(request, *offer));
+
+		if (MatchList)
+		{
+			consumption_map_t consumption;
+			cp_override_requested(request, *offer, consumption);
+			bool is_a_match = cp_sufficient_assets(*offer, consumption) && IsAMatch(&request, offer);
+			cp_restore_requested(request, consumption);
+				// NOTE: returnPslotToMatchList only works for p-slots; assumes they are not preempted.
+			if (is_a_match && !returnPslotToMatchList(request, offer))
+			{
+				dprintf(D_FULLDEBUG, "Unable to return still-valid offer to the match list.\n");
+			}
+		}
     }
 
     // 4. notifiy the accountant
@@ -5237,6 +5282,44 @@ pop_candidate()
 	}
 
 	return candidate;
+}
+
+// This method assumes the ad being inserted was just popped from the
+// top of the list. Specicifically, we assume there is room at the top
+// of the list for insertion, the list is sorted, and the ad being
+// inserted is likely to sort toward the top of the list.
+bool Matchmaker::MatchListType::
+insert_candidate(ClassAd * candidate,
+	double candidateRankValue,
+	double candidatePreJobRankValue,
+	double candidatePostJobRankValue,
+	double candidatePreemptRankValue,
+	PreemptState candidatePreemptState)
+{
+	if (adListHead == 0) {return false;}
+	adListHead--;
+	AdListEntry new_entry;
+	new_entry.ad = candidate;
+	new_entry.RankValue = candidateRankValue;
+	new_entry.PreJobRankValue = candidatePreJobRankValue;
+	new_entry.PostJobRankValue = candidatePostJobRankValue;
+	new_entry.PreemptRankValue = candidatePreemptRankValue;
+	new_entry.PreemptStateValue = candidatePreemptState;
+
+		// Hand-rolled insertion sort; as the list was previously sorted,
+		// we know this will be O(n).
+	int insert_idx = adListHead;
+	while ( insert_idx < adListLen - 1 )
+	{
+		if ( sort_compare( &new_entry, &AdListArray[insert_idx + 1] ) > 0 ) {
+			AdListArray[insert_idx] = AdListArray[insert_idx + 1];
+			insert_idx++;
+		} else {
+			break;
+		}
+	}
+	AdListArray[insert_idx] = new_entry;
+	return true;
 }
 
 bool Matchmaker::MatchListType::
