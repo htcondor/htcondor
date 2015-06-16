@@ -684,7 +684,7 @@ job identifier within a pool.
 It currently contains the \Condor{schedd} daemon \Attr{Name} attribute, 
 a job identifier composed of attributes \Attr{ClusterId} and 
 \Attr{ProcId} separated by a period, 
-and the \Condor{schedd} attribute \Attr{DaemonStartTime},
+and the job's submission time in seconds since 1970-01-01 00:00:00 UTC,
 separated by \verb@#@ characters.
 The value \verb@submit.example.com#152.3#1358363336@ is an example.
 
