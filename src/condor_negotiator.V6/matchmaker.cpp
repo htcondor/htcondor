@@ -4044,7 +4044,10 @@ Matchmaker::
 rejectForConcurrencyLimits(std::string &limits)
 {
 	std::transform(limits.begin(), limits.end(), limits.begin(), ::tolower);
-	if (lastRejectedConcurrencyString == limits) {return false;}
+	if (lastRejectedConcurrencyString == limits) {
+		//dprintf(D_FULLDEBUG, "Rejecting job due to concurrency limits %s (see original rejection message).\n", limits.c_str());
+		return true;
+	}
 
 	StringList list(limits.c_str());
 	char *limit;
@@ -4064,8 +4067,9 @@ rejectForConcurrencyLimits(std::string &limits)
 			limit, count, max);
 
 		if (count < 0) {
-			EXCEPT("ERROR: Concurrency Limit %s is %f (below 0)",
+			dprintf(D_ALWAYS, "ERROR: Concurrency Limit %s is %f (below 0)\n",
 				limit, count);
+			return true;
 		}
 
 		if (count + increment > max) {
