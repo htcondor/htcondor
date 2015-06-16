@@ -4169,11 +4169,11 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
             PreemptState pstate = PreemptState(t);
 			if ( ((pstate != NO_PREEMPTION) && SubmitterLimitPermits(&request, cached_bestSoFar, limitUsed, submitterLimit, pieLeft)) ||
 			     (SubmitterLimitPermits(&request, cached_bestSoFar, limitUsedUnclaimed, submitterLimitUnclaimed, pieLeft)) ) {
-				if (cached_bestSoFar && evaluate_limits_with_match) {
+				if (evaluate_limits_with_match) {
 					std::string limits;
 					if (request.EvalString(ATTR_CONCURRENCY_LIMITS, cached_bestSoFar, limits)) {
-						if (rejectForConcurrencyLimits(limits)) {
-							cached_bestSoFar = NULL;
+						if (!rejectForConcurrencyLimits(limits)) {
+							break;
 						}
 					} else {
 						dprintf(D_FULLDEBUG, "Failed to evaluate concurrency limit attribute to string.");
