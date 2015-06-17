@@ -205,6 +205,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 		if (do_handshake) {
 			firm = handshake(m_methods_to_try, non_blocking);
 		}
+		do_handshake = true;
 
 		if ( firm == -2 ) {
 			dprintf(D_SECURITY, "AUTHENTICATE: handshake would block\n");
