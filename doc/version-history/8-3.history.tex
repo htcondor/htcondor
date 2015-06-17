@@ -77,6 +77,12 @@ owner (submitting user).
 node job if the DAG has been \Condor{rm}'ed.
 \Ticket{5089}
 
+\item A job ad's \Attr{ConcurrencyLimits} attribute can now be a ClassAd
+expression that references attributes of the machine ads that the job
+may be matched to.
+The expression must evaluate to a string that has the required format.
+\Ticket{5006}
+
 \item The matchmaking optimizations enabled by \MacroNI{CONSUMPTION\_POLICY}
 and \MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING} now work together properly.
 Previously, machines that were configured with a consumption policy
@@ -250,6 +256,11 @@ and Submitter ClassAds the Collector has seen.
 \item Augmented the ClassAd function \Procedure{debug} 
 to print an appropriate error message for undefined ClassAd functions.
 \Ticket{4885}
+
+\item Improved the compatibility of HTCondor version 8.3.6 daemons to work
+with HTCondor version 8.2 daemons,
+when running in a IPv4/IPv6 mixed mode pool.
+\Ticket{5074}
 
 \end{itemize}
 
