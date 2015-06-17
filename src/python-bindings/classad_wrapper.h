@@ -59,11 +59,11 @@ struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassA
     bool matches(boost::python::object) const;
     bool symmetricMatch(boost::python::object) const;
 
-    std::string toRepr();
+    std::string toRepr() const;
 
-    std::string toString();
+    std::string toString() const;
 
-    std::string toOldString();
+    std::string toOldString() const;
 
     AttrKeyIter beginKeys();
 

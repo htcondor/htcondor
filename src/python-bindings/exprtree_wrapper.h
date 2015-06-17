@@ -27,9 +27,9 @@ struct ExprTreeHolder
 
     boost::python::object Evaluate(boost::python::object scope=boost::python::object()) const;
 
-    std::string toRepr();
+    std::string toRepr() const;
 
-    std::string toString();
+    std::string toString() const;
 
     classad::ExprTree *get() const;
 
