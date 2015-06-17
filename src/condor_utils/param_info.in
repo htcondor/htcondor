@@ -7079,6 +7079,16 @@ friendly_name=Name of ecryptfs tool to add a passphrase
 review=toddt
 tags=ecryptfs
 
+[ECRYPTFS_KEY_TIMEOUT]
+default=3600
+range=600,86400
+type=int
+reconfig=true
+customization=expert
+friendly_name=Duration in seconds for key timeout
+review=toddt
+tags=ecryptfs
+
 [FILE_TRANSFER_DISK_LOAD_THROTTLE]
 default=
 type=string
