@@ -2090,6 +2090,14 @@ friendly_name=Sec Debug Print Keys
 review=?
 tags=daemon_core,daemon_core
 
+[SEC_DEFAULT_AUTHENTICATION_TIMEOUT]
+default=20
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Default timeout for all authentication methods
+tags=daemon_core,security
+
 [WANT_UDP_COMMAND_SOCKET]
 default=true
 type=bool
@@ -2127,7 +2135,7 @@ review=?
 tags=daemon_core,daemon_core
 
 [PRIVATE_NETWORK_NAME]
-default=
+default=$(FULL_HOSTNAME)
 type=string
 reconfig=true
 customization=seldom
@@ -4595,7 +4603,7 @@ review=?
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_INFORM_STARTD]
-default=true
+default=false
 type=bool
 reconfig=true
 customization=seldom
@@ -4714,6 +4722,15 @@ customization=seldom
 friendly_name=Negotiator Ignore User Priorities
 review=?
 tags=negotiator,matchmaker
+
+[RECEIVE_MSGS_DURATION]
+default=250
+type=int
+reconfig=true
+customization=devel
+friendly_name=DaemonCore Receive Messages Duration
+usage=how long to keep processing callback messages before returing to the pump. For the SCHEDD, how long to keep processing matches from the negotiator before checking for other work.
+tags=daemon_core,schedd
 
 [TCP_COLLECTOR_HOST]
 default=
@@ -5277,8 +5294,8 @@ review=?
 tags=schedd,schedd
 
 [MAX_JOBS_RUNNING]
-default=ifThenElse( $(DETECTED_MEMORY) < 10000, $(DETECTED_MEMORY), 10000 )
-win32_default=200
+default=MIN({$(DETECTED_MEMORY), 10000})
+win32_default=MIN({($(DETECTED_MEMORY)-200)/10, 2000})
 type=int
 reconfig=true
 customization=seldom
@@ -5319,6 +5336,24 @@ reconfig=true
 customization=seldom
 friendly_name=Max Jobs Submitted
 review=?
+tags=schedd,schedd
+
+[MAX_JOBS_PER_OWNER]
+default=100000
+type=int
+reconfig=true
+customization=normal
+friendly_name=Max jobs in the SCHEDD's queue from a single owner.
+usage=Ensure that a single user does not fill the SCHEDD
+tags=schedd,schedd
+
+[MAX_JOBS_PER_SUBMISSION]
+default=20000
+type=int
+reconfig=true
+customization=normal
+friendly_name=Max jobs in a single submit
+usage=Circuit breaker to prevent an excessive number of a jobs in a single submission. Use to reject one form of mistake
 tags=schedd,schedd
 
 [NEGOTIATE_ALL_JOBS_IN_CLUSTER]
@@ -6396,7 +6431,7 @@ tags=schedd
 [WANT_SUSPEND]
 default=False
 [WANT_VACATE]
-default=False
+default=True
 [SUSPEND]
 default=False
 [CONTINUE]
@@ -7835,7 +7870,7 @@ default=(TARGET.JobUniverse == $(VM))
 [TESTINGMODE_WANT_SUSPEND]
 default=False
 [TESTINGMODE_WANT_VACATE]
-default=False
+default=True
 [TESTINGMODE_START]
 default=True
 [TESTINGMODE_SUSPEND]
@@ -8065,7 +8100,7 @@ review=?
 friendly_name=Use a no-preemption policy
 default : @end
 	WANT_SUSPEND=False
-	WANT_VACATE=False
+	WANT_VACATE=True
 	SUSPEND=False
 	CONTINUE=True
 	PREEMPT=False
@@ -8145,7 +8180,7 @@ default : @end
 	ALLOW_READ=*
 	ALLOW_WRITE=$(FULL_HOSTNAME) $(IP_ADDRESS)
 	ALLOW_NEGOTIATOR=$(CONDOR_HOST)
-	ALLOW_NEGOTIATOR_SCHEDD=$(CONDOR_HOST) $(FLOCK_NEGOTIATOR_HOSTS)
+	ALLOW_NEGOTIATOR_SCHEDD=$(ALLOW_NEGOTIATOR) $(FLOCK_NEGOTIATOR_HOSTS)
 	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE) $(FLOCK_FROM)
 	ALLOW_WRITE_STARTD=$(ALLOW_WRITE) $(FLOCK_FROM)
 	ALLOW_READ_COLLECTOR=$(ALLOW_READ) $(FLOCK_FROM)

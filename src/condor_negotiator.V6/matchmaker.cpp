@@ -718,7 +718,7 @@ reinitialize ()
 	if( ConsiderEarlyPreemption && !ConsiderPreemption ) {
 		dprintf(D_ALWAYS,"WARNING: NEGOTIATOR_CONSIDER_EARLY_PREEMPTION=true will be ignored, because NEGOTIATOR_CONSIDER_PREEMPTION=false\n");
 	}
-	want_inform_startd = param_boolean("NEGOTIATOR_INFORM_STARTD", true);
+	want_inform_startd = param_boolean("NEGOTIATOR_INFORM_STARTD", false);
 	want_nonblocking_startd_contact = param_boolean("NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT",true);
 
 	// we should figure these out automatically someday ....
