@@ -3273,12 +3273,24 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 		do {
 			rip->r_reqexp->restore();
 			if (mach_classad->EvalBool( ATTR_REQUIREMENTS, req_classad, mach_requirements) == 0) {
+				dprintf(D_ALWAYS,
+					"STARTD Requirements expression no longer evaluates to a boolean %s MODIFY_REQUEST_EXPR_ edits\n",
+					unmodified_req_classad ? "with" : "w/o"
+					);
 				mach_requirements = 0;  // If we can't eval it as a bool, treat it as false
 			}
 				// If the pslot cannot support this request, ABORT iff there is not
 				// an unmodified_req_classad backup copy we can try on the next iteration of
 				// the while loop
 			if (mach_requirements == 0) {
+				if (IsDebugVerbose(D_MATCH)) {
+					dprintf(D_MATCH | D_FULLDEBUG,
+						"STARTD Requirements do not match, %s MODIFY_REQUEST_EXPR_ edits. Job ad was ============================\n", 
+						unmodified_req_classad ? "with" : "w/o");
+					dPrintAd(D_MATCH | D_FULLDEBUG, *req_classad, true);
+					dprintf(D_MATCH | D_FULLDEBUG, "Machine ad was ============================\n");
+					dPrintAd(D_MATCH | D_FULLDEBUG, *mach_classad, true);
+				}
 				if (unmodified_req_classad) {
 					// our modified req_classad no longer matches, put back the original
 					// so we can try again.
