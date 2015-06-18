@@ -3496,7 +3496,7 @@ Resource::publishDynamicChildSummaries(ClassAd *cap) {
 	cap->Assign(ATTR_NUM_DYNAMIC_SLOTS, m_children.size());
 
 		// If not set, turn off the whole thing
-	if (param_boolean("ALLOW_PSLOT_PREEMPTION", false) == false) {
+	if (param_boolean("ADVERTISE_PSLOT_ROLLUP_INFORMATION", true) == false) {
 		return;
 	}
 
