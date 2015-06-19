@@ -124,7 +124,7 @@ status to be reported incorrectly.
 
 \begin{itemize}
 
-\item HTCondor version 8.3.6 released on June 16, 2015.
+\item HTCondor version 8.3.6 released on June 23, 2015.
 
 \end{itemize}
 
@@ -394,6 +394,10 @@ the script interpreter did not exist, HTCondor would claim that the
 script file did not exist.
 Now the error message properly indicates that the interpreter is invalid.
 \Ticket{3718}
+
+\item Fixed a bug that could cause a daemon to go into an infinite loop
+during authentication, consuming an ever-growing amount of memory.
+\Ticket{5101}
 
 \end{itemize}
 
