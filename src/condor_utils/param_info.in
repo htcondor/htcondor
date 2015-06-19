@@ -4340,17 +4340,17 @@ review=?
 tags=starter,job_info_communicator
 
 [ENCRYPT_EXECUTE_DIRECTORY]
-default=
-type=string
+default=false
+type=bool
 reconfig=true
 customization=seldom
 friendly_name=Encrypt Execute Directory
 review=?
-tags=starter,starter
+tags=startd,starter
 
 [ENCRYPT_EXECUTE_DIRECTORY_FILENAMES]
 default=false
-type=string
+type=bool
 reconfig=true
 customization=seldom
 friendly_name=Encrypt Filenames Inside Execute Directory
