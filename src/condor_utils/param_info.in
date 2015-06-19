@@ -4348,6 +4348,15 @@ friendly_name=Encrypt Execute Directory
 review=?
 tags=starter,starter
 
+[ENCRYPT_EXECUTE_DIRECTORY_FILENAMES]
+default=false
+type=string
+reconfig=true
+customization=seldom
+friendly_name=Encrypt Filenames Inside Execute Directory
+review=?
+tags=startd,starter
+
 [STARTER_JOB_ENVIRONMENT]
 default=
 type=string

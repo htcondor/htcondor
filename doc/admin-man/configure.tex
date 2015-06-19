@@ -11140,6 +11140,17 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
 	requires installation of the ecryptfs-utils package), or the EFS (Encrypted
 	File System) feature of NTFS on Windows.
 
+\label{param:EncryptExecuteDirectoryFilenames}
+\item[\Macro{ENCRYPT\_EXECUTE\_DIRECTORY\_FILENAMES}]
+	When using an encrypted execute directory, the contents of the files
+	will always be encrypted.  On Windows, the filenames are not encrypted,
+	and this setting has no effect.  On Linux, the filenames may or may not
+	be encrypted, but there is some overhead and restrictions on doing so
+	(see ecryptfs documentation).  As a result, by default the filenames
+	are not encrypted on Linux, although the administrator may choose to
+	enable that behavior by setting this configuration variable to
+	\Expr{True}.
+
 \label{param:EcryptfsAddPassphrase}
 \item[\Macro{ECRYPTFS\_ADD\_PASSPHRASE}]
   The path to the \Prog{ecryptfs-add-passphrase} command-line utility. 
