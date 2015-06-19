@@ -240,9 +240,9 @@ bool dslotLookup( const classad::ClassAd *ad, const char *name, int idx, classad
 	if ( ad == NULL || name == NULL || idx < 0 ) {
 		return false;
 	}
-	string attr_name = "child";
+	string attr_name = "Child";
 	attr_name += name;
-	// lookup or evaluate child<name>
+	// lookup or evaluate Child<name>
 	// set value to idx-th entry of resulting ExprList
 	const classad::ExprTree *expr_tree = ad->Lookup( attr_name );
 	if ( expr_tree == NULL || expr_tree->GetKind() != classad::ExprTree::EXPR_LIST_NODE ) {

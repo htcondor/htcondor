@@ -3548,7 +3548,7 @@ Resource::publishDynamicChildSummaries(ClassAd *cap) {
 void
 Resource::rollupDynamicAttrs(ClassAd *cap, std::string &name) const {
 	std::string attrName;
-	attrName = "child" + name;
+	attrName = "Child" + name;
 
 	std::string attrValue = "{";
 	bool firstTime = true;
