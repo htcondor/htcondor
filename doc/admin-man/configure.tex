@@ -11155,7 +11155,8 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
 \item[\Macro{SEC\_DEFAULT\_AUTHENTICATION\_TIMEOUT}]
   The length of time in seconds that HTCondor should attempt
   authenticating network connections before giving up.
-  The default is 20 seconds.
+  The default imposes no time limit, so the attempt never gives up.
+  %The default is 20 seconds.
   Like other security settings, the portion of the configuration variable
   name, \MacroNI{DEFAULT}, 
   may be replaced by a different access level to specify the timeout to use for
