@@ -878,6 +878,7 @@ bool
 DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 {
 	ReliSock sock;
+	ClassAd responseAd;
 
 	dprintf( D_FULLDEBUG, "DedicatedScheduler::deactivateClaim\n");
 
@@ -914,6 +915,13 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 		return false;
 	}
 	
+	// Wait for response from the startd to avoid misleading errors.
+	sock.decode();
+	// Ignore decode/getClassAd errors - Failure to receive the response classad
+	// should "not be critical in any way" (see comment in startd/command.cpp 
+	//  - deactivate_claim()).
+	getClassAd(&sock, responseAd);
+
 		// Clear out this match rec, since it's no longer allocated to
 		// a given MPI job.
 	deallocMatchRec( m_rec );
@@ -3014,7 +3022,17 @@ DedicatedScheduler::AddMrec(
 	// just in case the job is removed while the request is still pending.
 	pending_requests[claim_id]->ChainCollapse();
 
-    if (is_partitionable(match_ad)) {
+    // PartitionableSlot in match_ad can never be 'true' as match_ad was
+    // tweaked by ScheddNegotiate::fixupPartitionableSlot. If we want 
+    // not to store just one 'dynamic' slot per host into all_matches 
+    // and leave behind all extra created dynamic slots 
+    // we need to use/fill pending_matches. Try checking for
+    // SlotTypeID == PARTITIONABLE_SLOT, as this is left unchanged by
+    // ScheddNegotiate::fixupPartitionableSlot.
+    // if (is_partitionable(match_ad)) {
+    int slot_type_id = 0;
+    match_ad->LookupInteger(ATTR_SLOT_TYPE_ID, slot_type_id);
+    if (slot_type_id == 1) { // Cannot include Resource.h from here.
         pending_matches[claim_id] = mrec;
         pending_claims[mrec->publicClaimId()] = claim_id;
     } else {
