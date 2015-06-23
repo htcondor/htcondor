@@ -902,7 +902,7 @@ tags=dagman,dagman_main
 
 [DAGMAN_CONDOR_RM_EXE]
 default=$(BIN)/condor_rm
-win32_default=$(BIN)\condor_submit.exe
+win32_default=$(BIN)\condor_rm.exe
 type=path
 reconfig=false
 customization=expert
