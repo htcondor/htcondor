@@ -1,0 +1,20 @@
+Client specs:
+
+Arg 0 is communication channel to use
+Arg 1 is message
+
+Communication channel is initiated to server and message is sent.
+
+Server specs:
+
+Arg 0 is communication channel to initiate listen on
+Arg 1 is file name to log to
+Arg 2 turns raw mode on with any term by defining $raw
+
+Server initiates itself and establishes a listen on specified comm channel
+and waits for a message. If the message is "quit" it exits.
+
+Any other message gets written to specified log file.
+
+If $raw is defined then no newline is written at end of the message.
+Otherwise the write of the message includes a newline.
