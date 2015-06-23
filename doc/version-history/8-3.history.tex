@@ -74,9 +74,9 @@ multiple jobs to a single partitionable slot.
 
 \begin{itemize}
 
-\item Fixed a bug when running parallel universe jobs on a pool
-with partitionable slots, where too many slots would get 
-claimed for the job.
+\item Fixed a parallel universe bug,
+in which too many slots were claimed for a job
+on a pool with partitionable slots.
 \Ticket{5110}
 
 \item \Condor{dagman} VARS values can now contain single quotes.
