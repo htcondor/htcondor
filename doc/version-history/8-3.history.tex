@@ -87,7 +87,7 @@ retries plus a FINAL node could cause a DAG getting aborted or
 \Condor{rm}'ed to re-submit nodes other than the FINAL node.
 \Ticket{5090}
 
-\item Fixed a bug in \Condor{submit} where using submit attibute
+\item Fixed a bug in \Condor{submit} where using submit attribute
 \Attr{EC2IamProfileArn} would lead to requests to EC2 failing.
 \Ticket{5095}
 
@@ -95,6 +95,12 @@ retries plus a FINAL node could cause a DAG getting aborted or
 and ABORT-DAG-ON specified for the name node could cause the node
 status to be reported incorrectly.
 \Ticket{5092}
+
+\item Fixed an incorrect Win32 default value for the
+DAGMAN\_CONDOR\_RM\_EXE configuration macro.  This caused \Condor{dagman}
+(on Windows) to not correctly remove running node jobs if the
+ABORT-DAG-ON feature was triggered.
+\Ticket{5114}
 
 \end{itemize}
 
