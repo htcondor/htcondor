@@ -30,9 +30,11 @@ The details of each version are described below.
 \begin{itemize}
 
 \item When using configuration variable \Macro{ENCRYPT\_EXECUTE\_DIRECTORY}
-on Linux, filenames are no longer encrypted by default.  This behavior can
-be enabled by setting \Macro{ENCRYPT\_EXECUTE\_DIRECTORY\_FILENAMES} to
-\Expr{True}.
+on Linux platforms, 
+file names are no longer encrypted by default.  
+Encryption of file names can be enabled by setting 
+the new configuration variable \Macro{ENCRYPT\_EXECUTE\_DIRECTORY\_FILENAMES} 
+to \Expr{True}.
 \Ticket{5108}
 
 \item The new configuration variable \MacroNI{MAX\_JOBS\_PER\_SUBMISSION}
