@@ -4782,20 +4782,20 @@ review=?
 tags=daemon_client,dc_collector
 
 [UPDATE_COLLECTOR_WITH_TCP]
-default=
-type=string
+default=true
+type=bool
 reconfig=true
 customization=seldom
 friendly_name=Update Collector With Tcp
 review=?
 tags=daemon_client,dc_collector
 
-[UPDATE_COLLECTORS_WITH_TCP]
-default=
-type=string
+[UPDATE_VIEW_COLLECTOR_WITH_TCP]
+default=false
+type=bool
 reconfig=true
 customization=seldom
-friendly_name=Update Collectors With Tcp
+friendly_name=Update View Collector With Tcp
 review=?
 tags=daemon_client,dc_collector
 

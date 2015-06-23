@@ -84,7 +84,7 @@ class DCCollectorAdSeqMan {
 */
 class DCCollector : public Daemon {
 public:
-	enum UpdateType { UDP, TCP, CONFIG };
+	enum UpdateType { UDP, TCP, CONFIG, CONFIG_VIEW };
 
 		/** Constructor
 			@param name The name (or sinful string) of the collector, 

@@ -51,7 +51,7 @@ DCCollector::init( bool needs_reconfig )
 	tcp_collector_host = NULL;
 	tcp_collector_addr = NULL;
 	tcp_collector_port = 0;
-	use_tcp = false;
+	use_tcp = true;
 	use_nonblocking_update = true;
 	udp_update_destination = NULL;
 	tcp_update_destination = NULL;
@@ -203,6 +203,7 @@ DCCollector::parseTCPInfo( void )
 		use_tcp = false;
 		break;
 	case CONFIG:
+	case CONFIG_VIEW:
 		use_tcp = false;
 		char *tmp = param( "TCP_UPDATE_COLLECTORS" );
 		if( tmp ) {
@@ -217,7 +218,11 @@ DCCollector::parseTCPInfo( void )
 				break;
 			}
 		}
-		use_tcp = param_boolean( "UPDATE_COLLECTOR_WITH_TCP", use_tcp );
+		if ( up_type == CONFIG_VIEW ) {
+			use_tcp = param_boolean( "UPDATE_VIEW_COLLECTOR_WITH_TCP", false );
+		} else {
+			use_tcp = param_boolean( "UPDATE_COLLECTOR_WITH_TCP", true );
+		}
 		if( !hasUDPCommandPort() ) {
 			use_tcp = true;
 		}
