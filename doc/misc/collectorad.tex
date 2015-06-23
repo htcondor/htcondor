@@ -95,7 +95,25 @@ number, the release date, and the build identification number.
   vulture.cs.wisc.edu.
 
 \index{ClassAd Collector attribute!RunningJobs}
-\item[\AdAttr{RunningJobs}:] Description is not yet written.
+\item[\AdAttr{RunningJobs}:] Definition not yet written.
+
+\index{ClassAd Collector attribute!StartdAds}
+\item[\AdAttr{StartdAds}:] The integer number of unique \Condor{startd}
+  daemon ClassAds seen since the \Condor{collector} began executing.
+
+\index{ClassAd Collector attribute!StartdAdsPeak}
+\item[\AdAttr{StartdAdsPeak}:] The largest integer number of unique 
+  \Condor{startd} daemon ClassAds seen at any one time, 
+  since the \Condor{collector} began executing.
+
+\index{ClassAd Collector attribute!SubmitterAds}
+\item[\AdAttr{SubmitterAds}:] The integer number of unique submitters seen
+  since the \Condor{collector} began executing.
+
+\index{ClassAd Collector attribute!SubmitterAdsPeak}
+\item[\AdAttr{SubmitterAdsPeak}:] The largest integer number of unique 
+  submitters seen at any one time, 
+since the \Condor{collector} began executing.
 
 \index{ClassAd Collector attribute!UpdateInterval}
 \item[\AdAttr{UpdateInterval}:] Description is not yet written.
@@ -103,6 +121,44 @@ number, the release date, and the build identification number.
 \index{ClassAd Collector attribute!UpdateSequenceNumber}
 \item[\AdAttr{UpdateSequenceNumber}:] An integer that begins at 0,
    and increments by one each time the same ClassAd is again advertised.
+
+\index{ClassAd Collector attribute!UpdatesInitial}
+\index{ClassAd Collector attribute!UpdatesInitial\_<ClassAd-Name>}
+\item[\AdAttr{UpdatesInitial}:] A Statistics attribute representing
+  a count of unique ClassAds seen,
+  over the lifetime of this \Condor{collector}.
+  Counts per ClassAd are advertised in attributes named by ClassAd type
+  as \Attr{UpdatesInitial\_<ClassAd-Name>}.
+
+\index{ClassAd Collector attribute!UpdatesLost}
+\index{ClassAd Collector attribute!UpdatesLost\_<ClassAd-Name>}
+\item[\AdAttr{UpdatesLost}:] A Statistics attribute representing
+  the count of updates lost,
+  over the lifetime of this \Condor{collector}.
+  Counts per ClassAd are advertised in attributes named by ClassAd type
+  as \Attr{UpdatesLost\_<ClassAd-Name>}.
+
+\index{ClassAd Collector attribute!UpdatesLostMax}
+\item[\AdAttr{UpdatesLostMax}:] A Statistics attribute defining
+  the largest number of updates lost at any point in time, 
+  over the lifetime of this \Condor{collector}.
+  ClassAd sequence numbers are used to detect lost ClassAds.
+
+\index{ClassAd Collector attribute!UpdatesLostRatio}
+\item[\AdAttr{UpdatesLostRatio}:] A Statistics attribute defining
+  the floating point ratio of the total number of updates to
+  the number of updates lost 
+  over the lifetime of this \Condor{collector}.
+  ClassAd sequence numbers are used to detect lost ClassAds.
+  A value of 1 indicates that all ClassAds have been lost.
+
+\index{ClassAd Collector attribute!UpdatesTotal}
+\index{ClassAd Collector attribute!UpdatesTotal\_<ClassAd-Name>}
+\item[\AdAttr{UpdatesTotal}:] A Statistics attribute representing the
+  count of the number of ClassAd updates received
+  over the lifetime of this \Condor{collector}.
+  Counts per ClassAd are advertised in attributes named by ClassAd type
+  as \Attr{UpdatesTotal\_<ClassAd-Name>}.
 
 \end{description}
 

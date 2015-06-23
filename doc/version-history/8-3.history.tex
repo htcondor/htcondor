@@ -61,9 +61,11 @@ The details of each version are described below.
 \begin{itemize}
 
 \item When using configuration variable \Macro{ENCRYPT\_EXECUTE\_DIRECTORY}
-on Linux, filenames are no longer encrypted by default.  This behavior can
-be enabled by setting \Macro{ENCRYPT\_EXECUTE\_DIRECTORY\_FILENAMES} to
-\Expr{True}.
+on Linux platforms, 
+file names are no longer encrypted by default.  
+Encryption of file names can be enabled by setting 
+the new configuration variable \Macro{ENCRYPT\_EXECUTE\_DIRECTORY\_FILENAMES} 
+to \Expr{True}.
 \Ticket{5108}
 
 \item The new configuration variable \MacroNI{MAX\_JOBS\_PER\_SUBMISSION}
@@ -103,9 +105,9 @@ multiple jobs to a single partitionable slot.
 
 \begin{itemize}
 
-\item Fixed a bug when running parallel universe jobs on a pool
-with partitionable slots, where too many slots would get 
-claimed for the job.
+\item Fixed a parallel universe bug,
+in which too many slots were claimed for a job
+on a pool with partitionable slots.
 \Ticket{5110}
 
 \item \Condor{dagman} VARS values can now contain single quotes.
@@ -116,7 +118,7 @@ retries plus a FINAL node could cause a DAG getting aborted or
 \Condor{rm}'ed to re-submit nodes other than the FINAL node.
 \Ticket{5090}
 
-\item Fixed a bug in \Condor{submit} where using submit attibute
+\item Fixed a bug in \Condor{submit} where using submit attribute
 \Attr{EC2IamProfileArn} would lead to requests to EC2 failing.
 \Ticket{5095}
 
@@ -124,6 +126,12 @@ retries plus a FINAL node could cause a DAG getting aborted or
 and ABORT-DAG-ON specified for the name node could cause the node
 status to be reported incorrectly.
 \Ticket{5092}
+
+\item Fixed an incorrect Win32 default value for the
+DAGMAN\_CONDOR\_RM\_EXE configuration macro.  This caused \Condor{dagman}
+(on Windows) to not correctly remove running node jobs if the
+ABORT-DAG-ON feature was triggered.
+\Ticket{5114}
 
 \end{itemize}
 
