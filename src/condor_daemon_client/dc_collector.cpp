@@ -48,13 +48,9 @@ DCCollector::init( bool needs_reconfig )
 
 	pending_update_list = NULL;
 	update_rsock = NULL;
-	tcp_collector_host = NULL;
-	tcp_collector_addr = NULL;
-	tcp_collector_port = 0;
 	use_tcp = true;
 	use_nonblocking_update = true;
-	udp_update_destination = NULL;
-	tcp_update_destination = NULL;
+	update_destination = NULL;
 
 	if (bootTime == 0) {
 		bootTime = time( NULL );
@@ -108,34 +104,15 @@ DCCollector::deepCopy( const DCCollector& copy )
 		  update_rsock works and TCP updates are still happy...
 		*/
 
-	if( tcp_collector_host ) {
-		delete [] tcp_collector_host;
-	}
-	tcp_collector_host = strnewp( copy.tcp_collector_host );
-
-	if( tcp_collector_addr ) {
-		delete [] tcp_collector_addr;
-	}
-	tcp_collector_addr = strnewp( copy.tcp_collector_addr );
-
-	tcp_collector_port = copy.tcp_collector_port;
-
 	use_tcp = copy.use_tcp;
 	use_nonblocking_update = copy.use_nonblocking_update;
 
 	up_type = copy.up_type;
 
-	if( udp_update_destination ) {
-        delete [] udp_update_destination;
+	if( update_destination ) {
+        delete [] update_destination;
     }
-	udp_update_destination = strnewp( copy.udp_update_destination );
-
-    if( tcp_update_destination ) {
-        delete [] tcp_update_destination;
-	}
-
-    tcp_update_destination = strnewp( copy.tcp_update_destination );
-    
+	update_destination = strnewp( copy.update_destination );
 
 	startTime = copy.startTime;
 
@@ -154,27 +131,6 @@ DCCollector::deepCopy( const DCCollector& copy )
 void
 DCCollector::reconfig( void )
 {
-	char* tmp;
-	tmp = param( "TCP_COLLECTOR_HOST" );
-	if( tmp ) {
-		use_tcp = true;
-		if( tcp_collector_host ) {
-			if( strcmp(tcp_collector_host, tmp) ) { 
-					// the TCP_COLLECTOR_HOST has changed...
-				if( update_rsock ) {
-					delete( update_rsock );
-					update_rsock = NULL;
-				}
-				delete [] tcp_collector_host;
-				tcp_collector_host = strnewp( tmp );
-			}
-		} else {
-				// nothing set yet, so store it now
-			tcp_collector_host = strnewp( tmp );
-		}
-		free( tmp );
-	}
-
 	use_nonblocking_update = param_boolean("NONBLOCKING_COLLECTOR_UPDATE",true);
 
 	if( ! _addr ) {
@@ -227,47 +183,6 @@ DCCollector::parseTCPInfo( void )
 			use_tcp = true;
 		}
 		break;
-	}
-
-	if( tcp_collector_addr ) {
-		delete [] tcp_collector_addr;
-		tcp_collector_addr = NULL;
-	}
-
-	if( ! tcp_collector_host ) {
-			// there's no specific TCP host to use.  if needed, use
-			// the default collector...
-		tcp_collector_port = _port;
-		tcp_collector_addr = strnewp( _addr );
-	} else {
-			// they gave us a specific string.  parse it so we know
-			// where to send the TCP updates.  this is in case they
-			// want to setup a tree of collectors, etc.
-		if( is_valid_sinful(tcp_collector_host) ) {
-			tcp_collector_addr = strnewp( tcp_collector_host );
-			tcp_collector_port = string_to_port( tcp_collector_host );
-			return;
-		} 
-
-			// if we're still here, they didn't give us a valid
-			// "sinful string", so see if they specified a port... 
-		char* host = strnewp( tcp_collector_host );
-		char* colon = NULL;
-		if( !(colon = strchr(host, ':')) ) {
-				// no colon, use the default port, and treat the given
-				// string as the address.
-			int default_port = param_integer("COLLECTOR_PORT", COLLECTOR_PORT);
-			tcp_collector_port = default_port;
-			tcp_collector_addr = strnewp( tcp_collector_host );
-		} else { 
-				// there's a colon, so grab what's after it for the
-				// port, and what's before it for the address.
-			*colon = '\0';
-			tcp_collector_addr = strnewp( host );
-			colon++;
-			tcp_collector_port = atoi( colon );
-		}
-		delete [] host;
 	}
 }
 
@@ -329,11 +244,6 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 				 "attempting to re-read address file\n" );
 		if( readAddressFile(_subsys) ) {
 			_port = string_to_port( _addr );
-			tcp_collector_port = _port;
-			if( tcp_collector_addr ) {
-				delete [] tcp_collector_addr;
-			}
-			tcp_collector_addr = strnewp( _addr );
 			parseTCPInfo(); // update use_tcp
 			dprintf( D_HOSTNAME, "Using port %d based on address \"%s\"\n",
 					 _port, _addr );
@@ -511,7 +421,7 @@ DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 
 	dprintf( D_FULLDEBUG,
 			 "Attempting to send update via UDP to collector %s\n",
-			 udp_update_destination );
+			 update_destination );
 
 	bool raw_protocol = false;
 	if( cmd == UPDATE_COLLECTOR_AD || cmd == INVALIDATE_COLLECTOR_ADS ) {
@@ -545,7 +455,7 @@ DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 {
 	dprintf( D_FULLDEBUG,
 			 "Attempting to send update via TCP to collector %s\n",
-			 tcp_update_destination );
+			 update_destination );
 
 	if( ! update_rsock ) {
 			// we don't have a TCP sock for sending an update.  we've
@@ -621,28 +531,21 @@ DCCollector::displayResults( void )
 const char*
 DCCollector::updateDestination( void )
 {
-	if( use_tcp ) { 
-		return tcp_update_destination;
-	}
-	return udp_update_destination;
+	return update_destination;
 }
 
 
 void
 DCCollector::initDestinationStrings( void )
 {
-	if( udp_update_destination ) {
-		delete [] udp_update_destination;
-		udp_update_destination = NULL;
-	}
-	if( tcp_update_destination ) {
-		delete [] tcp_update_destination;
-		tcp_update_destination = NULL;
+	if( update_destination ) {
+		delete [] update_destination;
+		update_destination = NULL;
 	}
 
 	std::string dest;
 
-		// UDP updates will always be sent to whatever info we've got
+		// Updates will always be sent to whatever info we've got
 		// in the Daemon object.  So, there's nothing hard to do for
 		// this... just see what useful info we have and use it. 
 	if( _full_hostname ) {
@@ -654,32 +557,7 @@ DCCollector::initDestinationStrings( void )
 	} else {
 		if (_addr) dest = _addr;
 	}
-	udp_update_destination = strnewp( dest.c_str() );
-
-		// TCP updates, if they happen at all, might go to a different
-		// place.  So, we've got to do a little more work to figure
-		// out what we should use...
-
-	if( ! tcp_collector_host ) { 
-			// they didn't supply anything, so we should use the info
-			// in the Daemon part of ourself, which we've already got
-			// in the udp_update_destination.  so we just use that.
-		tcp_update_destination = strnewp( udp_update_destination );
-
-	} else if( is_valid_sinful(tcp_collector_host) ) { 
-			// they gave us a specific host, but it's already in
-			// sinful-string form, so that's all we can do...
-		tcp_update_destination = strnewp( tcp_collector_host );
-
-	} else {
-			// they gave us either an IP or a hostname, either
-			// way... use what they gave us, and tack on the port
-			// we're using (which either came from them, or is the
-			// default COLLECTOR_PORT if unspecified).
-
-		formatstr(dest, "%s (port: %d)", tcp_collector_addr ? tcp_collector_addr : "", tcp_collector_port);
-		tcp_update_destination = strnewp( dest.c_str() );
-	}
+	update_destination = strnewp( dest.c_str() );
 }
 
 
@@ -909,17 +787,8 @@ DCCollector::~DCCollector( void )
 	if( adSeqMan ) {
 		delete( adSeqMan );
 	}
-	if( tcp_collector_addr ) {
-		delete [] tcp_collector_addr;
-	}
-	if( tcp_collector_host ) {
-		delete [] tcp_collector_host;
-	}
-	if( udp_update_destination ) {
-		delete [] udp_update_destination;
-	}
-	if( tcp_update_destination ) {
-		delete [] tcp_update_destination;
+	if( update_destination ) {
+		delete [] update_destination;
 	}
 
 		// In case there are any nonblocking updates in progress,

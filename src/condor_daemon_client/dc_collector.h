@@ -137,9 +137,6 @@ private:
 
 	ReliSock* update_rsock;
 
-	char* tcp_collector_host;
-	char* tcp_collector_addr;
-	int tcp_collector_port;
 	bool use_tcp;
 	bool use_nonblocking_update;
 	UpdateType up_type;
@@ -157,8 +154,7 @@ private:
 
 	bool initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking );
 
-	char* tcp_update_destination;
-	char* udp_update_destination;
+	char* update_destination;
 
 	UtcTime m_blacklist_monitor_query_started;
 	static std::map< std::string, Timeslice > blacklist;

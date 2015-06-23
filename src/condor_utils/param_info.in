@@ -4754,15 +4754,6 @@ friendly_name=DaemonCore Receive Messages Duration
 usage=how long to keep processing callback messages before returing to the pump. For the SCHEDD, how long to keep processing matches from the negotiator before checking for other work.
 tags=daemon_core,schedd
 
-[TCP_COLLECTOR_HOST]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Tcp Collector Host
-review=?
-tags=daemon_client,dc_collector
-
 [NONBLOCKING_COLLECTOR_UPDATE]
 default=true
 type=bool
