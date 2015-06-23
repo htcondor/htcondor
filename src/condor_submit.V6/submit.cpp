@@ -298,6 +298,7 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "$STRICT.TRUE", &StrictTrueMetaDef },
 	{ "ARCH",      &ArchMacroDef },
 	{ "Cluster",   &ClusterMacroDef },
+	{ "ClusterId", &ClusterMacroDef },
 	{ "IsLinux",   &IsLinuxMacroDef },
 	{ "IsWindows", &IsWinMacroDef },
 	{ "ItemIndex", &RowMacroDef },
@@ -307,6 +308,7 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "OPSYSMAJORVER",   &OpsysMajorVerMacroDef },
 	{ "OPSYSVER",        &OpsysVerMacroDef },
 	{ "Process",   &ProcessMacroDef },
+	{ "ProcId",    &ProcessMacroDef },
 	{ "Row",       &RowMacroDef },
 	{ "SPOOL",     &SpoolMacroDef },
 	{ "Step",      &StepMacroDef },
@@ -6096,7 +6098,7 @@ SetGridParams()
 		free( tmp );
 	}
 
-	if( (tmp = condor_param( EC2IamProfileName, ATTR_EC2_IAM_PROFILE_ARN )) ) {
+	if( (tmp = condor_param( EC2IamProfileName, ATTR_EC2_IAM_PROFILE_NAME )) ) {
 		if( bIamProfilePresent ) {
 			fprintf( stderr, "\nWARNING: EC2 job(s) contain both %s and %s; ignoring %s.\n", EC2IamProfileArn, EC2IamProfileName, EC2IamProfileName );
 		} else {
@@ -7735,6 +7737,12 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 			if ( ProcId == -2 ) {
 				fprintf(stderr,
 				"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
+			} else if( ProcId == -3 ) {
+				fprintf(stderr,
+				"Number of submitted jobs would exceed MAX_JOBS_PER_OWNER\n");
+			} else if( ProcId == -4 ) {
+				fprintf(stderr,
+				"Number of submitted jobs would exceed MAX_JOBS_PER_SUBMISSION\n");
 			}
 			DoCleanup(0,0,NULL);
 			exit(1);

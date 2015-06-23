@@ -124,6 +124,8 @@ struct OwnerCounters {
   int JobsFlocked;
   int JobsFlockedHere; // volatile field use to hold the JobsRunning calculation when sending submitter adds to flock collectors
   int Hits;  // used in the mark/sweep algorithm of count_jobs to detect Owners that no longer have any jobs in the queue.
+  int JobsCounted; // smaller than Hits by the number of match recs for this Owner.
+  int JobsRecentlyAdded; // zeroed on each sweep, incremented on submission.
   void clear_job_counters() { memset(this, 0, sizeof(*this)); }
   OwnerCounters()
 	: JobsRunning(0)
@@ -134,6 +136,8 @@ struct OwnerCounters {
 	, JobsFlocked(0)
 	, JobsFlockedHere(0)
 	, Hits(0)
+	, JobsCounted(0)
+	, JobsRecentlyAdded(0)
   {}
 };
 
@@ -503,6 +507,8 @@ class Scheduler : public Service
 	char*			uidDomain( void ) { return UidDomain; };
 	int				getJobsTotalAds() { return JobsTotalAds; };
 	int				getMaxJobsSubmitted() { return MaxJobsSubmitted; };
+	int				getMaxJobsPerOwner() { return MaxJobsPerOwner; }
+	int				getMaxJobsPerSubmission() { return MaxJobsPerSubmission; }
 
 		// Used by the UserIdentity class and some others
 	const ExprTree*	getGridParsedSelectionExpr() const 
@@ -589,6 +595,10 @@ class Scheduler : public Service
 	ScheddStatistics stats;
 	ScheddOtherStatsMgr OtherPoolStats;
 
+#ifdef USE_OWNERDATA_MAP
+	const OwnerData * insert_owner_const(const char*);
+	void incrementRecentlyAdded(const char *);
+#endif
 
 private:
 
@@ -634,6 +644,8 @@ private:
 	char*			StartLocalUniverse; // expression for local jobs
 	char*			StartSchedulerUniverse; // expression for scheduler jobs
 	int				MaxJobsSubmitted;
+	int				MaxJobsPerOwner;
+	int				MaxJobsPerSubmission;
 	bool			NegotiateAllJobsInCluster;
 	int				JobsStarted; // # of jobs started last negotiating session
 	int				SwapSpace;	 // available at beginning of last session

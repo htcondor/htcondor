@@ -470,6 +470,10 @@ static int use_local_access( const char *file )
 int
 pseudo_ulog( ClassAd *ad )
 {
+	// Ignore the event time we were given, use the
+	// current time and timezone
+	ad->Delete("EventTime");
+
 	ULogEvent *event = instantiateEvent(ad);
 	int result = 0;
 	char const *critical_error = NULL;

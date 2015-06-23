@@ -2,6 +2,7 @@
 
 import re
 import types
+import pickle
 import classad
 import datetime
 import unittest
@@ -13,6 +14,16 @@ class TestClassad(unittest.TestCase):
         self.assertEquals(ad['foo'], "1")
         self.assertEquals(ad['bar'], 2)
         self.assertRaises(KeyError, ad.__getitem__, 'baz')
+
+    def test_pickle(self):
+        ad = classad.ClassAd({"one": 1})
+        expr = classad.ExprTree("2+2")
+        pad = pickle.dumps(ad)
+        pexpr = pickle.dumps(expr)
+        ad2 = pickle.loads(pad)
+        expr2 = pickle.loads(pexpr)
+        self.assertEquals(ad2.__repr__(), "[ one = 1 ]")
+        self.assertEquals(expr2.__repr__(), "2 + 2")
 
     def test_load_classad_from_file(self):
         ad = classad.parse(open("tests/test.ad"))

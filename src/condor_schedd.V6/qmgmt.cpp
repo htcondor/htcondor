@@ -170,7 +170,11 @@ static JobQueueType *JobQueue = 0;
 static StringList DirtyJobIDs;
 static std::set<int> DirtyPidsSignaled;
 static int next_cluster_num = -1;
+// If we ever allow more than one concurrent transaction, and next_proc_num
+// being a global, we'll need to make the same change to
+// jobs_added_this_transaction.
 static int next_proc_num = 0;
+static int jobs_added_this_transaction = 0;
 int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
 static bool JobQueueDirty = false;
 static int in_walk_job_queue = 0;
@@ -2033,12 +2037,50 @@ NewProc(int cluster_id)
 #endif
 		return -1;
 	}
-	
+
 	if ( TotalJobsCount >= scheduler.getMaxJobsSubmitted() ) {
 		dprintf(D_ALWAYS,
 			"NewProc(): MAX_JOBS_SUBMITTED exceeded, submit failed\n");
 		return -2;
 	}
+
+
+	// It is a security violation to change ATTR_OWNER to something other
+	// than Q_SOCK->getOwner(), so as long condor_submit and Q_SOCK->getOwner()
+	// agree on who the owner is (or until we change the schedd so that /it/
+	// sets the Owner string), it's safe to do this rather than complicate
+	// things by using the owner attribute from the job ad we don't have yet.
+	const char * owner = Q_SOCK->getOwner();
+	ASSERT( owner != NULL );
+	const OwnerData * ownerData = scheduler.insert_owner_const( owner );
+	ASSERT( ownerData != NULL );
+	int ownerJobCount = ownerData->num.JobsCounted
+						+ ownerData->num.JobsRecentlyAdded
+						+ jobs_added_this_transaction;
+
+	int maxJobsPerOwner = scheduler.getMaxJobsPerOwner();
+	if( ownerJobCount >= maxJobsPerOwner ) {
+		dprintf( D_ALWAYS,
+			"NewProc(): MAX_JOBS_PER_OWNER exceeded, submit failed.  "
+			"Current total is %d.  Limit is %d.\n",
+			ownerJobCount, maxJobsPerOwner );
+		return -3;
+	}
+
+	int maxJobsPerSubmission = scheduler.getMaxJobsPerSubmission();
+	if( jobs_added_this_transaction >= maxJobsPerSubmission ) {
+		dprintf( D_ALWAYS,
+			"NewProc(): MAX_JOBS_PER_SUBMISSION exceeded, submit failed.  "
+			"Current total is %d.  Limit is %d.\n",
+			jobs_added_this_transaction, maxJobsPerSubmission );
+		return -4;
+	}
+
+	// We can't increase ownerData->num.JobsRecentlyAdded here because we
+	// don't know, at this point, that the overall transaction will succeed.
+	// Instead, track how many jobs we're adding this transaction.
+	++jobs_added_this_transaction;
+
 
 	proc_id = next_proc_num++;
 	IdToKey(cluster_id,proc_id,key);
@@ -3193,6 +3235,7 @@ InTransaction()
 int
 BeginTransaction()
 {
+	jobs_added_this_transaction = 0;
 	JobQueue->BeginTransaction();
 
 	// note what time we started the transaction (used by SetTimerAttribute())
@@ -3280,6 +3323,9 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 				 JobQueue->Lookup(job_id, procad))
 			{
 				dprintf(D_FULLDEBUG,"New job: %s\n",job_id.c_str());
+#ifdef USE_OWNERDATA_MAP
+				scheduler.incrementRecentlyAdded( Q_SOCK->getOwner() );
+#endif
 
 					// chain proc ads to cluster ad
 				procad->ChainToAd(clusterad);

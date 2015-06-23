@@ -31,16 +31,12 @@ use CondorTest;
 # which prints its public and private Sinfuls to stdout and exits.
 #
 
-...
-
 #
 # Naturally, we have to see what happens when we specify a NETWORK_INTERFACE,
 # whose behavior depends on BIND_ALL_INTERFACES.  If false, only address that
 # HTCondor will advertise is NETWORK_INTERFACE.  Is true, NETWORK_INTERFACE
 # must the public (and primary) address advertised, but others may be.
 #
-
-...
 
 #
 # Now we get to the sub-tests that can't be done without spinning up a
@@ -57,8 +53,6 @@ use CondorTest;
 # since the broker needs the SPd to be up -- the master always starts the
 # SPd first.)
 #
-
-...
 
 	# Success.
 	# RegisterResult( 1, "test_name" => $testname );

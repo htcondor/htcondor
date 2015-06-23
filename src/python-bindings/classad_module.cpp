@@ -105,6 +105,26 @@ struct classad_from_python_dict {
     }
 };
 
+struct classad_pickle_suite : boost::python::pickle_suite
+{
+    static
+    boost::python::tuple
+    getinitargs(const ClassAdWrapper& ad)
+    {
+        return boost::python::make_tuple(ad.toString());
+    }
+};
+
+struct exprtree_pickle_suite : boost::python::pickle_suite
+{
+    static
+    boost::python::tuple
+    getinitargs(const ExprTreeHolder& expr)
+    {
+        return boost::python::make_tuple(expr.toString());
+    }
+};
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(setdefault_overloads, setdefault, 1, 2);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(get_overloads, get, 1, 2);
 
@@ -159,6 +179,7 @@ BOOST_PYTHON_MODULE(classad)
     class_<ClassAdWrapper, boost::noncopyable>("ClassAd", "A classified advertisement.")
         .def(init<std::string>())
         .def(init<boost::python::dict>())
+        .def_pickle(classad_pickle_suite())
         .def("__delitem__", &ClassAdWrapper::Delete)
         .def("__getitem__", &ClassAdWrapper::LookupWrap, condor::classad_expr_return_policy<>())
         .def("eval", &ClassAdWrapper::EvaluateAttrObject, "Evaluate the ClassAd attribute to a python object.")
@@ -186,6 +207,7 @@ BOOST_PYTHON_MODULE(classad)
         ;
 
     class_<ExprTreeHolder>("ExprTree", "An expression in the ClassAd language", init<std::string>())
+        .def_pickle(exprtree_pickle_suite())
         .def("__str__", &ExprTreeHolder::toString)
         .def("__repr__", &ExprTreeHolder::toRepr)
         .def("__getitem__", &ExprTreeHolder::getItem, condor::classad_expr_return_policy<>())

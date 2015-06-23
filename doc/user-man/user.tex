@@ -344,7 +344,7 @@ universes for user jobs:
 	\item local
  	\item parallel
  	\item vm
-% 	\item docker
+  	\item docker
 \end{itemize}
 
 The \SubmitCmd{universe} under which a job runs
@@ -384,8 +384,7 @@ See section~\ref{sec:Parallel} for more about the Parallel universe.
 The vm universe allows users to run jobs where the job is
 no longer a simple executable, but a disk image, facilitating
 the execution of a virtual machine.
-%%The docker universe instantiates a Docker container within which
-%%the HTCondor job runs.
+The docker universe runs a Docker container as an HTCondor job.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:standard-universe}Standard Universe}
@@ -589,16 +588,14 @@ virtual machines with the vm universe.
 
 Please see section~\ref{sec:vmuniverse} for details.
 
-% %%%%%%%%%%%%
-% \subsubsection{Docker Universe}
-% %%%%%%%%%%%%
-% \index{universe!docker}
-% \index{docker universe}
-% The docker universe causes an instantiation of a container
-% on an execute host,
-% and the job is run within that container.  
-
-% Please see section~\ref{sec:dockeruniverse} for details.
+%%%%%%%%%%%%
+\subsubsection{Docker Universe}
+%%%%%%%%%%%%
+\index{universe!docker}
+\index{docker universe}
+The docker universe runs a docker container on an execute host
+as a job.  
+Please see section~\ref{sec:dockeruniverse} for details.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:submitting}Submitting a Job}
@@ -970,20 +967,20 @@ There are automatic variables for use within the submit description file.
 
 \begin{description}
 
-\item [\Expr{\$(Cluster)}]
+\item [\Expr{\$(Cluster)} or \Expr{\$(ClusterId)}]
   Each set of queued jobs from a specific user, 
   submitted from a single submit host, sharing an executable
-  have the same value of \Expr{\$(Cluster)}.
+  have the same value of \Expr{\$(Cluster)} or \Expr{\$(ClusterId)}.
   The first cluster of jobs are assigned to cluster 0, 
   and the value is incremented by one for each new cluster of jobs.
-  \Expr{\$(Cluster)} will have the same value as the job ClassAd attribute
+  \Expr{\$(Cluster)} or \Expr{\$(ClusterId)} will have the same value as the job ClassAd attribute
   \Attr{ClusterId}.
-\item [\Expr{\$(Process)}]
+\item [\Expr{\$(Process)} or \Expr{\$(ProcId)}]
   Within a cluster of jobs, each takes on its own unique \Expr{\$(Process)} 
-  value.
+  or \Expr{\$(ProcId)} value.
   The first job has value 0.
-  \Expr{\$(Process)} will have the same value as the job ClassAd attribute
-  \Attr{ProcId}.
+  \Expr{\$(Process)} or \Expr{\$(ProcId)} will have the same value as the 
+  job ClassAd attribute \Attr{ProcId}.
 \item [\Expr{\$(Item)}]
   The default name of the variable when no \Expr{<varname>} is provided
   in a \SubmitCmdNI{queue} command.

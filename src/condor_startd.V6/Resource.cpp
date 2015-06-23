@@ -2428,6 +2428,7 @@ Resource::makeChildClaimIds() {
 		bool firstTime = true;
 
 		for (std::set<Resource *,ResourceLess>::iterator i(m_children.begin());  i != m_children.end();  i++) {
+			std::string buf = "";
 			if (firstTime) {
 				firstTime = false;
 			} else {
@@ -2436,15 +2437,15 @@ Resource::makeChildClaimIds() {
 			Resource *child = (*i);
 			if (child->r_pre_pre) {
 				attrValue += '"';
-				attrValue += child->r_pre_pre->id();
+				attrValue += EscapeAdStringValue( child->r_pre_pre->id(), buf );
 				attrValue += '"';
 			} else if (child->r_pre) {
 				attrValue += '"';
-				attrValue += child->r_pre->id();
+				attrValue += EscapeAdStringValue( child->r_pre->id(), buf );
 				attrValue += '"';
 			} else if (child->r_cur) {
 				attrValue += '"';
-				attrValue += child->r_cur->id();
+				attrValue += EscapeAdStringValue( child->r_cur->id(), buf );
 				attrValue += '"';
 			}
 		}
@@ -3272,12 +3273,24 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 		do {
 			rip->r_reqexp->restore();
 			if (mach_classad->EvalBool( ATTR_REQUIREMENTS, req_classad, mach_requirements) == 0) {
+				dprintf(D_ALWAYS,
+					"STARTD Requirements expression no longer evaluates to a boolean %s MODIFY_REQUEST_EXPR_ edits\n",
+					unmodified_req_classad ? "with" : "w/o"
+					);
 				mach_requirements = 0;  // If we can't eval it as a bool, treat it as false
 			}
 				// If the pslot cannot support this request, ABORT iff there is not
 				// an unmodified_req_classad backup copy we can try on the next iteration of
 				// the while loop
 			if (mach_requirements == 0) {
+				if (IsDebugVerbose(D_MATCH)) {
+					dprintf(D_MATCH | D_FULLDEBUG,
+						"STARTD Requirements do not match, %s MODIFY_REQUEST_EXPR_ edits. Job ad was ============================\n", 
+						unmodified_req_classad ? "with" : "w/o");
+					dPrintAd(D_MATCH | D_FULLDEBUG, *req_classad, true);
+					dprintf(D_MATCH | D_FULLDEBUG, "Machine ad was ============================\n");
+					dPrintAd(D_MATCH | D_FULLDEBUG, *mach_classad, true);
+				}
 				if (unmodified_req_classad) {
 					// our modified req_classad no longer matches, put back the original
 					// so we can try again.
@@ -3483,7 +3496,7 @@ Resource::publishDynamicChildSummaries(ClassAd *cap) {
 	cap->Assign(ATTR_NUM_DYNAMIC_SLOTS, m_children.size());
 
 		// If not set, turn off the whole thing
-	if (param_boolean("ALLOW_PSLOT_PREEMPTION", false) == false) {
+	if (param_boolean("ADVERTISE_PSLOT_ROLLUP_INFORMATION", true) == false) {
 		return;
 	}
 
@@ -3535,7 +3548,7 @@ Resource::publishDynamicChildSummaries(ClassAd *cap) {
 void
 Resource::rollupDynamicAttrs(ClassAd *cap, std::string &name) const {
 	std::string attrName;
-	attrName = "child" + name;
+	attrName = "Child" + name;
 
 	std::string attrValue = "{";
 	bool firstTime = true;

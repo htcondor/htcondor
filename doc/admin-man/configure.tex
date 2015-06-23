@@ -2178,7 +2178,8 @@ of the subsystem corresponding to the daemon.
 
 \label{param:EnableUserlogLocking}
 \item[\Macro{ENABLE\_USERLOG\_LOCKING}]
-  A boolean value that is \Expr{False} by default.
+  A boolean value that defaults to \Expr{False} on Unix platforms and
+  \Expr{True} on Windows platforms.
   When \Expr{True}, a user's job event log
   will be locked before being written to.
   If \Expr{False}, HTCondor will not lock the file before writing.
@@ -2636,7 +2637,8 @@ but across all users and user's jobs.
 
 \label{param:EventLogLocking}
 \item[\Macro{EVENT\_LOG\_LOCKING}]
-  A boolean value that defaults to \Expr{False}.
+  A boolean value that defaults to \Expr{False} on Unix platforms and
+  \Expr{True} on Windows platforms.
   When \Expr{True},
   the event log (as specified by \MacroNI{EVENT\_LOG})
   will be locked before being written to.
@@ -2731,8 +2733,9 @@ which use DaemonCore).
   usually the best location for this directory.
 
 \label{param:SettableAttrs}
-\item[\Macro{SETTABLE\_ATTRS\Dots}]
-  All macros that begin with \Macro{SETTABLE\_ATTRS} or
+\MacroIndex{SETTABLE\_ATTRS\_CONFIG}
+\item[\Macro{SETTABLE\_ATTRS\_<PERMISSION-LEVEL>}]
+  All macros that begin with \MacroNI{SETTABLE\_ATTRS} or
   \MacroNI{<SUBSYS>.SETTABLE\_ATTRS} are settings used to restrict the 
   configuration values that can be changed using the \Condor{config\_val} 
   command.
@@ -5106,7 +5109,8 @@ WANT_HOLD_REASON = \
 
 \label{param:MountUnderScratch}
 \item[\Macro{MOUNT\_UNDER\_SCRATCH}]
-  A comma separated list of directories. 
+  A ClassAd expression, which when evaluated in the context of the job ClassAd evaluates
+  to a comma separated list of directories. 
   For each directory in the list, 
   HTCondor creates a directory in the job's temporary scratch directory 
   with that name,
@@ -5902,26 +5906,26 @@ availability statistics in the \Condor{startd}.
   Each sample requires 4 bytes of memory and approximately 10 bytes of
   disk space.
 
-% \label{param:Docker}
-% \item[\Macro{DOCKER}]
-%   Defines
-%   the path and executable name of the Docker CLI in one of two ways.
-%   The first way is for execute machines
-%   that are set up to run the Docker CLI as a user other than root,
-%   or when HTCondor daemons are run as root;
-%   the value is only the path and executable name of the Docker CLI.
-%   This would be the case when the default value of \File{/usr/bin/docker}
-%   is used.
-%   The second way places the string \Expr{sudo} to the left of the 
-%   path and executable name.
-%   When the parser finds this form of the value,
-%   the Docker CLI is invoked and run as root by the \Condor{starter},
-%   and it is presumed that the user that the \Condor{starter} daemon is
-%   run as has been given password-less sudo permission to run the Docker CLI.
-%   An example of the configuration for running the Docker CLI as root:
-% \begin{verbatim}
-%   DOCKER = sudo /usr/bin/docker
-% \end{verbatim}
+\label{param:Docker}
+\item[\Macro{DOCKER}]
+  Defines
+  the path and executable name of the Docker CLI in one of two ways.
+  The first way is for execute machines
+  that are set up to run the Docker CLI as a user other than root,
+  or when HTCondor daemons are run as root;
+  the value is only the path and executable name of the Docker CLI.
+  This would be the case when the default value of \File{/usr/bin/docker}
+  is used.
+  The second way places the string \Expr{sudo} to the left of the 
+  path and executable name.
+  When the parser finds this form of the value,
+  the Docker CLI is invoked and run as root by the \Condor{starter},
+  and it is presumed that the user that the \Condor{starter} daemon is
+  run as has been given password-less sudo permission to run the Docker CLI.
+  An example of the configuration for running the Docker CLI as root:
+\begin{verbatim}
+  DOCKER = sudo /usr/bin/docker
+\end{verbatim}
 
 \end{description}
 
@@ -6091,6 +6095,32 @@ MAX_JOBS_RUNNING	= \
   of jobs fails, if the total number of jobs would exceed this limit. 
   The default value for this variable is the largest positive
   integer value.
+
+\label{param:MaxJobsPerOwner}
+\item[\Macro{MAX\_JOBS\_PER\_OWNER}]
+  This integer value limits the number of jobs any given owner (user) is
+  permitted to have within a \Condor{schedd} daemon's queue.  
+  A job submission fails if it would cause this limit on the number of
+  jobs to be exceeded. 
+  The default value for this variable is the largest positive
+  integer value.
+
+  This configuration variable may be most useful in conjunction with
+ \MacroNI{MAX\_JOBS\_SUBMITTED},
+  to ensure that no one user can dominate the queue.
+
+\label{param:MaxJobsPerSubmission}
+\item[\Macro{MAX\_JOBS\_PER\_SUBMISSION}]
+  This integer value limits the number of jobs any single submission
+  is permitted to add to a \Condor{schedd} daemon's queue.  The
+  whole submission fails if the number of jobs would exceed this limit.
+  The default value for this variable is the largest positive
+  integer value.
+
+  This configuration variable may be useful for catching user error,
+  and for protecting a busy \Condor{schedd} daemon
+  from the excessively lengthy interruption
+  required to accept a very large number of jobs at one time.
 
 \label{param:MaxShadowExceptions}
 \item[\Macro{MAX\_SHADOW\_EXCEPTIONS}]
@@ -7583,13 +7613,14 @@ REM Run the actual job now
 \label{param:AssignCpuAffinity} 
 \item[\Macro{ASSIGN\_CPU\_AFFINITY}]
   A boolean expression that defaults to \Expr{False}.
-  When \Expr{True},
+  When it evaluates to \Expr{True},
   each job under this \Condor{startd} is confined to using only as many
   cores as the configured number of slots.  When using partitionable
   slots, each job will be bound to as many cores as requested by
   specifying \SubmitCmdNI{request\_cpus}.
   When \Expr{True}, this configuration variable overrides any specification
-  of \MacroNI{ENFORCE\_CPU\_AFFINITY}.
+  of \MacroNI{ENFORCE\_CPU\_AFFINITY}. The expression is evaluated in the
+  context of the Job ClassAd.
 
 \label{param:EnforceCpuAffinity} 
 \item[\Macro{ENFORCE\_CPU\_AFFINITY}]
@@ -11109,6 +11140,17 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
 	requires installation of the ecryptfs-utils package), or the EFS (Encrypted
 	File System) feature of NTFS on Windows.
 
+\label{param:EncryptExecuteDirectoryFilenames}
+\item[\Macro{ENCRYPT\_EXECUTE\_DIRECTORY\_FILENAMES}]
+	When using an encrypted execute directory, the contents of the files
+	will always be encrypted.  On Windows, the filenames are not encrypted,
+	and this setting has no effect.  On Linux, the filenames may or may not
+	be encrypted, but there is some overhead and restrictions on doing so
+	(see ecryptfs documentation).  As a result, by default the filenames
+	are not encrypted on Linux, although the administrator may choose to
+	enable that behavior by setting this configuration variable to
+	\Expr{True}.
+
 \label{param:EcryptfsAddPassphrase}
 \item[\Macro{ECRYPTFS\_ADD\_PASSPHRASE}]
   The path to the \Prog{ecryptfs-add-passphrase} command-line utility. 
@@ -11150,7 +11192,8 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
 \item[\Macro{SEC\_DEFAULT\_AUTHENTICATION\_TIMEOUT}]
   The length of time in seconds that HTCondor should attempt
   authenticating network connections before giving up.
-  The default is 20 seconds.
+  The default imposes no time limit, so the attempt never gives up.
+  %The default is 20 seconds.
   Like other security settings, the portion of the configuration variable
   name, \MacroNI{DEFAULT}, 
   may be replaced by a different access level to specify the timeout to use for
@@ -11237,11 +11280,12 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
   and thousands of \Condor{startd} daemons on a network with a 0.1 second 
   round trip time).
 
-  The default value for this configuration option is \Expr{False}.  To
-  have any effect, it must be \Expr{True} in the configuration of both
+  The default value is \Expr{True}.  
+  To have any effect, it must be \Expr{True} in the configuration of both
   the execute side (\Condor{startd}) as well as the submit side 
-  (\Condor{schedd}).  When
-  this authentication method is used, all other security negotiation
+  (\Condor{schedd}).
+  When \Expr{True},
+  all other security negotiation
   between the submit and execute daemons is bypassed.  All inter-daemon
   communication between the submit and execute side will use the
   \Condor{startd} daemon's settings for \MacroNI{SEC\_DAEMON\_ENCRYPTION} and

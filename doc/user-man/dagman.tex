@@ -2544,9 +2544,10 @@ and partial contents of the Perl PRE script, \File{final\_pre.pl}:
 \end{verbatim}
 
 
-There are restrictions on the use of a FINAL node.
-There is no DONE option for the HTCondor job.
-And, other nodes may \emph{not} reference the FINAL node in specifications of 
+\Bold{There are restrictions on the use of a FINAL node.}
+The DONE option is not allowed for a FINAL node.
+And, a FINAL node may not be referenced in any of the following
+specifications:
 \begin{itemize}
 \item PARENT, CHILD
 \item RETRY
@@ -2554,6 +2555,9 @@ And, other nodes may \emph{not} reference the FINAL node in specifications of
 \item PRIORITY
 \item CATEGORY
 \end{itemize}
+
+Also, as of version 8.3.7, DAGMan allows at most two submit attempts
+for a FINAL node if the DAG has been \Condor{rm}'ed.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGMan-rescue}The Rescue DAG}

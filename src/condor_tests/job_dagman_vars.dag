@@ -38,6 +38,11 @@ Vars NodeF noderetry="$(RETRY)"
 # (I'm not sure why). wenger 2015-01-15
 Vars NodeF +DagNodeRetry="$(RETRY)"
 
+Job NodeG job_dagman_vars-node-newargs2.cmd
+Vars NodeG nodename="$(JOB)"
+# Note: naming a variable "arguments" causes problems.
+Vars NodeG args="'Vincenzo ''The Shark'' Nibali' 'Bernard \"\"The Badger\"\" Hinault'"
+
 Parent NodeA Child NodeB NodeC
 Parent NodeB NodeC Child NodeD
 Parent NodeD Child NodeE 

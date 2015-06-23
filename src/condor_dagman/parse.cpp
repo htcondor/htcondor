@@ -1351,12 +1351,6 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 					varValue.setChar( varValue.Length() - 1, '\0' );
 					escaped = true;
 					continue;
-				} else if(*str == '\'') { // these would mess the command line up 
-				                          // later on
-					debug_printf(DEBUG_QUIET,
-						"ERROR: %s (line %d): single quotes are not allowed in values.\n",
-						filename, lineNumber);
-					return false;
 				}
 			} else {
 				if(*str != '\\' && *str != '"') {

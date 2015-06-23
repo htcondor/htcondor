@@ -290,23 +290,35 @@ command_pckpt_all( Service*, int, Stream* )
 int
 command_x_event( Service*, int, Stream* s ) 
 {
-	dprintf( D_FULLDEBUG, "command_x_event() called.\n" );
+	// Simple attempt to avoid D_ALWAYS warnings from registering twice.
+	static Stream * lastStashed = NULL;
 
 		// Only trust events over the network if the network message
 		// originated from our local machine.
 	if ( !s ||							// trust calls from within the startd
 		 (s && s->peer_is_local())		// trust only sockets from local machine
-	   ) 
+	   )
 	{
 		sysapi_last_xevent();
 	} else {
-		dprintf( D_ALWAYS, 
+		dprintf( D_ALWAYS,
 			"ERROR command_x_event received from %s is not local - discarded\n",
 			s->peer_ip_str() );
 	}
 
 	if( s ) {
 		s->end_of_message();
+
+		if( lastStashed != s ) {
+			int rc = daemonCore->Register_Command_Socket( s, "kbdd socket" );
+			if( rc < 0 ) {
+				dprintf( D_ALWAYS, "Failed to register kbdd socket for updates: error %d.\n", rc );
+				return FALSE;
+			}
+			lastStashed = s;
+		}
+
+		return KEEP_STREAM;
 	}
 	return TRUE;
 }

@@ -585,6 +585,8 @@ Scheduler::Scheduler() :
 	RequestClaimTimeout = 0;
 	MaxJobsRunning = 0;
 	MaxJobsSubmitted = INT_MAX;
+	MaxJobsPerOwner = INT_MAX;
+	MaxJobsPerSubmission = INT_MAX;
 	NegotiateAllJobsInCluster = false;
 	JobsStarted = 0;
 	JobsIdle = 0;
@@ -1298,7 +1300,7 @@ Scheduler::count_jobs()
 						"Increasing flock level for %s to %d from %d. (Due to lack of activity from negotiator)\n",
 						Owner.Name(), new_flock_level, old_flocklevel);
 			}
-			FlockLevel = MIN(Owner.FlockLevel, FlockLevel);
+			FlockLevel = MAX(Owner.FlockLevel, FlockLevel);
 		}
 	}
 
@@ -2517,7 +2519,11 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 
 	Counters->Hits += 1;
 	Owner->LastHitTime = now;
-
+	// Hits also counts matchrecs, which aren't jobs.
+	Counters->JobsCounted += 1;
+	// This way we know we aren't resetting unless we've actually counted
+	// something during a sweep.
+	Counters->JobsRecentlyAdded = 0;
 
 	if ( (universe != CONDOR_UNIVERSE_GRID) &&	// handle Globus below...
 		 (!service_this_universe(universe,job))  ) 
@@ -2741,6 +2747,19 @@ service_this_universe(int universe, ClassAd* job)
 }
 
 #ifdef USE_OWNERDATA_MAP
+void
+Scheduler::incrementRecentlyAdded(const char * owner)
+{
+	OwnerData * ownerData = insert_owner( owner );
+	++(ownerData->num.JobsRecentlyAdded);
+}
+
+const OwnerData *
+Scheduler::insert_owner_const(const char * owner)
+{
+	return insert_owner(owner);
+}
+
 OwnerData *
 Scheduler::find_owner(const char * owner)
 {
@@ -2772,6 +2791,12 @@ Scheduler::remove_unused_owners()
 }
 
 #else
+
+const OwnerData *
+Scheduler::find_owner_const(const char * owner)
+{
+	return find_owner(owner);
+}
 
 OwnerData *
 Scheduler::find_owner(const char * owner, int * pnum)
@@ -11832,7 +11857,9 @@ Scheduler::Init()
 	free( tmp );
 
 	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);
-	
+	MaxJobsPerOwner = param_integer( "MAX_JOBS_PER_OWNER", INT_MAX );
+	MaxJobsPerSubmission = param_integer( "MAX_JOBS_PER_SUBMISSION", INT_MAX );
+
 	NegotiateAllJobsInCluster = param_boolean_crufty("NEGOTIATE_ALL_JOBS_IN_CLUSTER", false);
 
 	STARTD_CONTACT_TIMEOUT = param_integer("STARTD_CONTACT_TIMEOUT",45);
@@ -13632,6 +13659,8 @@ Scheduler::publish( ClassAd *cad ) {
 	cad->Assign( "JobsThisBurst", JobsThisBurst );
 	cad->Assign( "MaxJobsRunning", MaxJobsRunning );
 	cad->Assign( "MaxJobsSubmitted", MaxJobsSubmitted );
+	cad->Assign( "MaxJobsPerOwner", MaxJobsPerOwner );
+	cad->Assign( "MaxJobsPerSubmission", MaxJobsPerSubmission );
 	cad->Assign( "JobsStarted", JobsStarted );
 	cad->Assign( "SwapSpace", SwapSpace );
 	cad->Assign( "ShadowSizeEstimate", ShadowSizeEstimate );
@@ -13764,7 +13793,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	bool retry_is_sensible = false;
 	bool job_is_suitable = false;
 	ClassAd starter_ad;
-	int ltimeout = 20;
+	int ltimeout = 300;
 
 		// This command is called for example by condor_ssh_to_job
 		// in order to establish a security session for communication
@@ -13939,6 +13968,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		if( !startd.locateStarter(global_job_id.Value(),mrec->claimId(),daemonCore->publicNetworkIpAddr(),&starter_ad,ltimeout) )
 		{
 			error_msg = "Failed to get address of starter for this job";
+			retry_is_sensible = true; // maybe shadow hasn't activated starter yet?
 			goto error_wrapup;
 		}
 		job_claimid = mrec->claimId();
@@ -15764,7 +15794,7 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 					}
 				}
 
-				errorStack->pushf( "QMGMT", 2, reasonString.c_str() );
+				errorStack->pushf( "QMGMT", 2, "%s", reasonString.c_str() );
 				return -1;
 			}
 		} else {

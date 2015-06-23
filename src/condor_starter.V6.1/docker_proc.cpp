@@ -326,8 +326,17 @@ bool DockerProc::JobExit() {
 
 void DockerProc::Suspend() {
 	dprintf( D_ALWAYS, "DockerProc::Suspend()\n" );
+	int rv = 0;
 
-	// TODO: docker pause ${containerName} only exists in Docker 1.1+.
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		CondorError error;
+		rv = DockerAPI::pause( containerName, error );
+	}
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	if( rv < 0 ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to suspend container '%s'.\n", containerName.c_str() );
+	}
 
 	is_suspended = true;
 }
@@ -335,9 +344,18 @@ void DockerProc::Suspend() {
 
 void DockerProc::Continue() {
 	dprintf( D_ALWAYS, "DockerProc::Continue()\n" );
+	int rv = 0;	
 
 	if( is_suspended ) {
-		// TODO: docker unpause ${containerName} only exists in Docker 1.1+.
+		{
+			TemporaryPrivSentry sentry(PRIV_ROOT);
+			CondorError error;
+			rv = DockerAPI::unpause( containerName, error );
+		}
+		if( rv < 0 ) {
+			dprintf( D_ALWAYS | D_FAILURE, "Failed to unpause container '%s'.\n", containerName.c_str() );
+		}
+
 
 		is_suspended = false;
 	}

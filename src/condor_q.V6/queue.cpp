@@ -135,8 +135,9 @@ typedef bool (* buffer_line_processor)(void*, ClassAd *);
 static 	void short_header (void);
 static 	void usage (const char *, int other=0);
 enum { usage_Universe=1, usage_JobStatus=2, usage_AllOther=0xFF };
-static 	char * buffer_io_display (ClassAd *);
+static 	void buffer_io_display (std::string & out, ClassAd *);
 static 	char * bufferJobShort (ClassAd *);
+static const char * format_job_status_char(int job_status, AttrList*ad, Formatter &);
 
 // functions to fetch job ads and print them out
 //
@@ -468,10 +469,13 @@ int SlotSort(ClassAd *ad1, ClassAd *ad2, void *  /*data*/)
 class CondorQClassAdFileParseHelper : public compat_classad::ClassAdFileParseHelper
 {
  public:
+	CondorQClassAdFileParseHelper() : is_schedd(false), is_submitter(false) {}
 	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file);
 	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* file);
 	std::string schedd_name;
 	std::string schedd_addr;
+	bool is_schedd;
+	bool is_submitter;
 };
 
 // this method is called before each line is parsed. 
@@ -491,9 +495,12 @@ int CondorQClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/
 	// the normal output of condor_q -long is "-- schedd-name <addr>"
 	// we want to treat that as a delimiter, and also capture the schedd name and addr
 	if (starts_with(line, "-- ")) {
-		if (starts_with(line.substr(3), "Schedd:")) {
-			schedd_name = line.substr(3+8);
-			size_t ix1 = schedd_name.find_first_of(": \t\n");
+		is_schedd = starts_with(line.substr(3), "Schedd:");
+		is_submitter = starts_with(line.substr(3), "Submitter:");
+		if (is_schedd || is_submitter) {
+			size_t ix1 = schedd_name.find(':');
+			schedd_name = line.substr(ix1+1);
+			ix1 = schedd_name.find_first_of(": \t\n");
 			if (ix1 != string::npos) {
 				size_t ix2 = schedd_name.find_first_not_of(": \t\n", ix1);
 				if (ix2 != string::npos) {
@@ -1802,17 +1809,24 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if (is_arg_prefix(arg, "io", 1)) {
+		if (is_arg_prefix(arg, "io", 2)) {
 			// goodput and show_io require the same column
 			// real-estate, so they're mutually exclusive
 			show_io = true;
 			dash_goodput = false;
+			attrs.append(ATTR_NUM_JOB_STARTS);
+			attrs.append(ATTR_NUM_CKPTS_RAW);
 			attrs.append(ATTR_FILE_READ_BYTES);
+			attrs.append(ATTR_BYTES_RECVD);
 			attrs.append(ATTR_FILE_WRITE_BYTES);
-			attrs.append(ATTR_FILE_SEEK_COUNT);
+			attrs.append(ATTR_BYTES_SENT);
 			attrs.append(ATTR_JOB_REMOTE_WALL_CLOCK);
+			attrs.append(ATTR_FILE_SEEK_COUNT);
 			attrs.append(ATTR_BUFFER_SIZE);
 			attrs.append(ATTR_BUFFER_BLOCK_SIZE);
+			attrs.append(ATTR_TRANSFERRING_INPUT);
+			attrs.append(ATTR_TRANSFERRING_OUTPUT);
+			attrs.append(ATTR_TRANSFER_QUEUED);
 		}
 		else if (is_arg_prefix(arg, "dag", 2)) {
 			dash_dag = true;
@@ -1957,6 +1971,9 @@ processCommandLineArguments (int argc, char *argv[])
 				Q.addOR(constraint);
 			}
 		}
+	} else if (show_io) {
+		// if no job id's specifed, then constrain the query to jobs that are doing file transfer
+		Q.addAND("JobUniverse==1 || TransferQueued=?=true || TransferringOutput=?=true || TransferringInput=?=true");
 	}
 }
 
@@ -2041,36 +2058,88 @@ unsigned int process_direct_argument(char *arg)
 }
 
 
-static char *
-buffer_io_display( ClassAd *ad )
+static void
+buffer_io_display(std::string & out, ClassAd *ad)
 {
-	int cluster=0, proc=0;
-	float read_bytes=0, write_bytes=0, seek_count=0;
-	int buffer_size=0, block_size=0;
-	float wall_clock=-1;
+	int univ=0;
+	ad->EvalInteger(ATTR_JOB_UNIVERSE, NULL, univ);
 
-	char owner[256];
+	const char * idIter = ATTR_NUM_JOB_STARTS;
+	if (univ==CONDOR_UNIVERSE_STANDARD) idIter = ATTR_NUM_CKPTS_RAW;
 
-	ad->EvalInteger(ATTR_CLUSTER_ID,NULL,cluster);
-	ad->EvalInteger(ATTR_PROC_ID,NULL,proc);
-	ad->EvalString(ATTR_OWNER,NULL,owner);
+	int cluster=0, proc=0, iter=0, status=0;
+	char misc[256];
+	ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
+	ad->LookupInteger(ATTR_PROC_ID,proc);
+	ad->LookupInteger(idIter,iter);
+	ad->LookupString(ATTR_OWNER, misc, sizeof(misc));
+	ad->LookupInteger(ATTR_JOB_STATUS,status);
 
-	ad->EvalFloat(ATTR_FILE_READ_BYTES,NULL,read_bytes);
-	ad->EvalFloat(ATTR_FILE_WRITE_BYTES,NULL,write_bytes);
-	ad->EvalFloat(ATTR_FILE_SEEK_COUNT,NULL,seek_count);
+	formatstr( out, "%4d.%-3d %-14s %4d %2s", cluster, proc, 
+				format_owner( misc, ad ),
+				iter,
+				format_job_status_char(status, ad, *((Formatter*)NULL)) );
+
+	double read_bytes=0, write_bytes=0, wall_clock=-1;
 	ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,wall_clock);
-	ad->EvalInteger(ATTR_BUFFER_SIZE,NULL,buffer_size);
-	ad->EvalInteger(ATTR_BUFFER_BLOCK_SIZE,NULL,block_size);
 
-	sprintf( return_buff, "%4d.%-3d %-14s", cluster, proc,
-			 format_owner( owner, ad ) );
+	misc[0]=0;
+
+	bool have_bytes = true;
+	if (univ==CONDOR_UNIVERSE_STANDARD) {
+
+		ad->EvalFloat(ATTR_FILE_READ_BYTES,NULL,read_bytes);
+		ad->EvalFloat(ATTR_FILE_WRITE_BYTES,NULL,write_bytes);
+
+		have_bytes = wall_clock >= 1.0 && (read_bytes >= 1.0 || write_bytes >= 1.0);
+
+		double seek_count=0;
+		int buffer_size=0, block_size=0;
+		ad->EvalFloat(ATTR_FILE_SEEK_COUNT,NULL,seek_count);
+		ad->EvalInteger(ATTR_BUFFER_SIZE,NULL,buffer_size);
+		ad->EvalInteger(ATTR_BUFFER_BLOCK_SIZE,NULL,block_size);
+
+		sprintf(misc, " seeks=%d, buf=%d,%d", (int)seek_count, buffer_size, block_size);
+	} else {
+		// not std universe. show transfer queue stats
+		/*
+			BytesRecvd/1048576.0 AS " MB_INPUT"  PRINTF "%9.2f"
+			BytesSent/1048576.0  AS "MB_OUTPUT"  PRINTF "%9.2f"
+			{JobStatus,TransferringInput,TransferringOutput,TransferQueued}[0] AS ST PRINTAS JOB_STATUS
+			TransferQueued       AS XFER_Q
+			TransferringInput    AS XFER_IN
+			TransferringOutput=?=true || JobStatus==6   AS XFER_OUT
+		*/
+		ad->EvalFloat(ATTR_BYTES_RECVD,NULL,read_bytes);
+		ad->EvalFloat(ATTR_BYTES_SENT,NULL,write_bytes);
+
+		have_bytes = (read_bytes > 0 || write_bytes > 0);
+
+		int transferring_input = false;
+		int transferring_output = false;
+		int transfer_queued = false;
+		ad->EvalBool(ATTR_TRANSFERRING_INPUT,NULL,transferring_input);
+		ad->EvalBool(ATTR_TRANSFERRING_OUTPUT,NULL,transferring_output);
+		ad->EvalBool(ATTR_TRANSFER_QUEUED,NULL,transfer_queued);
+
+		StringList xfer_states;
+		if (transferring_input) xfer_states.append("in");
+		if (transferring_output) xfer_states.append("out");
+		if (transfer_queued) xfer_states.append("queued");
+		if ( ! xfer_states.isEmpty()) {
+			char * xfer = xfer_states.print_to_string();
+			sprintf(misc, " transfer=%s", xfer);
+			free(xfer);
+		}
+	}
 
 	/* If the jobAd values are not set, OR the values are all zero,
-	   report no data collected.  This could be true for a vanilla
-	   job, or for a standard job that has not checkpointed yet. */
+		report no data collected. This can be true for a standard universe
+		job that has not checkpointed yet. */
 
-	if(wall_clock<0 || ((read_bytes < 1.0) && (write_bytes < 1.0) && (seek_count < 1.0)) ) {
-		strcat(return_buff, "   [ no i/o data collected ]\n");
+	if ( ! have_bytes) {
+		//                                                                            12345678 12345678 12345678/s
+		out += (univ==CONDOR_UNIVERSE_STANDARD) ? "   [ no i/o data collected ] " : "    .        .        .      ";
 	} else {
 		if(wall_clock < 1.0) wall_clock=1;
 
@@ -2079,14 +2148,25 @@ buffer_io_display( ClassAd *ad )
 		statement -- it returns a pointer to a static buffer.
 		*/
 
-		sprintf( return_buff,"%s %8s", return_buff, metric_units(read_bytes) );
-		sprintf( return_buff,"%s %8s", return_buff, metric_units(write_bytes) );
-		sprintf( return_buff,"%s %8.0f", return_buff, seek_count );
-		sprintf( return_buff,"%s %8s/s", return_buff, metric_units((int)((read_bytes+write_bytes)/wall_clock)) );
-		sprintf( return_buff,"%s %8s", return_buff, metric_units(buffer_size) );
-		sprintf( return_buff,"%s %8s\n", return_buff, metric_units(block_size) );
+		if (read_bytes > 0) {
+			formatstr_cat(out, " %8s", metric_units(read_bytes) );
+		} else {
+			out += "    .    ";
+		}
+		if (write_bytes > 0) {
+			formatstr_cat(out, " %8s", metric_units(write_bytes) );
+		} else {
+			out += "    .    ";
+		}
+		if (read_bytes + write_bytes > 0) {
+			formatstr_cat(out, " %8s/s", metric_units((int)((read_bytes+write_bytes)/wall_clock)) );
+		} else {
+			out += "    .      ";
+		}
 	}
-	return ( return_buff );
+
+	out += misc;
+	out += "\n";
 }
 
 
@@ -2215,8 +2295,8 @@ short_header (void)
 	} else if ( show_held ) {
 		printf( "%11s %-30s\n", "HELD_SINCE", "HOLD_REASON" );
 	} else if ( show_io ) {
-		printf( "%8s %8s %8s %10s %8s %8s\n",
-				"READ", "WRITE", "SEEK", "XPUT", "BUFSIZE", "BLKSIZE" );
+		printf( "%4s %2s %-8s %-8s %-10s %s\n",
+				"RUNS", "ST", " INPUT", " OUTPUT", " RATE", "MISC");
 	} else if( dash_run ) {
 		printf( "%11s %12s %-16s\n", "SUBMITTED", JOB_TIME, "HOST(S)" );
 	} else {
@@ -2369,6 +2449,16 @@ format_job_universe(int job_universe, AttrList* /*ad*/, Formatter &)
 }
 
 static const char *
+format_job_id(int cluster_id, AttrList* ad, Formatter &)
+{
+	static char put_result[PROC_ID_STR_BUFLEN];
+	int proc_id=0;
+	ad->LookupInteger(ATTR_PROC_ID,proc_id);
+	ProcIdToStr(cluster_id, proc_id, put_result);
+	return put_result;
+}
+
+static const char *
 format_job_status_raw(int job_status, AttrList* /*ad*/, Formatter &)
 {
 	switch(job_status) {
@@ -2387,7 +2477,7 @@ static const char *
 format_job_status_char(int job_status, AttrList*ad, Formatter &)
 {
 	static char put_result[3];
-	put_result[1] = 0;
+	put_result[1] = ' ';
 	put_result[2] = 0;
 
 	put_result[0] = encode_status(job_status);
@@ -2420,11 +2510,11 @@ format_job_status_char(int job_status, AttrList*ad, Formatter &)
 	ad->EvalBool(ATTR_TRANSFERRING_OUTPUT,NULL,transferring_output);
 	ad->EvalBool(ATTR_TRANSFER_QUEUED,NULL,transfer_queued);
 	if( transferring_input ) {
-		put_result[0] = transfer_queued ? 'q' : '+';
-		put_result[1] = '<';
+		put_result[0] = '<';
+		put_result[1] = transfer_queued ? 'q' : ' ';
 	}
 	if( transferring_output || job_status == TRANSFERRING_OUTPUT) {
-		put_result[0] = transfer_queued ? 'q' : '+';
+		put_result[0] = transfer_queued ? 'q' : ' ';
 		put_result[1] = '>';
 	}
 	return put_result;
@@ -2880,8 +2970,10 @@ usage (const char *myName, int other)
 		"\t-goodput\t\tDisplay job goodput statistics\n"	
 		"\t-help [Universe|State]\tDisplay this screen, JobUniverses, JobStates\n"
 		"\t-hold\t\t\tGet information about jobs on hold\n"
-		"\t-io\t\t\tShow information regarding I/O\n"
+		"\t-io\t\t\tDisplay information regarding I/O\n"
+//FUTURE		"\t-transfer\t\tDisplay information for jobs that are doing file transfer\n"
 		"\t-run\t\t\tGet information about running jobs\n"
+		"\t-totals\t\t\tDisplay only job totals\n"
 		"\t-stream-results \tProduce output as jobs are fetched\n"
 		"\t-version\t\tPrint the HTCondor version and exit\n"
 		"\t-wide[:<width>]\t\tDon't truncate data to fit in 80 columns.\n"
@@ -3652,7 +3744,7 @@ static const char * render_job_text(ClassAd *job, std::string & result_text)
 	} else if (better_analyze) {
 		ASSERT(0); // should never get here.
 	} else if (show_io) {
-		result_text += buffer_io_display(job);
+		buffer_io_display(result_text, job);
 	} else if (usingPrintMask) {
 		if (mask.IsEmpty()) return NULL;
 		mask.display(result_text, job);
@@ -3848,7 +3940,6 @@ process_job_to_map(void * pv,  ClassAd* job)
 		fprintf( stderr, "Error: Two results with the same ID.\n" );
 		//tj: 2013 -don't abort without printing jobs
 		// exit( 1 );
-		//maybe we should toss tempCPS into an orphan list rather than simply leaking it?
 		return false;
 	} else {
 		render_job_text(job, pp.first->second);
@@ -3871,6 +3962,24 @@ void clear_results(RESULT_MAP_TYPE & result_map)
 }
 
 
+PRAGMA_REMIND("Write this properly as a method on the sinful object.")
+
+const char * summarize_sinful_for_display(std::string & addrsumy, const char * addr)
+{
+	addrsumy = addr;
+	const char * quest = strchr(addr, '?');
+	if ( ! quest) {
+	   addrsumy = addr;
+	   return addr;
+	}
+	
+	addrsumy.clear();
+	addrsumy.insert(0, addr, 0, quest - addr);
+	addrsumy += "?...";
+	return addrsumy.c_str();
+}
+
+
 // query SCHEDD or QUILLD daemon for jobs. and then print out the desired job info.
 // this function handles -analyze, -streaming, -dag and all normal condor_q output
 // when the source is a SCHEDD or QUILLD.
@@ -3883,11 +3992,13 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	// initialize counters
 	malformed = idle = running = held = completed = suspended = 0;
 
+	std::string addr_summary;
+	summarize_sinful_for_display(addr_summary, scheddAddress);
 	std::string source_label;
-	if (querySchedds) {
-		formatstr(source_label, "Schedd: %s : %s", scheddName, scheddAddress);
+	if (querySubmittors) {
+		formatstr(source_label, "Submitter: %s : %s : %s", scheddName, addr_summary.c_str(), scheddMachine);
 	} else {
-		formatstr(source_label, "Submitter: %s : %s : %s", scheddName, scheddAddress, scheddMachine);
+		formatstr(source_label, "Schedd: %s : %s", scheddName, addr_summary.c_str());
 	}
 
 	if (verbose || dash_profile) {
@@ -4078,7 +4189,8 @@ show_file_queue(const char* jobads, const char* userlog)
 		if (better_analyze && ! jobads_file_parse_helper.schedd_name.empty()) {
 			const char *scheddName    = jobads_file_parse_helper.schedd_name.c_str();
 			const char *scheddAddress = jobads_file_parse_helper.schedd_addr.c_str();
-			formatstr(source_label, "Schedd: %s : %s", scheddName, scheddAddress);
+			const char *queryType     = jobads_file_parse_helper.is_submitter ? "Submitter" : "Schedd";
+			formatstr(source_label, "%s: %s : %s", queryType, scheddName, scheddAddress);
 			}
 		
 		/* The variable UseDB should be false in this branch since it was set 
@@ -6622,6 +6734,7 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, format_cpu_time, NULL },
 	{ "JOB_DESCRIPTION", ATTR_JOB_CMD, format_job_description, ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
+	{ "JOB_ID",          ATTR_CLUSTER_ID, format_job_id, ATTR_PROC_ID "\0" },
 	{ "JOB_STATUS",      ATTR_JOB_STATUS, format_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
 	{ "JOB_STATUS_RAW",  ATTR_JOB_STATUS, format_job_status_raw, NULL },
 	{ "JOB_UNIVERSE",    ATTR_JOB_UNIVERSE, format_job_universe, NULL },

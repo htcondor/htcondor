@@ -60,6 +60,7 @@ DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 	m_reqFound(FALSE),
 	m_result(FALSE),
 	m_perm(USER_AUTH_FAILURE),
+	m_allow_empty(false),
 	m_policy(NULL),
 	m_key(NULL),
 	m_sid(NULL),

@@ -44,6 +44,20 @@ static void ncpus_linux( int *num_cpus,int *num_hyperthread_cpus );
 typedef BOOL (WINAPI *LPFN_GLPI)(
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION, 
     PDWORD);
+// The version if winnt.h that ships with Vs9 doesn't define SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
+// so this code won't build.  We use the define for PROCESSOR_ARCHITECTURE_NEUTRAL which is nearby
+// in the modern winnt.h as a way of detecting the missing structure definition and commenting out
+// the relevant code.
+#ifdef PROCESSOR_ARCHITECTURE_NEUTRAL
+#define HAS_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
+typedef BOOL (WINAPI *LPFN_GLPIX)(
+	DWORD, // RelationshipType
+	PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, // Buffer
+	PDWORD); // ReturnedLength
+#else
+#pragma message("WARNING: PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX not defined in winnt.h - using WinXP compatible code to detect CPU cores.")
+#pragma message("WARNING: This version of HTCondor may not correct detect > 16 CPUS.")
+#endif
 #endif
 
 #ifdef WIN32
@@ -106,13 +120,58 @@ sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 		int coreCount = 0;
 		int logicalCoreCount = 0;
 
+		#ifdef HAS_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
+		LPFN_GLPIX glpix = NULL;
+		#endif
 		LPFN_GLPI glpi = NULL;
 		HMODULE hmod = GetModuleHandle(TEXT("kernel32"));
 		if (hmod) {
-			glpi = (LPFN_GLPI) GetProcAddress(hmod, "GetLogicalProcessorInformation");
+		#ifdef HAS_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
+			glpix = (LPFN_GLPIX) GetProcAddress(hmod, "GetLogicalProcessorInformationEx");
+			if ( ! glpix)
+		#endif
+				glpi = (LPFN_GLPI) GetProcAddress(hmod, "GetLogicalProcessorInformation");
 		}
+		#ifdef HAS_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX
+		if (glpix)
+		{
+			// this code for Win7 or later.
+
+			// call once to determine buffer size.
+			DWORD cbInfo = 0;
+			glpix(RelationProcessorCore, NULL, &cbInfo);
+			if (!cbInfo || cbInfo > 10*1024*1024) { // 10Mb is way more than we ever expect to need...
+				EXCEPT("Error: Failed to determine space for SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX : %d needed", cbInfo);
+			}
+			PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX infoBuf = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)malloc(cbInfo);
+			if ( ! glpix(RelationProcessorCore, infoBuf, &cbInfo)) {
+				EXCEPT("Error: Failed to call GetLogicalProcessorInformationEx: %d", GetLastError());
+			}
+
+			// got the processor info, now we decode it.
+			// the return value is a set of structures that have a Size field telling us how
+			// far to the next structure.
+			PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX ph = infoBuf;
+			for (char * pi = (char*)infoBuf; pi < (char*)infoBuf + cbInfo; pi += ph->Size) {
+				ph = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)pi;
+				ASSERT(ph->Relationship == RelationProcessorCore);
+				coreCount++;
+				if (ph->Processor.Flags & LTP_PC_SMT) {
+					for (unsigned ix = 0; ix < ph->Processor.GroupCount; ++ix) {
+						logicalCoreCount += CountSetBits(ph->Processor.GroupMask[ix].Mask);
+					}
+				} else {
+					// TJ: is this right? or should we be counting set bits to determine number of cores here?
+					logicalCoreCount += 1;
+				}
+			}
+			free(infoBuf);
+		}
+		else
+		#endif
 		if (glpi)
 		{
+			// this code for pre-win7
 			DWORD returnLength = 0;
 			int byteOffset = 0;
 			PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = NULL;

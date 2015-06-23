@@ -873,6 +873,18 @@ update_report_result:
 				"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n";
 			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 		}
+		if( ProcId == -3 ) {
+			error = TRUE;
+			error_msg =
+				"Number of submitted jobs would exceed MAX_JOBS_PER_OWNER\n";
+			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
+		}
+		if( ProcId == -4 ) {
+			error = TRUE;
+			error_msg =
+				"Number of submitted jobs would exceed MAX_JOBS_PER_SUBMISSION\n";
+			dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
+		}
 
 
 		// Adjust the argument/environment syntax based on the version

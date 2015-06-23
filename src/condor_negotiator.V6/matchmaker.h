@@ -207,6 +207,11 @@ class Matchmaker : public Service
 		void calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &, double &, double &,
 										   double &, double &);
 
+		// Check to see if any concurrency limit is violated with the given set of limits.
+		// *Note* limits will be changed to lower-case.
+		bool rejectForConcurrencyLimits(std::string &limits);
+
+
 		/** Calculate a submitter's share of the pie.
 			@param quiet Do not emitt debug information about the calculation
 			@param scheddName Name attribute from the submitter ad.
@@ -305,7 +310,13 @@ class Matchmaker : public Service
 		/* ODBC insert functions */
 		void insert_into_rejects(char const *userName, ClassAd& job);
 		void insert_into_matches(char const *userName, ClassAd& request, ClassAd& offer);
-		
+
+			// Returns a pslot to the match list (after consumption policies have been applied).
+			// Recalculates ranks and re-sorts match list.
+			// ASSUMES NO_PREEMPTION for pslots.
+		bool returnPslotToMatchList(ClassAd &request, ClassAd *offer);
+		void calculateRanks(ClassAd &request, ClassAd *offer, PreemptState candidatePreemptState, double &candidateRankValue, double &candidatePreJobRankValue, double &candidatePostJobRankValue, double &candidatePreemptRankValue);
+
 
 		void RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad );
 
@@ -377,7 +388,8 @@ class Matchmaker : public Service
 		int rejPreemptForPolicy; //   - PREEMPTION_REQUIREMENTS == False?
 		int rejPreemptForRank;	//   - startd RANKs new job lower?
 		int rejForSubmitterLimit;   //   - not enough group quota?
-        string rejectedConcurrencyLimit; // the name of concurrency limit rejected
+	std::set<std::string> rejectedConcurrencyLimits;
+	std::string lastRejectedConcurrencyString;
 
 
 		// Class used to store each individual entry in the
@@ -419,6 +431,16 @@ class Matchmaker : public Service
 		public:
 
 			ClassAd* pop_candidate();
+				// Return the previously-pop'd candidate back into the list.
+				// Note that this assumes there is empty space in the front of the list
+				// Also assume list was already sorted.
+				// Returns false if there was no space (i.e., this wasn't previously pop'd).
+			bool insert_candidate(ClassAd * candidate,
+					double candidateRankValue,
+					double candidatePreJobRankValue,
+					double candidatePostJobRankValue,
+					double candidatePreemptRankValue,
+					PreemptState candidatePreemptState);
 			bool cache_still_valid(ClassAd &request,ExprTree *preemption_req,
 				ExprTree *preemption_rank,bool preemption_req_unstable, bool preemption_rank_unstable);
 			void get_diagnostics(int & rejForNetwork,

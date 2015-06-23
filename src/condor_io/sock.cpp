@@ -1132,8 +1132,7 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr ) {
 
 	// In practice, all C++03 implementations are stable with respect
 	// to insertion order; the  C++11 standard requires that they are.
-	// FIXME: Since this is kind of important, we really should have
-	// a unit test to verify this behavior.
+	// We have a unit test for the former.
 	std::multimap< int, condor_sockaddr > sortedByDesire;
 
 	// If we don't multiply by -1 and instead use rbegin()/rend(),
@@ -1154,7 +1153,7 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr ) {
 
 		// Assume that we "have" any protocol that's enabled.  It turns
 		// out that anything else (including considering the desirability
-		// of our interfaces) gets really complicated.  Instead (FIXME:)
+		// of our interfaces) gets really complicated.  Instead, we
 		// document that ENABLE_IPV6 should be false unless you have a
 		// public IPv6 address (or one which everyone in your pool can
 		// otherwise reach).

@@ -78,7 +78,10 @@ int main(int argc, const char ** argv)
 			pid_t pid = getpid();
 			sprintf(copy_smaps, "cat /proc/%d/smaps > %s", pid, filename);
 			int r = system(copy_smaps);
-			fprintf(stdout, "%s returned %d\n", copy_smaps, r);
+			if (r != 0) {
+				fprintf(stdout, "%d return copy smaps", r);
+			}
+			//fprintf(stdout, "%s returned %d\n", copy_smaps, r);
 		#endif
 		} else {
 			fprintf(stderr, "unknown argument: %s\n", argv[ix]);
@@ -127,8 +130,8 @@ static const char * const aVerTrue[] = {
 	"version > 6.0", "!version >" CONDOR_SERIES_VERSION, "version > 8.1.1",
 	"version > 8.1.4", "version > 7.24.29",
 	"version >= " CONDOR_VERSION, "version == " CONDOR_SERIES_VERSION, "version != 8.0",
-	"version == " CONDOR_VERSION, "version <= " CONDOR_SERIES_VERSION ".9",
-	"version <= " CONDOR_SERIES_VERSION, "version < " CONDOR_SERIES_VERSION ".9", "version < " CONDOR_SERIES_VERSION ".16",
+	"version == " CONDOR_VERSION, "version <= " CONDOR_SERIES_VERSION ".12",
+	"version <= " CONDOR_SERIES_VERSION, "version < " CONDOR_SERIES_VERSION ".12", "version < " CONDOR_SERIES_VERSION ".16",
 	"version < " CONDOR_SERIES_VERSION ".99", "version < " CONDOR_NEXT_VERSION, "version < 9.0",
 	"version < 10.0", " VERSION < 10.0 ", " Version < 10.0"
 };

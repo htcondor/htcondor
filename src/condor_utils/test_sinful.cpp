@@ -3,10 +3,6 @@
 
 #include <stdio.h>
 
-//
-// For now, we're only testing the addrs-related functionality.
-//
-
 bool verbose = false;
 #define REQUIRE( condition ) \
 	if(! ( condition )) { \
@@ -192,6 +188,79 @@ int main( int, char ** ) {
 
 	REQUIRE( s.hasAddrs() );
 
+
+	// In practice, all C++03 implementations are stable with respect
+	// to insertion order; the  C++11 standard requires that they are.
+	// This is the unit test for the former.
+	std::multimap< int, condor_sockaddr > sortedByDesire;
+
+	sortedByDesire.insert(std::make_pair( 0, sa ));
+	sortedByDesire.insert(std::make_pair( 0, sa2 ));
+	sortedByDesire.insert(std::make_pair( 0, sa3 ));
+	int i = 0;
+	std::multimap< int, condor_sockaddr >::const_iterator iter;
+	for( iter = sortedByDesire.begin(); iter != sortedByDesire.end(); ++iter, ++i ) {
+		switch( i ) {
+			case 0:
+				REQUIRE( (* iter).second == sa );
+				break;
+			case 1:
+				REQUIRE( (* iter).second == sa2 );
+				break;
+			case 2:
+				REQUIRE( (* iter).second == sa3 );
+				break;
+			default:
+				REQUIRE( false );
+				break;
+		}
+	}
+
+	sortedByDesire.clear();
+	REQUIRE( sortedByDesire.size() == 0 );
+	sortedByDesire.insert(std::make_pair( 1, sa ));
+	sortedByDesire.insert(std::make_pair( 0, sa2 ));
+	sortedByDesire.insert(std::make_pair( 0, sa3 ));
+	i = 0;
+	for( iter = sortedByDesire.begin(); iter != sortedByDesire.end(); ++iter, ++i ) {
+		switch( i ) {
+			case 0:
+				REQUIRE( (* iter).second == sa2 );
+				break;
+			case 1:
+				REQUIRE( (* iter).second == sa3 );
+				break;
+			case 2:
+				REQUIRE( (* iter).second == sa );
+				break;
+			default:
+				REQUIRE( false );
+				break;
+		}
+	}
+
+	sortedByDesire.clear();
+	REQUIRE( sortedByDesire.size() == 0 );
+	sortedByDesire.insert(std::make_pair( 0, sa2 ));
+	sortedByDesire.insert(std::make_pair( 1, sa ));
+	sortedByDesire.insert(std::make_pair( 0, sa3 ));
+	i = 0;
+	for( iter = sortedByDesire.begin(); iter != sortedByDesire.end(); ++iter, ++i ) {
+		switch( i ) {
+			case 0:
+				REQUIRE( (* iter).second == sa2 );
+				break;
+			case 1:
+				REQUIRE( (* iter).second == sa3 );
+				break;
+			case 2:
+				REQUIRE( (* iter).second == sa );
+				break;
+			default:
+				REQUIRE( false );
+				break;
+		}
+	}
 
 	return 0;
 }
