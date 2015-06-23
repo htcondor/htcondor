@@ -33,6 +33,7 @@ use Check::CondorLog;
 use Time::Local;
 use Cwd;
 
+my $donejob = 1;
 my $test_name = "job_test_scheddrotation";
 my $logpattern = "SchedLog";
 CondorTest::RunTest($test_name);
@@ -50,6 +51,7 @@ my $firstappend_condor_config = '
 	WANT_SUSPEND = FALSE
 	NEGOTIATION_INTERVAL = 5
 	SCHEDD_INTERVAL = 5
+	NUM_CPUS = 24
 	MAX_SCHEDD_LOG = 20 Kb
 ';
 
@@ -61,25 +63,32 @@ CondorTest::StartCondorWithParams(
 	condorlocalsrc => "$configfile1",
 );
 
-sub on_execute {
-}
+Condor::SetAllowedEvents("RegisterEvictedWithoutCheckpoint,RegisterSubmit,RegisterExecute,RegisterImageupdated");
 
-sub on_submit {
-}
+#sub on_execute {
+#};
+#
+#sub on_submit {
+##};
 
-sub on_imageupdated {
-}
+#sub on_imageupdated {
+#};
 
-sub on_success {
-}
+#sub on_success {
+	#print "$donejob completed\n";
+	#$donejob += 1;
+	#system("condor_q");
+	#timestamp();
+#};
 
 print "First test basic job\n";
 $result = SimpleJob::RunCheck(
 	queue_sz => 40,
-	on_execute => \&on_execute,
-	on_success => \&on_success,
-	on_submit => \&on_submit,
-	on_imageupdated => \&on_imageupdated,
+	timeout => 600,
+	#on_execute => \&on_execute,
+	#on_success => \&on_success,
+	#on_submit => \&on_submit,
+	#on_imageupdated => \&on_imageupdated,
 ); # jobid 1
 
 my $return = "";
