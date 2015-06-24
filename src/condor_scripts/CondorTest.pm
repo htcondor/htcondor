@@ -3479,6 +3479,7 @@ sub CoreCheck {
 			next;
 		}
 		$fullpath = $logdir . "/" . $perp;
+		print "About to see if :$fullpath: exists\n";
 		if(-f $fullpath) {
 			if($perp =~ /core/) {
 				# returns printable string
