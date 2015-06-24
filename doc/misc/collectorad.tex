@@ -99,7 +99,8 @@ number, the release date, and the build identification number.
 
 \index{ClassAd Collector attribute!StartdAds}
 \item[\AdAttr{StartdAds}:] The integer number of unique \Condor{startd}
-  daemon ClassAds seen since the \Condor{collector} began executing.
+  daemon ClassAds counted at the most recent time the \Condor{collector}
+  updated its own ClassAd.
 
 \index{ClassAd Collector attribute!StartdAdsPeak}
 \item[\AdAttr{StartdAdsPeak}:] The largest integer number of unique 
@@ -107,8 +108,9 @@ number, the release date, and the build identification number.
   since the \Condor{collector} began executing.
 
 \index{ClassAd Collector attribute!SubmitterAds}
-\item[\AdAttr{SubmitterAds}:] The integer number of unique submitters seen
-  since the \Condor{collector} began executing.
+\item[\AdAttr{SubmitterAds}:] The integer number of unique submitters 
+  counted at the most recent time the \Condor{collector} 
+  updated its own ClassAd.
 
 \index{ClassAd Collector attribute!SubmitterAdsPeak}
 \item[\AdAttr{SubmitterAdsPeak}:] The largest integer number of unique 
