@@ -138,8 +138,8 @@ job_dagman_lazy_submit_file: personal
 job_dagman_local: personal
 job_dagman_loglink: personal
 job_dagman_log_path: personal
-job_dagman_maxpostscripts: cygwin, personal
-job_dagman_maxprescripts: cygwin, personal
+job_dagman_maxpostscripts:  personal
+job_dagman_maxprescripts:  personal
 job_dagman_multi_dag: personal
 job_dagman_node_dir: personal
 job_dagman_node_prio: personal
@@ -149,7 +149,7 @@ job_dagman_nonexistent_subdag: personal
 job_dagman_noop_node: personal
 job_dagman_parallel-A: personal
 job_dagman_pegasus_recovery: personal
-job_dagman_prepost: cygwin, personal
+job_dagman_prepost:  personal
 job_dagman_pre_skip-A: personal
 job_dagman_pre_skip-B: personal
 job_dagman_pre_skip-C: personal
