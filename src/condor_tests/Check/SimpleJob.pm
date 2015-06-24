@@ -207,6 +207,7 @@ sub RunCheck
 		$availableslots = ExamineSlots($args{check_slots});
 	
 		if($availableslots < $queuesz) {
+			printf "RunCheck returning before submission. available slots:$availableslots vs requested:$queuesz\n";
     		CondorTest::RegisterResult( $result, %args );
     		return $result;
 		}
@@ -394,6 +395,7 @@ sub RunCheck
 	}
     close( SUBMIT );
 
+	print "RunCheck finally calling RunTest\n";
 	if (defined $args{GetClusterId}) {
     	$result = CondorTest::RunTest($testname, $submit_fname, 0, $args{GetClusterId});
 	} else {

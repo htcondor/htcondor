@@ -71,9 +71,9 @@ sub WaitForIt {
         system("condor_q");
         #print "Calling CheckStatus with final:$final\n";
         $res = CheckStatus($final);
-        #print "Result from CheckStatus:$res\n";
+        print "Result from CheckStatus:$res\n";
         if($res == 1) {
-            #print "WaitForIt got 1, we are really done\n";
+            print "WaitForIt got 1, we are really done\n";
             return(1);
         } elsif ($res == 2) {
             # wait on the next negotiator cycle to ensure
@@ -88,13 +88,13 @@ sub WaitForIt {
             print "WaitForIt got -1, something went wrong\n";
             return (-1);
         } elsif ($res == 0) {
-            #print "We need more time in WaitForIt\n";
+            print "We need more time in WaitForIt\n";
         }
         if( $count != $looplimit ) {
             #$sleeptime = ($count * $variance);
             $sleeptime = ($variance);
             sleep($sleeptime);
-            #print "sleep time set to $sleeptime\n";
+            print "sleep time set to $sleeptime\n";
         } else { 
             print "Timeout in WaitForIt\n";
             return(-1);
@@ -163,18 +163,21 @@ sub CountRunning
     my $line = ""; 
     my @goods = (); 
 
+	print "CountRunning: enter and get queue information\n";
     CondorTest::runCondorTool("condor_q",\@goods,2,{emit_output => 0});
+	print "CountRunning: have queue information\n";
     foreach my $job (@goods) {
         chomp($job);
         $line = $job;
         #print "JOB: $line\n";
         if($line =~ /^.*?\sR\s.*$/) {
             $runcount += 1;
-            #print "Run count now:$runcount\n";
+            print "Run count now:$runcount\n";
         } else {
-            #print "Parse error or Idle:$line\n";
+            print "Parse error or Idle:$line\n";
         }   
     }   
+	print "CountRunning: returning $runcount\n";
     return($runcount);
 }
 
