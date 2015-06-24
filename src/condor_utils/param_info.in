@@ -4048,7 +4048,6 @@ tags=c++_util,sshd_wrapper
 
 [ENABLE_USERLOG_LOCKING]
 default=false
-win32_default=true
 type=bool
 reconfig=true
 customization=seldom
@@ -4085,7 +4084,6 @@ tags=c++_util,user_log
 
 [EVENT_LOG_LOCKING]
 default=false
-win32_default=true
 type=bool
 reconfig=true
 customization=seldom
@@ -8315,3 +8313,4 @@ default: @end
 	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
 @end
 
+# ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^
