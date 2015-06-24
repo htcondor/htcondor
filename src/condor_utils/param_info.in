@@ -1,3 +1,18 @@
+[ENABLE_KERNEL_TUNING]
+default=false
+type=bool
+review=?
+
+[KERNEL_TUNING_LOG]
+default=$(LOG)/KernelTuning.log
+type=path
+review=?
+
+[LINUX_KERNEL_TUNING_SCRIPT]
+default=$(LIBEXEC)/linux_kernel_tuning
+type=path
+review=?
+
 [COLLECTOR_ENVIRONMENT]
 # XXX follows pattern of %s_ENVIRONMENT
 default=
