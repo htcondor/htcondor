@@ -2544,8 +2544,8 @@ and partial contents of the Perl PRE script, \File{final\_pre.pl}:
 \end{verbatim}
 
 
-\Bold{There are restrictions on the use of a FINAL node.}
-The DONE option is not allowed for a FINAL node.
+There are restrictions on the use of a FINAL node.
+The DONE option is \emph{not} allowed for a FINAL node.
 And, a FINAL node may not be referenced in any of the following
 specifications:
 \begin{itemize}
@@ -2556,8 +2556,9 @@ specifications:
 \item CATEGORY
 \end{itemize}
 
-Also, as of version 8.3.7, DAGMan allows at most two submit attempts
-for a FINAL node if the DAG has been \Condor{rm}'ed.
+As of HTCondor version 8.3.7, DAGMan allows at most two submit attempts
+of a FINAL node,
+if the DAG has been removed from the queue with \Condor{rm}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGMan-rescue}The Rescue DAG}
