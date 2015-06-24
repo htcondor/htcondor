@@ -81,8 +81,8 @@ limits the total number number of jobs that may be in the queue for each
 owner (submitting user).
 \Ticket{4641}
 
-\item \Condor{dagman} now allows at most two submit attempts for a FINAL
-node job if the DAG has been \Condor{rm}'ed.
+\item \Condor{dagman} now allows a maximum of two submit attempts of a FINAL
+node job, if the DAG has been removed with \Condor{rm}.
 \Ticket{5089}
 
 \item A job ad's \Attr{ConcurrencyLimits} attribute can now be a ClassAd
