@@ -1018,7 +1018,6 @@ rm -rf %{buildroot}%{_mandir}/man1/condor_compile.1*
 rm -rf %{buildroot}%{_mandir}/man1/condor_config_bind.1*
 rm -rf %{buildroot}%{_mandir}/man1/condor_configure.1*
 rm -rf %{buildroot}%{_mandir}/man1/condor_load_history.1*
-rm -rf %{buildroot}%{_mandir}/man1/condor_set_shutdown.1*
 rm -rf %{buildroot}%{_mandir}/man1/filelock_midwife.1*
 rm -rf %{buildroot}%{_mandir}/man1/filelock_undertaker.1*
 rm -rf %{buildroot}%{_mandir}/man1/install_release.1*
