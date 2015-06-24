@@ -932,7 +932,7 @@ tags=dagman,dagman_main
 
 [DAGMAN_CONDOR_RM_EXE]
 default=$(BIN)/condor_rm
-win32_default=$(BIN)\condor_submit.exe
+win32_default=$(BIN)\condor_rm.exe
 type=path
 reconfig=false
 customization=expert
@@ -4355,13 +4355,22 @@ review=?
 tags=starter,job_info_communicator
 
 [ENCRYPT_EXECUTE_DIRECTORY]
-default=
-type=string
+default=false
+type=bool
 reconfig=true
 customization=seldom
 friendly_name=Encrypt Execute Directory
 review=?
-tags=starter,starter
+tags=startd,starter
+
+[ENCRYPT_EXECUTE_DIRECTORY_FILENAMES]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Encrypt Filenames Inside Execute Directory
+review=?
+tags=startd,starter
 
 [STARTER_JOB_ENVIRONMENT]
 default=

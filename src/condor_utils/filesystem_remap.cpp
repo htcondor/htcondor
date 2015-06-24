@@ -359,8 +359,13 @@ int FilesystemRemap::AddEncryptedMapping(std::string mountpoint, std::string pas
 	// create mount options line
 	std::string mountopts;
 	formatstr(mountopts,
-			"ecryptfs_sig=%s,ecryptfs_fnek_sig=%s,ecryptfs_cipher=aes,ecryptfs_key_bytes=16",
-			m_sig1.c_str(),m_sig2.c_str());
+			"ecryptfs_sig=%s,ecryptfs_cipher=aes,ecryptfs_key_bytes=16",
+			m_sig1.c_str());
+
+	// optionally encrypt the filenames themselves
+	if(param_boolean("ENCRYPT_EXECUTE_DIRECTORY_FILENAMES",false)) {
+		mountopts += ",ecryptfs_fnek_sig=" + m_sig2;
+	}
 
 	// stash mount info for PerformMappings() to access.  we do this in advance as
 	// we don't want PerformMappings doing heap memory allocation/destructions.
