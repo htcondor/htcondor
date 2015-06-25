@@ -10377,7 +10377,7 @@ send_vacate(match_rec* match,int cmd)
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
 	msg->setSecSessionId( match->secSessionId() );
 
-	if ( !startd->hasUDPCommandPort() || param_boolean("SCHEDD_SEND_VACATE_VIA_TCP",false) ) {
+	if ( !startd->hasUDPCommandPort() || param_boolean("SCHEDD_SEND_VACATE_VIA_TCP",true) ) {
 		dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d ) via TCP\n", 
 				 match->peer, cmd );
 		msg->setStreamType(Stream::reli_sock);
