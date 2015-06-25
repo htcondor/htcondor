@@ -673,19 +673,19 @@ SharedPortState::HandleFD(Stream *&s)
 #if USE_ABSTRACT_DOMAIN_SOCKET
 	struct sockaddr_un addr;
 	socklen_t addrlen = sizeof(struct sockaddr_un);
- 	if( -1 == getpeername( sock->get_file_desc(), (struct sockaddr *) & addr, & addrlen ) ) {
-		dprintf( D_AUDIT, (DPF_IDENT)sock, "Failure while auditing connection from %s: unable to obtain domain socket peer address: %s\n",
+	if( -1 == getpeername( sock->get_file_desc(), (struct sockaddr *) & addr, & addrlen ) ) {
+		dprintf( D_AUDIT, *sock, "Failure while auditing connection from %s: unable to obtain domain socket peer address: %s\n",
 			m_sock->peer_addr().to_ip_and_port_string().c_str(),
 			strerror( errno ) );
 	} else if( addrlen <= sizeof( sa_family_t ) ) {
-		dprintf( D_AUDIT, (DPF_IDENT)sock, "Failure while auditing connection from %s: unable to obtain domain socket peer address because domain socket peer is unnamed.\n",
+		dprintf( D_AUDIT, *sock, "Failure while auditing connection from %s: unable to obtain domain socket peer address because domain socket peer is unnamed.\n",
 			m_sock->peer_addr().to_ip_and_port_string().c_str() );
 	} else if( addr.sun_path[0] != '\0' ) {
 		struct ucred cred;
 		socklen_t len = sizeof(struct ucred);
 		int rc = getsockopt( sock->get_file_desc(), SOL_SOCKET, SO_PEERCRED, & cred, & len );
 		if( rc == -1 ) {
-		dprintf( D_AUDIT, (DPF_IDENT)sock, "Failure while auditing connection via %s from %s: unable to obtain domain socket's peer credentials: %s.\n",
+		dprintf( D_AUDIT, *sock, "Failure while auditing connection via %s from %s: unable to obtain domain socket's peer credentials: %s.\n",
 			addr.sun_path,
 			m_sock->peer_addr().to_ip_and_port_string().c_str(),
 			strerror( errno ) );
@@ -734,7 +734,7 @@ SharedPortState::HandleFD(Stream *&s)
 
 			// We can't use m_requested_by because it was supplied by the
 			// remote process (and therefore can't be trusted).
-			dprintf( D_AUDIT, (DPF_IDENT)sock,
+			dprintf( D_AUDIT, *sock,
 				"Forwarding connection to PID = %d, UID = %d, GID = %d [executable '%s'; command line '%s'] via %s from %s.\n",
 				cred.pid, cred.uid, cred.gid,
 				procExe,
