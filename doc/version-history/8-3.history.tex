@@ -95,8 +95,8 @@ retries plus a FINAL node could cause a DAG getting aborted or
 \SubmitCmd{ec2\_iam\_profile\_arn} would lead to failing EC2 requests.
 \Ticket{5095}
 
-\item Fixed a bug in \Condor{dagman} in which having node retries
-and ABORT-DAG-ON specified for the name node could cause the node
+\item Fixed a bug in \Condor{dagman} in which having both node retries
+and ABORT-DAG-ON specified for the same node could cause the node
 status to be reported incorrectly.
 \Ticket{5092}
 
