@@ -106,6 +106,14 @@ DAGMAN\_CONDOR\_RM\_EXE configuration macro.  This caused \Condor{dagman}
 ABORT-DAG-ON feature was triggered.
 \Ticket{5114}
 
+\item The default value for configuration parameter
+\Macro{UPDATE\_COLLECTOR\_WITH\_TCP} has changed to \Expr{True}.
+The new configuration parameter \Macro{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP}
+controls whether UDP or TCP is used to forward update to the
+\Condor{collector}s specified via \Macro{CONDOR\_VIEW\_HOST}.
+Its default value is \Expr{False}.
+\Ticket{5116}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
