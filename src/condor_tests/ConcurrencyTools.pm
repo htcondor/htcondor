@@ -164,7 +164,7 @@ sub CountRunning
     my @goods = (); 
 
 	print "CountRunning: enter and get queue information\n";
-    CondorTest::runCondorTool("condor_q",\@goods,2,{emit_output => 0});
+    CondorTest::runCondorTool("condor_q",\@goods,2,{emit_output => 1});
 	print "CountRunning: have queue information\n";
     foreach my $job (@goods) {
         chomp($job);
