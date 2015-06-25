@@ -3443,6 +3443,7 @@ sub CoreCheck {
 	my $count = 0;
 	my $scancount = 0;
 	my $fullpath = "";
+	my $iswindows = CondorUtils:::is_wiindows();
 	
 	CondorUtils::fullchomp($logdir);
 	print "Checking for cores and ERRORS for test:$test:\n";
@@ -3478,7 +3479,13 @@ sub CoreCheck {
 		if($perp =~ /^\./) {
 			next;
 		}
-		$fullpath = $logdir . "/" . $perp;
+		if($iswindows) {
+			$fullpath = $logdir . "\" . $perp;
+		} else {
+			$fullpath = $logdir . "/" . $perp;
+		}
+		CondorUtils::fullchomp($fullpath);
+		$fullpath =~ s/[\r\n]//g;
 		print "About to see if :$fullpath: exists\n";
 		if(-f $fullpath) {
 			if($perp =~ /core/) {
