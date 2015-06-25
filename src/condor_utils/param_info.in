@@ -5253,7 +5253,7 @@ review=?
 tags=schedd,schedd
 
 [SCHEDD_SEND_VACATE_VIA_TCP]
-default=false
+default=true
 type=bool
 reconfig=true
 customization=seldom
