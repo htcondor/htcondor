@@ -1427,7 +1427,7 @@ void CollectorDaemon::Config()
         free(tmp);
         cvh.rewind();
         while (char* vhost = cvh.next()) {
-            DCCollector* vhd = new DCCollector(vhost);
+            DCCollector* vhd = new DCCollector(vhost, DCCollector::CONFIG_VIEW);
             Sinful view_addr( vhd->addr() );
             Sinful my_addr( daemonCore->publicNetworkIpAddr() );
 
