@@ -89,6 +89,13 @@ to properly refer to the support files for the Java universe.
 \item Corrected the definition of the job ClassAd attribute 
 \Attr{GlobalJobId} within the HTCondor manual.
 \Ticket{5096}
+
+\item Fixed an incorrect Win32 default value for the
+DAGMAN\_CONDOR\_RM\_EXE configuration macro.  This caused \Condor{dagman}
+(on Windows) to not correctly remove running node jobs if the
+ABORT-DAG-ON feature was triggered.
+\Ticket{5114}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

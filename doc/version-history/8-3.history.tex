@@ -99,6 +99,10 @@ could not benefit from the matchlist caching option of the
 multiple jobs to a single partitionable slot.
 \Ticket{4973}
 
+\item The maximum buffer size for \Condor{chirp} commands has increased
+from 1024 bytes to 5120 bytes.
+\Ticket{5019}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -118,12 +122,12 @@ retries plus a FINAL node could cause a DAG getting aborted or
 \Condor{rm}'ed to re-submit nodes other than the FINAL node.
 \Ticket{5090}
 
-\item Fixed a bug in \Condor{submit} where using submit attribute
-\Attr{EC2IamProfileArn} would lead to requests to EC2 failing.
+\item Fixed a bug in \Condor{submit} in which the use of submit command
+\SubmitCmd{ec2\_iam\_profile\_arn} would lead to failing EC2 requests.
 \Ticket{5095}
 
-\item Fixed a bug in \Condor{dagman} in which having node retries
-and ABORT-DAG-ON specified for the name node could cause the node
+\item Fixed a bug in \Condor{dagman} in which having both node retries
+and ABORT-DAG-ON specified for the same node could cause the node
 status to be reported incorrectly.
 \Ticket{5092}
 
