@@ -54,8 +54,8 @@ owner (submitting user).
 node job, if the DAG has been removed with \Condor{rm}.
 \Ticket{5089}
 
-\item A job ad's \Attr{ConcurrencyLimits} attribute can now be a ClassAd
-expression that references attributes of the machine ads that the job
+\item A job's ClassAd attribute \Attr{ConcurrencyLimits} may now be a ClassAd
+expression that references attributes of the machine ClassAds that the job
 may be matched to.
 The expression must evaluate to a string that has the required format.
 \Ticket{5006}

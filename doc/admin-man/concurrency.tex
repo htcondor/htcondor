@@ -105,10 +105,11 @@ A concurrency limit named
 \Expr{OTHER.LICENSE} will receive the default limit of 5, as
 there is no set named \Expr{OTHER}.
 
-Note that it is possible, in unusual circumstances, for more jobs to
+Note that it is possible, under unusual circumstances, for more jobs to
 be started than should be allowed by the concurrency limits feature.
 In the presence of preemption and dropped updates from the
-\Condor{startd} daemon to the \Condor{collector} daemon, it is
-possible for the limit to be exceeded. If the limits are exceeded,
+\Condor{startd} daemon to the \Condor{collector} daemon, 
+it is possible for the limit to be exceeded. 
+If the limits are exceeded,
 HTCondor will not kill any job to reduce the number of running jobs to
 meet the limit.
