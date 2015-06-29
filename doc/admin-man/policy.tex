@@ -1981,9 +1981,6 @@ The following line should be placed in the job's submit description file:
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{admin-man/multi-core.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \subsubsection{\label{sec:Interactive-Job-Policy}With Interactive Jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{policy!utilizing interactive jobs}
@@ -2010,3 +2007,7 @@ Or, if slot 1 should be reserved for interactive jobs:
 START = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
 \end{verbatim}
 \normalsize
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{admin-man/multi-core.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
