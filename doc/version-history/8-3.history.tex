@@ -101,10 +101,11 @@ and ABORT-DAG-ON specified for the same node could cause the node
 status to be reported incorrectly.
 \Ticket{5092}
 
-\item Fixed an incorrect Win32 default value for the
-DAGMAN\_CONDOR\_RM\_EXE configuration macro.  This caused \Condor{dagman}
-(on Windows) to not correctly remove running node jobs if the
-ABORT-DAG-ON feature was triggered.
+\item On Windows platforms, fixed an incorrect Win32 default value for
+configuration variable \Macro{DAGMAN\_CONDOR\_RM\_EXE}.
+The incorrect default caused \Condor{dagman}
+to not correctly remove running node jobs,
+if the ABORT-DAG-ON feature was triggered.
 \Ticket{5114}
 
 \item The default value for configuration parameter
