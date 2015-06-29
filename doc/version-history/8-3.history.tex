@@ -63,8 +63,9 @@ The expression must evaluate to a string that has the required format.
 \item The matchmaking optimizations enabled by \MacroNI{CONSUMPTION\_POLICY}
 and \MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING} now work together properly.
 Previously, machines that were configured with a consumption policy
-could not benefit from the matchlist caching option of the
-\Condor{negotiator}, which could result in it taking more time to match
+could not benefit from the match list caching option of the
+\Condor{negotiator}.
+This may have led to an increased amount of time required to match
 multiple jobs to a single partitionable slot.
 \Ticket{4973}
 
