@@ -94,8 +94,9 @@ The expression must evaluate to a string that has the required format.
 \item The matchmaking optimizations enabled by \MacroNI{CONSUMPTION\_POLICY}
 and \MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING} now work together properly.
 Previously, machines that were configured with a consumption policy
-could not benefit from the matchlist caching option of the
-\Condor{negotiator}, which could result in it taking more time to match
+could not benefit from the match list caching option of the
+\Condor{negotiator}.
+This may have led to an increased amount of time required to match
 multiple jobs to a single partitionable slot.
 \Ticket{4973}
 
@@ -131,11 +132,20 @@ and ABORT-DAG-ON specified for the same node could cause the node
 status to be reported incorrectly.
 \Ticket{5092}
 
-\item Fixed an incorrect Win32 default value for the
-DAGMAN\_CONDOR\_RM\_EXE configuration macro.  This caused \Condor{dagman}
-(on Windows) to not correctly remove running node jobs if the
-ABORT-DAG-ON feature was triggered.
+\item On Windows platforms, fixed an incorrect Win32 default value for
+configuration variable \Macro{DAGMAN\_CONDOR\_RM\_EXE}.
+The incorrect default caused \Condor{dagman}
+to not correctly remove running node jobs,
+if the ABORT-DAG-ON feature was triggered.
 \Ticket{5114}
+
+\item The default value for configuration parameter
+\Macro{UPDATE\_COLLECTOR\_WITH\_TCP} has changed to \Expr{True}.
+The new configuration parameter \Macro{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP}
+controls whether UDP or TCP is used to forward update to the
+\Condor{collector}s specified via \Macro{CONDOR\_VIEW\_HOST}.
+Its default value is \Expr{False}.
+\Ticket{5116}
 
 \end{itemize}
 
