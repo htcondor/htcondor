@@ -8773,6 +8773,15 @@ These macros affect the \Condor{negotiator}.
   to claimed slots that cannot immediately be preempted
   due to \Macro{MAXJOBRETIREMENTTIME}.
 
+\label{param:AllowPslotPreemption}
+\item[\Macro{ALLOW\_PSLOT\_PREEMPTION}]
+  A boolean value that defaults to \Expr{False}.
+  When set to \Expr{True} for the \Condor{negotiator} and all
+  \Condor{startd}s and \Condor{schedd}s, enables a new matchmaking
+  mode, where one or more dynamic slots can be preempted in order to
+  make enough resources available in their parent partitionable slot
+  for a job to successfully match to the partitionable slot.
+
 \label{param:StartdAdReevalExpr}
 \item[\Macro{STARTD\_AD\_REEVAL\_EXPR}]
   A boolean value evaluated in the context of each machine ClassAd within
