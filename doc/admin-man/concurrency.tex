@@ -107,8 +107,9 @@ there is no set named \Expr{OTHER}.
 
 A concurrency limit may be evaluated against the attributes of a 
 matched machine.
-Care must be taken with the specification, 
-due to the treatment of quote marks by \Condor{submit}.
+To implement this, the job uses submit command 
+\SubmitCmd{concurrency\_limits\_expr} instead of
+\SubmitCmd{concurrency\_limits}.
 Consider an example in which execute machines are located on
 one of two local networks.
 The administrator sets a concurrency limit to limit the number
@@ -135,17 +136,30 @@ NETWORK_B_LIMIT = 10
 Each network intensive job identifies itself by specifying the limit
 within the submit description file:
 \begin{verbatim}
-+ConcurrencyLimits = TARGET.NETWORK
+concurrency_limits_expr = TARGET.NETWORK
 \end{verbatim}
 
 The concurrency limit is applied based on the network
 of the matched machine.
 
-The direct specification of the job ClassAd attribute \Attr{ConcurrencyLimits}
-must be used in this situation.
-Specification of submit command \SubmitCmdNI{concurrency\_limits}
-will not work, as \Condor{submit} would inject double quote marks
-incorrectly for the evaluation.
+An extension of this example applies two concurrency limits.
+One limit is the same as in the example, 
+such that it is based on an attribute of the matched machine.
+The other limit is of a specialized application
+called \AdStr{SWX} in this example.
+The negotiator configuration is extended to also include
+\begin{verbatim}
+SWX_LIMIT = 15
+\end{verbatim}
+
+The network intensive job that also uses two units of the \Expr{SWX} 
+application identifies the needed resources in the single submit command:
+\begin{verbatim}
+concurrency_limits_expr = strcat("SWX:2 ", TARGET.NETWORK)
+\end{verbatim}
+
+Submit command \SubmitCmdNI{concurrency\_limits\_expr} may not be used 
+together with submit command \SubmitCmdNI{concurrency\_limits}.
 
 Note that it is possible, under unusual circumstances, for more jobs to
 be started than should be allowed by the concurrency limits feature.

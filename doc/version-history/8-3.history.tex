@@ -54,10 +54,11 @@ owner (submitting user).
 node job, if the DAG has been removed with \Condor{rm}.
 \Ticket{5089}
 
-\item A job's ClassAd attribute \Attr{ConcurrencyLimits} may now be a ClassAd
-expression that references attributes of the machine ClassAds that the job
+\item 
+The new submit command \SubmitCmd{concurrency\_limits\_expr}
+allows a job to specify concurrency limits in a ClassAd expression 
+that may reference attributes of the machine ClassAds that the job
 may be matched to.
-The expression must evaluate to a string that has the required format.
 \Ticket{5006}
 
 \item The matchmaking optimizations enabled by \MacroNI{CONSUMPTION\_POLICY}
