@@ -295,6 +295,9 @@ void do_linux_kernel_tuning() {
 	// code appropriately (may report an error).
 	pid_t childPID = fork();
 	if( childPID == 0 ) {
+		daemonCore->Forked_Child_Wants_Fast_Exit( true );
+		dprintf_init_fork_child();
+
 		priv_state prev = set_root_priv();
 
 		int fd = open( "/dev/null", O_RDONLY );

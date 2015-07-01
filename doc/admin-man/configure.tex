@@ -3391,36 +3391,43 @@ to use a host name that is not the primary one.
 
 \label{param:UpdateCollectorWithTcp}
 \item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
-  If your site needs to use TCP connections to send ClassAd updates to
-  your collector, set to \Expr{True}
-  to enable this feature.
+  This boolean value controls whether TCP or UDP is used by daemons to
+  send ClassAd updates to the \Condor{collector}.
   Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
   Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
   for more details and a discussion of when this
   functionality is needed. 
-  At this time, this setting only affects the main \Condor{collector}
-  for the site, not any sites that a \Condor{schedd} might flock to. 
-  For large pools, it is also necessary to
+  When using TCP in large pools, it is also necessary to
   ensure that the collector has a high enough file descriptor limit
-  (e.g. using \Macro{MAX\_FILE\_DESCRIPTORS}.
-  Defaults to \Expr{False}.
+  (e.g. using \Macro{COLLECTOR\_MAX\_FILE\_DESCRIPTORS}.
+  Defaults to \Expr{True}.
   % PKK
   % Described in default config file: YES
   % Defined in the default config file: NO
   % Default definition in config file: bogus
-  % Result if not defined or RHS is empty: disable the feature of TCP updates to
+  % Result if not defined or RHS is empty: use TCP for updates to
   % collectors
-  % WARNING: The code also looks for UPDATE_COLLECTORS_WITH_TCP, which
-  % means the SAME THING as UPDATE_COLLECTOR_WITH_TCP
+
+\label{param:UpdateViewCollectorWithTcp}
+\item[\Macro{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP}]
+  This boolean value controls whether TCP or UDP is used by the
+  \Condor{collector} to forward ClassAd updates to the collector(s)
+  specified by \Macro{CONDOR\_VIEW\_HOST}.
+  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
+  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
+  for more details and a discussion of when this
+  functionality is needed.
+  Defaults to \Expr{False}.
 
 \label{param:TcpUpdateCollectors}
 \item[\Macro{TCP\_UPDATE\_COLLECTORS}]
-  The list of collectors which will be updated with TCP instead of UDP.
+  The list of collectors which will be updated with TCP instead of UDP
+  when \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP} or
+  \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP} is set to \Expr{False}.
   Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
   Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
   for more details and a discussion of when a site needs this
   functionality. 
-  If not defined, no collectors use TCP instead of UDP.
   % PKK
   % Described in default config file: NO
   % Defined in the default config file: NO
@@ -6897,7 +6904,6 @@ SYSTEM_PERIODIC_REMOVE = \
   in attribute \Attr{foo\_RAW} in the job ClassAd.
   The following are set by default:
 \begin{verbatim}
-        SCHEDD_ROUND_ATTR_ImageSize = 25%
         SCHEDD_ROUND_ATTR_ResidentSetSize = 25%
         SCHEDD_ROUND_ATTR_ProportionalSetSizeKb = 25%
         SCHEDD_ROUND_ATTR_ImageSize = 25%
@@ -8888,6 +8894,15 @@ These macros affect the \Condor{negotiator}.
   prevents the \Condor{negotiator} from matching jobs
   to claimed slots that cannot immediately be preempted
   due to \Macro{MAXJOBRETIREMENTTIME}.
+
+\label{param:AllowPslotPreemption}
+\item[\Macro{ALLOW\_PSLOT\_PREEMPTION}]
+  A boolean value that defaults to \Expr{False}.
+  When set to \Expr{True} for the \Condor{negotiator} and all
+  \Condor{startd}s and \Condor{schedd}s, enables a new matchmaking
+  mode, where one or more dynamic slots can be preempted in order to
+  make enough resources available in their parent partitionable slot
+  for a job to successfully match to the partitionable slot.
 
 \label{param:StartdAdReevalExpr}
 \item[\Macro{STARTD\_AD\_REEVAL\_EXPR}]
