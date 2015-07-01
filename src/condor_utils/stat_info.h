@@ -147,6 +147,11 @@ public:
     */
 	time_t GetCreateTime() { return create_time; }
 
+	/** Get creation time of the Symlink.
+		@return time in seconds since 00:00:00 UTC, January 1, 1970
+    */
+	time_t GetSymlinkCreateTime() { return symlink_ctime; }
+
 	/** Get file size.
 		@return size of the file in bytes
 	*/
@@ -194,6 +199,7 @@ private:
 	time_t access_time;
 	time_t modify_time;
 	time_t create_time;
+	time_t symlink_ctime; // creation time of the symlink rather than the file if file is SymLink
 #ifndef WIN32
 	uid_t owner;
 	gid_t group;

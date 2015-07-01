@@ -70,6 +70,8 @@ bool		MailFlag;			// true if we should send mail about problems
 bool		VerboseFlag;		// true if we should produce verbose output
 bool		RmFlag;				// true if we should remove extraneous files
 StringList	*BadFiles;			// list of files which don't belong
+char		*WebRoot;             // dir for condor caching 
+char		*UnusedCacheFiles; 	// Unused Cachec Files that should be removed from WebRootDir
 
 // prototypes of local interest
 void usage();
@@ -93,6 +95,7 @@ bool proc_exists( int, int );
 bool is_myproxy_file( const char *name );
 bool is_ccb_file( const char *name );
 bool touched_recently(char const *fname,time_t delta);
+void check_webroot_dir();
 
 /*
   Tell folks how to use this program.
@@ -181,6 +184,7 @@ main( int argc, char *argv[] )
 	check_log_dir();
 	check_daemon_sock_dir();
 	check_tmp_dir();
+	check_webroot_dir();
 
 		// Produce output, either on stdout or by mail
 	if( !BadFiles->isEmpty() ) {
@@ -809,6 +813,11 @@ init_params()
         EXCEPT( "LOG not specified in config file" );
     }
 
+	WebRoot = param("WEB_ROOT_DIR");
+	if( WebRoot  == NULL ){
+		EXCEPT( "WEB_ROOT_DIR not specified in config file" );
+	}
+
 	DaemonSockDir = param("DAEMON_SOCKET_DIR");
 	if( DaemonSockDir == NULL ) {
 		EXCEPT("DAEMON_SOCKET_DIR not defined");
@@ -871,6 +880,7 @@ init_params()
 	ValidSpoolFiles = param("SYSTEM_VALID_SPOOL_FILES");
 
 	InvalidLogFiles = param("INVALID_LOG_FILES");
+
 }
 
 
@@ -982,4 +992,26 @@ touched_recently(char const *fname,time_t delta)
 		return false;
 	}
 	return true;
+}
+
+/*
+  Scan the WEB_ROOT_DIR for stale symlinks
+*/
+void check_webroot_dir()
+{	
+  const char *f;
+  Directory dir(WebRoot, PRIV_ROOT);		
+
+  while( (f = dir.Next()) ) {
+	StatInfo stinfo(f);
+
+	// Remove the Symlink (NOT the file) if the Symlink was created a week ago
+	if (  IsSymlink(f) && abs(int(time(NULL)-stinfo.GetSymlinkCreateTime())) > (7 * 24 * 3600) ){
+	  bad_file(WebRoot, f, dir);
+	} else {
+	  good_file(WebRoot, f);
+	}		
+	
+  }
+
 }

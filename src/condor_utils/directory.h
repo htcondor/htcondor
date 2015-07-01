@@ -119,6 +119,12 @@ public:
 		@return time in seconds since 00:00:00 UTC, January 1, 1970 */
 	time_t GetCreateTime() { return curr ? curr->GetCreateTime() : 0; };
 
+	/** Get creation time of current file if it is a Symlink.  
+        If not Symlink return the file ctime(). If there is no current
+	    file, return 0. 
+		@return time in seconds since 00:00:00 UTC, January 1, 1970 */
+	time_t GetSymlinkCreateTime() { return curr ? curr->GetSymlinkCreateTime() : 0; };
+
 	/** Get size of current file.  If there is no current file, return 0.
 		@return size of file in bytes */
 	filesize_t GetFileSize() { return curr ? curr->GetFileSize() : 0; };
