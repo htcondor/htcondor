@@ -6904,7 +6904,6 @@ SYSTEM_PERIODIC_REMOVE = \
   in attribute \Attr{foo\_RAW} in the job ClassAd.
   The following are set by default:
 \begin{verbatim}
-        SCHEDD_ROUND_ATTR_ImageSize = 25%
         SCHEDD_ROUND_ATTR_ResidentSetSize = 25%
         SCHEDD_ROUND_ATTR_ProportionalSetSizeKb = 25%
         SCHEDD_ROUND_ATTR_ImageSize = 25%
@@ -8895,6 +8894,15 @@ These macros affect the \Condor{negotiator}.
   prevents the \Condor{negotiator} from matching jobs
   to claimed slots that cannot immediately be preempted
   due to \Macro{MAXJOBRETIREMENTTIME}.
+
+\label{param:AllowPslotPreemption}
+\item[\Macro{ALLOW\_PSLOT\_PREEMPTION}]
+  A boolean value that defaults to \Expr{False}.
+  When set to \Expr{True} for the \Condor{negotiator} and all
+  \Condor{startd}s and \Condor{schedd}s, enables a new matchmaking
+  mode, where one or more dynamic slots can be preempted in order to
+  make enough resources available in their parent partitionable slot
+  for a job to successfully match to the partitionable slot.
 
 \label{param:StartdAdReevalExpr}
 \item[\Macro{STARTD\_AD\_REEVAL\_EXPR}]

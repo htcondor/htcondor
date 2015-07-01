@@ -63,7 +63,7 @@ EndpointPublisher::init(const std::string& uri_suffix, bool for_ssl)
 
 	// grab an ephemeral port
 	ReliSock probe_sock;
-	if (-1 == probe_sock.bind(true,0)) {
+	if (-1 == probe_sock.bind(CP_IPV4, true, 0, false)) {
 		dprintf(D_ALWAYS,"EndpointPublisher is unable to obtain ANY ephemeral port from configured range! " \
 			"Check configured values of LOWPORT,HIGHPORT.\n");
 		return false;

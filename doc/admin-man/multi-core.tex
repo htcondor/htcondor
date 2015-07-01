@@ -705,13 +705,15 @@ queue
 \end{verbatim}
 
 Each partitionable slot will have
-the ClassAd attribute
+the ClassAd attributes
 \begin{verbatim}
   PartitionableSlot = True
+  SlotType = "Partitionable"
 \end{verbatim}
-Each dynamic slot will have the ClassAd attribute 
+Each dynamic slot will have the ClassAd attributes 
 \begin{verbatim}
   DynamicSlot = True
+  SlotType = "Dynamic"
 \end{verbatim}
 These attributes may be used in a \MacroNI{START} expression for 
 the purposes of creating detailed policies.
@@ -734,6 +736,53 @@ In this instance a job requiring 2GB of memory will be starved
 and unable to run.  A partial solution to this problem is provided
 by defragmentation accomplished by the \Condor{defrag} daemon,
 as discussed in section~\ref{sec:SMP-defrag}.
+
+Another partial solution is a new matchmaking algorithm in the
+negotiator, referred to as partitionable slot preemption,
+or pslot preemption.
+Normally, when the negotiator searches for a match for a job ad, it
+looks at each slot ad individually.
+With pslot preemption, the negotiator looks at a partitional slot and
+all of its dynamic slots as a group.
+If the partitionable slot does not have sufficient resources (memory,
+cpu, disk) to be matched with the candidate job, then the negotiator
+looks at all of the related dynamic slots that the candidate job can
+preempt (following the normal preemption rules described elsewhere).
+It adds the resources of each dynamic slot and adds them to those
+of the partionable slot, one dynamic slot at a time.
+Once the total resources are sufficient to enable a match, the
+negotiator sends the match information to the schedd.
+When the schedd claims the partitionable slot, the dynamic slots are
+preempted so that their resources are retruned to the partitionable slot
+for use by the new job.
+
+To use this new matchmaking algorithm, set the following configuration
+variable for all machines in your pool:
+\begin{verbatim}
+  ALLOW_PSLOT_PREEMPTION = True
+\end{verbatim}
+
+When the negotiator examines the resources of dynamic slots,
+it sorts the slots by their \Attr{CurrentRank} attribute, where slots
+with lower values are considered first.
+The negotiator only examines the cpu, memory and disk
+resources of the dynamic slots; custom resources are ignored.
+
+Dynamic slots that have retirement time remaining are not considered
+eligible for preemption, regardless of how
+\MacroNI{NEGOTIATOR\_CONSIDER\_EARLY\_PREEMPTION} is set.
+
+When pslot preemption is enabled, the negotiator will not preempt
+dynamic slots directly. It will preempt them only as part of a match
+to a partitionable slot.
+
+When multiple partitionable slots match a candidate job and the various
+job rank expressions are evaluated to sort the matching slots, the ad of
+the partitionable slot is used for evaluation.
+This may cause unexpected results with some expressions, as attributes
+like \Attr{RemoteOwner} won't be present in a partitionable slot that
+matches with preemption of some of its dynamic slots.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-resource-defaults}

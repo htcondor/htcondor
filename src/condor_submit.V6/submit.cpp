@@ -5643,7 +5643,7 @@ SetJobLease( void )
 				  reconnectable jobs can survive schedd crashes and
 				  the like...
 				*/
-			lease_duration = 20 * 60;
+			lease_duration = 40 * 60;
 		} else {
 				// not defined and can't reconnect, we're done.
 			return;

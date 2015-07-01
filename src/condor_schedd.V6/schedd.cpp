@@ -11577,43 +11577,6 @@ Scheduler::Init()
 
     stats.Reconfig();
 
-	//PRAGMA_REMIND("TJ: These should be moved into the default config table")
-		// set defaults for rounding attributes for autoclustering
-		// only set these values if nothing is specified in condor_config.
-	MyString tmpstr;
-	tmpstr.formatstr("SCHEDD_ROUND_ATTR_%s",ATTR_EXECUTABLE_SIZE);
-	tmp = param(tmpstr.Value());
-	if ( !tmp ) {
-		config_insert(tmpstr.Value(),"25%");	// round up to 25% of magnitude
-	} else {
-		free(tmp);
-	}
-	tmpstr.formatstr("SCHEDD_ROUND_ATTR_%s",ATTR_IMAGE_SIZE);
-	tmp = param(tmpstr.Value());
-	if ( !tmp ) {
-		config_insert(tmpstr.Value(),"25%");	// round up to 25% of magnitude
-	} else {
-		free(tmp);
-	}
-	tmpstr.formatstr("SCHEDD_ROUND_ATTR_%s",ATTR_DISK_USAGE);
-	tmp = param(tmpstr.Value());
-	if ( !tmp ) {
-		config_insert(tmpstr.Value(),"25%");	// round up to 25% of magnitude
-	} else {
-		free(tmp);
-	}
-	// round ATTR_NUM_CKPTS because our default expressions
-	// in the startd for ATTR_IS_VALID_CHECKPOINT_PLATFORM references
-	// it (thus by default it is significant), and further references it
-	// essentially as a bool.  so by default, lets round it.
-	tmpstr.formatstr("SCHEDD_ROUND_ATTR_%s",ATTR_NUM_CKPTS);
-	tmp = param(tmpstr.Value());
-	if ( !tmp ) {
-		config_insert(tmpstr.Value(),"4");	// round up to next 10000
-	} else {
-		free(tmp);
-	}
-
 	if( Spool ) free( Spool );
 	if( !(Spool = param("SPOOL")) ) {
 		EXCEPT( "No spool directory specified in config file" );
