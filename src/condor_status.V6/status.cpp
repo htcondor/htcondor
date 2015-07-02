@@ -40,6 +40,13 @@
 #include <sstream>
 #include <iostream>
 
+// use strverscmp for numerical sorting of hosts/slots if available
+#if defined(GLIBC)
+# define STRVCMP strverscmp
+#else
+# define STRVCMP strcmp
+#endif
+
 using std::vector;
 using std::string;
 using std::stringstream;
@@ -1466,7 +1473,7 @@ lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 		buf1 = "";
 		buf2 = "";
 	}
-	val = strcmp( buf1.Value(), buf2.Value() );
+	val = STRVCMP( buf1.Value(), buf2.Value() );
 	if( val ) {
 		return (val < 0);
 	}
@@ -1474,7 +1481,7 @@ lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 	if (!ad1->LookupString(ATTR_NAME, buf1) ||
 		!ad2->LookupString(ATTR_NAME, buf2))
 		return 0;
-	return ( strcmp( buf1.Value(), buf2.Value() ) < 0 );
+	return ( STRVCMP( buf1.Value(), buf2.Value() ) < 0 );
 }
 
 
