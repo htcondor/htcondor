@@ -34,12 +34,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added new matchmaking mode where one or more dynamaic slots can
+\item A new matchmaking mode permits one or more dynamic slots to
 be preempted in order to make enough resources available to their parent
-partitionable slot to allow a job to be matched to it.
-This can be enabled via the new configuration parameter
-\Macro{ALLOW\_PSLOT\_PREEMPTION}, a boolean value that defaults to
-\Expr{False}.
+partitionable slot to allow a job match.
+The new mode is enabled by setting the new configuration variable
+\Macro{ALLOW\_PSLOT\_PREEMPTION} to \Expr{True}.
+This variable defaults to \Expr{False}.
 \Ticket{5097}
 
 \end{itemize}
