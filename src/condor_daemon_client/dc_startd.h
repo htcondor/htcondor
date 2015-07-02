@@ -60,6 +60,7 @@ public:
 			@return true on success, false on invalid input (NULL)
 		*/
 	bool setClaimId( const char* id );
+	bool setClaimId( const std::string &id ) {return setClaimId(id.c_str());}
 
 		/** @return the ClaimId string for this startd, NULL if we
 			don't have a value yet.
