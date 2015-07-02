@@ -568,6 +568,11 @@ version number.
 	\item[\Expr{601}:] for Windows 7 or Windows Server 2008
 	\end{description}
 %
+\index{ClassAd machine attribute!PartitionableSlot}
+\label{PartitionableSlot-machine-attribute} 
+\item[\AdAttr{PartitionableSlot}:] For SMP machines,
+a boolean value identifying that this slot may be partitioned.
+%
 \index{ClassAd machine attribute!RecentJobPreemptions}
 \item[\AdAttr{RecentJobPreemptions}:] The total number of jobs which
 have been preempted from this machine in the last twenty minutes.
@@ -602,11 +607,6 @@ job.  This may be less than the amount offered by the machine's
 \AdAttr{MaxJobRetirementTime} expression, because the job may
 ask for less.
 %
-\index{ClassAd machine attribute!PartitionableSlot}
-\label{PartitionableSlot-machine-attribute} 
-\item[\AdAttr{PartitionableSlot}:] For SMP machines,
-a boolean value identifying that this slot may be partitioned.
-%
 \index{ClassAd machine attribute!SlotID}
 \item[\AdAttr{SlotID}:] For SMP machines, the integer
 that identifies the slot.
@@ -617,6 +617,12 @@ name="slotX@full.hostname"
 For non-SMP machines with one slot, the value will be 1.
 \Note This attribute was added in HTCondor version 6.9.3.
 For older versions of HTCondor, see \AdAttr{VirtualMachineID} below.
+%
+\index{ClassAd machine attribute!SlotType}
+\label{SlotType-machine-attribute} 
+\item[\AdAttr{SlotType}:] For SMP machines with partitionable slots,
+the partitionable slot will have this attribute set to \AdStr{Partitionable},
+and all dynamic slots will have this attribute set to \AdStr{Dynamic}.
 %
 \index{ClassAd machine attribute!SlotWeight}
 \item[\AdAttr{SlotWeight}:]

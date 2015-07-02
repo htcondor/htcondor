@@ -8775,9 +8775,10 @@ These macros affect the \Condor{negotiator}.
 \label{param:AllowPslotPreemption}
 \item[\Macro{ALLOW\_PSLOT\_PREEMPTION}]
   A boolean value that defaults to \Expr{False}.
-  When set to \Expr{True} for the \Condor{negotiator} and all
-  \Condor{startd}s and \Condor{schedd}s, enables a new matchmaking
-  mode, where one or more dynamic slots can be preempted in order to
+  When set to \Expr{True} for the \Condor{negotiator} as well as all
+  \Condor{startd} and \Condor{schedd} daemons, 
+  it enables a new matchmaking mode in which one or more dynamic slots 
+  can be preempted in order to
   make enough resources available in their parent partitionable slot
   for a job to successfully match to the partitionable slot.
 
