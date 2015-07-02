@@ -362,6 +362,11 @@ class ClassAd : public classad::ClassAd
 	// CopyAttribute(target_attr,target_attr,source_ad).
 	void CopyAttribute(char const *target_attr, classad::ClassAd *source_ad );
 
+        static void CopyAttribute(const char *target_attr, classad::ClassAd &target_ad, const char *source_attr, const classad::ClassAd &source_ad);
+        static void CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const std::string &source_attr, const classad::ClassAd &source_ad)
+        {CopyAttribute(target_attr.c_str(), target_ad, source_attr.c_str(), source_ad);}
+
+
     /** Takes the ad this is chained to, copies over all the 
      *  attributes from the parent ad that aren't in this classad
      *  (so attributes in both the parent ad and this ad retain the 

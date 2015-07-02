@@ -296,6 +296,7 @@ struct RequestIterator
             if (reply == NO_MORE_JOBS)
             {
                 if (!m_sock->end_of_message()) {THROW_EX(RuntimeError, "Failed to get EOM from schedd.");}
+                m_done = true;
                 return;
             }
             else if (reply != JOB_INFO) {THROW_EX(RuntimeError, "Unexpected response from schedd.");}
@@ -308,14 +309,13 @@ struct RequestIterator
 
     boost::shared_ptr<ClassAdWrapper> next()
     {
-        if (m_done) {THROW_EX(StopIteration, "All requests processed");}
-
         if (m_requests.empty())
         {
+                if (m_done) {THROW_EX(StopIteration, "All requests processed");}
+
                 getNextRequest();
                 if (m_requests.empty())
                 {
-                    m_done = true;
                     THROW_EX(StopIteration, "All requests processed");
                 }
         }
@@ -380,10 +380,10 @@ friend class Schedd;
 public:
 
     static boost::shared_ptr<ScheddNegotiate> enter(boost::shared_ptr<ScheddNegotiate> obj) {return obj;}
-    static bool exit(boost::shared_ptr<ScheddNegotiate> mgr, boost::python::object /*obj1*/, boost::python::object /*obj2*/, boost::python::object /*obj3*/)
+    static bool exit(boost::shared_ptr<ScheddNegotiate> mgr, boost::python::object obj1, boost::python::object /*obj2*/, boost::python::object /*obj3*/)
     {
         mgr->disconnect();
-        return true;
+        return (obj1.ptr() == Py_None);
     }
 
     void
@@ -400,27 +400,32 @@ public:
     }
 
     void
-    sendClaim(boost::python::object claim_obj)
+    sendClaim(boost::python::object claim, boost::python::object offer_obj, boost::python::object request_obj)
     {
+        if (!m_negotiating) {THROW_EX(RuntimeError, "Not currently negotiating with schedd");}
         if (!m_sock.get()) {THROW_EX(RuntimeError, "Unable to connect to schedd for negotiation");}
 
-        ClassAdWrapper claim_ad = boost::python::extract<ClassAdWrapper>(claim_obj);
-        std::string claim_id;
-        if (!claim_ad.EvaluateAttrString(ATTR_CLAIM_ID, claim_id))
-        {
-            THROW_EX(ValueError, "Attribute ClaimId does not evaluate to a string.");
-        }
-        claim_ad.Delete(ATTR_CLAIM_ID);
+        std::string claim_id = boost::python::extract<std::string>(claim);
+        ClassAdWrapper offer_ad = boost::python::extract<ClassAdWrapper>(offer_obj);
+        ClassAdWrapper request_ad = boost::python::extract<ClassAdWrapper>(request_obj);
+
+        compat_classad::ClassAd::CopyAttribute(ATTR_REMOTE_GROUP, offer_ad, ATTR_SUBMITTER_GROUP, request_ad);
+        compat_classad::ClassAd::CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, offer_ad, ATTR_SUBMITTER_NEGOTIATING_GROUP, request_ad);
+        compat_classad::ClassAd::CopyAttribute(ATTR_REMOTE_AUTOREGROUP, offer_ad, ATTR_SUBMITTER_AUTOREGROUP, request_ad);
+        compat_classad::ClassAd::CopyAttribute(ATTR_RESOURCE_REQUEST_CLUSTER, offer_ad, ATTR_CLUSTER_ID, request_ad);
+        compat_classad::ClassAd::CopyAttribute(ATTR_RESOURCE_REQUEST_PROC, offer_ad, ATTR_PROC_ID, request_ad);
 
         m_sock->encode();
         m_sock->put(PERMISSION_AND_AD);
         m_sock->put_secret(claim_id);
-        putClassAd(m_sock.get(), claim_ad);
+        putClassAd(m_sock.get(), offer_ad);
         m_sock->end_of_message();
     }
 
     boost::shared_ptr<RequestIterator> getRequests()
     {
+        if (!m_negotiating) {THROW_EX(RuntimeError, "Not currently negotiating with schedd");}
+
         boost::shared_ptr<RequestIterator> requests(new RequestIterator(m_sock));
         return requests;
     }
@@ -1505,7 +1510,15 @@ void export_schedd()
     class_<ScheddNegotiate>("ScheddNegotiate", no_init)
         .def("__iter__", &ScheddNegotiate::getRequests, "Get resource requests from schedd.", boost::python::with_custodian_and_ward_postcall<1, 0>())
         .def("sendClaim", &ScheddNegotiate::sendClaim, "Send a claim to the schedd.\n"
-          ":param claim: A ClassAd object containing the ClaimId attribute.")
+          ":param claim: A string containing the claim ID.\n"
+          ":param offer: A ClassAd object containing a description of the resource claimed (the machine's ClassAd).\n"
+          ":param request: A ClassAd object corresponding to the schedd resource request (optional).",
+#if BOOST_VERSION < 103400
+          (boost::python::arg("claim"), boost::python::arg("offer"), boost::python::arg("request")=boost::python::dict())
+#else
+          (boost::python::arg("self"), boost::python::arg("claim"), boost::python::arg("offer"), boost::python::arg("request")=boost::python::dict())
+#endif
+          )
         .def("__enter__", &ScheddNegotiate::enter)
         .def("__exit__", &ScheddNegotiate::exit)
         .def("disconnect", &ScheddNegotiate::disconnect, "Disconnect from negotiation session.");
