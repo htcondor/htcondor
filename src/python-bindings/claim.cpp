@@ -15,6 +15,7 @@
 #include "enum_utils.h"
 #include "condor_attributes.h"
 #include "dc_startd.h"
+#include "globus_utils.h"
 #include "classad/source.h"
 
 #include "old_boost.h"
@@ -104,6 +105,126 @@ struct Claim
             rval = startd.releaseClaim(vacate_type, &reply, 20);
         }
         if (!rval) {THROW_EX(RuntimeError, "Startd failed to release claim.");}
+
+        m_claim = "";
+    }
+
+
+    void
+    activate(boost::python::object ad_obj)
+    {
+        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+
+        compat_classad::ClassAd ad = boost::python::extract<ClassAdWrapper>(ad_obj)();
+        if (ad.find(ATTR_JOB_KEYWORD) == ad.end())
+        {
+            ad.InsertAttr(ATTR_HAS_JOB_AD, true);
+        }
+
+        DCStartd startd(m_addr.c_str());
+        startd.setClaimId(m_claim);
+        compat_classad::ClassAd reply;
+        int irval;
+        {
+            condor::ModuleLock ml;
+            irval = startd.activateClaim(&ad, &reply, 20);
+        }
+        if (irval != OK) {THROW_EX(RuntimeError, "Startd failed to activate claim.");}
+    }
+
+
+    void
+    deactivate(VacateType vacate_type)
+    {
+        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+
+        DCStartd startd(m_addr.c_str());
+        startd.setClaimId(m_claim);
+        compat_classad::ClassAd reply;
+        bool rval;
+        {
+            condor::ModuleLock ml;
+            rval = startd.deactivateClaim(vacate_type, &reply, 20);
+        }
+        if (!rval) {THROW_EX(RuntimeError, "Startd failed to deactivate claim.");}
+    }
+
+
+    void
+    suspend()
+    {
+        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+
+        DCStartd startd(m_addr.c_str());
+        startd.setClaimId(m_claim);
+        compat_classad::ClassAd reply;
+        bool rval;
+        {
+            condor::ModuleLock ml;
+            rval = startd.suspendClaim(&reply, 20);
+        }
+        if (!rval) {THROW_EX(RuntimeError, "Startd failed to suspend claim.");}
+    }
+
+
+    void
+    renew()
+    {
+        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+
+        DCStartd startd(m_addr.c_str());
+        startd.setClaimId(m_claim);
+        compat_classad::ClassAd reply;
+        bool rval;
+        {
+            condor::ModuleLock ml;
+            rval = startd.renewLeaseForClaim(&reply, 20);
+        }
+        if (!rval) {THROW_EX(RuntimeError, "Startd failed to renew claim.");}
+    }
+
+
+    void
+    resume()
+    {
+        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+
+        DCStartd startd(m_addr.c_str());
+        startd.setClaimId(m_claim);
+        compat_classad::ClassAd reply;
+        bool rval;
+        {
+            condor::ModuleLock ml;
+            rval = startd.resumeClaim(&reply, 20);
+        }
+        if (!rval) {THROW_EX(RuntimeError, "Sartd failed to resume claim.");}
+    }
+
+
+    void
+    delegateGSI(boost::python::object fname)
+    {
+        if (m_claim.empty()) {THROW_EX(ValueError, "No claim set for object.");}
+
+        std::string proxy_file;
+        if (fname.ptr() == Py_None)
+        {
+            proxy_file = get_x509_proxy_filename();
+        }
+        else
+        {
+            proxy_file = boost::python::extract<std::string>(fname);
+        }
+
+        DCStartd startd(m_addr.c_str());
+        startd.setClaimId(m_claim);
+        compat_classad::ClassAd reply;
+        int irval;
+        {
+            condor::ModuleLock ml;
+            irval = startd.delegateX509Proxy(proxy_file.c_str(), 0, NULL);
+        }
+        if (irval != OK) {THROW_EX(RuntimeError, "Startd failed to delegate GSI proxy.");}
     }
 
 
@@ -123,6 +244,47 @@ private:
 void
 export_claim()
 {
+    boost::python::enum_<VacateType>("VacateTypes")
+        .value("Fast", VACATE_FAST)
+        .value("Graceful", VACATE_GRACEFUL)
+        ;
+
+#if BOOST_VERSION >= 103400
+    boost::python::docstring_options doc_options;
+    doc_options.disable_cpp_signatures();
+#endif
     
+    boost::python::class_<Claim>("Claim", "A client class for Claims in HTCondor")
+        .def(boost::python::init<>())
+        .def(boost::python::init<boost::python::object>(":param ad: An ad describing the Claim (optionally) and a Startd location."))
+        .def("requestCOD", &Claim::requestCOD, "Request a COD claim from the remote Startd."
+            ":param constraint: A constraint on the remote slot to use (defaults to 'true')"
+            ":param lease_duration: Time, in seconds, of the claim's lease.  Defaults to -1",
+#if BOOST_VERSION < 103400
+            (boost::python::arg("constraint")=boost::python::object(), boost::python::arg("lease_duration")=-1)
+#else
+            (boost::python::arg("self"), boost::python::arg("constraint")=boost::python::object(), boost::python::arg("lease_duration")=-1)
+#endif
+            )
+        .def("release", &Claim::release, "Release startd from the claim.",
+            ":param vacate_type: Type of vacate to perform (Fast or Graceful); must be from VacateTypes enum.",
+#if BOOST_VERSION < 103400
+            (boost::python::arg("vacate_type")=VACATE_GRACEFUL)
+#else
+            (boost::python::arg("self"), boost::python::arg("vacate_type")=VACATE_GRACEFUL)
+#endif
+            )
+        .def("activate", &Claim::activate, "Activate an existing claim.\n"
+            ":param ad: Ad describing job to activate.")
+        .def("suspend", &Claim::suspend, "Suspend an activated claim.")
+        .def("renew", &Claim::renew, "Renew the lease on an existing claim.")
+        .def("resume", &Claim::resume, "Resume a suspended claim.")
+        .def("deactivate", &Claim::deactivate, "Deactivate a claim.")
+        .def("delegateGSIProxy", &Claim::delegateGSI, "Delegate a GSI proxy to the claim.\n"
+            ":param filename: Filename of GSI proxy; defaults to the Globus proxy detection logic",
+            (boost::python::arg("filename")=boost::python::object()))
+        .def("__repr__", &Claim::toString)
+        .def("__str__", &Claim::toString)
+        ;
 }
 
