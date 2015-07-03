@@ -47,7 +47,7 @@ public:
 	static long long type_param_long(CpuAttributes* p_attr, const char * name, long long def_value);
 	static char * param(CpuAttributes* p_attr, const char * name);
 	static const char * param(std::string& out, CpuAttributes* p_attr, const char * name);
-	static void init_types(int max_type_id);
+	static void init_types(int max_type_id, bool first_init);
 
 private:
 	std::string shares; // share info from SLOT_TYPE_n attribute
