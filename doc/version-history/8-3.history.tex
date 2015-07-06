@@ -74,6 +74,23 @@ multiple jobs to a single partitionable slot.
 from 1024 bytes to 5120 bytes.
 \Ticket{5019}
 
+\item The default values of the configuration variables listed in
+Table~\ref{table:new-knob-defaults} have changed,
+such that the default now represents the commonly configured value.
+
+% This table must be formatted oddly, to make the pdf version look OK.
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|l|c|c|} \hline
+\textbf{Variable Name} & \textbf{Previous Default} & \textbf{New Default}\\ \hline \hline
+\MacroNI{NEGOTIATOR\_INFORM\_STARTD} & \Expr{True} & \Expr{False}  \\ 
+\hline
+\end{tabular}
+\caption{\label{table:new-knob-defaults}Changes to configuration variable defaults in HTCondor 8.3.7}
+\end{table}
+\end{center}
+\Ticket{5019}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
