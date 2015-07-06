@@ -5,6 +5,8 @@ import types
 import classad
 import datetime
 import unittest
+import warnings
+import tempfile
 
 class TestClassad(unittest.TestCase):
 
@@ -15,10 +17,73 @@ class TestClassad(unittest.TestCase):
         self.assertRaises(KeyError, ad.__getitem__, 'baz')
 
     def test_load_classad_from_file(self):
-        ad = classad.parse(open("tests/test.ad"))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ad = classad.parse(open("tests/test.ad"))
         self.assertEqual(ad["foo"], "bar")
         self.assertEqual(ad["baz"], classad.Value.Undefined)
         self.assertRaises(KeyError, ad.__getitem__, "bar")
+
+    def test_load_classad_from_file_v2(self):
+        ad = classad.parseOne(open("tests/test.ad"))
+        self.assertEqual(ad["foo"], "bar")
+        self.assertEqual(ad["baz"], classad.Value.Undefined)
+        self.assertRaises(KeyError, ad.__getitem__, "bar")
+
+    def one_ad_verify(self, ad):
+        self.assertEqual(len(ad), 2)
+        self.assertEqual(ad["foo"], 1)
+        self.assertEqual(ad["bar"], 2)
+
+    def test_parse_one(self):
+        ad = classad.parseOne("foo = 1\nbar = 2")
+        self.one_ad_verify(ad)
+        ad = classad.parseOne("[foo = 1; bar = 2]")
+        self.one_ad_verify(ad)
+        ad = classad.parseOne("foo = 1", classad.Parser.New)
+        self.assertEqual(len(ad), 0)
+        self.one_ad_verify(classad.parseOne("foo = 1\nbar = 2\n"))
+        self.one_ad_verify(classad.parseOne("foo = 1\nbar = 1\n\nbar = 2\n"))
+        ad = classad.parseOne("[foo = 1]", classad.Parser.Old)
+        self.assertEqual(len(ad), 0)
+        self.one_ad_verify(classad.parseOne("[foo = 1; bar = 1;] [bar = 2]"))
+        self.one_ad_verify(classad.parseOne("-------\nfoo = 1\nbar = 2\n\n"))
+
+    def test_parse_iter(self):
+        tf = tempfile.TemporaryFile()
+        tf.write("[foo = 1] [bar = 2]")
+        tf.seek(0)
+        ad_iter = classad.parseAds(tf)
+        ad = ad_iter.next()
+        self.assertEqual(len(ad), 1)
+        self.assertEqual(ad["foo"], 1)
+        self.assertEquals(" [bar = 2]", tf.read())
+        tf = tempfile.TemporaryFile()
+        tf.write("-----\nfoo = 1\n\nbar = 2\n")
+        tf.seek(0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ad_iter = classad.parseOldAds(tf)
+        ad = ad_iter.next()
+        self.assertEqual(len(ad), 1)
+        self.assertEqual(ad["foo"], 1)
+        self.assertEquals("bar = 2\n", tf.read())
+
+    def test_parse_next(self):
+        tf = tempfile.TemporaryFile()
+        tf.write("[foo = 1] [bar = 2]")
+        tf.seek(0)
+        ad = classad.parseNext(tf)
+        self.assertEqual(len(ad), 1)
+        self.assertEqual(ad["foo"], 1)
+        self.assertEquals(" [bar = 2]", tf.read())
+        tf = tempfile.TemporaryFile()
+        tf.write("-----\nfoo = 1\n\nbar = 2\n")
+        tf.seek(0)
+        ad = classad.parseNext(tf)
+        self.assertEqual(len(ad), 1)
+        self.assertEqual(ad["foo"], 1)
+        self.assertEquals("bar = 2\n", tf.read())
 
     def new_ads_verify(self, ads):
         ads = list(ads)
@@ -45,11 +110,39 @@ class TestClassad(unittest.TestCase):
     def test_load_classads(self):
         self.new_ads_verify(classad.parseAds(open("tests/test_multiple.ad")))
         self.new_ads_verify(classad.parseAds(open("tests/test_multiple.ad").read()))
-        self.old_ads_verify(classad.parseOldAds(open("tests/test_multiple.old.ad")))
-        self.old_ads_verify(classad.parseOldAds(open("tests/test_multiple.old.ad").read()))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.old_ads_verify(classad.parseOldAds(open("tests/test_multiple.old.ad")))
+            self.old_ads_verify(classad.parseOldAds(open("tests/test_multiple.old.ad").read()))
+        self.old_ads_verify(classad.parseAds(open("tests/test_multiple.old.ad")))
+        self.old_ads_verify(classad.parseAds(open("tests/test_multiple.old.ad").read()))
+
+    def test_warnings(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            classad.parseOld("foo = 1\nbar = 2")
+            self.assertEqual(len(w), 1)
+            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
+            self.assertTrue("deprecated" in str(w[-1].message))
 
     def test_old_classad(self):
-        ad = classad.parseOld(open("tests/test.old.ad"))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ad = classad.parseOld(open("tests/test.old.ad"))
+        contents = open("tests/test.old.ad").read()
+        keys = []
+        for line in contents.splitlines():
+            info = line.split(" = ")
+            if len(info) != 2:
+                continue
+            self.assertTrue(info[0] in ad)
+            self.assertEqual(ad.lookup(info[0]).__repr__(), info[1])
+            keys.append(info[0])
+        for key in ad:
+            self.assertTrue(key in keys)
+
+    def test_old_classad_v2(self):
+        ad = classad.parseNext(open("tests/test.old.ad"))
         contents = open("tests/test.old.ad").read()
         keys = []
         for line in contents.splitlines():

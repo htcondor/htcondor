@@ -127,16 +127,23 @@ BOOST_PYTHON_MODULE(classad)
     def("lastError", GetLastCondorError, "The last error that occurred in the ClassAd library.");
     def("registerLibrary", RegisterLibrary, "Register a shared library of ClassAd functions.");
 
+    boost::python::enum_<ParserType>("Parser")
+        .value("Auto", CLASSAD_AUTO)
+        .value("Old", CLASSAD_OLD)
+        .value("New", CLASSAD_NEW)
+        ;
+
     def("parse", parseString, return_value_policy<manage_new_object>());
     def("parse", parseFile, return_value_policy<manage_new_object>(),
         "Parse input into a ClassAd.\n"
         ":param input: A string or a file pointer.\n"
         ":return: A ClassAd object.");
-    def("parseAds", parseAdsString);
-    def("parseAds", parseAdsFile, with_custodian_and_ward_postcall<0, 1>(),
+    def("parseAds", parseAds, with_custodian_and_ward_postcall<0, 1>(),
         "Parse input iterator into an iterator of ClassAds.\n"
         ":param input: A string or a file pointer.\n"
-        ":return: A iterator which produces ClassAd objects.");
+        ":param parser: Which ClassAd parser to use.\n"
+        ":return: A iterator which produces ClassAd objects.",
+        (boost::python::arg("input"), boost::python::arg("parser")=CLASSAD_AUTO));
 
     def("parseOld", parseOld, return_value_policy<manage_new_object>(),
         "Parse old ClassAd format input into a ClassAd.\n"
@@ -146,6 +153,21 @@ BOOST_PYTHON_MODULE(classad)
         "an iterator of ClassAd objects\n"
         ":param input: A string or iterable object.\n"
         ":return: An iterator of ClassAd objects.");
+    def("parseOne", parseOne,
+        "Parse entire input into a single ClassAd.\n"
+        "In the presence of multiple ads or blank space, continue to merge ads "
+        "together until entire string is consumed"
+        ":param input: A string or file pointer.\n"
+        ":param parser: Which ClassAd parser to use.\n"
+        ":return: A ClassAd object.",
+        (boost::python::arg("input"), boost::python::arg("parser")=CLASSAD_AUTO));
+    def("parseNext", parseNext,
+        "Parse the next ClassAd in the input string.\n"
+        "Forwards the input object to point after the consumed ClassAd.\n"
+        ":param input: A file-like object.\n"
+        ":param parser: Which ClassAd parser to use.\n"
+        ":return: A ClassAd object.",
+        (boost::python::arg("input"), boost::python::arg("parser")=CLASSAD_AUTO));
 
     def("quote", quote, "Convert a python string into a string corresponding ClassAd string literal");
     def("unquote", unquote, "Convert a python string escaped as a ClassAd string back to python");
