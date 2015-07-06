@@ -2195,34 +2195,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
 				}
 			}
 		}
-	#if 0
-		// Now over-ride the global STARTD_ATTRS/EXPRS with slot_type_n_xxx or STOTn_ values if they are defined.
-		if (r_attr) {
-			StringList slot_attrs;
-			auto_free_ptr tmp(param("STARTD_EXPRS"));
-			if (tmp) { slot_attrs.initializeFromString(tmp); }
-			tmp.set(param("STARTD_ATTRS"));
-			if (tmp) { slot_attrs.initializeFromString(tmp); }
-
-			slot_attrs.rewind();
-			char * attr;
-			while ((attr = slot_attrs.next())) {
-				const char * val = SlotType::type_param(r_attr, attr);
-				if ( ! val) continue; // nothing type specific, go with what we already set in config_fill_ad.
-				if ( ! val[0]) {
-					// interpre explicit empty values as 'remove the attribute' (explicitly set to undefined instead?)
-					cap->Delete(attr);
-				} else {
-					std::string buf(attr); buf += " = "; buf += val;
-					if( !cap->Insert( buf.c_str() ) ) {
-						dprintf(D_ALWAYS,
-								"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s.  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the SLOT ad.\n",
-								buf.c_str() );
-					}
-				}
-			}
-		}
-	#endif
 #else
 		// config_fill_ad can not take strings with "_" in it's prefix
 		// e.g. slot1_1, instead needs to be slot1
