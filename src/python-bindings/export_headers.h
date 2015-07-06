@@ -9,4 +9,5 @@ void export_secman();
 void export_event_reader();
 void export_log_reader();
 void enable_classad_extensions();
+void enable_deprecation_warnings();
 

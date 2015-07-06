@@ -6109,8 +6109,7 @@ MAX_JOBS_RUNNING	= \
   permitted to have within a \Condor{schedd} daemon's queue.  
   A job submission fails if it would cause this limit on the number of
   jobs to be exceeded. 
-  The default value for this variable is the largest positive
-  integer value.
+  The default value is 100000.
 
   This configuration variable may be most useful in conjunction with
  \MacroNI{MAX\_JOBS\_SUBMITTED},
@@ -6121,8 +6120,7 @@ MAX_JOBS_RUNNING	= \
   This integer value limits the number of jobs any single submission
   is permitted to add to a \Condor{schedd} daemon's queue.  The
   whole submission fails if the number of jobs would exceed this limit.
-  The default value for this variable is the largest positive
-  integer value.
+  The default value is 20000.
 
   This configuration variable may be useful for catching user error,
   and for protecting a busy \Condor{schedd} daemon
@@ -8594,17 +8592,17 @@ These macros affect the \Condor{negotiator}.
 \item[\Macro{NEGOTIATOR\_INFORM\_STARTD}]
   Boolean setting that controls if the \Condor{negotiator} should
   inform the \Condor{startd} when it has been matched with a job.
-  The default is \Expr{True}.
-  When this is set to \Expr{False}, the \Condor{startd} will never
-  enter the Matched state, and will go directly from Unclaimed to
-  Claimed.
+  The default is \Expr{False}.
+  When this is set to the default value of \Expr{False}, 
+  the \Condor{startd} will never
+  enter the Matched state, and will go directly from Unclaimed to Claimed.
   Because this notification is done via UDP, if a pool is configured
   so that the execute hosts do not create UDP command sockets (see the
   \Macro{WANT\_UDP\_COMMAND\_SOCKET} setting described in
   section~\ref{param:WantUDPCommandSocket} on
-  page~\pageref{param:WantUDPCommandSocket} for details), the
-  \Condor{negotiator} should be configured not to attempt to contact
-  these \Condor{startds} by configuring this setting to \Expr{False}.
+  page~\pageref{param:WantUDPCommandSocket} for details), 
+  the \Condor{negotiator} should be configured not to attempt to contact
+  these \Condor{startd} daemons by using the default value.
 
 \label{param:NegotiatorPreJobRank}
 \item[\Macro{NEGOTIATOR\_PRE\_JOB\_RANK}]
