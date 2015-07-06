@@ -1127,9 +1127,11 @@ firstPass (int argc, char *argv[])
 				// the silent constraint TARGET.%s =!= UNDEFINED is added
 				// as a customAND constraint on the second pass
 		} else
+#if defined(GLIBC)
 		if (matchPrefix (argv[i], "-natural", 4)) {
 			naturalSort = true;
 		} else
+#endif
 		if (matchPrefix (argv[i], "-submitters", 5)) {
 			setMode (MODE_SCHEDD_SUBMITTORS, i, argv[i]);
 		} else
