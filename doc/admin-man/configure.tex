@@ -6121,8 +6121,7 @@ MAX_JOBS_RUNNING	= \
   This integer value limits the number of jobs any single submission
   is permitted to add to a \Condor{schedd} daemon's queue.  The
   whole submission fails if the number of jobs would exceed this limit.
-  The default value for this variable is the largest positive
-  integer value.
+  The default value is 20000.
 
   This configuration variable may be useful for catching user error,
   and for protecting a busy \Condor{schedd} daemon
