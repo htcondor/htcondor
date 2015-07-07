@@ -247,12 +247,12 @@ sub EndTest
 
     TestDebug( "\n\nFinal status for $testname: $result_str\n  $test_success_count check(s) passed\n  $test_failure_count check(s) failed$extra_notes\n", 1 );
 
-	#if(defined $no_exit) {
-		#return($exit_status);
-	#} else {
-    	#exit($exit_status);
-	#}
-	return($exit_status);
+	if(defined $no_exit) {
+		return($exit_status);
+	} else {
+    	exit($exit_status);
+	}
+	#return($exit_status);
 }
 
 # This should be called in each check function to register the pass/fail result
