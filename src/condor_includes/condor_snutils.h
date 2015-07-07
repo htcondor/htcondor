@@ -43,9 +43,9 @@ BEGIN_C_DECLS
 int snprintf(char *str, size_t size, const char *format, ...);
 /**	Disable the warning about the number of formal parameters 
 	differing from a previous declaration */
-#pragma warning ( disable : 4273 ) // inconsistent dll linkage
+#pragma warning(suppress: 4273) // inconsistent dll linkage
+#pragma warning(suppress: 28251) // inconsistent annotations
 int __cdecl vsnprintf(char *str, size_t size, const char *format, va_list args);
-#pragma warning ( default : 4273 )
 #endif
 
 int printf_length(const char *format, ...);

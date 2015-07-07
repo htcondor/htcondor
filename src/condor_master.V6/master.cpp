@@ -1608,6 +1608,7 @@ void init_firewall_exceptions() {
 	// We also want to add exceptions for the DAGMan we ship
 	// with Condor:
 
+	dagman_image_path = NULL; // make sure it's initialized.
 	bin_path = param ( "BIN" );
 	if ( bin_path ) {
 		dagman_image_path = (char*) malloc (
