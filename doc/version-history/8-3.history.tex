@@ -74,8 +74,8 @@ multiple jobs to a single partitionable slot.
 from 1024 bytes to 5120 bytes.
 \Ticket{5019}
 
-\item The default values of the configuration variables listed in
-Table~\ref{table:new-knob-defaults} have changed,
+\item The default values of the configuration variables and ClassAd attributes
+listed in Table~\ref{table:new-knob-defaults} have changed,
 such that the default now represents the commonly configured value.
 
 % This table must be formatted oddly, to make the pdf version look OK.
@@ -83,14 +83,14 @@ such that the default now represents the commonly configured value.
 \begin{table}[hbt]
 \begin{tabular}{|l|c|c|} \hline
 \textbf{Variable Name} & \textbf{Previous Default} & \textbf{New Default}\\ \hline \hline
-\MacroNI{NEGOTIATOR\_INFORM\_STARTD} & \Expr{True} & \Expr{False}  \\ 
-\MacroNI{MAX\_JOBS\_PER\_SUBMISSION} & largest positive integer & 20000  \\ 
-\MacroNI{MAX\_JOBS\_PER\_OWNER} & largest positive integer & 100000  \\ 
-\MacroNI{MAX\_JOBS\_RUNNING} (on Windows) & 200 & 2000  \\ 
-\MacroNI{PRIVATE\_NETWORK\_NAME} & no default & \MacroUNI{FULL\_HOSTNAME}  \\ 
-\hline
+\MacroNI{NEGOTIATOR\_INFORM\_STARTD} & \Expr{True} & \Expr{False}  \\ \hline
+\MacroNI{MAX\_JOBS\_PER\_SUBMISSION} & largest positive integer & 20000  \\ \hline
+\MacroNI{MAX\_JOBS\_PER\_OWNER} & largest positive integer & 100000  \\ \hline
+\MacroNI{MAX\_JOBS\_RUNNING} (on Windows) & 200 & 2000  \\ \hline
+\MacroNI{PRIVATE\_NETWORK\_NAME} & no default & \MacroUNI{FULL\_HOSTNAME}  \\ \hline
+\MacroNI{JobLeaseDuration} & 20 minutes & 40 minutes \\ \hline
 \end{tabular}
-\caption{\label{table:new-knob-defaults}Changes to configuration variable defaults in HTCondor 8.3.7}
+\caption{\label{table:new-knob-defaults}Changes to defaults in HTCondor 8.3.7}
 \end{table}
 \end{center}
 \Ticket{4988}
