@@ -1,4 +1,4 @@
-##**************************************************************
+ys#**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
@@ -50,6 +50,7 @@ sub InitGlobals{
 	$expect_checks = shift;
 	$expect_run = shift;
 	$expect_idle = shift;
+	print "InitGlobals: expect idle $expect_idle expect run $expect_run expect checks $expect_checks total checks $total_checks\n";
 };
 
 sub WaitForIt {
@@ -63,13 +64,16 @@ sub WaitForIt {
 	print "entered WaitForIt\n";
 	CondorTest::PrintTimeStamp();
 
+	my @catchstuff;
     while ($count < $looplimit) {
+		@catchstuff = {};
         $count += 1;
         print "Loop $count in WaitForIt\n";
 		CondorTest::PrintTimeStamp();
 
-        system("condor_q");
-        #print "Calling CheckStatus with final:$final\n";
+		print "Current queue in WaitForIt\n";
+        runCondorTool("condor_q",\@catchstuff,2,{emit_output=>0});
+        print "Calling CheckStatus with final:$final\n";
         $res = CheckStatus($final);
         print "Result from CheckStatus:$res\n";
         if($res == 1) {
@@ -116,7 +120,7 @@ sub CheckStatus {
         # clearly unhappy
         print "Running jobs <$running_now> exceeded concurrency limits <$expect_run>\n";
         $expect_run = 1000; # remove will let a job start, bump count way up now.
-        system("condor_rm -all");
+        runToolNTimes("condor_rm -all",1,0);
         $done = 1;
         CondorTest::RegisterResult(0, "test_name", $testname);
         return(-1);
@@ -129,7 +133,7 @@ sub CheckStatus {
         if($expect_idle == 0) {
             $done = 1;
             print "Expected idle 0 and run number met, remove jobs\n";
-            system("condor_rm -all");
+            runToolNTimes("condor_rm -all",1,0);
             #clearly done and happy
             return(1);
         } else {
@@ -141,7 +145,7 @@ sub CheckStatus {
                 if($amidone == 1) {
                     $expect_run = 1000; # remove will let a job start, bump count way up now.
                     CondorTest::runToolNTimes("condor_q",1,0);
-                    system("condor_rm -all");
+                    runToolNTimes("condor_rm -all",1,0);
                     return(1)
                 } else {
                     return(2);
@@ -190,7 +194,7 @@ sub CountIdle
 
     print scalar(localtime()) . " In count Idle:allow_too_few_idle_once=$allow_too_few_idle_once\n";
     #runcmd("condor_q");
-    CondorTest::runCondorTool("condor_q",\@goods,2,{emit_output => 0});
+    CondorTest::runCondorTool("condor_q",\@goods,2,{emit_output => 1});
     foreach my $job (@goods) {
         chomp($job);
         $line = $job;
@@ -292,7 +296,7 @@ sub ExamineQueue
         }
     }
     print "Total slots available here:\n\n";
-    system("condor_status");
+    runToolNTimes("condor_status",1,0);
 }
 
 sub QueueMoreJobs
