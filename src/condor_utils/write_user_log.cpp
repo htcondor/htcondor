@@ -1425,11 +1425,13 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 					// linked in libcondorapi
 				char *attrsToWrite = NULL;
 				param_jobad->LookupString("JobAdInformationAttrs",&attrsToWrite);
-				if( attrsToWrite && *attrsToWrite ) {
-					writeJobAdInfoEvent( attrsToWrite, **p, event, param_jobad, false,
-						(p == logs.begin()) && m_use_xml);
-				}
+				if (attrsToWrite) {
+					if (*attrsToWrite) {
+						writeJobAdInfoEvent( attrsToWrite, **p, event, param_jobad, false,
+							(p == logs.begin()) && m_use_xml);
+					}
 				free( attrsToWrite );
+				}
 			}
 		}
 	}

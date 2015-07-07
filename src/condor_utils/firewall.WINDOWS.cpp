@@ -358,7 +358,7 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 		// printf("Result is %lS\n", str);
 
 		len = wcslen(str);
-		tmp = (char*) malloc(len*2+1 * sizeof(char));
+		tmp = (char*) malloc((len*2+1) * sizeof(char));
 		ASSERT(tmp);
 		sprintf(tmp, "%S", str);
 

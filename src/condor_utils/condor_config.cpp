@@ -231,6 +231,7 @@ char * _allocation_pool::consume(int cb, int cbAlign)
 	if ( ! cb) return NULL;
 	cbAlign = MAX(cbAlign, this->alignment());
 	int cbConsume = (cb + cbAlign-1) & ~(cbAlign-1);
+	if (cbConsume <= 0) return NULL;
 
 	// if this is a virgin pool, give it a default reserve of 4 Kb
 	if ( ! this->cMaxHunks || ! this->phunks) {
@@ -1046,7 +1047,7 @@ real_config(const char* host, int wantsQuiet, int config_options)
 			insert(macro_name, varvalue, ConfigMacroSet, EnvMacro);
 		}
 
-		free( varname );
+		free( varname ); varname = NULL;
 	}
 
 		// Insert the special macros.  We don't want the user to
@@ -1317,11 +1318,9 @@ init_tilde()
 # else
 	// On Windows, we'll just look in the registry for TILDE.
 	HKEY	handle;
-	char regKey[1024];
+	std::string regKey("Software\\"); regKey += myDistro->GetCap();
 
-	snprintf( regKey, 1024, "Software\\%s", myDistro->GetCap() );
-
-	if ( RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey,
+	if ( RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey.c_str(),
 		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
 
 		// got the reg key open; now we just need to see if
@@ -1508,10 +1507,9 @@ find_file(const char *env_name, const char *file_name, int config_options)
 # elif defined WIN32	// ifdef UNIX
 	// Only look in the registry on WinNT.
 	HKEY	handle;
-	char	regKey[256];
+	std::string regKey("Software\\"); regKey += myDistro->GetCap();
 
-	snprintf( regKey, 256, "Software\\%s", myDistro->GetCap() );
-	if ( !config_source && RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey,
+	if ( !config_source && RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey.c_str(),
 		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
 		// We have found a registry key for Condor, which
 		// means this user has a pulse and has actually run the
@@ -1549,6 +1547,7 @@ find_file(const char *env_name, const char *file_name, int config_options)
 
 						if ( GetLastError() == ERROR_INVALID_PASSWORD ) {
 							// try again with an empty password
+							#pragma warning(suppress: 6031) // yeah. we aren't checking the return value...
 							WNetAddConnection2(
 										&nr,   /* NetResource */
 										"",    /* password (none) */
