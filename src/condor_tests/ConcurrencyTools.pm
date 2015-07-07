@@ -72,7 +72,7 @@ sub WaitForIt {
 		CondorTest::PrintTimeStamp();
 
 		print "Current queue in WaitForIt\n";
-        runCondorTool("condor_q",\@catchstuff,2,{emit_output=>0});
+        CondorTest::runCondorTool("condor_q",\@catchstuff,2,{emit_output=>0});
         print "Calling CheckStatus with final:$final\n";
         $res = CheckStatus($final);
         print "Result from CheckStatus:$res\n";
@@ -120,7 +120,7 @@ sub CheckStatus {
         # clearly unhappy
         print "Running jobs <$running_now> exceeded concurrency limits <$expect_run>\n";
         $expect_run = 1000; # remove will let a job start, bump count way up now.
-        runToolNTimes("condor_rm -all",1,0);
+        CondorTest::runToolNTimes("condor_rm -all",1,0);
         $done = 1;
         CondorTest::RegisterResult(0, "test_name", $testname);
         return(-1);
@@ -133,7 +133,7 @@ sub CheckStatus {
         if($expect_idle == 0) {
             $done = 1;
             print "Expected idle 0 and run number met, remove jobs\n";
-            runToolNTimes("condor_rm -all",1,0);
+            CondorTest::runToolNTimes("condor_rm -all",1,0);
             #clearly done and happy
             return(1);
         } else {
@@ -145,7 +145,7 @@ sub CheckStatus {
                 if($amidone == 1) {
                     $expect_run = 1000; # remove will let a job start, bump count way up now.
                     CondorTest::runToolNTimes("condor_q",1,0);
-                    runToolNTimes("condor_rm -all",1,0);
+                    CondorTest::runToolNTimes("condor_rm -all",1,0);
                     return(1)
                 } else {
                     return(2);
@@ -296,7 +296,7 @@ sub ExamineQueue
         }
     }
     print "Total slots available here:\n\n";
-    runToolNTimes("condor_status",1,0);
+    CondorTest::runToolNTimes("condor_status",1,0);
 }
 
 sub QueueMoreJobs
