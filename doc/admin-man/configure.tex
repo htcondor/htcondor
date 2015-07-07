@@ -6055,7 +6055,7 @@ These macros control the \Condor{schedd}.
   expression requires 1MByte of RAM per running job on the submit machine.
   In some environments and configurations, this is overly
   generous and can be cut by as much as 50\%.
-  On Windows platforms, the number of running jobs is still capped at 200.
+  On Windows platforms, the number of running jobs is capped at 2000.
   A 64-bit version of Windows  is recommended in order to raise the value
   above the default.
   Under Unix, the maximum default is now 10,000.  To scale higher, we
@@ -6080,7 +6080,7 @@ MAX_SHADOWS_MEM	= ceiling($(DETECTED_MEMORY)*0.8*1024/800)
 MAX_SHADOWS_PORTS	= 10000
 ## Under windows, things are much less scalable, currently.
 ## Note that this can probably be safely increased a bit under 64-bit windows.
-MAX_SHADOWS_OPSYS	= ifThenElse(regexp("WIN.*","$(OPSYS)"),200,100000)
+MAX_SHADOWS_OPSYS	= ifThenElse(regexp("WIN.*","$(OPSYS)"),2000,100000)
 ## Now build up the expression for MAX_JOBS_RUNNING.  This is complicated
 ## due to lack of a min() function.
 MAX_JOBS_RUNNING	= $(MAX_SHADOWS_MEM)
