@@ -137,6 +137,12 @@ controls whether UDP or TCP is used to forward update to the
 Its default value is \Expr{False}.
 \Ticket{5116}
 
+\item Fixed a bug that could cause the \Condor{starter} to wait forever
+if its connection to the \Condor{shadow} is lost after the job exits.
+This bug is very likely to occur if CCB is being used and the CCB server
+becomes unavailable.
+\Ticket{5136}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

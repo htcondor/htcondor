@@ -2212,9 +2212,17 @@ JICShadow::syscall_sock_handler(Stream *)
 	// the shadow - should that fail, updateShadow() will do
 	// all the right stuff like invoking syscall_sock_disconnect() etc.
 	dprintf(D_ALWAYS,
-		"Connection to shadow may be lost, will test by sending an update\n");
-	updateShadow(NULL);
-	return TRUE;
+		"Connection to shadow may be lost, will test by sending whoami request.\n");
+	char buff[32];
+	if ( REMOTE_CONDOR_whoami( sizeof(buff), buff ) <= 0 ) {
+		// Failed to send whoami request to the shadow.  Since the shadow
+		// never returns failure for this pseudo call (if our buffer is
+		// large enough), we assume
+		// we failed to communicate with the shadow.  Close up the
+		// socket and wait for a reconnect.
+		syscall_sock_disconnect();
+	}
+	return KEEP_STREAM;
 }
 
 
@@ -2225,6 +2233,8 @@ JICShadow::job_lease_expired()
 	  This method is invoked by a daemoncore timer, which is set
 	  to fire ATTR_JOB_LEASE_DURATION seconds after the syscall_sock disappears.
 	*/
+
+	dprintf( D_ALWAYS, "No reconnect from shadow for %d seconds, aborting job execution!\n", (int)(time(NULL) - syscall_sock_lost_time) );
 
 	// A few sanity checks...
 	ASSERT(syscall_sock_lost_time > 0);
