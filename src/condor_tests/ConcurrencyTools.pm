@@ -56,7 +56,7 @@ sub InitGlobals{
 sub WaitForIt {
     my $count = 0;
     my $looplimit = 7;
-    my $variance = 10;
+    my $variance = 20;
     my $sleeptime = 0;
     my $res = 0;
     my $final = 0;
@@ -68,6 +68,8 @@ sub WaitForIt {
     while ($count < $looplimit) {
 		@catchstuff = {};
         $count += 1;
+        $sleeptime = ($variance);
+        sleep($sleeptime);
         print "Loop $count in WaitForIt\n";
 		CondorTest::PrintTimeStamp();
 
@@ -96,8 +98,6 @@ sub WaitForIt {
         }
         if( $count != $looplimit ) {
             #$sleeptime = ($count * $variance);
-            $sleeptime = ($variance);
-            sleep($sleeptime);
             print "sleep time set to $sleeptime\n";
         } else { 
             print "Timeout in WaitForIt\n";
@@ -178,7 +178,7 @@ sub CountRunning
             $runcount += 1;
             print "Run count now:$runcount\n";
         } else {
-            print "Parse error or Idle:$line\n";
+            #print "Parse error or Idle:$line\n";
         }   
     }   
 	print "CountRunning: returning $runcount\n";

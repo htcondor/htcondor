@@ -3485,7 +3485,7 @@ sub CoreCheck {
 			$fullpath = $logdir . "/" . $perp;
 		}
 		CondorUtils::fullchomp($fullpath);
-		print "fullpath now :$fullpath:\n";
+		#print "fullpath now :$fullpath:\n";
 		if(-f $fullpath) {
 			if($perp =~ /core/) {
 				# returns printable string
