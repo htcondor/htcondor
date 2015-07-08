@@ -23,12 +23,12 @@ if(WINDOWS)
             endif()
 
             condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h )
-            target_link_libraries( pyclassad ${CLASSADS_FOUND} ${PYTHON_LIBRARY_BOOST_ONE} ${PYTHON_LIBRARY_BOOST_TWO} ${PYTHON_DEBUG_LIBRARY} ${PYTHON_LIBRARIES})
+            target_link_libraries( pyclassad ${CLASSADS_FOUND} ${PYTHON_LIBRARY_BOOST_ONE} ${PYTHON_LIBRARY_BOOST_TWO} ${PYTHON_LIBRARIES} ${PYTHON_DEBUG_LIBRARY} )
             set_target_properties( pyclassad PROPERTIES OUTPUT_NAME "${PYCLASSAD_LIB_NAME}" )
 
             # Note we do not use condor_shared_lib below because we want a separate install target.
             add_library( classad_module SHARED classad_module.cpp classad_parsers.cpp )
-            target_link_libraries( classad_module pyclassad ${PCRE_FOUND} ${PYTHON_LIBRARY_BOOST_ONE} ${PYTHON_LIBRARY_BOOST_TWO} ${PYTHON_DEBUG_LIBRARY} ${PYTHON_LIBRARIES} )
+            target_link_libraries( classad_module pyclassad ${PCRE_FOUND} ${PYTHON_LIBRARY_BOOST_ONE} ${PYTHON_LIBRARY_BOOST_TWO} ${PYTHON_LIBRARIES} ${PYTHON_DEBUG_LIBRARY} )
             set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
             set_target_properties(classad_module PROPERTIES SUFFIX ".pyd" )
 
@@ -40,7 +40,7 @@ if(WINDOWS)
             install ( TARGETS classad_python_user DESTINATION "${C_LIBEXEC}" )
 
             add_library( htcondor SHARED htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp )
-            target_link_libraries( htcondor pyclassad condor_utils ${PYTHON_LIBRARY_BOOST_ONE} ${PYTHON_LIBRARY_BOOST_TWO} ${PYTHON_DEBUG_LIBRARY} ${PYTHON_LIBRARIES} ${CONDOR_WIN_LIBS} )
+            target_link_libraries( htcondor pyclassad condor_utils ${PYTHON_LIBRARY_BOOST_ONE} ${PYTHON_LIBRARY_BOOST_TWO} ${PYTHON_LIBRARIES} ${PYTHON_DEBUG_LIBRARY} ${CONDOR_WIN_LIBS} )
             set_target_properties( htcondor PROPERTIES SUFFIX ".pyd" )
 
             install ( TARGETS pyclassad DESTINATION ${C_LIB} )
