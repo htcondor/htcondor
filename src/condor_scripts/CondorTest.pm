@@ -247,12 +247,12 @@ sub EndTest
 
     TestDebug( "\n\nFinal status for $testname: $result_str\n  $test_success_count check(s) passed\n  $test_failure_count check(s) failed$extra_notes\n", 1 );
 
-	#if(defined $no_exit) {
-		#return($exit_status);
-	#} else {
-    	#exit($exit_status);
-	#}
-	return($exit_status);
+	if(defined $no_exit) {
+		return($exit_status);
+	} else {
+    	exit($exit_status);
+	}
+	#return($exit_status);
 }
 
 # This should be called in each check function to register the pass/fail result
@@ -3443,6 +3443,7 @@ sub CoreCheck {
 	my $count = 0;
 	my $scancount = 0;
 	my $fullpath = "";
+	my $iswindows = CondorUtils::is_windows();
 	
 	CondorUtils::fullchomp($logdir);
 	print "Checking for cores and ERRORS for test:$test:\n";
@@ -3478,7 +3479,13 @@ sub CoreCheck {
 		if($perp =~ /^\./) {
 			next;
 		}
-		$fullpath = $logdir . "/" . $perp;
+		if($iswindows) {
+			$fullpath = $logdir . "\\" . $perp;
+		} else {
+			$fullpath = $logdir . "/" . $perp;
+		}
+		CondorUtils::fullchomp($fullpath);
+		#print "fullpath now :$fullpath:\n";
 		if(-f $fullpath) {
 			if($perp =~ /core/) {
 				# returns printable string

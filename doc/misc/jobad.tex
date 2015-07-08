@@ -164,6 +164,9 @@ number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 delimited by commas and space characters.
 The items in the list
 identify named resources that the job requires.
+Each item in the list may be a string identifying the resource,
+or it may be a ClassAd expression that evaluates to a string,
+evaluated in the context of a machine ClassAd match. 
 
 %%% ClassAd attribute: CumulativeSlotTime
 \index{ClassAd job attribute!CumulativeSlotTime}

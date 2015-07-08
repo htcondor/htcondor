@@ -562,6 +562,7 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 			SlotResTermSumy * psumy = useMap[key];
 			if ( ! psumy) {
 				psumy = new SlotResTermSumy();
+				ASSERT(psumy);
 				useMap[key] = psumy;
 				//formatstr_cat(out, "\tadded %x for key %s\n", psumy, key.c_str());
 			} else {
@@ -5840,7 +5841,7 @@ int PreSkipEvent::readEvent (FILE *file)
 
 	// check if event ended without specifying the DAG node.
 	// in this case, the submit host would be the event delimiter
-	if ( strncmp(skipEventLogNotes,"...",3)==0 ) {
+	if (skipEventLogNotes && (MATCH == strncmp(skipEventLogNotes,"...",3))) {
 			// This should not happen. The event should have a 
 			// DAGMan node associated with it.
 		skipEventLogNotes[0] = '\0';

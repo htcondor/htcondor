@@ -3009,7 +3009,7 @@ bool hash_iter_done(HASHITER& it) {
 			}
 		}
 	}
-	if (it.ix >= it.set.size && ((it.opts & HASHITER_NO_DEFAULTS) != 0 || (it.id >= it.set.defaults->size)))
+	if (it.ix >= it.set.size && ((it.opts & HASHITER_NO_DEFAULTS) != 0 || ! it.set.defaults || (it.id >= it.set.defaults->size)))
 		return true;
 	return false;
 }
@@ -3535,7 +3535,7 @@ const char * lookup_macro_def(const char * name, const char * subsys, MACRO_SET 
 				set.defaults->metat[ix].use_count += (use&1);
 				set.defaults->metat[ix].ref_count += (use>>1)&1;
 			}
-			if ( ! p) {
+			if ( ! p && set.defaults) {
 				p = &set.defaults->table[ix];
 			}
 		}

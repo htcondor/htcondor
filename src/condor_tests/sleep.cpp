@@ -1,7 +1,44 @@
+/***************************************************************
+ *
+ * Copyright (C) 2015, John M. Knoeller 
+ * Condor Team, Computer Sciences Department
+ * University of Wisconsin-Madison, WI.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
+// this file contains a Windows specific sleep program that builds using MSVC
+// but does not use the c-runtime so that it is small and portable.
+
+// disable all of the code checks since they emit code that refers to the c-runtime.
+#pragma strict_gs_check(off)
+#pragma runtime_checks("scu", off)
 
 // Force the linker to include KERNEL32.LIB and to NOT include the c-runtime
 #pragma comment(linker, "/nodefaultlib")
 #pragma comment(linker, "/defaultlib:kernel32.lib")
+#pragma comment(linker, "/subsystem:console")
+#pragma comment(linker, "/entry:begin")
+
+// Build this file using the following command line.
+//cl /O1 /GS- sleep.cpp /link /subsystem:console kernel32.lib
+
+// fake the security cookie stuff that the compiler emits unless we pass /GS- on the compile line
+// even though we turn off strict_gs_check above.
+// 
+extern "C" int __security_cookie = 0xBAAD;
+extern "C" void _fastcall __security_check_cookie(int cookie) { };
 
 // Note: this code should compile without linking to the c-runtime at all
 // it is entirely self-contained other than windows api calls
@@ -180,6 +217,7 @@ c* append_num(c* psz, unsigned int ui, int min_width = 1, c lead = ' ')
 // divide by 10 and return both the result of the division and the remainder
 // this code comes from http://www.hackersdelight.org/divcMore.pdf
 // tj modified it to return the remainder
+#pragma optimize("gs", on)  // must optimize this code or it emits references to c-runtime shift functions
 unsigned __int64 divu10(unsigned __int64 ui, int * premainder)
 {
    unsigned __int64 q, r;
@@ -196,6 +234,7 @@ unsigned __int64 divu10(unsigned __int64 ui, int * premainder)
    if (premainder) *premainder = (int)r;
    return q;
 }
+#pragma optimize("", on)
 
 
 template <class c>
@@ -299,13 +338,13 @@ BOOL Print(HANDLE hf, const c* output, const c* pend) {
 template <class c>
 const c* parse_uint(const c* pline, unsigned int * puint) {
 	*puint = 0;
-	for (char ch = (char)*pline; ch >= '0' && ch <= '9'; ch = *++pline) {
+	for (c ch = *pline; ch >= '0' && ch <= '9'; ch = *++pline) {
 		*puint = (*puint * 10) + (unsigned int)(ch - '0');
 	}
 	return pline;
 }
 
-extern "C" void __cdecl begin( void )
+void begin( void )
 {
     int multi_link_only = 0;
     int show_usage = 0;

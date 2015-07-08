@@ -210,10 +210,13 @@ DCMsg::reportFailure( DCMessenger *messenger )
 	if( m_delivery_status == DELIVERY_CANCELED ) {
 		debug_level = m_msg_cancel_debug_level;
 	}
-	dprintf( debug_level, "Failed to send %s to %s: %s\n",
+	if (debug_level)
+	{
+		dprintf( debug_level, "Failed to send %s to %s: %s\n",
 			 name(),
 			 messenger->peerDescription(),
 			 m_errstack.getFullText().c_str() );
+	}
 }
 
 void

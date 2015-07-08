@@ -1350,10 +1350,12 @@ void CollectorDaemon::Config()
 	if( myself == NULL ) {
 		EXCEPT( "Unable to determine my own address, aborting rather than hang.  You may need to make sure the shared port daemon is running first." );
 	}
+	Sinful mySinful( myself );
 	while( collectorsToUpdate->next( daemon ) ) {
 		const char * current = daemon->addr();
 		if( current == NULL ) { continue; }
-		if( strcmp( myself, current ) == 0 ) {
+		Sinful currentSinful( current );
+		if( mySinful.addressPointsToMe( currentSinful ) ) {
 			collectorsToUpdate->deleteCurrent();
 		}
 	}
@@ -1427,7 +1429,7 @@ void CollectorDaemon::Config()
         free(tmp);
         cvh.rewind();
         while (char* vhost = cvh.next()) {
-            DCCollector* vhd = new DCCollector(vhost);
+            DCCollector* vhd = new DCCollector(vhost, DCCollector::CONFIG_VIEW);
             Sinful view_addr( vhd->addr() );
             Sinful my_addr( daemonCore->publicNetworkIpAddr() );
 

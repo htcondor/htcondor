@@ -4048,7 +4048,6 @@ tags=c++_util,sshd_wrapper
 
 [ENABLE_USERLOG_LOCKING]
 default=false
-win32_default=true
 type=bool
 reconfig=true
 customization=seldom
@@ -4085,7 +4084,6 @@ tags=c++_util,user_log
 
 [EVENT_LOG_LOCKING]
 default=false
-win32_default=true
 type=bool
 reconfig=true
 customization=seldom
@@ -4756,15 +4754,6 @@ friendly_name=DaemonCore Receive Messages Duration
 usage=how long to keep processing callback messages before returing to the pump. For the SCHEDD, how long to keep processing matches from the negotiator before checking for other work.
 tags=daemon_core,schedd
 
-[TCP_COLLECTOR_HOST]
-default=
-type=string
-reconfig=true
-customization=seldom
-friendly_name=Tcp Collector Host
-review=?
-tags=daemon_client,dc_collector
-
 [NONBLOCKING_COLLECTOR_UPDATE]
 default=true
 type=bool
@@ -4784,20 +4773,20 @@ review=?
 tags=daemon_client,dc_collector
 
 [UPDATE_COLLECTOR_WITH_TCP]
-default=
-type=string
+default=true
+type=bool
 reconfig=true
 customization=seldom
 friendly_name=Update Collector With Tcp
 review=?
 tags=daemon_client,dc_collector
 
-[UPDATE_COLLECTORS_WITH_TCP]
-default=
-type=string
+[UPDATE_VIEW_COLLECTOR_WITH_TCP]
+default=false
+type=bool
 reconfig=true
 customization=seldom
-friendly_name=Update Collectors With Tcp
+friendly_name=Update View Collector With Tcp
 review=?
 tags=daemon_client,dc_collector
 
@@ -5264,7 +5253,7 @@ review=?
 tags=schedd,schedd
 
 [SCHEDD_SEND_VACATE_VIA_TCP]
-default=false
+default=true
 type=bool
 reconfig=true
 customization=seldom
@@ -6435,6 +6424,42 @@ tags=schedd
 
 [SCHEDD_ROUND_ATTR_ResidentSetSize]
 default=25%
+type=string
+reconfig=false
+customization=seldom
+friendly_name=
+review=?
+tags=schedd
+
+[SCHEDD_ROUND_ATTR_ExecutableSize]
+default=25%
+type=string
+reconfig=false
+customization=seldom
+friendly_name=
+review=?
+tags=schedd
+
+[SCHEDD_ROUND_ATTR_ImageSize]
+default=25%
+type=string
+reconfig=false
+customization=seldom
+friendly_name=
+review=?
+tags=schedd
+
+[SCHEDD_ROUND_ATTR_DiskUsage]
+default=25%
+type=string
+reconfig=false
+customization=seldom
+friendly_name=
+review=?
+tags=schedd
+
+[SCHEDD_ROUND_ATTR_NumCkpts]
+default=4
 type=string
 reconfig=false
 customization=seldom
@@ -8315,3 +8340,4 @@ default: @end
 	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
 @end
 
+# ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

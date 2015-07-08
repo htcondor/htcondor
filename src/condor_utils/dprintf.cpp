@@ -514,7 +514,7 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, c
 							for (PCHAR p = pszFile; *p; ++p) {
 								if (*p == '/' || *p == '\\') {
 									pszFile = p+1;
-									if ((p[1] == 's') && (p[2] == 'r') && (p[3]=='c') && (p[4]='\\' || p[4] == '/')){
+									if ((p[1] == 's') && (p[2] == 'r') && (p[3]=='c') && (p[4]=='\\' || p[4] == '/')){
 										pszFile = p+5; break;
 									}
 								}

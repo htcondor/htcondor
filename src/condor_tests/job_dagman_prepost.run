@@ -22,9 +22,10 @@ use CondorTest;
 use CondorUtils;
 use Cwd;
 
+my $iswindows = CondorUtils::is_windows();
+
 $cmd = 'job_dagman_prepost.dag';
 
-$flowlog = "job_dagman_prepost-srvr-log.log";
 $serversubFile = "job_dagman_prepost-srvr.cmd";
 
 my $pid = $$;
@@ -35,17 +36,26 @@ CondorTest::LoadExemption("job_dagman_prepost,no,DC_AUTHENTICATE unable to recei
 
 my $socketname = "prepostsock";
 my $newsocketname = $curcwd . "/" . $pid . "/prepostsock";
+my $flowlog = $curcwd . "/" . $pid . "/job_dagman_prepost-srvr-log.log";
+if($iswindows) {
+	$_ = $flowlog;
+	s/\//\\\\/g;
+	$flowlog = $_;
+}
+my $appendfile = "filetoappendto";
 CondorTest::debug("current directory is $newsocketname\n",1);
 
 # start a server for this test
 
 runcmd("rm -f $flowlog");
-defined(my $pid = fork) or die "Cannot fork: $!";
-unless ($pid)
-{
-    #child runs and ceases to exist
-    exec "./x_general_server.pl $newsocketname $flowlog";
-    die "can not exec dumpcore!\n";
+if(!($iswindows)) {
+	defined(my $pid = fork) or die "Cannot fork: $!";
+	unless ($pid)
+	{
+    	#child runs and ceases to exist
+    	exec "./x_general_server.pl $newsocketname $flowlog";
+    	die "can not exec dumpcore!\n";
+	}
 }
 #main process continues here
 
@@ -63,24 +73,39 @@ foreach $name (@filestoedit)
 	{
 		CondorUtils::fullchomp($_);
 		$line = $_;
-		if( $line =~ /(^\s*.*)$socketname(.*$)/)
-		{
-			CondorTest::debug("Found ---$1$socketname$2---\n",1);
-			CondorTest::debug("replacing with $1$newsocketname$2\n",1);
-			print NEWFF "$1$newsocketname$2\n";
-		}
-		else
-		{
-			print NEWFF "$line\n";
+		if(!($iswindows)) {
+			if( $line =~ /(^\s*.*)$socketname(.*$)/)
+			{
+				CondorTest::debug("Found ---$1$socketname$2---\n",1);
+				CondorTest::debug("replacing with $1$newsocketname$2\n",1);
+				print NEWFF "$1$newsocketname$2\n";
+			}
+			else
+			{
+				print NEWFF "$line\n";
+			}
+		} else {
+			if( $line =~ /(^\s*.*)$appendfile(.*$)/)
+			{
+				CondorTest::debug("Found ---$1$appendfile$2---\n",1);
+				CondorTest::debug("replacing with $1$flowlog$2\n",1);
+				print NEWFF "$1$flowlog$2\n";
+			}
+			else
+			{
+				print NEWFF "$line\n";
+			}
 		}
 	}
 	close(FF);
 	close(NEWFF);
 }
 
-foreach $name (@filestochmod)
-{
-	runcmd("chmod 755 $name");
+if(!($iswindows)) {
+	foreach $name (@filestochmod)
+	{
+		runcmd("chmod 755 $name");
+	}
 }
 
 $testdesc =  'Condor submit dag - verify pre/post ran test - scheduler U';
@@ -138,12 +163,16 @@ $success = sub
 		if( $ret ne "0" )
 		{
 			# shutdown the server we started
-            runcmd("./x_general_client.pl $newsocketname quit");
+			if(!($iswindows)) {
+            	runcmd("./x_general_client.pl $newsocketname quit");
+			}
 			die "failed to run exact number of pre/post scripts\n";
 		}
 	}
 	# shutdown the server we started
-    runcmd("./x_general_client.pl $newsocketname quit");
+	if(!($iswindows)) {
+    	runcmd("./x_general_client.pl $newsocketname quit");
+	}
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);
@@ -158,7 +187,9 @@ if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	exit(0);
 } else {
 	# shutdown the server we started
-    runcmd("./x_general_client.pl $newsocketname quit");
+	if(!($iswindows)) {
+    	runcmd("./x_general_client.pl $newsocketname quit");
+	}
 	die "$testname: CondorTest::RunTest() failed\n";
 }
 

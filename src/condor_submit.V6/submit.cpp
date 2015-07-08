@@ -513,6 +513,7 @@ const char	*LoadProfile = "load_profile";
 
 // Concurrency Limit parameters
 const char    *ConcurrencyLimits = "concurrency_limits";
+const char    *ConcurrencyLimitsExpr = "concurrency_limits_expr";
 
 // Accounting Group parameters
 const char* AcctGroup = "accounting_group";
@@ -5642,7 +5643,7 @@ SetJobLease( void )
 				  reconnectable jobs can survive schedd crashes and
 				  the like...
 				*/
-			lease_duration = 20 * 60;
+			lease_duration = 40 * 60;
 		} else {
 				// not defined and can't reconnect, we're done.
 			return;
@@ -9372,8 +9373,14 @@ void
 SetConcurrencyLimits()
 {
 	MyString tmp = condor_param_mystring(ConcurrencyLimits, NULL);
+	MyString tmp2 = condor_param_mystring(ConcurrencyLimitsExpr, NULL);
 
 	if (!tmp.IsEmpty()) {
+		if (!tmp2.IsEmpty()) {
+			fprintf( stderr, "ERROR: %s and %s can't be used together\n",
+					 ConcurrencyLimits, ConcurrencyLimitsExpr );
+			exit( 1 );
+		}
 		char *str;
 
 		tmp.lower_case();
@@ -9389,6 +9396,10 @@ SetConcurrencyLimits()
 
 			free(str);
 		}
+	} else if (!tmp2.IsEmpty()) {
+		std::string expr;
+		formatstr( expr, "%s = %s", ATTR_CONCURRENCY_LIMITS, tmp2.Value() );
+		InsertJobExpr( expr.c_str() );
 	}
 }
 

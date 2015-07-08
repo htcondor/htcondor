@@ -242,7 +242,12 @@ chirp_put_one_file(char *local, char *remote, int perm) {
 	
 		// Get size of file, allocate buffer
 	struct stat stat_buf;
-	stat(local, &stat_buf);
+	if (fstat(fileno(rfd), &stat_buf) == -1) {
+		fprintf(stderr, "Can't fstat local file %s\n", local);
+		fclose(rfd);
+		DISCONNECT_AND_RETURN(client, -1);
+	}
+
 	int size = stat_buf.st_size;
 	char* buf = (char*)malloc(size);
 	if ( ! buf) {

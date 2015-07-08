@@ -17,6 +17,12 @@
 ## limitations under the License.
 ##
 ##**************************************************************
+use CondorUtils;
 
 
-system("./x_general_client.pl prepostsock prescript_ran");
+my $iswindows = CondorUtils::is_windows();
+if($iswindows) {
+	system("appendmsg -n -f filetoappendto prescript_ran");
+} else {
+	system("./x_general_client.pl prepostsock prescript_ran");
+}

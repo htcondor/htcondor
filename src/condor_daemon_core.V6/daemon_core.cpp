@@ -4666,7 +4666,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	int sig = msg->theSignal();
 	PidEntry * pidinfo = NULL;
 	int same_thread, is_local;
-	char const *destination;
+	char const *destination = NULL;
 	int target_has_dcpm = TRUE;		// is process pid a daemon core process?
 
 	// sanity check on the pid.  we don't want to do something silly like

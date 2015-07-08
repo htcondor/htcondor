@@ -72,7 +72,8 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	HadAds        (LESSER_TABLE_SIZE , &adNameHashFunction),
 	LeaseManagerAds(LESSER_TABLE_SIZE , &adNameHashFunction),
 	GridAds       (LESSER_TABLE_SIZE , &adNameHashFunction),
-	GenericAds    (LESSER_TABLE_SIZE , &stringHashFunction)
+	GenericAds    (LESSER_TABLE_SIZE , &stringHashFunction),
+	__self_ad__(0)
 {
 	clientTimeout = 20;
 	machineUpdateInterval = 30;

@@ -127,13 +127,10 @@ const char * SlotType::type_param(const char * name)
 /*static*/ bool SlotType::insert_param(void*, HASHITER & it)
 {
 	const char * name = hash_iter_key(it);
-	const char * rawval = hash_iter_value(it);
-	if ( ! rawval || ! rawval[0])
-		return true; // keep iterating
-
 	char * res_value = ::param(name);
-	if ( ! res_value)
-		return true; // keep iterating
+	// we hit this on iteration so the config file has a statement
+	// but param returned NULL, so set an explicit empty value.
+	if ( ! res_value) { res_value = strdup(""); }
 
 	// extract the number and get a pointer to the remainder
 	const char * pnum = name + sizeof("SLOT_TYPE_")-1;
@@ -159,9 +156,11 @@ const char * SlotType::type_param(const char * name)
 
 // clear the table of slot type config info, and then re-initialize it
 // by fetching all params that begin with "SLOT_TYPE_n".
-/*static*/ void SlotType::init_types(int max_type_id)
+/*static*/ void SlotType::init_types(int max_type_id, bool first_init)
 {
-	types.resize(max_type_id);
+	if (first_init || (max_type_id > (int)types.size())) {
+		types.resize(max_type_id);
+	}
 	for (size_t ix = 0; ix < types.size(); ++ix) { types[ix].clear(); }
 
 	Regex re;
@@ -2135,10 +2134,68 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		caInsert(cap, r_classad, ATTR_UNHIBERNATE);
 #endif
 
-			// Include everything from STARTD_EXPRS.
-			// And then include everything from SLOTx_STARTD_EXPRS
+			// this sets STARTD_ATTRS, but ignores the SLOT_TYPE_n override values
 		daemonCore->publish(cap);
 
+#if 1
+		// now override the global STARTD_ATTRS values with SLOT_TYPE_n_* or SLOTn_* values if they exist.
+		// the list of attributes can also be ammended at this level, but note that the list can only be expanded
+		// it cannot be fully overridden via a SLOT override. (it will just be left with daemonCore->publish values)
+
+		// use the slot name prefix up to the first _ as a config prefix, we do this so dynamic slots
+		// get the same values as their parent slots.
+		MyString slot_name(r_id_str);
+		int iUnderPos = slot_name.find("_");
+		if (iUnderPos >=0) { slot_name.setChar (iUnderPos,  '\0'); }
+
+		// load the relevant param that controls the attribute list.  
+		// We preserve the behavior of config_fill_ad here so the effective list is STARTD_ATTRS + SLOTn_STARTD_ATTRS
+		// but because param is overridden in this class the actual effect is that if SLOT_TYPE_n_* attributes
+		// are defined, they are loaded INSTEAD of global params without the SLOT_TYPE_n_ prefix
+		// so this CAN generate a completely different list than config_fill_ad uses.  When that happens
+		// the values set in daemonCore->publish will be left alone <sigh>
+		//
+		StringList slot_attrs;
+		auto_free_ptr tmp(param("STARTD_ATTRS"));
+		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
+		MyString param_name(slot_name); param_name += "_STARTD_ATTRS";
+		tmp.set(param(param_name.c_str()));
+		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
+
+		// check for obsolete STARTD_EXPRS and generate a warning if set
+		{
+			MyString tname(slot_name); tname += "_STARTD_EXPRS";
+			auto_free_ptr tmp2(param(tname.c_str()));
+			if ( ! tmp2.empty()) {
+				dprintf(D_ALWAYS, "WARNING: config contains obsolete %s or SLOT_TYPE_n_%s which will be (partially) ignored! use *_STARTD_ATTRS instead.\n", tname.c_str(), tname.c_str());
+			}
+			tmp2.set(param("STARTD_EXPRS"));
+			if ( ! tmp2.empty()) {
+				dprintf(D_ALWAYS, "WARNING: config contains obsolete STARTD_EXPRS or SLOT_TYPE_n_STARTD_EXPRS which will be (partially) ignored! use STARTD_ATTRS instead.\n");
+			}
+		}
+
+		slot_attrs.rewind();
+		for (char* attr = slot_attrs.first(); attr != NULL; attr = slot_attrs.next()) {
+			param_name.formatstr("%s_%s", slot_name.c_str(), attr);
+			tmp.set(param(param_name.c_str()));
+			if ( ! tmp) { tmp.set(param(attr)); } // if no SLOTn_attr config definition, lookup just attr
+			if ( ! tmp) continue;  // no definition of either type, skip this attribute.
+
+			if (tmp.empty()) {
+				// interpret explicit empty values as 'remove the attribute' (should we set to undefined instead?)
+				cap->Delete(attr);
+			} else {
+				std::string buf(attr); buf += " = "; buf += tmp.ptr();
+				if ( ! cap->Insert(buf.c_str())) {
+					dprintf(D_ALWAYS | D_FAILURE,
+							"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s."
+							"  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
+							buf.c_str(), slot_name.c_str() );
+				}
+			}
+		}
+#else
 		// config_fill_ad can not take strings with "_" in it's prefix
 		// e.g. slot1_1, instead needs to be slot1
 		MyString szTmp(r_id_str);
@@ -2148,7 +2205,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			szTmp.setChar ( iUnderPos,  '\0' );
 		}
 		
+		// set STARTD_ATTRS/EXPRS using SLOTn_ prefix values, or global values.
 		config_fill_ad( cap, szTmp.Value() );
+#endif
 
 			// Also, include a slot ID attribute, since it's handy for
 			// defining expressions, and other things.

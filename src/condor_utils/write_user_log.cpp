@@ -611,16 +611,63 @@ WriteUserLog::openFile(
 	}
 #if defined(WIN32)
 	flags |= _O_TEXT;
+
+	// if we want lock-free append, we have to open the handle in a diffent file mode than what the
+	// c-runtime uses.  FILE_APPEND_DATA but NOT FILE_WRITE_DATA or GENERIC_WRITE.
+	// note that we do NOT pass _O_APPEND to _open_osfhandle() since what that does in the current (broken)
+	// c-runtime is tell it to call seek before every write, but you *can't* seek an append-only file...
+	// PRAGMA_REMIND("TJ: remove use_lock test here for 8.5.x")
+	if (append && ! use_lock) {
+		DWORD err = 0;
+		DWORD attrib =  FILE_ATTRIBUTE_NORMAL; // set to FILE_ATTRIBUTE_READONLY based on mode???
+		DWORD create_mode = (flags & O_CREAT) ? OPEN_ALWAYS : OPEN_EXISTING;
+		DWORD share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+		HANDLE hf = CreateFile(file, FILE_APPEND_DATA, share_mode, NULL, create_mode, attrib, NULL);
+		if (hf == INVALID_HANDLE_VALUE) {
+			fd = -1;
+			err = GetLastError();
+		} else {
+			fd = _open_osfhandle((intptr_t)hf, flags & (/*_O_APPEND | */_O_RDONLY | _O_TEXT | _O_WTEXT));
+			if (fd < 0) {
+				// open_osfhandle can sometimes set errno and sometimes _doserrno (i.e. GetLastError()),
+				// the only non-windows error code it sets is EMFILE when the c-runtime fd table is full.
+				if (errno == EMFILE) {
+					err = ERROR_TOO_MANY_OPEN_FILES;
+				} else {
+					err = _doserrno;
+					if (err == NO_ERROR) err = ERROR_INVALID_FUNCTION; // make sure we get an error code
+				}
+			}
+		}
+
+		if (fd < 0) {
+			dprintf( D_ALWAYS,
+					 "WriteUserLog::initialize: "
+						 "CreateFile/_open_osfhandle(\"%s\") failed - err %d (%s)\n",
+					 file,
+					 err,
+					 GetLastErrorString(err) );
+			return false;
+		}
+
+		// prepare to lock the file.
+		if ( use_lock ) {
+			lock = new FileLock( fd, NULL, file );
+		} else {
+			lock = new FakeFileLock( );
+		}
+		return true;
+	}
 #endif
 	mode_t mode = 0664;
 	fd = safe_open_wrapper_follow( file, flags, mode );
 	if( fd < 0 ) {
 		dprintf( D_ALWAYS,
-		         "WriteUserLog::initialize: "
-		             "safe_open_wrapper(\"%s\") failed - errno %d (%s)\n",
-		         file,
-		         errno,
-		         strerror(errno) );
+					"WriteUserLog::initialize: "
+						"safe_open_wrapper(\"%s\") failed - errno %d (%s)\n",
+					file,
+					errno,
+					strerror(errno) );
 		return false;
 	}
 
@@ -1378,11 +1425,13 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 					// linked in libcondorapi
 				char *attrsToWrite = NULL;
 				param_jobad->LookupString("JobAdInformationAttrs",&attrsToWrite);
-				if( attrsToWrite && *attrsToWrite ) {
-					writeJobAdInfoEvent( attrsToWrite, **p, event, param_jobad, false,
-						(p == logs.begin()) && m_use_xml);
-				}
+				if (attrsToWrite) {
+					if (*attrsToWrite) {
+						writeJobAdInfoEvent( attrsToWrite, **p, event, param_jobad, false,
+							(p == logs.begin()) && m_use_xml);
+					}
 				free( attrsToWrite );
+				}
 			}
 		}
 	}

@@ -3227,7 +3227,7 @@ to use a host name that is not the primary one.
   Otherwise, you can specify a particular private IP address to use by
   defining the \MacroNI{PRIVATE\_NETWORK\_INTERFACE} setting
   (described below).
-  There is no default for this setting.
+  The default is \MacroUNI{FULL\_HOSTNAME}.
   After changing this setting and running \Condor{reconfig}, it may
   take up to one \Condor{collector} update interval before the change becomes visible.
   % DWW
@@ -3391,36 +3391,43 @@ to use a host name that is not the primary one.
 
 \label{param:UpdateCollectorWithTcp}
 \item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
-  If your site needs to use TCP connections to send ClassAd updates to
-  your collector, set to \Expr{True}
-  to enable this feature.
+  This boolean value controls whether TCP or UDP is used by daemons to
+  send ClassAd updates to the \Condor{collector}.
   Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
   Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
   for more details and a discussion of when this
   functionality is needed. 
-  At this time, this setting only affects the main \Condor{collector}
-  for the site, not any sites that a \Condor{schedd} might flock to. 
-  For large pools, it is also necessary to
+  When using TCP in large pools, it is also necessary to
   ensure that the collector has a high enough file descriptor limit
-  (e.g. using \Macro{MAX\_FILE\_DESCRIPTORS}.
-  Defaults to \Expr{False}.
+  (e.g. using \Macro{COLLECTOR\_MAX\_FILE\_DESCRIPTORS}.
+  Defaults to \Expr{True}.
   % PKK
   % Described in default config file: YES
   % Defined in the default config file: NO
   % Default definition in config file: bogus
-  % Result if not defined or RHS is empty: disable the feature of TCP updates to
+  % Result if not defined or RHS is empty: use TCP for updates to
   % collectors
-  % WARNING: The code also looks for UPDATE_COLLECTORS_WITH_TCP, which
-  % means the SAME THING as UPDATE_COLLECTOR_WITH_TCP
+
+\label{param:UpdateViewCollectorWithTcp}
+\item[\Macro{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP}]
+  This boolean value controls whether TCP or UDP is used by the
+  \Condor{collector} to forward ClassAd updates to the collector(s)
+  specified by \Macro{CONDOR\_VIEW\_HOST}.
+  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
+  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
+  for more details and a discussion of when this
+  functionality is needed.
+  Defaults to \Expr{False}.
 
 \label{param:TcpUpdateCollectors}
 \item[\Macro{TCP\_UPDATE\_COLLECTORS}]
-  The list of collectors which will be updated with TCP instead of UDP.
+  The list of collectors which will be updated with TCP instead of UDP
+  when \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP} or
+  \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP} is set to \Expr{False}.
   Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
   Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
   for more details and a discussion of when a site needs this
   functionality. 
-  If not defined, no collectors use TCP instead of UDP.
   % PKK
   % Described in default config file: NO
   % Defined in the default config file: NO
@@ -4654,7 +4661,7 @@ WANT_HOLD_REASON = \
   job will be soft-killed and given time to checkpoint or clean up.
   The amount of time given depends on \Macro{MachineMaxVacateTime}
   and \Macro{KILL}.
-  The default value is \Expr{False}.
+  The default value is \Expr{True}.
 
 \label{param:EnableVersionedOpsys}
 \item[\Macro{ENABLE\_VERSIONED\_OPSYS}]
@@ -6048,7 +6055,7 @@ These macros control the \Condor{schedd}.
   expression requires 1MByte of RAM per running job on the submit machine.
   In some environments and configurations, this is overly
   generous and can be cut by as much as 50\%.
-  On Windows platforms, the number of running jobs is still capped at 200.
+  On Windows platforms, the number of running jobs is capped at 2000.
   A 64-bit version of Windows  is recommended in order to raise the value
   above the default.
   Under Unix, the maximum default is now 10,000.  To scale higher, we
@@ -6073,7 +6080,7 @@ MAX_SHADOWS_MEM	= ceiling($(DETECTED_MEMORY)*0.8*1024/800)
 MAX_SHADOWS_PORTS	= 10000
 ## Under windows, things are much less scalable, currently.
 ## Note that this can probably be safely increased a bit under 64-bit windows.
-MAX_SHADOWS_OPSYS	= ifThenElse(regexp("WIN.*","$(OPSYS)"),200,100000)
+MAX_SHADOWS_OPSYS	= ifThenElse(regexp("WIN.*","$(OPSYS)"),2000,100000)
 ## Now build up the expression for MAX_JOBS_RUNNING.  This is complicated
 ## due to lack of a min() function.
 MAX_JOBS_RUNNING	= $(MAX_SHADOWS_MEM)
@@ -6102,8 +6109,7 @@ MAX_JOBS_RUNNING	= \
   permitted to have within a \Condor{schedd} daemon's queue.  
   A job submission fails if it would cause this limit on the number of
   jobs to be exceeded. 
-  The default value for this variable is the largest positive
-  integer value.
+  The default value is 100000.
 
   This configuration variable may be most useful in conjunction with
  \MacroNI{MAX\_JOBS\_SUBMITTED},
@@ -6114,8 +6120,7 @@ MAX_JOBS_RUNNING	= \
   This integer value limits the number of jobs any single submission
   is permitted to add to a \Condor{schedd} daemon's queue.  The
   whole submission fails if the number of jobs would exceed this limit.
-  The default value for this variable is the largest positive
-  integer value.
+  The default value is 20000.
 
   This configuration variable may be useful for catching user error,
   and for protecting a busy \Condor{schedd} daemon
@@ -6897,7 +6902,6 @@ SYSTEM_PERIODIC_REMOVE = \
   in attribute \Attr{foo\_RAW} in the job ClassAd.
   The following are set by default:
 \begin{verbatim}
-        SCHEDD_ROUND_ATTR_ImageSize = 25%
         SCHEDD_ROUND_ATTR_ResidentSetSize = 25%
         SCHEDD_ROUND_ATTR_ProportionalSetSizeKb = 25%
         SCHEDD_ROUND_ATTR_ImageSize = 25%
@@ -6988,7 +6992,7 @@ SYSTEM_PERIODIC_REMOVE = \
 
 \label{param:ScheddSendVacateViaTcp}
 \item[\Macro{SCHEDD\_SEND\_VACATE\_VIA\_TCP}]
-  A boolean value that defaults to \Expr{False}.
+  A boolean value that defaults to \Expr{True}.
   When \Expr{True}, the \Condor{schedd} daemon sends vacate signals via TCP,
   instead of the default UDP.
 
@@ -8588,17 +8592,17 @@ These macros affect the \Condor{negotiator}.
 \item[\Macro{NEGOTIATOR\_INFORM\_STARTD}]
   Boolean setting that controls if the \Condor{negotiator} should
   inform the \Condor{startd} when it has been matched with a job.
-  The default is \Expr{True}.
-  When this is set to \Expr{False}, the \Condor{startd} will never
-  enter the Matched state, and will go directly from Unclaimed to
-  Claimed.
+  The default is \Expr{False}.
+  When this is set to the default value of \Expr{False}, 
+  the \Condor{startd} will never
+  enter the Matched state, and will go directly from Unclaimed to Claimed.
   Because this notification is done via UDP, if a pool is configured
   so that the execute hosts do not create UDP command sockets (see the
   \Macro{WANT\_UDP\_COMMAND\_SOCKET} setting described in
   section~\ref{param:WantUDPCommandSocket} on
-  page~\pageref{param:WantUDPCommandSocket} for details), the
-  \Condor{negotiator} should be configured not to attempt to contact
-  these \Condor{startds} by configuring this setting to \Expr{False}.
+  page~\pageref{param:WantUDPCommandSocket} for details), 
+  the \Condor{negotiator} should be configured not to attempt to contact
+  these \Condor{startd} daemons by using the default value.
 
 \label{param:NegotiatorPreJobRank}
 \item[\Macro{NEGOTIATOR\_PRE\_JOB\_RANK}]
@@ -8888,6 +8892,16 @@ These macros affect the \Condor{negotiator}.
   prevents the \Condor{negotiator} from matching jobs
   to claimed slots that cannot immediately be preempted
   due to \Macro{MAXJOBRETIREMENTTIME}.
+
+\label{param:AllowPslotPreemption}
+\item[\Macro{ALLOW\_PSLOT\_PREEMPTION}]
+  A boolean value that defaults to \Expr{False}.
+  When set to \Expr{True} for the \Condor{negotiator} as well as all
+  \Condor{startd} and \Condor{schedd} daemons, 
+  it enables a new matchmaking mode in which one or more dynamic slots 
+  can be preempted in order to
+  make enough resources available in their parent partitionable slot
+  for a job to successfully match to the partitionable slot.
 
 \label{param:StartdAdReevalExpr}
 \item[\Macro{STARTD\_AD\_REEVAL\_EXPR}]
