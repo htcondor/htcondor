@@ -56,7 +56,7 @@ int main( int, char ** ) {
 
 	sinfulString = s.getSinful();
 	REQUIRE( sinfulString != NULL );
-	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5>" ) == 0 );
+	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4-5>" ) == 0 );
 
 	t = Sinful( sinfulString );
 	v = t.getAddrs();
@@ -67,7 +67,7 @@ int main( int, char ** ) {
 
 	sinfulString = t.getSinful();
 	REQUIRE( sinfulString != NULL );
-	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5>" ) == 0 );
+	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4-5>" ) == 0 );
 
 	REQUIRE( s.hasAddrs() );
 
@@ -86,7 +86,7 @@ int main( int, char ** ) {
 
 	sinfulString = s.getSinful();
 	REQUIRE( sinfulString != NULL );
-	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5+5.6.7.8:9>" ) == 0 );
+	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4-5+5.6.7.8-9>" ) == 0 );
 
 	t = Sinful( sinfulString );
 	v = t.getAddrs();
@@ -98,7 +98,7 @@ int main( int, char ** ) {
 
 	sinfulString = t.getSinful();
 	REQUIRE( sinfulString != NULL );
-	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5+5.6.7.8:9>" ) == 0 );
+	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4-5+5.6.7.8-9>" ) == 0 );
 
 	REQUIRE( s.hasAddrs() );
 
@@ -118,7 +118,7 @@ int main( int, char ** ) {
 
 	sinfulString = s.getSinful();
 	REQUIRE( sinfulString != NULL );
-	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5+5.6.7.8:9+[1:3:5:7::a]:13>" ) == 0 );
+	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4-5+5.6.7.8-9+[1-3-5-7--a]-13>" ) == 0 );
 
 	t = Sinful( sinfulString );
 	v = t.getAddrs();
@@ -131,7 +131,7 @@ int main( int, char ** ) {
 
 	sinfulString = t.getSinful();
 	REQUIRE( sinfulString != NULL );
-	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5+5.6.7.8:9+[1:3:5:7::a]:13>" ) == 0 );
+	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4-5+5.6.7.8-9+[1-3-5-7--a]-13>" ) == 0 );
 
 	REQUIRE( s.hasAddrs() );
 
@@ -171,7 +171,7 @@ int main( int, char ** ) {
 
 	sinfulString = s.getSinful();
 	REQUIRE( sinfulString != NULL );
-	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5+5.6.7.8:9+[1:3:5:7::a]:13>" ) == 0 );
+	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4-5+5.6.7.8-9+[1-3-5-7--a]-13>" ) == 0 );
 
 	t = Sinful( sinfulString );
 	v = t.getAddrs();
@@ -184,7 +184,7 @@ int main( int, char ** ) {
 
 	sinfulString = t.getSinful();
 	REQUIRE( sinfulString != NULL );
-	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4:5+5.6.7.8:9+[1:3:5:7::a]:13>" ) == 0 );
+	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4-5+5.6.7.8-9+[1-3-5-7--a]-13>" ) == 0 );
 
 	REQUIRE( s.hasAddrs() );
 
