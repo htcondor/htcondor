@@ -33,10 +33,21 @@ use Check::CondorLog;
 #  on and schedd normally one but two when super port open
 #
 ########################################################
-	my @listeningdaemons = ();
-	my %expectedcounts = ();
-	my %superexpectedcounts = ();
+my @listeningdaemons = ();
+my %expectedcounts = ();
+my %superexpectedcounts = ();
+my $mixedmode = 0;
 
+my $ipv4 = `condor_config_val enable_ipv4`;
+fullchomp($ipv4);
+my $ipv6 = `condor_config_val enable_ipv6`;
+fullchomp($ipv6);
+
+if(($ipv4 eq true)&&($ipv6 eq true)) {
+	$mixedmode = 1;
+}
+
+	
 if(is_windows()) {
 	@listeningdaemons = (
 		"condor_schedd",
@@ -62,11 +73,19 @@ if(is_windows()) {
 		condor_shared_port=>1,
 		condor_schedd=>1,
 	);
-	%superexpectedcounts = (
-		condor_shared_port=>1,
-		condor_schedd=>2,
-		condor_collector=>1,
-	);
+	if($mixmode == 1) {
+		%superexpectedcounts = (
+			condor_shared_port=>2,
+			condor_schedd=>2,
+			condor_collector=>1,
+		);
+	} else {
+		%superexpectedcounts = (
+			condor_shared_port=>1,
+			condor_schedd=>2,
+			condor_collector=>1,
+		);
+	}
 }
 
 my %piddaemonnames = ();
