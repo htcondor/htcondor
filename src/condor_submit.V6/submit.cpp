@@ -8543,7 +8543,7 @@ check_open( const char *name, int flags )
 
 	if ( !DisableFileChecks ) {
 		int fd = safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664);
-		if ((errno == ENOENT) && dryrun_create) {
+		if ((fd < 0) && (errno == ENOENT) && dryrun_create) {
 			// we are doing dry-run, and the input flags were to create/truncate a file
 			// we stripped the create/truncate flags, now we treate a 'file does not exist' error
 			// as success since O_CREAT would have made it (probably).
