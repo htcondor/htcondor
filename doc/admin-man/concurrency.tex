@@ -107,6 +107,8 @@ there is no set named \Expr{OTHER}.
 
 A concurrency limit may be evaluated against the attributes of a 
 matched machine.
+This allows a job to vary what concurrency limits it requires based on
+the machine to which it is matched.
 To implement this, the job uses submit command 
 \SubmitCmd{concurrency\_limits\_expr} instead of
 \SubmitCmd{concurrency\_limits}.

@@ -762,7 +762,7 @@ such that their resources are returned to the partitionable slot
 for use by the new job.
 
 To enable pslot preemption,
-all machines in the pool set configuration variable:
+the following configuration variable must be set for the negotiator:
 \begin{verbatim}
   ALLOW_PSLOT_PREEMPTION = True
 \end{verbatim}
