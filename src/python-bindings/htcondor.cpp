@@ -1,4 +1,6 @@
 
+#include "python_bindings_common.h"
+
 #include <boost/python.hpp>
 
 #include "old_boost.h"

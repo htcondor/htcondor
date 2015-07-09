@@ -1,3 +1,4 @@
+#include "python_bindings_common.h"
 #include "old_boost.h"
 #include <boost/python/raw_function.hpp>
 #include <classad/source.h>

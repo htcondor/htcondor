@@ -1,4 +1,4 @@
-
+#include "python_bindings_common.h"
 #include "old_boost.h"
 
 #include <classad/source.h>

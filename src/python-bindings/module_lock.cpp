@@ -1,4 +1,7 @@
 
+// Note - python_bindings_common.h must be included first so it can manage macro definition conflicts
+// between python and condor.
+#include "python_bindings_common.h"
 #include <Python.h>
 
 #include "module_lock.h"

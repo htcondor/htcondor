@@ -49,7 +49,7 @@
 // reason defining fileno and fdopen to the right ones does not work 
 // in new versions of Visual Studio)
 //#pragma warning( disable : 4996 )
-#define _CRT_NONSTDC_NO_DEPRECATE
+#define _CRT_NONSTDC_NO_DEPRECATE 1
 #define _CRT_NONSTDC_NO_WARNINGS
 
 // #define NOGDI
