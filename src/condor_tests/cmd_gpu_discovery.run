@@ -96,9 +96,16 @@ my $onexecute = sub {
 	# sample jobs running and save the locations
 	runCondorTool("condor_q -constraint jobstatus==2 -af RemoteHost",\@running,2,{emit_output=>1});
 	foreach my $slot (@running) {
+		# we had early detection with having some remote
+		# hosts defined but some undefined
+		# we will not stuff a gpulandings hash location
+		# with undefined allowing it to be updated with
+		# a fallowing on_execute() callback
 		if(!(exists $gpulandings{$slot})) {
 			print "Marking slot $slot as gpu landing location\n";
-			$gpulandings{$slot} = 1;
+			if($slot ne "undefined") {
+				$gpulandings{$slot} = 1;
+			}
 		}
 	}
 };
