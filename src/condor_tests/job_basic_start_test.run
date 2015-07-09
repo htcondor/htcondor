@@ -113,17 +113,24 @@ foreach my $line (@cmdout) {
 # if this worked, spcial cluster should be 5 and the plain
 # should be some number less.
 if($jobs{$special} == 5){
-	print "Special job $special running on dedicated slot $jobs{$special}\n";
+    print "Special job $special running on dedicated slot $jobs{$special}\n";
+    CondorTest::RegisterResult(1,"test_name","$testname");
 } else {
-	die "Special job $special NOT running on dedicated slot 5 <$jobs{$special}>\n";
+    print "Special job $special NOT running on dedicated slot 5 <$jobs{$special}>\n";
+    CondorTest::RegisterResult(0,"test_name","$testname");
 }
 
 if($jobs{$plain} < 5){
-	print "Regular job $plain running on geneneral purpose slot $jobs{$plain}\n";
+    print "Regular job $plain running on geneneral purpose slot $jobs{$plain}\n";
+    CondorTest::RegisterResult(1,"test_name","$testname");
 } else {
-	die "Regular job $plain running on dedicated slot 5 <$jobs{$plain}>\n";
+    print "Regular job $plain running on dedicated slot 5 <$jobs{$plain}>\n";
+    CondorTest::RegisterResult(0,"test_name","$testname");
 }
-#CondorTest::RegisterResult(1,{test_name => $testname});
+
+my @tooloutput = ();
+print "Clearing jobs before taking personal down\n";
+runCondorTool("condor_rm -all",\@tooloutput,2,{emit_output=>1});
 
 CondorTest::EndTest();
 
