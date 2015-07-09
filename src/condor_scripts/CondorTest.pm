@@ -3446,7 +3446,7 @@ sub CoreCheck {
 	my $iswindows = CondorUtils::is_windows();
 	
 	CondorUtils::fullchomp($logdir);
-	print "Checking for cores and ERRORS for test:$test:\n";
+	print "Checking for cores and ERRORS for test:$test: logdir:$logdir:\n";
 	if(CondorUtils::is_windows() == 1) {
 		my $windowslogdir = "";
 		if(is_windows_native_perl()) {
@@ -3470,9 +3470,11 @@ sub CoreCheck {
 	my @files = ();
 	GetDirList(\@files, $logdir);
 	my $totalerrors = 0;
-	#foreach my $perp (@files) {
-		#print "LogDirContent:$perp:\n";
-	#}
+	if($iswindows) {
+		foreach my $perp (@files) {
+			print "LogDirContent:$perp:\n";
+		}
+	}
 	foreach my $perp (@files) {
 		CondorUtils::fullchomp($perp);
 		# don't bother with address files
@@ -3485,7 +3487,9 @@ sub CoreCheck {
 			$fullpath = $logdir . "/" . $perp;
 		}
 		CondorUtils::fullchomp($fullpath);
-		#print "fullpath now :$fullpath:\n";
+		if(CondorUtils::is_windows() == 1) {
+			print "fullpath now :$fullpath:\n";
+		}
 		if(-f $fullpath) {
 			if($perp =~ /core/) {
 				# returns printable string
