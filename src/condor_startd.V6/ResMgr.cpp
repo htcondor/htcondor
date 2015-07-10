@@ -552,6 +552,7 @@ ResMgr::reconfig_resources( void )
 
 		// See if any new types were defined.  Don't except if there's
 		// any errors, just dprintf().
+	ASSERT(max_types > 0);
 	SlotType::init_types(max_types, false);
 	initTypes( max_types, type_strings, 0 );
 
@@ -1601,6 +1602,7 @@ ResMgr::addResource( Resource *rip )
 }
 
 
+//PRAGMA_REMIND("tj: re-write this silly function so that it doesn't allocate a new resources array just to remove a resource...")
 bool
 ResMgr::removeResource( Resource* rip )
 {
