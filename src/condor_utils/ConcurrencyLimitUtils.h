@@ -22,4 +22,4 @@
  * An input limit is a limit plus, optionally, ':' + increment,
  * e.g. m:3 or f.
  */
-void ParseConcurrencyLimit(char *&limit, double &increment);
+bool ParseConcurrencyLimit(char *&limit, double &increment);
