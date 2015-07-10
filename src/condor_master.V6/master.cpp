@@ -310,7 +310,7 @@ void do_linux_kernel_tuning() {
 			exit( 1 );
 		}
 		fd = open( kernelTuningLogFile.c_str(), O_WRONLY | O_APPEND, 0644 );
-		if( errno == ENOENT ) {
+		if ((fd < 0) && (errno == ENOENT)) {
 			fd = open( kernelTuningLogFile.c_str(), O_WRONLY | O_APPEND | O_CREAT, 0644 );
 		}
 		if( fd == -1 ) {
