@@ -105,6 +105,11 @@ A concurrency limit named
 \Expr{OTHER.LICENSE} will receive the default limit of 5, as
 there is no set named \Expr{OTHER}.
 
+Concurrency limit names are case-insensitive.
+The names must consist of alphabetic letters (A to Z), numerical digits
+(0 to 9), the underscore character ( `\_' ), and possibly one period.
+The names cannot start with a digit.
+
 Note that it is possible, in unusual circumstances, for more jobs to
 be started than should be allowed by the concurrency limits feature.
 In the presence of preemption and dropped updates from the
