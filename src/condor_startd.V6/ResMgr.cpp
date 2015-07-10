@@ -587,6 +587,7 @@ ResMgr::reconfig_resources( void )
 	ASSERT( sorted_resources != NULL );
 	for( i=0; i<max_types; i++ ) {
 		sorted_resources[i] = new Resource* [max_num];
+		ASSERT(sorted_resources[i] != NULL);
 		memset( sorted_resources[i], 0, (max_num*sizeof(Resource*)) );
 	}
 
@@ -1612,6 +1613,7 @@ ResMgr::removeResource( Resource* rip )
 			// deleted, so we'll need to make a new resources array
 			// without this resource.
 		new_resources = new Resource* [ nresources - 1 ];
+		ASSERT(new_resources != NULL);
 		j = 0;
 		for( i = 0; i < nresources; i++ ) {
 			if( resources[i] != rip ) {

@@ -112,6 +112,7 @@ typedef __int32 int32_t;
 #define strlwr _strlwr
 #define chdir _chdir
 #define fsync _commit
+#pragma warning(suppress: 28251) // disable inconsistent annotation warning.
 DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #define execl _execl  
 #define execv _execv

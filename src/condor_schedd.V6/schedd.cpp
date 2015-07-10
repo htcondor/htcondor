@@ -5150,6 +5150,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			EXCEPT( "impossible: unknown action (%d) in actOnJobs() after "
 					"it was already recognized", action_num );
 		}
+		buf[sizeof(buf)-1] = 0; // snprintf won't null terminate if it runs out of space.
 		int size = strlen(buf) + strlen(value) + 3;
 		constraint = (char*) malloc( size * sizeof(char) );
 		if( ! constraint ) {
