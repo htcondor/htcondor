@@ -3955,7 +3955,7 @@ sub FindControlFile
 		#TestDebug( "Running file test is: $runningfile\n",$debuglevel);
 		if(!(-d $runningfile)) {
 			TestDebug( "Creating control file directory: $runningfile\n",$debuglevel);
-			runcmd("mkdir -p $runningfile");
+			CreateDir("-p $runningfile");
 		}
 	} else {
 		die "Lost relative to where: $RunningFile is :-(\n";
