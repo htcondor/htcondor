@@ -7632,6 +7632,8 @@ Scheduler::spawnShadow( shadow_rec* srec )
 						delete_shadow_rec( srec );
 						srec = NULL;
 					}
+					free( shadow_path );
+					return;
 				}
 				args.AppendArg("--transferd");
 				args.AppendArg(td->get_sinful());
