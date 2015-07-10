@@ -3962,7 +3962,7 @@ void clear_results(RESULT_MAP_TYPE & result_map)
 }
 
 
-PRAGMA_REMIND("Write this properly as a method on the sinful object.")
+//PRAGMA_REMIND("Write this properly as a method on the sinful object.")
 
 const char * summarize_sinful_for_display(std::string & addrsumy, const char * addr)
 {

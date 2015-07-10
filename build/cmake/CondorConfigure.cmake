@@ -28,7 +28,6 @@ elseif(${OS_NAME} MATCHES "WIN")
 
 	# The following is necessary for sdk/ddk version to compile against.
 	# lowest common denominator is WinXP-SP3, except when building with vc9, then we can't count on sdk support.
-	add_definitions(-DWINDOWS)
 	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WINXP)
 	add_definitions(-DWINVER=_WIN32_WINNT_WINXP)
 	if (MSVC90)
@@ -38,6 +37,11 @@ elseif(${OS_NAME} MATCHES "WIN")
 	endif()
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 	
+	# don't set -DWINDOWS if we are just going to set -DWINDOWS="WINDOWS_6.X" later... it just causes warnings...
+	if (NOT (${OS_NAME} STREQUAL "WINDOWS"))
+	   add_definitions(-DWINDOWS)
+	endif ()
+
 	if(MSVC11)
 		set(PREFER_CPP11 TRUE)
 	endif()

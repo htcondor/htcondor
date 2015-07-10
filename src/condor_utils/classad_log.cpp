@@ -409,7 +409,7 @@ int ExamineLogTransaction(
 			if (!name) {
 				if ( !ad ) {
 					ad = maker.New();
-					PRAGMA_REMIND("tj: don't turn on dirty tracking here!")
+					//PRAGMA_REMIND("tj: don't turn on dirty tracking here!")
 					ad->EnableDirtyTracking();
 					ASSERT(ad);
 				}
