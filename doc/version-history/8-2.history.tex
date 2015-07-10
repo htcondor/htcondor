@@ -104,6 +104,10 @@ to not correctly remove running node jobs,
 if the ABORT-DAG-ON feature was triggered.
 \Ticket{5114}
 
+\item Restrictions on allowable concurrency limit names are now enforced.
+Previously, the names were allowed to have unexpected characters, which
+would cause the \Condor{userprio} command to fail.
+\Ticket{5123}
 
 \end{itemize}
 

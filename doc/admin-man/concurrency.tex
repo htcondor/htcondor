@@ -163,6 +163,11 @@ concurrency_limits_expr = strcat("SWX:2 ", TARGET.NETWORK)
 Submit command \SubmitCmdNI{concurrency\_limits\_expr} may not be used 
 together with submit command \SubmitCmdNI{concurrency\_limits}.
 
+Concurrency limit names are case-insensitive.
+The names must consist of alphabetic letters (A to Z), numerical digits
+(0 to 9), the underscore character ( `\_' ), and possibly one period.
+The names cannot start with a digit.
+
 Note that it is possible, under unusual circumstances, for more jobs to
 be started than should be allowed by the concurrency limits feature.
 In the presence of preemption and dropped updates from the
