@@ -76,6 +76,7 @@
 #include "condor_holdcodes.h"
 #include "condor_url.h"
 #include "condor_version.h"
+#include "ConcurrencyLimitUtils.h"
 #include "submit_internal.h"
 
 #include "list.h"
@@ -9386,6 +9387,20 @@ SetConcurrencyLimits()
 		tmp.lower_case();
 
 		StringList list(tmp.Value());
+
+		char *limit;
+		list.rewind();
+		while ( (limit = list.next()) ) {
+			double increment;
+
+			if ( !ParseConcurrencyLimit(limit, increment) ) {
+				fprintf( stderr,
+						 "\nERROR: Invalid concurrency limit '%s'\n",
+						 limit );
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+			}
+		}
 
 		list.qsort();
 

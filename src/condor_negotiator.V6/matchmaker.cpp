@@ -4104,7 +4104,11 @@ rejectForConcurrencyLimits(std::string &limits)
 	list.rewind();
 	while ((limit = list.next())) {
 		double increment;
-		ParseConcurrencyLimit(limit, increment);
+		if ( !ParseConcurrencyLimit(limit, increment) ) {
+			dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
+					 limit );
+			continue;
+		}
 
 		str = limit;
 		double count = accountant.GetLimit(str);
