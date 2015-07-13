@@ -633,8 +633,6 @@ reinitialize ()
 	dprintf (D_ALWAYS,"MAX_TIME_PER_SUBMITTER = %d sec\n",MaxTimePerSubmitter);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_PIESPIN = %d sec\n",MaxTimePerSpin);
 
-	if( tmp ) free( tmp );
-
 	if (PreemptionRank) {
 		delete PreemptionRank;
 		PreemptionRank = NULL;
