@@ -61,6 +61,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added an option to audit connections made through the
+\Condor{shared\_port} daemon's socket directory, allowing the
+administrator to check for abuse.
+\Ticket{4803}
+
 \item When using configuration variable \Macro{ENCRYPT\_EXECUTE\_DIRECTORY}
 on Linux platforms, 
 file names are no longer encrypted by default.  
@@ -134,11 +139,31 @@ only runs detection software for CUDA GPUs,
 ignoring OpenCL GPUs.
 \Ticket{5118}
 
+\item The default value for configuration variable
+\Macro{UPDATE\_COLLECTOR\_WITH\_TCP} has changed to \Expr{True}.
+The new configuration variable \Macro{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP}
+controls whether UDP or TCP is used to forward updates to the
+\Condor{collector} daemons specified with \Macro{CONDOR\_VIEW\_HOST}.
+Its default value is \Expr{False}, 
+such that UDP is the default protocol.
+\Ticket{5116}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item The collector will no longer pause 30 seconds on start-up in certain
+configurations.
+\Ticket{5128}
+
+\item The \Condor{kbdd} now works with shared port enabled.
+\Ticket{5058}
+
+\item As of HTCondor 8.3.5, the standard universe will work on the IPv4
+parts of mixed-mode pools.
+\Ticket{5058}
 
 \item Fixed a parallel universe bug,
 in which too many slots were claimed for a job
@@ -168,14 +193,6 @@ The incorrect default caused \Condor{dagman}
 to not correctly remove running node jobs,
 if the ABORT-DAG-ON feature was triggered.
 \Ticket{5114}
-
-\item The default value for configuration parameter
-\Macro{UPDATE\_COLLECTOR\_WITH\_TCP} has changed to \Expr{True}.
-The new configuration parameter \Macro{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP}
-controls whether UDP or TCP is used to forward update to the
-\Condor{collector}s specified via \Macro{CONDOR\_VIEW\_HOST}.
-Its default value is \Expr{False}.
-\Ticket{5116}
 
 \item Fixed a bug that could cause the \Condor{starter} to wait forever
 if its connection to the \Condor{shadow} is lost after the job exits.

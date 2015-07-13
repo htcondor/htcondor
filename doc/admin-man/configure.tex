@@ -3393,41 +3393,36 @@ to use a host name that is not the primary one.
 \item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
   This boolean value controls whether TCP or UDP is used by daemons to
   send ClassAd updates to the \Condor{collector}.
-  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
-  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
-  for more details and a discussion of when this
-  functionality is needed. 
+  Please read section~\ref{sec:tcp-collector-update} 
+  for more details and a discussion of when this functionality is needed. 
   When using TCP in large pools, it is also necessary to
-  ensure that the collector has a high enough file descriptor limit
-  (e.g. using \Macro{COLLECTOR\_MAX\_FILE\_DESCRIPTORS}.
-  Defaults to \Expr{True}.
+  ensure that the \Condor{collector} has a large enough file descriptor limit
+  using \Macro{COLLECTOR\_MAX\_FILE\_DESCRIPTORS}.
+  The default value is \Expr{True}.
   % PKK
   % Described in default config file: YES
   % Defined in the default config file: NO
   % Default definition in config file: bogus
-  % Result if not defined or RHS is empty: use TCP for updates to
-  % collectors
+  % Result if not defined or RHS is empty: use TCP for updates to collectors
 
 \label{param:UpdateViewCollectorWithTcp}
 \item[\Macro{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP}]
   This boolean value controls whether TCP or UDP is used by the
-  \Condor{collector} to forward ClassAd updates to the collector(s)
-  specified by \Macro{CONDOR\_VIEW\_HOST}.
-  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
-  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
+  \Condor{collector} to forward ClassAd updates to the \Condor{collector}
+  daemons specified by \Macro{CONDOR\_VIEW\_HOST}.
+  Please read section~\ref{sec:tcp-collector-update} 
   for more details and a discussion of when this
   functionality is needed.
-  Defaults to \Expr{False}.
+  The default value is \Expr{False}.
 
 \label{param:TcpUpdateCollectors}
 \item[\Macro{TCP\_UPDATE\_COLLECTORS}]
-  The list of collectors which will be updated with TCP instead of UDP
+  The list of \Condor{collector} daemons which will be updated with 
+  TCP instead of UDP
   when \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP} or
-  \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP} is set to \Expr{False}.
-  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
-  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
-  for more details and a discussion of when a site needs this
-  functionality. 
+  \MacroNI{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP} is \Expr{False}.
+  Please read section~\ref{sec:tcp-collector-update} 
+  for more details and a discussion of when a site needs this functionality. 
   % PKK
   % Described in default config file: NO
   % Defined in the default config file: NO
@@ -12485,6 +12480,14 @@ see~\pageref{sec:shared-port-daemon}.
   The named socket allows command-line tools such as \Condor{ssh\_to\_job} to
   use \Condor{shared\_port} as described.
 
+  On Linux platforms,
+  if you set \Macro{SHARED\_PORT\_AUDIT\_LOG}, HTCondor will log the
+  following information about each connection made through the
+  \MacroNI{DAEMON\_SOCKET\_DIR}: the source address, the socket file
+  name, and the target process's PID, UID, GID, executable path, and
+  command line.  An administrator may use this information to deter
+  abuse.
+
   The default value is \Expr{auto},
   causing the use of the directory \Expr{\$(LOCK)/daemon\_sock}.
   On Unix platforms other than Linux, 
@@ -12513,6 +12516,41 @@ see~\pageref{sec:shared-port-daemon}.
   It is recommended to use configuration variable 
   \MacroNI{SHARED\_PORT\_PORT} to set a non-default port number,
   instead of using this configuration variable.
+
+\label{param:SharedPortAuditLog}
+\item[\Macro{SHARED\_PORT\_AUDIT\_LOG}]
+  On Linux platforms,
+  the path and file name of the \Condor{shared\_port} log that records
+  connections made via the \MacroNI{DAEMON\_SOCKET\_DIR}.
+  If not defined, there will be no \Condor{shared\_port} audit log.
+
+\label{param:MaxSharedPortAuditLog}
+\item[\Macro{MAX\_SHARED\_PORT\_AUDIT\_LOG}]
+  On Linux platforms,
+  controls the maximum amount of time that a log will be allowed to grow.
+  When it is time to rotate a log file,
+  it will be saved to a file with an ISO timestamp suffix.
+  The oldest rotated file receives the file name suffix \Expr{.old}.
+  The \Expr{.old} files are overwritten each time the maximum number of
+  rotated files
+  (determined by the value of \MacroNI{MAX\_NUM\_SHARED\_PORT\_AUDIT\_LOG})
+  is exceeded.
+  A value of 0 specifies that the file may grow without bounds.
+  The following suffixes may be used to qualify the integer:
+\begin{description}
+  \item{\Expr{Sec} for seconds}
+  \item{\Expr{Min} for minutes}
+  \item{\Expr{Hr} for hours}
+  \item{\Expr{Day} for days}
+  \item{\Expr{Wk} for weeks}
+\end{description}
+
+\label{param:MaxNumSharedPortAuditLog}
+\item[\Macro{MAX\_NUM\_SHARED\_PORT\_AUDIT\_LOG}]
+  On Linux platforms,
+  the integer that controls the maximum number of rotations that
+  the \Condor{shared\_port} audit log is allowed to perform,
+  before the oldest one will be rotated away. The default value is 1.
 
 \end{description}
 
