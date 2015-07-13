@@ -4231,13 +4231,11 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 			}
 		}
 
-		MSC_SUPPRESS_WARNING(6011) // can't sure sure that sock is not NULL
 		user = sock->getFullyQualifiedUser();
 		if( !user ) {
 			user = "";
 		}
 		if (IsDebugLevel(D_COMMAND)) {
-			MSC_SUPPRESS_WARNING(6011) // can't be sure that stream is not NULL
 			dprintf(D_COMMAND, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
 					comTable[index].handler_descrip,
 					inServiceCommandSocket_flag,

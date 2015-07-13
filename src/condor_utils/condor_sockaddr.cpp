@@ -407,6 +407,7 @@ bool condor_sockaddr::from_ip_and_port_string( const char * ip_and_port_string )
 
 	char copy[IP_STRING_BUF_SIZE];
 	strncpy( copy, ip_and_port_string, IP_STRING_BUF_SIZE );
+	copy[IP_STRING_BUF_SIZE-1] = 0; // make sure it's null terminated.
 
 	char * lastColon = strrchr( copy, ':' );
 	if( lastColon == NULL ) { return false; }
@@ -428,6 +429,7 @@ bool condor_sockaddr::from_ccb_safe_string( const char * ip_and_port_string ) {
 
 	char copy[IP_STRING_BUF_SIZE];
 	strncpy( copy, ip_and_port_string, IP_STRING_BUF_SIZE );
+	copy[IP_STRING_BUF_SIZE-1] = 0; // make sure it's null terminated.
 
 	char * lastColon = strrchr( copy, '-' );
 	if( lastColon == NULL ) { return false; }
