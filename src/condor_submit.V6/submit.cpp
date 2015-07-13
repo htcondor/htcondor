@@ -9392,14 +9392,16 @@ SetConcurrencyLimits()
 		list.rewind();
 		while ( (limit = list.next()) ) {
 			double increment;
+			char *limit_cpy = strdup( limit );
 
-			if ( !ParseConcurrencyLimit(limit, increment) ) {
+			if ( !ParseConcurrencyLimit(limit_cpy, increment) ) {
 				fprintf( stderr,
 						 "\nERROR: Invalid concurrency limit '%s'\n",
 						 limit );
 				DoCleanup(0,0,NULL);
 				exit( 1 );
 			}
+			free( limit_cpy );
 		}
 
 		list.qsort();
