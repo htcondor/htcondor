@@ -3393,41 +3393,36 @@ to use a host name that is not the primary one.
 \item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
   This boolean value controls whether TCP or UDP is used by daemons to
   send ClassAd updates to the \Condor{collector}.
-  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
-  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
-  for more details and a discussion of when this
-  functionality is needed. 
+  Please read section~\ref{sec:tcp-collector-update} 
+  for more details and a discussion of when this functionality is needed. 
   When using TCP in large pools, it is also necessary to
-  ensure that the collector has a high enough file descriptor limit
-  (e.g. using \Macro{COLLECTOR\_MAX\_FILE\_DESCRIPTORS}.
-  Defaults to \Expr{True}.
+  ensure that the \Condor{collector} has a large enough file descriptor limit
+  using \Macro{COLLECTOR\_MAX\_FILE\_DESCRIPTORS}.
+  The default value is \Expr{True}.
   % PKK
   % Described in default config file: YES
   % Defined in the default config file: NO
   % Default definition in config file: bogus
-  % Result if not defined or RHS is empty: use TCP for updates to
-  % collectors
+  % Result if not defined or RHS is empty: use TCP for updates to collectors
 
 \label{param:UpdateViewCollectorWithTcp}
 \item[\Macro{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP}]
   This boolean value controls whether TCP or UDP is used by the
-  \Condor{collector} to forward ClassAd updates to the collector(s)
-  specified by \Macro{CONDOR\_VIEW\_HOST}.
-  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
-  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
+  \Condor{collector} to forward ClassAd updates to the \Condor{collector}
+  daemons specified by \Macro{CONDOR\_VIEW\_HOST}.
+  Please read section~\ref{sec:tcp-collector-update} 
   for more details and a discussion of when this
   functionality is needed.
-  Defaults to \Expr{False}.
+  The default value is \Expr{False}.
 
 \label{param:TcpUpdateCollectors}
 \item[\Macro{TCP\_UPDATE\_COLLECTORS}]
-  The list of collectors which will be updated with TCP instead of UDP
+  The list of \Condor{collector} daemons which will be updated with 
+  TCP instead of UDP
   when \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP} or
-  \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP} is set to \Expr{False}.
-  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
-  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
-  for more details and a discussion of when a site needs this
-  functionality. 
+  \MacroNI{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP} is \Expr{False}.
+  Please read section~\ref{sec:tcp-collector-update} 
+  for more details and a discussion of when a site needs this functionality. 
   % PKK
   % Described in default config file: NO
   % Defined in the default config file: NO

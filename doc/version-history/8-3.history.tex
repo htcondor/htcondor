@@ -102,6 +102,15 @@ only runs detection software for CUDA GPUs,
 ignoring OpenCL GPUs.
 \Ticket{5118}
 
+\item The default value for configuration variable
+\Macro{UPDATE\_COLLECTOR\_WITH\_TCP} has changed to \Expr{True}.
+The new configuration variable \Macro{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP}
+controls whether UDP or TCP is used to forward updates to the
+\Condor{collector} daemons specified with \Macro{CONDOR\_VIEW\_HOST}.
+Its default value is \Expr{False}, 
+such that UDP is the default protocol.
+\Ticket{5116}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -136,14 +145,6 @@ The incorrect default caused \Condor{dagman}
 to not correctly remove running node jobs,
 if the ABORT-DAG-ON feature was triggered.
 \Ticket{5114}
-
-\item The default value for configuration parameter
-\Macro{UPDATE\_COLLECTOR\_WITH\_TCP} has changed to \Expr{True}.
-The new configuration parameter \Macro{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP}
-controls whether UDP or TCP is used to forward update to the
-\Condor{collector}s specified via \Macro{CONDOR\_VIEW\_HOST}.
-Its default value is \Expr{False}.
-\Ticket{5116}
 
 \item Fixed a bug that could cause the \Condor{starter} to wait forever
 if its connection to the \Condor{shadow} is lost after the job exits.
