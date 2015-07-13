@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added an option to audit connections made through the
+\Condor{shared\_port} daemon's socket directory, allowing the
+administrator to check for abuse.
+\Ticket{4803}
+
 \item When using configuration variable \Macro{ENCRYPT\_EXECUTE\_DIRECTORY}
 on Linux platforms, 
 file names are no longer encrypted by default.  
