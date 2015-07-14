@@ -889,7 +889,20 @@ SharedPortEndpoint::HandleListenerAccept( Stream * stream )
 #ifndef WIN32
 	ASSERT( stream == &m_listener_sock );
 #endif
-	DoListenerAccept(NULL);
+	unsigned maxAccepts = param_integer("MAX_ACCEPTS_PER_CYCLE", 8);
+	Selector selector;
+	selector.set_timeout( 0, 0 );
+	selector.add_fd( static_cast<Sock*>(stream)->get_file_desc(), Selector::IO_READ );
+
+	for (unsigned i=0; i<maxAccepts; i++)
+	{
+		DoListenerAccept(NULL);
+		selector.execute();
+		if (!selector.has_ready())
+		{
+			break;
+		}
+	}
 	return KEEP_STREAM;
 }
 
