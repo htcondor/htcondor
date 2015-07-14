@@ -2870,8 +2870,8 @@ DaemonCore::reconfig(void) {
 		In the words of BOC, "Don't fear the reapers!"
 	*/
 	m_iMaxReapsPerCycle = param_integer("MAX_REAPS_PER_CYCLE",0,0);
-    if( m_iMaxReapsPerCycle != 1 ) {
-        dprintf(D_FULLDEBUG,"Setting maximum reaps per cycle %d.\n", m_iMaxAcceptsPerCycle);
+    if( m_iMaxReapsPerCycle != 0 ) {
+        dprintf(D_FULLDEBUG,"Setting maximum reaps per cycle %d.\n", m_iMaxReapsPerCycle);
     }
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
