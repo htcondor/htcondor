@@ -1260,7 +1260,8 @@ then the argument will be \Expr{bar}.
 The value defined for a macro may contain spaces and tabs.
 It is also possible to have double quote marks and
 backslashes within a value.
-In order to have spaces or tabs within a value used as an argument,
+In order to have spaces or tabs within a value specified for a command line
+argument,
 use the New Syntax format for the \SubmitCmdNI{arguments} submit command,
 as described in section~\ref{man-condor-submit-arguments}.
 Escapes for double quote marks
@@ -1283,12 +1284,12 @@ single quotes can be used in three ways:
 There are examples of all three cases below.  
 In New Syntax, 
 to pass a single quote as part of an argument, 
-the single quote must be escaped with another single quote (\Expr{''})
-for \Condor{submit} parsing (see the NodeA \Expr{fourth} macro below).
+escape it with another single quote
+for \Condor{submit} parsing as in the example's NodeA \Expr{fourth} macro.
 
 As an example that shows uses of all special characters, 
-here are only the relevant parts of a DAG input file
-(note that the NodeA value for the macro \Expr{second} contains a tab):
+here are only the relevant parts of a DAG input file.
+Note that the NodeA value for the macro \Expr{second} contains a tab.
 \footnotesize
 \begin{verbatim}
     VARS NodeA first="Alberto Contador"
@@ -1307,7 +1308,8 @@ here are only the relevant parts of a DAG input file
 \end{verbatim}
 \normalsize
 
-The submit description file for NodeA uses New Syntax for the
+Consider an example in which
+the submit description file for NodeA uses the New Syntax for the
 \SubmitCmdNI{arguments} command:
 \footnotesize
 \begin{verbatim}
@@ -1327,7 +1329,8 @@ The resulting values passed to the NodeA executable are:
 \end{verbatim}
 \normalsize
 
-The submit description file for NodeB uses Old Syntax for the
+Consider an example in which
+the submit description file for NodeB uses the Old Syntax for the
 \SubmitCmdNI{arguments} command:
 \footnotesize
 \begin{verbatim}
@@ -1346,7 +1349,8 @@ The resulting values passed to the NodeB executable are:
 \end{verbatim}
 \normalsize
 
-The submit description file for NodeC uses New Syntax for the
+Consider an example in which
+the submit description file for NodeC uses the New Syntax for the
 \SubmitCmdNI{arguments} command:
 \footnotesize
 \begin{verbatim}
