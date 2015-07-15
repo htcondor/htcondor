@@ -29,9 +29,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added an option to audit connections made through the
-\Condor{shared\_port} daemon's socket directory, allowing the
-administrator to check for abuse.
+\item Added the ability to audit connections made through the
+\Condor{shared\_port} daemon's socket directory, 
+logging information in the \Condor{shared\_port} audit log.
+This log allows an administrator to check for abuse.
+New configuration variables \Macro{SHARED\_PORT\_AUDIT\_LOG},
+\Macro{MAX\_SHARED\_PORT\_AUDIT\_LOG},
+and \Macro{MAX\_NUM\_SHARED\_PORT\_AUDIT\_LOG} define the
+\Condor{shared\_port} audit log.
 \Ticket{4803}
 
 \item When using configuration variable \Macro{ENCRYPT\_EXECUTE\_DIRECTORY}
