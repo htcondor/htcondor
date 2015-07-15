@@ -1536,6 +1536,7 @@ sub StateChange
 			return(0);
 		}
 		#print "StateChange: again\n";
+		#CollectWhoData($desiredstate);
 		CollectWhoData();
 		$state = ProcessStateWanted($config);
 		#print "StateChange: now:$state\n";
@@ -1615,6 +1616,9 @@ sub NewIsDownYet {
 
 sub CollectWhoData
 {
+	my $desiredstate = shift;
+	# experient to vary by going up vs down OFF now
+	# and nothing is passed in
 	my @whoarray;
 	#print "CollectWhoData for this Condor:<$ENV{CONDOR_CONFIG}>\n";
 
@@ -1626,10 +1630,20 @@ sub CollectWhoData
 	#$condor->DisplayWhoDataInstances();
 	# condor_who -quick is best before master is alive
 	if($condor != 0) {
-		my $hasLive = $condor->HasLiveMaster();
-		#print "HasLiveMaster says:$hasLive\n";
-		if($condor->HasLiveMaster() == 1) {
-			$usequick = 0;
+		if(defined $desiredstate) {
+			if($desiredstate eq "down"){
+				print "going down and using quick mode\n";
+			} else {
+				if($condor->HasLiveMaster() == 1) {
+					$usequick = 0;
+				}
+			}
+		} else {
+			my $hasLive = $condor->HasLiveMaster();
+			#print "HasLiveMaster says:$hasLive\n";
+			if($condor->HasLiveMaster() == 1) {
+				$usequick = 0;
+			}
 		}
 	} else {
 		die "CollectWhoData with no condor instance yet\n";
@@ -1647,12 +1661,12 @@ sub CollectWhoData
 			CondorUtils::fullchomp($wholine);
 			#print "$wholine\n";
 			if($wholine =~ /(\w*)\s+(.*?)\s+(.*?)\s+(.*?)/) {
-				#print "Who data with 4 fields:$1,$2,$3,$4\n";
-				#condor_who -quick fields. $1 daemon name $2 pid
+				print "Who data with 4 fields:$1,$2,$3,$4\n";
+				#print "condor_who -quick fields. $1 daemon name $2 pid\n";
 				#id this is the master is pid real?
 				my $savepid = $2;
 				my $processstring = "";
-				if($1 eq "Master") {
+				if(($1 eq "Master") && ($desiredstate ne "down")) {
 					#print "Master found\n";
 					if(CondorUtils::is_windows() == 1) {
 				    	my @grift = `tasklist | grep $savepid`;
@@ -1686,7 +1700,12 @@ sub CollectWhoData
 							}
 						}
 					}
-				} 
+				} else {
+					print "Not Master but $1\n";
+					next if $wholine =~ /^Daemon.*$/; # skip column headings
+					next if $wholine =~ /^\-\-\-\-\-\-.*$/; # skip dashes
+					CondorTest::LoadWhoData($1,$2,"","","","","");
+				}
 			}
 		}
 	} else {
@@ -1698,14 +1717,14 @@ sub CollectWhoData
 			next if $wholine =~ /^\-\-\-\-\-\-.*$/; # skip dashes
 			#print "$wholine\n";
 			if($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+<(.*)>\s+(.*)/) {
-				#print "Who data with 7 fields:$1,$2,$3,$4,$5,$6,$7\n";
+				print "Who data with 7 fields:$1,$2,$3,$4,$5,$6,$7\n";
 				#print "Parse:$wholine\n";
 				#print "Before LoadWhoData: $1,$2,$3,$4,$5,$6,$7\n";
 				# this next call assumes we are interested in currently configed personal condor
 				# which means a lookup for condor instance for each daemon
 				CondorTest::LoadWhoData($1,$2,$3,$4,$5,$6,$7);
 			} elsif($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?).*/) {
-				#print "Who data with 5 fields:$1,$2,$3,$4,$5\n";
+				print "Who data with 5 fields:$1,$2,$3,$4,$5\n";
 				#print "Before LoadWhoData: $1,$2,$3,$4,$5\n";
 				CondorTest::LoadWhoData($1,$2,$3,$4,$5,"","");
 			} else {
