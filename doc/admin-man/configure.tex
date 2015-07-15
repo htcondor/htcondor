@@ -12481,11 +12481,11 @@ see~\pageref{sec:shared-port-daemon}.
   use \Condor{shared\_port} as described.
 
   On Linux platforms,
-  if you set \Macro{SHARED\_PORT\_AUDIT\_LOG}, HTCondor will log the
+  setting \Macro{SHARED\_PORT\_AUDIT\_LOG} causes HTCondor to log the
   following information about each connection made through the
   \MacroNI{DAEMON\_SOCKET\_DIR}: the source address, the socket file
   name, and the target process's PID, UID, GID, executable path, and
-  command line.  An administrator may use this information to deter
+  command line.  An administrator may use this logged information to deter
   abuse.
 
   The default value is \Expr{auto},
@@ -12527,9 +12527,10 @@ see~\pageref{sec:shared-port-daemon}.
 \label{param:MaxSharedPortAuditLog}
 \item[\Macro{MAX\_SHARED\_PORT\_AUDIT\_LOG}]
   On Linux platforms,
-  controls the maximum amount of time that a log will be allowed to grow.
+  controls the maximum amount of time that the \Condor{shared\_port}
+  audit log will be allowed to grow.
   When it is time to rotate a log file,
-  it will be saved to a file with an ISO timestamp suffix.
+  the log file will be saved to a file named with an ISO timestamp suffix.
   The oldest rotated file receives the file name suffix \Expr{.old}.
   The \Expr{.old} files are overwritten each time the maximum number of
   rotated files
@@ -12550,7 +12551,8 @@ see~\pageref{sec:shared-port-daemon}.
   On Linux platforms,
   the integer that controls the maximum number of rotations that
   the \Condor{shared\_port} audit log is allowed to perform,
-  before the oldest one will be rotated away. The default value is 1.
+  before the oldest one will be rotated away.
+  The default value is 1.
 
 \end{description}
 
