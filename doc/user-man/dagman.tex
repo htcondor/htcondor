@@ -1115,7 +1115,7 @@ If this abort occurs, the return value for the DAG is 1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{dagman:VARS}Variable Values Associated with Nodes}
-\index{DAGMan input file!VARS keyword}
+\index{DAG input file!VARS keyword}
 
 \index{DAGMan!VARS (macro for submit description file)}
 \index{VARS}
@@ -1192,8 +1192,9 @@ In the case where the submit description file for each node
 varies only in file naming, 
 macros reduce the number of submit description files to one.
 
-The example uses a single submit description file in the DAG input
-file, and uses the \Arg{VARS} entry to name files used by each job.
+This example references a single submit description file for each of
+the nodes in the DAG input file, 
+and it uses the \Arg{VARS} entry to name files used by each job.
 
 The relevant portion of the DAG input file appears as 
 \begin{verbatim}
@@ -1253,6 +1254,8 @@ then the argument will be \Expr{bar}.
 \begin{description}
 \item[Special characters within VARS string definitions]
 \end{description}
+\index{DAGMan!VARS (use of special characters)}
+\index{VARS (use of special characters)}
 
 The value defined for a macro may contain spaces and tabs.
 It is also possible to have double quote marks and
@@ -1268,19 +1271,23 @@ double quote marks require two levels of escaping:
 one level is for the parsing of the DAG input file, and the other level is for
 passing the resulting value through \Condor{submit}.
 
-As of version 8.3.7, it is possible to have single quotes within a VARS
-value.  When used in arguments, single quotes can be used in two different
-ways:
+As of HTCondor version 8.3.7, 
+single quotes are permitted within the value specification.  
+For the specification of command line \SubmitCmdNI{arguments}, 
+single quotes can be used in three ways:
 \begin{itemize}
-\item Within an argument (in both Old and New argument syntax)
-\item To delimit an argument containing whitespace (in New argument
-syntax only)
+\item in Old Syntax, within a macro's value specification
+\item in New Syntax, within a macro's value specification
+\item in New Syntax only, to delimit an argument containing white space 
 \end{itemize}
-There are examples of all three cases below.  Note that in New argument
-syntax, to pass a single quote within an argument, it must be escaped
-(for \Condor{submit} parsing) with another single quote.
+There are examples of all three cases below.  
+In New Syntax, 
+to pass a single quote as part of an argument, 
+the argument must be escaped with another single quote
+for \Condor{submit} parsing.
 
-As an example, here are only the relevant parts of a DAG input file.
+As an example that shows uses of all special characters, 
+here are only the relevant parts of a DAG input file.
 Note that the NodeA value for the macro \Expr{second} contains a tab.
 \footnotesize
 \begin{verbatim}
@@ -1300,8 +1307,9 @@ Note that the NodeA value for the macro \Expr{second} contains a tab.
 \end{verbatim}
 \normalsize
 
-The New Syntax \SubmitCmdNI{arguments} line of the submit description file
-for NodeA is
+Consider an example of the New Syntax 
+use of \SubmitCmdNI{arguments} in the submit description file
+for NodeA.
 \footnotesize
 \begin{verbatim}
   arguments = "'$(first)' '$(second)' '$(third)' '($fourth)' '$(misc)'"
@@ -1320,8 +1328,9 @@ The resulting values passed to the NodeA executable are:
 \end{verbatim}
 \normalsize
 
-The Old Syntax \SubmitCmdNI{arguments} line of the submit description file
-for NodeB is
+Consider an example of the Old Syntax 
+use of \SubmitCmdNI{arguments} in the submit description file
+for NodeB.
 \footnotesize
 \begin{verbatim}
   arguments = $(first) $(second) $(third) $(fourth) $(misc)
@@ -1339,8 +1348,9 @@ The resulting values passed to the NodeB executable are:
 \end{verbatim}
 \normalsize
 
-The New Syntax \SubmitCmdNI{arguments} line of the submit description file
-for NodeC is
+Consider an example of the New Syntax 
+use of \SubmitCmdNI{arguments} in the submit description file
+for NodeC.
 \footnotesize
 \begin{verbatim}
   arguments = "$(args)"

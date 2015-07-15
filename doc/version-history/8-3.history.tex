@@ -59,6 +59,10 @@ owner (submitting user).
 node job, if the DAG has been removed with \Condor{rm}.
 \Ticket{5089}
 
+\item \Condor{dagman} VARS values can now contain single quotes,
+as described in section~\ref{dagman:VARS}.
+\Ticket{1082}
+
 \item 
 The new submit command \SubmitCmd{concurrency\_limits\_expr}
 allows a job to specify concurrency limits in a ClassAd expression 
@@ -137,10 +141,6 @@ parts of mixed-mode pools.
 in which too many slots were claimed for a job
 on a pool with partitionable slots.
 \Ticket{5110}
-
-\item \Condor{dagman} VARS values can now contain single quotes
-(see section~\ref{dagman:VARS} for details).
-\Ticket{1082}
 
 \item Fixed a bug in \Condor{dagman} in which a combination of node
 retries plus a FINAL node could cause a DAG getting aborted or
