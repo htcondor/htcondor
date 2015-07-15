@@ -73,7 +73,7 @@ if(is_windows()) {
 		condor_shared_port=>1,
 		condor_schedd=>1,
 	);
-	if($mixedmode == 1) {
+	if($mixedmode == true) {
 		%superexpectedcounts = (
 			condor_shared_port=>2,
 			condor_schedd=>2,
