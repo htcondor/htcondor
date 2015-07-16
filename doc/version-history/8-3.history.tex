@@ -125,6 +125,15 @@ Its default value is \Expr{False},
 such that UDP is the default protocol.
 \Ticket{5116}
 
+\item \Condor{q} will now abbreviate the address field in the header for each \Condor{schedd}. It also
+no longer incorrectly shows "Submitter:" in the header when it should be showing "Schedd:"
+\Ticket{5071}
+
+\item \Condor{q} \Opt{-io} now shows transfer information for Vanilla universe jobs as well as Standard universe jobs.
+And it will not print anything for Vanilla jobs that are not currently in transfer state.
+\Ticket{5084}
+
+
 \end{itemize}
 
 \noindent Bugs Fixed:
