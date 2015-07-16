@@ -43,8 +43,12 @@ fullchomp($ipv4);
 my $ipv6 = `condor_config_val enable_ipv6`;
 fullchomp($ipv6);
 
-if(($ipv4 eq true)&&($ipv6 eq true)) {
-	$mixedmode = 1;
+if($ipv4 eq "true") {
+	$mixedmode += 1;
+}
+
+if($ipv6 eq "true") {
+	$mixedmode += 1;
 }
 
 	
@@ -73,7 +77,7 @@ if(is_windows()) {
 		condor_shared_port=>1,
 		condor_schedd=>1,
 	);
-	if($mixedmode == true) {
+	if($mixedmode == 2) {
 		%superexpectedcounts = (
 			condor_shared_port=>2,
 			condor_schedd=>2,
