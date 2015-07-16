@@ -112,6 +112,7 @@ bool        absentMode = false;
 char 		*target = NULL;
 ClassAd		*targetAd = NULL;
 ArgList projList;		// Attributes that we want the server to send us
+StringList dashAttributes; // Attributes specifically requested via the -attributes argument
 
 // instantiate templates
 
@@ -364,6 +365,14 @@ main (int argc, char *argv[])
 	    // Remove everything from the projection list if we're displaying
 	    // the "long form" of the ads.
 	    projList.Clear();
+		// but if -attributes was supplied, show only those attributes
+		if ( ! dashAttributes.isEmpty()) {
+			const char * s;
+			dashAttributes.rewind();
+			while ((s = dashAttributes.next())) {
+				projList.AppendArg(s);
+			}
+		}
 	}
 
 	if( projList.Count() > 0 ) {
@@ -1191,6 +1200,7 @@ secondPass (int argc, char *argv[])
 			more_attrs.rewind();
 			while( (s=more_attrs.next()) ) {
 				projList.AppendArg(s);
+				dashAttributes.append(s);
 			}
 			i++;
 			continue;
