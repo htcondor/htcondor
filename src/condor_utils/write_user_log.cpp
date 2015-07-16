@@ -341,6 +341,7 @@ WriteUserLog::Configure( bool force )
 		
 		int len = strlen(m_global_path) + 6;
 		char *tmp = (char*) malloc(len);
+		ASSERT(tmp);
 		snprintf( tmp, len, "%s.lock", m_global_path );
 		m_rotation_lock_path = tmp;
 	}

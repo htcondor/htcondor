@@ -689,8 +689,10 @@ static time_t _condor_dprintf_gettime(DebugHeaderInfo &info, unsigned int hdr_fl
 		static void (WINAPI*get_precise_time)(unsigned long long * ft) = NULL;
 		static BOOLEAN (WINAPI* time_to_1970)(unsigned long long * ft, unsigned long * epoch_time);
 		if ( ! check_for_precise) {
-			*(FARPROC*)&get_precise_time = GetProcAddress(GetModuleHandle("Kernel32.dll"), "GetSystemTimePreciseAsFileTime");
-			*(FARPROC*)&time_to_1970 = GetProcAddress(GetModuleHandle("ntdll.dll"), "RtlTimeToSecondsSince1970");
+			HMODULE hmod = GetModuleHandle("Kernel32.dll");
+			if (hmod) { *(FARPROC*)&get_precise_time = GetProcAddress(hmod, "GetSystemTimePreciseAsFileTime"); }
+			hmod = GetModuleHandle("ntdll.dll");
+			if (hmod) { *(FARPROC*)&time_to_1970 = GetProcAddress(hmod, "RtlTimeToSecondsSince1970"); }
 			check_for_precise = true;
 		}
 		unsigned long long nanos = 0;
@@ -846,6 +848,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 		_condor_dprintf_critsec = 
 			(CRITICAL_SECTION *)malloc(sizeof(CRITICAL_SECTION));
 		ASSERT( _condor_dprintf_critsec );
+		MSC_SUPPRESS_WARNING(28125) // suppress warning: InitCritSec should be called inside a try/except block.
 		InitializeCriticalSection(_condor_dprintf_critsec);
 	}
 	EnterCriticalSection(_condor_dprintf_critsec);

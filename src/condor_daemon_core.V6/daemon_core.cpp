@@ -9197,6 +9197,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 		if ( entry->nEntries == 0 ) {
 			// a watcher thread exits when nEntries drop to zero.
 			// thus, this thread no longer exists; remove it from our list
+			MSC_SUPPRESS_WARNING(26115) // suppress warning - lock not released.
 			::DeleteCriticalSection(&(entry->crit_section));
 			::CloseHandle(entry->event);
 			::CloseHandle(entry->hThread);

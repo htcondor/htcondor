@@ -41,6 +41,11 @@ struct hostent *NameEnt;
 
 WriteUserLog logFile("owner", NULL, "local.log", 0, 0, 0, (bool)0, NULL);
 
+static void simulateUsage(struct rusage &ru) {
+	memset(&ru, 0, sizeof(ru));
+	// put in some 'reasonble' values here??
+}
+
 int writeSubmitEvent();
 int writeRemoteErrorEvent();
 int writeExecuteEvent();
@@ -175,6 +180,7 @@ int writeJobEvictedEvent()
 int writeJobTerminatedEvent()
 {
 	struct rusage ru;
+	simulateUsage(ru);
 
 	JobTerminatedEvent jobterminated;
 	jobterminated.normal = false;
@@ -197,6 +203,7 @@ int writeJobTerminatedEvent()
 int writeNodeTerminatedEvent()
 {
 	struct rusage ru;
+	simulateUsage(ru);
 
 	NodeTerminatedEvent nodeterminated;
 	nodeterminated.node = 44;

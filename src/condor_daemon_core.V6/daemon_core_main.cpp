@@ -1039,6 +1039,7 @@ handle_fetch_log( Service *, int cmd, ReliSock *stream )
 	}
 
 	char *pname = (char*)malloc (strlen(name) + 5);
+	ASSERT(pname);
 	char *ext = strchr(name,'.');
 
 	//If there is a dot in the name, it is of the form "<SUBSYS>.<ext>"
