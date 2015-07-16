@@ -91,6 +91,7 @@ void SetOldClassAdSemantics(bool enable)
 	_useOldClassAdSemantics = enable;
 	if ( specialAttrNames == NULL ) {
 		init_specialAttrNames();
+		SAL_assume(specialAttrNames != NULL)
 	}
 	if ( enable ) {
 		specialAttrNames->insert( ATTR_MY );
