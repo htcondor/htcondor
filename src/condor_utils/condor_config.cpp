@@ -284,6 +284,7 @@ char * _allocation_pool::consume(int cb, int cbAlign)
 			int cbAlloc = (this->nHunk > 0) ? (this->phunks[this->nHunk-1].cbAlloc * 2) : (16 * 1024);
 			cbAlloc = MAX(cbAlloc, cbConsume);
 			ph->reserve(cbAlloc);
+			SAL_assume(ph->pb != NULL);
 		}
 
 		//PRAGMA_REMIND("TJ: fix to account for extra size needed to align start ptr")

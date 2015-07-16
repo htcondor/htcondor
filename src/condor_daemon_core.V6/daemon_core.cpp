@@ -267,6 +267,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	ppid = 0;
 #ifdef WIN32
 	// init the mutex
+	#pragma warning(suppress: 28125) // should InitCritSec inside a try/except block..
 	InitializeCriticalSection(&Big_fat_mutex);
 	EnterCriticalSection(&Big_fat_mutex);
 
@@ -9225,6 +9226,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 	// All watcher threads have their hands full (or there are no
 	// watcher threads!).  We need to create a new watcher thread.
 	entry = new PidWatcherEntry;
+	#pragma warning(suppress: 28125) // InitCritSec could be called inside a try/except block.
 	::InitializeCriticalSection(&(entry->crit_section));
 	entry->event = ::CreateEvent(NULL,FALSE,FALSE,NULL);	// auto-reset event
 	if ( entry->event == NULL ) {

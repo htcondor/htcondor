@@ -3536,7 +3536,7 @@ const char * lookup_macro_def(const char * name, const char * subsys, MACRO_SET 
 				set.defaults->metat[ix].use_count += (use&1);
 				set.defaults->metat[ix].ref_count += (use>>1)&1;
 			}
-			if ( ! p && set.defaults) {
+			if ( ! p && set.defaults && set.defaults->table) {
 				p = &set.defaults->table[ix];
 			}
 		}

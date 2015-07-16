@@ -394,6 +394,7 @@ HRESULT FNEXPORT HaryList_Create (
 	if ( ! plst)
 		return E_OUTOFMEMORY;
 
+#pragma warning(suppress: 28125) // warning InitCritSec should be called in a try/except block
     plst->fdwOptions = fdwOptions | ARYLIST_OPT_F_INITIALIZED;
     if (fdwOptions & ARYLIST_OPT_F_SERIALIZE)
         InitializeCriticalSection(&plst->cs);

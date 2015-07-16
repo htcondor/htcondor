@@ -288,7 +288,7 @@ bool add_ref_callback(void* /*pv*/, HASHITER & it)
 		int ix = pmeta->param_id;
 
 		// save use/ref count for this item
-		macro_defaults::META tmp;
+		macro_defaults::META tmp = {0,0};
 		if (it.is_def) {
 			if (it.set.defaults && it.set.defaults->metat && ix < it.set.defaults->size) {
 				tmp = it.set.defaults->metat[ix];

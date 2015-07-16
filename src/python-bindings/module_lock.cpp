@@ -39,6 +39,7 @@ ModuleLock::initialize()
 {
 #ifdef WIN32
     if (ModuleLock::m_mutex_intialized) return;
+    #pragma warning(suppress: 28125) // function must be called from within a try/except block... (except that's really optional)
 #endif
     MODULE_LOCK_MUTEX_INITIALIZE(&m_mutex);
 #ifdef WIN32
