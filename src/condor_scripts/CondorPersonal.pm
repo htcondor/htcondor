@@ -1702,12 +1702,12 @@ sub CollectWhoData
 							}
 						}
 					}
-				} else {
-					print "Not Master but $1\n";
-					next if $wholine =~ /^Daemon.*$/; # skip column headings
-					next if $wholine =~ /^\-\-\-\-\-\-.*$/; # skip dashes
-					CondorTest::LoadWhoData($1,$2,"","","","","");
-				}
+				} #else {
+					#print "Not Master but $1\n";
+					#next if $wholine =~ /^Daemon.*$/; # skip column headings
+					#next if $wholine =~ /^\-\-\-\-\-\-.*$/; # skip dashes
+					#CondorTest::LoadWhoData($1,$2,"","","","","");
+				#}
 			}
 		}
 	} else {

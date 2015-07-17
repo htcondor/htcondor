@@ -2729,6 +2729,7 @@ sub slurp {
   {
       my $self = shift;
 	  my $onedaemon = "$self->{daemon}" . ",$self->{pid}";
+	  print "GetDaemonAndPid: returning $onedaemon\n";
 	  return($onedaemon);
   }
   sub DisplayWhoDataInstance
@@ -2873,13 +2874,13 @@ sub LoadWhoData
 	  );
 	  open(PF,">$file") or print "PIDS file create failed:$!\n";
 	  foreach my $daemonkey (keys %{$self->{personal_who_data}}) {
-	  	#print "$daemonkey: $self->{personal_who_data}->{$daemonkey}\n";
+	  	print "$daemonkey: $self->{personal_who_data}->{$daemonkey}\n";
 		$piddata = $self->{personal_who_data}->{$daemonkey}->GetDaemonAndPid();
-		#print "$piddata\n";
+		print "$piddata\n";
 		my @pidandname = split /,/, $piddata;
 		my $line = "$pidandname[1] $refer{$pidandname[0]}";
 		print PF "$line\n";
-		#print "$line\n";
+		print "$line\n";
 	  }
 	  close(PF);
   }
@@ -3153,6 +3154,7 @@ sub CreatePidsFile {
 	my $config = $ENV{CONDOR_CONFIG};
 	my $condor_instance = GetPersonalCondorWithConfig($config);
 	if($condor_instance != 0) {
+		print "Have condor instance to write PIDS file with\n";
 		$condor_instance->WritePidsFile($pidsfile);
 	} else {
 		die "Failed to fetch our condor_instance\n";
