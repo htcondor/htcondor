@@ -3127,7 +3127,13 @@ SetTransferFiles()
 	macro_value = condor_param( TransferInputFiles, "TransferInputFiles" ) ;
 	TransferInputSizeKb = 0;
 	if( macro_value ) {
-		input_file_list.initializeFromString( macro_value );
+		// as a special case transferinputfiles="" will produce an empty list of input files, not a syntax error
+		// PRAGMA_REMIND("replace this special case with code that correctly parses any input wrapped in double quotes")
+		if (macro_value[0] == '"' && macro_value[1] == '"' && macro_value[2] == 0) {
+			input_file_list.clearAll();
+		} else {
+			input_file_list.initializeFromString( macro_value );
+		}
 	}
 
 
@@ -3179,7 +3185,14 @@ SetTransferFiles()
 								"TransferOutputFiles" ); 
 	if( macro_value ) 
 	{
-		output_file_list.initializeFromString(macro_value);
+		// as a special case transferoutputfiles="" will produce an empty list of output files, not a syntax error
+		// PRAGMA_REMIND("replace this special case with code that correctly parses any input wrapped in double quotes")
+		if (macro_value[0] == '"' && macro_value[1] == '"' && macro_value[2] == 0) {
+			output_file_list.clearAll();
+			output_files = ATTR_TRANSFER_OUTPUT_FILES " = \"\"";
+		} else {
+			output_file_list.initializeFromString(macro_value);
+		}
 		output_file_list.rewind();
 		count = 0;
 		while ( (tmp_ptr=output_file_list.next()) ) {
