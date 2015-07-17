@@ -222,6 +222,7 @@ display_stats()
 
 	// display JobStatistics
 	JobStatistics **statarray = new JobStatistics* [numJobStats];
+	ASSERT(statarray);
 	JobStatistics *js;
 	Stats.startIterations();
 	for (i=0; Stats.iterate(js) == 1; i++) {

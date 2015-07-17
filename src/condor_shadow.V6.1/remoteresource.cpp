@@ -2381,6 +2381,7 @@ RemoteResource::requestReconnect( void )
 
 				// All the errors that can only be programmer
 				// mistakes: the starter should never return them...  
+		default:
 		case CA_FAILURE:
 		case CA_INVALID_STATE:
 		case CA_INVALID_REQUEST:

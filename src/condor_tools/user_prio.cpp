@@ -1374,6 +1374,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, bool HierFlag)
    if (max_name < min_name) max_name = min_name;
    if (HierFlag) max_name += 2;
    char * Line  = (char*)malloc(max_name*2+cols_max_width+4);
+   ASSERT(Line);
 
    // print first row of headings
    CopyAndPadToWidth(Line,HierFlag ? "Group" : NULL,max_name+1,' ');
