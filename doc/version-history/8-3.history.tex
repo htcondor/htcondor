@@ -182,8 +182,9 @@ under some conditions.
 \item The \Condor{kbdd} now works with shared port enabled.
 \Ticket{5058}
 
-\item As of HTCondor 8.3.5, the standard universe will work on the IPv4
-parts of mixed-mode pools.
+\item A bug fix in HTCondor version 8.3.5 allows standard universe jobs
+to work on a mixed mode pool with both IPv4 and IPv6 machines
+and with daemons that are of earlier 8.3.x releases.
 \Ticket{4860}
 
 \item Fixed a parallel universe bug,
@@ -218,8 +219,10 @@ This bug is very likely to occur if CCB is being used and the CCB server
 becomes unavailable.
 \Ticket{5136}
 
-\item Fixed a bug that would cause events to be lost when \Macro{EVENT\_LOG\_LOCKING}
-or \Macro{ENABLE\_USERLOG\_LOCKING} were set to false on Windows.
+\item Fixed a Windows platform bug that caused events to be lost when 
+configuration variables
+\Macro{EVENT\_LOG\_LOCKING} or \Macro{ENABLE\_USERLOG\_LOCKING} 
+were set to \Expr{False}.
 \Ticket{5115}
 
 \end{itemize}
