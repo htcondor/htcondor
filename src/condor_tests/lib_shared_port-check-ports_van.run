@@ -37,20 +37,46 @@ my @listeningdaemons = ();
 my %expectedcounts = ();
 my %superexpectedcounts = ();
 my $mixedmode = 0;
+my $debugmode = 0;
 
-my $ipv4 = `condor_config_val enable_ipv4`;
+#my $firstappend_condor_config = '
+	#DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	#NUM_CPUS = 2
+	#NEGOTIATOR_INTERVAL = 5
+	#ENABLE_IPV4 = True
+	#ENABLE_IPV6 = True
+#';
+
+#$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"compressedtestname");
+#print "local config file:$configfile\n";
+
+#CondorTest::StartCondorWithParams(
+    #condor_name => "compressedtestname",
+    #fresh_local => "TRUE",
+    #condorlocalsrc => "$configfile",
+#);
+
+system("condor_config_val -dump enable_ipv4 -v");
+system("condor_config_val -dump enable_ipv6 -v");
+
+my $ipv4 = `condor_config_val ENABLE_IPV4`;
 fullchomp($ipv4);
-my $ipv6 = `condor_config_val enable_ipv6`;
+print "IPV4=$ipv4\n";
+my $ipv6 = `condor_config_val ENABLE_IPV6`;
 fullchomp($ipv6);
+print "IPV6=$ipv6\n";
 
-if($ipv4 eq "true") {
+if($ipv4 =~ /true/i) {
+	print "adding 1 to $mixedmode since ipv4 is enabled.\n";
 	$mixedmode += 1;
 }
 
-if($ipv6 eq "true") {
+if($ipv6 =~ /true/i) {
+	print "adding 1 to $mixedmode since ipv6 is enabled.\n";
 	$mixedmode += 1;
 }
 
+print "Mixedmode:$mixedmode\n";
 	
 if(is_windows()) {
 	@listeningdaemons = (
@@ -73,17 +99,22 @@ if(is_windows()) {
 		"condor_collector",
 		"condor_shared_port",
 	);
-	%expectedcounts = (
-		condor_shared_port=>1,
-		condor_schedd=>1,
-	);
 	if($mixedmode == 2) {
+		print "Adjusting listeners for mixed mode, ie 2 shared port listeners\n";
+		%expectedcounts = (
+			condor_shared_port=>2,
+			condor_schedd=>1,
+		);
 		%superexpectedcounts = (
 			condor_shared_port=>2,
 			condor_schedd=>2,
 			condor_collector=>1,
 		);
 	} else {
+		%expectedcounts = (
+			condor_shared_port=>1,
+			condor_schedd=>1,
+		);
 		%superexpectedcounts = (
 			condor_shared_port=>1,
 			condor_schedd=>2,
@@ -393,12 +424,14 @@ sub ValidateListenCounts {
 		# expected count with name
 		$listencount = $piddaemonlistencount{$pid};
 		if($phase ne "super") {
+			print "setting ports for non-super case using:$expectedcounts{$piddaemonnames{$pid}}\n";
 			if(exists $expectedcounts{$piddaemonnames{$pid}}) {
 				$expectedlistencount = $expectedcounts{$piddaemonnames{$pid}};
 			} else {
 				$expectedlistencount = 0;
 			}
 		} else {
+			print "setting ports for non-super case using:$expectedcounts{$piddaemonnames{$pid}}\n";
 			if(exists $superexpectedcounts{$piddaemonnames{$pid}}) {
 				$expectedlistencount = $superexpectedcounts{$piddaemonnames{$pid}};
 			} else {
