@@ -1070,6 +1070,7 @@ sub StartTest
 		my $logdir = `condor_config_val log`;
 		CondorUtils::fullchomp($logdir);
 		CondorUtils::fullchomp($handle);
+		print "LOGDIR from condor_config_val log:$logdir Test:$handle\n";
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 	}
 	##############################################################
@@ -1082,6 +1083,7 @@ sub StartTest
 		print "Calling CoreCheck in endof StartTest if wrapped\n";
 		my $logdir = `condor_config_val log`;
 		CondorUtils::fullchomp($logdir);
+		print "LOGDIR from condor_config_val log:$logdir Test:$handle\n";
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 		if($config ne "") {
 			#print "KillDaemonPids called on this config file: $config\n";
@@ -3426,6 +3428,8 @@ sub ShouldCheck_coreERROR
 	print "savename:$saveme\n";
 	TestDebug("Not /Config/ based, saveme is $saveme\n",2);
 	TestDebug("Logdir is $logdir\n",2);
+	print "Not /Config/ based, saveme is $saveme\n";
+	print "Logdir is $logdir\n";
 	if($logdir =~ /$saveme/) {
 		# no because KillPersonal will do it
 		return(0);
