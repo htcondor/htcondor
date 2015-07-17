@@ -187,8 +187,10 @@ This bug is very likely to occur if CCB is being used and the CCB server
 becomes unavailable.
 \Ticket{5136}
 
-\item Fixed a bug that would cause events to be lost when \Macro{EVENT\_LOG\_LOCKING}
-or \Macro{ENABLE\_USERLOG\_LOCKING} were set to false on Windows.
+\item Fixed a Windows platform bug that caused events to be lost when 
+configuration variables
+\Macro{EVENT\_LOG\_LOCKING} or \Macro{ENABLE\_USERLOG\_LOCKING} 
+were set to \Expr{False}.
 \Ticket{5115}
 
 \end{itemize}
