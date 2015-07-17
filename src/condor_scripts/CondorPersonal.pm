@@ -360,6 +360,7 @@ sub StartCondorWithParams
 	$version = $personal_condor_params{"condor_name"} || die "Missing condor_name!\n";
 	#print "StartCondorWithParams: placed param condor_name to version:$version\n";
 	my $mpid = $personal_condor_params{"owner_pid"} || $pid;
+	$mpid = "pdir$mpid";
 	my $config_and_port = "";
 	my $winpath = "";
 
@@ -965,6 +966,7 @@ sub TunePersonalCondor
 
 	if(!(defined $mpid)) {
 		$mpid = $$;
+		$mpid = "pdir$mpid";
 	}
 
 my $socketdir = "";
@@ -1346,7 +1348,7 @@ sub StartPersonalCondor
 	if( $> == 0 ) {
 		my $testName = $control{ 'test_name' };
 		system( "chown condor.condor $home/${testName}.saveme >& /dev/null" );
-		system( "chown -R condor.condor $home/${testName}.saveme/$pid >& /dev/null" );
+		system( "chown -R condor.condor $home/${testName}.saveme/pdir$pid >& /dev/null" );
 	}
 
 	my $configfile = $control{"condorconfig"};
@@ -1659,7 +1661,7 @@ sub CollectWhoData
 		CondorTest::runCondorTool("condor_who -quick -daemon -log \"$logdir\"",\@whoarray,2,{emit_output=>0});
 		foreach my $wholine (@whoarray) {
 			CondorUtils::fullchomp($wholine);
-			#print "$wholine\n";
+			print "raw whodataline: $wholine\n";
 			if($wholine =~ /(\w*)\s+(.*?)\s+(.*?)\s+(.*?)/) {
 				print "Who data with 4 fields:$1,$2,$3,$4\n";
 				#print "condor_who -quick fields. $1 daemon name $2 pid\n";
@@ -1715,7 +1717,7 @@ sub CollectWhoData
 			CondorUtils::fullchomp($wholine);
 			next if $wholine =~ /^Daemon.*$/; # skip column headings
 			next if $wholine =~ /^\-\-\-\-\-\-.*$/; # skip dashes
-			#print "$wholine\n";
+			print "rwawhodataline: $wholine\n";
 			if($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+<(.*)>\s+(.*)/) {
 				print "Who data with 7 fields:$1,$2,$3,$4,$5,$6,$7\n";
 				#print "Parse:$wholine\n";
@@ -1850,6 +1852,7 @@ sub FindCollectorPort
 sub SaveMeSetup
 {
 	my $testname = shift;
+	print "Into SaveMeSetup for:$testname\n";
 	my $mypid = $$;
 	my $res = 1;
 	my $mysaveme = $testname . ".saveme";
@@ -1858,7 +1861,7 @@ sub SaveMeSetup
 		print "SaveMeSetup: Could not create \"saveme\" directory for test\n";
 		return(0);
 	}
-	my $mypiddir = $mysaveme . "/" . $mypid;
+	my $mypiddir = $mysaveme . "/pdir" . $mypid;
 	# there should be no matching directory here
 	# unless we are getting pid recycling. Start fresh.
 	$res = system("rm -rf $mypiddir");
@@ -1892,6 +1895,7 @@ sub PersonalSystem
 	my $args = shift @_;
 	my $dumpLogs = $ENV{DUMP_CONDOR_LOGS};
 	my $mypid = $$;
+	$mypid = "pdir$mypid";
 	
 	if(defined $dumpLogs) {
 		print "Dump Condor Logs if things go south\n";

@@ -277,11 +277,11 @@ if($timestamp == 1) {
 
 # now we find the tests we care about.
 if( @testlist ) {
-	debug("Test list contents:\n", 2);
+	debug("Test list contents:\n", 6);
     
 	# we were explicitly given a # list on the command-line
 	foreach my $test (@testlist) {
-		debug("    $test\n", 2);
+		debug("    $test\n", 6);
 		if($test !~ /.*\.run$/) {
 			$test = "$test.run";
 		}
@@ -292,7 +292,7 @@ if( @testlist ) {
 	}
 }
 elsif( $testfile ) {
-	debug("Using test file '$testfile'\n", 2);
+	debug("Using test file '$testfile'\n", 6);
 	open(TESTFILE, '<', $testfile) || die "Can't open $testfile\n";
 	while( <TESTFILE> ) {
 		next if(/^\s*#/);  # Skip comment lines
@@ -314,7 +314,7 @@ else {
 	# we weren't given any specific tests or a test list, so we need to 
 	# find all test programs (all files ending in .run) for each compiler
 	my $gotdot = 0;
-	debug("working on default test list\n",2);
+	debug("working on default test list\n",6);
 	foreach my $compiler (@compilers) {
 		if($compiler eq ".") {
 			$gotdot = 1;
@@ -421,12 +421,12 @@ foreach my $compiler (@compilers) {
 		@currenttests = sort @currenttests;
 	}
 	foreach my $test_program (@currenttests) {
-		debug(" *********** Starting test: $test_program *********** \n",2);
+		debug(" *********** Starting test: $test_program *********** \n",6);
 
 		# doing this next test
 		$currenttest = $currenttest + 1;
 
-		debug("Want to test $test_program\n",2);
+		debug("Want to test $test_program\n",6);
 
 
 		$currentgroup += 1;
@@ -488,7 +488,7 @@ foreach my $test_name (@successful_tests)
 {
 	print OUTF "$test_name 0\n";
 	print SUMOUTF "$test_name 0\n";
-	print "$test_name passed\n";
+	#print "$test_name passed\n";
 }
 close OUTF;
 close SUMOUTF;
@@ -568,8 +568,7 @@ sub StartTestOutput
 	my $compiler = shift;
 	my $test_program = shift;
 
-	debug("StartTestOutput passed compiler: $compiler\n",2);
-	print "StartTestOutput passed compiler: $compiler\n";
+	debug("StartTestOutput passed compiler: $compiler\n",6);
 
 	if ($isXML){
 		print XML "<test_result>\n<name>$compiler.$test_program</name>\n<description></description>\n";
@@ -588,8 +587,7 @@ sub CompleteTestOutput
 	my $failure = "";
 	my @statret = ();
 
-	debug(" *********** Completing test: $test_name *********** \n",2);
-	print " *********** Completing test: $test_name *********** \n";
+	debug(" *********** Completing test: $test_name *********** \n",6);
 	@statret = CondorUtils::ProcessReturn($status);
 	if($statret[0] == 0)
 	#if( WIFEXITED( $status ) && WEXITSTATUS( $status ) == 0 )
@@ -649,7 +647,7 @@ sub DoChild
 	# we know where the published directories are if we ask by name
 	# and they are relevant for the entire test time. We need ask
 	# and check only once.
-	debug( "Test start @ $test_starttime \n",2);
+	debug( "Test start @ $test_starttime \n",6);
 	sleep(1);
 	# add test core file
 
@@ -657,12 +655,12 @@ sub DoChild
 	s/\.run//;
 	my $testname = $_;
 	my $save = $testname . ".saveme";
-	my $piddir = $save . "/$$";
+	my $piddir = $save . "/pdir$$";
 	# make sure pid storage directory exists
 	#print "Batch_test: checking on saveme: $save\n";
 	CreateDir("-p $save");
 	#verbose_system("mkdir -p $save",{emit_output=>0});
-	my $pidcmd =  $save . "/" . "$$";
+	my $pidcmd =  $save . "/" . "pdir$$";
 	#print "Batch_test: checking on saveme/pid: $pidcmd\n";
 	CreateDir("-p $pidcmd");
 	#verbose_system("$pidcmd",{emit_output=>0});
@@ -691,7 +689,7 @@ sub DoChild
 		$cmdout = $testname . ".$test_id" . ".cmd.out";
 
 		if( $hush == 0 ) {
-			debug( "Child Starting:perl $test_program > $test_program.$test_id.out\n",2);
+			debug( "Child Starting:perl $test_program > $test_program.$test_id.out\n",6);
 		}
 		$res = system("perl $test_program > $test_program.$test_id.out 2>&1");
 	} else {
@@ -703,7 +701,7 @@ sub DoChild
 		$cmdout = $testname . ".cmd.out";
 
 		if( $hush == 0 ) {
-			debug( "Child Starting:perl $test_program > $test_program.out\n",2);
+			debug( "Child Starting:perl $test_program > $test_program.out\n",6);
 		}
 		$res = system("perl $test_program > $test_program.out 2>&1");
 	}
@@ -785,7 +783,7 @@ sub safe_copy {
 		print "Can't copy $src to $dest: $!\n";
 		return 0;
 	} else {
-		debug("Copied $src to $dest\n",2);
+		debug("Copied $src to $dest\n",6);
 		return 1;
 	}
 }
@@ -834,7 +832,7 @@ sub wait_for_test_children {
 	}
 
 	$hashsize = keys %{$test};
-	debug("Tests remaining: $hashsize\n",2);
+	debug("Tests remaining: $hashsize\n",6);
 	#print "Hash size of tests = <$hashsize>\n";
 
 	while( my $child = wait() ) {
@@ -853,11 +851,11 @@ sub wait_for_test_children {
 		#print "wait_for_test_children: debug message\n";
 		# ignore spurious children
 		if(! defined $test->{$child}) {
-			debug($debug_message.". It was not known. Ignoring.\n", 2);
+			debug($debug_message.". It was not known. Ignoring.\n", 6);
 			#print "Test not known<$test->{$child}>.....\n";
 			next;
 		} else {
-			debug($debug_message.". Test: $test->{$child}.\n", 2);
+			debug($debug_message.". Test: $test->{$child}.\n", 6);
 			#print "processing PID $child: ";
 			#print "Test known: $test->{$child}\n";
 		}
@@ -888,7 +886,7 @@ sub wait_for_test_children {
 		CompleteTestOutput($compiler, $test_name, $child, $status);
 		delete $test->{$child};
 		$hashsize = keys %{$test};
-		debug("Tests remaining: $hashsize\n",2);
+		debug("Tests remaining: $hashsize\n",6);
 		#print "Hash size of tests = <$hashsize>\n";
 		last if $hashsize == 0;
 
