@@ -143,6 +143,11 @@ in a transfer state.
 
 \begin{itemize}
 
+\item Fixed a bug that caused \Condor{status} \Opt{-submitters}
+\Opt{-wide} to truncate the submitter names within the second part of
+the output.
+\Ticket{5087}
+
 \item The \Condor{collector} no longer pauses for 30 seconds on start up
 under some conditions.
 \Ticket{5128}
