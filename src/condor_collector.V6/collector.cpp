@@ -1470,6 +1470,7 @@ void CollectorDaemon::Config()
 			dprintf(D_ALWAYS, "CONDOR_VIEW_CLASSAD_TYPES configured, will forward ad types: %s\n",
 					printable_string?printable_string:"");
 			free(printable_string);
+			free(tmp);
 		}
 	}
 

@@ -761,6 +761,7 @@ do_REMOTE_syscall()
 			result = ( syscall_sock->code( terrno ) );
 			ASSERT( result );
 		}
+		free( path );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		return 0;

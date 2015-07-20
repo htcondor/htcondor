@@ -12937,7 +12937,11 @@ Scheduler::invalidate_ads()
 		// Update collectors
 	daemonCore->sendUpdates(INVALIDATE_SCHEDD_ADS, cad, NULL, false);
 
-	if (NumOwners == 0) return;	// no submitter ads to invalidate
+	if (NumOwners == 0) {
+		// no submitter ads to invalidate
+		delete cad;
+		return;
+	}
 
 		// Invalidate all our submittor ads.
 

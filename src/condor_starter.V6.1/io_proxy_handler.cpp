@@ -636,6 +636,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 				result = REMOTE_CONDOR_putfile_buffer(buffer, length);
 				sprintf(line, "%d", convert(result, errno));
 				r->put_line_raw(line);
+				free(buffer);
 			} else {
 				sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
 				r->put_line_raw(line);

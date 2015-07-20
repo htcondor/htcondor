@@ -541,6 +541,7 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 			}
 			rval = false;
 		}
+		delete ad;
 	}
 	return rval;
 }

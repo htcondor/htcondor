@@ -2355,6 +2355,7 @@ SetExecutable()
 
 	if (ename) free(ename);
 	free(copySpool);
+	free( IckptName );
 }
 
 void
@@ -4590,6 +4591,7 @@ SetLogNotes()
 	LogNotesVal = condor_param( LogNotesCommand, ATTR_SUBMIT_EVENT_NOTES );
 	if ( LogNotesVal ) {
 		InsertJobExprString( ATTR_SUBMIT_EVENT_NOTES, LogNotesVal );
+		free( LogNotesVal );
 	}
 }
 
@@ -4599,6 +4601,7 @@ SetUserNotes()
 	UserNotesVal = condor_param( UserNotesCommand, ATTR_SUBMIT_EVENT_USER_NOTES );
 	if ( UserNotesVal ) {
 		InsertJobExprString( ATTR_SUBMIT_EVENT_USER_NOTES, UserNotesVal );
+		free( UserNotesVal );
 	}
 }
 
@@ -4610,6 +4613,7 @@ SetStackSize()
 	if( StackSizeVal ) {
 		(void) buffer.formatstr( "%s = %s", ATTR_STACK_SIZE, StackSizeVal);
 		InsertJobExpr(buffer);
+		free( StackSizeVal );
 	}
 }
 

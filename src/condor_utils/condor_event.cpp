@@ -444,8 +444,10 @@ ULogEvent::toClassAd(void)
 	if( eventTimeStr ) {
 		if ( !myad->InsertAttr("EventTime", eventTimeStr) ) {
 			delete myad;
+			free( eventTimeStr );
 			return NULL;
 		}
+		free( eventTimeStr );
 	} else {
 		delete myad;
 		return NULL;

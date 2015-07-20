@@ -182,8 +182,10 @@ FILE* LoadClassAdLog(
 		if (log_rec->Write(log_fp) < 0) {
 			errmsg.formatstr("write to %s failed, errno = %d\n", filename, errno);
 			fclose(log_fp);
+			delete log_rec;
 			return NULL;
 		}
+		delete log_rec;
 	}
 
 	return log_fp;
@@ -340,6 +342,7 @@ bool TruncateClassAdLog(
 		{
 			errmsg.formatstr("Failed to open parent directory %s for fsync after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
 		}
+		free( parent_dir );
 	}
 	else
 	{
@@ -508,6 +511,7 @@ bool WriteClassAdLogState(
 	log = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
 	if (log->Write(fp) < 0) {
 		errmsg.formatstr("write to %s failed, errno = %d", filename, errno);
+		delete log;
 		return false;
 	}
 	delete log;
@@ -520,6 +524,7 @@ bool WriteClassAdLogState(
 		log = new LogNewClassAd(key, GetMyTypeName(*ad), GetTargetTypeName(*ad), maker);
 		if (log->Write(fp) < 0) {
 			errmsg.formatstr("write to %s failed, errno = %d", filename, errno);
+			delete log;
 			return false;
 		}
 		delete log;
@@ -540,6 +545,7 @@ bool WriteClassAdLogState(
 										  ExprTreeToString(expr));
 				if (log->Write(fp) < 0) {
 					errmsg.formatstr("write to %s failed, errno = %d", filename, errno);
+					delete log;
 					return false;
 				}
 				delete log;
