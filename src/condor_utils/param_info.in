@@ -4552,6 +4552,15 @@ friendly_name=Negotiator Max Time Per Submitter
 review=?
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_MAX_TIME_PER_SCHEDD]
+default=31536000
+type=int
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Max Time Per Schedd
+review=?
+tags=negotiator,matchmaker
+
 [NEGOTIATOR_MAX_TIME_PER_PIESPIN]
 default=31536000
 type=int

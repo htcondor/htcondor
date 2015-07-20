@@ -327,6 +327,7 @@ class Matchmaker : public Service
 		int  MaxTimePerCycle;		// how long for total negotiation cycle
 		int  MaxTimePerSubmitter;   // how long to talk to any one submitter
 		int  MaxTimePerSpin;        // How long per pie spin
+		int  MaxTimePerSchedd;		// How long to talk to any one schedd
 		ExprTree *PreemptionReq;	// only preempt if true
 		ExprTree *PreemptionReqPslot;	// only preempt pslots if true
 		ExprTree *PreemptionRank; 	// rank preemption candidates
@@ -349,6 +350,8 @@ class Matchmaker : public Service
 
 		StringList NegotiatorMatchExprNames;
 		StringList NegotiatorMatchExprValues;
+
+		map<string, int> ScheddsTimeInCycle;
 
 		CollectorList* Collectors;
 
