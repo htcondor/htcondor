@@ -558,7 +558,7 @@ MyString condor_sockaddr::to_ccb_safe_string() {
 		return MyString();
 	}
 
-	for( unsigned i = 0; i < IP_STRING_BUF_SIZE; ++i ) {
+	for( unsigned i = 0; colonated[i] != '\0' && i < IP_STRING_BUF_SIZE; ++i ) {
 		if( colonated[i] == ':' ) { colonated[i] = '-'; }
 	}
 

@@ -2389,6 +2389,7 @@ GroupEntry::GroupEntry():
     autoregroup(false),
     usage(0),
     submitterAds(NULL),
+    priority(0),
     quota(0),
     requested(0),
     currently_requested(0),
@@ -2402,7 +2403,8 @@ GroupEntry::GroupEntry():
     parent(NULL),
     children(),
     chmap(),
-    sort_ad(new ClassAd())
+    sort_ad(new ClassAd()),
+    sort_key(0)
 {
 }
 
@@ -6061,10 +6063,12 @@ bool
 Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) {
 	bool isPartitionable = false;
 
+dprintf(D_ALWAYS,"JEF pslotMultiMatch()\n");
 	machine->LookupBool(ATTR_SLOT_PARTITIONABLE, isPartitionable);
 
 	// This whole deal is only for partitionable slots
 	if (!isPartitionable) {
+dprintf(D_ALWAYS,"JEF   return: not partitionable\n");
 		return false;
 	}
 
@@ -6079,6 +6083,11 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 	machine->LookupInteger(ATTR_NUM_DYNAMIC_SLOTS, numDslots);
 
 	if (numDslots < 1) {
+dprintf(D_ALWAYS,"JEF   return: numDslots < 1\n");
+		return false;
+	}
+	if ( machine->LookupExpr( "ChildCurrentRank" ) == NULL ) {
+dprintf(D_ALWAYS,"JEF   return: no rollup info\n");
 		return false;
 	}
 
@@ -6115,6 +6124,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 		if ( child_claims[i] == "" ) {
 			continue;
 		}
+dprintf(D_ALWAYS,"JEF   push_back %d %f\n",i,currentRank);
 		ranks.push_back( std::pair<int, double>(i, currentRank) );
 	}
 
@@ -6133,6 +6143,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 		// In rank order, see if by preempting one more dslot would cause pslot to match
 	for (unsigned int slot = 0; slot < ranks.size() && ranks[slot].second < newRank; slot++) {
 		int dSlot = ranks[slot].first; // dslot index in childXXX list
+dprintf(D_ALWAYS,"JEF   considering %d\n",dSlot);
 
 			// if ranks are the same, consider preemption just based on user prio iff
 			// 1) userprio of preempting user > exiting user + delta
@@ -6228,10 +6239,12 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, double preemptPrio) 
 			}
 
 			machine->Assign("PreemptDslotClaims", claimsToPreempt.c_str());
+dprintf(D_ALWAYS,"JEF   return: found a match\n");
 			return true;
 		} 
 	}
 
+dprintf(D_ALWAYS,"JEF   return: no match\n");
 	return false;
 }
 
