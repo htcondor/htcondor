@@ -1668,7 +1668,7 @@ sub CollectWhoData
 				#id this is the master is pid real?
 				my $savepid = $2;
 				my $processstring = "";
-				if(($1 eq "Master") && ($desiredstate ne "down")) {
+				if($1 eq "Master") {
 					#print "Master found\n";
 					if(CondorUtils::is_windows() == 1) {
 				    	my @grift = `tasklist | grep $savepid`;

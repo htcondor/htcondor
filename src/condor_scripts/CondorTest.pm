@@ -171,6 +171,7 @@ sub Cleanup()
 	MyHead("-15", "Cores/core_error_trace");
 	print "************************************\n";
 	print "\n\n";
+	RegisterResult(0,"test_name","$handle");
 	return 0;
     }
     return 1;
@@ -188,7 +189,8 @@ sub EndTest
 
     my $exit_status = 0;
     if( Cleanup() == 0 ) {
-	$exit_status = 1;
+		print "0 return from cleanup means $failed_coreERROR was not empty\n";
+		$exit_status = 1;
     }
 
 	# at this point all the personals started should be stopped
@@ -233,12 +235,12 @@ sub EndTest
 	}
 
     if( $test_failure_count > 0 ) {
-	$exit_status = 1;
+		$exit_status = 1;
     }
 
     if( $test_failure_count == 0 && $test_success_count == 0 ) {
-	$extra_notes = "$extra_notes\n  CondorTest::RegisterResult() was never called!";
-	$exit_status = 1;
+		$extra_notes = "$extra_notes\n  CondorTest::RegisterResult() was never called!";
+		$exit_status = 1;
     }
 
     my $result_str = $exit_status == 0 ? "SUCCESS" : "FAILURE";
