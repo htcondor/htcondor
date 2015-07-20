@@ -400,7 +400,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 
 			logPathParam = param(pname);//dprintf_param_funcs->param(pname);
 			if (logPathParam) {
-				logPath.insert(0, logPathParam);
+				logPath = logPathParam;
 			} else {
 				// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
 				char *lsubsys = param("SUBSYSTEM");//dprintf_param_funcs->param("SUBSYSTEM");
@@ -432,7 +432,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 			// tristan 5/29/09
 			logPathParam = param(pname);
 			if(logPathParam)
-				logPath.insert(0, logPathParam);
+				logPath = logPathParam;
 
 			if(!DebugParams.empty())
 			{

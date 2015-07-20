@@ -128,8 +128,6 @@ public:
 
     ///
 	~ReliSock();
-    ///
-	void init();				/* shared initialization method */
 
     ///
 	int listen();
@@ -370,6 +368,9 @@ protected:
 	char const *getTargetSharedPortID() { return m_target_shared_port_id; }
 
 private:
+    ///
+	void init();				/* shared initialization method */
+
 	bool connect_socketpair_impl( ReliSock & dest, condor_protocol proto, bool isLoopback );
 };
 

@@ -487,6 +487,10 @@ DaemonCore::~DaemonCore()
 		free( comTable[i].command_descrip );
 		free( comTable[i].handler_descrip );
 	}
+	if ( m_unregisteredCommand.num ) {
+		free( m_unregisteredCommand.command_descrip );
+		free( m_unregisteredCommand.handler_descrip );
+	}
 
 	for (i=0;i<nSig;i++) {
 		free( sigTable[i].sig_descrip );
@@ -542,6 +546,13 @@ DaemonCore::~DaemonCore()
 		if ( pid_entry ) delete pid_entry;
 	}
 	delete pidTable;
+
+	// Delete all time-skip watchers
+	m_TimeSkipWatchers.Rewind();
+	TimeSkipWatcher * p;
+	while( (p = m_TimeSkipWatchers.Next()) ) {
+		delete p;
+	}
 
 	if (m_proc_family != NULL) {
 		delete m_proc_family;
