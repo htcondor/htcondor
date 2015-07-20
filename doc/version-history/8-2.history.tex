@@ -48,6 +48,11 @@ This variable defaults to \Expr{False}.
 
 \begin{itemize}
 
+\item Fixed a bug that caused \Condor{status} \Opt{-submitters}
+\Opt{-wide} to truncate the submitter names within the second part of
+the output.
+\Ticket{5087}
+
 \item Fixed a bug in which Linux kernel version 4 would incorrectly report
 a load average of -1.
 \Ticket{5080}
