@@ -169,11 +169,28 @@ Nothing will be printed for vanilla universe jobs that are not currently
 in a transfer state.
 \Ticket{5084}
 
+\item A new matchmaking mode permits one or more dynamic slots to
+be preempted in order to make enough resources available to their parent
+partitionable slot to allow a job match.
+The new mode is enabled by setting the new \Condor{negotiator}
+configuration variable \Macro{ALLOW\_PSLOT\_PREEMPTION} to \Expr{True}.
+This variable defaults to \Expr{False}.
+The new configuration variable \Macro{ADVERTISE\_PSLOT\_ROLLUP\_INFORMATION}
+controls whether a \Condor{startd} daemon advertises additional attributes
+about partitionable slot preemption to the \Condor{collector}.
+\Ticket{5097}
+\Ticket{5094}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug that caused \Condor{status} \Opt{-submitters}
+\Opt{-wide} to truncate the submitter names within the second part of
+the output.
+\Ticket{5087}
 
 \item The \Condor{collector} no longer pauses for 30 seconds on start up
 under some conditions.

@@ -1158,8 +1158,68 @@ a string representing the manufacturer's version number.
 \index{ClassAd machine attribute (for GPU resources)!<name>RuntimeVersion}
 \item[\AdAttr{<name>RuntimeVersion}:] For CUDA devices,
 a string representing the manufacturer's version number.
-
 \end{description}
+
+The following attributes are advertised for a machine in which
+partitionable slot preemption is enabled.
+
+\begin{description}
+\index{ClassAd machine attribute (for pslot preemption)!ChildAccountingGroup}
+\item[\AdAttr{ChildAccountingGroup}:] 
+A ClassAd list containing the values of the \Attr{AccountingGroup}
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildActivity}
+\item[\AdAttr{ChildActivity}:] 
+A ClassAd list containing the values of the \Attr{Activity} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildCpus}
+\item[\AdAttr{ChildCpus}:]
+A ClassAd list containing the values of the \Attr{Cpus} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildCurrentRank}
+\item[\AdAttr{ChildCurrentRank}:] 
+A ClassAd list containing the values of the \Attr{CurrentRank} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildEnteredCurrentState}
+\item[\AdAttr{ChildEnteredCurrentState}:] 
+A ClassAd list containing the values of the \Attr{EnteredCurrentState} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildMemory}
+\item[\AdAttr{ChildMemory}:] 
+A ClassAd list containing the values of the \Attr{Memory} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildName}
+\item[\AdAttr{ChildName}:] 
+A ClassAd list containing the values of the \Attr{Name} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildRemoteOwner}
+\item[\AdAttr{ChildRemoteOwner}:] 
+A ClassAd list containing the values of the \Attr{RemoteOwner} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildRemoteUser}
+\item[\AdAttr{ChildRemoteUser}:] 
+A ClassAd list containing the values of the \Attr{RemoteUser} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildRetirementTimeRemaining}
+\item[\AdAttr{ChildRetirementTimeRemaining}:] 
+A ClassAd list containing the values of the \Attr{RetirementTimeRemaining} 
+attribute for each dynamic slot of the partitionable slot.
+
+\index{ClassAd machine attribute (for pslot preemption)!ChildState}
+\item[\AdAttr{ChildState}:] 
+A ClassAd list containing the values of the \Attr{State} 
+attribute for each dynamic slot of the partitionable slot.
+\end{description}
+
 
 Finally, the single attribute, 
 \Attr{CurrentTime}, is defined by the ClassAd
