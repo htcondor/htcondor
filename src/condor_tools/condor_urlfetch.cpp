@@ -1,3 +1,22 @@
+/***************************************************************
+ *
+ * Copyright (C) 2014-2015, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
 #define CURL_STATICLIB
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,6 +24,7 @@
 #include <fstream>
 #include <curl/curl.h>
 #include <string.h>
+
 /*condor_urlfetch
  *This program downloads the url specified as the first argument into the 
  *file specified in the second argument, as well as stdout.
@@ -22,7 +42,7 @@ using namespace std;
 
 size_t write_data(void *ptr, size_t size, size_t nmemb, void *userp); 
 int write_prevfile(const char *prev);
-bool isEmpty(FILE *file);
+//bool isEmpty(FILE *file);
 
 std::string readBuffer;
 
@@ -49,8 +69,8 @@ int main(int argc, const char *argv[])
         lastLoc++;
         if(strncmp(argv[1], "-MASTER", 10) != 0)
         {
-            // if -MASTER was not passed, we only want to pull
-            // if the cached file is missing or cannot be read.
+          // if -MASTER was not passed, we only want to pull
+          // if the cached file is missing or cannot be read.
             FILE *fp = fopen(argv[lastLoc], "r");
             if(fp)
             {
@@ -85,15 +105,16 @@ int main(int argc, const char *argv[])
 
 
       //If something has been written to the buffer, copy this to our output file.
-        if(!readBuffer.empty());
+        if(!readBuffer.empty())
         {
-            std:ofstream out(argv[lastLoc]);
+            std::ofstream out(argv[lastLoc]);
             out << readBuffer;
-                    
+
             out.close();
         }
     }
 
+  // open the cache file and write it to stdout.
     if(write_prevfile(argv[lastLoc]) != 0)
     {
         perror("Error opening file as read only");
@@ -148,6 +169,8 @@ int write_prevfile(const char *prev)
     return 0;
 }
 
+/*
+// check if our cache file is empty.
 bool isEmpty(FILE *ptrFile)
 {
     long offset = ftell(ptrFile);
@@ -161,3 +184,4 @@ bool isEmpty(FILE *ptrFile)
     fseek(ptrFile, offset, SEEK_SET);
     return false;
 }
+*/
