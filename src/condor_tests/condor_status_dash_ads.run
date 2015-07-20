@@ -42,14 +42,16 @@ use Check::CondorLog;
 my $expectedrunning = 0;
 my $pid = $$;
 my $testname = "condor_status_dash_ads";
-my $AdSaveLoc = "$testname" . ".saveme/$pid"; 
+my $AdSaveLoc = "$testname" . ".saveme/pdir$pid"; 
+my $SaveName = "$testname" . ".saveme";
 
 my @thisconfig;
 my $variance = "";
 
-
-CreateDir("-p $testname.saveme");
-CreateDir("-p $AdSaveLoc");
+my $createdircmd = "-p $SaveName";
+CreateDir("$createdircmd");
+$createdircmd = "-p $AdSaveLoc";
+CreateDir("$createdircmd");
 
 my $AdSaveLocDir = "$AdSaveLoc/CurrentSavedAd";
 my $VarianceStash = "StatusAds";
