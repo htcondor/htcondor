@@ -92,11 +92,17 @@ Previously, it was set to the build ID, which violated the RPM Packaging
 Guidelines.
 \Ticket{5042}
 
-\item Fixed a problem in the RPM packages that prevented the
-Java universe from operating.
+\item Fixed a problem in the Red Hat Enterprise Linux 7 RPM packages
+that prevented the Java universe from operating.
 The global configuration file is now updated in the RPM packages
 to properly refer to the support files for the Java universe.
 \Ticket{5059}
+
+\item Added \Condor{credd}, \Condor{set\_shutdown}, the \Condor{set\_shutdown}
+manual page, and \Condor{vm-gahp-vmare} to the Red Hat Enterprise Linux 7
+RPM packages.
+These files were inadvertently omitted from the new style RPM packages.
+\Ticket{5098}
 
 \item Corrected the definition of the job ClassAd attribute 
 \Attr{GlobalJobId} within the HTCondor manual.
