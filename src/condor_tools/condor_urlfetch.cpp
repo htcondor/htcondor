@@ -107,9 +107,9 @@ int main(int argc, const char *argv[])
       //If something has been written to the buffer, copy this to our output file.
         if(!readBuffer.empty())
         {
-            std::ofstream out(argv[lastLoc]);
-            out << readBuffer;
+            ofstream out(argv[lastLoc]);
 
+            out.write(readBuffer.c_str(), readBuffer.length());
             out.close();
         }
     }
