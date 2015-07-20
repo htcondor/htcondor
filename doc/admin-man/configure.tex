@@ -4600,6 +4600,26 @@ WANT_HOLD_REASON = \
   A larger value for a specific job ranks that job above
   others with lower values for \MacroNI{RANK}.
 
+\label{param:AdvertisePslotRollupInformation}
+\item[\Macro{ADVERTISE\_PSLOT\_ROLLUP\_INFORMATION}]
+  A boolean value that defaults to \Expr{True},
+  causing the \Condor{startd} to advertise ClassAd attributes that may be
+  used in partitionable slot preemption.
+  The attributes are
+  \begin{itemize}
+  \item \Attr{ChildAccountingGroup}
+  \item \Attr{ChildActivity}
+  \item \Attr{ChildCPUs}
+  \item \Attr{ChildCurrentRank}
+  \item \Attr{ChildEnteredCurrentState}
+  \item \Attr{ChildMemory}
+  \item \Attr{ChildName}
+  \item \Attr{ChildRemoteOwner}
+  \item \Attr{ChildRemoteUser}
+  \item \Attr{ChildRetirementTimeRemaining}
+  \item \Attr{ChildState}
+  \end{itemize}
+
 \label{param:IsValidCheckpointPlatform}
 \item[\Macro{IS\_VALID\_CHECKPOINT\_PLATFORM}]
   A boolean expression that is logically ANDed with the
