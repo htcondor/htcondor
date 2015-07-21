@@ -868,27 +868,30 @@ and the object can take lists, dictionaries, and ClassAds as values.
 \begin{tabular}{|p{16cm}|} \hline
 \texttt{parseOne( input, parser=Auto )}
 
-Parse entire input into a single ClassAd.
-In the presence of multiple ads or blank space, continue to merge ads
-together until entire string is consumed.
-Returns a ClassAd object.
+Parse the entire \texttt{input} into a single ClassAd.
+In the presence of multiple ClassAds or blank lines, 
+continue to merge ClassAds together until the entire string is consumed.
+Returns a \texttt{classad} object.
 
 Parameter \texttt{input} is a string-like object or a file pointer.
-Parameter \texttt{parser} tells which ClassAd parser to use.
+
+Parameter \texttt{parser} specifies which ClassAd parser to use.
 \\ \hline
 
 \texttt{parseNext( input, parser=Auto )}
 
 Parse the next ClassAd in the input string.
-Forwards the input object to point after the consumed ClassAd.
-Returns a ClassAd object.
+Advances the \texttt{input} object to point after the consumed ClassAd.
+Returns a \texttt{classad} object.
 
 Parameter \texttt{input} is a file-like object.
-Parameter \texttt{parser} tells which ClassAd parser to use.
+
+Parameter \texttt{parser} specifies which ClassAd parser to use.
 \\ \hline
 \texttt{parse( input )}
 
-Deprecated. Parse input into a ClassAd.
+\textit{This method is no longer used.}
+Parse input into a ClassAd.
 Returns a ClassAd object.
 
 Parameter \texttt{input} is a string-like object or a file pointer.
@@ -896,7 +899,8 @@ Parameter \texttt{input} is a string-like object or a file pointer.
 
 \texttt{parseOld( input )}
 
-Deprecated. Parse old ClassAd format input into a ClassAd.
+\textit{This method is no longer used.}
+Parse old ClassAd format input into a ClassAd.
 Returns a ClassAd object.
 
 Parameter \texttt{input} is a string-like object or a file pointer.
@@ -1096,7 +1100,8 @@ Returns an iterator.
 \\ \hline
 \texttt{parseOldAds( input )}
 
-Deprecated. Given \texttt{input} of a string or file, return an iterator of
+\textit{This method is no longer used.}
+Given \texttt{input} of a string or file, return an iterator of
 ClassAds where the ClassAds are in the Old ClassAd format.
 
 Returns an iterator.
