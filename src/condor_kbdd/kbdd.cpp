@@ -207,7 +207,7 @@ daemon_main( int argc, char **argv )
 }
 
 #ifdef WIN32
-int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, __in_opt LPSTR lpCmdLine, __in int nShowCmd )
+int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, __in LPSTR lpCmdLine, __in int nShowCmd )
 {
 	// t1031 - tell dprintf not to exit if it can't write to the log
 	// we have to do this before dprintf_config is called

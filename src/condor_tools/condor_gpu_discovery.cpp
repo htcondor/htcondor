@@ -419,6 +419,7 @@ clReturn oclGetInfo(cl_platform_id plid, cl_e_platform_info eInfo, std::string &
 		if (g_buffer) free (g_buffer);
 		if (cb < 120) cb = 120;
 		g_buffer = (char*)malloc(cb*2);
+		if ( ! g_buffer) { fprintf(stderr, "ERROR: failed to allocate %d bytes\n", (int)(cb*2)); exit(-1); }
 		g_cBuffer = cb*2;
 		clr = ocl.GetPlatformInfo(plid, eInfo, g_cBuffer, g_buffer, &cb);
 	}
@@ -438,6 +439,7 @@ clReturn oclGetInfo(cl_device_id did, cl_e_device_info eInfo, std::string & val)
 		if (g_buffer) free (g_buffer);
 		if (cb < 120) cb = 120;
 		g_buffer = (char*)malloc(cb*2);
+		if ( ! g_buffer) { fprintf(stderr, "ERROR: failed to allocate %d bytes\n", (int)(cb*2)); exit(-1); }
 		g_cBuffer = cb*2;
 		clr = ocl.GetDeviceInfo(did, eInfo, g_cBuffer, g_buffer, &cb);
 	}

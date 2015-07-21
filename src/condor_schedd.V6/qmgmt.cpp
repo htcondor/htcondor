@@ -5268,7 +5268,7 @@ int dump_job_q_stats(int cat)
 {
 	HashTable<JobQueueKey,JobQueueJob*>* table = JobQueue->Table();
 	table->startIterations();
-	int bucket, old_bucket=-1, item;
+	int bucket=0, old_bucket=-1, item=0;
 
 	int cTotalBuckets = 0;
 	int cFilledBuckets = 0;

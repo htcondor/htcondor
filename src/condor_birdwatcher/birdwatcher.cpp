@@ -11,10 +11,10 @@ TCHAR szWindowClass[MAX_LOADSTRING];			// the main window class name
 
 // Forward declarations of functions included in this code module:
 
-int APIENTRY wWinMain(HINSTANCE hInstance,
-                     HINSTANCE hPrevInstance,
-                     LPWSTR    lpCmdLine,
-                     int       nCmdShow)
+int WINAPI wWinMain(_In_ HINSTANCE hInstance,
+                    _In_opt_ HINSTANCE hPrevInstance,
+                    _In_ LPWSTR    lpCmdLine,
+                    _In_ int       nCmdShow)
 {
 	MSG msg;
 	hInst = hInstance;

@@ -509,6 +509,11 @@ int chirp_read(int argc, char **argv) {
 
 	char *path = argv[fileOffset];
 	int length = strtol(argv[fileOffset + 1], NULL, 10);
+	void* buf = malloc(length+1);
+	if ( ! buf) {
+		printf("failed to allocate %d bytes\n", length);
+		return -1;
+	}
 	
 	struct chirp_client *client = 0;
 	CONNECT_STARTER(client);
@@ -517,7 +522,6 @@ int chirp_read(int argc, char **argv) {
 	if(fd < 0) {
 		DISCONNECT_AND_RETURN(client, fd);
 	}
-	void* buf = malloc(length+1);
 	
 	int ret_val = -1;
 	// Use read

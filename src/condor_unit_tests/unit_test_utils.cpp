@@ -137,7 +137,7 @@ void make_big_string(
 	char **quoted_string) // OUT: the string in quotes
 {
 	*string = (char *) malloc(length + 1);
-	ASSERT( string );
+	ASSERT( *string );
 
 	for (int i = 0; i < length; i++) {
 		(*string)[i] = (rand() % 26) + 97;

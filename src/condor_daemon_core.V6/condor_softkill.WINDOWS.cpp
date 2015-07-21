@@ -193,7 +193,7 @@ check_winsta(wchar_t* winsta_name, LPARAM)
 }
 
 int WINAPI
-wWinMain(HINSTANCE, HINSTANCE, wchar_t*, int)
+wWinMain(__in HINSTANCE, __in_opt HINSTANCE, __in wchar_t*, __in int)
 {
 	// usage is:
 	//   condor_softkill.exe <target_pid> [debug_output_file]

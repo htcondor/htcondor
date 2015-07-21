@@ -178,6 +178,10 @@ chirp_client_connect_url( const char *url, const char **path_part)
 			//which is not followed by a valid port/path.
 
 			host = (char *)malloc(str-url+1);
+			if ( ! host) {
+				errno = ENOMEM;
+				return NULL;
+			}
 			strncpy(host,url,str-url);
 			host[str-url] = '\0';
 

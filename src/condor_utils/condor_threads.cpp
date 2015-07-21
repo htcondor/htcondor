@@ -87,6 +87,7 @@ static int
 pthread_mutex_init (pthread_mutex_t *mv, 
                     const pthread_mutexattr_t *)
 {
+#pragma warning(suppress: 28125)
 	InitializeCriticalSection(mv);
 	return 0;
 }
@@ -140,6 +141,7 @@ pthread_cond_init (pthread_cond_t *cv,
   cv->waiters_count_ = 0;
 
   // Initialize critical section
+#pragma warning(suppress: 28125)
   InitializeCriticalSection(&(cv->waiters_count_lock_));
 
   // Create an auto-reset event.
