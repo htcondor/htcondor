@@ -652,38 +652,31 @@ agent_starter( ReliSock * s )
 int
 handle_agent_fetch_log (ReliSock* stream) {
 
-	char *daemon_name = NULL;
-	char *daemon_paramname = NULL;
-	char *daemon_filename = NULL;
+	MyString daemon;
 	int  res = FALSE;
 
-	if( ! stream->code(daemon_name) ||
+	if( ! stream->code(daemon) ||
 		! stream->end_of_message()) {
 		dprintf( D_ALWAYS, "ERROR: fetch_log can't read daemon name\n" );
-		free( daemon_name );
 		return FALSE;
 	}
 
-	dprintf( D_ALWAYS, "INFO: daemon_name: %s\n", daemon_name );
+	dprintf( D_ALWAYS, "INFO: daemon_name: %s\n", daemon.c_str() );
 
-	daemon_paramname = (char*)malloc (strlen(daemon_name) + 5);
-	strcpy (daemon_paramname, daemon_name);
-	strcat (daemon_paramname, "_LOG");
+	// append _LOG to get the param name of the daemon log file
+	daemon += "_LOG";
 
-	dprintf( D_ALWAYS, "INFO: daemon_paramname: %s\n", daemon_paramname );
+	dprintf( D_ALWAYS, "INFO: daemon_paramname: %s\n", daemon.c_str() );
 
-	if( (daemon_filename = param(daemon_paramname)) ) {
+	auto_free_ptr daemon_filename(param(daemon.c_str()));
+	if ( daemon_filename ) {
 		filesize_t	size;
-		dprintf( D_ALWAYS, "INFO: daemon_filename: %s\n", daemon_filename );
+		dprintf( D_ALWAYS, "INFO: daemon_filename: %s\n", daemon_filename.ptr() );
 		stream->encode();
-		res = (stream->put_file(&size, daemon_filename) < 0);
-		free (daemon_filename);
+		res = (stream->put_file(&size, daemon_filename.ptr()) < 0);
 	} else {
-		dprintf( D_ALWAYS, "ERROR: fetch_log can't param for log name\n" );
+		dprintf( D_ALWAYS, "ERROR: fetch_log can't param for %s\n", daemon.c_str() );
 	}
-
-	free (daemon_paramname);
-	free (daemon_name);
 
 	return res;
 }
