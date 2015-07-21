@@ -12106,7 +12106,9 @@ Scheduler::Init()
 #endif
 
 	int int_val = param_integer( "JOB_IS_FINISHED_INTERVAL", 0, 0 );
-	job_is_finished_queue.setPeriod( int_val );	
+	job_is_finished_queue.setPeriod( int_val );
+	int_val = param_integer( "JOB_IS_FINISHED_COUNT", 8, 1 );
+	job_is_finished_queue.setCountPerInterval(int_val);
 
 	JobStopDelay = param_integer( "JOB_STOP_DELAY", 0, 0 );
 	stop_job_queue.setPeriod( JobStopDelay );
