@@ -1292,6 +1292,9 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 
 	}
 
+	#lets always overrul existing A__DEBUG with one that adds to it D_CMD
+	print NEW "ALL_DEBUG = \$(ALL_DEBUG) D_CMD:1\n";
+
 	close(NEW);
 	if (defined $returnarrayref) {
 		PostTunePersonalCondor($personal_config_file,$returnarrayref);
