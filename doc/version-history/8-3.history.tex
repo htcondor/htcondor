@@ -167,6 +167,8 @@ the output.
 
 \item The \Condor{collector} no longer pauses for 30 seconds on start up
 under some conditions.
+This fix does not work when the configuration has 
+\Expr{USE\_SHARED\_PORT = True}.
 \Ticket{5128}
 
 \item The \Condor{kbdd} now works with shared port enabled.
