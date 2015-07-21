@@ -10704,7 +10704,7 @@ Scheduler::child_exit(int pid, int status)
 			dprintf( D_ALWAYS,
 					 "%s pid %d successfully killed because it was hung.\n",
 					 name, pid );
-			status = JOB_EXCEPTION;
+			status = JOB_EXCEPTION << 8;
 		}
 
 			//

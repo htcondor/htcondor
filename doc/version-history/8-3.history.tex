@@ -51,8 +51,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.3.7 not yet released.
-%\item HTCondor version 8.3.7 released on Month Date, 2015.
+\item HTCondor version 8.3.7 released on July 23, 2015.
 
 \end{itemize}
 
@@ -181,6 +180,11 @@ about partitionable slot preemption to the \Condor{collector}.
 \Ticket{5097}
 \Ticket{5094}
 
+\item Updated the Python \texttt{classad} parsing interface with methods that
+are able to parse ClassAds given in either the Old or New ClassAd format.
+The parsing methods can automatically detect which format is used.
+\Ticket{4990}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -194,6 +198,8 @@ the output.
 
 \item The \Condor{collector} no longer pauses for 30 seconds on start up
 under some conditions.
+This fix does not work when the configuration has 
+\Expr{USE\_SHARED\_PORT = True}.
 \Ticket{5128}
 
 \item The \Condor{kbdd} now works with shared port enabled.
@@ -241,6 +247,14 @@ configuration variables
 \Macro{EVENT\_LOG\_LOCKING} or \Macro{ENABLE\_USERLOG\_LOCKING} 
 were set to \Expr{False}.
 \Ticket{5115}
+
+\item Files omitted from the new style RPM packages 
+for Red Hat Enterprise Linux 6 and 7 are now present.
+They include
+the \Condor{credd} binary, the \Condor{set\_shutdown} binary,
+the \Condor{set\_shutdown} manual page, 
+and the \Condor{vm-gahp-vmware} binary.
+\Ticket{5098}
 
 \end{itemize}
 
