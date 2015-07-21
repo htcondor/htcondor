@@ -866,17 +866,44 @@ and the object can take lists, dictionaries, and ClassAds as values.
 \textbf{\texttt{classad} module functions:}
 \begin{flushleft}
 \begin{tabular}{|p{16cm}|} \hline
+\texttt{parseOne( input, parser=Auto )}
+
+Parse the entire \texttt{input} into a single ClassAd.
+In the presence of multiple ClassAds or blank lines, 
+continue to merge ClassAds together until the entire string is consumed.
+Returns a \texttt{classad} object.
+
+Parameter \texttt{input} is a string-like object or a file pointer.
+
+Parameter \texttt{parser} specifies which ClassAd parser to use.
+\\ \hline
+
+\texttt{parseNext( input, parser=Auto )}
+
+Parse the next ClassAd in the input string.
+Advances the \texttt{input} object to point after the consumed ClassAd.
+Returns a \texttt{classad} object.
+
+Parameter \texttt{input} is a file-like object.
+
+Parameter \texttt{parser} specifies which ClassAd parser to use.
+\\ \hline
 \texttt{parse( input )}
 
-Parse input into a ClassAd.  
+\textit{This method is no longer used.}
+Parse input into a ClassAd.
 Returns a ClassAd object.
 
 Parameter \texttt{input} is a string-like object or a file pointer.
 \\ \hline
 
-\texttt{parseOld( )}
+\texttt{parseOld( input )}
 
+\textit{This method is no longer used.}
 Parse old ClassAd format input into a ClassAd.
+Returns a ClassAd object.
+
+Parameter \texttt{input} is a string-like object or a file pointer.
 \\ \hline
 \texttt{version( )}
 
@@ -1053,27 +1080,28 @@ Returns a string.
 \\ \hline
 \texttt{quote( str )}
 
-Converts the Python string, \Code{str}, into a ClassAd string literal.
+Converts the Python string, \texttt{str}, into a ClassAd string literal.
 
 Returns the string literal.
 \\ \hline
 \texttt{unquote( str )}
 
-Converts the Python string, \Code{str}, escaped as a ClassAd string back to a
+Converts the Python string, \texttt{str}, escaped as a ClassAd string back to a
 Python string.
 
 Returns the Python string.
 \\ \hline
-\texttt{parseAds( input )}
+\texttt{parseAds( input, parser=Auto )}
 
-Given \Code{input} of a string or file, return an iterator of
-ClassAds where the ClassAds are in the New ClassAd format.
+Given \texttt{input} of a string or file, return an iterator of ClassAds.
+Parameter \texttt{parser} tells which ClassAd parser to use.
 
 Returns an iterator.
 \\ \hline
 \texttt{parseOldAds( input )}
 
-Given \Code{input} of a string or file, return an iterator of
+\textit{This method is no longer used.}
+Given \texttt{input} of a string or file, return an iterator of
 ClassAds where the ClassAds are in the Old ClassAd format.
 
 Returns an iterator.
@@ -1091,7 +1119,7 @@ Returns a new \texttt{ExprTree} object.
 \texttt{matches( ad )}
 
 Given \texttt{ClassAd} object \texttt{ad}, 
-check to see if this object matches the \Code{Requirements} attribute 
+check to see if this object matches the \texttt{Requirements} attribute
 of \texttt{ad}.
 Returns \texttt{true} if it does.
 
@@ -1099,7 +1127,7 @@ Returns \texttt{true} if it does.
 \texttt{symmetricMatch( ad )}
 
 Returns \texttt{true} if the given \texttt{ad} matches this and this matches
-\Code{ad}.  Equivalent to \texttt{self.matches(ad) and ad.matches(self)}.
+\texttt{ad}.  Equivalent to \texttt{self.matches(ad) and ad.matches(self)}.
 
 \\ \hline
 \texttt{externalRefs( expr )}
@@ -1127,8 +1155,8 @@ represents an expression in the ClassAd language.  The python operators
 for \texttt{ExprTree} have been overloaded so, if \texttt{e1} and \texttt{e2}
 are \texttt{ExprTree} objects, then \texttt{e1 + e2} is also a \texttt{ExprTree}
 object.  Lazy-evaluation is used, so an expression \texttt{"foo" + 1} does not
-produce an error until it is evaluated with a call to \Code{bool()} or the
-\Code{.eval()} class member.
+produce an error until it is evaluated with a call to \texttt{bool()} or the
+\texttt{.eval()} class member.
 
 \textbf{\texttt{ExprTree} class methods:}
 \begin{flushleft}
@@ -1146,6 +1174,23 @@ Represent and return the ClassAd expression as a string.
 Evaluate the expression and return as a ClassAd value, 
 typically a Python object.
 \\ \hline
+\end{tabular}
+\end{flushleft}
+
+\textbf{Module enums:}
+\begin{flushleft}
+\begin{tabular}{|p{16cm}|} \hline
+
+\texttt{Parser}
+
+Tells which ClassAd parser to use.
+Values may be
+\texttt{Auto},
+\texttt{Old},
+or \texttt{New}.
+
+\\ \hline
+
 \end{tabular}
 \end{flushleft}
 
@@ -1178,7 +1223,7 @@ Type "help", "copyright", "credits" or "license" for more information.
         foo = 2 + 2; 
         baz = time() + 4
     ]
->>> ad2=classad.parse(open("test_ad", "r"));
+>>> ad2=classad.parseOne(open("test_ad", "r"));
 >>> ad2["error"] = classad.Value.Error
 >>> ad2["undefined"] = classad.Value.Undefined
 >>> print ad2
@@ -1262,13 +1307,13 @@ KeyError: 'foo'
 \normalsize
 
 Here is an example that illustrates the use of the iterator
-\texttt{parseOldAds} method on a history log.
+\texttt{parseAds} method on a history log.
 \footnotesize
 \begin{verbatim}
 >>> import classad
 >>> import os
 >>> fd = os.popen("condor_history -l -match 4")
->>> ads = classad.parseOldAds(fd)
+>>> ads = classad.parseAds(fd)
 >>> print [ad["ClusterId"] for ad in ads]
 [23389L, 23388L, 23386L, 23387L]
 >>>
