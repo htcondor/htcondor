@@ -105,7 +105,10 @@ sub timed_callback {
     if ($negotiate_test_passed_or_failed && !$slot_test_passed_or_failed) {
         # notice I'm ignoring Disk - it's hard to check disk directly because you have to use a 
         # percentage or fraction, and that means I can't know ahead of time how much disk to expect
-        my @res = `condor_status -constraint "SlotTypeID > 0" -format "%d" SlotTypeID -format " %d" SlotWeight -format " %d" Cpus -format " %d" Memory -format " %d\n" Tokens`;
+        #my @res = `condor_status -constraint "SlotTypeID > 0" -format "%d" SlotTypeID -format " %d" SlotWeight -format " %d" Cpus -format " %d" Memory -format " %d\n" Tokens`;
+		my @res = ();
+		my $result = 0;
+		$result = runCondorTool("condor_status -constraint \"SlotTypeID > 0\" -af SlotTypeID -af SlotWeight -af Cpus -af  Memory -af Tokens",\@res,2,{em-t_output=>1});
         my %hist = ();
         foreach $rec (@res) {
             chomp $rec;
@@ -117,7 +120,10 @@ sub timed_callback {
             }
         }
 
-        my @res2 = `condor_status -constraint "SlotTypeID < 0" -format "%d" SlotTypeID -format " %d" SlotWeight -format " %d" Cpus -format " %d" Memory -format " %d\n" Tokens`;
+        #my @res2 = `condor_status -constraint "SlotTypeID < 0" -format "%d" SlotTypeID -format " %d" SlotWeight -format " %d" Cpus -format " %d" Memory -format " %d\n" Tokens`;
+		my @res2 = ();
+		my $result2 = 0;
+		$result2 = runCondorTool("condor_status -constraint \"SlotTypeID < 0\" -af SlotTypeID -af SlotWeight -af Cpus -af Memory -af Tokens",\@res2,2,{emit_output=>1});
         my %hist2 = ();
         foreach $rec (@res2) {
             chomp $rec;

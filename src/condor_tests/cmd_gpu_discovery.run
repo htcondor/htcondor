@@ -102,9 +102,11 @@ my $onexecute = sub {
 		# with undefined allowing it to be updated with
 		# a fallowing on_execute() callback
 		if(!(exists $gpulandings{$slot})) {
-			print "Marking slot $slot as gpu landing location\n";
 			if($slot ne "undefined") {
+				print "Marking slot $slot as gpu landing location\n";
 				$gpulandings{$slot} = 1;
+			} else {
+				print "Too early to set slot as it is still undefined\n";
 			}
 		}
 	}
@@ -124,6 +126,11 @@ $result = SimpleJob::RunCheck(
 
 print "Good $totalcpus jobs ran\n";
 
+print "These were where jobs requesting a GPU landed\n";
+foreach my $key (sort keys %gpulandings) {
+	print "$key ran a GPU job\n";
+}
+
 my @slots = ();
 runCondorTool("condor_status -af name -constraint GPUs==1",\@slots,2,{emit_output=>1});
 
@@ -131,6 +138,9 @@ my $gpuslots = @slots;
 
 if($gpuslots == $totalgpus) {
 	print "Great, GPUs were distributed evenly\n";
+	foreach my $slot (@slots) {
+		print "GPU slot:$slot\n";
+	}
 	RegisterResult(1,test_name,$testname);
 } else {
 	print "We expected $totalgpus GPUs and saw:$gpuslots\n";
@@ -144,6 +154,7 @@ my %gpuslots = ();
 
 foreach my $slot (@slots) {
 	$gpuslots{$slot} = 1;
+	print "Storing $slot as a gpu slot\n";
 }
 
 #now ensure each job is running where there is a GPU
@@ -155,6 +166,7 @@ foreach my $job (sort keys %gpulandings) {
 	if(exists $gpuslots{$job}) {
 		$gpumatch += 1;
 	} else {
+		print "$job from gpulandings not set in gpuslots\n";
 		print "$job: IS NOT A GPU SLOT!\n";
 		$gpumiss += 1;
 	}

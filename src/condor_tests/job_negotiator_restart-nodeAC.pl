@@ -1,6 +1,7 @@
 #! /usr/bin/env perl
 
 use CondorTest;
+use Check::CondorLog;
 
 # Figure out our "HTCondor" username.
 $username = `whoami`;
@@ -77,15 +78,24 @@ if ($ARGV[0] eq "A") {
 		die "Priority factor ($priofactor) does NOT match expected priority factor ($expectedfactor)\n";
 	}
 
+	# look for the beginning of another negotiation cycle before preceeding
+	CondorLog::RunCheckMultiple(
+		daemon => "Negotiator",
+		match_new => "true",
+		match_timeout => 600,
+		match_regexp => "Started Negotiation Cycle",
+		match_callback => $on_match,
+	);
+
 	# Reset to the original priority factor.
 	$priofactor /= 3;
 	print "Setting priofactor to $priofactor\n";
 
-	open (OUTPUT, "condor_userprio -setfactor $user $priofactor 2>&1 |") or die "Can't fork: $!";
-	while (<OUTPUT>) {
-		print "$_";
+	@resarray = ();
+	$status = runCondorTool("condor_userprio -setfactor $user $priofactor",\@resarray,2);
+	foreach my $line (@resarray) {
+		print "$line";
 	}
-	close (OUTPUT) or die "condor_userprio failed: $?";
 
 } else {
 	print "Node $ARGV[0] job fails -- unexpected node name!\n";
