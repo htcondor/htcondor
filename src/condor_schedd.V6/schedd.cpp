@@ -7725,6 +7725,7 @@ Scheduler::StartJobHandler()
 	PROC_ID* job_id=NULL;
 	int cluster, proc;
 	int status;
+	ClassAd *job_ad = NULL;
 
 		// clear out our timer id since the hander just went off
 	StartJobTimer = -1;
@@ -7746,7 +7747,9 @@ Scheduler::StartJobHandler()
 		job_id=&srec->job_id;
 		cluster = job_id->cluster;
 		proc = job_id->proc;
-		if( ! isStillRunnable(cluster, proc, status) ) {
+		job_ad = GetJobAd(cluster, proc);
+		if( !isStillRunnable(cluster, proc, status) ||
+			(job_ad && srec->is_reconnect && !jobLeaseIsValid(job_ad, cluster, proc)) ) {
 			if( status != -1 ) {  
 					/*
 					  the job still exists, it's just been removed or
