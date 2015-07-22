@@ -405,7 +405,7 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n",
 				_writePartialRescueDag ? "True" : "False" );
 
-	_defaultNodeLog = param( "DAGMAN_DEFAULT_NODE_LOG" );
+	param( _defaultNodeLog, "DAGMAN_DEFAULT_NODE_LOG" );
 	if ( _defaultNodeLog == "" ) {
 		_defaultNodeLog = "@(DAG_DIR)/@(DAG_FILE).nodes.log";
 	}

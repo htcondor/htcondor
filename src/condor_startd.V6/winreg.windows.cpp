@@ -329,6 +329,7 @@ char * get_windows_reg_value(
 		//
 		if (ERROR_MORE_DATA == lres || ERROR_SUCCESS == lres)
 		{
+			uli.QuadPart = 0; // make sure that our volatile uli is zero'ed out.
 			if (vtype == REG_MULTI_SZ || vtype == REG_SZ || vtype == REG_EXPAND_SZ || vtype == REG_LINK || vtype == REG_BINARY)
 			{
 				value = (char*)malloc(cbData+1);	
@@ -337,7 +338,6 @@ char * get_windows_reg_value(
 			else
 			{
 				cbData = sizeof(uli);
-				uli.QuadPart = 0; // in case we don't read the whole 8 bytes.
 				lres = RegQueryValueEx(hkey, pszName, NULL, &vtype, (byte*)&uli, &cbData);
 			}
 		}
@@ -392,6 +392,7 @@ char * get_windows_reg_value(
 				break;
 
 			case REG_DWORD_BIG_ENDIAN:
+				// htonl converts from native endian to big-endian (i.e network byte order)
 				uli.LowPart = htonl(uli.LowPart);
 				// fall though
 			case REG_DWORD:

@@ -2050,21 +2050,23 @@ NewProc(int cluster_id)
 	// agree on who the owner is (or until we change the schedd so that /it/
 	// sets the Owner string), it's safe to do this rather than complicate
 	// things by using the owner attribute from the job ad we don't have yet.
-	const char * owner = Q_SOCK->getOwner();
-	ASSERT( owner != NULL );
-	const OwnerData * ownerData = scheduler.insert_owner_const( owner );
-	ASSERT( ownerData != NULL );
-	int ownerJobCount = ownerData->num.JobsCounted
-						+ ownerData->num.JobsRecentlyAdded
-						+ jobs_added_this_transaction;
+	if (Q_SOCK) {
+		const char * owner = Q_SOCK->getOwner();
+		ASSERT( owner != NULL );
+		const OwnerData * ownerData = scheduler.insert_owner_const( owner );
+		ASSERT( ownerData != NULL );
+		int ownerJobCount = ownerData->num.JobsCounted
+							+ ownerData->num.JobsRecentlyAdded
+							+ jobs_added_this_transaction;
 
-	int maxJobsPerOwner = scheduler.getMaxJobsPerOwner();
-	if( ownerJobCount >= maxJobsPerOwner ) {
-		dprintf( D_ALWAYS,
-			"NewProc(): MAX_JOBS_PER_OWNER exceeded, submit failed.  "
-			"Current total is %d.  Limit is %d.\n",
-			ownerJobCount, maxJobsPerOwner );
-		return -3;
+		int maxJobsPerOwner = scheduler.getMaxJobsPerOwner();
+		if( ownerJobCount >= maxJobsPerOwner ) {
+			dprintf( D_ALWAYS,
+				"NewProc(): MAX_JOBS_PER_OWNER exceeded, submit failed.  "
+				"Current total is %d.  Limit is %d.\n",
+				ownerJobCount, maxJobsPerOwner );
+			return -3;
+		}
 	}
 
 	int maxJobsPerSubmission = scheduler.getMaxJobsPerSubmission();
@@ -2897,11 +2899,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	JobQueue->SetAttribute(key.c_str(), attr_name, attr_value, flags & SETDIRTY);
 	if( flags & SHOULDLOG ) {
-		char* old_val = NULL;
-		ExprTree *tree;
-		tree = job->LookupExpr(attr_name);
-		if( tree ) {
-			old_val = const_cast<char*>(ExprTreeToString(tree));
+		const char* old_val = NULL;
+		if (job) {
+			ExprTree *tree = job->LookupExpr(attr_name);
+			if (tree) { old_val = ExprTreeToString(tree); }
 		}
 		scheduler.WriteAttrChangeToUserLog(key.c_str(), attr_name, attr_value, old_val);
 	}
@@ -3381,12 +3382,12 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 			int max_xfer_input_mb = -1;
 			param_integer("MAX_TRANSFER_INPUT_MB",max_xfer_input_mb,true,-1,false,INT_MIN,INT_MAX,procad);
 			filesize_t job_max_xfer_input_mb = 0;
-			if( procad->EvalInteger(ATTR_MAX_TRANSFER_INPUT_MB,NULL,job_max_xfer_input_mb) ) {
+			if( procad && procad->EvalInteger(ATTR_MAX_TRANSFER_INPUT_MB,NULL,job_max_xfer_input_mb) ) {
 				max_xfer_input_mb = job_max_xfer_input_mb;
 			}
 			if( max_xfer_input_mb >= 0 ) {
 				filesize_t xfer_input_size_mb = 0;
-				if( procad->EvalInteger(ATTR_TRANSFER_INPUT_SIZE_MB,NULL,xfer_input_size_mb) ) {
+				if( procad && procad->EvalInteger(ATTR_TRANSFER_INPUT_SIZE_MB,NULL,xfer_input_size_mb) ) {
 					if( xfer_input_size_mb > max_xfer_input_mb ) {
 						std::string hold_reason;
 						formatstr(hold_reason,"%s (%d) is greater than %s (%d) at submit time",
@@ -4071,16 +4072,16 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 								tvalue[endquoteindex] = '\0';
 						}
 					}
-					bigbuf2 = (char *) malloc(  strlen(left) 
-											  + strlen(tvalue) 
-											  + strlen(right)
-											  + 1);
+					size_t lenBigbuf = strlen(left) + strlen(tvalue)  + strlen(right);
+					bigbuf2 = (char *) malloc( lenBigbuf +1 );
+					ASSERT(bigbuf2);
 					sprintf(bigbuf2,"%s%s%n%s",left,tvalue,&search_pos,right);
 					free(attribute_value);
 					attribute_value = (char *) malloc(  strlen(curr_attr_to_expand)
 													  + 3 // = and quotes
-													  + strlen(bigbuf2)
+													  + lenBigbuf
 													  + 1);
+					ASSERT(attribute_value);
 					sprintf(attribute_value,"%s=%s",curr_attr_to_expand,
 						bigbuf2);
 					expanded_ad->Insert(attribute_value);
@@ -5267,7 +5268,7 @@ int dump_job_q_stats(int cat)
 {
 	HashTable<JobQueueKey,JobQueueJob*>* table = JobQueue->Table();
 	table->startIterations();
-	int bucket, old_bucket=-1, item;
+	int bucket=0, old_bucket=-1, item=0;
 
 	int cTotalBuckets = 0;
 	int cFilledBuckets = 0;

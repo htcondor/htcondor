@@ -5150,6 +5150,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			EXCEPT( "impossible: unknown action (%d) in actOnJobs() after "
 					"it was already recognized", action_num );
 		}
+		buf[sizeof(buf)-1] = 0; // snprintf won't null terminate if it runs out of space.
 		int size = strlen(buf) + strlen(value) + 3;
 		constraint = (char*) malloc( size * sizeof(char) );
 		if( ! constraint ) {
@@ -8135,6 +8136,8 @@ Scheduler::spawnShadow( shadow_rec* srec )
 						delete_shadow_rec( srec );
 						srec = NULL;
 					}
+					free( shadow_path );
+					return;
 				}
 				args.AppendArg("--transferd");
 				args.AppendArg(td->get_sinful());
@@ -10701,7 +10704,7 @@ Scheduler::child_exit(int pid, int status)
 			dprintf( D_ALWAYS,
 					 "%s pid %d successfully killed because it was hung.\n",
 					 name, pid );
-			status = JOB_EXCEPTION;
+			status = JOB_EXCEPTION << 8;
 		}
 
 			//
@@ -12934,7 +12937,11 @@ Scheduler::invalidate_ads()
 		// Update collectors
 	daemonCore->sendUpdates(INVALIDATE_SCHEDD_ADS, cad, NULL, false);
 
-	if (NumOwners == 0) return;	// no submitter ads to invalidate
+	if (NumOwners == 0) {
+		// no submitter ads to invalidate
+		delete cad;
+		return;
+	}
 
 		// Invalidate all our submittor ads.
 

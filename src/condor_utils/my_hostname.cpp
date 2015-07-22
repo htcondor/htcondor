@@ -189,8 +189,7 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 
 	if( best_overall < 0 ) {
 		dprintf(D_ALWAYS,"Failed to convert %s=%s to an IP address.\n",
-				interface_param_name ? interface_param_name : "",
-				interface_pattern);
+				interface_param_name, interface_pattern);
 		return false;
 	}
 

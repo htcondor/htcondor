@@ -1115,7 +1115,7 @@ If this abort occurs, the return value for the DAG is 1.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{dagman:VARS}Variable Values Associated with Nodes}
-\index{DAGMan input file!VARS keyword}
+\index{DAG input file!VARS keyword}
 
 \index{DAGMan!VARS (macro for submit description file)}
 \index{VARS}
@@ -1124,7 +1124,7 @@ file of the node job.
 The \Arg{VARS} keyword provides a method for defining a macro.
 Macros are defined on a per-node basis, using the syntax
 
-\Opt{VARS} \Arg{JobName} \Arg{macroname=}\Arg{"string"} [\Arg{macroname=}\Arg{"string"\Dots]}
+\Opt{VARS} \Arg{JobName} \Arg{macroname=}\Arg{"string"} [\Arg{macroname=}\Arg{"string"\Dots}]
 
 The macro may be used within the
 submit description file of the relevant node.  
@@ -1192,8 +1192,9 @@ In the case where the submit description file for each node
 varies only in file naming, 
 macros reduce the number of submit description files to one.
 
-The example uses a single submit description file in the DAG input
-file, and uses the \Arg{VARS} entry to name files used by each job.
+This example references a single submit description file for each of
+the nodes in the DAG input file, 
+and it uses the \Arg{VARS} entry to name files used by each job.
 
 The relevant portion of the DAG input file appears as 
 \begin{verbatim}
@@ -1253,12 +1254,14 @@ then the argument will be \Expr{bar}.
 \begin{description}
 \item[Special characters within VARS string definitions]
 \end{description}
+\index{DAGMan!VARS (use of special characters)}
+\index{VARS (use of special characters)}
 
 The value defined for a macro may contain spaces and tabs.
 It is also possible to have double quote marks and
 backslashes within a value.
-It is \emph{not} possible to have single quote marks within a value.
-In order to have spaces or tabs within a value,
+In order to have spaces or tabs within a value specified for a command line
+argument,
 use the New Syntax format for the \SubmitCmdNI{arguments} submit command,
 as described in section~\ref{man-condor-submit-arguments}.
 Escapes for double quote marks
@@ -1269,56 +1272,97 @@ double quote marks require two levels of escaping:
 one level is for the parsing of the DAG input file, and the other level is for
 passing the resulting value through \Condor{submit}.
 
-As an example, here are only the relevant parts of a DAG input file.
-Note that the NodeA value for macro \Expr{second} contains a tab.
+As of HTCondor version 8.3.7, 
+single quotes are permitted within the value specification.  
+For the specification of command line \SubmitCmdNI{arguments}, 
+single quotes can be used in three ways:
+\begin{itemize}
+\item in Old Syntax, within a macro's value specification
+\item in New Syntax, within a macro's value specification
+\item in New Syntax only, to delimit an argument containing white space 
+\end{itemize}
+There are examples of all three cases below.  
+In New Syntax, 
+to pass a single quote as part of an argument, 
+escape it with another single quote
+for \Condor{submit} parsing as in the example's NodeA \Expr{fourth} macro.
+
+As an example that shows uses of all special characters, 
+here are only the relevant parts of a DAG input file.
+Note that the NodeA value for the macro \Expr{second} contains a tab.
 \footnotesize
 \begin{verbatim}
     VARS NodeA first="Alberto Contador"
     VARS NodeA second="\"\"Andy	Schleck\"\""
     VARS NodeA third="Lance\\ Armstrong"
+    VARS NodeA fourth="Vincenzo ''The Shark'' Nibali"
     VARS NodeA misc="!@#$%^&*()_-=+=[]{}?/"
     
     VARS NodeB first="Lance_Armstrong"
     VARS NodeB second="\\\"Andreas_Kloden\\\""
     VARS NodeB third="Ivan\\_Basso"
+    VARS NodeB fourth="Bernard_'The_Badger'_Hinault"
     VARS NodeB misc="!@#$%^&*()_-=+=[]{}?/"
+
+    VARS NodeC args="'Nairo Quintana' 'Chris Froome'"
 \end{verbatim}
 \normalsize
 
-The New Syntax \SubmitCmdNI{arguments} line of the submit description file
-for NodeA is
+Consider an example in which
+the submit description file for NodeA uses the New Syntax for the
+\SubmitCmdNI{arguments} command:
 \footnotesize
 \begin{verbatim}
-  arguments = "'$(first)' '$(second)' '$(third)' '$(misc)'"
+  arguments = "'$(first)' '$(second)' '$(third)' '($fourth)' '$(misc)'"
 \end{verbatim}
 \normalsize
 The single quotes around each variable reference are only necessary
 if the variable value may contain spaces or tabs.
-The resulting values passed to the NodeA executable are
+The resulting values passed to the NodeA executable are:
 \footnotesize
 \begin{verbatim}
   Alberto Contador
   "Andy	Schleck"
   Lance\ Armstrong
+  Vincenzo 'The Shark' Nibali
   !@#$%^&*()_-=+=[]{}?/
 \end{verbatim}
 \normalsize
 
-The Old Syntax \SubmitCmdNI{arguments} line of the submit description file
-for NodeB is
+Consider an example in which
+the submit description file for NodeB uses the Old Syntax for the
+\SubmitCmdNI{arguments} command:
 \footnotesize
 \begin{verbatim}
-  arguments = $(first) $(second) $(third) $(misc)
+  arguments = $(first) $(second) $(third) $(fourth) $(misc)
 \end{verbatim}
 \normalsize
 
-The resulting values passed to the NodeB executable are
+The resulting values passed to the NodeB executable are:
 \footnotesize
 \begin{verbatim}
   Lance_Armstrong
   "Andreas_Kloden"
   Ivan\_Basso
+  Bernard_'The_Badger'_Hinault
   !@#$%^&*()_-=+=[]{}?/
+\end{verbatim}
+\normalsize
+
+Consider an example in which
+the submit description file for NodeC uses the New Syntax for the
+\SubmitCmdNI{arguments} command:
+\footnotesize
+\begin{verbatim}
+  arguments = "$(args)"
+\end{verbatim}
+\normalsize
+
+The resulting values passed to the NodeC executable are:
+\footnotesize
+\begin{verbatim}
+  Nairo Quintana
+  Chris Froome
 \end{verbatim}
 \normalsize
 

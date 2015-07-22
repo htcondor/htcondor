@@ -39,6 +39,6 @@ void _classad_except(const char *format, ...)
 	vfprintf(stderr, format, arguments);
 	va_end(arguments);
 	exit(1);
-	return;
 }
-}
+
+} // namespace classad

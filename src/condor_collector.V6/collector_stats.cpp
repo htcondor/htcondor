@@ -592,6 +592,17 @@ CollectorDaemonStatsList::enable( bool nable )
 		hashTable = new StatsHashTable( STATS_TABLE_SIZE, &hashFunction );
 	} else if ( ( ! enabled ) && ( hashTable ) ) {
 		dprintf( D_ALWAYS, "enable: Destroying stats hash table\n" );
+
+		// iterate through hash table, delete all entries
+		CollectorBaseStats *ent;
+		StatsHashKey key;
+
+		hashTable->startIterations();
+		while ( hashTable->iterate(key, ent) ) {
+			delete ent;
+			hashTable->remove(key);
+		}
+
 		delete hashTable;
 		hashTable = NULL;
 	}

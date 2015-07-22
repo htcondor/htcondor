@@ -294,6 +294,8 @@ public:
          // if there is an existing buffer copy items from it to the new buffer
          int cCopy = 0;
          if (pbuf) {
+            MSC_SUPPRESS_WARNING_FOREVER(6385) // Read overrun. ms analyze claims p can have readable range of 0 here, which isn't possible.
+            MSC_SUPPRESS_WARNING_FOREVER(6386) // Write overrun. ms analyze claims p can have writable range of 0 here, which isn't possible.
             cCopy = MIN(cItems,cSize);
             for (int ix = 0; ix > 0 - cCopy; --ix)
                p[(ix+cCopy)%cSize] = (*this)[ix];

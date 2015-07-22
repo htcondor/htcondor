@@ -1745,9 +1745,14 @@ void Accountant::IncrementLimit(const MyString& _limit)
 
 	dprintf(D_ACCOUNTANT, "IncrementLimit(%s)\n", limit);
 
-	ParseConcurrencyLimit(limit, increment);
+	if ( ParseConcurrencyLimit(limit, increment) ) {
 
-	concurrencyLimits.insert(limit, GetLimit(limit) + increment);
+		concurrencyLimits.insert(limit, GetLimit(limit) + increment);
+
+	} else {
+		dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
+				 limit );
+	}
 
 	free(limit);
 }
@@ -1759,9 +1764,14 @@ void Accountant::DecrementLimit(const MyString& _limit)
 
 	dprintf(D_ACCOUNTANT, "DecrementLimit(%s)\n", limit);
 
-	ParseConcurrencyLimit(limit, increment);
+	if ( ParseConcurrencyLimit(limit, increment) ) {
 
-	concurrencyLimits.insert(limit, GetLimit(limit) - increment);
+		concurrencyLimits.insert(limit, GetLimit(limit) - increment);
+
+	} else {
+		dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
+				 limit );
+	}
 
 	free(limit);
 }

@@ -234,7 +234,6 @@ CredDaemon::get_passwd_handler(int i, Stream *s)
 	result = sock->code(password);
 	if( !result ) {
 		dprintf(D_ALWAYS, "get_passwd_handler: Failed to send password.\n");
-		free(password);
 		goto bail_out;
 	}
 

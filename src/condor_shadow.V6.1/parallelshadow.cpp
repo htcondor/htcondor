@@ -329,6 +329,7 @@ ParallelShadow::getResources( void )
 			int jobAdNumInProc = 0;
 			if (!job_ad->LookupInteger(ATTR_MAX_HOSTS, jobAdNumInProc)) {
 				dprintf(D_ALWAYS, "ERROR: no attribute MaxHosts in parallel job\n");	
+				delete sock;
 				return false;
 			};
 			ASSERT( jobAdNumInProc == numInProc);
@@ -345,6 +346,7 @@ ParallelShadow::getResources( void )
 
     startMaster();
 
+    delete sock;
     return TRUE;
 }
 

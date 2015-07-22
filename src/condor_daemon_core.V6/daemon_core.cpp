@@ -267,6 +267,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	ppid = 0;
 #ifdef WIN32
 	// init the mutex
+	#pragma warning(suppress: 28125) // should InitCritSec inside a try/except block..
 	InitializeCriticalSection(&Big_fat_mutex);
 	EnterCriticalSection(&Big_fat_mutex);
 
@@ -486,6 +487,10 @@ DaemonCore::~DaemonCore()
 		free( comTable[i].command_descrip );
 		free( comTable[i].handler_descrip );
 	}
+	if ( m_unregisteredCommand.num ) {
+		free( m_unregisteredCommand.command_descrip );
+		free( m_unregisteredCommand.handler_descrip );
+	}
 
 	for (i=0;i<nSig;i++) {
 		free( sigTable[i].sig_descrip );
@@ -541,6 +546,13 @@ DaemonCore::~DaemonCore()
 		if ( pid_entry ) delete pid_entry;
 	}
 	delete pidTable;
+
+	// Delete all time-skip watchers
+	m_TimeSkipWatchers.Rewind();
+	TimeSkipWatcher * p;
+	while( (p = m_TimeSkipWatchers.Next()) ) {
+		delete p;
+	}
 
 	if (m_proc_family != NULL) {
 		delete m_proc_family;
@@ -2870,8 +2882,8 @@ DaemonCore::reconfig(void) {
 		In the words of BOC, "Don't fear the reapers!"
 	*/
 	m_iMaxReapsPerCycle = param_integer("MAX_REAPS_PER_CYCLE",0,0);
-    if( m_iMaxReapsPerCycle != 1 ) {
-        dprintf(D_FULLDEBUG,"Setting maximum reaps per cycle %d.\n", m_iMaxAcceptsPerCycle);
+    if( m_iMaxReapsPerCycle != 0 ) {
+        dprintf(D_FULLDEBUG,"Setting maximum reaps per cycle %d.\n", m_iMaxReapsPerCycle);
     }
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
@@ -4231,13 +4243,11 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 			}
 		}
 
-		MSC_SUPPRESS_WARNING(6011) // can't sure sure that sock is not NULL
 		user = sock->getFullyQualifiedUser();
 		if( !user ) {
 			user = "";
 		}
 		if (IsDebugLevel(D_COMMAND)) {
-			MSC_SUPPRESS_WARNING(6011) // can't be sure that stream is not NULL
 			dprintf(D_COMMAND, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
 					comTable[index].handler_descrip,
 					inServiceCommandSocket_flag,
@@ -4666,7 +4676,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	int sig = msg->theSignal();
 	PidEntry * pidinfo = NULL;
 	int same_thread, is_local;
-	char const *destination;
+	char const *destination = NULL;
 	int target_has_dcpm = TRUE;		// is process pid a daemon core process?
 
 	// sanity check on the pid.  we don't want to do something silly like
@@ -9198,6 +9208,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 		if ( entry->nEntries == 0 ) {
 			// a watcher thread exits when nEntries drop to zero.
 			// thus, this thread no longer exists; remove it from our list
+			MSC_SUPPRESS_WARNING(26115) // suppress warning - lock not released.
 			::DeleteCriticalSection(&(entry->crit_section));
 			::CloseHandle(entry->event);
 			::CloseHandle(entry->hThread);
@@ -9227,6 +9238,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 	// All watcher threads have their hands full (or there are no
 	// watcher threads!).  We need to create a new watcher thread.
 	entry = new PidWatcherEntry;
+	#pragma warning(suppress: 28125) // InitCritSec could be called inside a try/except block.
 	::InitializeCriticalSection(&(entry->crit_section));
 	entry->event = ::CreateEvent(NULL,FALSE,FALSE,NULL);	// auto-reset event
 	if ( entry->event == NULL ) {

@@ -76,6 +76,7 @@ void KeyInfo :: init(unsigned char * keyData, int keyDataLen)
     if ((keyDataLen > 0) && keyData) {
         keyDataLen_ = keyDataLen;
         keyData_    = (unsigned char *)malloc(keyDataLen_ + 1);
+        ASSERT(keyData_);
         memset(keyData_, 0, keyDataLen_ + 1);
         memcpy(keyData_, keyData, keyDataLen_);   
     }

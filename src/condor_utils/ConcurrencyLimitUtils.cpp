@@ -17,11 +17,14 @@
 #include "condor_common.h"
 
 #include "ConcurrencyLimitUtils.h"
+#include "condor_classad.h"
 
-void
+bool
 ParseConcurrencyLimit(char *&input, double &increment)
 {
 	char *sep = NULL;
+	char *dot = NULL;
+	bool valid = true;
 
 	increment = 1;
 
@@ -35,4 +38,19 @@ ParseConcurrencyLimit(char *&input, double &increment)
 	if (increment <= 0) {
 		increment = 1;
 	}
+
+	if ( NULL != (dot = strchr( input, '.' )) ) {
+		*dot = '\0';
+		if ( !IsValidAttrName( dot + 1 ) ) {
+			valid = false;
+		}
+	}
+	if ( !IsValidAttrName( input ) ) {
+		valid = false;
+	}
+	if ( dot ) {
+		*dot = '.';
+	}
+
+	return valid;
 }

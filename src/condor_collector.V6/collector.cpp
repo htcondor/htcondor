@@ -1350,10 +1350,12 @@ void CollectorDaemon::Config()
 	if( myself == NULL ) {
 		EXCEPT( "Unable to determine my own address, aborting rather than hang.  You may need to make sure the shared port daemon is running first." );
 	}
+	Sinful mySinful( myself );
 	while( collectorsToUpdate->next( daemon ) ) {
 		const char * current = daemon->addr();
 		if( current == NULL ) { continue; }
-		if( strcmp( myself, current ) == 0 ) {
+		Sinful currentSinful( current );
+		if( mySinful.addressPointsToMe( currentSinful ) ) {
 			collectorsToUpdate->deleteCurrent();
 		}
 	}
@@ -1468,6 +1470,7 @@ void CollectorDaemon::Config()
 			dprintf(D_ALWAYS, "CONDOR_VIEW_CLASSAD_TYPES configured, will forward ad types: %s\n",
 					printable_string?printable_string:"");
 			free(printable_string);
+			free(tmp);
 		}
 	}
 

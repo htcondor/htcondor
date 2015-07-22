@@ -2364,6 +2364,7 @@ char * strdup_quoted(const char* str, int cch, bool quoted) {
 
 	// malloc with room for quotes and a terminating 0
 	char * out = (char*)malloc(cch+3);
+	ASSERT(out);
 	char * p = out;
 
 	// copy, adding quotes or not as requested.
@@ -3009,7 +3010,7 @@ bool hash_iter_done(HASHITER& it) {
 			}
 		}
 	}
-	if (it.ix >= it.set.size && ((it.opts & HASHITER_NO_DEFAULTS) != 0 || (it.id >= it.set.defaults->size)))
+	if (it.ix >= it.set.size && ((it.opts & HASHITER_NO_DEFAULTS) != 0 || ! it.set.defaults || (it.id >= it.set.defaults->size)))
 		return true;
 	return false;
 }
@@ -3531,11 +3532,11 @@ const char * lookup_macro_def(const char * name, const char * subsys, MACRO_SET 
 	if ( ! p || use) {
 		int ix = param_default_get_index(name, set);
 		if (ix >= 0) {
-			if (use && set.defaults->metat) {
+			if (use && set.defaults && set.defaults->metat) {
 				set.defaults->metat[ix].use_count += (use&1);
 				set.defaults->metat[ix].ref_count += (use>>1)&1;
 			}
-			if ( ! p) {
+			if ( ! p && set.defaults && set.defaults->table) {
 				p = &set.defaults->table[ix];
 			}
 		}

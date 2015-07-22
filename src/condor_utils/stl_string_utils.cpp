@@ -78,7 +78,7 @@ int vformatstr(std::string& s, const char* format, va_list pargs) {
     } catch (...) {
         varbuf = NULL;
     }
-    if (NULL == varbuf) EXCEPT("Failed to allocate char buffer of %d chars", n);
+	if (NULL == varbuf) { EXCEPT("Failed to allocate char buffer of %d chars", n); }
 
     // re-print, using buffer of sufficient size
 #if !defined(va_copy)

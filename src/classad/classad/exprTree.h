@@ -131,12 +131,14 @@ class ExprTree
 		
 		/**
 		 * Return a ptr to the raw exprtree below the interface
-		 */ 
+		 */
+		SAL_Ret_notnull
 		virtual const ExprTree* self() const;
 
 		/* This version is for shared-library compatibility.
 		 * Remove it the next time we have to bump the ClassAds SO version.
 		 */
+		SAL_Ret_notnull
 		virtual const ExprTree* self();
 
 		/// A debugging method; send expression to stdout

@@ -34,12 +34,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added new matchmaking mode where one or more dynamaic slots can
+\item A new matchmaking mode permits one or more dynamic slots to
 be preempted in order to make enough resources available to their parent
-partitionable slot to allow a job to be matched to it.
-This can be enabled via the new configuration parameter
-\Macro{ALLOW\_PSLOT\_PREEMPTION}, a boolean value that defaults to
-\Expr{False}.
+partitionable slot to allow a job match.
+The new mode is enabled by setting the new configuration variable
+\Macro{ALLOW\_PSLOT\_PREEMPTION} to \Expr{True}.
+This variable defaults to \Expr{False}.
 \Ticket{5097}
 
 \end{itemize}
@@ -48,7 +48,12 @@ This can be enabled via the new configuration parameter
 
 \begin{itemize}
 
-\item Fixed a bug where Linux kernel version 4 would incorrectly report
+\item Fixed a bug that caused \Condor{status} \Opt{-submitters}
+\Opt{-wide} to truncate the submitter names within the second part of
+the output.
+\Ticket{5087}
+
+\item Fixed a bug in which Linux kernel version 4 would incorrectly report
 a load average of -1.
 \Ticket{5080}
 
@@ -71,13 +76,14 @@ from being sent back to the \Condor{shadow} or \Condor{schedd}. Also fixed a bug
 cause all use of this \Condor{chirp} command to fail once 50 unique ClassAd attribute names had been set.
 \Ticket{5050}
 
-\item Fixed a bug that resulted in HTCondor possibly not detecting all of the CPU Cores on Windows
-when the number of cores was large. The bug was first seen on a server with 24 real cores (48 hypercores).
+\item Fixed a bug that resulted in HTCondor possibly not detecting all of 
+the CPU cores on Windows, when the number of cores was large. 
+The bug was first seen on a server with 24 real cores (48 Hyper-threaded cores).
 \Ticket{5075}
 
 \item Fixed a bug that could cause GSI authentication or X.509 proxy
 delegation to fail with an error message of
-``couldn't set globus thread model''.
+\AdStr{couldn't set globus thread model}.
 \Ticket{5061}
 
 \item 
@@ -86,21 +92,35 @@ Previously, it was set to the build ID, which violated the RPM Packaging
 Guidelines.
 \Ticket{5042}
 
-\item Fixed a problem in the RPM packages that prevented the
-Java universe from operating.
+\item Fixed a problem in the Red Hat Enterprise Linux 7 RPM packages
+that prevented the Java universe from operating.
 The global configuration file is now updated in the RPM packages
 to properly refer to the support files for the Java universe.
 \Ticket{5059}
+
+\item Files omitted from the new style RPM packages 
+for Red Hat Enterprise Linux 7 are now present.
+They include
+the \Condor{credd} binary, the \Condor{set\_shutdown} binary,
+the \Condor{set\_shutdown} manual page, 
+and the \Condor{vm-gahp-vmware} binary.
+\Ticket{5098}
 
 \item Corrected the definition of the job ClassAd attribute 
 \Attr{GlobalJobId} within the HTCondor manual.
 \Ticket{5096}
 
-\item Fixed an incorrect Win32 default value for the
-DAGMAN\_CONDOR\_RM\_EXE configuration macro.  This caused \Condor{dagman}
-(on Windows) to not correctly remove running node jobs if the
-ABORT-DAG-ON feature was triggered.
+\item On Windows platforms, fixed an incorrect Win32 default value for
+configuration variable \Macro{DAGMAN\_CONDOR\_RM\_EXE}.
+The incorrect default caused \Condor{dagman}
+to not correctly remove running node jobs,
+if the ABORT-DAG-ON feature was triggered.
 \Ticket{5114}
+
+\item Restrictions on allowable concurrency limit names are now enforced.
+Previously, the names were allowed to have unexpected characters, which
+would cause the \Condor{userprio} command to fail.
+\Ticket{5123}
 
 \end{itemize}
 

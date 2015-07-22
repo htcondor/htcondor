@@ -440,7 +440,11 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 			free( array );
 			return -1;
 		}
-		fseek( fp, _SysapiProcCpuinfo.offset, SEEK_SET );
+		int ret = fseek( fp, _SysapiProcCpuinfo.offset, SEEK_SET );
+		if (ret < 0) {
+			free( array );
+			return -1;
+		}
 		dprintf( D_LOAD,
 				 "Reading from %s, offset %ld\n",
 				 _SysapiProcCpuinfo.file, _SysapiProcCpuinfo.offset );

@@ -59,6 +59,7 @@ public:
 	void clearAll();
 	void remove_anycase (const char* str);
 	char *next (void) { return m_strings.Next(); }
+	char *first (void) { m_strings.Rewind(); return m_strings.Next(); }
 	
 	/** This is invalid when "current" points to NULL as stated in list.h*/
 	void deleteCurrent();

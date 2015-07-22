@@ -19,6 +19,13 @@ resources to be limited in the negotiator's configuration file.
 The job submitter must declare in the submit description file which 
 resources the job consumes.
 
+The administrator chooses a name for the limit.
+Concurrency limit names are case-insensitive.
+The names are formed from  the alphabet letters 'A' to 'Z' and 'a' to 'z', 
+the numerical digits 0 to 9, 
+the underscore character  '\_' , and at most one period character.
+The names cannot start with a numerical digit.
+
 For example, assume that there are 3 licenses for the X software,
 so HTCondor should constrain the number of running jobs which need the
 X software to 3.  
@@ -107,6 +114,8 @@ there is no set named \Expr{OTHER}.
 
 A concurrency limit may be evaluated against the attributes of a 
 matched machine.
+This allows a job to vary what concurrency limits it requires based on
+the machine to which it is matched.
 To implement this, the job uses submit command 
 \SubmitCmd{concurrency\_limits\_expr} instead of
 \SubmitCmd{concurrency\_limits}.

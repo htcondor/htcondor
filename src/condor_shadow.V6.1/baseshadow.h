@@ -114,6 +114,7 @@ class BaseShadow : public Service
 			about it, and exit with a special status. 
 			@param reason Why we gave up (for UserLog, dprintf, etc)
 		*/
+	PREFAST_NORETURN
 	void reconnectFailed( const char* reason ); 
 
 	virtual bool shouldAttemptReconnect(RemoteResource *) { return true;};

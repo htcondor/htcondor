@@ -156,7 +156,8 @@ void setBaseName(const char *baseName) {
 		if (searchLogName)
 			free(searchLogName);
 		searchLogName = (char *)malloc(strlen(logBaseName)+3);
-		sprintf(searchLogName, "%s.*", (const char*)logBaseName); 		
+		ASSERT(searchLogName);
+		sprintf(searchLogName, "%s.*", (const char*)logBaseName);
 #endif
 		isInitialized = 1;
 	}

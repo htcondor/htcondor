@@ -1649,6 +1649,7 @@ sub MultiMonitor
 	print "We are in the MultiMonitor with $userlogcnt logs\n";
 
 	foreach my $log (@userlogs) {
+		print "Logs being extracted in MultiMonitor:$log:\n";
 		open(SUBMIT_LOG,"<$log") or die "MultiMonitor failed to open $log for about to be child:$!\n";
 		$mypid = fork();
 		if($mypid == 0) {
@@ -2664,7 +2665,7 @@ sub ParseSubmitFile
 sub AccessUserLogs {
 	my $arrayref = shift;
 	my $count = @userlogs;
-	#print "transferring $count UserLogs to CondorTest module\n";
+	print "transferring $count UserLogs to CondorTest module\n";
 	foreach my $log (@userlogs) {
 		push @{$arrayref}, $log;
 	}
@@ -2730,6 +2731,8 @@ sub GatherUserLogs {
 	my $arrayref;
 	my $logcount = 0;
 	my @tmplogs = ();
+	print "No longer assuming one log file because of submit foreach\n";
+	print "Exploring logs in GatherUserLogs\n";
 	$arrayref = GatherDryData($submitfile,$drydatafile);
 	# store dry data in expected locaton
 	foreach my $line (@{$arrayref}) {
@@ -2742,9 +2745,9 @@ sub GatherUserLogs {
 		}
 	}
 	$logcount = @userlogs;
-	#print "Found $logcount userlogs\n";
+	print "Found $logcount userlogs\n";
 	foreach my $log (@userlogs) {
-		#print "userlog:$log\n";
+		print "userlog:$log\n";
 	}
 	# how many jobs did this submit produce
 	@tmplogs = ();

@@ -242,6 +242,7 @@ FileTransfer::~FileTransfer()
 	if (perm_obj) delete perm_obj;
 #endif
 	free(m_sec_session_id);
+	delete plugin_table;
 }
 
 int

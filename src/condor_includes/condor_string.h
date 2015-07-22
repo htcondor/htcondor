@@ -25,8 +25,10 @@
 
 BEGIN_C_DECLS
 
+MSC_DISABLE_WARNING(28251) // Disable inconsistent annotation warning.
 DLL_IMPORT_MAGIC char* strupr( char *str );
 DLL_IMPORT_MAGIC char* strlwr( char *str );
+MSC_RESTORE_WARNING(28251)
 
 // Get an effective line, after removing line continuation characters and
 // trimming leading and trailing whitespace. More than 1 line may be read

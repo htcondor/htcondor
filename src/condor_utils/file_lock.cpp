@@ -425,11 +425,6 @@ FileLock::lockViaMutex(LOCK_TYPE type)
 	int result = -1;
 
 #ifdef WIN32	// only implemented on Win32 so far...
-	//char * filename = NULL;
-	int filename_len;
-	char *ptr = NULL;
-	char mutex_name[MAX_PATH];
-
 
 		// If we made it here, we want to use a kernel mutex.
 		//
@@ -441,6 +436,35 @@ FileLock::lockViaMutex(LOCK_TYPE type)
 
 		// first, open a handle to the mutex if we haven't already
 	if ( m_debug_win32_mutex == NULL && m_path ) {
+#if 1
+		char mutex_name[MAX_PATH];
+
+		// start the mutex name with Global\ so that it works properly on systems running Terminal Services
+		strcpy(mutex_name, "Global\\");
+		size_t ix = strlen(mutex_name);
+
+		// Create the mutex name based upon the lock file
+		// specified in the config file.
+		const char * ptr = m_path;
+
+		// Note: Win32 will not allow backslashes in the name,
+		// so get convert them to / as we copy. Also
+		// The mutex name is case-sensitive, but the NTFS filesystem
+		// is not.  So to avoid user confusion, we lowercase it
+		while (*ptr) {
+			char ch = *ptr++;
+			if (ch == '\\') ch = '/';
+			else if (isupper(ch)) ch = _tolower(ch);
+			mutex_name[ix++] = ch;
+			if (ix+1 >= COUNTOF(mutex_name))
+				break;
+		}
+		mutex_name[ix] = 0;
+#else
+		int filename_len;
+		char *ptr = NULL;
+		char mutex_name[MAX_PATH];
+
 			// Create the mutex name based upon the lock file
 			// specified in the config file.  				
 		char * filename = strdup(m_path);
@@ -460,6 +484,7 @@ FileLock::lockViaMutex(LOCK_TYPE type)
 		snprintf(mutex_name,MAX_PATH,"Global\\%s",filename);
 		free(filename);
 		filename = NULL;
+#endif
 			// Call CreateMutex - this will create the mutex if it does
 			// not exist, or just open it if it already does.  Note that
 			// the handle to the mutex is automatically closed by the

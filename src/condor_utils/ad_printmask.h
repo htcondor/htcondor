@@ -155,6 +155,16 @@ class AttrListPrintMask
 							);
 };
 
+// parse -af: options after the : and all of the included arguments up to the next -
+// returns the number of arguments consumed
+int parse_autoformat_args (
+	int /*argc*/,
+	char* argv[],
+	int ixArg,
+	const char *popts,
+	AttrListPrintMask & print_mask,
+	bool diagnostic);
+
 // functions & classes in make_printmask.cpp
 
 // This holds expressions that the user would like to use to group results by.

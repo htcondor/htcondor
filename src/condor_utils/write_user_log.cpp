@@ -341,6 +341,7 @@ WriteUserLog::Configure( bool force )
 		
 		int len = strlen(m_global_path) + 6;
 		char *tmp = (char*) malloc(len);
+		ASSERT(tmp);
 		snprintf( tmp, len, "%s.lock", m_global_path );
 		m_rotation_lock_path = tmp;
 	}
@@ -1425,11 +1426,13 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 					// linked in libcondorapi
 				char *attrsToWrite = NULL;
 				param_jobad->LookupString("JobAdInformationAttrs",&attrsToWrite);
-				if( attrsToWrite && *attrsToWrite ) {
-					writeJobAdInfoEvent( attrsToWrite, **p, event, param_jobad, false,
-						(p == logs.begin()) && m_use_xml);
-				}
+				if (attrsToWrite) {
+					if (*attrsToWrite) {
+						writeJobAdInfoEvent( attrsToWrite, **p, event, param_jobad, false,
+							(p == logs.begin()) && m_use_xml);
+					}
 				free( attrsToWrite );
+				}
 			}
 		}
 	}

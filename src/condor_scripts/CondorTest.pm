@@ -171,6 +171,7 @@ sub Cleanup()
 	MyHead("-15", "Cores/core_error_trace");
 	print "************************************\n";
 	print "\n\n";
+	RegisterResult(0,"test_name","$handle");
 	return 0;
     }
     return 1;
@@ -188,7 +189,8 @@ sub EndTest
 
     my $exit_status = 0;
     if( Cleanup() == 0 ) {
-	$exit_status = 1;
+		print "0 return from cleanup means $failed_coreERROR was not empty\n";
+		$exit_status = 1;
     }
 
 	# at this point all the personals started should be stopped
@@ -233,12 +235,12 @@ sub EndTest
 	}
 
     if( $test_failure_count > 0 ) {
-	$exit_status = 1;
+		$exit_status = 1;
     }
 
     if( $test_failure_count == 0 && $test_success_count == 0 ) {
-	$extra_notes = "$extra_notes\n  CondorTest::RegisterResult() was never called!";
-	$exit_status = 1;
+		$extra_notes = "$extra_notes\n  CondorTest::RegisterResult() was never called!";
+		$exit_status = 1;
     }
 
     my $result_str = $exit_status == 0 ? "SUCCESS" : "FAILURE";
@@ -247,12 +249,12 @@ sub EndTest
 
     TestDebug( "\n\nFinal status for $testname: $result_str\n  $test_success_count check(s) passed\n  $test_failure_count check(s) failed$extra_notes\n", 1 );
 
-	#if(defined $no_exit) {
-		#return($exit_status);
-	#} else {
-    	#exit($exit_status);
-	#}
-	return($exit_status);
+	if(defined $no_exit) {
+		return($exit_status);
+	} else {
+    	exit($exit_status);
+	}
+	#return($exit_status);
 }
 
 # This should be called in each check function to register the pass/fail result
@@ -1070,6 +1072,7 @@ sub StartTest
 		my $logdir = `condor_config_val log`;
 		CondorUtils::fullchomp($logdir);
 		CondorUtils::fullchomp($handle);
+		print "LOGDIR from condor_config_val log:$logdir Test:$handle\n";
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 	}
 	##############################################################
@@ -1082,6 +1085,7 @@ sub StartTest
 		print "Calling CoreCheck in endof StartTest if wrapped\n";
 		my $logdir = `condor_config_val log`;
 		CondorUtils::fullchomp($logdir);
+		print "LOGDIR from condor_config_val log:$logdir Test:$handle\n";
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 		if($config ne "") {
 			#print "KillDaemonPids called on this config file: $config\n";
@@ -2727,6 +2731,7 @@ sub slurp {
   {
       my $self = shift;
 	  my $onedaemon = "$self->{daemon}" . ",$self->{pid}";
+	  print "GetDaemonAndPid: returning $onedaemon\n";
 	  return($onedaemon);
   }
   sub DisplayWhoDataInstance
@@ -2871,13 +2876,13 @@ sub LoadWhoData
 	  );
 	  open(PF,">$file") or print "PIDS file create failed:$!\n";
 	  foreach my $daemonkey (keys %{$self->{personal_who_data}}) {
-	  	#print "$daemonkey: $self->{personal_who_data}->{$daemonkey}\n";
+	  	print "$daemonkey: $self->{personal_who_data}->{$daemonkey}\n";
 		$piddata = $self->{personal_who_data}->{$daemonkey}->GetDaemonAndPid();
-		#print "$piddata\n";
+		print "$piddata\n";
 		my @pidandname = split /,/, $piddata;
 		my $line = "$pidandname[1] $refer{$pidandname[0]}";
 		print PF "$line\n";
-		#print "$line\n";
+		print "$line\n";
 	  }
 	  close(PF);
   }
@@ -3151,6 +3156,7 @@ sub CreatePidsFile {
 	my $config = $ENV{CONDOR_CONFIG};
 	my $condor_instance = GetPersonalCondorWithConfig($config);
 	if($condor_instance != 0) {
+		print "Have condor instance to write PIDS file with\n";
 		$condor_instance->WritePidsFile($pidsfile);
 	} else {
 		die "Failed to fetch our condor_instance\n";
@@ -3426,6 +3432,8 @@ sub ShouldCheck_coreERROR
 	print "savename:$saveme\n";
 	TestDebug("Not /Config/ based, saveme is $saveme\n",2);
 	TestDebug("Logdir is $logdir\n",2);
+	print "Not /Config/ based, saveme is $saveme\n";
+	print "Logdir is $logdir\n";
 	if($logdir =~ /$saveme/) {
 		# no because KillPersonal will do it
 		return(0);
@@ -3446,7 +3454,7 @@ sub CoreCheck {
 	my $iswindows = CondorUtils::is_windows();
 	
 	CondorUtils::fullchomp($logdir);
-	print "Checking for cores and ERRORS for test:$test:\n";
+	print "Checking for cores and ERRORS for test:$test: logdir:$logdir:\n";
 	if(CondorUtils::is_windows() == 1) {
 		my $windowslogdir = "";
 		if(is_windows_native_perl()) {
@@ -3470,9 +3478,11 @@ sub CoreCheck {
 	my @files = ();
 	GetDirList(\@files, $logdir);
 	my $totalerrors = 0;
-	#foreach my $perp (@files) {
-		#print "LogDirContent:$perp:\n";
-	#}
+	if($iswindows) {
+		foreach my $perp (@files) {
+			print "LogDirContent:$perp:\n";
+		}
+	}
 	foreach my $perp (@files) {
 		CondorUtils::fullchomp($perp);
 		# don't bother with address files
@@ -3485,7 +3495,9 @@ sub CoreCheck {
 			$fullpath = $logdir . "/" . $perp;
 		}
 		CondorUtils::fullchomp($fullpath);
-		print "fullpath now :$fullpath:\n";
+		if(CondorUtils::is_windows() == 1) {
+			print "fullpath now :$fullpath:\n";
+		}
 		if(-f $fullpath) {
 			if($perp =~ /core/) {
 				# returns printable string
@@ -3951,7 +3963,7 @@ sub FindControlFile
 		#TestDebug( "Running file test is: $runningfile\n",$debuglevel);
 		if(!(-d $runningfile)) {
 			TestDebug( "Creating control file directory: $runningfile\n",$debuglevel);
-			runcmd("mkdir -p $runningfile");
+			CreateDir("-p $runningfile");
 		}
 	} else {
 		die "Lost relative to where: $RunningFile is :-(\n";

@@ -1,7 +1,7 @@
 
-// Note - pyconfig.h must be included before condor_common to avoid
+// Note - python_bindings_common.h must be included before condor_common to avoid
 // re-definition warnings.
-#include <pyconfig.h>
+#include "python_bindings_common.h"
 
 #include <poll.h>
 

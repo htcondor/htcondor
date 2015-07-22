@@ -517,8 +517,12 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 		return false;
 	}
 
-	int items = sscanf( timestampTok, "%lu", &timestamp );
-	if ( items != 1 ) {
+		// fetch the number, and get a pointer to the first char after
+		// if the pointer did not advance, then there was no number to parse.
+	char *pend;
+	timestamp = (time_t)strtoll(timestampTok, &pend, 10);
+
+	if (pend == timestampTok) {
 		debug_printf( DEBUG_QUIET, "Warning: error reading "
 					"timestamp in jobstate.log file line <%s>\n",
 					line.Value() );
@@ -530,8 +534,8 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 
 	seqNum = 0;
 	if ( seqNumTok ) {
-		items = sscanf( seqNumTok, "%d", &seqNum );
-		if ( items != 1 ) {
+		seqNum = (int)strtol(seqNumTok, &pend, 10);
+		if (pend == seqNumTok) {
 			debug_printf( DEBUG_QUIET, "Warning: error reading "
 						"sequence number in jobstate.log file line <%s>\n",
 						line.Value() );

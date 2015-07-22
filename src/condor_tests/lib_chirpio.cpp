@@ -130,7 +130,7 @@ main(int  /*argc*/, char **  /*argv*/)
 			printf("Failed to get entire test pattern\n");
 			return(1);
 		}
-		if( strncmp(tstmessage, chktstmessage, tstmsglen) != 0)
+		if( memcmp(tstmessage, chktstmessage, tstmsglen) != 0)
 		{
 			printf("Test pattern at end of file missing\n");
 			return(1);

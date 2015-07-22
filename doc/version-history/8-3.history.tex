@@ -38,7 +38,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item When the \Condor{startd} starts up and shuts down, it removes any left over files and directories in the execute directory.  Previous, it would remove all sub-directories, including the special "lost+found" directory, which the file system check program may need when recovering files.  Now it never removes that directory.
+\Ticket{4577}
 
 \end{itemize}
 
@@ -50,8 +51,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.3.7 not yet released.
-%\item HTCondor version 8.3.7 released on Month Date, 2015.
+\item HTCondor version 8.3.7 released on July 23, 2015.
 
 \end{itemize}
 
@@ -59,6 +59,16 @@ The details of each version are described below.
 \noindent New Features:
 
 \begin{itemize}
+
+\item Added the ability to audit connections made through the
+\Condor{shared\_port} daemon's socket directory, 
+logging information in the \Condor{shared\_port} audit log.
+This log allows an administrator to check for abuse.
+New configuration variables \Macro{SHARED\_PORT\_AUDIT\_LOG},
+\Macro{MAX\_SHARED\_PORT\_AUDIT\_LOG},
+and \Macro{MAX\_NUM\_SHARED\_PORT\_AUDIT\_LOG} define the
+\Condor{shared\_port} audit log.
+\Ticket{4803}
 
 \item When using configuration variable \Macro{ENCRYPT\_EXECUTE\_DIRECTORY}
 on Linux platforms, 
@@ -85,6 +95,10 @@ owner (submitting user).
 node job, if the DAG has been removed with \Condor{rm}.
 \Ticket{5089}
 
+\item \Condor{dagman} VARS values can now contain single quotes,
+as described in section~\ref{dagman:VARS}.
+\Ticket{1082}
+
 \item 
 The new submit command \SubmitCmd{concurrency\_limits\_expr}
 allows a job to specify concurrency limits in a ClassAd expression 
@@ -105,19 +119,101 @@ multiple jobs to a single partitionable slot.
 from 1024 bytes to 5120 bytes.
 \Ticket{5019}
 
+\item The default values of the configuration variables and ClassAd attributes
+listed in Table~\ref{table:new-knob-defaults} have changed,
+such that the default now represents the commonly configured value.
+
+% This table must be formatted oddly, to make the pdf version look OK.
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|l|c|c|} \hline
+\textbf{Variable Name} & \textbf{Previous Default} & \textbf{New Default}\\ \hline \hline
+\MacroNI{NEGOTIATOR\_INFORM\_STARTD} & \Expr{True} & \Expr{False}  \\ \hline
+\MacroNI{MAX\_JOBS\_PER\_SUBMISSION} & largest positive integer & 20000  \\ \hline
+\MacroNI{MAX\_JOBS\_PER\_OWNER} & largest positive integer & 100000  \\ \hline
+\MacroNI{MAX\_JOBS\_RUNNING} (on Windows) & 200 & 2000  \\ \hline
+\MacroNI{PRIVATE\_NETWORK\_NAME} & no default & \MacroUNI{FULL\_HOSTNAME}  \\ \hline
+\MacroNI{JobLeaseDuration} & 20 minutes & 40 minutes \\ \hline
+\MacroNI{WANT\_VACATE} & \Expr{False} & \Expr{True} \\ \hline
+\MacroNI{SCHEDD\_SEND\_VACATE\_VIA\_TCP} & \Expr{False} & \Expr{True} \\ \hline
+\end{tabular}
+\caption{\label{table:new-knob-defaults}Changes to defaults in HTCondor 8.3.7}
+\end{table}
+\end{center}
+\Ticket{4988}
+
+\item The new \Opt{-cuda} option for the \Condor{gpu\_discovery} tool
+only runs detection software for CUDA GPUs, 
+ignoring OpenCL GPUs.
+\Ticket{5118}
+
+\item The default value for configuration variable
+\Macro{UPDATE\_COLLECTOR\_WITH\_TCP} has changed to \Expr{True}.
+The new configuration variable \Macro{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP}
+controls whether UDP or TCP is used to forward updates to the
+\Condor{collector} daemons specified with \Macro{CONDOR\_VIEW\_HOST}.
+Its default value is \Expr{False}, 
+such that UDP is the default protocol.
+\Ticket{5116}
+
+\item \Condor{q} will now abbreviate the address field in the header 
+for each \Condor{schedd}. 
+Also, the incorrect header \AdStr{Submitter:} is corrected to be \AdStr{Schedd:}
+when appropriate.
+\Ticket{5071}
+
+\item The \Opt{-io} option to \Condor{q} now shows transfer information for 
+both vanilla and standard universe jobs.
+Nothing will be printed for vanilla universe jobs that are not currently 
+in a transfer state.
+\Ticket{5084}
+
+\item A new matchmaking mode permits one or more dynamic slots to
+be preempted in order to make enough resources available to their parent
+partitionable slot to allow a job match.
+The new mode is enabled by setting the new \Condor{negotiator}
+configuration variable \Macro{ALLOW\_PSLOT\_PREEMPTION} to \Expr{True}.
+This variable defaults to \Expr{False}.
+The new configuration variable \Macro{ADVERTISE\_PSLOT\_ROLLUP\_INFORMATION}
+controls whether a \Condor{startd} daemon advertises additional attributes
+about partitionable slot preemption to the \Condor{collector}.
+\Ticket{5097}
+\Ticket{5094}
+
+\item Updated the Python \texttt{classad} parsing interface with methods that
+are able to parse ClassAds given in either the Old or New ClassAd format.
+The parsing methods can automatically detect which format is used.
+\Ticket{4990}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
+\item Fixed a bug that caused \Condor{status} \Opt{-submitters}
+\Opt{-wide} to truncate the submitter names within the second part of
+the output.
+\Ticket{5087}
+
+\item The \Condor{collector} no longer pauses for 30 seconds on start up
+under some conditions.
+This fix does not work when the configuration has 
+\Expr{USE\_SHARED\_PORT = True}.
+\Ticket{5128}
+
+\item The \Condor{kbdd} now works with shared port enabled.
+\Ticket{5058}
+
+\item A bug fix in HTCondor version 8.3.5 allows standard universe jobs
+to work on a mixed mode pool with both IPv4 and IPv6 machines
+and with daemons that are of earlier 8.3.x releases.
+\Ticket{4860}
+
 \item Fixed a parallel universe bug,
 in which too many slots were claimed for a job
 on a pool with partitionable slots.
 \Ticket{5110}
-
-\item \Condor{dagman} VARS values can now contain single quotes.
-\Ticket{1082}
 
 \item Fixed a bug in \Condor{dagman} in which a combination of node
 retries plus a FINAL node could cause a DAG getting aborted or
@@ -140,13 +236,25 @@ to not correctly remove running node jobs,
 if the ABORT-DAG-ON feature was triggered.
 \Ticket{5114}
 
-\item The default value for configuration parameter
-\Macro{UPDATE\_COLLECTOR\_WITH\_TCP} has changed to \Expr{True}.
-The new configuration parameter \Macro{UPDATE\_VIEW\_COLLECTOR\_WITH\_TCP}
-controls whether UDP or TCP is used to forward update to the
-\Condor{collector}s specified via \Macro{CONDOR\_VIEW\_HOST}.
-Its default value is \Expr{False}.
-\Ticket{5116}
+\item Fixed a bug that could cause the \Condor{starter} to wait forever
+if its connection to the \Condor{shadow} is lost after the job exits.
+This bug is very likely to occur if CCB is being used and the CCB server
+becomes unavailable.
+\Ticket{5136}
+
+\item Fixed a Windows platform bug that caused events to be lost when 
+configuration variables
+\Macro{EVENT\_LOG\_LOCKING} or \Macro{ENABLE\_USERLOG\_LOCKING} 
+were set to \Expr{False}.
+\Ticket{5115}
+
+\item Files omitted from the new style RPM packages 
+for Red Hat Enterprise Linux 6 and 7 are now present.
+They include
+the \Condor{credd} binary, the \Condor{set\_shutdown} binary,
+the \Condor{set\_shutdown} manual page, 
+and the \Condor{vm-gahp-vmware} binary.
+\Ticket{5098}
 
 \end{itemize}
 

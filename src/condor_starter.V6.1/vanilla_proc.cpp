@@ -60,7 +60,7 @@ void StarterStatistics::Clear() {
 void StarterStatistics::Init() {
     Clear();
 
-    if ( ! this->RecentWindowQuantum) this->RecentWindowQuantum = 1;
+    this->RecentWindowQuantum = 1;
     this->RecentWindowMax = this->RecentWindowQuantum;
 
     STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "", BlockReads, IF_BASICPUB);

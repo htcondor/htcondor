@@ -329,6 +329,7 @@ void NordugridJob::doEvaluateState()
 	do {
 		reevaluate_state = false;
 		old_gm_state = gmState;
+		ASSERT ( gahp != NULL || gmState == GM_HOLD || gmState == GM_DELETE );
 
 		switch ( gmState ) {
 		case GM_INIT: {

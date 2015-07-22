@@ -358,7 +358,7 @@ void ConvertDefaultIPToSocketIP(char const *,std::string &,Stream&) {
 #include "Regex.h"
 
 Regex::Regex() {not_impl();}
-Regex::~Regex() {not_impl();}
+Regex::~Regex() {}
 bool Regex::compile(MyString const& , char const** , int* , int ) {not_impl();return false;}
 bool Regex::match(MyString const& , ExtArray<MyString>* ) {not_impl();return false;}
 

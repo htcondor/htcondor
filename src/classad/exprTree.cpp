@@ -274,6 +274,7 @@ bool ExprTree::isClassad(ClassAd ** ptr)
 	return (bRet);
 }
 
+SAL_Ret_notnull
 const ExprTree* ExprTree::self() const
 {
 	const ExprTree * pRet=this;
@@ -283,6 +284,7 @@ const ExprTree* ExprTree::self() const
 /* This version is for shared-library compatibility.
  * Remove it the next time we have to bump the ClassAds SO version.
  */
+SAL_Ret_notnull
 const ExprTree* ExprTree::self()
 {
 	const ExprTree * pRet=this;

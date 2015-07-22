@@ -272,6 +272,7 @@ OperateInRecoveryMode( ClassAd *logRec )
 		}
 	    ClassAdParser local_parser;
 		ClassAd *cla=local_parser.ParseClassAd(oneentry,true);
+		SAL_assume(cla != NULL)
 		ClassAd *content = (ClassAd*)(cla->Lookup("Ad"));
 		if( !viewTree.ClassAdInserted( this, key, content ) ) {
 		  CondorErrMsg += "; could not insert classad";
@@ -1587,6 +1588,7 @@ LogState( FILE *fp )
 			}
 			ClassAdParser local_parser;
 			ClassAd *cla=local_parser.ParseClassAd(cla_s,true);
+			if ( ! cla) { CLASSAD_EXCEPT("parser failed to allocate an ad"); }
 			if (!cla->InsertAttr("OpType", ClassAdCollOp_AddClassAd )) {
 				CondorErrMsg += "; failed to log state";
 				return( false );

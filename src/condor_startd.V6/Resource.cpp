@@ -127,41 +127,40 @@ const char * SlotType::type_param(const char * name)
 /*static*/ bool SlotType::insert_param(void*, HASHITER & it)
 {
 	const char * name = hash_iter_key(it);
-	const char * rawval = hash_iter_value(it);
-	if ( ! rawval || ! rawval[0])
-		return true; // keep iterating
 
-	char * res_value = ::param(name);
-	if ( ! res_value)
-		return true; // keep iterating
+	// we hit this on iteration so we know the config file has a statement, but we can
+	// still get back a NULL from ::param, if so we want to put "" into the slot's param table
+	auto_free_ptr res_value(::param(name));
+	const char * value = res_value.empty() ? "" : res_value.ptr();
 
 	// extract the number and get a pointer to the remainder
 	const char * pnum = name + sizeof("SLOT_TYPE_")-1;
 	char * tag;
 	int type_id = strtol(pnum, &tag, 10);
 	if (tag == pnum)
-		return true; // keep iterating
+		return true; // didn't parse a number, this shouldn't happen keep iterating
 
 	if (type_id < 0 || type_id >= (int)types.size()) {
 		dprintf(D_FULLDEBUG, "param %s matches SLOT_TYPE_n pattern, but n is out of range, ignoring", name);
 	} else {
 		SlotType * ptyp = &types[type_id];
 		if ( ! *tag) {
-			ptyp->shares = res_value;
+			ptyp->shares = value;
 		} else if (*tag == '_') {
-			ptyp->params[tag+1] = res_value;
+			ptyp->params[tag+1] = value;
 		}
 	}
-	free(res_value);
 	return true;
 }
 
 
 // clear the table of slot type config info, and then re-initialize it
 // by fetching all params that begin with "SLOT_TYPE_n".
-/*static*/ void SlotType::init_types(int max_type_id)
+/*static*/ void SlotType::init_types(int max_type_id, bool first_init)
 {
-	types.resize(max_type_id);
+	if (first_init || (max_type_id > (int)types.size())) {
+		types.resize(max_type_id);
+	}
 	for (size_t ix = 0; ix < types.size(); ++ix) { types[ix].clear(); }
 
 	Regex re;
@@ -198,6 +197,23 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 
 		// we need this before we instantiate any Claim objects...
 	r_id = rid;
+#if 1
+	r_sub_id = 0;
+	if (_parent) { r_sub_id = _parent->m_id_dispenser->next(); }
+	const char * name_prefix = SlotType::type_param(cap, "NAME_PREFIX");
+	if (name_prefix) {
+		tmp = name_prefix;
+	} else {
+		::param(tmp, "STARTD_RESOURCE_PREFIX", "");
+		if (tmp.empty()) tmp = "slot";
+	}
+	// append slot id
+	// for dynamic slots, also append sub_id
+	tmp.formatstr_cat( "%d", r_id );
+	if  (_parent) { tmp.formatstr_cat( "_%d", r_sub_id ); }
+	// save the constucted slot name & id string.
+	r_id_str = strdup( tmp.Value() );
+#else
 	char* name_prefix = NULL;
 	if (cap) {
 		const char * p = SlotType::type_param(cap, "NAME_PREFIX");
@@ -217,6 +233,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 		tmp.formatstr_cat( "%d", r_id );
 	}
 	r_id_str = strdup( tmp.Value() );
+#endif
 	r_pair_name = NULL;
 
 		// we need this before we can call type()...
@@ -226,14 +243,8 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	m_id_dispenser = NULL;
 
 		// we need this before we instantiate the Reqexp object...
-#if 1
 	if (SlotType::type_param_boolean(cap, "PARTITIONABLE", false)) {
-#else
-	tmp.formatstr( "SLOT_TYPE_%d_PARTITIONABLE", type() );
-	if( param_boolean( tmp.Value(), false ) ) {
-#endif
 		set_feature( PARTITIONABLE_SLOT );
-
 		m_id_dispenser = new IdDispenser( 3, 1 );
 	} else {
 		set_feature( STANDARD_SLOT );
@@ -259,7 +270,6 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
     if (get_feature() == PARTITIONABLE_SLOT) {
         // Partitionable slots may support a consumption policy
         // first, determine if a consumption policy is being configured
-#if 1
 		r_has_cp = param_boolean("CONSUMPTION_POLICY", false);
 		r_has_cp = SlotType::type_param_boolean(cap, "CONSUMPTION_POLICY", r_has_cp);
 		if (r_has_cp) {
@@ -269,28 +279,6 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 			nclaims = (unsigned) SlotType::type_param_long(cap, "NUM_CLAIMS", nclaims);
 			while (r_claims.size() < nclaims) r_claims.insert(new Claim(this));
 		}
-#else
-        string pname;
-        formatstr(pname, "SLOT_TYPE_%d_CONSUMPTION_POLICY", type());
-        if (param_defined(pname.c_str())) {
-            r_has_cp = param_boolean(pname.c_str(), false);
-        } else {
-            r_has_cp = param_boolean("CONSUMPTION_POLICY", false);
-        }
-
-        if (r_has_cp) {
-            // number of claims to be supplied by the pslot
-            formatstr(pname, "SLOT_TYPE_%d_NUM_CLAIMS", type());
-            unsigned nclaims = 1;
-            int ncpus = (int)ceil(r_attr->num_cpus());
-            if (param_defined(pname.c_str())) {
-                nclaims = param_integer(pname.c_str(), ncpus);
-            } else {
-                nclaims = param_integer("NUM_CLAIMS", ncpus);
-            }
-            while (r_claims.size() < nclaims) r_claims.insert(new Claim(this));
-        }
-#endif
 	}
 
     r_cur = new Claim(this);
@@ -337,12 +325,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	}
 
 	// check if slot should be hidden from the collector
-#if 1
 	r_no_collector_updates = SlotType::type_param_boolean(cap, "HIDDEN", false);
-#else
-	tmp.formatstr( "SLOT_TYPE_%d_HIDDEN", type() );
-	r_no_collector_updates = param_boolean(tmp.c_str(), false);
-#endif
 
 	update_tid = -1;
 
@@ -2135,10 +2118,68 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		caInsert(cap, r_classad, ATTR_UNHIBERNATE);
 #endif
 
-			// Include everything from STARTD_EXPRS.
-			// And then include everything from SLOTx_STARTD_EXPRS
+			// this sets STARTD_ATTRS, but ignores the SLOT_TYPE_n override values
 		daemonCore->publish(cap);
 
+#if 1
+		// now override the global STARTD_ATTRS values with SLOT_TYPE_n_* or SLOTn_* values if they exist.
+		// the list of attributes can also be ammended at this level, but note that the list can only be expanded
+		// it cannot be fully overridden via a SLOT override. (it will just be left with daemonCore->publish values)
+
+		// use the slot name prefix up to the first _ as a config prefix, we do this so dynamic slots
+		// get the same values as their parent slots.
+		MyString slot_name(r_id_str);
+		int iUnderPos = slot_name.find("_");
+		if (iUnderPos >=0) { slot_name.setChar (iUnderPos,  '\0'); }
+
+		// load the relevant param that controls the attribute list.  
+		// We preserve the behavior of config_fill_ad here so the effective list is STARTD_ATTRS + SLOTn_STARTD_ATTRS
+		// but because param is overridden in this class the actual effect is that if SLOT_TYPE_n_* attributes
+		// are defined, they are loaded INSTEAD of global params without the SLOT_TYPE_n_ prefix
+		// so this CAN generate a completely different list than config_fill_ad uses.  When that happens
+		// the values set in daemonCore->publish will be left alone <sigh>
+		//
+		StringList slot_attrs;
+		auto_free_ptr tmp(param("STARTD_ATTRS"));
+		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
+		MyString param_name(slot_name); param_name += "_STARTD_ATTRS";
+		tmp.set(param(param_name.c_str()));
+		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
+
+		// check for obsolete STARTD_EXPRS and generate a warning if set
+		{
+			MyString tname(slot_name); tname += "_STARTD_EXPRS";
+			auto_free_ptr tmp2(param(tname.c_str()));
+			if ( ! tmp2.empty()) {
+				dprintf(D_ALWAYS, "WARNING: config contains obsolete %s or SLOT_TYPE_n_%s which will be (partially) ignored! use *_STARTD_ATTRS instead.\n", tname.c_str(), tname.c_str());
+			}
+			tmp2.set(param("STARTD_EXPRS"));
+			if ( ! tmp2.empty()) {
+				dprintf(D_ALWAYS, "WARNING: config contains obsolete STARTD_EXPRS or SLOT_TYPE_n_STARTD_EXPRS which will be (partially) ignored! use STARTD_ATTRS instead.\n");
+			}
+		}
+
+		slot_attrs.rewind();
+		for (char* attr = slot_attrs.first(); attr != NULL; attr = slot_attrs.next()) {
+			param_name.formatstr("%s_%s", slot_name.c_str(), attr);
+			tmp.set(param(param_name.c_str()));
+			if ( ! tmp) { tmp.set(param(attr)); } // if no SLOTn_attr config definition, lookup just attr
+			if ( ! tmp) continue;  // no definition of either type, skip this attribute.
+
+			if (tmp.empty()) {
+				// interpret explicit empty values as 'remove the attribute' (should we set to undefined instead?)
+				cap->Delete(attr);
+			} else {
+				std::string buf(attr); buf += " = "; buf += tmp.ptr();
+				if ( ! cap->Insert(buf.c_str())) {
+					dprintf(D_ALWAYS | D_FAILURE,
+							"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s."
+							"  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
+							buf.c_str(), slot_name.c_str() );
+				}
+			}
+		}
+#else
 		// config_fill_ad can not take strings with "_" in it's prefix
 		// e.g. slot1_1, instead needs to be slot1
 		MyString szTmp(r_id_str);
@@ -2148,7 +2189,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			szTmp.setChar ( iUnderPos,  '\0' );
 		}
 		
+		// set STARTD_ATTRS/EXPRS using SLOTn_ prefix values, or global values.
 		config_fill_ad( cap, szTmp.Value() );
+#endif
 
 			// Also, include a slot ID attribute, since it's handy for
 			// defining expressions, and other things.
@@ -2300,21 +2343,11 @@ Resource::publish( ClassAd* cap, amask_t mask )
         // the slot-type of its parent for inheriting CP-related configurations:
         int slot_type = (type() >= 0) ? type() : -type();
 
-#if 1
 		if ( ! SlotType::param(expr, r_attr, "SLOT_WEIGHT") &&
 			 ! SlotType::param(expr, r_attr, "SlotWeight")) {
 			expr = "Cpus";
 		}
-#else
-        formatstr(pname, "SLOT_TYPE_%d_SLOT_WEIGHT", slot_type);
-        if (param_defined(pname.c_str())) {
-            param(expr, pname.c_str());
-        } else if (param_defined("SLOT_WEIGHT")) {
-            param(expr, "SLOT_WEIGHT");
-        } else {
-            param(expr, "SlotWeight", "Cpus");
-        }
-#endif
+
         if (!cap->AssignExpr(ATTR_SLOT_WEIGHT, expr.c_str())) {
             EXCEPT("Bad slot weight expression: '%s'", expr.c_str());
         }
@@ -2333,23 +2366,10 @@ Resource::publish( ClassAd* cap, amask_t mask )
             while (char* asset = alist.next()) {
                 if (MATCH == strcasecmp(asset, "swap")) continue;
 
-#if 1
 				pname = "CONSUMPTION_"; pname += asset;
 				if ( ! SlotType::param(expr, r_attr, pname.c_str())) {
 					formatstr(expr, "ifthenelse(target.%s%s =?= undefined, 0, target.%s%s)", ATTR_REQUEST_PREFIX, asset, ATTR_REQUEST_PREFIX, asset);
 				}
-#else
-                formatstr(pname, "SLOT_TYPE_%d_CONSUMPTION_%s", slot_type, asset);
-                if (param_defined(pname.c_str())) {
-                    param(expr, pname.c_str());
-                } else {
-                    string cpdefault;
-                    formatstr(cpdefault, "ifthenelse(target.%s%s =?= undefined, 0, target.%s%s)", ATTR_REQUEST_PREFIX, asset, ATTR_REQUEST_PREFIX, asset);
-                    // cpus, memory and disk will pick up default values from param_info:
-                    formatstr(pname, "CONSUMPTION_%s", asset);
-                    param(expr, pname.c_str(), cpdefault.c_str());
-                }
-#endif
 
                 string rattr;
                 formatstr(rattr, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);

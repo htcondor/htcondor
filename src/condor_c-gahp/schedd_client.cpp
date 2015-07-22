@@ -1103,6 +1103,7 @@ submit_report_result:
 
 			// now output this list of classads into a result
 			const char ** result  = new const char* [matching_ads.Length() + 3];
+			ASSERT(result);
 
 			std::string _ad_count;
 			formatstr( _ad_count, "%d", matching_ads.Length() );

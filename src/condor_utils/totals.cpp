@@ -116,6 +116,7 @@ displayTotals (FILE *file, int keyLength)
 		
 	// sort the keys (insertion sort) so we display totals in sorted order
 	const char **keys = new const char* [allTotals.getNumElements()];
+	ASSERT(keys);
 	allTotals.startIterations();
 	for (k = 0; k < allTotals.getNumElements(); k++) // for each key
 	{

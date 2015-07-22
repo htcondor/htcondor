@@ -633,8 +633,6 @@ reinitialize ()
 	dprintf (D_ALWAYS,"MAX_TIME_PER_SUBMITTER = %d sec\n",MaxTimePerSubmitter);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_PIESPIN = %d sec\n",MaxTimePerSpin);
 
-	if( tmp ) free( tmp );
-
 	if (PreemptionRank) {
 		delete PreemptionRank;
 		PreemptionRank = NULL;
@@ -2391,6 +2389,7 @@ GroupEntry::GroupEntry():
     autoregroup(false),
     usage(0),
     submitterAds(NULL),
+    priority(0),
     quota(0),
     requested(0),
     currently_requested(0),
@@ -2404,7 +2403,8 @@ GroupEntry::GroupEntry():
     parent(NULL),
     children(),
     chmap(),
-    sort_ad(new ClassAd())
+    sort_ad(new ClassAd()),
+    sort_key(0)
 {
 }
 
@@ -4104,7 +4104,11 @@ rejectForConcurrencyLimits(std::string &limits)
 	list.rewind();
 	while ((limit = list.next())) {
 		double increment;
-		ParseConcurrencyLimit(limit, increment);
+		if ( !ParseConcurrencyLimit(limit, increment) ) {
+			dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
+					 limit );
+			continue;
+		}
 
 		str = limit;
 		double count = accountant.GetLimit(str);

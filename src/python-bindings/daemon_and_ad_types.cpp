@@ -1,3 +1,4 @@
+#include "python_bindings_common.h"
 
 #include <condor_adtypes.h>
 #include <daemon_types.h>

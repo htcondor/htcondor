@@ -720,7 +720,7 @@ Starter::execJobPipeStarter( void )
 
 	int* std_fds_p = NULL;
 	int std_fds[3];
-	int pipe_fds[2];
+	int pipe_fds[2] = {-1,-1};
 	if( s_claim->hasJobAd() ) {
 		if( ! daemonCore->Create_Pipe(pipe_fds) ) {
 			dprintf( D_ALWAYS, "ERROR: Can't create pipe to pass job ClassAd "

@@ -249,6 +249,11 @@ $append_submit_commands = '
 concurrency_limits = small.license
 ';
 
+$tmplog = `condor_config_val log`;
+fullchomp($tmplog);
+
+print "small.license tmplog:$tmplog\n";
+
 ConcurrencyTools::InitGlobals(0,0,6,0,3,1);
 print "Test class default: small.license\n";
 $taskname = "checksmall";

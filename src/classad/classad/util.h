@@ -26,7 +26,9 @@
 namespace classad {
 
 // macro for recognising octal digits
-#define isodigit(x) (( (x) - '0' < 8 ) && ((x) - '0' >= 0))
+//#define isodigit(x) (((x) >= '0') && ((x) < '8'))
+// using & instead of && to avoid a branch...
+#define isodigit(x) (((x) >= '0') & ((x) < '8'))
 
 // A structure which represents the Absolute Time Literal
 struct abstime_t 

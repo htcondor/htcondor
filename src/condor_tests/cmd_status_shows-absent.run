@@ -2,9 +2,11 @@
 
 use strict;
 use warnings;
+use Cwd;
 
 use CondorCmdStatusWorker2;
 use CondorTest;
+use CondorUtils;
 
 #
 # FIXME: Use runcmd(), and/or refactor into a function the conversion 
@@ -12,6 +14,14 @@ use CondorTest;
 #
 
 my $testname = "cmd_status_shows-absent";
+my $top = getcwd();
+
+print "Ad file will be here:$top\n";
+
+my $iswindows = is_windows();
+
+print "Test:$testname considers id windows:$iswindows\n";
+
 #
 # This is terrible hack.
 #
@@ -22,100 +32,175 @@ if( $terribleHack eq "" ) {
 }
 my( $personalCondorA, $personalCondorB ) = split( '&', $terribleHack );
 
-my $stable = CondorCmdStatusWorker2::IsSystemStable();
-## my $stable = 1;
-if( $stable != 1 ) {
-    failTestWithReason( "System did not stabilize.\n" );
-}
+my $adfile = CondorTest::TempFileName("$testname.classads");
+fullchomp($adfile);
+
+#$adfile = "$top/$adfile";
+
+#print "Windows vs others checking\n";
+
+#print "$adfile is value before checking windows\n";
+
+#if($iswindows) {
+	#$_ = $adfile;
+	#s/\//\\\\/g;
+	#$adfile = $_;
+#} else {
+#}
+
+#print "Path to tempm file is:$adfile\n";
 
 #
 # Advertise both absent and present ads so that we can check for false
 # positives and false negatives.
 #
-my %adTemplate = (      'MyType'                    => '"Machine"',
-                        'TargetType'                => '"Job"',
-                        'OpSys'                     => '"LINUX"',
-                        'Arch'                      => '"X86_64"',
-                        'State'                     => '"Unclaimed"',
-                        'Activity'                  => '"Idle"',
-                        'LoadAvg'                   => '0.0',
-                        'Memory'                    => '666',
-                        'MyCurrentTime'             => '1666',
-                        'EnteredCurrentActivity'    => '1000',
-                        );
 
-my %absentTemplate = (  %adTemplate,
-                        'Absent'                => "TRUE",
-                        'ClassAdLifetime'       => "1000",
-                        );
+my $basead = ' MyType                    = "Machine"
+TargetType                = "Job"
+OpSys                     = "LINUX"
+Arch                      = "X86_64"
+State                     = "Unclaimed"
+Activity                  = "Idle"
+LoadAvg                   = 0.0
+Memory                    = 666
+MyCurrentTime             = 1666
+EnteredCurrentActivity    = 1000 ';
 
-my %absentAds;
-addAd( \%absentAds, %absentTemplate,
-                        'Name'                  => '"slot1@absent-machine"',
-                        'Machine'               => '"absent-machine"',
-                        );
-addAd( \%absentAds, %absentTemplate,
-                        'Name'                  => '"slot2@absent-machine"',
-                        'Machine'               => '"absent-machine"',
-                        );
+my $absenttype = '
+Absent                    = TRUE
+ClassAdLifetime           = 1000 ';
 
-my %presentAds;
-addAd( \%presentAds, %adTemplate,
-                        'Name'                  => '"slot1@present-machine"',
-                        'Machine'               => '"present-machine"',
-                        );
-addAd( \%presentAds, %adTemplate,
-                        'Name'                  => '"slot2@present-machine"',
-                        'Machine'               => '"present-machine"',
-                        );
+my $absent1 = '
+Name                      = "slot1@absent-machine"
+Machine                   = "absent-machine" ';
+
+my $absent2 = '
+Name                      = "slot2@absent-machine"
+Machine                   = "absent-machine" ';
+
+my $present1 = '
+Name                      = "slot1@present-machine"
+Machine                   = "present-machine" ';
+
+my $present2 = '
+Name                      = "slot2@present-machine"
+Machine                   = "present-machine" ';
+
+my @absentnames = (
+	"slot1\@absent-machine",
+	"slot2\@absent-machine",
+);
+
+my @presentnames = (
+	"slot1\@present-machine",
+	"slot2\@present-machine",
+);
+
+# we need to construct a file with 2 absent classads and two
+# present classads. All four have the same base and one unique 
+# part per add. Additionally, the absent ads need the absenttype lines
+# when doing condor_advertise, -multiple lets an empty line
+# be an ad separator.
+
+if(-f $adfile) {
+	print "AdFile:$adfile exists before creation\n";
+}
+
+print "Temp file for ads:$adfile\n";
+open(AF,">$adfile") or die "Temp ad file:$adfile could not be created\n";
+print AF "$basead";
+print AF "$absenttype";
+print AF "$absent1";
+print AF "\n";
+print AF "\n";
+print AF "$basead";
+print AF "$absenttype";
+print AF "$absent2";
+print AF "\n";
+print AF "\n";
+print AF "$basead";
+print AF "$present1";
+print AF "\n";
+print AF "\n";
+print AF "$basead";
+print AF "$present2";
+close(AF);
+
+my $adfilesize = 0;
+if(-f $adfile) {
+	print "AdFile:$adfile exists after creation\n";
+	$adfilesize = -s $adfile;
+	print "file size for ads after creation is:$adfilesize\n";
+}
+
+my @adresults = ();
+my $res = runCondorTool("condor_advertise -multiple UPDATE_STARTD_AD $adfile",\@adresults,2,{emit_output=>1});
+
+if($res != 0) {
+	print "Problem error return from condor_advertise:$res\n";
+}
 
 #
 # Verify that we added the ads succesfully. 
 #
-my $verifyFH;
 my %verifiedAdNames;
-my $verifyCommand = qq/condor_status -af Name -const "(TRUE || Absent)" /;
-my $childPID = open( $verifyFH, '-|', $verifyCommand );
-if( $childPID == 0 ) {
-    failTestWithReason( "Unable to fetch advertised ads.\n" );
-}
-while( my $line = <$verifyFH> ) {
-    $line =~ s/[\012\015]+$//;
-    $verifiedAdNames{ $line } = undef;
-}
-close( $verifyFH );
-waitpid( $childPID, 0 );
 
-if( ! ( subset( \%presentAds, \%verifiedAdNames ) && subset( \%presentAds, \%verifiedAdNames ) ) ) {
-    failTestWithReason( "An advertised ad is missing.\n" );
+my @statusres = ();
+$res = runCondorTool("condor_status -af Name -const \"(TRUE || Absent)\"",\@statusres,2,{emit_output=>1});
+print "verifying ads were advertised\n";
+foreach my $line (@statusres ) {
+    $line =~ s/[\012\015]+$//;
+	print "verifying ads published\n";
+	print ":$line:\n";
+    #$verifiedAdNames{ $line } = undef;
+    $verifiedAdNames{ $line } = 1;
+}
+
+# by checking both array presentname and absent names for existence in @verifiedAdNames
+# we should know if all ads cound be gotten and what type they are.
+foreach my $ad (@presentnames) {
+	if(exists $verifiedAdNames{$ad}) {
+		RegisterResult(1,"test_name", "$testname");
+	} else {
+		print "a present ad:$ad is missing\n";
+		RegisterResult(0,"test_name", "$testname");
+	}
+}
+
+foreach my $ad (@absentnames) {
+	if(exists $verifiedAdNames{$ad}) {
+		RegisterResult(1,"test_name", "$testname");
+	} else {
+		print "an absent ad:$ad is missing\n";
+		RegisterResult(0,"test_name", "$testname");
+	}
 }
 
 #
 # Test the -absent flag: when we run condor_status with it do we get 
 # all the absent machines, and only the machines that are absent?
 #
-my $absentFH;
+
+@statusres = (); # clear for reuse
 my %absentAdNames;
-my $absentCommand = qq/condor_status -absent -af Name/;
-$childPID = open( $absentFH, '-|', $absentCommand );
-if( $childPID == 0 ) {
-    failTestWithReason( "Unable to fetch absent ads.\n" );
-}
-while( my $line = <$absentFH> ) {
+$res = runCondorTool("condor_status -absent -af Name",\@statusres,2,{emit_output=>1});
+foreach my $line (@statusres) {
     $line =~ s/[\012\015]+$//;
+	print "Absent:$line:\n";
     $absentAdNames{ $line } = undef;
 }
-close( $absentFH );
-waitpid( $childPID, 0 );
 
 # Tolerate other ads, but fail if a present ad appears.
-# FIXME: ensure that present ads can not appear by using ABSENT_REQUIREMENTS.
-if( ! subset( \%absentAds, \%absentAdNames ) ) {
-    failTestWithReason( "False negative: missing an absent ad.\n" );
+
+foreach my $ad (@presentnames) {
+	if(exists $absentAdNames{$ad}) {
+		print "a prsent ad:$ad is in absent list\n";
+		RegisterResult(0,"test_name", "$testname");
+	} else {
+		RegisterResult(1,"test_name", "$testname");
+	}
 }
-if( grep( /present-machine/, keys( %absentAdNames ) ) ) {
-    failTestWithReason( "False positive: a present ad is in the absent list.\n" );
-}
+
 
 RegisterResult(1,"test_name", "$testname");
 RemoveAllJobs();
@@ -123,8 +208,8 @@ CondorTest::EndTest();
 #
 # Test(s) completed successfully.
 #
-print( "cmd_status_shows-absent SUCCESS\n" );
-exit( 0 );
+#print( "cmd_status_shows-absent SUCCESS\n" );
+#exit( 0 );
 
 # -----------------------------------------------------------------------------
 
@@ -146,57 +231,3 @@ sub RemoveAllJobs {
 	sleep(2);
 
 }
-
-sub failTestWithReason {
-    my( $reason ) = @_;
-    
-    warn( $reason );
-	RegisterResult(0,"test_name", "$testname");
-	RemoveAllJobs();
-	CondorTest::EndTest();
-    exit( 1 );
-} # end failTestWithReason()
-
-sub addAd {
-    my $hashRef = shift( @_ );
-    my %hash = @_;
-
-    #
-    # Add the ad, by name, to its collection.
-    #
-    my $unquotedName = $hash{ 'Name' };
-    $unquotedName =~ s/"//g;
-    $hashRef->{ $unquotedName } = \%hash;
-    
-    #
-    # Insert the ad into the collector.  Since we'll be verifying
-    # that we get the ads back from the collector in a seperate step,
-    # we can skip some ugly temporary files mess and just shove the
-    # ad down the pipe.
-    #
-    my $adFH;
-    my $adCommand = qq/condor_advertise UPDATE_STARTD_AD -/;
-    my $childPID = open( $adFH, '|-', $adCommand );
-    if( $childPID == 0 ) {
-        failWithTestReason( "Unable to advertise test ads.\n" );
-    }
-    
-    foreach my $key (keys %hash) {
-        print( $adFH "$key = " . $hash{ $key } . "\n" );
-    }
-    
-    close( $adFH );
-    waitpid( $childPID, 0 );
-} # end addAd()
-
-sub subset {
-    my( $sub, $set ) = @_;
-    
-    foreach my $key (keys %{$sub}) {
-        if( ! exists( $set->{ $key } ) ) {
-            return 0;
-        }
-    }
-    
-    return 1;
-} # end subset()

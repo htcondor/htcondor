@@ -76,6 +76,7 @@
 #include "condor_holdcodes.h"
 #include "condor_url.h"
 #include "condor_version.h"
+#include "ConcurrencyLimitUtils.h"
 #include "submit_internal.h"
 
 #include "list.h"
@@ -2354,6 +2355,7 @@ SetExecutable()
 
 	if (ename) free(ename);
 	free(copySpool);
+	free( IckptName );
 }
 
 void
@@ -3126,7 +3128,13 @@ SetTransferFiles()
 	macro_value = condor_param( TransferInputFiles, "TransferInputFiles" ) ;
 	TransferInputSizeKb = 0;
 	if( macro_value ) {
-		input_file_list.initializeFromString( macro_value );
+		// as a special case transferinputfiles="" will produce an empty list of input files, not a syntax error
+		// PRAGMA_REMIND("replace this special case with code that correctly parses any input wrapped in double quotes")
+		if (macro_value[0] == '"' && macro_value[1] == '"' && macro_value[2] == 0) {
+			input_file_list.clearAll();
+		} else {
+			input_file_list.initializeFromString( macro_value );
+		}
 	}
 
 
@@ -3178,7 +3186,14 @@ SetTransferFiles()
 								"TransferOutputFiles" ); 
 	if( macro_value ) 
 	{
-		output_file_list.initializeFromString(macro_value);
+		// as a special case transferoutputfiles="" will produce an empty list of output files, not a syntax error
+		// PRAGMA_REMIND("replace this special case with code that correctly parses any input wrapped in double quotes")
+		if (macro_value[0] == '"' && macro_value[1] == '"' && macro_value[2] == 0) {
+			output_file_list.clearAll();
+			output_files = ATTR_TRANSFER_OUTPUT_FILES " = \"\"";
+		} else {
+			output_file_list.initializeFromString(macro_value);
+		}
 		output_file_list.rewind();
 		count = 0;
 		while ( (tmp_ptr=output_file_list.next()) ) {
@@ -4576,6 +4591,7 @@ SetLogNotes()
 	LogNotesVal = condor_param( LogNotesCommand, ATTR_SUBMIT_EVENT_NOTES );
 	if ( LogNotesVal ) {
 		InsertJobExprString( ATTR_SUBMIT_EVENT_NOTES, LogNotesVal );
+		free( LogNotesVal );
 	}
 }
 
@@ -4585,6 +4601,7 @@ SetUserNotes()
 	UserNotesVal = condor_param( UserNotesCommand, ATTR_SUBMIT_EVENT_USER_NOTES );
 	if ( UserNotesVal ) {
 		InsertJobExprString( ATTR_SUBMIT_EVENT_USER_NOTES, UserNotesVal );
+		free( UserNotesVal );
 	}
 }
 
@@ -4596,6 +4613,7 @@ SetStackSize()
 	if( StackSizeVal ) {
 		(void) buffer.formatstr( "%s = %s", ATTR_STACK_SIZE, StackSizeVal);
 		InsertJobExpr(buffer);
+		free( StackSizeVal );
 	}
 }
 
@@ -8543,7 +8561,7 @@ check_open( const char *name, int flags )
 
 	if ( !DisableFileChecks ) {
 		int fd = safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664);
-		if ((errno == ENOENT) && dryrun_create) {
+		if ((fd < 0) && (errno == ENOENT) && dryrun_create) {
 			// we are doing dry-run, and the input flags were to create/truncate a file
 			// we stripped the create/truncate flags, now we treate a 'file does not exist' error
 			// as success since O_CREAT would have made it (probably).
@@ -9386,6 +9404,22 @@ SetConcurrencyLimits()
 		tmp.lower_case();
 
 		StringList list(tmp.Value());
+
+		char *limit;
+		list.rewind();
+		while ( (limit = list.next()) ) {
+			double increment;
+			char *limit_cpy = strdup( limit );
+
+			if ( !ParseConcurrencyLimit(limit_cpy, increment) ) {
+				fprintf( stderr,
+						 "\nERROR: Invalid concurrency limit '%s'\n",
+						 limit );
+				DoCleanup(0,0,NULL);
+				exit( 1 );
+			}
+			free( limit_cpy );
+		}
 
 		list.qsort();
 

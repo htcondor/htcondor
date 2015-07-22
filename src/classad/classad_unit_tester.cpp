@@ -640,13 +640,15 @@ static void test_exprlist(const Parameters &, Results &results)
     Literal *add;
     add = Literal::MakeReal("2.2");
 
-    iter = list2_copy->begin();
-    list2_copy->insert(iter, add);
-    TEST("Edited list is different", !(list2->SameAs(list2_copy)));
+    if (list2_copy) {
+        iter = list2_copy->begin();
+        list2_copy->insert(iter, add);
+        TEST("Edited list is different", !(list2->SameAs(list2_copy)));
 
-    iter = list2_copy->begin();
-    list2_copy->erase(iter);
-    TEST("Twice Edited list is same", (list2->SameAs(list2_copy)));
+        iter = list2_copy->begin();
+        list2_copy->erase(iter);
+        TEST("Twice Edited list is same", (list2->SameAs(list2_copy)));
+    }
 
     delete list0;
     delete list1;

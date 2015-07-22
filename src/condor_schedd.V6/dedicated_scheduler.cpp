@@ -325,6 +325,7 @@ ResList::sortByRank(ClassAd *rankAd) {
 	this->Rewind();
 
 	struct rankSortRec *array = new struct rankSortRec[this->Number()];
+	ASSERT(array);
 	int index = 0;
 	ClassAd *machine = NULL;
 
