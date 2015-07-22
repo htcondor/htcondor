@@ -40,7 +40,7 @@ my %AllowedEvents = ();
 
 use base 'Exporter';
 
-our @EXPORT = qw(PrintTimeStamp timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest);
+our @EXPORT = qw(PrintTimeStamp timestamp runCondorTool runCondorToolCarefully runToolNTimes RegisterResult EndTest GetLogDir);
 
 my %securityoptions =
 (
@@ -1069,8 +1069,9 @@ sub StartTest
 		TestDebug("Want to Check core and ERROR!!!!!!!!!!!!!!!!!!\n\n",2);
 		print "Calling CoreCheck in endof StartTest\n";
 		# running in Config
-		my $logdir = `condor_config_val log`;
-		CondorUtils::fullchomp($logdir);
+
+		my $logdir = GetLogDir();
+
 		CondorUtils::fullchomp($handle);
 		print "LOGDIR from condor_config_val log:$logdir Test:$handle\n";
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
@@ -1083,8 +1084,9 @@ sub StartTest
 
 	if(defined  $wrap_test) {
 		print "Calling CoreCheck in endof StartTest if wrapped\n";
-		my $logdir = `condor_config_val log`;
-		CondorUtils::fullchomp($logdir);
+
+		my $logdir = GetLogDir();
+
 		print "LOGDIR from condor_config_val log:$logdir Test:$handle\n";
 		$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
 		if($config ne "") {
@@ -1777,7 +1779,7 @@ sub runCondorTool
 	$count = 0;
 	my $hashref;
 	while( $count < $attempts) {
-		#print "runCondorTool: Attempt: <$count>\n";
+		print "runCondorTool: Attempt: <$count>\n";
 
 		# Add a message to runcmd output
 		${$options}{emit_string} = "runCondorTool: Cmd: $cmd Attempt: $count";
@@ -2205,9 +2207,15 @@ sub SearchCondorLog
     my $regexp = shift;
 	my $arrayref = shift;
 
-    my $logloc = `condor_config_val ${daemon}_log`;
+	my $daemonlog = "$daemon" . "_log";
+	my @fetchlog = ();
+	@fetchlog = `condor_config_val $daemonlog`;
+	my $logdir = $fetchlog[0];
+	CondorUtils::fullchomp($logdir);
+	my $logloc = $logdir;
+	print "SearchCondorLog for daemon:$daemon yielded:$logloc\n";
+
 	my $count = 0;
-    CondorUtils::fullchomp($logloc);
 
     CondorTest::TestDebug("Search this log: $logloc for: $regexp\n",3);
     open(LOG,"<$logloc") || die "Can not open logfile: $logloc: $!\n";
@@ -2266,9 +2274,15 @@ sub SearchCondorLogMultiple
 	my $goal = 0;
 	my $retryregexp = "";
 
-    my @choices = `condor_config_val ${daemon}_log`;
-	my $logloc = $choices[0];
-    CondorUtils::fullchomp($logloc);
+    
+	my $daemonlog = "$daemon" . "_log";
+	my @fetchlog = ();
+	@fetchlog = `condor_config_val $daemonlog`;
+	my $logdir = $fetchlog[0];
+	CondorUtils::fullchomp($logdir);
+	my $logloc = $logdir;
+	print "SearchCondorLog for daemon:$daemon yielded:$logloc\n";
+
     CondorTest::TestDebug("Search this log: $logloc for: $regexp instances = $instances\n",2);
     CondorTest::TestDebug("Timeout = $timeout\n",2);
 
@@ -2416,8 +2430,10 @@ sub SearchCondorSpecialLog
     my $allmatch = shift;
 
     my $matches = 0;
-    my $logloc = `condor_config_val log`;
-    CondorUtils::fullchomp($logloc);
+
+	my $logdir = GetLogDir();
+	my $logloc = $logdir;
+
     $logloc = "$logloc/$logname";
 
     #print "SearchCondorSpecialLog: $logname/$regexp/$allmatch\n";
@@ -2457,8 +2473,7 @@ sub PersonalPolicySearchLog
     my $policyitem = shift;
     my $logname = shift;
 
-	my $logdir = `condor_config_val log`;
-	CondorUtils::fullchomp($logdir);
+	my $logdir = GetLogDir();
 
     #my $logloc = $pid . "/" . $pid . $personal . "/log/" . $logname;
     my $logloc = $logdir . "/" . $logname;
@@ -2486,8 +2501,9 @@ sub OuterPoolTest
 	my $locconfig = "";
     TestDebug( "Running this command: $cmd \n",2);
     # shhhhhhhh third arg 0 makes it hush its output
-	my $logdir = `condor_config_val log`;
-	CondorUtils::fullchomp($logdir);
+	
+	my $logdir = GetLogDir();
+
 	TestDebug( "log dir is: $logdir\n",2);
 	if($logdir =~ /^.*condor_tests.*$/){
 		print "Running within condor_tests\n";
@@ -2509,8 +2525,9 @@ sub PersonalCondorTest
 	my $locconfig = "";
     print "Running this command: $cmd \n";
     # shhhhhhhh third arg 0 makes it hush its output
-	my $logdir = `condor_config_val log`;
-	CondorUtils::fullchomp($logdir);
+
+	my $logdir = GetLogDir();
+
 	print "log dir is: $logdir\n";
 	if($logdir =~ /^.*condor_tests.*$/){
 		print "Running within condor_tests\n";
@@ -3023,8 +3040,12 @@ sub LoadWhoData
 	  if($self->{personal_daemon_list} ne "") {
 	  	  return $self->{personal_daemon_list};
 	  } else {
-	  	  my $dlist = `condor_config_val daemon_list`;
+
+		  my @fetchlog = ();
+		  @fetchlog = `condor_config_val daemon_list`;
+		  my $dlist = $fetchlog[0];
 		  CondorUtils::fullchomp($dlist);
+
 		  # have all daemon lists be space separated
 		  $_ = uc $dlist;
 		  s/\s*,\s/ /g;
@@ -3150,9 +3171,12 @@ sub GetPersonalCondorWithConfig
 
 sub CreatePidsFile {
 	# use config to get acondor instance
-	my $logdir = `condor_config_val log`;
-	CondorUtils::fullchomp($logdir);
+	
+	my $logdir = GetLogDir();
+
+	print "CreatePidsFile: log:$logdir\n";
 	my $pidsfile = $logdir . "/PIDS";
+	print "File: PIDS:$pidsfile\n";
 	my $config = $ENV{CONDOR_CONFIG};
 	my $condor_instance = GetPersonalCondorWithConfig($config);
 	if($condor_instance != 0) {
@@ -3415,8 +3439,8 @@ sub KillPersonal
 
 sub ShouldCheck_coreERROR
 {
-	my $logdir = `condor_config_val log`;
-	CondorUtils::fullchomp($logdir);
+	my $logdir = GetLogDir();
+
 	my $testsrunning = CountRunningTests();
 	if(($logdir =~ /Config/) &&($testsrunning > 1)) {
 		# no because we are doing concurrent testing
@@ -4164,4 +4188,17 @@ sub SetTestName
 	Condor::SetHandle($testname);
 }
 
+sub GetLogDir {
+	my $config = shift;
+	my $logreturn = "";
+	if(defined $config) {
+		print "GetLogDir: get from instance associated with this condfig:$config\n";	
+	} else {
+		my @canditate = `condor_config_val log`;
+		$logreturn = $canditate[0];
+		fullchomp($logreturn);
+		print "GetLogDir says:$logreturn\n";
+		return($logreturn);
+	}
+}
 1;
