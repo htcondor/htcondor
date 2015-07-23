@@ -32,7 +32,7 @@ DagmanClassad::DagmanClassad( const CondorID &DAGManJobId ) :
 {
 	CondorID defaultCondorId;
 	if ( DAGManJobId == defaultCondorId ) {
-		debug_printf( DEBUG_QUIET, "No Condor ID available for DAGMan (running on command line?); DAG status will not be reported to ClassAd\n" );
+		debug_printf( DEBUG_QUIET, "No HTCondor ID available for DAGMan (running on command line?); DAG status will not be reported to ClassAd\n" );
 		return;
 	}
 

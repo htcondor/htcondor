@@ -91,7 +91,7 @@ class DagmanClassad {
 		// Whether this object is valid.
 	bool _valid;
 
-		// The Condor ID for this DAGMan -- that's the classad we'll
+		// The HTCondor ID for this DAGMan -- that's the classad we'll
 		// update.
 	CondorID _dagmanId;
 

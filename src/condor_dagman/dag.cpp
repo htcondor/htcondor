@@ -442,7 +442,7 @@ Dag::DetectCondorLogGrowth () {
 // Developer's Note: returning false tells main_timer to abort the DAG
 bool Dag::ProcessLogEvents (bool recovery) {
 
-	debug_printf( DEBUG_VERBOSE, "Currently monitoring %d Condor "
+	debug_printf( DEBUG_VERBOSE, "Currently monitoring %d HTCondor "
 				"log file(s)\n", _condorLogRdr.activeLogFileCount() );
 
 	bool done = false;  // Keep scanning until ULOG_NO_EVENT
@@ -467,7 +467,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 	}
 
 	if (DEBUG_LEVEL(DEBUG_VERBOSE) && recovery) {
-		const char *name = "Condor";
+		const char *name = "HTCondor";
 		debug_printf( DEBUG_NORMAL, "    ------------------------------\n");
 		debug_printf( DEBUG_NORMAL, "       %s Recovery Complete\n", name);
 		debug_printf( DEBUG_NORMAL, "    ------------------------------\n");
@@ -673,7 +673,7 @@ void
 Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
-  // NOTE: while there are known Condor bugs leading to a "double"
+  // NOTE: while there are known HTCondor bugs leading to a "double"
   // terminate-then-abort event pair for the same job proc abortion,
   // this method will no longer actually see the second (abort) event,
   // because the event-checking code will suppress it.  Therefore, this
@@ -698,7 +698,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 		if ( job->GetStatus() != Job::STATUS_ERROR ) {
 			job->TerminateFailure();
 			snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-				  "Condor reported %s event for job proc (%d.%d.%d)",
+				  "HTCondor reported %s event for job proc (%d.%d.%d)",
 				  ULogEventNumberNames[event->eventNumber],
 				  event->cluster, event->proc, event->subproc );
 			job->retval = DAG_ERROR_CONDOR_JOB_ABORTED;
@@ -1088,7 +1088,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		// has a job in the queue, we don't want to increment
 		// the job proc count and jobs submitted counts here, because
 		// if we get a terminated event corresponding to the "original"
-		// Condor ID, we won't decrement the counts at that time.
+		// HTCondor ID, we won't decrement the counts at that time.
 		//
 	if ( submitEventIsSane || job->GetStatus() != Job::STATUS_SUBMITTED ) {
 		job->_queuedNodeJobProcs++;
@@ -1379,7 +1379,7 @@ Dag::StartNode( Job *node, bool isRetry )
 
 	// if a PRE script exists and hasn't already been run, run that
 	// first -- the PRE script's reaper function will submit the
-	// actual job to Condor if/when the script exits successfully
+	// actual job to HTCondor if/when the script exits successfully
 
     if( node->_scriptPre && node->_scriptPre->_done == FALSE ) {
 		node->SetStatus( Job::STATUS_PRERUN );
@@ -1931,7 +1931,7 @@ Dag::NumNodesDone( bool includeFinal ) const
 }
 
 //---------------------------------------------------------------------------
-// Note: the Condor part of this method essentially duplicates functionality
+// Note: the HTCondor part of this method essentially duplicates functionality
 // that is now in schedd.cpp.  We are keeping this here for now in case
 // someone needs to run a 7.5.6 DAGMan with an older schedd.
 // wenger 2011-01-26
@@ -1950,7 +1950,7 @@ void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
 
 	if ( removeCondorJobs && haveCondorJob ) {
 		debug_printf( DEBUG_NORMAL, "Removing any/all submitted "
-					"Condor jobs...\n" );
+					"HTCondor jobs...\n" );
 
 		MyString constraint;
 
@@ -2950,7 +2950,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		statusStr.trim();
 		fprintf( outfile, "  NodeStatus = %d; /* %s */\n", status,
 					EscapeClassadString( statusStr.Value() ) );
-		// fprintf( outfile, "  /* CondorStatus = xxx; */\n" );
+		// fprintf( outfile, "  /* HTCondorStatus = xxx; */\n" );
 		fprintf( outfile, "  StatusDetails = %s;\n",
 					EscapeClassadString( nodeNote ) );
 		fprintf( outfile, "  RetryCount = %d;\n", node->GetRetries() );
@@ -3128,16 +3128,16 @@ Dag::CheckAllJobs()
 
 	result = _checkCondorEvents.CheckAllJobs(jobError);
 	if ( result == CheckEvents::EVENT_ERROR ) {
-		debug_printf( DEBUG_QUIET, "Error checking Condor job events: %s\n",
+		debug_printf( DEBUG_QUIET, "Error checking HTCondor job events: %s\n",
 				jobError.Value() );
 		ASSERT( false );
 	} else if ( result == CheckEvents::EVENT_BAD_EVENT ||
 				result == CheckEvents::EVENT_WARNING ) {
-		debug_printf( DEBUG_NORMAL, "Warning checking Condor job events: %s\n",
+		debug_printf( DEBUG_NORMAL, "Warning checking HTCondor job events: %s\n",
 				jobError.Value() );
 		check_warning_strictness( DAG_STRICT_3 );
 	} else {
-		debug_printf( DEBUG_DEBUG_1, "All Condor job events okay\n");
+		debug_printf( DEBUG_DEBUG_1, "All HTCondor job events okay\n");
 	}
 }
 
@@ -3194,7 +3194,7 @@ Dag::PrintPendingNodes() const
 		case Job::STATUS_PRERUN:
 		case Job::STATUS_SUBMITTED:
 		case Job::STATUS_POSTRUN:
-			dprintf( D_ALWAYS, "  Node %s, Condor ID %d, status %s\n",
+			dprintf( D_ALWAYS, "  Node %s, HTCondor ID %d, status %s\n",
 						node->GetJobName(), node->GetCluster(),
 						node->GetStatusName() );
 			break;
@@ -3285,7 +3285,7 @@ Dag::IncludeExtraDotCommands(
 //           be drawn, and it's based on the state of the node. In particular,
 //           we draw different shapes for each node type, but also add
 //           a short description of the state, to make it easily readable by
-//           people that are familiar with Condor job states. 
+//           people that are familiar with HTCondor job states. 
 // Scope:    Private
 //
 //-------------------------------------------------------------------------
@@ -3724,7 +3724,7 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 
 
 //---------------------------------------------------------------------------
-// Checks whether this is a "good" event ("bad" events include Condor
+// Checks whether this is a "good" event ("bad" events include HTCondor
 // sometimes writing a terminated/aborted pair instead of just
 // aborted, and the "submit once, run twice" bug).  Extra abort events
 // we just ignore; other bad events will abort the DAG unless
@@ -3762,7 +3762,7 @@ Dag::EventSanityCheck( const ULogEvent* event,
 
 	debug_printf( DEBUG_NORMAL, "%s\n", eventError.Value() );
 	//debug_printf( DEBUG_NORMAL, "WARNING: bad event here may indicate a "
-				  //"serious bug in Condor -- beware!\n" );
+				  //"serious bug in HTCondor -- beware!\n" );
 
 	if( checkResult == CheckEvents::EVENT_WARNING ) {
 		debug_printf( DEBUG_NORMAL, "BAD EVENT is warning only\n");
@@ -3900,7 +3900,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 {
 	submit_result_t result = SUBMIT_RESULT_NO_SUBMIT;
 
-		// Resetting the Condor ID here fixes PR 799.  wenger 2007-01-24.
+		// Resetting the HTCondor ID here fixes PR 799.  wenger 2007-01-24.
 	if ( node->GetCluster() != _defaultCondorId._cluster ) {
 		ASSERT( JobIsNoop( condorID ) == node->GetNoop() );
 		int id = GetIndexID( node->GetID() );
@@ -3974,7 +3974,7 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 	_nextSubmitDelay = 1;
 
     // append node to the submit queue so we can match it with its
-    // submit event once the latter appears in the Condor job log
+    // submit event once the latter appears in the HTCondor job log
     if( _submitQ->enqueue( node ) == -1 ) {
 		debug_printf( DEBUG_QUIET, "ERROR: _submitQ->enqueue() failed!\n" );
 	}
