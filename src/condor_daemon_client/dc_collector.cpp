@@ -224,6 +224,7 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
 		ad2->CopyAttribute(ATTR_MY_ADDRESS,ad1);
 	}
 
+#if 0 // don't want this in all ads, moving to self_monitor code so it shows up only in daemon ads
     // My initial plan was to publish these for schedd, however they will provide
     // potentially useful context for performance/health assessment of any daemon 
     if (ad1) {
@@ -234,6 +235,7 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking )
         ad2->Assign(ATTR_DETECTED_CPUS, param_integer("DETECTED_CORES", 0));
         ad2->Assign(ATTR_DETECTED_MEMORY, param_integer("DETECTED_MEMORY", 0));
     }
+#endif
 
 		// We never want to try sending an update to port 0.  If we're
 		// about to try that, and we're trying to talk to a local

@@ -128,13 +128,15 @@ bool SelfMonitorData::ExportData(ClassAd *ad)
     if (ad == NULL) {
         success = false;
     } else {
-        ad->Assign("MonitorSelfTime",            (int)   last_sample_time);
-        ad->Assign("MonitorSelfCPUUsage",        (float) cpu_usage);
-        ad->Assign("MonitorSelfImageSize",       (float) image_size);
-        ad->Assign("MonitorSelfResidentSetSize", (int)   rs_size);
-        ad->Assign("MonitorSelfAge",             (int)   age);
-		ad->Assign("MonitorSelfRegisteredSocketCount", (int) registered_socket_count);
-		ad->Assign("MonitorSelfSecuritySessions", (int) cached_security_sessions);
+        ad->Assign("MonitorSelfTime",            last_sample_time);
+        ad->Assign("MonitorSelfCPUUsage",        cpu_usage);
+        ad->Assign("MonitorSelfImageSize",       image_size);
+        ad->Assign("MonitorSelfResidentSetSize", rs_size);
+        ad->Assign("MonitorSelfAge",             age);
+        ad->Assign("MonitorSelfRegisteredSocketCount", registered_socket_count);
+        ad->Assign("MonitorSelfSecuritySessions", cached_security_sessions);
+        ad->Assign(ATTR_DETECTED_CPUS, param_integer("DETECTED_CORES", 0));
+        ad->Assign(ATTR_DETECTED_MEMORY, param_integer("DETECTED_MEMORY", 0));
 
         success = true;
     }

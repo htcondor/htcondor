@@ -2121,7 +2121,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// this sets STARTD_ATTRS, but ignores the SLOT_TYPE_n override values
 		daemonCore->publish(cap);
 
-#if 1
 		// now override the global STARTD_ATTRS values with SLOT_TYPE_n_* or SLOTn_* values if they exist.
 		// the list of attributes can also be ammended at this level, but note that the list can only be expanded
 		// it cannot be fully overridden via a SLOT override. (it will just be left with daemonCore->publish values)
@@ -2179,19 +2178,6 @@ Resource::publish( ClassAd* cap, amask_t mask )
 				}
 			}
 		}
-#else
-		// config_fill_ad can not take strings with "_" in it's prefix
-		// e.g. slot1_1, instead needs to be slot1
-		MyString szTmp(r_id_str);
-		int iUnderPos = szTmp.find("_");
-
-		if ( iUnderPos >=0 ) {
-			szTmp.setChar ( iUnderPos,  '\0' );
-		}
-		
-		// set STARTD_ATTRS/EXPRS using SLOTn_ prefix values, or global values.
-		config_fill_ad( cap, szTmp.Value() );
-#endif
 
 			// Also, include a slot ID attribute, since it's handy for
 			// defining expressions, and other things.
