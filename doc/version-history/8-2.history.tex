@@ -53,6 +53,13 @@ This variable defaults to \Expr{False}.
 the output.
 \Ticket{5087}
 
+\item Using \Condor{status} \Opt{-long} with the \Opt{-attributes} option
+now fetches from the \Condor{collector} 
+and then displays the attributes specified along with any attributes that
+they, in turn, reference.
+Additional attributes already being sent may be included.
+\Ticket{5160}
+
 \item Fixed a bug in which Linux kernel version 4 would incorrectly report
 a load average of -1.
 \Ticket{5080}
@@ -121,6 +128,10 @@ if the ABORT-DAG-ON feature was triggered.
 Previously, the names were allowed to have unexpected characters, which
 would cause the \Condor{userprio} command to fail.
 \Ticket{5123}
+
+\item The \Condor{schedd} now properly updates badput statistics when
+it kills an unresponsive \Condor{shadow} process.
+\Ticket{5151}
 
 \end{itemize}
 
