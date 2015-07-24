@@ -1760,6 +1760,9 @@ main( int argc, const char *argv[] )
 	for (i=0;i<JobAdsArrayLen;i++) {
 		delete JobAdsArray[i];
 	}
+	delete job;
+	delete ClusterAd;
+	delete MySchedd;
 
 	/*	print all of the parameters that were not actually expanded/used 
 		in the submit file. but not if we never queued any jobs. since
