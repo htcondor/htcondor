@@ -75,13 +75,18 @@ void ClassAdLibraryVersion(string &version_string)
     return;
 }
 
-static References *specialAttrNames = NULL;
-static void init_specialAttrNames() {
-	specialAttrNames = new References;
-	specialAttrNames->insert( ATTR_TOPLEVEL );
-	specialAttrNames->insert( ATTR_ROOT );
-	specialAttrNames->insert( ATTR_SELF );
-	specialAttrNames->insert( ATTR_PARENT );
+static References &getSpecialAttrNames()
+{
+	static References specialAttrNames;
+	static bool specialAttrNames_inited = false;
+	if ( !specialAttrNames_inited ) {
+		specialAttrNames.insert( ATTR_TOPLEVEL );
+		specialAttrNames.insert( ATTR_ROOT );
+		specialAttrNames.insert( ATTR_SELF );
+		specialAttrNames.insert( ATTR_PARENT );
+		specialAttrNames_inited = true;
+	}
+	return specialAttrNames;
 }
 
 static FunctionCall *CurrentTime_expr = NULL;
@@ -89,29 +94,22 @@ static FunctionCall *CurrentTime_expr = NULL;
 void SetOldClassAdSemantics(bool enable)
 {
 	_useOldClassAdSemantics = enable;
-	if ( specialAttrNames == NULL ) {
-		init_specialAttrNames();
-		SAL_assume(specialAttrNames != NULL)
-	}
 	if ( enable ) {
-		specialAttrNames->insert( ATTR_MY );
-		specialAttrNames->insert( ATTR_CURRENT_TIME );
+		getSpecialAttrNames().insert( ATTR_MY );
+		getSpecialAttrNames().insert( ATTR_CURRENT_TIME );
 		if ( CurrentTime_expr == NULL ) {
 			vector<ExprTree*> args;
 			CurrentTime_expr = FunctionCall::MakeFunctionCall( "time", args );
 		}
 	} else {
-		specialAttrNames->erase( ATTR_MY );
-		specialAttrNames->erase( ATTR_CURRENT_TIME );
+		getSpecialAttrNames().erase( ATTR_MY );
+		getSpecialAttrNames().erase( ATTR_CURRENT_TIME );
 	}
 }
 
 ClassAd::
 ClassAd ()
 {
-	if ( specialAttrNames == NULL ) {
-		init_specialAttrNames();
-	}
 	EnableDirtyTracking();
 	chained_parent_ad = NULL;
 	alternateScope = NULL;
@@ -678,7 +676,7 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 		} else {
 			superScope = current->parentScope;
 		}
-		if ( specialAttrNames->find(name) == specialAttrNames->end() ) {
+		if ( getSpecialAttrNames().find(name) == getSpecialAttrNames().end() ) {
 			// continue searching from the superScope ...
 			current = superScope;
 			if( current == this ) {		// NAC - simple loop checker
