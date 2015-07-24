@@ -83,6 +83,7 @@ sub SetUp
 	my $cmdstatus;
 	my @adarray;
 
+	print "CondorCmdStatusWorker2 setup in\n";
 	my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"statusworker1");
 
 	my $new_condor = CondorTest::StartCondorWithParams(
@@ -119,7 +120,7 @@ sub SetUp
 	#$ENV{CONDOR_CONFIG} = $saveconfig;
 	$ENV{CONDOR_CONFIG} = $pool1;
 
-	print "ok\n";
+	print "ok - first pool started\n";
 
 	my $done = 0;
 
@@ -130,6 +131,7 @@ sub SetUp
 		condorlocalsrc => "$configfile2",
 	);
 
+	print "ok - second pool started\n";
 	CondorTest::SetTestName($testname);
 
 	my $pool2 = $new_condor2->GetCondorConfig();
@@ -194,6 +196,8 @@ sub SetUp
 	print "job 1.0 running - ";
 	print "ok\n\n";
 
+	print "CondorCmdStatusWorker2: remote pool steady and ready\n";
+
 	# submit into collector node schedd
 	print "In personal condor with collector\n";
 	print "Changing from: $pool2 to:$pool1\n";
@@ -257,9 +261,12 @@ sub SetUp
     my $nattempts = 8;
     my $count = 0;
 
+	print "CondorCmdStatusWorker2: local pool steady and ready\n";
+
 	print "Looking for expected number of startds(6) - ";
     CondorTest::debug("Looking at new pool<condor_status>\n",$debuglevel);
     while($count < $nattempts) {
+		print "startd check loop $count\n";
     my $masterlocal = 0;
     my $mastersched = 0;
         my $found1 = 0;
@@ -303,6 +310,8 @@ sub SetUp
     }
 
 	my $configreturn = $pool1 . "&" . $pool2;
+
+	print "CondorCmdStatusWorker2 setup done\n";
 
 	if($done != 1) {
 		return("");
