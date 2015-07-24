@@ -1292,8 +1292,10 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 
 	}
 
-	#lets always overrul existing A__DEBUG with one that adds to it D_CMD
+	#lets always overrule existing A__DEBUG with one that adds to it D_CMD
 	print NEW "ALL_DEBUG = \$(ALL_DEBUG) D_CMD:1\n";
+	# we are testing. dramatically reduce MaxVacateTime
+	print NEW "JOB_MAX_VACATE_TIME = 15\n";
 
 	close(NEW);
 	if (defined $returnarrayref) {

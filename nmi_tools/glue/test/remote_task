@@ -339,6 +339,8 @@ sub StartTestPersonal {
 	my $firstappend_condor_config = '
     	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
     	ALL_DEBUG = D_ALWAYS
+		NEGOTIATOR_INTERVAL = 5
+		JOB_MAX_VACATE_TIME = 15
 	';
 
 	my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"remotetask$test");
