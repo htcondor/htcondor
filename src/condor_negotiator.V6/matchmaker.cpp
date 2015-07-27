@@ -3655,6 +3655,9 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 	FDToRRLMap fdToRRL;
 	unsigned attemptedPrefetches = 0, successfulPrefetches = 0;
 	double startTime = _condor_debug_get_time_double();
+	int prefetchTimeout = param_integer("PREFETCH_REQUEST_LISTS_TIMEOUT");
+	double deadline = (prefetchTimeout > 0) ? (startTime + prefetchTimeout) : -1;
+
 	while (assignWork(scheddWorkQueues, currentWork, negotiations) || !currentWork.empty())
 	{
 		dprintf(D_FULLDEBUG, "Starting prefetch loop.\n");
@@ -3704,11 +3707,16 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 			}
 		}
 
+		if ((deadline >= 0) && (_condor_debug_get_time_double() > deadline))
+		{
+			dprintf(D_ALWAYS, "Prefetch cycle hit deadline of %d; skipping remaining submitters.\n", prefetchTimeout);
+			break;
+		}
+
 		// Non-blocking reads of RRLs
 		Selector selector;
-		int timeout = NegotiatorTimeout - (_condor_debug_get_time_double() - startTime);
-		if (timeout < 0) {break;}
 		selector.set_timeout(NegotiatorTimeout);
+
 			// Put together the selector.
 		unsigned workCount = 0;
 		for (CurrentWorkMap::const_iterator it=currentWork.begin(); it!=currentWork.end(); it++)
@@ -3722,8 +3730,22 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 		}
 		if (!workCount) {continue;}
 		dprintf(D_FULLDEBUG, "Waiting on the results of %u negotiation sessions.\n", workCount);
-		selector.execute(); // TODO: handle selector errors.
-		if (selector.timed_out()) {break;}
+		selector.execute();
+		if (selector.timed_out() && selector.failed())
+		{
+			for (FDToRRLMap::const_iterator it = fdToRRL.begin(); it != fdToRRL.end(); it++)
+			{
+				std::string scheddAddr; getScheddAddr(*(it->second.first), scheddAddr);
+				scheddWorkQueues[scheddAddr]->clear();
+				ReliSock *sock = sockCache->findReliSock(scheddAddr);
+				if (!sock) {continue;}
+				CurrentWorkMap::iterator iter = currentWork.find(scheddAddr);
+				if (iter != currentWork.end()) {currentWork.erase(iter);}
+				if (selector.timed_out()) {dprintf(D_ALWAYS, "Timeout when prefetching from %s; will skip this schedd for the remainder of prefetch cycle.\n", scheddAddr.c_str());}
+				else {dprintf(D_ALWAYS, "Failure when waiting on results of negotiations sessions (%s, errno=%d).\n", strerror(selector.select_errno()), selector.select_errno());}
+			}
+		}
+		else
 			// Try getting the RRL for all ready sockets.
 		for (FDToRRLMap::const_iterator it = fdToRRL.begin(); it != fdToRRL.end(); it++)
 		{
@@ -3751,7 +3773,7 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 				scheddWorkQueues[scheddAddr]->clear();
 				CurrentWorkMap::iterator iter = currentWork.find(scheddAddr);
 				if (iter != currentWork.end()) {currentWork.erase(iter);}
-				// TODO: log
+				dprintf(D_ALWAYS, "Error when prefetching from %s; will skip this schedd for the remainder of prefetch cycle.\n", scheddAddr.c_str());
 				break;
 			}
 			case ResourceRequestList::RRL_CONTINUE:
@@ -3759,14 +3781,19 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 				break;
 			}
 		}
-	}
 
-		// TODO: don't try new work too close to deadline
+		if ((deadline >= 0) && (_condor_debug_get_time_double() > deadline))
+		{
+			dprintf(D_ALWAYS, "Prefetch cycle hit deadline of %d; skipping remaining submitters.\n", prefetchTimeout);
+			break;
+		}
+	}
 	unsigned timedOutPrefetches = 0;
 	for (CurrentWorkMap::const_iterator it=currentWork.begin(); it!=currentWork.end(); it++)
 	{
 		timedOutPrefetches++;
-			// TODO: sockCache->invalidateSock( scheddAddr.Value() );
+		dprintf(D_ALWAYS, "At end of the prefetch cycle, still waiting on response from %s; giving up and invalidating socket.\n", it->first.c_str());
+		sockCache->invalidateSock(it->first);
 		endNegotiate(it->first);
 	}
 	dprintf(D_ALWAYS, "Prefetch summary: %u attempted, %u successful.\n", attemptedPrefetches, successfulPrefetches);
