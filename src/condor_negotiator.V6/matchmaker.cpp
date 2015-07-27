@@ -3617,7 +3617,7 @@ assignWork(const ScheddWorkMap &workMap, CurrentWorkMap &curWork, ScheddWork &ne
 void
 Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterAds)
 {
-	if (!param_boolean("PREFETCH_REQUEST_LISTS", false))
+	if (!param_boolean("PREFETCH_REQUESTS", false))
 	{
 		return;
 	}
@@ -3660,11 +3660,11 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 	FDToRRLMap fdToRRL;
 	unsigned attemptedPrefetches = 0, successfulPrefetches = 0;
 	double startTime = _condor_debug_get_time_double();
-	int prefetchTimeout = param_integer("PREFETCH_REQUEST_LISTS_TIMEOUT");
-	double deadline = (prefetchTimeout > 0) ? (startTime + prefetchTimeout) : -1;
+	int prefetchTimeout = param_integer("PREFETCH_REQUESTS_TIMEOUT", NegotiatorTimeout);
+	int prefetchCycle = param_integer("PREFETCH_REQUESTS_MAX_TIME");
+	double deadline = (prefetchCycle > 0) ? (startTime + prefetchCycle) : -1;
 
 	Selector selector;
-	selector.set_timeout(NegotiatorTimeout);
 	while (assignWork(scheddWorkQueues, currentWork, negotiations) || !currentWork.empty())
 	{
 		dprintf(D_FULLDEBUG, "Starting prefetch loop.\n");
@@ -3682,10 +3682,10 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 				switch (rrl->tryRetrieve(sock))
 				{
 				case ResourceRequestList::RRL_DONE:
-					endNegotiate(scheddAddr);
 				case ResourceRequestList::RRL_NO_MORE_JOBS:
 				{
 					dprintf(D_FULLDEBUG, "Prefetch negotiation immediately finished.\n");
+					if (rrl->needsEndNegotiateNow()) {endNegotiate(scheddAddr);}
 					std::string hash; makeSubmitterScheddHash(**it, hash);
 					m_cachedRRLs[hash] = rrl;
 					CurrentWorkMap::iterator iter = currentWork.find(scheddAddr);
@@ -3716,12 +3716,13 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 
 		if ((deadline >= 0) && (_condor_debug_get_time_double() > deadline))
 		{
-			dprintf(D_ALWAYS, "Prefetch cycle hit deadline of %d; skipping remaining submitters.\n", prefetchTimeout);
+			dprintf(D_ALWAYS, "Prefetch cycle hit deadline of %d; skipping remaining submitters.\n", prefetchCycle);
 			break;
 		}
 
 		// Non-blocking reads of RRLs
 		selector.reset();
+		selector.set_timeout(prefetchTimeout);
 
 			// Put together the selector.
 		unsigned workCount = 0;
@@ -3763,10 +3764,10 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 			if (!sock) {continue;}
 			switch (rrl.tryRetrieve(sock)) {
 			case ResourceRequestList::RRL_DONE:
-				endNegotiate(scheddAddr);
 			case ResourceRequestList::RRL_NO_MORE_JOBS:
 			{
 					// Successfully prefetched a RRL; cache it in the negotiator.
+				if (rrl.needsEndNegotiateNow()) {endNegotiate(scheddAddr);}
 				std::string hash; makeSubmitterScheddHash(*(it->second.first), hash);
 				m_cachedRRLs[hash] = it->second.second;
 				CurrentWorkMap::iterator iter = currentWork.find(scheddAddr);
@@ -3791,7 +3792,7 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 
 		if ((deadline >= 0) && (_condor_debug_get_time_double() > deadline))
 		{
-			dprintf(D_ALWAYS, "Prefetch cycle hit deadline of %d; skipping remaining submitters.\n", prefetchTimeout);
+			dprintf(D_ALWAYS, "Prefetch cycle hit deadline of %d; skipping remaining submitters.\n", prefetchCycle);
 			break;
 		}
 	}

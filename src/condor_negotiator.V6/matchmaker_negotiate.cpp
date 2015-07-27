@@ -26,7 +26,8 @@
 #include "matchmaker_negotiate.h"
 
 ResourceRequestList::ResourceRequestList(int protocol_version)
-	: m_consume_empty_rrl(false),
+	: m_send_end_negotiate(false),
+	m_send_end_negotiate_now(false),
 	m_requests_to_fetch(0)
 {
 	m_protocol_version = protocol_version;
@@ -62,13 +63,16 @@ ResourceRequestList::~ResourceRequestList()
 bool
 ResourceRequestList::needsEndNegotiate()
 {
-	if (m_consume_empty_rrl)
-	{
-		m_consume_empty_rrl = false;
-		return true;
-	}
-	return false;
+	return m_send_end_negotiate;
 }
+
+
+bool
+ResourceRequestList::needsEndNegotiateNow()
+{
+	return m_send_end_negotiate_now;
+}
+
 
 bool
 ResourceRequestList::getRequest(ClassAd &request, int &cluster, int &proc, int &autocluster,
@@ -79,11 +83,6 @@ ResourceRequestList::getRequest(ClassAd &request, int &cluster, int &proc, int &
 	proc = -1;
 	autocluster = -1;
 
-	if (m_consume_empty_rrl && m_ads.empty())
-	{
-		return false;
-	}
-
 	// 2a.  ask for job information
 	if ( resource_request_count > ++resource_request_offers ) {
 		// No need to go to the schedd to ask for another resource request,
@@ -91,6 +90,17 @@ ResourceRequestList::getRequest(ClassAd &request, int &cluster, int &proc, int &
 		// for the request we already have cached.
 		request = cached_resource_request;
 	} else {
+			// The prefetch of RRLs saw a NO_MORE_JOBS from the schedd.
+			// Hence, once m_ads is empty and we run out or resource_request_count,
+			// then we ought to return false.
+			//
+			// In this case, we never ask the schedd to send job info, so we must
+			// send an explicit END_NEGOTIATE to inform it we are done.
+		if (m_send_end_negotiate && m_ads.empty())
+		{
+			return false;
+		}
+
 		// We used up our cached_resource_request, so no we need to grab the
 		// next request from our list m_ads.
 		
@@ -199,14 +209,15 @@ ResourceRequestList::TryStates
 ResourceRequestList::tryRetrieve(ReliSock *const sock)
 {
 	TryStates result = fetchRequestsFromSchedd(sock, false);
-	if (result == RRL_NO_MORE_JOBS)
-	{
-		m_consume_empty_rrl = true;
-	}
-	else
-	{
-		m_consume_empty_rrl = false;
-	}
+		// Protocol version 1 requires an END_NEGOTIATE after NO_MORE_JOBS if *any* RRLs were received
+		//   - If NO_MORE_JOBS was sent without any RRLs, then END_NEGOTIATE is not needed
+		//
+		// Protocol version 0 does not require any immediate end negotiate -- NO_MORE_JOBS indicates
+		// the schedd is done.
+	m_send_end_negotiate_now = (result == RRL_DONE) || ((result == RRL_NO_MORE_JOBS) && !m_ads.empty() && (m_protocol_version==1));
+		// This indicates that we already saw NO_MORE_JOBS; hence, when using the cached RRL, we'll
+		// never request jobs.
+	m_send_end_negotiate = (result == RRL_NO_MORE_JOBS);
 	return result;
 }
 
