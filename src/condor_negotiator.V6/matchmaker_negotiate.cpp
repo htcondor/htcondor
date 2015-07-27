@@ -79,7 +79,7 @@ ResourceRequestList::getRequest(ClassAd &request, int &cluster, int &proc, int &
 	proc = -1;
 	autocluster = -1;
 
-	if (m_consume_empty_rrl)
+	if (m_consume_empty_rrl && m_ads.empty())
 	{
 		return false;
 	}
@@ -199,7 +199,7 @@ ResourceRequestList::TryStates
 ResourceRequestList::tryRetrieve(ReliSock *const sock)
 {
 	TryStates result = fetchRequestsFromSchedd(sock, false);
-	if (result == RRL_NO_MORE_JOBS && m_ads.empty())
+	if (result == RRL_NO_MORE_JOBS)
 	{
 		m_consume_empty_rrl = true;
 	}

@@ -3571,6 +3571,11 @@ bool makeSubmitterScheddHash(const ClassAd &ad, std::string &hash)
 		return false;
 	}
 	ss << submitterName << "," << scheddAddr;
+	int jobprio = 0;
+	ad.EvaluateAttrInt("JOBPRIO_MIN", jobprio);
+	ss << "," << jobprio;
+	ad.EvaluateAttrInt("JOBPRIO_MAX", jobprio);
+	ss << "," << jobprio;
 	hash = ss.str();
 	return true;
 }
@@ -3866,7 +3871,7 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 	// from the version of the schedd, figure out the version of the negotiate 
 	// protocol supported.
 	int schedd_negotiate_protocol_version = 0; 
-	if (!submitterAd.EvaluateAttrString(ATTR_VERSION, schedd_version_string) && !schedd_version_string.empty())
+	if (submitterAd.EvaluateAttrString(ATTR_VERSION, schedd_version_string) && !schedd_version_string.empty())
 	{
 		CondorVersionInfo scheddVersion(schedd_version_string.c_str());
 		if (scheddVersion.built_since_version(8,3,0))
@@ -4007,7 +4012,7 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 		sockCache->invalidateSock(scheddAddr);
 		return false;
 	}
-	dprintf(D_FULLDEBUG, "Started NEGOTIATE with remote schedd.\n");
+	dprintf(D_FULLDEBUG, "Started NEGOTIATE with remote schedd; protocol version %d.\n", schedd_negotiate_protocol_version);
 
 	if (!request_list.get())
 	{
