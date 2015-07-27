@@ -3658,6 +3658,8 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 	int prefetchTimeout = param_integer("PREFETCH_REQUEST_LISTS_TIMEOUT");
 	double deadline = (prefetchTimeout > 0) ? (startTime + prefetchTimeout) : -1;
 
+	Selector selector;
+	selector.set_timeout(NegotiatorTimeout);
 	while (assignWork(scheddWorkQueues, currentWork, negotiations) || !currentWork.empty())
 	{
 		dprintf(D_FULLDEBUG, "Starting prefetch loop.\n");
@@ -3714,11 +3716,11 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 		}
 
 		// Non-blocking reads of RRLs
-		Selector selector;
-		selector.set_timeout(NegotiatorTimeout);
+		selector.reset();
 
 			// Put together the selector.
 		unsigned workCount = 0;
+		fdToRRL.clear();
 		for (CurrentWorkMap::const_iterator it=currentWork.begin(); it!=currentWork.end(); it++)
 		{
 			ReliSock *sock = sockCache->findReliSock(it->first);
