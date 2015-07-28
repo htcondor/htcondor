@@ -8927,6 +8927,9 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	std::string job_ad_path;
 	bool wrote_job_ad = false;
 	bool directory_exists = false;
+	FamilyInfo fi;
+
+	fi.max_snapshot_interval = 15;
 
 	is_executable = false;
 
@@ -9247,7 +9250,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	daemonCore->SetInheritParentSinful( NULL );
 	pid = daemonCore->Create_Process( a_out_name.Value(), args, PRIV_USER_FINAL, 
 	                                  shadowReaperId, FALSE, FALSE,
-	                                  &envobject, iwd.Value(), NULL, NULL, inouterr,
+	                                  &envobject, iwd.Value(), &fi, NULL, inouterr,
 	                                  NULL, niceness, NULL,
 	                                  DCJOBOPT_NO_ENV_INHERIT,
 	                                  core_size_ptr );
@@ -10664,6 +10667,7 @@ Scheduler::child_exit(int pid, int status)
 		//
 	if (IsSchedulerUniverse(srec)) {
  		// scheduler universe process 
+		daemonCore->Kill_Family( pid );
 		scheduler_univ_job_exit(pid,status,srec);
 		delete_shadow_rec( pid );
 			// even though this will get set correctly in
