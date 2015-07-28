@@ -3399,21 +3399,23 @@ The recommendation holds whether the jobs are represented by
 a DAG due to dependencies, or all the jobs are
 independent of each other, such as they might be in a parameter sweep.
 DAGMan offers:
-\begin{itemize}
-\item{Throttling}
-  to limit the number of submitted jobs at any point in time.
-\item{Retry of jobs that fail.}
-  A useful tool when an intermittent error may cause a job to fail
-  or fail to run to completion when attempted at one point in time,
+\begin{description}
+\item[Throttling]
+  Throttling limits the number of submitted jobs at any point in time.
+\item[Retry of jobs that fail]
+  This is a useful tool when an intermittent error may cause a job to fail
+  or may cause a job to fail to run to completion when attempted at 
+  one point in time,
   but not at another point in time.
-  And, note that what constitutes failure is user-defined.
-\item{Automatic generation of the administrative support that facilitates the
-  rerunning of only jobs that fail.}
-\item{The ability to run scripts before and/or after the execution of
-individual jobs.}
-\end{itemize}
+  The conditions under which retry occurs are user-defined.
+  In addition, the administrative support that facilitates the
+  rerunning of only those jobs that fail is automatically generated.
+\item[Scripts associated with node jobs]
+  PRE and POST scripts run on the submit host before and/or after 
+  the execution of specified node jobs.
+\end{description}
 
-Each of these capabilities is described in detail (above)
+Each of these capabilities is described in detail
 within this manual section about DAGMan.
 To make effective use of DAGMan, there is no way around reading the 
 appropriate subsections.
@@ -3421,8 +3423,8 @@ appropriate subsections.
 To run DAGMan with large numbers of independent jobs,
 there are generally two ways of organizing and specifying the
 files that control the jobs.
-Both ways presume that programs or scripts will generate the files,
-because the files are either large and repetitive
+Both ways presume that programs or scripts will generate needed files,
+because the file contents are either large and repetitive,
 or because there are a large number of similar files to be
 generated representing the large numbers of jobs.
 The two file types needed are the DAG input file and the
@@ -3432,7 +3434,7 @@ Each of the two ways is presented separately:
 \begin{description}
 \item[A unique submit description file for each of the many jobs.]
 A single DAG input file lists each of the jobs and specifies
-a distinct HTCondor submit description file for each job.
+a distinct submit description file for each job.
 The DAG input file is simple to generate, as it chooses an
 identifier for each job and names the submit description file.
 For example, the simplest DAG input file for a set of 1000 independent jobs,
@@ -3460,21 +3462,20 @@ might appear as
   log = job6.log
   input = job6.in
   output = job6.out
-  notification = Never
   arguments = "-file job6.out"
   queue
 \end{verbatim}
 
-Submission of the entire set of jobs is
+Submission of the entire set of jobs uses the command line
 \begin{verbatim}
   condor_submit_dag sweep.dag
 \end{verbatim}
 
 A benefit to having unique submit description files for each of the
-jobs is that they are available, if one of the jobs needs to be
+jobs is that they are available if one of the jobs needs to be
 submitted individually.
 A drawback to having unique submit description files for each of the jobs
-is that there are lots of files, one for each job.
+is that there are lots of submit description files.
 
 \item[Single submit description file.]
 A single HTCondor submit description file might be used for all the many
@@ -3507,13 +3508,12 @@ This submit description file might appear as
   log = wholeDAG.log
   input = job$(runnumber).in
   output = job$(runnumber).out
-  notification = Never
   arguments = "-$(runnumber)"
   queue
 \end{verbatim}
 The job with \Expr{runnumber="8"} expects to find its input file \File{job8.in} 
-in the single, common directory, and it 
-sends its output to \File{job8.out}.
+in the single, common directory, 
+and it sends its output to \File{job8.out}.
 The single log for all job events of the entire DAG is \File{wholeDAG.log}.
 Using one file for the entire DAG meets the limitation that no macro
 substitution may be specified for the job log file, 
@@ -3525,7 +3525,7 @@ This node's executable is invoked with
 
 \end{description}
 
-These examples work well with respect to file naming and placement
+These examples work well with respect to file naming and file location
 when there are less than several thousand jobs submitted as part
 of a DAG.
 The large numbers of files per directory becomes an issue when there
@@ -3544,7 +3544,7 @@ for the input, output, and log files for one of the many jobs.
 
 As an example, for this set of 10,000 jobs and directories, assume
 that there is a run number of 600.
-The directory will be named \File{dir.600}, and it will
+The directory will be named \File{dir600}, and it will
 hold the 3 files called \File{in}, \File{out}, and \File{log},
 representing the input, output, and HTCondor job log files associated
 with run number 600.
@@ -3553,16 +3553,16 @@ The DAG input file sets a variable representing the run number,
 as in the previous example:
 \begin{verbatim}
   # file biggersweep.dag
-  JOB job0 common.submit
+  JOB job0 bigger.submit
   VARS job0 runnumber="0"
-  JOB job1 common.submit
+  JOB job1 bigger.submit
   VARS job1 runnumber="1"
-  JOB job2 common.submit
+  JOB job2 bigger.submit
   VARS job2 runnumber="2"
   .
   .
   .
-  JOB job9999 common.submit
+  JOB job9999 bigger.submit
   VARS job9999 runnumber="9999"
 \end{verbatim}
 
@@ -3575,9 +3575,8 @@ It resides in the same directory as the DAG input file.
   log = log
   input = in
   output = out
-  notification = Never
   arguments = "-$(runnumber)"
-  initialdir = dir.$(runnumber)
+  initialdir = dir$(runnumber)
   queue
 \end{verbatim}
 
@@ -3602,10 +3601,9 @@ the submit description file, the DAG input file, and the subdirectories,
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!workflow metrics}
 
-As of HTCondor version 8.1.0, \Condor{dagman} has the ability to report
-workflow metrics to one or more HTTP servers.  
-This capability is currently only used for workflows run under Pegasus.  
-The reporting can be
+\Condor{dagman} may report workflow metrics to one or more HTTP servers.  
+This capability is currently only used for workflows run under \Prog{Pegasus}.  
+The reporting is
 disabled by setting the \Macro{CONDOR\_DEVELOPERS} configuration
 variable to \Expr{NONE},
 or by setting the \Env{PEGASUS\_METRICS} environment
@@ -3613,8 +3611,8 @@ variable to any value other than \Expr{True} (case-insensitive) or 1.
 The \File{dagman.out} file will indicate whether or not metrics were
 reported.
 
-For every DAG, a metrics file is created whether the metrics
-are actually reported or not.
+For every DAG, a metrics file is created independent of the reporting
+of those metrics.
 This metrics file is named
 \File{\textless{dag\_file\_name}\textgreater.metrics},
 where \Expr{<dag\_file\_name>} is the name of the DAG input file.
@@ -3653,52 +3651,52 @@ Here is an example metrics output file:
 
 Here is an explanation of each of the items in the file:
 \begin{itemize}
-\item \Expr{client}: the name of the workflow software,
-for example \Expr{"condor\_dagman"}.
-\item \Expr{version}: the version of the client software.
-\item \Expr{planner}: the workflow planner, 
-as read from the \File{braindump.txt} file.
+\item \Expr{client}: the name of the client workflow software;
+in the example, it is \Expr{"condor\_dagman"}
+\item \Expr{version}: the version of the client workflow software
+\item \Expr{planner}: the workflow planner,
+as read from the \File{braindump.txt} file
 \item \Expr{planner\_version}: the planner software version,
-as read from the \File{braindump.txt} file.
-\item \Expr{type}: the type of data,  \Expr{"metrics"}.
+as read from the \File{braindump.txt} file
+\item \Expr{type}: the type of data,  \Expr{"metrics"}
 \item \Expr{wf\_uuid}: the workflow ID, 
-generated by \Prog{pegasus-plan}, as read from the \File{braindump.txt} file.
+generated by \Prog{pegasus-plan}, as read from the \File{braindump.txt} file
 \item \Expr{root\_wf\_uuid}: the root workflow ID,
-which is relevant for nested workflows. 
+which is relevant for nested workflows.
 It is generated by \Prog{pegasus-plan}, 
 as read from the \File{braindump.txt} file.
 \item \Expr{start\_time}: the start time of the client,
-in epoch seconds, with millisecond precision.
+in epoch seconds, with millisecond precision
 \item \Expr{end\_time}: the end time of the client,
-in epoch seconds, with millisecond precision.
+in epoch seconds, with millisecond precision
 \item \Expr{duration}: the duration of the client,
-in seconds, with millisecond precision.
-\item \Expr{exitcode}: the \Condor{dagman} exit code.
+in seconds, with millisecond precision
+\item \Expr{exitcode}: the \Condor{dagman} exit code
 \item \Expr{dagman\_id}: the value of the \Attr{ClusterId} attribute 
-of the \Condor{dagman} instance.
+of the \Condor{dagman} instance
 \item \Expr{parent\_dagman\_id}: the value of the \Attr{ClusterId} attribute 
 of the parent \Condor{dagman} instance of this DAG;
-empty if this DAG is not a SUBDAG.
+empty if this DAG is \emph{not} a SUBDAG
 \item \Expr{rescue\_dag\_number}: the number of the Rescue DAG being run,
-or 0 if not running a Rescue DAG.
+or 0 if not running a Rescue DAG
 \item \Expr{jobs}: the number of nodes in the DAG input file,
-not including SUBDAG nodes.
+not including SUBDAG nodes
 \item \Expr{jobs\_failed}: the number of failed nodes in the workflow,
-not including SUBDAG nodes.
+not including SUBDAG nodes
 \item \Expr{jobs\_succeeded}: the number of successful nodes in the
 workflow, not including SUBDAG nodes; 
-this includes jobs that succeeded after retries.
-\item \Expr{dag\_jobs}: the number of SUBDAG nodes in the DAG input file.
-\item \Expr{dag\_jobs\_failed}: the number of SUBDAG nodes that failed.
-\item \Expr{dag\_jobs\_succeeded}: the number of SUBDAG nodes that succeeded.
+this includes jobs that succeeded after retries
+\item \Expr{dag\_jobs}: the number of SUBDAG nodes in the DAG input file
+\item \Expr{dag\_jobs\_failed}: the number of SUBDAG nodes that failed
+\item \Expr{dag\_jobs\_succeeded}: the number of SUBDAG nodes that succeeded
 \item \Expr{total\_jobs}: the total number of jobs in
-the DAG input file.
+the DAG input file
 \item \Expr{total\_jobs\_run}: the total number of nodes executed in a DAG.
 It should be equal to \Expr{jobs\_succeeded + jobs\_failed + 
-dag\_jobs\_succeeded + dag\_jobs\_failed}.
+dag\_jobs\_succeeded + dag\_jobs\_failed}
 \item \Expr{total\_job\_time}: the sum of the time between the first
-execute event and the terminated event for all jobs that are not SUBDAGs.
-\item \Expr{dag\_status}: the final status of the DAG, as follows:
+execute event and the terminated event for all jobs that are not SUBDAGs
+\item \Expr{dag\_status}: the final status of the DAG, with values
   \begin{itemize}
   \item \Expr{0}: OK
   \item \Expr{1}: error; an error condition different than those listed here
@@ -3720,8 +3718,7 @@ variable.
 If not specified, the file name defaults to 
 \File{braindump.txt}, and it is placed in the current directory.
 
-Note that, as of HTCondor version 8.1.0, 
-the \Expr{total\_job\_time} value is always zero,
+Note that the \Expr{total\_job\_time} value is always zero,
 because the calculation of that value has not yet been implemented.
 
 If a DAG succeeds, but the metrics reporting fails, the DAG is
@@ -3732,9 +3729,9 @@ This includes reporting the metrics if the \Condor{dagman} job is removed,
 or if the DAG drains from the queue because of being halted by a halt
 file.
 
-The metrics are actually reported by the
+The metrics are reported by the
 \Condor{dagman\_metrics\_reporter} executable
-as described in the man page at
+as described in the manual page at
 ~\pageref{man-condor-dagman-metrics-reporter}.
 
 \index{DAGMan|)}
