@@ -32,9 +32,6 @@ CondorVersionInfo::CondorVersionInfo(const char *versionstring,
 									 const char *platformstring)
 {
 	myversion.MajorVer = 0;
-	myversion.Rest = NULL;
-	myversion.Arch = NULL;
-	myversion.OpSys = NULL;
 	mysubsys = NULL;
 
 	if ( versionstring == NULL ) {
@@ -60,9 +57,6 @@ CondorVersionInfo::CondorVersionInfo(int major, int minor, int subminor,
 									 const char *platformstring)
 {
 	myversion.MajorVer = 0;
-	myversion.Rest = NULL;
-	myversion.Arch = NULL;
-	myversion.OpSys = NULL;
 	mysubsys = NULL;
 
 	if ( platformstring == NULL ) {
@@ -86,23 +80,14 @@ CondorVersionInfo::CondorVersionInfo(CondorVersionInfo const &other)
 	if( other.mysubsys ) {
 		mysubsys = strdup(other.mysubsys);
 	}
-	if( other.myversion.Rest ) {
-		myversion.Rest = strdup(other.myversion.Rest);
-	}
-	if( other.myversion.Arch ) {
-		myversion.Arch = strdup(other.myversion.Arch);
-	}
-	if( other.myversion.OpSys ) {
-		myversion.OpSys = strdup(other.myversion.OpSys);
-	}
+	myversion.Rest = other.myversion.Rest;
+	myversion.Arch = other.myversion.Arch;
+	myversion.OpSys = other.myversion.OpSys;
 }
 
 CondorVersionInfo::~CondorVersionInfo()
 {
 	if (mysubsys) free(mysubsys);
-	if(myversion.Rest) free(myversion.Rest);
- 	if(myversion.Arch) free(myversion.Arch);
- 	if(myversion.OpSys) free(myversion.OpSys);
 }
 
 
@@ -407,7 +392,7 @@ CondorVersionInfo::VersionData_to_string(VersionData_t const &ver) const
 	int n = snprintf(buf,buflen,"$%s: %d.%d.%d %s $", 
 					 "CondorVersion", // avoid having false "$CondorVersion: ..." show up in strings
 					 ver.MajorVer, ver.MinorVer, ver.SubMinorVer,
-					 ver.Rest);
+					 ver.Rest.c_str());
 	if( n>=buflen || n<0 ) {
 		free(buf);
 		return NULL;
@@ -434,9 +419,9 @@ CondorVersionInfo::numbers_to_VersionData( int major, int minor, int subminor,
 					+ ver.SubMinorVer;
 
 	if ( rest ) {
-		ver.Rest = strdup( rest );
+		ver.Rest = rest;
 	} else {
-		ver.Rest = strdup( "" );
+		ver.Rest = "";
 	}
 
 	return true;
@@ -484,12 +469,9 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 		// There is a date and other things at the end of the string,
 		// but we're not using them anymore, but others may be so we
 		// hold on to them.  See CondorVersion() for complete format.
-	ver.Rest = strdup(ptr);
+	ver.Rest = ptr;
 		// Strip the trailing " $"
-	char *end = strstr( ver.Rest, " $" );
-	if ( end ) {
-		*end = '\0';
-	}
+	ver.Rest.erase( ver.Rest.find( " $" ) );
 
 	return true;
 }
@@ -517,9 +499,8 @@ CondorVersionInfo::string_to_PlatformData(const char *platformstring,
 
 	size_t len = strcspn(ptr,"-");
 	if( len ) {
-		ver.Arch = strdup(ptr);
-		ASSERT(ver.Arch);
-		ver.Arch[len] = '\0';
+		ver.Arch = ptr;
+		ver.Arch.erase( len );
 		ptr += len;
 	}
 
@@ -529,9 +510,8 @@ CondorVersionInfo::string_to_PlatformData(const char *platformstring,
 
 	len = strcspn(ptr," $");
 	if( len ) {
-		ver.OpSys = strdup(ptr);
-		ASSERT(ver.OpSys);
-		ver.OpSys[len] = '\0';
+		ver.OpSys = ptr;
+		ver.OpSys.erase( len );
 		ptr += len;
 	}
 
