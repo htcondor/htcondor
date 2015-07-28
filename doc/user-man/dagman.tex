@@ -3358,21 +3358,23 @@ The recommendation holds whether the jobs are represented by
 a DAG due to dependencies, or all the jobs are
 independent of each other, such as they might be in a parameter sweep.
 DAGMan offers:
-\begin{itemize}
-\item{Throttling}
-  to limit the number of submitted jobs at any point in time.
-\item{Retry of jobs that fail.}
-  A useful tool when an intermittent error may cause a job to fail
-  or fail to run to completion when attempted at one point in time,
+\begin{description}
+\item[Throttling]
+  Throttling limits the number of submitted jobs at any point in time.
+\item[Retry of jobs that fail]
+  This is a useful tool when an intermittent error may cause a job to fail
+  or may cause a job to fail to run to completion when attempted at 
+  one point in time,
   but not at another point in time.
-  And, note that what constitutes failure is user-defined.
-\item{Automatic generation of the administrative support that facilitates the
-  rerunning of only jobs that fail.}
-\item{The ability to run scripts before and/or after the execution of
-individual jobs.}
-\end{itemize}
+  The conditions under which retry occurs are user-defined.
+  In addition, the administrative support that facilitates the
+  rerunning of only those jobs that fail is automatically generated.
+\item[Scripts associated with node jobs]
+  PRE and POST scripts run on the submit host before and/or after 
+  the execution of specified node jobs.
+\end{description}
 
-Each of these capabilities is described in detail (above)
+Each of these capabilities is described in detail
 within this manual section about DAGMan.
 To make effective use of DAGMan, there is no way around reading the 
 appropriate subsections.
@@ -3380,8 +3382,8 @@ appropriate subsections.
 To run DAGMan with large numbers of independent jobs,
 there are generally two ways of organizing and specifying the
 files that control the jobs.
-Both ways presume that programs or scripts will generate the files,
-because the files are either large and repetitive
+Both ways presume that programs or scripts will generate needed files,
+because the file contents are either large and repetitive,
 or because there are a large number of similar files to be
 generated representing the large numbers of jobs.
 The two file types needed are the DAG input file and the
@@ -3391,7 +3393,7 @@ Each of the two ways is presented separately:
 \begin{description}
 \item[A unique submit description file for each of the many jobs.]
 A single DAG input file lists each of the jobs and specifies
-a distinct HTCondor submit description file for each job.
+a distinct submit description file for each job.
 The DAG input file is simple to generate, as it chooses an
 identifier for each job and names the submit description file.
 For example, the simplest DAG input file for a set of 1000 independent jobs,
@@ -3419,21 +3421,20 @@ might appear as
   log = job6.log
   input = job6.in
   output = job6.out
-  notification = Never
   arguments = "-file job6.out"
   queue
 \end{verbatim}
 
-Submission of the entire set of jobs is
+Submission of the entire set of jobs uses the command line
 \begin{verbatim}
   condor_submit_dag sweep.dag
 \end{verbatim}
 
 A benefit to having unique submit description files for each of the
-jobs is that they are available, if one of the jobs needs to be
+jobs is that they are available if one of the jobs needs to be
 submitted individually.
 A drawback to having unique submit description files for each of the jobs
-is that there are lots of files, one for each job.
+is that there are lots of submit description files.
 
 \item[Single submit description file.]
 A single HTCondor submit description file might be used for all the many
@@ -3466,13 +3467,12 @@ This submit description file might appear as
   log = wholeDAG.log
   input = job$(runnumber).in
   output = job$(runnumber).out
-  notification = Never
   arguments = "-$(runnumber)"
   queue
 \end{verbatim}
 The job with \Expr{runnumber="8"} expects to find its input file \File{job8.in} 
-in the single, common directory, and it 
-sends its output to \File{job8.out}.
+in the single, common directory, 
+and it sends its output to \File{job8.out}.
 The single log for all job events of the entire DAG is \File{wholeDAG.log}.
 Using one file for the entire DAG meets the limitation that no macro
 substitution may be specified for the job log file, 
@@ -3484,7 +3484,7 @@ This node's executable is invoked with
 
 \end{description}
 
-These examples work well with respect to file naming and placement
+These examples work well with respect to file naming and file location
 when there are less than several thousand jobs submitted as part
 of a DAG.
 The large numbers of files per directory becomes an issue when there
@@ -3503,7 +3503,7 @@ for the input, output, and log files for one of the many jobs.
 
 As an example, for this set of 10,000 jobs and directories, assume
 that there is a run number of 600.
-The directory will be named \File{dir.600}, and it will
+The directory will be named \File{dir600}, and it will
 hold the 3 files called \File{in}, \File{out}, and \File{log},
 representing the input, output, and HTCondor job log files associated
 with run number 600.
@@ -3512,16 +3512,16 @@ The DAG input file sets a variable representing the run number,
 as in the previous example:
 \begin{verbatim}
   # file biggersweep.dag
-  JOB job0 common.submit
+  JOB job0 bigger.submit
   VARS job0 runnumber="0"
-  JOB job1 common.submit
+  JOB job1 bigger.submit
   VARS job1 runnumber="1"
-  JOB job2 common.submit
+  JOB job2 bigger.submit
   VARS job2 runnumber="2"
   .
   .
   .
-  JOB job9999 common.submit
+  JOB job9999 bigger.submit
   VARS job9999 runnumber="9999"
 \end{verbatim}
 
@@ -3534,9 +3534,8 @@ It resides in the same directory as the DAG input file.
   log = log
   input = in
   output = out
-  notification = Never
   arguments = "-$(runnumber)"
-  initialdir = dir.$(runnumber)
+  initialdir = dir$(runnumber)
   queue
 \end{verbatim}
 
