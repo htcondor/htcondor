@@ -42,6 +42,10 @@ The new mode is enabled by setting the new configuration variable
 This variable defaults to \Expr{False}.
 \Ticket{5097}
 
+\item When a scheduler universe job exits, the \Condor{schedd} now kills
+any child processes that the job left behind.
+\Ticket{5173}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
