@@ -1364,6 +1364,7 @@ case CONDOR_getlongdir:
 		Directory directory(path);
 		struct stat stat_buf;
 		char line[1024];
+		memset( line, 0, sizeof(line) );
 		
 		// Get directory's contents
 		while((next = directory.Next())) {
@@ -1550,6 +1551,7 @@ case CONDOR_getdir:
 #endif
 		terrno = (condor_errno_t)errno;
 		char line[1024];
+		memset( line, 0, sizeof(line) );
 		if(rval == 0) {
 			if(statfs_string(line, &statfs_buf) < 0) {
 				rval = -1;
@@ -1771,6 +1773,7 @@ case CONDOR_getdir:
 		rval = lstat(path, &stat_buf);
 		terrno = (condor_errno_t)errno;
 		char line[1024];
+		memset( line, 0, sizeof(line) );
 		if(rval == 0) {
 			if(stat_string(line, &stat_buf) < 0) {
 				rval = -1;
@@ -1813,6 +1816,7 @@ case CONDOR_getdir:
 #endif
 		terrno = (condor_errno_t)errno;
 		char line[1024];
+		memset( line, 0, sizeof(line) );
 		if(rval == 0) {
 			if(statfs_string(line, &statfs_buf) < 0) {
 				rval = -1;
@@ -1950,6 +1954,7 @@ case CONDOR_getdir:
 		rval = fstat(fd, &stat_buf);
 		terrno = (condor_errno_t)errno;
 		char line[1024];
+		memset( line, 0, sizeof(line) );
 		if(rval == 0) {
 			if(stat_string(line, &stat_buf) < 0) {
 				rval = -1;
@@ -1986,6 +1991,7 @@ case CONDOR_getdir:
 		rval = stat(path, &stat_buf);
 		terrno = (condor_errno_t)errno;
 		char line[1024];
+		memset( line, 0, sizeof(line) );
 		if(rval == 0) {
 			if(stat_string(line, &stat_buf) < 0) {
 				rval = -1;
