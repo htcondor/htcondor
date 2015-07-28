@@ -66,12 +66,48 @@ void AddReferencedAttribsToBuffer(
 	const char * pindent,
 	std::string & return_buf);
 
+class QuantizingAccumulator {
+public:
+	QuantizingAccumulator(int val, int num) : accum(val), quantized(val), allocs(num) {}
+	QuantizingAccumulator& operator+=(size_t val) { Add(val); return *this; }
+	QuantizingAccumulator& operator+=(int val) { Add(val); return *this; }
+	size_t Value(size_t * pquan=NULL, size_t * pcount=NULL) {
+		if (pquan) *pquan = quantized;
+		if (pcount) *pcount = allocs;
+		return accum;
+	}
+private:
+	void Add(size_t val) { 
+		accum += val; 
+	#ifdef WIN32
+		// from expermentation with vs2012 (32 bit), memory allocation does NOT return consecutive allocations
+		// but the smallest obserable differnce shows that the allocator adds 8 and then quantizes by 8
+		quantized += 8 + ((val + 7) & ~7);
+	#else
+		// from http://web.eecs.utk.edu/~huangj/cs360/360/notes/Malloc1/lecture.html
+		// linux malloc adds 8 then quantizes to 8 bytes
+		quantized += 8 + ((val + 7) & ~7);
+	#endif
+		++allocs;
+	}
+	size_t accum;
+	size_t quantized;
+	size_t allocs;
+};
+
 void AddTargetAttribsToBuffer(
 	StringList & trefs, // in, target refs (probably returned by AddReferencedAttribsToBuffer)
 	ClassAd * request,
 	ClassAd * target,
 	const char * pindent,
 	std::string & return_buf);
+
+// this functions walk the given classad data structure and determines the memory consumed into
+// the given QuantizingAccumulator. The effects of classad caching/compression are ignored by these functions.
+// the return value is the same as accum.Value().
+int AddExprTreeMemoryUse (const classad::ExprTree* tree, QuantizingAccumulator & accum, int & num_skipped);
+int AddClassadMemoryUse (const classad::ClassAd* cad, QuantizingAccumulator & accum, int & num_skipped);
+int AddClassadMemoryUse (const classad::ExprList* list, QuantizingAccumulator & accum, int & num_skipped);
 
 
 #endif//__EXPR_ANALYZE_H__

@@ -4099,7 +4099,7 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 					 const char* old_value)
 {
 	PROC_ID job_id;
-	StrToProcId(job_id_str, job_id);
+	StrToProcIdFixMe(job_id_str, job_id);
 	WriteUserLog* ULog = this->InitializeUserLog( job_id );
 	if( ! ULog ) {
 			// User didn't want log

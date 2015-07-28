@@ -197,7 +197,7 @@ public:
 		return job_id_str;
 	}
 	const PROC_ID& id() {
-		return *(PROC_ID*)this;
+		return *reinterpret_cast<PROC_ID*>(&(this->cluster));
 	}
 	void set(const char * jid) {
 		if ( ! jid || ! jid[0]) {
@@ -207,7 +207,7 @@ public:
 		}
 		strncpy(job_id_str, jid, sizeof(job_id_str));
 		job_id_str[sizeof(job_id_str)-1] = 0;
-		StrToProcId(job_id_str, cluster, proc);
+		StrIsProcId(job_id_str, cluster, proc, NULL);
 	}
 	void set(int c, int p) {
 		cluster = c; proc = p;

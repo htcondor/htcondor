@@ -296,16 +296,18 @@ typedef char JobQueueKeyStrBuf;
 static inline const char * KeyToStr(const JobQueueKey& key, JobQueueKeyStrBuf& buf) {
 	return key;
 }
-#endif
 
 static inline
 void
 StrToId(const char *str,int & cluster,int & proc)
 {
+	const char * pend = str;
 	if( !StrToProcId(str,cluster,proc) ) {
 		EXCEPT("Qmgmt: Malformed key - '%s'",str);
 	}
 }
+
+#endif
 
 static
 void
@@ -3365,9 +3367,6 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 					// they are responsible for writing the submit event
 					// to the user log.
 					if ( vers.built_since_version( 7, 5, 4 ) ) {
-						//PROC_ID job_id = key;
-						//job_id.cluster = cluster_id;
-						//job_id.proc = proc_id;
 						scheduler.WriteSubmitToUserLog( job_id, doFsync );
 					}
 				}
@@ -3743,8 +3742,9 @@ MarkJobClean(PROC_ID proc_id)
 void
 MarkJobClean(const char* job_id_str)
 {
-	JobQueueKeyBuf key(job_id_str);
-	MarkJobClean(key.id());
+	PROC_ID jid;
+	StrToProcIdFixMe(job_id_str, jid);
+	MarkJobClean(jid);
 }
 
 void

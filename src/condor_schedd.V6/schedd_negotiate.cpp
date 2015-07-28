@@ -449,7 +449,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 			if (ac && jobid) {
 				int rr_cluster, rr_proc;
 				m_current_auto_cluster_id = atoi(ac);
-				StrToProcId(jobid,rr_cluster,rr_proc);
+				StrIsProcId(jobid,rr_cluster,rr_proc,NULL);
 				if (rr_cluster != m_current_job_id.cluster || rr_proc != m_current_job_id.proc) {
 					m_current_resources_delivered = 0;
 				}

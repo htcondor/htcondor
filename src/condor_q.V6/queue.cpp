@@ -197,6 +197,7 @@ static  char *jobads_file = NULL;
 static  char *machineads_file = NULL;
 static  char *userprios_file = NULL;
 static  bool analyze_with_userprio = false;
+static  const char * analyze_memory_usage = NULL;
 static  bool dash_profile = false;
 //static  bool analyze_dslots = false;
 static  bool disable_user_print_files = false;
@@ -1182,12 +1183,19 @@ processCommandLineArguments (int argc, char *argv[])
 		if( *argv[i] != '-' ) {
 			int cluster, proc;
 			// no dash means this arg is a cluster/proc, proc, or owner
+		#if 1
+			const char * pend;
+			if (StrIsProcId(argv[i], cluster, proc, &pend) && *pend == 0) {
+				constrID.push_back(CondorID(cluster,proc,-1));
+			}
+		#else
 			if( sscanf( argv[i], "%d.%d", &cluster, &proc ) == 2 ) {
 				constrID.push_back(CondorID(cluster,proc,-1));
 			} 
 			else if( sscanf ( argv[i], "%d", &cluster ) == 1 ) {
 				constrID.push_back(CondorID(cluster,-1,-1));
 			} 
+		#endif
 			else {
 				++cOwnersOnCmdline;
 				if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
@@ -1697,6 +1705,10 @@ processCommandLineArguments (int argc, char *argv[])
 						analyze_detail_level |= detail_show_all_subexprs;
 					} else if (is_arg_prefix(popt, "diagnostic",4)) {
 						analyze_detail_level |= detail_diagnostic;
+					} else if (is_arg_prefix(popt, "memory",3)) {
+						analyze_memory_usage = opts.next();
+						if (analyze_memory_usage) { analyze_memory_usage = strdup(analyze_memory_usage); }
+						else { analyze_memory_usage = ATTR_REQUIREMENTS; }
 					//} else if (is_arg_prefix(popt, "dslots",2)) {
 					//	analyze_dslots = true;
 					} else {
@@ -4584,6 +4596,21 @@ doJobRunAnalysisToBuffer(ClassAd *request, anaCounters & ac, int details, bool n
 #if defined(ADD_TARGET_SCOPING)
 	request->AddTargetRefs( TargetMachineAttrs );
 #endif
+
+	if (analyze_memory_usage) {
+		int num_skipped = 0;
+		QuantizingAccumulator mem_use(0,0);
+		const classad::ExprTree* tree = request->LookupExpr(analyze_memory_usage);
+		if (tree) {
+			AddExprTreeMemoryUse(tree, mem_use, num_skipped);
+		}
+		size_t raw_mem, quantized_mem, num_allocs;
+		raw_mem = mem_use.Value(&quantized_mem, &num_allocs);
+
+		sprintf(return_buff, "\nMemory usage for '%s' is %d bytes from %d allocations requesting %d bytes (%d expr nodes skipped)\n",
+				analyze_memory_usage, (int)quantized_mem, (int)num_allocs, (int)raw_mem, num_skipped);
+		return return_buff;
+	}
 
 	if( !request->LookupString( ATTR_OWNER , owner, sizeof(owner) ) ) return "Nothing here.\n";
 	if( !request->LookupInteger( ATTR_NICE_USER , niceUser ) ) niceUser = 0;

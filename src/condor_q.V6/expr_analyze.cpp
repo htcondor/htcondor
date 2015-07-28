@@ -1330,4 +1330,125 @@ void AddReferencedAttribsToBuffer(
 	}
 }
 
+int AddClassadMemoryUse (const classad::ExprList* list, QuantizingAccumulator & accum, int & num_skipped)
+{
+	accum += sizeof(classad::ExprList);
+	classad::ExprList::const_iterator it;
+	for (it = list->begin(); it != list->end(); ++it) {
+		AddExprTreeMemoryUse(*it, accum, num_skipped);
+	}
+	return accum.Value();
+}
 
+int AddClassadMemoryUse (const classad::ClassAd* cad, QuantizingAccumulator & accum, int & num_skipped)
+{
+	accum += sizeof(classad::ClassAd);
+	classad::ClassAd::const_iterator it;
+	for (it = cad->begin(); it != cad->end(); ++it) {
+		accum += it->first.length() * sizeof(char); // TODO: account for std::string overhead.
+		AddExprTreeMemoryUse(it->second, accum, num_skipped);
+	}
+	return accum.Value();
+}
+
+int AddExprTreeMemoryUse (const classad::ExprTree* expr, QuantizingAccumulator & accum, int & num_skipped)
+{
+	classad::ExprTree::NodeKind kind = expr->GetKind( );
+
+	classad::ExprTree *left=NULL, *right=NULL, *gripping=NULL;
+	switch(kind) {
+		case classad::ExprTree::LITERAL_NODE: {
+			classad::Value val;
+			classad::Value::NumberFactor factor;
+			((const classad::Literal*)expr)->GetComponents(val, factor);
+			accum += sizeof(classad::Literal);
+			const char * s = NULL;
+			classad::ExprList * lst = NULL;
+			classad::ClassAd * cad = NULL;
+			if (val.IsStringValue(s) && s) { accum += (strlen(s)+1) * sizeof(*s); }
+			else if (val.IsListValue(lst) && lst) { AddClassadMemoryUse(lst, accum, num_skipped); }
+			else if (val.IsClassAdValue(cad) && lst) { AddClassadMemoryUse(cad, accum, num_skipped); }
+			break;
+		}
+
+		case classad::ExprTree::ATTRREF_NODE: {
+			bool absolute;
+			std::string strAttr; // simple attr, need unparse to get TARGET. or MY. prefix.
+			((const classad::AttributeReference*)expr)->GetComponents(left, strAttr, absolute);
+			accum += sizeof(classad::AttributeReference);
+			break;
+		}
+
+		case classad::ExprTree::OP_NODE: {
+			classad::Operation::OpKind op = classad::Operation::__NO_OP__;
+			((const classad::Operation*)expr)->GetComponents(op, left, right, gripping);
+			if (op == classad::Operation::PARENTHESES_OP) {
+				accum += sizeof(classad::OperationParens);
+			} else if (op == classad::Operation::TERNARY_OP) {
+				accum += sizeof(classad::Operation3);
+			} else if (op == classad::Operation::UNARY_PLUS_OP ||
+						op == classad::Operation::UNARY_MINUS_OP ||
+						op == classad::Operation::LOGICAL_NOT_OP) {
+				accum += sizeof(classad::Operation1);
+			} else {
+				accum += sizeof(classad::Operation2);
+			}
+			break;
+		}
+
+		case classad::ExprTree::FN_CALL_NODE: {
+			std::vector<classad::ExprTree*> args;
+			std::string strLabel;
+			((const classad::FunctionCall*)expr)->GetComponents(strLabel, args);
+			accum += sizeof(classad::FunctionCall);
+			if ( ! strLabel.empty()) {
+				accum += strLabel.size() * sizeof(char);
+			}
+			for (size_t ii = 0; ii < args.size(); ++ii) {
+				if (args[ii]) { AddExprTreeMemoryUse(args[ii], accum, num_skipped); }
+			}
+			break;
+		}
+
+		case classad::ExprTree::CLASSAD_NODE: {
+			std::vector< std::pair<std::string, classad::ExprTree*> > attrsT;
+			((const classad::ClassAd*)expr)->GetComponents(attrsT);
+			accum += sizeof(classad::ClassAd);
+			if (attrsT.size()) {
+				std::vector< std::pair<std::string, classad::ExprTree*> >::const_iterator it;
+				for (it = attrsT.begin(); it != attrsT.end(); ++it) {
+					accum += it->first.length() * sizeof(char); // TODO: account for std::string overhead.
+					AddExprTreeMemoryUse(it->second, accum, num_skipped);
+				}
+			}
+			break;
+		}
+
+		case classad::ExprTree::EXPR_LIST_NODE: {
+			std::vector<classad::ExprTree*> exprs;
+			((const classad::ExprList*)expr)->GetComponents(exprs);
+			accum += sizeof(classad::ExprList);
+			if (exprs.size()) {
+				std::vector<classad::ExprTree*>::const_iterator it;
+				for (it = exprs.begin(); it != exprs.end(); ++it) {
+					AddExprTreeMemoryUse(*it, accum, num_skipped);
+				}
+			}
+			break;
+		}
+		
+		case classad::ExprTree::EXPR_ENVELOPE: {
+			// recurse b/c we indirect for this element.
+			const classad::CachedExprEnvelope* pcenv = (const classad::CachedExprEnvelope*)expr;
+			left = const_cast<classad::CachedExprEnvelope*>(pcenv)->get();
+			accum += sizeof(classad::CachedExprEnvelope);
+			break;
+		}
+	}
+
+	if (left) AddExprTreeMemoryUse(left, accum, num_skipped);
+	if (right) AddExprTreeMemoryUse(right, accum, num_skipped);
+	if (gripping) AddExprTreeMemoryUse(gripping, accum, num_skipped);
+
+	return (int)accum.Value();
+}
