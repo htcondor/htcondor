@@ -4,18 +4,175 @@ use strict;
 use warnings;
 
 use CondorTest;
+use NetworkTestConfigs;
 
+#
+# The 'test_sinful' binary validates that Sinful's multiple-address abstraction
+# is functioning properly, and that std::multimap sorts stably.
+#
 my $rv = system( 'test_sinful' );
 
-my $testname = "test_sinful";
-print "test_sinful binary returning:$rv\n";
+my $testName = "test_sinful";
 if( $rv == 0 ) {
-	print "value 0 so registering a success\n";
-	RegisterResult( 1, "test_name" => $testname );
+	RegisterResult( 1, "test_name" => $testName );
 } else {
-	print "value:$rv so registering a failure\n";
-	RegisterResult( 0, "test_name" => $testname );
+	RegisterResult( 0, "test_name" => $testName );
 }
 
+#
+# These tests use the condor_sinful tool to verify that we can successfully
+# round trip between original Sinful strings (with addrs) and V1 strings.
+#
+sub countBrokenConversions {
+	my( @ads ) = @_;
+
+	my $rv = 0;
+	foreach my $ad (@ads) {
+		my $sinful = $ad->{ 'MyAddress' };
+		my $v1String = $ad->{ 'AddressV1' };
+
+		print( "Checking " . $ad->{ 'MyType' } . " ($sinful <-> $v1String)...\n" );
+
+		# Check forward conversion.
+		my $converted = `condor_sinful v1 '${sinful}'`;
+		chomp( $converted );
+		if( $converted ne $v1String ) {
+			print( "Forward conversion failure.\n" );
+			print( "FAILURE: ${sinful} => ${converted} != ${v1String}\n" );
+			++$rv;
+		}
+
+		# Check reverse conversion.
+		my $reverse = `condor_sinful sinful '${v1String}'`;
+		chomp( $reverse );
+		if( $reverse ne $sinful ) {
+			print( "Reverse conversion failure.\n" );
+			print( "FAILURE: ${v1String} => ${reverse} != ${sinful}\n" );
+			++$rv;
+		}
+
+		# And check round-trip conversion.
+		$reverse = `condor_sinful sinful '${converted}'`;
+		chomp( $reverse );
+		if( $reverse ne $sinful ) {
+			print( "Round-trip (from sinful) failure.\n" );
+			print( "FAILURE: ${sinful} => ${converted} => ${reverse} != ${sinful}\n" );
+			++$rv;
+		}
+
+		$converted = `condor_sinful sinful '${v1String}'`;
+		chomp( $converted );
+		$reverse = `condor_sinful v1 '${converted}'`;
+		chomp( $reverse );
+		if( $reverse ne $v1String ) {
+			print( "Round-trip (from v1string) failure.\n" );
+			print( "FAILURE: ${v1String} => ${converted} => ${reverse} != ${v1String}\n" );
+			++$rv;
+		}
+	}
+
+	return $rv;
+}
+
+sub checkConversionsWithConfig {
+	my( $tn, $config, $customStart ) = @_;
+
+	# The testing daemon isn't started by the master, so it doesn't know
+	# the secret cookie.  Windows apparently always ignores the value of
+	# DAEMON_SOCKET_DIR, so we don't have to be cross-platform here.
+	my $daemonSocketDir = "/tmp/daemon_socket_dir_" . $$ . $tn;
+	mkdir( $daemonSocketDir );
+	$config .= "	DAEMON_SOCKET_DIR = $daemonSocketDir\n";
+
+	my $cf = CondorTest::CreateLocalConfig( $config, $tn );
+	if( defined( $customStart ) ) {
+		if( $customStart eq "IMMEDIATE" ) {
+			CondorTest::StartCondorWithParams(
+				condor_name				=> $tn,
+				fresh_local				=> "TRUE",
+				condorlocalsrc			=> $cf,
+			);
+		} elsif( $customStart eq "DELAY" ) {
+			CondorTest::StartCondorWithParams(
+				condor_name				=> $tn,
+				fresh_local				=> "TRUE",
+				condorlocalsrc			=> $cf,
+			);
+
+			# Wait for the shared port daemon to register itself.  This
+			# should occur about sixty seconds after it starts up.
+			print( "Waiting for shared port daemon to register with CCB...\n" );
+			while(! CondorTest::SearchCondorLog( "shared_port", "CCBListener: registered with CCB server" )) {
+				sleep( 10 );
+			}
+			print( "... done.\n" );
+
+			# Force the CCB address to disk.
+			runCondorTool( "condor_reconfig", undef, 1, { emit_output => 0 } );
+
+			# Give the shared port daemon some time to do its write.
+			print( "Waiting for shared port daemon to write its new address file...\n" );
+			while(! CondorTest::SearchCondorLog( "shared_port", "About to update statistics in shared_port daemon ad file" ) ) {
+				sleep( 1 );
+			}
+			print( "... done.\n" );
+		} else {
+			print( "Unknown custom start argument ${customStart}!\n" );
+			RegisterResult( 0, "test_name" => $tn );
+		}
+	} else {
+		CondorTest::StartCondorWithParams(
+			condor_name				=> $tn,
+			fresh_local				=> "TRUE",
+			condorlocalsrc			=> $cf,
+			do_not_start			=> "TRUE",
+		);
+	}
+
+	# Check the testingd's public and private addresses.
+	my @ads;
+	my @lines;
+	runCondorTool( "condor_testingd -f", \@lines, 1, { emit_output => 0 } );
+
+	my $address = $lines[0]; CondorUtils::fullchomp( $address );
+	my $addressV1 = $lines[1]; CondorUtils::fullchomp( $addressV1 );
+	push( @ads, { "MyAddress" => $address, "AddressV1" => $addressV1, "MyType" => "Testing (public)" } );
+
+	$address = $lines[2]; CondorUtils::fullchomp( $address );
+	$addressV1 = $lines[3]; CondorUtils::fullchomp( $addressV1 );
+	push( @ads, { "MyAddress" => $address, "AddressV1" => $addressV1, "MyType" => "Testing (private)" } );
+
+	if( countBrokenConversions( @ads ) == 0 ) {
+		RegisterResult( 1, "test_name" => $tn );
+	} else {
+		RegisterResult( 0, "test_name" => $tn );
+	}
+
+	rmdir( $daemonSocketDir );
+}
+
+#
+# Check round-tripping a variety of different addresses.
+#
+
+checkConversionsWithConfig( "ipv4-only", $NetworkTestConfigs::ipV4Only );
+checkConversionsWithConfig( "ipv6-only", $NetworkTestConfigs::ipV6Only );
+checkConversionsWithConfig( "mixed-mode", $NetworkTestConfigs::mixedMode );
+
+checkConversionsWithConfig( "biaFalse", $NetworkTestConfigs::niOnly );
+checkConversionsWithConfig( "biaTrue", $NetworkTestConfigs::niGiven );
+
+checkConversionsWithConfig( "privateNetworkInterface", $NetworkTestConfigs::pni );
+checkConversionsWithConfig( "privateNetworkInterfaceAndName", $NetworkTestConfigs::pniAndName );
+
+# This works but produces screwy Sinfuls that won't route correctly.
+checkConversionsWithConfig( "tcpForwardingHost", $NetworkTestConfigs::tcpForwardingHost );
+
+# Neither shared port nor CCB will generate the corresponding Sinful without
+# a live daemon with which to register.
+checkConversionsWithConfig( "sp", $NetworkTestConfigs::sp, "IMMEDIATE" );
+checkConversionsWithConfig( "ccb", $NetworkTestConfigs::ccb, "IMMEDIATE" );
+checkConversionsWithConfig( "ccbAndSp", $NetworkTestConfigs::ccbAndSp, "DELAY" );
+
 EndTest();
-#endtest never returns unless called with some arg(any)
+exit( 1 );

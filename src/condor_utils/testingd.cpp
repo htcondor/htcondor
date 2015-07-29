@@ -13,9 +13,16 @@ main_init( int, char * [] ) {
 	dprintf( D_ALWAYS, "main_init()\n" );
 
 	char const * publicSinfulString = daemonCore->InfoCommandSinfulStringMyself( false );
-	char const * privateSinfulString = daemonCore->InfoCommandSinfulStringMyself( true );
 	fprintf( stdout, "%s\n", publicSinfulString ? publicSinfulString : "(null)" );
+	Sinful publicSinful( publicSinfulString );
+	ASSERT( publicSinful.valid() );
+	fprintf( stdout, "%s\n", publicSinful.getV1String() );
+
+	char const * privateSinfulString = daemonCore->InfoCommandSinfulStringMyself( true );
 	fprintf( stdout, "%s\n", privateSinfulString ? privateSinfulString : "(null)" );
+	Sinful privateSinful( privateSinfulString );
+	ASSERT( privateSinful.valid() );
+	fprintf( stdout, "%s\n", privateSinful.getV1String() );
 
 	DC_Exit( 0 );
 }

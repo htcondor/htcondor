@@ -119,7 +119,7 @@ sub deriveMasterConfig {
 		# start from there. There are all the possible config files
 		# plus changed vs default values.
 		#print "derived_condor_config exists NOT!\n";
-		my $res = CondorTest::runCondorTool("condor_config_val -writeconfig:file $derivedconfig",\@outres,2,{emit_output=>1,expect_result=>\&ANY});
+		my $res = CondorTest::runCondorTool("condor_config_val -writeconfig:file $derivedconfig",\@outres,2,{emit_output=>0,expect_result=>\&ANY});
 		if($res != 1) {
 			die "Error while getting the effective current configuration\n";
 		}
@@ -1666,9 +1666,9 @@ sub CollectWhoData
 		CondorTest::runCondorTool("condor_who -quick -daemon -log \"$logdir\"",\@whoarray,2,{emit_output=>0});
 		foreach my $wholine (@whoarray) {
 			CondorUtils::fullchomp($wholine);
-			print timestamp() .  ": raw whodataline: $wholine\n";
+			# print timestamp() .  ": raw whodataline: $wholine\n";
 			if($wholine =~ /(\w*)\s+(.*?)\s+(.*?)\s+(.*?)/) {
-				print timestamp() .  ": Who data with 4 fields:$1,$2,$3,$4\n";
+				# print timestamp() .  ": Who data with 4 fields:$1,$2,$3,$4\n";
 				#print "condor_who -quick fields. $1 daemon name $2 pid\n";
 				#id this is the master is pid real?
 				my $savepid = $2;
@@ -1722,17 +1722,17 @@ sub CollectWhoData
 			CondorUtils::fullchomp($wholine);
 			next if $wholine =~ /^Daemon.*$/; # skip column headings
 			next if $wholine =~ /^\-\-\-\-\-\-.*$/; # skip dashes
-			print timestamp()  . ": rwawhodataline: $wholine\n";
+			# print timestamp()  . ": rawhodataline: $wholine\n";
 			if($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+<(.*)>\s+(.*)/) {
-				print timestamp() . ": Who data with 7 fields:$1,$2,$3,$4,$5,$6,$7\n";
-				#print "Parse:$wholine\n";
-				#print "Before LoadWhoData: $1,$2,$3,$4,$5,$6,$7\n";
+				# print timestamp() . ": Who data with 7 fields:$1,$2,$3,$4,$5,$6,$7\n";
+				# print "Parse:$wholine\n";
+				# print "Before LoadWhoData: $1,$2,$3,$4,$5,$6,$7\n";
 				# this next call assumes we are interested in currently configed personal condor
 				# which means a lookup for condor instance for each daemon
 				CondorTest::LoadWhoData($1,$2,$3,$4,$5,$6,$7);
 			} elsif($wholine =~ /(.*?)\s+(.*?)\s+(.*?)\s+(.*?)\s+(.*?).*/) {
-				print timestamp() . ": Who data with 5 fields:$1,$2,$3,$4,$5\n";
-				#print "Before LoadWhoData: $1,$2,$3,$4,$5\n";
+				# print timestamp() . ": Who data with 5 fields:$1,$2,$3,$4,$5\n";
+				# print "Before LoadWhoData: $1,$2,$3,$4,$5\n";
 				CondorTest::LoadWhoData($1,$2,$3,$4,$5,"","");
 			} else {
 				#print "CollectWhoData: Parse Error: $wholine\n";

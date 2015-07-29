@@ -213,11 +213,11 @@ sub EndTest
 			print "This condor:$name failed to come all the way down\n";
 			print "Adding a FAILED instance to make test fail\n\n";
 			# this one not down add negative result, BROADCAST and check rest
-			RegisterResult(0,"test_name","$handle");
+			RegisterResult(0,"test_name","Shutting down Personal Condor '$name'");
 		} else {
 			print "OK\n";
 			print "Adding a PASSED event for this HTCondor personal stopping\n";
-			RegisterResult(1,"test_name","$handle");
+			RegisterResult(1,"test_name","Shutting down Personal Codor '$name'");
 		}
 	}
 	
@@ -228,10 +228,10 @@ sub EndTest
     if($failed_coreERROR ne "") {
 		$exit_status = 1;
 		$extra_notes = "$extra_notes\n  Log Directory Check results: $failed_coreERROR\n";
-		RegisterResult(0,"test_name","$handle");
+		RegisterResult(0,"test_name","CoreCheck");
     } else {
-		print "Passed Core Check\n";
-		RegisterResult(1,"test_name","$handle");
+		# print "Passed Core Check\n";
+		RegisterResult(1,"test_name","CoreCheck");
 	}
 
     if( $test_failure_count > 0 ) {
@@ -1779,7 +1779,7 @@ sub runCondorTool
 	$count = 0;
 	my $hashref;
 	while( $count < $attempts) {
-		print "runCondorTool: Attempt: <$count>\n";
+		# print "runCondorTool: Attempt: <$count>\n";
 
 		# Add a message to runcmd output
 		${$options}{emit_string} = "runCondorTool: Cmd: $cmd Attempt: $count";
@@ -2213,7 +2213,7 @@ sub SearchCondorLog
 	my $logdir = $fetchlog[0];
 	CondorUtils::fullchomp($logdir);
 	my $logloc = $logdir;
-	print "SearchCondorLog for daemon:$daemon yielded:$logloc\n";
+	# print "SearchCondorLog for daemon:$daemon yielded:$logloc\n";
 
 	my $count = 0;
 
@@ -3415,7 +3415,6 @@ sub KillPersonal
 		$logdir = $1 . "/log";
 	} else {
 		TestDebug("KillPersonal passed this config: $personal_config\n",2);
-		e ie "Can not extract log directory\n";
 	}
 	# mark the direction we are going is down/off
 	my $condor = GetPersonalCondorWithConfig($personal_config);
