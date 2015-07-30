@@ -473,23 +473,24 @@ ThreadImplementation::hashFuncThreadInfo(const ThreadInfo & mythread)
 	// two platforms we will get a very nice distribution -vs- byte adding.
 	unsigned int hash = 0;
 
-	unsigned int j = sizeof(pthread_t);
-	int i = 0;
-	pthread_t thread = mythread.get_pthread();
-	unsigned int *buf = (unsigned int *)&thread;
+	union {
+		pthread_t thread;
+		unsigned int  ibuf[sizeof(pthread_t)/sizeof(unsigned int)];
+		unsigned char cbuf[sizeof(pthread_t)];
+	} u;
 
+	u.thread = mythread.get_pthread();
 
 		// add up bytes in unsigned int chunks
-	while (j >= sizeof(unsigned int) ) {
-		hash += buf[i];
-		i++;
-		j -= sizeof(unsigned int);
+	size_t j = 0;
+	while (j < sizeof(pthread_t)) {
+		hash += u.ibuf[j/sizeof(unsigned int)];
+		j += sizeof(unsigned int);
 	}
-
 		// add up bytes of anything left over
-	unsigned char *n = (unsigned char *) &buf[i];
-	for (i=0;  j > 0; j--, i++ ) {
-		hash += n[i];
+	while (j < sizeof(pthread_t)) {
+		hash += u.cbuf[j];
+		++j;
 	}
 
 	return hash;
