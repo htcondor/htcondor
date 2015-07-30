@@ -146,15 +146,9 @@ struct OwnerCounters {
 #define USE_OWNERDATA_MAP 1
 
 struct OwnerData {
-#ifdef USE_OWNERDATA_MAP
   std::string name;
   const char * Name() const { return name.empty() ? "" : name.c_str(); }
   bool empty() const { return name.empty(); }
-#else
-  char* Name;
-  const char * Name() const { return const_cast<const char*>(Name); }
-  bool empty() const { return Name==NULL; }
-#endif
   OwnerCounters num;
   time_t LastHitTime; // records the last time we incremented num.Hit, use to expire Owners
   // Time of most recent change in flocking level or
@@ -164,16 +158,10 @@ struct OwnerData {
   int OldFlockLevel;
   time_t NegotiationTimestamp;
   std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
-#ifdef USE_OWNERDATA_MAP
   OwnerData() : LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0) { }
-#else
-  OwnerData() : Name(NULL), LastHitTime(0), FlockLevel(0), OldFlockLevel(0), NegotiationTimestamp(0) { }
-#endif
 };
 
-#ifdef USE_OWNERDATA_MAP
 typedef std::map<std::string, OwnerData> OwnerDataMap;
-#endif
 
 class match_rec: public ClaimIdParser
 {
@@ -599,10 +587,8 @@ class Scheduler : public Service
 	ScheddStatistics stats;
 	ScheddOtherStatsMgr OtherPoolStats;
 
-#ifdef USE_OWNERDATA_MAP
 	const OwnerData * insert_owner_const(const char*);
 	void incrementRecentlyAdded(const char *);
-#endif
 
 private:
 
@@ -672,11 +658,7 @@ private:
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
 	int				BadProc;
-#ifdef USE_OWNERDATA_MAP
 	OwnerDataMap    Owners;
-#else
-	ExtArray<OwnerData> Owners; // May be tracking AccountingGroup instead of owner username/domain
-#endif
 	//JOB_ID_SET      LocalJobIds;  // set of jobid's of local and scheduler universe jobs.
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	int				NumOwners;
@@ -760,13 +742,8 @@ private:
 	int			command_query_job_ads(int, Stream* stream);
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	void   			check_claim_request_timeouts( void );
-#ifdef USE_OWNERDATA_MAP
 	OwnerData * insert_owner(const char*);
 	OwnerData * find_owner(const char*);
-#else
-	OwnerData * insert_owner(const char*, int * pnum=NULL);
-	OwnerData * find_owner(const char*, int * pnum=NULL);
-#endif
 	void		remove_unused_owners();
 	void			child_exit(int, int);
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);

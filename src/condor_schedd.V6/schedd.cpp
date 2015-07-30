@@ -788,17 +788,7 @@ Scheduler::~Scheduler()
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
 	}
 
-#ifdef USE_OWNERDATA_MAP
 	Owners.clear();
-#else
-	PRAGMA_REMIND("tj: clean up owner objects here.")
-	for(int ii = 0; ii < NumOwners; ii++) {
-		if( Owners[ii].Name ) { 
-			free( Owners[ii].Name );
-			Owners[ii].Name = NULL;
-		}
-	}
-#endif
 
 	if (_gridlogic) {
 		delete _gridlogic;
@@ -1187,20 +1177,12 @@ Scheduler::count_jobs()
 	scheduler.OtherPoolStats.ResetJobsRunning();
 
 	time_t current_time = time(0);
-	#ifdef USE_OWNERDATA_MAP
+
 	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 		OwnerData & Owner = it->second;
-		Owner.num.clear_job_counters();	// clear the jobs counters
+		Owner.num.clear_job_counters();	// clear the jobs counters (including recently added)
 		Owner.PrioSet.clear();
 	}
-	#else
-	// Reset owner job counters in preparation for calling WalkJobQueue(count_a_job)
-	for (int ii = 0; ii < NumOwners; ii++) {
-		OwnerData & Owner = Owners[ii];
-		Owner.num.clear();
-		Owner.PrioSet.clear();
-	}
-	#endif
 
 	GridJobOwners.clear();
 
@@ -1259,7 +1241,6 @@ Scheduler::count_jobs()
 		}
 	}
 
-#ifdef USE_OWNERDATA_MAP
 	// count the owners that have non-zero Hits count.  These are the owners that
 	// currently have jobs in the queue.
 	NumOwners = 0;
@@ -1267,18 +1248,13 @@ Scheduler::count_jobs()
 		const OwnerData & Owner = it->second;
 		if (Owner.num.Hits > 0) ++NumOwners;
 	}
-#endif
 
 	// set FlockLevel for owners
 	if (MaxFlockLevel) {
 		int flock_increment = param_integer("FLOCK_INCREMENT",1,1);
-#ifdef USE_OWNERDATA_MAP
+
 		for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 			OwnerData & Owner = it->second;
-#else
-		for (int ii=0; ii < NumOwners; ii++) {
-			OwnerData & Owner = Owners[ii];
-#endif
 
 			// set negotiation timestamp to current time for owners that have no idle jobs.
 			if ( ! Owner.num.JobsIdle) {
@@ -1454,17 +1430,10 @@ Scheduler::count_jobs()
 	pAd.ChainToAd(m_adBase);
 	pAd.Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
 
-#ifdef USE_OWNERDATA_MAP
 	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 		OwnerData & Owner = it->second;
 		const char * owner_name = Owner.Name();
 		if ( !fill_submitter_ad(pAd, Owner, -1, D_FULLDEBUG) ) continue;
-#else
-	for (int ii=0; ii < NumOwners; ii++) {
-	  OwnerData & Owner = Owners[ii];
-	  const char * owner_name = Owner.Name();
-	  if ( !fill_submitter_ad(pAd, Owner, -1, D_FULLDEBUG) ) continue;
-#endif
 
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 			   owner_name, UidDomain );
@@ -1501,16 +1470,10 @@ Scheduler::count_jobs()
 			// and (JobsRunning + JobsFlocked) - JobsFlockedHere as JobsFlocked
 			// i.e. the JobsFlocked count for flocked pools is a count of
 			// 'jobs running elsewhere' including jobs running in the schedd's local pool.
-			#ifdef USE_OWNERDATA_MAP
 			for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 				OwnerData & Owner = it->second;
 				Owner.num.JobsFlockedHere = 0;
 			}
-			#else
-			for (int ii=0; ii < NumOwners; ii++) {
-				Owners[ii].num.JobsFlockedHere = 0;
-			}
-			#endif
 			matches->startIterations();
 			match_rec *mRec;
 			while(matches->iterate(mRec) == 1) {
@@ -1525,13 +1488,8 @@ Scheduler::count_jobs()
 			}
 
 			// update submitter ad in this pool for each owner
-			#ifdef USE_OWNERDATA_MAP
 			for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 				OwnerData & Owner = it->second;
-			#else
-			for (int ii=0; ii < NumOwners; ii++) {
-				OwnerData & Owner = Owners[ii];
-			#endif
 				if ( !fill_submitter_ad(pAd,Owner,flock_level,D_NEVER) ) {
 					// if we're no longer flocking with this pool and
 					// we're not running jobs in the pool, then don't send
@@ -1550,15 +1508,9 @@ Scheduler::count_jobs()
 
 	pAd.Delete(ATTR_SUBMITTER_TAG);
 
-	#ifdef USE_OWNERDATA_MAP
 	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 		it->second.OldFlockLevel = it->second.FlockLevel;
 	}
-	#else
-	for (int ii=0; ii < NumOwners; ii++) {
-		Owners[ii].OldFlockLevel = Owners[ii].FlockLevel;
-	}
-	#endif
 
 	 // Tell our GridUniverseLogic class what we've seen in terms
 	 // of Globus Jobs per owner.
@@ -1599,13 +1551,8 @@ Scheduler::count_jobs()
 	// This is done by looking at the Hits counter that was set above.
 	// that are not in the current list (the current list has only owners w/ idle jobs)
 	MyString submitter_name;
-	#ifdef USE_OWNERDATA_MAP
 	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 		OwnerData & Owner = it->second;
-	#else
-	for (int ii=0; ii < NumOwners; ii++) {
-		OwnerData & Owner = Owners[ii];
-	#endif
 		// If this Owner has any jobs in the queue or match records,
 		// we don't want to send the, so we continue to the next
 		if (Owner.num.Hits > 0) continue;
@@ -1613,7 +1560,6 @@ Scheduler::count_jobs()
 		submitter_name.formatstr("%s@%s", Owner.Name(), UidDomain);
 		int old_flock_level = Owner.OldFlockLevel;
 
-	#ifdef USE_OWNERDATA_MAP
 		// expire and mark for removal Owners that have not had any hits (i.e jobs in the queue)
 		// for more than UnusedSubmitterLifetime. 
 		if ( ! Owner.LastHitTime) {
@@ -1625,12 +1571,6 @@ Scheduler::count_jobs()
 			// free it.  this marks the entry as unused
 			Owner.name.clear();
 		}
-	#else
-		if ( Owner.Name ) {
-			free(Owner.Name);
-			Owner.Name = NULL;
-		}
-	#endif
 
 		pAd.Assign(ATTR_NAME, submitter_name.Value());
 		dprintf (D_FULLDEBUG, "Changed attribute: %s = %s\n", ATTR_NAME, submitter_name.Value());
@@ -1760,14 +1700,9 @@ int Scheduler::make_ad_list(
    // submitter ad, note that chained ad's dont delete the 
    // chain parent when they are deleted, so it's safe to 
    // put these ads into the list. 
-   #ifdef USE_OWNERDATA_MAP
    for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
       const OwnerData & Owner = it->second;
       if (Owner.empty()) continue;
-   #else
-   for (int ii = 0; ii < NumOwners; ++ii) {
-      const OwnerData & Owner = Owners[ii];
-   #endif
       cad = new ClassAd();
       cad->ChainToAd(m_adBase);
       if ( ! fill_submitter_ad(*cad, Owner, -1, D_NEVER)) {
@@ -2746,7 +2681,6 @@ service_this_universe(int universe, ClassAd* job)
 	}
 }
 
-#ifdef USE_OWNERDATA_MAP
 void
 Scheduler::incrementRecentlyAdded(const char * owner)
 {
@@ -2790,60 +2724,6 @@ Scheduler::remove_unused_owners()
 	}
 }
 
-#else
-
-const OwnerData *
-Scheduler::find_owner_const(const char * owner)
-{
-	return find_owner(owner);
-}
-
-OwnerData *
-Scheduler::find_owner(const char * owner, int * pnum)
-{
-	int i = 0;
-	for ( ; i < NumOwners; i++ ) {
-		if( strcmp(Owners[i].Name,owner) == 0 ) {
-			if (pnum) *pnum = i;
-			return &Owners[i];
-		}
-	}
-	if (pnum) *pnum = i;
-	return NULL;
-}
-
-OwnerData *
-Scheduler::insert_owner(const char * owner, int * pnum)
-{
-	int i;
-	OwnerData * pown = find_owner(owner, &i);
-	if (pnum) *pnum = i;
-	if (pown) return pown;
-
-	Owners[i].Name = strdup( owner );
-
-	NumOwners +=1;
-	return &Owners[i];
-}
-
-void
-Scheduler::remove_unused_owners()
-{
-	// compact the owner array, squeezing out the entries that don't have names.
-	int NumEntries = NumOwners;
-	NumOwners = 0; 
-	for (int ii = 0; ii < NumEntries; ++ii) {
-		if (Owners[ii].Name) {
-			// keep this one, if we have a gap between the current index
-			// and the number of owners, then we have to copy the entry down.
-			if (ii > NumOwners) {
-				Owners[NumOwners] = Owners[ii];
-			}
-			++NumOwners;
-		}
-	}
-}
-#endif
 
 
 static bool IsSchedulerUniverse( shadow_rec* srec );
@@ -12970,13 +12850,8 @@ Scheduler::invalidate_ads()
 	cad->Assign( ATTR_SCHEDD_NAME, Name );
 	cad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
 
-#ifdef USE_OWNERDATA_MAP
 	for (OwnerDataMap::iterator it = Owners.begin(); it != Owners.end(); ++it) {
 		const OwnerData & Owner = it->second;
-#else
-	for (int ii = 0; ii < NumOwners; ii++ ) {
-		const OwnerData & Owner = Owners[ii];
-#endif
 		daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, cad, NULL, false);
 		MyString submitter;
 		submitter.formatstr("%s@%s", Owner.Name(), UidDomain);

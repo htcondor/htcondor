@@ -3342,9 +3342,9 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 				 JobQueue->Lookup(job_id, procad))
 			{
 				dprintf(D_FULLDEBUG,"New job: %s\n",job_id.c_str());
-#ifdef USE_OWNERDATA_MAP
+
+					// increment the 'recently added' job count for this owner
 				scheduler.incrementRecentlyAdded( Q_SOCK->getOwner() );
-#endif
 
 					// chain proc ads to cluster ad
 				procad->ChainToAd(clusterad);
