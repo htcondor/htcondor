@@ -135,10 +135,6 @@ ClassAdLog<K,AltK,AD>::filter_iterator::operator++(int)
 // force instantiation of the template types needed by the JobQueue
 typedef GenericClassAdCollection<JobQueueKey, const char*,JobQueuePayload> JobQueueType;
 template class ClassAdLog<JobQueueKey,const char*,JobQueuePayload>;
-#if 0 //def USE_JOB_QUEUE_JOB
-template class ClassAdLog<JOB_ID_KEY,const char*,JobQueuePayload>;
-template class GenericClassAdCollection<JOB_ID_KEY,const char*,JobQueuePayload>;
-#endif
 
 #include "file_sql.h"
 extern FILESQL *FILEObj;
@@ -261,7 +257,6 @@ DeadIdToStr(int cluster, int proc, char *buf)
 	ProcIdToStr(cluster,proc,buf);
 }
 
-#ifdef USE_JOB_QUEUE_JOB
 static inline JobQueueKey& IdToKey(int cluster, int proc, JobQueueKey& key)
 {
 	key.cluster = cluster;
@@ -285,43 +280,13 @@ static inline const JobQueueKey& StrToKey(const char * job_id_str, JobQueueKey& 
 	return key;
 }
 */
-#else
-typedef char JobQueueKeyBuf[PROC_ID_STR_BUFLEN];
-const char * IdToKey(int cluster, int proc, JobQueueKeyBuf& buf)
-{
-	ProcIdToStr(cluster,proc,buf);
-	return buf;
-}
-typedef char JobQueueKeyStrBuf;
-static inline const char * KeyToStr(const JobQueueKey& key, JobQueueKeyStrBuf& buf) {
-	return key;
-}
-
-static inline
-void
-StrToId(const char *str,int & cluster,int & proc)
-{
-	const char * pend = str;
-	if( !StrToProcId(str,cluster,proc) ) {
-		EXCEPT("Qmgmt: Malformed key - '%s'",str);
-	}
-}
-
-#endif
 
 static
 void
 KeyToId(JobQueueKey &key,int & cluster,int & proc)
 {
-#ifdef USE_JOB_QUEUE_JOB
 	cluster = key.cluster;
 	proc = key.proc;
-#else
-	const char * str = key.value();
-	if( !StrToProcId(str,cluster,proc) ) {
-		EXCEPT("Qmgmt: Malformed key - '%s'",str);
-	}
-#endif
 }
 
 // This is where we can clean up any data structures that refer to the job object
@@ -2266,7 +2231,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	}
 
 		// remove jobid from any indexes
-	scheduler.removeJobFromIndexes(key.id());
+	scheduler.removeJobFromIndexes(key);
 
 		// remove any match (startd) ad stored w/ this job
 	RemoveMatchedAd(cluster_id,proc_id);
@@ -3449,6 +3414,7 @@ AbortTransactionAndRecomputeClusters()
 			use brute force and blow the whole thing away and recompute it. 
 			-Todd 2/2000
 		*/
+		//TODO: move cluster count from hashtable into the cluster's JobQueueJob object.
 		ClusterSizeHashTable->clear();
 		ClassAd *ad;
 		JobQueueKey key;
@@ -3456,15 +3422,9 @@ AbortTransactionAndRecomputeClusters()
 		int cluster_num;
 		JobQueue->StartIterateAllClassAds();
 		while (JobQueue->IterateAllClassAds(ad,key)) {
-		#ifdef USE_JOB_QUEUE_JOB
 			cluster_num = key.cluster;
 			if ( ! cluster_num) continue;  // skip cluster & header ads
 			else {
-		#else
-			const char *tmp = key.value();
-			if ( *tmp == '0' ) continue;	// skip cluster & header ads
-			if ( (cluster_num = atoi(tmp)) ) {
-		#endif
 				// count up number of procs in cluster, update ClusterSizeHashTable
 				if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
 					// First proc we've seen in this cluster; set size to 1
@@ -4613,11 +4573,7 @@ GetJobByConstraint(const char *constraint)
 
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->Iterate(key,ad)) {
-	#ifdef USE_JOB_QUEUE_JOB
 		if ( key.cluster > 0 && key.proc >= 0 && // avoid cluster and header ads
-	#else
-		if ( *(key.value()) != '0' &&	// avoid cluster and header ads
-	#endif
 			EvalBool(ad, constraint)) {
 				return ad;
 		}
@@ -4648,11 +4604,7 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 	}
 
 	while(JobQueue->Iterate(key,ad)) {
-	#ifdef USE_JOB_QUEUE_JOB
 		if ( key.cluster > 0 && key.proc >= 0 && // avoid cluster and header ads
-	#else
-		if ( *(key.value()) != '0' &&	// avoid cluster and header ads
-	#endif
 			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
 			return ad;
 		}
@@ -4698,27 +4650,14 @@ GetNextJobByCluster(int c, int initScan)
 		return NULL;
 	}
 
-#ifdef USE_JOB_QUEUE_JOB
 	JobQueueJob	*ad;
-#else
-	ClassAd	*ad;
-	char cluster[25];
-	snprintf(cluster,25,"%d.",c);
-	cluster[COUNTOF(cluster)-1] = 0; // force null term.
-	int len = strlen(cluster);
-#endif
 
 	if (initScan) {
 		JobQueue->StartIterateAllClassAds();
 	}
 
-	#ifdef USE_JOB_QUEUE_JOB
 	while(JobQueue->Iterate(key,ad)) {
 		if ( c == key.cluster ) {
-	#else
-	while(JobQueue->IterateAllClassAds(ad,key)) {
-		if ( strncmp(cluster,key.value(),len) == 0 ) {
-	#endif
 			return ad;
 		}
 	}
@@ -5249,7 +5188,6 @@ WalkJobQueue3(queue_classad_scan_func func, void* pv, schedd_runtime_probe & ftm
 }
 
 
-#ifdef USE_JOB_QUEUE_JOB
 // this function for use only inside the schedd, external clients will use the one above...
 void
 WalkJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
@@ -5281,7 +5219,7 @@ WalkJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
 
 	in_walk_job_queue--;
 }
-#endif
+
 
 int dump_job_q_stats(int cat)
 {

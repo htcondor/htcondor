@@ -82,7 +82,7 @@ class QmgmtPeer {
 };
 
 
-#define USE_JOB_QUEUE_JOB 1
+#define USE_JOB_QUEUE_JOB 1 // contents of the JobQueue is a class *derived* from ClassAd, (new for 8.3)
 
 // used to store a ClassAd + runtime information in a condor hashtable.
 class JobQueueJob : public ClassAd {
@@ -225,7 +225,6 @@ public:
 	JOB_ID_KEY_BUF(const JOB_ID_KEY& rhs)     : JOB_ID_KEY(rhs.cluster, rhs.proc) { job_id_str[0] = 0; }
 };
 
-#ifdef USE_JOB_QUEUE_JOB
 
 // specialize the helper class for create/destroy of hashtable entries for the ClassAdLog class
 template <>
@@ -249,7 +248,10 @@ public:
 		ad=Ad;
 		return iret >= 0;
 	}
-	virtual bool remove(const char * key) { JOB_ID_KEY k(key); return table.remove(k) >= 0; }
+	virtual bool remove(const char * key) {
+		JOB_ID_KEY k(key);
+		return table.remove(k) >= 0;
+	}
 	virtual bool insert(const char * key, ClassAd * ad) {
 		JOB_ID_KEY k(key);
 		JobQueueJob* Ad = new JobQueueJob();  // TODO: find out of we can count on ad already being a JobQueueJob*
@@ -281,15 +283,6 @@ protected:
 typedef JOB_ID_KEY JobQueueKey;
 typedef JobQueueJob* JobQueuePayload;
 typedef ClassAdLog<JOB_ID_KEY, const char*,JobQueueJob*> JobQueueLogType;
-
-#else // ! USE_JOB_QUEUE_JOB
-
- // the 8.2 JobQueue types
- typedef HashKey JobQueueKey;
- typedef ClassAd* JobQueuePayload;
- typedef ClassAdLog<HashKey, const char*, ClassAd*> JobQueueLogType;
-
-#endif // ! USE_JOB_QUEUE_JOB
 
 JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
 JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
