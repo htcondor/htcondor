@@ -3671,43 +3671,41 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 }
 
 bool
-Scheduler::WriteSubmitToUserLog( PROC_ID job_id, bool do_fsync )
+Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync )
 {
 	std::string submitUserNotes, submitEventNotes;
 
 		// Skip writing submit events for procid != 0 for parallel jobs
-	int universe = -1;
-	GetAttributeInt( job_id.cluster, job_id.proc, ATTR_JOB_UNIVERSE, &universe );
+	int universe = job->Universe();
 	if ( universe == CONDOR_UNIVERSE_PARALLEL ) {
-		if ( job_id.proc > 0) {
+		if ( job->jid.proc > 0) {
 			return true;;
 		}
 	}
 
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	WriteUserLog* ULog = this->InitializeUserLog( job->jid );
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
 	}
 	SubmitEvent event;
-	ClassAd *job_ad = GetJobAd(job_id.cluster,job_id.proc);
 
 	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
-	if ( job_ad->LookupString(ATTR_SUBMIT_EVENT_NOTES, submitEventNotes) ) {
+	if ( job->LookupString(ATTR_SUBMIT_EVENT_NOTES, submitEventNotes) ) {
 		event.submitEventLogNotes = strnewp(submitEventNotes.c_str());
 	}
-	if ( job_ad->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, submitUserNotes) ) {
+	if ( job->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, submitUserNotes) ) {
 		event.submitEventUserNotes = strnewp(submitUserNotes.c_str());
 	}
 
 	ULog->setEnableFsync(do_fsync);
-	bool status = ULog->writeEvent(&event, job_ad);
+	bool status = ULog->writeEvent(&event, job);
 	delete ULog;
 
 	if (!status) {
 		dprintf( D_ALWAYS,
 				 "Unable to log ULOG_SUBMIT event for job %d.%d\n",
-				 job_id.cluster, job_id.proc );
+				 job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
