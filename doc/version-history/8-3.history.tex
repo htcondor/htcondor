@@ -38,7 +38,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item When the \Condor{startd} starts up and shuts down, it removes any left over files and directories in the execute directory.  Previous, it would remove all sub-directories, including the special "lost+found" directory, which the file system check program may need when recovering files.  Now it never removes that directory.
+\item When the \Condor{startd} starts up and shuts down, 
+it removes any left over files and directories in the execute directory.  
+Previous versions of HTCondor would remove all sub-directories, 
+including the special \File{lost+found} directory, 
+which the file system check program may need when recovering files.  
+Now it never removes that directory.
 \Ticket{4577}
 
 \end{itemize}
