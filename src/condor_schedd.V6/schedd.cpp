@@ -7200,24 +7200,13 @@ PostInitJobQueue()
 
 
 int
-find_idle_local_jobs( ClassAd *job, void* )
+find_idle_local_jobs( JobQueueJob *job, const JOB_ID_KEY&, void* )
 {
-	int	status;
-	int	cur_hosts;
-	int	max_hosts;
-	int	univ;
-	PROC_ID id;
-
-	int noop = 0;
-	job->LookupBool(ATTR_JOB_NOOP, noop);
-	if (noop) {
-		return 0;
-	}
-
-	if (job->LookupInteger(ATTR_JOB_UNIVERSE, univ) != 1) {
-		univ = CONDOR_UNIVERSE_STANDARD;
-	}
-
+	// Since this function may be used while walking the whole queue
+	// It's important to reject jobs that we aren't going to start very quickly.
+	// so we get universe and Noop flag out of the job object rather than
+	// doing an attribute lookup here - it's at least an order of magnitude faster.
+	int univ = job->Universe();
 	if( univ != CONDOR_UNIVERSE_LOCAL && univ != CONDOR_UNIVERSE_SCHEDULER ) {
 		return 0;
 	}
@@ -7226,8 +7215,15 @@ find_idle_local_jobs( ClassAd *job, void* )
 		return 0;
 	}
 
-	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
-	job->LookupInteger(ATTR_PROC_ID, id.proc);
+	if (job->IsNoopJob()) {
+		return 0;
+	}
+
+	PROC_ID id = job->jid;
+	int	status;
+	int	cur_hosts;
+	int	max_hosts;
+
 	job->LookupInteger(ATTR_JOB_STATUS, status);
 
 	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) != 1) {
@@ -7694,7 +7690,29 @@ Scheduler::StartLocalJobs()
 	if ( ExitWhenDone ) {
 		return;
 	}
+#if 0 // enable this code to walk the table of LocalJobIds instead of the whole queue
+	  // note that this code is only about 20% faster than walking the whole job queue
+	  // when 0.1% of jobs are schedular universe. it's probably even slower if a larger
+	  // percentage of the jobs are scheduler universe.
+	double begin = _condor_debug_get_time_double();
+	// Instead of walking the job queue. walk the set of local/scheduler jobs
+	for (JOB_ID_SET::iterator it = LocalJobIds.begin(); it != LocalJobIds.end(); /*++it not here*/) {
+		JOB_ID_SET::iterator curr = it++; // save and advance the iterator, in case we want to erase the item
+		JobQueueJob *job = GetJobAd(*curr);
+		if ( ! job) { // this id no longer refers to a job. so remove it from the list.
+			//TODO: should we warn when this happens??
+			LocalJobIds.erase(curr);
+			continue;
+		}
+		// call the old queue walk function.
+		find_idle_local_jobs(job, *curr, NULL);
+	}
+	double runtime = _condor_debug_get_time_double() - begin;
+	WalkJobQ_find_idle_local_jobs_runtime += runtime;
+	//WalkJobQ_runtime += runtime;
+#else
 	WalkJobQueue(find_idle_local_jobs);
+#endif
 }
 
 shadow_rec*
@@ -14922,6 +14940,36 @@ Scheduler::claimLocalStartd()
 }
 
 /**
+ * Adds a job to various job indexes, called on startup and when new jobs are committed to the queue.
+ * 
+ * @param jobAd - the new job to be added to the cronTabs table
+ * @param loading_job_queue - true if this function is called when reloading the job queue
+ **/
+void
+Scheduler::indexAJob( JobQueueJob * /*jobAd*/, bool /*loading_job_queue*/ )
+{
+#if 0 // enable this code to keep an index of LocalJobIds
+	int univ = jobAd->Universe();
+	if (univ == CONDOR_UNIVERSE_LOCAL || univ == CONDOR_UNIVERSE_SCHEDULER) {
+		LocalJobIds.insert(jobAd->jid);
+	}
+#endif
+}
+
+/**
+ * Removes a job from various job indexes, called when the job object is deleted
+ * 
+ * @param jobAd - the new job to be added to the cronTabs table
+ **/
+void
+Scheduler::removeJobFromIndexes( const JOB_ID_KEY& /*job_id*/ )
+{
+#if 0 // enable this code to keep an index of LocalJobIds
+	LocalJobIds.erase(job_id);
+#endif
+}
+
+/**
  * Adds a job to our list of CronTab jobs
  * We will check to see if the job has already been added and
  * whether it defines a valid CronTab schedule before adding it
@@ -14930,13 +14978,11 @@ Scheduler::claimLocalStartd()
  * @param jobAd - the new job to be added to the cronTabs table
  **/
 void
-Scheduler::addCronTabClassAd( ClassAd *jobAd )
+Scheduler::addCronTabClassAd( JobQueueJob *jobAd )
 {
 	if ( NULL == m_adSchedd ) return;
 	CronTab *cronTab = NULL;
-	PROC_ID id;
-	jobAd->LookupInteger( ATTR_CLUSTER_ID, id.cluster );
-	jobAd->LookupInteger( ATTR_PROC_ID, id.proc );
+	PROC_ID id = jobAd->jid;
 	if ( this->cronTabs->lookup( id, cronTab ) < 0 &&
 		 CronTab::needsCronTab( jobAd ) ) {
 		this->cronTabs->insert( id, NULL );

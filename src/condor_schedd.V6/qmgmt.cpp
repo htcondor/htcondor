@@ -1007,6 +1007,15 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 	}
 }
 
+bool JobQueueJob::IsNoopJob()
+{
+	if ( ! has_noop_attr) return false;
+	int noop = 0;
+	if ( ! this->LookupBool(ATTR_JOB_NOOP, noop)) { has_noop_attr = false; }
+	else { has_noop_attr = true; }
+	return has_noop_attr && noop;
+}
+
 // After the job queue is loaded from disk, or a new job is submitted
 // the fields in the job object have to be initialized to match the ad
 //
@@ -1186,7 +1195,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				// Update fields in the newly created JobObject
 			ad->autocluster_id = -1;
 			ad->Delete(ATTR_AUTO_CLUSTER_ID);
-			ad->universe = universe;
+			ad->SetUniverse(universe);
 			JobQueueJob *clusterad = NULL;
 			if (JobQueue->Lookup(JOB_ID_KEY(key.cluster,-1), clusterad)) {
 				ad->SetCluster(clusterad);
@@ -1264,6 +1273,10 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			}
 
 			ConvertOldJobAdAttrs( ad, true );
+
+				// Add the job to various runtime indexes for quick lookups
+				//
+			scheduler.indexAJob(ad, true);
 
 				// If input files are going to be spooled, rewrite
 				// the paths in the job ad to point at our spool area.
@@ -2251,6 +2264,9 @@ int DestroyProc(int cluster_id, int proc_id)
 
 		CommitTransaction(NONDURABLE);
 	}
+
+		// remove jobid from any indexes
+	scheduler.removeJobFromIndexes(key.id());
 
 		// remove any match (startd) ad stored w/ this job
 	RemoveMatchedAd(cluster_id,proc_id);
@@ -3335,6 +3351,9 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 
 					// convert any old attributes for backwards compatbility
 				ConvertOldJobAdAttrs(procad, false);
+
+					// Add the job to various runtime indexes for quick lookups
+				scheduler.indexAJob(procad, false);
 
 					// make sure the job objd and cluster object are populated
 				clusterad->jid = cluster_key;
@@ -4959,7 +4978,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 	GetAutoCluster_cchit_runtime += last_autocluster_classad_cache_hit;
 
 	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
-	ASSERT(universe == job->universe);
+	ASSERT(universe == job->Universe());
 
 	job->LookupInteger(ATTR_JOB_STATUS, job_status);
     if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {

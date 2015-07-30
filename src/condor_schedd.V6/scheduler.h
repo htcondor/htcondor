@@ -85,6 +85,8 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure );
 class JobQueueJob;
 extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 
+typedef std::set<JOB_ID_KEY> JOB_ID_SET;
+
 class match_rec;
 
 struct shadow_rec
@@ -384,7 +386,7 @@ class Scheduler : public Service
 	friend	int		NewProc(int cluster_id);
 	friend	int		count_a_job(JobQueueJob*, const JOB_ID_KEY&, void* );
 //	friend	void	job_prio(ClassAd *);
-	friend  int		find_idle_local_jobs(ClassAd *, void*);
+	friend  int		find_idle_local_jobs(JobQueueJob *, const JOB_ID_KEY&, void*);
 	friend	int		updateSchedDInterval(JobQueueJob*, const JOB_ID_KEY&, void* );
     friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
@@ -400,8 +402,10 @@ class Scheduler : public Service
 	int				spoolJobFilesReaper(int,int);	
 	int				transferJobFilesReaper(int,int);
 	void			PeriodicExprHandler( void );
-	void			addCronTabClassAd( ClassAd* );
+	void			addCronTabClassAd( JobQueueJob* );
 	void			addCronTabClusterId( int );
+	void			indexAJob(JobQueueJob* job, bool loading_job_queue=false);
+	void			removeJobFromIndexes(const JOB_ID_KEY& job_id);
 	int				RecycleShadow(int cmd, Stream *stream);
 	void			finishRecycleShadow(shadow_rec *srec);
 
@@ -673,6 +677,7 @@ private:
 #else
 	ExtArray<OwnerData> Owners; // May be tracking AccountingGroup instead of owner username/domain
 #endif
+	//JOB_ID_SET      LocalJobIds;  // set of jobid's of local and scheduler universe jobs.
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	int				NumOwners;
 	time_t			NegotiationRequestTime;
