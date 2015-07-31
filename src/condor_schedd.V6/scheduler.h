@@ -901,7 +901,6 @@ private:
 // Other prototypes
 class JobQueueJob;
 struct JOB_ID_KEY;
-int get_job_prio(JobQueueJob *ad, const JOB_ID_KEY& key, void* user);
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec );
 extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);

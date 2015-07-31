@@ -4909,7 +4909,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 	SCGetAutoClusterType = last_autocluster_type;
 	GetAutoCluster_cchit_runtime += last_autocluster_classad_cache_hit;
 
-	//job->autocluster_id = auto_id;
 	GetAutoCluster_runtime += last_autocluster_runtime;
 	if (last_autocluster_make_sig) { GetAutoCluster_signature_runtime += last_autocluster_runtime; }
 	else { GetAutoCluster_hit_runtime += last_autocluster_runtime; }
@@ -4975,11 +4974,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		job->LookupString(ATTR_OWNER, powner, cremain);
 	}
 
-    // No longer judge whether or not a job can run by looking at its status.
-    // Rather look at if it has all the hosts that it wanted.
-    if (cur_hosts>=max_hosts || job_status==HELD)
-        return cur_hosts;
-
     PrioRec[N_PrioRecs].id             = jid;
     PrioRec[N_PrioRecs].job_prio       = job_prio;
     PrioRec[N_PrioRecs].pre_job_prio1  = pre_job_prio1;
@@ -5035,23 +5029,14 @@ jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 
 extern void mark_job_stopped(PROC_ID* job_id);
 
-int mark_idle(ClassAd *job, void*)
+int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* pvArg)
 {
-    int     status, cluster, proc, hosts, universe;
-	PROC_ID	job_id;
-	static time_t bDay = 0;
-
 		// Update ATTR_SCHEDD_BIRTHDATE in job ad at startup
-	if (bDay == 0) {
-		bDay = time(NULL);
-	}
-	job->Assign(ATTR_SCHEDD_BIRTHDATE,(int)bDay);
+		// pointer to birthday is passed as an argument...
+	time_t * pbDay = (time_t*)pvArg;
+	job->Assign(ATTR_SCHEDD_BIRTHDATE, *pbDay);
 
-	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
-		universe = CONDOR_UNIVERSE_STANDARD;
-	}
-
-	MyString managed_status;
+	std::string managed_status;
 	job->LookupString(ATTR_JOB_MANAGED, managed_status);
 	if ( managed_status == MANAGED_EXTERNAL ) {
 		// if a job is externally managed, don't touch a damn
@@ -5061,13 +5046,14 @@ int mark_idle(ClassAd *job, void*)
 		return 1;
 	}
 
-	job->LookupInteger(ATTR_CLUSTER_ID, cluster);
-	job->LookupInteger(ATTR_PROC_ID, proc);
-    job->LookupInteger(ATTR_JOB_STATUS, status);
-	job->LookupInteger(ATTR_CURRENT_HOSTS, hosts);
+	int universe = job->Universe();
+	int cluster = job->jid.cluster;
+	int proc = job->jid.proc;
+	PROC_ID job_id = job->jid;
 
-	job_id.cluster = cluster;
-	job_id.proc = proc;
+	int status, hosts;
+	job->LookupInteger(ATTR_JOB_STATUS, status);
+	job->LookupInteger(ATTR_CURRENT_HOSTS, hosts);
 
 	if ( status == COMPLETED ) {
 		DestroyProc(cluster,proc);
@@ -5277,7 +5263,8 @@ int dump_job_q_stats(int cat)
 */
 void mark_jobs_idle()
 {
-    WalkJobQueue(mark_idle);
+	time_t bDay = time(NULL);
+	WalkJobQueue2(mark_idle, &bDay);
 
 	// mark_idle() may have made a lot of commits in non-durable mode in 
 	// order to speed up recovery after a crash, so recovery does not incur

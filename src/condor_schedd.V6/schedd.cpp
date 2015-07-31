@@ -158,7 +158,7 @@ void send_vacate(match_rec*, int);
 void mark_job_stopped(PROC_ID*);
 void mark_job_running(PROC_ID*);
 void mark_serial_job_running( PROC_ID *job_id );
-int fixAttrUser( ClassAd *job, void* );
+int fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *);
 shadow_rec * find_shadow_rec(PROC_ID*);
 bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
@@ -819,16 +819,13 @@ Scheduler::~Scheduler()
 // If a job has been spooling for 12 hours,
 // It may well be that the remote condor_submit died
 // So we kill this job
-int check_for_spool_zombies(ClassAd *ad, void*)
+int check_for_spool_zombies(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *)
 {
-	int cluster;
-	if( !ad->LookupInteger( ATTR_CLUSTER_ID, cluster) ) {
-		return 0;
-	}
-	int proc;
-	if( !ad->LookupInteger( ATTR_PROC_ID, proc) ) {
-		return 0;
-	}
+	int cluster = job->jid.cluster;
+	int proc = job->jid.proc;
+
+	//PRAGMA_REMIND("tj asks: is it really ok that this function will look inside an uncommitted transaction to get the job status?")
+
 	int hold_status;
 	if( GetAttributeInt(cluster,proc,ATTR_JOB_STATUS,&hold_status) >= 0 ) {
 		if(hold_status == HELD) {
@@ -3061,29 +3058,27 @@ any other universe when the job is idle or held.
 */
 
 static int
-ResponsibleForPeriodicExprs( ClassAd *jobad )
+ResponsibleForPeriodicExprs( JobQueueJob *jobad, int & status )
 {
-	int status=-1, univ=-1;
-	PROC_ID jobid;
-
-	jobad->LookupInteger(ATTR_JOB_STATUS,status);
-	jobad->LookupInteger(ATTR_JOB_UNIVERSE,univ);
+	int univ = jobad->Universe();
 	bool managed = jobExternallyManaged(jobad);
-
 	if ( managed ) {
 		return 0;
 	}
 
-		// temporary for 7.2 only: avoid evaluating periodic
+	// don't fetch status if the caller already fetched it.
+	if (status < 0) {
+		jobad->LookupInteger(ATTR_JOB_STATUS,status);
+	}
+
+		// Avoid evaluating periodic
 		// expressions when the job is on hold for spooling
 	if( status == HELD ) {
 		int hold_reason_code = -1;
 		jobad->LookupInteger(ATTR_HOLD_REASON_CODE,hold_reason_code);
 		if( hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput ) {
-			int cluster = -1, proc = -1;
-			jobad->LookupInteger(ATTR_CLUSTER_ID, cluster);
-			jobad->LookupInteger(ATTR_PROC_ID, proc);
-			dprintf(D_FULLDEBUG,"Skipping periodic expressions for job %d.%d, because hold reason code is '%d'\n",cluster,proc,hold_reason_code);
+			dprintf(D_FULLDEBUG,"Skipping periodic expressions for job %d.%d, because hold reason code is '%d'\n",
+				jobad->jid.cluster, jobad->jid.proc, hold_reason_code);
 			return 0;
 		}
 	}
@@ -3099,12 +3094,8 @@ ResponsibleForPeriodicExprs( ClassAd *jobad )
 			case COMPLETED:
 				return 1;
 			case REMOVED:
-				jobid.cluster = -1;
-				jobid.proc = -1;
-				jobad->LookupInteger(ATTR_CLUSTER_ID,jobid.cluster);
-				jobad->LookupInteger(ATTR_PROC_ID,jobid.proc);
-				if ( jobid.cluster > 0 && jobid.proc > -1 && 
-					 scheduler.FindSrecByProcID(jobid) )
+				if ( jobad->jid.cluster > 0 && jobad->jid.proc > -1 && 
+					 scheduler.FindSrecByProcID(jobad->jid) )
 				{
 						// job removed, but shadow still exists
 					return 0;
@@ -3124,22 +3115,25 @@ and abort, hold, or release the job as necessary.
 */
 
 static int
-PeriodicExprEval( ClassAd *jobad, void* )
+PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void *)
 {
-	int cluster=-1, proc=-1, status=-1, action=-1;
+	int status=-1;
+	if(!ResponsibleForPeriodicExprs(jobad, status)) return 1;
 
-	if(!ResponsibleForPeriodicExprs(jobad)) return 1;
+	int cluster = jobad->jid.cluster;
+	int proc = jobad->jid.proc;
+	if(cluster<0 || proc<0) return 1;
 
-	jobad->LookupInteger(ATTR_CLUSTER_ID,cluster);
-	jobad->LookupInteger(ATTR_PROC_ID,proc);
-	jobad->LookupInteger(ATTR_JOB_STATUS,status);
-
-	if(cluster<0 || proc<0 || status<0) return 1;
+	// fetch status if the Responsible didn't, if no status, don't evaluate policy.
+	if (status < 0) {
+		jobad->LookupInteger(ATTR_JOB_STATUS,status);
+		if(status<0) return 1;
+	}
 
 	UserPolicy policy;
 	policy.Init(jobad);
 
-	action = policy.AnalyzePolicy(PERIODIC_ONLY);
+	int action = policy.AnalyzePolicy(PERIODIC_ONLY);
 
 	// Build a "reason" string for logging
 	MyString reason;
@@ -13920,7 +13914,7 @@ Scheduler::dumpState(int, Stream* s) {
 }
 
 int
-fixAttrUser( ClassAd *job, void* )
+fixAttrUser(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *)
 {
 	int nice_user = 0;
 	MyString owner;
@@ -14653,7 +14647,7 @@ Scheduler::adlist_publish( ClassAd *resAd )
 bool jobExternallyManaged(ClassAd * ad)
 {
 	ASSERT(ad);
-	MyString job_managed;
+	std::string job_managed;
 	if( ! ad->LookupString(ATTR_JOB_MANAGED, job_managed) ) {
 		return false;
 	}
