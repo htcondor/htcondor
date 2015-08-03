@@ -1026,6 +1026,18 @@ submit_report_result:
 		
 	// STATUS_CONSTRAINED
 	command_queue.Rewind();
+	if (qmgr_connection != NULL)
+	{
+		DisconnectQ(qmgr_connection, FALSE);
+		if ((qmgr_connection = ConnectQ(dc_schedd.addr(), QMGMT_TIMEOUT, true, &errstack, NULL, dc_schedd.version() )) == NULL)
+		{
+			formatstr(error_msg, "Error connecting to schedd %s for read-only commands: %s", ScheddAddr, errstack.getFullText().c_str());
+			dprintf(D_ALWAYS, "%s\n", error_msg.c_str());
+			failure_line_num = __LINE__;
+			failure_errno = errno;
+			goto contact_schedd_disconnect;
+		}
+	}
 	while (command_queue.Next(current_command)) {
 
 		if (current_command->status != SchedDRequest::SDCS_NEW)
@@ -1042,8 +1054,6 @@ submit_report_result:
 		if (qmgr_connection != NULL) {
 			SimpleList <std::string *> matching_ads;
 
-			error = FALSE;
-			
 			ClassAd *next_ad;
 			ClassAdList adlist;
 				// Only use GetAllJobsByConstraint if remote schedd is
