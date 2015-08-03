@@ -1687,6 +1687,10 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		(*sockTable)[i].is_command_sock = true;
 	} else {
 		(*sockTable)[i].is_command_sock = false;
+		if (iosock->type() == Stream::reli_sock)
+		{
+			static_cast<ReliSock*>(iosock)->setBufferedMode(true);
+		}
 	}
 
 	// Update curr_regdataptr for SetDataPtr()
@@ -3357,11 +3361,12 @@ void DaemonCore::Driver()
 		selector.reset();
 		min_deadline = 0;
 		for (i = 0; i < nSock; i++) {
+			Sock *iosock = (*sockTable)[i].iosock;
 				// NOTE: keep the following logic for building the
 				// fdset in sync with DaemonCore::ServiceCommandSocket()
 
 				// if a valid entry not already being serviced, add to select
-			if ( (*sockTable)[i].iosock && 
+			if ( iosock && 
 				 (*sockTable)[i].servicing_tid==0 &&
 				 (*sockTable)[i].remove_asap == false ) {	
 					// Setup our fdsets
@@ -3380,13 +3385,17 @@ void DaemonCore::Driver()
 						// connect is ready to write.  when connect
 						// is ready, select will set the writefd set
 						// on success, or the exceptfd set on failure.
-					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_WRITE );
-					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_EXCEPT );
+					selector.add_fd( iosock->get_file_desc(), Selector::IO_WRITE );
+					selector.add_fd( iosock->get_file_desc(), Selector::IO_EXCEPT );
 				} else {
-					int sockfd = (*sockTable)[i].iosock->get_file_desc();
+					int sockfd = iosock->get_file_desc();
 					switch( (*sockTable)[i].handler_type ) {
 					case HANDLE_READ:
 						selector.add_fd( sockfd, Selector::IO_READ );
+						if ((iosock->type() == Stream::reli_sock) && (static_cast<ReliSock*>(iosock)->getBufferedBytes()>0))
+						{
+							timeout = 0;
+						}
 						break;
 					case HANDLE_WRITE:
 						selector.add_fd( sockfd, Selector::IO_WRITE );
@@ -3596,7 +3605,8 @@ void DaemonCore::Driver()
 
 			// scan through the socket table to find which ones select() set
 			for(i = 0; i < nSock; i++) {
-				if ( (*sockTable)[i].iosock && 
+				Sock *iosock = (*sockTable)[i].iosock;
+				if ( iosock && 
 					 (*sockTable)[i].servicing_tid==0 &&
 					 (*sockTable)[i].remove_asap == false ) 
 				{	// if a valid entry...
@@ -3604,12 +3614,12 @@ void DaemonCore::Driver()
 					// if the socket was doing a connect(), we check the
 					// writefds and excepfds.  otherwise, check readfds.
 					(*sockTable)[i].call_handler = false;
-					time_t deadline = (*sockTable)[i].iosock->get_deadline();
+					time_t deadline = iosock->get_deadline();
 					bool sock_timed_out = ( deadline && deadline < now );
 
 					if ( superuser_command_arrived &&
-						 ((*sockTable)[i].iosock != super_dc_rsock &&
-						  (*sockTable)[i].iosock != super_dc_ssock) )
+						 (iosock != super_dc_rsock &&
+						  iosock != super_dc_ssock) )
 					{
 						// do nothing for now, because we know there is a request pending
 						// on the suerperuser command socket, and this is not the
@@ -3620,9 +3630,9 @@ void DaemonCore::Driver()
 					}
 					else if ( (*sockTable)[i].is_connect_pending ) {
 
-						if ( selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
+						if ( selector.fd_ready( iosock->get_file_desc(),
 												Selector::IO_WRITE ) ||
-							 selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
+							 selector.fd_ready( iosock->get_file_desc(),
 												Selector::IO_EXCEPT ) ||
 							 sock_timed_out )
 						{
@@ -3631,20 +3641,20 @@ void DaemonCore::Driver()
 							// Only call handler if CEDAR confirms the
 							// connect algorithm has completed.
 
-							if ( ((Sock *)(*sockTable)[i].iosock)->
-							      do_connect_finish() != CEDAR_EWOULDBLOCK)
+							if ( (iosock)->do_connect_finish() != CEDAR_EWOULDBLOCK)
 							{
 								(*sockTable)[i].call_handler = true;
 							}
 						}
 					} else if ((*sockTable)[i].handler_type == HANDLE_READ || (*sockTable)[i].handler_type == HANDLE_READ_WRITE) {
-						if ( (selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ ) ) ||
+						if ( (selector.fd_ready( iosock->get_file_desc(), Selector::IO_READ ) ) ||
+							 ((iosock->type() == Stream::reli_sock)  && (static_cast<ReliSock*>(iosock)->getBufferedBytes() > 0)) ||
 							 sock_timed_out )
 						{
 							(*sockTable)[i].call_handler = true;
 						}
 					} else if ((*sockTable)[i].handler_type == HANDLE_WRITE || (*sockTable)[i].handler_type == HANDLE_READ_WRITE) {
-						if ( (selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_WRITE ) ) ||
+						if ( (selector.fd_ready( iosock->get_file_desc(), Selector::IO_WRITE ) ) ||
 							 sock_timed_out )
 						{
 							(*sockTable)[i].call_handler = true;
@@ -3811,8 +3821,13 @@ void DaemonCore::Driver()
 
                         dc_stats.SockMessages += 1;
 
+						ReliSock *iosock = ((*sockTable)[i].iosock->type() == Stream::reli_sock) ?
+							static_cast<ReliSock*>((*sockTable)[i].iosock) : 
+							NULL;
 						if ( recheck_status && ((*sockTable)[i].handler_type == HANDLE_READ) &&
-							 ((*sockTable)[i].is_connect_pending == false) )
+							 ((*sockTable)[i].is_connect_pending == false) &&
+							 (!iosock || (iosock->getBufferedBytes() <= 0))
+						)
 						{
 							// we have already called at least one callback handler.  what
 							// if this handler drained this registed pipe, so that another
@@ -4360,6 +4375,7 @@ int DaemonCore::ServiceCommandSocket()
 	
 	inServiceCommandSocket_flag = TRUE;
 	for( int i = -1; i < local_nSock; i++) {
+		int sockEntry = -1;
 		bool use_loop = true;
 			// We iterate through each socket in sockTable. We do this instead of selecting
 			// over a bunch of different file descriptors because we can have them be removed
@@ -4370,7 +4386,8 @@ int DaemonCore::ServiceCommandSocket()
 
 			// We start with i = -1 so that we always start with the initial command socket.
 		if( i == -1 ) {
-			selector.add_fd( (*sockTable)[initial_command_sock()].iosock->get_file_desc(), Selector::IO_READ );
+			sockEntry = initial_command_sock();
+			selector.add_fd( (*sockTable)[sockEntry].iosock->get_file_desc(), Selector::IO_READ );
 		}
 			// If (*sockTable)[i].iosock is a valid socket
 			// and that we don't use the initial command socket (could substitute i != initial_command_socket())
@@ -4383,6 +4400,7 @@ int DaemonCore::ServiceCommandSocket()
 				 ((*sockTable)[i].remove_asap == false) &&
 				 ((*sockTable)[i].is_reverse_connect_pending == false) &&
 				 ((*sockTable)[i].is_connect_pending == false)) {
+			sockEntry = i;
 			selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
 		}
 		else {
@@ -4409,16 +4427,19 @@ int DaemonCore::ServiceCommandSocket()
 					EXCEPT("select, error # = %d",WSAGetLastError());
 				}
 #endif
-				if ( selector.has_ready() ) {
+				Sock *iosock = (*sockTable)[sockEntry].iosock;
+				if ( ((iosock->type() == Stream::reli_sock) && (static_cast<ReliSock*>(iosock)->getBufferedBytes() > 0)) ||
+					selector.has_ready() )
+				{
 						// CallSocketHandler_worker called by CallSocketHandler
 						// also calls CheckPrivState in order to
 						// Make sure we didn't leak our priv state.
-					CallSocketHandler(i, true);
+					CallSocketHandler(sockEntry, true);
 					commands_served++;
 						// If the slot in sockTable just got removed, make sure we exit the loop
-					if ( ((*sockTable)[i].iosock == NULL) ||  // slot is empty
-						 ((*sockTable)[i].remove_asap &&           // slot available
-						  (*sockTable)[i].servicing_tid==0 ) ) {
+					if ( ((*sockTable)[sockEntry].iosock == NULL) ||  // slot is empty
+						 ((*sockTable)[sockEntry].remove_asap &&           // slot available
+						  (*sockTable)[sockEntry].servicing_tid==0 ) ) {
 						break;
 					}
 				} 
@@ -4461,6 +4482,10 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		if( SocketIsRegistered(asock) ) {
 			is_command_sock = true;
 		}
+		else
+		{
+			static_cast<ReliSock*>(asock)->setBufferedMode(true);
+		}
 	}
 	else {
 		ASSERT( insock );
@@ -4475,6 +4500,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 			}
 			is_command_sock = false;
 			always_keep_stream = true;
+			static_cast<ReliSock*>(accepted_sock)->setBufferedMode(true);
 		}
 		else {
 			asock = insock;

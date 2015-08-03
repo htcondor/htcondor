@@ -258,6 +258,17 @@ public:
 	int clear_backlog_flag() {bool state = m_has_backlog; m_has_backlog = false; return state;}
 	int clear_read_block_flag() {bool state = m_read_would_block; m_read_would_block = false; return state;}
 
+	// Enable buffered receive mode.  In this mode, as much data as possible
+	// is buffered within the ReliSock object on reads (keeping things non-blocking).
+	// NOTE that if data is in the buffer, the underlying file descriptor may not
+	// fire on `select'.  Hence, any code using ReliSocks in buffer mode must explicitly
+	// understand this before calling select.  This is why buffered mode defaults to false.
+	//
+	// If there is data in the buffer and buffer mode is disabled, then this call will fail.
+	bool setBufferedMode(bool new_mode);
+	bool getBufferedMode() {return m_buffered_mode;}
+	ssize_t getBufferedBytes() {return m_buffered_mode ? m_recv_buffer.num_untouched() : -1;}
+
 	bool is_closed() {return rcv_msg.m_closed;}
 //	PROTECTED INTERFACE TO RELIABLE SOCKS
 //
@@ -305,7 +316,7 @@ protected:
 		RcvMsg();
 		~RcvMsg();
 		void reset();
-		int rcv_packet(char const *peer_description, SOCKET, int);
+		int rcv_packet();
 		void init_parent(ReliSock *tmp){ p_sock = tmp; } 
 
 		ChainBuf	buf;
@@ -362,6 +373,7 @@ protected:
 	bool m_has_backlog;
 	bool m_read_would_block;
 	bool m_non_blocking;
+	bool m_buffered_mode;
 
 	virtual void setTargetSharedPortID( char const *id );
 	virtual bool sendTargetSharedPortID();
@@ -372,6 +384,9 @@ private:
 	void init();				/* shared initialization method */
 
 	bool connect_socketpair_impl( ReliSock & dest, condor_protocol proto, bool isLoopback );
+
+	int condor_read_buffered(char *buffer, size_t length, bool is_non_blocking);
+	Buf m_recv_buffer;
 };
 
 class BlockingModeGuard {

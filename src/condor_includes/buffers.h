@@ -75,6 +75,7 @@ public:
 	inline Buf *next() const { return _next; }
 	inline void set_next(Buf *b) { _next = b; }
 	inline void *get_ptr() const { return &_dta[num_touched()]; }
+	inline void inc_used(size_t bytes) {_dta_sz+=bytes;}
 	
 	///initialize socket handle.
 	void init_parent(Sock* tmp) { p_sock = tmp;}

@@ -393,7 +393,7 @@ addORConstraint (const char *value)
 QueryResult CondorQuery::
 fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 {
-	Sock*    sock; 
+	ReliSock*    sock; 
 	int                     more;
 	QueryResult result;
 	ClassAd     queryAd(extraAttrs), *ad;
@@ -422,8 +422,11 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 	}
 
 
-	int mytimeout = param_integer ("QUERY_TIMEOUT",60); 
-	if (!(sock = my_collector.startCommand(command, Stream::reli_sock, mytimeout, errstack)) ||
+	int mytimeout = param_integer ("QUERY_TIMEOUT",60);
+	sock = static_cast<ReliSock*>(my_collector.makeConnectedSocket(Stream::reli_sock, mytimeout, 0, errstack, false));
+	sock->setBufferedMode(true);
+	if (!sock ||
+	    !my_collector.startCommand(command, sock, mytimeout, errstack, "Condor Query") ||
 	    !putClassAd (sock, queryAd) || !sock->end_of_message()) {
 
 		if (sock) {

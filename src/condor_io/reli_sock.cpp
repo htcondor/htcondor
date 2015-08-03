@@ -48,8 +48,9 @@ ReliSock::init()
 	m_has_backlog = false;
 	m_read_would_block = false;
 	m_non_blocking = false;
-	ignore_next_encode_eom = FALSE;
-	ignore_next_decode_eom = FALSE;
+	m_buffered_mode = false;
+	ignore_next_encode_eom = false;
+	ignore_next_decode_eom = false;
 	_bytes_sent = 0.0;
 	_bytes_recvd = 0.0;
 	_special_state = relisock_none;
@@ -57,6 +58,7 @@ ReliSock::init()
 	hostAddr = NULL;
 	snd_msg.reset();
 	rcv_msg.reset();
+	m_recv_buffer.reset();
 	rcv_msg.init_parent(this);
 	snd_msg.init_parent(this);
 	m_target_shared_port_id = NULL;
@@ -64,12 +66,15 @@ ReliSock::init()
 
 
 ReliSock::ReliSock()
-	: Sock()
+	: Sock(),
+	m_recv_buffer(0)
 {
 	init();
 }
 
-ReliSock::ReliSock(const ReliSock & orig) : Sock(orig)
+ReliSock::ReliSock(const ReliSock & orig)
+	 : Sock(orig),
+	m_recv_buffer(0)
 {
 	init();
 	// now copy all cedar state info via the serialize() method
@@ -109,6 +114,7 @@ ReliSock::close()
 	// Purge send and receive buffers at the relisock level
 	snd_msg.reset();
 	rcv_msg.reset();
+	m_recv_buffer.reset();
 
 	// then invoke close() in parent class to close fd etc
 	return Sock::close();
@@ -315,8 +321,114 @@ ReliSock::put_bytes_raw( const char *buffer, int length )
 int 
 ReliSock::get_bytes_raw( char *buffer, int length )
 {
-	return condor_read(peer_description(),_sock,buffer,length,_timeout);
+	return condor_read_buffered(buffer, length, false);
 }
+
+int
+ReliSock::condor_read_buffered(char *buffer, size_t length, bool is_non_blocking)
+{
+	if (!m_buffered_mode)
+	{
+		//dprintf(D_NETWORK, "Reading bytes in non-buffered mode.\n");
+		return condor_read(peer_description(), _sock, buffer, length, _timeout, 0, is_non_blocking);
+	}
+
+	// Buffer strategy:
+	// 1) memcpy() as many bytes as possible from the internal buffer.
+	// 2) Read non-blocking from the socket to the passed buffer.
+	// 3) Read non-blocking from the socket to the internal buffer.
+	// 4) If more is needed for the passed buffer, do a non-blocking read.
+	//dprintf(D_NETWORK, "Got read request to %p for %lu bytes (non-blocking %d).\n", buffer, length, is_non_blocking);
+
+	ssize_t result = m_recv_buffer.get_max(buffer, length);
+	//dprintf(D_NETWORK, "Got %ld bytes from internal buffer.\n", result);
+	length -= result;
+	size_t bytes_so_far = result;
+	if (length == 0)
+	{
+		//dprintf(D_NETWORK, "All bytes services from internal buffer.\n");
+		return bytes_so_far;
+	}
+		// We didn't have enough bytes in the buffer to fulfill the request
+		// Hence, we should always take the conditional block.
+	if (m_recv_buffer.consumed())
+	{
+		//dprintf(D_NETWORK, "Resetting internal buffer.\n");
+		m_recv_buffer.reset();
+	}
+
+		// In this case, we first read from the socket directly to the passed buffer,
+		// then any additional bytes into the internal buffer.
+	if (length >= static_cast<size_t>(m_recv_buffer.num_free()))
+	{
+		//dprintf(D_NETWORK, "Reading first to passed buffer.\n");
+		if ((result = condor_read(peer_description(), _sock, buffer+bytes_so_far, length, _timeout, 0, is_non_blocking)) < 0)
+		{
+			return result;
+		}
+		else if (is_non_blocking && (static_cast<size_t>(result) < length))
+		{
+			return bytes_so_far+result;
+		}
+		length -= result;
+		bytes_so_far += result;
+
+		// If we got some bytes non-blocking and satisfied the request, there could be
+		// more bytes to read non-blocking into our buffer.
+		if ((result > 0) && (length == 0))
+		{
+			// Note we ignore the result; if the socket errored out, we'll see this fact on the next read.
+			m_recv_buffer.read(peer_description(), _sock, m_recv_buffer.num_free(), _timeout, true);
+		}
+		else if (length)
+		{
+			// Not possible to do more non-blocking reads.  Time to block.
+			// If we were in non-blocking mode for condor_read_buffered, we would have already
+			// returned.
+			return condor_read(peer_description(), _sock, buffer+bytes_so_far, length, _timeout, 0, false);
+		}
+	}
+	else
+	{ // In this case, first read into the internal buffer, memcpy
+		//dprintf(D_NETWORK, "Reading first to internal buffer.\n");
+		if ((result = m_recv_buffer.read(peer_description(), _sock, m_recv_buffer.num_free(), _timeout, true)) < 0)
+		{
+			return result;
+		}
+		//dprintf(D_NETWORK, "Read %ld bytes to internal buffer.\n", result);
+		result = m_recv_buffer.get_max(buffer+bytes_so_far, length);
+		//dprintf(D_NETWORK, "Copied %ld bytes to passed buffer.\n", result);
+		length -= result;
+		bytes_so_far += result;
+		if (length)
+		{
+			if (is_non_blocking)
+			{
+				//dprintf(D_NETWORK, "Non-blocking; no more bytes to give.\n");
+				return bytes_so_far;
+			}
+			result = condor_read(peer_description(), _sock, buffer+bytes_so_far, length, _timeout, 0, false);
+			//dprintf(D_NETWORK, "Non-blocking read result: %ld\n", result);
+			return result;
+		}
+	}
+	return bytes_so_far;
+}
+
+
+bool
+ReliSock::setBufferedMode(bool new_mode)
+{
+	if ((getBufferedBytes() > 0) && !new_mode) {return false;}
+
+	m_buffered_mode = new_mode;
+	if (m_buffered_mode)
+	{
+		m_recv_buffer.grow_buf(CONDOR_IO_BUF_SIZE);
+	}
+	return true;
+}
+
 
 int 
 ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
@@ -421,7 +533,7 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
                 goto error;
 	}
 
-	result = condor_read(peer_description(), _sock, buffer, length, _timeout);
+	result = condor_read_buffered(buffer, length, false);
 
 	
 	if( result < 0 ) {
@@ -462,7 +574,7 @@ ReliSock::handle_incoming_packet()
 		return TRUE;
 	}
 
-	return rcv_msg.rcv_packet(peer_description(), _sock, _timeout);
+	return rcv_msg.rcv_packet();
 }
 
 int
@@ -728,8 +840,8 @@ bool ReliSock::RcvMsg::init_MD(CONDOR_MD_MODE mode, KeyInfo * key)
 }
 
 ReliSock::RcvMsg :: RcvMsg() : 
-    mode_(MD_OFF),
-    mdChecker_(0), 
+	mode_(MD_OFF),
+	mdChecker_(0),
 	p_sock(0),
 	m_partial_packet(false),
 	m_remaining_read_length(0),
@@ -751,7 +863,7 @@ void ReliSock::RcvMsg::reset()
 	buf.reset();
 }
 
-int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, int _timeout)
+int ReliSock::RcvMsg::rcv_packet()
 {
 	char	        hdr[MAX_HEADER_SIZE];
 	char *cksum_ptr = &hdr[5];
@@ -770,7 +882,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 
 	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 
-	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, 0, p_sock->is_non_blocking());
+	retval = p_sock->condor_read_buffered(hdr, header_size, p_sock->is_non_blocking());
 	if ( retval == 0 ) {   // 0 means that the read would have blocked; unlike a normal read(), condor_read
 	                       // returns -2 if the socket has been closed.
 		dprintf(D_NETWORK, "Reading header would have blocked.\n");
@@ -781,7 +893,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 	// TCP packets.
 	if ( (retval > 0) && (retval != header_size) ) {
 		dprintf(D_NETWORK, "Force-reading remainder of header.\n");
-		retval = condor_read(peer_description, _sock, hdr+retval, header_size-retval, _timeout);
+		retval = p_sock->condor_read_buffered(hdr+retval, header_size-retval, false);
 	}
 
 	if ( retval < 0 && 
@@ -826,7 +938,8 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 	}
 
 read_packet:
-	tmp_len = m_tmp->read(peer_description, _sock, len, _timeout, p_sock->is_non_blocking());
+	m_tmp->alloc_buf();
+	tmp_len = p_sock->condor_read_buffered(static_cast<char*>(m_tmp->get_ptr()), len, p_sock->is_non_blocking());
 	if (tmp_len != len) {
 		if (p_sock->is_non_blocking() && (tmp_len >= 0)) {
 			m_partial_packet = true;
@@ -843,6 +956,7 @@ read_packet:
 			return FALSE;
 		}
 	}
+	m_tmp->inc_used(tmp_len);
 
         // Now, check MD
         if (mode_ != MD_OFF) {
