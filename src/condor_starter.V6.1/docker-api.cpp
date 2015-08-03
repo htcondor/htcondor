@@ -15,6 +15,7 @@ static bool add_docker_arg(ArgList &runArgs);
 static int run_simple_docker_command(	const std::string &command,
 					const std::string &container,
 					CondorError &e);
+static int gc_image(const std::string &image);
 
 //
 // Because we fork before calling docker, we don't actually
@@ -195,6 +196,18 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 	my_pclose( dockerResults );
 	return 0;
 }
+
+int
+DockerAPI::rmi(const std::string &image, CondorError &err) {
+	return run_simple_docker_command("rmi", image, err);
+}
+
+
+int
+DockerAPI::kill(const std::string &image, CondorError &err) {
+	return run_simple_docker_command("kill", image, err);
+}
+
 
 int 
 DockerAPI::pause( const std::string & container, CondorError & err ) {
@@ -490,4 +503,9 @@ run_simple_docker_command(const std::string &command, const std::string &contain
 
 	my_pclose( dockerResults );
 	return 0;
+}
+
+static int 
+gc_image(const std::string & /*image*/) {
+  return 0;
 }

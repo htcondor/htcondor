@@ -372,7 +372,9 @@ bool DockerProc::Remove() {
 	if( is_suspended ) { Continue(); }
 	requested_exit = true;
 
-	// TODO: docker kill --signal=${rm_kill_sig} ${containerName}
+	CondorError err;
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	DockerAPI::kill( containerName, err);
 
 	// Do NOT send any signals to the waiting process.  It should only
 	// react when the container does.
@@ -389,7 +391,9 @@ bool DockerProc::Hold() {
 	if( is_suspended ) { Continue(); }
 	requested_exit = true;
 
-	// TODO: docker kill --signal=${hold_kill_sig} ${containerName}
+	CondorError err;
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	DockerAPI::kill( containerName, err );
 
 	// Do NOT send any signals to the waiting process.  It should only
 	// react when the container does.
@@ -413,11 +417,9 @@ bool DockerProc::ShutdownGraceful() {
 	if( is_suspended ) { Continue(); }
 	requested_exit = true;
 
-	// TODO: rm_kill_sig defaults to soft_kill_sig
-	// TODO: docker kill --signal=${rm_kill_sig} ${containerName}
-
-	// Do NOT send any signals to the waiting process.  It should only
-	// react when the container does.
+	CondorError err;
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	DockerAPI::kill( containerName, err );
 
 	// If rm_kill_sig is not SIGKILL, the process may linger.  Returning
 	// false indicates that shutdown is pending.
@@ -440,10 +442,9 @@ bool DockerProc::ShutdownFast() {
 	// so don't bother to Continue() the process if it's been suspended.
 	requested_exit = true;
 
-	// TODO: docker kill --signal=SIGKILL ${containerName}
-
-	// Do NOT send any signals to the waiting process.  It should only
-	// react when the container does.
+	CondorError err;
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	DockerAPI::kill( containerName, err );
 
 	// Based on the other comments, you'd expect this to return true.
 	// It could, but it's simpler to just to let the usual routines
